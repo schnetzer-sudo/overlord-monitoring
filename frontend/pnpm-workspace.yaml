@@ -1,0 +1,18 @@
+# pnpm fuehrt Installationsskripte von Abhaengigkeiten nur aus, wenn sie hier
+# ausdruecklich freigegeben sind. Ohne Eintrag bricht "pnpm install" mit
+# ERR_PNPM_IGNORED_BUILDS ab — auch in der CI.
+#
+# Beide Pakete werden von unseren direkten Abhaengigkeiten selbst mitgebracht:
+#   sharp          Bildoptimierung von next/image
+#   unrs-resolver  Modulaufloesung von eslint-config-next
+#
+# Jede weitere Freigabe ist eine bewusste Entscheidung und wird im Pull Request
+# begruendet — ein Installationsskript laeuft mit den Rechten des Bauenden.
+allowBuilds:
+  sharp: true
+  unrs-resolver: true
+
+# pnpm 11 sperrt frisch veroeffentlichte Versionen fuer eine Karenzzeit
+# (Schutz gegen uebernommene Pakete). nuqs 2.9.2 ist geprueft und freigegeben.
+minimumReleaseAgeExclude:
+  - nuqs@2.9.2

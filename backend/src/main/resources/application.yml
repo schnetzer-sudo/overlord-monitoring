@@ -1,0 +1,82 @@
+# Overlord Monitoring — Backend-Konfiguration
+#
+# In dieser Datei stehen KEINE Zugangsdaten. Alles Umgebungsspezifische kommt
+# ueber Umgebungsvariablen; die Vorlage dafuer ist backend/.env.example.
+#
+# Profile:
+#   dev   lokale Entwicklung — Standard, wenn nichts gesetzt ist
+#   prod  Betrieb — muss ueber SPRING_PROFILES_ACTIVE=prod aktiviert werden
+
+spring:
+  application:
+    name: overlord-monitor
+  profiles:
+    default: dev
+  threads:
+    virtual:
+      enabled: true
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+  # Regel: Niemals interne Details oder Stacktraces an den Client.
+  # Gilt in JEDEM Profil — auch in dev, sonst wird es in prod vergessen.
+  error:
+    whitelabel:
+      enabled: false
+    include-message: never
+    include-stacktrace: never
+    include-exception: false
+    include-binding-errors: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Bewusst minimal. Jeder weitere Endpunkt wird einzeln freigegeben.
+        include: health,info
+  endpoint:
+    health:
+      # Nach aussen nur der Gesamtstatus, in JEDEM Profil. Die Einzelheiten
+      # nennen Pfade und ab Schritt 2 auch die Datenbankverbindungen — und das
+      # dev-Profil zeigt auf die Testkopie, eine Vollkopie der Produktion.
+      # Wer mehr sehen will, liest das Protokoll.
+      show-details: never
+      show-components: never
+
+logging:
+  level:
+    root: ${LOG_LEVEL_ROOT:INFO}
+    de.kraftwerkone.overlord.monitor: ${LOG_LEVEL_APP:INFO}
+
+---
+# ─── dev ────────────────────────────────────────────────────────────────────
+# Lokale Entwicklung gegen die Testkopie (Daten bis Ende 2025).
+# Ab Schritt 2 liefert der TimeProvider hier MAX(Message.MessageLastUpdate)
+# statt der Systemuhr — sonst liefert das Standard-Zeitfenster von 24 Stunden
+# null Zeilen.
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+logging:
+  level:
+    de.kraftwerkone.overlord.monitor: ${LOG_LEVEL_APP:DEBUG}
+
+---
+# ─── prod ───────────────────────────────────────────────────────────────────
+# Betrieb. Gelesen wird zur Laufzeit auf der Produktionsdatenbank —
+# die Leistungsregeln L1 bis L6 sind hier nicht verhandelbar.
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+server:
+  forward-headers-strategy: framework
+
+logging:
+  level:
+    root: ${LOG_LEVEL_ROOT:WARN}
+    de.kraftwerkone.overlord.monitor: ${LOG_LEVEL_APP:INFO}

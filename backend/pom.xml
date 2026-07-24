@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>4.1.0</version>
+    <relativePath/>
+  </parent>
+
+  <!--
+    Basispaket ist de.kraftwerkone.overlord.monitor.
+    Achtung: Aus groupId + artifactId wuerde de.kraftwerkone.overlordmonitor abgeleitet.
+    Das ist NICHT das Basispaket dieses Projekts. Siehe DEVELOPMENT_GUIDELINES.md, Abschnitt 2.
+  -->
+  <groupId>de.kraftwerkone</groupId>
+  <artifactId>overlord-monitor</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <name>overlord-monitor</name>
+  <description>Monitoring-Werkzeug fuer die EDI-Integrationsplattform Overlord</description>
+
+  <properties>
+    <java.version>21</java.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+    <archunit.version>1.4.2</archunit.version>
+    <spotless-maven-plugin.version>3.8.0</spotless-maven-plugin.version>
+    <google-java-format.version>1.35.0</google-java-format.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!--
+      ArchUnit bewusst als Kern-Artefakt, nicht als archunit-junit5.
+      Spring Boot 4.1 liefert JUnit Jupiter 6 und damit JUnit Platform 6; die
+      ArchUnit-JUnit5-Engine zielt auf Platform 1.x. Der Kern ist von der
+      Test-Engine unabhaengig und wird aus normalen @Test-Methoden aufgerufen.
+    -->
+    <dependency>
+      <groupId>com.tngtech.archunit</groupId>
+      <artifactId>archunit</artifactId>
+      <version>${archunit.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+
+      <!--
+        Spotless ist im Build verankert: "spotless:check" haengt an der Phase
+        "validate". "./mvnw verify" schlaegt damit bei Formatverstoessen fehl,
+        bevor ueberhaupt kompiliert wird. Reparatur: ./mvnw spotless:apply
+      -->
+      <plugin>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
+        <version>${spotless-maven-plugin.version}</version>
+        <configuration>
+          <java>
+            <googleJavaFormat>
+              <version>${google-java-format.version}</version>
+              <style>GOOGLE</style>
+            </googleJavaFormat>
+            <!--
+              Kein separates removeUnusedImports: googleJavaFormat raeumt Importe
+              bereits mit auf. Der eigene Schritt zoege nur eine zweite, aeltere
+              google-java-format-Version in den Build.
+            -->
+            <formatAnnotations/>
+          </java>
+          <pom>
+            <includes>
+              <include>pom.xml</include>
+            </includes>
+            <endWithNewline/>
+            <trimTrailingWhitespace/>
+          </pom>
+          <formats>
+            <format>
+              <includes>
+                <include>src/main/resources/**/*.yml</include>
+                <include>src/test/resources/**/*.yml</include>
+              </includes>
+              <endWithNewline/>
+              <trimTrailingWhitespace/>
+              <indent>
+                <spaces>true</spaces>
+                <spacesPerTab>2</spacesPerTab>
+              </indent>
+            </format>
+          </formats>
+        </configuration>
+        <executions>
+          <execution>
+            <id>spotless-check</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

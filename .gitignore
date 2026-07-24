@@ -1,0 +1,68 @@
+# ─── Zugangsdaten ────────────────────────────────────────────────────────────
+# Niemals im Repository. Vorlage ist backend/.env.example.
+.env
+.env.*
+!.env.example
+*.p12
+*.jks
+*.pem
+*.key
+
+# ─── Java / Maven ────────────────────────────────────────────────────────────
+target/
+*.class
+*.jar
+*.war
+*.ear
+# Kein !-Ausnahmemuster fuer die maven-wrapper.jar noetig: Der Wrapper laeuft im
+# Modus "only-script" und laedt Maven selbst herunter. Es liegt bewusst keine
+# Binaerdatei im Repository. Siehe backend/.mvn/wrapper/maven-wrapper.properties.
+.mvn/timing.properties
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+*.hprof
+hs_err_pid*
+replay_pid*
+
+# ─── Node / Next.js ──────────────────────────────────────────────────────────
+node_modules/
+.pnpm-store/
+.next/
+out/
+build/
+dist/
+next-env.d.ts
+*.tsbuildinfo
+.turbo/
+.vercel/
+.eslintcache
+coverage/
+
+# ─── Logs ────────────────────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# ─── IDE ─────────────────────────────────────────────────────────────────────
+.idea/
+*.iml
+*.ipr
+*.iws
+# Muster mit /* statt /: Git kann eine Datei nicht wieder einschliessen, wenn
+# bereits ihr Elternverzeichnis ausgeschlossen ist. Die Ausnahme darunter waere
+# mit ".vscode/" wirkungslos.
+.vscode/*
+!.vscode/extensions.json
+.settings/
+.project
+.classpath
+.factorypath
+.apt_generated/
+nbproject/private/
+
+# ─── Betriebssystem ──────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini

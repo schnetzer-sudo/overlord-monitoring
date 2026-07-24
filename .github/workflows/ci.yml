@@ -1,0 +1,73 @@
+name: CI
+
+# Backend und Frontend werden unabhaengig voneinander gebaut und geprueft.
+# Es sind genau dieselben Befehle, die auch lokal gelten — nichts CI-Eigenes.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Nur lesen. Dieser Workflow schreibt nichts ins Repository.
+permissions:
+  contents: read
+
+# Ein neuer Push auf denselben Zweig bricht den vorherigen Lauf ab.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (Java 21, Spring Boot 4.1)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Auschecken
+        uses: actions/checkout@v7
+
+      - name: JDK 21 einrichten
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      # Enthaelt Spotless (Formatpruefung) und den ArchUnit-Test.
+      # Maven bringt der Wrapper selbst mit, inklusive gepinnter Pruefsumme.
+      - name: Bauen und pruefen
+        run: ./mvnw -B --no-transfer-progress verify
+
+  frontend:
+    name: Frontend (Node 24, Next.js 16)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Auschecken
+        uses: actions/checkout@v7
+
+      # Muss vor setup-node stehen, sonst findet dessen Cache pnpm nicht.
+      # Die Version kommt aus dem Feld packageManager in frontend/package.json.
+      - name: pnpm einrichten
+        uses: pnpm/action-setup@v6
+        with:
+          package_json_file: frontend/package.json
+
+      - name: Node einrichten
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      # --frozen-lockfile: Die CI aendert pnpm-lock.yaml nie, sie prueft ihn.
+      - name: Abhaengigkeiten installieren
+        run: pnpm install --frozen-lockfile
+
+      # "pnpm build" fuehrt zuerst lint, typecheck und format:check aus.
+      - name: Bauen und pruefen
+        run: pnpm build

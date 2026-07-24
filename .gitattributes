@@ -1,0 +1,33 @@
+# Zeilenenden verbindlich festlegen.
+#
+# Ohne diese Datei haengt das Ergebnis an der lokalen Einstellung core.autocrlf:
+# Unter Windows schreibt Spotless dann CRLF, unter Linux LF — und
+# "./mvnw verify" schlaegt je nach Rechner an der Formatpruefung fehl, ohne
+# dass jemand etwas geaendert haette. Passend dazu .editorconfig.
+
+# Standard: Git speichert LF und checkt LF aus — auf jeder Plattform.
+* text=auto eol=lf
+
+# Ausnahme: Windows-Batchdateien brauchen CRLF.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Der Maven-Wrapper ist ein POSIX-Shellskript und bleibt LF.
+mvnw text eol=lf
+
+# Binaerdateien nie umschreiben.
+*.jar   binary
+*.zip   binary
+*.gz    binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.webp  binary
+*.avif  binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.otf   binary
+*.pdf   binary

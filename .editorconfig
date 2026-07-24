@@ -1,0 +1,40 @@
+; Verbindlich für alle Dateien im Repository.
+; Die Formatierung wird zusätzlich maschinell erzwungen:
+; Backend über Spotless (google-java-format), Frontend über Prettier.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+max_line_length = 120
+
+[*.java]
+indent_size = 2
+max_line_length = 100
+
+[*.{xml,pom}]
+indent_size = 2
+
+[*.{yml,yaml}]
+indent_size = 2
+
+[*.{js,jsx,ts,tsx,mjs,cjs,json,jsonc,css}]
+indent_size = 2
+; Deckungsgleich mit printWidth in frontend/.prettierrc.json.
+max_line_length = 100
+
+[*.md]
+indent_size = 2
+; Zwei abschließende Leerzeichen sind in Markdown ein Zeilenumbruch.
+trim_trailing_whitespace = false
+
+[*.{bat,cmd}]
+end_of_line = crlf
+
+[Makefile]
+indent_style = tab
