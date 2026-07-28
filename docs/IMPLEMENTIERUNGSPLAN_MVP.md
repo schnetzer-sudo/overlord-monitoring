@@ -1,6 +1,10 @@
 # Overlord Monitoring — Implementierungsplan MVP
 
-Stand: 24.07.2026 · Ergänzt `PROJEKTBESCHREIBUNG.md`
+Stand: 27.07.2026 · Ergänzt `PROJEKTBESCHREIBUNG.md`
+
+**Revision 27.07.2026.** Schritt 2 ist nach dem Sparring ausformuliert. Die Statuserhebung ist von
+Schritt 3 nach Schritt 2 vorgezogen, weil die Verbindung dort ohnehin steht. Schritt 4 und 7 sind
+an die korrigierten Fakten angepasst.
 
 Zehn Schritte. Zwei Fundamentschritte, danach acht Durchstiche mit Backend und Frontend zusammen.
 Jeder Schritt wird ein eigener Claude-Code-Prompt und endet mit etwas, das man durchklicken kann.
@@ -92,27 +96,54 @@ eigene Schema.
 
 **Skills:** keine
 
+**Voraussetzung:** Die Rechte auf der Testkopie sind gesetzt und `overlord_monitor` existiert mit
+`utf8mb4` / `utf8mb4_general_ci`. Zugangsdaten liegen in Umgebungsvariablen, nicht im Repository.
+
 **Inhalt**
-- Zwei DataSources mit zwei DB-Benutzern: `GlassfishDB` nur lesend, `overlord_monitor` schreibend
+- Zwei DataSources mit zwei DB-Benutzern. **Keine davon `@Primary`** — ein vergessener Qualifier
+  soll beim Start scheitern, nicht zur Laufzeit den falschen Pool treffen. Flyway wird über
+  `@FlywayDataSource` gebunden
+- **Genau ein Transaktionsmanager**, gebunden an `overlord_monitor` und `@Primary`. Damit bedeutet
+  `@Transactional` überall "schreibt ins eigene Schema"
+- Lese-Pool klein, `readOnly`, mit `SET SESSION max_statement_time` als Laufzeitgrenze
+- Zwei DSLContexts. Regel: Der Lese-Kontext darf **beide** Schemata lesen, der Schreib-Kontext
+  ausschließlich `overlord_monitor`. Kein `defaultSchema`, Schemanamen immer voll qualifiziert
 - jOOQ-Codegenerierung aus beiden Schemata, in **zwei getrennte Zielpakete**:
   `…monitor.jooq.glassfish` (nur lesend) und `…monitor.jooq.monitor` (schreibend). Gleichnamige
-  Tabellen kollidieren dadurch nicht, und der Import zeigt die Schreibrichtung
-- ArchUnit-Test: Klassen aus `jooq.glassfish` werden ausschließlich in Repository-Klassen
-  verwendet, nicht in Services oder Controllern. Das Schreibverbot selbst prüft ArchUnit nicht —
-  dafür sorgen die DB-Rechte, der als `readOnly` markierte Pool und ein jOOQ-`ExecuteListener`,
-  der auf dem Lese-`DSLContext` alles außer `SELECT` abweist
-- Flyway ausschließlich für `overlord_monitor`, erste Migration mit `audit_log`
-- `TimeProvider`-Interface: Produktion Systemuhr, Dev-Profil `MAX(Message.MessageLastUpdate)`
-- Einheitliches API-Fehlerformat, globaler Exception-Handler
-- Healthcheck, der beide Verbindungen prüft
-- Ein Smoke-Test, der Mandanten und Projekte aus der Testkopie liest
+  Tabellen kollidieren dadurch nicht, und der Import zeigt die Schreibrichtung.
+  Läuft bei jedem lokalen Build, **Ausgabe wird eingecheckt**; die CI überspringt sie über
+  `-Djooq.codegen.skip=true`. Views einschließen (`MessageMandantID`), Routinen und Events
+  ausschließen, `bit(1)` per `forcedType` auf `Boolean`
+- ArchUnit: Klassen aus `jooq.glassfish` nur in Repository-Klassen, `DataSource` nur in `config`,
+  kein direkter Aufruf von `now()`. Das Schreibverbot selbst prüft ArchUnit nicht — dafür sorgen
+  die DB-Rechte, der `readOnly`-Pool und ein jOOQ-`ExecuteListener`, der auf dem Lese-`DSLContext`
+  alles außer `SELECT` abweist
+- Flyway ausschließlich für `overlord_monitor`, erste Migration mit `audit_log`. Zeichensatz und
+  Sortierung in jeder Migration **explizit**, Token-Spalten mit `COLLATE utf8mb4_bin`
+- Zeitquelle als `java.time.Clock`: Produktion Systemuhr, Dev-Profil ein `Clock.offset(...)`, der
+  beim Start aus `MAX(Message.MessageLastUpdate)` berechnet wird. Die Zeit läuft weiter statt
+  einzufrieren
+- Einheitliches API-Fehlerformat (RFC 9457), globaler Exception-Handler. Regel ab hier: fremde und
+  nicht existierende Ressourcen liefern beide `404`, niemals `403`
+- Healthcheck, der beide Verbindungen getrennt ausweist
+- **Statuskatalog vorgezogen aus Schritt 3:** `SELECT DISTINCT MessageStatus` erheben,
+  `docs/message-status.md` anlegen, `MessageStatusClassifier` in `common` bauen. Die Fehlerbedingung
+  entsteht hier einmal und wird nirgends nachgebaut
+- Tests in zwei Stufen: ohne Datenbank (ArchUnit, Listener, Clock, Fehlerformat) und mit
+  `@Tag("db")` markiert (Rauchtest, schemaübergreifender Join, Schreibverbot, Statuskatalog,
+  Zeitzonen-Rundlauf, Schemaabgleich Test gegen Produktion)
+- Die vorhandene CI-Konfiguration aus Schritt 1 anpassen: `-Djooq.codegen.skip=true` und
+  `-DexcludedGroups=db`
 
-**Abgrenzung:** Keine fachlichen Endpunkte, keine Authentifizierung.
+**Abgrenzung:** Keine fachlichen Endpunkte, keine Authentifizierung, kein `process_catalog`.
 
-**Abnahme:** Healthcheck grün, Smoke-Test liefert echte Mandanten. Ein Schreibversuch auf
-`GlassfishDB` scheitert an fehlenden Rechten — das wird als Test festgehalten.
+**Abnahme:** Healthcheck grün und beide Verbindungen getrennt sichtbar. Rauchtest liefert echte
+Mandanten. **Ein schemaübergreifender Join läuft in einem einzigen Statement durch** — ohne diesen
+Nachweis ist der Schritt nicht fertig, denn daran hängt ab Schritt 9 die gesamte Partnerzuordnung.
+Ein Schreibversuch auf `GlassfishDB` scheitert an fehlenden Rechten. Der Build läuft auch ohne
+Datenbankzugriff durch.
 
-**Dokumentation:** `docs/datenzugriff.md`
+**Dokumentation:** `docs/datenzugriff.md`, `docs/message-status.md`, `docs/annahmen-korrekturen.md`
 
 ---
 
@@ -128,8 +159,12 @@ eigene Schema.
 - Cookie mit `HttpOnly`, `Secure`, `SameSite=Lax`
 - Sperre nach fünf Fehlversuchen für 15 Minuten, zusätzlich Begrenzung pro IP
 - Unspezifische Fehlermeldungen
-- `SELECT DISTINCT MessageStatus` einmalig ausführen und das Ergebnis dokumentieren
+- Session-Tabelle über `@SpringSessionDataSource` an `overlord_monitor` gebunden. Die Spalte mit
+  der Session-ID bekommt `COLLATE utf8mb4_bin` — die Standardsortierung des Schemas vergleicht ohne
+  Rücksicht auf Groß- und Kleinschreibung
+- Sitzungsablauf und Sperrfristen rechnen mit der **Systemuhr**, nicht mit dem Clock aus Schritt 2
 - Migrationsskript für Altnutzer: Name, Mandant, Rolle übernehmen, Konten gesperrt anlegen
+  (36 Konten in der Alt-`User`-Tabelle)
 - Endpunkt für den angemeldeten Nutzer inklusive Rolle
 - Der `MandantContext` wird aus der Session aufgelöst und ist ab hier Pflichtparameter jeder
   Repository-Methode
@@ -159,10 +194,17 @@ geschützten Route leitet um, sechster Fehlversuch sperrt.
 - Listen-Endpunkt mit Pflicht-Zeitfenster (Standard 24 Stunden, Maximum ein Jahr)
 - Cursor-Paginierung über `(MessageLastUpdate, MessageID)`, kein `OFFSET`
 - Filter: Status, Prozess, Freitext auf Prozessname
-- Statusabbildung: `ERROR_*` gleich Fehler, `SUSPENDED` gleich Warten, Timeout-Überschreitung
-  berechnet aus `MessageLastUpdate + MessageTimeout`
+- Statusabbildung **ausschließlich über den `MessageStatusClassifier` aus Schritt 2**, nicht inline.
+  Fehler heißt `ERROR_*` **oder** `COMMIT_REJECTED`. `SUSPENDED` heißt Warten.
+  Timeout-Überschreitung berechnet aus `MessageLastUpdate + MessageTimeout`, "läuft noch" definiert
+  als "nicht in einem Endstatus" — **nicht** als `MessageStatus = 'RUNNING'`, den es in der
+  Testkopie null Mal gibt
+- Zu klären, bevor die Liste steht: 142 Projekte stehen 134 Zeilen in `ProjectMandant` gegenüber
+  (Annahme A8). Projekte ohne Zuordnung wären für niemanden sichtbar
 - Mandantenfilter fest im Statement über `ProjectMandant`
 - Isolationstest: Mandant A fragt ab, Daten von Mandant B sind unerreichbar
+- Hinweis für die Oberfläche: `SPLITTED` und `MERGED` machen zusammen rund 34 Prozent aller Zeilen
+  aus. Eine ungefilterte Liste besteht zu einem Drittel aus Zwischenprodukten
 
 **Frontend**
 - Tabelle mit serverseitiger Paginierung und Sortierung
@@ -244,6 +286,12 @@ Nachricht ist die Quittung sichtbar.
 
 **Backend**
 - Suchendpunkt über `MessageBAM` mit dem eigenen Index auf `MessageBAMValue`
+  (10,9 Millionen Zeilen, 7,1 GB)
+- **`MessageBAM` hat keinen Zeitstempel.** Das Pflicht-Zeitfenster greift erst nach dem Join auf
+  `Message`, also nach dem teuren Teil. Ein `LIMIT` vor dem Join schneidet die falschen Zeilen ab.
+  Zuerst messen, dann entscheiden. Rückfalloption, falls die Messung nicht trägt: ein eigener
+  BAM-Index in `overlord_monitor` mit Wert, Typ, `MessageID`, Zeitstempel und Mandant, vom
+  Rollup-Job mitgeführt (Annahme A9)
 - **Hartes Ergebnislimit und Mindestlänge des Suchbegriffs.** Werte wie `050` kommen
   millionenfach vor
 - Sichtbare BAM-Typen und deren Reihenfolge aus `MessageBAMMandant` je Mandant
@@ -363,6 +411,16 @@ als erwartet, wird geteilt: erst die Detailansicht mit Rohwerten, dann die Über
 **Reihenfolge ist nicht beliebig.** Schritte 1 bis 3 sind Voraussetzung für alles Weitere.
 Schritt 10 setzt den gefüllten Katalog aus Schritt 9 voraus, sonst zeigt das Dashboard
 überwiegend "nicht zugeordnet".
+
+**Die CI erreicht die Datenbank nicht.** Das Repository liegt in der Cloud, die Testkopie im
+internen Netz. Deshalb gilt ab Schritt 2 dauerhaft: generierte jOOQ-Quellen sind eingecheckt,
+datenbankgebundene Tests tragen `@Tag("db")` und werden in der CI ausgeschlossen. Jeder neue Test,
+der eine Verbindung braucht, bekommt diese Markierung — sonst steht die Pipeline rot.
+
+**Der Rollup in Schritt 10 ist kein Zwang, sondern eine Entlastung.** Bei 3,3 Millionen Zeilen in
+`Message` wäre Live-Aggregation technisch möglich; das Altsystem macht sie tagesweise. Der Rollup
+existiert für Ladezeit und Ruhe auf der Produktionsdatenbank. Diese Begründung bitte so
+verwenden — die frühere Zahl von 36 Millionen Zeilen war falsch.
 
 **Nach jedem Schritt gilt:** Isolationstest grün, Abfrage gegen die Testkopie gemessen,
 Dokumentation aktualisiert. Erst dann ist der Schritt fertig.

@@ -15,6 +15,10 @@
 # Der Maven-Wrapper ist ein POSIX-Shellskript und bleibt LF.
 mvnw text eol=lf
 
+# Generierte jOOQ-Quellen: eingecheckt (die CI erreicht die Testkopie nicht), aber
+# in Diffs und Sprachstatistik als generiert markiert.
+src/main/generated-java/** linguist-generated=true
+
 # Binaerdateien nie umschreiben.
 *.jar   binary
 *.zip   binary

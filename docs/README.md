@@ -46,11 +46,18 @@ Kurz, konkret, aus der Sicht von jemandem, der das Feature später ändern muss:
 
 ### Features
 
-Noch keine — Schritt 1 legt nur das Fundament. Die folgenden Dateien entstehen laut Plan:
+Angelegt:
+
+| Datei | Aus Schritt | Inhalt |
+|---|---|---|
+| [`datenzugriff.md`](datenzugriff.md) | Schritt 2 | Zwei DataSources, zwei DSLContexts, ein Transaktionsmanager, dreischichtiger Schreibschutz, Flyway, Zeitquellen, Fehlerformat, jOOQ-Codegenerierung, Tests |
+| [`message-status.md`](message-status.md) | Schritt 2 | Statuskatalog, `MessageStatusClassifier`, die eine Fehlerbedingung (vorgezogen aus Schritt 3) |
+| [`annahmen-korrekturen.md`](annahmen-korrekturen.md) | Schritt 2 | Was die Erhebungen gegenüber der Projektbeschreibung verändert/bestätigt haben |
+
+Die folgenden Dateien entstehen laut Plan:
 
 | Datei | Entsteht in | Inhalt |
 |---|---|---|
-| `datenzugriff.md` | Schritt 2 | DataSources, jOOQ-Codegenerierung, Flyway, `TimeProvider`, Fehlerformat |
 | `authentifizierung.md` | Schritt 3 | Anmeldung, Session, Sperre, Migration der Altnutzer |
 | `mandantentrennung.md` | Schritt 3 | Wie die Trennung durchgesetzt und geprüft wird |
 | `nachrichtenliste.md` | Schritt 4 | Listen-Endpunkt, Zeitfenster, Cursor, Filter |
@@ -74,4 +81,4 @@ Einmalig erhobene Fakten über das Quellsystem, die sonst niemand mehr nachvollz
 
 | Datei | Entsteht in | Inhalt |
 |---|---|---|
-| `message-status-werte.md` | Schritt 3 | Ergebnis von `SELECT DISTINCT MessageStatus` — prüft Annahme A6 aus der Projektbeschreibung |
+| [`message-status.md`](message-status.md) | **Schritt 2** (vorgezogen) | Ergebnis von `SELECT DISTINCT MessageStatus` — widerlegt Annahme A6. Ersetzt das ursprünglich für Schritt 3 geplante `message-status-werte.md` |

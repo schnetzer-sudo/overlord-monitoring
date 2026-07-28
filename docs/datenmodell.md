@@ -283,22 +283,37 @@ damit Endlosketten nicht auflaufen.
 
 ## 8. Größenordnung
 
+Gemessenes Mengengerüst (27.07.2026, ersetzt die frühere Schätzung):
+
+| Tabelle | Zeilen | Größe |
+|---|---|---|
+| `MessageProperty` | 46.964.279 | 61,0 GB |
+| `MessageBAM` | 10.859.666 | 7,1 GB |
+| `MessageAction` | 10.215.743 | 3,0 GB |
+| `Message` | 3.341.519 | 2,9 GB |
+| `Process` | 1.490 | — |
+| `Project` | 142 | — |
+
 | Kennzahl | Wert |
 |---|---|
-| Nachrichten pro Tag | 10.000 bis 100.000 |
-| Aufbewahrung | ein Jahr |
-| Zeilen in `Message` | bis rund 36 Millionen |
-| Zeilen in `MessageProperty` | mehrere hundert Millionen |
-| Prozesse | rund 1.500 (Annahme A7) |
+| Nachrichten pro Tag | rund 5.000 |
+| Aufbewahrung | **22 Monate** (ältester Datensatz 01.10.2024) |
+| Prozesse | 1.490 (Annahme A7 bestätigt) |
+
+Die **Zeilenzahl war nie die richtige Kennzahl.** `MessageProperty` belegt 61 GB und ist damit 82 %
+der Datenbank; dort entscheidet die Bytegröße. Die frühere Annahme (36 Mio. Zeilen in `Message`,
+mehrere hundert Millionen in `MessageProperty`) ist überholt — siehe
+[`annahmen-korrekturen.md`](annahmen-korrekturen.md).
 
 **Gelesen wird zur Laufzeit auf der Produktionsdatenbank.** Eine laufend aktualisierte Replica
 existiert nicht. Deshalb sind die Leistungsregeln L1 bis L6 verbindlich und nicht verhandelbar.
 
 | Umgebung | Inhalt | Verwendung |
 |---|---|---|
-| **Testkopie** | Vollkopie der Produktion, Daten **bis Ende 2025** | Entwicklung, Tests, Messung von Abfrageplänen |
+| **Testkopie** | Vollkopie der Produktion, Datenstand **08.07.2026** | Entwicklung, Tests, Messung von Abfrageplänen |
 | **Produktion** | Live | Laufzeitdatenquelle der Anwendung |
 
-⚠️ Weil die Testkopie Ende 2025 endet, liefert ein Standard-Zeitfenster von 24 Stunden dort null
-Zeilen. Deshalb wird `LocalDateTime.now()` nirgends direkt aufgerufen — stattdessen `TimeProvider`
-(Regel Z1).
+⚠️ Weil die Testkopie hinter der realen Uhrzeit zurückliegt (am 28.07.2026 rund 19 Tage), liefert ein
+Standard-Zeitfenster von 24 Stunden dort null Zeilen. Deshalb wird `LocalDateTime.now()` nirgends
+direkt aufgerufen — stattdessen die Anwendungsuhr (`Clock`) aus `common` (Regel Z1). Siehe
+[`datenzugriff.md`](datenzugriff.md).

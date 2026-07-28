@@ -33,6 +33,18 @@ Nur einer der beiden besitzt zusätzlich Schreibrechte, und ausschließlich auf 
 Die Schreibgarantie hängt an den DB-Rechten, nicht an der Trennung der Verbindungen. Der Lese-Pool
 wird zusätzlich auf JDBC-Ebene als `readOnly` markiert.
 
+**Die Regel für die beiden jOOQ-`DSLContext`s** (ab Schritt 2) lautet nicht „`monitor`-Klassen
+gehören zum Schreib-Kontext", sondern:
+
+> Der Lese-`DSLContext` (`glassfishDsl`) darf **beide** Schemata lesen. Der Schreib-`DSLContext`
+> (`monitorDsl`) darf ausschließlich `overlord_monitor` und ausschließlich dort schreiben.
+
+Schemaübergreifende Abfragen laufen zwingend über eine einzige Verbindung, also über den Lese-Pool.
+Deshalb kein `defaultSchema` in der jOOQ-Konfiguration — Schemanamen werden immer voll qualifiziert
+gerendert. Keine der beiden DataSources ist `@Primary`; es gibt genau einen
+`PlatformTransactionManager`, gebunden an `overlord_monitor`. Vollständig in
+[`docs/datenzugriff.md`](docs/datenzugriff.md).
+
 **Keine lokale Datenbank für die Entwicklung, kein `docker-compose.yml`.** Entwickelt wird gegen
 die Testkopie. Eine Datenbank im Container wäre nutzlos, weil `overlord_monitor` wegen der
 schemaübergreifenden Joins zwingend auf derselben Instanz liegen muss wie `GlassfishDB`. Container
@@ -295,13 +307,18 @@ Feature-Dokumentation unter `docs/`.
 `LocalDate.now()`, `Instant.now()`, `ZonedDateTime.now()`, `OffsetDateTime.now()`,
 `new Date()` und `System.currentTimeMillis()`.
 
-Stattdessen ein `TimeProvider`-Interface in `common`: in Produktion die Systemuhr, im Dev-Profil
-das Maximum aus `Message.MessageLastUpdate`. Grund: Die Testkopie endet Ende 2025, die reale
-Uhrzeit liegt darüber hinaus. Ein Standard-Zeitfenster von 24 Stunden liefert dort null Zeilen und
-lässt korrekte Anwendungsteile kaputt aussehen. Nebeneffekt: Die Anwendung wird testbar.
+Stattdessen zwei `java.time.Clock`-Beans in `common` (`common/ZeitConfig`, ab Schritt 2): die
+**Anwendungsuhr** (`@Primary`) und `systemClock`. In Produktion ist die Anwendungsuhr die Systemuhr,
+im Dev-Profil um den Rückstand der Testkopie zurückversetzt (Maximum aus `Message.MessageLastUpdate`,
+läuft weiter statt einzufrieren). Grund: Die Testkopie liegt hinter der realen Uhrzeit; ein
+Standard-Zeitfenster von 24 Stunden liefert dort sonst null Zeilen und lässt korrekte
+Anwendungsteile kaputt aussehen. Nebeneffekt: Die Anwendung wird testbar.
 
-Die einzige Klasse, die die Systemuhr lesen darf, ist die Produktivimplementierung von
-`TimeProvider`. `PaketstrukturTest` prüft das.
+**Sicherheitsrelevante Zeit** (Sitzungsablauf, Sperrfristen ab Schritt 3) und Protokollzeit nutzen
+niemals die Anwendungsuhr, sondern `systemClock` (echte Uhr, UTC).
+
+Die einzige Stelle, die die Systemuhr liest, ist `ZeitConfig` in `common`. `PaketstrukturTest`
+prüft, dass `now()` und Verwandte außerhalb von `common` nicht aufgerufen werden.
 
 **Z2 — `MessageTimeout` ist eine Dauer in Minuten, kein Zeitpunkt.** Der Timeout-Zeitpunkt wird im
 Backend als `MessageLastUpdate + MessageTimeout` berechnet.
@@ -421,14 +438,14 @@ Framework 7 bringt `ProblemDetail` mit; es wird nichts Eigenes gebaut.
   "status": 400,
   "detail": "Das Zeitfenster darf höchstens ein Jahr umfassen.",
   "instance": "/api/nachrichten",
-  "fehlerId": "b7c1f2e4-…"
+  "traceId": "b7c1f2e4-…"
 }
 ```
 
 - `title` und `detail` sind **deutsch und für den Nutzer lesbar**. Sie dürfen unverändert angezeigt
   werden.
-- `fehlerId` ist eine Korrelations-ID. Sie steht auch im Serverprotokoll. Damit kann ein Nutzer
-  eine Störung melden, ohne dass ihm interne Details gezeigt werden.
+- `traceId` ist eine Korrelations-ID (ab Schritt 2 so benannt). Sie steht auch im Serverprotokoll.
+  Damit kann ein Nutzer eine Störung melden, ohne dass ihm interne Details gezeigt werden.
 - Feldbezogene Prüffehler kommen zusätzlich als `errors: [{ "feld": …, "meldung": … }]`.
 
 Statuscodes:
@@ -477,7 +494,7 @@ Infrastruktur an jemanden außerhalb des Hauses.
 Ein globaler `@RestControllerAdvice` in `common` ist die **einzige** Stelle, die Ausnahmen in
 Antworten übersetzt. Kein Controller fängt selbst.
 
-Jeder Protokolleintrag trägt die `fehlerId`, den Endpunkt, den Benutzernamen und den Mandanten.
+Jeder Protokolleintrag trägt die `traceId`, den Endpunkt, den Benutzernamen und den Mandanten.
 **Nie protokolliert werden**: Passwörter, Session-IDs, Cookie-Werte, Inhalte von EDI-Nutzdaten
 und `MessagePropertyValue` — dort stehen Preise, Mengen und Kundendaten.
 
@@ -496,7 +513,7 @@ Anwendungsprotokoll.
 | **Unit** | JUnit Jupiter, AssertJ, Mockito | Fachlogik ohne Datenbank: Statusabbildung, Timeout-Berechnung, Cursor-Kodierung, Übersetzung der Prozessschritte |
 | **Integration** | Spring Boot Test gegen die **Testkopie** | Repositories und Endpunkte mit echtem SQL |
 | **Isolation** | Spring Boot Test gegen die Testkopie | Mandantentrennung, **pflichtig je Endpunkt** |
-| **Architektur** | ArchUnit | Paketstruktur, `TimeProvider`, kein JPA, ab Schritt 2 `jooq.glassfish` |
+| **Architektur** | ArchUnit | Paketstruktur, Zeitquelle (`Clock` statt `now()`), kein JPA, ab Schritt 2 `jooq.glassfish` |
 
 ### Der Mandanten-Isolationstest ist Pflicht
 
@@ -513,14 +530,20 @@ Das ist kein Richtwert und keine Empfehlung.
 
 ### Integrationstests laufen gegen die Testkopie
 
-Vollkopie der Produktion mit Daten bis Ende 2025. Deshalb: Kein Test darf `now()` als
-Referenzzeitpunkt annehmen — er nutzt den `TimeProvider` (Z1). Tests schreiben **niemals** nach
+Vollkopie der Produktion, Datenstand 08.07.2026 und damit hinter der realen Uhrzeit. Deshalb: Kein
+Test darf `now()` als Referenzzeitpunkt annehmen — er nutzt die Anwendungsuhr (`Clock` aus `common`,
+Z1). Tests schreiben **niemals** nach
 `GlassfishDB` (S1); sie lesen vorhandene Daten und legen benötigte eigene Datensätze
 ausschließlich in `overlord_monitor` an.
 
-Zugangsdaten der Testkopie kommen aus Umgebungsvariablen. Fehlen sie, werden die
-Integrationstests übersprungen statt zu scheitern — der Build bleibt für jemanden ohne DB-Zugang
-brauchbar. Der Unit- und der Architekturteil laufen immer.
+Zugangsdaten der Testkopie kommen aus Umgebungsvariablen.
+
+**Datenbankgebundene Tests tragen ab Schritt 2 `@Tag("db")`** und laufen lokal standardmäßig mit
+(Namensschema `<Thema>IT` über Failsafe in der Phase `verify`; der Kontext-Rauchtest über Surefire).
+Die CI — und jeder ohne DB-Zugang — schließt die Gruppe über `-DexcludedGroups=db` aus; die Option
+wirkt in Surefire wie in Failsafe. Der Unit- und der Architekturteil laufen immer, auch ohne
+Datenbank. Zusammen mit den eingecheckten jOOQ-Quellen und `-Djooq.codegen.skip=true` bleibt der
+Build für jemanden ohne DB-Zugang vollständig brauchbar.
 
 ### Messung
 

@@ -34,8 +34,11 @@ stillschweigend gebrochen:
 5. **Keine `OFFSET`-Paginierung** — ausschließlich cursor-basiert.
 6. **`MessageProperty` nur über `MessageID`** — nie über den Wert filtern, gruppieren, sortieren.
 7. **Keine Live-Aggregation über `Message`** — Kennzahlen kommen aus `message_rollup`.
-8. **`LocalDateTime.now()` wird nirgends direkt aufgerufen** — stattdessen `TimeProvider`.
-9. **Fehlerprüfung über `LEFT(MessageStatus, 6) = 'ERROR_'`**, nicht über `LIKE 'ERROR_%'`.
+8. **`LocalDateTime.now()` wird nirgends direkt aufgerufen** — stattdessen die `Clock`-Beans aus
+   `common/ZeitConfig` (Anwendungsuhr bzw. `systemClock`).
+9. **Fehlerprüfung nur über `MessageStatusClassifier.fehlerBedingung(...)`** — niemals über das
+   naive `LIKE 'ERROR_%'` (`_` ist ein Platzhalter). Die dort umgesetzte Fassung und ihre
+   Begründung stehen in `docs/message-status.md`.
 10. **Pro Endpunkt ein Mandanten-Isolationstest.** Ohne ihn wird nicht gemergt.
 
 ## Dokumentationspflicht

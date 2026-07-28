@@ -29,6 +29,21 @@
     <archunit.version>1.4.2</archunit.version>
     <spotless-maven-plugin.version>3.8.0</spotless-maven-plugin.version>
     <google-java-format.version>1.35.0</google-java-format.version>
+
+    <!--
+      Die jOOQ-Codegenerierung laeuft bei jedem lokalen Build gegen die Testkopie.
+      Ihre Ausgabe (src/main/generated-java) wird EINGECHECKT. Die CI erreicht die
+      Testkopie im internen Netz nicht und setzt daher -Djooq.codegen.skip=true; sie
+      kompiliert gegen die versionierten Quellen. Standard hier ist false.
+      Siehe docs/datenzugriff.md und DEVELOPMENT_GUIDELINES.md.
+    -->
+    <jooq.codegen.skip>false</jooq.codegen.skip>
+
+    <!--
+      Verzeichnis der generierten jOOQ-Quellen. Wird versioniert, per build-helper
+      als Quellverzeichnis ergaenzt und von Spotless bewusst NICHT angefasst.
+    -->
+    <jooq.generated.dir>${project.basedir}/src/main/generated-java</jooq.generated.dir>
   </properties>
 
   <dependencies>
@@ -43,6 +58,39 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+
+    <!--
+      Datenzugriff. In Spring Boot 4 ist die Autokonfiguration modularisiert: jedes
+      Starter bringt sein eigenes ...autoconfigure-Modul mit. spring-boot-starter-jooq
+      zieht spring-boot-starter-jdbc (HikariCP, spring-jdbc) transitiv mit; beide sind
+      hier trotzdem explizit genannt, damit die Abhaengigkeit sichtbar bleibt.
+    -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-jdbc</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-jooq</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-flyway</artifactId>
+    </dependency>
+
+    <!-- Flyway spricht MariaDB ueber das flyway-mysql-Modul an. -->
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-mysql</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+
+    <!-- MariaDB Connector/J. Version wird vom Spring-Boot-BOM verwaltet. -->
+    <dependency>
+      <groupId>org.mariadb.jdbc</groupId>
+      <artifactId>mariadb-java-client</artifactId>
+      <scope>runtime</scope>
     </dependency>
 
     <dependency>
@@ -72,6 +120,25 @@
       </plugin>
 
       <!--
+        Failsafe fuehrt die Integrationstests (*IT) in der Phase "verify" aus.
+        Sie tragen alle @Tag("db") und laufen lokal gegen die Testkopie mit; die
+        CI schliesst die Gruppe ueber -DexcludedGroups=db aus (dieselbe Eigenschaft
+        wie bei Surefire). Version aus dem Spring-Boot-BOM.
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!--
         Spotless ist im Build verankert: "spotless:check" haengt an der Phase
         "validate". "./mvnw verify" schlaegt damit bei Formatverstoessen fehl,
         bevor ueberhaupt kompiliert wird. Reparatur: ./mvnw spotless:apply
@@ -82,6 +149,16 @@
         <version>${spotless-maven-plugin.version}</version>
         <configuration>
           <java>
+            <!--
+              Nur handgeschriebener Code. Die generierten jOOQ-Quellen unter
+              src/main/generated-java werden von build-helper als Quellverzeichnis
+              ergaenzt; ohne die explizite Einschraenkung wuerde Spotless sie mit
+              formatieren und der Build bei jeder Neugenerierung anschlagen.
+            -->
+            <includes>
+              <include>src/main/java/**/*.java</include>
+              <include>src/test/java/**/*.java</include>
+            </includes>
             <googleJavaFormat>
               <version>${google-java-format.version}</version>
               <style>GOOGLE</style>
@@ -124,6 +201,176 @@
             </goals>
           </execution>
         </executions>
+      </plugin>
+
+      <!--
+        jOOQ-Codegenerierung, zwei Ausfuehrungen in zwei getrennte Zielpakete.
+        Der Generator laeuft mit dem Schreibbenutzer (monitor_root), weil er auch
+        das eigene Schema liest; auf GlassfishDB besitzt auch dieser Benutzer nur
+        SELECT. Keine eigene <version> — sie kommt aus dem Spring-Boot-BOM und ist
+        damit an die Laufzeit-jOOQ-Version (3.21.x) gekoppelt.
+
+        Zugangsdaten stehen NICHT hier, sondern kommen ueber Umgebungsvariablen
+        (${env.*}). Ausgabeverzeichnis ist src/main/generated-java und wird
+        eingecheckt. Uebersprungen ueber -Djooq.codegen.skip=true (CI).
+      -->
+      <plugin>
+        <groupId>org.jooq</groupId>
+        <artifactId>jooq-codegen-maven</artifactId>
+        <dependencies>
+          <dependency>
+            <groupId>org.mariadb.jdbc</groupId>
+            <artifactId>mariadb-java-client</artifactId>
+            <version>${mariadb.version}</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <!-- GlassfishDB: Quellschema, ausschliesslich lesend. -->
+          <execution>
+            <id>codegen-glassfish</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <configuration>
+              <skip>${jooq.codegen.skip}</skip>
+              <jdbc>
+                <driver>org.mariadb.jdbc.Driver</driver>
+                <url>jdbc:mariadb://${env.OVERLORD_DB_HOST}:${env.OVERLORD_DB_PORT}/${env.OVERLORD_DB_GLASSFISH_SCHEMA}</url>
+                <user>${env.OVERLORD_DB_WRITE_USER}</user>
+                <password>${env.OVERLORD_DB_WRITE_PASSWORD}</password>
+              </jdbc>
+              <generator>
+                <database>
+                  <name>org.jooq.meta.mariadb.MariaDBDatabase</name>
+                  <inputSchema>${env.OVERLORD_DB_GLASSFISH_SCHEMA}</inputSchema>
+                  <includes>.*</includes>
+                  <!-- Views einschliessen (MessageMandantID); Routinen, Sequenzen,
+                       Pakete und UDTs ausschliessen. -->
+                  <includeTables>true</includeTables>
+                  <includeRoutines>false</includeRoutines>
+                  <includeSequences>false</includeSequences>
+                  <includePackages>false</includePackages>
+                  <includeUDTs>false</includeUDTs>
+                  <forcedTypes>
+                    <!-- bit(1) -> Boolean, betrifft Message.Source und Message.Target. -->
+                    <forcedType>
+                      <name>BOOLEAN</name>
+                      <includeTypes>(?i:BIT\(1\))</includeTypes>
+                    </forcedType>
+                  </forcedTypes>
+                </database>
+                <target>
+                  <packageName>de.kraftwerkone.overlord.monitor.jooq.glassfish</packageName>
+                  <directory>${jooq.generated.dir}</directory>
+                </target>
+              </generator>
+            </configuration>
+          </execution>
+          <!-- overlord_monitor: eigenes Schema, schreibend. -->
+          <execution>
+            <id>codegen-monitor</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <configuration>
+              <skip>${jooq.codegen.skip}</skip>
+              <jdbc>
+                <driver>org.mariadb.jdbc.Driver</driver>
+                <url>jdbc:mariadb://${env.OVERLORD_DB_HOST}:${env.OVERLORD_DB_PORT}/${env.OVERLORD_DB_MONITOR_SCHEMA}</url>
+                <user>${env.OVERLORD_DB_WRITE_USER}</user>
+                <password>${env.OVERLORD_DB_WRITE_PASSWORD}</password>
+              </jdbc>
+              <generator>
+                <database>
+                  <name>org.jooq.meta.mariadb.MariaDBDatabase</name>
+                  <inputSchema>${env.OVERLORD_DB_MONITOR_SCHEMA}</inputSchema>
+                  <includes>.*</includes>
+                  <!-- Flyways Buchhaltungstabelle gehoert nicht ins Modell. -->
+                  <excludes>flyway_schema_history</excludes>
+                  <includeTables>true</includeTables>
+                  <includeRoutines>false</includeRoutines>
+                  <includeSequences>false</includeSequences>
+                  <includePackages>false</includePackages>
+                  <includeUDTs>false</includeUDTs>
+                  <forcedTypes>
+                    <forcedType>
+                      <name>BOOLEAN</name>
+                      <includeTypes>(?i:BIT\(1\))</includeTypes>
+                    </forcedType>
+                  </forcedTypes>
+                </database>
+                <target>
+                  <packageName>de.kraftwerkone.overlord.monitor.jooq.monitor</packageName>
+                  <directory>${jooq.generated.dir}</directory>
+                </target>
+              </generator>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!--
+        Fuegt die generierten jOOQ-Quellen als Quellverzeichnis hinzu. Ohne diesen
+        Schritt kompiliert der handgeschriebene Code nicht gegen die generierten
+        Typen. Version aus dem Spring-Boot-BOM.
+      -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>add-generated-jooq</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>${jooq.generated.dir}</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!--
+        Flyway als Maven-Plugin, ausschliesslich fuer overlord_monitor. Bewusst NICHT
+        an eine Bauphase gebunden: die CI erreicht die Datenbank nicht. Manuell
+        aufgerufen (./mvnw flyway:migrate), um das Schema vor der ersten
+        Codegenerierung anzulegen. Zur Laufzeit migriert Spring Boot ueber
+        @FlywayDataSource. Zugangsdaten ueber Umgebungsvariablen.
+      -->
+      <plugin>
+        <groupId>org.flywaydb</groupId>
+        <artifactId>flyway-maven-plugin</artifactId>
+        <configuration>
+          <url>jdbc:mariadb://${env.OVERLORD_DB_HOST}:${env.OVERLORD_DB_PORT}/${env.OVERLORD_DB_MONITOR_SCHEMA}</url>
+          <user>${env.OVERLORD_DB_WRITE_USER}</user>
+          <password>${env.OVERLORD_DB_WRITE_PASSWORD}</password>
+          <schemas>
+            <schema>${env.OVERLORD_DB_MONITOR_SCHEMA}</schema>
+          </schemas>
+          <defaultSchema>${env.OVERLORD_DB_MONITOR_SCHEMA}</defaultSchema>
+          <createSchemas>false</createSchemas>
+          <baselineOnMigrate>false</baselineOnMigrate>
+          <locations>
+            <location>filesystem:src/main/resources/db/migration</location>
+          </locations>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-mysql</artifactId>
+            <version>${flyway.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.mariadb.jdbc</groupId>
+            <artifactId>mariadb-java-client</artifactId>
+            <version>${mariadb.version}</version>
+          </dependency>
+        </dependencies>
       </plugin>
     </plugins>
   </build>

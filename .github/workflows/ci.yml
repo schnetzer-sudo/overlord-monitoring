@@ -37,8 +37,14 @@ jobs:
 
       # Enthaelt Spotless (Formatpruefung) und den ArchUnit-Test.
       # Maven bringt der Wrapper selbst mit, inklusive gepinnter Pruefsumme.
+      #
+      # Die CI erreicht die Testkopie im internen Netz nicht. Deshalb:
+      #   -Djooq.codegen.skip=true  ueberspringt die jOOQ-Codegenerierung; kompiliert
+      #                             wird gegen die eingecheckten Quellen (src/main/generated-java).
+      #   -DexcludedGroups=db       schliesst die datenbankgebundenen Tests (@Tag("db"))
+      #                             aus — in Surefire wie in Failsafe.
       - name: Bauen und pruefen
-        run: ./mvnw -B --no-transfer-progress verify
+        run: ./mvnw -B --no-transfer-progress -Djooq.codegen.skip=true -DexcludedGroups=db verify
 
   frontend:
     name: Frontend (Node 24, Next.js 16)

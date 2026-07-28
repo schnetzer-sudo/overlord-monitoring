@@ -15,6 +15,35 @@ spring:
   threads:
     virtual:
       enabled: true
+  # Die beiden DSLContexts werden von Hand gebaut (config/JooqConfig). Boots
+  # jOOQ-Autokonfiguration wuerde einen ConnectionProvider aus genau einer
+  # DataSource ableiten wollen und an den zwei bewusst nicht-primaeren DataSources
+  # scheitern. Sie wird deshalb abgeschaltet.
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.jooq.autoconfigure.JooqAutoConfiguration
+  # Flyway verwaltet AUSSCHLIESSLICH overlord_monitor (Regel S2). Gebunden wird der
+  # Schreib-Pool ueber @FlywayDataSource (config/DataSourceConfig). Das Schema
+  # existiert bereits, wird also nicht angelegt und nicht baselined.
+  flyway:
+    enabled: true
+    default-schema: ${OVERLORD_DB_MONITOR_SCHEMA}
+    schemas: ${OVERLORD_DB_MONITOR_SCHEMA}
+    create-schemas: false
+    baseline-on-migrate: false
+
+# Verbindungsangaben beider Schemata. Ausschliesslich Umgebungsvariablen — die
+# JDBC-URL wird im Code gebaut und traegt bewusst keine Zeitzonenparameter.
+overlord:
+  db:
+    host: ${OVERLORD_DB_HOST}
+    port: ${OVERLORD_DB_PORT}
+    glassfish-schema: ${OVERLORD_DB_GLASSFISH_SCHEMA}
+    monitor-schema: ${OVERLORD_DB_MONITOR_SCHEMA}
+    read-user: ${OVERLORD_DB_READ_USER}
+    read-password: ${OVERLORD_DB_READ_PASSWORD}
+    write-user: ${OVERLORD_DB_WRITE_USER}
+    write-password: ${OVERLORD_DB_WRITE_PASSWORD}
 
 server:
   port: ${SERVER_PORT:8080}
@@ -33,14 +62,14 @@ management:
   endpoints:
     web:
       exposure:
-        # Bewusst minimal. Jeder weitere Endpunkt wird einzeln freigegeben.
-        include: health,info
+        # Ausschliesslich health. Jeder weitere Endpunkt wird einzeln freigegeben.
+        include: health
   endpoint:
     health:
-      # Nach aussen nur der Gesamtstatus, in JEDEM Profil. Die Einzelheiten
-      # nennen Pfade und ab Schritt 2 auch die Datenbankverbindungen — und das
-      # dev-Profil zeigt auf die Testkopie, eine Vollkopie der Produktion.
-      # Wer mehr sehen will, liest das Protokoll.
+      # Nach aussen nur der Gesamtstatus, in JEDEM Profil. Die Einzelheiten nennen
+      # die beiden Datenbankverbindungen — und das dev-Profil zeigt auf die
+      # Testkopie, eine Vollkopie der Produktion. Wer mehr sehen will, liest das
+      # Protokoll. Im dev-Profil sind die Details freigeschaltet (siehe unten).
       show-details: never
       show-components: never
 
@@ -51,14 +80,20 @@ logging:
 
 ---
 # ─── dev ────────────────────────────────────────────────────────────────────
-# Lokale Entwicklung gegen die Testkopie (Daten bis Ende 2025).
-# Ab Schritt 2 liefert der TimeProvider hier MAX(Message.MessageLastUpdate)
-# statt der Systemuhr — sonst liefert das Standard-Zeitfenster von 24 Stunden
-# null Zeilen.
+# Lokale Entwicklung gegen die Testkopie (Datenstand 08.07.2026).
+# Der TimeProvider liefert hier MAX(Message.MessageLastUpdate) statt der Systemuhr
+# — sonst liefert das Standard-Zeitfenster von 24 Stunden null Zeilen.
 spring:
   config:
     activate:
       on-profile: dev
+
+management:
+  endpoint:
+    health:
+      # In der Entwicklung beide Verbindungen getrennt sichtbar.
+      show-details: always
+      show-components: always
 
 logging:
   level:

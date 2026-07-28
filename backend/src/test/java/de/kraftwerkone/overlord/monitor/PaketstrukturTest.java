@@ -24,6 +24,7 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -39,7 +40,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * #GEMEINSAME_PAKETE} oder {@link #FACHPAKETE}. Alle Regeln leiten ihre Paketlisten daraus ab, ein
  * Paket kann also nicht versehentlich aus der Pruefung fallen.
  *
- * <p>Die Regeln zu {@code jooq.glassfish} folgen in Schritt 2, sobald es generierten Code gibt.
+ * <p>Die Regeln zu {@code jooq.glassfish} stehen seit Schritt 2 im Abschnitt „Datenzugriff" am Ende
+ * dieser Klasse.
  */
 class PaketstrukturTest {
 
@@ -55,7 +57,7 @@ class PaketstrukturTest {
   private static final List<String> FACHPAKETE =
       List.of("message", "bam", "payload", "catalog", "rollup", "dashboard", "admin");
 
-  /** Das generierte Paket. Wird nicht von Hand angelegt, entsteht in Schritt 2. */
+  /** Das generierte Paket. Entstand in Schritt 2 durch Codegenerierung, nie von Hand gepflegt. */
   private static final String GENERIERT = "jooq";
 
   private static final JavaClasses KLASSEN =
@@ -205,6 +207,8 @@ class PaketstrukturTest {
         noClasses()
             .that()
             .resideOutsideOfPackage(musterFuer("common"))
+            .and()
+            .resideOutsideOfPackage(musterFuer(GENERIERT))
             .should()
             .callMethod(LocalDateTime.class, "now")
             .orShould()
@@ -237,6 +241,8 @@ class PaketstrukturTest {
   void kein_jpa_kein_hibernate() {
     ArchRule regel =
         noClasses()
+            .that()
+            .resideOutsideOfPackage(musterFuer(GENERIERT))
             .should()
             .dependOnClassesThat()
             .resideInAnyPackage("jakarta.persistence..", "javax.persistence..", "org.hibernate..")
@@ -252,6 +258,8 @@ class PaketstrukturTest {
   void kein_javax() {
     ArchRule regel =
         noClasses()
+            .that()
+            .resideOutsideOfPackage(musterFuer(GENERIERT))
             .should()
             .dependOnClassesThat()
             .resideInAnyPackage("javax.servlet..", "javax.validation..", "javax.annotation..")
@@ -267,12 +275,57 @@ class PaketstrukturTest {
   void kein_jackson_2() {
     ArchRule regel =
         noClasses()
+            .that()
+            .resideOutsideOfPackage(musterFuer(GENERIERT))
             .should()
             .dependOnClassesThat()
             .resideInAnyPackage("com.fasterxml.jackson..")
             .because(
                 "Spring Boot 4 bringt Jackson 3 unter tools.jackson. Ein Import auf"
                     + " com.fasterxml.jackson ist fast immer ein Muster aus Spring Boot 3.")
+            .allowEmptyShould(true);
+    regel.check(KLASSEN);
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────────────────────
+  // Datenzugriff (ab Schritt 2)
+  // ───────────────────────────────────────────────────────────────────────────────────────────
+
+  @Test
+  @DisplayName("Generierte glassfish-Typen nur in Repository-Klassen (Regeln M2, Schreibschutz)")
+  void jooq_glassfish_nur_in_repository_klassen() {
+    ArchRule regel =
+        noClasses()
+            .that()
+            .resideOutsideOfPackage(musterFuer(GENERIERT))
+            .and()
+            .haveSimpleNameNotEndingWith("Repository")
+            .should()
+            .dependOnClassesThat()
+            .resideInAPackage(BASIS + ".jooq.glassfish..")
+            .because(
+                "am Import einer Tabelle aus dem Quellschema muss sofort erkennbar sein, dass sie"
+                    + " nur gelesen wird. Nur Repository-Klassen fassen jooq.glassfish an; Services"
+                    + " und Controller sehen ausschliesslich eigene Typen.")
+            .allowEmptyShould(true);
+    regel.check(KLASSEN);
+  }
+
+  @Test
+  @DisplayName("javax.sql.DataSource wird nur in config verdrahtet")
+  void datasource_nur_in_config() {
+    ArchRule regel =
+        noClasses()
+            .that()
+            .resideOutsideOfPackage(musterFuer(VERDRAHTUNG))
+            .and()
+            .resideOutsideOfPackage(musterFuer(GENERIERT))
+            .should()
+            .dependOnClassesThat()
+            .areAssignableTo(DataSource.class)
+            .because(
+                "die DataSources sind reine Verdrahtung. Fachcode kennt nur DSLContext, niemals die"
+                    + " DataSource selbst.")
             .allowEmptyShould(true);
     regel.check(KLASSEN);
   }
