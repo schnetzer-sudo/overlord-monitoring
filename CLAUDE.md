@@ -62,7 +62,8 @@ Code ohne zugehörige Dokumentation ist unfertig, auch wenn er läuft.
 | Frontend-Abhängigkeiten | `cd frontend && pnpm install` |
 | Frontend bauen und prüfen | `cd frontend && pnpm build` |
 | Frontend starten | `cd frontend && pnpm dev` |
-| Frontend prüfen | `cd frontend && pnpm lint && pnpm typecheck && pnpm format:check` |
+| Frontend prüfen | `cd frontend && pnpm check` (Lint, Typprüfung, Formatprüfung, Tests) |
+| Frontend-Tests einzeln | `cd frontend && pnpm test` |
 
 Formatierung und Linting sind im Build verankert. `./mvnw verify` schlägt bei
 Formatverstößen fehl; `pnpm build` läuft erst nach `lint` und `typecheck`.

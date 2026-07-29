@@ -108,7 +108,21 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     return fehler.getDefaultMessage() == null ? "Ungueltiger Wert" : fehler.getDefaultMessage();
   }
 
-  /** Ergaenzt die {@code traceId} auch bei den von Spring vorbereiteten 4xx-Antworten. */
+  /**
+   * Ergaenzt {@code traceId} und {@code type} bei den von Spring vorbereiteten Antworten.
+   *
+   * <p><b>Warum {@code type} hier noch einmal gesetzt wird.</b> Die Faelle, die {@code
+   * ResponseEntityExceptionHandler} selbst behandelt — unlesbares JSON, falsche HTTP-Methode,
+   * unbekannter Pfad — tragen ohne Zutun {@code about:blank}. Das ist laut RFC 9457 zulaessig, aber
+   * kein Schluessel: Die Oberflaeche uebersetzt anhand des {@code type}, und mit {@code
+   * about:blank} bliebe ihr nur der deutsche Text aus {@code detail}. Eine zweisprachige
+   * Oberflaeche waere damit nicht sauber moeglich.
+   *
+   * <p>Bewusst eine grobe Zuordnung nach Statuscode und keine Liste je Ausnahmetyp: Diese Antworten
+   * sind Randfaelle, die kein Nutzer im Normalbetrieb sieht. {@code 404} bekommt denselben
+   * Schluessel wie {@link RessourceNichtGefundenException} — ein unbekannter Pfad und eine fremde
+   * Ressource sollen sich auch hier nicht unterscheiden.
+   */
   @Override
   protected ResponseEntity<Object> handleExceptionInternal(
       Exception ex,
@@ -120,8 +134,27 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         super.handleExceptionInternal(ex, body, headers, statusCode, request);
     if (antwort != null && antwort.getBody() instanceof ProblemDetail problem) {
       mitTraceId(problem);
+      mitRueckfallTyp(problem);
     }
     return antwort;
+  }
+
+  /** Setzt einen stabilen Problemtyp, wo Spring keinen vergeben hat. */
+  private static void mitRueckfallTyp(ProblemDetail problem) {
+    URI vorhanden = problem.getType();
+    if (vorhanden != null && !"about:blank".equals(vorhanden.toString())) {
+      return;
+    }
+    int status = problem.getStatus();
+    String typ;
+    if (status == HttpStatus.NOT_FOUND.value()) {
+      typ = "nicht-gefunden";
+    } else if (status >= 500) {
+      typ = "technischer-fehler";
+    } else {
+      typ = "anfrage-ungueltig";
+    }
+    problem.setType(URI.create(TYP_BASIS + typ));
   }
 
   private static String mitTraceId(ProblemDetail problem) {

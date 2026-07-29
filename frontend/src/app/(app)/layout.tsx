@@ -1,13 +1,17 @@
 import type { ReactNode } from "react";
 
+import { Anwendungsrahmen } from "@/components/anwendungsrahmen";
+
 /**
- * Layout der Routengruppe "angemeldet".
+ * Layout der Routengruppe „angemeldet".
  *
- * <p>Noch ohne Inhalt. Der Anwendungsrahmen — Navigation, Kopfzeile, Nutzermenue,
- * Abmelden — entsteht in Schritt 3, der Schutz der Routen ebenfalls. Die
- * Berechtigungsentscheidung trifft dabei immer das Backend; rollenabhaengige
- * Navigation hier ist reine Bequemlichkeit.
+ * Alles darunter läuft im Anwendungsrahmen — Kopfzeile mit aktivem Mandanten,
+ * Navigation, Nutzermenü — und durchläuft dort den Ablauf nach dem Anmelden:
+ * Änderungszwang vor Mandantenauswahl vor Startseite.
+ *
+ * **Der Rahmen schützt nichts.** Die Berechtigungsentscheidung trifft immer das
+ * Backend.
  */
 export default function AngemeldetLayout({ children }: { children: ReactNode }) {
-  return <>{children}</>;
+  return <Anwendungsrahmen>{children}</Anwendungsrahmen>;
 }

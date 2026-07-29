@@ -180,23 +180,31 @@ frontend/
 │  │  │  └─ anmeldung/page.tsx
 │  │  ├─ (app)/                 Routengruppe: angemeldet, mit Anwendungsrahmen
 │  │  │  ├─ layout.tsx
+│  │  │  ├─ page.tsx            Startseite
+│  │  │  ├─ passwort/page.tsx
+│  │  │  ├─ mandantenauswahl/page.tsx
 │  │  │  ├─ dashboard/page.tsx
 │  │  │  ├─ nachrichten/page.tsx
 │  │  │  ├─ prozesse/page.tsx
 │  │  │  └─ administration/page.tsx
-│  │  ├─ layout.tsx             Wurzel-Layout
-│  │  ├─ providers.tsx          TanStack Query und nuqs — die einzige "use client"-Insel oben
-│  │  └─ globals.css
-│  ├─ components/
+│  │  ├─ layout.tsx             Wurzel-Layout, liest die Sprache aus dem Cookie
+│  │  ├─ providers.tsx          TanStack Query, nuqs, Sprache — die einzige "use client"-Insel oben
+│  │  └─ globals.css            das gesamte visuelle Konzept: Farben, Typografie, Dichte
+│  ├─ components/              Zusammensetzung: Rahmen, Kopfzeile, Navigation, Zustände
 │  │  └─ ui/                    ausschließlich shadcn/ui — nicht von Hand erweitern
 │  ├─ features/
 │  │  └─ <feature>/             fachliche Bausteine, spiegeln die Backend-Fachpakete
 │  │     ├─ components/
-│  │     ├─ hooks/
+│  │     ├─ hooks.ts
 │  │     └─ api.ts
-│  └─ lib/                      Infrastruktur: HTTP-Client, Query-Client, Formatierung, Utils
+│  ├─ i18n/                     de.ts, en.ts, Kontext, Server-Aktion — jede Zeichenkette
+│  ├─ lib/                      Infrastruktur: HTTP-Client, Query-Client, Routen, Ablauf, Formatierung
+│  └─ proxy.ts                  Routensperre (seit Next.js 16 statt middleware.ts)
+├─ tests/                       Vitest, ohne DOM — geprüft werden Entscheidungen, nicht Markup
 ├─ components.json              shadcn/ui-Konfiguration — nicht von Hand ändern
+├─ next.config.ts               Rewrite /api → Backend (statt CORS)
 ├─ pnpm-workspace.yaml          Freigabe von Installationsskripten (allowBuilds)
+├─ .env.example                 Vorlage; eigene Werte in .env.local (ignoriert)
 ├─ .prettierrc.json
 └─ package.json
 ```
@@ -614,9 +622,23 @@ Die Seite lädt serverseitig genug für einen sinnvollen ersten Anblick; das Nac
 globaler Store, kein `useEffect`-mit-`fetch`. Query-Keys sind strukturiert und beginnen mit dem
 Feature: `['nachrichten', 'liste', filter]`.
 
-Der HTTP-Client liegt in `lib/`, schickt `credentials: 'include'` und übersetzt eine
-`problem+json`-Antwort in einen typisierten Fehler. Ein `401` führt zur Weiterleitung auf die
-Anmeldung.
+Der HTTP-Client liegt in `lib/` und übersetzt eine `problem+json`-Antwort in einen typisierten
+Fehler. **Kein `credentials: 'include'`** (Stand Schritt 3): Der Browser spricht ausschließlich mit
+Next.js, ein Rewrite reicht `/api` an das Backend weiter. Damit ist alles gleiche Herkunft — kein
+CORS, keine Sonderregel für `SameSite`. Vollständig in
+[`docs/frontend-grundlagen.md`](docs/frontend-grundlagen.md).
+
+**Kein erneuter Versuch bei `401`, `403` und `404`.** Bei diesen drei Codes stand das Ergebnis schon
+beim ersten Aufruf fest; ein Wiederholungslauf lässt den Nutzer nur mehrere Sekunden auf eine
+Meldung warten, die sich nicht mehr ändern kann. Mutationen wiederholen grundsätzlich nicht.
+
+Ein `401` führt zur Weiterleitung auf die Anmeldung — **ohne Fehlermeldung**, und an genau einer
+Stelle (`lib/query-client.ts`). Er heißt nicht „etwas ist schiefgegangen", sondern „die Sitzung ist
+weg".
+
+**Beim Mandantenwechsel und beim Abmelden wird der Zwischenspeicher geleert, nicht invalidiert.**
+`invalidateQueries` zeigt die alten Daten weiter an, bis die neue Antwort da ist — nach dem
+Umschalten wären das die Daten des vorherigen Mandanten.
 
 ### Filterzustand: nuqs
 
@@ -656,11 +678,38 @@ ist Bequemlichkeit; verbindlich prüft immer das Backend.
 Konkret: Eine Route für Administratoren wird im Menü ausgeblendet, **und** der Endpunkt dahinter
 prüft die Rolle. Das Ausblenden allein ist keine Absicherung.
 
+### Keine Zeichenkette und kein Farbwert in einer Komponente
+
+Zwei Regeln, beide maschinell geprüft (ab Schritt 3):
+
+**Keine Zeichenkette.** Jeder Text, den ein Nutzer sieht, steht in `src/i18n/de.ts` und `en.ts` und
+wird über `texte.<bereich>.<schluessel>` gelesen. Beide Sprachdateien haben denselben Schlüsselsatz
+— erzwungen durch den Typ **und** durch `tests/sprachdateien.test.ts`.
+
+**Kein Farbwert.** Kein Hex-Wert, keine CSS-Farbfunktion, keine Tailwind-Farbklasse wie
+`text-blue-600`. Farben kommen ausschließlich über Design-Tokens aus `src/app/globals.css`;
+Statusfarben liegen hinter **semantischen** Tokens, deren Namen die Fachlichkeit tragen
+(`--status-fehler`, nicht `--rot`). Die Zuordnung von Status zu Token entsteht an genau einer Stelle
+(`src/lib/status-farbe.ts`). Blockiert durch `tests/farbwerte.test.ts`.
+
+Beide Regeln nehmen `src/components/ui` aus — Generatorbereich von shadcn/ui. Für eigene Bausteine
+gelten sie ohne Ausnahme. Begründung und Änderungswege in
+[`docs/visuelles-konzept.md`](docs/visuelles-konzept.md).
+
 ### Zustände
 
 Jede datengetriebene Ansicht behandelt vier Zustände sichtbar: **Laden**, **Leer**, **Fehler**,
 **Daten**. „Leer" heißt nicht „Fehler" und sieht auch nicht so aus. Bei „Leer" wird gesagt, woran
 es liegen kann — meist am Zeitfenster.
+
+Die Bausteine dafür stehen in `components/zustand.tsx` und werden nicht je Ansicht nachgebaut. Das
+gilt auch für eine Ansicht ohne Daten: Eine leere Seite ist der Zustand „Leer" und sieht auch so
+aus.
+
+**Ein `404` wird niemals als „kein Zugriff" oder „nicht berechtigt" formuliert.** Fremd und nicht
+vorhanden müssen auch in der Anzeige ununterscheidbar bleiben, sonst hebelt die Oberfläche aus, was
+das Backend sorgfältig verbirgt (Regel M3, „404 statt 403"). Übersetzt wird anhand des
+maschinenlesbaren `type` der `problem+json`-Antwort, nicht anhand von `detail`.
 
 ---
 

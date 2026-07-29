@@ -1,0 +1,425 @@
+# Frontend-Grundlagen
+
+Entsteht in Schritt 3, Teil 2. Beschreibt den **Unterbau** der Oberfläche: wie der Browser mit dem
+Backend spricht, warum die Routensperre kein Schutz ist, wie die Sprachdateien aufgebaut sind,
+welche Regeln für den Zwischenspeicher gelten und wie ein Fehlertyp zu einer Übersetzung wird.
+
+Das Aussehen steht in [`visuelles-konzept.md`](visuelles-konzept.md). Die Endpunkte selbst stehen in
+[`authentifizierung.md`](authentifizierung.md) und [`mandantentrennung.md`](mandantentrennung.md).
+
+---
+
+## 1. Der Browser spricht ausschließlich mit Next.js
+
+Jeder `/api`-Aufruf geht an die Next.js-Adresse. Ein Rewrite in `next.config.ts` reicht ihn an das
+Backend weiter:
+
+```ts
+async rewrites() {
+  return [{ source: "/api/:pfad*", destination: `${BACKEND}/api/:pfad*` }];
+}
+```
+
+**Was das erspart:** kein CORS, kein `credentials: "include"`, keine Cookie-Domain, keine Sonderregel
+für `SameSite`, keine Preflight-Anfragen. Alles ist gleiche Herkunft.
+
+**Warum das auch im Betrieb richtig ist:** Dort zieht ohnehin ein Reverse Proxy Frontend und Backend
+unter eine Domain. Der Rewrite bildet genau diese Topologie schon lokal ab — was in der Entwicklung
+funktioniert, funktioniert deshalb auch danach. Die verbreitete Alternative (Frontend auf Port 3000
+spricht direkt mit Port 8080) verhält sich in **beiden** Umgebungen anders als die Produktion und
+verschiebt die Cookie-Probleme nur nach hinten.
+
+**Warum in der Konfiguration und nicht in einem Route Handler:** Ein eigener Handler müsste
+Kopfzeilen, Cookies, Statuscodes und Datenströme selbst durchreichen — eine zweite Stelle, an der
+etwas verloren geht. Beim Rohdaten-Download in Schritt 8 wäre das ein echtes Problem.
+
+Die Backend-Adresse kommt aus `OVERLORD_BACKEND_URL`, Vorlage in `frontend/.env.example`. Der
+Standard `http://localhost:8080` gilt ausschließlich lokal. **Die Variable trägt bewusst kein
+`NEXT_PUBLIC_`**: Der Browser sieht diese Adresse nie.
+
+### CSRF
+
+Das Backend legt den Token als Cookie `XSRF-TOKEN` ab (nicht `HttpOnly`) und erwartet ihn als
+Kopfzeile `X-XSRF-TOKEN`. Sein `CsrfCookieFilter` hängt **vor** der Autorisierung, das Cookie
+entsteht also auch bei einer `401`-Antwort.
+
+`lib/http.ts` nutzt genau das: Fehlt der Token vor dem ersten schreibenden Aufruf, holt es ihn mit
+einem `GET /api/auth/me` — statt den ersten Versuch mit `403` scheitern zu lassen. Lesende Aufrufe
+brauchen ihn nicht.
+
+Nachgemessen am 29.07.2026 über den Rewrite:
+
+```
+GET /api/auth/me  →  401
+                     set-cookie: XSRF-TOKEN=…; Path=/; SameSite=Lax
+                     content-type: application/problem+json
+```
+
+---
+
+## 2. Die Routensperre ist Bequemlichkeit, kein Schutz
+
+`src/proxy.ts` (seit Next.js 16 heißt die Datei so statt `middleware.ts`) prüft **ausschließlich, ob
+ein Sitzungs-Cookie vorhanden ist**. Nicht, ob es gültig ist. Keine Rolle, kein Mandant.
+
+Sie kann das gar nicht: Das Cookie ist `HttpOnly` und sein Inhalt ist eine undurchsichtige
+Sitzungs-ID, die nur das Backend auflösen kann.
+
+Ihr einziger Zweck ist, einem nicht angemeldeten Nutzer den Ladevorgang einer Seite zu ersparen, die
+ihm sofort ein `401` einbrächte. Der Hinweis steht als Kommentar in der Datei — ohne ihn baut
+irgendwann jemand eine Berechtigungsprüfung hinein, und dann liegt die Sicherheitsentscheidung im
+Browser des Nutzers.
+
+**Verbindlich entscheidet immer das Backend**, in jedem einzelnen SQL-Statement.
+
+### Zwei Feinheiten
+
+**`/api` ist vom Matcher ausgenommen.** Sonst bekäme der HTTP-Client bei fehlender Sitzung eine
+HTML-Weiterleitung statt eines `401`, und die gesamte Fehlerbehandlung liefe ins Leere.
+
+**Die Anmeldeseite leitet nur ohne `weiter`-Parameter weiter.** Ohne diese Bedingung entstünde bei
+einem **abgelaufenen** Cookie eine Endlosschleife: Der Sperre genügt die Anwesenheit des Cookies, sie
+schickt zur Startseite; das Backend antwortet `401`; der QueryClient schickt zurück zur Anmeldung;
+die Sperre sieht wieder das Cookie. Mit `weiter` bleibt die Anmeldeseite stehen.
+
+### Zurück im Browser
+
+`Cache-Control: no-store` würde den Zurück-Vorwärts-Zwischenspeicher des Browsers abschalten — genau
+das, was nach dem Abmelden gebraucht wird.
+
+**Es lässt sich hier nicht setzen.** Gemessen gegen Next.js 16.2.11: Eigene Kopfzeilen aus `proxy.ts`
+kommen beim Browser an, `Cache-Control` nicht. Next.js vergibt für dynamisch gerenderte Seiten seinen
+eigenen Wert (`no-cache, must-revalidate`) und überschreibt sowohl die Kopfzeile aus `proxy.ts` als
+auch `headers()` aus `next.config.ts`. Beides wurde ausprobiert, beides ist wirkungslos.
+
+`no-cache` verhindert die Auslieferung aus dem HTTP-Zwischenspeicher, **nicht** die Wiederherstellung
+aus dem bfcache. Der Schutz liegt deshalb im Anwendungsrahmen: Er hört auf `pageshow` und lädt neu,
+sobald `event.persisted` gesetzt ist. Die neue Anfrage läuft durch die Routensperre, und ohne
+Sitzungs-Cookie landet der Nutzer auf der Anmeldung.
+
+---
+
+## 3. Der Ablauf nach dem Anmelden
+
+Die Verzweigung steht in **einer reinen Funktion**, `lib/ablauf.ts`:
+
+```
+Änderungszwang  →  Mandantenauswahl  →  Startseite
+```
+
+| Zustand | Ziel |
+|---|---|
+| nicht angemeldet | `/anmeldung` |
+| `mustChangePassword` | `/passwort` — schlägt alles andere |
+| `mandant === null` | `/mandantenauswahl` |
+| sonst | bleibt, wo er ist |
+
+Ohne React und ohne Netzwerk, damit sie sich prüfen lässt: `tests/ablauf.test.ts` deckt unter anderem
+den Fall ab, dass **beide** Bedingungen zugleich gelten — dann gewinnt der Änderungszwang. Der
+Anwendungsrahmen tut nichts weiter, als das Ergebnis an den Router weiterzureichen.
+
+Auch das ist keine Absicherung: Der `PasswortwechselInterceptor` im Backend lehnt bei gesetztem Zwang
+jeden Endpunkt außer Selbstauskunft, Passwortänderung und Abmeldung ab, und ohne aktiven Mandanten
+antwortet jeder fachliche Endpunkt mit `kein-mandant-gewaehlt`. Die Oberfläche zeigt nur den Weg,
+statt den Nutzer gegen eine Fehlermeldung laufen zu lassen.
+
+**Solange der Änderungszwang steht, gibt es keine Navigation.** Ein Menü wäre dort eine Einladung in
+die Sackgasse.
+
+### Der `weiter`-Parameter
+
+Nach der Anmeldung geht es an den ursprünglich angefragten Ort zurück. Ungeprüft wäre das eine offene
+Weiterleitung: Ein Link auf `/anmeldung?weiter=https://…` führte nach erfolgreicher Anmeldung auf
+eine fremde Seite — mit dem Vertrauen, das der Nutzer gerade dieser Anwendung entgegengebracht hat.
+
+`lib/routen.ts` lässt deshalb nur einen Pfad innerhalb der Anwendung durch: genau ein führender
+Schrägstrich, kein Protokoll, kein Backslash, nicht die Anmeldeseite selbst. Alles andere wird zur
+Startseite. Geprüft in `tests/routen.test.ts`.
+
+---
+
+## 4. Sprachen
+
+### Aufbau
+
+```
+src/i18n/
+├─ de.ts        Leitsprache. Definiert zugleich den Typ `Texte`
+├─ en.ts        `export const en: Texte = { … }`
+├─ index.ts     Sprachliste, Cookie-Name, Auswahl
+├─ server.ts    aktive Sprache für Server-Komponenten
+├─ provider.tsx Kontext für Client-Komponenten (`useTexte`, `useSprache`)
+└─ aktion.ts    Server-Aktion zum Umschalten
+```
+
+**Keine Zeichenkette in einer Komponente.** Sie greift über `texte.anmeldung.titel` zu — verschachtelt
+und typsicher, kein Nachschlagen über einen Punktpfad zur Laufzeit.
+
+Zwei Sicherungen gegen Abweichung:
+
+1. **Zur Bauzeit** — `en: Texte`. Ein fehlender Schlüssel ist ein Typfehler, ein überzähliger auch
+   (überschüssige Eigenschaften eines Objektliterals).
+2. **Zur Laufzeit** — `tests/sprachdateien.test.ts` vergleicht beide Schlüsselsätze in beide
+   Richtungen und prüft, dass kein Text leer ist.
+
+`de.ts` trägt bewusst **kein** `as const`: Sonst wären die Werte Literaltypen und jede englische
+Übersetzung wäre „nicht zuweisbar an `'Anmeldung'`".
+
+### Kein Sprachpräfix in der URL
+
+Die Sprache ist eine Eigenschaft des **Nutzers**, nicht der Ansicht. Ein geteilter Link erscheint
+beim Empfänger in dessen Sprache — bei einem Werkzeug, in dem man Links zu Störungen weitergibt, ist
+das der wichtigere Fall.
+
+Die Wahl liegt im Cookie `overlord_sprache` (ein Jahr, `SameSite=Lax`, nicht `HttpOnly`). Das
+Wurzel-Layout liest es serverseitig, setzt `<html lang>` und reicht **nur die aktive** Sprachdatei in
+den Client-Kontext — die zweite landet nie im ausgelieferten Zustand.
+
+Umgeschaltet wird über eine **Server-Aktion** in einem Formular. Der Grund: Das Layout liest die
+Sprache auf dem Server, der neue Wert muss also dort ankommen; `revalidatePath("/", "layout")`
+erzwingt das. Nebeneffekt, der es wert ist: Die Umschaltung funktioniert auch ohne JavaScript.
+
+**Eine Spalte für die Sprachwahl am Nutzer gibt es bewusst nicht.** Das Cookie genügt, solange
+niemand die Sprache geräteübergreifend erwartet. Wird das je gefordert, kommt eine Spalte an
+`app_user` dazu und das Cookie wird zum Zwischenspeicher — kein Umbau der Oberfläche.
+
+### Datum und Zahlen
+
+Über `Intl` mit der aktiven Sprache (`lib/format.ts`).
+
+**Der wichtigste Teil ist, was nicht passiert.** Die Zeitstempel aus `GlassfishDB` sind Wanduhrzeit
+des Altsystem-Servers ohne Zeitzone. Sie werden angezeigt **wie geliefert**: keine Umrechnung, kein
+`timeZone` beim Formatieren.
+
+Würde man den Wert an `new Date()` geben und in der Zeitzone des Browsers formatieren, stünde ein um
+14:23 verarbeiteter Beleg je nach Standort um 16:23 in der Liste — plausibel genug, dass es niemand
+merkt, und falsch genug, dass die Suche nach dem Zeitpunkt aus dem Altwerkzeug ins Leere geht.
+
+Deshalb liest `lib/format.ts` die gelieferten Felder **einzeln** und baut daraus ein Datum, dessen
+örtliche Felder mit den gelieferten übereinstimmen. `tests/format.test.ts` hält das fest, auch für
+Werte mit angehängtem `Z` oder `+02:00`.
+
+---
+
+## 5. Zwischenspeicher
+
+Serverdaten liegen ausschließlich in TanStack Query. Ein Client, zentral konfiguriert in
+`lib/query-client.ts`.
+
+### Kein zweiter Versuch bei 401, 403 und 404
+
+```ts
+retry: (versuche, fehler) => !istEndgueltig(fehler) && versuche < 1
+```
+
+Bei diesen drei Codes stand das Ergebnis schon beim ersten Aufruf fest. Ohne diese Regel wartet der
+Nutzer mehrere Sekunden auf eine Meldung, die sich nicht mehr ändern kann. Mutationen wiederholen
+grundsätzlich nicht.
+
+### Beim Mandantenwechsel wird geleert, nicht invalidiert
+
+`queryClient.clear()`, nicht `invalidateQueries`.
+
+Der Unterschied ist der ganze Punkt: `invalidateQueries` markiert Daten nur als veraltet und **zeigt
+sie weiter an**, bis die neue Antwort da ist. Nach dem Umschalten stünden für einen Moment die Daten
+des vorherigen Mandanten auf dem Bildschirm — obwohl das Backend sauber ist. Bei einem Werkzeug,
+dessen Kernversprechen die Trennung ist, wäre das der peinlichste denkbare Fehler.
+
+Geleert wird **vor** dem Weitergehen. `lib/zwischenspeicher.ts` macht die Reihenfolge zu einer
+eigenen Funktion, damit sie prüfbar ist; `tests/zwischenspeicher.test.ts` weist sie nach.
+
+Beim **Abmelden** dasselbe, zusätzlich mit harter Navigation — sie wirft auch den Zustand im Speicher
+weg, den ein Router-Wechsel stehen ließe. Und sie läuft in `onSettled`, nicht in `onSuccess`: Der
+Nutzer wollte gehen, auch wenn der Aufruf fehlschlug.
+
+### Bei 401 wird umgeleitet, nicht gemeldet
+
+Eine `401`-Antwort heißt „die Sitzung ist weg". Die einzige sinnvolle Reaktion ist die Anmeldung, und
+zwar ohne Fehlermeldung. `lib/query-client.ts` ist die einzige Stelle, die das tut — für Abfragen
+und Mutationen gleichermaßen. Auf der Anmeldeseite selbst greift sie nicht: Dort ist ein `401` die
+abgelehnte Anmeldung und gehört angezeigt.
+
+### Vier Zustände je Ansicht
+
+Laden, Leer, Fehler, Daten — `components/zustand.tsx`. „Leer" ist kein Fehler und sieht auch nicht so
+aus; wer bei jedem leeren Zeitfenster eine rote Meldung sieht, hört auf, rote Meldungen ernst zu
+nehmen. Bei „Leer" wird gesagt, woran es liegen kann. Das gilt auch für die bewusst leere Startseite.
+
+---
+
+## 6. Fehler: von `type` zur Übersetzung
+
+Antworten im Format RFC 9457 werden in `lib/http.ts` zu einem `ProblemFehler` gelesen: `status`,
+`typ`, `titel`, `detail`, `traceId` und die Feldfehler aus `errors`.
+
+**Übersetzt wird anhand des maschinenlesbaren `type`**, nicht anhand von `detail`:
+
+```
+https://overlord.kraftwerkone.de/probleme/konto-gesperrt
+                                          └── Schlüssel in texte.fehler
+```
+
+`lib/fehlertext.ts` schlägt `texte.fehler[typ]` nach. Fehlt eine Übersetzung, ist `detail` die
+**Rückfallebene** — lieber ein richtiger Satz in der falschen Sprache als „unbekannter Fehler". Die
+Fehler-Kennung (`traceId`) wird nur bei technischen Fehlern gezeigt; bei „Passwort falsch" wäre sie
+Rauschen.
+
+Der Text aus dem Backend ist deutsch und für den Nutzer lesbar — aber eben deutsch. Ohne einen
+Schlüssel müsste die Oberfläche Texte vergleichen, und die ändern sich.
+
+### Die eine Ergänzung am Backend
+
+Die Fehlerantworten aus Teil 1 trugen fast alle einen Typ. Nicht getroffen waren die Fälle, die
+`ResponseEntityExceptionHandler` selbst beantwortet — unlesbares JSON, falsche HTTP-Methode,
+unbekannter Pfad. Sie trugen `about:blank`.
+
+`GlobalExceptionHandler.handleExceptionInternal` setzt jetzt einen Rückfalltyp:
+
+| Status | Typ |
+|---|---|
+| `404` | `nicht-gefunden` — **derselbe** wie bei `RessourceNichtGefundenException` |
+| `5xx` | `technischer-fehler` |
+| sonst | `anfrage-ungueltig` |
+
+Bewusst eine grobe Zuordnung nach Statuscode und keine Liste je Ausnahmetyp: Diese Antworten sind
+Randfälle, die kein Nutzer im Normalbetrieb sieht. Dass `404` denselben Schlüssel bekommt, ist
+dagegen keine Bequemlichkeit — ein unbekannter Pfad und eine fremde Ressource sollen sich auch hier
+nicht unterscheiden.
+
+Nachgemessen am 29.07.2026:
+
+```
+POST /api/auth/mandant  {"mandantId":"GIBTESNICHT"}
+  → 404  type=…/nicht-gefunden
+
+GET  /api/gibtesnicht
+  → 404  type=…/nicht-gefunden      ← ununterscheidbarer Typ
+
+POST /api/auth/me
+  → 405  type=…/anfrage-ungueltig
+```
+
+Der englische `detail`-Text der zweiten Antwort („No static resource …") erreicht den Nutzer nie: Der
+Typ ist übersetzt, die Rückfallebene greift nicht.
+
+### Ein 404 sagt niemals etwas über Berechtigung
+
+„Das Gesuchte gibt es nicht." / „What you are looking for does not exist."
+
+Kein „kein Zugriff", kein „nicht berechtigt". Das Backend verbirgt sorgfältig, ob eine Ressource
+nicht existiert oder einem fremden Mandanten gehört — beides liefert denselben Statuscode und
+denselben Rumpf. Ein Wort wie „berechtigt" in der Oberfläche hebelte genau das aus.
+
+`tests/sprachdateien.test.ts` prüft beide Sprachen gegen eine Wortliste und blockiert den Build,
+sobald jemand den Text „hilfreicher" macht.
+
+### Meldungen bei der Anmeldung
+
+Unspezifisch, wie im Backend: Ob der Benutzername unbekannt oder das Passwort falsch war, steht
+nirgends. Die Ausnahme aus Teil 1 — gesperrtes oder deaktiviertes Konto bei **korrektem** Passwort —
+kommt als eigener Problemtyp (`konto-gesperrt`, `konto-deaktiviert`) und wird angezeigt.
+
+---
+
+## 7. Der Rahmen steht, nur der Inhalt scrollt
+
+`components/anwendungsrahmen.tsx` ist so gebaut:
+
+```
+div            h-dvh  flex-col  overflow-hidden     ← genau eine Fensterhöhe
+├─ header      shrink-0                             ← steht
+└─ div         flex  flex-1  min-h-0
+   ├─ aside    w-navspalte  shrink-0  overflow-y-auto   ← steht, scrollt notfalls selbst
+   └─ main     flex-1  min-h-0  min-w-0  overflow-y-auto ← der einzige Scrollbereich
+```
+
+**`min-h-0` ist die ganze Pointe.** Ein Flex-Kind bekommt implizit `min-height: auto` und wächst
+damit über seinen Container hinaus, statt zu scrollen. Ohne diese Klasse dehnt sich der
+Inhaltsbereich unter das Fenster, das Dokument bekommt eine zweite Bildlaufleiste, und die
+Kopfzeile wandert beim Scrollen weg. Das ist die häufigste Ursache für eine doppelte
+Bildlaufleiste und der Grund, warum sie hier zweimal steht.
+
+**Warum jetzt und nicht in Schritt 4:** Dort braucht die Nachrichtenliste eine feststehende
+Tabellenkopfzeile über einem scrollenden Bereich. Ein Rahmen, der das nicht hergibt, wird dann
+mitten in einer Listenansicht umgebaut — und zwar von jemandem, der eigentlich eine Liste bauen
+wollte.
+
+**Die Seite selbst scrollt nie.** Nachgemessen gegen den fertigen Build, 1920 × 1080, mit 4000 px
+Inhalt im Inhaltsbereich:
+
+```
+documentElement.scrollHeight   1080   = clientHeight  → keine Bildlaufleiste am Dokument
+main.scrollHeight            > clientHeight           → der Inhaltsbereich scrollt
+Kopfzeile links 0, Breite 1920; Navigationsspalte links 0; Inhalt rechts 0
+```
+
+Bei 360 px: `scrollWidth` 360, kein horizontales Scrollen, Navigationsspalte und Suchplatz
+entfallen, der aktive Mandant bleibt.
+
+**Eine Maximalbreite gehört nicht in den Rahmen**, nur in eine Ansicht mit Fließtext — die
+Begründung steht in [`visuelles-konzept.md`](visuelles-konzept.md) §5.
+
+---
+
+## 8. Aufteilung des Codes
+
+```
+src/
+├─ app/                    Routen. Server-Komponenten, soweit möglich
+│  ├─ (public)/anmeldung/
+│  └─ (app)/               Anwendungsrahmen: /, /passwort, /mandantenauswahl, …
+├─ components/             Zusammensetzung: Rahmen, Kopfzeile, Navigation, Zustände
+│  └─ ui/                  shadcn/ui — Generatorbereich, nicht von Hand ändern
+├─ features/sitzung/       Anmeldung, Sitzung, Passwort, Mandantenwahl
+├─ i18n/                   Sprachdateien und Kontext
+├─ lib/                    Infrastruktur: http, query-client, ablauf, routen, format, …
+└─ proxy.ts                Routensperre
+```
+
+**Warum Sitzung und Mandant ein Feature sind:** Im Backend liegt beides im Paket `security`, und die
+Selbstauskunft bringt den aktiven Mandanten mit. Zwei Features müssten sich genau diesen Typ teilen —
+und ein Feature importiert nicht aus einem Nachbarfeature.
+
+`"use client"` steht so weit unten wie möglich. Server-Komponenten sind: Wurzel-Layout, alle
+`page.tsx`, `seiten-platzhalter.tsx`. Client sind: alles mit Zustand, Interaktion oder TanStack
+Query.
+
+### Filterzustand
+
+`lib/filter.ts` hält die nuqs-Abstraktion für das Zeitfenster — **hier noch ohne Wirkung**, weil es
+in Schritt 3 keine Liste gibt. Sie entsteht trotzdem jetzt, damit Schritt 4 nicht anfängt,
+Zeitfenster in Komponentenzustand zu legen und später umzubauen.
+
+Bewusst **ohne** Standardwert: Fehlt das Zeitfenster, setzt das Backend den Standard aus Regel L1
+(24 Stunden). Ein zweiter Standardwert im Frontend liefe dem ersten irgendwann hinterher.
+
+---
+
+## 9. Tests
+
+`pnpm test` (Vitest, in `pnpm build` verankert). Bewusst klein: kein jsdom, keine Testing Library,
+kein React-Plugin. Geprüft werden die **Entscheidungen**, nicht das Markup — das sind alles reine
+Funktionen, und ein gerenderter Baum brächte hier nichts außer Laufzeit und Abhängigkeiten.
+
+| Datei | Was |
+|---|---|
+| `ablauf.test.ts` | Änderungszwang vor Mandantenauswahl vor Startseite |
+| `sprachdateien.test.ts` | gleicher Schlüsselsatz; 404-Wortwahl; Rückfall auf `detail` |
+| `farbwerte.test.ts` | kein Hex-Wert, keine Tailwind-Farbklasse in einer Komponente |
+| `zwischenspeicher.test.ts` | geleert **vor** dem Weitergehen, bei Wechsel und Abmeldung |
+| `format.test.ts` | Zeitstempel ohne Zeitzonenverschiebung |
+| `routen.test.ts` | `weiter` als offene Weiterleitung ausgeschlossen |
+
+---
+
+## 10. Offene Punkte
+
+- **Der Änderungszwang-Pfad ist in der Oberfläche nicht end-to-end durchgeklickt.** Die Verzweigung
+  ist unit-getestet und der Interceptor im Backend durch Teil 1 abgedeckt; die Abnahme durch die
+  Oberfläche braucht ein frisch angelegtes Konto und wurde bewusst nicht gegen die geteilte
+  Testkopie ausgeführt.
+- **`components/ui/sheet.tsx` enthält eine feste Zeichenkette** („Close" für den Schließen-Knopf) aus
+  dem Generator. Generatorbereich; wenn sie stört, wird die Komponente umschlossen, nicht geändert.
+- **Kein Dunkelmodus, keine Barrierefreiheit über die Grundlagen hinaus** — bewusst außerhalb dieses
+  Schritts.
+- **Die Sprachwahl liegt nur im Cookie**, also je Gerät und Browser.

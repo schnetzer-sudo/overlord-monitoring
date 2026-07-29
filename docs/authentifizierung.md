@@ -337,6 +337,9 @@ Für Teil 2 und für jeden anderen Client, in dieser Reihenfolge:
 
 Alle folgenden Aufrufe schicken das Sitzungs-Cookie mit; schreibende zusätzlich den CSRF-Header.
 
+Die Oberfläche aus Teil 2 setzt genau diese Reihenfolge um; wo sie liegt und warum der Browser dafür
+ausschließlich mit Next.js spricht, steht in [`frontend-grundlagen.md`](frontend-grundlagen.md).
+
 ---
 
 ## 11. Messungen (Regel L7)

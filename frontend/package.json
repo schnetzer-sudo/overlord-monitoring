@@ -12,7 +12,9 @@
     "typecheck": "next typegen && tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm run lint && pnpm run typecheck && pnpm run format:check"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "pnpm run lint && pnpm run typecheck && pnpm run format:check && pnpm run test"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.4",
@@ -39,6 +41,7 @@
     "prettier-plugin-tailwindcss": "^0.8.1",
     "shadcn": "^4.14.1",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   }
 }

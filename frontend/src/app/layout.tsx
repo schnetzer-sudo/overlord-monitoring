@@ -1,29 +1,40 @@
 import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+
+import { texteFuer } from "@/i18n";
+import { aktiveSprache, aktiveTexte } from "@/i18n/server";
+import { cn } from "@/lib/utils";
 
 import { Providers } from "./providers";
 import "./globals.css";
-import { Geist } from "next/font/google";
-import { cn } from "@/lib/utils";
 
+/** Neutrale Grotesk für den Fließtext … */
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
+/** … und dieselbe Familie mit fester Laufweite für Codes, IDs und Kennungen. */
+const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
-export const metadata: Metadata = {
-  title: {
-    default: "Overlord Monitoring",
-    template: "%s · Overlord Monitoring",
-  },
-  description: "Zustand der EDI-Uebertragungen der Integrationsplattform Overlord",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const texte = await aktiveTexte();
+  return {
+    title: { default: texte.anwendung.name, template: `%s · ${texte.anwendung.name}` },
+    description: texte.anwendung.beschreibung,
+  };
+}
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+/**
+ * Wurzel-Layout. Liest die Sprache **einmal** aus dem Cookie: für `lang` am
+ * Dokument und für den Sprachkontext darunter. Kein Sprachpräfix in der URL —
+ * die Sprache ist eine Eigenschaft des Nutzers, nicht der Ansicht.
+ */
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const sprache = await aktiveSprache();
+
   return (
-    <html lang="de" className={cn("font-sans", geist.variable)}>
+    <html lang={sprache} className={cn("font-sans", geist.variable, geistMono.variable)}>
       <body>
-        <Providers>{children}</Providers>
+        <Providers sprache={sprache} texte={texteFuer(sprache)}>
+          {children}
+        </Providers>
       </body>
     </html>
   );

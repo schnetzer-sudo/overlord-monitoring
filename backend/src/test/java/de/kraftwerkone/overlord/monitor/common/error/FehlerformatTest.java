@@ -1,6 +1,7 @@
 package de.kraftwerkone.overlord.monitor.common.error;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -15,9 +16,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Prueft das einheitliche Fehlerformat (RFC 9457) ohne Datenbank: {@code application/problem+json},
- * eine {@code traceId} und keine internen Details in der Antwort.
+ * eine {@code traceId}, ein stabiles {@code type} und keine internen Details in der Antwort.
  */
 class FehlerformatTest {
+
+  /** Praefix jeder Problemtyp-URI dieser Anwendung. */
+  private static final String TYP_BASIS = "https://overlord.kraftwerkone.de/probleme/";
 
   private MockMvc mvc;
 
@@ -37,6 +41,7 @@ class FehlerformatTest {
         .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
         .andExpect(jsonPath("$.status").value(500))
         .andExpect(jsonPath("$.title").value("Technischer Fehler"))
+        .andExpect(jsonPath("$.type").value(TYP_BASIS + "technischer-fehler"))
         .andExpect(jsonPath("$.traceId").isNotEmpty())
         // Keine internen Details: die Ursachennachricht taucht nicht auf.
         .andExpect(
@@ -52,6 +57,22 @@ class FehlerformatTest {
         .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
         .andExpect(jsonPath("$.status").value(404))
         .andExpect(jsonPath("$.title").value("Nicht gefunden"))
+        .andExpect(jsonPath("$.type").value(TYP_BASIS + "nicht-gefunden"))
+        .andExpect(jsonPath("$.traceId").isNotEmpty());
+  }
+
+  /**
+   * Auch die Faelle, die Spring selbst beantwortet, tragen einen Schluessel.
+   *
+   * <p>Ohne ihn stuende dort {@code about:blank}, und die Oberflaeche haette nichts zum Uebersetzen
+   * — sie uebersetzt anhand des {@code type}, nicht anhand des deutschen {@code detail}.
+   */
+  @Test
+  @DisplayName("Eine von Spring beantwortete Ausnahme traegt ebenfalls einen stabilen Problemtyp")
+  void rueckfall_typ() throws Exception {
+    mvc.perform(post("/test/nurGet"))
+        .andExpect(status().isMethodNotAllowed())
+        .andExpect(jsonPath("$.type").value(TYP_BASIS + "anfrage-ungueltig"))
         .andExpect(jsonPath("$.traceId").isNotEmpty());
   }
 
@@ -66,6 +87,11 @@ class FehlerformatTest {
     @GetMapping("/test/nichtgefunden")
     String nichtGefunden() {
       throw new RessourceNichtGefundenException("Nachricht 42 gehoert einem fremden Mandanten");
+    }
+
+    @GetMapping("/test/nurGet")
+    String nurGet() {
+      return "ok";
     }
   }
 }

@@ -55,6 +55,8 @@ Angelegt:
 | [`annahmen-korrekturen.md`](annahmen-korrekturen.md) | Schritt 2 | Was die Erhebungen gegenüber der Projektbeschreibung verändert/bestätigt haben |
 | [`authentifizierung.md`](authentifizierung.md) | Schritt 3, Teil 1 | Anmeldung, Sperre und Auskunftsdisziplin, Sitzung und Cookie je Profil, Passwortwechsel, Bootstrap, Nutzer anlegen — und warum die Altnutzer bewusst **nicht** übernommen werden |
 | [`mandantentrennung.md`](mandantentrennung.md) | Schritt 3, Teil 1 | `MandantContext`, Berechtigung als Menge statt Rolle, die genau zwei Endpunkt-Ausnahmen, die ArchUnit-Regel, die Vorlage für den Isolationstest |
+| [`visuelles-konzept.md`](visuelles-konzept.md) | Schritt 3, Teil 2 | Farbrollen samt fachlicher Bindung der Statusfarben, die vier Stufen des Akzents `#b9c022` mit gemessenen Kontrastwerten, „Status nie allein über Farbe", Typografie, Dichte nach Zeigergerät, volle Fensterbreite und die eine Ausnahme davon, Verhalten am Handy — und wie man das Konzept in einer Datei ändert |
+| [`frontend-grundlagen.md`](frontend-grundlagen.md) | Schritt 3, Teil 2 | Rewrite statt CORS, warum die Routensperre kein Schutz ist, Ablauf nach dem Anmelden, Aufbau der Sprachdateien, Regeln für den Zwischenspeicher, Zuordnung von `type` zu Übersetzung, Scroll-Architektur des Rahmens |
 
 Die folgenden Dateien entstehen laut Plan:
 

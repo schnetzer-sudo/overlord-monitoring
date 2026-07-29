@@ -233,6 +233,30 @@ der Treiber und die URL braucht einen expliziten Zeitzonenparameter.
 - Stacktraces, SQL-Fragmente, Tabellen-, Spalten- und Klassennamen erscheinen **nie** in der Antwort —
   auch nicht im Dev-Profil.
 
+### Jede Antwort trägt ein `type` (ergänzt in Schritt 3, Teil 2)
+
+Fachliche Ausnahmen bringen ihren Problemtyp selbst mit (`FachlicheAusnahme.problemTyp`). Die Fälle,
+die `ResponseEntityExceptionHandler` **selbst** beantwortet — unlesbares JSON, falsche HTTP-Methode,
+unbekannter Pfad — trugen dagegen `about:blank`. Das ist nach RFC 9457 zulässig, aber kein
+Schlüssel: Die Oberfläche übersetzt anhand des `type`, nicht anhand des deutschen `detail`, und ohne
+Schlüssel wäre eine zweisprachige Oberfläche nicht sauber möglich.
+
+`handleExceptionInternal` setzt deshalb einen Rückfalltyp nach Statuscode:
+
+| Status | Typ |
+|---|---|
+| `404` | `nicht-gefunden` — **derselbe** wie bei `RessourceNichtGefundenException` |
+| `5xx` | `technischer-fehler` |
+| sonst | `anfrage-ungueltig` |
+
+Bewusst grob nach Statuscode und nicht je Ausnahmetyp: Diese Antworten sind Randfälle, die kein
+Nutzer im Normalbetrieb sieht. Dass `404` denselben Schlüssel bekommt, ist dagegen keine
+Bequemlichkeit — ein unbekannter Pfad und eine fremde Ressource dürfen sich auch hier nicht
+unterscheiden (Regel M3). `FehlerformatTest` prüft beides.
+
+Wie das Frontend daraus eine Übersetzung macht, steht in
+[`frontend-grundlagen.md`](frontend-grundlagen.md) §6.
+
 > Hinweis zur Benennung: In `DEVELOPMENT_GUIDELINES.md` §5.5 hieß das Feld ursprünglich `fehlerId`.
 > Verbindlich ist ab Schritt 2 der Name **`traceId`** (so auch die Abnahme des Schritts). Die
 > Richtlinie ist entsprechend angeglichen.
