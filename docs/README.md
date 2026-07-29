@@ -53,13 +53,13 @@ Angelegt:
 | [`datenzugriff.md`](datenzugriff.md) | Schritt 2 | Zwei DataSources, zwei DSLContexts, ein Transaktionsmanager, dreischichtiger Schreibschutz, Flyway, Zeitquellen, Fehlerformat, jOOQ-Codegenerierung, Tests |
 | [`message-status.md`](message-status.md) | Schritt 2 | Statuskatalog, `MessageStatusClassifier`, die eine Fehlerbedingung (vorgezogen aus Schritt 3) |
 | [`annahmen-korrekturen.md`](annahmen-korrekturen.md) | Schritt 2 | Was die Erhebungen gegenüber der Projektbeschreibung verändert/bestätigt haben |
+| [`authentifizierung.md`](authentifizierung.md) | Schritt 3, Teil 1 | Anmeldung, Sperre und Auskunftsdisziplin, Sitzung und Cookie je Profil, Passwortwechsel, Bootstrap, Nutzer anlegen — und warum die Altnutzer bewusst **nicht** übernommen werden |
+| [`mandantentrennung.md`](mandantentrennung.md) | Schritt 3, Teil 1 | `MandantContext`, Berechtigung als Menge statt Rolle, die genau zwei Endpunkt-Ausnahmen, die ArchUnit-Regel, die Vorlage für den Isolationstest |
 
 Die folgenden Dateien entstehen laut Plan:
 
 | Datei | Entsteht in | Inhalt |
 |---|---|---|
-| `authentifizierung.md` | Schritt 3 | Anmeldung, Session, Sperre, Migration der Altnutzer |
-| `mandantentrennung.md` | Schritt 3 | Wie die Trennung durchgesetzt und geprüft wird |
 | `nachrichtenliste.md` | Schritt 4 | Listen-Endpunkt, Zeitfenster, Cursor, Filter |
 | `nachrichtendetail.md` | Schritt 5 | Detailansicht, Prozessschritte, Eigenschaften |
 | `prozessschritte-uebersetzung.md` | Schritt 5 | Zuordnungstabelle `SOSActionServiceProperties` → Klartext |

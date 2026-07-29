@@ -4,13 +4,19 @@
 package de.kraftwerkone.overlord.monitor.jooq.monitor;
 
 
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AppUser;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AppUserMandant;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AuditLog;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.AppUserMandantRecord;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.AppUserRecord;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.AuditLogRecord;
 
+import org.jooq.ForeignKey;
 import org.jooq.TableField;
 import org.jooq.UniqueKey;
 import org.jooq.impl.DSL;
 import org.jooq.impl.Internal;
+import org.jooq.impl.QOM.ForeignKeyRule;
 
 
 /**
@@ -24,5 +30,14 @@ public class Keys {
     // UNIQUE and PRIMARY KEY definitions
     // -------------------------------------------------------------------------
 
+    public static final UniqueKey<AppUserRecord> KEY_APP_USER_PRIMARY = Internal.createUniqueKey(AppUser.APP_USER, DSL.name("KEY_app_user_PRIMARY"), new TableField[] { AppUser.APP_USER.ID }, true);
+    public static final UniqueKey<AppUserRecord> KEY_APP_USER_UQ_APP_USER_USERNAME = Internal.createUniqueKey(AppUser.APP_USER, DSL.name("KEY_app_user_uq_app_user_username"), new TableField[] { AppUser.APP_USER.USERNAME }, true);
+    public static final UniqueKey<AppUserMandantRecord> KEY_APP_USER_MANDANT_PRIMARY = Internal.createUniqueKey(AppUserMandant.APP_USER_MANDANT, DSL.name("KEY_app_user_mandant_PRIMARY"), new TableField[] { AppUserMandant.APP_USER_MANDANT.USER_ID, AppUserMandant.APP_USER_MANDANT.MANDANT_ID }, true);
     public static final UniqueKey<AuditLogRecord> KEY_AUDIT_LOG_PRIMARY = Internal.createUniqueKey(AuditLog.AUDIT_LOG, DSL.name("KEY_audit_log_PRIMARY"), new TableField[] { AuditLog.AUDIT_LOG.ID }, true);
+
+    // -------------------------------------------------------------------------
+    // FOREIGN KEY definitions
+    // -------------------------------------------------------------------------
+
+    public static final ForeignKey<AppUserMandantRecord, AppUserRecord> FK_APP_USER_MANDANT_USER = Internal.createForeignKey(AppUserMandant.APP_USER_MANDANT, DSL.name("fk_app_user_mandant_user"), new TableField[] { AppUserMandant.APP_USER_MANDANT.USER_ID }, Keys.KEY_APP_USER_PRIMARY, new TableField[] { AppUser.APP_USER.ID }, true, ForeignKeyRule.CASCADE, ForeignKeyRule.RESTRICT);
 }

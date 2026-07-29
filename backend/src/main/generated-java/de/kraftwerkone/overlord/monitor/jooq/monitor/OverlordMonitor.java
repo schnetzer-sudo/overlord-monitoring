@@ -4,6 +4,8 @@
 package de.kraftwerkone.overlord.monitor.jooq.monitor;
 
 
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AppUser;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AppUserMandant;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AuditLog;
 
 import java.util.Arrays;
@@ -29,6 +31,16 @@ public class OverlordMonitor extends SchemaImpl {
     public static final OverlordMonitor OVERLORD_MONITOR = new OverlordMonitor();
 
     /**
+     * The table <code>overlord_monitor.app_user</code>.
+     */
+    public final AppUser APP_USER = AppUser.APP_USER;
+
+    /**
+     * The table <code>overlord_monitor.app_user_mandant</code>.
+     */
+    public final AppUserMandant APP_USER_MANDANT = AppUserMandant.APP_USER_MANDANT;
+
+    /**
      * The table <code>overlord_monitor.audit_log</code>.
      */
     public final AuditLog AUDIT_LOG = AuditLog.AUDIT_LOG;
@@ -49,6 +61,8 @@ public class OverlordMonitor extends SchemaImpl {
     @Override
     public final List<Table<?>> getTables() {
         return Arrays.asList(
+            AppUser.APP_USER,
+            AppUserMandant.APP_USER_MANDANT,
             AuditLog.AUDIT_LOG
         );
     }

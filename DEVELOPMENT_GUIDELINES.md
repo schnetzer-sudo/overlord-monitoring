@@ -221,13 +221,30 @@ Diese Regeln werden nicht abgewogen. Wer meint, eine davon brechen zu müssen, f
 
 ### 4.1 Mandantentrennung — die wichtigste Regel des Projekts
 
-**M1 — Kein Endpunkt nimmt jemals eine Mandanten-ID entgegen.** Nicht als Pfadsegment, nicht als
+**M1 — Kein Endpunkt nimmt eine Mandanten-ID entgegen.** Nicht als Pfadsegment, nicht als
 Query-Parameter, nicht im Body, nicht im Header. Der Mandant wird ausschließlich aus der Session
 gelesen.
+
+**Genau zwei Ausnahmen**, beide namentlich in [`docs/mandantentrennung.md`](docs/mandantentrennung.md)
+geführt: `POST /api/auth/mandant` (Wechsel, geprüft gegen die zulässige Menge) und
+`POST /api/admin/users` (Anlegen eines Kontos, nur ADMIN). Die erste fragt einen Datenausschnitt, die
+zweite definiert ein Konto. Taucht dort jemals eine dritte auf, ist das ein Signal und keine
+Kleinigkeit.
 
 **M2 — Jede Repository-Methode bekommt den Mandanten als ersten Pflichtparameter.** Es gibt keine
 Überladung ohne ihn. Eine Methode `findById(String messageId)` ohne Mandant darf nicht existieren,
 auch nicht `private`, auch nicht „nur für den Test".
+
+Der Typ ist `security/MandantContext` und trägt **genau eine** Mandanten-ID — für beide Rollen. Auch
+ADMIN wählt einen Mandanten und wechselt ihn, statt alle gleichzeitig zu sehen; damit gibt es keinen
+Codepfad ohne Mandantenfilter und die Signaturen sind rollenunabhängig. `PaketstrukturTest` prüft die
+Regel maschinell (ab Schritt 3): Jede öffentliche Methode einer Klasse, die Typen aus
+`jooq.glassfish` verwendet, hat `MandantContext` als ersten Parameter.
+
+Die **einzige** Ausnahme sind die Methoden, die den Kontext erst *herstellen* — sie lesen die Menge
+der zulässigen Mandanten, bevor feststeht, welcher aktiv ist. Sie tragen `@OhneMandantenkontext` mit
+Pflichtbegründung, stehen ausschließlich im `MandantRepository` und liefern niemals fachliche Daten.
+Vollständig geführt in [`docs/mandantentrennung.md`](docs/mandantentrennung.md).
 
 **M3 — Der Filter über `ProjectMandant` ist Bestandteil jedes Statements**, nicht nachgelagerte
 Prüfung. Wer eine fremde `MessageID` errät, bekommt null Zeilen — weil die Zeile für ihn nie
@@ -235,7 +252,12 @@ existiert hat. Kein „erst laden, dann prüfen".
 
 **M4 — Pro Endpunkt existiert ein automatisierter Isolationstest**, der mit Mandant A abfragt und
 nachweist, dass Daten von Mandant B unerreichbar sind. **Ein neuer Endpunkt ohne diesen Test wird
-nicht gemergt.**
+nicht gemergt.** Die Vorlage ist `MandantenIsolationDbIT` (Schritt 3); sie enthält zusätzlich die
+Gegenprobe mit einer erfundenen ID.
+
+**404 statt 403.** Eine nicht vorhandene Ressource und eine Ressource eines fremden Mandanten liefern
+**dieselbe** Antwort — nicht nur denselben Statuscode, sondern denselben Rumpf. Ein `403` verriete,
+dass der Datensatz existiert.
 
 **M5 — Die Mandantentrennung gilt auch quer.** Auch verkettete Nachrichten, auch Suchtreffer, auch
 Rollup-Zeilen, auch Downloads unterliegen ihr.
@@ -346,16 +368,30 @@ zugeordnet" — niemals als geratener Wert, niemals stillschweigend verteilt.
 ### 4.7 Authentifizierung
 
 **A1 — BCrypt mit Kostenfaktor 12.** Serverseitige Session, Session-ID im Cookie mit `HttpOnly`,
-`Secure`, `SameSite=Lax`. **Kein JWT** — bei externen Nutzern wiegt sofortige Rücknehmbarkeit
-schwerer als Zustandslosigkeit.
+`SameSite=Lax` und `Secure`. **Kein JWT** — bei externen Nutzern wiegt sofortige Rücknehmbarkeit
+schwerer als Zustandslosigkeit. `Secure` ist **per Profil schaltbar** und im Profil `dev` aus; ohne
+das funktioniert die lokale Entwicklung über `http://localhost` nicht.
 
-**A2 — Sperre nach fünf Fehlversuchen für 15 Minuten**, zusätzlich Begrenzung pro IP.
+**A2 — Sperre nach fünf Fehlversuchen für 15 Minuten**, zusätzlich Begrenzung pro IP. Die
+Nutzersperre ist persistent in `app_user`, die **IP-Begrenzung liegt ausschließlich im
+Arbeitsspeicher** und schreibt niemals in die Datenbank — sonst wäre der Schutzmechanismus selbst der
+Angriffsvektor.
 
 **A3 — Fehlermeldungen bleiben unspezifisch.** Nie „Benutzer unbekannt" gegen „Passwort falsch"
-unterscheiden, weder im Text noch in der Antwortzeit.
+unterscheiden, weder im Text noch in der Antwortzeit — deshalb wird auch bei unbekanntem
+Benutzernamen ein BCrypt-Vergleich gegen einen Dummy-Hash gerechnet. **Eine Ausnahme:** War das
+Passwort korrekt und das Konto ist gesperrt oder deaktiviert, darf das benannt werden.
 
 **A4 — Die Klartext-Passwörter der Alt-`User`-Tabelle werden nicht übernommen** und gelten als
-kompromittiert. Alle migrierten Konten starten gesperrt mit Zwang zur Neuvergabe.
+kompromittiert. **Es findet überhaupt keine Migration statt** (Entscheidung 28.07.2026): Konten
+entstehen einzeln über `POST /api/admin/users`, das erste über das Profil `bootstrap`. Jedes neue
+Konto startet mit Zwang zur Passwortänderung.
+
+**A5 — Sicherheitsrelevante Zeit rechnet mit der Systemuhr.** Sperrfristen, Sitzungsablauf und
+Protokollzeit nutzen `systemClock` aus `common/ZeitConfig`, **niemals** die Anwendungsuhr — die ist
+im Dev-Profil um Wochen zurückversetzt, und eine Sperre liefe dort erst in drei Wochen ab.
+
+Vollständig in [`docs/authentifizierung.md`](docs/authentifizierung.md).
 
 ### 4.8 Geheimnisse
 
@@ -525,8 +561,13 @@ unerreichbar sind. Das Muster:
 3. Erwartet wird `404` beziehungsweise eine leere Liste. **Nicht** `403`.
 4. Zusätzlich: Kein Ergebnis der Antwort gehört zu Mandant B.
 
-Benennung `<Endpunkt>IsolationTest`. **Ein neuer Endpunkt ohne diesen Test wird nicht gemergt.**
-Das ist kein Richtwert und keine Empfehlung.
+Und die Gegenprobe, die den eigentlichen Kern ausmacht: Dieselbe Anfrage mit einer **erfundenen** ID
+muss eine **ununterscheidbare** Antwort liefern. Ein `404` allein genügt nicht.
+
+Benennung **`<Thema>IsolationDbIT`** (angeglichen in Schritt 3): Ein Isolationstest braucht immer eine
+Datenbank, trägt also `@Tag("db")` und gehört über Failsafe in dieselbe Gruppe wie die übrigen
+`*IT`. Die Vorlage ist `MandantenIsolationDbIT`. **Ein neuer Endpunkt ohne diesen Test wird nicht
+gemergt.** Das ist kein Richtwert und keine Empfehlung.
 
 ### Integrationstests laufen gegen die Testkopie
 

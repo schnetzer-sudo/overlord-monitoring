@@ -1,6 +1,18 @@
 # Overlord Monitoring — Implementierungsplan MVP
 
-Stand: 27.07.2026 · Ergänzt `PROJEKTBESCHREIBUNG.md`
+Stand: 28.07.2026 · Ergänzt `PROJEKTBESCHREIBUNG.md`
+
+**Stand der Umsetzung**
+
+| Schritt | Status |
+|---|---|
+| 1 — Fundament | erledigt |
+| 2 — Backend-Grundgerüst und Datenzugriff | erledigt, über die CI bestätigt, auf `main` |
+| 3 — Anmeldung und Mandantentrennung | **geteilt in Teil 1 (Backend) und Teil 2 (Frontend)**; Teil 1 erledigt (29.07.2026), Teil 2 offen |
+
+**Revision 28.07.2026.** Schritt 3 ist geteilt. Die Übernahme der Altnutzer entfällt ersatzlos und
+wird durch einen minimalen Anlege-Endpunkt ersetzt. Der Mandantenwechsel prüft eine Menge statt
+einer Rolle. A8 ist geklärt.
 
 **Revision 27.07.2026.** Schritt 2 ist nach dem Sparring ausformuliert. Die Statuserhebung ist von
 Schritt 3 nach Schritt 2 vorgezogen, weil die Verbindung dort ohnehin steht. Schritt 4 und 7 sind
@@ -151,9 +163,12 @@ Datenbankzugriff durch.
 
 **Ziel:** Man kann sich anmelden und landet auf einer geschützten, noch leeren Seite.
 
-**Skills:** frontend-design, shadcn/ui
+**Geteilt in zwei Prompts**, weil Backend, erstes Frontend und Kontenanlage zusammen zu groß für
+einen Durchlauf sind. Teil 1 ist reines Backend, Teil 2 das Frontend.
 
-**Backend**
+**Skills:** Teil 1 keine, Teil 2 frontend-design und shadcn/ui
+
+**Backend (Teil 1)**
 - `app_user` und `app_user_mandant` per Flyway
 - BCrypt Kostenfaktor 12, Spring Security, serverseitige Session
 - Cookie mit `HttpOnly`, `Secure`, `SameSite=Lax`
@@ -163,22 +178,42 @@ Datenbankzugriff durch.
   der Session-ID bekommt `COLLATE utf8mb4_bin` — die Standardsortierung des Schemas vergleicht ohne
   Rücksicht auf Groß- und Kleinschreibung
 - Sitzungsablauf und Sperrfristen rechnen mit der **Systemuhr**, nicht mit dem Clock aus Schritt 2
-- Migrationsskript für Altnutzer: Name, Mandant, Rolle übernehmen, Konten gesperrt anlegen
-  (36 Konten in der Alt-`User`-Tabelle)
-- Endpunkt für den angemeldeten Nutzer inklusive Rolle
-- Der `MandantContext` wird aus der Session aufgelöst und ist ab hier Pflichtparameter jeder
-  Repository-Methode
+- **Keine Migration der Altnutzer.** Ersatzlos gestrichen, Begründung in
+  `PROJEKTBESCHREIBUNG.md` Abschnitt 7. Stattdessen ein Startvorgang im Profil `bootstrap`, der
+  das erste Admin-Konto aus Umgebungsvariablen anlegt — nur wenn noch kein ADMIN existiert
+- **Minimaler Anlege-Endpunkt `POST /api/admin/users`** statt eines Migrationslaufs. Nur Anlegen;
+  Auflisten, Sperren, Rollenwechsel und Zurücksetzen bleiben Schritt 9. Ohne ihn ist die Abnahme
+  nicht möglich, weil ein Nutzer der Rolle `MANDANT` gebraucht wird
+- **Passwortänderungspfad.** Jedes Konto startet mit Änderungszwang; solange er gesetzt ist, lehnt
+  jeder Endpunkt außer Abmelden, Selbstauskunft und Passwortänderung ab. Ohne diesen Pfad wäre
+  kein Konto nutzbar
+- **Mandantenwechsel prüft die Menge, nicht die Rolle.** Ein existierender, aber nicht zulässiger
+  Mandant liefert dieselbe Antwort wie eine erfundene ID
+- Bei unbekanntem Benutzernamen wird trotzdem ein BCrypt-Vergleich gerechnet; die IP-Begrenzung
+  liegt ausschließlich im Arbeitsspeicher
+- `Secure` am Cookie ist per Profil schaltbar, im Profil `dev` aus
+- Endpunkt für den angemeldeten Nutzer inklusive Rolle und aktivem Mandanten
+- Der `MandantContext` trägt genau eine Mandanten-ID, wird aus der Session aufgelöst und ist ab
+  hier erster Pflichtparameter jeder Repository-Methode auf das Quellschema. Eine ArchUnit-Regel
+  prüft das
 
-**Frontend**
+**Frontend (Teil 2)**
 - Anwendungsrahmen: Navigation, Kopfzeile, Nutzermenü, Abmelden
 - Anmeldeseite, geschützte Routen, Weiterleitung
+- **Mandantenauswahl**, aktiver Mandant sichtbar in der Kopfzeile — nicht in einem Untermenü, weil
+  Ansichten für ADMIN sonst unbemerkt einen anderen Ausschnitt zeigen
+- **Beim Mandantenwechsel wird der Query-Cache vollständig geleert, nicht invalidiert.** Sonst
+  zeigt die Oberfläche nach dem Umschalten weiter Daten des vorherigen Mandanten, obwohl das
+  Backend sauber ist
+- Erzwungene Passwortänderung als eigene Seite
 - Erste Umsetzung des visuellen Konzepts
 
-**Abgrenzung:** Keine Benutzerverwaltungsoberfläche, kein Passwort-Reset. Nutzer werden vorerst
-per Skript angelegt.
+**Abgrenzung:** Keine Benutzerverwaltungsoberfläche, kein Zurücksetzen durch den Admin, keine
+Übernahme der Altnutzer.
 
 **Abnahme:** Anmeldung funktioniert, Abmeldung beendet die Session, unangemeldeter Aufruf einer
-geschützten Route leitet um, sechster Fehlversuch sperrt.
+geschützten Route leitet um, sechster Fehlversuch sperrt, der Änderungszwang greift, und ein
+fremder Mandant ist von einer erfundenen ID nicht zu unterscheiden.
 
 **Dokumentation:** `docs/authentifizierung.md`, `docs/mandantentrennung.md`
 
@@ -199,8 +234,11 @@ geschützten Route leitet um, sechster Fehlversuch sperrt.
   Timeout-Überschreitung berechnet aus `MessageLastUpdate + MessageTimeout`, "läuft noch" definiert
   als "nicht in einem Endstatus" — **nicht** als `MessageStatus = 'RUNNING'`, den es in der
   Testkopie null Mal gibt
-- Zu klären, bevor die Liste steht: 142 Projekte stehen 134 Zeilen in `ProjectMandant` gegenüber
-  (Annahme A8). Projekte ohne Zuordnung wären für niemanden sichtbar
+- A8 ist geklärt: Projekte ohne Zeile in `ProjectMandant` bleiben bewusst für niemanden sichtbar,
+  auch nicht für ADMIN. Kein Sonderpfad, kein Pseudo-Mandant
+- Zweiter Testnutzer für den Isolationstest auf `VOTG` oder `SUTTONS`, **nicht** auf `NXHBE` —
+  zwei Mandanten desselben Konzerns sind ein schlechter Beweis für eine Trennung, die zwischen
+  Firmen greifen soll
 - Mandantenfilter fest im Statement über `ProjectMandant`
 - Isolationstest: Mandant A fragt ab, Daten von Mandant B sind unerreichbar
 - Hinweis für die Oberfläche: `SPLITTED` und `MERGED` machen zusammen rund 34 Prozent aller Zeilen
@@ -421,6 +459,14 @@ der eine Verbindung braucht, bekommt diese Markierung — sonst steht die Pipeli
 `Message` wäre Live-Aggregation technisch möglich; das Altsystem macht sie tagesweise. Der Rollup
 existiert für Ladezeit und Ruhe auf der Produktionsdatenbank. Diese Begründung bitte so
 verwenden — die frühere Zahl von 36 Millionen Zeilen war falsch.
+
+**Zum Messen braucht es einen Kommandozeilen-Client.** `mariadb` ist installiert, aber der Server
+bietet kein TLS an — **jeder Aufruf braucht `--skip-ssl`**, sonst bricht der Client mit
+„SSL is required" ab. Das sieht aus wie ein Rechte- oder Netzwerkproblem und ist keines.
+
+**Offene Messung aus Schritt 2:** `docs/message-status.md` behauptet, die `LEFT`-Form der
+Fehlerbedingung könne `MessageStatusIDX` nicht nutzen — bislang ohne `EXPLAIN`-Beleg. Wird in
+Schritt 4 nachgeholt, wo die Bedingung erstmals in einer echten Abfrage landet.
 
 **Nach jedem Schritt gilt:** Isolationstest grün, Abfrage gegen die Testkopie gemessen,
 Dokumentation aktualisiert. Erst dann ist der Schritt fertig.

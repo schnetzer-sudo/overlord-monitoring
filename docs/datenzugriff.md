@@ -15,7 +15,7 @@ Alle in diesem Dokument genannten Fakten sind am 28.07.2026 gegen die Testkopie
 | Bean | Pool | Benutzer | Rechte | Zweck |
 |---|---|---|---|---|
 | `glassfishDataSource` | `glassfish-read` | `monitor_read` | `SELECT` auf **beide** Schemata | Lesen, auch schemaübergreifend |
-| `monitorDataSource` | `monitor-write` | `monitor_root` | `SELECT` auf `GlassfishDB`, `ALL PRIVILEGES` auf `overlord_monitor` | Schreiben ins eigene Schema |
+| `monitorDataSource` | `monitor-write` | `monitor_write` | `SELECT` auf `GlassfishDB`, `ALL PRIVILEGES` auf `overlord_monitor` | Schreiben ins eigene Schema |
 
 Beide Pools sind HikariCP, beide in `config/DataSourceConfig`.
 
@@ -86,7 +86,7 @@ gebaut.
 
 ## 4. Schreibschutz auf `GlassfishDB` — drei Schichten, nicht gleichwertig
 
-1. **Die DB-Rechte sind die Wahrheit — sie tragen die Garantie.** `monitor_read` und `monitor_root`
+1. **Die DB-Rechte sind die Wahrheit — sie tragen die Garantie.** `monitor_read` und `monitor_write`
    besitzen auf `GlassfishDB` ausschließlich `SELECT`. Verifiziert per `SHOW GRANTS` am 28.07.2026.
 2. **Der `readOnly`-Pool ist Zusatz, kein Nachweis.** Beim MariaDB-Treiber ist nicht verlässlich, was
    `setReadOnly` serverseitig bewirkt. Nicht als Garantie werten.
@@ -106,11 +106,11 @@ scheitert deshalb jeder Schreibversuch auf `GlassfishDB` bereits mit **Fehler 12
 running with the --read-only option"), noch vor der Rechteprüfung. Der Schreibverbotstest akzeptiert
 deshalb `1290` **oder** `1142` (fehlendes Recht) — beides weist den Schreibversuch ab.
 
-`monitor_root` besitzt `ALL PRIVILEGES` auf `overlord_monitor` und schreibt dort erfolgreich, obwohl
+`monitor_write` besitzt `ALL PRIVILEGES` auf `overlord_monitor` und schreibt dort erfolgreich, obwohl
 der Server global `read_only` ist (verifiziert: sechs von sechs Schreibversuchen erfolgreich).
 
 > ⚠️ **Bekannter, transienter Effekt.** In einem kurzen Fenster (vermutlich während die Testkopie neu
-> befüllt wird) scheiterte am 28.07.2026 auch `monitor_root` kurzzeitig mit `1290`. Schlägt ein Build
+> befüllt wird) scheiterte am 28.07.2026 auch `monitor_write` kurzzeitig mit `1290`. Schlägt ein Build
 > mit „server is running with the --read-only option" fehl, ist das kein Code-Fehler — den Lauf
 > wiederholen. In Produktion tritt das nicht auf.
 
@@ -153,6 +153,31 @@ Begründungen zum Schnitt:
 `audit/AuditLogWriter` schreibt in einer **eigenen** Transaktion (`Propagation.REQUIRES_NEW`): rollt
 die Fachtransaktion zurück, bleibt der Protokolleintrag bestehen. Der Zeitpunkt kommt aus der
 Systemuhr in UTC (`systemClock`), nicht aus der Anwendungsuhr.
+
+### `V2__app_user.sql` und `V3__spring_session.sql` (Schritt 3)
+
+Beide beschrieben in [`authentifizierung.md`](authentifizierung.md). Zwei Punkte gehören hierher,
+weil sie den Datenzugriff selbst betreffen:
+
+- **`V3` ist nicht selbst entworfen.** Die Datei ist
+  `org/springframework/session/jdbc/schema-mysql.sql` aus der Distribution `spring-session-jdbc 4.1.0`,
+  angepasst um genau zwei Dinge: explizite Angabe von Zeichensatz und Sortierung, und `COLLATE
+  utf8mb4_bin` auf `SESSION_ID` und `PRIMARY_ID`. Ein selbst geschriebenes Sitzungsschema wäre ein
+  stiller Fehler — Spalten, Typen und Indizes müssen exakt zu `JdbcIndexedSessionRepository` passen.
+  `SPRING_SESSION_ATTRIBUTES.SESSION_PRIMARY_ID` erbt die binäre Sortierung zwangsläufig, sonst legt
+  MariaDB den Fremdschlüssel nicht an. Beim Anwenden meldet MariaDB zweimal
+  `Name 'SPRING_SESSION_PK' ignored for PRIMARY key` (Fehler 1280) — das ist eine Eigenheit des
+  gelieferten Skripts und kein Problem.
+- **`spring.session.jdbc.initialize-schema: never`**, damit Spring Session nicht an Flyway vorbei ein
+  zweites, leicht abweichendes Schema anlegt.
+- Der Fremdschlüssel in `V3` und der auf `app_user` in `V2` liegen **innerhalb** von
+  `overlord_monitor` und überschreiten keine Schemagrenze. `app_user_mandant.mandant_id` zeigt
+  fachlich auf `GlassfishDB.Mandant.MandantID`, trägt aber bewusst **keinen** Fremdschlüssel dorthin.
+- **Die `SPRING_SESSION`-Tabellen sind aus der jOOQ-Codegenerierung ausgeschlossen.** Sie gehören
+  Spring Session und werden nie über jOOQ angefasst; ein generierter Typ lüde zum Mitschreiben ein.
+- `monitorDataSource` trägt seit Schritt 3 zusätzlich `@SpringSessionDataSource`. Beide Bindungen
+  (`@FlywayDataSource` und diese) sind nötig, weil keine der DataSources `@Primary` ist — ohne sie
+  suchte Spring Session eine eindeutige DataSource und fände zwei.
 
 ---
 
@@ -217,7 +242,7 @@ der Treiber und die URL braucht einen expliziten Zeitzonenparameter.
 ## 9. jOOQ-Codegenerierung
 
 - `jooq-codegen-maven` **ohne eigene `<version>`** (kommt aus dem Spring-Boot-BOM, `3.21.5`, an die
-  Laufzeit gekoppelt). Zwei Ausführungen mit dem Benutzer `monitor_root`:
+  Laufzeit gekoppelt). Zwei Ausführungen mit dem Benutzer `monitor_write`:
   - `GlassfishDB` → `de.kraftwerkone.overlord.monitor.jooq.glassfish`
   - `overlord_monitor` → `de.kraftwerkone.overlord.monitor.jooq.monitor`
 - Ausgabe `src/main/generated-java`, **eingecheckt**. Grund: Der Codegen läuft lokal gegen die

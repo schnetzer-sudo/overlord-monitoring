@@ -61,6 +61,34 @@
     </dependency>
 
     <!--
+      Anmeldung und Session (Schritt 3). Spring Security 7 kommt ueber das
+      Spring-Boot-BOM; die Konfiguration ist ein SecurityFilterChain-Bean.
+      spring-boot-starter-session-jdbc bringt Spring Session 4.1 mit der
+      JDBC-Ablage: die Sitzung liegt serverseitig in overlord_monitor, nicht im
+      Arbeitsspeicher eines Prozesses. Das Schema legt Flyway an
+      (V3__spring_session.sql), nicht Spring Session selbst.
+    -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-session-jdbc</artifactId>
+    </dependency>
+
+    <!--
+      Caffeine traegt die IP-Begrenzung der Anmeldung — ausschliesslich im
+      Arbeitsspeicher, mit Ablauf. Sie darf niemals in die Datenbank schreiben,
+      sonst ist der Schutzmechanismus selbst der Angriffsvektor: jeder Bot
+      erzeugte Schreiblast. Version aus dem Spring-Boot-BOM.
+    -->
+    <dependency>
+      <groupId>com.github.ben-manes.caffeine</groupId>
+      <artifactId>caffeine</artifactId>
+    </dependency>
+
+    <!--
       Datenzugriff. In Spring Boot 4 ist die Autokonfiguration modularisiert: jedes
       Starter bringt sein eigenes ...autoconfigure-Modul mit. spring-boot-starter-jooq
       zieht spring-boot-starter-jdbc (HikariCP, spring-jdbc) transitiv mit; beide sind
@@ -205,7 +233,7 @@
 
       <!--
         jOOQ-Codegenerierung, zwei Ausfuehrungen in zwei getrennte Zielpakete.
-        Der Generator laeuft mit dem Schreibbenutzer (monitor_root), weil er auch
+        Der Generator laeuft mit dem Schreibbenutzer (monitor_write), weil er auch
         das eigene Schema liest; auf GlassfishDB besitzt auch dieser Benutzer nur
         SELECT. Keine eigene <version> — sie kommt aus dem Spring-Boot-BOM und ist
         damit an die Laufzeit-jOOQ-Version (3.21.x) gekoppelt.
@@ -287,17 +315,31 @@
                   <name>org.jooq.meta.mariadb.MariaDBDatabase</name>
                   <inputSchema>${env.OVERLORD_DB_MONITOR_SCHEMA}</inputSchema>
                   <includes>.*</includes>
-                  <!-- Flyways Buchhaltungstabelle gehoert nicht ins Modell. -->
-                  <excludes>flyway_schema_history</excludes>
+                  <!--
+                    Flyways Buchhaltungstabelle gehoert nicht ins Modell. Die
+                    SPRING_SESSION-Tabellen ebenso wenig: sie gehoeren Spring
+                    Session, werden ausschliesslich von dessen Repository
+                    beschrieben und nie ueber jOOQ angefasst. Waeren sie
+                    generiert, laedt der Typ zum Mitschreiben ein.
+                  -->
+                  <excludes>flyway_schema_history|SPRING_SESSION.*</excludes>
                   <includeTables>true</includeTables>
                   <includeRoutines>false</includeRoutines>
                   <includeSequences>false</includeSequences>
                   <includePackages>false</includePackages>
                   <includeUDTs>false</includeUDTs>
                   <forcedTypes>
+                    <!--
+                      MariaDB fuehrt BOOLEAN als TINYINT(1). Ohne diese Abbildung
+                      erzeugt der Codegen java.lang.Byte und jedes Flag muesste im
+                      Code gegen 0/1 verglichen werden. Bewusst NUR fuer das eigene
+                      Schema: hier ist jedes TINYINT(1) ein Ja/Nein-Flag, weil wir
+                      es selbst so anlegen. In GlassfishDB waere dieselbe Annahme
+                      geraten — das Schema gehoert uns nicht.
+                    -->
                     <forcedType>
                       <name>BOOLEAN</name>
-                      <includeTypes>(?i:BIT\(1\))</includeTypes>
+                      <includeTypes>(?i:TINYINT\(1\))</includeTypes>
                     </forcedType>
                   </forcedTypes>
                 </database>

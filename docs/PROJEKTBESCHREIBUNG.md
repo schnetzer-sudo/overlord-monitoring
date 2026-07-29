@@ -1,7 +1,12 @@
 # Overlord Monitoring — Projektbeschreibung
 
-Stand: 27.07.2026 · Diese Datei ist der verbindliche Kontext für alle Arbeiten am Projekt.
+Stand: 28.07.2026 · Diese Datei ist der verbindliche Kontext für alle Arbeiten am Projekt.
 Bei Widersprüchen zwischen dieser Datei und einer Annahme im Code gilt diese Datei.
+
+**Revision 28.07.2026.** Schritt 2 ist umgesetzt und über die CI bestätigt. Geändert haben sich
+die Rollenbeschreibung (Abschnitt 2), der Schreibbenutzer (Abschnitt 3.0), die Mandantenliste
+(Abschnitt 3.2), die Authentifizierung samt Wegfall der Nutzermigration (Abschnitt 7) sowie die
+Annahmen A2, A8 und die neue A11 (Abschnitt 11).
 
 **Revision 27.07.2026.** Erhebung gegen die Testkopie vor Schritt 2. Geändert haben sich das
 Mengengerüst (Abschnitt 3.2 und 8), die Statusdefinition (Abschnitt 4.1 und 4.2), der Datenstand
@@ -30,14 +35,27 @@ Vollständigkeit. Interne IDs, Statuscodes und Servicenamen sind Beiwerk, keine 
 
 | Rolle | Wer | Sieht |
 |---|---|---|
-| `MANDANT` | Kundenmitarbeiter (extern) | Ausschließlich Daten des eigenen Mandanten |
+| `MANDANT` | Kundenmitarbeiter (extern) | Ausschließlich Daten der ihm zugeordneten Mandanten |
 | `ADMIN` | Interne EDI-Betreuung | Alle Mandanten, zusätzlich Benutzer- und Katalogpflege |
 
 Primäre Zielgruppe ist die Rolle `MANDANT`. Externe Nutzer bedeuten: Die Mandantentrennung ist
 eine Sicherheitsanforderung, keine Komfortfunktion.
 
-Aktuelle Annahme: Ein Nutzer gehört zu genau einem Mandanten (so ist es im Altsystem modelliert).
-Das Datenmodell wird trotzdem für n:m vorbereitet, damit ein späterer Wechsel keine Migration erzwingt.
+**ADMIN sieht alle Mandanten, aber nacheinander — nicht gleichzeitig** (Entscheidung 28.07.2026).
+Es ist immer genau ein Mandant aktiv, für jede Rolle. Der Unterschied zwischen den Rollen liegt
+allein darin, welche Mandanten wählbar sind. Damit gibt es keinen Codepfad ohne Mandantenfilter,
+die Repository-Signaturen sind für beide Rollen identisch, und der Isolationstest gilt für ADMIN
+unverändert. Der Preis: Ansichten sind für ADMIN nur eingeschränkt teilbar, weil der aktive Mandant
+in der Session steht und nicht in der URL. Deshalb gehört er sichtbar in die Kopfzeile.
+
+Berechtigung wird als **Menge** geprüft, nicht als Rolle: *Wer für einen Mandanten berechtigt ist,
+darf zu ihm wechseln.* ADMIN ist für alle berechtigt und damit kein Sonderfall, sondern der Nutzer
+mit der größten Menge.
+
+Annahme A2 (ein Nutzer gehört zu genau einem Mandanten) gilt weiterhin als Ausgangslage, steht
+aber erkennbar unter Druck: `NEXANS` und `NXHBE` sind derselbe Konzern, `IBIS` und `IBISGUS`
+dieselbe Firma mit anderem Zuschnitt. Das Datenmodell ist über `app_user_mandant` für n:m
+vorbereitet, und die mengenbasierte Prüfung fängt den Fall ohne Zusatzbau ab.
 
 ---
 
@@ -55,13 +73,24 @@ sind `varchar(36)`.
 | Benutzer | `GlassfishDB` | `overlord_monitor` |
 |---|---|---|
 | `monitor_read` | `SELECT` | `SELECT` |
-| `monitor_root` | `SELECT` | `ALL PRIVILEGES` |
+| `monitor_write` | `SELECT` | `ALL PRIVILEGES` |
 
 Kein Benutzer besitzt irgendein Schreibrecht auf `GlassfishDB`. Host, Benutzernamen und Passwörter
 stehen ausschließlich in Umgebungsvariablen, niemals in einer versionierten Datei.
 
+Der Schreibbenutzer hieß ursprünglich `monitor_root`. Umbenannt am 28.07.2026, weil der Name
+Allmacht suggerierte, obwohl er nur auf `overlord_monitor` schreiben darf — der nächste Kollege
+liest den Namen und nicht die Dokumentation.
+
 MariaDB 10.6 hat seinen Wartungszeitraum im Juli 2026 erreicht. Die Instanz gehört uns nicht, aber
 wir lesen dauerhaft darauf — siehe Annahme A10.
+
+**Der Server bietet keine TLS-Verschlüsselung an** (festgestellt 28.07.2026). Der JDBC-Treiber
+stört sich nicht daran und verbindet unverschlüsselt, neuere Kommandozeilen-Clients brechen mit
+„SSL is required, but the server does not support it" ab und brauchen `--skip-ssl`. Fachlich heißt
+das: Der gesamte Verkehr zwischen Anwendung und Datenbank läuft im Klartext über das Netz — nicht
+die Passwörter, die überträgt MariaDB im Frage-Antwort-Verfahren, aber jede Nachricht, jeder
+BAM-Wert, jede Belegnummer. Siehe Annahme A11.
 
 ### 3.1 Hierarchie
 
@@ -141,6 +170,25 @@ Reihenfolge (`MessageBAMTypeSortIndex`). Diese Konfiguration wird für die Spalt
 Suchfelder übernommen, nicht neu erfunden.
 
 **`Process` / `Project` / `Mandant` / `ProjectMandant`** — die Hierarchie. Reine Stammdaten.
+
+Die zehn Mandanten, erhoben am 28.07.2026. Die `MandantID` ist ein lesbarer Code, keine UUID:
+
+| ID | Name | |
+|---|---|---|
+| `EDITIONLINGERI` | Edition Lingerie GmbH | |
+| `IBIS` | IBIS GmbH | gehört mit `IBISGUS` zusammen |
+| `IBISGUS` | IBIS GmbH mit GUS WW | |
+| `NEXANS` | Nexans autoelectric GmbH | trägt praktisch das gesamte Nachrichtenaufkommen |
+| `NXHBE` | Nexans Belgien | gehört mit `NEXANS` zusammen |
+| `SUTTONS` | Suttons Group | |
+| `SYSTEM` | Systemmandant | **technisch, kein Kunde** |
+| `VOTG` | VOTG Tanktainer GmbH | |
+| `WOC` | Without Contract | **technisch, kein Kunde** — Auffangbecken für Verkehr ohne hinterlegten Vertrag |
+| `ZAST` | Zast GmbH | |
+
+`SYSTEM` und `WOC` gehören nicht in eine Auswahl, die wie eine Kundenliste aussieht. `WOC` ist
+vermutlich das Gegenstück zum Auffangprozess `00001_Undefined` und braucht im Dashboard eine
+gesonderte Behandlung, sonst steht ein Auffangbecken zwischen echten Kunden.
 
 **`SOS` / `SOSAction`** — "Sequence of Services", der konkrete, aus Bausteinen zusammengesetzte
 Ablauf. `SOSName` ist bereits in Klartext gepflegt ("Lieferabruf von AMG (VDA)", "Eingehender
@@ -462,23 +510,65 @@ Vorgängergeneration, das ist bei jedem Schritt zu prüfen.
 
 ### Authentifizierung
 Eigene Benutzerverwaltung. BCrypt mit Kostenfaktor 12. Serverseitige Session, Session-ID im Cookie
-mit `HttpOnly`, `Secure`, `SameSite=Lax`. Kein JWT — bei externen Nutzern wiegt sofortige
+mit `HttpOnly`, `SameSite=Lax` und `Secure`. Kein JWT — bei externen Nutzern wiegt sofortige
 Rücknehmbarkeit schwerer als Zustandslosigkeit.
 
-Sperre nach fünf Fehlversuchen für 15 Minuten, zusätzlich Begrenzung pro IP. Fehlermeldungen
-bleiben unspezifisch, damit sich keine Benutzernamen durchprobieren lassen.
+`Secure` ist **per Profil schaltbar** und im Profil `dev` aus. Ohne diese Schaltbarkeit
+funktioniert die lokale Entwicklung über `http://localhost` nicht. Ein Test belegt, dass das
+Attribut außerhalb von `dev` gesetzt ist.
 
-Migration: Benutzername, Mandant und Rolle werden aus der Alt-`User`-Tabelle übernommen. Die
-Klartext-Passwörter werden **nicht** übernommen und gelten als kompromittiert. Alle migrierten
-Konten starten gesperrt mit Zwang zur Neuvergabe.
+Sperre nach fünf Fehlversuchen für 15 Minuten, zusätzlich Begrenzung pro IP. Dabei gilt:
+
+- Die **Nutzersperre ist persistent** in `app_user`. Die **IP-Begrenzung liegt ausschließlich im
+  Arbeitsspeicher** und schreibt niemals in die Datenbank — sonst wäre der Schutzmechanismus selbst
+  der Angriffsvektor, weil jeder Bot Schreiblast erzeugt.
+- Fehlermeldungen bleiben unspezifisch. **Die gleichlautende Meldung allein reicht aber nicht:**
+  Bei unbekanntem Benutzernamen wird trotzdem ein BCrypt-Vergleich gegen einen festen Dummy-Hash
+  gerechnet. Ohne das antwortet der unbekannte Fall in zwei statt zweihundert Millisekunden und
+  Benutzernamen lassen sich über die Laufzeit durchprobieren.
+- **Eine Ausnahme von der Unspezifik:** War das Passwort korrekt und das Konto gesperrt oder
+  deaktiviert, darf das benannt werden. Wer das Passwort kennt, erfährt nichts Neues — wer es nicht
+  kennt, bekommt weiter die unspezifische Meldung. Sonst rennt ein berechtigter Nutzer fünfzehn
+  Minuten gegen eine Wand, ohne den Grund zu erfahren.
+
+Sicherheitsrelevante Zeit — Sperrfristen, Sitzungsablauf — rechnet mit der **Systemuhr**, niemals
+mit dem `Clock`-Bean aus Abschnitt 8.
+
+**Es findet keine Migration der Alt-Benutzertabelle statt** (Entscheidung 28.07.2026). Ursprünglich
+war vorgesehen, Benutzername, Mandant und Rolle zu übernehmen. Dagegen sprechen drei Dinge: Die
+Tabelle `GlassfishDB.User` bleibt dauerhaft lesbar, eine Übernahme wäre also nur ein vorgezogener
+`SELECT` und keine einmalige Gelegenheit. Alle 36 Konten wären gesperrt und ohne Passwort gestartet
+und hätten einzeln freigeschaltet werden müssen — derselbe Aufwand wie neu anlegen, nur mit toten
+Zeilen als Zwischenschritt. Und die Rolle `Admin` bedeutet dort etwas anderes als bei uns: Im
+Altsystem trägt jeder Nutzer eine `MandantID`, auch die zehn Admins, die Rolle war also innerhalb
+eines Mandanten gedacht. Eine wörtliche Übernahme hätte zehn überwiegend externe Konten quer über
+genau die Grenze gehoben, die dieses Projekt schützt.
+
+Konten entstehen stattdessen einzeln und bewusst. Das erste Admin-Konto legt ein Startvorgang im
+Profil `bootstrap` aus Umgebungsvariablen an — nur, wenn noch kein ADMIN existiert, und mit
+Zwang zur Passwortänderung, sodass die Variable lediglich ein Einmalpasswort transportiert. Die
+Klartext-Passwörter des Altsystems werden nicht gelesen und gelten als kompromittiert.
+
+Jedes neu angelegte Konto startet mit Änderungszwang. Solange dieser gesetzt ist, lehnt jeder
+Endpunkt außer Abmelden, Selbstauskunft und Passwortänderung ab. **Ohne diesen Änderungspfad wäre
+kein Konto nutzbar** — Annahme A3 schließt eine Selbstbedienung per E-Mail aus.
 
 ### Mandantentrennung — die wichtigste Regel des Projekts
 
-**Kein Endpunkt nimmt jemals eine Mandanten-ID entgegen.** Der Mandant wird ausschließlich aus der
+**Kein Endpunkt nimmt eine Mandanten-ID entgegen.** Der Mandant wird ausschließlich aus der
 Session gelesen.
 
-Jede Repository-Methode bekommt den Mandanten als ersten Pflichtparameter. Es gibt keine
-Überladung ohne ihn. Der Filter über `ProjectMandant` ist Bestandteil jedes Statements, nicht
+**Genau zwei Ausnahmen**, beide namentlich geführt in `docs/mandantentrennung.md`:
+`POST /api/auth/mandant` (Wechsel, geprüft gegen die zulässige Menge) und `POST /api/admin/users`
+(Anlegen eines Kontos, nur ADMIN). Die erste fragt einen Datenausschnitt, die zweite definiert ein
+Konto. Taucht dort jemals eine dritte auf, ist das ein Signal und keine Kleinigkeit.
+
+Beim Wechsel liefert ein **existierender, aber nicht zulässiger** Mandant dieselbe Antwort wie eine
+erfundene ID: `404`. Unterschieden sie sich, ließe sich die Mandantenliste abfragen.
+
+Der `MandantContext` trägt immer **genau eine** Mandanten-ID, für beide Rollen. Jede
+Repository-Methode, die auf das Quellschema zugreift, bekommt ihn als ersten Pflichtparameter. Es
+gibt keine Überladung ohne ihn, und eine ArchUnit-Regel prüft das, statt es nur aufzuschreiben. Der Filter über `ProjectMandant` ist Bestandteil jedes Statements, nicht
 nachgelagerte Prüfung. Wer eine fremde `MessageID` errät, bekommt null Zeilen — weil die Zeile für
 ihn nie existiert hat.
 
@@ -619,15 +709,16 @@ Clock, sondern immer die Systemuhr.
 | # | Annahme | Risiko wenn falsch |
 |---|---|---|
 | ~~A1~~ | **Geklärt.** Testkopie der Produktion vorhanden (Daten bis Ende 2025), zur Laufzeit wird auf der Produktion gelesen | — |
-| A2 | Ein Nutzer gehört zu genau einem Mandanten | `app_user_mandant` ist vorbereitet, Aufwand gering |
+| A2 | Ein Nutzer gehört zu genau einem Mandanten | **Unter Druck.** `NEXANS`/`NXHBE` und `IBIS`/`IBISGUS` sind jeweils dasselbe Haus. `app_user_mandant` ist n:m vorbereitet, und der Wechsel prüft die Menge statt der Rolle — der Fall ist damit ohne Zusatzbau abgedeckt |
 | A3 | Kein SMTP-Relay verfügbar, Passwort-Reset erfolgt durch Admin | Selbstbedienung fehlt, später nachrüstbar |
 | ~~A4~~ | **Geklärt.** Rohdatenzugriff über Filestore-Links ist gewünscht und für alle Mandantennutzer freigegeben | — |
 | ~~A5~~ | **Geklärt.** Eigenständiger Betrieb möglich, GlassFish nicht vorgeschrieben (Instanz wäre Version 6/7) | — |
 | ~~A6~~ | **Widerlegt 27.07.2026.** `ERROR_*` ist **nicht** die vollständige Fehlerdefinition: `COMMIT_REJECTED` ist ein Fehler ohne Präfix. Siehe 4.1 | — |
 | ~~A7~~ | **Bestätigt 27.07.2026.** 1.490 Prozesse | — |
-| A8 | Jedes Projekt ist mindestens einem Mandanten zugeordnet | **Offen.** 142 Projekte stehen 134 Zeilen in `ProjectMandant` gegenüber. Nachrichten in Projekten ohne Zuordnung wären für niemanden sichtbar, auch nicht für Admins. Vor Schritt 4 zu klären |
+| ~~A8~~ | **Geklärt 28.07.2026, bewusst akzeptiert.** 142 Projekte stehen 134 Zeilen in `ProjectMandant` gegenüber. Nachrichten in Projekten ohne Zuordnung sind im Werkzeug für niemanden sichtbar, auch nicht für ADMIN. Es wird **kein** Sonderpfad und kein Pseudo-Mandant gebaut. Wichtig, dass das dokumentiert bleibt: Wird eine solche Nachricht gesucht, findet sie niemand, und ohne diesen Eintrag wüsste auch niemand warum | — |
 | A9 | Die BAM-Suche lässt sich mit Zeitfenster und hartem Limit ausreichend begrenzen | `MessageBAM` hat keinen Zeitstempel, das Fenster greift erst nach dem Join. Rückfalloption: eigener BAM-Index in `overlord_monitor`, vom Rollup-Job mitgeführt |
 | A10 | MariaDB 10.6 bleibt für die Laufzeit des Projekts in Betrieb | Version hat im Juli 2026 den Wartungszeitraum erreicht. Ein Upgrade auf 11.x ändert Standard-Sortierungen — deshalb steht die Sortierung in jeder Migration explizit |
+| A11 | Die unverschlüsselte Verbindung zur Datenbank ist tragbar | **Offen.** Auf der Testkopie ist kein TLS eingerichtet. Tragbar, wenn Anwendungsserver und Datenbank im selben Rechenzentrum am selben Switch stehen; nicht tragbar über ein Firmennetz mit WLAN oder Standortkopplung. Vor dem Produktivbetrieb mit `SHOW VARIABLES LIKE 'have_ssl'` gegen die Produktion zu prüfen |
 
 ---
 

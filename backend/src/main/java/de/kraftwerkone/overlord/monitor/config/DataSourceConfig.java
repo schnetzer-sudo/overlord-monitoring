@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.support.JdbcTransactionManager;
+import org.springframework.session.jdbc.config.annotation.SpringSessionDataSource;
 import org.springframework.transaction.PlatformTransactionManager;
 
 /**
@@ -56,10 +57,15 @@ public class DataSourceConfig {
 
   /**
    * Schreib-Pool {@code monitor-write} auf den Schreibbenutzer. Schreibt ausschliesslich in {@code
-   * overlord_monitor}. Von Flyway ueber {@link FlywayDataSource} genutzt.
+   * overlord_monitor}. Von Flyway ueber {@link FlywayDataSource} und von Spring Session ueber
+   * {@link SpringSessionDataSource} genutzt.
+   *
+   * <p>Beide Bindungen sind noetig, weil keine der DataSources {@link Primary} ist: Ohne die
+   * Annotationen suchte Spring Session eine eindeutige DataSource und faende zwei.
    */
   @Bean
   @FlywayDataSource
+  @SpringSessionDataSource
   public DataSource monitorDataSource(DatabaseProperties props) {
     HikariConfig cfg = new HikariConfig();
     cfg.setPoolName("monitor-write");

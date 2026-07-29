@@ -10,9 +10,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.domain.JavaMethod;
+import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchRule;
+import de.kraftwerkone.overlord.monitor.security.MandantContext;
+import de.kraftwerkone.overlord.monitor.security.OhneMandantenkontext;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -309,6 +313,83 @@ class PaketstrukturTest {
                     + " und Controller sehen ausschliesslich eigene Typen.")
             .allowEmptyShould(true);
     regel.check(KLASSEN);
+  }
+
+  /**
+   * Regel M2, maschinell: Wer das Quellschema anfasst, bekommt den Mandanten als <b>ersten</b>
+   * Parameter. Nicht als zweiten, nicht optional, nicht in einer Ueberladung daneben.
+   *
+   * <p>Die einzige zulaessige Abweichung ist {@link OhneMandantenkontext} — fuer die Methoden, die
+   * den Kontext erst herstellen. Der folgende Test haelt fest, dass diese Markierung nirgends sonst
+   * auftaucht.
+   */
+  @Test
+  @DisplayName("MandantContext ist erster Parameter jeder Methode auf jooq.glassfish (Regel M2)")
+  void mandantcontext_ist_erster_parameter() {
+    List<String> verstoesse = new ArrayList<>();
+    for (JavaClass klasse : klassenMitGlassfishZugriff()) {
+      for (JavaMethod methode : klasse.getMethods()) {
+        if (!methode.getModifiers().contains(JavaModifier.PUBLIC)
+            || methode.isAnnotatedWith(OhneMandantenkontext.class)) {
+          continue;
+        }
+        List<JavaClass> parameter = methode.getRawParameterTypes();
+        boolean inOrdnung =
+            !parameter.isEmpty() && parameter.getFirst().isEquivalentTo(MandantContext.class);
+        if (!inOrdnung) {
+          verstoesse.add(klasse.getSimpleName() + "." + methode.getName());
+        }
+      }
+    }
+    assertThat(verstoesse)
+        .as(
+            "Diese oeffentlichen Methoden fassen jooq.glassfish an, ohne MandantContext als ersten"
+                + " Parameter zu verlangen. Entweder fehlt der Parameter — oder die Methode stellt"
+                + " den Kontext erst her und braucht @OhneMandantenkontext mit Begruendung.")
+        .isEmpty();
+  }
+
+  @Test
+  @DisplayName("@OhneMandantenkontext steht ausschliesslich im MandantRepository")
+  void ausnahme_nur_im_mandantrepository() {
+    List<String> fundstellen = new ArrayList<>();
+    for (JavaClass klasse : KLASSEN) {
+      for (JavaMethod methode : klasse.getMethods()) {
+        if (methode.isAnnotatedWith(OhneMandantenkontext.class)) {
+          fundstellen.add(klasse.getSimpleName());
+        }
+      }
+    }
+    assertThat(fundstellen)
+        .as(
+            "Die Ausnahme von Regel M2 ist namentlich gefuehrt. Taucht sie ausserhalb des"
+                + " MandantRepository auf, ist das ein Signal und keine Kleinigkeit — genau wie"
+                + " eine dritte Endpunkt-Ausnahme in docs/mandantentrennung.md.")
+        .containsOnly("MandantRepository");
+  }
+
+  /** Alle handgeschriebenen Klassen, die irgendeinen Typ aus {@code jooq.glassfish} verwenden. */
+  private static List<JavaClass> klassenMitGlassfishZugriff() {
+    String glassfishPaket = BASIS + ".jooq.glassfish";
+    List<JavaClass> treffer = new ArrayList<>();
+    for (JavaClass klasse : KLASSEN) {
+      if (klasse.getPackageName().startsWith(BASIS + "." + GENERIERT)) {
+        continue;
+      }
+      boolean fasstAn =
+          klasse.getDirectDependenciesFromSelf().stream()
+              .anyMatch(
+                  abhaengigkeit ->
+                      abhaengigkeit.getTargetClass().getPackageName().startsWith(glassfishPaket));
+      if (fasstAn) {
+        treffer.add(klasse);
+      }
+    }
+    assertThat(treffer)
+        .as(
+            "Es gibt keine Klasse mehr, die jooq.glassfish anfasst — dann prueft diese Regel nichts")
+        .isNotEmpty();
+    return treffer;
   }
 
   @Test

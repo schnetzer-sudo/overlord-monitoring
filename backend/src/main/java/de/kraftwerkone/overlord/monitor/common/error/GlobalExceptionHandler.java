@@ -2,6 +2,7 @@ package de.kraftwerkone.overlord.monitor.common.error;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
+import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,6 +11,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
@@ -33,18 +36,26 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
   private static final String TYP_BASIS = "https://overlord.kraftwerkone.de/probleme/";
 
-  @ExceptionHandler(RessourceNichtGefundenException.class)
-  public ProblemDetail handleNichtGefunden(
-      RessourceNichtGefundenException ex, HttpServletRequest request) {
-    ProblemDetail problem =
-        ProblemDetail.forStatusAndDetail(
-            HttpStatus.NOT_FOUND, "Die angeforderte Ressource wurde nicht gefunden.");
-    problem.setTitle("Nicht gefunden");
-    problem.setType(URI.create(TYP_BASIS + "nicht-gefunden"));
+  /**
+   * Alle vorhergesehenen Fehler — gesperrtes Konto, fremder Mandant, zu grosses Zeitfenster. Ohne
+   * Stacktrace protokolliert; in die Antwort geht ausschliesslich der fachliche Text.
+   */
+  @ExceptionHandler(FachlicheAusnahme.class)
+  public ProblemDetail handleFachlich(FachlicheAusnahme ex, HttpServletRequest request) {
+    ProblemDetail problem = ProblemDetail.forStatusAndDetail(ex.status(), ex.detail());
+    problem.setTitle(ex.titel());
+    problem.setType(URI.create(TYP_BASIS + ex.problemTyp()));
     problem.setInstance(URI.create(request.getRequestURI()));
     String traceId = mitTraceId(problem);
+    // Die interne Ursache steht nur hier, nie in der Antwort.
     log.info(
-        "Nicht gefunden [traceId={}] {} {}", traceId, request.getMethod(), request.getRequestURI());
+        "Fachlicher Fehler [traceId={}] {} {} -> {} ({}): {}",
+        traceId,
+        request.getMethod(),
+        request.getRequestURI(),
+        ex.status().value(),
+        ex.problemTyp(),
+        ex.getMessage());
     return problem;
   }
 
@@ -66,6 +77,35 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         request.getRequestURI(),
         ex);
     return problem;
+  }
+
+  /**
+   * Feldbezogene Prueffehler kommen zusaetzlich als {@code errors: [{feld, meldung}]}. Ohne diese
+   * Liste muesste die Oberflaeche raten, welches Feld gemeint ist.
+   */
+  @Override
+  protected ResponseEntity<Object> handleMethodArgumentNotValid(
+      MethodArgumentNotValidException ex,
+      HttpHeaders headers,
+      HttpStatusCode status,
+      WebRequest request) {
+    ResponseEntity<Object> antwort =
+        super.handleMethodArgumentNotValid(ex, headers, status, request);
+    if (antwort != null && antwort.getBody() instanceof ProblemDetail problem) {
+      problem.setTitle("Eingabe unvollstaendig");
+      problem.setType(URI.create(TYP_BASIS + "eingabe-ungueltig"));
+      problem.setDetail("Bitte pruefe die angegebenen Felder.");
+      problem.setProperty(
+          "errors",
+          ex.getBindingResult().getFieldErrors().stream()
+              .map(fehler -> Map.of("feld", fehler.getField(), "meldung", meldung(fehler)))
+              .toList());
+    }
+    return antwort;
+  }
+
+  private static String meldung(FieldError fehler) {
+    return fehler.getDefaultMessage() == null ? "Ungueltiger Wert" : fehler.getDefaultMessage();
   }
 
   /** Ergaenzt die {@code traceId} auch bei den von Spring vorbereiteten 4xx-Antworten. */

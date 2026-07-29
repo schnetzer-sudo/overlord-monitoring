@@ -22,6 +22,18 @@ spring:
   autoconfigure:
     exclude:
       - org.springframework.boot.jooq.autoconfigure.JooqAutoConfiguration
+      # Ohne diese Ausnahme legt Boot beim Start einen Standardnutzer mit erzeugtem
+      # Passwort an und schreibt es ins Protokoll. Dieses Projekt hat eine eigene
+      # Benutzerverwaltung; ein zweiter, unbeabsichtigter Weg hinein waere genau der
+      # Codepfad, den niemand prueft.
+      - org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
+  # Die Sitzung liegt serverseitig in overlord_monitor (Spring Session JDBC), gebunden
+  # ueber @SpringSessionDataSource an den Schreib-Pool. Das Schema legt Flyway an
+  # (V3__spring_session.sql) — "never" verhindert, dass Spring Session an Flyway vorbei
+  # arbeitet und ein zweites, leicht abweichendes Schema erzeugt.
+  session:
+    jdbc:
+      initialize-schema: never
   # Flyway verwaltet AUSSCHLIESSLICH overlord_monitor (Regel S2). Gebunden wird der
   # Schreib-Pool ueber @FlywayDataSource (config/DataSourceConfig). Das Schema
   # existiert bereits, wird also nicht angelegt und nicht baselined.
@@ -48,6 +60,22 @@ overlord:
 server:
   port: ${SERVER_PORT:8080}
   shutdown: graceful
+  servlet:
+    session:
+      # Sitzungsdauer ohne Aktivitaet. Gerechnet wird mit der Systemuhr, nicht mit der
+      # Anwendungsuhr aus Schritt 2 — die ist im dev-Profil um Wochen zurueckversetzt.
+      timeout: 30m
+      cookie:
+        # Eigener Name statt JSESSIONID: Das Cookie gehoert diesem Werkzeug und nicht
+        # irgendeinem Servlet-Container. Diese Werte gelten auch fuer Spring Session —
+        # Boot baut den CookieSerializer daraus.
+        name: OVERLORD_SESSION
+        http-only: true
+        same-site: lax
+        # Standard ist AN. Das dev-Profil schaltet es aus, sonst schickt der Browser das
+        # Cookie ueber http://localhost nicht mit und die lokale Entwicklung steht.
+        # Ein Test belegt, dass es ausserhalb von dev gesetzt ist.
+        secure: true
   # Regel: Niemals interne Details oder Stacktraces an den Client.
   # Gilt in JEDEM Profil — auch in dev, sonst wird es in prod vergessen.
   error:
@@ -87,6 +115,15 @@ spring:
   config:
     activate:
       on-profile: dev
+
+server:
+  servlet:
+    session:
+      cookie:
+        # NUR hier aus. Ueber http://localhost sendet der Browser ein Secure-Cookie nicht
+        # mit; ohne diese Schaltbarkeit funktioniert die lokale Entwicklung nicht. In jedem
+        # anderen Profil bleibt es an.
+        secure: false
 
 management:
   endpoint:

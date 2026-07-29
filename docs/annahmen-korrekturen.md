@@ -32,11 +32,11 @@ kann.
   („server is running with the --read-only option"), noch **vor** der Rechteprüfung. Das ist ein
   vierter, unbeabsichtigter Schutz vor Schreibzugriffen auf `GlassfishDB` (siehe `datenzugriff.md`
   §4).
-- **`monitor_root` schreibt trotzdem erfolgreich** nach `overlord_monitor` (schema-weite
+- **`monitor_write` schreibt trotzdem erfolgreich** nach `overlord_monitor` (schema-weite
   `ALL PRIVILEGES`), obwohl der Server global `read_only` ist — sechs von sechs Schreibversuchen
   erfolgreich, Flyway-Migration `V1` erfolgreich angewandt.
 - ⚠️ **Transienter Effekt:** In einem kurzen Fenster (vermutlich Neubefüllung der Testkopie) scheiterte
-  auch `monitor_root` kurzzeitig mit `1290`. Schlägt ein lokaler Build mit dieser Meldung fehl, ist
+  auch `monitor_write` kurzzeitig mit `1290`. Schlägt ein lokaler Build mit dieser Meldung fehl, ist
   das **kein Code-Fehler** — den Lauf wiederholen. Der Effekt ist auf die Testkopie beschränkt.
 - Der Schreibverbotstest akzeptiert deshalb `1290` **oder** `1142` (fehlendes Recht).
 

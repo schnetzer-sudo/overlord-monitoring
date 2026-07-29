@@ -4,6 +4,8 @@
 package de.kraftwerkone.overlord.monitor.jooq.monitor;
 
 
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AppUser;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AppUserMandant;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AuditLog;
 
 
@@ -12,6 +14,16 @@ import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AuditLog;
  */
 @SuppressWarnings({ "all", "unchecked", "rawtypes", "this-escape" })
 public class Tables {
+
+    /**
+     * The table <code>overlord_monitor.app_user</code>.
+     */
+    public static final AppUser APP_USER = AppUser.APP_USER;
+
+    /**
+     * The table <code>overlord_monitor.app_user_mandant</code>.
+     */
+    public static final AppUserMandant APP_USER_MANDANT = AppUserMandant.APP_USER_MANDANT;
 
     /**
      * The table <code>overlord_monitor.audit_log</code>.
