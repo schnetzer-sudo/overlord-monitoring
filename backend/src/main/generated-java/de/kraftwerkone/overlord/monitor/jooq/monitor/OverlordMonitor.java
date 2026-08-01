@@ -7,6 +7,7 @@ package de.kraftwerkone.overlord.monitor.jooq.monitor;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AppUser;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AppUserMandant;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AuditLog;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.BamSpalte;
 
 import java.util.Arrays;
 import java.util.List;
@@ -46,6 +47,11 @@ public class OverlordMonitor extends SchemaImpl {
     public final AuditLog AUDIT_LOG = AuditLog.AUDIT_LOG;
 
     /**
+     * The table <code>overlord_monitor.bam_spalte</code>.
+     */
+    public final BamSpalte BAM_SPALTE = BamSpalte.BAM_SPALTE;
+
+    /**
      * No further instances allowed
      */
     private OverlordMonitor() {
@@ -63,7 +69,8 @@ public class OverlordMonitor extends SchemaImpl {
         return Arrays.asList(
             AppUser.APP_USER,
             AppUserMandant.APP_USER_MANDANT,
-            AuditLog.AUDIT_LOG
+            AuditLog.AUDIT_LOG,
+            BamSpalte.BAM_SPALTE
         );
     }
 }

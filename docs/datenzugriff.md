@@ -179,6 +179,38 @@ weil sie den Datenzugriff selbst betreffen:
   (`@FlywayDataSource` und diese) sind nötig, weil keine der DataSources `@Primary` ist — ohne sie
   suchte Spring Session eine eindeutige DataSource und fände zwei.
 
+### `V4__bam_spalte.sql` (Schritt 4)
+
+Kuratierte Auswahl der zwei BAM-Spalten je Mandant. Drei Spalten: `mandant_id`, `position` (1 oder 2)
+und `message_bam_type`; Primärschlüssel `(mandant_id, position)`.
+
+**Warum es diese Tabelle gibt.** Naheliegend wäre, die beiden Spalten über
+`GlassfishDB.MessageBAMMandant.MessageBAMTypeSortIndex` zu wählen — und für sechs der sieben
+konfigurierten Mandanten trifft dieser Index die richtige Wahl. **Bei `NEXANS` nicht:** Die beiden
+kleinsten Indizes sind `9000` „Abladestelle_L_SAP" und `9001` „Abrufnummer_L_SAP". Die Abladestelle
+ist genau das Feld, das die Projektbeschreibung als millionenfach vorkommenden Wert nennt (`050`);
+als Spalte stünde dort auf fast jeder Zeile dasselbe. Die Lieferschein-Nr. liegt auf Platz sieben
+(Messung M7 in [`messungen-schritt4.md`](messungen-schritt4.md)).
+
+Also kuratiert statt geraten, wie bei Partner, Standort, Richtung und Belegart (Regel Q4): Die
+Heuristik — hier der Sortierindex — befüllt vor, die Wahrheit steht in der Tabelle.
+**Vorbelegt wird ausschließlich die Ausnahme**, zwei Zeilen für `NEXANS`.
+
+**Die Auflösungsregel** (umgesetzt mit dem Listen-Endpunkt):
+
+1. Gibt es Zeilen für den aktiven Mandanten, gelten **sie** — in der Reihenfolge `position`.
+2. Sonst die zwei **kleinsten** `MessageBAMTypeSortIndex` aus `MessageBAMMandant`. Bei Gleichstand
+   entscheidet `MessageBAMType` aufsteigend — `VOTG` vergibt `2002` zweimal (M7), ohne diesen
+   Zusatz wäre die Reihenfolge dort zufällig.
+3. Hat ein Mandant nur **einen** BAM-Typ (`ZAST`), gibt es **eine** Spalte.
+4. Hat er **keinen** (`EDITIONLINGERI`, `SYSTEM`, `WOC`), gibt es **keine**. Keine leere Spalte, kein
+   Platzhalter — eine Spalte ohne Inhalt behauptet, es gäbe dort etwas zu sehen.
+
+Kein Fremdschlüssel über die Schemagrenze: `mandant_id` zeigt fachlich auf
+`GlassfishDB.Mandant.MandantID`, `message_bam_type` auf `GlassfishDB.MessageBAMType.MessageBAMType`
+— beide tragen bewusst **keinen** Fremdschlüssel dorthin. Verschwindet ein BAM-Typ im Altsystem,
+bleibt die Kuratierung bestehen, statt rückwirkend zu verschwinden.
+
 ---
 
 ## 6. Zeitquellen

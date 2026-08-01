@@ -7,6 +7,7 @@ package de.kraftwerkone.overlord.monitor.jooq.monitor;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AppUser;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AppUserMandant;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AuditLog;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.BamSpalte;
 
 
 /**
@@ -29,4 +30,9 @@ public class Tables {
      * The table <code>overlord_monitor.audit_log</code>.
      */
     public static final AuditLog AUDIT_LOG = AuditLog.AUDIT_LOG;
+
+    /**
+     * The table <code>overlord_monitor.bam_spalte</code>.
+     */
+    public static final BamSpalte BAM_SPALTE = BamSpalte.BAM_SPALTE;
 }
