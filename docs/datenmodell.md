@@ -144,11 +144,24 @@ gelegentlich 1:n (Varianten wie `_OUT`, `_MAIL`).
 
 ### `User` — Alt-Benutzertabelle
 
-`UserPassword` varchar(20) im **Klartext**.
+`UserID` (Benutzername und Schlüssel) · `MandantID` · `UserRole` mit den Werten `Admin` und `User` ·
+`UserPassword` varchar(20) im **Klartext**
 
-🚫 **Wird nicht weiterverwendet.** Benutzername, Mandant und Rolle werden übernommen, die
-Passwörter **nicht** — sie gelten als kompromittiert. Alle migrierten Konten starten gesperrt mit
-Zwang zur Neuvergabe. (Abschnitt 7 der Projektbeschreibung)
+🚫 **Es wird nichts übernommen. Die Tabelle ist reine Nachschlagequelle.** Aus ihr wird zur Laufzeit
+nicht gelesen — weder Benutzername noch Mandant noch Rolle, und `UserPassword` schon gar nicht.
+Konten entstehen einzeln über `POST /api/admin/users`, das erste über das Profil `bootstrap`.
+Vollständig in [`authentifizierung.md`](authentifizierung.md) §8 und Abschnitt 7 der
+[Projektbeschreibung](PROJEKTBESCHREIBUNG.md).
+
+> **Korrektur 01.08.2026.** Hier stand bis heute: *„Benutzername, Mandant und Rolle werden
+> übernommen, die Passwörter nicht … Alle migrierten Konten starten gesperrt mit Zwang zur
+> Neuvergabe."* Dieser Stand ist seit der **Entscheidung vom 28.07.2026 widerrufen** — der
+> Migrationslauf entfällt **ersatzlos**, es gibt keine migrierten Konten. Die drei Gründe
+> (die Tabelle bleibt dauerhaft lesbar, eine Übernahme wäre nur ein vorgezogener `SELECT`; alle
+> 36 Konten wären einzeln freizuschalten gewesen; `Admin` bedeutet im Altsystem etwas anderes, weil
+> dort auch jeder Admin eine `MandantID` trägt) stehen in `authentifizierung.md` §8. Der überholte
+> Satz wird benannt und nicht stillschweigend ersetzt: Wer ihn in einem älteren Stand liest, soll
+> hier finden, dass er zurückgenommen wurde.
 
 ### `MessageStatisticHistory` und View `MessageStatistic`
 

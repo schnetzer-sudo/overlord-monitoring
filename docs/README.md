@@ -84,3 +84,4 @@ Einmalig erhobene Fakten über das Quellsystem, die sonst niemand mehr nachvollz
 | Datei | Entsteht in | Inhalt |
 |---|---|---|
 | [`message-status.md`](message-status.md) | **Schritt 2** (vorgezogen) | Ergebnis von `SELECT DISTINCT MessageStatus` — widerlegt Annahme A6. Ersetzt das ursprünglich für Schritt 3 geplante `message-status-werte.md` |
+| [`messungen-schritt4.md`](messungen-schritt4.md) | **vor Schritt 4** | M0 bis M7 gegen die Testkopie (01.08.2026): Datenstand, Spalten und Indizes, `MessageTimeout`, Nachrichten je Mandant, View gegen `EXISTS`, `SOSID`, `SPLITTED`/`MERGED`, BAM-Konfiguration — je mit Statement, Ergebnis, `EXPLAIN` und Laufzeit. Dazu die Auffälligkeiten und die daraus **offenen Fragen**. Reine Erhebung, keine Entscheidungen |

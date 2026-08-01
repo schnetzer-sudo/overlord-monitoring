@@ -1,7 +1,12 @@
 # Overlord Monitoring — Projektbeschreibung
 
-Stand: 28.07.2026 · Diese Datei ist der verbindliche Kontext für alle Arbeiten am Projekt.
+Stand: 01.08.2026 · Diese Datei ist der verbindliche Kontext für alle Arbeiten am Projekt.
 Bei Widersprüchen zwischen dieser Datei und einer Annahme im Code gilt diese Datei.
+
+**Korrektur 01.08.2026.** Annahme A1 (Abschnitt 11) nannte „Daten bis Ende 2025" und widersprach
+damit dem Datenstand in Abschnitt 8. Messung M0 gegen die Testkopie entscheidet zugunsten von
+Abschnitt 8 (**08.07.2026**); A1 ist entsprechend korrigiert und Abschnitt 8 um die Bestätigung
+ergänzt. Alle Zahlen dazu in [`messungen-schritt4.md`](messungen-schritt4.md). Sonst nichts geändert.
 
 **Revision 28.07.2026.** Schritt 2 ist umgesetzt und über die CI bestätigt. Geändert haben sich
 die Rollenbeschreibung (Abschnitt 2), der Schreibbenutzer (Abschnitt 3.0), die Mandantenliste
@@ -646,6 +651,15 @@ Prozent der Datenbank; dort entscheidet die Bytegröße.
 | Testkopie (interner Host, MariaDB 10.6) | Vollkopie der Produktion, Datenstand **08.07.2026** | Entwicklung, Tests, Messung von Abfrageplänen |
 | Produktion | Live | Laufzeitdatenquelle der Anwendung |
 
+**Bestätigt am 01.08.2026** durch Messung M0: `MIN(MessageLastUpdate) = 2024-10-01 02:00:28`,
+`MAX = 2026-07-08 17:21:10`, 3.341.519 Zeilen — unverändert gegenüber dem 28.07.2026, die Testkopie
+ist seither nicht neu befüllt worden. Dieser Abschnitt ist damit die maßgebliche Stelle für den
+Datenstand; die abweichende Angabe „Daten bis Ende 2025" bei Annahme A1 in Abschnitt 11 war falsch
+und ist dort korrigiert. **Wie sich die 3,34 Millionen Zeilen über diesen Zeitraum verteilen, ist
+nicht gleichmäßig** — die gemessene Verteilung steht in
+[`messungen-schritt4.md`](messungen-schritt4.md) und ist vor der Festlegung relativer Zeitfenster in
+Schritt 4 zu lesen.
+
 Eine laufend aktualisierte Replica existiert nicht. Zur Laufzeit wird auf der Produktion gelesen —
 daher sind die Regeln 1 bis 6 verbindlich und nicht verhandelbar.
 
@@ -708,7 +722,7 @@ Clock, sondern immer die Systemuhr.
 
 | # | Annahme | Risiko wenn falsch |
 |---|---|---|
-| ~~A1~~ | **Geklärt.** Testkopie der Produktion vorhanden (Daten bis Ende 2025), zur Laufzeit wird auf der Produktion gelesen | — |
+| ~~A1~~ | **Geklärt.** Testkopie der Produktion vorhanden, zur Laufzeit wird auf der Produktion gelesen. **Korrigiert 01.08.2026:** Hier stand „Daten bis Ende 2025" — das widersprach Abschnitt 8, der **08.07.2026** nennt. Messung M0 gibt Abschnitt 8 recht: `MAX(Message.MessageLastUpdate) = 2026-07-08 17:21:10`. Die falsche Angabe stammte aus der Zeit vor der Erhebung vom 27.07.2026 und ist beim Nachziehen von Abschnitt 8 übersehen worden. Zur Verteilung innerhalb dieses Zeitraums siehe [`messungen-schritt4.md`](messungen-schritt4.md) | — |
 | A2 | Ein Nutzer gehört zu genau einem Mandanten | **Unter Druck.** `NEXANS`/`NXHBE` und `IBIS`/`IBISGUS` sind jeweils dasselbe Haus. `app_user_mandant` ist n:m vorbereitet, und der Wechsel prüft die Menge statt der Rolle — der Fall ist damit ohne Zusatzbau abgedeckt |
 | A3 | Kein SMTP-Relay verfügbar, Passwort-Reset erfolgt durch Admin | Selbstbedienung fehlt, später nachrüstbar |
 | ~~A4~~ | **Geklärt.** Rohdatenzugriff über Filestore-Links ist gewünscht und für alle Mandantennutzer freigegeben | — |

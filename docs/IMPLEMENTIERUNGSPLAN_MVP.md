@@ -1,6 +1,6 @@
 # Overlord Monitoring — Implementierungsplan MVP
 
-Stand: 28.07.2026 · Ergänzt `PROJEKTBESCHREIBUNG.md`
+Stand: 01.08.2026 · Ergänzt `PROJEKTBESCHREIBUNG.md`
 
 **Stand der Umsetzung**
 
@@ -8,7 +8,17 @@ Stand: 28.07.2026 · Ergänzt `PROJEKTBESCHREIBUNG.md`
 |---|---|
 | 1 — Fundament | erledigt |
 | 2 — Backend-Grundgerüst und Datenzugriff | erledigt, über die CI bestätigt, auf `main` |
-| 3 — Anmeldung und Mandantentrennung | **geteilt in Teil 1 (Backend) und Teil 2 (Frontend)**; Teil 1 erledigt (29.07.2026), Teil 2 offen |
+| 3 — Anmeldung und Mandantentrennung | **geteilt in Teil 1 (Backend) und Teil 2 (Frontend)**; beide Teile erledigt (29.07.2026) |
+| 4 — Nachrichtenliste | offen; Messungen erhoben (01.08.2026), siehe [`messungen-schritt4.md`](messungen-schritt4.md) |
+
+**Korrektur 01.08.2026 zu Schritt 3, Teil 2.** Die Tabelle führte Teil 2 bis hierhin als **offen**.
+Dieser Stand war seit dem 29.07.2026 überholt: Teil 2 ist an diesem Tag zusammen mit Teil 1
+abgeschlossen worden. Beleg sind die beiden Dokumente, die laut Dokumentationspflicht erst mit dem
+Feature entstehen — [`frontend-grundlagen.md`](frontend-grundlagen.md) und
+[`visuelles-konzept.md`](visuelles-konzept.md); beide sind angelegt und tragen Messungen vom
+29.07.2026. Der überholte Eintrag wird hier benannt und nicht stillschweigend überschrieben, damit
+nachvollziehbar bleibt, dass die Tabelle drei Tage lang falsch war und nicht etwa der Schritt
+nachträglich umdatiert wurde.
 
 **Revision 28.07.2026.** Schritt 3 ist geteilt. Die Übernahme der Altnutzer entfällt ersatzlos und
 wird durch einen minimalen Anlege-Endpunkt ersetzt. Der Mandantenwechsel prüft eine Menge statt
