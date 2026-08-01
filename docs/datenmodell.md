@@ -53,8 +53,19 @@ Treffer man anschließend zählt.
 ⚠️ **Es gibt kein Anlagedatum.** `MessageLastUpdate` ist der Zeitpunkt der **letzten Änderung**.
 Der fachliche Start ist `MIN(MessageAction.MessageActionStart)`.
 
-⚠️ **`MessageTimeout` ist eine Dauer in Minuten, kein Zeitpunkt.** Der Timeout-Zeitpunkt wird im
+⚠️ **`MessageTimeout` ist eine Dauer in Sekunden, kein Zeitpunkt.** Der Timeout-Zeitpunkt wird im
 Backend als `MessageLastUpdate + MessageTimeout` berechnet.
+
+> **Korrektur 01.08.2026.** Hier stand bis heute **„Dauer in Minuten"** — ebenso in Regel Z2 der
+> Entwicklungsrichtlinien und in Abschnitt 3.3 der Projektbeschreibung. Das ist durch Messung M8
+> widerlegt: `SOSActionTimeout = 1800` steht 37.120-mal neben dem Ablaufschritt `WAIT|30M`, und
+> 1800 **Sekunden** sind exakt 30 Minuten; der einzige andere vorkommende Wert `300` passt zum
+> Schritt `5M`. Unter der Minuten-Lesart stünde eine Frist von 30 Stunden neben einem Schritt, der
+> 30 Minuten wartet. Vollständige Belegkette samt ihrer Schwachstelle in
+> [`messungen-schritt4.md`](messungen-schritt4.md), Abschnitt M8.
+>
+> Die Größenordnung ändert sich damit um **Faktor 60**. Wer die Spalte in einer älteren Fassung als
+> Minuten gelesen hat, hat die Kategorie „Überfällig" um 29,5 Stunden zu spät ausgelöst.
 
 **Nutzbare Indizes:**
 
@@ -229,7 +240,16 @@ Siehe `Message`. Wer „seit wann läuft das" beantworten will, braucht
 
 ### 5.3 `MessageTimeout` ist eine Dauer
 
-Minuten, kein Zeitpunkt. Wer die Spalte als Zeitstempel liest, bekommt Unsinn.
+**Sekunden**, kein Zeitpunkt. Wer die Spalte als Zeitstempel liest, bekommt Unsinn — und wer sie als
+Minuten liest, rechnet um Faktor 60 daneben (Korrektur 01.08.2026, siehe oben).
+
+In der Testkopie kommen genau zwei Werte vor: `1800` (99,79 %) und `0` (0,21 %), **niemals `NULL`**.
+`0` wird als „kein Timeout" behandelt.
+
+⚠️ **`ERROR_TIMEOUT` entsteht nicht aus dieser Spalte.** Die 52 so gekennzeichneten Nachrichten
+laufen 2 bis 5,6 Minuten und brechen höchstens 120 Sekunden nach dem Start ihrer letzten Aktion ab —
+das ist eine kürzere Frist auf Dienstebene. Wer die 52 Zeilen als Beispiele für ein abgelaufenes
+`MessageTimeout` liest, liest sie falsch (M8).
 
 ### 5.4 `MessageProperty` ist EAV und riesig
 

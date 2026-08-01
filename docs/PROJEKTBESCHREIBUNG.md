@@ -126,8 +126,11 @@ Message → Process → Project → ProjectMandant → Mandant
 Wichtig:
 - Es gibt **kein Anlagedatum**. `MessageLastUpdate` ist der Zeitpunkt der letzten Änderung.
   Der fachliche Start ist `MIN(MessageAction.MessageActionStart)`.
-- `MessageTimeout` ist eine **Dauer in Minuten**, kein Zeitpunkt. Der Timeout-Zeitpunkt wird im
-  Backend berechnet.
+- `MessageTimeout` ist eine **Dauer in Sekunden**, kein Zeitpunkt. Der Timeout-Zeitpunkt wird im
+  Backend berechnet. *Korrigiert 01.08.2026:* Hier stand „Dauer in Minuten". Messung M8 widerlegt
+  das — `SOSActionTimeout = 1800` steht 37.120-mal neben dem Ablaufschritt `WAIT|30M`, und 1800
+  Sekunden sind exakt 30 Minuten. Die Größenordnung ändert sich um Faktor 60; Belegkette in
+  [`messungen-schritt4.md`](messungen-schritt4.md) M8.
 - Nutzbare Indizes: `MessageLastUpdateIDX`, `MessageStatusIDX` und der zusammengesetzte
   `MessageLastUpdateProcessMessageIDX (MessageLastUpdate, ProcessID, MessageID)`.
 

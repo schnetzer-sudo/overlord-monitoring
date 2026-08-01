@@ -2,10 +2,14 @@
 
 Erhebung gegen die **Testkopie** am 01.08.2026, vor dem Bau der Nachrichtenliste (Regel L7).
 
-> **Was dieses Dokument ist und was nicht.** Hier stehen ausschließlich **erhobene Zahlen**. Es
-> werden keine Schlüsse gezogen und keine Entscheidungen getroffen. Was aus den Zahlen folgen
-> könnte, steht am Ende als **Frage**, nicht als Antwort. Die Auswertung findet außerhalb dieser
-> Erhebung statt.
+> **Was dieses Dokument ist und was nicht.** In **M0 bis M7** stehen ausschließlich erhobene Zahlen;
+> dort werden keine Schlüsse gezogen. Was aus ihnen folgen könnte, steht unter „Offene
+> Entscheidungen" als **Frage**, nicht als Antwort.
+>
+> **M8 und M9 sind anders** (nachgetragen am 01.08.2026, vor Schritt 4). Sie beantworten je genau
+> eine Frage aus dieser Liste und ziehen die Schlussfolgerung **ausdrücklich** — beide entscheiden,
+> wie der Code rechnet, und blieben sonst offen. Wo eine Frage damit erledigt ist, steht das unten
+> an der Frage.
 
 ---
 
@@ -294,7 +298,7 @@ Laufzeit: 11.428 ms (ein Lauf). Zwölf Statuswerte — genau die in
   `MessageLastUpdate + MessageTimeout` ergibt damit für 99,79 % aller Zeilen denselben Abstand.
 - `1800` in der Einheit **Minuten** wären 30 Stunden, in der Einheit **Sekunden** 30 Minuten.
   [`datenmodell.md`](datenmodell.md) und Regel Z2 nennen Minuten. Die Zahl allein entscheidet das
-  nicht — siehe „Offene Entscheidungen".
+  nicht. → **Entschieden durch [M8](#m8--einheit-von-messagetimeout): Sekunden.**
 
 ---
 
@@ -928,10 +932,242 @@ Alle 69 Zeilen finden ihre Beschreibung in `MessageBAMType` — geprüft mit
 
 ---
 
+## M8 — Einheit von `MessageTimeout`
+
+Nachgetragen am 01.08.2026. M2 hatte gezeigt: Es gibt genau zwei Werte, `1800` und `0`, niemals
+`NULL`. `1800` Minuten wären 30 Stunden, `1800` Sekunden 30 Minuten.
+[`datenmodell.md`](datenmodell.md) und Regel Z2 sagen Minuten.
+
+### Statement (a) — die vorgesehene Messung
+
+```sql
+SELECT m.MessageID, m.MessageTimeout, m.MessageStatus,
+       MIN(a.MessageActionStart) AS start,
+       m.MessageLastUpdate       AS ende,
+       TIMESTAMPDIFF(MINUTE, MIN(a.MessageActionStart), m.MessageLastUpdate) AS dauer_minuten
+FROM Message m
+JOIN MessageAction a ON a.MessageID = m.MessageID
+WHERE m.MessageStatus = 'ERROR_TIMEOUT'
+GROUP BY m.MessageID, m.MessageTimeout, m.MessageStatus, m.MessageLastUpdate
+ORDER BY dauer_minuten;
+```
+
+Vorab geprüft: `MessageAction.MessageActionStart` existiert (`timestamp`, `NULL`-fähig), und **alle
+52** `ERROR_TIMEOUT`-Nachrichten haben Zeilen in `MessageAction` — der Join verliert keine.
+
+**Ergebnis, ohne `MessageID`** (52 Zeilen, alle mit `MessageTimeout = 1800`):
+
+| Kennzahl | Sekunden | Minuten |
+|---|---|---|
+| Minimum | 119 | 1,98 |
+| Median (Mittel aus 26. und 27. Wert) | 210 | 3,50 |
+| Maximum | 335 | 5,58 |
+| arithmetisches Mittel | ~176 | 2,9 |
+
+Verteilung: 4 Zeilen bei 119 s, dann 44 Zeilen dicht zwischen 185 s und 237 s, dann je eine bei
+264 s, 306 s und 335 s.
+
+**Laufzeit:** 4,4 ms (Statement a), 3,7 ms (Auswertung ohne `MessageID`).
+
+### Die vorgesehene Messung entscheidet die Frage nicht
+
+Die Vorgabe lautete: rund 30 Minuten heißt Sekunden, rund 30 Stunden heißt Minuten. Gemessen sind
+**3,5 Minuten** — keines von beidem. Die Entscheidungsregel greift ins Leere.
+
+Der Grund ist auffindbar. Zusätzlich gemessen:
+
+```sql
+SELECT TIMESTAMPDIFF(SECOND, MAX(a.MessageActionStart), m.MessageLastUpdate) AS letzter_start_bis_ende
+FROM Message m JOIN MessageAction a ON a.MessageID = m.MessageID
+WHERE m.MessageStatus = 'ERROR_TIMEOUT' GROUP BY m.MessageID, m.MessageLastUpdate;
+```
+
+| | Sekunden |
+|---|---|
+| Minimum vom Start der **letzten** Aktion bis zum Fehler | 0 |
+| Maximum | **120** |
+
+Laufzeit 5,9 ms. Zwischen dem Start der letzten Aktion und dem Fehler liegen **höchstens
+120 Sekunden** — eine glatte Zwei-Minuten-Grenze. Dazu passt, dass jede der 52 Nachrichten genau
+eine `MessageAction` mit `SOSActionTimeout = 0` trägt (52 Zeilen) neben 149 Zeilen mit `1800`.
+
+> **`ERROR_TIMEOUT` ist nicht das Ablaufen von `MessageTimeout`.** Der Status entsteht offenbar aus
+> einer Zeitüberschreitung auf Dienstebene mit einer eigenen, kürzeren Frist. Die Messung zielte
+> damit auf die falsche Grundgesamtheit — nicht auf die Nachrichten, an denen `MessageTimeout`
+> tatsächlich abläuft.
+
+### Die Gegenprobe, die entscheidet
+
+`datenmodell.md` nennt das Muster `WAIT|30M` in `SOSActionServiceProperties`. Steht daneben ein
+Zahlenwert für dieselbe Frist, ist die Einheit ablesbar:
+
+```sql
+SELECT a.SOSActionTimeout,
+       SUBSTRING_INDEX(SUBSTRING_INDEX(a.SOSActionServiceProperties, 'WAIT|', -1), '|', 1) AS wait_marke,
+       COUNT(*) AS zeilen
+FROM MessageAction a
+WHERE a.SOSActionServiceProperties LIKE '%WAIT|%'
+  AND a.MessageActionStart >= '2025-12-01'
+GROUP BY a.SOSActionTimeout, wait_marke ORDER BY zeilen DESC LIMIT 20;
+```
+
+| `SOSActionTimeout` | Marke im Ablauf | Zeilen |
+|---|---|---|
+| `1800` | `30M` | **37.120** |
+| `1800` | `15M` | 909 |
+
+**Laufzeit: 97,976 s** (ein Lauf) — ein `LIKE '%…%'` über `mediumtext` in `MessageAction` (10,2 Mio.
+Zeilen, 3,0 GB), auch mit Zeitfenster. Das Statement ist eine einmalige Erhebung und **kein Muster
+für Anwendungscode** (Regel L4 gilt sinngemäß).
+
+Dazu die Stammdaten, wo Varianz zu erwarten wäre:
+
+```sql
+SELECT SOSActionTimeout,
+       CASE WHEN SOSActionServiceProperties LIKE '%WAIT|%'
+            THEN SUBSTRING_INDEX(SUBSTRING_INDEX(SOSActionServiceProperties,'WAIT|',-1),'|',1)
+            ELSE '(kein WAIT)' END AS wait_marke,
+       COUNT(*) AS zeilen
+FROM SOSAction GROUP BY SOSActionTimeout, wait_marke ORDER BY SOSActionTimeout, zeilen DESC;
+```
+
+| `SOSActionTimeout` | Marke | Zeilen |
+|---|---|---|
+| `NULL` | (kein WAIT) | 11 |
+| `300` | (kein WAIT) | 2 |
+| `1800` | (kein WAIT) | 3.743 |
+| `1800` | `30M` | 186 |
+| `1800` | `5M` | 1 |
+| `1800` | `15M` | 1 |
+
+Laufzeit 70,9 ms. `SOSActionTimeout` ist also ein systemweiter Vorgabewert `1800` mit zwei
+Ausreißern `300`.
+
+### Schlussfolgerung — ausdrücklich
+
+> **`1800` ist eine Sekundenangabe. Der Timeout beträgt 30 Minuten.
+> `datenmodell.md` und Regel Z2 sind falsch.**
+
+Die Belegkette:
+
+1. `1800` steht 37.120-mal neben dem Ablaufschritt `30M`. **1800 Sekunden sind exakt 30 Minuten.**
+   Unter der Minuten-Lesart stünde eine Frist von 30 **Stunden** neben einem Schritt, der 30
+   **Minuten** wartet — Faktor 60 Luft, womit die Frist nichts mehr begrenzte.
+2. Der einzige andere vorkommende Wert, `300`, ergibt in Sekunden 5 Minuten und passt zum ebenfalls
+   vorhandenen Schritt `5M`. In Minuten wären es 5 Stunden.
+3. Eine Vorgabefrist von 30 Minuten je Ablaufschritt ist für EDI-Übertragungen, die in Minuten
+   laufen (M8 a: 2 bis 5,6 Minuten), die plausible Größenordnung; 30 Stunden sind es nicht.
+
+**Die Schwachstelle, die dazugehört:** Gemessen ist `MessageAction.SOSActionTimeout` beziehungsweise
+`SOSAction.SOSActionTimeout` — **nicht** `Message.MessageTimeout` selbst. Übertragen wird die
+Einheit, weil beide Spalten denselben Typ (`smallint(6)`), denselben Wertevorrat (`1800`, `0`) und
+dieselbe Namensendung tragen. Ein direkter Beleg an `Message.MessageTimeout` fehlt und ist auf der
+Testkopie auch nicht zu bekommen, weil dort keine Nachricht existiert, an der diese Frist sichtbar
+abläuft (`RUNNING` kommt null Mal vor).
+
+**Entschieden am 01.08.2026 nach Rückfrage.** Die Einheit steht im Code an **genau einer Stelle** als
+benannte Konstante, damit ein Gegenbeleg aus der Produktion eine Zeile kostet und keine Suche.
+
+### Was das ändert
+
+| Datei | Vorher | Jetzt |
+|---|---|---|
+| `datenmodell.md` §3, §5.3 | „Dauer in Minuten" | Dauer in **Sekunden**, mit Datum und Beleg |
+| `DEVELOPMENT_GUIDELINES.md` Z2 | „Dauer in Minuten" | Dauer in **Sekunden** |
+| `DEVELOPMENT_GUIDELINES.md` §5.3 | Feldname `timeoutMinuten` | `timeoutSekunden` |
+| `PROJEKTBESCHREIBUNG.md` §3.3 | „Dauer in Minuten" | Dauer in **Sekunden** |
+
+---
+
+## M9 — Anker für die Dev-Uhr
+
+Nachgetragen am 01.08.2026. Gesucht ist der jüngste Tag, an dem **mindestens drei Mandanten**
+Nachrichten haben — als Bezugspunkt, der einen brauchbaren Ausschnitt liefert statt der 285 Zeilen
+eines einzigen Mandanten am Maximum (Auffälligkeit A).
+
+### Statement
+
+```sql
+SELECT DATE(m.MessageLastUpdate) AS tag,
+       COUNT(*) AS zeilen,
+       COUNT(DISTINCT pm.MandantID) AS mandanten,
+       MAX(m.MessageLastUpdate) AS letzter_zeitpunkt
+FROM Message m
+JOIN Process p         ON p.ProcessID  = m.ProcessID
+JOIN ProjectMandant pm ON pm.ProjectID = p.ProjectID
+GROUP BY tag
+HAVING mandanten >= 3
+ORDER BY tag DESC
+LIMIT 5;
+```
+
+### EXPLAIN
+
+| id | select_type | table | type | key | key_len | ref | rows | Extra |
+|---|---|---|---|---|---|---|---|---|
+| 1 | SIMPLE | `m` | `index` | `MessageLastUpdateProcessMessageIDX` | 298 | NULL | 3.560.486 | `Using where; Using index; Using filesort` |
+| 1 | SIMPLE | `p` | `eq_ref` | `PRIMARY` | 146 | `m.ProcessID` | 1 | `Using where` |
+| 1 | SIMPLE | `pm` | `ref` | `PRIMARY` | 146 | `p.ProjectID` | 1 | `Using index` |
+
+### Ergebnis
+
+| Tag | Zeilen | Mandanten | letzter Zeitpunkt |
+|---|---|---|---|
+| **2025-12-30** | 776 | **3** | **`2025-12-30 04:09:47`** |
+| 2025-12-29 | 6.249 | 6 | `2025-12-29 23:53:50` |
+| 2025-12-28 | 6.083 | 5 | `2025-12-28 23:53:15` |
+| 2025-12-27 | 1.988 | 6 | `2025-12-27 23:53:41` |
+| 2025-12-26 | 2.619 | 5 | `2025-12-26 23:56:06` |
+
+**Laufzeit:** Aufwärmlauf 7,047 s, beste von drei **6,923 s** (6,948 · 6,968 · 6,923 s).
+
+Die Erwartung aus den bisherigen Messungen ist bestätigt: Der jüngste Treffer liegt auf dem
+**2025-12-30**. Kein Tag aus dem Ausläufer 2026 erfüllt die Bedingung — dort hat nur `NEXANS` Daten.
+
+### Was der neue Anker im 24-Stunden-Fenster liefert
+
+```sql
+SELECT pm.MandantID, COUNT(*) AS zeilen
+FROM Message m JOIN Process p ON p.ProcessID = m.ProcessID
+JOIN ProjectMandant pm ON pm.ProjectID = p.ProjectID
+WHERE m.MessageLastUpdate >  TIMESTAMP('2025-12-30 04:09:47') - INTERVAL 1 DAY
+  AND m.MessageLastUpdate <= TIMESTAMP('2025-12-30 04:09:47')
+GROUP BY pm.MandantID ORDER BY zeilen DESC;
+```
+
+| `MandantID` | Zeilen |
+|---|---|
+| `NEXANS` | 5.177 |
+| `SUTTONS` | 684 |
+| `IBIS` | 233 |
+| `VOTG` | 206 |
+| `IBISGUS` | 81 |
+| `WOC` | 1 |
+| **gesamt** | **6.382** |
+
+Laufzeiten 51,2 ms und 7,1 ms.
+
+### Gegenüberstellung der beiden Anker
+
+| | Anker `MAX(MessageLastUpdate)` | Anker M9 |
+|---|---|---|
+| Zeitpunkt | `2026-07-08 17:21:10` | `2025-12-30 04:09:47` |
+| Zeilen im 24-h-Fenster | 285 | **6.382** |
+| Mandanten mit Daten | 1 (`NEXANS`) | **6** |
+| `VOTG` sichtbar (Isolationstest, Mandant A) | nein | **ja**, 206 Zeilen |
+| `SUTTONS` sichtbar (Isolationstest, Mandant B) | nein | **ja**, 684 Zeilen |
+
+**Schlussfolgerung, ausdrücklich:** Der Anker aus M9 ist der brauchbare. Mit ihm zeigt das
+Standard-Zeitfenster von 24 Stunden für **beide** Testmandanten aus
+[`mandantentrennung.md`](mandantentrennung.md) §5 echte Daten; mit dem alten Anker sieht jeder
+Mandant außer `NEXANS` leer aus — und genau das soll Regel Z1 verhindern.
+
+---
+
 ## Auffälligkeiten
 
 Was von der bestehenden Dokumentation abweicht. **Hier wird nichts entschieden und nichts
-geändert** — außer den drei Stellen, die die Aufgabenstellung ausdrücklich benennt.
+geändert** — außer den Stellen, die die Aufgabenstellung ausdrücklich benennt.
 
 ### A. Der Bestand hat eine fünfmonatige Lücke und einen dünnen Ausläufer
 
@@ -990,9 +1226,14 @@ Betroffene Aussagen der Dokumentation:
 ### B. `MessageTimeout` kennt nur zwei Werte, und `NULL` ist keiner davon
 
 `datenmodell.md` und Regel Z2 beschreiben eine „Dauer in Minuten" und sagen nichts über den
-Wertebereich. Gemessen: `1800` (99,79 %) und `0` (0,21 %), niemals `NULL`. `1800` Minuten wären
-30 Stunden. Das ist keine Aussage darüber, welche Einheit gilt — nur die Feststellung, dass hier
-etwas zu klären ist.
+Wertebereich. Gemessen: `1800` (99,79 %) und `0` (0,21 %), niemals `NULL`.
+
+> **Erledigt durch [M8](#m8--einheit-von-messagetimeout) am 01.08.2026:** Die Einheit ist
+> **Sekunden**, `1800` sind 30 Minuten. `datenmodell.md`, `PROJEKTBESCHREIBUNG.md` und Regel Z2 sind
+> entsprechend korrigiert; der Feldname der API heißt `timeoutSekunden` statt `timeoutMinuten`.
+> Nebenbefund aus derselben Messung: **`ERROR_TIMEOUT` entsteht nicht aus `MessageTimeout`**,
+> sondern aus einer kürzeren Frist auf Dienstebene (höchstens 120 Sekunden ab Start der letzten
+> Aktion). Wer die 52 Zeilen als Beispiele für abgelaufene `MessageTimeout` liest, liest sie falsch.
 
 ### C. `ProjectMandant` ist n:m im Schema, 1:1 in den Daten
 
@@ -1060,14 +1301,17 @@ festgehalten.
 
 ## Offene Entscheidungen
 
-Was aus den Zahlen folgen *könnte* — als Frage formuliert. **Keine dieser Fragen wird hier
-beantwortet.**
+Was aus den Zahlen folgen *könnte* — als Frage formuliert. Beantwortet wurden hier nachträglich nur
+die beiden, die **M8** und **M9** ausdrücklich klären sollten; sie sind als erledigt gekennzeichnet.
 
 ### Zum Zeitbezug
 
-1. Wenn ein 24-Stunden-Fenster relativ zum Maximum 285 Zeilen eines einzigen Mandanten enthält:
+1. ~~Wenn ein 24-Stunden-Fenster relativ zum Maximum 285 Zeilen eines einzigen Mandanten enthält:
    Bleibt der Bezugspunkt der Dev-Uhr `MAX(Message.MessageLastUpdate)`, oder wird er auf das Ende
-   des **dichten** Bestands (`2025-12-30`) gelegt?
+   des **dichten** Bestands (`2025-12-30`) gelegt?~~
+   **Erledigt durch [M9](#m9--anker-für-die-dev-uhr):** Der Bezugspunkt wird umgestellt auf den
+   jüngsten Zeitpunkt an einem Tag mit mindestens drei Mandanten — ermittelt, nicht eingetragen.
+   Umsetzung und Begründung in [`datenzugriff.md`](datenzugriff.md) §6.
 2. Sind die fünf leeren Monate ein Fehler der Testkopie, der behoben wird — oder der Zustand, gegen
    den Schritt 4 zu entwickeln ist?
 3. Wenn der Ausläufer bestehen bleibt: Wie unterscheidet die Oberfläche im Zustand „Leer" ein zu eng
@@ -1078,13 +1322,19 @@ beantwortet.**
 4. Der Plan nennt `VOTG` oder `SUTTONS` als zweiten Mandanten, „der mit dem höheren Aufkommen
    gewinnt". Über den Gesamtbestand ist das `SUTTONS` (197.158 gegen 145.840). In den letzten
    30 Tagen relativ zu M0 hat **keiner von beiden** eine Zeile. Welche der beiden Zahlen entscheidet?
-5. Kann ein Isolationstest, der ein relatives Zeitfenster benutzt, mit `VOTG` oder `SUTTONS`
-   überhaupt Daten sehen — oder braucht er ein absolutes Fenster im dichten Bestand?
+5. ~~Kann ein Isolationstest, der ein relatives Zeitfenster benutzt, mit `VOTG` oder `SUTTONS`
+   überhaupt Daten sehen — oder braucht er ein absolutes Fenster im dichten Bestand?~~
+   **Erledigt durch [M9](#m9--anker-für-die-dev-uhr):** Mit dem neuen Anker der Dev-Uhr
+   (`2025-12-30 04:09:47`) liefert das relative 24-Stunden-Fenster `VOTG` 206 und `SUTTONS` 684
+   Zeilen. Ein absolutes Fenster ist nicht nötig.
 
 ### Zu `MessageTimeout`
 
-6. Bedeutet `1800` dreißig **Stunden** (Minuten, wie Regel Z2 sagt) oder dreißig **Minuten**
-   (Sekunden)? Wo lässt sich das belegen, wenn nicht an dieser Spalte?
+6. ~~Bedeutet `1800` dreißig **Stunden** (Minuten, wie Regel Z2 sagt) oder dreißig **Minuten**
+   (Sekunden)?~~ **Erledigt durch [M8](#m8--einheit-von-messagetimeout): Sekunden**, belegt über
+   `SOSActionTimeout` gegen die Ablaufmarke `WAIT|30M`. Offen bleibt der direkte Beleg an
+   `Message.MessageTimeout` selbst — auf der Testkopie nicht zu bekommen, weil dort keine Nachricht
+   existiert, an der diese Frist sichtbar abläuft.
 7. Bedeutet `0` „kein Timeout" oder „nicht gesetzt"? Dass alle 1.051 `COMMIT_SENT` und 103 von 111
    `COMMIT_REJECTED` eine `0` tragen, `MERGED` und `SPLITTED` dagegen kein einziges Mal — spricht das
    für eine Bedeutung oder für einen technischen Nebeneffekt?
@@ -1162,6 +1412,12 @@ Beste von N Läufen nach einem Aufwärmlauf, serverseitig gemessen.
 | M6 + | Monatsverteilung | 1 | 11,587 s | `ALL` |
 | M7 | BAM je Mandant | 5 | **0,937 ms** | `index`, `MandantIDSortIndexBAMTYpeIDX`, kein `filesort` |
 | M7 + | Pflegezustand Sortierindex | 1 | 1,2 ms | `index` |
+| M8 a | Dauer der 52 `ERROR_TIMEOUT` | 1 | 4,4 ms | `range`, `MessageStatusIDX` + `eq_ref` auf `MessageAction` |
+| M8 + | Start der letzten Aktion bis Fehler | 1 | 5,9 ms | wie M8 a |
+| M8 + | `WAIT`-Marke gegen `SOSActionTimeout` | 1 | **97.976 ms** | `LIKE '%…%'` über `mediumtext`, 10,2 Mio. Zeilen — einmalige Erhebung, kein Muster für Code |
+| M8 + | dasselbe über die Stammdaten `SOSAction` | 1 | 70,9 ms | `ALL` über 3.944 Zeilen |
+| M9 | jüngster Tag mit ≥ 3 Mandanten | 3 | **6,923 s** | `index`, `MessageLastUpdateProcessMessageIDX`, `filesort` |
+| M9 + | 24-h-Fenster ab dem neuen Anker | 1 | 51,2 ms | `range`, `MessageLastUpdateIDX` |
 | A | Tagesverteilung 2026 | 1 | 8,2 ms | `range`, `MessageLastUpdateIDX` |
 | A | Tagesverteilung Dez 2025 | 1 | 85,3 ms | `range`, `MessageLastUpdateIDX` |
 

@@ -350,8 +350,16 @@ niemals die Anwendungsuhr, sondern `systemClock` (echte Uhr, UTC).
 Die einzige Stelle, die die Systemuhr liest, ist `ZeitConfig` in `common`. `PaketstrukturTest`
 prüft, dass `now()` und Verwandte außerhalb von `common` nicht aufgerufen werden.
 
-**Z2 — `MessageTimeout` ist eine Dauer in Minuten, kein Zeitpunkt.** Der Timeout-Zeitpunkt wird im
-Backend als `MessageLastUpdate + MessageTimeout` berechnet.
+**Z2 — `MessageTimeout` ist eine Dauer in Sekunden, kein Zeitpunkt.** Der Timeout-Zeitpunkt wird im
+Backend als `MessageLastUpdate + MessageTimeout` berechnet. Der Wert `0` bedeutet „kein Timeout";
+solche Zeilen werden nie überfällig.
+
+> **Korrigiert 01.08.2026.** Diese Regel nannte bis heute **Minuten**. Messung M8 widerlegt das:
+> `SOSActionTimeout = 1800` steht 37.120-mal neben dem Ablaufschritt `WAIT|30M` — 1800 Sekunden sind
+> exakt 30 Minuten, 1800 Minuten wären 30 Stunden. Belegkette und die eine Schwachstelle darin
+> stehen in [`docs/messungen-schritt4.md`](docs/messungen-schritt4.md), Abschnitt M8. Die Einheit
+> steht im Code an genau einer Stelle als benannte Konstante, damit ein Gegenbeleg aus der
+> Produktion eine Zeile kostet und keine Suche.
 
 ### 4.6 SQL-Fallstricke
 
@@ -447,8 +455,9 @@ müssen.
 - Zeitfenster werden als `von`/`bis` übergeben, beide ISO 8601 UTC. Fehlen sie, gilt der Standard
   aus L1.
 - Dauern werden als **ganze Sekunden** übertragen (`dauerSekunden: 42`), nicht als formatierter
-  Text. `MessageTimeout` bleibt in Minuten, weil die Quelle das so führt — das Feld heißt dann
-  auch `timeoutMinuten`.
+  Text. `MessageTimeout` bleibt in **Sekunden**, weil die Quelle das so führt (Regel Z2, korrigiert
+  am 01.08.2026) — das Feld heißt dann auch `timeoutSekunden`. Damit ist es dieselbe Einheit wie
+  jede andere Dauer der API; ein Sonderfall entfällt.
 
 ### 5.4 Paginierung
 
