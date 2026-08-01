@@ -11,6 +11,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.web.csrf.CsrfException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -29,6 +31,11 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
  *
  * <p>Regel ab hier: eine nicht existierende Ressource und eine Ressource eines fremden Mandanten
  * liefern beide {@code 404}, niemals {@code 403} (Regel M3).
+ *
+ * <p><b>Gleicher Status heisst nicht gleicher Problemtyp.</b> Ein abgewiesener CSRF-Token und eine
+ * nicht ausreichende Rolle sind beide {@code 403}, haben aber je einen eigenen Typ — siehe {@link
+ * #handleCsrf} und {@link #handleZugriffVerweigert}. Umgekehrt teilen sich ein unbekannter Pfad und
+ * eine fremde Ressource bewusst denselben Typ, weil sie ununterscheidbar bleiben muessen.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
@@ -56,6 +63,71 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         ex.status().value(),
         ex.problemTyp(),
         ex.getMessage());
+    return problem;
+  }
+
+  /**
+   * Ein fehlender, abgelaufener oder nicht passender CSRF-Token — <b>kein</b> Berechtigungsproblem.
+   *
+   * <p>Getrennt von {@link #handleZugriffVerweigert}, obwohl beide {@code 403} liefern und {@code
+   * CsrfException} eine {@code AccessDeniedException} ist. Mit einem gemeinsamen Problemtyp koennte
+   * der Aufrufer die beiden Faelle nicht unterscheiden — dabei ist die Handlung genau
+   * entgegengesetzt: Beim Token holt er ihn nach und schickt die Anfrage erneut, bei der Rolle ist
+   * jeder weitere Versuch sinnlos.
+   *
+   * <p>Der Text bleibt trotzdem unspezifisch (Regel A3): Er sagt, dass die Anfrage erneut gestellt
+   * werden muss — nicht, ob der Token fehlte, abgelaufen war oder nicht passte.
+   */
+  @ExceptionHandler(CsrfException.class)
+  public ProblemDetail handleCsrf(CsrfException ex, HttpServletRequest request) {
+    return verweigert(
+        request,
+        "csrf-token-ungueltig",
+        "Anfrage nicht angenommen",
+        "Die Anfrage konnte nicht angenommen werden. Lade die Seite neu und sende sie erneut.",
+        ex);
+  }
+
+  /**
+   * Angemeldet, aber die Rolle reicht nicht. Faengt {@code AccessDeniedException} als Ganzes und
+   * nicht nur {@code AuthorizationDeniedException}: Ein kuenftiger Untertyp soll hier landen und
+   * nicht ueber {@link #handleTechnisch} zu einem {@code 500} werden. {@code CsrfException} ist
+   * davon ausgenommen — fuer sie greift die speziellere Methode oben.
+   *
+   * <p>Gilt nur fuer Bereiche, deren Existenz ohnehin bekannt ist. Bei fremden <b>Daten</b> bleibt
+   * es bei {@code 404} (Regel M3); ein {@code 403} verriete dort, dass der Datensatz existiert.
+   */
+  @ExceptionHandler(AccessDeniedException.class)
+  public ProblemDetail handleZugriffVerweigert(
+      AccessDeniedException ex, HttpServletRequest request) {
+    return verweigert(
+        request,
+        "zugriff-verweigert",
+        "Zugriff verweigert",
+        "Dieser Bereich ist fuer deine Rolle nicht freigegeben.",
+        ex);
+  }
+
+  /** Gemeinsamer Rumpf der beiden {@code 403}-Faelle — getrennt bleiben Typ, Titel und Text. */
+  private static ProblemDetail verweigert(
+      HttpServletRequest request,
+      String problemTyp,
+      String titel,
+      String detail,
+      Exception ursache) {
+    ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, detail);
+    problem.setTitle(titel);
+    problem.setType(URI.create(TYP_BASIS + problemTyp));
+    problem.setInstance(URI.create(request.getRequestURI()));
+    String traceId = mitTraceId(problem);
+    // Vorhergesehener Fehler: ohne Stacktrace protokolliert. Die Ausnahmeklasse steht nur hier.
+    log.info(
+        "Abgewiesen [traceId={}] {} {} -> 403 ({}): {}",
+        traceId,
+        request.getMethod(),
+        request.getRequestURI(),
+        problemTyp,
+        ursache.getClass().getSimpleName());
     return problem;
   }
 

@@ -204,6 +204,48 @@ nie geschrieben, und die erste schreibende Anfrage scheiterte mit `403`. Der Fil
 Autorisierung, damit das Cookie auch bei einer `401`-Antwort gesetzt wird — genau das braucht der
 Anmeldevorgang: Ein unangemeldeter `GET` holt das Token, danach geht `POST /api/auth/login`.
 
+#### Ein abgewiesener Token ist kein Berechtigungsproblem (korrigiert 01.08.2026)
+
+**Vorheriger Stand (Schritt 3, Teil 1):** Der `accessDeniedHandler` in `config/SecurityConfig` baute
+für **jede** `AccessDeniedException` dieselbe `FachlicheAusnahme` mit dem Problemtyp
+`zugriff-verweigert`. Weil `CsrfException` von `AccessDeniedException` erbt, traf das den
+CSRF-Fall mit.
+
+**Warum das falsch war.** Beide Fälle sind `403`, bedeuten aber Entgegengesetztes:
+
+| Fall | Was der Aufrufer tun muss |
+|---|---|
+| CSRF-Token fehlt, ist abgelaufen oder passt nicht | Token nachholen, Anfrage **erneut** senden |
+| Rolle reicht nicht | aufgeben — jeder weitere Versuch scheitert genauso |
+
+Mit einem gemeinsamen `type` konnte die Oberfläche das nicht unterscheiden. Sie übersetzt anhand des
+`type` und nicht anhand von `detail` (siehe [`frontend-grundlagen.md`](frontend-grundlagen.md) §6);
+ein abgelaufener Token erschien dem Nutzer damit als „Dieser Bereich ist für deine Rolle nicht
+freigegeben" — eine Aussage, die schlicht nicht stimmt.
+
+**Jetziger Stand.** Zwei getrennte Handler im `GlobalExceptionHandler`:
+
+| Ausnahme | Status | `type` | Titel |
+|---|---|---|---|
+| `CsrfException` (samt `MissingCsrfTokenException`, `InvalidCsrfTokenException`) | `403` | `csrf-token-ungueltig` | Anfrage nicht angenommen |
+| `AccessDeniedException`, darunter `AuthorizationDeniedException` | `403` | `zugriff-verweigert` | Zugriff verweigert |
+
+Der `accessDeniedHandler` reicht die **ursprüngliche** Ausnahme an den `HandlerExceptionResolver`
+weiter, statt vorab eine `FachlicheAusnahme` daraus zu bauen. Nur so kommt der Unterschied überhaupt
+beim Advice an — und es bleibt bei genau einer Stelle, die Ausnahmen in Antworten übersetzt.
+
+Gefangen wird bewusst `AccessDeniedException` und nicht nur `AuthorizationDeniedException`: Ein
+künftiger Untertyp soll hier landen und nicht über den technischen Handler zu einem `500` werden.
+`CsrfException` ist die speziellere Signatur und gewinnt.
+
+**Der Text bleibt unspezifisch** (Regel A3): „Die Anfrage konnte nicht angenommen werden. Lade die
+Seite neu und sende sie erneut." Er nennt die Handlung, nicht den Grund — ob der Token fehlte,
+abgelaufen war oder nicht passte, steht ausschließlich im Serverprotokoll.
+
+Belegt durch drei Tests in `FehlerformatTest` (ohne Datenbank): je einer pro Fall und einer, der
+festhält, dass die beiden `type`-Werte verschieden sind. Beide Schlüssel stehen in `i18n/de.ts` und
+`i18n/en.ts`; `tests/sprachdateien.test.ts` erzwingt den gleichen Schlüsselsatz.
+
 ---
 
 ## 6. Passwortwechsel

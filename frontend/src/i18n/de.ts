@@ -125,6 +125,10 @@ export const de = {
     // Sitzung und Berechtigung
     "nicht-angemeldet": "Die Sitzung ist abgelaufen. Melde dich erneut an.",
     "zugriff-verweigert": "Dieser Bereich ist für deine Rolle nicht freigegeben.",
+    // Ebenfalls 403, aber das Gegenteil von „zugriff-verweigert": Hier hilft ein
+    // erneuter Versuch. Der Text nennt bewusst nicht, warum der Token nicht trug.
+    "csrf-token-ungueltig":
+      "Die Anfrage konnte nicht angenommen werden. Lade die Seite neu und sende sie erneut.",
     "kein-mandant-gewaehlt": "Wähle zuerst einen Mandanten aus.",
     "passwortwechsel-erforderlich": "Vergib zuerst ein neues Passwort.",
 

@@ -254,6 +254,19 @@ Nutzer im Normalbetrieb sieht. Dass `404` denselben Schlüssel bekommt, ist dage
 Bequemlichkeit — ein unbekannter Pfad und eine fremde Ressource dürfen sich auch hier nicht
 unterscheiden (Regel M3). `FehlerformatTest` prüft beides.
 
+### Gleicher Status heißt nicht gleicher Typ (ergänzt 01.08.2026)
+
+Die Kehrseite: Zwei Antworten mit demselben Status brauchen **nicht** denselben Schlüssel. Seit dem
+01.08.2026 hat der abgewiesene CSRF-Token einen eigenen (`csrf-token-ungueltig`) und ist damit von
+der nicht ausreichenden Rolle (`zugriff-verweigert`) unterscheidbar, obwohl beide `403` sind und
+`CsrfException` von `AccessDeniedException` erbt. Begründung, Vorzustand und Tests stehen in
+[`authentifizierung.md`](authentifizierung.md) §5.
+
+Die Faustregel, die aus beiden Fällen folgt: **Der `type` richtet sich danach, was der Aufrufer als
+Nächstes tun soll** — nicht danach, welche Ausnahmeklasse geflogen ist und nicht danach, welcher
+Statuscode herauskommt. Bei `404` ist die nächste Handlung in beiden Fällen dieselbe (nichts), beim
+`403` ist sie entgegengesetzt (erneut senden gegen aufgeben).
+
 Wie das Frontend daraus eine Übersetzung macht, steht in
 [`frontend-grundlagen.md`](frontend-grundlagen.md) §6.
 

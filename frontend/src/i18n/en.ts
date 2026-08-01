@@ -118,6 +118,9 @@ export const en: Texte = {
     // Session and permission
     "nicht-angemeldet": "The session has expired. Please sign in again.",
     "zugriff-verweigert": "This area is not enabled for your role.",
+    // Also a 403, but the opposite of "zugriff-verweigert": here a retry helps.
+    // The wording deliberately does not say why the token did not hold.
+    "csrf-token-ungueltig": "The request could not be accepted. Reload the page and send it again.",
     "kein-mandant-gewaehlt": "Select a tenant first.",
     "passwortwechsel-erforderlich": "Set a new password first.",
 

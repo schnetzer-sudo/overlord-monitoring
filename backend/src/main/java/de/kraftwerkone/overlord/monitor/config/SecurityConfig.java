@@ -135,18 +135,15 @@ public class SecurityConfig {
                                     "Melde dich an, um fortzufahren.",
                                     "Zugriff ohne gueltige Sitzung auf "
                                         + request.getRequestURI())))
+                    // Die urspruengliche Ausnahme wird unveraendert weitergereicht, statt hier eine
+                    // FachlicheAusnahme daraus zu bauen. Nur so kann der Advice die beiden Faelle
+                    // auseinanderhalten: CsrfException (Token nachholen und erneut senden) und
+                    // AuthorizationDeniedException (Rolle reicht nicht) sind beide 403, bedeuten
+                    // aber Entgegengesetztes. Welchen Problemtyp der Aufrufer sieht, entscheidet
+                    // damit weiterhin genau eine Stelle — der Advice in common.
                     .accessDeniedHandler(
                         (request, response, ex) ->
-                            fehlerUebersetzer.resolveException(
-                                request,
-                                response,
-                                null,
-                                new FachlicheAusnahme(
-                                    HttpStatus.FORBIDDEN,
-                                    "zugriff-verweigert",
-                                    "Zugriff verweigert",
-                                    "Dieser Bereich ist fuer deine Rolle nicht freigegeben.",
-                                    "Rolle reicht nicht fuer " + request.getRequestURI()))))
+                            fehlerUebersetzer.resolveException(request, response, null, ex)))
         // Keine Umleitung auf eine Anmeldeseite und kein Zwischenspeichern der urspruenglichen
         // Anfrage: Diese Anwendung antwortet einem Programm, nicht einem Browser-Formular.
         .requestCache(cache -> cache.disable())
