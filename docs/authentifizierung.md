@@ -159,6 +159,17 @@ Zwei Tests sichern das ab:
 **nur** in `dev` fehlt — auch ein neues, unbekanntes Profil erbt die sichere Einstellung.
 `AnmeldungDbIT` prüft am echten `Set-Cookie` des laufenden Servers Name, `HttpOnly` und `SameSite`.
 
+> **Gehärtet am 01.08.2026.** `CookieAttributeTest` baute bis dahin eine `StandardEnvironment` und
+> übernahm damit `systemProperties` und `systemEnvironment`. Stand in der Shell
+> `SPRING_PROFILES_ACTIVE=dev` — auf einem Entwicklungsrechner der Normalfall —, war neben dem
+> geprüften Profil auch `dev` aktiv; dessen Dokument steht in `application.yml` weiter unten und
+> gewann mit `secure: false`. Der Test fiel also **auf genau den Rechnern um, auf denen entwickelt
+> wird**, und belegte im Erfolgsfall nur, dass die Variable gerade nicht gesetzt war. Jetzt entfernt
+> er beide Quellen, setzt das Profil selbst und sichert mit `getActiveProfiles()` zu, dass
+> ausschließlich das benannte aktiv ist. Ein vierter Testfall setzt `spring.profiles.active` — den
+> prozessinternen Zwilling der Variablen — bewusst auf `dev` und verlangt für `prod` weiterhin
+> `true`; er ist der Test, der den ursprünglichen Fehler gefunden hätte.
+
 > **Warum die Integrationstests einen echten Server starten und kein MockMvc verwenden:** Ohne
 > eingebetteten Server konfiguriert Spring Boot den `CookieSerializer` nicht aus
 > `server.servlet.session.cookie.*`. Das Cookie hieße dann `SESSION` statt `OVERLORD_SESSION`, und
