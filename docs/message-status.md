@@ -73,6 +73,99 @@ Das Feld wird als Parameter übergeben, damit dieser gemeinsame Baustein nicht a
 
 ---
 
+## Endstatus und Überfälligkeit (ergänzt 01.08.2026, Schritt 4)
+
+### `istEndstatus(MessageStatusKind)`
+
+> **Offen sind allein `WARTEND` und `LAEUFT`.** Alles andere ist Endstatus.
+
+| Einordnung | Endstatus? | Rohwerte |
+|---|---|---|
+| `ABGESCHLOSSEN` | ja | `FINISHED` |
+| `QUITTIERT` | ja | `EERP_RECEIVED`, `COMMIT_RECEIVED` |
+| `FEHLER` | ja | `ERROR_*`, `COMMIT_REJECTED` |
+| `ZWISCHENSCHRITT` | **ja** | `SPLITTED`, `MERGED` |
+| `UNGEKLAERT` | **ja** | `CHECKED`, `CKECKED`, `COMMIT_SENT`, alles Unbekannte |
+| `WARTEND` | **nein** | `SUSPENDED` |
+| `LAEUFT` | **nein** | `RUNNING` |
+
+**Warum `ZWISCHENSCHRITT` fertig ist.** Eine gemergte oder gesplittete Nachricht wird nicht wieder
+angefasst — sie ist als *Zeile* fertig, auch wenn der fachliche Vorgang über die Verkettung
+weiterläuft. Messung M6 stützt das: `SPLITTED` und `MERGED` verteilen sich über fünfzehn Monate in
+stabiler Größenordnung (38.428 bis 57.426 bzw. 20.609 bis 34.937 je Monat) und ballen sich **nicht**
+am aktuellen Rand; wären sie flüchtige Zwischenzustände, sähe die Verteilung anders aus. Zählten sie
+als offen, wären **34,38 Prozent aller Zeilen** Kandidaten für „überfällig" — und die Kategorie wäre
+Rauschen.
+
+**Warum `UNGEKLAERT` hier als fertig zählt.** Das ist keine Behauptung, die Nachricht sei fertig,
+sondern die Weigerung, das Gegenteil zu behaupten: Sie als offen zu führen hieße, wir wüssten, dass
+sie *nicht* fertig ist. Genau das wissen wir nicht. So bleibt sie aus **allen drei**
+Problemkategorien heraus, statt mit einer Vermutung gefüllt zu werden.
+
+Umgesetzt als vollständiges `switch` ohne `default`: Ein neuer Wert in `MessageStatusKind` löst
+einen Compilerfehler aus und erbt keine stille Voreinstellung.
+
+### Überfälligkeit
+
+> **Überfällig** = **nicht** in einem Endstatus **und** `MessageLastUpdate + MessageTimeout` liegt
+> vor dem Zeitpunkt der **Anwendungsuhr**.
+
+- **`MessageTimeout` ist eine Dauer in Sekunden** (Messung M8, korrigiert am 01.08.2026 — die
+  Dokumentation nannte Minuten). Die Einheit steht im Code an genau einer Stelle:
+  `MessageStatusClassifier.TIMEOUT_EINHEIT`.
+- **`MessageTimeout = 0` heißt „kein Timeout".** Solche Zeilen werden nie überfällig (6.915 Zeilen,
+  M2).
+- **`NULL` wird behandelt**, obwohl es in 3,34 Millionen Zeilen kein einziges Mal vorkommt — die
+  Spalte lässt es zu, und die Produktion muss sich nicht daran halten, was die Testkopie zufällig
+  enthält.
+- **„Läuft noch" heißt „nicht in einem Endstatus"**, nicht `MessageStatus = 'RUNNING'`.
+- Getrennt von *Fehler* und *Unquittiert*, niemals mit ihnen zusammengefasst (Regel Q3). `SUSPENDED`
+  ist kein Fehler — aber offen, und damit der eigentliche Kandidat dieser Kategorie.
+
+In SQL sind die offenen Zeilen genau `MessageStatus IN ('SUSPENDED','RUNNING')`; jeder andere und
+jeder unbekannte Wert ist Endstatus.
+
+### Messung gegen die Testkopie (Regel L7)
+
+Bezugspunkt ist die Anwendungsuhr im Profil `dev`, also der Anker aus M9 (`2025-12-30 04:09:47`).
+
+```sql
+SELECT COUNT(*) FROM Message
+WHERE MessageStatus IN ('SUSPENDED','RUNNING')
+  AND MessageTimeout > 0
+  AND MessageLastUpdate + INTERVAL MessageTimeout SECOND < ?;
+```
+
+`EXPLAIN`: `type=range`, `key=MessageStatusIDX`, `rows=539`, `Using index condition; Using where` —
+kein voller Durchlauf. Laufzeit **11,0 ms** für die zusammengesetzte Auswertung, 4,5 ms für die
+Einzelabfrage.
+
+| | Zeilen |
+|---|---|
+| offen (nicht Endstatus), Gesamtbestand | 538 |
+| davon **überfällig**, Gesamtbestand | **538** |
+| offen im 24-h-Standardfenster | 1 |
+| davon **überfällig** im 24-h-Standardfenster | **1** |
+
+**Die Erwartung „nahezu null überfällige Zeilen" trifft zu — aber aus einem anderen Grund als
+angenommen.** Nicht weil kaum etwas überfällig wäre: Über den Gesamtbestand sind es **alle 538**
+offenen Zeilen, denn `RUNNING` kommt null Mal vor und die 538 `SUSPENDED` enden am 29.12.2025, also
+vor dem Anker. Im Standardfenster von 24 Stunden liegt schlicht nur **eine** offene Zeile überhaupt.
+
+> ⚠️ **Die Kategorie „Überfällig" ist gegen die Testkopie praktisch nicht prüfbar.** Sie zeigt dort
+> entweder eine Zeile (24 h) oder alle offenen (unbegrenzt) — beides sagt nichts darüber, ob die
+> Frist fachlich richtig gewählt ist. Das war schon in `message-status.md` für `RUNNING` vermerkt und
+> gilt für diese Kategorie insgesamt.
+
+**Nebenbefund zur Einheit:** Dieselbe Abfrage mit `INTERVAL … MINUTE` statt `SECOND` liefert 537
+statt 538 — ein Unterschied von einer Zeile. **Auf der Testkopie ist die Wahl der Einheit also
+nahezu unsichtbar**, weil der Anker weit hinter allen offenen Zeilen liegt. In Produktion, wo
+Nachrichten in Minuten laufen, ist es der Unterschied zwischen 30 Minuten und 30 Stunden. Ein Test,
+der die Einheit gegen die Testkopie belegen wollte, könnte das nicht leisten — deshalb steht sie als
+benannte Konstante im Code und ihre Begründung in `messungen-schritt4.md` M8.
+
+---
+
 ## Sicherung gegen neue Statuswerte
 
 `DatenzugriffDbIT.statuskatalog_entspricht_dokumentierter_menge` vergleicht `SELECT DISTINCT
