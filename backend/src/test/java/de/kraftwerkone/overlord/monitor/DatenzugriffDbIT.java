@@ -13,6 +13,7 @@ import de.kraftwerkone.overlord.monitor.config.DatabaseProperties;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
@@ -49,6 +50,9 @@ class DatenzugriffDbIT {
 
   @Autowired private MessageStatusClassifier classifier;
   @Autowired private DatabaseProperties props;
+
+  /** Die Anwendungsuhr — im Profil {@code dev} die zurueckversetzte aus {@code ZeitConfig}. */
+  @Autowired private Clock anwendungsuhr;
 
   @Test
   @DisplayName("Rauchtest: liest echte Mandanten und Projekte aus GlassfishDB")
@@ -138,6 +142,44 @@ class DatenzugriffDbIT {
     assertThat(inDatenbank)
         .as("Das generierte Modell kennt Spalten, die in der verbundenen DB fehlen (Drift).")
         .containsAll(generiert);
+  }
+
+  /**
+   * Der Anker der Dev-Uhr taugt — geprueft an seiner <b>Eigenschaft</b>, nicht am Datum.
+   *
+   * <p>Ein Test auf {@code 2025-12-30 04:09:47} waere bei der naechsten Neubefuellung der Testkopie
+   * rot, ohne dass sich etwas verschlechtert haette. Geprueft wird deshalb, was der Anker leisten
+   * soll: dass das Standard-Zeitfenster von 24 Stunden ab ihm mehrere Mandanten zeigt. Genau das
+   * war mit {@code MAX(Message.MessageLastUpdate)} nicht mehr der Fall (ein Mandant, 285 Zeilen).
+   */
+  @Test
+  @DisplayName("Dev-Uhr: das 24-h-Fenster ab dem Anker zeigt mehrere Mandanten")
+  void anker_der_dev_uhr_zeigt_mehrere_mandanten() {
+    LocalDateTime anker = LocalDateTime.now(anwendungsuhr);
+
+    Integer mandanten =
+        glassfishDsl
+            .resultQuery(
+                """
+                select count(distinct pm.MandantID)
+                from Message m
+                join Process p on p.ProcessID = m.ProcessID
+                join ProjectMandant pm on pm.ProjectID = p.ProjectID
+                where m.MessageLastUpdate >  ? - interval 1 day
+                  and m.MessageLastUpdate <= ?
+                """,
+                anker,
+                anker)
+            .fetchOne(0, Integer.class);
+
+    assertThat(mandanten)
+        .as(
+            "Im 24-h-Fenster ab der Anwendungsuhr (%s) haben nur %s Mandanten Daten. Dann ist der"
+                + " Anker der Dev-Uhr unbrauchbar geworden — siehe ZeitConfig und"
+                + " docs/messungen-schritt4.md M9.",
+            anker, mandanten)
+        .isNotNull()
+        .isGreaterThanOrEqualTo(2);
   }
 
   @Test

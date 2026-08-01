@@ -191,18 +191,69 @@ liest — `LocalDateTime.now()` und Verwandte werden nirgends aufgerufen, Regel 
 | Anwendungsuhr (`@Primary`, Typ `Clock`) | relative Zeitfenster, Timeout-Berechnung | prod: Systemuhr · dev: um den Rückstand der Testkopie zurückversetzt |
 | `systemClock` | **sicherheitsrelevante Zeit** (Sitzung, Sperrfristen ab Schritt 3) und Protokollzeit | immer echte Uhr, UTC |
 
-**Dev-Versatz:** Beim Start liest die Anwendung `MAX(Message.MessageLastUpdate)` und versetzt die
-Uhr um die Differenz zurück; die Zeit **läuft weiter** (kein Einfrieren). Gemessen am 28.07.2026:
-Maximum `2026-07-08 17:21:10`, Versatz rund **19 Tage**. Der Wert wird ermittelt, nicht eingetragen —
-er wächst täglich und springt bei jeder Neubefüllung. Schlägt die Abfrage fehl oder ist sie leer,
-fällt die Uhr mit `WARN` auf die Systemuhr zurück.
+**Dev-Versatz:** Beim Start liest die Anwendung einen **Anker** aus der Testkopie und versetzt die
+Uhr um die Differenz zurück; die Zeit **läuft weiter** (kein Einfrieren). Der Wert wird ermittelt,
+nicht eingetragen — er überlebt damit jede Neubefüllung.
+
+### Der Anker ist seit dem 01.08.2026 ein anderer
+
+> **Überholter Stand:** Bis zum 01.08.2026 war der Anker `MAX(Message.MessageLastUpdate)`. Gemessen
+> am 28.07.2026 ergab das `2026-07-08 17:21:10` und einen Versatz von rund 19 Tagen.
+
+**Warum das nicht mehr trägt.** Messung M0 und die Verteilungsmessungen in
+[`messungen-schritt4.md`](messungen-schritt4.md) zeigen: Der Bestand der Testkopie ist dicht bis zum
+**30.12.2025**, danach folgen **fünf Monate ohne eine einzige Zeile** und fünf verstreute Tage, an
+denen ausschließlich `NEXANS` Daten hat. Ein 24-Stunden-Fenster ab dem Maximum enthält damit
+**285 Zeilen eines einzigen Mandanten**. Lokal sah jeder andere Mandant leer aus — auch `VOTG` und
+`SUTTONS`, die beiden Testmandanten des Isolationstests. Genau das soll Regel Z1 verhindern; der
+Anker erfüllte seinen Zweck nicht mehr.
+
+**Neuer Anker (Messung M9):** der jüngste Zeitpunkt an einem Tag, an dem **mindestens drei
+Mandanten** Nachrichten haben.
+
+```sql
+select max(m.MessageLastUpdate)
+from Message m
+join Process p on p.ProcessID = m.ProcessID
+join ProjectMandant pm on pm.ProjectID = p.ProjectID
+group by date(m.MessageLastUpdate)
+having count(distinct pm.MandantID) >= 3
+order by date(m.MessageLastUpdate) desc
+limit 1
+```
+
+| | alter Anker | neuer Anker |
+|---|---|---|
+| Zeitpunkt (Stand 01.08.2026) | `2026-07-08 17:21:10` | `2025-12-30 04:09:47` |
+| Zeilen im 24-h-Fenster | 285 | **6.382** |
+| Mandanten mit Daten | 1 | **6** |
+| `VOTG` / `SUTTONS` sichtbar | nein | **ja** (206 / 684 Zeilen) |
+
+**Warum drei Mandanten und nicht einer oder alle zehn:** Ein Tag mit genau einem Mandanten ist der
+Zustand, den die Umstellung beseitigt. Eine hohe Schwelle fände nie einen Tag — `NXHBE` hat neun
+Nachrichten insgesamt, `EDITIONLINGERI` keine.
+
+**Kosten:** Die Anker-Abfrage ist ein voller Durchlauf über `Message` und dauert rund **6,9 Sekunden**
+(`EXPLAIN`: `index` über `MessageLastUpdateProcessMessageIDX`, `Using filesort`). Sie läuft
+**einmal beim Start und ausschließlich im Profil `dev`**. In Produktion ist die Anwendungsuhr die
+Systemuhr; dort wird nichts gelesen.
+
+**Drei Stufen, jede protokolliert.** Findet die Anker-Abfrage keinen Tag, fällt die Uhr auf
+`MAX(Message.MessageLastUpdate)` zurück; ist auch das leer oder schlägt etwas fehl, auf die
+Systemuhr. Ein stiller Rückfall wäre schlimmer als ein falscher Anker — beide erzeugen dieselbe
+leere Liste, und nur einer davon ist erklärbar.
 
 Startmeldung (dev):
 
 ```
-WARN ... ZeitConfig : Dev-Clock aktiv: Anwendungszeit auf 2026-07-08T17:21:10 zurueckversetzt
-                      (Versatz -19 Tage / -474 Stunden). Sicherheitsrelevante Zeit nutzt weiterhin die Systemuhr.
+WARN ... ZeitConfig : Dev-Clock aktiv: Anwendungszeit auf 2025-12-30T04:09:47 zurueckversetzt
+                      (Versatz -214 Tage / -5143 Stunden), Anker: juengster Tag mit mindestens 3 Mandanten.
+                      Sicherheitsrelevante Zeit nutzt weiterhin die Systemuhr.
 ```
+
+**Geprüft wird die Eigenschaft, nicht das Datum.** `DatenzugriffDbIT` verlangt, dass das
+24-Stunden-Fenster ab der Anwendungsuhr Daten von mehreren Mandanten zeigt. Ein Test auf das konkrete
+Datum wäre bei der nächsten Neubefüllung rot, ohne dass sich etwas verschlechtert hätte.
 
 > **Sicherheitsrelevante Zeit nutzt niemals die Anwendungsuhr**, sondern `systemClock`. Sonst wären
 > Sitzungsablauf und Sperrfristen im Dev-Profil um 19 Tage verschoben.

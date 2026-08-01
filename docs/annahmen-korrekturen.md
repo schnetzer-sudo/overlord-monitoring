@@ -22,6 +22,60 @@ kann.
 
 ---
 
+## Erhebung 01.08.2026 (vor Schritt 4)
+
+Vollständig mit Statements, `EXPLAIN` und Laufzeiten in
+[`messungen-schritt4.md`](messungen-schritt4.md). Was sich dadurch an der bestehenden Dokumentation
+geändert hat:
+
+### `MessageTimeout` ist in **Sekunden**, nicht in Minuten (Messung M8)
+
+Die bisher an vier Stellen dokumentierte „Dauer in Minuten" ist **falsch**. Beleg:
+`SOSActionTimeout = 1800` steht 37.120-mal neben dem Ablaufschritt `WAIT|30M` — 1800 Sekunden sind
+exakt 30 Minuten; der einzige andere vorkommende Wert `300` passt zum Schritt `5M`. Unter der
+Minuten-Lesart stünde eine Frist von 30 **Stunden** neben einem Schritt, der 30 **Minuten** wartet.
+
+Korrigiert in `datenmodell.md` §3 und §5.3, `DEVELOPMENT_GUIDELINES.md` Z2 und §5.3 (Feldname
+`timeoutSekunden` statt `timeoutMinuten`) sowie `PROJEKTBESCHREIBUNG.md` Abschnitt 3.3. **Die
+Größenordnung ändert sich um Faktor 60.**
+
+Die Schwachstelle der Belegkette gehört dazu: Gemessen ist `SOSActionTimeout`, **nicht**
+`Message.MessageTimeout` selbst. Ein direkter Beleg ist auf der Testkopie nicht zu bekommen, weil
+dort keine Nachricht existiert, an der diese Frist sichtbar abläuft (`RUNNING` kommt null Mal vor).
+Die Einheit steht im Code deshalb an genau einer Stelle als benannte Konstante.
+
+### `ERROR_TIMEOUT` entsteht nicht aus `MessageTimeout` (Messung M8)
+
+Die 52 so gekennzeichneten Nachrichten laufen 2 bis 5,6 Minuten und brechen **höchstens 120 Sekunden**
+nach dem Start ihrer letzten Aktion ab. Das ist eine kürzere Frist auf Dienstebene. Wer die 52 Zeilen
+als Beispiele für ein abgelaufenes `MessageTimeout` liest, liest sie falsch.
+
+### Der Bestand der Testkopie hat eine fünfmonatige Lücke (Messungen M0, M9)
+
+Dicht bis `2025-12-30`, dann **keine einzige Zeile** von Januar bis Mai 2026, dann fünf verstreute
+Tage mit zusammen 5.133 Zeilen, an denen ausschließlich `NEXANS` Daten hat. Der Datenstand
+`08.07.2026` ist als **Maximum** korrekt, beschreibt aber nicht die Dichte.
+
+Folge: Der Anker der Dev-Uhr ist von `MAX(Message.MessageLastUpdate)` auf den jüngsten Zeitpunkt an
+einem Tag mit mindestens drei Mandanten umgestellt (`2025-12-30 04:09:47`). Vorher zeigte das
+24-Stunden-Standardfenster 285 Zeilen eines Mandanten, jetzt 6.382 Zeilen aus sechs — darunter
+`VOTG` und `SUTTONS`, die beiden Testmandanten des Isolationstests. Details in
+[`datenzugriff.md`](datenzugriff.md) §6.
+
+### Weitere Befunde ohne Änderung an der Dokumentation
+
+- **`ProjectMandant` ist n:m im Schema, 1:1 in den Daten** — alle 134 Projekte gehören genau einem
+  Mandanten, der Join vervielfacht nichts. Zu **Annahme A8**: 140 Projekte gegenüber 134 Zuordnungen;
+  die sechs nicht zugeordneten tragen **keine** Nachricht.
+- **Die View `MessageMandantID` ist mit den Rechten der Anwendung nicht analysierbar** —
+  `SHOW CREATE VIEW` und `EXPLAIN` scheitern beide am fehlenden Recht `SHOW VIEW`. Regel L7 ist für
+  diesen Zugriffsweg damit nicht erfüllbar.
+- **`Message` hat sechs Indizes**, `datenmodell.md` §3 nennt drei.
+- Die Zählstände von `information_schema` sind veraltet (`Message` 3.560.486 gegenüber 3.341.519
+  gezählt).
+
+---
+
 ## Erhebung 28.07.2026 (Schritt 2, neu)
 
 ### Der Server der Testkopie ist global `read_only`
