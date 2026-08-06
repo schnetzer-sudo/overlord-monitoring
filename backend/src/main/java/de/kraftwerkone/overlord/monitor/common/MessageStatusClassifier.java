@@ -102,6 +102,16 @@ public class MessageStatusClassifier {
   /**
    * Ist die Nachricht als Zeile fertig?
    *
+   * <p><b>Diese Methode gehoert der Ueberfaelligkeitsrechnung und sonst niemandem.</b> Sie
+   * beantwortet genau eine Frage: „Kann fuer diese Zeile noch eine Frist ablaufen?" Sie ist
+   * <b>nicht</b> die Grundlage eines Filters „nur offene Nachrichten" — dort wuerde sie 1.051
+   * {@code COMMIT_SENT}-Zeilen lautlos verschwinden lassen, obwohl {@code docs/message-status.md}
+   * ausdruecklich festhaelt, dass wir ueber diese Zeilen <b>nichts wissen</b>. Für {@code
+   * UNGEKLAERT} liefert sie {@code true}, und das ist hier die vorsichtige Antwort (keine
+   * Behauptung, die Nachricht haenge); in einem Sichtbarkeitsfilter waere dieselbe {@code true} die
+   * unvorsichtige. Wer „offen" im Sinne der Oberflaeche braucht, definiert das dort und begruendet
+   * es dort.
+   *
    * <p><b>Offen sind allein {@link MessageStatusKind#WARTEND} und {@link
    * MessageStatusKind#LAEUFT}.</b> Alles andere gilt als Endstatus — auch {@code ZWISCHENSCHRITT}:
    * Eine gemergte oder gesplittete Nachricht wird nicht wieder angefasst, sie ist als <i>Zeile</i>
@@ -156,10 +166,19 @@ public class MessageStatusClassifier {
    * Der Zeitpunkt, zu dem die Nachricht ueberfaellig wird — {@code MessageLastUpdate +
    * MessageTimeout}.
    *
-   * <p>Leer, wenn es keinen gibt: bei {@code MessageTimeout = 0} („kein Timeout") und bei {@code
-   * NULL}. {@code NULL} kommt in 3,34 Millionen Zeilen der Testkopie <b>kein einziges Mal</b> vor
-   * (Messung M2), wird aber behandelt — die Spalte laesst es zu, und eine Neubefuellung oder die
-   * Produktion muss sich nicht daran halten, was die Testkopie zufaellig enthaelt.
+   * <p>Leer, wenn es keinen gibt: bei {@code MessageTimeout = 0} und bei {@code NULL}.
+   *
+   * <p><b>Dass {@code 0} „kein Timeout" heisst, ist eine Analogie und kein Befund.</b> Ein
+   * Gegenbeleg steht in derselben Messung, die die Einheit geklaert hat: Bei allen 52 {@code
+   * ERROR_TIMEOUT}-Nachrichten traegt die fehlschlagende Aktion {@code SOSActionTimeout = 0} — und
+   * trotzdem greift dort eine Frist von hoechstens 120 Sekunden. In dieser Spalte bedeutet {@code
+   * 0} also eher „nimm die Vorgabe" als „keine Frist". Praktisch folgenlos ist das nur, weil alle
+   * 6.915 Zeilen mit {@code MessageTimeout = 0} in einem Endstatus stehen und damit ohnehin nie
+   * ueberfaellig werden. Sollte in Produktion je eine offene Zeile mit {@code 0} auftauchen, ist
+   * <b>hier</b> nachzusehen. {@code NULL} kommt in 3,34 Millionen Zeilen der Testkopie <b>kein
+   * einziges Mal</b> vor (Messung M2), wird aber behandelt — die Spalte laesst es zu, und eine
+   * Neubefuellung oder die Produktion muss sich nicht daran halten, was die Testkopie zufaellig
+   * enthaelt.
    *
    * <p>Ein negativer Wert wird wie {@code 0} behandelt: Eine Frist, die vor ihrem Beginn ablaeuft,
    * ist keine Frist. Vorgekommen ist das nicht.

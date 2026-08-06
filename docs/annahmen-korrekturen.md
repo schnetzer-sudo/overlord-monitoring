@@ -62,11 +62,36 @@ einem Tag mit mindestens drei Mandanten umgestellt (`2025-12-30 04:09:47`). Vorh
 `VOTG` und `SUTTONS`, die beiden Testmandanten des Isolationstests. Details in
 [`datenzugriff.md`](datenzugriff.md) §6.
 
+### Annahme A8 ist erledigt: die sechs Projekte ohne Zuordnung tragen keine Nachricht
+
+`Project` hat 140 Zeilen (gezählt), `ProjectMandant` 134 — sechs Projekte haben keinen Mandanten.
+**Sie tragen zusammen null Nachrichten**: Die Summe der Nachrichten je Mandant aus M3 (b) ist exakt
+gleich der Gesamtzahl in `Message` (3.341.519). Damit ist die offene Frage von Annahme A8
+beantwortet, und zwar ohne Folgen — es gibt keine Nachricht, die durch die Mandantenkette fällt.
+
+Die Entscheidung bleibt trotzdem, wie sie in [`mandantentrennung.md`](mandantentrennung.md) §2
+steht: Nachrichten in Projekten ohne Zuordnung wären für niemanden sichtbar, auch nicht für ADMIN,
+und es wird **kein** Sonderpfad und kein Pseudo-Mandant gebaut. Dass der Fall heute leer ist, macht
+die Regel nicht überflüssig — es macht sie nur billig.
+
+### Das Mengengerüst ist rund 7.300 Nachrichten am Tag, nicht 5.000
+
+`PROJEKTBESCHREIBUNG.md` §8 und `datenmodell.md` §8 nennen „rund 5.000 pro Tag". Im **dichten** Teil
+des Bestands sind es **rund 7.300**: 3.336.386 Zeilen über 456 Tage (01.10.2024 bis 30.12.2025).
+Die 5.000 entstehen, wenn man den gesamten Zeitraum inklusive der fünfmonatigen Lücke durch die
+Tage teilt.
+
+Für die Auslegung zählt die dichte Zahl: Ein 24-Stunden-Fenster im dichten Bestand hat 6.249 Zeilen
+über alle Mandanten (M9) — das ist die Größenordnung, gegen die die Nachrichtenliste gemessen wurde
+(L1 bis L10). Die Zahlen der Projektbeschreibung sind damit nicht falsch, aber sie beschreiben einen
+Durchschnitt, den es an keinem einzigen Tag gab.
+
 ### Weitere Befunde ohne Änderung an der Dokumentation
 
 - **`ProjectMandant` ist n:m im Schema, 1:1 in den Daten** — alle 134 Projekte gehören genau einem
-  Mandanten, der Join vervielfacht nichts. Zu **Annahme A8**: 140 Projekte gegenüber 134 Zuordnungen;
-  die sechs nicht zugeordneten tragen **keine** Nachricht.
+  Mandanten, der Join vervielfacht nichts. Die Nachrichtenliste hält sich trotzdem an `EXISTS` statt
+  an einen Join: Eine Liste, deren Zeilenzahl an einer Stammdatenpflege hängt, ist die falsche
+  Grundlage für eine Sicherheitsgrenze.
 - **Die View `MessageMandantID` ist mit den Rechten der Anwendung nicht analysierbar** —
   `SHOW CREATE VIEW` und `EXPLAIN` scheitern beide am fehlenden Recht `SHOW VIEW`. Regel L7 ist für
   diesen Zugriffsweg damit nicht erfüllbar.

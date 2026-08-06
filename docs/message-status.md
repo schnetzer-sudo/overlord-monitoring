@@ -79,6 +79,15 @@ Das Feld wird als Parameter übergeben, damit dieser gemeinsame Baustein nicht a
 
 > **Offen sind allein `WARTEND` und `LAEUFT`.** Alles andere ist Endstatus.
 
+> ⚠️ **Diese Methode gehört der Überfälligkeitsrechnung und sonst niemandem** (präzisiert am
+> 06.08.2026). Sie beantwortet genau eine Frage: *Kann für diese Zeile noch eine Frist ablaufen?*
+> Sie ist **nicht** die Grundlage eines späteren Filters „nur offene Nachrichten". Dort würde sie
+> 1.051 `COMMIT_SENT`-Zeilen lautlos verschwinden lassen — obwohl weiter oben in dieser Datei steht,
+> dass wir über genau diese Zeilen **nichts wissen**. Für `UNGEKLAERT` liefert sie `true`, und das
+> ist in der Überfälligkeitsrechnung die vorsichtige Antwort (keine Behauptung, die Nachricht hänge);
+> in einem Sichtbarkeitsfilter wäre dieselbe `true` die unvorsichtige. Wer „offen" im Sinne der
+> Oberfläche braucht, definiert das dort — und begründet es dort.
+
 | Einordnung | Endstatus? | Rohwerte |
 |---|---|---|
 | `ABGESCHLOSSEN` | ja | `FINISHED` |
@@ -113,8 +122,21 @@ einen Compilerfehler aus und erbt keine stille Voreinstellung.
 - **`MessageTimeout` ist eine Dauer in Sekunden** (Messung M8, korrigiert am 01.08.2026 — die
   Dokumentation nannte Minuten). Die Einheit steht im Code an genau einer Stelle:
   `MessageStatusClassifier.TIMEOUT_EINHEIT`.
-- **`MessageTimeout = 0` heißt „kein Timeout".** Solche Zeilen werden nie überfällig (6.915 Zeilen,
-  M2).
+- **`MessageTimeout = 0` wird als „kein Timeout" behandelt.** Solche Zeilen werden nie überfällig
+  (6.915 Zeilen, M2).
+
+  > ⚠️ **Das ist eine Analogie, kein Befund** (ergänzt am 06.08.2026). Ein Gegenbeleg steht in
+  > derselben Messung, die die Einheit geklärt hat: Bei **allen 52** `ERROR_TIMEOUT`-Nachrichten
+  > trägt die fehlschlagende Aktion `SOSActionTimeout = 0` — und trotzdem greift dort eine Frist von
+  > höchstens 120 Sekunden (M8). In dieser Spalte bedeutet `0` also eher „nimm die Vorgabe" als
+  > „keine Frist". Ob `Message.MessageTimeout` dasselbe meint, ist **nicht** belegt; die Übertragung
+  > ist dieselbe Analogie wie bei der Einheit.
+  >
+  > **Praktisch folgenlos ist das heute nur aus einem Grund:** Alle 6.915 Zeilen mit
+  > `MessageTimeout = 0` stehen in einem Endstatus (`FINISHED` 5.711, `COMMIT_SENT` 1.051,
+  > `COMMIT_REJECTED` 103, `CHECKED` 50) und werden damit ohnehin nie überfällig — die Lesart der
+  > `0` ändert an keiner einzigen Zeile etwas. Taucht in Produktion eine **offene** Zeile mit `0`
+  > auf, ist das die Stelle, an der nachzusehen ist.
 - **`NULL` wird behandelt**, obwohl es in 3,34 Millionen Zeilen kein einziges Mal vorkommt — die
   Spalte lässt es zu, und die Produktion muss sich nicht daran halten, was die Testkopie zufällig
   enthält.
