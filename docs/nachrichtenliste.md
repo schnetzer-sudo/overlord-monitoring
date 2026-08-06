@@ -136,6 +136,14 @@ Für die Testkopie ist das gemessen (M0: Serverzeit und Arbeitsplatzuhr gehen gl
 Die Umrechnung ist bewusst **nicht** Jackson überlassen: Ein `LocalDateTime` hätte dort keine Zone
 und ein `Instant` nur die, die zufällig konfiguriert ist.
 
+**Die Gegenrichtung gehört dazu** (ergänzt 06.08.2026). Eine Umrechnung nach UTC, die in der Anzeige
+nicht zurückgerechnet wird, ist keine Umrechnung, sondern eine Verschiebung: Aus 23:53:50 in der
+Datenbank würde 22:53 auf dem Bildschirm, im Sommer 21:53 — das Altwerkzeug zeigt 23:53. Deshalb
+formatiert das Frontend in einer **festen** Zone und nicht in der des Browsers, und **dieselbe** Zone
+liefert das Backend als `anzeigezone` in der Selbstauskunft. Es ist genau die der Anwendungsuhr; die
+Kette schließt sich damit über einen Wert, der an einer Stelle gepflegt wird. Vollständig in
+[`frontend-grundlagen.md`](frontend-grundlagen.md) §4.
+
 ---
 
 ## 3. Die Mandantenkette — `EXISTS` statt der View

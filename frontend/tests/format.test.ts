@@ -1,40 +1,140 @@
 import { describe, expect, it } from "vitest";
 
-import { formatiereDatum, formatiereZahl, formatiereZeitpunkt } from "@/lib/format";
+import {
+  ZEITZONE_RUECKFALL,
+  formatiereDatum,
+  formatiereRelativ,
+  formatiereZahl,
+  formatiereZeitpunkt,
+  formatiereZeitpunktGenau,
+} from "@/lib/format";
 
 /**
- * Der Zeitstempel darf sich **nicht** verschieben.
+ * Die zweite Hälfte der Zeitkette: **UTC der API → dieselbe Wanduhrzeit in der
+ * Anzeige.**
  *
- * Die Werte aus `GlassfishDB` sind Wanduhrzeit des Altsystem-Servers. Würde man
- * sie durch eine Zeitzonenumrechnung schicken, stünde ein um 14:23 verarbeiteter
- * Beleg je nach Standort des Browsers um 16:23 in der Liste — plausibel genug,
- * dass es niemand merkt, und falsch genug, dass die Suche nach dem Zeitpunkt aus
- * dem Altwerkzeug ins Leere geht.
+ * Die erste Hälfte — Wanduhrzeit der Quelle → UTC — steht im Backend
+ * (`ZeitpunkteTest`). Beide Tests halten **dieselben konkreten Werte** fest;
+ * läuft eine Seite weg, wird die andere rot.
+ *
+ * **Dieser Test hielt bis zum 06.08.2026 das Gegenteil fest.** Er verlangte, dass
+ * ein Zeitstempel „wie geliefert" angezeigt wird, ausdrücklich auch bei
+ * angehängtem `Z`. Für Schritt 3 war das richtig: Kein Endpunkt lieferte
+ * Zeitstempel aus `GlassfishDB`, und die Regel schützte davor, einen zonenlosen
+ * Wert durch die Browserzone zu schicken. Seit Schritt 4 rechnet das Backend die
+ * Wanduhrzeit nach UTC um — und „wie geliefert" wurde damit zu genau der
+ * Verschiebung, die die Regel verhindern sollte.
  */
-describe("Zeitpunkte", () => {
-  it("zeigt die gelieferten Felder unverändert an", () => {
-    expect(formatiereZeitpunkt("2026-07-08T14:23:00Z", "de")).toBe("08.07.2026, 14:23");
+
+/** Die Zone, in der Anwendungs- und Datenbankserver laufen. */
+const BERLIN = "Europe/Berlin";
+
+describe("Die Zeitkette", () => {
+  /**
+   * Der konkrete Fall aus Messung M9: der letzte Zeitstempel des 29.12.2025.
+   *
+   * In der Datenbank steht 23:53:50, das Altwerkzeug zeigt 23:53. Genau das muss
+   * hier herauskommen — nicht 22:53.
+   */
+  it("zeigt im Winter wieder die Wanduhrzeit der Datenbank", () => {
+    expect(formatiereZeitpunkt("2025-12-29T22:53:50Z", "de", BERLIN)).toBe("29.12.2025, 23:53");
   });
 
-  it("verschiebt sich auch dann nicht, wenn ein Zeitzonenversatz mitgeliefert wird", () => {
-    // Der Versatz wird bewusst ignoriert: Die Quelle führt keine Zeitzone, und
-    // was das Backend anhängt, ändert nichts an der abgelesenen Wanduhrzeit.
-    expect(formatiereZeitpunkt("2026-07-08T14:23:00+02:00", "de")).toBe("08.07.2026, 14:23");
-    expect(formatiereZeitpunkt("2026-07-08T14:23:00", "de")).toBe("08.07.2026, 14:23");
-    expect(formatiereZeitpunkt("2026-07-08 14:23:00.123", "de")).toBe("08.07.2026, 14:23");
+  it("zeigt im Sommer wieder die Wanduhrzeit der Datenbank — dann zwei Stunden", () => {
+    expect(formatiereZeitpunkt("2026-07-08T15:21:10Z", "de", BERLIN)).toBe("08.07.2026, 17:21");
+  });
+
+  /**
+   * Der Kern der Umstellung: Die Anzeige hängt an der gelieferten Zone, **nicht**
+   * an der des Betrachters. Ein Nutzer in München und einer in Antwerpen sehen
+   * dieselbe Uhrzeit — deshalb wird hier gegen zwei verschiedene Zonen geprüft
+   * und nicht gegen die des Testrechners.
+   */
+  it("hängt an der übergebenen Zone und nicht am Standort des Betrachters", () => {
+    const utc = "2025-12-29T22:53:50Z";
+
+    expect(formatiereZeitpunkt(utc, "de", BERLIN)).toBe("29.12.2025, 23:53");
+    expect(formatiereZeitpunkt(utc, "de", "UTC")).toBe("29.12.2025, 22:53");
+    expect(formatiereZeitpunkt(utc, "de", "America/New_York")).toBe("29.12.2025, 17:53");
+  });
+
+  it("liefert den genauen Wert mit Sekunden für den Tooltip", () => {
+    expect(formatiereZeitpunktGenau("2025-12-29T22:53:50Z", "de", BERLIN)).toBe(
+      "29.12.2025, 23:53:50",
+    );
+  });
+
+  it("formatiert das Datum in derselben Zone", () => {
+    // 00:30 UTC ist in Berlin bereits der 30.12. — das Datum darf nicht am
+    // UTC-Tag hängen bleiben.
+    expect(formatiereDatum("2025-12-29T23:30:00Z", "de", BERLIN)).toBe("30.12.2025");
+  });
+});
+
+describe("Zeitpunkte lesen", () => {
+  /**
+   * Die API überträgt ausschließlich UTC (Richtlinie §5.3). Kommt ein Wert ohne
+   * Versatz, wird er **als UTC** gelesen — `new Date("…T22:53:50")` läse ihn
+   * sonst als Ortszeit des Browsers, und der Wert bekäme je nach Standort eine
+   * andere Bedeutung.
+   */
+  it("liest einen Wert ohne Versatz als UTC, nicht als Ortszeit des Browsers", () => {
+    expect(formatiereZeitpunkt("2025-12-29T22:53:50", "de", BERLIN)).toBe("29.12.2025, 23:53");
+    expect(formatiereZeitpunkt("2025-12-29 22:53:50", "de", BERLIN)).toBe("29.12.2025, 23:53");
+  });
+
+  it("nimmt einen ausgeschriebenen Versatz ernst", () => {
+    // 23:53:50+01:00 ist derselbe Zeitpunkt wie 22:53:50Z.
+    expect(formatiereZeitpunkt("2025-12-29T23:53:50+01:00", "de", BERLIN)).toBe(
+      "29.12.2025, 23:53",
+    );
   });
 
   it("formatiert in der aktiven Sprache", () => {
-    expect(formatiereZeitpunkt("2026-07-08T14:23:00Z", "en")).toContain("2026");
-    expect(formatiereZeitpunkt("2026-07-08T14:23:00Z", "en")).not.toBe(
-      formatiereZeitpunkt("2026-07-08T14:23:00Z", "de"),
-    );
-    expect(formatiereDatum("2026-07-08T14:23:00Z", "de")).toBe("08.07.2026");
+    const deutsch = formatiereZeitpunkt("2025-12-29T22:53:50Z", "de", BERLIN);
+    const englisch = formatiereZeitpunkt("2025-12-29T22:53:50Z", "en", BERLIN);
+
+    expect(englisch).toContain("2025");
+    expect(englisch).not.toBe(deutsch);
   });
 
   it("reicht einen unlesbaren Wert unverändert durch — lieber roh als falsch", () => {
-    expect(formatiereZeitpunkt("kein Zeitpunkt", "de")).toBe("kein Zeitpunkt");
-    expect(formatiereZeitpunkt(null, "de")).toBe("");
+    expect(formatiereZeitpunkt("kein Zeitpunkt", "de", BERLIN)).toBe("kein Zeitpunkt");
+    expect(formatiereZeitpunkt(null, "de", BERLIN)).toBe("");
+    expect(formatiereZeitpunkt(undefined, "de", BERLIN)).toBe("");
+  });
+
+  /**
+   * Fehlt die Zone — etwa solange die Selbstauskunft lädt —, wird UTC gezeigt und
+   * **nicht** die Zone des Browsers. Ein Rückfall auf den Browser wäre genau der
+   * Fehler, den diese Datei verhindert, nur seltener und damit schwerer zu finden.
+   */
+  it("fällt ohne oder mit unbrauchbarer Zone auf UTC zurück, nie auf den Browser", () => {
+    const inUtc = formatiereZeitpunkt("2025-12-29T22:53:50Z", "de", ZEITZONE_RUECKFALL);
+
+    expect(formatiereZeitpunkt("2025-12-29T22:53:50Z", "de", undefined)).toBe(inUtc);
+    expect(formatiereZeitpunkt("2025-12-29T22:53:50Z", "de", "Gibt/EsNicht")).toBe(inUtc);
+    expect(inUtc).toBe("29.12.2025, 22:53");
+  });
+});
+
+describe("Relative Zeit", () => {
+  const jetzt = new Date("2025-12-30T04:09:47Z");
+
+  it("nennt die größte Einheit, von der eine ganze vergangen ist", () => {
+    expect(formatiereRelativ("2025-12-30T01:09:47Z", "de", jetzt)).toBe("vor 3 Stunden");
+    expect(formatiereRelativ("2025-12-30T04:07:47Z", "de", jetzt)).toBe("vor 2 Minuten");
+    expect(formatiereRelativ("2025-12-27T04:09:47Z", "de", jetzt)).toBe("vor 3 Tagen");
+  });
+
+  it("bleibt bei wenigen Sekunden verständlich statt auf 0 zu springen", () => {
+    expect(formatiereRelativ("2025-12-30T04:09:42Z", "de", jetzt)).toBe("vor 5 Sekunden");
+    expect(formatiereRelativ("2025-12-30T04:09:47Z", "de", jetzt)).toBe("jetzt");
+  });
+
+  it("reicht einen unlesbaren Wert unverändert durch", () => {
+    expect(formatiereRelativ("kein Zeitpunkt", "de", jetzt)).toBe("kein Zeitpunkt");
+    expect(formatiereRelativ(null, "de", jetzt)).toBe("");
   });
 });
 

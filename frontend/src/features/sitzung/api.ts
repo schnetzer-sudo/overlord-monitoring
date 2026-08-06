@@ -33,6 +33,18 @@ export type Selbstauskunft = {
   mandant: Mandant | null;
   mustChangePassword: boolean;
   downloadAllowed: boolean;
+  /**
+   * IANA-Kennung der Zone, in der Zeitstempel **anzuzeigen** sind, etwa
+   * `Europe/Berlin`.
+   *
+   * Sie kommt vom Backend und nicht aus einer Konstante hier: Es ist dieselbe
+   * Zone, mit der dort die Wanduhrzeit der Quelle nach UTC umgerechnet wird.
+   * Zwei Stellen liefen beim Umzug des Servers auseinander — und zwar lautlos,
+   * weil eine um Stunden verschobene Uhrzeit plausibel aussieht. Verwendet wird
+   * sie über `components/zeitzone.tsx`; warum überhaupt eine feste Zone und
+   * nicht die des Browsers, steht in `lib/format.ts`.
+   */
+  anzeigezone: string;
 };
 
 export type Anmeldedaten = { username: string; password: string };

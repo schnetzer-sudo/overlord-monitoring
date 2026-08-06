@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Fehler } from "./zustand";
 import { Kopfzeile } from "./kopfzeile";
 import { NavigationsListe } from "./navigations-liste";
+import { ZeitzoneProvider } from "./zeitzone";
 
 /**
  * Der Anwendungsrahmen: Kopfzeile, Navigation, Inhalt — und der Ablauf nach dem
@@ -107,24 +108,31 @@ export function Anwendungsrahmen({ children }: { children: ReactNode }) {
   const frei = !auskunft.mustChangePassword && auskunft.mandant !== null;
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden">
-      <Kopfzeile
-        auskunft={auskunft}
-        navigationSichtbar={frei}
-        mandantenwechselErlaubt={!auskunft.mustChangePassword}
-      />
-      {/* `min-h-0` ist hier kein Feinschliff, sondern die Bedingung: Ohne ihn
-          wächst ein Flex-Kind über seinen Container hinaus, statt zu scrollen —
-          und das Fenster bekommt eine zweite Bildlaufleiste. */}
-      <div className="flex min-h-0 flex-1">
-        {frei ? (
-          <aside className="border-border w-navspalte hidden shrink-0 overflow-y-auto border-r px-2.5 py-2 md:block">
-            <NavigationsListe rolle={auskunft.role} />
-          </aside>
-        ) : null}
-        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto px-3 py-4 md:px-5">{children}</main>
+    // Die Anzeigezone kommt aus der Selbstauskunft und gilt für alles darunter.
+    // Der Rahmen ist die einzige Stelle, die sie hat, und jede Zeitangabe in
+    // jedem Feature braucht sie — siehe `components/zeitzone.tsx`.
+    <ZeitzoneProvider zone={auskunft.anzeigezone}>
+      <div className="flex h-dvh flex-col overflow-hidden">
+        <Kopfzeile
+          auskunft={auskunft}
+          navigationSichtbar={frei}
+          mandantenwechselErlaubt={!auskunft.mustChangePassword}
+        />
+        {/* `min-h-0` ist hier kein Feinschliff, sondern die Bedingung: Ohne ihn
+            wächst ein Flex-Kind über seinen Container hinaus, statt zu scrollen —
+            und das Fenster bekommt eine zweite Bildlaufleiste. */}
+        <div className="flex min-h-0 flex-1">
+          {frei ? (
+            <aside className="border-border w-navspalte hidden shrink-0 overflow-y-auto border-r px-2.5 py-2 md:block">
+              <NavigationsListe rolle={auskunft.role} />
+            </aside>
+          ) : null}
+          <main className="min-h-0 min-w-0 flex-1 overflow-y-auto px-3 py-4 md:px-5">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </ZeitzoneProvider>
   );
 }
 

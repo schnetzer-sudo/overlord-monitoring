@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import java.time.Clock;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -36,17 +37,26 @@ public class AuthController {
   private final MandantService mandantService;
   private final AuditLogWriter auditLogWriter;
 
+  /**
+   * Die <b>Anwendungsuhr</b>, allein wegen ihrer Zone: Sie ist die Zone, in der die Oberflaeche
+   * Zeitstempel anzeigt, und dieselbe, mit der {@code common/Zeitpunkte} die Wanduhrzeit der Quelle
+   * nach UTC umrechnet. Begruendung an {@link SelbstauskunftResponse#fuer}.
+   */
+  private final Clock anwendungsuhr;
+
   AuthController(
       AnmeldeService anmeldeService,
       PasswortService passwortService,
       SitzungsVerwaltung sitzungsVerwaltung,
       MandantService mandantService,
-      AuditLogWriter auditLogWriter) {
+      AuditLogWriter auditLogWriter,
+      Clock anwendungsuhr) {
     this.anmeldeService = anmeldeService;
     this.passwortService = passwortService;
     this.sitzungsVerwaltung = sitzungsVerwaltung;
     this.mandantService = mandantService;
     this.auditLogWriter = auditLogWriter;
+    this.anwendungsuhr = anwendungsuhr;
   }
 
   public record AnmeldungRequest(
@@ -129,11 +139,7 @@ public class AuthController {
   }
 
   private SelbstauskunftResponse selbstauskunft(AngemeldeterNutzer nutzer) {
-    return new SelbstauskunftResponse(
-        nutzer.username(),
-        nutzer.rolle().name(),
-        mandantService.aktiver(nutzer).orElse(null),
-        nutzer.mustChangePassword(),
-        nutzer.downloadAllowed());
+    return SelbstauskunftResponse.fuer(
+        nutzer, mandantService.aktiver(nutzer).orElse(null), anwendungsuhr.getZone());
   }
 }

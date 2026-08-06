@@ -105,6 +105,41 @@ class NachrichtenlisteDbIT extends SicherheitsTestbasis {
         .startsWith("2025-12-2");
   }
 
+  /**
+   * <b>Die Zeitkette gegen echte Daten</b> (Aufgabe 11): Wanduhrzeit in {@code GlassfishDB} → die
+   * Zone, die das Backend selbst als Anzeigezone nennt → UTC in der Antwort.
+   *
+   * <p>Der Test unterstellt <b>keine</b> Zeitzone, sondern liest sie aus der Selbstauskunft — genau
+   * den Wert, mit dem das Frontend anschliessend zurueckrechnet. Waeren die beiden verschieden,
+   * stuende in der Anzeige eine andere Uhrzeit als in der Datenbank, und keine Seite fuer sich
+   * saehe falsch aus. Die Rueckrichtung (UTC → Anzeige) belegt {@code
+   * frontend/tests/format.test.ts}, die reine Rechnung {@code ZeitpunkteTest}.
+   */
+  @Test
+  @DisplayName("Der Zeitpunkt der Antwort ist die Wanduhrzeit der Datenbank in der Anzeigezone")
+  void zeitpunkt_entspricht_der_wanduhrzeit_der_quelle() throws Exception {
+    String anzeigezone = sitzung.hole("/api/auth/me").json("$.anzeigezone");
+    assertThat(anzeigezone)
+        .as("Ohne Anzeigezone kann das Frontend nicht zurueckrechnen")
+        .isNotBlank();
+
+    Antwort antwort = sitzung.hole(fensterAbfrage("&limit=1"));
+    String messageId = antwort.<List<String>>json("$.items[*].messageId").getFirst();
+    String ausDerAntwort = antwort.<List<String>>json("$.items[*].zeitpunkt").getFirst();
+
+    LocalDateTime inDerDatenbank =
+        glassfishDsl
+            .select(MESSAGE.MESSAGELASTUPDATE)
+            .from(MESSAGE)
+            .where(MESSAGE.MESSAGEID.eq(messageId))
+            .fetchOne(MESSAGE.MESSAGELASTUPDATE);
+
+    assertThat(ausDerAntwort)
+        .isEqualTo(
+            DateTimeFormatter.ISO_INSTANT.format(
+                inDerDatenbank.atZone(java.time.ZoneId.of(anzeigezone)).toInstant()));
+  }
+
   @Test
   @DisplayName("Ohne Zeitfenster greift die Vorgabe von 24 Stunden")
   void ohne_zeitfenster_greift_die_vorgabe() throws Exception {

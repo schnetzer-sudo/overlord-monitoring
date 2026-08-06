@@ -3,6 +3,7 @@ package de.kraftwerkone.overlord.monitor.security;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import java.time.Clock;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,9 +28,14 @@ public class MandantController {
   private final MandantService mandantService;
   private final SitzungsVerwaltung sitzungsVerwaltung;
 
-  MandantController(MandantService mandantService, SitzungsVerwaltung sitzungsVerwaltung) {
+  /** Nur wegen ihrer Zone — Begruendung an {@link SelbstauskunftResponse#fuer}. */
+  private final Clock anwendungsuhr;
+
+  MandantController(
+      MandantService mandantService, SitzungsVerwaltung sitzungsVerwaltung, Clock anwendungsuhr) {
     this.mandantService = mandantService;
     this.sitzungsVerwaltung = sitzungsVerwaltung;
+    this.anwendungsuhr = anwendungsuhr;
   }
 
   public record WechselRequest(@NotBlank(message = "Mandant fehlt") String mandantId) {}
@@ -50,12 +56,7 @@ public class MandantController {
     AngemeldeterNutzer nutzer = erforderlicherNutzer();
     MandantResponse ziel =
         mandantService.wechsle(nutzer, anfrage.mandantId(), request.getRemoteAddr());
-    return new SelbstauskunftResponse(
-        nutzer.username(),
-        nutzer.rolle().name(),
-        ziel,
-        nutzer.mustChangePassword(),
-        nutzer.downloadAllowed());
+    return SelbstauskunftResponse.fuer(nutzer, ziel, anwendungsuhr.getZone());
   }
 
   private AngemeldeterNutzer erforderlicherNutzer() {

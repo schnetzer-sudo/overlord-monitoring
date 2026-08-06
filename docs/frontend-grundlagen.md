@@ -187,17 +187,81 @@ niemand die Sprache geräteübergreifend erwartet. Wird das je gefordert, kommt 
 
 Über `Intl` mit der aktiven Sprache (`lib/format.ts`).
 
-**Der wichtigste Teil ist, was nicht passiert.** Die Zeitstempel aus `GlassfishDB` sind Wanduhrzeit
-des Altsystem-Servers ohne Zeitzone. Sie werden angezeigt **wie geliefert**: keine Umrechnung, kein
-`timeZone` beim Formatieren.
+> ⚠️ **Korrigiert am 06.08.2026 (Schritt 4, Aufgabe 11). Der bisherige Stand dieses Abschnitts ist
+> überholt.** Er lautete: „Die Zeitstempel aus `GlassfishDB` sind Wanduhrzeit des Altsystem-Servers
+> ohne Zeitzone. Sie werden angezeigt **wie geliefert**: keine Umrechnung, kein `timeZone` beim
+> Formatieren" — und `lib/format.ts` las die gelieferten Felder deshalb einzeln, ausdrücklich auch
+> bei angehängtem `Z`.
+>
+> **Für Schritt 3 war das richtig.** Damals lieferte kein Endpunkt Zeitstempel aus `GlassfishDB`,
+> und die Regel schützte vor genau dem Fehler, den sie benennt: einen zonenlosen Wert durch die
+> Browserzone zu schicken.
+>
+> **Seit Schritt 4 ist es falsch.** Der Listen-Endpunkt rechnet die Wanduhrzeit im Backend nach UTC
+> um (`common/Zeitpunkte`, [`nachrichtenliste.md`](nachrichtenliste.md) §2). „Wie geliefert" heißt
+> ab da: den UTC-Wert ablesen und die Umrechnung unterschlagen — also genau die Verschiebung, die
+> vermieden werden sollte. Aus `23:53:50` in der Datenbank wurde `22:53:50Z` auf der Leitung und
+> **22:53** in der Anzeige, im Sommer 21:53. Das Altwerkzeug zeigt 23:53.
 
-Würde man den Wert an `new Date()` geben und in der Zeitzone des Browsers formatieren, stünde ein um
-14:23 verarbeiteter Beleg je nach Standort um 16:23 in der Liste — plausibel genug, dass es niemand
-merkt, und falsch genug, dass die Suche nach dem Zeitpunkt aus dem Altwerkzeug ins Leere geht.
+#### Die Auflösung: UTC auf der Leitung, feste Zone in der Anzeige
 
-Deshalb liest `lib/format.ts` die gelieferten Felder **einzeln** und baut daraus ein Datum, dessen
-örtliche Felder mit den gelieferten übereinstimmen. `tests/format.test.ts` hält das fest, auch für
-Werte mit angehängtem `Z` oder `+02:00`.
+Ein Zeitstempel durchläuft drei Stationen und bedeutet an jeder etwas anderes:
+
+| Station | Wert | Was er ist |
+|---|---|---|
+| `GlassfishDB` | `2025-12-29 23:53:50` | Wanduhrzeit des Altsystem-Servers, ohne Zone |
+| API | `2025-12-29T22:53:50Z` | UTC — dort ist der Wert eindeutig |
+| Anzeige | `29.12.2025, 23:53` | wieder die Wanduhrzeit |
+
+**UTC bleibt auf der Leitung.** `von` und `bis` müssen einen Punkt auf der Zeitachse benennen, und
+das kann nur UTC (Richtlinie §5.3). Daran wird nicht gerührt.
+
+**Das Frontend formatiert in einer festen Zone, nicht in der des Browsers.** Ein Nutzer in München
+und einer in Antwerpen sehen dieselbe Uhrzeit, und beide dieselbe wie im Altsystem. Das ist Absicht:
+Der Zeitpunkt ist hier eine **Eigenschaft des Belegs**, kein Termin im Kalender des Betrachters.
+
+**Die Zone liefert das Backend** — als `anzeigezone` in der Selbstauskunft (`GET /api/auth/me` und
+jede Antwort, die dieselbe Auskunft trägt). Es ist dieselbe Zone, mit der `common/Zeitpunkte` die
+Wanduhrzeit nach UTC umrechnet. Eine Konstante im Frontend wäre eine zweite Pflegestelle und liefe
+beim Umzug des Servers auseinander — lautlos, weil eine um Stunden verschobene Uhrzeit plausibel
+aussieht.
+
+Der Weg durch den Baum: `components/anwendungsrahmen.tsx` hat die Selbstauskunft und füllt
+`components/zeitzone.tsx`; jedes Feature liest sie über `useAnzeigezone()`. **Kein Feature importiert
+dafür aus `features/sitzung`** — der Kontext ist genau die Naht dazwischen.
+
+**Fehlt die Zone** — etwa solange die Selbstauskunft lädt —, wird in **UTC** formatiert
+(`ZEITZONE_RUECKFALL`), niemals in der Zone des Browsers. Ein Rückfall auf den Browser wäre derselbe
+Fehler, nur seltener und damit schwerer zu finden: verschoben je nach Standort, ohne dass irgendwo
+etwas fehlschlägt. UTC ist für alle gleich und weicht sichtbar ab.
+
+**Ein Wert ohne Zonenversatz wird als UTC gelesen**, nicht als Ortszeit des Browsers.
+`new Date("2025-12-29T22:53:50")` täte Letzteres; die API überträgt laut Richtlinie §5.3
+ausschließlich UTC.
+
+#### Der Test belegt die ganze Kette
+
+Zwei Tests, dieselben konkreten Werte — läuft eine Seite weg, wird die andere rot:
+
+| Hälfte | Test | Fall |
+|---|---|---|
+| Wanduhrzeit → UTC | `backend` `ZeitpunkteTest` | `2025-12-29T23:53:50` in `Europe/Berlin` → `2025-12-29T22:53:50Z` |
+| UTC → Anzeige | `frontend` `tests/format.test.ts` | `2025-12-29T22:53:50Z` in `Europe/Berlin` → `29.12.2025, 23:53` |
+
+Dazu der Sommerfall (zwei Stunden statt einer) und der Nachweis, dass die Anzeige an der
+**gelieferten** Zone hängt und nicht am Standort: derselbe UTC-Wert ergibt in `Europe/Berlin`,
+`UTC` und `America/New_York` drei verschiedene Uhrzeiten.
+
+#### Relative Zeit
+
+`formatiereRelativ` liefert „vor 3 Stunden" — als **Ergänzung** zum absoluten Zeitpunkt, nie als
+Ersatz. Der absolute Wert ist der, den man gegen das Altwerkzeug hält und in eine Störungsmeldung
+schreibt.
+
+Bezugspunkt ist die Uhr des **Browsers**, nicht die Anwendungsuhr des Backends. In Produktion ist
+das dasselbe. Im Profil `dev` liegt die Testkopie Monate zurück, und der Tooltip liest sich
+entsprechend („vor 7 Monaten") — er sagt dann die Wahrheit über die realen Daten und nicht über die
+verstellte Uhr. Der absolute Wert daneben bleibt davon unberührt.
 
 ---
 
@@ -407,7 +471,7 @@ Funktionen, und ein gerenderter Baum brächte hier nichts außer Laufzeit und Ab
 | `sprachdateien.test.ts` | gleicher Schlüsselsatz; 404-Wortwahl; Rückfall auf `detail` |
 | `farbwerte.test.ts` | kein Hex-Wert, keine Tailwind-Farbklasse in einer Komponente |
 | `zwischenspeicher.test.ts` | geleert **vor** dem Weitergehen, bei Wechsel und Abmeldung |
-| `format.test.ts` | Zeitstempel ohne Zeitzonenverschiebung |
+| `format.test.ts` | UTC → Anzeige in der gelieferten Zone; Rückfall auf UTC statt auf den Browser; relative Zeit |
 | `routen.test.ts` | `weiter` als offene Weiterleitung ausgeschlossen |
 
 ---
