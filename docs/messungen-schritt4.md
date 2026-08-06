@@ -1164,6 +1164,136 @@ Mandant außer `NEXANS` leer aus — und genau das soll Regel Z1 verhindern.
 
 ---
 
+## L1 bis L10 — die Statements der Nachrichtenliste
+
+Nachgetragen am **06.08.2026**, nach dem Bau des Listen-Endpunkts (Regel L7). Gemessen wurden die
+**tatsächlich von jOOQ erzeugten** Statements: Sie wurden aus einem Integrationstest heraus mit
+eingesetzten Werten protokolliert und unverändert gegen die Testkopie gestellt — kein von Hand
+nachgebautes SQL.
+
+> **Die Fenster sind absolut, nicht relativ.** Ein 24-Stunden-Fenster relativ zum Maximum enthält
+> 285 Zeilen, und jede Messung darin sagt „schnell", unabhängig von der Abfrage. Der 29.12.2025 hat
+> 6.249 Zeilen und liegt damit nahe an einem Produktionstag — im dichten Teil sind es rund 7.300 am
+> Tag. Gemessen wurde `2025-12-29 00:00:00` bis `2025-12-30 00:00:00` (24 h), ab `2025-11-30`
+> (30 Tage) und ab `2024-12-30` (ein Jahr).
+>
+> **Die Sitzung hatte kein `max_statement_time`.** Der Lese-Pool der Anwendung setzt 10 Sekunden
+> ([`datenzugriff.md`](datenzugriff.md) §1); hier sollte die wahre Laufzeit sichtbar werden statt
+> eines Abbruchs. Kein Statement kam in die Nähe — das langsamste liegt bei 1,3 Sekunden.
+>
+> Jede Angabe ist die **beste von fünf** Läufen nach einem Aufwärmlauf, serverseitig über
+> `SET profiling = 1`. `rows` ist die Schätzung aus `information_schema` und liegt 6,5 Prozent zu
+> hoch (Auffälligkeit G); `r_rows` ist der tatsächlich gelesene Wert aus `ANALYZE`.
+
+### Ergebnis
+
+| # | Abfrage | gewählter Index | `key_len` | `rows` | `r_rows` | Laufzeit |
+|---|---|---|---|---|---|---|
+| **L1** | NEXANS, 24 h, ohne Filter | `MessageLastUpdateIDX` | 5 | 11.814 | **194** | **2,715 ms** |
+| **L2** | NEXANS, 30 Tage, ohne Filter | `MessageLastUpdateIDX` | 5 | 409.758 | **194** | **2,709 ms** |
+| **L3** | NEXANS, ein Jahr, ohne Filter | `MessageLastUpdateIDX` | 5 | 1.780.243 | **194** | **2,692 ms** |
+| **L4** | SUTTONS, 24 h, ohne Filter | `MessageLastUpdateIDX` | 5 | 11.814 | **2.890** | **33,978 ms** |
+| **L5** | NEXANS, ein Jahr, Status FEHLER | **`MessageStatusIDX`** | 123 | 6.257 | 124 | **24,803 ms** |
+| **L6** | SUTTONS, ein Jahr, Status FEHLER | **`MessageStatusIDX`** | 123 | 6.257 | 106 | **25,162 ms** |
+| **L7a** | Vorfilter Prozess- und Projektname | `ProjectMandant_Mandant_idx` | 146 | 17 | 17 | **2,975 ms** |
+| **L7b** | Vorfilter Ablaufname | `ProjectMandant_Mandant_idx` | 146 | 17 | 17 | **5,806 ms** |
+| **L7c** | NEXANS, 30 Tage, Freitext aufgelöst | `MessageLastUpdateIDX` | 5 | 409.758 | **214.330** | **1.295,872 ms** |
+| **L8** | NEXANS, 24 h, zweite Seite über Cursor | `MessageLastUpdateIDX` | **151** | 11.417 | **52** | **1,795 ms** |
+| **L9** | BAM-Nachladung, 50 `MessageID` | `PRIMARY` (`Using index`) | 148 | 100 | — | **2,982 ms** |
+| **L10** | BAM-Nachladung, 200 `MessageID` | `PRIMARY` (`Using index`) | 148 | 400 | — | **3,440 ms** |
+
+Aufwärmläufe: 3,360 · 2,818 · 2,708 · 34,755 · 25,665 · 25,514 · 2,945 · 6,435 · 1.350,317 · 1,804 ·
+3,078 · 3,442 ms.
+
+### Was die Zahlen zeigen
+
+**Die Fenstergröße kostet auf der ersten Seite nichts** (L1 = L2 = L3, alle bei 2,7 ms). Das ist der
+überraschendste Befund. Die Abfrage sortiert absteigend und bricht nach 51 Zeilen ab; MariaDB läuft
+den Index vom oberen Rand des Fensters rückwärts und liest 194 Zeilen — unabhängig davon, ob unter
+ihnen noch 11.000 oder 1,8 Millionen weitere lägen. Die `rows`-Schätzung wächst um Faktor 150, die
+tatsächliche Arbeit nicht. **Regel L1 rechtfertigt sich damit nicht über die erste Seite**, sondern
+über alles, was danach kommt: über die letzte Seite eines Jahresfensters, über jeden Filter, der
+nicht auf dem Zeitindex liegt, und über den Schutz davor, dass jemand den Zeitraum ganz weglässt.
+
+**Der Mandant entscheidet mehr als das Fenster** (L1 gegen L4: 2,7 ms gegen 34,0 ms bei identischem
+Fenster). `NEXANS` stellt 86 Prozent aller Zeilen; für 51 Zeilen von `SUTTONS` muss MariaDB
+**2.890** Indexeinträge durchlaufen, weil dazwischen lauter fremde liegen. Ein kleiner Mandant zahlt
+also für die Größe der großen. Bei `SUTTONS` (5,9 Prozent) sind das 34 ms; bei einem Mandanten mit
+einem Promille wären es entsprechend mehr. Das ist die Kennzahl, die man im Auge behalten muss —
+nicht die Gesamtzeilenzahl.
+
+**Die Vermutung zum Statusfilter ist bestätigt.** Sobald `status=FEHLER` gesetzt ist, wechselt der
+Treiber auf `MessageStatusIDX` (`key_len = 123`, `Using index condition; Using where; Using
+filesort`). Der Zeitfilter wird dann nachgelagert geprüft, und weil die `LIKE`-Fassung der
+Fehlerbedingung zwei Indexbereiche ergibt, bleibt die Kandidatenmenge klein: rund 3.400 Zeilen über
+den Gesamtbestand. Das `filesort` ist dabei kein Befund — es sortiert diese kleine Menge, nicht das
+Fenster.
+
+**L6 ist nicht der pathologische Fall, für den er gehalten wurde.** Die Erwartung war, dass ein
+seltener Status bei einem kleinen Mandanten über ein langes Fenster den Zeitindex als Treiber wählt
+und den ganzen Jahresbereich ergebnislos durchläuft. Das tritt **nicht** ein: Der Statusfilter zieht
+den Treiber auf `MessageStatusIDX`, und L6 kostet mit 25,2 ms genauso viel wie L5 mit 24,8 ms. Der
+Mandant spielt hier keine Rolle mehr, weil die Kandidatenmenge schon vor dem Mandantenfilter klein
+ist.
+
+**Der pathologische Fall ist L7c — der Freitextfilter.** 1,3 Sekunden, `r_rows = 214.330`,
+`r_filtered = 0,01 %`: MariaDB behält das Zeitfenster als Treiber und wirft 99,99 Prozent der
+gelesenen Zeilen wieder weg. Die Ursache ist die **ODER-Verknüpfung über zwei Spalten**
+(`ProcessID IN (…) OR SOSID IN (…)`) — sie schließt den Index auf `ProcessID` aus. Nachgemessen:
+
+| Variante | Treiber | `r_rows` | Laufzeit |
+|---|---|---|---|
+| wie gebaut (`ProcessID` **oder** `SOSID`) | `MessageLastUpdateIDX` | 214.330 | **1.295,872 ms** |
+| nur `ProcessID IN (…)`, ohne das ODER | **`ProejctIDIDX`** | **17** | **12,334 ms** |
+| wie gebaut, aber 24-h-Fenster | `MessageLastUpdateIDX` | 6.249 | 40,393 ms |
+
+Ohne das ODER wählt der Optimierer den Prozess-Index und ist **hundertmal schneller**. Die Kosten
+wachsen linear mit dem Fenster (24 h: 40 ms, 30 Tage: 1,3 s) — ein Jahresfenster mit Suchbegriff
+läge damit in der Größenordnung von zehn Sekunden und damit an der Grenze von `max_statement_time`.
+**Das ist ein Befund, keine Behebung:** Der Umbau (zwei getrennte Abfragen mit `UNION` statt einer
+ODER-Bedingung) ändert die Form des Statements und braucht seine eigene Messung. Er steht als
+offener Punkt in [`nachrichtenliste.md`](nachrichtenliste.md).
+
+**Die Cursor-Bedingung nutzt beide Indexspalten** (L8, `key_len = 151`). `MessageLastUpdateIDX` ist
+laut Schema nur auf `MessageLastUpdate` definiert; InnoDB hängt an jeden Sekundärindex den
+Primärschlüssel, und MariaDB nutzt das (`optimizer_switch: extended_keys=on`). Der Index ist damit
+faktisch `(MessageLastUpdate, MessageID)` — genau der Sortierschlüssel der Liste. **Kein
+`filesort`**, obwohl nach zwei Spalten sortiert wird. Die Gegenüberstellung mit dem Tupelvergleich:
+
+| | ODER-Form | Tupelvergleich |
+|---|---|---|
+| `key_len` | **151** (beide Spalten) | 5 (nur der Zeitstempel) |
+| `r_rows` für 51 gelieferte Zeilen | **52** | 245 |
+| Laufzeit, beste von fünf | **1,795 ms** | 2,551 ms |
+
+Eine erste Messung derselben Abfrage **ohne** den Zwischenschritt-Ausschluss ergab dasselbe Bild
+(72 gegen 155 Zeilen, 1,842 gegen 1,990 ms). Der Tupelvergleich wird von MariaDB 10.6 nicht in einen
+Indexbereich übersetzt, sondern als Filter ausgewertet.
+
+**Die zweite Seite ist billiger als die erste** (1,795 ms gegen 2,715 ms). Der Cursor verengt den
+Indexbereich; ohne ihn muss MariaDB vom Fensterrand aus lesen. Genau das ist der Unterschied zu
+`OFFSET`, der mit jeder Seite teurer würde.
+
+**Die BAM-Nachladung skaliert flach** (L9 gegen L10: 2,982 ms gegen 3,440 ms bei vierfacher
+Kennungszahl). Der Zugriff läuft über das Präfix des Primärschlüssels und ist `Using index` — die
+Werte stehen im Index selbst, es wird keine Zeile nachgeschlagen. Vier mal so viele Kennungen kosten
+15 Prozent mehr Zeit.
+
+**Die Vorfilterung des Suchbegriffs ist billig** (L7a 3,0 ms, L7b 5,8 ms). Beide steigen über
+`ProjectMandant_Mandant_idx` ein — der Mandant ist der selektivste Teil der Bedingung — und laufen
+dann über 17 Projekte, 43 Prozesse je Projekt und deren Abläufe. Der fehlende Index auf `SOSName`
+kostet nichts: `SOS` hat 1.818 Zeilen.
+
+### Statements
+
+Die Statements stehen nicht vollständig hier — sie sind zwischen 400 und 8.300 Zeichen lang, weil
+jOOQ jede Spalte voll qualifiziert und die Kennungslisten einsetzt. Die Form ist in
+[`nachrichtenliste.md`](nachrichtenliste.md) beschrieben; erzeugt werden sie von
+`message/NachrichtenRepository`. Die Kennungen der BAM-Messungen stammen aus einer echten Seite
+(200 `MessageID` aus dem 24-Stunden-Fenster von NEXANS) und sind hier bewusst nicht abgedruckt.
+
+---
+
 ## Auffälligkeiten
 
 Was von der bestehenden Dokumentation abweicht. **Hier wird nichts entschieden und nichts
@@ -1420,6 +1550,18 @@ Beste von N Läufen nach einem Aufwärmlauf, serverseitig gemessen.
 | M9 + | 24-h-Fenster ab dem neuen Anker | 1 | 51,2 ms | `range`, `MessageLastUpdateIDX` |
 | A | Tagesverteilung 2026 | 1 | 8,2 ms | `range`, `MessageLastUpdateIDX` |
 | A | Tagesverteilung Dez 2025 | 1 | 85,3 ms | `range`, `MessageLastUpdateIDX` |
+| L1 | Liste NEXANS, 24 h | 5 | **2,715 ms** | `range`, `MessageLastUpdateIDX`, kein `filesort` |
+| L2 | Liste NEXANS, 30 Tage | 5 | **2,709 ms** | wie L1 |
+| L3 | Liste NEXANS, ein Jahr | 5 | **2,692 ms** | wie L1 |
+| L4 | Liste SUTTONS, 24 h | 5 | **33,978 ms** | wie L1, aber 2.890 statt 194 gelesene Zeilen |
+| L5 | Liste NEXANS, ein Jahr, FEHLER | 5 | **24,803 ms** | `range`, `MessageStatusIDX`, `filesort` |
+| L6 | Liste SUTTONS, ein Jahr, FEHLER | 5 | **25,162 ms** | wie L5 |
+| L7a | Vorfilter Prozess-/Projektname | 5 | **2,975 ms** | `ref`, `ProjectMandant_Mandant_idx` |
+| L7b | Vorfilter Ablaufname | 5 | **5,806 ms** | `ref`, `ProjectMandant_Mandant_idx` + `SOS_ProcessFK` |
+| L7c | Liste NEXANS, 30 Tage, Freitext | 5 | **1.295,872 ms** | `range`, `MessageLastUpdateIDX`, `r_filtered` 0,01 % |
+| L8 | Liste NEXANS, 24 h, zweite Seite | 5 | **1,795 ms** | `range`, `MessageLastUpdateIDX`, `key_len` 151 |
+| L9 | BAM-Nachladung, 50 Kennungen | 5 | **2,982 ms** | `range`, `PRIMARY`, `Using index` |
+| L10 | BAM-Nachladung, 200 Kennungen | 5 | **3,440 ms** | `range`, `PRIMARY`, `Using index` |
 
 **Muster, das über alle Messungen hinweg sichtbar ist:** Sobald ein Zeitfenster gesetzt ist, arbeitet
 MariaDB im `range`-Zugriff über `MessageLastUpdate` und braucht Millisekunden. Ohne Zeitfenster wird

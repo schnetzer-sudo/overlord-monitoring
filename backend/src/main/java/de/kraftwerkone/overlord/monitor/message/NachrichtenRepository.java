@@ -157,9 +157,9 @@ public class NachrichtenRepository {
    * haengt an jeden Sekundaerindex den Primaerschluessel, und MariaDB nutzt das ({@code
    * optimizer_switch: extended_keys=on}) — der Index ist damit faktisch {@code (MessageLastUpdate,
    * MessageID)} und genau der Sortierschluessel dieser Liste. Die ODER-Form uebersetzt MariaDB in
-   * einen Bereich ueber beide Spalten ({@code key_len = 151}) und liest 72 Zeilen fuer eine Seite
-   * von 50; der Tupelvergleich ergibt nur einen Bereich ueber den Zeitstempel ({@code key_len = 5})
-   * und liest 155 Zeilen, von denen es 46 Prozent wieder wegwirft. Zahlen in {@code
+   * einen Bereich ueber beide Spalten ({@code key_len = 151}) und liest 52 Zeilen fuer eine Seite
+   * von 50 (1,795 ms); der Tupelvergleich ergibt nur einen Bereich ueber den Zeitstempel ({@code
+   * key_len = 5}), liest 245 Zeilen und braucht 2,551 ms. Zahlen in {@code
    * docs/messungen-schritt4.md}, Abschnitt L8.
    *
    * <p>Nebenbefund derselben Messung: Der Tiebreaker ueber {@code MessageID} loest <b>kein</b>
@@ -205,6 +205,13 @@ public class NachrichtenRepository {
    *
    * <p>{@code %} und {@code _} im Begriff werden maskiert. Ohne das waere {@code _} ein Platzhalter
    * fuer ein beliebiges Zeichen — derselbe Fallstrick wie in Regel Q1.
+   *
+   * <p><b>Die Vorfilterung ist billig, das Hauptstatement mit ihrem Ergebnis nicht</b> (Messung
+   * L7c): Die {@code ODER}-Verknuepfung ueber {@code ProcessID} und {@code SOSID} schliesst den
+   * Index auf {@code ProcessID} aus, MariaDB behaelt das Zeitfenster als Treiber und liest ueber 30
+   * Tage 214.330 Zeilen fuer 51 Treffer — 1,3 Sekunden. Der Umbau auf zwei Zweige mit {@code UNION}
+   * steht als offener Punkt in {@code docs/nachrichtenliste.md}; er aendert die Form des Statements
+   * und braucht seine eigene Messung.
    */
   public Suchtreffer loeseSucheAuf(MandantContext mandant, String begriff, int hoechstens) {
     String muster = "%" + DSL.escape(begriff, '\\') + "%";

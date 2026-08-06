@@ -243,9 +243,8 @@ Bei aufsteigender Sortierung gespiegelt. Die Alternative wäre der Tupelvergleic
 |---|---|---|
 | gewählter Index | `MessageLastUpdateIDX` | `MessageLastUpdateIDX` |
 | `key_len` | **151** (beide Spalten) | 5 (nur der Zeitstempel) |
-| gelesene Zeilen (`r_rows`) für 50 gelieferte | **72** | 155 |
-| `r_filtered` | 100 % | 46,45 % |
-| Laufzeit, beste von fünf | **1,842 ms** | 1,990 ms |
+| gelesene Zeilen (`r_rows`) für 51 gelieferte | **52** | 245 |
+| Laufzeit, beste von fünf | **1,795 ms** | 2,551 ms |
 
 **Warum `key_len = 151`:** `MessageLastUpdateIDX` steht laut Schema nur auf `MessageLastUpdate`.
 InnoDB hängt an jeden Sekundärindex den Primärschlüssel, und MariaDB nutzt das
@@ -314,6 +313,14 @@ Hauptstatement), sondern damit die Trefferzahl den Mandanten beschreibt und nich
 **Die Trefferliste wird gedeckelt (200 je Seite der Auflösung).** Trifft der Begriff mehr, antwortet
 der Endpunkt mit `suchbegriff-zu-unscharf` — und **nicht** mit einer abgeschnittenen Menge, die wie
 ein vollständiges Ergebnis aussieht.
+
+> ⚠️ **Der Freitextfilter ist der teuerste Fall dieses Endpunkts** — 1,3 Sekunden über 30 Tage
+> (Messung L7c). Die Vorfilterung selbst kostet nichts (3,0 und 5,8 ms); teuer ist das
+> Hauptstatement, weil die **ODER-Verknüpfung über zwei Spalten** (`ProcessID IN (…) OR SOSID IN
+> (…)`) den Index auf `ProcessID` ausschließt. MariaDB behält das Zeitfenster als Treiber, liest
+> 214.330 Zeilen und wirft 99,99 Prozent davon weg. Ohne das ODER wählt der Optimierer
+> `ProejctIDIDX` und braucht 12,3 ms — hundertmal weniger. Die Kosten wachsen linear mit dem
+> Fenster. Behebung und offene Frage stehen unter „Offene Punkte".
 
 `%` und `_` im Suchbegriff werden maskiert. Ohne das wäre `_` ein Platzhalter für ein beliebiges
 Zeichen — derselbe Fallstrick wie in Regel Q1.
@@ -432,6 +439,14 @@ Quellschema vor genau der Prüfung, die ihn sichtbar machen soll.
 
 ## 9. Offene Punkte
 
+- **Der Freitextfilter über lange Zeitfenster ist zu teuer und muss umgebaut werden.** Gemessen
+  (L7c): 40 ms über 24 Stunden, **1,3 Sekunden über 30 Tage**; hochgerechnet läge ein Jahresfenster
+  bei rund zehn Sekunden und damit an der Grenze von `max_statement_time` (10 s im Lese-Pool). Die
+  Ursache ist bekannt und die Abhilfe naheliegend: zwei getrennte Abfragen (`ProcessID IN (…)` und
+  `SOSID IN (…)`) mit `UNION` statt einer ODER-Bedingung — der Optimierer wählt dann je Zweig einen
+  Index und ist im gemessenen Fall hundertmal schneller. **Das ist bewusst nicht mehr Teil dieses
+  Schritts:** Der Umbau ändert die Form des Statements und braucht seine eigene Messung. Bis dahin
+  gilt: Wer sucht, sollte das Zeitfenster eng halten.
 - **Eine tatsächlich hängende `SPLITTED`-Nachricht erscheint nie als überfällig.** `ZWISCHENSCHRITT`
   gilt als Endstatus (`message-status.md`), und die Überfälligkeitsrechnung setzt „nicht in einem
   Endstatus" voraus. Bleibt eine gesplittete Nachricht wirklich hängen, sieht man das **nicht** am
