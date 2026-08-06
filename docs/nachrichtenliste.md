@@ -174,6 +174,38 @@ Stammdatenpflege hängt, ist die falsche Grundlage für eine Sicherheitsgrenze.
 (Annahme A8, geklärt). Kein Sonderpfad, kein Pseudo-Mandant. Die sechs betroffenen Projekte tragen
 ohnehin keine einzige Nachricht.
 
+### Der Isolationstest (Regel M4)
+
+`NachrichtenIsolationDbIT` — ohne ihn wird der Endpunkt nicht gemergt. Er kopiert das Muster aus
+`MandantenIsolationDbIT` und tauscht Aufruf und Kennung.
+
+**Mandant A ist `NEXANS`, Mandant B ist `SUTTONS`.** Über den Gesamtbestand liegt `SUTTONS` mit
+197.158 Zeilen vor `VOTG` mit 145.840 (M3). `NXHBE` und `IBISGUS` scheiden aus — zwei Mandanten
+desselben Hauses sind ein schlechter Beweis für eine Trennung, die zwischen Firmen greifen soll;
+`NXHBE` hat ohnehin neun Nachrichten.
+
+**Das Zeitfenster ist absolut** (29.12.2025). Außer `NEXANS` endet jeder Mandant am 30.12.2025 (M3,
+„Zeitspanne je Mandant"); in einem relativen Fenster sähe `SUTTONS` je nach Datenstand null Zeilen —
+und der Test bewiese nur, dass leer leer ist. Im gewählten Fenster hat `NEXANS` 5.043 und `SUTTONS`
+685 Zeilen. **Der erste Testfall hält genau das fest**, damit ein späterer Datenstand die
+Aussagekraft nicht stillschweigend verliert.
+
+Geprüft wird:
+
+1. Beide Mandanten haben Daten im Fenster — die Voraussetzung, ohne die alles Folgende wertlos wäre.
+2. Der Nutzer auf `NEXANS` bekommt **keine** Nachricht und **keinen** Prozess von `SUTTONS`; die
+   fremden Kennungen kommen im Antwortrumpf überhaupt nicht vor.
+3. **Die Gegenprobe, die den Kern ausmacht:** Ein Filter auf einen fremden, *existierenden* Prozess
+   und ein Filter auf eine *erfundene* Kennung liefern **ununterscheidbare** Antworten — gleicher
+   Status, gleicher Rumpf (ohne `traceId`). Wären sie zu unterscheiden, ließe sich über den
+   Prozessfilter die Prozesslandschaft fremder Mandanten abfragen. Und es ist `200` mit leerer
+   Liste, nicht `403`: Die Zeile hat für diesen Nutzer nie existiert.
+4. Der Freitextfilter findet keine fremden Prozesse — die Trennung gilt auch quer (Regel M5), also
+   auch in der Vorfilterung über die Stammdaten.
+5. Ein **fremder Cursor** öffnet keinen fremden Ausschnitt. Er trägt keine Berechtigung, sondern nur
+   einen Zeitpunkt und eine Kennung.
+6. Die Trennung gilt in **beide** Richtungen — sonst bewiese der Test nur, dass `NEXANS` alles sieht.
+
 ### Der aktive Mandant kommt über die zulässige Menge
 
 Der Endpunkt liest den Mandanten nicht roh aus der Sitzung, sondern über

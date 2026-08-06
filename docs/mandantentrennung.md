@@ -170,6 +170,14 @@ Schritt 4 tauscht dafür nur den Aufruf und die Kennung aus; Aufbau, Nutzer und 
 **nicht** `NEXANS`/`NXHBE` oder `IBIS`/`IBISGUS`: Zwei Mandanten desselben Konzerns sind ein
 schlechter Beweis für eine Trennung, die zwischen Firmen greifen soll.
 
+> **Ergänzt 06.08.2026 (Schritt 4).** Die erste Kopie der Vorlage ist `NachrichtenIsolationDbIT`
+> ([`nachrichtenliste.md`](nachrichtenliste.md) §3). Sie paart `NEXANS` gegen `SUTTONS` statt `VOTG`
+> gegen `SUTTONS` — auch das zwei verschiedene Häuser, aber die beiden mit dem größten Bestand, und
+> damit die Paarung, bei der ein Leck am ehesten sichtbar würde. Sie benutzt außerdem ein
+> **absolutes** Zeitfenster: Außer `NEXANS` endet jeder Mandant am 30.12.2025, ein relatives Fenster
+> hinge damit am Datenstand der Testkopie. Der erste Testfall hält fest, dass beide Mandanten im
+> gewählten Fenster Daten haben — sonst bewiese der Test nur, dass leer leer ist.
+
 Der Test prüft zu Beginn, dass beide in der Testkopie existieren und die erfundene ID nicht. Schlägt
 das fehl, hat sich die Testkopie geändert — nicht der Code.
 
