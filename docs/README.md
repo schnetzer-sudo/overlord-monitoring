@@ -57,12 +57,12 @@ Angelegt:
 | [`mandantentrennung.md`](mandantentrennung.md) | Schritt 3, Teil 1 | `MandantContext`, Berechtigung als Menge statt Rolle, die genau zwei Endpunkt-Ausnahmen, die ArchUnit-Regel, die Vorlage für den Isolationstest |
 | [`visuelles-konzept.md`](visuelles-konzept.md) | Schritt 3, Teil 2 | Farbrollen samt fachlicher Bindung der Statusfarben, die vier Stufen des Akzents `#b9c022` mit gemessenen Kontrastwerten, „Status nie allein über Farbe", Typografie, Dichte nach Zeigergerät, volle Fensterbreite und die eine Ausnahme davon, Verhalten am Handy — und wie man das Konzept in einer Datei ändert |
 | [`frontend-grundlagen.md`](frontend-grundlagen.md) | Schritt 3, Teil 2 | Rewrite statt CORS, warum die Routensperre kein Schutz ist, Ablauf nach dem Anmelden, Aufbau der Sprachdateien, Regeln für den Zwischenspeicher, Zuordnung von `type` zu Übersetzung, Scroll-Architektur des Rahmens |
+| [`nachrichtenliste.md`](nachrichtenliste.md) | Schritt 4 | Listen-Endpunkt mit Pflicht-Zeitfenster, Cursor-Paginierung in der gemessenen ODER-Form, Filter über `MessageStatusKind`, Freitext gegen die Stammdaten, die Mandantenkette als `EXISTS` statt über die View — und warum |
 
 Die folgenden Dateien entstehen laut Plan:
 
 | Datei | Entsteht in | Inhalt |
 |---|---|---|
-| `nachrichtenliste.md` | Schritt 4 | Listen-Endpunkt, Zeitfenster, Cursor, Filter |
 | `nachrichtendetail.md` | Schritt 5 | Detailansicht, Prozessschritte, Eigenschaften |
 | `prozessschritte-uebersetzung.md` | Schritt 5 | Zuordnungstabelle `SOSActionServiceProperties` → Klartext |
 | `verkettung.md` | Schritt 6 | Auflösung über Split, Merge und Quittung |

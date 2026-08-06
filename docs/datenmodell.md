@@ -29,8 +29,27 @@ vier Joins:
 Message → Process → Project → ProjectMandant → Mandant
 ```
 
-Sie ist in der vorhandenen View **`MessageMandantID`** gekapselt. `ProjectMandant` ist eine
-**n:m-Beziehung** — ein Projekt kann mehreren Mandanten zugeordnet sein.
+`ProjectMandant` ist eine **n:m-Beziehung** — ein Projekt kann mehreren Mandanten zugeordnet sein.
+
+Es gibt für diese Kette eine vorhandene View **`MessageMandantID`**. **Sie wird nicht verwendet.**
+
+> **Korrektur 06.08.2026.** Hier stand bis heute: *„Sie ist in der vorhandenen View
+> `MessageMandantID` gekapselt."* Ab Schritt 4 wird die Kette **handgeschrieben als `EXISTS`**
+> ausgeführt. Drei Gründe, alle gemessen:
+>
+> 1. **Der Zugriffspfad der View ist mit unseren Rechten strukturell nicht einsehbar.** Weder
+>    `SHOW CREATE VIEW` (Fehler 1142) noch `EXPLAIN` über die View (Fehler 1345) sind möglich; beide
+>    brauchen das Recht `SHOW VIEW`, das in `SELECT` nicht enthalten ist — beim Lese- wie beim
+>    Schreibbenutzer, in Produktion wie auf der Testkopie. Was wir nie einsehen können, kann
+>    **Regel L7 nicht erfüllen**.
+> 2. Die View läuft mit `SECURITY_TYPE = DEFINER` bei `DEFINER = root` und wird als
+>    `IS_UPDATABLE = YES` geführt (M4).
+> 3. Die `EXISTS`-Fassung nutzt nachweislich `MessageLastUpdateIDX`, braucht kein `filesort` und
+>    liefert dieselbe Menge — die Gegenprobe ergab null Abweichung.
+>
+> Belege in [`messungen-schritt4.md`](messungen-schritt4.md) M4, Umsetzung in
+> [`nachrichtenliste.md`](nachrichtenliste.md) §3. Die View bleibt im Schema und in der
+> jOOQ-Codegenerierung; sie wird nur nicht mehr als der vorgesehene Weg beschrieben.
 
 **Diese Kette ist Bestandteil jedes Statements**, nicht nachgelagerte Prüfung (Regel M3). Wer eine
 fremde `MessageID` errät, bekommt null Zeilen — weil die Zeile für ihn nie existiert hat.
@@ -81,6 +100,15 @@ des Cursors aus Regel L3 — aber `ProcessID` steht **dazwischen**. Eine Sortier
 eine Gleichheitsbedingung festgelegt ist. Welcher Zugriffspfad tatsächlich gewählt wird, steht
 erst nach der Messung gegen die Testkopie fest (Regel L7) — nicht vorher und nicht durch
 Hinsehen.
+
+> **Gemessen am 06.08.2026 (Schritt 4).** Die Warnung bleibt richtig, trifft aber nicht zu: Gebraucht
+> wird `MessageLastUpdateProcessMessageIDX` gar nicht. MariaDB wählt für die Liste
+> `MessageLastUpdateIDX` — und der ist **faktisch `(MessageLastUpdate, MessageID)`**, weil InnoDB an
+> jeden Sekundärindex den Primärschlüssel hängt und der Optimierer das nutzt
+> (`optimizer_switch: extended_keys=on`). Die Cursor-Bedingung in der ODER-Form ergibt damit einen
+> Bereich über **beide** Spalten (`key_len = 151`), und der Tiebreaker über `MessageID` löst **kein**
+> `filesort` aus. Zahlen in [`messungen-schritt4.md`](messungen-schritt4.md) L8, Umsetzung in
+> [`nachrichtenliste.md`](nachrichtenliste.md) §4.
 
 ### `MessageAction` — die einzelnen Prozessschritte
 

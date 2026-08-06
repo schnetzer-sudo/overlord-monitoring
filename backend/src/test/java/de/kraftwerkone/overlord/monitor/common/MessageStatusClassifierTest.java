@@ -45,6 +45,19 @@ class MessageStatusClassifierTest {
     assertThat(classifier.einordnung(null)).isEqualTo(MessageStatusKind.UNGEKLAERT);
   }
 
+  /**
+   * Die eine Ausnahme von „Unbekanntes ist ungeklaert" — und der Grund dafuer: Waere sie nicht da,
+   * faende der Statusfilter {@code FEHLER} ueber {@link MessageStatusClassifier#fehlerBedingung}
+   * eine Zeile, die die Liste anschliessend als „Bedeutung nicht verifiziert" beschriftet.
+   */
+  @Test
+  @DisplayName("Ein unbekannter ERROR_-Wert ist ein Fehler — dieselbe Regel wie in SQL")
+  void unbekanntes_error_praefix_ist_fehler() {
+    assertThat(classifier.einordnung("ERROR_GIBTESNOCHNICHT")).isEqualTo(MessageStatusKind.FEHLER);
+    assertThat(classifier.einordnung("ERRORX")).isEqualTo(MessageStatusKind.UNGEKLAERT);
+    assertThat(classifier.einordnung("ERROR")).isEqualTo(MessageStatusKind.UNGEKLAERT);
+  }
+
   @Test
   @DisplayName("Die bekannte Menge umfasst genau die 13 dokumentierten Werte")
   void bekannte_menge() {
@@ -178,5 +191,79 @@ class MessageStatusClassifierTest {
     assertThat(sql).contains("ERROR");
     // Die naive Variante ist ausdruecklich unerwuenscht (kann den Index nicht nutzen).
     assertThat(sql).doesNotContainIgnoringCase("left(");
+  }
+
+  // ─── Uebersetzung Einordnung → SQL (Schritt 4) ──────────────────────────────────────────────
+
+  private static String sql(org.jooq.Condition bedingung) {
+    return DSL.using(SQLDialect.MARIADB).renderInlined(bedingung);
+  }
+
+  private static final Field<String> STATUS = DSL.field(DSL.name("MessageStatus"), String.class);
+
+  @Test
+  @DisplayName("Geschlossene Einordnungen werden aufgezaehlt, FEHLER bleibt die eine Bedingung")
+  void bedingung_je_einordnung() {
+    assertThat(sql(classifier.bedingung(MessageStatusKind.ABGESCHLOSSEN, STATUS)))
+        .contains("FINISHED")
+        .doesNotContainIgnoringCase("like");
+    assertThat(sql(classifier.bedingung(MessageStatusKind.ZWISCHENSCHRITT, STATUS)))
+        .contains("MERGED")
+        .contains("SPLITTED");
+    assertThat(sql(classifier.bedingung(MessageStatusKind.FEHLER, STATUS)))
+        .isEqualTo(sql(classifier.fehlerBedingung(STATUS)));
+  }
+
+  @Test
+  @DisplayName("UNGEKLAERT ist der Rest — samt NULL und samt allem Unbekannten")
+  void ungeklaert_ist_der_rest() {
+    String sql = sql(classifier.bedingung(MessageStatusKind.UNGEKLAERT, STATUS));
+
+    assertThat(sql).containsIgnoringCase("is null");
+    assertThat(sql).containsIgnoringCase("not in");
+    assertThat(sql).containsIgnoringCase("not (");
+    // Die bekannten ungeklaerten Werte duerfen nicht aufgezaehlt sein — sie fallen unter „Rest".
+    assertThat(sql).doesNotContain("COMMIT_SENT").doesNotContain("CHECKED");
+    assertThat(sql).contains("FINISHED").contains("SUSPENDED");
+  }
+
+  @Test
+  @DisplayName("Mehrere Einordnungen werden mit ODER verbunden, keine filtert nicht")
+  void mehrere_einordnungen() {
+    String sql =
+        sql(
+            classifier.bedingung(
+                java.util.List.of(MessageStatusKind.FEHLER, MessageStatusKind.WARTEND), STATUS));
+
+    assertThat(sql).containsIgnoringCase(" or ").contains("SUSPENDED").contains("COMMIT_REJECTED");
+    assertThat(sql(classifier.bedingung(java.util.List.of(), STATUS)))
+        .isEqualTo(sql(DSL.noCondition()));
+  }
+
+  /**
+   * {@code zwischenschritte=false}: Ohne das vorangestellte {@code IS NULL} waere {@code NOT
+   * (status IN (…))} fuer eine Zeile ohne Status selbst {@code NULL} — sie fiele aus der Liste,
+   * sobald irgendetwas ausgeschlossen wird.
+   */
+  @Test
+  @DisplayName("Der Ausschluss laesst Zeilen ohne Status stehen")
+  void ausschluss_behaelt_zeilen_ohne_status() {
+    String sql = sql(classifier.ohne(MessageStatusKind.ZWISCHENSCHRITT, STATUS));
+
+    assertThat(sql).containsIgnoringCase("is null");
+    assertThat(sql).containsIgnoringCase("not (");
+    assertThat(sql).contains("MERGED").contains("SPLITTED");
+  }
+
+  @Test
+  @DisplayName("Die Rohwerte je Einordnung stammen aus derselben Zuordnung wie die Anzeige")
+  void rohwerte_und_einordnung_stimmen_ueberein() {
+    for (MessageStatusKind einordnung : MessageStatusKind.values()) {
+      for (String rohwert : classifier.rohwerte(einordnung)) {
+        assertThat(classifier.einordnung(rohwert)).as("Rohwert %s", rohwert).isEqualTo(einordnung);
+      }
+    }
+    assertThat(classifier.rohwerte(MessageStatusKind.ZWISCHENSCHRITT))
+        .containsExactly("MERGED", "SPLITTED");
   }
 }

@@ -372,9 +372,18 @@ Wie das Frontend daraus eine Übersetzung macht, steht in
   auf `src/main/java` beschränkt und fasst den generierten Code nicht an.
 - Property `jooq.codegen.skip` (Standard `false`); die CI setzt `true`.
 - `.gitattributes`: `src/main/generated-java/** linguist-generated=true`.
-- Je Schema: Views **einschließen** (`MessageMandantID` wird für die Mandantentrennung gebraucht),
-  Routinen/Sequenzen/Pakete/UDTs ausschließen, `forcedType` `bit(1)` → `Boolean` (betrifft
-  `Message.Source` und `Message.Target` — verifiziert: beide werden `Boolean`).
+- Je Schema: Views **einschließen**, Routinen/Sequenzen/Pakete/UDTs ausschließen, `forcedType`
+  `bit(1)` → `Boolean` (betrifft `Message.Source` und `Message.Target` — verifiziert: beide werden
+  `Boolean`).
+
+> **Korrektur 06.08.2026.** Hier stand als Begründung für das Einschließen der Views:
+> *„`MessageMandantID` wird für die Mandantentrennung gebraucht."* Das gilt nicht mehr. Ab Schritt 4
+> läuft die Mandantenkette handgeschrieben als `EXISTS` über `Process → ProjectMandant`, weil der
+> Zugriffspfad durch die View mit unseren Rechten strukturell nicht einsehbar ist (Fehler 1142 und
+> 1345) und damit Regel L7 nicht erfüllen kann. Begründung vollständig in
+> [`nachrichtenliste.md`](nachrichtenliste.md) §3, Messung in
+> [`messungen-schritt4.md`](messungen-schritt4.md) M4. Die Views bleiben trotzdem eingeschlossen —
+> die Generierung kostet nichts, und ein Ausschluss wäre eine Änderung ohne Anlass.
 
 **Voraussetzung des Codegens:** `overlord_monitor.audit_log` muss existieren. Reihenfolge beim
 Erst-Aufbau: `flyway:migrate` → `generate-sources`. Danach ist die Tabelle da und der Codegen läuft

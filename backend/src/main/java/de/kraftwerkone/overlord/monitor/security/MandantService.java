@@ -3,6 +3,7 @@ package de.kraftwerkone.overlord.monitor.security;
 import de.kraftwerkone.overlord.monitor.audit.AuditEvent;
 import de.kraftwerkone.overlord.monitor.audit.AuditEventType;
 import de.kraftwerkone.overlord.monitor.audit.AuditLogWriter;
+import de.kraftwerkone.overlord.monitor.common.error.KeinMandantGewaehltException;
 import de.kraftwerkone.overlord.monitor.common.error.RessourceNichtGefundenException;
 import java.util.List;
 import java.util.Optional;
@@ -56,6 +57,27 @@ public class MandantService {
     // Auch hier ueber die zulaessige Menge: verliert ein Nutzer seine Zuordnung, waehrend die
     // Sitzung laeuft, faellt der Mandant damit von selbst weg.
     return zulaessige(nutzer).stream().filter(m -> m.id().equals(aktiv.get())).findFirst();
+  }
+
+  /**
+   * Der aktive Mandant als {@link MandantContext} — <b>der Einstieg jedes fachlichen Endpunkts</b>
+   * (ab Schritt 4).
+   *
+   * <p>Bewusst ueber {@link #aktiver(AngemeldeterNutzer)} und damit ueber die zulaessige Menge,
+   * nicht ueber den rohen Sitzungswert: Verliert ein Nutzer waehrend einer laufenden Sitzung seine
+   * Mandantenzuordnung, faellt der aktive Mandant von selbst weg. Der Preis ist eine kleine
+   * zusaetzliche Abfrage je Aufruf (gemessen ~0,6 ms, {@code docs/mandantentrennung.md} §6) — der
+   * Gegenwert ist, dass eine entzogene Berechtigung sofort wirkt und nicht erst beim naechsten
+   * Anmelden.
+   *
+   * @throws de.kraftwerkone.overlord.monitor.common.error.KeinMandantGewaehltException wenn kein
+   *     Mandant gewaehlt oder der gewaehlte nicht mehr zulaessig ist. Ein Zugriff „einfach ohne
+   *     Filter" existiert nicht.
+   */
+  public MandantContext aktuellerKontext(AngemeldeterNutzer nutzer) {
+    return aktiver(nutzer)
+        .map(mandant -> new MandantContext(mandant.id()))
+        .orElseThrow(KeinMandantGewaehltException::new);
   }
 
   /**
