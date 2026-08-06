@@ -631,6 +631,11 @@ dem Nutzer die Rückmeldung, dass gerade geladen wird.
 **Ist die Grenze aufgehoben, sagt ein ruhiger Hinweis, dass die Suche länger dauern kann.** Keine
 Warnfarbe: Der Nutzer hat das gerade selbst entschieden, er soll nur wissen, was ihn erwartet.
 
+**Der Hinweis ist auf die Breite des Eingabefelds begrenzt.** Ohne das verbreitert ein langer Text
+die Spalte des Suchfelds, und das Feld rutscht in eine andere Zeile der Filterleiste — genau in dem
+Moment, in dem der Nutzer hineinschreibt. Aufgefallen ist das erst in der Abnahme im Browser; die
+kurzen Hinweise davor („noch zwei Zeichen") waren nie breit genug dafür.
+
 **Ein neuer Suchbegriff setzt `langeSuche` zurück.** Die Grenze wurde für *diese* Suche bewusst
 aufgehoben; sie stillschweigend über den nächsten Begriff mitzunehmen hieße, eine einmalige
 Entscheidung dauerhaft zu machen — ausgerechnet die, die eine mehrsekündige Abfrage erlaubt.

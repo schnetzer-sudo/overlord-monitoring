@@ -404,9 +404,13 @@ function Suchfeld({
         ) : null}
       </div>
       {hinweis === undefined ? null : (
+        /* Dieselbe Breite wie das Eingabefeld, damit ein langer Hinweis die
+           Spalte nicht verbreitert: Sonst rutscht das Suchfeld beim Tippen in
+           eine andere Zeile der Filterleiste — und zwar genau dann, wenn der
+           Nutzer gerade hineinschreibt. */
         <div
           id={`${kennung}-hinweis`}
-          className="text-muted-foreground text-beiwerk flex flex-wrap items-center gap-x-2 gap-y-1"
+          className="text-muted-foreground text-beiwerk flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 sm:max-w-64"
         >
           {/* Bewusst dieselbe ruhige Farbrolle wie „noch zwei Zeichen": Der Nutzer
               hat nichts falsch gemacht, sein Fenster ist nur größer als das, was
