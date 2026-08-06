@@ -94,6 +94,12 @@ diese Zeile wüsste auch niemand warum.
 
 **Taucht hier jemals eine dritte auf, ist das ein Signal und keine Kleinigkeit.**
 
+> **Nachgetragen 06.08.2026 (Schritt 4, Aufgabe 12).** `GET /api/prozesse`
+> ([`prozessauswahl.md`](prozessauswahl.md)) liefert die Prozesse eines Mandanten und wäre der
+> naheliegende Kandidat für eine dritte Ausnahme — er ist **keine**. Der Endpunkt nimmt überhaupt
+> keinen Parameter entgegen; der Mandant kommt wie überall sonst aus der Sitzung über
+> `MandantService.aktuellerKontext`. **Die Liste bleibt bei zwei Einträgen.**
+
 ### Warum Ausnahme 1 nicht auf Existenz prüft
 
 `MandantService.wechsle` prüft **ausschließlich gegen die zulässige Menge** — nie gegen
@@ -170,6 +176,14 @@ Schritt 4 tauscht dafür nur den Aufruf und die Kennung aus; Aufbau, Nutzer und 
 **nicht** `NEXANS`/`NXHBE` oder `IBIS`/`IBISGUS`: Zwei Mandanten desselben Konzerns sind ein
 schlechter Beweis für eine Trennung, die zwischen Firmen greifen soll.
 
+> **Ergänzt 06.08.2026 (Schritt 4, Aufgabe 12).** Die zweite Kopie ist `ProzesseIsolationDbIT`
+> ([`prozessauswahl.md`](prozessauswahl.md) §5). Dort sieht die Gegenprobe **anders** aus, und das
+> ist kein Abweichen von der Vorlage, sondern ihre Übertragung: Der Endpunkt nimmt **keinen
+> Parameter** entgegen, es gibt also keine Eingabe, über die sich Existenz erfragen ließe. Die
+> Gegenprobe verschiebt sich deshalb von der Eingabe auf die **Ausgabe** — der Antwortrumpf darf
+> keine fremde Kennung *und keinen fremden Prozessnamen* enthalten. Zusätzlich prüft der Test die
+> Rolle ADMIN: ohne aktiven Mandanten `403`, nach dem Wechsel genau der eine Mandant.
+>
 > **Ergänzt 06.08.2026 (Schritt 4).** Die erste Kopie der Vorlage ist `NachrichtenIsolationDbIT`
 > ([`nachrichtenliste.md`](nachrichtenliste.md) §3). Sie paart `NEXANS` gegen `SUTTONS` statt `VOTG`
 > gegen `SUTTONS` — auch das zwei verschiedene Häuser, aber die beiden mit dem größten Bestand, und

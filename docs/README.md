@@ -58,6 +58,7 @@ Angelegt:
 | [`visuelles-konzept.md`](visuelles-konzept.md) | Schritt 3, Teil 2 | Farbrollen samt fachlicher Bindung der Statusfarben, die vier Stufen des Akzents `#b9c022` mit gemessenen Kontrastwerten, „Status nie allein über Farbe", Typografie, Dichte nach Zeigergerät, volle Fensterbreite und die eine Ausnahme davon, Verhalten am Handy — und wie man das Konzept in einer Datei ändert |
 | [`frontend-grundlagen.md`](frontend-grundlagen.md) | Schritt 3, Teil 2 | Rewrite statt CORS, warum die Routensperre kein Schutz ist, Ablauf nach dem Anmelden, Aufbau der Sprachdateien, Regeln für den Zwischenspeicher, Zuordnung von `type` zu Übersetzung, Scroll-Architektur des Rahmens |
 | [`nachrichtenliste.md`](nachrichtenliste.md) | Schritt 4 | Listen-Endpunkt mit Pflicht-Zeitfenster, Cursor-Paginierung in der gemessenen ODER-Form, Filter über `MessageStatusKind`, Freitext gegen die Stammdaten, die Mandantenkette als `EXISTS` statt über die View — und warum |
+| [`prozessauswahl.md`](prozessauswahl.md) | Schritt 4 | `GET /api/prozesse` — die Liste, aus der der Prozessfilter wählt. Stammdaten ohne Zeitfenster und ohne Cursor, die Mandantenkette hier als Join statt als `EXISTS`, und warum die Gegenprobe des Isolationstests bei einem Endpunkt ohne Parameter anders aussieht |
 
 Die folgenden Dateien entstehen laut Plan:
 

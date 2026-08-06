@@ -1420,6 +1420,81 @@ volumenstarken kostet es knapp sechs Sekunden.
 
 ---
 
+## L12 — die Prozessauswahl
+
+Erhoben am **06.08.2026** (Aufgabe 12) für den neuen Endpunkt `GET /api/prozesse`. Gemessen wurde
+die schema-qualifizierte Entsprechung des von jOOQ erzeugten Statements; es enthält keine
+Parameterlisten, die Form ist identisch.
+
+```sql
+SELECT p.ProcessID, p.ProcessName, pr.ProjectName
+FROM Process p
+JOIN ProjectMandant pm ON pm.ProjectID = p.ProjectID
+LEFT JOIN Project pr   ON pr.ProjectID = p.ProjectID
+WHERE pm.MandantID = ?
+ORDER BY pr.ProjectName, p.ProcessName;
+```
+
+### EXPLAIN
+
+| id | select_type | table | type | possible_keys | key | key_len | ref | rows | Extra |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | SIMPLE | `ProjectMandant` | `ref` | `PRIMARY`, `ProjectMandant_Mandant_idx` | **`ProjectMandant_Mandant_idx`** | 146 | `const` | 17 | `Using where; Using index; Using temporary; Using filesort` |
+| 1 | SIMPLE | `Process` | `ref` | `Process_ProjectFK` | `Process_ProjectFK` | 147 | `ProjectMandant.ProjectID` | 5 | — |
+| 1 | SIMPLE | `Project` | `eq_ref` | `PRIMARY` | `PRIMARY` | 146 | `ProjectMandant.ProjectID` | 1 | — |
+
+### Ergebnis
+
+| Mandant | gelieferte Zeilen | Laufzeit (beste von fünf) | Aufwärmlauf |
+|---|---|---|---|
+| `NEXANS` | 733 | **4,225 ms** | 4,705 ms |
+| `SUTTONS` | 17 | **0,606 ms** | 0,618 ms |
+
+Einzelwerte `NEXANS`: 4,225 · 4,371 · 4,321 · 4,723 · 4,730 ms. `SUTTONS`: 0,718 · 0,606 · 0,611 ·
+1,015 · 1,049 ms.
+
+### Prozesse je Mandant
+
+```sql
+SELECT pm.MandantID, COUNT(*) AS prozesse, COUNT(DISTINCT p.ProjectID) AS projekte,
+       SUM(pr.ProjectName IS NULL) AS ohne_projektname,
+       SUM(p.ProcessName IS NULL)  AS ohne_prozessname
+FROM Process p JOIN ProjectMandant pm ON pm.ProjectID = p.ProjectID
+LEFT JOIN Project pr ON pr.ProjectID = p.ProjectID
+GROUP BY pm.MandantID ORDER BY prozesse DESC;
+```
+
+| `MandantID` | Prozesse | Projekte | ohne Projektname | ohne Prozessname |
+|---|---|---|---|---|
+| `NEXANS` | **733** | 17 | 0 | 0 |
+| `VOTG` | 390 | 39 | 0 | 0 |
+| `IBIS` | 192 | 46 | 0 | 0 |
+| `IBISGUS` | 89 | 19 | 0 | 0 |
+| `ZAST` | 35 | 4 | 0 | 0 |
+| `SUTTONS` | 17 | 1 | 0 | 0 |
+| `NXHBE` | 17 | 2 | 0 | 0 |
+| `EDITIONLINGERI` | 9 | 3 | 0 | 0 |
+| `WOC` | 4 | 1 | 0 | 0 |
+| `SYSTEM` | 4 | 2 | 0 | 0 |
+
+`Process` insgesamt: **1.503** gezählte Zeilen, davon **0** ohne `ProjectID`.
+
+### Was die Zahlen zeigen
+
+- **Der Einstieg läuft über den Mandanten**, nicht über `Process` — `ProjectMandant_Mandant_idx` ist
+  derselbe Zugriffspfad wie bei der Vorfilterung des Suchbegriffs (L7a). Der Mandant ist der
+  selektivste Teil der Bedingung.
+- **`Using temporary; Using filesort` ist hier kein Befund.** Sortiert werden ein paar hundert
+  Zeilen, und für `ORDER BY ProjectName, ProcessName` gibt es keinen Index, der das bediente. Bei
+  733 Zeilen kostet das vier Millisekunden.
+- **Die Laufzeit wächst mit der Prozesszahl des Mandanten, nicht mit dem Gesamtbestand** — 733
+  Zeilen kosten das Siebenfache von 17. Das ist das Gegenteil des Musters aus L4, wo ein kleiner
+  Mandant für die Größe des großen zahlte: Hier liest jeder nur seinen eigenen Ausschnitt.
+- **`information_schema` nennt 1.490 Zeilen, gezählt sind es 1.503** — dieselbe Veralterung der
+  Statistiken wie in Auffälligkeit G. Für die Größenordnung ändert das nichts.
+
+---
+
 ## Auffälligkeiten
 
 Was von der bestehenden Dokumentation abweicht. **Hier wird nichts entschieden und nichts
@@ -1696,6 +1771,8 @@ Beste von N Läufen nach einem Aufwärmlauf, serverseitig gemessen.
 | L11 | derselbe Begriff, **`UNION`-Alternative** | 5 | **985,4 ms** | wie oben, `r_rows` 78.318 **je Zweig** |
 | L11 + | nur `ProcessID IN (…)`, volumenstark | 2 | 5.865,4 ms | `ref`, `ProejctIDIDX` — liest den ganzen Bestand der Prozesse |
 | L11 + | nur `SOSID IN (…)`, volumenstark | 2 | 1.323,6 ms | `range`, `MessageLastUpdateIDX` — auf `SOSID` gibt es keinen Index |
+| L12 | Prozessauswahl `NEXANS` (733 Prozesse) | 5 | **4,225 ms** | `ref`, `ProjectMandant_Mandant_idx`, `temporary` + `filesort` |
+| L12 | Prozessauswahl `SUTTONS` (17 Prozesse) | 5 | **0,606 ms** | wie oben |
 
 **Muster, das über alle Messungen hinweg sichtbar ist:** Sobald ein Zeitfenster gesetzt ist, arbeitet
 MariaDB im `range`-Zugriff über `MessageLastUpdate` und braucht Millisekunden. Ohne Zeitfenster wird
