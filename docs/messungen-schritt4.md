@@ -1294,6 +1294,132 @@ jOOQ jede Spalte voll qualifiziert und die Kennungslisten einsetzt. Die Form ist
 
 ---
 
+## M10 und L11 — der Freitextfilter, zweiter Anlauf
+
+Erhoben am **06.08.2026** (Aufgabe 10). Ziel war, den teuersten Fall dieses Endpunkts zu entschärfen
+— L7c, 1,3 Sekunden über 30 Tage. Geprüft wurden **zwei** Wege. **Beide tragen nicht.** Das Ergebnis
+steht hier vollständig, auch weil es das Gegenteil der Erwartung ist.
+
+### M10 — trägt die Auflösung über `SOS.ProcessID`?
+
+Der geplante Umbau wollte die Treffer aus `SOSName` über die Spalte `SOS.ProcessID` zu `ProcessID`s
+auflösen und mit den Treffern aus `ProcessName`/`ProjectName` zu **einer** Kennungsliste vereinigen.
+Im Hauptstatement bliebe dann eine einzige Bedingung `m.ProcessID IN (…)` und damit ein nutzbarer
+Index. Die Vorbedingung dafür ist, dass der Weg über `SOS` zur selben `ProcessID` führt wie die
+Nachricht selbst:
+
+```sql
+SELECT COUNT(*) AS abweichend
+FROM Message m JOIN SOS s ON s.SOSID = m.SOSID
+WHERE s.ProcessID IS NULL OR s.ProcessID <> m.ProcessID;
+```
+
+**EXPLAIN**
+
+| id | select_type | table | type | key | key_len | ref | rows | Extra |
+|---|---|---|---|---|---|---|---|---|
+| 1 | SIMPLE | `m` | `ALL` | NULL | NULL | NULL | 3.560.486 | `Using where` |
+| 1 | SIMPLE | `s` | `eq_ref` | `PRIMARY` | 146 | `m.SOSID` | 1 | `Using where` |
+
+**Ergebnis: `9101` — nicht 0.**
+
+| Kennzahl | Wert |
+|---|---|
+| abweichende Zeilen | **9.101** von 3.341.519 = **0,27 %** |
+| davon `Message.ProcessID IS NULL` | 0 |
+| davon `SOS.ProcessID IS NULL` | 0 (alle 1.818 `SOS`-Zeilen tragen eine `ProcessID`) |
+| betroffene `SOS`-Zeilen | **11** |
+| verschiedene `SOS.ProcessID` | 11 |
+| verschiedene `Message.ProcessID` | 14 |
+| Zeitraum | `2024-10-01 06:50:31` bis `2025-12-29 13:40:14` — über den ganzen Bestand verteilt |
+
+Laufzeit 10,877 s (ein Lauf, voller Durchlauf über `Message`).
+
+Verteilung über die Mandanten (29,390 s, ein Lauf):
+
+| `MandantID` | abweichende Zeilen | betroffene `SOS` |
+|---|---|---|
+| `NEXANS` | 9.038 | 10 |
+| `IBIS` | 63 | 1 |
+
+**Schlussfolgerung, ausdrücklich: Der Umbau findet nicht statt.** Er ist nicht bloß unscharf, er
+**verliert Zeilen**: Für diese 9.101 Nachrichten zeigt der Ablauf auf einen anderen Prozess als die
+Nachricht selbst. Ein Suchtreffer im Ablaufnamen fände sie über die aufgelöste `ProcessID` nicht
+mehr — die Suche würde also stillschweigend weniger finden als heute. Elf betroffene `SOS`-Zeilen
+über fünfzehn Monate sind auch kein Ausreißer eines Tages, sondern ein struktureller Zustand des
+Quellsystems.
+
+Die Unschärfe, die derselbe Umbau zusätzlich mitgebracht hätte (ein Treffer im Ablaufnamen liefert
+alle Nachrichten seines Prozesses, also auch die Geschwister der `_OUT`- und `_MAIL`-Varianten),
+wäre für sich vertretbar gewesen — verlorene Zeilen sind es nicht.
+
+### L11 — trägt die Alternative mit `UNION`?
+
+`nachrichtenliste.md` §9 führte den `UNION` bisher als die naheliegende Abhilfe: zwei Zweige,
+`ProcessID IN (…)` und `SOSID IN (…)`, „der Optimierer wählt dann je Zweig einen Index". Diese
+Annahme ist jetzt **gemessen statt vermutet** — und sie ist **falsch**.
+
+Gemessen wurde dasselbe Fenster wie in L1 bis L10 (`2025-11-30` bis `2025-12-30`, 30 Tage), Mandant
+`NEXANS`, Seitengröße 51, Zwischenschritte ausgeschlossen. Weil L7c seinen Suchbegriff nicht
+festgehalten hat und das Verhalten stark am Begriff hängt, wurden **zwei** Begriffe gemessen: einer,
+dessen Prozesse volumenstark sind, und einer, dessen Prozesse im Fenster kaum Zeilen tragen.
+
+| Begriff | aufgelöst zu | OR-Form (wie gebaut) | `UNION`-Alternative |
+|---|---|---|---|
+| volumenstark | 14 Prozesse, 22 Abläufe | **2,290 ms** | **7.206,8 ms** |
+| selektiv | 22 Prozesse, 31 Abläufe | **499,1 ms** | **985,4 ms** |
+
+Aufwärmläufe: 2,465 · 7.384,2 ms bzw. 519,2 · 1.081,3 ms. Beste von fünf, serverseitig über
+`SET profiling = 1`.
+
+**Die `UNION`-Form ist in beiden Fällen langsamer — einmal um Faktor zwei, einmal um Faktor 3.100.**
+
+**Die Ursache steht in M1 und ist bisher niemandem aufgefallen: `Message.SOSID` hat keinen Index.**
+Die Tabelle trägt `PRIMARY`, `MessageLastUpdateIDX`, `MessageLastUpdateProcessMessageIDX`,
+`MessageStatusIDX`, `Message_ProcessFK`, `ProejctIDIDX`, `SourceMessageIDIDX` und
+`TargetMessageIDIDX` — auf `SOSID` keinen. Der `SOSID`-Zweig **kann** deshalb gar keinen eigenen
+Index wählen; er steigt zwangsläufig wieder über `MessageLastUpdateIDX` ein und liest das ganze
+Fenster. `ANALYZE` für den selektiven Begriff:
+
+| Form | Zweig | gewählter Index | `r_rows` |
+|---|---|---|---|
+| OR-Form | — | `MessageLastUpdateIDX` | 78.318 |
+| `UNION` | `ProcessID IN (…)` | `MessageLastUpdateIDX` | 78.318 |
+| `UNION` | `SOSID IN (…)` | `MessageLastUpdateIDX` | 78.318 |
+
+Der `UNION` **teilt die Arbeit nicht auf, er verdoppelt sie**: zweimal dasselbe Fenster statt einmal,
+plus Zusammenführung und `filesort` über das Ergebnis.
+
+**Warum die Gegenmessung aus L7c das nicht gezeigt hat.** Dort wurde `nur ProcessID IN (…), ohne das
+ODER` gemessen — 12,334 ms über `ProejctIDIDX`. Das ist **nur der eine Zweig** und damit keine
+Alternative, sondern eine andere Abfrage: Sie lässt die Treffer aus `SOSName` einfach weg. Der
+zweite Zweig und die Zusammenführung wurden nie gemessen. Nachgemessen für den volumenstarken
+Begriff, jetzt vollständig:
+
+| Zweig allein | gewählter Index | Laufzeit |
+|---|---|---|
+| `ProcessID IN (…)` | `ProejctIDIDX` | **5.865,4 ms** |
+| `SOSID IN (…)` | `MessageLastUpdateIDX` | **1.323,6 ms** |
+
+Auch die 12,3 ms aus L7c sind also nicht der Normalfall des Prozess-Zweigs: Über `ProejctIDIDX`
+liest MariaDB **alle** Nachrichten der getroffenen Prozesse über den gesamten Bestand und filtert
+das Zeitfenster erst danach. Bei den 17 volumenschwachen Prozessen von L7c war das billig, bei 14
+volumenstarken kostet es knapp sechs Sekunden.
+
+### Was daraus folgt
+
+- **Der Freitextfilter bleibt, wie er ist.** Von den beiden vorgesehenen Wegen verliert der eine
+  Zeilen und der andere Zeit. Ein dritter ist mit den Mitteln dieses Projekts nicht in Sicht: Der
+  fehlende Index auf `Message.SOSID` ließe sich nur mit einem `CREATE INDEX` auf `GlassfishDB`
+  beheben, und das ist durch Regel S1 ausgeschlossen — dieses Schema gehört uns nicht.
+- **Die Kosten sind nicht die aus L7c.** Sie hängen am Suchbegriff und liegen zwischen 2 ms und
+  einigen Sekunden. Der Hinweis „wer sucht, sollte das Zeitfenster eng halten" bleibt richtig und
+  ist damit die einzige verfügbare Abhilfe.
+- **Für die Oberfläche heißt das:** kein Suchfeld ohne Mindestlänge (steht bereits, Regel L5) und
+  keine Suche, die bei jedem Tastendruck läuft (entprellt, Aufgabe 14).
+
+---
+
 ## Auffälligkeiten
 
 Was von der bestehenden Dokumentation abweicht. **Hier wird nichts entschieden und nichts
@@ -1562,6 +1688,14 @@ Beste von N Läufen nach einem Aufwärmlauf, serverseitig gemessen.
 | L8 | Liste NEXANS, 24 h, zweite Seite | 5 | **1,795 ms** | `range`, `MessageLastUpdateIDX`, `key_len` 151 |
 | L9 | BAM-Nachladung, 50 Kennungen | 5 | **2,982 ms** | `range`, `PRIMARY`, `Using index` |
 | L10 | BAM-Nachladung, 200 Kennungen | 5 | **3,440 ms** | `range`, `PRIMARY`, `Using index` |
+| M10 | Abweichung `SOS.ProcessID` gegen `Message.ProcessID` | 1 | 10.877 ms | `ALL` + `eq_ref` — Ergebnis **9.101**, der Umbau entfällt |
+| M10 + | dieselbe Abweichung je Mandant | 1 | 29.390 ms | `ALL` + zwei `eq_ref` |
+| L11 | Freitext, volumenstarker Begriff, **OR-Form** | 5 | **2,290 ms** | `range`, `MessageLastUpdateIDX` |
+| L11 | derselbe Begriff, **`UNION`-Alternative** | 5 | **7.206,8 ms** | beide Zweige `MessageLastUpdateIDX`, Fenster doppelt gelesen |
+| L11 | Freitext, selektiver Begriff, **OR-Form** | 5 | **499,1 ms** | `range`, `MessageLastUpdateIDX`, `r_rows` 78.318 |
+| L11 | derselbe Begriff, **`UNION`-Alternative** | 5 | **985,4 ms** | wie oben, `r_rows` 78.318 **je Zweig** |
+| L11 + | nur `ProcessID IN (…)`, volumenstark | 2 | 5.865,4 ms | `ref`, `ProejctIDIDX` — liest den ganzen Bestand der Prozesse |
+| L11 + | nur `SOSID IN (…)`, volumenstark | 2 | 1.323,6 ms | `range`, `MessageLastUpdateIDX` — auf `SOSID` gibt es keinen Index |
 
 **Muster, das über alle Messungen hinweg sichtbar ist:** Sobald ein Zeitfenster gesetzt ist, arbeitet
 MariaDB im `range`-Zugriff über `MessageLastUpdate` und braucht Millisekunden. Ohne Zeitfenster wird

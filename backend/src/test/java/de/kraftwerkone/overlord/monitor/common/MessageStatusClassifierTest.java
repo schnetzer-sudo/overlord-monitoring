@@ -58,6 +58,33 @@ class MessageStatusClassifierTest {
     assertThat(classifier.einordnung("ERROR")).isEqualTo(MessageStatusKind.UNGEKLAERT);
   }
 
+  /**
+   * Die Schreibweise darf Java und SQL nicht auseinanderlaufen lassen (Aufgabe 10b, 06.08.2026).
+   *
+   * <p>Das Quellschema sortiert mit {@code utf8mb4_general_ci}: {@code error_x} faellt dort unter
+   * {@link MessageStatusClassifier#fehlerBedingung} und kaeme mit dem Statusfilter {@code FEHLER}
+   * zurueck. Ordnete Java denselben Wert als {@code UNGEKLAERT} ein, beschriftete die Liste ihn
+   * anschliessend mit „Bedeutung nicht verifiziert" — gefiltert nach Fehler, angezeigt als
+   * ungeklaert.
+   */
+  @Test
+  @DisplayName("Die Schreibweise entscheidet nicht ueber die Einordnung")
+  void schreibweise_aendert_die_einordnung_nicht() {
+    // Das ERROR_-Praefix — der Fall, der Java und SQL auseinandertreibt.
+    assertThat(classifier.einordnung("error_x")).isEqualTo(MessageStatusKind.FEHLER);
+    assertThat(classifier.einordnung("Error_Duplicate")).isEqualTo(MessageStatusKind.FEHLER);
+    // Und der zweite Zweig derselben Bedingung, der ohne Praefix auskommt.
+    assertThat(classifier.einordnung("commit_rejected")).isEqualTo(MessageStatusKind.FEHLER);
+
+    // Die uebrigen bekannten Werte ebenso — sonst haetten wir zwei Regeln statt einer.
+    assertThat(classifier.einordnung("finished")).isEqualTo(MessageStatusKind.ABGESCHLOSSEN);
+    assertThat(classifier.einordnung("Suspended")).isEqualTo(MessageStatusKind.WARTEND);
+    assertThat(classifier.istEndstatus("suspended")).isFalse();
+
+    // Was unbekannt ist, bleibt unbekannt — hochgestellt wird verglichen, nicht geraten.
+    assertThat(classifier.einordnung("errorx")).isEqualTo(MessageStatusKind.UNGEKLAERT);
+  }
+
   @Test
   @DisplayName("Die bekannte Menge umfasst genau die 13 dokumentierten Werte")
   void bekannte_menge() {

@@ -314,13 +314,16 @@ Hauptstatement), sondern damit die Trefferzahl den Mandanten beschreibt und nich
 der Endpunkt mit `suchbegriff-zu-unscharf` — und **nicht** mit einer abgeschnittenen Menge, die wie
 ein vollständiges Ergebnis aussieht.
 
-> ⚠️ **Der Freitextfilter ist der teuerste Fall dieses Endpunkts** — 1,3 Sekunden über 30 Tage
-> (Messung L7c). Die Vorfilterung selbst kostet nichts (3,0 und 5,8 ms); teuer ist das
-> Hauptstatement, weil die **ODER-Verknüpfung über zwei Spalten** (`ProcessID IN (…) OR SOSID IN
-> (…)`) den Index auf `ProcessID` ausschließt. MariaDB behält das Zeitfenster als Treiber, liest
-> 214.330 Zeilen und wirft 99,99 Prozent davon weg. Ohne das ODER wählt der Optimierer
-> `ProejctIDIDX` und braucht 12,3 ms — hundertmal weniger. Die Kosten wachsen linear mit dem
-> Fenster. Behebung und offene Frage stehen unter „Offene Punkte".
+> ⚠️ **Der Freitextfilter ist der teuerste Fall dieses Endpunkts.** Die Vorfilterung selbst kostet
+> nichts (3,0 und 5,8 ms); teuer ist das Hauptstatement. Die Kosten hängen am Suchbegriff und
+> reichen von 2 ms bis zu einigen Sekunden — 1,3 Sekunden über 30 Tage im Fall von L7c.
+>
+> **Zwei Abhilfen wurden geprüft, beide tragen nicht** (Messungen M10 und L11, 06.08.2026). Die
+> Auflösung über `SOS.ProcessID` zu einer einzigen Kennungsliste **verliert 9.101 Zeilen**, weil der
+> Ablauf dort auf einen anderen Prozess zeigt als die Nachricht. Und die `UNION`-Fassung ist
+> **langsamer** statt schneller: `Message.SOSID` hat **keinen Index**, der zweite Zweig muss also
+> ebenfalls über das Zeitfenster einsteigen — der `UNION` liest das Fenster zweimal statt einmal.
+> Der Stand und was daraus folgt, steht unter „Offene Punkte".
 
 `%` und `_` im Suchbegriff werden maskiert. Ohne das wäre `_` ein Platzhalter für ein beliebiges
 Zeichen — derselbe Fallstrick wie in Regel Q1.
@@ -439,26 +442,54 @@ Quellschema vor genau der Prüfung, die ihn sichtbar machen soll.
 
 ## 9. Offene Punkte
 
-- **Der Freitextfilter über lange Zeitfenster ist zu teuer und muss umgebaut werden.** Gemessen
-  (L7c): 40 ms über 24 Stunden, **1,3 Sekunden über 30 Tage**; hochgerechnet läge ein Jahresfenster
-  bei rund zehn Sekunden und damit an der Grenze von `max_statement_time` (10 s im Lese-Pool). Die
-  Ursache ist bekannt und die Abhilfe naheliegend: zwei getrennte Abfragen (`ProcessID IN (…)` und
-  `SOSID IN (…)`) mit `UNION` statt einer ODER-Bedingung — der Optimierer wählt dann je Zweig einen
-  Index und ist im gemessenen Fall hundertmal schneller. **Das ist bewusst nicht mehr Teil dieses
-  Schritts:** Der Umbau ändert die Form des Statements und braucht seine eigene Messung. Bis dahin
-  gilt: Wer sucht, sollte das Zeitfenster eng halten.
+- **Der Freitextfilter bleibt teuer, und beide vorgesehenen Abhilfen sind widerlegt** (geprüft am
+  06.08.2026, Messungen M10 und L11). Der Punkt bleibt offen — aber er ist jetzt ein *bekannter*
+  offener Punkt und keine ungehobene Verbesserung:
+
+  1. **Auflösung über `SOS.ProcessID` zu einer Kennungsliste — verworfen.** Sie hätte die
+     ODER-Bedingung beseitigt und einen Indexzugriff auf `ProcessID` möglich gemacht. Die
+     Vorprüfung (M10) ergibt aber **9.101 Zeilen**, bei denen `SOS.ProcessID` und
+     `Message.ProcessID` auseinanderfallen — elf `SOS`-Zeilen, verteilt über fünfzehn Monate,
+     `NEXANS` 9.038 und `IBIS` 63. Diese Nachrichten fände die Suche danach nicht mehr. **Eine
+     Suche, die stillschweigend weniger findet, ist schlimmer als eine langsame.**
+  2. **Zwei Zweige mit `UNION` — widerlegt.** Diese Datei nannte den `UNION` bisher als die
+     naheliegende Abhilfe. Gemessen ist er **langsamer**: 985 ms gegen 499 ms beim selektiven
+     Begriff, 7,2 s gegen 2,3 ms beim volumenstarken. Der Grund steht in M1 und war übersehen
+     worden: **auf `Message.SOSID` gibt es keinen Index.** Der `SOSID`-Zweig kann deshalb keinen
+     eigenen Zugriffspfad wählen und steigt wieder über `MessageLastUpdateIDX` ein — der `UNION`
+     liest das Fenster **zweimal** statt einmal. Die 12,3 ms aus der Gegenmessung in L7c waren nur
+     der `ProcessID`-Zweig **allein**, also eine Abfrage, die die Treffer aus `SOSName` schlicht
+     weglässt.
+
+  **Was bleibt.** Ein Index auf `Message.SOSID` würde es lösen und ist ausgeschlossen — `GlassfishDB`
+  gehört uns nicht, Regel S1 verbietet jedes DDL. Damit ist die Mindestlänge (Regel L5), die
+  Entprellung im Suchfeld und ein enges Zeitfenster die einzige verfügbare Abhilfe. Sollte die
+  Suche in Produktion zum Problem werden, ist die nächste zu prüfende Stufe eine **Obergrenze für
+  das Zeitfenster bei gesetztem Suchbegriff** — eine fachliche Einschränkung statt einer
+  technischen, und deshalb eine Entscheidung und keine Umsetzung.
 - **Eine tatsächlich hängende `SPLITTED`-Nachricht erscheint nie als überfällig.** `ZWISCHENSCHRITT`
   gilt als Endstatus (`message-status.md`), und die Überfälligkeitsrechnung setzt „nicht in einem
   Endstatus" voraus. Bleibt eine gesplittete Nachricht wirklich hängen, sieht man das **nicht** am
   Status, sondern erst über die Verkettung in Schritt 6 — dort fehlt dann die Fortsetzung. Das ist
   eine bewusste Entscheidung (sonst wären 34,38 Prozent aller Zeilen Kandidaten für „überfällig"),
   aber es ist eine Lücke, und sie gehört hier benannt.
-- **Groß-/Kleinschreibung bei der Fehlerbedingung.** Die Sortierung des Quellschemas ist
-  `utf8mb4_general_ci`, der SQL-Vergleich also unabhängig von der Schreibweise; `String.startsWith`
-  in Java ist es nicht. Ein Wert `error_x` würde in SQL als Fehler gefunden und in Java als
-  ungeklärt beschriftet. Alle zwölf vorkommenden Werte sind durchgehend groß geschrieben, und
-  `DatenzugriffDbIT` wird rot, sobald ein dreizehnter auftaucht. Ein `UPPER()` in der Bedingung
-  kostete jeden Indexbereich und ist deshalb nicht der Weg.
+- ~~**Groß-/Kleinschreibung bei der Fehlerbedingung.**~~ **Erledigt am 06.08.2026.** Die Sortierung
+  des Quellschemas ist `utf8mb4_general_ci`, der SQL-Vergleich also unabhängig von der Schreibweise;
+  `String.startsWith` und `Map.get` in Java sind es nicht. Ein Wert `error_x` wurde damit in SQL als
+  Fehler gefunden und in Java als ungeklärt beschriftet — der Statusfilter `FEHLER` lieferte eine
+  Zeile, die die Liste anschließend mit „Bedeutung nicht verifiziert" beschriftete.
+
+  Angeglichen ist es **in Java**: `MessageStatusClassifier.einordnung` stellt den Rohwert vor jedem
+  Vergleich mit `Locale.ROOT` hoch, sowohl für das `ERROR_`-Präfix als auch für den Abgleich gegen
+  die bekannten Werte (und damit auch für `COMMIT_REJECTED`). `Locale.ROOT` und nicht die
+  Standardsprache: Im türkischen Gebietsschema wird aus `i` ein `İ`, und `FINISHED` träfe seinen
+  eigenen Eintrag nicht mehr.
+
+  **SQL bleibt unangetastet.** Ein `UPPER()` in der Bedingung kostete den Indexbereich auf
+  `MessageStatusIDX`, den die Messungen L5 und L6 als Treiber des Statusfilters ausweisen — für
+  einen Fall, der auf der Testkopie kein einziges Mal vorkommt. `MessageStatusClassifierTest`
+  deckt einen kleingeschriebenen Wert ab; `DatenzugriffDbIT` wird weiterhin rot, sobald im
+  Altsystem ein dreizehnter Statuswert auftaucht.
 - **Die BAM-Spaltenauflösung läuft je Anfrage** (zwei kleine Abfragen, zusammen unter 2 ms). Ein
   Zwischenspeicher je Mandant wäre möglich, bringt aber eine Invalidierungsfrage mit — offen, bis
   eine Messung zeigt, dass es sich lohnt.

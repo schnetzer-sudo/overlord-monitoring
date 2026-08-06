@@ -3,6 +3,7 @@ package de.kraftwerkone.overlord.monitor.common;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -70,16 +71,31 @@ public class MessageStatusClassifier {
    * ist die Fehlerart." Ohne diese Zeile fielen Java und SQL auseinander — der Statusfilter {@code
    * FEHLER} liefert eine Zeile, die die Liste danach als „Bedeutung nicht verifiziert" beschriftet.
    * Ueber die Fehlerart wird weiterhin nichts behauptet, nur ueber die Kategorie.
+   *
+   * <p><b>Der Rohwert wird vor jedem Vergleich hochgestellt</b> (ergaenzt am 06.08.2026, Aufgabe
+   * 10b). Die Sortierung des Quellschemas ist {@code utf8mb4_general_ci}, der Vergleich in SQL also
+   * unabhaengig von der Schreibweise; {@link String#startsWith} und {@link Map#get} sind es nicht.
+   * Ohne diese Zeile fiele ein Wert {@code error_x} in SQL unter {@link #fehlerBedingung(Field)}
+   * und in Java unter {@code UNGEKLAERT} — der Statusfilter {@code FEHLER} lieferte also eine
+   * Zeile, die die Liste anschliessend als „Bedeutung nicht verifiziert" beschriftet. Dieselbe
+   * Unstimmigkeit gaelte fuer {@code commit_rejected} und fuer jeden anderen bekannten Wert.
+   *
+   * <p><b>Angeglichen wird in Java, nicht in SQL.</b> Ein {@code UPPER()} in der Bedingung kostete
+   * jeden Indexbereich — {@code MessageStatusIDX} traegt den Statusfilter (Messungen L5 und L6),
+   * und eine Funktion um die Spalte macht ihn unbrauchbar. {@link Locale#ROOT}, damit die
+   * Umwandlung nicht an der Systemsprache haengt: Im tuerkischen Gebietsschema wird aus {@code i}
+   * ein {@code İ}, und {@code FINISHED} traefe seinen eigenen Eintrag nicht mehr.
    */
   public MessageStatusKind einordnung(String status) {
     if (status == null) {
       return MessageStatusKind.UNGEKLAERT;
     }
-    MessageStatusKind bekannt = BEKANNT.get(status);
+    String hochgestellt = status.toUpperCase(Locale.ROOT);
+    MessageStatusKind bekannt = BEKANNT.get(hochgestellt);
     if (bekannt != null) {
       return bekannt;
     }
-    return status.startsWith(FEHLER_PRAEFIX)
+    return hochgestellt.startsWith(FEHLER_PRAEFIX)
         ? MessageStatusKind.FEHLER
         : MessageStatusKind.UNGEKLAERT;
   }
@@ -253,12 +269,11 @@ public class MessageStatusClassifier {
    *   <li>Alle uebrigen sind geschlossene Mengen und werden aufgezaehlt.
    * </ul>
    *
-   * <p><b>Die eine bekannte Unschaerfe:</b> Die Sortierung des Quellschemas ist {@code
-   * utf8mb4_general_ci}, der Vergleich in SQL also gross-/kleinschreibungsunabhaengig, {@link
-   * String#startsWith} dagegen nicht. Ein Wert {@code error_x} wuerde in SQL als Fehler gefunden
-   * und in Java als ungeklaert beschriftet. Alle zwoelf vorkommenden Werte sind durchgehend gross
-   * geschrieben, und {@code DatenzugriffDbIT} wird rot, sobald ein dreizehnter auftaucht — deshalb
-   * bleibt es bei der Indexnutzung statt eines {@code UPPER()}, das jeden Indexbereich kostete.
+   * <p><b>Schreibweise: erledigt am 06.08.2026.</b> Die Sortierung des Quellschemas ist {@code
+   * utf8mb4_general_ci}, der Vergleich hier also gross-/kleinschreibungsunabhaengig. Angeglichen
+   * wird in Java — {@link #einordnung(String)} stellt den Rohwert vor jedem Vergleich hoch —, nicht
+   * durch ein {@code UPPER()} in dieser Bedingung: Das kostete jeden Indexbereich auf {@code
+   * MessageStatusIDX}, den die Messungen L5 und L6 als Treiber des Statusfilters ausweisen.
    */
   public Condition bedingung(MessageStatusKind einordnung, Field<String> messageStatus) {
     return switch (einordnung) {
