@@ -87,6 +87,34 @@ export function zeitfenstermodus(zustand: Zeitfensterzustand): Zeitfenstermodus 
   return zustand.zeitraum !== null ? "vorwahl" : "offen";
 }
 
+/**
+ * Der Modus, den die Oberfläche **zeigt** — er kann einen Schritt vor dem der URL
+ * liegen.
+ *
+ * „Frei gewählt, aber noch nichts eingetragen" lässt sich in der URL nicht
+ * ausdrücken: Ein freies Fenster ohne beide Zeitpunkte ist von „keine Auswahl"
+ * nicht zu unterscheiden, beides ist `zeitraum=null, von=null, bis=null`. Und es
+ * *soll* sich nicht ausdrücken lassen — der freie Modus beginnt bewusst leer (ein
+ * vorbelegtes Fenster wäre ein zweiter Standardwert), und ein leeres freies
+ * Fenster zeigt denselben Ausschnitt wie gar keine Auswahl. In der URL steht,
+ * was man sieht; hier geht es darum, was der Nutzer gerade ausfüllt.
+ *
+ * Ohne diese Unterscheidung ist der freie Modus über die Oberfläche **gar nicht
+ * erreichbar**: Der Klick auf „Frei" schriebe einen Zustand, der sich vom
+ * vorherigen nicht unterscheidet, die Eingabefelder erschienen nie, und nur eine
+ * von Hand gebaute URL käme noch in den Modus. Aufgefallen in der Sichtprüfung
+ * am 06.08.2026.
+ *
+ * @param freiGewaehlt Komponentenzustand: Hat der Nutzer „Frei" gedrückt?
+ */
+export function angezeigterModus(
+  zustand: Zeitfensterzustand,
+  freiGewaehlt: boolean,
+): Zeitfenstermodus {
+  const ausDerUrl = zeitfenstermodus(zustand);
+  return ausDerUrl === "offen" && freiGewaehlt ? "frei" : ausDerUrl;
+}
+
 /** Eine Vorwahl schlägt ein freies Fenster — beide zugleich wären `400`. */
 export function mitVorwahl(zeitraum: Zeitraum): Zeitfensterzustand {
   return { zeitraum, von: null, bis: null };

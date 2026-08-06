@@ -591,6 +591,17 @@ löscht `von`/`bis`, ein freies Fenster löscht `zeitraum`. Das Backend lehnte d
 `zeitfenster-mehrdeutig` ab, und ein Nutzer, der über eine Schaltfläche in einen Fehlerzustand
 gerät, hat keine Möglichkeit, ihn zu verstehen.
 
+> **„Frei gewählt, aber noch nichts eingetragen" steht nicht in der URL** — und das ist keine
+> Nachlässigkeit, sondern der Grund für eine eigene Funktion. Ein freies Fenster ohne beide
+> Zeitpunkte ist dort von „keine Auswahl" nicht zu unterscheiden: beides ist `zeitraum=null,
+> von=null, bis=null`. Es soll auch nicht unterscheidbar sein, denn beides zeigt denselben
+> Ausschnitt, und der freie Modus beginnt bewusst leer (ein vorbelegtes Fenster wäre der zweite
+> Standardwert). Der Zwischenzustand liegt deshalb im Komponentenzustand; `lib/filter.ts`
+> `angezeigterModus` macht die Regel prüfbar. **Ohne sie ist der freie Modus über die Oberfläche
+> gar nicht erreichbar** — der Klick schreibt einen Zustand, der sich vom vorherigen nicht
+> unterscheidet, die Eingabefelder erscheinen nie, und nur eine von Hand gebaute URL kommt noch
+> hinein. Gefunden in der Sichtprüfung am 06.08.2026.
+
 **Kein Standardwert im Frontend.** Fehlt das Zeitfenster, setzt das Backend die 24 Stunden aus Regel
 L1. Ohne Auswahl ist deshalb **keine** Vorwahl gedrückt; daneben steht der Hinweis „Ohne Auswahl
 gilt das Standardfenster des Servers" — bewusst **ohne Zahl**, denn eine Zahl hier wäre der zweite

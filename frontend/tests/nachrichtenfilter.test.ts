@@ -8,7 +8,13 @@ import {
   suchfeldFehler,
   type Nachrichtenfilter,
 } from "@/features/nachrichten/filter";
-import { mitFreiemFenster, mitVorwahl, zeitfenstermodus } from "@/lib/filter";
+import {
+  angezeigterModus,
+  mitFreiemFenster,
+  mitVorwahl,
+  ohneZeitfenster,
+  zeitfenstermodus,
+} from "@/lib/filter";
 import { ProblemFehler } from "@/lib/http";
 
 /**
@@ -307,6 +313,33 @@ describe("Die beiden Zeitfenstermodi schließen einander aus", () => {
    * Oberfläche übersetzt den Typ. Zwei Stellen mit derselben Prüfung driften
    * auseinander — und die im Browser ist die, auf die kein Verlass ist.
    */
+  /**
+   * **Der freie Modus muss erreichbar bleiben.** Ein freies Fenster ohne beide
+   * Zeitpunkte ist in der URL nicht von „keine Auswahl" zu unterscheiden — beides
+   * ist `zeitraum=null, von=null, bis=null`. Leitete die Oberfläche ihren Modus
+   * allein daraus ab, täte der Klick auf „Frei" sichtbar nichts: Die
+   * Eingabefelder erschienen nie, und nur eine von Hand gebaute URL käme noch in
+   * den Modus. Genau das war bis zum 06.08.2026 der Fall.
+   */
+  it("zeigt den freien Modus auch, solange kein Zeitpunkt eingetragen ist", () => {
+    const leer = ohneZeitfenster();
+
+    expect(zeitfenstermodus(leer)).toBe("offen");
+    expect(angezeigterModus(leer, false)).toBe("offen");
+    expect(angezeigterModus(leer, true)).toBe("frei");
+  });
+
+  it("lässt die URL gewinnen, sobald sie etwas sagt", () => {
+    // Ein gesetztes Fenster ist ohnehin „frei" — der Komponentenzustand ändert
+    // daran nichts.
+    const frei = mitFreiemFenster(new Date("2025-12-29T00:00:00Z"), null);
+    expect(angezeigterModus(frei, false)).toBe("frei");
+
+    // Und eine Vorwahl schlägt einen stehengebliebenen Komponentenzustand:
+    // Sonst zeigte die Leiste „Frei" und filterte nach sieben Tagen.
+    expect(angezeigterModus(mitVorwahl("7d"), true)).toBe("vorwahl");
+  });
+
   it("hält ein halbes Fenster nicht zurück", () => {
     const abfrage = alsAbfrage({
       ...LEER,

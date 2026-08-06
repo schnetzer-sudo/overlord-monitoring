@@ -13,7 +13,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { einsetzen } from "@/i18n";
 import { useTexte } from "@/i18n/provider";
 import { fehleranzeige } from "@/lib/fehlertext";
-import { zeitfenstermodus, ZEITRAEUME, type Zeitraum } from "@/lib/filter";
+import { angezeigterModus, ZEITRAEUME, type Zeitraum } from "@/lib/filter";
 import { wanduhrzeitFuerEingabe, zeitpunktAusWanduhrzeit } from "@/lib/format";
 import { ProblemFehler } from "@/lib/http";
 
@@ -109,7 +109,16 @@ function Zeitfensterwahl({
 }) {
   const texte = useTexte();
   const zone = useAnzeigezone();
-  const modus = zeitfenstermodus(filter);
+  /*
+   * „Frei gedrückt, aber noch nichts eingetragen" steht bewusst nicht in der URL
+   * — es ist derselbe Ausschnitt wie gar keine Auswahl. Ohne diesen
+   * Komponentenzustand wäre der freie Modus über die Oberfläche aber gar nicht
+   * erreichbar: Der Klick schriebe einen Zustand, der sich vom vorherigen nicht
+   * unterscheidet, und die Eingabefelder erschienen nie. Begründung in
+   * `lib/filter.ts`, {@link angezeigterModus}.
+   */
+  const [freiGewaehlt, setFreiGewaehlt] = useState(false);
+  const modus = angezeigterModus(filter, freiGewaehlt);
   const vonId = useId();
   const bisId = useId();
 
@@ -127,11 +136,13 @@ function Zeitfensterwahl({
         aria-label={texte.nachrichten.zeitfenster.bezeichnung}
         value={modus === "frei" ? "frei" : (filter.zeitraum ?? "")}
         onValueChange={(wert) => {
+          setFreiGewaehlt(wert === "frei");
           if (wert === "") {
             steuerung.setzeZeitfensterZurueck();
           } else if (wert === "frei") {
             // Der freie Modus beginnt leer: Ein vorbelegtes Fenster wäre wieder
-            // ein zweiter Standardwert.
+            // ein zweiter Standardwert. Sichtbar wird die Wahl über
+            // `freiGewaehlt`, nicht über die URL.
             steuerung.setzeFreiesFenster(null, null);
           } else {
             steuerung.setzeZeitraum(wert as Zeitraum);
