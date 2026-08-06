@@ -10,6 +10,12 @@ Erhebung gegen die **Testkopie** am 01.08.2026, vor dem Bau der Nachrichtenliste
 > eine Frage aus dieser Liste und ziehen die Schlussfolgerung **ausdrücklich** — beide entscheiden,
 > wie der Code rechnet, und blieben sonst offen. Wo eine Frage damit erledigt ist, steht das unten
 > an der Frage.
+>
+> **M11 bis M13 sind ebenfalls anders** (nachgetragen am 06.08.2026, Nachbesserung zu Schritt 4).
+> Auch sie sind vor dem Bau erhoben worden und entscheiden je eine Frage der Oberfläche: M11 ist
+> Vorarbeit für die BAM-Suche in Schritt 7, M12 entscheidet, ob der Zwischenschritte-Schalter
+> datengetrieben wird, und **M13 entscheidet, ob der aktuelle Schritt überhaupt anzeigbar ist**. Ihre
+> Schlussfolgerungen stehen ausdrücklich dabei.
 
 ---
 
@@ -1603,6 +1609,445 @@ GROUP BY pm.MandantID ORDER BY prozesse DESC;
 
 ---
 
+## M11 — Wie oft ist welcher BAM-Typ überhaupt befüllt?
+
+Erhoben am **06.08.2026** (Nachbesserung zu Schritt 4, Aufgabe 1). **Vorarbeit für Schritt 7**, nicht
+für die Liste: Die BAM-Spalten verlassen die Nachrichtenliste ohnehin. Die BAM-Suche muss aber
+wissen, welche Felder sie anbieten sollte und welche leer sind.
+
+Anlass ist ein sichtbarer Fehlgriff der Kuratierung. `V4__bam_spalte.sql` setzt für `NEXANS` die
+Typen **9006** („Lieferschein-Nr._L_SAP") und **9001** („Abrufnummer_L_SAP"). Auf dem Bild des
+Auftraggebers war die erste Spalte auf jeder sichtbaren Zeile leer, und die zweite lieferte
+Dutzende laufender Positionsnummern je Nachricht. Diese Messung sagt, wie systematisch das ist.
+
+### Statement
+
+Der Zugriff läuft ausschließlich über **`MessageID`** (Regeln L4/L5) — nie über `MessageBAMValue`.
+Die Bezugsmenge wird über das Zeitfenster vorgewählt, `MessageBAM` hängt als `ref` über das Präfix
+seines Primärschlüssels daran.
+
+```sql
+SELECT bm.MessageBAMType, bt.MessageBAMTypeDescription,
+       COALESCE(g.nachrichten, 0) AS nachrichten_mit_wert,
+       ROUND(100 * COALESCE(g.nachrichten, 0) / 180251, 2) AS abdeckung_prozent,
+       COALESCE(g.werte, 0) AS werte_gesamt,
+       ROUND(g.schnitt, 2) AS werte_je_nachricht, g.groesste AS meiste_werte_einer_nachricht
+FROM MessageBAMMandant bm
+LEFT JOIN MessageBAMType bt ON bt.MessageBAMType = bm.MessageBAMType
+LEFT JOIN (
+    SELECT je.MessageBAMType, COUNT(*) AS nachrichten, SUM(je.anzahl) AS werte,
+           AVG(je.anzahl) AS schnitt, MAX(je.anzahl) AS groesste
+    FROM (
+        SELECT b.MessageBAMType, b.MessageID, COUNT(*) AS anzahl
+        FROM Message m
+        JOIN MessageBAM b ON b.MessageID = m.MessageID
+        WHERE m.MessageLastUpdate >= '2025-11-30 00:00:00'
+          AND m.MessageLastUpdate <  '2025-12-30 00:00:00'
+          AND EXISTS (SELECT 1 FROM Process p
+                      JOIN ProjectMandant pm ON pm.ProjectID = p.ProjectID
+                      WHERE p.ProcessID = m.ProcessID AND pm.MandantID = 'NEXANS')
+        GROUP BY b.MessageBAMType, b.MessageID
+    ) je
+    GROUP BY je.MessageBAMType
+) g ON g.MessageBAMType = bm.MessageBAMType
+WHERE bm.MandantID = 'NEXANS'
+ORDER BY nachrichten_mit_wert DESC, bm.MessageBAMType;
+```
+
+**Die Bezugsmenge:** `NEXANS` hat im Fenster `2025-11-30` bis `2025-12-30` genau **180.251**
+Nachrichten (eigene Abfrage, beste von zwei: **683 ms**). Alle Prozentwerte unten beziehen sich
+darauf.
+
+### EXPLAIN (des inneren Teils, ohne die Hüllen)
+
+| id | select_type | table | type | key | key_len | ref | rows | Extra |
+|---|---|---|---|---|---|---|---|---|
+| 1 | PRIMARY | `m` | `range` | `MessageLastUpdateProcessMessageIDX` | 5 | NULL | 476.586 | `Using where; Using index; Using temporary; Using filesort` |
+| 1 | PRIMARY | `p` | `eq_ref` | `PRIMARY` | 146 | `m.ProcessID` | 1 | `Using where` |
+| 1 | PRIMARY | `pm` | `eq_ref` | `PRIMARY` | 292 | `p.ProjectID`, `const` | 1 | `Using where; Using index` |
+| 1 | PRIMARY | `b` | **`ref`** | **`PRIMARY`** | 146 | `m.MessageID` | 8 | **`Using index`** |
+
+`MessageBAM` wird über das Präfix seines Primärschlüssels angefahren und ist `Using index` — es wird
+keine Zeile nachgeschlagen. Derselbe Zugriffspfad wie bei der Nachladung der Liste (L9/L10).
+
+### Ergebnis — alle 40 konfigurierten Typen
+
+| Typ | Beschreibung | Nachrichten mit Wert | Abdeckung | Werte gesamt | Ø je Nachricht | meiste einer Nachricht |
+|---|---|---|---|---|---|---|
+| 9018 | Kundenmaterialnummer_K_SAP | 29.284 | **16,25 %** | 143.213 | 4,89 | 3.035 |
+| 9015 | Kundenwerk_K_SAP | 29.268 | **16,24 %** | 29.659 | 1,01 | 8 |
+| 9014 | Lieferantennummer beim Kunden_K_SAP | 29.249 | **16,23 %** | 29.292 | 1,00 | 2 |
+| 9020 | Lieferschein, Entnahme , PUS_K_SAP | 27.302 | **15,15 %** | 76.512 | 2,80 | 3.773 |
+| 9016 | Abladestelle_K_SAP | 26.460 | **14,68 %** | 27.753 | 1,05 | 15 |
+| 9019 | Bestellnummer vom Kunden_K_SAP | 15.615 | 8,66 % | 110.707 | 7,09 | 3.035 |
+| 9032 | Sendercode_K_SAP | 14.864 | 8,25 % | 14.864 | 1,00 | 1 |
+| 9033 | Empfaengercode_K_SAP | 14.864 | 8,25 % | 14.864 | 1,00 | 1 |
+| 9017 | (JIT-) Abrufnummer_K_SAP | 13.147 | 7,29 % | 39.412 | 3,00 | 571 |
+| 9022 | Gutschriftsanzeigen-Nummer_K_SAP | 12.960 | 7,19 % | 14.496 | 1,12 | 500 |
+| 9023 | Übertragungsnummer Gutschrift_K_SAP | 12.960 | 7,19 % | 12.966 | 1,00 | 4 |
+| 9003 | Material-Nr. beim Lieferanten_L_SAP | 7.929 | 4,40 % | 55.833 | 7,04 | 642 |
+| 9004 | Unsere Material-Nr._L_SAP | 7.923 | 4,40 % | 55.697 | 7,03 | 642 |
+| 9005 | Werk_L_SAP | 7.801 | 4,33 % | 8.246 | 1,06 | 5 |
+| 9000 | Abladestelle_L_SAP | 7.180 | 3,98 % | 7.764 | 1,08 | 6 |
+| 9002 | Lieferplannummer_L_SAP | 5.964 | 3,31 % | 41.333 | 6,93 | 749 |
+| **9001** | **Abrufnummer_L_SAP** | 5.459 | **3,03 %** | 24.136 | **4,42** | **238** |
+| 9021 | Transportnummer_K_SAP | 2.454 | 1,36 % | 2.454 | 1,00 | 1 |
+| **9006** | **Lieferschein-Nr._L_SAP** | 1.933 | **1,07 %** | 7.057 | 3,65 | 173 |
+| 9007 | Transport-Nummer_L_SAP | 1.490 | 0,83 % | 1.727 | 1,16 | 32 |
+| 9039 | Daten-Sender-Nummer_L_SAP | 1.432 | 0,79 % | 1.443 | 1,01 | 2 |
+| 9034 | Bestellnummer_L_SAP | 1.251 | 0,69 % | 6.092 | 4,87 | 152 |
+| 9037 | Packmittelnummer Kunde_L_SAP | 1.227 | 0,68 % | 1.846 | 1,50 | 12 |
+| 9038 | Packmittelnummer Lieferant_L_SAP | 1.156 | 0,64 % | 2.639 | 2,28 | 31 |
+| 9036 | Lagerort Kunde_L_SAP | 932 | 0,52 % | 953 | 1,02 | 3 |
+| 9009 | Beleg-Nr. GS_L_SAP | 739 | 0,41 % | 739 | 1,00 | 1 |
+| 9010 | Materialbeleg (Entnahme)_L_SAP | 739 | 0,41 % | 1.151 | 1,56 | 55 |
+| 9024 | Rechnungsnummer_K_SAP | 433 | 0,24 % | 988 | 2,28 | 78 |
+| 9012 | Charge_L_SAP | 292 | 0,16 % | 767 | 2,63 | 51 |
+| 9008 | Beleg-Nr.  TSL _L_SAP | 234 | 0,13 % | 234 | 1,00 | 1 |
+| 9013 | Nr. TSL_L_SAP | 234 | 0,13 % | 234 | 1,00 | 1 |
+| 9011 | Anlieferungs-Nr. ae_L_SAP | 58 | 0,03 % | 58 | 1,00 | 1 |
+| 9025 | Abladestelle_FORS | 10 | 0,01 % | 20 | 2,00 | 2 |
+| 9027 | Bestellnummer_FORS | 10 | 0,01 % | 15.790 | **1.579,00** | 3.035 |
+| 9028 | Material-Nr. beim Kunden_FORS | 10 | 0,01 % | 15.790 | **1.579,00** | 3.035 |
+| 9029 | Material-Nr.beim Lieferanten_FORS | 10 | 0,01 % | 15.790 | **1.579,00** | 3.035 |
+| 9030 | Sender_Ident_FORS | 10 | 0,01 % | 10 | 1,00 | 1 |
+| 9031 | Empf_Ident_FORS | 10 | 0,01 % | 10 | 1,00 | 1 |
+| **9026** | **LS/RE-Nummer_FORS** | **0** | **0,00 %** | 0 | — | — |
+| **9035** | **Werk Kunde_L_SAP** | **0** | **0,00 %** | 0 | — | — |
+
+**Laufzeit:** Aufwärmlauf 12,951 s, beste von drei **12,689 s** (13,147 · 12,689 · 12,697 s). Ohne
+die Spalten „Ø" und „meiste" — also ohne die innere Gruppierung je Nachricht — kostet dieselbe
+Auswertung **5,294 s**.
+
+### Antworten auf die Fragen der Aufgabenstellung
+
+- **Die fünf Typen mit der höchsten Abdeckung** sind 9018, 9015, 9014, 9020 und 9016 — sämtlich aus
+  der Gruppe `_K_SAP`, zwischen 14,68 % und 16,25 %.
+- **Zwei Typen sind über den ganzen Monat kein einziges Mal befüllt:** 9026 („LS/RE-Nummer_FORS") und
+  9035 („Werk Kunde_L_SAP"). Beide sind konfiguriert, beide tragen nichts.
+- **Kein Typ erreicht auch nur ein Fünftel der Nachrichten.** Der beste kommt auf 16,25 %. Eine
+  BAM-Spalte, die *immer* etwas zeigt, gibt es bei `NEXANS` nicht — das ist keine Frage der Auswahl,
+  sondern der Datenlage.
+
+### Was das für Schritt 7 heißt
+
+Drei Befunde, alle drei ohne Entscheidung — die fällt in Schritt 7:
+
+1. **Die kuratierte Auswahl greift daneben, und die Messung sagt um wie viel.** 9006 ist auf
+   **98,93 %** aller Zeilen leer, 9001 auf **96,97 %**. Der Auftraggeber hat also nicht eine
+   unglückliche Seite erwischt, sondern den Normalfall gesehen. Die zwei bestbelegten Typen (9018,
+   9015) lägen um den Faktor 15 beziehungsweise 5 darüber — auch sie ließen vier von fünf Zeilen
+   leer.
+2. **Die Zahl der Werte je Nachricht ist der zweite Fallstrick, und er ist größer als der erste.**
+   9001 trägt im Schnitt 4,42 Werte, im Höchstfall **238**. Bei 9027, 9028 und 9029 stehen auf zehn
+   Nachrichten je 15.790 Werte — **1.579 im Schnitt, bis zu 3.035 auf einer einzigen Nachricht**.
+   Ein Suchfeld über solche Typen liefert keine Belegnummer, sondern eine Positionsliste. Die
+   Deckelung aus Regel L5 ist damit nicht Vorsicht, sondern Voraussetzung.
+3. **Die Gruppen `_L_SAP`, `_K_SAP` und `_FORS` verhalten sich völlig verschieden.** `_K_SAP` trägt
+   die Masse, `_L_SAP` liegt eine Größenordnung darunter, `_FORS` ist mit zehn Nachrichten praktisch
+   leer. Der Sortierindex, den die Auflösungsregel benutzt, ordnet genau nach diesen Gruppen
+   ([`datenzugriff.md`](datenzugriff.md) §5) — und stellt dabei die schwächste Gruppe nach vorn.
+
+---
+
+## M12 — Zwischenschritte je Mandant
+
+Erhoben am **06.08.2026**. Frage: Kommen `SPLITTED` und `MERGED` bei **jedem** Mandanten vor, oder
+kündigt der Ausblenden-Schalter der Liste bei manchen eine Ausblendung an, die nichts ausblendet?
+
+### Statement
+
+Wie M3 als Join und nicht als `EXISTS`: In den Daten ist `ProjectMandant` durchgängig 1:1 (M3), der
+Join vervielfacht also nichts, und die Summe je Mandant ergibt wieder den Gesamtbestand.
+
+```sql
+SELECT pm.MandantID, COUNT(*) AS nachrichten,
+       SUM(m.MessageStatus IN ('SPLITTED','MERGED')) AS zwischenschritte,
+       SUM(m.MessageStatus = 'SPLITTED') AS splitted,
+       SUM(m.MessageStatus = 'MERGED')   AS merged,
+       ROUND(100 * SUM(m.MessageStatus IN ('SPLITTED','MERGED')) / COUNT(*), 3) AS anteil_prozent
+FROM Message m
+JOIN Process p         ON p.ProcessID  = m.ProcessID
+JOIN ProjectMandant pm ON pm.ProjectID = p.ProjectID
+GROUP BY pm.MandantID ORDER BY nachrichten DESC;
+```
+
+Variante (b) mit `WHERE m.MessageLastUpdate >= '2025-11-30' AND < '2025-12-30'` — die letzten
+30 Tage des dichten Zeitraums, dasselbe Fenster wie M11.
+
+**EXPLAIN (a):** `m` `ALL` (3.560.486), `p` `eq_ref` `PRIMARY`, `pm` `ref` `PRIMARY`,
+`Using temporary; Using filesort`.
+**EXPLAIN (b):** `m` `range` über `MessageLastUpdateIDX` (`key_len` 5, 409.756 geschätzt), sonst
+gleich.
+
+### Ergebnis (a) — Gesamtbestand
+
+| `MandantID` | Nachrichten | Zwischenschritte | `SPLITTED` | `MERGED` | Anteil |
+|---|---|---|---|---|---|
+| `NEXANS` | 2.885.711 | 1.142.684 | 394.803 | 747.881 | **39,598 %** |
+| `SUTTONS` | 197.158 | 6.002 | 6.002 | 0 | **3,044 %** |
+| `VOTG` | 145.840 | 40 | 40 | 0 | **0,027 %** |
+| `IBIS` | 75.746 | **0** | 0 | 0 | 0 % |
+| `IBISGUS` | 29.339 | **0** | 0 | 0 | 0 % |
+| `ZAST` | 5.036 | **0** | 0 | 0 | 0 % |
+| `WOC` | 2.529 | **0** | 0 | 0 | 0 % |
+| `SYSTEM` | 151 | **0** | 0 | 0 | 0 % |
+| `NXHBE` | 9 | 4 | 0 | 4 | 44,444 % |
+
+`EDITIONLINGERI` erscheint nicht — der Mandant hat überhaupt keine Nachricht (bekannt aus M3).
+
+**Laufzeit:** Aufwärmlauf 32,729 s, beste von drei **32,677 s** (32,706 · 32,677 · 32,768 s).
+
+### Ergebnis (b) — 2025-11-30 bis 2025-12-30
+
+| `MandantID` | Nachrichten | Zwischenschritte | `SPLITTED` | `MERGED` | Anteil |
+|---|---|---|---|---|---|
+| `NEXANS` | 180.251 | 66.133 | 27.505 | 38.628 | **36,689 %** |
+| `SUTTONS` | 21.516 | 639 | 639 | 0 | **2,970 %** |
+| `VOTG` | 6.104 | **0** | 0 | 0 | 0 % |
+| `IBIS` | 4.331 | **0** | 0 | 0 | 0 % |
+| `IBISGUS` | 1.722 | **0** | 0 | 0 | 0 % |
+| `ZAST` | 283 | **0** | 0 | 0 | 0 % |
+| `WOC` | 118 | **0** | 0 | 0 | 0 % |
+| `SYSTEM` | 5 | **0** | 0 | 0 | 0 % |
+
+`NXHBE` fehlt: Seine neun Nachrichten stammen alle vom `2025-05-19` (M3).
+
+**Laufzeit:** Aufwärmlauf 3,345 s, beste von drei **3,219 s** (3,259 · 3,280 · 3,219 s).
+
+### Was die Zahlen zeigen
+
+**Die 34,38 Prozent aus M6 sind ein Durchschnitt über einen einzigen Mandanten.** `NEXANS` stellt 86
+Prozent des Bestands, und dort sind es 39,6 Prozent. Bei allen anderen ist der Anteil eine ganz
+andere Größenordnung — oder null.
+
+**Fünf von neun Mandanten mit Nachrichten haben über den gesamten Bestand nicht eine einzige
+Zwischenschritt-Zeile:** `IBIS`, `IBISGUS`, `ZAST`, `WOC` und `SYSTEM`. Zusammen sind das 112.801
+Nachrichten. Für sie kündigt der Chip der Liste heute etwas an, das es nicht gibt.
+
+**`VOTG` ist der Grenzfall, und er entscheidet die Form des Kriteriums.** 40 Zeilen von 145.840 sind
+0,027 Prozent — im dichten Monat null. Ein Kriterium, das *das Zeitfenster* betrachtet, schaltete
+den Chip bei `VOTG` je nach gewähltem Zeitraum an und aus; ein Nutzer sähe ein Bedienelement
+erscheinen und verschwinden, ohne einen Zusammenhang zu erkennen. **Ein Kriterium über den
+Gesamtbestand ist an dieser Stelle das ruhigere** — und es ist zugleich das billigere, weil es zu
+den Stammdaten des Mandanten gehört und nicht in die Antwort jeder Seite.
+
+**`SPLITTED` und `MERGED` treten nicht gemeinsam auf.** Außer bei `NEXANS` gibt es entweder nur
+`SPLITTED` (`SUTTONS`, `VOTG`) oder nur `MERGED` (`NXHBE`). Für die Oberfläche ändert das nichts —
+der Chip spricht von „Zwischenschritten" und nennt keinen Rohwert.
+
+---
+
+## M13 — Trägt `SOSActionID` einen lesbaren Namen?
+
+Erhoben am **06.08.2026**. Von dieser Messung hing ab, ob der aktuelle Schritt bei offenen
+Nachrichten überhaupt anzeigbar ist.
+
+### Zuerst: `SOSAction` in `information_schema` — M1 hat diese Tabelle nicht erfasst
+
+```sql
+SELECT TABLE_NAME, ORDINAL_POSITION, COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_KEY
+FROM information_schema.COLUMNS
+WHERE TABLE_SCHEMA = 'GlassfishDB' AND TABLE_NAME = 'SOSAction' ORDER BY ORDINAL_POSITION;
+```
+
+| # | Spalte | Typ | NULL | Schlüssel |
+|---|---|---|---|---|
+| 1 | `SOSID` | `varchar(36)` | NO | **PRI** |
+| 2 | `SOSActionID` | `smallint(6)` | NO | **PRI** |
+| 3 | `SOSActionName` | `varchar(255)` | YES | |
+| 4 | `ServiceID` | `varchar(36)` | YES | MUL |
+| 5 | `SOSActionServiceProperties` | `mediumtext` | YES | |
+| 6 | `SOSActionTimeout` | `smallint(6)` | YES | |
+
+| Index | Spalten (in Reihenfolge) | eindeutig | Kardinalität |
+|---|---|---|---|
+| `PRIMARY` | **`SOSID`, `SOSActionID`** | ja | 4.232 |
+| `SOSAction_ServiceFK` | `ServiceID` | nein | 24 |
+| `SOSAction_SOSFK` | `SOSID` | nein | 4.232 |
+
+`SOSAction` hat **3.944** Zeilen (1,5 MB Daten, 0,6 MB Index; `information_schema` schätzt 4.232 —
+dieselbe Veralterung wie in Auffälligkeit G). Laufzeiten der drei Metadaten-Abfragen: 2,7 · 0,8 ·
+0,7 ms, `COUNT(*)` 2,8 ms.
+
+> ⚠️ **Der Primärschlüssel ist zusammengesetzt.** `Message.SOSActionID` allein identifiziert
+> **keine** `SOSAction`-Zeile — der Schritt wird erst zusammen mit `Message.SOSID` eindeutig. Ein
+> Join über `SOSActionID` allein wäre kein Zugriffspfad, sondern ein Kreuzprodukt: Die Kennung `2`
+> gibt es 694-mal. Jede Auswertung unten joint deshalb über **beide** Spalten.
+
+Ein Ablauf hat ein bis sechs Schritte: 442 Abläufe mit einem, 694 mit zwei, 480 mit drei, 134 mit
+vier, 24 mit fünf, 3 mit sechs.
+
+### (1) Auf wie vielen Nachrichten ist `SOSActionID` gesetzt?
+
+```sql
+SELECT COALESCE(m.MessageStatus, '<NULL>') AS status, COUNT(*) AS nachrichten,
+       SUM(m.SOSActionID IS NOT NULL) AS mit_sosactionid,
+       SUM(m.SOSActionID IS NULL)     AS ohne_sosactionid,
+       SUM(m.SOSActionID = 0)         AS sosactionid_null_wert,
+       MIN(m.SOSActionID) AS kleinste, MAX(m.SOSActionID) AS groesste
+FROM Message m GROUP BY COALESCE(m.MessageStatus, '<NULL>') ORDER BY nachrichten DESC;
+```
+
+| Rohstatus | Einordnung | Nachrichten | mit `SOSActionID` | ohne | davon `= 0` | kleinste | größte |
+|---|---|---|---|---|---|---|---|
+| `FINISHED` | `ABGESCHLOSSEN` | 2.030.986 | 2.030.986 | **0** | 519 | 0 | 30 |
+| `MERGED` | `ZWISCHENSCHRITT` | 747.885 | 747.885 | **0** | 0 | 1 | 2 |
+| `SPLITTED` | `ZWISCHENSCHRITT` | 400.845 | 400.845 | **0** | 0 | 1 | 10 |
+| `EERP_RECEIVED` | `QUITTIERT` | 143.871 | 143.871 | **0** | 0 | 1 | 10 |
+| `COMMIT_RECEIVED` | `QUITTIERT` | 12.654 | 12.654 | **0** | 0 | 2 | 3 |
+| `ERROR_DUPLICATE` | `FEHLER` | 3.248 | 3.248 | **0** | 0 | 1 | 1 |
+| `COMMIT_SENT` | `UNGEKLAERT` | 1.051 | 1.051 | **0** | 0 | 2 | 2 |
+| **`SUSPENDED`** | **`WARTEND`** | **538** | **538** | **0** | 0 | 2 | 2 |
+| `CHECKED` | `UNGEKLAERT` | 276 | 276 | **0** | 50 | 0 | 3 |
+| `COMMIT_REJECTED` | `FEHLER` | 111 | 111 | **0** | 0 | 1 | 2 |
+| `ERROR_TIMEOUT` | `FEHLER` | 52 | 52 | **0** | 0 | 1 | 3 |
+| `CKECKED` | `UNGEKLAERT` | 2 | 2 | **0** | 0 | 1 | 1 |
+| **`RUNNING`** | **`LAEUFT`** | **0** | — | — | — | — | — |
+
+**`SOSActionID` ist auf jeder einzelnen der 3.341.519 Zeilen gesetzt** — kein `NULL`, bei keinem
+Status. Der Wert `0` kommt 569-mal vor, ausschließlich bei `FINISHED` und `CHECKED`.
+
+**Laufzeit:** Aufwärmlauf 8,105 s, beste von drei **8,112 s** (8,112 · 8,131 · 8,116 s).
+
+### (2) Führt der Verweis zu einer `SOSAction`-Zeile?
+
+```sql
+SELECT COUNT(*) AS gesetzt, SUM(a.SOSID IS NULL) AS verwaist
+FROM Message m
+LEFT JOIN SOSAction a ON a.SOSID = m.SOSID AND a.SOSActionID = m.SOSActionID
+WHERE m.SOSActionID IS NOT NULL;
+```
+
+| gesetzt | verwaist |
+|---|---|
+| 3.341.519 | **1.467.042 (43,90 %)** |
+
+**Laufzeit:** Aufwärmlauf 15,055 s, beste von drei **15,042 s**.
+
+Das ist zunächst ein alarmierender Wert — und die Aufschlüsselung nach Status entschärft ihn
+vollständig:
+
+```sql
+SELECT COALESCE(m.MessageStatus,'<NULL>') AS status, COUNT(*) AS nachrichten,
+       SUM(a.SOSID IS NULL) AS verwaist,
+       ROUND(100*SUM(a.SOSID IS NULL)/COUNT(*),2) AS verwaist_prozent
+FROM Message m
+LEFT JOIN SOSAction a ON a.SOSID = m.SOSID AND a.SOSActionID = m.SOSActionID
+GROUP BY COALESCE(m.MessageStatus,'<NULL>') ORDER BY nachrichten DESC;
+```
+
+| Rohstatus | Nachrichten | verwaist | Anteil |
+|---|---|---|---|
+| `FINISHED` | 2.030.986 | 1.466.973 | **72,23 %** |
+| `MERGED` | 747.885 | 0 | 0,00 % |
+| `SPLITTED` | 400.845 | 0 | 0,00 % |
+| `EERP_RECEIVED` | 143.871 | 17 | 0,01 % |
+| `COMMIT_RECEIVED` | 12.654 | 0 | 0,00 % |
+| `ERROR_DUPLICATE` | 3.248 | 0 | 0,00 % |
+| `COMMIT_SENT` | 1.051 | 0 | 0,00 % |
+| **`SUSPENDED`** | **538** | **0** | **0,00 %** |
+| `CHECKED` | 276 | 52 | 18,84 % |
+| `COMMIT_REJECTED` | 111 | 0 | 0,00 % |
+| `ERROR_TIMEOUT` | 52 | 0 | 0,00 % |
+| `CKECKED` | 2 | 0 | 0,00 % |
+
+**Laufzeit:** Aufwärmlauf 23,751 s, beste von drei **22,965 s**.
+
+**Die verwaisten Verweise liegen zu 99,995 Prozent bei `FINISHED`** — dem Status, bei dem der
+Schritt ohnehin nicht gezeigt wird. Was übrig bleibt, sind 17 `EERP_RECEIVED` und 52 `CHECKED`.
+**Bei den offenen Status ist die Verknüpfung lückenlos.**
+
+> **Als Vermutung zur Ursache, nicht als Befund:** Der Wert `SOSActionID = 0` und ein Verweis auf
+> einen Schritt, den es im heutigen Ablauf nicht mehr gibt, wären beide plausible Erklärungen für
+> eine abgeschlossene Nachricht. Geprüft wurde die Lücke, nicht ihre Herkunft — für die
+> Anzeigeentscheidung genügt, dass sie die offenen Zeilen nicht betrifft.
+
+### (3) Ist der Name lesbar?
+
+```sql
+SELECT COUNT(*) AS zeilen, SUM(SOSActionName IS NULL) AS name_null,
+       SUM(SOSActionName = '') AS name_leer,
+       COUNT(DISTINCT SOSActionName) AS verschiedene,
+       MIN(CHAR_LENGTH(SOSActionName)) AS kuerzester, MAX(CHAR_LENGTH(SOSActionName)) AS laengster
+FROM SOSAction;
+```
+
+| Zeilen | `NULL` | leer | verschiedene | kürzester | längster |
+|---|---|---|---|---|---|
+| 3.944 | **0** | **0** | 575 | 8 Zeichen | 61 Zeichen |
+
+Gestalt der Namen: **3.918 von 3.944 bestehen aus mehreren Wörtern**, 26 aus einem Wort ohne
+Leerzeichen. **Kein einziger Name besteht nur aus Ziffern.** Laufzeiten 7,4 und 35,7 ms.
+
+**Zehn Beispielwerte** — anonymisiert, weil in vielen Namen Kunden- und Partnernamen stehen
+(`<Kunde>` ersetzt einen solchen; die übrigen Bestandteile sind Nachrichtenarten des Altsystems und
+keine Kundendaten):
+
+| `SOSActionName` | Zeilen |
+|---|---|
+| `Send Message to Partner` | 478 |
+| `Format Conversion` | 460 |
+| `Split Multiple IDOC` | 333 |
+| `Merge files and wait` | 191 |
+| `Send Message to Pool` | 132 |
+| `Send File by Mail` | 126 |
+| `Conversion DELFOR02 to VDA4905` | 186 |
+| `Merge Invoice with attachments` | 111 |
+| `Transport XML Inhouse to <Kunde>` | 78 |
+| `Konvertierung nach §302` | 56 |
+
+In sehr vielen weiteren Namen steht ein Kundenname als Bestandteil (`Conversion <Kunde> ORDERS96A to
+XML Inhouse` und ähnlich, meist mit einstelliger Zeilenzahl je Name). Sie sind hier deshalb nicht
+einzeln abgedruckt.
+
+**Befund: Ja, `SOSAction` trägt einen für Menschen lesbaren Namen** — kein technischer Bezeichner,
+keine Nummer, keine Kennung. Die Sprache ist überwiegend Englisch mit deutschen Einsprengseln; das
+ist die Sprache des Quellsystems und wird nicht eingedeutscht (Richtlinie §2, Namenskonventionen).
+
+### (4) Die offenen Nachrichten im Einzelnen — der Fall, um den es geht
+
+```sql
+SELECT m.MessageStatus, m.SOSActionID,
+       COALESCE(a.SOSActionName, '<keine SOSAction-Zeile>') AS schritt, COUNT(*) AS nachrichten
+FROM Message m
+LEFT JOIN SOSAction a ON a.SOSID = m.SOSID AND a.SOSActionID = m.SOSActionID
+WHERE m.MessageStatus IN ('SUSPENDED','RUNNING')
+GROUP BY m.MessageStatus, m.SOSActionID, schritt ORDER BY nachrichten DESC;
+```
+
+| `MessageStatus` | `SOSActionID` | Schritt | Nachrichten |
+|---|---|---|---|
+| `SUSPENDED` | 2 | **`Send Message to Pool`** | **538** |
+
+**Eine einzige Zeile.** Alle 538 wartenden Nachrichten stehen auf demselben Schritt, alle lösen ihn
+auf, keine ist verwaist. `RUNNING` kommt wie dokumentiert null Mal vor.
+
+**Laufzeit:** Aufwärmlauf 38,0 ms, beste von fünf **4,57 ms** (11,20 · 6,53 · 4,66 · 4,57 · 4,72 ms).
+
+Zum Vergleich dieselbe Auswertung über die Fehlerzustände (`ERROR_DUPLICATE`, `ERROR_TIMEOUT`,
+`COMMIT_REJECTED`, 3.411 Zeilen, 79,0 ms) — dort verteilt sie sich auf sechs verschiedene Schritte,
+von `Konverter VDA4908 an GSVERF IDOC` (3.248) bis `Konverter DELFOR97A an DELFOR IDOC` (3). Auch
+diese lösen sämtlich auf.
+
+### Die Verzweigung der Aufgabenstellung, ausdrücklich
+
+> **`SOSAction` liefert einen lesbaren Namen. Aufgabe 6 wird umgesetzt.**
+
+Mit drei Einschränkungen, die in die Feature-Dokumentation gehören:
+
+1. **Gejoint wird über `(SOSID, SOSActionID)`**, nie über die Kennung allein — der Primärschlüssel
+   ist zusammengesetzt.
+2. **Der fehlende Schritt ist ein Normalfall, kein Fehler.** 43,9 Prozent aller Verweise laufen ins
+   Leere; bei den offenen Zeilen null Prozent. Die Anzeige zeigt den Schritt nur bei `WARTEND` und
+   `LAEUFT` und muss trotzdem mit `null` umgehen können — die Produktion muss sich nicht daran
+   halten, was die Testkopie zufällig enthält.
+3. **Lokal ist die Anzeige kaum prüfbar.** `RUNNING` kommt null Mal vor, `SUSPENDED` 538-mal und nur
+   bis zum `2025-12-29`; alle 538 tragen denselben Schritt. Was sich prüfen lässt, ist genau eine
+   Zeile mit einem Text — nicht die Vielfalt, die die Produktion zeigen wird.
+
+---
+
 ## Auffälligkeiten
 
 Was von der bestehenden Dokumentation abweicht. **Hier wird nichts entschieden und nichts
@@ -1815,9 +2260,30 @@ die beiden, die **M8** und **M9** ausdrücklich klären sollten; sie sind als er
     Gleichstand — `MessageBAMType`, die Beschreibung, oder etwas anderes?
 18. `ZAST` hat genau **einen** BAM-Typ, `EDITIONLINGERI`, `SYSTEM` und `WOC` haben **keinen**. Was
     zeigen die zwei BAM-Spalten dort — nichts, eine Spalte, oder einen Ersatz?
-19. Bei `NEXANS` weicht der Sortierindex in 18 von 40 Zeilen vom Typ ab und gruppiert nach
+19. ~~Bei `NEXANS` weicht der Sortierindex in 18 von 40 Zeilen vom Typ ab und gruppiert nach
     `_L_SAP` / `_K_SAP` / `_FORS`. Die beiden ersten Plätze wären damit „Abladestelle_L_SAP" und
-    „Abrufnummer_L_SAP". Ist das die fachlich gewollte Auswahl?
+    „Abrufnummer_L_SAP". Ist das die fachlich gewollte Auswahl?~~
+    **Beantwortet durch [M11](#m11--wie-oft-ist-welcher-bam-typ-überhaupt-befüllt): Nein.** Der
+    Sortierindex stellt die schwächste der drei Gruppen nach vorn. Die kuratierte Auswahl (9006 und
+    9001) ist auf 98,93 % beziehungsweise 96,97 % aller Zeilen leer; die bestbelegten Typen stehen
+    sämtlich in `_K_SAP`. Die Frage ist damit **nicht** für die Liste entschieden — dort entfallen
+    die BAM-Spalten —, sondern als Vorgabe für die Suchfelder in Schritt 7.
+
+### Zu den Zwischenschritten in der Oberfläche
+
+20. ~~Gilt der Ausblenden-Schalter für alle Mandanten?~~
+    **Beantwortet durch [M12](#m12--zwischenschritte-je-mandant): Nein.** Fünf von neun Mandanten mit
+    Nachrichten haben über den gesamten Bestand keine einzige Zwischenschritt-Zeile. Offen bleibt,
+    ob der Grenzfall `VOTG` (40 von 145.840 Zeilen) fachlich als „hat Zwischenschritte" gelten soll —
+    die Umsetzung sagt Ja, weil ein Kriterium über den Gesamtbestand nicht mit dem Zeitfenster
+    flackert.
+
+### Zum aktuellen Schritt
+
+21. ~~Trägt `Message.SOSActionID` etwas, das man einem Nutzer zeigen kann?~~
+    **Beantwortet durch [M13](#m13--trägt-sosactionid-einen-lesbaren-namen): Ja.** `SOSActionName`
+    ist durchgängig gepflegt und lesbar. Offen bleibt die Herkunft der 43,9 % verwaisten Verweise —
+    sie liegen zu 99,995 % bei `FINISHED` und berühren die Anzeige nicht.
 
 ---
 
@@ -1889,6 +2355,17 @@ Beste von N Läufen nach einem Aufwärmlauf, serverseitig gemessen.
 | L13 | derselbe Fall, 90 Tage | 5 | **3.937 ms** | `r_rows` 680.872 — **gewählte äußere Grenze** |
 | L13 | derselbe Fall, 180 Tage | 3 | **8.005 ms** | `r_rows` 1.385.909 — 80 % von `max_statement_time` |
 | L13 | derselbe Fall, ein Jahr | 3 | **15.636 ms** | `r_rows` 2.713.376 — **reisst die Zeitgrenze** |
+| M11 | Bezugsmenge NEXANS, 30 Tage | 2 | **683 ms** | `range`, `MessageLastUpdateProcessMessageIDX` |
+| M11 | BAM-Abdeckung je Typ, mit Ø und Maximum | 3 | **12,689 s** | `range` + `ref` auf `MessageBAM.PRIMARY`, `Using index` |
+| M11 | dieselbe Auswertung ohne Ø und Maximum | 1 | 5.294 ms | wie oben, ohne die innere Gruppierung |
+| M12 a | Zwischenschritte je Mandant, Gesamtbestand | 3 | **32,677 s** | `ALL` + zwei `eq_ref`, `temporary` + `filesort` |
+| M12 b | dieselbe Auswertung, 30 Tage | 3 | **3,219 s** | `range`, `MessageLastUpdateIDX` |
+| M13 | `SOSAction` aus `information_schema` | 1 | 2,7 ms | — |
+| M13 (1) | `SOSActionID` je Rohstatus | 3 | **8,112 s** | `ALL` über `Message` |
+| M13 (2) | verwaiste Verweise gesamt | 3 | **15,042 s** | `ALL` + `eq_ref` auf `SOSAction.PRIMARY` |
+| M13 (3) | verwaiste Verweise je Status | 3 | **22,965 s** | wie oben, zusätzlich `temporary` + `filesort` |
+| M13 (4) | die offenen Nachrichten (`SUSPENDED`/`RUNNING`) | 5 | **4,57 ms** | `range`, `MessageStatusIDX` + `eq_ref` |
+| M13 + | Pflegezustand `SOSActionName` | 1 | 7,4 ms | `ALL` über 3.944 Zeilen |
 
 **Muster, das über alle Messungen hinweg sichtbar ist:** Sobald ein Zeitfenster gesetzt ist, arbeitet
 MariaDB im `range`-Zugriff über `MessageLastUpdate` und braucht Millisekunden. Ohne Zeitfenster wird
