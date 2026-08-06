@@ -95,6 +95,106 @@ export const en: Texte = {
     hinweis: "This view arrives in a later step.",
   },
 
+  nachrichten: {
+    spalten: {
+      zeitpunkt: "Time",
+      status: "Status",
+      prozess: "Process",
+      projekt: "Project",
+    },
+    nichtZugeordnet: "not assigned",
+    ohneWert: "—",
+    bamWeitere: "+{anzahl} more",
+    bamAlleWerte: "All values in this column",
+    rohwert: "Status value of the legacy system",
+    bedeutungNichtVerifiziert: "Meaning not verified",
+    zeitRelativ: "Time from now",
+    sortierungUmschalten: "Sort by time",
+    sortierungNeueste: "Newest first",
+    sortierungAelteste: "Oldest first",
+
+    status: {
+      FEHLER: "Error",
+      WARTEND: "Waiting",
+      LAEUFT: "Running",
+      ZWISCHENSCHRITT: "Intermediate",
+      ABGESCHLOSSEN: "Completed",
+      QUITTIERT: "Acknowledged",
+      UNGEKLAERT: "Unclear",
+    },
+
+    zeitfenster: {
+      bezeichnung: "Time window",
+      h24: "24 hours",
+      d7: "7 days",
+      d30: "30 days",
+      frei: "Custom",
+      von: "From",
+      bis: "To",
+      standardHinweis: "Without a choice the server's default window applies.",
+      zuruecksetzen: "Reset time window",
+    },
+
+    statusfilter: {
+      bezeichnung: "Status",
+      alle: "All statuses",
+      gewaehlt: "{anzahl} selected",
+      zuruecksetzen: "Clear status filter",
+    },
+
+    prozessfilter: {
+      bezeichnung: "Process",
+      alle: "All processes",
+      gewaehlt: "{anzahl} selected",
+      suchen: "Narrow processes",
+      keineTreffer: "No process matches this input.",
+      leer: "No process is set up for this tenant.",
+      unbekannt: "Process of another tenant",
+      zuruecksetzen: "Clear process filter",
+    },
+
+    suche: {
+      bezeichnung: "Search",
+      platzhalter: "Process, project or flow name",
+      zuKurz: "{anzahl} more characters, then the search runs.",
+      leeren: "Clear search",
+    },
+
+    zwischenschritte: {
+      chipAus: "Intermediate steps hidden",
+      chipAn: "Intermediate steps shown",
+      erklaerung: "Split and merged messages — around a third of all rows.",
+      einblenden: "Show intermediate steps",
+      ausblenden: "Hide intermediate steps",
+    },
+
+    blaettern: {
+      zurueck: "Previous page",
+      vor: "Next page",
+      seiteEins: "Page 1",
+      weitereSeite: "more page",
+    },
+
+    aktualisierung: {
+      schalter: "Refresh automatically",
+      jetztAktualisieren: "Refresh now",
+      stand: "As of {zeit}",
+      standUnbekannt: "Not loaded yet",
+      pausiertGeblaettert: "Paused while paging.",
+      laeuft: "Refreshing …",
+    },
+
+    leer: {
+      titel: "No message in this range",
+      zeitfenster: "Widen the time window.",
+      zwischenschritte: "Intermediate steps are hidden — show them.",
+      suche: "The search term narrows the list — clear it.",
+      status: "The status filter narrows the list — clear it.",
+      prozess: "The process filter narrows the list — clear it.",
+      fensterErweitern: "Widen to 30 days",
+    },
+  },
+
   zustand: {
     laedt: "Loading …",
     leerTitel: "Nothing to show",
@@ -132,6 +232,23 @@ export const en: Texte = {
     // Input
     "eingabe-ungueltig": "Please check the marked fields.",
     "anfrage-ungueltig": "This request could not be processed.",
+
+    // Message list — the problem types from docs/nachrichtenliste.md §1. Each
+    // says what to do; none names a table.
+    "zeitfenster-mehrdeutig": "Choose either a preset range or a custom one, not both.",
+    "zeitfenster-unvollstaendig": "A custom time window needs both points in time.",
+    "zeitfenster-ungueltig": "“To” must lie after “from”.",
+    "zeitfenster-zu-gross": "The time window may span at most one year.",
+    "zeitpunkt-ungueltig": "One of the two points in time cannot be read.",
+    "zeitraum-unbekannt": "This range does not exist.",
+    "sortierung-unbekannt": "This sort order does not exist.",
+    "status-unbekannt": "This status does not exist.",
+    "suchbegriff-zu-kurz": "The search term needs at least three characters.",
+    // Deliberately a hint at the search field, not an error state of the view:
+    // the user did nothing wrong, the term is just too broad.
+    "suchbegriff-zu-unscharf": "The search term matches too many processes. Narrow it down.",
+    "limit-ungueltig": "This page size is not allowed.",
+    "cursor-ungueltig": "The page position is no longer valid. Start again on page one.",
     "altes-passwort-falsch": "The current password is not correct.",
     "passwort-zu-kurz": "The new password needs at least twelve characters.",
     "passwort-unveraendert": "The new password must differ from the current one.",

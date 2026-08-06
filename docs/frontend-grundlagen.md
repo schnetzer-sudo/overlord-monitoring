@@ -431,12 +431,14 @@ Begründung steht in [`visuelles-konzept.md`](visuelles-konzept.md) §5.
 src/
 ├─ app/                    Routen. Server-Komponenten, soweit möglich
 │  ├─ (public)/anmeldung/
-│  └─ (app)/               Anwendungsrahmen: /, /passwort, /mandantenauswahl, …
-├─ components/             Zusammensetzung: Rahmen, Kopfzeile, Navigation, Zustände
+│  └─ (app)/               Anwendungsrahmen: /, /passwort, /mandantenauswahl, /nachrichten, …
+├─ components/             Zusammensetzung: Rahmen, Kopfzeile, Navigation, Zustände, Zeitzone
 │  └─ ui/                  shadcn/ui — Generatorbereich, nicht von Hand ändern
-├─ features/sitzung/       Anmeldung, Sitzung, Passwort, Mandantenwahl
+├─ features/
+│  ├─ sitzung/             Anmeldung, Sitzung, Passwort, Mandantenwahl
+│  └─ nachrichten/         Liste, Filter, Blättern (Schritt 4)
 ├─ i18n/                   Sprachdateien und Kontext
-├─ lib/                    Infrastruktur: http, query-client, ablauf, routen, format, …
+├─ lib/                    Infrastruktur: http, query-client, ablauf, routen, format, filter, …
 └─ proxy.ts                Routensperre
 ```
 
@@ -444,18 +446,43 @@ src/
 Selbstauskunft bringt den aktiven Mandanten mit. Zwei Features müssten sich genau diesen Typ teilen —
 und ein Feature importiert nicht aus einem Nachbarfeature.
 
+**`features/nachrichten` importiert nicht aus `features/sitzung`.** Zwei Dinge braucht es trotzdem
+von dort, und beide gehen über die Naht in `components/`:
+
+| Was | Weg |
+|---|---|
+| die Anzeigezone aus der Selbstauskunft | `components/zeitzone.tsx` — der Rahmen füllt sie, jedes Feature liest sie |
+| der Zustand der Sitzung selbst | gar nicht — der Rahmen entscheidet, was überhaupt gerendert wird |
+
+Aus demselben Grund liegt der Aufruf von `/api/prozesse` in `features/nachrichten` und nicht in einem
+eigenen Feature `prozesse`: Es entstünde allein für einen Fetch und müsste sofort von `nachrichten`
+importiert werden. Kommt in Schritt 10 eine eigene Prozessansicht, wandert der gemeinsame Teil nach
+`components/` oder `lib/` — nicht ins Nachbarfeature.
+
 `"use client"` steht so weit unten wie möglich. Server-Komponenten sind: Wurzel-Layout, alle
 `page.tsx`, `seiten-platzhalter.tsx`. Client sind: alles mit Zustand, Interaktion oder TanStack
-Query.
+Query. Auch `features/nachrichten/filter.ts` ist bewusst **frei von React** — die Umrechnung Zustand
+→ Anfrage ist eine reine Funktion und wird als solche geprüft.
 
 ### Filterzustand
 
-`lib/filter.ts` hält die nuqs-Abstraktion für das Zeitfenster — **hier noch ohne Wirkung**, weil es
-in Schritt 3 keine Liste gibt. Sie entsteht trotzdem jetzt, damit Schritt 4 nicht anfängt,
-Zeitfenster in Komponentenzustand zu legen und später umzubauen.
+`lib/filter.ts` hält die nuqs-Abstraktion für das **Zeitfenster** — den einen Filter, den jeder
+Listen-Endpunkt hat. Was nur die Nachrichtenliste betrifft (Status, Prozess, Suche,
+Zwischenschritte, Sortierung), liegt im Feature; `lib` ist Infrastruktur, nie Fachlichkeit.
+
+Entstanden in Schritt 3 ohne Wirkung, damit Schritt 4 nicht anfängt, Zeitfenster in
+Komponentenzustand zu legen und später umzubauen. Seit Schritt 4 ist es der Filter der
+Nachrichtenliste ([`nachrichtenliste.md`](nachrichtenliste.md) §8.2).
 
 Bewusst **ohne** Standardwert: Fehlt das Zeitfenster, setzt das Backend den Standard aus Regel L1
 (24 Stunden). Ein zweiter Standardwert im Frontend liefe dem ersten irgendwann hinterher.
+
+> **Die eine Ausnahme, und warum sie keine ist.** `zwischenschritte` steht ausdrücklich in der URL,
+> ab dem ersten Rendern und auch dann, wenn es der Vorgabe entspricht — dafür trägt der Parser
+> `clearOnDefault: false`, sonst entfernte `nuqs` ihn wieder. Der Unterschied zum Zeitfenster:
+> Dort wird ein Standard *gesetzt*, hier wird ein Drittel aller Zeilen *weggelassen*. Was man sieht,
+> muss man teilen können; ohne den Parameter sähe der Empfänger eines Links dieselbe Ansicht mit
+> anderen Zeilen.
 
 ---
 
@@ -470,9 +497,10 @@ Funktionen, und ein gerenderter Baum brächte hier nichts außer Laufzeit und Ab
 | `ablauf.test.ts` | Änderungszwang vor Mandantenauswahl vor Startseite |
 | `sprachdateien.test.ts` | gleicher Schlüsselsatz; 404-Wortwahl; Rückfall auf `detail` |
 | `farbwerte.test.ts` | kein Hex-Wert, keine Tailwind-Farbklasse in einer Komponente |
-| `zwischenspeicher.test.ts` | geleert **vor** dem Weitergehen, bei Wechsel und Abmeldung |
-| `format.test.ts` | UTC → Anzeige in der gelieferten Zone; Rückfall auf UTC statt auf den Browser; relative Zeit |
+| `zwischenspeicher.test.ts` | geleert **vor** dem Weitergehen, bei Wechsel und Abmeldung; das Ziel nach dem Mandantenwechsel trägt keine Filter |
+| `format.test.ts` | UTC → Anzeige in der gelieferten Zone; Rückfall auf UTC statt auf den Browser; relative Zeit; Wanduhrzeit der Eingabefelder, auch am Umstellungstag |
 | `routen.test.ts` | `weiter` als offene Weiterleitung ausgeschlossen |
+| `nachrichtenfilter.test.ts` | URL → Zustand → URL; unbekannte Werte werden übergangen; **der Cursor taucht in keiner erzeugten URL auf**; die beiden Zeitfenstermodi schließen einander aus |
 
 ---
 

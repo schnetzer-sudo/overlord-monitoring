@@ -1,6 +1,4 @@
-"use client";
-
-import { parseAsIsoDateTime, useQueryStates } from "nuqs";
+import { createParser, parseAsIsoDateTime } from "nuqs";
 
 /**
  * Filterzustand liegt in der **URL**, nicht in `useState`.
@@ -10,28 +8,120 @@ import { parseAsIsoDateTime, useQueryStates } from "nuqs";
  * bewusst in Kauf genommen wurde: Der aktive Mandant steht in der Sitzung, nicht
  * in der URL. Deshalb steht er sichtbar in der Kopfzeile.
  *
- * **Hier noch ohne Wirkung.** In Schritt 3 gibt es keine Liste, die gefiltert
- * werden könnte. Die Abstraktion entsteht trotzdem jetzt, damit Schritt 4 nicht
- * anfängt, Zeitfenster in Komponentenzustand zu legen und später umzubauen.
+ * Hier steht der Teil, den **jeder** Listen-Endpunkt hat: das Zeitfenster. Es ist
+ * Pflicht (Regel L1), Standard 24 Stunden, Maximum ein Jahr — durchgesetzt wird
+ * beides im Backend. Was nur die Nachrichtenliste betrifft (Status, Prozess,
+ * Suche, Zwischenschritte, Sortierung), liegt im Feature; `lib` ist
+ * Infrastruktur, nie Fachlichkeit.
  *
- * Das Zeitfenster ist der einzige Filter, den **jeder** Listen-Endpunkt hat: Es
- * ist Pflicht (Regel L1), Standard 24 Stunden, Maximum ein Jahr. Durchgesetzt
- * wird beides im Backend — hier wird es nur transportiert.
+ * Entstanden in Schritt 3 ohne Wirkung, damit Schritt 4 nicht anfängt,
+ * Zeitfenster in Komponentenzustand zu legen und später umzubauen. Seit Schritt 4
+ * ist es der Filter der Nachrichtenliste.
  */
 
+/** Zur Erinnerung, was das Backend durchsetzt — **keine** Vorgabe dieser Seite. */
 export const ZEITFENSTER_STANDARD_STUNDEN = 24;
 export const ZEITFENSTER_MAXIMUM_TAGE = 365;
 
 /**
- * Kein `withDefault`: Fehlt das Zeitfenster in der URL, setzt das **Backend**
- * den Standard. Ein zweiter Standardwert im Frontend liefe dem ersten
- * irgendwann hinterher.
+ * Die wählbaren relativen Zeiträume. Die Codes gehören dem Backend
+ * (`common/Zeitraum`); ein unbekannter Wert wird dort mit `400` abgewiesen und
+ * **nicht** stillschweigend auf die Vorgabe gezogen.
+ *
+ * **Relative Zeiträume werden niemals im Frontend gerechnet.** Der Aufrufer
+ * schickt `24h`, nicht zwei Zeitpunkte: Käme das Fenster aus der Browseruhr, wäre
+ * die Anwendungsuhr des Backends umgangen — und die Liste lokal immer leer, weil
+ * die Testkopie Monate hinter der realen Uhrzeit liegt (Regel Z1).
+ */
+export const ZEITRAEUME = ["24h", "7d", "30d"] as const;
+
+export type Zeitraum = (typeof ZEITRAEUME)[number];
+
+export function istZeitraum(wert: string | null | undefined): wert is Zeitraum {
+  return wert !== null && wert !== undefined && (ZEITRAEUME as readonly string[]).includes(wert);
+}
+
+/** Ein unbekannter Code landet nicht in der URL — er wäre ein garantiertes `400`. */
+export const parseAsZeitraum = createParser<Zeitraum>({
+  parse: (wert) => (istZeitraum(wert) ? wert : null),
+  serialize: (wert) => wert,
+});
+
+/**
+ * **Kein `withDefault`.** Fehlt das Zeitfenster, setzt das *Backend* den Standard
+ * aus Regel L1. Ein zweiter Standardwert im Frontend liefe dem ersten irgendwann
+ * hinterher — und weil beide plausibel aussehen, fiele es niemandem auf.
  */
 export const ZEITFENSTER_PARAMETER = {
+  zeitraum: parseAsZeitraum,
   von: parseAsIsoDateTime,
   bis: parseAsIsoDateTime,
 };
 
-export function useZeitfenster() {
-  return useQueryStates(ZEITFENSTER_PARAMETER);
+/**
+ * Das Zeitfenster, wie es in der URL steht.
+ *
+ * Die beiden Modi schließen einander aus. Sind `zeitraum` **und** `von`/`bis`
+ * zugleich gesetzt, antwortet das Backend mit `400` `zeitfenster-mehrdeutig` — und
+ * zwar bewusst statt einer stillen Vorrangregel. Das Frontend lässt den Zustand
+ * deshalb gar nicht erst entstehen: {@link mitVorwahl} und {@link mitFreiemFenster}
+ * löschen jeweils den anderen Modus.
+ */
+export type Zeitfensterzustand = {
+  zeitraum: Zeitraum | null;
+  von: Date | null;
+  bis: Date | null;
+};
+
+export type Zeitfenstermodus = "vorwahl" | "frei" | "offen";
+
+/**
+ * `offen` heißt: Der Nutzer hat nichts gewählt, es gilt der Standard des Backends.
+ * Das ist ein **eigener Zustand** und nicht „24 Stunden" — sonst stünde die
+ * Vorgabe an zwei Stellen.
+ */
+export function zeitfenstermodus(zustand: Zeitfensterzustand): Zeitfenstermodus {
+  if (zustand.von !== null || zustand.bis !== null) {
+    return "frei";
+  }
+  return zustand.zeitraum !== null ? "vorwahl" : "offen";
+}
+
+/** Eine Vorwahl schlägt ein freies Fenster — beide zugleich wären `400`. */
+export function mitVorwahl(zeitraum: Zeitraum): Zeitfensterzustand {
+  return { zeitraum, von: null, bis: null };
+}
+
+/** Und umgekehrt. */
+export function mitFreiemFenster(von: Date | null, bis: Date | null): Zeitfensterzustand {
+  return { zeitraum: null, von, bis };
+}
+
+/** Zurück auf den Standard des Backends. */
+export function ohneZeitfenster(): Zeitfensterzustand {
+  return { zeitraum: null, von: null, bis: null };
+}
+
+/**
+ * Das Zeitfenster als Anfrageparameter — **ISO 8601 in UTC**, wie es Richtlinie
+ * §5.3 verlangt. `toISOString` liefert genau das.
+ *
+ * Ein unvollständiges freies Fenster (nur `von` oder nur `bis`) wird
+ * mitgeschickt und **nicht** hier abgefangen: Das Backend antwortet
+ * `zeitfenster-unvollstaendig`, und die Oberfläche übersetzt den Typ. Zwei
+ * Stellen, die dieselbe Prüfung machen, driften auseinander — und die im Browser
+ * ist die, auf die kein Verlass ist.
+ */
+export function zeitfensterAlsParameter(zustand: Zeitfensterzustand): [string, string][] {
+  if (zeitfenstermodus(zustand) === "frei") {
+    const parameter: [string, string][] = [];
+    if (zustand.von !== null) {
+      parameter.push(["von", zustand.von.toISOString()]);
+    }
+    if (zustand.bis !== null) {
+      parameter.push(["bis", zustand.bis.toISOString()]);
+    }
+    return parameter;
+  }
+  return zustand.zeitraum === null ? [] : [["zeitraum", zustand.zeitraum]];
 }

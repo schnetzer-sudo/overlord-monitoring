@@ -7,6 +7,8 @@ import {
   formatiereZahl,
   formatiereZeitpunkt,
   formatiereZeitpunktGenau,
+  wanduhrzeitFuerEingabe,
+  zeitpunktAusWanduhrzeit,
 } from "@/lib/format";
 
 /**
@@ -135,6 +137,63 @@ describe("Relative Zeit", () => {
   it("reicht einen unlesbaren Wert unverändert durch", () => {
     expect(formatiereRelativ("kein Zeitpunkt", "de", jetzt)).toBe("kein Zeitpunkt");
     expect(formatiereRelativ(null, "de", jetzt)).toBe("");
+  });
+});
+
+/**
+ * Die Eingabefelder des freien Zeitfensters.
+ *
+ * Ein `<input type="datetime-local">` kennt keine Zone. Läse man seinen Wert mit
+ * `new Date()`, bekäme er die des Browsers — und das freie Zeitfenster wäre gegen
+ * die Daten verschoben, sobald jemand nicht zufällig in der Zone des Servers
+ * sitzt. Derselbe Fehler wie oben, nur an der Eingabe statt an der Anzeige.
+ */
+describe("Wanduhrzeit der Eingabefelder", () => {
+  it("liest die Eingabe als Zeit der Anzeigezone", () => {
+    expect(zeitpunktAusWanduhrzeit("2025-12-29T23:53", BERLIN)?.toISOString()).toBe(
+      "2025-12-29T22:53:00.000Z",
+    );
+    // Sommer: zwei Stunden statt einer.
+    expect(zeitpunktAusWanduhrzeit("2026-07-08T17:21", BERLIN)?.toISOString()).toBe(
+      "2026-07-08T15:21:00.000Z",
+    );
+  });
+
+  it("hängt an der Zone und nicht am Standort des Betrachters", () => {
+    const inBerlin = zeitpunktAusWanduhrzeit("2025-12-29T12:00", BERLIN);
+    const inUtc = zeitpunktAusWanduhrzeit("2025-12-29T12:00", "UTC");
+
+    expect(inBerlin?.toISOString()).toBe("2025-12-29T11:00:00.000Z");
+    expect(inUtc?.toISOString()).toBe("2025-12-29T12:00:00.000Z");
+  });
+
+  it("füllt das Feld wieder mit derselben Wanduhrzeit", () => {
+    for (const wanduhrzeit of ["2025-12-29T23:53", "2026-07-08T17:21", "2025-12-30T00:00"]) {
+      const zeitpunkt = zeitpunktAusWanduhrzeit(wanduhrzeit, BERLIN);
+      expect(wanduhrzeitFuerEingabe(zeitpunkt, BERLIN)).toBe(wanduhrzeit);
+    }
+  });
+
+  /**
+   * Der Versatz hängt am Zeitpunkt, den die Umrechnung erst sucht. Ohne den
+   * zweiten Durchgang läge sie an den beiden Umstellungstagen im Jahr um eine
+   * Stunde daneben — hier die Nacht der Rückstellung 2026.
+   */
+  it("trifft auch am Tag der Zeitumstellung", () => {
+    // 26.10.2025, 03:00 Ortszeit — nach der Rückstellung, also UTC+1.
+    expect(zeitpunktAusWanduhrzeit("2025-10-26T03:00", BERLIN)?.toISOString()).toBe(
+      "2025-10-26T02:00:00.000Z",
+    );
+    // 26.10.2025, 01:00 Ortszeit — davor, also UTC+2.
+    expect(zeitpunktAusWanduhrzeit("2025-10-26T01:00", BERLIN)?.toISOString()).toBe(
+      "2025-10-25T23:00:00.000Z",
+    );
+  });
+
+  it("liefert nichts zurück, was es nicht lesen kann", () => {
+    expect(zeitpunktAusWanduhrzeit("", BERLIN)).toBeNull();
+    expect(zeitpunktAusWanduhrzeit("29.12.2025", BERLIN)).toBeNull();
+    expect(wanduhrzeitFuerEingabe(null, BERLIN)).toBe("");
   });
 });
 

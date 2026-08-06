@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { nachAbmeldung, nachMandantenwechsel } from "@/lib/zwischenspeicher";
+import {
+  nachAbmeldung,
+  nachMandantenwechsel,
+  zielNachMandantenwechsel,
+} from "@/lib/zwischenspeicher";
 
 /**
  * Der Nachweis zu Abnahmepunkt 5: Ein Mandantenwechsel leert den
@@ -29,5 +33,20 @@ describe("Zwischenspeicher", () => {
     const { schritte, speicher, weiter } = protokoll();
     nachAbmeldung(speicher, weiter);
     expect(schritte).toEqual(["geleert", "weiter"]);
+  });
+});
+
+/**
+ * Ein Teil des Zustands liegt gar nicht im Zwischenspeicher, sondern in der
+ * Adresszeile — und der **Prozessfilter** ist der Fall, an dem das weh tut:
+ * `ProcessID`s sind mandantengebunden. Bliebe der Filter über den Wechsel hinweg
+ * stehen, sähe der Nutzer eine dauerhaft leere Liste, deren Ursache in einem
+ * Auswahlfeld steckt, das ihm nichts mehr anzeigen kann.
+ */
+describe("Das Ziel nach dem Mandantenwechsel", () => {
+  it("trägt keine Filter aus der vorherigen Ansicht", () => {
+    expect(zielNachMandantenwechsel("/")).toBe("/");
+    expect(zielNachMandantenwechsel("/nachrichten?prozess=abc&zeitraum=7d")).toBe("/nachrichten");
+    expect(zielNachMandantenwechsel("/nachrichten?prozess=abc#unten")).toBe("/nachrichten");
   });
 });

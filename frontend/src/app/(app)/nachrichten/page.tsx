@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { SeitenPlatzhalter } from "@/components/seiten-platzhalter";
+import { NachrichtenAnsicht } from "@/features/nachrichten/components/nachrichten-ansicht";
 import { aktiveTexte } from "@/i18n/server";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -8,14 +8,18 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: texte.navigation.eintraege.nachrichten };
 }
 
-/** Platzhalter. Die Liste entsteht in Schritt 4, das Detail in Schritt 5. */
-export default async function NachrichtenPage() {
-  const texte = await aktiveTexte();
-  return (
-    <SeitenPlatzhalter
-      titel={texte.navigation.eintraege.nachrichten}
-      platzhalterTitel={texte.platzhalter.titel}
-      hinweis={texte.platzhalter.hinweis}
-    />
-  );
+/**
+ * Die Nachrichtenliste.
+ *
+ * Die Seite selbst bleibt **Server-Komponente**: `"use client"` steht so weit
+ * unten im Baum wie möglich, hier an der Ansicht. Sie holt nichts vor — der
+ * Filterzustand steht in der URL und wird im Browser gelesen, und eine
+ * serverseitig geholte erste Seite wäre für jeden anderen Filter sofort wieder
+ * verworfen.
+ *
+ * Das Detail einer Zeile entsteht in Schritt 5; bis dahin hat der Zeilenklick
+ * keine Funktion.
+ */
+export default function NachrichtenPage() {
+  return <NachrichtenAnsicht />;
 }

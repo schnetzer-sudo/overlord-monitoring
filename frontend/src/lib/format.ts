@@ -195,3 +195,98 @@ export function formatiereRelativ(
 export function formatiereZahl(wert: number, sprache: Sprache): string {
   return new Intl.NumberFormat(sprache).format(wert);
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Wanduhrzeit ↔ Zeitpunkt — für die Eingabefelder des freien Zeitfensters
+
+   Ein `<input type="datetime-local">` kennt keine Zone: Es liefert und erwartet
+   „2025-12-29T00:00" als reine Wanduhrzeit. Läse man diesen Wert mit `new Date()`,
+   bekäme er die Zone des Browsers — und das freie Zeitfenster wäre gegen die Daten
+   verschoben, sobald jemand nicht zufällig in der Zone des Servers sitzt. Genau der
+   Fehler, den `formatiereZeitpunkt` oben vermeidet, nur an der Eingabe statt an der
+   Anzeige.
+
+   Deshalb wird auch hier in der **Anzeigezone** gerechnet, mit `Intl` und ohne
+   Bibliothek.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/** Teilt einen Zeitpunkt in die Wanduhrzeitfelder einer Zone auf. */
+const TEILE: Intl.DateTimeFormatOptions = {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  // `h23` und nicht `hour12: false`: Letzteres liefert für Mitternacht je nach
+  // ICU-Fassung „24" statt „00".
+  hourCycle: "h23",
+};
+
+/**
+ * Der Versatz der Zone zu **diesem** Zeitpunkt, in Millisekunden. Positiv östlich
+ * von Greenwich. Nicht konstant — Sommerzeit.
+ */
+function zonenversatz(zeitpunkt: Date, zone: string): number {
+  const teile = new Intl.DateTimeFormat("en-US", { ...TEILE, timeZone: zone }).formatToParts(
+    zeitpunkt,
+  );
+  const feld = (art: Intl.DateTimeFormatPartTypes) =>
+    Number(teile.find((teil) => teil.type === art)?.value ?? "0");
+  const alsUtc = Date.UTC(
+    feld("year"),
+    feld("month") - 1,
+    feld("day"),
+    feld("hour"),
+    feld("minute"),
+    feld("second"),
+  );
+  return alsUtc - zeitpunkt.getTime();
+}
+
+/**
+ * Liest eine Wanduhrzeit (`2025-12-29T00:00`) **als Zeit in der Anzeigezone** und
+ * liefert den Zeitpunkt, der auf die Leitung geht.
+ *
+ * **Zwei Durchgänge, und das ist kein Feinschliff.** Der Versatz hängt am
+ * Zeitpunkt, den wir gerade erst suchen. Beim ersten Durchgang wird er am falschen
+ * Zeitpunkt abgelesen — an den beiden Umstellungstagen im Jahr liegt er dann um
+ * eine Stunde daneben. Der zweite Durchgang liest ihn am Ergebnis des ersten ab
+ * und trifft.
+ *
+ * Bleibt die eine Stunde, die es zweimal gibt (Rückstellung im Herbst), und die
+ * eine, die es nicht gibt (Vorstellung im Frühjahr). Dort ist die Eingabe
+ * mehrdeutig beziehungsweise unmöglich; das Ergebnis ist dann der frühere
+ * beziehungsweise der nächstgelegene Zeitpunkt. Für eine Fenstergrenze ist das
+ * folgenlos — eine Stunde Unschärfe an einer Grenze, die der Nutzer selbst grob
+ * wählt.
+ */
+export function zeitpunktAusWanduhrzeit(wanduhrzeit: string, zone: string): Date | null {
+  const roh = wanduhrzeit.trim();
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(roh)) {
+    return null;
+  }
+  // Erst so lesen, als wäre die Wanduhrzeit UTC — dann den Versatz abziehen.
+  const naiv = Date.parse(`${roh.length === 16 ? `${roh}:00` : roh}Z`);
+  if (Number.isNaN(naiv)) {
+    return null;
+  }
+  const ersterVersuch = naiv - zonenversatz(new Date(naiv), zone);
+  return new Date(naiv - zonenversatz(new Date(ersterVersuch), zone));
+}
+
+/**
+ * Die Gegenrichtung: ein Zeitpunkt als Wanduhrzeit der Anzeigezone, im Format,
+ * das `<input type="datetime-local">` erwartet (`2025-12-29T00:00`).
+ */
+export function wanduhrzeitFuerEingabe(zeitpunkt: Date | null, zone: string): string {
+  if (zeitpunkt === null || Number.isNaN(zeitpunkt.getTime())) {
+    return "";
+  }
+  const teile = new Intl.DateTimeFormat("en-US", { ...TEILE, timeZone: zone }).formatToParts(
+    zeitpunkt,
+  );
+  const feld = (art: Intl.DateTimeFormatPartTypes) =>
+    teile.find((teil) => teil.type === art)?.value ?? "00";
+  return `${feld("year")}-${feld("month")}-${feld("day")}T${feld("hour")}:${feld("minute")}`;
+}

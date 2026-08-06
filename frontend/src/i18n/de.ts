@@ -102,6 +102,111 @@ export const de = {
     hinweis: "Diese Ansicht entsteht in einem späteren Schritt.",
   },
 
+  nachrichten: {
+    spalten: {
+      zeitpunkt: "Zeitpunkt",
+      status: "Status",
+      prozess: "Prozess",
+      projekt: "Projekt",
+    },
+    // „Nicht zugeordnet heißt nicht zugeordnet" (Regel Q4). Das Backend liefert
+    // hier null und erfindet nichts; der Ersatztext ist eine Entscheidung der
+    // Oberfläche und steht deshalb hier.
+    nichtZugeordnet: "nicht zugeordnet",
+    ohneWert: "—",
+    bamWeitere: "+{anzahl} weitere",
+    bamAlleWerte: "Alle Werte dieser Spalte",
+    rohwert: "Statuswert des Altsystems",
+    bedeutungNichtVerifiziert: "Bedeutung nicht verifiziert",
+    zeitRelativ: "Abstand zu jetzt",
+    sortierungUmschalten: "Nach Zeitpunkt sortieren",
+    sortierungNeueste: "Neueste zuerst",
+    sortierungAelteste: "Älteste zuerst",
+
+    status: {
+      FEHLER: "Fehler",
+      WARTEND: "Wartend",
+      LAEUFT: "Läuft",
+      ZWISCHENSCHRITT: "Zwischenschritt",
+      ABGESCHLOSSEN: "Abgeschlossen",
+      QUITTIERT: "Quittiert",
+      UNGEKLAERT: "Ungeklärt",
+    },
+
+    zeitfenster: {
+      bezeichnung: "Zeitfenster",
+      h24: "24 Stunden",
+      d7: "7 Tage",
+      d30: "30 Tage",
+      frei: "Frei",
+      von: "Von",
+      bis: "Bis",
+      // Bewusst ohne Zahl: Die Vorgabe steht im Backend (Regel L1), und ein
+      // zweiter Wert hier liefe dem ersten irgendwann hinterher.
+      standardHinweis: "Ohne Auswahl gilt das Standardfenster des Servers.",
+      zuruecksetzen: "Zeitfenster zurücksetzen",
+    },
+
+    statusfilter: {
+      bezeichnung: "Status",
+      alle: "Alle Status",
+      gewaehlt: "{anzahl} gewählt",
+      zuruecksetzen: "Statusfilter leeren",
+    },
+
+    prozessfilter: {
+      bezeichnung: "Prozess",
+      alle: "Alle Prozesse",
+      gewaehlt: "{anzahl} gewählt",
+      suchen: "Prozess einschränken",
+      keineTreffer: "Kein Prozess passt zu dieser Eingabe.",
+      leer: "Für diesen Mandanten ist kein Prozess hinterlegt.",
+      unbekannt: "Prozess eines anderen Mandanten",
+      zuruecksetzen: "Prozessfilter leeren",
+    },
+
+    suche: {
+      bezeichnung: "Suche",
+      platzhalter: "Prozess-, Projekt- oder Ablaufname",
+      zuKurz: "Noch {anzahl} Zeichen, dann wird gesucht.",
+      leeren: "Suche leeren",
+    },
+
+    zwischenschritte: {
+      chipAus: "Zwischenschritte ausgeblendet",
+      chipAn: "Zwischenschritte eingeblendet",
+      erklaerung: "Gesplittete und zusammengeführte Nachrichten — rund ein Drittel aller Zeilen.",
+      einblenden: "Zwischenschritte einblenden",
+      ausblenden: "Zwischenschritte ausblenden",
+    },
+
+    blaettern: {
+      zurueck: "Vorherige Seite",
+      vor: "Nächste Seite",
+      seiteEins: "Seite 1",
+      weitereSeite: "weitere Seite",
+    },
+
+    aktualisierung: {
+      schalter: "Automatisch aktualisieren",
+      jetztAktualisieren: "Jetzt aktualisieren",
+      stand: "Stand {zeit}",
+      standUnbekannt: "Noch nicht geladen",
+      pausiertGeblaettert: "Pausiert, solange geblättert wird.",
+      laeuft: "Wird aktualisiert …",
+    },
+
+    leer: {
+      titel: "Keine Nachricht in diesem Ausschnitt",
+      zeitfenster: "Erweitere das Zeitfenster.",
+      zwischenschritte: "Zwischenschritte sind ausgeblendet — blende sie ein.",
+      suche: "Der Suchbegriff schränkt die Liste ein — leere ihn.",
+      status: "Der Statusfilter schränkt die Liste ein — leere ihn.",
+      prozess: "Der Prozessfilter schränkt die Liste ein — leere ihn.",
+      fensterErweitern: "Auf 30 Tage erweitern",
+    },
+  },
+
   zustand: {
     laedt: "Wird geladen …",
     leerTitel: "Nichts anzuzeigen",
@@ -140,6 +245,24 @@ export const de = {
     // Eingaben
     "eingabe-ungueltig": "Bitte prüfe die markierten Felder.",
     "anfrage-ungueltig": "Diese Anfrage konnte nicht verarbeitet werden.",
+
+    // Nachrichtenliste — die Fehlertypen aus docs/nachrichtenliste.md §1.
+    // Jeder nennt, was zu tun ist; keiner nennt einen Tabellennamen.
+    "zeitfenster-mehrdeutig":
+      "Wähle entweder eine Vorwahl oder ein freies Zeitfenster, nicht beides.",
+    "zeitfenster-unvollstaendig": "Ein freies Zeitfenster braucht beide Zeitpunkte.",
+    "zeitfenster-ungueltig": "Der Zeitpunkt „bis“ muss nach „von“ liegen.",
+    "zeitfenster-zu-gross": "Das Zeitfenster darf höchstens ein Jahr umfassen.",
+    "zeitpunkt-ungueltig": "Einer der beiden Zeitpunkte ist nicht lesbar.",
+    "zeitraum-unbekannt": "Diesen Zeitraum gibt es nicht.",
+    "sortierung-unbekannt": "Diese Sortierung gibt es nicht.",
+    "status-unbekannt": "Diesen Status gibt es nicht.",
+    "suchbegriff-zu-kurz": "Der Suchbegriff braucht mindestens drei Zeichen.",
+    // Bewusst als Hinweis am Suchfeld und nicht als Fehlerzustand der Ansicht:
+    // Der Nutzer hat nichts falsch gemacht, sein Begriff ist nur zu weit.
+    "suchbegriff-zu-unscharf": "Der Suchbegriff trifft zu viele Prozesse. Verenge ihn.",
+    "limit-ungueltig": "Diese Seitengröße ist nicht zulässig.",
+    "cursor-ungueltig": "Die Seitenposition ist nicht mehr gültig. Beginne wieder auf Seite eins.",
     "altes-passwort-falsch": "Das bisherige Passwort stimmt nicht.",
     "passwort-zu-kurz": "Das neue Passwort braucht mindestens zwölf Zeichen.",
     "passwort-unveraendert": "Das neue Passwort muss sich vom bisherigen unterscheiden.",

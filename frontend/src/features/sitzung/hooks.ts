@@ -4,7 +4,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 
 import { ROUTEN } from "@/lib/routen";
-import { nachAbmeldung, nachMandantenwechsel } from "@/lib/zwischenspeicher";
+import {
+  nachAbmeldung,
+  nachMandantenwechsel,
+  zielNachMandantenwechsel,
+} from "@/lib/zwischenspeicher";
 
 import {
   SITZUNG_SCHLUESSEL,
@@ -85,6 +89,11 @@ export function useMandanten() {
 /**
  * Mandantenwechsel. Der Zwischenspeicher wird **geleert, nicht invalidiert** —
  * Begründung in `lib/zwischenspeicher.ts`.
+ *
+ * Und es wird auf ein Ziel **ohne Filter in der URL** gewechselt: Der
+ * Prozessfilter der Nachrichtenliste trägt `ProcessID`s, die dem alten Mandanten
+ * gehören und für den neuen bedeutungslos sind. Bliebe er stehen, sähe der Nutzer
+ * eine dauerhaft leere Liste, deren Ursache niemand sieht.
  */
 export function useMandantWechseln() {
   const speicher = useQueryClient();
@@ -94,7 +103,7 @@ export function useMandantWechseln() {
     onSuccess: (auskunft: Selbstauskunft) => {
       nachMandantenwechsel(speicher, () => {
         speicher.setQueryData(SITZUNG_SCHLUESSEL.selbstauskunft, auskunft);
-        router.replace(ROUTEN.startseite);
+        router.replace(zielNachMandantenwechsel(ROUTEN.startseite));
       });
     },
   });

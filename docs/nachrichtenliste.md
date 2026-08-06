@@ -429,7 +429,176 @@ Quellschema vor genau der Prüfung, die ihn sichtbar machen soll.
 
 ---
 
-## 8. Regelbezug
+## 8. Die Oberfläche
+
+Entsteht in Schritt 4, Aufgaben 13 bis 15. Route `/nachrichten` im Anwendungsrahmen, Feature
+`features/nachrichten` — es importiert **nicht** aus `features/sitzung`.
+
+```
+features/nachrichten/
+├─ api.ts                          Typen und die zwei Aufrufe
+├─ filter.ts                       Filterzustand, rein — ohne React
+├─ hooks.ts                        URL-Bindung, Blättern, Aktualisierung
+└─ components/
+   ├─ nachrichten-ansicht.tsx      der Zusammenbau, "use client"
+   ├─ filterleiste.tsx             Zeitfenster, Status, Suche, Zwischenschritte
+   ├─ prozess-filter.tsx           Mehrfachauswahl aus /api/prozesse
+   ├─ nachrichten-tabelle.tsx      Spalten, Zeitpunkt, BAM-Zellen
+   ├─ status-plakette.tsx          Status — nie allein über Farbe
+   └─ blaettern.tsx                Seiten, Stand, automatische Aktualisierung
+```
+
+`"use client"` steht so weit unten wie möglich: `page.tsx` bleibt Server-Komponente, `filter.ts` ist
+frei von React (und deshalb als reine Funktion prüfbar).
+
+### 8.1 Die Spalten
+
+```
+Zeitpunkt · Status · Prozess · Projekt · BAM 1 · BAM 2
+```
+
+**Keine `MessageID`-Spalte.** Eine `varchar(36)`-UUID widerspricht dem Leitsatz „interne IDs sind
+Beiwerk", und ohne Kopierfunktion trägt sie nichts. Sie kommt in Schritt 5 zurück, wenn es ein
+Detail gibt, auf das sie zeigt.
+
+**Die BAM-Überschriften kommen aus `beschreibung` der Antwort**, nicht aus einer festen Liste — sie
+unterscheiden sich je Mandant. Hat der Mandant keine BAM-Konfiguration (`EDITIONLINGERI`, `SYSTEM`,
+`WOC`), fehlen beide Spalten und die Tabelle hat vier. Eine leere Spalte behauptete, es gäbe dort
+etwas zu sehen.
+
+Mehrere Werte eines Typs stehen untereinander; was nicht mitgekommen ist, steht als `+n weitere`
+darunter. Eine stumm gekürzte Liste sieht aus wie eine vollständige.
+
+**Status nie allein über Farbe.** Jede Plakette trägt Beschriftung **und** Zeichen; die Farbrolle
+ist die halbe Aussage. Bei `bedeutungNichtVerifiziert` wird der **Rohwert** zur Beschriftung, dazu
+der Hinweis „Bedeutung nicht verifiziert" — statt einen plausiblen Text zu erfinden. Bei gesicherter
+Einordnung steht der Rohwert im Tooltip, damit ein Anwender ihn gegen die alte Oberfläche halten
+kann. Die Zuordnung Status → Farbe steht weiterhin an genau einer Stelle (`lib/status-farbe.ts`);
+die Komponente kennt keine Farbe.
+
+**Zeit absolut in der Zelle, relativ im Tooltip.** Der absolute Wert ist der, den man weitergibt;
+der relative sagt auf einen Blick, ob etwas gerade eben passiert ist. Der Tooltip ist ein
+`title`-Attribut und keine Bibliothekskomponente — das visuelle Konzept lässt außer Schublade und
+Menü keine Bewegung zu. Für Vorleseprogramme steht derselbe Text zusätzlich verborgen im Markup.
+
+**Der Zeilenklick hat keine Funktion.** Kein Panel, kein Kopieren, kein Hover-Zustand — die
+Hover-Färbung, die `components/ui/table` mitbringt, ist ausdrücklich abgeschaltet. Schritt 5 belegt
+den Klick; bis dahin wäre ein Anfassgefühl ohne Wirkung schlimmer als gar keins.
+
+**Am schmalen Fenster** fällt zuerst **BAM 2** weg (unter `lg`), dann **Projekt** (unter `md`).
+Übrig bleiben Zeitpunkt, Status, Prozess und BAM 1. Der aktive Mandant bleibt bei jeder Breite in
+der Kopfzeile sichtbar — das entscheidet der Anwendungsrahmen (bestehende Regel aus
+[`visuelles-konzept.md`](visuelles-konzept.md) §6).
+
+### 8.2 Filter und URL
+
+In der URL stehen: `zeitraum` **oder** `von`/`bis` · `status` · `prozess` · `suche` ·
+`zwischenschritte` · `sortierung`.
+
+**Der Cursor steht nicht in der URL.** Ein geteilter Link auf Seite sieben eines relativen Fensters
+zeigte beim Empfänger auf andere Zeilen. Beim Öffnen eines Links beginnt die Liste auf Seite eins.
+Ebenfalls nicht in der URL: der Schalter für die automatische Aktualisierung — er betrifft die
+Arbeitsweise des Betrachters, nicht den gezeigten Ausschnitt.
+
+**Das Zeitfenster als sichtbare Vorwahlen:** 24 Stunden · 7 Tage · 30 Tage · frei. „Frei" schaltet
+auf `von`/`bis` um. **Beide Modi zugleich lässt die Oberfläche gar nicht erst zu** — eine Vorwahl
+löscht `von`/`bis`, ein freies Fenster löscht `zeitraum`. Das Backend lehnte den Zustand mit
+`zeitfenster-mehrdeutig` ab, und ein Nutzer, der über eine Schaltfläche in einen Fehlerzustand
+gerät, hat keine Möglichkeit, ihn zu verstehen.
+
+**Kein Standardwert im Frontend.** Fehlt das Zeitfenster, setzt das Backend die 24 Stunden aus Regel
+L1. Ohne Auswahl ist deshalb **keine** Vorwahl gedrückt; daneben steht der Hinweis „Ohne Auswahl
+gilt das Standardfenster des Servers" — bewusst **ohne Zahl**, denn eine Zahl hier wäre der zweite
+Standardwert, der dem ersten irgendwann hinterherliefe.
+
+**Die `von`/`bis`-Felder rechnen in der Anzeigezone.** Ein `datetime-local` kennt keine Zone; läse
+man seinen Wert mit `new Date()`, wäre das freie Fenster gegen die Daten verschoben, sobald jemand
+nicht in der Zone des Servers sitzt — derselbe Fehler wie in Aufgabe 11, nur an der Eingabe statt an
+der Anzeige. Umgerechnet wird in `lib/format.ts`, mit zwei Durchgängen, damit auch die beiden
+Umstellungstage im Jahr treffen.
+
+**Statusfilter über die Einordnungen** aus `MessageStatusKind`, nicht über Rohwerte; die
+Beschriftungen kommen aus den Sprachdateien. **Prozessfilter** als Mehrfachauswahl aus
+`/api/prozesse` ([`prozessauswahl.md`](prozessauswahl.md)); eingegrenzt wird örtlich über die
+bereits geladene Liste, nicht über einen Serverparameter.
+
+**Das Suchfeld sucht ab drei Zeichen und entprellt** (400 ms). Der Freitextfilter ist der teuerste
+Fall des Endpunkts (L7c und L11), und seine Kosten wachsen mit dem Zeitfenster; bei jedem
+Tastendruck zu suchen hieße, dieselbe teure Abfrage fünfmal für einen Begriff zu stellen, den der
+Nutzer noch nicht fertig getippt hat. **Zu kurz ist kein Fehler, sondern ein Zwischenzustand** — der
+Nutzer läuft beim Tippen zwangsläufig hindurch. `suchbegriff-zu-unscharf` und `suchbegriff-zu-kurz`
+erscheinen als **Hinweis am Suchfeld**, nicht als Fehlerzustand der ganzen Ansicht.
+
+**Zwischenschritte sind ausgeblendet — und das steht sichtbar da.** Als Chip, der in einem Halbsatz
+erklärt, was fehlt, und ihn einschaltet; und **ausdrücklich in der URL, ab dem ersten Rendern**. Das
+ist kein Widerspruch zu „kein Standardwert im Frontend", sondern die andere Seite derselben Münze:
+Hier wird ein Drittel aller Zeilen *weggelassen*, und was man sieht, muss man teilen können.
+
+**Sortiert wird über die Spaltenüberschrift „Zeitpunkt".** Ein eigenes Auswahlfeld wäre ein zweites
+Bedienelement für eine Entscheidung mit zwei Werten — und es gibt ohnehin keinen zweiten
+Sortierschlüssel (§4).
+
+### 8.3 Blättern, Zustände, Aktualisierung
+
+**Vorwärts über `nextCursor`, rückwärts über einen Stapel im Komponentenzustand** — nicht über einen
+zweiten Cursor vom Server. **Keine Seitenzahlen:** Es gibt keine Gesamtzahl (Regel L2), und eine
+erfundene wäre schlimmer als keine. Ein geänderter Filter setzt den Stapel zurück; der alte Cursor
+träge einen Zeitpunkt, der im neuen Fenster nichts zu suchen hat (`cursor-ungueltig`).
+
+**Vier Zustände** nach `components/zustand.tsx`. Die **Filterleiste bleibt in jedem** stehen — sie
+ist der Weg aus dem leeren Zustand heraus; sie mit den Daten zu verstecken hieße, dem Nutzer genau
+dann das Werkzeug wegzunehmen, wenn er es braucht.
+
+**Der Leerzustand nennt eine Ursache** und sieht nicht wie ein Fehler aus. Genannt werden *alle*
+greifenden Einschränkungen — Zeitfenster, ausgeblendete Zwischenschritte, Suchbegriff, Status- und
+Prozessfilter —, nicht nur die erste: Wer den Suchbegriff leert und immer noch nichts sieht, weil
+auch der Statusfilter steht, käme sonst zweimal an dieselbe Wand. Dazu eine Schaltfläche „Auf 30
+Tage erweitern".
+
+> Der Leerzustand ist hier **besonders wichtig**: Im Profil `dev` enthält das
+> 24-Stunden-Standardfenster je nach Mandant sehr wenige oder null Zeilen, und außer `NEXANS` hat
+> kein Mandant Daten nach dem 30.12.2025 (Messung M3). „Nichts gefunden" allein ließe den Nutzer
+> glauben, das Werkzeug sei kaputt.
+
+**Fehler werden über den `type` der RFC-9457-Antwort übersetzt**, nicht über `detail`
+([`frontend-grundlagen.md`](frontend-grundlagen.md) §6). Alle Problemtypen aus §1 haben einen
+Eintrag in beiden Sprachdateien.
+
+**Die automatische Aktualisierung ist eng gefasst:**
+
+| | |
+|---|---|
+| Standard | **aus** — wer das Werkzeug öffnet, ist angespannt; eine Liste, die unter den Händen springt, hilft nicht |
+| Intervall | 60 Sekunden |
+| nur auf Seite eins | sonst springt die Ansicht oder der Cursor liegt außerhalb des Fensters |
+| nur bei sichtbarem Tab | ohne das stellte ein über Nacht offenes Fenster 480 Abfragen auf der Produktionsdatenbank |
+| Stand | **immer sichtbar**, auch bei manueller Bedienung |
+
+Dass sie beim Blättern pausiert, steht daneben — ein Schalter, der an ist und nichts tut, ist
+schlimmer als einer, der aus ist.
+
+**Beim Mandantenwechsel** wird der Zwischenspeicher geleert, nicht invalidiert (bestehende Regel).
+Der **Prozessfilter wird dabei mit zurückgesetzt**: `ProcessID`s sind mandantengebunden, und ein
+stehengebliebener Filter erzeugte eine dauerhaft leere Liste, deren Ursache in einem Auswahlfeld
+steckt, das nichts mehr anzeigen kann. Umgesetzt über `zielNachMandantenwechsel` in
+`lib/zwischenspeicher.ts` — die Regel steht als prüfbare Funktion da und nicht als Nebenwirkung
+einer Navigation.
+
+Ein geteilter Link kann trotzdem fremde `ProcessID`s tragen. Die werden **nicht stillschweigend
+entfernt** — das zeigte dem Empfänger einen anderen Ausschnitt als dem Absender —, sondern stehen
+als eigener, entfernbarer Eintrag in der Auswahl.
+
+### 8.4 Tests
+
+| Datei | Was |
+|---|---|
+| `tests/nachrichtenfilter.test.ts` | URL → Zustand → URL; unbekannte Werte werden übergangen; **der Cursor taucht in keiner erzeugten URL auf**; die beiden Zeitfenstermodi schließen einander aus |
+| `tests/format.test.ts` | UTC → Anzeige in der gelieferten Zone; Wanduhrzeit der Eingabefelder, auch am Umstellungstag |
+| `tests/zwischenspeicher.test.ts` | das Ziel nach dem Mandantenwechsel trägt keine Filter |
+
+---
+
+## 9. Regelbezug
 
 | Regel | Umsetzung |
 |---|---|
@@ -444,7 +613,9 @@ Quellschema vor genau der Prüfung, die ihn sichtbar machen soll.
 | **L7** jede Abfrage gemessen | [`messungen-schritt4.md`](messungen-schritt4.md), Abschnitte L1 bis L10 |
 | **Z1** kein `now()` | Zeitfenster über die Anwendungsuhr, aufgelöst in `common` |
 | **Q1** Fehlerbedingung | ausschließlich `MessageStatusClassifier.fehlerBedingung` |
-| **Q4** nicht zugeordnet heißt nicht zugeordnet | `processName`/`projectName` bleiben `null` |
+| **Q4** nicht zugeordnet heißt nicht zugeordnet | `processName`/`projectName` bleiben `null`; den Ersatztext wählt die Oberfläche |
+| **Status nie allein über Farbe** | `status-plakette.tsx` — Beschriftung **und** Zeichen; die Zuordnung Status → Farbe bleibt in `lib/status-farbe.ts` |
+| **Kein Farbwert in einer Komponente** | `tests/farbwerte.test.ts` deckt auch das neue Feature ab |
 
 ---
 
@@ -506,4 +677,27 @@ Quellschema vor genau der Prüfung, die ihn sichtbar machen soll.
 - **Der Zeitzonen-Übergang** (Wanduhrzeit der Quelle → UTC der API) setzt voraus, dass Anwendungs-
   und Datenbankserver dieselbe Zone haben. Für die Testkopie ist das gemessen; für die Produktion
   ist es die Annahme, die die Anwendungsuhr ohnehin macht. Ein Auseinanderlaufen fiele als
-  systematischer Versatz aller Zeitpunkte auf.
+  systematischer Versatz aller Zeitpunkte auf — und seit Aufgabe 11 an **einer** Stelle: Die
+  Oberfläche formatiert mit derselben Zone, die das Backend zum Umrechnen benutzt.
+
+### Zur Oberfläche (Aufgaben 13 bis 15)
+
+- **Der Zeilenklick hat keine Funktion.** Das ist die Abgrenzung dieses Schritts, kein Versehen —
+  Schritt 5 belegt ihn mit der Detailansicht.
+- **Der relative Tooltip rechnet gegen die Browseruhr**, nicht gegen die Anwendungsuhr. In
+  Produktion ist das dasselbe; im Profil `dev` liest er sich als „vor 7 Monaten", weil die Testkopie
+  so weit zurückliegt. Er sagt damit die Wahrheit über die realen Daten und nicht über die
+  verstellte Uhr — der absolute Wert daneben bleibt unberührt. Wollte man ihn an die Anwendungsuhr
+  binden, müsste das Backend einen Bezugszeitpunkt mitliefern; das wäre ein neues Feld für einen
+  Tooltip und ist den Preis heute nicht wert.
+- **Die Prozessauswahl lädt alle Prozesse des Mandanten und grenzt im Speicher ein.** Bei `NEXANS`
+  sind das 733 Einträge — vertretbar, aber die obere Kante. Ein serverseitiger Suchparameter wäre
+  der nächste Schritt, wenn ein Mandant je vierstellig viele Prozesse bekommt; er brächte
+  allerdings genau die Fallstricke mit, die den Freitextfilter der Liste teuer machen.
+- **Kein Virtualisieren der Tabelle.** Bei einer Seitengröße von 50 (Maximum 200) ist es
+  unnötig; käme je eine „alles laden"-Ansicht dazu, wäre es der erste Umbau.
+- **Der Leerzustand unterscheidet nicht zwischen einem zu eng gewählten Fenster und einer
+  Datenlücke** (offene Frage 3 aus [`messungen-schritt4.md`](messungen-schritt4.md)). Er nennt alle
+  greifenden Einschränkungen und bietet an, das Fenster zu erweitern — dass die Testkopie zwischen
+  Januar und Mai 2026 keine einzige Zeile hat, weiß er nicht. Dafür bräuchte es eine Auskunft über
+  den Datenbestand, die es nicht gibt.
