@@ -279,6 +279,71 @@ class NachrichtenlisteDbIT extends SicherheitsTestbasis {
         .allMatch(name -> name.contains(begriff));
   }
 
+  /**
+   * Die Fenstergrenze der Suche (Messung L13). Sie haengt an der <b>Spanne</b>, nicht am Modus, und
+   * greift nur bei gesetztem Suchbegriff: Ohne ihn kostet ein langes Fenster nichts (L1 bis L3).
+   *
+   * <p>Ein Fenster ueber der Grenze wird abgewiesen, <b>bevor</b> {@code Message} angefasst wird —
+   * der Test kostet deshalb keine Sekunde Datenbankzeit, obwohl er den teuersten Fall des Endpunkts
+   * beschreibt. Aus demselben Grund sucht der Fall, der <i>durchgeht</i>, nach einem Begriff ohne
+   * jeden Treffer: Geprueft wird, ob die Anfrage angenommen wird, nicht wie schnell ein bestimmter
+   * Begriff antwortet — und ein Begriff, der die Stammdaten trifft, laesst hier einen
+   * mehrsekuendigen Durchlauf auf der geteilten Testkopie stehen.
+   */
+  private static final String BEGRIFF_OHNE_TREFFER = "zzzgibtesganzsichernicht";
+
+  private String langesFenster(long tage, String zusatz) {
+    return "/api/nachrichten?limit=1&von="
+        + URLEncoder.encode(iso(FENSTER_BIS.minusDays(tage)), StandardCharsets.UTF_8)
+        + "&bis="
+        + URLEncoder.encode(iso(FENSTER_BIS), StandardCharsets.UTF_8)
+        + zusatz;
+  }
+
+  @Test
+  @DisplayName("Ein Suchfenster ueber 30 Tagen ist 400 und nennt beide Zahlen")
+  void suchfenster_ueber_der_grenze_ist_400() throws Exception {
+    Antwort antwort = sitzung.hole(langesFenster(60, "&suche=" + BEGRIFF_OHNE_TREFFER));
+
+    assertThat(antwort.status()).isEqualTo(400);
+    assertThat(antwort.<String>json("$.type")).endsWith("/suche-fenster-zu-gross");
+    assertThat(antwort.<Integer>json("$.grenzeTage"))
+        .as("Ohne diese Zahl muesste die Oberflaeche die Grenze ein zweites Mal kennen")
+        .isEqualTo(30);
+    assertThat(antwort.<Integer>json("$.angefragtTage")).isEqualTo(60);
+  }
+
+  @Test
+  @DisplayName("Dasselbe Fenster geht mit langeSuche durch")
+  void langesuche_hebt_die_grenze_auf() throws Exception {
+    Antwort antwort =
+        sitzung.hole(langesFenster(60, "&suche=" + BEGRIFF_OHNE_TREFFER + "&langeSuche=true"));
+
+    assertThat(antwort.status()).isEqualTo(200);
+    assertThat(antwort.hatFeld("$.items")).isTrue();
+  }
+
+  @Test
+  @DisplayName("Ueber der aeusseren Grenze ist es auch mit langeSuche 400")
+  void ueber_der_aeusseren_grenze_bleibt_es_400() throws Exception {
+    Antwort antwort =
+        sitzung.hole(langesFenster(120, "&suche=" + BEGRIFF_OHNE_TREFFER + "&langeSuche=true"));
+
+    assertThat(antwort.status()).isEqualTo(400);
+    assertThat(antwort.<String>json("$.type")).endsWith("/suche-fenster-zu-gross");
+    assertThat(antwort.<Integer>json("$.grenzeTage"))
+        .as("Mit langeSuche gilt die groessere Grenze — genannt wird die, die tatsaechlich gilt")
+        .isEqualTo(90);
+  }
+
+  @Test
+  @DisplayName("Ohne Suchbegriff greift die Fenstergrenze der Suche nicht")
+  void ohne_suchbegriff_bleibt_das_lange_fenster_erlaubt() throws Exception {
+    Antwort antwort = sitzung.hole(langesFenster(120, ""));
+
+    assertThat(antwort.status()).isEqualTo(200);
+  }
+
   @Test
   @DisplayName("Ein Suchbegriff ohne Treffer liefert eine leere Liste, keinen Fehler")
   void suche_ohne_treffer_ist_leer() throws Exception {

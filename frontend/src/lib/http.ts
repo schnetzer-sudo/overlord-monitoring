@@ -39,6 +39,16 @@ export class ProblemFehler extends Error {
   readonly detail: string | undefined;
   readonly traceId: string | undefined;
   readonly felder: readonly Feldfehler[];
+  /**
+   * Die **eigenen** Felder der Antwort neben `type`, `title` und `detail` —
+   * RFC 9457 lässt sie ausdrücklich zu.
+   *
+   * Sie existieren, damit die Oberfläche eine konkrete Meldung bauen kann, ohne
+   * `detail` zu zerlegen und ohne dieselbe Zahl ein zweites Mal zu kennen: Steht
+   * die geltende Grenze im Rumpf, ändert man sie im Backend, ohne dass ein
+   * Sprachtext hinterherläuft.
+   */
+  readonly angaben: Readonly<Record<string, unknown>>;
 
   constructor(werte: {
     status: number;
@@ -47,6 +57,7 @@ export class ProblemFehler extends Error {
     detail?: string;
     traceId?: string;
     felder?: readonly Feldfehler[];
+    angaben?: Readonly<Record<string, unknown>>;
   }) {
     super(werte.detail ?? werte.titel ?? werte.typ);
     this.name = "ProblemFehler";
@@ -56,6 +67,13 @@ export class ProblemFehler extends Error {
     this.detail = werte.detail;
     this.traceId = werte.traceId;
     this.felder = werte.felder ?? [];
+    this.angaben = werte.angaben ?? {};
+  }
+
+  /** Eine Zahl aus {@link angaben} — oder `undefined`, wenn sie fehlt oder keine ist. */
+  zahl(name: string): number | undefined {
+    const wert = this.angaben[name];
+    return typeof wert === "number" && Number.isFinite(wert) ? wert : undefined;
   }
 }
 
@@ -64,6 +82,21 @@ const ENDGUELTIG = [401, 403, 404];
 
 export function istEndgueltig(fehler: unknown): boolean {
   return fehler instanceof ProblemFehler && ENDGUELTIG.includes(fehler.status);
+}
+
+/**
+ * Die Suche ist an der Zeitgrenze der Datenbank abgebrochen worden.
+ *
+ * Der eine Fall, in dem ein zweiter Versuch nicht nur nichts bringt, sondern
+ * **schadet**: Er stellt dieselbe Abfrage noch einmal, und sie läuft wieder in
+ * dieselbe Grenze — zehn weitere Sekunden auf der Produktionsdatenbank für eine
+ * Antwort, die schon feststeht. Was hilft, ist ein engerer Zeitraum oder ein
+ * schärferer Begriff, und das kann nur der Nutzer entscheiden.
+ */
+export const SUCHE_ABGEBROCHEN = "suche-abgebrochen";
+
+export function istZeitgrenze(fehler: unknown): boolean {
+  return fehler instanceof ProblemFehler && fehler.typ === SUCHE_ABGEBROCHEN;
 }
 
 export function istNichtAngemeldet(fehler: unknown): boolean {
@@ -124,6 +157,13 @@ function felderAus(rohwert: unknown): Feldfehler[] {
   });
 }
 
+/** Die Felder, die RFC 9457 selbst vergibt. Alles andere gehört dem Fall. */
+const RFC_FELDER = ["type", "title", "status", "detail", "instance", "traceId", "errors"];
+
+function angabenAus(koerper: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(koerper).filter(([name]) => !RFC_FELDER.includes(name)));
+}
+
 async function fehlerAus(antwort: Response): Promise<ProblemFehler> {
   const typKopf = antwort.headers.get("content-type") ?? "";
   if (!typKopf.includes("problem+json") && !typKopf.includes("application/json")) {
@@ -142,6 +182,7 @@ async function fehlerAus(antwort: Response): Promise<ProblemFehler> {
     detail: alsText(koerper.detail),
     traceId: alsText(koerper.traceId),
     felder: felderAus(koerper.errors),
+    angaben: angabenAus(koerper),
   });
 }
 

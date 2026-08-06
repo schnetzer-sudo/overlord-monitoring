@@ -1420,6 +1420,114 @@ volumenstarken kostet es knapp sechs Sekunden.
 
 ---
 
+## L13 — Freitext über lange Fenster
+
+Erhoben am **06.08.2026**, nach M10 und L11. Beide Umbauten des Freitextfilters sind widerlegt; was
+bleibt, ist eine Grenze. Diese Messung beantwortet die eine Frage, die vor dem Bau der Grenze offen
+war: **Was handelt sich ein Nutzer ein, der sie bewusst aufhebt?**
+
+Aufbau wie L11 — Mandant `NEXANS`, Fenster **absolut** und endend am `2025-12-30 00:00:00` (im
+dichten Bestand), Seitengröße 51, Zwischenschritte ausgeschlossen, gemessen mit derselben Form des
+Statements, die `message/NachrichtenRepository` erzeugt. Die Sitzung hatte **kein**
+`max_statement_time`; sichtbar werden sollte die wahre Laufzeit und nicht ein Abbruch. Beste von
+fünf Läufen nach einem Aufwärmlauf, serverseitig über `SET profiling = 1`; bei den Läufen über zehn
+Sekunden beste von drei.
+
+**Die beiden Begriffe sind nicht abgedruckt** (Regel G1 — es sind Kundennamen aus dem Bestand).
+Sie sind über ihre Auflösung eindeutig beschrieben und wiederauffindbar.
+
+### Der selektive Begriff — 22 Prozesse, 31 Abläufe
+
+Derselbe wie in L11, wiedererkannt an `r_rows = 78.318` und rund 490 ms über 30 Tage.
+
+| # | Fenster | `rows` (Schätzung) | `r_rows` | Laufzeit |
+|---|---|---|---|---|
+| — | 30 Tage (Kontrolle, = L11) | 409.758 | **78.318** | **488,4 ms** |
+| **L13a** | 90 Tage | 1.476.168 | **78.318** | **487,9 ms** |
+| **L13b** | 180 Tage | 1.780.243 | **78.318** | **495,1 ms** |
+| **L13c** | ein Jahr | 1.780.243 | **78.318** | **478,2 ms** |
+
+**EXPLAIN** ist in allen vier Fällen identisch — nur die Schätzung wächst:
+
+| id | table | type | key | key_len | rows | Extra |
+|---|---|---|---|---|---|---|
+| 1 | `m` | `range` | `MessageLastUpdateIDX` | 5 | s. o. | `Using where` |
+| 1 | `p` | `eq_ref` | `PRIMARY` | 146 | 1 | `Using where` |
+| 1 | `pr` | `eq_ref` | `PRIMARY` | 146 | 1 | `Using where` |
+| 1 | `mp` | `eq_ref` | `PRIMARY` | 146 | 1 | `Using where` |
+| 1 | `pm` | `eq_ref` | `PRIMARY` | 292 | 1 | `Using where; Using index` |
+
+**ANALYZE** ebenso: `r_rows = 78.318` auf `m`, `r_filtered = 0,07 %`, alle Folgetabellen `1,00`.
+
+> **Das Fenster kostet beim selektiven Begriff gar nichts.** Alle vier Läufe lesen exakt dieselben
+> 78.318 Zeilen und brauchen dieselbe halbe Sekunde. MariaDB läuft vom **oberen** Fensterrand
+> rückwärts und bricht ab, sobald 51 Treffer beisammen sind; die Untergrenze des Fensters wird nie
+> erreicht. Das ist dasselbe Muster wie L1 = L2 = L3, nur auf einem hundertfach höheren Niveau.
+>
+> **Damit ist die Vermutung aus L7c korrigiert.** Dort stand „die Kosten wachsen linear mit dem
+> Fenster (24 h: 40 ms, 30 Tage: 1,3 s)". Das stimmt — aber nicht wegen der Fenstergröße, sondern
+> weil der dort gemessene Begriff die Seite **nie gefüllt** hat: `r_rows` war mit 214.330 genau die
+> Zeilenzahl des ganzen 30-Tage-Fensters. Es wächst nicht die Fenstergröße mit den Kosten, sondern
+> die Zahl der Zeilen, die vor dem 51. Treffer liegen.
+
+### Der schlimmste Fall — ein Begriff ohne eine einzige Zeile im Fenster
+
+Ein Begriff, der drei Prozesse und drei Abläufe in den **Stammdaten** trifft, deren Nachrichten im
+Fenster aber alle fehlen. Die Vorfilterung ist damit nicht leer — die Abkürzung „kein Treffer, also
+leere Liste ohne `Message` anzufassen" greift nicht —, und die Seite füllt sich nie. Das ist der
+volle Durchlauf mit leerem Ergebnis.
+
+| Fenster | Zeilen im Fenster | `r_rows` | `r_filtered` | Laufzeit | N |
+|---|---|---|---|---|---|
+| 30 Tage | 214.330 | **214.330** | 0,00 % | **1.246 ms** | 5 |
+| 90 Tage | 680.872 | **680.872** | 0,00 % | **3.937 ms** | 5 |
+| 180 Tage | 1.385.909 | **1.385.909** | 0,00 % | **8.005 ms** | 3 |
+| **ein Jahr** | 2.713.376 | **2.713.376** | 0,00 % | **15.636 ms** | 3 |
+
+`EXPLAIN` unverändert (`range` über `MessageLastUpdateIDX`, `key_len = 5`); in `ANALYZE` stehen die
+Folgetabellen auf `r_rows = NULL`, weil keine Kandidatenzeile je bis zum Join kommt.
+
+### Die Entscheidung, ausdrücklich
+
+> **Ein Jahr reißt `max_statement_time`.** Der Lese-Pool bricht bei 10 Sekunden ab
+> ([`datenzugriff.md`](datenzugriff.md) §1); der schlimmste Fall braucht **15,6**. Die Aufhebung
+> der Grenze wird deshalb **nicht** bis zum Maximum aus Regel L1 gewährt.
+>
+> **Gewählt sind 90 Tage.** Es ist die größte gemessene Spanne mit Sicherheitsabstand: 3,9 s sind
+> 39 Prozent der Zeitgrenze, also Faktor 2,5 Luft. 180 Tage liegen mit 8,0 s bei 80 Prozent — das
+> ist kein Abstand, sondern ein dichterer Tag.
+
+Der Verlauf ist über alle vier Messungen streng linear bei rund **173.000 Zeilen je Sekunde**
+(172,0 · 173,0 · 173,1 · 173,5 Tausend/s). Daraus lässt sich der Punkt ablesen, an dem die
+Zeitgrenze fällt: 10 Sekunden entsprechen 1,73 Mio. Zeilen und damit **etwa 225 Tagen**. Die 180
+Tage sind nicht „knapp darunter", sie sind ein Viertel davor.
+
+Interpoliert wird trotzdem nicht: Gewählt ist eine Spanne, die gemessen wurde.
+
+### Der Abbruch selbst — was der Treiber wirft
+
+Nachgeprüft, weil die Behandlung im Code genau diese eine Ausnahme fangen soll und nicht pauschal
+alles. Dasselbe Statement in einer Sitzung mit `SET SESSION max_statement_time = 10`:
+
+```
+ERROR 1969 (70100): Query execution was interrupted (max_statement_time exceeded)
+```
+
+Über JDBC (Connector/J 3.5.8) und über jOOQ 3.21, je einmal ausgeführt:
+
+| Ebene | Ergebnis |
+|---|---|
+| MariaDB | Fehler **1969**, SQLState **70100** |
+| Treiber | `java.sql.SQLTimeoutException` (Untertyp von `SQLTransientException`) |
+| jOOQ | `org.jooq.exception.DataAccessException`, `sqlState() = "70100"`, Ursache die `SQLTimeoutException` |
+
+Ein Spring-`SQLExceptionTranslator` liegt nicht dazwischen: Die beiden `DSLContext`-Beans werden in
+`config/JooqConfig` von Hand gebaut, ohne den Übersetzer der Spring-Boot-Autokonfiguration. Was im
+Repository ankommt, ist deshalb die `DataAccessException` von jOOQ mit der `SQLTimeoutException` als
+Ursache — und genau darauf prüft `NachrichtenRepository.anDerZeitgrenze`.
+
+---
+
 ## L12 — die Prozessauswahl
 
 Erhoben am **06.08.2026** (Aufgabe 12) für den neuen Endpunkt `GET /api/prozesse`. Gemessen wurde
@@ -1773,8 +1881,23 @@ Beste von N Läufen nach einem Aufwärmlauf, serverseitig gemessen.
 | L11 + | nur `SOSID IN (…)`, volumenstark | 2 | 1.323,6 ms | `range`, `MessageLastUpdateIDX` — auf `SOSID` gibt es keinen Index |
 | L12 | Prozessauswahl `NEXANS` (733 Prozesse) | 5 | **4,225 ms** | `ref`, `ProjectMandant_Mandant_idx`, `temporary` + `filesort` |
 | L12 | Prozessauswahl `SUTTONS` (17 Prozesse) | 5 | **0,606 ms** | wie oben |
+| L13 | Freitext, selektiver Begriff, 30 Tage (Kontrolle) | 5 | **488,4 ms** | `range`, `MessageLastUpdateIDX`, `r_rows` 78.318 |
+| L13a | derselbe Begriff, 90 Tage | 5 | **487,9 ms** | wie oben, `r_rows` **unverändert** 78.318 |
+| L13b | derselbe Begriff, 180 Tage | 5 | **495,1 ms** | wie oben |
+| L13c | derselbe Begriff, ein Jahr | 5 | **478,2 ms** | wie oben |
+| L13 | schlimmster Fall (kein Treffer im Fenster), 30 Tage | 5 | **1.246 ms** | `range`, `MessageLastUpdateIDX`, `r_rows` 214.330 |
+| L13 | derselbe Fall, 90 Tage | 5 | **3.937 ms** | `r_rows` 680.872 — **gewählte äußere Grenze** |
+| L13 | derselbe Fall, 180 Tage | 3 | **8.005 ms** | `r_rows` 1.385.909 — 80 % von `max_statement_time` |
+| L13 | derselbe Fall, ein Jahr | 3 | **15.636 ms** | `r_rows` 2.713.376 — **reisst die Zeitgrenze** |
 
 **Muster, das über alle Messungen hinweg sichtbar ist:** Sobald ein Zeitfenster gesetzt ist, arbeitet
 MariaDB im `range`-Zugriff über `MessageLastUpdate` und braucht Millisekunden. Ohne Zeitfenster wird
 jede Abfrage über `Message` zu einem vollen Durchlauf von 1,5 bis 20 Sekunden. Regel L1
 (Pflicht-Zeitfenster) hat in diesen Zahlen ihre Entsprechung.
+
+**Die eine Ausnahme, und was sie wirklich sagt** (L7c, L11, L13): Der Freitextfilter bleibt im
+`range`-Zugriff und braucht trotzdem Sekunden. Nicht die Fenstergröße treibt ihn — L13 zeigt
+dieselbe halbe Sekunde über 30 Tage wie über ein Jahr —, sondern die Zahl der Zeilen, die vor dem
+letzten gelieferten Treffer liegen. Ein Zeitfenster begrenzt diese Zahl nach oben; mehr kann es
+nicht. Deshalb steht neben dem Pflicht-Zeitfenster aus L1 eine zweite, engere Grenze für den einen
+Filter, der sie braucht.

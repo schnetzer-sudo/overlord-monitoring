@@ -53,6 +53,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     problem.setTitle(ex.titel());
     problem.setType(URI.create(TYP_BASIS + ex.problemTyp()));
     problem.setInstance(URI.create(request.getRequestURI()));
+    // Zuerst die Zusatzfelder, dann die traceId: So kann kein Fall sie ueberschreiben.
+    ex.zusatz().forEach(problem::setProperty);
     String traceId = mitTraceId(problem);
     // Die interne Ursache steht nur hier, nie in der Antwort.
     log.info(

@@ -86,8 +86,19 @@ export function useNachrichtenfilter() {
       (prozess: string[]) => void setzeFilter({ prozess: prozess.length === 0 ? null : prozess }),
       [setzeFilter],
     ),
+    /**
+     * Ein neuer Begriff setzt `langeSuche` zurück. Die Grenze wurde für *diese*
+     * Suche bewusst aufgehoben; sie stillschweigend über den nächsten Begriff
+     * mitzunehmen hieße, eine einmalige Entscheidung dauerhaft zu machen —
+     * ausgerechnet bei der Entscheidung, die eine mehrsekündige Abfrage erlaubt.
+     */
     setzeSuche: useCallback(
-      (suche: string) => void setzeFilter({ suche: suche === "" ? null : suche }),
+      (suche: string) =>
+        void setzeFilter({ suche: suche === "" ? null : suche, langeSuche: false }),
+      [setzeFilter],
+    ),
+    setzeLangeSuche: useCallback(
+      (langeSuche: boolean) => void setzeFilter({ langeSuche }),
       [setzeFilter],
     ),
     setzeZwischenschritte: useCallback(
@@ -146,6 +157,18 @@ function useSichtbar(): boolean {
 
 export type Listenzustand = {
   seite: Seite<Nachricht> | undefined;
+  /**
+   * Die letzte Seite, die tatsächlich geliefert wurde — auch dann noch, wenn die
+   * aktuelle Anfrage gescheitert ist.
+   *
+   * Sie existiert für genau einen Fall: eine Rückmeldung, die dem **Suchfeld**
+   * gilt und nicht der Ansicht. Wer bei stehender Liste einen Suchbegriff tippt,
+   * der über der Fenstergrenze liegt, bekommt einen Hinweis am Feld — und soll
+   * dabei sehen, was er vorher gesehen hat. Ohne diesen Rückgriff verschwände die
+   * Liste, weil die neue Abfrage einen eigenen Schlüssel hat und für den nie
+   * Daten ankamen.
+   */
+  letzteSeite: Seite<Nachricht> | undefined;
   /** Ab wann die Zeilen stehen — sichtbar, auch bei manueller Bedienung. */
   standVon: number;
   /** Erster Aufbau: noch keine Zeilen da. Der Zustand „Laden". */
@@ -235,10 +258,27 @@ export function useNachrichtenSeite(
 
   const seite = anfrage.data;
 
+  /*
+   * Kein `placeholderData`: Das hielte die alte Seite bei *jedem* Filterwechsel
+   * stehen und nähme dem Nutzer die Rückmeldung, dass gerade neu geladen wird.
+   * Hier geht es um einen einzigen Fall, und wer ihn braucht, holt sich den
+   * Rückgriff ausdrücklich.
+   *
+   * Angepasst **während des Renderns** und nicht in einem Effekt — dasselbe
+   * Muster wie beim Zurücksetzen des Seitenstapels weiter oben: React verwirft
+   * den begonnenen Durchlauf und rendert sofort neu, der Zwischenstand erscheint
+   * nie auf dem Bildschirm.
+   */
+  const [letzteSeite, setLetzteSeite] = useState<Seite<Nachricht> | undefined>(undefined);
+  if (seite !== undefined && seite !== letzteSeite) {
+    setLetzteSeite(seite);
+  }
+
   const nachladen = anfrage.refetch;
 
   return {
     seite,
+    letzteSeite: seite ?? letzteSeite,
     standVon: anfrage.dataUpdatedAt,
     laedt: anfrage.isPending,
     laeuft: anfrage.isFetching && !anfrage.isPending,

@@ -24,6 +24,7 @@ auch keiner entstehen.
 | `status` | mehrfach, Werte aus `MessageStatusKind` | alle | **keine Rohwerte** |
 | `prozess` | mehrfach, `ProcessID` | alle | |
 | `suche` | Freitext, mindestens 3 Zeichen | — | Prozess-, Projekt- und Ablaufname |
+| `langeSuche` | `true`, `false` | `false` | hebt die Fenstergrenze der Suche auf — bis 90 Tage, nicht weiter |
 | `zwischenschritte` | `true`, `false` | `false` | `SPLITTED`/`MERGED` |
 | `sortierung` | `neueste`, `aelteste` | `neueste` | ausschließlich über den Zeitpunkt |
 | `cursor` | undurchsichtig | — | Seitenposition der vorigen Antwort |
@@ -91,12 +92,32 @@ anhand von `detail`.
 | `status-unbekannt` | 400 | Wert ist keine `MessageStatusKind` (etwa ein Rohwert) |
 | `suchbegriff-zu-kurz` | 400 | unter drei Zeichen |
 | `suchbegriff-zu-unscharf` | 400 | mehr Treffer als die Grenze |
+| `suche-fenster-zu-gross` | 400 | `suche` gesetzt und Spanne über der Grenze (§5) |
+| `suche-abgebrochen` | 400 | Statement in `max_statement_time` gelaufen, bei gesetztem `suche` |
 | `limit-ungueltig` | 400 | außerhalb 1 bis 200 |
 | `cursor-ungueltig` | 400 | unlesbar **oder** Zeitpunkt außerhalb des Fensters |
 | `kein-mandant-gewaehlt` | 403 | kein aktiver Mandant in der Sitzung |
 
 **Kein unbekannter Wert wird stillschweigend auf die Vorgabe gezogen.** Wer `zeitraum=24` schreibt,
 bekäme sonst 24 Stunden und hätte keinen Anlass, den Tippfehler zu bemerken.
+
+**`suche-fenster-zu-gross` trägt zwei zusätzliche Felder**, `grenzeTage` und `angefragtTage`. RFC
+9457 lässt eigene Felder ausdrücklich zu, und sie sind hier der Punkt: Die Oberfläche baut daraus
+eine konkrete Meldung samt Schaltfläche, ohne die Grenze ein zweites Mal zu kennen. Stünde sie auch
+im Frontend, liefe eine der beiden Zahlen der anderen irgendwann hinterher — und weil beide
+plausibel aussehen, fiele es niemandem auf.
+
+```json
+{
+  "type": "https://overlord.kraftwerkone.de/probleme/suche-fenster-zu-gross",
+  "title": "Zeitfenster für die Suche zu groß",
+  "status": 400,
+  "detail": "Die Suche ist auf 30 Tage begrenzt; angefragt sind 60. …",
+  "grenzeTage": 30,
+  "angefragtTage": 60,
+  "traceId": "…"
+}
+```
 
 ---
 
@@ -324,7 +345,7 @@ ein vollständiges Ergebnis aussieht.
 
 > ⚠️ **Der Freitextfilter ist der teuerste Fall dieses Endpunkts.** Die Vorfilterung selbst kostet
 > nichts (3,0 und 5,8 ms); teuer ist das Hauptstatement. Die Kosten hängen am Suchbegriff und
-> reichen von 2 ms bis zu einigen Sekunden — 1,3 Sekunden über 30 Tage im Fall von L7c.
+> reichen von 2 ms bis zu einigen Sekunden.
 >
 > **Zwei Abhilfen wurden geprüft, beide tragen nicht** (Messungen M10 und L11, 06.08.2026). Die
 > Auflösung über `SOS.ProcessID` zu einer einzigen Kennungsliste **verliert 9.101 Zeilen**, weil der
@@ -335,6 +356,70 @@ ein vollständiges Ergebnis aussieht.
 
 `%` und `_` im Suchbegriff werden maskiert. Ohne das wäre `_` ein Platzhalter für ein beliebiges
 Zeichen — derselbe Fallstrick wie in Regel Q1.
+
+### Die Fenstergrenze der Suche — 30 Tage, bewusst aufhebbar bis 90
+
+Nachgetragen am 06.08.2026 (Messung [L13](messungen-schritt4.md#l13--freitext-über-lange-fenster)).
+Der Filter bleibt, wie er ist; was dazukommt, ist eine Grenze.
+
+**Ist `suche` gesetzt und die Spanne des Zeitfensters größer als 30 Tage, antwortet der Endpunkt mit
+`400 suche-fenster-zu-gross`.** `langeSuche=true` hebt die Grenze auf **90 Tage** an — nicht weiter.
+Das Maximum von einem Jahr aus Regel L1 bleibt darüber bestehen; bei gesetztem Suchbegriff greift es
+nur nie, weil die engere Grenze früher zieht. Ohne Suchbegriff ändert sich **nichts**: Ein
+Jahresfenster kostet dort dieselben 2,7 ms wie ein Tagesfenster (L1 bis L3).
+
+**Die Grenze gilt für die Spanne, nicht für den Modus.** Praktisch beißt sie nur im `von`/`bis`-Modus,
+weil `zeitraum` ohnehin nur `24h`, `7d` und `30d` anbietet. Das ist kein Grund, sie im relativen Modus
+wegzulassen — käme dort je ein `90d` dazu, wäre die Lücke sonst still da, bevor jemand sie sucht.
+
+**Warum eine Grenze auf das Fenster und keine auf die Trefferzahl.** Teuer ist nicht der breite
+Suchbegriff, sondern der seltene. Ein Begriff, dessen Prozesse im Fenster viele Zeilen tragen, füllt
+die 51 Treffer sofort (2,3 ms). Ein Begriff, dessen Prozesse kaum Zeilen tragen, zwingt MariaDB
+durch das Fenster, bis 51 beisammen sind (499 ms bei 78.318 gelesenen Zeilen). Der schlimmste Fall
+ist der Begriff, der in den Stammdaten trifft und im Fenster nichts findet: voller Durchlauf, leeres
+Ergebnis. **Eine Grenze auf die Zahl der aufgelösten Prozesse bestrafte damit genau den schnellen
+Fall und ließe den langsamen durch.**
+
+**Warum 90 Tage und nicht ein Jahr.** Der schlimmste Fall kostet gemessen 1,2 s über 30 Tage,
+**3,9 s über 90 Tage**, 8,0 s über 180 Tage und **15,6 s über ein Jahr**. Der Lese-Pool bricht bei
+10 s ab (`max_statement_time`, [`datenzugriff.md`](datenzugriff.md) §1) — ein Jahresfenster reißt
+diese Grenze also, und 180 Tage liegen mit 80 Prozent so dicht daneben, dass ein dichterer Tag
+genügt. 90 Tage lassen Faktor 2,5 Luft und sind eine **gemessene** Spanne, keine interpolierte.
+
+**Die Antwort nennt beide Zahlen** (`grenzeTage`, `angefragtTage`, §1). Damit baut die Oberfläche
+eine konkrete Meldung statt einer allgemeinen — und die Grenze bleibt an einer Stelle gepflegt.
+
+Im Code: `NachrichtenFilter.SUCHE_FENSTER` und `SUCHE_FENSTER_LANG`, geprüft in
+`NachrichtenFilter.aus` — an derselben Stelle wie jede andere Parameterprüfung.
+
+### Wenn das Statement trotzdem in die Zeitgrenze läuft
+
+Die Grenze macht den Abbruch unwahrscheinlich, nicht unmöglich: Unter Last oder in einem dichteren
+Bestand als dem gemessenen kann derselbe Fall wieder auflaufen. **Bei gesetztem Suchbegriff ist das
+ab jetzt ein absehbarer Fall und kein Systemfehler** — er wird zu `400 suche-abgebrochen` mit einem
+Text, der sagt, was zu tun ist: Zeitraum verkleinern oder Suchbegriff schärfen. Vorher wäre es ein
+`500` mit neutralem Text und einer Fehler-Kennung gewesen, also die Bitte, eine Störung zu melden,
+die keine ist.
+
+**Gefangen wird genau eine Ausnahme.** Nachgeprüft gegen die Testkopie (L13): MariaDB meldet Fehler
+`1969` mit SQLState `70100`, Connector/J 3.5 macht daraus eine `java.sql.SQLTimeoutException`, und
+jOOQ verpackt sie in eine `DataAccessException` mit genau dieser Ursache — ein
+Spring-`SQLExceptionTranslator` liegt nicht dazwischen, weil die beiden `DSLContext`-Beans in
+`config/JooqConfig` von Hand gebaut werden. Ein Syntaxfehler, ein Verbindungsabriss oder ein
+fehlendes Recht kommen ebenfalls als `DataAccessException` an und bleiben, was sie sind: technische
+Fehler mit `500`.
+
+**Und nur mit Suchbegriff.** Läuft ein Statement *ohne* Suche in die Zeitgrenze, ist das kein
+vorhergesehener Fall, sondern ein Befund; er gehört mit Stacktrace ins Protokoll und nicht in einen
+Hinweis, der dem Nutzer eine Verhaltensänderung nahelegt, die nichts ändern würde. Umgesetzt in
+`NachrichtenRepository.anDerZeitgrenze`.
+
+**`400` und nicht `503`** — mit einem Abstrich, der dazugehört: Die Anfrage ist so, wie sie gestellt
+wurde, nicht beantwortbar, und was sich ändern muss, ist die Anfrage (Richtlinie §5.5, „Anfrage
+fachlich unbrauchbar"). Der Abstrich ist, dass dieselbe Antwort auch dann kommt, wenn in Wahrheit die
+Datenbank unter Last steht; der Nutzer liest dann eine Aufforderung, die ihm nicht hilft. Sichtbar
+bleibt es trotzdem: Die `traceId` steht in der Antwort und im Protokoll, und häufen sich diese
+Einträge, ist das das Signal. Steht unter „Offene Punkte".
 
 ---
 
@@ -492,7 +577,7 @@ der Kopfzeile sichtbar — das entscheidet der Anwendungsrahmen (bestehende Rege
 
 ### 8.2 Filter und URL
 
-In der URL stehen: `zeitraum` **oder** `von`/`bis` · `status` · `prozess` · `suche` ·
+In der URL stehen: `zeitraum` **oder** `von`/`bis` · `status` · `prozess` · `suche` · `langeSuche` ·
 `zwischenschritte` · `sortierung`.
 
 **Der Cursor steht nicht in der URL.** Ein geteilter Link auf Seite sieben eines relativen Fensters
@@ -523,11 +608,38 @@ Beschriftungen kommen aus den Sprachdateien. **Prozessfilter** als Mehrfachauswa
 bereits geladene Liste, nicht über einen Serverparameter.
 
 **Das Suchfeld sucht ab drei Zeichen und entprellt** (400 ms). Der Freitextfilter ist der teuerste
-Fall des Endpunkts (L7c und L11), und seine Kosten wachsen mit dem Zeitfenster; bei jedem
-Tastendruck zu suchen hieße, dieselbe teure Abfrage fünfmal für einen Begriff zu stellen, den der
-Nutzer noch nicht fertig getippt hat. **Zu kurz ist kein Fehler, sondern ein Zwischenzustand** — der
-Nutzer läuft beim Tippen zwangsläufig hindurch. `suchbegriff-zu-unscharf` und `suchbegriff-zu-kurz`
-erscheinen als **Hinweis am Suchfeld**, nicht als Fehlerzustand der ganzen Ansicht.
+Fall des Endpunkts (L7c, L11 und L13); bei jedem Tastendruck zu suchen hieße, dieselbe teure Abfrage
+fünfmal für einen Begriff zu stellen, den der Nutzer noch nicht fertig getippt hat. **Zu kurz ist
+kein Fehler, sondern ein Zwischenzustand** — der Nutzer läuft beim Tippen zwangsläufig hindurch.
+`suchbegriff-zu-unscharf` und `suchbegriff-zu-kurz` erscheinen als **Hinweis am Suchfeld**, nicht als
+Fehlerzustand der ganzen Ansicht.
+
+**Die Fenstergrenze der Suche erscheint an derselben Stelle** und mit derselben ruhigen Farbrolle.
+`suche-fenster-zu-gross` nennt die geltende Grenze und den gewählten Zeitraum — beide Zahlen aus der
+Antwort, keine im Frontend — und daneben steht **„Trotzdem suchen"**. Die Schaltfläche setzt
+`langeSuche` in der URL; die Anfrage wiederholt sich damit von selbst, weil der Filter der
+Abfrageschlüssel ist.
+
+**Die Liste bleibt dabei stehen, so wie sie war.** Das ist der Unterschied zwischen einer Rückmeldung
+zu einer Eingabe und einem Fehlerzustand: Wer bei stehender Liste einen Begriff tippt, soll nicht
+zusehen, wie sie unter ihm verschwindet — die neue Abfrage hat einen eigenen Schlüssel, für den nie
+Daten ankamen, und der Leerzustand behauptete dann, im Zeitfenster stünde nichts. Umgesetzt über
+`letzteSeite` in `hooks.ts`: die letzte tatsächlich gelieferte Seite, ausdrücklich abgerufen und
+nicht über `placeholderData` — das hielte die alte Seite bei *jedem* Filterwechsel stehen und nähme
+dem Nutzer die Rückmeldung, dass gerade geladen wird.
+
+**Ist die Grenze aufgehoben, sagt ein ruhiger Hinweis, dass die Suche länger dauern kann.** Keine
+Warnfarbe: Der Nutzer hat das gerade selbst entschieden, er soll nur wissen, was ihn erwartet.
+
+**Ein neuer Suchbegriff setzt `langeSuche` zurück.** Die Grenze wurde für *diese* Suche bewusst
+aufgehoben; sie stillschweigend über den nächsten Begriff mitzunehmen hieße, eine einmalige
+Entscheidung dauerhaft zu machen — ausgerechnet die, die eine mehrsekündige Abfrage erlaubt.
+
+**`suche-abgebrochen` steht ebenfalls am Suchfeld**, obwohl es kein Prüffehler ist. Beide Handlungen,
+die helfen — Zeitraum verkleinern, Begriff schärfen —, finden dort statt; und eine Schaltfläche
+„Erneut versuchen" wäre hier falsch, weil sie dieselbe Abfrage noch einmal in dieselbe Zeitgrenze
+schickte. Aus demselben Grund wiederholt der Zwischenspeicher diesen einen Fall nicht automatisch
+(`lib/query-client.ts`); bei jedem anderen `4xx` bleibt es beim einen Wiederholungsversuch.
 
 **Zwischenschritte sind ausgeblendet — und das steht sichtbar da.** Als Chip, der in einem Halbsatz
 erklärt, was fehlt, und ihn einschaltet; und **ausdrücklich in der URL, ab dem ersten Rendern**. Das
@@ -580,9 +692,11 @@ schlimmer als einer, der aus ist.
 **Beim Mandantenwechsel** wird der Zwischenspeicher geleert, nicht invalidiert (bestehende Regel).
 Der **Prozessfilter wird dabei mit zurückgesetzt**: `ProcessID`s sind mandantengebunden, und ein
 stehengebliebener Filter erzeugte eine dauerhaft leere Liste, deren Ursache in einem Auswahlfeld
-steckt, das nichts mehr anzeigen kann. Umgesetzt über `zielNachMandantenwechsel` in
-`lib/zwischenspeicher.ts` — die Regel steht als prüfbare Funktion da und nicht als Nebenwirkung
-einer Navigation.
+steckt, das nichts mehr anzeigen kann. **`langeSuche` fällt aus demselben Grund mit weg:** Die
+Grenze wurde für einen bestimmten Begriff bei einem bestimmten Mandanten aufgehoben; sie über den
+Wechsel mitzunehmen, hieße eine einmalige Entscheidung stillschweigend dauerhaft zu machen.
+Umgesetzt über `zielNachMandantenwechsel` in `lib/zwischenspeicher.ts` — die Regel steht als
+prüfbare Funktion da und nicht als Nebenwirkung einer Navigation.
 
 Ein geteilter Link kann trotzdem fremde `ProcessID`s tragen. Die werden **nicht stillschweigend
 entfernt** — das zeigte dem Empfänger einen anderen Ausschnitt als dem Absender —, sondern stehen
@@ -592,9 +706,9 @@ als eigener, entfernbarer Eintrag in der Auswahl.
 
 | Datei | Was |
 |---|---|
-| `tests/nachrichtenfilter.test.ts` | URL → Zustand → URL; unbekannte Werte werden übergangen; **der Cursor taucht in keiner erzeugten URL auf**; die beiden Zeitfenstermodi schließen einander aus |
+| `tests/nachrichtenfilter.test.ts` | URL → Zustand → URL; unbekannte Werte werden übergangen; **der Cursor taucht in keiner erzeugten URL auf**; die beiden Zeitfenstermodi schließen einander aus; `langeSuche` steht in der URL und wird nur zusammen mit dem Suchbegriff geschickt; **welche Problemtypen an das Suchfeld gehören und welche über die Ansicht**, samt der beiden Zahlen aus der Antwort |
 | `tests/format.test.ts` | UTC → Anzeige in der gelieferten Zone; Wanduhrzeit der Eingabefelder, auch am Umstellungstag |
-| `tests/zwischenspeicher.test.ts` | das Ziel nach dem Mandantenwechsel trägt keine Filter |
+| `tests/zwischenspeicher.test.ts` | das Ziel nach dem Mandantenwechsel trägt keine Filter — auch kein `langeSuche` |
 
 ---
 
@@ -609,8 +723,8 @@ als eigener, entfernbarer Eintrag in der Auswahl.
 | **L1** Pflicht-Zeitfenster | `common/Zeitfenster`, Vorgabe 24 h, Maximum ein Jahr |
 | **L2** keine Live-Aggregation | kein `COUNT`, `limit + 1` statt `total` |
 | **L3** keine `OFFSET`-Paginierung | Cursor über `(MessageLastUpdate, MessageID)` |
-| **L4/L5** `MessageProperty`/BAM nur über die Kennung | `MessageProperty` wird nicht angefasst; Suche nur über Stammdaten, mit Mindestlänge und Deckel |
-| **L7** jede Abfrage gemessen | [`messungen-schritt4.md`](messungen-schritt4.md), Abschnitte L1 bis L10 |
+| **L4/L5** `MessageProperty`/BAM nur über die Kennung | `MessageProperty` wird nicht angefasst; Suche nur über Stammdaten, mit Mindestlänge, Deckel **und Fenstergrenze** (§5) |
+| **L7** jede Abfrage gemessen | [`messungen-schritt4.md`](messungen-schritt4.md), Abschnitte L1 bis L13 |
 | **Z1** kein `now()` | Zeitfenster über die Anwendungsuhr, aufgelöst in `common` |
 | **Q1** Fehlerbedingung | ausschließlich `MessageStatusClassifier.fehlerBedingung` |
 | **Q4** nicht zugeordnet heißt nicht zugeordnet | `processName`/`projectName` bleiben `null`; den Ersatztext wählt die Oberfläche |
@@ -623,7 +737,9 @@ als eigener, entfernbarer Eintrag in der Auswahl.
 
 - **Der Freitextfilter bleibt teuer, und beide vorgesehenen Abhilfen sind widerlegt** (geprüft am
   06.08.2026, Messungen M10 und L11). Der Punkt bleibt offen — aber er ist jetzt ein *bekannter*
-  offener Punkt und keine ungehobene Verbesserung:
+  offener Punkt und keine ungehobene Verbesserung. **Eingegrenzt ist er seit dem 06.08.2026 durch
+  die Fenstergrenze aus §5** (Messung L13); was folgt, beschreibt weiterhin die Ursache und nicht
+  ihre Behebung:
 
   1. **Auflösung über `SOS.ProcessID` zu einer Kennungsliste — verworfen.** Sie hätte die
      ODER-Bedingung beseitigt und einen Indexzugriff auf `ProcessID` möglich gemacht. Die
@@ -641,11 +757,46 @@ als eigener, entfernbarer Eintrag in der Auswahl.
      weglässt.
 
   **Was bleibt.** Ein Index auf `Message.SOSID` würde es lösen und ist ausgeschlossen — `GlassfishDB`
-  gehört uns nicht, Regel S1 verbietet jedes DDL. Damit ist die Mindestlänge (Regel L5), die
-  Entprellung im Suchfeld und ein enges Zeitfenster die einzige verfügbare Abhilfe. Sollte die
-  Suche in Produktion zum Problem werden, ist die nächste zu prüfende Stufe eine **Obergrenze für
-  das Zeitfenster bei gesetztem Suchbegriff** — eine fachliche Einschränkung statt einer
-  technischen, und deshalb eine Entscheidung und keine Umsetzung.
+  gehört uns nicht, Regel S1 verbietet jedes DDL. Damit sind die Mindestlänge (Regel L5), die
+  Entprellung im Suchfeld und ein enges Zeitfenster die verfügbaren Abhilfen. Die zuletzt genannte
+  nächste Stufe — eine **Obergrenze für das Zeitfenster bei gesetztem Suchbegriff** — ist am
+  06.08.2026 gemessen (L13) und **umgesetzt** (§5): 30 Tage, bewusst aufhebbar bis 90.
+
+  **Die Gestalt einer späteren Behebung ist durch M10 sichtbar geworden — und sie ist viel kleiner
+  als der in Annahme A9 genannte „eigene Suchindex".** Was den Umbau über `SOS.ProcessID` zu Fall
+  gebracht hat, ist ein sehr kleines Datenproblem: **elf `SOS`-Zeilen mit vierzehn abweichenden
+  Prozessen.** Eine Zuordnungstabelle dieser Größe in `overlord_monitor`, vom Rollup-Job aus
+  Schritt 10 fortgeschrieben, würde genügen: Ein Treffer in `SOSName` ließe sich damit auf **beide**
+  Prozesskennungen auflösen — die des Ablaufs und die, unter der die Nachrichten tatsächlich
+  stehen —, und die einfache Bedingung `ProcessID IN (…)` trüge wieder, ohne Zeilen zu verlieren.
+  Damit fiele die ODER-Verknüpfung weg, die heute den Index auf `ProcessID` ausschließt. **Der Preis
+  ist ein voller Durchlauf über `Message`** (10,9 s, M10) zum Füllen der Tabelle; als seltener
+  Hintergrundlauf ist das tragbar, als Teil einer Anfrage nicht. Umgesetzt wird das hier nicht — es
+  gehört zu Schritt 10 und braucht seine eigene Messung.
+- **Nachrichten wechseln den Prozess, während die `SOSID` stehen bleibt — und für Schritt 6 ist
+  offen, was das für die Mandantengrenze bedeutet.** Nachgewiesen ist der Wechsel selbst (M10):
+  **9.101 Zeilen**, bei denen `SOS.ProcessID` und `Message.ProcessID` auseinanderfallen — elf
+  `SOS`-Zeilen, vierzehn Prozesse, verteilt über fünfzehn Monate und damit kein Ausreißer eines
+  Tages. **Ungeprüft ist, ob Quell- und Zielprozess über `ProjectMandant` zum selben Mandanten
+  führen.**
+
+  **Für die Liste ist das folgenlos**, weil der Mandantenfilter über den *aktuellen*
+  `Message.ProcessID` läuft: Eine Zeile gehört immer genau dem Mandanten, unter dem sie gerade steht.
+  **Für die Verkettung in Schritt 6 ist es das nicht.** Eine Kette über einen solchen Wechsel hätte
+  Glieder in zwei Mandanten, und was der Endpunkt dann zeigt und was er verschweigt, ist eine
+  Entscheidung, die **vor** dem Bau der Kette fallen muss — nicht während. Die naheliegenden
+  Möglichkeiten (die Kette am Mandantenwechsel abschneiden; sie zeigen und die fremden Glieder
+  unkenntlich machen; sie ganz verweigern) unterscheiden sich fachlich erheblich, und die
+  Mandantentrennung ist bei externen Nutzern eine Sicherheitsanforderung (Regel M5: sie gilt auch
+  quer).
+
+  Der Punkt steht hier und nicht erst in Schritt 6, damit er dort nicht **neu gefunden** werden muss.
+
+  > **Als Vermutung zur Ursache, nicht als Befund:** Das Datenbank-Event `MoveDTNA997` verschiebt
+  > laut [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §3.3 stündlich Nachrichten zwischen zwei
+  > Prozessen. Das passt zum Bild, ist aber **nicht nachgewiesen** — geprüft wurde die Abweichung,
+  > nicht ihre Herkunft.
+
 - **Eine tatsächlich hängende `SPLITTED`-Nachricht erscheint nie als überfällig.** `ZWISCHENSCHRITT`
   gilt als Endstatus (`message-status.md`), und die Überfälligkeitsrechnung setzt „nicht in einem
   Endstatus" voraus. Bleibt eine gesplittete Nachricht wirklich hängen, sieht man das **nicht** am
@@ -669,6 +820,13 @@ als eigener, entfernbarer Eintrag in der Auswahl.
   einen Fall, der auf der Testkopie kein einziges Mal vorkommt. `MessageStatusClassifierTest`
   deckt einen kleingeschriebenen Wert ab; `DatenzugriffDbIT` wird weiterhin rot, sobald im
   Altsystem ein dreizehnter Statuswert auftaucht.
+- **`suche-abgebrochen` sagt dem Nutzer „mach die Anfrage kleiner", auch wenn in Wahrheit die
+  Datenbank unter Last steht.** Der Statuscode ist `400`, weil das die Handlung ist, die dem Nutzer
+  zur Verfügung steht — aber die Antwort unterscheidet die beiden Ursachen nicht, und sie kann es
+  aus der Anwendung heraus auch nicht. Sichtbar wird der Unterschied nur in der Häufung: Jede dieser
+  Antworten trägt eine `traceId`, die im Protokoll steht. Häufen sich die Einträge, ist das das
+  Signal — eine Kennzahl dafür gibt es heute nicht, sie gehört zur Betriebsüberwachung und nicht in
+  diesen Schritt.
 - **Die BAM-Spaltenauflösung läuft je Anfrage** (zwei kleine Abfragen, zusammen unter 2 ms). Ein
   Zwischenspeicher je Mandant wäre möglich, bringt aber eine Invalidierungsfrage mit — offen, bis
   eine Messung zeigt, dass es sich lohnt.

@@ -1,5 +1,6 @@
 package de.kraftwerkone.overlord.monitor.common.error;
 
+import java.util.Map;
 import org.springframework.http.HttpStatus;
 
 /**
@@ -14,6 +15,13 @@ import org.springframework.http.HttpStatus;
  * Stacktraces, SQL, Tabellen-, Spalten- oder Klassennamen, Hostnamen — und niemals ein Passwort.
  * {@link #getMessage()} ist die interne Ursache fuers Protokoll und darf konkreter sein. Wo beide
  * gleich sind, genuegt der kurze Konstruktor.
+ *
+ * <p><b>{@link #zusatz()} sind maschinenlesbare Angaben zum Fall</b> — RFC 9457 erlaubt eigene
+ * Felder neben {@code type}, {@code title} und {@code detail}. Sie existieren, damit die
+ * Oberflaeche eine <i>konkrete</i> Meldung bauen kann, statt {@code detail} zu zerlegen oder
+ * dieselbe Zahl ein zweites Mal zu pflegen: Steht die geltende Grenze im Rumpf, kann sie im Backend
+ * geaendert werden, ohne dass ein Sprachtext hinterherlaeuft. Hier gehoert ausschliesslich hinein,
+ * was der Nutzer ohnehin sehen darf — keine Tabellennamen, keine Zahlen aus dem Bestand.
  */
 public class FachlicheAusnahme extends RuntimeException {
 
@@ -21,6 +29,7 @@ public class FachlicheAusnahme extends RuntimeException {
   private final String problemTyp;
   private final String titel;
   private final String detail;
+  private final Map<String, Object> zusatz;
 
   /**
    * @param status der HTTP-Status der Antwort
@@ -39,11 +48,26 @@ public class FachlicheAusnahme extends RuntimeException {
    */
   public FachlicheAusnahme(
       HttpStatus status, String problemTyp, String titel, String detail, String interneUrsache) {
+    this(status, problemTyp, titel, detail, interneUrsache, Map.of());
+  }
+
+  /**
+   * @param zusatz maschinenlesbare Angaben zum Fall, die zusaetzlich in den Antwortrumpf gehen.
+   *     Ausschliesslich Werte, die der Nutzer ohnehin sehen darf.
+   */
+  public FachlicheAusnahme(
+      HttpStatus status,
+      String problemTyp,
+      String titel,
+      String detail,
+      String interneUrsache,
+      Map<String, Object> zusatz) {
     super(interneUrsache);
     this.status = status;
     this.problemTyp = problemTyp;
     this.titel = titel;
     this.detail = detail;
+    this.zusatz = Map.copyOf(zusatz);
   }
 
   public HttpStatus status() {
@@ -61,5 +85,10 @@ public class FachlicheAusnahme extends RuntimeException {
   /** Der dem Nutzer gezeigte Text. */
   public String detail() {
     return detail;
+  }
+
+  /** Zusaetzliche Felder des Antwortrumpfs. Leer, wenn der Fall ohne Zahlen auskommt. */
+  public Map<String, Object> zusatz() {
+    return zusatz;
   }
 }

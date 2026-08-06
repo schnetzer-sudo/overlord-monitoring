@@ -12,12 +12,15 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { einsetzen } from "@/i18n";
 import { useTexte } from "@/i18n/provider";
+import { fehleranzeige } from "@/lib/fehlertext";
 import { zeitfenstermodus, ZEITRAEUME, type Zeitraum } from "@/lib/filter";
 import { wanduhrzeitFuerEingabe, zeitpunktAusWanduhrzeit } from "@/lib/format";
+import { ProblemFehler } from "@/lib/http";
 
 import {
   STATUSARTEN,
   SUCHE_MINDESTLAENGE,
+  sucheTraegt,
   type Nachrichtenfilter,
   type Statusart,
 } from "../filter";
@@ -25,6 +28,9 @@ import { ProzessFilter } from "./prozess-filter";
 
 /** Wie lange nach dem letzten Tastendruck gewartet wird, bevor gesucht wird. */
 const SUCHE_ENTPRELLUNG_MS = 400;
+
+/** Der Problemtyp, der die beiden Zahlen mitbringt und eine Schaltfläche verdient. */
+const FENSTER_ZU_GROSS = "suche-fenster-zu-gross";
 
 type Steuerung = {
   setzeZeitraum: (zeitraum: Zeitraum) => void;
@@ -49,11 +55,14 @@ export function Filterleiste({
   filter,
   steuerung,
   suchfehler,
+  aufLangeSuche,
 }: {
   filter: Nachrichtenfilter;
   steuerung: Steuerung;
   /** Ein `suchbegriff-zu-unscharf` gehört an das Suchfeld, nicht über die Ansicht. */
-  suchfehler?: string;
+  suchfehler?: ProblemFehler;
+  /** Hebt die Fenstergrenze der Suche auf — „Trotzdem suchen". */
+  aufLangeSuche: () => void;
 }) {
   return (
     <div className="flex flex-col gap-2">
@@ -61,7 +70,13 @@ export function Filterleiste({
         <Zeitfensterwahl filter={filter} steuerung={steuerung} />
         <StatusFilter gewaehlt={filter.status ?? []} aufAuswahl={steuerung.setzeStatus} />
         <ProzessFilter gewaehlt={filter.prozess ?? []} aufAuswahl={steuerung.setzeProzesse} />
-        <Suchfeld wert={filter.suche ?? ""} aufSuche={steuerung.setzeSuche} fehler={suchfehler} />
+        <Suchfeld
+          wert={filter.suche ?? ""}
+          aufSuche={steuerung.setzeSuche}
+          fehler={suchfehler}
+          langeSuche={filter.langeSuche && sucheTraegt(filter.suche)}
+          aufLangeSuche={aufLangeSuche}
+        />
       </div>
       <ZwischenschritteChip
         eingeblendet={filter.zwischenschritte}
@@ -278,15 +293,24 @@ function StatusFilter({
  * Tippen zwangsläufig hindurch; ihm nach dem zweiten Zeichen eine Fehlermeldung
  * hinzustellen, wäre eine Belehrung für etwas, das er gerade tut. Der Hinweis
  * sagt stattdessen, was noch fehlt.
+ *
+ * **Und die Fenstergrenze ist ebenfalls kein Fehlerzustand der Ansicht.** Bei
+ * gesetztem Suchbegriff ist das Zeitfenster begrenzt (Messung L13); wer darüber
+ * liegt, bekommt hier die beiden Zahlen und eine Schaltfläche, die es trotzdem
+ * versucht — nicht eine rote Meldung, die seine Liste wegnimmt.
  */
 function Suchfeld({
   wert,
   aufSuche,
   fehler,
+  langeSuche,
+  aufLangeSuche,
 }: {
   wert: string;
   aufSuche: (suche: string) => void;
-  fehler?: string;
+  fehler?: ProblemFehler;
+  langeSuche: boolean;
+  aufLangeSuche: () => void;
 }) {
   const texte = useTexte();
   const kennung = useId();
@@ -310,11 +334,36 @@ function Suchfeld({
   }, [eingabe, wert, aufSuche]);
 
   const fehlendeZeichen = SUCHE_MINDESTLAENGE - eingabe.trim().length;
-  const hinweis =
-    fehler ??
-    (eingabe.trim().length > 0 && fehlendeZeichen > 0
-      ? einsetzen(texte.nachrichten.suche.zuKurz, { anzahl: fehlendeZeichen })
-      : undefined);
+  const fensterZuGross = fehler?.typ === FENSTER_ZU_GROSS ? fehler : undefined;
+
+  /*
+   * Die beiden Zahlen kommen aus der Antwort und nicht aus einer Konstante hier:
+   * Die Grenze gehört dem Backend, das sie gemessen hat. Fehlt eine von beiden
+   * — etwa weil eine ältere Fassung antwortet —, greift der allgemeine Satz aus
+   * dem Fehlerkatalog statt einer Meldung mit einer Lücke darin.
+   */
+  const grenzeTage = fensterZuGross?.zahl("grenzeTage");
+  const angefragtTage = fensterZuGross?.zahl("angefragtTage");
+
+  function hinweisText(): string | undefined {
+    if (grenzeTage !== undefined && angefragtTage !== undefined) {
+      return einsetzen(texte.nachrichten.suche.fensterZuGross, {
+        grenze: grenzeTage,
+        angefragt: angefragtTage,
+      });
+    }
+    if (fehler !== undefined) {
+      return fehleranzeige(fehler, texte).text;
+    }
+    if (eingabe.trim().length > 0 && fehlendeZeichen > 0) {
+      return einsetzen(texte.nachrichten.suche.zuKurz, { anzahl: fehlendeZeichen });
+    }
+    // Zuletzt, weil jede Rückmeldung wichtiger ist als die Auskunft, dass es
+    // gerade dauern kann.
+    return langeSuche ? texte.nachrichten.suche.langeSucheLaeuft : undefined;
+  }
+
+  const hinweis = hinweisText();
 
   return (
     <div className="flex min-w-0 flex-col gap-0.5">
@@ -355,9 +404,26 @@ function Suchfeld({
         ) : null}
       </div>
       {hinweis === undefined ? null : (
-        <p id={`${kennung}-hinweis`} className="text-muted-foreground text-beiwerk">
-          {hinweis}
-        </p>
+        <div
+          id={`${kennung}-hinweis`}
+          className="text-muted-foreground text-beiwerk flex flex-wrap items-center gap-x-2 gap-y-1"
+        >
+          {/* Bewusst dieselbe ruhige Farbrolle wie „noch zwei Zeichen": Der Nutzer
+              hat nichts falsch gemacht, sein Fenster ist nur größer als das, was
+              die Suche in vertretbarer Zeit durchläuft. */}
+          <span>{hinweis}</span>
+          {fensterZuGross === undefined ? null : (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="min-h-beruehrung"
+              onClick={aufLangeSuche}
+            >
+              {texte.nachrichten.suche.trotzdemSuchen}
+            </Button>
+          )}
+        </div>
       )}
     </div>
   );

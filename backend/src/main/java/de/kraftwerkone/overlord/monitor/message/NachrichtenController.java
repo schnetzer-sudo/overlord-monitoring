@@ -53,6 +53,8 @@ public class NachrichtenController {
    * @param status mehrfach; Werte aus {@code MessageStatusKind}, nicht Rohwerte
    * @param prozess mehrfach; {@code ProcessID}
    * @param suche Freitext auf Prozess-, Projekt- und Ablaufnamen, mindestens drei Zeichen
+   * @param langeSuche hebt die Fenstergrenze der Suche auf; Vorgabe {@code false}. Wirkt nur
+   *     zusammen mit {@code suche} und nur bis {@link NachrichtenFilter#SUCHE_FENSTER_LANG}.
    * @param zwischenschritte ob {@code SPLITTED}/{@code MERGED} mitkommen; Vorgabe {@code false}
    * @param cursor undurchsichtige Seitenposition der vorigen Antwort
    */
@@ -64,6 +66,7 @@ public class NachrichtenController {
       @RequestParam(required = false) List<String> status,
       @RequestParam(required = false) List<String> prozess,
       @RequestParam(required = false) String suche,
+      @RequestParam(required = false) Boolean langeSuche,
       @RequestParam(required = false) Boolean zwischenschritte,
       @RequestParam(required = false) String sortierung,
       @RequestParam(required = false) String cursor,
@@ -78,6 +81,7 @@ public class NachrichtenController {
             status,
             prozess,
             suche,
+            langeSuche,
             zwischenschritte,
             sortierung,
             cursor,

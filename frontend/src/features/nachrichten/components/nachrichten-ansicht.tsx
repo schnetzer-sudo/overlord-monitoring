@@ -5,10 +5,8 @@ import { useState } from "react";
 import { Fehler, Laden, Leer } from "@/components/zustand";
 import { Button } from "@/components/ui/button";
 import { useTexte } from "@/i18n/provider";
-import { fehleranzeige } from "@/lib/fehlertext";
-import { ProblemFehler } from "@/lib/http";
 
-import { sucheTraegt, type Nachrichtenfilter } from "../filter";
+import { sucheTraegt, suchfeldFehler, type Nachrichtenfilter } from "../filter";
 import { useNachrichtenSeite, useNachrichtenfilter } from "../hooks";
 import { Blaettern } from "./blaettern";
 import { Filterleiste } from "./filterleiste";
@@ -33,11 +31,20 @@ export function NachrichtenAnsicht() {
   const [aktualisierungAn, setAktualisierungAn] = useState(false);
   const liste = useNachrichtenSeite(filter, aktualisierungAn);
 
-  // Ein zu weiter oder zu kurzer Suchbegriff ist kein Fehler der ganzen Ansicht,
-  // sondern eine Rückmeldung zu einer Eingabe — er gehört an das Feld, das ihn
-  // ausgelöst hat.
+  // Ein zu weiter, zu kurzer oder über die Fenstergrenze hinaus gestellter
+  // Suchbegriff ist kein Fehler der ganzen Ansicht, sondern eine Rückmeldung zu
+  // einer Eingabe — er gehört an das Feld, das ihn ausgelöst hat.
   const amSuchfeld = suchfeldFehler(liste.fehler);
   const ansichtsfehler = amSuchfeld === undefined ? liste.fehler : undefined;
+
+  /*
+   * Bei einer Rückmeldung am Suchfeld bleibt die Liste stehen, so wie sie war.
+   * Sonst verschwände sie unter dem Nutzer, während er tippt: Die neue Abfrage
+   * hat einen eigenen Schlüssel, für den nie Daten ankamen — und der Leerzustand
+   * behauptete dann, im Zeitfenster stünde nichts, obwohl gar nicht gesucht
+   * wurde.
+   */
+  const zeigeSeite = liste.seite ?? (amSuchfeld === undefined ? undefined : liste.letzteSeite);
 
   return (
     <div className="flex flex-col gap-4">
@@ -46,19 +53,20 @@ export function NachrichtenAnsicht() {
       <Filterleiste
         filter={filter}
         steuerung={steuerung}
-        suchfehler={amSuchfeld === undefined ? undefined : fehleranzeige(amSuchfeld, texte).text}
+        suchfehler={amSuchfeld}
+        aufLangeSuche={() => steuerung.setzeLangeSuche(true)}
       />
 
       {ansichtsfehler ? (
         <Fehler fehler={ansichtsfehler} aufWiederholen={liste.aktualisiere} />
       ) : liste.laedt ? (
         <Laden zeilen={8} />
-      ) : (liste.seite?.items.length ?? 0) === 0 ? (
+      ) : (zeigeSeite?.items.length ?? 0) === 0 ? (
         <LeerMitUrsache filter={filter} auf30Tage={() => steuerung.setzeZeitraum("30d")} />
       ) : (
         <div className="border-border bg-card overflow-x-auto rounded-lg border">
           <NachrichtenTabelle
-            zeilen={liste.seite?.items ?? []}
+            zeilen={zeigeSeite?.items ?? []}
             sortierung={filter.sortierung ?? "neueste"}
             aufSortierung={steuerung.setzeSortierung}
           />
@@ -121,11 +129,4 @@ function LeerMitUrsache({
       )}
     </div>
   );
-}
-
-/** Die beiden Problemtypen, die einer Eingabe gelten und nicht der Ansicht. */
-const AM_SUCHFELD = ["suchbegriff-zu-unscharf", "suchbegriff-zu-kurz"];
-
-function suchfeldFehler(fehler: unknown): ProblemFehler | undefined {
-  return fehler instanceof ProblemFehler && AM_SUCHFELD.includes(fehler.typ) ? fehler : undefined;
 }

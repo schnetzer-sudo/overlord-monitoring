@@ -5,9 +5,11 @@ import {
   alsSuchparameter,
   ausSuchparametern,
   sucheTraegt,
+  suchfeldFehler,
   type Nachrichtenfilter,
 } from "@/features/nachrichten/filter";
 import { mitFreiemFenster, mitVorwahl, zeitfenstermodus } from "@/lib/filter";
+import { ProblemFehler } from "@/lib/http";
 
 /**
  * Der Filterzustand liegt in der **URL**, damit Ansichten teilbar sind.
@@ -24,6 +26,7 @@ const LEER: Nachrichtenfilter = {
   status: null,
   prozess: null,
   suche: null,
+  langeSuche: false,
   zwischenschritte: false,
   sortierung: null,
 };
@@ -42,6 +45,7 @@ describe("URL → Zustand", () => {
       status: ["FEHLER", "WARTEND"],
       prozess: ["abc", "def"],
       suche: "lieferschein",
+      langeSuche: false,
       zwischenschritte: true,
       sortierung: "aelteste",
     });
@@ -147,6 +151,87 @@ describe("Zustand → URL", () => {
     expect(alsSuchparameter(filter).get("suche")).toBe("ab");
     expect(sucheTraegt(filter.suche)).toBe(false);
     expect(alsAbfrage(filter)).not.toContain("suche");
+  });
+});
+
+/**
+ * Die bewusst aufgehobene Fenstergrenze der Suche steht in der URL wie jeder
+ * andere Filter — was man sieht, ist was man teilt. Ein Link auf eine
+ * ausdrücklich lange Suche zeigt beim Empfänger dieselbe Liste und nicht `400`.
+ */
+describe("langeSuche", () => {
+  it("steht in der URL und lässt sich wieder einlesen", () => {
+    const filter: Nachrichtenfilter = { ...LEER, suche: "lieferschein", langeSuche: true };
+
+    const url = alsSuchparameter(filter);
+
+    expect(url.get("langeSuche")).toBe("true");
+    expect(ausSuchparametern(url)).toEqual(filter);
+  });
+
+  it("fehlt in der URL, solange die Grenze steht", () => {
+    expect(alsSuchparameter({ ...LEER, suche: "lieferschein" }).has("langeSuche")).toBe(false);
+    expect(ausSuchparametern(new URLSearchParams("")).langeSuche).toBe(false);
+  });
+
+  /**
+   * Ohne Suchbegriff greift die Grenze im Backend gar nicht. Den Parameter
+   * trotzdem mitzuschicken machte nur den Abfrageschlüssel des Zwischenspeichers
+   * unnötig verschieden — dieselbe Antwort läge dann zweimal darin.
+   */
+  it("wird nur zusammen mit dem Suchbegriff geschickt", () => {
+    expect(alsAbfrage({ ...LEER, suche: "lieferschein", langeSuche: true })).toContain(
+      "langeSuche=true",
+    );
+    expect(alsAbfrage({ ...LEER, langeSuche: true })).not.toContain("langeSuche");
+    expect(alsAbfrage({ ...LEER, suche: "ab", langeSuche: true })).not.toContain("langeSuche");
+  });
+});
+
+/**
+ * **Welche Rückmeldung an das Suchfeld gehört und welche über die Ansicht.**
+ *
+ * Der Unterschied ist nicht kosmetisch: Am Feld bleibt die Liste stehen, über der
+ * Ansicht verschwindet sie. Wer beim Tippen in die Fenstergrenze läuft, soll
+ * weiter sehen, was er vorher gesehen hat — und nicht einen Leerzustand, der
+ * behauptet, im Zeitfenster stünde nichts.
+ */
+describe("Rückmeldungen am Suchfeld", () => {
+  const problem = (typ: string, angaben: Record<string, unknown> = {}) =>
+    new ProblemFehler({ status: 400, typ, angaben });
+
+  it("nimmt die vier Typen an, die einer Eingabe gelten", () => {
+    for (const typ of [
+      "suchbegriff-zu-kurz",
+      "suchbegriff-zu-unscharf",
+      "suche-fenster-zu-gross",
+      "suche-abgebrochen",
+    ]) {
+      expect(suchfeldFehler(problem(typ)), typ).toBeDefined();
+    }
+  });
+
+  it("lässt alles andere Fehlerzustand der Ansicht bleiben", () => {
+    expect(suchfeldFehler(problem("zeitfenster-zu-gross"))).toBeUndefined();
+    expect(suchfeldFehler(problem("cursor-ungueltig"))).toBeUndefined();
+    expect(suchfeldFehler(new Error("irgendwas"))).toBeUndefined();
+    expect(suchfeldFehler(undefined)).toBeUndefined();
+  });
+
+  /**
+   * Die beiden Zahlen der konkreten Meldung kommen aus der Antwort. Fehlt eine —
+   * etwa weil eine ältere Fassung antwortet —, greift der allgemeine Satz aus
+   * dem Fehlerkatalog statt einer Meldung mit einer Lücke darin.
+   */
+  it("liest Grenze und angefragte Spanne aus der Antwort", () => {
+    const fehler = problem("suche-fenster-zu-gross", { grenzeTage: 30, angefragtTage: 60 });
+
+    expect(fehler.zahl("grenzeTage")).toBe(30);
+    expect(fehler.zahl("angefragtTage")).toBe(60);
+    expect(problem("suche-fenster-zu-gross").zahl("grenzeTage")).toBeUndefined();
+    expect(
+      problem("suche-fenster-zu-gross", { grenzeTage: "30" }).zahl("grenzeTage"),
+    ).toBeUndefined();
   });
 });
 

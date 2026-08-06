@@ -1,6 +1,6 @@
 import { MutationCache, QueryCache, QueryClient, isServer } from "@tanstack/react-query";
 
-import { istEndgueltig, istNichtAngemeldet } from "./http";
+import { istEndgueltig, istNichtAngemeldet, istZeitgrenze } from "./http";
 import { ROUTEN, WEITER_PARAMETER } from "./routen";
 
 /**
@@ -50,7 +50,13 @@ function erzeugeQueryClient(): QueryClient {
         // Kein zweiter Versuch bei 401, 403 und 404: Das Ergebnis stand schon
         // beim ersten Aufruf fest. Ohne diese Regel wartet der Nutzer mehrere
         // Sekunden auf eine Meldung, die sich nicht mehr ändern kann.
-        retry: (versuche, fehler) => !istEndgueltig(fehler) && versuche < 1,
+        //
+        // Und keiner bei einer abgebrochenen Suche: Dort stellte der zweite
+        // Versuch dieselbe Abfrage noch einmal und liefe wieder in dieselbe
+        // Zeitgrenze — zehn weitere Sekunden auf der Produktionsdatenbank für
+        // eine Antwort, die schon feststeht.
+        retry: (versuche, fehler) =>
+          !istEndgueltig(fehler) && !istZeitgrenze(fehler) && versuche < 1,
       },
       mutations: {
         retry: false,

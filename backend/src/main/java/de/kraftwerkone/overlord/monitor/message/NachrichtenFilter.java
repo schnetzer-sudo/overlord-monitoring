@@ -8,10 +8,12 @@ import de.kraftwerkone.overlord.monitor.common.Zeitpunkte;
 import de.kraftwerkone.overlord.monitor.common.Zeitraum;
 import de.kraftwerkone.overlord.monitor.common.error.FachlicheAusnahme;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import org.springframework.http.HttpStatus;
 
@@ -26,6 +28,8 @@ import org.springframework.http.HttpStatus;
  * @param status leere Menge heisst „alle"
  * @param prozessIds ausdruecklich gewaehlte {@code ProcessID}s, leer heisst „alle"
  * @param suche Freitext oder {@code null}; die Aufloesung zu IDs macht das Repository
+ * @param langeSuche ob die Fenstergrenze der Suche bewusst aufgehoben wurde. Wirkt nur zusammen mit
+ *     {@code suche} und hebt sie nur bis {@link #SUCHE_FENSTER_LANG}.
  * @param zwischenschritte ob {@code SPLITTED}/{@code MERGED} mitkommen
  * @param cursor Seitenposition oder {@code null} fuer die erste Seite
  */
@@ -34,6 +38,7 @@ public record NachrichtenFilter(
     Set<MessageStatusKind> status,
     List<String> prozessIds,
     String suche,
+    boolean langeSuche,
     boolean zwischenschritte,
     Sortierrichtung sortierung,
     Seitenposition cursor,
@@ -66,6 +71,42 @@ public record NachrichtenFilter(
   /** Die Vorgabe: Zwischenschritte bleiben draussen. */
   public static final boolean ZWISCHENSCHRITTE_VORGABE = false;
 
+  /**
+   * Die Fenstergrenze <b>bei gesetztem Suchbegriff</b> (Messung L13, 06.08.2026).
+   *
+   * <p>Der Freitextfilter ist der teuerste Fall dieses Endpunkts, und beide vorgesehenen Umbauten
+   * sind gemessen und verworfen (M10 und L11). Was bleibt, ist eine Grenze — und zwar an der
+   * <b>Spanne</b>, nicht am Modus: Praktisch beisst sie nur im {@code von}/{@code bis}-Modus, weil
+   * {@code zeitraum} ohnehin nur bis 30 Tage reicht; das ist kein Grund, sie dort wegzulassen.
+   *
+   * <p><b>Warum eine Grenze auf das Fenster und nicht auf die Trefferzahl.</b> Teuer ist nicht der
+   * breite Begriff, sondern der seltene: Ein Begriff, dessen Prozesse im Fenster viele Zeilen
+   * tragen, fuellt die Seite sofort (2,3 ms). Ein Begriff, dessen Prozesse kaum Zeilen tragen,
+   * zwingt MariaDB durch das ganze Fenster. Eine Grenze auf die Zahl der aufgeloesten Prozesse
+   * bestrafte damit genau den schnellen Fall und liesse den langsamen durch.
+   */
+  public static final Duration SUCHE_FENSTER = Duration.ofDays(30);
+
+  /**
+   * Bis hierher — und nicht weiter — hebt {@code langeSuche=true} die Grenze auf.
+   *
+   * <p><b>Neunzig Tage, weil das die groesste gemessene Spanne mit Sicherheitsabstand ist</b>
+   * (L13). Der schlimmste Fall ist der Begriff, der Stammdaten trifft, aber im Fenster keine
+   * einzige Zeile: voller Durchlauf, leeres Ergebnis. Gemessen gegen die Testkopie kostet er 1,2 s
+   * ueber 30 Tage, <b>3,9 s ueber 90 Tage</b>, 8,0 s ueber 180 Tage und 15,6 s ueber ein Jahr — der
+   * Verlauf ist linear bei rund 173.000 Zeilen je Sekunde. Der Lese-Pool bricht bei 10 s ab ({@code
+   * max_statement_time}, {@code docs/datenzugriff.md} §1): Ein Jahr <b>reisst</b> die Grenze, 180
+   * Tage liegen mit 80 Prozent daneben und damit einen dichteren Tag davon entfernt. 90 Tage lassen
+   * Faktor 2,5 Luft.
+   *
+   * <p>Das Maximum von einem Jahr aus Regel L1 bleibt darueber bestehen ({@code Zeitfenster}) — bei
+   * gesetztem Suchbegriff greift es nur nie, weil diese Grenze frueher zieht.
+   */
+  public static final Duration SUCHE_FENSTER_LANG = Duration.ofDays(90);
+
+  /** Die Vorgabe: Die Grenze steht. */
+  public static final boolean LANGE_SUCHE_VORGABE = false;
+
   public NachrichtenFilter {
     status = Set.copyOf(status);
     prozessIds = List.copyOf(prozessIds);
@@ -85,6 +126,7 @@ public record NachrichtenFilter(
       List<String> status,
       List<String> prozess,
       String suche,
+      Boolean langeSuche,
       Boolean zwischenschritte,
       String sortierung,
       String cursor,
@@ -98,15 +140,57 @@ public record NachrichtenFilter(
             bis == null ? null : Zeitpunkte.ausIso(bis, anwendungsuhr.getZone(), "bis"),
             anwendungsuhr);
 
+    String begriff = suchbegriff(suche);
+    boolean langes = langeSuche == null ? LANGE_SUCHE_VORGABE : langeSuche;
+    pruefeSuchfenster(begriff, fenster, langes);
+
     return new NachrichtenFilter(
         fenster,
         einordnungen(status),
         werte(prozess),
-        suchbegriff(suche),
+        begriff,
+        langes,
         zwischenschritte == null ? ZWISCHENSCHRITTE_VORGABE : zwischenschritte,
         sortierung == null ? Sortierrichtung.NEUESTE : Sortierrichtung.ausCode(sortierung),
         cursor == null ? null : Seitenposition.dekodiere(cursor).imFenster(fenster),
         seitengroesse(limit));
+  }
+
+  /**
+   * Die Fenstergrenze der Suche — {@code 400} mit eigenem Problemtyp, wenn sie ueberschritten ist.
+   *
+   * <p><b>Ohne Suchbegriff greift sie nicht.</b> Ein Jahresfenster ohne Suche kostet dieselben 2,7
+   * ms wie ein Tagesfenster (Messungen L1 bis L3); teuer wird erst die ODER-Bedingung ueber {@code
+   * ProcessID} und {@code SOSID}, die den Zeitindex als einzigen Zugriffspfad uebrig laesst.
+   *
+   * <p><b>Die Antwort nennt beide Zahlen</b> — die geltende Grenze und die angefragte Spanne. Damit
+   * kann die Oberflaeche eine konkrete Meldung samt Schaltflaeche „Trotzdem suchen" bauen, ohne die
+   * Grenze ein zweites Mal zu kennen; steht sie nur im Backend, laeuft ihr kein Sprachtext
+   * hinterher.
+   */
+  private static void pruefeSuchfenster(String suche, Zeitfenster fenster, boolean langeSuche) {
+    if (suche == null) {
+      return;
+    }
+    Duration grenze = langeSuche ? SUCHE_FENSTER_LANG : SUCHE_FENSTER;
+    Duration spanne = fenster.spanne();
+    if (spanne.compareTo(grenze) <= 0) {
+      return;
+    }
+    long grenzeTage = Zeitfenster.tageAufgerundet(grenze);
+    long angefragtTage = Zeitfenster.tageAufgerundet(spanne);
+    throw new FachlicheAusnahme(
+        HttpStatus.BAD_REQUEST,
+        "suche-fenster-zu-gross",
+        "Zeitfenster fuer die Suche zu gross",
+        "Die Suche ist auf "
+            + grenzeTage
+            + " Tage begrenzt; angefragt sind "
+            + angefragtTage
+            + ". Verkleinere das Zeitfenster"
+            + (langeSuche ? "." : " oder suche ausdruecklich ueber den laengeren Zeitraum."),
+        "Suchfenster ueber der Grenze: " + angefragtTage + " statt " + grenzeTage + " Tage",
+        Map.of("grenzeTage", grenzeTage, "angefragtTage", angefragtTage));
   }
 
   private static Set<MessageStatusKind> einordnungen(List<String> status) {

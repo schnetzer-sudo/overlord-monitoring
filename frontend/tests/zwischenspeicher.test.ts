@@ -42,11 +42,18 @@ describe("Zwischenspeicher", () => {
  * `ProcessID`s sind mandantengebunden. Bliebe der Filter über den Wechsel hinweg
  * stehen, sähe der Nutzer eine dauerhaft leere Liste, deren Ursache in einem
  * Auswahlfeld steckt, das ihm nichts mehr anzeigen kann.
+ *
+ * Aus demselben Grund fällt `langeSuche` mit weg: Die Fenstergrenze der Suche
+ * wurde für einen bestimmten Begriff bei einem bestimmten Mandanten bewusst
+ * aufgehoben. Sie über den Wechsel hinweg mitzunehmen, hieße eine einmalige
+ * Entscheidung stillschweigend dauerhaft zu machen — ausgerechnet die, die eine
+ * mehrsekündige Abfrage erlaubt.
  */
 describe("Das Ziel nach dem Mandantenwechsel", () => {
   it("trägt keine Filter aus der vorherigen Ansicht", () => {
     expect(zielNachMandantenwechsel("/")).toBe("/");
     expect(zielNachMandantenwechsel("/nachrichten?prozess=abc&zeitraum=7d")).toBe("/nachrichten");
     expect(zielNachMandantenwechsel("/nachrichten?prozess=abc#unten")).toBe("/nachrichten");
+    expect(zielNachMandantenwechsel("/nachrichten?suche=abc&langeSuche=true")).toBe("/nachrichten");
   });
 });

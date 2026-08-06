@@ -270,15 +270,21 @@ verstellte Uhr. Der absolute Wert daneben bleibt davon unberührt.
 Serverdaten liegen ausschließlich in TanStack Query. Ein Client, zentral konfiguriert in
 `lib/query-client.ts`.
 
-### Kein zweiter Versuch bei 401, 403 und 404
+### Kein zweiter Versuch bei 401, 403 und 404 — und keiner bei einer abgebrochenen Suche
 
 ```ts
-retry: (versuche, fehler) => !istEndgueltig(fehler) && versuche < 1
+retry: (versuche, fehler) => !istEndgueltig(fehler) && !istZeitgrenze(fehler) && versuche < 1
 ```
 
 Bei diesen drei Codes stand das Ergebnis schon beim ersten Aufruf fest. Ohne diese Regel wartet der
 Nutzer mehrere Sekunden auf eine Meldung, die sich nicht mehr ändern kann. Mutationen wiederholen
 grundsätzlich nicht.
+
+**Der vierte Fall ist seit dem Nachtrag zu Schritt 4 dabei und hat einen anderen Grund** (ergänzt
+06.08.2026): `suche-abgebrochen` heißt, dass ein Statement in die Zeitgrenze der Datenbank gelaufen
+ist. Dort bringt der zweite Versuch nicht nur nichts, er **schadet** — er stellt dieselbe Abfrage
+noch einmal und läuft wieder in dieselbe Grenze. Erkannt wird er am `type` und nicht am Statuscode;
+`400` als Ganzes wird weiterhin wiederholt, denn dort ist der zweite Versuch billig.
 
 ### Beim Mandantenwechsel wird geleert, nicht invalidiert
 
@@ -330,6 +336,35 @@ Rauschen.
 
 Der Text aus dem Backend ist deutsch und für den Nutzer lesbar — aber eben deutsch. Ohne einen
 Schlüssel müsste die Oberfläche Texte vergleichen, und die ändern sich.
+
+### Eigene Felder neben `type`, `title` und `detail`
+
+RFC 9457 lässt eigene Felder im Rumpf ausdrücklich zu. `ProblemFehler` hebt sie als `angaben` auf —
+alles, was nicht zu den Feldern des Formats selbst gehört — und `zahl(name)` liest eine Zahl daraus
+heraus, oder `undefined`, wenn sie fehlt oder keine ist.
+
+Gebraucht wird das seit Schritt 4, Nachtrag, von genau einem Fall: `suche-fenster-zu-gross` bringt
+`grenzeTage` und `angefragtTage` mit. **Der Sinn ist, die Zahl nicht zweimal zu pflegen.** Die
+Grenze gehört dorthin, wo sie gemessen wurde — ins Backend; stünde sie auch in einem Sprachtext,
+liefe eine der beiden der anderen irgendwann hinterher, und weil beide plausibel aussehen, fiele es
+niemandem auf. Fehlt eine der Zahlen, greift der allgemeine Satz aus dem Fehlerkatalog statt einer
+Meldung mit einer Lücke darin.
+
+### Die beiden Problemtypen der Suche
+
+Beide entstanden im Nachtrag zu Schritt 4 und beide gehören an das **Suchfeld**, nicht über die
+Ansicht ([`nachrichtenliste.md`](nachrichtenliste.md) §5 und §8.2):
+
+| `type` | Was er heißt | Was die Oberfläche tut |
+|---|---|---|
+| `suche-fenster-zu-gross` | Bei gesetztem Suchbegriff ist das Zeitfenster begrenzt; die Anfrage liegt darüber | Hinweis am Feld mit beiden Zahlen aus der Antwort, dazu **„Trotzdem suchen"** — die Schaltfläche setzt `langeSuche` in der URL. Die Liste bleibt stehen. |
+| `suche-abgebrochen` | Das Statement ist in `max_statement_time` gelaufen | Hinweis am Feld: Zeitraum verkleinern oder Begriff schärfen. **Kein** zweiter Versuch — siehe unten. |
+
+**`suche-abgebrochen` ist der eine Fall, in dem `lib/query-client.ts` nicht wiederholt.** Sonst
+bleibt es bei einem Wiederholungsversuch für alles außer `401`, `403` und `404`. Hier ändert der
+zweite Versuch das Ergebnis nicht, er kostet es noch einmal: dieselbe Abfrage, dieselbe Zeitgrenze,
+zehn weitere Sekunden auf der Produktionsdatenbank. Erkannt wird der Fall über `istZeitgrenze` in
+`lib/http.ts` — am `type` und nicht am Statuscode, denn `400` als Ganzes wird weiterhin wiederholt.
 
 ### Die eine Ergänzung am Backend
 
@@ -500,7 +535,7 @@ Funktionen, und ein gerenderter Baum brächte hier nichts außer Laufzeit und Ab
 | `zwischenspeicher.test.ts` | geleert **vor** dem Weitergehen, bei Wechsel und Abmeldung; das Ziel nach dem Mandantenwechsel trägt keine Filter |
 | `format.test.ts` | UTC → Anzeige in der gelieferten Zone; Rückfall auf UTC statt auf den Browser; relative Zeit; Wanduhrzeit der Eingabefelder, auch am Umstellungstag |
 | `routen.test.ts` | `weiter` als offene Weiterleitung ausgeschlossen |
-| `nachrichtenfilter.test.ts` | URL → Zustand → URL; unbekannte Werte werden übergangen; **der Cursor taucht in keiner erzeugten URL auf**; die beiden Zeitfenstermodi schließen einander aus |
+| `nachrichtenfilter.test.ts` | URL → Zustand → URL; unbekannte Werte werden übergangen; **der Cursor taucht in keiner erzeugten URL auf**; die beiden Zeitfenstermodi schließen einander aus; `langeSuche` steht in der URL und wird nur mit dem Suchbegriff geschickt; welche Problemtypen an das Suchfeld gehören und welche über die Ansicht |
 
 ---
 

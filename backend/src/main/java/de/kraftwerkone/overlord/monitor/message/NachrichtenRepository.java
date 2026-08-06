@@ -10,16 +10,20 @@ import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.SOS;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
 import de.kraftwerkone.overlord.monitor.common.Seitenposition;
+import de.kraftwerkone.overlord.monitor.common.error.FachlicheAusnahme;
 import de.kraftwerkone.overlord.monitor.jooq.glassfish.tables.Process;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
+import java.sql.SQLTimeoutException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.OrderField;
+import org.jooq.exception.DataAccessException;
 import org.jooq.impl.DSL;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -65,33 +69,76 @@ public class NachrichtenRepository {
    * naechste Seite" ohne {@code COUNT} (Regel L2).
    */
   public List<NachrichtZeile> finde(MandantContext mandant, Nachrichtenabfrage abfrage) {
-    return glassfishDsl
-        .select(
-            MESSAGE.MESSAGEID,
-            MESSAGE.MESSAGELASTUPDATE,
-            MESSAGE.MESSAGESTATUS,
-            MESSAGE.PROCESSID,
-            PROCESS.PROCESSNAME,
-            PROJECT.PROJECTNAME)
-        .from(MESSAGE)
-        // LEFT JOIN, obwohl die Mandantenkette einen Prozess ohnehin erzwingt: Der Anzeigename
-        // darf nicht darueber entscheiden, ob eine Zeile erscheint.
-        .leftJoin(PROCESS)
-        .on(PROCESS.PROCESSID.eq(MESSAGE.PROCESSID))
-        .leftJoin(PROJECT)
-        .on(PROJECT.PROJECTID.eq(PROCESS.PROJECTID))
-        .where(bedingungen(mandant, abfrage))
-        .orderBy(sortierung(abfrage))
-        .limit(abfrage.limit() + 1)
-        .fetch(
-            satz ->
-                new NachrichtZeile(
-                    satz.value1(),
-                    satz.value2(),
-                    satz.value3(),
-                    satz.value4(),
-                    satz.value5(),
-                    satz.value6()));
+    try {
+      return glassfishDsl
+          .select(
+              MESSAGE.MESSAGEID,
+              MESSAGE.MESSAGELASTUPDATE,
+              MESSAGE.MESSAGESTATUS,
+              MESSAGE.PROCESSID,
+              PROCESS.PROCESSNAME,
+              PROJECT.PROJECTNAME)
+          .from(MESSAGE)
+          // LEFT JOIN, obwohl die Mandantenkette einen Prozess ohnehin erzwingt: Der Anzeigename
+          // darf nicht darueber entscheiden, ob eine Zeile erscheint.
+          .leftJoin(PROCESS)
+          .on(PROCESS.PROCESSID.eq(MESSAGE.PROCESSID))
+          .leftJoin(PROJECT)
+          .on(PROJECT.PROJECTID.eq(PROCESS.PROJECTID))
+          .where(bedingungen(mandant, abfrage))
+          .orderBy(sortierung(abfrage))
+          .limit(abfrage.limit() + 1)
+          .fetch(
+              satz ->
+                  new NachrichtZeile(
+                      satz.value1(),
+                      satz.value2(),
+                      satz.value3(),
+                      satz.value4(),
+                      satz.value5(),
+                      satz.value6()));
+    } catch (DataAccessException fehler) {
+      throw anDerZeitgrenze(fehler, abfrage.suchtreffer() != null);
+    }
+  }
+
+  /**
+   * Der Abbruch an {@code max_statement_time} — <b>bei gesetztem Suchbegriff ein absehbarer Fall
+   * und kein Systemfehler.</b>
+   *
+   * <p>Der Lese-Pool setzt {@code SET SESSION max_statement_time=10} ({@code docs/datenzugriff.md}
+   * §1). Ohne Suchbegriff kommt kein Statement dieses Endpunkts auch nur in die Naehe (Messungen L1
+   * bis L10, langsamster Fall 34 ms); mit Suchbegriff und langem Fenster schon — deshalb gibt es
+   * die Fenstergrenze aus {@link NachrichtenFilter#SUCHE_FENSTER}. Sie macht den Abbruch
+   * unwahrscheinlich, nicht unmoeglich: Unter Last oder in einem dichteren Bestand als dem
+   * gemessenen kann derselbe Fall wieder auflaufen.
+   *
+   * <p><b>Gefangen wird genau eine Ausnahme, nicht pauschal alles.</b> Nachgeprueft gegen die
+   * Testkopie am 06.08.2026: MariaDB meldet Fehler {@code 1969} mit SQLState {@code 70100} („Query
+   * execution was interrupted"), der Treiber (Connector/J 3.5) macht daraus eine {@link
+   * SQLTimeoutException}, und jOOQ verpackt sie in eine {@link DataAccessException} mit genau
+   * dieser Ursache. Ein Syntaxfehler, eine abgerissene Verbindung oder ein fehlendes Recht kommen
+   * ebenfalls als {@code DataAccessException} hier an und bleiben, was sie sind: technische Fehler
+   * mit {@code 500}.
+   *
+   * <p><b>Und nur mit Suchbegriff.</b> Laeuft ein Statement <i>ohne</i> Suche in die Zeitgrenze,
+   * ist das kein vorhergesehener Fall, sondern ein Befund — er gehoert mit Stacktrace ins Protokoll
+   * und nicht in einen Hinweis, der dem Nutzer eine Verhaltensaenderung nahelegt, die nichts
+   * aendern wuerde.
+   *
+   * <p>Der Text sagt, was zu tun ist, und nennt weder Tabelle noch Zeitgrenze noch Zeilenzahl.
+   */
+  static RuntimeException anDerZeitgrenze(DataAccessException fehler, boolean mitSuchbegriff) {
+    if (!mitSuchbegriff || fehler.getCause(SQLTimeoutException.class) == null) {
+      return fehler;
+    }
+    return new FachlicheAusnahme(
+        HttpStatus.BAD_REQUEST,
+        "suche-abgebrochen",
+        "Suche abgebrochen",
+        "Die Suche hat zu lange gedauert und wurde abgebrochen. Verkleinere den Zeitraum oder"
+            + " schaerfe den Suchbegriff.",
+        "Statement an der Zeitgrenze abgebrochen (Suchbegriff gesetzt)");
   }
 
   private List<Condition> bedingungen(MandantContext mandant, Nachrichtenabfrage abfrage) {
@@ -206,12 +253,19 @@ public class NachrichtenRepository {
    * <p>{@code %} und {@code _} im Begriff werden maskiert. Ohne das waere {@code _} ein Platzhalter
    * fuer ein beliebiges Zeichen — derselbe Fallstrick wie in Regel Q1.
    *
-   * <p><b>Die Vorfilterung ist billig, das Hauptstatement mit ihrem Ergebnis nicht</b> (Messung
-   * L7c): Die {@code ODER}-Verknuepfung ueber {@code ProcessID} und {@code SOSID} schliesst den
-   * Index auf {@code ProcessID} aus, MariaDB behaelt das Zeitfenster als Treiber und liest ueber 30
-   * Tage 214.330 Zeilen fuer 51 Treffer — 1,3 Sekunden. Der Umbau auf zwei Zweige mit {@code UNION}
-   * steht als offener Punkt in {@code docs/nachrichtenliste.md}; er aendert die Form des Statements
-   * und braucht seine eigene Messung.
+   * <p><b>Die Vorfilterung ist billig, das Hauptstatement mit ihrem Ergebnis nicht</b> (Messungen
+   * L7c, L11 und L13): Die {@code ODER}-Verknuepfung ueber {@code ProcessID} und {@code SOSID}
+   * schliesst den Index auf {@code ProcessID} aus, MariaDB behaelt das Zeitfenster als Treiber. Was
+   * das kostet, haengt am Begriff und nicht an der Fenstergroesse: Wer die Seite fuellt, zahlt
+   * dasselbe ueber ein Jahr wie ueber 30 Tage (L13: 78.318 gelesene Zeilen, rund 0,5 s in beiden
+   * Faellen). Wer sie nicht fuellt, zahlt das ganze Fenster — 1,2 s ueber 30 Tage, 15,6 s ueber ein
+   * Jahr.
+   *
+   * <p><b>Beide vorgesehenen Umbauten sind gemessen und verworfen</b> (M10 und L11): Die Aufloesung
+   * ueber {@code SOS.ProcessID} zu einer einzigen Kennungsliste verliert 9.101 Zeilen, und die
+   * {@code UNION}-Fassung ist langsamer statt schneller, weil {@code Message.SOSID} keinen Index
+   * hat und beide Zweige dasselbe Fenster lesen. Geblieben ist deshalb eine Grenze und kein Umbau:
+   * {@link NachrichtenFilter#SUCHE_FENSTER}.
    */
   public Suchtreffer loeseSucheAuf(MandantContext mandant, String begriff, int hoechstens) {
     String muster = "%" + DSL.escape(begriff, '\\') + "%";

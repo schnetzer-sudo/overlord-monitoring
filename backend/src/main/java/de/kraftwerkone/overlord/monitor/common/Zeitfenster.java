@@ -2,6 +2,7 @@ package de.kraftwerkone.overlord.monitor.common;
 
 import de.kraftwerkone.overlord.monitor.common.error.FachlicheAusnahme;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import org.springframework.http.HttpStatus;
 
@@ -97,5 +98,28 @@ public record Zeitfenster(LocalDateTime von, LocalDateTime bis) {
   /** Liegt der Zeitpunkt im Fenster? Grundlage der Cursor-Pruefung. */
   public boolean enthaelt(LocalDateTime zeitpunkt) {
     return !zeitpunkt.isBefore(von) && !zeitpunkt.isAfter(bis);
+  }
+
+  /**
+   * Die Spanne des Fensters — unabhaengig davon, ob sie aus einem relativen Zeitraum oder aus
+   * {@code von}/{@code bis} entstanden ist.
+   *
+   * <p>Grundlage jeder Grenze, die an der <b>Groesse</b> des Fensters haengt und nicht am Modus:
+   * Ein Filter, der ueber ein langes Fenster teuer wird, wird es unabhaengig davon, wie das Fenster
+   * zustande kam.
+   */
+  public Duration spanne() {
+    return Duration.between(von, bis);
+  }
+
+  /**
+   * Die Spanne in Tagen, <b>aufgerundet</b> — die Zahl, die in einer Fehlermeldung steht.
+   *
+   * <p>Aufgerundet, weil ein Fenster von 30 Tagen und einer Sekunde sonst als „30 Tage" in einer
+   * Meldung erschiene, die es mit der Begruendung „hoechstens 30 Tage" gerade abgewiesen hat.
+   */
+  public static long tageAufgerundet(Duration dauer) {
+    long ganze = dauer.toDays();
+    return dauer.equals(Duration.ofDays(ganze)) ? ganze : ganze + 1;
   }
 }

@@ -158,6 +158,10 @@ export const en: Texte = {
       platzhalter: "Process, project or flow name",
       zuKurz: "{anzahl} more characters, then the search runs.",
       leeren: "Clear search",
+      fensterZuGross:
+        "Search covers at most {grenze} days; {angefragt} are selected. Narrow the time window.",
+      trotzdemSuchen: "Search anyway",
+      langeSucheLaeuft: "The search covers a longer period and may take a moment.",
     },
 
     zwischenschritte: {
@@ -247,6 +251,11 @@ export const en: Texte = {
     // Deliberately a hint at the search field, not an error state of the view:
     // the user did nothing wrong, the term is just too broad.
     "suchbegriff-zu-unscharf": "The search term matches too many processes. Narrow it down.",
+    // The generic sentence without numbers — the concrete message with the limit
+    // and the selected range is built at the search field from the response.
+    "suche-fenster-zu-gross": "This time window is too large for a search.",
+    "suche-abgebrochen":
+      "The search took too long and was cancelled. Shorten the time range or narrow the search term.",
     "limit-ungueltig": "This page size is not allowed.",
     "cursor-ungueltig": "The page position is no longer valid. Start again on page one.",
     "altes-passwort-falsch": "The current password is not correct.",

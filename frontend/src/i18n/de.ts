@@ -170,6 +170,14 @@ export const de = {
       platzhalter: "Prozess-, Projekt- oder Ablaufname",
       zuKurz: "Noch {anzahl} Zeichen, dann wird gesucht.",
       leeren: "Suche leeren",
+      // Beide Zahlen kommen aus der Antwort des Backends, nicht aus diesem Text.
+      // Die Grenze gehört dorthin, wo sie gemessen wurde.
+      fensterZuGross:
+        "Die Suche gilt für höchstens {grenze} Tage; gewählt sind {angefragt}. Verkleinere das Zeitfenster.",
+      trotzdemSuchen: "Trotzdem suchen",
+      // Bewusst eine Auskunft und keine Warnung: Der Nutzer hat das gerade selbst
+      // entschieden, er soll nur wissen, was ihn erwartet.
+      langeSucheLaeuft: "Die Suche läuft über einen längeren Zeitraum und kann etwas dauern.",
     },
 
     zwischenschritte: {
@@ -261,6 +269,15 @@ export const de = {
     // Bewusst als Hinweis am Suchfeld und nicht als Fehlerzustand der Ansicht:
     // Der Nutzer hat nichts falsch gemacht, sein Begriff ist nur zu weit.
     "suchbegriff-zu-unscharf": "Der Suchbegriff trifft zu viele Prozesse. Verenge ihn.",
+    // Der allgemeine Satz ohne Zahlen. Die konkrete Meldung mit Grenze und
+    // gewähltem Zeitraum baut das Suchfeld aus der Antwort — hier stünde die
+    // Grenze sonst ein zweites Mal und liefe der ersten irgendwann hinterher.
+    "suche-fenster-zu-gross": "Für die Suche ist dieses Zeitfenster zu groß.",
+    // Kein technischer Text und keine Fehler-Kennung: Der Abbruch an der
+    // Zeitgrenze ist bei gesetztem Suchbegriff ein absehbarer Fall, und was hilft,
+    // steht im Satz.
+    "suche-abgebrochen":
+      "Die Suche hat zu lange gedauert und wurde abgebrochen. Verkleinere den Zeitraum oder schärfe den Suchbegriff.",
     "limit-ungueltig": "Diese Seitengröße ist nicht zulässig.",
     "cursor-ungueltig": "Die Seitenposition ist nicht mehr gültig. Beginne wieder auf Seite eins.",
     "altes-passwort-falsch": "Das bisherige Passwort stimmt nicht.",

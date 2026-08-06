@@ -5,6 +5,7 @@ import {
   zeitfensterAlsParameter,
   type Zeitfensterzustand,
 } from "@/lib/filter";
+import { ProblemFehler } from "@/lib/http";
 
 /**
  * Der Filterzustand der Nachrichtenliste — **in der URL, nicht im Komponentenzustand.**
@@ -62,6 +63,22 @@ export type Sortierung = (typeof SORTIERUNGEN)[number];
 export const SUCHE_MINDESTLAENGE = 3;
 
 /**
+ * Die Fenstergrenze der Suche ist bewusst aufgehoben.
+ *
+ * Bei gesetztem Suchbegriff begrenzt das Backend das Zeitfenster auf 30 Tage und
+ * antwortet darüber mit `suche-fenster-zu-gross`; `langeSuche=true` hebt die
+ * Grenze bis zur äußeren Grenze an. **Die beiden Zahlen stehen hier nicht** — sie
+ * kommen aus der Fehlerantwort. Stünden sie auch im Frontend, liefe eine von
+ * beiden der anderen irgendwann hinterher, und weil beide plausibel aussehen,
+ * fiele es niemandem auf.
+ *
+ * **Der Wert steht in der URL wie jeder andere Filter.** Was man sieht, ist was
+ * man teilt: Wer einen Link auf eine ausdrücklich lange Suche weitergibt, gibt
+ * genau die weiter — und nicht eine, die beim Empfänger mit `400` endet.
+ */
+export const LANGE_SUCHE_VORGABE = false;
+
+/**
  * Zwischenschritte (`SPLITTED`, `MERGED`) sind ausgeblendet.
  *
  * Der Grund ist keine technische Erwägung: **34,38 Prozent aller Zeilen** sind
@@ -102,6 +119,10 @@ export const NACHRICHTEN_PARAMETER = {
   status: parseAsArrayOf(literalParser(STATUSARTEN)),
   prozess: parseAsArrayOf(parseAsString),
   suche: parseAsString,
+  // Anders als `zwischenschritte` **ohne** `clearOnDefault: false`: Hier wird
+  // nichts weggelassen, sondern etwas zugelassen. Steht der Parameter nicht da,
+  // gilt die Grenze — und das ist der Normalfall, den keine URL erwähnen muss.
+  langeSuche: parseAsBoolean.withDefault(LANGE_SUCHE_VORGABE),
   zwischenschritte: parseAsBoolean
     .withDefault(ZWISCHENSCHRITTE_VORGABE)
     .withOptions({ clearOnDefault: false }),
@@ -112,6 +133,7 @@ export type Nachrichtenfilter = Zeitfensterzustand & {
   status: Statusart[] | null;
   prozess: string[] | null;
   suche: string | null;
+  langeSuche: boolean;
   zwischenschritte: boolean;
   sortierung: Sortierung | null;
 };
@@ -119,6 +141,39 @@ export type Nachrichtenfilter = Zeitfensterzustand & {
 /** Ist der Suchbegriff lang genug, um ihn überhaupt zu schicken? */
 export function sucheTraegt(suche: string | null): suche is string {
   return suche !== null && suche.trim().length >= SUCHE_MINDESTLAENGE;
+}
+
+/**
+ * Die Problemtypen, die einer **Eingabe** gelten und nicht der Ansicht.
+ *
+ * Alle vier haben dasselbe gemeinsam: Was der Nutzer tun kann, tut er am
+ * Suchfeld. Ein Fehlerzustand über der ganzen Ansicht nähme ihm dabei die Liste
+ * weg, die er gerade noch gesehen hat — und der Leerzustand behauptete, im
+ * Zeitfenster stünde nichts, obwohl gar nicht gesucht wurde.
+ *
+ * `suche-abgebrochen` gehört dazu, obwohl es kein Prüffehler ist, sondern ein
+ * Abbruch an der Zeitgrenze der Datenbank: Auch dort helfen genau die beiden
+ * Handlungen, die hier stattfinden — Zeitraum verkleinern, Begriff schärfen. Und
+ * eine Schaltfläche „Erneut versuchen" wäre falsch, weil sie dieselbe Abfrage in
+ * dieselbe Grenze schickte.
+ */
+export const AM_SUCHFELD = [
+  "suchbegriff-zu-kurz",
+  "suchbegriff-zu-unscharf",
+  "suche-fenster-zu-gross",
+  "suche-abgebrochen",
+] as const;
+
+/**
+ * Gehört diese Fehlerantwort an das Suchfeld?
+ *
+ * Bewusst als reine Funktion und nicht als Bedingung in der Komponente: Es ist
+ * eine **Entscheidung**, und Entscheidungen werden hier geprüft, Markup nicht.
+ */
+export function suchfeldFehler(fehler: unknown): ProblemFehler | undefined {
+  return fehler instanceof ProblemFehler && (AM_SUCHFELD as readonly string[]).includes(fehler.typ)
+    ? fehler
+    : undefined;
 }
 
 /**
@@ -151,6 +206,12 @@ export function alsAbfrage(filter: Nachrichtenfilter, cursor?: string | null): s
   }
   if (sucheTraegt(filter.suche)) {
     parameter.set("suche", filter.suche.trim());
+    // Nur zusammen mit dem Suchbegriff: Ohne ihn greift die Grenze im Backend
+    // gar nicht, und der Parameter machte nur den Abfrageschlüssel des
+    // Zwischenspeichers unnötig verschieden.
+    if (filter.langeSuche) {
+      parameter.set("langeSuche", "true");
+    }
   }
   // Ausdrücklich auch dann, wenn er der Vorgabe entspricht: Was ausgeblendet ist,
   // gehört sichtbar in die Anfrage.
@@ -203,6 +264,11 @@ export function alsSuchparameter(filter: Nachrichtenfilter): URLSearchParams {
   if (filter.suche !== null && filter.suche !== "") {
     parameter.set("suche", filter.suche);
   }
+  // Wie der Suchbegriff selbst: in der URL steht, was der Nutzer eingestellt
+  // hat — auch wenn die Anfrage es gerade nicht braucht.
+  if (filter.langeSuche) {
+    parameter.set("langeSuche", "true");
+  }
   // Ausdrücklich, ab dem ersten Rendern — siehe ZWISCHENSCHRITTE_VORGABE.
   parameter.set("zwischenschritte", String(filter.zwischenschritte));
   if (filter.sortierung !== null) {
@@ -227,6 +293,7 @@ export function ausSuchparametern(suchparameter: URLSearchParams): Nachrichtenfi
   };
   const zeitraum = suchparameter.get("zeitraum");
   const sortierung = suchparameter.get("sortierung");
+  const langeSuche = suchparameter.get("langeSuche");
   const zwischenschritte = suchparameter.get("zwischenschritte");
   const status = suchparameter.getAll("status").filter(istStatusart);
   const prozess = suchparameter.getAll("prozess").filter((wert) => wert !== "");
@@ -238,6 +305,7 @@ export function ausSuchparametern(suchparameter: URLSearchParams): Nachrichtenfi
     status: status.length === 0 ? null : status,
     prozess: prozess.length === 0 ? null : prozess,
     suche: suchparameter.get("suche"),
+    langeSuche: langeSuche === null ? LANGE_SUCHE_VORGABE : langeSuche === "true",
     zwischenschritte:
       zwischenschritte === null ? ZWISCHENSCHRITTE_VORGABE : zwischenschritte === "true",
     sortierung:
