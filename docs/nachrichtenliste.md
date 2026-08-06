@@ -42,7 +42,13 @@ auch keiner entstehen.
       "bedeutungNichtVerifiziert": false,
       "processId": "…",
       "processName": "40000_AMG_LAB_VDA",
-      "projectName": "300_KundenEingehend"
+      "projectName": "300_KundenEingehend",
+      "bamWerte": [
+        { "typ": 9006, "beschreibung": "Lieferschein-Nr._L_SAP",
+          "werte": ["LS-000001", "LS-000002", "LS-000003"], "weitere": 2 },
+        { "typ": 9001, "beschreibung": "Abrufnummer_L_SAP",
+          "werte": [], "weitere": 0 }
+      ]
     }
   ],
   "nextCursor": "MjAyNS0xMi0yOVQyMzoyMjo0MXxjZGI2…",
@@ -282,7 +288,60 @@ Zeichen — derselbe Fallstrick wie in Regel Q1.
 
 ---
 
-## 6. Aufbau im Code
+## 6. Die BAM-Werte — zweite Abfrage je Seite
+
+Die BAM-Werte sind das, woran ein Sachbearbeiter seinen Beleg wiedererkennt: Lieferschein-Nr.,
+Bestellnummer, Transport-Nummer. Welche zwei Typen ein Mandant sieht, entscheidet die
+Auflösungsregel aus [`datenzugriff.md`](datenzugriff.md) §5 (Vorrang der Kuratierung, sonst die zwei
+kleinsten Sortierindizes, bei Gleichstand der kleinere Typ).
+
+### Nicht als Join, sondern als zweite Abfrage
+
+```sql
+SELECT MessageID, MessageBAMType, MessageBAMValue
+FROM MessageBAM
+WHERE MessageID IN (…bis zu 200…)
+  AND MessageBAMType IN (:typ1, :typ2)
+```
+
+Als Join wäre `MessageBAM` (10,9 Mio. Zeilen, 7,1 GB) Teil der Sortier- und Limit-Rechnung. Ein Typ
+kann je Nachricht **mehrfach** vorkommen — der Wert steht im Primärschlüssel
+`(MessageID, MessageBAMType, MessageBAMValue)` —, und `LIMIT 50` bedeutete dann 50 *Wertzeilen*
+statt 50 Nachrichten. Die Seite hätte je nach Belegart eine andere Länge.
+
+Der Einstieg über `MessageID` nutzt das Präfix dieses Primärschlüssels. Über `MessageBAMValue` wird
+**nie** gefiltert, gruppiert oder sortiert (Regeln L4/L5); die Werte werden im Speicher sortiert, auf
+höchstens ein paar hundert Zeichenketten.
+
+Die Abfrage läuft **nach** dem Abschneiden der Seite: Die Zusatzzeile, an der `hasMore` erkannt wird,
+bekommt keine Werte. Und sie läuft **gar nicht**, wenn der Mandant keine BAM-Konfiguration hat
+(`EDITIONLINGERI`, `SYSTEM`, `WOC`) — kein Aufruf mit leerer Typliste.
+
+**Der Mandant steht nicht im Statement** und muss es nicht: Die `MessageID`s stammen aus der Seite,
+die das mandantengefilterte Hauptstatement gerade geliefert hat — eine fremde Kennung kann gar nicht
+darunter sein. Der `MandantContext` ist trotzdem Pflichtparameter (Regel M2) und macht sichtbar, dass
+die Methode nur mit einer solchen Liste aufgerufen werden darf.
+
+### Darstellung
+
+- Mehrere Werte eines Typs werden **zusammengefasst**, sortiert und ab dem vierten gekürzt;
+  `weitere` sagt, wie viele fehlen. Eine stumm gekürzte Liste sieht aus wie eine vollständige.
+- Doppelte Werte fallen weg — derselbe Lieferschein zweimal ist keine zusätzliche Auskunft.
+- **Jede Zeile trägt so viele Einträge, wie der Mandant Spalten hat** — auch die Zeile, die dazu
+  nichts zu sagen hat (dann mit leerer Werteliste). Sonst müsste die Oberfläche die Spalten je Zeile
+  neu ausrichten.
+- Ein Mandant ohne Konfiguration bekommt **keinen** Eintrag. Keine leere Spalte, kein Platzhalter —
+  eine Spalte ohne Inhalt behauptet, es gäbe dort etwas zu sehen.
+
+### Kosten
+
+Zwei zusätzliche Abfragen je Seite: die Spaltenauflösung (Kuratierung plus Konfiguration, zusammen
+unter 2 ms) und das Nachladen der Werte. Messungen L9 und L10 in
+[`messungen-schritt4.md`](messungen-schritt4.md) zeigen den Verlauf über 50 und 200 Kennungen.
+
+---
+
+## 7. Aufbau im Code
 
 ```
 common/                              message/
@@ -320,7 +379,7 @@ Quellschema vor genau der Prüfung, die ihn sichtbar machen soll.
 
 ---
 
-## 7. Regelbezug
+## 8. Regelbezug
 
 | Regel | Umsetzung |
 |---|---|
@@ -339,7 +398,7 @@ Quellschema vor genau der Prüfung, die ihn sichtbar machen soll.
 
 ---
 
-## 8. Offene Punkte
+## 9. Offene Punkte
 
 - **Eine tatsächlich hängende `SPLITTED`-Nachricht erscheint nie als überfällig.** `ZWISCHENSCHRITT`
   gilt als Endstatus (`message-status.md`), und die Überfälligkeitsrechnung setzt „nicht in einem

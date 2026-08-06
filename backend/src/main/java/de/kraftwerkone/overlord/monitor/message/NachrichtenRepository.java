@@ -1,6 +1,7 @@
 package de.kraftwerkone.overlord.monitor.message;
 
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.MESSAGE;
+import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.MESSAGEBAM;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROCESS;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROJECT;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROJECTMANDANT;
@@ -14,7 +15,6 @@ import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-// Verdeckt java.lang.Process — gemeint ist die Tabelle des Quellschemas.
 import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.OrderField;
@@ -44,6 +44,9 @@ public class NachrichtenRepository {
   /**
    * Der Alias fuer die Mandantenkette. Er muss ein anderer sein als der der aeusseren Abfrage —
    * dort haengt {@code Process} schon fuer den Anzeigenamen.
+   *
+   * <p>Der Typ {@code Process} ist die generierte Tabelle des Quellschemas; der Import verdeckt in
+   * dieser Datei {@code java.lang.Process}.
    */
   private static final Process MANDANTEN_PROCESS = PROCESS.as("mandanten_process");
 
@@ -233,5 +236,41 @@ public class NachrichtenRepository {
 
     boolean zuUnscharf = prozessIds.size() > hoechstens || sosIds.size() > hoechstens;
     return new Suchtreffer(prozessIds, sosIds, zuUnscharf);
+  }
+
+  /**
+   * Die BAM-Werte einer bereits gelesenen Seite — <b>zweite Abfrage</b>, kein Join in die
+   * paginierte.
+   *
+   * <p>Als Join waere {@code MessageBAM} (10,9 Mio. Zeilen, 7,1 GB) Teil der Sortier- und
+   * Limit-Rechnung. Ein Typ kann je Nachricht mehrfach vorkommen — der Wert steht im
+   * Primaerschluessel {@code (MessageID, MessageBAMType, MessageBAMValue)} —, und {@code LIMIT 50}
+   * bedeutete dann 50 <i>Wertzeilen</i> statt 50 Nachrichten. Die Seite haette je nach Belegart
+   * eine andere Laenge.
+   *
+   * <p>Der Einstieg ueber {@code MessageID} nutzt das Praefix dieses Primaerschluessels. Ueber
+   * {@code MessageBAMValue} wird <b>nie</b> gefiltert, gruppiert oder sortiert (Regeln L4/L5); die
+   * Sortierung der Werte passiert im Speicher, auf hoechstens ein paar hundert Zeichenketten.
+   *
+   * <p><b>Der Mandant steht hier nicht im Statement</b> und muss es nicht: Die {@code MessageID}s
+   * stammen aus der Seite, die das mandantengefilterte Hauptstatement gerade geliefert hat — eine
+   * fremde Kennung kann gar nicht darunter sein. Der Parameter ist trotzdem Pflicht (Regel M2) und
+   * macht sichtbar, dass diese Methode nur mit einer solchen Liste aufgerufen werden darf.
+   *
+   * <p>Ohne Kennungen oder ohne Typen wird <b>gar nicht</b> abgefragt: Ein Mandant ohne
+   * BAM-Konfiguration ({@code EDITIONLINGERI}, {@code SYSTEM}, {@code WOC}) loest hier keine
+   * Abfrage mit leerer {@code IN}-Liste aus.
+   */
+  public List<BamWert> findeBamWerte(
+      MandantContext mandant, List<String> messageIds, List<Short> typen) {
+    if (messageIds.isEmpty() || typen.isEmpty()) {
+      return List.of();
+    }
+    return glassfishDsl
+        .select(MESSAGEBAM.MESSAGEID, MESSAGEBAM.MESSAGEBAMTYPE, MESSAGEBAM.MESSAGEBAMVALUE)
+        .from(MESSAGEBAM)
+        .where(MESSAGEBAM.MESSAGEID.in(messageIds))
+        .and(MESSAGEBAM.MESSAGEBAMTYPE.in(typen))
+        .fetch(satz -> new BamWert(satz.value1(), satz.value2(), satz.value3()));
   }
 }

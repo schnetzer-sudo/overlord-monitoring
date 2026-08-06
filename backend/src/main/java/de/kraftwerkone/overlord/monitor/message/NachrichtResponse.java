@@ -1,6 +1,7 @@
 package de.kraftwerkone.overlord.monitor.message;
 
 import java.time.Instant;
+import java.util.List;
 
 /**
  * Eine Zeile der Nachrichtenliste, so wie der Aufrufer sie sieht.
@@ -22,6 +23,9 @@ import java.time.Instant;
  *     plausiblen Text zu erfinden.
  * @param processName {@code null}, wenn die Quelle keinen Namen fuehrt — nicht zugeordnet heisst
  *     nicht zugeordnet (Regel Q4); den Ersatztext waehlt die Oberflaeche
+ * @param bamWerte so viele Eintraege, wie der Mandant BAM-Spalten hat (0, 1 oder 2) — auch dann,
+ *     wenn diese Nachricht dazu nichts traegt. Sonst muesste die Oberflaeche die Spalten je Zeile
+ *     neu ausrichten.
  */
 public record NachrichtResponse(
     String messageId,
@@ -31,4 +35,20 @@ public record NachrichtResponse(
     boolean bedeutungNichtVerifiziert,
     String processId,
     String processName,
-    String projectName) {}
+    String projectName,
+    List<BamWerte> bamWerte) {
+
+  /**
+   * Die Werte einer BAM-Spalte — die fachliche Kennung, an der ein Sachbearbeiter seinen Beleg
+   * wiedererkennt.
+   *
+   * <p>Ein Typ kann je Nachricht mehrfach vorkommen (der Wert steht im Primaerschluessel von {@code
+   * MessageBAM}). Eine gesplittete Sammelrechnung traegt so mehrere Lieferscheinnummern. Angezeigt
+   * werden hoechstens drei; {@code weitere} sagt, wie viele nicht mitgekommen sind — eine stumm
+   * gekuerzte Liste sieht aus wie eine vollstaendige.
+   *
+   * @param beschreibung der lesbare Name des Typs, damit der Aufrufer nichts nachschlagen muss
+   * @param weitere Anzahl der nicht mitgelieferten Werte, {@code 0} wenn alle da sind
+   */
+  public record BamWerte(short typ, String beschreibung, List<String> werte, int weitere) {}
+}
