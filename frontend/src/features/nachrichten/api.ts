@@ -64,10 +64,27 @@ export type Prozess = {
   projectName: string | null;
 };
 
+/**
+ * Was der Bestand des aktiven Mandanten hergibt — **Stammdaten der Ansicht, nicht
+ * Inhalt einer Seite**.
+ *
+ * Die Oberfläche entscheidet daran, welche Bedienelemente sie überhaupt anbietet.
+ * Ein Schalter, der etwas ausblendet, das es beim eigenen Mandanten gar nicht
+ * gibt, kündigt eine Wirkung an, die ausbleibt.
+ */
+export type Merkmale = {
+  /**
+   * Messung M12: Fünf von neun Mandanten mit Nachrichten haben über den gesamten
+   * Bestand nicht eine einzige `SPLITTED`- oder `MERGED`-Zeile.
+   */
+  zwischenschritteVorhanden: boolean;
+};
+
 export const NACHRICHTEN_SCHLUESSEL = {
   /** Der Filter gehört in den Schlüssel: Andere Filter sind andere Daten. */
   liste: (abfrage: string) => ["nachrichten", "liste", abfrage] as const,
   prozesse: ["nachrichten", "prozesse"] as const,
+  merkmale: ["nachrichten", "merkmale"] as const,
 };
 
 export function holeNachrichten(abfrage: string): Promise<Seite<Nachricht>> {
@@ -76,4 +93,8 @@ export function holeNachrichten(abfrage: string): Promise<Seite<Nachricht>> {
 
 export function holeProzesse(): Promise<Prozess[]> {
   return hole<Prozess[]>("/prozesse");
+}
+
+export function holeMerkmale(): Promise<Merkmale> {
+  return hole<Merkmale>("/nachrichten/merkmale");
 }

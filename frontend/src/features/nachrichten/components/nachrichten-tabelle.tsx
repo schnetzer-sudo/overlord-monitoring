@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/table";
 import { useSprache, useTexte } from "@/i18n/provider";
 import { formatiereRelativ, formatiereZeitpunktGenau } from "@/lib/format";
-import { cn } from "@/lib/utils";
 
 import type { Nachricht } from "../api";
 import type { Sortierung } from "../filter";

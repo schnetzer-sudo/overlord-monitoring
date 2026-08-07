@@ -191,4 +191,67 @@ class NachrichtenIsolationDbIT extends SicherheitsTestbasis {
         .isNotEmpty()
         .doesNotContainAnyElementsOf(nexansProzesse);
   }
+
+  // ─── /api/nachrichten/merkmale (Regel M4 — ein Isolationstest je Endpunkt) ──────
+
+  /**
+   * <b>Der zweite Pflicht-Isolationstest dieses Controllers.</b> Der Merkmale-Endpunkt nimmt
+   * ueberhaupt keinen Parameter entgegen — und genau das ist hier der Nachweis: Zwei Nutzer stellen
+   * <i>dieselbe</i> Anfrage und bekommen verschiedene Antworten, weil der Mandant ausschliesslich
+   * aus der Sitzung kommt (Regel M1). Es gibt keine Eingabe, ueber die einer die Auskunft des
+   * anderen erreichen koennte.
+   *
+   * <p>Die erwarteten Werte kommen aus Messung M12 ueber den Gesamtbestand: {@code NEXANS} 39,598 %
+   * Zwischenschritte, {@code IBIS} <b>null</b> ueber 75.746 Nachrichten. {@code SUTTONS} taugt hier
+   * nicht als Gegenstueck — es hat 6.002 und lieferte denselben Wert wie {@code NEXANS}.
+   */
+  @Test
+  @DisplayName("Die Merkmale beschreiben den Bestand der eigenen Sitzung, nicht den eines anderen")
+  void merkmale_haengen_an_der_sitzung() throws Exception {
+    String nutzerIbis = PRAEFIX + "isolation-ibis";
+    assertThat(mandantRepository.existiert("IBIS")).isTrue();
+    legeNutzerAn(nutzerIbis, PASSWORT, Rolle.MANDANT, "IBIS");
+    Sitzung aufIbis = anmelden(nutzerIbis, PASSWORT);
+
+    Antwort fuerNexans = aufNexans.hole("/api/nachrichten/merkmale");
+    Antwort fuerIbis = aufIbis.hole("/api/nachrichten/merkmale");
+
+    assertThat(fuerNexans.status()).isEqualTo(200);
+    assertThat(fuerIbis.status()).isEqualTo(200);
+    assertThat(fuerNexans.<Boolean>json("$.zwischenschritteVorhanden"))
+        .as("NEXANS: 1.142.684 Zwischenschritte ueber den Gesamtbestand (M12)")
+        .isTrue();
+    assertThat(fuerIbis.<Boolean>json("$.zwischenschritteVorhanden"))
+        .as("IBIS: keine einzige ueber 75.746 Nachrichten (M12)")
+        .isFalse();
+  }
+
+  /**
+   * Die Gegenprobe zum Zwischenspeicher: Er haengt am Mandanten und nicht am Prozess. Waere er es
+   * nicht, bekaeme der zweite Aufrufer die Auskunft des ersten — und das waere eine Auskunft ueber
+   * einen fremden Bestand.
+   */
+  @Test
+  @DisplayName(
+      "Der Zwischenspeicher der Merkmale traegt die Auskunft nicht zum naechsten Mandanten")
+  void merkmale_werden_nicht_ueber_mandanten_hinweg_gehalten() throws Exception {
+    String nutzerIbis = PRAEFIX + "isolation-ibis-cache";
+    legeNutzerAn(nutzerIbis, PASSWORT, Rolle.MANDANT, "IBIS");
+    Sitzung aufIbis = anmelden(nutzerIbis, PASSWORT);
+
+    // Erst NEXANS, dann IBIS, dann wieder NEXANS — jeder bekommt seinen eigenen Wert.
+    assertThat(
+            aufNexans
+                .hole("/api/nachrichten/merkmale")
+                .<Boolean>json("$.zwischenschritteVorhanden"))
+        .isTrue();
+    assertThat(
+            aufIbis.hole("/api/nachrichten/merkmale").<Boolean>json("$.zwischenschritteVorhanden"))
+        .isFalse();
+    assertThat(
+            aufNexans
+                .hole("/api/nachrichten/merkmale")
+                .<Boolean>json("$.zwischenschritteVorhanden"))
+        .isTrue();
+  }
 }

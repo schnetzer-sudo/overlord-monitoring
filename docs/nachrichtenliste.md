@@ -117,6 +117,43 @@ plausibel aussehen, fiele es niemandem auf.
 }
 ```
 
+### Der zweite Endpunkt: was der Bestand hergibt
+
+```
+GET /api/nachrichten/merkmale        →  { "zwischenschritteVorhanden": true }
+```
+
+Ergänzt am 07.08.2026. **Kein Parameter, auch kein Zeitfenster** — die Antwort hängt ausschließlich
+an der Sitzung (Regel M1), und das ist zugleich der Kern seines Isolationstests: Zwei Nutzer stellen
+dieselbe Anfrage und bekommen verschiedene Antworten, weil es keine Eingabe gibt, über die einer die
+Auskunft des anderen erreichen könnte.
+
+Er beantwortet eine Frage über die **Stammdaten des Mandanten**, nicht über einen Ausschnitt: *Kommen
+bei diesem Mandanten überhaupt Zwischenschritte vor?* Die Oberfläche entscheidet daran, ob sie den
+Ausblenden-Schalter anbietet (§8.2).
+
+**Warum nicht ein Feld an jeder Seite.** Der Wert beschreibt den Gesamtbestand, ändert sich selten
+und wird zwischengespeichert; die Liste aktualisiert sich unter Umständen jede Minute. An jeder Seite
+zu hängen hieße, ihn jedes Mal neu zu ermitteln — und das ist genau der `COUNT` je Anfrage, den Regel
+L2 ausschließt.
+
+**Zwischengespeichert je Mandant, eine Stunde, im Arbeitsspeicher** (`NachrichtenService`). Keine
+Tabelle: Der Wert wird *ermittelt*, nicht gepflegt — eine Konfigurationstabelle wäre eine zweite
+Wahrheit, die der ersten irgendwann hinterherliefe. Die Haltbarkeit rechnet gegen die **Systemuhr**;
+gegen die Anwendungsuhr gerechnet liefe sie im Profil `dev` nie ab, weil die dort Monate zurücksteht.
+
+**Scheitert die Ermittlung, antwortet der Endpunkt `true`** und nicht mit einem Fehler. Ein Abbruch
+beim Ermitteln eines *Anzeigehinweises* darf die Liste nicht mitreißen; `true` ist der Zustand, den
+die Liste vor der Nachbesserung für alle hatte — also keine Verschlechterung. Der Rückfall wird
+mitzwischengespeichert, sonst wäre der Schutzmechanismus die Last. Sichtbar bleibt er im Protokoll
+(`WARN`, mit Ausnahme).
+
+Kosten und die Form des Statements stehen in
+[L15](messungen-schritt4.md#l15--gibt-es-beim-mandanten-überhaupt-zwischenschritte); die Kurzfassung:
+`STRAIGHT_JOIN` über `ProjectMandant → Process → Message`, weil der Optimierer sonst je Mandant einen
+anderen Plan wählt und für manche auf einen vollen Durchlauf zurückfällt (13,2 s gegen 12 ms bei zwei
+Mandanten, die *beide* keinen Zwischenschritt haben).
+
 ---
 
 ## 2. Das Pflicht-Zeitfenster (Regel L1)
@@ -471,7 +508,8 @@ common/                              message/
 ├─ Zeitfenster, Zeitraum             ├─ NachrichtenController   REST, nimmt nie eine Mandanten-ID
 ├─ Seitenposition, Seite             ├─ NachrichtenService      Fachlogik, Einordnung, Zeitpunkte
 ├─ Sortierrichtung                   ├─ NachrichtenFilter       geprüfte Parameter
-├─ Zeitpunkte  (Wanduhr ↔ UTC)       └─ NachrichtResponse       DTO nach außen
+├─ Zeitpunkte  (Wanduhr ↔ UTC)       ├─ NachrichtResponse       DTO nach außen
+│                                    └─ NachrichtenMerkmaleResponse  Stammdaten der Ansicht
 ├─ BamSpalte, BamSpaltenRegel
 └─ MessageStatusClassifier
 ```
@@ -726,6 +764,30 @@ erklärt, was fehlt, und ihn einschaltet; und **ausdrücklich in der URL, ab dem
 ist kein Widerspruch zu „kein Standardwert im Frontend", sondern die andere Seite derselben Münze:
 Hier wird ein Drittel aller Zeilen *weggelassen*, und was man sieht, muss man teilen können.
 
+> **Der Chip erscheint nur, wo es etwas auszublenden gibt** (seit 07.08.2026). Die 34,38 Prozent aus
+> Messung M6 waren ein Durchschnitt über **einen** Mandanten — `NEXANS` stellt 86 Prozent des
+> Bestands, und dort sind es 39,6 Prozent. Messung [M12](messungen-schritt4.md) hat das
+> aufgeschlüsselt: **Fünf von neun Mandanten mit Nachrichten haben über den gesamten Bestand nicht
+> eine einzige Zwischenschritt-Zeile** — `IBIS`, `IBISGUS`, `ZAST`, `WOC` und `SYSTEM`, zusammen
+> 112.801 Nachrichten. Für sie kündigte der Chip eine Ausblendung an, die nichts ausblendet, und ein
+> Bedienelement ohne Wirkung ist schlimmer als keins.
+>
+> Die Auskunft kommt aus `GET /api/nachrichten/merkmale` (§1) und **nicht aus der Antwort jeder
+> Seite**. Sie beschreibt den Gesamtbestand und nicht das Zeitfenster: `VOTG` hat 40
+> Zwischenschritte über den ganzen Bestand und null im dichten Monat — ein Kriterium über das
+> gewählte Fenster ließe den Chip dort erscheinen und verschwinden, ohne dass ein Zusammenhang
+> erkennbar wäre.
+>
+> **Solange die Auskunft lädt, erscheint der Chip nicht.** Dieselbe Entscheidung wie beim
+> Mandantenumschalter ([`visuelles-konzept.md`](visuelles-konzept.md) §5): Ein Bedienelement, das
+> einen Moment später erscheint, ist besser als eines, das wieder verschwindet. **Scheitert sie,
+> erscheint er** — wie vor der Nachbesserung.
+>
+> **`zwischenschritte` steht trotzdem in der URL, auch ohne Chip.** Sonst verhielte sich ein
+> geteilter Link je nach Mandant anders — und genau den Unterschied soll die URL abbilden. Der
+> Parameter wirkt weiterhin; er ist nur bei diesen Mandanten folgenlos, weil es nichts gibt, das er
+> ausblenden könnte.
+
 **Sortiert wird über die Spaltenüberschrift „Zeitpunkt".** Ein eigenes Auswahlfeld wäre ein zweites
 Bedienelement für eine Entscheidung mit zwei Werten — und es gibt ohnehin keinen zweiten
 Sortierschlüssel (§4).
@@ -799,12 +861,12 @@ als eigener, entfernbarer Eintrag in der Auswahl.
 | **M1** kein Endpunkt nimmt eine Mandanten-ID | kein Parameter, Mandant aus der Sitzung über `MandantService` |
 | **M2** Mandant als erster Pflichtparameter | `NachrichtenRepository`; ArchUnit prüft es |
 | **M3** Filter im Statement | `EXISTS` über `Process → ProjectMandant`, Teil jeder Bedingungsliste |
-| **M4** Isolationstest je Endpunkt | `NachrichtenIsolationDbIT` |
+| **M4** Isolationstest je Endpunkt | `NachrichtenIsolationDbIT` — fuer die Liste **und** fuer `/api/nachrichten/merkmale` |
 | **L1** Pflicht-Zeitfenster | `common/Zeitfenster`, Vorgabe 24 h, Maximum ein Jahr |
-| **L2** keine Live-Aggregation | kein `COUNT`, `limit + 1` statt `total` |
+| **L2** keine Live-Aggregation | kein `COUNT`, `limit + 1` statt `total`; die Merkmale sind eine Existenzfrage mit `LIMIT 1` und zwischengespeichert (§1) |
 | **L3** keine `OFFSET`-Paginierung | Cursor über `(MessageLastUpdate, MessageID)` |
 | **L4/L5** `MessageProperty`/BAM nur über die Kennung | `MessageProperty` wird nicht angefasst; **`MessageBAM` seit der Nachbesserung gar nicht mehr** (§6); Suche nur über Stammdaten, mit Mindestlänge, Deckel **und Fenstergrenze** (§5) |
-| **L7** jede Abfrage gemessen | [`messungen-schritt4.md`](messungen-schritt4.md), Abschnitte L1 bis L14 |
+| **L7** jede Abfrage gemessen | [`messungen-schritt4.md`](messungen-schritt4.md), Abschnitte L1 bis L15 |
 | **Z1** kein `now()` | Zeitfenster über die Anwendungsuhr, aufgelöst in `common` |
 | **Q1** Fehlerbedingung | ausschließlich `MessageStatusClassifier.fehlerBedingung` |
 | **Q4** nicht zugeordnet heißt nicht zugeordnet | `processName`/`projectName`/`sosName` bleiben `null`; den Ersatztext wählt die Oberfläche |

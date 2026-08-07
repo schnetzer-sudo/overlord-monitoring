@@ -24,6 +24,7 @@ import {
   type Nachrichtenfilter,
   type Statusart,
 } from "../filter";
+import { useMerkmale } from "../hooks";
 import { ProzessFilter } from "./prozess-filter";
 
 /** Wie lange nach dem letzten Tastendruck gewartet wird, bevor gesucht wird. */
@@ -529,13 +530,35 @@ function Suchfeld({
 /**
  * Zwischenschritte sind ausgeblendet — **und das steht sichtbar da.**
  *
- * 34,38 Prozent aller Zeilen sind `SPLITTED` oder `MERGED`. Eine Liste, die zu
- * einem Drittel aus Begriffen besteht, die der Zielnutzer nicht kennt, kostet
- * beim ersten Kontakt Vertrauen — deshalb bleiben sie draußen. Aber wer ein
- * Drittel weglässt, muss es sagen: Sonst sucht jemand eine Nachricht, die es gibt
- * und die er nie zu sehen bekommt.
+ * Bei `NEXANS` sind 39,6 Prozent aller Zeilen `SPLITTED` oder `MERGED`. Eine
+ * Liste, die zu einem Drittel aus Begriffen besteht, die der Zielnutzer nicht
+ * kennt, kostet beim ersten Kontakt Vertrauen — deshalb bleiben sie draußen. Aber
+ * wer ein Drittel weglässt, muss es sagen: Sonst sucht jemand eine Nachricht, die
+ * es gibt und die er nie zu sehen bekommt.
  *
  * Der Chip erklärt in einem Halbsatz, was fehlt, und schaltet es ein.
+ *
+ * ## Er erscheint nur, wo es etwas auszublenden gibt
+ *
+ * Die 34,38 Prozent aus Messung M6 waren ein Durchschnitt über **einen** Mandanten
+ * — `NEXANS` stellt 86 Prozent des Bestands. Messung M12 hat das aufgeschlüsselt:
+ * **Fünf von neun Mandanten mit Nachrichten haben über den gesamten Bestand nicht
+ * eine einzige Zwischenschritt-Zeile**, zusammen 112.801 Nachrichten. Für sie
+ * kündigte dieser Chip eine Ausblendung an, die nichts ausblendet — und ein
+ * Bedienelement ohne Wirkung ist schlimmer als keins.
+ *
+ * **Solange die Auskunft lädt, erscheint er nicht.** Dieselbe Entscheidung wie
+ * beim Mandantenumschalter (`visuelles-konzept.md` §5): Ein Bedienelement, das
+ * einen Moment später erscheint, ist besser als eines, das wieder verschwindet.
+ *
+ * **Scheitert die Auskunft, erscheint er.** Dann steht er da wie vor der
+ * Nachbesserung. Ein Fehler beim Ermitteln eines *Anzeigehinweises* darf dem
+ * Nutzer kein Bedienelement wegnehmen — dieselbe Richtung, in die auch das Backend
+ * zurückfällt.
+ *
+ * **`zwischenschritte` steht trotzdem in der URL**, auch ohne Chip. Sonst
+ * verhielte sich ein geteilter Link je nach Mandant anders, und das ist genau der
+ * Unterschied, den die URL abbilden soll.
  */
 function ZwischenschritteChip({
   eingeblendet,
@@ -545,7 +568,12 @@ function ZwischenschritteChip({
   aufUmschalten: (eingeblendet: boolean) => void;
 }) {
   const texte = useTexte();
+  const merkmale = useMerkmale();
   const Zeichen = eingeblendet ? Eye : EyeOff;
+
+  if (!(merkmale.isError || (merkmale.data?.zwischenschritteVorhanden ?? false))) {
+    return null;
+  }
 
   return (
     <button

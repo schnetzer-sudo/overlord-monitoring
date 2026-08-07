@@ -312,4 +312,52 @@ public class NachrichtenRepository {
     boolean zuUnscharf = prozessIds.size() > hoechstens || sosIds.size() > hoechstens;
     return new Suchtreffer(prozessIds, sosIds, zuUnscharf);
   }
+
+  /**
+   * Kommen beim Mandanten ueberhaupt Zwischenschritte vor? Eine Existenzfrage, kein {@code COUNT}.
+   *
+   * <p>Messung M12 ist der Anlass: <b>Fuenf von neun Mandanten mit Nachrichten haben ueber den
+   * gesamten Bestand nicht eine einzige {@code SPLITTED}- oder {@code MERGED}-Zeile.</b> Fuer sie
+   * kuendigt der Ausblenden-Schalter der Liste eine Wirkung an, die ausbleibt.
+   *
+   * <p><b>Ueber den Gesamtbestand und nicht ueber das Zeitfenster.</b> {@code VOTG} entscheidet die
+   * Form: 40 Zeilen von 145.840 ueber den ganzen Bestand, im dichten Monat null. Ein Kriterium
+   * ueber das gewaehlte Fenster schaltete den Schalter dort je nach Zeitraum an und aus — ein
+   * Bedienelement, das erscheint und verschwindet, ohne dass ein Zusammenhang erkennbar waere.
+   *
+   * <p><b>{@code STRAIGHT_JOIN} ist hier kein Feinschliff, sondern die Bedingung, unter der das
+   * Statement ueberhaupt tragbar ist</b> (Messung L15). Ohne die erzwungene Reihenfolge waehlt
+   * MariaDB den Zugriffspfad <i>je Mandant verschieden</i> und faellt fuer manche auf einen vollen
+   * Durchlauf ueber {@code Message} zurueck: gemessen 13,3 s fuer {@code IBIS} gegen 12 ms fuer
+   * {@code WOC}, beide ohne einen einzigen Zwischenschritt. Der Grund ist die veraltete Statistik
+   * der Quelle — {@code Message_ProcessFK} und {@code MessageStatusIDX} sind beide mit
+   * Kardinalitaet 18 gefuehrt (M1), und darauf laesst sich keine Planwahl gruenden.
+   *
+   * <p>Mit {@code STRAIGHT_JOIN} laeuft die Kette in der einzigen Richtung, die selektiv ist:
+   * {@code ProjectMandant} (Index auf {@code MandantID}) → {@code Process} → {@code Message} als
+   * {@code ref} ueber {@code ProcessID}. <b>Die Kosten haengen damit am Bestand des Mandanten und
+   * nicht an der Groesse der Tabelle</b> — die Eigenschaft, die das Statement in der Produktion
+   * tragfaehig macht. Schlimmster gemessener Fall 331 ms ({@code IBIS}, 75.746 Nachrichten, keine
+   * Zwischenschritte), {@code NEXANS} 0,8 ms.
+   *
+   * <p><b>Der schlimmste Fall bleibt der Mandant mit vielen Nachrichten und keinem
+   * Zwischenschritt</b> — dort wird sein ganzer Bestand gelesen. Deshalb wird das Ergebnis
+   * zwischengespeichert ({@link NachrichtenService}) und deshalb faellt ein Abbruch an der
+   * Zeitgrenze dort auf „Schalter anzeigen" zurueck: der bisherige Zustand, also keine
+   * Verschlechterung.
+   */
+  public boolean hatZwischenschritte(MandantContext mandant) {
+    return glassfishDsl.fetchExists(
+        glassfishDsl
+            .selectOne()
+            .from(PROJECTMANDANT)
+            .straightJoin(PROCESS)
+            .on(PROCESS.PROJECTID.eq(PROJECTMANDANT.PROJECTID))
+            .straightJoin(MESSAGE)
+            .on(MESSAGE.PROCESSID.eq(PROCESS.PROCESSID))
+            .where(PROJECTMANDANT.MANDANTID.eq(mandant.mandantId()))
+            .and(
+                statusClassifier.bedingung(
+                    MessageStatusKind.ZWISCHENSCHRITT, MESSAGE.MESSAGESTATUS)));
+  }
 }

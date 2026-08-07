@@ -90,6 +90,24 @@ public class NachrichtenController {
     return nachrichtenService.liste(mandant, filter);
   }
 
+  /**
+   * Was der Bestand des aktiven Mandanten hergibt — <b>kein Inhalt einer Seite, sondern Stammdaten
+   * der Ansicht.</b>
+   *
+   * <p>Auch dieser Endpunkt nimmt <b>keine Mandanten-ID</b> entgegen (Regel M1); die Antwort haengt
+   * ausschliesslich an der Sitzung. Das ist zugleich der Kern seines Isolationstests: Zwei Nutzer
+   * verschiedener Mandanten bekommen verschiedene Antworten, ohne dass einer davon etwas anderes
+   * schicken koennte als der andere.
+   *
+   * <p><b>Warum getrennt von der Liste.</b> Der Wert beschreibt den Gesamtbestand, aendert sich
+   * selten und wird zwischengespeichert; die Liste aktualisiert sich unter Umstaenden jede Minute.
+   * An jeder Seite zu haengen hiesse, ihn jedes Mal neu zu ermitteln — Regel L2.
+   */
+  @GetMapping("/api/nachrichten/merkmale")
+  public NachrichtenMerkmaleResponse merkmale() {
+    return nachrichtenService.merkmale(mandantService.aktuellerKontext(erforderlicherNutzer()));
+  }
+
   private AngemeldeterNutzer erforderlicherNutzer() {
     return sitzungsVerwaltung
         .aktuellerNutzer()

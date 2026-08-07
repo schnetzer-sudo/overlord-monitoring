@@ -2153,6 +2153,110 @@ Durchklicken des Auftraggebers widerlegt.
 
 ---
 
+## L15 — Gibt es beim Mandanten überhaupt Zwischenschritte?
+
+Erhoben am **07.08.2026** (Nachbesserung zu Schritt 4, Aufgabe 5). M12 hat die Frage fachlich
+beantwortet: Fünf von neun Mandanten haben keinen einzigen Zwischenschritt. Diese Messung
+beantwortet die andere Hälfte — **wie teuer ist es, das zur Laufzeit festzustellen?**
+
+Die Anforderung schließt zwei Wege aus: kein `COUNT` je Anfrage (Regel L2) und keine gepflegte
+Konfigurationstabelle. Bleibt eine **Existenzfrage mit `LIMIT 1`** über den Gesamtbestand des
+Mandanten.
+
+### Die naheliegende Fassung ist unbrauchbar — und zwar unberechenbar unbrauchbar
+
+Dieselbe `EXISTS`-Mandantenkette wie im Hauptstatement, dazu die Statusbedingung:
+
+```sql
+SELECT 1 FROM Message m
+WHERE m.MessageStatus IN ('SPLITTED','MERGED')
+  AND EXISTS (SELECT 1 FROM Process p JOIN ProjectMandant pm ON pm.ProjectID = p.ProjectID
+              WHERE p.ProcessID = m.ProcessID AND pm.MandantID = :mandant)
+LIMIT 1;
+```
+
+| Mandant | Zwischenschritte? | Nachrichten | Laufzeit (beste von drei) |
+|---|---|---|---|
+| `NEXANS` | ja | 2.885.711 | 1.543 ms |
+| `WOC` | **nein** | 2.529 | **11,9 ms** |
+| `IBIS` | **nein** | 75.746 | **13.197 ms** |
+
+**13,2 Sekunden gegen 11,9 Millisekunden — bei zwei Mandanten, die beide keinen einzigen
+Zwischenschritt haben.** Der Lese-Pool bricht bei 10 s ab (`max_statement_time`,
+[`datenzugriff.md`](datenzugriff.md) §1); die Antwort für `IBIS` käme also gar nicht an.
+
+`ANALYZE` zeigt, warum: Für `IBIS` wählt MariaDB `ProejctIDIDX` und liest **`r_rows` = 3.341.519** —
+den ganzen Bestand, alle Mandanten. Der Optimierer entscheidet die Reihenfolge **je Mandant neu**,
+und die Statistik, auf der er das tut, taugt nicht: `Message_ProcessFK` und `MessageStatusIDX` sind
+beide mit **Kardinalität 18** geführt (M1) — bei 3,5 Millionen Zeilen.
+
+Erzwungene Indizes helfen nicht. Mit `USE INDEX (MessageStatusIDX)` liest `IBIS` `r_rows` =
+1.148.730 (alle Zwischenschritt-Zeilen aller Mandanten) in **9.380 ms**; mit
+`USE INDEX (Message_ProcessFK)` fällt der Plan auf `type = ALL` zurück, also einen vollen Durchlauf,
+und braucht **6.941 ms**. Der Index-Hint bindet die Tabelle, nicht die Join-Reihenfolge — und die
+ist hier das Problem.
+
+### `STRAIGHT_JOIN` — die Reihenfolge festnageln statt den Index
+
+```sql
+SELECT 1 FROM ProjectMandant pm
+STRAIGHT_JOIN Process p ON p.ProjectID = pm.ProjectID
+STRAIGHT_JOIN Message m ON m.ProcessID = p.ProcessID
+WHERE pm.MandantID = :mandant AND m.MessageStatus IN ('SPLITTED','MERGED')
+LIMIT 1;
+```
+
+**ANALYZE (`IBIS`)** — die Kette läuft jetzt in der einzigen Richtung, die selektiv ist:
+
+| table | type | key | rows | r_rows |
+|---|---|---|---|---|
+| `pm` | `ref` | `ProjectMandant_Mandant_idx` | 46 | 46,00 |
+| `p` | `ref` | `Process_ProjectFK` | 5 | 4,17 |
+| `m` | `ref` | `ProejctIDIDX` (auf `ProcessID`) | 197.804 | **394,51** |
+
+`Using index` bei `p`, kein `filesort`, keine temporäre Tabelle.
+
+| Mandant | Zwischenschritte? | Nachrichten | vorher | **mit `STRAIGHT_JOIN`** |
+|---|---|---|---|---|
+| `NEXANS` | ja | 2.885.711 | 1.543 ms | **0,788 ms** |
+| `SUTTONS` | ja | 197.158 | — | **5,62 ms** |
+| `VOTG` | ja (40 Zeilen) | 145.840 | — | **1,20 ms** |
+| `IBIS` | **nein** | 75.746 | 13.197 ms | **329,6 ms** |
+| `IBISGUS` | **nein** | 29.339 | — | **128,4 ms** |
+| `ZAST` | **nein** | 5.036 | — | **23,4 ms** |
+| `WOC` | **nein** | 2.529 | 11,9 ms | **11,5 ms** |
+| `SYSTEM` | **nein** | 151 | — | **1,03 ms** |
+| `NXHBE` | ja (4 Zeilen) | 9 | — | **0,57 ms** |
+| `EDITIONLINGERI` | — (keine Nachrichten) | 0 | — | **0,58 ms** |
+
+Beste von drei Läufen nach einem Aufwärmlauf, serverseitig über `SET profiling = 1`.
+
+### Was daraus folgt
+
+**Der schlimmste Fall fällt von 13,2 s auf 331 ms** — und das ist nicht der eigentliche Gewinn. Der
+eigentliche ist, dass die Kosten jetzt **am Bestand des Mandanten hängen und nicht an der Größe der
+Tabelle**. Ein Mandant mit 2.529 Nachrichten zahlt 12 ms, einer mit 75.746 zahlt 331 ms; niemand
+zahlt mehr für Zeilen, die ihm nicht gehören. Genau diese Eigenschaft entscheidet, ob das Statement
+in der Produktion trägt — dort liegen zehnmal so viele Zeilen, aber nicht zehnmal so viele je
+Mandant.
+
+**Die Reihenfolge ist erzwungen und das ist Absicht.** Ein `STRAIGHT_JOIN` nimmt dem Optimierer eine
+Entscheidung ab, und normalerweise ist das ein schlechtes Geschäft. Hier ist es keins: Die
+Statistik, auf der er entscheiden müsste, ist nachweislich falsch (Kardinalität 18 bei 3,5 Mio.
+Zeilen), das Ergebnis schwankt je Mandant um den Faktor 1.000, und `GlassfishDB` gehört uns nicht —
+ein `ANALYZE TABLE` wäre ein Schreibvorgang und fällt unter Regel S1.
+
+**Der teuerste Fall bleibt der Mandant mit vielen Nachrichten und keinem Zwischenschritt.** Dort
+wird sein ganzer Bestand gelesen, weil es nichts zu finden gibt. Deshalb wird das Ergebnis
+zwischengespeichert (eine Stunde, je Mandant) und deshalb fällt ein Abbruch an der Zeitgrenze auf
+„Schalter anzeigen" zurück — den Zustand vor der Nachbesserung, also keine Verschlechterung.
+
+**Über den Gesamtbestand und nicht über das Zeitfenster.** `VOTG` entscheidet die Form: 40 Zeilen
+von 145.840 über den ganzen Bestand, im dichten Monat null (M12). Ein Kriterium über das gewählte
+Fenster schaltete den Chip dort je nach Zeitraum an und aus.
+
+---
+
 ## Auffälligkeiten
 
 Was von der bestehenden Dokumentation abweicht. **Hier wird nichts entschieden und nichts

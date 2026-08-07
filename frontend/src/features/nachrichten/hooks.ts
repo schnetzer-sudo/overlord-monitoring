@@ -14,8 +14,10 @@ import {
 
 import {
   NACHRICHTEN_SCHLUESSEL,
+  holeMerkmale,
   holeNachrichten,
   holeProzesse,
+  type Merkmale,
   type Nachricht,
   type Prozess,
   type Seite,
@@ -129,6 +131,29 @@ export function useProzesse() {
     queryFn: holeProzesse,
     staleTime: PROZESSE_HALTBARKEIT,
     gcTime: PROZESSE_HALTBARKEIT,
+  });
+}
+
+/**
+ * Die Merkmale des Bestands. **Noch länger gehalten als die Prozessauswahl** — sie
+ * beschreiben den Gesamtbestand eines Mandanten und ändern sich, wenn überhaupt,
+ * genau einmal.
+ *
+ * Das Backend hält den Wert seinerseits eine Stunde; hier zu kurz zu halten hieße
+ * nur, dieselbe Antwort öfter über die Leitung zu schicken.
+ *
+ * Beim Mandantenwechsel wird der gesamte Zwischenspeicher geleert, nicht
+ * invalidiert (`lib/zwischenspeicher.ts`) — eine eigene Invalidierung braucht es
+ * deshalb auch hier nicht.
+ */
+const MERKMALE_HALTBARKEIT = 60 * 60 * 1000;
+
+export function useMerkmale() {
+  return useQuery<Merkmale>({
+    queryKey: NACHRICHTEN_SCHLUESSEL.merkmale,
+    queryFn: holeMerkmale,
+    staleTime: MERKMALE_HALTBARKEIT,
+    gcTime: MERKMALE_HALTBARKEIT,
   });
 }
 
