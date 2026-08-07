@@ -425,18 +425,61 @@ kommt als eigener Problemtyp (`konto-gesperrt`, `konto-deaktiviert`) und wird an
 `components/anwendungsrahmen.tsx` ist so gebaut:
 
 ```
-div            h-dvh  flex-col  overflow-hidden     ← genau eine Fensterhöhe
-├─ header      shrink-0                             ← steht
+div            relative  h-dvh  flex-col  overflow-hidden     ← genau eine Fensterhöhe
+├─ header      shrink-0                                       ← steht
 └─ div         flex  flex-1  min-h-0
-   ├─ aside    w-navspalte  shrink-0  overflow-y-auto   ← steht, scrollt notfalls selbst
-   └─ main     flex-1  min-h-0  min-w-0  overflow-y-auto ← der einzige Scrollbereich
+   ├─ aside    relative  w-navspalte  shrink-0  overflow-y-auto   ← steht, scrollt notfalls selbst
+   └─ main     relative  flex-1  min-h-0  min-w-0  overflow-y-auto ← der einzige Scrollbereich
 ```
 
-**`min-h-0` ist die ganze Pointe.** Ein Flex-Kind bekommt implizit `min-height: auto` und wächst
-damit über seinen Container hinaus, statt zu scrollen. Ohne diese Klasse dehnt sich der
+### Die drei Bedingungen
+
+**1. `min-h-0` auf jedem Flex-Kind im Pfad.** Ein Flex-Kind bekommt implizit `min-height: auto` und
+wächst damit über seinen Container hinaus, statt zu scrollen. Ohne diese Klasse dehnt sich der
 Inhaltsbereich unter das Fenster, das Dokument bekommt eine zweite Bildlaufleiste, und die
 Kopfzeile wandert beim Scrollen weg. Das ist die häufigste Ursache für eine doppelte
 Bildlaufleiste und der Grund, warum sie hier zweimal steht.
+
+**2. Genau ein Element mit `overflow-y-auto`**, und unterhalb davon nichts, das seine Höhe an der
+Fensterhöhe bemisst (kein zweites `h-dvh`, kein `min-h-screen`, kein `h-full` in einem bereits
+begrenzten Bereich).
+
+**3. Jeder Scrollbereich ist zugleich Bezugspunkt — `relative`.** Nachgetragen am **06.08.2026**,
+nach einem Fehler, den die ersten beiden Bedingungen nicht abgedeckt haben und auch nicht abdecken
+konnten.
+
+> **Ein absolut positioniertes Element ohne positionierten Vorfahren hängt am Ursprungsblock der
+> Seite. `overflow-hidden` weiter oben beschneidet es deshalb nicht — sein Platz zählt zur
+> Scrollfläche des Dokuments.**
+
+Das klingt nach einem Randfall und ist keiner: **Tailwinds `sr-only` ist `position: absolute`.**
+Jede verborgene Beschriftung für Vorleseprogramme ist also ein solches Element, und in einer langen
+Liste sitzt sie weit unten.
+
+Gemessen an der Nachrichtenliste, 1920 × 889, 50 Zeilen (`nexans1`, Standardfenster):
+
+| | vorher | nachher |
+|---|---|---|
+| `documentElement.scrollHeight` | **2.243** | 889 |
+| `documentElement.clientHeight` | 889 | 889 |
+| erreichbares `window.scrollY` | **1.354** | **0** |
+| tiefstes Element ohne positionierten Vorfahren | `sr-only` im Aktualisieren-Knopf, `docBottom = 2.243` | — |
+| `main.scrollTop` am Listenende | 1.386 von 1.386 | 1.386 von 1.386 |
+
+Der Befund entstand nicht durch Hinsehen, sondern durch Ausschluss: `overflow-x: hidden` an `html`
+(das `overflow-y` auf `auto` hochstuft) war die naheliegende Vermutung und ist **widerlegt** — mit
+`overflow-y: hidden` an `html` blieben dieselben 1.354 px erreichbar. Erst das Ausblenden einzelner
+Teilbäume zeigte den Verursacher: Der Blätter-Block ist 32 px hoch, und ihn auszublenden nahm dem
+Dokument 1.354 px Scrollfläche. Vier von 104 `sr-only`-Elementen im Inhaltsbereich hatten keinen
+positionierten Vorfahren; das tiefste lag exakt auf der beobachteten Scrollhöhe.
+
+**Was der Nutzer davon sah:** Unter der Fußzeile der Tabelle folgten mehrere hundert Pixel Leere.
+Wer dort hineinscrollte, schob den gesamten Anwendungsrahmen — Kopfzeile, Navigation, Liste — aus
+dem Bild und sah eine weiße Fläche. Beim nächsten Rendern rechnete der Browser die Scrollfläche neu
+und klemmte die Position zurück: das gemeldete „Zurückspringen".
+
+**Die Regel, die daraus folgt:** *Ein Bereich, der scrollt oder beschneidet, ist `relative`.* Sonst
+beschneidet er nur, was er zufällig als Nachfahren im Fluss hat — und nicht das, was danebensteht.
 
 **Warum jetzt und nicht in Schritt 4:** Dort braucht die Nachrichtenliste eine feststehende
 Tabellenkopfzeile über einem scrollenden Bereich. Ein Rahmen, der das nicht hergibt, wird dann

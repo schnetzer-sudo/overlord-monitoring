@@ -112,7 +112,8 @@ export function Anwendungsrahmen({ children }: { children: ReactNode }) {
     // Der Rahmen ist die einzige Stelle, die sie hat, und jede Zeitangabe in
     // jedem Feature braucht sie — siehe `components/zeitzone.tsx`.
     <ZeitzoneProvider zone={auskunft.anzeigezone}>
-      <div className="flex h-dvh flex-col overflow-hidden">
+      {/* `relative` ist hier kein Feinschliff — siehe den Kommentar an `main`. */}
+      <div className="relative flex h-dvh flex-col overflow-hidden">
         <Kopfzeile
           auskunft={auskunft}
           navigationSichtbar={frei}
@@ -123,11 +124,29 @@ export function Anwendungsrahmen({ children }: { children: ReactNode }) {
             und das Fenster bekommt eine zweite Bildlaufleiste. */}
         <div className="flex min-h-0 flex-1">
           {frei ? (
-            <aside className="border-border w-navspalte hidden shrink-0 overflow-y-auto border-r px-2.5 py-2 md:block">
+            <aside className="border-border w-navspalte relative hidden shrink-0 overflow-y-auto border-r px-2.5 py-2 md:block">
               <NavigationsListe rolle={auskunft.role} />
             </aside>
           ) : null}
-          <main className="min-h-0 min-w-0 flex-1 overflow-y-auto px-3 py-4 md:px-5">
+          {/*
+           * `relative` an jedem Scrollbereich, und zwar aus einem gemessenen Grund
+           * (06.08.2026): Ein absolut positioniertes Element ohne positionierten
+           * Vorfahren hängt am *Ursprungsblock der Seite* — und wird deshalb von
+           * `overflow-hidden` weiter oben **nicht** beschnitten. Sein Platz zählt
+           * dann zur Scrollfläche des Dokuments.
+           *
+           * Das ist kein theoretischer Fall: Tailwinds `sr-only` ist
+           * `position: absolute`. Die verborgene Beschriftung im Aktualisieren-Knopf
+           * unter der Tabelle lag damit 2.243 px unter dem Seitenanfang, das Dokument
+           * bekam 1.354 px Scrollfläche ohne einen einzigen sichtbaren Inhalt, und
+           * wer über das Listenende hinausscrollte, schob den gesamten
+           * Anwendungsrahmen aus dem Bild.
+           *
+           * Mit `relative` ist der Scrollbereich selbst der Bezug: Was in ihm liegt,
+           * scrollt mit ihm und wird von ihm beschnitten. Begründung und Messung in
+           * `docs/frontend-grundlagen.md` §7.
+           */}
+          <main className="relative min-h-0 min-w-0 flex-1 overflow-y-auto px-3 py-4 md:px-5">
             {children}
           </main>
         </div>
@@ -138,10 +157,10 @@ export function Anwendungsrahmen({ children }: { children: ReactNode }) {
 
 function RahmenSkelett({ hinweis }: { hinweis: string }) {
   return (
-    <div className="flex h-dvh flex-col overflow-hidden" aria-busy="true">
+    <div className="relative flex h-dvh flex-col overflow-hidden" aria-busy="true">
       <span className="sr-only">{hinweis}</span>
       <div className="bg-card border-border h-kopfzeile shrink-0 border-b" />
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 py-4 md:px-5">
+      <div className="relative min-h-0 flex-1 space-y-3 overflow-y-auto px-3 py-4 md:px-5">
         <Skeleton className="h-zeile w-48" />
         <Skeleton className="h-zeile w-full" />
         <Skeleton className="h-zeile w-2/3" />
