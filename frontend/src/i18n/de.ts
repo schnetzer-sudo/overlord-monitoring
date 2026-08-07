@@ -204,7 +204,12 @@ export const de = {
     zwischenschritte: {
       chipAus: "Zwischenschritte ausgeblendet",
       chipAn: "Zwischenschritte eingeblendet",
-      erklaerung: "Gesplittete und zusammengeführte Nachrichten — rund ein Drittel aller Zeilen.",
+      // Ohne Mengenangabe, seit der Chip datengetrieben erscheint (07.08.2026).
+      // „Rund ein Drittel" stammte aus M6 und beschrieb NEXANS; M12 hat gezeigt,
+      // dass der Anteil je Mandant zwischen 44 und 0,03 Prozent liegt. Eine Zahl,
+      // die für zwei von vier Mandanten mit Zwischenschritten falsch ist, wäre
+      // genau die erfundene Auskunft, die Regel Q4 ausschließt.
+      erklaerung: "Gesplittete und zusammengeführte Nachrichten sind nicht mit dabei.",
       einblenden: "Zwischenschritte einblenden",
       ausblenden: "Zwischenschritte ausblenden",
     },

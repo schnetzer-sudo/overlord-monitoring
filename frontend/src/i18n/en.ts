@@ -172,7 +172,7 @@ export const en: Texte = {
     zwischenschritte: {
       chipAus: "Intermediate steps hidden",
       chipAn: "Intermediate steps shown",
-      erklaerung: "Split and merged messages — around a third of all rows.",
+      erklaerung: "Split and merged messages are not included.",
       einblenden: "Show intermediate steps",
       ausblenden: "Hide intermediate steps",
     },

@@ -855,6 +855,14 @@ Hier wird ein Drittel aller Zeilen *weggelassen*, und was man sieht, muss man te
 > geteilter Link je nach Mandant anders — und genau den Unterschied soll die URL abbilden. Der
 > Parameter wirkt weiterhin; er ist nur bei diesen Mandanten folgenlos, weil es nichts gibt, das er
 > ausblenden könnte.
+>
+> **Der Text des Chips nennt keine Menge mehr.** Er lautete „…— rund ein Drittel aller Zeilen"; die
+> Zahl stammte aus M6 und beschrieb `NEXANS`. M12 hat gezeigt, dass der Anteil bei den vier
+> Mandanten, die den Chip überhaupt sehen, zwischen **44 und 0,03 Prozent** liegt (`NXHBE` 44,4 %,
+> `NEXANS` 39,6 %, `SUTTONS` 3,0 %, `VOTG` 0,027 %). Solange der Chip für alle stand, war die Zahl
+> ein grober Durchschnitt; seit er datengetrieben erscheint, wäre sie für die Hälfte seiner
+> Empfänger schlicht falsch — und eine falsche Zahl ist genau die erfundene Auskunft, die Regel Q4
+> ausschließt. Eine mandantengenaue Zahl wäre ein `COUNT` über `Message` und damit Regel L2.
 
 **Sortiert wird über die Spaltenüberschrift „Zeitpunkt".** Ein eigenes Auswahlfeld wäre ein zweites
 Bedienelement für eine Entscheidung mit zwei Werten — und es gibt ohnehin keinen zweiten
@@ -912,7 +920,45 @@ Ein geteilter Link kann trotzdem fremde `ProcessID`s tragen. Die werden **nicht 
 entfernt** — das zeigte dem Empfänger einen anderen Ausschnitt als dem Absender —, sondern stehen
 als eigener, entfernbarer Eintrag in der Auswahl.
 
-### 8.4 Tests
+### 8.4 Sichtprüfung im Browser (07.08.2026)
+
+Nach der Nachbesserung, gegen die laufende Anwendung im Profil `dev`, Mandant `NEXANS`, Fenster
+1484 × 935. **Eingaben wurden getippt und geklickt, nicht gesetzt** — kein Zuweisen von `value`,
+keine von Hand gebaute URL. Der Anlass für diese Regel steht in §8.2: Zwei Prüfungen sind zuvor
+durch Türen gelaufen, die es für Nutzer nicht gibt.
+
+| # | Geprüft | Ergebnis |
+|---|---|---|
+| 1 | Am Listenende ist Schluss | Das Dokument scrollt **nicht** (`scrollY` bleibt 0, auch nach `scrollTo(0, 1e7)`); der Inhaltsbereich scrollt auf **genau** sein Maximum (1.182 = `scrollHeight − clientHeight`); unter dem letzten Element stehen **16 px**, der Innenabstand des Bereichs. Bei einer Liste mit einer Zeile: `maxScroll = 0` — es gibt keine Scrollfläche, in die man hineinfallen könnte. |
+| 2 | „Frei" anklicken, Daten tippen | Nach `20.12.2025 06:15` und `22.12.2025 18:45` steht `von=2025-12-20T05:15:00.000Z&bis=2025-12-22T17:45:00.000Z` in der URL, und die Liste zeigt den getippten Ausschnitt. Der Versatz stimmt (MEZ, UTC+1). |
+| 3 | Vier Spalten, gleiche Zeilenhöhe, Sekunden | `Zeitpunkt · Status · Ablauf · Projekt`. **Alle 50 Zeilen sind exakt 36 px** hoch — eine einzige Höhe über die ganze Seite, also `--dichte-zeile`. Zeitpunkt `30.12.2025, 04:09:47`. |
+| 4 | Ablauf in Klartext, Prozess im Tooltip | Zelle „Lieferabruf von Kunde A (VDA)", `title` „Lieferabruf von Kunde A (VDA) / Prozess: Kunde A LAB (VDA)". Genau das Gegensatzpaar aus der Aufgabenstellung. |
+| 5 | Sekunden unterscheiden gleiche Minuten | Am Rand des Standardfensters stehen 27 Zeilen auf `04:09:47` und 18 auf `04:09:45` — bis zur Minute identisch, an den Sekunden auseinanderzuhalten. |
+| 6 | Prozessauswahl lesbar, Bildlauf flüssig | 733 Einträge, **0 davon abgeschnitten**. 30 Sprünge à 1.000 px mit erzwungenem Layout: 0,3 ms zusammen. Mit dem Mausrad kein Ruckeln. |
+| 7 | Fußzeile bei ungeklärtem Status | Bei fünf `CHECKED`-Zeilen erscheint sie unter der Tabelle; auf Seiten ohne solche Zeile ist sie nicht da. |
+| 8 | Schritt bei offen, nicht bei abgeschlossen | `Wartend` · `Send Message to Pool`; `Abgeschlossen` zeigt nichts daneben. Zeilenhöhe in beiden Fällen 36 px. |
+| 9 | Schmales Fenster | **Nicht gesehen — siehe unten.** |
+
+> ⚠️ **Punkt 9 ist offen, und Punkt 1 nur zur Hälfte geprüft.** Die Browsersteuerung konnte das
+> Fenster nicht verkleinern: Der Tab rendert ohne echtes Fenster (`outerWidth`/`outerHeight` melden
+> `0 × 0`), und die Größenänderung meldet Erfolg, ohne dass sich `innerWidth`/`innerHeight` bewegen.
+>
+> **Was stattdessen geprüft wurde, und was das wert ist.** Für Punkt 1 wurde die *Inhaltslänge*
+> variiert statt der Fensterhöhe — eine Zeile, 50 Zeilen, 50 Zeilen mit Fußzeile. Das trifft
+> dieselbe Invariante, an der der gemeldete Fehler hing (der Scrollbereich war höher als sein
+> Inhalt), und in allen drei Fällen deckt sich der erreichbare Scrollstand exakt mit dem Maximum.
+> **Drei Fensterhöhen sind es trotzdem nicht.**
+>
+> Für Punkt 9 wurde das **Regelwerk** nachgesehen statt der Darstellung: `hidden md:table-cell`
+> steht auf der Projektspalte, und zwar auf **jeder Zelle**, nicht nur auf der Überschrift — unter
+> 768 px fällt also die ganze Spalte weg und nicht bloß ihr Kopf. Waagerechter Überlauf ist bei der
+> geprüften Breite null, an der Karte wie am Dokument. **Gesehen ist das nicht.**
+>
+> Beides gehört von Hand nachgeholt, bevor der Schritt als abgenommen gilt.
+
+---
+
+### 8.5 Tests
 
 | Datei | Was |
 |---|---|
