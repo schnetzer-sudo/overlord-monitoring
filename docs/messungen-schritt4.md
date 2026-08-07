@@ -2048,6 +2048,111 @@ Mit drei Einschränkungen, die in die Feature-Dokumentation gehören:
 
 ---
 
+## L14 — Was kosten die beiden neuen Joins der Liste?
+
+Erhoben am **07.08.2026** (Nachbesserung zu Schritt 4, Aufgaben 4 und 6). Zwei Spalten kommen dazu
+und beide hängen an einem Join, den es bisher nicht gab: **`SOS.SOSName`** als Anzeigename des
+Ablaufs (Aufgabe 4) und **`SOSAction.SOSActionName`** als aktueller Schritt bei offenen Nachrichten
+(Aufgabe 6). Regel L7 gilt für beide, auch wenn beide Zieltabellen klein sind.
+
+Bezugspunkt wie L8/L11/L13: Mandant `NEXANS`, Fenster **absolut** `2025-12-29 00:00:00` bis
+`2025-12-30 00:00:00`, Zwischenschritte ausgeschlossen, Seitengröße 51, dieselbe Form des
+Statements, die `message/NachrichtenRepository` erzeugt. Beste von fünf Läufen nach einem
+Aufwärmlauf, serverseitig über `SET profiling = 1`.
+
+### Die drei Fassungen
+
+```sql
+-- A: heutiger Stand
+FROM Message m LEFT JOIN Process p … LEFT JOIN Project pr …
+-- B: + Ablaufname
+              LEFT JOIN SOS s        ON s.SOSID = m.SOSID
+-- C: + aktueller Schritt (das ausgelieferte Statement)
+              LEFT JOIN SOSAction sa ON sa.SOSID = m.SOSID AND sa.SOSActionID = m.SOSActionID
+```
+
+| Fassung | beste von fünf | fünf Läufe |
+|---|---|---|
+| **A** — ohne beide Joins | **2,646 ms** | 2,737 · 2,801 · 2,858 · 2,646 · 4,095 ms |
+| **B** — mit `SOS` | **2,851 ms** | 7,218 · 3,314 · 2,969 · 2,889 · 2,851 ms |
+| **C** — mit `SOS` und `SOSAction` | **3,270 ms** | 3,401 · 3,355 · 3,390 · 3,711 · 3,270 ms |
+
+Aufwärmlauf 5,029 ms. **Der Aufschlag beträgt 0,2 ms für den Ablaufnamen und 0,6 ms für beide
+zusammen** — bei einer Abfrage, deren Streuung über fünf Läufe größer ist als der gemessene
+Unterschied. Als Vielfaches gelesen sind es 24 Prozent; als Zahl gelesen sind es sechs Zehntel einer
+Millisekunde neben einem Endpunkt, dessen teuerster dokumentierter Fall bei mehreren Sekunden liegt
+(L13).
+
+### `EXPLAIN` — beide Joins sind `eq_ref` auf dem Primärschlüssel
+
+Der Zugriffspfad des Hauptstatements bleibt **unverändert**: `m` steigt weiterhin als `range` über
+`MessageLastUpdateIDX` ein (`key_len` 5, Schätzung 11.814), kein `filesort`, keine temporäre
+Tabelle. Die beiden neuen Zeilen hängen als je ein Nachschlagevorgang je Kandidatenzeile daran:
+
+| table | type | key | key_len | ref | rows | r_rows |
+|---|---|---|---|---|---|---|
+| `m` | `range` | `MessageLastUpdateIDX` | 5 | — | 11.814 | **194,00** |
+| `p` | `eq_ref` | `PRIMARY` | 146 | `m.ProcessID` | 1 | 1,00 |
+| `pr` | `eq_ref` | `PRIMARY` | 146 | `p.ProjectID` | 1 | 1,00 |
+| `mp` | `eq_ref` | `PRIMARY` | 146 | `m.ProcessID` | 1 | 1,00 |
+| `pm` | `eq_ref` | `PRIMARY` | 292 | `mp.ProjectID`, const | 1 | 0,45 |
+| **`s`** | **`eq_ref`** | **`PRIMARY`** | **146** | **`m.SOSID`** | **1** | **1,00** |
+| **`sa`** | **`eq_ref`** | **`PRIMARY`** | **148** | **`m.SOSID`, `m.SOSActionID`** | **1** | **0,39** |
+
+**`key_len = 148` bei `sa` ist der Beleg dafür, dass über den ganzen Primärschlüssel gejoint wird**
+— 146 Bytes `varchar(36)` für `SOSID` plus 2 Bytes `smallint` für `SOSActionID`. Über die Kennung
+allein wäre es ein Kreuzprodukt (M13: die Kennung `2` gibt es 694-mal).
+
+`r_rows = 0,39` bei `sa` heißt, dass rund drei von fünf Nachschlagevorgängen ins Leere laufen. Das
+ist der aus M13 bekannte Normalfall — 72 Prozent der `FINISHED`-Zeilen haben keinen auflösbaren
+Schritt, und dieses Fenster besteht fast nur aus solchen. **Es ist kein Fehler und kostet nichts**:
+Ein `eq_ref`, der nichts findet, ist billiger als einer, der etwas findet.
+
+### Trägt jede Zeile einen lesbaren Ablaufnamen?
+
+Die Frage entscheidet, ob die Spalte „Ablauf" etwas beiträgt oder nur eine weitere leere Spalte
+neben den BAM-Spalten wäre, die gerade herausfliegen.
+
+```sql
+SELECT COUNT(*) AS nachrichten, SUM(m.SOSID IS NULL) AS ohne_sosid,
+       SUM(m.SOSID IS NOT NULL AND s.SOSID IS NULL)   AS verwaist,
+       SUM(s.SOSID IS NOT NULL AND s.SOSName IS NULL) AS zeile_ohne_namen
+FROM Message m LEFT JOIN SOS s ON s.SOSID = m.SOSID
+WHERE m.MessageLastUpdate >= '2025-11-30' AND m.MessageLastUpdate < '2025-12-30'
+  AND EXISTS (…Mandantenkette NEXANS…);
+```
+
+| Nachrichten | ohne `SOSID` | verwaist | Zeile ohne Namen |
+|---|---|---|---|
+| 180.251 | **0** | **0** | **0** |
+
+**Alle 180.251 Nachrichten des dichten Monats lösen zu einem gepflegten Namen auf.** Kein `NULL`,
+kein verwaister Verweis, keine namenlose `SOS`-Zeile. Das ist der Gegensatz zu M11, wo der
+bestbelegte BAM-Typ 16,25 Prozent erreicht.
+
+Dazu der Pflegezustand der Zieltabelle selbst — dieselbe Auswertung wie in M5, hier noch einmal
+gegen den heutigen Stand:
+
+| Zeilen | `NULL` | leer | verschiedene | kürzester | längster |
+|---|---|---|---|---|---|
+| 1.818 | **0** | **0** | 1.403 | 6 Zeichen | 55 Zeichen |
+
+**55 Zeichen ist die Zahl, an der die Spaltenbreite hängt.** Sie ist der Grund, warum die feste
+Zeilenhöhe aus Aufgabe 4 mit Kürzung und Tooltip arbeitet und nicht mit Umbruch: Ein Name dieser
+Länge zerrisse sonst die Zeile.
+
+### Was daraus folgt
+
+**Der Join wird gemacht.** Er ändert den Zugriffspfad nicht, kostet unterhalb der Streuung und
+liefert auf jeder Zeile einen Wert — während `ProcessName`, den er in der Anzeige ablöst, laut
+Projektbeschreibung §3.2 nur zufällig lesbar ist. Der Abstrich steht in
+[`nachrichtenliste.md`](nachrichtenliste.md): Diese Datei nannte „kein `SOSName` in der Liste"
+bisher unter „Offene Punkte" mit der Begründung, er wäre „ein weiterer Join ohne Nutzen für die
+Frage *wo steht mein Beleg*". Die erste Hälfte ist gemessen und stimmt, die zweite ist durch das
+Durchklicken des Auftraggebers widerlegt.
+
+---
+
 ## Auffälligkeiten
 
 Was von der bestehenden Dokumentation abweicht. **Hier wird nichts entschieden und nichts

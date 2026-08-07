@@ -11,12 +11,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { einsetzen } from "@/i18n";
 import { useSprache, useTexte } from "@/i18n/provider";
-import { formatiereRelativ, formatiereZeitpunkt, formatiereZeitpunktGenau } from "@/lib/format";
+import { formatiereRelativ, formatiereZeitpunktGenau } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-import type { BamWerte, Nachricht } from "../api";
+import type { Nachricht } from "../api";
 import type { Sortierung } from "../filter";
 import { StatusPlakette } from "./status-plakette";
 
@@ -25,16 +24,45 @@ import { StatusPlakette } from "./status-plakette";
  *
  * ## Die Spalten
  *
- * `Zeitpunkt · Status · Prozess · Projekt · BAM 1 · BAM 2`
+ * `Zeitpunkt · Status · Ablauf · Projekt`
+ *
+ * **Die BAM-Spalten sind weg.** Sie sollten das sein, woran ein Sachbearbeiter
+ * seinen Beleg wiedererkennt, und waren im Betrieb leer: Messung M11 weist die
+ * beiden für `NEXANS` kuratierten Typen auf 98,93 und 96,97 Prozent der Zeilen
+ * als leer aus, und **kein einziger** der 40 konfigurierten Typen erreicht ein
+ * Fünftel der Nachrichten. Eine Spalte, die fast immer leer ist, behauptet, es
+ * gäbe dort etwas zu sehen — und kostet den Platz, den die übrigen brauchen.
+ *
+ * **„Ablauf" zeigt `sosName`, nicht `processName`.** Die Projektbeschreibung
+ * §3.2 legt `SOSName` als den Anzeigenamen fest, und er ist durchgängig in
+ * Klartext gepflegt (Messung L14: 1.818 Zeilen, kein leerer Wert, auf allen
+ * 180.251 Nachrichten des dichten Monats auflösbar). `ProcessName` ist nur
+ * zufällig lesbar — „Kunde A Lieferschein (VDA)" steht dort neben
+ * „KUNDE_B_MX_000000_LAB". Er geht nicht verloren: Er steht im Tooltip und
+ * für Vorleseprogramme verborgen im Markup, und der Freitextfilter durchsucht
+ * ihn weiterhin.
  *
  * **Keine `MessageID`-Spalte.** Eine `varchar(36)`-UUID widerspricht dem Leitsatz
  * „interne IDs sind Beiwerk", und ohne Kopierfunktion trägt sie nichts. Sie kommt
  * in Schritt 5 wieder, wenn es ein Detail gibt, auf das sie zeigt.
  *
- * **Die BAM-Überschriften kommen aus der Antwort**, nicht aus einer festen Liste:
- * Welche zwei BAM-Typen ein Mandant sieht, entscheidet seine Konfiguration. Hat
- * er keine (`EDITIONLINGERI`, `SYSTEM`, `WOC`), fehlen beide Spalten und die
- * Tabelle hat vier — eine leere Spalte behauptete, es gäbe dort etwas zu sehen.
+ * ## Der Zeitpunkt trägt Sekunden
+ *
+ * `29.12.2025, 23:39:14`. Auf dem Bild des Auftraggebers standen mehrfach zwei
+ * Zeilen mit identischem Zeitpunkt, Prozess und Projekt nebeneinander — für den
+ * Nutzer nicht unterscheidbar. Für ein Werkzeug, dessen Leitfrage „wo ist mein
+ * Beleg" lautet, sind zwei ununterscheidbare Zeilen so schädlich wie eine leere
+ * Spalte. Der relative Abstand steht weiterhin im Tooltip; er ist die Ergänzung,
+ * nie der Ersatz.
+ *
+ * ## Feste Zeilenhöhe — die Regel für jede Spalte
+ *
+ * Die Tabelle liegt in `table-fixed`, jede Zeile ist `h-zeile` hoch
+ * (`--dichte-zeile`, `docs/visuelles-konzept.md` §5), und **jeder** Zellinhalt
+ * wird auf eine Zeile gekürzt; der Vollwert steht im `title`. Das gilt
+ * ausdrücklich nicht nur für die heutigen vier Spalten: Ohne diese Regel zerreißt
+ * der nächste lange Wert die Liste wieder, so wie es die mehrwertigen BAM-Zellen
+ * getan haben. Der längste gemessene Ablaufname hat 55 Zeichen (L14).
  *
  * ## Der Zeilenklick hat keine Funktion
  *
@@ -45,9 +73,9 @@ import { StatusPlakette } from "./status-plakette";
  *
  * ## Am schmalen Fenster
  *
- * Zuerst fällt **BAM 2** weg, dann **Projekt**. Übrig bleiben Zeitpunkt, Status,
- * Prozess und BAM 1 — die vier, mit denen sich ein Beleg wiedererkennen lässt.
- * Der aktive Mandant bleibt bei jeder Breite in der Kopfzeile sichtbar; das
+ * Zuerst und einzig fällt **Projekt** weg (unter `md`). Übrig bleiben Zeitpunkt,
+ * Status und Ablauf — die drei, mit denen sich ein Beleg wiederfinden lässt. Der
+ * aktive Mandant bleibt bei jeder Breite in der Kopfzeile sichtbar; das
  * entscheidet der Anwendungsrahmen, nicht diese Tabelle.
  */
 export function NachrichtenTabelle({
@@ -61,63 +89,45 @@ export function NachrichtenTabelle({
 }) {
   const texte = useTexte();
 
-  // Jede Zeile trägt so viele BAM-Einträge, wie der Mandant Spalten hat — auch
-  // die Zeile, die dazu nichts zu sagen hat. Die erste genügt deshalb, um die
-  // Überschriften zu bestimmen.
-  const bamSpalten = zeilen[0]?.bamWerte ?? [];
-
   return (
-    <Table className="text-basis">
+    // `table-fixed` ist die Voraussetzung der festen Zeilenhöhe: Nur mit festen
+    // Spaltenbreiten hat eine Zelle eine Breite, auf die sich kürzen lässt.
+    <Table className="text-basis table-fixed">
       <TableHeader>
         <TableRow className="hover:bg-transparent">
-          <TableHead className="w-[11.5rem]">
+          <TableHead className="h-8 w-[11.5rem]">
             <SortierUmschalter sortierung={sortierung} aufSortierung={aufSortierung} />
           </TableHead>
-          <TableHead className="w-[10.5rem]">{texte.nachrichten.spalten.status}</TableHead>
-          <TableHead>{texte.nachrichten.spalten.prozess}</TableHead>
-          <TableHead className="hidden md:table-cell">
+          <TableHead className="h-8 w-[10.5rem]">{texte.nachrichten.spalten.status}</TableHead>
+          {/* Ohne Breitenangabe: Der Ablaufname bekommt, was übrig bleibt. */}
+          <TableHead className="h-8">{texte.nachrichten.spalten.ablauf}</TableHead>
+          <TableHead className="hidden h-8 w-[18rem] md:table-cell">
             {texte.nachrichten.spalten.projekt}
           </TableHead>
-          {bamSpalten.map((spalte, stelle) => (
-            <TableHead
-              key={spalte.typ}
-              // Zuerst fällt BAM 2 weg, dann Projekt: Die zweite BAM-Spalte
-              // erscheint deshalb erst später als das Projekt.
-              className={cn(stelle === 1 && "hidden lg:table-cell")}
-            >
-              {spalte.beschreibung}
-            </TableHead>
-          ))}
         </TableRow>
       </TableHeader>
       <TableBody>
         {zeilen.map((zeile) => (
           // Kein onClick, kein cursor-pointer, keine Hover-Fläche.
           <TableRow key={zeile.messageId} className="h-zeile hover:bg-transparent">
-            <TableCell className="align-middle">
+            <TableCell className="px-2 py-0 align-middle">
               <ZeitpunktZelle wert={zeile.zeitpunkt} />
             </TableCell>
-            <TableCell className="align-middle">
+            <TableCell className="px-2 py-0 align-middle">
               <StatusPlakette
                 statusKind={zeile.statusKind}
                 rohwert={zeile.status}
                 bedeutungNichtVerifiziert={zeile.bedeutungNichtVerifiziert}
               />
             </TableCell>
-            <TableCell className="align-middle">
-              <Name wert={zeile.processName} />
+            <TableCell className="px-2 py-0 align-middle">
+              <AblaufZelle sosName={zeile.sosName} processName={zeile.processName} />
             </TableCell>
-            <TableCell className="text-muted-foreground hidden align-middle md:table-cell">
-              <Name wert={zeile.projectName} />
+            <TableCell className="text-muted-foreground hidden px-2 py-0 align-middle md:table-cell">
+              <span className="block truncate" title={zeile.projectName ?? undefined}>
+                <Name wert={zeile.projectName} />
+              </span>
             </TableCell>
-            {zeile.bamWerte.map((spalte, stelle) => (
-              <TableCell
-                key={spalte.typ}
-                className={cn("align-middle", stelle === 1 && "hidden lg:table-cell")}
-              >
-                <BamZelle spalte={spalte} />
-              </TableCell>
-            ))}
           </TableRow>
         ))}
       </TableBody>
@@ -128,7 +138,7 @@ export function NachrichtenTabelle({
 /**
  * Sortiert wird ausschließlich über den Zeitpunkt, Richtung wählbar — deshalb
  * sitzt die Umschaltung in dieser einen Spaltenüberschrift und nicht in einem
- * eigenen Auswahlfeld. Für Status oder Prozessname gibt es weder einen Index noch
+ * eigenen Auswahlfeld. Für Status oder Ablaufname gibt es weder einen Index noch
  * einen eindeutigen Tiebreaker; ein Cursor darauf würde Zeilen überspringen oder
  * doppelt liefern.
  */
@@ -160,12 +170,18 @@ function SortierUmschalter({
 }
 
 /**
- * Zeit **absolut** in der Zelle, **relativ** im Tooltip.
+ * Zeit **absolut mit Sekunden** in der Zelle, **relativ** im Tooltip.
  *
  * Der absolute Wert ist der, den man gegen das Altwerkzeug hält und in eine
  * Störungsmeldung schreibt; der relative sagt auf einen Blick, ob etwas gerade
  * eben passiert ist. Umgekehrt wäre es falsch herum: „vor 3 Stunden" lässt sich
  * nicht weitergeben.
+ *
+ * **Die Sekunden stehen in der Zelle und nicht im Tooltip**, seit dem
+ * Durchklicken des Auftraggebers: Zwei Zeilen, die sich bis zur Minute gleichen,
+ * sind ohne sie nicht auseinanderzuhalten — und ein Tooltip, den man je Zeile
+ * aufrufen muss, um zwei Zeilen zu unterscheiden, beantwortet die Frage nicht.
+ * Auf einem Touchgerät gibt es ihn ohnehin nicht.
  *
  * **Der Tooltip ist ein `title`-Attribut und keine Bibliothekskomponente.** Das
  * visuelle Konzept lässt außer Schublade und Menü keine Bewegung zu, und ein
@@ -178,11 +194,10 @@ function ZeitpunktZelle({ wert }: { wert: string }) {
   const zone = useAnzeigezone();
 
   const relativ = formatiereRelativ(wert, sprache);
-  const genau = formatiereZeitpunktGenau(wert, sprache, zone);
 
   return (
-    <time dateTime={wert} title={`${genau} · ${relativ}`} className="whitespace-nowrap">
-      {formatiereZeitpunkt(wert, sprache, zone)}
+    <time dateTime={wert} title={relativ} className="block truncate">
+      {formatiereZeitpunktGenau(wert, sprache, zone)}
       <span className="sr-only">
         {" "}
         — {texte.nachrichten.zeitRelativ}: {relativ}
@@ -191,7 +206,40 @@ function ZeitpunktZelle({ wert }: { wert: string }) {
   );
 }
 
-/** „Nicht zugeordnet heißt nicht zugeordnet" (Regel Q4) — und sieht auch so aus. */
+/**
+ * Der Ablaufname in der Zelle, der Prozessname im Tooltip.
+ *
+ * Beide beschreiben, wo eine Nachricht durchläuft, und nur einer ist verlässlich
+ * lesbar. Der andere geht trotzdem nicht verloren — er ist der Name, unter dem
+ * ein Kollege dieselbe Zeile im Altwerkzeug wiederfindet, und der Freitextfilter
+ * durchsucht ihn weiterhin. Was man sucht, sieht man damit auch.
+ */
+function AblaufZelle({
+  sosName,
+  processName,
+}: {
+  sosName: string | null;
+  processName: string | null;
+}) {
+  const texte = useTexte();
+  const prozess = processName === null || processName === "" ? null : processName;
+  const hinweis = `${texte.nachrichten.prozessName}: ${prozess ?? texte.nachrichten.nichtZugeordnet}`;
+
+  return (
+    <span className="block truncate" title={`${sosName ?? ""}\n${hinweis}`.trim()}>
+      <Name wert={sosName} />
+      <span className="sr-only"> — {hinweis}</span>
+    </span>
+  );
+}
+
+/**
+ * „Nicht zugeordnet heißt nicht zugeordnet" (Regel Q4) — und sieht auch so aus.
+ *
+ * **Ohne eigenen Tooltip.** Den setzt die Zelle, die diesen Namen einbettet: Ein
+ * `title` hier gewönne gegen den der Zelle, und der Ablauf verlöre damit genau
+ * den Prozessnamen, für den sein Tooltip da ist.
+ */
 function Name({ wert }: { wert: string | null }) {
   const texte = useTexte();
   if (wert === null || wert === "") {
@@ -199,40 +247,5 @@ function Name({ wert }: { wert: string | null }) {
       <span className="text-muted-foreground italic">{texte.nachrichten.nichtZugeordnet}</span>
     );
   }
-  return <span className="break-words">{wert}</span>;
-}
-
-/**
- * Die Werte einer BAM-Spalte.
- *
- * Mehrere Werte eines Typs werden zusammengefasst — eine gesplittete
- * Sammelrechnung trägt so mehrere Lieferscheinnummern. **Was nicht mitgekommen
- * ist, wird gezählt und nicht verschwiegen:** Eine stumm gekürzte Liste sieht aus
- * wie eine vollständige, und der Nutzer suchte dann nach einer Nummer, die es
- * gibt und die er nie zu sehen bekommt.
- */
-function BamZelle({ spalte }: { spalte: BamWerte }) {
-  const texte = useTexte();
-  const sprache = useSprache();
-
-  if (spalte.werte.length === 0) {
-    return <span className="text-muted-foreground">{texte.nachrichten.ohneWert}</span>;
-  }
-
-  return (
-    <div className="flex flex-col gap-0.5">
-      {spalte.werte.map((wert) => (
-        <span key={wert} className="text-beiwerk font-mono break-all">
-          {wert}
-        </span>
-      ))}
-      {spalte.weitere > 0 ? (
-        <span className="text-muted-foreground text-beiwerk">
-          {einsetzen(texte.nachrichten.bamWeitere, {
-            anzahl: new Intl.NumberFormat(sprache).format(spalte.weitere),
-          })}
-        </span>
-      ) : null}
-    </div>
-  );
+  return <>{wert}</>;
 }

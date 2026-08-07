@@ -1,7 +1,6 @@
 package de.kraftwerkone.overlord.monitor.message;
 
 import java.time.Instant;
-import java.util.List;
 
 /**
  * Eine Zeile der Nachrichtenliste, so wie der Aufrufer sie sieht.
@@ -12,9 +11,15 @@ import java.util.List;
  * Farbe und Sortierung festmacht. Die Zuordnung entsteht ausschliesslich im {@code
  * MessageStatusClassifier} und wird nirgends nachgebaut.
  *
- * <p>Kein {@code SOSName}, keine Verkettung, kein Timeout: Die Liste beantwortet „wo steht mein
- * Beleg", nicht „was ist im Einzelnen passiert" (Schritt 5) und nicht „was haengt daran" (Schritt
- * 6).
+ * <p><b>Keine BAM-Werte mehr</b> (Nachbesserung zu Schritt 4). Messung M11 hat der kuratierten
+ * Auswahl den Boden entzogen: Die beiden Typen, die {@code NEXANS} sieht, sind auf 98,93 und 96,97
+ * Prozent der Zeilen leer, und kein einziger der 40 konfigurierten Typen erreicht auch nur ein
+ * Fuenftel der Nachrichten. Die zweite Abfrage je Seite entfaellt damit ebenfalls. {@code
+ * bam_spalte} und {@code common/BamSpaltenRegel} bleiben — Schritt 7 braucht beides fuer die
+ * BAM-Suche.
+ *
+ * <p>Keine Verkettung und kein Timeout: Die Liste beantwortet „wo steht mein Beleg", nicht „was ist
+ * im Einzelnen passiert" (Schritt 5) und nicht „was haengt daran" (Schritt 6).
  *
  * @param zeitpunkt {@code MessageLastUpdate} als UTC-Zeitpunkt. <b>Kein Anlagedatum</b> — die
  *     Quelle hat keines (Regel Q2).
@@ -22,10 +27,14 @@ import java.util.List;
  *     seine fachliche Bedeutung ist nicht belegt. Die Oberflaeche kennzeichnet das, statt einen
  *     plausiblen Text zu erfinden.
  * @param processName {@code null}, wenn die Quelle keinen Namen fuehrt — nicht zugeordnet heisst
- *     nicht zugeordnet (Regel Q4); den Ersatztext waehlt die Oberflaeche
- * @param bamWerte so viele Eintraege, wie der Mandant BAM-Spalten hat (0, 1 oder 2) — auch dann,
- *     wenn diese Nachricht dazu nichts traegt. Sonst muesste die Oberflaeche die Spalten je Zeile
- *     neu ausrichten.
+ *     nicht zugeordnet (Regel Q4); den Ersatztext waehlt die Oberflaeche. Er steht seit der
+ *     Nachbesserung <b>nicht mehr in einer eigenen Spalte</b>, sondern im Tooltip des Ablaufs: Er
+ *     ist nur zufaellig lesbar („Kunde A Lieferschein (VDA)" neben „KUNDE_B_MX_000000_LAB"),
+ *     waehrend {@code sosName} laut Projektbeschreibung §3.2 der Anzeigename ist.
+ * @param sosName der Anzeigename des Ablaufs ({@code SOS.SOSName}), die Spalte „Ablauf". Gemessen
+ *     in L14: durchgaengig gepflegt und auf allen 180.251 Nachrichten des dichten Monats
+ *     aufloesbar; der Join ist ein {@code eq_ref} und kostet 0,2 ms. Trotzdem nullable — die
+ *     Produktion muss sich nicht daran halten, was die Testkopie zufaellig enthaelt.
  */
 public record NachrichtResponse(
     String messageId,
@@ -36,19 +45,4 @@ public record NachrichtResponse(
     String processId,
     String processName,
     String projectName,
-    List<BamWerte> bamWerte) {
-
-  /**
-   * Die Werte einer BAM-Spalte — die fachliche Kennung, an der ein Sachbearbeiter seinen Beleg
-   * wiedererkennt.
-   *
-   * <p>Ein Typ kann je Nachricht mehrfach vorkommen (der Wert steht im Primaerschluessel von {@code
-   * MessageBAM}). Eine gesplittete Sammelrechnung traegt so mehrere Lieferscheinnummern. Angezeigt
-   * werden hoechstens drei; {@code weitere} sagt, wie viele nicht mitgekommen sind — eine stumm
-   * gekuerzte Liste sieht aus wie eine vollstaendige.
-   *
-   * @param beschreibung der lesbare Name des Typs, damit der Aufrufer nichts nachschlagen muss
-   * @param weitere Anzahl der nicht mitgelieferten Werte, {@code 0} wenn alle da sind
-   */
-  public record BamWerte(short typ, String beschreibung, List<String> werte, int weitere) {}
-}
+    String sosName) {}

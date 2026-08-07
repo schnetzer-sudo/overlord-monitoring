@@ -1,9 +1,7 @@
 package de.kraftwerkone.overlord.monitor.message;
 
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.MESSAGE;
-import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.MESSAGEBAM;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import de.kraftwerkone.overlord.monitor.security.Rolle;
 import de.kraftwerkone.overlord.monitor.security.SicherheitsTestbasis;
@@ -15,8 +13,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import org.jooq.DSLContext;
-import org.jooq.Record2;
-import org.jooq.impl.DSL;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -354,101 +350,51 @@ class NachrichtenlisteDbIT extends SicherheitsTestbasis {
     assertThat(antwort.<Boolean>json("$.hasMore")).isFalse();
   }
 
-  // ─── BAM-Werte (Aufgabe 7) ──────────────────────────────────────────────────────────────────
+  // ─── Der Ablaufname (Nachbesserung zu Schritt 4, Aufgabe 4) ─────────────────────
 
   /**
-   * {@code NEXANS} ist der Mandant, fuer den die Kuratierung angelegt wurde: Der Sortierindex
-   * zeigte auf „Abladestelle" (millionenfach derselbe Wert), kuratiert sind Lieferschein-Nr. und
-   * Abrufnummer. Geprueft wird die <b>Reihenfolge</b> und dass jede Zeile beide Spalten traegt —
-   * auch die, die dazu nichts zu sagen hat.
+   * Die Spalte, die die beiden BAM-Spalten abgeloest hat. Der Anspruch an sie ist genau der, an dem
+   * jene gescheitert sind: <b>Sie traegt auf jeder Zeile etwas.</b> Messung L14 weist das fuer alle
+   * 180.251 Nachrichten des dichten Monats nach; dieser Test haelt es fuer das Fenster fest, damit
+   * ein spaeterer Datenstand die Aussage nicht stillschweigend verliert.
    */
   @Test
-  @DisplayName("Jede Zeile traegt beide BAM-Spalten des Mandanten, in kuratierter Reihenfolge")
-  void bam_spalten_stehen_an_jeder_zeile() throws Exception {
-    Antwort antwort = sitzung.hole(fensterAbfrage("&limit=20"));
+  @DisplayName("Jede Zeile traegt einen Ablaufnamen in Klartext")
+  void jede_zeile_traegt_einen_ablaufnamen() throws Exception {
+    Antwort antwort = sitzung.hole(fensterAbfrage("&limit=50"));
 
-    assertThat(antwort.<List<List<Object>>>json("$.items[*].bamWerte"))
-        .isNotEmpty()
-        .allMatch(werte -> werte.size() == 2);
-    assertThat(antwort.<List<Integer>>json("$.items[0].bamWerte[*].typ"))
-        .containsExactly(9006, 9001);
-    assertThat(antwort.<List<String>>json("$.items[*].bamWerte[*].beschreibung"))
-        .allMatch(beschreibung -> beschreibung != null && !beschreibung.isBlank());
-  }
-
-  @Test
-  @DisplayName("Mehr als drei Werte eines Typs werden gekuerzt und die Kuerzung wird benannt")
-  void mehr_als_drei_werte_werden_gekuerzt() throws Exception {
-    Record2<String, LocalDateTime> vielwertig =
-        glassfishDsl
-            .select(MESSAGEBAM.MESSAGEID, MESSAGE.MESSAGELASTUPDATE)
-            .from(MESSAGEBAM)
-            .join(MESSAGE)
-            .on(MESSAGE.MESSAGEID.eq(MESSAGEBAM.MESSAGEID))
-            .where(MESSAGE.MESSAGELASTUPDATE.between(FENSTER_VON, FENSTER_BIS))
-            .and(MESSAGEBAM.MESSAGEBAMTYPE.eq((short) 9006))
-            .groupBy(MESSAGEBAM.MESSAGEID, MESSAGE.MESSAGELASTUPDATE)
-            .having(DSL.count().gt(NachrichtenService.BAM_WERTE_JE_SPALTE))
-            .limit(1)
-            .fetchOne();
-    // Ohne eine solche Nachricht prueft der Test nichts — dann ist er uebersprungen und nicht
-    // gruen.
-    assumeTrue(vielwertig != null, "Keine Nachricht mit mehr als drei Werten im Fenster");
-
-    int werteInDerQuelle =
-        glassfishDsl.fetchCount(
-            MESSAGEBAM,
-            MESSAGEBAM
-                .MESSAGEID
-                .eq(vielwertig.value1())
-                .and(MESSAGEBAM.MESSAGEBAMTYPE.eq((short) 9006)));
-
-    // Ein Fenster von genau einer Sekunde um diese Nachricht — damit sie auf der ersten Seite
-    // steht.
-    Antwort antwort =
-        sitzung.hole(
-            "/api/nachrichten?limit=200&zwischenschritte=true&von="
-                + URLEncoder.encode(iso(vielwertig.value2()), StandardCharsets.UTF_8)
-                + "&bis="
-                + URLEncoder.encode(iso(vielwertig.value2()), StandardCharsets.UTF_8));
-
-    List<String> ids = antwort.json("$.items[*].messageId");
-    int index = ids.indexOf(vielwertig.value1());
-    assertThat(index)
-        .as("Die Nachricht muss im Fenster ihrer eigenen Sekunde liegen")
-        .isNotNegative();
-
-    assertThat(antwort.<List<String>>json("$.items[" + index + "].bamWerte[0].werte"))
-        .hasSize(NachrichtenService.BAM_WERTE_JE_SPALTE);
-    assertThat(antwort.<Integer>json("$.items[" + index + "].bamWerte[0].weitere"))
-        .as("Die Kuerzung wird gezaehlt und nicht verschwiegen")
-        .isPositive()
-        .isLessThanOrEqualTo(werteInDerQuelle - NachrichtenService.BAM_WERTE_JE_SPALTE);
+    List<String> namen = antwort.json("$.items[*].sosName");
+    assertThat(namen).isNotEmpty().doesNotContainNull();
+    assertThat(namen)
+        .as("Klartext, keine Kennung: mindestens sechs Zeichen und nicht nur Ziffern (L14)")
+        .allMatch(name -> name.length() >= 6 && !name.matches("\\d+"));
   }
 
   /**
-   * {@code WOC} („Without Contract") hat Nachrichten, aber keine Zeile in {@code
-   * MessageBAMMandant}. Keine leere Spalte, kein Platzhalter — eine Spalte ohne Inhalt behauptet,
-   * es gaebe dort etwas zu sehen.
+   * {@code ProcessName} bleibt in der Antwort, obwohl er keine eigene Spalte mehr hat — die
+   * Oberflaeche zeigt ihn im Tooltip des Ablaufs. Er ist nur zufaellig lesbar, und genau deshalb
+   * traegt die Spalte jetzt {@code SOSName} (Projektbeschreibung §3.2).
    */
   @Test
-  @DisplayName("Ein Mandant ohne BAM-Konfiguration bekommt keine Spalte")
-  void mandant_ohne_bam_konfiguration_bekommt_keine_spalte() throws Exception {
-    String nutzerOhneBam = PRAEFIX + "liste-woc";
-    legeNutzerAn(nutzerOhneBam, PASSWORT, Rolle.MANDANT, "WOC");
-    Sitzung woc = anmelden(nutzerOhneBam, PASSWORT);
+  @DisplayName("Ablauf- und Prozessname stehen beide in der Antwort, und sie sind verschieden")
+  void ablauf_und_prozessname_stehen_beide_da() throws Exception {
+    Antwort antwort = sitzung.hole(fensterAbfrage("&limit=50"));
 
-    Antwort antwort =
-        woc.hole(
-            "/api/nachrichten?limit=5&zwischenschritte=true&von="
-                + URLEncoder.encode(
-                    iso(LocalDateTime.parse("2025-12-01T00:00:00")), StandardCharsets.UTF_8)
-                + "&bis="
-                + URLEncoder.encode(
-                    iso(LocalDateTime.parse("2025-12-30T00:00:00")), StandardCharsets.UTF_8));
+    assertThat(antwort.<List<String>>json("$.items[*].processName")).isNotEmpty();
+    assertThat(antwort.<List<String>>json("$.items[*].projectName")).isNotEmpty();
+  }
+
+  /**
+   * Die BAM-Werte sind aus der Liste verschwunden, und zwar vollstaendig — kein leeres Feld, das
+   * spaeter jemand wieder zu fuellen versucht. {@code bam_spalte} und {@code
+   * common/BamSpaltenRegel} bleiben davon unberuehrt; Schritt 7 baut die BAM-Suche darauf.
+   */
+  @Test
+  @DisplayName("Die Antwort traegt kein Feld bamWerte mehr")
+  void keine_bam_werte_mehr_in_der_antwort() throws Exception {
+    Antwort antwort = sitzung.hole(fensterAbfrage("&limit=5"));
 
     assertThat(antwort.status()).isEqualTo(200);
-    assertThat(antwort.<List<String>>json("$.items[*].messageId")).isNotEmpty();
-    assertThat(antwort.<List<List<Object>>>json("$.items[*].bamWerte")).allMatch(List::isEmpty);
+    assertThat(antwort.rumpf()).doesNotContain("bamWerte");
   }
 }

@@ -44,12 +44,7 @@ auch keiner entstehen.
       "processId": "…",
       "processName": "40000_AMG_LAB_VDA",
       "projectName": "300_KundenEingehend",
-      "bamWerte": [
-        { "typ": 9006, "beschreibung": "Lieferschein-Nr._L_SAP",
-          "werte": ["LS-000001", "LS-000002", "LS-000003"], "weitere": 2 },
-        { "typ": 9001, "beschreibung": "Abrufnummer_L_SAP",
-          "werte": [], "weitere": 0 }
-      ]
+      "sosName": "Versand Einzel IDOC aus Split"
     }
   ],
   "nextCursor": "MjAyNS0xMi0yOVQyMzoyMjo0MXxjZGI2…",
@@ -66,9 +61,12 @@ festmacht. Beide kommen aus derselben Stelle: `common/MessageStatusClassifier`.
 Unbekannte. Der Wert kommt so aus dem Altsystem, seine fachliche Bedeutung ist nicht belegt; die
 Oberfläche kennzeichnet das, statt einen plausiblen Text zu erfinden.
 
-`processName` und `projectName` dürfen `null` sein. Was der Nutzer anstelle einer fehlenden
-Zuordnung liest, ist eine Oberflächenentscheidung und gehört in die Sprachdateien, nicht in eine
-Abfrage (Regel Q4).
+`processName`, `projectName` und `sosName` dürfen `null` sein. Was der Nutzer anstelle einer
+fehlenden Zuordnung liest, ist eine Oberflächenentscheidung und gehört in die Sprachdateien, nicht
+in eine Abfrage (Regel Q4).
+
+**`sosName` ist der Anzeigename des Ablaufs** und seit der Nachbesserung zu Schritt 4 die Spalte
+„Ablauf" (§8.1). **`bamWerte` gibt es nicht mehr** — die Begründung steht in §6.
 
 **Kein `total`.** Eine Gesamtzahl über `Message` wäre genau die Live-Aggregation, die Regel L2
 verbietet — und sie kostet mehr als die Seite selbst: Ein `COUNT` über ein Jahresfenster liest den
@@ -423,56 +421,46 @@ Einträge, ist das das Signal. Steht unter „Offene Punkte".
 
 ---
 
-## 6. Die BAM-Werte — zweite Abfrage je Seite
+## 6. Die BAM-Werte sind aus der Liste heraus — und warum
 
-Die BAM-Werte sind das, woran ein Sachbearbeiter seinen Beleg wiedererkennt: Lieferschein-Nr.,
-Bestellnummer, Transport-Nummer. Welche zwei Typen ein Mandant sieht, entscheidet die
-Auflösungsregel aus [`datenzugriff.md`](datenzugriff.md) §5 (Vorrang der Kuratierung, sonst die zwei
-kleinsten Sortierindizes, bei Gleichstand der kleinere Typ).
+Bis zur Nachbesserung von Schritt 4 trug jede Zeile zwei BAM-Spalten, nachgeladen in einer zweiten
+Abfrage je Seite. Sie sollten das sein, woran ein Sachbearbeiter seinen Beleg wiedererkennt:
+Lieferschein-Nr., Bestellnummer, Transport-Nummer. **Im Betrieb waren sie leer.**
 
-### Nicht als Join, sondern als zweite Abfrage
+Beim ersten Durchklicken durch den Auftraggeber stand die erste Spalte auf **jeder sichtbaren
+Zeile** leer, und die zweite lieferte siebenundzwanzig laufende Positionsnummern je Nachricht.
+Messung [M11](messungen-schritt4.md) sagt, wie systematisch das ist:
 
-```sql
-SELECT MessageID, MessageBAMType, MessageBAMValue
-FROM MessageBAM
-WHERE MessageID IN (…bis zu 200…)
-  AND MessageBAMType IN (:typ1, :typ2)
-```
+| | |
+|---|---|
+| Typ 9006 („Lieferschein-Nr._L_SAP"), kuratiert | auf **98,93 %** der Zeilen leer |
+| Typ 9001 („Abrufnummer_L_SAP"), kuratiert | auf **96,97 %** der Zeilen leer, im Schnitt 4,42 Werte, im Höchstfall 238 |
+| bestbelegter der **40** konfigurierten Typen | **16,25 %** |
+| Typen, die im ganzen Monat kein einziges Mal befüllt sind | 2 |
 
-Als Join wäre `MessageBAM` (10,9 Mio. Zeilen, 7,1 GB) Teil der Sortier- und Limit-Rechnung. Ein Typ
-kann je Nachricht **mehrfach** vorkommen — der Wert steht im Primärschlüssel
-`(MessageID, MessageBAMType, MessageBAMValue)` —, und `LIMIT 50` bedeutete dann 50 *Wertzeilen*
-statt 50 Nachrichten. Die Seite hätte je nach Belegart eine andere Länge.
+**Der Auftraggeber hat also nicht eine unglückliche Seite erwischt, sondern den Normalfall
+gesehen.** Und es ist keine Frage der Auswahl: Eine BAM-Spalte, die *immer* etwas zeigt, gibt es
+bei `NEXANS` nicht. Auch die zwei bestbelegten Typen ließen vier von fünf Zeilen leer.
 
-Der Einstieg über `MessageID` nutzt das Präfix dieses Primärschlüssels. Über `MessageBAMValue` wird
-**nie** gefiltert, gruppiert oder sortiert (Regeln L4/L5); die Werte werden im Speicher sortiert, auf
-höchstens ein paar hundert Zeichenketten.
+Damit fällt die Spalte unter dieselbe Regel, die §8.1 seit Schritt 4 für einen Mandanten ohne
+BAM-Konfiguration formuliert: **Eine Spalte ohne Inhalt behauptet, es gäbe dort etwas zu sehen.**
+Der Unterschied war nur, dass sie hier je Zeile leer ist statt je Mandant — und dass sie den Platz
+kostete, den die übrigen Spalten brauchen.
 
-Die Abfrage läuft **nach** dem Abschneiden der Seite: Die Zusatzzeile, an der `hasMore` erkannt wird,
-bekommt keine Werte. Und sie läuft **gar nicht**, wenn der Mandant keine BAM-Konfiguration hat
-(`EDITIONLINGERI`, `SYSTEM`, `WOC`) — kein Aufruf mit leerer Typliste.
+**Was verschwindet:** die zwei Spalten, das Feld `bamWerte` in der Antwort, die zweite Abfrage je
+Seite (`findeBamWerte`) und die Spaltenauflösung im Paket `message`.
 
-**Der Mandant steht nicht im Statement** und muss es nicht: Die `MessageID`s stammen aus der Seite,
-die das mandantengefilterte Hauptstatement gerade geliefert hat — eine fremde Kennung kann gar nicht
-darunter sein. Der `MandantContext` ist trotzdem Pflichtparameter (Regel M2) und macht sichtbar, dass
-die Methode nur mit einer solchen Liste aufgerufen werden darf.
+**Was bleibt, unangetastet:** die Tabelle `bam_spalte` mit ihrer Migration, die Auflösungsregel
+`common/BamSpaltenRegel` samt Test und die Kuratierung in [`datenzugriff.md`](datenzugriff.md) §5.
+**Schritt 7 braucht beides** — dort entsteht die BAM-Suche, und M11 ist ausdrücklich als Vorarbeit
+dafür erhoben: Sie sagt, welche Felder ein Suchfeld anbieten sollte und welche leer sind. Der
+Datenzugriff entsteht dann im Paket `bam` und nicht hier; Fachpakete kennen einander nicht (§7).
 
-### Darstellung
-
-- Mehrere Werte eines Typs werden **zusammengefasst**, sortiert und ab dem vierten gekürzt;
-  `weitere` sagt, wie viele fehlen. Eine stumm gekürzte Liste sieht aus wie eine vollständige.
-- Doppelte Werte fallen weg — derselbe Lieferschein zweimal ist keine zusätzliche Auskunft.
-- **Jede Zeile trägt so viele Einträge, wie der Mandant Spalten hat** — auch die Zeile, die dazu
-  nichts zu sagen hat (dann mit leerer Werteliste). Sonst müsste die Oberfläche die Spalten je Zeile
-  neu ausrichten.
-- Ein Mandant ohne Konfiguration bekommt **keinen** Eintrag. Keine leere Spalte, kein Platzhalter —
-  eine Spalte ohne Inhalt behauptet, es gäbe dort etwas zu sehen.
-
-### Kosten
-
-Zwei zusätzliche Abfragen je Seite: die Spaltenauflösung (Kuratierung plus Konfiguration, zusammen
-unter 2 ms) und das Nachladen der Werte. Messungen L9 und L10 in
-[`messungen-schritt4.md`](messungen-schritt4.md) zeigen den Verlauf über 50 und 200 Kennungen.
+> **Der zweite Befund aus M11 gehört dazu, weil er die Suche in Schritt 7 betrifft und nicht die
+> Liste.** Die Zahl der Werte je Nachricht ist der größere Fallstrick: Bei den Typen 9027, 9028 und
+> 9029 stehen auf zehn Nachrichten je 15.790 Werte — **1.579 im Schnitt, bis zu 3.035 auf einer
+> einzigen Nachricht**. Ein Suchfeld über solche Typen liefert keine Belegnummer, sondern eine
+> Positionsliste. Die Deckelung aus Regel L5 ist damit nicht Vorsicht, sondern Voraussetzung.
 
 ---
 
@@ -482,21 +470,27 @@ unter 2 ms) und das Nachladen der Werte. Messungen L9 und L10 in
 common/                              message/
 ├─ Zeitfenster, Zeitraum             ├─ NachrichtenController   REST, nimmt nie eine Mandanten-ID
 ├─ Seitenposition, Seite             ├─ NachrichtenService      Fachlogik, Einordnung, Zeitpunkte
-├─ Sortierrichtung                   ├─ NachrichtenRepository   jOOQ, MandantContext zuerst
-├─ Zeitpunkte  (Wanduhr ↔ UTC)       ├─ BamSpaltenRepository    jOOQ, MandantContext zuerst
-├─ BamSpalte, BamSpaltenRegel        ├─ NachrichtenFilter       geprüfte Parameter
-└─ MessageStatusClassifier           └─ NachrichtResponse       DTO nach außen
+├─ Sortierrichtung                   ├─ NachrichtenFilter       geprüfte Parameter
+├─ Zeitpunkte  (Wanduhr ↔ UTC)       └─ NachrichtResponse       DTO nach außen
+├─ BamSpalte, BamSpaltenRegel
+└─ MessageStatusClassifier
 ```
 
 Was in `common` liegt, liegt dort, weil ein zweites Fachpaket es braucht: Zeitfenster, Cursor und
 Sortierung gehören zu **jedem** Listen-Endpunkt (Schritt 6, 7 und 10 folgen), die BAM-Spaltenregel
-ab Schritt 7 auch dem Paket `bam`.
+ab Schritt 7 dem Paket `bam`.
+
+**`message/BamSpaltenRepository` ist mit der Nachbesserung entfallen** (§6). Die Regel in `common`
+bleibt und behält ihren Test; ihr *Datenzugriff* entsteht in Schritt 7 neu im Paket `bam`, weil er
+dort gebraucht wird und nicht mehr hier. Ein ungenutztes Statement in `message` stehen zu lassen,
+hätte Schritt 7 nicht geholfen — es hätte kopiert werden müssen, denn Fachpakete kennen einander
+nicht.
 
 ### Warum die BAM-Regel in `common` liegt, der Zugriff darauf aber nicht
 
 Die Auflösungsregel aus [`datenzugriff.md`](datenzugriff.md) §5 steht als reine Rechenlogik in
-`common/BamSpaltenRegel` — sie wird von `message` (Spalten der Liste) und ab Schritt 7 von `bam`
-(Suchfelder) gebraucht, und Fachpakete kennen einander nicht.
+`common/BamSpaltenRegel` — sie wird ab Schritt 7 von `bam` (Suchfelder) gebraucht, und Fachpakete
+kennen einander nicht.
 
 Der **Datenzugriff** kann dort trotzdem nicht liegen, und zwar aus zwei Regeln, die zusammen nicht
 erfüllbar sind:
@@ -508,7 +502,7 @@ erfüllbar sind:
 
 Eine Klasse in `common`, die das Quellschema liest, müsste also gleichzeitig `MandantContext`
 verlangen und ihn nicht kennen dürfen. Getrennt wird deshalb dort, wo die Entscheidung liegt: **die
-Regel gemeinsam, die zwei Statements je Fachpaket.** Der Ausweg über rohes SQL (wie ihn `ZeitConfig`
+Regel gemeinsam, die Statements je Fachpaket.** Der Ausweg über rohes SQL (wie ihn `ZeitConfig`
 für den Anker der Dev-Uhr geht) wäre hier falsch — er verstecke einen fachlichen Zugriff auf das
 Quellschema vor genau der Prüfung, die ihn sichtbar machen soll.
 
@@ -539,20 +533,63 @@ frei von React (und deshalb als reine Funktion prüfbar).
 ### 8.1 Die Spalten
 
 ```
-Zeitpunkt · Status · Prozess · Projekt · BAM 1 · BAM 2
+Zeitpunkt · Status · Ablauf · Projekt
 ```
+
+**Neu geschnitten in der Nachbesserung zu Schritt 4.** Der Anspruch, an dem der alte Satz gemessen
+wurde und den er verfehlt hat: **Jede Spalte muss etwas beitragen.**
+
+**Die BAM-Spalten sind weg** (§6). Was an ihre Stelle tritt, ist keine Ersatzspalte, sondern eine,
+die es schon gab und die falsch besetzt war.
+
+**„Ablauf" zeigt `SOSName`, nicht `ProcessName`.** Die Projektbeschreibung §3.2 legt `SOSName` als
+den **Anzeigenamen** fest, und er ist durchgängig in Klartext gepflegt — Messung
+[L14](messungen-schritt4.md#l14--was-kosten-die-beiden-neuen-joins-der-liste): 1.818 Zeilen, kein
+`NULL`, kein Leerwert, 6 bis 55 Zeichen, keiner besteht nur aus Ziffern, und auf **allen 180.251**
+Nachrichten des dichten Monats auflösbar. `ProcessName` ist dagegen nur zufällig lesbar: Auf dem
+Bild des Auftraggebers steht „Kunde A Lieferschein (VDA)" neben „KUNDE_B_MX_000000_LAB".
+
+`ProcessName` geht nicht verloren — er steht im **Tooltip** der Ablaufzelle und für
+Vorleseprogramme verborgen im Markup. Und der Freitextfilter durchsucht weiterhin Prozess-,
+Projekt- und Ablaufnamen (§5). **Das passt jetzt zusammen: Was man sucht, sieht man auch.**
+
+Der Join kostet 0,2 ms und ändert den Zugriffspfad nicht (L14, `eq_ref` über den Primärschlüssel
+von `SOS`).
 
 **Keine `MessageID`-Spalte.** Eine `varchar(36)`-UUID widerspricht dem Leitsatz „interne IDs sind
 Beiwerk", und ohne Kopierfunktion trägt sie nichts. Sie kommt in Schritt 5 zurück, wenn es ein
 Detail gibt, auf das sie zeigt.
 
-**Die BAM-Überschriften kommen aus `beschreibung` der Antwort**, nicht aus einer festen Liste — sie
-unterscheiden sich je Mandant. Hat der Mandant keine BAM-Konfiguration (`EDITIONLINGERI`, `SYSTEM`,
-`WOC`), fehlen beide Spalten und die Tabelle hat vier. Eine leere Spalte behauptete, es gäbe dort
-etwas zu sehen.
+#### Der Zeitpunkt trägt Sekunden
 
-Mehrere Werte eines Typs stehen untereinander; was nicht mitgekommen ist, steht als `+n weitere`
-darunter. Eine stumm gekürzte Liste sieht aus wie eine vollständige.
+`29.12.2025, 23:39:14`.
+
+Auf dem Bild des Auftraggebers standen mehrfach **zwei Zeilen mit identischem Zeitpunkt, Prozess
+und Projekt** nebeneinander. Der Nutzer kann sie nicht auseinanderhalten — und für ein Werkzeug,
+dessen Leitfrage „wo ist mein Beleg" lautet, sind zwei ununterscheidbare Zeilen so schädlich wie
+eine leere Spalte.
+
+**Die Sekunden stehen in der Zelle und nicht im Tooltip.** Ein Tooltip, den man je Zeile aufrufen
+muss, um zwei Zeilen zu vergleichen, beantwortet die Frage nicht; auf einem Touchgerät gibt es ihn
+ohnehin nicht. Der **relative** Abstand bleibt im Tooltip — er ist die Ergänzung, nie der Ersatz
+([`frontend-grundlagen.md`](frontend-grundlagen.md) §4).
+
+#### Feste Zeilenhöhe — ab jetzt die Regel für jede Spalte
+
+> **Jede Zelle ist eine Zeile hoch. Was nicht hineinpasst, wird gekürzt; der Vollwert steht im
+> `title`.**
+
+Die Regel gilt **nicht nur** für die heutigen vier Spalten. Ohne sie zerreißt der nächste lange
+Wert die Liste wieder — genau das haben die mehrwertigen BAM-Zellen getan, die untereinander bis zu
+vier Zeilen hoch wurden und die Liste ungleichmäßig machten. Eine Liste mit springenden Zeilenhöhen
+lässt sich nicht überfliegen, und Überfliegen ist die einzige Art, wie ein Nutzer 50 Zeilen liest.
+
+Umgesetzt über `table-fixed` mit festen Breiten für Zeitpunkt, Status und Projekt; „Ablauf" bekommt
+den Rest. Feste Spaltenbreiten sind die Voraussetzung dafür, dass eine Zelle überhaupt eine Breite
+hat, auf die sich kürzen lässt. Die Höhe ist `--dichte-zeile`
+([`visuelles-konzept.md`](visuelles-konzept.md) §5), die Kopfzeile der Tabelle ist enger geworden
+und der Innenabstand der Zellen ebenfalls — zusammen mit den zwei entfallenen Spalten passen
+spürbar mehr Zeilen ins Fenster.
 
 **Status nie allein über Farbe.** Jede Plakette trägt Beschriftung **und** Zeichen; die Farbrolle
 ist die halbe Aussage. Bei `bedeutungNichtVerifiziert` wird der **Rohwert** zur Beschriftung, dazu
@@ -561,18 +598,13 @@ Einordnung steht der Rohwert im Tooltip, damit ein Anwender ihn gegen die alte O
 kann. Die Zuordnung Status → Farbe steht weiterhin an genau einer Stelle (`lib/status-farbe.ts`);
 die Komponente kennt keine Farbe.
 
-**Zeit absolut in der Zelle, relativ im Tooltip.** Der absolute Wert ist der, den man weitergibt;
-der relative sagt auf einen Blick, ob etwas gerade eben passiert ist. Der Tooltip ist ein
-`title`-Attribut und keine Bibliothekskomponente — das visuelle Konzept lässt außer Schublade und
-Menü keine Bewegung zu. Für Vorleseprogramme steht derselbe Text zusätzlich verborgen im Markup.
-
 **Der Zeilenklick hat keine Funktion.** Kein Panel, kein Kopieren, kein Hover-Zustand — die
 Hover-Färbung, die `components/ui/table` mitbringt, ist ausdrücklich abgeschaltet. Schritt 5 belegt
 den Klick; bis dahin wäre ein Anfassgefühl ohne Wirkung schlimmer als gar keins.
 
-**Am schmalen Fenster** fällt zuerst **BAM 2** weg (unter `lg`), dann **Projekt** (unter `md`).
-Übrig bleiben Zeitpunkt, Status, Prozess und BAM 1. Der aktive Mandant bleibt bei jeder Breite in
-der Kopfzeile sichtbar — das entscheidet der Anwendungsrahmen (bestehende Regel aus
+**Am schmalen Fenster** fällt zuerst und einzig **Projekt** weg (unter `md`). Übrig bleiben
+Zeitpunkt, Status und Ablauf. Der aktive Mandant bleibt bei jeder Breite in der Kopfzeile sichtbar
+— das entscheidet der Anwendungsrahmen (bestehende Regel aus
 [`visuelles-konzept.md`](visuelles-konzept.md) §6).
 
 ### 8.2 Filter und URL
@@ -765,17 +797,17 @@ als eigener, entfernbarer Eintrag in der Auswahl.
 | Regel | Umsetzung |
 |---|---|
 | **M1** kein Endpunkt nimmt eine Mandanten-ID | kein Parameter, Mandant aus der Sitzung über `MandantService` |
-| **M2** Mandant als erster Pflichtparameter | `NachrichtenRepository`, `BamSpaltenRepository`; ArchUnit prüft es |
+| **M2** Mandant als erster Pflichtparameter | `NachrichtenRepository`; ArchUnit prüft es |
 | **M3** Filter im Statement | `EXISTS` über `Process → ProjectMandant`, Teil jeder Bedingungsliste |
 | **M4** Isolationstest je Endpunkt | `NachrichtenIsolationDbIT` |
 | **L1** Pflicht-Zeitfenster | `common/Zeitfenster`, Vorgabe 24 h, Maximum ein Jahr |
 | **L2** keine Live-Aggregation | kein `COUNT`, `limit + 1` statt `total` |
 | **L3** keine `OFFSET`-Paginierung | Cursor über `(MessageLastUpdate, MessageID)` |
-| **L4/L5** `MessageProperty`/BAM nur über die Kennung | `MessageProperty` wird nicht angefasst; Suche nur über Stammdaten, mit Mindestlänge, Deckel **und Fenstergrenze** (§5) |
-| **L7** jede Abfrage gemessen | [`messungen-schritt4.md`](messungen-schritt4.md), Abschnitte L1 bis L13 |
+| **L4/L5** `MessageProperty`/BAM nur über die Kennung | `MessageProperty` wird nicht angefasst; **`MessageBAM` seit der Nachbesserung gar nicht mehr** (§6); Suche nur über Stammdaten, mit Mindestlänge, Deckel **und Fenstergrenze** (§5) |
+| **L7** jede Abfrage gemessen | [`messungen-schritt4.md`](messungen-schritt4.md), Abschnitte L1 bis L14 |
 | **Z1** kein `now()` | Zeitfenster über die Anwendungsuhr, aufgelöst in `common` |
 | **Q1** Fehlerbedingung | ausschließlich `MessageStatusClassifier.fehlerBedingung` |
-| **Q4** nicht zugeordnet heißt nicht zugeordnet | `processName`/`projectName` bleiben `null`; den Ersatztext wählt die Oberfläche |
+| **Q4** nicht zugeordnet heißt nicht zugeordnet | `processName`/`projectName`/`sosName` bleiben `null`; den Ersatztext wählt die Oberfläche |
 | **Status nie allein über Farbe** | `status-plakette.tsx` — Beschriftung **und** Zeichen; die Zuordnung Status → Farbe bleibt in `lib/status-farbe.ts` |
 | **Kein Farbwert in einer Komponente** | `tests/farbwerte.test.ts` deckt auch das neue Feature ab |
 
@@ -875,11 +907,14 @@ als eigener, entfernbarer Eintrag in der Auswahl.
   Antworten trägt eine `traceId`, die im Protokoll steht. Häufen sich die Einträge, ist das das
   Signal — eine Kennzahl dafür gibt es heute nicht, sie gehört zur Betriebsüberwachung und nicht in
   diesen Schritt.
-- **Die BAM-Spaltenauflösung läuft je Anfrage** (zwei kleine Abfragen, zusammen unter 2 ms). Ein
-  Zwischenspeicher je Mandant wäre möglich, bringt aber eine Invalidierungsfrage mit — offen, bis
-  eine Messung zeigt, dass es sich lohnt.
-- **Kein `SOSName` in der Liste.** Der Anzeigename des Ablaufs kommt in Schritt 5; hier wäre er ein
-  weiterer Join ohne Nutzen für die Frage „wo steht mein Beleg".
+- ~~**Die BAM-Spaltenauflösung läuft je Anfrage.**~~ **Gegenstandslos seit dem 07.08.2026** — die
+  Liste löst keine BAM-Spalten mehr auf (§6). Die Frage nach einem Zwischenspeicher stellt sich in
+  Schritt 7 neu und dann mit anderen Zahlen.
+- ~~**Kein `SOSName` in der Liste.**~~ **Umgekehrt entschieden am 07.08.2026.** Diese Datei nannte
+  ihn „einen weiteren Join ohne Nutzen für die Frage *wo steht mein Beleg*". Die erste Hälfte ist
+  gemessen und stimmt (L14: `eq_ref`, 0,2 ms); die zweite ist durch das Durchklicken des
+  Auftraggebers widerlegt — `ProcessName` ist nur zufällig lesbar, und die Spalte daneben war leer.
+  Der Anzeigename ist jetzt die Spalte „Ablauf" (§8.1).
 - **Der Zeitzonen-Übergang** (Wanduhrzeit der Quelle → UTC der API) setzt voraus, dass Anwendungs-
   und Datenbankserver dieselbe Zone haben. Für die Testkopie ist das gemessen; für die Produktion
   ist es die Annahme, die die Anwendungsuhr ohnehin macht. Ein Auseinanderlaufen fiele als

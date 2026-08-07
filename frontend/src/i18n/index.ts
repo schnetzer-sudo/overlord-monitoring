@@ -39,9 +39,9 @@ export function texteFuer(sprache: Sprache): Texte {
 }
 
 /**
- * Setzt Werte in einen Text ein: `einsetzen(texte.…bamWeitere, { anzahl: 4 })`.
+ * Setzt Werte in einen Text ein: `einsetzen(texte.…sucheZuKurz, { fehlt: 2 })`.
  *
- * **Warum überhaupt Platzhalter.** Ein Satz wie „+4 weitere" aus Bausteinen
+ * **Warum überhaupt Platzhalter.** Ein Satz wie „noch 2 Zeichen" aus Bausteinen
  * zusammenzusetzen, hieße die Wortstellung im Code festzulegen — und die ist je
  * Sprache eine andere. Mit einem Platzhalter bleibt der ganze Satz in der
  * Sprachdatei, und die Übersetzung darf ihn umstellen.

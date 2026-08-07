@@ -1,7 +1,6 @@
 package de.kraftwerkone.overlord.monitor.message;
 
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.MESSAGE;
-import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.MESSAGEBAM;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROCESS;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROJECT;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROJECTMANDANT;
@@ -41,6 +40,14 @@ import org.springframework.stereotype.Repository;
  * geblättert (Regel L3). Beides steht nicht zur Wahl: Mit Zeitfenster arbeitet MariaDB im {@code
  * range}-Zugriff ueber {@code MessageLastUpdateIDX}, ohne wird jede Abfrage ueber {@code Message}
  * zu einem vollen Durchlauf.
+ *
+ * <p><b>Die BAM-Werte sind hier ausgezogen</b> (Nachbesserung zu Schritt 4). Sie waren eine zweite
+ * Abfrage je Seite und sind jetzt gar keine mehr: Messung M11 zeigt, dass der bestbelegte der 40
+ * konfigurierten Typen 16,25 Prozent der Nachrichten erreicht und die beiden kuratierten 98,93
+ * beziehungsweise 96,97 Prozent der Zeilen leer lassen. Eine Spalte, die fast immer leer ist,
+ * behauptet, es gaebe dort etwas zu sehen. <b>{@code bam_spalte}, die Migration und {@code
+ * common/BamSpaltenRegel} bleiben unangetastet</b> — Schritt 7 baut die BAM-Suche darauf, mit einem
+ * eigenen Statement im Paket {@code bam} (Fachpakete kennen einander nicht).
  */
 @Repository
 public class NachrichtenRepository {
@@ -77,7 +84,8 @@ public class NachrichtenRepository {
               MESSAGE.MESSAGESTATUS,
               MESSAGE.PROCESSID,
               PROCESS.PROCESSNAME,
-              PROJECT.PROJECTNAME)
+              PROJECT.PROJECTNAME,
+              SOS.SOSNAME)
           .from(MESSAGE)
           // LEFT JOIN, obwohl die Mandantenkette einen Prozess ohnehin erzwingt: Der Anzeigename
           // darf nicht darueber entscheiden, ob eine Zeile erscheint.
@@ -85,6 +93,11 @@ public class NachrichtenRepository {
           .on(PROCESS.PROCESSID.eq(MESSAGE.PROCESSID))
           .leftJoin(PROJECT)
           .on(PROJECT.PROJECTID.eq(PROCESS.PROJECTID))
+          // Der Ablaufname, seit der Nachbesserung zu Schritt 4 die Spalte „Ablauf". Ebenfalls
+          // LEFT JOIN und aus demselben Grund: Eine Zeile ohne aufloesbaren Ablauf verschwindet
+          // nicht, sie zeigt an dieser Stelle nichts.
+          .leftJoin(SOS)
+          .on(SOS.SOSID.eq(MESSAGE.SOSID))
           .where(bedingungen(mandant, abfrage))
           .orderBy(sortierung(abfrage))
           .limit(abfrage.limit() + 1)
@@ -96,7 +109,8 @@ public class NachrichtenRepository {
                       satz.value3(),
                       satz.value4(),
                       satz.value5(),
-                      satz.value6()));
+                      satz.value6(),
+                      satz.value7()));
     } catch (DataAccessException fehler) {
       throw anDerZeitgrenze(fehler, abfrage.suchtreffer() != null);
     }
@@ -297,41 +311,5 @@ public class NachrichtenRepository {
 
     boolean zuUnscharf = prozessIds.size() > hoechstens || sosIds.size() > hoechstens;
     return new Suchtreffer(prozessIds, sosIds, zuUnscharf);
-  }
-
-  /**
-   * Die BAM-Werte einer bereits gelesenen Seite — <b>zweite Abfrage</b>, kein Join in die
-   * paginierte.
-   *
-   * <p>Als Join waere {@code MessageBAM} (10,9 Mio. Zeilen, 7,1 GB) Teil der Sortier- und
-   * Limit-Rechnung. Ein Typ kann je Nachricht mehrfach vorkommen — der Wert steht im
-   * Primaerschluessel {@code (MessageID, MessageBAMType, MessageBAMValue)} —, und {@code LIMIT 50}
-   * bedeutete dann 50 <i>Wertzeilen</i> statt 50 Nachrichten. Die Seite haette je nach Belegart
-   * eine andere Laenge.
-   *
-   * <p>Der Einstieg ueber {@code MessageID} nutzt das Praefix dieses Primaerschluessels. Ueber
-   * {@code MessageBAMValue} wird <b>nie</b> gefiltert, gruppiert oder sortiert (Regeln L4/L5); die
-   * Sortierung der Werte passiert im Speicher, auf hoechstens ein paar hundert Zeichenketten.
-   *
-   * <p><b>Der Mandant steht hier nicht im Statement</b> und muss es nicht: Die {@code MessageID}s
-   * stammen aus der Seite, die das mandantengefilterte Hauptstatement gerade geliefert hat — eine
-   * fremde Kennung kann gar nicht darunter sein. Der Parameter ist trotzdem Pflicht (Regel M2) und
-   * macht sichtbar, dass diese Methode nur mit einer solchen Liste aufgerufen werden darf.
-   *
-   * <p>Ohne Kennungen oder ohne Typen wird <b>gar nicht</b> abgefragt: Ein Mandant ohne
-   * BAM-Konfiguration ({@code EDITIONLINGERI}, {@code SYSTEM}, {@code WOC}) loest hier keine
-   * Abfrage mit leerer {@code IN}-Liste aus.
-   */
-  public List<BamWert> findeBamWerte(
-      MandantContext mandant, List<String> messageIds, List<Short> typen) {
-    if (messageIds.isEmpty() || typen.isEmpty()) {
-      return List.of();
-    }
-    return glassfishDsl
-        .select(MESSAGEBAM.MESSAGEID, MESSAGEBAM.MESSAGEBAMTYPE, MESSAGEBAM.MESSAGEBAMVALUE)
-        .from(MESSAGEBAM)
-        .where(MESSAGEBAM.MESSAGEID.in(messageIds))
-        .and(MESSAGEBAM.MESSAGEBAMTYPE.in(typen))
-        .fetch(satz -> new BamWert(satz.value1(), satz.value2(), satz.value3()));
   }
 }

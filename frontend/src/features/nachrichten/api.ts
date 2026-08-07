@@ -15,20 +15,6 @@ import { hole } from "@/lib/http";
  * gemeinsame Teil nach `components/` oder `lib/` — nicht ins Nachbarfeature.
  */
 
-/** Eine BAM-Spalte einer Zeile. Jede Zeile trägt so viele, wie der Mandant hat. */
-export type BamWerte = {
-  typ: number;
-  /**
-   * Der lesbare Name des Typs — **er ist zugleich die Spaltenüberschrift**. Sie
-   * kommt aus der Antwort und nicht aus einer festen Liste: Welche zwei BAM-Typen
-   * ein Mandant sieht, entscheidet seine Konfiguration.
-   */
-  beschreibung: string;
-  werte: string[];
-  /** Wie viele Werte nicht mitgekommen sind. Eine stumm gekürzte Liste sieht aus wie eine ganze. */
-  weitere: number;
-};
-
 export type Nachricht = {
   messageId: string;
   /** ISO 8601 in UTC. Angezeigt wird er in der Anzeigezone — siehe `lib/format.ts`. */
@@ -40,10 +26,22 @@ export type Nachricht = {
   /** Bei `UNGEKLAERT`: Der Wert kommt so aus dem Altsystem, seine Bedeutung ist nicht belegt. */
   bedeutungNichtVerifiziert: boolean;
   processId: string;
-  /** Darf `null` sein — nicht zugeordnet heißt nicht zugeordnet (Regel Q4). */
+  /**
+   * Darf `null` sein — nicht zugeordnet heißt nicht zugeordnet (Regel Q4).
+   *
+   * **Ohne eigene Spalte.** `processName` ist nur zufällig lesbar und steht seit
+   * der Nachbesserung zu Schritt 4 im Tooltip des Ablaufs; die Spalte trägt
+   * `sosName`. Der Freitextfilter durchsucht ihn weiterhin.
+   */
   processName: string | null;
   projectName: string | null;
-  bamWerte: BamWerte[];
+  /**
+   * Der Anzeigename des Ablaufs (`SOS.SOSName`) — die Spalte „Ablauf".
+   *
+   * Durchgängig in Klartext gepflegt (Messung L14), aber trotzdem nullable: Die
+   * Produktion muss sich nicht daran halten, was die Testkopie enthält.
+   */
+  sosName: string | null;
 };
 
 /**

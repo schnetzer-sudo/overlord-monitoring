@@ -106,16 +106,19 @@ export const de = {
     spalten: {
       zeitpunkt: "Zeitpunkt",
       status: "Status",
-      prozess: "Prozess",
+      // Der Anzeigename des Ablaufs (SOSName). „Prozess" ist als Spalte
+      // entfallen — ProcessName steht jetzt im Tooltip dieser Zelle.
+      ablauf: "Ablauf",
       projekt: "Projekt",
     },
+    // Der Prozessname als Beschriftung des Tooltips: Ohne sie stünde dort ein
+    // technischer Bezeichner ohne Auskunft darüber, was er ist.
+    prozessName: "Prozess",
     // „Nicht zugeordnet heißt nicht zugeordnet" (Regel Q4). Das Backend liefert
     // hier null und erfindet nichts; der Ersatztext ist eine Entscheidung der
     // Oberfläche und steht deshalb hier.
     nichtZugeordnet: "nicht zugeordnet",
     ohneWert: "—",
-    bamWeitere: "+{anzahl} weitere",
-    bamAlleWerte: "Alle Werte dieser Spalte",
     rohwert: "Statuswert des Altsystems",
     bedeutungNichtVerifiziert: "Bedeutung nicht verifiziert",
     zeitRelativ: "Abstand zu jetzt",
