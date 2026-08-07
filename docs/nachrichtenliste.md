@@ -754,6 +754,28 @@ Beschriftungen kommen aus den Sprachdateien. **Prozessfilter** als Mehrfachauswa
 `/api/prozesse` ([`prozessauswahl.md`](prozessauswahl.md)); eingegrenzt wird örtlich über die
 bereits geladene Liste, nicht über einen Serverparameter.
 
+> **Die aufgeklappte Prozessauswahl ist breiter als das geschlossene Feld** (seit 07.08.2026) —
+> 34 rem gegen 13 rem, nach oben durch das Fenster begrenzt (`calc(100vw - 2rem)`). Bei **733
+> Einträgen** für `NEXANS` ist die Auswahl ohne vollständige Namen nicht bedienbar: Der längste
+> Prozessname hat 58 Zeichen, der längste Projektname 44, und im Vorgängerstand schnitt die Liste
+> bei 20 rem ab. Wer zwischen zwei Namen wählen soll, die sich erst hinter dem Schnitt
+> unterscheiden, sieht beide Male dasselbe.
+>
+> **Umbrechen statt kürzen.** In der Tabelle gilt die feste Zeilenhöhe (§8.1), weil dort 50 Zeilen
+> überflogen werden; hier wird *ausgewählt*, und ein gekürzter Name macht die Auswahl mehrdeutig.
+> Die Kürzung mit Tooltip war als letztes Mittel vorgesehen und **wird nicht gebraucht**:
+> Nachgemessen im Browser sind **0 von 733** Einträgen abgeschnitten (`scrollWidth > clientWidth`).
+>
+> **Kein Virtualisieren.** Die 733 Einträge stehen als 4.399 DOM-Knoten in einem Bereich von
+> 32.288 px Höhe. Gemessen über 30 Sprünge à 1.000 px mit erzwungenem Layout: **0,3 ms zusammen,
+> schlechtester Einzelwert 0,1 ms** — der Browser rechnet die Liste nicht neu. Ruckelt es nicht,
+> bleibt es beim Einfachen; Virtualisierung wäre der erste Umbau, wenn ein Mandant je vierstellig
+> viele Prozesse bekommt.
+>
+> **Der Platzhalter des Suchfelds war abgeschnitten** („Prozess-, Projekt- oder Ablaufnam…") und
+> versprach damit weniger, als das Feld kann. Das Feld ist von 16 auf 20 rem gewachsen; die
+> Filterleiste bricht um, wenn der Platz nicht reicht.
+
 **Das Suchfeld sucht ab drei Zeichen und entprellt** (400 ms). Der Freitextfilter ist der teuerste
 Fall des Endpunkts (L7c, L11 und L13); bei jedem Tastendruck zu suchen hieße, dieselbe teure Abfrage
 fünfmal für einen Begriff zu stellen, den der Nutzer noch nicht fertig getippt hat. **Zu kurz ist

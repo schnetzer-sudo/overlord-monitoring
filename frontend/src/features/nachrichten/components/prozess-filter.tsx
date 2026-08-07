@@ -84,7 +84,22 @@ export function ProzessFilter({
             <ChevronsUpDown aria-hidden="true" className="size-3.5 shrink-0 opacity-60" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-80">
+        {/*
+         * **Die aufgeklappte Liste ist breiter als das geschlossene Feld** — und
+         * das ist keine Kosmetik. Bei 733 Einträgen für `NEXANS` ist die Auswahl
+         * ohne vollständige Namen nicht bedienbar: Der längste Prozessname hat 58
+         * Zeichen, der längste Projektname 44, und im Vorgängerstand schnitt die
+         * Liste bei 20 rem ab. Wer zwischen „…_LAB_VDA" und „…_LAB_VDA_2" wählen
+         * soll, sieht dann beide Male dasselbe.
+         *
+         * 34 rem tragen den Namen im Regelfall ganz; was darüber liegt, bricht um
+         * (siehe `ProzessZeile`) statt zu kürzen. Nach oben begrenzt das Fenster:
+         * `calc(100vw-2rem)` hält die Schublade auch bei 360 px im Bild.
+         */}
+        <PopoverContent
+          align="start"
+          className="w-[min(34rem,calc(100vw-2rem))] max-w-[calc(100vw-2rem)]"
+        >
           <Label htmlFor="prozess-eingrenzung" className="sr-only">
             {texte.nachrichten.prozessfilter.suchen}
           </Label>
@@ -133,10 +148,8 @@ export function ProzessFilter({
                     >
                       <TriangleAlert aria-hidden="true" className="size-3.5 shrink-0 opacity-70" />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate">
-                          {texte.nachrichten.prozessfilter.unbekannt}
-                        </span>
-                        <span className="text-muted-foreground text-beiwerk block truncate font-mono">
+                        <span className="block">{texte.nachrichten.prozessfilter.unbekannt}</span>
+                        <span className="text-muted-foreground text-beiwerk block font-mono break-all">
                           {id}
                         </span>
                       </span>
@@ -192,12 +205,24 @@ function ProzessZeile({
           gewaehlt && "bg-accent",
         )}
       >
-        <Checkbox id={kennung} checked={gewaehlt} onCheckedChange={aufUmschalten} />
+        <Checkbox
+          id={kennung}
+          checked={gewaehlt}
+          onCheckedChange={aufUmschalten}
+          className="shrink-0"
+        />
         <Label htmlFor={kennung} className="min-w-0 flex-1 cursor-pointer py-1 font-normal">
-          <span className="block truncate">
+          {/*
+           * **Umbrechen statt kürzen.** In der Tabelle gilt die feste Zeilenhöhe,
+           * weil dort 50 Zeilen überflogen werden; hier wird *ausgewählt*, und
+           * ein gekürzter Name macht die Auswahl mehrdeutig. Ein Prozessname, der
+           * nicht in eine Zeile passt, bekommt deshalb eine zweite — die
+           * Zeilenhöhe der Auswahl darf schwanken, die der Liste nicht.
+           */}
+          <span className="block break-words">
             {prozess.processName ?? texte.nachrichten.nichtZugeordnet}
           </span>
-          <span className="text-muted-foreground text-beiwerk block truncate">
+          <span className="text-muted-foreground text-beiwerk block break-words">
             {prozess.projectName ?? texte.nachrichten.nichtZugeordnet}
           </span>
         </Label>

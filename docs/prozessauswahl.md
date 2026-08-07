@@ -228,6 +228,49 @@ stehengebliebener Filter erzeugte eine dauerhaft leere Liste, deren Ursache niem
 
 ---
 
+## 7a. Die aufgeklappte Auswahl braucht Platz
+
+Nachgetragen am **07.08.2026** (Nachbesserung zu Schritt 4, Aufgabe 7). Beim Durchklicken durch den
+Auftraggeber waren die Prozessnamen abgeschnitten — und bei 733 Einträgen ist die Liste ohne
+vollständige Namen nicht bedienbar.
+
+| | vorher | nachher |
+|---|---|---|
+| Breite der aufgeklappten Liste | 20 rem | **34 rem**, begrenzt durch `calc(100vw - 2rem)` |
+| Breite des geschlossenen Felds | 13 rem | 13 rem |
+| lange Namen | gekürzt | **umgebrochen** |
+| abgeschnittene Einträge (gemessen, `NEXANS`) | — | **0 von 733** |
+
+**Umbrechen statt kürzen.** In der Nachrichtenliste gilt die feste Zeilenhöhe, weil dort 50 Zeilen
+überflogen werden; hier wird *ausgewählt*. Ein gekürzter Name macht die Auswahl mehrdeutig, sobald
+sich zwei Prozesse erst hinter dem Schnitt unterscheiden — und genau das ist bei Namen wie
+`… Lieferschein (VDA)` neben `… Lieferschein (EDIFACT)` der Regelfall. Die Kürzung mit Tooltip war
+als letztes Mittel vorgesehen und wird nicht gebraucht.
+
+Die Zahlen dazu: 733 Prozesse, längster Prozessname **58 Zeichen**, längster Projektname 44, im
+Schnitt 21,8.
+
+**Das Eingrenzungsfeld bleibt** — es ist bei 733 Einträgen der schnellere Weg als Scrollen, und es
+arbeitet weiterhin rein örtlich (§9).
+
+### Kein Virtualisieren — gemessen, nicht vermutet
+
+Die 733 Einträge stehen als **4.399 DOM-Knoten** in einem Bereich von **32.288 px** Höhe bei 288 px
+Sichtfenster. Gemessen im Browser über 30 Sprünge à 1.000 px, jeweils mit erzwungenem Layout
+(`getBoundingClientRect` auf Container und letztes Kind):
+
+| | |
+|---|---|
+| Summe über 30 Sprünge | **0,3 ms** |
+| schlechtester Einzelwert | **0,1 ms** |
+
+Der Browser rechnet die Liste nicht neu — sie steht, und es wird nur der Ausschnitt verschoben. Mit
+dem Mausrad ist kein Ruckeln zu sehen. **Ruckelt es nicht, bleibt es beim Einfachen.**
+Virtualisierung wäre der erste Umbau, wenn ein Mandant je vierstellig viele Prozesse bekommt — dann
+allerdings zusammen mit dem serverseitigen Suchparameter aus §9, denn beides hat dieselbe Ursache.
+
+---
+
 ## 8. Regelbezug
 
 | Regel | Umsetzung |

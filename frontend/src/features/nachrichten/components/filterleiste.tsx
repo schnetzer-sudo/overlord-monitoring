@@ -477,7 +477,11 @@ function Suchfeld({
             onChange={(ereignis) => setEingabe(ereignis.target.value)}
             placeholder={texte.nachrichten.suche.platzhalter}
             aria-describedby={hinweis === undefined ? undefined : `${kennung}-hinweis`}
-            className="h-bedienelement w-full pl-7 sm:w-64"
+            // 20 rem statt 16: Bei 16 war der Platzhalter abgeschnitten
+            // („Prozess-, Projekt- oder Ablaufnam…") und versprach damit weniger,
+            // als das Feld kann. Der Platz ist da — die Leiste bricht um, wenn er
+            // es nicht ist.
+            className="h-bedienelement w-full pl-7 sm:w-80"
           />
         </div>
         {eingabe !== "" ? (
