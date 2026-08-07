@@ -9,7 +9,21 @@ Stand: 01.08.2026 · Ergänzt `PROJEKTBESCHREIBUNG.md`
 | 1 — Fundament | erledigt |
 | 2 — Backend-Grundgerüst und Datenzugriff | erledigt, über die CI bestätigt, auf `main` |
 | 3 — Anmeldung und Mandantentrennung | **geteilt in Teil 1 (Backend) und Teil 2 (Frontend)**; beide Teile erledigt (29.07.2026) |
-| 4 — Nachrichtenliste | offen; Messungen erhoben (01.08.2026), siehe [`messungen-schritt4.md`](messungen-schritt4.md) |
+| 4 — Nachrichtenliste | erledigt, samt Nachbesserung (07.08.2026); Messungen in [`messungen-schritt4.md`](messungen-schritt4.md) |
+| 5 — Nachrichtendetail und Prozessschritte | **geteilt in Teil 1 (Backend) und Teil 2 (Frontend)**; beide Teile erledigt (07.08.2026). Messungen in [`messungen-schritt5.md`](messungen-schritt5.md) und [`nachrichtendetail.md`](nachrichtendetail.md) §8, die Oberfläche in §10 |
+
+**Korrektur 07.08.2026 zu Schritt 4.** Die Tabelle führte Schritt 4 bis hierhin als **offen**.
+Dieser Stand war überholt: Der Listen-Endpunkt steht seit dem 06.08.2026 und ist am 07.08.2026
+nachgebessert worden. Belege sind die Dokumente, die laut Dokumentationspflicht erst mit dem Feature
+entstehen — [`nachrichtenliste.md`](nachrichtenliste.md) und [`prozessauswahl.md`](prozessauswahl.md)
+—, dazu die grünen Pflichttests `NachrichtenIsolationDbIT` und `ProzesseIsolationDbIT`. Der überholte
+Eintrag wird hier benannt und nicht stillschweigend überschrieben, nach demselben Muster wie die
+Korrektur zu Schritt 3.
+
+**Schritt 5 ist geteilt**, aus demselben Grund wie Schritt 3: Backend und Oberfläche zusammen sind zu
+groß für einen Durchlauf. Teil 1 ist reines Backend und liefert die beiden Endpunkte; Teil 2 baut das
+Detailpanel und zieht dabei die Beschriftung der Nachrichtenliste nach
+([`nachrichtenliste.md`](nachrichtenliste.md) §9, „steht auf" gegen „wartet vor").
 
 **Korrektur 01.08.2026 zu Schritt 3, Teil 2.** Die Tabelle führte Teil 2 bis hierhin als **offen**.
 Dieser Stand war seit dem 29.07.2026 überholt: Teil 2 ist an diesem Tag zusammen mit Teil 1
@@ -278,10 +292,40 @@ wieder her. Der Isolationstest ist grün. Die Abfrage ist gegen die Testkopie ge
 **Backend**
 - Detail-Endpunkt: `MessageAction` als Schrittfolge mit Start, Ende und Dauer
 - `MessageProperty` ausschließlich über `MessageID` geladen
-- **Übersetzung der `SOSActionServiceProperties` in Klartext.** Aus `NXS_FILE_CONVERT|E2A|UNWRAP`
+- ~~**Übersetzung der `SOSActionServiceProperties` in Klartext.** Aus `NXS_FILE_CONVERT|E2A|UNWRAP`
   wird "Datei konvertiert", aus `NXS_MERGE|...|WAIT|30M` wird "wartet auf Zusammenführung,
   30 Minuten". Die Zuordnungstabelle wird gepflegt, unbekannte Bausteine erscheinen als Rohwert —
-  nie geraten
+  nie geraten~~
+- **Korrektur 07.08.2026: Die Zuordnungstabelle entfällt.** Der überholte Auftrag steht
+  durchgestrichen darüber und wird nicht überschrieben — er stammt aus der Zeit vor
+  [M13](messungen-schritt4.md#m13--trägt-sosactionid-einen-lesbaren-namen), das gezeigt hat, dass
+  `SOSAction.SOSActionName` bereits durchgängig gepflegt und lesbar ist. Damit stand nicht mehr die
+  Frage im Raum, *wie* übersetzt wird, sondern **ob eine `MessageAction`-Zeile diesen Namen
+  überhaupt erreicht**. Drei Messungen beantworten das:
+  - **[M15](messungen-schritt5.md#m15--lässt-sich-einer-messageaction-zeile-ein-lesbarer-name-zuordnen):**
+    Der Klartext kommt aus dem Join `SOSAction ON (MessageAction.SOSID, MessageAction.SOSActionID)`
+    — **niemals** über `Message.SOSID`. Belegt ist das nicht über die Auflösungsquote (die ist bei
+    allen drei geprüften Fassungen fast gleich und belegt deshalb nichts), sondern über den
+    Vergleich des *ausgeführten* mit dem *geplanten* Baustein: null Abweichungen gegen 3,83 Prozent.
+  - **[M19](messungen-schritt5.md#m19--wie-groß-müsste-die-zuordnungstabelle-sein):** Eine Tabelle
+    bräuchte über den ganzen dichten Monat **vier** Zeilen — und **drei davon wären keine
+    Übersetzung**, weil `EERP received`, `Message has been sent` und `EERP pending` bereits lesbare
+    Sätze sind. Der eine echte Fall, `FTPSender`, löst anderswo auf **25 verschiedene** Namen auf;
+    eine Zeile `FTPSender → <ein Text>` wäre gröber als das, was ohne sie herauskommt.
+  - **[M20](messungen-schritt5.md#m20--erklärt-messageactionsosid-die-439-prozent-aus-m13):** Die
+    Ursache der namenlosen Schritte ist nicht ein fehlender Baustein, sondern eine **lückenhafte
+    Nummerierung** — der Ablauf definiert `1, 98, 99`, die Ausführung zählt fortlaufend. Es fehlt
+    nicht der Schritt, es fehlt die Übersetzung seiner Nummer.
+
+  Gebaut ist stattdessen eine **dreistufige Namensauflösung** ohne eine einzige gepflegte Zeile:
+  direkt über den Join, sonst über die erste Bausteinmarke im selben Ablauf (**nur bei genau einem
+  Treffer**), sonst der Rohwert. Gemessen trägt sie **99,7 Prozent** der echten Schritte einen
+  echten Namen ein statt 71,5. Vollständig in [`nachrichtendetail.md`](nachrichtendetail.md) §2.
+- **Ebenfalls entfallen: das Gerüst der geplanten Schritte.**
+  [M21](messungen-schritt5.md#m21--trägt-das-gerüst-der-geplanten-schritte) hat es gemessen — es
+  trägt in 28 bis 45 Prozent der Fälle vollständig und ist in 0,31 bis 0,92 Prozent **nachweislich
+  falsch**, mit wachsendem Anteil bei größerem Zeitfenster. Ein „Schritt 2 von 5" gäbe es ohnehin
+  nicht: 14,5 Prozent der Abläufe nummerieren lückenhaft (M20)
 - Anzeigename aus `SOS.SOSName`
 
 **Frontend**
@@ -294,7 +338,9 @@ wieder her. Der Isolationstest ist grün. Die Abfrage ist gegen die Testkopie ge
 **Abnahme:** Für eine bekannte Nachricht stimmt die Schrittfolge mit dem Altsystem überein. Bei
 einer hängenden Nachricht ist ohne Fachwissen erkennbar, wo sie steht.
 
-**Dokumentation:** `docs/nachrichtendetail.md`, `docs/prozessschritte-uebersetzung.md`
+**Dokumentation:** [`docs/nachrichtendetail.md`](nachrichtendetail.md).
+~~`docs/prozessschritte-uebersetzung.md`~~ entfällt mit der Zuordnungstabelle, die sie beschrieben
+hätte; der Vermerk dazu steht in [`docs/README.md`](README.md).
 
 ---
 

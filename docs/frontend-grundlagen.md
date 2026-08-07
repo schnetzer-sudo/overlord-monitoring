@@ -598,6 +598,43 @@ wenn niemand die URL von Hand baut. Genau das ist zweimal passiert.
 **Schritt 7 und Schritt 9 bekommen dieselbe Bauform.** Die BAM-Suche und der Katalog haben beide
 einen Modus, der leer beginnt; die Frage stellt sich dort unverändert.
 
+#### Die dritte Regel: nicht jeder URL-Parameter ist ein Anfrageparameter
+
+Nachgetragen am **07.08.2026** (Schritt 5, Teil 2), als der erste Parameter dazukam, der in der URL
+steht und in keiner Abfrage vorkommt.
+
+> **Was in der URL steht, beschreibt die Ansicht. Was in der Abfrage steht, beschreibt die Frage an
+> das Backend. Das ist nicht dieselbe Menge.**
+
+**Der Anlass.** `nachricht` — die geöffnete Detailansicht — gehört in die URL: Was man sieht, muss
+man teilen können, und „schick mir mal den Link" ist bei diesem Werkzeug die eigentliche Anwendung.
+An `/api/nachrichten` gehört er trotzdem nicht: Der Listen-Endpunkt kennt ihn nicht, und träte er
+in den Abfrageschlüssel des Zwischenspeichers ein, lüde **jeder Klick auf eine Zeile die ganze Liste
+neu** und setzte die Seitenposition zurück — für eine Ansicht, die ihre Daten ohnehin selbst holt.
+
+Umgesetzt ist das als zwei getrennte Funktionen mit zwei Zwecken (`features/nachrichten/filter.ts`):
+`alsSuchparameter` baut die **URL**, `alsAbfrage` die **Anfrage**. Der Test hält beides fest,
+einschließlich der Probe, dass die Abfrage mit und ohne geöffnetes Panel Zeichen für Zeichen
+dieselbe ist.
+
+#### `history`: „replace" für Filter, „push" für Ansichten
+
+Ebenfalls aus Schritt 5, Teil 2. `useQueryStates` bekommt weiterhin `history: "replace"` — ein
+Filter, den man verstellt, ist keine Station, zu der man zurückgeht, und ein Verlaufseintrag je
+Tastendruck im Suchfeld machte den Zurück-Knopf unbrauchbar.
+
+**Ein Parameter, der eine Ansicht *öffnet*, ist etwas anderes** und trägt deshalb am Parser
+`withOptions({ history: "push" })` — `nuqs` wertet die Angabe je Schlüssel aus. Am schmalen Fenster
+füllt die Detailansicht den Bildschirm, und das Zurück des Browsers ist dort der Weg heraus; ohne
+eigenen Verlaufseintrag spränge es an der Liste vorbei.
+
+#### Die `clearOnDefault`-Falle, in einem Satz
+
+`nuqs` entfernt einen Parameter aus der URL, sobald er dem **Standardwert** gleicht — geprüft wird
+das nur, wenn überhaupt einer gesetzt ist. Daraus folgt beides: `zwischenschritte` hat einen
+Standardwert und braucht deshalb `clearOnDefault: false`; `nachricht` hat keinen und braucht es
+nicht. **Wer je ein `withDefault` ergänzt, schreibt `clearOnDefault: false` in dieselbe Zeile.**
+
 ---
 
 ## 9. Tests
@@ -612,9 +649,10 @@ Funktionen, und ein gerenderter Baum brächte hier nichts außer Laufzeit und Ab
 | `sprachdateien.test.ts` | gleicher Schlüsselsatz; 404-Wortwahl; Rückfall auf `detail` |
 | `farbwerte.test.ts` | kein Hex-Wert, keine Tailwind-Farbklasse in einer Komponente |
 | `zwischenspeicher.test.ts` | geleert **vor** dem Weitergehen, bei Wechsel und Abmeldung; das Ziel nach dem Mandantenwechsel trägt keine Filter |
-| `format.test.ts` | UTC → Anzeige in der gelieferten Zone; Rückfall auf UTC statt auf den Browser; relative Zeit; Wanduhrzeit der Eingabefelder, auch am Umstellungstag |
+| `format.test.ts` | UTC → Anzeige in der gelieferten Zone; Rückfall auf UTC statt auf den Browser; relative Zeit; Wanduhrzeit der Eingabefelder, auch am Umstellungstag; **Dauern** mit höchstens zwei Einheiten und „< 1 s" statt „0 s" |
 | `routen.test.ts` | `weiter` als offene Weiterleitung ausgeschlossen |
-| `nachrichtenfilter.test.ts` | URL → Zustand → URL; unbekannte Werte werden übergangen; **der Cursor taucht in keiner erzeugten URL auf**; die beiden Zeitfenstermodi schließen einander aus; `langeSuche` steht in der URL und wird nur mit dem Suchbegriff geschickt; welche Problemtypen an das Suchfeld gehören, welche an die Zeitfensterfelder und welche über die Ansicht; das halb ausgefüllte freie Fenster |
+| `nachrichtenfilter.test.ts` | URL → Zustand → URL; unbekannte Werte werden übergangen; **der Cursor taucht in keiner erzeugten URL auf**; die beiden Zeitfenstermodi schließen einander aus; `langeSuche` steht in der URL und wird nur mit dem Suchbegriff geschickt; welche Problemtypen an das Suchfeld gehören, welche an die Zeitfensterfelder und welche über die Ansicht; das halb ausgefüllte freie Fenster; **`nachricht` steht in der URL und in keiner Abfrage** |
+| `nachrichtendetail.test.ts` | die Normierung des Zeitleistenbalkens, die Schwelle der Lückenzeile, die vier offenen Zustände ([`nachrichtendetail.md`](nachrichtendetail.md) §10.9) |
 
 ---
 

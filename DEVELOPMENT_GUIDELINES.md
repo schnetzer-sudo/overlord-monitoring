@@ -331,6 +331,49 @@ millionenfach vor.
 Laufzeit). Kein Statement geht ungeprüft in Produktion. Das Ergebnis gehört in die
 Feature-Dokumentation unter `docs/`.
 
+**L8 — Keine Quelltabelle ohne Erhebung** *(neu am 07.08.2026)*.
+
+> **Bevor eine Tabelle des Quellschemas das erste Mal in Anwendungscode auftaucht, werden ihre
+> Spalten und Indizes gegen `information_schema` erhoben.** Nicht nur bei Verdacht.
+
+Die Spaltenlisten in der Dokumentation sind **übernommen, nicht gemessen** — und zweimal waren sie
+falsch:
+
+| Fundstelle | Was dort stand | Was gemessen ist |
+|---|---|---|
+| `MessageTimeout` an vier Stellen | „Dauer in **Minuten**" | Sekunden — Faktor 60 daneben (M8, 01.08.2026) |
+| `MessageAction` in `datenmodell.md` und `PROJEKTBESCHREIBUNG.md` §3.2 | sieben Spalten | **neun** — `SOSID` und `SOSActionID` fehlten, beide `NOT NULL` (M14, 07.08.2026) |
+
+Der zweite Fall wiegt schwerer als der erste: Die beiden unentdeckten Spalten sind genau die, über
+die der Schrittname aufgelöst wird. Ohne die Erhebung wäre in Schritt 5 eine handgepflegte
+Zuordnungstabelle gebaut worden, die niemand gebraucht hätte.
+
+**Stand der Erhebung** (`GlassfishDB` hat 23 Basistabellen und 2 Views):
+
+| | Tabellen |
+|---|---|
+| **Erhoben** | `Mandant`, `Message`, `MessageAction`, `MessageBAMMandant`, `MessageBAMType`, `MessageProperty`, `Process`, `Project`, `ProjectMandant`, `Service`, `SOS`, `SOSAction` sowie die View `MessageMandantID` |
+| **Nicht erhoben** | **`MessageBAM`**, `MessagePropertySearchListEntry`, `MessageStatisticHistory`, `Schedule`, `SchedulePlans`, `ScheduleTasks`, `ServiceGroup`, `ServiceTask`, `ServiceType`, `SOSDefaultMessageProperty`, `User` sowie die View `MessageStatistic` |
+
+⚠️ **`MessageBAM` trägt Schritt 7** (BAM-Suche) und ist bis heute **nicht** erhoben. Was
+`datenmodell.md` §3 über sie sagt — Primärschlüssel, `varchar(70)`, eigener Index —, ist übernommen
+und ungeprüft. Die Erhebung gehört an den Anfang von Schritt 7, nicht in seine Mitte.
+
+**L9 — Ein Durchlauf ohne Zeitfenster ist eine begründete Ausnahme, kein Werkzeug**
+*(neu am 07.08.2026)*.
+
+> Eine **Erhebung** ohne eingegrenzte `MessageID`-Menge über `MessageProperty` oder `MessageAction`
+> ist zulässig, wenn sie **vorher als notwendig begründet** und **nachher mit gemessenen Kosten im
+> Messdokument ausgewiesen** wird. Ohne beides gilt sie als Fehler. **In Anwendungscode gibt es sie
+> nicht.**
+
+Die Begründung muss sagen, warum ein Zeitfenster die Frage nicht beantworten kann — nicht, dass es
+unbequem wäre. Das bisher einzige Beispiel, an dem sich die Form ablesen lässt, steht in
+[`docs/messungen-schritt5.md`](docs/messungen-schritt5.md) M22: Im gesamten Bestand gibt es 95 offene
+Aktionen, und ein Zeitfenster über `Message` schnitte gerade die Zeilen weg, um die es geht. Kosten:
+2,8 s für den Zähler, 23,3 s für die Aufschlüsselung nach Status — beide ausgewiesen, beide auf einer
+Tabelle von 2,8 GB und nicht auf den 61 GB von `MessageProperty`.
+
 ### 4.5 Zeit
 
 **Z1 — `LocalDateTime.now()` wird nirgends direkt aufgerufen.** Das gilt ebenso für

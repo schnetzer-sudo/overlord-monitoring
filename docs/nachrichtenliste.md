@@ -574,6 +574,11 @@ features/nachrichten/
    └─ blaettern.tsx                Seiten, Stand, automatische Aktualisierung
 ```
 
+Seit Schritt 5 liegen im selben Feature die Bausteine der Detailansicht (`detail.ts`,
+`nachricht-detail.tsx`, `nachricht-seite.tsx`, `zeitleiste.tsx`, `eigenschaften-block.tsx`).
+Beschrieben sind sie in [`nachrichtendetail.md`](nachrichtendetail.md) §10 — sie beantworten eine
+andere Frage und stehen deshalb dort, nicht hier.
+
 `"use client"` steht so weit unten wie möglich: `page.tsx` bleibt Server-Komponente, `filter.ts` ist
 frei von React (und deshalb als reine Funktion prüfbar).
 
@@ -662,6 +667,37 @@ gedämpften Textfarbe. Eine eigene Farbe wäre eine Statusaussage, die er nicht 
 > Leere (M13) — praktisch alle davon bei `FINISHED`, wo ohnehin nichts gezeigt wird. Bei den offenen
 > Status ist die Verknüpfung in der Testkopie lückenlos; die Anzeige muss trotzdem mit `null`
 > umgehen können, denn die Produktion muss sich daran nicht halten.
+>
+> **Nachgetragen 07.08.2026:** Die Herkunft dieser 43,9 Prozent ist inzwischen gemessen — sie
+> entstehen aus einer **Nummerierungslücke** der Ablaufdefinition und nicht aus geänderten Abläufen
+> ([`messungen-schritt5.md`](messungen-schritt5.md) M20). An der Anzeige ändert das nichts.
+
+> ✅ **Die Beschriftung ist nachgezogen** (Schritt 5, Teil 2). Sie lautete bis dahin nur auf den
+> Schrittnamen, mit dem Tooltip „Aktueller Schritt" — und führte damit in die Irre: Die Nachricht
+> steht nicht auf dem genannten Schritt, sie wartet **davor** (M16 3, alle 538 `SUSPENDED` haben
+> jede Aktion beendet).
+>
+> Jetzt steht in der Zelle `wartet vor: Send Message to Pool` beziehungsweise `läuft auf: …`,
+> abhängig von der Einordnung:
+>
+> | Einordnung | Beschriftung | Belegt? |
+> |---|---|---|
+> | `WARTEND` | „wartet vor: {Schritt}" | **ja** — M16 3 |
+> | `LAEUFT` | „läuft auf: {Schritt}" | **nein** — `RUNNING` kommt in der Testkopie null Mal vor |
+>
+> **Beide Lagen, nicht eine.** Alles auf „wartet vor" umzustellen wäre dieselbe ungeprüfte
+> Behauptung mit umgekehrtem Vorzeichen: Gerade bei `LAEUFT` wäre ein tatsächlich laufender Schritt
+> der zu erwartende Fall. Der offene Rest steht unter „Offene Punkte".
+>
+> **Die Liste leitet das aus `statusKind` ab und nicht aus `offenerZustand`** — das Feld führt nur
+> das Detail ([`nachrichtendetail.md`](nachrichtendetail.md) §3), und der Listen-Endpunkt wurde
+> dafür ausdrücklich **nicht** erweitert. Der Vollwert steht wie bisher im `title`.
+>
+> **Die Plakette weicht dem Zusatz nicht** (Sichtprüfung 07.08.2026). Mit der neuen Beschriftung
+> stand in der Zelle zuerst `Warte…` statt `Wartend`: Die Plakette durfte schrumpfen, der Name
+> daneben nicht. Genau verkehrt herum — der Status ist die Hauptinformation, der Schritt ist
+> Beiwerk. Steht ein Schritt daneben, ist die Plakette jetzt `shrink-0`; ohne ihn darf sie weiter
+> weichen, denn dort trägt sie bei `bedeutungNichtVerifiziert` einen Rohwert beliebiger Länge.
 
 **Status nie allein über Farbe.** Jede Plakette trägt Beschriftung **und** Zeichen; die Farbrolle
 ist die halbe Aussage. Bei `bedeutungNichtVerifiziert` wird der **Rohwert** zur Beschriftung, dazu
@@ -682,9 +718,22 @@ die Komponente kennt keine Farbe.
 > Rauschen, und Rauschen unter einer Tabelle liest irgendwann niemand mehr — auch dann nicht, wenn
 > es einmal zählt.
 
-**Der Zeilenklick hat keine Funktion.** Kein Panel, kein Kopieren, kein Hover-Zustand — die
-Hover-Färbung, die `components/ui/table` mitbringt, ist ausdrücklich abgeschaltet. Schritt 5 belegt
-den Klick; bis dahin wäre ein Anfassgefühl ohne Wirkung schlimmer als gar keins.
+**Der Zeilenklick öffnet seit Schritt 5 die Detailansicht.** Bis dahin hatte er ausdrücklich keine
+Funktion, und die Hover-Färbung aus `components/ui/table` war abgeschaltet — ein Anfassgefühl ohne
+Wirkung ist schlimmer als gar keins. Jetzt trägt die Zeile beides: Zeigehand, Hover-Fläche,
+Fokusring, `Tab`/`Enter`/`Leertaste`. Sie setzt den Parameter `nachricht` in der URL; was daraufhin
+erscheint, steht in [`nachrichtendetail.md`](nachrichtendetail.md) §10.
+
+Die geöffnete Zeile bleibt in der Liste erkennbar — `aria-current` und die blasse Akzenttönung,
+dieselbe wie am aktiven Navigationseintrag. Sie sagt etwas über die **Anwendung** (welche Zeile
+offen ist) und nicht über die Daten; eine Statusfarbe wäre hier eine Aussage, die die Zeile nicht
+macht ([`visuelles-konzept.md`](visuelles-konzept.md) §3).
+
+> **`Escape` schließt das Panel wieder** (Sichtprüfung 07.08.2026). Öffnen ging mit der Tastatur von
+> Anfang an; zum Schließen hätte man durch bis zu fünfzig Zeilen tabben müssen, weil der
+> Schließen-Knopf im DOM hinter der Tabelle steht. Das erfüllt „erreichbar" und verfehlt
+> „bedienbar". In einem Eingabefeld und bei einem offenen Auswahlfeld bleibt `Escape`, was es ist —
+> sonst täte die Taste zweierlei.
 
 **Am schmalen Fenster** fällt zuerst und einzig **Projekt** weg (unter `md`). Übrig bleiben
 Zeitpunkt, Status und Ablauf. Der aktive Mandant bleibt bei jeder Breite in der Kopfzeile sichtbar
@@ -695,6 +744,11 @@ Zeitpunkt, Status und Ablauf. Der aktive Mandant bleibt bei jeder Breite in der 
 
 In der URL stehen: `zeitraum` **oder** `von`/`bis` · `status` · `prozess` · `suche` · `langeSuche` ·
 `zwischenschritte` · `sortierung`.
+
+Seit Schritt 5 kommt `nachricht` dazu — die geöffnete Detailansicht. Sie steht in der URL wie jeder
+andere Wert und wird trotzdem **nicht** an `/api/nachrichten` geschickt; die Begründung samt der
+`clearOnDefault`-Falle und dem Verlaufseintrag steht in
+[`nachrichtendetail.md`](nachrichtendetail.md) §10.2.
 
 **Der Cursor steht nicht in der URL.** Ein geteilter Link auf Seite sieben eines relativen Fensters
 zeigte beim Empfänger auf andere Zeilen. Beim Öffnen eines Links beginnt die Liste auf Seite eins.
@@ -1091,6 +1145,32 @@ durch Türen gelaufen, die es für Nutzer nicht gibt.
   gemessen und stimmt (L14: `eq_ref`, 0,2 ms); die zweite ist durch das Durchklicken des
   Auftraggebers widerlegt — `ProcessName` ist nur zufällig lesbar, und die Spalte daneben war leer.
   Der Anzeigename ist jetzt die Spalte „Ablauf" (§8.1).
+- ~~**Die Statuszelle sagt „steht auf", gemeint ist „wartet vor".**~~ **Erledigt am 07.08.2026 in
+  Schritt 5, Teil 2** — die Zelle sagt jetzt „wartet vor: …" beziehungsweise „läuft auf: …" (§8.1).
+  **Offen bleibt der zweite Teil des Punktes:** Belegt ist die Aussage nur für `SUSPENDED`; für
+  `LAEUFT` ist sie es nicht und wird es lokal auch nicht. Der Befund selbst bleibt hier stehen,
+  statt gelöscht zu werden — er ist die Begründung der heutigen Beschriftung:
+
+  §8.1 zeigt bei `WARTEND` und `LAEUFT` den Schritt aus `SOSActionName` neben der
+  Statusplakette. Gemessen am 07.08.2026 ([`messungen-schritt5.md`](messungen-schritt5.md) M16 3):
+  Bei **allen 538** `SUSPENDED`-Nachrichten ist **jede** Aktion beendet — `MessageActionEnd` ist
+  nirgends `NULL`, und keine Nachricht steht ohne Aktion da. Eine wartende Nachricht steht also
+  **zwischen** zwei Schritten und nicht auf einem laufenden; beim Warten auf eine Zusammenführung ist
+  genau das der Normalfall.
+
+  **Die Anzeige ist fachlich richtig** — der genannte Schritt ist der, auf den `Message.SOSActionID`
+  zeigt, und das ist der nächste, nicht der laufende. Falsch ist nur, dass die Zelle das nicht sagt.
+  Wer „Send Message to Pool" neben `WARTEND` liest, nimmt an, dieser Schritt laufe gerade.
+
+  **Nachgezogen wurde die Beschriftung in Schritt 5, Teil 2** — dort, wo die Zeitleiste den
+  Unterschied zwischen „steht auf" und „wartet vor" ohnehin sichtbar machen muss. Sie zwischendurch
+  isoliert zu ändern hätte geheißen, dieselbe Entscheidung zweimal zu treffen.
+
+  > ⚠️ Belegt ist das für `SUSPENDED`, **nicht** für `LAEUFT`: `RUNNING` kommt in der Testkopie null
+  > Mal vor (Projektbeschreibung §4.1). Gerade dort wäre der laufende Schritt der zu erwartende Fall
+  > — die Beschriftung trägt deshalb **beide** Lagen und ist nicht einfach von „steht auf" auf
+  > „wartet vor" umgestellt worden. **Dieser Teil bleibt offen und ist lokal nicht zu schließen.**
+
 - **Der Zeitzonen-Übergang** (Wanduhrzeit der Quelle → UTC der API) setzt voraus, dass Anwendungs-
   und Datenbankserver dieselbe Zone haben. Für die Testkopie ist das gemessen; für die Produktion
   ist es die Annahme, die die Anwendungsuhr ohnehin macht. Ein Auseinanderlaufen fiele als
@@ -1099,8 +1179,8 @@ durch Türen gelaufen, die es für Nutzer nicht gibt.
 
 ### Zur Oberfläche (Aufgaben 13 bis 15)
 
-- **Der Zeilenklick hat keine Funktion.** Das ist die Abgrenzung dieses Schritts, kein Versehen —
-  Schritt 5 belegt ihn mit der Detailansicht.
+- ~~**Der Zeilenklick hat keine Funktion.**~~ **Erledigt in Schritt 5, Teil 2** — er öffnet die
+  Detailansicht (§8.1, [`nachrichtendetail.md`](nachrichtendetail.md) §10).
 - **Der relative Tooltip rechnet gegen die Browseruhr**, nicht gegen die Anwendungsuhr. In
   Produktion ist das dasselbe; im Profil `dev` liest er sich als „vor 7 Monaten", weil die Testkopie
   so weit zurückliegt. Er sagt damit die Wahrheit über die realen Daten und nicht über die

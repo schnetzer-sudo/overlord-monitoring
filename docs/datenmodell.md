@@ -112,8 +112,41 @@ Hinsehen.
 
 ### `MessageAction` — die einzelnen Prozessschritte
 
-PK `(MessageID, MessageActionID)` · `MessageActionStart` / `MessageActionEnd` · `ServiceID` ·
-`SOSActionServiceProperties` mediumtext · `SOSActionTimeout`
+PK `(MessageID, MessageActionID)` · **`SOSID`** varchar(36) NOT NULL · **`SOSActionID`** smallint(6)
+NOT NULL · `MessageActionStart` / `MessageActionEnd` timestamp · `ServiceID` varchar(36) ·
+`SOSActionServiceProperties` mediumtext · `SOSActionTimeout` smallint(6)
+
+**Nutzbare Indizes:** `PRIMARY (MessageID, MessageActionID)` und `MessageAction_MessageFK (MessageID)`
+— sonst keine. Insbesondere **kein Index auf `SOSID`, `SOSActionID` oder `ServiceID`**: Jeder Zugriff
+läuft von der `MessageID` aus in die kleine Zieltabelle hinein, nie umgekehrt.
+
+> **Korrektur 07.08.2026.** Hier standen bis heute **sieben** Spalten; die Tabelle hat **neun**. Es
+> fehlten `SOSID` und `SOSActionID`, beide `NOT NULL`. Der Grund für die Lücke ist der Vorgang, nicht
+> der Inhalt: Diese Spaltenliste war aus der Projektbeschreibung **übernommen und nie gegen
+> `information_schema` erhoben** — M1 in [`messungen-schritt4.md`](messungen-schritt4.md) hat
+> `MessageAction` nicht erfasst. Gemessen wurde sie erst in
+> [`messungen-schritt5.md`](messungen-schritt5.md) **M14**. Daraus folgt die neue Regel L8 in
+> [`../DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md).
+>
+> **Die beiden Spalten sind nicht Beiwerk — sie tragen die Auflösung des Schrittnamens.** Der Join
+> auf die Ablaufdefinition lautet:
+>
+> ```sql
+> JOIN SOSAction sa ON sa.SOSID = ma.SOSID AND sa.SOSActionID = ma.SOSActionID
+> ```
+>
+> 🚫 **Niemals über `Message.SOSID`.** Messung **M15** stellt drei Fassungen nebeneinander und
+> vergleicht den *ausgeführten* Baustein mit dem *geplanten*: Über `MessageAction` stimmen sie in
+> **100 %** der aufgelösten Zeilen überein (366.336 von 366.343 über einen Monat, 99,998 %), über
+> `Message.SOSID` mit `MessageActionID` nur in **96,17 %**. Die Auflösungsquote der drei Fassungen
+> ist fast gleich — **sie belegt deshalb nichts**; nur der Markenvergleich unterscheidet den
+> richtigen Join vom zufällig treffenden.
+>
+> ⚠️ **`MessageActionID` ist nicht `SOSActionID`.** Die erste ist eine laufende Nummer je Nachricht
+> und beginnt bei **0**, die zweite ist der Schlüssel in die Ablaufdefinition. Der dritte Schritt
+> einer Nachricht trägt je nach Ablauf die Kennung 2, 3 oder 10 (M15). Und `SOSAction` nummeriert
+> **nicht lückenlos**: 257 von 1.777 Abläufen haben eine größte Kennung über ihrer Schrittzahl, 233
+> nutzen Kennungen ab 99 (M20).
 
 `SOSActionServiceProperties` enthält die ausgeführten Bausteine als **pipe-getrennte Liste**, etwa:
 
@@ -125,12 +158,37 @@ NXS_MERGE|KE_OSTROV_734973|WAIT|30M|30406_..._MRG
 ⚠️ **Diese Rohwerte werden dem Nutzer nicht angezeigt**, sondern in lesbare Schritte übersetzt
 (Schritt 5). Unbekannte Bausteine erscheinen als Rohwert — nie geraten.
 
+> **Präzisiert 07.08.2026.** „Übersetzt" heißt **nicht** über eine handgepflegte Zuordnungstabelle,
+> sondern über den Join oben: Der Klartext ist `SOSAction.SOSActionName`. Er erreicht 71 bis 78 % der
+> echten Schritte; der Rest zeigt seinen Rohwert, und **jeder** dieser Schritte hat einen (M15, M18).
+> Ob für den Rest zusätzlich übersetzt wird, ist offen — das Vokabular dafür ist mit **vier** Marken
+> über einen ganzen Monat klein (M19).
+
 ### `MessageProperty` — Schlüssel/Wert-Paare je Nachricht (EAV)
 
 PK `(MessageID, MessagePropertyName, MessageActionID)` · `MessagePropertyValue` mediumtext
 
-Rund **zehn Zeilen pro Nachricht**, bei einem Jahr Aufbewahrung **mehrere hundert Millionen
-Zeilen**.
+Rund **23 Zeilen pro Nachricht** im dichten Bestand; **46.964.279 Zeilen, 61,0 GB** insgesamt
+(Erhebung 27.07.2026). Der Index belegt davon **45,9 GB**, die Nutzdaten nur 15,1 GB — die
+„1,3 Kilobyte je Zeile" aus [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §3.2 sind zu drei
+Vierteln Index.
+
+**Alle Eigenschaften einer Nachricht zusammen wiegen rund 595 Byte.** Das ist die Zahl, die für einen
+Detail-Aufruf zählt — nicht die Speichergröße der Tabelle.
+
+> **Korrektur 07.08.2026.** Hier stand bis heute: *„Rund zehn Zeilen pro Nachricht, bei einem Jahr
+> Aufbewahrung mehrere hundert Millionen Zeilen."* Beide Hälften sind falsch:
+>
+> - **Zeilen je Nachricht:** gemessen **22,57** über einen Tag und **22,88** über einen Monat, Minimum
+>   14, Maximum 38 ([`messungen-schritt5.md`](messungen-schritt5.md) M17). Die „rund vierzehn" der
+>   Projektbeschreibung sind das Mittel über den **gesamten** Aufbewahrungszeitraum
+>   (46.964.279 / 3.341.519 = 14,05); die „rund zehn" hier waren eine Schätzung ohne Messung.
+> - **Gesamtzahl:** nicht „mehrere hundert Millionen", sondern **47 Millionen** — und die
+>   Aufbewahrung beträgt **22 Monate**, nicht ein Jahr (§8 und `PROJEKTBESCHREIBUNG.md` §8). Die
+>   Zeilenzahl war ohnehin nie die richtige Kennzahl; maßgeblich ist die Bytegröße.
+>
+> Die alte Angabe stammt aus der Zeit vor der Erhebung vom 27.07.2026, die das Mengengerüst um rund
+> Faktor zehn nach unten korrigiert hat, und ist beim Nachziehen übersehen worden.
 
 🚫 **Zugriff ausschließlich über `MessageID`.** Niemals filtern, gruppieren oder sortieren über
 `MessagePropertyValue` — die Indizes darauf sind **Präfix-Indizes über 50 Zeichen** und für
@@ -281,7 +339,16 @@ das ist eine kürzere Frist auf Dienstebene. Wer die 52 Zeilen als Beispiele fü
 
 ### 5.4 `MessageProperty` ist EAV und riesig
 
-Hunderte Millionen Zeilen, Präfix-Indizes über 50 Zeichen. Nur über `MessageID` zugreifen.
+**47 Millionen Zeilen, 61,0 GB** — davon 45,9 GB Index. Präfix-Indizes über 50 Zeichen, und zwar
+**zwei**: `MessagePropertyValueIDX (MessagePropertyValue(50))` und
+`MessagePropertyNameValueIDX (MessagePropertyName, MessagePropertyValue(50))`. Nur über `MessageID`
+zugreifen.
+
+> **Korrektur 07.08.2026.** Hier stand „Hunderte Millionen Zeilen" — es sind 47 Millionen. Die
+> Präfixlänge 50 ist dagegen **gemessen und bestätigt** (`SUB_PART = 50`,
+> [`messungen-schritt5.md`](messungen-schritt5.md) M14). Dass der Index dreimal so viel Platz braucht
+> wie die Nutzdaten, ist der eigentliche Grund für Regel L4: Eine Aggregation über den Wert wälzt
+> 61 GB um, nicht 15.
 
 ### 5.5 `MessageStatistic.Period` ist ein zusammengesetzter String
 
@@ -348,18 +415,37 @@ Gemessenes Mengengerüst (27.07.2026, ersetzt die frühere Schätzung):
 
 | Tabelle | Zeilen | Größe |
 |---|---|---|
-| `MessageProperty` | 46.964.279 | 61,0 GB |
+| `MessageProperty` | 46.964.279 (geschätzt) | 61,0 GB — davon **45,9 GB Index** |
 | `MessageBAM` | 10.859.666 | 7,1 GB |
-| `MessageAction` | 10.215.743 | 3,0 GB |
+| `MessageAction` | **10.308.590 (gezählt)** | 3,0 GB |
 | `Message` | 3.341.519 | 2,9 GB |
 | `Process` | 1.490 | — |
-| `Project` | 142 | — |
+| `Project` | 140 (gezählt) | — |
 
 | Kennzahl | Wert |
 |---|---|
-| Nachrichten pro Tag | rund 5.000 |
+| Nachrichten pro Tag | **rund 7.300 im dichten Bestand** (nicht 5.000) |
 | Aufbewahrung | **22 Monate** (ältester Datensatz 01.10.2024) |
 | Prozesse | 1.490 (Annahme A7 bestätigt) |
+
+> **Korrektur 07.08.2026, zwei Zeilen.**
+>
+> **„Rund 5.000 Nachrichten pro Tag" beschreibt einen Durchschnitt, den es an keinem einzigen Tag
+> gab.** Im dichten Teil sind es **rund 7.300** — 3.336.386 Zeilen über 456 Tage (01.10.2024 bis
+> 30.12.2025). Die 5.000 entstehen, wenn man den gesamten Zeitraum **einschließlich der
+> fünfmonatigen Lücke** durch die Tage teilt. Gemessen in
+> [`messungen-schritt4.md`](messungen-schritt4.md), Auffälligkeit A; in
+> [`annahmen-korrekturen.md`](annahmen-korrekturen.md) seit dem 01.08.2026 festgehalten, hier bis
+> heute nicht nachgezogen.
+>
+> **Nachtrag vom selben Tag:** [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §8 hat die Zahl
+> ebenfalls getragen und ist inzwischen nachgezogen — dort mit eigener, datierter Begründung. Damit
+> nennen alle drei Dateien dieselbe Zahl; die Korrektur ist abgeschlossen und nicht mehr offen.
+>
+> **`MessageAction` ist gezählt worden und hat 10.308.590 Zeilen**, nicht die geschätzten 10.215.743
+> ([`messungen-schritt5.md`](messungen-schritt5.md) M14). Bemerkenswert ist die Richtung: Bei
+> `Message` **über**schätzt `information_schema` um 6,5 %, bei `MessageAction` **unter**schätzt es um
+> 0,9 %. „Veraltet" heißt also nicht „zu hoch", sondern nur „unzuverlässig".
 
 Die **Zeilenzahl war nie die richtige Kennzahl.** `MessageProperty` belegt 61 GB und ist damit 82 %
 der Datenbank; dort entscheidet die Bytegröße. Die frühere Annahme (36 Mio. Zeilen in `Message`,

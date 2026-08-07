@@ -135,12 +135,23 @@ Wichtig:
   `MessageLastUpdateProcessMessageIDX (MessageLastUpdate, ProcessID, MessageID)`.
 
 **`MessageAction`** — die einzelnen Prozessschritte einer Nachricht.
-PK `(MessageID, MessageActionID)` · `MessageActionStart` / `MessageActionEnd` · `ServiceID` ·
+PK `(MessageID, MessageActionID)` · **`SOSID`** varchar(36) NOT NULL · **`SOSActionID`** smallint(6)
+NOT NULL · `MessageActionStart` / `MessageActionEnd` · `ServiceID` ·
 `SOSActionServiceProperties` mediumtext · `SOSActionTimeout`
+
+*Korrigiert 07.08.2026:* Hier standen sieben Spalten, die Tabelle hat **neun** — `SOSID` und
+`SOSActionID` fehlten. Diese Liste war nie gegen `information_schema` erhoben, sondern übernommen;
+gemessen wurde sie erst in [`messungen-schritt5.md`](messungen-schritt5.md) M14. Die beiden Spalten
+tragen die Auflösung des Schrittnamens: Der Join lautet
+`SOSAction ON (MessageAction.SOSID, MessageAction.SOSActionID)` und **niemals** über
+`Message.SOSID` — M15 belegt das mit 100 % Übereinstimmung des ausgeführten mit dem geplanten
+Baustein gegen 96,17 % bei der Fassung über `Message`. Details in
+[`datenmodell.md`](datenmodell.md) §3.
 
 `SOSActionServiceProperties` enthält die ausgeführten Bausteine als pipe-getrennte Liste, etwa
 `NXS_FILE_CONVERT|E2A|UNWRAP` oder `NXS_MERGE|KE_OSTROV_734973|WAIT|30M|30406_..._MRG`.
-Diese Rohwerte werden dem Nutzer **nicht** angezeigt, sondern in lesbare Schritte übersetzt.
+Diese Rohwerte werden dem Nutzer **nicht** angezeigt, sondern in lesbare Schritte übersetzt — der
+Klartext ist `SOSAction.SOSActionName`, nicht eine handgepflegte Zuordnungstabelle.
 
 **`MessageProperty`** — Schlüssel/Wert-Paare je Nachricht (EAV).
 PK `(MessageID, MessagePropertyName, MessageActionID)` · `MessagePropertyValue` mediumtext
@@ -624,8 +635,28 @@ Nachrichten pro Tag und 36 Millionen Zeilen):
 | `Project` | 142 | — |
 | `User` | 36 | — |
 
-Rund 5.000 Nachrichten pro Tag. Die Aufbewahrung beträgt **22 Monate** — ältester Datensatz
-01.10.2024 —, nicht ein Jahr. Es wird auf der Produktionsdatenbank gelesen.
+Rund **7.300 Nachrichten pro Tag** im dichten Bestand. Die Aufbewahrung beträgt **22 Monate** —
+ältester Datensatz 01.10.2024 —, nicht ein Jahr. Es wird auf der Produktionsdatenbank gelesen.
+
+> **Korrigiert 07.08.2026.** Hier stand bis heute **„rund 5.000 Nachrichten pro Tag"**. Das
+> beschreibt einen Durchschnitt, den es an keinem einzigen Tag gab: Er entsteht, wenn man den
+> gesamten Zeitraum **einschließlich der fünfmonatigen Datenlücke** durch die Tage teilt. Gemessen
+> sind **3.336.386 Zeilen über 456 Tage** (01.10.2024 bis 30.12.2025), also rund 7.300 je Tag —
+> [`messungen-schritt4.md`](messungen-schritt4.md), Auffälligkeit A.
+>
+> **Diese Datei ist laut ihrer eigenen Präambel die Instanz, die Widersprüche entscheidet.** Genau
+> deshalb wiegt die falsche Zahl hier schwerer als anderswo: [`annahmen-korrekturen.md`](annahmen-korrekturen.md)
+> führt die Korrektur seit dem **01.08.2026**, [`datenmodell.md`](datenmodell.md) §8 ist am
+> **07.08.2026** nachgezogen worden — und solange sie hier stand, schlug sie beide. Sie wird
+> benannt und nicht stillschweigend ersetzt, damit nachvollziehbar bleibt, dass die verbindliche
+> Datei sechs Tage lang der korrigierten hinterherlief.
+>
+> Auch die Tabelle darüber ist inzwischen an einer Stelle überholt: `MessageAction` ist mit
+> **10.308.590** Zeilen **gezählt** worden (M14), die 10.215.743 waren die Schätzung aus
+> `information_schema`. Bemerkenswert ist die Richtung — bei `Message` **über**schätzt sie um
+> 6,5 %, bei `MessageAction` **unter**schätzt sie um 0,9 %. „Veraltet" heißt also nicht „zu hoch",
+> sondern nur „unzuverlässig", und eine `rows`-Angabe im `EXPLAIN` trägt kein Vorzeichen, auf das
+> man sich verlassen könnte.
 
 Die Zeilenzahl war nie die richtige Kennzahl. `MessageProperty` belegt 61 GB und ist damit 82
 Prozent der Datenbank; dort entscheidet die Bytegröße.

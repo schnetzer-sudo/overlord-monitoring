@@ -76,10 +76,15 @@ die Regel nicht überflüssig — es macht sie nur billig.
 
 ### Das Mengengerüst ist rund 7.300 Nachrichten am Tag, nicht 5.000
 
-`PROJEKTBESCHREIBUNG.md` §8 und `datenmodell.md` §8 nennen „rund 5.000 pro Tag". Im **dichten** Teil
+`PROJEKTBESCHREIBUNG.md` §8 und `datenmodell.md` §8 nannten „rund 5.000 pro Tag". Im **dichten** Teil
 des Bestands sind es **rund 7.300**: 3.336.386 Zeilen über 456 Tage (01.10.2024 bis 30.12.2025).
 Die 5.000 entstehen, wenn man den gesamten Zeitraum inklusive der fünfmonatigen Lücke durch die
 Tage teilt.
+
+> **Nachgezogen.** `datenmodell.md` §8 am 07.08.2026, `PROJEKTBESCHREIBUNG.md` §8 am selben Tag mit
+> Schritt 5 — beide mit eigener, datierter Begründung an Ort und Stelle. Der Eintrag hier bleibt
+> stehen: Er ist der Ort, an dem die Abweichung zuerst festgehalten wurde, und er belegt, dass die
+> verbindliche Datei sechs Tage lang der korrigierten hinterherlief.
 
 Für die Auslegung zählt die dichte Zahl: Ein 24-Stunden-Fenster im dichten Bestand hat 6.249 Zeilen
 über alle Mandanten (M9) — das ist die Größenordnung, gegen die die Nachrichtenliste gemessen wurde
@@ -98,6 +103,93 @@ Durchschnitt, den es an keinem einzigen Tag gab.
 - **`Message` hat sechs Indizes**, `datenmodell.md` §3 nennt drei.
 - Die Zählstände von `information_schema` sind veraltet (`Message` 3.560.486 gegenüber 3.341.519
   gezählt).
+
+---
+
+## Erhebung 07.08.2026 (vor Schritt 5)
+
+Vollständig mit Statements, `EXPLAIN` und Laufzeiten in
+[`messungen-schritt5.md`](messungen-schritt5.md).
+
+### `MessageAction` hat zwei Spalten, die niemand kannte — und es sind die wichtigsten
+
+`SOSID` varchar(36) **NOT NULL** und `SOSActionID` smallint(6) **NOT NULL**. Beide fehlten in
+`datenmodell.md` §3 und `PROJEKTBESCHREIBUNG.md` §3.2, die dort **sieben** statt **neun** Spalten
+führten (Messung M14).
+
+Der Grund für die Lücke ist der Vorgang, nicht der Inhalt: Die Spaltenliste war aus der
+Projektbeschreibung **übernommen und nie gegen `information_schema` erhoben** — M1 hat
+`MessageAction` nicht erfasst. Daraus folgt die neue Regel **L8** in
+[`../DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md): Keine Quelltabelle taucht in
+Anwendungscode auf, bevor ihre Spalten und Indizes erhoben sind. **`MessageBAM` ist bis heute nicht
+erhoben und trägt Schritt 7.**
+
+Die Folge war keine Kleinigkeit: Ohne diese Spalten wäre in Schritt 5 die im Plantext beauftragte
+handgepflegte Zuordnungstabelle gebaut worden, die durch sie **entfällt**.
+
+### Der Join auf die Ablaufdefinition läuft über `MessageAction`, nicht über `Message`
+
+```sql
+JOIN SOSAction sa ON sa.SOSID = ma.SOSID AND sa.SOSActionID = ma.SOSActionID
+```
+
+Messung **M15** stellt drei Fassungen nebeneinander und vergleicht nicht die Auflösungsquote — die
+ist bei allen dreien ähnlich und belegt deshalb nichts —, sondern den **ausgeführten Baustein gegen
+den geplanten**:
+
+| Fassung | erste Marke gleich | verschieden |
+|---|---|---|
+| `m.SOSID` + `ma.MessageActionID` (die ursprünglich vorgesehene) | 96,17 % | **375** |
+| `m.SOSID` + `ma.SOSActionID` | 98,44 % | **157** |
+| **`ma.SOSID` + `ma.SOSActionID`** | **100 %** | **0** |
+
+Über den dichten Monat: 366.336 von 366.343 aufgelösten Zeilen stimmen überein (99,998 %), sieben
+nicht.
+
+⚠️ **`MessageActionID` ist nicht `SOSActionID`.** Die erste ist eine laufende Nummer je Nachricht ab
+**0**, die zweite der Schlüssel in die Ablaufdefinition — und `SOSAction` nummeriert **nicht
+lückenlos**: 257 von 1.777 Abläufen haben eine größte Kennung über ihrer Schrittzahl, 233 nutzen
+Kennungen ab 99 (M20).
+
+### Die 43,9 Prozent verwaister Verweise aus M13 sind erklärt — anders als vermutet
+
+Die Vermutung lautete: `Message` trägt den heutigen Ablauf, `MessageAction` den zur Ausführungszeit.
+**Widerlegt** (M20): Von den verwaisten Verweisen liegt **kein einziger** auf einer Zeile mit
+abweichendem `SOSID` — alle liegen auf Zeilen, bei denen `MessageAction.SOSID` und `Message.SOSID`
+übereinstimmen.
+
+Die tatsächliche Ursache ist eine **Nummerierungslücke**: Der betroffene Ablauf definiert die
+Schritte 1, 98 und 99; die Ausführung schreibt die fortlaufende Position 2. Der Verweis auf „2" muss
+deshalb ins Leere laufen. Der ausgeführte Baustein ist derselbe — der geplante Schritt 98 und die
+namenlose Aktion tragen beide die Marke `FTPSender`. **Die Zahlen von M13 bleiben unverändert; sie
+sind richtig gemessen, nur anders zu lesen als damals angenommen.**
+
+### `MessageProperty` ist kleiner und dichter als dokumentiert
+
+| Angabe | Was dokumentiert war | Was gemessen ist |
+|---|---|---|
+| Zeilen je Nachricht | „rund zehn" (`datenmodell.md`), „rund vierzehn" (`PROJEKTBESCHREIBUNG.md`) | **22,57** über einen Tag, **22,88** über einen Monat; Minimum 14, Maximum 38 |
+| Gesamtzahl | „mehrere hundert Millionen Zeilen bei einem Jahr Aufbewahrung" | **47 Millionen** bei **22 Monaten** |
+| „1,3 Kilobyte je Zeile" | als Datenmenge gelesen | richtig als **Speicherbedarf**: 321 B Daten + 978 B Index. Die mittlere **Wertlänge** beträgt **26,4 Zeichen** |
+| bekannte Namen | zehn | **101** im Tagesfenster, **119** im Monatsfenster |
+
+**Die Zahl, die für die Detailansicht zählt, ist keine davon:** Alle Eigenschaften einer Nachricht
+zusammen wiegen **595 Byte** — in beiden Fenstern auf das Byte gleich. Der Typ `mediumtext` erlaubt
+16 MB je Zelle; der größte gemessene Wert liegt bei 12,4 KB über einen Monat (M17).
+
+Korrigiert in `datenmodell.md` §3, §5.4 und §8. Bei der Gelegenheit dort nachgezogen: **„rund 5.000
+Nachrichten pro Tag" ist rund 7.300 im dichten Bestand** — seit dem 01.08.2026 hier festgehalten,
+in `datenmodell.md` §8 aber bis heute nicht übernommen gewesen.
+
+### Was `docs/README.md` jetzt unterscheidet
+
+Die Regel „keine Produktionsdaten" hat nicht beantwortet, ob eine Bausteinmarke wie
+`NXS_FILE_CONVERT` darunter fällt, weil `NXS` ein Mandantenkürzel ist. Geschärft am 07.08.2026:
+**Der Trennstrich läuft zwischen Nutzdaten und Konfiguration**, nicht zwischen „intern" und „extern".
+Geschützt sind Belegnummern, `MessagePropertyValue`-Inhalte, **Partner**namen, Zugangsdaten und
+Hostnamen; nicht geschützt ist das Konfigurationsvokabular des Altsystems einschließlich der
+Mandantenkürzel — die zehn Mandanten stehen ohnehin mit vollem Firmennamen in
+`PROJEKTBESCHREIBUNG.md` §3.2.
 
 ---
 

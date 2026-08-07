@@ -1963,6 +1963,26 @@ Schritt ohnehin nicht gezeigt wird. Was übrig bleibt, sind 17 `EERP_RECEIVED` u
 > eine abgeschlossene Nachricht. Geprüft wurde die Lücke, nicht ihre Herkunft — für die
 > Anzeigeentscheidung genügt, dass sie die offenen Zeilen nicht betrifft.
 
+> **Nachgetragen am 07.08.2026 — die Herkunft ist inzwischen gemessen.** Die Zahlen oben bleiben
+> **unverändert**; sie sind richtig gemessen, nur anders zu lesen als damals angenommen. Erklärt sind
+> sie in [`messungen-schritt5.md`](messungen-schritt5.md), Abschnitt **M20**:
+>
+> 1. **Nicht** durch geänderte Abläufe. `MessageAction` trägt ein eigenes `SOSID` (entdeckt in M14 —
+>    `datenmodell.md` führte die Spalte nicht), und die Vermutung „`Message` trägt den heutigen
+>    Ablauf, `MessageAction` den zur Ausführungszeit" ist **widerlegt**: Von den verwaisten Verweisen
+>    liegt **kein einziger** auf einer Zeile mit abweichendem `SOSID`.
+> 2. **Sondern durch eine Nummerierungslücke.** `SOSAction` nummeriert nicht lückenlos — der Ablauf,
+>    der im gemessenen Fenster 3.985 der 4.025 namenlosen Schritte stellt, definiert seine Schritte
+>    als **1, 98 und 99**, während die Ausführung die fortlaufende Position **2** schreibt. Ein
+>    Verweis auf „2" muss deshalb ins Leere laufen. **Der ausgeführte Baustein ist derselbe:**
+>    Der geplante Schritt 98 und die namenlose Aktion tragen beide die Marke `FTPSender`.
+> 3. Verbreitet ist das nicht selten: **257 von 1.777 Abläufen (14,5 %)** haben eine größte
+>    Schrittkennung über ihrer Schrittzahl, 233 nutzen Kennungen ab 99.
+>
+> Die Einschränkung dazu: Gemessen ist das an Fenster A (29.12.2025), nicht am Gesamtbestand. Dass es
+> **auch** geänderte Abläufe gibt, ist damit nicht ausgeschlossen — widerlegt ist nur, dass sie die
+> Erklärung sind.
+
 ### (3) Ist der Name lesbar?
 
 ```sql
@@ -2491,8 +2511,15 @@ die beiden, die **M8** und **M9** ausdrücklich klären sollten; sie sind als er
 
 21. ~~Trägt `Message.SOSActionID` etwas, das man einem Nutzer zeigen kann?~~
     **Beantwortet durch [M13](#m13--trägt-sosactionid-einen-lesbaren-namen): Ja.** `SOSActionName`
-    ist durchgängig gepflegt und lesbar. Offen bleibt die Herkunft der 43,9 % verwaisten Verweise —
-    sie liegen zu 99,995 % bei `FINISHED` und berühren die Anzeige nicht.
+    ist durchgängig gepflegt und lesbar. ~~Offen bleibt die Herkunft der 43,9 % verwaisten Verweise —
+    sie liegen zu 99,995 % bei `FINISHED` und berühren die Anzeige nicht.~~
+    **Auch die Herkunft ist erledigt, am 07.08.2026 durch
+    [`messungen-schritt5.md`](messungen-schritt5.md) M20:** Die Verweise laufen nicht ins Leere, weil
+    Abläufe geändert worden wären — diese Vermutung ist widerlegt —, sondern weil `SOSAction` **nicht
+    lückenlos nummeriert** (ein Ablauf mit den Schritten 1, 98, 99 gegen eine Ausführung, die die
+    Position 2 schreibt). Zugleich hat M15 den Join korrigiert: Er läuft über
+    `MessageAction.SOSID` und `MessageAction.SOSActionID`, **nicht** über `Message.SOSID` — zwei
+    Spalten, die `datenmodell.md` bis dahin nicht kannte. Die Zahlen von M13 bleiben unverändert.
 
 ---
 
