@@ -23,6 +23,7 @@ Fahrplan steht in [`docs/IMPLEMENTIERUNGSPLAN_MVP.md`](docs/IMPLEMENTIERUNGSPLAN
 ├─ CLAUDE.md                  Arbeitsanweisung — zuerst lesen
 ├─ DEVELOPMENT_GUIDELINES.md  Architektur, Konventionen, die unverhandelbaren Regeln
 ├─ docs/                      Projektbeschreibung, Plan, eine Datei je Feature
+├─ scripts/                   Helfer für die lokale Entwicklung
 ├─ backend/                   Spring Boot 4.1, Java 21, Maven
 └─ frontend/                  Next.js 16, TypeScript, pnpm
 ```
@@ -52,6 +53,28 @@ pnpm dev                        # http://localhost:3000
 ```
 
 Unter Windows in PowerShell statt `./mvnw` einfach `.\mvnw`.
+
+### Beides auf einmal (Windows)
+
+```powershell
+.\scripts\dev-start.ps1
+```
+
+Startet Backend und Frontend in zwei eigenen Fenstern und öffnet am Ende den Browser. Davor prüft
+das Skript der Reihe nach, was erfahrungsgemäß schiefgeht: ob die `OVERLORD_*`-Variablen gesetzt
+sind, ob die Datenbank über das Netz erreichbar ist, und **ob die Ports 8080 und 3000 noch frei
+sind**. Der letzte Punkt ist der eigentliche Grund für das Skript: Eine vergessene Altinstanz lässt
+den Health-Check grün melden, während man die alte Version testet.
+
+Das Skript **enthält und setzt keine Zugangsdaten** — es liest die Umgebungsvariablen nur, um den
+Datenbank-Host für den Erreichbarkeitstest zu finden.
+
+| Schalter | Wirkung |
+|---|---|
+| `-Force` | startet auch bei belegten Ports |
+| `-CodeGen` | lässt die jOOQ-Codegenerierung mitlaufen (langsamer, braucht die Datenbank) |
+| `-NoBrowser` | öffnet am Ende keinen Browser |
+| `-DbHost` / `-DbPort` | Ziel des Erreichbarkeitstests von Hand setzen |
 
 ## Konfiguration
 
