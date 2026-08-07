@@ -50,10 +50,17 @@ export function StatusPlakette({
   statusKind,
   rohwert,
   bedeutungNichtVerifiziert,
+  schritt,
 }: {
   statusKind: string;
   rohwert: string | null;
   bedeutungNichtVerifiziert: boolean;
+  /**
+   * Der Schritt, auf dem eine **offene** Nachricht gerade steht. Das Backend
+   * liefert ihn nur bei `WARTEND` und `LAEUFT`; diese Komponente entscheidet das
+   * nicht nach und prüft es nicht nach — sie zeigt, was da ist.
+   */
+  schritt?: string | null;
 }) {
   const texte = useTexte();
   // Ein Wert, den diese Fassung nicht kennt, ist derselbe Fall wie ein
@@ -72,16 +79,49 @@ export function StatusPlakette({
       : `${texte.nachrichten.rohwert}: ${rohwert}`;
 
   return (
-    <Badge
-      variant="outline"
-      className={cn("h-auto max-w-full gap-1.5 px-2 py-0.5", statusKlassen(art))}
-      title={hinweis}
+    // Eine Zeile, nicht zwei: Die Zeilenhöhe der Liste ist `--dichte-zeile` und
+    // gilt für alle Zeilen gleich. Sie auf zwei Zeilen auszulegen kostete jede
+    // Zeile ein Drittel Höhe — für einen Zusatz, den in der Testkopie 538 von
+    // 3,3 Millionen Zeilen tragen.
+    <span className="flex min-w-0 items-center gap-1.5">
+      <Badge
+        variant="outline"
+        className={cn("h-auto max-w-full shrink gap-1.5 px-2 py-0.5", statusKlassen(art))}
+        title={hinweis}
+      >
+        <Zeichen aria-hidden="true" />
+        <span className={cn("truncate", bedeutungNichtVerifiziert && "font-mono")}>
+          {beschriftung}
+        </span>
+        {hinweis === undefined ? null : <span className="sr-only">— {hinweis}</span>}
+      </Badge>
+      {schritt ? <SchrittZusatz schritt={schritt} /> : null}
+    </span>
+  );
+}
+
+/**
+ * Der aktuelle Schritt, neben dem Status.
+ *
+ * **Nur bei offenen Nachrichten** — bei allen anderen liefert das Backend `null`,
+ * weil `SOSActionID` dort den *letzten* Schritt benennt und nicht den aktuellen.
+ * Als eigene Spalte wäre er auf 99 Prozent der Zeilen belanglos; hier steht er
+ * genau dort, wo die Frage entsteht, die er beantwortet: „wartend — worauf?"
+ *
+ * **Ohne eigene Farbrolle.** Er ist Beiwerk im Sinne des Leitsatzes und trägt die
+ * gedämpfte Textfarbe; eine eigene Farbe wäre eine Statusaussage, die er nicht
+ * macht (`visuelles-konzept.md` §3).
+ */
+function SchrittZusatz({ schritt }: { schritt: string }) {
+  const texte = useTexte();
+
+  return (
+    <span
+      className="text-muted-foreground text-beiwerk min-w-0 truncate"
+      title={`${texte.nachrichten.aktuellerSchritt}: ${schritt}`}
     >
-      <Zeichen aria-hidden="true" />
-      <span className={cn("truncate", bedeutungNichtVerifiziert && "font-mono")}>
-        {beschriftung}
-      </span>
-      {hinweis === undefined ? null : <span className="sr-only">— {hinweis}</span>}
-    </Badge>
+      {schritt}
+      <span className="sr-only"> ({texte.nachrichten.aktuellerSchritt})</span>
+    </span>
   );
 }

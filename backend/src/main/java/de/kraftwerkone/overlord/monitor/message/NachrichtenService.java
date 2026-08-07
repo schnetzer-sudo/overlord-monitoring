@@ -155,7 +155,7 @@ public class NachrichtenService {
     return treffer;
   }
 
-  /** Rohwerte zu Antwortzeilen: Einordnung und UTC-Zeitpunkt. */
+  /** Rohwerte zu Antwortzeilen: Einordnung, UTC-Zeitpunkt und der Schritt, sofern er einer ist. */
   private List<NachrichtResponse> uebersetze(List<NachrichtZeile> zeilen) {
     List<NachrichtResponse> antwort = new ArrayList<>(zeilen.size());
     for (NachrichtZeile zeile : zeilen) {
@@ -170,8 +170,31 @@ public class NachrichtenService {
               zeile.processId(),
               zeile.processName(),
               zeile.projectName(),
-              zeile.sosName()));
+              zeile.sosName(),
+              aktuellerSchritt(einordnung, zeile.schritt())));
     }
     return List.copyOf(antwort);
+  }
+
+  /**
+   * Der Schritt, auf dem eine Nachricht <b>gerade steht</b> — und {@code null}, wenn sie auf keinem
+   * mehr steht.
+   *
+   * <p>{@code SOSActionID} ist auf jeder einzelnen Zeile gesetzt (M13), auch auf abgeschlossenen;
+   * dort benennt sie den <i>letzten</i> Schritt. Als Feld „aktueller Schritt" waere sie auf 99
+   * Prozent der Zeilen eine falsche Auskunft, und eine falsche Auskunft ist schlechter als keine.
+   *
+   * <p><b>Warum genau {@code WARTEND} und {@code LAEUFT}.</b> Das ist dieselbe Zweierauswahl, die
+   * {@code MessageStatusClassifier.istEndstatus} trifft — aber sie wird hier <b>ausdrucklich
+   * aufgezaehlt und nicht ueber jene Methode geholt</b>. {@code message-status.md} fuehrt dazu eine
+   * eigene Warnung: Die Methode gehoert der Ueberfaelligkeitsrechnung, und fuer {@code UNGEKLAERT}
+   * antwortet sie {@code true} — in ihrem Zusammenhang die vorsichtige Antwort, hier waere dieselbe
+   * {@code true} die unvorsichtige. „Offen" im Sinne der Oberflaeche wird deshalb hier definiert
+   * und hier begruendet.
+   */
+  private static String aktuellerSchritt(MessageStatusKind einordnung, String schritt) {
+    return einordnung == MessageStatusKind.WARTEND || einordnung == MessageStatusKind.LAEUFT
+        ? schritt
+        : null;
   }
 }

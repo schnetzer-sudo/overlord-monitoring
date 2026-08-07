@@ -35,6 +35,19 @@ import java.time.Instant;
  *     in L14: durchgaengig gepflegt und auf allen 180.251 Nachrichten des dichten Monats
  *     aufloesbar; der Join ist ein {@code eq_ref} und kostet 0,2 ms. Trotzdem nullable — die
  *     Produktion muss sich nicht daran halten, was die Testkopie zufaellig enthaelt.
+ * @param schritt der Schritt, auf dem die Nachricht <b>gerade steht</b> ({@code
+ *     SOSAction.SOSActionName}) — <b>ausschliesslich bei {@code WARTEND} und {@code LAEUFT}</b>,
+ *     sonst {@code null}.
+ *     <p><b>Das ist keine Anzeigeentscheidung, sondern eine fachliche.</b> {@code SOSActionID} ist
+ *     auf <i>jeder</i> Zeile gesetzt (M13: 3.341.519 von 3.341.519), auch auf abgeschlossenen —
+ *     dort benennt sie aber den <i>letzten</i> Schritt und nicht den aktuellen. Das Feld heisst
+ *     „Schritt, auf dem sie steht"; einen solchen gibt es nur, solange sie laeuft. Ihn trotzdem
+ *     mitzuschicken hiesse, dem Aufrufer einen Wert zu geben, der etwas anderes bedeutet, als sein
+ *     Name sagt — und der Chatbot aus Ausbaustufe 1 ruft dieselben Endpunkte auf wie die
+ *     Oberflaeche.
+ *     <p>Auch bei offenen Nachrichten darf er {@code null} sein: Der Verweis kann ins Leere laufen.
+ *     In der Testkopie tut er das bei den offenen Status kein einziges Mal (M13), aber die
+ *     Produktion muss sich daran nicht halten.
  */
 public record NachrichtResponse(
     String messageId,
@@ -45,4 +58,5 @@ public record NachrichtResponse(
     String processId,
     String processName,
     String projectName,
-    String sosName) {}
+    String sosName,
+    String schritt) {}

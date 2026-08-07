@@ -5,6 +5,7 @@ import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROCESS;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROJECT;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROJECTMANDANT;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.SOS;
+import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.SOSACTION;
 
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
@@ -85,7 +86,8 @@ public class NachrichtenRepository {
               MESSAGE.PROCESSID,
               PROCESS.PROCESSNAME,
               PROJECT.PROJECTNAME,
-              SOS.SOSNAME)
+              SOS.SOSNAME,
+              SOSACTION.SOSACTIONNAME)
           .from(MESSAGE)
           // LEFT JOIN, obwohl die Mandantenkette einen Prozess ohnehin erzwingt: Der Anzeigename
           // darf nicht darueber entscheiden, ob eine Zeile erscheint.
@@ -98,6 +100,14 @@ public class NachrichtenRepository {
           // nicht, sie zeigt an dieser Stelle nichts.
           .leftJoin(SOS)
           .on(SOS.SOSID.eq(MESSAGE.SOSID))
+          // Der aktuelle Schritt. Gejoint wird ueber BEIDE Spalten des zusammengesetzten
+          // Primaerschluessels — ueber die Kennung allein waere es ein Kreuzprodukt: Die
+          // SOSActionID 2 gibt es 694-mal (M13). Dass 43,9 Prozent der Verweise ins Leere laufen,
+          // ist der dokumentierte Normalfall und kostet nichts; bei den offenen Status ist die
+          // Verknuepfung lueckenlos.
+          .leftJoin(SOSACTION)
+          .on(SOSACTION.SOSID.eq(MESSAGE.SOSID))
+          .and(SOSACTION.SOSACTIONID.eq(MESSAGE.SOSACTIONID))
           .where(bedingungen(mandant, abfrage))
           .orderBy(sortierung(abfrage))
           .limit(abfrage.limit() + 1)
@@ -110,7 +120,8 @@ public class NachrichtenRepository {
                       satz.value4(),
                       satz.value5(),
                       satz.value6(),
-                      satz.value7()));
+                      satz.value7(),
+                      satz.value8()));
     } catch (DataAccessException fehler) {
       throw anDerZeitgrenze(fehler, abfrage.suchtreffer() != null);
     }

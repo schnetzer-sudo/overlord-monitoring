@@ -19,6 +19,12 @@ import java.time.LocalDateTime;
  * (1.818 Zeilen, kein {@code NULL}, kein Leerwert) und auf allen 180.251 Nachrichten des dichten
  * Monats aufloesbar. Die Spalte bleibt trotzdem nullable — die Produktion muss sich nicht daran
  * halten, was die Testkopie zufaellig enthaelt.
+ *
+ * <p><b>{@code schritt} ist der Rohwert aus {@code SOSAction.SOSActionName}</b> —
+ * <i>ungefiltert</i>, also auch bei abgeschlossenen Nachrichten gefuellt. Dass er dort nichts
+ * aussagt, entscheidet der Service ({@link NachrichtenService}) und nicht diese Schicht: Hier
+ * stehen Rohwerte. Er ist haeufig {@code null}, und das ist der Normalfall — 43,9 Prozent aller
+ * Verweise laufen ins Leere (M13), praktisch alle davon bei {@code FINISHED}.
  */
 public record NachrichtZeile(
     String messageId,
@@ -27,4 +33,5 @@ public record NachrichtZeile(
     String processId,
     String processName,
     String projectName,
-    String sosName) {}
+    String sosName,
+    String schritt) {}

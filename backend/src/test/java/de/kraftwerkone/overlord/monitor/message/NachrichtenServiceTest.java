@@ -46,6 +46,9 @@ class NachrichtenServiceTest {
   /** Die echte Uhr — bewusst weit weg von der Anwendungsuhr, damit eine Verwechslung auffiele. */
   private static final Instant SYSTEMZEIT = Instant.parse("2026-08-07T08:00:00Z");
 
+  /** Der einzige Schritt, auf dem in der Testkopie eine offene Nachricht steht (M13). */
+  private static final String SCHRITT = "Send Message to Pool";
+
   @Mock private NachrichtenRepository nachrichtenRepository;
 
   /** Kein Mock: Die Einordnung ist Fachlogik und soll hier mitlaufen, nicht wegdefiniert werden. */
@@ -72,8 +75,23 @@ class NachrichtenServiceTest {
   }
 
   private static NachrichtZeile zeile(String id, String status, String sosName) {
+    return zeile(id, status, sosName, SCHRITT);
+  }
+
+  /**
+   * Der Schritt kommt aus der Quelle <b>ungefiltert</b> — auch bei abgeschlossenen Nachrichten
+   * steht dort ein Wert. Ob er in die Antwort gehoert, entscheidet der Service.
+   */
+  private static NachrichtZeile zeile(String id, String status, String sosName, String schritt) {
     return new NachrichtZeile(
-        id, ZEITPUNKT, status, "prozess-1", "40000_AMG_LAB_VDA", "300_KundenEingehend", sosName);
+        id,
+        ZEITPUNKT,
+        status,
+        "prozess-1",
+        "40000_AMG_LAB_VDA",
+        "300_KundenEingehend",
+        sosName,
+        schritt);
   }
 
   /** Die Zone der Anwendungsuhr ist die eine Stelle, an der die Wanduhrzeit nach UTC kommt. */
@@ -214,6 +232,68 @@ class NachrichtenServiceTest {
     assertThat(seite.items()).isEmpty();
     assertThat(seite.hasMore()).isFalse();
     verify(nachrichtenRepository, never()).finde(any(), any());
+  }
+
+  // ─── Der aktuelle Schritt (Nachbesserung zu Schritt 4, Aufgabe 6) ──────────────
+
+  /**
+   * Der Kern der Entscheidung: {@code SOSActionID} ist auf <b>jeder</b> Zeile gesetzt (M13), auch
+   * auf abgeschlossenen — dort benennt sie den letzten Schritt und nicht den aktuellen. Als Feld
+   * „aktueller Schritt" waere sie auf 99 Prozent der Zeilen eine falsche Auskunft.
+   */
+  @Test
+  @DisplayName("Der Schritt kommt nur bei offenen Nachrichten mit")
+  void schritt_nur_bei_offenen_nachrichten() {
+    when(nachrichtenRepository.finde(any(), any()))
+        .thenReturn(
+            List.of(
+                zeile("wartend", "SUSPENDED", "Merge files and wait"),
+                zeile("laeuft", "RUNNING", "Format Conversion"),
+                zeile("fertig", "FINISHED", "Send Message to Partner"),
+                zeile("quittiert", "EERP_RECEIVED", "Send Message to Partner"),
+                zeile("fehler", "ERROR_DUPLICATE", "Format Conversion"),
+                zeile("zwischen", "SPLITTED", "Split Multiple IDOC"),
+                zeile("ungeklaert", "CHECKED", "Format Conversion")));
+
+    List<NachrichtResponse> zeilen = service().liste(MANDANT, filter(null)).items();
+
+    assertThat(zeilen)
+        .filteredOn(z -> z.schritt() != null)
+        .extracting(NachrichtResponse::messageId)
+        .as("nur WARTEND und LAEUFT")
+        .containsExactly("wartend", "laeuft");
+    assertThat(zeilen.getFirst().schritt()).isEqualTo(SCHRITT);
+  }
+
+  /**
+   * {@code UNGEKLAERT} ist der Fall, der die ausdrueckliche Aufzaehlung rechtfertigt: {@code
+   * istEndstatus} liefert dort {@code true} — in der Ueberfaelligkeitsrechnung die vorsichtige
+   * Antwort, in einem Sichtbarkeitsfilter die unvorsichtige ({@code message-status.md}). Der
+   * Schritt erscheint dort nicht, weil ueber diese Zeilen nichts bekannt ist.
+   */
+  @Test
+  @DisplayName("Ein ungeklaerter Status bekommt keinen Schritt")
+  void ungeklaerter_status_bekommt_keinen_schritt() {
+    when(nachrichtenRepository.finde(any(), any()))
+        .thenReturn(List.of(zeile("m1", "COMMIT_SENT", "Format Conversion")));
+
+    assertThat(service().liste(MANDANT, filter(null)).items().getFirst().schritt()).isNull();
+  }
+
+  /**
+   * 43,9 Prozent aller Verweise laufen ins Leere (M13). Bei den offenen Status tut das in der
+   * Testkopie keiner — die Produktion muss sich daran aber nicht halten.
+   */
+  @Test
+  @DisplayName("Auch bei einer offenen Nachricht darf der Schritt fehlen")
+  void offene_nachricht_ohne_aufloesbaren_schritt() {
+    when(nachrichtenRepository.finde(any(), any()))
+        .thenReturn(List.of(zeile("m1", "SUSPENDED", "Merge files and wait", null)));
+
+    NachrichtResponse zeile = service().liste(MANDANT, filter(null)).items().getFirst();
+
+    assertThat(zeile.statusKind()).isEqualTo("WARTEND");
+    assertThat(zeile.schritt()).isNull();
   }
 
   // ─── Die Merkmale des Bestands (Nachbesserung zu Schritt 4, Aufgabe 5) ──────────

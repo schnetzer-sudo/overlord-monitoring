@@ -120,6 +120,10 @@ export const de = {
     nichtZugeordnet: "nicht zugeordnet",
     ohneWert: "—",
     rohwert: "Statuswert des Altsystems",
+    // Der Schritt, auf dem eine offene Nachricht gerade steht. Er kommt aus
+    // SOSAction und ist Klartext (Messung M13) — die Sprache ist die des
+    // Quellsystems und wird nicht eingedeutscht.
+    aktuellerSchritt: "Aktueller Schritt",
     bedeutungNichtVerifiziert: "Bedeutung nicht verifiziert",
     zeitRelativ: "Abstand zu jetzt",
     sortierungUmschalten: "Nach Zeitpunkt sortieren",

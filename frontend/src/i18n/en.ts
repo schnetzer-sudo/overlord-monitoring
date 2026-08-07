@@ -106,6 +106,7 @@ export const en: Texte = {
     nichtZugeordnet: "not assigned",
     ohneWert: "—",
     rohwert: "Status value of the legacy system",
+    aktuellerSchritt: "Current step",
     bedeutungNichtVerifiziert: "Meaning not verified",
     zeitRelativ: "Time from now",
     sortierungUmschalten: "Sort by time",

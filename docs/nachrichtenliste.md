@@ -44,7 +44,8 @@ auch keiner entstehen.
       "processId": "…",
       "processName": "40000_AMG_LAB_VDA",
       "projectName": "300_KundenEingehend",
-      "sosName": "Versand Einzel IDOC aus Split"
+      "sosName": "Versand Einzel IDOC aus Split",
+      "schritt": null
     }
   ],
   "nextCursor": "MjAyNS0xMi0yOVQyMzoyMjo0MXxjZGI2…",
@@ -67,6 +68,14 @@ in eine Abfrage (Regel Q4).
 
 **`sosName` ist der Anzeigename des Ablaufs** und seit der Nachbesserung zu Schritt 4 die Spalte
 „Ablauf" (§8.1). **`bamWerte` gibt es nicht mehr** — die Begründung steht in §6.
+
+**`schritt` steht ausschließlich bei `WARTEND` und `LAEUFT`**, sonst `null`. Das ist **keine
+Anzeigeentscheidung, sondern eine fachliche**: `SOSActionID` ist auf *jeder* Zeile gesetzt (M13:
+3.341.519 von 3.341.519), auch auf abgeschlossenen — dort benennt sie aber den **letzten** Schritt
+und nicht den aktuellen. Das Feld heißt „der Schritt, auf dem sie steht"; einen solchen gibt es nur,
+solange sie läuft. Ihn trotzdem mitzuschicken hieße, dem Aufrufer einen Wert zu geben, der etwas
+anderes bedeutet als sein Name — und der Chatbot aus Ausbaustufe 1 ruft dieselben Endpunkte auf wie
+die Oberfläche.
 
 **Kein `total`.** Eine Gesamtzahl über `Message` wäre genau die Live-Aggregation, die Regel L2
 verbietet — und sie kostet mehr als die Seite selbst: Ein `COUNT` über ein Jahresfenster liest den
@@ -628,6 +637,31 @@ hat, auf die sich kürzen lässt. Die Höhe ist `--dichte-zeile`
 ([`visuelles-konzept.md`](visuelles-konzept.md) §5), die Kopfzeile der Tabelle ist enger geworden
 und der Innenabstand der Zellen ebenfalls — zusammen mit den zwei entfallenen Spalten passen
 spürbar mehr Zeilen ins Fenster.
+
+#### Der aktuelle Schritt steht in der Statuszelle — bei offenen Nachrichten
+
+Bei `WARTEND` und `LAEUFT` steht **neben** der Statusplakette der Schritt, auf dem die Nachricht
+gerade steht (`schritt`, §1). Bei allen anderen erscheint dort nichts.
+
+**Warum neben und nicht unter dem Status.** Die feste Zeilenhöhe gilt für alle Zeilen gleich. Sie
+auf zwei Zeilen auszulegen kostete **jede** Zeile ein Drittel Höhe — für einen Zusatz, den in der
+Testkopie 538 von 3,3 Millionen Zeilen tragen. Das widerspräche dem, wofür die Liste gerade
+kompakter geworden ist. Der Zusatz steht deshalb einzeilig daneben, gekürzt, mit dem Vollwert im
+Tooltip; die Statusspalte ist ab `lg` breiter, damit er dort lesbar bleibt.
+
+**Er trägt keine eigene Farbrolle.** Er ist Beiwerk im Sinne des Leitsatzes und steht in der
+gedämpften Textfarbe. Eine eigene Farbe wäre eine Statusaussage, die er nicht macht
+([`visuelles-konzept.md`](visuelles-konzept.md) §3).
+
+> ⚠️ **Diese Anzeige ist lokal kaum prüfbar.** `RUNNING` kommt in der Testkopie **null Mal** vor,
+> `SUSPENDED` 538-mal und nur bis zum 2025-12-29 — und **alle 538 stehen auf demselben Schritt**
+> („Send Message to Pool", M13). Was sich vorführen lässt, ist genau eine Zeile mit einem Text, nicht
+> die Vielfalt, die die Produktion zeigen wird.
+>
+> **Der fehlende Schritt ist ein Normalfall, kein Fehler.** 43,9 Prozent aller Verweise laufen ins
+> Leere (M13) — praktisch alle davon bei `FINISHED`, wo ohnehin nichts gezeigt wird. Bei den offenen
+> Status ist die Verknüpfung in der Testkopie lückenlos; die Anzeige muss trotzdem mit `null`
+> umgehen können, denn die Produktion muss sich daran nicht halten.
 
 **Status nie allein über Farbe.** Jede Plakette trägt Beschriftung **und** Zeichen; die Farbrolle
 ist die halbe Aussage. Bei `bedeutungNichtVerifiziert` wird der **Rohwert** zur Beschriftung, dazu

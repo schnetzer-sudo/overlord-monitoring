@@ -97,7 +97,12 @@ export function NachrichtenTabelle({
           <TableHead className="h-8 w-[11.5rem]">
             <SortierUmschalter sortierung={sortierung} aufSortierung={aufSortierung} />
           </TableHead>
-          <TableHead className="h-8 w-[10.5rem]">{texte.nachrichten.spalten.status}</TableHead>
+          {/* Breiter ab `lg`, damit der aktuelle Schritt neben dem Status noch
+              lesbar ist. Darunter bleibt es bei der Breite der Plakette — der
+              Zusatz kürzt dann und steht vollständig im Tooltip. */}
+          <TableHead className="h-8 w-[10.5rem] lg:w-[17rem]">
+            {texte.nachrichten.spalten.status}
+          </TableHead>
           {/* Ohne Breitenangabe: Der Ablaufname bekommt, was übrig bleibt. */}
           <TableHead className="h-8">{texte.nachrichten.spalten.ablauf}</TableHead>
           <TableHead className="hidden h-8 w-[18rem] md:table-cell">
@@ -117,6 +122,7 @@ export function NachrichtenTabelle({
                 statusKind={zeile.statusKind}
                 rohwert={zeile.status}
                 bedeutungNichtVerifiziert={zeile.bedeutungNichtVerifiziert}
+                schritt={zeile.schritt}
               />
             </TableCell>
             <TableCell className="px-2 py-0 align-middle">

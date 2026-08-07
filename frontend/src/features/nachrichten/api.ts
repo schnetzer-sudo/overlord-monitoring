@@ -42,6 +42,16 @@ export type Nachricht = {
    * Produktion muss sich nicht daran halten, was die Testkopie enthält.
    */
   sosName: string | null;
+  /**
+   * Der Schritt, auf dem die Nachricht **gerade steht** — **nur** bei `WARTEND`
+   * und `LAEUFT`, sonst `null`.
+   *
+   * Dass die Auswahl schon im Backend getroffen ist, ist Absicht: `SOSActionID`
+   * ist auf jeder Zeile gesetzt, benennt bei abgeschlossenen aber den *letzten*
+   * Schritt. Die Oberfläche entscheidet hier nicht, was sie zeigt, sondern nur
+   * wie — was sie zeigen darf, steht schon fest.
+   */
+  schritt: string | null;
 };
 
 /**
