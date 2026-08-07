@@ -11,7 +11,8 @@ import { ProblemFehler } from "@/lib/http";
  * Der Filterzustand der Nachrichtenliste — **in der URL, nicht im Komponentenzustand.**
  *
  * In der URL stehen: `zeitraum` **oder** `von`/`bis`, `status`, `prozess`,
- * `suche`, `zwischenschritte`, `sortierung`.
+ * `suche`, `zwischenschritte`, `sortierung` — und seit Schritt 5 die gewählte
+ * `nachricht`.
  *
  * ## Was ausdrücklich *nicht* in der URL steht: der Cursor
  *
@@ -119,6 +120,25 @@ export const NACHRICHTEN_PARAMETER = {
   status: parseAsArrayOf(literalParser(STATUSARTEN)),
   prozess: parseAsArrayOf(parseAsString),
   suche: parseAsString,
+  /**
+   * Die gewählte Nachricht — der Einhängepunkt der Detailansicht neben der
+   * Liste.
+   *
+   * **Bewusst ohne `withDefault`.** Genau daran hängt die `clearOnDefault`-Falle:
+   * `nuqs` entfernt einen Parameter aus der URL, sobald er dem *Standardwert*
+   * gleicht — geprüft wird das nur, wenn überhaupt einer gesetzt ist
+   * (`parser.defaultValue !== undefined`). Ohne Standardwert kann kein
+   * Kennungswert versehentlich verschwinden; `null` entfernt ihn, und genau das
+   * ist „Schließen". Käme hier je ein `withDefault` dazu, gehörte
+   * `clearOnDefault: false` in derselben Zeile dazu.
+   *
+   * **`history: "push"` und nicht `replace` wie der Rest der Leiste.** Ein
+   * Filter, den man verstellt, ist keine Station, zu der man zurückgeht; eine
+   * geöffnete Nachricht ist eine. Am schmalen Fenster füllt die Ansicht den
+   * Bildschirm, und das Zurück des Browsers ist dort der Weg heraus — ohne
+   * eigenen Verlaufseintrag spränge es an der Liste vorbei.
+   */
+  nachricht: parseAsString.withOptions({ history: "push" }),
   // Anders als `zwischenschritte` **ohne** `clearOnDefault: false`: Hier wird
   // nichts weggelassen, sondern etwas zugelassen. Steht der Parameter nicht da,
   // gilt die Grenze — und das ist der Normalfall, den keine URL erwähnen muss.
@@ -136,6 +156,11 @@ export type Nachrichtenfilter = Zeitfensterzustand & {
   langeSuche: boolean;
   zwischenschritte: boolean;
   sortierung: Sortierung | null;
+  /**
+   * Die geöffnete Nachricht. Sie ist Teil des URL-Zustands wie jeder Filter —
+   * aber **kein Parameter der Liste**: {@link alsAbfrage} lässt sie weg.
+   */
+  nachricht: string | null;
 };
 
 /**
@@ -241,6 +266,13 @@ export function feldFehler(fehler: unknown): ProblemFehler | undefined {
 /**
  * Der Filter als Abfragezeichenkette für `/api/nachrichten`.
  *
+ * **`nachricht` steht hier nicht — und das ist der Punkt.** Die gewählte
+ * Nachricht ist Zustand der *Ansicht*, kein Filter der Liste: Der Endpunkt kennt
+ * den Parameter nicht, und träte er in den Abfrageschlüssel des
+ * Zwischenspeichers ein, lüde jeder Klick auf eine Zeile die ganze Liste neu und
+ * setzte die Seitenposition zurück. Das Panel lädt über seine eigene Kennung
+ * (`NACHRICHTEN_SCHLUESSEL.detail`) und hängt nicht am Ergebnis der Liste.
+ *
  * **Was leer ist, wird nicht geschickt.** Ein `?status=` wäre kein Filter auf den
  * leeren Status, sondern Rauschen — und es machte den Abfrageschlüssel des
  * Zwischenspeichers unnötig verschieden.
@@ -336,6 +368,12 @@ export function alsSuchparameter(filter: Nachrichtenfilter): URLSearchParams {
   if (filter.sortierung !== null) {
     parameter.set("sortierung", filter.sortierung);
   }
+  // Zuletzt, damit die Kennung am Ende der geteilten URL steht — dort, wo man
+  // beim Weitergeben hinsieht. „Schick mir mal den Link" ist die eigentliche
+  // Anwendung dieses Parameters.
+  if (filter.nachricht !== null && filter.nachricht !== "") {
+    parameter.set("nachricht", filter.nachricht);
+  }
 
   return parameter;
 }
@@ -359,6 +397,10 @@ export function ausSuchparametern(suchparameter: URLSearchParams): Nachrichtenfi
   const zwischenschritte = suchparameter.get("zwischenschritte");
   const status = suchparameter.getAll("status").filter(istStatusart);
   const prozess = suchparameter.getAll("prozess").filter((wert) => wert !== "");
+  // Eine leere Kennung ist keine Auswahl. Sie entstünde nur aus einer von Hand
+  // gebauten URL (`?nachricht=`) und öffnete sonst ein Panel, das garantiert
+  // nichts findet.
+  const nachricht = suchparameter.get("nachricht");
 
   return {
     zeitraum: zeitraum === "24h" || zeitraum === "7d" || zeitraum === "30d" ? zeitraum : null,
@@ -372,5 +414,6 @@ export function ausSuchparametern(suchparameter: URLSearchParams): Nachrichtenfi
       zwischenschritte === null ? ZWISCHENSCHRITTE_VORGABE : zwischenschritte === "true",
     sortierung:
       sortierung === "neueste" || sortierung === "aelteste" ? (sortierung as Sortierung) : null,
+    nachricht: nachricht === null || nachricht === "" ? null : nachricht,
   };
 }

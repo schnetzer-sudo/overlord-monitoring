@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
+import { de } from "@/i18n/de";
+import { en } from "@/i18n/en";
 import {
   ZEITZONE_RUECKFALL,
   formatiereDatum,
+  formatiereDauer,
   formatiereRelativ,
   formatiereZahl,
   formatiereZeitpunkt,
@@ -201,5 +204,53 @@ describe("Zahlen", () => {
   it("werden in der aktiven Sprache getrennt", () => {
     expect(formatiereZahl(1234567, "de")).toBe("1.234.567");
     expect(formatiereZahl(1234567, "en")).toBe("1,234,567");
+  });
+});
+
+/**
+ * Die Dauern der Zeitleiste (Schritt 5).
+ *
+ * **Die Einheiten kommen aus der Sprachdatei** und stehen nicht im Formatierer —
+ * auch „s" und „min" sind Text, den ein Nutzer sieht. Hier wird deshalb mit
+ * genau den Bausteinen der Leitsprache geprüft und nicht mit erfundenen.
+ */
+describe("Dauern", () => {
+  const einheiten = de.nachrichten.detail.dauer;
+
+  it("nennt höchstens zwei Einheiten", () => {
+    expect(formatiereDauer(45, einheiten)).toBe("45 s");
+    expect(formatiereDauer(65, einheiten)).toBe("1 min 5 s");
+    expect(formatiereDauer(120, einheiten)).toBe("2 min");
+    expect(formatiereDauer(11520, einheiten)).toBe("3 h 12 min");
+    expect(formatiereDauer(3600, einheiten)).toBe("1 h");
+    // Sekunden fallen ab einer Stunde weg — sie beantworten dort keine Frage
+    // mehr, und die Spalte soll in jeder Zeile gleich breit bleiben.
+    expect(formatiereDauer(3661, einheiten)).toBe("1 h 1 min");
+    expect(formatiereDauer(90000, einheiten)).toBe("1 d 1 h");
+    expect(formatiereDauer(172800, einheiten)).toBe("2 d");
+  });
+
+  /**
+   * Das Backend rechnet in ganzen Sekunden; ein Schritt mit `0` hat zwischen
+   * null und einer Sekunde gedauert. „0 s" behauptete eine Genauigkeit, die die
+   * Zahl nicht hat — und die Zeitleiste soll „praktisch nichts" sagen, nicht
+   * „gar nichts".
+   */
+  it("schreibt für null Sekunden nicht „0 s“", () => {
+    expect(formatiereDauer(0, einheiten)).toBe("< 1 s");
+  });
+
+  /**
+   * Eine negative Dauer kommt nicht vor — das Backend liefert dort `null`. Käme
+   * sie doch, ist ein Minuszeichen in einer Zeitleiste schlechter als gar
+   * nichts.
+   */
+  it("zeigt niemals eine negative Dauer", () => {
+    expect(formatiereDauer(-5, einheiten)).toBe("< 1 s");
+    expect(formatiereDauer(Number.NaN, einheiten)).toBe("< 1 s");
+  });
+
+  it("nutzt die Bausteine der aktiven Sprache", () => {
+    expect(formatiereDauer(65, en.nachrichten.detail.dauer)).toBe("1 min 5 s");
   });
 });

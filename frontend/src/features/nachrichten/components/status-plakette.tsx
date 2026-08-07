@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { einsetzen } from "@/i18n";
 import { useTexte } from "@/i18n/provider";
 import { statusKlassen, type Statusart } from "@/lib/status-farbe";
 import { cn } from "@/lib/utils";
@@ -86,7 +87,23 @@ export function StatusPlakette({
     <span className="flex min-w-0 items-center gap-1.5">
       <Badge
         variant="outline"
-        className={cn("h-auto max-w-full shrink gap-1.5 px-2 py-0.5", statusKlassen(art))}
+        className={cn(
+          "h-auto max-w-full gap-1.5 px-2 py-0.5",
+          statusKlassen(art),
+          /*
+           * **Steht ein Schritt daneben, weicht der Status nicht.** Ohne diese
+           * Unterscheidung kürzte die Zeile zuerst die Plakette — aus „Wartend"
+           * wurde „Warte…", während der Schritt daneben Platz behielt. Genau
+           * verkehrt herum: Der Status ist die Hauptinformation, der Schritt ist
+           * Beiwerk nach dem Leitsatz. Aufgefallen in der Sichtprüfung am
+           * 07.08.2026.
+           *
+           * Ohne Schritt darf sie weiter weichen: Dort ist sie das einzige
+           * Element, und bei `bedeutungNichtVerifiziert` steht ein Rohwert
+           * beliebiger Länge darin.
+           */
+          schritt ? "shrink-0" : "shrink",
+        )}
         title={hinweis}
       >
         <Zeichen aria-hidden="true" />
@@ -95,33 +112,53 @@ export function StatusPlakette({
         </span>
         {hinweis === undefined ? null : <span className="sr-only">— {hinweis}</span>}
       </Badge>
-      {schritt ? <SchrittZusatz schritt={schritt} /> : null}
+      {schritt ? <SchrittZusatz schritt={schritt} art={art} /> : null}
     </span>
   );
 }
 
 /**
- * Der aktuelle Schritt, neben dem Status.
+ * Der Schritt neben dem Status — **und was die Zelle über ihn behauptet.**
  *
  * **Nur bei offenen Nachrichten** — bei allen anderen liefert das Backend `null`,
  * weil `SOSActionID` dort den *letzten* Schritt benennt und nicht den aktuellen.
  * Als eigene Spalte wäre er auf 99 Prozent der Zeilen belanglos; hier steht er
  * genau dort, wo die Frage entsteht, die er beantwortet: „wartend — worauf?"
  *
+ * ## Zwei Beschriftungen, seit Schritt 5
+ *
+ * Bis dahin stand hier der nackte Name mit dem Tooltip „Aktueller Schritt", und
+ * das führte in die Irre: Wer „Send Message to Pool" neben `Wartend` liest,
+ * nimmt an, dieser Schritt laufe gerade. **Messung M16 (3) sagt das Gegenteil** —
+ * bei allen 538 `SUSPENDED`-Nachrichten der Testkopie ist *jede* Aktion beendet.
+ * Eine wartende Nachricht steht **zwischen** zwei Schritten, nicht auf einem.
+ *
+ * **Für `LAEUFT` gilt das nicht als belegt.** `RUNNING` kommt in der Testkopie
+ * null Mal vor; gerade dort wäre ein tatsächlich laufender Schritt der zu
+ * erwartende Fall. Die Beschriftung trägt deshalb **beide** Lagen und stellt
+ * nicht einfach alles auf „wartet vor" um — das wäre dieselbe ungeprüfte
+ * Behauptung mit umgekehrtem Vorzeichen.
+ *
  * **Ohne eigene Farbrolle.** Er ist Beiwerk im Sinne des Leitsatzes und trägt die
  * gedämpfte Textfarbe; eine eigene Farbe wäre eine Statusaussage, die er nicht
  * macht (`visuelles-konzept.md` §3).
  */
-function SchrittZusatz({ schritt }: { schritt: string }) {
+function SchrittZusatz({ schritt, art }: { schritt: string; art: Statusart }) {
   const texte = useTexte();
+  const wartet = art === "WARTEND";
+  const beschriftung = einsetzen(
+    wartet ? texte.nachrichten.schrittWartetVor : texte.nachrichten.schrittLaeuftAuf,
+    { schritt },
+  );
+  const hinweis = einsetzen(
+    wartet ? texte.nachrichten.schrittWartetVorHinweis : texte.nachrichten.schrittLaeuftAufHinweis,
+    { schritt },
+  );
 
   return (
-    <span
-      className="text-muted-foreground text-beiwerk min-w-0 truncate"
-      title={`${texte.nachrichten.aktuellerSchritt}: ${schritt}`}
-    >
-      {schritt}
-      <span className="sr-only"> ({texte.nachrichten.aktuellerSchritt})</span>
+    <span className="text-muted-foreground text-beiwerk min-w-0 truncate" title={hinweis}>
+      <span aria-hidden="true">{beschriftung}</span>
+      <span className="sr-only">{hinweis}</span>
     </span>
   );
 }

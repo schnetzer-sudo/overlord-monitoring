@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { useSprache, useTexte } from "@/i18n/provider";
 import { formatiereRelativ, formatiereZeitpunktGenau } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 import type { Nachricht } from "../api";
 import type { Sortierung } from "../filter";
@@ -63,12 +64,18 @@ import { StatusPlakette } from "./status-plakette";
  * der nächste lange Wert die Liste wieder, so wie es die mehrwertigen BAM-Zellen
  * getan haben. Der längste gemessene Ablaufname hat 55 Zeichen (L14).
  *
- * ## Der Zeilenklick hat keine Funktion
+ * ## Der Zeilenklick öffnet das Detail
  *
- * Kein Panel, kein Kopieren, **kein Hover-Zustand, der eine Interaktion
- * verspricht** — deshalb ist die Hover-Färbung, die `components/ui/table`
- * mitbringt, hier ausdrücklich abgeschaltet. Schritt 5 belegt den Klick; bis
- * dahin wäre ein Anfassgefühl ohne Wirkung schlimmer als gar keins.
+ * Seit Schritt 5 trägt er die Detailansicht — und damit auch das Anfassgefühl,
+ * das ihm bis dahin ausdrücklich fehlte: Hover-Fläche, Zeigehand, Fokusring. Er
+ * setzt den Parameter `nachricht` in der URL; das Panel lädt daraufhin über
+ * seine eigene Kennung.
+ *
+ * **Tastaturbedienbar.** Die Zeile ist über `Tab` erreichbar, `Enter` und
+ * `Leertaste` öffnen sie. Ein Klick auf einen Verweis *in* der Zeile öffnet das
+ * Panel nicht mit — heute steht dort keiner, und die Bedingung steht trotzdem
+ * da: Wer später eine Verkettung in eine Zelle setzt (Schritt 6), soll sie nicht
+ * erst finden müssen.
  *
  * ## Am schmalen Fenster
  *
@@ -81,10 +88,15 @@ export function NachrichtenTabelle({
   zeilen,
   sortierung,
   aufSortierung,
+  gewaehlt,
+  aufAuswahl,
 }: {
   zeilen: Nachricht[];
   sortierung: Sortierung;
   aufSortierung: (sortierung: Sortierung) => void;
+  /** Die geöffnete Nachricht — sie kommt aus der URL, nicht aus dieser Tabelle. */
+  gewaehlt: string | null;
+  aufAuswahl: (messageId: string) => void;
 }) {
   const texte = useTexte();
 
@@ -112,8 +124,42 @@ export function NachrichtenTabelle({
       </TableHeader>
       <TableBody>
         {zeilen.map((zeile) => (
-          // Kein onClick, kein cursor-pointer, keine Hover-Fläche.
-          <TableRow key={zeile.messageId} className="h-zeile hover:bg-transparent">
+          <TableRow
+            key={zeile.messageId}
+            tabIndex={0}
+            aria-label={texte.nachrichten.zeileOeffnen}
+            // Die geöffnete Zeile ist auch in der Liste erkennbar — sonst wäre
+            // nicht zu sehen, wozu das Panel daneben gehört.
+            aria-current={zeile.messageId === gewaehlt ? "true" : undefined}
+            onClick={(ereignis) => {
+              // Ein Klick auf einen Verweis oder eine Schaltfläche *in* der
+              // Zeile öffnet das Panel nicht mit.
+              if ((ereignis.target as HTMLElement).closest("a, button, input, label")) {
+                return;
+              }
+              aufAuswahl(zeile.messageId);
+            }}
+            onKeyDown={(ereignis) => {
+              if (ereignis.target !== ereignis.currentTarget) {
+                return;
+              }
+              if (ereignis.key === "Enter" || ereignis.key === " ") {
+                // Sonst blättert die Leertaste die Ansicht weiter, während sie
+                // öffnet.
+                ereignis.preventDefault();
+                aufAuswahl(zeile.messageId);
+              }
+            }}
+            className={cn(
+              "h-zeile focus-visible:ring-ring cursor-pointer focus-visible:ring-2 focus-visible:-outline-offset-2 focus-visible:outline-none",
+              // Die blasse Akzenttönung, dieselbe wie am aktiven
+              // Navigationseintrag: Sie sagt etwas über die **Anwendung** —
+              // welche Zeile gerade offen ist —, nicht über die Daten. Eine
+              // Statusfarbe wäre hier eine Aussage, die die Zeile nicht macht
+              // (`visuelles-konzept.md` §3).
+              zeile.messageId === gewaehlt ? "bg-accent hover:bg-accent" : "hover:bg-muted",
+            )}
+          >
             <TableCell className="px-2 py-0 align-middle">
               <ZeitpunktZelle wert={zeile.zeitpunkt} />
             </TableCell>

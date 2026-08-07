@@ -196,6 +196,66 @@ export function formatiereZahl(wert: number, sprache: Sprache): string {
   return new Intl.NumberFormat(sprache).format(wert);
 }
 
+/**
+ * Die Einheitenbausteine für {@link formatiereDauer}.
+ *
+ * **Sie kommen aus der Sprachdatei und stehen nicht hier.** Auch „s" und „min"
+ * sind Text, den ein Nutzer sieht — und eine Ausnahme von der Regel „keine
+ * Zeichenkette außerhalb von `i18n`" für kurze Wörter ist genau die Ausnahme,
+ * die die Regel aufweicht.
+ */
+export type Dauereinheiten = {
+  /** Für alles unter einer Sekunde — das Backend liefert dort `0`. */
+  unterSekunde: string;
+  sekunden: string;
+  minuten: string;
+  stunden: string;
+  tage: string;
+};
+
+const MINUTE = 60;
+const STUNDE = 60 * MINUTE;
+const TAG = 24 * STUNDE;
+
+/**
+ * Eine Dauer in ganzen Sekunden als lesbarer Text: `3 h 12 min`, `45 s`.
+ *
+ * **Höchstens zwei Einheiten.** „1 h 3 min 7 s" beantwortet keine Frage, die
+ * „1 h 3 min" nicht schon beantwortet — und die Zeitleiste braucht eine Spalte,
+ * die in jeder Zeile gleich breit bleibt.
+ *
+ * **`0` wird zu „< 1 s" und nicht zu „0 s".** Das Backend rechnet die Dauer in
+ * ganzen Sekunden; ein Schritt mit `0` hat zwischen null und einer Sekunde
+ * gedauert. „0 s" behauptete eine Genauigkeit, die die Zahl nicht hat.
+ *
+ * Eine negative Dauer kommt nicht vor — das Backend liefert dort `null` — und
+ * wird hier wie `0` behandelt, statt ein Minuszeichen anzuzeigen.
+ */
+export function formatiereDauer(sekunden: number, einheiten: Dauereinheiten): string {
+  const ganz = Math.floor(sekunden);
+  if (!Number.isFinite(ganz) || ganz <= 0) {
+    return einheiten.unterSekunde;
+  }
+  const teil = (baustein: string, wert: number) => baustein.replace("{wert}", String(wert));
+
+  if (ganz < MINUTE) {
+    return teil(einheiten.sekunden, ganz);
+  }
+  if (ganz < STUNDE) {
+    const rest = ganz % MINUTE;
+    const minuten = teil(einheiten.minuten, Math.floor(ganz / MINUTE));
+    return rest === 0 ? minuten : `${minuten} ${teil(einheiten.sekunden, rest)}`;
+  }
+  if (ganz < TAG) {
+    const rest = Math.floor((ganz % STUNDE) / MINUTE);
+    const stunden = teil(einheiten.stunden, Math.floor(ganz / STUNDE));
+    return rest === 0 ? stunden : `${stunden} ${teil(einheiten.minuten, rest)}`;
+  }
+  const rest = Math.floor((ganz % TAG) / STUNDE);
+  const tage = teil(einheiten.tage, Math.floor(ganz / TAG));
+  return rest === 0 ? tage : `${tage} ${teil(einheiten.stunden, rest)}`;
+}
+
 /* ─────────────────────────────────────────────────────────────────────────────
    Wanduhrzeit ↔ Zeitpunkt — für die Eingabefelder des freien Zeitfensters
 

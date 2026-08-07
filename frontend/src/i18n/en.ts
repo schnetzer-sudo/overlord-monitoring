@@ -106,7 +106,11 @@ export const en: Texte = {
     nichtZugeordnet: "not assigned",
     ohneWert: "—",
     rohwert: "Status value of the legacy system",
-    aktuellerSchritt: "Current step",
+    schrittWartetVor: "waiting before: {schritt}",
+    schrittWartetVorHinweis: "Waiting before this step: {schritt}",
+    schrittLaeuftAuf: "running at: {schritt}",
+    schrittLaeuftAufHinweis: "Running at this step: {schritt}",
+    zeileOeffnen: "Show details of this message",
     bedeutungNichtVerifiziert: "Meaning not verified",
     ungeklaertFusszeile:
       "A badge with a question mark shows the legacy system's status value unchanged: its " +
@@ -201,6 +205,65 @@ export const en: Texte = {
       status: "The status filter narrows the list — clear it.",
       prozess: "The process filter narrows the list — clear it.",
       fensterErweitern: "Widen to 30 days",
+    },
+
+    detail: {
+      titel: "Message",
+      schliessen: "Close view",
+      zurueckZurListe: "Back to the list",
+      zeitpunkt: "Last changed",
+      start: "Started",
+      projekt: "Project",
+      prozess: "Process",
+      kennung: "Message reference",
+      kennungKopieren: "Copy reference",
+      kennungKopiert: "Copied",
+
+      ablaufTitel: "What happened",
+      keineSchritte: "No process step is recorded for this message.",
+      ohneSchritt: "The message is open, but no step has run yet.",
+      gewartet: "waited {dauer}",
+      ohneDauer: "no duration recorded",
+      laeuftGerade: "running now",
+      nochNichtBegonnen: "not started yet",
+      wartetVorUnbekannt:
+        "The message is waiting — what for is not recorded in the workflow definition.",
+      wartetWeiterhin: "The message is waiting — it will not continue on its own.",
+      verweistAuf: "The workflow points at: {schritt}",
+      baustein: "Building block",
+      herkunft: {
+        DIREKT: "Name from the workflow definition",
+        HERGELEITET: "Name derived from the building block within the workflow",
+        ROHWERT: "The workflow holds no name — the building block is shown instead",
+      },
+
+      kuratiert: {
+        "Message.SendingPartner": "Sender",
+        "Message.SplitCount": "Split count",
+      },
+
+      eigenschaften: {
+        titel: "Technical properties ({anzahl})",
+        keine: "No technical properties",
+        aufklappen: "Show technical properties",
+        zuklappen: "Hide technical properties",
+        name: "Name",
+        wert: "Value",
+        gekappt: "shortened",
+        gekapptHinweis: "Shortened — {bytes} bytes in the original.",
+        leer: "No property is recorded for this message.",
+      },
+
+      nichtGefunden:
+        "Under the tenant shown in the header this message does not exist. If the link came from someone else, check that tenant first.",
+
+      dauer: {
+        unterSekunde: "< 1 s",
+        sekunden: "{wert} s",
+        minuten: "{wert} min",
+        stunden: "{wert} h",
+        tage: "{wert} d",
+      },
     },
   },
 

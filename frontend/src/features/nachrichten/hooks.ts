@@ -14,11 +14,15 @@ import {
 
 import {
   NACHRICHTEN_SCHLUESSEL,
+  holeEigenschaften,
   holeMerkmale,
   holeNachrichten,
+  holeNachrichtendetail,
   holeProzesse,
+  type Eigenschaft,
   type Merkmale,
   type Nachricht,
+  type Nachrichtendetail,
   type Prozess,
   type Seite,
 } from "./api";
@@ -111,6 +115,20 @@ export function useNachrichtenfilter() {
       (sortierung: Sortierung) => void setzeFilter({ sortierung }),
       [setzeFilter],
     ),
+    /**
+     * Öffnet oder schließt die Detailansicht neben der Liste.
+     *
+     * **`null` schließt und lässt den übrigen Filterzustand unberührt** — es
+     * wird genau ein Parameter entfernt und nicht die URL neu gebaut. Wer das
+     * Panel schließt, will seine Liste behalten, wie sie war.
+     *
+     * Der Verlaufseintrag entsteht am Parser (`history: "push"` in
+     * `filter.ts`), nicht hier: Er gehört zum Parameter und nicht zum Aufrufer.
+     */
+    setzeNachricht: useCallback(
+      (messageId: string | null) => void setzeFilter({ nachricht: messageId }),
+      [setzeFilter],
+    ),
   };
 }
 
@@ -156,6 +174,58 @@ export function useMerkmale() {
     gcTime: MERKMALE_HALTBARKEIT,
   });
 }
+
+/**
+ * Das Detail **einer** Nachricht.
+ *
+ * **Es hängt nicht am Ergebnis der Liste.** Geladen wird über die Kennung, und
+ * zwar auch dann, wenn die Nachricht außerhalb des gewählten Zeitfensters liegt
+ * und die Liste dahinter leer ist. Das ist gewollt: Ein tiefer Link auf einen
+ * Beleg ist die eigentliche Anwendung dieser Ansicht — „schick mir mal den
+ * Link" —, und der Empfänger hat das Zeitfenster des Absenders nicht.
+ *
+ * Ein `404` wird nicht wiederholt (`lib/query-client.ts`): Fremd und nicht
+ * vorhanden sind ununterscheidbar, und beides steht schon beim ersten Aufruf
+ * fest.
+ *
+ * @param messageId `null`, solange nichts gewählt ist — dann läuft keine Abfrage.
+ */
+export function useNachrichtendetail(messageId: string | null) {
+  return useQuery<Nachrichtendetail>({
+    // Der Schlüssel trägt die leere Kennung nie: Bei `null` ist die Abfrage aus,
+    // und ein Eintrag dafür entstünde gar nicht erst.
+    queryKey: NACHRICHTEN_SCHLUESSEL.detail(messageId ?? ""),
+    queryFn: () => holeNachrichtendetail(messageId as string),
+    enabled: messageId !== null && messageId !== "",
+  });
+}
+
+/**
+ * Die technischen Eigenschaften — **erst beim Aufklappen.**
+ *
+ * Der Kopf trägt die Anzahl, der Block ist damit beschriftbar, ohne ihn zu
+ * laden. Genau dafür gibt es den zweiten Endpunkt; ihn mitzuladen nähme ihm
+ * seinen Zweck.
+ *
+ * Länger gehalten als die Liste: Die Eigenschaften einer abgeschlossenen
+ * Nachricht ändern sich nicht mehr, und wer zwischen zwei Nachrichten hin und
+ * her springt, soll nicht zweimal dieselbe Antwort holen.
+ *
+ * @param aktiv der Schalter des Blocks. Bewusst ein Parameter: Der Zustand
+ *   gehört der Komponente, nicht der Abfrage — und **nicht der URL**, denn er
+ *   ist keine Ansicht, die jemand teilt.
+ */
+export function useEigenschaften(messageId: string | null, aktiv: boolean) {
+  return useQuery<Eigenschaft[]>({
+    queryKey: NACHRICHTEN_SCHLUESSEL.eigenschaften(messageId ?? ""),
+    queryFn: () => holeEigenschaften(messageId as string),
+    enabled: aktiv && messageId !== null && messageId !== "",
+    staleTime: EIGENSCHAFTEN_HALTBARKEIT,
+    gcTime: EIGENSCHAFTEN_HALTBARKEIT,
+  });
+}
+
+const EIGENSCHAFTEN_HALTBARKEIT = 15 * 60 * 1000;
 
 /** Intervall der automatischen Aktualisierung. */
 export const AKTUALISIERUNG_INTERVALL_MS = 60_000;

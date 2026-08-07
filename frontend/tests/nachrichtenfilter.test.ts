@@ -38,6 +38,7 @@ const LEER: Nachrichtenfilter = {
   langeSuche: false,
   zwischenschritte: false,
   sortierung: null,
+  nachricht: null,
 };
 
 describe("URL → Zustand", () => {
@@ -57,6 +58,7 @@ describe("URL → Zustand", () => {
       langeSuche: false,
       zwischenschritte: true,
       sortierung: "aelteste",
+      nachricht: null,
     });
   });
 
@@ -241,6 +243,69 @@ describe("Rückmeldungen am Suchfeld", () => {
     expect(
       problem("suche-fenster-zu-gross", { grenzeTage: "30" }).zahl("grenzeTage"),
     ).toBeUndefined();
+  });
+});
+
+/**
+ * **Die geöffnete Nachricht steht in der URL — und nicht in der Anfrage.**
+ *
+ * Zwei Regeln treffen hier aufeinander, und beide gelten: Was der Nutzer sieht,
+ * muss er teilen können (`nachricht` gehört also in die URL); und die
+ * Detailansicht hängt nicht am Ergebnis der Liste (`nachricht` gehört also
+ * **nicht** in den Abfrageschlüssel, mit dem die Liste geladen wird).
+ */
+describe("Die gewählte Nachricht", () => {
+  const kennung = "8f3a1c2e-0000-4000-8000-000000000001";
+
+  it("steht in der URL und lässt sich wieder einlesen", () => {
+    const filter: Nachrichtenfilter = { ...LEER, zeitraum: "7d", nachricht: kennung };
+
+    const url = alsSuchparameter(filter);
+
+    expect(url.get("nachricht")).toBe(kennung);
+    expect(ausSuchparametern(url)).toEqual(filter);
+  });
+
+  /**
+   * Der Endpunkt der Liste kennt den Parameter nicht — und träte er in den
+   * Abfrageschlüssel ein, lüde **jeder Klick auf eine Zeile die ganze Liste
+   * neu** und setzte die Seitenposition zurück. Das Panel lädt über seine eigene
+   * Kennung.
+   */
+  it("taucht in keiner Abfrage der Liste auf", () => {
+    const filter: Nachrichtenfilter = { ...LEER, zeitraum: "24h", nachricht: kennung };
+
+    expect(alsAbfrage(filter)).not.toContain("nachricht");
+    // Und die Probe darauf, dass sie den Schlüssel wirklich nicht verändert:
+    // Mit und ohne geöffnetes Panel dieselbe Abfrage.
+    expect(alsAbfrage(filter)).toBe(alsAbfrage({ ...LEER, zeitraum: "24h" }));
+  });
+
+  /**
+   * Schließen entfernt genau einen Parameter. Wer das Panel zumacht, will seine
+   * Liste behalten, wie sie war — dieselbe Seite, dasselbe Fenster, dieselben
+   * Filter.
+   */
+  it("lässt den übrigen Filterzustand unberührt", () => {
+    const offen: Nachrichtenfilter = {
+      ...LEER,
+      zeitraum: "30d",
+      status: ["FEHLER"],
+      suche: "lieferschein",
+      nachricht: kennung,
+    };
+    const geschlossen = alsSuchparameter({ ...offen, nachricht: null });
+
+    expect(geschlossen.has("nachricht")).toBe(false);
+    expect(geschlossen.get("zeitraum")).toBe("30d");
+    expect(geschlossen.getAll("status")).toEqual(["FEHLER"]);
+    expect(geschlossen.get("suche")).toBe("lieferschein");
+  });
+
+  /** Eine leere Kennung ist keine Auswahl — sie öffnete ein Panel, das nichts findet. */
+  it("übergeht eine leere Kennung", () => {
+    expect(ausSuchparametern(new URLSearchParams("nachricht=")).nachricht).toBeNull();
+    expect(alsSuchparameter({ ...LEER, nachricht: "" }).has("nachricht")).toBe(false);
   });
 });
 

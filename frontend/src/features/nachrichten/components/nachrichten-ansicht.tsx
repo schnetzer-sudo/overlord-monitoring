@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Fehler, Laden, Leer } from "@/components/zustand";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
 import { useNachrichtenSeite, useNachrichtenfilter } from "../hooks";
 import { Blaettern } from "./blaettern";
 import { Filterleiste } from "./filterleiste";
+import { NachrichtDetail } from "./nachricht-detail";
 import { NachrichtenTabelle } from "./nachrichten-tabelle";
 
 /**
@@ -64,49 +65,138 @@ export function NachrichtenAnsicht() {
   const ruhigeRueckmeldung = anEinemFeld !== undefined || zeitfensterHalb(filter);
   const zeigeSeite = liste.seite ?? (ruhigeRueckmeldung ? liste.letzteSeite : undefined);
 
+  const gewaehlt = filter.nachricht;
+  const schliesse = steuerung.setzeNachricht;
+
+  /*
+   * **`Escape` schließt das Panel** — nachgetragen nach der Sichtprüfung am
+   * 07.08.2026.
+   *
+   * Öffnen mit der Tastatur ging von Anfang an: Die Zeile ist ein Tabstopp,
+   * `Enter` und `Leertaste` öffnen sie. Schließen ging *theoretisch* auch — der
+   * Schließen-Knopf steht im DOM hinter der Tabelle, man muss also durch bis zu
+   * fünfzig Zeilen tabben. Das erfüllt „mit der Tastatur erreichbar" und
+   * verfehlt „mit der Tastatur bedienbar".
+   *
+   * `Escape` statt eines Fokussprungs ins Panel: Ein Sprung nähme dem Nutzer die
+   * Stelle in der Liste, an der er gerade war — und einem Mausnutzer, der nichts
+   * davon wollte, ebenso.
+   *
+   * **Zwei Ausnahmen, damit die Taste nicht zweierlei tut.** In einem
+   * Eingabefeld räumt `Escape` die Eingabe (ein `type="search"` leert sich
+   * nativ), und ein offenes Radix-Auswahlfeld schließt sich damit. Beides bleibt
+   * das, was es ist; das Panel bleibt dann stehen.
+   */
+  useEffect(() => {
+    if (gewaehlt === null) {
+      return;
+    }
+    function beiTaste(ereignis: KeyboardEvent) {
+      if (ereignis.key !== "Escape" || ereignis.defaultPrevented) {
+        return;
+      }
+      const ziel = ereignis.target as HTMLElement | null;
+      if (ziel?.closest("input, textarea, select, [contenteditable='true']")) {
+        return;
+      }
+      if (document.querySelector("[data-radix-popper-content-wrapper]") !== null) {
+        return;
+      }
+      schliesse(null);
+    }
+    document.addEventListener("keydown", beiTaste);
+    return () => document.removeEventListener("keydown", beiTaste);
+  }, [gewaehlt, schliesse]);
+
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-ueberschrift font-semibold">{texte.navigation.eintraege.nachrichten}</h1>
+    /*
+     * Ab `xl` steht das Panel **neben** der Liste, darunter an ihrer Stelle.
+     *
+     * Beides sitzt im **einen** Scrollbereich des Anwendungsrahmens; es entsteht
+     * keine zweite Bildlaufleiste und nichts bemisst seine Höhe am Fenster
+     * (`frontend-grundlagen.md` §7). Ein Panel, das für sich scrollt, wäre der
+     * erste Verstoß gegen genau die Regeln, die dort gemessen worden sind.
+     */
+    <div className="flex flex-col gap-4 xl:flex-row xl:items-start">
+      <div
+        className={
+          /*
+           * Am schmalen Fenster gibt es kein „neben der Liste": Dort füllt die
+           * Ansicht den Bildschirm, und das Zurück des Browsers schließt sie,
+           * weil der Zustand in der URL steht.
+           *
+           * Ausgeblendet statt ausgehängt — `display: none` nimmt die Liste aus
+           * dem Bild und aus der Tastaturreihenfolge, lässt ihren Zustand aber
+           * stehen. Wer das Panel schließt, findet dieselbe Seite wieder, ohne
+           * dass eine zweite Abfrage auf die Produktionsdatenbank geht.
+           */
+          gewaehlt !== null
+            ? "hidden min-w-0 flex-1 flex-col gap-4 xl:flex"
+            : "flex min-w-0 flex-1 flex-col gap-4"
+        }
+      >
+        <h1 className="text-ueberschrift font-semibold">
+          {texte.navigation.eintraege.nachrichten}
+        </h1>
 
-      <Filterleiste
-        filter={filter}
-        steuerung={steuerung}
-        suchfehler={amSuchfeld}
-        zeitfensterfehler={amZeitfenster}
-        aufLangeSuche={() => steuerung.setzeLangeSuche(true)}
-      />
+        <Filterleiste
+          filter={filter}
+          steuerung={steuerung}
+          suchfehler={amSuchfeld}
+          zeitfensterfehler={amZeitfenster}
+          aufLangeSuche={() => steuerung.setzeLangeSuche(true)}
+        />
 
-      {ansichtsfehler ? (
-        <Fehler fehler={ansichtsfehler} aufWiederholen={liste.aktualisiere} />
-      ) : /* Das Skelett nur, wenn es wirklich nichts zu zeigen gibt. Liegt eine
-             vorige Seite vor, bleibt sie stehen — siehe `ruhigeRueckmeldung`. */
-      liste.laedt && zeigeSeite === undefined ? (
-        <Laden zeilen={8} />
-      ) : (zeigeSeite?.items.length ?? 0) === 0 ? (
-        <LeerMitUrsache filter={filter} auf30Tage={() => steuerung.setzeZeitraum("30d")} />
-      ) : (
-        <div className="border-border bg-card overflow-x-auto rounded-lg border">
-          <NachrichtenTabelle
-            zeilen={zeigeSeite?.items ?? []}
-            sortierung={filter.sortierung ?? "neueste"}
-            aufSortierung={steuerung.setzeSortierung}
+        {ansichtsfehler ? (
+          <Fehler fehler={ansichtsfehler} aufWiederholen={liste.aktualisiere} />
+        ) : /* Das Skelett nur, wenn es wirklich nichts zu zeigen gibt. Liegt eine
+               vorige Seite vor, bleibt sie stehen — siehe `ruhigeRueckmeldung`. */
+        liste.laedt && zeigeSeite === undefined ? (
+          <Laden zeilen={8} />
+        ) : (zeigeSeite?.items.length ?? 0) === 0 ? (
+          <LeerMitUrsache filter={filter} auf30Tage={() => steuerung.setzeZeitraum("30d")} />
+        ) : (
+          <div className="border-border bg-card overflow-x-auto rounded-lg border">
+            <NachrichtenTabelle
+              zeilen={zeigeSeite?.items ?? []}
+              sortierung={filter.sortierung ?? "neueste"}
+              aufSortierung={steuerung.setzeSortierung}
+              gewaehlt={gewaehlt}
+              aufAuswahl={steuerung.setzeNachricht}
+            />
+            <UngeklaertFusszeile zeilen={zeigeSeite?.items ?? []} />
+          </div>
+        )}
+
+        <Blaettern
+          kannZurueck={liste.kannZurueck}
+          kannVor={liste.kannVor}
+          aufZurueck={liste.zurueck}
+          aufVor={liste.vor}
+          aufSeiteEins={liste.aufSeiteEins}
+          standVon={liste.standVon}
+          laeuft={liste.laeuft}
+          aktualisierungAn={aktualisierungAn}
+          aufAktualisierung={setAktualisierungAn}
+          aufAktualisieren={liste.aktualisiere}
+        />
+      </div>
+
+      {gewaehlt === null ? null : (
+        <div className="min-w-0 xl:w-[26rem] xl:shrink-0 2xl:w-[30rem]">
+          <NachrichtDetail
+            // Ein Wechsel der Nachricht ist eine neue Ansicht und kein neuer
+            // Zustand derselben: Der Kopierknopf und der Eigenschaftenblock
+            // beginnen von vorn.
+            key={gewaehlt}
+            messageId={gewaehlt}
+            // Schließen entfernt **nur** diesen Parameter aus der URL — der
+            // übrige Filterzustand bleibt unberührt.
+            aufSchliessen={() => steuerung.setzeNachricht(null)}
+            schliessenText={texte.nachrichten.detail.schliessen}
           />
-          <UngeklaertFusszeile zeilen={zeigeSeite?.items ?? []} />
         </div>
       )}
-
-      <Blaettern
-        kannZurueck={liste.kannZurueck}
-        kannVor={liste.kannVor}
-        aufZurueck={liste.zurueck}
-        aufVor={liste.vor}
-        aufSeiteEins={liste.aufSeiteEins}
-        standVon={liste.standVon}
-        laeuft={liste.laeuft}
-        aktualisierungAn={aktualisierungAn}
-        aufAktualisierung={setAktualisierungAn}
-        aufAktualisieren={liste.aktualisiere}
-      />
     </div>
   );
 }

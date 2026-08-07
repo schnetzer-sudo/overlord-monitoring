@@ -120,10 +120,22 @@ export const de = {
     nichtZugeordnet: "nicht zugeordnet",
     ohneWert: "—",
     rohwert: "Statuswert des Altsystems",
-    // Der Schritt, auf dem eine offene Nachricht gerade steht. Er kommt aus
-    // SOSAction und ist Klartext (Messung M13) — die Sprache ist die des
-    // Quellsystems und wird nicht eingedeutscht.
-    aktuellerSchritt: "Aktueller Schritt",
+    // Der Schritt neben der Statusplakette. Er kommt aus SOSAction und ist
+    // Klartext (Messung M13) — die Sprache ist die des Quellsystems und wird
+    // nicht eingedeutscht.
+    //
+    // Zwei Beschriftungen statt einer, seit Schritt 5: Die Zelle sagte „aktueller
+    // Schritt", gemeint war bei wartenden Nachrichten „wartet davor". Messung
+    // M16 (3) hat für alle 538 SUSPENDED festgestellt, dass jede Aktion beendet
+    // ist — eine wartende Nachricht steht zwischen zwei Schritten, nicht auf
+    // einem laufenden. Für LAEUFT ist das nicht gemessen (RUNNING kommt in der
+    // Testkopie null Mal vor); dort bleibt die bisherige Lesart stehen, statt
+    // ungeprüft auf die andere umgestellt zu werden.
+    schrittWartetVor: "wartet vor: {schritt}",
+    schrittWartetVorHinweis: "Wartet vor diesem Schritt: {schritt}",
+    schrittLaeuftAuf: "läuft auf: {schritt}",
+    schrittLaeuftAufHinweis: "Läuft auf diesem Schritt: {schritt}",
+    zeileOeffnen: "Details dieser Nachricht anzeigen",
     bedeutungNichtVerifiziert: "Bedeutung nicht verifiziert",
     // Steht unter der Tabelle, sobald eine solche Zeile auf der Seite ist. Bis
     // zum 07.08.2026 stand der Hinweis nur im title-Attribut — auf einem
@@ -238,6 +250,95 @@ export const de = {
       status: "Der Statusfilter schränkt die Liste ein — leere ihn.",
       prozess: "Der Prozessfilter schränkt die Liste ein — leere ihn.",
       fensterErweitern: "Auf 30 Tage erweitern",
+    },
+
+    // Die Detailansicht (Schritt 5). Sie beantwortet in verständlicher Sprache,
+    // was mit einer Nachricht passiert ist.
+    detail: {
+      titel: "Nachricht",
+      schliessen: "Ansicht schließen",
+      zurueckZurListe: "Zurück zur Liste",
+      zeitpunkt: "Zuletzt geändert",
+      start: "Beginn",
+      projekt: "Projekt",
+      prozess: "Prozess",
+      // Die MessageID kehrt hier zurück, nachdem sie aus der Liste geflogen ist:
+      // Sie ist Beiwerk nach dem Leitsatz, aber sie ist das, was jemand in eine
+      // E-Mail an die EDI-Betreuung schreibt. Deshalb klein und mit Kopierknopf.
+      kennung: "Nachrichten-Kennung",
+      kennungKopieren: "Kennung kopieren",
+      kennungKopiert: "Kopiert",
+
+      ablaufTitel: "Was passiert ist",
+      // Ohne Prozessschritt, aber abgeschlossen: kein Fehler, nur nichts zu
+      // zeigen. Der Metadaten-Schritt zählt nicht als Prozessschritt.
+      keineSchritte: "Für diese Nachricht ist kein Prozessschritt aufgezeichnet.",
+      // OHNE_SCHRITT: offen und trotzdem ohne Schritt — eigener Text statt einer
+      // leeren Leiste.
+      ohneSchritt: "Die Nachricht ist offen, es ist aber noch kein Schritt ausgeführt worden.",
+      gewartet: "{dauer} gewartet",
+      ohneDauer: "keine Dauer aufgezeichnet",
+      laeuftGerade: "läuft gerade",
+      nochNichtBegonnen: "noch nicht begonnen",
+      // WARTET_VOR ohne nächsten Schritt: Das wird benannt und nicht
+      // weggelassen. Die Nachricht wartet, wir wissen nur nicht worauf.
+      wartetVorUnbekannt:
+        "Die Nachricht wartet — worauf, ist in der Ablaufdefinition nicht hinterlegt.",
+      // Der Fall der Testkopie: Der benannte nächste Schritt ist derselbe, der
+      // gerade gelaufen ist (der SUSPEND-Schritt selbst). Sein Name steht eine
+      // Zeile darüber; ihn zu wiederholen ergäbe „noch nicht begonnen" unter
+      // „2 min" — ein Widerspruch für jeden, der kein EDI-Spezialist ist.
+      wartetWeiterhin: "Die Nachricht wartet — von selbst geht es hier nicht weiter.",
+      verweistAuf: "Der Ablauf verweist auf: {schritt}",
+      baustein: "Baustein",
+      // Die Herkunft steht ausschließlich im Tooltip. Wer „Send File by FTP"
+      // liest, soll nicht mit der Frage belastet werden, wie wir darauf gekommen
+      // sind; wer nachsehen will, findet es.
+      herkunft: {
+        DIREKT: "Name aus der Ablaufdefinition",
+        HERGELEITET: "Name über den Baustein aus dem Ablauf hergeleitet",
+        ROHWERT: "Im Ablauf ist kein Name hinterlegt — angezeigt wird der Baustein",
+      },
+
+      // Die Beschriftung der kuratierten Felder ist eine Übersetzung und lebt
+      // deshalb hier. Der Schlüssel ist der Rohname aus MessagePropertyName.
+      // Ein kuratiertes Feld ohne Eintrag erscheint mit seinem Rohnamen,
+      // sichtbar unfertig — besser als lautlos zu fehlen.
+      kuratiert: {
+        "Message.SendingPartner": "Absender",
+        "Message.SplitCount": "Aufteilungszahl",
+      },
+
+      eigenschaften: {
+        titel: "Technische Eigenschaften ({anzahl})",
+        keine: "Keine technischen Eigenschaften",
+        aufklappen: "Technische Eigenschaften anzeigen",
+        zuklappen: "Technische Eigenschaften ausblenden",
+        name: "Name",
+        wert: "Wert",
+        // Ein stillschweigend abgeschnittener Wert ist schlimmer als ein
+        // sichtbar abgeschnittener: Sonst liest jemand eine halbe Belegnummer
+        // als ganze.
+        gekappt: "gekürzt",
+        gekapptHinweis: "Gekürzt — im Original {bytes} Bytes.",
+        leer: "Zu dieser Nachricht ist keine Eigenschaft hinterlegt.",
+      },
+
+      // Für eine unbekannte und für eine fremde Kennung derselbe Text. Das
+      // Backend macht „gibt es nicht" und „gehört einem anderen Mandanten"
+      // absichtlich ununterscheidbar; ein Wort über Berechtigungen gäbe genau
+      // das preis, was die 404-Regel schützt. Genannt wird stattdessen der
+      // Mandant in der Kopfzeile — für beide Fälle wahr.
+      nichtGefunden:
+        "Unter dem Mandanten in der Kopfzeile gibt es diese Nachricht nicht. Stammt der Link von jemand anderem, prüfe zuerst den Mandanten dort oben.",
+
+      dauer: {
+        unterSekunde: "< 1 s",
+        sekunden: "{wert} s",
+        minuten: "{wert} min",
+        stunden: "{wert} h",
+        tage: "{wert} d",
+      },
     },
   },
 
