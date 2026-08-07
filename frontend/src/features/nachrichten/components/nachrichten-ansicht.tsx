@@ -6,7 +6,14 @@ import { Fehler, Laden, Leer } from "@/components/zustand";
 import { Button } from "@/components/ui/button";
 import { useTexte } from "@/i18n/provider";
 
-import { sucheTraegt, suchfeldFehler, type Nachrichtenfilter } from "../filter";
+import {
+  feldFehler,
+  sucheTraegt,
+  suchfeldFehler,
+  zeitfensterFehler,
+  zeitfensterHalb,
+  type Nachrichtenfilter,
+} from "../filter";
 import { useNachrichtenSeite, useNachrichtenfilter } from "../hooks";
 import { Blaettern } from "./blaettern";
 import { Filterleiste } from "./filterleiste";
@@ -31,20 +38,31 @@ export function NachrichtenAnsicht() {
   const [aktualisierungAn, setAktualisierungAn] = useState(false);
   const liste = useNachrichtenSeite(filter, aktualisierungAn);
 
-  // Ein zu weiter, zu kurzer oder über die Fenstergrenze hinaus gestellter
-  // Suchbegriff ist kein Fehler der ganzen Ansicht, sondern eine Rückmeldung zu
-  // einer Eingabe — er gehört an das Feld, das ihn ausgelöst hat.
+  /*
+   * Eine Rückmeldung zu einer **Eingabe** ist kein Fehler der ganzen Ansicht.
+   * Sie gehört an das Feld, das sie ausgelöst hat — beim Suchbegriff ebenso wie
+   * beim freien Zeitfenster, wo zwischen „Von" und „Bis" zwangsläufig ein
+   * Moment liegt, in dem nur einer der beiden Zeitpunkte dasteht.
+   */
   const amSuchfeld = suchfeldFehler(liste.fehler);
-  const ansichtsfehler = amSuchfeld === undefined ? liste.fehler : undefined;
+  const amZeitfenster = zeitfensterFehler(liste.fehler);
+  const anEinemFeld = feldFehler(liste.fehler);
+  const ansichtsfehler = anEinemFeld === undefined ? liste.fehler : undefined;
 
   /*
-   * Bei einer Rückmeldung am Suchfeld bleibt die Liste stehen, so wie sie war.
+   * Bei einer Rückmeldung an einem Feld bleibt die Liste stehen, so wie sie war.
    * Sonst verschwände sie unter dem Nutzer, während er tippt: Die neue Abfrage
    * hat einen eigenen Schlüssel, für den nie Daten ankamen — und der Leerzustand
-   * behauptete dann, im Zeitfenster stünde nichts, obwohl gar nicht gesucht
-   * wurde.
+   * behauptete dann, im Zeitfenster stünde nichts, obwohl die Eingabe noch gar
+   * nicht fertig ist.
+   *
+   * Das halb ausgefüllte freie Fenster gehört **schon vor der Antwort** dazu.
+   * Sonst zeigte die Ansicht für die Dauer der Anfrage ein Ladeskelett, obwohl
+   * schon feststeht, dass die Antwort nur „es fehlt noch etwas" lauten kann —
+   * die Liste verschwände also genau für den Moment zwischen „Von" und „Bis".
    */
-  const zeigeSeite = liste.seite ?? (amSuchfeld === undefined ? undefined : liste.letzteSeite);
+  const ruhigeRueckmeldung = anEinemFeld !== undefined || zeitfensterHalb(filter);
+  const zeigeSeite = liste.seite ?? (ruhigeRueckmeldung ? liste.letzteSeite : undefined);
 
   return (
     <div className="flex flex-col gap-4">
@@ -54,12 +72,15 @@ export function NachrichtenAnsicht() {
         filter={filter}
         steuerung={steuerung}
         suchfehler={amSuchfeld}
+        zeitfensterfehler={amZeitfenster}
         aufLangeSuche={() => steuerung.setzeLangeSuche(true)}
       />
 
       {ansichtsfehler ? (
         <Fehler fehler={ansichtsfehler} aufWiederholen={liste.aktualisiere} />
-      ) : liste.laedt ? (
+      ) : /* Das Skelett nur, wenn es wirklich nichts zu zeigen gibt. Liegt eine
+             vorige Seite vor, bleibt sie stehen — siehe `ruhigeRueckmeldung`. */
+      liste.laedt && zeigeSeite === undefined ? (
         <Laden zeilen={8} />
       ) : (zeigeSeite?.items.length ?? 0) === 0 ? (
         <LeerMitUrsache filter={filter} auf30Tage={() => steuerung.setzeZeitraum("30d")} />

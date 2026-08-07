@@ -138,6 +138,23 @@ export type Nachrichtenfilter = Zeitfensterzustand & {
   sortierung: Sortierung | null;
 };
 
+/**
+ * Ein freies Zeitfenster, bei dem genau **einer** der beiden Zeitpunkte steht.
+ *
+ * Der Zwischenzustand jeder Eingabe eines freien Fensters: Zwischen „Von" und
+ * „Bis" gibt es keinen Weg, der ihn überspringt. Er ist **kein Filterzustand,
+ * sondern ein Moment beim Ausfüllen** — die Ansicht lässt ihre Liste deshalb
+ * stehen, statt sie durch ein Ladeskelett zu ersetzen, dessen Antwort ohnehin
+ * nur „es fehlt noch etwas" lauten kann.
+ *
+ * **Keine zweite Prüfung.** Die Anfrage geht trotzdem hinaus und das Backend
+ * entscheidet (`lib/filter.ts`); hier wird nur entschieden, was der Nutzer in
+ * der Zwischenzeit sieht.
+ */
+export function zeitfensterHalb(filter: Nachrichtenfilter): boolean {
+  return (filter.von === null) !== (filter.bis === null);
+}
+
 /** Ist der Suchbegriff lang genug, um ihn überhaupt zu schicken? */
 export function sucheTraegt(suche: string | null): suche is string {
   return suche !== null && suche.trim().length >= SUCHE_MINDESTLAENGE;
@@ -165,15 +182,60 @@ export const AM_SUCHFELD = [
 ] as const;
 
 /**
+ * Die Problemtypen, die den **Zeitfensterfeldern** gelten und nicht der Ansicht.
+ *
+ * Derselbe Gedanke wie bei {@link AM_SUCHFELD}, nur an zwei anderen Feldern —
+ * und aus demselben Anlass: **Wer ein freies Fenster ausfüllt, ist mitten in
+ * einer Eingabe.** Zwischen „Von" und „Bis" liegt zwangsläufig ein Moment, in
+ * dem nur einer der beiden Zeitpunkte dasteht. Diesen Moment mit einer roten
+ * Meldung über der ganzen Ansicht zu beantworten, hieße dem Nutzer die Liste
+ * wegzunehmen, weil er noch nicht fertig getippt hat — genau die Belehrung, die
+ * §8.2 für den zu kurzen Suchbegriff bereits ausschließt.
+ *
+ * **Die Prüfung bleibt im Backend.** Das Frontend hält die Anfrage nicht zurück
+ * und rechnet nichts nach; es entscheidet nur, **wo** die Antwort erscheint. Der
+ * Unterschied ist wichtig: Eine zweite Prüfung im Browser liefe der ersten
+ * irgendwann hinterher (`lib/filter.ts`), eine zweite *Darstellung* kann das
+ * nicht.
+ *
+ * `zeitfenster-mehrdeutig` gehört nicht dazu: Diesen Zustand lässt die
+ * Oberfläche gar nicht erst entstehen (§8.2). Käme er trotzdem, ist er ein
+ * Befund und gehört sichtbar über die Ansicht.
+ */
+export const AM_ZEITFENSTER = [
+  "zeitfenster-unvollstaendig",
+  "zeitfenster-ungueltig",
+  "zeitpunkt-ungueltig",
+] as const;
+
+function ausKatalog(katalog: readonly string[], fehler: unknown): ProblemFehler | undefined {
+  return fehler instanceof ProblemFehler && katalog.includes(fehler.typ) ? fehler : undefined;
+}
+
+/**
  * Gehört diese Fehlerantwort an das Suchfeld?
  *
  * Bewusst als reine Funktion und nicht als Bedingung in der Komponente: Es ist
  * eine **Entscheidung**, und Entscheidungen werden hier geprüft, Markup nicht.
  */
 export function suchfeldFehler(fehler: unknown): ProblemFehler | undefined {
-  return fehler instanceof ProblemFehler && (AM_SUCHFELD as readonly string[]).includes(fehler.typ)
-    ? fehler
-    : undefined;
+  return ausKatalog(AM_SUCHFELD, fehler);
+}
+
+/** Gehört diese Fehlerantwort an die Zeitfensterfelder? */
+export function zeitfensterFehler(fehler: unknown): ProblemFehler | undefined {
+  return ausKatalog(AM_ZEITFENSTER, fehler);
+}
+
+/**
+ * Gehört die Antwort an **irgendein** Feld — und damit nicht über die Ansicht?
+ *
+ * Die eine Stelle, an der die Ansicht entscheidet, ob sie ihre Liste stehen
+ * lässt. Kommt ein weiteres Feld dazu (Schritt 7 bringt die BAM-Suche), wächst
+ * hier ein Katalog und nicht eine Bedingung in einer Komponente.
+ */
+export function feldFehler(fehler: unknown): ProblemFehler | undefined {
+  return suchfeldFehler(fehler) ?? zeitfensterFehler(fehler);
 }
 
 /**

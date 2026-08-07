@@ -145,6 +145,13 @@ export const de = {
       // zweiter Wert hier liefe dem ersten irgendwann hinterher.
       standardHinweis: "Ohne Auswahl gilt das Standardfenster des Servers.",
       zuruecksetzen: "Zeitfenster zurücksetzen",
+      // Ein datetime-local liefert erst dann einen Wert, wenn Datum UND Uhrzeit
+      // vollstaendig sind. Wer nur das Datum eintippt, sieht es im Feld stehen —
+      // und die Anwendung tut nichts und sagt nichts. Genau das war der Befund
+      // vom 07.08.2026; erkannt wird der Zustand an validity.badInput.
+      unvollstaendig: "Bitte Datum und Uhrzeit vollständig eintragen.",
+      // Beide Zeitpunkte fehlen noch: kein Fehler, sondern ein Zwischenzustand.
+      beideNoetig: "Für ein freies Zeitfenster fehlt noch der zweite Zeitpunkt.",
     },
 
     statusfilter: {

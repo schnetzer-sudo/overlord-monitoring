@@ -613,6 +613,38 @@ nicht in der Zone des Servers sitzt — derselbe Fehler wie in Aufgabe 11, nur a
 der Anzeige. Umgerechnet wird in `lib/format.ts`, mit zwei Durchgängen, damit auch die beiden
 Umstellungstage im Jahr treffen.
 
+> **Ein halb getipptes `datetime-local` meldet sich nicht von selbst** (ergänzt 07.08.2026). Der
+> Auftraggeber berichtete, „Frei" öffne die Datumsauswahl, aber nach der Eingabe passiere nichts.
+> Nachgestellt im Browser — geklickt und getippt, nicht zugewiesen —: Wer nur das **Datum** einträgt
+> und die Uhrzeit auslässt, sieht `01.12.2025` im Feld stehen und bekommt trotzdem `value === ""`.
+> Ein `datetime-local` liefert seinen Wert erst, wenn **alle** Segmente stehen.
+>
+> **Der Kern ist nicht der leere Wert, sondern das ausbleibende Ereignis.** Solange die Segmente
+> unvollständig sind, feuert Chrome überhaupt kein `input` — React sieht also kein `onChange`, und
+> die Oberfläche konnte diesen Zustand deshalb gar nicht bemerken. Sie tat nichts und sagte nichts.
+>
+> Herausgegeben wird er allein über `validity.badInput`. Gelesen wird der an `keyup` und `blur`
+> (`keyup` fängt jeden Tastendruck, `blur` den Weg über Maus und Kalenderfeld) und im
+> **Komponentenzustand** gehalten, nicht in der URL: Eine halbe Eingabe ist keine Auswahl, und was
+> die URL nicht ausdrücken kann, gehört nicht hinein
+> ([`frontend-grundlagen.md`](frontend-grundlagen.md) §8).
+>
+> **Was der Nutzer sieht, in dieser Reihenfolge:** „Bitte Datum und Uhrzeit vollständig eintragen"
+> schlägt alles andere — es ist der einzige Zustand, in dem sonst gar nichts geschähe. Dann die
+> Antwort des Servers, falls eine da ist. Dann „Für ein freies Zeitfenster fehlt noch der zweite
+> Zeitpunkt", solange erst einer der beiden steht.
+>
+> **`zeitfenster-unvollstaendig`, `zeitfenster-ungueltig` und `zeitpunkt-ungueltig` stehen ab jetzt
+> an den Datumsfeldern**, nicht über der Ansicht (`AM_ZEITFENSTER` in `filter.ts`, dieselbe Bauform
+> wie `AM_SUCHFELD`). Wer ein freies Fenster ausfüllt, ist mitten in einer Eingabe; zwischen „Von"
+> und „Bis" liegt zwangsläufig ein Moment mit nur einem Zeitpunkt. Diesen Moment mit einer roten
+> Meldung über der ganzen Ansicht zu beantworten, hieße dem Nutzer die Liste wegzunehmen, weil er
+> noch nicht fertig getippt hat — genau die Belehrung, die §8.2 für den zu kurzen Suchbegriff
+> bereits ausschließt. **Die Prüfung bleibt im Backend**; das Frontend hält keine Anfrage zurück und
+> rechnet nichts nach, es entscheidet nur, **wo** die Antwort erscheint. `zeitfenster-mehrdeutig`
+> gehört ausdrücklich **nicht** dazu: Diesen Zustand lässt die Oberfläche gar nicht erst entstehen —
+> käme er doch, ist er ein Befund und gehört sichtbar.
+
 **Statusfilter über die Einordnungen** aus `MessageStatusKind`, nicht über Rohwerte; die
 Beschriftungen kommen aus den Sprachdateien. **Prozessfilter** als Mehrfachauswahl aus
 `/api/prozesse` ([`prozessauswahl.md`](prozessauswahl.md)); eingegrenzt wird örtlich über die
@@ -722,7 +754,7 @@ als eigener, entfernbarer Eintrag in der Auswahl.
 
 | Datei | Was |
 |---|---|
-| `tests/nachrichtenfilter.test.ts` | URL → Zustand → URL; unbekannte Werte werden übergangen; **der Cursor taucht in keiner erzeugten URL auf**; die beiden Zeitfenstermodi schließen einander aus; `langeSuche` steht in der URL und wird nur zusammen mit dem Suchbegriff geschickt; **welche Problemtypen an das Suchfeld gehören und welche über die Ansicht**, samt der beiden Zahlen aus der Antwort |
+| `tests/nachrichtenfilter.test.ts` | URL → Zustand → URL; unbekannte Werte werden übergangen; **der Cursor taucht in keiner erzeugten URL auf**; die beiden Zeitfenstermodi schließen einander aus; `langeSuche` steht in der URL und wird nur zusammen mit dem Suchbegriff geschickt; **welche Problemtypen an das Suchfeld gehören, welche an die Zeitfensterfelder und welche über die Ansicht**, samt der beiden Zahlen aus der Antwort; **das halb ausgefüllte freie Fenster** wird erkannt und lässt die Liste stehen |
 | `tests/format.test.ts` | UTC → Anzeige in der gelieferten Zone; Wanduhrzeit der Eingabefelder, auch am Umstellungstag |
 | `tests/zwischenspeicher.test.ts` | das Ziel nach dem Mandantenwechsel trägt keine Filter — auch kein `langeSuche` |
 

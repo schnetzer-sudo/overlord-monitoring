@@ -55,19 +55,22 @@ export function Filterleiste({
   filter,
   steuerung,
   suchfehler,
+  zeitfensterfehler,
   aufLangeSuche,
 }: {
   filter: Nachrichtenfilter;
   steuerung: Steuerung;
   /** Ein `suchbegriff-zu-unscharf` gehört an das Suchfeld, nicht über die Ansicht. */
   suchfehler?: ProblemFehler;
+  /** Ein halb ausgefülltes freies Fenster gehört an die beiden Datumsfelder. */
+  zeitfensterfehler?: ProblemFehler;
   /** Hebt die Fenstergrenze der Suche auf — „Trotzdem suchen". */
   aufLangeSuche: () => void;
 }) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-start gap-2">
-        <Zeitfensterwahl filter={filter} steuerung={steuerung} />
+        <Zeitfensterwahl filter={filter} steuerung={steuerung} fehler={zeitfensterfehler} />
         <StatusFilter gewaehlt={filter.status ?? []} aufAuswahl={steuerung.setzeStatus} />
         <ProzessFilter gewaehlt={filter.prozess ?? []} aufAuswahl={steuerung.setzeProzesse} />
         <Suchfeld
@@ -103,12 +106,45 @@ export function Filterleiste({
 function Zeitfensterwahl({
   filter,
   steuerung,
+  fehler,
 }: {
   filter: Nachrichtenfilter;
   steuerung: Steuerung;
+  fehler?: ProblemFehler;
 }) {
   const texte = useTexte();
   const zone = useAnzeigezone();
+  const hinweisId = useId();
+  /*
+   * „Angefangen, aber nicht fertig" — der Zustand, den ein `datetime-local`
+   * nicht über seinen Wert mitteilt.
+   *
+   * Das Feld liefert erst dann einen Wert, wenn **alle** Segmente stehen; wer
+   * nur das Datum eintippt, sieht es im Feld und bekommt trotzdem `value === ""`.
+   * Der `onChange` läuft, das Ergebnis ist `null`, der Filter ändert sich nicht —
+   * und die Anwendung tut nichts und sagt nichts. Genau das war der Befund vom
+   * 07.08.2026: `Bis` zeigte `30.12.2025`, `value` war leer, `badInput` war
+   * `true`, und in der URL stand kein `bis`.
+   *
+   * `validity.badInput` ist die einzige Stelle, an der der Browser diesen
+   * Zustand überhaupt herausgibt. Er wird im Komponentenzustand gehalten und
+   * nicht in der URL: Er beschreibt keine Auswahl, sondern eine halbe Eingabe —
+   * und was die URL nicht ausdrücken kann, gehört nicht hinein
+   * (`frontend-grundlagen.md` §8).
+   *
+   * **Gelesen wird an `keyup` und `blur`, nicht an `change`** — und das ist der
+   * Kern der Sache: Solange die Segmente unvollständig sind, bleibt `value` leer,
+   * und Chrome feuert deshalb **überhaupt kein `input`-Ereignis**. React sieht
+   * also kein `onChange`, und genau darum konnte die Oberfläche diesen Zustand
+   * bisher nicht bemerken. `keyup` feuert bei jedem Tastendruck, `blur` fängt den
+   * Weg über Maus und Kalenderfeld ab.
+   */
+  const [angefangen, setAngefangen] = useState({ von: false, bis: false });
+
+  function merkeEingabestand(feld: "von" | "bis", ziel: HTMLInputElement) {
+    const halb = ziel.validity.badInput;
+    setAngefangen((bisher) => (bisher[feld] === halb ? bisher : { ...bisher, [feld]: halb }));
+  }
   /*
    * „Frei gedrückt, aber noch nichts eingetragen" steht bewusst nicht in der URL
    * — es ist derselbe Ausschnitt wie gar keine Auswahl. Ohne diesen
@@ -127,6 +163,34 @@ function Zeitfensterwahl({
     "7d": texte.nachrichten.zeitfenster.d7,
     "30d": texte.nachrichten.zeitfenster.d30,
   };
+
+  /*
+   * Was der Nutzer im freien Modus zu lesen bekommt, in dieser Reihenfolge:
+   *
+   * 1. **Halb getippt** schlägt alles andere. Es ist der einzige Zustand, in dem
+   *    die Anwendung sonst gar nichts täte — kein Wert, keine Anfrage, keine
+   *    Antwort. Er geht der Serverantwort auch zeitlich voraus: Solange das Feld
+   *    keinen Wert hat, wird nichts geschickt.
+   * 2. **Die Antwort des Servers**, falls eine da ist. Übersetzt wird über den
+   *    `type`, nicht über `detail`.
+   * 3. **Nur einer der beiden Zeitpunkte steht.** Dann ist zwar eine Anfrage
+   *    unterwegs, aber ihre Antwort ist noch nicht da — und bis dahin soll nicht
+   *    stillschweigend nichts passieren.
+   */
+  function zeitfensterHinweisText(): string | undefined {
+    if (angefangen.von || angefangen.bis) {
+      return texte.nachrichten.zeitfenster.unvollstaendig;
+    }
+    if (fehler !== undefined) {
+      return fehleranzeige(fehler, texte).text;
+    }
+    if ((filter.von === null) !== (filter.bis === null)) {
+      return texte.nachrichten.zeitfenster.beideNoetig;
+    }
+    return undefined;
+  }
+
+  const zeitfensterHinweis = modus === "frei" ? zeitfensterHinweisText() : undefined;
 
   return (
     <div className="flex flex-col gap-1">
@@ -166,44 +230,62 @@ function Zeitfensterwahl({
       ) : null}
 
       {modus === "frei" ? (
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="flex flex-col gap-0.5">
-            <Label htmlFor={vonId} className="text-beiwerk">
-              {texte.nachrichten.zeitfenster.von}
-            </Label>
-            {/* Die Eingabe ist Wanduhrzeit ohne Zone. Umgerechnet wird in der
-                Anzeigezone — sonst wäre das freie Fenster gegen die Daten
-                verschoben, sobald jemand nicht in der Zone des Servers sitzt. */}
-            <Input
-              id={vonId}
-              type="datetime-local"
-              className="h-bedienelement w-auto"
-              value={wanduhrzeitFuerEingabe(filter.von, zone)}
-              onChange={(ereignis) =>
-                steuerung.setzeFreiesFenster(
-                  zeitpunktAusWanduhrzeit(ereignis.target.value, zone),
-                  filter.bis,
-                )
-              }
-            />
+        <div className="flex flex-col gap-0.5">
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="flex flex-col gap-0.5">
+              <Label htmlFor={vonId} className="text-beiwerk">
+                {texte.nachrichten.zeitfenster.von}
+              </Label>
+              {/* Die Eingabe ist Wanduhrzeit ohne Zone. Umgerechnet wird in der
+                  Anzeigezone — sonst wäre das freie Fenster gegen die Daten
+                  verschoben, sobald jemand nicht in der Zone des Servers sitzt. */}
+              <Input
+                id={vonId}
+                type="datetime-local"
+                className="h-bedienelement w-auto"
+                aria-describedby={zeitfensterHinweis === undefined ? undefined : hinweisId}
+                value={wanduhrzeitFuerEingabe(filter.von, zone)}
+                onKeyUp={(ereignis) => merkeEingabestand("von", ereignis.currentTarget)}
+                onBlur={(ereignis) => merkeEingabestand("von", ereignis.currentTarget)}
+                onChange={(ereignis) => {
+                  merkeEingabestand("von", ereignis.currentTarget);
+                  steuerung.setzeFreiesFenster(
+                    zeitpunktAusWanduhrzeit(ereignis.target.value, zone),
+                    filter.bis,
+                  );
+                }}
+              />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <Label htmlFor={bisId} className="text-beiwerk">
+                {texte.nachrichten.zeitfenster.bis}
+              </Label>
+              <Input
+                id={bisId}
+                type="datetime-local"
+                className="h-bedienelement w-auto"
+                aria-describedby={zeitfensterHinweis === undefined ? undefined : hinweisId}
+                value={wanduhrzeitFuerEingabe(filter.bis, zone)}
+                onKeyUp={(ereignis) => merkeEingabestand("bis", ereignis.currentTarget)}
+                onBlur={(ereignis) => merkeEingabestand("bis", ereignis.currentTarget)}
+                onChange={(ereignis) => {
+                  merkeEingabestand("bis", ereignis.currentTarget);
+                  steuerung.setzeFreiesFenster(
+                    filter.von,
+                    zeitpunktAusWanduhrzeit(ereignis.target.value, zone),
+                  );
+                }}
+              />
+            </div>
           </div>
-          <div className="flex flex-col gap-0.5">
-            <Label htmlFor={bisId} className="text-beiwerk">
-              {texte.nachrichten.zeitfenster.bis}
-            </Label>
-            <Input
-              id={bisId}
-              type="datetime-local"
-              className="h-bedienelement w-auto"
-              value={wanduhrzeitFuerEingabe(filter.bis, zone)}
-              onChange={(ereignis) =>
-                steuerung.setzeFreiesFenster(
-                  filter.von,
-                  zeitpunktAusWanduhrzeit(ereignis.target.value, zone),
-                )
-              }
-            />
-          </div>
+
+          {/* Dieselbe ruhige Farbrolle wie „noch zwei Zeichen" am Suchfeld: Der
+              Nutzer hat nichts falsch gemacht, er ist nur noch nicht fertig. */}
+          {zeitfensterHinweis === undefined ? null : (
+            <p id={hinweisId} className="text-muted-foreground text-beiwerk max-w-prose">
+              {zeitfensterHinweis}
+            </p>
+          )}
         </div>
       ) : null}
     </div>

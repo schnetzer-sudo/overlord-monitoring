@@ -4,8 +4,11 @@ import {
   alsAbfrage,
   alsSuchparameter,
   ausSuchparametern,
+  feldFehler,
   sucheTraegt,
   suchfeldFehler,
+  zeitfensterFehler,
+  zeitfensterHalb,
   type Nachrichtenfilter,
 } from "@/features/nachrichten/filter";
 import {
@@ -348,5 +351,56 @@ describe("Die beiden Zeitfenstermodi schließen einander aus", () => {
 
     expect(abfrage).toContain("von=2025-12-29T00%3A00%3A00.000Z");
     expect(abfrage).not.toContain("bis=");
+  });
+});
+
+/**
+ * Das freie Zeitfenster ist eine **Eingabe**, kein Schalter — und zwischen „Von"
+ * und „Bis" liegt zwangsläufig ein Moment, in dem erst einer der beiden
+ * Zeitpunkte dasteht. Was die Oberfläche in diesem Moment tut, ist hier
+ * festgehalten: Sie sagt, was noch fehlt, und nimmt dem Nutzer nicht die Liste
+ * weg (Nachbesserung zu Schritt 4, 07.08.2026).
+ */
+describe("Das halb ausgefüllte freie Zeitfenster", () => {
+  const zeitpunkt = new Date("2025-12-29T00:00:00Z");
+
+  it("erkennt genau den Zustand, in dem ein Zeitpunkt fehlt", () => {
+    expect(zeitfensterHalb({ ...LEER, ...mitFreiemFenster(zeitpunkt, null) })).toBe(true);
+    expect(zeitfensterHalb({ ...LEER, ...mitFreiemFenster(null, zeitpunkt) })).toBe(true);
+    // Beide gesetzt ist ein vollständiges Fenster, keiner gesetzt ist „keine
+    // Auswahl" — in beiden Fällen wartet die Ansicht auf nichts.
+    expect(zeitfensterHalb({ ...LEER, ...mitFreiemFenster(zeitpunkt, zeitpunkt) })).toBe(false);
+    expect(zeitfensterHalb(LEER)).toBe(false);
+    expect(zeitfensterHalb({ ...LEER, ...mitVorwahl("7d") })).toBe(false);
+  });
+
+  /**
+   * Bis zum 07.08.2026 ersetzte `zeitfenster-unvollstaendig` die ganze Liste
+   * durch eine rote Meldung — für eine Eingabe, die der Nutzer gerade erst zur
+   * Hälfte gemacht hatte. Dieselbe Belehrung, die §8.2 für den zu kurzen
+   * Suchbegriff längst ausschließt.
+   */
+  it("gehört an die Datumsfelder und nicht über die Ansicht", () => {
+    const unvollstaendig = new ProblemFehler({ status: 400, typ: "zeitfenster-unvollstaendig" });
+    const ungueltig = new ProblemFehler({ status: 400, typ: "zeitfenster-ungueltig" });
+
+    expect(zeitfensterFehler(unvollstaendig)).toBe(unvollstaendig);
+    expect(zeitfensterFehler(ungueltig)).toBe(ungueltig);
+    expect(feldFehler(unvollstaendig)).toBe(unvollstaendig);
+
+    // Der Suchfeld-Katalog bleibt davon unberührt — zwei Felder, zwei Kataloge.
+    expect(suchfeldFehler(unvollstaendig)).toBeUndefined();
+  });
+
+  /**
+   * `zeitfenster-mehrdeutig` lässt die Oberfläche gar nicht erst entstehen: Eine
+   * Vorwahl löscht `von`/`bis`, ein freies Fenster löscht `zeitraum`. Käme der
+   * Typ trotzdem, ist er ein Befund und gehört sichtbar über die Ansicht.
+   */
+  it("lässt einen echten Befund über der Ansicht stehen", () => {
+    const mehrdeutig = new ProblemFehler({ status: 400, typ: "zeitfenster-mehrdeutig" });
+
+    expect(zeitfensterFehler(mehrdeutig)).toBeUndefined();
+    expect(feldFehler(mehrdeutig)).toBeUndefined();
   });
 });

@@ -133,6 +133,8 @@ export const en: Texte = {
       bis: "To",
       standardHinweis: "Without a choice the server's default window applies.",
       zuruecksetzen: "Reset time window",
+      unvollstaendig: "Please enter both date and time.",
+      beideNoetig: "A custom time window still needs its second point in time.",
     },
 
     statusfilter: {

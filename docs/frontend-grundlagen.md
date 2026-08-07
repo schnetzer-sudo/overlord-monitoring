@@ -578,7 +578,7 @@ Funktionen, und ein gerenderter Baum brächte hier nichts außer Laufzeit und Ab
 | `zwischenspeicher.test.ts` | geleert **vor** dem Weitergehen, bei Wechsel und Abmeldung; das Ziel nach dem Mandantenwechsel trägt keine Filter |
 | `format.test.ts` | UTC → Anzeige in der gelieferten Zone; Rückfall auf UTC statt auf den Browser; relative Zeit; Wanduhrzeit der Eingabefelder, auch am Umstellungstag |
 | `routen.test.ts` | `weiter` als offene Weiterleitung ausgeschlossen |
-| `nachrichtenfilter.test.ts` | URL → Zustand → URL; unbekannte Werte werden übergangen; **der Cursor taucht in keiner erzeugten URL auf**; die beiden Zeitfenstermodi schließen einander aus; `langeSuche` steht in der URL und wird nur mit dem Suchbegriff geschickt; welche Problemtypen an das Suchfeld gehören und welche über die Ansicht |
+| `nachrichtenfilter.test.ts` | URL → Zustand → URL; unbekannte Werte werden übergangen; **der Cursor taucht in keiner erzeugten URL auf**; die beiden Zeitfenstermodi schließen einander aus; `langeSuche` steht in der URL und wird nur mit dem Suchbegriff geschickt; welche Problemtypen an das Suchfeld gehören, welche an die Zeitfensterfelder und welche über die Ansicht; das halb ausgefüllte freie Fenster |
 
 ---
 
