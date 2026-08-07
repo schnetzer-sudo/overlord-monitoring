@@ -125,6 +125,13 @@ export const de = {
     // Quellsystems und wird nicht eingedeutscht.
     aktuellerSchritt: "Aktueller Schritt",
     bedeutungNichtVerifiziert: "Bedeutung nicht verifiziert",
+    // Steht unter der Tabelle, sobald eine solche Zeile auf der Seite ist. Bis
+    // zum 07.08.2026 stand der Hinweis nur im title-Attribut — auf einem
+    // Touchgerät gibt es keinen Hover, und dort erfuhr der Nutzer nie, was das
+    // Fragezeichen bedeutet.
+    ungeklaertFusszeile:
+      "Eine Plakette mit Fragezeichen zeigt den Statuswert des Altsystems unverändert: Seine " +
+      "fachliche Bedeutung ist nicht belegt, und es wird nichts geraten.",
     zeitRelativ: "Abstand zu jetzt",
     sortierungUmschalten: "Nach Zeitpunkt sortieren",
     sortierungNeueste: "Neueste zuerst",

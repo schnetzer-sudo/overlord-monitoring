@@ -91,6 +91,7 @@ export function NachrichtenAnsicht() {
             sortierung={filter.sortierung ?? "neueste"}
             aufSortierung={steuerung.setzeSortierung}
           />
+          <UngeklaertFusszeile zeilen={zeigeSeite?.items ?? []} />
         </div>
       )}
 
@@ -107,6 +108,38 @@ export function NachrichtenAnsicht() {
         aufAktualisieren={liste.aktualisiere}
       />
     </div>
+  );
+}
+
+/**
+ * Was „Bedeutung nicht verifiziert" heißt — **einmal unter der Tabelle statt nur
+ * im Tooltip.**
+ *
+ * Der Hinweis stand bisher ausschließlich im `title`-Attribut der Plakette. **Auf
+ * einem Touchgerät gibt es keinen Hover**: Dort sieht der Nutzer eine Plakette mit
+ * einem Rohwert und einem Fragezeichen und erfährt nie, was das bedeutet — er
+ * müsste annehmen, die Anwendung sei kaputt.
+ *
+ * **Nur, wenn eine solche Zeile auf der Seite steht.** Der Fall ist selten:
+ * `CHECKED`, `CKECKED` und `COMMIT_SENT` sind zusammen 0,04 Prozent aller Zeilen.
+ * Eine dauerhaft stehende Fußzeile für 0,04 Prozent wäre Rauschen — und Rauschen
+ * unter einer Tabelle liest irgendwann niemand mehr, auch nicht, wenn es einmal
+ * zählt.
+ *
+ * **Eine Zeile, nicht eine je Vorkommen.** Sie erklärt eine Kennzeichnung, nicht
+ * eine Zeile.
+ */
+function UngeklaertFusszeile({ zeilen }: { zeilen: { bedeutungNichtVerifiziert: boolean }[] }) {
+  const texte = useTexte();
+
+  if (!zeilen.some((zeile) => zeile.bedeutungNichtVerifiziert)) {
+    return null;
+  }
+
+  return (
+    <p className="border-border text-muted-foreground text-beiwerk border-t px-2 py-1.5">
+      {texte.nachrichten.ungeklaertFusszeile}
+    </p>
   );
 }
 

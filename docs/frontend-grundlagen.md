@@ -562,6 +562,42 @@ Bewusst **ohne** Standardwert: Fehlt das Zeitfenster, setzt das Backend den Stan
 > muss man teilen können; ohne den Parameter sähe der Empfänger eines Links dieselbe Ansicht mit
 > anderen Zeilen.
 
+#### Die zweite Regel: was die URL nicht ausdrücken kann, ist kein Filterzustand
+
+Nachgetragen am **07.08.2026**, neben der Entscheidung gegen einen zweiten Standardwert und aus
+demselben Anlass — einem Zustand, den es gab, aber nicht geben konnte.
+
+> **Ist die URL die alleinige Quelle des Filterzustands, kann kein Zustand existieren, den die URL
+> nicht ausdrücken kann.**
+
+**Der Anlass.** „Freies Zeitfenster, noch ohne Zeitpunkte" war von „keine Auswahl" nicht zu
+unterscheiden: Beides ist `zeitraum=null, von=null, bis=null`, derselbe Nullzustand. Der Klick auf
+„Frei" schrieb also einen Zustand, der sich vom vorherigen nicht unterschied — die Eingabefelder
+erschienen nie, und **der Modus war über die Oberfläche gar nicht erreichbar**. Hinein kam nur, wer
+sich eine URL von Hand baute. Gefunden in der Sichtprüfung am 06.08.2026.
+
+**Was daraus folgt, ist nicht „mehr in die URL".** Die Auflösung war die umgekehrte: Der
+Zwischenzustand ist *kein Filterzustand* — er beschreibt keinen Ausschnitt, sondern eine begonnene
+Eingabe, und beide Ausschnitte sind identisch. Er gehört deshalb in den Komponentenzustand, und die
+Regel, die ihn ableitet, in eine prüfbare reine Funktion (`lib/filter.ts` `angezeigterModus`).
+Dasselbe gilt für „halb getipptes `datetime-local`" (07.08.2026,
+[`nachrichtenliste.md`](nachrichtenliste.md) §8.2): auch das eine halbe Eingabe und keine Auswahl.
+
+**Die Prüfung, die vor dem Bau steht**, ist deshalb ein Zweischritt:
+
+1. **Drückt die URL diesen Zustand aus?** Wenn ja: hinein damit, fertig.
+2. **Wenn nein — ist er wirklich ein Filterzustand?**
+   - *Nein* (er beschreibt eine Eingabe, keinen Ausschnitt): Komponentenzustand, und die Ableitung
+     kommt als reine Funktion neben den Filter, nicht als Bedingung in eine Komponente.
+   - *Ja* (er zeigt einen anderen Ausschnitt): Dann fehlt der URL ein Parameter — und das ist ein
+     Befund, keine Geschmacksfrage.
+
+**Wer das übergeht, merkt es nicht am Code, sondern erst beim Durchklicken** — und auch dann nur,
+wenn niemand die URL von Hand baut. Genau das ist zweimal passiert.
+
+**Schritt 7 und Schritt 9 bekommen dieselbe Bauform.** Die BAM-Suche und der Katalog haben beide
+einen Modus, der leer beginnt; die Frage stellt sich dort unverändert.
+
 ---
 
 ## 9. Tests

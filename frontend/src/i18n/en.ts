@@ -108,6 +108,9 @@ export const en: Texte = {
     rohwert: "Status value of the legacy system",
     aktuellerSchritt: "Current step",
     bedeutungNichtVerifiziert: "Meaning not verified",
+    ungeklaertFusszeile:
+      "A badge with a question mark shows the legacy system's status value unchanged: its " +
+      "business meaning is not documented, and nothing is guessed.",
     zeitRelativ: "Time from now",
     sortierungUmschalten: "Sort by time",
     sortierungNeueste: "Newest first",

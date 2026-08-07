@@ -670,6 +670,18 @@ Einordnung steht der Rohwert im Tooltip, damit ein Anwender ihn gegen die alte O
 kann. Die Zuordnung Status → Farbe steht weiterhin an genau einer Stelle (`lib/status-farbe.ts`);
 die Komponente kennt keine Farbe.
 
+> **„Bedeutung nicht verifiziert" steht seit dem 07.08.2026 auch unter der Tabelle**, nicht nur im
+> Tooltip. Der Grund ist der Touchscreen: **Dort gibt es keinen Hover.** Ein Nutzer sah eine
+> Plakette mit einem Rohwert und einem Fragezeichen und erfuhr nie, was das heißt — er musste
+> annehmen, die Anwendung sei kaputt.
+>
+> Es ist **eine** Fußzeile, nicht eine je Zeile: Sie erklärt eine Kennzeichnung, nicht ein
+> Vorkommen. Und sie erscheint **nur, wenn eine solche Zeile auf der Seite steht.** Der Fall ist
+> selten — `CHECKED`, `CKECKED` und `COMMIT_SENT` sind zusammen **0,04 Prozent** aller Zeilen
+> ([`message-status.md`](message-status.md)). Eine dauerhaft stehende Fußzeile für 0,04 Prozent wäre
+> Rauschen, und Rauschen unter einer Tabelle liest irgendwann niemand mehr — auch dann nicht, wenn
+> es einmal zählt.
+
 **Der Zeilenklick hat keine Funktion.** Kein Panel, kein Kopieren, kein Hover-Zustand — die
 Hover-Färbung, die `components/ui/table` mitbringt, ist ausdrücklich abgeschaltet. Schritt 5 belegt
 den Klick; bis dahin wäre ein Anfassgefühl ohne Wirkung schlimmer als gar keins.
