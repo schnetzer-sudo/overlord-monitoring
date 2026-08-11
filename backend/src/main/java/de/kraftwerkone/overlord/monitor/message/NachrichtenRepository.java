@@ -8,7 +8,6 @@ import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.SOS;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.SOSACTION;
 
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
-import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
 import de.kraftwerkone.overlord.monitor.common.Seitenposition;
 import de.kraftwerkone.overlord.monitor.common.error.FachlicheAusnahme;
 import de.kraftwerkone.overlord.monitor.jooq.glassfish.tables.Process;
@@ -173,15 +172,11 @@ public class NachrichtenRepository {
     bedingungen.add(MESSAGE.MESSAGELASTUPDATE.le(abfrage.fenster().bis()));
     bedingungen.add(mandantenkette(mandant));
 
+    // Die einzige Statusbedingung ist die ausdrueckliche Auswahl des Nutzers. Bis zum 11.08.2026
+    // stand hier eine zweite: `zwischenschritte=false` schloss SPLITTED und MERGED aus, ohne dass
+    // jemand danach gefragt haette. Sie ist ersatzlos entfallen (docs/nachrichtenliste.md §5).
     if (!abfrage.status().isEmpty()) {
       bedingungen.add(statusClassifier.bedingung(abfrage.status(), MESSAGE.MESSAGESTATUS));
-    }
-    // Ausdruecklich gewaehlte Zwischenschritte schlagen die Vorgabe: Sonst filterte der Nutzer
-    // ZWISCHENSCHRITT und bekaeme garantiert null Zeilen.
-    if (!abfrage.zwischenschritte()
-        && !abfrage.status().contains(MessageStatusKind.ZWISCHENSCHRITT)) {
-      bedingungen.add(
-          statusClassifier.ohne(MessageStatusKind.ZWISCHENSCHRITT, MESSAGE.MESSAGESTATUS));
     }
     if (!abfrage.prozessIds().isEmpty()) {
       bedingungen.add(MESSAGE.PROCESSID.in(abfrage.prozessIds()));
@@ -324,51 +319,19 @@ public class NachrichtenRepository {
     return new Suchtreffer(prozessIds, sosIds, zuUnscharf);
   }
 
-  /**
-   * Kommen beim Mandanten ueberhaupt Zwischenschritte vor? Eine Existenzfrage, kein {@code COUNT}.
+  /*
+   * Hier stand bis zum 11.08.2026 `hatZwischenschritte(mandant)` — die Existenzabfrage hinter
+   * `GET /api/nachrichten/merkmale`. Sie ist mit dem Ausblende-Schalter entfallen, den sie
+   * ein- und ausblendete.
    *
-   * <p>Messung M12 ist der Anlass: <b>Fuenf von neun Mandanten mit Nachrichten haben ueber den
-   * gesamten Bestand nicht eine einzige {@code SPLITTED}- oder {@code MERGED}-Zeile.</b> Fuer sie
-   * kuendigt der Ausblenden-Schalter der Liste eine Wirkung an, die ausbleibt.
-   *
-   * <p><b>Ueber den Gesamtbestand und nicht ueber das Zeitfenster.</b> {@code VOTG} entscheidet die
-   * Form: 40 Zeilen von 145.840 ueber den ganzen Bestand, im dichten Monat null. Ein Kriterium
-   * ueber das gewaehlte Fenster schaltete den Schalter dort je nach Zeitraum an und aus — ein
-   * Bedienelement, das erscheint und verschwindet, ohne dass ein Zusammenhang erkennbar waere.
-   *
-   * <p><b>{@code STRAIGHT_JOIN} ist hier kein Feinschliff, sondern die Bedingung, unter der das
-   * Statement ueberhaupt tragbar ist</b> (Messung L15). Ohne die erzwungene Reihenfolge waehlt
-   * MariaDB den Zugriffspfad <i>je Mandant verschieden</i> und faellt fuer manche auf einen vollen
-   * Durchlauf ueber {@code Message} zurueck: gemessen 13,3 s fuer {@code IBIS} gegen 12 ms fuer
-   * {@code WOC}, beide ohne einen einzigen Zwischenschritt. Der Grund ist die veraltete Statistik
-   * der Quelle — {@code Message_ProcessFK} und {@code MessageStatusIDX} sind beide mit
-   * Kardinalitaet 18 gefuehrt (M1), und darauf laesst sich keine Planwahl gruenden.
-   *
-   * <p>Mit {@code STRAIGHT_JOIN} laeuft die Kette in der einzigen Richtung, die selektiv ist:
-   * {@code ProjectMandant} (Index auf {@code MandantID}) → {@code Process} → {@code Message} als
-   * {@code ref} ueber {@code ProcessID}. <b>Die Kosten haengen damit am Bestand des Mandanten und
-   * nicht an der Groesse der Tabelle</b> — die Eigenschaft, die das Statement in der Produktion
-   * tragfaehig macht. Schlimmster gemessener Fall 331 ms ({@code IBIS}, 75.746 Nachrichten, keine
-   * Zwischenschritte), {@code NEXANS} 0,8 ms.
-   *
-   * <p><b>Der schlimmste Fall bleibt der Mandant mit vielen Nachrichten und keinem
-   * Zwischenschritt</b> — dort wird sein ganzer Bestand gelesen. Deshalb wird das Ergebnis
-   * zwischengespeichert ({@link NachrichtenService}) und deshalb faellt ein Abbruch an der
-   * Zeitgrenze dort auf „Schalter anzeigen" zurueck: der bisherige Zustand, also keine
-   * Verschlechterung.
+   * **Sie verschwindet nicht, weil sie langsam war, sondern weil die Frage nicht mehr gestellt
+   * wird.** Der Vermerk gehoert trotzdem hierhin, sonst liest ihn spaeter jemand als
+   * Leistungsoptimierung und baut die Gestalt an anderer Stelle wieder auf: Das Statement brauchte
+   * fuer `IBIS` gemessene **13,2 Sekunden** gegen **11,9 Millisekunden** fuer `WOC` (L15) — beide
+   * Mandanten ohne einen einzigen Zwischenschritt — und waere im Lese-Pool nach 10 Sekunden
+   * gestorben (`max_statement_time`, docs/datenzugriff.md §1). Der `STRAIGHT_JOIN`, der das
+   * abfing, und der veraltete Statistikstand der Quelle, der ihn noetig machte
+   * (`Message_ProcessFK` und `MessageStatusIDX` beide mit Kardinalitaet 18, M1), stehen in
+   * docs/nachrichtenliste.md §5.
    */
-  public boolean hatZwischenschritte(MandantContext mandant) {
-    return glassfishDsl.fetchExists(
-        glassfishDsl
-            .selectOne()
-            .from(PROJECTMANDANT)
-            .straightJoin(PROCESS)
-            .on(PROCESS.PROJECTID.eq(PROJECTMANDANT.PROJECTID))
-            .straightJoin(MESSAGE)
-            .on(MESSAGE.PROCESSID.eq(PROCESS.PROCESSID))
-            .where(PROJECTMANDANT.MANDANTID.eq(mandant.mandantId()))
-            .and(
-                statusClassifier.bedingung(
-                    MessageStatusKind.ZWISCHENSCHRITT, MESSAGE.MESSAGESTATUS)));
-  }
 }

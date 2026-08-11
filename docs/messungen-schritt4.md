@@ -1729,6 +1729,24 @@ Auswertung **5,294 s**.
   BAM-Spalte, die *immer* etwas zeigt, gibt es bei `NEXANS` nicht — das ist keine Frage der Auswahl,
   sondern der Datenlage.
 
+  > ⚠️ **Präzisiert am 10.08.2026, ohne Widerruf** ([`messungen-schritt6.md`](messungen-schritt6.md)
+  > M28‑2). Die 16,25 % sind über **alle** Zeilen gerechnet, und diese Zahl ist unverändert richtig.
+  > Über die **Split-Wurzeln** allein gerechnet erreicht Typ 9018 dagegen **92,26 %** und vier
+  > weitere Typen über 83 %. Der Schluss „das ist keine Frage der Auswahl" gilt deshalb für die
+  > Gesamtmenge, **nicht** für eine nach der Stellung in der Kette geschnittene. Dass es diese
+  > Stellung überhaupt maschinell zu erkennen gibt, war zum Zeitpunkt von M11 nicht gemessen — die
+  > vier Verkettungsangaben sind erst in M23 bis M28 erhoben worden. Dieselbe Präzisierung steht in
+  > [`nachrichtenliste.md`](nachrichtenliste.md) §6.
+  >
+  > > **Belegvermerk** *(nachgetragen am 10.08.2026 nach Regel L10)*.
+  > > *Gemessen:* Über **alle** 180.251 `NEXANS`-Zeilen des Fensters erreicht kein konfigurierter
+  > > BAM-Typ mehr als 16,25 %.
+  > > *Behauptet war:* Eine BAM-Spalte, die *immer* etwas zeigt, gibt es bei `NEXANS` nicht — „keine
+  > > Frage der Auswahl, sondern der Datenlage".
+  > > **Die Lücke:** Der Satz springt von der **Gesamtmenge** auf **jede beliebige Teilmenge**.
+  > > Gemessen ist nur die erste. `n` war hier so groß wie möglich und hat den Fehlschluss nicht
+  > > verhindert — was fehlte, war die Frage, **über welche Menge** die Quote überhaupt etwas sagt.
+
 ### Was das für Schritt 7 heißt
 
 Drei Befunde, alle drei ohne Entscheidung — die fällt in Schritt 7:

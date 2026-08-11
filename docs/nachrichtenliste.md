@@ -25,7 +25,6 @@ auch keiner entstehen.
 | `prozess` | mehrfach, `ProcessID` | alle | |
 | `suche` | Freitext, mindestens 3 Zeichen | — | Prozess-, Projekt- und Ablaufname |
 | `langeSuche` | `true`, `false` | `false` | hebt die Fenstergrenze der Suche auf — bis 90 Tage, nicht weiter |
-| `zwischenschritte` | `true`, `false` | `false` | `SPLITTED`/`MERGED` |
 | `sortierung` | `neueste`, `aelteste` | `neueste` | ausschließlich über den Zeitpunkt |
 | `cursor` | undurchsichtig | — | Seitenposition der vorigen Antwort |
 | `limit` | 1 bis 200 | 50 | hartes Maximum |
@@ -108,6 +107,15 @@ anhand von `detail`.
 **Kein unbekannter Wert wird stillschweigend auf die Vorgabe gezogen.** Wer `zeitraum=24` schreibt,
 bekäme sonst 24 Stunden und hätte keinen Anlass, den Tippfehler zu bemerken.
 
+> **Ein alter Link mit `zwischenschritte=false` wird trotzdem nicht abgewiesen** (seit dem
+> 11.08.2026, §5). Der Parameter ist keiner mehr und wird wie jeder unbekannte Suchparameter
+> übergangen — kein Fehler, keine Umleitung, kein Hinweis. Das ist kein Widerspruch zum Absatz
+> darüber: Dort geht es um einen **falschen Wert** für einen Parameter, den es gibt; hier um einen
+> Parameter, den es nicht mehr gibt. Der Nutzer, der einen solchen Link öffnet, kann die Entscheidung
+> gar nicht mehr treffen, über die man ihn belehren würde — und er bekommt ohnehin zu sehen, was der
+> Parameter einblenden sollte. Festgehalten in `NachrichtenlisteDbIT.alter_parameter_wird_uebergangen`,
+> und zwar mit beiden Hälften: derselbe Statuscode **und** dieselbe Zeilenmenge.
+
 **`suche-fenster-zu-gross` trägt zwei zusätzliche Felder**, `grenzeTage` und `angefragtTage`. RFC
 9457 lässt eigene Felder ausdrücklich zu, und sie sind hier der Punkt: Die Oberfläche baut daraus
 eine konkrete Meldung samt Schaltfläche, ohne die Grenze ein zweites Mal zu kennen. Stünde sie auch
@@ -126,42 +134,38 @@ plausibel aussehen, fiele es niemandem auf.
 }
 ```
 
-### Der zweite Endpunkt: was der Bestand hergibt
+### ~~Der zweite Endpunkt: was der Bestand hergibt~~ — entfallen am 11.08.2026
 
 ```
 GET /api/nachrichten/merkmale        →  { "zwischenschritteVorhanden": true }
 ```
 
-Ergänzt am 07.08.2026. **Kein Parameter, auch kein Zeitfenster** — die Antwort hängt ausschließlich
-an der Sitzung (Regel M1), und das ist zugleich der Kern seines Isolationstests: Zwei Nutzer stellen
-dieselbe Anfrage und bekommen verschiedene Antworten, weil es keine Eingabe gibt, über die einer die
-Auskunft des anderen erreichen könnte.
+Ergänzt am 07.08.2026, **entfernt am 11.08.2026** (Schritt 6, Teil 2a). Er hat genau eine Frage
+beantwortet: *Kommen bei diesem Mandanten überhaupt Zwischenschritte vor?* — damit die Oberfläche
+entscheiden konnte, ob sie den Ausblende-Schalter anbietet. **Mit dem Schalter fällt die Frage weg,
+und mit der Frage der Endpunkt** samt seinem Zwischenspeicher je Mandant, seinem Rückfall auf `true`
+und seinem Pflicht-Isolationstest nach Regel M4. Die Begründung steht in §5.
 
-Er beantwortet eine Frage über die **Stammdaten des Mandanten**, nicht über einen Ausschnitt: *Kommen
-bei diesem Mandanten überhaupt Zwischenschritte vor?* Die Oberfläche entscheidet daran, ob sie den
-Ausblenden-Schalter anbietet (§8.2).
+> ⚠️ **Damit fällt auch die L15-Falle — und das gehört so notiert.** Die Existenzabfrage dahinter
+> brauchte für `IBIS` gemessene **13,2 Sekunden** gegen **11,9 Millisekunden** für `WOC`
+> ([L15](messungen-schritt4.md#l15--gibt-es-beim-mandanten-überhaupt-zwischenschritte)) — zwei
+> Mandanten, die *beide* keinen einzigen Zwischenschritt haben. Der Lese-Pool bricht bei 10 Sekunden
+> ab ([`datenzugriff.md`](datenzugriff.md) §1); ohne den `STRAIGHT_JOIN` über
+> `ProjectMandant → Process → Message`, der die einzige selektive Reihenfolge erzwang, wäre das
+> Statement dort gestorben. Der Grund war die veraltete Statistik der Quelle: `Message_ProcessFK` und
+> `MessageStatusIDX` stehen beide mit Kardinalität 18 (M1), und darauf lässt sich keine Planwahl
+> gründen.
+>
+> **Sie verschwindet nicht, weil sie langsam war, sondern weil die Frage nicht mehr gestellt wird.**
+> Der Unterschied ist der ganze Punkt dieses Vermerks: Wer ihn überliest, hält den Wegfall für eine
+> Leistungsoptimierung und baut dieselbe Gestalt bei nächster Gelegenheit an anderer Stelle wieder
+> auf — die Falle steckt nicht im Statement, sondern in der Form „Existenzfrage über den ganzen
+> Bestand eines Mandanten".
 
-**Warum nicht ein Feld an jeder Seite.** Der Wert beschreibt den Gesamtbestand, ändert sich selten
-und wird zwischengespeichert; die Liste aktualisiert sich unter Umständen jede Minute. An jeder Seite
-zu hängen hieße, ihn jedes Mal neu zu ermitteln — und das ist genau der `COUNT` je Anfrage, den Regel
-L2 ausschließt.
-
-**Zwischengespeichert je Mandant, eine Stunde, im Arbeitsspeicher** (`NachrichtenService`). Keine
-Tabelle: Der Wert wird *ermittelt*, nicht gepflegt — eine Konfigurationstabelle wäre eine zweite
-Wahrheit, die der ersten irgendwann hinterherliefe. Die Haltbarkeit rechnet gegen die **Systemuhr**;
-gegen die Anwendungsuhr gerechnet liefe sie im Profil `dev` nie ab, weil die dort Monate zurücksteht.
-
-**Scheitert die Ermittlung, antwortet der Endpunkt `true`** und nicht mit einem Fehler. Ein Abbruch
-beim Ermitteln eines *Anzeigehinweises* darf die Liste nicht mitreißen; `true` ist der Zustand, den
-die Liste vor der Nachbesserung für alle hatte — also keine Verschlechterung. Der Rückfall wird
-mitzwischengespeichert, sonst wäre der Schutzmechanismus die Last. Sichtbar bleibt er im Protokoll
-(`WARN`, mit Ausnahme).
-
-Kosten und die Form des Statements stehen in
-[L15](messungen-schritt4.md#l15--gibt-es-beim-mandanten-überhaupt-zwischenschritte); die Kurzfassung:
-`STRAIGHT_JOIN` über `ProjectMandant → Process → Message`, weil der Optimierer sonst je Mandant einen
-anderen Plan wählt und für manche auf einen vollen Durchlauf zurückfällt (13,2 s gegen 12 ms bei zwei
-Mandanten, die *beide* keinen Zwischenschritt haben).
+**Was daraus für andere Endpunkte bleibt:** Eine Frage über den *Gesamtbestand* eines Mandanten hat
+keine Kostenobergrenze, die man am Zeitfenster ablesen könnte. Wer je wieder eine stellt, misst sie
+je Mandant und nicht einmal (L7) — und legt vorher fest, was passiert, wenn sie in die Zeitgrenze
+läuft.
 
 ---
 
@@ -359,15 +363,91 @@ nennt. Ohne diese Zeile lieferte der Filter `FEHLER` eine Zeile, die die Liste a
 „Bedeutung nicht verifiziert" beschriftet. Ein Integrationstest hält die Deckungsgleichheit fest:
 Jede gelieferte Zeile trägt die Einordnung, nach der gefiltert wurde.
 
-### Zwischenschritte sind ausgeblendet
+### Der Ausblende-Schalter — gebaut, gemessen, entfernt
 
-`zwischenschritte=false` ist die Vorgabe und schließt `SPLITTED` und `MERGED` aus. Der Grund ist
-keine technische Erwägung: **34,38 Prozent aller Zeilen** sind Zwischenprodukte (M6). Eine Liste,
-die zu einem Drittel aus Begriffen besteht, die der Zielnutzer nicht kennt, kostet beim ersten
-Kontakt Vertrauen.
+**Die Liste filtert nicht nach Status, außer der Nutzer sagt es ausdrücklich.** Seit dem 11.08.2026
+(Schritt 6, Teil 2a) gibt es keine Statusvorgabe mehr — weder als Parameter, noch als Bedingung im
+Statement, noch als Bedienelement. Dieser Abschnitt erzählt, was stattdessen dastand und warum es
+wieder verschwunden ist; wer den Schalter in einem halben Jahr wieder vorschlägt, findet hier den
+Grund und nicht nur die Tatsache.
 
-**Ein ausdrücklicher Statusfilter auf `ZWISCHENSCHRITT` schlägt die Vorgabe.** Sonst filterte der
-Nutzer danach und bekäme garantiert null Zeilen.
+#### Was gebaut war
+
+`zwischenschritte=false` war die Vorgabe des Listen-Endpunkts und schloss `SPLITTED` und `MERGED`
+aus. Ein ausdrücklicher Statusfilter auf `ZWISCHENSCHRITT` schlug sie — sonst hätte der Nutzer
+danach gefiltert und garantiert null Zeilen bekommen. In der Oberfläche stand ein Chip, der den
+Zustand benannte und umschaltete (§8.2); ob er überhaupt erschien, entschied
+`GET /api/nachrichten/merkmale` (§1).
+
+**Die Begründung war fachlich und klang gut:** **34,38 Prozent aller Zeilen** sind Zwischenprodukte
+(M6). Eine Liste, die zu einem Drittel aus Begriffen besteht, die der Zielnutzer nicht kennt, kostet
+beim ersten Kontakt Vertrauen.
+
+#### Was gemessen wurde
+
+**Sie war nie gemessen.** Die Runde vom 10.08.2026
+([`messungen-schritt6.md`](messungen-schritt6.md)) hat sie geprüft und in drei Punkten widerlegt:
+
+- **Die ausgeblendete `SPLITTED`-Zeile ist der Elternteil, die gezeigten `FINISHED`-Zeilen sind
+  seine Fragmente** (M24). Die Vorgabe blendete also gerade die Zeile aus, die der Nutzer
+  wiedererkennt — der Produktions-Screenshot, der die Runde ausgelöst hat, war der Normalfall.
+- **96,9 Prozent der ausgeblendeten Wurzeln tragen BAM-Werte gegen 2,4 Prozent der gezeigten
+  Kinder** (M26‑1b). Das ist kein Anzeige-, sondern ein **Suchproblem**: Der Treffer war da, die
+  Zeile war weg. Für `NEXANS` waren beide kuratierten BAM-Spalten auf der Vorgabe-Ansicht deshalb
+  praktisch leer (E1) — schon vor Schritt 7.
+- **Drei Mandanten ohne einen einzigen Zwischenschritt haben trotzdem Ketten** (`IBIS`, `IBISGUS`,
+  `ZAST`, M24‑3). Ein Kriterium über den *Status* erfasst die Verkettung gar nicht; `Source = 1`
+  erfasst sie (E4).
+
+#### Warum ersatzlos und nicht ersetzt
+
+Naheliegend wäre gewesen, die Vorgabe zu **drehen**: statt über den Status über die *Stellung in der
+Kette* auszublenden. M28‑1 hat beziffert, was das kostet (Fenster B, 214.330 Zeilen):
+
+| `MandantID` | Zeilen | heute ausgeblendet | Stellungsprädikat P1 |
+|---|---:|---:|---:|
+| `NEXANS` | 180.251 | 36,69 % | **77,61 %** |
+| `SUTTONS` | 21.516 | 2,97 % | 5,80 % |
+| `IBIS` | 4.331 | **0 %** | 0,83 % |
+| **`IBISGUS`** | 1.722 | **0 %** | **100,00 %** |
+| **`ZAST`** | 283 | **0 %** | **92,93 %** |
+| **gesamt** | 214.330 | 31,15 % | **66,80 %** |
+
+**Bei `IBISGUS` blendet P1 jede einzelne Zeile aus** (1.722 von 1.722; `ohne_kette` ist dort null),
+bei `ZAST` 92,93 Prozent. Für beide Mandanten wäre die Vorgabe-Ansicht leer beziehungsweise fast
+leer — **heute sehen sie jede Zeile.**
+
+> **Eine Vorgabe, die je nach Mandant zwischen 0 % und 100 % versteckt, ist keine Vorgabe.** Das ist
+> der Satz, an dem die Entscheidung hängt: Nicht der Wert des Prädikats war falsch gewählt, sondern
+> die Vorstellung, es gäbe überhaupt eine sinnvolle Ausblendung, die für alle Mandanten gleichzeitig
+> gilt. Beide Kandidaten — der alte über den Status, der neue über die Stellung — sind an dieser
+> Streuung gescheitert, und zwar an entgegengesetzten Enden.
+
+Dazu kommt der Befund aus M26, der auch die gedrehte Fassung trifft: Die Zeile, die die Belegnummer
+trägt, ist die Wurzel. Ein Prädikat, das Wurzeln ausblendet, versteckt genau die Zeile, die der
+Nutzer sucht — dieselbe Fehlrichtung wie vorher, nur mit besserem Kriterium.
+
+**Was an die Stelle tritt: nichts.** Die Liste zeigt jede Zeile ihres Zeitfensters. Was der Nutzer
+nicht sehen will, filtert er weg — über den Statusfilter, der beide neuen Werte einzeln anbietet.
+
+#### Was das kostet, und was es nicht kostet
+
+Die Liste zeigt bei `NEXANS` sichtbar mehr Zeilen als vorher — im Tagesfenster des dichten Bestands
+5.043 statt 4.228 (M28‑1 Fenster A, E1). Das ist die getragene Folge und keine Nebenwirkung: **Der
+Zielnutzer bekommt Zeilen zu sehen, deren Status er nicht kennt.** Die Antwort darauf ist die
+Beschriftung und nicht das Verstecken — `AUFGETEILT` und `ZUSAMMENGEFUEHRT` sagen in einem Wort, was
+passiert ist ([`message-status.md`](message-status.md)).
+
+**Am Zugriffspfad ändert sich nichts.** Die entfallene Bedingung war ein Filter auf `MessageStatus`,
+kein Zugriffspfad; Treiber ist und bleibt das Zeitfenster über `MessageLastUpdateIDX` (L1 bis L3).
+Eine neue Messung nach L7 braucht es dafür nicht — es fällt eine Bedingung weg, es kommt keine hinzu.
+
+> **Der Abstrich, der dokumentiert gehört: Der Status ist über die Kette unzuverlässig.** Bei `IBIS`,
+> `IBISGUS` und `ZAST` trägt die Wurzel `FINISHED` (M24‑3). Die Liste sagt damit bei `NEXANS` etwas
+> über die Aufteilung und bei drei Mandanten nichts — und sie **kann es nicht besser wissen**, weil
+> die verlässliche Auskunft (`Source`) nicht im Status steht. Das ist die bewusst getragene Folge
+> daraus, dass die Liste **keine Rollenkennzeichnung** bekommt (Entscheidung des Auftraggebers; die
+> Rolle erscheint im Detail). **Bekannter Punkt, kein Fehler** — er steht auch unter „Offene Punkte".
 
 ### Freitext — niemals gegen `Message`
 
@@ -488,6 +568,45 @@ Messung [M11](messungen-schritt4.md) sagt, wie systematisch das ist:
 gesehen.** Und es ist keine Frage der Auswahl: Eine BAM-Spalte, die *immer* etwas zeigt, gibt es
 bei `NEXANS` nicht. Auch die zwei bestbelegten Typen ließen vier von fünf Zeilen leer.
 
+> ⚠️ **Der letzte Satz gilt für die Zeilen, die diese Liste zeigt — nicht für die, die sie
+> ausblendet** (gemessen am 10.08.2026,
+> [`messungen-schritt6.md`](messungen-schritt6.md#m28--rollenverteilung-kandidatenprädikate-und-der-bam-typ-je-rolle)
+> M28‑2). Über die **Split-Wurzeln** von `NEXANS` gemessen liegt Typ **9018**
+> („Kundenmaterialnummer_K_SAP") bei **92,26 %**, und vier weitere Typen liegen über 83 %. Bei `IBIS`
+> erreicht Typ 0 („Bestellnummer") **92,59 %** der Wurzeln. Eine Spalte, die *fast* immer etwas zeigt,
+> gibt es also sehr wohl — nur nicht auf der Menge, die hier betrachtet wurde.
+>
+> **M11 wird davon nicht widerlegt.** Auf den **Kindern**, also auf dem, was die Liste heute
+> tatsächlich anzeigt, liegt die beste Quote bei `NEXANS` bei **0,72 %**. Die beiden kuratierten
+> Typen stehen auf den Wurzeln bei 5,02 % (9006) und 11,79 % (9001) — die Kuratierung aus Schritt 4
+> traf also auch die Wurzeln nicht, weil sie ohne Rücksicht auf die Stellung in der Kette gewählt
+> wurde; diese Stellung war damals nicht gemessen.
+>
+> ✅ **Entschieden am 11.08.2026: Die Spalte kommt hier nicht zurück.** Die Frage gehört zu
+> Schritt 7 und braucht eine eigene Messung — die Kuratierung 9006/9001 stammt aus Schritt 4 und
+> wurde ohne Rücksicht auf die Stellung in der Kette gewählt; sie trifft auf den Wurzeln 5,02 %
+> beziehungsweise 11,79 % (M28‑2). Eine Spalte zurückzuholen, deren Typ nachweislich der falsche
+> ist, wäre derselbe Fehler mit umgekehrtem Vorzeichen.
+>
+> **Was sich am 11.08.2026 trotzdem geändert hat, gehört dazu:** Die Zeilen, auf denen die Werte
+> sitzen, sind jetzt **sichtbar** — der Ausblende-Schalter ist gefallen (§5). Der Befund aus E1
+> („beide kuratierten Spalten sind auf der Vorgabe-Ansicht praktisch leer") beschreibt damit einen
+> Zustand, den es nicht mehr gibt; die Spalten selbst sind seit der Nachbesserung zu Schritt 4
+> ohnehin draußen. Was bleibt, ist die Vorarbeit für Schritt 7: **Wo ein Wert sitzt, hängt an der
+> Rolle und nicht am Status.**
+>
+> > **Belegvermerk** *(nachgetragen am 10.08.2026 nach Regel L10)*.
+> > *Gemessen (M11):* Über **alle** 180.251 `NEXANS`-Zeilen des dichten Monats erreicht kein
+> > konfigurierter BAM-Typ mehr als **16,25 %**.
+> > *Behauptet war:* Eine BAM-Spalte, die immer etwas zeigt, gibt es bei `NEXANS` nicht — „das ist
+> > keine Frage der Auswahl, sondern der Datenlage".
+> > **Die Lücke:** „über alle Zeilen" ist nicht „über jede Teilmenge". Der Satz hat aus einer
+> > Aussage über die **Gesamtmenge** eine über **jede beliebige Auswahl** gemacht. Genau daran
+> > scheitert er: Auf den Split-Wurzeln liegt Typ 9018 bei 92,26 % (M28‑2). **`n` war hier so groß
+> > wie möglich** — und die Menge trotzdem die falsche. Dass sie sich überhaupt maschinell
+> > schneiden lässt, war zum Zeitpunkt von M11 nicht gemessen; die vier Verkettungsangaben sind
+> > erst in M23 bis M28 erhoben worden.
+
 Damit fällt die Spalte unter dieselbe Regel, die §8.1 seit Schritt 4 für einen Mandanten ohne
 BAM-Konfiguration formuliert: **Eine Spalte ohne Inhalt behauptet, es gäbe dort etwas zu sehen.**
 Der Unterschied war nur, dass sie hier je Zeile leer ist statt je Mandant — und dass sie den Platz
@@ -517,11 +636,15 @@ common/                              message/
 ├─ Zeitfenster, Zeitraum             ├─ NachrichtenController   REST, nimmt nie eine Mandanten-ID
 ├─ Seitenposition, Seite             ├─ NachrichtenService      Fachlogik, Einordnung, Zeitpunkte
 ├─ Sortierrichtung                   ├─ NachrichtenFilter       geprüfte Parameter
-├─ Zeitpunkte  (Wanduhr ↔ UTC)       ├─ NachrichtResponse       DTO nach außen
-│                                    └─ NachrichtenMerkmaleResponse  Stammdaten der Ansicht
+├─ Zeitpunkte  (Wanduhr ↔ UTC)       └─ NachrichtResponse       DTO nach außen
 ├─ BamSpalte, BamSpaltenRegel
 └─ MessageStatusClassifier
 ```
+
+**`NachrichtenMerkmaleResponse` ist am 11.08.2026 entfallen** — mit dem Endpunkt, den es beschrieb
+(§1, §5). Ebenso entfallen sind `NachrichtenRepository.hatZwischenschritte`, der Zwischenspeicher im
+`NachrichtenService` samt seiner zweiten Uhr und `MessageStatusClassifier.ohne(…)`, das ausschließlich
+für `zwischenschritte=false` existierte.
 
 Was in `common` liegt, liegt dort, weil ein zweites Fachpaket es braucht: Zeitfenster, Cursor und
 Sortierung gehören zu **jedem** Listen-Endpunkt (Schritt 6, 7 und 10 folgen), die BAM-Spaltenregel
@@ -562,12 +685,12 @@ Entsteht in Schritt 4, Aufgaben 13 bis 15. Route `/nachrichten` im Anwendungsrah
 
 ```
 features/nachrichten/
-├─ api.ts                          Typen und die zwei Aufrufe
+├─ api.ts                          Typen und die Aufrufe
 ├─ filter.ts                       Filterzustand, rein — ohne React
 ├─ hooks.ts                        URL-Bindung, Blättern, Aktualisierung
 └─ components/
    ├─ nachrichten-ansicht.tsx      der Zusammenbau, "use client"
-   ├─ filterleiste.tsx             Zeitfenster, Status, Suche, Zwischenschritte
+   ├─ filterleiste.tsx             Zeitfenster, Status, Prozess, Suche
    ├─ prozess-filter.tsx           Mehrfachauswahl aus /api/prozesse
    ├─ nachrichten-tabelle.tsx      Spalten, Zeitpunkt, BAM-Zellen
    ├─ status-plakette.tsx          Status — nie allein über Farbe
@@ -672,32 +795,66 @@ gedämpften Textfarbe. Eine eigene Farbe wäre eine Statusaussage, die er nicht 
 > entstehen aus einer **Nummerierungslücke** der Ablaufdefinition und nicht aus geänderten Abläufen
 > ([`messungen-schritt5.md`](messungen-schritt5.md) M20). An der Anzeige ändert das nichts.
 
-> ✅ **Die Beschriftung ist nachgezogen** (Schritt 5, Teil 2). Sie lautete bis dahin nur auf den
-> Schrittnamen, mit dem Tooltip „Aktueller Schritt" — und führte damit in die Irre: Die Nachricht
-> steht nicht auf dem genannten Schritt, sie wartet **davor** (M16 3, alle 538 `SUSPENDED` haben
-> jede Aktion beendet).
+##### Die Zelle nennt keine Präposition — die Geschichte dieser Beschriftung
+
+**Heute steht in der Zelle `Wartend` und daneben `Schritt: Send Message to Pool`.** Kein „vor", kein
+„in", kein „auf". Das ist der dritte Stand, und die beiden davor gehören dazu, weil sie erklären,
+warum es der letzte ist.
+
+| Stand | Beschriftung | Was daran nicht stimmte |
+|---|---|---|
+| Schritt 4 | nur der Schrittname, Tooltip „Aktueller Schritt" | Wer „Send Message to Pool" neben `Wartend` liest, nimmt an, dieser Schritt laufe gerade. M16 (3): Bei allen 538 `SUSPENDED` ist **jede** Aktion beendet |
+| Schritt 5, Teil 2 | „wartet vor: {Schritt}" / „läuft auf: {Schritt}" | **Widerlegt durch M29** (siehe unten) |
+| **11.08.2026** | **„Schritt: {Schritt}"** | — die Zelle sagt, was ihre Datenquelle hergibt |
+
+> ⚠️ **Warum „wartet vor" falsch war.**
+> [M29](messungen-schritt5.md#m29--worauf-zeigt-messagesosactionid-bei-wartenden-nachrichten) hat
+> über **alle 538** wartenden Nachrichten gemessen: `Message.SOSID`/`SOSActionID` zeigen ausnahmslos
+> auf den Schritt, der **zuletzt gelaufen** ist — den mit `WAITUNTIL|…|SUSPEND`, der die Nachricht
+> schlafen legt. Die Nachricht wartet also **in** diesem Schritt und nicht **davor**, in 538 von 538
+> Fällen.
 >
-> Jetzt steht in der Zelle `wartet vor: Send Message to Pool` beziehungsweise `läuft auf: …`,
-> abhängig von der Einordnung:
+> **Die Berufung auf M16 (3) war ein Fehlschluss**, und es lohnt zu benennen welcher: Gemessen war
+> „jede Aktion ist beendet". Daraus folgt, dass die Nachricht auf keinem laufenden Schritt steht —
+> **nicht**, dass ein *nächster* aussteht. Die Zahl war richtig, die Lesart zu weit.
 >
-> | Einordnung | Beschriftung | Belegt? |
-> |---|---|---|
-> | `WARTEND` | „wartet vor: {Schritt}" | **ja** — M16 3 |
-> | `LAEUFT` | „läuft auf: {Schritt}" | **nein** — `RUNNING` kommt in der Testkopie null Mal vor |
->
-> **Beide Lagen, nicht eine.** Alles auf „wartet vor" umzustellen wäre dieselbe ungeprüfte
-> Behauptung mit umgekehrtem Vorzeichen: Gerade bei `LAEUFT` wäre ein tatsächlich laufender Schritt
-> der zu erwartende Fall. Der offene Rest steht unter „Offene Punkte".
->
-> **Die Liste leitet das aus `statusKind` ab und nicht aus `offenerZustand`** — das Feld führt nur
-> das Detail ([`nachrichtendetail.md`](nachrichtendetail.md) §3), und der Listen-Endpunkt wurde
-> dafür ausdrücklich **nicht** erweitert. Der Vollwert steht wie bisher im `title`.
->
-> **Die Plakette weicht dem Zusatz nicht** (Sichtprüfung 07.08.2026). Mit der neuen Beschriftung
-> stand in der Zelle zuerst `Warte…` statt `Wartend`: Die Plakette durfte schrumpfen, der Name
-> daneben nicht. Genau verkehrt herum — der Status ist die Hauptinformation, der Schritt ist
-> Beiwerk. Steht ein Schritt daneben, ist die Plakette jetzt `shrink-0`; ohne ihn darf sie weiter
-> weichen, denn dort trägt sie bei `bedeutungNichtVerifiziert` einen Rohwert beliebiger Länge.
+> > **Belegvermerk** *(nachgetragen am 10.08.2026 nach Regel L10)*.
+> > *Gemessen (M16 3):* Bei allen 538 `SUSPENDED`-Nachrichten trägt **jede Aktion** ein
+> > `MessageActionEnd`. `n = 538`, der gesamte Bestand dieses Status.
+> > *Behauptet war:* Die Nachricht wartet **vor** einem Schritt, der noch aussteht.
+> > **Die Lücke:** „Keine Aktion läuft" sagt nichts darüber, ob überhaupt noch eine **folgt**. Der
+> > Satz hat aus einer Aussage über die *gelaufenen* Schritte eine über einen *kommenden* gemacht —
+> > und genau die hat M29 widerlegt. **`n` war hier vollständig; der Umfang war nie das Problem.**
+> > Das ist der Fall, an dem sich zeigt, warum `n =` allein nicht genügt.
+
+**Warum ohne Präposition und nicht mit der richtigen.** Nicht als Kompromiss: Der Unterschied
+zwischen *in* und *vor* entsteht aus dem Vergleich von `Message.SOSActionID` mit dem zuletzt
+**ausgeführten** Schritt — und der steht in `MessageAction`, einer Tabelle mit 10,3 Millionen Zeilen
+(M23‑1), die die Liste nach L2 und L3 nicht je Seite joinen soll. Das Detail kann es, weil es genau
+eine Nachricht lädt ([`nachrichtendetail.md`](nachrichtendetail.md) §3). **Die Zelle sagt damit
+genau das, was ihre Datenquelle hergibt** — und nicht mehr.
+
+**Der verworfene Weg gehört dazu, damit er nicht in sechs Monaten als naheliegende Verbesserung
+wiederkommt:** `offenerZustand` in den Listen-Endpunkt zu ziehen. Er wurde erwogen und **verworfen**
+— es wäre je Zeile ein zusätzlicher Zugriff auf `MessageAction`, also genau der Join, den die Liste
+seit Schritt 4 nicht macht. Der Preis stünde auf jeder Seite mit 50 Zeilen; der Gegenwert wäre ein
+Wörtchen. Wer ihn trotzdem will, misst ihn vorher (L7) und begründet ihn gegen L2/L3 — nicht
+umgekehrt.
+
+**Beide Einordnungen tragen dieselbe Beschriftung.** Für `LAEUFT` war „läuft auf" ohnehin nie belegt
+(`RUNNING` kommt in der Testkopie null Mal vor); die eine Formulierung trifft jetzt beide Lagen,
+ohne über eine davon etwas zu behaupten.
+
+**Die Beschriftung steht sichtbar da und nicht nur im Tooltip.** Auf einem Touchgerät gibt es keinen
+Hover — dieselbe Lehre wie bei der Fußzeile zu „Bedeutung nicht verifiziert" (unten). Der `title`
+trägt denselben Text ungekürzt, weil die Zelle eine Zeile hoch ist und kürzt.
+
+> **Die Plakette weicht dem Zusatz nicht** (Sichtprüfung 07.08.2026). Mit der Beschriftung aus
+> Schritt 5 stand in der Zelle zuerst `Warte…` statt `Wartend`: Die Plakette durfte schrumpfen, der
+> Name daneben nicht. Genau verkehrt herum — der Status ist die Hauptinformation, der Schritt ist
+> Beiwerk. Steht ein Schritt daneben, ist die Plakette `shrink-0`; ohne ihn darf sie weiter weichen,
+> denn dort trägt sie bei `bedeutungNichtVerifiziert` einen Rohwert beliebiger Länge. **Das gilt
+> unverändert weiter**, und der neue Text ist kürzer als der alte.
 
 **Status nie allein über Farbe.** Jede Plakette trägt Beschriftung **und** Zeichen; die Farbrolle
 ist die halbe Aussage. Bei `bedeutungNichtVerifiziert` wird der **Rohwert** zur Beschriftung, dazu
@@ -743,7 +900,18 @@ Zeitpunkt, Status und Ablauf. Der aktive Mandant bleibt bei jeder Breite in der 
 ### 8.2 Filter und URL
 
 In der URL stehen: `zeitraum` **oder** `von`/`bis` · `status` · `prozess` · `suche` · `langeSuche` ·
-`zwischenschritte` · `sortierung`.
+`sortierung`.
+
+> **`zwischenschritte` ist am 11.08.2026 aus der URL verschwunden** — mit dem Schalter, den er trug
+> (§5). Er war der **einzige** Parameter, der ausdrücklich in der URL stand, auch wenn er der Vorgabe
+> entsprach: Was ausgeblendet ist, muss man teilen können. Die Liste blendet nichts mehr aus, und
+> damit gibt es nichts zu teilen; ohne Auswahl ist die URL jetzt leer. Mit ihm entfallen das
+> `withDefault`, das `clearOnDefault: false` und der Effekt, der ihn beim ersten Rendern nachtrug.
+>
+> **Ein alter Link, der ihn trägt, wird nicht abgewiesen.** Er wird schlicht übergangen, wie jeder
+> unbekannte Suchparameter — kein Fehler, keine Umleitung, kein Hinweis, und auch keine stille
+> Umschreibung der URL. Er hat nie etwas anderes bewirkt, als das auszublenden, was jetzt ohnehin
+> erscheint (§1).
 
 Seit Schritt 5 kommt `nachricht` dazu — die geöffnete Detailansicht. Sie steht in der URL wie jeder
 andere Wert und wird trotzdem **nicht** an `/api/nachrichten` geschickt; die Begründung samt der
@@ -881,42 +1049,31 @@ die helfen — Zeitraum verkleinern, Begriff schärfen —, finden dort statt; u
 schickte. Aus demselben Grund wiederholt der Zwischenspeicher diesen einen Fall nicht automatisch
 (`lib/query-client.ts`); bei jedem anderen `4xx` bleibt es beim einen Wiederholungsversuch.
 
-**Zwischenschritte sind ausgeblendet — und das steht sichtbar da.** Als Chip, der in einem Halbsatz
-erklärt, was fehlt, und ihn einschaltet; und **ausdrücklich in der URL, ab dem ersten Rendern**. Das
-ist kein Widerspruch zu „kein Standardwert im Frontend", sondern die andere Seite derselben Münze:
-Hier wird ein Drittel aller Zeilen *weggelassen*, und was man sieht, muss man teilen können.
+#### ~~Der Chip „Zwischenschritte ausgeblendet"~~ — entfallen am 11.08.2026
 
-> **Der Chip erscheint nur, wo es etwas auszublenden gibt** (seit 07.08.2026). Die 34,38 Prozent aus
-> Messung M6 waren ein Durchschnitt über **einen** Mandanten — `NEXANS` stellt 86 Prozent des
-> Bestands, und dort sind es 39,6 Prozent. Messung [M12](messungen-schritt4.md) hat das
-> aufgeschlüsselt: **Fünf von neun Mandanten mit Nachrichten haben über den gesamten Bestand nicht
-> eine einzige Zwischenschritt-Zeile** — `IBIS`, `IBISGUS`, `ZAST`, `WOC` und `SYSTEM`, zusammen
-> 112.801 Nachrichten. Für sie kündigte der Chip eine Ausblendung an, die nichts ausblendet, und ein
-> Bedienelement ohne Wirkung ist schlimmer als keins.
+Er stand für die ehrliche Hälfte einer Vorgabe, die sich nicht halten ließ: Wer ein Drittel aller
+Zeilen weglässt, muss es sagen — als Chip, der in einem Halbsatz erklärt, was fehlt, und ihn
+einschaltet. **Mit der Vorgabe fällt der Chip** (§5); es gibt nichts mehr anzukündigen. Mit ihm
+verschwinden die Abfrage auf `/api/nachrichten/merkmale`, ihr Zwischenspeicher, die
+Erscheinungslogik und die vier Zeichenketten in `de.ts`/`en.ts`.
+
+> **Was an ihm richtig war und bleiben soll — für den nächsten Fall dieser Art.** Der Chip erschien
+> seit dem 07.08.2026 **nur, wo es etwas auszublenden gab**: Messung
+> [M12](messungen-schritt4.md) hatte gezeigt, dass fünf von neun Mandanten mit Nachrichten über den
+> gesamten Bestand **nicht eine einzige** Zwischenschritt-Zeile haben (`IBIS`, `IBISGUS`, `ZAST`,
+> `WOC`, `SYSTEM` — zusammen 112.801 Nachrichten). Für sie kündigte er eine Ausblendung an, die
+> nichts ausblendet, und **ein Bedienelement ohne Wirkung ist schlimmer als keins.** Dieselbe Zahl,
+> die seine Erscheinungslogik nötig machte, hat am 10.08.2026 die Vorgabe selbst zu Fall gebracht:
+> Eine Ausblendung, die bei fünf von neun Mandanten nichts tut und bei einem 39,6 Prozent versteckt,
+> beschreibt keinen gemeinsamen Zustand.
 >
-> Die Auskunft kommt aus `GET /api/nachrichten/merkmale` (§1) und **nicht aus der Antwort jeder
-> Seite**. Sie beschreibt den Gesamtbestand und nicht das Zeitfenster: `VOTG` hat 40
-> Zwischenschritte über den ganzen Bestand und null im dichten Monat — ein Kriterium über das
-> gewählte Fenster ließe den Chip dort erscheinen und verschwinden, ohne dass ein Zusammenhang
-> erkennbar wäre.
->
-> **Solange die Auskunft lädt, erscheint der Chip nicht.** Dieselbe Entscheidung wie beim
-> Mandantenumschalter ([`visuelles-konzept.md`](visuelles-konzept.md) §5): Ein Bedienelement, das
-> einen Moment später erscheint, ist besser als eines, das wieder verschwindet. **Scheitert sie,
-> erscheint er** — wie vor der Nachbesserung.
->
-> **`zwischenschritte` steht trotzdem in der URL, auch ohne Chip.** Sonst verhielte sich ein
-> geteilter Link je nach Mandant anders — und genau den Unterschied soll die URL abbilden. Der
-> Parameter wirkt weiterhin; er ist nur bei diesen Mandanten folgenlos, weil es nichts gibt, das er
-> ausblenden könnte.
->
-> **Der Text des Chips nennt keine Menge mehr.** Er lautete „…— rund ein Drittel aller Zeilen"; die
-> Zahl stammte aus M6 und beschrieb `NEXANS`. M12 hat gezeigt, dass der Anteil bei den vier
-> Mandanten, die den Chip überhaupt sehen, zwischen **44 und 0,03 Prozent** liegt (`NXHBE` 44,4 %,
-> `NEXANS` 39,6 %, `SUTTONS` 3,0 %, `VOTG` 0,027 %). Solange der Chip für alle stand, war die Zahl
-> ein grober Durchschnitt; seit er datengetrieben erscheint, wäre sie für die Hälfte seiner
-> Empfänger schlicht falsch — und eine falsche Zahl ist genau die erfundene Auskunft, die Regel Q4
-> ausschließt. Eine mandantengenaue Zahl wäre ein `COUNT` über `Message` und damit Regel L2.
+> **Ebenfalls richtig und für spätere Anzeigen gültig:** Solange die Auskunft lud, erschien er nicht
+> (ein Bedienelement, das einen Moment später erscheint, ist besser als eines, das wieder
+> verschwindet — [`visuelles-konzept.md`](visuelles-konzept.md) §5); scheiterte sie, erschien er.
+> Und sein Text nannte **keine Menge**: Der Anteil lag je Mandant zwischen 44 und 0,03 Prozent
+> (`NXHBE` 44,4 %, `NEXANS` 39,6 %, `SUTTONS` 3,0 %, `VOTG` 0,027 %), eine gemittelte Zahl wäre für
+> die Hälfte seiner Empfänger falsch gewesen — genau die erfundene Auskunft, die Regel Q4
+> ausschließt, und eine mandantengenaue Zahl wäre ein `COUNT` über `Message` und damit Regel L2.
 
 **Sortiert wird über die Spaltenüberschrift „Zeitpunkt".** Ein eigenes Auswahlfeld wäre ein zweites
 Bedienelement für eine Entscheidung mit zwei Werten — und es gibt ohnehin keinen zweiten
@@ -934,10 +1091,13 @@ ist der Weg aus dem leeren Zustand heraus; sie mit den Daten zu verstecken hieß
 dann das Werkzeug wegzunehmen, wenn er es braucht.
 
 **Der Leerzustand nennt eine Ursache** und sieht nicht wie ein Fehler aus. Genannt werden *alle*
-greifenden Einschränkungen — Zeitfenster, ausgeblendete Zwischenschritte, Suchbegriff, Status- und
-Prozessfilter —, nicht nur die erste: Wer den Suchbegriff leert und immer noch nichts sieht, weil
-auch der Statusfilter steht, käme sonst zweimal an dieselbe Wand. Dazu eine Schaltfläche „Auf 30
-Tage erweitern".
+greifenden Einschränkungen — Zeitfenster, Suchbegriff, Status- und Prozessfilter —, nicht nur die
+erste: Wer den Suchbegriff leert und immer noch nichts sieht, weil auch der Statusfilter steht, käme
+sonst zweimal an dieselbe Wand. Dazu eine Schaltfläche „Auf 30 Tage erweitern".
+
+> **Die Klausel „ausgeblendete Zwischenschritte" ist am 11.08.2026 entfallen** — mit dem Schalter,
+> auf den sie hinwies (§5). **Die übrigen bleiben vollzählig**; die Regel „alle greifenden
+> Einschränkungen, nicht nur die erste" ist von der Löschung ausdrücklich nicht berührt.
 
 > Der Leerzustand ist hier **besonders wichtig**: Im Profil `dev` enthält das
 > 24-Stunden-Standardfenster je nach Mandant sehr wenige oder null Zeilen, und außer `NEXANS` hat
@@ -1016,9 +1176,44 @@ durch Türen gelaufen, die es für Nutzer nicht gibt.
 
 | Datei | Was |
 |---|---|
-| `tests/nachrichtenfilter.test.ts` | URL → Zustand → URL; unbekannte Werte werden übergangen; **der Cursor taucht in keiner erzeugten URL auf**; die beiden Zeitfenstermodi schließen einander aus; `langeSuche` steht in der URL und wird nur zusammen mit dem Suchbegriff geschickt; **welche Problemtypen an das Suchfeld gehören, welche an die Zeitfensterfelder und welche über die Ansicht**, samt der beiden Zahlen aus der Antwort; **das halb ausgefüllte freie Fenster** wird erkannt und lässt die Liste stehen |
+| `tests/nachrichtenfilter.test.ts` | URL → Zustand → URL; unbekannte Werte werden übergangen; **der Cursor taucht in keiner erzeugten URL auf**; die beiden Zeitfenstermodi schließen einander aus; `langeSuche` steht in der URL und wird nur zusammen mit dem Suchbegriff geschickt; **welche Problemtypen an das Suchfeld gehören, welche an die Zeitfensterfelder und welche über die Ansicht**, samt der beiden Zahlen aus der Antwort; **das halb ausgefüllte freie Fenster** wird erkannt und lässt die Liste stehen; **`AUFGETEILT` und `ZUSAMMENGEFUEHRT` werden gelesen, `ZWISCHENSCHRITT` nicht mehr**; **ein alter `zwischenschritte`-Parameter ist folgenlos** — derselbe Zustand und dieselbe Abfrage wie ohne ihn; ohne Auswahl bleibt die URL leer |
 | `tests/format.test.ts` | UTC → Anzeige in der gelieferten Zone; Wanduhrzeit der Eingabefelder, auch am Umstellungstag |
 | `tests/zwischenspeicher.test.ts` | das Ziel nach dem Mandantenwechsel trägt keine Filter — auch kein `langeSuche` |
+
+---
+
+### 8.6 Sichtprüfung im Browser (11.08.2026)
+
+Nach Schritt 6, Teil 2a, gegen die laufende Anwendung im Profil `dev`, angemeldet als ADMIN, Fenster
+1920 × 726. **Geklickt und getippt, nicht programmatisch gesetzt** — mit einer benannten Ausnahme:
+Der alte Link (Punkt 6) *ist* eine von Hand geöffnete URL, denn genau das ist der geprüfte Vorgang.
+
+| # | Geprüft | Ergebnis |
+|---|---|---|
+| 1 | Kein Chip mehr | Die Filterleiste ist eine Zeile mit **vier** Elementen (Zeitfenster, Status, Prozess, Suche). Kein Chip, keine zweite Zeile darunter |
+| 2 | Der Statusfilter bietet beide Werte | Acht Einträge: Fehler · Wartend · Läuft · **Aufgeteilt** · **Zusammengeführt** · Abgeschlossen · Quittiert · Ungeklärt. **„Zwischenschritt" steht nirgends** |
+| 3 | Beide liefern Zeilen | `Aufgeteilt` mit dem Split-Zeichen bei `NEXANS` im 24‑h‑Fenster; `Zusammengeführt` mit dem Merge-Zeichen über 7 Tage. Zwei verschiedene Zeichen, dieselbe neutrale Farbrolle |
+| 4 | Die Vorgabe blendet nichts aus | Ohne Statusfilter enthält eine Seite von 200 Zeilen bei `NEXANS`: 137 `ABGESCHLOSSEN`, 49 `FEHLER`, **13 `AUFGETEILT`**, 1 `QUITTIERT` — vorher wären die 13 nicht dabei gewesen |
+| 5 | Die Statuszelle nennt keine Präposition | `Wartend` · `Schritt: Send Message to …`, `title` trägt den Vollwert `Schritt: Send Message to Pool`. **„wartet vor" kommt im ganzen Dokument nicht mehr vor**, „Zwischenschritt" ebenso wenig |
+| 6 | Liste gegen Detail | Dieselbe Nachricht angeklickt: Das Panel markiert `Send Message to Pool` als den Schritt, in dem sie steht („Die Nachricht wartet — von selbst geht es hier nicht weiter", *wartet seit 6 d 17 h · Frist 30 min · Überfällig*). Die Liste daneben sagt `Schritt: Send Message to Pool`. **Kein Widerspruch mehr** |
+| 7 | Alter Link | `?zeitraum=7d&zwischenschritte=false` von Hand geöffnet: **200**, Liste wie ohne den Parameter, Statusfilter auf „Alle Status", keine Meldung, keine Umleitung. Der Parameter bleibt unverändert in der Adresszeile stehen — er wird übergangen, nicht weggeschrieben |
+| 8 | Kleiner Mandant | Auf `IBISGUS` gewechselt — der Mandant, bei dem ein Stellungsprädikat **100 %** aller Zeilen ausgeblendet hätte (M28‑1). Die Liste zeigt ihren vollen Bestand |
+| 9 | Ohne Auswahl bleibt die URL leer | Nach dem Mandantenwechsel steht `/nachrichten` ohne jeden Suchparameter da. Vorher trug sie ab dem ersten Rendern `zwischenschritte=false` |
+| 10 | Zeilenhöhe unverändert | Alle 50 Zeilen exakt **36 px**, auch mit geöffnetem Panel und mit dem Schritt-Zusatz in der Zelle — dieselbe eine Höhe wie am 07.08.2026 |
+| 11 | Schmales Fenster | **Nicht gesehen — siehe unten.** |
+
+> ⚠️ **Punkt 11 ist offen, und zwar aus demselben Grund wie am 07.08.2026 und am 10.08.2026.** Die
+> Browsersteuerung kann das Fenster nicht verkleinern: `innerWidth` und `outerWidth` melden beide
+> 1920 und bewegen sich nicht. Das ist keine Beobachtung mehr, sondern eine Eigenschaft der Umgebung
+> ([`frontend-grundlagen.md`](frontend-grundlagen.md) §7).
+>
+> **Was stattdessen geprüft wurde, und was das wert ist.** Das **Regelwerk**: `hidden md:table-cell`
+> steht auf **allen 51** Zellen der Projektspalte (Kopf und 50 Zeilen), unter 768 px fällt also die
+> ganze Spalte weg und nicht bloß ihr Kopf. Waagerechter Überlauf ist bei der geprüften Breite
+> **null**. Die Filterleiste ist `flex flex-wrap` und bricht damit um, statt zu überlaufen — und sie
+> hat seit heute ein Element weniger zu brechen. **Gesehen ist das nicht.**
+>
+> **Das gehört von Hand nachgeholt, bevor der Schritt als abgenommen gilt.**
 
 ---
 
@@ -1029,9 +1224,9 @@ durch Türen gelaufen, die es für Nutzer nicht gibt.
 | **M1** kein Endpunkt nimmt eine Mandanten-ID | kein Parameter, Mandant aus der Sitzung über `MandantService` |
 | **M2** Mandant als erster Pflichtparameter | `NachrichtenRepository`; ArchUnit prüft es |
 | **M3** Filter im Statement | `EXISTS` über `Process → ProjectMandant`, Teil jeder Bedingungsliste |
-| **M4** Isolationstest je Endpunkt | `NachrichtenIsolationDbIT` — fuer die Liste **und** fuer `/api/nachrichten/merkmale` |
+| **M4** Isolationstest je Endpunkt | `NachrichtenIsolationDbIT` — für die Liste. Der zweite Endpunkt (`/api/nachrichten/merkmale`) ist am 11.08.2026 entfallen, sein Isolationstest mit ihm; **kein anderer wurde angefasst** |
 | **L1** Pflicht-Zeitfenster | `common/Zeitfenster`, Vorgabe 24 h, Maximum ein Jahr |
-| **L2** keine Live-Aggregation | kein `COUNT`, `limit + 1` statt `total`; die Merkmale sind eine Existenzfrage mit `LIMIT 1` und zwischengespeichert (§1) |
+| **L2** keine Live-Aggregation | kein `COUNT`, `limit + 1` statt `total` |
 | **L3** keine `OFFSET`-Paginierung | Cursor über `(MessageLastUpdate, MessageID)` |
 | **L4/L5** `MessageProperty`/BAM nur über die Kennung | `MessageProperty` wird nicht angefasst; **`MessageBAM` seit der Nachbesserung gar nicht mehr** (§6); Suche nur über Stammdaten, mit Mindestlänge, Deckel **und Fenstergrenze** (§5) |
 | **L7** jede Abfrage gemessen | [`messungen-schritt4.md`](messungen-schritt4.md), Abschnitte L1 bis L15 |
@@ -1083,12 +1278,18 @@ durch Türen gelaufen, die es für Nutzer nicht gibt.
   ist ein voller Durchlauf über `Message`** (10,9 s, M10) zum Füllen der Tabelle; als seltener
   Hintergrundlauf ist das tragbar, als Teil einer Anfrage nicht. Umgesetzt wird das hier nicht — es
   gehört zu Schritt 10 und braucht seine eigene Messung.
-- **Nachrichten wechseln den Prozess, während die `SOSID` stehen bleibt — und für Schritt 6 ist
-  offen, was das für die Mandantengrenze bedeutet.** Nachgewiesen ist der Wechsel selbst (M10):
+- **Nachrichten wechseln den Prozess, während die `SOSID` stehen bleibt.** ~~**Für Schritt 6 ist
+  offen, was das für die Mandantengrenze bedeutet.**~~ **Geprüft am 10.08.2026 —
+  [M27](messungen-schritt6.md#m27--mandantengrenze-bei-prozesswechseln): Quell- und Zielprozess
+  führen in allen 9.101 Zeilen zum *selben* Mandanten** (`IBIS`/`IBIS` 63, `NEXANS`/`NEXANS` 9.038).
+  Die drei unten genannten Möglichkeiten sind damit **nicht** gegeneinander abzuwägen; die Kette
+  bleibt innerhalb der Grenze. Der Mandantenfilter der Kette wird trotzdem gesetzt — er ist die
+  Zusicherung (Regel M5), nicht die Beobachtung.
+
+  Nachgewiesen ist der Wechsel selbst (M10):
   **9.101 Zeilen**, bei denen `SOS.ProcessID` und `Message.ProcessID` auseinanderfallen — elf
   `SOS`-Zeilen, vierzehn Prozesse, verteilt über fünfzehn Monate und damit kein Ausreißer eines
-  Tages. **Ungeprüft ist, ob Quell- und Zielprozess über `ProjectMandant` zum selben Mandanten
-  führen.**
+  Tages.
 
   **Für die Liste ist das folgenlos**, weil der Mandantenfilter über den *aktuellen*
   `Message.ProcessID` läuft: Eine Zeile gehört immer genau dem Mandanten, unter dem sie gerade steht.
@@ -1107,12 +1308,31 @@ durch Türen gelaufen, die es für Nutzer nicht gibt.
   > Prozessen. Das passt zum Bild, ist aber **nicht nachgewiesen** — geprüft wurde die Abweichung,
   > nicht ihre Herkunft.
 
-- **Eine tatsächlich hängende `SPLITTED`-Nachricht erscheint nie als überfällig.** `ZWISCHENSCHRITT`
-  gilt als Endstatus (`message-status.md`), und die Überfälligkeitsrechnung setzt „nicht in einem
-  Endstatus" voraus. Bleibt eine gesplittete Nachricht wirklich hängen, sieht man das **nicht** am
-  Status, sondern erst über die Verkettung in Schritt 6 — dort fehlt dann die Fortsetzung. Das ist
-  eine bewusste Entscheidung (sonst wären 34,38 Prozent aller Zeilen Kandidaten für „überfällig"),
-  aber es ist eine Lücke, und sie gehört hier benannt.
+- **Eine tatsächlich hängende `SPLITTED`-Nachricht erscheint nie als überfällig.** `AUFGETEILT` und
+  `ZUSAMMENGEFUEHRT` gelten als Endstatus (`message-status.md`), und die Überfälligkeitsrechnung
+  setzt „nicht in einem Endstatus" voraus. Bleibt eine gesplittete Nachricht wirklich hängen, sieht
+  man das **nicht** am Status, sondern erst über die Verkettung — dort fehlt dann die Fortsetzung.
+  Das ist eine bewusste Entscheidung (sonst wären 34,38 Prozent aller Zeilen Kandidaten für
+  „überfällig"), aber es ist eine Lücke, und sie gehört hier benannt. **Die Aufteilung des Status am
+  11.08.2026 hat daran nichts geändert** — sie hat den Wert geteilt, nicht die Rechnung.
+- 🟡 **Der Status sagt über die Stellung in der Kette nichts Verlässliches — und die Liste zeigt
+  trotzdem nur ihn** *(neu am 11.08.2026)*. Bei `IBIS`, `IBISGUS` und `ZAST` trägt die Wurzel
+  `FINISHED` (M24‑3). `AUFGETEILT` sagt bei `NEXANS` also etwas über die Aufteilung und bei drei
+  Mandanten nichts. **Die Liste kann es nicht besser wissen:** Die verlässliche Auskunft steht in
+  `Source`/`Target` und nicht im Status, und eine **Rollenkennzeichnung in der Liste ist
+  ausgeschlossen** — Entscheidung des Auftraggebers, weder Spalte noch Symbol noch Tooltip; die
+  Rolle erscheint im Detail. Das ist die bewusst getragene Folge und **kein Fehler**; sie steht
+  hier, damit sie nicht als einer gemeldet wird.
+
+  > **Belegvermerk** (Regel L10).
+  > *Gemessen (M24‑3, Fenster B + Überhang):* Bei `IBIS` (1.714 Elternzeilen), `IBISGUS` (22) und
+  > `ZAST` (20) tragen die Eltern `FINISHED`; bei `NEXANS` (27.644) und `SUTTONS` (640) tragen sie
+  > `SPLITTED`.
+  > *Behauptet ist:* Der Status ist über die Kette hinweg unzuverlässig.
+  > **Die Lücke:** Gemessen sind fünf Mandanten in einem Monatsfenster, behauptet ist eine Aussage
+  > über den Bestand. Sie trägt trotzdem, weil sie einen **Gegenbeleg** braucht und keine Quote: Ein
+  > einziger Mandant, dessen Wurzel `FINISHED` trägt, widerlegt „der Status benennt die Stellung".
+  > Drei sind gemessen.
 - ~~**Groß-/Kleinschreibung bei der Fehlerbedingung.**~~ **Erledigt am 06.08.2026.** Die Sortierung
   des Quellschemas ist `utf8mb4_general_ci`, der SQL-Vergleich also unabhängig von der Schreibweise;
   `String.startsWith` und `Map.get` in Java sind es nicht. Ein Wert `error_x` wurde damit in SQL als
@@ -1171,6 +1391,28 @@ durch Türen gelaufen, die es für Nutzer nicht gibt.
   > — die Beschriftung trägt deshalb **beide** Lagen und ist nicht einfach von „steht auf" auf
   > „wartet vor" umgestellt worden. **Dieser Teil bleibt offen und ist lokal nicht zu schließen.**
 
+- ~~🔴 **„wartet vor" ist widerlegt und steht trotzdem noch in der Zelle**~~ **Erledigt am
+  11.08.2026 (Schritt 6, Teil 2a).** Die Zelle nennt keine Präposition mehr, sondern Status und
+  Schritt: `Wartend` · `Schritt: Send Message to Pool` (§8.1). Liste und Detail widersprechen sich
+  damit nicht mehr.
+
+  **Von den drei Wegen, die hier standen, ist der zweite genommen worden — in seiner strengsten
+  Fassung.** Die Bewertung von damals gehört dazu, weil sie erklärt, warum:
+
+  | Weg | Preis | Ergebnis |
+  |---|---|---|
+  | Listen-Endpunkt trägt den Wartezustand je Zeile | ein zusätzlicher Zugriff auf `MessageAction` (10,3 Mio. Zeilen) je Zeile | **verworfen** — genau der Join, den die Liste nach L2/L3 nicht macht; er stünde auf jeder Seite mit 50 Zeilen für ein Wörtchen |
+  | Wortwahl ohne die Unterscheidung | kostet nichts, sagt weniger | **genommen**, aber nicht als „wartet: X" (das liest sich für `LAEUFT` schief), sondern als „Schritt: X" — eine Formulierung, die für beide Einordnungen trägt |
+  | Beschriftung fällt weg, der Schritt steht wieder allein | zurück zum Zustand vor Schritt 5 | **verworfen** — die Sichtprüfung hatte ihn als irreführend befunden |
+
+- 🟡 **Das schmale Fenster ist weiterhin ungesehen** *(fortgeschrieben am 11.08.2026)*. Zum dritten
+  Mal geprüft ist nur das Regelwerk, nicht die Darstellung — die Browsersteuerung kann das Fenster
+  nicht verkleinern ([`frontend-grundlagen.md`](frontend-grundlagen.md) §7). Neu ist, dass die
+  Filterleiste ein Element weniger hat: Der Chip stand als eigene Zeile darunter und ist entfallen,
+  die verbleibenden vier brechen um. **Was zu sehen wäre:** ob die vier Bedienelemente unter 768 px
+  sinnvoll umbrechen und ob die Statuszelle mit `Schritt: …` dort noch lesbar bleibt — sie ist
+  gegenüber „wartet vor: …" kürzer geworden, aber die Statusspalte ist ab `lg` breiter, und
+  darunter greift diese Breite nicht.
 - **Der Zeitzonen-Übergang** (Wanduhrzeit der Quelle → UTC der API) setzt voraus, dass Anwendungs-
   und Datenbankserver dieselbe Zone haben. Für die Testkopie ist das gemessen; für die Produktion
   ist es die Annahme, die die Anwendungsuhr ohnehin macht. Ein Auseinanderlaufen fiele als

@@ -37,12 +37,16 @@ gesagt hat.
   "processName": "40000_AMG_LAB_VDA",
   "projectName": "300_KundenEingehend",
   "sosName": "Versand Einzel IDOC aus Split",
+  "rollen": ["SPLIT_WURZEL"],
   "zeitpunkt": "2025-12-29T22:53:50Z",
   "start": "2025-12-29T22:41:12Z",
-  "timeoutSekunden": 1800,
+  "gesamtdauerSekunden": 758,
+  "fristSekunden": 1800,
   "eigenschaftenAnzahl": 22,
-  "offenerZustand": "WARTET_VOR",
+  "offenerZustand": "WARTET_IN",
   "naechsterSchritt": "Send Message to Pool",
+  "wartetSeitSekunden": 15120,
+  "ueberfaellig": true,
   "schritte": [
     {
       "position": 1,
@@ -74,6 +78,27 @@ es, weil sie es je Zeile braucht — das Detail nicht.
 Anlagedatum (Regel Q2); der Start ist `MIN(MessageAction.MessageActionStart)` über **alle**
 Aktionen, einschließlich des Metadaten-Schritts. Ihn auszunehmen ergäbe einen zu späten Start — an
 ihm kommt die Nachricht ins System (M17 3).
+
+**`fristSekunden` hieß bis zum 10.08.2026 `timeoutSekunden`.** Es ist unverändert
+`Message.MessageTimeout` in **Sekunden** (Regel Z2, M8) — neu ist, dass eine `0` als `null` geht:
+„keine Frist gesetzt". **Umbenannt statt ergänzt:** Zwei Felder aus derselben Spalte mit
+verschiedener `null`-Bedeutung wären eine zweite Wahrheit. Der Timeout **je Schritt** heißt
+weiterhin `timeoutSekunden` und bleibt roh — dort ist die Bedeutung der `0` eine offene Frage
+(Frage 8 in [`messungen-schritt5.md`](messungen-schritt5.md)), hier ist sie geklärt.
+
+**`rollen` steht im Kopf** *(neu am 11.08.2026, Schritt 6 Teil 2b)* — die Stellung dieser Nachricht
+in der Verkettung, **immer vorhanden, leer statt fehlend**. Ein fehlendes Feld hieße „unbekannt", ein
+leeres heißt „nicht in einer Kette".
+
+**Es kostet keinen Join und kein zweites Statement.** Die vier Verkettungsspalten liegen auf der
+`Message`-Zeile, die `findeKopf` ohnehin liest; die Zugriffspfade in §8 ändern sich nicht, `Message`
+bleibt `const`. Genau dafür war E4 die Messung: Ob eine Nachricht eine Kette hat, steht auf der Zeile
+— ohne Abfrage.
+
+**Abgeleitet wird in `common/Kettenrollen`**, der einen Stelle dafür — dieselbe Bauform wie beim
+`MessageStatusClassifier`. Hier wird so wenig neu abgeleitet, wie hier neu klassifiziert wird.
+Wozu die Oberfläche das Feld braucht, steht in [`verkettung.md`](verkettung.md) §8.1: Ist die Liste
+leer, gibt es keinen Kettenblock und **keine zweite Anfrage**.
 
 **Die Anzahl der Eigenschaften steht im Kopf, obwohl die Eigenschaften selbst nicht mitkommen.**
 Ohne sie könnte die Oberfläche den eingeklappten Block nicht beschriften, ohne ihn zu laden — womit
@@ -193,14 +218,104 @@ Ein Feld, das den Zustand benennt, statt ihn die Oberfläche erraten zu lassen.
 
 | Wert | Bedingung |
 |---|---|
-| `LAEUFT_AUF` | Nachricht offen, und eine Aktion hat kein `MessageActionEnd` |
-| `WARTET_VOR` | Nachricht offen, aber **jede** Aktion ist beendet |
-| `OHNE_SCHRITT` | Nachricht offen, aber es gibt gar keine Aktion |
+| `LAEUFT_AUF` | Nachricht offen, und ein Schritt hat kein `MessageActionEnd` |
+| `WARTET_IN` | Nachricht offen, jeder Schritt beendet, und `Message.SOSID`/`SOSActionID` zeigen auf den **zuletzt ausgeführten** Schritt |
+| `WARTET_VOR` | Nachricht offen, jeder Schritt beendet, und sie zeigen auf einen **anderen** Schritt |
+| `EMPFANGEN` | Nachricht offen, es gibt eine `MessageAction` mit `SOSActionID = 0` und **keine** mit `SOSActionID <> 0` |
+| `OHNE_AKTION` | Nachricht offen, und es gibt **gar keine** `MessageAction` |
 | `KEINER` | Nachricht nicht offen |
 
-**Die Reihenfolge der Prüfung ist Teil der Regel.** „Gar keine Aktion" muss **vor** „jede Aktion ist
-beendet" stehen: Über einer leeren Menge ist die zweite Bedingung wahr, und die Nachricht bekäme
-`WARTET_VOR` samt einem nächsten Schritt, vor dem sie gar nicht steht.
+**Die Reihenfolge der Prüfung ist Teil der Regel.** „Keine Schrittfolge" muss **vor** „jeder Schritt
+ist beendet" stehen: Über einer leeren Menge ist die zweite Bedingung wahr, und die Nachricht bekäme
+einen Wartezustand samt einem Schritt, an dem sie gar nicht steht.
+
+**Das `switch` ohne `default` erzwingt, dass jede Stelle bewusst nachgezogen wird.** Ein neuer Wert
+soll einen Compilerfehler auslösen und keine stille Voreinstellung erben — dieselbe Bauart wie beim
+`MessageStatusKind`. Bei der Aufteilung unten hat genau das gewirkt: Die beiden neuen Werte konnten
+`wartetSeitSekunden` nicht stillschweigend als `null` erben.
+
+### Der Wartezustand ist aufgeteilt — und die Aufteilung liegt im Backend
+
+*Geändert am 10.08.2026, Anlass ist [M29](messungen-schritt5.md#m29--worauf-zeigt-messagesosactionid-bei-wartenden-nachrichten).*
+
+Bis dahin gab es **einen** Wartezustand, und die Oberfläche verglich zwei gelieferte Felder —
+`naechsterSchritt` gegen die Namen der gelaufenen Schritte —, um zu entscheiden, welchen Satz sie
+schreibt (§10.11). Das widerspricht der Regel aus Teil 1: *Das Backend liefert den Zustand, die
+Oberfläche stellt ihn dar und leitet nichts selbst ab.*
+
+**Der Unterschied ist die Präposition, und sie ist ehrlich:** Die Nachricht wartet *in* einem
+Schritt, der sie schlafen gelegt hat, oder *vor* einem, der noch nicht begonnen hat.
+
+**Verglichen wird über die Kennungen, nicht über den Namen.** Zwei Schritte desselben Ablaufs können
+gleich heißen; ein Namensvergleich wäre dann eine Verwechslung. Beide Hälften des zusammengesetzten
+Schlüssels zählen — 2,51 Prozent der Nachrichten haben Schritte aus mehr als einem Ablauf (M20), und
+eine `SOSActionID` allein ist dort nicht eindeutig.
+
+**Ist `Message.SOSID` leer**, zeigt der Verweis auf nichts: Das ergibt `WARTET_VOR` mit einem
+`naechsterSchritt` von `null`, und die Oberfläche benennt genau das. Über den Gesamtbestand läuft
+dieser Verweis zu 43,9 Prozent ins Leere (M13).
+
+> ⚠️ **`WARTET_VOR` ist ein unbeobachteter Zweig.** M29 hat über **alle 538** wartenden Nachrichten
+> gemessen: **538 Mal** `WARTET_IN`, **null Mal** `WARTET_VOR`. Gebaut, unit-getestet, nie gesehen —
+> vollständig in §10.12.
+
+### Der »zuletzt ausgeführte Schritt« ist der letzte Schritt der Schrittfolge
+
+**Also ohne `SOSActionID = 0`.** Der Metadaten-Schritt erscheint nicht in der Zeitleiste (S1); ihn
+beim Vergleich mitzuzählen hieße, `WARTET_IN` gegen eine Zeile zu entscheiden, die der Nutzer nicht
+sieht. Bei den 538 wartenden Nachrichten der Testkopie ändert das nichts — sie haben sämtlich genau
+zwei echte Schritte (M29 1) —, aber die Produktion muss sich nicht daran halten, was die Testkopie
+zufällig enthält.
+
+**Der Schritt wird nach derselben Ordnung bestimmt, nach der die Zeitleiste sortiert:**
+`MessageActionStart`, bei Gleichstand `MessageActionID`. Diese Ordnung steht an **genau einer
+Stelle**, nämlich im `ORDER BY` von `findeAktionen`; der Service nimmt das letzte Element und
+sortiert nicht ein zweites Mal. Ein zweites Sortierkriterium an einer zweiten Stelle wäre genau die
+Drift, gegen die diese Regel gerichtet ist.
+
+> M29 (0) hat nachgemessen, dass diese Ordnung und `MAX(MessageActionID)` auf allen 538 wartenden
+> Nachrichten **dieselbe** Zeile treffen — 538 von 538, null Abweichungen. Das ist ein Befund über
+> die Daten und keine Freigabe, im Code die andere Ordnung zu nehmen.
+
+### `OHNE_SCHRITT` trug zwei Fälle und ist aufgeteilt worden
+
+*Geändert am 10.08.2026, im Nachtrag zu Schritt 5.* Der Wert hieß zuletzt „es gibt keinen **echten**
+Schritt" und deckte damit zwei Lagen ab, die verschiedene Fragen beantworten:
+
+| Wert | Was er sagt |
+|---|---|
+| `EMPFANGEN` | Die Nachricht ist im System angekommen und seitdem nicht weitergelaufen — eine Auskunft über die **Plattform** |
+| `OHNE_AKTION` | Zu dieser Nachricht ist kein Ablauf protokolliert — eine Auskunft über die **Datenlage** |
+
+**Ein gemeinsamer Text müsste so vage sein, dass er beides abdeckt — und wäre dann für keinen der
+beiden brauchbar.** Deshalb zwei Werte und zwei Sätze.
+
+**Der Name `OHNE_SCHRITT` verschwindet und wird für keinen der beiden weiterverwendet.** Sonst
+überlebt die alte, unscharfe Bedeutung in irgendeinem Kopf. `LAEUFT_AUF`, `WARTET_IN`, `WARTET_VOR`
+und `KEINER` bleiben unverändert.
+
+Beide erben, was die Runde davor entschieden hat: **Der Metadaten-Schritt ist kein Schritt der
+Zeitleiste** (S1). Eine Nachricht, die nur ihn hat, als `LAEUFT_AUF` zu führen hieße, eine Zeile zu
+markieren, die die Leiste gar nicht zeigt.
+
+#### Woran der Code „nur Schritt 0" erkennt
+
+An **`SOSActionID = 0`**, wie S1 es festlegt — nicht an `MessageActionID`.
+
+> **Belegvermerk** (Regel L10).
+> *Gemessen (M15 1, Fenster A):* `SOSActionID = 0` steht ausschließlich neben `MessageActionID = 0`
+> und umgekehrt — 6.249 zu 6.249, ohne Abweichung.
+> *Behauptet wäre:* Die beiden Spalten bezeichnen dieselbe Menge.
+> **Die Lücke:** ein Tag und ein Fenster. Für die Erkennung ist sie folgenlos, weil S1 die Regel
+> ohnehin an `SOSActionID` festmacht und dieselbe Deckung über **704.427** Aktionen **beider**
+> Fenster nachgemessen hat, mit null Abweichungen in allen drei Paarvergleichen. Der Vermerk steht
+> hier, weil er überall hingehört, wo ein Satz weiter reicht als seine Messung.
+
+#### An den Daten der Testkopie ändert die Aufteilung nichts
+
+Beide Fälle kommen dort null Mal vor: M16 (3) hat „gar keine Aktion" mit `0` gemessen, M29 (1)
+„keine echte Aktion" mit `0` von 538. **Nicht widerlegt, nur nicht beobachtet** — mit je eigenem
+Grund in §10.12.
 
 **„Offen" heißt `WARTEND` oder `LAEUFT`** aus dem `MessageStatusClassifier` — ausdrücklich
 aufgezählt und **nicht** über `istEndstatus` geholt. [`message-status.md`](message-status.md) führt
@@ -213,15 +328,24 @@ demselben Grund.
 **Nicht auf `ERROR_TIMEOUT` gestützt** — M8 hat gezeigt, dass dieser Status nicht das Ablaufen von
 `MessageTimeout` ist, sondern eine kürzere Frist auf Dienstebene.
 
-### `WARTET_VOR` ist der Normalfall des Wartens
+### `WARTET_IN` ist der Normalfall des Wartens
 
-Bei **allen 538** `SUSPENDED`-Nachrichten der Testkopie ist **jede** Aktion beendet (M16 3). Eine
-wartende Nachricht steht also **zwischen** zwei Schritten und nicht auf einem laufenden; beim Warten
-auf eine Zusammenführung ist genau das der Normalfall.
+Bei **allen 538** `SUSPENDED`-Nachrichten der Testkopie ist **jede** Aktion beendet (M16 3), und bei
+**allen 538** zeigt der Verweis auf den Schritt, der zuletzt gelaufen ist (M29). Eine wartende
+Nachricht steht also nicht *zwischen* zwei Schritten, sondern **in** dem Schritt, der sie schlafen
+gelegt hat — dem mit `WAITUNTIL|…|SUSPEND`.
 
-Nur in diesem Zustand kommt `naechsterSchritt` mit — aufgelöst aus `Message.SOSID` und
+> **Das korrigiert die Lesart von M16 (3), nicht seine Zahl.** Dort stand „eine wartende Nachricht
+> steht *zwischen* zwei Schritten". Gemessen war: jede Aktion ist beendet. Das stimmt weiterhin —
+> nur folgt daraus nicht, dass ein *nächster* Schritt aussteht. M29 hat die Lücke gefüllt, die M16
+> offen gelassen hat.
+
+In **beiden** Wartezuständen kommt `naechsterSchritt` mit — aufgelöst aus `Message.SOSID` und
 `Message.SOSActionID`. **Nullbar**, weil dieser Verweis über den Gesamtbestand zu 43,9 Prozent ins
-Leere läuft (M13); bei allen 538 wartenden Nachrichten löst er auf.
+Leere läuft (M13); bei allen 538 wartenden Nachrichten löst er auf (M29 3). Dass die Oberfläche ihn
+bei `WARTET_IN` nur in den Tooltip schreibt, ändert nichts daran, dass er geliefert wird: Der Name
+ist die Auskunft, welchen Schritt das Altsystem meint, und die hängt nicht davon ab, wie sie
+dargestellt wird.
 
 > ⚠️ **Belegt ist das für `SUSPENDED`, nicht für `LAEUFT`.** `RUNNING` kommt in der Testkopie null
 > Mal vor, in der Produktion aber sehr wohl — und gerade dort wäre der laufende Schritt der zu
@@ -239,6 +363,152 @@ Ende allein genügt nicht: 39 der 95 offenen Aktionen des Gesamtbestands gehöre
 sieben zu `CHECKED` (M22). Dort ist es eine Protokolllücke und kein Hänger, und ein Feld, das beides
 gleich benennt, wäre eine falsche Auskunft. Wer das rohe Merkmal braucht, liest `ende` — das ist
 dort `null`.
+
+---
+
+## 3a. Wartedauer, Frist und Überfälligkeit
+
+*Neu am 10.08.2026.* Die Frage, die ein Nutzer vor einer hängenden Nachricht tatsächlich stellt,
+lautet nicht „wie lange lag sie zwischen zwei Schritten", sondern **„wie lange steht sie schon"**.
+Der Endpunkt beantwortet sie, statt die Oberfläche rechnen zu lassen.
+
+| Feld | Wert |
+|---|---|
+| `wartetSeitSekunden` | der Bezugspunkt hängt am offenen Zustand — siehe die Tabelle darunter |
+| `fristSekunden` | `Message.MessageTimeout` — eine Dauer in **Sekunden**, kein Zeitpunkt (M8). `null` bei `NULL` und bei `0` |
+| `ueberfaellig` | ob `MessageLastUpdate + MessageTimeout` in der Vergangenheit liegt **und** die Nachricht nicht in einem Endstatus ist |
+| `gesamtdauerSekunden` | fachlicher Start bis `MessageLastUpdate`, für **jede** Nachricht |
+
+**Die Berechnung läuft im Backend gegen die Anwendungsuhr, niemals im Browser.** Im Dev-Profil ist
+die Uhr um Monate versetzt; eine Oberfläche, die `Date.now()` gegen einen gelieferten Zeitstempel
+rechnete, zeigte dort Monate statt Stunden. Das ist genau der Grund, warum es die Uhr gibt.
+
+Es ist die **Anwendungsuhr**, nicht die Systemuhr — die Ausnahme in Regel A5 gilt für
+*sicherheitsrelevante* Zeit, also Sperrfristen und Sitzungsablauf.
+
+**Eine negative Dauer wird `null`**, bei beiden Feldern und aus demselben Grund wie bei
+`dauerSekunden` (§4): „wartet seit minus drei Sekunden" ist schlechter als gar keine Angabe.
+Vorgekommen ist es nicht — die Anwendungsuhr steht auf dem jüngsten Zeitpunkt des Bestands und läuft
+vorwärts —, aber eine Uhr, die einmal zurückspringt, soll keine negative Dauer erzeugen.
+
+### Der Bezugspunkt je Zustand
+
+| Zustand | Bezugspunkt |
+|---|---|
+| `LAEUFT_AUF` | Beginn der offenen Aktion |
+| `WARTET_IN`, `WARTET_VOR` | Ende der letzten Aktion **der Schrittfolge** |
+| **`EMPFANGEN`** | **Ende des Schritts `0`; ist es nicht gesetzt, dessen Beginn** |
+| `OHNE_AKTION` | `null` — es gibt keinen Anker |
+| `KEINER` | `null` |
+
+> **Korrigiert am 10.08.2026.** Hier stand: *„Hat eine Nachricht ausschließlich den Schritt `0`, ist
+> das der Fall `OHNE_SCHRITT`, und `wartetSeitSekunden` ist `null` — nicht die Zeit seit dem
+> Metadaten-Eintrag."* **Das war verkehrt herum.**
+>
+> Eine Nachricht, die um 14:32 angekommen und seitdem nicht angefasst worden ist, **hängt** — und
+> das ist der Zustand, in dem ein Nutzer dieses Werkzeug öffnet. Mit `null` sagte das Feld an der
+> einzigen Stelle nichts, an der es etwas zu sagen hätte. Die alte Fassung hat auf definitorische
+> Sauberkeit optimiert (*„der Metadaten-Schritt zählt nicht zu den Schritten"*) statt auf die Frage
+> des Nutzers. Der Schritt `0` ist kein Verarbeitungsschritt, aber er **ist** ein Ereignis mit einem
+> Zeitpunkt — aus genau diesem Grund rechnet der fachliche Start ja auch über ihn (M17 3).
+
+**Bei `OHNE_AKTION` bleibt es bei `null`, und zwar konsequent:** Der fachliche Start im Kopf ist dort
+ebenfalls `null` (`MIN(MessageActionStart)` über eine leere Menge). Eine Dauer aus
+`MessageLastUpdate` zu rechnen wäre eine erfundene Zahl — der Zeitpunkt der letzten Änderung ist
+nicht der Zeitpunkt des Eingangs.
+
+**`ueberfaellig` ändert sich durch die Aufteilung nicht** — es hängt an `MessageLastUpdate +
+MessageTimeout` und `istEndstatus`, nicht am offenen Zustand. Erwähnenswert ist trotzdem, dass die
+Kategorie mit `EMPFANGEN` zum ersten Mal einen Zustand bekommt, in dem sie wirklich etwas sagt: eine
+Nachricht, die eingegangen und über ihre Frist hinaus nicht weitergelaufen ist.
+
+### Auch hier zählt der Metadaten-Schritt nicht — außer bei `EMPFANGEN`
+
+„Die letzte Aktion" ist die letzte Aktion **der Schrittfolge**, also ohne Schritt `0`.
+
+> **Die beiden Mengen rund um den Metadaten-Schritt, nebeneinander — und warum das keine
+> Unsauberkeit ist.**
+>
+> | Frage | Menge | Grund |
+> |---|---|---|
+> | **fachlicher Start** (`start`, `gesamtdauerSekunden`) | **alle** Aktionen, **einschließlich** Schritt `0` | Der Start ist der Zeitpunkt, an dem die Nachricht ins System kommt — und das *ist* der Metadaten-Schritt (M17 3: dort hängen die `Message.*`-Eigenschaften und die `*Reader`-Dienste). Ihn auszunehmen ergäbe einen zu späten Start |
+> | **letzter Schritt** (`WARTET_IN`/`WARTET_VOR`, `LAEUFT_AUF`, die Zeitleiste) | **nur echte** Schritte, **ohne** Schritt `0` | Der letzte Schritt ist etwas, das der Nutzer in der Leiste sieht. Gegen eine unsichtbare Zeile zu entscheiden hieße, ihm eine Aussage über etwas zu machen, das für ihn nicht existiert |
+> | **`EMPFANGEN`** | **genau** Schritt `0` | Hier ist der Metadaten-Schritt nicht die falsche Zeile, sondern die einzige Auskunft, die es gibt — dieselbe Lesart wie beim fachlichen Start. Er wird trotzdem keine Zeile der Leiste |
+>
+> **Verschiedene Fragen, verschiedene Mengen.** Beim nächsten Lesen sieht das nach einer
+> Inkonsistenz aus; es steht deshalb hier, samt Begründung. Das Kriterium ist in allen drei Fällen
+> dasselbe (`SOSActionID = 0`, S1) — verschieden ist nur, ob es ausschließt, einschließt oder allein
+> steht.
+
+### `fristSekunden` und `timeoutSekunden` sind absichtlich verschieden
+
+Der Kopf trägt seit der Nachbesserung `fristSekunden`, der Schritt weiterhin `timeoutSekunden`. Zwei
+Namen, zwei **verschiedene Größen** — und das ist keine Uneinheitlichkeit.
+
+| Feld | Quellspalte | Wo | Bedeutung |
+|---|---|---|---|
+| `fristSekunden` | `Message.MessageTimeout` | Kopf | die Frist der **Nachricht**; `0` und `NULL` gehen beide als `null` hinaus |
+| `timeoutSekunden` | `MessageAction.SOSActionTimeout` | je Schritt | die Frist des **Ablaufschritts**, roh geliefert und nicht gedeutet |
+
+**Sie werden nicht zusammengeführt, und das ist kein Versäumnis an der Vereinheitlichung.** M8 hat
+gemessen, dass die beiden fachlich auseinanderliegen: Alle 52 `ERROR_TIMEOUT`-Nachrichten tragen
+`MessageTimeout = 1800`, und trotzdem liegen zwischen dem Start ihrer letzten Aktion und dem Fehler
+**höchstens 120 Sekunden**; jede von ihnen trägt genau eine Aktion mit `SOSActionTimeout = 0`. Der
+Status hängt damit an einer **Dienstfrist** — weder an der Nachrichtenfrist noch an der Schrittfrist,
+die dort `0` ist. Ein gemeinsames Feld behauptete eine Gleichheit, die gemessen nicht besteht.
+
+> **Belegvermerk** (Regel L10).
+> *Gemessen (M8):* Bei 52 von 52 `ERROR_TIMEOUT`-Nachrichten stehen 1.800 Sekunden Nachrichtenfrist,
+> `0` Sekunden Schrittfrist und höchstens 120 Sekunden tatsächlicher Abstand nebeneinander.
+> *Behauptet wird:* Nachrichtenfrist und Schrittfrist sind zwei verschiedene Größen.
+> **Die Lücke:** Der Schluss ruht auf einem Status. Dass die beiden Spalten *überall* auseinander
+> laufen, ist nicht gemessen — gemessen ist, dass sie an **einer** Stelle nachweislich verschiedene
+> Dinge sagen. Für die Entscheidung „nicht zusammenführen" genügt das: Ein Gegenbeispiel widerlegt
+> eine Gleichsetzung, auch wenn es sie nicht flächendeckend widerlegt.
+
+Die Einheit ist in beiden Fällen dieselbe (**Sekunden**, Regel Z2) und steht an genau einer Stelle
+als benannte Konstante — `MessageStatusClassifier.TIMEOUT_EINHEIT`. Gleich ist die Einheit, nicht die
+Größe.
+
+Die `0` behandeln die beiden Felder verschieden, und auch das ist Absicht: Im Kopf ist ihre Bedeutung
+geklärt („keine Frist gesetzt"), je Schritt ist sie eine offene Frage (Frage 8 in
+[`messungen-schritt5.md`](messungen-schritt5.md)). Ein Feld, das eine ungeklärte `0` in ein `null`
+übersetzte, nähme die Antwort vorweg.
+
+### `ueberfaellig` ist Problemkategorie 2, und sie entsteht an genau einer Stelle
+
+`MessageStatusClassifier.istUeberfaellig` in `common` — eine benannte, von außen aufrufbare Einheit,
+die das Dashboard später **ruft** statt sie dort nachzubauen. Dasselbe Muster wie die Einordnung
+selbst. Sie prüft beide Bedingungen: nicht in einem Endstatus **und** Frist abgelaufen. Nicht über
+`MessageStatus = 'RUNNING'`, nicht über `ERROR_TIMEOUT`.
+
+> **Die Prüfung „nicht in einem Endstatus" benutzt `istEndstatus`** — und zwar genau hier, denn
+> [`message-status.md`](message-status.md) weist die Methode ausdrücklich der Überfälligkeitsrechnung
+> zu und sonst niemandem. **Nicht** die Aufzählung `WARTEND`/`LAEUFT`, die §3 für den offenen Zustand
+> verwendet. Die beiden Formen stehen aus guten Gründen nebeneinander im Code und sind hier nicht
+> austauschbar: Für `UNGEKLAERT` liefert `istEndstatus` `true`, und das ist in dieser Rechnung die
+> vorsichtige Antwort — keine Behauptung, die Nachricht hänge. In §3 wäre dieselbe `true` die
+> unvorsichtige.
+
+Ist `MessageTimeout` null oder nicht gesetzt, ist `ueberfaellig` `false` und `fristSekunden` `null` —
+keine erfundene Frist.
+
+**Die Kategorie ist gegen die Testkopie praktisch nicht prüfbar.** Über den Gesamtbestand sind
+*alle* 538 offenen Zeilen überfällig, im 24-Stunden-Standardfenster genau eine — beides sagt nichts
+darüber, ob die Frist fachlich richtig gewählt ist. Das steht schon in
+[`message-status.md`](message-status.md) und gilt hier unverändert. Der Datenbanktest prüft deshalb
+nicht *ob*, sondern die **Kopplung**: ohne Frist keine Überfälligkeit, und wer überfällig ist, ist
+offen.
+
+### Die Gesamtdauer ist die Abdeckung für die gestrichene Lückenzeile
+
+Endet Schritt 3 und beginnt Schritt 4 drei Stunden später, weil ein Dienst weg war, steht diese Zeit
+in **keiner** Schrittdauer — und nach dem Streichen der Lückenzeile (§10.12) wäre sie unsichtbar.
+Passt die Summe der Schrittdauern nicht zur Gesamtdauer, steckt die Zeit dazwischen, und man sieht
+es, ohne dass ein Element dafür existiert, das nie jemand ausgelöst hat.
+
+Sie kommt für **jede** Nachricht, offen oder nicht: Auch bei einer abgeschlossenen ist „wie lange hat
+das gedauert" eine sinnvolle Frage, und das Feld hat mit dem offenen Zustand nichts zu tun.
 
 ---
 
@@ -365,8 +635,9 @@ offene Frage 10). Regel Q4 — nicht geraten.
 
 Interne Kennungen, obwohl sie auf **jeder** Nachricht stehen: `Message.GUID`, `Message.SOS`,
 `Message.Payload.GUID` und `Message.SourceMessageID`. Sie sind nach dem Leitsatz Beiwerk, keine
-Hauptinformation. `Message.Payload.GUID` wird in **Schritt 8 ein Knopf** und kein Anzeigewert,
-`Message.SourceMessageID` in **Schritt 6 eine Verkettung**.
+Hauptinformation. `Message.Payload.GUID` wird in **Schritt 8 ein Knopf** und kein Anzeigewert;
+`Message.SourceMessageID` ist seit Schritt 6 eine **Verkettung** und erscheint als Zeile im
+Kettenblock — gelesen aus der Spalte von `Message` und nicht aus dieser Eigenschaft.
 
 Ebenso draußen: `Message.MessageActionID`, `Message.SOSActionID` und
 `Message.SOSActionServiceProperties`. Sie stehen ebenfalls auf jeder Nachricht, wiederholen aber
@@ -635,9 +906,9 @@ damit es bei einer Umstellung nicht still kippt.
 | Datei | Was, und ob mit Datenbank |
 |---|---|
 | `SchrittnamenTest` | **ohne DB** — alle drei Stufen, kein `\|` im Wert, `null` als Wert, mehrdeutige Marke, Marke ohne Treffer, Marke im falschen Ablauf, Schreibweise, zwei Abläufe in einer Nachricht, Zeile ohne Namen |
-| `NachrichtendetailServiceTest` | **ohne DB** — die vier offenen Zustände, Metadaten-Schritt ausgenommen, negative Dauer, kuratierte Auswahl, Kappung auf Zeichengrenze, UTC-Umrechnung |
+| `NachrichtendetailServiceTest` | **ohne DB** — die **sechs** offenen Zustände samt `WARTET_IN` gegen `WARTET_VOR` (beide Schlüsselhälften, Verweis auf einen nicht-letzten Schritt, Verweis ins Leere) und `EMPFANGEN` gegen `OHNE_AKTION` (Wartedauer ab dem Ende des Schritts `0`, Rückfall auf dessen Beginn, `null` ohne jede Aktion, `EMPFANGEN` kann überfällig sein), Metadaten-Schritt ausgenommen, offener Metadaten-Schritt ist kein Hänger, Wartedauer gegen eine **feste** Anwendungsuhr, Frist und Überfälligkeit samt `UNGEKLAERT`, Gesamtdauer, negative Dauer, kuratierte Auswahl, Kappung auf Zeichengrenze, UTC-Umrechnung |
 | `NachrichtendetailStatementsTest` | **ohne DB** — Mandantenfilter in jedem Statement, kein Zugriff über `MessagePropertyValue`, Begrenzung des Werts in der Abfrage |
-| `NachrichtendetailDbIT` | `@Tag("db")` — echte Schrittfolgen, `WARTET_VOR` samt nächstem Schritt, beide Auflösungsstufen kommen vor, Anzahl im Kopf stimmt mit der Liste überein |
+| `NachrichtendetailDbIT` | `@Tag("db")` — echte Schrittfolgen, `WARTET_IN` samt Wartedauer, die Kopplung von `ueberfaellig` an Frist und Offenheit, die Gesamtdauer deckt die Schrittdauern ab, beide Auflösungsstufen kommen vor, Anzahl im Kopf stimmt mit der Liste überein |
 | `NachrichtendetailIsolationDbIT` | `@Tag("db")` — **die zwei Pflicht-Isolationstests** (Regel M4) |
 
 **Keine fest eingetragene `MessageID` in den Datenbanktests.** Die Bezugsnachrichten werden über den
@@ -672,12 +943,15 @@ features/nachrichten/
    ├─ nachricht-detail.tsx         die eine Komponente beider Einhängepunkte: Kopf,
    │                                 Ladung, Fehler, Kennung
    ├─ nachricht-seite.tsx          der Rahmen der eigenen Route
+   ├─ ansicht-umschalter.tsx       ab 11.08.2026 — der Knopf zwischen beiden (§10.7)
    ├─ zeitleiste.tsx               Schritt-, Lücken- und Erwartungszeile
    ├─ eigenschaften-block.tsx      eingeklappt, lädt erst beim Aufklappen
+   ├─ kette-block.tsx              ab Schritt 6, Teil 2b — zwischen Kopf und Zeitleiste
    └─ nachrichten-tabelle.tsx      der Zeilenklick bekommt seine Funktion
 
 app/(app)/nachrichten/[messageId]/page.tsx   Server-Komponente, reicht die Kennung durch
 lib/format.ts                                + formatiereDauer
+lib/routen.ts                                + die beiden Zielrouten des Umschalters (11.08.2026)
 ```
 
 ### 10.1 Zwei Einhängepunkte, eine Komponente
@@ -747,6 +1021,10 @@ nachgebaut.
 Dann Zeitpunkt und fachlicher Start, formatiert mit derselben Zone und derselben Funktion wie die
 Liste ([`frontend-grundlagen.md`](frontend-grundlagen.md) §4): Sekunden in der Zelle, der relative
 Abstand im `title`.
+
+**Daneben die Gesamtdauer** (`gesamtdauerSekunden`, §3a) — sie steht zwischen Beginn und Projekt,
+weil sie genau die Spanne zwischen den beiden Zeitfeldern darüber ist. Fehlt sie (keine Aktion mit
+Start), erscheint dieselbe Kennzeichnung wie bei jedem anderen fehlenden Wert.
 
 **Projekt und Prozess stehen dazu**, obwohl die Aufgabenstellung sie nicht nennt. Der Grund ist die
 eigene Route: Ein tiefer Link zeigt die Ansicht **ohne** Liste, und ohne diese beiden Felder ist
@@ -823,18 +1101,44 @@ nichts" — und das ist etwas anderes als „nicht aufgezeichnet".
 rechnet in ganzen Sekunden, ein Schritt mit `0` hat zwischen null und einer Sekunde gedauert, und
 „0 s" behauptete eine Genauigkeit, die die Zahl nicht hat.
 
-#### Die Lücke zwischen zwei Schritten ist eine eigene Zeile
+#### Die Wartezeile am offenen Zustand
 
-Schwelle: **`LUECKE_SCHWELLE_SEKUNDEN` = 60**. Darunter ist der Abstand die normale Übergabe
-zwischen zwei Diensten und keine Auskunft — eine Zeile je Schrittwechsel machte die Leiste doppelt
-so lang und sagte nichts.
+*wartet seit 4 h 12 min · Frist 30 min* — eine Zeile unter der Leiste, sobald
+`wartetSeitSekunden` gesetzt ist. Bei `LAEUFT_AUF` heißt sie *läuft seit …*; das Verb kommt aus dem
+Zustand, nicht aus einer Bedingung in der Komponente.
 
-Ohne diese Zeile steht die Wartezeit **in keiner Schrittdauer**, und genau sie ist bei einer
-hängenden Nachricht oft die ganze Antwort.
+**Beide Zahlen kommen fertig aus dem Backend** (§3a). Die Oberfläche entscheidet nur, ob die Zeile
+erscheint und welches Verb sie trägt — gerechnet wird hier nichts, weil die Anwendungsuhr im Profil
+`dev` Monate zurücksteht.
 
-Keine Zeile entsteht, wenn der vorige Schritt gar kein Ende trägt (dann gibt es keinen Zwischenraum,
-sondern einen offenen Schritt), wenn ein Zeitpunkt unlesbar ist, und bei negativem oder
-null-Abstand. Eine negative Dauer liefert das Backend ohnehin als `null` (§4).
+Fehlt die Frist, steht eben nur die eine Hälfte da. Eine erfundene Frist wäre schlechter als keine.
+
+**Bei `ueberfaellig` wird die Zeile hervorgehoben — und zwar ohne eine einzige Farbe.** Nicht nur
+„nie allein über Farbe", sondern hier **gar nicht** über Farbe: Rot gehört nach
+[`visuelles-konzept.md`](visuelles-konzept.md) §7 ausschließlich der Kategorie *Fehler*. Würde
+„überfällig" rot, verschmölzen zwei der drei Problemkategorien in der Wahrnehmung, obwohl Regel Q3
+sie im Code sorgfältig trennt. Ein Status-Gelb gibt es in diesem Farbsystem nicht, und eine eigene
+Rolle dafür ist dort ausdrücklich einer späteren Entscheidung vorbehalten — sie hier zu erfinden
+hieße, dieser Entscheidung vorzugreifen. Die Hervorhebung ist deshalb **Zeichen, Wort und
+Schriftstärke** gegen die gedämpfte Umgebung.
+
+**Das Wort für die Kategorie steht in `texte.problem`**, auf oberster Ebene der Sprachdatei und
+nicht unter `nachrichten`: Das Detail benennt die Kategorie an einer Nachricht, das Dashboard zählt
+sie über viele — beide müssen dasselbe Wort sagen, sonst hält ein Nutzer dieselbe Sache für zwei
+Sachen.
+
+#### Die Lückenzeile ist entfernt worden
+
+**Sie war gebaut, mit Schwelle (`LUECKE_SCHWELLE_SEKUNDEN` = 60), Unit-Tests und einer eigenen Zeile
+zwischen zwei Schritten — und sie ist am 10.08.2026 wieder entfernt worden.** Der Grund steht in
+§10.12: Über rund 700 geprüfte Nachrichten ist sie nie erschienen, weil die größte Lücke zwischen
+zwei Schritten **eine Sekunde** beträgt. Das ist kein knapper Fehlschlag, sondern strukturell — die
+Wartezeit steckt in der Dauer des `WAITUNTIL`-Schritts, nicht zwischen zwei Schritten.
+
+An ihre Stelle sind zwei Dinge getreten, die dieselbe Frage besser beantworten: die **Wartezeile**
+oben (für die offene Nachricht) und `gesamtdauerSekunden` im Kopf (für die abgeschlossene). Ein
+Vitest hält fest, dass zwischen zwei Schritten **keine** Zeile mehr entsteht, auch bei drei Stunden
+Abstand nicht — die Streichung ist damit eine Zusage und kein Versehen.
 
 #### Der offene Zustand wird gezeigt, nicht errechnet
 
@@ -843,14 +1147,34 @@ Das Backend liefert ihn als Feld (§3). Die Oberfläche stellt ihn dar und leite
 | Feld | Darstellung |
 |---|---|
 | `LAEUFT_AUF` | der betroffene Schritt ist markiert — Kontur in der Rolle `--status-offen`, dazu Zeichen **und** Text „läuft gerade"; keine Dauer, kein Balken |
-| `WARTET_VOR` | **nach** dem letzten ausgeführten Schritt eine eigene Zeile mit gestrichelter Kontur — mit dem Namen und „noch nicht begonnen", **wenn** der benannte Schritt nicht schon in der Leiste steht; sonst nur der Satz, dass die Nachricht wartet (§10.11) |
-| `OHNE_SCHRITT` | eigener Text statt einer leeren Leiste |
+| `WARTET_IN` | **nach** dem letzten Schritt eine Zeile mit gestrichelter Kontur: *„Die Nachricht wartet — von selbst geht es hier nicht weiter."* **Der Name wird nicht wiederholt** — er steht eine Zeile darüber; der Verweis bleibt im Tooltip |
+| `WARTET_VOR` | dieselbe Zeile, aber mit dem **Namen** des Schritts und „noch nicht begonnen" |
+| `EMPFANGEN` | statt einer leeren Leiste: *„Empfangen am … — seitdem ist kein Schritt ausgeführt worden."* Darunter die **Wartezeile** wie bei den anderen offenen Zuständen |
+| `OHNE_AKTION` | *„Zu dieser Nachricht ist kein Ablauf protokolliert."* — und **keine** Wartezeile |
 | `KEINER` | nichts Zusätzliches |
 
-Ist bei `WARTET_VOR` der nächste Schritt `null`, wird das benannt und nicht weggelassen: *„Die
-Nachricht wartet — worauf, ist in der Ablaufdefinition nicht hinterlegt."* Ihn stillschweigend zu
-unterschlagen hieße, eine offene Nachricht wie eine abgeschlossene aussehen zu lassen. Über den
-Gesamtbestand läuft dieser Verweis zu 43,9 Prozent ins Leere (M13).
+**Der Zeitpunkt in der `EMPFANGEN`-Zeile ist `start`**, also der fachliche Start — und der ist dort
+genau der Metadaten-Schritt, die einzige Aktion, die es gibt. Formatiert mit derselben Zone und
+derselben Funktion wie im Kopf. Fehlt er (`MessageActionStart` ist `NULL`-fähig, gemessen aber auf
+keiner der 10,3 Millionen Zeilen leer, M22), steht der Satz ohne Datum da statt mit einem
+Platzhalter.
+
+**Bei `OHNE_AKTION` bleibt die Wartezeile weg, ohne dass die Komponente das entscheidet:** Das
+Backend liefert dort keine Wartedauer, und die Zeile hängt allein daran (§3a). Eine Zeile mit
+Platzhalter wäre schlechter als keine.
+
+**Die Zeitleiste selbst bleibt, wie sie war.** Der Schritt `0` erscheint auch bei `EMPFANGEN` nicht
+als Zeile (S1). Was sich am 10.08.2026 geändert hat, ist der Satz **über** der leeren Leiste — nicht
+ihr Inhalt.
+
+**Die Wortwahl folgt dem gelieferten Zustand, nicht einem Vergleich.** Bis zum 10.08.2026 verglich
+`detail.ts` `naechsterSchritt` mit den Namen der gelaufenen Schritte; jetzt trägt das Feld die
+Antwort (§3). Ein Vitest hält fest, dass ein zufällig gleicher Name daran nichts mehr ändert.
+
+Ist der benannte Schritt `null`, wird das benannt und nicht weggelassen: *„Die Nachricht wartet —
+worauf, ist in der Ablaufdefinition nicht hinterlegt."* Ihn stillschweigend zu unterschlagen hieße,
+eine offene Nachricht wie eine abgeschlossene aussehen zu lassen. Über den Gesamtbestand läuft dieser
+Verweis zu 43,9 Prozent ins Leere (M13).
 
 > **„Die Leiste endet dort" heißt nicht, dass etwas abgeschnitten wird.** Bei `LAEUFT_AUF` hängt die
 > Zeitleiste nichts an — mehr nicht. Schritte hinter dem laufenden werden **nicht** weggelassen: Der
@@ -858,9 +1182,9 @@ Gesamtbestand läuft dieser Verweis zu 43,9 Prozent ins Leere (M13).
 > eine Fortsetzung), und gemessene Zeilen stillschweigend zu verschweigen wäre etwas anderes als
 > eine Leiste, die von selbst dort aufhört.
 
-**`OHNE_SCHRITT` und „abgeschlossen ohne Schritt" sehen in der Zeilenliste gleich aus — leer.** Was
-der Nutzer liest, entscheidet die Komponente über den *Zustand* und nicht über die Länge der Liste;
-sonst hieße „offen und ohne Schritt" dasselbe wie „fertig und ohne Schritt".
+**`EMPFANGEN`, `OHNE_AKTION` und „abgeschlossen ohne Schritt" sehen in der Zeilenliste gleich aus —
+leer.** Was der Nutzer liest, entscheidet die Komponente über den *Zustand* und nicht über die Länge
+der Liste; sonst hieße „angekommen und seitdem nichts" dasselbe wie „fertig und ohne Schritt".
 
 #### Die Herkunft des Namens steht im Tooltip
 
@@ -881,6 +1205,22 @@ damit die Erklärung an **einer** Stelle liegt.
 [`nachrichtenliste.md`](nachrichtenliste.md) §8.1: Was nicht hineinpasst, wird gekürzt, der Vollwert
 steht im `title`. Die gemessene Namenslänge geht bis 61 Zeichen — in einem Panel von 26 rem passt
 das nicht immer.
+
+### 10.4a Der Kettenblock — zwischen Kopf und Zeitleiste
+
+*Neu am 11.08.2026 (Schritt 6, Teil 2b).* Er beantwortet die dritte Frage des Werkzeugs — **was
+hängt an dieser Nachricht** — und steht deshalb **zwischen Kopf und Zeitleiste**: näher an der
+Nachricht selbst als der Ablauf ihrer Schritte.
+
+**Ist `rollen` leer, gibt es ihn nicht** — keine Überschrift, kein leerer Kasten, und **keine
+Anfrage auf `/kette`**. Dieselbe Regel wie beim Eigenschaftenblock bei `eigenschaftenAnzahl === 0`.
+Genau deshalb darf er dauerhaft sichtbar sein statt eingeklappt: Sein Hauptnachteil wäre gewesen,
+bei der Mehrheit der Nachrichten Platz ohne Inhalt zu kosten.
+
+**Vollständig beschrieben ist er in [`verkettung.md`](verkettung.md) §8** — die Einteilung nach der
+Flussrichtung, die Zahl in der Überschrift, das Nachladen statt eines Sprungs in die Liste, die
+Zustände und warum der Block keine eigene Farbe trägt. Hier steht nur, **wo** er sitzt und **dass**
+er die Zeitleiste nicht anfasst: An ihr, an der Wartezeile und an den Zuständen ändert sich nichts.
 
 ### 10.5 Die technischen Eigenschaften
 
@@ -942,7 +1282,13 @@ Standardfenster des Servers. Gelesen wird `window.location.search` **im Ereignis
 `useSearchParams` — der Hook zwingt die Seite unter eine Suspense-Grenze, gebraucht wird der Wert
 aber erst beim Klick.
 
-### 10.7 Nebeneinander, und am schmalen Fenster
+### 10.7 Nebeneinander, am schmalen Fenster — und der Umschalter dazwischen
+
+> **Ergänzt am 11.08.2026** (Nachbesserung 1 zu Schritt 6). Bis dahin beschrieb dieser Abschnitt
+> ausschließlich die zwei Einhängepunkte **nach Umbruchpunkt** — welcher von beiden erscheint, war
+> allein eine Folge der Fensterbreite. Das bleibt richtig und steht unverändert unten; neu ist, dass
+> der Nutzer ab `xl` selbst zwischen ihnen wechseln kann. **Kein Satz der alten Fassung ist falsch
+> geworden**, es fehlte einer.
 
 Ab `xl` (1280 px) steht das Panel **neben** der Liste (26 rem, ab `2xl` 30 rem), darunter **an ihrer
 Stelle**: Am Handy gibt es kein „neben der Liste", dort füllt die Ansicht den Bildschirm, und das
@@ -959,6 +1305,100 @@ Seite wieder, ohne dass eine zweite Abfrage auf die Produktionsdatenbank geht. D
 ein tiefer Link am Handy die Liste im Hintergrund einmal lädt — eine Abfrage von gemessenen
 2,7 ms (L1 bis L3), und der Weg heraus führt ohnehin dorthin.
 
+#### Warum es den Umschalter gibt: das Panel wird relativ schmaler, je breiter das Fenster ist
+
+Das Panel hat eine **feste** Breite in `rem`, die Liste bekommt den Rest. Gemessen am 11.08.2026
+gegen die laufende Anwendung, Fenster 1920 × 889:
+
+| Fensterbreite | Inhaltsbereich (`main`) | Panel | Anteil |
+|---|---:|---:|---:|
+| 1280 px (`xl`) | 1072 px | 26 rem = 416 px | 39 % |
+| **1920 px (`2xl`)** | **1697 px** | **30 rem = 480 px** | **28,3 %** |
+
+> **Belegvermerk** (Regel L10).
+> *Gemessen:* die Zeile für 1920 px — `main.clientWidth = 1697`, Panelbreite `480`.
+> *Behauptet wird:* dieselbe Bewegung auch bei 1280 px.
+> **Die Lücke:** Die 1280er-Zeile ist **gerechnet, nicht gemessen** (1280 − 208 px Navigationsspalte
+> ohne Abzug für die Bildlaufleiste); bei 1920 px liegt der gemessene Wert aus demselben Grund
+> 15 px unter dem gerechneten. Für den Schluss genügt das: Der Zähler ist konstant, der Nenner
+> wächst mit dem Fenster — die Richtung hängt an keiner der beiden Zahlen.
+
+Ein Klick auf eine Zeile setzt den Fokus ins Panel, der optische Schwerpunkt bleibt aber auf der
+Liste. **Am großen Monitor — dort, wo das Werkzeug betrieben wird — ist das Missverhältnis am
+größten.**
+
+#### Der Umschalter
+
+| Einhängepunkt | Beschriftung | Ziel |
+|---|---|---|
+| Panel (`/nachrichten?nachricht=<id>&…`) | „Ohne Liste anzeigen" | `/nachrichten/<id>?<Abfragezeichenkette ohne `nachricht`>` |
+| eigene Route (`/nachrichten/<id>?…`) | „Neben der Liste anzeigen" | `/nachrichten?nachricht=<id>&<Abfragezeichenkette>` |
+
+**Es entsteht kein neuer Mechanismus, kein neuer Zustand und keine neue Route.** Beide Ziele gibt es
+seit Schritt 5; gebaut ist der Weg dazwischen. **Der Modus *ist* die Route** — kein `localStorage`,
+kein Cookie, kein Kontext, kein zusätzlicher Suchparameter. Daraus folgt zweierlei von selbst: Der
+Zurück-Knopf führt Schritt für Schritt zurück, weil beide Wege echte Navigationen sind, und der Modus
+überlebt das Öffnen eines Kettenglieds, weil [`verkettung.md`](verkettung.md) §8.6 auf der eigenen
+Route ohnehin auf dieselbe Route führt. **Dafür ist nichts gebaut worden.**
+
+- **Der Schließen-Knopf bleibt in beiden Modi unverändert**, der Umschalter tritt **neben** ihn.
+  Zwei Knöpfe, zwei Aussagen: *diese Nachricht anders zeigen* gegen *diese Nachricht schließen*.
+- **`nachricht` wird beim Maximieren aus der Abfragezeichenkette entfernt** — sonst stünde die
+  Kennung zweimal im Ziel, einmal im Pfad und einmal als Parameter. Beim Verkleinern wird sie
+  gesetzt. Alles andere bleibt **unverändert und in seiner Reihenfolge** stehen.
+- **Die Entscheidung ist die Zielroute**, und die steht als reine Funktion in `lib/routen.ts`
+  (`ansichtOhneListe`, `ansichtNebenListe`), nicht als Ausdruck in einer Komponente. Sie führt die
+  Abfragezeichenkette **roh** weiter, statt sie über `URLSearchParams` neu aufzubauen: Jene Klasse
+  kodierte `von=2026-07-08T00:00:00Z` zu `…T00%3A00%3A00Z` um. Gleichwertig ist nicht unverändert,
+  und in einer geteilten URL sieht man den Unterschied.
+- **Derselbe Mechanismus wie beim bestehenden Schließen:** `window.location.search` wird **im
+  Ereignis** gelesen, kein `useSearchParams`, keine neue Suspense-Grenze (§10.6). Der Preis ist, dass
+  der Umschalter **kein Mittelklick-Ziel** ist und sich nicht in einem neuen Tab öffnen lässt. Das
+  wird bewusst getragen — Konsistenz mit dem vorhandenen Weg wiegt hier schwerer, und die Ansicht ist
+  über die Adresszeile weiterhin vollständig erreichbar und teilbar.
+- **Unter `xl` erscheint er nicht.** Dort füllt die Detailansicht ohnehin die Stelle der Liste; ein
+  Schalter, der nichts Sichtbares ändert, verspricht etwas, das er nicht hält. Umgesetzt über die
+  Klassen (`hidden xl:inline-flex`) und **nicht** über eine Abfrage der Fensterbreite in JavaScript —
+  die wäre ein zweiter Umbruchpunkt neben dem der Ansicht, und zwei laufen auseinander.
+- **Anfassbarkeit wie der Kopierknopf der `MessageID`:** `button`, `aria-label` **und** `title`,
+  Fokusring, `Enter` und `Leertaste`. Zeichen aus `lucide-react` (`Maximize2` / `Minimize2`). **Keine
+  Farbe in der Komponente, keine Animation, kein Übergang** ([`visuelles-konzept.md`](visuelles-konzept.md) §7).
+
+#### Die eigene Route nutzt die volle Inhaltsbreite
+
+**Das war bereits so.** Vor der Nachbesserung festgestellt und hier festgehalten, damit es niemand
+für neu hält: `nachricht-seite.tsx` trägt seit Schritt 5, Teil 2 die Klasse `max-w-inhalt` — also
+`--dichte-inhaltsbreite`, 72 rem. Die Route hat den Panel-Baustein nie in 26 rem gezeigt.
+
+Gemessen am 11.08.2026, Fenster 1920: Ansichtsbreite **1152 px** (= 72 rem bei 16 px Grundschrift),
+linke Kante bei **x = 228** — also bündig mit Listenkopf und Panelkopf (`main` beginnt bei 208, dazu
+20 px Innenabstand). **Linksbündig, nicht zentriert**, und das ist die Entscheidung: Beim Umschalten
+springt der Inhalt dadurch nicht seitwärts, sondern wird nur breiter. Zentriert läge die Kante bei
+x = 488.
+
+> ⚠️ **Die 72 rem sind gewählt, nicht gemessen.** Das Token ist in
+> [`visuelles-konzept.md`](visuelles-konzept.md) §5 für **Fließtext** begründet — längere Zeilen sind
+> schwer zu lesen —, und die Detailansicht ist keiner. Es gibt keine Messung, die eine andere Zahl
+> trägt, und für diesen Zweck wird auch keine erfunden. Der Wert steht hier, weil ein vorhandenes
+> Token besser ist als eine zweite frei gewählte Zahl daneben.
+
+**Eine Spalte, keine Umverteilung.** Die Reihenfolge der Blöcke bleibt: Kopf, Kettenblock,
+Zeitleiste, technische Eigenschaften. Eine zweispaltige Anordnung wäre ein Entwurf und kein
+Breitenwechsel. **Kein eigener Scrollbereich** — es bleibt beim einen senkrechten Scroller aus
+[`frontend-grundlagen.md`](frontend-grundlagen.md) §7.
+
+> **Die Zeitleiste bleibt senkrecht**, obwohl §10.4 sie „weil das Panel schmal ist" so begründet. Die
+> Begründung gilt weiterhin für den Modus, in dem die Ansicht meistens steht; eine Leiste, die je
+> nach Einhängepunkt ihre Richtung wechselt, wäre zwei Leisten.
+
+#### Der Preis des Umschaltens, und wer ihn zahlt
+
+**Der Weg von der eigenen Route zurück zur Liste kostet eine Listenabfrage.** Der
+`display: none`-Trick oben hält den Zustand nur *innerhalb* einer Seite; die eigene Route ist eine
+andere. Das ist die bekannte Eigenschaft dieser Route und **keine neue** — sie gilt für den
+Schließen-Knopf seit Schritt 5 genauso. Der Umschalter macht sie nur häufiger sichtbar. Die
+Gegenrichtung ist billiger: Wer maximiert, hängt die Liste aus und fragt sie nicht.
+
 ### 10.8 Was die Oberfläche bewusst nicht zeigt
 
 - **Keine Deutung des Timeouts.** `timeoutSekunden` kommt je Schritt mit und wird **nicht**
@@ -966,8 +1406,11 @@ ein tiefer Link am Handy die Liste im Hintergrund einmal lädt — eine Abfrage 
   Achtundvierzigfache (§4) — ob das dieselbe Kennzeichnung ist wie die Problemkategorie „Überfällig"
   aus Regel Q3 oder eine andere Ebene, ist offen (Frage 7 in `messungen-schritt5.md`). Eine
   Kennzeichnung zu erfinden, bevor die Frage beantwortet ist, hieße die Antwort vorwegzunehmen.
-- **Keine Verkettung.** Eine Aufteilungszahl erscheint als Zahl und verlinkt zu nichts — das ist
-  Schritt 6.
+- ~~**Keine Verkettung.**~~ **Erledigt in Schritt 6, Teil 2b** (§10.4a): Der Kettenblock steht
+  zwischen Kopf und Zeitleiste, und ein Klick auf ein Glied öffnet dessen Detail. **Die
+  Aufteilungszahl aus den kuratierten Eigenschaften verlinkt weiterhin zu nichts** — sie ist ein
+  `MessageProperty`-Wert und keine Verkettung; was tatsächlich an der Nachricht hängt, steht im
+  Block darunter und kommt aus den vier Spalten von `Message`.
 - **Kein Rohdaten-Download** — das ist Schritt 8.
 - **Kein Gerüst geplanter Schritte** — die Entscheidung samt Zahlen steht in §11 (M21).
 
@@ -975,13 +1418,22 @@ ein tiefer Link am Handy die Liste im Hintergrund einmal lädt — eine Abfrage 
 
 | Datei | Was |
 |---|---|
-| `tests/nachrichtendetail.test.ts` | die Normierung des Balkens (längster voll, Mindestbreite, alles unter einer Sekunde, keine Dauer → kein Balken); die Lückenschwelle in beide Richtungen, negativ, null und nach einem Schritt ohne Ende; die vier offenen Zustände samt `WARTET_VOR` ohne benannten nächsten Schritt; **dass ein bereits gelaufener „nächster" Schritt erkannt wird** (§10.11); dass bei `LAEUFT_AUF` nichts angehängt und nichts weggelassen wird; `bedeutungNichtVerifiziert` als abgeleiteter Wert |
+| `tests/nachrichtendetail.test.ts` | die Normierung des Balkens (längster voll, Mindestbreite, alles unter einer Sekunde, keine Dauer → kein Balken); **dass zwischen zwei Schritten keine Zeile mehr entsteht**, auch bei drei Stunden Abstand nicht; die sechs offenen Zustände samt `WARTET_IN` gegen `WARTET_VOR` und ohne benannten Schritt; **dass `EMPFANGEN` und `OHNE_AKTION` der Leiste nichts anhängen** — der Metadaten-Schritt wird auch dort keine Zeile; **dass ein zufällig gleicher Name die Wortwahl nicht mehr ändert**; dass bei `LAEUFT_AUF` nichts angehängt und nichts weggelassen wird; die Wartezeile mit Dauer, Frist, Kategorie, **ihr Erscheinen bei `EMPFANGEN` mit dem Verb des Wartens** und ihre Abwesenheit ohne Wartedauer; `bedeutungNichtVerifiziert` als abgeleiteter Wert |
 | `tests/nachrichtenfilter.test.ts` | `nachricht` steht in der URL und lässt sich wieder einlesen; **taucht in keiner Abfrage der Liste auf** und lässt deren Abfrageschlüssel unverändert; Schließen lässt den übrigen Filterzustand stehen; eine leere Kennung ist keine Auswahl |
 | `tests/format.test.ts` | `formatiereDauer` mit höchstens zwei Einheiten, „< 1 s" statt „0 s", nie eine negative Dauer, Bausteine aus der aktiven Sprache |
 | `tests/sprachdateien.test.ts` | unverändert — beide Sprachdateien tragen den neuen Abschnitt vollständig |
+| `tests/routen.test.ts` *(11.08.2026)* | die beiden Zielrouten des Umschalters (§10.7): leere Abfragezeichenkette in beide Richtungen; jeder Filter unverändert und in seiner Reihenfolge; `nachricht` entfernt beziehungsweise gesetzt und im Ziel **genau einmal**, auch wenn es am Anfang oder am Ende stand; eine Kennung mit Sonderzeichen einmal und nicht doppelt kodiert; und dass `NACHRICHT_PARAMETER` denselben Parameter meint wie `NACHRICHTEN_PARAMETER` |
+| `tests/ansicht-umschalter.test.tsx` *(11.08.2026)* | **gerenderter Baum, begründete Ausnahme:** dass der Knopf `hidden xl:inline-flex` trägt und `inline-flex` **nicht** stehen bleibt, und dass er im Panel und auf der eigenen Route verschiedene Beschriftungen führt — je in `aria-label` **und** `title` |
 
-Kein gerenderter Baum: Geprüft werden die **Entscheidungen**, nicht das Markup
+Kein gerenderter Baum, mit den Ausnahmen aus `tests/detail-baum.test.tsx` und
+`tests/ansicht-umschalter.test.tsx`: Geprüft werden die **Entscheidungen**, nicht das Markup
 ([`frontend-grundlagen.md`](frontend-grundlagen.md) §9).
+
+> **Warum der Umschalter eine Ausnahme rechtfertigt.** Seine Sichtbarkeitsregel *ist* eine Klasse —
+> sie steht bewusst nicht in JavaScript (§10.7). Und der Umbruchpunkt, an dem sie greift, ist von
+> Hand nicht zu prüfen: Die Browsersteuerung kann das Fenster nicht verkleinern
+> ([`frontend-grundlagen.md`](frontend-grundlagen.md) §7). Was über die Klassen belegbar ist, wird
+> deshalb dort belegt, wo es belegbar ist.
 
 ### 10.10 Sichtprüfung im Browser (07.08.2026)
 
@@ -1045,15 +1497,18 @@ Rohwert `NXS_MERGE|BMW|WAITUNTIL|now+170H@…|SUSPEND` — er ist der Schritt, d
 
 Die geplante Zeile hätte damit „Send Message to Pool · noch nicht begonnen" unmittelbar unter
 „Send Message to Pool · 2 min" geschrieben — für den Nutzer, der laut Leitsatz kein EDI-Spezialist
-ist, schlicht ein Widerspruch. Die Zeile wiederholt den Namen deshalb nicht mehr, wenn er schon in
-der Leiste steht; sie sagt dann *„Die Nachricht wartet — von selbst geht es hier nicht weiter."*,
-und der Verweis bleibt im Tooltip nachlesbar. Steht dort ein **anderer** Schritt, erscheint er
-weiterhin als noch nicht begonnen.
+ist, schlicht ein Widerspruch.
 
-> **Der offene Zustand wird dadurch nicht errechnet.** Er kommt weiter aus dem Backend; verglichen
-> werden zwei gelieferte Felder, und das Ergebnis entscheidet nur über die **Wortwahl** einer Zeile.
-> Verglichen wird über den *Namen*: Zwei gleich benannte Zeilen untereinander sind für den Leser
-> dieselbe Zeile, gleich welche Kennung dahintersteht.
+> **Nachgebessert am 10.08.2026, und zwar an der richtigen Stelle.** Die erste Fassung ließ die
+> Oberfläche zwei gelieferte Felder über den **Namen** vergleichen und daraus die Wortwahl
+> bestimmen. Das war eine Ableitung, die dort nichts zu suchen hat — und über den Namen war sie
+> zusätzlich angreifbar: Zwei Schritte desselben Ablaufs können gleich heißen.
+>
+> [M29](messungen-schritt5.md#m29--worauf-zeigt-messagesosactionid-bei-wartenden-nachrichten) hat
+> zuerst gemessen, wie oft die Beobachtung gilt: **538 von 538**, und der Gegenfall **null Mal**.
+> Daraufhin ist der Wartezustand im Backend aufgeteilt worden — `WARTET_IN` gegen `WARTET_VOR`,
+> verglichen über die **Kennungen** (§3). Die Oberfläche vergleicht seither gar nichts mehr; sie
+> stellt den gelieferten Zustand dar.
 
 **3. Mit der Tastatur ging Öffnen, aber Schließen nur mühsam.** Der Schließen-Knopf steht im DOM
 hinter der Tabelle — man hätte durch bis zu fünfzig Zeilen tabben müssen. Das erfüllt „erreichbar"
@@ -1062,24 +1517,246 @@ nicht zweierlei tut: in einem Eingabefeld und bei einem offenen Auswahlfeld blei
 Ein Fokussprung ins Panel wäre die Alternative gewesen und ist verworfen — er nähme dem Nutzer die
 Stelle in der Liste, an der er gerade war, und einem Mausnutzer, der nichts davon wollte, ebenso.
 
+> **Nachgezogen am 10.08.2026: `Escape` wirkt auch auf `/nachrichten/<id>`** und führt dort zurück
+> zur Liste — dieselbe Wirkung wie der Schließen-Knopf, mitsamt der Abfragezeichenkette. Die bis
+> dahin offene Notiz lautete, auf der eigenen Route sei der Schließen-Knopf ohnehin der erste
+> Tabstopp, ein Kürzel also entbehrlich. Das stimmt und macht die Taste trotzdem nicht falsch: Wer
+> die Ansicht im Panel mit `Escape` schließt und denselben Beleg später über einen geteilten Link
+> öffnet, drückt dieselbe Taste und erwartet dasselbe. **Eine Taste, die je nach Einhängepunkt wirkt
+> oder nicht, lernt niemand.**
+>
+> Die Regel steht seither samt ihren zwei Ausnahmen in **einem** Hook (`useEscapeSchliesst`) statt in
+> zwei `useEffect`. Ein zweiter Abzug derselben Bedingungen wäre die Stelle, an der eine davon
+> irgendwann fehlt — und dann räumt `Escape` in einem Suchfeld nicht mehr die Eingabe, sondern
+> schließt die Ansicht.
+
 ### 10.12 Was die Testkopie nicht hergibt
 
-Drei Dinge sind gebaut und **nicht gegen echte Daten gesehen**:
+**Jeder Punkt nennt seinen Grund** — Versäumnis oder Unmöglichkeit. Das ist der Unterschied, auf den
+es hier ankommt: Nach einem Versäumnis sucht man einen Testfall, nach einer Unmöglichkeit nicht.
 
-| | Warum |
-|---|---|
-| **Die Lückenzeile** | Über **700 geprüfte Nachrichten** ist die größte Lücke zwischen zwei Schritten **eine Sekunde**. Die Schwelle von 60 Sekunden greift also nirgends. Belegt ist die Zeile ausschließlich durch `tests/nachrichtendetail.test.ts` |
-| **`LAEUFT_AUF`** | `RUNNING` kommt in der Testkopie null Mal vor (§13); die Markierung des laufenden Schritts ist nur unit-getestet |
-| **`OHNE_SCHRITT`** und **die Kappung** | beides kommt in der Testkopie nicht vor (§3, §6) |
+| | Warum | Art |
+|---|---|---|
+| **`LAEUFT_AUF`** | siehe unten — **in der Testkopie nachweislich unbeobachtbar** | Unmöglichkeit |
+| **`WARTET_VOR`** | M29: **0 von 538**. Der Verweis zeigt bei jeder wartenden Nachricht auf den zuletzt gelaufenen Schritt | Unmöglichkeit im heutigen Bestand |
+| **`EMPFANGEN`** | tritt im Produktivbetrieb bei eingehenden, noch nicht weitergelaufenen Nachrichten auf. In der Testkopie ist der Bestand abgeschnitten, und `RUNNING` kommt null Mal vor — dort steht nichts mehr am Anfang seiner Verarbeitung | Unmöglichkeit im heutigen Bestand |
+| **`OHNE_AKTION`** | M16 (3) hat `ohne_jede_aktion = 0` über die geprüften Status gemessen. **Nicht widerlegt, nur nicht beobachtet** — `MessageAction` kennt keinen Zwang, der den Fall ausschlösse | nicht beobachtet |
+| **Die Kappung** | der größte gemessene Wert liegt bei 12.732 Byte, die Grenze bei 16.384 (§6). Eine Grenze, die auf der Testkopie griffe, wäre zu niedrig gewählt | Unmöglichkeit von Natur aus |
+| **`ueberfaellig` als Kategorie** | über den Gesamtbestand sind *alle* 538 offenen Zeilen überfällig, im 24-h-Fenster genau eine — beides sagt nichts darüber, ob die Frist fachlich richtig gewählt ist ([`message-status.md`](message-status.md)) | Unmöglichkeit |
+
+#### `LAEUFT_AUF` ist nicht ungetestet, sondern unbeobachtbar
+
+Das ist keine Ausrede, sondern eine Kette von drei Messungen:
+
+1. **`RUNNING` kommt in der Testkopie null Mal vor** ([`message-status.md`](message-status.md)).
+2. **Bei allen 538 `SUSPENDED` ist jede Aktion beendet** (M16 3). Es gibt in der Testkopie also
+   **keine offene Nachricht mit einer offenen Aktion**.
+3. **Die 95 offenen Aktionen aus M22 helfen nicht.** 49 davon liegen im Fehlerzustand
+   `ERROR_TIMEOUT`, die übrigen 46 auf `FINISHED` und `CHECKED` — nach der Definition in §3 ist
+   keine dieser Nachrichten *offen*, und alle ergeben `KEINER`.
+
+**Es gibt also keinen Datensatz, an dem sich `LAEUFT_AUF` vorführen ließe** — nicht weil niemand
+gesucht hätte, sondern weil es ihn nicht gibt. Das steht hier als Begründung und nicht als
+Versäumnis; sonst sucht in drei Monaten jemand nach einem Testfall, den es nicht geben kann.
+
+#### `WARTET_VOR` ist gebaut, unit-getestet und nie gesehen
+
+M29 hat über **alle 538** wartenden Nachrichten gemessen — `n = 538`, das ist der gesamte Bestand
+dieses Status —, und der Fall »zeigt auf einen anderen, noch nicht ausgeführten Schritt« kommt
+**null Mal** vor. Er ist damit nicht widerlegt, sondern nicht beobachtet.
+
+**Und die Fallzahl trägt weniger, als sie aussieht.** Die 538 sind *eine* Gestalt: ausnahmslos zwei
+echte Schritte (M29 1), ausnahmslos dieselbe `SOSActionID` in demselben Ablauf (M29 4), sieben Tage.
+`n = 538` ist die Zahl der Zeilen, nicht die Zahl der Fälle. Dazu fehlt der Status, der es zeigen
+würde: `RUNNING` kommt null Mal vor. Genau deshalb bleibt der Zweig gebaut und wird nicht
+wegoptimiert.
+
+#### `EMPFANGEN` und `OHNE_AKTION` sind gebaut, unit-getestet und lokal nicht zu sehen
+
+*Beide neu am 10.08.2026, aus der Aufteilung von `OHNE_SCHRITT` (§3).* Sie stehen hier **mit
+Begründung und nicht als Versäumnis** — dieselbe Formulierung wie bei `LAEUFT_AUF`.
+
+**`EMPFANGEN` ist fachlich beantwortet worden, nicht gemessen.** Ursprünglich war für diesen Nachtrag
+eine Messung vorgesehen (kommt eine Nachricht mit ausschließlich dem Metadaten-Schritt vor?). Sie ist
+**entfallen**, weil der Auftraggeber die Frage fachlich beantwortet hat: **Im Produktivbetrieb tritt
+der Fall auf**, sobald Nachrichten eingehen und noch nicht weitergelaufen sind. Die Testkopie hat
+eine Schnittkante und kennt kein `RUNNING`; ihre Leere hat in diesem Projekt bereits dreimal nichts
+bedeutet. Der Zweig wird deshalb gebaut, unabhängig davon, ob er lokal vorführbar ist — genau wie
+`LAEUFT_AUF`. Die freigehaltene Messnummer ist in
+[`messungen-schritt5.md`](messungen-schritt5.md) vermerkt, damit sie nicht als verlorene Messung
+gelesen wird.
+
+**`OHNE_AKTION` ist gemessen und null Mal gefunden worden** (M16 3, `ohne_jede_aktion = 0` über
+`SUSPENDED`, `ERROR_DUPLICATE`, `COMMIT_REJECTED` und `ERROR_TIMEOUT`). Er ist damit **nicht
+widerlegt, nur nicht beobachtet**: `MessageAction` kennt keinen Zwang, der eine Nachricht ohne jede
+Aktion ausschlösse, und die Detailansicht hält ihn deshalb aus.
+
+**Was sich lokal sehr wohl prüfen lässt, ist die Gegenrichtung:** dass die bestehenden Zustände
+unverändert erscheinen. Das steht in §10.14.
+
+#### Die Lückenzeile — gebaut und wieder entfernt
+
+**Sie steht hier, damit niemand sie in einem halben Jahr erneut vorschlägt, ohne den Grund zu
+finden.**
+
+Gebaut war: eine eigene Zeile zwischen zwei Schritten, sobald der Abstand `LUECKE_SCHWELLE_SEKUNDEN`
+= 60 überschritt, mit Symbol, Text und Unit-Tests in beide Richtungen.
+
+Gemessen ist: **Über rund 700 geprüfte Nachrichten des dichten Tages und der Woche davor beträgt die
+größte Lücke zwischen zwei Schritten eine Sekunde.** Die Zeile ist nie erschienen.
+
+**Das war kein knapper Fehlschlag, den eine niedrigere Schwelle geheilt hätte, sondern
+strukturell:** Die Wartezeit steckt in der **Dauer des `WAITUNTIL`-Schritts**, nicht im Zwischenraum
+zwischen zwei Schritten. Eine wartende Nachricht steht *in* ihrem letzten Schritt (§3, M29) — sie
+liegt nicht zwischen zweien. Eine Schwelle von fünf Sekunden hätte die Leiste bei jedem
+Schrittwechsel verlängert und wäre trotzdem nicht die Antwort auf die Frage gewesen, die ein Nutzer
+stellt.
+
+**Ersetzt ist sie durch zwei Dinge**, die dieselbe Frage tatsächlich beantworten: die **Wartezeile**
+am offenen Zustand (§10.4) und `gesamtdauerSekunden` im Kopf (§3a). Der zweite deckt genau den Fall
+ab, für den die Lückenzeile gedacht war: Endet Schritt 3 und beginnt Schritt 4 drei Stunden später,
+passt die Summe der Schrittdauern nicht zur Gesamtdauer — und man sieht es.
 
 **Das ist kein Versäumnis der Prüfung, sondern die Gestalt des Bestands** — und es steht hier, damit
-niemand die grüne Testliste für eine Vorführung hält. Was sich vorführen ließ, ist in §10.10
-aufgezählt.
+niemand die grüne Testliste für eine Vorführung hält. Was sich vorführen ließ, ist in §10.10 und
+§10.13 aufgezählt.
+
+### 10.13 Sichtprüfung nach der Nachbesserung (10.08.2026)
+
+Gegen die laufende Anwendung im Profil `dev`, Mandant `NEXANS`, Rolle ADMIN, Fenster 1920 × 889.
+**Geklickt und getippt, nicht zugewiesen.** Die Anwendung ist vor der Prüfung **neu gestartet**
+worden — ein laufendes Backend kennt neue Antwortfelder nicht, und eine Prüfung gegen die alte
+Instanz bewiese nichts.
+
+**Die Stichprobe ist nach Gestalt gewählt, nicht nach Aktualität:** Zeitfenster 7 Tage, Status
+`Wartend` über die Filterleiste geklickt. Von den wartenden Nachrichten fällt genau eine aus der
+Reihe — sie liegt am 29.12. um 12:37, alle übrigen am 24.12. um 06:56. Diese eine ist geprüft.
+
+| # | Geprüft | Ergebnis |
+|---|---|---|
+| 1 | **Der Zustand kommt als `WARTET_IN`** | `offenerZustand: "WARTET_IN"`, `naechsterSchritt: "Send Message to Pool"` |
+| 2 | Der Name wird nicht wiederholt | Unter „Send Message to Pool · 2 min" steht *„Die Nachricht wartet — von selbst geht es hier nicht weiter."* — kein zweites Mal derselbe Name |
+| 3 | Der Verweis bleibt im Tooltip | `title` der Zeile: „Der Ablauf verweist auf: Send Message to Pool" |
+| 4 | **Der Rohwert bestätigt M29 an dieser Nachricht** | `title` des letzten Schritts: `NXS_MERGE\|BMW\|WAITUNTIL\|now+170H@…\|SUSPEND` — der Schritt, der sie schlafen legt, ist derselbe, auf den der Verweis zeigt |
+| 5 | **Die Wartezeile** | *wartet seit 15 h 35 min · Frist 30 min · ⚠ Überfällig* |
+| 6 | Die Frist ist in **Sekunden** gelesen | `fristSekunden: 1800` → angezeigt „30 min". Unter der Minuten-Lesart stünde dort „30 h" |
+| 7 | Die Uhr ist die **Anwendungsuhr** und läuft | zwei Minuten später auf der eigenen Route: „wartet seit 15 h **37** min". Gegen `Date.now()` gerechnet stünden dort acht Monate |
+| 8 | **Überfällig ohne Farbe** | Zeichen, Wort „Überfällig" und Schriftstärke; kein Rot, kein Gelb (§10.4) |
+| 9 | **Die Gesamtdauer im Kopf** | „3 min 15 s" = 12:34:01 → 12:37:16. `gesamtdauerSekunden: 195`, Schrittdauern 75 + 120 = **195** — die Summe *ist* die Gesamtdauer, es steckt keine Zeit dazwischen |
+| 10 | **Keine Lückenzeile** | zwischen den beiden Schritten steht nichts — die Zeile ist entfernt |
+| 11 | Das alte Feld ist weg | `"timeoutSekunden" in antwort === false` im Kopf; je Schritt trägt es weiterhin `1800` |
+| 12 | **Escape im Panel** | schließt; nur `nachricht` fällt aus der URL, `zeitraum`/`status`/`zwischenschritte` bleiben |
+| 13 | **Escape auf `/nachrichten/<id>`** | führt auf `/nachrichten` — **mit** der Abfragezeichenkette des geöffneten Links |
+| 14 | **Die Ausnahme hält** | im Suchfeld „BMW" getippt, `Escape` gedrückt: Das Feld ist geräumt (`suche=BMW` verschwindet), **das Panel bleibt offen** |
+| 15 | Eine Bildlaufleiste, kein Überlauf | Dokument scrollt nicht, `main` ist der einzige senkrechte Scroller, waagerechter Überlauf **0** — trotz des neuen Containers um die Leiste |
+| 16 | Feste Zeilenhöhe | jede Schrittzeile **36 px** (`--dichte-zeile`) |
+| 17 | Schmales Fenster | **nicht gesehen** — dieselbe Grenze wie immer ([`frontend-grundlagen.md`](frontend-grundlagen.md) §8) |
+
+**Punkt 9 ist der stärkste Beleg dafür, dass die Lückenzeile richtig gestrichen ist.** An einer
+Nachricht, die seit über fünfzehn Stunden wartet, ist die Summe der Schrittdauern **auf die Sekunde**
+gleich der Gesamtdauer: Zwischen den Schritten liegt nichts. Die ganze Wartezeit steckt hinter dem
+letzten Schritt — und genau dort steht sie jetzt.
+
+> ✅ **Der Befund aus dieser Runde ist am 11.08.2026 behoben** (Schritt 6, Teil 2a). In der Liste
+> daneben stand in derselben Zeile `wartet vor: Send Message …` — die Beschriftung aus Schritt 5,
+> Teil 2, die M29 widerlegt hat; Detail und Liste widersprachen sich **an derselben Nachricht,
+> nebeneinander sichtbar**. Die Zelle nennt jetzt keine Präposition mehr, sondern `Schritt: …`
+> ([`nachrichtenliste.md`](nachrichtenliste.md) §8.1). Der Weg, `offenerZustand` in den
+> Listen-Endpunkt zu ziehen, ist dabei erwogen und **verworfen** worden — er wäre je Zeile ein Join
+> auf `MessageAction`.
 
 Gesehen wurden dagegen: bis zu **vier Schritte** je Nachricht, Dauern von `< 1 s` bis `1 min 57 s`
 nebeneinander (die Normierung trägt genau dort), **36 Eigenschaften**, beide kuratierten Felder mit
 ihrer deutschen Beschriftung (`Absender BMW`, `Aufteilungszahl 0`), beide Auflösungsstufen des
 Schrittnamens und der Zustand `WARTET_VOR`.
+
+### 10.14 Sichtprüfung nach dem Nachtrag (10.08.2026)
+
+Gegen die laufende Anwendung im Profil `dev`, Mandant `NEXANS`, Rolle ADMIN, Fenster 1920 × 889.
+**Geklickt und getippt, nicht zugewiesen.** Die Anwendung ist vor der Prüfung **neu gestartet**
+worden — ein laufendes Backend kennt einen neuen Zustandswert nicht, und eine Prüfung gegen die alte
+Instanz bewiese nichts.
+
+> **Was hier geprüft wird, ist die Gegenrichtung.** `EMPFANGEN` und `OHNE_AKTION` sind lokal nicht
+> vorführbar (§10.12) — die Testkopie enthält beide nicht. Geprüft ist deshalb, dass die
+> **bestehenden** Zustände unverändert erscheinen. Das ist die Frage, die eine Aufteilung von
+> Zustandslogik aufwirft: nicht „sieht der neue Fall gut aus", sondern „hat der alte sich still
+> verändert".
+
+**Die Stichprobe ist nach Gestalt gewählt, nicht nach Aktualität:** Zeitfenster 7 Tage und Status
+über die Filterleiste geklickt. Unter `Wartend` fällt genau eine Nachricht aus der Reihe — sie liegt
+am 29.12. um 12:37, alle übrigen am 24.12. um 06:56. Es ist dieselbe Gestalt wie in §10.13, und das
+ist hier der Zweck: derselbe Beleg, nachher gemessen.
+
+| # | Geprüft | Ergebnis |
+|---|---|---|
+| 1 | **Der Zustand ist unverändert `WARTET_IN`** | `offenerZustand: "WARTET_IN"`, `naechsterSchritt: "Send Message to Pool"` |
+| 2 | Die Zeitleiste zeigt dieselben zwei Schritte | „Konverter VDA4908 an GSVERF IDOC · 1 min 15 s" und „Send Message to Pool · 2 min" |
+| 3 | Der Name wird nicht wiederholt | darunter *„Die Nachricht wartet — von selbst geht es hier nicht weiter."* |
+| 4 | Der Verweis bleibt im Tooltip | `title` der Zeile: „Der Ablauf verweist auf: Send Message to Pool" |
+| 5 | **Die Wartezeile steht wie bisher** | *wartet seit 15 h 34 min · Frist 30 min · ⚠ Überfällig* |
+| 6 | Der Tooltip des Schrittnamens trägt Baustein und Herkunft | `NXS_MERGE\|BMW\|WAITUNTIL\|now+170H@…\|SUSPEND` samt „Name aus der Ablaufdefinition" — und bestätigt M29 an dieser Nachricht ein zweites Mal |
+| 7 | Feste Zeilenhöhe | jede Schrittzeile **36 px** (`--dichte-zeile`) |
+| 8 | **Überfällig weiterhin ohne Farbe** | gemessen `lab(3.6999 0 0)` — Buntheit **null**; unterschieden nur durch Zeichen, Wort und Schriftstärke (500 gegen 400) |
+| 9 | Die Gesamtdauer deckt die Schrittdauern | `gesamtdauerSekunden: 195`, Schrittdauern 75 + 120 = **195** |
+| 10 | Das alte Kopffeld bleibt weg | `"timeoutSekunden" in antwort === false`; je Schritt trägt es weiterhin `1800` |
+| 11 | **`KEINER` ist unverändert** | eine abgeschlossene Nachricht (drei Schritte): `offenerZustand: "KEINER"`, `wartetSeitSekunden: null`, kein `naechsterSchritt`, **keine Wartezeile**, keine angehängte Zeile |
+| 12 | Auch dort deckt die Gesamtdauer | `300` gegen 171 + 94 + 35 = **300** |
+| 13 | `Escape` schließt weiterhin | nur `nachricht` fällt aus der URL, `zeitraum`/`status` bleiben |
+| 14 | Schmales Fenster | **nicht gesehen** — dieselbe Grenze wie immer (§10.10, Punkt 15) |
+
+**Punkt 8 ist der, der ohne Messung nicht zu haben ist.** „Kein Rot" sieht man; „gar keine Farbe"
+sieht man nicht — `lab(3.6999 0 0)` sagt es. Die Kennzeichnung greift der offenen Entscheidung in
+[`visuelles-konzept.md`](visuelles-konzept.md) §7a damit nachweislich nicht vor.
+
+**Nicht gesehen, weil es sie nicht gibt:** `EMPFANGEN`, `OHNE_AKTION`, `LAEUFT_AUF`, `WARTET_VOR` und
+die Kappung. Jeder Punkt mit seinem Grund in §10.12.
+
+> ✅ **Der bekannte Widerspruch ist am 11.08.2026 aufgelöst** (Schritt 6, Teil 2a). Die Liste trug
+> bei derselben Nachricht `wartet vor: Send Message …`, während das Detail „wartet in" sagte; sie
+> sagt jetzt `Schritt: Send Message …` und behauptet damit nichts mehr über die Lage
+> ([`nachrichtenliste.md`](nachrichtenliste.md) §8.1).
+
+### 10.15 Sichtprüfung des Umschalters (11.08.2026)
+
+Gegen die laufende Anwendung im Profil `dev`, Mandant `NEXANS`, Rolle ADMIN, Fenster 1920 × 889.
+**Geklickt und getippt, nicht zugewiesen.** Kein Neustart nötig — die Nachbesserung ist reines
+Frontend, das Backend ist unberührt.
+
+Zwei Belege, gefahren mit gesetzten Filtern: `zeitraum=30d`, `status=AUFGETEILT`,
+`prozess=70320_TYCO_US_787690_LS_856`, `sortierung=neueste`.
+
+| # | Geprüft | Ergebnis |
+|---|---|---|
+| 1 | Der Umschalter steht im Panelkopf **neben** dem Schließen-Knopf | zwei Knöpfe bei `x = 1800` und `x = 1840`; der Umschalter links davon |
+| 2 | Ein Klick führt auf die eigene Route, `nachricht` fällt weg | `/nachrichten/ab498ef3-…?zeitraum=30d&status=AUFGETEILT&sortierung=neueste&prozess=70320_…` — Reihenfolge unverändert, **kein** `nachricht=` |
+| 3 | Dort volle Inhaltsbreite, linksbündig, Liste weg | Ansicht **1152 px** (= 72 rem) bei `main` 1712, linke Kante `x = 228` gegen `main` bei 208 |
+| 4 | Der Umschalter sagt dort *„Neben der Liste anzeigen"*, ein Klick führt zurück | `aria-label` **und** `title` gewechselt; Ziel `/nachrichten?nachricht=…&zeitraum=30d&status=AUFGETEILT&sortierung=neueste&prozess=70320_…` |
+| 5 | Der Zurück-Knopf führt **Schritt für Schritt** zurück | drei Stationen einzeln durchlaufen: Panel → Route → Panel → Liste ohne Kennung, kein Übersprung |
+| 6 | **Kein Filter geht verloren, keiner kommt hinzu** | alle drei über die Filterleiste geklickt; nach hin und zurück steht `Status: 1 gewählt`, `Prozess: 1 gewählt`, `30 Tage` unverändert |
+| 7 | Auf der eigenen Route ein Kettenglied anklicken | *„Versand Einzel IDOC aus Split"* → `/nachrichten/6e24d350-…?<dieselben Filter>` — **Route bleibt**, nur die Kennung im Pfad wechselt |
+| 8 | Der Schließen-Knopf verhält sich in beiden Modi wie vorher | im Panel fällt genau `nachricht` aus der URL; auf der Route führt *„Zurück zur Liste"* auf `/nachrichten?<dieselben Filter>` |
+| 9 | Keine zweite Bildlaufleiste | `documentElement.scrollHeight === clientHeight === 889` in **beiden** Modi |
+| 10 | Konsole | keine Fehler, keine Warnungen — nur Next-Rauschen (`[HMR] connected`) |
+| 11 | **Unter 1280 px erscheint er nicht** | **nicht gesehen** — siehe unten |
+
+**Punkt 11 ist über das Regelwerk belegt und nicht über die Darstellung.** Die Browsersteuerung kann
+das Fenster nicht verkleinern ([`frontend-grundlagen.md`](frontend-grundlagen.md) §7). Belegt ist
+damit dies und nur dies, gelesen aus dem gebauten Stylesheet:
+
+```
+.hidden{display:none}                                            ← ohne Bedingung
+@media (min-width:80rem){ … .xl\:inline-flex{display:inline-flex} … }
+```
+
+`80rem` sind bei gemessenen 16 px Grundschrift genau **1280 px**; der Knopf trägt beide Klassen
+(`tests/ansicht-umschalter.test.tsx`, und im laufenden DOM nachgesehen). **Was daraus folgt, folgt
+aus der Regel — gesehen worden ist es nicht.**
+
+**Ein Befund zur Prüfmethode, nicht zur Anwendung:** Ein Klick unmittelbar nach einer Navigation
+läuft ins Leere — der Knopf bekommt den Fokusring, aber die Hydration ist noch nicht durch, und der
+Ereignisbehandler hängt noch nicht. Der zweite Klick wirkte sofort. Das gehört hierher, damit es beim
+nächsten Mal nicht als Fehler des Umschalters gelesen wird.
 
 ---
 
@@ -1147,12 +1824,16 @@ Nachrichten mit mehr als einem Ablauf hat kein einzelnes Gerüst Gültigkeit.
 
 Siehe §4. Höchstens sieben Aktionen gemessen, eine Detailansicht lädt eine einzige Nachricht.
 
-### Keine Deutung des Timeouts, keine Verkettung, kein Download
+### Keine Deutung des Timeouts, kein Download
 
-`SOSActionTimeout` wird geliefert und nicht gedeutet (§4). `SourceMessageID`, `TargetMessageID` und
-die Flags `Source`/`Target` werden **nicht** aufgelöst — das ist Schritt 6; eine Aufteilungszahl aus
-den kuratierten Eigenschaften erscheint als Zahl und verlinkt zu nichts. Der Filestore hinter
+`SOSActionTimeout` wird geliefert und nicht gedeutet (§4). Der Filestore hinter
 `Message.Payload.GUID` wird nicht aufgelöst — das ist Schritt 8.
+
+> **Die Verkettung stand hier bis zum 11.08.2026** und ist in Schritt 6 aufgelöst worden: Die vier
+> Spalten stehen als `rollen` im Kopf (§1), der Block darunter zeigt die Kette
+> ([`verkettung.md`](verkettung.md) §8). Was **nicht** aufgelöst wird, ist die Aufteilungszahl aus
+> den kuratierten Eigenschaften: Sie ist ein `MessageProperty`-Wert und verlinkt weiterhin zu
+> nichts.
 
 ---
 
@@ -1168,11 +1849,14 @@ den kuratierten Eigenschaften erscheint als Zahl und verlinkt zu nichts. Der Fil
 | **L1** Pflicht-Zeitfenster | gilt für Listen; hier ist die Nachricht über den Primärschlüssel benannt (§1) |
 | **L2** keine Live-Aggregation | ein `COUNT` über `MessageProperty` **einer** Nachricht, `Using index` — keine Kennzahl über `Message` |
 | **L4** `MessageProperty` nur über `MessageID` | Einstieg immer über die Kennung; die Namensbedingung nutzt den Primärschlüssel (`key_len 548`), niemals den Wert |
-| **L7** jede Abfrage gemessen | §8, sechs Statements gegen drei Gestalten |
+| **L7** jede Abfrage gemessen | §8, sechs Statements gegen drei Gestalten. `rollen` (11.08.2026) ist **keine neue Abfrage**: vier Spalten mehr auf der Zeile, die `findeKopf` ohnehin liest |
+| **Die Rollen entstehen an einer Stelle** | `common/Kettenrollen`, gerufen und nicht nachgebaut — dieselbe Bauform wie beim `MessageStatusClassifier` (§1) |
 | **L8** keine Quelltabelle ohne Erhebung | `MessageAction`, `MessageProperty`, `SOSAction`, `Service` sind in M14 erhoben |
 | **L9** kein Durchlauf ohne Zeitfenster in Anwendungscode | keiner; die Erhebungen dieses Dokuments tragen alle ein Fenster |
-| **Z1** kein `now()` | die Zone der Zeitumrechnung kommt aus der Anwendungsuhr; sonst wird keine Zeit gebraucht |
-| **Z2** `MessageTimeout` in Sekunden | `timeoutSekunden` im Kopf und je Schritt, Einheit aus `MessageStatusClassifier.TIMEOUT_EINHEIT` |
+| **Z1** kein `now()` | die Zone der Zeitumrechnung **und** der Bezugspunkt von `wartetSeitSekunden`/`ueberfaellig` kommen aus der **Anwendungsuhr** (`LocalDateTime.now(anwendungsuhr)`), nie aus der Systemuhr und nie aus dem Browser (§3a) |
+| **Z2** `MessageTimeout` in Sekunden | `fristSekunden` im Kopf, `timeoutSekunden` je Schritt, Einheit aus `MessageStatusClassifier.TIMEOUT_EINHEIT` |
+| **Q3** die drei Problemkategorien bleiben getrennt | `ueberfaellig` ist ein eigenes Feld neben `statusKind` und wird nie mit *Fehler* zusammengefasst; in der Anzeige trägt es **keine** Farbe, damit es auch optisch nicht mit Rot verschmilzt (§10.4) |
+| **§4.2 Kategorie 2 entsteht an einer Stelle** | `MessageStatusClassifier.istUeberfaellig` in `common` — von außen aufrufbar, damit das Dashboard sie ruft statt nachbaut (§3a) |
 | **Q1** Fehlerbedingung | keine eigene; Einordnung ausschließlich über `MessageStatusClassifier.einordnung` |
 | **Q2** kein Anlagedatum | `start` ist `MIN(MessageActionStart)`, `zeitpunkt` ist `MessageLastUpdate` |
 | **Q4** nicht geraten | `Message.VFN` bleibt draußen; die Eindeutigkeitsbedingung in Stufe 2; `processName`/`projectName`/`sosName` bleiben `null` |
@@ -1224,18 +1908,53 @@ den kuratierten Eigenschaften erscheint als Zahl und verlinkt zu nichts. Der Fil
   haben. Für die Testkopie ist das gemessen; für die Produktion ist es die Annahme, die die
   Anwendungsuhr ohnehin macht. Unverändert gegenüber der Liste, und an derselben Stelle
   (`common/Zeitpunkte`).
-- ~~**Die Beschriftung der Nachrichtenliste.**~~ **Nachgezogen in Teil 2.** Die Statuszelle sagt bei
-  `WARTEND` jetzt „wartet vor: …" und bei `LAEUFT` „läuft auf: …"
-  ([`nachrichtenliste.md`](nachrichtenliste.md) §8.1). **Der Rest des Punktes bleibt offen, und
-  zwar dauerhaft lokal:** Belegt ist „wartet vor" nur für `SUSPENDED` (M16 3); für `LAEUFT` steht
-  die bisherige Lesart unverändert da, weil `RUNNING` in der Testkopie null Mal vorkommt. Die
-  Beschriftung trägt beide Lagen — bewiesen ist nur eine.
-- **Drei Teile der Oberfläche sind nicht gegen echte Daten gesehen** — die Lückenzeile,
-  `LAEUFT_AUF` und `OHNE_SCHRITT` samt der Kappung. Vollständig mit Zahlen in §10.12.
+- ~~**Die Beschriftung der Nachrichtenliste.**~~ **Erledigt am 11.08.2026** (Schritt 6, Teil 2a).
+  Die Zwischenfassung aus Schritt 5, Teil 2 („wartet vor: …" / „läuft auf: …") ist durch M29
+  widerlegt worden; die Zelle nennt jetzt **keine Präposition** mehr, sondern `Schritt: …`
+  ([`nachrichtenliste.md`](nachrichtenliste.md) §8.1). Damit ist auch der zweite Teil des Punktes
+  erledigt, und zwar durch Verzicht statt durch Beweis: Weder für `WARTEND` noch für `LAEUFT`
+  behauptet die Liste noch etwas, das sie aus ihrer Datenquelle nicht wissen kann.
+- ~~**Drei Teile der Oberfläche sind nicht gegen echte Daten gesehen** — die Lückenzeile,
+  `LAEUFT_AUF` und `OHNE_SCHRITT` samt der Kappung.~~ **Fortgeschrieben am 10.08.2026.** Die
+  Lückenzeile ist entfernt; an ihre Stelle sind die Wartezeile und die Gesamtdauer getreten, beide
+  gegen echte Daten gesehen. Ungesehen bleiben `LAEUFT_AUF`, `WARTET_VOR`, **`EMPFANGEN`**,
+  **`OHNE_AKTION`** und die Kappung — mit je eigenem Grund in §10.12.
+- **`EMPFANGEN` ist gebaut, ohne dass eine Messung ihn gesucht hätte.** Die vorgesehene Erhebung ist
+  entfallen, weil der Auftraggeber die Frage fachlich beantwortet hat: Im Produktivbetrieb tritt der
+  Fall auf. Das ist eine **Auskunft und kein Befund** — sie steht hier als solche, damit sie nicht
+  irgendwann als gemessene Zahl gelesen wird. Prüfen ließe sie sich erst an der Produktion, dort dann
+  zusammen mit `LAEUFT_AUF` und `RUNNING`.
+- **`WARTET_VOR` ist gebaut und in der Testkopie null Mal beobachtet** (M29, `n = 538`). Ob es den
+  Fall in der Produktion gibt, ist offen: Gemessen ist ausschließlich `SUSPENDED`, und diese 538
+  sind *eine* Gestalt. Die Frage steht als Nummer 17 in
+  [`messungen-schritt5.md`](messungen-schritt5.md) und wäre eine Auskunft aus dem Altsystem —
+  bedeutet `Message.SOSActionID` dort je „der nächste", oder immer „der zuletzt angefasste"?
+- ~~🔴 **Die Liste sagt weiterhin „wartet vor", das Detail sagt „wartet in".**~~ **Erledigt am
+  11.08.2026** (Schritt 6, Teil 2a). Von den drei Wegen ist der genommen worden, der ohne die
+  Unterscheidung auskommt: Die Zelle nennt Status und Schritt ohne Präposition. Der Weg über
+  `offenerZustand` im Listen-Endpunkt ist **verworfen** — er wäre je Zeile ein Zugriff auf
+  `MessageAction` (10,3 Mio. Zeilen) für ein Wörtchen, und damit genau der Join, den die Liste nach
+  L2/L3 nicht macht ([`nachrichtenliste.md`](nachrichtenliste.md) §8.1). **Das Detail behält seine
+  sechs Werte unverändert** — es kann die Unterscheidung treffen, weil es eine Nachricht lädt.
+- **Die Problemkategorie „Überfällig" hat keine Farbrolle**, und das ist eine offene Entscheidung
+  und kein Versäumnis. [`visuelles-konzept.md`](visuelles-konzept.md) §7 hält fest, dass sie eine
+  eigene bekommt — nicht Rot, und wenn gelb, dann auf der orangen Seite bei Ton höchstens 85. Bis
+  dahin trägt die Kennzeichnung Zeichen, Wort und Schriftstärke. Entschieden wird das dort, wo das
+  Dashboard entsteht, und nicht hier nebenbei.
+
+  > **Nachgetragen am 10.08.2026: Die Entscheidung ist aufgeschoben, nicht getroffen.** Beißen wird
+  > sie im **Dashboard** — dort stehen die drei Problemkategorien nebeneinander, und trägt nur eine
+  > davon Farbe, liest sich das als Rangfolge. Genau die schließt Regel Q3 aus, wo Fehler,
+  > Überfällig und Unquittiert ausdrücklich getrennt und **gleichrangig** geführt werden. Der Punkt
+  > steht deshalb jetzt auch dort, wo er fällt: unter den offenen Punkten in
+  > [`visuelles-konzept.md`](visuelles-konzept.md), mit dem Rahmen aus §3 und mit dem Zeitpunkt.
+  > **Im Detail bleibt es vorerst bei Text und Zeichen; das wird nicht geändert** — „nie allein über
+  > Farbe" gilt ohnehin.
 - **Das schmale Fenster ist nicht gesehen** (§10.10, Punkt 15). Die Browsersteuerung kann das
   Fenster nicht verkleinern; geprüft ist das Regelwerk, nicht die Darstellung. Derselbe offene Punkt
   wie in [`nachrichtenliste.md`](nachrichtenliste.md) §8.4 und aus demselben Grund — er gehört von
   Hand nachgeholt.
-- **`Escape` schließt das Panel, die eigene Route hat keine solche Taste.** Dort ist der
-  Schließen-Knopf der erste Tabstopp nach der Navigation, ein Kürzel also entbehrlich; käme je eine
-  zweite Ansicht mit langem Vorlauf dazu, wäre das die Stelle, an der man es nachzieht.
+- ~~**`Escape` schließt das Panel, die eigene Route hat keine solche Taste.**~~ **Nachgezogen am
+  10.08.2026** (§10.11): Die Taste wirkt auf beiden Einhängepunkten und tut dort dasselbe wie der
+  Schließen-Knopf. Die Regel samt ihren zwei Ausnahmen liegt in **einem** Hook, nicht in zwei
+  `useEffect`.

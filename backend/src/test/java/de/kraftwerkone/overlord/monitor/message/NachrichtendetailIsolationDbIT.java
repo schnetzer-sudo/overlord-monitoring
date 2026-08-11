@@ -71,7 +71,7 @@ class NachrichtendetailIsolationDbIT extends SicherheitsTestbasis {
   }
 
   private String liste() {
-    return "/api/nachrichten?zwischenschritte=true&limit=5&von="
+    return "/api/nachrichten?limit=5&von="
         + URLEncoder.encode(iso(FENSTER_VON), StandardCharsets.UTF_8)
         + "&bis="
         + URLEncoder.encode(iso(FENSTER_BIS), StandardCharsets.UTF_8);

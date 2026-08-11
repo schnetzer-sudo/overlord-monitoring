@@ -26,11 +26,16 @@ import org.springframework.web.bind.annotation.RestController;
  * <p><b>Warum ein eigener Controller neben {@code NachrichtenController}.</b> Beide bedienen {@code
  * /api/nachrichten}, aber sie beantworten verschiedene Fragen — „wo steht mein Beleg" gegen „was
  * ist im Einzelnen passiert" — und haben nichts gemeinsam ausser dem Pfadpraefix. Dass {@code
- * /api/nachrichten/merkmale} aus dem Nachbarcontroller und {@code
- * /api/nachrichten/&#123;messageId&#125;} von hier nebeneinander bestehen koennen, ist kein Zufall,
- * auf den man hofft: Spring loest ueber alle Controller hinweg auf und bevorzugt dabei das
- * woertliche Segment vor der Pfadvariablen. Ein Test haelt das fest, damit es nicht bei einer
- * Umstellung still kippt.
+ * /api/nachrichten} aus dem Nachbarcontroller, {@code /api/nachrichten/&#123;messageId&#125;} von
+ * hier und {@code /api/nachrichten/&#123;messageId&#125;/kette} aus dem dritten nebeneinander
+ * bestehen koennen, ist kein Zufall, auf den man hofft: Spring loest ueber alle Controller hinweg
+ * auf. Ein Test haelt das fest, damit es nicht bei einer Umstellung still kippt.
+ *
+ * <p><b>Bis zum 11.08.2026 stand hier ein schaerferer Fall:</b> {@code /api/nachrichten/merkmale}
+ * war ein woertliches Segment an derselben Stelle wie die Pfadvariable, und der Vorrang des
+ * woertlichen Segments entschied. Der Endpunkt ist mit dem Ausblende-Schalter entfallen
+ * (docs/nachrichtenliste.md §5); die Regel selbst gilt unveraendert weiter und traegt jetzt {@code
+ * …/kette}.
  */
 @RestController
 public class NachrichtendetailController {

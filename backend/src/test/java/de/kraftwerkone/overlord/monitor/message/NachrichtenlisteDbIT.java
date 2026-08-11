@@ -228,9 +228,9 @@ class NachrichtenlisteDbIT extends SicherheitsTestbasis {
   @Test
   @DisplayName("Der Statusfilter liefert ausschliesslich Zeilen dieser Einordnung")
   void statusfilter_ist_deckungsgleich_mit_der_anzeige() throws Exception {
-    for (String einordnung : List.of("FEHLER", "ABGESCHLOSSEN", "QUITTIERT", "ZWISCHENSCHRITT")) {
-      Antwort antwort =
-          sitzung.hole(fensterAbfrage("&limit=50&zwischenschritte=true&status=" + einordnung));
+    for (String einordnung :
+        List.of("FEHLER", "ABGESCHLOSSEN", "QUITTIERT", "AUFGETEILT", "ZUSAMMENGEFUEHRT")) {
+      Antwort antwort = sitzung.hole(fensterAbfrage("&limit=50&status=" + einordnung));
 
       assertThat(antwort.status()).as("Status %s", einordnung).isEqualTo(200);
       assertThat(antwort.<List<String>>json("$.items[*].statusKind"))
@@ -239,18 +239,53 @@ class NachrichtenlisteDbIT extends SicherheitsTestbasis {
     }
   }
 
+  /**
+   * <b>Der Statusfilter bietet beide neuen Werte an und liefert fuer beide Zeilen</b> (Schritt 6,
+   * Teil 2a). Der Test prueft nicht nur, dass die Anfrage angenommen wird, sondern dass im dichten
+   * Fenster tatsaechlich Zeilen zurueckkommen — sonst bewiese er nur, dass leer leer ist.
+   */
   @Test
-  @DisplayName("Zwischenschritte bleiben ohne ausdrueckliche Anforderung draussen")
-  void zwischenschritte_sind_ausgeblendet() throws Exception {
-    Antwort ohne = sitzung.hole(fensterAbfrage("&limit=200"));
-    assertThat(ohne.<List<String>>json("$.items[*].statusKind"))
-        .isNotEmpty()
-        .doesNotContain("ZWISCHENSCHRITT");
+  @DisplayName("AUFGETEILT und ZUSAMMENGEFUEHRT sind zwei Filter mit zwei Ergebnismengen")
+  void beide_neuen_einordnungen_liefern_zeilen() throws Exception {
+    List<String> aufgeteilt =
+        sitzung.hole(fensterAbfrage("&limit=50&status=AUFGETEILT")).json("$.items[*].status");
+    List<String> zusammengefuehrt =
+        sitzung.hole(fensterAbfrage("&limit=50&status=ZUSAMMENGEFUEHRT")).json("$.items[*].status");
 
-    Antwort mit = sitzung.hole(fensterAbfrage("&limit=200&zwischenschritte=true"));
-    assertThat(mit.<List<String>>json("$.items[*].statusKind"))
+    assertThat(aufgeteilt).isNotEmpty().allMatch("SPLITTED"::equals);
+    assertThat(zusammengefuehrt).isNotEmpty().allMatch("MERGED"::equals);
+  }
+
+  /**
+   * <b>Die Liste filtert nicht mehr nach Status, ausser der Nutzer sagt es ausdruecklich</b>
+   * (11.08.2026). Bis dahin blendete {@code zwischenschritte=false} als Vorgabe {@code SPLITTED}
+   * und {@code MERGED} aus — also gerade die Zeilen, die bei {@code NEXANS} die Belegnummer tragen
+   * (M26: 96,9 gegen 2,4 Prozent).
+   */
+  @Test
+  @DisplayName("Ohne Statusfilter stehen aufgeteilte und zusammengefuehrte Zeilen in der Liste")
+  void ohne_statusfilter_ist_nichts_ausgeblendet() throws Exception {
+    Antwort antwort = sitzung.hole(fensterAbfrage("&limit=200"));
+
+    assertThat(antwort.<List<String>>json("$.items[*].statusKind"))
         .as("Im dichten Bestand gibt es SPLITTED und MERGED — sonst pruefte der Test nichts")
-        .contains("ZWISCHENSCHRITT");
+        .contains("AUFGETEILT", "ZUSAMMENGEFUEHRT");
+  }
+
+  /**
+   * <b>Ein alter Link wird nicht abgewiesen.</b> {@code zwischenschritte} ist kein Parameter mehr
+   * und wird wie jeder unbekannte Suchparameter uebergangen — kein Fehler, keine Umleitung, keine
+   * Wirkung. Geprueft wird beides: derselbe Statuscode <i>und</i> dieselbe Menge wie ohne ihn.
+   */
+  @Test
+  @DisplayName("Ein Link mit zwischenschritte=false oeffnet die Liste ohne Fehler und ohne Wirkung")
+  void alter_parameter_wird_uebergangen() throws Exception {
+    Antwort ohne = sitzung.hole(fensterAbfrage("&limit=50"));
+    Antwort mitAltemParameter = sitzung.hole(fensterAbfrage("&limit=50&zwischenschritte=false"));
+
+    assertThat(mitAltemParameter.status()).isEqualTo(200);
+    assertThat(mitAltemParameter.<List<String>>json("$.items[*].messageId"))
+        .isEqualTo(ohne.<List<String>>json("$.items[*].messageId"));
   }
 
   @Test

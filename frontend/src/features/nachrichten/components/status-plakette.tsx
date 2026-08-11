@@ -6,6 +6,7 @@ import {
   CircleCheck,
   CircleHelp,
   Clock,
+  Merge,
   PlayCircle,
   Split,
   type LucideIcon,
@@ -43,7 +44,11 @@ const ZEICHEN: Record<Statusart, LucideIcon> = {
   QUITTIERT: CheckCheck,
   WARTEND: Clock,
   LAEUFT: PlayCircle,
-  ZWISCHENSCHRITT: Split,
+  // Die beiden teilen sich die Farbrolle „offen" und tragen deshalb den ganzen
+  // Unterschied im Zeichen und in der Beschriftung: aus eins wurde viel, aus
+  // viel wurde eins.
+  AUFGETEILT: Split,
+  ZUSAMMENGEFUEHRT: Merge,
   UNGEKLAERT: CircleHelp,
 };
 
@@ -52,6 +57,7 @@ export function StatusPlakette({
   rohwert,
   bedeutungNichtVerifiziert,
   schritt,
+  kompakt = false,
 }: {
   statusKind: string;
   rohwert: string | null;
@@ -62,6 +68,21 @@ export function StatusPlakette({
    * nicht nach und prüft es nicht nach — sie zeigt, was da ist.
    */
   schritt?: string | null;
+  /**
+   * Nur das Zeichen, ohne Beschriftung — für eine Zeile, in der der Status
+   * neben Ablaufname und Zeitpunkt steht und die 26 rem breit ist
+   * (Kettenblock).
+   *
+   * **Das ist keine Ausnahme von „nie allein über Farbe".** Die Regel verlangt
+   * „zusätzlich eine Beschriftung **oder** ein Zeichen"
+   * (`visuelles-konzept.md` §3), und die acht Zeichen unterscheiden sich in
+   * ihrer Form, nicht in ihrer Farbe. Die Beschriftung geht dabei nicht
+   * verloren: Sie steht im `title` und für Vorleseprogramme im Markup.
+   *
+   * **Ein zweites Zeichen- oder Farbverzeichnis entsteht dafür nicht.** Genau
+   * deshalb ist das eine Eigenschaft dieser Komponente und keine zweite.
+   */
+  kompakt?: boolean;
 }) {
   const texte = useTexte();
   // Ein Wert, den diese Fassung nicht kennt, ist derselbe Fall wie ein
@@ -78,6 +99,22 @@ export function StatusPlakette({
     : rohwert === null
       ? undefined
       : `${texte.nachrichten.rohwert}: ${rohwert}`;
+
+  if (kompakt) {
+    return (
+      <Badge
+        variant="outline"
+        className={cn("size-5 shrink-0 justify-center p-0", statusKlassen(art))}
+        title={hinweis === undefined ? beschriftung : `${beschriftung} — ${hinweis}`}
+      >
+        <Zeichen aria-hidden="true" />
+        <span className="sr-only">
+          {beschriftung}
+          {hinweis === undefined ? null : ` — ${hinweis}`}
+        </span>
+      </Badge>
+    );
+  }
 
   return (
     // Eine Zeile, nicht zwei: Die Zeilenhöhe der Liste ist `--dichte-zeile` und
@@ -112,53 +149,52 @@ export function StatusPlakette({
         </span>
         {hinweis === undefined ? null : <span className="sr-only">— {hinweis}</span>}
       </Badge>
-      {schritt ? <SchrittZusatz schritt={schritt} art={art} /> : null}
+      {schritt ? <SchrittZusatz schritt={schritt} /> : null}
     </span>
   );
 }
 
 /**
- * Der Schritt neben dem Status — **und was die Zelle über ihn behauptet.**
+ * Der Schritt neben dem Status — **ohne Präposition.**
  *
  * **Nur bei offenen Nachrichten** — bei allen anderen liefert das Backend `null`,
  * weil `SOSActionID` dort den *letzten* Schritt benennt und nicht den aktuellen.
  * Als eigene Spalte wäre er auf 99 Prozent der Zeilen belanglos; hier steht er
  * genau dort, wo die Frage entsteht, die er beantwortet: „wartend — worauf?"
  *
- * ## Zwei Beschriftungen, seit Schritt 5
+ * ## Warum die Zelle keine Präposition mehr nennt (11.08.2026)
  *
- * Bis dahin stand hier der nackte Name mit dem Tooltip „Aktueller Schritt", und
- * das führte in die Irre: Wer „Send Message to Pool" neben `Wartend` liest,
- * nimmt an, dieser Schritt laufe gerade. **Messung M16 (3) sagt das Gegenteil** —
- * bei allen 538 `SUSPENDED`-Nachrichten der Testkopie ist *jede* Aktion beendet.
- * Eine wartende Nachricht steht **zwischen** zwei Schritten, nicht auf einem.
+ * Seit Schritt 5 stand hier „wartet vor: {Schritt}" beziehungsweise „läuft auf:
+ * {Schritt}". **Messung M29 hat das erste widerlegt:** Über alle 538 wartenden
+ * Nachrichten zeigt `Message.SOSActionID` auf den Schritt, der **zuletzt gelaufen**
+ * ist — die Nachricht wartet *in* ihm, nicht davor. Das Detail sagt das seither
+ * richtig; die Liste sagte an derselben Nachricht eine Zeile daneben das
+ * Gegenteil.
  *
- * **Für `LAEUFT` gilt das nicht als belegt.** `RUNNING` kommt in der Testkopie
- * null Mal vor; gerade dort wäre ein tatsächlich laufender Schritt der zu
- * erwartende Fall. Die Beschriftung trägt deshalb **beide** Lagen und stellt
- * nicht einfach alles auf „wartet vor" um — das wäre dieselbe ungeprüfte
- * Behauptung mit umgekehrtem Vorzeichen.
+ * **Die Zelle nennt jetzt Status und Schritt und sonst nichts.** Nicht als
+ * Kompromiss: Der Unterschied zwischen *in* und *vor* entsteht aus dem Vergleich
+ * von `Message.SOSActionID` mit dem zuletzt ausgeführten Schritt — und der steht
+ * in `MessageAction`, einer Tabelle mit 10,3 Millionen Zeilen, die die Liste nach
+ * L2 und L3 nicht je Seite joinen soll. Das Detail kann es, weil es genau eine
+ * Nachricht lädt. Die Zelle sagt damit genau das, was ihre Datenquelle hergibt —
+ * und nicht mehr (`docs/nachrichtenliste.md` §8.1).
+ *
+ * **Die Beschriftung steht sichtbar da und nicht nur im Tooltip.** Auf einem
+ * Touchgerät gibt es keinen Hover; ein Name ohne jede Einordnung wäre dort ein
+ * Wort neben einer Plakette. Der `title` trägt denselben Text ungekürzt — die
+ * Zelle ist eine Zeile hoch und kürzt.
  *
  * **Ohne eigene Farbrolle.** Er ist Beiwerk im Sinne des Leitsatzes und trägt die
  * gedämpfte Textfarbe; eine eigene Farbe wäre eine Statusaussage, die er nicht
  * macht (`visuelles-konzept.md` §3).
  */
-function SchrittZusatz({ schritt, art }: { schritt: string; art: Statusart }) {
+function SchrittZusatz({ schritt }: { schritt: string }) {
   const texte = useTexte();
-  const wartet = art === "WARTEND";
-  const beschriftung = einsetzen(
-    wartet ? texte.nachrichten.schrittWartetVor : texte.nachrichten.schrittLaeuftAuf,
-    { schritt },
-  );
-  const hinweis = einsetzen(
-    wartet ? texte.nachrichten.schrittWartetVorHinweis : texte.nachrichten.schrittLaeuftAufHinweis,
-    { schritt },
-  );
+  const beschriftung = einsetzen(texte.nachrichten.schrittZusatz, { schritt });
 
   return (
-    <span className="text-muted-foreground text-beiwerk min-w-0 truncate" title={hinweis}>
-      <span aria-hidden="true">{beschriftung}</span>
-      <span className="sr-only">{hinweis}</span>
+    <span className="text-muted-foreground text-beiwerk min-w-0 truncate" title={beschriftung}>
+      {beschriftung}
     </span>
   );
 }

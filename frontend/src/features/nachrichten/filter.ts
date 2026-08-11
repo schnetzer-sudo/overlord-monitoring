@@ -11,8 +11,12 @@ import { ProblemFehler } from "@/lib/http";
  * Der Filterzustand der Nachrichtenliste — **in der URL, nicht im Komponentenzustand.**
  *
  * In der URL stehen: `zeitraum` **oder** `von`/`bis`, `status`, `prozess`,
- * `suche`, `zwischenschritte`, `sortierung` — und seit Schritt 5 die gewählte
- * `nachricht`.
+ * `suche`, `sortierung` — und seit Schritt 5 die gewählte `nachricht`.
+ *
+ * **`zwischenschritte` ist am 11.08.2026 entfallen** — mit dem Ausblende-Schalter,
+ * den er trug. Ein alter Link, der ihn noch mitbringt, wird nicht abgewiesen: Er
+ * wird schlicht übergangen wie jeder unbekannte Suchparameter, und die Liste zeigt
+ * ohnehin, was er einblenden sollte (`docs/nachrichtenliste.md` §5).
  *
  * ## Was ausdrücklich *nicht* in der URL steht: der Cursor
  *
@@ -39,12 +43,19 @@ import { ProblemFehler } from "@/lib/http";
  * „Fehler", nicht `ERROR_DUPLICATE`; und die Menge der Rohwerte je Kategorie
  * gehört dem Altsystem, nicht der Oberfläche. Das Backend weist einen Rohwert an
  * dieser Stelle mit `400` `status-unbekannt` ab.
+ *
+ * **`ZWISCHENSCHRITT` ist am 11.08.2026 in zwei Einträge zerfallen.** Technisch
+ * waren `SPLITTED` und `MERGED` dasselbe; für den Nutzer bedeuten sie
+ * Gegenteiliges — *aus eins wurde viel* gegen *aus viel wurde eins*. Der Filter
+ * bietet sie deshalb einzeln an. Er bleibt eine ausdrückliche Nutzerentscheidung
+ * und hat mit der Kette nichts zu tun.
  */
 export const STATUSARTEN = [
   "FEHLER",
   "WARTEND",
   "LAEUFT",
-  "ZWISCHENSCHRITT",
+  "AUFGETEILT",
+  "ZUSAMMENGEFUEHRT",
   "ABGESCHLOSSEN",
   "QUITTIERT",
   "UNGEKLAERT",
@@ -79,22 +90,6 @@ export const SUCHE_MINDESTLAENGE = 3;
  */
 export const LANGE_SUCHE_VORGABE = false;
 
-/**
- * Zwischenschritte (`SPLITTED`, `MERGED`) sind ausgeblendet.
- *
- * Der Grund ist keine technische Erwägung: **34,38 Prozent aller Zeilen** sind
- * Zwischenprodukte. Eine Liste, die zu einem Drittel aus Begriffen besteht, die
- * der Zielnutzer nicht kennt, kostet beim ersten Kontakt Vertrauen.
- *
- * **Anders als beim Zeitfenster steht dieser Wert ausdrücklich in der URL**, ab
- * dem ersten Rendern. Das ist kein Widerspruch zu „kein Standardwert im
- * Frontend", sondern die andere Seite derselben Münze: Hier wird etwas
- * *weggelassen*, und was man sieht, muss man auch teilen können. Bekäme der
- * Empfänger eines Links eine Liste ohne den Chip, sähe er weniger Zeilen als der
- * Absender und wüsste nicht warum.
- */
-export const ZWISCHENSCHRITTE_VORGABE = false;
-
 function literalParser<T extends string>(erlaubt: readonly T[]) {
   return createParser<T>({
     parse: (wert) => ((erlaubt as readonly string[]).includes(wert) ? (wert as T) : null),
@@ -105,15 +100,15 @@ function literalParser<T extends string>(erlaubt: readonly T[]) {
 /**
  * Die Parameter, so wie sie in der URL stehen.
  *
- * `zwischenschritte` trägt als einziger ein `withDefault` — siehe
- * {@link ZWISCHENSCHRITTE_VORGABE}. Alles andere bleibt ohne: Ein zweiter
- * Standardwert liefe dem des Backends irgendwann hinterher.
+ * **Nur `langeSuche` trägt ein `withDefault`**, und auch das nur, weil ein
+ * Wahrheitswert einen braucht. Alles andere bleibt ohne: Ein zweiter Standardwert
+ * liefe dem des Backends irgendwann hinterher.
  *
- * **`clearOnDefault: false` ist hier der ganze Punkt.** `nuqs` entfernt einen
- * Parameter aus der URL, sobald er dem Standardwert entspricht — sinnvoll, damit
- * URLs kurz bleiben, und hier genau falsch: Der Chip stünde sichtbar auf
- * „ausgeblendet", die URL sagte dazu nichts, und der Empfänger eines Links sähe
- * dieselbe Ansicht mit anderen Zeilen. Was man sieht, muss man teilen können.
+ * Bis zum 11.08.2026 stand hier ein zweiter — `zwischenschritte`, mit
+ * `clearOnDefault: false`, damit `nuqs` ihn nicht wieder aus der URL entfernte.
+ * Das war richtig, solange die Vorgabe ein Drittel aller Zeilen *wegließ*: Was
+ * man sieht, muss man teilen können. Jetzt lässt die Liste nichts mehr weg, und
+ * damit gibt es nichts zu teilen (`docs/nachrichtenliste.md` §8.2).
  */
 export const NACHRICHTEN_PARAMETER = {
   ...ZEITFENSTER_PARAMETER,
@@ -139,13 +134,10 @@ export const NACHRICHTEN_PARAMETER = {
    * eigenen Verlaufseintrag spränge es an der Liste vorbei.
    */
   nachricht: parseAsString.withOptions({ history: "push" }),
-  // Anders als `zwischenschritte` **ohne** `clearOnDefault: false`: Hier wird
-  // nichts weggelassen, sondern etwas zugelassen. Steht der Parameter nicht da,
-  // gilt die Grenze — und das ist der Normalfall, den keine URL erwähnen muss.
+  // **Ohne** `clearOnDefault: false`: Hier wird nichts weggelassen, sondern etwas
+  // zugelassen. Steht der Parameter nicht da, gilt die Grenze — und das ist der
+  // Normalfall, den keine URL erwähnen muss.
   langeSuche: parseAsBoolean.withDefault(LANGE_SUCHE_VORGABE),
-  zwischenschritte: parseAsBoolean
-    .withDefault(ZWISCHENSCHRITTE_VORGABE)
-    .withOptions({ clearOnDefault: false }),
   sortierung: literalParser(SORTIERUNGEN),
 };
 
@@ -154,7 +146,6 @@ export type Nachrichtenfilter = Zeitfensterzustand & {
   prozess: string[] | null;
   suche: string | null;
   langeSuche: boolean;
-  zwischenschritte: boolean;
   sortierung: Sortierung | null;
   /**
    * Die geöffnete Nachricht. Sie ist Teil des URL-Zustands wie jeder Filter —
@@ -307,9 +298,6 @@ export function alsAbfrage(filter: Nachrichtenfilter, cursor?: string | null): s
       parameter.set("langeSuche", "true");
     }
   }
-  // Ausdrücklich auch dann, wenn er der Vorgabe entspricht: Was ausgeblendet ist,
-  // gehört sichtbar in die Anfrage.
-  parameter.set("zwischenschritte", String(filter.zwischenschritte));
   if (filter.sortierung !== null) {
     parameter.set("sortierung", filter.sortierung);
   }
@@ -363,8 +351,6 @@ export function alsSuchparameter(filter: Nachrichtenfilter): URLSearchParams {
   if (filter.langeSuche) {
     parameter.set("langeSuche", "true");
   }
-  // Ausdrücklich, ab dem ersten Rendern — siehe ZWISCHENSCHRITTE_VORGABE.
-  parameter.set("zwischenschritte", String(filter.zwischenschritte));
   if (filter.sortierung !== null) {
     parameter.set("sortierung", filter.sortierung);
   }
@@ -394,7 +380,6 @@ export function ausSuchparametern(suchparameter: URLSearchParams): Nachrichtenfi
   const zeitraum = suchparameter.get("zeitraum");
   const sortierung = suchparameter.get("sortierung");
   const langeSuche = suchparameter.get("langeSuche");
-  const zwischenschritte = suchparameter.get("zwischenschritte");
   const status = suchparameter.getAll("status").filter(istStatusart);
   const prozess = suchparameter.getAll("prozess").filter((wert) => wert !== "");
   // Eine leere Kennung ist keine Auswahl. Sie entstünde nur aus einer von Hand
@@ -410,8 +395,8 @@ export function ausSuchparametern(suchparameter: URLSearchParams): Nachrichtenfi
     prozess: prozess.length === 0 ? null : prozess,
     suche: suchparameter.get("suche"),
     langeSuche: langeSuche === null ? LANGE_SUCHE_VORGABE : langeSuche === "true",
-    zwischenschritte:
-      zwischenschritte === null ? ZWISCHENSCHRITTE_VORGABE : zwischenschritte === "true",
+    // `zwischenschritte` wird hier nicht gelesen und nicht abgewiesen — ein alter
+    // Link trägt ihn schlicht ins Leere, wie jeden unbekannten Suchparameter.
     sortierung:
       sortierung === "neueste" || sortierung === "aelteste" ? (sortierung as Sortierung) : null,
     nachricht: nachricht === null || nachricht === "" ? null : nachricht,

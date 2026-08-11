@@ -1,14 +1,15 @@
 "use client";
 
-import { Clock, Hourglass, PlayCircle } from "lucide-react";
+import { AlertTriangle, Clock, PlayCircle } from "lucide-react";
 
+import { useAnzeigezone } from "@/components/zeitzone";
 import { einsetzen } from "@/i18n";
-import { useTexte } from "@/i18n/provider";
-import { formatiereDauer } from "@/lib/format";
+import { useSprache, useTexte } from "@/i18n/provider";
+import { formatiereDauer, formatiereZeitpunktGenau } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 import type { Nachrichtendetail, Schritt } from "../api";
-import { zeitleiste, type Zeitleistenzeile } from "../detail";
+import { wartezeile, zeitleiste, type Zeitleistenzeile } from "../detail";
 
 /**
  * Die Zeitleiste — der Kern der Detailansicht.
@@ -27,32 +28,82 @@ import { zeitleiste, type Zeitleistenzeile } from "../detail";
  * überfliegen.
  */
 export function Zeitleiste({ detail }: { detail: Nachrichtendetail }) {
-  const texte = useTexte();
   const zeilen = zeitleiste(detail);
+  const warten = wartezeile(detail);
 
   if (zeilen.length === 0) {
     return (
+      <div className="flex flex-col gap-2">
+        <LeereLeiste detail={detail} />
+        {warten ? <WarteZeile warten={warten} /> : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <ol className="flex flex-col">
+        {zeilen.map((zeile) => (
+          <Zeile key={zeile.id} zeile={zeile} />
+        ))}
+      </ol>
+      {warten ? <WarteZeile warten={warten} /> : null}
+    </div>
+  );
+}
+
+/**
+ * Der Satz über der leeren Leiste. **Er unterscheidet drei Lagen, die alle drei
+ * dieselbe leere Zeilenliste ergeben** — was der Nutzer liest, entscheidet der
+ * gelieferte Zustand und nicht die Länge der Liste.
+ *
+ * | Zustand | Satz |
+ * |---|---|
+ * | `EMPFANGEN` | *Empfangen am … — seitdem ist kein Schritt ausgeführt worden.* |
+ * | `OHNE_AKTION` | *Zu dieser Nachricht ist kein Ablauf protokolliert.* |
+ * | `KEINER` | *Für diese Nachricht ist kein Prozessschritt aufgezeichnet.* |
+ *
+ * Bis zum 10.08.2026 trugen die ersten beiden **einen** Zustand (`OHNE_SCHRITT`)
+ * und damit einen Satz. Der eine ist eine Auskunft über die **Plattform** — die
+ * Nachricht ist angekommen und hängt seitdem —, der andere über die
+ * **Datenlage**. Ein gemeinsamer Text müsste so vage sein, dass er beides
+ * abdeckt, und wäre dann für keinen der beiden brauchbar.
+ *
+ * **Der Zeitpunkt ist der fachliche Start**, und bei `EMPFANGEN` ist das genau
+ * der Metadaten-Schritt: die einzige Aktion, die es dort gibt. Formatiert wird
+ * er mit derselben Zone und derselben Funktion wie im Kopf. Fehlt er — die
+ * Spalte lässt `NULL` zu, gemessen ist er auf keiner der 10,3 Millionen Zeilen
+ * leer (M22) —, steht der Satz ohne Datum da statt mit einem Platzhalter.
+ */
+function LeereLeiste({ detail }: { detail: Nachrichtendetail }) {
+  const texte = useTexte();
+  const sprache = useSprache();
+  const zone = useAnzeigezone();
+
+  if (detail.offenerZustand === "OHNE_AKTION") {
+    return (
+      <p className="text-muted-foreground text-beiwerk">{texte.nachrichten.detail.ohneAktion}</p>
+    );
+  }
+
+  if (detail.offenerZustand === "EMPFANGEN") {
+    return (
       <p className="text-muted-foreground text-beiwerk">
-        {detail.offenerZustand === "OHNE_SCHRITT"
-          ? texte.nachrichten.detail.ohneSchritt
-          : texte.nachrichten.detail.keineSchritte}
+        {detail.start === null
+          ? texte.nachrichten.detail.empfangenOhneZeitpunkt
+          : einsetzen(texte.nachrichten.detail.empfangen, {
+              zeitpunkt: formatiereZeitpunktGenau(detail.start, sprache, zone),
+            })}
       </p>
     );
   }
 
   return (
-    <ol className="flex flex-col">
-      {zeilen.map((zeile) => (
-        <Zeile key={zeile.id} zeile={zeile} />
-      ))}
-    </ol>
+    <p className="text-muted-foreground text-beiwerk">{texte.nachrichten.detail.keineSchritte}</p>
   );
 }
 
 function Zeile({ zeile }: { zeile: Zeitleistenzeile }) {
-  if (zeile.art === "luecke") {
-    return <LueckenZeile sekunden={zeile.sekunden} />;
-  }
   if (zeile.art === "erwartet") {
     return <ErwarteteZeile name={zeile.name} bereitsGelaufen={zeile.bereitsGelaufen} />;
   }
@@ -141,40 +192,98 @@ function Balken({ anteil }: { anteil: number | null }) {
 }
 
 /**
- * Die Wartezeit **zwischen** zwei Schritten.
+ * *wartet seit 4 h 12 min · Frist 30 min* — die Zeile am offenen Zustand.
  *
- * Ohne diese Zeile steht sie in keiner Schrittdauer — und genau sie ist bei
- * einer hängenden Nachricht oft die ganze Antwort.
+ * ## Sie ist der Ersatz für die Lückenzeile, und zwar aus einem gemessenen Grund
+ *
+ * Die Lückenzeile stand *zwischen* zwei Schritten und ist über rund 700 geprüfte
+ * Nachrichten nie erschienen: Die größte Lücke beträgt eine Sekunde. **Die
+ * Wartezeit steckt in der Dauer des `WAITUNTIL`-Schritts**, nicht im Zwischenraum
+ * — und die eigentliche Frage eines Nutzers vor einer hängenden Nachricht lautet
+ * ohnehin nicht „wie lange lag sie zwischen zwei Schritten", sondern „wie lange
+ * steht sie schon".
+ *
+ * ## Beide Zahlen sind gerechnet, bevor sie hier ankommen
+ *
+ * `wartetSeitSekunden` entsteht im Backend gegen die **Anwendungsuhr**. Im Profil
+ * `dev` steht die Monate zurück; `Date.now()` gegen einen gelieferten Zeitstempel
+ * ergäbe dort „vor 7 Monaten" statt „vor 4 Stunden".
+ *
+ * ## Überfällig wird hervorgehoben — und zwar ohne eine einzige Farbe
+ *
+ * Nicht nur „nie allein über Farbe", sondern hier **gar nicht** über Farbe. Der
+ * Grund steht in `visuelles-konzept.md` §7 und ist Regel Q3: Rot gehört
+ * ausschließlich der Kategorie *Fehler*. Würde „überfällig" rot, verschmölzen
+ * zwei der drei Problemkategorien in der Wahrnehmung, obwohl der Code sie
+ * sorgfältig trennt. Ein Status-Gelb gibt es in diesem Farbsystem nicht, und
+ * eine eigene Rolle dafür ist dort ausdrücklich einer späteren Entscheidung
+ * vorbehalten — sie hier zu erfinden hieße, dieser Entscheidung vorzugreifen.
+ *
+ * Die Hervorhebung ist deshalb achromatisch: **Zeichen, Wort und Schriftstärke**
+ * gegen die gedämpfte Umgebung. Das Wort kommt aus `texte.problem` — auf oberster
+ * Ebene, damit das Dashboard später dieselbe Kategorie gleich benennt und nicht
+ * „abgelaufen" schreibt, wo hier „Überfällig" steht.
  */
-function LueckenZeile({ sekunden }: { sekunden: number }) {
+function WarteZeile({ warten }: { warten: NonNullable<ReturnType<typeof wartezeile>> }) {
   const texte = useTexte();
+  const dauer = formatiereDauer(warten.sekunden, texte.nachrichten.detail.dauer);
+  const satz = einsetzen(
+    warten.laeuft ? texte.nachrichten.detail.laeuftSeit : texte.nachrichten.detail.wartetSeit,
+    { dauer },
+  );
+
   return (
-    <li className="border-border text-muted-foreground text-beiwerk flex items-center gap-1.5 border-l-2 py-1 pl-2">
-      <Hourglass aria-hidden="true" className="size-3.5 shrink-0 opacity-70" />
-      {einsetzen(texte.nachrichten.detail.gewartet, {
-        dauer: formatiereDauer(sekunden, texte.nachrichten.detail.dauer),
-      })}
-    </li>
+    <p
+      className={cn(
+        "text-beiwerk flex flex-wrap items-center gap-x-2 gap-y-1",
+        warten.ueberfaellig ? "text-foreground" : "text-muted-foreground",
+      )}
+    >
+      <span className="flex items-center gap-1.5">
+        <Clock aria-hidden="true" className="size-3.5 shrink-0" />
+        {satz}
+      </span>
+
+      {warten.fristSekunden === null ? null : (
+        <span data-ziffern>
+          {einsetzen(texte.nachrichten.detail.frist, {
+            dauer: formatiereDauer(warten.fristSekunden, texte.nachrichten.detail.dauer),
+          })}
+        </span>
+      )}
+
+      {warten.ueberfaellig ? (
+        <span
+          className="flex items-center gap-1 font-medium"
+          title={texte.problem.ueberfaelligHinweis}
+        >
+          <AlertTriangle aria-hidden="true" className="size-3.5 shrink-0" />
+          {texte.problem.ueberfaellig}
+        </span>
+      ) : null}
+    </p>
   );
 }
 
 /**
- * Das Ende der Leiste bei `WARTET_VOR`. **Die Nachricht wartet — und das steht
- * da**, erkennbar anders als die ausgeführten Schritte.
+ * Das Ende der Leiste bei `WARTET_IN` und `WARTET_VOR`. **Die Nachricht wartet —
+ * und das steht da**, erkennbar anders als die ausgeführten Schritte.
  *
- * Drei Fälle, und alle drei kommen aus zwei gelieferten Feldern:
+ * Drei Fälle, und alle drei kommen aus **gelieferten Feldern**; hier wird nichts
+ * verglichen und nichts abgeleitet:
  *
- * 1. **Kein nächster Schritt** (`naechsterSchritt === null`, über den
+ * 1. **Kein benannter Schritt** (`naechsterSchritt === null`, über den
  *    Gesamtbestand 43,9 Prozent der Verweise): Das wird benannt und nicht
  *    weggelassen. Die Nachricht wartet, wir wissen nur nicht worauf; sie
  *    stillschweigend wie eine abgeschlossene aussehen zu lassen wäre die
  *    schlechtere Auskunft.
- * 2. **Der benannte Schritt ist bereits gelaufen** — der Fall der Testkopie
- *    (Sichtprüfung 07.08.2026, siehe `../detail.ts`). Dann wird sein Name
- *    **nicht wiederholt**: Er steht eine Zeile darüber, mit seiner Dauer. Die
- *    Zeile sagt nur noch, dass es hier nicht von selbst weitergeht; der Verweis
- *    bleibt im Tooltip nachlesbar.
- * 3. **Ein anderer Schritt**: Er steht als noch nicht begonnen da.
+ * 2. **`WARTET_IN`** — der gemessene Normalfall, 538 von 538 (M29). Der Verweis
+ *    zeigt auf den Schritt, der sie schlafen gelegt hat. Sein Name wird **nicht
+ *    wiederholt**: Er steht eine Zeile darüber, mit seiner Dauer. Die Zeile sagt
+ *    nur noch, dass es hier nicht von selbst weitergeht; der Verweis bleibt im
+ *    Tooltip nachlesbar.
+ * 3. **`WARTET_VOR`** — der Verweis zeigt auf einen anderen Schritt, und der
+ *    steht als noch nicht begonnen da. In der Testkopie null Mal beobachtet.
  */
 function ErwarteteZeile({
   name,

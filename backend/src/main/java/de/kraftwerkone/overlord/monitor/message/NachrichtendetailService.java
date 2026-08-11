@@ -1,5 +1,6 @@
 package de.kraftwerkone.overlord.monitor.message;
 
+import de.kraftwerkone.overlord.monitor.common.Kettenrollen;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
 import de.kraftwerkone.overlord.monitor.common.Zeitpunkte;
@@ -20,9 +21,10 @@ import org.springframework.stereotype.Service;
  * Die Fachlogik des Nachrichtendetails: Schritte benennen, den offenen Zustand bestimmen, Dauern
  * rechnen, Werte kappen.
  *
- * <p>Was hier <b>nicht</b> geschieht: klassifizieren. Die Einordnung eines {@code MessageStatus}
- * entsteht ausschliesslich im {@code MessageStatusClassifier} und wird nirgends nachgebaut — sonst
- * driftet sie ueber die Ausbaustufen auseinander.
+ * <p>Was hier <b>nicht</b> geschieht: klassifizieren und Rollen bestimmen. Die Einordnung eines
+ * {@code MessageStatus} entsteht ausschliesslich im {@code MessageStatusClassifier}, die
+ * Kettenrollen ausschliesslich in {@code common/Kettenrollen}. Beides wird hier benutzt und
+ * nirgends nachgebaut — sonst driftet es ueber die Ausbaustufen auseinander.
  */
 @Service
 public class NachrichtendetailService {
@@ -57,8 +59,12 @@ public class NachrichtendetailService {
     Schrittnamen namen = Schrittnamen.aus(detailRepository.findeAblaufschritte(mandant, messageId));
 
     MessageStatusKind einordnung = statusClassifier.einordnung(kopf.status());
-    OffenerZustand zustand = zustand(einordnung, aktionen);
+    List<MessageAktion> schrittfolge = schrittfolge(aktionen);
+    OffenerZustand zustand = zustand(einordnung, kopf, aktionen, schrittfolge);
     ZoneId zone = anwendungsuhr.getZone();
+    LocalDateTime jetzt = LocalDateTime.now(anwendungsuhr);
+    Integer frist = frist(kopf);
+    LocalDateTime start = fachlicherStart(aktionen);
 
     return new NachrichtendetailResponse(
         kopf.messageId(),
@@ -68,13 +74,23 @@ public class NachrichtendetailService {
         kopf.processName(),
         kopf.projectName(),
         kopf.sosName(),
+        // Die Rollen entstehen in `common/Kettenrollen` und werden hier nicht nachgebaut —
+        // dieselbe Bauform wie beim MessageStatusClassifier. `List.copyOf` eines EnumSet behaelt
+        // die Deklarationsreihenfolge von Kettenrolle; die Reihenfolge in der Antwort haengt damit
+        // nicht daran, in welcher Reihenfolge die Spalten gelesen wurden.
+        List.copyOf(
+            Kettenrollen.aus(
+                kopf.source(), kopf.sourceMessageId(), kopf.targetMessageId(), kopf.target())),
         Zeitpunkte.nachUtc(kopf.zeitpunkt(), zone),
-        Zeitpunkte.nachUtc(fachlicherStart(aktionen), zone),
-        kopf.timeoutSekunden() == null ? null : (int) kopf.timeoutSekunden(),
+        Zeitpunkte.nachUtc(start, zone),
+        abstand(start, kopf.zeitpunkt()),
+        frist,
         kopf.eigenschaftenAnzahl(),
         zustand,
-        zustand == OffenerZustand.WARTET_VOR ? kopf.naechsterSchrittName() : null,
-        schrittfolge(aktionen, namen, zustand, zone),
+        zustand.istWartend() ? kopf.naechsterSchrittName() : null,
+        wartetSeitSekunden(zustand, aktionen, schrittfolge, jetzt),
+        statusClassifier.istUeberfaellig(kopf.status(), kopf.zeitpunkt(), frist, jetzt),
+        schrittResponses(schrittfolge, namen, zustand, zone),
         kuratierte(detailRepository.findeKuratierteEigenschaften(mandant, messageId)));
   }
 
@@ -95,28 +111,86 @@ public class NachrichtendetailService {
   }
 
   /**
-   * Der offene Zustand — die vier Faelle in der Reihenfolge, in der sie sich ausschliessen.
+   * Der offene Zustand — die sechs Faelle in der Reihenfolge, in der sie sich ausschliessen.
    *
-   * <p>„Ohne Aktion" muss <b>vor</b> „jede Aktion beendet" stehen: Ueber einer leeren Menge ist
-   * „jede ist beendet" wahr, und die Nachricht bekaeme {@link OffenerZustand#WARTET_VOR} samt einem
-   * naechsten Schritt, vor dem sie gar nicht steht.
+   * <p>„Keine Schrittfolge" muss <b>vor</b> „jede Aktion beendet" stehen: Ueber einer leeren Menge
+   * ist „jede ist beendet" wahr, und die Nachricht bekaeme einen Wartezustand samt einem Schritt,
+   * an dem sie gar nicht steht.
    *
-   * <p>Geprueft wird ueber <b>alle</b> Aktionen einschliesslich des Metadaten-Schritts, denn M16
-   * (3) hat genau so gemessen — und eine Nachricht, die nur ihren Metadaten-Schritt hat, hat sehr
-   * wohl eine Aktion.
+   * <p><b>Geprueft wird ueber die Schrittfolge, also ohne den Metadaten-Schritt</b> (geaendert am
+   * 10.08.2026 mit M29). Bis dahin lief die Pruefung ueber <b>alle</b> Aktionen, weil M16 (3) so
+   * gemessen hat. Der Wechsel ist kein Widerspruch zu jener Messung, sondern die Folge derselben
+   * Trennung, die diese Runde ueberall zieht: Der Metadaten-Schritt erscheint nicht in der
+   * Zeitleiste (S1). Eine Nachricht, die nur ihn hat, hat fuer den Nutzer keinen Schritt — sie als
+   * {@link OffenerZustand#LAEUFT_AUF} zu fuehren hiesse, eine Zeile zu markieren, die niemand
+   * sieht. <b>An den Daten der Testkopie aendert das nichts:</b> Keine der 538 wartenden
+   * Nachrichten hat ausschliesslich ihren Metadaten-Schritt (M29 1, {@code 0} von 538).
+   *
+   * <p><b>Die leere Schrittfolge traegt zwei Faelle, und sie werden getrennt</b> (aufgeteilt am
+   * 10.08.2026, vorher {@code OHNE_SCHRITT}). Gibt es den Metadaten-Schritt, ist die Nachricht
+   * angekommen und seitdem nicht weitergelaufen ({@link OffenerZustand#EMPFANGEN}); gibt es gar
+   * keine Aktion, ist zu ihr kein Ablauf protokolliert ({@link OffenerZustand#OHNE_AKTION}). Das
+   * erste ist eine Auskunft ueber die Plattform, das zweite ueber die Datenlage.
+   *
+   * <p><b>Die Aufteilung {@code WARTET_IN} gegen {@code WARTET_VOR} faellt hier und nicht in der
+   * Oberflaeche.</b> Verglichen werden {@code Message.SOSID}/{@code SOSActionID} mit dem zuletzt
+   * ausgefuehrten Schritt — ueber die <b>Kennungen</b>, nicht ueber den Namen: Zwei Schritte
+   * desselben Ablaufs koennen gleich heissen, und dann waere ein Namensvergleich eine Verwechslung.
    */
-  private OffenerZustand zustand(MessageStatusKind einordnung, List<MessageAktion> aktionen) {
+  private OffenerZustand zustand(
+      MessageStatusKind einordnung,
+      NachrichtKopfZeile kopf,
+      List<MessageAktion> aktionen,
+      List<MessageAktion> schrittfolge) {
     boolean offen =
         einordnung == MessageStatusKind.WARTEND || einordnung == MessageStatusKind.LAEUFT;
     if (!offen) {
       return OffenerZustand.KEINER;
     }
-    if (aktionen.isEmpty()) {
-      return OffenerZustand.OHNE_SCHRITT;
+    if (schrittfolge.isEmpty()) {
+      return aktionen.isEmpty() ? OffenerZustand.OHNE_AKTION : OffenerZustand.EMPFANGEN;
     }
-    return aktionen.stream().anyMatch(MessageAktion::ohneEnde)
-        ? OffenerZustand.LAEUFT_AUF
+    if (schrittfolge.stream().anyMatch(MessageAktion::ohneEnde)) {
+      return OffenerZustand.LAEUFT_AUF;
+    }
+    return zeigtAuf(kopf, letzterSchritt(schrittfolge))
+        ? OffenerZustand.WARTET_IN
         : OffenerZustand.WARTET_VOR;
+  }
+
+  /**
+   * Zeigt der Verweis der Nachricht auf genau diesen Schritt?
+   *
+   * <p>Beide Haelften des zusammengesetzten Schluessels muessen stimmen: 2,51 Prozent der
+   * Nachrichten haben Schritte aus mehr als einem Ablauf (M20), und eine {@code SOSActionID} allein
+   * ist dann nicht eindeutig.
+   *
+   * <p>Ist {@code Message.SOSID} leer, zeigt der Verweis auf nichts — das ergibt {@link
+   * OffenerZustand#WARTET_VOR} mit einem {@code naechsterSchritt} von {@code null}, und die
+   * Oberflaeche benennt genau das. Ueber den Gesamtbestand laeuft dieser Verweis zu 43,9 Prozent
+   * ins Leere (M13).
+   */
+  private static boolean zeigtAuf(NachrichtKopfZeile kopf, MessageAktion schritt) {
+    return kopf.sosActionId() != null
+        && Objects.equals(kopf.sosId(), schritt.sosId())
+        && kopf.sosActionId() == schritt.sosActionId();
+  }
+
+  /**
+   * Der <b>zuletzt ausgefuehrte</b> Schritt der Schrittfolge.
+   *
+   * <p>Die Ordnung ist die der Zeitleiste — {@code MessageActionStart}, bei Gleichstand {@code
+   * MessageActionID} — und sie steht an <b>genau einer</b> Stelle: in der Abfrage ({@code
+   * NachrichtendetailRepository.findeAktionen}). Hier wird nur das letzte Element genommen, nicht
+   * ein zweites Mal sortiert. Ein zweites Sortierkriterium an einer zweiten Stelle waere genau die
+   * Drift, gegen die diese Regel gerichtet ist.
+   *
+   * <p>M29 (0) hat nachgemessen, dass diese Ordnung und {@code MAX(MessageActionID)} auf allen 538
+   * wartenden Nachrichten dieselbe Zeile treffen. Das ist ein Befund ueber die Daten und keine
+   * Freigabe, hier die andere Ordnung zu nehmen.
+   */
+  private static MessageAktion letzterSchritt(List<MessageAktion> schrittfolge) {
+    return schrittfolge.get(schrittfolge.size() - 1);
   }
 
   /**
@@ -138,15 +212,21 @@ public class NachrichtendetailService {
   /**
    * Die Schrittfolge — <b>ohne</b> den Metadaten-Schritt und ohne Obergrenze.
    *
+   * <p><b>Die eine Stelle, an der der Metadaten-Schritt ausgenommen wird.</b> Zustand, Wartedauer
+   * und Anzeige lesen alle dieselbe Liste; wuerde jede fuer sich filtern, gaebe es drei Stellen, an
+   * denen dieselbe Regel driften kann. Kriterium ist {@code SOSActionID = 0} (S1).
+   *
    * <p>Die Sortierung kommt aus der Abfrage und wird hier nicht wiederholt.
    */
-  private static List<SchrittResponse> schrittfolge(
-      List<MessageAktion> aktionen, Schrittnamen namen, OffenerZustand zustand, ZoneId zone) {
-    List<SchrittResponse> schritte = new ArrayList<>(aktionen.size());
-    for (MessageAktion aktion : aktionen) {
-      if (aktion.istMetadatenSchritt()) {
-        continue;
-      }
+  private static List<MessageAktion> schrittfolge(List<MessageAktion> aktionen) {
+    return aktionen.stream().filter(aktion -> !aktion.istMetadatenSchritt()).toList();
+  }
+
+  /** Die Schrittfolge als Antwort — Namen, Zeiten, Dauern. */
+  private static List<SchrittResponse> schrittResponses(
+      List<MessageAktion> schrittfolge, Schrittnamen namen, OffenerZustand zustand, ZoneId zone) {
+    List<SchrittResponse> schritte = new ArrayList<>(schrittfolge.size());
+    for (MessageAktion aktion : schrittfolge) {
       Schrittname name = namen.loese(aktion.sosId(), aktion.sosActionId(), aktion.bausteine());
       schritte.add(
           new SchrittResponse(
@@ -161,6 +241,90 @@ public class NachrichtendetailService {
               zustand == OffenerZustand.LAEUFT_AUF && aktion.ohneEnde()));
     }
     return List.copyOf(schritte);
+  }
+
+  /**
+   * Wie lange die Nachricht schon steht — <b>gegen die Anwendungsuhr</b>, niemals im Browser
+   * gerechnet.
+   *
+   * <p>Die Uhr ist die Anwendungsuhr und nicht die Systemuhr: Die Ausnahme in Regel A5 gilt fuer
+   * <i>sicherheitsrelevante</i> Zeit, also Sperrfristen und Sitzungsablauf. Im Profil {@code dev}
+   * steht sie um Monate zurueck, und genau deshalb darf diese Zahl nicht im Browser entstehen —
+   * dort ergaebe {@code Date.now()} gegen einen gelieferten Zeitstempel Monate statt Stunden.
+   *
+   * <p>Bewusst ein vollstaendiges {@code switch} ohne {@code default}: Ein siebter Zustand soll
+   * hier einen Compilerfehler ausloesen und keine stille {@code null} erben. Genau das hat die
+   * Aufteilung von {@code OHNE_SCHRITT} am 10.08.2026 erzwungen — die beiden neuen Faelle konnten
+   * keine Voreinstellung erben, sie mussten hier bewusst entschieden werden.
+   */
+  private static Long wartetSeitSekunden(
+      OffenerZustand zustand,
+      List<MessageAktion> aktionen,
+      List<MessageAktion> schrittfolge,
+      LocalDateTime jetzt) {
+    return switch (zustand) {
+      // Ohne jede Aktion gibt es keinen Anker: Der fachliche Start ist dort ebenfalls null, und
+      // eine Dauer aus MessageLastUpdate waere eine erfundene Zahl — der Zeitpunkt der letzten
+      // Aenderung ist nicht der Zeitpunkt des Eingangs.
+      case KEINER, OHNE_AKTION -> null;
+      // Angekommen und seitdem nicht weitergelaufen: gerechnet ab dem Metadaten-Schritt. Er ist
+      // kein Verarbeitungsschritt, aber er IST das Ereignis mit einem Zeitpunkt (M17 3) — aus
+      // demselben Grund rechnet der fachliche Start ueber ihn. Mit null sagte das Feld an der
+      // einzigen Stelle nichts, an der es etwas zu sagen haette.
+      case EMPFANGEN ->
+          aktionen.stream()
+              .filter(MessageAktion::istMetadatenSchritt)
+              .findFirst()
+              // Ende, und ist es nicht gesetzt, der Beginn — dieselbe Zeile also, nicht ein
+              // anderer Anker.
+              .map(schrittNull -> abstand(bezugspunkt(schrittNull), jetzt))
+              .orElse(null);
+      case LAEUFT_AUF ->
+          schrittfolge.stream()
+              .filter(MessageAktion::ohneEnde)
+              .findFirst()
+              .map(offene -> abstand(offene.start(), jetzt))
+              .orElse(null);
+      case WARTET_IN, WARTET_VOR -> abstand(letzterSchritt(schrittfolge).ende(), jetzt);
+    };
+  }
+
+  /** Ende einer Aktion, ersatzweise ihr Beginn. Beide duerfen {@code NULL} sein. */
+  private static LocalDateTime bezugspunkt(MessageAktion aktion) {
+    return aktion.ende() != null ? aktion.ende() : aktion.start();
+  }
+
+  /**
+   * Die Frist der Nachricht: {@code Message.MessageTimeout} in <b>Sekunden</b> (Regel Z2, M8).
+   *
+   * <p><b>{@code 0} und {@code NULL} werden beide zu {@code null}</b> — „keine Frist gesetzt". Eine
+   * gelieferte {@code 0} liesse sich als „sofort faellig" lesen, und das steht nirgends. Dass die
+   * {@code 0} „kein Timeout" bedeutet, ist eine Analogie und kein Befund; die Begruendung samt
+   * ihrem Gegenbeleg steht an der Stelle, an der sie wirkt ({@code
+   * MessageStatusClassifier.timeoutZeitpunkt}).
+   */
+  private static Integer frist(NachrichtKopfZeile kopf) {
+    return kopf.timeoutSekunden() == null || kopf.timeoutSekunden() <= 0
+        ? null
+        : (int) kopf.timeoutSekunden();
+  }
+
+  /**
+   * Der Abstand zweier Zeitpunkte in ganzen Sekunden, {@code null} bei fehlendem Wert <b>und bei
+   * negativem Abstand</b>.
+   *
+   * <p>Dieselbe Regel wie bei {@link #dauerSekunden(MessageAktion)} und aus demselben Grund:
+   * „wartet seit minus drei Sekunden" ist schlechter als gar keine Angabe. Vorgekommen ist es nicht
+   * — die Anwendungsuhr im Profil {@code dev} steht auf dem juengsten Zeitpunkt des Bestands und
+   * laeuft vorwaerts —, aber eine Uhr, die einmal zurueckspringt, soll keine negative Dauer
+   * erzeugen.
+   */
+  private static Long abstand(LocalDateTime von, LocalDateTime bis) {
+    if (von == null || bis == null) {
+      return null;
+    }
+    long sekunden = Duration.between(von, bis).toSeconds();
+    return sekunden < 0 ? null : sekunden;
   }
 
   /**

@@ -36,7 +36,6 @@ const LEER: Nachrichtenfilter = {
   prozess: null,
   suche: null,
   langeSuche: false,
-  zwischenschritte: false,
   sortierung: null,
   nachricht: null,
 };
@@ -45,7 +44,7 @@ describe("URL → Zustand", () => {
   it("stellt einen geteilten Link vollständig wieder her", () => {
     const url = new URLSearchParams(
       "zeitraum=7d&status=FEHLER&status=WARTEND&prozess=abc&prozess=def" +
-        "&suche=lieferschein&zwischenschritte=true&sortierung=aelteste",
+        "&suche=lieferschein&sortierung=aelteste",
     );
 
     expect(ausSuchparametern(url)).toEqual({
@@ -56,10 +55,37 @@ describe("URL → Zustand", () => {
       prozess: ["abc", "def"],
       suche: "lieferschein",
       langeSuche: false,
-      zwischenschritte: true,
       sortierung: "aelteste",
       nachricht: null,
     });
+  });
+
+  /**
+   * Die beiden Werte, die am 11.08.2026 an die Stelle von `ZWISCHENSCHRITT`
+   * getreten sind. Der alte Sammelwert ist kein gültiger Filterwert mehr und
+   * fällt wie jeder unbekannte still weg — das Backend wiese ihn mit
+   * `status-unbekannt` ab.
+   */
+  it("liest AUFGETEILT und ZUSAMMENGEFUEHRT, übergeht ZWISCHENSCHRITT", () => {
+    expect(
+      ausSuchparametern(new URLSearchParams("status=AUFGETEILT&status=ZUSAMMENGEFUEHRT")).status,
+    ).toEqual(["AUFGETEILT", "ZUSAMMENGEFUEHRT"]);
+    expect(ausSuchparametern(new URLSearchParams("status=ZWISCHENSCHRITT")).status).toBeNull();
+  });
+
+  /**
+   * **Ein alter Link wird nicht abgewiesen.** `zwischenschritte` ist kein
+   * Parameter mehr; er wird übergangen wie jeder unbekannte Suchparameter — kein
+   * Fehler, keine Umleitung, keine Wirkung. Er hat nie etwas anderes bewirkt, als
+   * das auszublenden, was jetzt ohnehin erscheint.
+   */
+  it("übergeht einen alten zwischenschritte-Parameter folgenlos", () => {
+    expect(ausSuchparametern(new URLSearchParams("zeitraum=7d&zwischenschritte=false"))).toEqual(
+      ausSuchparametern(new URLSearchParams("zeitraum=7d")),
+    );
+    expect(
+      alsAbfrage(ausSuchparametern(new URLSearchParams("zwischenschritte=false"))),
+    ).not.toContain("zwischenschritte");
   });
 
   it("liest ein freies Zeitfenster als Zeitpunkte", () => {
@@ -88,14 +114,6 @@ describe("URL → Zustand", () => {
     expect(filter.sortierung).toBeNull();
   });
 
-  /** Ohne Angabe gilt die Vorgabe — Zwischenschritte bleiben draußen. */
-  it("blendet Zwischenschritte ohne gegenteilige Angabe aus", () => {
-    expect(ausSuchparametern(new URLSearchParams("")).zwischenschritte).toBe(false);
-    expect(ausSuchparametern(new URLSearchParams("zwischenschritte=true")).zwischenschritte).toBe(
-      true,
-    );
-  });
-
   /**
    * Das Zeitfenster hat **keinen** Standardwert im Frontend. Fehlt es, setzt das
    * Backend die 24 Stunden aus Regel L1; ein zweiter Standardwert liefe dem
@@ -121,7 +139,6 @@ describe("Zustand → URL", () => {
       status: ["FEHLER"],
       prozess: ["abc"],
       suche: "lieferschein",
-      zwischenschritte: true,
       sortierung: "aelteste",
     };
 
@@ -131,7 +148,6 @@ describe("Zustand → URL", () => {
     expect(url.getAll("status")).toEqual(["FEHLER"]);
     expect(url.getAll("prozess")).toEqual(["abc"]);
     expect(url.get("suche")).toBe("lieferschein");
-    expect(url.get("zwischenschritte")).toBe("true");
     expect(url.get("sortierung")).toBe("aelteste");
     // Hin und zurück ergibt denselben Zustand — sonst zeigte ein geteilter Link
     // etwas anderes als die Ansicht, aus der er stammt.
@@ -139,16 +155,14 @@ describe("Zustand → URL", () => {
   });
 
   /**
-   * Was ausgeblendet ist, muss man teilen können: `zwischenschritte` steht
-   * ausdrücklich in der URL, ab dem ersten Rendern und auch dann, wenn es der
-   * Vorgabe entspricht.
+   * **Ohne Auswahl bleibt die URL leer** — seit dem Wegfall des
+   * Ausblende-Schalters am 11.08.2026. Bis dahin stand hier `zwischenschritte`
+   * ausdrücklich drin, weil die Liste ein Drittel der Zeilen wegließ und was man
+   * sieht, muss man teilen können. Sie lässt nichts mehr weg.
    */
-  it("schreibt zwischenschritte auch dann, wenn es der Vorgabe entspricht", () => {
-    expect(alsSuchparameter(LEER).get("zwischenschritte")).toBe("false");
-  });
-
   it("schreibt nichts, was nicht gesetzt ist", () => {
-    expect([...alsSuchparameter(LEER).keys()]).toEqual(["zwischenschritte"]);
+    expect([...alsSuchparameter(LEER).keys()]).toEqual([]);
+    expect(alsAbfrage(LEER)).toBe("");
   });
 
   /**

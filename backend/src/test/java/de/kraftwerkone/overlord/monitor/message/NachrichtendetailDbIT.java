@@ -27,7 +27,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  *
  * <p>Mandant ist {@code NEXANS}: Er traegt praktisch das gesamte Nachrichtenaufkommen, und <b>alle
  * 538 wartenden Nachrichten der Testkopie gehoeren ihm</b> (gemessen, 23. bis 29.12.2025). Ohne ihn
- * waere der wichtigste Fall dieses Schritts — {@code WARTET_VOR} — nicht pruefbar.
+ * waere der wichtigste Fall dieses Schritts — {@code WARTET_IN} — nicht pruefbar.
  */
 class NachrichtendetailDbIT extends SicherheitsTestbasis {
 
@@ -57,7 +57,7 @@ class NachrichtendetailDbIT extends SicherheitsTestbasis {
   }
 
   private String liste(String zusatz) {
-    return "/api/nachrichten?zwischenschritte=true&limit=50&von="
+    return "/api/nachrichten?limit=50&von="
         + URLEncoder.encode(iso(FENSTER_VON), StandardCharsets.UTF_8)
         + "&bis="
         + URLEncoder.encode(iso(FENSTER_BIS), StandardCharsets.UTF_8)
@@ -93,6 +93,48 @@ class NachrichtendetailDbIT extends SicherheitsTestbasis {
         .as("gemessen sind rund 22,6 Eigenschaften je Nachricht (M17 1)")
         .isPositive();
     assertThat(detail.<String>json("$.offenerZustand")).isNotBlank();
+  }
+
+  /**
+   * <b>Die Rollen im Kopf</b> (Schritt 6, Teil 2b) — <b>immer vorhanden, leer statt fehlend</b>.
+   *
+   * <p>{@code JsonPath.read} wirft, wenn das Feld fehlt: Genau das ist hier die Pruefung. Ein
+   * fehlendes Feld hiesse „unbekannt", ein leeres heisst „nicht in einer Kette" — und daran
+   * entscheidet die Oberflaeche, ob sie {@code /kette} ueberhaupt ruft.
+   *
+   * <p><b>Beide Sortierrichtungen</b>, damit die Stichprobe nicht an einem Ende des Fensters
+   * haengt. Dass darin sowohl verkettete als auch unverkettete Nachrichten vorkommen, ruht auf der
+   * gemessenen Verteilung: Ueber Fenster B tragen 39.090 von 214.330 Zeilen keine Rolle (18 %) und
+   * 104.049 die Rolle {@code SPLIT_KIND} (M30‑4).
+   */
+  @Test
+  @DisplayName("Die Rollen stehen im Kopf — immer vorhanden, leer statt fehlend")
+  void rollen_stehen_im_kopf() throws Exception {
+    List<String> erlaubt = List.of("SPLIT_WURZEL", "SPLIT_KIND", "MERGE_EINGANG", "MERGE_ERGEBNIS");
+    int mitKette = 0;
+    int ohneKette = 0;
+
+    for (String zusatz : List.of("", "&sortierung=aelteste")) {
+      for (String kennung : kennungen(zusatz)) {
+        List<String> rollen = detail(kennung).json("$.rollen");
+
+        assertThat(rollen).as("unbekannte Rolle bei %s", kennung).isSubsetOf(erlaubt);
+        assertThat(rollen)
+            .as("nie mehr als zwei Rollen je Zeile — gemessen, nicht garantiert (M28‑1c)")
+            .hasSizeLessThanOrEqualTo(2);
+        if (rollen.isEmpty()) {
+          ohneKette++;
+        } else {
+          mitKette++;
+        }
+      }
+    }
+
+    assertThat(mitKette).as("keine einzige verkettete Nachricht in der Stichprobe").isPositive();
+    assertThat(ohneKette)
+        .as(
+            "keine einzige unverkettete Nachricht — dann belegt die Stichprobe die leere Menge nicht")
+        .isPositive();
   }
 
   /**
@@ -138,15 +180,19 @@ class NachrichtendetailDbIT extends SicherheitsTestbasis {
   }
 
   /**
-   * <b>Abnahmekriterium 3.</b> Fuer eine wartende Nachricht liefert der Endpunkt {@code WARTET_VOR}
-   * samt naechstem Schritt.
+   * <b>Abnahmekriterium 3.</b> Fuer eine wartende Nachricht liefert der Endpunkt {@code WARTET_IN}
+   * samt dem Schritt, auf den der Verweis zeigt, und der Wartedauer.
    *
-   * <p>Das ist der gemessene Normalfall des Wartens und nicht der Sonderfall: Bei <b>allen 538</b>
-   * {@code SUSPENDED}-Nachrichten ist jede Aktion beendet (M16 3).
+   * <p><b>{@code WARTET_IN} und nicht {@code WARTET_VOR}</b> — geaendert am 10.08.2026 mit M29. Der
+   * Verweis aus {@code Message.SOSID}/{@code SOSActionID} zeigt bei <b>allen 538</b> wartenden
+   * Nachrichten auf den Schritt, der <i>zuletzt gelaufen</i> ist: den mit {@code
+   * WAITUNTIL|…|SUSPEND}, der die Nachricht schlafen legt. {@code WARTET_VOR} kommt in der
+   * Testkopie null Mal vor und ist deshalb hier nicht pruefbar (siehe {@code nachrichtendetail.md}
+   * §10.12).
    */
   @Test
-  @DisplayName("Eine wartende Nachricht steht zwischen zwei Schritten — WARTET_VOR mit naechstem")
-  void wartende_nachricht_liefert_wartet_vor() throws Exception {
+  @DisplayName("Eine wartende Nachricht wartet IN ihrem letzten Schritt — WARTET_IN mit Wartedauer")
+  void wartende_nachricht_liefert_wartet_in() throws Exception {
     List<String> wartende = kennungen("&status=WARTEND");
     assertThat(wartende)
         .as("Ohne eine wartende Nachricht im Fenster prueft dieser Test nichts")
@@ -157,14 +203,79 @@ class NachrichtendetailDbIT extends SicherheitsTestbasis {
       Antwort detail = detail(kennung);
 
       assertThat(detail.<String>json("$.offenerZustand"))
-          .as("Nachricht %s: jede Aktion ist beendet, sie steht also VOR dem naechsten", kennung)
-          .isEqualTo("WARTET_VOR");
+          .as("Nachricht %s: der Verweis zeigt auf den zuletzt gelaufenen Schritt (M29)", kennung)
+          .isEqualTo("WARTET_IN");
       assertThat(detail.<String>json("$.naechsterSchritt"))
-          .as("bei allen 538 wartenden Nachrichten loest der Verweis auf (M13)")
+          .as("bei allen 538 wartenden Nachrichten loest der Verweis auf (M13, M29 3)")
           .isNotBlank();
       assertThat(detail.<List<Boolean>>json("$.schritte[*].laeuftAuf"))
           .as("wer wartet, laeuft auf keinem Schritt")
           .allSatisfy(laeuftAuf -> assertThat(laeuftAuf).isFalse());
+      assertThat(detail.<Integer>json("$.wartetSeitSekunden"))
+          .as("die Wartedauer wird im Backend gegen die Anwendungsuhr gerechnet, nie im Browser")
+          .isNotNull()
+          .isNotNegative();
+      geprueft++;
+    }
+    assertThat(geprueft).isPositive();
+  }
+
+  /**
+   * Die Problemkategorie <b>Ueberfaellig</b> (§4.2 Nr. 2), an echten Daten.
+   *
+   * <p>Der Test verlangt <b>keinen</b> bestimmten Wert: Ob eine Nachricht ueberfaellig ist, haengt
+   * am Stand der Anwendungsuhr und damit am Befuellstand der Testkopie. Geprueft wird die
+   * <i>Kopplung</i> — ohne Frist keine Ueberfaelligkeit, und wer ueberfaellig ist, ist offen. Genau
+   * die beiden Bedingungen, die {@code MessageStatusClassifier.istUeberfaellig} verbindet.
+   */
+  @Test
+  @DisplayName("Ueberfaellig setzt eine Frist und einen offenen Zustand voraus")
+  void ueberfaellig_haengt_an_frist_und_offenheit() throws Exception {
+    int geprueft = 0;
+    for (String kennung : kennungen("")) {
+      Antwort detail = detail(kennung);
+      boolean ueberfaellig = Boolean.TRUE.equals(detail.<Boolean>json("$.ueberfaellig"));
+
+      if (ueberfaellig) {
+        assertThat(detail.<Integer>json("$.fristSekunden"))
+            .as("Nachricht %s: ohne Frist gibt es keine Ueberfaelligkeit", kennung)
+            .isNotNull()
+            .isPositive();
+        assertThat(detail.<String>json("$.offenerZustand"))
+            .as("Nachricht %s: ein Endstatus kann nicht ueberfaellig werden", kennung)
+            .isNotEqualTo("KEINER");
+      }
+      geprueft++;
+    }
+    assertThat(geprueft).isPositive();
+  }
+
+  /**
+   * Die Gesamtdauer ist die Abdeckung fuer den Fall, den die gestrichene Lueckenzeile fangen
+   * sollte: Zeit, die zwischen zwei Schritten steckt und in keiner Schrittdauer auftaucht.
+   */
+  @Test
+  @DisplayName("Die Gesamtdauer deckt die Summe der Schrittdauern ab")
+  void gesamtdauer_deckt_die_schrittdauern_ab() throws Exception {
+    int geprueft = 0;
+    for (String kennung : kennungen("")) {
+      Antwort detail = detail(kennung);
+      Integer gesamt = detail.json("$.gesamtdauerSekunden");
+      if (gesamt == null) {
+        continue;
+      }
+      long summe =
+          detail.<List<Integer>>json("$.schritte[*].dauerSekunden").stream()
+              .filter(java.util.Objects::nonNull)
+              .mapToLong(Integer::longValue)
+              .sum();
+
+      assertThat((long) gesamt)
+          .as(
+              "Nachricht %s: die Gesamtdauer laeuft vom fachlichen Start bis MessageLastUpdate und"
+                  + " umfasst damit jede Schrittdauer",
+              kennung)
+          .isGreaterThanOrEqualTo(summe);
       geprueft++;
     }
     assertThat(geprueft).isPositive();
@@ -255,20 +366,12 @@ class NachrichtendetailDbIT extends SicherheitsTestbasis {
     assertThat(eigenschaften.<List<String>>json("$[*].name")).contains("Message.GUID");
   }
 
-  /**
-   * {@code /api/nachrichten/merkmale} und {@code /api/nachrichten/&#123;messageId&#125;} stehen
-   * nebeneinander. Spring bevorzugt das woertliche Segment vor der Pfadvariablen — dieser Test
-   * haelt fest, dass das so bleibt.
+  /*
+   * Hier stand bis zum 11.08.2026 ein Test, der `GET /api/nachrichten/merkmale` gegen die
+   * Pfadvariable `/api/nachrichten/{messageId}` abgrenzte — Spring bevorzugt das woertliche
+   * Segment. Der Endpunkt ist entfallen (docs/nachrichtenliste.md §5); die Regel selbst wird
+   * weiterhin festgehalten, jetzt in `KettenDbIT.bestehende_endpunkte_bleiben_erreichbar`.
    */
-  @Test
-  @DisplayName("Der Merkmale-Endpunkt wird nicht als MessageID gelesen")
-  void merkmale_bleibt_erreichbar() throws Exception {
-    Antwort antwort = sitzung.hole("/api/nachrichten/merkmale");
-
-    assertThat(antwort.status()).isEqualTo(200);
-    assertThat(antwort.hatFeld("$.zwischenschritteVorhanden")).isTrue();
-    assertThat(antwort.hatFeld("$.schritte")).isFalse();
-  }
 
   @Test
   @DisplayName("Ein Aufruf ohne Anmeldung kommt gar nicht erst durch")

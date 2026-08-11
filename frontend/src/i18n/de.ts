@@ -54,6 +54,23 @@ export const de = {
     MANDANT: "Mandant",
   },
 
+  /**
+   * Die drei Problemkategorien aus `PROJEKTBESCHREIBUNG.md` §4.2 — **auf oberster
+   * Ebene, nicht unter `nachrichten`.**
+   *
+   * Sie gehören keiner Ansicht: Das Detail benennt sie an einer Nachricht, das
+   * Dashboard zählt sie über viele. Beide müssen dasselbe Wort sagen, sonst heißt
+   * dieselbe Sache an zwei Stellen verschieden — und der Nutzer hält sie für zwei
+   * Sachen. Die Kategorien werden nie zu „Fehler" zusammengefasst (Regel Q3).
+   *
+   * Angelegt ist nur, was heute gezeigt wird: `ueberfaellig`. „Fehler" hat seine
+   * Beschriftung bereits an der Statusplakette, „Unquittiert" gibt es noch nicht.
+   */
+  problem: {
+    ueberfaellig: "Überfällig",
+    ueberfaelligHinweis: "Die Frist für diese Nachricht ist abgelaufen.",
+  },
+
   anmeldung: {
     titel: "Anmeldung",
     einleitung: "Melde dich an, um den Zustand deiner EDI-Übertragungen zu sehen.",
@@ -124,17 +141,15 @@ export const de = {
     // Klartext (Messung M13) — die Sprache ist die des Quellsystems und wird
     // nicht eingedeutscht.
     //
-    // Zwei Beschriftungen statt einer, seit Schritt 5: Die Zelle sagte „aktueller
-    // Schritt", gemeint war bei wartenden Nachrichten „wartet davor". Messung
-    // M16 (3) hat für alle 538 SUSPENDED festgestellt, dass jede Aktion beendet
-    // ist — eine wartende Nachricht steht zwischen zwei Schritten, nicht auf
-    // einem laufenden. Für LAEUFT ist das nicht gemessen (RUNNING kommt in der
-    // Testkopie null Mal vor); dort bleibt die bisherige Lesart stehen, statt
-    // ungeprüft auf die andere umgestellt zu werden.
-    schrittWartetVor: "wartet vor: {schritt}",
-    schrittWartetVorHinweis: "Wartet vor diesem Schritt: {schritt}",
-    schrittLaeuftAuf: "läuft auf: {schritt}",
-    schrittLaeuftAufHinweis: "Läuft auf diesem Schritt: {schritt}",
+    // **Ohne Präposition, seit dem 11.08.2026.** Hier standen vier Texte: „wartet
+    // vor: …" und „läuft auf: …", je mit eigenem Tooltip. Messung M29 hat das
+    // erste über alle 538 wartenden Nachrichten widerlegt — sie warten *in* dem
+    // Schritt, der sie schlafen gelegt hat, nicht davor. Ob in oder vor,
+    // entscheidet der Vergleich mit dem zuletzt gelaufenen Schritt; der steht in
+    // MessageAction und wird von der Liste nicht je Seite gejoint (L2, L3). Die
+    // Zelle nennt deshalb Status und Schritt und behauptet nichts darüber, wie
+    // die Nachricht zu ihm steht.
+    schrittZusatz: "Schritt: {schritt}",
     zeileOeffnen: "Details dieser Nachricht anzeigen",
     bedeutungNichtVerifiziert: "Bedeutung nicht verifiziert",
     // Steht unter der Tabelle, sobald eine solche Zeile auf der Seite ist. Bis
@@ -149,11 +164,17 @@ export const de = {
     sortierungNeueste: "Neueste zuerst",
     sortierungAelteste: "Älteste zuerst",
 
+    // AUFGETEILT und ZUSAMMENGEFUEHRT sind am 11.08.2026 an die Stelle des einen
+    // Wertes „Zwischenschritt" getreten. Technisch waren SPLITTED und MERGED
+    // dasselbe; für den Nutzer bedeuten sie Gegenteiliges — aus eins wurde viel
+    // gegen aus viel wurde eins. Das Wort „Zwischenschritt" kommt in keiner
+    // Oberflächenzeichenkette mehr vor.
     status: {
       FEHLER: "Fehler",
       WARTEND: "Wartend",
       LAEUFT: "Läuft",
-      ZWISCHENSCHRITT: "Zwischenschritt",
+      AUFGETEILT: "Aufgeteilt",
+      ZUSAMMENGEFUEHRT: "Zusammengeführt",
       ABGESCHLOSSEN: "Abgeschlossen",
       QUITTIERT: "Quittiert",
       UNGEKLAERT: "Ungeklärt",
@@ -213,18 +234,9 @@ export const de = {
       langeSucheLaeuft: "Die Suche läuft über einen längeren Zeitraum und kann etwas dauern.",
     },
 
-    zwischenschritte: {
-      chipAus: "Zwischenschritte ausgeblendet",
-      chipAn: "Zwischenschritte eingeblendet",
-      // Ohne Mengenangabe, seit der Chip datengetrieben erscheint (07.08.2026).
-      // „Rund ein Drittel" stammte aus M6 und beschrieb NEXANS; M12 hat gezeigt,
-      // dass der Anteil je Mandant zwischen 44 und 0,03 Prozent liegt. Eine Zahl,
-      // die für zwei von vier Mandanten mit Zwischenschritten falsch ist, wäre
-      // genau die erfundene Auskunft, die Regel Q4 ausschließt.
-      erklaerung: "Gesplittete und zusammengeführte Nachrichten sind nicht mit dabei.",
-      einblenden: "Zwischenschritte einblenden",
-      ausblenden: "Zwischenschritte ausblenden",
-    },
+    // Hier stand bis zum 11.08.2026 der Textblock des Ausblende-Chips. Er ist mit
+    // dem Schalter entfallen; die Liste blendet nichts mehr aus und hat deshalb
+    // auch nichts mehr anzukündigen (docs/nachrichtenliste.md §5).
 
     blaettern: {
       zurueck: "Vorherige Seite",
@@ -245,7 +257,9 @@ export const de = {
     leer: {
       titel: "Keine Nachricht in diesem Ausschnitt",
       zeitfenster: "Erweitere das Zeitfenster.",
-      zwischenschritte: "Zwischenschritte sind ausgeblendet — blende sie ein.",
+      // Die Klausel zu den ausgeblendeten Zwischenschritten ist mit dem Schalter
+      // entfallen. Die übrigen bleiben vollzählig — genannt werden alle
+      // greifenden Einschränkungen, nicht nur die erste.
       suche: "Der Suchbegriff schränkt die Liste ein — leere ihn.",
       status: "Der Statusfilter schränkt die Liste ein — leere ihn.",
       prozess: "Der Prozessfilter schränkt die Liste ein — leere ihn.",
@@ -258,8 +272,17 @@ export const de = {
       titel: "Nachricht",
       schliessen: "Ansicht schließen",
       zurueckZurListe: "Zurück zur Liste",
+      // Der Umschalter zwischen den beiden Einhängepunkten. Er steht neben dem
+      // Schließen-Knopf und nicht an seiner Stelle: „diese Nachricht anders
+      // zeigen" ist etwas anderes als „diese Nachricht schließen".
+      ansichtOhneListe: "Ohne Liste anzeigen",
+      ansichtNebenListe: "Neben der Liste anzeigen",
       zeitpunkt: "Zuletzt geändert",
       start: "Beginn",
+      // Die Gesamtdauer steht im Kopf neben Beginn und Zeitpunkt. Sie ist die
+      // Abdeckung für Zeit, die zwischen zwei Schritten steckt und in keiner
+      // Schrittdauer auftaucht — siehe nachrichtendetail.md §3a.
+      gesamtdauer: "Gesamtdauer",
       projekt: "Projekt",
       prozess: "Prozess",
       // Die MessageID kehrt hier zurück, nachdem sie aus der Liste geflogen ist:
@@ -273,21 +296,38 @@ export const de = {
       // Ohne Prozessschritt, aber abgeschlossen: kein Fehler, nur nichts zu
       // zeigen. Der Metadaten-Schritt zählt nicht als Prozessschritt.
       keineSchritte: "Für diese Nachricht ist kein Prozessschritt aufgezeichnet.",
-      // OHNE_SCHRITT: offen und trotzdem ohne Schritt — eigener Text statt einer
-      // leeren Leiste.
-      ohneSchritt: "Die Nachricht ist offen, es ist aber noch kein Schritt ausgeführt worden.",
-      gewartet: "{dauer} gewartet",
+      // EMPFANGEN: angekommen und seitdem nicht weitergelaufen — eine Auskunft
+      // über die Plattform. Der Zeitpunkt ist der Metadaten-Schritt; er ist kein
+      // Verarbeitungsschritt, aber er IST das Ereignis mit einem Zeitpunkt, und
+      // deshalb steht er hier statt eines vagen „ist offen".
+      empfangen: "Empfangen am {zeitpunkt} — seitdem ist kein Schritt ausgeführt worden.",
+      // Derselbe Satz ohne Datum. MessageActionStart ist auf keiner der 10,3
+      // Millionen Zeilen leer (M22), die Spalte lässt es aber zu — und ein
+      // Platzhalter im Satz wäre schlechter als der Satz ohne ihn.
+      empfangenOhneZeitpunkt:
+        "Die Nachricht ist empfangen worden — seitdem ist kein Schritt ausgeführt worden.",
+      // OHNE_AKTION: eine Auskunft über die Datenlage, nicht über die Plattform.
+      // Deshalb ein eigener Satz und nicht derselbe wie oben.
+      ohneAktion: "Zu dieser Nachricht ist kein Ablauf protokolliert.",
       ohneDauer: "keine Dauer aufgezeichnet",
       laeuftGerade: "läuft gerade",
       nochNichtBegonnen: "noch nicht begonnen",
+      // Die Wartezeile am offenen Zustand. Sie ersetzt die Lückenzeile zwischen
+      // zwei Schritten, die über rund 700 geprüfte Nachrichten nie erschienen
+      // ist — die Wartezeit steckt in der Dauer des WAITUNTIL-Schritts, nicht
+      // zwischen zwei Schritten (nachrichtendetail.md §10.12).
+      wartetSeit: "wartet seit {dauer}",
+      laeuftSeit: "läuft seit {dauer}",
+      frist: "Frist {dauer}",
       // WARTET_VOR ohne nächsten Schritt: Das wird benannt und nicht
       // weggelassen. Die Nachricht wartet, wir wissen nur nicht worauf.
       wartetVorUnbekannt:
         "Die Nachricht wartet — worauf, ist in der Ablaufdefinition nicht hinterlegt.",
-      // Der Fall der Testkopie: Der benannte nächste Schritt ist derselbe, der
-      // gerade gelaufen ist (der SUSPEND-Schritt selbst). Sein Name steht eine
-      // Zeile darüber; ihn zu wiederholen ergäbe „noch nicht begonnen" unter
-      // „2 min" — ein Widerspruch für jeden, der kein EDI-Spezialist ist.
+      // WARTET_IN — der gemessene Normalfall (M29, 538 von 538): Der Verweis
+      // zeigt auf den Schritt, der gerade gelaufen ist, den SUSPEND-Schritt
+      // selbst. Sein Name steht eine Zeile darüber; ihn zu wiederholen ergäbe
+      // „noch nicht begonnen" unter „2 min" — ein Widerspruch für jeden, der
+      // kein EDI-Spezialist ist. Der Verweis bleibt im Tooltip nachlesbar.
       wartetWeiterhin: "Die Nachricht wartet — von selbst geht es hier nicht weiter.",
       verweistAuf: "Der Ablauf verweist auf: {schritt}",
       baustein: "Baustein",
@@ -339,6 +379,48 @@ export const de = {
         stunden: "{wert} h",
         tage: "{wert} d",
       },
+    },
+
+    // Die Kette im Detailpanel (Schritt 6, Teil 2b) — „was hängt an dieser
+    // Nachricht". Die beiden Überschriften folgen dem **Datenfluss** und nicht
+    // der Richtung der API: Beim Merge liegt das Ergebnis in `aufwaerts` und
+    // die Eingänge in `abwaerts`, im Fluss ist es umgekehrt
+    // (`docs/verkettung.md`).
+    kette: {
+      // Die Zahl steht nur dort, wo der Endpunkt eine liefert — für den Abstieg
+      // (`abwaertsGesamt`, gemessen genau, M30‑1). Der Aufstieg hat keine:
+      // Seine Länge ist die der Liste, und die ist bei `tiefeErreicht` gerade
+      // nicht die Gesamtzahl.
+      kommtVon: {
+        titel: "Kommt von",
+        titelEins: "Kommt von — 1 Eingang",
+        titelZahl: "Kommt von — {anzahl} Eingänge",
+      },
+      wurdeZu: {
+        titel: "Wurde zu",
+        titelEins: "Wurde zu — 1 Teil",
+        titelZahl: "Wurde zu — {anzahl} Teile",
+      },
+      // Steht im Tooltip jeder Zeile. Der Unterschied zwischen „aufgeteilt" und
+      // „zusammengeführt" ist das, was der Nutzer verstehen soll — er kommt
+      // fertig aus dem Backend und wird hier nicht zusammengerechnet.
+      beziehung: {
+        AUFTEILUNG: "Aufteilung",
+        ZUSAMMENFUEHRUNG: "Zusammenführung",
+      },
+      // Eingerückt wird nicht — das Panel ist 26 rem breit, und eine Einrückung
+      // je Ebene fräße die Breite der Ablaufnamen. Die Reihenfolge trägt die
+      // Ebene; ab der zweiten Stufe steht sie zusätzlich als Beiwerk daneben.
+      stufe: "Stufe {stufe}",
+      gliedOeffnen: "{ablauf} öffnen",
+      weitereLaden: "Weitere laden",
+      laedtWeitere: "Wird geladen …",
+      geladen: "{anzahl} Glieder geladen",
+      // Eine Kette, die stillschweigend abbricht, ist schlimmer als eine, die
+      // sagt, dass sie abbricht. Zwei Sätze und nicht einer: „tief" beschreibt,
+      // wo abgebrochen wurde, „im Kreis" warum.
+      tiefeErreicht: "Die Kette ist länger als hier gezeigt.",
+      zyklusErkannt: "Die Kette führt im Kreis — hier ist sie abgebrochen.",
     },
   },
 

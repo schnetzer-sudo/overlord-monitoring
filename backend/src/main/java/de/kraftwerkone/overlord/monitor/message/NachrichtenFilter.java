@@ -30,7 +30,6 @@ import org.springframework.http.HttpStatus;
  * @param suche Freitext oder {@code null}; die Aufloesung zu IDs macht das Repository
  * @param langeSuche ob die Fenstergrenze der Suche bewusst aufgehoben wurde. Wirkt nur zusammen mit
  *     {@code suche} und hebt sie nur bis {@link #SUCHE_FENSTER_LANG}.
- * @param zwischenschritte ob {@code SPLITTED}/{@code MERGED} mitkommen
  * @param cursor Seitenposition oder {@code null} fuer die erste Seite
  */
 public record NachrichtenFilter(
@@ -39,7 +38,6 @@ public record NachrichtenFilter(
     List<String> prozessIds,
     String suche,
     boolean langeSuche,
-    boolean zwischenschritte,
     Sortierrichtung sortierung,
     Seitenposition cursor,
     int limit) {
@@ -68,8 +66,14 @@ public record NachrichtenFilter(
    */
   public static final int SUCHE_HOECHSTENS_TREFFER = 200;
 
-  /** Die Vorgabe: Zwischenschritte bleiben draussen. */
-  public static final boolean ZWISCHENSCHRITTE_VORGABE = false;
+  /*
+   * Hier stand bis zum 11.08.2026 `ZWISCHENSCHRITTE_VORGABE = false` — die Vorgabe des
+   * Ausblende-Schalters. Sie ist ersatzlos entfallen (docs/nachrichtenliste.md §5): Gemessen hat
+   * ein Stellungspraedikat bei `IBISGUS` 100 Prozent und bei `ZAST` 92,93 Prozent aller Zeilen
+   * ausgeblendet (M28-1), und die alte Statusvorgabe versteckte ausgerechnet die Zeile, die die
+   * Belegnummer traegt (M26: 96,9 gegen 2,4 Prozent). **Die Liste filtert nicht mehr nach Status,
+   * ausser der Nutzer sagt es ausdruecklich.**
+   */
 
   /**
    * Die Fenstergrenze <b>bei gesetztem Suchbegriff</b> (Messung L13, 06.08.2026).
@@ -127,7 +131,6 @@ public record NachrichtenFilter(
       List<String> prozess,
       String suche,
       Boolean langeSuche,
-      Boolean zwischenschritte,
       String sortierung,
       String cursor,
       Integer limit,
@@ -150,7 +153,6 @@ public record NachrichtenFilter(
         werte(prozess),
         begriff,
         langes,
-        zwischenschritte == null ? ZWISCHENSCHRITTE_VORGABE : zwischenschritte,
         sortierung == null ? Sortierrichtung.NEUESTE : Sortierrichtung.ausCode(sortierung),
         cursor == null ? null : Seitenposition.dekodiere(cursor).imFenster(fenster),
         seitengroesse(limit));

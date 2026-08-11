@@ -374,6 +374,36 @@ Aktionen, und ein Zeitfenster über `Message` schnitte gerade die Zeilen weg, um
 2,8 s für den Zähler, 23,3 s für die Aufschlüsselung nach Status — beide ausgewiesen, beide auf einer
 Tabelle von 2,8 GB und nicht auf den 61 GB von `MessageProperty`.
 
+**L10 — Kein Befundsatz ohne Belegvermerk** *(neu am 10.08.2026)*.
+
+> **Jeder Befundsatz trägt zwei Zeilen: was gemessen wurde und was behauptet wird.** Sind sie
+> identisch, steht das da und kostet eine Zeile. Weichen sie ab, ist die Abweichung der Inhalt des
+> Vermerks — sie ist der Schluss, den der Satz zieht, und genau der ist **nicht gemessen**.
+>
+> Der Vermerk ersetzt `n =` nicht, er ergänzt es. **`n` sichert den Umfang, der Vermerk den
+> Schluss.** Beide Fehlerarten sind in diesem Projekt aufgetreten, und sie sind verschieden.
+
+Die Regel gilt für Messdokumente **und** für jeden Satz in einer Feature-Datei, der sich auf eine
+Messung beruft — dort steht der Vermerk neben dem Satz und nicht nur in der Erhebung.
+
+**Der Anlass: dieselbe Gestalt, dreimal in einer Woche.** Alle drei Sätze sind inzwischen korrigiert;
+sie stehen hier, weil die Regel ohne ihre Beispiele nur eine Absichtserklärung wäre.
+
+| Satz | gemessen war | Fundstelle |
+|---|---|---|
+| „wartet vor" ist belegt | bei allen 538 `SUSPENDED` ist **jede Aktion beendet** | M16 3 → [`docs/nachrichtenliste.md`](docs/nachrichtenliste.md) §8.1 |
+| „Kein Merge-Ergebnis trägt einen `SourceMessageID`" | die **sechs** Merge-Ergebnisse in Fenster A tragen keinen | M25‑2 → [`docs/datenmodell.md`](docs/datenmodell.md) §7 |
+| „Eine BAM-Spalte, die immer etwas zeigt, gibt es nicht" | über **alle** Zeilen erreicht kein Typ 20 % | M11 → [`docs/nachrichtenliste.md`](docs/nachrichtenliste.md) §6 |
+
+**`n =` fängt das nicht.** Es sichert den Stichprobenumfang, nicht den Schluss — bei „wartet vor" war
+`n` sogar vollständig (538 von 538), und der Satz war trotzdem falsch. Bei „kein Merge-Ergebnis" war
+umgekehrt der Schluss richtig gebaut und `n` zu klein. Zwei verschiedene Fehler, zwei verschiedene
+Absicherungen.
+
+> ⚠️ **Die Fehlbedienung, auf die zu achten ist:** Ein Vermerk, der den Befund bloß wiederholt, sieht
+> aus wie Sorgfalt und leistet nichts. Steht in beiden Zeilen dasselbe, obwohl der Satz weiter reicht
+> als die Messung, ist die Regel wirkungslos eingeführt worden.
+
 ### 4.5 Zeit
 
 **Z1 — `LocalDateTime.now()` wird nirgends direkt aufgerufen.** Das gilt ebenso für
@@ -887,6 +917,7 @@ Ein Schritt ist fertig, wenn **alle** Punkte zutreffen. Nicht „im Wesentlichen
 **Dokumentation**
 - [ ] Neues Feature → neue Datei in `docs/`; geändertes Feature → aktualisierte Datei
 - [ ] Neue Datei ist in `docs/README.md` verzeichnet
+- [ ] Jeder Befundsatz trägt seinen Belegvermerk — gemessen gegen behauptet (L10)
 - [ ] Berührt die Änderung eine Regel aus Abschnitt 4, ist das hier vermerkt
 
 **Ohne Dokumentation ist ein Schritt nicht fertig, auch wenn der Code läuft.**

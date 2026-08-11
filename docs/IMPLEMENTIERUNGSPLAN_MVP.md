@@ -11,6 +11,7 @@ Stand: 01.08.2026 · Ergänzt `PROJEKTBESCHREIBUNG.md`
 | 3 — Anmeldung und Mandantentrennung | **geteilt in Teil 1 (Backend) und Teil 2 (Frontend)**; beide Teile erledigt (29.07.2026) |
 | 4 — Nachrichtenliste | erledigt, samt Nachbesserung (07.08.2026); Messungen in [`messungen-schritt4.md`](messungen-schritt4.md) |
 | 5 — Nachrichtendetail und Prozessschritte | **geteilt in Teil 1 (Backend) und Teil 2 (Frontend)**; beide Teile erledigt (07.08.2026). Messungen in [`messungen-schritt5.md`](messungen-schritt5.md) und [`nachrichtendetail.md`](nachrichtendetail.md) §8, die Oberfläche in §10 |
+| 6 — Verkettung | **geteilt in Teil 1 (additiv), Teil 2a (Löschungen), Teil 2b (Kettenfläche)**; alle drei erledigt (11.08.2026), dazu Nacharbeit Teil B und Nachbesserung 1. Messungen in [`messungen-schritt6.md`](messungen-schritt6.md), das Feature in [`verkettung.md`](verkettung.md) |
 
 **Korrektur 07.08.2026 zu Schritt 4.** Die Tabelle führte Schritt 4 bis hierhin als **offen**.
 Dieser Stand war überholt: Der Listen-Endpunkt steht seit dem 06.08.2026 und ist am 07.08.2026
@@ -349,26 +350,171 @@ hätte; der Vermerk dazu steht in [`docs/README.md`](README.md).
 **Ziel:** Die Frage "wo ist mein Lieferschein" wird über Aufteilung und Zusammenführung hinweg
 beantwortet.
 
-**Skills:** frontend-design, shadcn/ui
+**Skills:** frontend-design, shadcn/ui (nur Teil 2)
 
-**Backend**
-- Auflösung über `SourceMessageID`, `TargetMessageID` sowie die Flags `Source` und `Target`
-- Vorgänger und Nachfolger, begrenzte Tiefe gegen Endlosketten
-- Quittungszuordnung einbeziehen (`COMMIT_RECEIVED`, `EERP_RECEIVED`)
-- Mandantenfilter gilt auch für verkettete Nachrichten
-- Hinweis auf die stündliche Verzögerung des `MatchInterchange`-Events mitliefern
+> **Aufgeteilt in zwei Teile (10.08.2026), und zwar nicht entlang der üblichen Naht.** Bei Schritt 3
+> und 5 lief die Trennung zwischen Backend und Oberfläche. Hier liegt sie anders: **Teil 1 fügt
+> ausschließlich hinzu, Teil 2 entfernt.**
+>
+> Der Grund ist der Umbau, den [M24‑3, M26 und M28‑1](messungen-schritt6.md) ausgelöst haben — der
+> Wegfall des Ausblende-Schalters, der Wegfall von `/api/nachrichten/merkmale`, die Aufteilung von
+> `ZWISCHENSCHRITT`. **Jede dieser Löschungen fasst Backend und Oberfläche gleichzeitig an:** Der
+> Parameter `zwischenschritte` wird vom Frontend gesetzt, `merkmale` vom Frontend gelesen, und
+> `ZWISCHENSCHRITT` steht als `statusKind` in der API **und** als Zeichenkette in `de.ts`/`en.ts`.
+> Trennte man sie nach Backend und Frontend, wäre das Projekt zwischen den beiden Teilen kaputt —
+> und der Hauptzweig bleibt jederzeit baubar (Richtlinie §10).
+>
+> Deshalb: **Teil 1 = alles, was nur hinzufügt** (die beiden Endpunkte, die Rollenlogik). **Teil 2 =
+> alles, was etwas wegnimmt oder ändert** (die Löschungen samt ihrer Entsprechung in der Oberfläche,
+> und die Kettendarstellung selbst).
+
+### Teil 1 — Backend, ausschließlich additiv
+
+**Erledigt.** Vorarbeit: [M30](messungen-schritt6.md) — alle sechs Zugriffsrichtungen einzeln
+gemessen, bevor eine Zeile Code entstand (Regel L7).
+
+- Zwei Endpunkte: `GET /api/nachrichten/{messageId}/kette` und der cursor-basierte
+  `GET /api/nachrichten/{messageId}/kette/nachfolger`
+- Auflösung über `SourceMessageID`, `TargetMessageID` sowie die Flags `Source` und `Target` — alle
+  vier, weil es **zwei Beziehungen** sind und nicht zwei Sichten auf eine (M25‑2)
+- **Unsymmetrisch, aus gemessenen Gründen:** nach oben vollständig (je Ebene ein
+  Primärschlüsselzugriff, 0,5 ms), nach unten **eine** Ebene (bis 3.350 Kinder, bis 897
+  Merge-Eingänge, M30‑2)
+- **Drei Grenzen** statt der einen geplanten: Tiefe 10, **Breite 50** und **Zyklus**. Die
+  Breitengrenze fehlte im Plan und ist zwingend; der Zyklusschutz sagt „im Kreis" statt „tief"
+- Rollenlogik als reine Rechenlogik in `common/Kettenrolle` und `common/Kettenrollen` — eine
+  **Menge**, kein Aufzählungswert (M28‑1c), mit einem Bestandstest als Ersatz für das vollständige
+  `switch`
+- Mandantenfilter in jedem der fünf Statements, **auch in der Zählung** (Regel M5)
+
+**Abgrenzung Teil 1:** Keine Oberfläche. **Keine Änderung an der Nachrichtenliste** — der
+Ausblende-Schalter, der Chip, der Parameter `zwischenschritte` und `/api/nachrichten/merkmale`
+bleiben unangetastet. Keine Aufteilung von `ZWISCHENSCHRITT`. Keine BAM-Werte im Kettenglied, kein
+Download.
+
+**Abnahme Teil 1:** Beide Endpunkte antworten; aufwärts wird bis zur Wurzel aufgelöst, abwärts genau
+eine Ebene, alle drei Grenzen greifen. `nachfolgerGesamt` und die über den Cursor erreichbare Menge
+stimmen überein — beide gefiltert. Isolationstest je Endpunkt, einschließlich der Gegenprobe mit
+einer **echten** fremden Kennung. `./mvnw verify` grün, **die Oberfläche unverändert und lauffähig**.
+
+### Teil 2a — die Statusaufteilung und die Löschungen
+
+**Erledigt am 11.08.2026.** Der Teil, der Backend und Oberfläche gleichzeitig anfasst und deshalb
+nicht entlang der üblichen Naht geteilt werden kann.
+
+- Aufteilung von `ZWISCHENSCHRITT` in **`AUFGETEILT`** (`SPLITTED`) und **`ZUSAMMENGEFUEHRT`**
+  (`MERGED`) — ändert `statusKind` in der API **und** die Sprachdateien. `istEndstatus` liefert für
+  beide unverändert `true`; an der Überfälligkeitsrechnung ändert sich nichts
+- Wegfall des Parameters `zwischenschritte`, seiner Bedingung im Statement und von
+  `GET /api/nachrichten/merkmale` samt Zwischenspeicher und Isolationstest. **Die Liste filtert
+  nicht mehr nach Status, außer der Nutzer sagt es ausdrücklich**
+- Wegfall von Schalter und Chip samt ihrer Zeichenketten in `de.ts`/`en.ts` und der Klausel im
+  Leerzustand — die übrigen Klauseln bleiben vollzählig
+- Die Statuszelle nennt **keine Präposition** mehr (M29 hat „wartet vor" widerlegt); der Weg über
+  `offenerZustand` im Listen-Endpunkt ist erwogen und verworfen
+
+> **Der Schalter fällt ersatzlos** — und **nicht**, wie hier bis zum 11.08.2026 stand, „an der
+> Stellung statt am Status". Der Grund steht in M28‑1 und ist erst mit dieser Messung entstanden:
+> Ein Stellungsprädikat blendet bei `IBISGUS` **100 Prozent** aller Zeilen aus und bei `ZAST`
+> 92,93 Prozent — beide sehen heute jede Zeile. Eine Vorgabe, die je nach Mandant zwischen 0 % und
+> 100 % versteckt, ist keine. Vollständig in [`docs/nachrichtenliste.md`](nachrichtenliste.md) §5.
+
+**Abgrenzung Teil 2a:** Keine Kettenfläche, keine Rollenkennzeichnung in der Liste, keine
+BAM-Spalten, keine Änderung an `istEndstatus`, an der Fehlerbedingung oder an der
+Überfälligkeitsrechnung, keine neue Messung.
+
+**Abnahme Teil 2a:** `ZWISCHENSCHRITT` existiert nirgends mehr; der Statusfilter bietet beide Werte
+an und liefert für beide Zeilen; `zwischenschritte` kommt in URL, Endpunkt, Filter und Statement
+nicht mehr vor; ein Link mit `zwischenschritte=false` öffnet die Liste ohne Fehler und ohne Wirkung;
+die Liste zeigt bei `NEXANS` sichtbar mehr Zeilen; Liste und Detail widersprechen sich an derselben
+Nachricht nicht mehr.
+
+### Teil 2b — die Kettenfläche
 
 **Frontend**
 - Darstellung der Kette im Detailpanel, aktuelle Nachricht hervorgehoben
-- Navigation entlang der Kette
+- Navigation entlang der Kette, und der Sprung in die Nachfolger, wenn ein Glied breit ist
 - Sichtbarer Hinweis, dass Quittungen bis zu eine Stunde verzögert eintreffen
+  (`MatchInterchange`-Event)
 
-**Abgrenzung:** Keine Graphenvisualisierung. Eine Liste oder ein einfacher Baum genügt.
+**Abgrenzung Teil 2b:** Keine Graphenvisualisierung. Eine Liste oder ein einfacher Baum genügt.
 
-**Abnahme:** Für eine aufgeteilte Nachricht sind alle Teile erreichbar. Für eine quittierte
+**Abnahme Teil 2b:** Für eine aufgeteilte Nachricht sind alle Teile erreichbar. Für eine quittierte
 Nachricht ist die Quittung sichtbar.
 
-**Dokumentation:** `docs/verkettung.md`
+**Dokumentation:** [`docs/verkettung.md`](verkettung.md) — Teil 1 steht in §1 bis §7, **Teil 2b in
+§8** (11.08.2026). Teil 2a steht in [`docs/nachrichtenliste.md`](nachrichtenliste.md) §5 und §8.1
+sowie in [`docs/message-status.md`](message-status.md), also bei den Features, die er anfasst.
+
+> **Zur Abnahme von Teil 2b.** „Alle Teile erreichbar" ist erfüllt, aber nicht wörtlich: Die Liste
+> ist auf 50 Glieder gedeckelt, und darüber hinaus führt das Nachladen über den Cursor-Endpunkt
+> ([`verkettung.md`](verkettung.md) §8.7) — gesehen an einer Wurzel mit 169 Teilen. Ein Sprung in
+> die Nachrichtenliste wäre der naheliegende Weg gewesen und bricht Regel L1. **Die Quittung ist
+> keine eigene Anzeige geworden:** Ein quittiertes Merge-Ergebnis trägt die Einordnung `QUITTIERT`
+> in seiner Statusplakette, und die steht im Kettenglied wie im Kopf. Ein zweites Element dafür
+> gäbe es nur, wenn `EERP_RECEIVED` mehr wäre als ein Status — das ist es nicht
+> ([`message-status.md`](message-status.md)).
+
+### Nacharbeit Teil B — die Ketten-API benennt den Mechanismus (11.08.2026)
+
+**Der Vertrag oben ist an zwei Stellen überholt**, und das steht hier, statt ihn stillschweigend zu
+ersetzen:
+
+| oben genannt | seit dem 11.08.2026 |
+|---|---|
+| `GET /api/nachrichten/{messageId}/kette/nachfolger` | `GET /api/nachrichten/{messageId}/kette/abwaerts` — der alte Pfad ist **entfernt**, nicht als Weiche gehalten |
+| `nachfolgerGesamt` (Abnahme Teil 1) | `abwaertsGesamt`; die Abnahme selbst ist unverändert |
+| die Listen `vorgaenger` / `nachfolger` | `aufwaerts` / `abwaerts`, dazu **neu** `abwaertsCursor` |
+
+**Warum.** Die alten Namen benannten eine *Bedeutung*, und die stimmt nur bei der Aufteilung: Beim
+Merge-Eingang steht im Aufstieg das Ergebnis. Die Aufgabenstellung zu Teil 2b ist genau daran
+gescheitert und hat bei 38.628 Zeilen das Gegenteil dessen behauptet, was passiert ist; die
+Umsetzung hat die Oberfläche korrigiert, nicht die Ursache. Ausbaustufe 1 hängt den Chatbot an
+genau diese Endpunkte. Vollständig samt Belegen in [`verkettung.md`](verkettung.md) §2.
+
+**`abwaertsCursor`** beseitigt den offenen Punkt aus `verkettung.md` §11: Der erste Klick auf „Mehr
+laden" kostet seither **eine** Anfrage statt zwei. **Kein Verhalten der Oberfläche ändert sich
+sonst** — Beschriftungen, Einteilung nach der Flussrichtung, Zahl in der Überschrift und die drei
+Grenzen bleiben.
+
+### Nachbesserung 1 — die Ansicht ohne Liste (11.08.2026)
+
+**Ausschließlich Frontend, keine Änderung am Backend.** Die Detailansicht bekommt einen Umschalter
+zwischen den **beiden bereits vorhandenen** Einhängepunkten: dem Panel neben der Liste
+(`/nachrichten?nachricht=<id>`) und der eigenen Route (`/nachrichten/<id>`).
+
+**Der Grund ist ein Missverhältnis, das mit der Fensterbreite wächst.** Das Panel hat eine feste
+Breite in `rem`, die Liste bekommt den Rest — bei 1920 px sind das gemessene **28,3 Prozent** des
+Inhaltsbereichs (480 von 1697 px) gegen gerechnete 39 Prozent bei 1280 px. Ein Klick auf eine Zeile
+setzt den Fokus ins Panel, der optische Schwerpunkt bleibt aber auf der Liste, und am großen Monitor
+— dort, wo das Werkzeug betrieben wird — ist der Abstand am größten.
+
+**Es entsteht kein neuer Mechanismus, kein neuer Zustand und keine neue Route.** Der Modus *ist* die
+Route: kein `localStorage`, kein Cookie, kein Kontext, kein zusätzlicher Suchparameter. Zwei
+Alternativen sind ausdrücklich verworfen — eine **ziehbare Trennlinie** (ihr Zustand könnte nicht in
+die URL, und die Umbruchpunkte der Liste hängen an der *Fensterbreite*, nicht an ihrer eigenen: eine
+ziehbare Liste quetschte sich, ohne es zu merken) und eine **größere Grundbreite** (verschiebt nur:
+schmalere Liste bei unveränderten Umbruchpunkten).
+
+**Ein Befund vor dem Bauen, festgehalten statt vorausgesetzt:** Die eigene Route hat den
+Panel-Baustein **nie in 26 rem** gezeigt. Sie trägt seit Schritt 5, Teil 2 die volle Inhaltsbreite
+(`max-w-inhalt` = `--dichte-inhaltsbreite`, 72 rem), linksbündig — gemessen 1152 px bei Fenster 1920.
+Die zweite Aufgabe war damit weder Breitenänderung noch Umbau, sondern nur zu belegen.
+
+**Abgrenzung:** Kein Backend, keine neue Abfrage und deshalb **keine Messung nach Regel L7** — es
+gibt kein neues Statement. Keine Änderung an der Nachrichtenliste, am Kettenblock (die Grenze von 50
+Abwärtsgliedern bleibt und ist Gegenstand einer eigenen Nachbesserung), an Zeitleiste, Kopf oder
+Eigenschaftenblock, an der Panelbreite. Keine ziehbare Trennlinie, kein Container-Query, keine
+Animation.
+
+**Abnahme:** Neun der zehn Punkte sind im Browser geklickt und belegt, der zehnte — dass der
+Umschalter unter 1280 px nicht erscheint — **ist nicht gesehen worden**: Die Browsersteuerung kann
+das Fenster nicht verkleinern. Er ist über die Regel belegt (`.hidden` ohne Bedingung gegen
+`.xl\:inline-flex` in `@media (min-width:80rem)`) und als solcher gekennzeichnet. Vollständig in
+[`nachrichtendetail.md`](nachrichtendetail.md) §10.15.
+
+**Dokumentation:** [`nachrichtendetail.md`](nachrichtendetail.md) §10.7 (gekennzeichnet und
+datiert, nicht überschrieben), §10.9 und §10.15; [`visuelles-konzept.md`](visuelles-konzept.md) §5.
 
 ---
 

@@ -19,20 +19,20 @@ import type { Nachrichtendetail, Schritt } from "./api";
  * Balken **nicht** vergleichbar. Deshalb steht die Dauer immer auch als Text
  * daneben — ein Balken ohne Zahl ist ein Gefühl.
  *
- * ## Die Lücke zwischen zwei Schritten ist eine eigene Zeile
+ * ## Es gibt keine Lückenzeile mehr
  *
- * Ohne sie steht die Wartezeit in keiner Schrittdauer, und genau sie ist bei
- * einer hängenden Nachricht oft die ganze Antwort.
- */
-
-/**
- * Ab wann eine Lücke zwischen zwei Schritten eine eigene Zeile bekommt.
+ * Bis zum 10.08.2026 stand hier eine `luecke`-Funktion: Lag zwischen dem Ende
+ * eines Schritts und dem Beginn des nächsten mehr als eine Minute, bekam der
+ * Zwischenraum eine eigene Zeile. **Über rund 700 geprüfte Nachrichten ist sie
+ * nie erschienen** — die größte gemessene Lücke beträgt *eine Sekunde*.
  *
- * Eine Minute: Darunter ist der Abstand die normale Übergabe zwischen zwei
- * Diensten und keine Auskunft — eine Zeile je Schrittwechsel machte die Leiste
- * doppelt so lang und sagte nichts.
+ * Das war kein knapper Fehlschlag, sondern strukturell: **Die Wartezeit steckt
+ * in der Dauer des `WAITUNTIL`-Schritts, nicht zwischen zwei Schritten.** An
+ * ihre Stelle ist die Wartezeile am offenen Zustand getreten
+ * (`wartetSeitSekunden`), und die Zeit, die doch einmal zwischen zwei Schritten
+ * steckt, wird über `gesamtdauerSekunden` im Kopf sichtbar. Vollständig
+ * begründet in `nachrichtendetail.md` §10.12.
  */
-export const LUECKE_SCHWELLE_SEKUNDEN = 60;
 
 /**
  * Die Mindestbreite eines Balkens, als Anteil der vollen Breite.
@@ -53,15 +53,16 @@ export type Zeitleistenzeile =
       /** Anteil an der vollen Breite, `null` bei fehlender Dauer. */
       anteil: number | null;
     }
-  | { art: "luecke"; id: string; sekunden: number }
   /**
-   * Die Zeile, die bei `WARTET_VOR` ans Ende kommt.
+   * Die Zeile, die bei den beiden Wartezuständen ans Ende kommt.
    *
    * `name` ist nullbar: Die Nachricht wartet, wir wissen nur nicht worauf — und
    * das wird benannt und nicht weggelassen.
    *
-   * **`bereitsGelaufen` ist der Befund aus der Sichtprüfung vom 07.08.2026** und
-   * kein Feinschliff. Siehe {@link zeitleiste}.
+   * **`bereitsGelaufen` kommt aus dem gelieferten Zustand und nicht aus einem
+   * Vergleich hier.** Bis zum 10.08.2026 verglich diese Datei `naechsterSchritt`
+   * mit den Namen der Schritte; seit M29 entscheidet das Backend über die
+   * Kennungen, und `WARTET_IN` ist genau dieser Fall.
    */
   | { art: "erwartet"; id: string; name: string | null; bereitsGelaufen: boolean };
 
@@ -97,88 +98,46 @@ export function balkenanteil(dauerSekunden: number | null, laengste: number): nu
 }
 
 /**
- * Die Lücke zwischen zwei aufeinanderfolgenden Schritten in ganzen Sekunden —
- * oder `null`, wenn keine Zeile daraus wird.
- *
- * Keine Zeile gibt es, wenn der vorige Schritt gar kein Ende trägt (dann gibt es
- * keinen Zwischenraum, sondern einen offenen Schritt), wenn einer der beiden
- * Zeitpunkte unlesbar ist, und wenn die Lücke negativ, null oder unter der
- * Schwelle liegt.
- */
-export function luecke(vorher: Schritt, nachher: Schritt): number | null {
-  if (vorher.ende === null) {
-    return null;
-  }
-  const ende = Date.parse(vorher.ende);
-  const start = Date.parse(nachher.start);
-  if (Number.isNaN(ende) || Number.isNaN(start)) {
-    return null;
-  }
-  const sekunden = Math.floor((start - ende) / 1000);
-  return sekunden >= LUECKE_SCHWELLE_SEKUNDEN ? sekunden : null;
-}
-
-/**
  * Die Zeilen der Zeitleiste, in Anzeigereihenfolge.
  *
  * **Es wird nichts abgeschnitten.** Die Beschreibung „bei `LAEUFT_AUF` endet die
  * Leiste dort" trifft in den Daten von selbst zu — der laufende Schritt ist der
- * letzte, er trägt kein Ende und bekommt deshalb weder eine Lückenzeile noch
- * eine Fortsetzung. Schritte hinter ihm wegzulassen wäre etwas anderes: das
- * stillschweigende Verschweigen gemessener Zeilen.
+ * letzte, er trägt kein Ende und bekommt deshalb keine Fortsetzung. Schritte
+ * hinter ihm wegzulassen wäre etwas anderes: das stillschweigende Verschweigen
+ * gemessener Zeilen.
  *
- * **Der offene Zustand wird gezeigt, nicht errechnet.** `WARTET_VOR` hängt eine
- * eigene Zeile an, `OHNE_SCHRITT` und `KEINER` hängen nichts an — was bei leerer
- * Schrittfolge zu sehen ist, entscheidet die Komponente über den Zustand und
- * nicht über die Länge dieser Liste.
+ * **Der offene Zustand wird gezeigt, nicht errechnet.** `WARTET_IN` und
+ * `WARTET_VOR` hängen eine eigene Zeile an, `EMPFANGEN`, `OHNE_AKTION` und
+ * `KEINER` hängen nichts an — was bei leerer Schrittfolge zu sehen ist,
+ * entscheidet die Komponente über den Zustand und nicht über die Länge dieser
+ * Liste. **Die Leiste selbst ändert sich durch die Aufteilung von `OHNE_SCHRITT`
+ * nicht**: Der Metadaten-Schritt war nie eine Zeile und wird auch keine (S1).
  *
- * ## `bereitsGelaufen` — der Befund aus der Sichtprüfung vom 07.08.2026
+ * ## Die Wortwahl der letzten Zeile kommt aus dem Zustand
  *
- * **Bei den wartenden Nachrichten der Testkopie benennt `naechsterSchritt`
- * denselben Schritt, der gerade gelaufen ist.** Nachgesehen an einer
- * `SUSPENDED`-Nachricht: Schritt 2 heißt „Send Message to Pool" und trägt den
- * Rohwert `NXS_MERGE|BMW|WAITUNTIL|…|SUSPEND` — er ist der Schritt, der die
- * Nachricht *schlafen legt*. Und `Message.SOSActionID` zeigt auf genau ihn.
- *
- * Ohne diese Unterscheidung stünde „Send Message to Pool · noch nicht begonnen"
- * unmittelbar unter „Send Message to Pool · 2 min" — für den Nutzer, der laut
- * Leitsatz kein EDI-Spezialist ist, schlicht ein Widerspruch.
- *
- * **Abgeleitet wird hier nichts über den Zustand.** Der kommt weiter aus dem
- * Backend; verglichen werden zwei gelieferte Felder, und das Ergebnis
- * entscheidet nur über die **Wortwahl** einer Zeile. Verglichen wird über den
- * *Namen* und nicht über eine Kennung: Zwei gleich benannte Zeilen
- * untereinander sind für den Leser dieselbe Zeile, gleich welche Kennung
- * dahintersteht.
+ * Der Unterschied ist die Präposition, und sie ist ehrlich: Die Nachricht wartet
+ * *in* einem Schritt, der sie schlafen gelegt hat (`WARTET_IN`), oder *vor*
+ * einem, der noch nicht begonnen hat (`WARTET_VOR`). Bei `WARTET_IN` wird der
+ * Name nicht wiederholt — er steht eine Zeile darüber, mit seiner Dauer; sonst
+ * stünde „Send Message to Pool · noch nicht begonnen" unmittelbar unter
+ * „Send Message to Pool · 2 min", und das ist für jeden, der laut Leitsatz kein
+ * EDI-Spezialist ist, schlicht ein Widerspruch.
  */
 export function zeitleiste(detail: Nachrichtendetail): Zeitleistenzeile[] {
   const laengste = laengsteDauer(detail.schritte);
-  const zeilen: Zeitleistenzeile[] = [];
+  const zeilen: Zeitleistenzeile[] = detail.schritte.map((schritt) => ({
+    art: "schritt",
+    id: `schritt-${schritt.position}`,
+    schritt,
+    anteil: balkenanteil(schritt.dauerSekunden, laengste),
+  }));
 
-  detail.schritte.forEach((schritt, nummer) => {
-    const vorher = detail.schritte[nummer - 1];
-    if (vorher !== undefined) {
-      const sekunden = luecke(vorher, schritt);
-      if (sekunden !== null) {
-        zeilen.push({ art: "luecke", id: `luecke-${schritt.position}`, sekunden });
-      }
-    }
-    zeilen.push({
-      art: "schritt",
-      id: `schritt-${schritt.position}`,
-      schritt,
-      anteil: balkenanteil(schritt.dauerSekunden, laengste),
-    });
-  });
-
-  if (detail.offenerZustand === "WARTET_VOR") {
+  if (detail.offenerZustand === "WARTET_IN" || detail.offenerZustand === "WARTET_VOR") {
     zeilen.push({
       art: "erwartet",
       id: "erwartet",
       name: detail.naechsterSchritt,
-      bereitsGelaufen:
-        detail.naechsterSchritt !== null &&
-        detail.schritte.some((schritt) => schritt.name === detail.naechsterSchritt),
+      bereitsGelaufen: detail.offenerZustand === "WARTET_IN",
     });
   }
 
@@ -195,4 +154,40 @@ export function zeitleiste(detail: Nachrichtendetail): Zeitleistenzeile[] {
  */
 export function bedeutungNichtVerifiziert(statusKind: string): boolean {
   return statusKind === "UNGEKLAERT";
+}
+
+/**
+ * Die Wartezeile am offenen Zustand — *wartet seit 4 h 12 min · Frist 30 min*.
+ *
+ * **Beide Zahlen kommen fertig aus dem Backend.** Hier wird nur entschieden, ob
+ * die Zeile überhaupt erscheint und welches Verb sie trägt; gerechnet wird
+ * nichts. Das ist keine Förmlichkeit: Die Anwendungsuhr steht im Profil `dev`
+ * Monate zurück, und eine Dauer aus `Date.now()` wäre dort um Monate falsch.
+ *
+ * `null` heißt **keine Zeile**: Ohne Wartedauer gibt es nichts zu sagen. Die
+ * Frist darf dabei fehlen — eine Nachricht ohne gesetzten Timeout wartet
+ * trotzdem, und dann steht eben nur die eine Hälfte da.
+ *
+ * **Bei `EMPFANGEN` erscheint sie, bei `OHNE_AKTION` nicht** — und zwar ohne
+ * eine Bedingung auf den Zustand: Das Backend liefert dort eine Wartedauer und
+ * hier keine. Eine Zeile mit Platzhalter wäre schlechter als keine.
+ */
+export type Wartezeile = {
+  /** `true` bei `LAEUFT_AUF`: Sie läuft, sie wartet nicht. */
+  laeuft: boolean;
+  sekunden: number;
+  fristSekunden: number | null;
+  ueberfaellig: boolean;
+};
+
+export function wartezeile(detail: Nachrichtendetail): Wartezeile | null {
+  if (detail.wartetSeitSekunden === null) {
+    return null;
+  }
+  return {
+    laeuft: detail.offenerZustand === "LAEUFT_AUF",
+    sekunden: detail.wartetSeitSekunden,
+    fristSekunden: detail.fristSekunden,
+    ueberfaellig: detail.ueberfaellig,
+  };
 }

@@ -30,7 +30,8 @@ export type Statusart =
   | "FEHLER"
   | "WARTEND"
   | "LAEUFT"
-  | "ZWISCHENSCHRITT"
+  | "AUFGETEILT"
+  | "ZUSAMMENGEFUEHRT"
   | "ABGESCHLOSSEN"
   | "QUITTIERT"
   | "UNGEKLAERT";
@@ -48,11 +49,17 @@ const ZUORDNUNG: Record<Statusart, Statusrolle> = {
   // Nachricht, abgeschlossen der einer eingehenden.
   ABGESCHLOSSEN: "abgeschlossen",
   QUITTIERT: "abgeschlossen",
-  // Neutral: Zwischenschritte und Wartendes. `SUSPENDED` ist kein Fehler (Q3),
-  // und `SPLITTED`/`MERGED` sind Zwischenprodukte, keine Ergebnisse.
+  // Neutral: Wartendes und die beiden Zwischenprodukte. `SUSPENDED` ist kein
+  // Fehler (Q3), und `SPLITTED`/`MERGED` sind Zwischenprodukte, keine Ergebnisse.
+  //
+  // **Beide teilen sich eine Farbrolle, obwohl sie seit dem 11.08.2026 zwei
+  // Statusarten sind.** Der Unterschied zwischen „aufgeteilt" und
+  // „zusammengeführt" ist keine Aussage über *gut oder schlecht* — und nur die
+  // trägt eine Farbe. Getragen wird er von Beschriftung und Zeichen.
   WARTEND: "offen",
   LAEUFT: "offen",
-  ZWISCHENSCHRITT: "offen",
+  AUFGETEILT: "offen",
+  ZUSAMMENGEFUEHRT: "offen",
   // „Nicht zugeordnet heißt nicht zugeordnet" (Q4). Ein unbekannter Statuswert
   // bekommt keine geratene Farbe, sondern eine eigene, sichtbar zurückhaltende.
   UNGEKLAERT: "ungeklaert",

@@ -21,8 +21,8 @@ class MessageStatusClassifierTest {
     assertThat(classifier.einordnung("FINISHED")).isEqualTo(MessageStatusKind.ABGESCHLOSSEN);
     assertThat(classifier.einordnung("EERP_RECEIVED")).isEqualTo(MessageStatusKind.QUITTIERT);
     assertThat(classifier.einordnung("COMMIT_RECEIVED")).isEqualTo(MessageStatusKind.QUITTIERT);
-    assertThat(classifier.einordnung("MERGED")).isEqualTo(MessageStatusKind.ZWISCHENSCHRITT);
-    assertThat(classifier.einordnung("SPLITTED")).isEqualTo(MessageStatusKind.ZWISCHENSCHRITT);
+    assertThat(classifier.einordnung("MERGED")).isEqualTo(MessageStatusKind.ZUSAMMENGEFUEHRT);
+    assertThat(classifier.einordnung("SPLITTED")).isEqualTo(MessageStatusKind.AUFGETEILT);
     assertThat(classifier.einordnung("SUSPENDED")).isEqualTo(MessageStatusKind.WARTEND);
     assertThat(classifier.einordnung("RUNNING")).isEqualTo(MessageStatusKind.LAEUFT);
   }
@@ -106,21 +106,44 @@ class MessageStatusClassifierTest {
     assertThat(classifier.istEndstatus(MessageStatusKind.ABGESCHLOSSEN)).isTrue();
     assertThat(classifier.istEndstatus(MessageStatusKind.QUITTIERT)).isTrue();
     assertThat(classifier.istEndstatus(MessageStatusKind.FEHLER)).isTrue();
-    assertThat(classifier.istEndstatus(MessageStatusKind.ZWISCHENSCHRITT)).isTrue();
+    assertThat(classifier.istEndstatus(MessageStatusKind.AUFGETEILT)).isTrue();
+    assertThat(classifier.istEndstatus(MessageStatusKind.ZUSAMMENGEFUEHRT)).isTrue();
     assertThat(classifier.istEndstatus(MessageStatusKind.UNGEKLAERT)).isTrue();
   }
 
   /**
    * Die Entscheidung, die 34,38 Prozent aller Zeilen betrifft: {@code SPLITTED} und {@code MERGED}
    * sind fertig. Zaehlten sie als offen, waere jede dritte Zeile ein Kandidat fuer „ueberfaellig".
+   *
+   * <p><b>Der Test haelt fest, dass die Aufteilung von {@code ZWISCHENSCHRITT} daran nichts
+   * geaendert hat</b> (11.08.2026). Aus einem Wert wurden zwei; die Antwort auf „kann fuer diese
+   * Zeile noch eine Frist ablaufen" ist fuer beide dieselbe wie vorher.
    */
   @Test
   @DisplayName("SPLITTED und MERGED sind Endstatus, SUSPENDED nicht")
-  void zwischenschritte_sind_endstatus() {
+  void aufgeteilt_und_zusammengefuehrt_sind_endstatus() {
     assertThat(classifier.istEndstatus("SPLITTED")).isTrue();
     assertThat(classifier.istEndstatus("MERGED")).isTrue();
     assertThat(classifier.istEndstatus("SUSPENDED")).isFalse();
     assertThat(classifier.istEndstatus("RUNNING")).isFalse();
+  }
+
+  /**
+   * Die Gegenprobe zur Aufteilung: Sie hat den <b>Status</b> geteilt und nicht die
+   * Ueberfaelligkeitsrechnung. Eine gesplittete Nachricht mit laengst abgelaufener Frist bleibt
+   * nicht ueberfaellig — sonst waeren bei {@code NEXANS} 39,6 Prozent aller Zeilen Kandidaten.
+   */
+  @Test
+  @DisplayName("Weder SPLITTED noch MERGED werden je ueberfaellig")
+  void aufgeteilt_und_zusammengefuehrt_werden_nicht_ueberfaellig() {
+    LocalDateTime langeHer = LocalDateTime.parse("2025-01-01T00:00:00");
+    LocalDateTime jetzt = LocalDateTime.parse("2025-12-30T04:09:47");
+
+    assertThat(classifier.istUeberfaellig("SPLITTED", langeHer, 1800, jetzt)).isFalse();
+    assertThat(classifier.istUeberfaellig("MERGED", langeHer, 1800, jetzt)).isFalse();
+    assertThat(classifier.istUeberfaellig("SUSPENDED", langeHer, 1800, jetzt))
+        .as("die Gegenprobe — sonst pruefte der Test nur, dass nichts ueberfaellig wird")
+        .isTrue();
   }
 
   @Test
@@ -234,9 +257,12 @@ class MessageStatusClassifierTest {
     assertThat(sql(classifier.bedingung(MessageStatusKind.ABGESCHLOSSEN, STATUS)))
         .contains("FINISHED")
         .doesNotContainIgnoringCase("like");
-    assertThat(sql(classifier.bedingung(MessageStatusKind.ZWISCHENSCHRITT, STATUS)))
+    assertThat(sql(classifier.bedingung(MessageStatusKind.AUFGETEILT, STATUS)))
+        .contains("SPLITTED")
+        .doesNotContain("MERGED");
+    assertThat(sql(classifier.bedingung(MessageStatusKind.ZUSAMMENGEFUEHRT, STATUS)))
         .contains("MERGED")
-        .contains("SPLITTED");
+        .doesNotContain("SPLITTED");
     assertThat(sql(classifier.bedingung(MessageStatusKind.FEHLER, STATUS)))
         .isEqualTo(sql(classifier.fehlerBedingung(STATUS)));
   }
@@ -267,21 +293,6 @@ class MessageStatusClassifierTest {
         .isEqualTo(sql(DSL.noCondition()));
   }
 
-  /**
-   * {@code zwischenschritte=false}: Ohne das vorangestellte {@code IS NULL} waere {@code NOT
-   * (status IN (…))} fuer eine Zeile ohne Status selbst {@code NULL} — sie fiele aus der Liste,
-   * sobald irgendetwas ausgeschlossen wird.
-   */
-  @Test
-  @DisplayName("Der Ausschluss laesst Zeilen ohne Status stehen")
-  void ausschluss_behaelt_zeilen_ohne_status() {
-    String sql = sql(classifier.ohne(MessageStatusKind.ZWISCHENSCHRITT, STATUS));
-
-    assertThat(sql).containsIgnoringCase("is null");
-    assertThat(sql).containsIgnoringCase("not (");
-    assertThat(sql).contains("MERGED").contains("SPLITTED");
-  }
-
   @Test
   @DisplayName("Die Rohwerte je Einordnung stammen aus derselben Zuordnung wie die Anzeige")
   void rohwerte_und_einordnung_stimmen_ueberein() {
@@ -290,7 +301,7 @@ class MessageStatusClassifierTest {
         assertThat(classifier.einordnung(rohwert)).as("Rohwert %s", rohwert).isEqualTo(einordnung);
       }
     }
-    assertThat(classifier.rohwerte(MessageStatusKind.ZWISCHENSCHRITT))
-        .containsExactly("MERGED", "SPLITTED");
+    assertThat(classifier.rohwerte(MessageStatusKind.AUFGETEILT)).containsExactly("SPLITTED");
+    assertThat(classifier.rohwerte(MessageStatusKind.ZUSAMMENGEFUEHRT)).containsExactly("MERGED");
   }
 }

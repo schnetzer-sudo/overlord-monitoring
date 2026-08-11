@@ -15,8 +15,8 @@ einem geratenen Wert.
 | Status | Anzahl | Einordnung (`MessageStatusKind`) | Anzeige |
 |---|---|---|---|
 | `FINISHED` | 1.663.884 | `ABGESCHLOSSEN` | grün |
-| `MERGED` | 607.277 | `ZWISCHENSCHRITT` | neutral |
-| `SPLITTED` | 310.263 | `ZWISCHENSCHRITT` | neutral |
+| `MERGED` | 607.277 | `ZUSAMMENGEFUEHRT` | neutral |
+| `SPLITTED` | 310.263 | `AUFGETEILT` | neutral |
 | `EERP_RECEIVED` | 116.828 | `QUITTIERT` | grün |
 | `COMMIT_RECEIVED` | 10.126 | `QUITTIERT` | grün |
 | `COMMIT_SENT` | 979 | `UNGEKLAERT` | neutral |
@@ -30,6 +30,47 @@ einem geratenen Wert.
 
 13 dokumentierte Werte. Die `MessageStatusKind`-Einordnung ist in `MessageStatusClassifier`
 hinterlegt.
+
+### `ZWISCHENSCHRITT` ist zwei Werte geworden (11.08.2026, Schritt 6, Teil 2a)
+
+| alt | neu | Rohwert |
+|---|---|---|
+| `ZWISCHENSCHRITT` | **`AUFGETEILT`** | `SPLITTED` |
+| `ZWISCHENSCHRITT` | **`ZUSAMMENGEFUEHRT`** | `MERGED` |
+
+**Technisch waren beide dasselbe, fachlich bedeuten sie Gegenteiliges:** *aus eins wurde viel* gegen
+*aus viel wurde eins*. Ein gemeinsamer Eimer verschluckt genau den Unterschied, den die Verkettung
+sichtbar macht ([`verkettung.md`](verkettung.md) §1) — `MERGED` ist der **Eingang** einer
+Zusammenführung und zeigt auf das Ergebnis, `SPLITTED` ist die **Wurzel** einer Aufteilung und wird
+von ihren Kindern rückverwiesen (M23‑2, M25‑1).
+
+**`istEndstatus` liefert für beide weiterhin `true`.** An der Überfälligkeitsrechnung ändert sich
+**nichts**; M6 stützt das unverändert (siehe unten). Das vollständige `switch` ohne `default` hat
+erzwungen, dass jede Stelle im Code bewusst nachgezogen wurde, statt eine stille Voreinstellung zu
+erben — genau der Zweck, für den es dort steht.
+
+**Das Wort „Zwischenschritt" kommt in keiner Sprachdatei und in keiner Oberflächenzeichenkette mehr
+vor.** Der Statusfilter der Liste bietet beide Werte einzeln an
+([`nachrichtenliste.md`](nachrichtenliste.md) §5).
+
+> ⚠️ **Der Abstrich, der dazugehört: Der Status sagt über die Stellung in der Kette nichts
+> Verlässliches.** Bei `IBIS`, `IBISGUS` und `ZAST` trägt die Wurzel `FINISHED` (M24‑3) — und das
+> sind gerade die drei Mandanten, die über den ganzen Bestand **keine einzige** `SPLITTED`- oder
+> `MERGED`-Zeile haben. Verlässlich ist die Spalte `Source`, nicht `MessageStatus`. Die Liste zeigt
+> trotzdem nur den Status: Eine Rollenkennzeichnung dort ist Entscheidung des Auftraggebers und
+> unterbleibt; die Rolle erscheint im Detail. Der Punkt steht als bekannter Abstrich in
+> [`nachrichtenliste.md`](nachrichtenliste.md) §5 — **nicht als Fehler**.
+>
+> > **Belegvermerk** (Regel L10).
+> > *Gemessen (M24‑3, Fenster B + Überhang):* Bei `IBIS` (1.714), `IBISGUS` (22) und `ZAST` (20)
+> > tragen die Elternzeilen `FINISHED`; bei `NEXANS` (27.644) und `SUTTONS` (640) tragen sie
+> > `SPLITTED`.
+> > *Behauptet ist:* Der Status ist über die Kette hinweg **unzuverlässig** — die Liste sagt bei
+> > `NEXANS` etwas über die Aufteilung und bei drei Mandanten nichts.
+> > **Die Lücke:** Gemessen sind fünf Mandanten in einem Monatsfenster, behauptet ist eine Aussage
+> > über den Bestand. Sie trägt trotzdem, weil sie nur einen **Gegenbeleg** braucht und nicht eine
+> > Quote: Ein einziger Mandant, dessen Wurzel `FINISHED` trägt, widerlegt „der Status benennt die
+> > Stellung". Drei sind gemessen.
 
 ## Nachprüfung am 28.07.2026 (unbefristet, ganze Testkopie)
 
@@ -93,12 +134,17 @@ Das Feld wird als Parameter übergeben, damit dieser gemeinsame Baustein nicht a
 | `ABGESCHLOSSEN` | ja | `FINISHED` |
 | `QUITTIERT` | ja | `EERP_RECEIVED`, `COMMIT_RECEIVED` |
 | `FEHLER` | ja | `ERROR_*`, `COMMIT_REJECTED` |
-| `ZWISCHENSCHRITT` | **ja** | `SPLITTED`, `MERGED` |
+| `AUFGETEILT` | **ja** | `SPLITTED` |
+| `ZUSAMMENGEFUEHRT` | **ja** | `MERGED` |
 | `UNGEKLAERT` | **ja** | `CHECKED`, `CKECKED`, `COMMIT_SENT`, alles Unbekannte |
 | `WARTEND` | **nein** | `SUSPENDED` |
 | `LAEUFT` | **nein** | `RUNNING` |
 
-**Warum `ZWISCHENSCHRITT` fertig ist.** Eine gemergte oder gesplittete Nachricht wird nicht wieder
+> **Die Aufteilung am 11.08.2026 hat an dieser Tabelle nichts geändert außer der Zeilenzahl.** Aus
+> einer Zeile wurden zwei mit demselben Wert. `MessageStatusClassifierTest` hält beides fest — dass
+> beide Endstatus sind und dass keiner von beiden je überfällig wird.
+
+**Warum `AUFGETEILT` und `ZUSAMMENGEFUEHRT` fertig sind.** Eine gemergte oder gesplittete Nachricht wird nicht wieder
 angefasst — sie ist als *Zeile* fertig, auch wenn der fachliche Vorgang über die Verkettung
 weiterläuft. Messung M6 stützt das: `SPLITTED` und `MERGED` verteilen sich über fünfzehn Monate in
 stabiler Größenordnung (38.428 bis 57.426 bzw. 20.609 bis 34.937 je Monat) und ballen sich **nicht**

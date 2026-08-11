@@ -8,14 +8,16 @@ import { Fehler } from "@/components/zustand";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSprache, useTexte } from "@/i18n/provider";
-import { formatiereRelativ, formatiereZeitpunktGenau } from "@/lib/format";
+import { formatiereDauer, formatiereRelativ, formatiereZeitpunktGenau } from "@/lib/format";
 import { ProblemFehler } from "@/lib/http";
 import type { Texte } from "@/i18n";
 
 import type { KuratierteEigenschaft, Nachrichtendetail } from "../api";
 import { bedeutungNichtVerifiziert } from "../detail";
 import { useNachrichtendetail } from "../hooks";
+import { AnsichtUmschalter, type Umschaltziel } from "./ansicht-umschalter";
 import { EigenschaftenBlock } from "./eigenschaften-block";
+import { KettenBlock } from "./kette-block";
 import { StatusPlakette } from "./status-plakette";
 import { Zeitleiste } from "./zeitleiste";
 
@@ -49,15 +51,29 @@ import { Zeitleiste } from "./zeitleiste";
  *   eigenen Route führt es zurück zur Liste.
  * @param schliessenText die Beschriftung dafür — „Schließen" gegen „Zurück zur
  *   Liste". Es ist derselbe Vorgang mit zwei Bedeutungen.
+ * @param aufOeffnen öffnet ein Glied der Kette. Wie beim Schließen entscheidet
+ *   der Einhängepunkt, was das heißt: im Panel der Parameter `nachricht` in der
+ *   URL, auf der eigenen Route dieselbe Route mit der neuen Kennung. Beides ist
+ *   der **bestehende** Weg, und beides bleibt teilbar.
+ * @param umschaltenZu wohin der Umschalter im Kopf führt — aus dem Panel auf die
+ *   eigene Route, von dort zurück ans Panel (`ansicht-umschalter.tsx`). Er tritt
+ *   **neben** den Schließen-Knopf und nicht an seine Stelle.
+ * @param aufUmschalten der Weg dorthin, wieder vom Einhängepunkt gestellt.
  */
 export function NachrichtDetail({
   messageId,
   aufSchliessen,
   schliessenText,
+  aufOeffnen,
+  umschaltenZu,
+  aufUmschalten,
 }: {
   messageId: string;
   aufSchliessen: () => void;
   schliessenText: string;
+  aufOeffnen: (messageId: string) => void;
+  umschaltenZu: Umschaltziel;
+  aufUmschalten: () => void;
 }) {
   const texte = useTexte();
   const anfrage = useNachrichtendetail(messageId);
@@ -82,6 +98,9 @@ export function NachrichtDetail({
             texte.nachrichten.detail.titel
           )}
         </h2>
+        {/* Erst umschalten, dann schließen — die Reihenfolge im DOM ist die
+            Reihenfolge unter `Tab`, und „anders zeigen" steht vor „weg damit". */}
+        <AnsichtUmschalter zu={umschaltenZu} aufUmschalten={aufUmschalten} />
         <Button
           type="button"
           variant="ghost"
@@ -102,11 +121,28 @@ export function NachrichtDetail({
       ) : anfrage.data ? (
         <>
           <Kopf detail={anfrage.data} />
+          {/*
+            Die Kette sitzt zwischen Kopf und Zeitleiste: Sie beantwortet „was
+            hängt daran" und steht damit näher an der Nachricht selbst als der
+            Ablauf ihrer Schritte. `key` baut sie beim Blättern zwischen
+            Nachrichten neu auf — sonst überlebte der Nachladezustand einer
+            Kette die Nachricht, zu der er gehört.
+
+            Der Schlüssel trägt einen Namen davor, weil er sich sonst mit dem
+            des Eigenschaftenblocks deckte: Zwei Geschwister mit demselben
+            `key` sind für React derselbe Platz im Baum. Aufgefallen in der
+            Sichtprüfung am 11.08.2026 als Konsolenmeldung.
+          */}
+          <KettenBlock
+            key={`kette-${anfrage.data.messageId}`}
+            detail={anfrage.data}
+            aufOeffnen={aufOeffnen}
+          />
           <Zeitleiste detail={anfrage.data} />
           <EigenschaftenBlock
             // Beim Blättern zwischen Nachrichten beginnt der Block wieder
             // eingeklappt — und lädt damit auch nichts nach.
-            key={anfrage.data.messageId}
+            key={`eigenschaften-${anfrage.data.messageId}`}
             messageId={anfrage.data.messageId}
             anzahl={anfrage.data.eigenschaftenAnzahl}
           />
@@ -160,6 +196,22 @@ function Kopf({ detail }: { detail: Nachrichtendetail }) {
         </Feld>
         <Feld beschriftung={texte.nachrichten.detail.start} hinweis={start.hinweis}>
           {start.text}
+        </Feld>
+        {/*
+          Die Gesamtdauer steht neben Beginn und Zeitpunkt, weil sie genau die
+          Spanne zwischen den beiden ist. Sie ist die Abdeckung für Zeit, die
+          zwischen zwei Schritten steckt und in keiner Schrittdauer auftaucht:
+          Passt die Summe der Schrittdauern nicht dazu, lag die Nachricht
+          dazwischen. Genau dafür war die gestrichene Lückenzeile gedacht.
+        */}
+        <Feld beschriftung={texte.nachrichten.detail.gesamtdauer}>
+          {detail.gesamtdauerSekunden === null ? (
+            texte.nachrichten.ohneWert
+          ) : (
+            <span data-ziffern>
+              {formatiereDauer(detail.gesamtdauerSekunden, texte.nachrichten.detail.dauer)}
+            </span>
+          )}
         </Feld>
         <Feld beschriftung={texte.nachrichten.detail.projekt}>
           <Zuordnung wert={detail.projectName} />

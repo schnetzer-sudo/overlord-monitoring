@@ -111,9 +111,7 @@ class ProzesseIsolationDbIT extends SicherheitsTestbasis {
     String eigenerProzess =
         aufNexans.hole("/api/prozesse").<List<String>>json("$[*].processId").getFirst();
 
-    Antwort liste =
-        aufNexans.hole(
-            "/api/nachrichten?zeitraum=30d&zwischenschritte=true&prozess=" + eigenerProzess);
+    Antwort liste = aufNexans.hole("/api/nachrichten?zeitraum=30d&prozess=" + eigenerProzess);
 
     assertThat(liste.status()).isEqualTo(200);
   }

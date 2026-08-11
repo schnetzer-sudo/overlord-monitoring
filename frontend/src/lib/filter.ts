@@ -11,8 +11,8 @@ import { createParser, parseAsIsoDateTime } from "nuqs";
  * Hier steht der Teil, den **jeder** Listen-Endpunkt hat: das Zeitfenster. Es ist
  * Pflicht (Regel L1), Standard 24 Stunden, Maximum ein Jahr — durchgesetzt wird
  * beides im Backend. Was nur die Nachrichtenliste betrifft (Status, Prozess,
- * Suche, Zwischenschritte, Sortierung), liegt im Feature; `lib` ist
- * Infrastruktur, nie Fachlichkeit.
+ * Suche, Sortierung), liegt im Feature; `lib` ist Infrastruktur, nie
+ * Fachlichkeit.
  *
  * Entstanden in Schritt 3 ohne Wirkung, damit Schritt 4 nicht anfängt,
  * Zeitfenster in Komponentenzustand zu legen und später umzubauen. Seit Schritt 4

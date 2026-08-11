@@ -23,7 +23,7 @@ class NachrichtenFilterTest {
 
   private static NachrichtenFilter filter(String zeitraum, String cursor, Integer limit) {
     return NachrichtenFilter.aus(
-        zeitraum, null, null, null, null, null, null, null, null, cursor, limit, UHR);
+        zeitraum, null, null, null, null, null, null, null, cursor, limit, UHR);
   }
 
   /** Ein absolutes Fenster von {@code tage} Tagen, endend am Bezugspunkt der Uhr. */
@@ -37,7 +37,6 @@ class NachrichtenFilterTest {
         null,
         suche,
         langeSuche,
-        null,
         null,
         null,
         null,
@@ -58,15 +57,16 @@ class NachrichtenFilterTest {
   }
 
   @Test
-  @DisplayName("Die Vorgaben: 24 Stunden, 50 Zeilen, neueste zuerst, ohne Zwischenschritte")
+  @DisplayName("Die Vorgaben: 24 Stunden, 50 Zeilen, neueste zuerst, kein Statusfilter")
   void vorgaben() {
     NachrichtenFilter filter = filter(null, null, null);
 
     assertThat(filter.limit()).isEqualTo(NachrichtenFilter.LIMIT_VORGABE);
     assertThat(filter.sortierung()).isEqualTo(Sortierrichtung.NEUESTE);
-    assertThat(filter.zwischenschritte()).isFalse();
     assertThat(filter.cursor()).isNull();
-    assertThat(filter.status()).isEmpty();
+    assertThat(filter.status())
+        .as("Die Liste filtert nicht nach Status, ausser der Nutzer sagt es ausdruecklich")
+        .isEmpty();
     assertThat(filter.fenster().von())
         .isEqualTo(LocalDateTime.parse("2025-12-30T04:09:47").minusHours(24));
   }
@@ -80,7 +80,6 @@ class NachrichtenFilterTest {
             null,
             null,
             List.of("FEHLER", "wartend"),
-            null,
             null,
             null,
             null,
@@ -106,9 +105,53 @@ class NachrichtenFilterTest {
                         null,
                         null,
                         null,
-                        null,
                         UHR)))
         .as("Ein Rohwert ist kein gueltiger Filterwert")
+        .isEqualTo("status-unbekannt");
+  }
+
+  /**
+   * Die beiden Werte, die am 11.08.2026 an die Stelle von {@code ZWISCHENSCHRITT} getreten sind.
+   * Fuer den Nutzer bedeuten sie Gegenteiliges — <i>aus eins wurde viel</i> gegen <i>aus viel wurde
+   * eins</i> —, und der Statusfilter bietet sie deshalb einzeln an.
+   */
+  @Test
+  @DisplayName("Der Statusfilter kennt AUFGETEILT und ZUSAMMENGEFUEHRT einzeln")
+  void statusfilter_kennt_beide_neuen_werte() {
+    NachrichtenFilter beide =
+        NachrichtenFilter.aus(
+            null,
+            null,
+            null,
+            List.of("AUFGETEILT", "ZUSAMMENGEFUEHRT"),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            UHR);
+
+    assertThat(beide.status())
+        .containsExactlyInAnyOrder(
+            MessageStatusKind.AUFGETEILT, MessageStatusKind.ZUSAMMENGEFUEHRT);
+
+    assertThat(
+            problemTyp(
+                () ->
+                    NachrichtenFilter.aus(
+                        null,
+                        null,
+                        null,
+                        List.of("ZWISCHENSCHRITT"),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        UHR)))
+        .as("Den alten Sammelwert gibt es nicht mehr — er wird abgewiesen, nicht uebersetzt")
         .isEqualTo("status-unbekannt");
   }
 
@@ -129,19 +172,18 @@ class NachrichtenFilterTest {
             problemTyp(
                 () ->
                     NachrichtenFilter.aus(
-                        null, null, null, null, null, "ab", null, null, null, null, null, UHR)))
+                        null, null, null, null, null, "ab", null, null, null, null, UHR)))
         .isEqualTo("suchbegriff-zu-kurz");
 
     assertThat(
             NachrichtenFilter.aus(
-                    null, null, null, null, null, "  AMG  ", null, null, null, null, null, UHR)
+                    null, null, null, null, null, "  AMG  ", null, null, null, null, UHR)
                 .suche())
         .as("Der Begriff wird getrimmt, bevor die Laenge zaehlt")
         .isEqualTo("AMG");
 
     assertThat(
-            NachrichtenFilter.aus(
-                    null, null, null, null, null, "   ", null, null, null, null, null, UHR)
+            NachrichtenFilter.aus(null, null, null, null, null, "   ", null, null, null, null, UHR)
                 .suche())
         .as("Ein leerer Parameter ist kein Filter")
         .isNull();
@@ -167,18 +209,7 @@ class NachrichtenFilterTest {
             problemTyp(
                 () ->
                     NachrichtenFilter.aus(
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        "groesste",
-                        null,
-                        null,
-                        UHR)))
+                        null, null, null, null, null, null, null, "groesste", null, null, UHR)))
         .isEqualTo("sortierung-unbekannt");
   }
 
@@ -250,7 +281,6 @@ class NachrichtenFilterTest {
             null,
             List.of(),
             List.of("", "  ", "40000_AMG"),
-            null,
             null,
             null,
             null,

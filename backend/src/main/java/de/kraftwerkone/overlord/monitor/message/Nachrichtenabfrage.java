@@ -22,7 +22,6 @@ public record Nachrichtenabfrage(
     Set<MessageStatusKind> status,
     List<String> prozessIds,
     Suchtreffer suchtreffer,
-    boolean zwischenschritte,
     boolean absteigend,
     Seitenposition cursor,
     int limit) {
@@ -33,7 +32,6 @@ public record Nachrichtenabfrage(
         filter.status(),
         filter.prozessIds(),
         suchtreffer,
-        filter.zwischenschritte(),
         filter.sortierung().absteigend(),
         filter.cursor(),
         filter.limit());

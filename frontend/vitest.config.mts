@@ -2,13 +2,32 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 /**
- * Bewusst klein: kein jsdom, keine Testing Library, kein React-Plugin.
+ * Bewusst klein: kein React-Plugin, keine Testing Library.
  *
  * Geprüft werden die Entscheidungen, nicht das Markup — der Ablauf nach dem
  * Anmelden, die Gleichheit beider Sprachdateien, die Wortwahl bei 404, das
  * Leeren des Zwischenspeichers und die Zeitstempel ohne Zeitzonenverschiebung.
  * Das sind alles reine Funktionen. Ein gerenderter Baum brächte hier nichts
  * außer Laufzeit und Abhängigkeiten.
+ *
+ * **Die Ausnahmen sind gezählt, nicht gewachsen** — Stand 11.08.2026 sind es
+ * vier in zwei Dateien:
+ *
+ * | Datei | Fälle | Warum ein Baum |
+ * |---|---|---|
+ * | `tests/detail-baum.test.tsx` | 3 | zwei Sätze, die von Hand grundsätzlich nicht zu sehen sind, und die Regression zum Doppelschlüssel |
+ * | `tests/ansicht-umschalter.test.tsx` | 1 | die Sichtbarkeitsregel des Umschalters **ist** eine Klasse, und ihr Umbruchpunkt ist von Hand nicht prüfbar (`docs/frontend-grundlagen.md` §7) |
+ *
+ * Allen vieren ist dasselbe gemeinsam: **Es gibt keinen anderen Ort, an dem sie
+ * belegbar wären.** Das ist die Bedingung, nicht „es ließe sich so leichter
+ * prüfen". Sie schalten ihre Umgebung selbst über `// @vitest-environment jsdom`
+ * um — die Voreinstellung bleibt `node`, damit die übrigen neun Dateien nichts
+ * von einem DOM bezahlen.
+ *
+ * `setupFiles` trägt das Netz darunter: Ein `console.error` lässt den Testlauf
+ * fehlschlagen (`tests/setup/konsole.ts`). Es gilt für **alle** Dateien, nicht
+ * nur für die rendernden — eine Meldung aus einer reinen Funktion ist genauso
+ * ein Befund.
  */
 export default defineConfig({
   resolve: {
@@ -18,6 +37,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["tests/**/*.test.ts"],
+    include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
+    setupFiles: ["./tests/setup/konsole.ts"],
   },
 });

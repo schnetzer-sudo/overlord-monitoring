@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { Fehler, Laden, Leer } from "@/components/zustand";
 import { Button } from "@/components/ui/button";
 import { useTexte } from "@/i18n/provider";
+import { ansichtOhneListe } from "@/lib/routen";
 
 import {
   feldFehler,
@@ -14,7 +16,7 @@ import {
   zeitfensterHalb,
   type Nachrichtenfilter,
 } from "../filter";
-import { useNachrichtenSeite, useNachrichtenfilter } from "../hooks";
+import { useEscapeSchliesst, useNachrichtenSeite, useNachrichtenfilter } from "../hooks";
 import { Blaettern } from "./blaettern";
 import { Filterleiste } from "./filterleiste";
 import { NachrichtDetail } from "./nachricht-detail";
@@ -33,6 +35,7 @@ import { NachrichtenTabelle } from "./nachrichten-tabelle";
  */
 export function NachrichtenAnsicht() {
   const texte = useTexte();
+  const router = useRouter();
   const { filter, ...steuerung } = useNachrichtenfilter();
   // Nicht in der URL: Der Schalter betrifft die Arbeitsweise des Betrachters,
   // nicht den gezeigten Ausschnitt.
@@ -68,45 +71,11 @@ export function NachrichtenAnsicht() {
   const gewaehlt = filter.nachricht;
   const schliesse = steuerung.setzeNachricht;
 
-  /*
-   * **`Escape` schließt das Panel** — nachgetragen nach der Sichtprüfung am
-   * 07.08.2026.
-   *
-   * Öffnen mit der Tastatur ging von Anfang an: Die Zeile ist ein Tabstopp,
-   * `Enter` und `Leertaste` öffnen sie. Schließen ging *theoretisch* auch — der
-   * Schließen-Knopf steht im DOM hinter der Tabelle, man muss also durch bis zu
-   * fünfzig Zeilen tabben. Das erfüllt „mit der Tastatur erreichbar" und
-   * verfehlt „mit der Tastatur bedienbar".
-   *
-   * `Escape` statt eines Fokussprungs ins Panel: Ein Sprung nähme dem Nutzer die
-   * Stelle in der Liste, an der er gerade war — und einem Mausnutzer, der nichts
-   * davon wollte, ebenso.
-   *
-   * **Zwei Ausnahmen, damit die Taste nicht zweierlei tut.** In einem
-   * Eingabefeld räumt `Escape` die Eingabe (ein `type="search"` leert sich
-   * nativ), und ein offenes Radix-Auswahlfeld schließt sich damit. Beides bleibt
-   * das, was es ist; das Panel bleibt dann stehen.
-   */
-  useEffect(() => {
-    if (gewaehlt === null) {
-      return;
-    }
-    function beiTaste(ereignis: KeyboardEvent) {
-      if (ereignis.key !== "Escape" || ereignis.defaultPrevented) {
-        return;
-      }
-      const ziel = ereignis.target as HTMLElement | null;
-      if (ziel?.closest("input, textarea, select, [contenteditable='true']")) {
-        return;
-      }
-      if (document.querySelector("[data-radix-popper-content-wrapper]") !== null) {
-        return;
-      }
-      schliesse(null);
-    }
-    document.addEventListener("keydown", beiTaste);
-    return () => document.removeEventListener("keydown", beiTaste);
-  }, [gewaehlt, schliesse]);
+  // `Escape` schließt das Panel. Die Regel samt ihren zwei Ausnahmen steht in
+  // `useEscapeSchliesst` — an einer Stelle, weil die eigene Route dieselbe Taste
+  // trägt (`nachricht-seite.tsx`).
+  const schliessePanel = useCallback(() => schliesse(null), [schliesse]);
+  useEscapeSchliesst(gewaehlt !== null, schliessePanel);
 
   return (
     /*
@@ -194,6 +163,24 @@ export function NachrichtenAnsicht() {
             // übrige Filterzustand bleibt unberührt.
             aufSchliessen={() => steuerung.setzeNachricht(null)}
             schliessenText={texte.nachrichten.detail.schliessen}
+            // Ein Glied der Kette öffnet sich über denselben Parameter wie eine
+            // Zeile der Liste. Kein neuer Mechanismus, keine eigene Route — und
+            // die Ansicht bleibt teilbar.
+            aufOeffnen={steuerung.setzeNachricht}
+            umschaltenZu="ohneListe"
+            /*
+             * Auf die eigene Route, mit derselben Abfragezeichenkette — nur ohne
+             * `nachricht`, sonst stünde die Kennung zweimal im Ziel.
+             *
+             * Gelesen wird `window.location.search` **im Ereignis**, genau wie
+             * beim Schließen auf der eigenen Route (`nachrichtendetail.md`
+             * §10.6): kein `useSearchParams`, keine neue Suspense-Grenze. Nicht
+             * `alsSuchparameter(filter)`, obwohl der Filter hier zur Hand wäre —
+             * das baute die Zeichenkette nach eigener Ordnung neu auf, statt die
+             * stehende weiterzureichen, und ein unbekannter Parameter aus einem
+             * geteilten Link fiele dabei weg.
+             */
+            aufUmschalten={() => router.push(ansichtOhneListe(gewaehlt, window.location.search))}
           />
         </div>
       )}
@@ -255,9 +242,12 @@ function LeerMitUrsache({
 }) {
   const texte = useTexte();
 
+  // Die Klausel „ausgeblendete Zwischenschritte" ist am 11.08.2026 entfallen — mit
+  // dem Schalter, auf den sie hinwies. Die übrigen bleiben vollzählig: Wer den
+  // Suchbegriff leert und immer noch nichts sieht, weil auch der Statusfilter
+  // steht, käme sonst zweimal an dieselbe Wand.
   const ursachen = [
     texte.nachrichten.leer.zeitfenster,
-    filter.zwischenschritte ? undefined : texte.nachrichten.leer.zwischenschritte,
     sucheTraegt(filter.suche) ? texte.nachrichten.leer.suche : undefined,
     (filter.status?.length ?? 0) > 0 ? texte.nachrichten.leer.status : undefined,
     (filter.prozess?.length ?? 0) > 0 ? texte.nachrichten.leer.prozess : undefined,

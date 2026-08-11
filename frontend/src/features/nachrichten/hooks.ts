@@ -1,8 +1,8 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, type InfiniteData } from "@tanstack/react-query";
 import { useQueryStates } from "nuqs";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
 import {
   mitFreiemFenster,
@@ -15,12 +15,14 @@ import {
 import {
   NACHRICHTEN_SCHLUESSEL,
   holeEigenschaften,
-  holeMerkmale,
+  holeKette,
+  holeKettenAbwaerts,
   holeNachrichten,
   holeNachrichtendetail,
   holeProzesse,
   type Eigenschaft,
-  type Merkmale,
+  type Kette,
+  type Kettenglied,
   type Nachricht,
   type Nachrichtendetail,
   type Prozess,
@@ -35,6 +37,67 @@ import {
 } from "./filter";
 
 /**
+ * **`Escape` schließt die Detailansicht** — an genau einer Stelle, für beide
+ * Einhängepunkte.
+ *
+ * Im Panel entfernt es den Parameter aus der URL, auf der eigenen Route führt es
+ * zurück zur Liste. Es ist derselbe Vorgang mit zwei Bedeutungen, und es ist
+ * derselbe wie beim Schließen-Knopf — die Taste tut nichts, was der Knopf nicht
+ * täte.
+ *
+ * ## Warum das ein Hook ist und keine zwei `useEffect`
+ *
+ * Nachgetragen am 10.08.2026, als die eigene Route dieselbe Taste bekam. Die
+ * beiden Ausnahmen unten sind der Grund: Ein zweiter Abzug derselben Bedingungen
+ * wäre die Stelle, an der eine davon irgendwann fehlt — und dann räumt `Escape`
+ * in einem Suchfeld nicht mehr die Eingabe, sondern schließt die Ansicht.
+ *
+ * ## Warum überhaupt `Escape`
+ *
+ * Aus der Sichtprüfung am 07.08.2026: Öffnen mit der Tastatur ging von Anfang an
+ * — die Zeile ist ein Tabstopp, `Enter` und `Leertaste` öffnen sie. Schließen
+ * ging *theoretisch* auch, der Schließen-Knopf steht im DOM hinter der Tabelle;
+ * man muss also durch bis zu fünfzig Zeilen tabben. Das erfüllt „mit der Tastatur
+ * erreichbar" und verfehlt „mit der Tastatur bedienbar".
+ *
+ * `Escape` statt eines Fokussprungs ins Panel: Ein Sprung nähme dem Nutzer die
+ * Stelle in der Liste, an der er gerade war — und einem Mausnutzer, der nichts
+ * davon wollte, ebenso.
+ *
+ * ## Zwei Ausnahmen, damit die Taste nicht zweierlei tut
+ *
+ * In einem Eingabefeld räumt `Escape` die Eingabe (ein `type="search"` leert sich
+ * nativ), und ein offenes Radix-Auswahlfeld schließt sich damit. Beides bleibt
+ * das, was es ist; die Ansicht bleibt dann stehen.
+ *
+ * @param aktiv ob die Ansicht überhaupt offen ist. Auf der eigenen Route immer,
+ *   im Panel nur bei gesetztem Parameter — sonst hinge ein Zuhörer am Dokument,
+ *   der nichts zu tun hat.
+ */
+export function useEscapeSchliesst(aktiv: boolean, aufSchliessen: () => void) {
+  useEffect(() => {
+    if (!aktiv) {
+      return;
+    }
+    function beiTaste(ereignis: KeyboardEvent) {
+      if (ereignis.key !== "Escape" || ereignis.defaultPrevented) {
+        return;
+      }
+      const ziel = ereignis.target as HTMLElement | null;
+      if (ziel?.closest("input, textarea, select, [contenteditable='true']")) {
+        return;
+      }
+      if (document.querySelector("[data-radix-popper-content-wrapper]") !== null) {
+        return;
+      }
+      aufSchliessen();
+    }
+    document.addEventListener("keydown", beiTaste);
+    return () => document.removeEventListener("keydown", beiTaste);
+  }, [aktiv, aufSchliessen]);
+}
+
+/**
  * Der Filterzustand, gebunden an die URL.
  *
  * Die beiden Zeitfenstermodi schließen einander aus, und **das Frontend lässt den
@@ -46,24 +109,12 @@ import {
 export function useNachrichtenfilter() {
   const [filter, setzeFilter] = useQueryStates(NACHRICHTEN_PARAMETER, { history: "replace" });
 
-  /**
-   * `zwischenschritte` steht ausdrücklich in der URL, **ab dem ersten Rendern**.
-   * Was ausgeblendet ist, muss man auch teilen können: Bekäme der Empfänger eines
-   * Links den Parameter nicht mit, sähe er dieselbe Ansicht mit anderen Zeilen.
-   *
-   * Nur beim ersten Rendern und nur, wenn er fehlt — `history: "replace"` legt
-   * dafür keinen Eintrag im Verlauf an.
+  /*
+   * Hier stand bis zum 11.08.2026 ein Effekt, der `zwischenschritte` beim ersten
+   * Rendern in die URL nachtrug — was ausgeblendet ist, muss man teilen können.
+   * Die Liste blendet nichts mehr aus; damit ist auch nichts mehr nachzutragen,
+   * und die URL bleibt leer, solange der Nutzer nichts eingestellt hat.
    */
-  const nachgetragen = useRef(false);
-  useEffect(() => {
-    if (nachgetragen.current) {
-      return;
-    }
-    nachgetragen.current = true;
-    if (!new URLSearchParams(window.location.search).has("zwischenschritte")) {
-      void setzeFilter({ zwischenschritte: filter.zwischenschritte });
-    }
-  }, [filter.zwischenschritte, setzeFilter]);
 
   const setzeZeitfenster = useCallback(
     (zustand: Zeitfensterzustand) => void setzeFilter(zustand),
@@ -107,10 +158,6 @@ export function useNachrichtenfilter() {
       (langeSuche: boolean) => void setzeFilter({ langeSuche }),
       [setzeFilter],
     ),
-    setzeZwischenschritte: useCallback(
-      (zwischenschritte: boolean) => void setzeFilter({ zwischenschritte }),
-      [setzeFilter],
-    ),
     setzeSortierung: useCallback(
       (sortierung: Sortierung) => void setzeFilter({ sortierung }),
       [setzeFilter],
@@ -152,28 +199,13 @@ export function useProzesse() {
   });
 }
 
-/**
- * Die Merkmale des Bestands. **Noch länger gehalten als die Prozessauswahl** — sie
- * beschreiben den Gesamtbestand eines Mandanten und ändern sich, wenn überhaupt,
- * genau einmal.
- *
- * Das Backend hält den Wert seinerseits eine Stunde; hier zu kurz zu halten hieße
- * nur, dieselbe Antwort öfter über die Leitung zu schicken.
- *
- * Beim Mandantenwechsel wird der gesamte Zwischenspeicher geleert, nicht
- * invalidiert (`lib/zwischenspeicher.ts`) — eine eigene Invalidierung braucht es
- * deshalb auch hier nicht.
+/*
+ * Hier stand bis zum 11.08.2026 `useMerkmale` — die Abfrage auf
+ * `/api/nachrichten/merkmale` samt ihrem eigenen, besonders langen
+ * Zwischenspeicher. Sie beantwortete genau eine Frage: ob der Ausblende-Schalter
+ * erscheinen soll. Endpunkt und Schalter sind gemeinsam entfallen
+ * (`docs/nachrichtenliste.md` §5).
  */
-const MERKMALE_HALTBARKEIT = 60 * 60 * 1000;
-
-export function useMerkmale() {
-  return useQuery<Merkmale>({
-    queryKey: NACHRICHTEN_SCHLUESSEL.merkmale,
-    queryFn: holeMerkmale,
-    staleTime: MERKMALE_HALTBARKEIT,
-    gcTime: MERKMALE_HALTBARKEIT,
-  });
-}
 
 /**
  * Das Detail **einer** Nachricht.
@@ -226,6 +258,79 @@ export function useEigenschaften(messageId: string | null, aktiv: boolean) {
 }
 
 const EIGENSCHAFTEN_HALTBARKEIT = 15 * 60 * 1000;
+
+/**
+ * Die Kette einer Nachricht — **nur, wenn sie eine hat.**
+ *
+ * `aktiv` kommt aus `detail.rollen`: Ist die Liste leer, steht die Nachricht in
+ * keiner Kette, und es entsteht **keine Anfrage**. Rund 60 Prozent aller Zeilen
+ * sind das. Die Auskunft kostet nichts — die vier Verkettungsspalten stehen auf
+ * der `Message`-Zeile, die der Detail-Endpunkt ohnehin liest (E4).
+ *
+ * Länger gehalten als die Liste, aus demselben Grund wie die Eigenschaften: Die
+ * Kette einer abgeschlossenen Nachricht ändert sich nicht mehr, und wer
+ * zwischen zwei Gliedern hin und her springt, soll nicht zweimal dieselbe
+ * Antwort holen.
+ */
+export function useKette(messageId: string | null, aktiv: boolean) {
+  return useQuery<Kette>({
+    queryKey: NACHRICHTEN_SCHLUESSEL.kette(messageId ?? ""),
+    queryFn: () => holeKette(messageId as string),
+    enabled: aktiv && messageId !== null && messageId !== "",
+    staleTime: KETTE_HALTBARKEIT,
+    gcTime: KETTE_HALTBARKEIT,
+  });
+}
+
+const KETTE_HALTBARKEIT = 15 * 60 * 1000;
+
+/**
+ * Die nachgeladenen Seiten der Abwärtsglieder — **cursor-basiert, und erst auf
+ * Verlangen.**
+ *
+ * ## Es beginnt hinter dem, was schon dasteht
+ *
+ * `/kette` liefert die ersten fünfzig Abwärtsglieder **und mit
+ * `abwaertsCursor` die Position dahinter**. Die erste hier geholte Seite ist
+ * deshalb die *zweite* — ein Klick bringt fünfzig neue Zeilen, in **einer**
+ * Anfrage.
+ *
+ * Bis zum 11.08.2026 war das ein Umweg: `/kette` lieferte keinen Cursor, der
+ * Block holte die erste Seite ein zweites Mal, nur um eine Position zu
+ * bekommen, und zog die zweite sofort nach — zwei Anfragen für einen Klick.
+ * Der Nachzug in `components/kette-block.tsx` ist mit dem Feld ersatzlos
+ * entfallen.
+ *
+ * @param aktiv der Schalter des Blocks. Bewusst ein Parameter: Der Zustand
+ *   gehört der Komponente, nicht der Abfrage — und **nicht der URL**, denn er
+ *   beschreibt keine Ansicht, die jemand teilt.
+ * @param abCursor `kette.abwaertsCursor`. Er wird gelesen, wenn die erste
+ *   Anfrage läuft — und die läuft erst, wenn `aktiv` wahr ist, also nachdem die
+ *   Kette da war.
+ */
+export function useKettenAbwaerts(
+  messageId: string | null,
+  aktiv: boolean,
+  abCursor: string | null,
+) {
+  return useInfiniteQuery<
+    Seite<Kettenglied>,
+    unknown,
+    InfiniteData<Seite<Kettenglied>>,
+    ReturnType<typeof NACHRICHTEN_SCHLUESSEL.kettenAbwaerts>,
+    string | null
+  >({
+    queryKey: NACHRICHTEN_SCHLUESSEL.kettenAbwaerts(messageId ?? ""),
+    queryFn: ({ pageParam }) => holeKettenAbwaerts(messageId as string, pageParam),
+    initialPageParam: abCursor,
+    // `nextCursor` ist undurchsichtig und wird nicht auseinandergenommen — er
+    // geht zurück, wie er kam.
+    getNextPageParam: (letzte) => letzte.nextCursor,
+    enabled: aktiv && messageId !== null && messageId !== "",
+    staleTime: KETTE_HALTBARKEIT,
+    gcTime: KETTE_HALTBARKEIT,
+  });
+}
 
 /** Intervall der automatischen Aktualisierung. */
 export const AKTUALISIERUNG_INTERVALL_MS = 60_000;

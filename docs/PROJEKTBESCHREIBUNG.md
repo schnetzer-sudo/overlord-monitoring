@@ -230,12 +230,51 @@ auf selbst gefüllt.
 | Event | Takt | Wirkung |
 |---|---|---|
 | `CreateMessageStatisticHistory` | täglich | füllt `MessageStatisticHistory` |
-| `MatchInterchange` | stündlich | ordnet COMMITs über Interchange-Nummern zu, setzt `MessageStatus = 'COMMIT_RECEIVED'` und `SourceMessageID` |
+| `MatchInterchange` | ⚠️ **„stündlich" — ungedeckt** (M31‑3, 11.08.2026) | ordnet COMMITs über Interchange-Nummern zu, setzt `MessageStatus = 'COMMIT_RECEIVED'` und `SourceMessageID` |
 | `SetTargetFlag` | — | setzt `Target`-Flag |
 | `MoveDTNA997` | stündlich | verschiebt Nachrichten zwischen zwei Prozessen (kundenspezifisch) |
 
 Konsequenz: Die COMMIT-Zuordnung ist bis zu eine Stunde verzögert. Das muss in der Oberfläche
-kommuniziert werden, sonst wirkt eine korrekt übertragene Nachricht wie unquittiert.
+kommuniziert werden, sonst wirkt eine korrekt übertragene Nachricht wie unquittiert. ⚠️ **Die
+Angabe „eine Stunde" hängt am Takt und ist damit ebenso ungedeckt** — siehe den Kasten darunter.
+
+> ### ⚠️ Der Takt von `MatchInterchange` ist ungedeckt *(gekennzeichnet am 11.08.2026)*
+>
+> **Bis heute stand „stündlich" in dieser Datei als Tatsache — und diese Datei ist die verbindliche
+> Wahrheit dieses Projekts.** Eine Quelle für die Angabe ist nirgends verzeichnet. M31‑3
+> ([`messungen-schritt6.md`](messungen-schritt6.md)) hat versucht, sie von der Testkopie aus zu
+> belegen. **Ergebnis: nicht belegt.**
+>
+> | Weg | Ergebnis |
+> |---|---|
+> | `information_schema.EVENTS` | **leer** — nachweislich ein Rechteartefakt und kein Befund über den Bestand |
+> | `SHOW EVENTS FROM GlassfishDB` | `ERROR 1044 … Access denied for user 'monitor_read'` — **die Verweigerung ist die bessere Auskunft:** Sie belegt, dass die leere Antwort oben nichts über die Existenz von Events sagt |
+> | `@@global.event_scheduler` | **`ON`** — Events *können* auf dieser Instanz laufen, wir sehen sie nur nicht |
+> | Wirkung: `MessageLastUpdate` über die Minute der Stunde (`COMMIT_RECEIVED`, n = 12.654, 408 Tage) | **jede** der 60 Minuten belegt, kein Wert hebt sich ab. Bei einem stündlichen Event stünden rund 12.000 der 12.654 Zeilen auf einer oder zwei Minuten |
+> | volumengleicher Ballungsvergleich über alle Status | `COMMIT_RECEIVED` **0,597** gegen `MERGED` **0,601** — ein Status, den **kein** Event schreibt. Die Ballung ist die des EDI-Verkehrs und nicht die einer Uhr |
+>
+> > **Belegvermerk** (Regel L10).
+> > *Gemessen:* die Verteilung von `MessageLastUpdate` über die Minute der Stunde, für
+> > `COMMIT_RECEIVED` über den ganzen Bestand und für sechs Kontrollstatus bei gleichem Aufkommen.
+> > *Behauptet wird:* dass der Takt **von hier aus nicht sichtbar** ist.
+> > **Die Lücke, und sie ist grundsätzlich:** `MessageLastUpdate` ist der Zeitpunkt der **letzten**
+> > Änderung, nicht der des Event-Schreibzugriffs. Schreibt danach noch etwas auf die Zeile,
+> > verwischt die Ballung. **Die Messung kann den Takt belegen, wenn sie ihn zeigt — aber nicht
+> > ausschließen, wenn sie ihn nicht zeigt.** Sie zeigt ihn nicht. Der Satz „`MatchInterchange`
+> > läuft nicht stündlich" ist damit **nicht** gemessen und wird hier auch nicht behauptet.
+>
+> **Was daraus folgt.** „Stündlich" wird **nicht gestrichen** — es kann stimmen, und die Messung
+> kann es nicht widerlegen. Es ist als **ungedeckt gekennzeichnet**: Die Quelle liegt außerhalb der
+> Testkopie, beim Altsystem, dem das Event gehört, und dort ist sie zu holen.
+>
+> **Die Konsequenz oben steht auf demselben Boden.** Dass die COMMIT-Zuordnung verzögert ist, ist
+> unstrittig; **wie lange**, ist es nicht. Ein Satz in der Oberfläche wie „kann bis zu eine Stunde
+> dauern" wäre nach Regel Q4 geraten und ist deshalb **nicht gebaut** — er steht als offener Punkt
+> in [`verkettung.md`](verkettung.md) §11.
+>
+> **Warum das nicht als Randnotiz endet:** In der verbindlichen Datei stand ein Satz, der eine
+> Angabe ohne Herkunft als Tatsache ausgibt. Das ist der wichtigere Befund von M31‑3 — wichtiger
+> als die Frage, wie lange das Event nachläuft.
 
 ---
 
@@ -252,8 +291,8 @@ Vollständige Erhebung der Testkopie seit 01.01.2025 (Stand 27.07.2026):
 | Status | Anzahl | Einordnung | Anzeige |
 |---|---|---|---|
 | `FINISHED` | 1.663.884 | abgeschlossen | grün |
-| `MERGED` | 607.277 | Zwischenschritt, Verkettung beachten | neutral |
-| `SPLITTED` | 310.263 | Zwischenschritt, Verkettung beachten | neutral |
+| `MERGED` | 607.277 | **zusammengeführt** (`ZUSAMMENGEFUEHRT`), Verkettung beachten | neutral |
+| `SPLITTED` | 310.263 | **aufgeteilt** (`AUFGETEILT`), Verkettung beachten | neutral |
 | `EERP_RECEIVED` | 116.828 | Empfangsbestätigung liegt vor | grün |
 | `COMMIT_RECEIVED` | 10.126 | Empfangsbestätigung liegt vor | grün |
 | `COMMIT_SENT` | 979 | ungeklärt | neutral |
@@ -278,6 +317,13 @@ leer.
 **`CHECKED`, `CKECKED` und `COMMIT_SENT` gelten als bekannt, aber fachlich ungeklärt.** Sie werden
 neutral behandelt und mit Rohwert plus dem Hinweis "Bedeutung nicht verifiziert" angezeigt. Es
 wird nichts geraten.
+
+**`SPLITTED` und `MERGED` sind zwei Einordnungen und nicht eine** (entschieden am 11.08.2026,
+Schritt 6, Teil 2a). Bis dahin trugen beide dieselbe: `ZWISCHENSCHRITT`. Technisch waren sie
+austauschbar, fachlich bedeuten sie Gegenteiliges — **aus eins wurde viel** gegen **aus viel wurde
+eins**. Die Verkettung macht genau diesen Unterschied sichtbar (§4.3): `MERGED` ist der *Eingang*
+einer Zusammenführung, `SPLITTED` die *Wurzel* einer Aufteilung. Ein gemeinsamer Eimer verschluckte
+ihn. **An der Überfälligkeitsrechnung ändert das nichts** — beide bleiben Endstatus (§4.2).
 
 **Die Fehlerabfrage.** In SQL ist `_` ein Platzhalter für ein beliebiges Zeichen, `LIKE 'ERROR_%'`
 trifft also auch `ERRORX...`. Verwendet wird:
@@ -309,6 +355,22 @@ Diese drei sind bewusst getrennt und dürfen nie zu "Fehler" zusammengefasst wer
 2. **Überfällig** — die Nachricht ist **nicht in einem Endstatus** und
    `MessageLastUpdate + MessageTimeout` liegt in der Vergangenheit. Nicht über
    `MessageStatus = 'RUNNING'` definieren, siehe 4.1.
+
+   > **Diese Kategorie entsteht an genau einer Stelle im Code:**
+   > `common/MessageStatusClassifier.istUeberfaellig(status, messageLastUpdate, messageTimeout,
+   > jetzt)` *(seit 10.08.2026 in Gebrauch, Schritt 5)*. Sie ist von außen aufrufbar, damit das
+   > Dashboard sie **ruft** statt sie dort nachzubauen — dieselbe Bauform wie die Statuseinordnung
+   > selbst. Sie prüft beide Bedingungen zusammen und benutzt für die erste `istEndstatus`, dem
+   > [`message-status.md`](message-status.md) diese Methode ausdrücklich zuweist.
+   >
+   > `jetzt` zieht der Aufrufer aus der **Anwendungsuhr** (Regel Z1) — niemals aus der Systemuhr und
+   > niemals aus dem Browser. Erste Verwendung und vollständige Begründung in
+   > [`nachrichtendetail.md`](nachrichtendetail.md) §3a.
+   >
+   > **In der Anzeige trägt „überfällig" keine Farbe.** Rot gehört ausschließlich der Kategorie
+   > *Fehler*; würden beide rot, verschmölzen sie in der Wahrnehmung, obwohl der Code sie trennt.
+   > Eine eigene Farbrolle ist offen und in [`visuelles-konzept.md`](visuelles-konzept.md) §7 einer
+   > späteren Entscheidung vorbehalten.
 3. **Unquittiert** — ausgehende Nachricht ohne zugeordnete Empfangsbestätigung.
    **`COMMIT_REJECTED` gehört ausdrücklich nicht hierher.** Das ist eine Quittung, nur eine
    negative. Sonst erscheint derselbe Beleg in zwei Kacheln und die Zahlen wirken erfunden.

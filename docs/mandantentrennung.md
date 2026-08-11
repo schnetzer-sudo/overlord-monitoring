@@ -184,6 +184,20 @@ schlechter Beweis für eine Trennung, die zwischen Firmen greifen soll.
 > keine fremde Kennung *und keinen fremden Prozessnamen* enthalten. Zusätzlich prüft der Test die
 > Rolle ADMIN: ohne aktiven Mandanten `403`, nach dem Wechsel genau der eine Mandant.
 >
+> **Ergänzt 10.08.2026 (Schritt 6, Teil 1).** Die vierte Kopie ist `KettenIsolationDbIT`
+> ([`verkettung.md`](verkettung.md) §6) — zwei Endpunkte, zwei Tests, Paarung wie die Vorlage
+> (`VOTG` gegen `SUTTONS`). Zwei Dinge kommen dort hinzu, die es vorher nicht gab:
+>
+> 1. **Regel M5 hat bei der Kette eine zweite Seite: die Zählung.** `abwaertsGesamt` trägt
+>    denselben Mandantenfilter wie die gelieferten Zeilen. Eine ungefilterte Zahl neben gefilterten
+>    Zeilen wäre selbst eine Auskunft über fremden Bestand — und sie sähe aus wie ein Fehler des
+>    Werkzeugs, nicht wie ein Leck. *(Das Feld hieß bis zum 11.08.2026 `nachfolgerGesamt`;
+>    [`verkettung.md`](verkettung.md) §2 sagt, warum es umbenannt wurde.)*
+> 2. **Die Gegenprobe läuft zusätzlich mit einer *echten* fremden Kennung**, nicht nur mit einer
+>    erfundenen: als ADMIN den Mandanten wechseln, dort eine `MessageID` holen, zurückwechseln,
+>    dieselbe Kennung anfragen. Verglichen werden Rumpf **und Laufzeit** — genau der Kanal, den der
+>    Absatz „Woran die Zusage tatsächlich hängt" unten beschreibt.
+>
 > **Ergänzt 06.08.2026 (Schritt 4).** Die erste Kopie der Vorlage ist `NachrichtenIsolationDbIT`
 > ([`nachrichtenliste.md`](nachrichtenliste.md) §3). Sie paart `NEXANS` gegen `SUTTONS` statt `VOTG`
 > gegen `SUTTONS` — auch das zwei verschiedene Häuser, aber die beiden mit dem größten Bestand, und
@@ -194,6 +208,35 @@ schlechter Beweis für eine Trennung, die zwischen Firmen greifen soll.
 
 Der Test prüft zu Beginn, dass beide in der Testkopie existieren und die erfundene ID nicht. Schlägt
 das fehl, hat sich die Testkopie geändert — nicht der Code.
+
+### Woran die Zusage „ununterscheidbar" tatsächlich hängt
+
+Nachgetragen am **10.08.2026**, weil Schritt 6 (Verkettung) und Schritt 8 (Rohdaten-Download)
+denselben Pfadparameter bekommen wie das Nachrichtendetail — dieselbe Bauform, dieselbe Falle.
+
+> **Die Zusage hängt nicht daran, dass die beiden `404`-Rümpfe gleich aussehen, sondern daran, dass
+> beide Fälle *dasselbe Statement mit null Zeilen* sind.** Baut jemand später eine Existenzprüfung
+> davor, stimmen die Rümpfe weiterhin überein — und die Laufzeit verrät den Unterschied. Das Feld
+> `instance` spiegelt den angefragten Pfad und ist deshalb unbedenklich, solange es eine Spiegelung
+> bleibt; der Test weist das zeichenweise nach.
+
+**Warum das eine eigene Zeile wert ist.** Der Isolationstest vergleicht Antwortrümpfe. Das ist die
+richtige Prüfung, aber sie prüft die *Wirkung* und nicht die *Ursache*: Ein Code, der erst die
+Existenz nachschlägt und dann bei einer fremden Nachricht denselben festen Text ausgibt, besteht ihn
+— und ist trotzdem unterscheidbar, weil „gibt es nicht" einen Zugriff kostet und „gehört einem
+anderen" zwei. Über genug Anfragen ist das ein messbarer Kanal.
+
+**Die Zusage ist deshalb die Bauform, nicht der Text:** Der Mandantenfilter steht als `EXISTS` **im**
+Statement (Regel M3), es kommt in beiden Fällen dieselbe leere Menge zurück, und derselbe feste Text
+geht hinaus. Wer eine Existenzprüfung davorbaut, bricht die Zusage — auch wenn kein Test rot wird.
+
+**`instance` ist die eine Stelle, an der sich die beiden Antworten unterscheiden**, und sie ist keine
+Auskunft: Nach RFC 9457 ist es der angefragte Pfad, und weil die Kennung bei diesen Endpunkten *im
+Pfad* steht, enthält `instance` sie zwangsläufig. Es ist das **Zitat der Frage**, nicht eine Antwort
+über den Bestand. Damit das eine Spiegelung bleibt und nicht unbemerkt zu einer Nachschlage-Auskunft
+wird, normalisiert der Test `instance` nicht nur wie `traceId`, sondern prüft zusätzlich **Zeichen
+für Zeichen**, dass es genau dem gesendeten Pfad entspricht
+([`nachrichtendetail.md`](nachrichtendetail.md) §7).
 
 ### Testkonten
 

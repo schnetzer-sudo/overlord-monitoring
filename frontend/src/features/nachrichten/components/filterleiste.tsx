@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { ChevronsUpDown, Eye, EyeOff, Search, X } from "lucide-react";
+import { ChevronsUpDown, Search, X } from "lucide-react";
 
 import { useAnzeigezone } from "@/components/zeitzone";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,6 @@ import {
   type Nachrichtenfilter,
   type Statusart,
 } from "../filter";
-import { useMerkmale } from "../hooks";
 import { ProzessFilter } from "./prozess-filter";
 
 /** Wie lange nach dem letzten Tastendruck gewartet wird, bevor gesucht wird. */
@@ -40,7 +39,6 @@ type Steuerung = {
   setzeStatus: (status: Statusart[]) => void;
   setzeProzesse: (prozesse: string[]) => void;
   setzeSuche: (suche: string) => void;
-  setzeZwischenschritte: (zwischenschritte: boolean) => void;
 };
 
 /**
@@ -51,6 +49,11 @@ type Steuerung = {
  * Empfänger auf andere Zeilen) und der Schalter für die automatische
  * Aktualisierung (er betrifft die Arbeitsweise des Betrachters, nicht den
  * gezeigten Ausschnitt).
+ *
+ * **Der Ausblende-Chip ist am 11.08.2026 entfallen**, samt der Abfrage, die über
+ * sein Erscheinen entschied. Er kündigte an, dass ein Teil der Liste fehlt — und
+ * die Vorgabe dahinter versteckte gemessen ausgerechnet die Zeile, die der Nutzer
+ * sucht (`docs/nachrichtenliste.md` §5).
  */
 export function Filterleiste({
   filter,
@@ -69,22 +72,16 @@ export function Filterleiste({
   aufLangeSuche: () => void;
 }) {
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-start gap-2">
-        <Zeitfensterwahl filter={filter} steuerung={steuerung} fehler={zeitfensterfehler} />
-        <StatusFilter gewaehlt={filter.status ?? []} aufAuswahl={steuerung.setzeStatus} />
-        <ProzessFilter gewaehlt={filter.prozess ?? []} aufAuswahl={steuerung.setzeProzesse} />
-        <Suchfeld
-          wert={filter.suche ?? ""}
-          aufSuche={steuerung.setzeSuche}
-          fehler={suchfehler}
-          langeSuche={filter.langeSuche && sucheTraegt(filter.suche)}
-          aufLangeSuche={aufLangeSuche}
-        />
-      </div>
-      <ZwischenschritteChip
-        eingeblendet={filter.zwischenschritte}
-        aufUmschalten={steuerung.setzeZwischenschritte}
+    <div className="flex flex-wrap items-start gap-2">
+      <Zeitfensterwahl filter={filter} steuerung={steuerung} fehler={zeitfensterfehler} />
+      <StatusFilter gewaehlt={filter.status ?? []} aufAuswahl={steuerung.setzeStatus} />
+      <ProzessFilter gewaehlt={filter.prozess ?? []} aufAuswahl={steuerung.setzeProzesse} />
+      <Suchfeld
+        wert={filter.suche ?? ""}
+        aufSuche={steuerung.setzeSuche}
+        fehler={suchfehler}
+        langeSuche={filter.langeSuche && sucheTraegt(filter.suche)}
+        aufLangeSuche={aufLangeSuche}
       />
     </div>
   );
@@ -531,74 +528,14 @@ function Suchfeld({
   );
 }
 
-/**
- * Zwischenschritte sind ausgeblendet — **und das steht sichtbar da.**
+/*
+ * Hier stand bis zum 11.08.2026 der Chip „Zwischenschritte ausgeblendet" — samt
+ * seiner datengetriebenen Erscheinungslogik, die `useMerkmale` dafür abfragte.
  *
- * Bei `NEXANS` sind 39,6 Prozent aller Zeilen `SPLITTED` oder `MERGED`. Eine
- * Liste, die zu einem Drittel aus Begriffen besteht, die der Zielnutzer nicht
- * kennt, kostet beim ersten Kontakt Vertrauen — deshalb bleiben sie draußen. Aber
- * wer ein Drittel weglässt, muss es sagen: Sonst sucht jemand eine Nachricht, die
- * es gibt und die er nie zu sehen bekommt.
- *
- * Der Chip erklärt in einem Halbsatz, was fehlt, und schaltet es ein.
- *
- * ## Er erscheint nur, wo es etwas auszublenden gibt
- *
- * Die 34,38 Prozent aus Messung M6 waren ein Durchschnitt über **einen** Mandanten
- * — `NEXANS` stellt 86 Prozent des Bestands. Messung M12 hat das aufgeschlüsselt:
- * **Fünf von neun Mandanten mit Nachrichten haben über den gesamten Bestand nicht
- * eine einzige Zwischenschritt-Zeile**, zusammen 112.801 Nachrichten. Für sie
- * kündigte dieser Chip eine Ausblendung an, die nichts ausblendet — und ein
- * Bedienelement ohne Wirkung ist schlimmer als keins.
- *
- * **Solange die Auskunft lädt, erscheint er nicht.** Dieselbe Entscheidung wie
- * beim Mandantenumschalter (`visuelles-konzept.md` §5): Ein Bedienelement, das
- * einen Moment später erscheint, ist besser als eines, das wieder verschwindet.
- *
- * **Scheitert die Auskunft, erscheint er.** Dann steht er da wie vor der
- * Nachbesserung. Ein Fehler beim Ermitteln eines *Anzeigehinweises* darf dem
- * Nutzer kein Bedienelement wegnehmen — dieselbe Richtung, in die auch das Backend
- * zurückfällt.
- *
- * **`zwischenschritte` steht trotzdem in der URL**, auch ohne Chip. Sonst
- * verhielte sich ein geteilter Link je nach Mandant anders, und das ist genau der
- * Unterschied, den die URL abbilden soll.
+ * Er war die ehrliche Hälfte einer Vorgabe, die sich nicht halten ließ: Wer ein
+ * Drittel der Zeilen weglässt, muss es sagen. Gemessen hat die Vorgabe aber
+ * ausgerechnet die Zeile versteckt, die der Nutzer sucht — 96,9 Prozent der
+ * ausgeblendeten Wurzeln tragen BAM-Werte gegen 2,4 Prozent der gezeigten Kinder
+ * (M26). Mit der Vorgabe fällt der Chip; es gibt nichts mehr anzukündigen.
+ * Vollständig in `docs/nachrichtenliste.md` §5 und §6.
  */
-function ZwischenschritteChip({
-  eingeblendet,
-  aufUmschalten,
-}: {
-  eingeblendet: boolean;
-  aufUmschalten: (eingeblendet: boolean) => void;
-}) {
-  const texte = useTexte();
-  const merkmale = useMerkmale();
-  const Zeichen = eingeblendet ? Eye : EyeOff;
-
-  if (!(merkmale.isError || (merkmale.data?.zwischenschritteVorhanden ?? false))) {
-    return null;
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={() => aufUmschalten(!eingeblendet)}
-      title={
-        eingeblendet
-          ? texte.nachrichten.zwischenschritte.ausblenden
-          : texte.nachrichten.zwischenschritte.einblenden
-      }
-      className="border-border bg-card hover:bg-muted focus-visible:ring-ring text-beiwerk min-h-bedienelement flex w-fit max-w-full items-center gap-2 rounded-md border px-2.5 text-left focus-visible:ring-2 focus-visible:outline-none"
-    >
-      <Zeichen aria-hidden="true" className="size-3.5 shrink-0 opacity-70" />
-      <span className="font-medium">
-        {eingeblendet
-          ? texte.nachrichten.zwischenschritte.chipAn
-          : texte.nachrichten.zwischenschritte.chipAus}
-      </span>
-      <span className="text-muted-foreground hidden truncate sm:inline">
-        {texte.nachrichten.zwischenschritte.erklaerung}
-      </span>
-    </button>
-  );
-}

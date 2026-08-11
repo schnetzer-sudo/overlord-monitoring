@@ -26,6 +26,15 @@ import org.springframework.web.bind.annotation.RestController;
  * <p><b>Der Cursor gehoert nicht in eine geteilte URL.</b> Er wird als Parameter angenommen, weil
  * das Blaettern ihn braucht — aber Filter und Zeitfenster sind das, was ein Kollege im Link sehen
  * soll. Ein Link auf Seite sieben eines relativen Fensters zeigt beim Empfaenger auf andere Zeilen.
+ *
+ * <p><b>Ein alter Link mit {@code zwischenschritte=false} wird nicht abgewiesen</b> (seit dem
+ * 11.08.2026, mit dem Wegfall des Ausblende-Schalters). Der Parameter ist schlicht keiner mehr und
+ * wird wie jeder unbekannte Suchparameter uebergangen — kein Fehler, keine Umleitung, kein Hinweis.
+ * Er hat nie etwas anderes bewirkt, als das auszublenden, was jetzt ohnehin erscheint; ein {@code
+ * 400} dafuer waere eine Belehrung ueber eine Entscheidung, die der Absender des Links gar nicht
+ * mehr treffen kann. Das gilt ausdruecklich <b>nicht</b> fuer die Parameter, die es weiterhin gibt:
+ * Ein {@code zeitraum=24} bleibt {@code 400}, sonst haette niemand Anlass, den Tippfehler zu
+ * bemerken.
  */
 @RestController
 public class NachrichtenController {
@@ -55,7 +64,6 @@ public class NachrichtenController {
    * @param suche Freitext auf Prozess-, Projekt- und Ablaufnamen, mindestens drei Zeichen
    * @param langeSuche hebt die Fenstergrenze der Suche auf; Vorgabe {@code false}. Wirkt nur
    *     zusammen mit {@code suche} und nur bis {@link NachrichtenFilter#SUCHE_FENSTER_LANG}.
-   * @param zwischenschritte ob {@code SPLITTED}/{@code MERGED} mitkommen; Vorgabe {@code false}
    * @param cursor undurchsichtige Seitenposition der vorigen Antwort
    */
   @GetMapping("/api/nachrichten")
@@ -67,7 +75,6 @@ public class NachrichtenController {
       @RequestParam(required = false) List<String> prozess,
       @RequestParam(required = false) String suche,
       @RequestParam(required = false) Boolean langeSuche,
-      @RequestParam(required = false) Boolean zwischenschritte,
       @RequestParam(required = false) String sortierung,
       @RequestParam(required = false) String cursor,
       @RequestParam(required = false) Integer limit) {
@@ -82,30 +89,11 @@ public class NachrichtenController {
             prozess,
             suche,
             langeSuche,
-            zwischenschritte,
             sortierung,
             cursor,
             limit,
             anwendungsuhr);
     return nachrichtenService.liste(mandant, filter);
-  }
-
-  /**
-   * Was der Bestand des aktiven Mandanten hergibt — <b>kein Inhalt einer Seite, sondern Stammdaten
-   * der Ansicht.</b>
-   *
-   * <p>Auch dieser Endpunkt nimmt <b>keine Mandanten-ID</b> entgegen (Regel M1); die Antwort haengt
-   * ausschliesslich an der Sitzung. Das ist zugleich der Kern seines Isolationstests: Zwei Nutzer
-   * verschiedener Mandanten bekommen verschiedene Antworten, ohne dass einer davon etwas anderes
-   * schicken koennte als der andere.
-   *
-   * <p><b>Warum getrennt von der Liste.</b> Der Wert beschreibt den Gesamtbestand, aendert sich
-   * selten und wird zwischengespeichert; die Liste aktualisiert sich unter Umstaenden jede Minute.
-   * An jeder Seite zu haengen hiesse, ihn jedes Mal neu zu ermitteln — Regel L2.
-   */
-  @GetMapping("/api/nachrichten/merkmale")
-  public NachrichtenMerkmaleResponse merkmale() {
-    return nachrichtenService.merkmale(mandantService.aktuellerKontext(erforderlicherNutzer()));
   }
 
   private AngemeldeterNutzer erforderlicherNutzer() {

@@ -38,8 +38,8 @@ public class MessageStatusClassifier {
           Map.entry("FINISHED", MessageStatusKind.ABGESCHLOSSEN),
           Map.entry("EERP_RECEIVED", MessageStatusKind.QUITTIERT),
           Map.entry("COMMIT_RECEIVED", MessageStatusKind.QUITTIERT),
-          Map.entry("MERGED", MessageStatusKind.ZWISCHENSCHRITT),
-          Map.entry("SPLITTED", MessageStatusKind.ZWISCHENSCHRITT),
+          Map.entry("MERGED", MessageStatusKind.ZUSAMMENGEFUEHRT),
+          Map.entry("SPLITTED", MessageStatusKind.AUFGETEILT),
           Map.entry("SUSPENDED", MessageStatusKind.WARTEND),
           Map.entry("RUNNING", MessageStatusKind.LAEUFT),
           Map.entry("ERROR_DUPLICATE", MessageStatusKind.FEHLER),
@@ -129,9 +129,15 @@ public class MessageStatusClassifier {
    * es dort.
    *
    * <p><b>Offen sind allein {@link MessageStatusKind#WARTEND} und {@link
-   * MessageStatusKind#LAEUFT}.</b> Alles andere gilt als Endstatus — auch {@code ZWISCHENSCHRITT}:
-   * Eine gemergte oder gesplittete Nachricht wird nicht wieder angefasst, sie ist als <i>Zeile</i>
-   * fertig, auch wenn der fachliche Vorgang ueber die Verkettung weiterlaeuft.
+   * MessageStatusKind#LAEUFT}.</b> Alles andere gilt als Endstatus — auch {@code AUFGETEILT} und
+   * {@code ZUSAMMENGEFUEHRT}: Eine gemergte oder gesplittete Nachricht wird nicht wieder angefasst,
+   * sie ist als <i>Zeile</i> fertig, auch wenn der fachliche Vorgang ueber die Verkettung
+   * weiterlaeuft.
+   *
+   * <p><b>Die Aufteilung von {@code ZWISCHENSCHRITT} in zwei Werte (11.08.2026) aendert hier
+   * nichts.</b> Beide neuen Werte liefern weiterhin {@code true}; M6 stuetzt das unveraendert.
+   * Waeren sie offen, waeren bei {@code NEXANS} 39,6 Prozent aller Zeilen Kandidaten fuer
+   * „ueberfaellig" — und die Kategorie waere Rauschen.
    *
    * <p>Messung M6 stuetzt das: {@code SPLITTED} und {@code MERGED} verteilen sich ueber fuenfzehn
    * Monate in stabiler Groessenordnung (38.428 bis 57.426 bzw. 20.609 bis 34.937 je Monat) und
@@ -151,7 +157,7 @@ public class MessageStatusClassifier {
    */
   public boolean istEndstatus(MessageStatusKind einordnung) {
     return switch (einordnung) {
-      case ABGESCHLOSSEN, QUITTIERT, FEHLER, ZWISCHENSCHRITT, UNGEKLAERT -> true;
+      case ABGESCHLOSSEN, QUITTIERT, FEHLER, AUFGETEILT, ZUSAMMENGEFUEHRT, UNGEKLAERT -> true;
       case WARTEND, LAEUFT -> false;
     };
   }
@@ -284,7 +290,7 @@ public class MessageStatusClassifier {
               .or(
                   DSL.not(fehlerBedingung(messageStatus))
                       .and(messageStatus.notIn(eindeutigeRohwerte())));
-      case ABGESCHLOSSEN, QUITTIERT, WARTEND, LAEUFT, ZWISCHENSCHRITT ->
+      case ABGESCHLOSSEN, QUITTIERT, WARTEND, LAEUFT, AUFGETEILT, ZUSAMMENGEFUEHRT ->
           messageStatus.in(rohwerte(einordnung));
     };
   }
@@ -301,17 +307,14 @@ public class MessageStatusClassifier {
         .orElseGet(DSL::noCondition);
   }
 
-  /**
-   * Das Gegenteil: alles ausser dieser Einordnung. Grundlage von {@code zwischenschritte=false}.
-   *
-   * <p>Das {@code IS NULL} davor ist kein Schmuck: {@code NOT (status IN (…))} ist fuer eine {@code
-   * NULL}-Spalte selbst {@code NULL} und damit nicht wahr — eine Zeile ohne Status fiele aus der
-   * Liste, sobald man <i>irgendetwas</i> ausschliesst. Vorgekommen ist das in der Testkopie nicht;
-   * die Spalte laesst es zu.
+  /*
+   * Hier stand bis zum 11.08.2026 ein `ohne(einordnung, feld)` — das Gegenteil einer Einordnung,
+   * gebaut ausschliesslich fuer `zwischenschritte=false`. Es ist mit dem Ausblende-Schalter
+   * entfallen (docs/nachrichtenliste.md §5): Die Liste filtert nicht mehr nach Status, ausser der
+   * Nutzer sagt es ausdruecklich. Braucht je wieder jemand eine Ausschlussbedingung, gehoert das
+   * `IS NULL` davor wieder dazu — `NOT (status IN (…))` ist fuer eine NULL-Spalte selbst NULL und
+   * damit nicht wahr, eine Zeile ohne Status fiele also aus der Liste.
    */
-  public Condition ohne(MessageStatusKind einordnung, Field<String> messageStatus) {
-    return messageStatus.isNull().or(DSL.not(bedingung(einordnung, messageStatus)));
-  }
 
   /** Alle bekannten Rohwerte, deren Einordnung eine geschlossene Menge ist. */
   private SortedSet<String> eindeutigeRohwerte() {

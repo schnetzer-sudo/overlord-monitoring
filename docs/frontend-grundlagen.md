@@ -546,7 +546,7 @@ Query. Auch `features/nachrichten/filter.ts` ist bewusst **frei von React** — 
 
 `lib/filter.ts` hält die nuqs-Abstraktion für das **Zeitfenster** — den einen Filter, den jeder
 Listen-Endpunkt hat. Was nur die Nachrichtenliste betrifft (Status, Prozess, Suche,
-Zwischenschritte, Sortierung), liegt im Feature; `lib` ist Infrastruktur, nie Fachlichkeit.
+Sortierung), liegt im Feature; `lib` ist Infrastruktur, nie Fachlichkeit.
 
 Entstanden in Schritt 3 ohne Wirkung, damit Schritt 4 nicht anfängt, Zeitfenster in
 Komponentenzustand zu legen und später umzubauen. Seit Schritt 4 ist es der Filter der
@@ -555,12 +555,18 @@ Nachrichtenliste ([`nachrichtenliste.md`](nachrichtenliste.md) §8.2).
 Bewusst **ohne** Standardwert: Fehlt das Zeitfenster, setzt das Backend den Standard aus Regel L1
 (24 Stunden). Ein zweiter Standardwert im Frontend liefe dem ersten irgendwann hinterher.
 
-> **Die eine Ausnahme, und warum sie keine ist.** `zwischenschritte` steht ausdrücklich in der URL,
-> ab dem ersten Rendern und auch dann, wenn es der Vorgabe entspricht — dafür trägt der Parser
-> `clearOnDefault: false`, sonst entfernte `nuqs` ihn wieder. Der Unterschied zum Zeitfenster:
-> Dort wird ein Standard *gesetzt*, hier wird ein Drittel aller Zeilen *weggelassen*. Was man sieht,
-> muss man teilen können; ohne den Parameter sähe der Empfänger eines Links dieselbe Ansicht mit
-> anderen Zeilen.
+> ~~**Die eine Ausnahme, und warum sie keine ist.**~~ **Gegenstandslos seit dem 11.08.2026.** Die
+> Ausnahme war `zwischenschritte`: Der Parameter stand ausdrücklich in der URL, ab dem ersten
+> Rendern und auch dann, wenn er der Vorgabe entsprach — dafür trug der Parser `clearOnDefault:
+> false`, sonst hätte `nuqs` ihn wieder entfernt. Der Unterschied zum Zeitfenster: Dort wird ein
+> Standard *gesetzt*, dort wurde ein Drittel aller Zeilen *weggelassen*, und was man sieht, muss man
+> teilen können.
+>
+> **Die Regel dahinter bleibt und ist die eigentliche Auskunft dieses Absatzes:** *Ein Standardwert,
+> der etwas weglässt, gehört in die URL; einer, der etwas setzt, nicht.* Der Fall, an dem sie
+> entstanden ist, gibt es nicht mehr — der Ausblende-Schalter ist entfallen
+> ([`nachrichtenliste.md`](nachrichtenliste.md) §5), die Liste lässt nichts mehr weg, und ohne
+> Auswahl ist die URL leer.
 
 #### Die zweite Regel: was die URL nicht ausdrücken kann, ist kein Filterzustand
 
@@ -628,20 +634,100 @@ Tastendruck im Suchfeld machte den Zurück-Knopf unbrauchbar.
 füllt die Detailansicht den Bildschirm, und das Zurück des Browsers ist dort der Weg heraus; ohne
 eigenen Verlaufseintrag spränge es an der Liste vorbei.
 
+#### In einer Zelle mit mehreren Angaben weicht die Hauptinformation nicht
+
+Nachgetragen am **10.08.2026**, aus dem ersten Befund der Sichtprüfung zu Schritt 5, Teil 2.
+
+> **In einer Zelle mit mehreren Angaben wird die Hauptinformation nie gekürzt, damit Beiwerk Platz
+> bekommt. Der Status weicht nicht dem Schritt daneben.**
+
+**Der Anlass.** In der Statuszelle der Nachrichtenliste stehen seit Schritt 5 zwei Dinge: die
+Plakette und der Schritt, auf dem die Nachricht steht. Mit der neuen Beschriftung stand dort
+`Warte…` statt `Wartend` — die Plakette war geschrumpft, damit der Schrittname vollständig
+hineinpasste. **Genau verkehrt herum:** Der Status ist die Hauptinformation, der Schritt ist Beiwerk
+nach dem Leitsatz.
+
+Umgesetzt ist das über `shrink-0` an der Plakette, **sobald ein Schritt daneben steht**; ohne ihn
+darf sie weiter weichen, denn dort trägt sie bei `bedeutungNichtVerifiziert` einen Rohwert beliebiger
+Länge ([`nachrichtenliste.md`](nachrichtenliste.md) §8.1).
+
+Die Regel ist allgemeiner als ihr Anlass: Sie gilt für jede Zelle, in der zwei Angaben um dieselbe
+Breite konkurrieren. Wer entscheiden muss, welche weicht, fragt nicht „was passt", sondern „was
+sucht der Nutzer".
+
+#### Was der Browsertest nicht kann
+
+Ebenfalls nachgetragen am **10.08.2026**, nachdem dieselbe Lücke in drei aufeinanderfolgenden
+Schritten aufgetaucht ist.
+
+> **Die Fensterbreite lässt sich nicht ändern** — `resize_window` meldet Erfolg, `innerWidth` bleibt
+> stehen. Verhalten am schmalen Fenster ist deshalb bei **jedem** Schritt von Hand zu prüfen und
+> gehört in die Vorbereitungsliste, nicht in die Abnahme durch Claude Code.
+
+Gemessen jeweils so: `resize_window` liefert eine Erfolgsmeldung, `innerWidth` bleibt bei 1920,
+`outerWidth` meldet `0`. Nachgesehen werden kann deshalb nur das **Regelwerk** — welche Klassen an
+welchem Umbruchpunkt greifen —, und das ist etwas anderes als eine Sichtprüfung.
+
+**Warum das hier steht und nicht je Feature.** Die Grenze hängt am Werkzeug und nicht an der
+Ansicht; sie ist in Schritt 4 ([`nachrichtenliste.md`](nachrichtenliste.md) §8.4) und in Schritt 5
+([`nachrichtendetail.md`](nachrichtendetail.md) §10.10) je einzeln entdeckt und je einzeln als
+offener Punkt notiert worden. Beim dritten Mal ist das keine Beobachtung mehr, sondern eine
+Eigenschaft der Umgebung — und die gehört an eine Stelle, an der sie **vor** dem Bau gelesen wird.
+
 #### Die `clearOnDefault`-Falle, in einem Satz
 
 `nuqs` entfernt einen Parameter aus der URL, sobald er dem **Standardwert** gleicht — geprüft wird
-das nur, wenn überhaupt einer gesetzt ist. Daraus folgt beides: `zwischenschritte` hat einen
-Standardwert und braucht deshalb `clearOnDefault: false`; `nachricht` hat keinen und braucht es
-nicht. **Wer je ein `withDefault` ergänzt, schreibt `clearOnDefault: false` in dieselbe Zeile.**
+das nur, wenn überhaupt einer gesetzt ist. Daraus folgt beides: Ein Parameter mit Standardwert, der
+in der URL stehen *soll*, braucht `clearOnDefault: false`; `nachricht` hat keinen Standardwert und
+braucht es nicht. **Wer je ein `withDefault` ergänzt, schreibt `clearOnDefault: false` in dieselbe
+Zeile** — oder entscheidet bewusst dagegen, wie bei `langeSuche`, das nichts weglässt, sondern etwas
+zulässt.
+
+> Der Fall, an dem die Falle entdeckt wurde, war `zwischenschritte`; er ist am 11.08.2026 entfallen
+> ([`nachrichtenliste.md`](nachrichtenliste.md) §5). **Die Falle bleibt** — sie hängt an `nuqs` und
+> nicht an diesem Parameter.
 
 ---
 
 ## 9. Tests
 
-`pnpm test` (Vitest, in `pnpm build` verankert). Bewusst klein: kein jsdom, keine Testing Library,
-kein React-Plugin. Geprüft werden die **Entscheidungen**, nicht das Markup — das sind alles reine
+`pnpm test` (Vitest, in `pnpm build` verankert). Bewusst klein: keine Testing Library, kein
+React-Plugin. Geprüft werden die **Entscheidungen**, nicht das Markup — das sind alles reine
 Funktionen, und ein gerenderter Baum brächte hier nichts außer Laufzeit und Abhängigkeiten.
+
+> **Ergänzt am 11.08.2026 — die Voreinstellung bleibt, die Ausnahme ist benannt.** Dieser Absatz
+> nannte bis heute zusätzlich **kein jsdom**. Das gilt weiterhin für neun der zehn Testdateien:
+> Die Umgebung ist `node`, und `tests/detail-baum.test.tsx` schaltet sie über
+> `// @vitest-environment jsdom` für sich allein um. Gerendert wird mit `createRoot` und `act`; die
+> einzige neue Abhängigkeit ist `jsdom`, und die Hülle steht in `tests/hilfe/rendern.tsx`.
+>
+> **Der Anlass ist kein Sinneswandel, sondern eine Fehlerklasse ohne Netz.** Am 11.08.2026 trugen
+> zwei Geschwister im Detailpanel denselben React-`key`; die Konsole meldete es, kein Test konnte es
+> finden, und sichtbar falsch war nichts ([`verkettung.md`](verkettung.md) §8.12). Gerendert wird
+> deshalb für **drei** Fälle und nicht mehr — zwei Sätze, die in der Testkopie grundsätzlich nicht
+> auslösbar sind, und die Regression zum Doppelschlüssel. Alles Übrige bleibt reine Funktion.
+
+### `console.error` lässt den Testlauf fehlschlagen *(seit 11.08.2026)*
+
+`tests/setup/konsole.ts`, über `setupFiles` für **alle** Dateien — auch für die nicht rendernden:
+Eine Meldung aus einer reinen Funktion ist genauso ein Befund. Die ursprüngliche Meldung steht im
+Fehlertext, die Platzhalter von React (`%s`) sind aufgelöst.
+
+Drei Regeln, und sie sind der eigentliche Inhalt:
+
+1. **Keine pauschale Ausnahmeliste.** Wird ein Test rot, ist die Meldung die Nachricht und nicht das
+   Problem — behoben wird die Ursache.
+2. Eine nachweislich nicht abstellbare Fremdmeldung wird **einzeln** aufgenommen: exakte Meldung,
+   ein Satz Begründung, Datum. Keine Muster, keine Platzhalter. **Die Liste ist heute leer.**
+3. Wird es viel, wird angehalten und berichtet, statt zwanzig Tests umzuschreiben.
+
+`console.warn` bleibt vorerst außen vor: Der Doppelschlüssel kommt über `console.error`, und eine
+zweite Verschärfung in derselben Runde machte den Befund unlesbar.
+
+**Geprüft ist das Netz, nicht behauptet.** Der Doppelschlüssel wurde am 11.08.2026 absichtlich
+wieder eingebaut; der Lauf wurde rot mit der Meldung *„Encountered two children with the same key,
+`8f3a1c2e-…`"* im Fehlertext, und die Änderung wurde zurückgenommen. Ein Netz, das man nicht
+gerissen hat, ist eine Behauptung.
 
 | Datei | Was |
 |---|---|
@@ -653,6 +739,8 @@ Funktionen, und ein gerenderter Baum brächte hier nichts außer Laufzeit und Ab
 | `routen.test.ts` | `weiter` als offene Weiterleitung ausgeschlossen |
 | `nachrichtenfilter.test.ts` | URL → Zustand → URL; unbekannte Werte werden übergangen; **der Cursor taucht in keiner erzeugten URL auf**; die beiden Zeitfenstermodi schließen einander aus; `langeSuche` steht in der URL und wird nur mit dem Suchbegriff geschickt; welche Problemtypen an das Suchfeld gehören, welche an die Zeitfensterfelder und welche über die Ansicht; das halb ausgefüllte freie Fenster; **`nachricht` steht in der URL und in keiner Abfrage** |
 | `nachrichtendetail.test.ts` | die Normierung des Zeitleistenbalkens, die Schwelle der Lückenzeile, die vier offenen Zustände ([`nachrichtendetail.md`](nachrichtendetail.md) §10.9) |
+| `kette.test.ts` | die Einteilung nach der Flussrichtung, die Zahl in der Überschrift, das Nachladen, ob es einen Block gibt ([`verkettung.md`](verkettung.md) §8.10) |
+| **`detail-baum.test.tsx`** *(neu, 11.08.2026)* | **die einzigen drei gerenderten Bäume**: `tiefeErreicht` und `zyklusErkannt` samt ihrer Lage **unter beiden** Abschnitten (§8.5 dort), und die Regression zum Doppelschlüssel — sie besteht genau dann, wenn kein `console.error` fällt |
 
 ---
 

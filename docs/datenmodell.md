@@ -93,6 +93,14 @@ Backend als `MessageLastUpdate + MessageTimeout` berechnet.
 | `MessageLastUpdateIDX` | `MessageLastUpdate` |
 | `MessageStatusIDX` | `MessageStatus` |
 | `MessageLastUpdateProcessMessageIDX` | `(MessageLastUpdate, ProcessID, MessageID)` |
+| `SourceMessageIDIDX` | `SourceMessageID` |
+| `TargetMessageIDIDX` | `TargetMessageID` |
+
+> **Die beiden Verkettungsindizes sind am 10.08.2026 nachgetragen**
+> ([`messungen-schritt6.md`](messungen-schritt6.md) M23‑1). Sie standen hier nicht, und ob es sie
+> gibt, war nirgends dokumentiert — die Gestalt der Ketten-Auflösung in Schritt 6 hing daran. Beide
+> decken die **volle** Spaltenlänge ab (`SUB_PART` leer, anders als bei `MessageProperty`). Die
+> Kinder einer Wurzel kosten damit einen `ref`-Zugriff.
 
 ⚠️ **Vorsicht bei der Cursor-Sortierung.** Der zusammengesetzte Index enthält zwar beide Spalten
 des Cursors aus Regel L3 — aber `ProcessID` steht **dazwischen**. Eine Sortierung nach
@@ -380,6 +388,26 @@ geratener Wert. (Regel Q4)
 Siehe Datenbank-Events. Das muss in der Oberfläche kommuniziert werden, sonst wirkt eine korrekt
 übertragene Nachricht wie unquittiert.
 
+### 5.8 `bit(1)` lässt sich nicht summieren
+
+`Message.Source` und `Message.Target` sind `bit(1)` mit Vorgabe `b'0'`. `SUM(Source)` liefert dort
+**keinen brauchbaren Wert** — summiert wird die Bitfolge, nicht die Zahl. Für jede Auszählung:
+
+```sql
+SUM(Source + 0)
+```
+
+Verifiziert am 10.08.2026 ([`messungen-schritt6.md`](messungen-schritt6.md) M23‑2). Im
+Anwendungscode tritt das nicht auf — der jOOQ-Codegen bildet `bit(1)` per `forcedType` auf `Boolean`
+ab ([`datenzugriff.md`](datenzugriff.md) §9) —, wohl aber in jeder Erhebung von Hand.
+
+### 5.9 Unbelegte Verkettung ist `NULL`, nie leerer String
+
+`SourceMessageID` und `TargetMessageID` sind unbelegt **ausnahmslos `NULL`**; über beide
+Bezugsfenster von M23‑2 (6.249 und 214.330 Zeilen) kommt kein einziger leerer String vor. Die
+zusätzliche Bedingung `<> ''` ist damit folgenlos — sie bleibt in den Statements trotzdem stehen,
+weil die Produktion sich nicht daran halten muss, was die Testkopie zufällig enthält.
+
 ---
 
 ## 6. Datenbank-Events
@@ -389,9 +417,17 @@ Laufen weiter, **gehören uns nicht**:
 | Event | Takt | Wirkung |
 |---|---|---|
 | `CreateMessageStatisticHistory` | täglich | füllt `MessageStatisticHistory` |
-| `MatchInterchange` | stündlich | ordnet COMMITs über Interchange-Nummern zu, setzt `MessageStatus = 'COMMIT_RECEIVED'` und `SourceMessageID` |
+| `MatchInterchange` | ⚠️ **„stündlich" — ungedeckt** (M31‑3, 11.08.2026) | ordnet COMMITs über Interchange-Nummern zu, setzt `MessageStatus = 'COMMIT_RECEIVED'` und `SourceMessageID` |
 | `SetTargetFlag` | — | setzt `Target`-Flag |
 | `MoveDTNA997` | stündlich | verschiebt Nachrichten zwischen zwei Prozessen (kundenspezifisch) |
+
+> **Gekennzeichnet am 11.08.2026.** Die Tabelle ist aus
+> [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §3.3 übernommen, und dort steht auch die
+> Begründung: M31‑3 hat den Takt von der Testkopie aus **nicht** belegen können — die direkte
+> Auskunft ist durch fehlende Rechte verschlossen, und die Wirkung des Events lässt sich nicht von
+> der Ballung des gewöhnlichen EDI-Verkehrs unterscheiden. **Gestrichen wird die Angabe nicht**
+> (die Messung kann den Takt zeigen, aber nicht ausschließen); ihre Quelle liegt beim Altsystem.
+> Die Kennzeichnung steht hier nur, damit die beiden Tabellen nicht auseinanderlaufen.
 
 ---
 
@@ -406,6 +442,82 @@ Für den Nutzer ist genau das die Antwort auf „wo ist mein Lieferschein". Die 
 
 Der Mandantenfilter gilt auch für verkettete Nachrichten (Regel M5), und die Tiefe wird begrenzt,
 damit Endlosketten nicht auflaufen.
+
+### Die vier Spalten, gemessen (10.08.2026)
+
+Der Absatz oben beschrieb bis zum 10.08.2026 einen Ablauf, aber nicht die **Mechanik**. Sie ist in
+[`messungen-schritt6.md`](messungen-schritt6.md) erhoben. Die vier Angaben sind **nicht** vier
+Sichten auf dieselbe Beziehung, sondern zwei Beziehungen mal zwei Richtungen:
+
+| Angabe | Steht auf | Bedeutet | Beziehung |
+|---|---|---|---|
+| `SourceMessageID` | dem **Kind** | „mein Elternteil ist …" | Aufteilung |
+| `Source` | der **Wurzel** | „ich habe Kinder" | Aufteilung, Gegenrichtung |
+| `TargetMessageID` | dem **Merge-Eingang** | „ich bin zusammengeführt worden nach …" | Zusammenführung |
+| `Target` | dem **Merge-Ergebnis** | „ich bin aus einer Zusammenführung entstanden" | Zusammenführung, Gegenrichtung |
+
+- **Die beiden ID-Spalten schließen einander je Zeile aus** (M28‑1). Keine Zeile trägt
+  `SourceMessageID` **und** `TargetMessageID` — null Fälle über beide Bezugsfenster. Wer nur eine der
+  beiden liest, verliert die Hälfte der Fälle.
+
+  > ⚠️ **Geschärft am 10.08.2026.** Hier stand: *„Die beiden ID-Spalten sind vollständig disjunkt
+  > (M25‑2). Kein Merge-Ergebnis trägt einen `SourceMessageID`, keine Split-Wurzel einen
+  > `TargetMessageID` — in 4.528 geprüften Paaren nicht ein einziges Mal."* Die zweite Hälfte trägt
+  > (`Wurzel + Eingang` = 0). **Die erste nicht:** M28‑1c findet über Fenster B **33 `NEXANS`-Zeilen**,
+  > die zugleich Merge-Ergebnis (`Target = 1`) **und** Split-Kind (`SourceMessageID` belegt) sind.
+  > M25‑2 hatte für seine Stichprobe recht — die sechs Merge-Ergebnisse in Fenster A —, und die
+  > Verallgemeinerung auf den Bestand war ein Schluss zu weit. **Disjunkt sind die beiden
+  > ID-Spalten, nicht die beiden Beziehungen:** Eine Zeile kann sehr wohl in der einen Kette Kind und
+  > in der anderen Ergebnis sein.
+  >
+  > > **Belegvermerk** *(nachgetragen am 10.08.2026 nach Regel L10)*.
+  > > *Gemessen (M25‑2):* Die **sechs** Merge-Ergebnisse in Fenster A tragen keinen
+  > > `SourceMessageID`. `n = 6`.
+  > > *Behauptet war:* **Kein** Merge-Ergebnis trägt einen `SourceMessageID` — eine Aussage über den
+  > > Bestand.
+  > > **Die Lücke:** sechs Zeilen eines Tagesfensters gegen 3,34 Millionen. Hier war `n` tatsächlich
+  > > zu klein, und der Vermerk hätte es gezeigt: Die zweite Zeile hätte „im Bestand" gesagt, wo die
+  > > erste „in sechs Zeilen" sagt. **Damit stehen die beiden Fehlerarten dieses Projekts
+  > > nebeneinander:** Hier war der Umfang zu klein, bei „wartet vor"
+  > > ([`nachrichtenliste.md`](nachrichtenliste.md) §8.1) war er vollständig und der Schluss
+  > > trotzdem zu weit. `n` und Vermerk sichern verschiedene Dinge.
+- **Eine Zeile kann zwei Rollen tragen, aber nie drei oder vier** (M28‑1c). Über Fenster B sind es
+  **514 von 214.330 Zeilen = 0,240 %**; je Mandant reicht die Spanne von 0 % bis **1,278 %**
+  (`IBISGUS`). Selten, aber nicht null — die Rolle einer Nachricht ist deshalb eine **Menge** und
+  kein einzelner Wert. Gemessene Kombinationen: Wurzel + Kind (456), Kind + Ergebnis (33),
+  Ergebnis + Wurzel (25); Wurzel + Eingang und Kind + Eingang kommen **nicht** vor.
+- **Die Flags decken sich exakt mit der tatsächlichen Verkettung** (E4): `Source = 1` genau dann,
+  wenn mindestens ein Kind existiert (479/479, und 0 von 5.770 mit `Source = 0`); `Target = 1` genau
+  dann, wenn eine `MERGED`-Zeile auf die Nachricht zeigt (6/6, 0 von 6.243). Ob eine Nachricht
+  überhaupt eine Kette hat, steht damit **auf der Zeile selbst** — ohne Abfrage.
+- **Der Status sagt über die Stellung in der Kette nichts Verlässliches.** Meist trägt die Wurzel
+  `SPLITTED` und das Kind `FINISHED`, aber bei `IBIS`, `IBISGUS` und `ZAST` trägt die Wurzel
+  `FINISHED` — bei Mandanten also, die über den ganzen Bestand **keine einzige**
+  Zwischenschritt-Zeile haben (M24‑3). Verlässlich ist `Source`, nicht `MessageStatus`.
+- **`MERGED` ist der Eingang, nicht das Ergebnis.** Das Ergebnis trägt `Target = 1` und meist
+  `EERP_RECEIVED`; der Zusammenführungsgrad liegt bei **23 : 1** (M25‑1).
+- **Breite und Tiefe:** bis **3.048 Kinder** an einer Wurzel im Bezugsmonat (87 % haben genau eines),
+  und mindestens **vier Ebenen** — das Ergebnis einer Zusammenführung kann selbst wieder aufgeteilt
+  werden (M24‑2, E2). Die Tiefenbegrenzung oben ist richtig; eine **Breitenbegrenzung** fehlte und
+  ist ebenso nötig.
+
+  > **Präzisiert am 10.08.2026 (M30‑2, M30‑3).** Über den **gesamten** Bestand statt über Fenster B
+  > gemessen: bis **3.350** Kinder an einer Wurzel (452.822 Wurzeln, davon 1,07 % mit mehr als 50)
+  > und bis **897** Eingänge an einem Merge-Ergebnis (31.185 Ergebnisse, davon **11,38 %** mit mehr
+  > als 50). **Die Breitengrenze greift beim Merge zehnmal häufiger als beim Split** — der Grund
+  > steht in M25‑1: Ein Merge sammelt im Normalfall Dutzende (Grad 23 : 1), ein Split hat im
+  > Normalfall genau ein Kind.
+  >
+  > Und aus „mindestens vier Ebenen" ist **genau vier** geworden: Ketten mit fünf Gliedern gibt es
+  > über alle 214.330 Startzeilen aus Fenster B **nicht** (M30‑3). Damit ist zugleich **kein
+  > Zyklus** erreichbar — ein Kreis lieferte auf jeder Stufe Treffer —, und über den gesamten
+  > Bestand gibt es **null Selbstverweise** (`SourceMessageID = MessageID` oder
+  > `TargetMessageID = MessageID`, n = 3,34 Mio.). Der Zyklusschutz in
+  > [`verkettung.md`](verkettung.md) §4 bleibt trotzdem: Die Kette entsteht durch Datenbank-Events,
+  > die uns nicht gehören (§6).
+- **Die Kette überschreitet die Mandantengrenze nicht** (M27): In allen 9.101 Zeilen mit
+  Prozesswechsel führen Quell- und Zielprozess zum selben Mandanten. Der Filter aus Regel M5 bleibt
+  trotzdem gesetzt — er ist die Zusicherung, nicht die Beobachtung.
 
 ---
 

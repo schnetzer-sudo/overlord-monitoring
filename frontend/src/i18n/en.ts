@@ -47,6 +47,11 @@ export const en: Texte = {
     MANDANT: "Tenant",
   },
 
+  problem: {
+    ueberfaellig: "Overdue",
+    ueberfaelligHinweis: "The deadline for this message has passed.",
+  },
+
   anmeldung: {
     titel: "Sign in",
     einleitung: "Sign in to see the state of your EDI transfers.",
@@ -106,10 +111,7 @@ export const en: Texte = {
     nichtZugeordnet: "not assigned",
     ohneWert: "—",
     rohwert: "Status value of the legacy system",
-    schrittWartetVor: "waiting before: {schritt}",
-    schrittWartetVorHinweis: "Waiting before this step: {schritt}",
-    schrittLaeuftAuf: "running at: {schritt}",
-    schrittLaeuftAufHinweis: "Running at this step: {schritt}",
+    schrittZusatz: "Step: {schritt}",
     zeileOeffnen: "Show details of this message",
     bedeutungNichtVerifiziert: "Meaning not verified",
     ungeklaertFusszeile:
@@ -124,7 +126,8 @@ export const en: Texte = {
       FEHLER: "Error",
       WARTEND: "Waiting",
       LAEUFT: "Running",
-      ZWISCHENSCHRITT: "Intermediate",
+      AUFGETEILT: "Split",
+      ZUSAMMENGEFUEHRT: "Merged",
       ABGESCHLOSSEN: "Completed",
       QUITTIERT: "Acknowledged",
       UNGEKLAERT: "Unclear",
@@ -173,14 +176,6 @@ export const en: Texte = {
       langeSucheLaeuft: "The search covers a longer period and may take a moment.",
     },
 
-    zwischenschritte: {
-      chipAus: "Intermediate steps hidden",
-      chipAn: "Intermediate steps shown",
-      erklaerung: "Split and merged messages are not included.",
-      einblenden: "Show intermediate steps",
-      ausblenden: "Hide intermediate steps",
-    },
-
     blaettern: {
       zurueck: "Previous page",
       vor: "Next page",
@@ -200,7 +195,6 @@ export const en: Texte = {
     leer: {
       titel: "No message in this range",
       zeitfenster: "Widen the time window.",
-      zwischenschritte: "Intermediate steps are hidden — show them.",
       suche: "The search term narrows the list — clear it.",
       status: "The status filter narrows the list — clear it.",
       prozess: "The process filter narrows the list — clear it.",
@@ -211,8 +205,11 @@ export const en: Texte = {
       titel: "Message",
       schliessen: "Close view",
       zurueckZurListe: "Back to the list",
+      ansichtOhneListe: "Show without list",
+      ansichtNebenListe: "Show next to list",
       zeitpunkt: "Last changed",
       start: "Started",
+      gesamtdauer: "Total duration",
       projekt: "Project",
       prozess: "Process",
       kennung: "Message reference",
@@ -221,11 +218,15 @@ export const en: Texte = {
 
       ablaufTitel: "What happened",
       keineSchritte: "No process step is recorded for this message.",
-      ohneSchritt: "The message is open, but no step has run yet.",
-      gewartet: "waited {dauer}",
+      empfangen: "Received on {zeitpunkt} — no step has run since.",
+      empfangenOhneZeitpunkt: "The message has been received — no step has run since.",
+      ohneAktion: "No workflow run is recorded for this message.",
       ohneDauer: "no duration recorded",
       laeuftGerade: "running now",
       nochNichtBegonnen: "not started yet",
+      wartetSeit: "waiting for {dauer}",
+      laeuftSeit: "running for {dauer}",
+      frist: "deadline {dauer}",
       wartetVorUnbekannt:
         "The message is waiting — what for is not recorded in the workflow definition.",
       wartetWeiterhin: "The message is waiting — it will not continue on its own.",
@@ -264,6 +265,30 @@ export const en: Texte = {
         stunden: "{wert} h",
         tage: "{wert} d",
       },
+    },
+
+    kette: {
+      kommtVon: {
+        titel: "Came from",
+        titelEins: "Came from — 1 input",
+        titelZahl: "Came from — {anzahl} inputs",
+      },
+      wurdeZu: {
+        titel: "Became",
+        titelEins: "Became — 1 part",
+        titelZahl: "Became — {anzahl} parts",
+      },
+      beziehung: {
+        AUFTEILUNG: "Split",
+        ZUSAMMENFUEHRUNG: "Merge",
+      },
+      stufe: "Level {stufe}",
+      gliedOeffnen: "Open {ablauf}",
+      weitereLaden: "Load more",
+      laedtWeitere: "Loading …",
+      geladen: "{anzahl} links loaded",
+      tiefeErreicht: "The chain is longer than shown here.",
+      zyklusErkannt: "The chain runs in a circle — it stops here.",
     },
   },
 

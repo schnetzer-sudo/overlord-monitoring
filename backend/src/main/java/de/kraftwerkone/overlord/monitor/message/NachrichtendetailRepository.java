@@ -98,11 +98,23 @@ public class NachrichtendetailRepository {
    * kostet nichts; ob er in der Antwort erscheint, entscheidet der offene Zustand im Service.
    * Dieselbe Aufteilung wie beim aktuellen Schritt der Liste.
    *
+   * <p><b>{@code Message.SOSID} und {@code Message.SOSActionID} kommen roh dazu</b> (10.08.2026).
+   * Sie sind die beiden Spalten, ueber die der Service {@link OffenerZustand#WARTET_IN} von {@link
+   * OffenerZustand#WARTET_VOR} unterscheidet. Sie kosten nichts — der Join darauf steht ohnehin —,
+   * und sie hier zu lesen ist der Grund, warum die Oberflaeche keine Kennungen mehr vergleicht.
+   *
    * <p><b>Die Anzahl der Eigenschaften kommt als Unterabfrage</b> und nicht aus einem fuenften
    * Zugriff. Sie zaehlt ueber das Praefix des Primaerschluessels von {@code MessageProperty} und
    * liest dabei <b>keinen einzigen Wert</b> — {@code Using index}. Ein {@code COUNT} ueber {@code
    * MessageProperty} <i>fuer eine Nachricht</i> ist nicht die Live-Aggregation, die Regel L2
    * ausschliesst; die zielt auf Kennzahlen ueber {@code Message}.
+   *
+   * <p><b>Die vier Verkettungsspalten kommen roh dazu</b> (11.08.2026, Schritt 6 Teil 2b). Aus
+   * ihnen entstehen die Rollen der Nachricht — <b>in {@code common/Kettenrollen} und nicht
+   * hier</b>. Sie <b>kosten keinen Join und kein zweites Statement</b>: Alle vier stehen auf der
+   * {@code Message}-Zeile, die dieses Statement ohnehin liest. Genau das ist die Auskunft von E4 —
+   * ob eine Nachricht eine Kette hat, steht auf der Zeile, ohne Abfrage. Der Zugriffspfad aus §8
+   * aendert sich damit nicht; {@code Message} bleibt {@code const}.
    */
   public NachrichtKopfZeile findeKopf(MandantContext mandant, String messageId) {
     Field<Integer> eigenschaftenAnzahl =
@@ -121,8 +133,14 @@ public class NachrichtendetailRepository {
             PROCESS.PROCESSNAME,
             PROJECT.PROJECTNAME,
             SOS.SOSNAME,
+            MESSAGE.SOSID,
+            MESSAGE.SOSACTIONID,
             SOSACTION.SOSACTIONNAME,
-            eigenschaftenAnzahl)
+            eigenschaftenAnzahl,
+            MESSAGE.SOURCE,
+            MESSAGE.SOURCEMESSAGEID,
+            MESSAGE.TARGETMESSAGEID,
+            MESSAGE.TARGET)
         .from(MESSAGE)
         .leftJoin(PROCESS)
         .on(PROCESS.PROCESSID.eq(MESSAGE.PROCESSID))
@@ -147,7 +165,13 @@ public class NachrichtendetailRepository {
                     satz.value7(),
                     satz.value8(),
                     satz.value9(),
-                    satz.value10()));
+                    satz.value10(),
+                    satz.value11(),
+                    satz.value12(),
+                    satz.value13(),
+                    satz.value14(),
+                    satz.value15(),
+                    satz.value16()));
   }
 
   /**

@@ -54,7 +54,7 @@ der jeder Nutzer ankommt, und sie umzudeuten kostet mehr, als jede Gestaltung ge
 |---|---|---|---|
 | `--status-abgeschlossen` | fertig und quittiert | Grün, Ton 166 | Der Endzustand, den der Nutzer sucht. Grün heißt hier „nichts zu tun". Tiefer und blaustichiger als die naheliegende Wahl — siehe „Der Akzent". |
 | `--status-fehler` | `ERROR_*` und `COMMIT_REJECTED` | Rot | Der einzige Zustand, der sofort Aufmerksamkeit verlangt. Rot ist deshalb selten. |
-| `--status-offen` | wartend, laufend, Zwischenschritt | Neutral | Kein Ergebnis, kein Problem. Farbe wäre hier eine Aussage, die es nicht gibt — `SPLITTED` und `MERGED` machen zusammen rund ein Drittel aller Zeilen aus. |
+| `--status-offen` | wartend, laufend, **aufgeteilt, zusammengeführt** | Neutral | Kein Ergebnis, kein Problem. Farbe wäre hier eine Aussage, die es nicht gibt — `SPLITTED` und `MERGED` machen zusammen rund ein Drittel aller Zeilen aus. **Beide teilen sich seit dem 11.08.2026 diese eine Rolle, obwohl sie zwei Statusarten sind:** Der Unterschied zwischen „aufgeteilt" und „zusammengeführt" ist keine Aussage über *gut oder schlecht*, und nur die trägt eine Farbe. Er steckt in Beschriftung und Zeichen. |
 | `--status-ungeklaert` | unbekannter Statuswert | Neutral, gedämpft | „Nicht zugeordnet heißt nicht zugeordnet" (Regel Q4). Ein geratener Wert wäre schlimmer als sichtbare Zurückhaltung. |
 
 Jede Rolle hat drei Werte: Vordergrund, `-flaeche` und `-kontur`. Damit lässt sich ein Status als
@@ -183,6 +183,17 @@ BAM-Werten. Die braucht jede Spalte, die das Fenster hergibt.
 Fließtext steht — `--dichte-inhaltsbreite` (72 rem) und die schmaleren Karten von
 Mandantenauswahl und Passwortseite tun genau das. Sie gehört in die Ansicht, **nie** in den Rahmen.
 
+**`--dichte-inhaltsbreite` begrenzt seit Schritt 5, Teil 2 auch die Detailansicht auf ihrer eigenen
+Route** (`/nachrichten/<id>`), und seit dem 11.08.2026 ist das dort die tragende Breite: Ein
+Umschalter im Kopf führt aus dem Panel dorthin und zurück
+([`nachrichtendetail.md`](nachrichtendetail.md) §10.7). **Linksbündig, nicht zentriert**, damit der
+Lesebeginn beim Umschalten an derselben x-Position bleibt.
+
+> ⚠️ **Für diesen Zweck sind die 72 rem gewählt, nicht gemessen.** Die Begründung unten gilt dem
+> **Fließtext**, und eine Detailansicht ist keiner. Es gibt keine Messung, die eine andere Zahl
+> trägt — und es wird für diesen Zweck auch keine erfunden. Ein vorhandenes Token ist hier besser als
+> eine zweite frei gewählte Zahl daneben.
+
 ### Die Maße
 
 | Token | Zeigergerät | Berührungsgerät | Warum |
@@ -277,6 +288,37 @@ Größe der Bedienflächen.
 
 ---
 
+## 7a. Offene Punkte
+
+### „Überfällig" hat keine Farbrolle — aufgeschoben, nicht entschieden
+
+*Aufgenommen am 10.08.2026 im Nachtrag zu Schritt 5.*
+
+Seit Schritt 5 zeigt das Nachrichtendetail die Problemkategorie *Überfällig* an — und **bewusst ohne
+Farbe**: Zeichen, Wort und Schriftstärke gegen die gedämpfte Umgebung
+([`nachrichtendetail.md`](nachrichtendetail.md) §10.4). Das war richtig: Rot gehört nach §3 und
+Regel Q3 ausschließlich dem *Fehler*, und ein Status-Gelb gibt es in diesem Farbsystem nicht.
+
+**Es ist aber keine getroffene Entscheidung, sondern eine vertagte** — und der Punkt gehört benannt,
+solange er noch keinen Schaden anrichtet.
+
+**Beißen wird sie im Dashboard.** Dort stehen die drei Problemkategorien nebeneinander. Trägt nur
+eine davon Farbe, liest sich das als **Rangfolge** — und genau die schließt Regel Q3 aus, wo Fehler,
+Überfällig und Unquittiert ausdrücklich getrennt und **gleichrangig** geführt werden. Eine
+Kategorie ohne Farbe neben einer roten ist keine neutrale Darstellung, sie ist eine leisere.
+
+| | |
+|---|---|
+| **Rahmen** | den §3 bereits gesetzt hat: **orange, Ton höchstens 85**. Zwischen 90 und 135 stünde die Rolle dem Akzent (`#b9c022`, Ton 112,4) zu nahe. Rot bei Ton 27 bleibt dem Fehler |
+| **Umfang** | drei Werte wie bei jeder Rolle — Vordergrund, `-flaeche`, `-kontur`; sonst wird irgendwo ein vierter erfunden |
+| **Nachzurechnen** | der Textkontrast, wie bei den vier Akzentstufen (§8). „Nachrechnen" ist wörtlich gemeint |
+| **Zeitpunkt** | **spätestens beim Dashboard** (Schritt 10) und nicht später. Dort fällt sie ohnehin an — sie dann *nebenbei* zu treffen wäre der Fehler |
+| **Bis dahin** | im Detail **Text und Zeichen**, keine Farbe. Das wird **nicht** geändert; „nie allein über Farbe" gilt ohnehin, und eine Rolle hier zu erfinden hieße, der Entscheidung vorzugreifen |
+
+**Für „unquittiert" gilt dasselbe**, nur später: Die Kategorie hat bis heute keine Ansicht.
+
+---
+
 ## 8. Wie man das Konzept ändert
 
 | Änderung | Datei | Aufwand |
@@ -303,7 +345,7 @@ Verweise und Fokusringe unlesbar sind — geschätzt wird das nicht, gerechnet s
 
 | Regel | Umsetzung |
 |---|---|
-| **Q3** Die drei Problemkategorien bleiben getrennt | Rot ist ausschließlich `FEHLER`. „Überfällig" und „unquittiert" bekommen eine eigene Rolle, siehe §7 |
+| **Q3** Die drei Problemkategorien bleiben getrennt | Rot ist ausschließlich `FEHLER`. „Überfällig" und „unquittiert" bekommen eine eigene Rolle, siehe §7 — offen, mit Rahmen und Zeitpunkt in §7a |
 | **Q4** Nicht zugeordnet heißt nicht zugeordnet | eigene Rolle `--status-ungeklaert`, kein geratener Wert |
 | Statusabbildung nur über den `MessageStatusClassifier` | `lib/status-farbe.ts` bildet nur die **Einordnung** auf Farbe ab, nie einen Rohwert |
 | Status nie allein über Farbe | §3; als Kommentar an `lib/status-farbe.ts`, wo die Zuordnung entsteht |

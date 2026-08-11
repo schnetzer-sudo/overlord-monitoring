@@ -17,6 +17,13 @@ Gegenstück zu [`messungen-schritt4.md`](messungen-schritt4.md).
 > Frage im Raum, *wie* übersetzt wird, sondern **ob eine `MessageAction`-Zeile diesen Namen
 > überhaupt erreicht**. M15 beantwortet sie.
 
+> **Warum nach M22 die Nummer M29 folgt und nicht M23.** Die Nummerierung läuft **projektweit** fort
+> und nicht je Datei — sonst wäre „M23" zweideutig und jeder Querverweis eine Rückfrage. **M23 bis
+> M28 sind am 10.08.2026 vergeben worden**, an die Erhebung zur Verkettung in
+> [`messungen-schritt6.md`](messungen-schritt6.md). [M29](#m29--worauf-zeigt-messagesosactionid-bei-wartenden-nachrichten)
+> ist danach entstanden, gehört aber fachlich zu Schritt 5 und steht deshalb hier. Die Lücke ist
+> kein Versehen, sondern die Spur einer Reihenfolge.
+
 ---
 
 ## 0. Rahmen der Messung
@@ -2070,6 +2077,317 @@ Erhebung.
 
 ---
 
+# Nachtrag vom 10.08.2026 — M29
+
+> **Was hier nachgetragen wird und warum.** Die Sichtprüfung zu Schritt 5, Teil 2 hat an **einer**
+> wartenden Nachricht gefunden, dass der vermeintlich *nächste* Schritt derselbe ist, der gerade
+> gelaufen ist — der Schritt mit `WAITUNTIL|…|SUSPEND`, der die Nachricht schlafen legt
+> ([`nachrichtendetail.md`](nachrichtendetail.md) §10.11). **Eine Beobachtung ist keine Regel.**
+> M29 misst, wie oft sie gilt.
+>
+> Die Antwort entscheidet über den Bau: Ist der Fall „zeigt auf einen anderen, noch nicht
+> ausgeführten Schritt" beobachtet, sind es zwei Zustände mit je eigener Beobachtungsbasis; ist er es
+> nicht, ist der zweite ein gebauter, aber ungesehener Zweig — und das gehört benannt, bevor der
+> Code steht.
+>
+> Der Rahmen aus [Abschnitt 0](#0-rahmen-der-messung) gilt unverändert. Server zu Beginn:
+> `2026-08-10 14:25:17` (UTC `12:25:17`), `SELECT @@global.read_only` → **`1`** als erste Abfrage der
+> Sitzung, Benutzer `monitor_read@%`, MariaDB `10.6.22-MariaDB-0ubuntu0.22.04.1-log`. Client
+> unverändert der `mysql` 8.0.46 mit `--ssl-mode=DISABLED`.
+
+---
+
+## M29 — Worauf zeigt `Message.SOSActionID` bei wartenden Nachrichten?
+
+Die Menge sind **alle 538 `SUSPENDED`-Nachrichten** des Gesamtbestands, Zugriff über
+`MessageStatusIDX`. **Ein Zeitfenster ist hier nicht nötig und würde die Aussage verkleinern:** Die
+538 sind bereits die ganze Grundgesamtheit der Frage, nicht ein Ausschnitt daraus. Das ist keine
+Ausnahme nach Regel L9 — es gibt keinen Durchlauf ohne eingegrenzte Menge; die Eingrenzung ist der
+Statusfilter, und er trägt einen Index.
+
+**Der Metadaten-Schritt ist ausgeschlossen** (`SOSActionID <> 0`). Aktionen mit `SOSActionID = 0`
+sind kein Prozessschritt ([S1](#s1--woran-ist-der-metadaten-schritt-erkennbar)) und stehen nicht in
+der Schrittfolge; zählte die Messung sie mit, vergliche sie gegen eine Zeile, die der Nutzer gar
+nicht sieht — derselbe Fehler wie eine falsche Sortierung, nur eine Ebene tiefer.
+
+### (0) Vorprüfung — treffen beide Ordnungen denselben letzten Schritt?
+
+Das Vorlage-Statement bestimmt den letzten Schritt über `MAX(MessageActionID)`. Die **Zeitleiste**
+sortiert dagegen nach `MessageActionStart`, bei Gleichstand nach `MessageActionID`
+([`nachrichtendetail.md`](nachrichtendetail.md) §4). Eine Auswertung, die eine andere Reihenfolge
+annimmt als die Anzeige, misst etwas anderes als das, was der Nutzer sieht — also wird die Annahme
+zuerst geprüft und nicht vorausgesetzt.
+
+```sql
+WITH echte AS (
+  SELECT ma.MessageID, ma.MessageActionID, ma.SOSID, ma.SOSActionID, ma.MessageActionStart
+  FROM MessageAction ma
+  WHERE ma.MessageID IN (SELECT MessageID FROM Message WHERE MessageStatus = 'SUSPENDED')
+    AND ma.SOSActionID <> 0
+),
+nach_id AS (
+  SELECT e.* FROM echte e
+  JOIN (SELECT MessageID, MAX(MessageActionID) AS letzte FROM echte GROUP BY MessageID) x
+    ON x.MessageID = e.MessageID AND x.letzte = e.MessageActionID
+),
+nach_zeit AS (
+  SELECT MessageID, MessageActionID, SOSID, SOSActionID FROM (
+    SELECT e.*, ROW_NUMBER() OVER (PARTITION BY MessageID
+                                   ORDER BY MessageActionStart DESC, MessageActionID DESC) AS rn
+    FROM echte e
+  ) r WHERE rn = 1
+)
+SELECT COUNT(*) AS nachrichten,
+       SUM(a.MessageActionID  = b.MessageActionID) AS gleiche_position,
+       SUM(a.MessageActionID <> b.MessageActionID) AS verschiedene_position
+FROM nach_id a JOIN nach_zeit b ON b.MessageID = a.MessageID;
+```
+
+**EXPLAIN**
+
+| id | select_type | table | type | key | key_len | ref | rows | Extra |
+|---|---|---|---|---|---|---|---|---|
+| 1 | `PRIMARY` | `<derived5>` | `ALL` | — | — | — | 538 | `Using where` |
+| 1 | `PRIMARY` | `Message` | `eq_ref` | `PRIMARY` | 146 | `x.MessageID` | 1 | `Using where` |
+| 1 | `PRIMARY` | `ma` | `eq_ref` | `PRIMARY` | **148** | `x.MessageID,x.letzte` | 1 | `Using where` |
+| 1 | `PRIMARY` | `<derived7>` | `ref` | `key0` | 147 | `x.MessageID` | 2 | `Using where` |
+| 5 | `DERIVED` | `Message` | `ref` | `MessageStatusIDX` | 123 | `const` | 538 | `Using where; Using index; Using temporary; Using filesort` |
+| 5 | `DERIVED` | `ma` | `ref` | `PRIMARY` | 146 | `Message.MessageID` | 1 | `Using where` |
+| 7 | `LATERAL DERIVED` | `ma` | `ref` | `PRIMARY` | 146 | `ma.MessageID` | 1 | `Using where; Using temporary` |
+| 7 | `LATERAL DERIVED` | `Message` | `eq_ref` | `PRIMARY` | 146 | `ma.MessageID` | 1 | `Using where` |
+
+**Ergebnis** — `n = 538`
+
+| Nachrichten | gleiche Position | **verschiedene Position** |
+|---|---|---|
+| **538** | **538** | **0** |
+
+Laufzeit: Aufwärmlauf 60,642 ms, beste von fünf **57,601 ms**.
+
+Dieselbe Auswertung über `SOSActionID` statt über die Position: ebenfalls 538 gleich, **0**
+verschieden.
+
+> **Die beiden Ordnungen sind auf dieser Menge nicht unterscheidbar** (`n = 538`). Das
+> Vorlage-Statement misst also, was die Zeitleiste zeigt, und wird **unverändert** übernommen. Das
+> ist ein Befund über die Daten und keine Freigabe für den Code: Dort wird der letzte Schritt
+> weiterhin **nach der Ordnung der Zeitleiste** bestimmt, damit nicht zwei Stellen zwei
+> Sortierungen kennen.
+
+### (1) Wie viele echte Schritte hat eine wartende Nachricht?
+
+```sql
+SELECT anzahl_echte_schritte, COUNT(*) AS nachrichten
+FROM ( SELECT ma.MessageID, COUNT(*) AS anzahl_echte_schritte
+       FROM MessageAction ma
+       WHERE ma.MessageID IN (SELECT MessageID FROM Message WHERE MessageStatus = 'SUSPENDED')
+         AND ma.SOSActionID <> 0
+       GROUP BY ma.MessageID ) n
+GROUP BY anzahl_echte_schritte ORDER BY anzahl_echte_schritte;
+```
+
+**EXPLAIN**: `<derived2>` `ALL`, 538 Zeilen, `Using temporary; Using filesort`; darunter `Message`
+`ref` über `MessageStatusIDX` (`key_len` 123, `Using index`) und `ma` `ref` über
+`MessageAction.PRIMARY` (`key_len` 146).
+
+**Ergebnis** — `n = 538`
+
+| echte Schritte je Nachricht | Nachrichten |
+|---|---|
+| **2** | **538** |
+
+Laufzeit: Aufwärmlauf 12,323 ms, beste von fünf **8,647 ms**. **Eine einzige Zeile** — jede der 538
+wartenden Nachrichten hat genau zwei echte Schritte, keine hat einen oder drei.
+
+Und die Gegenprobe dazu, weil sie den Zustand `OHNE_SCHRITT` betrifft:
+
+```sql
+SELECT COUNT(*) AS suspended_ohne_echten_schritt
+FROM Message m
+WHERE m.MessageStatus = 'SUSPENDED'
+  AND NOT EXISTS (SELECT 1 FROM MessageAction ma
+                  WHERE ma.MessageID = m.MessageID AND ma.SOSActionID <> 0);
+```
+
+**EXPLAIN**: `m` `ref` über `MessageStatusIDX` (`key_len` 123, `Using where; Using index`),
+Unterabfrage `index_subquery` über `MessageAction.PRIMARY`. Ergebnis **0** von 538 (`n = 538`),
+Laufzeit Aufwärmlauf 5,676 ms, beste von fünf **5,535 ms**.
+
+> **Keine wartende Nachricht besteht allein aus ihrem Metadaten-Schritt.** M16 (3) hatte das für
+> „gar keine Aktion" gemessen; hier ist es zusätzlich für „keine *echte* Aktion" gemessen. Der
+> Unterschied ist erst mit dieser Runde entstanden, weil `OHNE_SCHRITT` seither über die
+> Schrittfolge und nicht mehr über alle Aktionen definiert ist.
+>
+> **Nachgetragen am selben Tag:** `OHNE_SCHRITT` ist inzwischen aufgeteilt in `EMPFANGEN`
+> (Metadaten-Schritt vorhanden, kein echter Schritt) und `OHNE_AKTION` (gar keine Aktion) —
+> [`nachrichtendetail.md`](nachrichtendetail.md) §3. **Diese Gegenprobe misst genau `EMPFANGEN`**,
+> M16 (3) misst `OHNE_AKTION`. Beide Zahlen sind `0`; die Zahlen ändern sich nicht, nur die Namen
+> der Fälle, die sie zählen.
+
+### (2) Die Hauptfrage
+
+```sql
+SELECT COUNT(*) AS nachrichten,
+       SUM(l.sosid = m.SOSID AND l.sosactionid = m.SOSActionID) AS zeigt_auf_letzten_schritt,
+       SUM(NOT (l.sosid = m.SOSID AND l.sosactionid = m.SOSActionID)) AS zeigt_woanders_hin,
+       SUM(l.sosid IS NULL) AS ohne_aktion
+FROM Message m
+LEFT JOIN (
+  SELECT ma.MessageID, ma.SOSID AS sosid, ma.SOSActionID AS sosactionid
+  FROM MessageAction ma
+  JOIN (
+    SELECT MessageID, MAX(MessageActionID) AS letzte
+    FROM MessageAction
+    WHERE MessageID IN (SELECT MessageID FROM Message WHERE MessageStatus = 'SUSPENDED')
+      AND SOSActionID <> 0
+    GROUP BY MessageID
+  ) x ON x.MessageID = ma.MessageID AND x.letzte = ma.MessageActionID
+) l ON l.MessageID = m.MessageID
+WHERE m.MessageStatus = 'SUSPENDED';
+```
+
+**EXPLAIN**
+
+| id | select_type | table | type | key | key_len | ref | rows | Extra |
+|---|---|---|---|---|---|---|---|---|
+| 1 | `PRIMARY` | `m` | `ref` | `MessageStatusIDX` | 123 | `const` | 538 | `Using index condition` |
+| 1 | `PRIMARY` | `ma` | `ref` | `PRIMARY` | 146 | `m.MessageID` | 1 | |
+| 1 | `PRIMARY` | `<derived3>` | `ref` | `key0` | 146 | `m.MessageID` | 2 | `Using where` |
+| 3 | `LATERAL DERIVED` | `MessageAction` | `ref` | `PRIMARY` | 146 | `ma.MessageID` | 1 | `Using where` |
+| 3 | `LATERAL DERIVED` | `Message` | `eq_ref` | `PRIMARY` | 146 | `MessageAction.MessageID` | 1 | `Using where` |
+
+Kein voller Durchlauf: Der Einstieg ist `ref` über `MessageStatusIDX`, alles Weitere hängt als
+`ref`/`eq_ref` am Präfix des Primärschlüssels von `MessageAction`.
+
+**Ergebnis** — `n = 538`
+
+| Nachrichten | zeigt auf den letzten Schritt | **zeigt woanders hin** | ohne Aktion |
+|---|---|---|---|
+| **538** | **538 — 100 %** | **0 — 0 %** | **0** |
+
+Laufzeit: Aufwärmlauf 83,724 ms, beste von fünf **81,736 ms**.
+
+### (3) Gegenprobe — was ist der Verweis sonst noch?
+
+```sql
+SELECT COUNT(*) AS nachrichten,
+       SUM(EXISTS (SELECT 1 FROM MessageAction ma
+                   WHERE ma.MessageID = m.MessageID
+                     AND ma.SOSID = m.SOSID AND ma.SOSActionID = m.SOSActionID
+                     AND ma.SOSActionID <> 0))                       AS verweis_ist_ausgefuehrter_schritt,
+       SUM(EXISTS (SELECT 1 FROM SOSAction sa
+                   WHERE sa.SOSID = m.SOSID AND sa.SOSActionID = m.SOSActionID)) AS verweis_loest_auf
+FROM Message m
+WHERE m.MessageStatus = 'SUSPENDED';
+```
+
+**EXPLAIN**: `m` `ref` über `MessageStatusIDX` (`key_len` 123, `Using index condition`); die
+Unterabfrage über `SOSAction` `eq_ref` über `PRIMARY` mit **`key_len` 148** — also über den *ganzen*
+zusammengesetzten Schlüssel, `Using index`; die über `MessageAction` `ref` über `PRIMARY`
+(`key_len` 146).
+
+**Ergebnis** — `n = 538`
+
+| Nachrichten | Verweis ist ein **ausgeführter** Schritt | Verweis löst in `SOSAction` auf |
+|---|---|---|
+| **538** | **538** | **538** |
+
+Laufzeit: Aufwärmlauf 34,208 ms, beste von fünf **33,914 ms**.
+
+Der Verweis ist also nicht bloß „nicht der nächste", sondern nachweislich einer, der **schon
+gelaufen ist** — und er läuft bei keiner der 538 ins Leere. Das ist der Gegensatz zu den 43,9
+Prozent verwaister Verweise über den Gesamtbestand
+([M13](messungen-schritt4.md#m13--trägt-sosactionid-einen-lesbaren-namen)) und deckt sich mit dem,
+was [`nachrichtendetail.md`](nachrichtendetail.md) §3 dazu bereits festhält.
+
+### (4) Nebenbefund: die Marke des letzten Schritts
+
+**Nur zur Kenntnis — daran wird nichts erkannt.** Die Beobachtungsbasis ist dafür zu schmal, und die
+Abgrenzung zu Schritt 5 nennt es ausdrücklich: Die Marke `SUSPEND` wird nicht zur Erkennung
+verwendet.
+
+```sql
+SELECT COUNT(*) AS nachrichten,
+       SUM(l.bausteine LIKE '%SUSPEND%')   AS marke_suspend,
+       SUM(l.bausteine LIKE '%WAITUNTIL%') AS marke_waituntil,
+       SUM(l.bausteine IS NULL)            AS ohne_bausteine,
+       COUNT(DISTINCT l.sosactionid)       AS verschiedene_sosactionid,
+       COUNT(DISTINCT l.sosid)             AS verschiedene_ablaeufe
+FROM Message m
+LEFT JOIN ( … dieselbe abgeleitete Tabelle wie in (2), zusätzlich
+            ma.SOSActionServiceProperties AS bausteine … ) l ON l.MessageID = m.MessageID
+WHERE m.MessageStatus = 'SUSPENDED';
+```
+
+**EXPLAIN**: identisch zu (2), nur trägt `m` hier `Using where; Using index` statt `Using index
+condition`.
+
+**Ergebnis** — `n = 538`
+
+| Nachrichten | `SUSPEND` | `WAITUNTIL` | ohne Bausteine | verschiedene `SOSActionID` | verschiedene Abläufe |
+|---|---|---|---|---|---|
+| **538** | **538** | **538** | **0** | **1** | **1** |
+
+Laufzeit: Aufwärmlauf 88,700 ms, beste von fünf **87,469 ms**.
+
+Das `LIKE '%…%'` steht hier **nur**, weil die Menge durch den Statusfilter bereits auf 538 Zeilen
+eingegrenzt ist; über `SOSActionServiceProperties` ungefiltert gemessen kostete dasselbe Muster
+97,976 s ([M8](messungen-schritt4.md#m8--was-ist-messagetimeout)). **Kein Muster für
+Anwendungscode.**
+
+### Schlussfolgerung — ausdrücklich
+
+> ### `WARTET_VOR` kommt in der Testkopie **null Mal** vor.
+>
+> Bei **allen 538** wartenden Nachrichten (`n = 538`, das ist der gesamte Bestand dieses Status)
+> zeigen `Message.SOSID` und `Message.SOSActionID` auf **den Schritt, der zuletzt gelaufen ist** —
+> nicht auf einen kommenden. Der Fall »zeigt auf einen anderen, noch nicht ausgeführten Schritt«
+> ist **nicht beobachtet**, und zwar nicht selten, sondern gar nicht.
+>
+> **Damit ist der Wartezustand aufzuteilen, und die Aufteilung gehört ins Backend.** Der Unterschied
+> ist die Präposition: Eine Nachricht wartet *in* einem Schritt, der sie schlafen gelegt hat
+> (`WARTET_IN`, 538 von 538), oder *vor* einem, der noch nicht begonnen hat (`WARTET_VOR`, 0 von
+> 538). Beide sind zu bauen — die Oberfläche darf die Unterscheidung nicht durch den Vergleich
+> zweier gelieferter Kennungen selbst treffen —, aber nur einer ist vorführbar.
+>
+> **`WARTET_VOR` gehört damit in dieselbe Liste wie `LAEUFT_AUF` und `OHNE_SCHRITT`**
+> ([`nachrichtendetail.md`](nachrichtendetail.md) §10.12): gebaut, unit-getestet, nie gesehen.
+>
+> *Nachgetragen am selben Tag:* `OHNE_SCHRITT` heißt dort inzwischen `EMPFANGEN` und `OHNE_AKTION` —
+> die Liste ist länger geworden, ihr Kriterium nicht.
+
+**Die Schwachstelle, die dazugehört — und sie ist größer, als die 100 Prozent aussehen.** Die 538
+Nachrichten sind **eine** Gestalt und nicht 538 Belege: Sie haben ausnahmslos genau zwei echte
+Schritte (1), ihr letzter Schritt trägt ausnahmslos **dieselbe** `SOSActionID` in **demselben**
+Ablauf (4), und M16 (3) hat sie bereits als einen Zeitraum von sieben Tagen auf demselben Schritt
+`Send Message to Pool` ausgewiesen. Die Fallzahl `n = 538` ist die Zahl der *Zeilen*, nicht die Zahl
+der *Fälle* — an Vielfalt liegt hier **eine** vor.
+
+Dazu kommt der Status, der fehlt: **`RUNNING` gibt es in der Testkopie null Mal.** Gemessen ist
+ausschließlich `SUSPENDED`. Ob eine Nachricht in einem anderen Ablauf oder unter `RUNNING` auf einen
+noch nicht begonnenen Schritt zeigt, ist durch diese Messung **nicht widerlegt** — sie ist nur nicht
+beobachtet. Genau deshalb bleibt `WARTET_VOR` gebaut und wird nicht wegoptimiert.
+
+---
+
+## M31 — vorgesehen, entfallen, Nummer bleibt frei
+
+**Es gibt keine Messung M31.** Die Nummer ist am 10.08.2026 für den Nachtrag zu Schritt 5 vorgesehen
+worden und beantwortet nicht mehr, wofür sie vorgesehen war. Sie steht hier, damit sie nicht als
+**verlorene Messung** gelesen wird, und ist **für die nächste Messung zu verwenden**.
+
+Vorgesehen war die Frage: *Kommt eine Nachricht mit ausschließlich dem Metadaten-Schritt vor?* Sie
+ist **fachlich beantwortet worden statt gemessen**: Im Produktivbetrieb tritt der Fall auf, sobald
+Nachrichten eingehen und noch nicht weitergelaufen sind. Die Testkopie hat eine Schnittkante und
+kennt kein `RUNNING`; ihre Leere hat in diesem Projekt bereits dreimal nichts bedeutet. Der Zustand
+`EMPFANGEN` ([`nachrichtendetail.md`](nachrichtendetail.md) §3) wird deshalb gebaut, unabhängig
+davon, ob er lokal vorführbar ist — genau wie `LAEUFT_AUF`.
+
+> **Das ist eine Auskunft und kein Befund.** Sie trägt keine Zahl, keinen `EXPLAIN` und keine
+> Laufzeit, und sie steht deshalb hier und nicht in der Laufzeittabelle. Was M29 (1) misst, ist die
+> Gegenrichtung: Unter `SUSPENDED` kommt der Fall **null Mal** vor.
+
+---
+
 ## Korrekturen an den Vorlage-Statements
 
 **Keine Tabelle und keine Spalte aus der Aufgabenstellung fehlt.** Sämtliche verwendeten Namen
@@ -2151,8 +2469,16 @@ Was aus den Zahlen folgen *könnte* — als Frage formuliert, nicht als Antwort.
    > anderswo auf 25 verschiedene `SOSActionName` auflöst. Die Frage bleibt offen, aber sie lautet
    > jetzt anders: nicht „wie groß", sondern „**ob überhaupt**, oder stattdessen über die Marke im
    > selben Ablauf" (neue Frage 13).
-4. Der Zwischenraum bei wartenden Nachrichten (M16 3) ist ein eigener Zustand. Wird er als eigene
-   Zeile in der Zeitleiste gezeigt („wartet seit …"), oder als Zustand der Zeitleiste als Ganzes?
+4. ~~Der Zwischenraum bei wartenden Nachrichten (M16 3) ist ein eigener Zustand. Wird er als eigene
+   Zeile in der Zeitleiste gezeigt („wartet seit …"), oder als Zustand der Zeitleiste als Ganzes?~~
+   **Beantwortet am 10.08.2026: als Zustand, mit einer Zeile daran — und die Zahl kommt aus dem
+   Backend.** Gebaut war zunächst eine *Lückenzeile* zwischen zwei Schritten; über rund 700 geprüfte
+   Nachrichten ist sie nie erschienen, weil die größte Lücke zwischen zwei Schritten **eine Sekunde**
+   beträgt. Das war kein knapper Fehlschlag, sondern strukturell: **Die Wartezeit steckt in der Dauer
+   des `WAITUNTIL`-Schritts, nicht zwischen zwei Schritten.** Die Zeile ist entfernt und durch
+   `wartetSeitSekunden` samt `fristSekunden` am offenen Zustand ersetzt, gerechnet gegen die
+   **Anwendungsuhr** im Backend. Vollständig mit Begründung in
+   [`nachrichtendetail.md`](nachrichtendetail.md) §3a und §10.12.
 5. `MessageActionID = 500` und `502` kommen je 20-mal vor, tragen Bausteine, lösen nie auf, und
    `502` hat keine einzige `MessageProperty`-Zeile. Was bedeuten diese beiden Kennungen, und
    gehören sie in die Zeitleiste?
@@ -2232,6 +2558,17 @@ Was aus den Zahlen folgen *könnte* — als Frage formuliert, nicht als Antwort.
     im Quellsystem für „letzter Schritt" und `98` für „vorletzter"? Falls ja, wäre die Zuordnung von
     ausgeführter Position zu geplanter Kennung berechenbar statt geraten — falls nein, ist sie es
     nicht. Nicht gemessen; es wäre eine Auskunft aus dem Altsystem, keine Abfrage.
+
+### Aus dem Nachtrag vom 10.08.2026
+
+17. **Gibt es `WARTET_VOR` in der Produktion?** [M29](#m29--worauf-zeigt-messagesosactionid-bei-wartenden-nachrichten)
+    hat den Fall über alle 538 wartenden Nachrichten **null Mal** gefunden — und diese 538 sind
+    **eine** Gestalt: zwei echte Schritte, ein Ablauf, eine `SOSActionID`, sieben Tage. Der Zweig ist
+    gebaut und unit-getestet. Zu klären wäre er an der Produktion, wo `RUNNING` vorkommt; bis dahin
+    steht er in [`nachrichtendetail.md`](nachrichtendetail.md) §10.12 als unbeobachtet. Ob
+    `Message.SOSActionID` im Altsystem überhaupt je „der nächste" bedeutet oder immer „der zuletzt
+    angefasste", ist damit ebenfalls offen — es wäre dieselbe Auskunft aus dem Altsystem wie bei
+    Frage 16.
 
 ---
 
@@ -2322,7 +2659,25 @@ Beste von N Läufen nach einem Aufwärmlauf, serverseitig über `SET profiling =
 | M22 | die 95 offenen Aktionen nach Status | 3 | **23.273,4 ms** | `index` `MessageStatusIDX` + `ref` `MessageAction.PRIMARY` — **freigegeben, kein Muster für Code** |
 | M22 | zeitliche Lage der 52 `ERROR_TIMEOUT` | 5 | **2,9 ms** | `ref` `MessageStatusIDX`, `ref = const`, 52 Zeilen |
 
-**Was der Nachtrag an Laufzeiten hinzufügt, bestätigt das Muster ein drittes Mal.** Jede Auswertung
+### Nachtrag vom 10.08.2026
+
+| Messung | Statement | N | Laufzeit | Zugriffspfad |
+|---|---|---|---|---|
+| M29 (0) | beide Ordnungen gegeneinander | 5 | **57,6 ms** | `ref` `MessageStatusIDX` + zwei abgeleitete Tabellen, `eq_ref` `MessageAction.PRIMARY` (`key_len` 148) |
+| M29 (1) | echte Schritte je wartender Nachricht | 5 | **8,6 ms** | `ref` `MessageStatusIDX` (`Using index`) + `ref` `MessageAction.PRIMARY` |
+| M29 (1) | wartende Nachrichten ohne echten Schritt | 5 | **5,5 ms** | wie oben, Unterabfrage `index_subquery` |
+| M29 (2) | **die Hauptfrage** | 5 | **81,7 ms** | `ref` `MessageStatusIDX` + `LATERAL DERIVED` über `MessageAction.PRIMARY` |
+| M29 (3) | Gegenprobe über `SOSAction` | 5 | **33,9 ms** | wie oben, zusätzlich `eq_ref` `SOSAction.PRIMARY` (`key_len` **148**, `Using index`) |
+| M29 (4) | Marke des letzten Schritts | 5 | **87,5 ms** | wie (2), `LIKE '%…%'` über 538 vorgefilterte Zeilen — **kein Muster für Code** |
+
+**Der ganze Nachtrag bleibt unter einer Zehntelsekunde**, obwohl kein Zeitfenster gesetzt ist. Das
+widerspricht dem Muster oben nicht, sondern bestätigt es von der anderen Seite: Die Eingrenzung
+kommt hier nicht aus `MessageLastUpdateIDX`, sondern aus `MessageStatusIDX` — 538 Zeilen statt 3,3
+Millionen. **Teuer ist nicht „ohne Zeitfenster", teuer ist „ohne Index."** Der Unterschied zu den
+beiden freigegebenen Durchläufen aus M22 (2,8 s und 23,3 s) ist genau dieser: Dort steht das
+Auswahlkriterium (`MessageActionEnd IS NULL`) in keinem Index, hier steht es in einem.
+
+**Was der Nachtrag vom 07.08.2026 an Laufzeiten hinzufügt, bestätigt das Muster ein drittes Mal.** Jede Auswertung
 mit Zeitfenster bleibt im Millisekundenbereich für Fenster A und im einstelligen Sekundenbereich für
 Fenster B — der Faktor zwischen den Fenstern liegt durchgängig zwischen 30 und 45 und damit nahe am
 Mengenverhältnis von 34. Die beiden Ausreißer nach oben sind erklärbar und beide gewollt: die
