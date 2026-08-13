@@ -360,3 +360,58 @@ In diesem Netz scheitert der Weg zu `repo.maven.apache.org` über IPv6 (Timeout 
 Lokale Builds brauchen `MAVEN_OPTS="-Djava.net.preferIPv4Stack=true"` (oder ein `.mvn/jvm.config`).
 Die GitHub-CI ist nicht betroffen. Kein Fachthema, aber ohne diesen Hinweis kostet der erste Build
 Zeit.
+
+---
+
+## Erhebung 13.08.2026 (Schritt 7, Teil 2a)
+
+Vollständig in [`messungen-schritt7.md`](messungen-schritt7.md) **M46**. Hier steht nur, was sich
+dadurch an einer bestehenden Annahme ändert — und das ist im Kern **eine**, dafür eine tragende.
+
+### Die Sollänge ist keine Eigenschaft des Typs, sondern des Paares aus Mandant und Typ (M46‑2)
+
+**Die Annahme.** M43 misst die Sollänge **je Typ** und formuliert die Kuratierung durchgängig
+typweise („eine Sollänge je Typ, die die Suche dauerhaft auffüllt", Belegvermerk zu M43). Nichts
+darin ist falsch — die Frage nach dem Mandanten war schlicht **nicht gestellt**.
+
+**Die Messung.** M46‑2 erhebt die dominante Länge je (Mandant, Typ) über den Bestand, für alle 36
+Typen mit führender Null: **45 Paare**. Drei davon widersprechen der Typannahme, und zwar auf drei
+verschiedene Weisen:
+
+| | Typ | Befund | was ein typweiter Schlüssel getan hätte |
+|---|---:|---|---|
+| **die Länge weicht ab** | 2000 | `SUTTONS` Länge **6** (97,33 %), `VOTG` Länge **7** (84,06 %) | eine Sollänge von 6 für `VOTG` gesetzt — falsch |
+| **die Entscheidung weicht ab** | 9014 | Bestand 58,45 %, `WOC` **95,21 %** bei 79,15 % führender Null | den Eintrag verworfen, der für `WOC` der nützlichste ist |
+| **die Grundlage weicht ab** | 2001 | `VOTG` 100 % Dominanz, aber **null** Werte mit führender Null | über die Gesamtdominanz (79,12 %) entschieden und die 8 Zeilen nie gesehen |
+
+**Die Konsequenz.** `overlord_monitor.bam_sollaenge` ist nach `(mandant_id, message_bam_type)`
+geschlüsselt. Das ist der teurere Schnitt und der einzige, der alle drei Fälle trifft.
+
+> **Warum das hier steht und nicht nur in der Feature-Datei.** Es ist **dieselbe Fehlerart wie bei
+> `bam_spalte`** — dort hatte Schritt 4 angenommen, `MessageBAMMandant.MessageBAMTypeSortIndex` wähle
+> die richtigen Spalten, und für sechs von sieben Mandanten stimmte das auch. Zweimal in Folge hat
+> eine kuratierte Eigenschaft, die als typ- oder systemweit gedacht war, **je Mandant** anders
+> ausgesehen. Beide Male ist es aufgefallen, weil jemand nachgemessen hat statt es zu übernehmen.
+
+### Was diese Erhebung **nicht** ändert
+
+- **Keine Zahl aus M32 bis M45 ist angefasst worden.** Die sechs Bestandszeilen aus M43‑1
+  reproduzieren Zeile für Zeile (2001 mit 67,21 %, 9036 mit 98,94 %).
+- **Die Bytegrößen sind zum sechsten Mal byteidentisch** (27.07., 07.08., 10.08., 11.08., 12.08. und
+  13.08.2026). Die Testkopie ist seit dem 07.08.2026 nicht neu befüllt worden.
+- **Regel L5** bleibt unverändert. Die Mindestlänge, die sie fordert, ist weiterhin je Typ zu
+  bemessen (E6, M38) — M46 sagt dazu nichts Neues.
+
+### Neu offen
+
+- **Ob die 95-Prozent-Regel um eine Wirksamkeitsbedingung ergänzt wird.** Zwei der vierzehn
+  kuratierten Paare können nachweislich nichts finden (`IBIS`/1, `SUTTONS`/2000), weil kein Wert
+  **mit** führender Null auf der Sollänge liegt. Die Zeilen stehen mechanisch da; die Ergänzung wäre
+  eine Regeländerung und ist **nicht** getroffen worden.
+- **Ob 9006 eine benannte Ausnahme bekommt.** Die seit Schritt 4 kuratierte Lieferschein-Nr. fällt
+  mit **94,21 %** durch — 0,79 Prozentpunkte unter der Schwelle, und ausgerechnet für sie belegt
+  M43‑4 die Wirkung des Auffüllens an echten Werten.
+- **Eine Sicherungsregel für handkuratierte Daten gab es nicht.** Geprüft über `docs/`, das
+  Wurzelverzeichnis und die Migrationen. Sie ist mit Teil 2a in
+  [`bam-sollaengen.md`](bam-sollaengen.md) §7.2 **angelegt** worden und führt von Anfang an auch
+  `process_catalog` und `partner` — beide existieren noch nicht.

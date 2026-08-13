@@ -211,6 +211,42 @@ Kein Fremdschlüssel über die Schemagrenze: `mandant_id` zeigt fachlich auf
 — beide tragen bewusst **keinen** Fremdschlüssel dorthin. Verschwindet ein BAM-Typ im Altsystem,
 bleibt die Kuratierung bestehen, statt rückwirkend zu verschwinden.
 
+### `V5__bam_sollaenge.sql` (Schritt 7, Teil 2a)
+
+Kuratierte **Sollänge** je Mandant und BAM-Typ: die Länge, auf die die BAM-Suche einen Suchbegriff
+mit führenden Nullen auffüllt. Dazu ein Kennzeichen für **führende Leerzeichen** und der
+Herkunftsnachweis (gemessene Dominanz, Zeilenzahl, Messdatum). Primärschlüssel
+`(mandant_id, message_bam_type)`. Vollständig in [`bam-sollaengen.md`](bam-sollaengen.md).
+
+**Warum es diese Tabelle gibt.** Der Nutzer tippt die Belegnummer vom Beleg ab, führende Nullen
+stehen dort nicht, die exakte Suche findet nichts — und eine leere Trefferliste sieht aus wie „gibt
+es nicht", nicht wie „falsch getippt". M43‑4 misst es: bei **sechs von acht** geprüften Typen findet
+die rohe Fassung **null** Treffer und die aufgefüllte die richtigen.
+
+**Warum der Schlüssel den Mandanten trägt** — und nicht nur den Typ, wie es naheläge. M46‑2 widerlegt
+die Typannahme an drei unabhängigen Stellen: Typ 2000 dominiert bei `SUTTONS` mit Länge 6 und bei
+`VOTG` mit Länge 7; Typ 9014 erreicht über den Bestand nur 58,45 %, bei `WOC` aber **95,21 %**; und
+Typ 2001 hat bei `VOTG` 100 % Dominanz, aber keinen einzigen Wert mit führender Null. Der teurere
+Schnitt ist der einzige, der alle drei richtig trifft.
+
+**Eine eigene Tabelle statt einer Spalte an `bam_spalte`.** Beide sind Kuratierungen zu BAM, und
+beide gehören trotzdem nicht zusammen: `bam_spalte` beantwortet, welche zwei Werte die **Liste**
+zeigt, und ist nach `(mandant_id, position)` geschlüsselt; `bam_sollaenge` beantwortet, worauf die
+**Suche** auffüllt, und ist nach `(mandant_id, message_bam_type)` geschlüsselt. Eine gemeinsame
+Tabelle hätte für jede Frage die Hälfte der Zeilen leer.
+
+Kein Fremdschlüssel über die Schemagrenze, aus demselben Grund wie bei `V4`. Zeichensatz und
+Sortierung stehen explizit.
+
+**Zugriffspfad:** ausschließlich lesend, über den Primärschlüssel oder als Vollabzug (16 Zeilen). Sie
+wird **nie** gegen `GlassfishDB` gejoint — die Suchvarianten entstehen aus ihr **vor** dem Statement,
+nicht darin.
+
+**Gesichert** durch `BamSollaengeDriftDbIT` (`@Tag("db")`): je kuratiertem Eintrag eine eigene
+Abfrage über den Bestand. Die Sammelform über alle Typen kostet 6,8 s und stirbt am
+`max_statement_time=10` des Lese-Pools (§1) — je Paar bleibt sie weit darunter. **Der Test läuft
+nicht in der CI**, dieselbe bewusst akzeptierte Garantiestufe wie beim Statustest.
+
 ---
 
 ## 6. Zeitquellen

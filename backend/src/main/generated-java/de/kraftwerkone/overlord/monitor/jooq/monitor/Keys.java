@@ -7,10 +7,12 @@ package de.kraftwerkone.overlord.monitor.jooq.monitor;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AppUser;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AppUserMandant;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AuditLog;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.BamSollaenge;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.BamSpalte;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.AppUserMandantRecord;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.AppUserRecord;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.AuditLogRecord;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.BamSollaengeRecord;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.BamSpalteRecord;
 
 import org.jooq.ForeignKey;
@@ -36,6 +38,7 @@ public class Keys {
     public static final UniqueKey<AppUserRecord> KEY_APP_USER_UQ_APP_USER_USERNAME = Internal.createUniqueKey(AppUser.APP_USER, DSL.name("KEY_app_user_uq_app_user_username"), new TableField[] { AppUser.APP_USER.USERNAME }, true);
     public static final UniqueKey<AppUserMandantRecord> KEY_APP_USER_MANDANT_PRIMARY = Internal.createUniqueKey(AppUserMandant.APP_USER_MANDANT, DSL.name("KEY_app_user_mandant_PRIMARY"), new TableField[] { AppUserMandant.APP_USER_MANDANT.USER_ID, AppUserMandant.APP_USER_MANDANT.MANDANT_ID }, true);
     public static final UniqueKey<AuditLogRecord> KEY_AUDIT_LOG_PRIMARY = Internal.createUniqueKey(AuditLog.AUDIT_LOG, DSL.name("KEY_audit_log_PRIMARY"), new TableField[] { AuditLog.AUDIT_LOG.ID }, true);
+    public static final UniqueKey<BamSollaengeRecord> KEY_BAM_SOLLAENGE_PRIMARY = Internal.createUniqueKey(BamSollaenge.BAM_SOLLAENGE, DSL.name("KEY_bam_sollaenge_PRIMARY"), new TableField[] { BamSollaenge.BAM_SOLLAENGE.MANDANT_ID, BamSollaenge.BAM_SOLLAENGE.MESSAGE_BAM_TYPE }, true);
     public static final UniqueKey<BamSpalteRecord> KEY_BAM_SPALTE_PRIMARY = Internal.createUniqueKey(BamSpalte.BAM_SPALTE, DSL.name("KEY_bam_spalte_PRIMARY"), new TableField[] { BamSpalte.BAM_SPALTE.MANDANT_ID, BamSpalte.BAM_SPALTE.POSITION }, true);
 
     // -------------------------------------------------------------------------

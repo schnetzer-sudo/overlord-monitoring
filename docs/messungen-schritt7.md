@@ -76,6 +76,30 @@ Bezugsdokumente: [`messungen-schritt4.md`](messungen-schritt4.md) (M0–M13, L1�
 > Ende und dieser Kopf. **Die Anzeige ändert dieser Nachtrag nicht**: Die Beschreibungen bleiben
 > vollständig stehen, und M45 trifft keine Entscheidung darüber.
 
+> ### 📌 Vierter Nachtrag vom 13.08.2026 — M46
+>
+> **M46** (Woher kommt die Sollänge, und gilt sie je Mandant?) ist am **13.08.2026** nachgereicht
+> worden, nach M45 und E7 und in einer eigenen Sitzungsfolge. Sie steht unten zwischen E7 und der
+> Zusammenfassung.
+>
+> **Der Anlass ist Schritt 7, Teil 2a** — die erste Messung dieser Runde, die **gebaut** wird und
+> nicht nur erhebt: Aus ihr entsteht `overlord_monitor.bam_sollaenge` (`V5__bam_sollaenge.sql`).
+> M43 hatte die Sollänge für sechs Typen über den Bestand belegt und dabei gezeigt, dass eine aus
+> einem Monat abgeleitete Kuratierung falsch sein kann (Typ 2001). Zwei Zahlen fehlten trotzdem:
+> die Dominanz über den Bestand für **alle** Typen, und die Antwort darauf, ob die Sollänge je
+> **Mandant** dieselbe ist. Die zweite war ungemessen — und sie fällt anders aus als erwartet.
+>
+> **Diese Messung trifft, anders als die drei Nachträge zuvor, eine Entscheidung** — nämlich welche
+> Zeilen in der Kuratierungstabelle stehen. Sie fällt mechanisch nach der 95-Prozent-Regel aus dem
+> Auftrag; wo die Regel an eine Grenze stößt, steht das als Befund und nicht als Nachbesserung.
+> Was daraus gebaut worden ist, steht in [`bam-sollaengen.md`](bam-sollaengen.md).
+>
+> **Hauptrunde und die drei früheren Nachträge bleiben unverändert.** Keine Zahl aus M32 bis M45,
+> E6 und E7 ist angefasst worden. Fortgeschrieben sind erneut nur die zusammenfassenden Abschnitte
+> am Ende und dieser Kopf. Auch der vierte Nachtrag fand **keinen** Widerspruch: Die Bytegrößen sind
+> zum **sechsten** Mal byteidentisch, und die sechs Bestandszeilen aus M43‑1 reproduzieren Zeile für
+> Zeile.
+
 **Nummerierung ab M32.** Geprüft über `docs\` und die Dateien im Wurzelverzeichnis: **M31** ist die
 höchste projektweit vergebene Nummer (`messungen-schritt6.md`, Block 4); **M32 bis M41** kommen in
 keiner anderen Datei vor. Die Zählung läuft projektweit fort und nicht je Datei. Die ergänzende
@@ -87,6 +111,8 @@ projektweit vergebene Nummer, **E6** unverändert die höchste ergänzende.
 **M45** und **E7** sind am 13.08.2026 nachgetragen; vor der Vergabe über `docs\` und das
 Wurzelverzeichnis geprüft — **M44** war die höchste projektweit vergebene Nummer, **E6** die höchste
 ergänzende.
+**M46** ist am selben Tag nachgetragen; ebenso geprüft — **M45** war zu diesem Zeitpunkt die höchste
+projektweit vergebene Nummer, **E7** die höchste ergänzende.
 
 **Diese Runde baut nichts.** Kein Endpunkt, keine Migration, keine Oberfläche, keine Änderung an
 vorhandenem Code — und **keine Entscheidung**. Die Lesarten standen vor der Erhebung fest; welche
@@ -3115,6 +3141,410 @@ Annahme.
 
 ---
 
+# M46 — Woher kommt die Sollänge, und gilt sie je Mandant?
+
+**Frage.** M43 hat die Sollänge für **sechs** Typen über den Bestand belegt und für alle übrigen nur
+über Fenster B. Genau dort ist der Fehler gemessen worden: Typ 2001 lag über den Monat bei 100 % und
+über den Bestand bei 67,21 %. Eine Kuratierung aus einem Monat gilt anschließend für 22 Monate.
+M46 holt drei Zahlen nach, die die Kuratierung trägt: die Dominanz über den **Bestand** für **jeden**
+Typ, die Frage, ob die Sollänge je **Mandant** dieselbe ist, und den Anteil **führender** Leerzeichen.
+
+> **Das Ergebnis vorweg, in vier Sätzen.** Die Sollänge ist **keine Eigenschaft des Typs** — sie
+> weicht je Mandant ab, und zwar an zwei Stellen unabhängig voneinander: Typ 2000 liegt bei
+> `SUTTONS` auf Länge 6 und bei `VOTG` auf Länge 7, und Typ 9014 erreicht über den Bestand nur
+> 58,45 %, bei `WOC` aber **95,21 %**. Die 95-Prozent-Regel ergibt über den Mandantenschnitt
+> **vierzehn** kuratierte Paare aus **45** gemessenen. **Zwei der vierzehn können nachweislich nicht
+> wirken**, weil bei ihnen kein Wert *mit* führender Null auf der Sollänge vorkommt. Und führende
+> Leerzeichen tragen über den Bestand nur **zwei** Typen: 9018 mit 1,349624 % und 9020 mit einer
+> einzigen Zeile.
+
+## M46‑0 Rahmen
+
+Unverändert aus §0 übernommen, am **13.08.2026** in eigenen Sitzungen erhoben. Jeder Aufruf des
+Clients ist eine neue Sitzung; **`SELECT @@global.read_only` steht deshalb in jedem Skript als erste
+Abfrage** und lieferte jedes Mal **`1`**. `SET max_statement_time = 60` vor dem ersten Statement,
+Laufzeit serverseitig über `SET profiling = 1` / `SHOW PROFILES`, Zugangsdaten ausschließlich aus
+`OVERLORD_DB_*` (Regel G1). Serverzeit zu Beginn `2026-08-13 11:42:46` (`UTC_TIMESTAMP` `09:42:46`).
+
+**Die Testkopie ist unverändert — der sechste Messtag in Folge, byteidentisch:**
+
+| | `DATA_LENGTH` | `INDEX_LENGTH` |
+|---|---:|---:|
+| `Message` | 740.851.712 | 2.157.330.432 |
+| `MessageAction` | 2.226.634.752 | 819.855.360 |
+| `MessageBAM` | 1.826.422.784 | 5.254.217.728 |
+
+### Der Spaltentyp — erhoben, nicht übernommen
+
+Die Migration braucht den Typ des BAM-Typs. Er ist gegen `information_schema` geprüft worden und
+nicht aus `datenmodell.md` abgeschrieben (Regel L8):
+
+| Tabelle | Spalte | `COLUMN_TYPE` | `NULL`? |
+|---|---|---|---|
+| `MessageBAM` | `MessageBAMType` | **`smallint(6)`** | NO |
+| `MessageBAMType` | `MessageBAMType` | **`smallint(6)`** | NO |
+
+### Eine PAD-SPACE-Falle, die M43‑3 noch nicht hatte
+
+M46‑3 fragt nach dem **führenden** Leerzeichen. Die naheliegende Form `LEFT(v, 1) = ' '` ist
+**falsch**, und das ist gemessen und nicht überlegt:
+
+```sql
+SELECT '' = ' ', '' LIKE ' %', ' a' LIKE ' %', LEFT('', 1) = ' ';
+```
+
+| Ausdruck | Ergebnis | Bedeutung |
+|---|---:|---|
+| `'' = ' '` | **1** | PAD SPACE: der Leerstring ist dem Leerzeichen **gleich** |
+| **`LEFT('', 1) = ' '`** | **1** | **Ein leerer Wert zählte als „führendes Leerzeichen"** |
+| `'' LIKE ' %'` | **0** | `LIKE` polstert nicht — dieselbe Regel wie in M43‑3 |
+| `' a' LIKE ' %'` | 1 | und trifft, was es treffen soll |
+
+M46‑3 misst deshalb über `LIKE ' %'`. **Praktisch wäre es hier folgenlos geblieben** — die Erhebung
+zählt zugleich die Leerstrings und findet über alle 55 Typen **null**. Der Beleg steht trotzdem hier:
+Er ist der Grund für die Form, und ohne ihn stünde sie als Geschmacksfrage da.
+
+## M46‑1 Die Dominanz über den **Bestand**, nicht über einen Monat
+
+**Ohne Zeitfenster, und das ist begründungspflichtig (Regel L9).** Dieselbe Begründung wie bei
+M43‑1: Ein Fenster kann die Frage „ist die Länge dieses Typs stabil" grundsätzlich nicht
+beantworten, weil es genau die Zeiträume ausblendet, in denen sie sich geändert haben könnte. M43
+hat das nicht als Risiko, sondern als Messwert gezeigt (Typ 2001).
+
+```sql
+SELECT r.typ, SUM(r.zeilen) AS zeilen,
+       ROUND(100 * SUM(r.zeilen_fn) / SUM(r.zeilen), 2) AS f_null_pz,
+       COUNT(*) AS laengen,
+       MAX(CASE WHEN r.rn = 1 THEN r.laenge END) AS haeufigste,
+       ROUND(100 * MAX(CASE WHEN r.rn = 1 THEN r.zeilen END) / SUM(r.zeilen), 2) AS dominanz_pz
+FROM (SELECT g.*, ROW_NUMBER() OVER (PARTITION BY g.typ ORDER BY g.zeilen DESC, g.laenge) AS rn
+      FROM (SELECT MessageBAMType AS typ, CHAR_LENGTH(MessageBAMValue) AS laenge,
+                   COUNT(*) AS zeilen, SUM(LEFT(MessageBAMValue,1) = '0') AS zeilen_fn
+            FROM MessageBAM GROUP BY 1,2) g) r
+GROUP BY r.typ ORDER BY dominanz_pz DESC, r.typ;
+```
+
+**`EXPLAIN`** — Vollscan über einen deckenden Index, `Using index`. Der Optimierer wählt `PRIMARY`;
+der erzwungene `MessageBAM_BAMValue` ist **4,4 % schneller** und damit im Rauschen. **Regel L15 ist
+damit geprüft und nicht angenommen:** Hier wählt der Optimierer nicht falsch.
+
+| Fassung | key | rows | Extra | Laufzeit |
+|---|---|---:|---|---:|
+| Optimiererwahl | `PRIMARY` | 10.859.666 | `Using index; Using temporary; Using filesort` | 12,238 s |
+| `FORCE INDEX (MessageBAM_BAMValue)` | `MessageBAM_BAMValue` | 10.859.666 | `Using index; Using temporary; Using filesort` | **11,703 s** |
+
+> `rows` steht auf **10.859.666** — der `information_schema`-Schätzung. Gezählt hat die Tabelle
+> **15.406.350** (M33‑0). Dieselbe Warnung wie in M32 und M42‑1: Eine `rows`-Angabe trägt kein
+> Vorzeichen.
+
+Die Grundaggregation liefert **480** Gruppen aus `Typ × führende Null × Länge` über **55** Typen.
+Die Verdichtung entsteht mit `ROW_NUMBER()` und nicht von Hand, wie in M43‑1.
+
+### Ergebnis — alle 55 Typen des Bestands, nach Dominanz sortiert
+
+„Dominanz" ist der Anteil der häufigsten Länge an **allen** Zeilen des Typs, „f. Null" der Anteil
+der Werte mit führender Null. Die Trennlinie bei 95 % steht in der Tabelle.
+
+| Typ | Beschreibung | Zeilen | f. Null | Längen | häufigste | **Dominanz** |
+|---:|---|---:|---:|---:|---:|---:|
+| 1002 | PONumber | 84 | 0 % | 1 | 9 | **100,00 %** |
+| 1003 | TradingPartnerID | 4 | 0 % | 1 | 2 | **100,00 %** |
+| **2002** | InvoiceNumber VTG | 456 | **100 %** | 1 | 10 | **100,00 %** |
+| 2003 | OrderLoadNo | 15 | 0 % | 1 | 10 | **100,00 %** |
+| 2004 | YourReference | 1 | 0 % | 1 | 38 | **100,00 %** |
+| **2005** | CustRef1 | 9 | **100 %** | 1 | 10 | **100,00 %** |
+| 2006 | CustRef2 | 5 | 0 % | 1 | 10 | **100,00 %** |
+| **2007** | LoadNo | 9 | **100 %** | 1 | 10 | **100,00 %** |
+| 2008 | Tanknummer | 108 | 0 % | 1 | 11 | **100,00 %** |
+| 9002 | Lieferplannummer_L_SAP | 793.588 | 0 % | 1 | 10 | **100,00 %** |
+| **9009** | Beleg-Nr. GS_L_SAP | 17.913 | 34,35 % | 1 | 10 | **100,00 %** |
+| 9010 | Materialbeleg (Entnahme)_L_SAP | 26.044 | 0 % | 1 | 10 | **100,00 %** |
+| **9011** | Anlieferungs-Nr. ae_L_SAP | 1.412 | **100 %** | 1 | 10 | **100,00 %** |
+| **9012** | Charge_L_SAP | 17.934 | **100 %** | 1 | 10 | **100,00 %** |
+| **9013** | Nr. TSL_L_SAP | 6.148 | 9,48 % | 1 | 10 | **100,00 %** |
+| **9024** | Rechnungsnummer_K_SAP | 25.359 | **100 %** | 1 | 10 | **100,00 %** |
+| 9039 | Daten-Sender-Nummer_L_SAP | 33.347 | 0 % | 3 | 6 | 99,98 % |
+| 9034 | Bestellnummer_L_SAP | 135.074 | 0 % | 12 | 10 | 99,80 % |
+| 2 | Lieferscheinnummer | 62.079 | 0 % | 4 | 7 | 99,40 % |
+| **9021** | Transportnummer_K_SAP | 55.250 | 94,67 % | 2 | 10 | 99,24 % |
+| **9036** | Lagerort Kunde_L_SAP | 22.847 | 98,94 % | 2 | 4 | 99,23 % |
+| **1** | Auftragsnummer | 178.773 | 0,00 % *(1 Zeile)* | 17 | 7 | 99,03 % |
+| 3 | Rechnungsnummer | 2.268.697 | 0 % | 2 | 8 | 97,96 % |
+| 1001 | PartNumber | 82 | 0 % | 2 | 8 | 97,56 % |
+| **9000** | Abladestelle_L_SAP | 151.063 | 32,05 % | 5 | 3 | 96,68 % |
+| **2000** | OrderNumber | 12.434 | 1,41 % | 8 | 6 | 96,25 % |
+| 9027 | Bestellnummer_FORS | 215.117 | 0 % | 2 | 9 | 95,53 % |
+| | | | | | | *— Schwelle 95 % —* |
+| 9028 | Material-Nr. beim Kunden_FORS | 215.116 | 0,21 % | 5 | 13 | 94,52 % |
+| 9029 | Material-Nr. beim Lieferanten_FORS | 215.116 | 0,21 % | 5 | 13 | 94,52 % |
+| 9004 | Unsere Material-Nr._L_SAP | 1.081.129 | 5,71 % | 9 | 8 | 94,29 % |
+| **9006** | Lieferschein-Nr._L_SAP *(kuratiert)* | 155.809 | 32,99 % | 2 | 8 | **94,21 %** |
+| 9008 | Beleg-Nr. TSL_L_SAP | 6.164 | 0 % | 2 | 10 | 90,48 % |
+| 9007 | Transport-Nummer_L_SAP | 40.603 | 48,43 % | 13 | 8 | 83,52 % |
+| 9020 | Lieferschein, Entnahme, PUS_K_SAP | 998.686 | 18,10 % | 15 | 8 | 82,31 % |
+| 9005 | Werk_L_SAP | 162.893 | 0,06 % | 4 | 4 | 82,12 % |
+| 9032 | Sendercode_K_SAP | 157.848 | 1,75 % | 11 | 10 | 81,14 % |
+| 9023 | Übertragungsnummer Gutschrift_K_SAP | 127.959 | 0,81 % | 9 | 6 | 79,95 % |
+| **2001** | VendorReference | 11.191 | **67,21 %** | 3 | 14 | **79,12 %** |
+| 9033 | Empfaengercode_K_SAP | 157.848 | 3,38 % | 14 | 25 | 79,03 % |
+| **9001** | Abrufnummer_L_SAP *(kuratiert)* | 465.143 | 0 % | 4 | 3 | 72,06 % |
+| 1004 | ShippingAdress | 6 | 0 % | 2 | 6 | 66,67 % |
+| 0 | Bestellnummer | 167.463 | 1,40 % | 16 | 10 | 66,59 % |
+| 9037 | Packmittelnummer Kunde_L_SAP | 41.562 | 6,75 % | 22 | 8 | 64,96 % |
+| 9015 | Kundenwerk_K_SAP | 435.690 | 25,34 % | 10 | 3 | 58,51 % |
+| 9014 | Lieferantennummer beim Kunden_K_SAP | 432.227 | 8,37 % | 9 | 8 | **58,45 %** |
+| 9030 | Sender_Ident_FORS | 147 | 0 % | 2 | 8 | 55,78 % |
+| 9031 | Empf_Ident_FORS | 147 | 0 % | 2 | 12 | 55,78 % |
+| 9025 | Abladestelle_FORS | 295 | 50,51 % | 2 | 3 | 50,51 % |
+| 9019 | Bestellnummer vom Kunden_K_SAP | 1.852.237 | 1,35 % | 17 | 9 | 49,87 % |
+| 9022 | Gutschriftsanzeigen-Nummer_K_SAP | 135.240 | 0,54 % | 6 | 10 | 43,67 % |
+| 9018 | Kundenmaterialnummer_K_SAP | 2.311.236 | 1,71 % | 20 | 13 | 43,61 % |
+| 9017 | (JIT-) Abrufnummer_K_SAP | 666.806 | 28,09 % | 17 | 3 | 42,15 % |
+| 9016 | Abladestelle_K_SAP | 412.886 | 2,61 % | 12 | 2 | 27,29 % |
+| 9038 | Packmittelnummer Lieferant_L_SAP | 59.802 | 22,55 % | 21 | 8 | 24,07 % |
+| 9003 | Material-Nr. beim Lieferanten_L_SAP | 1.071.249 | 3,89 % | 35 | 9 | 17,95 % |
+
+**Der Bestand kennt 55 Typen, Fenster B kannte 46** (M38). Neu sind 1001 bis 1004 und 2003 bis 2008
+— durchweg kleine Typen, die im Monat nicht vorkamen. **Die Kontrolle gegen M43 ist bestanden:** Die
+sechs dort über den Bestand gemessenen Typen reproduzieren Zeile für Zeile, 2001 mit **67,21 %** und
+9036 mit **98,94 %** führender Null.
+
+### Warum die Entscheidung an der Dominanz über **alle** Werte hängt
+
+Der Auftrag verlangt die Erhebung „getrennt nach Werten mit und ohne führende Null" und entscheidet
+über „eine dominante Länge ≥ 95 %". Beides ist erhoben; die **Entscheidung** fällt an der Dominanz
+über alle Werte des Paares, und das ist eine Festlegung, die hier offen steht:
+
+- Die Anwendung füllt eine **Eingabe** auf die Sollänge auf und weiß dabei nicht, ob der gesuchte
+  Wert im Bestand mit oder ohne Null steht. Maßgeblich ist deshalb, ob die Sollänge für den **ganzen
+  Typ** gilt.
+- Die Trennung nach Schreibweise steht in der Tabelle unten und in M46‑1c; wer die Regel anders
+  schneiden will, findet dort die Zahlen dafür.
+- **Die drei Lesarten fallen auseinander**, und zwar nicht selten: 9020 hat über alle Werte 82,31 %,
+  in der Gruppe **ohne** Null aber 98,78 %; 9015 hat 58,51 % gegen 97,56 % in der Gruppe **mit**
+  Null. Eine Kuratierung nach der Gruppendominanz ergäbe andere Einträge. Das ist keine
+  Feinheit — es ist der Unterschied zwischen 14 und deutlich mehr Zeilen.
+
+### Ergebnis — dieselbe Erhebung, getrennt nach Schreibweise (Auszug)
+
+Vollständig für alle 55 Typen erhoben; abgedruckt sind die Typen, an denen die Entscheidung hängt.
+
+| Typ | **ohne** führende Null | | | **mit** führender Null | | |
+|---:|---:|---:|---|---:|---:|---|
+| | Zeilen | Längen | häufigste | Zeilen | Längen | häufigste |
+| 1 | 178.772 | 17 | 7 (99,03 %) | **1** | 1 | **8 (100 %)** |
+| 2000 | 12.259 | 7 | 6 (97,63 %) | 175 | 3 | **12 (78,86 %)** |
+| 2001 | 3.670 | 3 | 10 (63,46 %) | 7.521 | 1 | 14 (100 %) |
+| 2002 | — | — | — | 456 | 1 | 10 (100 %) |
+| 9000 | 102.641 | 4 | 3 (95,17 %) | 48.422 | 2 | 3 (99,87 %) |
+| 9006 | 104.401 | 2 | 8 (96,16 %) | 51.408 | 2 | 8 (90,23 %) |
+| 9014 | 396.068 | 9 | 8 (63,71 %) | 36.159 | 5 | 10 (58,82 %) |
+| 9015 | 325.287 | 8 | 3 (45,26 %) | 110.403 | 8 | **3 (97,56 %)** |
+| 9020 | 817.934 | 14 | **8 (98,78 %)** | 180.752 | 6 | 10 (92,13 %) |
+| 9021 | 2.943 | 2 | 10 (85,73 %) | 52.307 | 1 | 10 (100 %) |
+| 9036 | 243 | 2 | 3 (72,84 %) | 22.604 | 1 | 4 (100 %) |
+
+## M46‑1c Kommt bei der Sollänge überhaupt ein Wert **mit** führender Null vor?
+
+**Diese Frage stellt der Auftrag nicht, und sie entscheidet trotzdem, ob ein Eintrag wirken kann.**
+Die Sollänge ist die Länge, auf die aufgefüllt wird. Liegt im Bestand kein Wert **mit** führender
+Null auf dieser Länge, findet die aufgefüllte Fassung nichts — der Eintrag kostet dann eine
+Suchvariante ohne Gegenwert.
+
+Typgebunden über `MessageBAM_BAMValue` als `range`, **0,177 s**:
+
+```sql
+SELECT MessageBAMType AS typ, CHAR_LENGTH(MessageBAMValue) AS laenge, COUNT(*) AS zeilen
+FROM MessageBAM
+WHERE MessageBAMType IN (…die Kandidaten…) AND MessageBAMValue LIKE '0%'
+GROUP BY 1, 2 ORDER BY 1, 3 DESC, 2;
+```
+
+| Typ | Sollänge | Längen **mit** führender Null (Zeilen) | trifft die Sollänge |
+|---:|---:|---|---|
+| **1** | 7 | 8 (1) | **nein** |
+| **2000** | 6 | 12 (138), 8 (30), 10 (7) | **nein** |
+| 2002 | 10 | 10 (456) | ja |
+| 2005 | 10 | 10 (9) | ja |
+| 2007 | 10 | 10 (9) | ja |
+| 9000 | 3 | 3 (48.360), 1 (62) | ja |
+| 9009 | 10 | 10 (6.153) | ja |
+| 9011 | 10 | 10 (1.412) | ja |
+| 9012 | 10 | 10 (17.934) | ja |
+| 9013 | 10 | 10 (583) | ja |
+| 9021 | 10 | 10 (52.307) | ja |
+| 9024 | 10 | 10 (25.359) | ja |
+| 9036 | 4 | 4 (22.604) | ja |
+
+**Bei Typ 1 und Typ 2000 zeigt die Sollänge ins Leere.** Typ 1 trägt im ganzen Bestand **eine
+einzige** Zeile mit führender Null, und die ist acht statt sieben Zeichen lang. Bei 2000 liegen die
+175 Zeilen mit Null auf den Längen 12, 8 und 10 — die dominante Länge 6 ist nicht darunter.
+
+## M46‑2 Ist die Sollänge je Mandant dieselbe?
+
+**Die Frage, um die es geht.** Es liegt nahe, die Sollänge als Eigenschaft des Typs zu behandeln;
+dieselbe Annahme ist in diesem Projekt schon einmal für eine kuratierte Eigenschaft getroffen und
+später korrigiert worden.
+
+Fensterlos, aus demselben Grund wie M46‑1. Einstieg über `MessageBAM_BAMValue` als `range`, dann die
+Kette über `eq_ref` hinauf:
+
+| id | table | type | key | rows | Extra |
+|---|---|---|---|---:|---|
+| 1 | `b` | `range` | `MessageBAM_BAMValue` | 1.036.196 | `Using where; Using index; Using temporary; Using filesort` |
+| 1 | `m` | `eq_ref` | `PRIMARY` | 1 | `Using where` |
+| 1 | `p` | `eq_ref` | `PRIMARY` | 1 | `Using where` |
+| 1 | `pm` | `ref` | `PRIMARY` | 1 | `Using index` |
+
+**Erhoben für alle 36 Typen, die im Bestand überhaupt einen Wert mit führender Null tragen** — rund
+11,4 Millionen Zeilen, **in fünf Stapeln**, weil ein Lauf über alle 36 die 60-Sekunden-Grenze reißt.
+Das Ergebnis sind **45 Paare** aus Mandant und Typ. **Regel L7 ist damit übererfüllt:** Die Erhebung
+umfasst jeden Mandanten, der einen solchen Typ trägt, `WOC` mit 2.067 Zeilen eingeschlossen.
+
+### Ergebnis — die Paare, an denen die Antwort hängt
+
+| Typ | Mandant | Zeilen | Längen | häufigste | Dominanz | f. Null |
+|---:|---|---:|---:|---:|---:|---:|
+| **2000** | **`SUTTONS`** | 12.296 | 8 | **6** | **97,33 %** | 1,24 % |
+| **2000** | **`VOTG`** | 138 | 2 | **7** | 84,06 % | 15,94 % |
+| 1 | `IBIS` | 155.875 | 17 | 7 | 99,00 % | 0,00 % |
+| 1 | `IBISGUS` | 22.898 | 4 | 7 | 99,20 % | 0,00 % |
+| 2001 | `SUTTONS` | 11.183 | 2 | 14 | 79,17 % | 67,25 % |
+| 2001 | `VOTG` | 8 | 1 | 7 | 100,00 % | **0 %** |
+| **9014** | **`NEXANS`** | 430.160 | 9 | 8 | 58,73 % | 8,03 % |
+| **9014** | **`WOC`** | 2.067 | 2 | **6** | **95,21 %** | 79,15 % |
+| 0 | `IBIS` | 137.898 | 16 | 10 | 66,58 % | 1,44 % |
+| 0 | `IBISGUS` | 29.565 | 6 | 10 | 66,63 % | 1,23 % |
+
+Die übrigen 35 Paare gehören zu Typen, die nur **ein** Mandant trägt; dort ist die Zahl je Mandant
+identisch mit der über den Bestand und steht in M46‑1.
+
+**Die Antwort ist: nein — und sie hängt nicht an einem einzelnen Ausreißer.**
+
+- **Typ 2000 weicht in der Länge ab.** `SUTTONS` dominiert mit Länge **6** bei 97,33 %, `VOTG` mit
+  Länge **7** bei 84,06 %. Eine typweite Sollänge von 6 wäre für `VOTG` schlicht falsch.
+- **Typ 9014 weicht in der Entscheidung ab.** Über den Bestand kommt er auf 58,45 % und fiele durch.
+  Bei `WOC` erreicht er **95,21 %** und trägt dort auf **79,15 %** der Zeilen eine führende Null.
+  Ein typweiter Schnitt hätte den Eintrag verworfen, der für diesen Mandanten der nützlichste ist.
+- **Typ 2001 zeigt es von der anderen Seite.** Bei `VOTG` hat er 100 % Dominanz — und **null** Werte
+  mit führender Null. Der Mandantenschnitt schließt ihn dort aus, ein typweiter hätte über die
+  Gesamtdominanz von 79,12 % entschieden und die 8 Zeilen nie gesehen.
+
+**Damit ist die Kuratierung nach `(mandant_id, bam_typ)` zu schlüsseln.** Das ist der teurere Schnitt
+— und der einzige, der die drei Fälle richtig trifft.
+
+### M46‑2c Wirksamkeit je Paar
+
+Dieselbe Frage wie M46‑1c, aber je Mandant (**3,033 s**). Für `WOC`/9014 liegen alle 1.636 Zeilen mit
+führender Null auf Länge **6** — die Sollänge trifft. Für `IBIS`/1 und `SUTTONS`/2000 bleibt es beim
+Befund aus M46‑1c: Die Sollänge trifft **keinen** Wert mit führender Null. `IBISGUS`/1 trägt gar
+keinen und ist damit kein Kandidat.
+
+## M46‑3 Führende Leerzeichen, getrennt von folgenden
+
+M43‑3 hat für Fenster B belegt, dass die 25,88 % Randleerzeichen bei 9018 zu 24,83 Prozentpunkten
+**folgende** sind — unter PAD SPACE beim `=`-Vergleich folgenlos — und zu 1,05 Prozentpunkten
+**führende**. M46‑3 holt die führenden über den **Bestand** und für **alle** Typen nach.
+
+**Die erste Fassung hat die 60-Sekunden-Grenze gerissen** und ist serverseitig abgebrochen worden
+(`ERROR 1969: Query execution was interrupted`). Sie trug einen `LEFT JOIN` auf `MessageBAMType`,
+gruppierte über die Beschreibung und rechnete zusätzlich `TRIM(TRAILING …)` je Zeile. Die schlanke
+Fassung ohne Join und ohne `TRIM` kostet **9,558 s**:
+
+```sql
+SELECT MessageBAMType AS typ, COUNT(*) AS zeilen,
+       SUM(MessageBAMValue LIKE ' %') AS fuehrend,
+       SUM(CHAR_LENGTH(MessageBAMValue) = 0) AS leerstring
+FROM MessageBAM GROUP BY 1 HAVING fuehrend > 0 OR leerstring > 0;
+```
+
+### Ergebnis — über den Bestand tragen **zwei** Typen ein führendes Leerzeichen
+
+| Typ | Beschreibung | Zeilen | **führend** | Anteil | Leerstrings |
+|---:|---|---:|---:|---:|---:|
+| **9018** | Kundenmaterialnummer_K_SAP | 2.311.236 | **31.193** | **1,349624 %** | 0 |
+| **9020** | Lieferschein, Entnahme, PUS_K_SAP | 998.686 | **1** | 0,000100 % | 0 |
+
+Über alle 55 Typen: **kein einziger Leerstring**. Beide Typen gehören ausschließlich `NEXANS` — ihre
+Zeilenzahl je Mandant aus M46‑2 ist identisch mit der über den Bestand, also kann keine der Zeilen
+einem anderen Mandanten gehören.
+
+**Der Bestand liegt über dem Monat, und das ist kein Widerspruch zu M43‑3.** Dort sind es **1,05 %**
+über Fenster B, hier **1,349624 %** über den Bestand — dieselbe Größenordnung, andere Grundmenge.
+Bemerkenswerter ist, was **verschwindet**: 9032 und 9033 tragen über Fenster B je 2,15 %
+Randleerzeichen, davon nach M43‑3 **0,00 % führende**. Über den Bestand bestätigt sich das —
+sie stehen nicht in dieser Tabelle. Die 2,15 % sind vollständig folgende und damit unter PAD SPACE
+beim `=`-Vergleich unsichtbar.
+
+> **Die Anteile sind zweimal gemessen worden, und die erste Zahl war falsch.** Die naheliegende Form
+> `ROUND(100 * AVG(v LIKE ' %'), 4)` liefert für 9018 **1,3500 %** und für 9020 **0,0000 %**. Ursache
+> ist `@@div_precision_increment = 4`: `AVG` über einen Wahrheitswert rechnet dezimal und wird auf
+> vier Nachkommastellen gekürzt, **bevor** mit 100 multipliziert wird. Der Beleg steht daneben —
+> `AVG(x)` liefert `0.3333`, wo `100.0 * SUM(x) / COUNT(*)` auf `33,333333` kommt. Gemessen und
+> abgedruckt sind die Zahlen aus der Summenform: **1,349624 %** und **0,000100 %**. Die *Zählwerte*
+> waren in beiden Fassungen dieselben und richtig. **Für M46‑1 und M46‑2 ist die Falle folgenlos**,
+> weil dort durchgängig `100 * SUM(…) / SUM(…)` steht und keine der Spalten über `AVG` entsteht.
+
+## Was daraus folgt
+
+Die Zeilen dieser Tabelle standen — bis auf die Spalte „trifft zu" — **vor** der Erhebung fest; sie
+sind aus dem Auftrag zu Schritt 7, Teil 2a übernommen.
+
+| Befund (vor der Messung formuliert) | trifft zu | Konsequenz |
+|---|---|---|
+| Ein Typ hat über den Bestand eine dominante Länge ≥ **95 %** → er bekommt eine Sollänge | **ja, bei 13 von 36 Typen mit führender Null** | Über den Mandantenschnitt sind es **14 Paare**. Die Schwelle wirkt wie beabsichtigt: 2001 fällt mit 79,12 % durch, und die Zahl aus dem 2001-Fall (67,21 % führende Null) liegt noch tiefer |
+| Ein Typ liegt darunter → **keine Sollänge** | **ja, bei 23 von 36** | Für sie wird nicht aufgefüllt. Der Auftrag nennt das keinen Mangel — und die Messung stützt das nur zum Teil, siehe den Absatz zu 9006 unten |
+| Die dominante Länge ist je Mandant **gleich** → Schlüssel `bam_typ` | **nein** | — |
+| Sie **unterscheidet sich** je Mandant → Schlüssel `(mandant_id, bam_typ)` | **ja, an drei unabhängigen Stellen** | 2000 (Länge 6 gegen 7), 9014 (58,45 % gegen 95,21 %), 2001 (`VOTG` ohne eine einzige führende Null). **Der teurere Schnitt ist der richtige** |
+| Führende Leerzeichen treten bei **mehreren** Typen auf → auch sie gehören kuratiert | **ja, bei zweien — und der zweite ist eine einzige Zeile** | 9018 mit 31.193 von 2.311.236, 9020 mit **1** von 998.686. Die Kuratierung führt beide; dass der zweite praktisch nie wirkt, steht daneben |
+
+**Wo die vorformulierte Zeile nicht passt — die Regel kennt die Wirksamkeit nicht.** Sie fragt nach
+der Längendominanz und trifft damit zwei Paare, bei denen kein Wert **mit** führender Null auf der
+Sollänge liegt: `IBIS`/1 (eine Zeile, Länge 8 statt 7) und `SUTTONS`/2000 (175 Zeilen auf den Längen
+12, 8 und 10 statt 6). Beide Einträge sind mechanisch angelegt worden, weil die Befüllung mechanisch
+ist; **ob die Regel um die Bedingung „bei der Sollänge kommt eine führende Null vor" ergänzt wird,
+ist eine Entscheidung und wird hier nicht getroffen.**
+
+**Und ein zweiter Befund ohne vorformulierte Zeile: die Regel schließt ausgerechnet 9006 aus.** Die
+kuratierte Lieferschein-Nr. liegt über den Bestand bei **94,21 %** — 0,79 Prozentpunkte unter der
+Schwelle. Ausgerechnet für sie hat M43‑4 gezeigt, dass das Auffüllen trägt: roh 1.642 Treffer,
+aufgefüllt **4**. Und ausgerechnet sie trägt auf 32,99 % ihrer Werte eine führende Null. **Das ist
+der teuerste Einzelfall dieser Regel**, und er ist keine Panne, sondern ihr Preis: Eine Schwelle,
+die 2001 fängt, fängt auch 9006. Wer sie auf 94 % senkte, nähme 9028, 9029 und 9004 mit — und die
+tragen 0,21 %, 0,21 % und 5,71 % führende Nullen.
+
+**Ein dritter: der Bestand kennt neun Typen mehr als Fenster B**, und alle neun sind winzig (1 bis
+108 Zeilen). Drei davon — 2005, 2007 und 2002 — tragen auf **100 %** ihrer Werte eine führende Null
+und bekommen eine Sollänge. Eine Kuratierung aus Fenster B hätte sie nicht gekannt.
+
+### Belegvermerk (Regel L10)
+
+> *Gemessen:* Die Längenverteilung je Typ über den **gesamten Bestand** (n = 15.406.350 Zeilen,
+> 55 Typen, 480 Gruppen) und je **(Mandant, Typ)** für die 36 Typen mit führender Null (n ≈ 11,4
+> Mio. Zeilen, 45 Paare). Der Anteil führender Leerzeichen über den Bestand für alle 55 Typen.
+> Die Wirksamkeitsprüfung M46‑1c/2c steht auf den 211.062 Zeilen mit führender Null der
+> Kandidatentypen.
+>
+> *Behauptet wird:* dass daraus eine **Kuratierungsregel für die Zukunft** wird — eine Sollänge je
+> Mandant und Typ, die die Suche dauerhaft auffüllt.
+>
+> **Die Lücke, und sie ist dieselbe wie bei M43 — nur größer geworden.** Ein Typ kann seine Gestalt
+> ändern, ohne dass es jemand merkt, und die Suche findet dann still weniger. M43 konnte das für 40
+> Typen nicht sagen; M46 hat den Bestand nun für **alle** erhoben und die Lücke damit von „welche
+> Typen" auf „welcher Zeitpunkt" verschoben: **Gemessen ist der Stand der Testkopie vom 08.07.2026.
+> Ob eine Sollänge morgen noch gilt, sagt diese Runde nicht** — sie sagt nur, dass es an einem Typ
+> (2001) und an einem Mandantenpaar (2000) schon einmal auseinandergelaufen ist. Genau dagegen ist
+> `BamSollaengeDriftDbIT` gebaut, und dessen Garantiestufe ist ausdrücklich begrenzt: Er läuft nicht
+> in der CI. **Nicht gemessen ist außerdem, ob die Produktion dieselbe Verteilung trägt** — es
+> besteht kein Zugang zu ihr, dieselbe benannte Lücke wie im Belegvermerk zu M44.
+>
+> **Und eine zweite Lücke, die diese Runde neu aufmacht:** Die Entscheidung fällt an der Dominanz
+> über **alle** Werte eines Paares. Ob das die richtige der drei möglichen Lesarten ist, ist eine
+> Festlegung und **keine Messung** — die Zahlen für die beiden anderen stehen daneben, und sie
+> ergäben eine andere Kuratierung.
+
+---
+
 # Zusammenfassung: Frage → Antwort
 
 | Frage | Antwort |
@@ -3167,6 +3597,13 @@ Annahme.
 | Träfen zwei gleich beschriftete Gruppen je zusammen? | **Ja.** 9000 und 9016 stehen über Fenster B auf **3.405 Nachrichten gemeinsam** — 11,3 % aller Nachrichten mit `Abladestelle` (M45) |
 | Meint die Endung das System und nicht das Feld? | **Als Vermutung ja** — **jede** der drei Kollisionen paart *verschiedene* Endungen, keine dieselbe. Bestätigen kann das nur das Altsystem (M45) |
 | Tragen BAM-Werte ein Leerzeichen **innen**? | **Ja, bei 2,97 %** — 27.792 von 936.529 über Fenster B, verteilt auf 16 Typen. Angeführt von 9016, 9003 und **9018**, dem tragenden Typ von `NEXANS` (E7) |
+| Wie viele Typen kennt der **Bestand**? | **55**, nicht die 46 aus Fenster B. Die neun zusätzlichen sind winzig (1 bis 108 Zeilen) — drei davon tragen auf 100 % führende Nullen (M46‑1) |
+| Wie viele Typen tragen über den Bestand eine dominante Länge ≥ 95 %? | **27 von 55.** Davon tragen **13** überhaupt Werte mit führender Null und sind damit Kandidaten (M46‑1) |
+| **Ist die Sollänge je Mandant dieselbe?** | **Nein — an drei unabhängigen Stellen.** 2000 (`SUTTONS` Länge 6, `VOTG` Länge 7), 9014 (Bestand 58,45 %, `WOC` **95,21 %**), 2001 (`VOTG` ohne eine einzige führende Null). Der Schlüssel ist `(mandant_id, bam_typ)` (M46‑2) |
+| Wie viele Paare werden kuratiert? | **14 von 45** gemessenen — plus zwei Zeilen für das führende Leerzeichen (M46‑2) |
+| Wirken alle vierzehn? | **Zwölf.** Bei `IBIS`/1 und `SUTTONS`/2000 liegt kein Wert **mit** führender Null auf der Sollänge (M46‑1c, M46‑2c) |
+| Trifft die Regel die kuratierte Lieferschein-Nr. 9006? | **Nein — 94,21 %**, 0,79 Prozentpunkte unter der Schwelle. Ausgerechnet den Typ, für den M43‑4 die Wirkung belegt hat (M46‑1) |
+| Wie viele Typen tragen ein **führendes** Leerzeichen über den Bestand? | **Zwei.** 9018 mit 31.193 von 2.311.236 (**1,349624 %**), 9020 mit **einer** Zeile. Leerstrings gibt es **keine** (M46‑3) |
 
 ---
 
@@ -3300,6 +3737,34 @@ Ergebnis** abgebrochen wurde.
 | **E7 Werte mit innerem Leerzeichen je Typ** | **B** | **2.692,4 ms** | einmalig |
 | E7 Nenner (BAM-Zeilen im Fenster) | B | 2.288,6 ms | einmalig |
 
+### Vierter Nachtrag vom 13.08.2026 — M46
+
+| Messung | Fenster | Laufzeit | Wiederholungen |
+|---|---|---:|---|
+| M46‑0 Rahmen, Spaltentyp, PAD-SPACE-Beleg | — | < 3 ms | einmalig |
+| **M46‑1 Grundaggregation, Optimiererwahl (`PRIMARY`)** | **ohne** | **12,238 s** | beste von 2 nach Aufwärmlauf |
+| **M46‑1 dieselbe mit `FORCE INDEX (MessageBAM_BAMValue)`** | **ohne** | **11,703 s** | einmalig (Regel L15) |
+| **M46‑1 Verdichtung je Typ und Schreibweise** | **ohne** | **12,369 s** | beste von 3 |
+| **M46‑1 Verdichtung je Typ (Entscheidungsgrundlage)** | **ohne** | **11,878 s** | beste von 3 |
+| M46‑1c Längen mit führender Null, typgebunden | ohne | **0,177 s** | beste von 2 |
+| M46‑2 Sondierung, 13 Typen | ohne | 6,951 s | Aufwärmlauf |
+| **M46‑2 je (Mandant, Typ), 13 Typen** | **ohne** | **6,663 s** | beste von 5 |
+| **M46‑2 vollständig, Stapel 1 (9018)** | **ohne** | **34,855 s** | einmalig |
+| **M46‑2 vollständig, Stapel 2 (9019, 9020)** | **ohne** | **43,647 s** | einmalig |
+| **M46‑2 vollständig, Stapel 3 (9003, 9004)** | **ohne** | **41,908 s** | einmalig |
+| **M46‑2 vollständig, Stapel 4 (9014–9017)** | **ohne** | **28,334 s** | einmalig |
+| **M46‑2 vollständig, Stapel 5 (27 Typen)** | **ohne** | **42,891 s** | einmalig |
+| M46‑2c Wirksamkeit je Paar | ohne | 3,033 s | einmalig |
+| **M46‑3 erste Fassung (Join + `TRIM`)** | **ohne** | **abgebrochen bei 60 s** ⚠️ | — |
+| **M46‑3 schlanke Fassung** | **ohne** | **9,558 s** | beste von 3 |
+| M46‑3 Anteile in Summenform | ohne | 8,541 s | einmalig |
+
+**Zwei Abweichungen vom Rahmen, beide ausgewiesen.** Die fünf Stapel von M46‑2 sind **einmalig**
+gelaufen statt „beste von drei": Sie liegen zwischen 28,3 s und 43,6 s, drei Läufe je Stapel hätten
+die Erhebung auf rund zehn Minuten gedehnt, und die Frage ist eine nach Verteilungen und nicht nach
+Laufzeiten. Die Zerlegung in Stapel selbst ist die zweite: Ein Lauf über alle 36 Typen (rund
+11,4 Mio. Zeilen) reißt die 60-Sekunden-Grenze rechnerisch, und die Grenze wird **nicht** ausgesetzt.
+
 **Der dritte Nachtrag ist der billigste der drei.** Sein teuerstes Statement kostet **4,650 s** und
 bleibt damit bei 7,8 % der 60-Sekunden-Grenze; die Stammdatenabfragen, aus denen der Hauptbefund
 stammt, liegen sämtlich unter 3 ms. Kein Statement ist abgebrochen worden, und keines lief ohne
@@ -3309,11 +3774,12 @@ Zeitfenster über eine große Tabelle — Regel L9 ist hier gar nicht berührt.
 kostet ohne Zeitfenster 10,6 s und ist der einzige gemessene Fall, der die Zeitgrenze des Lese-Pools
 reißt. Mit dem Standard-Zeitfenster von 24 Stunden kostet er 90,5 ms.
 
-## Die vier Abweichungen vom Rahmen
+## Die fünf Abweichungen vom Rahmen
 
 Sie stehen hier zusammen, damit sie nicht in den Tabellen untergehen. **Die vierte unterscheidet
 sich von den ersten dreien grundsätzlich: Sie war vorher entschieden und begründet, die anderen sind
-passiert.**
+passiert.** Die fünfte ist wieder eine, die passiert ist — und die einzige, bei der die Grenze
+tatsächlich **gegriffen** hat.
 
 | | Statement | was passiert ist |
 |---|---|---|
@@ -3321,6 +3787,7 @@ passiert.**
 | 2 | M33‑2 je Typ, mit Join | **198,596 s** — Grenze um Faktor 3,3 gerissen, Kaltlauf, nicht abgebrochen |
 | 3 | Auswahl der Prüfwerte, erste Fassung | **679 s ohne Ergebnis**, client-seitig abgebrochen, serverseitig mit `KILL QUERY` beendet |
 | **4** | **M44‑2 `COUNT(*)` über `MessageProperty`** | **199,380 s** — die 60-Sekunden-Grenze war für dieses eine Statement **vorab ausgesetzt** und durch `SET max_statement_time = 900` ersetzt. Kein Abbruch: 22,2 % der gesetzten Grenze |
+| **5** | **M46‑3, erste Fassung** | **serverseitig abgebrochen bei 60 s** (`ERROR 1969`). Die Grenze war gesetzt und hat gegriffen — kein Blockieren, kein `KILL QUERY`. Die schlanke Fassung ohne `LEFT JOIN` und ohne `TRIM` kostet **9,558 s**, also 15,9 % der Grenze |
 
 Fall 1 und 2 sind vor der Einführung von `SET max_statement_time = 60` gelaufen; der Client blockiert
 bis zum Ergebnis, ein Abbruch „bei 60 Sekunden" war deshalb nicht möglich. Ab Fall 3 lief jede
@@ -3328,6 +3795,13 @@ Sitzung mit der serverseitigen Grenze, und danach ist kein Statement mehr über 
 Kaltläufe sind warm um den Faktor 6,0 beziehungsweise 11,3 billiger** (10,421 s und 17,631 s, je
 beste von drei) — das ist der eigentliche Befund und der Grund, die Zahlen nicht einfach zu
 verwerfen.
+
+**Fall 5 ist der erste, bei dem der Schutz getan hat, wofür er da ist.** Er steht hier nicht als
+Malheur, sondern weil er den Unterschied zu Fall 1 und 2 zeigt: Dort lief der Client ins Offene, hier
+kam nach 60 Sekunden ein Fehler und die Sitzung war frei. Der Auslöser war zudem kein teurer
+Zugriffspfad, sondern drei Kleinigkeiten in einem Statement — ein `LEFT JOIN` auf 62 Stammdatenzeilen,
+eine Gruppierung über deren Beschreibung und ein `TRIM` je Zeile. **Dieselbe Frage ohne sie kostet
+ein Sechstel.**
 
 **Fall 4 ist keine Panne, sondern eine ausgewiesene Ausnahme nach Regel L9.** Die Begründung stand
 vor der Messung fest — eine Tabelle von 61,03 GB lässt sich in 60 Sekunden nicht zählen, und die
@@ -3339,9 +3813,9 @@ Statement** und nicht für die Runde: Alle übrigen Statements des zweiten Nacht
 
 # Wo die vorformulierte Zeile nicht passte
 
-**Einundzwanzig** Stellen, einzeln benannt und jeweils als eigener Absatz unter der Tabelle
+**Vierundzwanzig** Stellen, einzeln benannt und jeweils als eigener Absatz unter der Tabelle
 ausgewiesen — elf aus der Hauptrunde vom 11.08.2026, sieben aus dem ersten und drei aus dem zweiten
-Nachtrag vom 12.08.2026:
+Nachtrag vom 12.08.2026, drei aus dem vierten vom 13.08.2026:
 
 | # | Messung | Der Befund, der in keine Zeile passte |
 |---:|---|---|
@@ -3366,6 +3840,9 @@ Nachtrag vom 12.08.2026:
 | **19** | **M44** | Die neue Zahl **löst einen dokumentierten Widerspruch auf, statt einen zu erzeugen**: 14,05 gegen 22,57 Zeilen je Nachricht war nie ein Dichteeffekt, sondern die um 60,9 % zu niedrige Schätzung. Gezählt sind es **22,62** über den Gesamtbestand |
 | **20** | **M44** | Die „1,3 Kilobyte je Zeile" sind aus derselben Schätzung gerechnet und werden zu **808 Byte**. Die Verhältnisaussage „zu drei Vierteln Index" hält (75,3 %), die absoluten Werte nicht |
 | **21** | **M44** | **Sechs der sieben Zeilen** des Mengengerüsts in §8 waren `information_schema`-Schätzungen, nicht zwei — `Process` (1.503 statt 1.490) und `Project` (140 statt 142) sind seit dem 01.08.2026 gezählt und nie nachgezogen worden |
+| **22** | **M46** | **Die Regel kennt die Wirksamkeit nicht.** Sie fragt nach der Längendominanz und trifft zwei Paare, bei denen kein Wert *mit* führender Null auf der Sollänge liegt: `IBIS`/1 und `SUTTONS`/2000 |
+| **23** | **M46** | **Die Schwelle schließt ausgerechnet 9006 aus** — 94,21 %, 0,79 Prozentpunkte darunter. Genau den Typ, für den M43‑4 die Wirkung des Auffüllens belegt hat (roh 1.642, aufgefüllt 4) |
+| **24** | **M46** | **Der Bestand kennt 55 Typen, Fenster B kannte 46.** Drei der neun zusätzlichen tragen auf 100 % ihrer Werte eine führende Null und werden kuratiert — eine Kuratierung aus Fenster B hätte sie nicht gekannt |
 
 Dazu **fünf** Befunde, die eine Zeile zwar treffen, aber über sie hinausreichen und deshalb ebenfalls
 als eigener Absatz stehen: die Null der Merge-Eingänge über Fenster B (M39), die fehlende
@@ -3451,6 +3928,30 @@ Sparring desselben Tages erledigt und **nicht** entfernt worden.
 - **Ob die Stammdaten der Produktion dieselben 62 Zeilen führen.** Die Kopie ist vom 08.07.2026. Ein
   seither angelegter Typ könnte eine heute eindeutige gekürzte Form kollidieren lassen, ohne dass es
   jemand bemerkte.
+
+### Was der vierte Nachtrag (M46) neu offen lässt
+
+- **Welche der drei Lesarten der 95-Prozent-Regel die richtige ist.** M46 entscheidet an der Dominanz
+  über **alle** Werte eines Paares. Die Gruppendominanz („nur die Werte mit führender Null" oder „die
+  größere der beiden Gruppen", wie sie M43 in seinen Bändern verwendet) ergäbe eine **andere**
+  Kuratierung — 9020 käme mit 98,78 % hinein, 9015 mit 97,56 %. Die Zahlen stehen in M46‑1, die
+  Festlegung ist keine Messung.
+- **Ob ein Eintrag ohne Wirkung schadet.** `IBIS`/1 und `SUTTONS`/2000 fügen je Suche eine Variante
+  hinzu, die im Bestand nichts trifft. Was diese Variante an Laufzeit kostet, ist **nicht gemessen**
+  — M46 misst Verteilungen, keine Suchen. Die Zahl fehlt und gehört in M47.
+- **Ob die Kuratierung 9006 fehlt.** Der Typ liegt 0,79 Prozentpunkte unter der Schwelle, trägt auf
+  32,99 % führende Nullen und ist der einzige, für den M43‑4 die Wirkung an echten Werten belegt hat.
+  Ob die Schwelle richtig gesetzt ist oder 9006 eine benannte Ausnahme bekommt, ist eine
+  **Entscheidung** und steht als offene Frage 14.
+- **Ob die Sollänge über die Zeit stabil ist.** M43 ließ das für 40 Typen offen; M46 hat den Bestand
+  für alle erhoben und die Lücke damit verschoben, nicht geschlossen — gemessen ist der Stand vom
+  08.07.2026. `BamSollaengeDriftDbIT` prüft es, läuft aber nicht in der CI.
+- **Ob die Produktion dieselbe Verteilung trägt.** Dieselbe benannte Lücke wie im Belegvermerk zu
+  M44: Es besteht kein Zugang zur Produktion.
+- **Ob ein Mandant, der heute einen Typ nicht trägt, ihn morgen trägt.** Die Kuratierung ist nach
+  `(mandant_id, bam_typ)` geschlüsselt und kennt nur die 45 gemessenen Paare. Ein neuer Mandant oder
+  ein neuer Typ erscheint schlicht nicht darin, und der Drift-Test bemerkt es nicht — er prüft, was
+  dasteht, nicht was fehlt.
 
 ---
 
@@ -3538,6 +4039,17 @@ Sparring desselben Tages erledigt und **nicht** entfernt worden.
     geben muss**, damit die Suche nicht still weniger findet, ist eine Entscheidung und steht hier
     als Frage (Belegvermerk zu M43).
 
+    > ✔ **Beantwortet und gebaut am 13.08.2026.** *Woher:* aus **M46**, über den Bestand und je
+    > Mandant — und die Frage nach dem „je Typ" ist dabei mit **nein** beantwortet worden, die
+    > Kuratierung ist nach `(mandant_id, bam_typ)` geschlüsselt. *Wo:* in einer **eigenen** Tabelle
+    > `overlord_monitor.bam_sollaenge` (`V5__bam_sollaenge.sql`) und nicht in `bam_spalte` — die
+    > beantwortet eine andere Frage (welche zwei Spalten die Liste zeigt) und hat einen anderen
+    > Schlüssel. *Wie fortgeschrieben:* über `BamSollaengeDriftDbIT`, der je kuratiertem Eintrag
+    > prüft, ob die dominante Länge über den Bestand noch bei mindestens 95 % liegt. **Die
+    > Garantiestufe ist begrenzt und das ist ausgewiesen:** Der Test läuft nicht in der CI, weil sie
+    > das interne Netz nicht erreicht — dieselbe Stufe wie beim Statustest. Vollständig in
+    > [`bam-sollaengen.md`](bam-sollaengen.md).
+
 12. **Wird das führende Leerzeichen genauso behandelt wie die führende Null?** Bei 9018 tragen
     1,05 % der Zeilen eines — rund 1.500 — und die exakte Suche erreicht sie nicht (M43‑3:
     23 gegen 3 Treffer). Es ist derselbe Sachverhalt wie bei der Null, nur unsichtbarer: Ein
@@ -3548,3 +4060,23 @@ Sparring desselben Tages erledigt und **nicht** entfernt worden.
     (M43‑2). Keine Normalisierung heilt das — sie wählt nur, welche der fünf Varianten gefunden
     wird. Der Nutzer muss erfahren, dass es die anderen gibt, und das ist eine Frage der
     Antwortform und nicht der Datenbank.
+
+### Neu aus dem vierten Nachtrag vom 13.08.2026
+
+14. **Bekommt 9006 eine benannte Ausnahme?** Die 95-Prozent-Regel schließt die kuratierte
+    Lieferschein-Nr. mit **94,21 %** aus — 0,79 Prozentpunkte unter der Schwelle. Ausgerechnet für
+    sie belegt M43‑4 die Wirkung des Auffüllens an echten Werten (roh **1.642** Treffer, aufgefüllt
+    **4**), und sie trägt auf **32,99 %** ihrer Werte eine führende Null. Die Schwelle zu senken
+    hilft nicht: Bei 94 % kämen 9028, 9029 und 9004 mit, und die tragen 0,21 %, 0,21 % und 5,71 %.
+    Entweder 9006 wird namentlich aufgenommen — dann ist die Regel keine Regel mehr, sondern eine
+    Regel plus Liste — oder die Suche findet dort ohne Auffüllen 1.642 statt 4 Treffer.
+
+15. **Wird die Regel um die Wirksamkeitsbedingung ergänzt?** `IBIS`/1 und `SUTTONS`/2000 stehen
+    mechanisch in der Kuratierung und können nachweislich nichts finden (M46‑1c). Eine Ergänzung
+    „bei der Sollänge kommt mindestens ein Wert mit führender Null vor" nähme beide heraus. Was die
+    beiden Einträge kosten, ist ungemessen — es ist je eine zusätzliche Variante in der `IN`-Liste.
+
+16. **Wie erfährt die Kuratierung von einem neuen Mandanten oder Typ?** Sie kennt die 45 Paare vom
+    13.08.2026. `BamSollaengeDriftDbIT` prüft, was dasteht — **nicht, was fehlt**. Ein Mandant, der
+    morgen einen Typ mit durchgängig führender Null bekommt, wird ohne Sollänge gesucht, und niemand
+    bemerkt es.
