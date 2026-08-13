@@ -206,7 +206,7 @@ Lesebeginn beim Umschalten an derselben x-Position bleibt.
 | `--dichte-suchbereich` | 18 rem (288 px) | 18 rem | reservierter Platz für die BAM-Suche, Schritt 7 |
 | `--dichte-feld` | 2.5 rem | 2.5 rem | Eingabefeld im Formular — bleibt bewusst komfortabel |
 | `--dichte-zeile` | 2.25 rem | 2.25 rem | Tabellenzeile ab Schritt 4 |
-| `--dichte-beschriftung` | 10 rem | 10 rem | **gedeckelte** Breite einer Beschriftungsspalte neben ihren Werten, seit Schritt 7 |
+| `--dichte-beschriftung` | **10 rem** im Panel · **16 rem** auf der eigenen Route | ebenso | **gedeckelte** Breite einer Beschriftungsspalte neben ihren Werten, seit Schritt 7. Der Deckel gehört zum **Einhängepunkt**: Die Route hebt den Wert über `.beschriftung-breit` herauf |
 | `--dichte-inhaltsbreite` | 72 rem | 72 rem | Maximalbreite **innerhalb** einer Ansicht |
 
 > **`--dichte-beschriftung` ist heute an genau einer Stelle im Einsatz** — im Belegdaten-Block
@@ -220,6 +220,20 @@ Lesebeginn beim Umschalten an derselben x-Position bleibt.
 > die **Hauptinformation** in den Umbruch; die Herleitung steht in `bam-werte.md` §11a. **Wer die
 > Zahl ändert, prüft sie im Panel und nicht auf der eigenen Route** — dort ist die Zeile doppelt so
 > breit und der Fehler unsichtbar.
+>
+> **Deshalb trägt die Zeile seit dem 13.08.2026 zwei Werte** *(Nachbesserung nach der Nacharbeit
+> desselben Tages)*. Der Satz oben bleibt richtig und bleibt stehen — er ist genau der Grund für die
+> Teilung: Die 10 rem sind die Rechnung *„was bleibt dem Wert übrig"*, und auf der eigenen Route
+> (Gruppenzeile **1.126 px** statt 454) bleibt dem Wert reichlich — bei 10 rem wären es dort 954 px
+> für eine Marke von rund 285 px gewesen. Die Beschriftungen brachen also um, ohne dass jemand
+> dadurch Platz gewann. **16 rem = 256 px**, gegen die längste gemessene Beschriftung von
+> **249 px**; es bleibt ein Deckel und keine feste Breite.
+>
+> **Umgesetzt am Einhängepunkt, nicht am Block.** `.beschriftung-breit` in `globals.css` setzt
+> `--dichte-beschriftung` auf dem Wrapper der Route herauf; der Block liest den Wert wie bisher und
+> erfährt nicht, wo er hängt. Das trägt, weil `@theme inline` den Verweis in die Utility-Klasse
+> schreibt statt den aufgelösten Wert (`grid-template-columns: var(--dichte-beschriftung) minmax(0,
+> 1fr)`, im gebauten CSS nachgesehen) — **wer diese Klasse ändert, prüft das dort erneut nach.**
 
 Gemessen bei 1920 px: Vier Navigationseinträge belegen 142 px statt vorher rund 236 px, die
 Kopfzeile 51 px statt 57.
@@ -237,16 +251,53 @@ Sprachumschaltung und Nutzermenü sämtlich 44 px hoch, die Kopfzeile 56.
 **Begründung für die 72 rem im Fließtext:** Längere Zeilen sind schwer zu lesen — der Grund gilt
 für Text, nicht für Tabellen. Deshalb steht die Grenze in der Ansicht und nicht am Rahmen.
 
-### Der reservierte Suchplatz
+### Der reservierte Suchplatz — ✔ **gefüllt am 13.08.2026 (Schritt 7, Teil 3)**
 
-In der Kopfzeile steht links neben dem Mandantenumschalter ein **leerer** Bereich fester Breite
-(`data-bereich="suche"`). Kein Eingabefeld, kein Platzhalter, keine Attrappe — bis Schritt 7 ihn
-füllt.
+In der Kopfzeile steht links neben dem Mandantenumschalter ein Bereich fester Breite
+(`data-bereich="suche"`).
+
+> **Der ursprüngliche Vermerk bleibt stehen, weil er die Entscheidung trägt.** Er lautete: „Kein
+> Eingabefeld, kein Platzhalter, keine Attrappe — **bis Schritt 7 ihn füllt**." Genau das ist am
+> 13.08.2026 geschehen: Dort sitzt jetzt das Belegnummern-Suchfeld samt optionaler Belegart und
+> `+`-Schaltfläche ([`bam-suche.md`](bam-suche.md) §11.1). Gelöscht wird der Vermerk nicht —
+> **erledigt gekennzeichnet**, damit erkennbar bleibt, dass die Breite von Anfang an für dieses
+> Feld reserviert war und nicht nachträglich zurechtgeschoben wurde.
 
 **Begründung:** Die Suche ist laut Leitsatz der Haupteinstieg. Steht ihr Platz nicht von Anfang an
 fest, drängt sie sich später zwischen Mandant, Sprache und Nutzermenü. Ein Feld, das nichts tut,
-wäre trotzdem schlechter als keins: Es verspricht eine Funktion, die es nicht gibt. Am Handy
-entfällt der Bereich ganz — dort ist jeder Pixel Breite vergeben.
+wäre trotzdem schlechter als keins: Es verspricht eine Funktion, die es nicht gibt.
+
+> ⚠️ **Ein Satz von damals gilt nicht mehr, und das ist eine Änderung und kein Versehen.** Hier
+> stand: „Am Handy entfällt der Bereich ganz — dort ist jeder Pixel Breite vergeben." **Das galt
+> für den leeren Platz.** Für den Haupteinstieg gilt es nicht: Eine Suche, die es am schmalen
+> Fenster nicht gibt, ist keine. Unter 768 px ist das Feld deshalb eine **eigene, volle Zeile** der
+> Kopfzeile — es konkurriert dort um keine Breite mehr, sondern kostet eine Zeile Höhe. Das ist
+> dieselbe Abwägung, die §6 beim Umbruch der Kopfzeile selbst trifft. **Kein neuer Umbruchpunkt**:
+> `md` ist der des Projekts.
+
+### Die Marke — eine Gestalt, ein Ort
+
+*Aufgenommen am 13.08.2026, als sie die zweite Ansicht bekam.*
+
+Gedämpfte Fläche (`--muted`), kleiner Radius (`rounded-sm`), **kein Rahmen**, feste Laufweite für
+den Wert. Sie entstand in Schritt 7, Teil 1 für die Belegdaten im Detail
+([`bam-werte.md`](bam-werte.md) §11a) und trägt seit Teil 3 auch die Begriffe der Suche.
+
+**Warum sie jetzt hier steht und vorher nicht.** §11a hielt ausdrücklich fest, dass eine Bauform an
+genau einer Stelle nicht ins Konzept gehört — sonst wird es zur Sammelstelle —, und ebenso
+ausdrücklich: *„Wenn die BAM-Suche in Teil 2 oder 3 dieselbe Marke braucht, wandert sie."* Sie
+braucht sie. Der Code liegt in `components/marke.tsx`; **es gibt keine zweite Marken-Gestalt im
+Projekt.**
+
+**Die Bedienbarkeit ist ein Schalter und springt nicht per Voreinstellung an.** Das ist der Teil,
+der hierher gehört und nicht in eine Ansicht:
+
+| Ohne Schließen-Schaltfläche | Mit Schließen-Schaltfläche |
+|---|---|
+| eine **Anzeige** — kein Zeigerwechsel, kein Fokusrahmen, kein `title` | ein **Bedienelement**; bedienbar ist der Knopf *in* der Marke, nicht die Marke |
+| so steht sie im Belegdaten-Block, und daran ändert sich nichts | so stehen die Begriffe der Suche |
+
+**Keine Statusfarbe und keine neue Farbrolle.** Die Marke sagt nichts über einen Zustand (§3).
 
 ### Der Mandantenumschalter: Anzeige oder Bedienelement
 
@@ -268,6 +319,10 @@ Unter 768 px:
 - Der **aktive Mandant bleibt in der Kopfzeile** — er wandert nicht ins Menü.
 - Die Kopfzeile bricht dafür in zwei Zeilen um: oben Produktname und Nutzermenü, darunter Mandant
   und Sprache.
+- **Seit dem 13.08.2026 kommt eine dritte Zeile dazu: das Belegnummern-Suchfeld** (§5). Es entfällt
+  dort ausdrücklich **nicht** — es ist der Haupteinstieg des Werkzeugs, und einer, den es am
+  schmalen Fenster nicht gibt, ist keiner. Der Preis ist dieselbe Art Preis wie beim Umbruch
+  selbst: eine Zeile Höhe statt einer weggelassenen Funktion.
 
 **Begründung für den Umbruch:** Bei 360 px passen Menüschalter, Produktname, Mandant,
 Sprachumschaltung und Nutzermenü nicht nebeneinander, ohne dass etwas unleserlich wird. Der Umbruch

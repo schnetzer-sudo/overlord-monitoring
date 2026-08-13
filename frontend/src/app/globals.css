@@ -148,7 +148,10 @@
      fuer alle und naehme vier kurzen rund die Haelfte des Panels weg. Mit dem
      Deckel kostet sie zwei Zeilen in ihrer EIGENEN Zelle. Heute nur im
      Belegdaten-Block; die Beschreibungsliste im Kopf bleibt inhaltsbreit
-     (docs/bam-werte.md §11). */
+     (docs/bam-werte.md §11).
+
+     Das ist der Wert fuer den ENGEREN Einhaengepunkt, das Panel neben der
+     Liste. Die eigene Route hebt ihn herauf — siehe .beschriftung-breit unten. */
   --dichte-beschriftung: 10rem;
   --dichte-inhaltsbreite: 72rem; /* nur INNERHALB einer Ansicht, nie am Rahmen */
   --radius: 0.5rem;
@@ -235,6 +238,26 @@
     --dichte-navzeile: var(--dichte-beruehrung);
     --dichte-kopfzeile: 3.5rem;
   }
+}
+
+/* Der Deckel der Beschriftungsspalte gehoert zum EINHAENGEPUNKT und nicht zum
+   Block. Die 10 rem oben sind fuer das Panel gemessen (454 px Gruppenzeile,
+   282 px bleiben den Werten, die laengste Marke braucht 285 px). Auf der eigenen
+   Route /nachrichten/<id> ist dieselbe Gruppenzeile gemessene 1.126 px breit
+   (72 rem Inhaltsbreite abzueglich Rahmen und Innenabstand); dort brachen
+   dieselben Beschriftungen um, waehrend die Werte reichlich Platz hatten.
+
+   16 rem sind 256 px, und die laengste Beschriftung des Bestands misst gegen
+   die echte Schrift 249 px (35 Zeichen). Es bleibt ein DECKEL und keine feste
+   Breite: Wird der Bestand im Altsystem laenger, bricht die Beschriftung dort
+   wieder um — und das ist richtig.
+
+   Der Block erfaehrt davon nichts. Er liest --dichte-beschriftung wie bisher;
+   die Klasse sitzt auf dem Wrapper der Route (features/nachrichten/components/
+   nachricht-seite.tsx). Keine Zahl in einer Komponente, dieselbe Regel wie bei
+   den Farbwerten. Begruendung: docs/bam-werte.md §11a. */
+.beschriftung-breit {
+  --dichte-beschriftung: 16rem;
 }
 
 /* Kein Dunkelmodus im MVP — hier wird nichts umgeschaltet. Der Block bleibt

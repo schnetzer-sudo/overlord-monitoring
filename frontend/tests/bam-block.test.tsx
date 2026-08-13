@@ -16,13 +16,14 @@ import { neuerZwischenspeicher, rendere } from "./hilfe/rendern";
  * Alles andere an diesem Block ist Abzählung und Einteilung und steht als reine
  * Funktion im Backend — geprüft werden Entscheidungen, nicht Markup
  * (`docs/frontend-grundlagen.md` §9). Diese Datei ist die begründete Ausnahme,
- * und sie bleibt bei drei Tests:
+ * und sie bleibt bei vier Tests:
  *
  * | Test | Warum genau dieser |
  * |---|---|
  * | Derselbe Wert unter zwei Typen | Der Schlüssel der Liste ist `(typ, wert)`. Wäre er der Wert allein, meldete React einen **doppelten Schlüssel** — in der Konsole, und sichtbar falsch wäre nichts. M37 misst den Fall auf 4,17 % der Paare |
  * | `bamAnzahl === 0` | Der Block ist **nicht im Baum**, und es geht **keine Anfrage** hinaus. Beides ist eine Aussage über Abwesenheit, und die ist ohne Baum nicht zu treffen. Bei 80,6 % der Nachrichten ist das der Fall (M41) |
  * | eingeklappt mit Werten | Die Gegenprobe: Ohne sie bewiese der vorige Test nur, dass ein leerer Baum keine Anfrage stellt — nicht, dass der Block **wartet**, bis jemand aufklappt |
+ * | die zerlegte Beschriftung *(13.08.2026)* | Die Zerlegung selbst ist reine Funktion und steht in `tests/bam-beschriftung.test.ts`. **Was nur der Baum zeigt, ist die Fuge:** Zwei Elemente statt einer Zeichenkette — und ob dazwischen ein Leerzeichen entsteht, entscheidet JSX und nicht die Funktion. Ein `getByText` fiele hier herein, weil der Text jetzt in zwei Kindern liegt |
  *
  * Der erste hängt vollständig an `tests/setup/konsole.ts`: Er besteht genau
  * dann, wenn **kein `console.error`** fällt. Eine pauschale Unterdrückung wäre
@@ -57,6 +58,32 @@ const ZWEI_TYPEN_EIN_WERT: BamWerte = {
       gesamt: 3007,
       werte: ["0050"],
       weitereVorhanden: true,
+    },
+  ],
+};
+
+/**
+ * **Eine Beschriftung mit Endung und eine ohne** — die beiden Zweige der
+ * Zerlegung nebeneinander. 22 der 62 Typen tragen keine Endung (M45‑1); `9018`
+ * steht stellvertretend für den Fall, in dem statt der Beschreibung die
+ * **Typnummer** kommt, weil die Zeile in `MessageBAMType` fehlt.
+ */
+const MIT_UND_OHNE_ENDUNG: BamWerte = {
+  messageId: MESSAGE_ID,
+  gruppen: [
+    {
+      typ: 9018,
+      bezeichnung: "Kundenmaterialnummer_K_SAP",
+      gesamt: 1,
+      werte: ["0Z3 915 902 D"],
+      weitereVorhanden: false,
+    },
+    {
+      typ: 0,
+      bezeichnung: "Bestellnummer",
+      gesamt: 1,
+      werte: ["094930"],
+      weitereVorhanden: false,
     },
   ],
 };
@@ -172,6 +199,49 @@ describe("Der BAM-Block", () => {
       expect(behaelter.querySelector("button")?.getAttribute("aria-expanded")).toBe("false");
       expect(behaelter.querySelectorAll("section")).toHaveLength(0);
       expect(anfragen).toEqual([]);
+    } finally {
+      await abbauen();
+    }
+  });
+
+  /**
+   * **Die Beschriftung steht vollständig und ohne eingefügtes Leerzeichen im
+   * Baum.**
+   *
+   * Seit dem 13.08.2026 zeigt der Block sie in **zwei** Elementen, damit die
+   * Endung beim Umbruch nicht aufbricht (`lib/bam-beschriftung.ts`). Die
+   * Zerlegung selbst ist reine Funktion und dort geprüft; hier geht es um die
+   * **Fuge**: Ein Zeilenumbruch oder ein `{" "}` an der falschen Stelle im JSX
+   * machte aus `Kundenmaterialnummer_K_SAP` ein `Kundenmaterialnummer _K_SAP` —
+   * und das sieht im Quelltext richtig aus.
+   *
+   * Geprüft wird deshalb über `textContent` des umschließenden `h3` und **nicht**
+   * über eine Textsuche: Der Text liegt jetzt in zwei Kindern.
+   */
+  it("zeigt die Beschriftung vollständig und ohne Leerzeichen vor der Endung", async () => {
+    const zwischenspeicher = neuerZwischenspeicher();
+    zwischenspeicher.setQueryData(NACHRICHTEN_SCHLUESSEL.bam(MESSAGE_ID), MIT_UND_OHNE_ENDUNG);
+
+    const { behaelter, abbauen } = await rendere(
+      <BamBlock messageId={MESSAGE_ID} anzahl={2} />,
+      zwischenspeicher,
+    );
+
+    try {
+      await klappeAuf(behaelter);
+
+      const ueberschriften = [...behaelter.querySelectorAll("section h3")];
+      expect(ueberschriften.map((h3) => h3.textContent)).toEqual([
+        "Kundenmaterialnummer_K_SAP",
+        "Bestellnummer",
+      ]);
+
+      // Die Endung ist ein eigenes Element — sonst hätte die Umbruchregel
+      // nichts, woran sie greifen könnte.
+      expect(ueberschriften.map((h3) => h3.querySelector("[data-endung]")?.textContent)).toEqual([
+        "_K_SAP",
+        undefined,
+      ]);
     } finally {
       await abbauen();
     }

@@ -16,6 +16,21 @@ Entsteht in **Schritt 7, Teil 1** (12.08.2026). **Backend und Oberfläche in ein
 > die Begründung der Marke — und **M45**, ob die Typbeschreibungen ohne ihre Endung eindeutig
 > blieben. **M45 ändert die Anzeige nicht**; sie beantwortet den ersten offenen Punkt in §13.
 
+> ### 📌 Nachbesserung vom 13.08.2026 — die Beschriftungen, **nach** der Nacharbeit desselben Tages
+>
+> **Reine Frontend-Änderung, kein Statement und deshalb keine Messung nach Regel L7.** Zwei Dinge
+> hat die Sichtprüfung oben nicht gesehen, und beide betreffen ausschließlich die **Beschriftung**:
+>
+> 1. **Der Umbruch fiel in die Endung** — `Kundenmaterialnummer_` / `K_SAP`. Sie ist jetzt eine
+>    nicht umbrechbare Einheit; der Name bricht weiter um.
+> 2. **Der Deckel galt auch dort, wo er nicht gebraucht wird.** Die 10 rem sind für das Panel
+>    gemessen; auf der eigenen Route (Gruppenzeile 1.126 px) sind es **16 rem**.
+>
+> Beides steht in **§11a**, die Abnahme dazu in **§16**. Am Endpunkt, an seiner Antwortform, an der
+> Deckelung bei 20 je Gruppe, an der Sortierung, an `bamAnzahl`, am Listenschlüssel `(typ, wert)`,
+> am Aufklappverhalten, an der Einfügestelle, am Umbruchpunkt 768 px und an der Marke ändert sich
+> **nichts**. **Die Endung wird nicht gekürzt** — M45 hat gemessen, dass das nicht verlustfrei wäre.
+
 Der Block beantwortet die Frage, mit der der typische Nutzer dieses Werkzeug öffnet: **Welcher Beleg
 ist das?** Nicht „wo steht mein Beleg" (das ist [`nachrichtenliste.md`](nachrichtenliste.md)), nicht
 „was ist im Einzelnen passiert" ([`nachrichtendetail.md`](nachrichtendetail.md)) und nicht „was hängt
@@ -595,6 +610,20 @@ jemand es braucht, und es bräuchte einen Cursor.
 noch nicht, und ein toter Verweis ist schlechter als keiner. Die Marke ist deshalb **kein Knopf**:
 kein Zeigerwechsel, kein Fokusrahmen, kein `title`.
 
+> **Nachgetragen am 13.08.2026:** Die Begründung stimmt nicht mehr in ihrer Voraussetzung — **der
+> Suchendpunkt existiert seit Teil 2b** (`GET /api/bam/suche`, [`bam-suche.md`](bam-suche.md)).
+> **Am Verhalten des Blocks ändert das hier nichts**, und zwar bewusst: Ob ein Klick auf eine Marke
+> in die Suche führt, ist eine Entscheidung der **Oberfläche** und gehört damit in Teil 3, zusammen
+> mit dem Suchfeld, den Chips und der Trefferliste. Was der Endpunkt dafür schon mitbringt, ist die
+> Form, die ein solcher Verweis bräuchte: `begriff=<typ>:<wert>` — und der Block kennt beide Teile
+> des Schlüssels bereits (§11).
+>
+> **Teil 3 hat entschieden, und zwar dagegen** (13.08.2026). Der Verweis ist **nicht** gebaut: Er
+> wirft eine eigene Frage auf — ersetzt der Klick die laufende Suche, oder legt er eine Marke dazu?
+> —, und mit ihm käme diese Marke als Knopf zurück. Er steht als offener Punkt in
+> [`bam-suche.md`](bam-suche.md) §13. **Der Satz oben gilt damit unverändert weiter: Ein Klick auf
+> einen Wert tut nichts.**
+
 ---
 
 ## 11a. Warum die Anordnung so und nicht anders
@@ -626,9 +655,53 @@ gedämpften Flächenton (`--muted`, [`visuelles-konzept.md`](visuelles-konzept.m
 **keine neue Farbrolle** ein — nachgesehen am gerenderten Baum: Der Hintergrund der Marke ist
 zeichengleich mit dem Token. Kein Rahmen, kleiner Radius (`rounded-sm`, 4,8 px).
 
+### Die Endung bricht nicht auf — sie ist eine Einheit
+
+*Nachgebessert am 13.08.2026, **nach** der Nacharbeit desselben Tages. Die Sätze darunter bleiben
+stehen; hier steht, was an ihnen ungesehen geblieben war.*
+
+Bei `Kundenmaterialnummer_K_SAP` stand auf der ersten Zeile `Kundenmaterialnummer_` und auf der
+zweiten `K_SAP`. **Das ist kein Breitenproblem.** Es ist `overflow-wrap: break-word` an einer
+Zeichenkette, die keine Wortgrenze hat: Der Bruch fällt dorthin, wo die Breite ausgeht, und der
+Unterstrich bleibt am Zeilenende hängen. Gemeint ist `Kundenmaterialnummer` / `_K_SAP`.
+
+Gezeigt wird deshalb **dieselbe Zeichenkette in zwei Teilen** (`lib/bam-beschriftung.ts`): Der Name
+darf weiterhin umbrechen — eine Beschriftung wie `Gutschriftsanzeigen-Nummer` ist allein breiter als
+die Spalte —, die Endung trägt `white-space: nowrap`. **Gekürzt wird nach wie vor nichts.**
+
+**Die Endung ist der abschließende Lauf aus `_GROSSBUCHSTABEN`-Segmenten, und diese Fassung ist
+gemessen und nicht gewählt.** Beide naheliegenden Fassungen sind an echten Daten falsch:
+
+| Fassung | Was sie liefert |
+|---|---|
+| `[A-Z]` **mit** `i`-Flag | `Sender_Ident_FORS` → Endung `_Ident_FORS`. Genau der Fehler, den **M45‑2** unter der Spaltenkollation `general_ci` in SQL gemessen hat — dort traf `[A-Z]` auch Kleinbuchstaben. In JavaScript ist `[A-Z]` ohne Flag zeichengenau; ein `i` reproduzierte ihn |
+| „ab dem letzten Unterstrich" | für **33** Typen `_SAP` statt `_L_SAP`/`_K_SAP` — und damit ausgerechnet der Verlust der Unterscheidung, wegen der die Endung überhaupt stehen bleibt (§13) |
+
+> **Belegvermerk** (Regel L10).
+> *Gemessen (M45‑1, M45‑2):* die 62 Typbeschreibungen des Bestands, ihre drei Endungen (`_L_SAP` 20,
+> `_K_SAP` 13, `_FORS` 7; **22 ohne**) und die Fehlzuordnung von `Sender_Ident_FORS` unter
+> `general_ci`.
+> *Behauptet wird:* dass die Regel den Bruch an die richtige Stelle legt.
+> **Die Lücke:** M45 hat die Beschreibungen erhoben, nicht ihren Umbruch. Dass die Endung danach in
+> **einem** Zeilenrechteck steht, ist am 13.08.2026 am laufenden System **gesehen** (§16, Punkt 1)
+> und nicht aus der Regel geschlossen.
+
+**Nicht getrimmt.** Typ 9008 heißt `Beleg-Nr.··TSL·_L_SAP` — zwei Leerzeichen im Namen und eines vor
+dem Unterstrich. Der Name behält seine Zeichen unverändert; das Leerzeichen davor ist dort sogar die
+bessere Umbruchstelle. **Ziffern treffen die Regel nicht**, und das ist richtig: Fehlt die Zeile in
+`MessageBAMType`, steht statt der Beschreibung die **Typnummer** (§6) — `9018` hat keine Endung, wie
+22 der 62 echten Beschreibungen auch.
+
+> ⚠️ **Zwischen den beiden Teilen darf kein Leerzeichen entstehen.** Stünde dort eines, hieße die
+> Gruppe `Kundenmaterialnummer _K_SAP` — im Quelltext unauffällig, in der Anzeige falsch. Der Fall
+> hängt an der Formatierung des JSX und nicht an der Zerlegung; er ist deshalb der einzige Punkt
+> dieser Nachbesserung, der einen **gerenderten Baum** braucht (`tests/bam-block.test.tsx`), und er
+> wird über `textContent` des umschließenden Elements geprüft — eine Textsuche fiele herein, weil der
+> Text jetzt in zwei Kindern liegt.
+
 ### Die Beschriftungsspalte ist gedeckelt, nicht inhaltsbreit
 
-`--dichte-beschriftung`, **10 rem**. Die Zahl steht als benannte Größe bei den übrigen Dichtewerten
+`--dichte-beschriftung`. Die Zahl steht als benannte Größe bei den übrigen Dichtewerten
 in `globals.css` und nicht als Zahl in der Komponente.
 
 **Warum gedeckelt.** `Lieferantennummer beim Kunden_K_SAP` misst gegen die echte Schrift **249 px**.
@@ -654,6 +727,50 @@ Beschriftung neben drei Zeilen Werten in der Mitte.
 
 **Die Beschriftung bricht um, sie wird nicht gekürzt.** Damit entfällt auch der `title` mit dem
 Vollwert, den die erste Fassung trug: Er wäre ein Versprechen auf etwas, das ohnehin dasteht.
+
+### Der Deckel gehört zum Einhängepunkt — 10 rem im Panel, 16 rem auf der eigenen Route
+
+*Nachgebessert am 13.08.2026, **nach** der Nacharbeit desselben Tages. Die 10 rem oben bleiben
+richtig; sie waren nur nicht die ganze Antwort.*
+
+Die 10 rem sind für das **Panel** gemessen und dort exakt richtig — 454 px Gruppenzeile, 282 px
+bleiben den Werten, die längste Marke braucht 285 px. Die Detailansicht hat seit dem 11.08.2026 aber
+einen **zweiten** Einhängepunkt: die eigene Route `/nachrichten/<id>` mit 72 rem Inhaltsbreite
+(`--dichte-inhaltsbreite`). Dieselbe Gruppenzeile misst dort **1.126 px** statt 454 (§16). Bei
+10 rem bliebe der Wertspalte davon **954 px** — und die längste gemessene Marke braucht rund
+**285 px**. Die Beschriftungen brachen also um, ohne dass der Wert den Platz gebraucht hätte.
+**Die Begründung für die 10 rem gilt dort schlicht nicht:** Sie ist die Rechnung *„was bleibt dem
+Wert übrig"*, und dem Wert bleibt auf der Route reichlich.
+
+Auf der eigenen Route sind es deshalb **16 rem = 256 px**. Die Zahl kommt aus derselben Messung wie
+die 10 rem: Die längste Beschriftung des Bestands hat 35 Zeichen und misst gegen die echte Schrift
+**249 px** (Sichtprüfung 13.08.2026, §15 Punkt 4). Es bleibt ein **Deckel** und keine feste Breite —
+wird der Bestand im Altsystem länger, bricht die Beschriftung dort wieder um, und das ist richtig.
+
+**Der Block erfährt nicht, wo er hängt.** Er liest `--dichte-beschriftung` wie bisher; die Route
+setzt den Wert auf ihrem Wrapper herauf (`.beschriftung-breit` in `globals.css`, gesetzt in
+`nachricht-seite.tsx`). Keine Zahl in einer Komponente, dieselbe Regel wie bei den Farbwerten. Dass
+das genügt, ist **im gebauten CSS nachgesehen** und nicht angenommen: Wegen `@theme inline` steht in
+der Utility-Klasse der Verweis selbst und nicht der aufgelöste Wert —
+
+```css
+@media (min-width:48rem){ … .md\:grid-cols-beschriftung{grid-template-columns:var(--dichte-beschriftung) minmax(0, 1fr)} … }
+```
+
+— und `var()` wird an dem Element aufgelöst, das die Klasse trägt. Ein zweites Dichtemaß und eine
+Eigenschaft am Block wären dadurch entbehrlich.
+
+**Was dabei gleich bleibt, und beides ist der Grund für einen festen Wert:**
+
+- Der Rückfall auf die gestapelte Form unter **768 px** gilt auf **beiden** Einhängepunkten
+  unverändert. **Kein neuer Umbruchpunkt.**
+- **Alle Werte einer Gruppe beginnen bei derselben x-Position** — innerhalb eines Einhängepunkts,
+  über alle Gruppen und über alle Nachrichten hinweg.
+
+> **`fit-content(16rem)` wäre die knappere Variante und ist bewusst nicht gewählt.** Sie rückt die
+> Spalte an die längste Beschriftung der *jeweiligen* Nachricht heran — und ließe damit die
+> x-Position der Werte von Nachricht zu Nachricht wandern. Beim Blättern zwischen zwei Belegen wäre
+> das eine Bewegung ohne Aussage.
 
 ### Am schmalen Fenster fällt der Block auf die gestapelte Form zurück
 
@@ -696,7 +813,23 @@ Aufklappverhalten und die Stelle, an der der Block sitzt. **Die Beschreibungslis
 ([`nachrichtendetail.md`](nachrichtendetail.md) §10.3) ist nicht mit umgestellt worden** — sie bleibt
 inhaltsbreit, weil ihre Beschriftungen kurz und in der Zahl fest sind.
 
-### Warum die Marke nicht in `visuelles-konzept.md` steht
+### ~~Warum die Marke nicht in `visuelles-konzept.md` steht~~ — ✔ **sie steht seit dem 13.08.2026 dort**
+
+> **Erledigt in Schritt 7, Teil 3.** Der Absatz unten hatte die Bedingung selbst formuliert —
+> *„Wenn die BAM-Suche in Teil 2 oder 3 dieselbe Marke braucht, wandert sie"* —, und sie ist
+> eingetreten: Die Begriffe der Belegsuche tragen dieselbe Gestalt
+> ([`bam-suche.md`](bam-suche.md) §11.2). Der Code liegt seitdem an **einer** Stelle
+> (`components/marke.tsx`), die Bauform samt ihrer Begründung in
+> [`visuelles-konzept.md`](visuelles-konzept.md) §5.
+>
+> **Am Block ändert das nichts, und das ist der Punkt:** Die Bedienbarkeit ist dort ein
+> **Schalter**, der nicht per Voreinstellung anspringt. Ohne Schließen-Schaltfläche bleibt die
+> Marke, was sie hier ist — **kein Knopf**, kein Zeigerwechsel, kein Fokusrahmen, kein `title`. Der
+> Baum des Blocks ist unverändert: Er setzt dieselbe Klassenliste weiterhin unmittelbar auf sein
+> `<li>`, statt eine Marke darin zu verschachteln.
+>
+> Der ursprüngliche Absatz bleibt stehen, weil er die Bedingung enthält, unter der die Wanderung
+> richtig war — und nicht, weil sie es immer gewesen wäre.
 
 **Weil sie heute an genau einer Stelle vorkommt.** Das visuelle Konzept führt Farbrollen, Schrift-
 und Dichtewerte — also das, was mehrere Ansichten teilen. Eine Bauform dort zu führen, die es einmal
@@ -721,7 +854,8 @@ Genau deshalb steht `typ` in der Antwort, obwohl die Oberfläche ihn nicht anzei
 
 | Datei | Was |
 |---|---|
-| `tests/bam-block.test.tsx` | **gerenderter Baum, begründete Ausnahme** — drei Fälle: derselbe Wert unter zwei Typen **ohne `console.error`** (die Regression zum Schlüssel); `bamAnzahl === 0` → **nicht im Baum und keine Anfrage**; eingeklappt mit Werten → Überschrift mit der Zahl, **und immer noch keine Anfrage** |
+| `tests/bam-beschriftung.test.ts` *(neu, 13.08.2026)* | **ohne Baum** — die Zerlegung als reine Funktion, an den **gemessenen** Fällen aus M45‑1: `Kundenmaterialnummer_K_SAP`, `Sender_Ident_FORS`, `Empf_Ident_FORS`, `Material-Nr. beim Lieferanten_L_SAP`, `Bestellnummer` und `9018` ohne Endung, `Beleg-Nr.··TSL·_L_SAP` mit seinen Leerzeichen. Dazu **beide Gegenproben** ausgeschrieben — das `i`-Flag und „ab dem letzten Unterstrich" — und die Zusicherung, dass Name plus Endung wieder die Beschriftung ergeben, Zeichen für Zeichen |
+| `tests/bam-block.test.tsx` | **gerenderter Baum, begründete Ausnahme** — **vier** Fälle: derselbe Wert unter zwei Typen **ohne `console.error`** (die Regression zum Schlüssel); `bamAnzahl === 0` → **nicht im Baum und keine Anfrage**; eingeklappt mit Werten → Überschrift mit der Zahl, **und immer noch keine Anfrage**; seit dem 13.08.2026 die **Fuge** der zerlegten Beschriftung — vollständig und ohne eingefügtes Leerzeichen, geprüft über `textContent` |
 | `tests/detail-baum.test.tsx` | unverändert, um `bamAnzahl: 0` ergänzt |
 
 **Die Prüfung auf `console.error` ist ein Fehlschlagsgrund** (`tests/setup/konsole.ts`, seit Schritt 6
@@ -927,3 +1061,60 @@ Einhängepunkte: das Panel neben der Liste (Gruppenzeile **454 px**) und die eig
    sind auf dieser Nachricht 230 px hoch. **Der Posten gehört zum Kettenblock**
    ([`verkettung.md`](verkettung.md)) und ist hier nur notiert, damit die nächste Abnahme ihn nicht
    dem falschen Block zuschreibt.
+
+---
+
+## 16. Sichtprüfung der Nachbesserung (13.08.2026)
+
+**Durchgeführt am 13.08.2026** am laufenden System (Backend `localhost:8080`, Oberfläche
+`localhost:3000`), über die Browsersteuerung, `innerWidth` **1920 px**, Zugang über alle Mandanten,
+aktiv **`NEXANS`**. Geprüft wurden **beide** Einhängepunkte: das Panel neben der Liste (Gruppenzeile
+**454 px**) und die eigene Route (Gruppenzeile **1.126 px**).
+
+**Die beiden Prüfnachrichten**, nach ihrer **Gestalt** gewählt und über den Listen- und den
+Detail-Endpunkt gefunden; die Kennungen stehen nach Regel G1 nicht hier:
+
+| | Gestalt |
+|---|---|
+| **sieben Gruppen** | `NEXANS`, VDA-Lieferabruf, **7 Typen zu je einem Wert**. Alle sieben Beschriftungen tragen `_K_SAP`, darunter die längste des Bestands (`Lieferantennummer beim Kunden_K_SAP`) und der Fall aus der Aufgabenstellung (`Kundenmaterialnummer_K_SAP`) |
+| **gedeckelte Gruppen** | `NEXANS`, **378 Werte in 7 Gruppen**, davon **drei** gedeckelt (26 / 169 / 169 gegen je 20 gezeigte) |
+
+**Punkt 9 bleibt offen** — er ist der einzige, den die Browsersteuerung nicht kann.
+
+| # | Zu prüfen | Befund |
+|---|---|---|
+| 1 | Panel: **ein** Zeilenrechteck je Endung | ✔ Alle sieben Beschriftungen tragen eine Endung, und jedes Endungs-Element hat `getClientRects().length` = **1** — siebenmal `1`, keine Ausnahme. Der Namensteil bricht dabei weiterhin um: bei sechs der sieben auf zwei Rechtecke. `white-space` der Endung am gerenderten Baum: **`nowrap`** |
+| 2 | Panel: die Höhe wächst nicht | ✔ **Wachstum 0 px** — und das ist direkt gemessen und nicht aus §15 hergeleitet: Am selben Baum, in derselben Sitzung, wurde die **alte** Form nachgestellt (`h3.textContent = h3.textContent`, also die Beschriftung als *ein* Textknoten) und neu vermessen. **312 px vorher wie nachher**, und je Beschriftung dieselben sieben Höhen (36/18/18/36/36/36/36 px). ⚠️ **Die ~218 px aus §15 sind nicht reproduziert**, und zwar nicht wegen dieser Änderung: Sie gehören zu einer Nachricht mit sieben **kurzen** Beschriftungen. Über sechs Seiten à 100 Nachrichten des Dezemberfensters trägt keine erreichbare `NEXANS`-Nachricht sieben Gruppen, deren Beschriftungen alle in 160 px passen — die Zahl ist damit **nicht nachgemessen**, das Kriterium *„darf nicht wachsen"* dagegen schon |
+| 3 | Panel: Text vollständig, ohne eingefügtes Leerzeichen | ✔ Am gerenderten Baum über `textContent` abgelesen, nicht am Quelltext: `Lieferantennummer beim Kunden_K_SAP` · `Kundenwerk_K_SAP` · `Abladestelle_K_SAP` · `(JIT-) Abrufnummer_K_SAP` · `Kundenmaterialnummer_K_SAP` · `Bestellnummer vom Kunden_K_SAP` · `Lieferschein, Entnahme , PUS_K_SAP`. **Kein Leerzeichen vor einer Endung.** Im Bild bricht `Kundenmaterialnummer` / `_K_SAP` an der gemeinten Stelle — vorher stand dort `Kundenmaterialnummer_` / `K_SAP` |
+| 4 | Eigene Route: keine Beschriftung bricht um | ✔ Alle sieben `h3` sind **18 px** hoch, also einzeilig. Die längste (`Lieferantennummer beim Kunden_K_SAP`) misst **249,5 px** bei einer Spalte von **256 px** — die Vorhersage aus §11a, hier gegen die echte Schrift gemessen. `grid-template-columns` am gerenderten Baum: **`256px 858px`**. `--dichte-beschriftung` am Wrapper der Route und an der Gruppe **`16rem`**, an `:root` unverändert **`10rem`** — die Überschreibung greift genau dort, wo sie soll, und nirgends sonst |
+| 5 | Eigene Route: gedeckelte Gruppen | ✔ Drei Gruppen mit je genau **20** Marken und *„und 6 weitere"* bzw. zweimal *„und 149 weitere"*, jeweils **unmittelbar hinter der letzten Marke** (`previousElementSibling` trägt `data-wert`) und **ohne Fläche** (`background-color: rgba(0, 0, 0, 0)`). Zwei der drei laufen über **drei** Markenzeilen. **Kein waagerechter Überlauf:** `scrollWidth − clientWidth` ist **0** am Dokument, **0** am Inhaltsbereich und **0** an jeder der sieben Gruppen |
+| 6 | Beide Einhängepunkte: gleiche x-Position | ✔ **Panel: 1.590 px**, über alle sieben Gruppen genau **ein** Wert. **Eigene Route: 509 px**, ebenfalls genau ein Wert — und derselbe bei **beiden** Prüfnachrichten, also auch über Nachrichten hinweg. Dass die beiden Zahlen sich unterscheiden, ist der Punkt: Sie gilt **innerhalb** eines Einhängepunkts |
+| 7 | Konsole | ✔ Nach Leeren, Neuladen und Aufklappen **zwei** Einträge, beide Fremdmeldungen: der React-DevTools-Hinweis und `[HMR] connected`. **Kein `error`, keine Schlüsselmeldung** |
+| 8 | Tests | ✔ `pnpm check` grün: Lint, Typprüfung, Prettier und **249 Tests in 15 Dateien**, einschließlich der neuen `tests/bam-beschriftung.test.ts` |
+| 9 | **Schmales Fenster (< 768 px)** | **offen, nicht prüfbar** — `resize_window` meldet Erfolg und ändert `innerWidth` nicht ([`frontend-grundlagen.md`](frontend-grundlagen.md) §8). Steht in der Tabelle *Offene Sichtprüfungen* in [`README.md`](README.md), dort um die Endung ergänzt. **Nicht als bestanden ausgegeben** |
+
+### Was die Abnahme zusätzlich gezeigt hat
+
+1. **Weg A trägt, und der Grund steht im gebauten CSS.** Nachgesehen, nicht angenommen:
+   `.md\:grid-cols-beschriftung{grid-template-columns:var(--dichte-beschriftung) minmax(0, 1fr)}`
+   innerhalb von `@media (min-width:48rem)`. Weil `globals.css` `@theme inline` benutzt, steht in
+   der Utility-Klasse der **Verweis** und nicht der aufgelöste Wert — und `var()` wird an dem
+   Element aufgelöst, das die Klasse trägt. Ein zweites Dichtemaß und eine Eigenschaft `breit` am
+   Block (Weg B) waren dadurch entbehrlich. **Wer `@theme inline` je zu `@theme` ändert, bricht
+   das**, und zwar lautlos: Die Route zeigte dann wieder 10 rem.
+
+2. **Die Gruppenzeile der eigenen Route misst 1.126 px und nicht 1.152.** Die 1.152 px sind
+   `--dichte-inhaltsbreite` (72 rem); die 26 px Differenz sind der Innenabstand und der Rahmen des
+   Detail-Rahmens (`p-3` plus 1 px je Seite). **An der Rechnung ändert das nichts** — die 16 rem
+   sind gegen die Beschriftung bemessen und nicht gegen die Zeile —, aber die Zahl gehört richtig
+   notiert, damit die nächste Abnahme nicht 26 px sucht.
+
+3. **Die Endung bricht auch dort nicht auf, wo der Name mehrfach umbricht.** Bei
+   `Lieferschein, Entnahme , PUS_K_SAP` bricht der Name an zwei Stellen (Komma und Leerzeichen), und
+   `PUS_K_SAP` steht trotzdem geschlossen — die Regel greift am *abschließenden* Lauf und nicht am
+   ersten Unterstrich, den sie findet.
+
+4. **`Kundenwerk_K_SAP` und `Abladestelle_K_SAP` bleiben einzeilig, obwohl sie eine Endung tragen.**
+   Das ist die stille Gegenprobe zur Zerlegung: Sie zerteilt jede Beschriftung, aber sie *erzwingt*
+   keinen Umbruch. Wer beim nächsten Umbau einen `<br>` oder ein `block` einsetzt, sieht es hier
+   zuerst.

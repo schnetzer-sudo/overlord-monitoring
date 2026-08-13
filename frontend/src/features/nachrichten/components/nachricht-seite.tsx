@@ -97,7 +97,15 @@ export function NachrichtSeite({ messageId }: { messageId: string }) {
     // **Linksbündig, nicht zentriert** (kein `mx-auto`): Der Lesebeginn bleibt
     // an derselben x-Position wie Listenkopf und Panelkopf. Beim Umschalten
     // springt der Inhalt dadurch nicht seitwärts, sondern wird nur breiter.
-    <div className="max-w-inhalt flex flex-col gap-4">
+    //
+    // `beschriftung-breit` hebt `--dichte-beschriftung` von 10 auf 16 rem —
+    // **der Deckel gehört zum Einhängepunkt und nicht zum Block**
+    // (`globals.css`, `bam-werte.md` §11a). Die 10 rem sind für das Panel
+    // gemessen; hier ist dieselbe Gruppenzeile gemessene 1.126 px breit statt
+    // 454, und die Beschriftungen brachen um, ohne dass der Wert dadurch Platz
+    // gewann. Der Belegdaten-Block lernt dabei **nicht**, wo er hängt: Er liest
+    // den Wert wie bisher.
+    <div className="max-w-inhalt beschriftung-breit flex flex-col gap-4">
       <NachrichtDetail
         messageId={messageId}
         aufSchliessen={zurueck}

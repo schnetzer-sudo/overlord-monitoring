@@ -3,9 +3,11 @@
 import { useId, useState } from "react";
 import { ChevronRight } from "lucide-react";
 
+import { MARKE_GESTALT } from "@/components/marke";
 import { Fehler, Laden } from "@/components/zustand";
 import { einsetzen } from "@/i18n";
 import { useSprache, useTexte } from "@/i18n/provider";
+import { zerlegeBeschriftung } from "@/lib/bam-beschriftung";
 import { formatiereZahl } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -156,6 +158,15 @@ export function BamBlock({ messageId, anzahl }: { messageId: string; anzahl: num
  * nicht"* verkehrt herum: Die Belegnummer ist die Hauptinformation, die
  * Beschriftung ist Beiwerk.
  *
+ * **Der Deckel gehört zum Einhängepunkt, nicht zum Block** *(13.08.2026)*. Der
+ * Block liest `--dichte-beschriftung` und erfährt nicht, wo er hängt; die eigene
+ * Route setzt den Wert auf ihrem Wrapper auf 16 rem herauf
+ * (`.beschriftung-breit` in `globals.css`, `nachricht-seite.tsx`). Dort ist die
+ * Gruppenzeile gemessene 1.126 px breit statt 454 — die Begründung für die
+ * 10 rem ist die Rechnung *„was bleibt dem Wert übrig"*, und dort bleibt ihm
+ * reichlich. Dieselben Beschriftungen brachen um, ohne dass jemand dadurch
+ * Platz gewann.
+ *
  * Die Zeilen richten sich **oben** aus. Mittig schwömme eine einzeilige
  * Beschriftung neben drei Zeilen Werten in der Mitte.
  *
@@ -173,6 +184,11 @@ export function BamBlock({ messageId, anzahl }: { messageId: string; anzahl: num
  * `Abladestelle_K_SAP` stehen auf 3.405 Nachrichten eines Monats gemeinsam —
  * gekürzt stünden dort zwei Gruppen mit identischer Überschrift untereinander.
  *
+ * **Sie bricht deshalb nicht *in* der Endung** *(13.08.2026)*. Gezeigt wird
+ * dieselbe Zeichenkette, nur in zwei Teilen: Der Name darf weiterhin umbrechen,
+ * die Endung ist eine Einheit (`lib/bam-beschriftung.ts`). Ohne das fiel der
+ * Bruch dorthin, wo die Breite ausging — `Kundenmaterialnummer_` / `K_SAP`.
+ *
  * **Ein Typ wird nicht als „nicht konfiguriert" markiert.** Ob er in der
  * Konfiguration des Mandanten steht, ist eine interne Angabe; der Nutzer sieht
  * ihn schlicht weiter unten. Das Backend liefert die Angabe gar nicht erst.
@@ -183,6 +199,7 @@ function Gruppe({ gruppe }: { gruppe: BamGruppe }) {
   const titelId = useId();
 
   const rest = gruppe.gesamt - gruppe.werte.length;
+  const { name, endung } = zerlegeBeschriftung(gruppe.bezeichnung);
 
   return (
     <section
@@ -191,9 +208,22 @@ function Gruppe({ gruppe }: { gruppe: BamGruppe }) {
     >
       {/* Umbruch statt Kürzung: Die Spalte ist gedeckelt, also bricht eine lange
           Beschriftung in ihr um — und ein `title` mit dem Vollwert wäre ein
-          Versprechen auf etwas, das ohnehin dasteht. */}
+          Versprechen auf etwas, das ohnehin dasteht.
+
+          Der Name behält dabei sein `break-words` vom `h3`: Eine Beschriftung,
+          deren Namensteil allein breiter ist als die Spalte, muss weiterhin
+          umbrechen dürfen. Nur die Endung ist eine Einheit.
+
+          Zwischen den beiden Teilen darf **kein Leerzeichen** entstehen, sonst
+          stünde dort „Kundenmaterialnummer _K_SAP". Sie stehen deshalb ohne
+          jeden Text dazwischen; ein `{" "}` wäre hier genau der Fehler. */}
       <h3 id={titelId} className="text-muted-foreground text-beiwerk font-medium break-words">
-        {gruppe.bezeichnung}
+        <span>{name}</span>
+        {endung === null ? null : (
+          <span data-endung className="whitespace-nowrap">
+            {endung}
+          </span>
+        )}
       </h3>
       <ul className="flex flex-wrap items-center gap-1">
         {gruppe.werte.map((wert) => (
@@ -201,11 +231,10 @@ function Gruppe({ gruppe }: { gruppe: BamGruppe }) {
           // 4,17 Prozent der Paare steht derselbe Wert unter mehreren Typen
           // (M37). Innerhalb einer Nachricht ist das Paar eindeutig — der
           // Primärschlüssel ist (MessageID, MessageBAMType, MessageBAMValue).
-          <li
-            key={`${gruppe.typ}-${wert}`}
-            data-wert
-            className="bg-muted text-beiwerk min-w-0 rounded-sm px-1.5 py-0.5 font-mono break-words"
-          >
+          // Die Gestalt ist seit Teil 3 geteilt (`components/marke.tsx`) — es
+          // soll keine zweite im Projekt geben. Was hier **nicht** dazukommt,
+          // ist die Bedienbarkeit: Diese Marke bleibt kein Knopf.
+          <li key={`${gruppe.typ}-${wert}`} data-wert className={cn(MARKE_GESTALT, "font-mono")}>
             {wert}
           </li>
         ))}

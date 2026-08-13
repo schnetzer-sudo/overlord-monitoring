@@ -1270,6 +1270,13 @@ sitzt und **dass** er nichts anfasst: An Zeitleiste, Wartezeile, Zuständen und 
 > fest sind; die BAM-Beschriftungen kommen aus dem Altsystem und werden bis zu 35 Zeichen lang.
 > **Die Beschreibungsliste im Kopf ist deshalb nicht mit umgestellt worden.**
 
+> **Nachgebessert am 13.08.2026, nach der Nacharbeit desselben Tages: Auf der eigenen Route ist der
+> Deckel weiter** — 16 statt 10 rem, gesetzt am Wrapper der Route und nicht am Block
+> ([`bam-werte.md`](bam-werte.md) §11a). Die 10 rem sind für das **Panel** gemessen; hier ist
+> dieselbe Gruppenzeile gemessene 1.126 px breit statt 454, und die Beschriftungen brachen um, ohne
+> dass der Wert dadurch Platz gewann. **§10.3 bleibt auch davon unberührt** — sie ist inhaltsbreit und
+> hat gar keinen Deckel, den man je Einhängepunkt setzen könnte.
+
 ### 10.5 Die technischen Eigenschaften
 
 Eingeklappt, beschriftet mit `eigenschaftenAnzahl` **aus dem Kopf** — also ohne sie zu laden. Genau
@@ -1337,6 +1344,21 @@ aber erst beim Klick.
 > allein eine Folge der Fensterbreite. Das bleibt richtig und steht unverändert unten; neu ist, dass
 > der Nutzer ab `xl` selbst zwischen ihnen wechseln kann. **Kein Satz der alten Fassung ist falsch
 > geworden**, es fehlte einer.
+
+> **Ergänzt am 13.08.2026 (Schritt 7, Teil 3): Es gibt einen dritten Einhängepunkt, und dort
+> erscheint der Umschalter nicht.**
+>
+> Die Trefferliste der Belegsuche öffnet **dieselbe Komponente** über denselben Parameter
+> `nachricht` ([`bam-suche.md`](bam-suche.md) §11.4) — sie ist wiederverwendet und nicht
+> nachgebaut. **Was dort fehlt, ist der Umschalter**, und zwar nicht aus Platzgründen: Sein Ziel
+> ist die eigene Route, und deren Rückweg führt über `ansichtNebenListe` an die **Liste**
+> (`lib/routen.ts`) — nicht an die Suche. Ein Umschalter, dessen Rückweg woanders endet als dort,
+> wo er herkam, ist keiner.
+>
+> Umgesetzt als **freiwillige Angaben**: `umschaltenZu` und `aufUmschalten` sind seitdem optional,
+> und ohne sie erscheint der Knopf nicht. **An den beiden bestehenden Einhängepunkten ändert sich
+> nichts** — sie geben beides weiterhin mit. Ob die Suche je einen eigenen Rückweg bekommt, ist
+> nicht entschieden und steht als offener Punkt in [`bam-suche.md`](bam-suche.md) §13.
 
 Ab `xl` (1280 px) steht das Panel **neben** der Liste (26 rem, ab `2xl` 30 rem), darunter **an ihrer
 Stelle**: Am Handy gibt es kein „neben der Liste", dort füllt die Ansicht den Bildschirm, und das

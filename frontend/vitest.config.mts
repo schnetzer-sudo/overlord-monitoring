@@ -10,20 +10,24 @@ import { defineConfig } from "vitest/config";
  * Das sind alles reine Funktionen. Ein gerenderter Baum brächte hier nichts
  * außer Laufzeit und Abhängigkeiten.
  *
- * **Die Ausnahmen sind gezählt, nicht gewachsen** — Stand 12.08.2026 sind es
- * sieben in drei Dateien:
+ * **Die Ausnahmen sind gezählt, nicht gewachsen** — Stand 13.08.2026 sind es
+ * **zwölf in vier Dateien**. Diese Zahl wird an genau dieser Stelle geführt;
+ * `tests/hilfe/rendern.tsx` und `docs/frontend-grundlagen.md` §9 verweisen
+ * darauf, statt sie zu wiederholen (drei Orte für dieselbe Zahl sind zwei zu
+ * viel):
  *
  * | Datei | Fälle | Warum ein Baum |
  * |---|---|---|
  * | `tests/detail-baum.test.tsx` | 3 | zwei Sätze, die von Hand grundsätzlich nicht zu sehen sind, und die Regression zum Doppelschlüssel |
  * | `tests/ansicht-umschalter.test.tsx` | 1 | die Sichtbarkeitsregel des Umschalters **ist** eine Klasse, und ihr Umbruchpunkt ist von Hand nicht prüfbar (`docs/frontend-grundlagen.md` §7) |
- * | `tests/bam-block.test.tsx` | 3 | zweimal eine Aussage über **Abwesenheit** (kein Block und keine Anfrage bei `bamAnzahl === 0`, und immer noch keine, solange niemand aufklappt) und die Regression zum Schlüssel `(typ, wert)` |
+ * | `tests/bam-block.test.tsx` | 4 | zweimal eine Aussage über **Abwesenheit** (kein Block und keine Anfrage bei `bamAnzahl === 0`, und immer noch keine, solange niemand aufklappt), die Regression zum Schlüssel `(typ, wert)` — und seit dem 13.08.2026 die **Fuge** der zerlegten Beschriftung: ob zwischen Name und Endung ein Leerzeichen entsteht, entscheidet JSX und keine Funktion |
+ * | `tests/suche-marken.test.tsx` *(13.08.2026)* | 4 | die Regression zum Schlüssel `(typ, wert)` an den Marken, der unbekannte Typ als Nummer, und zweimal eine Regel, die **selbst** eine Klasse plus ein `title` ist: die Längenregel der Trefferspalte und der Kettenhinweis |
  *
- * Allen sieben ist dasselbe gemeinsam: **Es gibt keinen anderen Ort, an dem sie
+ * Allen zwölf ist dasselbe gemeinsam: **Es gibt keinen anderen Ort, an dem sie
  * belegbar wären.** Das ist die Bedingung, nicht „es ließe sich so leichter
  * prüfen". Sie schalten ihre Umgebung selbst über `// @vitest-environment jsdom`
- * um — die Voreinstellung bleibt `node`, damit die übrigen neun Dateien nichts
- * von einem DOM bezahlen.
+ * um — die Voreinstellung bleibt `node`, damit die übrigen Dateien nichts von
+ * einem DOM bezahlen.
  *
  * `setupFiles` trägt das Netz darunter: Ein `console.error` lässt den Testlauf
  * fehlschlagen (`tests/setup/konsole.ts`). Es gilt für **alle** Dateien, nicht

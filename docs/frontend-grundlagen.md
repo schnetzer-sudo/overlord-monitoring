@@ -697,11 +697,11 @@ Funktionen, und ein gerenderter Baum brächte hier nichts außer Laufzeit und Ab
 
 > **Ergänzt am 11.08.2026, fortgeschrieben am 13.08.2026 — die Voreinstellung bleibt, die Ausnahmen
 > sind benannt.** Dieser Absatz nannte bis zum 11.08.2026 zusätzlich **kein jsdom**. Das gilt
-> weiterhin für neun der zwölf Testdateien: Die Umgebung ist `node`, und die drei rendernden
-> (`tests/detail-baum.test.tsx`, `tests/ansicht-umschalter.test.tsx`, `tests/bam-block.test.tsx`)
-> schalten sie über `// @vitest-environment jsdom` für sich allein um. Gerendert wird mit
-> `createRoot` und `act`; die einzige neue Abhängigkeit ist `jsdom`, und die Hülle steht in
-> `tests/hilfe/rendern.tsx`.
+> weiterhin für die überwiegende Mehrheit der Testdateien: Die Umgebung ist `node`, und allein die
+> **rendernden** schalten sie über `// @vitest-environment jsdom` für sich um. **Welche das sind
+> und wie viele Fälle sie tragen, steht im Kopf von `frontend/vitest.config.mts`** — hier stünde
+> sonst dieselbe Zahl ein zweites Mal. Gerendert wird mit `createRoot` und `act`; die einzige neue
+> Abhängigkeit ist `jsdom`, und die Hülle steht in `tests/hilfe/rendern.tsx`.
 >
 > **Der Anlass ist kein Sinneswandel, sondern eine Fehlerklasse ohne Netz.** Am 11.08.2026 trugen
 > zwei Geschwister im Detailpanel denselben React-`key`; die Konsole meldete es, kein Test konnte es
@@ -716,6 +716,12 @@ Funktionen, und ein gerenderter Baum brächte hier nichts außer Laufzeit und Ab
 > `tests/hilfe/rendern.tsx` auf sieben Fälle fortgeschrieben, `vitest.config.mts` und diese Tabelle
 > aber bei vier beziehungsweise drei stehen lassen — und `tests/ansicht-umschalter.test.tsx` fehlte
 > hier seit Schritt 6 ganz. **Drei Orte für dieselbe Zahl sind zwei zu viel.**
+>
+> **Angewandt am selben Tag, bei der ersten Gelegenheit:** Schritt 7, Teil 3 bringt eine vierte
+> rendernde Datei (`tests/suche-marken.test.tsx`). Die neue Gesamtzahl steht **ausschließlich** in
+> `vitest.config.mts`; der Kopf von `tests/hilfe/rendern.tsx` nennt sie nicht mehr, sondern
+> beschreibt die Bedingung, unter der ein Fall dazukommt. Diese Tabelle führt die Dateien weiter —
+> **Dateien, keine Summe.**
 
 ### `console.error` lässt den Testlauf fehlschlagen *(seit 11.08.2026)*
 
@@ -752,7 +758,10 @@ gerissen hat, ist eine Behauptung.
 | `kette.test.ts` | die Einteilung nach der Flussrichtung, die Zahl in der Überschrift, das Nachladen, ob es einen Block gibt ([`verkettung.md`](verkettung.md) §8.10) |
 | **`detail-baum.test.tsx`** *(neu, 11.08.2026)* | **gerenderter Baum**, drei Fälle: `tiefeErreicht` und `zyklusErkannt` samt ihrer Lage **unter beiden** Abschnitten (§8.5 dort), und die Regression zum Doppelschlüssel — sie besteht genau dann, wenn kein `console.error` fällt |
 | **`ansicht-umschalter.test.tsx`** *(11.08.2026)* | **gerenderter Baum**, ein Fall: die Sichtbarkeitsregel des Umschalters ist selbst eine Klasse, und ihr Umbruchpunkt ist von Hand nicht prüfbar (§7) |
-| **`bam-block.test.tsx`** *(12.08.2026)* | **gerenderter Baum**, drei Fälle: derselbe Wert unter zwei Typen **ohne `console.error`** (der Schlüssel ist `(typ, wert)`, M37); `bamAnzahl === 0` → **nicht im Baum und keine Anfrage**; eingeklappt mit Werten → Überschrift mit der Zahl, **und immer noch keine Anfrage** ([`bam-werte.md`](bam-werte.md) §11) |
+| **`bam-block.test.tsx`** *(12.08.2026, ergänzt 13.08.2026)* | **gerenderter Baum**, vier Fälle: derselbe Wert unter zwei Typen **ohne `console.error`** (der Schlüssel ist `(typ, wert)`, M37); `bamAnzahl === 0` → **nicht im Baum und keine Anfrage**; eingeklappt mit Werten → Überschrift mit der Zahl, **und immer noch keine Anfrage**; die **Fuge** der zerlegten Beschriftung — vollständig und ohne eingefügtes Leerzeichen vor der Endung, über `textContent` und nicht über eine Textsuche ([`bam-werte.md`](bam-werte.md) §11a) |
+| `bam-beschriftung.test.ts` *(13.08.2026)* | die Zerlegung der Typbeschreibung in Name und Endung, an den gemessenen Fällen aus M45‑1 — samt beider **Gegenproben**: das `i`-Flag (`Sender_Ident_FORS`) und „ab dem letzten Unterstrich" (`_SAP` statt `_L_SAP`) |
+| `suche.test.ts` *(13.08.2026)* | die Entscheidungen der Belegsuche: Parameterform mit Pflichttrenner und Teilung am **ersten** Doppelpunkt, der Rundlauf URL → Zustand → URL über den **wiederholten** `begriff`-Parameter, der übergangene unbrauchbare Begriff, **die Abfrage mit und ohne geöffnete Nachricht Zeichen für Zeichen dieselbe**, der doppelte Begriff, die Sperre beim neunten, die Nulltreffer-Zeile, die Spalte „Treffer" samt Dedupe, das Jahresfenster einschließlich Schalttag, und dass die Abschneidemeldung in beiden Sprachen **Fenster und Abschneidung** nennt ([`bam-suche.md`](bam-suche.md) §11.10) |
+| **`suche-marken.test.tsx`** *(13.08.2026)* | **gerenderter Baum**, vier Fälle: derselbe Wert unter zwei Typen **ohne `console.error`** — hier an den Marken der Suche —, der unbekannte Typ als Nummer, und zweimal eine Regel, die **selbst** eine Klasse plus ein `title` ist: die Längenregel der Trefferspalte und der Kettenhinweis |
 
 ---
 
