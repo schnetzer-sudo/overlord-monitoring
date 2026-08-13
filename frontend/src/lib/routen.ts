@@ -10,6 +10,12 @@ export const ROUTEN = {
   // der Startseite, nicht daneben.
   startseite: "/",
   nachrichten: "/nachrichten",
+  /**
+   * Die Belegsuche. **Ohne Navigationseintrag** — sie wird über das Feld in der
+   * Kopfzeile erreicht, und das steht auf jeder Seite; ein Menüpunkt daneben wäre
+   * eine zweite Tür in denselben Raum (`docs/bam-suche.md`).
+   */
+  suche: "/suche",
   prozesse: "/prozesse",
   administration: "/administration",
 } as const;

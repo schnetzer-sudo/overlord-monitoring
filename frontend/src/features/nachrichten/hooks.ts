@@ -14,6 +14,8 @@ import {
 
 import {
   NACHRICHTEN_SCHLUESSEL,
+  holeBamSuche,
+  holeBamTypen,
   holeBamWerte,
   holeEigenschaften,
   holeKette,
@@ -21,6 +23,8 @@ import {
   holeNachrichten,
   holeNachrichtendetail,
   holeProzesse,
+  type BamSuchergebnis,
+  type BamTyp,
   type BamWerte,
   type Eigenschaft,
   type Kette,
@@ -37,6 +41,7 @@ import {
   type Sortierung,
   type Statusart,
 } from "./filter";
+import { SUCHE_PARAMETER, begriffeAus, type Suchbegriff, type Suchzustand } from "./suche";
 
 /**
  * **`Escape` schließt die Detailansicht** — an genau einer Stelle, für beide
@@ -292,6 +297,90 @@ export function useBamWerte(messageId: string | null, aktiv: boolean) {
 }
 
 const BAM_HALTBARKEIT = 15 * 60 * 1000;
+
+/**
+ * Die Belegarten zur Auswahl neben dem Suchfeld.
+ *
+ * **Länger gehalten als jede Liste** — reine Stammdaten des Mandanten, die sich
+ * ohne Zutun des Altsystems nicht ändern. Beim Mandantenwechsel wird der gesamte
+ * Zwischenspeicher geleert, nicht invalidiert (`lib/zwischenspeicher.ts`); eine
+ * eigene Invalidierung braucht es deshalb nicht.
+ *
+ * **Sie lädt auf jeder Seite**, weil das Feld in der Kopfzeile steht — einmal je
+ * Sitzung und Mandant. Der Aufruf liest zwei Stammdatentabellen mit zusammen 131
+ * Zeilen und kostet gemessen 0,53 Millisekunden (M48).
+ */
+export function useBamTypen() {
+  return useQuery<BamTyp[]>({
+    queryKey: NACHRICHTEN_SCHLUESSEL.bamTypen,
+    queryFn: holeBamTypen,
+    staleTime: BAM_HALTBARKEIT,
+    gcTime: BAM_HALTBARKEIT,
+  });
+}
+
+/**
+ * Der Zustand der Belegsuche, gebunden an die URL.
+ *
+ * **`history: "replace"`**, wie bei jeder Filterleiste: Eine Marke, die man
+ * hinzufügt oder wegnimmt, ist keine Station, zu der man zurückgeht. Der
+ * Parameter `nachricht` bringt sein `push` am Parser mit (`filter.ts`) und wird
+ * davon nicht berührt — am schmalen Fenster ist das Zurück des Browsers der Weg
+ * aus der geöffneten Nachricht heraus.
+ */
+export function useSuchzustand() {
+  const [zustand, setzeZustand] = useQueryStates(SUCHE_PARAMETER, { history: "replace" });
+
+  return {
+    zustand: zustand as Suchzustand,
+    begriffe: begriffeAus(zustand as Suchzustand),
+    setzeBegriffe: useCallback(
+      (begriffe: Suchbegriff[]) =>
+        void setzeZustand({ begriff: begriffe.length === 0 ? null : begriffe }),
+      [setzeZustand],
+    ),
+    /** `null`/`null` heißt „Vorgabe des Servers" — und nicht „30 Tage" (Regel L1). */
+    setzeFenster: useCallback(
+      (von: Date | null, bis: Date | null) => void setzeZustand({ von, bis }),
+      [setzeZustand],
+    ),
+    /**
+     * Öffnet oder schließt die Nachricht neben der Trefferliste.
+     *
+     * **`null` schließt und lässt den übrigen Zustand unberührt** — es wird genau
+     * ein Parameter entfernt und nicht die URL neu gebaut. Der Verlaufseintrag
+     * entsteht am Parser (`history: "push"` in `filter.ts`) und nicht hier.
+     */
+    setzeNachricht: useCallback(
+      (messageId: string | null) => void setzeZustand({ nachricht: messageId }),
+      [setzeZustand],
+    ),
+  };
+}
+
+/**
+ * Eine Belegsuche.
+ *
+ * **Ohne Begriff läuft keine Abfrage.** Den Endpunkt gibt es ohne Suchbegriff
+ * nicht; ein Aufruf ohne wäre ein garantiertes `400`, und die Ansicht zeigt
+ * stattdessen ihren Leerzustand.
+ *
+ * **Kein zweiter Versuch bei `suche-abgebrochen`** — das entscheidet
+ * `lib/query-client.ts` an einer Stelle für die ganze Anwendung: Dieselbe Abfrage
+ * liefe noch einmal in dieselbe Zeitgrenze und kostete weitere Sekunden auf der
+ * Produktionsdatenbank.
+ *
+ * **Nicht länger gehalten als die Vorgabe.** Anders als Belegdaten und Kette
+ * beschreibt eine Suche keinen festen Gegenstand, sondern ein Zeitfenster — und
+ * das wandert mit der Anwendungsuhr weiter, sobald es die Vorgabe ist.
+ */
+export function useBamSuche(abfrage: string, aktiv: boolean) {
+  return useQuery<BamSuchergebnis>({
+    queryKey: NACHRICHTEN_SCHLUESSEL.bamSuche(abfrage),
+    queryFn: () => holeBamSuche(abfrage),
+    enabled: aktiv,
+  });
+}
 
 /**
  * Die Kette einer Nachricht — **nur, wenn sie eine hat.**

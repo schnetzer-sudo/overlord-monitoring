@@ -121,21 +121,13 @@ public class BamService {
   }
 
   /**
-   * Die Beschriftung — {@code MessageBAMTypeDescription}, unveraendert.
+   * Die Beschriftung — {@code MessageBAMTypeDescription}, unveraendert; fehlt sie, die Typnummer.
    *
-   * <p><b>Fehlt sie, erscheint die Typnummer</b>, sichtbar unfertig. Dieselbe Regel wie bei einem
-   * kuratierten Eigenschaftsnamen ohne Uebersetzung ({@code nachrichtendetail.md} §10.3): Ein neuer
-   * Typ aus dem Altsystem faellt beim ersten Blick auf, statt lautlos als leere Zeile zu
-   * erscheinen.
-   *
-   * <p>Ein <b>leerer</b> Text wird wie ein fehlender behandelt. Die Spalte laesst ihn zu, und eine
-   * Gruppe ohne jede Ueberschrift waere die eine Darstellung, die schlechter ist als die Typnummer.
+   * <p>Die Regel selbst steht seit Teil 2b in {@link Typbezeichnung}, weil die <b>Trefferliste der
+   * Suche</b> sie ebenfalls braucht. Zwei Nachbauten waeren die Drift, bei der derselbe fehlende
+   * Typ an zwei Stellen verschieden beschriftet erscheint.
    */
   private static String bezeichnung(BamTypZeile zeile) {
-    String beschreibung = zeile.bezeichnung();
-    if (beschreibung == null || beschreibung.isBlank()) {
-      return Short.toString(zeile.typ());
-    }
-    return beschreibung;
+    return Typbezeichnung.fuer(zeile.typ(), zeile.bezeichnung());
   }
 }

@@ -66,6 +66,34 @@ public record Zeitfenster(LocalDateTime von, LocalDateTime bis) {
     return new Zeitfenster(jetzt.minus(gewaehlt.dauer()), jetzt);
   }
 
+  /**
+   * Dasselbe für einen Endpunkt, der <b>nur</b> den absoluten Modus anbietet und eine <b>eigene
+   * Vorgabe</b> hat.
+   *
+   * <p><b>Warum es diese zweite Fassung gibt.</b> {@link #VORGABE} sind 24 Stunden, und das ist die
+   * richtige Vorgabe für eine <i>Liste</i>: Wer sie öffnet, will wissen, was gerade läuft. Die
+   * BAM-Suche stellt eine andere Frage — <b>wer eine Belegnummer hat, hat kein Datum</b> —, und für
+   * sie sind 24 Stunden gemessen zu eng: Beim schlimmsten Wert der Erhebung findet ein Tagesfenster
+   * <b>279 von 234.159</b> Nachrichten (M35). Die Vorgabe ist deshalb ein Parameter dieser Methode
+   * und keine zweite Konstante hier; welche Zahl sie trägt, entscheidet der Endpunkt und begründet
+   * sie in seiner Dokumentation.
+   *
+   * <p><b>Die Obergrenze bleibt ein Jahr</b>, und sie wird nicht neu erfunden: Der absolute Zweig
+   * ist derselbe wie bei {@link #aufloesen}, samt {@code zeitfenster-unvollstaendig}, {@code
+   * zeitfenster-ungueltig} und {@code zeitfenster-zu-gross}. <b>Es wird nichts gekappt</b> — ein zu
+   * großes Fenster ist {@code 400}, keine stillschweigend verkleinerte Antwort.
+   *
+   * @param vorgabe die Spanne, die gilt, wenn der Aufrufer keine Zeitpunkte nennt
+   */
+  public static Zeitfenster mitVorgabe(
+      LocalDateTime von, LocalDateTime bis, Duration vorgabe, Clock anwendungsuhr) {
+    if (von != null || bis != null) {
+      return absolutes(von, bis);
+    }
+    LocalDateTime jetzt = LocalDateTime.now(anwendungsuhr);
+    return new Zeitfenster(jetzt.minus(vorgabe), jetzt);
+  }
+
   private static Zeitfenster absolutes(LocalDateTime von, LocalDateTime bis) {
     if (von == null || bis == null) {
       throw new FachlicheAusnahme(

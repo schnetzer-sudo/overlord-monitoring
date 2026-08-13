@@ -12,6 +12,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { Suchfeld } from "@/features/nachrichten/components/suchfeld";
 import type { Selbstauskunft } from "@/features/sitzung/api";
 import { Nutzermenue } from "@/features/sitzung/components/nutzermenue";
 import { useTexte } from "@/i18n/provider";
@@ -86,16 +87,28 @@ export function Kopfzeile({
         </span>
 
         {/*
-         * Reservierter Platz für die BAM-Suche aus Schritt 7 — **absichtlich
-         * leer**.
+         * Der seit Schritt 3 reservierte Platz für die Belegsuche — **seit
+         * Schritt 7, Teil 3 gefüllt**.
          *
-         * Die Suche ist laut Leitsatz der Haupteinstieg; sie darf sich später
-         * nicht zwischen Mandant, Sprache und Nutzermenü drängen. Deshalb steht
-         * der Platz schon jetzt hier, aber kein Eingabefeld: Ein Feld, das
-         * nichts tut, ist schlechter als keins. Am Handy entfällt der Platz —
-         * dort ist jeder Pixel Breite vergeben.
+         * Die Suche ist laut Leitsatz der Haupteinstieg; ihr Platz stand deshalb
+         * von Anfang an fest, damit sie sich später nicht zwischen Mandant,
+         * Sprache und Nutzermenü drängt. Bis dahin blieb er ausdrücklich leer —
+         * ein Feld, das nichts tut, ist schlechter als keins.
+         *
+         * **Unterhalb von 768 px ist es eine eigene, volle Zeile.** Am
+         * Zeigergerät sitzt es in den reservierten 18 rem zwischen Produktname
+         * und Mandant; darunter trägt diese Breite nicht mehr. Es *entfällt*
+         * dort aber nicht: Ein Haupteinstieg, den es am schmalen Fenster nicht
+         * gibt, ist keiner. Das kostet eine Zeile Höhe — dieselbe Abwägung wie
+         * beim Umbruch der Kopfzeile selbst (`docs/visuelles-konzept.md` §6).
+         *
+         * **Kein neuer Umbruchpunkt**: `md` ist der des Projekts.
          */}
-        <div data-bereich="suche" className="w-suchbereich order-3 hidden shrink-0 md:block" />
+        {navigationSichtbar ? (
+          <div data-bereich="suche" className="md:w-suchbereich order-6 w-full shrink-0 md:order-3">
+            <Suchfeld />
+          </div>
+        ) : null}
 
         {/* Auf dem Handy die zweite Zeile, am Rechner rechts neben dem Suchplatz. */}
         <div className="order-5 flex w-full min-w-0 items-center gap-2 md:order-4 md:w-auto">

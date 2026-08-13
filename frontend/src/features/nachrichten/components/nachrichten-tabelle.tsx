@@ -238,8 +238,13 @@ function SortierUmschalter({
  * visuelle Konzept lässt außer Schublade und Menü keine Bewegung zu, und ein
  * eingeblendeter Tooltip brächte genau die mit. Für Vorleseprogramme steht
  * derselbe Text zusätzlich verborgen im Markup.
+ *
+ * **Sie ist seit Schritt 7, Teil 3 ausgeführt und nicht mehr privat.** Die
+ * Trefferliste der Belegsuche zeigt dieselbe Zeilengestalt wie diese Liste — das
+ * ist eine Zusage des Endpunkts (`docs/bam-suche.md` §1) und wäre mit einem
+ * zweiten Nachbau derselben Zelle keine mehr.
  */
-function ZeitpunktZelle({ wert }: { wert: string }) {
+export function ZeitpunktZelle({ wert }: { wert: string }) {
   const texte = useTexte();
   const sprache = useSprache();
   const zone = useAnzeigezone();
@@ -265,7 +270,7 @@ function ZeitpunktZelle({ wert }: { wert: string }) {
  * ein Kollege dieselbe Zeile im Altwerkzeug wiederfindet, und der Freitextfilter
  * durchsucht ihn weiterhin. Was man sucht, sieht man damit auch.
  */
-function AblaufZelle({
+export function AblaufZelle({
   sosName,
   processName,
 }: {

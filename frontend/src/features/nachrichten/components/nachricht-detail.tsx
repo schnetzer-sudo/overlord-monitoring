@@ -59,6 +59,13 @@ import { Zeitleiste } from "./zeitleiste";
  * @param umschaltenZu wohin der Umschalter im Kopf führt — aus dem Panel auf die
  *   eigene Route, von dort zurück ans Panel (`ansicht-umschalter.tsx`). Er tritt
  *   **neben** den Schließen-Knopf und nicht an seine Stelle.
+ *
+ *   <p><b>Beide Angaben sind seit Schritt 7, Teil 3 freiwillig.</b> Es gibt einen
+ *   dritten Einhängepunkt: die Trefferliste der Belegsuche. Dort entfällt der
+ *   Umschalter, und zwar nicht aus Platzgründen — der Rückweg von der eigenen
+ *   Route führt an die **Liste** und nicht an die Suche (`lib/routen.ts`). Ein
+ *   Umschalter, der woanders endet als dort, wo er herkam, ist keiner. Fehlen sie,
+ *   erscheint er nicht; alles Übrige bleibt unverändert.
  * @param aufUmschalten der Weg dorthin, wieder vom Einhängepunkt gestellt.
  */
 export function NachrichtDetail({
@@ -73,8 +80,8 @@ export function NachrichtDetail({
   aufSchliessen: () => void;
   schliessenText: string;
   aufOeffnen: (messageId: string) => void;
-  umschaltenZu: Umschaltziel;
-  aufUmschalten: () => void;
+  umschaltenZu?: Umschaltziel;
+  aufUmschalten?: () => void;
 }) {
   const texte = useTexte();
   const anfrage = useNachrichtendetail(messageId);
@@ -100,8 +107,12 @@ export function NachrichtDetail({
           )}
         </h2>
         {/* Erst umschalten, dann schließen — die Reihenfolge im DOM ist die
-            Reihenfolge unter `Tab`, und „anders zeigen" steht vor „weg damit". */}
-        <AnsichtUmschalter zu={umschaltenZu} aufUmschalten={aufUmschalten} />
+            Reihenfolge unter `Tab`, und „anders zeigen" steht vor „weg damit".
+            Ohne Ziel gibt es ihn nicht: Die Suche hat keinen zweiten
+            Einhängepunkt, an den er zurückführen könnte. */}
+        {umschaltenZu === undefined || aufUmschalten === undefined ? null : (
+          <AnsichtUmschalter zu={umschaltenZu} aufUmschalten={aufUmschalten} />
+        )}
         <Button
           type="button"
           variant="ghost"

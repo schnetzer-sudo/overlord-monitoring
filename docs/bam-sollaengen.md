@@ -9,6 +9,15 @@ sechzehn Zeilen entstanden sind, wo die Regel dahinter an ihre Grenze stößt, u
 Veralten gesichert ist. **Sie beschreibt keinen Endpunkt.** Die Suche, die sie benutzt, entsteht in
 Teil 2b ([`bam-suche.md`](bam-suche.md)); die Oberfläche in Teil 3.
 
+> ### 📌 Nachgetragen am 13.08.2026 — die Tabelle wird seit Teil 2b benutzt
+>
+> **Sie ist gebaut**: `GET /api/bam/suche` liest sie als **Vollabzug für den Mandanten der Sitzung**
+> und bildet daraus die Suchvarianten — vollständig in [`bam-suche.md`](bam-suche.md) §3.
+> **An der Tabelle ändert sich nichts**, weder am Schnitt noch am Inhalt; die zwei wirkungslosen
+> Einträge bleiben, 9006 kommt nicht dazu. Beides sind weiterhin Entscheidungen des Auftraggebers.
+>
+> **Was M47 gemessen und dabei an dieser Datei korrigiert hat, steht in §8.**
+
 ---
 
 ## 1. Wozu
@@ -288,15 +297,40 @@ Nicht in dieser Liste: `app_user` (Konten, aber über `POST /api/admin/users` ne
    nicht gemessen (§3).
 4. **Wie erfährt die Kuratierung von einem neuen Mandanten oder Typ?** Der Drift-Test bemerkt es
    nicht (§7.1).
-5. **Was kostet eine Variante, die nichts trifft?** Ungemessen — M46 misst Verteilungen, keine
-   Suchen. Die Zahl gehört in M47 (Teil 2b).
+5. ~~**Was kostet eine Variante, die nichts trifft?** Ungemessen — M46 misst Verteilungen, keine
+   Suchen. Die Zahl gehört in M47 (Teil 2b).~~ ✔ **Gemessen am 13.08.2026 in M47: rund 0,1 ms.**
+   Von einer auf zwei Fassungen kostet dieselbe Suche 0,956 → 1,131 ms, von einer auf fünf an einem
+   Wert mit 2.256 Treffern 20,228 → 22,439 ms. **Damit ist die Frage 2 keine Leistungsfrage mehr**,
+   sondern nur noch die, ob die Regel sagen soll, was sie meint. Sie bleibt offen.
+
+### Was Teil 2b an dieser Datei sichtbar gemacht hat
+
+*Nachgetragen am 13.08.2026 nach M47. Keine dieser drei Zeilen ändert die Tabelle.*
+
+1. **Die Zahl der Sollängen von `NEXANS` ist gezählt worden, und sie ist eine andere als im
+   Auftrag.** Der Auftrag zu Teil 2b nennt „elf Sollängen, aber nur drei verschiedene". Die Tabelle
+   führt für `NEXANS` **zehn Zeilen**, davon **acht mit einer Sollänge** und zwei nur mit dem
+   Leerzeichen-Kennzeichen. **Die Zahl der verschiedenen ist mit drei richtig** (10, 4 und 3), und
+   nur auf sie kommt es an — die Normalisierung bildet aus den *verschiedenen* Sollängen. §4.1 ist
+   damit bestätigt und nicht geändert.
+2. **Die Obergrenze der Variantenzahl ist damit belegt.** Bei `NEXANS` — dem Mandanten mit den
+   meisten kuratierten Zeilen — sind es **höchstens fünf** gesuchte Fassungen, und die erreicht nur
+   eine ein- oder zweistellige Eingabe: drei aufgefüllte, die rohe und die mit Leerzeichen. Für eine
+   siebenstellige Eingabe sind es drei, für eine zehnstellige zwei.
+3. **`sollaenge IS NULL` ist im Endpunkt kein Sonderfall, sondern ein Zweig.** Die beiden Zeilen aus
+   §4.2 erzeugen die Leerzeichen-Fassung und **keine** aufgefüllte. Das trifft ausgerechnet 9018 —
+   den Typ, der bei `NEXANS` auf 92,26 % der Wurzeln sitzt (M39) und damit den naheliegendsten
+   Suchtyp überhaupt. **Für ihn wird nie aufgefüllt**, und das ist die praktische Folge der
+   95-Prozent-Regel, die §4.3 beschreibt.
 
 ---
 
 ## 9. Was diese Datei nicht beschreibt
 
 - **Den Suchendpunkt.** `GET /api/bam/suche`, seine Parameterform, das Zeitfenster und die
-  Abfrageform entstehen in Teil 2b → [`bam-suche.md`](bam-suche.md).
+  Abfrageform stehen in [`bam-suche.md`](bam-suche.md) (Teil 2b, seit 13.08.2026 gebaut).
 - **Wie die Varianten gebildet werden.** Roh, aufgefüllt, mit führendem Leerzeichen — das ist die
-  Normalisierung des Endpunkts und nicht die Kuratierung.
+  Normalisierung des Endpunkts und nicht die Kuratierung; sie steht in
+  [`bam-suche.md`](bam-suche.md) §3 samt der Begründung, warum die Leerzeichen-Fassung gesucht und
+  **nicht gemeldet** wird.
 - **Welche Typen die Oberfläche zur Auswahl anbietet.** Das ist Teil 3.

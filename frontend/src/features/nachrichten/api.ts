@@ -408,6 +408,100 @@ export type BamWerte = {
   gruppen: BamGruppe[];
 };
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   Die Belegsuche (Schritt 7, Teil 3)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Eine Belegart zur Auswahl neben dem Suchfeld.
+ *
+ * **Die Auswahl ist ein Angebot und kein Filter.** Sie kommt aus der
+ * Konfiguration des Mandanten (`MessageBAMMandant`) und sagt nichts darüber, was
+ * im Bestand steht — `WOC` trägt 2.067 BAM-Zeilen unter einem Typ, den seine
+ * Konfiguration nicht kennt (M40). Deshalb bleibt die Suche **ohne** Typ die
+ * Vorgabe, und ein Mandant ohne konfigurierten Typ bekommt gar keine Auswahl.
+ */
+export type BamTyp = {
+  typ: number;
+  /** `MessageBAMType.MessageBAMTypeDescription`, unverändert — nie `null`. */
+  bezeichnung: string;
+  /** Die Ordnung des Altsystems. Sie wird nicht angezeigt; die Liste steht schon darin. */
+  sortIndex: number;
+};
+
+/**
+ * Worauf eine Nummer auf dieser Nachricht getroffen hat.
+ *
+ * **Das ist die eine Angabe, die der Nutzer nicht selbst getippt hat.** Den Wert
+ * kennt er — er steht in seiner Marke; was er nicht weiß, ist, ob seine Nummer
+ * dort als Lieferschein-Nr., als Charge oder als Kundenmaterialnummer steht.
+ */
+export type BamTrefferWert = {
+  /** Zusammen mit dem Wert der Schlüssel der Liste — niemals der Wert allein (M37). */
+  typ: number;
+  bezeichnung: string;
+  /** Der Wert, **wie er im Bestand steht** — mit führender Null, falls er eine trägt. */
+  wert: string;
+};
+
+/**
+ * Eine gefundene Nachricht: **dieselbe Zeilengestalt wie in der Liste**, dazu
+ * `rollen` und `treffer`.
+ *
+ * Dass die zehn Listenfelder wortgleich sind, ist eine Zusage des Endpunkts
+ * (`docs/bam-suche.md` §1) — wer aus der Suche heraus weiterarbeitet, sieht
+ * dieselbe Zeile wie aus der Liste, und das Detail dahinter ist dasselbe.
+ */
+export type BamTreffer = Nachricht & {
+  /**
+   * Die Stellung in der Verkettung — **immer vorhanden, leer statt fehlend**.
+   *
+   * Sie steht hier, weil die Suche fast immer die **Wurzel** findet: 96,87
+   * Prozent der Wurzeln tragen BAM-Werte, nur 2,42 Prozent der Kinder (M26‑1b).
+   * Ohne sie hielte sich der Nutzer bei einem Endstatus für fertig, obwohl der
+   * Beleg als Bündel weitergelaufen ist.
+   */
+  rollen: Kettenrolle[];
+  /** Mehrere sind kein Randfall: 4,17 Prozent der Paare tragen denselben Wert unter mehreren Typen (M37). */
+  treffer: BamTrefferWert[];
+};
+
+/**
+ * Ein Begriff, so wie die Suche ihn verstanden hat — **samt der Fassungen, nach
+ * denen tatsächlich gesucht wurde**.
+ *
+ * **Keine stille Korrektur.** Wer `4711815` tippt und `004711815` findet, muss
+ * erfahren, warum; sonst sähe die Trefferliste aus, als hätte die Datenbank
+ * etwas anderes enthalten als sie enthält. Die Fassung mit führendem Leerzeichen
+ * steht bewusst **nicht** darin (`docs/bam-suche.md` §3).
+ */
+export type BamBegriffTreffer = {
+  /** Die Eingabe, an den Rändern beschnitten — ein Zitat der Frage. */
+  eingabe: string;
+  typ: number | null;
+  /** Die gesuchten Fassungen, mit der Eingabe an erster Stelle. */
+  varianten: string[];
+};
+
+/** Die Antwort der Belegsuche. */
+export type BamSuchergebnis = {
+  /** Die Treffer, absteigend nach Zeitpunkt — **immer vorhanden, leer statt fehlend**. */
+  nachrichten: BamTreffer[];
+  begriffe: BamBegriffTreffer[];
+  /**
+   * Das **tatsächlich verwendete** Zeitfenster, ISO 8601 in UTC.
+   *
+   * Es steht in der Antwort und nicht nur in der Anfrage, weil es nicht die
+   * Laufzeit verändert, sondern die **Antwort**: Beim schlimmsten gemessenen Wert
+   * findet ein Tagesfenster 279 von 234.159 Nachrichten (M35). Wer nicht weiß,
+   * dass er durch ein Fenster schaut, hält das Gefundene für alles, was es gibt.
+   */
+  von: string;
+  bis: string;
+  /** Ob es mehr Treffer gäbe. Gezählt **nach** dem Mandantenfilter. */
+  abgeschnitten: boolean;
+};
+
 /** Eine rohe `MessageProperty`-Zeile, auf Abruf geladen. */
 export type Eigenschaft = {
   name: string;
@@ -437,6 +531,13 @@ export const NACHRICHTEN_SCHLUESSEL = {
   eigenschaften: (messageId: string) => ["nachrichten", "eigenschaften", messageId] as const,
   /** Die Belegdaten einer Nachricht — nur geladen, wenn der Block aufgeklappt wird. */
   bam: (messageId: string) => ["nachrichten", "bam", messageId] as const,
+  /** Die Belegarten zur Auswahl. Reine Stammdaten des Mandanten, entsprechend lange gehalten. */
+  bamTypen: ["nachrichten", "bam-typen"] as const,
+  /**
+   * Eine Belegsuche. Der Schlüssel trägt die ganze Abfrage — andere Begriffe und
+   * ein anderes Zeitfenster sind andere Daten.
+   */
+  bamSuche: (abfrage: string) => ["nachrichten", "bam-suche", abfrage] as const,
   /** Die Kette einer Nachricht — nur geladen, wenn `rollen` nicht leer ist. */
   kette: (messageId: string) => ["nachrichten", "kette", messageId] as const,
   /**
@@ -477,6 +578,32 @@ export function holeEigenschaften(messageId: string): Promise<Eigenschaft[]> {
  */
 export function holeBamWerte(messageId: string): Promise<BamWerte> {
   return hole<BamWerte>(`/nachrichten/${encodeURIComponent(messageId)}/bam`);
+}
+
+/**
+ * Die Belegarten, die dieser Mandant zur Auswahl bekommt.
+ *
+ * **Ohne Parameter, und ohne Mandanten-ID** (Regel M1): Der Mandant kommt aus der
+ * Sitzung. Eine leere Liste ist eine Antwort und kein Fehler — drei Mandanten
+ * haben keinen konfigurierten Typ und suchen typlos.
+ */
+export function holeBamTypen(): Promise<BamTyp[]> {
+  return hole<BamTyp[]>("/bam/typen");
+}
+
+/**
+ * Die Belegsuche.
+ *
+ * **Kein Cursor und kein `limit`.** Der Endpunkt liefert höchstens 50 Treffer und
+ * sagt, wenn es mehr gäbe; wer mehr sehen will, verengt den Zeitraum oder nennt
+ * eine zweite Nummer — und die zweite Nummer ist die billigere Verengung
+ * (`docs/bam-suche.md` §5).
+ *
+ * @param abfrage die fertige Zeichenkette aus `suche.ts`; sie trägt die Begriffe
+ *   als **wiederholten** Parameter, genau wie der Endpunkt sie erwartet
+ */
+export function holeBamSuche(abfrage: string): Promise<BamSuchergebnis> {
+  return hole<BamSuchergebnis>(`/bam/suche${abfrage}`);
 }
 
 export function holeKette(messageId: string): Promise<Kette> {

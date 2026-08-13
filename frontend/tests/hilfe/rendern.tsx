@@ -9,23 +9,20 @@ import { SpracheProvider } from "@/i18n/provider";
  * **Die kleinste Hülle, die eine Komponente dieses Projekts rendert.**
  *
  * Geprüft werden hier weiterhin Entscheidungen und kein Markup
- * (`docs/frontend-grundlagen.md` §9). Es gibt sieben Fälle, für die das nicht
- * reicht, und für sie existiert diese Datei: drei in
- * `tests/detail-baum.test.tsx` — zwei davon von Hand grundsätzlich nicht
- * erreichbar, der dritte die Regression zum Doppelschlüssel vom 11.08.2026 —,
- * einer in `tests/ansicht-umschalter.test.tsx`, wo die zu prüfende Regel selbst
- * eine CSS-Klasse ist und ihr Umbruchpunkt von Hand nicht prüfbar
- * (`docs/frontend-grundlagen.md` §7), und drei in `tests/bam-block.test.tsx`.
+ * (`docs/frontend-grundlagen.md` §9). Es gibt eine abgezählte Menge von Fällen,
+ * für die das nicht reicht, und für sie existiert diese Datei.
  *
- * **Der Zuwachs am 12.08.2026 ist eine Entscheidung und keine Bequemlichkeit.**
- * Die drei neuen Fälle sind dieselbe Klasse wie der Doppelschlüssel: zweimal
- * eine Aussage über **Abwesenheit** (kein Block im Baum, keine Anfrage) und
- * einmal die Regression zum Schlüssel `(typ, wert)`, die genau dann besteht,
- * wenn **kein `console.error`** fällt. Keiner davon ist ohne Baum belegbar.
+ * **Welche das sind und wie viele, steht an genau einer Stelle: im Kopf von
+ * `frontend/vitest.config.mts`.** Sie hier ein zweites Mal zu führen war der
+ * Befund vom 13.08.2026 — drei Orte für dieselbe Zahl sind zwei zu viel, und
+ * genau einer davon lief den anderen hinterher.
  *
- * **Die Zahl steht hier, damit sie beim nächsten Zuwachs eine Entscheidung
- * verlangt.** Die Bedingung ist nicht „ein Baum wäre bequemer", sondern „es gibt
- * keinen anderen Ort, an dem der Satz belegbar wäre".
+ * **Die Bedingung für einen weiteren Fall bleibt dieselbe** und ist der
+ * eigentliche Inhalt dieses Absatzes: nicht „ein Baum wäre bequemer", sondern
+ * „es gibt keinen anderen Ort, an dem der Satz belegbar wäre". Das trifft auf
+ * zwei Klassen zu — Aussagen über **Abwesenheit** (kein Block im Baum, keine
+ * Anfrage) und Regeln, die selbst eine **Klasse** oder eine Konsolenmeldung
+ * sind.
  *
  * **Bewusst ohne Testing Library und ohne React-Plugin.** Gebraucht wird ein
  * Baum im DOM, mehr nicht: `createRoot` plus `act` leisten das, und die einzige

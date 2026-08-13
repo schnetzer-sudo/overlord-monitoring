@@ -1010,6 +1010,16 @@ bereits geladene Liste, nicht über einen Serverparameter.
 > versprach damit weniger, als das Feld kann. Das Feld ist von 16 auf 20 rem gewachsen; die
 > Filterleiste bricht um, wenn der Platz nicht reicht.
 
+> **Die Beschriftung des Suchfelds ist am 13.08.2026 angepasst worden — von „Suche" auf „Prozess,
+> Projekt oder Ablauf durchsuchen".** Der Anlass steht in [`bam-suche.md`](bam-suche.md) §11.1:
+> Seit Schritt 7, Teil 3 steht ein **zweites** Suchfeld in der Kopfzeile, und das sucht etwas
+> anderes — Belegnummern. Zwei Felder auf demselben Bildschirm, die verschiedene Dinge tun und
+> verschieden fehlschlagen, sind eine Falle, besonders für den Nutzer, der kein EDI-Spezialist ist.
+> **Beide Beschriftungen sagen deshalb, worin sie suchen.**
+>
+> Der **Platzhalter** ist unverändert („Prozess-, Projekt- oder Ablaufname") — er tat es schon; die
+> Beschriftung, die für Vorleseprogramme daneben stand, tat es nicht.
+
 **Das Suchfeld sucht ab drei Zeichen und entprellt** (400 ms). Der Freitextfilter ist der teuerste
 Fall des Endpunkts (L7c, L11 und L13); bei jedem Tastendruck zu suchen hieße, dieselbe teure Abfrage
 fünfmal für einen Begriff zu stellen, den der Nutzer noch nicht fertig getippt hat. **Zu kurz ist

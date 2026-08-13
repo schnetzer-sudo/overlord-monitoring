@@ -166,7 +166,9 @@ export const en: Texte = {
     },
 
     suche: {
-      bezeichnung: "Search",
+      // Names what it searches — there is a second search field in the header
+      // since step 7 part 3, and it searches something else.
+      bezeichnung: "Search processes, projects and flows",
       platzhalter: "Process, project or flow name",
       zuKurz: "{anzahl} more characters, then the search runs.",
       leeren: "Clear search",
@@ -298,6 +300,85 @@ export const en: Texte = {
       tiefeErreicht: "The chain is longer than shown here.",
       zyklusErkannt: "The chain runs in a circle — it stops here.",
     },
+  },
+
+  /** The document search (step 7, part 3) — its own view, not part of the list. */
+  suche: {
+    titel: "Document search",
+
+    feld: {
+      bezeichnung: "Search document number",
+      platzhalter: "Search document number",
+      hinzufuegen: "Add term",
+    },
+
+    typwahl: {
+      alle: "All document types",
+      gewaehlt: "Document type: {belegart}",
+    },
+
+    marken: {
+      bezeichnung: "Search terms",
+      entfernen: "Remove term",
+      grenzeErreicht:
+        "The search takes at most {anzahl} terms — a guard rail, not a business limit. Remove one to search for another.",
+    },
+
+    spalten: {
+      treffer: "Match",
+      kette: "Chain",
+    },
+
+    treffer: {
+      weitere: "{erste} +{anzahl}",
+      alleTypen: "Matched as: {typen}",
+    },
+
+    kette: {
+      kurz: {
+        SPLIT_WURZEL: "Split",
+        SPLIT_KIND: "Part",
+        MERGE_EINGANG: "Input",
+        MERGE_ERGEBNIS: "Result",
+      },
+      satz: {
+        SPLIT_WURZEL: "This message was split — the parts continue on their own.",
+        SPLIT_KIND: "This message is one part of a split.",
+        MERGE_EINGANG: "This message went into a merge.",
+        MERGE_ERGEBNIS: "This message came out of a merge.",
+      },
+    },
+
+    varianten: "Searched for {eingabe} and {fassungen}.",
+
+    fenster: {
+      aendern: "Change time window",
+      einJahr: "Extend to one year",
+      vorgabe: "Restore default",
+      gilt: "The time window {von} to {bis} applies.",
+    },
+
+    ergebnis: {
+      anzahl: "{anzahl} matches in the time window {von} to {bis}.",
+      abgeschnitten:
+        "More than {anzahl} matches — showing the {anzahl} most recent in the time window {von} to {bis}. Narrow the period or name a second document number.",
+      keine: "No message carries this document",
+      keineHinweis:
+        "Extend the time window or remove a term. You do not need to type a leading zero — the search adds it.",
+      nulltreffer: "With this term: 0. Without it: {anzahl}.",
+      nulltrefferAbgeschnitten: "With this term: 0. Without it: more than {anzahl}.",
+    },
+
+    leer: {
+      titel: "What are you looking for?",
+      was: "Type a document number into the field above — delivery note, order or transport number, batch, plant or material number. Enter starts the search.",
+      belegarten: "These document types are set up for this tenant:",
+      hilfe:
+        "The search also looks for leading zeros and a leading space — they are not on the printed document but they are in the data. Several terms are combined with AND.",
+    },
+
+    abgebrochen:
+      "The search took too long and was cancelled. Narrow the period or name a second document number.",
   },
 
   zustand: {

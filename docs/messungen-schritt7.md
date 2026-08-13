@@ -100,6 +100,24 @@ Bezugsdokumente: [`messungen-schritt4.md`](messungen-schritt4.md) (M0–M13, L1�
 > zum **sechsten** Mal byteidentisch, und die sechs Bestandszeilen aus M43‑1 reproduzieren Zeile für
 > Zeile.
 
+> ### 📌 Fünfter Nachtrag vom 13.08.2026 — M47
+>
+> **M47** (Was kostet das gebaute Suchstatement?) ist am **13.08.2026** nachgereicht worden, nach M46
+> und in fünf eigenen Sitzungen. Sie steht unten zwischen M46 und der Zusammenfassung.
+>
+> **Der Anlass ist Schritt 7, Teil 2b** — und der Unterschied zu allen vorherigen Messungen dieser
+> Runde ist der Gegenstand: **M47 misst nicht, was gebaut werden könnte, sondern was gebaut ist.**
+> Der gemessene Text ist aus dem Repository gegen eine jOOQ-Attrappe gerendert; er unterscheidet sich
+> an keiner Stelle vom ausgelieferten. Sie schließt damit zwei ausdrücklich offene Zahlen: ob das
+> Pflicht-Zeitfenster die beiden Bösfälle der Verundung auffängt (offene Frage 10) und was eine
+> Suchvariante kostet, die nichts trifft ([`bam-sollaengen.md`](bam-sollaengen.md) §8, Punkt 5).
+>
+> **Hauptrunde und die vier früheren Nachträge bleiben unverändert.** Keine Zahl aus M32 bis M46,
+> E6 und E7 ist angefasst worden. Fortgeschrieben sind erneut nur die zusammenfassenden Abschnitte
+> am Ende und dieser Kopf. Die Bytegrößen sind zum **siebten** Mal byteidentisch, und beide
+> Prüfwert-Herleitungen aus M42 reproduzieren Zeile für Zeile — Trefferzahlen, Wertzahl der fetten
+> Nachricht und die 2.499 BAM-Werte je Kandidatennachricht.
+
 **Nummerierung ab M32.** Geprüft über `docs\` und die Dateien im Wurzelverzeichnis: **M31** ist die
 höchste projektweit vergebene Nummer (`messungen-schritt6.md`, Block 4); **M32 bis M41** kommen in
 keiner anderen Datei vor. Die Zählung läuft projektweit fort und nicht je Datei. Die ergänzende
@@ -113,12 +131,21 @@ Wurzelverzeichnis geprüft — **M44** war die höchste projektweit vergebene Nu
 ergänzende.
 **M46** ist am selben Tag nachgetragen; ebenso geprüft — **M45** war zu diesem Zeitpunkt die höchste
 projektweit vergebene Nummer, **E7** die höchste ergänzende.
+**M47** ist am selben Tag nachgetragen; ebenso geprüft — **M46** war zu diesem Zeitpunkt die höchste
+projektweit vergebene Nummer, **E7** unverändert die höchste ergänzende. Eine neue ergänzende Nummer
+ist nicht vergeben worden.
 
 **Diese Runde baut nichts.** Kein Endpunkt, keine Migration, keine Oberfläche, keine Änderung an
 vorhandenem Code — und **keine Entscheidung**. Die Lesarten standen vor der Erhebung fest; welche
 Fassung gebaut wird, entscheidet der Auftraggeber danach. Das gilt für den Nachtrag ebenso: Er
 stellt fest, was die Verundung kostet und womit normalisiert werden **könnte** — er wählt weder die
 Bauform noch die Kuratierung.
+
+> **Ab dem vierten Nachtrag gilt dieser Satz nicht mehr uneingeschränkt**, und das ist keine
+> Aufweichung, sondern eine Zäsur: **M46** entscheidet, welche Zeilen in der Kuratierung stehen, und
+> **M47** misst ein Statement, das bereits **gebaut** ist. Beide bleiben trotzdem hier statt in einer
+> eigenen Datei — die Nummernfolge läuft projektweit, und eine Messung von ihrer Runde zu trennen
+> hieße, ihre Bezugszahlen zu verlieren.
 
 ---
 
@@ -3545,6 +3572,475 @@ und bekommen eine Sollänge. Eine Kuratierung aus Fenster B hätte sie nicht gek
 
 ---
 
+# M47 — Was kostet das **gebaute** Suchstatement?
+
+*Fünfter Nachtrag, 13.08.2026. Schritt 7, Teil 2b — die Messung vor dem Merge (Regel L7, §8 Regel 7).*
+
+**Frage.** Alle bisherigen Zahlen dieser Runde stammen von Statements, die den späteren Endpunkt
+*nachbilden*. M47 misst den, der gebaut ist — mit Normalisierung, mit Deckelung, mit Anzeigespalten
+und mit dem Zeitfenster, das M35 begründet hat.
+
+> **Gemessen wird der Text, den jOOQ tatsächlich schickt**, nicht eine nachgebaute Fassung. Er ist
+> aus dem Repository gegen eine jOOQ-Attrappe **gerendert** und mit Sitzungsvariablen statt der
+> Prüfwerte in die Messsitzung übernommen (Regel G1). Damit unterscheidet sich der gemessene
+> Buchstabe an keiner Stelle vom ausgelieferten.
+
+> **Das Ergebnis vorweg, in vier Sätzen.** Das 30-Tage-Fenster fängt **beide** offenen Bösfälle: K3b
+> fällt von 5.275 auf **882 ms**, K5c von 926,7 auf **6,9 ms** — offene Frage 10 ist damit
+> beantwortet. Der Optimierer steigt auch im gebauten Statement **in jeder** Konstellation über den
+> seltensten Begriff ein, selbst wenn er an fünfter Stelle steht. Die Normalisierung kostet
+> **Zehntelmillisekunden**: von einer auf drei Fassungen 0,956 → 1,221 ms, und bei `NEXANS` sind
+> **fünf** Fassungen die Obergrenze überhaupt. Und der Befund, der nicht im Plan stand: **Die
+> Anzeigespalten unter statt über der Deckelung kosten den Faktor 1,48 — bei identisch gutem
+> `EXPLAIN`**, genau wie in Teil 1.
+
+## M47‑0 Rahmen
+
+Unverändert aus §0 übernommen, am **13.08.2026** in fünf eigenen Sitzungen erhoben. Jeder Aufruf des
+Clients ist eine neue Sitzung; **`SELECT @@global.read_only` steht deshalb in jedem Skript als erste
+Abfrage** und lieferte jedes Mal **`1`**. `SET max_statement_time = 60` vor dem ersten Statement,
+`SET profiling_history_size = 100`, Laufzeit serverseitig über `SET profiling = 1` / `SHOW PROFILES`,
+Zugangsdaten ausschließlich aus `OVERLORD_DB_*`. Serverzeit zu Beginn `2026-08-13 13:27:35`
+(`UTC_TIMESTAMP` `11:27:35`).
+
+**Die Testkopie ist unverändert — der siebte Messtag in Folge, byteidentisch:**
+
+| | `DATA_LENGTH` | `INDEX_LENGTH` |
+|---|---:|---:|
+| `Message` | 740.851.712 | 2.157.330.432 |
+| `MessageAction` | 2.226.634.752 | 819.855.360 |
+| `MessageBAM` | 1.826.422.784 | 5.254.217.728 |
+
+### `@@sql_mode` — erhoben, weil das Statement daran hängt
+
+```
+STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
+```
+
+**Kein `ONLY_FULL_GROUP_BY`.** Das `GROUP BY m.MessageID` neben den übrigen `Message`-Spalten ist
+damit zulässig — dieselbe Form, die schon M34, M35 und M42 gemessen haben. §0 nennt die Einstellung
+seit der Hauptrunde; sie steht hier ein zweites Mal, weil sie ab jetzt in **Anwendungscode** steht
+und nicht nur in einer Erhebung.
+
+### Wiederholungen
+
+Beste von fünf nach einem Aufwärmlauf; bei Statements über **einer** Sekunde beste von drei nach
+einem Aufwärmlauf. Die sechs teuren Fälle sind zusätzlich in einer eigenen Sitzung mit vier Läufen
+wiederholt worden, nachdem die erste Runde dort nur zwei Messläufe ergab. **Beide Runden stimmen bis
+auf 1,2 Prozent überein** (1.661,99 gegen 1.655,83 ms; 8.992,56 gegen 8.939,75; 872,11 gegen 881,98;
+4.158,18 gegen 4.202,70; 929,66 gegen 935,05; 1,771 gegen 1,834) — abgedruckt ist jeweils die
+Dreierfassung.
+
+## M47‑1 Die Prüfwerte
+
+**Alle Prüfwerte werden je Sitzung neu hergeleitet**, nie übertragen (dieselbe Methodik wie M42‑0).
+Abgedruckt sind ausschließlich ihre **Eigenschaften**.
+
+### Die Ankernachricht (Herleitung wie M42‑0)
+
+`NEXANS`-Wurzel in Fenster A mit genau neun BAM-Werten, kleinste `MessageID`. Sie liefert dieselben
+neun Werte wie in M42 — die Kontrolle geht auf, Zeichen für Zeichen der Trefferzahlen:
+
+| Rolle | Typ | Länge | globale Trefferzahl | in M42‑0 |
+|---|---:|---:|---:|---:|
+| selten | 9022 | 12 | **1** | 1 ✔ |
+| der schlimmste | 9014 | 8 | **234.159** | 234.159 ✔ |
+| sehr häufig a | 9032 | 10 | 100.343 | 100.343 ✔ |
+| sehr häufig b | 9033 | 25 | 124.793 | 124.793 ✔ |
+| mittel | 9018 | 10 | 540 | 540 ✔ |
+| häufig | 9016 | 8 | 1.182 | 1.182 ✔ |
+
+### Die fette Nachricht (Herleitung wie M42‑1 K5)
+
+Das `NEXANS`-**Merge-Ergebnis** mit den meisten BAM-Werten in Fenster B. Auch hier reproduziert die
+Herleitung M42 vollständig:
+
+| | gemessen | in M42‑1 K5 |
+|---|---:|---:|
+| BAM-Werte auf der Nachricht | **3.409** | 3.409 ✔ |
+| Prüfwert 9018, globale Trefferzahl | **719** | 719 ✔ |
+| Prüfwert 9019, globale Trefferzahl | **654** | 654 ✔ |
+| Kandidatennachrichten hinter 9018 | **654** | 654 ✔ |
+| BAM-Werte auf diesen 654 Nachrichten | **1.634.605** | 1.634.605 ✔ |
+| also je Nachricht | **2.499** | 2.499 ✔ |
+
+### Der Wert für die Normalisierung — neu in dieser Runde
+
+Hergeleitet aus einem **kuratierten Paar** von `NEXANS` mit 100 % Längendominanz und 100 % führender
+Null (Sollänge 10): der kleinste Wert dieses Paares im Fenster, der mit einer Null beginnt und auf
+der Sollänge liegt. Daraus die Fassungen, die die Anwendung bilden würde:
+
+| Fassung | Länge | globale Trefferzahl |
+|---|---:|---:|
+| **der Kern** (Eingabe ohne die führenden Nullen) | 8 | **0** |
+| auf die Sollänge aufgefüllt | 10 | **2** |
+| mit führendem Leerzeichen | 9 | 0 |
+
+**Das ist M43‑4 an einem eigenen Wert reproduziert:** Die rohe Fassung findet **nichts**, die
+aufgefüllte die richtigen. Der Nutzer, der die Null nicht mittippt, ginge ohne Normalisierung leer
+aus — nicht „mit weniger Treffern", sondern mit **keinem**.
+
+Für den Fall mit den **meisten** Varianten zusätzlich die ersten zwei Zeichen desselben Kerns:
+
+| Fassung | Länge | globale Trefferzahl |
+|---|---:|---:|
+| zwei Zeichen, roh | 2 | **2.256** |
+| auf 3 aufgefüllt | 3 | 143 |
+| auf 4 aufgefüllt | 4 | 0 |
+| auf 10 aufgefüllt | 10 | 0 |
+| mit führendem Leerzeichen | 3 | 0 |
+
+### Die Kuratierung von `NEXANS`, gezählt
+
+| | |
+|---|---:|
+| Zeilen in `bam_sollaenge` für `NEXANS` | **10** |
+| davon mit einer Sollänge | **8** |
+| **verschiedene** Sollängen | **3** (10, 4, 3) |
+| Zeilen ohne Sollänge | 2 |
+| Zeilen mit Leerzeichen-Kennzeichen | 2 |
+
+### `IBIS` (Regel L7)
+
+`IBIS`-Nachricht in Fenster B mit mindestens zwei BAM-Werten, kleinste `MessageID` — sie trägt drei
+Werte; die beiden Prüfwerte haben **3** und **5** globale Treffer. Das entspricht M42‑4: Bei `IBIS`
+ist die größte globale Trefferzahl über das Fenster **216**, der Bösfall existiert dort nicht.
+
+## M47‑2 `EXPLAIN`
+
+### Die Gestalt, die alle Fälle teilen
+
+| id | select_type | table | type | key | key_len | rows | Extra |
+|---|---|---|---|---|---:|---:|---|
+| 1 | PRIMARY | `<derived2>` | `ALL` | — | — | 2 … 51 | `Using filesort` |
+| 1 | PRIMARY | `Process` | `eq_ref` | `PRIMARY` | 146 | 1 | `Using where` |
+| 1 | PRIMARY | `Project` | `eq_ref` | `PRIMARY` | 146 | 1 | `Using where` |
+| 1 | PRIMARY | `SOS` | `eq_ref` | `PRIMARY` | 146 | 1 | `Using where` |
+| 1 | PRIMARY | `SOSAction` | `eq_ref` | `PRIMARY` | 148 | 1 | `Using where` |
+| 2 | DERIVED | **`b1`** | **`ref`** | **`MessageBAM_BAMValueOnly`** | 282 | 1 … 443.830 | `Using where; Using index; Using temporary; Using filesort` |
+| 2 | DERIVED | `Message` | `eq_ref` | `PRIMARY` | 146 | 1 | `Using where` |
+| 2 | DERIVED | `mandanten_process` | `eq_ref` | `PRIMARY` | 146 | 1 | `Using where` |
+| 2 | DERIVED | `ProjectMandant` | `eq_ref` | `PRIMARY` | 292 | 1 | `Using where; Using index` |
+
+**Die vier Anzeigetabellen stehen in der äußeren Abfrage und laufen auf höchstens 51 Zeilen.** Das
+ist die Gestalt, die §4 von [`bam-suche.md`](bam-suche.md) beschreibt, und sie ist im Plan sichtbar.
+
+### Die führende Tabelle ist **immer** die mit dem selteneren Begriff — belegt, nicht angenommen
+
+| Fall | führende Tabelle | `rows` | zweiter Begriff: `key` / `key_len` / `ref` / `rows` |
+|---|---|---:|---|
+| zwei Begriffe, seltener **zuerst** geschrieben | `b1` | **1** | `MessageBAM_BAMValueOnly` / **428** / `const, b1.MessageID` / **1** |
+| zwei Begriffe, seltener **zuletzt** geschrieben | **`b2`** | **1** | dieselbe Gestalt — **der Plan ist identisch** |
+| **fünf** Begriffe, seltener an **fünfter** Stelle | **`b5`** | **1** | vier × `MessageBAM_BAMValueOnly` / 428 / `const, b5.MessageID` / **1** |
+| K3b (häufig × häufig) | `b1` | **177.506** | **`PRIMARY` / 146 / `MessageID` / `rows` 8** |
+| K5c (fette Nachricht) | **`b2`** (654) | **654** | `MessageBAM_BAMValueOnly` / **428** / `const, b2.MessageID` / **1** |
+
+**Regel L15 ist damit erfüllt und nicht bloß behauptet:** Der Optimierer ordnet die Selbstjoins
+selbst um, und zwar auch dann, wenn der seltene Begriff im Statement an letzter Stelle steht. Genau
+deshalb steht kein `STRAIGHT_JOIN` darin.
+
+**Ein Befund gegenüber M42:** Bei **K5c kippt der Plan mit Zeitfenster *nicht* auf `PRIMARY`/`rows` 8.**
+M42‑1 hat dort genau diesen Zugriff gemessen (und die 8 als um Faktor 312 zu klein entlarvt); mit dem
+Fenster steht zwischen den beiden Begriffen ein `eq_ref` auf `Message`, und der zweite Begriff läuft
+wieder als `ref` mit `key_len` 428 und `rows` 1. **Die Laufzeit folgt:** 926,7 ms ohne Fenster gegen
+**6,9 ms** mit dreißig Tagen.
+
+### Was die `IN`-Liste am Plan ändert — die offene Frage des Auftrags
+
+| Varianten je Begriff | `type` auf `b1` | `key` | `key_len` | `rows` |
+|---:|---|---|---:|---:|
+| 1 | **`ref`** | `MessageBAM_BAMValueOnly` | 282 | 1 |
+| 2 | **`range`** | `MessageBAM_BAMValueOnly` | 282 | 3 |
+| 5 | **`range`** | `MessageBAM_BAMValueOnly` | 282 | 4.656 |
+
+**Die Zugriffsart wechselt von `ref` auf `range`, die Indexwahl und die führende Tabelle bleiben.**
+Die Frage, ob eine `IN`-Liste die Wahl der Einstiegstabelle beeinflusst, ist damit mit **nein**
+beantwortet — und sie war offen und nicht rhetorisch: Ein `range` ist für den Optimierer teurer als
+ein `ref`, und bei zwei Begriffen mit je mehreren Varianten hätte er umschwenken können.
+
+### Die Typangabe
+
+Mit `AND b1.MessageBAMType = ?` erscheint `MessageBAM_BAMValue` in `possible_keys` — **gewählt wird
+trotzdem der reine Wertindex** (`MessageBAM_BAMValueOnly`, `range`, `rows` 3). Bei einer `IN`-Liste
+über mehrere Werte ist der zusammengesetzte Index also nicht die bessere Wahl; M36 hatte ihn bei
+**einem** Wert gewählt gesehen.
+
+### Die zweite Abfrage (Trefferwerte)
+
+| table | type | key | key_len | rows | Extra |
+|---|---|---|---:|---:|---|
+| `Message` | `range` | `PRIMARY` | 146 | 2 | `Using where; Using temporary; Using filesort` |
+| **`MessageBAM`** | **`ref`** | **`MessageBAM_MessageFK`** | 146 | 4 | **`Using index`** |
+| `ProjectMandant` | `ref` | `ProjectMandant_Mandant_idx` | 146 | 17 | `Using index` |
+| `MessageBAMType` | `eq_ref` | `PRIMARY` | 2 | 1 | |
+| `mandanten_process` | `eq_ref` | `PRIMARY` | 146 | 1 | `Using where` |
+
+**Der Einstieg über die Kennungen ist `Using index`** — die Tabelle wird nicht angefasst. Gewählt ist
+`MessageBAM_MessageFK` (`MessageID` allein) und nicht das Präfix des Primärschlüssels; für den Zugriff
+ist das dasselbe, für die vorformulierte Erwartung nicht (unten).
+
+### Der Vollabzug der Kuratierung
+
+| table | type | key | key_len | rows | Extra |
+|---|---|---|---:|---:|---|
+| `bam_sollaenge` | `ref` | `PRIMARY` | 146 | **10** | `Using where` |
+
+Zehn Zeilen über den Primärschlüssel-Präfix. **Kein Join gegen `GlassfishDB`** — das Statement nennt
+das Quellschema nicht.
+
+## M47‑3 Laufzeiten
+
+Alle Werte in Millisekunden.
+
+### Ein Begriff
+
+| Fall | Treffer des Werts | **30 Tage** | **ein Jahr** |
+|---|---:|---:|---:|
+| typischer Wert | 1 | **1,095** | **1,089** |
+| **der schlimmste Wert** | 234.159 | **1.655,827** | **8.939,745** |
+| Kern ohne führende Null, 1 Fassung | 0 | 0,956 | — |
+| Kern, **2 Fassungen** (roh + aufgefüllt) | 0 / 2 | 1,131 | — |
+| Kern, **3 Fassungen** (+ Leerzeichen) | 0 / 2 / 0 | **1,221** | 1,263 |
+| Kern, 2 Fassungen **mit Typangabe** | | 1,187 | — |
+| zwei Zeichen, 1 Fassung | 2.256 | 20,228 | — |
+| zwei Zeichen, **5 Fassungen** | 2.256 / 143 / 0 / 0 / 0 | **22,439** | — |
+
+### Verundung
+
+| Fall | **30 Tage** | **ein Jahr** | ohne Fenster (M42) |
+|---|---:|---:|---:|
+| **K2** selten × schlimmster Wert | **1,209** | — | 0,672 |
+| K2, umgekehrte Reihenfolge | **1,202** | — | 0,710 |
+| **K3b** häufig × häufig | **881,975** | 4.202,697 | **5.275,4** |
+| **K5c** fette Nachricht | **6,911** | 935,046 | **926,7** |
+| **fünf Begriffe** | **1,622** | 1,834 | 0,947 |
+| fünf Begriffe, seltener zuletzt | **1,607** | — | 1,031 |
+
+### `IBIS`, zweite Abfrage, Kuratierung
+
+| Fall | 30 Tage |
+|---|---:|
+| `IBIS`, ein Begriff | **1,185** |
+| `IBIS`, zwei Begriffe | **1,214** |
+| die zweite Abfrage (Trefferwerte) | **0,650** |
+| der Vollabzug der Kuratierung | **0,336** |
+
+### Die Gegenform: Anzeigespalten neben statt über der Deckelung
+
+Dieselbe Frage, dieselben Daten, der schlimmste Wert, 30 Tage — einmal wie gebaut, einmal flach:
+
+| Fassung | Laufzeit | `EXPLAIN` |
+|---|---:|---|
+| **gebaut** (Joins über der Deckelung) | **1.655,827** | `b1` `ref` `Using index`, danach vier `eq_ref` auf **51 Zeilen** |
+| Gegenform (Joins neben `MessageBAM`) | **2.443,334** | `b1` `ref` `Using index`, danach **sieben** `eq_ref` — auf **234.159 Zeilen** |
+| Faktor | **1,48** | — |
+
+## Was daraus folgt
+
+| Befund (vor der Messung formuliert) | trifft zu | Konsequenz |
+|---|---|---|
+| **K3b liegt mit 30-Tage-Fenster unter einer Sekunde** | **ja — 882 ms** | **Offene Frage 10 ist beantwortet.** Das Pflicht-Zeitfenster fängt den Bösfall der Verundung; er fällt von 5.275 auf 882 ms, Faktor 6,0 — dieselbe Größenordnung, die M35 für den schlimmsten Einzelwert misst. Eine **eigene** Grenze für die Verundung wird nicht gebraucht |
+| **K5c liegt mit 30-Tage-Fenster unter einer Sekunde** | **ja, weit — 6,9 ms** | Faktor **134** gegenüber der fensterlosen Messung. Der Grund steht im Plan und nicht in der Uhr: Mit Fenster kippt der zweite Begriff nicht auf den `rows`-8-Zugriff |
+| K3b oder K5c reißen die Sekunde | **nein** | — **Abnahmepunkt 3 ist erfüllt**, und zwar in beiden Fällen |
+| **Der Optimierer steigt über den seltensten Begriff ein** | **ja, in jeder gemessenen Konstellation** | Belegt am `EXPLAIN` und an der Laufzeit: 1,209 gegen 1,202 ms bei getauschter Reihenfolge, 1,622 gegen 1,607 ms bei fünf Begriffen. **Kein `STRAIGHT_JOIN`** — Regel L15 ist geprüft und nicht angenommen |
+| **Eine typlose Suche bei `NEXANS` erzeugt wenige Varianten** | **ja — höchstens fünf** | Und die fünf erreicht nur eine ein- oder zweistellige Eingabe. Der Grund ist gezählt: **drei verschiedene** Sollängen auf acht kuratierten Zeilen. Für eine siebenstellige Eingabe sind es **drei** Fassungen, für eine zehnstellige **zwei** |
+| **Die Normalisierung kostet wenig** | **ja — Zehntelmillisekunden** | 0,956 → 1,221 ms von einer auf drei Fassungen; 20,228 → 22,439 ms von einer auf fünf bei einem Wert mit 2.256 Treffern. **Damit ist auch beziffert, was eine wirkungslose Variante kostet** (offene Frage aus M46 §8): rund 0,1 ms |
+| **Die `IN`-Liste ändert die Wahl der führenden Tabelle** | **nein** | Die Zugriffsart wechselt von `ref` auf `range`, Index und Einstiegstabelle bleiben. Die Frage war offen und ist mit Zahl statt mit Vermutung beantwortet |
+| **Die Typangabe beschleunigt nicht** | **ja** (1,131 gegen 1,187 ms) | M36 am gebauten Statement bestätigt. Sie bleibt Ergebnisverfeinerung |
+| **Der schlimmste Wert bleibt mit 30 Tagen weit unter der Zeitgrenze** | **ja** — 1,656 s, Faktor 6,0 Reserve | Die Vorgabe von 30 Tagen ist damit gemessen tragfähig |
+| **Mit einem Jahr bleibt Reserve** | **kaum** — 8,940 s, **11 % Reserve** | Bestätigt M35 (8,664 s) am gebauten Statement. **Der Abbruchpfad wird gebraucht**, und Regel L1 bleibt mit ihrem Maximum die richtige Grenze |
+| **`IBIS` verhält sich wie `NEXANS`** | **ja** | 1,185 und 1,214 ms gegen 1,095 und 1,209 ms. Regel L7 ist erfüllt |
+
+**Wo die vorformulierte Zeile nicht passt — die Anzeigespalten sind der teuerste Fehler, den man hier
+machen kann, und er steht in keiner Zeile des Auftrags.** Der Auftrag beschreibt die Zweiteilung in
+Trefferzeilen und Trefferwerte, nicht aber, **wo** die vier Anzeigetabellen hängen. Gemessen: 1.655,8
+gegen 2.443,3 ms, Faktor 1,48 — und **beide Pläne sehen gleich gut aus**, in beiden ist jeder Zugriff
+`eq_ref` auf `PRIMARY`. Es ist derselbe Fehler wie in Teil 1 ([`bam-werte.md`](bam-werte.md) §4, dort
+Faktor 18,4), aus demselben Grund: Der Plan sagt nicht, **wie oft** eine Zeile angefasst wird.
+
+**Ein zweiter: Bei K5c greift die Falle aus M42‑1 K5 mit Zeitfenster nicht mehr.** M42 hat sie als
+den Fall beschrieben, in dem „ein Zusatzbegriff nicht umsonst ist" — Faktor 112. Mit dreißig Tagen
+kostet derselbe Fall **6,9 ms**. Das entwertet M42 nicht: Dort war das Fenster ausdrücklich weggelassen,
+damit die Zahlen gegen M34 stehen. **Es verschiebt nur, wer den Fall auffängt** — nicht die Bauform,
+sondern Regel L1.
+
+**Ein dritter: die Kuratierung von `NEXANS` hat acht Sollängen, nicht elf.** Der Auftrag zu Teil 2b
+nennt „elf Sollängen, aber nur drei verschiedene". Gezählt sind **zehn Zeilen**, davon **acht** mit
+einer Sollänge und **zwei** nur mit dem Leerzeichen-Kennzeichen; die Zahl der *verschiedenen* ist mit
+drei richtig, und nur auf die kommt es an. Der Code und seine Tests nennen die gezählte Zahl.
+
+**Ein vierter: die zweite Abfrage wählt `MessageBAM_MessageFK` und nicht das Präfix des
+Primärschlüssels.** Der Auftrag erwartet den Zugriff „als `ref` über das Präfix des
+Primärschlüssels", so wie ihn M11, M26‑1b, M28‑2 und M39‑1 gemessen haben. Gewählt ist der
+Fremdschlüsselindex auf `MessageID` allein — **derselbe Zugriffstyp, `Using index`, dieselbe
+Größenordnung**; `MessageBAM` hat nach M32 drei Indizes, die auf `MessageID` beginnen und dieselbe
+Frage beantworten. Der Unterschied ist eine Feststellung und keine Folge.
+
+### Belegvermerk (Regel L10)
+
+> *Gemessen:* Die Laufzeit des **gebauten** Statements über **19** Fälle bei `NEXANS` und **zwei** bei
+> `IBIS`, je mit 30-Tage- und teils mit Jahresfenster, auf einer ruhenden Testkopie; dazu der
+> `EXPLAIN` in **13** Fassungen. Die Prüfwerte stammen aus **vier** hergeleiteten Nachrichten (n = 4):
+> einer gewöhnlichen `NEXANS`-Wurzel, dem fettesten `NEXANS`-Merge-Ergebnis aus Fenster B, einer
+> `IBIS`-Nachricht und der Nachricht hinter einem kuratierten Paar.
+>
+> *Behauptet wird:* dass der Endpunkt mit seiner Vorgabe von 30 Tagen tragfähig ist.
+>
+> **Die Lücke, und sie ist dreifach.** Erstens gilt die 10-Sekunden-Grenze in **Produktion**, und
+> gemessen ist eine **ruhende** Testkopie — die Zahlen sind Untergrenzen und keine Zusagen; dieselbe
+> benannte Lücke wie im Belegvermerk zu M35. Zweitens ist der teuerste Fall **ein** Wert: der
+> schlimmste, den M33 über den Bestand kennt. Ob ein Nutzer im Betrieb überhaupt danach sucht, sagt
+> keine Zahl dieser Runde. Drittens misst M47 die **Statements** und nicht den **Aufruf**: Was HTTP,
+> Sitzungsprüfung und Serialisierung dazulegen, steht hier nicht — in Teil 1 waren es bei drei
+> Statements rund 2 ms ([`bam-werte.md`](bam-werte.md) §4). Was trägt: *Mit 30 Tagen kostet der
+> schlimmste bekannte Wert 1,66 s und jeder gemessene Normalfall unter 2 ms.* Was **nicht** gemessen
+> ist: *derselbe Satz unter Last.*
+
+---
+
+# M48 — Was kostet die Typenauswahl?
+
+*Sechster Nachtrag, 13.08.2026. Schritt 7, Teil 3 — die Messung vor dem Merge (Regel L7, §8
+Regel 7).*
+
+**Frage.** Teil 3 bringt einen zweiten Endpunkt mit: `GET /api/bam/typen` liefert die für den
+Mandanten der Sitzung konfigurierten BAM-Typen als **Auswahl** neben dem Suchfeld. Er fasst
+ausschließlich Stammdaten an — was kostet er, und über welchen Pfad?
+
+> **Das Ergebnis vorweg.** **0,534 ms** für den größten Mandanten (`NEXANS`, 40 konfigurierte
+> Typen), **0,410 ms** für einen ohne jede Konfiguration (`WOC`). Der Zugriff ist ein `ref` über
+> `MandantIDSortIndexBAMTYpeIDX` mit **`Using index`** — und der Index trägt Filter *und* beide
+> Sortierschlüssel, es entsteht **kein `filesort`**. Der Befund, der nicht im Auftrag stand:
+> **`MessageBAMTypeSortIndex` ist nicht eindeutig** — bei `VOTG` tragen die Typen 2002 und 2011
+> beide den Index 2002.
+
+## M48‑0 Rahmen
+
+Unverändert aus §0. Erhoben am **13.08.2026** in einer eigenen Sitzung, Lesebenutzer
+`monitor_read@%`, `--ssl-mode=DISABLED`, `--default-character-set=utf8mb4`.
+
+| | |
+|---|---|
+| Nachweis, dass es die Testkopie ist | `SELECT @@global.read_only` → **`1`**, erste **und** letzte Abfrage der Sitzung |
+| Serverzeit | `2026-08-13 14:22:04` |
+| `@@sql_mode` | `STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION` — unverändert gegenüber M47 |
+| Laufzeitmessung | `SET profiling = 1` / `SHOW PROFILES`, **beste von fünf** nach einem Aufwärmlauf |
+| Gemessen wurde | der **gerenderte** Text, den jOOQ tatsächlich schickt — abgegriffen gegen die Attrappe aus `BamTypenStatementsTest` |
+| Regel S1 | ausschließlich `SELECT` und `EXPLAIN` |
+
+## M48‑1 Die Größenordnung der beiden Stammdatentabellen
+
+```sql
+SELECT TABLE_NAME, TABLE_ROWS FROM information_schema.TABLES
+WHERE TABLE_SCHEMA='GlassfishDB' AND TABLE_NAME IN ('MessageBAMMandant','MessageBAMType');
+```
+
+| Tabelle | Zeilen |
+|---|---:|
+| `MessageBAMMandant` | **69** |
+| `MessageBAMType` | **62** |
+
+Zusammen 131 Zeilen — weniger als eine einzige Seite der Nachrichtenliste.
+
+### Konfigurierte Typen je Mandant
+
+```sql
+SELECT MandantID, COUNT(*) AS typen, COUNT(DISTINCT MessageBAMTypeSortIndex) AS versch_idx
+FROM MessageBAMMandant GROUP BY MandantID ORDER BY typen DESC;
+```
+
+| Mandant | Typen | verschiedene Sortierindizes |
+|---|---:|---:|
+| `NEXANS` | 40 | 40 |
+| **`VOTG`** | **12** | **11** |
+| `NXHBE` | 6 | 6 |
+| `IBISGUS` | 4 | 4 |
+| `IBIS` | 4 | 4 |
+| `SUTTONS` | 2 | 2 |
+| `ZAST` | 1 | 1 |
+
+**`EDITIONLINGERI`, `SYSTEM` und `WOC` kommen nicht vor** — sie haben keinen konfigurierten Typ.
+Das bestätigt M40 aus der Gegenrichtung und ist zugleich der Prüffall „leere Auswahl" des
+Endpunkts.
+
+> **Der Befund, der in keiner vorformulierten Zeile stand: Der Sortierindex ist nicht eindeutig.**
+> `VOTG` hat 12 Typen auf 11 verschiedenen Indizes — 2002 (`InvoiceNumber VTG`) und 2011
+> (`InvoiceNumber Vendor`) tragen beide den Index 2002. Ohne einen zweiten Sortierschlüssel
+> entschiede dort die Reihenfolge der Speicherung, und zwei Aufrufe zeigten dieselbe Auswahl
+> verschieden. Das Statement sortiert deshalb über `(MessageBAMTypeSortIndex, MessageBAMType)`, und
+> `BamTypenDbIT.die_ordnung_ist_auch_bei_gleichem_index_eindeutig` hält den Fall fest — samt der
+> Vorprüfung, dass es ihn überhaupt noch gibt.
+
+## M48‑2 `EXPLAIN`
+
+Gemessen wurde der gerenderte Text:
+
+```sql
+select `GlassfishDB`.`MessageBAMMandant`.`MessageBAMType`,
+       `GlassfishDB`.`MessageBAMType`.`MessageBAMTypeDescription`,
+       `GlassfishDB`.`MessageBAMMandant`.`MessageBAMTypeSortIndex`
+from `GlassfishDB`.`MessageBAMMandant`
+  left outer join `GlassfishDB`.`MessageBAMType`
+    on `GlassfishDB`.`MessageBAMType`.`MessageBAMType` = `GlassfishDB`.`MessageBAMMandant`.`MessageBAMType`
+where `GlassfishDB`.`MessageBAMMandant`.`MandantID` = ?
+order by `GlassfishDB`.`MessageBAMMandant`.`MessageBAMTypeSortIndex` asc,
+         `GlassfishDB`.`MessageBAMMandant`.`MessageBAMType` asc
+```
+
+**`NEXANS`** (40 Typen):
+
+| table | type | key | key_len | ref | rows | Extra |
+|---|---|---|---|---|---:|---|
+| `MessageBAMMandant` | `ref` | `MandantIDSortIndexBAMTYpeIDX` | 146 | const | 40 | **`Using where; Using index`** |
+| `MessageBAMType` | `eq_ref` | `PRIMARY` | 2 | `…MessageBAMType` | 1 | |
+
+**`WOC`** (0 Typen): derselbe Plan, `rows` **1**.
+
+**Der Index ist genau der richtige, und das ist kein Zufall:**
+
+```
+MandantIDSortIndexBAMTYpeIDX = (MandantID, MessageBAMTypeSortIndex, MessageBAMType)
+```
+
+Er trägt den Filter **und** beide Sortierschlüssel in dieser Reihenfolge — deshalb `Using index` und
+**kein `filesort`**. Die Ordnung, die den doppelten Sortierindex auflöst, kostet damit **nichts**;
+sie ist die Ordnung des Index.
+
+## M48‑3 Laufzeiten
+
+Beste von fünf nach einem Aufwärmlauf, in Millisekunden.
+
+| Fall | Laufzeit |
+|---|---:|
+| `NEXANS` — 40 konfigurierte Typen | **0,534** |
+| `WOC` — keine Konfiguration | **0,410** |
+
+Der Unterschied zwischen dem größten und dem leeren Fall beträgt **0,12 ms**. Das ist die
+erwartete Gestalt: Beide Fälle bezahlen den Indexzugriff, und die 40 Zeilen darüber sind
+40 `eq_ref`-Zugriffe auf eine Tabelle mit 62 Zeilen.
+
+## Was daraus folgt
+
+1. **Der Endpunkt ist billig genug, um auf jeder Seite zu laden.** Das Suchfeld steht in der
+   Kopfzeile und braucht die Auswahl überall; gehalten wird sie 15 Minuten lang
+   (`useBamTypen`), gezahlt wird sie einmal je Sitzung und Mandant.
+
+2. **Er fasst `Message` und `MessageBAM` nicht an, und das ist eine Entscheidung.** Die Versuchung,
+   aus der Auswahl eine Aussage über den *Bestand* zu machen („biete nur Typen an, die tatsächlich
+   vorkommen"), wäre eine Existenzfrage über den Gesamtbestand eines Mandanten — genau die Gestalt,
+   die in [`nachrichtenliste.md`](nachrichtenliste.md) §1 als **L15-Falle** geführt ist: 13,2
+   Sekunden für `IBIS` gegen 11,9 Millisekunden für `WOC`, beide ohne ein einziges Ergebnis.
+   `BamTypenStatementsTest.nur_stammdaten` hält es fest.
+
+3. **Der doppelte Sortierindex ist der Grund für den zweiten Sortierschlüssel** — und er kostet
+   nichts, weil der Index ihn ohnehin trägt.
+
+4. **Ein Zeitfenster gibt es hier nicht, und Regel L1 ist nicht berührt.** Sie gilt für *Listen*
+   über `Message`; hier stehen zwei Stammdatentabellen mit zusammen 131 Zeilen, von denen keine
+   einen Zeitstempel trägt.
+
+---
+
 # Zusammenfassung: Frage → Antwort
 
 | Frage | Antwort |
@@ -3604,6 +4100,14 @@ und bekommen eine Sollänge. Eine Kuratierung aus Fenster B hätte sie nicht gek
 | Wirken alle vierzehn? | **Zwölf.** Bei `IBIS`/1 und `SUTTONS`/2000 liegt kein Wert **mit** führender Null auf der Sollänge (M46‑1c, M46‑2c) |
 | Trifft die Regel die kuratierte Lieferschein-Nr. 9006? | **Nein — 94,21 %**, 0,79 Prozentpunkte unter der Schwelle. Ausgerechnet den Typ, für den M43‑4 die Wirkung belegt hat (M46‑1) |
 | Wie viele Typen tragen ein **führendes** Leerzeichen über den Bestand? | **Zwei.** 9018 mit 31.193 von 2.311.236 (**1,349624 %**), 9020 mit **einer** Zeile. Leerstrings gibt es **keine** (M46‑3) |
+| **Was kostet das gebaute Statement im Normalfall?** | **1,1 ms** über 30 Tage — mit Normalisierung, Deckelung und allen Anzeigespalten (M47) |
+| Was kostet der schlimmste Wert im gebauten Statement? | **1,656 s** über 30 Tage, **8,940 s** über ein Jahr. Faktor 6,0 Reserve gegen 11 % (M47) |
+| **Fängt das 30-Tage-Fenster K3b und K5c?** | **Beide, und deutlich.** K3b 5.275 → **882 ms**, K5c 926,7 → **6,9 ms**. Offene Frage 10 ist beantwortet (M47) |
+| Steigt der Optimierer auch im gebauten Statement über den seltensten Begriff ein? | **Ja, in jeder Konstellation** — auch wenn er an fünfter Stelle steht; der `EXPLAIN` führt dann `b5` an (M47) |
+| Ändert die `IN`-Liste die Wahl der führenden Tabelle? | **Nein.** Die Zugriffsart wechselt von `ref` auf `range`, Index und Einstieg bleiben (M47) |
+| Wie viele Suchvarianten entstehen bei `NEXANS` höchstens? | **Fünf**, und nur bei ein- bis zweistelliger Eingabe — drei *verschiedene* Sollängen auf acht kuratierten Zeilen (M47) |
+| Was kostet die Normalisierung? | **Zehntelmillisekunden.** 0,956 → 1,221 ms von einer auf drei Fassungen; damit ist auch der Preis einer **wirkungslosen** Variante beziffert (M47) |
+| **Was kostet es, die Anzeigespalten neben statt über der Deckelung zu hängen?** | **Faktor 1,48** — 2.443 gegen 1.656 ms, bei **identisch gutem** `EXPLAIN`. Derselbe Fehler wie in Teil 1, dort Faktor 18,4 (M47) |
 
 ---
 
@@ -3765,7 +4269,39 @@ die Erhebung auf rund zehn Minuten gedehnt, und die Frage ist eine nach Verteilu
 Laufzeiten. Die Zerlegung in Stapel selbst ist die zweite: Ein Lauf über alle 36 Typen (rund
 11,4 Mio. Zeilen) reißt die 60-Sekunden-Grenze rechnerisch, und die Grenze wird **nicht** ausgesetzt.
 
-**Der dritte Nachtrag ist der billigste der drei.** Sein teuerstes Statement kostet **4,650 s** und
+### Fünfter Nachtrag vom 13.08.2026 — M47
+
+Gegen das **gebaute** Statement, gerendert aus dem Repository. Beste von fünf nach einem Aufwärmlauf;
+bei Statements über einer Sekunde beste von drei nach einem Aufwärmlauf.
+
+| Messung | Fenster | Laufzeit | Wiederholungen |
+|---|---|---:|---|
+| M47‑0 Rahmen, `@@sql_mode`, Bytegrößen | — | < 5 ms | einmalig |
+| M47‑1 Herleitung der Prüfwerte (vier Nachrichten) | A bzw. B | 0,1–2,5 s je Herleitung | einmalig je Sitzung |
+| M47‑2 alle dreizehn `EXPLAIN` | 30 T / Jahr | < 10 ms | einmalig |
+| **M47‑3 ein Begriff, typischer Wert** | **30 T / Jahr** | **1,095 / 1,089 ms** | beste von 5 |
+| **M47‑3 ein Begriff, schlimmster Wert** | **30 T / Jahr** | **1.655,827 / 8.939,745 ms** | beste von 3 |
+| M47‑3 Kern, 1 / 2 / 3 Fassungen | 30 T | 0,956 / 1,131 / **1,221 ms** | beste von 5 |
+| M47‑3 Kern, 3 Fassungen | Jahr | 1,263 ms | beste von 5 |
+| M47‑3 Kern, 2 Fassungen mit Typangabe | 30 T | 1,187 ms | beste von 5 |
+| M47‑3 zwei Zeichen, 1 / 5 Fassungen | 30 T | 20,228 / **22,439 ms** | beste von 5 |
+| M47‑3 **K2** selten × schlimmster, beide Reihenfolgen | 30 T | **1,209 / 1,202 ms** | beste von 5 |
+| **M47‑3 K3b** häufig × häufig | **30 T / Jahr** | **881,975 / 4.202,697 ms** | beste von 3 |
+| **M47‑3 K5c** fette Nachricht | **30 T / Jahr** | **6,911 / 935,046 ms** | beste von 5 · 3 |
+| M47‑3 fünf Begriffe, seltener zuerst / zuletzt | 30 T | **1,622 / 1,607 ms** | beste von 5 |
+| M47‑3 fünf Begriffe | Jahr | 1,834 ms | beste von 3 |
+| M47‑3 `IBIS`, ein / zwei Begriffe | 30 T | **1,185 / 1,214 ms** | beste von 5 |
+| M47‑3 zweite Abfrage (Trefferwerte) | — | **0,650 ms** | beste von 5 |
+| M47‑3 Vollabzug der Kuratierung | — | **0,336 ms** | beste von 5 |
+| **M47‑3 Gegenform: Anzeigespalten flach, schlimmster Wert** | **30 T** | **2.443,334 ms** | beste von 3 |
+
+**Keine Abweichung vom Rahmen.** Kein Statement hat die 60-Sekunden-Grenze erreicht, keines ist
+abgebrochen worden, keines lief ohne Zeitfenster über eine große Tabelle — Regel L9 ist nicht
+berührt. Das teuerste Statement dieses Nachtrags ist der schlimmste Wert über ein Jahr mit
+**8,940 s**; er liegt bei **89 Prozent** der Zeitgrenze des Lese-Pools und ist genau der Fall, für
+den der Abbruchpfad `suche-abgebrochen` existiert.
+
+**Der dritte Nachtrag ist der billigste der fünf.** Sein teuerstes Statement kostet **4,650 s** und
 bleibt damit bei 7,8 % der 60-Sekunden-Grenze; die Stammdatenabfragen, aus denen der Hauptbefund
 stammt, liegen sämtlich unter 3 ms. Kein Statement ist abgebrochen worden, und keines lief ohne
 Zeitfenster über eine große Tabelle — Regel L9 ist hier gar nicht berührt.
@@ -3773,6 +4309,12 @@ Zeitfenster über eine große Tabelle — Regel L9 ist hier gar nicht berührt.
 **Die Statements der Anwendung stehen im Millisekundenbereich — bis auf einen.** Der schlimmste Wert
 kostet ohne Zeitfenster 10,6 s und ist der einzige gemessene Fall, der die Zeitgrenze des Lese-Pools
 reißt. Mit dem Standard-Zeitfenster von 24 Stunden kostet er 90,5 ms.
+
+> **Fortgeschrieben am 13.08.2026 (M47).** Der Satz gilt weiter, und er ist jetzt am **gebauten**
+> Statement gemessen statt an einer Nachbildung: Der Normalfall kostet **1,1 ms**, der schlimmste
+> Wert **1,656 s** über die gebaute Vorgabe von 30 Tagen und **8,940 s** über ein Jahr. Der
+> Abbruchpfad ist damit kein Vorbehalt für den Ausnahmefall, sondern die Zusicherung für die
+> **Obergrenze** von Regel L1.
 
 ## Die fünf Abweichungen vom Rahmen
 
@@ -3813,9 +4355,9 @@ Statement** und nicht für die Runde: Alle übrigen Statements des zweiten Nacht
 
 # Wo die vorformulierte Zeile nicht passte
 
-**Vierundzwanzig** Stellen, einzeln benannt und jeweils als eigener Absatz unter der Tabelle
+**Achtundzwanzig** Stellen, einzeln benannt und jeweils als eigener Absatz unter der Tabelle
 ausgewiesen — elf aus der Hauptrunde vom 11.08.2026, sieben aus dem ersten und drei aus dem zweiten
-Nachtrag vom 12.08.2026, drei aus dem vierten vom 13.08.2026:
+Nachtrag vom 12.08.2026, drei aus dem vierten und **vier aus dem fünften** vom 13.08.2026:
 
 | # | Messung | Der Befund, der in keine Zeile passte |
 |---:|---|---|
@@ -3843,6 +4385,10 @@ Nachtrag vom 12.08.2026, drei aus dem vierten vom 13.08.2026:
 | **22** | **M46** | **Die Regel kennt die Wirksamkeit nicht.** Sie fragt nach der Längendominanz und trifft zwei Paare, bei denen kein Wert *mit* führender Null auf der Sollänge liegt: `IBIS`/1 und `SUTTONS`/2000 |
 | **23** | **M46** | **Die Schwelle schließt ausgerechnet 9006 aus** — 94,21 %, 0,79 Prozentpunkte darunter. Genau den Typ, für den M43‑4 die Wirkung des Auffüllens belegt hat (roh 1.642, aufgefüllt 4) |
 | **24** | **M46** | **Der Bestand kennt 55 Typen, Fenster B kannte 46.** Drei der neun zusätzlichen tragen auf 100 % ihrer Werte eine führende Null und werden kuratiert — eine Kuratierung aus Fenster B hätte sie nicht gekannt |
+| **25** | **M47** | **Wo die Anzeigespalten hängen, ist der teuerste Fehler dieses Statements — und er steht in keiner Zeile des Auftrags.** Neben statt über der Deckelung kostet **Faktor 1,48** (2.443 gegen 1.656 ms), bei **identisch gutem** `EXPLAIN`. Derselbe Fehler wie in Teil 1, dort Faktor 18,4 |
+| **26** | **M47** | **Bei K5c greift die `rows`-8-Falle aus M42‑1 K5 mit Zeitfenster nicht mehr:** 926,7 ms werden **6,9 ms**. Nicht die Bauform fängt den Fall auf, sondern Regel L1 |
+| **27** | **M47** | **`NEXANS` hat acht Sollängen auf zehn Zeilen, nicht elf.** Der Auftrag zu Teil 2b nennt „elf Sollängen"; die Zahl der *verschiedenen* ist mit drei richtig, und nur auf die kommt es an |
+| **28** | **M47** | **Die zweite Abfrage wählt `MessageBAM_MessageFK` und nicht das Präfix des Primärschlüssels.** Derselbe Zugriffstyp, dasselbe `Using index`, ein anderer der drei Indizes, die auf `MessageID` beginnen (M32) |
 
 Dazu **fünf** Befunde, die eine Zeile zwar treffen, aber über sie hinausreichen und deshalb ebenfalls
 als eigener Absatz stehen: die Null der Merge-Eingänge über Fenster B (M39), die fehlende
@@ -3880,10 +4426,12 @@ Sparring desselben Tages erledigt und **nicht** entfernt worden.
 
 ### Was der Nachtrag neu offen lässt
 
-- **Die Verundung mit Zeitfenster.** Alle Zahlen aus M42 sind **ohne** Fenster gemessen, damit sie
+- ~~**Die Verundung mit Zeitfenster.** Alle Zahlen aus M42 sind **ohne** Fenster gemessen, damit sie
   gegen M34 stehen. Ob das Fenster K3b (5,275 s) und K5c (926,7 ms) ebenso senkt wie in M35 den
   schlimmsten Einzelwert, ist ungemessen — und es ist die Zahl, die eine Deckelung der Verundung
-  überflüssig machen oder erzwingen würde.
+  überflüssig machen oder erzwingen würde.~~ ✔ **Gemessen am 13.08.2026 in M47:** Das Fenster senkt
+  **beide**, K3b auf **882 ms** (Faktor 6,0) und K5c auf **6,9 ms** (Faktor 134). Eine eigene
+  Deckelung der Verundung wird damit **nicht** gebraucht.
 - **Kombinationen, die es im Bestand nicht gibt.** M42‑0 wählt Werte, die **gemeinsam** auf einer
   Nachricht stehen. Der Fall „leeres Ergebnis" — genau der, den ein Nutzer erzeugt, der sich
   vertippt — ist nicht gemessen.
@@ -3936,9 +4484,12 @@ Sparring desselben Tages erledigt und **nicht** entfernt worden.
   größere der beiden Gruppen", wie sie M43 in seinen Bändern verwendet) ergäbe eine **andere**
   Kuratierung — 9020 käme mit 98,78 % hinein, 9015 mit 97,56 %. Die Zahlen stehen in M46‑1, die
   Festlegung ist keine Messung.
-- **Ob ein Eintrag ohne Wirkung schadet.** `IBIS`/1 und `SUTTONS`/2000 fügen je Suche eine Variante
+- ~~**Ob ein Eintrag ohne Wirkung schadet.** `IBIS`/1 und `SUTTONS`/2000 fügen je Suche eine Variante
   hinzu, die im Bestand nichts trifft. Was diese Variante an Laufzeit kostet, ist **nicht gemessen**
-  — M46 misst Verteilungen, keine Suchen. Die Zahl fehlt und gehört in M47.
+  — M46 misst Verteilungen, keine Suchen. Die Zahl fehlt und gehört in M47.~~ ✔ **Gemessen am
+  13.08.2026 in M47:** Eine zusätzliche Variante kostet rund **0,1 ms** (0,956 → 1,131 ms von einer
+  auf zwei Fassungen). **Der Preis ist damit kein Argument in der offenen Frage** — die Frage ist,
+  ob die Kuratierungsregel sagen soll, was sie meint, und das bleibt eine Entscheidung.
 - **Ob die Kuratierung 9006 fehlt.** Der Typ liegt 0,79 Prozentpunkte unter der Schwelle, trägt auf
   32,99 % führende Nullen und ist der einzige, für den M43‑4 die Wirkung an echten Werten belegt hat.
   Ob die Schwelle richtig gesetzt ist oder 9006 eine benannte Ausnahme bekommt, ist eine
@@ -4017,6 +4568,13 @@ Sparring desselben Tages erledigt und **nicht** entfernt worden.
    Fenster bei 5,275 s und damit bei Faktor 1,9 Reserve — und anders als der schlimmste Einzelwert
    entsteht er aus einer Eingabe, die der Nutzer für eine *Einschränkung* hält.
 
+   > ✔ **Entschieden und gebaut am 13.08.2026: ja.** Die Frage bleibt hier stehen, weil die Zahlen
+   > darunter es ebenfalls tun — und **M47 hat eine davon verschoben**: K3b liegt mit der gebauten
+   > Vorgabe von 30 Tagen bei **882 ms** und ist damit kein Grund mehr. Der Grund, der bleibt, ist
+   > der **Jahresfall**: 8,940 s am gebauten Statement, **89 Prozent** der Zeitgrenze, auf einer
+   > *ruhenden* Testkopie. Der Endpunkt benutzt denselben Problemtyp `suche-abgebrochen` wie die
+   > Nachrichtenliste und baut keinen zweiten ([`bam-suche.md`](bam-suche.md) §6).
+
 ### Neu aus dem Nachtrag vom 12.08.2026
 
 9. **Welche Bauform bekommt die Verundung?** Die beiden gemessenen sind **gegenläufig**, nicht
@@ -4031,6 +4589,14 @@ Sparring desselben Tages erledigt und **nicht** entfernt worden.
     0,094 ms je Stück. Sondern wegen zweier Fälle: zwei sehr häufige Begriffe (K3b, 5,275 s) und
     zwei mittlere Begriffe auf fetten Nachrichten (K5c, 926,7 ms). Ob das Pflicht-Zeitfenster beide
     auffängt, ist **ungemessen**.
+
+    > ✔ **Gemessen und beantwortet am 13.08.2026 in M47: nein, es braucht keine.** Das
+    > Pflicht-Zeitfenster fängt **beide** — K3b fällt auf **881,975 ms**, K5c auf **6,911 ms**. Bei
+    > K5c sagt der `EXPLAIN`, warum: Mit Fenster kippt der zweite Begriff nicht mehr auf den
+    > `PRIMARY`-Zugriff mit `rows` 8, sondern bleibt bei `MessageBAM_BAMValueOnly` mit `key_len` 428
+    > und `rows` 1. Gebaut ist deshalb **eine** Grenze — das Zeitfenster —, und das Schutzgeländer
+    > von acht Begriffen begrenzt die Join-Reihenfolgen und keine Laufzeit
+    > ([`bam-suche.md`](bam-suche.md) §1).
 
 11. **Woher kommt die Sollänge je Typ, und wie wird sie fortgeschrieben?** M43‑1 belegt sie für
     sechs Typen über den Bestand — und widerlegt sie im selben Atemzug für einen davon (2001:
@@ -4075,6 +4641,10 @@ Sparring desselben Tages erledigt und **nicht** entfernt worden.
     mechanisch in der Kuratierung und können nachweislich nichts finden (M46‑1c). Eine Ergänzung
     „bei der Sollänge kommt mindestens ein Wert mit führender Null vor" nähme beide heraus. Was die
     beiden Einträge kosten, ist ungemessen — es ist je eine zusätzliche Variante in der `IN`-Liste.
+
+    > **Der Preis ist seit M47 beziffert und beantwortet die Frage nicht:** rund **0,1 ms** je
+    > zusätzlicher Variante. Damit ist die Frage keine Leistungsfrage mehr, sondern nur noch die,
+    > ob die Kuratierungsregel sagen soll, was sie meint. Sie bleibt offen.
 
 16. **Wie erfährt die Kuratierung von einem neuen Mandanten oder Typ?** Sie kennt die 45 Paare vom
     13.08.2026. `BamSollaengeDriftDbIT` prüft, was dasteht — **nicht, was fehlt**. Ein Mandant, der

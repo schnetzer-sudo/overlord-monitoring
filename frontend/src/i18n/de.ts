@@ -220,7 +220,13 @@ export const de = {
     },
 
     suche: {
-      bezeichnung: "Suche",
+      // **Sie benennt, worin gesucht wird** — angepasst in Schritt 7, Teil 3.
+      // Seitdem steht ein zweites Suchfeld in der Kopfzeile, und das sucht etwas
+      // anderes: Belegnummern. Zwei Felder auf demselben Bildschirm, die
+      // verschiedene Dinge tun und verschieden fehlschlagen, sind eine Falle —
+      // besonders für den Nutzer, der kein EDI-Spezialist ist. Hier stand bis
+      // dahin „Suche".
+      bezeichnung: "Prozess, Projekt oder Ablauf durchsuchen",
       platzhalter: "Prozess-, Projekt- oder Ablaufname",
       zuKurz: "Noch {anzahl} Zeichen, dann wird gesucht.",
       leeren: "Suche leeren",
@@ -440,6 +446,124 @@ export const de = {
       tiefeErreicht: "Die Kette ist länger als hier gezeigt.",
       zyklusErkannt: "Die Kette führt im Kreis — hier ist sie abgebrochen.",
     },
+  },
+
+  /**
+   * Die Belegsuche (Schritt 7, Teil 3) — **auf oberster Ebene, nicht unter
+   * `nachrichten`.**
+   *
+   * Ihr Feld steht in der Kopfzeile und damit auf jeder Seite; ihre Route ist eine
+   * eigene. Unter `nachrichten` stünde sie neben dem Freitextfilter der Liste,
+   * und genau diese Verwechslung soll sie nicht einladen.
+   */
+  suche: {
+    titel: "Belegsuche",
+
+    feld: {
+      // Beschriftung und Platzhalter sagen dasselbe, und das ist Absicht: Der
+      // Platz in der Kopfzeile trägt keine sichtbare Beschriftung, der
+      // Platzhalter übernimmt sie — und beide müssen benennen, **worin** gesucht
+      // wird (siehe `nachrichten.suche.bezeichnung`).
+      bezeichnung: "Belegnummer suchen",
+      platzhalter: "Belegnummer suchen",
+      hinzufuegen: "Begriff hinzufügen",
+    },
+
+    typwahl: {
+      alle: "Alle Belegarten",
+      gewaehlt: "Belegart: {belegart}",
+    },
+
+    marken: {
+      bezeichnung: "Gesuchte Begriffe",
+      entfernen: "Begriff entfernen",
+      // Die Zahl kommt aus dem Code, damit sie nicht zweimal gepflegt wird. Der
+      // Satz nennt sie als das, was sie ist — ein Schutzgeländer und keine
+      // fachliche Grenze (docs/bam-suche.md §1).
+      grenzeErreicht:
+        "Mehr als {anzahl} Begriffe nimmt die Suche nicht an — ein Schutzgeländer, keine fachliche Grenze. Entferne einen, um einen anderen zu suchen.",
+    },
+
+    spalten: {
+      treffer: "Treffer",
+      kette: "Kette",
+    },
+
+    treffer: {
+      // Der erste Typ und die Zahl der übrigen. Mehrere sind kein Randfall: Bei
+      // 4,17 Prozent der Paare steht derselbe Wert unter mehreren Typen (M37).
+      weitere: "{erste} +{anzahl}",
+      alleTypen: "Getroffen als: {typen}",
+    },
+
+    // Die Stellung in der Verkettung. Sie ist hier wichtiger als in der Liste:
+    // Die Suche findet fast immer die Wurzel (96,87 Prozent der Wurzeln tragen
+    // BAM-Werte gegen 2,42 Prozent der Kinder, M26‑1b), und die trägt bei einer
+    // Aufteilung einen Endstatus, der die Frage „ist der Beleg angekommen" nicht
+    // beantwortet. Kurz in der Zelle, als Satz im Tooltip — auf einem Touchgerät
+    // gibt es keinen Hover.
+    kette: {
+      kurz: {
+        SPLIT_WURZEL: "Aufgeteilt",
+        SPLIT_KIND: "Teil",
+        MERGE_EINGANG: "Eingang",
+        MERGE_ERGEBNIS: "Ergebnis",
+      },
+      satz: {
+        SPLIT_WURZEL: "Diese Nachricht wurde aufgeteilt — die Teile laufen einzeln weiter.",
+        SPLIT_KIND: "Diese Nachricht ist ein Teil einer Aufteilung.",
+        MERGE_EINGANG: "Diese Nachricht ist in eine Zusammenführung eingegangen.",
+        MERGE_ERGEBNIS: "Diese Nachricht ist aus einer Zusammenführung entstanden.",
+      },
+    },
+
+    // Keine stille Korrektur: Wer 4711815 tippt und 004711815 findet, muss
+    // erfahren, warum. Die Fassung mit führendem Leerzeichen steht bewusst nicht
+    // darin — sie wäre für den Nutzer nicht nachvollziehbar (docs/bam-suche.md §3).
+    varianten: "Gesucht nach {eingabe} und {fassungen}.",
+
+    fenster: {
+      aendern: "Zeitfenster ändern",
+      einJahr: "Auf ein Jahr erweitern",
+      // Bewusst ohne Zahl: Die Vorgabe steht im Backend, und ein zweiter Wert
+      // hier liefe dem ersten irgendwann hinterher.
+      vorgabe: "Vorgabe wiederherstellen",
+      gilt: "Es gilt das Zeitfenster {von} bis {bis}.",
+    },
+
+    ergebnis: {
+      anzahl: "{anzahl} Treffer im Zeitfenster {von} bis {bis}.",
+      // **Abschneidung und Fenster zusammen.** Nur eines von beidem ist
+      // irreführend: „mehr als 50" ohne Fenster liest sich wie eine Aussage über
+      // den ganzen Bestand.
+      abgeschnitten:
+        "Mehr als {anzahl} Treffer — gezeigt werden die {anzahl} neuesten im Zeitfenster {von} bis {bis}. Verkleinere den Zeitraum oder nenne eine zweite Belegnummer.",
+      keine: "Keine Nachricht mit diesem Beleg",
+      keineHinweis:
+        "Erweitere das Zeitfenster oder entferne einen Begriff. Eine führende Null musst du nicht tippen — die ergänzt die Suche selbst.",
+      // Jede Marke verengt. Landet die dritte bei null, sieht der Nutzer sonst
+      // nicht, welche es war.
+      nulltreffer: "Mit diesem Begriff: 0. Ohne ihn: {anzahl}.",
+      // War die vorige Runde abgeschnitten, ist die gelieferte Zahl die
+      // Seitengröße und nicht die Trefferzahl. Sie als solche auszugeben wäre ein
+      // falscher Schluss in genau der Zeile, die vor einem bewahren soll.
+      nulltrefferAbgeschnitten: "Mit diesem Begriff: 0. Ohne ihn: mehr als {anzahl}.",
+    },
+
+    leer: {
+      titel: "Wonach suchst du?",
+      was: "Tippe eine Belegnummer in das Feld oben — Lieferschein-, Bestell- oder Transportnummer, Charge, Werk oder Materialnummer. Die Eingabetaste startet die Suche.",
+      belegarten: "Für diesen Mandanten sind diese Belegarten hinterlegt:",
+      hilfe:
+        "Führende Nullen und ein führendes Leerzeichen sucht die Suche von selbst mit — sie stehen auf dem Beleg nicht, im Bestand aber sehr wohl. Mehrere Begriffe werden mit UND verknüpft.",
+    },
+
+    // Derselbe Problemtyp wie in der Nachrichtenliste, aber der andere
+    // Handlungshinweis: Ein BAM-Wert lässt sich nicht schärfen, ein zweiter
+    // Begriff senkt die Laufzeit dagegen um Größenordnungen (M42‑1). Welcher der
+    // beiden Sätze erscheint, entscheidet die Ansicht und nicht der Fehlerkatalog.
+    abgebrochen:
+      "Die Suche hat zu lange gedauert und wurde abgebrochen. Verkleinere den Zeitraum oder nenne eine zweite Belegnummer.",
   },
 
   zustand: {

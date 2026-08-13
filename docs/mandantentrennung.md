@@ -198,6 +198,26 @@ schlechter Beweis für eine Trennung, die zwischen Firmen greifen soll.
 >    dieselbe Kennung anfragen. Verglichen werden Rumpf **und Laufzeit** — genau der Kanal, den der
 >    Absatz „Woran die Zusage tatsächlich hängt" unten beschreibt.
 >
+> **Ergänzt 13.08.2026 (Schritt 7, Teil 2b).** `BamSucheIsolationDbIT`
+> ([`bam-suche.md`](bam-suche.md) §7) ist die erste Kopie, bei der die Gegenprobe **ohne `404`**
+> auskommen muss — und das ist ihre Übertragung, kein Abweichen von der Vorlage. Bei Detail, Kette
+> und Belegdaten steht die Kennung *im Pfad*, und verglichen werden zwei `404`-Rümpfe. Die Suche
+> nimmt dagegen eine **Frage** entgegen: Ein Wert, den es für diesen Mandanten nicht gibt, ist `200`
+> mit leerer Liste — genau wie ein Wert, den es überhaupt nicht gibt. **Die Ununterscheidbarkeit
+> verschiebt sich damit vom Statuscode auf den Rumpf.**
+>
+> Zwei Dinge kommen dort hinzu, die es vorher nicht gab:
+>
+> 1. **Der Rumpf zitiert die Frage**, weil er die Suchbegriffe samt ihrer gebildeten Fassungen nennt
+>    (keine stille Korrektur). Das ist dieselbe Lage wie bei `instance` nach RFC 9457 und wird
+>    genauso behandelt: Der Test normalisiert das Zitat **und** weist zusätzlich nach, dass es genau
+>    die gesendete Eingabe ist und jede Fassung auf ihr endet. Damit die *Zahl* der Fassungen den
+>    Vergleich nicht stört, ist die erfundene Eingabe **genauso lang** wie die fremde.
+> 2. **Die Abschneidung ist selbst eine Auskunft.** Der Test prüft dieselbe Suche mit zwei Mandanten
+>    und verlangt **verschiedene** Zahlen — 50 Treffer mit `abgeschnitten: true` für den einen, null
+>    Treffer mit `abgeschnitten: false` für den anderen. Würde sie aus den Rohtreffern gezählt,
+>    meldete auch der zweite „es gibt mehr" und sagte damit etwas über die Datenmenge des ersten.
+>
 > **Ergänzt 06.08.2026 (Schritt 4).** Die erste Kopie der Vorlage ist `NachrichtenIsolationDbIT`
 > ([`nachrichtenliste.md`](nachrichtenliste.md) §3). Sie paart `NEXANS` gegen `SUTTONS` statt `VOTG`
 > gegen `SUTTONS` — auch das zwei verschiedene Häuser, aber die beiden mit dem größten Bestand, und

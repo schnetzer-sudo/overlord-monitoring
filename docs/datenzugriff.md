@@ -242,6 +242,17 @@ Sortierung stehen explizit.
 wird **nie** gegen `GlassfishDB` gejoint — die Suchvarianten entstehen aus ihr **vor** dem Statement,
 nicht darin.
 
+> **Gebaut seit Schritt 7, Teil 2b** (13.08.2026). `BamSucheRepository.findeSollaengen` liest sie als
+> **Vollabzug für den Mandanten der Sitzung** — gemessen `ref` auf `PRIMARY`, **10 Zeilen**,
+> **0,336 ms** (M47). Der Zugriff läuft über den **Lese-Kontext** (`glassfishDsl`), der beide
+> Schemata lesen darf (§3), und das gerenderte Statement nennt `GlassfishDB` an keiner Stelle —
+> festgehalten in `BamSucheStatementsTest.sollaengen_werden_nie_gegen_glassfish_gejoint`.
+>
+> **`MandantContext` ist erster Pflichtparameter, obwohl hier kein Quellschema angefasst wird.** Der
+> Schlüssel der Tabelle *trägt* den Mandanten: Eine Methode ohne ihn läse die Kuratierung fremder
+> Mandanten, und deren Sollängen bestimmten, wonach gesucht wird. Dass ArchUnit die Regel M2 nur für
+> `jooq.glassfish` erzwingt, ist der Grund für diesen Absatz und nicht für eine Ausnahme.
+
 **Gesichert** durch `BamSollaengeDriftDbIT` (`@Tag("db")`): je kuratiertem Eintrag eine eigene
 Abfrage über den Bestand. Die Sammelform über alle Typen kostet 6,8 s und stirbt am
 `max_statement_time=10` des Lese-Pools (§1) — je Paar bleibt sie weit darunter. **Der Test läuft
