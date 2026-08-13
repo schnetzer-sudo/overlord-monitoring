@@ -106,6 +106,9 @@ class NachrichtendetailServiceTest {
         sosActionId,
         sosId == null ? null : "Send Message to Pool",
         22,
+        // Neun BAM-Werte — die Gestalt der Ankernachricht aus M42-0. Der Service reicht die Zahl
+        // nur durch; was daraus wird, entscheidet der BAM-Endpunkt im Fachpaket `bam`.
+        9,
         source,
         sourceMessageId,
         targetMessageId,
@@ -576,6 +579,7 @@ class NachrichtendetailServiceTest {
               (short) 1,
               null,
               0,
+              0,
               null,
               null,
               null,
@@ -615,6 +619,7 @@ class NachrichtendetailServiceTest {
                 ABLAUF,
                 (short) 1,
                 null,
+                0,
                 0,
                 null,
                 null,

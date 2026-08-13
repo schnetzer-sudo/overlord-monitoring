@@ -352,12 +352,30 @@ Zuordnungstabelle gebaut worden, die niemand gebraucht hätte.
 
 | | Tabellen |
 |---|---|
-| **Erhoben** | `Mandant`, `Message`, `MessageAction`, `MessageBAMMandant`, `MessageBAMType`, `MessageProperty`, `Process`, `Project`, `ProjectMandant`, `Service`, `SOS`, `SOSAction` sowie die View `MessageMandantID` |
-| **Nicht erhoben** | **`MessageBAM`**, `MessagePropertySearchListEntry`, `MessageStatisticHistory`, `Schedule`, `SchedulePlans`, `ScheduleTasks`, `ServiceGroup`, `ServiceTask`, `ServiceType`, `SOSDefaultMessageProperty`, `User` sowie die View `MessageStatistic` |
+| **Erhoben** | `Mandant`, `Message`, `MessageAction`, **`MessageBAM`** *(seit 11.08.2026)*, `MessageBAMMandant`, `MessageBAMType`, `MessageProperty`, `Process`, `Project`, `ProjectMandant`, `Service`, `SOS`, `SOSAction` sowie die View `MessageMandantID` |
+| **Nicht erhoben** | `MessagePropertySearchListEntry`, `MessageStatisticHistory`, `Schedule`, `SchedulePlans`, `ScheduleTasks`, `ServiceGroup`, `ServiceTask`, `ServiceType`, `SOSDefaultMessageProperty`, `User` sowie die View `MessageStatistic` |
 
-⚠️ **`MessageBAM` trägt Schritt 7** (BAM-Suche) und ist bis heute **nicht** erhoben. Was
-`datenmodell.md` §3 über sie sagt — Primärschlüssel, `varchar(70)`, eigener Index —, ist übernommen
-und ungeprüft. Die Erhebung gehört an den Anfang von Schritt 7, nicht in seine Mitte.
+✔ **`MessageBAM` ist erhoben** *(nachgezogen 12.08.2026)*. Hier stand bis heute die Warnung, sie
+trage Schritt 7 und sei ungeprüft. Das ist mit
+[`messungen-schritt7.md`](docs/messungen-schritt7.md) M32 erledigt — und die Erhebung stand
+tatsächlich am **Anfang** von Schritt 7 und nicht in seiner Mitte. Was `datenmodell.md` §3 über sie
+sagte, ist **bestätigt** worden: Primärschlüssel, `varchar(70)`, eigener Index. Der Index ist
+zusätzlich ein **Vollindex** über 70 Zeichen und kein Präfixindex wie bei `MessageProperty`.
+
+> ⚠️ **Was diese Liste nicht führt, und die Frage bleibt hier offen.** Sie sagt, ob **Spalten und
+> Indizes** erhoben sind — nicht, ob die **Zeilenzahl** gezählt ist. Das sind zwei verschiedene
+> Dinge, und die Erfahrung dieses Projekts zeigt, dass die Liste die zweite Frage nicht mitbeantwortet:
+>
+> - `MessageAction` stand hier als **erhoben**, und seine Zeilenzahl war trotzdem bis M14 die
+>   Schätzung.
+> - `MessageBAM` stand als **nicht erhoben**, und seine Zeilenzahl war bis M33‑0 um 41,9 % falsch.
+> - `MessageProperty` steht seit M14 als **erhoben**, und seine Zeilenzahl ist erst mit **M44**
+>   (12.08.2026) angefasst worden.
+>
+> **Ob eine Zeilenzahl zur Erhebung im Sinne von L8 gehört — und ob diese Liste eine dritte Spalte
+> braucht —, ist eine Entscheidung des Auftraggebers und hier ausdrücklich nicht getroffen.** Der
+> Befund dazu steht in [`docs/annahmen-korrekturen.md`](docs/annahmen-korrekturen.md), Abschnitt
+> „Erhebung 11./12.08.2026".
 
 **L9 — Ein Durchlauf ohne Zeitfenster ist eine begründete Ausnahme, kein Werkzeug**
 *(neu am 07.08.2026)*.

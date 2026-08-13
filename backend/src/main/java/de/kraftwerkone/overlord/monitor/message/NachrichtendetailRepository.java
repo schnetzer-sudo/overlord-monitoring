@@ -2,6 +2,7 @@ package de.kraftwerkone.overlord.monitor.message;
 
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.MESSAGE;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.MESSAGEACTION;
+import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.MESSAGEBAM;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.MESSAGEPROPERTY;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROCESS;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROJECT;
@@ -109,6 +110,17 @@ public class NachrichtendetailRepository {
    * MessageProperty} <i>fuer eine Nachricht</i> ist nicht die Live-Aggregation, die Regel L2
    * ausschliesst; die zielt auf Kennzahlen ueber {@code Message}.
    *
+   * <p><b>Die Anzahl der BAM-Werte kommt in derselben Bauform dazu</b> (12.08.2026, Schritt 7 Teil
+   * 1) — eine zaehlende Unterabfrage ueber das Praefix des Primaerschluessels von {@code
+   * MessageBAM}, gemessen als {@code ref} auf {@code PRIMARY} mit {@code Using index}. Sie liest
+   * keinen einzigen Wert und braucht deshalb auch keine Deckelung.
+   *
+   * <p><b>Warum sie in den Kopf gehoert und nicht in den neuen Endpunkt.</b> M41 misst, dass
+   * <b>80,6 Prozent</b> aller Nachrichten in Fenster B <i>keinen</i> BAM-Wert tragen — bei
+   * Merge-Eingaengen sind es 38.628 von 38.628, also alle. Ohne diese Zahl im Kopf muesste die
+   * Oberflaeche einen Block zeichnen, um festzustellen, dass er leer ist. Dieselbe Begruendung wie
+   * bei {@code rollen} und bei {@code eigenschaftenAnzahl}.
+   *
    * <p><b>Die vier Verkettungsspalten kommen roh dazu</b> (11.08.2026, Schritt 6 Teil 2b). Aus
    * ihnen entstehen die Rollen der Nachricht — <b>in {@code common/Kettenrollen} und nicht
    * hier</b>. Sie <b>kosten keinen Join und kein zweites Statement</b>: Alle vier stehen auf der
@@ -122,6 +134,12 @@ public class NachrichtendetailRepository {
             .from(MESSAGEPROPERTY)
             .where(MESSAGEPROPERTY.MESSAGEID.eq(MESSAGE.MESSAGEID))
             .asField("eigenschaften_anzahl");
+
+    Field<Integer> bamAnzahl =
+        DSL.selectCount()
+            .from(MESSAGEBAM)
+            .where(MESSAGEBAM.MESSAGEID.eq(MESSAGE.MESSAGEID))
+            .asField("bam_anzahl");
 
     return glassfishDsl
         .select(
@@ -137,6 +155,7 @@ public class NachrichtendetailRepository {
             MESSAGE.SOSACTIONID,
             SOSACTION.SOSACTIONNAME,
             eigenschaftenAnzahl,
+            bamAnzahl,
             MESSAGE.SOURCE,
             MESSAGE.SOURCEMESSAGEID,
             MESSAGE.TARGETMESSAGEID,
@@ -171,7 +190,8 @@ public class NachrichtendetailRepository {
                     satz.value13(),
                     satz.value14(),
                     satz.value15(),
-                    satz.value16()));
+                    satz.value16(),
+                    satz.value17()));
   }
 
   /**

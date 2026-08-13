@@ -206,7 +206,20 @@ Lesebeginn beim Umschalten an derselben x-Position bleibt.
 | `--dichte-suchbereich` | 18 rem (288 px) | 18 rem | reservierter Platz für die BAM-Suche, Schritt 7 |
 | `--dichte-feld` | 2.5 rem | 2.5 rem | Eingabefeld im Formular — bleibt bewusst komfortabel |
 | `--dichte-zeile` | 2.25 rem | 2.25 rem | Tabellenzeile ab Schritt 4 |
+| `--dichte-beschriftung` | 10 rem | 10 rem | **gedeckelte** Breite einer Beschriftungsspalte neben ihren Werten, seit Schritt 7 |
 | `--dichte-inhaltsbreite` | 72 rem | 72 rem | Maximalbreite **innerhalb** einer Ansicht |
+
+> **`--dichte-beschriftung` ist heute an genau einer Stelle im Einsatz** — im Belegdaten-Block
+> ([`bam-werte.md`](bam-werte.md) §11a). Es steht hier, weil die Dichtewerte in `globals.css` wohnen
+> und diese Tabelle ihr Verzeichnis ist; die **Bauform** dahinter (Beschriftung links, Werte rechts
+> als Marken) steht bewusst **nicht** hier, solange sie eine einzige Ansicht betrifft.
+>
+> **Die 10 rem sind gemessen und nicht gewählt** — anders als die 72 rem eine Zeile darunter. Im
+> Panel bleiben damit 282 px für die Werte, und die längste gemessene Belegnummer braucht als Marke
+> rund 285 px. Eine breitere Beschriftungsspalte spart der Beschriftung eine Zeile und zwingt dafür
+> die **Hauptinformation** in den Umbruch; die Herleitung steht in `bam-werte.md` §11a. **Wer die
+> Zahl ändert, prüft sie im Panel und nicht auf der eigenen Route** — dort ist die Zeile doppelt so
+> breit und der Fehler unsichtbar.
 
 Gemessen bei 1920 px: Vier Navigationseinträge belegen 142 px statt vorher rund 236 px, die
 Kopfzeile 51 px statt 57.
@@ -328,6 +341,7 @@ Kategorie ohne Farbe neben einer roten ist keine neutrale Darstellung, sie ist e
 | Status bekommt eine andere Rolle | `src/lib/status-farbe.ts`, Tabelle `ZUORDNUNG` | eine Zeile |
 | Dichtere oder luftigere Navigation | `globals.css`, `--dichte-navzeile` | eine Zeile |
 | Dichtere oder luftigere Listen | `globals.css`, `--dichte-zeile` | eine Zeile |
+| Breitere oder schmalere Beschriftungsspalte | `globals.css`, `--dichte-beschriftung` | eine Zeile, **im Panel nachsehen** |
 | Schmalere oder breitere Navigationsspalte | `globals.css`, `--dichte-navspalte` | eine Zeile |
 | Andere Schrift | `src/app/layout.tsx` (`next/font`) | zwei Zeilen |
 | Dunkelmodus | `globals.css`, Block `.dark`, plus ein Umschalter | überschaubar |

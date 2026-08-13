@@ -56,6 +56,7 @@ function detail(werte: Partial<Nachrichtendetail> = {}): Nachrichtendetail {
     gesamtdauerSekunden: 758,
     fristSekunden: 1800,
     eigenschaftenAnzahl: 22,
+    bamAnzahl: 0,
     offenerZustand: "KEINER",
     naechsterSchritt: null,
     wartetSeitSekunden: null,

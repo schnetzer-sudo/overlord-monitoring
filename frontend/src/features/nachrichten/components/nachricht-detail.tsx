@@ -16,6 +16,7 @@ import type { KuratierteEigenschaft, Nachrichtendetail } from "../api";
 import { bedeutungNichtVerifiziert } from "../detail";
 import { useNachrichtendetail } from "../hooks";
 import { AnsichtUmschalter, type Umschaltziel } from "./ansicht-umschalter";
+import { BamBlock } from "./bam-block";
 import { EigenschaftenBlock } from "./eigenschaften-block";
 import { KettenBlock } from "./kette-block";
 import { StatusPlakette } from "./status-plakette";
@@ -137,6 +138,22 @@ export function NachrichtDetail({
             key={`kette-${anfrage.data.messageId}`}
             detail={anfrage.data}
             aufOeffnen={aufOeffnen}
+          />
+          {/*
+            Die Belegdaten sitzen zwischen Kettenblock und Zeitleiste: Sie
+            beantworten „welcher Beleg ist das", die Zeitleiste „was ist damit
+            passiert". Nach dem Leitsatz kommt die erste Frage zuerst — der
+            typische Nutzer sucht einen Beleg.
+
+            `key` mit eigenem Präfix, wie bei den Nachbarn: Drei Geschwister mit
+            demselben Schlüssel wären für React derselbe Platz im Baum. Der
+            Befund dazu stammt vom 11.08.2026 (`verkettung.md` §8.12), und
+            `tests/detail-baum.test.tsx` hält ihn fest.
+          */}
+          <BamBlock
+            key={`bam-${anfrage.data.messageId}`}
+            messageId={anfrage.data.messageId}
+            anzahl={anfrage.data.bamAnzahl}
           />
           <Zeitleiste detail={anfrage.data} />
           <EigenschaftenBlock

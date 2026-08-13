@@ -349,6 +349,24 @@ export const de = {
         "Message.SplitCount": "Aufteilungszahl",
       },
 
+      // Die Belegdaten (Schritt 7, Teil 1) — nach dem Leitsatz die
+      // Hauptinformation dieser Ansicht und deshalb vor der Zeitleiste. Der
+      // Block erscheint gar nicht, wenn `bamAnzahl` null ist; bei 80,6 Prozent
+      // der Nachrichten ist das der Fall (M41).
+      bam: {
+        // Die Zahl steht in der Überschrift, damit erkennbar ist, ob sich das
+        // Aufklappen lohnt — sie kommt aus dem Kopf und kostet keine Anfrage.
+        titel: "Belegdaten ({anzahl})",
+        aufklappen: "Belegdaten anzeigen",
+        zuklappen: "Belegdaten ausblenden",
+        // Die ehrliche Restangabe. Kein „mehr laden": Das bräuchte einen Cursor
+        // und kommt erst, wenn jemand es braucht.
+        weitere: "und {anzahl} weitere",
+        // Kann nur eintreten, wenn sich der Bestand zwischen Kopf und Block
+        // ändert. Ein Block, der dann nichts sagt, sähe nach einem Fehler aus.
+        leer: "Zu dieser Nachricht ist keine Belegnummer hinterlegt.",
+      },
+
       eigenschaften: {
         titel: "Technische Eigenschaften ({anzahl})",
         keine: "Keine technischen Eigenschaften",

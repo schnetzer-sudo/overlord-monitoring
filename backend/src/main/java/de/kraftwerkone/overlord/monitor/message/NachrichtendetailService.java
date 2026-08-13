@@ -86,6 +86,9 @@ public class NachrichtendetailService {
         abstand(start, kopf.zeitpunkt()),
         frist,
         kopf.eigenschaftenAnzahl(),
+        // Die Zahl der BAM-Werte, damit die Oberflaeche den Block gar nicht erst zeichnet, wo es
+        // nichts zu zeigen gibt — bei 80,6 Prozent der Nachrichten ist das der Fall (M41).
+        kopf.bamAnzahl(),
         zustand,
         zustand.istWartend() ? kopf.naechsterSchrittName() : null,
         wartetSeitSekunden(zustand, aktionen, schrittfolge, jetzt),

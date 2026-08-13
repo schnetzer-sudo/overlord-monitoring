@@ -176,10 +176,17 @@ NXS_MERGE|KE_OSTROV_734973|WAIT|30M|30406_..._MRG
 
 PK `(MessageID, MessagePropertyName, MessageActionID)` · `MessagePropertyValue` mediumtext
 
-Rund **23 Zeilen pro Nachricht** im dichten Bestand; **46.964.279 Zeilen, 61,0 GB** insgesamt
-(Erhebung 27.07.2026). Der Index belegt davon **45,9 GB**, die Nutzdaten nur 15,1 GB — die
-„1,3 Kilobyte je Zeile" aus [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §3.2 sind zu drei
-Vierteln Index.
+Rund **23 Zeilen pro Nachricht** im dichten Bestand (M17) — und **22,62** über den Gesamtbestand,
+seit die Zeilenzahl gezählt ist (M44). **75.571.462 Zeilen (gezählt, 12.08.2026), 61,0 GB**
+insgesamt; die Bytegröße stammt aus der Erhebung vom 27.07.2026 und ist seither über fünf Messtage
+**byteidentisch**. Der Index belegt davon **45,9 GB**, die Nutzdaten nur 15,1 GB — die
+„1,3 Kilobyte je Zeile" aus [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §3.2 sind
+**808 Byte** und weiterhin **zu drei Vierteln Index** (608 B Index gegen 200 B Daten, 75,3 %).
+
+*Korrigiert 12.08.2026:* Hier standen **46.964.279 Zeilen (Erhebung 27.07.2026)**. Das war die
+`information_schema`-Schätzung und lag **60,9 % zu niedrig**; gezählt in
+[`messungen-schritt7.md`](messungen-schritt7.md) M44. Die Bytegrößen sind unberührt. Vollständig im
+Kasten in §8.
 
 **Alle Eigenschaften einer Nachricht zusammen wiegen rund 595 Byte.** Das ist die Zahl, die für einen
 Detail-Aufruf zählt — nicht die Speichergröße der Tabelle.
@@ -197,6 +204,16 @@ Detail-Aufruf zählt — nicht die Speichergröße der Tabelle.
 >
 > Die alte Angabe stammt aus der Zeit vor der Erhebung vom 27.07.2026, die das Mengengerüst um rund
 > Faktor zehn nach unten korrigiert hat, und ist beim Nachziehen übersehen worden.
+>
+> ⚠️ **Nachtrag 12.08.2026: Die Erklärung „verschiedene Nenner" ist widerlegt.** Der Absatz oben
+> deutet die Lücke zwischen 14,05 (Gesamtbestand) und 22,57 (dichter Bestand) als Zeitraumeffekt.
+> Das war plausibel und ist falsch: Die 14,05 sind aus der **Schätzung** gerechnet. Mit der
+> gezählten Zeilenzahl ergeben sich **75.571.462 / 3.341.519 = 22,62** — also praktisch derselbe
+> Wert wie im dichten Bestand. **Ebenso überholt ist die Gesamtzahl in der zweiten Zeile:** nicht
+> 47 Millionen, sondern **75,6 Millionen**. Der Kasten bleibt stehen, weil sein Kern richtig ist —
+> „rund zehn" und „mehrere hundert Millionen bei einem Jahr" waren beide falsch, und die Aufbewahrung
+> beträgt 22 Monate. Falsch sind nur die beiden Zahlen, die er aus der Schätzung gerechnet hat.
+> Belege in [`messungen-schritt7.md`](messungen-schritt7.md) M44.
 
 🚫 **Zugriff ausschließlich über `MessageID`.** Niemals filtern, gruppieren oder sortieren über
 `MessagePropertyValue` — die Indizes darauf sind **Präfix-Indizes über 50 Zeichen** und für
@@ -226,8 +243,21 @@ Das ist die **zentrale Suchdimension für Fachanwender**: Lieferschein-Nr., Best
 Transport-Nummer, Charge, Werk, Materialnummer und so weiter. `MessageBAMType` verweist auf
 `MessageBAMType.MessageBAMTypeDescription`.
 
+**Gezählt am 11.08.2026: 15.406.350 Zeilen**, 7,1 GB, rund **fünf** Einträge je Nachricht
+(15.406.350 / 3.341.519 = 4,61). Erhoben in
+[`messungen-schritt7.md`](messungen-schritt7.md) M32 (Spalten und Indizes) und M33‑0 (Zeilenzahl) —
+die Erhebung, die Regel L8 für diese Tabelle nachgeholt hat. M32 hat die drei Angaben der Zeile
+darüber **bestätigt**: Primärschlüssel, `varchar(70)` und ein eigener Index auf dem Wert; der Index
+ist ein **Vollindex** über 70 Zeichen und kein Präfixindex.
+
 ⚠️ **Hartes Ergebnislimit und Mindestlänge des Suchbegriffs** sind Pflicht. Werte wie `050` kommen
-millionenfach vor. (Regel L5)
+millionenfach vor. (Regel L5) — **gemessen unterlegt seit M33:** Das Maximum liegt bei **234.159**
+Treffern für einen einzigen Wert, das 99. Perzentil bei 75, der Median bei 1.
+
+> **Ergänzt 12.08.2026.** Dieser Absatz stand hier bis heute **ohne Zeilenzahl** — die 10.859.666
+> standen nur in §8 und in [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §3.2 und §8. Er
+> bekommt sie jetzt in der **gezählten** Fassung und mit ihrer Herkunft, damit dieselbe Lücke nicht
+> ein zweites Mal entsteht. Zur alten Zahl siehe den Korrekturkasten in §8.
 
 ### `MessageBAMMandant` — sichtbare BAM-Typen je Mandant
 
@@ -523,22 +553,31 @@ Sichten auf dieselbe Beziehung, sondern zwei Beziehungen mal zwei Richtungen:
 
 ## 8. Größenordnung
 
-Gemessenes Mengengerüst (27.07.2026, ersetzt die frühere Schätzung):
+Mengengerüst — **Zeilenzahlen gezählt (Stand 12.08.2026), Bytegrößen erhoben am 27.07.2026**
+(ersetzt die frühere Schätzung). Die Kennzeichnung gilt **jeder** Zeile und nicht nur den
+geänderten:
 
-| Tabelle | Zeilen | Größe |
-|---|---|---|
-| `MessageProperty` | 46.964.279 (geschätzt) | 61,0 GB — davon **45,9 GB Index** |
-| `MessageBAM` | 10.859.666 | 7,1 GB |
-| `MessageAction` | **10.308.590 (gezählt)** | 3,0 GB |
-| `Message` | 3.341.519 | 2,9 GB |
-| `Process` | 1.490 | — |
-| `Project` | 140 (gezählt) | — |
+| Tabelle | Zeilen | Herkunft der Zeilenzahl | Größe |
+|---|---|---|---|
+| `MessageProperty` | **75.571.462** | **gezählt** (M44, 12.08.2026) | 61,0 GB — davon **45,9 GB Index** |
+| `MessageBAM` | **15.406.350** | **gezählt** (M33‑0, 11.08.2026) | 7,1 GB |
+| `MessageAction` | **10.308.590** | **gezählt** (M14, 07.08.2026) | 3,0 GB |
+| `Message` | 3.341.519 | **gezählt** (M0, 01.08.2026) | 2,9 GB |
+| `Process` | **1.503** | **gezählt** (M10, 01.08.2026; bestätigt M44) | — |
+| `Project` | 140 | **gezählt** (28.07.2026; bestätigt M44) | — |
+| `User` | 36 | **gezählt** (M44, 12.08.2026) | — |
+
+**Keine Zeile steht mehr auf einer Schätzung.** Die Bytegrößen stammen ohnehin aus belegten Seiten
+und nicht aus einer Stichprobe; sie sind über fünf Messtage byteidentisch geblieben
+([`messungen-schritt7.md`](messungen-schritt7.md) §0 und M44‑0).
 
 | Kennzahl | Wert |
 |---|---|
 | Nachrichten pro Tag | **rund 7.300 im dichten Bestand** (nicht 5.000) |
 | Aufbewahrung | **22 Monate** (ältester Datensatz 01.10.2024) |
-| Prozesse | 1.490 (Annahme A7 bestätigt) |
+| Prozesse | **1.503 (gezählt)** — Annahme A7 bestätigt |
+| Eigenschaften je Nachricht | **22,62** über den Gesamtbestand, 22,57 bis 22,88 im dichten (M17, M44) |
+| BAM-Einträge je Nachricht | **4,61** über den Gesamtbestand (M33‑0) |
 
 > **Korrektur 07.08.2026, zwei Zeilen.**
 >
@@ -558,6 +597,34 @@ Gemessenes Mengengerüst (27.07.2026, ersetzt die frühere Schätzung):
 > ([`messungen-schritt5.md`](messungen-schritt5.md) M14). Bemerkenswert ist die Richtung: Bei
 > `Message` **über**schätzt `information_schema` um 6,5 %, bei `MessageAction` **unter**schätzt es um
 > 0,9 %. „Veraltet" heißt also nicht „zu hoch", sondern nur „unzuverlässig".
+
+> **Korrektur 12.08.2026 — die Herkunft steht jetzt an jeder Zeile.**
+>
+> **Drei Zahlen sind ersetzt.** `MessageBAM` **10.859.666 → 15.406.350** (gezählt, M33‑0, +41,9 %),
+> `MessageProperty` **46.964.279 → 75.571.462** (gezählt, M44, +60,9 %) und `Process`
+> **1.490 → 1.503** — die letzte ist seit dem 01.08.2026 gezählt und war hier nie nachgezogen worden.
+> Alle drei waren `information_schema.TABLE_ROWS`; die Bytegrößen daneben sind unberührt und
+> byteidentisch. Neu in der Tabelle ist `User` mit 36 (gezählt, M44).
+>
+> **Diese Datei lag diesmal vorne, und das gehört genauso festgehalten wie der umgekehrte Fall.**
+> Sie unterschied bei `MessageProperty` und `MessageAction` bereits zwischen „(geschätzt)" und
+> „(gezählt)" und führte `Project` mit den gezählten **140**, während
+> [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §8 alles unter „Gemessenes Mengengerüst"
+> zusammenfasste und 142 nannte. **Genau umgekehrt zum 07.08.2026**, wo diese Datei der korrigierten
+> `annahmen-korrekturen.md` sechs Tage hinterherlief (Kasten darüber). Wer beide Kästen nebeneinander
+> liest, sieht: Die Fehler laufen **nicht** immer in dieselbe Richtung, und keine der drei Dateien
+> ist verlässlich die vordere.
+>
+> **Was die Kennzeichnung hier trotzdem nicht leistete:** Sie stand an **drei** von sechs Zeilen —
+> `MessageProperty` „(geschätzt)", `MessageAction` und `Project` „(gezählt)". Die übrigen drei
+> (`MessageBAM`, `Message`, `Process`) trugen **gar keine** Angabe und sahen dadurch aus wie die
+> gezählten; zwei von ihnen waren Schätzungen, und beide falsch. **Eine Kennzeichnung an einem Teil
+> der Zeilen ist schlechter als keine** — sie lässt den Rest bestätigt aussehen. Ab dieser Fassung
+> trägt **jede** Zeile ihre Herkunft, auch die unveränderten.
+>
+> **Unberührt:** Regel L4 (sie wird durch die höhere Zeilenzahl eher strenger), die **82 Prozent**
+> (sie rechnen mit Bytes), Regel L5 (durch M33 gemessen unterlegt) und die Leistungsregeln L1 bis
+> L7. Einordnung in [`annahmen-korrekturen.md`](annahmen-korrekturen.md).
 
 Die **Zeilenzahl war nie die richtige Kennzahl.** `MessageProperty` belegt 61 GB und ist damit 82 %
 der Datenbank; dort entscheidet die Bytegröße. Die frühere Annahme (36 Mio. Zeilen in `Message`,

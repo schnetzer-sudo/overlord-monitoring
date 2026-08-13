@@ -26,6 +26,12 @@ import java.time.LocalDateTime;
  *     ins Leere (M13) — die Ursache ist die lueckenhafte Nummerierung der Ablaufdefinition und
  *     nicht ein geaenderter Ablauf (M20). Bei allen 538 wartenden Nachrichten loest er auf (M29 3)
  * @param eigenschaftenAnzahl Anzahl der {@code MessageProperty}-Zeilen dieser Nachricht
+ * @param bamAnzahl Anzahl der {@code MessageBAM}-Zeilen dieser Nachricht — die Belegdaten, die
+ *     unter {@code GET /api/nachrichten/&#123;id&#125;/bam} liegen. Dieselbe Bauform wie {@code
+ *     eigenschaftenAnzahl}: eine zaehlende Unterabfrage ueber den Praefix des Primaerschluessels,
+ *     die keinen einzigen Wert liest. Sie steht hier, weil <b>80,6 Prozent</b> aller Nachrichten
+ *     keinen BAM-Wert tragen (M41) — ohne sie zeichnete die Oberflaeche einen Block, um
+ *     festzustellen, dass er leer ist
  * @param source {@code Message.Source} als {@link Boolean} — der Codegen bildet {@code bit(1)} per
  *     {@code forcedType} ab ({@code datenzugriff.md} §9). Der Rueckwaertsindex der Aufteilung: Er
  *     deckt sich exakt mit „hat mindestens ein Kind" (E4), <b>ohne Abfrage</b>
@@ -49,6 +55,7 @@ public record NachrichtKopfZeile(
     Short sosActionId,
     String naechsterSchrittName,
     int eigenschaftenAnzahl,
+    int bamAnzahl,
     Boolean source,
     String sourceMessageId,
     String targetMessageId,

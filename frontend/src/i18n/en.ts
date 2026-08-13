@@ -243,6 +243,14 @@ export const en: Texte = {
         "Message.SplitCount": "Split count",
       },
 
+      bam: {
+        titel: "Document data ({anzahl})",
+        aufklappen: "Show document data",
+        zuklappen: "Hide document data",
+        weitere: "and {anzahl} more",
+        leer: "No document number is recorded for this message.",
+      },
+
       eigenschaften: {
         titel: "Technical properties ({anzahl})",
         keine: "No technical properties",

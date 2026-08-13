@@ -66,6 +66,17 @@ import java.util.List;
  *     Sonst kann die Oberflaeche den eingeklappten Block nicht beschriften, ohne ihn zu laden —
  *     womit der zweite Endpunkt seinen Zweck verloere. Gemessen sind rund 22,6 Eigenschaften je
  *     Nachricht (M17 1)
+ * @param bamAnzahl wie viele BAM-Werte — Belegnummern, Kennungen, Stellen — auf der Nachricht
+ *     stehen. <b>Immer vorhanden, {@code 0} statt fehlend.</b>
+ *     <p><b>Sie gehoert in den Kopf und nicht in den BAM-Endpunkt.</b> M41 misst, dass 80,6 Prozent
+ *     aller Nachrichten in Fenster B keinen BAM-Wert tragen — bei Merge-Eingaengen 38.628 von
+ *     38.628, also alle. Ohne die Zahl im Kopf muesste die Oberflaeche einen Block zeichnen und
+ *     eine Anfrage stellen, um festzustellen, dass er leer ist. Dieselbe Begruendung wie bei {@code
+ *     rollen} und {@code eigenschaftenAnzahl}, und dieselbe Bauform: eine zaehlende Unterabfrage
+ *     ueber den Primaerschluessel-Praefix, {@code Using index}, ohne einen einzigen gelesenen Wert.
+ *     <p>Die Werte selbst liegen unter {@code GET /api/nachrichten/&#123;id&#125;/bam} ({@code
+ *     docs/bam-werte.md}) — je Typgruppe gedeckelt, weil auf einer einzigen Nachricht bis zu 9.296
+ *     Werte stehen koennen
  * @param offenerZustand woran die Nachricht steht, benannt statt erraten
  * @param naechsterSchritt der Schritt, auf den {@code Message.SOSID}/{@code SOSActionID} zeigen —
  *     bei {@link OffenerZustand#WARTET_IN} der zuletzt <i>gelaufene</i>, bei {@link
@@ -127,6 +138,7 @@ public record NachrichtendetailResponse(
     Long gesamtdauerSekunden,
     Integer fristSekunden,
     int eigenschaftenAnzahl,
+    int bamAnzahl,
     OffenerZustand offenerZustand,
     String naechsterSchritt,
     Long wartetSeitSekunden,

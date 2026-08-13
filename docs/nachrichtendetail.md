@@ -43,6 +43,7 @@ gesagt hat.
   "gesamtdauerSekunden": 758,
   "fristSekunden": 1800,
   "eigenschaftenAnzahl": 22,
+  "bamAnzahl": 9,
   "offenerZustand": "WARTET_IN",
   "naechsterSchritt": "Send Message to Pool",
   "wartetSeitSekunden": 15120,
@@ -103,6 +104,20 @@ leer, gibt es keinen Kettenblock und **keine zweite Anfrage**.
 **Die Anzahl der Eigenschaften steht im Kopf, obwohl die Eigenschaften selbst nicht mitkommen.**
 Ohne sie könnte die Oberfläche den eingeklappten Block nicht beschriften, ohne ihn zu laden — womit
 der zweite Endpunkt seinen Zweck verlöre.
+
+**`bamAnzahl` steht aus demselben Grund im Kopf** *(neu am 12.08.2026, Schritt 7 Teil 1)* — die Zahl
+der Belegnummern auf dieser Nachricht, **immer vorhanden, `0` statt fehlend**. Sie beschriftet den
+eingeklappten BAM-Block (§10.4b) und entscheidet, ob er überhaupt entsteht.
+
+**Sie wiegt schwerer als die Anzahl der Eigenschaften**, weil die Leere hier der Normalfall ist:
+**80,6 Prozent** aller Nachrichten in Fenster B tragen **keinen** BAM-Wert, bei Merge-Eingängen sind
+es 38.628 von 38.628 (M41). Ohne die Zahl müsste die Oberfläche einen Block zeichnen und eine
+Anfrage stellen, um festzustellen, dass er leer ist. Dieselbe Begründung wie bei `rollen`.
+
+**Dieselbe Bauform wie `eigenschaftenAnzahl`:** eine zählende Unterabfrage über den Präfix des
+Primärschlüssels von `MessageBAM`, `ref` auf `PRIMARY` mit `Using index` — sie liest **keinen
+einzigen Wert**. Die Werte selbst liegen unter `GET /api/nachrichten/{messageId}/bam`, vollständig
+beschrieben in [`bam-werte.md`](bam-werte.md).
 
 ### Antwort des Eigenschaften-Endpunkts
 
@@ -1222,6 +1237,39 @@ Flussrichtung, die Zahl in der Überschrift, das Nachladen statt eines Sprungs i
 Zustände und warum der Block keine eigene Farbe trägt. Hier steht nur, **wo** er sitzt und **dass**
 er die Zeitleiste nicht anfasst: An ihr, an der Wartezeile und an den Zuständen ändert sich nichts.
 
+### 10.4b Der BAM-Block — zwischen Kettenblock und Zeitleiste
+
+*Neu am 12.08.2026 (Schritt 7, Teil 1).* Er beantwortet die **erste** Frage des Werkzeugs —
+**welcher Beleg ist das** — und steht deshalb **vor der Zeitleiste**: Die beantwortet, *was mit dem
+Beleg passiert ist*, und nach dem Leitsatz kommt die erste Frage zuerst.
+
+Die Reihenfolge im Panel ist damit: **Kopf → Kette → Belegdaten → Zeitleiste → Eigenschaften.** Von
+oben nach unten: *was ist das*, *was hängt daran*, *welcher Beleg ist das*, *was ist passiert*, und
+zuletzt das Technische.
+
+**Ist `bamAnzahl` null, gibt es ihn nicht** — kein Rahmen, kein Schalter, **keine Anfrage auf
+`/bam`**. Bei 80,6 Prozent der Nachrichten ist das der Fall, bei Merge-Eingängen bei allen (M41).
+Dieselbe Regel wie beim Kettenblock; anders als der Eigenschaftenblock lässt er dabei auch **keine
+Zeile Text** stehen — die Begründung steht in [`bam-werte.md`](bam-werte.md) §11.
+
+**Eingeklappt, lädt beim Aufklappen**, mit der Zahl in der Überschrift: dieselbe Bauform wie der
+Eigenschaftenblock (§10.5) und aus demselben Grund.
+
+**Vollständig beschrieben ist er in [`bam-werte.md`](bam-werte.md)** — die Zweiteilung aus Zählung
+und gedeckelten Werten, die Deckelung bei zwanzig je Gruppe, die Entscheidung gegen den
+Konfigurationsfilter, die Sortierregel und der Schlüssel `(typ, wert)`. Hier steht nur, **wo** er
+sitzt und **dass** er nichts anfasst: An Zeitleiste, Wartezeile, Zuständen und Eigenschaftenblock
+ändert sich nichts.
+
+> **Nacharbeit vom 13.08.2026 — und §10.3 ist ausdrücklich nicht betroffen.** Der Block ordnet seine
+> Werte seitdem **nebeneinander als Marken**, mit der Beschriftung links in einer **gedeckelten**
+> Spalte ([`bam-werte.md`](bam-werte.md) §11a). Das ist dieselbe Grundform *„Beschriftung links,
+> Wert rechts"* wie die Beschreibungsliste im Kopf (§10.3) — **mit einem Unterschied, der der Punkt
+> ist:** Die Liste im Kopf ist **inhaltsbreit** (`grid-cols-[auto_1fr]`), der BAM-Block ist
+> **gedeckelt**. Der Kopf darf inhaltsbreit sein, weil seine Beschriftungen kurz und in der Zahl
+> fest sind; die BAM-Beschriftungen kommen aus dem Altsystem und werden bis zu 35 Zeichen lang.
+> **Die Beschreibungsliste im Kopf ist deshalb nicht mit umgestellt worden.**
+
 ### 10.5 Die technischen Eigenschaften
 
 Eingeklappt, beschriftet mit `eigenschaftenAnzahl` **aus dem Kopf** — also ohne sie zu laden. Genau
@@ -1424,6 +1472,7 @@ Gegenrichtung ist billiger: Wer maximiert, hängt die Liste aus und fragt sie ni
 | `tests/sprachdateien.test.ts` | unverändert — beide Sprachdateien tragen den neuen Abschnitt vollständig |
 | `tests/routen.test.ts` *(11.08.2026)* | die beiden Zielrouten des Umschalters (§10.7): leere Abfragezeichenkette in beide Richtungen; jeder Filter unverändert und in seiner Reihenfolge; `nachricht` entfernt beziehungsweise gesetzt und im Ziel **genau einmal**, auch wenn es am Anfang oder am Ende stand; eine Kennung mit Sonderzeichen einmal und nicht doppelt kodiert; und dass `NACHRICHT_PARAMETER` denselben Parameter meint wie `NACHRICHTEN_PARAMETER` |
 | `tests/ansicht-umschalter.test.tsx` *(11.08.2026)* | **gerenderter Baum, begründete Ausnahme:** dass der Knopf `hidden xl:inline-flex` trägt und `inline-flex` **nicht** stehen bleibt, und dass er im Panel und auf der eigenen Route verschiedene Beschriftungen führt — je in `aria-label` **und** `title` |
+| `tests/bam-block.test.tsx` *(12.08.2026)* | **gerenderter Baum, begründete Ausnahme:** derselbe Wert unter zwei Typen **ohne `console.error`**; bei `bamAnzahl === 0` **nicht im Baum und keine Anfrage**; eingeklappt mit Werten die Überschrift mit der Zahl und **immer noch keine Anfrage**. Vollständig in [`bam-werte.md`](bam-werte.md) §11 |
 
 Kein gerenderter Baum, mit den Ausnahmen aus `tests/detail-baum.test.tsx` und
 `tests/ansicht-umschalter.test.tsx`: Geprüft werden die **Entscheidungen**, nicht das Markup
@@ -1849,7 +1898,7 @@ Siehe §4. Höchstens sieben Aktionen gemessen, eine Detailansicht lädt eine ei
 | **L1** Pflicht-Zeitfenster | gilt für Listen; hier ist die Nachricht über den Primärschlüssel benannt (§1) |
 | **L2** keine Live-Aggregation | ein `COUNT` über `MessageProperty` **einer** Nachricht, `Using index` — keine Kennzahl über `Message` |
 | **L4** `MessageProperty` nur über `MessageID` | Einstieg immer über die Kennung; die Namensbedingung nutzt den Primärschlüssel (`key_len 548`), niemals den Wert |
-| **L7** jede Abfrage gemessen | §8, sechs Statements gegen drei Gestalten. `rollen` (11.08.2026) ist **keine neue Abfrage**: vier Spalten mehr auf der Zeile, die `findeKopf` ohnehin liest |
+| **L7** jede Abfrage gemessen | §8, sechs Statements gegen drei Gestalten. `rollen` (11.08.2026) ist **keine neue Abfrage**: vier Spalten mehr auf der Zeile, die `findeKopf` ohnehin liest. `bamAnzahl` (12.08.2026) **ist** eine — eine zählende Unterabfrage, gemessen in [`bam-werte.md`](bam-werte.md) §4 und §8: `findeKopf` kostet damit 0,981 ms an der typischen und 4,668 ms an der teuersten bekannten Nachricht |
 | **Die Rollen entstehen an einer Stelle** | `common/Kettenrollen`, gerufen und nicht nachgebaut — dieselbe Bauform wie beim `MessageStatusClassifier` (§1) |
 | **L8** keine Quelltabelle ohne Erhebung | `MessageAction`, `MessageProperty`, `SOSAction`, `Service` sind in M14 erhoben |
 | **L9** kein Durchlauf ohne Zeitfenster in Anwendungscode | keiner; die Erhebungen dieses Dokuments tragen alle ein Fenster |

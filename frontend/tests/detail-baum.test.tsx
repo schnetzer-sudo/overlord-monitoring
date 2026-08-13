@@ -87,6 +87,9 @@ function detail(werte: Partial<Nachrichtendetail> = {}): Nachrichtendetail {
     gesamtdauerSekunden: 69,
     fristSekunden: null,
     eigenschaftenAnzahl: 31,
+    // Ohne Belegdaten: Der BAM-Block ist dann nicht im Baum, und dieser Test
+    // sagt nichts ueber ihn — er hat seinen eigenen (`tests/bam-block.test.tsx`).
+    bamAnzahl: 0,
     offenerZustand: "KEINER",
     naechsterSchritt: null,
     wartetSeitSekunden: null,

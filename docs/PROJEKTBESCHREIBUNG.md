@@ -156,9 +156,28 @@ Klartext ist `SOSAction.SOSActionName`, nicht eine handgepflegte Zuordnungstabel
 **`MessageProperty`** — Schlüssel/Wert-Paare je Nachricht (EAV).
 PK `(MessageID, MessagePropertyName, MessageActionID)` · `MessagePropertyValue` mediumtext
 
-**Gemessen am 27.07.2026: 46.964.279 Zeilen, 61 GB.** Rund vierzehn Zeilen je Nachricht und
-durchschnittlich 1,3 Kilobyte je Zeile. Diese eine Tabelle ist 82 Prozent der Datenbank — die
-Bytegröße ist hier die maßgebliche Kennzahl, nicht die Zeilenzahl.
+**Gezählt am 12.08.2026: 75.571.462 Zeilen**, 61,0 GB. Rund **23** Zeilen je Nachricht
+(75.571.462 / 3.341.519 = 22,62) und durchschnittlich **808 Byte** je Zeile. Belegt in
+[`messungen-schritt7.md`](messungen-schritt7.md) M44.
+
+**Diese eine Tabelle ist 82 Prozent der Datenbank** — die Bytegröße ist hier die maßgebliche
+Kennzahl, nicht die Zeilenzahl. *Dieser Satz rechnet mit **Bytes** und ist von jeder Korrektur der
+Zeilenzahl unberührt; er ist beim Nachziehen nicht zu ändern.*
+
+*Korrigiert 12.08.2026:* Hier stand „**Gemessen** am 27.07.2026: 46.964.279 Zeilen, 61 GB. Rund
+**vierzehn** Zeilen je Nachricht und durchschnittlich **1,3 Kilobyte** je Zeile." Gemessen war davon
+nur die Bytegröße. Die Zeilenzahl war die Schätzung `information_schema.TABLE_ROWS` und lag
+**60,9 % zu niedrig**; die beiden Kennzahlen dahinter sind aus ihr gerechnet und ändern sich
+entsprechend mit. **Die 61 GB bleiben** — sie stammen aus belegten Seiten und sind über fünf
+Messtage byteidentisch. Vollständig im Kasten in Abschnitt 8.
+
+> **Die „rund vierzehn" waren nie ein Zeitraumeffekt.** `datenmodell.md` §3 und
+> [`annahmen-korrekturen.md`](annahmen-korrekturen.md) erklärten die Lücke zwischen den vierzehn hier
+> und den in `messungen-schritt5.md` M17 gemessenen **22,57** im dichten Bestand seit dem 07.08.2026
+> mit **verschiedenen Nennern**. Die Erklärung war plausibel und ist mit M44 gegenstandslos: Aus der
+> gezählten Zahl folgen **22,62** über den Gesamtbestand, und das liegt zwischen den beiden direkt
+> gemessenen Werten 22,57 (Tag) und 22,88 (Monat). Es gab keinen Dichteeffekt, es gab eine falsche
+> Zahl — und eine plausible Erklärung, die sie fünf Tage lang zugedeckt hat.
 
 **Zugriff ausschließlich über `MessageID`.** Niemals filtern, gruppieren oder sortieren über
 `MessagePropertyValue` — die Indizes darauf sind Präfix-Indizes über 50 Zeichen und für
@@ -176,7 +195,13 @@ Das ist die zentrale Suchdimension für Fachanwender: Lieferschein-Nr., Bestelln
 Transport-Nummer, Charge, Werk, Materialnummer und so weiter. `MessageBAMType` verweist auf
 `MessageBAMType.MessageBAMTypeDescription`.
 
-Gemessen am 27.07.2026: 10.859.666 Zeilen, 7,1 GB, rund drei Einträge je Nachricht.
+**Gezählt am 11.08.2026: 15.406.350 Zeilen**, 7,1 GB, rund **fünf** Einträge je Nachricht
+(15.406.350 / 3.341.519 = 4,61). Belegt in [`messungen-schritt7.md`](messungen-schritt7.md) M33‑0.
+
+*Korrigiert 12.08.2026:* Hier stand „Gemessen am 27.07.2026: 10.859.666 Zeilen, 7,1 GB, rund **drei**
+Einträge je Nachricht". Die Zeilenzahl war nie gemessen, sondern die Stichprobenschätzung
+`information_schema.TABLE_ROWS` — und sie lag **41,9 % zu niedrig**. **Die 7,1 GB bleiben:** Sie
+stammen aus belegten Seiten und nicht aus einer Stichprobe. Vollständig im Kasten in Abschnitt 8.
 
 **`MessageBAM` hat keinen Zeitstempel.** Das Pflicht-Zeitfenster aus Abschnitt 8 kann deshalb erst
 **nach** dem Join auf `Message` greifen, also nach dem teuren Teil. Ein `LIMIT` vor dem Join hilft
@@ -684,18 +709,27 @@ Regeln:
 
 ## 8. Verbindliche Leistungsregeln
 
-**Gemessenes Mengengerüst, 27.07.2026** (ersetzt die frühere Schätzung von 10.000 bis 100.000
-Nachrichten pro Tag und 36 Millionen Zeilen):
+**Mengengerüst — Zeilenzahlen gezählt (Stand 12.08.2026), Bytegrößen erhoben am 27.07.2026**
+(ersetzt die frühere Schätzung von 10.000 bis 100.000 Nachrichten pro Tag und 36 Millionen Zeilen).
 
-| Tabelle | Zeilen | Größe |
-|---|---|---|
-| `MessageProperty` | 46.964.279 | 61,0 GB |
-| `MessageBAM` | 10.859.666 | 7,1 GB |
-| `MessageAction` | 10.215.743 | 3,0 GB |
-| `Message` | 3.341.519 | 2,9 GB |
-| `Process` | 1.490 | — |
-| `Project` | 142 | — |
-| `User` | 36 | — |
+**Die Spalte `Herkunft` gehört zur Tabelle und nicht zur Fußnote.** Sie sagt für jede Zeile, ob die
+Zahl gezählt oder geschätzt ist; bis zum 12.08.2026 stand über dieser Tabelle „Gemessenes
+Mengengerüst", und von sieben Zeilen war **eine** gemessen. Siehe den Kasten darunter.
+
+| Tabelle | Zeilen | Herkunft der Zeilenzahl | Größe |
+|---|---|---|---|
+| `MessageProperty` | **75.571.462** | **gezählt** (M44, 12.08.2026) | 61,0 GB |
+| `MessageBAM` | **15.406.350** | **gezählt** (M33‑0, 11.08.2026) | 7,1 GB |
+| `MessageAction` | **10.308.590** | **gezählt** (M14, 07.08.2026) | 3,0 GB |
+| `Message` | 3.341.519 | **gezählt** (M0, 01.08.2026) | 2,9 GB |
+| `Process` | **1.503** | **gezählt** (M10, 01.08.2026; bestätigt M44) | — |
+| `Project` | **140** | **gezählt** (28.07.2026; bestätigt M44) | — |
+| `User` | 36 | **gezählt** (M44, 12.08.2026) | — |
+
+**Die Bytegrößen sind durchgängig erhoben und nicht geschätzt.** `DATA_LENGTH` und `INDEX_LENGTH`
+stammen aus den belegten Seiten und nicht aus einer Stichprobe. Sie sind über fünf Messtage
+(27.07., 07.08., 10.08., 11.08., 12.08.2026) **byteidentisch** geblieben; die Kontrolle steht in
+[`messungen-schritt7.md`](messungen-schritt7.md) §0 und M44‑0.
 
 Rund **7.300 Nachrichten pro Tag** im dichten Bestand. Die Aufbewahrung beträgt **22 Monate** —
 ältester Datensatz 01.10.2024 —, nicht ein Jahr. Es wird auf der Produktionsdatenbank gelesen.
@@ -719,6 +753,55 @@ Rund **7.300 Nachrichten pro Tag** im dichten Bestand. Die Aufbewahrung beträgt
 > 6,5 %, bei `MessageAction` **unter**schätzt sie um 0,9 %. „Veraltet" heißt also nicht „zu hoch",
 > sondern nur „unzuverlässig", und eine `rows`-Angabe im `EXPLAIN` trägt kein Vorzeichen, auf das
 > man sich verlassen könnte.
+
+> **Korrigiert 12.08.2026 — nicht eine Zeile, sondern die Überschrift.**
+>
+> **1. Was falsch war.** Diese Tabelle führte `MessageBAM` mit **10.859.666** und `MessageProperty`
+> mit **46.964.279** Zeilen, beide unter der Überschrift „Gemessenes Mengengerüst". Gezählt sind
+> **15.406.350** und **75.571.462** — **41,9 %** und **60,9 %** zu niedrig. Dazu `Process` mit 1.490
+> statt **1.503** und `Project` mit 142 statt **140**. §3.2 nannte daraus abgeleitet „rund drei
+> Einträge je Nachricht" (tatsächlich **4,61**), „rund vierzehn Zeilen je Nachricht" (tatsächlich
+> **22,62**) und „1,3 Kilobyte je Zeile" (tatsächlich **808 Byte**).
+>
+> **2. Woher der Fehler kam.** Aus `information_schema.TABLE_ROWS` — einer Stichprobenschätzung, die
+> als Messung ausgegeben wurde. Für `MessageBAM` war das kein Zufall: Regel L8 führte sie bis zum
+> 11.08.2026 als **nicht erhoben**; gezählt worden ist sie erst, als der erste MVP-Schritt sie über
+> den Wert statt über die `MessageID` anfasste ([`messungen-schritt7.md`](messungen-schritt7.md)
+> M33‑0). Bei `MessageProperty` hatte M14 den Zähllauf am 07.08.2026 ausdrücklich abgelehnt — „die
+> Schätzung genügt" —, und genau diese Schätzung lag am weitesten daneben (M44).
+>
+> **3. Und das ist der eigentliche Befund: falsch war die Überschrift, nicht die Zeile.** Von den
+> **sieben** Zeilen dieser Tabelle war genau **eine** gezählt (`Message`, M0). Die übrigen sechs
+> stammten aus `information_schema`, und **fünf davon waren falsch — in beide Richtungen und von
+> 0,9 % bis 60,9 %**:
+>
+> | Tabelle | hier geführt | gezählt | Abweichung der geführten Zahl | Messung |
+> |---|---:|---:|---|---|
+> | `MessageProperty` | 46.964.279 | **75.571.462** | **60,9 % zu niedrig** | M44, 12.08.2026 |
+> | `MessageBAM` | 10.859.666 | **15.406.350** | **41,9 % zu niedrig** | M33‑0, 11.08.2026 |
+> | `Project` | 142 | **140** | 1,4 % zu hoch | 28.07.2026, bestätigt M44 |
+> | `MessageAction` | 10.215.743 | **10.308.590** | 0,9 % zu niedrig | M14, 07.08.2026 |
+> | `Process` | 1.490 | **1.503** | 0,9 % zu niedrig | M10, 01.08.2026, bestätigt M44 |
+> | `User` | 36 | **36** | keine | M44, 12.08.2026 |
+> | `Message` | 3.341.519 | 3.341.519 | — die geführte Zahl **war** die gezählte; `information_schema` nannte 3.560.486 und lag 6,5 % über der Wahrheit | M0, 01.08.2026 |
+>
+> Der Satz, dass eine `rows`-Angabe **kein Vorzeichen** trägt, steht im Kasten darüber seit dem
+> 07.08.2026 für `MessageAction`. Er bekommt hier seinen dritten und vierten Beleg — und mit 60,9 %
+> ist die Schätzung bei der größten Tabelle nicht mehr ungenau, sondern **unbrauchbar**. *Zur
+> Prozentrechnung: Bezugsgröße ist die hier geführte Zahl. Für `Message` ist es umgekehrt die
+> gezählte, weil dort nicht die Datei danebenlag, sondern `information_schema`.*
+>
+> **4. Was unberührt bleibt — und das ist der größere Teil.** Die **Bytegrößen** stammen aus
+> belegten Seiten und nicht aus einer Stichprobe; sie sind über fünf Messtage byteidentisch
+> geblieben. Damit stehen unverändert: **Regel L4** (`MessageProperty` nur über `MessageID`) — die
+> Zählung macht sie sogar **strenger**, weil ein Fehlzugriff 75,6 statt 47 Millionen Zeilen umwälzt;
+> die **82 Prozent** (sie rechnen mit Bytes); **Regel L5** (BAM-Suche mit Limit und Mindestlänge),
+> durch M33 erstmals gemessen unterlegt — Maximum 234.159 Treffer auf einen Wert; **Annahme A9**,
+> durch M33/M34 erledigt; und **alle sieben Leistungsregeln** darunter. Keine davon ändert sich.
+>
+> **Kein stilles Überschreiben.** Die alten Zahlen stehen oben in diesem Kasten und bleiben dort.
+> Die Erhebung im Volltext steht in [`messungen-schritt7.md`](messungen-schritt7.md) M33‑0 und M44,
+> die Einordnung in [`annahmen-korrekturen.md`](annahmen-korrekturen.md).
 
 Die Zeilenzahl war nie die richtige Kennzahl. `MessageProperty` belegt 61 GB und ist damit 82
 Prozent der Datenbank; dort entscheidet die Bytegröße.
@@ -824,8 +907,8 @@ Clock, sondern immer die Systemuhr.
 | ~~A4~~ | **Geklärt.** Rohdatenzugriff über Filestore-Links ist gewünscht und für alle Mandantennutzer freigegeben | — |
 | ~~A5~~ | **Geklärt.** Eigenständiger Betrieb möglich, GlassFish nicht vorgeschrieben (Instanz wäre Version 6/7) | — |
 | ~~A6~~ | **Widerlegt 27.07.2026.** `ERROR_*` ist **nicht** die vollständige Fehlerdefinition: `COMMIT_REJECTED` ist ein Fehler ohne Präfix. Siehe 4.1 | — |
-| ~~A7~~ | **Bestätigt 27.07.2026.** 1.490 Prozesse | — |
-| ~~A8~~ | **Geklärt 28.07.2026, bewusst akzeptiert.** 142 Projekte stehen 134 Zeilen in `ProjectMandant` gegenüber. Nachrichten in Projekten ohne Zuordnung sind im Werkzeug für niemanden sichtbar, auch nicht für ADMIN. Es wird **kein** Sonderpfad und kein Pseudo-Mandant gebaut. Wichtig, dass das dokumentiert bleibt: Wird eine solche Nachricht gesucht, findet sie niemand, und ohne diesen Eintrag wüsste auch niemand warum | — |
+| ~~A7~~ | **Bestätigt 27.07.2026.** Rund 1.500 Prozesse. *Korrigiert 12.08.2026:* Hier stand **1.490**; das war die `information_schema`-Schätzung. **Gezählt sind 1.503** — am 01.08.2026 ([`messungen-schritt4.md`](messungen-schritt4.md) M10) und erneut in M44. An der Annahme selbst ändert das nichts, sie ist weiterhin bestätigt | — |
+| ~~A8~~ | **Geklärt 28.07.2026, bewusst akzeptiert.** **140** Projekte stehen 134 Zeilen in `ProjectMandant` gegenüber — sechs Projekte ohne Mandanten, und sie tragen zusammen **null** Nachrichten ([`annahmen-korrekturen.md`](annahmen-korrekturen.md)). *Korrigiert 12.08.2026:* Hier standen **142**; das war die `information_schema`-Schätzung. Gezählt sind 140, am 28.07.2026 und erneut in M44 am 12.08.2026. Nachrichten in Projekten ohne Zuordnung sind im Werkzeug für niemanden sichtbar, auch nicht für ADMIN. Es wird **kein** Sonderpfad und kein Pseudo-Mandant gebaut. Wichtig, dass das dokumentiert bleibt: Wird eine solche Nachricht gesucht, findet sie niemand, und ohne diesen Eintrag wüsste auch niemand warum | — |
 | A9 | Die BAM-Suche lässt sich mit Zeitfenster und hartem Limit ausreichend begrenzen | `MessageBAM` hat keinen Zeitstempel, das Fenster greift erst nach dem Join. Rückfalloption: eigener BAM-Index in `overlord_monitor`, vom Rollup-Job mitgeführt |
 | A10 | MariaDB 10.6 bleibt für die Laufzeit des Projekts in Betrieb | Version hat im Juli 2026 den Wartungszeitraum erreicht. Ein Upgrade auf 11.x ändert Standard-Sortierungen — deshalb steht die Sortierung in jeder Migration explizit |
 | A11 | Die unverschlüsselte Verbindung zur Datenbank ist tragbar | **Offen.** Auf der Testkopie ist kein TLS eingerichtet. Tragbar, wenn Anwendungsserver und Datenbank im selben Rechenzentrum am selben Switch stehen; nicht tragbar über ein Firmennetz mit WLAN oder Standortkopplung. Vor dem Produktivbetrieb mit `SHOW VARIABLES LIKE 'have_ssl'` gegen die Produktion zu prüfen |

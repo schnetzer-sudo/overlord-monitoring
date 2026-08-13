@@ -14,12 +14,14 @@ import {
 
 import {
   NACHRICHTEN_SCHLUESSEL,
+  holeBamWerte,
   holeEigenschaften,
   holeKette,
   holeKettenAbwaerts,
   holeNachrichten,
   holeNachrichtendetail,
   holeProzesse,
+  type BamWerte,
   type Eigenschaft,
   type Kette,
   type Kettenglied,
@@ -258,6 +260,38 @@ export function useEigenschaften(messageId: string | null, aktiv: boolean) {
 }
 
 const EIGENSCHAFTEN_HALTBARKEIT = 15 * 60 * 1000;
+
+/**
+ * Die Belegdaten einer Nachricht — **erst beim Aufklappen.**
+ *
+ * Dieselbe Bauform wie bei den technischen Eigenschaften, aus demselben Grund:
+ * Der Kopf trägt mit `bamAnzahl` die Zahl, der Block ist damit beschriftbar,
+ * ohne ihn zu laden.
+ *
+ * **Und dieselbe Bauform wie beim Kettenblock, aus einem zweiten Grund:** Ist
+ * `bamAnzahl` null, gibt es den Block gar nicht — dann steht `aktiv` nie auf
+ * wahr, und es entsteht **keine Anfrage**. Bei 80,6 Prozent der Nachrichten ist
+ * das der Fall, bei Merge-Eingängen bei allen (M41).
+ *
+ * Länger gehalten als die Liste: Die Belegnummern einer abgeschlossenen
+ * Nachricht ändern sich nicht mehr, und wer zwischen zwei Nachrichten hin und
+ * her springt, soll nicht zweimal dieselbe Antwort holen.
+ *
+ * @param aktiv der Schalter des Blocks. Bewusst ein Parameter: Der Zustand
+ *   gehört der Komponente, nicht der Abfrage — und **nicht der URL**, denn er
+ *   ist keine Ansicht, die jemand teilt.
+ */
+export function useBamWerte(messageId: string | null, aktiv: boolean) {
+  return useQuery<BamWerte>({
+    queryKey: NACHRICHTEN_SCHLUESSEL.bam(messageId ?? ""),
+    queryFn: () => holeBamWerte(messageId as string),
+    enabled: aktiv && messageId !== null && messageId !== "",
+    staleTime: BAM_HALTBARKEIT,
+    gcTime: BAM_HALTBARKEIT,
+  });
+}
+
+const BAM_HALTBARKEIT = 15 * 60 * 1000;
 
 /**
  * Die Kette einer Nachricht — **nur, wenn sie eine hat.**

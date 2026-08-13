@@ -695,17 +695,27 @@ zulässt.
 React-Plugin. Geprüft werden die **Entscheidungen**, nicht das Markup — das sind alles reine
 Funktionen, und ein gerenderter Baum brächte hier nichts außer Laufzeit und Abhängigkeiten.
 
-> **Ergänzt am 11.08.2026 — die Voreinstellung bleibt, die Ausnahme ist benannt.** Dieser Absatz
-> nannte bis heute zusätzlich **kein jsdom**. Das gilt weiterhin für neun der zehn Testdateien:
-> Die Umgebung ist `node`, und `tests/detail-baum.test.tsx` schaltet sie über
-> `// @vitest-environment jsdom` für sich allein um. Gerendert wird mit `createRoot` und `act`; die
-> einzige neue Abhängigkeit ist `jsdom`, und die Hülle steht in `tests/hilfe/rendern.tsx`.
+> **Ergänzt am 11.08.2026, fortgeschrieben am 13.08.2026 — die Voreinstellung bleibt, die Ausnahmen
+> sind benannt.** Dieser Absatz nannte bis zum 11.08.2026 zusätzlich **kein jsdom**. Das gilt
+> weiterhin für neun der zwölf Testdateien: Die Umgebung ist `node`, und die drei rendernden
+> (`tests/detail-baum.test.tsx`, `tests/ansicht-umschalter.test.tsx`, `tests/bam-block.test.tsx`)
+> schalten sie über `// @vitest-environment jsdom` für sich allein um. Gerendert wird mit
+> `createRoot` und `act`; die einzige neue Abhängigkeit ist `jsdom`, und die Hülle steht in
+> `tests/hilfe/rendern.tsx`.
 >
 > **Der Anlass ist kein Sinneswandel, sondern eine Fehlerklasse ohne Netz.** Am 11.08.2026 trugen
 > zwei Geschwister im Detailpanel denselben React-`key`; die Konsole meldete es, kein Test konnte es
 > finden, und sichtbar falsch war nichts ([`verkettung.md`](verkettung.md) §8.12). Gerendert wird
-> deshalb für **drei** Fälle und nicht mehr — zwei Sätze, die in der Testkopie grundsätzlich nicht
-> auslösbar sind, und die Regression zum Doppelschlüssel. Alles Übrige bleibt reine Funktion.
+> deshalb für **sieben** Fälle und nicht mehr — Sätze und Umbruchpunkte, die von Hand grundsätzlich
+> nicht zu sehen sind, zwei Aussagen über **Abwesenheit** (kein Block, keine Anfrage), und zweimal
+> eine Regression zum Schlüssel. Alles Übrige bleibt reine Funktion.
+>
+> **Die Zählung wird an einer Stelle geführt:** dem Kopfkommentar von `frontend/vitest.config.mts`.
+> Diese Tabelle und der Kopf von `tests/hilfe/rendern.tsx` verweisen darauf; wächst die Zahl, wächst
+> sie dort. Der Anlass für diese Regel ist ein Befund der Abnahme vom 13.08.2026: Schritt 7 hatte
+> `tests/hilfe/rendern.tsx` auf sieben Fälle fortgeschrieben, `vitest.config.mts` und diese Tabelle
+> aber bei vier beziehungsweise drei stehen lassen — und `tests/ansicht-umschalter.test.tsx` fehlte
+> hier seit Schritt 6 ganz. **Drei Orte für dieselbe Zahl sind zwei zu viel.**
 
 ### `console.error` lässt den Testlauf fehlschlagen *(seit 11.08.2026)*
 
@@ -740,7 +750,9 @@ gerissen hat, ist eine Behauptung.
 | `nachrichtenfilter.test.ts` | URL → Zustand → URL; unbekannte Werte werden übergangen; **der Cursor taucht in keiner erzeugten URL auf**; die beiden Zeitfenstermodi schließen einander aus; `langeSuche` steht in der URL und wird nur mit dem Suchbegriff geschickt; welche Problemtypen an das Suchfeld gehören, welche an die Zeitfensterfelder und welche über die Ansicht; das halb ausgefüllte freie Fenster; **`nachricht` steht in der URL und in keiner Abfrage** |
 | `nachrichtendetail.test.ts` | die Normierung des Zeitleistenbalkens, die Schwelle der Lückenzeile, die vier offenen Zustände ([`nachrichtendetail.md`](nachrichtendetail.md) §10.9) |
 | `kette.test.ts` | die Einteilung nach der Flussrichtung, die Zahl in der Überschrift, das Nachladen, ob es einen Block gibt ([`verkettung.md`](verkettung.md) §8.10) |
-| **`detail-baum.test.tsx`** *(neu, 11.08.2026)* | **die einzigen drei gerenderten Bäume**: `tiefeErreicht` und `zyklusErkannt` samt ihrer Lage **unter beiden** Abschnitten (§8.5 dort), und die Regression zum Doppelschlüssel — sie besteht genau dann, wenn kein `console.error` fällt |
+| **`detail-baum.test.tsx`** *(neu, 11.08.2026)* | **gerenderter Baum**, drei Fälle: `tiefeErreicht` und `zyklusErkannt` samt ihrer Lage **unter beiden** Abschnitten (§8.5 dort), und die Regression zum Doppelschlüssel — sie besteht genau dann, wenn kein `console.error` fällt |
+| **`ansicht-umschalter.test.tsx`** *(11.08.2026)* | **gerenderter Baum**, ein Fall: die Sichtbarkeitsregel des Umschalters ist selbst eine Klasse, und ihr Umbruchpunkt ist von Hand nicht prüfbar (§7) |
+| **`bam-block.test.tsx`** *(12.08.2026)* | **gerenderter Baum**, drei Fälle: derselbe Wert unter zwei Typen **ohne `console.error`** (der Schlüssel ist `(typ, wert)`, M37); `bamAnzahl === 0` → **nicht im Baum und keine Anfrage**; eingeklappt mit Werten → Überschrift mit der Zahl, **und immer noch keine Anfrage** ([`bam-werte.md`](bam-werte.md) §11) |
 
 ---
 

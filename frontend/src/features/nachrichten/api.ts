@@ -303,6 +303,20 @@ export type Nachrichtendetail = {
    * ohne ihn zu laden.** Ohne sie verlöre der zweite Endpunkt seinen Zweck.
    */
   eigenschaftenAnzahl: number;
+  /**
+   * Wie viele Belegnummern auf der Nachricht stehen — **immer vorhanden, `0`
+   * statt fehlend**.
+   *
+   * **Daran entscheidet die Oberfläche, ob sie den BAM-Block überhaupt zeichnet
+   * und ob sie `/bam` ruft.** Bei **80,6 Prozent** der Nachrichten ist die Zahl
+   * `0` (M41), bei Merge-Eingängen bei *allen* — für sie entsteht damit weder
+   * ein leerer Rahmen noch eine zweite Anfrage. Dieselbe Bauform wie `rollen`
+   * beim Kettenblock und `eigenschaftenAnzahl` beim Eigenschaftenblock.
+   *
+   * Sie beschriftet zugleich die Überschrift des eingeklappten Blocks, damit
+   * erkennbar ist, ob sich das Aufklappen lohnt.
+   */
+  bamAnzahl: number;
   offenerZustand: OffenerZustand;
   /**
    * Der Schritt, auf den `Message.SOSID`/`SOSActionID` zeigen — nur in den beiden
@@ -335,6 +349,65 @@ export type Nachrichtendetail = {
   kuratierteEigenschaften: KuratierteEigenschaft[];
 };
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   Die Belegdaten einer Nachricht (Schritt 7, Teil 1)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Eine Typgruppe der Belegdaten — **die wahre Zahl neben den gezeigten Werten.**
+ *
+ * Die Zweiteilung im Backend ist hier sichtbar: `gesamt` kommt aus einer
+ * Zählung über den Index, `werte` aus einer zweiten, im Statement gedeckelten
+ * Abfrage. Ohne diese Trennung hinge die Antwortgröße an einer Zahl, die
+ * niemand gemessen hat — auf **einer** Nachricht stehen bis zu 9.296 Werte
+ * (M41), und über den ganzen Bestand ist das Maximum unbekannt.
+ */
+export type BamGruppe = {
+  /**
+   * Die Typnummer. Sie wird nicht angezeigt — sie ist zusammen mit dem Wert der
+   * **Schlüssel der Liste**. Der Wert allein genügt nicht: Bei 4,17 Prozent der
+   * Paare steht derselbe Wert unter mehreren Typen (M37), und doppelte
+   * React-Schlüssel sind für Vitest unsichtbar.
+   */
+  typ: number;
+  /**
+   * `MessageBAMType.MessageBAMTypeDescription`, unverändert — **nie `null`**.
+   * Fehlt die Zeile im Altsystem, steht hier die Typnummer: sichtbar unfertig
+   * statt lautlos leer.
+   *
+   * **Die Endungen `_K_SAP`, `_L_SAP` und `_FORS` bleiben stehen.** Ob die
+   * Beschreibungen ohne sie noch eindeutig sind, ist nicht gemessen — eine
+   * Kürzungsregel wäre nach Regel Q4 geraten (`docs/bam-werte.md`).
+   */
+  bezeichnung: string;
+  /** Die **wahre** Zahl der Werte dieses Typs, unabhängig von der Deckelung. */
+  gesamt: number;
+  /** Höchstens 20, aufsteigend nach Wert. Schon in der Datenbank gedeckelt. */
+  werte: string[];
+  /**
+   * `gesamt > werte.length`. Daraus schreibt die Oberfläche die **ehrliche
+   * Restangabe** — „und 2.987 weitere". **Kein „mehr laden":** Das bräuchte
+   * einen Cursor und kommt erst, wenn jemand es braucht.
+   */
+  weitereVorhanden: boolean;
+};
+
+/** Die Belegnummern einer Nachricht, nach Typ gruppiert. */
+export type BamWerte = {
+  messageId: string;
+  /**
+   * Je Typ eine Gruppe — **immer vorhanden, leer statt fehlend**. Zuerst die
+   * für diesen Mandanten konfigurierten Typen in ihrer Sortierreihenfolge,
+   * danach die übrigen nach Typnummer.
+   *
+   * **Die Konfiguration ordnet und siebt nicht.** `WOC` trägt 2.067 BAM-Zeilen
+   * unter einem Typ, den seine Konfiguration nicht kennt (M40); folgte der
+   * Block ihr als Filter, sähe dieser Mandant nichts. Ein unkonfigurierter Typ
+   * wird deshalb gezeigt — hinten und **ohne Markierung**.
+   */
+  gruppen: BamGruppe[];
+};
+
 /** Eine rohe `MessageProperty`-Zeile, auf Abruf geladen. */
 export type Eigenschaft = {
   name: string;
@@ -362,6 +435,8 @@ export const NACHRICHTEN_SCHLUESSEL = {
    */
   detail: (messageId: string) => ["nachrichten", "detail", messageId] as const,
   eigenschaften: (messageId: string) => ["nachrichten", "eigenschaften", messageId] as const,
+  /** Die Belegdaten einer Nachricht — nur geladen, wenn der Block aufgeklappt wird. */
+  bam: (messageId: string) => ["nachrichten", "bam", messageId] as const,
   /** Die Kette einer Nachricht — nur geladen, wenn `rollen` nicht leer ist. */
   kette: (messageId: string) => ["nachrichten", "kette", messageId] as const,
   /**
@@ -390,6 +465,18 @@ export function holeNachrichtendetail(messageId: string): Promise<Nachrichtendet
 
 export function holeEigenschaften(messageId: string): Promise<Eigenschaft[]> {
   return hole<Eigenschaft[]>(`/nachrichten/${encodeURIComponent(messageId)}/eigenschaften`);
+}
+
+/**
+ * Die Belegnummern einer Nachricht.
+ *
+ * **Kein Zeitfenster und keine Seitengröße.** Die Menge ist durch einen
+ * Primärschlüssel benannt, und die Deckelung sitzt im Statement des Backends —
+ * je Typgruppe höchstens zwanzig Werte. Der Aufrufer hat hier nichts zu
+ * stellen.
+ */
+export function holeBamWerte(messageId: string): Promise<BamWerte> {
+  return hole<BamWerte>(`/nachrichten/${encodeURIComponent(messageId)}/bam`);
 }
 
 export function holeKette(messageId: string): Promise<Kette> {

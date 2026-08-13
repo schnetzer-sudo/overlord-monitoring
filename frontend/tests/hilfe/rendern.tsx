@@ -9,13 +9,19 @@ import { SpracheProvider } from "@/i18n/provider";
  * **Die kleinste Hülle, die eine Komponente dieses Projekts rendert.**
  *
  * Geprüft werden hier weiterhin Entscheidungen und kein Markup
- * (`docs/frontend-grundlagen.md` §9). Es gibt vier Fälle, für die das nicht
+ * (`docs/frontend-grundlagen.md` §9). Es gibt sieben Fälle, für die das nicht
  * reicht, und für sie existiert diese Datei: drei in
  * `tests/detail-baum.test.tsx` — zwei davon von Hand grundsätzlich nicht
- * erreichbar, der dritte die Regression zum Doppelschlüssel vom 11.08.2026 —
- * und einer in `tests/ansicht-umschalter.test.tsx`, wo die zu prüfende Regel
- * selbst eine CSS-Klasse ist und ihr Umbruchpunkt von Hand nicht prüfbar
- * (`docs/frontend-grundlagen.md` §7).
+ * erreichbar, der dritte die Regression zum Doppelschlüssel vom 11.08.2026 —,
+ * einer in `tests/ansicht-umschalter.test.tsx`, wo die zu prüfende Regel selbst
+ * eine CSS-Klasse ist und ihr Umbruchpunkt von Hand nicht prüfbar
+ * (`docs/frontend-grundlagen.md` §7), und drei in `tests/bam-block.test.tsx`.
+ *
+ * **Der Zuwachs am 12.08.2026 ist eine Entscheidung und keine Bequemlichkeit.**
+ * Die drei neuen Fälle sind dieselbe Klasse wie der Doppelschlüssel: zweimal
+ * eine Aussage über **Abwesenheit** (kein Block im Baum, keine Anfrage) und
+ * einmal die Regression zum Schlüssel `(typ, wert)`, die genau dann besteht,
+ * wenn **kein `console.error`** fällt. Keiner davon ist ohne Baum belegbar.
  *
  * **Die Zahl steht hier, damit sie beim nächsten Zuwachs eine Entscheidung
  * verlangt.** Die Bedingung ist nicht „ein Baum wäre bequemer", sondern „es gibt
