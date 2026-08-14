@@ -41,7 +41,14 @@ import {
   type Sortierung,
   type Statusart,
 } from "./filter";
-import { SUCHE_PARAMETER, begriffeAus, type Suchbegriff, type Suchzustand } from "./suche";
+import {
+  SUCHE_PARAMETER,
+  begriffeAus,
+  modusAus,
+  type Suchbegriff,
+  type Suchmodus,
+  type Suchzustand,
+} from "./suche";
 
 /**
  * **`Escape` schließt die Detailansicht** — an genau einer Stelle, für beide
@@ -334,14 +341,50 @@ export function useSuchzustand() {
   return {
     zustand: zustand as Suchzustand,
     begriffe: begriffeAus(zustand as Suchzustand),
+    /** Der Modus **der URL** — nicht der der Antwort. Die beiden fallen auseinander, solange geladen wird. */
+    modus: modusAus(zustand as Suchzustand),
+    /**
+     * **Jede Änderung an den Begriffen setzt auf `exakt` zurück.**
+     *
+     * Wer eine Marke hinzufügt oder wegnimmt, stellt eine **neue Frage**, und die
+     * wird zuerst genau beantwortet — sonst liefe die teuerste Zugriffsform
+     * dieses Projekts (M50) unbemerkt weiter, obwohl der Anlass für sie, das
+     * leere Ergebnis, gar nicht mehr gilt. **Das Zeitfenster bleibt dabei, wie es
+     * ist**; es beschreibt den Ausschnitt und nicht die Frage.
+     */
     setzeBegriffe: useCallback(
       (begriffe: Suchbegriff[]) =>
-        void setzeZustand({ begriff: begriffe.length === 0 ? null : begriffe }),
+        void setzeZustand({ begriff: begriffe.length === 0 ? null : begriffe, modus: null }),
       [setzeZustand],
     ),
     /** `null`/`null` heißt „Vorgabe des Servers" — und nicht „30 Tage" (Regel L1). */
     setzeFenster: useCallback(
       (von: Date | null, bis: Date | null) => void setzeZustand({ von, bis }),
+      [setzeZustand],
+    ),
+    /**
+     * Der Vergleichsmodus, samt dem Fenster, über das er laufen soll.
+     *
+     * **`null` als Modus ist der Rückweg auf „genau suchen"** — der Parameter
+     * verschwindet aus der URL, weil `exakt` die Vorgabe ist.
+     *
+     * **`fenster` ist `null`, wenn sich am Zeitfenster nichts ändert**, und dann
+     * wird auch nichts geschrieben: Es bleibt beim gewählten Ausschnitt, und war
+     * keiner gewählt, bleibt die Vorgabe des Backends die Vorgabe des Backends.
+     * Das ist der Unterschied zwischen „ändert einen Wert" und „schreibt
+     * denselben Wert noch einmal hin" — der zweite Fall machte aus einer
+     * Servervorgabe stillschweigend einen eigenen Zeitpunkt in der URL.
+     *
+     * **Beim Rückweg wird das Fenster nicht zurückgesetzt.** Wer aus einem
+     * Jahresfenster in den Präfixmodus gegangen ist, kommt mit dreißig Tagen
+     * zurück und sieht sie. Das ist ein bewusst in Kauf genommener Nachteil und
+     * kein Versehen: Ein Wert, der sich beim Moduswechsel von selbst änderte,
+     * wäre versteckter Zustand — und der Zustand steht hier vollständig in der
+     * URL (`docs/bam-suche.md` §23).
+     */
+    setzeModus: useCallback(
+      (modus: Suchmodus | null, fenster: { von: Date; bis: Date } | null) =>
+        void setzeZustand(fenster === null ? { modus } : { modus, ...fenster }),
       [setzeZustand],
     ),
     /**

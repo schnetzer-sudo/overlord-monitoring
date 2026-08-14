@@ -99,6 +99,33 @@ export function istZeitgrenze(fehler: unknown): boolean {
   return fehler instanceof ProblemFehler && fehler.typ === SUCHE_ABGEBROCHEN;
 }
 
+/**
+ * Die Suche über den **Anfang** einer Belegnummer ist auf dreißig Tage gedeckelt,
+ * und die Anfrage lag darüber (`docs/bam-suche.md` §18).
+ *
+ * **Derselbe Grund wie bei {@link istZeitgrenze}, nur ohne dessen Preis:** Der
+ * Fehler steht schon an der *Parameterform* fest — dasselbe Fenster, derselbe
+ * Modus, dieselbe Antwort. Ein zweiter Versuch kann sie nicht ändern, er
+ * verzögert nur die Meldung, die dem Nutzer sagt, was zu tun ist. Was hilft, ist
+ * ein kleinerer Zeitraum oder wieder genau zu suchen, und beides kann nur er
+ * entscheiden.
+ *
+ * > **Warum das hier steht und nicht als Statuscode.** `400` als Ganzes bleibt
+ * > wiederholbar — ein zweiter Versuch ist dort meist harmlos und manchmal
+ * > richtig. Endgültig ist nicht der Code, sondern **dieser** Typ; erkannt wird
+ * > er deshalb am `type` und nicht am Status, genau wie die Zeitgrenze.
+ *
+ * **Der Nachbarfall `suche-fenster-zu-gross` der Nachrichtenliste ist bewusst
+ * nicht mitgeändert.** Er ist älter als Teil 4, hat seinen eigenen Weg heraus
+ * („Trotzdem suchen") und gehört nicht zum Umfang dieses Schritts. Dass für ihn
+ * dasselbe Argument gilt, steht als offener Punkt in `docs/bam-suche.md` §27.
+ */
+export const PRAEFIXSUCHE_FENSTER_ZU_GROSS = "praefixsuche-fenster-zu-gross";
+
+export function istPraefixfensterZuGross(fehler: unknown): boolean {
+  return fehler instanceof ProblemFehler && fehler.typ === PRAEFIXSUCHE_FENSTER_ZU_GROSS;
+}
+
 export function istNichtAngemeldet(fehler: unknown): boolean {
   return fehler instanceof ProblemFehler && fehler.status === 401;
 }

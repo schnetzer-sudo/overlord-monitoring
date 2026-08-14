@@ -483,6 +483,17 @@ export type BamBegriffTreffer = {
   varianten: string[];
 };
 
+/**
+ * Der Vergleichsmodus, **wie die Antwort ihn meldet** — großgeschrieben.
+ *
+ * Der gleichnamige URL-Parameter ist klein (`modus=exakt|praefix`), und das ist
+ * kein Versehen: Die URL-Parameter dieses Projekts sind kleingeschrieben und
+ * deutsch, die kontrollierten Vokabulare der Antwort sind es nicht (`statusKind`,
+ * `rollen`) — `docs/bam-suche.md` §20. Übersetzt wird an einer Stelle,
+ * `suche.ts` `modusAusAntwort`.
+ */
+export type BamAntwortmodus = "EXAKT" | "PRAEFIX";
+
 /** Die Antwort der Belegsuche. */
 export type BamSuchergebnis = {
   /** Die Treffer, absteigend nach Zeitpunkt — **immer vorhanden, leer statt fehlend**. */
@@ -500,6 +511,14 @@ export type BamSuchergebnis = {
   bis: string;
   /** Ob es mehr Treffer gäbe. Gezählt **nach** dem Mandantenfilter. */
   abgeschnitten: boolean;
+  /**
+   * Der **tatsächlich verwendete** Modus — aus demselben Grund in der Antwort wie
+   * `von` und `bis`: Er verändert nicht den Preis, sondern die Antwort. M49‑3
+   * misst, dass schon ein vollständig eingetippter Wert als Präfix **23
+   * Nachrichten statt einer** findet; wer nicht weiß, welcher Vergleich gelaufen
+   * ist, kann die Trefferliste nicht deuten.
+   */
+  modus: BamAntwortmodus;
 };
 
 /** Eine rohe `MessageProperty`-Zeile, auf Abruf geladen. */

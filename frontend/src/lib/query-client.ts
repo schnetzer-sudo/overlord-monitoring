@@ -1,6 +1,6 @@
 import { MutationCache, QueryCache, QueryClient, isServer } from "@tanstack/react-query";
 
-import { istEndgueltig, istNichtAngemeldet, istZeitgrenze } from "./http";
+import { istEndgueltig, istNichtAngemeldet, istPraefixfensterZuGross, istZeitgrenze } from "./http";
 import { ROUTEN, WEITER_PARAMETER } from "./routen";
 
 /**
@@ -55,8 +55,16 @@ function erzeugeQueryClient(): QueryClient {
         // Versuch dieselbe Abfrage noch einmal und liefe wieder in dieselbe
         // Zeitgrenze — zehn weitere Sekunden auf der Produktionsdatenbank für
         // eine Antwort, die schon feststeht.
+        //
+        // Seit Schritt 7, Teil 4 gilt dasselbe für ein zu großes Fenster im
+        // Präfixmodus. Der Fehler steht schon an der Parameterform fest; ein
+        // zweiter Versuch kostet zwar nichts auf der Datenbank, verzögert aber
+        // genau die Meldung, die dem Nutzer den Ausweg nennt.
         retry: (versuche, fehler) =>
-          !istEndgueltig(fehler) && !istZeitgrenze(fehler) && versuche < 1,
+          !istEndgueltig(fehler) &&
+          !istZeitgrenze(fehler) &&
+          !istPraefixfensterZuGross(fehler) &&
+          versuche < 1,
       },
       mutations: {
         retry: false,

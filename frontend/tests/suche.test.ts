@@ -4,6 +4,7 @@ import { texteFuer } from "@/i18n";
 import type { BamTrefferWert } from "@/features/nachrichten/api";
 import {
   HOECHSTENS_BEGRIFFE,
+  PRAEFIX_FENSTER_TAGE,
   abweichendeVarianten,
   alsAbfrage,
   alsParameter,
@@ -11,10 +12,15 @@ import {
   begriffeAus,
   ergaenze,
   jahresfensterAb,
+  modusAus,
+  modusAusAntwort,
   nulltrefferHinweis,
   parseAsBegriffe,
+  parseAsSuchmodus,
+  praefixfenster,
   spanneInTagen,
   trefferTypen,
+  zeigtPraefixAngebot,
   type Suchbegriff,
   type Suchzustand,
   type VorigeRunde,
@@ -33,6 +39,7 @@ const zustand = (teil: Partial<Suchzustand>): Suchzustand => ({
   begriff: null,
   von: null,
   bis: null,
+  modus: null,
   nachricht: null,
   ...teil,
 });
@@ -162,7 +169,156 @@ describe("Die Abfrage an das Backend", () => {
     expect(alsAbfrage(zustand({}))).toBe("");
     expect(begriffeAus(zustand({}))).toEqual([]);
   });
+
+  /**
+   * **Ohne `modus` verhält sich der Endpunkt Zeichen für Zeichen wie vor Teil 4**
+   * — das ist eine Zusage, die `BamSucheDbIT` an den beiden Rümpfen festhält
+   * (`docs/bam-suche.md` §16). Sie anzunehmen kostet nichts und hält den
+   * Abfrageschlüssel des Zwischenspeichers für den Normalfall unverändert.
+   */
+  it("schickt `modus` nur im Präfixmodus", () => {
+    const begriff = [{ typ: 9012, wert: "4711815" }];
+
+    expect(alsAbfrage(zustand({ begriff }))).toBe(alsAbfrage(zustand({ begriff, modus: "exakt" })));
+    expect(new URLSearchParams(alsAbfrage(zustand({ begriff })).slice(1)).has("modus")).toBe(false);
+
+    const praefix = new URLSearchParams(
+      alsAbfrage(zustand({ begriff, modus: "praefix" })).slice(1),
+    );
+    expect(praefix.get("modus")).toBe("praefix");
+  });
 });
+
+describe("Der Modus steht in der URL", () => {
+  /**
+   * **Er beschreibt einen Ausschnitt und keine begonnene Eingabe** — damit fällt
+   * er im Zweischritt aus `docs/frontend-grundlagen.md` §8 auf die erste Antwort:
+   * Die URL kann ihn ausdrücken, also steht er darin und ein geteilter Link zeigt
+   * dieselbe Suche.
+   */
+  it("liest und schreibt beide Werte", () => {
+    expect(parseAsSuchmodus.parse("praefix")).toBe("praefix");
+    expect(parseAsSuchmodus.parse("exakt")).toBe("exakt");
+    expect(parseAsSuchmodus.serialize("praefix")).toBe("praefix");
+  });
+
+  /** Ein unbekannter Wert wäre am Endpunkt `400 suchmodus-ungueltig` — er kommt gar nicht erst hinein. */
+  it("lässt keinen unbekannten Wert in die URL", () => {
+    expect(parseAsSuchmodus.parse("prefix")).toBeNull();
+    expect(parseAsSuchmodus.parse("PRAEFIX")).toBeNull();
+    expect(parseAsSuchmodus.parse("")).toBeNull();
+  });
+
+  /** `null` heißt „keine Angabe" und damit `exakt` — die Vorgabe gehört dem Backend. */
+  it("liest das Fehlen des Parameters als „exakt“", () => {
+    expect(modusAus(zustand({}))).toBe("exakt");
+    expect(modusAus(zustand({ modus: "praefix" }))).toBe("praefix");
+  });
+
+  /**
+   * **Die Antwort schreibt ihn groß, der Parameter klein** (`docs/bam-suche.md`
+   * §20). Ein unbekannter Wert ergibt `undefined` und **nicht** „exakt": Angeboten
+   * wird nur, was nachweislich noch nicht gelaufen ist.
+   */
+  it("übersetzt den Modus der Antwort in den der URL", () => {
+    expect(modusAusAntwort("EXAKT")).toBe("exakt");
+    expect(modusAusAntwort("PRAEFIX")).toBe("praefix");
+    expect(modusAusAntwort(undefined)).toBeUndefined();
+  });
+});
+
+describe("Das Angebot, über den Anfang der Nummer zu suchen", () => {
+  const lage = (teil: Partial<Parameters<typeof zeigtPraefixAngebot>[0]>) =>
+    zeigtPraefixAngebot({
+      modus: "exakt",
+      treffer: 0,
+      begriffe: 1,
+      abgebrochen: false,
+      ...teil,
+    });
+
+  it("erscheint, wenn die exakte Suche mit Begriffen leer ausgegangen ist", () => {
+    expect(lage({})).toBe(true);
+  });
+
+  /**
+   * **Bei Treffern gibt es die Kehrseite**, die im leeren Ergebnis fehlt: Schon ein
+   * vollständig eingetippter Wert findet als Präfix **23 Nachrichten statt einer**
+   * (M49‑3).
+   */
+  it("erscheint nicht, sobald etwas gefunden wurde", () => {
+    expect(lage({ treffer: 1 })).toBe(false);
+  });
+
+  it("erscheint nicht, wenn schon präfixweise gesucht wurde", () => {
+    expect(lage({ modus: "praefix" })).toBe(false);
+  });
+
+  /** Ein unbekannter gemeldeter Modus zählt nicht als „exakt“. */
+  it("erscheint nicht, wenn unklar ist, welcher Vergleich gelaufen ist", () => {
+    expect(lage({ modus: undefined })).toBe(false);
+  });
+
+  it("erscheint nicht ohne Begriff", () => {
+    expect(lage({ begriffe: 0 })).toBe(false);
+  });
+
+  /**
+   * **Der Fall, der am leichtesten durchrutscht.** Wer gerade an der Zeitgrenze
+   * gescheitert ist, bekommt keine **teurere** Suche angeboten — der Präfixmodus
+   * ist die teuerste Zugriffsform dieses Projekts (M50: 3,851 s über dreißig Tage
+   * im schlimmsten bekannten Fall).
+   */
+  it("erscheint nach einem Abbruch ausdrücklich nicht", () => {
+    expect(lage({ abgebrochen: true })).toBe(false);
+  });
+});
+
+describe("Das Fenster, über das der Präfixmodus läuft", () => {
+  const bis = new Date("2025-12-30T04:14:00.000Z");
+
+  /**
+   * **`bis` bleibt stehen, `von` rückt nach** — das neue Fenster ist ein
+   * **Ausschnitt** des alten und kein anderes. Genau daran hängt die Begründung,
+   * dass sich nicht zwei Dinge auf einmal ändern: Die exakte Suche über das große
+   * Fenster war leer, über einen Ausschnitt daraus ist sie zwangsläufig ebenfalls
+   * leer (`docs/bam-suche.md` §23).
+   */
+  it("verkleinert ein Jahresfenster auf den Deckel", () => {
+    const jahr = jahresfensterAb(bis);
+
+    const enger = praefixfenster(jahr);
+
+    expect(enger).not.toBeNull();
+    expect(enger!.bis.getTime()).toBe(bis.getTime());
+    expect(spanneInTagen(enger!.von, enger!.bis)).toBe(PRAEFIX_FENSTER_TAGE);
+    expect(enger!.von.getTime()).toBeGreaterThan(jahr.von.getTime());
+  });
+
+  /**
+   * **`null` heißt „es ändert sich nichts"**, und der Aufrufer schreibt dann auch
+   * nichts: War keine Zeit gewählt, bleibt die Vorgabe des Backends die Vorgabe
+   * des Backends — statt still zu einem eigenen Zeitpunkt in der URL zu werden.
+   */
+  it("lässt ein Fenster in Höhe des Deckels unangetastet", () => {
+    expect(praefixfenster({ von: new Date(bis.getTime() - TAGE(30)), bis })).toBeNull();
+  });
+
+  it("lässt ein kleineres Fenster unangetastet", () => {
+    expect(praefixfenster({ von: new Date(bis.getTime() - TAGE(7)), bis })).toBeNull();
+  });
+
+  /**
+   * Der Deckel steht hier **und** im Backend (`BamSuchfilter.PRAEFIX_FENSTER_MAXIMUM`),
+   * und das ist Absicht — dieselbe Bauform wie bei {@link HOECHSTENS_BEGRIFFE}.
+   * Wer die Zahl ändert, ändert beide.
+   */
+  it("hält den Deckel bei dreißig Tagen", () => {
+    expect(PRAEFIX_FENSTER_TAGE).toBe(30);
+  });
+});
+
+const TAGE = (anzahl: number) => anzahl * 24 * 60 * 60 * 1000;
 
 describe("Ein Begriff kommt dazu", () => {
   const acht: Suchbegriff[] = Array.from({ length: HOECHSTENS_BEGRIFFE }, (_, nummer) => ({
@@ -377,5 +533,73 @@ describe("Die Abschneidemeldung", () => {
       expect(text).toContain("{von}");
       expect(text).toContain("{bis}");
     }
+  });
+
+  /**
+   * **Im Präfixmodus rät sie zu mehr Zeichen, und der Rat stimmt:** Die
+   * Trefferzahl ist die Kostengröße (E6), und eine längere Eingabe senkt sie. Der
+   * Rat zum Zeitraum bleibt daneben stehen, aber nachgeordnet — bei dreißig Tagen
+   * ist dort weniger zu holen.
+   */
+  it.each(["de", "en"] as const)("rät in %s im Präfixmodus zuerst zu mehr Zeichen", (sprache) => {
+    const ergebnis = texteFuer(sprache).suche.ergebnis;
+
+    expect(ergebnis.abgeschnittenPraefix).not.toBe(ergebnis.abgeschnitten);
+    for (const platzhalter of ["{anzahl}", "{von}", "{bis}"]) {
+      expect(ergebnis.abgeschnittenPraefix).toContain(platzhalter);
+    }
+  });
+});
+
+describe("Die Sätze des Präfixmodus", () => {
+  /**
+   * **Kein Fachwort in der Oberfläche.** „Präfix" hilft dem Nutzer nicht, der kein
+   * EDI-Spezialist ist; benannt wird, was passiert. Das Wort steht im Code, in der
+   * URL und in dieser Datei — in keinem Satz, den jemand liest.
+   */
+  it.each(["de", "en"] as const)(
+    "nennen in %s die Wirkung und nicht den Fachbegriff",
+    (sprache) => {
+      const praefix = texteFuer(sprache).suche.praefix;
+
+      for (const satz of [
+        praefix.angebot,
+        praefix.angebotErwartung,
+        praefix.angebotKnopf,
+        praefix.laeuft,
+        praefix.zurueck,
+      ]) {
+        expect(satz.toLowerCase()).not.toContain("präfix");
+        expect(satz.toLowerCase()).not.toContain("praefix");
+        expect(satz.toLowerCase()).not.toContain("prefix");
+      }
+    },
+  );
+
+  /**
+   * **Beide Datumsangaben, und der Satz über das, was fehlt.** Ohne ihn liest der
+   * Nutzer „nicht gefunden" als „nicht vorhanden" — er hat womöglich ein Jahr
+   * gewählt und bekommt dreißig Tage.
+   */
+  it.each(["de", "en"] as const)(
+    "nennen in %s den durchsuchten Zeitraum vollständig",
+    (sprache) => {
+      const text = texteFuer(sprache).suche.praefix.zeitraum;
+
+      expect(text).toContain("{von}");
+      expect(text).toContain("{bis}");
+    },
+  );
+
+  /**
+   * Beide Zahlen kommen aus der Fehlerantwort und nicht aus dem Satz: Die Grenze
+   * gehört dorthin, wo sie gemessen wurde (`docs/frontend-grundlagen.md` §6).
+   */
+  it.each(["de", "en"] as const)("holen in %s die Grenze aus der Antwort", (sprache) => {
+    const praefix = texteFuer(sprache).suche.praefix;
+
+    expect(praefix.fensterZuGross).toContain("{grenze}");
+    expect(praefix.fensterZuGross).toContain("{angefragt}");
+    expect(praefix.fensterVerkleinern).toContain("{grenze}");
   });
 });

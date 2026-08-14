@@ -538,6 +538,12 @@ export const de = {
       // den ganzen Bestand.
       abgeschnitten:
         "Mehr als {anzahl} Treffer — gezeigt werden die {anzahl} neuesten im Zeitfenster {von} bis {bis}. Verkleinere den Zeitraum oder nenne eine zweite Belegnummer.",
+      // Derselbe Befund, ein anderer Rat. Im Präfixmodus ist die Trefferzahl die
+      // Kostengröße (E6), und mehr Zeichen senken sie — der Zeitraum ist hier
+      // schon auf 30 Tage gedeckelt, dort ist weniger zu holen. Deshalb steht der
+      // Rat zum Zeitraum daneben und nicht vorn.
+      abgeschnittenPraefix:
+        "Mehr als {anzahl} Treffer — gezeigt werden die {anzahl} neuesten im Zeitfenster {von} bis {bis}. Tippe mehr Zeichen der Nummer, das grenzt am stärksten ein. Ein kleinerer Zeitraum hilft hier weniger.",
       keine: "Keine Nachricht mit diesem Beleg",
       keineHinweis:
         "Erweitere das Zeitfenster oder entferne einen Begriff. Eine führende Null musst du nicht tippen — die ergänzt die Suche selbst.",
@@ -556,6 +562,43 @@ export const de = {
       belegarten: "Für diesen Mandanten sind diese Belegarten hinterlegt:",
       hilfe:
         "Führende Nullen und ein führendes Leerzeichen sucht die Suche von selbst mit — sie stehen auf dem Beleg nicht, im Bestand aber sehr wohl. Mehrere Begriffe werden mit UND verknüpft.",
+      // Der einzige Ort, an dem die Belegart erwähnt wird (docs/bam-suche.md
+      // §24). Kein Zwang und keine Belehrung: Das Angebot erscheint mit und ohne
+      // gewählte Belegart. Der Satz erscheint nur, wenn dieser Mandant überhaupt
+      // Belegarten hat — sonst nennte er ein Bedienelement, das es nicht gibt.
+      belegartHilfe:
+        "Suchst du nur den Anfang einer Nummer, findet eine gewählte Belegart zusätzlich über führende Nullen hinweg. Ohne Belegart geht das nicht.",
+      // Der Zeitraum ist im Präfixmodus auf 30 Tage gedeckelt; wer weiter zurück
+      // sucht, schiebt das Fenster über die vorhandenen Zeitraum-Bedienelemente
+      // dorthin. Der Satz steht hier, weil er sonst nirgends stünde.
+      zeitraumHilfe:
+        "Die Suche über den Anfang einer Nummer gilt jeweils für dreißig Tage. Wer weiter zurück sucht, verschiebt den Zeitraum über der Trefferliste.",
+    },
+
+    // Schritt 7, Teil 4 — der Rückfall auf die Suche über den Anfang der Nummer.
+    // **Kein Fachwort im Text**: „Präfix" hilft dem Nutzer nicht, der kein
+    // EDI-Spezialist ist. Benannt wird, was passiert, nicht wie es heißt.
+    praefix: {
+      angebot: "Soll nach Nummern gesucht werden, die damit anfangen?",
+      // Die Erwartung gehört dazu, weil das Ergebnis anders aussehen wird.
+      angebotErwartung: "Dabei erscheinen auch längere Nummern, die mit der eingegebenen beginnen.",
+      // Eine Beschriftung und kein bloßes Symbol: Der Knopf ist selten sichtbar
+      // und muss beim ersten Mal verständlich sein.
+      angebotKnopf: "Nach dem Anfang der Nummer suchen",
+      // Steht einmal über der Liste und nicht an jeder Marke — der Modus gilt für
+      // die ganze Suche und nicht je Begriff.
+      laeuft: "Gesucht wird nach Nummern, die mit dem Eingegebenen anfangen.",
+      zurueck: "Wieder genau suchen",
+      // Beide Datumsangaben, und der Satz, ohne den „nicht gefunden" als „nicht
+      // vorhanden" gelesen wird. Der Zeitraum kommt aus der Antwort.
+      zeitraum:
+        "Durchsucht wurde der Zeitraum {von} bis {bis} — ältere Nachrichten sind dabei nicht erfasst.",
+      // Die Oberfläche löst das nie selbst aus; der Fall kommt aus einer von Hand
+      // gebauten URL. Beide Zahlen stammen aus der Fehlerantwort und nicht aus
+      // diesem Text — die Grenze gehört dorthin, wo sie gemessen wurde.
+      fensterZuGross:
+        "Die Suche über den Anfang einer Nummer gilt für höchstens {grenze} Tage; gewählt sind {angefragt}.",
+      fensterVerkleinern: "Zeitraum auf {grenze} Tage verkleinern",
     },
 
     // Derselbe Problemtyp wie in der Nachrichtenliste, aber der andere

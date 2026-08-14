@@ -360,11 +360,25 @@ Ansicht ([`nachrichtenliste.md`](nachrichtenliste.md) §5 und §8.2):
 | `suche-fenster-zu-gross` | Bei gesetztem Suchbegriff ist das Zeitfenster begrenzt; die Anfrage liegt darüber | Hinweis am Feld mit beiden Zahlen aus der Antwort, dazu **„Trotzdem suchen"** — die Schaltfläche setzt `langeSuche` in der URL. Die Liste bleibt stehen. |
 | `suche-abgebrochen` | Das Statement ist in `max_statement_time` gelaufen | Hinweis am Feld: Zeitraum verkleinern oder Begriff schärfen. **Kein** zweiter Versuch — siehe unten. |
 
-**`suche-abgebrochen` ist der eine Fall, in dem `lib/query-client.ts` nicht wiederholt.** Sonst
+**`suche-abgebrochen` war der erste Fall, in dem `lib/query-client.ts` nicht wiederholt.** Sonst
 bleibt es bei einem Wiederholungsversuch für alles außer `401`, `403` und `404`. Hier ändert der
 zweite Versuch das Ergebnis nicht, er kostet es noch einmal: dieselbe Abfrage, dieselbe Zeitgrenze,
 zehn weitere Sekunden auf der Produktionsdatenbank. Erkannt wird der Fall über `istZeitgrenze` in
 `lib/http.ts` — am `type` und nicht am Statuscode, denn `400` als Ganzes wird weiterhin wiederholt.
+
+> **Seit dem 14.08.2026 sind es zwei.** `praefixsuche-fenster-zu-gross` — die Suche über den
+> **Anfang** einer Belegnummer ist auf dreißig Tage gedeckelt
+> ([`bam-suche.md`](bam-suche.md) §18) — wird ebenfalls nicht wiederholt, erkannt über
+> `istPraefixfensterZuGross` und ebenfalls am `type`.
+>
+> **Der Grund ist derselbe, der Preis ein anderer.** Bei der Zeitgrenze kostet der zweite Versuch
+> zehn Sekunden auf der Datenbank; hier kostet er nichts, weil der Fehler schon an der
+> **Parameterform** feststeht — dasselbe Fenster, derselbe Modus, dieselbe Antwort. Verzögert wird
+> trotzdem etwas, und zwar das Einzige, was hilft: die Meldung, die dem Nutzer den Ausweg nennt.
+>
+> **Der Nachbarfall `suche-fenster-zu-gross` ist bewusst nicht mitgeändert.** Für ihn gilt dasselbe
+> Argument, er ist aber älter und hat mit „Trotzdem suchen" seinen eigenen Weg heraus; er steht als
+> offener Punkt in [`bam-suche.md`](bam-suche.md) §27.
 
 ### Die eine Ergänzung am Backend
 

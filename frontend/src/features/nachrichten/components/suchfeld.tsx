@@ -129,9 +129,15 @@ export function Suchfeld() {
     setEingabe("");
     if (aufSuche) {
       // Ein Begriff mehr ist ein Filter und keine Station — `history: "replace"`
-      // steht am Hook. Der übrige Zustand (Zeitfenster, geöffnete Nachricht)
-      // bleibt unberührt, weil genau ein Schlüssel gesetzt wird.
-      void setzeZustand({ begriff: ergaenzung.begriffe });
+      // steht am Hook. Das Zeitfenster und die geöffnete Nachricht bleiben
+      // unberührt.
+      //
+      // **Der Modus fällt dagegen auf `exakt` zurück, und zwar hier wie beim
+      // Entfernen einer Marke** (`hooks.ts` `setzeBegriffe`): Ein Begriff mehr
+      // ist eine **neue Frage**, und die wird zuerst genau beantwortet. Der
+      // Anlass für die Präfixsuche — das leere Ergebnis — gilt dann nicht mehr,
+      // und sie ist die teuerste Zugriffsform dieses Projekts (M50).
+      void setzeZustand({ begriff: ergaenzung.begriffe, modus: null });
     } else {
       // Von anderswo ist es eine Station: Dorthin will man mit Zurück zurück.
       router.push(suchziel(ergaenzung.begriffe));

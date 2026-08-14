@@ -782,12 +782,18 @@ sagt, dass sich der Bestand geändert hat.
     > [`annahmen-korrekturen.md`](annahmen-korrekturen.md) eingetragen und nicht stillschweigend
     > repariert worden. **M51** hat davor gezählt, wen er traf: drei Typen von 62, davon **96,62 %
     > unter Typ 9003** allein, und alle drei bei **einem** Mandanten.
-12. **Der Rückfall über ein großes Fenster ist `400` und nicht möglich** *(neu in Teil 4)*. Ging die
+12. ~~**Der Rückfall über ein großes Fenster ist `400` und nicht möglich** *(neu in Teil 4)*. Ging die
     exakte Suche über ein Jahr leer aus, lässt sich der Präfixmodus über **dasselbe** Fenster nicht
     anbieten: Er ist auf 30 Tage gedeckelt (§18). Ein Rückfall müsste dort also entweder das Fenster
     mit verkleinern — und änderte damit zwei Dinge statt einem — oder ausbleiben. **Der Endpunkt
-    entscheidet das nicht**; er sagt `400` mit eigenem Fehlertyp und nennt beide Zahlen. Was die
-    Oberfläche daraus macht, gehört zu ihr und ist nicht gebaut.
+    entscheidet das nicht**; er sagt `400` mit eigenem Fehlertyp und nennt beide Zahlen.~~
+    ✔ **Entschieden am 14.08.2026 in der Oberfläche** (§23), und zwar für das **Mitverkleinern**.
+
+    > **Der Einwand „das ändert zwei Dinge statt einem" trägt hier nicht, und das ist der ganze
+    > Grund.** Die exakte Suche über das große Fenster war **leer**; über einen Ausschnitt daraus ist
+    > sie zwangsläufig ebenfalls leer. Das Verkleinern kann am exakten Ergebnis nichts ändern und ist
+    > deshalb keine zweite Änderung, sondern eine folgenlose. **Der Preis ist die Sichtbarkeit:** Über
+    > der Liste stehen beide Datumsangaben und der Satz, dass ältere Nachrichten nicht erfasst sind.
 13. **Die gebaute Höchstform ist nicht gemessen** *(neu in Teil 4)*. Acht Begriffe zu je bis zu sieben
     Nullen-im-Muster-Fassungen sind **56 `LIKE`-Zweige**. Gemessen sind ein Begriff ohne
     Zusatzfassungen (M50) und vier verodere `LIKE` bei einem Begriff (M49‑3). **Das Geländer bei acht
@@ -1320,11 +1326,12 @@ bewahren soll.
    9032/9033 auf denselben 100.343. **Welche Paare gekoppelt sind, ist nur für einige Typen
    gemessen** (Regel Q4); eine Warnung wäre für die übrigen geraten. Der Befund gehört notiert und
    nicht in die Oberfläche.
-4. ~~**Keine Präfixsuche**, auch nicht als Schalter — unverändert §9, Punkt 1.~~ **Am Endpunkt seit
+4. ~~**Keine Präfixsuche**, auch nicht als Schalter — unverändert §9, Punkt 1.~~ ~~**Am Endpunkt seit
    Teil 4 vorhanden** (§16). **In der Oberfläche weiterhin nicht** — Teil 4 fasst sie ausdrücklich
-   nicht an; der Rückfall im Nulltreffer-Fall ist damit noch nicht bedienbar (§15). Zu bauen wäre er
-   dort, wo die Nulltreffer-Zeile schon steht (§11.6) — und mit ihm die Frage aus §9, Punkt 12, was
-   bei einem Jahresfenster geschieht.
+   nicht an; der Rückfall im Nulltreffer-Fall ist damit noch nicht bedienbar (§15).~~
+   ✔ **Geschlossen am 14.08.2026** (§23 bis §27). Gebaut ist der Rückfall **im Leerzustand** und
+   nicht dort, wo die Nulltreffer-Zeile steht: Er gehört zu *„nichts gefunden"* und nicht zu
+   *„weniger gefunden als vorher"*. Die Frage aus §9, Punkt 12 ist mit ihm entschieden.
 5. **Kein `ODER` zwischen Begriffen**, keine Klammern, kein Abfragebaukasten — unverändert §9,
    Punkt 2.
 6. **Kein Cursor und kein Nachladen** — unverändert §9, Punkt 3.
@@ -1365,8 +1372,10 @@ hinnehmen.** Die Schwelle zu senken hilft nicht: Bei 94 % kämen 9028, 9029 und 
 
 # Teil 4 — die Präfixsuche
 
-*Entstanden am 14.08.2026, Backend §15 bis §21. **Die Oberfläche ist nicht angefasst** — geprüft mit
-`git status`: Der Diff dieses Teils berührt `backend/src/`, `docs/` und sonst nichts.*
+*Entstanden am 14.08.2026, Backend §15 bis §21. **Die Oberfläche war in diesem Schritt nicht
+angefasst** — geprüft mit `git status`: Der Diff dieses Teils berührt `backend/src/`, `docs/` und
+sonst nichts. Sie ist **am selben Tag** nachgezogen worden und steht als eigener Abschnitt weiter
+unten (§23 bis §27); der Satz hier bleibt stehen, weil er den Schnitt dieses Diffs beschreibt.*
 
 > ### 📌 Was sich am Endpunkt aus Teil 2b ändert — und was nicht
 >
@@ -1894,3 +1903,352 @@ Text prüft.
 | **G1** | Kein Prüfwert in einer Testdatei und kein BAM-Wert in dieser Datei — abgedruckt sind Typnummern, Typbeschreibungen und Zählungen |
 
 **`PROJEKTBESCHREIBUNG.md` ist nicht angefasst.** Kein Pfad unter `frontend/` ist geändert.
+
+---
+
+# Teil 4 — die Oberfläche
+
+*Entstanden am 14.08.2026, §23 bis §27. **Der Backend-Teil ist nicht angefasst** — der Diff dieses
+Teils berührt `frontend/` und `docs/` und sonst nichts.*
+
+> ### 📌 Was dazukommt — und was ausdrücklich nicht
+>
+> **Eine Sache kommt dazu:** Findet die Suche nichts, bekommt der Nutzer angeboten, **als Anfang der
+> Nummer** zu suchen — und sie läuft erst, wenn er es tut. Alles andere bleibt: dieselbe Marke,
+> dieselbe Trefferliste, dieselben Spalten, derselbe Kettenhinweis, kein neuer Umbruchpunkt.
+>
+> **Skills:** `frontend-design` und `shadcn` sind installiert und geprüft; **eingebunden ist
+> keiner**. Farbrollen, Dichte, Bauformen und Umbruchpunkte stehen in
+> [`visuelles-konzept.md`](visuelles-konzept.md) und
+> [`frontend-grundlagen.md`](frontend-grundlagen.md), und die entscheiden hier.
+
+---
+
+## 23. Das Angebot, und was der Knopf mit dem Zeitfenster tut
+
+### Warum es nicht von selbst läuft
+
+**Zwei getrennte Gründe, und sie tragen zwei verschiedene Entscheidungen.**
+
+| Frage | Antwort | Grund |
+|---|---|---|
+| Warum nicht als **Voreinstellung**? | Weil ein vollständig eingetippter Wert als Präfix **23 Nachrichten statt einer** findet (M49‑3) | Als Vorgabe änderte der Modus die Antwort **auch für den Nutzer, der nichts falsch macht**. Im Nulltreffer-Fall gibt es diese Kehrseite nicht: Dort ist die heutige Antwort leer, und jeder Treffer ist rein zusätzlich |
+| Warum nicht **automatisch** im Nulltreffer-Fall? | Weil der Präfixmodus die teuerste Zugriffsform dieses Projekts ist — **3,851 s** im schlimmsten bekannten Fall über 30 Tage, über ein Jahr **Abbruch** an der 60‑Sekunden-Grenze (M50) | Ein Knopf macht diesen Preis zu einer **Entscheidung des Nutzers** statt zu einer Nebenwirkung |
+
+### Wo es steht und wann es erscheint
+
+**Im Leerzustand der Trefferliste**, dort wo heute steht, dass nichts gefunden wurde. **Kein zweiter
+Platz**, kein Hinweis am Suchfeld, kein Vorschlag beim Tippen.
+
+Es erscheint genau dann, wenn **alle vier** zutreffen:
+
+| # | Bedingung | Warum |
+|---|---|---|
+| 1 | Die Antwort meldet `EXAKT` | Angeboten wird nur, was noch nicht gelaufen ist. **Ein unbekannter gemeldeter Modus zählt nicht als „exakt"** — wer nicht weiß, welcher Vergleich gelaufen ist, bietet keinen teureren an |
+| 2 | `nachrichten` ist leer | Nur hier fehlt die Kehrseite aus M49‑3 |
+| 3 | mindestens ein Begriff | Ohne Begriff läuft gar keine Suche |
+| 4 | die Suche wurde **nicht abgebrochen** | Wer gerade an der Zeitgrenze gescheitert ist, bekommt keine **teurere** Suche angeboten |
+
+> **Die vierte ist die, die am leichtesten durchrutscht.** Sie ergäbe sich heute schon aus der
+> Reihenfolge der Zweige im Baum — der Abbruchpfad rendert vor dem Leerzustand. **Das ist eine
+> Eigenschaft des Markups und keine Zusage**, und bei der nächsten Umstellung wäre sie still weg.
+> Die vier Bedingungen stehen deshalb als **reine Funktion** (`zeigtPraefixAngebot`) und werden als
+> solche geprüft.
+
+**Der Text nennt, was passiert, und nicht wie es heißt** — *„Soll nach Nummern gesucht werden, die
+damit anfangen?"* statt „Präfixsuche starten". Ein Fachwort im Knopf hilft dem Nutzer nicht, der
+kein EDI-Spezialist ist; das Wort *Präfix* steht im Code, in der URL und in dieser Datei, in keinem
+Satz, den jemand liest. **Ein Satz Erwartung gehört dazu**, weil das Ergebnis anders aussehen wird:
+dass dabei auch längere Nummern erscheinen, die mit der eingegebenen beginnen. **Der Knopf trägt
+eine Beschriftung und kein bloßes Symbol** — er ist selten sichtbar und muss beim ersten Mal
+verständlich sein.
+
+### Das Zeitfenster — der Teil, den M50 bestimmt hat
+
+Der Präfixmodus ist im Backend auf **30 Tage** gedeckelt (§18). Ein größeres Fenster zusammen mit
+`modus=praefix` ist `400 praefixsuche-fenster-zu-gross`.
+
+> **Entschieden am 14.08.2026: Der Knopf verkleinert das Fenster selbst** und sagt sichtbar, welcher
+> Zeitraum tatsächlich durchsucht wurde.
+
+**Wie verkleinert wird:** `bis` bleibt stehen, `von` rückt auf `bis` minus 30 Tage. Das neue Fenster
+ist damit ein **Ausschnitt** des alten. Ist das gewählte Fenster schon 30 Tage oder kleiner, ändert
+sich **nichts** — und dann wird auch nichts in die URL geschrieben: War keine Zeit gewählt, bleibt
+die Vorgabe des Backends die Vorgabe des Backends, statt still zu einem eigenen Zeitpunkt zu werden.
+
+**Warum das die Regel „es ändert sich genau eine Sache" nicht bricht.** Die exakte Suche über das
+große Fenster war **leer**. Über einen Ausschnitt daraus ist sie zwangsläufig ebenfalls leer — das
+Verkleinern kann am exakten Ergebnis nichts ändern und ist deshalb keine zweite Änderung, sondern
+eine folgenlose.
+
+**Was sichtbar sein muss, und das ist der Preis dieser Entscheidung.** Der Nutzer hat womöglich ein
+Jahr gewählt und bekommt Ergebnisse aus 30 Tagen. Über der Liste steht deshalb **mit beiden
+Datumsangaben**, welcher Zeitraum durchsucht wurde, und der Hinweis, dass ältere Nachrichten dabei
+nicht erfasst sind. Sonst liest er *„nicht gefunden"* als *„nicht vorhanden"*.
+
+> **Genannt wird das Fenster aus der Antwort**, also das tatsächlich verwendete — und nur, wenn die
+> Antwort auch präfixweise gelaufen ist. Solange geladen wird, gibt es keinen durchsuchten Zeitraum,
+> und einen zu behaupten wäre schlechter als keiner.
+
+**Ein anderer Ausschnitt bleibt erreichbar.** Die beiden Zeitpunktfelder wirken unverändert; wer
+weiter zurück sucht, schiebt das 30‑Tage-Fenster dorthin. Die Hilfe im Leerzustand nennt das in
+einem Satz.
+
+### Der Rückweg lässt das Fenster stehen — ein bewusst in Kauf genommener Nachteil
+
+Solange präfixweise gesucht wird, steht über der Liste, dass nach Anfängen gesucht wird, mit einer
+Möglichkeit, wieder genau zu suchen. **Ein Modus, aus dem man nur durch Neuladen herauskommt, ist
+eine Falle.**
+
+**Beim Rückweg wird das verkleinerte Fenster nicht zurückgesetzt.** Wer aus einem Jahresfenster in
+den Präfixmodus gegangen ist, kommt mit dreißig Tagen zurück und sieht sie.
+
+> **Der Grund:** Der Zustand steht vollständig in der URL, und ein Wert, der sich beim Moduswechsel
+> von selbst änderte, wäre versteckter Zustand. Der Nutzer sieht den Zeitraum und kann ihn wieder
+> aufziehen — der Knopf dafür steht unmittelbar daneben. **Das ist ein Nachteil und wird als solcher
+> geführt**, nicht als Feinheit: Wer nach dem Rückweg dasselbe sucht wie vorher, sucht über einen
+> kleineren Ausschnitt als beim ersten Mal und muss das selbst bemerken.
+
+### Die eine Änderung an einem vorhandenen Bedienelement
+
+**„Auf ein Jahr erweitern" gibt es im Präfixmodus nicht.** Dort führte der Knopf in **einem Klick**
+in ein garantiertes `400`; die Zusage lautet aber, dass die Oberfläche diesen Fehler **nie selbst
+auslöst**. Ein Bedienelement, dessen einziges Ergebnis eine Fehlermeldung ist, bricht sie.
+
+> **Gefunden in der Sichtprüfung am 14.08.2026** (§26) und noch währenddessen behoben. Die übrigen
+> Zeitraum-Bedienelemente bleiben unverändert — die beiden Felder verschieben das Fenster,
+> „Vorgabe wiederherstellen" bleibt. Weggenommen ist nur der eine Weg, der in diesem Modus **keinen
+> erreichbaren Zustand** herstellen kann.
+
+### Kommt der Fehler trotzdem — von außen
+
+Aus einer von Hand gebauten URL oder von Hand eingetragenen Zeitpunkten. Dann ist er ein
+**gewöhnlicher Fehlerzustand mit Ausweg** und keine leere Seite:
+
+- die Meldung mit **beiden Zahlen aus der Antwort** (`grenzeTage`, `angefragtTage`) — fehlt eine
+  davon, greift der allgemeine Satz aus dem Fehlerkatalog statt einer Meldung mit einer Lücke darin;
+- ein Knopf **„Zeitraum auf 30 Tage verkleinern"**, gerechnet gegen das `bis` der **URL** und nicht
+  gegen die Browseruhr (Regel Z1) — fehlt es, entfällt der Knopf, statt einen Zeitpunkt zu erfinden;
+- daneben unverändert der Rückweg auf „genau suchen" und die Zeitraum-Bedienelemente.
+
+**Und er wird nicht wiederholt.** `praefixsuche-fenster-zu-gross` steht seit Teil 4 neben
+`suche-abgebrochen` in der Ausnahmeliste von `lib/query-client.ts`: Der Fehler steht schon an der
+**Parameterform** fest — dasselbe Fenster, derselbe Modus, dieselbe Antwort. Ein zweiter Versuch
+kostet zwar nichts auf der Datenbank, verzögert aber genau die Meldung, die dem Nutzer den Ausweg
+nennt. **Erkannt wird er am `type` und nicht am Status:** `400` als Ganzes bleibt wiederholbar.
+
+### Der Zustand steht in der URL
+
+**`modus` steht neben `begriff`, `von` und `bis`**, über `nuqs` wie die übrigen. Er beschreibt einen
+anderen **Ausschnitt** — dieselbe Frage, präfixweise beantwortet, findet andere Nachrichten — und
+keine begonnene Eingabe; damit fällt er im Zweischritt aus
+[`frontend-grundlagen.md`](frontend-grundlagen.md) §8 auf die erste Antwort.
+
+**Bewusst ohne `withDefault`**, wie das Zeitfenster: `null` heißt „keine Angabe" und damit `exakt`.
+Praktisch steht deshalb **nur der Präfixmodus in der URL** — der Normalfall muss nicht erwähnt
+werden, und `null` zu setzen *ist* der Rückweg. Ein unbekannter Wert kommt gar nicht erst hinein; er
+wäre am Endpunkt `400 suchmodus-ungueltig`.
+
+**`modus=exakt` wird auch nicht an das Backend geschickt.** Der Endpunkt sagt zu, sich ohne den
+Parameter Zeichen für Zeichen wie vor Teil 4 zu verhalten (§16); diese Zusage anzunehmen kostet
+nichts und hält den Abfrageschlüssel des Zwischenspeichers für den Normalfall unverändert.
+
+> **Die Antwort schreibt den Modus groß, der Parameter ist klein** — `"modus": "EXAKT"` gegen
+> `?modus=exakt` (§20). Übersetzt wird das an **einer** Stelle (`suche.ts` `modusAusAntwort`), und
+> ein unbekannter Wert ergibt dort `undefined` und nicht „exakt": die sichere Richtung.
+
+**Jede Änderung an den Begriffen setzt auf `exakt` zurück** — beim Hinzufügen wie beim Entfernen
+einer Marke. Wer eine Marke bewegt, stellt eine **neue Frage**, und die wird zuerst genau
+beantwortet; der Anlass für die Präfixsuche, das leere Ergebnis, gilt dann nicht mehr. **Das
+Zeitfenster bleibt dabei, wie es ist** — es beschreibt den Ausschnitt und nicht die Frage.
+
+---
+
+## 24. Was die Oberfläche sonst ändert — und was ausdrücklich nicht
+
+### Die Abschneidemeldung rät im Präfixmodus zu mehr Zeichen
+
+Derselbe Befund, ein anderer Rat: *„Tippe mehr Zeichen der Nummer, das grenzt am stärksten ein. Ein
+kleinerer Zeitraum hilft hier weniger."*
+
+**Und der Rat stimmt.** E6 benennt die Kostengröße, und sie ist die **Trefferzahl** und nicht die
+Zeichenlänge — eine längere Eingabe senkt sie. Der Rat zum Zeitraum bleibt daneben stehen, aber
+nachgeordnet: Bei dreißig Tagen ist dort weniger zu holen als bei einem Jahr. **Entschieden wird das
+am Modus der Antwort und nicht an dem der URL** — der Rat gehört zu dem Vergleich, der die Zahl
+erzeugt hat.
+
+### Die Belegart — genannt an genau einer Stelle
+
+Über führende Nullen hinweg findet die Präfixsuche nur mit gewählter Belegart (§17, M49‑1). **Daraus
+wird kein Zwang und keine Belehrung:** Das Angebot erscheint mit und ohne. Erwähnt wird die Belegart
+**im Leerzustand von `/suche`**, wo ohnehin die Hilfe zur Suche steht — und **nur, wenn dieser
+Mandant überhaupt Belegarten hat**. Sonst nennte der Satz ein Bedienelement, das es dort nicht gibt;
+dieselbe Regel, nach der `WOC` auch keine leere Aufzählung bekommt.
+
+**Kein Sonderfall für Typ 9006.** Dass die Lieferschein-Nr. nicht in `bam_sollaenge` steht, ist eine
+offene Entscheidung des Auftraggebers ([`bam-sollaengen.md`](bam-sollaengen.md) §8) und wird nicht
+durch einen zweiten Kuratierungsort im Frontend geheilt — eine zweite Stelle liefe der ersten
+hinterher (§14).
+
+### Die Marken und die Trefferliste bleiben, wie sie sind
+
+**Kein neuer Marken-Baustein, keine zweite Marken-Gestalt.** Dieselbe Bauform aus
+`components/marke.tsx`. Dass präfixweise gesucht wird, steht **einmal über der Liste** und nicht an
+jeder Marke: Der Modus gilt für die **ganze** Suche und nicht je Begriff — an jede Marke geschrieben
+behauptete er das Gegenteil. Der Zeitraumhinweis steht an derselben Stelle und nicht an einer
+zweiten.
+
+**Die Trefferliste ist unverändert**, einschließlich der Spalte „Treffer" (der Typ, nicht der Wert)
+und des Kettenhinweises.
+
+### Am schmalen Fenster
+
+Unterhalb von 768 px gilt, was für die Suche schon gilt (§11.9): Das Angebot ist Teil des
+Leerzustands und bricht mit ihm um. **Kein neuer Umbruchpunkt.** Der Knopf trägt eine Beschriftung,
+und der Zeitraumhinweis mit seinen zwei Datumsangaben ist die Stelle, an der es eng wird —
+**ungesehen**, siehe §27.
+
+---
+
+## 25. Aufbau im Code und Tests
+
+```
+features/nachrichten/
+├─ suche.ts                    + Suchmodus, parseAsSuchmodus, modusAusAntwort,
+│                                PRAEFIX_FENSTER_TAGE, praefixfenster, zeigtPraefixAngebot
+├─ api.ts                      + BamAntwortmodus, + modus in BamSuchergebnis
+├─ hooks.ts                    + modus und setzeModus, Ruecksetzen in setzeBegriffe
+└─ components/
+   ├─ suche-ansicht.tsx        + Praefixzeile, PraefixAngebot, FensterZuGross
+   └─ suchfeld.tsx             Ruecksetzen auf exakt beim Hinzufuegen
+components/zustand.tsx         Leer bekommt einen Platz fuer den Ausweg, Fehler einen Satz und einen
+lib/http.ts                    + istPraefixfensterZuGross
+lib/query-client.ts            kein zweiter Versuch fuer diesen Typ
+i18n/de.ts, i18n/en.ts         die Saetze, in beiden Sprachen
+```
+
+**Die Entscheidungen liegen als reine Funktionen in `suche.ts` und nicht als Bedingungen in einer
+Komponente** — dieselbe Trennung wie bei `nulltrefferHinweis` seit Teil 3.
+
+**`PRAEFIX_FENSTER_TAGE` steht hier *und* im Backend** (`BamSuchfilter.PRAEFIX_FENSTER_MAXIMUM`),
+und das ist Absicht — dieselbe Bauform wie bei `HOECHSTENS_BEGRIFFE`: Das Backend weist ein zu
+großes Fenster ab, die Oberfläche lässt es gar nicht erst entstehen. **Wer die Zahl ändert, ändert
+beide.** Sie ist zugleich die **einzige** Backend-Zahl, die dieses Frontend wiederholt, ohne sie aus
+einer Antwort zu lesen, und der Grund ist, dass es die Antwort hier nicht gibt: Sie stünde im
+Fehlerrumpf, und genau diesen Fehler soll die Oberfläche nie auslösen. **Ein Wert, den man nur durch
+den eigenen Fehler erführe, ist keine Quelle.**
+
+| Datei | Was |
+|---|---|
+| `tests/suche.test.ts` | **ohne DOM**, **23 neue Fälle** (249 → 272 im ganzen Lauf): `modus` nur im Präfixmodus in der Abfrage und die Gegenprobe, dass `exakt` Zeichen für Zeichen dieselbe Abfrage ergibt wie keine Angabe; der Parser (beide Werte, der unbekannte, der leere); `modusAus` und `modusAusAntwort` samt Groß-/Kleinschreibung und dem unbekannten Wert als `undefined`; **alle sechs Lagen des Angebots**, darunter ausdrücklich der Abbruch; das Verkleinern auf den Deckel, das unangetastete Fenster genau auf und unter dem Deckel, und dass der Deckel bei dreißig steht; die geänderte Abschneidemeldung in **beiden** Sprachen; und dass in **keinem** sichtbaren Satz beider Sprachen das Wort „Präfix" steht |
+
+**Kein neuer gerenderter Baum.** Die Zahl bleibt bei **zwölf in vier Dateien**
+(`frontend/vitest.config.mts`): Alles, was Teil 4 entscheidet, ist eine reine Funktion oder ein Satz
+in einer Sprachdatei — es gibt keine Regel, die *selbst* eine Klasse plus ein `title` wäre.
+
+---
+
+## 26. Sichtprüfung
+
+**Durchgeführt am 14.08.2026** am laufenden System (`dev-start.ps1`, Backend `localhost:8080`,
+Oberfläche `localhost:3000`), über die Browsersteuerung bei einem Sichtfeld von **1568 × 726 px**,
+mit einem Zugang über alle Mandanten. Eingaben wurden getippt und geklickt; von Hand geöffnete URLs
+sind die Punkte 7 und 10, und dort *ist* die URL der geprüfte Vorgang.
+
+**Die Prüfwerte stehen nach Regel G1 nicht in dieser Datei.** Beschrieben ist ihre Gestalt und ihre
+Auswahl: ein zehnstelliger `NEXANS`-Wert des kuratierten Typs 9002 (Sollänge 10) **ohne** führende
+Null, hergeleitet über das Quellschema im Fenster der Anwendungsuhr. Um ihn herum sind vier
+Präfixlängen gezählt worden, und die Auswahl fiel auf die, die den Fall trägt:
+
+| Eingabe | Nachrichten im 30‑Tage-Fenster | verschiedene Werte |
+|---|---:|---:|
+| der **volle** Wert | 3 | 1 |
+| um **zwei** Zeichen verkürzt | 3 | 1 |
+| um **drei** Zeichen verkürzt | 21 | 14 |
+| um **vier** Zeichen verkürzt | 134 | 36 |
+
+Die zweite Zeile ist der Prüffall: Exakt findet sie **nichts** — auch nicht in der aufgefüllten
+Fassung, gegengeprüft am Quellschema —, präfixweise findet sie **dieselben drei** Nachrichten wie
+der volle Wert. Die vierte trägt die Abschneidung.
+
+| # | Zu prüfen | Erwartet | Befund |
+|---|---|---|---|
+| 1 | Eine Nummer, die es gibt | Treffer, **kein** Angebot | ✔ 3 Treffer, kein Angebot, kein `modus` in der URL |
+| 2 | Verkürzte Nummer, Zeitraum 30 Tage | leer, Angebot erscheint | ✔ *„0 Treffer"*, darunter die Variantenzeile (die aufgefüllte Fassung fand ebenfalls nichts) und im Leerzustand Frage, Knopf und Erwartungssatz |
+| 3 | Angebot drücken | Treffer, Hinweis über der Liste, Weg zurück, Zeitraum unverändert | ✔ dieselben 3 Treffer wie in Punkt 1. URL `?begriff=…&modus=praefix` — **ohne** `von`/`bis`: Das Fenster war die Servervorgabe und ist es geblieben |
+| 4 | Zeitraum ein Jahr, verkürzte Nummer | leer, Angebot erscheint | ✔ Fenster 30.12.2024–30.12.2025, 0 Treffer, Angebot da |
+| 5 | Angebot drücken | Fenster auf die letzten 30 Tage, beide Datumsangaben, Hinweis auf ältere Nachrichten, `von` geändert | ✔ `von` rückt von 30.12.2024 auf **30.11.2025**, `bis` unverändert. Über der Liste: *„Durchsucht wurde der Zeitraum 30.11.2025, 04:18 bis 30.12.2025, 04:18 — ältere Nachrichten sind dabei nicht erfasst."* 3 Treffer |
+| 6 | Zurück auf genau | wieder leer, Angebot wieder da, **Zeitraum bleibt bei 30 Tagen** | ✔ `modus` verschwindet aus der URL, `von`/`bis` bleiben stehen. „Auf ein Jahr erweitern" ist wieder da — der Weg zurück zum großen Fenster steht offen |
+| 7 | URL aus Punkt 5 neu laden | derselbe Modus, dieselben Marken, dasselbe verkleinerte Fenster | ✔ unverändert |
+| 8 | Marke hinzufügen im Präfixmodus | fällt auf `exakt` zurück, Zeitraum bleibt | ✔ `modus` fällt aus der URL, `von`/`bis` bleiben. Die Nulltreffer-Zeile aus Teil 3 erscheint dabei unverändert |
+| 9 | Eine Suche, die abbricht | **kein** Angebot | **nicht herbeiführbar** — siehe unten |
+| 10 | Von Hand `modus=praefix` mit Jahresfenster | Fehlerzustand mit Möglichkeit zum Verkleinern | ✔ *„Die Suche über den Anfang einer Nummer gilt für höchstens 30 Tage; gewählt sind 365."* mit dem Knopf *„Zeitraum auf 30 Tage verkleinern"*; darüber der Rückweg auf genau. Der Knopf führt auf 30.11.–30.12.2025 und 3 Treffer |
+| 11 | `WOC` — Mandant ohne Belegart | Angebot erscheint trotzdem, Hilfe nennt keine Belegarten | ✔ Angebot da. Im Leerzustand fehlen die Belegarten-Liste **und** der Belegart-Satz; die Typwahl erscheint gar nicht erst. Der Satz zum Zeitraum steht |
+| 12 | **Schmales Fenster, von Hand** | Angebot, Knopf und Zeitraumhinweis unter 768 px | **offen** — `resize_window` meldet Erfolg und ändert nichts ([`frontend-grundlagen.md`](frontend-grundlagen.md) §8). Steht in der Tabelle *Offene Sichtprüfungen* in [`README.md`](README.md) |
+
+**Konsole:** 36 Einträge über den ganzen Durchgang, sämtlich Fremdmeldungen (React-DevTools-Hinweis,
+`[HMR] connected`, `[Fast Refresh]`). **Kein `error`, keine Schlüsselmeldung.**
+
+### Was die Abnahme zusätzlich gezeigt hat
+
+**1. „Auf ein Jahr erweitern" stand im Präfixmodus noch da** — ein Klick in ein garantiertes `400`.
+Behoben während der Prüfung, Begründung in §23.
+
+**2. Punkt 9 ist am laufenden System nicht herbeizuführen, und das ist ein Befund über die
+Testkopie und nicht über den Code.** Zwei Versuche, beide ohne Abbruch:
+
+| Versuch | Erwartung aus der Messung | Befund |
+|---|---|---|
+| Der schlimmste **exakte** Wert des Bestands (234.159 Zeilen, M33) über ein **Jahr** | M47: 8,940 s, also 89 % der 10‑Sekunden-Grenze | läuft durch, **mehr als 50** Treffer |
+| Ein **einzeichiger** Präfix über 30 Tage | unbelegt; M50 misst 3,851 s für vier Zeichen | läuft durch, **mehr als 50** Treffer |
+
+**Die Bedingung ist damit nicht ungeprüft, sondern anders geprüft:** als eigener Testfall an
+`zeigtPraefixAngebot`. Behauptet wird sie hier nicht — sie steht als offener Punkt in §27.
+
+> **Der zweite Versuch hat dafür etwas anderes gezeigt**, das ohne ihn ungesehen geblieben wäre: die
+> **Abschneidemeldung im Präfixmodus** am laufenden System — *„Mehr als 50 Treffer … Tippe mehr
+> Zeichen der Nummer, das grenzt am stärksten ein. Ein kleinerer Zeitraum hilft hier weniger."*
+
+**3. Ein Fehler, der wiederholt wird, erscheint in dieser Umgebung nie.** Beim Bau von Punkt 10 blieb
+die Ansicht im Ladezustand stehen, obwohl das Backend in 26 ms mit `400` antwortete. Gemessen am
+Zustand der Abfrage: `status: pending`, `fetchStatus:` **`paused`** — TanStack Query hält den
+**zweiten Versuch** an, weil es die Umgebung für offline hält, und die Abfrage erreicht ihren
+Fehlerzustand nicht.
+
+> **Die Gegenprobe steht dabei, und sie ist der Grund, warum das kein Befund über Teil 4 ist:** Ein
+> `404` (der **nie** wiederholt wird) erscheint sofort und richtig; der **unveränderte** Pfad
+> `suche-fenster-zu-gross` der Nachrichtenliste hängt genauso. **Es ist eine Eigenschaft der
+> Browsersteuerung und nicht des Codes.**
+>
+> **Geändert wurde trotzdem etwas, und zwar aus einem eigenen Grund:**
+> `praefixsuche-fenster-zu-gross` wird seit Teil 4 **nicht mehr wiederholt** (§23). Das ist keine
+> Umgehung des Umgebungsproblems, sondern dieselbe Überlegung wie bei `suche-abgebrochen` — der
+> Fehler steht an der Parameterform fest, und ein zweiter Versuch verzögert nur die Meldung.
+> **Der Nachbarfall der Nachrichtenliste ist bewusst nicht mitgeändert** (§27).
+
+---
+
+## 27. Offene Punkte der Oberfläche zu Teil 4
+
+1. **Der Nutzen dieser Funktion ist unbeziffert — und das ist keine Nachlässigkeit.** Die Zahl, die
+   ihn trüge — *wie oft die exakte Suche im Betrieb leer ausgeht* —, stünde nur in einem
+   Suchprotokoll. **Es ist keines gebaut worden** (Entscheidung 14.08.2026, kein Suchzähler), weder
+   im Backend-Teil noch in der Oberfläche. **Die Kosten sind beziffert (M49‑3, M50), der Nutzen ist
+   es nicht**, und wer ihn beziffern will, braucht zuerst den Zähler.
+2. **Der Abbruchfall ist am laufenden System ungesehen** (§26, Punkt 2). Er ist als Testfall
+   festgehalten, nicht als Sichtprüfung.
+3. **Das schmale Fenster ist nicht gesehen** (§24). Drei Dinge stehen dort zur Prüfung: ob der
+   Leerzustand mit Frage, Knopf und Erwartungssatz trägt, ob der **Zeitraumhinweis mit seinen zwei
+   Datumsangaben** nicht abgeschnitten wird, und ob der Präfixhinweis samt Rückweg-Knopf
+   nebeneinander bleibt oder sinnvoll umbricht.
+4. **`suche-fenster-zu-gross` der Nachrichtenliste wird weiterhin wiederholt.** Für ihn gilt dasselbe
+   Argument wie für `praefixsuche-fenster-zu-gross` — der Fehler steht an der Parameterform fest.
+   **Nicht mitgeändert:** Er ist älter als Teil 4, hat mit „Trotzdem suchen" einen eigenen Weg
+   heraus, und ein Auftrag ist ein Eingriff.
+5. **Der Rückweg lässt das Fenster stehen** (§23). Bewusst in Kauf genommen und hier als das geführt,
+   was es ist: ein Nachteil, den der Nutzer selbst bemerken muss.
+6. **Kein Angebot in der Gegenrichtung.** Findet die Präfixsuche *zu viel*, rät die Abschneidemeldung
+   zu mehr Zeichen — es gibt aber keinen Knopf, der die Eingabe verlängert, und das kann es auch
+   nicht geben: Welche Zeichen fehlen, weiß nur der Nutzer.
+7. **Die gebaute Höchstform ist auch von der Oberfläche aus nicht gemessen** — unverändert §9,
+   Punkt 13. Acht Begriffe im Präfixmodus sind über die Marken erreichbar; gemessen ist ein Begriff.

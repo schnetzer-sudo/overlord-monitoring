@@ -16,17 +16,23 @@ import {
   wanduhrzeitFuerEingabe,
   zeitpunktAusWanduhrzeit,
 } from "@/lib/format";
-import { ProblemFehler } from "@/lib/http";
+import { ProblemFehler, istPraefixfensterZuGross } from "@/lib/http";
 
 import type { BamSuchergebnis } from "../api";
 import { useBamSuche, useBamTypen, useEscapeSchliesst, useSuchzustand } from "../hooks";
 import {
   HOECHSTENS_BEGRIFFE,
+  PRAEFIX_FENSTER_TAGE,
   abweichendeVarianten,
   alsAbfrage,
+  fensterZurueck,
   jahresfensterAb,
+  modusAusAntwort,
   nulltrefferHinweis,
+  praefixfenster,
   spanneInTagen,
+  zeigtPraefixAngebot,
+  type Suchmodus,
   type VorigeRunde,
 } from "../suche";
 import { MarkenLeiste } from "./marken-leiste";
@@ -79,7 +85,8 @@ const ABGEBROCHEN = "suche-abgebrochen";
  */
 export function SucheAnsicht() {
   const texte = useTexte();
-  const { zustand, begriffe, setzeBegriffe, setzeFenster, setzeNachricht } = useSuchzustand();
+  const { zustand, begriffe, modus, setzeBegriffe, setzeFenster, setzeModus, setzeNachricht } =
+    useSuchzustand();
   const abfrage = alsAbfrage(zustand);
   const anfrage = useBamSuche(abfrage, begriffe.length > 0);
   const ergebnis = anfrage.data;
@@ -125,6 +132,56 @@ export function SucheAnsicht() {
       ? anfrage.error
       : undefined;
 
+  /*
+   * **Die Oberfläche löst diesen Fehler nie selbst aus** — der Knopf verkleinert
+   * das Fenster vorher (`praefixfenster`), und „Auf ein Jahr erweitern" gibt es
+   * im Präfixmodus nicht. Er kommt aus einer von Hand gebauten URL oder aus von
+   * Hand eingetragenen Zeitpunkten, und dafür gibt es einen Fehlerzustand mit
+   * Ausweg statt einer leeren Seite (`docs/bam-suche.md` §23).
+   */
+  const fensterZuGross =
+    anfrage.error instanceof ProblemFehler && istPraefixfensterZuGross(anfrage.error)
+      ? anfrage.error
+      : undefined;
+
+  /*
+   * **Das Angebot hängt an vier Bedingungen, und sie stehen als reine Funktion
+   * daneben** (`suche.ts` `zeigtPraefixAngebot`) — nicht als Kette von `&&` in
+   * diesem Baum. Die vierte, „nicht abgebrochen", ist die, die am leichtesten
+   * durchrutscht: Sie ergäbe sich heute schon aus der Reihenfolge der Zweige
+   * unten, aber das ist eine Eigenschaft des Markups und keine Zusage.
+   *
+   * **Gefragt wird der Modus der Antwort und nicht der der URL.** Sie fallen
+   * auseinander, solange geladen wird — und angeboten wird nur, was
+   * nachweislich noch nicht gelaufen ist.
+   */
+  const angebot = zeigtPraefixAngebot({
+    modus: modusAusAntwort(ergebnis?.modus),
+    treffer: ergebnis?.nachrichten.length ?? 0,
+    begriffe: begriffe.length,
+    abgebrochen: abgebrochen !== undefined,
+  });
+
+  /*
+   * Der Knopf verkleinert das Fenster **selbst**, wenn es über dem Deckel liegt
+   * — und er rechnet dabei vom `bis` **aus der Antwort** zurück, nicht von der
+   * Browseruhr (Regel Z1). Liegt das Fenster schon darunter, ändert
+   * `praefixfenster` nichts und gibt `null`; dann wird auch kein Zeitpunkt in
+   * die URL geschrieben.
+   */
+  const aufPraefix = useCallback(() => {
+    if (ergebnis === undefined) {
+      return;
+    }
+    setzeModus(
+      "praefix",
+      praefixfenster({ von: new Date(ergebnis.von), bis: new Date(ergebnis.bis) }),
+    );
+  }, [ergebnis, setzeModus]);
+
+  /** Der Rückweg. **Das Fenster bleibt stehen** — siehe `hooks.ts` `setzeModus`. */
+  const aufExakt = useCallback(() => setzeModus(null, null), [setzeModus]);
+
   return (
     /*
      * Ab `xl` steht das Panel **neben** der Trefferliste, darunter an ihrer
@@ -154,6 +211,8 @@ export function SucheAnsicht() {
                 es braucht (dieselbe Regel wie bei der Filterleiste der Liste). */}
             <Kopfzeilen
               ergebnis={ergebnis}
+              modus={modus}
+              aufExakt={aufExakt}
               von={zustand.von}
               bis={zustand.bis}
               aufFenster={setzeFenster}
@@ -165,19 +224,24 @@ export function SucheAnsicht() {
               /* Der Abbruch an der Zeitgrenze ist ein absehbarer Fall und kein
                  Systemfehler. **Kein „Erneut versuchen"**: Dieselbe Abfrage liefe
                  in dieselbe Grenze. Was hilft, steht im Satz — und die beiden
-                 Handlungen stehen unmittelbar darüber. */
+                 Handlungen stehen unmittelbar darüber.
+
+                 **Und hier steht ausdrücklich kein Angebot.** Wer gerade an der
+                 Zeitgrenze gescheitert ist, bekommt keine teurere Suche
+                 angeboten (`docs/bam-suche.md` §23). */
               <p className="text-muted-foreground text-beiwerk max-w-prose" role="status">
                 {texte.suche.abgebrochen}
               </p>
+            ) : fensterZuGross !== undefined ? (
+              <FensterZuGross fehler={fensterZuGross} bis={zustand.bis} aufFenster={setzeFenster} />
             ) : anfrage.error ? (
               <Fehler fehler={anfrage.error} aufWiederholen={() => void anfrage.refetch()} />
             ) : anfrage.isPending ? (
               <Laden zeilen={8} />
             ) : (ergebnis?.nachrichten.length ?? 0) === 0 ? (
-              <Leer
-                titel={texte.suche.ergebnis.keine}
-                hinweis={texte.suche.ergebnis.keineHinweis}
-              />
+              <Leer titel={texte.suche.ergebnis.keine} hinweis={texte.suche.ergebnis.keineHinweis}>
+                {angebot ? <PraefixAngebot aufPraefix={aufPraefix} /> : null}
+              </Leer>
             ) : (
               <div className="border-border bg-card overflow-x-auto rounded-lg border">
                 <TrefferTabelle
@@ -212,11 +276,19 @@ export function SucheAnsicht() {
 }
 
 /**
- * Was über der Liste steht — **drei Angaben, und jede hat einen gemessenen
+ * Was über der Liste steht — **vier Angaben, und jede hat einen gemessenen
  * Grund.**
+ *
+ * Seit Teil 4 gehört der Präfixhinweis dazu, und er steht **hier und nur hier**:
+ * Der Modus gilt für die **ganze** Suche und nicht je Begriff — an jede Marke
+ * geschrieben behauptete er das Gegenteil (`docs/bam-suche.md` §23). Aus
+ * demselben Grund steht der Zeitraumhinweis in derselben Zeile und nicht an
+ * einer zweiten Stelle.
  */
 function Kopfzeilen({
   ergebnis,
+  modus,
+  aufExakt,
   von,
   bis,
   aufFenster,
@@ -224,6 +296,8 @@ function Kopfzeilen({
   voll,
 }: {
   ergebnis: BamSuchergebnis | undefined;
+  modus: Suchmodus;
+  aufExakt: () => void;
   von: Date | null;
   bis: Date | null;
   aufFenster: (von: Date | null, bis: Date | null) => void;
@@ -235,8 +309,15 @@ function Kopfzeilen({
 
   return (
     <div className="flex flex-col gap-1.5">
+      {modus === "praefix" ? <Praefixzeile ergebnis={ergebnis} aufExakt={aufExakt} /> : null}
       <Trefferzeile ergebnis={ergebnis} />
-      <Zeitfensterzeile ergebnis={ergebnis} von={von} bis={bis} aufFenster={aufFenster} />
+      <Zeitfensterzeile
+        ergebnis={ergebnis}
+        modus={modus}
+        von={von}
+        bis={bis}
+        aufFenster={aufFenster}
+      />
       <Variantenzeile ergebnis={ergebnis} />
 
       {nulltrefferVorher === null ? null : (
@@ -277,6 +358,16 @@ function Kopfzeilen({
  * abgeschnitten wurde und dass ein Fenster galt. Nur eines von beidem ist
  * irreführend — „mehr als 50" ohne Fenster liest sich wie eine Aussage über den
  * ganzen Bestand, und die wäre falsch.
+ *
+ * ## Im Präfixmodus rät sie zu **mehr Zeichen**
+ *
+ * Derselbe Befund, ein anderer Rat — und er stimmt: **Die Trefferzahl ist die
+ * Kostengröße** (E6), und eine längere Eingabe senkt sie. Der Rat zum Zeitraum
+ * bleibt daneben stehen, aber nachgeordnet: Dort ist bei dreißig Tagen weniger
+ * zu holen als bei einem Jahr.
+ *
+ * **Entschieden wird das am Modus der Antwort und nicht an dem der URL.** Der
+ * Rat gehört zu dem Vergleich, der die Zahl erzeugt hat.
  */
 function Trefferzeile({ ergebnis }: { ergebnis: BamSuchergebnis | undefined }) {
   const texte = useTexte();
@@ -287,23 +378,189 @@ function Trefferzeile({ ergebnis }: { ergebnis: BamSuchergebnis | undefined }) {
     return null;
   }
 
-  const fenster = {
+  const werte = {
+    anzahl: formatiereZahl(ergebnis.nachrichten.length, sprache),
     von: formatiereZeitpunkt(ergebnis.von, sprache, zone),
     bis: formatiereZeitpunkt(ergebnis.bis, sprache, zone),
   };
 
+  const abgeschnitten =
+    modusAusAntwort(ergebnis.modus) === "praefix"
+      ? texte.suche.ergebnis.abgeschnittenPraefix
+      : texte.suche.ergebnis.abgeschnitten;
+
   return (
     <p className="text-basis" role="status">
-      {ergebnis.abgeschnitten
-        ? einsetzen(texte.suche.ergebnis.abgeschnitten, {
-            anzahl: formatiereZahl(ergebnis.nachrichten.length, sprache),
-            ...fenster,
-          })
-        : einsetzen(texte.suche.ergebnis.anzahl, {
-            anzahl: formatiereZahl(ergebnis.nachrichten.length, sprache),
-            ...fenster,
-          })}
+      {einsetzen(ergebnis.abgeschnitten ? abgeschnitten : texte.suche.ergebnis.anzahl, werte)}
     </p>
+  );
+}
+
+/**
+ * **Der Hinweis, dass präfixweise gesucht wird — samt dem Weg zurück.**
+ *
+ * Ein Modus, aus dem man nur durch Neuladen herauskommt, ist eine Falle. Der
+ * Rückweg steht deshalb neben dem Hinweis und nicht in einem Menü, und er ist
+ * **sofort** da: auch während geladen wird, wo es noch kein Ergebnis gibt.
+ *
+ * ## Der Zeitraum steht dabei, und das ist der Preis der Verkleinerung
+ *
+ * Der Präfixmodus läuft über höchstens dreißig Tage
+ * ({@link PRAEFIX_FENSTER_TAGE}); wer aus einem Jahresfenster hierher gekommen
+ * ist, bekommt Ergebnisse aus einem Ausschnitt davon. **Ohne die beiden
+ * Datumsangaben liest er „nicht gefunden" als „nicht vorhanden"**
+ * (`docs/bam-suche.md` §23).
+ *
+ * **Genannt wird das Fenster aus der Antwort**, also das tatsächlich verwendete —
+ * und nur, wenn die Antwort auch präfixweise gelaufen ist. Solange geladen wird,
+ * gibt es keinen durchsuchten Zeitraum, und einer zu behaupten wäre schlechter
+ * als keiner.
+ */
+function Praefixzeile({
+  ergebnis,
+  aufExakt,
+}: {
+  ergebnis: BamSuchergebnis | undefined;
+  aufExakt: () => void;
+}) {
+  const texte = useTexte();
+  const sprache = useSprache();
+  const zone = useAnzeigezone();
+
+  const gelaufen = ergebnis !== undefined && modusAusAntwort(ergebnis.modus) === "praefix";
+
+  return (
+    <div className="border-border bg-muted flex flex-col gap-1 rounded-md border px-3 py-2">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="text-basis" role="status">
+          {texte.suche.praefix.laeuft}
+        </span>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="min-h-beruehrung"
+          onClick={aufExakt}
+        >
+          {texte.suche.praefix.zurueck}
+        </Button>
+      </div>
+
+      {gelaufen ? (
+        <p className="text-muted-foreground text-beiwerk max-w-prose">
+          {einsetzen(texte.suche.praefix.zeitraum, {
+            von: formatiereZeitpunkt(ergebnis.von, sprache, zone),
+            bis: formatiereZeitpunkt(ergebnis.bis, sprache, zone),
+          })}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * **Das Angebot — und es läuft erst auf Zutun.**
+ *
+ * Es steht im Leerzustand der Trefferliste und an keiner zweiten Stelle: kein
+ * Hinweis am Suchfeld, kein Vorschlag beim Tippen. Wann es erscheint, entscheidet
+ * `zeigtPraefixAngebot`; **dass** es erst auf einen Klick läuft, entscheidet
+ * M50 — der Präfixmodus ist die teuerste Zugriffsform dieses Projekts (3,851 s
+ * im schlimmsten bekannten Fall über dreißig Tage). Ein Knopf macht diesen Preis
+ * zu einer Entscheidung des Nutzers statt zu einer Nebenwirkung.
+ *
+ * **Der Text nennt, was passiert, und nicht wie es heißt.** „Präfixsuche" hilft
+ * dem Nutzer nicht, der kein EDI-Spezialist ist. Dazu ein Satz Erwartung, weil
+ * das Ergebnis anders aussehen wird: Es erscheinen auch längere Nummern.
+ *
+ * **Der Knopf trägt eine Beschriftung und kein bloßes Symbol** — er ist selten
+ * sichtbar und muss beim ersten Mal verständlich sein.
+ */
+function PraefixAngebot({ aufPraefix }: { aufPraefix: () => void }) {
+  const texte = useTexte();
+
+  return (
+    <div className="mt-2 flex max-w-prose flex-col items-center gap-2">
+      <p className="text-foreground text-basis">{texte.suche.praefix.angebot}</p>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="min-h-beruehrung"
+        onClick={aufPraefix}
+      >
+        {texte.suche.praefix.angebotKnopf}
+      </Button>
+      <p className="text-beiwerk">{texte.suche.praefix.angebotErwartung}</p>
+    </div>
+  );
+}
+
+/**
+ * **Der Deckel, von außen erwischt.**
+ *
+ * Die Oberfläche löst `praefixsuche-fenster-zu-gross` nie selbst aus — der Knopf
+ * verkleinert das Fenster vorher. Wer sich eine URL von Hand baut, landet
+ * trotzdem hier, und dann ist es ein gewöhnlicher Fehlerzustand **mit Ausweg**
+ * und keine leere Seite.
+ *
+ * **Zwei Auswege, und beide stehen da:** das Fenster auf den Deckel verkleinern
+ * (hier), oder wieder genau suchen (im Präfixhinweis darüber). Dazu bleiben die
+ * Zeitraum-Bedienelemente stehen wie in jedem anderen Zustand.
+ *
+ * ## Die Zahlen kommen aus der Antwort
+ *
+ * `grenzeTage` und `angefragtTage` stehen im Rumpf (`docs/frontend-grundlagen.md`
+ * §6) — dieselbe Bauform wie bei `suche-fenster-zu-gross` in der
+ * Nachrichtenliste. **Fehlt eine von beiden**, greift der allgemeine Satz aus dem
+ * Fehlerkatalog statt einer Meldung mit einer Lücke darin.
+ *
+ * ## Verkleinert wird gegen das `bis` der **URL**
+ *
+ * Eine Antwort gibt es hier nicht, und die Browseruhr ist keine Quelle (Regel
+ * Z1). Das `bis` steht in der URL — ohne es wäre das Fenster gar nicht über den
+ * Deckel gekommen. Fehlt es wider Erwarten doch, entfällt der Knopf, statt einen
+ * Zeitpunkt zu erfinden.
+ */
+function FensterZuGross({
+  fehler,
+  bis,
+  aufFenster,
+}: {
+  fehler: ProblemFehler;
+  bis: Date | null;
+  aufFenster: (von: Date | null, bis: Date | null) => void;
+}) {
+  const texte = useTexte();
+
+  const grenzeTage = fehler.zahl("grenzeTage");
+  const angefragtTage = fehler.zahl("angefragtTage");
+  const grenze = grenzeTage ?? PRAEFIX_FENSTER_TAGE;
+
+  const text =
+    grenzeTage !== undefined && angefragtTage !== undefined
+      ? einsetzen(texte.suche.praefix.fensterZuGross, {
+          grenze: grenzeTage,
+          angefragt: angefragtTage,
+        })
+      : undefined;
+
+  return (
+    <Fehler fehler={fehler} text={text}>
+      {bis === null ? null : (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="min-h-beruehrung mt-3"
+          onClick={() => {
+            const enger = fensterZurueck(bis, grenze);
+            aufFenster(enger.von, enger.bis);
+          }}
+        >
+          {einsetzen(texte.suche.praefix.fensterVerkleinern, { grenze })}
+        </Button>
+      )}
+    </Fehler>
   );
 }
 
@@ -381,11 +638,13 @@ function Variantenzeile({ ergebnis }: { ergebnis: BamSuchergebnis | undefined })
  */
 function Zeitfensterzeile({
   ergebnis,
+  modus,
   von,
   bis,
   aufFenster,
 }: {
   ergebnis: BamSuchergebnis | undefined;
+  modus: Suchmodus;
   von: Date | null;
   bis: Date | null;
   aufFenster: (von: Date | null, bis: Date | null) => void;
@@ -439,7 +698,24 @@ function Zeitfensterzeile({
           {texte.suche.fenster.aendern}
         </Button>
 
-        {anker !== null && spanne !== null && spanne < 360 ? (
+        {/*
+         * **Im Präfixmodus gibt es diesen Knopf nicht**, und das ist die eine
+         * Stelle, an der Teil 4 ein vorhandenes Bedienelement anfasst.
+         *
+         * Er führte dort in **ein Klick** in ein garantiertes `400
+         * praefixsuche-fenster-zu-gross` — der Modus ist auf dreißig Tage
+         * gedeckelt (`docs/bam-suche.md` §18). Die Zusage lautet, dass die
+         * Oberfläche diesen Fehler **nie selbst auslöst**; ein Knopf, dessen
+         * einziges Ergebnis eine Fehlermeldung ist, bricht sie.
+         *
+         * **Die Zeitraum-Bedienelemente wirken deshalb trotzdem unverändert**,
+         * und zwar die, um die es geht: Die beiden Felder verschieben das
+         * Dreißig-Tage-Fenster weiter zurück, „Vorgabe wiederherstellen" bleibt.
+         * Weggenommen ist nur der eine Weg, der in diesem Modus keinen
+         * erreichbaren Zustand herstellen kann. Wer ein Jahr will, sucht wieder
+         * genau — der Knopf dafür steht unmittelbar darüber.
+         */}
+        {modus === "exakt" && anker !== null && spanne !== null && spanne < 360 ? (
           <Button
             type="button"
             variant="outline"
@@ -546,6 +822,24 @@ function Zeitfensterzeile({
  * nachweislich gilt — alles andere wäre ein Beispiel. Hat er keine konfiguriert
  * ({@code EDITIONLINGERI}, {@code SYSTEM}, {@code WOC}), erscheint auch keine
  * Liste: kein Platzhalter, keine leere Aufzählung.
+ *
+ * ## Und hier steht der einzige Satz über die Belegart im Präfixmodus
+ *
+ * Über führende Nullen hinweg findet die Suche nach dem **Anfang** einer Nummer
+ * nur mit gewählter Belegart — Auffüllen und Präfixmuster ankern gegeneinander,
+ * und der Ausweg zieht die Nullen ins Muster, was eine Sollänge braucht (M49‑1,
+ * `docs/bam-suche.md` §17).
+ *
+ * **Daraus wird kein Zwang und keine Belehrung.** Das Angebot erscheint mit und
+ * ohne gewählte Belegart; erwähnt wird sie an dieser einen Stelle, wo ohnehin die
+ * Hilfe zur Suche steht — und **nur, wenn dieser Mandant überhaupt Belegarten
+ * hat**. Sonst nennte der Satz ein Bedienelement, das es hier nicht gibt.
+ *
+ * **Kein Sonderfall für Typ 9006.** Dass die Lieferschein-Nr. nicht in
+ * `bam_sollaenge` steht, ist eine offene Entscheidung des Auftraggebers
+ * ([`bam-sollaengen.md`](../../../../docs/bam-sollaengen.md) §8) und wird nicht
+ * durch einen zweiten Kuratierungsort geheilt — eine zweite Stelle liefe der
+ * ersten hinterher.
  */
 function Leerzustand() {
   const texte = useTexte();
@@ -570,6 +864,10 @@ function Leerzustand() {
       )}
 
       <p className="text-muted-foreground text-beiwerk">{texte.suche.leer.hilfe}</p>
+      {typen.length === 0 ? null : (
+        <p className="text-muted-foreground text-beiwerk">{texte.suche.leer.belegartHilfe}</p>
+      )}
+      <p className="text-muted-foreground text-beiwerk">{texte.suche.leer.zeitraumHilfe}</p>
     </div>
   );
 }

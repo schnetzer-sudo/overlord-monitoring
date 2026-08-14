@@ -362,6 +362,8 @@ export const en: Texte = {
       anzahl: "{anzahl} matches in the time window {von} to {bis}.",
       abgeschnitten:
         "More than {anzahl} matches — showing the {anzahl} most recent in the time window {von} to {bis}. Narrow the period or name a second document number.",
+      abgeschnittenPraefix:
+        "More than {anzahl} matches — showing the {anzahl} most recent in the time window {von} to {bis}. Type more characters of the number, that narrows it down most. A smaller period helps less here.",
       keine: "No message carries this document",
       keineHinweis:
         "Extend the time window or remove a term. You do not need to type a leading zero — the search adds it.",
@@ -375,6 +377,22 @@ export const en: Texte = {
       belegarten: "These document types are set up for this tenant:",
       hilfe:
         "The search also looks for leading zeros and a leading space — they are not on the printed document but they are in the data. Several terms are combined with AND.",
+      belegartHilfe:
+        "When you search for the beginning of a number only, a chosen document type also looks past leading zeros. Without a document type it cannot.",
+      zeitraumHilfe:
+        "Searching for the beginning of a number covers thirty days at a time. To look further back, move the period above the result list.",
+    },
+
+    praefix: {
+      angebot: "Search for numbers that start with this?",
+      angebotErwartung: "Longer numbers that begin with the one you typed will show up as well.",
+      angebotKnopf: "Search for the beginning of the number",
+      laeuft: "Searching for numbers that start with what you typed.",
+      zurueck: "Search exactly again",
+      zeitraum: "The period searched was {von} to {bis} — older messages are not covered by this.",
+      fensterZuGross:
+        "Searching for the beginning of a number covers at most {grenze} days; {angefragt} are selected.",
+      fensterVerkleinern: "Narrow the period to {grenze} days",
     },
 
     abgebrochen:
