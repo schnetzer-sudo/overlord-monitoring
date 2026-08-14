@@ -415,3 +415,90 @@ geschlüsselt. Das ist der teurere Schnitt und der einzige, der alle drei Fälle
   Wurzelverzeichnis und die Migrationen. Sie ist mit Teil 2a in
   [`bam-sollaengen.md`](bam-sollaengen.md) §7.2 **angelegt** worden und führt von Anfang an auch
   `process_catalog` und `partner` — beide existieren noch nicht.
+
+---
+
+## Korrektur 14.08.2026 (Schritt 7 — das Komma in der Parameterbindung)
+
+**Dies ist kein Befund über das Quellsystem, sondern ein Irrtum dieses Projekts.** Er steht hier,
+weil diese Datei die Stelle ist, an der das Projekt seine Irrtümer führt — und weil er sonst als
+eine Zeile im Änderungsverlauf verschwände.
+
+### Der Vermerk
+
+**Ein als fertig gemeldeter Pfad konnte 0,363 % der Werte nicht finden, und es fiel erst beim Bau
+eines Tests auf, der eine andere Frage stellte.**
+
+Die BAM-Suche über den Wert gilt seit **Schritt 7, Teil 2b** als fertig: gebaut, getestet, in **M47**
+gemessen, dokumentiert. Sie hatte einen Defekt in der **Annahme des Parameters** — Spring zerlegt
+einen einzeln gesetzten `@RequestParam` am **Komma**, ein BAM-Wert mit Komma zerfiel damit in zwei
+Begriffe, von denen der zweite keinen Pflichttrenner mehr trug, und die Antwort war
+`400 suchbegriff-ohne-typtrenner`. **In beiden Suchmodi**, weil der Fehler vor dem Modus sitzt.
+
+**Gefunden wurde er am 14.08.2026 beim Bau des Isolationstests zu Teil 4.** Dessen Herleitung nimmt
+die längsten `NEXANS`-Werte im Fenster; **alle 25 Kandidaten trugen ein Komma**, und der Endpunkt
+antwortete auf jeden einzelnen mit `400`. Niemand hatte danach gesucht.
+
+### Wie groß er war — und warum die Zahl allein in die Irre führt
+
+| | Zahl | Quelle |
+|---|---:|---|
+| Werte im Bestand mit Komma | **55.989** (0,363 %) | M50‑5 |
+| davon **Typ 9003** `Material-Nr. beim Lieferanten_L_SAP` | **54.096** — 96,62 % | M51‑2 |
+| Anteil **innerhalb** von Typ 9003 | **5,05 %** | M51‑3 |
+| betroffene Typen von 62 | **3** (9003, 9016, 9018) | M51‑2 |
+| betroffene Mandanten von 7 | **1** (`NEXANS`) | M51‑3 |
+
+**„0,363 % des Bestands" liest sich wie gleichmäßiges Rauschen. Es war keines.** Der Defekt saß bei
+**einem** Mandanten auf **jedem zwanzigsten** Wert eines seiner Anzeigetypen. Genau deshalb ist er
+der Herleitung eines Isolationstests aufgefallen und keiner Suche: Die Herleitung sortierte nach
+Länge, und die längsten Werte dieses Mandanten sind ausgerechnet die kommahaltigen.
+
+### Was daran zu lernen ist — und was nicht
+
+**Die drei Prüfnetze haben ihn alle nicht gefangen, jedes aus einem eigenen Grund:**
+
+| Netz | warum es ihn nicht sah |
+|---|---|
+| Einheitstests | Sie beginnen bei `BamSuchfilter.aus` — also **hinter** der Bindung. Was zwischen HTTP und Fachlogik passiert, prüfte keiner |
+| `BamSucheDbIT` | Die Prüfwerte werden nach **Gestalt** hergeleitet (führende Null, Sollänge) — eine Gestalt, die Kommas weder verlangt noch ausschließt. Es war Zufall, dass keiner erwischt wurde |
+| Die Messungen | M47 misst **Laufzeiten** des gerenderten Statements. Ein Wert, der den Endpunkt gar nicht erreicht, taucht dort nicht auf |
+
+**Nicht zu lernen ist daraus, dass mehr Tests nötig gewesen wären.** Die Lücke war eine der
+**Schicht**, nicht der Menge: Für die Annahme der Parameter gab es keinen einzigen Test, der ohne
+Datenbank lief — und die Tests, die sie berührten, tragen `@Tag("db")` und laufen in der CI nicht.
+Geschlossen ist die Lücke mit `BamSucheKommabindungTest` **für diesen einen Endpunkt**. Ob dieselbe
+Sorte Prüfung für die übrigen entsteht, ist eine offene Frage
+([`messungen-schritt7.md`](messungen-schritt7.md), Punkt 27).
+
+### Was korrigiert worden ist
+
+- **Der Code:** `BamSucheController` bindet `begriff` über einen controller-eigenen `@InitBinder`.
+  **Nur dieser Endpunkt** — die Nachrichtenliste trennt `status` und `prozess` weiterhin am Komma,
+  wo es heute gemessen folgenlos ist (M51‑4: 0 von 1.503 `ProcessID` tragen eines).
+- **Der Test:** `BamSucheDbIT.ein_komma_im_wert_ist_heute_400` ist **umgedreht und umbenannt** in
+  `ein_komma_im_wert_wird_gefunden` — nicht gelöscht. Der alte Name behauptete den Ist-Zustand als
+  Sollzustand.
+- **Die Dokumentation:** [`bam-suche.md`](bam-suche.md) §22 trägt Befund, Lebensdauer, Behebung und
+  Schnitt; §9 Punkt 11 ist als geschlossen gekennzeichnet, mit dem alten Text durchgestrichen
+  daneben.
+
+### Was diese Korrektur **nicht** ändert
+
+- **Keine Zahl aus M32 bis M50 ist angefasst worden.** M51‑1 reproduziert die Kommazählung aus
+  M50‑5 auf die Zeile (55.989) und die Zeilenzahl aus M33 (15.406.350).
+- **Die Bytegrößen sind zum zehnten Mal byteidentisch.** Die Testkopie ist seit dem 07.08.2026 nicht
+  neu befüllt worden.
+- **Am Statement der Suche ändert sich nichts.** Das Komma ist weder in `=` noch in `LIKE` ein
+  Platzhalter; maskiert werden weiterhin nur `\`, `%` und `_`. Geprüft in
+  `BamSucheStatementsTest`, nicht angenommen.
+- **`PROJEKTBESCHREIBUNG.md` ist nicht angefasst.**
+
+### Neu offen
+
+- **Welche Zeichen sonst noch zerlegt werden.** Untersucht sind zwei: der Doppelpunkt (M49‑4,
+  entschärft durch Teilung am ersten Vorkommen) und das Komma (M50‑5, M51, behoben). `;`, `|`, ein
+  rohes `+` in einer URL, ein Zeilenumbruch aus der Zwischenablage — ungeprüft.
+- **Wie oft solche Werte gesucht werden.** Nicht erhoben und in diesem Projekt auch nicht erhebbar:
+  Es führt kein Suchprotokoll. **Der Satz „der Defekt war selten im Weg" ist ein Schluss aus der
+  Datenlage und keine Beobachtung** — dieselbe benannte Lücke wie bei den 585 Doppelpunkten.

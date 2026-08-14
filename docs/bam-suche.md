@@ -1,7 +1,17 @@
 # Die BAM-Suche
 
-Entsteht in **Schritt 7, Teil 2b** (13.08.2026, Backend §1–§9) und **Teil 3** (13.08.2026,
-Oberfläche §10 bis §14).
+Entsteht in **Schritt 7, Teil 2b** (13.08.2026, Backend §1–§9), **Teil 3** (13.08.2026,
+Oberfläche §10 bis §14) und **Teil 4** (14.08.2026, Präfixsuche §15 bis §21).
+
+> ### 📌 Teil 4 — die Präfixsuche, 14.08.2026
+>
+> **Die Suche bleibt exakt.** Dazu **kommt** ein Parameter `modus=exakt|praefix` mit der Vorgabe
+> `exakt`: Geht die exakte Suche leer aus, lässt sich die Suche über den **Anfang** des Werts
+> anfordern. **Ohne den Parameter verhält sich der Endpunkt Zeichen für Zeichen wie vorher.**
+>
+> Die Entscheidung, ihre Begründung und der Deckel auf 30 Tage stehen in **§15 bis §21**; gemessen
+> ist sie in **M50**. **Die Oberfläche ist nicht angefasst** — der Rückfall ist damit am Endpunkt
+> vorhanden und noch nicht bedienbar (§13, Punkt 4).
 
 > ### 📌 Teil 3 — die Oberfläche, 13.08.2026
 >
@@ -64,7 +74,7 @@ wächst hier nicht.
 
 | Parameter | Form | Bedeutung |
 |---|---|---|
-| `begriff` | **wiederholt**, Format `<typ>:<wert>` | ein Suchbegriff. Der Doppelpunkt ist **Pflicht**; ohne Typ lautet er `:4711815`. Mindestens einer, höchstens **acht** |
+| `begriff` | **wiederholt**, Format `<typ>:<wert>` | ein Suchbegriff. Der Doppelpunkt ist **Pflicht**; ohne Typ lautet er `:4711815`. Mindestens einer, höchstens **acht**. **Ein Komma im Wert ist Teil des Werts** (§22) |
 | `von`, `bis` | ISO 8601 UTC | das Zeitfenster. Fehlen beide, gilt die Vorgabe von **30 Tagen** |
 
 **Warum `/api/bam/suche` und nicht `/api/nachrichten/suche`.** Der Endpunkt beantwortet eine eigene
@@ -79,10 +89,22 @@ Ohne ihn müsste die Anwendung raten, ob eine führende Ziffernfolge ein Typ ist
 Beides sind Zahlen: Die BAM-Typen heißen `0`, `1`, `2`, `2000`, `9018`, und die Werte sind nach M38
 bei fast allen Typen rein numerisch.
 
-**Ob ein BAM-Wert selbst einen Doppelpunkt enthalten kann, ist nicht gemessen.** Mit Pflichttrenner
-und Aufteilung am **ersten** Doppelpunkt ist die Frage **gegenstandslos**, statt nach Regel Q4
-beantwortet zu werden: Alles hinter dem ersten Trenner ist Wert, einschließlich weiterer
-Doppelpunkte. Ein leerer Typteil (`:4711815`) heißt „unter jedem Typ".
+**Ein BAM-Wert kann selbst einen Doppelpunkt enthalten — 585 tun es** *(gemessen am 13.08.2026,
+M49‑4; bis dahin stand hier „ist nicht gemessen")*. Mit Pflichttrenner und Aufteilung am **ersten**
+Doppelpunkt ist die Frage **gegenstandslos**, statt nach Regel Q4 beantwortet zu werden: Alles
+hinter dem ersten Trenner ist Wert, einschließlich weiterer Doppelpunkte. Ein leerer Typteil
+(`:4711815`) heißt „unter jedem Typ".
+
+> **Die Messung bestätigt die Bauform, statt sie zu erübrigen.** Sie war als Vorsichtsmaßnahme gegen
+> eine *unbekannte* Lage gebaut; die Lage ist jetzt bekannt und die Maßnahme deshalb nicht weniger,
+> sondern **mehr** begründet. Wer am **letzten** Doppelpunkt teilte oder den Trenner freistellte,
+> zerlegte diese 585 Werte falsch. Der Anteil ist klein (0,0038 % von 15.406.350), die Zahl ist es
+> nicht.
+>
+> *Gemessen:* das **Vorkommen** des Zeichens über den gesamten Bestand (Vollerhebung).
+> *Behauptet wird:* dass die Teilung am ersten Doppelpunkt notwendig ist.
+> **Die Lücke:** Gemessen ist, dass solche Werte **existieren** — nicht, dass heute jemand nach
+> einem von ihnen sucht, und nicht, dass die Produktion dieselben Werte trägt (Stand 08.07.2026).
 
 ### Höchstens acht Begriffe — Schutzgeländer, keine fachliche Grenze
 
@@ -676,9 +698,54 @@ sagt, dass sich der Bestand geändert hat.
 
 ### Offene Punkte
 
-1. **Präfixsuche.** Nicht gebaut, auch nicht als Schalter. E6 sagt, warum die Frage keine
+1. ~~**Präfixsuche.** Nicht gebaut, auch nicht als Schalter. E6 sagt, warum die Frage keine
    Leistungsfrage ist, sondern eine nach der zugelassenen Trefferzahl — und M38, dass eine
-   Mindestlänge dafür **je Typ** gelten müsste. Käme sie, käme die PAD-SPACE-Kehrseite mit (§3).
+   Mindestlänge dafür **je Typ** gelten müsste. Käme sie, käme die PAD-SPACE-Kehrseite mit (§3).~~
+   ✔ **Geschlossen am 14.08.2026 in Teil 4** (§15 bis §21).
+
+   > **Die Entscheidung: Die Präfixsuche kommt — aber nicht als Voreinstellung.** Die Suche bleibt
+   > exakt; findet sie **null** Treffer, bekommt der Nutzer die Präfixsuche **angeboten**, und sie
+   > läuft erst auf sein Zutun. Am Endpunkt ist das der neue Parameter `modus=exakt|praefix` mit der
+   > Vorgabe `exakt` (§16).
+   >
+   > **Der Grund ist nicht der Preis**, sondern M49‑3: **Ein vollständig eingetippter Wert findet als
+   > Präfix 23 Nachrichten statt einer.** Als Voreinstellung änderte die Präfixsuche damit die Antwort
+   > auch für den Nutzer, der nichts falsch macht. Im Nulltreffer-Fall gibt es diese Kehrseite nicht —
+   > dort ist die heutige Antwort leer, und jeder Treffer ist rein zusätzlich.
+   >
+   > **Der Nutzen bleibt unbeziffert, und das ist eine bewusste Auslassung.** Die Zahl, die ihn trüge
+   > — *wie oft die exakte Suche heute leer ausgeht* —, stünde nur in einem Suchprotokoll. **Es ist
+   > keines gebaut worden**, weder in Teil 4 noch vorher: Die BAM-Suche schreibt nichts ins
+   > `audit_log`, und ein Zähler wäre eine eigene Entscheidung mit eigener Datenhaltung gewesen. Der
+   > Punkt wird also mit bezifferten **Kosten** und unbeziffertem **Nutzen** geschlossen; wer ihn
+   > später beziffern will, braucht zuerst den Zähler.
+   >
+   > **Die PAD-SPACE-Kehrseite ist mitgekommen und behandelt** (§17), und die Mindestlänge bleibt aus
+   > — aus einem *neuen* Grund, den M49‑2a geliefert hat (§19).
+
+   > **Fortgeschrieben am 13.08.2026 — der Punkt bleibt offen, aber er steht nicht mehr auf
+   > Vermutungen.** [`messungen-schritt7.md`](messungen-schritt7.md) **M49** hat die vier Fragen
+   > gemessen, die dahinter ungeklärt waren. **Der Punkt wird dadurch nicht geschlossen: Eine
+   > Messung entscheidet ihn nicht, eine Entscheidung tut es.** Was jetzt dasteht:
+   >
+   > | Was gemessen ist | Zahl |
+   > |---|---|
+   > | **Auffüllen und Präfix schließen einander aus** — beide ankern vorn. Die rohe Präfixfassung findet den aufgefüllten Wert in **allen acht** geprüften Fällen **nicht** | M49‑1 |
+   > | Der Ausweg — die Nullen **ins Muster** ziehen — funktioniert in allen acht Fällen; sein Preis sind **3 bis 7** Fassungen je Begriff statt der heutigen fünf **insgesamt** (M47) | M49‑1 |
+   > | Bei kurzen Kernen kippt der Ausweg: 9006 und 9036 erzeugen über **eine Million** Kandidatenzeilen | M49‑1 |
+   > | **Es gibt keine schützende Mindestlänge.** Typlos steht die schlimmste Trefferzahl bei sechs Zeichen auf **234.159** und kann nie darunter fallen — ein einziger *exakter* Wert trägt diese Zeilen | M49‑2a, M33 |
+   > | Zwei Zeichen mehr entwaffnen **sechs Prozent** der gefährlichen Präfixe (1.731 → 1.624) | M49‑2a |
+   > | Je Typ liegt die Grenze um **Faktor 3.969** auseinander — und durchsetzbar wäre sie nur mit gewähltem Typ. **Die Suche ist typlos voreingestellt** (M36). Diese Spannung ist benannt und **nicht aufgelöst** | M49‑2b |
+   > | Der Plan ändert sich **nicht**: `MessageBAM_BAMValueOnly`, `range`, Einstieg weiter über den seltensten Begriff — kein `STRAIGHT_JOIN` | M49‑3 |
+   > | Die Kosten: Normalfall **1,4 ms**, schlimmster Wert **1,823 s** über 30 Tage, vier Zeichen verkürzt **1,361 s** und **3,400 s** über ein Jahr | M49‑3 |
+   > | **Schon der vollständige Wert als Präfix findet 23 statt 1.** M34s Bedingung „bei gleicher Trefferzahl" ist bei **keiner** Eingabelänge erfüllt | M49‑3 |
+   > | `%` kommt im Bestand **nicht** vor und wäre als Kennzeichen frei; `_` (2.696) und `*` (1.738) sind es nicht. Jede Eingabe bräuchte ein `ESCAPE` — dieselbe Falle wie Regel Q1 | M49‑4 |
+   > | **602.794 Werte (3,91 %) tragen ein folgendes Leerzeichen.** Mit `=` harmlos, mit `LIKE` nicht: **Ein Trim auf der Eingabe würde Pflicht** | M49‑4, M43‑3 |
+   >
+   > **Die Zahl, die den Punkt entscheiden würde, fehlt weiterhin — und sie fehlt nicht aus
+   > Nachlässigkeit:** *wie oft die exakte Suche heute leer ausgeht.* Sie stünde nur in einem
+   > Suchprotokoll, das die Anwendung nicht führt. **Damit sind die Kosten der Präfixsuche beziffert
+   > und ihr Nutzen nicht.**
 2. **`ODER` zwischen Begriffen.** Nicht gebaut. Die gemessene Entlastung der Verundung (Faktor
    15.843, M42‑1) gilt für `UND`; für `ODER` ist nichts gemessen, und die Bauform wäre eine andere.
 3. **Cursor und Nachladen.** Nicht gebaut. Es gäbe einen Sortierschlüssel, aber keine gemessene
@@ -702,8 +769,32 @@ sagt, dass sich der Bestand geändert hat.
 10. ~~**Die Kuratierung der Suchfeldtypen**~~ ✔ **Entschieden in Teil 3, und zwar gegen eine neue
     Kuratierung** (§10). Die Auswahl kommt aus `MessageBAMMandant`; eine zweite Tabelle entsteht
     nicht.
+11. ~~**Ein Komma im Wert macht ihn unsuchbar** *(neu in Teil 4, 14.08.2026)*. **55.989 Werte
+    (0,363 %) tragen eines** (M50‑5), und Spring zerlegt einen `@RequestParam List<String>` am Komma:
+    Der Wert zerfällt in zwei Begriffe, der zweite trägt keinen Pflichttrenner, die Antwort ist
+    `400 suchbegriff-ohne-typtrenner`. **Nicht behoben**, weil die Änderung an der Bindung den
+    exakten Pfad träfe, der gebaut, getestet und in M47 gemessen ist.~~
+    ✔ **Behoben am 14.08.2026, noch am selben Tag** (§22).
 
-> **Die offenen Punkte der Oberfläche stehen in §13** — sie sind andere als diese neun, und sie
+    > **Der Punkt hat einen halben Tag gelebt und war trotzdem ein Defekt und kein offener Punkt.**
+    > Er war nicht die Abwesenheit einer Fähigkeit, sondern ein Pfad, der seit Teil 2b als fertig
+    > galt und 0,363 % der Werte nicht fand. Als solcher ist er in
+    > [`annahmen-korrekturen.md`](annahmen-korrekturen.md) eingetragen und nicht stillschweigend
+    > repariert worden. **M51** hat davor gezählt, wen er traf: drei Typen von 62, davon **96,62 %
+    > unter Typ 9003** allein, und alle drei bei **einem** Mandanten.
+12. **Der Rückfall über ein großes Fenster ist `400` und nicht möglich** *(neu in Teil 4)*. Ging die
+    exakte Suche über ein Jahr leer aus, lässt sich der Präfixmodus über **dasselbe** Fenster nicht
+    anbieten: Er ist auf 30 Tage gedeckelt (§18). Ein Rückfall müsste dort also entweder das Fenster
+    mit verkleinern — und änderte damit zwei Dinge statt einem — oder ausbleiben. **Der Endpunkt
+    entscheidet das nicht**; er sagt `400` mit eigenem Fehlertyp und nennt beide Zahlen. Was die
+    Oberfläche daraus macht, gehört zu ihr und ist nicht gebaut.
+13. **Die gebaute Höchstform ist nicht gemessen** *(neu in Teil 4)*. Acht Begriffe zu je bis zu sieben
+    Nullen-im-Muster-Fassungen sind **56 `LIKE`-Zweige**. Gemessen sind ein Begriff ohne
+    Zusatzfassungen (M50) und vier verodere `LIKE` bei einem Begriff (M49‑3). **Das Geländer bei acht
+    Begriffen ist im Präfixmodus damit noch weniger belegt als im exakten** — dort endet die Messung
+    bei fünf (§1).
+
+> **Die offenen Punkte der Oberfläche stehen in §13** — sie sind andere als diese, und sie
 > gehören neben die Ansicht, die sie betreffen.
 
 ---
@@ -1229,7 +1320,11 @@ bewahren soll.
    9032/9033 auf denselben 100.343. **Welche Paare gekoppelt sind, ist nur für einige Typen
    gemessen** (Regel Q4); eine Warnung wäre für die übrigen geraten. Der Befund gehört notiert und
    nicht in die Oberfläche.
-4. **Keine Präfixsuche**, auch nicht als Schalter — unverändert §9, Punkt 1.
+4. ~~**Keine Präfixsuche**, auch nicht als Schalter — unverändert §9, Punkt 1.~~ **Am Endpunkt seit
+   Teil 4 vorhanden** (§16). **In der Oberfläche weiterhin nicht** — Teil 4 fasst sie ausdrücklich
+   nicht an; der Rückfall im Nulltreffer-Fall ist damit noch nicht bedienbar (§15). Zu bauen wäre er
+   dort, wo die Nulltreffer-Zeile schon steht (§11.6) — und mit ihm die Frage aus §9, Punkt 12, was
+   bei einem Jahresfenster geschieht.
 5. **Kein `ODER` zwischen Begriffen**, keine Klammern, kein Abfragebaukasten — unverändert §9,
    Punkt 2.
 6. **Kein Cursor und kein Nachladen** — unverändert §9, Punkt 3.
@@ -1265,3 +1360,537 @@ hinnehmen.** Die Schwelle zu senken hilft nicht: Bei 94 % kämen 9028, 9029 und 
 > prüfen. Wirksame Paare sind `NEXANS`/9012 (Charge) und `NEXANS`/9024 (Rechnungsnummer) — beide
 > mit 100 % Dominanz und 100 % führender Null ([`bam-sollaengen.md`](bam-sollaengen.md) §4.1). Ein
 > Durchklicken mit 9006 sähe aus wie ein Programmierfehler und wäre keiner.
+
+---
+
+# Teil 4 — die Präfixsuche
+
+*Entstanden am 14.08.2026, Backend §15 bis §21. **Die Oberfläche ist nicht angefasst** — geprüft mit
+`git status`: Der Diff dieses Teils berührt `backend/src/`, `docs/` und sonst nichts.*
+
+> ### 📌 Was sich am Endpunkt aus Teil 2b ändert — und was nicht
+>
+> **Genau zwei Dinge kommen dazu:** der Parameter `modus=exakt|praefix` (§16) und das Feld `modus`
+> in der Antwort (§20). **Ohne den Parameter verhält sich der Endpunkt Zeichen für Zeichen wie
+> vorher** — dieselben Statements, dieselben Varianten, dieselben Zeilen; `BamSucheDbIT` vergleicht
+> die beiden Rümpfe.
+>
+> Im Präfixmodus ändert sich **ein** Ausdruck des Statements: Aus `MessageBAMValue IN (…)` wird
+> `(MessageBAMValue LIKE ? ESCAPE '\' OR …)`. Mandantenfilter, `GROUP BY`, Deckelung auf 51, die vier
+> Anzeigetabellen über der Deckelung, die Sortierung und das fehlende `STRAIGHT_JOIN` bleiben
+> unberührt.
+>
+> **Skills: keiner.** Der Auftrag schließt `frontend-design` und `shadcn` aus; geprüft ist zu Beginn,
+> was installiert ist (die Liste steht in [`messungen-schritt7.md`](messungen-schritt7.md) M50‑0).
+> Keiner ist eingebunden worden.
+
+Grundlage sind **M49** (die Erhebung vom 13.08.2026) und **M50** (die Messung vom 14.08.2026 gegen
+das gebaute Statement mit getauschtem Wertprädikat).
+
+---
+
+## 15. Die Entscheidung, auf der alles steht
+
+`GET /api/bam/suche` sucht exakt. Wer `12345` tippt, findet `123456` nicht.
+
+**Entschieden am 14.08.2026: Die Präfixsuche kommt — aber nicht als Voreinstellung.** Die Suche
+bleibt exakt. Findet sie **null** Treffer, bekommt der Nutzer die Präfixsuche **angeboten**, und sie
+läuft erst auf sein Zutun.
+
+**Der Grund ist nicht der Preis.** M49‑3 misst ihn als tragbar: 1,374 ms im Normalfall, 1,823 s im
+schlimmsten *Wert* über 30 Tage. Der Grund ist der Befund, den dieselbe Messung zusätzlich gefunden
+hat:
+
+> **Ein vollständig eingetippter Wert findet als Präfix 23 Nachrichten statt einer**, weil 22 längere
+> Werte mit ihm beginnen (M49‑3).
+
+Eine Präfixsuche als Voreinstellung änderte damit die Antwort **auch für den Nutzer, der nichts
+falsch macht**. Im Nulltreffer-Fall gibt es diese Kehrseite nicht: Dort ist die heutige Antwort leer,
+und jeder Treffer ist rein zusätzlich.
+
+**Was daraus nicht folgt: dass die Präfixsuche billig ist.** Sie ist die teuerste Zugriffsform dieses
+Projekts, und der teuerste bekannte Fall war bis zum 14.08.2026 nie gelaufen — er ist es jetzt (§18).
+
+---
+
+## 16. Der Parameter
+
+```
+GET /api/bam/suche?begriff=…&von=…&bis=…&modus=exakt|praefix
+```
+
+| | |
+|---|---|
+| **Vorgabe** | `exakt`. Fehlt der Parameter oder ist er leer, verhält sich der Endpunkt wie vor Teil 4 |
+| **Gültige Werte** | `exakt`, `praefix` — ohne Rücksicht auf Groß- und Kleinschreibung, Ränder werden beschnitten |
+| **Unbekannter Wert** | `400` mit dem Problemtyp `suchmodus-ungueltig`. **Kein stiller Rückfall** — wer `modus=prefix` schreibt, soll es erfahren und nicht unbemerkt exakt suchen |
+| **Im Code** | `bam/Suchmodus` — ein Aufzählungstyp, kein freier Text |
+
+**Der Modus kommt als Zeichenkette in den Controller und nicht als Aufzählungstyp.** Sonst wäre ein
+unbekannter Wert die Typumwandlung von Spring und nicht der Fehler dieses Endpunkts — mit einem
+Rumpf, den die Oberfläche nicht übersetzen kann.
+
+### Er gilt für die ganze Suche und nicht je Begriff
+
+**Ein Kennzeichen *im* Begriff schiede aus.** Die Parameterform `<typ>:<wert>` teilt am **ersten**
+Doppelpunkt, und M49‑4 hat gemessen, dass **585 BAM-Werte** einen tragen; ein zweites Trennzeichen
+wäre nach Regel Q4 geraten, solange nicht gemessen ist, ob Werte es enthalten. **Wie berechtigt diese
+Vorsicht ist, hat M50‑5 gezeigt** — beim Komma, das *nicht* geprüft worden war, sind es 55.989 Werte
+(§9, Punkt 11).
+
+Fachlich braucht es das auch nicht: Der Rückfall feuert, wenn die **ganze** Suche leer war.
+
+---
+
+## 17. Das Wertprädikat
+
+Aus `MessageBAMValue IN (…)` wird `(MessageBAMValue LIKE ? ESCAPE '\' OR …)` — ein Zweig je Fassung,
+verodert. **Alles andere bleibt Zeichen für Zeichen unverändert.**
+
+**Kein `STRAIGHT_JOIN`, und Teil 4 liefert dafür das schärfste Argument, das dieses Projekt hat**
+(§18).
+
+### Das Maskieren ist Pflicht und keine Vorsichtsmaßnahme
+
+M49‑4 hat gezählt: `_` steht in **2.696** Werten des Bestands, `%` in **keinem**. Vor dem Anhängen
+des Platzhalters werden im Eingabewert `\`, `%` und `_` maskiert; das Maskierungszeichen selbst
+zuerst. **Der Escape-Zeichen ist `\`** — derselbe wie in `LIKE 'ERROR\_%' ESCAPE '\'`
+([`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §4.1, Regel Q1), aus Gründen der Wiedererkennung.
+
+*jOOQ rendert die Klausel für MariaDB als `escape '\\'` — der Rückstrich ist im Zeichenkettenliteral
+verdoppelt, wie MariaDB es verlangt. Das ist eine Sache des Dialekts; die Maskierung ist die Zusage.*
+
+**Die Semantik ist an der gebauten Fassung belegt und nicht behauptet** (M50‑4, acht Ausdrücke ohne
+Tabellenzugriff): `'50%' LIKE '50\%%' ESCAPE '\'` → 1, `'50X' LIKE '50\%%' ESCAPE '\'` → **0**,
+`'5X0' LIKE '5\_0%' ESCAPE '\'` → **0**.
+
+### Folgende Leerzeichen werden im Präfixmodus abgeschnitten — im exakten nicht
+
+**Der Grund ist die Kollation.** `utf8mb4_general_ci` ist PAD SPACE: `'4711 ' = '4711'` ist wahr,
+`LIKE` folgt dieser Regel aber **nicht** — `'4711' LIKE '4711 %'` ist **falsch** (M43‑3, in M49‑4 und
+M50‑4 an Ausdrücken belegt). Ein folgendes Leerzeichen wäre unter `=` folgenlos und unter `LIKE` der
+Unterschied zwischen Treffer und Leere.
+
+**Im exakten Modus wird nichts abgeschnitten** — nicht weil es dort schadete, sondern weil dieser
+Pfad gebaut, getestet und in M47 gemessen ist und ohne Anlass nicht angefasst wird.
+
+> ⚠️ **Und hier gehört die Ehrlichkeit dazu, die der Auftrag verlangt hat: Über den Endpunkt feuert
+> der Schnitt heute nie.** `Suchbegriff.ausParameter` beschneidet den Wertteil bereits an **beiden**
+> Rändern (§3, „der rohe Wert, an den Rändern beschnitten"), und keine der gebildeten Fassungen hängt
+> hinten etwas an — die aufgefüllten setzen Nullen davor, die Leerzeichen-Fassung ein Leerzeichen.
+> **Der dokumentierte Unterschied zwischen den Modi ist damit heute null.**
+>
+> **Der Schnitt steht trotzdem im Code** (`Suchbedingung.muster()`), und zwar an der Stelle, an der
+> die Zusage gilt: Wer je eine Fassung baut, die auf ein Leerzeichen endet, soll sie nicht in ein
+> stilles Nullergebnis laufen lassen. `BamSucheStatementsTest` prüft ihn deshalb an der Bedingung
+> direkt und nicht über den Endpunkt — und die Gegenprobe im exakten Modus daneben.
+
+**Führende Leerzeichen bleiben unangetastet.** Sie sind bedeutungstragend: Die Leerzeichen-Fassung
+aus `bam_sollaenge` wird auch im Präfixmodus gebildet und ergibt `LIKE ' 4711%'` (M46‑3).
+
+### Die führenden Nullen — der Teil, der eine Regel braucht
+
+**Das Auffüllen aus Teil 2b und ein Präfixmuster ankern gegeneinander.** M49‑1 hat es in **allen
+acht** prüfbaren Fällen gemessen: Wer `47118` tippt und `0004711815` sucht, findet mit
+`LIKE '47118%'` nichts — und mit der aufgefüllten Fassung `LIKE '0000047118%'` erst recht nicht.
+**Die Variantenbildung des exakten Modus ist im Präfixmodus wirkungslos.**
+
+Der Ausweg ist gemessen und funktioniert ebenfalls in allen acht Fällen: **die Nullen ins Muster
+ziehen** — ein Muster je plausibler Nullenzahl, `j` von 0 bis `sollaenge − länge(eingabe) − 1`. Das
+sind `sollaenge − länge(eingabe)` Fassungen einschließlich der rohen; bei Sollänge 10 also **drei**
+für eine siebenstellige und **sieben** für eine dreistellige Eingabe — genau die Spanne „3 bis 7" aus
+M49‑1.
+
+> **Warum die Reihe eine Null vor der Sollänge endet.** Bei `j = sollaenge − länge(eingabe)` wäre das
+> Muster selbst schon so lang wie die Sollänge — dann wäre der Kern des Werts vollständig eingetippt,
+> und das ist genau der Fall, den die **exakte** Suche mit ihrer aufgefüllten Fassung bereits trifft.
+
+**Er wird nur unter einer Bedingung gebaut:**
+
+> **Die Nullen-im-Muster-Fassungen entstehen ausschließlich für Begriffe, die einen Typ tragen und
+> für die es eine `sollaenge` gibt. Ein Begriff ohne Typ bekommt im Präfixmodus ausschließlich die
+> rohe Fassung** — auch keine mit führendem Leerzeichen, denn die hängt an einem kuratierten Paar.
+
+**Drei gemessene Gründe:**
+
+1. **Der Hauptfall braucht die Fassungen gar nicht.** 9018 sitzt bei `NEXANS` auf **92,26 %** der
+   Wurzeln (M39) und hat **keine** Sollänge — dort ist die rohe Präfixsuche wirksam und kostet keine
+   einzige Zusatzfassung.
+2. **Ohne Typ müssten alle Sollängen des Mandanten bedient werden.** M49‑1 zählt **3 bis 7** Fassungen
+   je Begriff bei *einer* Sollänge; die heutige Obergrenze liegt bei fünf **insgesamt** (M47). Bei
+   acht erlaubten Begriffen wären es sonst bis zu 56 `LIKE`-Zweige.
+3. **Bei kurzen Kernen kippt der Ausweg.** 9006 (Kern 3 Zeichen) erzeugt **1.245.618**, 9036 (Kern
+   1 Zeichen) **1.156.360** Kandidatenzeilen. Ein gewählter Typ macht daraus eine bewusste
+   Eingrenzung statt einer Nebenwirkung.
+
+**Die Typwahl bekommt damit eine zweite Rolle.** Bisher war sie reine Ergebnisverfeinerung (M36: +1,5
+bis +4 %). Das bleibt für die exakte Suche richtig; im Präfixmodus ist sie zusätzlich die
+Voraussetzung dafür, dass über führende Nullen hinweg gesucht werden kann. **Das ist kein Widerspruch
+zu M36** — dort geht es um Geschwindigkeit, hier darum, welche Fassungen bildbar sind.
+
+---
+
+## 18. Was M50 gemessen hat — und warum das Zeitfenster gedeckelt ist
+
+**Die Frage stand vor der Messung, und die Lesart auch.** M49‑2a kennt einen Vierzeichen-Präfix mit
+**1.332.180** Zeilen über den Bestand; durch das gebaute Statement gelaufen war bisher höchstens ein
+Fall mit 155.871 Zeilen. Der bekannte Bösfall ist **Faktor 8,5** größer und war nie gelaufen.
+
+| Fall, `NEXANS`, ein Begriff | Laufzeit | Anteil an der 10‑s‑Grenze des Lese-Pools |
+|---|---:|---:|
+| **30 Tage** | **3,851 s** | **38,5 %** |
+| **ein Jahr** | **Abbruch an der 60‑Sekunden-Grenze** | — |
+
+**Der Abbruch ist das Ergebnis.** Er ist im Aufwärmlauf eingetreten, nicht wiederholt worden, und die
+Grenze ist nicht ausgesetzt worden. Die vorregistrierte Lesart nennt dafür **Zweig B**:
+
+> **Der Präfixmodus ist auf 30 Tage gedeckelt.** Ein größeres Fenster zusammen mit `modus=praefix` ist
+> `400` mit dem eigenen Problemtyp `praefixsuche-fenster-zu-gross`. **Die exakte Suche behält ihr
+> Jahresmaximum** — sie ist ein anderer Zugriff und läuft im schlimmsten Fall in 8,940 s durch (M47).
+
+**Es wird nichts gekappt.** Ein stillschweigend verkleinertes Fenster wäre hier besonders schlecht:
+Das Fenster verändert bei dieser Suche nicht den Preis, sondern die **Antwort** (M35: 279 von
+234.159). Wer ein Jahr anfragt und dreißig Tage bekommt, ohne es zu erfahren, hält das Gefundene für
+alles, was es gibt. **Die Antwort nennt deshalb beide Zahlen** — `grenzeTage` und `angefragtTage` —,
+dieselbe Bauform wie bei `suche-fenster-zu-gross` in der Nachrichtenliste.
+
+**Numerisch ist der Deckel dieselbe Zahl wie die Fenstervorgabe, inhaltlich nicht.** Die eine sagt,
+was gilt, wenn niemand etwas nennt (§2), die andere, wie weit jemand gehen darf. Im Code stehen sie
+getrennt (`BamSuchfilter.FENSTER_VORGABE` und `PRAEFIX_FENSTER_MAXIMUM`) und dürfen sich
+auseinanderbewegen.
+
+> **Und die unangenehme Folge steht hier und nicht in einer Fußnote:** Ging die exakte Suche über ein
+> **Jahr** leer aus, lässt sich der Rückfall nicht über dasselbe Fenster anbieten. Er müsste dann
+> entweder das Fenster mitverkleinern — und änderte zwei Dinge statt einem — oder ausbleiben. **Der
+> Endpunkt entscheidet das nicht**; er sagt `400` und nennt die Zahlen. Steht als offener Punkt in §9,
+> Punkt 12.
+
+### Der `EXPLAIN` — und der Befund, mit dem niemand gerechnet hat (Regel L15)
+
+**Die Einstiegstabelle ist belegt und nicht angenommen — und sie ist eine andere als in M49‑3.**
+
+| Fall | führende Tabelle | `type` | `key` | `rows` | `MessageBAM` |
+|---|---|---|---|---:|---|
+| M49‑3, schlimmster **Wert** (443.830) | `b1` | `range` | `MessageBAM_BAMValueOnly` | 443.830 | Einstieg |
+| **M50, schlimmster Präfix (1.332.180), 30 T** | **`Message`** | **`range`** | **`MessageLastUpdateIDX`** | **409.758** | **zuletzt, `ref` über `PRIMARY`, `rows` 8, `Using index`** |
+| **M50, derselbe Fall, ein Jahr** | **`Message`** | `range` | `MessageLastUpdateIDX` | **1.780.243** | ebenso |
+
+Bei 1,33 Millionen Kandidatenzeilen dreht der Optimierer die Reihenfolge um: Er steigt über das
+**Zeitfenster** ein und probt `MessageBAM` erst am Ende über den Präfix des Primärschlüssels.
+`MessageBAM_BAMValueOnly` steht nur noch unter `possible_keys`.
+
+**Das ist die richtige Wahl** — der Wertindex läge bei 1,33 Millionen Einträgen, das Fenster liefert
+409.758 geschätzte Zeilen. **Und es ist das schärfste Argument gegen ein `STRAIGHT_JOIN`, das dieses
+Projekt hat:** Eine festgeschriebene Reihenfolge nähme dem Optimierer diese Wahl ausgerechnet im
+teuersten Fall. `BamSucheStatementsTest.kein_straight_join_im_praefixmodus` hält es fest.
+
+**Die gerenderte Fassung mit `ESCAPE` ändert am Plan nichts** — auch nicht mit zwei veroderten
+`LIKE` (M50‑4). Und **die Deckelung steht, wo sie stand**: `<derived2>` mit 51 Zeilen, darüber vier
+`eq_ref` auf `PRIMARY`.
+
+---
+
+## 19. Keine Mindestlänge — auch hier nicht, und aus einem neuen Grund
+
+Regel L5 verlangt sie, Teil 2b hat sie mit Begründung weggelassen (§1), und **M49‑2a hat den Grund
+verschärft statt ihn zu entkräften**:
+
+- **Typlos fällt die schlimmste Trefferzahl von k = 4 bis k = 6 nur von 1.332.180 auf 234.159** — und
+  kann darunter **nie** fallen, weil genau ein *exakter* Wert diese 234.159 Zeilen trägt (M33). **Der
+  Bösfall ist kein Präfixproblem**; er ist im exakten Bestand schon da.
+- **Zwei zusätzliche Zeichen entwaffnen sechs Prozent** der gefährlichen Präfixe (1.731 → 1.624).
+- **Je Typ liegt die Grenze um Faktor 3.969 auseinander** (59 bei 2000 gegen 234.159 bei 9014).
+  Durchsetzbar wäre eine typgebundene Länge nur mit gewähltem Typ — **und die Voreinstellung ist
+  typlos** (M36).
+
+**Es wird also keine gebaut.** Was schützt, ist dasselbe wie im exakten Modus: **Zeitfenster, hartes
+Limit 50 und der Abbruchpfad** — dazu, dass der Präfixmodus überhaupt nur auf ausdrückliches Zutun
+läuft, und dass sein Fenster gedeckelt ist (§18).
+
+> **„Gefährlich sind nur die Kennungsfelder" trägt als Beruhigung nicht**, und das ist inzwischen
+> zweimal gemessen. **M49‑2a:** Drei der zehn schlimmsten Präfixpaare gehören Typ **9019
+> „Bestellnummer vom Kunden"** — also genau dem, was ein Nutzer eintippt. **M50‑1 schärfer:** Der
+> schlimmste Präfix des ganzen Bestands verteilt sich auf 9002 (789.416, Kennung), **9019 (410.030),
+> 9034 „Bestellnummer_L_SAP" (132.693) und 0 „Bestellnummer" (2)** — **542.725 seiner 1.332.180
+> Zeilen, gut zwei Fünftel, sind Belegnummern.**
+
+---
+
+## 20. Die Antwort
+
+`BamSucheResponse` bekommt **ein** zusätzliches Feld:
+
+```json
+{ "nachrichten": [ … ], "begriffe": [ … ], "von": "…", "bis": "…",
+  "abgeschnitten": false, "modus": "EXAKT" }
+```
+
+| Feld | Bedeutung |
+|---|---|
+| `modus` | der **tatsächlich verwendete** Modus, `EXAKT` oder `PRAEFIX` |
+
+**Er steht aus demselben Grund in der Antwort wie `von` und `bis`:** Er verändert nicht den Preis,
+sondern die Antwort. M49‑3 misst, dass schon ein vollständig eingetippter Wert als Präfix **23
+Nachrichten statt einer** findet — wer nicht weiß, welcher Vergleich gelaufen ist, kann die
+Trefferliste nicht deuten.
+
+> **Der Parameter ist klein, das Antwortfeld groß geschrieben**, und das ist kein Versehen: Die
+> URL-Parameter dieses Projekts sind kleingeschrieben und deutsch (`von`, `bis`, `begriff`), die
+> kontrollierten Vokabulare der Antwort sind es nicht (`statusKind`, `rollen`). Gelesen wird der
+> Parameter deshalb ohne Rücksicht auf Groß- und Kleinschreibung — wer `modus=PRAEFIX` zurückschickt,
+> bekommt keine Fehlermeldung.
+
+**`begriffe[].varianten` trägt weiterhin lesbare Werte und keine Muster.** Der angehängte Platzhalter
+gehört nicht in die Anzeige; er entsteht erst in `Suchbedingung.muster()`. Bei Begriffen mit
+Nullen-im-Muster stehen dort die aufgefüllten Fassungen, genau wie im exakten Modus; die
+Leerzeichen-Fassung wird gesucht und **nicht** gemeldet — unverändert zur Begründung in §3.
+
+### Der neue Fehlerfall
+
+| `type` | Status | Wann | neu? |
+|---|---|---|---|
+| `suchmodus-ungueltig` | 400 | `modus` ist weder `exakt` noch `praefix` | **neu** |
+| `praefixsuche-fenster-zu-gross` | 400 | `modus=praefix` mit einem Fenster über 30 Tagen. Der Rumpf trägt `grenzeTage` und `angefragtTage` | **neu** |
+
+**Zwei neue Problemtypen, und beide betreffen die Parameterform.** Für den Abbruch entsteht **keiner**:
+Das ist derselbe Fall wie im exakten Modus und bekommt denselben Schlüssel `suche-abgebrochen` (§6).
+
+---
+
+## 21. Mandantentrennung, Aufbau und Tests
+
+### Die Trennung ist unverändert und ohne Ausnahme
+
+Der Filter als `EXISTS` über `Process → ProjectMandant` steht in **beiden** Statements auf dem
+Quellschema (Regel M3), `MandantContext` bleibt erster Pflichtparameter jeder Repository-Methode
+(M2), kein Endpunkt nimmt eine Mandanten-ID entgegen (M1). **Der neue Modus ändert daran nichts** —
+er tauscht einen Ausdruck innerhalb desselben `WHERE`.
+
+### Der Isolationstest ist erweitert, nicht ergänzt (Regel M4)
+
+`BamSucheIsolationDbIT` führt den Nachweis jetzt **zweimal**: für `modus=exakt` (§7, acht Fälle,
+unverändert) und für `modus=praefix` (fünf weitere). Dieselbe Paarung `NEXANS` gegen `SUTTONS`,
+dasselbe absolute Fenster, dieselbe Verschiebung der Ununterscheidbarkeit vom **Statuscode** auf den
+**Rumpf** — eine leere Suche ist `200` mit leerer Liste und kein `404`.
+
+**Geprüft wird präfixweise:**
+
+1. Beide Mandanten finden ihre **eigenen** Werte auch über den Anfang.
+2. Ein **fremder, echter** Wert liefert `200` mit leerer Liste — und einen Rumpf, der von dem einer
+   **erfundenen** Eingabe derselben Länge nicht zu unterscheiden ist.
+3. Die Trennung gilt in **beide** Richtungen, ebenfalls mit dem Rumpfvergleich.
+4. Die **Gegenprobe über den Mandantenwechsel**: als ADMIN zu `SUTTONS` wechseln, dort nachweisen,
+   dass der Wert *präfixweise* erreichbar ist, zurückwechseln, erneut suchen.
+5. Die **Abschneidung wird auch präfixweise nach dem Mandantenfilter gezählt**.
+
+> **Ein Präfix trifft mehr als ein exakter Vergleich, und der Test muss das aushalten.** Der Wert
+> eines fremden Mandanten kann zufällig der Anfang eines **eigenen** Werts sein — dann fände die Suche
+> völlig zu Recht eigene Nachrichten, und der Rumpfvergleich vergliche zwei verschiedene Fragen.
+> **Die Prüfwerte werden deshalb so hergeleitet, dass das ausgeschlossen ist:** über das Quellschema,
+> unabhängig vom Prüfling, wird ein fremder Wert gesucht, für den der eigene Mandant im Fenster
+> **null** Präfixtreffer hat. Findet die Herleitung keinen, wird der Test rot und sagt, dass sich die
+> Testkopie geändert hat.
+
+### Aufbau im Code
+
+```
+bam/
+├─ Suchmodus.java              NEU — exakt oder ueber den Anfang, kein freier Text
+├─ Suchbedingung.java          + modus, + muster() — Maskierung und Platzhalter an einer Stelle
+├─ Sollaengen.java             + die Praefix-Rechnung (Nullen ins Muster)
+├─ BamSuchfilter.java          + modus, + PRAEFIX_FENSTER_MAXIMUM
+├─ BamSucheRepository.java     + der LIKE-Zweig des Wertpraedikats
+├─ BamSucheController.java     + der Parameter, roh als Zeichenkette
+└─ BamSucheResponse.java       + modus
+```
+
+**Die Maskierung sitzt an genau einer Stelle** (`Suchbedingung.muster()`) und nicht im Repository:
+Das Repository rendert, es rechnet nicht. Damit ist sie ohne Datenbank prüfbar — und sie ist es.
+
+### Tests
+
+| Datei | Was, und ob mit Datenbank |
+|---|---|
+| `SollaengenTest` | **ohne DB** — zwei Gruppen nebeneinander: `Exakt` unverändert, `Praefix` neu. Ohne Typ **genau eine** Fassung (auch bei zweistelliger Eingabe, wo exakt fünf entstehen), mit Typ die Nullen-im-Muster-Fassungen in beiden Grenzen von M49‑1 (drei und sieben), die Reihe endet eine Null vor der Sollänge, keine Fassung trägt einen Platzhalter |
+| `BamSuchfilterTest` | **ohne DB** — die Vorgabe `exakt`, der leere Parameter als Nicht-Angabe, Groß- und Kleinschreibung, der unbekannte Wert als `400`, der 30‑Tage-Deckel **genau auf der Grenze und einen Tag darüber**, und dass er für `exakt` **nicht** gilt |
+| `BamSucheStatementsTest` | **ohne DB** — `LIKE … ESCAPE` statt `IN`, `%`/`_`/`\` der Eingabe maskiert, je Fassung ein veroderter Zweig, das folgende Leerzeichen weg und das führende da, **kein `STRAIGHT_JOIN`**, der Mandantenfilter, die Anzeigespalten über der Deckelung, die Typbedingung, die zweite Abfrage folgt dem Modus mit — und die Gegenprobe, dass im exakten Modus **kein** `LIKE` steht |
+| `BamSucheServiceTest` | **ohne DB** — der Modus in der Antwort, der Modus an **jeder** Bedingung, und die gemeldeten Fassungen je Modus nebeneinander |
+| `BamSucheDbIT` | `@Tag("db")` — **das Abnahmekriterium** (verkürzte Eingabe: exakt findet die Nachricht nicht, Präfix findet sie), ohne Typ genau eine Fassung, `%` und `_` literal (als **Paar** mit der Gegenprobe), die Antwort ohne `modus` **byteidentisch** zu `modus=exakt`, der 30‑Tage-Deckel am laufenden Endpunkt, der unbekannte Modus — und der Komma-Befund (seit dem 14.08.2026 umgedreht, §22) |
+| `BamSucheIsolationDbIT` | `@Tag("db")` — **der Pflicht-Isolationstest**, jetzt **zwölf** Testfälle statt sieben |
+
+**Kein Prüfwert steht in einer Testdatei** (Regel G1) — unverändert. Neu ist eine zusätzliche
+Bedingung an die Herleitung des Präfixfalls: **Sollänge ≥ 8 und Kern ≥ 7 Zeichen.** Ein kurzer Präfix
+ist unselektiv (M49‑2a: bis 1.332.180 Zeilen bei vier Zeichen), liefe ins harte Limit von 50, und der
+Test schlüge fehl, weil die gesuchte Nachricht **zu weit hinten** steht — nicht, weil der Präfixmodus
+kaputt ist.
+
+### Regelbezug
+
+| Regel | Wie umgesetzt |
+|---|---|
+| **M1–M5** | Unverändert; der Isolationstest deckt den neuen Pfad ab |
+| **L1** | Pflicht-Zeitfenster. **Im Präfixmodus zusätzlich auf 30 Tage gedeckelt** — begründet in §18 |
+| **L5** | Hartes Limit **ja**, Mindestlänge **nein** — zum zweiten Mal begründet abgewichen (§19). Ob das in `PROJEKTBESCHREIBUNG.md` vermerkt wird, ist eine offene Frage fürs Sparring |
+| **L7** | **M50** über `NEXANS`, mit `EXPLAIN` und Laufzeit — vor dem Merge |
+| **L10** | Belegvermerk in M50, und die Sätze hier tragen ihre Messnummer |
+| **L15** | Die Einstiegstabelle ist im `EXPLAIN` **belegt** — und sie ist eine **andere** als in M49‑3 (§18) |
+| **Q1** | Dieselbe Falle, dasselbe Maskierungszeichen (§17) |
+| **Q4** | Kein Trennzeichen geraten: Der Modus ist ein eigener Parameter und kein Kennzeichen im Begriff (§16) |
+| **Z1** | Unverändert — die Fenstervorgabe wird gegen die Anwendungsuhr aufgelöst |
+
+**`PROJEKTBESCHREIBUNG.md` ist nicht angefasst.**
+
+---
+
+# Nachtrag — das Komma im Wert
+
+*14.08.2026. **Kein neuer Teil und keine neue Fähigkeit**: eine Reparatur an einem Pfad, der seit
+Teil 2b als fertig galt.*
+
+---
+
+## 22. Der Kommadefekt — Befund, Lebensdauer, Behebung, Schnitt
+
+### Was kaputt war
+
+Spring bindet einen Anfrageparameter auf eine Liste, indem es einen **einzeln gesetzten** Wert am
+**Komma** zerlegt. `?begriff=:4711,815` kam damit nicht als *ein* Begriff `4711,815` an, sondern als
+zwei — `:4711` und `815`. Der zweite trug keinen Pflichttrenner mehr, und die Antwort war
+
+```
+400 suchbegriff-ohne-typtrenner
+```
+
+**Das traf beide Suchmodi**, weil der Fehler *vor* dem Modus sitzt: in der Annahme des Parameters
+und nicht im Vergleich. Wer den Wert exakt suchte, bekam `400`; wer ihn als Präfix suchte, ebenso.
+
+### Wie lange er lebte, und wie er gefunden wurde
+
+**Seit Teil 2b** — seit dem Tag, an dem die Suche über den Wert gebaut wurde. Er ist nicht durch
+Nachdenken gefunden worden, sondern beim Bau des **Isolationstests** zu Teil 4: Dessen Herleitung
+nimmt die längsten `NEXANS`-Werte im Fenster, und **alle 25 Kandidaten trugen ein Komma**. Der
+Endpunkt antwortete auf sämtliche mit `400`.
+
+> **Das ist der eigentliche Vermerk, und er steht in
+> [`annahmen-korrekturen.md`](annahmen-korrekturen.md):** Ein als fertig gemeldeter Pfad fand
+> 0,363 % der Werte nicht, und es fiel erst beim Bau eines Tests auf, der eine ganz andere Frage
+> stellte.
+
+### Wie groß der Schaden war — M51
+
+[`messungen-schritt7.md`](messungen-schritt7.md) **M51** hat gezählt, **wo** die Kommas sitzen; M50‑5
+hatte nur gezählt, **wie viele** es sind. Beides zusammen:
+
+| | Zeilen | Anteil |
+|---|---:|---:|
+| `MessageBAM` insgesamt | 15.406.350 | 100 % |
+| mit `,` | **55.989** | 0,363 % |
+| davon **Typ 9003** `Material-Nr. beim Lieferanten_L_SAP` | **54.096** | **96,62 %** der Kommas · **5,05 %** dieses Typs |
+| davon Typ 9016 `Abladestelle_K_SAP` | 1.888 | 3,37 % der Kommas · 0,46 % dieses Typs |
+| davon Typ 9018 `Kundenmaterialnummer_K_SAP` | **5** | 0,01 % der Kommas · 0,0002 % dieses Typs |
+
+**Drei von 62 Typen, und alle drei bei genau einem der sieben Mandanten** (`NEXANS`). Die
+tragenden Suchtypen aus M39 sind praktisch nicht betroffen — von den sieben nur 9018, und dort mit
+fünf Werten. **Der Defekt war also kein Breitenproblem, sondern ein tiefes bei einem Mandanten**:
+Dort war jeder zwanzigste Wert des Typs 9003 unsuchbar.
+
+> Die Messung hat den Bau **nicht** entschieden — repariert worden wäre so oder so. Sie entscheidet,
+> was hier über die Tragweite stehen darf, statt dass es geschätzt wird.
+
+### Die Behebung
+
+Die Bindung von `begriff` zerlegt nicht mehr am Komma. Im Code: ein `@InitBinder` in
+`BamSucheController`, der für `String[]` einen Editor registriert, dessen einzige Aufgabe es ist,
+**einen Parameterwert zu einem Eintrag** zu machen:
+
+```java
+@InitBinder
+void einParameterIstEinBegriff(WebDataBinder binder) {
+  binder.registerCustomEditor(String[].class, new EinWertEinEintrag());
+}
+```
+
+**Mehrere Begriffe kommen weiterhin als mehrfach gesetzter Parameter** — `?begriff=…&begriff=…`,
+unverändert wie seit Teil 2b. Der Editor greift nur dort, wo Spring einen *einzelnen* Wert vor sich
+hat; bei zwei gesetzten Parametern liegt bereits ein `String[]` vor und bleibt unangetastet.
+
+### Am Statement ändert sich nichts — geprüft, nicht angenommen
+
+**Das Komma ist weder in `=` noch in `LIKE` ein Platzhalter**, sondern ein gewöhnliches Zeichen.
+Maskiert werden weiterhin genau `\`, `%` und `_` (§17); das Komma **nicht**. Kein neues Prädikat,
+keine neue Fassung, kein neuer Abfrageplan — und deshalb auch keine Messung des Plans nötig.
+
+Geprüft ist das an zwei Stellen von `BamSucheStatementsTest`, gegen den **gerenderten** Text und die
+gebundenen Werte:
+
+- `das_komma_wird_nicht_maskiert` — die Eingabe `47_11,815` wird im Präfixmodus zu `47\_11,815%`:
+  der Unterstrich maskiert, das Komma unverändert.
+- `das_komma_wird_exakt_unveraendert_gebunden` — im exakten Modus steht `4711,815` als gebundener
+  Wert, ohne Platzhalter und ohne Rückstrich.
+
+### Der Schnitt — wo die Änderung greift und wo ausdrücklich nicht
+
+| | greift die Änderung? |
+|---|---|
+| `GET /api/bam/suche`, Parameter `begriff` | **ja** — hier und nur hier |
+| `GET /api/nachrichten`, Parameter `status` | **nein** — trennt weiterhin am Komma |
+| `GET /api/nachrichten`, Parameter `prozess` | **nein** — trennt weiterhin am Komma |
+| Anmeldung, Mandantenwechsel, Administration | **nein** — sie nehmen JSON-Rümpfe entgegen, keine Listen aus Anfrageparametern |
+| Detail, Kette, Belegdaten, Belegarten, Prozesse | **nein** — Kennung im Pfad bzw. keine Listenparameter |
+
+**`@InitBinder` gilt für einen Controller**, und `BamSucheController` trägt genau einen Endpunkt mit
+genau einem Listenparameter. **Eine projektweite Umstellung wäre etwas anderes gewesen**: Sie träfe
+Anmeldung, Nachrichtenliste und Administration mit, und keiner dieser Pfade hat darum gebeten.
+
+**Die Nachbarschaft ist durchgesehen** (M51‑4, alle zehn Controller). Listenparameter gibt es außer
+`begriff` genau zwei, beide in der Nachrichtenliste — und bei beiden ist ein Komma **heute**
+ausgeschlossen:
+
+- **`status`** nimmt Namen von `MessageStatusKind` (`FEHLER`, `WARTEND`, `LAEUFT`, `AUFGETEILT`,
+  `ZUSAMMENGEFUEHRT`, `ABGESCHLOSSEN`, `QUITTIERT`). Aufzählungsnamen tragen kein Komma; ein Komma
+  darin gäbe es nur als Tippfehler und ergäbe `400 status-unbekannt`.
+- **`prozess`** nimmt eine `Process.ProcessID`. **Gemessen und nicht geschätzt** (Regel Q4):
+  **0 von 1.503** Prozessen tragen ein Komma, in zwei Formen gegengeprüft (`LIKE` und `LOCATE`).
+
+> **Nicht mitrepariert, und das ist Absicht** — ein Auftrag, ein Eingriff. Die Zahl sagt, dass dort
+> heute nichts kaputt ist, nicht dass die Bindung dort richtig wäre. **Der Zustand ist in
+> `BamSucheDbIT.die_nachrichtenliste_trennt_weiterhin_am_komma` festgeschrieben**: Fällt dieser Test
+> eines Tages um, ist die Bindung dort geändert worden — dann gehört dieser Abschnitt
+> fortgeschrieben und nicht der Test gelöscht.
+
+### Tests
+
+| Test | Was er hält |
+|---|---|
+| **`BamSucheKommabindungTest`** *(neu, ohne DB)* | Zehn Fälle über `MockMvc`: ein Komma trennt nicht (mit und ohne Typ, auch zwei Kommas), zwei Parameter bleiben zwei Begriffe, der gemischte Fall ergibt zwei, die Reihenfolge bleibt, der leere Parameter fällt weiter weg, derselbe Nachweis im Präfixmodus, Komma **und** Unterstrich nebeneinander — und ein **Nachbar-Controller im selben Aufbau**, der weiterhin am Komma trennt |
+| `BamSucheStatementsTest` | Zwei neue Fälle: das Komma wird nicht maskiert (Präfix) und unverändert gebunden (exakt) |
+| `BamSucheDbIT.ein_komma_im_wert_wird_gefunden` | **Umgedreht und umbenannt**, nicht gelöscht. Hieß `ein_komma_im_wert_ist_heute_400` und behauptete den Ist-Zustand als Sollzustand. Der Prüfwert ist **hergeleitet** (`LIKE '%,_%'`, längster Kandidat von `NEXANS` im Fenster) und findet die Nachricht exakt **und** im Präfixmodus |
+| `BamSucheDbIT.komma_und_zweiter_begriff_ergeben_zwei_begriffe` | Ein Begriff mit Komma und einer ohne ergeben am laufenden Endpunkt **zwei** Begriffe |
+| `BamSucheDbIT.die_nachrichtenliste_trennt_weiterhin_am_komma` | Der Schnitt, am laufenden System nachgewiesen |
+| `BamSucheIsolationDbIT` | **Unberührt in seiner Aussage und grün** (zwölf Testfälle). Die Zeile `not like '%,%'` in der Herleitung bleibt stehen — sie ist ab jetzt eine Einschränkung der Auswahl und kein Befund mehr; der Kommentar sagt das |
+
+> **Warum der Bindungstest ohne Datenbank sein muss.** Der Defekt lebte einen ganzen Teil lang, ohne
+> dass ihn etwas fing — die Tests gegen die Testkopie tragen `@Tag("db")` und laufen in der CI
+> **nicht**, und die Einheitstests begannen erst bei `BamSuchfilter.aus`, also *hinter* der Bindung.
+> Genau diese Lücke schließt `BamSucheKommabindungTest`.
+
+### Was die Kombination `,` **und** `_` angeht
+
+Sie ist nur **ohne** Datenbank geprüft, und das ist kein Versehen: Bei `NEXANS` trägt im Fenster
+**kein einziger** Wert beides zugleich. Ein DbIT dafür wäre entweder rot oder müsste sich seinen
+Prüfwert ausdenken — beides schlechter als der Statement-Test, der die Maskierung am gerenderten
+Text prüft.
+
+### Regelbezug dieses Nachtrags
+
+| Regel | Wie umgesetzt |
+|---|---|
+| **M1–M5** | Unberührt. Die Änderung fasst den Mandantenfilter nicht an; der Isolationstest ist gelaufen und grün |
+| **L7** | **M51** vor dem Merge — sie entscheidet den Bau nicht, aber sie beziffert die Tragweite |
+| **L9** | Berührt: M51 misst ohne Zeitfenster über den Bestand. Begründung wie in M49‑4 und M50‑5 — die Frage gilt dem Bestand und nicht einer Suche |
+| **L10** | Belegvermerk in M51, samt der benannten Lücke: **Wie oft solche Werte gesucht werden, ist nicht erhoben** und wird es in diesem Projekt auch nicht |
+| **Q1** | Unverändert — dieselbe Maskierung, dasselbe Maskierungszeichen. Das Komma gehört nicht dazu |
+| **Q4** | Nichts geraten: Dass `ProcessID` kein Komma trägt, ist gemessen und nicht angenommen |
+| **G1** | Kein Prüfwert in einer Testdatei und kein BAM-Wert in dieser Datei — abgedruckt sind Typnummern, Typbeschreibungen und Zählungen |
+
+**`PROJEKTBESCHREIBUNG.md` ist nicht angefasst.** Kein Pfad unter `frontend/` ist geändert.

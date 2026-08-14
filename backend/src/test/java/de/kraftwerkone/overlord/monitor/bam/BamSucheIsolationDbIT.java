@@ -182,6 +182,14 @@ class BamSucheIsolationDbIT extends SicherheitsTestbasis {
   }
 
   /**
+   * Dieselbe Suche über den <b>Anfang</b> des Werts. Das Fenster bleibt Fenster B — 30 Tage, und
+   * damit genau der Deckel, den M50 dem Präfixmodus gesetzt hat.
+   */
+  private String praefixsuche(String begriff) {
+    return suche(begriff) + "&modus=praefix";
+  }
+
+  /**
    * Der Rumpf ohne die {@code traceId} und ohne das <b>Zitat der Eingabe</b>.
    *
    * <p>Der Antwortrumpf nennt die gesuchten Fassungen, damit es keine stille Korrektur gibt — er
@@ -365,5 +373,231 @@ class BamSucheIsolationDbIT extends SicherheitsTestbasis {
     assertThat(nachDemWechsel.<List<String>>json("$.nachrichten[*].messageId")).isEmpty();
     assertThat(vergleichbar(nachDemWechsel, fremd.wert()))
         .isEqualTo(vergleichbar(erfunden, erfunden(fremd.wert())));
+  }
+
+  // ─── Derselbe Nachweis fuer modus=praefix (Teil 4) ────────────────────────────
+
+  /**
+   * Ein fremder Wert, für den der <b>eigene</b> Mandant im Fenster keinen einzigen Präfixtreffer
+   * hat.
+   *
+   * <p><b>Warum diese Zusatzbedingung sein muss.</b> Ein Präfix trifft mehr als ein exakter
+   * Vergleich: Der Wert eines fremden Mandanten kann zufällig der Anfang eines <i>eigenen</i> Werts
+   * sein — dann fände die Suche völlig zu Recht eigene Nachrichten, und der Rumpfvergleich gegen
+   * eine erfundene Eingabe vergliche zwei verschiedene Fragen. Gesucht wird deshalb über das
+   * Quellschema — <b>unabhängig vom Prüfling</b> — ein fremder Wert, bei dem das nicht passiert.
+   *
+   * <p>Bevorzugt werden lange Werte: Je länger der Präfix, desto unwahrscheinlicher die Kollision.
+   *
+   * <p>⚠️ <b>Werte mit Komma sind ausgenommen — und die Ausnahme ist seit dem 14.08.2026 nicht mehr
+   * nötig.</b> Sie stammt aus einem Defekt: Spring zerlegte einen einzeln gesetzten
+   * {@code @RequestParam} am Komma, ein BAM-Wert mit Komma zerfiel damit in zwei Begriffe, von
+   * denen der zweite keinen Trenner trug, und die Antwort war {@code 400
+   * suchbegriff-ohne-typtrenner}. <b>Gefunden wurde der Defekt genau hier</b>, weil bei {@code
+   * NEXANS} alle 25 längsten Kandidaten ein Komma tragen. Er ist behoben ({@code
+   * BamSucheController#einParameterIstEinBegriff}, {@code
+   * BamSucheDbIT.ein_komma_im_wert_wird_gefunden}) und in {@code docs/annahmen-korrekturen.md}
+   * verzeichnet.
+   *
+   * <p><b>Die Zeile bleibt trotzdem stehen</b>, weil dieser Test den <i>Mandantenfilter</i> prüft
+   * und nicht die Bindung: Wer sie entfernt, ändert die Kandidatenmenge eines grünen
+   * Isolationstests, ohne dass die Aussage davon besser würde. Sie ist ab jetzt eine Einschränkung
+   * der Auswahl und kein Befund mehr.
+   */
+  private Fremd fremderWertOhneEigenenPraefixtreffer(String fremderMandant, String eigener) {
+    var kandidaten =
+        glassfishDsl.fetch(
+            """
+            select b.MessageBAMValue as wert, m.MessageID as kennung, m.ProcessID as prozess
+            from Message m
+            join MessageBAM b      on b.MessageID  = m.MessageID
+            join Process p         on p.ProcessID  = m.ProcessID
+            join ProjectMandant pm on pm.ProjectID = p.ProjectID
+            where pm.MandantID = ?
+              and m.MessageLastUpdate >= ?
+              and m.MessageLastUpdate <  ?
+              and char_length(b.MessageBAMValue) >= 4
+              and b.MessageBAMValue not like '%,%'
+            order by char_length(b.MessageBAMValue) desc, b.MessageBAMValue, m.MessageID
+            limit 25
+            """,
+            fremderMandant, FENSTER_VON, FENSTER_BIS);
+
+    for (var zeile : kandidaten) {
+      String wert = zeile.get("wert", String.class);
+      if (praefixtreffer(eigener, wert, FENSTER_VON, FENSTER_BIS) == 0) {
+        return new Fremd(
+            wert, zeile.get("kennung", String.class), zeile.get("prozess", String.class));
+      }
+    }
+    throw new AssertionError(
+        "Kein Wert von "
+            + fremderMandant
+            + " im Fenster, der nicht zugleich Praefix eines Werts von "
+            + eigener
+            + " ist. Dann hat sich die Testkopie geaendert — der Vergleich waere sonst"
+            + " aussagelos.");
+  }
+
+  /**
+   * Wie viele Zeilen eines Mandanten im Fenster mit diesem Wert <b>beginnen</b> — gezählt gegen das
+   * Quellschema und nicht über den Prüfling, damit die Herleitung nicht von dem abhängt, was sie
+   * absichern soll.
+   */
+  private int praefixtreffer(String mandant, String wert, LocalDateTime von, LocalDateTime bis) {
+    Integer treffer =
+        glassfishDsl
+            .resultQuery(
+                """
+                select count(*)
+                from MessageBAM b
+                join Message m         on m.MessageID  = b.MessageID
+                join Process p         on p.ProcessID  = m.ProcessID
+                join ProjectMandant pm on pm.ProjectID = p.ProjectID
+                where pm.MandantID = ?
+                  and m.MessageLastUpdate >= ?
+                  and m.MessageLastUpdate <  ?
+                  and b.MessageBAMValue like concat(?, '%')
+                """,
+                mandant, von, bis, wert)
+            .fetchOne(0, Integer.class);
+    return treffer == null ? 0 : treffer;
+  }
+
+  /** Ohne diese Zusicherung wäre der Präfixnachweis wertlos. */
+  @Test
+  @DisplayName("Praefix: beide Mandanten finden ihre eigenen Werte")
+  void praefix_beide_finden_ihre_eigenen_werte() throws Exception {
+    Fremd vonNexans = einWertVon(NEXANS);
+    Fremd vonSuttons = einWertVon(MANDANT_B);
+
+    Antwort nexans = aufNexans.hole(praefixsuche(vonNexans.wert()));
+    Antwort suttons = aufSuttons.hole(praefixsuche(vonSuttons.wert()));
+
+    assertThat(nexans.status()).isEqualTo(200);
+    assertThat(suttons.status()).isEqualTo(200);
+    assertThat(nexans.<String>json("$.modus")).isEqualTo("PRAEFIX");
+    assertThat(nexans.<List<String>>json("$.nachrichten[*].messageId"))
+        .contains(vonNexans.messageId());
+    assertThat(suttons.<List<String>>json("$.nachrichten[*].messageId"))
+        .contains(vonSuttons.messageId());
+  }
+
+  /**
+   * <b>Der Pflichtnachweis für den neuen Codepfad</b> (Regel M4). Ein fremder Wert findet auch
+   * präfixweise nichts — und zwar so, dass es von einer erfundenen Eingabe nicht zu unterscheiden
+   * ist.
+   *
+   * <p>Wie bei der exakten Suche verschiebt sich die Ununterscheidbarkeit vom <b>Statuscode</b> auf
+   * den <b>Rumpf</b>: Eine Suche ohne Treffer ist {@code 200} mit leerer Liste und kein {@code
+   * 404}.
+   */
+  @Test
+  @DisplayName("Praefix: ein fremder Wert ist ununterscheidbar von einem erfundenen")
+  void praefix_fremd_und_erfunden_sind_ununterscheidbar() throws Exception {
+    Fremd fremd = fremderWertOhneEigenenPraefixtreffer(MANDANT_B, NEXANS);
+    String erfunden = erfunden(fremd.wert());
+
+    Antwort fremdAberEcht = aufNexans.hole(praefixsuche(fremd.wert()));
+    Antwort ohneVorbild = aufNexans.hole(praefixsuche(erfunden));
+
+    assertThat(fremdAberEcht.status())
+        .as("keine leere Liste mit 403 und kein 404 — eine Suche ohne Treffer ist 200")
+        .isEqualTo(200);
+    assertThat(ohneVorbild.status()).isEqualTo(200);
+    assertThat(fremdAberEcht.<List<String>>json("$.nachrichten[*].messageId"))
+        .as("die fremde Nachricht ist auch praefixweise unerreichbar")
+        .isEmpty();
+    assertThat(vergleichbar(fremdAberEcht, fremd.wert()))
+        .as(
+            "Unterschieden sich die beiden Antworten in irgendetwas, das nicht die Frage selbst"
+                + " ist, liesse sich ueber die Praefixsuche der fremde Bestand abfragen")
+        .isEqualTo(vergleichbar(ohneVorbild, erfunden));
+    assertThat(fremdAberEcht.rumpf())
+        .as("keine Kennung und keine Prozesskennung des fremden Mandanten")
+        .doesNotContain(fremd.messageId())
+        .doesNotContain(fremd.processId());
+  }
+
+  /** Sonst bewiese der Test nur, dass {@code SUTTONS} nichts sieht. */
+  @Test
+  @DisplayName("Praefix: die Trennung gilt in beide Richtungen")
+  void praefix_trennung_gilt_in_beide_richtungen() throws Exception {
+    Fremd vonNexans = fremderWertOhneEigenenPraefixtreffer(NEXANS, MANDANT_B);
+    String erfunden = erfunden(vonNexans.wert());
+
+    Antwort fremdAberEcht = aufSuttons.hole(praefixsuche(vonNexans.wert()));
+    Antwort ohneVorbild = aufSuttons.hole(praefixsuche(erfunden));
+
+    assertThat(fremdAberEcht.status()).isEqualTo(200);
+    assertThat(fremdAberEcht.<List<String>>json("$.nachrichten[*].messageId")).isEmpty();
+    assertThat(fremdAberEcht.rumpf())
+        .doesNotContain(vonNexans.messageId())
+        .doesNotContain(vonNexans.processId());
+    assertThat(vergleichbar(fremdAberEcht, vonNexans.wert()))
+        .isEqualTo(vergleichbar(ohneVorbild, erfunden));
+  }
+
+  /**
+   * <b>Die Gegenprobe über den Mandantenwechsel, präfixweise.</b> Der Wert ist nachweislich echt
+   * und beim anderen Mandanten auch präfixweise erreichbar — und muss nach dem Zurückwechseln
+   * trotzdem dieselbe Antwort liefern wie eine erfundene Eingabe.
+   */
+  @Test
+  @DisplayName("Praefix: auch nach einem Mandantenwechsel bleibt der fremde Bestand unerreichbar")
+  void praefix_gegenprobe_ueber_den_mandantenwechsel() throws Exception {
+    String admin = PRAEFIX + "bamsuche-admin-praefix";
+    legeNutzerAn(admin, PASSWORT, Rolle.ADMIN);
+    Sitzung alsAdmin = anmelden(admin, PASSWORT);
+    Fremd fremd = fremderWertOhneEigenenPraefixtreffer(MANDANT_B, NEXANS);
+
+    assertThat(
+            alsAdmin.sende("/api/auth/mandant", "{\"mandantId\":\"" + MANDANT_B + "\"}").status())
+        .isEqualTo(200);
+    assertThat(
+            alsAdmin
+                .hole(praefixsuche(fremd.wert()))
+                .<List<String>>json("$.nachrichten[*].messageId"))
+        .as("als SUTTONS ist der Wert erreichbar — sonst prueft die Gegenprobe nichts")
+        .contains(fremd.messageId());
+
+    assertThat(alsAdmin.sende("/api/auth/mandant", "{\"mandantId\":\"" + NEXANS + "\"}").status())
+        .isEqualTo(200);
+
+    Antwort nachDemWechsel = alsAdmin.hole(praefixsuche(fremd.wert()));
+    Antwort erfunden = alsAdmin.hole(praefixsuche(erfunden(fremd.wert())));
+
+    assertThat(nachDemWechsel.<List<String>>json("$.nachrichten[*].messageId")).isEmpty();
+    assertThat(vergleichbar(nachDemWechsel, fremd.wert()))
+        .isEqualTo(vergleichbar(erfunden, erfunden(fremd.wert())));
+  }
+
+  /**
+   * <b>Auch die Abschneidung wird im Präfixmodus nach dem Mandantenfilter gezählt.</b> Sie ist der
+   * einzige Fall, in dem kein einziger fremder Wert herausgegeben würde — verraten würde nur die
+   * <b>Zahl</b>.
+   */
+  @Test
+  @DisplayName("Praefix: die Abschneidung wird nach dem Mandantenfilter gezaehlt")
+  void praefix_abschneidung_wird_nach_dem_mandantenfilter_gezaehlt() throws Exception {
+    String haeufig = haeufigsterWertAmTag();
+    assertThat(praefixtreffer(MANDANT_B, haeufig, TAG_VON, TAG_BIS))
+        .as(
+            "Traege SUTTONS selbst einen Wert, der mit diesem beginnt, verglichen die beiden Zahlen"
+                + " unten nicht mehr dieselbe Frage — dann hat sich die Testkopie geaendert")
+        .isZero();
+
+    Antwort nexans = aufNexans.hole(suche(TAG_VON, TAG_BIS, haeufig) + "&modus=praefix");
+    Antwort suttons = aufSuttons.hole(suche(TAG_VON, TAG_BIS, haeufig) + "&modus=praefix");
+
+    assertThat(nexans.<Boolean>json("$.abgeschnitten"))
+        .as("praefixweise gibt es fuer NEXANS mindestens so viele Treffer wie exakt")
+        .isTrue();
+    assertThat(suttons.<List<String>>json("$.nachrichten[*].messageId"))
+        .as("derselbe Wert gehoert SUTTONS nicht")
+        .isEmpty();
+    assertThat(suttons.<Boolean>json("$.abgeschnitten"))
+        .as("eine Abschneidung aus den Rohtreffern verriete die Datenmenge des anderen Mandanten")
+        .isFalse();
   }
 }

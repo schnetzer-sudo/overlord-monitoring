@@ -48,9 +48,9 @@ public class BamSucheService {
     List<Varianten> varianten = new ArrayList<>(filter.begriffe().size());
     List<Suchbedingung> bedingungen = new ArrayList<>(filter.begriffe().size());
     for (Suchbegriff begriff : filter.begriffe()) {
-      Varianten fassungen = sollaengen.fuer(begriff);
+      Varianten fassungen = sollaengen.fuer(begriff, filter.modus());
       varianten.add(fassungen);
-      bedingungen.add(new Suchbedingung(begriff.typ(), fassungen.gesucht()));
+      bedingungen.add(new Suchbedingung(begriff.typ(), fassungen.gesucht(), filter.modus()));
     }
 
     List<BamTrefferZeile> gelesen =
@@ -71,7 +71,8 @@ public class BamSucheService {
         begriffe(filter.begriffe(), varianten),
         Zeitpunkte.nachUtc(filter.fenster().von(), anwendungsuhr.getZone()),
         Zeitpunkte.nachUtc(filter.fenster().bis(), anwendungsuhr.getZone()),
-        abgeschnitten);
+        abgeschnitten,
+        filter.modus());
   }
 
   private static List<String> kennungen(List<BamTrefferZeile> zeilen) {

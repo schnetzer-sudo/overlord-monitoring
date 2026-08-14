@@ -4041,7 +4041,835 @@ erwartete Gestalt: Beide Fälle bezahlen den Indexzugriff, und die 40 Zeilen dar
 
 ---
 
-# Zusammenfassung: Frage → Antwort
+# M49 — Trägt eine Präfixsuche in der BAM-Suche?
+
+***Siebter** Nachtrag, 13.08.2026. Schritt 7 — **eine Erhebung, keine Entscheidung** und kein Code.*
+
+> **Abweichung von der Aufgabenstellung, benannt statt stillgeschwiegen.** Der Auftrag verlangt
+> diesen Abschnitt als **sechsten** Nachtrag. Der sechste ist bereits vergeben: **M48** (Teil 3, die
+> Typenauswahl) trägt diese Nummer seit demselben Tag. Der Auftrag hat das nicht bemerkt, obwohl er
+> M48 als höchste **Messnummer** richtig erwartet — Messnummern und Nachtragsnummern laufen in
+> dieser Datei getrennt. Gewählt ist deshalb **siebter**; zwei Abschnitte mit derselben Ordnungszahl
+> wären die schlechtere Auflösung. **Die Messnummer ist wie erwartet M49.**
+
+**Frage.** `GET /api/bam/suche` sucht exakt. Ob sich eine Präfixsuche nachrüsten lässt, steht als
+offener Punkt 1 in [`bam-suche.md`](bam-suche.md) §9. M34, E6 und M43‑3 haben die Kosten- und die
+Kollationsfrage bereits beantwortet; **ungemessen war viererlei**, und darum geht es hier:
+
+1. ob die Normalisierung aus Teil 2a — die vorn mit Nullen auffüllt — mit einem Muster, das
+   ebenfalls vorn ankert, überhaupt zusammengeht (**M49‑1**);
+2. ob es eine Präfixlänge gibt, ab der die schlimmste Trefferzahl beherrschbar wird (**M49‑2**);
+3. wie sich das **gebaute** Statement mit `LIKE` statt `IN` verhält (**M49‑3**);
+4. ob im Bestand Zeichen vorkommen, die unter `LIKE` zu Platzhaltern werden (**M49‑4**).
+
+> **Das Ergebnis vorweg, in fünf Sätzen.** Die Ableitung stimmt: **In allen acht geprüften Fällen
+> findet die rohe Präfixfassung den aufgefüllten Originalwert nicht** — Auffüllen und Präfix ankern
+> gegeneinander. Der Ausweg existiert und ist bezifferbar: Die Nullen ins Muster gezogen, findet
+> jeder Fall sein Original, und der Preis sind **drei bis sieben** Fassungen statt der heutigen
+> Obergrenze von fünf. Eine schützende Mindestlänge gibt es **nicht** — die schlimmste Trefferzahl
+> fällt von k = 4 bis k = 6 nur von 1.332.180 auf **234.159** und kann darunter nie fallen, weil
+> genau ein *exakter* Wert diese 234.159 Zeilen trägt. Je Typ liegt die Grenze völlig verschieden
+> (bei 2002 schon bei vier Zeichen unter 1.000, bei 9014 nie), **und die Suche ist typlos
+> voreingestellt.** Und der Befund, der in keiner Zeile des Auftrags stand: **Schon der
+> vollständige Wert als Präfix findet 23 Nachrichten statt einer.**
+
+## M49‑0 Rahmen und Anker
+
+Unverändert aus §0 übernommen, am **13.08.2026** in dreizehn eigenen Sitzungen erhoben. Jeder Aufruf
+des Clients ist eine neue Sitzung; **`SELECT @@global.read_only` steht deshalb in jedem Skript als
+erste Abfrage** und lieferte **jedes Mal `1`** — auch in der Schlusssitzung.
+
+| | |
+|---|---|
+| Ziel | **Testkopie**, `10.6.22-MariaDB-0ubuntu0.22.04.1-log` |
+| `@@global.read_only` **zu Beginn** | **`1`** (erste Abfrage der Runde, 16:43:40) |
+| `@@global.read_only` **am Ende** | **`1`** (letzte Abfrage der Runde, 17:02:03) |
+| Benutzer | **Lesebenutzer** `monitor_read@%` |
+| Serverzeit zu Beginn | `2026-08-13 16:43:40` (`UTC_TIMESTAMP` `14:43:40`, also UTC+2) |
+| Serverzeit am Ende | `2026-08-13 17:02:03` (`UTC_TIMESTAMP` `15:02:03`) |
+| `@@global.max_statement_time` | **`0`** — die 60 Sekunden je Sitzung über `SET max_statement_time = 60` |
+| `@@global.event_scheduler` | **`ON`**, unverändert |
+| Laufzeitmessung | serverseitig, `SET profiling = 1` / `information_schema.PROFILING`, `profiling_history_size = 100` |
+| Zugangsdaten | ausschließlich aus `OVERLORD_DB_*`, an den Client über `MYSQL_PWD` |
+
+### `@@sql_mode` — unverändert
+
+```
+STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
+```
+
+**Kein `ONLY_FULL_GROUP_BY`**, wie in §0 und M47.
+
+### `SHOW GRANTS FOR CURRENT_USER()`
+
+Drei Zeilen, unverändert gegenüber Schritt 4 bis 6 und gegenüber M47. Der Hash der ersten wird nach
+Regel G1 **nicht** abgedruckt:
+
+```
+GRANT USAGE ON *.* TO `monitor_read`@`%` IDENTIFIED BY PASSWORD '<Hash>'
+GRANT SELECT ON `GlassfishDB`.* TO `monitor_read`@`%`
+GRANT SELECT ON `overlord_monitor`.* TO `monitor_read`@`%`
+```
+
+### Die Testkopie ist unverändert — der **achte** Messtag in Folge
+
+| | `DATA_LENGTH` | `INDEX_LENGTH` |
+|---|---:|---:|
+| `Message` | 740.851.712 | 2.157.330.432 |
+| `MessageAction` | 2.226.634.752 | 819.855.360 |
+| **`MessageBAM`** | **1.826.422.784** | **5.254.217.728** |
+
+**Byteidentisch mit M23‑1, M31‑0, §0, M44‑0, M46‑0 und M47‑0.** Die Zahlen dieser Runde dürfen ohne
+Vorbehalt gegen M32 bis M48 gehalten werden.
+
+**Vier weitere Kontrollen sind nebenbei mitgelaufen und gehen sämtlich auf** — sie stehen hier, weil
+eine byteidentische Tabelle noch nicht heißt, dass dieselben Zeilen darin stehen:
+
+| Kontrolle | erwartet aus | gemessen |
+|---|---|---|
+| Zeilen in `MessageBAM` (dreimal unabhängig) | **15.406.350** (M33) | **15.406.350** ✔ |
+| Kernlängen der acht Prüftypen | 12 / 9 / 8 / 8 / 8 / 7 / 1 / 3 (M43‑4) | Zeichen für Zeichen ✔ |
+| Präfix des typischen Werts auf 6 / 4 Zeichen | **5.425** / **155.871** (E6) | **5.425** / **155.871** ✔ |
+| Die sechs Werte der Ankernachricht | 1 / 1.182 / 234.159 / 540 / 100.343 (M42‑0) | Zeile für Zeile ✔ |
+
+### Der Vergleichsanker aus M47
+
+Ein Statement aus M47 **unverändert**: das gebaute, gerenderte Suchstatement mit der `IN`-Liste, ein
+Begriff, typischer Wert, 30 Tage.
+
+| | M47 (13.08., frühere Sitzung) | M49 | Reproduktion |
+|---|---:|---:|---:|
+| ein Begriff, typischer Wert, 30 T | **1,095 ms** | **1,160 ms** | **105,9 %** |
+
+**Die Abweichung beträgt +5,9 Prozent** und liegt damit unter der Streuung, die M47 zwischen seinen
+eigenen beiden Messrunden ausweist (bis 1,2 % bei den teuren, hier bei einem Statement von rund
+einer Millisekunde). Die neuen Zahlen sind mit den alten vergleichbar.
+
+### Die Messnummer
+
+Höchste bisher vergebene Nummer in dieser Datei: **M48** — wie erwartet. Diese Runde ist damit
+**M49**, mit den Teilen M49‑0 bis M49‑4.
+
+### Skills
+
+**Es ist keiner benutzt worden.** Installiert sind `edi-field-mapping`, `find-skills`, `shadcn`
+(Benutzerebene) und das Plugin `frontend-design`; projektlokale Skills gibt es nicht. Diese Runde
+schreibt keinen Code und fasst keine Oberfläche an — `frontend-design` und `shadcn` sind damit
+gegenstandslos, die übrigen betreffen andere Werkzeuge.
+
+### Anonymisierung
+
+Wie in §0: **Kein BAM-Wert und keine Belegnummer steht in diesem Nachtrag.** Alle Prüfwerte stehen in
+Sitzungsvariablen, die auf dem Server gesetzt und dort verbraucht werden. **Neu gegenüber §0 ist
+eine Verschärfung**, und sie betrifft M49‑2a: Die häufigsten Präfixe *sind* Anfangsstücke echter
+Belegnummern und werden deshalb **maskiert** (`P1` bis `P10`); abgedruckt sind ihre Gestalt, ihre
+Trefferzahl und — wo die Frage daran hängt — der **Typ**, unter dem sie stehen. Typnummern und
+Beschreibungen aus `MessageBAMType` sind nach der Regel in [`README.md`](README.md)
+Konfigurationsvokabular und bleiben stehen.
+
+---
+
+## M49‑1 Sind Auffüllen und Präfix vereinbar?
+
+**Frage.** Findet ein Präfixmuster einen Wert, der im Bestand mit führenden Nullen steht, wenn die
+Eingabe verkürzt ist? Und findet ihn die Fassung mit den Nullen **im Muster**?
+
+### Die Kuratierung, gelesen statt abgeschrieben
+
+Erste Erkenntnis, noch vor jeder Trefferzahl: **Zwei der acht Typen aus M43‑4 haben in
+`overlord_monitor.bam_sollaenge` überhaupt keine Zeile.**
+
+```sql
+SELECT mandant_id, message_bam_type, sollaenge, fuehrendes_leerzeichen, dominanz_prozent, zeilen
+FROM overlord_monitor.bam_sollaenge ORDER BY message_bam_type, mandant_id;
+```
+
+| Typ | Beschreibung | kuratiertes Paar | Sollänge |
+|---:|---|---|---:|
+| 2001 | VendorReference | **keins** | — |
+| 2002 | InvoiceNumber VTG | `VOTG` | 10 |
+| 9006 | Lieferschein-Nr._L_SAP | **keins** | — |
+| 9011 | Anlieferungs-Nr. ae_L_SAP | `NEXANS` | 10 |
+| 9012 | Charge_L_SAP | `NEXANS` | 10 |
+| 9021 | Transportnummer_K_SAP | `NEXANS` | 10 |
+| 9024 | Rechnungsnummer_K_SAP | `NEXANS` | 10 |
+| 9036 | Lagerort Kunde_L_SAP | `NEXANS` | 4 |
+
+Das ist kein Fehler der Erhebung, sondern die Kuratierung selbst: **2001 und 9006 sind durch die
+95‑Prozent‑Regel gefallen** ([`bam-sollaengen.md`](bam-sollaengen.md)); 9006 mit 94,21 %. Damit die
+beiden trotzdem messbar sind, ist ihre Sollänge **in der Sitzung hergeleitet** und ausdrücklich
+**nicht** aus der Kuratierung gelesen:
+
+```sql
+SELECT LENGTH(MessageBAMValue) AS laenge, COUNT(*) AS n
+FROM MessageBAM WHERE MessageBAMType = 2001 GROUP BY laenge ORDER BY n DESC LIMIT 3;
+```
+
+| Typ | dominante Länge | n | Anteil |
+|---:|---:|---:|---:|
+| 2001 | **14** | 8.854 von 11.191 | 79,12 % |
+| 9006 | **8** | 146.780 von 155.809 | **94,21 %** |
+
+Die 94,21 % reproduzieren M46 auf zwei Nachkommastellen. **Beide hergeleiteten Sollängen sind
+identisch mit denen, die M43‑4 benutzt hat** (14 und 8) — die Vergleichbarkeit steht.
+
+### Die Prüfwerte
+
+Bauform wie in `BamSollaengeDriftDbIT`, je Typ neu hergeleitet, nie übertragen:
+
+```sql
+SET @typ := 9011; SET @soll := 10;
+SELECT MIN(MessageBAMValue) INTO @wert FROM MessageBAM
+ WHERE MessageBAMType = @typ AND MessageBAMValue LIKE '0%' AND LENGTH(MessageBAMValue) = @soll;
+SET @kern := TRIM(LEADING '0' FROM @wert);
+SET @p    := LEFT(@kern, LENGTH(@kern) - 2);   -- bzw. - 4
+```
+
+**Für jeden der acht Typen ist ein Wert gefunden worden** — die Herleitung ist nirgends leer
+ausgegangen.
+
+### Statement
+
+Je Prüfwert **ein** Statement, als `UNION ALL` über die Nullenzahl `j`, ohne Typeinschränkung (die
+Suche ist typlos — M32, M36), hier für vier Fassungen:
+
+```sql
+SELECT 0 AS nullen, COUNT(*) AS treffer FROM MessageBAM WHERE MessageBAMValue LIKE CONCAT(@p,'%')
+UNION ALL SELECT 1, COUNT(*) FROM MessageBAM WHERE MessageBAMValue LIKE CONCAT('0',@p,'%')
+UNION ALL SELECT 2, COUNT(*) FROM MessageBAM WHERE MessageBAMValue LIKE CONCAT('00',@p,'%')
+UNION ALL SELECT 3, COUNT(*) FROM MessageBAM WHERE MessageBAMValue LIKE CONCAT('000',@p,'%');
+
+SELECT @wert LIKE CONCAT(@p,'%')                          AS roh_trifft,
+       @wert LIKE CONCAT(REPEAT('0',@soll-LENGTH(@kern)),@p,'%') AS mit_nullen_trifft;
+```
+
+### `EXPLAIN` — jeder Zweig bleibt ein Bereichszugriff
+
+Für **jedes** der zehn Statements dieselbe Gestalt, ein Zweig je Fassung (Regel L15 — belegt, nicht
+angenommen):
+
+| id | select_type | table | type | key | key_len | Extra |
+|---|---|---|---|---|---:|---|
+| 1 | `PRIMARY` | `MessageBAM` | **`range`** | **`MessageBAM_BAMValueOnly`** | 282 | `Using where; Using index` |
+| 2…n | `UNCACHEABLE UNION` | `MessageBAM` | **`range`** | **`MessageBAM_BAMValueOnly`** | 282 | `Using where; Using index` |
+
+`UNCACHEABLE UNION` steht dort, weil die Sitzungsvariable den Zweig für den Abfrage-Cache
+unbrauchbar macht — für den Zugriffspfad folgenlos.
+
+### Ergebnis
+
+`ø` markiert die Fassung, die den Originalwert trifft.
+
+| Typ | Sollänge | Herkunft | Länge Original | Kern­länge | führende Nullen | Präfix­länge | **Fassungen** | Treffer je Fassung (j = 0, 1, 2, …) | **Summe** | roh trifft | mit Nullen trifft |
+|---:|---:|---|---:|---:|---:|---:|---:|---|---:|---|---|
+| **2001** | 14 | abgeleitet | 14 | 12 | 2 | 10 | **4** | 0 · 0 · **3 ø** · 0 | **3** | **nein** | **ja** |
+| 2001 (−4) | 14 | abgeleitet | 14 | 12 | 2 | 8 | **6** | 0 · 0 · **5 ø** · 0 · 0 · 0 | **5** | **nein** | **ja** |
+| **2002** | 10 | kuratiert | 10 | 9 | 1 | 7 | **3** | 0 · **4 ø** · 0 | **4** | **nein** | **ja** |
+| **9011** | 10 | kuratiert | 10 | 8 | 2 | 6 | **4** | 0 · 0 · **2 ø** · 0 | **2** | **nein** | **ja** |
+| **9012** | 10 | kuratiert | 10 | 8 | 2 | 6 | **4** | 0 · 0 · **1 ø** · 0 | **1** | **nein** | **ja** |
+| 9012 (−4) | 10 | kuratiert | 10 | 8 | 2 | 4 | **6** | **90** · 2 · **1 ø** · 0 · 0 · 0 | **93** | **nein** | **ja** |
+| **9024** | 10 | kuratiert | 10 | 8 | 2 | 6 | **4** | 0 · 0 · **1 ø** · 0 | **1** | **nein** | **ja** |
+| **9021** | 10 | kuratiert | 10 | 7 | 3 | 5 | **5** | 10 · 54 · 0 · **5 ø** · 0 | **69** | **nein** | **ja** |
+| **9036** | 4 | kuratiert | 4 | **1** | 3 | — | — | *Verkürzung unmöglich* | — | — | — |
+| 9036 (ungekürzt) | 4 | kuratiert | 4 | 1 | 3 | 1 | **3** | **1.086.626** · 34.928 · **34.806 ø** | **1.156.360** | **nein** | **ja** |
+| **9006** | 8 | abgeleitet | 8 | 3 | 5 | 1 | **7** | **1.086.626** · 34.928 · 34.806 · 65.353 · 1.598 · **5.425 ø** · 16.882 | **1.245.618** | **nein** | **ja** |
+
+**In allen acht Fällen, in denen sich die Frage stellen lässt, ist `roh_trifft` gleich `0` und
+`mit_nullen_trifft` gleich `1`.**
+
+### Befunde — vor der Messung formuliert
+
+| Befund | trifft zu | Konsequenz |
+|---|---|---|
+| **Die rohe Präfixfassung findet den Originalwert nicht** | **ja — in allen acht prüfbaren Fällen** | **Die Ableitung stimmt: Auffüllen und Präfix ankern gegeneinander.** Präfix ist bei kuratierten Typen ohne Zusatzbau **wirkungslos** — nicht „ungenauer", sondern ergebnislos |
+| Die rohe Präfixfassung findet ihn doch | **nein**, in keinem Fall | — |
+| **Die Nullen-im-Muster-Fassung findet ihn** | **ja — in allen acht** | Es gibt einen Ausweg, und sein Preis ist die Zahl der Fassungen: **3 bis 7** |
+| **Die Zahl der nötigen Fassungen wächst mit der Verkürzung** | **ja** | 2001: 4 → 6 Fassungen bei zwei zusätzlichen Zeichen weniger; 9012 ebenso. **Die heutige Obergrenze von fünf Fassungen (M47) trägt nicht mehr** — schon 9006 braucht **sieben**, und das bei *einem* Begriff. Bei acht Begriffen wären es bis zu 56 `LIKE`-Zweige |
+| **Die Trefferzahl der Nullen-Fassungen bleibt im zweistelligen Bereich** | **nein — sie spreizt über fünf Größenordnungen** | 1 bis **1.245.618**. Sie bleibt zweistellig, solange der **Kern lang** ist (9011, 9012, 9024, 2001, 2002, 9021: 1 bis 93), und bricht zusammen, sobald er **kurz** ist (9006, 9036: über eine Million). **Der Ausweg ist begehbar — aber nicht überall** |
+
+**Wo die vorformulierte Zeile nicht passt (1) — zwei der acht Typen füllen gar nicht auf, und dort
+gibt es den Widerspruch nicht.** Der Auftrag behandelt alle acht Typen aus M43‑4 als kuratiert. **2001
+und 9006 stehen nicht in `bam_sollaenge`**, weil sie durch die 95‑Prozent‑Regel gefallen sind. Für sie
+gilt der Befund der ersten Zeile **nicht aus dem gemessenen Grund**: Die Anwendung füllt ihre Eingabe
+nicht auf, ein Präfixmuster ankert also nicht gegen eine Normalisierung, sondern steht allein. Dass
+die rohe Fassung den Originalwert trotzdem nicht findet, liegt am **Bestand** (die Werte tragen dort
+führende Nullen) und nicht an der Anwendung. **Für diese beiden Typen wäre eine Präfixsuche also
+sofort wirksam — und sofort teuer**: 9006 ist ausgerechnet der Typ mit der Millionen-Trefferzahl.
+
+**Wo die vorformulierte Zeile nicht passt (2) — bei 9036 lässt sich der Prüfwert nicht verkürzen.**
+Sein Kern ist **ein Zeichen** lang; `LEFT(kern, LENGTH(kern) - 2)` ist die leere Zeichenkette, und
+`LIKE '%'` wäre der ganze Bestand. Der Auftrag setzt voraus, dass eine Verkürzung um zwei Zeichen
+immer möglich ist. Gemessen ist deshalb die **ungekürzte** Fassung, und sie zeigt dasselbe Bild in
+schärferer Form: Schon der vollständige Kern als Präfix kostet **1.086.626** Treffer in der ersten
+Fassung. Bei 9006 fällt dieselbe Grenze bei der zweiten Verkürzung (Kern 3 Zeichen, `−4` unmöglich).
+
+### Laufzeiten
+
+| Prüfwert | Fassungen | Laufzeit |
+|---|---:|---:|
+| 2002 | 3 | **0,661 ms** |
+| 9024 | 4 | 0,787 ms |
+| 9012 | 4 | 0,833 ms |
+| 9011 | 4 | 0,855 ms |
+| 2001 | 4 | 0,984 ms |
+| 9021 | 5 | 1,013 ms |
+| 2001 (−4) | 6 | 1,050 ms |
+| 9012 (−4) | 6 | 1,174 ms |
+| **9036 (ungekürzt)** | 3 | **679,599 ms** |
+| **9006** | 7 | **739,704 ms** |
+
+*einmalig je Prüfwert; die Frage gilt der Trefferzahl und nicht der Uhr.*
+
+**Die Laufzeit folgt der Trefferzahl und nicht der Zahl der Fassungen** — sechs Fassungen mit 93
+Treffern kosten 1,2 ms, drei Fassungen mit 1.156.360 Treffern kosten 680 ms. Das ist E6, an einer
+zweiten Stelle bestätigt.
+
+### Belegvermerk (Regel L10)
+
+> *Gemessen:* Für **acht** BAM-Typen (n = 8, davon sechs kuratiert und zwei mit in der Sitzung
+> hergeleiteter Sollänge) je **ein** Prüfwert — der kleinste Wert mit führender Null auf der
+> Sollänge —, dazu für drei Typen eine zweite, stärkere Verkürzung; insgesamt **zehn** Statements mit
+> je einem `EXPLAIN`, auf einer ruhenden Testkopie, **ohne Zeitfenster und ohne Mandantenfilter**.
+>
+> *Behauptet wird:* dass Auffüllen und Präfixsuche einander ausschließen und dass die
+> Nullen-im-Muster-Fassung der einzige gemessene Ausweg ist.
+>
+> **Die Lücke, und sie ist dreifach.** Erstens ist je Typ **ein** Wert gemessen, nicht die
+> Verteilung: Dass `roh_trifft` achtmal `0` ist, ist ein starkes Indiz und kein Beweis für *alle*
+> Werte dieser Typen — die Aussage folgt allerdings zusätzlich aus der Zeichenlogik, denn ein Kern
+> beginnt nach `TRIM(LEADING '0')` nie mit einer Null und ein aufgefüllter Wert immer. Zweitens sagt
+> keine dieser Zahlen, ob die **einzige** Ausweg-Bauform die Nullen im Muster sind; gemessen ist,
+> dass **diese** funktioniert, nicht dass keine andere existiert. Und drittens sind die Trefferzahlen
+> **typlos und ohne Zeitfenster** gezählt — der Endpunkt filtert danach über Mandant und dreißig
+> Tage, die Zahlen sind also **Kandidatenmengen** und keine Trefferlisten. Was trägt: *Wer verkürzt
+> tippt, findet ohne die Nullen im Muster nichts.* Was **nicht** gemessen ist: *wie viele Fassungen
+> die Anwendung im Betrieb wirklich bilden müsste, weil das von der Eingabelänge des Nutzers
+> abhängt.*
+
+---
+
+## M49‑2 Die Trefferzahl je Präfixlänge
+
+**Frage.** E6 zeigt an **einem** Wert, was Verkürzung kostet. Was fehlt, ist die Verteilung: Gibt es
+eine Präfixlänge, ab der die **schlimmste** Trefferzahl beherrschbar wird?
+
+> **Regel L9 ist berührt, und die Begründung steht vorher.** Beide Teile laufen **ohne Zeitfenster
+> über eine große Tabelle**. Ein Zeitfenster kann die Frage nicht beantworten: Gefragt ist, wie sich
+> die Werte des **Bestands** auf Präfixe verteilen — ein Monatsausschnitt sagte, wie sich die Werte
+> *eines Monats* verteilen, und genau das ist nicht die Größe, die eine Mindestlänge schützen müsste.
+> Die Kosten stehen unten in der Laufzeittabelle, und ein Statement hat die Grenze gerissen.
+
+### M49‑2a Typlos, über den ganzen Bestand
+
+```sql
+SELECT LEFT(MessageBAMValue,4) AS p, COUNT(*) AS n
+FROM MessageBAM GROUP BY p ORDER BY n DESC LIMIT 10;
+```
+
+**`EXPLAIN`** — für alle vier Längen dieselbe Gestalt, und der Wertindex wird **nicht** benutzt:
+
+| id | table | type | key | key_len | rows | Extra |
+|---|---|---|---|---:|---:|---|
+| 1 | `MessageBAM` | **`index`** | **`PRIMARY`** | 430 | 10.859.666 | `Using index; Using temporary; Using filesort` |
+
+Der Optimierer läuft den **Primärschlüssel** vollständig durch, nicht `MessageBAM_BAMValueOnly`.
+Für eine Gruppierung über einen **Ausdruck** (`LEFT(v,k)`) ist kein Index sortierend brauchbar; der
+schmalere Wertindex wäre die billigere Wahl gewesen. **Das ist eine Feststellung und keine
+Forderung** — an `GlassfishDB` wird nichts geändert (Regel S1).
+
+**Die Sonde bei `k = 4` kostet 16,144 s** und bleibt damit unter der 30‑Sekunden-Marke des Auftrags;
+die übrigen Längen sind deshalb gelaufen.
+
+#### Ergebnis — die zehn häufigsten Präfixe je Länge
+
+Präfixe **maskiert** (siehe Anonymisierung); abgedruckt sind Gestalt und Trefferzahl.
+
+| Rang | k = 3 | k = 4 | k = 5 | k = 6 |
+|---:|---:|---:|---:|---:|
+| 1 | 1.414.772 | **1.332.180** | 554.353 | **234.159** |
+| 2 | 1.118.693 | 1.118.693 | 505.104 | 224.481 |
+| 3 | 441.835 | 234.162 | 383.310 | 199.139 |
+| 4 | 369.267 | 230.264 | 251.261 | 185.591 |
+| 5 | 276.405 | 200.705 | 245.365 | **167.734** |
+| 6 | **264.469** | 199.139 | **234.159** | 139.341 |
+| 7 | 260.705 | 190.004 | 224.481 | 135.981 |
+| 8 | 249.553 | 188.928 | 204.506 | 124.793 |
+| 9 | 238.941 | **167.734** | 199.139 | 124.715 |
+| 10 | 234.819 | **155.871** | **167.734** | 119.717 |
+
+**Drei dieser Zahlen sind Wiedererkennungen und keine neuen Werte:**
+
+- **155.871** (k = 4, Rang 10) ist der Präfix aus **vier Nullen** — und damit exakt die Zahl, die
+  **E6** für das auf vier Zeichen verkürzte Präfix des typischen Prüfwerts misst. E6 ist damit an
+  einer unabhängigen Stelle reproduziert.
+- **264.469** (k = 3, Rang 6) ist dasselbe für **drei** Nullen — ebenfalls E6, dort als „nicht
+  gemessen" für die Laufzeit, aber mit derselben Trefferzahl.
+- **234.159** ist der **schlimmste Einzelwert des ganzen Bestands** (M33, M34, M42, M47). Er
+  erscheint ab k = 5 unverändert.
+
+**167.734 ist der Fall, den der Auftrag ausdrücklich in die Deutung gehoben haben wollte.** Diese
+Zahl steht bei k = 4, 5 **und** 6 identisch da. `LEFT(v,k)` liefert bei Werten, die **kürzer** als
+`k` sind, den ganzen Wert zurück — dieser Wert ist höchstens vier Zeichen lang, und für ihn ist die
+„Präfixsuche" bereits die **exakte** Suche. Das ist richtig so und keine Verzerrung; es heißt aber,
+dass eine Mindestlänge diesen Wert überhaupt nicht erreichen kann.
+
+#### Ergebnis — die Bänder
+
+```sql
+SELECT COUNT(*) AS praefixe, MAX(n) AS schlimmster,
+       SUM(n >= 1000) AS ab_1k, SUM(n >= 10000) AS ab_10k, SUM(n >= 100000) AS ab_100k,
+       SUM(n) AS zeilen_gesamt
+FROM (SELECT LEFT(MessageBAMValue,4) AS p, COUNT(*) AS n FROM MessageBAM GROUP BY p) x;
+```
+
+| k | Präfixe | **schlimmster** | ≥ 1.000 | ≥ 10.000 | ≥ 100.000 | Summe |
+|---:|---:|---:|---:|---:|---:|---:|
+| **4** | 12.915 | **1.332.180** | **1.731** | **139** | **19** | 15.406.350 |
+| **6** | 241.737 | **234.159** | **1.624** | **136** | **15** | 15.406.350 |
+| **8** | — | — | — | — | — | **Abbruch bei 60 s** |
+
+`SUM(n)` ist beide Male **15.406.350** — die gezählte Zeilenzahl aus M33, ein drittes Mal unabhängig
+reproduziert.
+
+**Zwei zusätzliche Zeichen entwaffnen fast nichts.** Die Zahl der Präfixe wächst um Faktor 18,7 —
+die Zahl der **gefährlichen** Präfixe fällt von 1.731 auf 1.624 (−6,2 %), die der sehr gefährlichen
+von 139 auf 136 (−2,2 %). **Wer von vier auf sechs Zeichen erhöht, verkleinert den Bestand der
+Bösfälle um sechs Prozent.**
+
+**Der Abbruch bei `k = 8` ist ein Ergebnis und kein Fehlschlag.** Er ist unten unter den Abweichungen
+ausgewiesen. Er verhindert die Fortsetzung der Reihe — **beantwortet die Frage aber nicht offen**,
+denn die Antwort folgt aus zwei bereits gemessenen Zahlen: Bei k = 6 ist die schlimmste Trefferzahl
+**234.159**, und M33 misst, dass **genau ein exakter Wert** diese 234.159 Zeilen trägt. Da `MAX(n)`
+mit wachsendem `k` nicht steigen kann und nie unter die Trefferzahl des häufigsten *exakten* Werts
+fällt, ist **234.159 ein Boden, den keine Präfixlänge unterschreitet.**
+
+#### Welchem Typ die schlimmsten Präfixe gehören
+
+```sql
+SELECT g.MessageBAMType, t.MessageBAMTypeDescription, g.n
+FROM (SELECT LEFT(MessageBAMValue,4) AS p, MessageBAMType, COUNT(*) AS n
+      FROM MessageBAM GROUP BY p, MessageBAMType ORDER BY n DESC LIMIT 10) g
+LEFT JOIN MessageBAMType t ON t.MessageBAMType = g.MessageBAMType;
+```
+
+| Rang | Typ | Beschreibung | Zeilen | Kennung oder Beleg? |
+|---:|---:|---|---:|---|
+| 1 | 9002 | Lieferplannummer_L_SAP | 789.416 | Kennung |
+| 2 | 9018 | Kundenmaterialnummer_K_SAP | 766.103 | Kennung |
+| **3** | **9019** | **Bestellnummer vom Kunden_K_SAP** | **410.030** | **Beleg** |
+| 4 | 9014 | Lieferantennummer beim Kunden_K_SAP | 234.159 | Kennung |
+| **5** | **9019** | **Bestellnummer vom Kunden_K_SAP** | **190.216** | **Beleg** |
+| 6 | 9004 | Unsere Material-Nr._L_SAP | 186.684 | Kennung |
+| 7 | 9028 | Material-Nr. beim Kunden_FORS | 176.203 | Kennung |
+| 8 | 9029 | Material-Nr.beim Lieferanten_FORS | 176.203 | Kennung |
+| 9 | 9004 | Unsere Material-Nr._L_SAP | 173.450 | Kennung |
+| **10** | **9019** | **Bestellnummer vom Kunden_K_SAP** | **161.067** | **Beleg** |
+
+### M49‑2b Je Typ
+
+Dieselbe Aggregation mit `WHERE MessageBAMType = ?`. **`EXPLAIN` je Typ** — hier greift der
+zusammengesetzte Index, anders als in M49‑2a:
+
+| id | table | type | key | key_len | ref | rows | Extra |
+|---|---|---|---|---:|---|---:|---|
+| 1 | `MessageBAM` | **`ref`** | **`MessageBAM_BAMValue`** | 2 | `const` | 5.429.833 | `Using where; Using index; Using temporary; Using filesort` |
+
+`key_len` 2 ist der `smallint`-Typ allein: Der Index `(MessageBAMType, MessageBAMValue)` trägt den
+Filter, die Gruppierung über den Ausdruck bleibt eine temporäre Tabelle.
+
+| Typ | Beschreibung | tragend bei (M39) | Zeilen | **k = 4**: Präfixe / schlimmster / ≥1k / ≥10k | **k = 6**: Präfixe / schlimmster / ≥1k / ≥10k |
+|---:|---|---|---:|---|---|
+| **9018** | Kundenmaterialnummer_K_SAP | `NEXANS` | 2.311.236 | 1.401 / **766.103** / 257 / 26 | 3.758 / **81.876** / 331 / 40 |
+| **0** | Bestellnummer | `IBIS`, `IBISGUS` | 167.463 | 3.699 / **25.227** / 39 / 1 | 13.506 / **1.801** / 21 / 0 |
+| **2000** | OrderNumber | `SUTTONS` | 12.434 | 487 / **250** / 0 / 0 | 1.755 / **59** / 0 / 0 |
+| **2001** | VendorReference | `SUTTONS` | 11.191 | 12 / **7.048** / 3 / 0 | 56 / **7.048** / 1 / 0 |
+| **3** | Rechnungsnummer | `ZAST` | 2.268.697 | 432 / **9.917** / 364 / 0 | 41.767 / **194** / 0 / 0 |
+| **2002** | InvoiceNumber VTG | `VOTG` | 456 | 4 / **326** / 0 / 0 | 4 / **326** / 0 / 0 |
+| **9014** | Lieferantennummer beim Kunden_K_SAP | `WOC` | 432.227 | 72 / **234.159** / 23 / 5 | 86 / **234.159** / 25 / 5 |
+| **9006** | Lieferschein-Nr._L_SAP | kuratiert seit Schritt 4 | 155.809 | 1.586 / **4.139** / 13 / 0 | 23.365 / **149** / 0 / 0 |
+| **9015** | Kundenwerk_K_SAP | `NEXANS` | 435.690 | 284 / **62.011** / 54 / 7 | 285 / **62.011** / 54 / 7 |
+
+**Die Antwort ist je Typ eine andere, und zwar nicht graduell:**
+
+| Wo die schlimmste Trefferzahl bei **k = 6** landet | Typen |
+|---|---|
+| **unter 1.000** — eine Mindestlänge von 6 trüge | 2002 (326), 3 (194), 9006 (149), 2000 (59) |
+| **zwischen 1.000 und 10.000** | 0 (1.801), 2001 (7.048) |
+| **fünf- bis sechsstellig — keine Länge hilft** | 9015 (62.011), 9018 (81.876), **9014 (234.159)** |
+
+**Drei Typen haben einen Boden, den mehr Zeichen nicht senken:** 2001 bleibt bei 7.048, 9015 bei
+62.011 und 9014 bei 234.159, unverändert von k = 4 auf k = 6. Bei ihnen steckt die Trefferzahl in
+**einem exakten Wert**, und ein Präfix kann nicht feiner werden als der Wert selbst.
+
+### Befunde — vor der Messung formuliert
+
+| Befund | trifft zu | Konsequenz |
+|---|---|---|
+| **Es gibt eine Präfixlänge, ab der die schlimmste Trefferzahl unter 1.000 fällt** | **nein — typlos in keiner Länge** | Bei k = 6 steht sie bei **234.159**, und tiefer kann sie nie fallen: Ein einziger *exakter* Wert trägt diese Zeilen (M33). **Eine Mindestlänge ist als Schutz typlos wertlos** |
+| **Es gibt sie nicht innerhalb brauchbarer Längen** | **ja — und auch außerhalb nicht** | **Dann schützt nur die Trefferzahl selbst**, und die Mindestlänge bleibt draußen — wie in Teil 2b, aber **aus einem neuen Grund**: dort, weil die Werte je Typ 1 bis 35 Zeichen lang sind (M38); hier, weil auch eine erfüllte Mindestlänge den Bösfall nicht verkleinert |
+| **Die Grenze liegt je Typ verschieden** | **ja, um Faktor 3.969** | Bei k = 6 zwischen **59** (2000) und **234.159** (9014). Eine Mindestlänge müsste je Typ gelten — **und dann ist sie nur durchsetzbar, wenn der Nutzer einen Typ gewählt hat. Die Suche ist typlos voreingestellt (M36).** Diese Spannung wird hier benannt und **nicht aufgelöst**: Ein je Typ verschiedener Schutz, der in der Voreinstellung nicht greift, ist kein Schutz, sondern eine Bedienbedingung |
+| **Die typlose und die typgebundene Grenze fallen zusammen** | **nein** | Typlos liegt die schlimmste Trefferzahl bei k = 4 bei **1.332.180**, der schlimmste Einzeltyp bei **766.103**. Der typlose Fall ist durchgängig der schlechtere — was zu erwarten war und trotzdem gemessen gehört, weil er die Voreinstellung ist |
+| **Die schlimmsten Präfixe gehören zu Kennungsfeldern und nicht zu Belegnummern** | **überwiegend ja — aber nicht durchgängig** | Sieben der zehn schlimmsten Paare gehören Kennungsfeldern (Lieferplan-, Kundenmaterial-, Lieferanten-, Material-Nr.) und decken sich mit M33 (9014, 9000, 9005, 9036). **Drei gehören 9019 „Bestellnummer vom Kunden"** — siehe den Absatz unten |
+
+**Wo die vorformulierte Zeile nicht passt (3) — der Boden.** Keine der fünf Zeilen fragt, ob die
+schlimmste Trefferzahl eine **untere Schranke** hat. Sie hat eine, und die Schranke ist der Kern der
+ganzen Frage: Weil ein exakter Wert 234.159 Zeilen trägt, ist jede Präfixlänge nach oben durch
+diesen Wert begrenzt. **Eine Mindestlänge kann den Bösfall nicht wegregeln, weil der Bösfall kein
+Präfixproblem ist.** Er ist bereits im exakten Bestand da — und die exakte Suche lebt heute damit,
+weil Zeitfenster und Limit ihn auffangen (M35, M47).
+
+**Wo die vorformulierte Zeile nicht passt (4) — 9019 ist eine Belegnummer.** Die Zeile erwartet den
+sauberen Schnitt „Kennungen gefährlich, Belegnummern harmlos". **Drei der zehn schlimmsten Paare
+tragen Typ 9019 „Bestellnummer vom Kunden"** mit 410.030, 190.216 und 161.067 Zeilen. Eine
+Bestellnummer ist genau das, was ein Nutzer in das Suchfeld tippt — der Schnitt trennt also nicht
+die gefährlichen von den gesuchten Feldern. Der Grund ist sichtbar, sobald man die Zahl
+danebenhält: 9019 hat innerhalb seiner Werte offenbar einen sehr gleichförmigen Anfang. **Für die
+Entscheidung heißt das, dass „gefährlich sind nur die Kennungsfelder" als Beruhigung nicht trägt.**
+
+### Belegvermerk (Regel L10)
+
+> *Gemessen:* Die Verteilung der BAM-Werte auf Präfixe der Längen 3, 4, 5 und 6 über den **gesamten
+> Bestand** (n = 15.406.350 Zeilen, Vollerhebung, kein Zeitfenster, kein Mandantenfilter), dazu die
+> Bänder bei k = 4 und k = 6 und dieselbe Erhebung je Typ für **neun** Typen bei k = 4 und k = 6.
+> Die Reihe bricht bei k = 8 an der 60‑Sekunden-Grenze ab.
+>
+> *Behauptet wird:* dass eine Mindestlänge die Präfixsuche nicht absichern kann.
+>
+> **Die Lücke, und sie ist vierfach.** Erstens ist die schärfste Aussage — der Boden bei 234.159 —
+> **kein Messergebnis dieser Runde**, sondern ein Schluss aus M49‑2a (k = 6) und M33 (der häufigste
+> exakte Wert). Der Schluss ist zwingend, aber er ist einer. Zweitens sind die Trefferzahlen
+> **Kandidatenmengen über den Bestand**: Was der Nutzer sähe, ginge zusätzlich durch Mandantenfilter,
+> Zeitfenster und Limit 50 — die Zahl bestimmt den **Preis**, nicht die Antwortlänge. Drittens sagt
+> keine Zahl, **welche** Präfixe Nutzer tatsächlich eingeben; gemessen ist der schlimmste Fall, nicht
+> der wahrscheinliche. Und viertens ist der Abbruch bei k = 8 eine echte Lücke für alles, was nicht
+> aus dem Boden folgt — etwa die Frage, wie schnell die **Zahl** der gefährlichen Präfixe zwischen
+> k = 6 und k = 10 abnimmt. Was trägt: *Typlos gibt es keine schützende Mindestlänge.* Was **nicht**
+> gemessen ist: *ob eine typgebundene Mindestlänge im Betrieb überhaupt greifen würde, weil die
+> Voreinstellung typlos ist.*
+
+---
+
+## M49‑3 Das gebaute Statement mit `LIKE` statt `IN`
+
+**Frage.** Wie verhält sich der **gebaute** Endpunkt, wenn nur das Wertprädikat getauscht wird?
+
+### Statement
+
+Gemessen ist der von jOOQ **gerenderte** Text aus `BamSucheRepository`, gegen eine jOOQ-Attrappe
+erzeugt wie in M47 und in `BamSucheStatementsTest`. **Ersetzt ist ausschließlich das Wertprädikat**
+— `` `b1`.`MessageBAMValue` in (?) `` wird zu `` `b1`.`MessageBAMValue` like concat(?, '%') ``.
+Mandantenfilter als `EXISTS`, `GROUP BY`, Deckelung auf 51 und die vier Anzeigetabellen **über** der
+Deckelung stehen unverändert. **Die Repository-Klasse ist dabei nicht geändert worden** (siehe die
+Abnahme unten).
+
+```sql
+select `treffer`.`MessageID`, `treffer`.`MessageLastUpdate`, `treffer`.`MessageStatus`,
+       `treffer`.`ProcessID`, `GlassfishDB`.`Process`.`ProcessName`, `GlassfishDB`.`Project`.`ProjectName`,
+       `GlassfishDB`.`SOS`.`SOSName`, `GlassfishDB`.`SOSAction`.`SOSActionName`,
+       `treffer`.`Source`, `treffer`.`SourceMessageID`, `treffer`.`TargetMessageID`, `treffer`.`Target`
+from (select `GlassfishDB`.`Message`.`MessageID`, `GlassfishDB`.`Message`.`MessageLastUpdate`,
+             `GlassfishDB`.`Message`.`MessageStatus`, `GlassfishDB`.`Message`.`ProcessID`,
+             `GlassfishDB`.`Message`.`SOSID`, `GlassfishDB`.`Message`.`SOSActionID`,
+             `GlassfishDB`.`Message`.`Source`, `GlassfishDB`.`Message`.`SourceMessageID`,
+             `GlassfishDB`.`Message`.`TargetMessageID`, `GlassfishDB`.`Message`.`Target`
+      from `GlassfishDB`.`MessageBAM` as `b1`
+      join `GlassfishDB`.`Message` on `GlassfishDB`.`Message`.`MessageID` = `b1`.`MessageID`
+      where (`b1`.`MessageBAMValue` like concat(@w_typisch,'%')          -- HIER, und nur hier
+             and `GlassfishDB`.`Message`.`MessageLastUpdate` >= '2025-11-30 00:00:00'
+             and `GlassfishDB`.`Message`.`MessageLastUpdate` <= '2025-12-30 00:00:00'
+             and exists (select 1 as `one` from `GlassfishDB`.`Process` as `mandanten_process`
+                         join `GlassfishDB`.`ProjectMandant`
+                           on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `mandanten_process`.`ProjectID`
+                         where (`mandanten_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID`
+                                and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'NEXANS')))
+      group by `GlassfishDB`.`Message`.`MessageID`
+      order by `GlassfishDB`.`Message`.`MessageLastUpdate` desc, `GlassfishDB`.`Message`.`MessageID` desc
+      fetch next 51 rows only) as `treffer`
+left outer join `GlassfishDB`.`Process`   on `GlassfishDB`.`Process`.`ProcessID` = `treffer`.`ProcessID`
+left outer join `GlassfishDB`.`Project`   on `GlassfishDB`.`Project`.`ProjectID` = `GlassfishDB`.`Process`.`ProjectID`
+left outer join `GlassfishDB`.`SOS`       on `GlassfishDB`.`SOS`.`SOSID` = `treffer`.`SOSID`
+left outer join `GlassfishDB`.`SOSAction` on (`GlassfishDB`.`SOSAction`.`SOSID` = `treffer`.`SOSID`
+                                          and `GlassfishDB`.`SOSAction`.`SOSActionID` = `treffer`.`SOSActionID`)
+order by `treffer`.`MessageLastUpdate` desc, `treffer`.`MessageID` desc
+```
+
+### Die Prüfwerte
+
+Hergeleitet wie in M34, M42‑0 und M47‑1, je Sitzung neu. Abgedruckt sind die Eigenschaften:
+
+| Rolle | Typ | Länge | exakt | **als Präfix** |
+|---|---:|---:|---:|---:|
+| der typische | 9017 | 8 | **1** | **23** |
+| … auf 6 Zeichen verkürzt | | 6 | — | **5.425** |
+| … auf 4 Zeichen verkürzt | | 4 | — | **155.871** |
+| der schlimmste | 9014 | 8 | **234.159** | — |
+| selten (Ankernachricht) | 9022 | 12 | 1 | — |
+| häufig (Ankernachricht) | 9016 | 8 | 1.182 | — |
+| `IBIS`, typisch | 0 | 10 | **1** | **1** |
+| `IBIS`, um zwei verkürzt | | 8 | — | **1** |
+
+### `EXPLAIN`
+
+Der Index und die Gestalt bleiben; die Zugriffsart wechselt.
+
+| Fall | führende Tabelle | `type` | `key` | `key_len` | `rows` |
+|---|---|---|---|---:|---:|
+| typischer Wert, vollständig als Präfix | `b1` | **`range`** | `MessageBAM_BAMValueOnly` | 282 | **23** |
+| … um zwei Zeichen verkürzt | `b1` | `range` | `MessageBAM_BAMValueOnly` | 282 | 13.086 |
+| … um vier Zeichen verkürzt | `b1` | `range` | `MessageBAM_BAMValueOnly` | 282 | **383.068** |
+| schlimmster Wert, vollständig | `b1` | `range` | `MessageBAM_BAMValueOnly` | 282 | **443.830** |
+| zwei Begriffe, **seltener zuerst** | **`b1`** | `range` | `MessageBAM_BAMValueOnly` | 282 | **1** |
+| zwei Begriffe, **seltener zuletzt** | **`b2`** | `range` | `MessageBAM_BAMValueOnly` | 282 | **1** |
+| fünf Begriffe, **seltener zuerst** | **`b1`** | `range` | `MessageBAM_BAMValueOnly` | 282 | **1** |
+| fünf Begriffe, **seltener an fünfter Stelle** | **`b5`** | `range` | `MessageBAM_BAMValueOnly` | 282 | **1** |
+| Nullen im Muster, vier `LIKE` im selben `OR` | `b1` | `range` | `MessageBAM_BAMValueOnly` | 282 | 5 |
+| `IBIS`, vollständig / verkürzt | `b1` | `range` | `MessageBAM_BAMValueOnly` | 282 | 1 |
+
+Die äußere Abfrage ist in **jedem** Fall unverändert: `<derived2>` als `ALL` mit höchstens 51 Zeilen,
+danach vier `eq_ref` auf `PRIMARY`. **Die Deckelung steht, wo sie stand.**
+
+### Laufzeiten
+
+Alle Werte in Millisekunden, beste von fünf nach einem Aufwärmlauf; bei Statements über einer
+Sekunde beste von drei nach einem Aufwärmlauf.
+
+| Fall | Kandidaten­zeilen | Treffer | **30 Tage** | **ein Jahr** | M47 mit `IN` | Aufschlag |
+|---|---:|---:|---:|---:|---:|---:|
+| **typischer Wert, vollständig als Präfix** | 23 | **1** (30 T) · **23** (Jahr) | **1,374** | **1,585** | 1,095 / 1,089 | **+25,5 %** |
+| **… um zwei Zeichen verkürzt** | 5.425 | 51 (gedeckelt) | **49,863** | — | — | — |
+| **… um vier Zeichen verkürzt** | 155.871 | 51 (gedeckelt) | **1.361,436** | **3.399,650** | — | — |
+| **der schlimmste Wert, vollständig** | 234.159 | 51 (gedeckelt) | **1.823,054** | — | 1.655,827 | **+10,1 %** |
+| zwei Begriffe, selten × häufig | — | 1 | **1,270** | — | 1,209 | +5,0 % |
+| … umgekehrte Reihenfolge | — | 1 | **1,279** | — | 1,202 | +6,4 % |
+| fünf Begriffe, seltener zuerst | — | 1 | **1,840** | — | 1,622 | +13,4 % |
+| fünf Begriffe, seltener zuletzt | — | 1 | **1,910** | — | 1,607 | +18,9 % |
+| **Nullen im Muster, vier `LIKE` im `OR`** | 5 | 0 | **1,205** | — | — | — |
+| `IBIS`, vollständig als Präfix | 1 | 1 | **1,177** | — | 1,185 | −0,7 % |
+| `IBIS`, um zwei Zeichen verkürzt | 1 | 1 | **1,177** | — | 1,214 | −3,0 % |
+
+### Befunde — vor der Messung formuliert
+
+| Befund | trifft zu | Konsequenz |
+|---|---|---|
+| **Der Index bleibt `MessageBAM_BAMValueOnly`, die Zugriffsart ist `range`** | **ja, in allen elf Fällen** | Wie bei der `IN`-Liste mit mehreren Varianten (M47). **Die Umstellung ändert den Plan nicht grundsätzlich** |
+| **Der Optimierer steigt weiter über den seltensten Begriff ein** | **ja** | Belegt am `EXPLAIN` (`b1` / `b2` / `b5` je nach Stellung) **und** an der Laufzeit: 1,270 gegen 1,279 ms bei zwei, 1,840 gegen 1,910 ms bei fünf Begriffen. **M42‑1 und M47 gelten weiter, kein `STRAIGHT_JOIN`.** Regel L15 ist geprüft und nicht angenommen |
+| **Er tut es nicht mehr, weil die `rows`-Schätzung eines `LIKE`-Bereichs schlechter ist als die einer `IN`-Liste** | **nein** | Die Schätzung bleibt `rows` 1 auf dem seltenen Begriff. Die Verundung mit Präfix ist **dieselbe** Bauform, und M42/M47 tragen sie |
+| **Die Deckelung auf 51 rettet die Laufzeit des verkürzten Präfixes** | **nein — wie erwartet** | 1.361 ms für 51 angezeigte Zeilen. Sortierung und Gruppierung liegen **vor** der Deckelung; alle 155.871 Kandidatenzeilen müssen erzeugt werden. Die Laufzeit folgt der Kandidatenzahl, nicht der Trefferzahl |
+| **Der Vierzeichenfall bleibt mit 30 Tagen unter einer Sekunde** | **nein — 1,361 s** | E6 misst 1,299 s über Fenster B **ohne** die Joins der Anwendung; der gebaute Aufbau legt 4,8 % dazu. **Mit einem Jahr sind es 3,400 s.** Beide bleiben unter der 10‑Sekunden-Grenze des Lese-Pools — der Vierzeichenfall ist also **teuer, aber nicht tödlich** |
+| **`IBIS` verhält sich wie `NEXANS`** | **ja** | 1,177 ms in beiden Fällen, sogar minimal **unter** den `IN`-Zahlen aus M47. **Regel L7 erfüllt** — und mit einem Zusatzbefund: Bei `IBIS` findet das um zwei Zeichen verkürzte Präfix **denselben einen** Treffer. Der Bösfall der Verkürzung ist dort so wenig vorhanden wie der Bösfall der Trefferzahl (M42‑4) |
+
+**Wo die vorformulierte Zeile nicht passt (5) — schon der *vollständige* Wert als Präfix findet 23
+statt 1.** Keine Zeile des Auftrags stellt diese Frage; sie behandelt „vollständiger Wert als
+Präfix" als den Fall, in dem Präfix und exakt dasselbe liefern. **Sie liefern es nicht.** Gemessen
+über den Bestand: derselbe achtstellige Prüfwert hat **exakt einen** Treffer und **als Präfix 23** —
+weil 22 längere Werte mit ihm beginnen. Über 30 Tage bleibt bei `NEXANS` davon eine Nachricht übrig,
+**über ein Jahr sind es 23**.
+
+Das entwertet M34 nicht, es präzisiert es. M34s Zeile „Präfix kostet 3 bis 27 % mehr" trägt den
+Zusatz **„aber nur bei gleicher Trefferzahl"** — und E6s Tabellenzeile „8 (vollständig) → 1 Treffer"
+ist die **exakte** Zählung aus M34, nicht die eines `LIKE`. Die Bedingung „gleiche Trefferzahl" ist
+also **bei keiner Eingabelänge erfüllt**, nicht einmal bei der vollständigen. Für die Leistung ist
+das folgenlos (23 Zeilen sind nichts); für die **Fachlichkeit** ist es der Kern: *Eine Präfixsuche
+liefert auch bei vollständig eingetippter Belegnummer ein anderes Ergebnis als heute.*
+
+### Belegvermerk (Regel L10)
+
+> *Gemessen:* Die Laufzeit des **gebauten** Statements mit getauschtem Wertprädikat über **elf**
+> Fälle — neun bei `NEXANS`, zwei bei `IBIS` —, je mit 30‑Tage- und in drei Fällen mit Jahresfenster,
+> auf einer ruhenden Testkopie; dazu **elf** `EXPLAIN`. Die Prüfwerte stammen aus **drei**
+> hergeleiteten Quellen (n = 3): dem typischen und dem schlimmsten Wert von `NEXANS` aus M34, der
+> Ankernachricht aus M42‑0 und einer `IBIS`-Nachricht.
+>
+> *Behauptet wird:* dass eine Präfixsuche denselben Zugriffspfad nimmt wie die heutige exakte Suche
+> und dass ihre Kosten allein an der Kandidatenzahl hängen.
+>
+> **Die Lücke, und sie ist vierfach.** Erstens gilt die 10‑Sekunden-Grenze in **Produktion**, und
+> gemessen ist eine **ruhende** Testkopie — dieselbe benannte Lücke wie im Belegvermerk zu M35 und
+> M47; die Zahlen sind Untergrenzen und keine Zusagen. Zweitens ist der teuerste gemessene Fall
+> **nicht der schlimmste denkbare**: Gemessen ist der schlimmste *Wert* (234.159) und das auf vier
+> Zeichen verkürzte Präfix *eines* Werts (155.871) — M49‑2a kennt einen Präfix mit **1.332.180**
+> Zeilen, und der ist **nicht** durch das Statement gelaufen. Drittens ist die Nullen-im-Muster-Fassung
+> mit **vier** `LIKE` gemessen, nicht mit sieben, und bei **einem** Begriff, nicht bei acht. Und
+> viertens misst M49‑3 die **Statements** und nicht den **Aufruf**. Was trägt: *Mit Präfix statt
+> exakt kostet jeder gemessene Normalfall unter 2 ms und der schlimmste bekannte Wert 1,8 s über 30
+> Tage.* Was **nicht** gemessen ist: *derselbe Satz für den schlimmsten Präfix des Bestands, für
+> sieben Fassungen und unter Last.*
+
+---
+
+## M49‑4 Sonderzeichen im Bestand
+
+**Frage.** Mit `=` sind `%` und `_` in der Eingabe harmlos. Mit `LIKE` werden sie zu Platzhaltern.
+Kommen sie im Bestand vor — und kann ein BAM-Wert einen Doppelpunkt tragen?
+
+> **Regel L9 ist berührt**, mit derselben Begründung wie bei M49‑2a: Die Frage gilt dem **Bestand**.
+> Ein Zeitfenster sagte, welche Zeichen *ein Monat* enthält, und für eine Eingabekennzeichnung, die
+> dauerhaft im Code steht, ist das die falsche Grundgesamtheit. **Die Sonde über eine einzige Spalte
+> kostet 7,798 s**, das vollständige Statement **21,412 s** — beide unter der Grenze.
+
+### Statement
+
+```sql
+SELECT COUNT(*)                                       AS zeilen,
+       SUM(MessageBAMValue LIKE '%#%%' ESCAPE '#')    AS mit_prozent,
+       SUM(MessageBAMValue LIKE '%#_%' ESCAPE '#')    AS mit_unterstrich,
+       SUM(MessageBAMValue LIKE '%*%')                AS mit_stern,
+       SUM(MessageBAMValue LIKE '%:%')                AS mit_doppelpunkt,
+       SUM(MessageBAMValue LIKE '% ')                 AS folgendes_leerzeichen
+FROM MessageBAM;
+```
+
+**`EXPLAIN`:** `MessageBAM`, `type` `index`, `key` `PRIMARY`, `key_len` 430, `rows` 10.859.666,
+`Using index` — ein vollständiger, index-naher Durchlauf ohne temporäre Tabelle.
+
+### Ergebnis
+
+| | Zeilen | Anteil |
+|---|---:|---:|
+| `MessageBAM` insgesamt | **15.406.350** | 100 % |
+| **mit `%`** | **0** | **0 %** |
+| mit `_` | **2.696** | 0,0175 % |
+| mit `*` | **1.738** | 0,0113 % |
+| **mit `:`** | **585** | **0,0038 %** |
+| **mit folgendem Leerzeichen** | **602.794** | **3,913 %** |
+
+**Die Zeile mit dem folgenden Leerzeichen ist gegengeprüft**, in einer Form **ohne** `LIKE` — weil
+die PAD-SPACE-Regel in diesem Projekt schon einmal eine Zahl verdorben hat (M46‑0):
+
+```sql
+SELECT SUM(LENGTH(MessageBAMValue) <> LENGTH(TRIM(TRAILING ' ' FROM MessageBAMValue)))
+         AS folgendes_leerzeichen_ohne_like,
+       SUM(LENGTH(MessageBAMValue) = 0) AS leere_werte
+FROM MessageBAM;
+```
+
+**602.794** — Zeichen für Zeichen dieselbe Zahl. Und **`leere_werte` ist `0`**, was M46 bestätigt:
+Einen leeren BAM-Wert gibt es im ganzen Bestand nicht.
+
+### Der Beleg statt der Behauptung
+
+Ohne Tabellenzugriff, damit die `ESCAPE`-Semantik nicht behauptet, sondern gezeigt ist:
+
+| Ausdruck | Ergebnis |
+|---|:---:|
+| `'50%' LIKE '50%'` | **1** — das `%` der Eingabe ist ein Platzhalter |
+| `'50%' LIKE '50#%' ESCAPE '#'` | **1** — maskiert trifft es das Zeichen selbst |
+| `'5_0' LIKE '5#_0' ESCAPE '#'` | **1** |
+| `'5X0' LIKE '5#_0' ESCAPE '#'` | **0** — maskiert trifft `_` **nicht** jedes Zeichen |
+| `'5X0' LIKE '5_0'` | **1** — unmaskiert schon |
+
+### Der Doppelpunkt — der Punkt ist **bestätigt**, nicht geschlossen
+
+[`bam-suche.md`](bam-suche.md) §1 führt als ausdrücklich ungemessen, **ob ein BAM-Wert selbst einen
+Doppelpunkt tragen kann**; die Parameterform `<typ>:<wert>` weicht dem aus, indem sie am **ersten**
+Doppelpunkt teilt.
+
+**Er kann: 585 BAM-Werte tragen einen Doppelpunkt.** Damit ist der offene Punkt **bestätigt und
+nicht geschlossen** — und die Bauentscheidung von Teil 2b war die richtige. Hätte die Anwendung am
+**letzten** Doppelpunkt geteilt oder den Trenner freigestellt, wären diese 585 Werte unsuchbar oder
+falsch zerlegt worden. Die Teilung am ersten Doppelpunkt ist damit **kein Vorsichtsmaßnahme mehr,
+sondern eine gemessen notwendige**.
+
+### Was `%`, `*` und `_` für eine Präfixkennzeichnung bedeuten
+
+Käme die Präfixsuche, bräuchte sie eine Form, in der der Nutzer sie **anfordert** — etwa ein
+angehängtes `*`. Dazu gehört die Auskunft, ob das Zeichen im Bestand vorkommt:
+
+| Zeichen | Zeilen | als Kennzeichen brauchbar? |
+|---|---:|---|
+| **`%`** | **0** | **ja** — es kommt im ganzen Bestand nicht vor. Es ist zugleich das Zeichen, das `LIKE` ohnehin benutzt |
+| `*` | 1.738 | **nur mit Regel**: 1.738 Werte trügen es selbst. Ein Wert, der auf `*` endet, wäre nicht mehr eindeutig als „exakt" formulierbar |
+| `_` | 2.696 | als Kennzeichen ungeeignet; **als Eingabezeichen aber gefährlich**, weil `LIKE` es als Platzhalter liest — 2.696 Werte tragen es |
+
+**Unabhängig von der Kennzeichnung gilt: Sobald `LIKE` in das Statement kommt, braucht jede Eingabe
+ein `ESCAPE`.** Die 2.696 Werte mit `_` sind der Beweis, dass die Falle nicht theoretisch ist: Wer
+heute einen solchen Wert exakt sucht, findet ihn; mit `LIKE` ohne `ESCAPE` fände er zusätzlich alle
+Werte, die an dieser Stelle ein beliebiges Zeichen tragen. Es ist dieselbe Falle wie
+`LIKE 'ERROR\_%' ESCAPE '\'` in [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §4.1 und
+Regel Q1.
+
+### Die Randleerzeichen — die Folgerung, nicht die Messung
+
+M43‑3 hat die Semantik zweifach belegt und wird hier **nicht wiederholt**. Was dazugehört, ist die
+**Konsequenz**, und sie ist jetzt beziffert:
+
+| Ausdruck | Ergebnis | was das heißt |
+|---|:---:|---|
+| `'123 ' = '123'` | **1** | Mit `=` ist ein folgendes Leerzeichen **im Bestand** harmlos (PAD SPACE) |
+| `'123' = '123 '` | **1** | … und ebenso eines **in der Eingabe** |
+| `'123 ' LIKE '123'` | **0** | `LIKE` folgt der PAD-SPACE-Regel **nicht** |
+| `'123 ' LIKE '123%'` | **1** | Ein Präfixmuster findet den Wert mit folgendem Leerzeichen |
+| **`'123' LIKE '123 %'`** | **0** | **Aber eine Eingabe *mit* folgendem Leerzeichen findet den Wert ohne nicht mehr** |
+
+**Ein Trim auf der Eingabe wird also Pflicht, sobald Präfix dazukommt** — und die Zahl daneben sagt,
+wie groß der Bestand ist, der an dieser Regel hängt: **602.794 Werte (3,91 %) tragen selbst ein
+folgendes Leerzeichen.** Heute fängt PAD SPACE beide Richtungen ab; mit `LIKE` fällt die eine
+Richtung weg.
+
+**Wo die vorformulierte Zeile nicht passt (6).** Der Auftrag stellt die Randleerzeichen ausdrücklich
+als *Folgerung* und nicht als Messung — sein eigenes Statement zählt sie aber mit, und die Zahl ist
+größer, als eine Folgerung nahelegt. **3,91 Prozent des Bestands sind kein Randfall.** Zum Vergleich:
+`bam_sollaenge` führt das **führende** Leerzeichen für zwei Paare mit 1,349624 % (9018) und
+0,000100 % (9020) — das folgende ist über den ganzen Bestand fast dreimal häufiger als das führende
+beim auffälligsten Typ. Es steht heute in keiner Kuratierung, weil es keine braucht; mit `LIKE`
+bräuchte es eine Regel.
+
+### Belegvermerk (Regel L10)
+
+> *Gemessen:* Über den **gesamten Bestand** (n = 15.406.350, Vollerhebung, kein Zeitfenster) das
+> Vorkommen von `%`, `_`, `*`, `:` und folgendem Leerzeichen; die Zeile zum folgenden Leerzeichen
+> zusätzlich in einer zweiten, `LIKE`-freien Form. Dazu neun Ausdrücke ohne Tabellenzugriff für die
+> `ESCAPE`- und die PAD-SPACE-Semantik.
+>
+> *Behauptet wird:* dass ein BAM-Wert einen Doppelpunkt tragen kann, dass `%` als Kennzeichen frei
+> ist und dass ein Trim auf der Eingabe mit `LIKE` zur Pflicht wird.
+>
+> **Die Lücke, und sie ist dreifach.** Erstens ist „`%` kommt nicht vor" eine Aussage über **diese
+> Testkopie mit Stand 08.07.2026** — nicht über die Produktion und nicht über morgen; ein einziger
+> neuer Wert mit `%` machte die Kennzeichnung mehrdeutig, und nichts im Quellsystem verbietet ihn.
+> Zweitens sagt die Zahl 585 **nicht**, dass diese Werte heute unsuchbar wären: Sie sind es nicht,
+> weil die Teilung am ersten Doppelpunkt sie korrekt zerlegt — gemessen ist die **Existenz**, nicht
+> ein Schaden. Und drittens sind die 602.794 folgenden Leerzeichen **typlos** gezählt; welche Typen
+> sie tragen und ob es dieselben sind, die **M43‑3** mit 24,83 % *folgenden* bei 9018 ausweist (von
+> den 25,88 % Randleerzeichen aus M38), ist **nicht** erhoben.
+> Was trägt: *`%` ist frei, `:` `*` `_` sind es nicht, und ein Trim wird Pflicht.* Was **nicht**
+> gemessen ist: *ob das für die Produktion ebenso gilt.*
+
+---
+
+## Für das Sparring
+
+Ohne Zahlenkolonnen, in drei Punkten.
+
+**1. Technisch tragbar — ja, aber nur mit einem Zusatzbau, den es heute nicht gibt.** Der
+Zugriffspfad ändert sich nicht, der Optimierer wählt weiter richtig, und die üblichen Fälle bleiben
+im Millisekundenbereich. Was die Präfixsuche kostet, ist nicht die Suchform, sondern die Zahl der
+Kandidatenzeilen — und die steigt mit jedem weggelassenen Zeichen dramatisch. Entscheidend ist
+etwas anderes: **Ohne Zusatzbau findet eine Präfixsuche bei den kuratierten Typen gar nichts.**
+Auffüllen und Präfix ankern beide vorn und schließen einander aus. Der gemessene Ausweg ist, die
+Nullen in das Muster zu ziehen; er funktioniert in jedem geprüften Fall und kostet drei bis sieben
+Muster je Begriff statt der heutigen fünf Fassungen insgesamt.
+
+**2. Nicht tragbar ist sie dort, wo der Wertevorrat einen gleichförmigen Anfang hat.** Bei den
+Typen, deren Werte alle ähnlich beginnen — Kennungsfelder wie die Lieferantennummer, die
+Kundenmaterialnummer, das Kundenwerk —, bleibt die schlimmste Trefferzahl auch bei sechs Zeichen
+sechsstellig, und mehr Zeichen senken sie nicht mehr, weil sie in einem einzelnen exakten Wert
+steckt. **Eine Mindestlänge löst das Problem also nicht**, und sie wäre ohnehin nur je Typ
+formulierbar — während die Suche typlos voreingestellt ist. Zwei Typen sind zusätzlich heikel, weil
+ihre Belegnummern nach dem Abziehen der führenden Nullen nur ein bis drei Zeichen übrig lassen; dort
+erzeugt schon die ungekürzte Eingabe über eine Million Kandidatenzeilen. Und ein Feld, das man für
+harmlos hielte, gehört auf diese Liste: die Bestellnummer vom Kunden.
+
+**3. Beim Auftraggeber liegen drei Entscheidungen, und keine davon entscheidet diese Runde.** Erstens:
+ob die Präfixsuche überhaupt kommt — die Zahlen sagen, dass sie machbar und dass sie teuer ist, aber
+nicht, ob der Nutzen sie rechtfertigt; **die Zahl, die das entschiede, existiert nicht** (siehe unten,
+Punkt 1 der Lücken). Zweitens: falls ja, ob sie **immer** gilt oder nur als zweite Geste im
+Nulltreffer-Fall — die zweite Form kostet nichts, solange sie nicht ausgelöst wird. Drittens, und das
+ist die unangenehmste: **Eine Präfixsuche verändert die Antwort auch dort, wo der Nutzer vollständig
+tippt.** Schon der ganze Wert als Muster findet mehr als die exakte Suche. Wer Präfix zuschaltet,
+tauscht nicht Bequemlichkeit gegen Laufzeit, sondern ändert, was „gefunden" heißt.
+
+---
 
 | Frage | Antwort |
 |---|---|
@@ -4108,6 +4936,678 @@ erwartete Gestalt: Beide Fälle bezahlen den Indexzugriff, und die 40 Zeilen dar
 | Wie viele Suchvarianten entstehen bei `NEXANS` höchstens? | **Fünf**, und nur bei ein- bis zweistelliger Eingabe — drei *verschiedene* Sollängen auf acht kuratierten Zeilen (M47) |
 | Was kostet die Normalisierung? | **Zehntelmillisekunden.** 0,956 → 1,221 ms von einer auf drei Fassungen; damit ist auch der Preis einer **wirkungslosen** Variante beziffert (M47) |
 | **Was kostet es, die Anzeigespalten neben statt über der Deckelung zu hängen?** | **Faktor 1,48** — 2.443 gegen 1.656 ms, bei **identisch gutem** `EXPLAIN`. Derselbe Fehler wie in Teil 1, dort Faktor 18,4 (M47) |
+| **Gehen Auffüllen und Präfixsuche zusammen?** | **Nein.** In **allen acht** prüfbaren Fällen findet die rohe Präfixfassung den aufgefüllten Originalwert **nicht** — beide ankern vorn (M49‑1) |
+| Gibt es einen Ausweg? | **Ja: die Nullen ins Muster ziehen.** Findet in allen acht Fällen das Original — Preis sind **3 bis 7** Fassungen je Begriff statt heute fünf insgesamt (M49‑1) |
+| Was kostet der Ausweg an Treffern? | **1 bis 1.245.618.** Zweistellig, solange der Kern lang ist; über eine Million, sobald er ein bis drei Zeichen hat (9036, 9006) (M49‑1) |
+| **Gibt es eine schützende Mindestlänge?** | **Typlos nein, in keiner Länge.** Bei k = 6 steht die schlimmste Trefferzahl auf **234.159** und kann nie darunter fallen — ein einziger *exakter* Wert trägt diese Zeilen (M49‑2a, M33) |
+| Wie viel bringen zwei Zeichen mehr? | **Sechs Prozent.** Präfixe ≥ 1.000 Treffer: 1.731 (k = 4) gegen 1.624 (k = 6), bei 18,7-fach mehr Präfixen (M49‑2a) |
+| **Liegt die Grenze je Typ verschieden?** | **Ja, um Faktor 3.969.** Bei k = 6 zwischen **59** (2000) und **234.159** (9014). Durchsetzbar wäre sie nur mit gewähltem Typ — die Suche ist **typlos voreingestellt** (M49‑2b, M36) |
+| Sind nur Kennungsfelder gefährlich? | **Nein.** Drei der zehn schlimmsten Präfixpaare gehören 9019 „Bestellnummer vom Kunden" (M49‑2a) |
+| Ändert `LIKE` statt `IN` den Plan? | **Nein.** `MessageBAM_BAMValueOnly`, `range`, und der Optimierer steigt weiter über den seltensten Begriff ein — auch an fünfter Stelle (M49‑3) |
+| Was kostet Präfix im gebauten Statement? | Normalfall **1,4 ms**, schlimmster Wert **1,823 s** über 30 Tage, vier Zeichen verkürzt **1,361 s** / **3,400 s** über ein Jahr (M49‑3) |
+| **Findet der vollständige Wert als Präfix dasselbe wie exakt?** | **Nein — 23 statt 1.** M34s „bei gleicher Trefferzahl" ist bei **keiner** Eingabelänge erfüllt (M49‑3) |
+| **Kann ein BAM-Wert einen Doppelpunkt tragen?** | **Ja, 585 tun es.** Der offene Punkt aus `bam-suche.md` §1 ist damit **bestätigt**, nicht geschlossen — und die Teilung am *ersten* Doppelpunkt gemessen notwendig (M49‑4) |
+| Kommt `%` im Bestand vor? | **Nein, kein einziges Mal.** `_` steht in 2.696 Werten, `*` in 1.738 (M49‑4) |
+| **Wie viele Werte tragen ein folgendes Leerzeichen?** | **602.794 — 3,91 %.** Mit `=` harmlos (PAD SPACE), mit `LIKE` nicht: Ein Trim auf der Eingabe wird Pflicht, sobald Präfix dazukommt (M49‑4, M43‑3) |
+| **Was kostet der schlimmste bekannte Präfix im gebauten Statement?** | **3,851 s** über 30 Tage — und über ein Jahr **Abbruch an der 60‑Sekunden-Grenze**. Der Faktor‑8,5-Fall aus M49‑2a ist damit gelaufen (M50) |
+| **Bleibt der Einstieg über `MessageBAM_BAMValueOnly`?** | **Nein — hier kippt der Plan.** Bei 1.332.180 Kandidatenzeilen steigt der Optimierer über `MessageLastUpdateIDX` ein und probt `MessageBAM` über den Primärschlüssel (M50 gegen M49‑3) |
+| **Kann ein BAM-Wert ein Komma tragen?** | **Ja, 55.989 tun es (0,363 %).** Und Spring zerlegt einen wiederholbaren Parameter am Komma — diese Werte sind heute **unsuchbar**, in beiden Modi (M50‑5) |
+| **Wo im Bestand sitzen die Kommas?** | **In drei von 62 Typen**, und 96,62 % davon in einem einzigen: 9003 „Material-Nr. beim Lieferanten" (54.096), dazu 9016 (1.888) und 9018 (**5**). Alle drei bei **einem** Mandanten (M51) |
+| **Traf der Kommadefekt die tragenden Suchtypen?** | **Praktisch nicht.** Von den sieben aus M39 ist nur 9018 betroffen — mit **fünf** Werten von 2.311.236, also 0,0002 % des Typs (M51‑2, M51‑3) |
+| **Bindet noch ein Endpunkt eine Liste, deren Werte ein Komma tragen könnten?** | **Zwei tun es** (`status`, `prozess` der Nachrichtenliste), **beide heute folgenlos**: Einordnungen sind Aufzählungsnamen, und **0 von 1.503** `ProcessID` tragen ein Komma (M51‑4) |
+
+---
+
+# M50 — Was kostet der schlimmste bekannte Präfix im gebauten Statement?
+
+***Achter** Nachtrag, 14.08.2026. Schritt 7, Teil 4 — die Messung **vor** dem Bau (Regel L7).*
+
+> **Die Nummern sind geprüft und nicht gleichgesetzt.** Höchste vergebene **Messnummer** in dieser
+> Datei: **M49**; höchste **ergänzende** Nummer: **E7**; höchste **Nachtragsnummer**: **sieben**
+> (M49). Messnummern und Nachtragsnummern laufen in dieser Datei getrennt — im siebten Nachtrag ist
+> genau das schiefgegangen. Diese Runde ist deshalb der **achte** Nachtrag mit der Messnummer
+> **M50**. Eine neue ergänzende Nummer ist nicht vergeben worden.
+
+**Frage.** M49‑2a kennt einen Vierzeichen-Präfix mit **1.332.180** Zeilen über den Bestand. Durch
+das gebaute Statement gelaufen ist bisher höchstens ein Fall mit 155.871 Zeilen (M49‑3: 1,361 s über
+30 Tage, 3,400 s über ein Jahr). **Der bekannte Bösfall ist Faktor 8,5 größer, und er ist nie
+gelaufen.** Diese Runde lässt ihn laufen.
+
+## Die vorregistrierte Lesart — sie stand vor der Messung fest
+
+| Ergebnis Jahresfenster | Konsequenz für den Bau |
+|---|---|
+| **unter 9 s** | Die Präfixsuche darf **dasselbe** Zeitfenster anbieten wie die exakte, bis zum Maximum aus Regel L1 (Zweig **A**) |
+| **9 s oder mehr** | Die Präfixsuche ist auf **30 Tage gedeckelt**; das Jahresfenster steht ihr nicht offen (Zweig **B**) |
+| **Abbruch an der 60‑s‑Grenze** | Zweig **B**, und der Abbruch ist das Ergebnis — nicht wiederholen, nicht die Grenze aussetzen |
+
+Die 9 Sekunden sind 90 % der Zeitgrenze des Lese-Pools und derselbe Maßstab, den M47 an den exakten
+Bösfall gelegt hat (8,940 s, „11 % Reserve").
+
+> **Eingetreten ist der dritte Fall.** Das Jahresfenster ist an der 60‑Sekunden-Grenze abgebrochen —
+> **schon im Aufwärmlauf**. Er ist nicht wiederholt und die Grenze nicht ausgesetzt worden.
+> **Gebaut wird Zweig B.**
+
+---
+
+## M50‑0 Rahmen
+
+Unverändert aus §0 übernommen, am **14.08.2026** in **elf** eigenen Sitzungen erhoben — neun für die
+Messung, zwei als Diagnose beim Bau (ihre Zahlen sind in M50‑5 profiliert wiederholt). Jeder Aufruf
+des Clients ist eine neue Sitzung; **`SELECT @@global.read_only` steht deshalb in jedem Skript als
+erste Abfrage** und lieferte **jedes Mal `1`**.
+
+| | |
+|---|---|
+| Ziel | **Testkopie**, `10.6.22-MariaDB-0ubuntu0.22.04.1-log` |
+| `@@global.read_only` **zu Beginn** | **`1`** (erste Abfrage der Runde, 09:52:30) |
+| `@@global.read_only` **am Ende** | **`1`** (letzte Abfrage der Runde, 10:31:02) |
+| Benutzer | **Lesebenutzer** `monitor_read@%` |
+| Serverzeit zu Beginn | `2026-08-14 09:52:30` (`UTC_TIMESTAMP` `07:52:30`, also UTC+2) |
+| Serverzeit am Ende | `2026-08-14 10:31:02` (`UTC_TIMESTAMP` `08:31:02`) |
+| `@@global.max_statement_time` | **`0`** — die 60 Sekunden je Sitzung über `SET max_statement_time = 60` |
+| `@@global.event_scheduler` | **`ON`**, unverändert |
+| Laufzeitmessung | serverseitig, `SET profiling = 1` / `SHOW PROFILES`, `profiling_history_size = 100` |
+| Wiederholungen | **beste von drei nach einem Aufwärmlauf für den Endpunktfall** (M50‑3); die Erhebungen über den Bestand einmalig — sie messen eine Verteilung und keine Uhr, wie in M49 |
+| Zugangsdaten | ausschließlich aus `OVERLORD_DB_*`, an den Client über `MYSQL_PWD` |
+
+### `@@sql_mode` — unverändert
+
+```
+STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
+```
+
+**Kein `ONLY_FULL_GROUP_BY`**, wie in §0, M47 und M49.
+
+### `SHOW GRANTS FOR CURRENT_USER()`
+
+Drei Zeilen, unverändert. Der Hash der ersten wird nach Regel G1 **nicht** abgedruckt:
+
+```
+GRANT USAGE ON *.* TO `monitor_read`@`%` IDENTIFIED BY PASSWORD '<Hash>'
+GRANT SELECT ON `GlassfishDB`.* TO `monitor_read`@`%`
+GRANT SELECT ON `overlord_monitor`.* TO `monitor_read`@`%`
+```
+
+### Die Testkopie ist unverändert — der **neunte** Messtag in Folge
+
+| | `DATA_LENGTH` | `INDEX_LENGTH` |
+|---|---:|---:|
+| `Message` | 740.851.712 | 2.157.330.432 |
+| `MessageAction` | 2.226.634.752 | 819.855.360 |
+| **`MessageBAM`** | **1.826.422.784** | **5.254.217.728** |
+
+**Byteidentisch mit M23‑1, M31‑0, §0, M44‑0, M46‑0, M47‑0 und M49‑0**, zu Beginn *und* am Ende der
+Runde geprüft. Dazu zwei unabhängige Kontrollen, die beide aufgehen:
+
+| Kontrolle | erwartet aus | gemessen |
+|---|---|---|
+| Zeilen in `MessageBAM` (dreimal in dieser Runde) | **15.406.350** (M33) | **15.406.350** ✔ |
+| Der häufigste Vierzeichen-Präfix | **1.332.180** (M49‑2a) | **1.332.180** ✔ |
+
+### Skills
+
+**Es ist keiner benutzt worden**, und das war die Vorgabe des Auftrags. Installiert und geprüft sind
+unter anderem `edi-field-mapping`, `find-skills`, `shadcn`, `frontend-design`, `dataviz`,
+`code-review`, `security-review`, `simplify`, `run`, `artifact-design` und `claude-in-chrome`;
+projektlokale Skills gibt es nicht. **`frontend-design` und `shadcn` sind für Teil 4 ausdrücklich
+ausgeschlossen** — er fasst die Oberfläche nicht an —, die übrigen betreffen andere Werkzeuge.
+
+### Anonymisierung
+
+Wie in §0 und M49: **Kein BAM-Wert und keine Belegnummer steht in diesem Nachtrag.** Der Präfix
+dieser Runde ist ein Anfangsstück echter Belegnummern; er steht ausschließlich in der
+Sitzungsvariablen `@p`, wird dort **hergeleitet und dort verbraucht** und ist nie aus der Datenbank
+herausgekommen. Abgedruckt sind seine **Gestalt**, seine Trefferzahl und die Typen, unter denen er
+steht — Typnummern und Beschreibungen aus `MessageBAMType` sind nach der Regel in
+[`README.md`](README.md) Konfigurationsvokabular.
+
+### Die eine Abweichung vom Rahmen
+
+**Der Auftrag verlangt `--skip-ssl`; gemessen ist mit `--ssl-mode=DISABLED`.** Der Client dieser
+Runde ist `mysql` 8.0.46 aus MySQL Workbench — derselbe wie in Schritt 4 bis 7 —, und er kennt
+`--skip-ssl` nicht; die Option ist die MariaDB-Schreibweise und bricht vor dem Sitzungsaufbau ab.
+Ein Wechsel auf den MariaDB-Client kostete die Vergleichbarkeit mit **allen** früheren Runden. Die
+Wirkung ist dieselbe: keine Transportverschlüsselung. Zusätzlich `--default-character-set=utf8mb4`,
+weil die Runde über Leerzeichen und Maskierungszeichen misst.
+
+---
+
+## M50‑1 Der Präfix — hergeleitet, nicht abgeschrieben
+
+Der Auftrag nennt die Herleitung und nicht den Wert:
+
+```sql
+SELECT LEFT(MessageBAMValue,4) AS p, COUNT(*) AS n INTO @p, @n
+  FROM MessageBAM GROUP BY p ORDER BY n DESC, p ASC LIMIT 1;
+```
+
+> **Regel L9 ist berührt, und die Begründung steht vorher.** Die Abfrage läuft **ohne Zeitfenster
+> über `MessageBAM`**. Ein Zeitfenster kann die Frage nicht beantworten: Gesucht ist der schlimmste
+> Präfix des **Bestands** — genau der Wert, den M49‑2a gefunden und ausdrücklich *nicht* durch das
+> Statement geschickt hat. Ein Monatsausschnitt lieferte den schlimmsten Präfix *eines Monats*, und
+> der ist nicht die Größe, um die es geht. **Die Kosten stehen unten**: 16,062 bis 16,243 s je
+> Sitzung. **Vier Sitzungen haben sie gelaufen, alle vier mit demselben Ergebnis** — drei davon
+> protokolliert, die vierte ist die abgebrochene Jahressitzung. Die zweite Sortierstufe `p ASC` macht
+> die Auswahl über Sitzungen hinweg reproduzierbar.
+
+### Seine Gestalt
+
+| Eigenschaft | Wert |
+|---|---|
+| Zeichen | **4** |
+| rein numerisch | **ja** |
+| beginnt mit einer Null | **nein** |
+| enthält `%`, `_` oder ein Leerzeichen | **nein**, keines davon |
+| Zeilen über den Bestand | **1.332.180** |
+
+**Die 1.332.180 reproduzieren M49‑2a Ziffer für Ziffer** — dort steht dieselbe Zahl als Rang 1 bei
+k = 4. Die Herleitung ist damit unabhängig bestätigt.
+
+### Welchen Typen er gehört
+
+```sql
+SELECT b.MessageBAMType, t.MessageBAMTypeDescription, COUNT(*) AS n
+FROM MessageBAM b LEFT JOIN MessageBAMType t ON t.MessageBAMType = b.MessageBAMType
+WHERE b.MessageBAMValue LIKE CONCAT(@p,'%')
+GROUP BY b.MessageBAMType, t.MessageBAMTypeDescription ORDER BY n DESC LIMIT 5;
+```
+
+| Typ | Beschreibung | Zeilen | Kennung oder Beleg? |
+|---:|---|---:|---|
+| 9002 | Lieferplannummer_L_SAP | 789.416 | Kennung |
+| **9019** | **Bestellnummer vom Kunden_K_SAP** | **410.030** | **Beleg** |
+| **9034** | **Bestellnummer_L_SAP** | **132.693** | **Beleg** |
+| 9003 | Material-Nr. beim Lieferanten_L_SAP | 39 | Kennung |
+| 0 | Bestellnummer | 2 | Beleg |
+
+**Summe: 1.332.180** — die Aufschlüsselung geht auf, es fehlt kein Typ. Laufzeit 4,062 s.
+
+**Zwei Drittel dieses Präfixes sind Belegnummern.** Die 410.030 sind Zeichen für Zeichen die Zahl,
+die M49‑2a auf Rang 3 seiner schlimmsten Präfixpaare führt. **Der Befund aus M49‑2a — „gefährlich
+sind nur die Kennungsfelder" trägt nicht — wird hier zum zweiten Mal und schärfer bestätigt:** Der
+schlimmste Präfix des ganzen Bestands trägt mit 9019, 9034 und 0 gleich **drei** Belegnummerntypen
+und 542.725 Zeilen davon. Das ist genau das, was ein Nutzer eintippt.
+
+---
+
+## M50‑2 `EXPLAIN` — der Plan kippt, und das ist der eigentliche Befund
+
+Gemessen ist der von jOOQ **gerenderte** Text aus `BamSucheRepository`, mit getauschtem
+Wertprädikat — dieselbe Bauform wie in M49‑3, nur ein anderer Prüfwert. Mandantenfilter als
+`EXISTS`, `GROUP BY m.MessageID`, Deckelung auf 51, die vier Anzeigetabellen **über** der Deckelung,
+**kein `STRAIGHT_JOIN`**.
+
+**30 Tage** (Fenster B) — und **ein Jahr** unterscheidet sich nur in einer Zahl:
+
+| id | select_type | table | type | key | key_len | ref | rows | Extra |
+|---|---|---|---|---|---:|---|---:|---|
+| 1 | PRIMARY | `<derived2>` | `ALL` | — | — | — | 51 | `Using filesort` |
+| 1 | PRIMARY | `Process` | `eq_ref` | `PRIMARY` | 146 | `treffer.ProcessID` | 1 | `Using where` |
+| 1 | PRIMARY | `Project` | `eq_ref` | `PRIMARY` | 146 | `Process.ProjectID` | 1 | `Using where` |
+| 1 | PRIMARY | `SOS` | `eq_ref` | `PRIMARY` | 146 | `treffer.SOSID` | 1 | `Using where` |
+| 1 | PRIMARY | `SOSAction` | `eq_ref` | `PRIMARY` | 148 | `treffer.SOSID,treffer.SOSActionID` | 1 | `Using where` |
+| 2 | DERIVED | **`Message`** | **`range`** | **`MessageLastUpdateIDX`** | **5** | — | **409.758** (Jahr: **1.780.243**) | `Using index condition; Using where; Using temporary; Using filesort` |
+| 2 | DERIVED | `mandanten_process` | `eq_ref` | `PRIMARY` | 146 | `Message.ProcessID` | 1 | `Using where` |
+| 2 | DERIVED | `ProjectMandant` | `eq_ref` | `PRIMARY` | 292 | `mandanten_process.ProjectID,const` | 1 | `Using where; Using index` |
+| 2 | DERIVED | **`b1`** | **`ref`** | **`PRIMARY`** | **146** | `Message.MessageID` | **8** | `Using where; Using index` |
+
+### Was daran neu ist
+
+**M49‑3 misst über elf Fälle, dass der Einstieg `b1` als `range` über `MessageBAM_BAMValueOnly`
+bleibt. Hier bleibt er es nicht.** Bei 1.332.180 Kandidatenzeilen dreht der Optimierer die Reihenfolge
+um: Er steigt über das **Zeitfenster** ein (`MessageLastUpdateIDX`, `key_len` 5) und probt
+`MessageBAM` erst am Ende über den **Präfix des Primärschlüssels**. `MessageBAM_BAMValueOnly` steht
+nur noch unter `possible_keys`.
+
+**Das ist keine Fehlwahl, sondern die richtige.** Der Wertindex läge bei 1,33 Millionen Einträgen;
+das Fenster liefert 409.758 geschätzte Zeilen. Der Optimierer nimmt den kleineren Einstieg — genau
+das, wofür in diesem Statement seit M42‑1 **kein `STRAIGHT_JOIN`** steht. Eine festgeschriebene
+Reihenfolge nähme ihm diese Wahl ausgerechnet im teuersten Fall.
+
+> **Regel L15: Die Einstiegstabelle ist belegt und nicht angenommen** — und sie ist eine andere als
+> erwartet. Wer nach M49‑3 „der Plan ändert sich nicht" fortgeschrieben hätte, hätte hier danebengelegen.
+> Der Satz aus M49‑3 bleibt richtig **für seine elf Fälle**; er trägt nicht über sie hinaus.
+
+**Und die Deckelung steht, wo sie stand:** `<derived2>` mit 51 Zeilen, darüber vier `eq_ref` auf
+`PRIMARY`. Die Gestalt aus M47 ist unberührt.
+
+---
+
+## M50‑3 Laufzeiten
+
+| Fall | Kandidatenzeilen | Aufwärmlauf | Läufe | **beste von drei** | Treffer |
+|---|---:|---:|---|---:|---|
+| **30 Tage** | 1.332.180 | 3,913 s | 3,865 / 3,885 / 3,851 s | **3,851 s** | 51 → **gedeckelt** |
+| **ein Jahr** | 1.332.180 | — | — | **Abbruch bei 60 s** | — |
+
+**Der Abbruch ist ein Ergebnis und kein Fehlschlag.** MariaDB meldet `ERROR 1969 (70100): Query
+execution was interrupted (max_statement_time exceeded)` — und zwar bereits im **Aufwärmlauf**. Nach
+der vorregistrierten Lesart ist er damit die Antwort; er ist nicht wiederholt worden, und die Grenze
+ist nicht ausgesetzt worden.
+
+> **Dass es genau der Fehler ist, den der Endpunkt bereits behandelt, ist kein Zufall und kein
+> Trost.** `1969`/`70100` ist die Ausnahme, aus der `BamSucheRepository.anDerZeitgrenze` den
+> Problemtyp `suche-abgebrochen` macht. In Produktion liefe sie **früher**: Der Lese-Pool setzt
+> `max_statement_time=10` ([`datenzugriff.md`](datenzugriff.md) §1), nicht 60. Der Jahresfall wäre
+> dort ein Abbruch nach zehn Sekunden — **ein Endpunkt, der zuverlässig abbricht, ist kein
+> Endpunkt**, und genau deshalb steht der Deckel im Code und nicht der Abbruchpfad allein.
+
+### Was die 30 Tage im Verhältnis bedeuten
+
+| Fall | 30 Tage | Anteil an der 10‑s‑Grenze des Lese-Pools |
+|---|---:|---:|
+| exakt, schlimmster Wert (M47) | 1,656 s | 16,6 % |
+| Präfix, schlimmster **Wert** (M49‑3) | 1,823 s | 18,2 % |
+| Präfix, vier Zeichen eines Werts (M49‑3) | 1,361 s | 13,6 % |
+| **Präfix, schlimmster Präfix des Bestands (M50)** | **3,851 s** | **38,5 %** |
+
+**Faktor 2,1 gegenüber dem bisher teuersten Präfixfall über 30 Tage** — und der Faktor zwischen den
+Kandidatenzahlen ist 8,5. Die Laufzeit wächst also **langsamer als linear**, was zum gekippten Plan
+passt: Nicht mehr der Wertindex bestimmt die Arbeit, sondern das Fenster.
+
+---
+
+## M50‑4 Die tatsächlich gerenderte Fassung — mit `ESCAPE`
+
+M49‑3 hat mit `like concat(?, '%')` gemessen. **Gebaut wird `like ? escape '\'`**, weil die
+Maskierung Pflicht ist (M49‑4: 2.696 Werte mit `_`). jOOQ rendert die Klausel für MariaDB als
+`escape '\\'` — der Rückstrich ist im Zeichenkettenliteral verdoppelt, wie es MariaDB verlangt.
+
+**Der `EXPLAIN` ist Zeile für Zeile derselbe**, sowohl mit einem `LIKE` als auch mit **zwei
+veroderten** (die Gestalt der Nullen-im-Muster-Fassungen): `Message` als `range` über
+`MessageLastUpdateIDX` mit denselben 409.758 Zeilen, `b1` als `ref` über `PRIMARY` mit `rows` 8,
+darüber die vier `eq_ref`. **Die Maskierung kostet den Plan nichts.**
+
+### Der Beleg statt der Behauptung
+
+Ohne Tabellenzugriff, damit die `ESCAPE`-Semantik der **gerenderten** Fassung gezeigt und nicht
+behauptet ist:
+
+| Ausdruck | Ergebnis | was das heißt |
+|---|:---:|---|
+| `'50%' LIKE '50\%%' ESCAPE '\'` | **1** | maskiert trifft `%` das Zeichen selbst |
+| `'50X' LIKE '50\%%' ESCAPE '\'` | **0** | … und eben **nicht** jedes Zeichen |
+| `'5_0' LIKE '5\_0%' ESCAPE '\'` | **1** | dasselbe für `_` |
+| `'5X0' LIKE '5\_0%' ESCAPE '\'` | **0** | die Falle aus Regel Q1, geschlossen |
+| `'a\b' LIKE 'a\\b%' ESCAPE '\'` | **1** | das Maskierungszeichen selbst ist maskierbar |
+| `' 4711X' LIKE ' 4711%' ESCAPE '\'` | **1** | ein **führendes** Leerzeichen trägt und bleibt |
+| `'4711 ' LIKE '4711%' ESCAPE '\'` | **1** | ein Wert **mit** folgendem Leerzeichen wird gefunden |
+| **`'4711' LIKE '4711 %' ESCAPE '\'`** | **0** | **aber eine Eingabe mit folgendem Leerzeichen findet den Wert ohne nicht mehr** |
+
+Die letzte Zeile ist die, an der der Schnitt in `Suchbedingung.muster()` hängt — M49‑4 hat sie als
+Folgerung ausgewiesen, hier steht sie an der gebauten Fassung.
+
+---
+
+## M50‑5 Der Doppelpunkt hat einen Nachbarn: das Komma
+
+**Gefunden beim Bau, nicht gesucht.** Die Herleitung des erweiterten Isolationstests nimmt die
+**längsten** `NEXANS`-Werte im Fenster — und der Endpunkt antwortete darauf mit `400`. Der Grund
+liegt nicht im neuen Pfad, sondern in der Parameterform aus Teil 2b: **Spring zerlegt einen
+`@RequestParam List<String>` am Komma.** Ein BAM-Wert mit Komma zerfällt damit in zwei Begriffe, von
+denen der zweite keinen Pflichttrenner mehr trägt — die Antwort ist `400 suchbegriff-ohne-typtrenner`.
+
+> **Regel L9 ist berührt**, mit derselben Begründung wie bei M49‑4: Die Frage gilt dem **Bestand**.
+> Eine Parameterform steht dauerhaft im Code; was *ein Monat* enthält, ist dafür die falsche
+> Grundgesamtheit. **Kosten: 7,731 s**, Gegenprobe 7,614 s.
+
+```sql
+SELECT COUNT(*) AS zeilen, SUM(MessageBAMValue LIKE '%,%') AS mit_komma FROM MessageBAM;
+```
+
+**`EXPLAIN`:** `MessageBAM`, `type` `index`, `key` `PRIMARY`, `key_len` 430, `rows` 10.859.666,
+`Using index` — dieselbe Gestalt wie M49‑4.
+
+| | Zeilen | Anteil |
+|---|---:|---:|
+| `MessageBAM` insgesamt | **15.406.350** | 100 % |
+| **mit `,`** | **55.989** | **0,363 %** |
+
+**Gegengeprüft in einer zweiten, `LIKE`-freien Form** — wie bei M49‑4, weil eine `LIKE`-Zählung in
+diesem Projekt schon einmal eine Zahl verdorben hat:
+
+```sql
+SELECT SUM(LOCATE(',', MessageBAMValue) > 0) AS mit_komma_ohne_like FROM MessageBAM;
+```
+
+**55.989** — Zeichen für Zeichen dieselbe Zahl. Und `COUNT(*)` liefert zum dritten Mal in dieser
+Runde **15.406.350**.
+
+**Das Komma ist damit 95‑mal häufiger als der Doppelpunkt** (55.989 gegen 585, M49‑4) — und anders
+als beim Doppelpunkt ist die Lage **nicht** entschärft: Der Doppelpunkt ist durch die Teilung am
+*ersten* Vorkommen behandelt, das Komma ist es nicht. **Diese 55.989 Werte sind heute unsuchbar, in
+beiden Modi.**
+
+> **Teil 4 behebt das nicht, und das ist eine Entscheidung.** Eine Änderung an der Bindung träfe den
+> **exakten** Pfad, der gebaut, getestet und in M47 gemessen ist; §2.2 des Auftrags verlangt
+> ausdrücklich, dass dort Zeichen für Zeichen nichts geändert wird. Der Befund ist stattdessen in
+> `BamSucheDbIT.ein_komma_im_wert_ist_heute_400` festgeschrieben und steht als offener Punkt in
+> [`bam-suche.md`](bam-suche.md) §9.
+
+---
+
+## Befunde — vor der Messung formuliert
+
+| Befund | trifft zu | Konsequenz |
+|---|---|---|
+| **Der Jahresfall bleibt unter 9 s** | **nein — Abbruch bei 60 s** | **Zweig B.** Der Präfixmodus ist auf 30 Tage gedeckelt; die exakte Suche behält ihr Jahresmaximum |
+| **Der 30‑Tage-Fall bleibt unter 9 s** | **ja — 3,851 s** | Der Deckel ist damit nicht nur eine Grenze, sondern eine **tragfähige** Grenze: 38,5 % der Zeitgrenze im schlimmsten bekannten Fall |
+| **Der Plan bleibt der aus M49‑3** | **nein** | Der Optimierer kippt auf `MessageLastUpdateIDX` und probt `MessageBAM` über `PRIMARY`. **Kein `STRAIGHT_JOIN`** — er wählt weiter selbst, und er wählt richtig |
+| **Die Laufzeit wächst linear mit der Kandidatenzahl** | **nein, langsamer** | Faktor 8,5 an Kandidaten ergibt Faktor 2,1 an Laufzeit gegenüber M49‑3. Passt zum gekippten Plan: Die Arbeit hängt am Fenster, nicht mehr am Wertindex |
+| **Die schlimmsten Präfixe gehören Kennungsfeldern** | **nein — zwei Drittel sind Belegnummern** | 9019, 9034 und 0 tragen 542.725 der 1.332.180 Zeilen. **M49‑2a wird zum zweiten Mal bestätigt**: „nur Kennungsfelder" trägt nicht |
+
+## Belegvermerk (Regel L10)
+
+> *Gemessen:* Die Laufzeit des **gebauten** Statements mit getauschtem Wertprädikat für **einen**
+> Präfix — den häufigsten Vierzeichen-Präfix des Bestands (1.332.180 Zeilen, hergeleitet und dreimal
+> reproduziert) — bei `NEXANS`, über 30 Tage (beste von drei nach einem Aufwärmlauf) und über ein
+> Jahr (Abbruch im Aufwärmlauf); dazu **vier** `EXPLAIN` (zwei Fenster × zwei Fassungen des
+> Wertprädikats), acht Ausdrücke ohne Tabellenzugriff für die `ESCAPE`- und PAD-SPACE-Semantik und
+> zwei Vollerhebungen über `MessageBAM` (Präfixherleitung, Kommazählung).
+>
+> *Behauptet wird:* dass der Präfixmodus über 30 Tage tragbar und über ein Jahr nicht tragbar ist.
+>
+> **Die Lücke, und sie ist vierfach.** **Erstens** ist `n = 1`: Gemessen ist **ein** Präfix, nämlich
+> der schlimmste bekannte — nicht eine Verteilung. Der Satz „30 Tage sind tragbar" stützt sich darauf,
+> dass dieser eine Fall der obere Rand ist, und das ist ein **Schluss aus M49‑2a** und keine Messung
+> dieser Runde. **Zweitens** gilt die 10‑Sekunden-Grenze in **Produktion**, gemessen ist eine
+> **ruhende** Testkopie — dieselbe benannte Lücke wie in M35, M47 und M49‑3; die Zahlen sind
+> Untergrenzen und keine Zusagen. Unter Last liegt der 30‑Tage-Fall näher an der Grenze als 38,5 %.
+> **Drittens** ist der gemessene Fall **ein Begriff ohne Typ und ohne Nullen-im-Muster-Fassungen** —
+> die gebaute Höchstform (acht Begriffe, bis zu sieben Fassungen je Begriff) ist **nicht** gelaufen;
+> M49‑3 misst vier verodere `LIKE` bei *einem* Begriff mit 1,205 ms, und mehr ist dazu nicht bekannt.
+> **Viertens** sagt keine Zahl, **welche** Präfixe Nutzer tatsächlich eingeben; gemessen ist der
+> schlimmste Fall, nicht der wahrscheinliche.
+>
+> Was trägt: *Der schlimmste bekannte Präfix des Bestands kostet über 30 Tage 3,851 s und reißt über
+> ein Jahr die 60‑Sekunden-Grenze.* Was **nicht** gemessen ist: *ob ein anderer Präfix über 30 Tage
+> teurer ist, und was die Höchstform mit acht Begriffen kostet.*
+
+---
+
+# M51 — Wo im Bestand sitzen die Kommas?
+
+***Neunter** Nachtrag, 14.08.2026. Die Messung **zur** Behebung des Kommadefekts (Regel L7).*
+
+> **Die Nummern sind geprüft und nicht gleichgesetzt.** Höchste vergebene **Messnummer** in dieser
+> Datei: **M50**; höchste **ergänzende** Nummer: **E7**; höchste **Nachtragsnummer**: **acht**
+> (M50). Messnummern und Nachtragsnummern laufen in dieser Datei getrennt — im siebten Nachtrag ist
+> genau das schiefgegangen. Diese Runde ist deshalb der **neunte** Nachtrag mit der Messnummer
+> **M51**. Eine neue ergänzende Nummer ist nicht vergeben worden.
+
+**Frage.** M50‑5 hat gezählt, **wie viele** Werte ein Komma tragen: 55.989, also 0,363 % des
+Bestands. **Wo sie sitzen, hat niemand gezählt** — und davon hängt ab, ob „ein Defekt im Suchweg"
+trägt oder ob eine große Zahl nur groß aussieht. Ein Komma in einer Freitextspalte ist etwas anderes
+als eines in der Nummer, die ein Mandant vom Beleg abtippt.
+
+> **Diese Messung entscheidet den Bau nicht.** Repariert wird so oder so; der Defekt liegt in einem
+> Pfad, der seit Teil 2b als fertig gilt. Sie entscheidet, **was in der Dokumentation über die
+> Tragweite stehen darf**, statt dass es geschätzt wird.
+
+## Die vorregistrierte Lesart — sie stand vor der Messung fest
+
+| Befund | trifft zu | Konsequenz |
+|---|---|---|
+| **Die Kommas sitzen überwiegend in Kennungs- und Freitextfeldern** | **ja — 100 %** | Der Defekt ist ärgerlich, aber selten im Weg dessen, der eine **Belegnummer** sucht |
+| **Sie sitzen in tragenden Suchtypen** (M39: 9018, 0, 2000, 2001, 3, 2002, 9014) | **fast nicht — 5 von 55.989** | Nur **Typ 9018** ist betroffen, mit **fünf** Werten. Die Dringlichkeit steigt dadurch nicht |
+| **Ein einzelner Typ trägt den Großteil** | **ja — 96,62 %** | In der Dokumentation steht **Typ 9003** und keine Gesamtzahl |
+
+---
+
+## M51‑0 Rahmen
+
+Unverändert aus §0 übernommen, am **14.08.2026** in **zehn** eigenen Sitzungen erhoben — neun für
+die Messung, eine als Diagnose beim Bau der Testherleitung (ihre beiden Laufzeiten stehen in der
+Laufzeittabelle). Jeder Aufruf des Clients ist eine neue Sitzung; **`SELECT @@global.read_only`
+steht deshalb in jedem Skript als erste Abfrage** und lieferte **jedes Mal `1`**.
+
+| | |
+|---|---|
+| Ziel | **Testkopie**, `10.6.22-MariaDB-0ubuntu0.22.04.1-log` |
+| `@@global.read_only` **zu Beginn** | **`1`** (erste Abfrage der Runde, 11:11:11) |
+| `@@global.read_only` **am Ende** | **`1`** (letzte Abfrage der Runde, 11:26:15) |
+| Benutzer | **Lesebenutzer** `monitor_read@%` |
+| Serverzeit zu Beginn | `2026-08-14 11:11:11` (`UTC_TIMESTAMP` `09:11:11`, also UTC+2) |
+| Serverzeit am Ende | `2026-08-14 11:26:15` (`UTC_TIMESTAMP` `09:26:15`) |
+| `@@global.max_statement_time` | **`0`** — die 60 Sekunden je Sitzung über `SET max_statement_time = 60` |
+| `@@global.event_scheduler` | **`ON`**, unverändert |
+| `@@div_precision_increment` | **`4`** — hier ohne Wirkung: Diese Runde rechnet **keine** Division im Server, alle Anteile sind aus ganzen Zahlen abgeleitet |
+| Laufzeitmessung | serverseitig, `SET profiling = 1` / `SHOW PROFILES`, `profiling_history_size = 100` |
+| Wiederholungen | **einmalig**. Der Gegenstand ist eine **Verteilung und keine Uhr** — dieselbe Begründung wie bei den Bestandserhebungen in M49 und M50; die Laufzeiten sind Obergrenzen mit Kaltlaufanteil und tragen keinen Befund |
+| Zugangsdaten | ausschließlich aus `OVERLORD_DB_*`, an den Client über `MYSQL_PWD` |
+
+### `@@sql_mode` — unverändert
+
+```
+STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
+```
+
+### `SHOW GRANTS FOR CURRENT_USER()`
+
+Drei Zeilen, unverändert. Der Hash der ersten wird nach Regel G1 **nicht** abgedruckt:
+
+```
+GRANT USAGE ON *.* TO `monitor_read`@`%` IDENTIFIED BY PASSWORD '<Hash>'
+GRANT SELECT ON `GlassfishDB`.* TO `monitor_read`@`%`
+GRANT SELECT ON `overlord_monitor`.* TO `monitor_read`@`%`
+```
+
+### Die Testkopie ist unverändert — der **zehnte** Messtag in Folge
+
+| | `DATA_LENGTH` | `INDEX_LENGTH` |
+|---|---:|---:|
+| `Message` | 740.851.712 | 2.157.330.432 |
+| `MessageAction` | 2.226.634.752 | 819.855.360 |
+| **`MessageBAM`** | **1.826.422.784** | **5.254.217.728** |
+
+**Byteidentisch mit M23‑1, M31‑0, §0, M44‑0, M46‑0, M47‑0, M49‑0 und M50‑0**, zu Beginn *und* am
+Ende der Runde geprüft. Dazu zwei Kontrollen aus M50‑5, die beide aufgehen:
+
+| Kontrolle | erwartet aus | gemessen |
+|---|---|---|
+| Zeilen in `MessageBAM` | **15.406.350** (M33) | **15.406.350** ✔ |
+| Werte mit Komma | **55.989** (M50‑5) | **55.989** ✔ |
+
+### Skills
+
+**Es ist keiner benutzt worden**, und das war die Vorgabe des Auftrags. Installiert und geprüft sind
+`edi-field-mapping`, `find-skills` und `shadcn` als Nutzer-Skills, dazu die mitgelieferten
+`frontend-design`, `dataviz`, `artifact-design`, `artifact-diagramming`, `artifact-capabilities`,
+`code-review`, `security-review`, `simplify`, `run`, `init`, `loop`, `schedule`, `claude-api`,
+`claude-in-chrome`, `update-config`, `keybindings-help` und `fewer-permission-prompts`;
+**projektlokale Skills gibt es nicht** (`.claude/skills/` fehlt). Keiner davon passt auf einen
+Auftrag, der eine Parameterbindung repariert und die Oberfläche nicht anfasst.
+
+### Anonymisierung
+
+Wie in §0, M49 und M50: **Kein BAM-Wert und keine Belegnummer steht in diesem Nachtrag.** Abgedruckt
+sind ausschließlich **Typnummern, Typbeschreibungen und Zählungen** — Typnummern und Beschreibungen
+aus `MessageBAMType` sind nach der Regel in [`README.md`](README.md) Konfigurationsvokabular.
+
+### Die eine Abweichung vom Rahmen
+
+**Der Auftrag verlangt `--skip-ssl`; gemessen ist mit `--ssl-mode=DISABLED`.** Zum dritten Mal
+dieselbe Abweichung aus demselben Grund: Der Client ist `mysql` 8.0.46 aus MySQL Workbench, und die
+Option ist die MariaDB-Schreibweise. Die Wirkung ist dieselbe: keine Transportverschlüsselung.
+Zusätzlich `--default-character-set=utf8mb4`.
+
+---
+
+## M51‑1 Die Sonde — und sie reproduziert M50‑5 auf die Stelle
+
+Der Auftrag verlangt eine Sonde vor dem Lauf: **Reißt sie die Grenze, ist der Abbruch das
+Ergebnis.** Genommen ist dafür nicht irgendein billiges Statement, sondern **die Zählung aus M50‑5**
+— sie kostet dieselbe Art Vollindex-Durchlauf wie die eigentliche Messung und ist zugleich die
+Kontrolle, ob der Bestand noch derselbe ist.
+
+```sql
+SELECT COUNT(*) AS zeilen, SUM(MessageBAMValue LIKE '%,%') AS mit_komma FROM MessageBAM;
+```
+
+| | Zeilen | Anteil |
+|---|---:|---:|
+| `MessageBAM` insgesamt | **15.406.350** | 100 % |
+| **mit `,`** | **55.989** | **0,363 %** |
+
+**7,731 s** — und das ist nicht nur „unter der Grenze", sondern **dieselbe Zahl wie in M50‑5**, dort
+ebenfalls 7,731 s. Die Sonde ist damit durchgelaufen; die Messung durfte folgen.
+
+> **Regel L9 ist berührt**, mit derselben Begründung wie bei M49‑4 und M50‑5: Die Frage gilt dem
+> **Bestand**. Eine Parameterform steht dauerhaft im Code; was *ein Monat* enthält, ist dafür die
+> falsche Grundgesamtheit.
+
+---
+
+## M51‑2 Das Statement — und der Befund ist schmaler als die Zahl
+
+```sql
+SELECT MessageBAMType, COUNT(*) AS zeilen
+FROM MessageBAM
+WHERE MessageBAMValue LIKE '%,%'
+GROUP BY MessageBAMType
+ORDER BY zeilen DESC
+LIMIT 15;
+```
+
+**`EXPLAIN`:** `MessageBAM`, `type` `index`, `key` **`MessageBAM_BAMValue`**, `key_len` 284, `rows`
+10.859.666, `Using where; Using index; Using temporary; Using filesort`.
+
+> **Der Plan ist ein anderer als in M49‑4 und M50‑5**, und der Grund ist die Gruppierung: Dort lief
+> der Durchlauf über `PRIMARY` (`key_len` 430), hier über den **Wertindex**. Er trägt als
+> Sekundärindex die Spalten des Primärschlüssels mit und deckt damit `MessageBAMType` ab — der
+> schmalere Schlüssel (284 statt 430) ist der billigere Durchlauf. **Er kostet 6,716 s und damit
+> weniger als die Sonde**, obwohl er zusätzlich gruppiert und sortiert.
+
+**Laufzeit: 6,716 s.** Das Ergebnis hat **drei** Zeilen — `LIMIT 15` schneidet nichts ab:
+
+| `MessageBAMType` | `MessageBAMTypeDescription` | Zeilen mit Komma | Anteil an allen 55.989 |
+|---:|---|---:|---:|
+| **9003** | **`Material-Nr. beim Lieferanten_L_SAP`** | **54.096** | **96,62 %** |
+| 9016 | `Abladestelle_K_SAP` | 1.888 | 3,37 % |
+| 9018 | `Kundenmaterialnummer_K_SAP` | **5** | 0,01 % |
+
+Die Beschreibungen stehen unverändert, samt Endung — dieselbe Regel wie in M45.
+
+**Kontrolle in zweiter Form**, ohne `LIMIT` und ohne Verlass auf die Sortierung:
+
+```sql
+SELECT COUNT(*) AS typen_mit_komma, SUM(zeilen) AS summe FROM (
+  SELECT MessageBAMType, COUNT(*) AS zeilen
+  FROM MessageBAM WHERE MessageBAMValue LIKE '%,%' GROUP BY MessageBAMType
+) t;
+```
+
+**3 Typen, Summe 55.989** (6,612 s) — Zeile für Zeile dieselbe Menge. Von den 62 Typen der
+Konfiguration (M45) tragen also **drei** überhaupt ein Komma.
+
+---
+
+## M51‑3 Wie dicht sitzen sie? — über den Auftrag hinaus
+
+Der Auftrag verlangt ein Statement. Ohne den **Nenner je Typ** bliebe aber offen, ob 54.096 für
+Typ 9003 viel oder wenig ist — und genau daran hängt die dritte Zeile der Lesart. Ein Statement
+mehr:
+
+```sql
+SELECT MessageBAMType, COUNT(*) AS zeilen_des_typs, SUM(MessageBAMValue LIKE '%,%') AS mit_komma
+FROM MessageBAM WHERE MessageBAMType IN (9003, 9016, 9018) GROUP BY MessageBAMType;
+```
+
+| Typ | Zeilen des Typs | mit Komma | Anteil **innerhalb** des Typs |
+|---:|---:|---:|---:|
+| **9003** | 1.071.249 | 54.096 | **5,05 %** |
+| 9016 | 412.886 | 1.888 | 0,46 % |
+| 9018 | 2.311.236 | 5 | **0,0002 %** |
+
+**3,016 s** — deutlich billiger als die Vollerhebungen, weil das Typprädikat den Durchlauf
+begrenzt. Die Spalte `mit_komma` reproduziert die drei Zahlen aus M51‑2 ein drittes Mal.
+
+**Und alle drei Typen gehören demselben Mandanten.** `MessageBAMMandant` führt 9003, 9016 und 9018
+bei **genau einem** der sieben konfigurierten Mandanten, nämlich `NEXANS` (1,1 ms). Der Defekt war
+damit kein Breitenproblem: Er traf **einen** Mandanten, dort aber jeden zwanzigsten Wert des
+Typs 9003.
+
+---
+
+## M51‑4 Die Nachbarschaft — bindet noch ein Endpunkt eine Liste?
+
+Der Defekt ist an einer Stelle gefunden worden; der Auftrag verlangt, nachzusehen, ob er anderswo
+genauso liegt. **Durchgesehen sind alle zehn Controller.** Anfrageparameter mit Listentyp gibt es
+außer `begriff` genau **zwei**, beide in der Nachrichtenliste:
+
+| Endpunkt | Parameter | Werte kommen aus | Komma möglich? |
+|---|---|---|---|
+| `/api/nachrichten` | `status` | Namen von `MessageStatusKind` (`FEHLER`, `WARTEND`, `LAEUFT`, `AUFGETEILT`, `ZUSAMMENGEFUEHRT`, `ABGESCHLOSSEN`, `QUITTIERT`) | **nein** — Aufzählungsnamen; ein Komma darin gäbe es nur als Tippfehler und ergibt `400 status-unbekannt` |
+| `/api/nachrichten` | `prozess` | `Process.ProcessID` | **nein, gemessen** — siehe unten |
+
+Alle übrigen Anfrageparameter des Projekts sind **einzelne** Werte (`zeitraum`, `von`, `bis`,
+`suche`, `langeSuche`, `sortierung`, `cursor`, `limit`, `modus`) und werden nicht zerlegt; die
+Administration, die Anmeldung und der Mandantenwechsel nehmen JSON-Rümpfe entgegen, Detail, Kette
+und Belegdaten eine Kennung im Pfad.
+
+**`ProcessID` ist gemessen und nicht geschätzt** (Regel Q4):
+
+```sql
+SELECT COUNT(*), SUM(ProcessID LIKE '%,%'), SUM(LOCATE(',', ProcessID) > 0) FROM Process;
+```
+
+**1.503 Prozesse, davon 0 mit Komma** — in beiden Formen, `LIKE` und `LOCATE`, wie bei M49‑4 und
+M50‑5 gegengeprüft. Die längste `ProcessID` hat 36 Zeichen. **3,0 ms**, weil `Process` eine
+Stammdatentabelle ist.
+
+> **Nicht mitrepariert, und das ist Absicht.** Ein Auftrag, ein Eingriff. Die Zahl sagt, dass dort
+> heute nichts kaputt ist — nicht, dass die Bindung dort richtig wäre. **Ein Prozessname mit Komma
+> würde die Nachrichtenliste morgen genauso zerlegen**, und dann ist dieser Abschnitt die Stelle,
+> an der es steht.
+
+---
+
+## Befunde — vor der Messung formuliert
+
+| Befund | trifft zu | Konsequenz |
+|---|---|---|
+| **Die Kommas sitzen überwiegend in Kennungs- und Freitextfeldern** | **ja, ausschließlich** | Material-Nr. beim Lieferanten und Abladestelle tragen 99,99 % davon. Keiner der drei Typen ist eine Belegnummer im Sinne des Leitsatzes |
+| **Sie sitzen in tragenden Suchtypen** | **fast nicht** | Von den sieben Typen aus M39 ist einer betroffen — 9018 mit **fünf** Werten von 2.311.236 |
+| **Ein einzelner Typ trägt den Großteil** | **ja** | 9003 trägt 54.096 der 55.989 |
+
+**Ein Befund passte in keine vorformulierte Zeile: Der Defekt war ein Mandantenproblem und kein
+Bestandsproblem.** Alle drei Typen sind bei **genau einem** der sieben Mandanten konfiguriert. Die
+Zahl „0,363 % des Bestands" liest sich wie ein gleichmäßig verteiltes Rauschen; tatsächlich saß
+sie bei einem Mandanten auf **jedem zwanzigsten Wert** eines seiner Anzeigetypen. **Das ist kein
+kleinerer, sondern ein anderer Befund** — und er ist der Grund, weshalb die Herleitung des
+Isolationstests über ihn gestolpert ist und nicht irgendeine Suche.
+
+**Ein zweiter passte ebenfalls nicht: Der Plan ist billiger als der der Sonde.** Die Gruppierung
+über `MessageBAMType` schickt den Optimierer auf den **Wertindex** statt auf `PRIMARY` — 284 statt
+430 Byte Schlüssellänge und 6,716 s statt 7,731 s, obwohl zusätzlich gruppiert und sortiert wird.
+Das war nicht erwartet und ändert an keiner Folgerung etwas; es steht hier, weil es in keine Zeile
+passte.
+
+## Belegvermerk (Regel L10)
+
+> *Gemessen:* Die Verteilung der kommahaltigen Werte über die BAM-Typen — **eine** Vollerhebung über
+> `MessageBAM` nach der Vorgabe des Auftrags, **eine** Sonde als Kontrolle gegen M50‑5, **eine**
+> zweite Form der Gruppierung ohne `LIMIT`, **eine** Erhebung der Nenner je betroffenem Typ, dazu
+> die Beschreibungen aus `MessageBAMType`, die Zuordnung aus `MessageBAMMandant` und eine
+> Vollerhebung über `Process` für die Nachbarschaft.
+>
+> *Behauptet wird:* dass der Kommadefekt **einen** Mandanten und dort im Wesentlichen **einen** Typ
+> traf, und dass er die tragenden Suchtypen aus M39 praktisch nicht berührte.
+>
+> **Die Lücke, und sie ist dreifach.** **Erstens** — und das ist die Lücke, die der Auftrag selbst
+> benennt — sagt keine dieser Zahlen, **wie oft solche Werte gesucht werden**. Gemessen ist die
+> Existenz im Bestand, nicht ein Schaden im Betrieb; dieses Projekt erhebt Suchanfragen bewusst
+> nicht, und deshalb ist auch keine Zahl unterwegs, die die Lücke später schlösse. **Der Satz „der
+> Defekt war selten im Weg" ist damit ein Schluss aus der Datenlage und keine Beobachtung.**
+> **Zweitens** ist die Zuordnung „Kennungs- oder Freitextfeld" aus den **Beschreibungen** gelesen
+> und nicht aus dem Inhalt: Dass „Material-Nr. beim Lieferanten" keine Belegnummer im Sinne des
+> Leitsatzes ist, folgt aus ihrem Namen — und Namen sind in diesem Projekt Konfiguration und keine
+> Zusage. **Drittens** ist die Nachbarschaft **heute** sauber; `Process` ist eine gepflegte
+> Stammdatentabelle, und 0 von 1.503 ist eine Momentaufnahme und keine Eigenschaft des Schemas.
+>
+> Was trägt: *Drei von 62 Typen tragen Kommas, 96,62 % davon ein einziger, und alle drei gehören
+> einem Mandanten.* Was **nicht** gemessen ist: *ob und wie oft jemand diese Werte gesucht hat.*
 
 ---
 
@@ -4316,12 +5816,113 @@ reißt. Mit dem Standard-Zeitfenster von 24 Stunden kostet er 90,5 ms.
 > Abbruchpfad ist damit kein Vorbehalt für den Ausnahmefall, sondern die Zusicherung für die
 > **Obergrenze** von Regel L1.
 
-## Die fünf Abweichungen vom Rahmen
+### Siebter Nachtrag vom 13.08.2026 — M49
+
+*Der **sechste** Nachtrag (M48, Typenauswahl) hat in dieser Übersicht keinen eigenen Abschnitt; seine
+drei Laufzeiten stehen in M48‑3. Das ist eine Lücke von damals und wird hier nicht stillschweigend
+geschlossen — siehe die offene Frage am Ende.*
+
+Die Erhebung zur Präfixsuche. **Zwei Blöcke laufen nach Regel L9 ohne Zeitfenster über
+`MessageBAM`** (M49‑2 und M49‑4); die Begründung steht jeweils vor der Messung, die Kosten hier.
+
+| Messung | Fenster | Laufzeit | Wiederholungen |
+|---|---|---:|---|
+| M49‑0 Rahmen, Grants, Bytegrößen, `@@sql_mode` | — | < 5 ms | einmalig |
+| **M49‑0 Vergleichsanker (M47, `IN`, typischer Wert)** | **30 T** | **1,160 ms** | beste von 5 |
+| M49‑1 Herleitung der Prüfwerte (acht Typen) | — | 1,2–19,1 ms je Typ | einmalig je Sitzung |
+| M49‑1 dominante Länge für 2001 / 9006 | — | 383 / 144 ms | einmalig |
+| M49‑1 `UNION ALL`, 3 bis 6 Fassungen (acht Läufe) | **ohne** | 0,661–1,174 ms | einmalig |
+| **M49‑1 `UNION ALL` 9036 ungekürzt / 9006** | **ohne** | **679,599 / 739,704 ms** | einmalig |
+| **M49‑2a `k` = 3 / 4 / 5 / 6, Top-10** | **ohne** | **14.620 / 16.144 / 19.659 / 23.829 ms** | einmalig |
+| **M49‑2a Bänder `k` = 4 / 6** | **ohne** | **15.996 / 23.770 ms** | einmalig |
+| **M49‑2a Bänder `k` = 8** | **ohne** | **Abbruch bei 60 s** | — |
+| **M49‑2a Typzuordnung der schlimmsten Präfixe** | **ohne** | **21.489 ms** | einmalig |
+| M49‑2b je Typ, `k` = 4 / 6 — 9018 | **ohne** | 2.098 / 2.289 ms | einmalig |
+| M49‑2b je Typ, `k` = 4 / 6 — Typ 3 | **ohne** | 2.000 / 2.350 ms | einmalig |
+| M49‑2b je Typ, `k` = 4 / 6 — 9014 / 9015 | **ohne** | 383–428 / 354–358 ms | einmalig |
+| M49‑2b je Typ, `k` = 4 / 6 — 0 / 9006 | **ohne** | 158–187 / 144–195 ms | einmalig |
+| M49‑2b je Typ, `k` = 4 / 6 — 2000 / 2001 / 2002 | **ohne** | 1,0–15,9 ms | einmalig |
+| M49‑3 elf `EXPLAIN` | 30 T / Jahr | < 10 ms | einmalig |
+| **M49‑3 typischer Wert, vollständig als Präfix** | **30 T / Jahr** | **1,374 / 1,585 ms** | beste von 5 |
+| **M49‑3 … um zwei Zeichen verkürzt** | **30 T** | **49,863 ms** | beste von 5 |
+| **M49‑3 … um vier Zeichen verkürzt** | **30 T / Jahr** | **1.361,436 / 3.399,650 ms** | beste von 3 |
+| **M49‑3 schlimmster Wert, vollständig** | **30 T** | **1.823,054 ms** | beste von 3 |
+| M49‑3 zwei Begriffe, beide Reihenfolgen | 30 T | **1,270 / 1,279 ms** | beste von 5 |
+| M49‑3 fünf Begriffe, seltener zuerst / zuletzt | 30 T | **1,840 / 1,910 ms** | beste von 5 |
+| M49‑3 Nullen im Muster, vier `LIKE` im `OR` | 30 T | **1,205 ms** | beste von 5 |
+| M49‑3 `IBIS`, vollständig / verkürzt | 30 T | **1,177 / 1,177 ms** | beste von 5 |
+| **M49‑4 Sonde, eine Spalte** | **ohne** | **7.798 ms** | einmalig |
+| **M49‑4 vollständiges Statement, fünf Spalten** | **ohne** | **21.412 ms** | einmalig |
+| **M49‑4 Gegenprobe ohne `LIKE`** | **ohne** | **9.534 ms** | einmalig |
+| M49‑4 `ESCAPE`- und PAD-SPACE-Belege | — | < 1 ms | einmalig |
+
+**Das teuerste nicht abgebrochene Statement dieses Nachtrags kostet 23,829 s** und liegt damit bei
+39,7 % der 60-Sekunden-Grenze. **Kein Statement der Anwendung** ist darunter: Die Erhebungen über den
+Bestand sind Messwerkzeuge und kämen so nie in Anwendungscode (Regel L9, letzter Satz). Die
+teuerste Fassung, die *als Endpunkt denkbar* wäre, ist der auf vier Zeichen verkürzte Präfix über
+ein Jahr mit **3,400 s** — 34 % der Zeitgrenze des Lese-Pools.
+
+### Achter Nachtrag vom 14.08.2026 — M50
+
+Die Messung vor dem Bau von Teil 4. **Zwei Blöcke laufen nach Regel L9 ohne Zeitfenster über
+`MessageBAM`** (die Präfixherleitung und die Kommazählung); die Begründung steht jeweils vor der
+Messung, die Kosten hier.
+
+| Messung | Fenster | Laufzeit | Wiederholungen |
+|---|---|---:|---|
+| M50‑0 Rahmen, Grants, Bytegrößen, `@@sql_mode` | — | < 5 ms | einmalig |
+| M50‑0 `COUNT(*)` über `MessageBAM` | **ohne** | **nicht gemessen** — in der Rahmensitzung ohne Profiling gelaufen | einmalig |
+| **M50‑1 Herleitung des Präfixes** | **ohne** | **16.062 / 16.232 / 16.243 ms** | vier Sitzungen, **drei** protokolliert |
+| M50‑1 Typzuordnung des Präfixes | **ohne** | **4.062 ms** | einmalig |
+| M50‑2 vier `EXPLAIN` (zwei Fenster × zwei Fassungen) | 30 T / Jahr | < 3 ms | einmalig |
+| **M50‑3 schlimmster Präfix des Bestands** | **30 T** | **3.851,152 ms** | **beste von drei** nach einem Aufwärmlauf (3,913 / 3,865 / 3,885 / 3,851 s) |
+| **M50‑3 schlimmster Präfix des Bestands** | **ein Jahr** | **Abbruch bei 60 s** | im Aufwärmlauf, nicht wiederholt |
+| M50‑4 `ESCAPE`- und PAD-SPACE-Belege (acht Ausdrücke) | — | < 1 ms | einmalig |
+| **M50‑5 Kommazählung** | **ohne** | **7.731 ms** | Aufwärmlauf 7,824 s + ein Lauf |
+| **M50‑5 Gegenprobe ohne `LIKE`** | **ohne** | **7.614 ms** | einmalig |
+
+*Die vierte Herleitung ist die der abgebrochenen Jahressitzung: Sie hat ihr Ergebnis noch gemeldet
+(`n = 1.332.180`, wie die drei anderen), ihre Laufzeit aber nicht — der Client hat die Sitzung beim
+Abbruch des Folgestatements beendet, bevor `SHOW PROFILES` lief. **Die Zahl fehlt und wird nicht
+geschätzt.***
+
+**Das teuerste nicht abgebrochene Statement dieses Nachtrags kostet 16,243 s** — die
+Präfixherleitung, ein Messwerkzeug und kein Anwendungsstatement. **Die teuerste Fassung, die als
+Endpunkt tatsächlich läuft, ist der schlimmste Präfix über 30 Tage mit 3,851 s** und liegt damit bei
+38,5 % der Zeitgrenze des Lese-Pools. Der Jahresfall ist **nicht** als Endpunkt denkbar — er ist
+abgebrochen, und genau deshalb steht der Deckel im Code.
+
+### Neunter Nachtrag vom 14.08.2026 — M51
+
+Die Messung zur Behebung des Kommadefekts. **Drei Blöcke laufen nach Regel L9 ohne Zeitfenster über
+`MessageBAM`** (Sonde, Gruppierung, Gegenprobe) und einer über `Process`; die Begründung steht
+jeweils vor der Messung, die Kosten hier. **Alle Zeilen sind einmalig gemessen** — der Gegenstand
+ist eine Verteilung und keine Uhr, wie in M49 und M50.
+
+| Messung | Fenster | Laufzeit | Wiederholungen |
+|---|---|---:|---|
+| M51‑0 Rahmen, Grants, Bytegrößen, `@@sql_mode` | — | < 5 ms | einmalig, ohne Profiling |
+| **M51‑1 Sonde: Kommazählung (Kontrolle gegen M50‑5)** | **ohne** | **7.731 ms** | einmalig — **dieselbe Zahl wie M50‑5** |
+| M51‑2 `EXPLAIN` der Gruppierung | **ohne** | 0,72 ms | einmalig |
+| **M51‑2 Kommas je Typ** | **ohne** | **6.716 ms** | einmalig |
+| **M51‑2 Gegenprobe ohne `LIMIT`** | **ohne** | **6.612 ms** | einmalig |
+| M51‑3 Beschreibungen aus `MessageBAMType` | — | 0,82 ms | einmalig |
+| M51‑3 Zuordnung aus `MessageBAMMandant` (zwei Abfragen) | — | < 1,1 ms | einmalig |
+| **M51‑3 Nenner je betroffenem Typ** | **ohne** | **3.016 ms** | einmalig |
+| **M51‑4 `ProcessID` mit Komma** | **ohne** | **3,0 ms** | einmalig |
+| *Diagnose beim Bau: Kandidaten für die Testherleitung* | *B* | *2.574 / 2.531 ms* | *einmalig, zwei Abfragen* |
+
+**Das teuerste Statement dieses Nachtrags kostet 7,731 s** — die Sonde, also ein Messwerkzeug und
+kein Anwendungsstatement. **Kein Statement dieser Runde läuft je als Endpunkt**: M51 misst den
+Bestand und nicht die Suche. Die Behebung selbst ändert am Statement der Suche nichts (siehe
+[`bam-suche.md`](bam-suche.md) §9), und deshalb ist zu ihr auch nichts zu messen gewesen.
+
+## Die sechs Abweichungen vom Rahmen
 
 Sie stehen hier zusammen, damit sie nicht in den Tabellen untergehen. **Die vierte unterscheidet
-sich von den ersten dreien grundsätzlich: Sie war vorher entschieden und begründet, die anderen sind
-passiert.** Die fünfte ist wieder eine, die passiert ist — und die einzige, bei der die Grenze
-tatsächlich **gegriffen** hat.
+sich von den übrigen grundsätzlich: Sie war vorher entschieden und begründet, die anderen sind
+passiert.** Die fünfte und die sechste sind die beiden, bei denen die Grenze tatsächlich
+**gegriffen** hat.
 
 | | Statement | was passiert ist |
 |---|---|---|
@@ -4330,6 +5931,7 @@ tatsächlich **gegriffen** hat.
 | 3 | Auswahl der Prüfwerte, erste Fassung | **679 s ohne Ergebnis**, client-seitig abgebrochen, serverseitig mit `KILL QUERY` beendet |
 | **4** | **M44‑2 `COUNT(*)` über `MessageProperty`** | **199,380 s** — die 60-Sekunden-Grenze war für dieses eine Statement **vorab ausgesetzt** und durch `SET max_statement_time = 900` ersetzt. Kein Abbruch: 22,2 % der gesetzten Grenze |
 | **5** | **M46‑3, erste Fassung** | **serverseitig abgebrochen bei 60 s** (`ERROR 1969`). Die Grenze war gesetzt und hat gegriffen — kein Blockieren, kein `KILL QUERY`. Die schlanke Fassung ohne `LEFT JOIN` und ohne `TRIM` kostet **9,558 s**, also 15,9 % der Grenze |
+| **6** | **M49‑2a, Bänder bei `k` = 8** | **serverseitig abgebrochen bei 60 s** (`ERROR 1969`). **Kein Ausweichen und keine zweite Fassung** — der Abbruch ist als Ergebnis stehen geblieben. Die Zahl der Präfixe wächst von 12.915 (k = 4) über 241.737 (k = 6) auf eine Größe, bei der die temporäre Tabelle die Grenze reißt; die Reihe endet damit bei k = 6. **Die Frage dahinter bleibt trotzdem beantwortet**, weil der Boden bei 234.159 aus M49‑2a und M33 folgt und nicht aus k = 8 |
 
 Fall 1 und 2 sind vor der Einführung von `SET max_statement_time = 60` gelaufen; der Client blockiert
 bis zum Ergebnis, ein Abbruch „bei 60 Sekunden" war deshalb nicht möglich. Ab Fall 3 lief jede
@@ -4351,13 +5953,68 @@ Frage gilt dem Bestand — und die gemessenen Kosten stehen in M44. Sie gilt fü
 Statement** und nicht für die Runde: Alle übrigen Statements des zweiten Nachtrags liegen unter
 5 ms. Und sie ist ausdrücklich **kein** Statement der Anwendung.
 
+### Zwei weitere Abweichungen des siebten Nachtrags (M49) — beide methodisch, keine an einem Statement
+
+Sie stehen getrennt, weil sie nicht in die Spalte „was passiert ist" gehören: Kein Statement ist an
+ihnen gescheitert, es ist **anders gemessen worden als der Rahmen es vorschreibt**.
+
+**A — `--ssl-mode=DISABLED` statt `--skip-ssl`.** Der Auftrag schreibt `--skip-ssl` vor. Der Client
+dieser Runde — `mysql` 8.0.46 aus MySQL Workbench, **derselbe wie in Schritt 4, 5, 6 und in M32 bis
+M48** — kennt diese Option nicht und bricht mit `unknown option '--skip-ssl'` ab, bevor eine Sitzung
+zustande kommt. Gewählt ist die wirkungsgleiche Option desselben Clients, mit der auch alle früheren
+Runden gemessen haben. **Die Alternative wäre ein anderer Client gewesen** (der MariaDB-Client kennt
+`--skip-ssl`) — und damit der Verlust der Vergleichbarkeit mit M32 bis M48, also genau das, was der
+Vergleichsanker in M49‑0 sicherstellen soll. Die Verschlüsselung ist in beiden Fassungen aus.
+
+**B — die Erhebungen über den Bestand sind *einmalig* gemessen, nicht als beste von drei.** Der
+Rahmen verlangt bei Statements über einer Sekunde die beste von drei nach einem Aufwärmlauf.
+Eingehalten ist das für **alle** Statements aus M49‑3, also für jede Zahl, die den Endpunkt betrifft.
+Nicht eingehalten ist es für die zwölf Erhebungen aus M49‑2 und M49‑4, die zwischen 2 und 24 Sekunden
+kosten. Der Grund steht hier und nicht in einer Fußnote: **Ihr Gegenstand ist die Verteilung und
+nicht die Uhr** — die Trefferzahlen sind exakt und wiederholungsunabhängig, und vier Läufe je
+Statement hätten der geteilten Testkopie rund fünf Minuten zusätzliche Last aufgeladen, ohne eine
+einzige Folgerung zu ändern. **Die Laufzeiten dieser zwölf Zeilen sind deshalb Obergrenzen mit
+Kaltlaufanteil und keine Bestwerte** — sie sind in der Laufzeittabelle als „einmalig"
+gekennzeichnet und tragen keinen Befund.
+
+### Die eine Abweichung des achten Nachtrags (M50) — dieselbe wie A, und aus demselben Grund
+
+**`--ssl-mode=DISABLED` statt `--skip-ssl`.** Der Auftrag zu Teil 4 schreibt `--skip-ssl` erneut
+vor, und der Client kennt die Option erneut nicht. Gemessen ist mit derselben wirkungsgleichen
+Option wie in M49 und in allen Runden davor. **Sie steht hier ein zweites Mal, weil sie ein zweites
+Mal aufgetreten ist** — und nicht, weil sie neu wäre.
+
+> **Der Rest des Rahmens ist eingehalten**, und zwar auch dort, wo M49 abgewichen ist: Die beiden
+> Erhebungen über den Bestand sind zwar einmalig gemessen (Präfixherleitung, Typzuordnung), **die
+> Kommazählung aber zweimal und der Endpunktfall als beste von drei nach einem Aufwärmlauf** — für
+> jede Zahl, die den gebauten Endpunkt betrifft, gilt die Regel des Rahmens ohne Einschränkung.
+
+### Die eine Abweichung des neunten Nachtrags (M51) — zum dritten Mal dieselbe
+
+**`--ssl-mode=DISABLED` statt `--skip-ssl`.** Derselbe Client, dieselbe fehlende Option, dieselbe
+wirkungsgleiche Ersetzung. **Sie steht hier ein drittes Mal, weil sie ein drittes Mal aufgetreten
+ist.**
+
+> **Und eine zweite, die keine Ausnahme ist, sondern eine Ansage:** M51 misst **jede** Zeile nur
+> **einmal**. Das ist keine Abweichung vom Rahmen, sondern die Regel, die M49 und M50 für
+> Bestandserhebungen schon angewandt haben — nur gilt sie hier für die **ganze** Runde, weil sie
+> keine einzige Zahl über einen laufenden Endpunkt erhebt. **Die Laufzeiten dieses Nachtrags sind
+> deshalb durchweg Obergrenzen mit Kaltlaufanteil und tragen keinen Befund.**
+
 ---
 
 # Wo die vorformulierte Zeile nicht passte
 
-**Achtundzwanzig** Stellen, einzeln benannt und jeweils als eigener Absatz unter der Tabelle
+**Achtunddreißig** Stellen, einzeln benannt und jeweils als eigener Absatz unter der Tabelle
 ausgewiesen — elf aus der Hauptrunde vom 11.08.2026, sieben aus dem ersten und drei aus dem zweiten
-Nachtrag vom 12.08.2026, drei aus dem vierten und **vier aus dem fünften** vom 13.08.2026:
+Nachtrag vom 12.08.2026, drei aus dem vierten, vier aus dem fünften und **sechs aus dem siebten**
+vom 13.08.2026, dazu **zwei aus dem achten** und **zwei aus dem neunten** vom 14.08.2026.
+
+> **Der sechste Nachtrag (M48) ist in dieser Tabelle nicht geführt**, obwohl er einen solchen Befund
+> hat — dass `MessageBAMTypeSortIndex` **nicht eindeutig** ist, stand in keiner vorformulierten
+> Zeile. Er ist in M48 als eigener Absatz ausgewiesen und nur hier nicht eingetragen. **Das ist eine
+> Lücke von damals; sie wird hier benannt und nicht nachträglich gefüllt** — die Zählung dieser
+> Tabelle gehört zu der Runde, die sie geschrieben hat. Siehe die offene Frage am Ende.
 
 | # | Messung | Der Befund, der in keine Zeile passte |
 |---:|---|---|
@@ -4389,6 +6046,16 @@ Nachtrag vom 12.08.2026, drei aus dem vierten und **vier aus dem fünften** vom 
 | **26** | **M47** | **Bei K5c greift die `rows`-8-Falle aus M42‑1 K5 mit Zeitfenster nicht mehr:** 926,7 ms werden **6,9 ms**. Nicht die Bauform fängt den Fall auf, sondern Regel L1 |
 | **27** | **M47** | **`NEXANS` hat acht Sollängen auf zehn Zeilen, nicht elf.** Der Auftrag zu Teil 2b nennt „elf Sollängen"; die Zahl der *verschiedenen* ist mit drei richtig, und nur auf die kommt es an |
 | **28** | **M47** | **Die zweite Abfrage wählt `MessageBAM_MessageFK` und nicht das Präfix des Primärschlüssels.** Derselbe Zugriffstyp, dasselbe `Using index`, ein anderer der drei Indizes, die auf `MessageID` beginnen (M32) |
+| **29** | **M49‑1** | **Zwei der acht Prüftypen füllen gar nicht auf.** 2001 und 9006 stehen nicht in `bam_sollaenge` — für sie entsteht der gemessene Widerspruch nicht, weil es keine Normalisierung gibt, gegen die ein Präfix ankern könnte. **Bei ihnen wäre Präfix sofort wirksam und sofort teuer** |
+| **30** | **M49‑1** | **Bei 9036 lässt sich der Prüfwert nicht verkürzen** — sein Kern ist **ein** Zeichen lang, `LEFT(kern, −1)` ist die leere Zeichenkette und `LIKE '%'` der ganze Bestand. Der Auftrag setzt voraus, dass zwei Zeichen immer abziehbar sind. Die ungekürzte Fassung kostet **1.086.626** Treffer in der ersten Fassung |
+| **31** | **M49‑2a** | **Die schlimmste Trefferzahl hat einen Boden, und keine Zeile fragt danach.** Bei k = 6 steht sie auf **234.159** — der Trefferzahl **eines exakten Werts** (M33). Keine Präfixlänge unterschreitet ihn. **Der Bösfall ist kein Präfixproblem**, er ist im exakten Bestand schon da |
+| **32** | **M49‑2a** | **Drei der zehn schlimmsten Präfixpaare gehören Typ 9019 „Bestellnummer vom Kunden"** (410.030 / 190.216 / 161.067). Die Zeile erwartet den Schnitt „Kennungen gefährlich, Belegnummern harmlos" — er trennt nicht die gefährlichen von den **gesuchten** Feldern |
+| **33** | **M49‑3** | **Schon der vollständige Wert als Präfix findet 23 statt 1.** Die Bedingung „bei gleicher Trefferzahl" aus M34 ist damit **bei keiner Eingabelänge** erfüllt; E6s Zeile „8 (vollständig) → 1 Treffer" ist die exakte Zählung und keine `LIKE`-Zählung. Für die Leistung folgenlos, für die Fachlichkeit der Kern |
+| **34** | **M49‑4** | **602.794 Werte (3,91 %) tragen ein folgendes Leerzeichen.** Der Auftrag führt die Randleerzeichen ausdrücklich als *Folgerung* und nicht als Messung — sein eigenes Statement zählt sie mit, und 3,91 % sind kein Randfall. Zum Vergleich: Das **führende** Leerzeichen steht bei 9018 mit 1,349624 % in der Kuratierung |
+| **35** | **M50‑2** | **Der Plan kippt, und der Auftrag setzt das Gegenteil voraus.** Er schreibt, M49‑3 habe belegt, dass der Optimierer „auch mit `LIKE` über den seltensten Begriff einsteigt". Beim schlimmsten Präfix des Bestands tut er es **nicht**: Er steigt über `MessageLastUpdateIDX` ein und probt `MessageBAM` über den Primärschlüssel; `MessageBAM_BAMValueOnly` steht nur noch unter `possible_keys`. **Die Wahl ist richtig** — und sie ist das schärfste Argument gegen ein `STRAIGHT_JOIN`, das dieses Projekt hat |
+| **36** | **M50‑5** | **Das Komma, und keine Zeile fragt danach.** **55.989 Werte (0,363 %) tragen eines** — 95‑mal so viele wie den Doppelpunkt (585, M49‑4). Anders als der Doppelpunkt ist es **nicht** entschärft: Spring zerlegt den wiederholbaren Parameter daran, und die Werte sind heute **unsuchbar** — in **beiden** Modi und seit Teil 2b. Gefunden beim Bau des Isolationstests, nicht beim Messen |
+| **37** | **M51‑3** | **Der Kommadefekt war ein Mandantenproblem und kein Bestandsproblem.** Die drei betroffenen Typen (9003, 9016, 9018) sind bei **genau einem** der sieben konfigurierten Mandanten geführt. „0,363 % des Bestands" liest sich wie gleichmäßiges Rauschen; tatsächlich saß der Defekt bei **einem** Mandanten auf **jedem zwanzigsten** Wert seines Typs 9003 (5,05 %). Keine Zeile fragte nach dem Mandanten — und genau deshalb ist der Defekt der Herleitung eines **Isolations**tests aufgefallen |
+| **38** | **M51‑2** | **Der gruppierende Durchlauf ist billiger als der zählende.** `GROUP BY MessageBAMType` schickt den Optimierer auf `MessageBAM_BAMValue` (`key_len` 284) statt auf `PRIMARY` (430, M49‑4 und M50‑5) — **6,716 s gegen 7,731 s**, obwohl zusätzlich gruppiert und sortiert wird. Erwartet war „dieselbe Gestalt, etwas teurer". Folgenlos für jede Aussage dieser Runde, aber es passte in keine Zeile |
 
 Dazu **fünf** Befunde, die eine Zeile zwar treffen, aber über sie hinausreichen und deshalb ebenfalls
 als eigener Absatz stehen: die Null der Merge-Eingänge über Fenster B (M39), die fehlende
@@ -4504,6 +6171,93 @@ Sparring desselben Tages erledigt und **nicht** entfernt worden.
   ein neuer Typ erscheint schlicht nicht darin, und der Drift-Test bemerkt es nicht — er prüft, was
   dasteht, nicht was fehlt.
 
+### Was der sechste Nachtrag (M49) neu offen lässt
+
+**Die drei Lücken, die der Auftrag selbst benennt, stehen zuerst — sie sind die wichtigsten, und
+keine davon ist eine Nachlässigkeit dieser Runde:**
+
+1. **Wie oft die exakte Suche heute leer ausgeht.** Das ist die Zahl, die die Empfehlung „Präfix nur
+   als zweite Geste im Nulltreffer-Fall" tragen würde — **und sie steht in keinem Bestand.** Es gäbe
+   sie nur aus einem Suchprotokoll, das die Anwendung nicht führt und das zu führen eine eigene
+   Entscheidung wäre (die BAM-Suche schreibt heute nichts ins `audit_log`; protokolliert werden
+   Anmeldung, Sperre, Passwortwechsel, Katalogänderung und Download).
+   **Ohne diese Zahl ist der Nutzen der Präfixsuche unbeziffert, während ihre Kosten es sind.**
+2. **Wie sich all das unter Last verhält.** Dieselbe benannte Lücke wie im Belegvermerk zu M35, M47
+   und in jeder Runde davor: Gemessen ist eine **ruhende** Testkopie, die 10-Sekunden-Grenze des
+   Lese-Pools gilt in der **Produktion**. Alle Zahlen sind Untergrenzen und keine Zusagen.
+3. **Ob die Produktion dieselbe Werteverteilung trägt.** Der Bestand hier hat den Stand
+   **08.07.2026**. Die gesamte Aussage über Präfixhäufigkeiten hängt daran — insbesondere die
+   Feststellung, dass `%` im Bestand **nicht vorkommt**.
+
+**Dazu vier, die aus den Messungen selbst entstanden sind:**
+
+- **Wie viele Fassungen die Anwendung im Betrieb bilden müsste.** M49‑1 zählt drei bis sieben je
+  Prüfwert bei **einem** Begriff. Die Zahl hängt an der Eingabelänge des Nutzers, und das Geländer
+  der Suche steht bei **acht** Begriffen. Gemessen ist die Nullen-im-Muster-Fassung mit **vier**
+  `LIKE` bei einem Begriff (1,205 ms) — nicht mit sieben und nicht bei acht Begriffen.
+- **Was der schlimmste Präfix des Bestands durch das gebaute Statement kostet.** M49‑2a kennt einen
+  Vierzeichen-Präfix mit **1.332.180** Zeilen. Gemessen ist durch das Statement der schlimmste
+  *Wert* (234.159) und ein Vierzeichen-Präfix mit 155.871. **Der teuerste bekannte Fall ist nicht
+  gelaufen**, und er ist um Faktor 8,5 größer als der teuerste gemessene.
+- **Wie schnell die Zahl der gefährlichen Präfixe zwischen sechs und zehn Zeichen abnimmt.** Die
+  Reihe bricht bei k = 8 an der 60-Sekunden-Grenze ab (Abweichung 6). Der **Boden** bei 234.159 folgt
+  ohne diese Zahlen; die **Menge** der Bösfälle nicht.
+- **Welche Typen die 602.794 folgenden Leerzeichen tragen.** M49‑4 zählt sie typlos. Ob es dieselben
+  sind, die **M43‑3** mit 24,83 % *folgenden* bei 9018 ausweist, ist nicht erhoben — und davon hinge ab, ob ein Trim
+  auf der Eingabe genügt oder ob auch die **Werte** eine Behandlung bräuchten.
+
+### Was der achte Nachtrag (M50) neu offen lässt
+
+**Eine Lücke schließt er:** Der zweite Punkt oben — „Was der schlimmste Präfix des Bestands durch das
+gebaute Statement kostet" — ist beantwortet. **3,851 s über 30 Tage, Abbruch über ein Jahr.** Die
+übrigen sechs bleiben unverändert offen.
+
+**Neu offen sind vier:**
+
+- **Ob es einen Präfix gibt, der über 30 Tage teurer ist als dieser.** Gemessen ist der schlimmste
+  Präfix über den **Bestand** — nicht der schlimmste über *ein Fenster von 30 Tagen*. Das sind zwei
+  verschiedene Größen: Der Bestandssieger verteilt seine 1,33 Millionen Zeilen über ein Jahr, ein
+  anderer Präfix könnte sie in einem Monat bündeln. **Die Zahl, die den Deckel wirklich trüge, wäre
+  die zweite** — und ihre Erhebung bräuchte eine Gruppierung über `LEFT(v,4)` **mit** Zeitfenster,
+  die diese Runde nicht gelaufen ist.
+- **Was die gebaute Höchstform kostet.** Acht Begriffe zu je bis zu sieben Fassungen sind
+  **56 `LIKE`-Zweige**. Gemessen sind ein Begriff ohne Zusatzfassungen (M50) und vier verodere `LIKE`
+  bei einem Begriff (M49‑3, 1,205 ms). Die Kombination ist nicht gelaufen. **Das Geländer bei acht
+  Begriffen ist damit im Präfixmodus noch weniger belegt als im exakten** (dort endet die Messung bei
+  fünf, M47).
+- **Ob der gekippte Plan stabil ist.** M50 zeigt den Umschlag bei 1,33 Millionen Kandidatenzeilen,
+  M49‑3 den alten Plan bei 443.830. **Wo genau der Optimierer umschaltet, ist nicht gemessen** — und
+  damit auch nicht, ob es dazwischen eine Zone gibt, in der er die *schlechtere* der beiden Wahlen
+  trifft.
+- **Wie viele der 55.989 Werte mit Komma jemals gesucht würden.** Dieselbe Gestalt wie bei den 585
+  Doppelpunkten (M49‑4): Gemessen ist die **Existenz**, nicht ein Schaden. Anders als dort ist die
+  Lage aber **nicht** entschärft — die Frage, ob die Parameterform geändert wird, steht unten.
+
+### Was der neunte Nachtrag (M51) neu offen lässt
+
+**Eine halbe Lücke schließt er.** Der vierte Punkt oben — „Wie viele der 55.989 Werte mit Komma
+jemals gesucht würden" — ist **nicht** beantwortet und wird es in diesem Projekt auch nicht: Es
+erhebt Suchanfragen bewusst nicht. Beantwortet ist die andere Hälfte, die M50 gar nicht gestellt
+hatte: **wo** diese Werte sitzen. Drei Typen von 62, davon einer mit 96,62 %, alle drei bei einem
+einzigen Mandanten. **Und die Frage, ob die Parameterform geändert wird, ist entschieden** — sie
+ist geändert (Frage 22 unten).
+
+**Neu offen sind drei:**
+
+- **Ob weitere Zeichen dieselbe Falle stellen.** Untersucht sind der Doppelpunkt (M49‑4, durch die
+  Teilung am ersten Vorkommen entschärft) und das Komma (M50‑5, M51, behoben). **Nicht untersucht
+  ist, was ein Client oder ein Zwischenstück sonst noch zerlegt** — `;`, `|`, ein rohes `+` in einer
+  URL. Die Frage ist nicht theoretisch: Der Kommadefekt ist nicht durch Nachdenken gefunden worden,
+  sondern durch einen Test, der zufällig über ihn stolperte.
+- **Ob `MessageBAM` weitere Typen mit Kommas bekommen kann.** Gemessen sind drei von 62 — heute.
+  Welche Typen ein Mandant befüllt und womit, entscheidet die Anbindung und nicht dieses Werkzeug;
+  **die Zahl ist eine Momentaufnahme und keine Eigenschaft des Schemas.** Dasselbe gilt für die
+  0 von 1.503 `ProcessID` in M51‑4.
+- **Ob die Nachrichtenliste dieselbe Behandlung bekommt.** `status` und `prozess` trennen weiterhin
+  am Komma; heute ist das folgenlos (M51‑4). **Ob die Bindung dort angeglichen wird, bevor es das
+  nicht mehr ist, ist nicht entschieden** — der Auftrag hat es ausdrücklich ausgeschlossen (ein
+  Auftrag, ein Eingriff), und der Zustand ist in `BamSucheDbIT` festgeschrieben.
+
 ---
 
 # Offene Fragen für das Sparring zu Schritt 7
@@ -4537,6 +6291,17 @@ Sparring desselben Tages erledigt und **nicht** entfernt worden.
    > ✔ **Entschieden im Sparring vom 12.08.2026: exakt**, mit einer typgebundenen und sichtbar
    > gemachten Normalisierung. Die Frage bleibt hier stehen, weil die Zahlen, auf denen die
    > Entscheidung ruht, es ebenfalls tun. Die Normalisierung ist ab hier **M43**.
+   >
+   > **Nachgemessen am 13.08.2026 in M49 — die Entscheidung wird davon nicht berührt, ihre
+   > Begründung schon.** Die Frage nach der **Nachrüstung** steht als offener Punkt 1 in
+   > `bam-suche.md` §9, und M49 legt die Zahlen darunter. Drei davon verschieben, was oben steht:
+   > Erstens ist die getroffene Normalisierung **kein neutraler Nachbar** einer späteren Präfixsuche,
+   > sondern ihr Gegenspieler — beide ankern vorn, und die rohe Präfixfassung findet den aufgefüllten
+   > Wert in **allen acht** geprüften Fällen nicht (M49‑1). Zweitens ist „Präfix braucht eine
+   > Mindestlänge" zwar richtig, aber **keine Lösung**: Es gibt keine Länge, ab der die schlimmste
+   > Trefferzahl beherrschbar wird (M49‑2). Und drittens gilt „beide kosten bei gleicher Trefferzahl
+   > dasselbe" zwar weiter — die Bedingung ist nur **nie erfüllt**, nicht einmal beim vollständig
+   > eingetippten Wert (M49‑3).
 
 4. **Wird normalisiert — und wenn ja, wo?** Führende Nullen bei sechs Typen auf 100 % der Werte,
    Randleerzeichen bei 9018 auf 25,88 %. Eine stille Korrektur verbietet sich; eine sichtbare
@@ -4650,3 +6415,105 @@ Sparring desselben Tages erledigt und **nicht** entfernt worden.
     13.08.2026. `BamSollaengeDriftDbIT` prüft, was dasteht — **nicht, was fehlt**. Ein Mandant, der
     morgen einen Typ mit durchgängig führender Null bekommt, wird ohne Sollänge gesucht, und niemand
     bemerkt es.
+
+---
+
+### Neu aus dem siebten Nachtrag vom 13.08.2026 (M49)
+
+17. **Kommt die Präfixsuche — und wenn ja, immer oder nur im Nulltreffer-Fall?** Die Kosten sind
+    beziffert (M49‑1 bis M49‑3), **der Nutzen ist es nicht**: Wie oft die exakte Suche heute leer
+    ausgeht, steht in keinem Bestand und stünde nur in einem Suchprotokoll, das die Anwendung nicht
+    führt. **Diese Runde entscheidet die Frage ausdrücklich nicht.** Was sie liefert, ist der Rahmen:
+    Ohne die Nullen im Muster findet Präfix bei kuratierten Typen **nichts** (M49‑1); eine
+    Mindestlänge schützt **nicht** (M49‑2); und die Antwort ändert sich auch bei vollständig
+    eingetippter Nummer (M49‑3, 23 statt 1).
+
+18. **Wenn Präfix kommt: Wie wird sie in der Parameterform angefordert?** M49‑4 sagt, welche Zeichen
+    frei sind: **`%` kommt im ganzen Bestand nicht vor**, `*` steht in 1.738 und `_` in 2.696 Werten.
+    Ein angehängtes `*` bräuchte eine Regel für die Werte, die selbst eines tragen. **Unabhängig
+    davon würde jede Eingabe ein `ESCAPE` brauchen** — dieselbe Falle wie Regel Q1.
+
+19. **Wenn Präfix kommt: Wird die Eingabe getrimmt?** Sie müsste. **602.794 Werte (3,91 %) tragen ein
+    folgendes Leerzeichen** (M49‑4). Heute fängt PAD SPACE beide Richtungen ab; mit `LIKE` findet
+    eine Eingabe *mit* folgendem Leerzeichen den Wert ohne nicht mehr. Ob der Trim in der
+    Parameterprüfung oder in der Variantenbildung sitzt, ist eine Bauentscheidung und keine Messung.
+
+20. **Kann eine Mindestlänge gelten, solange die Suche typlos voreingestellt ist?** M49‑2b misst die
+    Grenze je Typ zwischen **59** und **234.159** — sie müsste also je Typ gelten, und je Typ gilt
+    sie nur, wenn der Nutzer einen Typ gewählt hat. Die Vorgabe der Oberfläche ist **kein Typ**
+    (M36). **Diese Spannung ist in M49‑2 benannt und ausdrücklich nicht aufgelöst.**
+
+21. **Wird die Nachtrags- und Befundzählung dieser Datei nachgezogen?** Zwei Buchführungslücken sind
+    beim Schreiben des siebten Nachtrags aufgefallen und **nicht** eigenmächtig gefüllt worden:
+    Der sechste Nachtrag (**M48**) hat in *Alle Laufzeiten* keinen eigenen Abschnitt, und sein
+    Befund zum nicht eindeutigen `MessageBAMTypeSortIndex` fehlt in *Wo die vorformulierte Zeile
+    nicht passte*, obwohl er dort in M48 selbst als solcher ausgewiesen ist. Beides ist eine
+    Feststellung über die **Buchführung**, nicht über eine Messung — keine Zahl ist davon berührt.
+
+    > **Eine dritte kommt aus dem achten Nachtrag hinzu, und sie ist derselben Art:** Die Überschrift
+    > *„Was der **sechste** Nachtrag (M49) neu offen lässt"* trägt die falsche Ordnungszahl — M49 ist
+    > der siebte, wie M49‑0 selbst feststellt. Auch das bleibt stehen und wird hier benannt.
+
+---
+
+### Neu aus dem achten Nachtrag vom 14.08.2026 (M50)
+
+22. **Wird die Parameterform um das Komma erweitert?** **55.989 BAM-Werte (0,363 %) tragen eines**
+    (M50‑5), und Spring zerlegt den wiederholbaren `begriff`-Parameter daran: Diese Werte sind heute
+    **unsuchbar** — in beiden Modi und seit Teil 2b. Der Doppelpunkt ist durch die Teilung am
+    *ersten* Vorkommen behandelt (M49‑4), das Komma ist es nicht. **Teil 4 behebt es ausdrücklich
+    nicht**, weil die Änderung den exakten Pfad träfe; der heutige Stand ist in
+    `BamSucheDbIT.ein_komma_im_wert_ist_heute_400` festgeschrieben. **Die Entscheidung liegt beim
+    Auftraggeber** — und mit ihr die Frage, ob dieselbe Prüfung für weitere Zeichen fällig ist, die
+    Spring oder ein Client zerlegt.
+
+    > **Beantwortet am 14.08.2026: ja, und zwar sofort.** Der Auftraggeber hat die Erweiterung noch
+    > am selben Tag beauftragt — **vor** dem Frontend-Teil der Präfixsuche, damit dessen
+    > Sichtprüfung nicht zufällig darüber stolpert. Die Bindung von `begriff` trennt nicht mehr am
+    > Komma; der Test heißt jetzt `BamSucheDbIT.ein_komma_im_wert_wird_gefunden` und behauptet das
+    > Gegenteil von vorher. **Die Frage nach den weiteren Zeichen bleibt offen** und steht als
+    > Punkt 25 unten. Der Vorgang selbst — ein als fertig gemeldeter Pfad, der 0,363 % der Werte
+    > nicht fand — steht in [`annahmen-korrekturen.md`](annahmen-korrekturen.md).
+
+23. **Reicht der 30‑Tage-Deckel, oder braucht der Präfixmodus ein noch engeres Fenster?** M50 misst
+    den schlimmsten Präfix des **Bestands** mit 3,851 s über 30 Tage — 38,5 % der Zeitgrenze auf einer
+    **ruhenden** Testkopie. **Nicht gemessen ist der schlimmste Präfix über ein 30‑Tage-Fenster**, und
+    das ist die Zahl, die den Deckel wirklich trüge. Ob sie erhoben wird, bevor die Oberfläche den
+    Modus anbietet, ist eine Entscheidung des Auftraggebers.
+
+24. **Wird Regel L5 in `PROJEKTBESCHREIBUNG.md` vermerkt?** Die Mindestlänge des Suchbegriffs wird
+    mit Teil 4 zum **zweiten Mal** begründet abgewichen — im exakten Modus wegen M38 und E6, im
+    Präfixmodus zusätzlich wegen M49‑2a (die schlimmste Trefferzahl hat einen Boden, den keine Länge
+    unterschreitet). **Der Auftrag lässt `PROJEKTBESCHREIBUNG.md` ausdrücklich unangetastet** und
+    stellt die Frage hierher: Ob eine zweimal begründet abgewichene Regel in der verbindlichen Datei
+    einen Vermerk bekommt, ist nicht entschieden.
+
+---
+
+### Neu aus dem neunten Nachtrag vom 14.08.2026 (M51)
+
+25. **Welche Zeichen zerlegt sonst noch jemand?** Der Kommadefekt ist **nicht durch Nachdenken
+    gefunden worden**, sondern weil die Herleitung eines Isolationstests zufällig über ihn
+    stolperte — und er lebte seit Teil 2b. Untersucht sind seither zwei Zeichen: der Doppelpunkt
+    (M49‑4, durch die Teilung am *ersten* Vorkommen entschärft) und das Komma (M50‑5, M51, behoben).
+    **Ungeprüft ist, was auf dem Weg zwischen Tastatur und Statement sonst noch zerlegt oder
+    umgedeutet wird** — `;`, `|`, ein rohes `+` in einer URL, ein Zeilenumbruch aus der
+    Zwischenablage. Ob eine solche Prüfung als eigener Auftrag läuft, ist eine Entscheidung des
+    Auftraggebers; die Zählung dazu wäre billig (ein Statement in der Gestalt von M49‑4), die
+    Aufzählung der Zerlegungsstellen nicht.
+
+26. **Bekommt die Nachrichtenliste dieselbe Bindung?** `status` und `prozess` trennen weiterhin am
+    Komma. **Heute ist das folgenlos und gemessen** (M51‑4: Einordnungen sind Aufzählungsnamen,
+    0 von 1.503 `ProcessID` tragen ein Komma) — und deshalb hat der Auftrag es ausdrücklich
+    ausgeschlossen: ein Auftrag, ein Eingriff. Der Zustand ist in
+    `BamSucheDbIT.die_nachrichtenliste_trennt_weiterhin_am_komma` festgeschrieben, damit eine
+    spätere Änderung dort auffällt. **Ob angeglichen wird, bevor der erste Prozessname mit Komma
+    entsteht, ist nicht entschieden.**
+
+27. **Wie kommt ein solcher Defekt künftig früher heraus?** Der Kommafall war in der CI **nicht**
+    zu sehen: Die Tests gegen die Testkopie tragen `@Tag("db")` und sind dort ausgeschlossen, und
+    die reinen Einheitstests kannten die Bindung nicht — sie beginnen erst bei `BamSuchfilter.aus`.
+    Mit `BamSucheKommabindungTest` gibt es jetzt für **diesen** Endpunkt eine Prüfung der Bindung
+    ohne Datenbank. **Ob dieselbe Sorte Prüfung für die übrigen Endpunkte angelegt wird, ist eine
+    Entscheidung des Auftraggebers** — sie kostet je Endpunkt wenige Zeilen und fängt genau die
+    Klasse von Fehler, die zwischen HTTP und Fachlogik verschwindet.

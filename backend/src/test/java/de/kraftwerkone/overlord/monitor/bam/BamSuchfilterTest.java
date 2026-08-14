@@ -28,8 +28,14 @@ class BamSuchfilterTest {
   private static final Clock UHR =
       Clock.fixed(Instant.parse("2026-03-15T12:00:00Z"), ZoneId.of("Europe/Berlin"));
 
+  private static final List<String> EIN_BEGRIFF = List.of(":4711815");
+
   private static BamSuchfilter filter(List<String> begriffe) {
-    return BamSuchfilter.aus(begriffe, null, null, UHR);
+    return BamSuchfilter.aus(begriffe, null, null, null, UHR);
+  }
+
+  private static BamSuchfilter filter(List<String> begriffe, String modus) {
+    return BamSuchfilter.aus(begriffe, null, null, modus, UHR);
   }
 
   private static void weistAb(ThrowingCallable aufruf, String problemTyp) {
@@ -95,7 +101,7 @@ class BamSuchfilterTest {
   @DisplayName("Ohne Begriff ist die Suche 400 und keine leere Antwort")
   void ohne_begriff_ist_400() {
     weistAb(() -> filter(List.of()), "suchbegriff-fehlt");
-    weistAb(() -> BamSuchfilter.aus(null, null, null, UHR), "suchbegriff-fehlt");
+    weistAb(() -> BamSuchfilter.aus(null, null, null, null, UHR), "suchbegriff-fehlt");
     weistAb(() -> filter(List.of("  ")), "suchbegriff-fehlt");
     weistAb(() -> filter(List.of(":", ":   ")), "suchbegriff-fehlt");
   }
@@ -154,12 +160,12 @@ class BamSuchfilterTest {
     weistAb(
         () ->
             BamSuchfilter.aus(
-                List.of(":4711815"), "2024-01-01T00:00:00Z", "2026-01-01T00:00:00Z", UHR),
+                List.of(":4711815"), "2024-01-01T00:00:00Z", "2026-01-01T00:00:00Z", null, UHR),
         "zeitfenster-zu-gross");
 
     assertThat(
             BamSuchfilter.aus(
-                    List.of(":4711815"), "2025-01-01T00:00:00Z", "2025-12-31T00:00:00Z", UHR)
+                    List.of(":4711815"), "2025-01-01T00:00:00Z", "2025-12-31T00:00:00Z", null, UHR)
                 .fenster())
         .isNotNull();
   }
@@ -168,7 +174,7 @@ class BamSuchfilterTest {
   @DisplayName("Nur eine der beiden Grenzen ist 400")
   void halbes_fenster_ist_400() {
     weistAb(
-        () -> BamSuchfilter.aus(List.of(":4711815"), "2025-01-01T00:00:00Z", null, UHR),
+        () -> BamSuchfilter.aus(List.of(":4711815"), "2025-01-01T00:00:00Z", null, null, UHR),
         "zeitfenster-unvollstaendig");
   }
 
@@ -176,7 +182,104 @@ class BamSuchfilterTest {
   @DisplayName("Ein unlesbarer Zeitpunkt ist 400")
   void unlesbarer_zeitpunkt_ist_400() {
     weistAb(
-        () -> BamSuchfilter.aus(List.of(":4711815"), "gestern", "heute", UHR),
+        () -> BamSuchfilter.aus(List.of(":4711815"), "gestern", "heute", null, UHR),
         "zeitpunkt-ungueltig");
+  }
+
+  // ─── Der Suchmodus (Teil 4) ───────────────────────────────────────────────────
+
+  /**
+   * <b>Die Vorgabe ist exakt, und sie ist die Zusage des Teils</b>: Fehlt der Parameter, verhält
+   * sich der Endpunkt wie vor Teil 4.
+   */
+  @Test
+  @DisplayName("Ohne modus-Parameter gilt exakt")
+  void ohne_modus_gilt_exakt() {
+    assertThat(filter(EIN_BEGRIFF).modus()).isEqualTo(Suchmodus.EXAKT);
+    assertThat(filter(EIN_BEGRIFF, null).modus()).isEqualTo(Suchmodus.EXAKT);
+    assertThat(filter(EIN_BEGRIFF, "   ").modus())
+        .as("ein leerer Parameter ist keine Angabe — wie ?begriff= kein Begriff ist")
+        .isEqualTo(Suchmodus.EXAKT);
+    assertThat(Suchmodus.VORGABE).isEqualTo(Suchmodus.EXAKT);
+  }
+
+  @Test
+  @DisplayName("modus=praefix und modus=exakt werden gelesen, auch in Grossschreibung")
+  void beide_modi_werden_gelesen() {
+    assertThat(filter(EIN_BEGRIFF, "praefix").modus()).isEqualTo(Suchmodus.PRAEFIX);
+    assertThat(filter(EIN_BEGRIFF, "exakt").modus()).isEqualTo(Suchmodus.EXAKT);
+    assertThat(filter(EIN_BEGRIFF, "PRAEFIX").modus()).isEqualTo(Suchmodus.PRAEFIX);
+    assertThat(filter(EIN_BEGRIFF, " praefix ").modus()).isEqualTo(Suchmodus.PRAEFIX);
+  }
+
+  /**
+   * <b>Kein stiller Rückfall.</b> Wer sich vertippt, sucht sonst exakt und hält das Ergebnis für
+   * das der Präfixsuche.
+   */
+  @Test
+  @DisplayName("Ein unbekannter Modus ist 400 mit eigenem Problemtyp")
+  void unbekannter_modus_ist_400() {
+    weistAb(() -> filter(EIN_BEGRIFF, "prefix"), "suchmodus-ungueltig");
+    weistAb(() -> filter(EIN_BEGRIFF, "praefixsuche"), "suchmodus-ungueltig");
+    weistAb(() -> filter(EIN_BEGRIFF, "1"), "suchmodus-ungueltig");
+  }
+
+  /**
+   * <b>Zweig B aus M50.</b> Der schlimmste bekannte Präfix des Bestands ist über ein Jahr an der
+   * 60‑Sekunden-Grenze abgebrochen; über 30 Tage kostet er 3,851 s. Der Präfixmodus ist deshalb auf
+   * 30 Tage gedeckelt — <b>und es wird nichts gekappt</b>, ein größeres Fenster ist {@code 400}.
+   */
+  @Test
+  @DisplayName("Im Praefixmodus ist ein Fenster ueber 30 Tagen 400")
+  void praefix_ist_auf_dreissig_tage_gedeckelt() {
+    weistAb(
+        () ->
+            BamSuchfilter.aus(
+                EIN_BEGRIFF, "2025-01-01T00:00:00Z", "2025-12-31T00:00:00Z", "praefix", UHR),
+        "praefixsuche-fenster-zu-gross");
+
+    assertThat(BamSuchfilter.PRAEFIX_FENSTER_MAXIMUM).isEqualTo(Duration.ofDays(30));
+  }
+
+  /** Genau auf der Grenze geht es noch — und einen Tag darüber nicht mehr. */
+  @Test
+  @DisplayName("Genau 30 Tage gehen im Praefixmodus, 31 nicht")
+  void die_grenze_liegt_bei_genau_dreissig_tagen() {
+    assertThat(
+            BamSuchfilter.aus(
+                    EIN_BEGRIFF, "2025-11-30T00:00:00Z", "2025-12-30T00:00:00Z", "praefix", UHR)
+                .modus())
+        .isEqualTo(Suchmodus.PRAEFIX);
+
+    weistAb(
+        () ->
+            BamSuchfilter.aus(
+                EIN_BEGRIFF, "2025-11-29T00:00:00Z", "2025-12-30T00:00:00Z", "praefix", UHR),
+        "praefixsuche-fenster-zu-gross");
+  }
+
+  /**
+   * <b>Ohne von/bis greift der Deckel nie</b> — die Vorgabe sind dieselben 30 Tage. Der Rückfall
+   * aus einer leeren exakten Suche über das Standardfenster läuft damit ohne Sonderfall.
+   */
+  @Test
+  @DisplayName("Der Praefixmodus mit der Fenstervorgabe ist gueltig")
+  void praefix_mit_der_vorgabe_geht() {
+    BamSuchfilter filter = filter(EIN_BEGRIFF, "praefix");
+
+    assertThat(filter.modus()).isEqualTo(Suchmodus.PRAEFIX);
+    assertThat(filter.fenster().spanne()).isEqualTo(Duration.ofDays(30));
+  }
+
+  /** <b>Die exakte Suche behält ihr Jahresmaximum</b> — der Deckel gilt nur dem neuen Pfad. */
+  @Test
+  @DisplayName("Der Deckel gilt nur fuer praefix, nicht fuer exakt")
+  void der_deckel_gilt_nur_dem_praefixmodus() {
+    assertThat(
+            BamSuchfilter.aus(
+                    EIN_BEGRIFF, "2025-01-01T00:00:00Z", "2025-12-31T00:00:00Z", "exakt", UHR)
+                .fenster()
+                .spanne())
+        .isGreaterThan(BamSuchfilter.PRAEFIX_FENSTER_MAXIMUM);
   }
 }

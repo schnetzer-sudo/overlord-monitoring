@@ -55,7 +55,11 @@ class BamSucheServiceTest {
   }
 
   private static BamSuchfilter filter(Suchbegriff... begriffe) {
-    return new BamSuchfilter(List.of(begriffe), FENSTER);
+    return new BamSuchfilter(List.of(begriffe), FENSTER, Suchmodus.EXAKT);
+  }
+
+  private static BamSuchfilter praefixfilter(Suchbegriff... begriffe) {
+    return new BamSuchfilter(List.of(begriffe), FENSTER, Suchmodus.PRAEFIX);
   }
 
   private static BamTrefferZeile zeile(String messageId, int minute) {
@@ -332,5 +336,70 @@ class BamSucheServiceTest {
 
     verify(repository).findeSollaengen(MANDANT);
     verify(repository, never()).findeSollaengen(new MandantContext("SUTTONS"));
+  }
+
+  // ─── Der Suchmodus (Teil 4) ───────────────────────────────────────────────────
+
+  /**
+   * <b>Der verwendete Modus steht in der Antwort</b>, aus demselben Grund wie das Fenster: Er
+   * verändert nicht den Preis, sondern die Antwort. M49‑3 misst, dass schon ein vollständig
+   * eingetippter Wert als Präfix 23 Nachrichten statt einer findet.
+   */
+  @Test
+  @DisplayName("Die Antwort nennt den tatsaechlich verwendeten Modus")
+  void die_antwort_nennt_den_modus() {
+    gib(List.of(), List.of());
+
+    assertThat(service().suche(MANDANT, filter(new Suchbegriff(null, "1234567"))).modus())
+        .isEqualTo(Suchmodus.EXAKT);
+    assertThat(service().suche(MANDANT, praefixfilter(new Suchbegriff(null, "1234567"))).modus())
+        .isEqualTo(Suchmodus.PRAEFIX);
+  }
+
+  /**
+   * <b>Der Modus geht an jede Bedingung durch</b> — er gilt für die ganze Suche, nicht je Begriff.
+   */
+  @Test
+  @DisplayName("Jede Suchbedingung traegt den Modus der Suche")
+  void jede_bedingung_traegt_den_modus() {
+    gib(List.of(), List.of());
+
+    service()
+        .suche(
+            MANDANT,
+            praefixfilter(
+                new Suchbegriff(null, "1234567"), new Suchbegriff((short) 9012, "7654321")));
+
+    verify(repository).findeTreffer(any(), bedingungen.capture(), any());
+    assertThat(bedingungen.getValue())
+        .hasSize(2)
+        .allSatisfy(bedingung -> assertThat(bedingung.modus()).isEqualTo(Suchmodus.PRAEFIX));
+  }
+
+  /**
+   * <b>Im Präfixmodus wandern die Nullen ins Muster</b> — und die gemeldeten Fassungen bleiben
+   * lesbare Werte ohne Platzhalter. Die Gegenprobe daneben ist derselbe Begriff im exakten Modus.
+   */
+  @Test
+  @DisplayName("Mit Typ meldet der Praefixmodus die Nullen-Fassungen, ohne Typ genau eine")
+  void die_gemeldeten_fassungen_folgen_dem_modus() {
+    gib(List.of(new BamSollaengeZeile((short) 9012, 10, false)), List.of());
+
+    BamSucheResponse mitTyp =
+        service().suche(MANDANT, praefixfilter(new Suchbegriff((short) 9012, "1234567")));
+    assertThat(mitTyp.begriffe().getFirst().varianten())
+        .containsExactly("1234567", "01234567", "001234567");
+
+    BamSucheResponse ohneTyp =
+        service().suche(MANDANT, praefixfilter(new Suchbegriff(null, "1234567")));
+    assertThat(ohneTyp.begriffe().getFirst().varianten())
+        .as("ohne Typ genau eine Fassung — M49-1 und die drei Gruende in Sollaengen")
+        .containsExactly("1234567");
+
+    BamSucheResponse exakt =
+        service().suche(MANDANT, filter(new Suchbegriff((short) 9012, "1234567")));
+    assertThat(exakt.begriffe().getFirst().varianten())
+        .as("die Gegenprobe: exakt wird auf die Sollaenge aufgefuellt")
+        .containsExactly("1234567", "0001234567");
   }
 }

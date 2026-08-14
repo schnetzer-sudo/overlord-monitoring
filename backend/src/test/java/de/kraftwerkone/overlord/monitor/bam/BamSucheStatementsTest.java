@@ -70,11 +70,15 @@ class BamSucheStatementsTest {
   }
 
   private static Suchbedingung einBegriff() {
-    return new Suchbedingung(null, List.of("1234567", "0001234567"));
+    return new Suchbedingung(null, List.of("1234567", "0001234567"), Suchmodus.EXAKT);
   }
 
   private static Suchbedingung zweiterBegriff() {
-    return new Suchbedingung((short) 9018, List.of("7654321"));
+    return new Suchbedingung((short) 9018, List.of("7654321"), Suchmodus.EXAKT);
+  }
+
+  private static Suchbedingung praefix(String... werte) {
+    return new Suchbedingung(null, List.of(werte), Suchmodus.PRAEFIX);
   }
 
   /** Alle drei Statements einmal auslösen, in der Reihenfolge des Aufrufs. */
@@ -290,16 +294,204 @@ class BamSucheStatementsTest {
   }
 
   /**
-   * <b>Kein Präfixmuster.</b> Die Suche ist exakt; {@code LIKE} folgt zudem der PAD-SPACE-Regel
-   * nicht (M43‑3) und verhielte sich bei folgenden Leerzeichen anders als der {@code =}-Vergleich.
+   * <b>Im exakten Modus kein Präfixmuster — und das ist die Zusage von Teil 4.</b> Der Pfad aus
+   * Teil 2b ist gebaut, getestet und in M47 gemessen; er wird durch den neuen Modus nicht
+   * angefasst.
    */
   @Test
-  @DisplayName("Kein Statement sucht praefixweise")
-  void keine_praefixsuche() {
+  @DisplayName("Im exakten Modus sucht kein Statement praefixweise")
+  void keine_praefixsuche_im_exakten_modus() {
     for (String sql : alleStatements()) {
       assertThat(sql.toLowerCase(Locale.ROOT))
           .as("exakt, nicht praefixweise: %s", sql)
           .doesNotContain("`messagebamvalue` like");
     }
+  }
+
+  // ─── Der Praefixmodus (Teil 4) ────────────────────────────────────────────────
+
+  /**
+   * <b>Aus {@code IN} wird {@code LIKE … ESCAPE}</b> — und sonst ändert sich nichts. Der Deckel,
+   * der Mandantenfilter und die Anzeigespalten über der Deckelung stehen unverändert.
+   */
+  @Test
+  @DisplayName("Im Praefixmodus wird LIKE mit ESCAPE gerendert, nicht IN")
+  void praefixmodus_rendert_like_mit_escape() {
+    repository.findeTreffer(MANDANT, List.of(praefix("1234567")), FENSTER);
+
+    String klein = letztesSql().toLowerCase(Locale.ROOT);
+    assertThat(klein)
+        .as("das Wertpraedikat ist ein maskiertes LIKE: %s", letztesSql())
+        .contains("`messagebamvalue` like")
+        .contains("escape")
+        .doesNotContain("`messagebamvalue` in (");
+    assertThat(gerendert.getLast().werte())
+        .as("das Muster wird gebunden, nicht in den Text geschrieben")
+        .contains("1234567%");
+  }
+
+  /**
+   * <b>Die Maskierung ist Pflicht und keine Vorsichtsmaßnahme.</b> M49‑4 hat gezählt: {@code _}
+   * steht in 2.696 Werten des Bestands. Ohne {@code ESCAPE} wäre jedes davon in einer Eingabe ein
+   * Platzhalter — dieselbe Falle wie das naive {@code LIKE 'ERROR_%'} aus Regel Q1.
+   */
+  @Test
+  @DisplayName("Prozent, Unterstrich und Rueckstrich der Eingabe werden maskiert")
+  void die_eingabe_wird_maskiert() {
+    repository.findeTreffer(MANDANT, List.of(praefix("50%", "5_0", "a\\b")), FENSTER);
+
+    assertThat(gerendert.getLast().werte())
+        .as("je Zeichen ein vorangestellter Rueckstrich, dahinter der Platzhalter")
+        .contains("50\\%%", "5\\_0%", "a\\\\b%");
+  }
+
+  /**
+   * <b>Das Komma wird <i>nicht</i> maskiert, und das ist geprüft und nicht angenommen.</b>
+   *
+   * <p>Die Behebung vom 14.08.2026 lässt kommahaltige Werte erstmals bis ins Statement durch (M51:
+   * 55.989 Werte des Bestands, davon 54.096 unter Typ 9003). <b>Am Statement ändert das nichts</b>
+   * — das Komma ist weder in {@code =} noch in {@code LIKE} ein Platzhalter, sondern ein
+   * gewöhnliches Zeichen. Maskiert werden weiterhin genau {@code \}, {@code %} und {@code _}.
+   *
+   * <p>Der Prüfwert trägt beides zugleich: Maskierung und Kommabehandlung greifen unabhängig
+   * voneinander. <b>Über echte Daten ist diese Kombination nicht zu haben</b> — bei {@code NEXANS}
+   * trägt im Fenster kein einziger Wert Komma <i>und</i> Unterstrich; deshalb steht sie hier und
+   * nicht in {@code BamSucheDbIT}.
+   */
+  @Test
+  @DisplayName("Das Komma wird nicht maskiert — auch nicht neben einem Unterstrich")
+  void das_komma_wird_nicht_maskiert() {
+    repository.findeTreffer(MANDANT, List.of(praefix("47_11,815")), FENSTER);
+
+    assertThat(gerendert.getLast().werte())
+        .as("der Unterstrich maskiert, das Komma unveraendert")
+        .contains("47\\_11,815%");
+  }
+
+  /**
+   * <b>Der exakte Pfad bindet den Wert mit Komma, wie er ist</b> — kein Muster, keine Maskierung,
+   * kein Platzhalter. Das ist die Gegenprobe zum Präfixfall: Beide Modi tragen das Komma
+   * unverändert bis in die gebundenen Werte.
+   */
+  @Test
+  @DisplayName("Im exakten Modus wird der Wert mit Komma unveraendert gebunden")
+  void das_komma_wird_exakt_unveraendert_gebunden() {
+    repository.findeTreffer(
+        MANDANT, List.of(new Suchbedingung(null, List.of("4711,815"), Suchmodus.EXAKT)), FENSTER);
+
+    assertThat(gerendert.getLast().werte())
+        .as("weder Platzhalter noch Rueckstrich: %s", letztesSql())
+        .contains("4711,815")
+        .doesNotContain("4711,815%");
+  }
+
+  /**
+   * <b>Ein {@code LIKE}-Zweig je Fassung, verodert</b> — die Verundung bleibt die zwischen den
+   * <i>Begriffen</i>.
+   */
+  @Test
+  @DisplayName("Je Fassung ein LIKE-Zweig, verodert")
+  void je_fassung_ein_veroderter_zweig() {
+    repository.findeTreffer(MANDANT, List.of(praefix("1234567", "01234567")), FENSTER);
+
+    String klein = letztesSql().toLowerCase(Locale.ROOT);
+    assertThat(klein.split("`messagebamvalue` like", -1))
+        .as("zwei Fassungen, zwei Zweige: %s", letztesSql())
+        .hasSize(3);
+    assertThat(klein).contains(" or ");
+    assertThat(gerendert.getLast().werte()).contains("1234567%", "01234567%");
+  }
+
+  /**
+   * <b>Führende Leerzeichen bleiben, folgende werden abgeschnitten.</b> {@code LIKE} folgt der
+   * PAD-SPACE-Regel nicht (M43‑3, M49‑4): {@code '4711' LIKE '4711 %'} ist falsch, {@code '4711 '
+   * LIKE '4711%'} wahr. Die Leerzeichen-Fassung aus {@code bam_sollaenge} ist dagegen
+   * bedeutungstragend und bleibt unangetastet (M46‑3).
+   */
+  @Test
+  @DisplayName("Ein folgendes Leerzeichen faellt weg, ein fuehrendes bleibt")
+  void randleerzeichen_werden_verschieden_behandelt() {
+    repository.findeTreffer(MANDANT, List.of(praefix("4711 ", " 4711")), FENSTER);
+
+    assertThat(gerendert.getLast().werte()).contains("4711%", " 4711%").doesNotContain("4711 %");
+  }
+
+  /**
+   * <b>Die Gegenprobe zum vorigen Test:</b> Im exakten Modus wird nichts abgeschnitten — der Wert
+   * geht Zeichen für Zeichen in die {@code IN}-Liste, und unter PAD SPACE ist das folgenlos.
+   */
+  @Test
+  @DisplayName("Im exakten Modus geht das folgende Leerzeichen unveraendert in die IN-Liste")
+  void im_exakten_modus_bleibt_das_folgende_leerzeichen() {
+    repository.findeTreffer(
+        MANDANT, List.of(new Suchbedingung(null, List.of("4711 "), Suchmodus.EXAKT)), FENSTER);
+
+    assertThat(gerendert.getLast().werte()).contains("4711 ").doesNotContain("4711");
+  }
+
+  /**
+   * <b>Auch mit {@code LIKE} kein {@code STRAIGHT_JOIN}.</b> M49‑3 hat über elf Fälle gemessen,
+   * dass der Optimierer weiter über den seltensten Begriff einsteigt — auch wenn dieser an fünfter
+   * Stelle steht. Und M50 zeigt, dass er beim schlimmsten Präfix bewusst <i>etwas anderes</i>
+   * wählt: Eine festgeschriebene Reihenfolge nähme ihm genau das.
+   */
+  @Test
+  @DisplayName("Auch im Praefixmodus steht nirgends ein STRAIGHT_JOIN")
+  void kein_straight_join_im_praefixmodus() {
+    repository.findeTreffer(MANDANT, List.of(praefix("1234567"), praefix("7654321")), FENSTER);
+    repository.findeTrefferWerte(MANDANT, List.of("eine-nachricht"), List.of(praefix("1234567")));
+
+    for (Ausgefuehrt ausgefuehrt : gerendert) {
+      assertThat(ausgefuehrt.sql().toLowerCase(Locale.ROOT)).doesNotContain("straight_join");
+    }
+  }
+
+  /**
+   * <b>Alles außer dem Wertprädikat bleibt gleich.</b> Geprüft wird die Gestalt, an der M47 und M50
+   * hängen: Mandantenfilter, Verdichtung, Deckelung und die vier Anzeigetabellen <i>über</i> ihr.
+   */
+  @Test
+  @DisplayName("Der Praefixmodus aendert nur das Wertpraedikat")
+  void nur_das_wertpraedikat_aendert_sich() {
+    repository.findeTreffer(MANDANT, List.of(praefix("1234567")), FENSTER);
+
+    String klein = letztesSql().toLowerCase(Locale.ROOT);
+    assertThat(klein).contains("exists").contains("projectmandant").contains("group by");
+    int deckelung = klein.indexOf(") as `treffer`");
+    assertThat(deckelung).isGreaterThan(0);
+    for (String tabelle : List.of("`process` ", "`project` ", "`sos` ", "`sosaction` ")) {
+      assertThat(klein.indexOf("left outer join `glassfishdb`." + tabelle))
+          .isGreaterThan(deckelung);
+    }
+    assertThat(gerendert.getLast().werte().stream().map(String::valueOf).toList())
+        .contains(String.valueOf(BamSucheRepository.HOECHSTENS_TREFFER + 1));
+  }
+
+  /** Die Typangabe wirkt im Präfixmodus genauso — sie ist eine eigene, verundete Bedingung. */
+  @Test
+  @DisplayName("Ein Praefixbegriff mit Typ traegt seine Typbedingung zusaetzlich")
+  void typangabe_wirkt_auch_im_praefixmodus() {
+    repository.findeTreffer(
+        MANDANT,
+        List.of(new Suchbedingung((short) 9012, List.of("1234567"), Suchmodus.PRAEFIX)),
+        FENSTER);
+
+    String klein = letztesSql().toLowerCase(Locale.ROOT);
+    assertThat(klein).contains("`messagebamvalue` like").contains("`messagebamtype` = ");
+    assertThat(gerendert.getLast().werte()).contains((short) 9012, "1234567%");
+  }
+
+  /**
+   * <b>Die zweite Abfrage folgt dem Modus mit.</b> Sonst stünde in {@code treffer} nicht, was die
+   * Nachricht zum Treffer gemacht hat — die Bedingung ist dieselbe wie in (a), nur verodert.
+   */
+  @Test
+  @DisplayName("Auch die Trefferwerte-Abfrage sucht im Praefixmodus praefixweise")
+  void trefferwerte_folgen_dem_modus() {
+    repository.findeTrefferWerte(MANDANT, List.of("a"), List.of(praefix("1234567")));
+
+    String klein = letztesSql().toLowerCase(Locale.ROOT);
+    assertThat(klein).contains("`messageid` in (").contains("`messagebamvalue` like");
+    assertThat(gerendert.getLast().werte()).contains("a", "1234567%");
   }
 }

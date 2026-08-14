@@ -24,13 +24,18 @@ import java.util.List;
  *     <p><b>Gezählt wird nach dem Mandantenfilter</b>, weil der im Statement steht (Regel M3). Eine
  *     Meldung auf Basis der Rohtreffer sagte einem Nutzer etwas über die Datenmenge fremder
  *     Mandanten — genau die Sorte Leck, gegen die die 404-Regel beim Mandantenwechsel gebaut ist
+ * @param modus der <b>tatsächlich verwendete</b> Modus, aus demselben Grund wie {@code von} und
+ *     {@code bis}: Er verändert nicht den Preis, sondern die Antwort. M49‑3 misst, dass schon ein
+ *     vollständig eingetippter Wert als Präfix <b>23 Nachrichten statt einer</b> findet — wer nicht
+ *     weiß, welcher Vergleich gelaufen ist, kann die Trefferliste nicht deuten
  */
 public record BamSucheResponse(
     List<BamTrefferResponse> nachrichten,
     List<BamBegriffResponse> begriffe,
     Instant von,
     Instant bis,
-    boolean abgeschnitten) {
+    boolean abgeschnitten,
+    Suchmodus modus) {
 
   public BamSucheResponse {
     nachrichten = List.copyOf(nachrichten);

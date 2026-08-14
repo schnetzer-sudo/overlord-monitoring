@@ -48,9 +48,39 @@ import java.util.TreeSet;
  * — 12 Treffer mit wie ohne Leerzeichen). <b>Hier ist nichts nachzurüsten.</b>
  *
  * <p><b>Und die Kehrseite, damit sie niemand übersieht:</b> {@code LIKE} folgt der PAD-SPACE-Regel
- * <i>nicht</i> ({@code 'a' LIKE 'a '} ist falsch). Würde je präfixweise gesucht, verhielten sich
- * folgende Leerzeichen anders als hier — die Suche ist ausdrücklich exakt (offener Punkt in {@code
- * docs/bam-suche.md}).
+ * <i>nicht</i> ({@code 'a' LIKE 'a '} ist falsch). Sie ist seit Teil 4 kein offener Punkt mehr,
+ * sondern behandelt — der Schnitt sitzt in {@link Suchbedingung#muster()}.
+ *
+ * <h2>Der Präfixmodus rechnet anders, und das ist gemessen</h2>
+ *
+ * <p><b>Auffüllen und ein Präfixmuster ankern gegeneinander.</b> M49‑1 hat es in <b>allen acht</b>
+ * prüfbaren Fällen gemessen: Wer {@code 47118} tippt und {@code 0004711815} sucht, findet mit
+ * {@code LIKE '47118%'} nichts — und mit der auf die Sollänge aufgefüllten Fassung {@code LIKE
+ * '0000047118%'} erst recht nicht. <b>Die Variantenbildung des exakten Modus ist im Präfixmodus
+ * wirkungslos</b> und darf dort nicht einfach weiterlaufen.
+ *
+ * <p>Der Ausweg ist gemessen und funktioniert ebenfalls in allen acht Fällen: <b>die Nullen ins
+ * Muster ziehen</b> — ein Muster je plausibler Nullenzahl. Er entsteht aber <b>nur für Begriffe mit
+ * Typ</b>, und dafür gibt es drei gemessene Gründe:
+ *
+ * <ol>
+ *   <li><b>Der Hauptfall braucht ihn gar nicht.</b> 9018 sitzt bei {@code NEXANS} auf <b>92,26
+ *       Prozent</b> der Wurzeln (M39) und hat <b>keine</b> Sollänge — dort ist die rohe Präfixsuche
+ *       wirksam und kostet keine einzige Zusatzfassung.
+ *   <li><b>Ohne Typ müssten alle Sollängen des Mandanten bedient werden.</b> M49‑1 zählt <b>3 bis
+ *       7</b> Fassungen je Begriff bei <i>einer</i> Sollänge; die heutige Obergrenze liegt bei fünf
+ *       <b>insgesamt</b> (M47). Bei acht erlaubten Begriffen wären es sonst bis zu 56 {@code
+ *       LIKE}-Zweige.
+ *   <li><b>Bei kurzen Kernen kippt der Ausweg.</b> 9006 (Kern 3 Zeichen) erzeugt <b>1.245.618</b>,
+ *       9036 (Kern 1 Zeichen) <b>1.156.360</b> Kandidatenzeilen. Ein gewählter Typ macht daraus
+ *       eine bewusste Eingrenzung statt einer Nebenwirkung.
+ * </ol>
+ *
+ * <p><b>Die Typwahl bekommt damit eine zweite Rolle.</b> Bisher war sie reine Ergebnisverfeinerung
+ * (M36: +1,5 bis +4 %). Das bleibt für die exakte Suche richtig; im Präfixmodus ist sie zusätzlich
+ * die Voraussetzung dafür, dass über führende Nullen hinweg gesucht werden kann. Das ist
+ * <b>kein</b> Widerspruch zu M36 — dort geht es um Geschwindigkeit, hier darum, welche Fassungen
+ * bildbar sind.
  */
 public record Sollaengen(List<BamSollaengeZeile> zeilen) {
 
@@ -70,20 +100,31 @@ public record Sollaengen(List<BamSollaengeZeile> zeilen) {
   }
 
   /**
-   * Die Fassungen, mit denen dieser Begriff gesucht wird.
-   *
-   * <p><b>Mit Typ</b> gilt die Sollänge genau dieses Paares aus {@code (mandant_id,
-   * message_bam_type)}; <b>ohne Typ</b> alle für diesen Mandanten kuratierten <i>verschiedenen</i>
-   * Sollängen. Existiert für ein Paar keine Zeile oder ist die Sollänge {@code null}, wird für
-   * diesen Typ <b>nur roh</b> gesucht — kein Fehlerfall.
+   * Die Fassungen, mit denen dieser Begriff gesucht wird — <b>je Modus eine andere Rechnung</b>.
    *
    * <p><b>Der Schlüssel trägt den Mandanten, und das ist gemessen</b> (M46‑2): Typ 2000 dominiert
    * bei {@code SUTTONS} mit Länge 6 und bei {@code VOTG} mit Länge 7; Typ 9014 fällt über den
    * Bestand mit 58,45 % durch die Schwelle und erreicht bei {@code WOC} 95,21 %. Eine typweite
    * Sollänge träfe beide Fälle falsch. Deshalb kennt diese Klasse ausschließlich die Zeilen
-   * <i>eines</i> Mandanten.
+   * <i>eines</i> Mandanten — in beiden Modi.
+   *
+   * <p>Die Liste trägt in beiden Modi <b>lesbare Werte und keine Muster</b>. Der Platzhalter kommt
+   * erst in {@link Suchbedingung#muster()} dazu; damit steht in der Antwort dasselbe, was der
+   * Nutzer lesen kann.
    */
-  public Varianten fuer(Suchbegriff begriff) {
+  public Varianten fuer(Suchbegriff begriff, Suchmodus modus) {
+    return modus == Suchmodus.PRAEFIX ? praefix(begriff) : exakt(begriff);
+  }
+
+  /**
+   * Die Fassungen des exakten Modus — <b>unverändert seit Teil 2b</b>.
+   *
+   * <p><b>Mit Typ</b> gilt die Sollänge genau dieses Paares aus {@code (mandant_id,
+   * message_bam_type)}; <b>ohne Typ</b> alle für diesen Mandanten kuratierten <i>verschiedenen</i>
+   * Sollängen. Existiert für ein Paar keine Zeile oder ist die Sollänge {@code null}, wird für
+   * diesen Typ <b>nur roh</b> gesucht — kein Fehlerfall.
+   */
+  private Varianten exakt(Suchbegriff begriff) {
     String roh = begriff.wert();
     Set<String> gemeldet = new LinkedHashSet<>();
     gemeldet.add(roh);
@@ -95,6 +136,46 @@ public record Sollaengen(List<BamSollaengeZeile> zeilen) {
 
     Set<String> gesucht = new LinkedHashSet<>(gemeldet);
     if (fuehrendesLeerzeichen(begriff.typ())) {
+      gesucht.add(FUEHRENDES_LEERZEICHEN + roh);
+    }
+    return new Varianten(List.copyOf(gesucht), List.copyOf(gemeldet));
+  }
+
+  /**
+   * Die Fassungen des Präfixmodus — <b>die Nullen wandern ins Muster, statt den Wert zu
+   * verlängern</b>.
+   *
+   * <p><b>Ein Begriff ohne Typ bekommt genau eine Fassung: die rohe.</b> Die drei Gründe stehen
+   * oben am Typ und sind gemessen; hier steht nur die Regel. Das gilt auch für die
+   * Leerzeichen-Fassung — sie hängt an einem kuratierten Paar, und ohne Typ gibt es kein Paar.
+   *
+   * <p><b>Mit Typ und Sollänge</b> entsteht ein Muster je plausibler Nullenzahl: {@code j} von 0
+   * bis {@code sollaenge − länge(eingabe) − 1}. Das sind {@code sollaenge − länge(eingabe)}
+   * Fassungen einschließlich der rohen — für eine siebenstellige Eingabe auf der Sollänge 10 also
+   * <b>drei</b>, für eine dreistellige <b>sieben</b>. Genau die Spanne, die M49‑1 gemessen hat.
+   *
+   * <p><b>Warum die Reihe eine Null vor der Sollänge endet.</b> Bei {@code j = sollaenge −
+   * länge(eingabe)} wäre das Muster selbst schon so lang wie die Sollänge — der Kern des Werts wäre
+   * dann vollständig eingetippt, und das ist der Fall, den die <i>exakte</i> Suche mit ihrer
+   * aufgefüllten Fassung bereits vollständig trifft.
+   *
+   * <p><b>Nur auffüllen, nie kürzen — auch hier.</b> Ist die Eingabe so lang wie die Sollänge oder
+   * länger, bleibt es bei der rohen Fassung; die Schleife läuft dann nicht.
+   */
+  private Varianten praefix(Suchbegriff begriff) {
+    String roh = begriff.wert();
+    Set<String> gemeldet = new LinkedHashSet<>();
+    gemeldet.add(roh);
+    if (begriff.mitTyp()) {
+      for (int sollaenge : sollaengen(begriff.typ())) {
+        for (int nullen = 1; nullen <= sollaenge - roh.length() - 1; nullen++) {
+          gemeldet.add(String.valueOf(FUELLZEICHEN).repeat(nullen) + roh);
+        }
+      }
+    }
+
+    Set<String> gesucht = new LinkedHashSet<>(gemeldet);
+    if (begriff.mitTyp() && fuehrendesLeerzeichen(begriff.typ())) {
       gesucht.add(FUEHRENDES_LEERZEICHEN + roh);
     }
     return new Varianten(List.copyOf(gesucht), List.copyOf(gemeldet));

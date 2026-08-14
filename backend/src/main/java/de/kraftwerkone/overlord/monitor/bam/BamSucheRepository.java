@@ -279,15 +279,49 @@ public class BamSucheRepository {
   }
 
   /**
-   * Ein Begriff: die {@code IN}-Liste seiner Varianten, dazu die Typangabe, falls eine da ist.
+   * Ein Begriff: sein Wertprädikat, dazu die Typangabe, falls eine da ist.
    *
    * <p><b>Die Typangabe steht in der {@code WHERE}-Klausel und nicht hinter dem Limit.</b> M36
    * misst sie mit +1,5 bis +4 Prozent — im Rauschen; sie darf also dort stehen, wo sie fachlich
    * hingehört. Beschleunigen tut sie <b>nicht</b>, und das darf nirgends vorausgesetzt werden.
+   *
+   * <p><b>Das Wertprädikat ist die einzige Stelle, an der sich die beiden Modi unterscheiden.</b>
+   * Alles andere — Mandantenfilter, {@code GROUP BY}, Deckelung, die vier Anzeigetabellen über der
+   * Deckelung, die Sortierung, <b>kein {@code STRAIGHT_JOIN}</b> — bleibt Zeichen für Zeichen
+   * gleich. M49‑3 hat belegt, dass der Optimierer auch mit {@code LIKE} über den seltensten Begriff
+   * einsteigt, auch wenn dieser an fünfter Stelle steht; Regel L15 ist damit gemessen und nicht
+   * angenommen.
    */
   private static Condition begriffsbedingung(Messagebam tabelle, Suchbedingung bedingung) {
-    Condition werte = tabelle.MESSAGEBAMVALUE.in(bedingung.werte());
+    Condition werte =
+        bedingung.modus() == Suchmodus.PRAEFIX
+            ? praefixbedingung(tabelle, bedingung)
+            : tabelle.MESSAGEBAMVALUE.in(bedingung.werte());
     return bedingung.typ() == null ? werte : werte.and(tabelle.MESSAGEBAMTYPE.eq(bedingung.typ()));
+  }
+
+  /**
+   * Aus {@code MessageBAMValue IN (…)} wird {@code (MessageBAMValue LIKE ? ESCAPE '\' OR …)} — ein
+   * Zweig je Fassung, verodert.
+   *
+   * <p><b>Das {@code ESCAPE} ist Pflicht und keine Vorsichtsmaßnahme.</b> M49‑4 hat gezählt, dass
+   * {@code _} in 2.696 Werten des Bestands steht; ohne Maskierung wäre jedes davon in einer Eingabe
+   * ein Platzhalter. Die Muster kommen fertig maskiert aus {@link Suchbedingung#muster()} — das
+   * Repository hängt hier nichts an und schneidet nichts ab.
+   *
+   * <p><b>Der Plan bleibt derselbe.</b> M49‑3 misst über elf Fälle {@code range} auf {@code
+   * MessageBAM_BAMValueOnly} und den Einstieg weiter über den seltensten Begriff. <b>M50 zeigt
+   * allerdings die Grenze dieser Aussage</b>: Beim schlimmsten Präfix des Bestands kippt der
+   * Optimierer auf {@code MessageLastUpdateIDX} und probt {@code MessageBAM} über den
+   * Primärschlüssel — er wählt also weiter selbst, aber er wählt etwas anderes. Auch das ist ein
+   * Grund, hier <b>keinen</b> {@code STRAIGHT_JOIN} nachzurüsten.
+   */
+  private static Condition praefixbedingung(Messagebam tabelle, Suchbedingung bedingung) {
+    Condition muster = DSL.noCondition();
+    for (String eines : bedingung.muster()) {
+      muster = muster.or(tabelle.MESSAGEBAMVALUE.like(eines, Suchbedingung.ESCAPE));
+    }
+    return muster;
   }
 
   /**
