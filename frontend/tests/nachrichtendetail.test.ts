@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import type { Nachrichtendetail, Schritt } from "@/features/nachrichten/api";
+import type { Eigenschaft, Nachrichtendetail, Schritt } from "@/features/nachrichten/api";
 import {
   BALKEN_MINDESTANTEIL,
   balkenanteil,
   bedeutungNichtVerifiziert,
+  gruppiereEigenschaften,
   laengsteDauer,
   wartezeile,
   zeitleiste,
@@ -392,5 +393,221 @@ describe("Bedeutung nicht verifiziert", () => {
     expect(bedeutungNichtVerifiziert("UNGEKLAERT")).toBe(true);
     expect(bedeutungNichtVerifiziert("WARTEND")).toBe(false);
     expect(bedeutungNichtVerifiziert("FEHLER")).toBe(false);
+  });
+});
+
+/**
+ * **Die Gruppierung der technischen Eigenschaften** *(17.08.2026)*.
+ *
+ * Sie ist eine Entscheidung und keine Darstellung, und deshalb steht sie als
+ * reine Funktion neben der Komponente. Der Anlass: Flach untereinander steht
+ * `Converter.Log.GUID` zweimal und `Service.Type` dreimal und sieht aus wie eine
+ * Dublette — tatsächlich sind es Einträge verschiedener Prozessschritte. 31 der
+ * 101 gemessenen Namen kommen auf mehr als einem Schritt vor (M17 3).
+ *
+ * Geprüft wird hier vor allem, was die Funktion **nicht** tut: umsortieren,
+ * zusammenfassen, Namen erfinden oder leere Gruppen erzeugen.
+ */
+function eigenschaft(
+  werte: Partial<Eigenschaft> & { name: string; position: number },
+): Eigenschaft {
+  return {
+    wert: "0050",
+    gekappt: false,
+    originalLaengeBytes: null,
+    ...werte,
+  };
+}
+
+describe("Die Gruppierung der Eigenschaften", () => {
+  /**
+   * **`position === 0` ist die Nachricht selbst und steht vorn** — auch dann,
+   * wenn sie in der Antwort nicht zuerst kommt. Das Backend sortiert nach Name
+   * und erst dann nach Schritt; die Reihenfolge der Positionen ist damit
+   * beliebig.
+   */
+  it("stellt die Gruppe 0 nach vorn, auch wenn sie in der Eingabe nicht zuerst steht", () => {
+    const gruppen = gruppiereEigenschaften(
+      [
+        eigenschaft({ name: "Converter.Log.GUID", position: 2 }),
+        eigenschaft({ name: "Message.GUID", position: 0 }),
+      ],
+      [schritt({ position: 2, name: "Datei konvertiert" })],
+    );
+
+    expect(gruppen.map((gruppe) => gruppe.position)).toEqual([0, 2]);
+    // Die Nachricht selbst steht in `schritte[]` nicht drin — der
+    // Metadaten-Schritt ist kein Prozessschritt. Ihre Beschriftung ist deshalb
+    // `null`, und den Namen setzt die Komponente über `istNachricht`.
+    expect(gruppen[0]).toMatchObject({ istNachricht: true, beschriftung: null });
+    expect(gruppen[1]).toMatchObject({ istNachricht: false, beschriftung: "Datei konvertiert" });
+  });
+
+  /**
+   * **Die Gruppenreihenfolge folgt `schritte[]` und nicht der Zahl.**
+   *
+   * Die Ordnung der Schritte (`MessageActionStart`, bei Gleichstand
+   * `MessageActionID`) steht an genau einer Stelle: im `ORDER BY` von
+   * `findeAktionen`. Eine zweite Sortierung hier wäre die Drift, gegen die diese
+   * Regel gerichtet ist — und die Gruppen stünden in einer anderen Reihenfolge
+   * als die Zeilen der Zeitleiste darüber.
+   */
+  it("folgt der Reihenfolge der Schritte und sortiert nicht numerisch nach", () => {
+    const gruppen = gruppiereEigenschaften(
+      [
+        eigenschaft({ name: "A", position: 1 }),
+        eigenschaft({ name: "B", position: 2 }),
+        eigenschaft({ name: "C", position: 3 }),
+        eigenschaft({ name: "D", position: 0 }),
+      ],
+      [schritt({ position: 3 }), schritt({ position: 1 }), schritt({ position: 2 })],
+    );
+
+    expect(gruppen.map((gruppe) => gruppe.position)).toEqual([0, 3, 1, 2]);
+  });
+
+  /**
+   * **Ein Schritt ohne Eigenschaften bekommt keine leere Überschrift.** Der Fall
+   * ist gemessen: `MessageActionID = 502` existiert in `MessageAction`, kommt in
+   * `MessageProperty` aber nicht vor (M17 3).
+   */
+  it("erzeugt für einen Schritt ohne Eigenschaften keine Gruppe", () => {
+    const gruppen = gruppiereEigenschaften(
+      [eigenschaft({ name: "Service.Type", position: 1 })],
+      [schritt({ position: 1 }), schritt({ position: 502 })],
+    );
+
+    expect(gruppen.map((gruppe) => gruppe.position)).toEqual([1]);
+  });
+
+  /**
+   * **Eine Position ohne gelieferten Schritt bekommt keinen erfundenen Namen**
+   * und landet am Ende. Mehrere davon stehen untereinander aufsteigend — die
+   * Zahl ist dort das einzige, was es an Ordnung gibt.
+   */
+  it("hängt Positionen ohne Schritt ohne Beschriftung hinten an, aufsteigend", () => {
+    const gruppen = gruppiereEigenschaften(
+      [
+        eigenschaft({ name: "A", position: 500 }),
+        eigenschaft({ name: "B", position: 4 }),
+        eigenschaft({ name: "C", position: 1 }),
+      ],
+      [schritt({ position: 1 })],
+    );
+
+    expect(gruppen.map((gruppe) => gruppe.position)).toEqual([1, 4, 500]);
+    expect(gruppen.slice(1).map((gruppe) => gruppe.beschriftung)).toEqual([null, null]);
+    expect(gruppen.slice(1).map((gruppe) => gruppe.namensherkunft)).toEqual([null, null]);
+  });
+
+  /**
+   * **Fehlt `position === 0`, entsteht keine leere Gruppe „Nachricht".** Sie ist
+   * eine Gruppe wie jede andere und existiert nur, wenn etwas darin steht.
+   */
+  it("erfindet keine Gruppe 0, wenn keine Eigenschaft an ihr hängt", () => {
+    const gruppen = gruppiereEigenschaften(
+      [eigenschaft({ name: "Service.Type", position: 1 })],
+      [schritt({ position: 1 })],
+    );
+
+    expect(gruppen.some((gruppe) => gruppe.istNachricht)).toBe(false);
+  });
+
+  /**
+   * **Der Punkt der ganzen Übung.** Derselbe Name auf zwei Schritten ist keine
+   * Dublette, sondern zwei Einträge — `Converter.Payload.GUID` steht mit 7.862
+   * Zeilen auf 6.149 Nachrichten (M17 3). Zusammengefasst würde einer davon
+   * verschwinden.
+   */
+  it("behält denselben Namen in zwei Gruppen zweimal", () => {
+    const gruppen = gruppiereEigenschaften(
+      [
+        eigenschaft({ name: "Service.Type", position: 1, wert: "FileReader" }),
+        eigenschaft({ name: "Service.Type", position: 2, wert: "Converter" }),
+      ],
+      [schritt({ position: 1 }), schritt({ position: 2 })],
+    );
+
+    expect(gruppen.map((gruppe) => gruppe.eintraege.map((eintrag) => eintrag.wert))).toEqual([
+      ["FileReader"],
+      ["Converter"],
+    ]);
+  });
+
+  /**
+   * **Innerhalb einer Gruppe bleibt die Reihenfolge der Antwort.** Die
+   * Oberfläche zeigt heute alphabetisch, weil das Statement so sortiert
+   * (`MessagePropertyName`, dann `MessageActionID`) — das ist eine Beobachtung
+   * und keine Zusage dieser Funktion. Die Eingabe steht hier deshalb absichtlich
+   * nicht alphabetisch.
+   */
+  it("sortiert innerhalb einer Gruppe nicht um", () => {
+    const gruppen = gruppiereEigenschaften(
+      [
+        eigenschaft({ name: "Zeta", position: 1 }),
+        eigenschaft({ name: "Alpha", position: 1 }),
+        eigenschaft({ name: "Mitte", position: 1 }),
+      ],
+      [schritt({ position: 1 })],
+    );
+
+    expect(gruppen[0]?.eintraege.map((eintrag) => eintrag.name)).toEqual([
+      "Zeta",
+      "Alpha",
+      "Mitte",
+    ]);
+  });
+
+  /**
+   * **Die Invariante:** Kein Eintrag geht verloren, keiner wird zusammengefasst.
+   * Die Summe der Gruppengrößen ist die Länge der Eingabe — auch dann, wenn
+   * Positionen ohne Schritt und Schritte ohne Positionen gemischt auftreten.
+   */
+  it("verliert keinen Eintrag — die Summe der Gruppengrößen ist die Eingabelänge", () => {
+    const eingabe = [
+      eigenschaft({ name: "Message.GUID", position: 0 }),
+      eigenschaft({ name: "Message.SOS", position: 0 }),
+      eigenschaft({ name: "Service.Type", position: 1 }),
+      eigenschaft({ name: "Service.Type", position: 2 }),
+      eigenschaft({ name: "Converter.Log.GUID", position: 2 }),
+      eigenschaft({ name: "Fremd", position: 500 }),
+    ];
+
+    const gruppen = gruppiereEigenschaften(eingabe, [
+      schritt({ position: 2 }),
+      schritt({ position: 1 }),
+      schritt({ position: 502 }),
+    ]);
+
+    expect(gruppen.reduce((summe, gruppe) => summe + gruppe.eintraege.length, 0)).toBe(
+      eingabe.length,
+    );
+    expect(gruppen.map((gruppe) => gruppe.position)).toEqual([0, 2, 1, 500]);
+  });
+
+  /**
+   * **Gekappte Werte werden unverändert durchgereicht.** Das Kennzeichen und die
+   * ursprüngliche Länge hängen am Eintrag; die Gruppierung ordnet an und fasst
+   * nicht an.
+   */
+  it("reicht gekappt und originalLaengeBytes unverändert durch", () => {
+    const gruppen = gruppiereEigenschaften(
+      [
+        eigenschaft({
+          name: "Message.IDOCNr",
+          position: 0,
+          gekappt: true,
+          originalLaengeBytes: 2124,
+        }),
+      ],
+      [],
+    );
+
+    expect(gruppen[0]?.eintraege[0]).toMatchObject({ gekappt: true, originalLaengeBytes: 2124 });
+  });
+
+  /** Leere Eingabe heißt leere Liste — und nicht eine Gruppe „Nachricht" ohne Inhalt. */
+  it("ergibt bei leerer Eingabe eine leere Liste", () => {
+    expect(gruppiereEigenschaften([], [schritt({ position: 1 })])).toEqual([]);
   });
 });

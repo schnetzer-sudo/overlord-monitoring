@@ -9,7 +9,7 @@ import { formatiereDauer, formatiereZeitpunktGenau } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 import type { Nachrichtendetail, Schritt } from "../api";
-import { wartezeile, zeitleiste, type Zeitleistenzeile } from "../detail";
+import { schrittHinweis, wartezeile, zeitleiste, type Zeitleistenzeile } from "../detail";
 
 /**
  * Die Zeitleiste — der Kern der Detailansicht.
@@ -119,6 +119,12 @@ function Zeile({ zeile }: { zeile: Zeitleistenzeile }) {
  * darauf gekommen sind; wer nachsehen will, findet es. Bei `ROHWERT` steht
  * ohnehin der Rohwert als Name — auch dort gehört die Herkunft in den Tooltip,
  * damit die Erklärung an **einer** Stelle liegt.
+ *
+ * **Zusammengesetzt wird er seit dem 17.08.2026 in `../detail.ts`** und nicht
+ * mehr hier: Der Eigenschaftenblock gruppiert seine Werte nach Schritten und
+ * beschriftet jede Gruppe mit demselben Tooltip. Zwei Stellen, die denselben
+ * Schritt verschieden benennen, wären genau der Fehler, den jene Gruppierung
+ * beseitigen soll.
  */
 function SchrittZeile({ schritt, anteil }: { schritt: Schritt; anteil: number | null }) {
   const texte = useTexte();
@@ -127,13 +133,7 @@ function SchrittZeile({ schritt, anteil }: { schritt: Schritt; anteil: number | 
       ? texte.nachrichten.detail.ohneDauer
       : formatiereDauer(schritt.dauerSekunden, texte.nachrichten.detail.dauer);
 
-  const hinweis = [
-    schritt.name,
-    schritt.rohwert ? `${texte.nachrichten.detail.baustein}: ${schritt.rohwert}` : undefined,
-    texte.nachrichten.detail.herkunft[schritt.namensherkunft],
-  ]
-    .filter((teil): teil is string => teil !== undefined)
-    .join("\n");
+  const hinweis = schrittHinweis(schritt, texte);
 
   return (
     <li

@@ -386,6 +386,20 @@ export const de = {
         gekappt: "gekürzt",
         gekapptHinweis: "Gekürzt — im Original {bytes} Bytes.",
         leer: "Zu dieser Nachricht ist keine Eigenschaft hinterlegt.",
+        // Der Kopf einer Gruppe (Nacharbeit vom 17.08.2026): Schrittname und
+        // Anzahl. Die Zahl steht in der Sprachdatei und nicht im JSX, weil
+        // Klammern und Wortstellung Sache der Übersetzung sind.
+        gruppe: "{name} ({anzahl})",
+        // Die Gruppe zu `position === 0`. Sie sagt, **wo** die Werte hängen — an
+        // der Nachricht statt an einem Schritt — und behauptet nichts über ihren
+        // Inhalt. „Metadaten der Nachricht" oder „Allgemeine Angaben" wären
+        // genau das: Dass dort *ausschließlich* die `Message.*`-Familie steht,
+        // ist nicht gemessen. Gemessen ist die Gegenrichtung — die
+        // `Message.*`-Familie steht ausnahmslos dort (M17 3).
+        gruppeNachricht: "Nachricht",
+        // Eine Position, zu der kein Schritt geliefert wurde. Kein erfundener
+        // Name: Die Nummer ist das einzige, was über sie bekannt ist.
+        gruppeSchritt: "Schritt {nummer}",
       },
 
       // Für eine unbekannte und für eine fremde Kennung derselbe Text. Das

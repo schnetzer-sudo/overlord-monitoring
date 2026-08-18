@@ -263,6 +263,11 @@ export const en: Texte = {
         gekappt: "shortened",
         gekapptHinweis: "Shortened — {bytes} bytes in the original.",
         leer: "No property is recorded for this message.",
+        gruppe: "{name} ({anzahl})",
+        // Says *where* the values hang — on the message rather than on a step —
+        // and claims nothing about what they are.
+        gruppeNachricht: "Message",
+        gruppeSchritt: "Step {nummer}",
       },
 
       nichtGefunden:

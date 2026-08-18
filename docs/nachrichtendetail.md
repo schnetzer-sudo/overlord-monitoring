@@ -1299,6 +1299,161 @@ Zwischenschritte-Chip der Liste.
 zwischen Nachrichten beginnt der Block wieder eingeklappt; umgesetzt über `key={messageId}` und
 damit über den Baum, nicht über einen Effekt.
 
+#### Nacharbeit vom 17.08.2026 — die Werte stehen nach Schritt gruppiert
+
+> **Kein Satz des Abschnitts darüber ist falsch geworden.** Eingeklappt, beschriftet aus dem Kopf,
+> Laden beim Aufklappen, Ladezustand im Block, `key={messageId}`, Zustand nicht in der URL, eine
+> Zeile Text statt eines Schalters bei `eigenschaftenAnzahl === 0` — all das gilt unverändert.
+> Geändert hat sich ausschließlich, **was innerhalb des aufgeklappten Blocks steht**.
+
+**Der Anlass.** In der flachen Liste stand `Converter.Log.GUID` zweimal und `Service.Type` dreimal
+untereinander und sah aus wie eine Dublette. Es sind Einträge **verschiedener Prozessschritte**.
+Künftig steht über jeder Gruppe der Schrittname aus der Zeitleiste; der Nutzer sieht damit, **in
+welchem Schritt** ein Wert entstanden ist — dass etwa per OFTP empfangen und später per FTP versendet
+wurde.
+
+**Die gemessene Grundlage** ([`messungen-schritt5.md`](messungen-schritt5.md) **M17 3**, Fenster A):
+
+| Befund | Zahl |
+|---|---|
+| Zeilen an `MessageActionID = 0` (Metadaten-Schritt) | 82.943 von 141.037 — **58,8 %**, 71 verschiedene Namen |
+| Namen auf **genau einem** Schritt | 70 von 101 |
+| Namen auf **mehr als einem** Schritt | **31** |
+| Beleg, dass ein Name je Nachricht mehrfach vorkommt | `Converter.Payload.GUID`: 7.862 Zeilen auf 6.149 Nachrichten |
+| Ganze `Message.*`-Familie | **ausnahmslos** Schritt 0 |
+| Schritt ohne jede Eigenschaft | `MessageActionID = 502` — in `MessageAction` vorhanden, in `MessageProperty` nicht |
+
+##### Der Gruppierungsschlüssel ist `MessageActionID` — und nicht `SOSActionID`
+
+1. **`MessageProperty` hat keine `SOSActionID`** (M14) — nur `MessageActionID`. Über die
+   Ablaufkennung zu gruppieren verlangte einen Join, den niemand braucht.
+2. **Die beiden Kennungen sind nicht deckungsgleich.** M15 (1) misst `MessageActionID = 2` mal neben
+   `SOSActionID` 1, mal neben 2, und `MessageActionID = 3` neben 2, 3 oder 10 — **614 von 20.352**
+   Aktionen des Tagesfensters weichen ab.
+3. **`MessageActionID` ist die Ausführung** und über den Primärschlüssel `(MessageID,
+   MessageActionID)` je Nachricht eindeutig. `SOSActionID` ist der Schlüssel in die
+   *Ablaufdefinition*; führte ein Ablauf denselben Definitionsschritt zweimal aus, verschmölzen beide
+   Ausführungen zu einer Gruppe.
+
+Im Frontend heißt das Feld auf beiden Seiten bereits `position` — an `Eigenschaft` wie an `Schritt`,
+und beide Male steht `MessageActionID` dahinter (§1, §4). **Geprüft und nicht angenommen:**
+`EigenschaftResponse.position` kommt aus `MessageProperty.MessageActionID`,
+`SchrittResponse.position` aus `MessageAction.MessageActionID`.
+
+##### Die fünf Entscheidungen
+
+| # | Entscheidung |
+|---|---|
+| E1 | **Gruppiert wird im Frontend** aus den beiden vorhandenen Antworten. Kein Backend-Feld, keine neue Abfrage |
+| E2 | **`position === 0` ist die erste Gruppe** und heißt **„Nachricht"** |
+| E3 | **Flach:** eine Ebene, alle Gruppen offen, Überschriften dazwischen. Keine klappbaren Untergruppen — gemessen sind 22,6 Eigenschaften je Nachricht, Minimum 14, Maximum 38 (M17 1), und das wäre Mechanik für zwanzig Zeilen |
+| E4 | **Gruppenkopf = Schrittname + Anzahl**, etwa `Datei konvertiert (7)`. Tooltip wie in der Zeitleiste |
+| E5 | **Innerhalb einer Gruppe bleibt die Reihenfolge der Antwort** — die Gruppierung ist stabil und ordnet nicht um |
+
+**Die Beschriftung „Nachricht" sagt, *wo* die Werte hängen — an der Nachricht statt an einem Schritt
+— und behauptet nichts über ihren Inhalt.** „Metadaten der Nachricht" oder „Allgemeine Angaben"
+wären ausdrücklich falsch: Dass dort *ausschließlich* die `Message.*`-Familie steht, ist **nicht**
+gemessen. Gemessen ist die Gegenrichtung — die `Message.*`-Familie steht ausnahmslos dort (M17 3).
+
+**Die Gruppenreihenfolge folgt `schritte[]` und wird nicht numerisch nachsortiert.** Die Ordnung der
+Schritte (`MessageActionStart`, bei Gleichstand `MessageActionID`) steht laut §4 an **genau einer**
+Stelle, nämlich im `ORDER BY` von `findeAktionen`. Eine zweite Sortierung in der Oberfläche wäre die
+Drift, gegen die diese Regel gerichtet ist — und die Gruppen stünden in einer anderen Reihenfolge als
+die Zeilen der Zeitleiste darüber. Positionen ohne gelieferten Schritt tragen `beschriftung = null`,
+kommen ans Ende und werden dort aufsteigend nach Zahl geordnet; ihr Kopf trägt den Rückfall
+*Schritt N*. **Kein erfundener Name.**
+
+> **Belegvermerk** (Regel L10).
+> *Gemessen (M15 1, Fenster A; S1 über 704.427 Aktionen beider Fenster, null Abweichungen):*
+> `SOSActionID = 0` und `MessageActionID = 0` treffen dieselbe Menge.
+> *Behauptet wird:* dass `position === 0` in der Oberfläche der Metadaten-Schritt ist.
+> **Die Lücke:** Das Frontend sieht die `SOSActionID` gar nicht und verlässt sich auf diese Deckung.
+> Sie ist belegt, aber sie ist eine Messung und keine Zusage des Schemas.
+
+##### Der Tooltip des Gruppenkopfs ist derselbe wie in der Zeitleiste — und wird nicht nachgebaut
+
+Name, `Baustein: <Rohwert>` und der Herkunftstext zu `DIREKT` / `HERGELEITET` / `ROHWERT`. Die
+Zusammensetzung lag bis zu dieser Nacharbeit **inline** in `components/zeitleiste.tsx` und ist nach
+`features/nachrichten/detail.ts` gezogen worden (`schrittHinweis`); beide Stellen rufen sie.
+**Zwei Stellen, die denselben Schritt verschieden benennen, sind genau der Fehler, den diese
+Gruppierung beseitigen soll.** Bei der Gruppe „Nachricht" gibt es keinen Schritt und deshalb auch
+keinen Tooltip statt eines leeren.
+
+**Der React-Schlüssel ist `${position}:${name}`.** Der Primärschlüssel ist `(MessageID,
+MessagePropertyName, MessageActionID)`; innerhalb einer Gruppe ist der Name damit eindeutig, über
+Gruppen hinweg **nicht**. Ein Schlüssel aus dem Namen allein brächte die `console.error`-Warnungen
+aus Schritt 6 zurück — sichtbar falsch wäre nichts.
+
+**Keine eigene Farbe, keine Animation, kein Übergang** ([`visuelles-konzept.md`](visuelles-konzept.md)
+§7): Die Überschrift ist eine Beschriftung und keine Statusaussage, und sie nutzt denselben
+gedämpften Ton wie die Beschriftung im BAM-Block. **Kein eigener Scrollbereich** — es bleibt beim
+einen senkrechten Scroller ([`frontend-grundlagen.md`](frontend-grundlagen.md) §7).
+
+##### Unberührt bleiben Zeitleiste, Kettenblock, BAM-Block und Kopf
+
+Ausdrücklich: An §10.3 (Kopf), §10.4 (Zeitleiste), §10.4a (Kettenblock) und §10.4b (BAM-Block)
+ändert sich **nichts**. Die Zeitleiste hat eine Zeile Code abgegeben — die Zusammensetzung ihres
+Tooltips — und zeigt danach dasselbe wie vorher. Auch die Nachrichtenliste ist nicht berührt.
+
+**Ebenso wenig geändert:** keine Übersetzung, Deutung oder Umbenennung von Eigenschaftsnamen — sie
+bleiben Rohwerte. Kein Filter, keine Suche, keine Sortierumschaltung im Block. Und **keine Deutung,
+welcher Schritt „empfängt" oder „versendet"**: Der Schrittname kommt aus dem Ablauf; was er bedeutet,
+sagt das Werkzeug nicht dazu (Regel Q4).
+
+##### Es war keine Messung fällig, weil keine Abfrage entstanden ist
+
+Regel L7 verlangt, dass **jede neue Abfrage** vor dem Merge gegen die Testkopie gemessen wird. Hier
+entsteht keine: Beide Datensätze — Detail und Eigenschaften — werden in derselben Ansicht schon heute
+geladen, mit denselben zwei Aufrufen. Die Änderung ordnet an, was bereits im Baum liegt. **Kein
+Statement im Diff, kein neues Feld, kein neuer Endpunkt.**
+
+> **Befund zu Aufgabe 0, gemeldet und nicht verändert.** Das Statement der Eigenschaften
+> (`NachrichtendetailRepository.findeEigenschaften`) **trägt** ein `ORDER BY`, nämlich
+> `MessagePropertyName ASC, MessageActionID ASC` — also die Reihenfolge des Primärschlüssels, ohne
+> Sortierlauf. Damit ist die heute sichtbare alphabetische Ordnung eine **Zusage des Backends** und
+> nicht nur eine Beobachtung, und E5 („innerhalb einer Gruppe bleibt die Reihenfolge der Antwort")
+> steht auf festem Grund. **Am Statement ist nichts geändert worden**, und im Frontend ist
+> ausdrücklich **kein** Ersatzsortierer gebaut.
+
+##### Sichtprüfung im Browser (17.08.2026)
+
+Gegen die laufende Anwendung im Profil `dev`, Mandant `NEXANS`, Rolle ADMIN — **geklickt, nicht
+zugewiesen**. Geprüft an **beiden** Einhängepunkten, im Panel neben der Liste und auf der eigenen
+Route. Die Bezugsnachricht ist nach ihrer **Gestalt** gewählt und ihre `MessageID` steht wie in §8
+bewusst nicht hier: eingehende Nachricht mit **drei Schritten** und **36 Eigenschaften**, per OFTP
+empfangen und per FTP weitergereicht.
+
+| # | Geprüft | Ergebnis |
+|---|---|---|
+| 1 | Gruppenreihenfolge gegen die Zeitleiste | Zeitleiste *X12 EDICs Router → ANSI X12 2 Text → APIMS Transfer*; Gruppen *Nachricht → X12 EDICs Router → ANSI X12 2 Text → APIMS Transfer*. **Gleiche Reihenfolge, wortgleiche Namen** |
+| 2 | Die scheinbaren Dubletten | `Service.Type` steht **viermal** — je einmal in jeder Gruppe, mit **vier verschiedenen Werten**. `Converter.Log.GUID`, `Converter.Payload.GUID` und `Converter.TransactionID` stehen **je zweimal**, in zwei verschiedenen Gruppen und mit verschiedenen Werten |
+| 3 | Summe gegen den Blockkopf | 17 + 10 + 5 + 4 = **36**, und im Kopf steht *Technische Eigenschaften (36)* |
+| 4 | Netzanfragen beim Laden des Details | genau zwei — Kopf und `/kette`. **Keine auf `/eigenschaften`** |
+| 5 | Netzanfragen nach dem Klick auf die Überschrift | **genau eine** auf `/eigenschaften` |
+| 6 | Tooltip von Gruppenkopf und Zeitleistenzeile | beide *„X12 EDICs Router / Baustein: NXS_EDICSROUTER / Name aus der Ablaufdefinition"* — **zeichengleich**, weil sie aus derselben Funktion kommen |
+| 7 | Konsole | **keine Meldung**, obwohl vier gleichnamige Einträge im Baum stehen — der Schlüssel `${position}:${name}` trägt |
+
+**Nicht zu sehen war der Rückfall *Schritt N*.** Diese Nachricht hat zu jeder Position einen
+gelieferten Schritt. Der Zweig ist ausschließlich in `tests/eigenschaften-block.test.tsx` belegt —
+gebaut und unit-geprüft, nicht gegen echte Daten. Dieselbe Lage wie bei `WARTET_VOR` in §10.12.
+
+> **Der Befund, der die Wortwahl aus §7 bestätigt — und der Belegvermerk dazu.**
+>
+> In der Gruppe **„Nachricht"** stehen bei dieser Nachricht **nicht nur** `Message.*`-Einträge:
+> Neben den neun `Message.*` hängen dort sieben `OFTPReader.*`-Einträge und ein `Service.Type`.
+> Hätte die Gruppe „Metadaten der Nachricht" oder „Allgemeine Angaben" geheißen, stünde eine
+> Behauptung über den Inhalt darüber, die schon an der ersten geöffneten Nachricht falsch gewesen
+> wäre. Die gewählte Beschriftung sagt, **wo** die Werte hängen, und behauptet nichts darüber, was
+> sie sind.
+>
+> *Gemessen:* **eine** Nachricht in der Testkopie, gesichtet am 17.08.2026 — dort trägt
+> `MessageActionID = 0` neben der `Message.*`-Familie auch die `OFTPReader.*`-Familie.
+> *Behauptet wird:* nur, dass die verworfene Formulierung **widerlegt** ist. Ein einziger Gegenbeleg
+> genügt dafür, und mehr wird daraus nicht abgeleitet.
+> **Die Lücke:** Wie sich Schritt `0` über den Bestand zusammensetzt, ist **nicht** gemessen. M17 (3)
+> misst die Gegenrichtung — die `Message.*`-Familie steht ausnahmslos dort — und beziffert 71
+> verschiedene Namen auf Schritt `0`, ohne sie aufzuschlüsseln.
+
 ### 10.6 Ladung, Leere, Fehler
 
 **Laden.** Ein Platzhalter in der Gestalt der späteren Ansicht — Überschrift, vier Kopfzeilen, drei
@@ -1495,6 +1650,8 @@ Gegenrichtung ist billiger: Wer maximiert, hängt die Liste aus und fragt sie ni
 | `tests/routen.test.ts` *(11.08.2026)* | die beiden Zielrouten des Umschalters (§10.7): leere Abfragezeichenkette in beide Richtungen; jeder Filter unverändert und in seiner Reihenfolge; `nachricht` entfernt beziehungsweise gesetzt und im Ziel **genau einmal**, auch wenn es am Anfang oder am Ende stand; eine Kennung mit Sonderzeichen einmal und nicht doppelt kodiert; und dass `NACHRICHT_PARAMETER` denselben Parameter meint wie `NACHRICHTEN_PARAMETER` |
 | `tests/ansicht-umschalter.test.tsx` *(11.08.2026)* | **gerenderter Baum, begründete Ausnahme:** dass der Knopf `hidden xl:inline-flex` trägt und `inline-flex` **nicht** stehen bleibt, und dass er im Panel und auf der eigenen Route verschiedene Beschriftungen führt — je in `aria-label` **und** `title` |
 | `tests/bam-block.test.tsx` *(12.08.2026)* | **gerenderter Baum, begründete Ausnahme:** derselbe Wert unter zwei Typen **ohne `console.error`**; bei `bamAnzahl === 0` **nicht im Baum und keine Anfrage**; eingeklappt mit Werten die Überschrift mit der Zahl und **immer noch keine Anfrage**. Vollständig in [`bam-werte.md`](bam-werte.md) §11 |
+| `tests/nachrichtendetail.test.ts` — Gruppierung *(17.08.2026)* | zehn Fälle zu `gruppiereEigenschaften` (§10.5): Gruppe `0` vorn, auch wenn sie in der Eingabe nicht zuerst steht; **die Gruppenreihenfolge folgt `schritte[]` und nicht der Zahl** (`[3, 1, 2]` ergibt `0, 3, 1, 2`); ein Schritt ohne Eigenschaften erzeugt keine Gruppe; Positionen ohne Schritt landen ohne Beschriftung am Ende, aufsteigend; ohne `position === 0` entsteht keine leere Gruppe „Nachricht"; derselbe Name bleibt in zwei Gruppen zweimal stehen; innerhalb einer Gruppe wird nicht umsortiert; **die Invariante** Summe der Gruppengrößen = Länge der Eingabe; `gekappt` und `originalLaengeBytes` überstehen die Gruppierung; leere Eingabe → leere Liste |
+| `tests/eigenschaften-block.test.tsx` *(17.08.2026)* | **gerenderter Baum, begründete Ausnahme:** derselbe Name in **drei** Gruppen **ohne `console.error`** (der Schlüssel ist `${position}:${name}`); bei `anzahl === 0` **kein Schalter und keine Anfrage**; eingeklappt mit Werten die Überschrift mit der Zahl und **immer noch keine Anfrage**; ohne gelieferte `schritte` trägt jede Gruppe den Rückfall *Schritt N* |
 
 Kein gerenderter Baum, mit den Ausnahmen aus `tests/detail-baum.test.tsx` und
 `tests/ansicht-umschalter.test.tsx`: Geprüft werden die **Entscheidungen**, nicht das Markup

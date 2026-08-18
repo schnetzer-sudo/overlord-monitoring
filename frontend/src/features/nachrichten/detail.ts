@@ -1,4 +1,6 @@
-import type { Nachrichtendetail, Schritt } from "./api";
+import type { Texte } from "@/i18n";
+
+import type { Eigenschaft, Nachrichtendetail, Namensherkunft, Schritt } from "./api";
 
 /**
  * Die Zeitleiste der Detailansicht — **als reine Funktion, ohne React.**
@@ -145,6 +147,50 @@ export function zeitleiste(detail: Nachrichtendetail): Zeitleistenzeile[] {
 }
 
 /**
+ * Der Tooltip zu einem Schritt — **an genau einer Stelle für beide Aufrufer.**
+ *
+ * Name, `Baustein: <Rohwert>` und der Herkunftstext, durch Zeilenumbrüche
+ * getrennt. Die Zusammensetzung lag bis zum 17.08.2026 inline in
+ * `components/zeitleiste.tsx`; seit der Eigenschaftenblock nach Schritten
+ * gruppiert, braucht sie ein zweiter Aufrufer. **Zwei Stellen, die denselben
+ * Schritt verschieden benennen, sind genau der Fehler, den die Gruppierung
+ * beseitigen soll** — ein Gruppenkopf muss wortgleich dasselbe sagen wie die
+ * Zeile der Zeitleiste darüber.
+ *
+ * **Alle drei Angaben dürfen fehlen**, und dann gibt es keinen Tooltip statt
+ * eines leeren. Der Fall tritt an genau einer Stelle ein: bei einer Gruppe ohne
+ * passenden Schritt (`gruppiereEigenschaften`, Regel 5). Die Zeitleiste liefert
+ * Name und Herkunft immer.
+ *
+ * `undefined` statt `null`, weil das Ergebnis unverändert in ein `title`-Attribut
+ * geht — dort heißt `undefined` „kein Attribut".
+ */
+export function schrittHinweis(
+  schritt: {
+    name: string | null;
+    rohwert: string | null;
+    namensherkunft: Namensherkunft | null;
+  },
+  texte: Texte,
+): string | undefined {
+  const teile = [
+    schritt.name,
+    schritt.rohwert ? `${texte.nachrichten.detail.baustein}: ${schritt.rohwert}` : null,
+    schritt.namensherkunft === null
+      ? null
+      : texte.nachrichten.detail.herkunft[schritt.namensherkunft],
+  ];
+
+  // `typeof` und nicht `!== null`: Eine fehlende Angabe soll auch dann
+  // herausfallen, wenn sie als `undefined` ankommt — sonst stünde eine leere
+  // Zeile im Tooltip, und ein `title` aus einer leeren Zeile ist etwas anderes
+  // als gar keines.
+  const vorhandene = teile.filter((teil): teil is string => typeof teil === "string");
+
+  return vorhandene.length === 0 ? undefined : vorhandene.join("\n");
+}
+
+/**
  * Ob die Antwort neben dem Rohwert für `bedeutungNichtVerifiziert` steht.
  *
  * **Das Detail führt dieses Feld nicht** — es ist genau die Einordnung
@@ -190,4 +236,163 @@ export function wartezeile(detail: Nachrichtendetail): Wartezeile | null {
     fristSekunden: detail.fristSekunden,
     ueberfaellig: detail.ueberfaellig,
   };
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Die technischen Eigenschaften, nach ausgeführtem Schritt gruppiert
+   (Nacharbeit zu Schritt 5, Teil 2 — 17.08.2026)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Die Position des Metadaten-Schritts.
+ *
+ * > **Belegvermerk** (Regel L10).
+ * > *Gemessen (M15 1, Fenster A; S1 über 704.427 Aktionen beider Fenster, null
+ * > Abweichungen):* `SOSActionID = 0` und `MessageActionID = 0` treffen dieselbe
+ * > Menge.
+ * > *Behauptet wird:* dass `position === 0` in der Oberfläche der
+ * > Metadaten-Schritt ist.
+ * > **Die Lücke:** Das Frontend sieht die `SOSActionID` gar nicht und verlässt
+ * > sich auf diese Deckung. Sie ist belegt, aber sie ist eine Messung und keine
+ * > Zusage des Schemas.
+ */
+export const METADATEN_POSITION = 0;
+
+/** Eine Gruppe des Eigenschaftenblocks: ein ausgeführter Schritt und was an ihm hängt. */
+export type EigenschaftenGruppe = {
+  position: number;
+  /** Name des Schritts aus `schritte[]`; `null`, wenn es dazu keinen Schritt gibt. */
+  beschriftung: string | null;
+  namensherkunft: Namensherkunft | null;
+  rohwert: string | null;
+  /** true genau für position === 0 */
+  istNachricht: boolean;
+  eintraege: Eigenschaft[];
+};
+
+/**
+ * Die technischen Eigenschaften einer Nachricht, **nach dem ausgeführten Schritt
+ * gruppiert**.
+ *
+ * ## Warum überhaupt gruppiert wird
+ *
+ * Flach untereinander steht `Converter.Log.GUID` zweimal und `Service.Type`
+ * dreimal und sieht aus wie eine Dublette. Es sind Einträge **verschiedener
+ * Prozessschritte**: 31 der 101 gemessenen Namen kommen auf mehr als einem
+ * Schritt vor, und `Converter.Payload.GUID` steht mit 7.862 Zeilen auf 6.149
+ * Nachrichten (M17 3). Mit dem Schrittnamen darüber sieht der Nutzer, **wo** ein
+ * Wert entstanden ist — dass etwa per OFTP empfangen und später per FTP versendet
+ * wurde.
+ *
+ * ## Gruppiert wird über `MessageActionID` — nicht über `SOSActionID`
+ *
+ * Drei Gründe, und der dritte ist der tragende:
+ *
+ * 1. **`MessageProperty` hat gar keine `SOSActionID`** (M14) — nur
+ *    `MessageActionID`. Über die Ablaufkennung zu gruppieren verlangte einen
+ *    Join, den niemand braucht.
+ * 2. **Die beiden Kennungen sind nicht deckungsgleich.** M15 (1) misst
+ *    `MessageActionID = 2` mal neben `SOSActionID` 1, mal neben 2, und
+ *    `MessageActionID = 3` neben 2, 3 oder 10 — in **614 von 20.352** Aktionen
+ *    des Tagesfensters weichen sie voneinander ab.
+ * 3. **`MessageActionID` ist die Ausführung** und über den Primärschlüssel
+ *    `(MessageID, MessageActionID)` je Nachricht eindeutig. `SOSActionID` ist der
+ *    Schlüssel in die *Ablaufdefinition*; führte ein Ablauf denselben
+ *    Definitionsschritt zweimal aus, verschmölzen beide Ausführungen zu einer
+ *    Gruppe.
+ *
+ * Im Frontend heißt das Feld auf beiden Seiten `position` — an `Eigenschaft` wie
+ * an `Schritt`, und beide Male steht die Spalte `MessageActionID` dahinter
+ * (`nachrichtendetail.md` §4).
+ *
+ * ## Die Reihenfolge der Gruppen kommt von außen und wird hier nicht erfunden
+ *
+ * `position === 0` zuerst (die Nachricht selbst), danach **in der Reihenfolge von
+ * `schritte[]`**, so wie sie ankommt, zuletzt die übrigen Positionen aufsteigend.
+ *
+ * **Es wird nicht numerisch nachsortiert.** Die Ordnung der Schritte
+ * (`MessageActionStart`, bei Gleichstand `MessageActionID`) steht an **genau
+ * einer** Stelle, nämlich im `ORDER BY` von `findeAktionen`
+ * (`nachrichtendetail.md` §4). Eine zweite Sortierung hier wäre die Drift, gegen
+ * die diese Regel gerichtet ist — und die Gruppen stünden dann in einer anderen
+ * Reihenfolge als die Zeilen der Zeitleiste darüber.
+ *
+ * ## Was die Funktion ausdrücklich nicht tut
+ *
+ * - **Sie sortiert innerhalb einer Gruppe nicht um.** Die Eingabereihenfolge
+ *   bleibt erhalten; sie ist die des Backends (`MessagePropertyName`, dann
+ *   `MessageActionID`) und keine Zusage dieser Datei.
+ * - **Sie fasst nichts zusammen und lässt nichts weg.** Die Summe der
+ *   Gruppengrößen ist die Länge der Eingabe; derselbe Name in zwei Gruppen bleibt
+ *   zweimal stehen — genau das ist der Punkt.
+ * - **Sie erfindet keinen Namen.** Eine Position ohne passenden Schritt bekommt
+ *   `beschriftung = null` und landet am Ende.
+ * - **Sie erzeugt keine leere Gruppe.** Ein Schritt ohne Eigenschaften ist
+ *   gemessen: `MessageActionID = 502` existiert in `MessageAction`, kommt in
+ *   `MessageProperty` aber nicht vor (M17 3).
+ */
+export function gruppiereEigenschaften(
+  eigenschaften: Eigenschaft[],
+  schritte: Schritt[],
+): EigenschaftenGruppe[] {
+  // Eine Map hält die Einfügereihenfolge je Eimer — damit bleibt die
+  // Reihenfolge innerhalb einer Gruppe die der Eingabe, ohne einen Sortierlauf.
+  const nachPosition = new Map<number, Eigenschaft[]>();
+  for (const eigenschaft of eigenschaften) {
+    const eimer = nachPosition.get(eigenschaft.position);
+    if (eimer === undefined) {
+      nachPosition.set(eigenschaft.position, [eigenschaft]);
+    } else {
+      eimer.push(eigenschaft);
+    }
+  }
+
+  const gruppen: EigenschaftenGruppe[] = [];
+  const vergeben = new Set<number>();
+
+  function nimm(position: number, schritt: Schritt | undefined): void {
+    const eintraege = nachPosition.get(position);
+    // Ohne Einträge keine Gruppe: Ein Schritt ohne Eigenschaften bekommt keine
+    // leere Überschrift.
+    if (eintraege === undefined || vergeben.has(position)) {
+      return;
+    }
+    vergeben.add(position);
+    gruppen.push({
+      position,
+      beschriftung: schritt?.name ?? null,
+      namensherkunft: schritt?.namensherkunft ?? null,
+      rohwert: schritt?.rohwert ?? null,
+      istNachricht: position === METADATEN_POSITION,
+      eintraege,
+    });
+  }
+
+  // Die Nachricht selbst zuerst. Sie steht in `schritte[]` nicht drin — der
+  // Metadaten-Schritt ist kein Prozessschritt und wird schon im Backend
+  // ausgenommen (`nachrichtendetail.md` §4). Nachgesehen wird trotzdem, damit
+  // die Gruppe ihren Namen bekäme, falls die Antwort ihn eines Tages mitschickt.
+  nimm(
+    METADATEN_POSITION,
+    schritte.find((schritt) => schritt.position === METADATEN_POSITION),
+  );
+
+  // Danach in der Reihenfolge der Zeitleiste — und in keiner anderen.
+  for (const schritt of schritte) {
+    if (schritt.position === METADATEN_POSITION) {
+      continue;
+    }
+    nimm(schritt.position, schritt);
+  }
+
+  // Zuletzt, was zu keinem gelieferten Schritt gehört: aufsteigend nach Zahl,
+  // ohne Beschriftung. Hier ist die Zahl das einzige, was es an Ordnung gibt.
+  const uebrige = [...nachPosition.keys()]
+    .filter((position) => !vergeben.has(position))
+    .sort((eine, andere) => eine - andere);
+  for (const position of uebrige) {
+    nimm(position, undefined);
+  }
+
+  return gruppen;
 }

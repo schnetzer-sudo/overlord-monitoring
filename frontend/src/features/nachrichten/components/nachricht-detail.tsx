@@ -173,6 +173,12 @@ export function NachrichtDetail({
             key={`eigenschaften-${anfrage.data.messageId}`}
             messageId={anfrage.data.messageId}
             anzahl={anfrage.data.eigenschaftenAnzahl}
+            // Nur zum Beschriften der Gruppen (17.08.2026). Es ist dieselbe
+            // Liste, aus der die Zeitleiste darüber entsteht — genau deshalb
+            // stehen die Gruppen in derselben Reihenfolge und tragen wortgleich
+            // dieselben Namen. **Keine zweite Anfrage**: Beide Datensätze liegen
+            // schon im Baum.
+            schritte={anfrage.data.schritte}
           />
         </>
       ) : null}
