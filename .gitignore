@@ -66,3 +66,31 @@ nbproject/private/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# ─── Messrunde vor Schritt 8 ─────────────────────────────────────────────────
+# Das Auswertungsskript und die selbst erfundenen Testdaten werden eingecheckt —
+# sie sind der Beleg dafuer, wie gezaehlt wurde. Die Zaehlergebnisse und das
+# Arbeitsverzeichnis mit den geholten Dateien werden es nicht. (Regel G1)
+scripts/messung-schritt8/ergebnis/
+scripts/messung-schritt8/arbeit/
+
+# ─── Quelltext des Altwerkzeugs ──────────────────────────────────────────────
+# alterCode/ bleibt LOKAL. JsonServlet.java traegt drei produktive absolute
+# Pfade mit einem Produktionsknoten- und einem Dienstkontonamen; CLAUDE.md
+# schliesst Hostnamen und Produktionsdaten im Repository aus, und ein Push ist
+# in der Historie praktisch dauerhaft. Entschieden am 17.08.2026.
+#
+# Die vier Dateien des Filestore-Clients liegen byteidentisch unter
+# scripts/mitschnitt-saaj/ und sind dort eingecheckt - sie tragen keine
+# produktiven Pfade. Die Fundstellen in Abschnitt Q von
+# docs/messungen-schritt8.md verweisen auf den lokalen Bestand.
+alterCode/
+
+# ─── M70 — Mitschnitt des SAAJ-Aufrufs ───────────────────────────────────────
+# pom.xml, main und Lauscher werden eingecheckt — sie sind der Beleg dafuer,
+# wie gemessen wurde. Bauverzeichnis, Mitschnitt und das Wegwerf-Zielverzeichnis
+# des Abrufs nicht.
+scripts/mitschnitt-saaj/target/
+scripts/mitschnitt-saaj/mitschnitt/
+scripts/mitschnitt-saaj/retrieve/
+scripts/mitschnitt-saaj/arbeit/

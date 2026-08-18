@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Wegwerfprojekt fuer M70 — Mitschnitt des SAAJ-Aufrufs.
+
+  NICHT in den Hauptbau eingehaengt. Es baut ausschliesslich den kopierten
+  Alt-Code aus alterCode/ plus einen lokalen Lauscher, damit sichtbar wird,
+  was SAAJ tatsaechlich auf die Leitung legt.
+
+  Bewusst der javax-Zweig, NICHT jakarta: Ein Wechsel des Namensraums wuerde
+  die import-Zeilen in FilestoreClient.java erzwingen, und damit waere der
+  Lauf wieder ein Nachbau. Die vier Alt-Dateien sind byteidentisch kopiert.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>de.overlord.monitoring</groupId>
+  <artifactId>mitschnitt-saaj</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <properties>
+    <maven.compiler.source>21</maven.compiler.source>
+    <maven.compiler.target>21</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+  <dependencies>
+    <!-- Letzte Fassung des javax-Zweigs der SOAP-API. -->
+    <dependency>
+      <groupId>javax.xml.soap</groupId>
+      <artifactId>javax.xml.soap-api</artifactId>
+      <version>1.4.0</version>
+    </dependency>
+
+    <!-- SAAJ-Referenzimplementierung, javax-Zweig.
+         Hauptversion 1.x = javax, 2.x = jakarta. Hier bewusst 1.5.3. -->
+    <dependency>
+      <groupId>com.sun.xml.messaging.saaj</groupId>
+      <artifactId>saaj-impl</artifactId>
+      <version>1.5.3</version>
+    </dependency>
+
+    <!-- Activation, vom Alt-Code ueber javax.activation.DataHandler benoetigt. -->
+    <dependency>
+      <groupId>com.sun.activation</groupId>
+      <artifactId>javax.activation</artifactId>
+      <version>1.2.0</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <!-- Bewusst OHNE <configuration><mainClass>: Es gibt zwei Einstiegspunkte
+           (mitschnitt.Mitschnitt fuer M70, mitschnitt.Abruf fuer M71). Eine
+           feste Vorgabe hier ueberstimmt -Dexec.mainClass auf der Befehlszeile,
+           und dann laeuft still der falsche. Die Klasse wird deshalb bei jedem
+           Aufruf ausdruecklich angegeben. -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.1.0</version>
+      </plugin>
+    </plugins>
+  </build>
+</project>

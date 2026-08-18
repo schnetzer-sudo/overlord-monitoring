@@ -15,6 +15,14 @@
 # Der Maven-Wrapper ist ein POSIX-Shellskript und bleibt LF.
 mvnw text eol=lf
 
+# Ausnahme: die kopierten Alt-Dateien des Filestore-Clients.
+# M70 und M71 belegen ihre Byteidentitaet mit dem Original ueber SHA-256. Eine
+# Normalisierung CRLF -> LF wuerde genau diese Pruefsummen brechen, und zwar
+# still: Der Arbeitsbaum saehe unveraendert aus, ein frischer Klon nicht. Sie
+# werden deshalb als binaer behandelt und Byte fuer Byte gespeichert, wie sie
+# geliefert wurden.
+scripts/mitschnitt-saaj/src/main/java/de/kraftwerkone/filestore/client/*.java -text
+
 # Generierte jOOQ-Quellen: eingecheckt (die CI erreicht die Testkopie nicht), aber
 # in Diffs und Sprachstatistik als generiert markiert.
 src/main/generated-java/** linguist-generated=true
