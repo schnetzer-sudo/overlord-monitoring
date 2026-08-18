@@ -50,6 +50,22 @@ public class MessagepropertysearchlistentryRecord extends UpdatableRecordImpl<Me
         return (String) get(1);
     }
 
+    /**
+     * Setter for
+     * <code>GlassfishDB.MessagePropertySearchListEntry.MessagePropertyType</code>.
+     */
+    public void setMessagepropertytype(Integer value) {
+        set(2, value);
+    }
+
+    /**
+     * Getter for
+     * <code>GlassfishDB.MessagePropertySearchListEntry.MessagePropertyType</code>.
+     */
+    public Integer getMessagepropertytype() {
+        return (Integer) get(2);
+    }
+
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
@@ -73,11 +89,12 @@ public class MessagepropertysearchlistentryRecord extends UpdatableRecordImpl<Me
     /**
      * Create a detached, initialised MessagepropertysearchlistentryRecord
      */
-    public MessagepropertysearchlistentryRecord(String messagepropertyname, String mandantid) {
+    public MessagepropertysearchlistentryRecord(String messagepropertyname, String mandantid, Integer messagepropertytype) {
         super(Messagepropertysearchlistentry.MESSAGEPROPERTYSEARCHLISTENTRY);
 
         setMessagepropertyname(messagepropertyname);
         setMandantid(mandantid);
+        setMessagepropertytype(messagepropertytype);
         resetTouchedOnNotNull();
     }
 }

@@ -67,6 +67,12 @@ public class Messagepropertysearchlistentry extends TableImpl<Messagepropertysea
      */
     public final TableField<MessagepropertysearchlistentryRecord, String> MANDANTID = createField(DSL.name("MandantID"), SQLDataType.VARCHAR(36).defaultValue(DSL.field(DSL.raw("NULL"), SQLDataType.VARCHAR)), this, "");
 
+    /**
+     * The column
+     * <code>GlassfishDB.MessagePropertySearchListEntry.MessagePropertyType</code>.
+     */
+    public final TableField<MessagepropertysearchlistentryRecord, Integer> MESSAGEPROPERTYTYPE = createField(DSL.name("MessagePropertyType"), SQLDataType.INTEGER.defaultValue(DSL.field(DSL.raw("NULL"), SQLDataType.INTEGER)), this, "");
+
     private Messagepropertysearchlistentry(Name alias, Table<MessagepropertysearchlistentryRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
     }
