@@ -32,6 +32,10 @@ public enum AuditEventType {
   NUTZER_ANGELEGT,
   /** CATALOG_CHANGED */
   KATALOG_GEAENDERT,
-  /** PAYLOAD_DOWNLOADED */
-  ROHDATEN_DOWNLOAD
+  /** PAYLOAD_VIEWED — Artefakt im Browser angesehen (Schritt 8). */
+  ROHDATEN_ANGESEHEN,
+  /** PAYLOAD_DOWNLOADED — Artefakt heruntergeladen (Schritt 8). */
+  ROHDATEN_DOWNLOAD,
+  /** PAYLOAD_FAILED — Abruf fehlgeschlagen, mit dem Zustand im Detail (Schritt 8). */
+  ROHDATEN_ABRUF_FEHLGESCHLAGEN
 }

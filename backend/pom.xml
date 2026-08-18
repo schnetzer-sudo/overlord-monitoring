@@ -121,6 +121,33 @@
       <scope>runtime</scope>
     </dependency>
 
+    <!--
+      SOAP fuer den Rohdatenzugriff (Schritt 8). Die Ablage spricht ausschliesslich
+      SOAP und liefert die Datei als ZIP-Anhang; ein Bytestrom-Proxy reicht nicht.
+
+      Bewusst der jakarta-Zweig, und das ist gemessen: M72 hat beide Zweige gegen
+      denselben lokalen Lauscher laufen lassen und die Bytes auf der Leitung
+      verglichen — Anfragezeile, acht Kopfzeilen in gesendeter Reihenfolge und
+      276 Byte Rumpf sind identisch. Der javax-Zweig aus M70/M71 waere in einem
+      Spring-Boot-4-Projekt ein Fremdkoerper; er kann ausserdem keine Zeitgrenze
+      je Verbindung setzen, weil javax.xml.soap.SOAPConnection setReadTimeout gar
+      nicht kennt. Erst jakarta.xml.soap 3.x hat die beiden Methoden.
+
+      Keine <version> aus dem Spring-Boot-BOM: es verwaltet weder jakarta.xml.soap-api
+      noch saaj-impl. Die beiden Zahlen sind die in M72 gemessenen.
+    -->
+    <dependency>
+      <groupId>jakarta.xml.soap</groupId>
+      <artifactId>jakarta.xml.soap-api</artifactId>
+      <version>3.0.2</version>
+    </dependency>
+    <dependency>
+      <groupId>com.sun.xml.messaging.saaj</groupId>
+      <artifactId>saaj-impl</artifactId>
+      <version>3.0.6</version>
+      <scope>runtime</scope>
+    </dependency>
+
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>

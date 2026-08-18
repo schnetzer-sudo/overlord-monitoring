@@ -89,6 +89,7 @@ Vor der Vergabe über `docs\` und das Wurzelverzeichnis geprüft.
 | **M69** | **Nicht vergeben.** War für eine Messung zur Kennungsform vorgesehen und ist durch Q1 gegenstandslos geworden. Die Nummer bleibt frei und wird **nicht umgewidmet** — eine Nummer mit gewechselter Bedeutung ist genau der Fall, den dieses Projekt bei M62 vermieden hat. Siehe „Offene Punkte" 12 |
 | **M70** | Neu vergeben am 17.08.2026 für den Mitschnitt des SAAJ-Aufrufs. Vor der Vergabe geprüft: `M70`, `M71` und `M72` kommen in `docs\` und im Wurzelverzeichnis **in keiner Datei** vor |
 | **M71** | Neu vergeben am 17.08.2026 für den Abruf mit dem echten Client. Bei derselben Prüfung als frei festgestellt |
+| **M72** | Neu vergeben am **18.08.2026** für den Bytevergleich `javax` gegen `jakarta`. Vor der Vergabe erneut geprüft: der einzige Treffer für `M72` in `docs\` und im Wurzelverzeichnis ist die Zeile zu **M70** in dieser Tabelle, die die Nummer als frei ausweist statt sie zu vergeben |
 | **M66 (2)** | **Keine neue Nummer.** Die nachgeholte jüngste Zeitscheibe läuft als **Teilmessung von M66**, weil sie dieselbe Frage mit derselben Deutung stellt. Sie ist **nicht** in M66 eingearbeitet: M66 ist gefahren, und eine nachträglich veränderte Scheibe darin würde die Datei über ihre eigene Geschichte täuschen |
 | Rotationsgrenze | **Keine Nummer.** Kein eigener Befund, sondern die Präzisierung von M53 Befund 1 und M66 Befund 4 aus denselben Statements |
 
@@ -2253,6 +2254,198 @@ Verzeichnisse `retrieve\` (1 Datei, 639 Byte), `arbeit\` (2 Dateien, 6.891 Byte)
 
 ---
 
+## M72 — Legt der `jakarta`-Zweig dieselben Bytes auf die Leitung?
+
+**Erhoben am 18.08.2026.** Alle anderen Messungen dieser Datei stammen vom 17.08.2026; diese ist
+nachträglich hinzugekommen und ändert keine von ihnen.
+
+**Frage.** Offener Punkt 1 aus `rohdaten.md`: M70 und M71 liefen mit dem `javax`-Zweig
+(`javax.xml.soap-api 1.4.0`, `saaj-impl 1.5.3`). In einem Spring-Boot-4-Projekt auf Jakarta EE 11
+ist der ein Fremdkörper. Der `jakarta`-Zweig wäre stimmig — **sein Verhalten auf der Leitung ist
+aber ungeprüft.** Legt er dieselben Bytes ab wie der Zweig, mit dem der Abruf nachweislich
+funktioniert hat?
+
+**Nummernvergabe.** `M72` ist vor der Vergabe projektweit als frei geprüft: Der einzige Treffer in
+`docs\` und im Wurzelverzeichnis ist die Zeile der Nummernvergabe oben, die bei M70 festhält, dass
+`M70`, `M71` und `M72` damals frei waren. Sie vergibt die Nummer nicht.
+
+> ⚠️ **Es ist kein Filestore angesprochen worden.** Beide Läufe zielen ausschließlich auf
+> `127.0.0.1`; der Lauscher bindet auf `127.0.0.1`, nicht auf `0.0.0.0`. Der `ServiceConnectString`
+> ist nicht gelesen, nicht aufgelöst und nicht verwendet worden. Die GUID ist dieselbe **frei
+> erfundene** wie in M70 — `deadbeef-0000-4000-8000-0123456789ab`. Der Mitschnitt enthält deshalb
+> keinerlei echte Daten und darf hier im Wortlaut stehen.
+
+### Aufbau
+
+**Zwei Projekte, zwei Klassenpfade.** Ein Maven-Profil hätte nicht genügt: `saaj-impl 1.x` und
+`saaj-impl 3.x` belegen **beide** das interne Paket `com.sun.xml.messaging.saaj`. Auf einem
+Klassenpfad entscheidet die Reihenfolge, welche Implementierung lädt — und das ist genau die
+Eigenschaft, die hier gemessen werden soll.
+
+| | `javax` | `jakarta` |
+|---|---|---|
+| Projekt | `scripts/mitschnitt-saaj/` (unverändert seit M70) | `scripts/mitschnitt-saaj-jakarta/` (**neu**) |
+| Einstiegspunkt | `mitschnitt.Mitschnitt` | `mitschnitt.MitschnittJakarta` |
+| SOAP-API | `javax.xml.soap:javax.xml.soap-api:1.4.0` | `jakarta.xml.soap:jakarta.xml.soap-api:**3.0.2**` |
+| SAAJ-Implementierung | `com.sun.xml.messaging.saaj:saaj-impl:**1.5.3**` | `com.sun.xml.messaging.saaj:saaj-impl:**3.0.6**` |
+| Activation | `com.sun.activation:javax.activation:1.2.0`, transitiv `com.sun.activation:jakarta.activation:1.2.2` | `jakarta.activation:jakarta.activation-api:2.1.3`, `org.eclipse.angus:angus-activation:2.0.3` |
+| `stax-ex` | `1.8.3` | `2.1.0` |
+| API geladen aus | `javax.xml.soap-api-1.4.0.jar` | `jakarta.xml.soap-api-3.0.2.jar` |
+| Impl geladen aus | `saaj-impl-1.5.3.jar` | `saaj-impl-3.0.6.jar` |
+| `Implementation-Version` zur Laufzeit | `1.5.3` | `3.0.6` |
+| Fabriken zur Laufzeit | `…saaj.soap.ver1_1.SOAPMessageFactory1_1Impl`, `…saaj.client.p2p.HttpSOAPConnectionFactory` | **wortgleich dieselben Klassennamen** |
+
+| Angabe | Wert |
+|---|---|
+| Java | **21.0.11**, Eclipse Adoptium (Temurin-21.0.11+10), wie in M70 und M71 |
+| Läufe | **je einer**, nacheinander in einem Skriptlauf |
+| Skript | `scripts/mitschnitt-saaj-jakarta/m72.ps1` — **der Aufruf selbst**, abgelegt und von dort ausgeführt |
+
+**Warum die `javax`-Variante mitläuft, obwohl M70 sie schon gemessen hat.** Der Mitschnitt aus M70
+ist am 17.08.2026 um 14:59:17 gelöscht worden (siehe M71, „Löschung"). Es gibt keine Datei mehr,
+gegen die sich vergleichen ließe. Der Lauf holt sie unter denselben Bedingungen zurück und weist
+dabei zugleich nach, dass er die in M70 dokumentierten **579 Byte** reproduziert. **M70 ist nicht
+angefasst worden**, weder Text noch Zahlen noch das Projekt.
+
+### Die Alt-Dateien
+
+**Die Originale unter `alterCode/` sind unangetastet.** SHA-256 **vor und nach** dem Lauf erhoben,
+Zeichen für Zeichen gleich den bei M70 dokumentierten Summen und gleich den Kopien im
+M70-Projekt:
+
+| Datei | SHA-256 vor = nach = M70 |
+|---|---|
+| `FilestoreClient.java` | `d0f96d61eb5be2f4cdf33a71fbf9cbf10186e7637a7cb35239cfacf1c5c6109e` |
+| `FilestoreFile.java` | `cc9f0400329f8a5ee4bc039eca7c595d630b4cf6508c528db20674e0afdeb2be` |
+| `PayloadReader.java` | `9db3b8c098dfff47eda918fb67e9cb02af64613f30ef4113c7fd080b976d18af` |
+| `PayloadWriter.java` | `5e4cdd3065b55a7d3ace86dcbc7c65040d38919c9e9be0c6efb3bef403d9ff7c` |
+
+**Die `jakarta`-Kopie unterscheidet sich in genau zwei Zeilen**, beide `import`:
+
+| Datei | Abweichung vom Original |
+|---|---|
+| `FilestoreClient.java` | `import javax.activation.DataHandler;` → `import jakarta.activation.DataHandler;`<br>`import javax.xml.soap.*;` → `import jakarta.xml.soap.*;` |
+| `FilestoreFile.java` | **byteidentisch** |
+| `PayloadReader.java` | **byteidentisch** |
+| `PayloadWriter.java` | **byteidentisch** |
+
+`import javax.xml.namespace.QName;` **bleibt stehen** — `QName` ist JAXP aus dem JDK und vom
+Jakarta-Umzug nicht betroffen. Die Zeilenenden sind erhalten (CRLF); `.gitattributes` führt die
+`jakarta`-Kopie mit demselben `-text` wie die `javax`-Kopie, damit die Aussage „drei von vier
+byteidentisch" auch in einem frischen Klon noch nachprüfbar ist. `Lauscher.java` ist eine
+byteidentische Kopie aus dem M70-Projekt.
+
+### Ergebnis
+
+| Kennzahl | `javax` | `jakarta` |
+|---|---|---|
+| `requestFilestoreActions()` | **`true`** | **`true`** |
+| Mitschnitt gesamt | **579 Byte** | **579 Byte** |
+| Rumpf | **276 Byte** | **276 Byte** |
+| Bytes über `0x7F` im Rumpf | **0** | **0** |
+| Kopfzeilen | **8** | **8** |
+| Anfragezeile | `POST /WebApplication/FileStoreSoapReceiver HTTP/1.1` | **wortgleich** |
+
+**Die 579 Byte des `javax`-Laufs decken sich mit M70.** Der Aufbau reproduziert also, was er
+reproduzieren sollte.
+
+**Kopfzeilen in gesendeter Reihenfolge** — Zeile für Zeile gleich, einschließlich der Reihenfolge:
+
+| # | Kopfzeile (beide Zweige identisch) |
+|---|---|
+| 1 | `Accept: text/xml, text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2` |
+| 2 | `Content-Type: text/xml; charset=utf-8` |
+| 3 | `Cache-Control: no-cache` |
+| 4 | `Pragma: no-cache` |
+| 5 | `User-Agent: Java/21.0.11` |
+| 6 | `Host: 127.0.0.1:<port>` |
+| 7 | `Connection: keep-alive` |
+| 8 | `Content-Length: 276` |
+
+**Keine `SOAPAction` in beiden Zweigen** — der Befund aus M70 wiederholt sich.
+
+**Der Rumpf ist byteidentisch**, beide 276 Byte, ohne BOM, ohne XML-Deklaration, ohne Leerraum,
+Attribute in `File` alphabetisch (`Action`, `Counter`, `ID`):
+
+```
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"><SOAP-ENV:Body><m:FileList xmlns:m="http://filestore.kraftwerkone.de"><File Action="RETRIEVE" Counter="0" ID="deadbeef-0000-4000-8000-0123456789ab"/></m:FileList></SOAP-ENV:Body></SOAP-ENV:Envelope>
+```
+
+**Der Bytevergleich über die ganze Anfrage**, nicht nur über Kopf und Rumpf getrennt:
+
+| | Wert |
+|---|---|
+| Abweichende Byte-Offsets | **2** — Offset **252** und **253** |
+| Wo | **innerhalb der Portnummer** der `Host`-Zeile (`54089` gegen `54094`) |
+| SHA-256 nach Ersetzen des Loopback-Ports durch `<port>` | **beide** `3a7788bd5787dc33f8f44bdf499d6f8207c0a31562d18a79d9dfe04a2753f41c` |
+
+Der Lauscher bindet auf Port `0`, das Betriebssystem vergibt bei jedem Lauf einen anderen freien
+Port. Die beiden abweichenden Bytes sind Ziffern dieser Portnummer und gehören nicht zum Befund.
+Zwei fünfstellige Ports ergeben zufällig dieselbe Gesamtlänge; darauf beruht der Vergleich nicht —
+die Prüfsumme oben ist über die ersetzten Zeichenketten gebildet.
+
+### Befunde
+
+**Befund 1 — der `jakarta`-Zweig legt dieselben Bytes auf die Leitung.**
+*Gemessen war:* zwei Läufe gegen denselben Lauscheraufbau, `saaj-impl 1.5.3` gegen `saaj-impl
+3.0.6`. Anfragezeile gleich, acht Kopfzeilen in gleicher Reihenfolge mit gleichen Werten, Rumpf
+276 Byte byteidentisch; nach Ersetzen des Loopback-Ports dieselbe SHA-256 über die vollständigen
+579 Byte.
+*Behauptet wird:* Für **diesen** Aufruf — `RETRIEVE`, ein `File`-Element, kein Anhang — ist der
+Wechsel des Namensraums auf der Leitung **nicht beobachtbar**. Offener Punkt 1 aus `rohdaten.md`
+ist damit beantwortet.
+
+**Befund 2 — auch die Implementierungsklassen heißen gleich.**
+*Gemessen war:* `SOAPMessageFactory1_1Impl` und `HttpSOAPConnectionFactory` unter demselben
+Paketpfad `com.sun.xml.messaging.saaj.…` in beiden Zweigen, bei `Implementation-Version` `1.5.3`
+gegen `3.0.6`.
+*Behauptet wird:* Es ist dieselbe Codebasis in zwei Namensräumen, nicht zweimal dieselbe API mit
+verschiedenen Implementierungen. Das erklärt die Gleichheit, belegt sie aber nicht — belegt ist
+sie durch die Bytes.
+
+**Befund 3 — nur einer der beiden Zweige kann eine Zeitgrenze je Verbindung setzen.**
+*Gelesen war* — nicht gemessen, sondern aus den Klassendateien der beiden geladenen Jars abgelesen:
+`jakarta.xml.soap.SOAPConnection` (3.0.2) hat `setConnectTimeout(int)` und `setReadTimeout(int)`;
+`javax.xml.soap.SOAPConnection` (1.4.0) hat **weder das eine noch das andere**. Im Bytecode von
+`com.sun.xml.messaging.saaj.client.p2p.HttpSOAPConnection` aus `saaj-impl 3.0.6` stehen die
+zugehörigen Aufrufe `HttpURLConnection.setConnectTimeout` und `.setReadTimeout`; die Vorgabewerte
+kommen aus den Systemeigenschaften `saaj.connect.timeout` und `saaj.read.timeout`.
+*Behauptet wird:* Mit dem `javax`-Zweig gäbe es eine Zeitgrenze nur **JVM-weit** über
+Systemeigenschaften, nicht je Verbindung. **Nicht behauptet wird**, dass die Zeitgrenze auf der
+Leitung greift — das ist an diesem Aufbau nicht prüfbar, weil der Lauscher sofort antwortet. Es
+bräuchte einen Knoten, der annimmt und dann schweigt.
+*Dieser Befund ist eine Quelltextlesung im Sinne von Abschnitt Q und keine Messung*; er steht hier,
+weil er dieselbe Frage betrifft, die M72 aufgeworfen hat.
+
+**Befund 4 — der `User-Agent` kommt nicht von SAAJ.**
+*Gemessen war:* `User-Agent: Java/21.0.11` in **beiden** Zweigen.
+*Behauptet wird:* Die Zeile stammt aus `HttpURLConnection` des JDK und nicht aus der
+SAAJ-Fassung. Sie wechselt folglich mit der Java-Fassung, nicht mit der Bibliothek. Ein Servlet,
+das sie auswertet, sähe zwischen den beiden Zweigen keinen Unterschied — die Frage, ob eines das
+tut, ist **nicht gemessen**.
+
+> **Grenze des Befundes nach L10.**
+> *Gemessen war:* was `saaj-impl 3.0.6` mit `jakarta.xml.soap-api 3.0.2` auf Java 21.0.11 (Temurin)
+> für **eine** `RETRIEVE`-Anfrage mit **einem** `File`-Element und **ohne** Anhang sendet.
+> *Behauptet wird ausdrücklich **nicht**,* dass die beiden Zweige sich auch bei `CREATE`
+> gleich verhalten — dort entsteht ein `AttachmentPart`, also eine mehrteilige MIME-Nachricht mit
+> `boundary`, und die ist hier **nicht** gemessen. Das neue Werkzeug sendet ausschließlich
+> `RETRIEVE`; für alles andere ist der Befund nicht zu verwenden.
+> Ebenso wenig behauptet wird etwas über die **Antwortverarbeitung**: Der Lauscher antwortet mit
+> einem leeren Umschlag ohne Anhang. Ob `saaj-impl 3.0.6` einen ZIP-Anhang so entgegennimmt wie
+> `1.5.3` es in M71 tat, ist **ungemessen** — der Weg dorthin führt über einen Filestore, und der
+> ist hier bewusst nicht angesprochen worden. Siehe „Offene Punkte" 29.
+
+### Löschung
+
+**Es sind keine produktiven Daten entstanden.** Beide Mitschnitte enthalten ausschließlich die frei
+erfundene GUID. Gelöscht sind sie trotzdem, samt der Wegwerfverzeichnisse: `anfrage-javax.bin`,
+`anfrage-jakarta.bin`, beide `mitschnitt\`, beide `retrieve\` und beide `abhaengigkeiten.txt`.
+`Test-Path` liefert für alle acht `False`. Die Bauverzeichnisse `target\` bleiben und sind in
+`.gitignore` geführt.
+
+---
+
 ## Das Auswertungsskript
 
 `scripts/messung-schritt8/auswertung.ps1` ist **geschrieben und geprüft**, obwohl M61, M63, M65 und
@@ -2548,6 +2741,16 @@ Keiner davon ist entschieden. Sie sind der Ertrag dieser Runde, nicht ihr Rest.
     sich für beide Rollen gleich. Eine einzige Zahl für „den Beschnitt" gibt es nicht.
 28. **Die Zeilenenden sind uneinheitlich** (M61): LF 95, CRLF 38, gemischt 37, keines 36 von 206.
     Was die Anzeige daraus macht, ist offen.
+
+### Nachtrag vom 18.08.2026, nach M72
+
+29. **Die Antwortverarbeitung des `jakarta`-Zweigs ist ungemessen.** M72 vergleicht, was **gesendet**
+    wird, und findet keinen Unterschied. Was `saaj-impl 3.0.6` mit einer Antwort tut, die einen
+    ZIP-Anhang trägt, ist damit **nicht** beantwortet — der Lauscher antwortet mit einem leeren
+    Umschlag ohne Anhang, und ein Anhang käme nur von einem Filestore. Die Lücke schließt sich
+    entweder bei der Abnahme im Fenster `2025-07-24` bis `2025-12-30` (Punkt 5 in `rohdaten.md` §13)
+    oder durch eine gesonderte Freigabe für einen einzelnen Abruf, wie sie M71 hatte.
+    **Nicht entschieden.**
 
 ## Abweichungen vom Auftrag
 

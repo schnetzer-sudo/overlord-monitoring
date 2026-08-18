@@ -56,6 +56,26 @@ overlord:
     read-password: ${OVERLORD_DB_READ_PASSWORD}
     write-user: ${OVERLORD_DB_WRITE_USER}
     write-password: ${OVERLORD_DB_WRITE_PASSWORD}
+  # Grenzen des Rohdatenzugriffs (Schritt 8). Jede Zahl hat eine gemessene
+  # Bemessungsgrundlage, keinen geratenen Rundwert — Begruendung an
+  # payload/RohdatenEigenschaften.
+  #
+  # Sie stehen hier und nicht nur als Vorgabe im Code, damit im Betrieb sichtbar
+  # ist, was gilt, ohne dass jemand eine Klasse aufschlagen muss. Es sind keine
+  # Zugangsdaten; sie duerfen deshalb in der versionierten Datei stehen.
+  rohdaten:
+    # Harte Obergrenze einer einzelnen Datei. Groesstes gemessenes Artefakt:
+    # 609.995 Byte, keines ueber 1 MiB (M60). 8 MiB liegen gut dreizehnfach
+    # darueber. Sie greift WAEHREND des Lesens — die Vorabgroesse aus der
+    # Datenbank deckt nur 69,6 % der Artefakte und taugt nicht dafuer.
+    maximalgroesse-bytes: 8388608
+    # Ab wann die Anzeige gekappt wird, mit sichtbarem Hinweis. Der Download
+    # bleibt vollstaendig. 1 MiB liegt ueber dem gemessenen Maximum.
+    anzeige-grenze-bytes: 1048576
+    verbindungszeitgrenze: 5s
+    # Gemessen sind 38 bis 244 ms je Abruf (M66, M60), langsamster Einzelabruf
+    # 497 ms (M71). 15s fangen den Knoten ab, der annimmt und dann schweigt.
+    lesezeitgrenze: 15s
 
 server:
   port: ${SERVER_PORT:8080}

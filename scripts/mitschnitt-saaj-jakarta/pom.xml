@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Wegwerfprojekt fuer M72 — zweite Variante des Mitschnitts, jakarta-Zweig.
+
+  NICHT in den Hauptbau eingehaengt. Schwesterprojekt zu ../mitschnitt-saaj/,
+  das den javax-Zweig traegt. Zwei getrennte Projekte, weil sich die beiden
+  Zweige NICHT auf einem Klassenpfad vertragen: saaj-impl 1.x und 3.x belegen
+  beide das interne Paket com.sun.xml.messaging.saaj. Das laesst sich nicht
+  ueber ein Maven-Profil loesen, nur ueber getrennte Klassenpfade.
+
+  Der Unterschied zum M70-Projekt ist absichtlich so klein wie moeglich:
+  - FilestoreFile, PayloadReader, PayloadWriter sind byteidentische Kopien
+    der Originale unter alterCode/.
+  - FilestoreClient unterscheidet sich in GENAU ZWEI import-Zeilen
+    (javax.activation -> jakarta.activation, javax.xml.soap -> jakarta.xml.soap).
+    javax.xml.namespace.QName bleibt: das ist JAXP aus dem JDK und hat mit dem
+    Jakarta-Umzug nichts zu tun.
+  - Lauscher.java ist eine byteidentische Kopie aus dem M70-Projekt.
+  - MitschnittJakarta.java stellt dieselbe Kette aus JsonServlet.java:793–:797
+    nach wie mitschnitt.Mitschnitt, mit derselben frei erfundenen GUID.
+
+  Das Ziel ist ausschliesslich 127.0.0.1. Kein Filestore wird angesprochen.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>de.overlord.monitoring</groupId>
+  <artifactId>mitschnitt-saaj-jakarta</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <properties>
+    <maven.compiler.source>21</maven.compiler.source>
+    <maven.compiler.target>21</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+  <dependencies>
+    <!-- SOAP-API, jakarta-Zweig. Hauptversion 3.x = Jakarta EE 10/11. -->
+    <dependency>
+      <groupId>jakarta.xml.soap</groupId>
+      <artifactId>jakarta.xml.soap-api</artifactId>
+      <version>3.0.2</version>
+    </dependency>
+
+    <!-- SAAJ-Referenzimplementierung, jakarta-Zweig.
+         Hauptversion 1.x = javax, 3.x = jakarta. Hier bewusst 3.0.6.
+         Bringt jakarta.activation-api und angus-activation transitiv mit;
+         eine eigene Activation-Abhaengigkeit ist deshalb nicht noetig. -->
+    <dependency>
+      <groupId>com.sun.xml.messaging.saaj</groupId>
+      <artifactId>saaj-impl</artifactId>
+      <version>3.0.6</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <!-- Bewusst OHNE <configuration><mainClass>, aus demselben Grund wie im
+           Schwesterprojekt: eine feste Vorgabe hier ueberstimmt
+           -Dexec.mainClass auf der Befehlszeile. -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.1.0</version>
+      </plugin>
+    </plugins>
+  </build>
+</project>

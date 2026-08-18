@@ -23,6 +23,11 @@ mvnw text eol=lf
 # geliefert wurden.
 scripts/mitschnitt-saaj/src/main/java/de/kraftwerkone/filestore/client/*.java -text
 
+# Dieselbe Ausnahme fuer die jakarta-Kopie aus M72. Drei der vier Dateien sind
+# byteidentisch mit dem Original, die vierte unterscheidet sich in genau zwei
+# import-Zeilen — beides ist nur nachweisbar, solange Git nichts normalisiert.
+scripts/mitschnitt-saaj-jakarta/src/main/java/de/kraftwerkone/filestore/client/*.java -text
+
 # Generierte jOOQ-Quellen: eingecheckt (die CI erreicht die Testkopie nicht), aber
 # in Diffs und Sprachstatistik als generiert markiert.
 src/main/generated-java/** linguist-generated=true

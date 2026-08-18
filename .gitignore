@@ -94,3 +94,13 @@ scripts/mitschnitt-saaj/target/
 scripts/mitschnitt-saaj/mitschnitt/
 scripts/mitschnitt-saaj/retrieve/
 scripts/mitschnitt-saaj/arbeit/
+scripts/mitschnitt-saaj/abhaengigkeiten.txt
+
+# ─── M72 — derselbe Mitschnitt, jakarta-Zweig ────────────────────────────────
+# Gleiche Trennung: pom.xml, Quellen und m72.ps1 eingecheckt, Laufergebnisse
+# nicht. Die beiden .bin sind die Mitschnitte selbst.
+scripts/mitschnitt-saaj-jakarta/target/
+scripts/mitschnitt-saaj-jakarta/mitschnitt/
+scripts/mitschnitt-saaj-jakarta/retrieve/
+scripts/mitschnitt-saaj-jakarta/abhaengigkeiten.txt
+scripts/mitschnitt-saaj-jakarta/*.bin
