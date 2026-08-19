@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 
 import type { Nachrichtendetail, Schritt } from "../api";
 import { schrittHinweis, wartezeile, zeitleiste, type Zeitleistenzeile } from "../detail";
+import type { Artefaktziel } from "../rohdaten";
+import { Ziele } from "./artefakt-ziele";
 
 /**
  * Die Zeitleiste — der Kern der Detailansicht.
@@ -26,8 +28,41 @@ import { schrittHinweis, wartezeile, zeitleiste, type Zeitleistenzeile } from ".
  * gemessene Namenslänge geht bis 61 Zeichen — in einem Panel von 26 rem passt
  * das nicht immer, und eine Leiste mit springenden Zeilenhöhen lässt sich nicht
  * überfliegen.
+ *
+ * ## Was am 18.08.2026 dazugekommen ist — und was nicht
+ *
+ * Zwei Dinge, beide **an** der Zeile und keines *in* der Rechnung:
+ *
+ * 1. **Die Ziele.** Je Schritt hängen die Artefakte daran, die auf ihm liegen —
+ *    in aller Regel zwei, Datei und Protokoll. Wo nichts liegt, hängt nichts.
+ * 2. **Der Weg zu den technischen Eigenschaften.** Der Name wird zur
+ *    Schaltfläche und führt an die Gruppe desselben Schritts im Block darunter.
+ *
+ * **An der Zeitleiste selbst ändert das nichts:** keine andere Sortierung, keine
+ * zweite Datenquelle für die Zeilen, keine neue Zeile. `zeitleiste(detail)`
+ * rechnet unverändert (`../detail.ts`), und `schritte[]` bleibt die einzige
+ * Quelle der Zeilen — der Metadaten-Schritt steht auch jetzt in keiner
+ * (`docs/nachrichtendetail.md` §4). Was auf ihm liegt, steht **über** der Leiste
+ * (`artefakt-ziele.tsx` `Zielzeile`).
+ *
+ * @param ziele die Artefakte je `position`, aus `../rohdaten.ts`
+ *   `zieleJeSchritt`. Fehlt die Liste — sie lädt noch oder ihre Abfrage ist
+ *   fehlgeschlagen —, ist die Abbildung leer und keine Zeile trägt ein Ziel.
+ *   Die Leiste hängt nicht daran.
+ * @param aufSchritt der Weg zur Eigenschaftengruppe dieses Schritts. **Ohne ihn
+ *   bleibt der Name ein Text** und keine Schaltfläche: Der Aufrufer reicht ihn
+ *   nur durch, wenn es unter der Leiste überhaupt einen Block gibt
+ *   (`eigenschaftenAnzahl > 0`).
  */
-export function Zeitleiste({ detail }: { detail: Nachrichtendetail }) {
+export function Zeitleiste({
+  detail,
+  ziele,
+  aufSchritt,
+}: {
+  detail: Nachrichtendetail;
+  ziele?: Map<number, Artefaktziel[]>;
+  aufSchritt?: (position: number) => void;
+}) {
   const zeilen = zeitleiste(detail);
   const warten = wartezeile(detail);
 
@@ -44,7 +79,13 @@ export function Zeitleiste({ detail }: { detail: Nachrichtendetail }) {
     <div className="flex flex-col gap-2">
       <ol className="flex flex-col">
         {zeilen.map((zeile) => (
-          <Zeile key={zeile.id} zeile={zeile} />
+          <Zeile
+            key={zeile.id}
+            zeile={zeile}
+            messageId={detail.messageId}
+            ziele={ziele}
+            aufSchritt={aufSchritt}
+          />
         ))}
       </ol>
       {warten ? <WarteZeile warten={warten} /> : null}
@@ -103,11 +144,32 @@ function LeereLeiste({ detail }: { detail: Nachrichtendetail }) {
   );
 }
 
-function Zeile({ zeile }: { zeile: Zeitleistenzeile }) {
+function Zeile({
+  zeile,
+  messageId,
+  ziele,
+  aufSchritt,
+}: {
+  zeile: Zeitleistenzeile;
+  messageId: string;
+  ziele?: Map<number, Artefaktziel[]>;
+  aufSchritt?: (position: number) => void;
+}) {
   if (zeile.art === "erwartet") {
     return <ErwarteteZeile name={zeile.name} bereitsGelaufen={zeile.bereitsGelaufen} />;
   }
-  return <SchrittZeile schritt={zeile.schritt} anteil={zeile.anteil} />;
+  return (
+    <SchrittZeile
+      schritt={zeile.schritt}
+      anteil={zeile.anteil}
+      messageId={messageId}
+      // Kein Eimer heißt keine Ziele — und das ist der Regelfall: Solange die
+      // Artefaktliste lädt, ist die Abbildung leer, und ein Schritt ohne
+      // Artefakte kommt darin gar nicht vor.
+      ziele={ziele?.get(zeile.schritt.position) ?? []}
+      aufSchritt={aufSchritt}
+    />
+  );
 }
 
 /**
@@ -125,8 +187,30 @@ function Zeile({ zeile }: { zeile: Zeitleistenzeile }) {
  * beschriftet jede Gruppe mit demselben Tooltip. Zwei Stellen, die denselben
  * Schritt verschieden benennen, wären genau der Fehler, den jene Gruppierung
  * beseitigen soll.
+ *
+ * ## Der Name führt seit dem 18.08.2026 an die Eigenschaften dieses Schritts
+ *
+ * Die Gruppierung des Eigenschaftenblocks besteht seit dem 17.08.2026; es fehlte
+ * nur der Weg dorthin. **Kein neuer Block, keine Duplizierung** — ein Klick auf
+ * den Schritt klappt den Block auf und setzt den Fokus auf seine Gruppe.
+ *
+ * Das schließt zugleich den offenen Punkt, dass zwei Bausteine dieselbe Sache
+ * nach verschiedenen Spalten ordneten: Es gibt jetzt **eine** Ordnung, und das
+ * ist die dieser Leiste.
  */
-function SchrittZeile({ schritt, anteil }: { schritt: Schritt; anteil: number | null }) {
+function SchrittZeile({
+  schritt,
+  anteil,
+  messageId,
+  ziele,
+  aufSchritt,
+}: {
+  schritt: Schritt;
+  anteil: number | null;
+  messageId: string;
+  ziele: Artefaktziel[];
+  aufSchritt?: (position: number) => void;
+}) {
   const texte = useTexte();
   const dauer =
     schritt.dauerSekunden === null
@@ -146,9 +230,41 @@ function SchrittZeile({ schritt, anteil }: { schritt: Schritt; anteil: number | 
         schritt.laeuftAuf ? "border-status-offen-kontur" : "border-border",
       )}
     >
-      <span className="min-w-0 flex-1 truncate" title={hinweis}>
-        {schritt.name}
-      </span>
+      {/* Ohne Namen keine Schaltfläche: Ein Bedienelement ohne sichtbare
+          Beschriftung wäre für jeden, der es nicht ohnehin kennt, eine leere
+          Fläche — und sein zugänglicher Name hieße „Technische Eigenschaften zu
+          … anzeigen" mit einer Lücke darin. */}
+      {aufSchritt === undefined || schritt.name === "" ? (
+        <span className="min-w-0 flex-1 truncate" title={hinweis}>
+          {schritt.name}
+        </span>
+      ) : (
+        // Der sichtbare Name steht im zugänglichen Namen (WCAG 2.5.3): Wer
+        // „Datei gelesen" sagt, muss die Schaltfläche damit erreichen. Der
+        // Tooltip bleibt die Herkunft — er beantwortet eine andere Frage.
+        <button
+          type="button"
+          onClick={() => aufSchritt(schritt.position)}
+          title={hinweis}
+          aria-label={einsetzen(texte.nachrichten.detail.dateien.zuEigenschaften, {
+            name: schritt.name,
+          })}
+          // `self-stretch`: **Die Schaltfläche ist so hoch wie ihre Zeile.**
+          // Ohne sie wäre ihre Trefferfläche die Zeilenhöhe der Schrift und
+          // damit ein schmales Band in der Mitte einer 2.25-rem-Zeile — am
+          // Finger nicht zu treffen, und der Rest der Zeile täte nichts. Die
+          // Zeile selbst bleibt `h-zeile`; gedehnt wird nur dieses Kind.
+          className="hover:bg-muted focus-visible:ring-ring -mx-1 flex min-w-0 flex-1 items-center self-stretch rounded-md px-1 text-left focus-visible:ring-2 focus-visible:outline-none"
+        >
+          {/* Das Kürzen gehört auf dieses `span` und nicht auf die
+              Schaltfläche: Auf einem Flex-Behälter greift `text-overflow`
+              nicht, der Name bräche dann ab statt mit Auslassungspunkten zu
+              enden. */}
+          <span className="min-w-0 truncate">{schritt.name}</span>
+        </button>
+      )}
+
+      <Ziele messageId={messageId} ziele={ziele} />
 
       {schritt.laeuftAuf ? (
         // Nie allein über Farbe: Zeichen **und** Text.

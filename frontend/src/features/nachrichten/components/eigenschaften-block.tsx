@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { ChevronRight } from "lucide-react";
 
 import { Fehler, Laden } from "@/components/zustand";
@@ -40,23 +40,120 @@ import { useEigenschaften } from "../hooks";
  * Untergruppen: Gemessen sind 22,6 Eigenschaften je Nachricht, Minimum 14,
  * Maximum 38 (M17 1) — das wäre Mechanik für zwanzig Zeilen.
  *
+ * ## Der Weg hierher kommt aus der Zeitleiste (18.08.2026)
+ *
+ * Ein Klick auf einen Schritt dort klappt den Block auf und setzt den Fokus auf
+ * **seine** Gruppe. Der Fokus und nicht ein Bildlauf: Er bewegt die Ansicht
+ * ebenso, nimmt aber die Tastatur mit — und er ist die einzige Bewegung, die
+ * `visuelles-konzept.md` §7 ohnehin zulässt, weil sie keine ist.
+ *
+ * **Kein neuer Block, keine Duplizierung.** Die Gruppierung besteht seit dem
+ * 17.08.2026; es fehlte nur der Weg dorthin.
+ *
  * @param schritte die Schrittfolge aus dem Detail, allein zum Beschriften.
  *   Fehlen sie, tragen alle Gruppen den Rückfall; die Einteilung selbst hängt
  *   nicht an ihnen.
+ * @param sprung die Gruppe, die angesprungen werden soll — `null`, solange
+ *   niemand gesprungen ist. **`nummer` zählt die Klicks**, damit derselbe
+ *   Schritt zweimal hintereinander zweimal wirkt; ohne sie wäre der zweite Klick
+ *   auf dieselbe Zeile wirkungslos.
  */
+export type Sprungziel = { position: number; nummer: number };
+
 export function EigenschaftenBlock({
   messageId,
   anzahl,
   schritte = [],
+  sprung = null,
 }: {
   messageId: string;
   anzahl: number;
   schritte?: Schritt[];
+  sprung?: Sprungziel | null;
 }) {
   const texte = useTexte();
   const bereichId = useId();
   const [offen, setOffen] = useState(false);
   const anfrage = useEigenschaften(messageId, offen);
+  const daten = anfrage.data;
+
+  // **Aufgeklappt wird beim Rendern, nicht in einem Effekt.** Ein Sprung ist
+  // eine Änderung an einer Eigenschaft, aus der sich der eigene Zustand ergibt —
+  // React nennt das „adjusting state when a prop changes", und es ist der
+  // ausdrückliche Gegenentwurf zu einem Effekt, der `setState` ruft und dabei
+  // eine zweite Renderrunde auslöst.
+  const [gesehen, setGesehen] = useState(0);
+  if (sprung !== null && sprung.nummer !== gesehen) {
+    setGesehen(sprung.nummer);
+    setOffen(true);
+  }
+
+  // Der Fokus dagegen **ist** ein Effekt: Er ändert das Dokument und nicht den
+  // Zustand — und er kann erst laufen, wenn die Gruppen im Baum stehen. Zwischen
+  // Klick und Baum liegt die Abfrage, die es erst beim Aufklappen gibt.
+  const gesprungen = useRef(0);
+  const herkunft = useRef<{ nummer: number; element: Element | null } | null>(null);
+
+  useEffect(() => {
+    if (sprung === null || !offen || gesprungen.current === sprung.nummer) {
+      return;
+    }
+
+    // **Wo stand der Fokus, als geklickt wurde?** Beim ersten Durchlauf zu
+    // diesem Sprung festgehalten — später ist es zu spät, dann steht er
+    // womöglich schon woanders.
+    if (herkunft.current?.nummer !== sprung.nummer) {
+      herkunft.current = { nummer: sprung.nummer, element: document.activeElement };
+    }
+    const stand = herkunft.current;
+
+    // Die Antwort steht noch aus. Bei einem kalten Zwischenspeicher können das
+    // in dieser Umgebung Sekunden sein — gesprungen wird erst, wenn es etwas
+    // anzuspringen gibt.
+    if (daten === undefined) {
+      return;
+    }
+
+    // **Ein Klick, ein Sprung**, und danach ist er verbraucht — auch wenn er
+    // gleich verworfen wird. Ohne diese Marke sprünge die Ansicht ein zweites
+    // Mal, sobald jemand den Block von Hand zu- und wieder aufklappt.
+    gesprungen.current = sprung.nummer;
+
+    // **Wer weitergegangen ist, wird nicht zurückgerissen.** Hat der Nutzer den
+    // Fokus in der Wartezeit selbst bewegt — weitergetabbt, den Block von Hand
+    // zugeklappt —, ist der Sprung überholt. Ein Fokuswechsel Sekunden nach der
+    // Betätigung reißt ihn aus dem heraus, was er inzwischen tut, und
+    // unterbricht mitten in der Ansage eines Vorleseprogramms.
+    if (stand.element !== document.activeElement) {
+      return;
+    }
+
+    // Gibt es zu dem Schritt keine Gruppe, bekommt der Bereich selbst den Fokus.
+    // Der Fall ist gemessen: `MessageActionID = 502` steht in `MessageAction`,
+    // kommt in `MessageProperty` aber nicht vor (M17 3) — dann gibt es dort
+    // nichts anzuspringen, und ins Leere zu springen wäre schlechter als an den
+    // Anfang des Blocks.
+    const ziel =
+      document.getElementById(gruppenId(bereichId, sprung.position)) ??
+      document.getElementById(bereichId);
+    ziel?.focus();
+  }, [sprung, offen, daten, bereichId]);
+
+  /**
+   * Auf- und Zuklappen von Hand.
+   *
+   * **Zuklappen erledigt einen ausstehenden Sprung.** Wer während des Ladens
+   * zuklappt, hat den Sprung aufgegeben; ohne diese Zeile käme er beim nächsten
+   * Aufklappen nach — Minuten später und ohne Anlass. Der Fokusvergleich im
+   * Effekt fängt denselben Fall im Browser mit ab; hier steht er als Regel und
+   * nicht als Nebenwirkung.
+   */
+  const umschalten = () => {
+    if (offen && sprung !== null) {
+      gesprungen.current = sprung.nummer;
+    }
+    setOffen(!offen);
+  };
 
   const beschriftung = einsetzen(texte.nachrichten.detail.eigenschaften.titel, { anzahl });
 
@@ -74,7 +171,7 @@ export function EigenschaftenBlock({
     <div className="flex flex-col gap-2">
       <button
         type="button"
-        onClick={() => setOffen((bisher) => !bisher)}
+        onClick={umschalten}
         aria-expanded={offen}
         aria-controls={bereichId}
         title={
@@ -94,7 +191,19 @@ export function EigenschaftenBlock({
       </button>
 
       {offen ? (
-        <div id={bereichId}>
+        // `tabIndex={-1}`: Der Bereich ist das Rückfallziel eines Sprungs aus
+        // der Zeitleiste. Er ist damit programmatisch fokussierbar, kommt aber
+        // in keiner Tabreihenfolge vor.
+        //
+        // **Und er zeigt, dass er den Fokus hat.** Ein Sprungziel ohne sichtbare
+        // Kontur lässt den Tastaturnutzer nicht wissen, wo er gelandet ist —
+        // und das nächste `Tab` setzt dann von einer unsichtbaren Stelle aus
+        // fort. Dieselbe Rolle und dieselbe Stärke wie überall sonst.
+        <div
+          id={bereichId}
+          tabIndex={-1}
+          className="focus-visible:ring-ring rounded-md focus-visible:ring-2 focus-visible:outline-none"
+        >
           {anfrage.isPending ? (
             <Laden zeilen={3} />
           ) : anfrage.error ? (
@@ -108,7 +217,11 @@ export function EigenschaftenBlock({
               {gruppiereEigenschaften(anfrage.data ?? [], schritte).map((gruppe) => (
                 // Die Position ist der Schlüssel: Sie kommt je Nachricht genau
                 // einmal vor, und die Einteilung gruppiert genau darüber.
-                <Gruppe key={gruppe.position} gruppe={gruppe} />
+                <Gruppe
+                  key={gruppe.position}
+                  gruppe={gruppe}
+                  kopfId={gruppenId(bereichId, gruppe.position)}
+                />
               ))}
             </div>
           )}
@@ -116,6 +229,17 @@ export function EigenschaftenBlock({
       ) : null}
     </div>
   );
+}
+
+/**
+ * Die Kennung einer Gruppe im DOM — **an einer Stelle gebildet**, weil sie an
+ * zwei gebraucht wird: Der Effekt sucht sie, der Abschnitt trägt sie. Der
+ * Bereichsschlüssel aus `useId` steht davor, damit zwei Blöcke im selben
+ * Dokument — Panel und eigene Route existieren nicht gleichzeitig, aber die
+ * Regel hängt nicht daran — sich nicht dieselbe Kennung teilen.
+ */
+function gruppenId(bereichId: string, position: number): string {
+  return `${bereichId}-gruppe-${position}`;
 }
 
 /**
@@ -144,7 +268,7 @@ export function EigenschaftenBlock({
  * wegfallen. Ein Schrittname, der im Panel nicht in eine Zeile passt, bricht
  * deshalb um — dieselbe Entscheidung wie bei den Beschriftungen des BAM-Blocks.
  */
-function Gruppe({ gruppe }: { gruppe: EigenschaftenGruppe }) {
+function Gruppe({ gruppe, kopfId }: { gruppe: EigenschaftenGruppe; kopfId: string }) {
   const texte = useTexte();
   const sprache = useSprache();
   const titelId = useId();
@@ -155,7 +279,23 @@ function Gruppe({ gruppe }: { gruppe: EigenschaftenGruppe }) {
     : (gruppe.beschriftung ?? einsetzen(bausteine.gruppeSchritt, { nummer: gruppe.position }));
 
   return (
-    <section aria-labelledby={titelId} className="flex flex-col gap-1">
+    // `id` und `tabIndex={-1}`: das Ziel eines Sprungs aus der Zeitleiste. Der
+    // Fokus landet auf dem **Abschnitt** und nicht auf der Überschrift — über
+    // `aria-labelledby` liest ein Vorleseprogramm damit den Gruppennamen und
+    // weiß zugleich, dass darunter noch etwas kommt.
+    //
+    // **Der Fokus ist sichtbar**, mit derselben Rolle und derselben Stärke wie
+    // an jedem Bedienelement dieses Projekts. Wer per Tastatur aus der
+    // Zeitleiste hierher springt, muss sehen, wo er gelandet ist — sonst führt
+    // das nächste `Tab` aus einer unsichtbaren Stelle weiter. Der Rahmen liegt
+    // etwas außerhalb, damit er die Gruppe umfasst und nicht ihre erste Zeile
+    // überdeckt.
+    <section
+      id={kopfId}
+      tabIndex={-1}
+      aria-labelledby={titelId}
+      className="focus-visible:ring-ring flex flex-col gap-1 rounded-md focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+    >
       <h3
         id={titelId}
         className="text-muted-foreground text-beiwerk font-medium break-words"

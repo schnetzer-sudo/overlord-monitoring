@@ -1221,6 +1221,30 @@ damit die Erklärung an **einer** Stelle liegt.
 steht im `title`. Die gemessene Namenslänge geht bis 61 Zeichen — in einem Panel von 26 rem passt
 das nicht immer.
 
+#### Ergänzung vom 18.08.2026 — die Zeile trägt die Artefakte ihres Schritts
+
+> **Kein Satz des Abschnitts darüber ist falsch geworden.** Die Rechnung in `detail.ts`, die
+> Normierung des Balkens, die Wartezeile, die erwartete Zeile, die drei Texte der leeren Leiste, die
+> feste Zeilenhöhe, der Tooltip mit der Herkunft — all das gilt unverändert. Ergänzt ist **zweierlei
+> an der Zeile**, und beides ist Anzeige und keine Rechnung.
+
+Anlass ist die Nachbesserung von Schritt 8: Die Artefakte einer Nachricht hängen über
+`MessageActionID` **an ihrem Schritt** (M57) und standen trotzdem in einem eigenen Block darunter,
+der dieselben Schrittnamen ein zweites Mal führte. Vollständig begründet in
+[`rohdaten.md`](rohdaten.md) §3 (Kasten zu Entscheidung 6) und
+[`rohdaten-frontend.md`](rohdaten-frontend.md) §3.
+
+| Ergänzt | Was es tut |
+|---|---|
+| **Die Ziele** | je Schritt bis zu zwei kleine Zeichen — Datei und Protokoll —, jedes ein Verweis auf `/nachrichten/{id}/dateien/{artefaktId}`. Wo nichts liegt, hängt nichts. Sichtbar ist allein das Zeichen; der Name steht im `sr-only`-Text, der Rohname im `title` |
+| **Der Name als Weg zu den Eigenschaften** | er wird zur Schaltfläche und führt in die Gruppe desselben Schritts (§10.5). **Nur wo es Eigenschaften gibt** — bei `eigenschaftenAnzahl === 0` bleibt er Text |
+
+**Die Leiste führt Schritt `0` weiterhin nicht.** Das ist der Punkt, an dem eine Ergänzung zur
+Änderung geworden wäre: `schritte[]` bleibt die einzige Quelle der Zeilen, und der Metadaten-Schritt
+kommt dort nicht vor (§4). Die Artefakte, die auf ihm liegen — die eingegangene Datei **und** das
+Paar des Lesedienstes (M57) —, stehen in einer eigenen, gestrichelten Zeile **über** der Leiste.
+Gestrichelt wie die erwartete Zeile: Was gestrichelt ist, ist kein ausgeführter Schritt.
+
 ### 10.4a Der Kettenblock — zwischen Kopf und Zeitleiste
 
 *Neu am 11.08.2026 (Schritt 6, Teil 2b).* Er beantwortet die dritte Frage des Werkzeugs — **was
@@ -1389,11 +1413,32 @@ aus Schritt 6 zurück — sichtbar falsch wäre nichts.
 gedämpften Ton wie die Beschriftung im BAM-Block. **Kein eigener Scrollbereich** — es bleibt beim
 einen senkrechten Scroller ([`frontend-grundlagen.md`](frontend-grundlagen.md) §7).
 
+##### Nachtrag vom 18.08.2026 — die Gruppen sind aus der Zeitleiste anspringbar
+
+**Kein Satz des Abschnitts darüber ist falsch geworden**, und die Gruppierung selbst ist nicht
+angefasst: dieselbe Einteilung über `position`, dieselbe Reihenfolge, dieselben Köpfe mit demselben
+Tooltip. Ergänzt ist allein **der Weg hierher**.
+
+Ein Klick auf einen Schritt in der Zeitleiste (§10.4) klappt den Block auf und setzt den **Fokus**
+auf den Abschnitt dieses Schritts. Fokus und kein Bildlauf: Er bewegt die Ansicht ebenso, nimmt aber
+die Tastatur mit — ein Bildlauf ohne Fokus ließe ein Vorleseprogramm dort stehen, wo es war. Jede
+Gruppe trägt dafür eine `id` und `tabIndex={-1}`; gibt es zu dem Schritt keine Gruppe — gemessen
+möglich, `MessageActionID = 502` steht in `MessageAction` und fehlt in `MessageProperty` (M17 3) —,
+bekommt der Bereich selbst den Fokus.
+
+**Aufgeklappt wird beim Rendern und nicht in einem Effekt** (`react-hooks/set-state-in-effect`); der
+Fokus dagegen ist einer, weil er das Dokument ändert und erst laufen kann, wenn die Gruppen im Baum
+stehen. Ausführlich in [`rohdaten-frontend.md`](rohdaten-frontend.md) §3a.
+
 ##### Unberührt bleiben Zeitleiste, Kettenblock, BAM-Block und Kopf
 
 Ausdrücklich: An §10.3 (Kopf), §10.4 (Zeitleiste), §10.4a (Kettenblock) und §10.4b (BAM-Block)
 ändert sich **nichts**. Die Zeitleiste hat eine Zeile Code abgegeben — die Zusammensetzung ihres
 Tooltips — und zeigt danach dasselbe wie vorher. Auch die Nachrichtenliste ist nicht berührt.
+
+> **Das gilt für die Nacharbeit vom 17.08.2026.** Am 18.08.2026 hat die Zeitleiste die beiden
+> Ergänzungen aus §10.4 bekommen — die Ziele und den Weg hierher. Auch dort ist an ihrer Rechnung,
+> ihrer Sortierung und ihren Zeilen nichts geändert.
 
 **Ebenso wenig geändert:** keine Übersetzung, Deutung oder Umbenennung von Eigenschaftsnamen — sie
 bleiben Rohwerte. Kein Filter, keine Suche, keine Sortierumschaltung im Block. Und **keine Deutung,
@@ -1652,6 +1697,7 @@ Gegenrichtung ist billiger: Wer maximiert, hängt die Liste aus und fragt sie ni
 | `tests/bam-block.test.tsx` *(12.08.2026)* | **gerenderter Baum, begründete Ausnahme:** derselbe Wert unter zwei Typen **ohne `console.error`**; bei `bamAnzahl === 0` **nicht im Baum und keine Anfrage**; eingeklappt mit Werten die Überschrift mit der Zahl und **immer noch keine Anfrage**. Vollständig in [`bam-werte.md`](bam-werte.md) §11 |
 | `tests/nachrichtendetail.test.ts` — Gruppierung *(17.08.2026)* | zehn Fälle zu `gruppiereEigenschaften` (§10.5): Gruppe `0` vorn, auch wenn sie in der Eingabe nicht zuerst steht; **die Gruppenreihenfolge folgt `schritte[]` und nicht der Zahl** (`[3, 1, 2]` ergibt `0, 3, 1, 2`); ein Schritt ohne Eigenschaften erzeugt keine Gruppe; Positionen ohne Schritt landen ohne Beschriftung am Ende, aufsteigend; ohne `position === 0` entsteht keine leere Gruppe „Nachricht"; derselbe Name bleibt in zwei Gruppen zweimal stehen; innerhalb einer Gruppe wird nicht umsortiert; **die Invariante** Summe der Gruppengrößen = Länge der Eingabe; `gekappt` und `originalLaengeBytes` überstehen die Gruppierung; leere Eingabe → leere Liste |
 | `tests/eigenschaften-block.test.tsx` *(17.08.2026)* | **gerenderter Baum, begründete Ausnahme:** derselbe Name in **drei** Gruppen **ohne `console.error`** (der Schlüssel ist `${position}:${name}`); bei `anzahl === 0` **kein Schalter und keine Anfrage**; eingeklappt mit Werten die Überschrift mit der Zahl und **immer noch keine Anfrage**; ohne gelieferte `schritte` trägt jede Gruppe den Rückfall *Schritt N* |
+| `tests/zeitleiste-ziele.test.tsx` *(18.08.2026)* | **gerenderter Baum, begründete Ausnahme:** die Ergänzungen aus §10.4 und §10.5 — welche Zeile welches Ziel trägt (beide Arten, nur eine, keine); dass die Artefakte des **Metadaten-Schritts** über der Leiste erreichbar bleiben, **ohne dass die Leiste eine vierte Zeile bekäme**; die Belastungsprobe aus M55 mit fünfzehn eigenen Zielen ohne doppelten React-Schlüssel; das **Anspringen** der Eigenschaftengruppe samt der drei Fälle bei kaltem Zwischenspeicher; und dass ohne Eigenschaften **kein Schalter** am Schrittnamen steht. Vollständig in [`rohdaten-frontend.md`](rohdaten-frontend.md) §3 und §3a |
 
 Kein gerenderter Baum, mit den Ausnahmen aus `tests/detail-baum.test.tsx` und
 `tests/ansicht-umschalter.test.tsx`: Geprüft werden die **Entscheidungen**, nicht das Markup

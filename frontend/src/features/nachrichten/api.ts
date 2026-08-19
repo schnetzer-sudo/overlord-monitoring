@@ -537,6 +537,145 @@ export type Eigenschaft = {
   originalLaengeBytes: number | null;
 };
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   Rohdaten und Protokolle (Schritt 8, Teil Frontend)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Die beiden Arten von Artefakten. Abgeleitet aus dem `MessagePropertyName` und
+ * aus sonst nichts — gemessen sind genau zwei Namensmuster, `<Dienst>.Payload.GUID`
+ * und `<Dienst>.Log.GUID` (M54).
+ *
+ * **Die Unterscheidung ist nicht kosmetisch:** Der Beschnitt greift
+ * ausschließlich bei `PROTOKOLL`, und die Liste setzt die beiden Teile sichtbar
+ * voneinander ab (`docs/rohdaten.md` §5, Entscheidung 6).
+ */
+export type Artefaktart = "NUTZDATEN" | "PROTOKOLL";
+
+/**
+ * Der Zustand eines Abrufs — die vier benannten Fälle aus `docs/rohdaten.md` §8
+ * plus der Regelfall.
+ *
+ * **Keiner davon ist ein leeres Feld.** Jeder bekommt in der Oberfläche einen
+ * eigenen Text; das Backend liefert den Schlüssel und deutet ihn nicht. Die
+ * Trennung ist der Punkt: „Datei weg" und „Ablage aus" sehen für den Nutzer
+ * gleich aus und sind für den Betrieb völlig verschiedene Lagen.
+ *
+ * **Die Anzeige antwortet in allen fünf Fällen mit `200`.** Ein Fehlerstatus
+ * wäre falsch — „Protokoll ohne Marken" ist bei `FTPSender` der Normalfall
+ * (M63), und der hängt an rund 69 % der Nachrichten.
+ */
+export type Artefaktzustand =
+  | "ANZEIGBAR"
+  | "BINAERDATEI"
+  | "KEIN_ANZEIGBARER_PROTOKOLLTEIL"
+  | "DATEI_NICHT_VORHANDEN"
+  | "ABLAGE_NICHT_ERREICHBAR";
+
+/**
+ * Ein Artefakt in der Liste.
+ *
+ * **Kein Feld trägt einen Filestore-Verweis** — weder die GUID noch die
+ * Ablagenkennung. Was hier steht, reicht aus, um das Artefakt *innerhalb seiner
+ * Nachricht* zu benennen, und für nichts sonst.
+ *
+ * ## Es steht kein lesbarer Schrittname darin, und das ist Abweichung 1 des Backends
+ *
+ * Geliefert werden {@link schritt} (die `MessageActionID`) und {@link familie}
+ * (`FileReader`, `Converter`, `FTPSender`). Die lesbare Beschriftung entsteht
+ * **hier** — durch Verbindung mit der Schrittfolge aus dem Nachrichtendetail,
+ * deren `position` genau diese `MessageActionID` ist. Gerechnet wird das in
+ * `../rohdaten.ts`, nicht in einer Komponente.
+ */
+export type Artefakt = {
+  /** Die Kennung für Anzeige und Download: `<MessageActionID>-<MessagePropertyName>`. */
+  artefaktId: string;
+  /** `MessagePropertyName`, unverändert. */
+  name: string;
+  /**
+   * Der Teil vor dem Namensmuster — die technische Herkunft.
+   *
+   * **Sie ist keine Deutung**, sondern die Zeichenkette aus dem Namen, und wird
+   * nirgends übersetzt, ergänzt oder erraten (Regel Q4).
+   */
+  familie: string;
+  art: Artefaktart;
+  /**
+   * `MessageActionID`. **`0` ist der Metadaten-Schritt und kein Ablaufschritt**
+   * (M57, M17 3) — er kommt in `schritte[]` des Detail-Endpunkts gar nicht vor.
+   */
+  schritt: number;
+  /**
+   * Ob dieses Artefakt für den **aufrufenden** Nutzer beschnitten wird. Wahr nur
+   * bei Protokollen und nur für `MANDANT`.
+   *
+   * Es steht in der Liste, damit die Oberfläche es **ankündigen** kann, statt
+   * den Nutzer erst beim Öffnen zu überraschen.
+   */
+  beschnittMoeglich: boolean;
+};
+
+/**
+ * Die Artefakte einer Nachricht, **dreigeteilt in der Antwort**.
+ *
+ * Die Aufteilung kommt aus dem Datenmodell und nicht aus einer
+ * Gestaltungsentscheidung: `Message.Payload.GUID` hängt auf Schritt `0`, dem Ort
+ * der *Metadaten* — das ist kein Ablaufschritt. Sie in die Schrittfolge zu legen
+ * wäre schlicht falsch.
+ *
+ * **Die Oberfläche teilt daraus neu ein.** Seit der Nachbesserung vom
+ * 18.08.2026 hängen die Artefakte an den Zeilen der Zeitleiste, geordnet nach
+ * `schritt` und nicht nach Art (`docs/rohdaten.md` §3, Entscheidung 6 in ihrer
+ * korrigierten Fassung). **An dieser Antwort ändert das nichts** — sie ist
+ * unverändert die des Backends, und die Einteilung nach Schritt entsteht in
+ * `rohdaten.ts` (`zieleJeSchritt`).
+ *
+ * Jede Nachricht trägt **3 bis 15** Artefakte und mindestens ein Protokoll, bei
+ * jedem Mandanten (M55). Eine leere Antwort ist deshalb kein erwarteter Zustand.
+ */
+export type Artefaktliste = {
+  messageId: string;
+  /** Die eingegangene Datei, oder `null`. Die Tabelle erzwingt sie nicht. */
+  eingang: Artefakt | null;
+  /** Die umgewandelten Fassungen, nach Schritt geordnet. **Ohne** den Eingang. */
+  nutzdaten: Artefakt[];
+  /** Die Protokolle je Schritt, nach Schritt geordnet. */
+  protokolle: Artefakt[];
+};
+
+/**
+ * Die Anzeige eines Artefakts — **JSON, niemals ein Bytestrom mit ratbarem Typ.**
+ *
+ * Das ist der Unterschied zum Altsystem, das für Anzeige *und* Download denselben
+ * `application/octet-stream` liefert (Q4). Hier ist der Inhalt ein
+ * JSON-Zeichenkettenfeld, und die Oberfläche rendert ihn als **Textknoten**.
+ */
+export type Artefaktanzeige = {
+  artefaktId: string;
+  name: string;
+  art: Artefaktart;
+  zustand: Artefaktzustand;
+  /** Der Inhalt, nach `ISO-8859-1` dekodiert. Leer, wenn `zustand` nicht `ANZEIGBAR` ist. */
+  text: string;
+  /**
+   * Die Größe der **vollständigen** entpackten Datei — nicht die des gezeigten
+   * Ausschnitts. Nur so ist ablesbar, wie viel fehlt.
+   */
+  groesseBytes: number;
+  /** Ob die Anzeige an der Längengrenze gekappt wurde. Bei 610 KB Maximum (M60) eine Schutzmaßnahme. */
+  gekuerzt: boolean;
+  /** Ob der Markenbeschnitt gegriffen hat. Wahr nur bei Protokollen und nur für `MANDANT`. */
+  beschnitten: boolean;
+  /** Fest `ISO-8859-1` — gemessen, nicht geraten (M61). */
+  kodierung: string;
+  /**
+   * Wie viele Einträge das Archiv trug. In 693 geholten Dateien immer `1`; alles
+   * darüber ist ein nie beobachteter Fall und wird **vermerkt** statt
+   * stillschweigend verworfen wie im Altsystem (`docs/rohdaten.md` §4).
+   */
+  zipEintraege: number;
+};
+
 export const NACHRICHTEN_SCHLUESSEL = {
   /** Der Filter gehört in den Schlüssel: Andere Filter sind andere Daten. */
   liste: (abfrage: string) => ["nachrichten", "liste", abfrage] as const,
@@ -564,6 +703,18 @@ export const NACHRICHTEN_SCHLUESSEL = {
    * ein erneutes Aufklappen derselben Nachricht nicht die Kette selbst neu holt.
    */
   kettenAbwaerts: (messageId: string) => ["nachrichten", "kette", messageId, "abwaerts"] as const,
+  /**
+   * Die Artefakte einer Nachricht. **Ein Schlüssel für Block und Ansicht** — wer
+   * aus dem Detail heraus eine Datei öffnet, holt die Liste kein zweites Mal.
+   */
+  dateien: (messageId: string) => ["nachrichten", "dateien", messageId] as const,
+  /**
+   * Der Inhalt **eines** Artefakts. Eigener Schlüssel je Artefakt: Hinter jedem
+   * steht ein eigener SOAP-Abruf gegen die Ablage, und zwei Artefakte derselben
+   * Nachricht sind zwei verschiedene Dateien.
+   */
+  dateiInhalt: (messageId: string, artefaktId: string) =>
+    ["nachrichten", "dateien", messageId, artefaktId] as const,
 };
 
 export function holeNachrichten(abfrage: string): Promise<Seite<Nachricht>> {
@@ -623,6 +774,43 @@ export function holeBamTypen(): Promise<BamTyp[]> {
  */
 export function holeBamSuche(abfrage: string): Promise<BamSuchergebnis> {
   return hole<BamSuchergebnis>(`/bam/suche${abfrage}`);
+}
+
+/**
+ * Die Artefakte einer Nachricht — nach Eingang, Nutzdaten und Protokollen
+ * geteilt, ohne jeden Filestore-Verweis.
+ *
+ * **Kein Zeitfenster und kein Cursor.** Die Menge ist über einen
+ * Primärschlüssel benannt; es sind drei bis fünfzehn Zeilen zu einer benannten
+ * Nachricht (M55) und kein Ausschnitt aus einem Bestand.
+ *
+ * **Dieser Aufruf holt keine Datei.** Ob hinter einem Verweis noch etwas liegt,
+ * sagt die Liste nicht — das zu beantworten kostete drei bis fünfzehn
+ * SOAP-Abrufe je Nachricht.
+ */
+export function holeArtefakte(messageId: string): Promise<Artefaktliste> {
+  return hole<Artefaktliste>(`/nachrichten/${encodeURIComponent(messageId)}/dateien`);
+}
+
+/**
+ * Der Inhalt **eines** Artefakts, als Text.
+ *
+ * **Erst beim Öffnen der Ansicht**, nie mit der Liste: Dahinter steht ein
+ * SOAP-Abruf gegen die Ablage (38 bis 244 ms je Datei, M66/M60), und ein
+ * Vorabholen aller Artefakte einer Nachricht kostete bis zu fünfzehn davon.
+ *
+ * **Die `artefaktId` wird kodiert**, obwohl alle vorkommenden Zeichen in einem
+ * URL-Pfad unreserviert sind: Sie kommt aus der Adresszeile und damit von
+ * außen. Was von außen kommt, wird kodiert — sonst entscheidet ein Schrägstrich
+ * in der Kennung, welcher Endpunkt gerufen wird.
+ */
+export function holeArtefaktinhalt(
+  messageId: string,
+  artefaktId: string,
+): Promise<Artefaktanzeige> {
+  return hole<Artefaktanzeige>(
+    `/nachrichten/${encodeURIComponent(messageId)}/dateien/${encodeURIComponent(artefaktId)}/inhalt`,
+  );
 }
 
 export function holeKette(messageId: string): Promise<Kette> {

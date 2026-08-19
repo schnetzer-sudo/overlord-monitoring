@@ -14,6 +14,8 @@ import {
 
 import {
   NACHRICHTEN_SCHLUESSEL,
+  holeArtefakte,
+  holeArtefaktinhalt,
   holeBamSuche,
   holeBamTypen,
   holeBamWerte,
@@ -23,6 +25,8 @@ import {
   holeNachrichten,
   holeNachrichtendetail,
   holeProzesse,
+  type Artefaktanzeige,
+  type Artefaktliste,
   type BamSuchergebnis,
   type BamTyp,
   type BamWerte,
@@ -449,6 +453,74 @@ export function useKette(messageId: string | null, aktiv: boolean) {
 }
 
 const KETTE_HALTBARKEIT = 15 * 60 * 1000;
+
+/**
+ * Die Artefakte einer Nachricht — **seit dem 18.08.2026 mit dem Detail, nicht
+ * mehr erst beim Aufklappen.**
+ *
+ * Sie hing bis dahin am Schalter eines eigenen Blocks, dieselbe Bauform wie bei
+ * Belegdaten und Eigenschaften. **Den Block gibt es nicht mehr:** Die Artefakte
+ * hängen als Ziele an den Zeilen der Zeitleiste, und die steht immer da
+ * (`docs/rohdaten-frontend.md` §3). Ein Schalter, der erst geladen hätte,
+ * bliebe ohne Bedienelement.
+ *
+ * **Der Preis ist eine Anfrage je Detailaufruf, und er ist gemessen klein:**
+ * 0,867 ms als reine Datenbankabfrage (`docs/rohdaten-backend.md` §9). Vor allem
+ * aber **spricht sie keine Ablage an** — sie liest `MessageProperty`. Der
+ * SOAP-Aufruf gegen den Filestore steckt allein im *Inhalt* eines Artefakts
+ * (38 bis 244 ms je Datei, M66/M60), und der wird weiterhin erst beim Öffnen der
+ * Ansicht geholt. Genau diese Trennung ist der Grund, warum das hier vertretbar
+ * ist und dort nicht.
+ *
+ * **Derselbe Schlüssel wie in der Ansicht.** Wer aus dem Detail heraus eine
+ * Datei öffnet, holt die Liste kein zweites Mal — und die Beschriftung dort ist
+ * dieselbe Zeichenkette wie am Ziel, aus dem er kam.
+ *
+ * Länger gehalten als die Liste: Welche Artefakte an einer abgeschlossenen
+ * Nachricht hängen, ändert sich nicht mehr.
+ *
+ * @param aktiv bleibt ein Parameter. Das Detail reicht `true` durch; die Ansicht
+ *   auf der eigenen Route tut dasselbe. Er steht weiterhin hier, weil die
+ *   Entscheidung *ob geladen wird* dem Aufrufer gehört und nicht der Abfrage.
+ */
+export function useArtefakte(messageId: string | null, aktiv: boolean) {
+  return useQuery<Artefaktliste>({
+    queryKey: NACHRICHTEN_SCHLUESSEL.dateien(messageId ?? ""),
+    queryFn: () => holeArtefakte(messageId as string),
+    enabled: aktiv && messageId !== null && messageId !== "",
+    staleTime: ARTEFAKTE_HALTBARKEIT,
+    gcTime: ARTEFAKTE_HALTBARKEIT,
+  });
+}
+
+const ARTEFAKTE_HALTBARKEIT = 15 * 60 * 1000;
+
+/**
+ * Der Inhalt **eines** Artefakts.
+ *
+ * **Er wird erst beim Öffnen der Ansicht geholt, nicht mit der Liste.** Hinter
+ * jedem Abruf steht ein SOAP-Aufruf gegen die Ablage — 38 bis 244 ms je Datei
+ * (M66, M60) —, und eine Nachricht trägt bis zu fünfzehn Artefakte. Die Liste
+ * vorzuladen hieße, fünfzehn fremde Anlagen zu befragen, um drei Zeilen
+ * anzuzeigen.
+ *
+ * **Nicht länger gehalten als die Vorgabe.** Anders als die Artefaktliste
+ * beschreibt der Inhalt keinen Datenbankstand, sondern das Ergebnis eines
+ * Abrufs bei einer fremden Anlage: *Ablage nicht erreichbar* ist ein
+ * Betriebszustand, der sich in einer Minute geändert haben kann. Ihn zu halten
+ * hieße, einen vorübergehenden Ausfall für eine Viertelstunde festzuschreiben.
+ *
+ * Ein `404` wird nicht wiederholt (`lib/query-client.ts`): Eine unbekannte
+ * Nachricht, ein fremder Mandant und eine unbrauchbare Kennung sind
+ * ununterscheidbar, und alle drei stehen beim ersten Aufruf fest.
+ */
+export function useArtefaktinhalt(messageId: string, artefaktId: string) {
+  return useQuery<Artefaktanzeige>({
+    queryKey: NACHRICHTEN_SCHLUESSEL.dateiInhalt(messageId, artefaktId),
+    queryFn: () => holeArtefaktinhalt(messageId, artefaktId),
+    enabled: messageId !== "" && artefaktId !== "",
+  });
+}
 
 /**
  * Die nachgeladenen Seiten der Abwärtsglieder — **cursor-basiert, und erst auf

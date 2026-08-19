@@ -1,6 +1,6 @@
 # Rohdaten und Protokolle
 
-Stand: 17.08.2026 · Schritt 8 des MVP
+Stand: 17.08.2026, **Entscheidung 6 korrigiert am 18.08.2026** (§3) · Schritt 8 des MVP
 Grundlage: `messungen-schritt8.md` (M52–M71, Abschnitt Q), `messungen-schritt8-auftrag.md` Fassung 3
 
 Ergänzt `PROJEKTBESCHREIBUNG.md` §7 „Rohdatenzugriff". Bei Widersprüchen gilt die
@@ -100,11 +100,52 @@ Alles in diesem Abschnitt ist belegt. Fundstellen in `messungen-schritt8.md`.
 | 3 | Bei Protokollen sieht `MANDANT` nur den Bereich zwischen den Marken. `ADMIN` sieht vollständig. **Über die Rolle, nicht über ein Flag** | 14.08.2026 |
 | 4 | Kodierung **`ISO-8859-1`**, belegt durch M61 und deckungsgleich mit Q4 | 17.08.2026 |
 | 5 | Markenregel wie in §6, einschließlich **keine Startmarke → nichts** | 17.08.2026 |
-| 6 | **E1 = Zweigeteilt**: Nutzdaten und Protokolle getrennt, beide nach Schritt geordnet, Originaldatei im Kopf | 17.08.2026 |
+| 6 | **E1 = Artefakte an der Zeitleiste**, eingegangene Datei einzeln. **Korrigiert am 18.08.2026**, alte Fassung im Kasten unter dieser Tabelle | 17.08.2026, korrigiert 18.08.2026 |
 | 7 | **E2 = eigene Route.** Ein Sheet über der Detailansicht ist eine spätere Zugabe, kein MVP-Bestandteil | 17.08.2026 |
 | 8 | **E3 = Binärdateien werden erkannt und benannt**, nicht angezeigt | 17.08.2026 |
 | 9 | **E4 = Download liefert, was die Anzeige liefert.** Für `MANDANT` bei Protokollen also die beschnittene Fassung | 17.08.2026 |
 | 10 | „Keine Datei vorhanden" ist ein **Fehlerzustand**, kein Regelfall — produktiv decken sich Datenbank und Filestore (Auskunft 17.08.2026) | 17.08.2026 |
+
+### Entscheidung 6 ist am 18.08.2026 korrigiert worden
+
+> **Die alte Fassung, wortgleich wie sie am 17.08.2026 hier stand:**
+>
+> > 6 · **E1 = Zweigeteilt**: Nutzdaten und Protokolle getrennt, beide nach Schritt geordnet,
+> > Originaldatei im Kopf
+>
+> Dazu §5 in seiner alten Gestalt: *„Zweigeteilt, beide Teile nach Schritt geordnet — Kopf: die
+> eingegangene Datei · Nutzdaten je Schritt · Protokolle je Schritt, darunter, sichtbar abgesetzt."*
+
+**Der Grund.** Die Entscheidung entstand **vor** M57. M57 hat danach gezeigt, dass jedes Artefakt
+über `MessageActionID` an **seinem Schritt** hängt — und die Entscheidung ist nicht nachgezogen
+worden. Sichtbar wurde das erst im gebauten Zustand: Das Nachrichtendetail trug drei Blöcke auf
+derselben Achse — Zeitleiste, Dateien, technische Eigenschaften —, alle drei nach Schritt sortiert,
+alle drei untereinander. Im Dateienblock standen **neun Zeilen, davon acht mit vier sich
+wiederholenden Schrittnamen**: denselben, die drei Zeilen darüber schon in der Zeitleiste standen,
+dort mit Dauer und Balken.
+
+**Der Fehler lag in der Entscheidung, nicht in der Umsetzung.** Ein Nutzer will nicht „alle
+Nutzdaten", er will **einen Schritt aufmachen** und sehen, was dort liegt.
+
+**Die neue Fassung:**
+
+| | |
+|---|---|
+| **Zeitleiste** | je Schritt zusätzlich **die Artefakte, die auf ihm liegen** — in aller Regel zwei, Datei und Protokoll. Wo nichts liegt, kein Ziel; und es wird auch nichts abgeschnitten, wo mehr liegt |
+| **Eingegangene Datei** | einzeln, in einer eigenen Zeile **über** der Zeitleiste. Sie hängt an keinem Ablaufschritt |
+| **Technische Eigenschaften** | bleiben ein eigener Block, nach Schritt gruppiert — **anspringbar aus der Zeitleiste** |
+| **Block „Dateien und Protokolle"** | **entfällt vollständig** |
+
+**Warum die technischen Eigenschaften trotzdem ein eigener Block bleiben.** Die Trennlinie ist nicht
+„gehört zum Schritt oder nicht" — sie hängen genauso am Schritt —, sondern **„ein Ziel oder ein
+Textblock"**: Dateien sind null bis zwei Verweise je Schritt, Eigenschaften rund 23
+Schlüssel-Wert-Paare je Nachricht (M44). Zwei Ziele passen in eine Schrittzeile, zehn Wertepaare
+sprengen sie.
+
+**Was die Korrektur nicht anfasst:** die Aufteilung der *Antwort*. Das Backend liefert weiterhin
+`eingang`, `nutzdaten` und `protokolle` getrennt — sie folgt aus dem Datenmodell und nicht aus einer
+Gestaltungsentscheidung, und die Oberfläche teilt daraus neu ein. **Kein Endpunkt ist geändert
+worden.**
 
 ---
 
@@ -137,16 +178,25 @@ deckt nur 69,6 % und taugt nicht als Vorabprüfung (M60).
 
 ## 5. Die Artefakte in der Oberfläche
 
-**Zweigeteilt, beide Teile nach Schritt geordnet:**
+*Fassung vom 18.08.2026. Die alte steht im Kasten unter §3.*
 
-- **Kopf: die eingegangene Datei** (`Message.Payload.GUID`). Sie steht auf Schritt `0` und gehört
-  nicht in die Schrittfolge — Schritt `0` ist der Ort der Metadaten, kein Ablaufschritt.
-- **Nutzdaten je Schritt** — die umgewandelten Fassungen.
-- **Protokolle je Schritt** — darunter, sichtbar abgesetzt.
+**An der Zeitleiste, nicht in einem eigenen Block.** Es gibt **eine** Schrittfolge, die führt, und
+einen Block, der ihr folgt — statt dreier gleichrangiger Listen derselben Sache.
+
+- **Je Schritt bis zu zwei Ziele** an seiner Zeile: die umgewandelte Fassung und das Protokoll. Wo
+  nichts liegt, hängt nichts — kein Platzhalter, kein ausgegrautes Zeichen.
+- **Der Eingang steht darüber, in einer eigenen Zeile.** Auf Schritt `0` liegt die eingegangene
+  Datei (`Message.Payload.GUID`) **und** das Paar des Lesedienstes (M57). Schritt `0` ist der Ort der
+  Metadaten und kein Ablaufschritt; er kommt in `schritte[]` gar nicht vor und steht deshalb in
+  keiner Zeile der Leiste. Ohne diese Zeile wären seine Artefakte unerreichbar.
+- **Die technischen Eigenschaften bleiben ein eigener Block** — und sind aus jeder Zeile der
+  Zeitleiste anspringbar.
 
 **Beschriftung.** Wo ein `SOSActionName` auflöst, wird er verwendet. Für die **55,98 % ohne** (M57)
-gilt Schrittnummer plus technische Familie — `Schritt 2 · Converter`. **Nichts wird geraten**
-(Regel Q4), und die Dienst*namen* aus `Service.ServiceName` bleiben unsichtbar (M15 (3)).
+gilt Schrittnummer plus technische Familie — `Schritt 2 · Converter`. **Auf Schritt `0` steht die
+Familie allein** (`SAPReader`): Eine Nummer, die in der Zeitleiste nirgends auftaucht, ist keine
+Auskunft — dieselbe Begründung, aus der der Eingang nicht „Schritt 0 · Message" heißt. **Nichts wird
+geraten** (Regel Q4), und die Dienst*namen* aus `Service.ServiceName` bleiben unsichtbar (M15 (3)).
 
 ---
 

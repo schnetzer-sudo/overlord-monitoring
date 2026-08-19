@@ -270,6 +270,57 @@ export const en: Texte = {
         gruppeSchritt: "Step {nummer}",
       },
 
+      // Raw data and logs (step 8). The family (`Converter`, `FTPSender`) is a
+      // technical value from the property name and is never translated.
+      dateien: {
+        eingangTitel: "Incoming file",
+        eingang: "Arrival",
+        eingangHinweis:
+          "What was stored when the message arrived. The arrival is not a step of the flow and therefore does not appear in the timeline.",
+        schrittFamilie: "Step {nummer} · {familie}",
+        ohneZeile: "Without a step in the timeline",
+        zieleFehlgeschlagen: "The files for this message could not be loaded.",
+
+        ziel: "{art} · {name}",
+        zielAusschnitt: "{ziel} — {marke}",
+        zuEigenschaften: "Show technical properties for {name}",
+
+        ausschnittMarke: "Extract",
+        ausschnittAnkuendigung:
+          "Of this log you are shown the released section, not the complete file.",
+
+        ansichtTitel: "File",
+        zurueck: "Back to the message",
+        art: {
+          NUTZDATEN: "Payload",
+          PROTOKOLL: "Log",
+        },
+        groesse: "{bytes} bytes",
+        kodierung: "Encoding {name}",
+        herunterladen: "Download",
+        inhalt: "File content",
+
+        vermerkAusschnitt:
+          "You are seeing the released extract of this log. The download contains the same extract.",
+        vermerkGekappt: "The view ends at the length limit. The download is not truncated.",
+        vermerkMehrereEintraege: "The archive contained {anzahl} entries. The first one is shown.",
+
+        binaerTitel: "Binary file",
+        binaerText:
+          "This file does not consist of readable text and is therefore not displayed. Its size is {bytes} bytes.",
+        keinProtokollteilTitel: "No displayable log section",
+        keinProtokollteilText:
+          "This log contains no section that is shown to you. For many steps that is the normal case and does not mean that anything failed.",
+        nichtVorhandenTitel: "File not present",
+        nichtVorhandenText:
+          "The file store answered and delivered no file for this entry. Its retention period may have expired.",
+        ablageTitel: "File store unreachable",
+        ablageText:
+          "The file store is not answering right now. The file may still exist — try again in a few minutes.",
+        leerTitel: "Empty file",
+        leerText: "This file contains no characters at all.",
+      },
+
       nichtGefunden:
         "Under the tenant shown in the header this message does not exist. If the link came from someone else, check that tenant first.",
 

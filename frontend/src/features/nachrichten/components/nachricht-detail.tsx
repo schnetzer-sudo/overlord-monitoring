@@ -13,11 +13,13 @@ import { ProblemFehler } from "@/lib/http";
 import type { Texte } from "@/i18n";
 
 import type { KuratierteEigenschaft, Nachrichtendetail } from "../api";
-import { bedeutungNichtVerifiziert } from "../detail";
-import { useNachrichtendetail } from "../hooks";
+import { bedeutungNichtVerifiziert, METADATEN_POSITION } from "../detail";
+import { useArtefakte, useNachrichtendetail } from "../hooks";
+import { zieleJeSchritt, zieleOhneZeile } from "../rohdaten";
 import { AnsichtUmschalter, type Umschaltziel } from "./ansicht-umschalter";
+import { Zielzeile } from "./artefakt-ziele";
 import { BamBlock } from "./bam-block";
-import { EigenschaftenBlock } from "./eigenschaften-block";
+import { EigenschaftenBlock, type Sprungziel } from "./eigenschaften-block";
 import { KettenBlock } from "./kette-block";
 import { StatusPlakette } from "./status-plakette";
 import { Zeitleiste } from "./zeitleiste";
@@ -86,6 +88,32 @@ export function NachrichtDetail({
   const texte = useTexte();
   const anfrage = useNachrichtendetail(messageId);
   const titelId = useId();
+
+  // **Die Artefaktliste wird seit dem 18.08.2026 mit dem Detail geholt und nicht
+  // mehr erst beim Aufklappen.** Der Block, der sie aufklappte, gibt es nicht
+  // mehr; die Ziele hängen an der Zeitleiste, und die steht immer da.
+  //
+  // Der Preis ist eine Anfrage je Detailaufruf, und er ist gemessen klein: Die
+  // Liste ist eine reine Datenbankabfrage von 0,867 ms
+  // (`docs/rohdaten-backend.md` §9) und **spricht keine Ablage an** — der
+  // SOAP-Aufruf steckt allein im Inhalt, und der wird weiterhin erst beim
+  // Öffnen der Ansicht geholt.
+  const artefakte = useArtefakte(messageId, true);
+
+  // Der angesprungene Schritt trägt seine Nachricht mit sich, und beim Wechsel
+  // fällt er weg. **Diese Komponente wird beim Blättern nicht neu aufgebaut** —
+  // nur ihre Kinder tragen ein `key`. Ohne das Zurücksetzen klappte der
+  // Eigenschaftenblock der nächsten Nachricht von selbst auf, und wer später
+  // zur ersten zurückkehrt, spränge dort ein zweites Mal.
+  //
+  // Zurückgesetzt wird beim Rendern und nicht in einem Effekt: Es ist ein
+  // Zustand, der sich aus einer Eigenschaft ergibt (`react.dev`, *adjusting
+  // state when a prop changes*), und ein Effekt dafür löste eine zweite
+  // Renderrunde aus.
+  const [sprung, setSprung] = useState<(Sprungziel & { messageId: string }) | null>(null);
+  if (sprung !== null && sprung.messageId !== messageId) {
+    setSprung(null);
+  }
 
   return (
     <section
@@ -166,23 +194,142 @@ export function NachrichtDetail({
             messageId={anfrage.data.messageId}
             anzahl={anfrage.data.bamAnzahl}
           />
-          <Zeitleiste detail={anfrage.data} />
-          <EigenschaftenBlock
-            // Beim Blättern zwischen Nachrichten beginnt der Block wieder
-            // eingeklappt — und lädt damit auch nichts nach.
-            key={`eigenschaften-${anfrage.data.messageId}`}
-            messageId={anfrage.data.messageId}
-            anzahl={anfrage.data.eigenschaftenAnzahl}
-            // Nur zum Beschriften der Gruppen (17.08.2026). Es ist dieselbe
-            // Liste, aus der die Zeitleiste darüber entsteht — genau deshalb
-            // stehen die Gruppen in derselben Reihenfolge und tragen wortgleich
-            // dieselben Namen. **Keine zweite Anfrage**: Beide Datensätze liegen
-            // schon im Baum.
-            schritte={anfrage.data.schritte}
+          <Ablauf
+            detail={anfrage.data}
+            artefakte={artefakte}
+            sprung={sprung}
+            aufSprung={(position) =>
+              setSprung((bisher) => ({
+                messageId,
+                position,
+                // Die laufende Nummer, damit derselbe Schritt zweimal
+                // hintereinander zweimal wirkt.
+                nummer: (bisher?.nummer ?? 0) + 1,
+              }))
+            }
           />
         </>
       ) : null}
     </section>
+  );
+}
+
+/**
+ * **Der Ablauf einer Nachricht: die Zeitleiste, ihre Ziele und die technischen
+ * Eigenschaften darunter** — seit dem 18.08.2026 eine Einheit statt dreier
+ * gleichrangiger Listen derselben Sache.
+ *
+ * ## Was hier steht, und in welcher Reihenfolge
+ *
+ * | | |
+ * |---|---|
+ * | **Eingang** | alles auf Schritt `0` — die eingegangene Datei und das Paar des Lesedienstes. Er hängt an keinem Ablaufschritt und steht deshalb **über** der Leiste |
+ * | **Zeitleiste** | je Schritt Name, Balken, Dauer — und die Artefakte, die auf ihm liegen |
+ * | **Ohne Schritt in der Zeitleiste** | der Rest. Gemessen leer (M57, Befund 1), gebaut, damit kein Artefakt lautlos verschwindet |
+ * | **Technische Eigenschaften** | das Technischste zuletzt, nach Schritt gruppiert und aus der Leiste anspringbar |
+ *
+ * ## Warum die Dateien keinen eigenen Block mehr haben
+ *
+ * Sie hatten einen, vom 18.08.2026 bis zum selben Tag. Im gebauten Zustand
+ * standen darin **neun Zeilen mit vier sich wiederholenden Schrittnamen** —
+ * denselben, die drei Zeilen darüber in der Zeitleiste schon standen, dort mit
+ * Dauer und Balken. Der Fehler lag in der Entscheidung und nicht in der
+ * Umsetzung: Entscheidung 6 entstand, bevor M57 zeigte, dass Artefakte **am
+ * Schritt** hängen (`docs/rohdaten.md` §3).
+ *
+ * **Die technischen Eigenschaften bleiben ein eigener Block**, und die
+ * Trennlinie ist nicht „gehört zum Schritt oder nicht", sondern **„ein Ziel oder
+ * ein Textblock"**: Dateien sind null bis zwei Verweise je Schritt,
+ * Eigenschaften rund 23 Schlüssel-Wert-Paare je Nachricht (M44). Zwei Ziele
+ * passen in eine Schrittzeile, zehn Wertepaare sprengen sie.
+ */
+function Ablauf({
+  detail,
+  artefakte,
+  sprung,
+  aufSprung,
+}: {
+  detail: Nachrichtendetail;
+  artefakte: ReturnType<typeof useArtefakte>;
+  sprung: Sprungziel | null;
+  aufSprung: (position: number) => void;
+}) {
+  const texte = useTexte();
+  const bausteine = texte.nachrichten.detail.dateien;
+
+  // Beschriftet wird mit der Schrittfolge, die ohnehin im Baum liegt — dieselbe
+  // Verbindung, aus der die Gruppenköpfe des Eigenschaftenblocks entstehen
+  // (17.08.2026). **Keine zweite Anfrage.**
+  const ziele = zieleJeSchritt(artefakte.data, detail.schritte, texte);
+
+  return (
+    <>
+      {/*
+        **Eingang, Leiste und Rest stehen bündig aufeinander, ohne Abstand.**
+        Sie tragen dieselbe senkrechte Kontur links — die Schiene der Zeitleiste
+        —, und ein Abstand von 16 rem/4 dazwischen zerschnitte sie in drei
+        Stücke. Der Rahmen darum hält seinen Abstand zu den Nachbarblöcken; nach
+        innen gibt es keinen.
+      */}
+      <div className="flex flex-col">
+        <Zielzeile
+          messageId={detail.messageId}
+          beschriftung={bausteine.eingang}
+          hinweis={bausteine.eingangHinweis}
+          ziele={ziele.get(METADATEN_POSITION) ?? []}
+        />
+
+        <Zeitleiste
+          detail={detail}
+          ziele={ziele}
+          // Ohne Eigenschaften gibt es unten keinen Block, und dann bleiben die
+          // Schrittnamen Text. Ein Weg, der ins Leere führte, wäre schlechter
+          // als keiner — dieselbe Regel, aus der der Block dort einen Satz statt
+          // eines Schalters zeigt.
+          aufSchritt={detail.eigenschaftenAnzahl === 0 ? undefined : aufSprung}
+        />
+
+        <Zielzeile
+          messageId={detail.messageId}
+          beschriftung={bausteine.ohneZeile}
+          ziele={zieleOhneZeile(ziele, detail.schritte)}
+        />
+      </div>
+
+      {/*
+        Die Zeitleiste hängt an einem anderen Endpunkt als die Artefakte: Fällt
+        deren Abfrage aus, steht die Leiste weiterhin und es fehlen allein die
+        Ziele. Gesagt wird das trotzdem — sonst sähe eine Nachricht ohne
+        erreichbare Dateien aus wie eine ohne Dateien, und die gibt es gemessen
+        nicht (M55: 3 bis 15, bei jedem Mandanten).
+
+        Der gewöhnliche Baustein und kein eigener: Vier Zustände je Ansicht, und
+        die werden nicht je Ansicht nachgebaut (`components/zustand.tsx`).
+      */}
+      {artefakte.error ? (
+        <Fehler
+          fehler={artefakte.error}
+          text={bausteine.zieleFehlgeschlagen}
+          aufWiederholen={() => void artefakte.refetch()}
+        />
+      ) : null}
+
+      <EigenschaftenBlock
+        // Beim Blättern zwischen Nachrichten beginnt der Block wieder
+        // eingeklappt — und lädt damit auch nichts nach. `key` mit eigenem
+        // Präfix, wie bei den Nachbarn: Geschwister mit demselben Schlüssel
+        // wären für React derselbe Platz im Baum (`verkettung.md` §8.12).
+        key={`eigenschaften-${detail.messageId}`}
+        messageId={detail.messageId}
+        anzahl={detail.eigenschaftenAnzahl}
+        // Nur zum Beschriften der Gruppen (17.08.2026). Es ist dieselbe Liste,
+        // aus der die Zeitleiste darüber entsteht — genau deshalb stehen die
+        // Gruppen in derselben Reihenfolge und tragen wortgleich dieselben
+        // Namen.
+        schritte={detail.schritte}
+        sprung={sprung}
+      />
+    </>
   );
 }
 

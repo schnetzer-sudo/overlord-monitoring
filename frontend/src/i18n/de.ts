@@ -402,6 +402,108 @@ export const de = {
         gruppeSchritt: "Schritt {nummer}",
       },
 
+      // Rohdaten und Protokolle (Schritt 8, Teil Frontend) — die Dateien, die an
+      // einer Nachricht hängen: die eingegangene Datei, die umgewandelten
+      // Fassungen und die Protokolle der Schritte (docs/rohdaten.md).
+      dateien: {
+        // Die eingegangene Datei hängt auf Schritt 0, dem Ort der Metadaten, und
+        // der ist kein Ablaufschritt (M57, M17 3). Sie steht deshalb über der
+        // Zeitleiste und in keiner ihrer Zeilen.
+        eingangTitel: "Eingegangene Datei",
+        // Die Beschriftung der Zeile über der Zeitleiste. Auf Schritt 0 liegt
+        // nicht nur die eingegangene Datei, sondern auch das Paar des
+        // Lesedienstes — „Eingang" trägt beides, „Eingegangene Datei" trüge nur
+        // eins davon.
+        eingang: "Eingang",
+        eingangHinweis:
+          "Was beim Eingang der Nachricht abgelegt worden ist. Der Eingang ist kein Schritt des Ablaufs und steht deshalb nicht in der Zeitleiste.",
+        // Der Rückfall für die 55,98 Prozent der Artefakte, deren Schritt zu
+        // keinem Namen auflöst (M57). Die Familie ist ein technischer Wert aus
+        // dem MessagePropertyName und wird nicht übersetzt, ergänzt oder
+        // gedeutet (Regel Q4) — „Converter" bleibt „Converter".
+        schrittFamilie: "Schritt {nummer} · {familie}",
+        // Artefakte, deren Schritt in der Zeitleiste keine Zeile hat. Gemessen
+        // kommt das nicht vor (M57, Befund 1: ohne_schrittzeile = 0) — ohne
+        // diese Zeile fiele ein solches Artefakt aber lautlos aus der
+        // Oberfläche.
+        ohneZeile: "Ohne Schritt in der Zeitleiste",
+        // Die Artefaktliste konnte nicht geladen werden. Die Zeitleiste steht
+        // trotzdem: Sie hängt an einem anderen Endpunkt.
+        zieleFehlgeschlagen: "Die Dateien zu dieser Nachricht konnten nicht geladen werden.",
+
+        // Die Ziele an Zeitleiste und Eingangszeile. Sichtbar ist nur das
+        // Zeichen; das hier ist der Name für Vorleseprogramme.
+        ziel: "{art} · {name}",
+        zielAusschnitt: "{ziel} — {marke}",
+        // Der Weg von einer Zeile der Zeitleiste zu ihrer Gruppe im
+        // Eigenschaftenblock. Der sichtbare Schrittname steht darin, wie es
+        // WCAG 2.5.3 für den zugänglichen Namen verlangt.
+        zuEigenschaften: "Technische Eigenschaften zu {name} anzeigen",
+
+        // Die Ankündigung am Ziel. Sie steht dort, damit der Nutzer es vor dem
+        // Öffnen weiß, statt beim Öffnen überrascht zu werden.
+        ausschnittMarke: "Ausschnitt",
+        ausschnittAnkuendigung:
+          "Von diesem Protokoll wird dir der freigegebene Abschnitt gezeigt, nicht die vollständige Datei.",
+
+        // ── Die Ansicht auf ihrer eigenen Route ──────────────────────────────
+        // Der Rückfall der Überschrift, solange die Artefaktliste noch lädt und
+        // die Beschriftung deshalb fehlt.
+        ansichtTitel: "Datei",
+        zurueck: "Zurück zur Nachricht",
+        art: {
+          NUTZDATEN: "Nutzdaten",
+          PROTOKOLL: "Protokoll",
+        },
+        // Rohe Bytes, ohne Umrechnung in KB oder MB. Das größte gemessene
+        // Artefakt hat 609.995 Byte (M60); eine gerundete Angabe verlöre genau
+        // die Genauigkeit, mit der jemand zwei Fassungen vergleicht.
+        groesse: "{bytes} Bytes",
+        kodierung: "Kodierung {name}",
+        herunterladen: "Herunterladen",
+        // Der Inhalt selbst — als beschriftetes Feld für Vorleseprogramme.
+        inhalt: "Dateiinhalt",
+
+        // Die Vermerke. Jeder sagt, dass hier nicht die ganze Datei steht — und
+        // jeder sagt es aus einem anderen Grund.
+        vermerkAusschnitt:
+          "Du siehst den freigegebenen Ausschnitt dieses Protokolls. Der Download enthält denselben Ausschnitt.",
+        vermerkGekappt: "Die Anzeige endet an der Längengrenze. Der Download ist nicht gekappt.",
+        // In 693 geholten Dateien nie vorgekommen. Er wird trotzdem gezeigt: Das
+        // Altsystem verwirft den Rest stillschweigend (docs/rohdaten.md §4).
+        vermerkMehrereEintraege: "Das Archiv enthielt {anzahl} Einträge. Angezeigt wird der erste.",
+
+        // Die vier benannten Zustände aus docs/rohdaten.md §8. KEINER davon ist
+        // ein leeres Feld — genau das macht das Altsystem, und genau das ist der
+        // Unterschied. „Datei nicht vorhanden" und „Ablage nicht erreichbar"
+        // verschmelzen ausdrücklich NICHT zu „Fehler beim Laden": Für den
+        // Betrieb ist diese Unterscheidung die wichtigere.
+        binaerTitel: "Binärdatei",
+        binaerText:
+          "Diese Datei besteht nicht aus lesbarem Text und wird deshalb nicht angezeigt. Sie ist {bytes} Bytes groß.",
+        // Der häufigste der vier: FTPSender trägt in 28 von 30 Fällen keine
+        // Marken und hängt an rund 69 Prozent der Nachrichten, HTTPSender in 30
+        // von 30 (M63). Für MANDANT ist das der Normalfall — der Text muss das
+        // aushalten, ohne wie ein Defekt zu klingen.
+        keinProtokollteilTitel: "Kein anzeigbarer Protokollteil",
+        keinProtokollteilText:
+          "Dieses Protokoll enthält keinen Abschnitt, der dir gezeigt wird. Bei vielen Schritten ist das der Normalfall und bedeutet nicht, dass etwas fehlgeschlagen ist.",
+        nichtVorhandenTitel: "Datei nicht vorhanden",
+        nichtVorhandenText:
+          "Die Dateiablage hat geantwortet und zu diesem Eintrag keine Datei geliefert. Möglicherweise ist ihre Aufbewahrungsfrist abgelaufen.",
+        // Etwas anderes als „Datei weg", und für den Betrieb die wichtigere
+        // Unterscheidung. Als einziger der vier lohnt hier ein zweiter Versuch —
+        // deshalb steht die Schaltfläche nur an diesem Zustand.
+        ablageTitel: "Ablage nicht erreichbar",
+        ablageText:
+          "Die Dateiablage antwortet gerade nicht. Die Datei kann es weiterhin geben — versuche es in einigen Minuten erneut.",
+        // Eine Datei mit null Byte. Nicht gemessen — das kleinste beobachtete
+        // Artefakt hat 2 Byte (M60) —, aber möglich. Ohne diesen Satz stünde
+        // dort ein leerer Kasten, und genau den schließt §8 aus.
+        leerTitel: "Leere Datei",
+        leerText: "Diese Datei enthält kein einziges Zeichen.",
+      },
+
       // Für eine unbekannte und für eine fremde Kennung derselbe Text. Das
       // Backend macht „gibt es nicht" und „gehört einem anderen Mandanten"
       // absichtlich ununterscheidbar; ein Wort über Berechtigungen gäbe genau

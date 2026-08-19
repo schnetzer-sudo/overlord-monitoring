@@ -104,6 +104,50 @@ export function ansichtNebenListe(messageId: string, abfragezeichenkette: string
 }
 
 /**
+ * Die Ansicht **eines Artefakts** — `/nachrichten/<id>/dateien/<artefaktId>`.
+ *
+ * **Eine eigene Route und kein Sheet** (`docs/rohdaten.md` §3, Entscheidung 7).
+ * Der Grund ist derselbe wie beim Nachrichtendetail und wiegt hier schwerer: Der
+ * Inhalt ist bis zu 610 KB Text (M60) und braucht eine eigene Fläche mit eigenem
+ * Bildlauf. Ein Sheet über der Detailansicht ist ausdrücklich eine spätere
+ * Zugabe.
+ *
+ * **Der Inhalt ist Pfad, nicht Abfrage.** Er beschreibt, *was* man sieht, und
+ * nicht, wie man es filtert — dieselbe Regel, nach der `nachricht` in der URL
+ * steht und `cursor` nicht (`docs/frontend-grundlagen.md` §8).
+ *
+ * ## Sie trägt bewusst **keine** Abfragezeichenkette
+ *
+ * Anders als {@link ansichtOhneListe} und {@link ansichtNebenListe}, die den
+ * Filterzustand der Liste durchreichen. Drei Gründe, und der erste ist der
+ * tragende:
+ *
+ * 1. **Es soll ein echter Verweis sein.** Der Filterzustand steht nur in
+ *    `window.location.search` bereit; ihn beim Rendern zu lesen hieße
+ *    `useSearchParams`, und der zwingt die Seite unter eine Suspense-Grenze —
+ *    genau deshalb liest `nachricht-seite.tsx` ihn im *Ereignis*. Das geht bei
+ *    einer Schaltfläche, nicht bei einem `<a>`. Und ein Dateiverweis, den man
+ *    weder mit der mittleren Maustaste öffnen noch kopieren kann, verfehlt
+ *    Entscheidung 7: „verlinkbar" ist der ganze Grund für die eigene Route.
+ * 2. **Ein geteilter Verweis auf eine Datei handelt von der Datei.** Welches
+ *    Zeitfenster derjenige eingestellt hatte, der ihn verschickt, gehört nicht
+ *    dazu.
+ * 3. Der Weg zurück bleibt gangbar: Die Ansicht führt an die **Nachricht** auf
+ *    ihrer eigenen Route, und der Zurück-Knopf des Browsers führt Station für
+ *    Station dorthin, wo jemand tatsächlich herkam — samt Filtern.
+ */
+export function artefaktAnsicht(messageId: string, artefaktId: string): string {
+  return `${ROUTEN.nachrichten}/${encodeURIComponent(messageId)}/dateien/${encodeURIComponent(
+    artefaktId,
+  )}`;
+}
+
+/** Die Nachricht auf ihrer eigenen Route — der Weg zurück aus der Dateiansicht. */
+export function nachrichtAnsicht(messageId: string): string {
+  return `${ROUTEN.nachrichten}/${encodeURIComponent(messageId)}`;
+}
+
+/**
  * Prüft ein `weiter`-Ziel, **bevor** dorthin umgeleitet wird.
  *
  * Ohne diese Prüfung wäre die Anmeldeseite eine offene Weiterleitung: Ein Link
