@@ -74,6 +74,13 @@ desktop.ini
 scripts/messung-schritt8/ergebnis/
 scripts/messung-schritt8/arbeit/
 
+# ─── Messrunde vor Schritt 9b ────────────────────────────────────────────────
+# Gleiche Trennung wie bei Schritt 8: die .sql-Sitzungen werden eingecheckt —
+# sie sind der Beleg dafuer, wie gemessen wurde. Die Rohausgaben nicht: sie
+# enthalten vollstaendige Projekt- und Prozesskennungen und damit Partnernamen
+# Dritter. (Regel G1, geschaerft am 07.08.2026)
+scripts/messung-schritt9/ergebnis/
+
 # ─── Quelltext des Altwerkzeugs ──────────────────────────────────────────────
 # alterCode/ bleibt LOKAL. JsonServlet.java traegt drei produktive absolute
 # Pfade mit einem Produktionsknoten- und einem Dienstkontonamen; CLAUDE.md
