@@ -95,7 +95,11 @@ class RohdatenIsolationDbIT extends SicherheitsTestbasis {
     assertThat(dateien.status()).isEqualTo(200);
     List<String> kennungen = dateien.json("$..artefaktId");
     assertThat(kennungen)
-        .as("Jede Nachricht traegt 3 bis 15 Artefakte (M55) — ohne welche prueft der Test nichts")
+        .as(
+            "Jede Nachricht traegt 3 bis 15 Artefakte (M55) — ohne welche prueft der Test nichts."
+                + " Die Spanne zaehlt die am 19.08.2026 entfallene Zeile Message.Payload.GUID mit"
+                + " (M73); die Liste liefert eine weniger. Das Minimum bleibt ueber null, und mehr"
+                + " braucht diese Zusicherung nicht.")
         .isNotEmpty();
     return kennungen.getFirst();
   }

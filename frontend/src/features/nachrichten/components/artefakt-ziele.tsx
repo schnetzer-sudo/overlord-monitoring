@@ -96,7 +96,7 @@ function Ziel({ messageId, ziel }: { messageId: string; ziel: Artefaktziel }) {
  *
  * | Zeile | Was darin hängt |
  * |---|---|
- * | **Eingang**, über der Zeitleiste | alles auf Schritt `0` — die eingegangene Datei und das Paar des Lesedienstes (M57) |
+ * | **Eingang**, über der Zeitleiste | alles auf Schritt `0` — seit dem 19.08.2026 das Paar des Lesedienstes, Datei und Protokoll (M57, M73) |
  * | **Ohne Schritt in der Zeitleiste**, darunter | der Rest, den es gemessen nicht gibt (M57, Befund 1) |
  *
  * **Gestrichelte Kontur statt durchgezogener** — dasselbe Vokabular wie die

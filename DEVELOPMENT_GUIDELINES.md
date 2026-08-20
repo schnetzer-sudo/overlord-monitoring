@@ -279,6 +279,39 @@ markiert, und ein jOOQ-`ExecuteListener` weist auf dem Lese-`DSLContext` alles a
 
 **S2 — Flyway verwaltet ausschließlich `overlord_monitor`.**
 
+**S3 — Ein Prüflauf schreibt nicht in den Arbeitsbaum** *(neu am 19.08.2026)*.
+
+> 1. **Ein Prüflauf hat keine Schreibberechtigung auf den Arbeitsbaum.** Was er findet, wird
+>    **berichtet**, nicht behoben.
+> 2. **Jeder Prüflauf endet mit dem Nachweis eines unveränderten Baums** — `git status --porcelain`
+>    leer und `git diff` leer gegen den Stand vor dem Lauf. Der Nachweis wird **festgehalten**, nicht
+>    behauptet.
+> 3. **Schreibt ein Prüflauf dennoch, gelten seine Befunde bis zum Beleg des Gegenteils als gegen
+>    einen veränderten Baum entstanden** und sind vor der Übernahme neu zu erheben.
+
+**Warum die Regel hier steht und nicht in Abschnitt 7.** Sie ist ein Schreibverbot, und dieser
+Abschnitt ist die Stelle, an der dieses Projekt seine Schreibverbote führt. S1 und S2 verbieten das
+Schreiben in ein **Schema**, das uns nicht gehört; S3 verbietet es einem **Lauf**, der nur lesen soll.
+Der Abschnitt reicht damit ab heute über die Datenbank hinaus — das ist die Erweiterung, die mit
+dieser Regel bewusst vorgenommen wird.
+
+**Der Anlass, und er ist ein Vorfall dieses Projekts.** In der Nachbesserung zu Schritt 8 am
+18.08.2026 hat ein Prüfagent in den Arbeitsbaum geschrieben: in
+`frontend/src/features/nachrichten/rohdaten.ts` den Anzeigevermerk beschnitten und `zieleJeSchritt`
+umgeschrieben. Der Lauf wurde gestoppt, beide Änderungen zurückgesetzt. Der Vorgang steht vollständig
+in [`docs/annahmen-korrekturen.md`](docs/annahmen-korrekturen.md), „Vorfall 18.08.2026".
+
+**Warum der dritte Satz nötig ist.** Die ersten beiden ließen sich für Formalien halten. Der dritte
+sagt, was ein Verstoß kostet: Ein Lauf, der schreibt, prüft am Ende **seinen eigenen** Baum. Seine
+Befunde sind damit nicht falsch, aber sie sind **unbelegt** — und ein unbelegter Befund ist in diesem
+Projekt kein Befund (dieselbe Trennung wie in L10: gemessen gegen behauptet).
+
+> ⚠️ **Die Fehlbedienung, auf die zu achten ist:** Ein Nachweis, der aus „der Baum ist sauber"
+> besteht, leistet nichts. Der Nachweis ist die **Ausgabe** der beiden Befehle, festgehalten neben dem
+> Befundsatz — und er ist gegen den Stand **vor** dem Lauf zu ziehen, nicht gegen den Stand nach einer
+> zwischenzeitlichen Rücknahme. Ein zurückgesetzter Schreibvorgang hinterlässt einen sauberen Baum und
+> bleibt trotzdem ein Verstoß gegen Satz 1.
+
 ### 4.3 Rohdatenzugriff
 
 **R1 — Der Download läuft immer über das Backend als Proxy, niemals als direkter Link in den

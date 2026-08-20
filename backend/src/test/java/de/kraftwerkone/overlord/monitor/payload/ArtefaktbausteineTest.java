@@ -38,7 +38,7 @@ class ArtefaktbausteineTest {
       assertThat(Artefaktnamen.art("FileReader.FileProperty.Size")).isNull();
       assertThat(Artefaktnamen.art(".Payload.GUID")).as("ohne Familie").isNull();
       assertThat(Artefaktnamen.art(null)).isNull();
-      assertThat(Artefaktnamen.istArtefakt("Message.Payload.GUID")).isTrue();
+      assertThat(Artefaktnamen.istArtefakt("FileReader.Payload.GUID")).isTrue();
       assertThat(Artefaktnamen.istArtefakt("Message.SplitCount")).isFalse();
     }
 
@@ -52,11 +52,46 @@ class ArtefaktbausteineTest {
     }
 
     @Test
-    @DisplayName("Der Eingang ist genau Message.Payload.GUID, schreibungsempfindlich")
-    void eingang() {
-      assertThat(Artefaktnamen.istEingang("Message.Payload.GUID")).isTrue();
-      assertThat(Artefaktnamen.istEingang("message.payload.guid")).isFalse();
-      assertThat(Artefaktnamen.istEingang("Converter.Payload.GUID")).isFalse();
+    @DisplayName("Der Zeiger ist genau Message.Payload.GUID, schreibungsempfindlich")
+    void zeiger() {
+      assertThat(Artefaktnamen.istZeiger("Message.Payload.GUID")).isTrue();
+      assertThat(Artefaktnamen.istZeiger("message.payload.guid")).isFalse();
+      assertThat(Artefaktnamen.istZeiger("Converter.Payload.GUID")).isFalse();
+    }
+
+    /**
+     * <b>Der Zeiger traegt das Muster und ist trotzdem kein Artefakt</b> — die eine Ausnahme, und
+     * sie steht im Code statt im Statement.
+     *
+     * <p>Nach M73 (19.08.2026) traegt {@code Message.Payload.GUID} in 6.249 von 6.249 (Fenster A)
+     * und 214.330 von 214.330 Nachrichten (Fenster B) denselben Verweis wie die Nutzdatenzeile mit
+     * dem hoechsten {@code MessageActionID} derselben Nachricht. Er benennt also keine eigene
+     * Datei, sondern zeigt auf eine, die ohnehin an ihrem Schritt haengt.
+     *
+     * <p><b>{@code art} und {@code familie} antworten unveraendert</b>, und das ist Absicht: Sie
+     * beantworten die Frage nach dem <i>Muster</i>, und an dem hat sich nichts geaendert. Die
+     * Trennlinie liegt bei {@code istArtefakt}.
+     */
+    @Test
+    @DisplayName("Der Zeiger traegt das Muster, ist aber kein Artefakt (M73)")
+    void zeiger_ist_kein_artefakt() {
+      assertThat(Artefaktnamen.istArtefakt("Message.Payload.GUID"))
+          .as(
+              "Eine Liste, die jede Datei genau einmal fuehrt, ist die richtige Liste — der Verweis"
+                  + " ist ueber einen Schritt ab 1 bzw. ueber Schritt 0 ohnehin erreichbar (M73)")
+          .isFalse();
+      assertThat(Artefaktnamen.art("Message.Payload.GUID"))
+          .as("Das Muster ist unveraendert das der Nutzdaten")
+          .isEqualTo(Artefaktart.NUTZDATEN);
+      assertThat(Artefaktnamen.familie("Message.Payload.GUID"))
+          .as("Und die Familie bleibt die Zeichenkette aus dem Namen")
+          .isEqualTo("Message");
+      assertThat(Artefaktnamen.istArtefakt("message.Payload.GUID"))
+          .as(
+              "Die Ausnahme ist schreibungsempfindlich wie der Primaerschluessel selbst: Eine"
+                  + " zweite Schreibweise der Familie faellt nicht mit heraus, sondern wird"
+                  + " sichtbar")
+          .isTrue();
     }
 
     @Test
@@ -302,8 +337,10 @@ class ArtefaktbausteineTest {
     void muster_statt_familie() {
       assertThat(Downloaddateiname.likeMuster())
           .as(
-              "Nur die Lesedienste tragen den Namen (M56 a) — ueber die Familie des Eingangs"
-                  + " gesucht (Message.FileProperty.OriginalFilename) faende man nie etwas")
+              "Nur FileReader und FTPReader tragen den Namen (M56 a). Der Anlassfall der Regel ist"
+                  + " am 19.08.2026 entfallen (M73), die Regel bleibt: Ein Unterschied zwischen"
+                  + " Muster und Familie tritt weiter ein, sobald der Name auf dem Schritt eines"
+                  + " Artefakts einer anderen Familie liegt — ob das vorkommt, ist nicht gemessen")
           .isEqualTo("%.FileProperty.OriginalFilename");
       assertThat(Downloaddateiname.likeMuster())
           .as("Kein _ darin — das waere ein zweiter Platzhalter")

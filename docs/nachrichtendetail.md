@@ -9,6 +9,10 @@ nicht „was hängt daran" (das ist Schritt 6).
 Grundlage ist die Erhebung [`messungen-schritt5.md`](messungen-schritt5.md) — M14 bis M22 und der
 Nachtrag S1. Wo unten eine Zahl steht, steht dort ihr Statement.
 
+*Ergänzt am 20.08.2026:* Die Zahlen in den Abschnitten zu den Artefakten an der Zeitleiste (§5, §10.4)
+stammen aus der zweiten Erhebung, [`messungen-schritt8.md`](messungen-schritt8.md) — **M55**, **M57**
+und **M73**. Auch für sie gilt: Wo hier eine Zahl steht, steht dort ihr Statement.
+
 ---
 
 ## 1. Die beiden Endpunkte
@@ -654,6 +658,23 @@ Hauptinformation. `Message.Payload.GUID` wird in **Schritt 8 ein Knopf** und kei
 `Message.SourceMessageID` ist seit Schritt 6 eine **Verkettung** und erscheint als Zeile im
 Kettenblock — gelesen aus der Spalte von `Message` und nicht aus dieser Eigenschaft.
 
+> **Korrigiert 20.08.2026, nachgetragen zur Korrektur vom 19.08.2026.** Hier steht:
+> „`Message.Payload.GUID` wird in **Schritt 8 ein Knopf** und kein Anzeigewert". Er wird in
+> Schritt 8 **gar nichts** — weder Anzeigewert noch Knopf.
+>
+> **Gemessen ist (M73):** Der Name trägt in **6.249 von 6.249** Nachrichten (Fenster A) und
+> **214.330 von 214.330** (Fenster B) denselben Verweis wie die Nutzdatenzeile mit dem **höchsten
+> `MessageActionID`** derselben Nachricht — kein Gegenfall. Er benennt keine eigene Datei, sondern
+> zeigt auf eine, die ohnehin an ihrem Schritt hängt, und ist deshalb aus der Artefaktliste
+> entfallen ([`rohdaten.md`](rohdaten.md) §5, [`rohdaten-backend.md`](rohdaten-backend.md) §7,
+> Erhebung in [`messungen-schritt8.md`](messungen-schritt8.md)).
+>
+> *Ausdrücklich nicht behauptet:* dass „höchster `MessageActionID`" gleichbedeutend mit „zeitlich
+> zuletzt" ist. Gemessen ist die Schrittnummer, nicht die Uhr.
+>
+> **Der Ausschluss selbst bleibt richtig** — nur seine Begründung nicht. Dieselbe Berichtigung steht
+> im Javadoc von `KuratierteEigenschaften`.
+
 Ebenso draußen: `Message.MessageActionID`, `Message.SOSActionID` und
 `Message.SOSActionServiceProperties`. Sie stehen ebenfalls auf jeder Nachricht, wiederholen aber
 nur, was die Schrittfolge ohnehin zeigt.
@@ -1241,9 +1262,38 @@ der dieselben Schrittnamen ein zweites Mal führte. Vollständig begründet in
 
 **Die Leiste führt Schritt `0` weiterhin nicht.** Das ist der Punkt, an dem eine Ergänzung zur
 Änderung geworden wäre: `schritte[]` bleibt die einzige Quelle der Zeilen, und der Metadaten-Schritt
-kommt dort nicht vor (§4). Die Artefakte, die auf ihm liegen — die eingegangene Datei **und** das
-Paar des Lesedienstes (M57) —, stehen in einer eigenen, gestrichelten Zeile **über** der Leiste.
-Gestrichelt wie die erwartete Zeile: Was gestrichelt ist, ist kein ausgeführter Schritt.
+kommt dort nicht vor (§4). Was auf ihm liegt — das Paar des Lesedienstes, Datei und Protokoll (M57)
+—, steht in einer eigenen, gestrichelten Zeile **über** der Leiste, beschriftet mit *Eingang*.
+Gestrichelt wie die erwartete Zeile: Was gestrichelt ist, ist kein ausgeführter Schritt. **Liegt
+dort nichts, gibt es die Zeile nicht** — dasselbe „wo nichts liegt, hängt nichts" wie an den
+Schrittzeilen.
+
+> **Korrigiert 20.08.2026, nachgetragen zur Korrektur vom 19.08.2026.** Hier stand bis heute: „Die
+> Artefakte, die auf ihm liegen — **die eingegangene Datei und das Paar des Lesedienstes** (M57) —,
+> stehen in einer eigenen, gestrichelten Zeile über der Leiste." Das dritte Ziel war
+> `Message.Payload.GUID`, geführt als *Eingegangene Datei*, und es ist nach **M73** aus der Liste
+> entfallen (Begründung oben unter „Was ausdrücklich ausgeschlossen ist").
+>
+> **Die Zeile trägt seither höchstens zwei Ziele — und manchmal keines.** Für `MessageActionID = 0`
+> führt M57 (Fenster A) ausschließlich die neun Lesedienst-Paare und `Message.Payload.GUID`. Wo kein
+> Lesedienst auf Schritt `0` liegt, lag dort also **nur** der entfallene Name, und die Zeile bleibt
+> heute leer. **Gemessen (M73, Befund 6):** Das sind **950 von 6.249** Nachrichten in Fenster A und
+> **28.616 von 214.330** in Fenster B — genau die Nachrichten mit `DataWarehouse.Payload.GUID`,
+> vollständig komplementär zu den **5.299** bzw. **185.714** mit Lesedienst, ohne eine einzige
+> Ausnahme.
+>
+> **Verloren geht dabei nichts:** `DataWarehouse.Payload.GUID` liegt auf Schritt `1` (M57) und
+> hängt damit an einer Zeile der Leiste. Die Zeile *Eingang* verschwindet, kein Artefakt.
+>
+> **Die übrige Aussage bleibt** — die Zeile steht über der Leiste, gestrichelt, ohne Balken und ohne
+> Dauer, und die Leiste bekommt für Schritt `0` weiterhin keine eigene Zeile.
+>
+> **Belegvermerk (L10):** Gemessen ist, **welche** Namen auf `MessageActionID = 0` liegen (M57) —
+> nicht, was die Dateien dahinter sind. Dass das Paar des Lesedienstes den *Eingang* der Nachricht
+> bezeichnet, beruht auf einer Sichtprüfung des Auftraggebers an **einer** Nachricht vom
+> 19.08.2026. Offener Punkt 17 in [`rohdaten-frontend.md`](rohdaten-frontend.md) §11.
+>
+> Belege durchgehend in [`messungen-schritt8.md`](messungen-schritt8.md) unter M57 und M73.
 
 ### 10.4a Der Kettenblock — zwischen Kopf und Zeitleiste
 
@@ -2100,8 +2150,16 @@ Siehe §4. Höchstens sieben Aktionen gemessen, eine Detailansicht lädt eine ei
 
 ### Keine Deutung des Timeouts, kein Download
 
-`SOSActionTimeout` wird geliefert und nicht gedeutet (§4). Der Filestore hinter
-`Message.Payload.GUID` wird nicht aufgelöst — das ist Schritt 8.
+`SOSActionTimeout` wird geliefert und nicht gedeutet (§4). Kein Filestore-Verweis wird hier
+aufgelöst — das ist Schritt 8.
+
+> **Korrigiert 20.08.2026, nachgetragen zur Korrektur vom 19.08.2026.** Hier stand bis heute: „Der
+> Filestore hinter **`Message.Payload.GUID`** wird nicht aufgelöst — das ist Schritt 8." Der Satz
+> führte diesen Namen als das, was Schritt 8 auflösen würde. **Schritt 8 löst ihn gar nicht auf:**
+> Aufgelöst werden `<Dienst>.Payload.GUID` und `<Dienst>.Log.GUID`; `Message` ist kein Dienst, und
+> der Name benennt nach **M73** kein Artefakt (siehe Kasten in §5 und
+> [`rohdaten-backend.md`](rohdaten-backend.md) §7). Die Abgrenzung selbst — hier wird kein Verweis
+> aufgelöst — ist unberührt.
 
 > **Die Verkettung stand hier bis zum 11.08.2026** und ist in Schritt 6 aufgelöst worden: Die vier
 > Spalten stehen als `rollen` im Kopf (§1), der Block darunter zeigt die Kette

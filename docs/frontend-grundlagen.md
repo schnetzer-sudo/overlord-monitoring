@@ -773,13 +773,41 @@ gerissen hat, ist eine Behauptung.
 | **`detail-baum.test.tsx`** *(neu, 11.08.2026)* | **gerenderter Baum**, drei Fälle: `tiefeErreicht` und `zyklusErkannt` samt ihrer Lage **unter beiden** Abschnitten (§8.5 dort), und die Regression zum Doppelschlüssel — sie besteht genau dann, wenn kein `console.error` fällt |
 | **`ansicht-umschalter.test.tsx`** *(11.08.2026)* | **gerenderter Baum**, zwei Fälle: die Sichtbarkeitsregel des Umschalters ist selbst eine Klasse, und ihr Umbruchpunkt ist von Hand nicht prüfbar (§7); dazu, dass er im Panel und auf der eigenen Route Verschiedenes sagt. **Am 18.08.2026 von „ein Fall" auf zwei berichtigt** — die Datei trug den zweiten seit Schritt 6, die Zählung nicht |
 | **`bam-block.test.tsx`** *(12.08.2026, ergänzt 13.08.2026)* | **gerenderter Baum**, vier Fälle: derselbe Wert unter zwei Typen **ohne `console.error`** (der Schlüssel ist `(typ, wert)`, M37); `bamAnzahl === 0` → **nicht im Baum und keine Anfrage**; eingeklappt mit Werten → Überschrift mit der Zahl, **und immer noch keine Anfrage**; die **Fuge** der zerlegten Beschriftung — vollständig und ohne eingefügtes Leerzeichen vor der Endung, über `textContent` und nicht über eine Textsuche ([`bam-werte.md`](bam-werte.md) §11a) |
-| `rohdaten.test.ts` *(18.08.2026)* | die Entscheidungen des Rohdatenzugriffs: die **Beschriftungsregel** aus [`rohdaten-frontend.md`](rohdaten-frontend.md) §3 in allen fünf Lagen (aufgelöster Schrittname, Rückfall `Schritt N · Familie`, ohne Schrittfolge, Eingang, **Familie allein auf Schritt 0**), die **Ziele** je Schritt samt der Ankündigung des Ausschnitts und dem Rest ohne Zeile, der **Gleichlauf** von Anzeige und Download über alle fünf Zustände samt der Ausnahme „binäres Protokoll für `MANDANT`", die drei Vermerke mit ihrer Reihenfolge, der zweite Versuch **nur** bei nicht erreichbarer Ablage, und dass kein Pfad eine GUID oder Ablagenkennung trägt |
-| **`artefakt-ansicht.test.tsx`** *(18.08.2026)* | **gerenderter Baum**, neun Fälle: der **Textknoten** (ein Inhalt, der gültiges HTML ist, erzeugt kein einziges Element — und das `<pre>` hat genau ein Kind), die **vier Zustände** je einer, der Ausschnitt-Vermerk in beide Richtungen, der Download-Knopf nach Entscheidung 9 und die Beschriftung ohne Nachladen ([`rohdaten-frontend.md`](rohdaten-frontend.md) §8) |
+| `rohdaten.test.ts` *(18.08.2026, korrigiert 20.08.2026)* | die Entscheidungen des Rohdatenzugriffs: die **Beschriftungsregel** aus [`rohdaten-frontend.md`](rohdaten-frontend.md) §2 in allen **vier** Lagen (aufgelöster Schrittname, Rückfall `Schritt N · Familie`, ohne Schrittfolge, **Familie allein auf Schritt 0**), dass **`Message.Payload.GUID` kein Ziel erzeugt** (M73), die **Ziele** je Schritt samt der Ankündigung des Ausschnitts und dem Rest ohne Zeile, der **Gleichlauf** von Anzeige und Download über alle fünf Zustände samt der Ausnahme „binäres Protokoll für `MANDANT`", die drei Vermerke mit ihrer Reihenfolge, der zweite Versuch **nur** bei nicht erreichbarer Ablage, und dass kein Pfad eine GUID oder Ablagenkennung trägt |
+| **`artefakt-ansicht.test.tsx`** *(18.08.2026)* | **gerenderter Baum**, neun Fälle: der **Textknoten** (ein Inhalt, der gültiges HTML ist, erzeugt kein einziges Element — und das `<pre>` hat genau ein Kind), die **vier Zustände** je einer, der Ausschnitt-Vermerk in beide Richtungen, der Download-Knopf nach Entscheidung 9 ([`rohdaten-frontend.md`](rohdaten-frontend.md) §6) und die Beschriftung ohne Nachladen (ebenda §4, „Drei Abfragen, und jede hat ihren Grund") |
 | **`zeitleiste-ziele.test.tsx`** *(18.08.2026, Nachbesserung)* | **gerenderter Baum**, acht Fälle. Er ist an die Stelle von `dateien-block.test.tsx` getreten, als der eigene Dateienblock entfiel: die drei Lagen je Schritt (beide Arten, nur eine, keine), der **Eingang** über der Leiste — Schritt `0` hat dort keine Zeile und seine Artefakte dürfen trotzdem nicht verschwinden —, die **Belastungsprobe aus M55** mit fünfzehn eigenen Zielen ohne doppelten React-Schlüssel, das **Anspringen** der Eigenschaftengruppe (`document.activeElement`), und drei Fälle um den Sprung bei **kaltem Zwischenspeicher**: Er kommt nicht nach, wenn der Nutzer beim Warten zuklappt oder den Fokus weitersetzt, und er kommt sehr wohl, wenn der Nutzer stehen bleibt. Dazu die Gegenprobe: ohne Eigenschaften kein Schalter am Schrittnamen |
 | **`eigenschaften-block.test.tsx`** *(17.08.2026)* | **gerenderter Baum**, vier Fälle: derselbe Name in **drei** Gruppen **ohne `console.error`** (der Schlüssel ist `${position}:${name}`, M17 3); `anzahl === 0` → **kein Schalter und keine Anfrage**; eingeklappt mit Werten → Überschrift mit der Zahl, **und immer noch keine Anfrage**; der Rückfall „Schritt N" ohne gelieferte `schritte`. Die Einteilung selbst ist reine Funktion und steht in `nachrichtendetail.test.ts` ([`nachrichtendetail.md`](nachrichtendetail.md) §10.5) |
 | `bam-beschriftung.test.ts` *(13.08.2026)* | die Zerlegung der Typbeschreibung in Name und Endung, an den gemessenen Fällen aus M45‑1 — samt beider **Gegenproben**: das `i`-Flag (`Sender_Ident_FORS`) und „ab dem letzten Unterstrich" (`_SAP` statt `_L_SAP`) |
 | `suche.test.ts` *(13.08.2026)* | die Entscheidungen der Belegsuche: Parameterform mit Pflichttrenner und Teilung am **ersten** Doppelpunkt, der Rundlauf URL → Zustand → URL über den **wiederholten** `begriff`-Parameter, der übergangene unbrauchbare Begriff, **die Abfrage mit und ohne geöffnete Nachricht Zeichen für Zeichen dieselbe**, der doppelte Begriff, die Sperre beim neunten, die Nulltreffer-Zeile, die Spalte „Treffer" samt Dedupe, das Jahresfenster einschließlich Schalttag, und dass die Abschneidemeldung in beiden Sprachen **Fenster und Abschneidung** nennt ([`bam-suche.md`](bam-suche.md) §11.10) |
 | **`suche-marken.test.tsx`** *(13.08.2026)* | **gerenderter Baum**, vier Fälle: derselbe Wert unter zwei Typen **ohne `console.error`** — hier an den Marken der Suche —, der unbekannte Typ als Nummer, und zweimal eine Regel, die **selbst** eine Klasse plus ein `title` ist: die Längenregel der Trefferspalte und der Kettenhinweis |
+
+> **Korrigiert 20.08.2026, nachgetragen zur Korrektur vom 19.08.2026.** Die Zeile zu
+> `rohdaten.test.ts` führte die Beschriftungsregel „**in allen fünf Lagen** (aufgelöster
+> Schrittname, Rückfall `Schritt N · Familie`, ohne Schrittfolge, **Eingang**, Familie allein auf
+> Schritt 0)". Es sind **vier**: Die Lage *Eingang → Eingegangene Datei* ist am 19.08.2026
+> entfallen.
+>
+> **Gemessen ist (M73):** `Message.Payload.GUID` trägt in **6.249 von 6.249** Nachrichten (Fenster
+> A) und **214.330 von 214.330** (Fenster B) denselben Verweis wie die Nutzdatenzeile mit dem
+> **höchsten `MessageActionID`** derselben Nachricht — kein Gegenfall. Das Artefakt ist aus der
+> Liste entfallen, und an die Stelle der weggefallenen Lage ist ein Testfall getreten: dass für
+> diesen Namen **kein Ziel** entsteht ([`rohdaten-frontend.md`](rohdaten-frontend.md) §2 und §9).
+>
+> *Ausdrücklich nicht behauptet:* dass „höchster `MessageActionID`" gleichbedeutend mit „zeitlich
+> zuletzt" ist. Gemessen ist die Schrittnummer, nicht die Uhr.
+>
+> **Bei derselben Gelegenheit zwei Verweisfehler berichtigt, beide keine Folge von M73.** Die Zeile
+> zu `rohdaten.test.ts` verwies für die Beschriftungsregel auf `rohdaten-frontend.md` **§3**; dort
+> steht sie in **§2** — §3 sind die Ziele an der Zeitleiste. Die Zeile zu
+> `artefakt-ansicht.test.tsx` verwies für den Download-Knopf und die Beschriftung ohne Nachladen auf
+> **§8**; §8 ist „Handwerk" und trägt keinen der beiden. Richtig sind **§6** (Download und
+> Gleichlauf) und **§4** („Drei Abfragen, und jede hat ihren Grund"). Beide Verweise waren seit dem
+> 18.08.2026 falsch.
+>
+> **Die Fallzahlen der drei Dateien sind unverändert** — 29, 9 und 8. In `rohdaten.test.ts` sind
+> zwei Fälle entfallen und zwei hinzugekommen; dass die Summe gleich bleibt, ist Zufall und keine
+> Absicht. Die Gesamtzahl der gerenderten Fälle steht weiterhin **ausschließlich** im Kopf von
+> `frontend/vitest.config.mts` und ist unberührt: Beide entfallenen Fälle sind reine Funktionen.
 
 ---
 

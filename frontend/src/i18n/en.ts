@@ -273,7 +273,6 @@ export const en: Texte = {
       // Raw data and logs (step 8). The family (`Converter`, `FTPSender`) is a
       // technical value from the property name and is never translated.
       dateien: {
-        eingangTitel: "Incoming file",
         eingang: "Arrival",
         eingangHinweis:
           "What was stored when the message arrived. The arrival is not a step of the flow and therefore does not appear in the timeline.",

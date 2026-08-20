@@ -99,15 +99,18 @@ function detail(): Nachrichtendetail {
 function liste(): Artefaktliste {
   return {
     messageId: MESSAGE_ID,
-    eingang: {
-      artefaktId: "0-Message.Payload.GUID",
-      name: "Message.Payload.GUID",
-      familie: "Message",
-      art: "NUTZDATEN",
-      schritt: 0,
-      beschnittMoeglich: false,
-    },
     nutzdaten: [
+      // Das Paar des Lesedienstes auf Schritt 0 — seit dem 19.08.2026 alles, was
+      // dort liegt. `Message.Payload.GUID` stand bis dahin in einem eigenen Feld
+      // `eingang` und ist mit M73 entfallen.
+      {
+        artefaktId: "0-FileReader.Payload.GUID",
+        name: "FileReader.Payload.GUID",
+        familie: "FileReader",
+        art: "NUTZDATEN",
+        schritt: 0,
+        beschnittMoeglich: false,
+      },
       {
         artefaktId: ARTEFAKT_ID,
         name: "Converter.Payload.GUID",

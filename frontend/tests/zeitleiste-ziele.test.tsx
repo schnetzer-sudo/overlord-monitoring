@@ -95,9 +95,14 @@ function detail(werte: Partial<Nachrichtendetail> = {}): Nachrichtendetail {
  * **Die gemessene Gestalt einer Nachricht: die Zeitleiste führt drei Schritte,
  * die Artefakte liegen auf vier Positionen.**
  *
- * Auf Schritt `0` sitzen die eingegangene Datei *und* das Paar des Lesedienstes
- * (M57, Fenster A) — er kommt in `schritte[]` nicht vor, weil das Backend den
- * Metadaten-Schritt dort ausnimmt (`docs/nachrichtendetail.md` §4).
+ * Auf Schritt `0` sitzt das Paar des Lesedienstes (M57, Fenster A) — er kommt in
+ * `schritte[]` nicht vor, weil das Backend den Metadaten-Schritt dort ausnimmt
+ * (`docs/nachrichtendetail.md` §4).
+ *
+ * **`Message.Payload.GUID` stand bis zum 19.08.2026 daneben** und galt als die
+ * eingegangene Datei. Nach M73 zeigt der Name auf die Nutzdatenzeile mit dem
+ * höchsten `MessageActionID` derselben Nachricht; das Backend führt ihn nicht
+ * mehr.
  */
 const SCHRITTE = [
   schritt(1, "Datei konvertiert"),
@@ -107,7 +112,6 @@ const SCHRITTE = [
 
 const LISTE: Artefaktliste = {
   messageId: MESSAGE_ID,
-  eingang: artefakt(0, "Message", "NUTZDATEN"),
   nutzdaten: [artefakt(0, "SAPReader", "NUTZDATEN"), artefakt(1, "Converter", "NUTZDATEN")],
   protokolle: [
     artefakt(0, "SAPReader", "PROTOKOLL", true),
@@ -294,12 +298,16 @@ describe("Die Ziele an der Zeitleiste", () => {
    * darunter `Schritt 0 · SAPReader`. Der Grund ist keine Fehldarstellung,
    * sondern eine Ausnahme im Backend: `schritte[]` lässt den Metadaten-Schritt
    * weg (`SOSActionID = 0`), die Artefaktliste führt ihre `MessageActionID`
-   * ungefiltert — und auf Schritt `0` liegt **nicht nur** der Eingang, sondern
-   * auch das Paar des Lesedienstes (M57).
+   * ungefiltert — und auf Schritt `0` liegt das Paar des Lesedienstes (M57).
    *
-   * Sie bekommen deshalb eine eigene Zeile **über** der Leiste, und dort heißen
-   * sie nach ihrer Familie statt nach einer Schrittnummer, die es in der Leiste
-   * nicht gibt.
+   * Es bekommt deshalb eine eigene Zeile **über** der Leiste, und dort heißen
+   * die beiden nach ihrer Familie statt nach einer Schrittnummer, die es in der
+   * Leiste nicht gibt.
+   *
+   * **Seit dem 19.08.2026 sind es zwei Ziele statt dreier.** Das dritte war
+   * `Message.Payload.GUID`, geführt als *Eingegangene Datei*; nach M73 zeigt der
+   * Name auf die Nutzdatenzeile mit dem höchsten `MessageActionID` derselben
+   * Nachricht — dieselbe Datei, die die Leiste ohnehin führt.
    */
   it("stellt die Artefakte des Metadaten-Schritts über die Leiste, mit Familie statt Nummer", async () => {
     const { behaelter, abbauen } = await rendereDetail({ schritte: SCHRITTE }, LISTE);
@@ -317,10 +325,6 @@ describe("Die Ziele an der Zeitleiste", () => {
         })),
       ).toEqual([
         {
-          name: "Eingegangene Datei",
-          ziel: `/nachrichten/${MESSAGE_ID}/dateien/0-Message.Payload.GUID`,
-        },
-        {
           name: "Nutzdaten · SAPReader",
           ziel: `/nachrichten/${MESSAGE_ID}/dateien/0-SAPReader.Payload.GUID`,
         },
@@ -329,6 +333,9 @@ describe("Die Ziele an der Zeitleiste", () => {
           ziel: `/nachrichten/${MESSAGE_ID}/dateien/0-SAPReader.Log.GUID`,
         },
       ]);
+
+      // Kein Ziel auf die Kennung, die es einen Tag lang gab (M73).
+      expect(behaelter.innerHTML).not.toContain("0-Message.Payload.GUID");
 
       // Niemals „Schritt 0": Die Zeitleiste führt ihn nicht, also findet der
       // Nutzer die Nummer nirgends wieder.
@@ -348,15 +355,20 @@ describe("Die Ziele an der Zeitleiste", () => {
    * Abfragezeichenkette — und **kein doppelter React-Schlüssel**, obwohl
    * `Converter.Log.GUID` mehrfach vorkommt. Der Beleg dafür ist das Ausbleiben
    * eines `console.error` (`tests/setup/konsole.ts`).
+   *
+   * **Die Zahl bleibt fünfzehn.** Eines der fünfzehn war bis zum 19.08.2026
+   * `Message.Payload.GUID` im Feld `eingang`; an seine Stelle tritt hier eine
+   * Nutzdatei auf Schritt `3`, damit die Belastungsprobe die aus M55 bleibt und
+   * nicht stillschweigend auf vierzehn schrumpft.
    */
   it("bleibt bei fünfzehn Artefakten bedienbar", async () => {
     const viele: Artefaktliste = {
       messageId: MESSAGE_ID,
-      eingang: artefakt(0, "Message", "NUTZDATEN"),
       nutzdaten: [
         artefakt(0, "FileReader", "NUTZDATEN"),
         artefakt(1, "Converter", "NUTZDATEN"),
         artefakt(2, "Converter", "NUTZDATEN"),
+        artefakt(3, "Router", "NUTZDATEN"),
         artefakt(4, "Splitter", "NUTZDATEN"),
         artefakt(6, "Converter", "NUTZDATEN"),
       ],
@@ -391,9 +403,9 @@ describe("Die Ziele an der Zeitleiste", () => {
       ).toBe(true);
       expect(adressen.some((adresse) => adresse.includes("?"))).toBe(false);
 
-      // Acht Schrittzeilen tragen zusammen zwölf Ziele; die drei auf Schritt 0
+      // Acht Schrittzeilen tragen zusammen dreizehn Ziele; die zwei auf Schritt 0
       // hängen an der Eingangszeile darüber.
-      expect(zeilen(behaelter).flatMap((zeile) => zeile.ziele)).toHaveLength(12);
+      expect(zeilen(behaelter).flatMap((zeile) => zeile.ziele)).toHaveLength(13);
 
       // Der Rückfall greift genau dort, wo die Schrittfolge keinen Namen liefert
       // — und er erfindet keinen.

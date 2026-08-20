@@ -406,14 +406,21 @@ export const de = {
       // einer Nachricht hängen: die eingegangene Datei, die umgewandelten
       // Fassungen und die Protokolle der Schritte (docs/rohdaten.md).
       dateien: {
-        // Die eingegangene Datei hängt auf Schritt 0, dem Ort der Metadaten, und
-        // der ist kein Ablaufschritt (M57, M17 3). Sie steht deshalb über der
-        // Zeitleiste und in keiner ihrer Zeilen.
-        eingangTitel: "Eingegangene Datei",
         // Die Beschriftung der Zeile über der Zeitleiste. Auf Schritt 0 liegt
-        // nicht nur die eingegangene Datei, sondern auch das Paar des
-        // Lesedienstes — „Eingang" trägt beides, „Eingegangene Datei" trüge nur
-        // eins davon.
+        // das Paar des Lesedienstes, Datei und Protokoll (M57). Schritt 0 ist
+        // der Ort der Metadaten und kein Ablaufschritt (M57, M17 3) — er kommt
+        // in schritte[] nicht vor und steht deshalb in keiner Zeile der
+        // Zeitleiste.
+        //
+        // Bis zum 19.08.2026 stand hier zusätzlich `eingangTitel`
+        // („Eingegangene Datei") für Message.Payload.GUID. Der Name trägt nach
+        // M73 den Verweis der Nutzdatenzeile mit dem höchsten MessageActionID
+        // derselben Nachricht; das Artefakt ist entfallen, der Text mit ihm.
+        //
+        // Belegvermerk (L10): Gemessen ist, WELCHE Namen auf Schritt 0 liegen
+        // (M57). Dass das Paar des Lesedienstes den Eingang der Nachricht
+        // bezeichnet, ist eine Sichtprüfung des Auftraggebers an EINER Nachricht
+        // vom 19.08.2026 und keine Messung.
         eingang: "Eingang",
         eingangHinweis:
           "Was beim Eingang der Nachricht abgelegt worden ist. Der Eingang ist kein Schritt des Ablaufs und steht deshalb nicht in der Zeitleiste.",

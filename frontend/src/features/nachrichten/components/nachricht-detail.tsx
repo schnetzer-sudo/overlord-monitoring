@@ -223,7 +223,7 @@ export function NachrichtDetail({
  *
  * | | |
  * |---|---|
- * | **Eingang** | alles auf Schritt `0` — die eingegangene Datei und das Paar des Lesedienstes. Er hängt an keinem Ablaufschritt und steht deshalb **über** der Leiste |
+ * | **Eingang** | alles auf Schritt `0` — seit dem 19.08.2026 das Paar des Lesedienstes, Datei und Protokoll (M73). Schritt `0` hängt an keinem Ablaufschritt und steht deshalb **über** der Leiste |
  * | **Zeitleiste** | je Schritt Name, Balken, Dauer — und die Artefakte, die auf ihm liegen |
  * | **Ohne Schritt in der Zeitleiste** | der Rest. Gemessen leer (M57, Befund 1), gebaut, damit kein Artefakt lautlos verschwindet |
  * | **Technische Eigenschaften** | das Technischste zuletzt, nach Schritt gruppiert und aus der Leiste anspringbar |

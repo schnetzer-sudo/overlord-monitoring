@@ -616,12 +616,19 @@ export type Artefakt = {
 };
 
 /**
- * Die Artefakte einer Nachricht, **dreigeteilt in der Antwort**.
+ * Die Artefakte einer Nachricht, **zweigeteilt in der Antwort**.
  *
  * Die Aufteilung kommt aus dem Datenmodell und nicht aus einer
- * Gestaltungsentscheidung: `Message.Payload.GUID` hängt auf Schritt `0`, dem Ort
- * der *Metadaten* — das ist kein Ablaufschritt. Sie in die Schrittfolge zu legen
- * wäre schlicht falsch.
+ * Gestaltungsentscheidung: Der Beschnitt greift ausschließlich bei
+ * `PROTOKOLL`, und `beschnittMoeglich` hängt daran.
+ *
+ * **Das dritte Feld ist am 19.08.2026 entfallen.** Es hieß `eingang` und führte
+ * `Message.Payload.GUID` als „die eingegangene Datei". Nach **M73** trägt dieser
+ * Name in 6.249 von 6.249 (Fenster A) und 214.330 von 214.330 Nachrichten
+ * (Fenster B) den Verweis der Nutzdatenzeile mit dem **höchsten
+ * `MessageActionID`** derselben Nachricht — er benennt keine eigene Datei,
+ * sondern zeigt auf eine, die ohnehin an ihrem Schritt hängt. Das Backend führt
+ * ihn seither nicht mehr.
  *
  * **Die Oberfläche teilt daraus neu ein.** Seit der Nachbesserung vom
  * 18.08.2026 hängen die Artefakte an den Zeilen der Zeitleiste, geordnet nach
@@ -635,9 +642,7 @@ export type Artefakt = {
  */
 export type Artefaktliste = {
   messageId: string;
-  /** Die eingegangene Datei, oder `null`. Die Tabelle erzwingt sie nicht. */
-  eingang: Artefakt | null;
-  /** Die umgewandelten Fassungen, nach Schritt geordnet. **Ohne** den Eingang. */
+  /** Die Dateien, nach Schritt geordnet. */
   nutzdaten: Artefakt[];
   /** Die Protokolle je Schritt, nach Schritt geordnet. */
   protokolle: Artefakt[];
@@ -777,8 +782,8 @@ export function holeBamSuche(abfrage: string): Promise<BamSuchergebnis> {
 }
 
 /**
- * Die Artefakte einer Nachricht — nach Eingang, Nutzdaten und Protokollen
- * geteilt, ohne jeden Filestore-Verweis.
+ * Die Artefakte einer Nachricht — nach Nutzdaten und Protokollen geteilt, ohne
+ * jeden Filestore-Verweis.
  *
  * **Kein Zeitfenster und kein Cursor.** Die Menge ist über einen
  * Primärschlüssel benannt; es sind drei bis fünfzehn Zeilen zu einer benannten

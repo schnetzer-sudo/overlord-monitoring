@@ -77,18 +77,35 @@ function anzeige(teile: Partial<Artefaktanzeige> = {}): Artefaktanzeige {
   };
 }
 
-const EINGANG = artefakt({
-  artefaktId: "0-Message.Payload.GUID",
-  name: "Message.Payload.GUID",
-  familie: "Message",
+/**
+ * **Das Paar des Lesedienstes auf Schritt `0`** — seit dem 19.08.2026 alles, was
+ * dort liegt.
+ *
+ * `Message.Payload.GUID` stand bis dahin daneben und galt als die eingegangene
+ * Datei. Nach **M73** trägt der Name in 6.249 von 6.249 und 214.330 von 214.330
+ * Nachrichten den Verweis der Nutzdatenzeile mit dem **höchsten
+ * `MessageActionID`** derselben Nachricht; das Backend führt ihn nicht mehr.
+ */
+const LESEDIENST_DATEI = artefakt({
+  artefaktId: "0-SAPReader.Payload.GUID",
+  name: "SAPReader.Payload.GUID",
+  familie: "SAPReader",
+  schritt: 0,
+});
+
+const LESEDIENST_PROTOKOLL = artefakt({
+  artefaktId: "0-SAPReader.Log.GUID",
+  name: "SAPReader.Log.GUID",
+  familie: "SAPReader",
+  art: "PROTOKOLL",
   schritt: 0,
 });
 
 const LISTE: Artefaktliste = {
   messageId: "8f3a1c2e-0000-4000-8000-000000000001",
-  eingang: EINGANG,
-  nutzdaten: [artefakt({ artefaktId: "2-Converter.Payload.GUID" })],
+  nutzdaten: [LESEDIENST_DATEI, artefakt({ artefaktId: "2-Converter.Payload.GUID" })],
   protokolle: [
+    LESEDIENST_PROTOKOLL,
     artefakt({
       artefaktId: "2-Converter.Log.GUID",
       name: "Converter.Log.GUID",
@@ -114,7 +131,7 @@ describe("Die Beschriftung eines Artefakts", () => {
    */
   it("nimmt den Schrittnamen, wo der Schritt auflöst", () => {
     const beschriftung = artefaktBeschriftung(
-      { artefakt: artefakt({ artefaktId: "2-Converter.Payload.GUID" }), istEingang: false },
+      artefakt({ artefaktId: "2-Converter.Payload.GUID" }),
       [schritt(1, "Datei gelesen"), schritt(2, "Datei konvertiert")],
       TEXTE,
     );
@@ -132,14 +149,11 @@ describe("Die Beschriftung eines Artefakts", () => {
    */
   it("fällt auf Schrittnummer und Familie zurück, wo der Schritt nicht auflöst", () => {
     const beschriftung = artefaktBeschriftung(
-      {
-        artefakt: artefakt({
-          artefaktId: "3-FTPSender.Log.GUID",
-          familie: "FTPSender",
-          schritt: 3,
-        }),
-        istEingang: false,
-      },
+      artefakt({
+        artefaktId: "3-FTPSender.Log.GUID",
+        familie: "FTPSender",
+        schritt: 3,
+      }),
       [schritt(1, "Datei gelesen"), schritt(2, "Datei konvertiert")],
       TEXTE,
     );
@@ -155,26 +169,12 @@ describe("Die Beschriftung eines Artefakts", () => {
    */
   it("trägt ohne Schrittfolge überall den Rückfall", () => {
     const beschriftung = artefaktBeschriftung(
-      { artefakt: artefakt({ artefaktId: "2-Converter.Payload.GUID" }), istEingang: false },
+      artefakt({ artefaktId: "2-Converter.Payload.GUID" }),
       [],
       TEXTE,
     );
 
     expect(beschriftung).toBe("Schritt 2 · Converter");
-  });
-
-  /**
-   * **Der Eingang bekommt seinen eigenen Namen und niemals „Schritt 0".**
-   *
-   * Er hängt auf Schritt `0`, dem Ort der Metadaten — das ist kein Ablaufschritt
-   * (M57, M17 3) und kommt in `schritte[]` gar nicht vor. „Schritt 0 · Message"
-   * wäre technisch richtig und fachlich falsch.
-   */
-  it("nennt den Eingang die eingegangene Datei", () => {
-    const beschriftung = artefaktBeschriftung({ artefakt: EINGANG, istEingang: true }, [], TEXTE);
-
-    expect(beschriftung).toBe("Eingegangene Datei");
-    expect(beschriftung).not.toContain("0");
   });
 
   /**
@@ -184,14 +184,11 @@ describe("Die Beschriftung eines Artefakts", () => {
    */
   it("übersetzt die Familie nirgends", () => {
     const ohneSchritt = artefaktBeschriftung(
-      {
-        artefakt: artefakt({
-          artefaktId: "4-HTTPSender.Log.GUID",
-          familie: "HTTPSender",
-          schritt: 4,
-        }),
-        istEingang: false,
-      },
+      artefakt({
+        artefaktId: "4-HTTPSender.Log.GUID",
+        familie: "HTTPSender",
+        schritt: 4,
+      }),
       [],
       TEXTE,
     );
@@ -200,32 +197,20 @@ describe("Die Beschriftung eines Artefakts", () => {
   });
 
   /**
-   * **Auf Schritt `0` liegt nicht nur der Eingang** — dort sitzen auch die
-   * Artefakte des Lesedienstes, je Nachricht ein Paar aus Datei und Protokoll
-   * (M57, Fenster A: `SAPReader.*` 443 Zeilen je Richtung, `FileReader.*`
-   * 4.199, dazu sieben weitere Reader-Familien).
+   * **Auf Schritt `0` sitzen die Artefakte des Lesedienstes**, je Nachricht ein
+   * Paar aus Datei und Protokoll (M57, Fenster A: `SAPReader.*` 443 Zeilen je
+   * Richtung, `FileReader.*` 4.199, dazu sieben weitere Reader-Familien).
    *
    * Sie tragen **die Familie allein**. „Schritt 0 · SAPReader" wäre technisch
    * richtig und fachlich falsch: Schritt `0` steht in keiner Zeile der
    * Zeitleiste, und eine Nummer, die der Nutzer nirgends wiederfindet, ist keine
-   * Auskunft. Es ist dieselbe Begründung, aus der der Eingang nicht
-   * „Schritt 0 · Message" heißt.
+   * Auskunft.
+   *
+   * **Seit dem 19.08.2026 ist das die erste Lage der Regel** — die Lage davor
+   * galt dem Eingang und ist entfallen (M73).
    */
   it("nennt ein Artefakt auf Schritt 0 bei seiner Familie — ohne die Nummer", () => {
-    const beschriftung = artefaktBeschriftung(
-      {
-        artefakt: artefakt({
-          artefaktId: "0-SAPReader.Log.GUID",
-          name: "SAPReader.Log.GUID",
-          familie: "SAPReader",
-          art: "PROTOKOLL",
-          schritt: 0,
-        }),
-        istEingang: false,
-      },
-      [],
-      TEXTE,
-    );
+    const beschriftung = artefaktBeschriftung(LESEDIENST_PROTOKOLL, [], TEXTE);
 
     expect(beschriftung).toBe("SAPReader");
     expect(beschriftung).not.toContain("0");
@@ -244,14 +229,11 @@ describe("Die Ziele an der Zeitleiste", () => {
    */
   it("stellt die Art vor den Schrittnamen", () => {
     const ziel = artefaktziel(
-      {
-        artefakt: artefakt({
-          artefaktId: "2-Converter.Log.GUID",
-          name: "Converter.Log.GUID",
-          art: "PROTOKOLL",
-        }),
-        istEingang: false,
-      },
+      artefakt({
+        artefaktId: "2-Converter.Log.GUID",
+        name: "Converter.Log.GUID",
+        art: "PROTOKOLL",
+      }),
       [schritt(2, "Datei konvertiert")],
       TEXTE,
     );
@@ -261,13 +243,17 @@ describe("Die Ziele an der Zeitleiste", () => {
   });
 
   /**
-   * **Beim Eingang steht sie nicht** — *Nutzdaten · Eingegangene Datei* sagte
-   * zweimal dasselbe.
+   * **Jedes Ziel trägt seine Art — auch die auf Schritt `0`.**
+   *
+   * Die eine Ausnahme galt dem Eingang, weil *Nutzdaten · Eingegangene Datei*
+   * zweimal dasselbe sagte. Sie ist am 19.08.2026 mit dem Eingang entfallen
+   * (M73). An der Eingangszeile hängen jetzt zwei Ziele desselben Schritts, und
+   * genau dort ist die Art das einzige, was sie im Vorleseprogramm
+   * unterscheidet.
    */
-  it("lässt die Art beim Eingang weg", () => {
-    const ziel = artefaktziel({ artefakt: EINGANG, istEingang: true }, [], TEXTE);
-
-    expect(ziel.name).toBe("Eingegangene Datei");
+  it("trägt die Art auch an den beiden Zielen der Eingangszeile", () => {
+    expect(artefaktziel(LESEDIENST_DATEI, [], TEXTE).name).toBe("Nutzdaten · SAPReader");
+    expect(artefaktziel(LESEDIENST_PROTOKOLL, [], TEXTE).name).toBe("Protokoll · SAPReader");
   });
 
   /**
@@ -283,17 +269,14 @@ describe("Die Ziele an der Zeitleiste", () => {
    */
   it("kündigt den Ausschnitt im Namen und im Tooltip an", () => {
     const ziel = artefaktziel(
-      {
-        artefakt: artefakt({
-          artefaktId: "3-FTPSender.Log.GUID",
-          name: "FTPSender.Log.GUID",
-          familie: "FTPSender",
-          art: "PROTOKOLL",
-          schritt: 3,
-          beschnittMoeglich: true,
-        }),
-        istEingang: false,
-      },
+      artefakt({
+        artefaktId: "3-FTPSender.Log.GUID",
+        name: "FTPSender.Log.GUID",
+        familie: "FTPSender",
+        art: "PROTOKOLL",
+        schritt: 3,
+        beschnittMoeglich: true,
+      }),
       [],
       TEXTE,
     );
@@ -306,14 +289,17 @@ describe("Die Ziele an der Zeitleiste", () => {
 
   /**
    * **Eingeteilt wird nach `MessageActionID`, umsortiert wird nichts.** Innerhalb
-   * eines Eimers bleibt die Reihenfolge die des Backends: Eingang, Nutzdaten,
+   * eines Eimers bleibt die Reihenfolge die des Backends: Nutzdaten, dann
    * Protokolle.
    */
   it("teilt die Ziele nach Schritt ein und behält die Reihenfolge", () => {
     const eimer = zieleJeSchritt(LISTE, [schritt(2, "Datei konvertiert")], TEXTE);
 
     expect([...eimer.keys()]).toEqual([0, 2, 3]);
-    expect(eimer.get(0)?.map((ziel) => ziel.artefaktId)).toEqual(["0-Message.Payload.GUID"]);
+    expect(eimer.get(0)?.map((ziel) => ziel.artefaktId)).toEqual([
+      "0-SAPReader.Payload.GUID",
+      "0-SAPReader.Log.GUID",
+    ]);
     expect(eimer.get(2)?.map((ziel) => ziel.artefaktId)).toEqual([
       "2-Converter.Payload.GUID",
       "2-Converter.Log.GUID",
@@ -322,6 +308,40 @@ describe("Die Ziele an der Zeitleiste", () => {
       "Nutzdaten · Datei konvertiert",
       "Protokoll · Datei konvertiert",
     ]);
+  });
+
+  /**
+   * **`Message.Payload.GUID` erzeugt kein Ziel** — der Fall, der diese Runde
+   * trägt.
+   *
+   * Nach **M73** (19.08.2026) trägt der Name in **6.249 von 6.249** Nachrichten
+   * (Fenster A) und **214.330 von 214.330** (Fenster B) den Verweis der
+   * Nutzdatenzeile mit dem **höchsten `MessageActionID`** derselben Nachricht.
+   * Kein Gegenfall. Er benennt damit keine eigene Datei, sondern zeigt auf eine,
+   * die ohnehin an ihrem Schritt hängt — und die Eingangszeile zeigte dieselbe
+   * Datei ein zweites Mal, die die Zeitleiste am letzten Schritt schon führte.
+   *
+   * **Das Artefakt ist deshalb aus der Antwort des Backends entfallen**, und
+   * damit aus der Oberfläche. Dieser Test hält beide Hälften fest: Die
+   * Eingangszeile trägt genau das Paar des Lesedienstes, und **nirgends** hängt
+   * ein Ziel unter dieser Kennung.
+   *
+   * **Nicht gemessen ist, ob die Datei die zuletzt erzeugte ist.** „Höchster
+   * `MessageActionID`" ist die Größe, die auf dem Tisch liegt; dass die
+   * Schrittnummer die Ausführungsreihenfolge ist, wäre eine Deutung. Sie steht
+   * deshalb in keiner Beschriftung — und in diesem Test auch nicht.
+   */
+  it("erzeugt für Message.Payload.GUID kein Ziel", () => {
+    const eimer = zieleJeSchritt(LISTE, [schritt(2, "Datei konvertiert")], TEXTE);
+    const alle = [...eimer.values()].flat();
+
+    expect(eimer.get(0)?.map((ziel) => ziel.artefaktId)).toEqual([
+      "0-SAPReader.Payload.GUID",
+      "0-SAPReader.Log.GUID",
+    ]);
+    expect(alle.map((ziel) => ziel.artefaktId)).not.toContain("0-Message.Payload.GUID");
+    expect(alle.map((ziel) => ziel.titel)).not.toContain("Message.Payload.GUID");
+    expect(alle.map((ziel) => ziel.name).join(" ")).not.toContain("Eingegangene Datei");
   });
 
   /** Ohne Liste keine Ziele — der Zustand, solange die Abfrage läuft. */
@@ -341,7 +361,7 @@ describe("Die Ziele an der Zeitleiste", () => {
    * **Schritt `0` gehört ausdrücklich nicht dazu**: Er hat seine eigene Zeile
    * über der Leiste.
    */
-  it("sammelt ein, was weder Eingang noch Zeile der Zeitleiste ist", () => {
+  it("sammelt ein, was weder Eingangszeile noch Zeile der Zeitleiste ist", () => {
     const eimer = zieleJeSchritt(LISTE, [schritt(2, "Datei konvertiert")], TEXTE);
 
     expect(
@@ -359,39 +379,42 @@ describe("Die Ziele an der Zeitleiste", () => {
 
 describe("Die Artefakte einer Nachricht", () => {
   /**
-   * Eingang, Nutzdaten, Protokolle — in dieser Reihenfolge und **ohne
-   * Umsortieren**. Die Ordnung innerhalb der beiden Listen ist die des Backends
-   * (`ORDER BY MessageActionID, MessagePropertyName`) und steht damit an genau
-   * einer Stelle.
+   * Nutzdaten, dann Protokolle — in dieser Reihenfolge und **ohne Umsortieren**.
+   * Die Ordnung innerhalb der beiden Listen ist die des Backends (`ORDER BY
+   * MessageActionID, MessagePropertyName`) und steht damit an genau einer
+   * Stelle.
+   *
+   * **Das dritte Feld davor ist am 19.08.2026 entfallen** (M73): Die Antwort ist
+   * zweigeteilt, und diese Funktion hängt zwei Listen aneinander statt drei.
    */
   it("führt sie in Anzeigereihenfolge und ordnet nichts um", () => {
-    expect(artefakteintraege(LISTE).map((eintrag) => eintrag.artefakt.artefaktId)).toEqual([
-      "0-Message.Payload.GUID",
+    expect(artefakteintraege(LISTE).map((eintrag) => eintrag.artefaktId)).toEqual([
+      "0-SAPReader.Payload.GUID",
       "2-Converter.Payload.GUID",
+      "0-SAPReader.Log.GUID",
       "2-Converter.Log.GUID",
       "3-FTPSender.Log.GUID",
     ]);
-    expect(artefakteintraege(LISTE).map((eintrag) => eintrag.istEingang)).toEqual([
-      true,
-      false,
-      false,
-      false,
-    ]);
   });
 
-  it("findet einen Eintrag über seine Kennung — und den Eingang als Eingang", () => {
-    expect(findeArtefakt(LISTE, "3-FTPSender.Log.GUID")?.artefakt.familie).toBe("FTPSender");
-    expect(findeArtefakt(LISTE, "0-Message.Payload.GUID")?.istEingang).toBe(true);
+  it("findet ein Artefakt über seine Kennung", () => {
+    expect(findeArtefakt(LISTE, "3-FTPSender.Log.GUID")?.familie).toBe("FTPSender");
+    expect(findeArtefakt(LISTE, "0-SAPReader.Log.GUID")?.schritt).toBe(0);
   });
 
   /**
    * **`null` ist kein Fehler**, sondern der Zustand, solange die Liste lädt —
    * und der Zustand bei einer Kennung aus einer fremden URL. Die Ansicht kommt
    * ohne den Eintrag aus; ihr fehlt dann die Beschriftung, nicht der Inhalt.
+   *
+   * **`0-Message.Payload.GUID` steht hier stellvertretend für eine Kennung, die
+   * es einen Tag lang gab.** Sie ist seit dem 19.08.2026 eine unbekannte wie
+   * jede andere — kein Umleitungspfad, kein Sonderfall (M73).
    */
   it("liefert null für eine unbekannte Kennung und für eine fehlende Liste", () => {
     expect(findeArtefakt(LISTE, "9-Gibtesnicht.Log.GUID")).toBeNull();
-    expect(findeArtefakt(undefined, "0-Message.Payload.GUID")).toBeNull();
+    expect(findeArtefakt(LISTE, "0-Message.Payload.GUID")).toBeNull();
+    expect(findeArtefakt(undefined, "0-SAPReader.Payload.GUID")).toBeNull();
   });
 });
 

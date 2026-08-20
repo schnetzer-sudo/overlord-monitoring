@@ -149,12 +149,10 @@ class ArtefaktServiceTest {
         "FileReader.Payload.GUID", schritt, "BEISPIELPROD42|deadbeef-0000-4000-8000-0123456789ac");
   }
 
-  private static Artefaktzeile eingang() {
-    return new Artefaktzeile(
-        Artefaktnamen.NAME_EINGANG,
-        (short) 0,
-        "BEISPIELPROD42|deadbeef-0000-4000-8000-0123456789ad");
-  }
+  // Es gibt hier keine Zeile fuer Message.Payload.GUID mehr. Sie kaeme im Betrieb nie an: Das
+  // Repository laesst sie seit dem 19.08.2026 nicht durch (M73, Artefaktnamen#NAME_ZEIGER), und
+  // eine Attrappe, die sie trotzdem liefert, pruefte einen Zustand, den es nicht gibt. Belegt ist
+  // der Ausschluss dort, wo er stattfindet: ArtefaktStatementsTest.
 
   // ─── Die Liste ────────────────────────────────────────────────────────────────
 
@@ -162,26 +160,39 @@ class ArtefaktServiceTest {
   @DisplayName("Die Artefaktliste")
   class Liste {
 
+    /**
+     * <b>Zweigeteilt: Nutzdaten und Protokolle.</b> Das dritte Feld {@code eingang} ist am
+     * 19.08.2026 entfallen (M73) — es fuehrte {@code Message.Payload.GUID} als „die eingegangene
+     * Datei", und der Name zeigt in beiden gemessenen Fenstern ohne Gegenfall auf die
+     * Nutzdatenzeile mit dem hoechsten {@code MessageActionID} derselben Nachricht.
+     *
+     * <p>Die Trennlinie ist damit die einzige, die aus dem Datenmodell folgt: Der Beschnitt greift
+     * ausschliesslich bei Protokollen. <b>Schritt {@code 0} ist keine Trennlinie</b> — die Zeilen
+     * des Lesedienstes liegen dort und stehen in denselben beiden Listen wie alle anderen.
+     */
     @Test
-    @DisplayName("Zweigeteilt, der Eingang im Kopf und nicht in der Schrittfolge")
+    @DisplayName("Zweigeteilt: Nutzdaten und Protokolle, ueber alle Schritte")
     void zweigeteilt() {
-      artefakte(eingang(), nutzdatei((short) 1), protokoll((short) 1), protokoll((short) 2));
+      artefakte(
+          nutzdatei((short) 0),
+          protokoll((short) 0),
+          nutzdatei((short) 1),
+          protokoll((short) 1),
+          protokoll((short) 2));
 
       ArtefaktlisteResponse antwort = service.liste(MANDANT, Rolle.MANDANT, MESSAGE_ID);
 
-      assertThat(antwort.eingang()).isNotNull();
-      assertThat(antwort.eingang().schritt()).isEqualTo((short) 0);
-      assertThat(antwort.nutzdaten()).hasSize(1);
-      assertThat(antwort.protokolle()).hasSize(2);
+      assertThat(antwort.nutzdaten()).hasSize(2);
+      assertThat(antwort.protokolle()).hasSize(3);
       assertThat(antwort.nutzdaten())
-          .as("Der Eingang steht im Kopf und nicht zusaetzlich in den Nutzdaten")
-          .noneMatch(a -> a.schritt() == 0);
+          .as("Schritt 0 bekommt keinen Sonderplatz mehr — er steht in derselben Liste")
+          .anyMatch(a -> a.schritt() == 0);
     }
 
     @Test
     @DisplayName("Sie traegt keinen Verweis — weder GUID noch Ablagenkennung")
     void ohne_verweis() {
-      artefakte(eingang(), protokoll((short) 1));
+      artefakte(nutzdatei((short) 0), protokoll((short) 1));
 
       ArtefaktlisteResponse antwort = service.liste(MANDANT, Rolle.MANDANT, MESSAGE_ID);
 
@@ -206,7 +217,7 @@ class ArtefaktServiceTest {
     @Test
     @DisplayName("Sie spricht die Ablage nicht an")
     void ohne_abruf() {
-      artefakte(eingang(), protokoll((short) 1));
+      artefakte(nutzdatei((short) 0), protokoll((short) 1));
 
       service.liste(MANDANT, Rolle.MANDANT, MESSAGE_ID);
 
@@ -608,27 +619,36 @@ class ArtefaktServiceTest {
     }
 
     /**
-     * Der Eingang ist der Kopf der Liste und das naheliegendste Ziel eines Nutzers. Sein
-     * Originalname liegt unter {@code FileReader.FileProperty.OriginalFilename} auf demselben
-     * Schritt — <b>nicht</b> unter {@code Message.FileProperty.OriginalFilename}, denn den gibt es
-     * im gemessenen Bestand nicht (M56 a).
+     * Die Datei des Lesedienstes auf Schritt {@code 0} traegt ihren Originalnamen: {@code
+     * FileReader.FileProperty.OriginalFilename} auf demselben Schritt (M56 a).
+     *
+     * <p><b>Belegvermerk (L10).</b> <i>Gemessen ist:</i> welche Namen den Originalnamen tragen (M56
+     * a) und welche Namen auf Schritt {@code 0} liegen (M57). <i>Behauptet wird:</i> dass die Datei
+     * des Lesedienstes die <b>eingegangene</b> ist. Das beruht auf einer Sichtpruefung des
+     * Auftraggebers an <b>einer</b> Nachricht vom 19.08.2026 und ist <b>nicht gemessen</b>. Fuer
+     * diesen Test ist es ohne Belang — geprueft wird, dass der Name gefunden wird, nicht was die
+     * Datei ist.
+     *
+     * <p>Der Test hiess bis zum 19.08.2026 „Der Eingang bekommt den Originalnamen des Lesedienstes"
+     * und lief ueber {@code 0-Message.Payload.GUID}. Diese Kennung gibt es nicht mehr (M73);
+     * geprueft wird jetzt dieselbe Sache an dem Artefakt, das den Namen wirklich traegt.
      */
     @Test
-    @DisplayName("Der Eingang bekommt den Originalnamen des Lesedienstes")
-    void eingang_bekommt_originalnamen() {
-      artefakte(eingang());
+    @DisplayName("Die Datei des Lesedienstes bekommt seinen Originalnamen")
+    void lesedienst_bekommt_originalnamen() {
+      artefakte(nutzdatei((short) 0));
       ablage.liefert("Erfundener Inhalt");
       when(repository.findeOriginaldateiname(any(), anyString(), anyShort()))
           .thenReturn(Optional.of("ERFUNDEN-Beleg.001"));
 
       ArtefaktService.Download download =
           service.download(
-              MANDANT, MANDANT_NUTZER, MESSAGE_ID, "0-Message.Payload.GUID", "127.0.0.1");
+              MANDANT, MANDANT_NUTZER, MESSAGE_ID, "0-FileReader.Payload.GUID", "127.0.0.1");
 
       assertThat(download.dateiname())
           .as(
-              "Ueber die Familie „Message\" gesucht bliebe er ohne Namen und bekaeme die"
-                  + " MessageID — genau das, was rohdaten.md §9 dem Altsystem vorwirft")
+              "Ohne Originalnamen bekaeme er den konstruierten mit der MessageID darin — genau"
+                  + " das, was rohdaten.md §9 dem Altsystem vorwirft")
           .isEqualTo("ERFUNDEN-Beleg.001");
     }
 
@@ -744,7 +764,7 @@ class ArtefaktServiceTest {
     @Test
     @DisplayName("Die Liste wird nicht protokolliert — sie holt keine Datei")
     void liste_ohne_eintrag() {
-      artefakte(eingang(), protokoll((short) 1));
+      artefakte(nutzdatei((short) 0), protokoll((short) 1));
 
       service.liste(MANDANT, Rolle.MANDANT, MESSAGE_ID);
 

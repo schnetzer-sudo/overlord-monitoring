@@ -53,11 +53,16 @@ import java.util.stream.IntStream;
  * <p>Interne Kennungen, obwohl sie auf <b>jeder</b> Nachricht stehen: {@code Message.GUID}, {@code
  * Message.SOS}, {@code Message.Payload.GUID} und {@code Message.SourceMessageID} (je 100 bzw. 65,6
  * Prozent). Sie sind nach dem Leitsatz Beiwerk, keine Hauptinformation. {@code
- * Message.Payload.GUID} wird in Schritt 8 ein <i>Knopf</i> und kein Anzeigewert, {@code
- * Message.SourceMessageID} in Schritt 6 eine <i>Verkettung</i>. Ebenso draussen: {@code
+ * Message.SourceMessageID} wird in Schritt 6 eine <i>Verkettung</i>. Ebenso draussen: {@code
  * Message.MessageActionID}, {@code Message.SOSActionID} und {@code
  * Message.SOSActionServiceProperties} — sie stehen ebenfalls auf jeder Nachricht, wiederholen aber
  * nur, was die Schrittfolge ohnehin zeigt.
+ *
+ * <p><b>Berichtigt am 19.08.2026.</b> Hier stand bis heute, {@code Message.Payload.GUID} werde „in
+ * Schritt 8 ein <i>Knopf</i> und kein Anzeigewert". Er wird in Schritt 8 <b>gar nichts</b>: Nach
+ * M73 traegt der Name den Verweis der Nutzdatenzeile mit dem hoechsten {@code MessageActionID}
+ * derselben Nachricht und faellt aus der Artefaktliste ({@code Artefaktnamen#NAME_ZEIGER}). Der
+ * Ausschluss hier bleibt richtig — nur seine Begruendung nicht.
  *
  * <p><b>Keine deutschen Beschriftungen hier.</b> Geliefert werden Rohname, Wert und Rang; die
  * Beschriftung kommt aus der Sprachdatei der Oberflaeche. Das ist dieselbe Aufteilung, die die API

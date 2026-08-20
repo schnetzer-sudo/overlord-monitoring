@@ -5,6 +5,11 @@ Erhoben am **17.08.2026** gegen die Testkopie (`GlassfishDB`) und gegen die File
 Auftrag: [`messungen-schritt8-auftrag.md`](messungen-schritt8-auftrag.md), **Fassung 3** vom
 17.08.2026.
 
+**Nachgetragen am 19.08.2026: M73** — vier weitere SQL-Sitzungen aus eigenem Anlass, mit eigenem
+Auftrag und eigener vorregistrierter Deutung. Sie stehen unter „Teil A — Nachtrag vom 19.08.2026"
+und sind von der Erhebung des 17.08.2026 **getrennt** gehalten; keine Zahl jener Erhebung ist
+angefasst worden.
+
 **Diese Runde baut nichts und entscheidet nichts.** Die vorregistrierten Deutungen standen
 vollständig in dieser Datei, **bevor** das erste Statement lief; die Ergebnisteile waren dabei leer.
 Wo ein Ergebnis eine Entscheidung verlangt, steht sie unter „Offene Punkte" und ist nicht getroffen.
@@ -71,6 +76,23 @@ Wo ein Ergebnis eine Entscheidung verlangt, steht sie unter „Offene Punkte" un
 > - **18,2 % der Nutzdateien sind binär** (M61), und die Anzeige ist **nicht** kodierungsfrei.
 > - **Fehlerprotokolle sind vollständig gepaart** — 33 von 33 (M64). Der befürchtete Fall tritt
 >   nicht ein.
+>
+> ### Nachtrag vom 19.08.2026 — M73, und was er umwirft
+>
+> **`Message.Payload.GUID` ist nicht die eingegangene Datei.** Er trägt in **6.249 von 6.249**
+> Nachrichten (Fenster A) und **214.330 von 214.330** (Fenster B) den Verweis der Nutzdatenzeile
+> mit dem **höchsten `MessageActionID`** der Nachricht — die zuletzt erzeugte Datei, nicht die
+> erste. Kein einziger Gegenfall in beiden Fenstern.
+>
+> - **Die Beschriftung *Eingegangene Datei* trifft in 0,016 % bzw. 0,015 % der Nachrichten zu.**
+>   Seit dem 18.08.2026 steht sie als Tatsache in `rohdaten-frontend.md` §2 und `rohdaten.md` §5.
+>   Beide Sätze bleiben sichtbar stehen; **korrigiert wird in dieser Runde nichts** (M73 Befund 3).
+> - **Der Sichtbefund des Auftraggebers ist bestätigt**: In der Eingangszeile steht dieselbe Datei
+>   ein zweites Mal, die die Zeitleiste ohnehin zeigt — `ohne_treffer = 0` in beiden Fenstern.
+> - **Das Ziel darf entfallen, ohne dass eine Datei verloren geht** — 6.248 von 6.249 und 214.297
+>   von 214.330 sind über einen Schritt ab 1 erreichbar, der Rest über die Eingangszeile selbst.
+> - **Zwei weitere Stellen**, an denen ein Befund in keine vorformulierte Zeile passte. Es sind
+>   damit **elf**.
 
 ---
 
@@ -90,6 +112,7 @@ Vor der Vergabe über `docs\` und das Wurzelverzeichnis geprüft.
 | **M70** | Neu vergeben am 17.08.2026 für den Mitschnitt des SAAJ-Aufrufs. Vor der Vergabe geprüft: `M70`, `M71` und `M72` kommen in `docs\` und im Wurzelverzeichnis **in keiner Datei** vor |
 | **M71** | Neu vergeben am 17.08.2026 für den Abruf mit dem echten Client. Bei derselben Prüfung als frei festgestellt |
 | **M72** | Neu vergeben am **18.08.2026** für den Bytevergleich `javax` gegen `jakarta`. Vor der Vergabe erneut geprüft: der einzige Treffer für `M72` in `docs\` und im Wurzelverzeichnis ist die Zeile zu **M70** in dieser Tabelle, die die Nummer als frei ausweist statt sie zu vergeben |
+| **M73** | Neu vergeben am **19.08.2026** für die Frage, worauf `Message.Payload.GUID` zeigt. Vor der Vergabe geprüft: `grep -rnoE "\bM7[3-9]\b" --include="*.md" .` über `docs\` und das Wurzelverzeichnis liefert **keinen einzigen Treffer**. `M69` bleibt weiterhin frei und ist **nicht** umgewidmet worden |
 | **M66 (2)** | **Keine neue Nummer.** Die nachgeholte jüngste Zeitscheibe läuft als **Teilmessung von M66**, weil sie dieselbe Frage mit derselben Deutung stellt. Sie ist **nicht** in M66 eingearbeitet: M66 ist gefahren, und eine nachträglich veränderte Scheibe darin würde die Datei über ihre eigene Geschichte täuschen |
 | Rotationsgrenze | **Keine Nummer.** Kein eigener Befund, sondern die Präzisierung von M53 Befund 1 und M66 Befund 4 aus denselben Statements |
 
@@ -947,6 +970,520 @@ noch bestritten.
 Die Testkopie war zu Beginn (`11:51:22`) und am Ende (`12:07:11`) von Teil A schreibgeschützt.
 **Kein Statement der Runde war etwas anderes als `SELECT`, `SET`, `EXPLAIN` oder `SHOW PROFILES`.**
 Sieben Sitzungen, jede mit eigener Verbindung, jede mit `read_only`-Nachweis als erstem Statement.
+
+---
+
+# Teil A — Nachtrag vom 19.08.2026
+
+**Diese vier Sitzungen gehören nicht zum Lauf vom 17.08.2026.** Der Abschluss oben („Sieben
+Sitzungen") bleibt die Aussage über jenen Lauf und wird nicht umgeschrieben. M73 ist zwei Tage
+später aus einem eigenen Anlass gefahren worden, in vier weiteren Sitzungen, jede mit eigener
+Verbindung und eigenem `read_only`-Nachweis als erstem und letztem Statement.
+
+| Angabe | Wert |
+|---|---|
+| Versionsstring | `10.6.22-MariaDB-0ubuntu0.22.04.1-log` — unverändert gegenüber dem 17.08.2026 |
+| **`@@global.read_only`** | **`1`** in **allen acht** Erhebungen (Beginn und Ende jeder der vier Sitzungen) |
+| Serverzeit | Sitzung 9 `14:11:57`–`14:12:00`, 9b `14:15:28`–`14:15:32`, 9c `14:17:55`–`14:19:10`, 9d `14:20:31`–`14:21:14` |
+| Benutzer, Client, Grenze | unverändert: `monitor_read@%`, `mysql.exe` Ver 8.0.46, `--ssl-mode=DISABLED`, `--default-character-set=utf8mb4`, `-t`, `SET SESSION max_statement_time = 60` |
+| **S1** | ausschließlich `SELECT`, `SET`, `EXPLAIN`, `SHOW PROFILES` |
+
+## M73 — Worauf zeigt `Message.Payload.GUID`?
+
+**Anlass.** Sichtbefund vom 19.08.2026 an der laufenden Anwendung. In der Eingangszeile der
+Zeitleiste hängen drei Ziele. Der Auftraggeber hat sie geöffnet und zugeordnet: das erste ist die
+eingegangene Datei, das zweite das Protokoll des Eingangsschritts, das dritte die **Ausgangsdatei** —
+und die steht in der Zeitleiste am letzten Schritt bereits ein zweites Mal.
+
+Damit stand eine Aussage in Frage, die seit dem 18.08.2026 in zwei verbindlichen Feature-Dateien als
+Tatsache steht und nirgends belegt ist: dass `Message.Payload.GUID` die eingegangene Datei *ist*.
+**M57 hat gemessen, welche Namen auf Schritt `0` liegen — nicht, worauf ihre Verweise zeigen.**
+
+### 1. Frage
+
+**Trägt `Message.Payload.GUID` denselben Verweis wie ein anderes Artefakt derselben Nachricht — und
+wenn ja, welches?**
+
+Der Verweis hat die Form `<Ablagenkennung>|<UUID>` und ist durchgängig so gebaut (M54). Zwei gleiche
+Verweise heißen: **dieselbe Datei**, nicht zwei ähnliche. Die Frage ist damit ohne einen einzigen
+Filestore-Abruf entscheidbar — sie ist ein Zeichenkettenvergleich innerhalb einer Nachricht.
+
+### 2. Vorregistrierte Deutung
+
+**Diese Tabelle stand vollständig fest, bevor die erste Zeile Ergebnis gesehen war** — im Auftrag
+von M73, nicht in dieser Datei; hierher ist sie unverändert übernommen worden. Sie ist nachträglich
+nicht umformuliert worden.
+
+| Ausgang | Was er bedeutet | Was daraus folgt |
+|---|---|---|
+| **E — Eingang.** `Message.Payload.GUID` deckt sich überwiegend mit `<Reader>.Payload.GUID` auf Schritt `0` | Die heutige Beschriftung ist **richtig**. Die Eingangszeile zeigt zwei Ziele auf **eine** Datei | Ein Ziel entfällt, weil es dasselbe ist — nicht, weil es falsch beschriftet wäre. **Keine Doppelung mehr, kein Artefakt verloren** |
+| **A — Ausgang.** Er deckt sich überwiegend mit `<Sender>.Payload.GUID` auf einem späteren Schritt | Die Beschriftung *Eingegangene Datei* ist eine **Falschauskunft**, und der Verweis gehört nicht in die Eingangszeile | Das Ziel entfällt aus der Eingangszeile. Die Datei bleibt über den Sendeschritt erreichbar — **das ist zu belegen und nicht anzunehmen** |
+| **W — Wandlung.** Er deckt sich mit einem `Converter.Payload.GUID` oder einem anderen Zwischenschritt | Weder Eingang noch Ausgang, sondern die Fassung eines mittleren Schritts | Wie A, aber das Ziel gehört an **jenen** Schritt |
+| **U — unverbunden.** Er deckt sich mit **keinem** anderen Verweis | Eine eigene Datei. Der Name sagt dann nichts über ihren Inhalt, und SQL beantwortet die Frage nicht | **Anhalten.** Es folgt eine Inhaltsmessung nach dem Muster von Teil B. Bis dahin wird an der Beschriftung **nichts** geändert |
+| **G — gemischt.** Kein Ausgang trägt die klare Mehrheit, oder die Verteilung hängt an der Richtung oder am Mandanten | Es gibt keine eine Regel | **Anhalten und berichten.** Eine Beschriftung, die für einen Teil des Bestands falsch ist, ist keine |
+
+> **Die Mehrheit ist zu beziffern, nicht zu behaupten.** Liegt sie unter 95 %, gilt der Ausgang
+> **G**, egal wie deutlich der Rest aussieht.
+
+### 3. Ausgeführte Statements
+
+| Datei | Inhalt | Fenster |
+|---|---|---|
+| `scripts/messung-schritt8/sitzung9-eingangsverweis.sql` | Stufe 1 — Stichprobe 200 Nachrichten, Planprüfung | A |
+| `scripts/messung-schritt8/sitzung9b-eingangsverweis.sql` | Stufen 2, 3 und 4 | A |
+| `scripts/messung-schritt8/sitzung9c-eingangsverweis.sql` | Mehrfachtreffer im Einzelnen; danach Fenster B | A, B |
+| `scripts/messung-schritt8/sitzung9d-eingangsverweis.sql` | Erreichbarkeitsnachweis, Gegenprobe zur Richtungsnäherung | A, B |
+
+**Abweichungen vom Auftrag dieser Messung**, alle vorsätzlich:
+
+1. **Vier Skriptdateien statt der einen benannten.** §4 nennt
+   `sitzung9-eingangsverweis.sql`; §4 verlangt zugleich, dass Stufe 2 erst läuft, **wenn der Plan
+   von Stufe 1 sauber ist**. Jeder `mysql.exe`-Aufruf ist eine eigene Sitzung — das Tor zwischen
+   Stufe 1 und Stufe 2 ist ohne eine zweite Datei nicht einhaltbar. Die Benennung folgt dem
+   Vorbild `sitzung4b-gegenprobe.sql`.
+2. **`--skip-ssl` → `--ssl-mode=DISABLED`.** Der Workbench-Client kennt die MariaDB-Schreibweise
+   nicht; dieselbe Abweichung wie in Abweichung 3 der Runde vom 17.08.2026.
+3. **`profiling_history_size` von 15 auf 100 gehoben**, wie in allen Sitzungen dieser Runde.
+4. **Stufe 2 vergleicht gegen `%.Payload.GUID` *und* `%.Log.GUID`.** §5 nennt für Stufe 2 nur die
+   Nutzdatenzeilen, für Stufe 1 aber beide. Die Ausweitung kostet nichts und belegt die Null:
+   Ohne sie stünde „kein Protokollverweis trägt denselben Wert" als Annahme statt als Zahl.
+5. **Zusatz „Lage des Treffers im Ablauf" (S2-3).** Stufe 1 hat gezeigt, dass die Treffer auf
+   mehrere Familien fallen. Ohne diese Auszählung ließe sich *„es gibt keine eine Regel"* nicht von
+   *„es gibt eine Regel, die die vorregistrierte Tabelle nicht kennt"* unterscheiden — und genau
+   das ist der Unterschied zwischen Ausgang G und einem Befund, der in keine Zeile passt.
+6. **Zusatz „Gegenprobe zur Richtungsnäherung" (S5-2A).** Stufe 3 nähert die Richtung über
+   `%Reader.%` auf Schritt `0`. Die Gegenprobe prüft, ob diese Näherung überhaupt Richtungen
+   trennt. Sie tut es nicht (Befund 6) — ohne die Gegenprobe wäre Stufe 3 als Richtungsaussage
+   gelesen worden.
+7. **Zusatz „Erreichbarkeit" (S5-1A, S5-3B).** Die vorregistrierte Zeile **A** verlangt den Beleg
+   ausdrücklich („das ist zu belegen und nicht anzunehmen"). Er ist gefahren, obwohl §5 keine Stufe
+   dafür vorsieht.
+8. **Fenster B ist gefahren.** §4 sieht es „nur bei Auffälligkeit" vor. Die Auffälligkeit liegt vor:
+   In Fenster A trägt **keiner** der vorformulierten Ausgänge die geforderten 95 %.
+9. **Stufe 4 läuft als ein Statement mit `IN ('NEXANS','IBISGUS')` und `GROUP BY MandantID`**
+   statt als zwei getrennte Läufe. Die Zahlen sind dieselben; ein Vergleich der *Laufzeiten* je
+   Mandant ist damit nicht möglich — er ist in §5 Stufe 4 auch nicht verlangt („Hier geht es nicht
+   um Laufzeit, sondern um dieselbe Frage in der Sache").
+10. **Jeder Wertvergleich ist zweimal gerechnet** — einmal über die Spaltenkollation und einmal
+    über `BINARY`. Der Auftrag verlangt das nicht. Grund: `utf8mb4_general_ci` vergleicht ohne
+    Rücksicht auf Groß- und Kleinschreibung, und eine Gleichheit, die es nur unter dieser
+    Kollation gibt, wäre keine. **Beide Spalten stimmen in jeder Zeile beider Fenster überein**;
+    die Sorge war unbegründet, aber sie ist jetzt beziffert statt weggelassen.
+
+**Regel L4 — die Planprüfung, die §4 ohne Ausnahme verlangt.** Vor jedem Statement lief ein
+`EXPLAIN`. Der Einstieg läuft in allen Statements über `Message.MessageID` aus dem Zeitfenster;
+`MessageProperty` wird ausschließlich über `PRIMARY` erreicht.
+
+`EXPLAIN` Stufe 2, Fenster A — dasselbe Bild in Fenster B, nur mit `rows 409756` statt `11812`.
+Die Spalte `possible_keys` ist hier der Lesbarkeit halber herausgenommen; ihr Inhalt steht im
+Kasten darunter, weil er der einzige Grund ist, aus dem die Ausgabe missverstanden werden könnte:
+
+```
++------+-------------+-------+--------+----------------------+---------+-------------------------------+-------+-----------------------------------------------------------+
+| id   | select_type | table | type   | key                  | key_len | ref                           | rows  | Extra                                                     |
++------+-------------+-------+--------+----------------------+---------+-------------------------------+-------+-----------------------------------------------------------+
+|    1 | SIMPLE      | m     | range  | MessageLastUpdateIDX | 5       | NULL                          | 11812 | Using where; Using index; Using temporary; Using filesort |
+|    1 | SIMPLE      | m     | eq_ref | PRIMARY              | 146     | GlassfishDB.m.MessageID       | 1     | Using where                                               |
+|    1 | SIMPLE      | mp    | ref    | PRIMARY              | 548     | GlassfishDB.m.MessageID,const | 1     | Using where                                               |
+|    1 | SIMPLE      | mp    | ref    | PRIMARY              | 146     | GlassfishDB.m.MessageID       | 10    | Using where                                               |
++------+-------------+-------+--------+----------------------+---------+-------------------------------+-------+-----------------------------------------------------------+
+```
+
+> **Vollständigkeitshalber, weil es leicht als Verstoß gelesen wird:**
+> `MessagePropertyNameValueIDX` steht in **`possible_keys`** — in **keinem** Statement dieser
+> Messung steht er in `key`. Der Optimierer hat ihn erwogen und verworfen. `MessagePropertyValueIDX`
+> erscheint nirgends, auch nicht als Kandidat, und ein Vollzugriff (`type: ALL`) auf
+> `MessageProperty` kommt in keinem der geprüften Pläne vor. Die Abbruchbedingung aus §4 ist damit
+> **nicht** eingetreten.
+
+### 4. Ergebnis
+
+#### Stufe 1 — Stichprobe, 200 Nachrichten aus Fenster A
+
+Die 200 Nachrichten mit den kleinsten `MessageID` des Fensters; deterministisch in der Sitzung
+hergeleitet, ohne dass eine Kennung das Skript berührt (G1).
+
+| Kennzahl | Wert |
+|---|---|
+| Nachrichten | **200** |
+| Artefaktzeilen | **1.417** |
+| davon `Message.Payload.GUID` | **200** — genau eine je Nachricht |
+| Nachrichten mit Eingangszeile | **200** von 200 |
+| Länge der Verweise | `kuerzester = laengster = 52` — bestätigt M54 an der Stichprobe |
+
+| Zahl geteilter Verweise je Nachricht | Nachrichten |
+|---|---|
+| 0 | **0** |
+| 1 | 199 |
+| 2 | 1 |
+
+Der Plan war sauber; deshalb ist Stufe 2 gefahren worden.
+
+#### Stufe 2 — Fenster A vollständig
+
+**Die Kennzahlen aus §5:**
+
+| Kennzahl | Fenster A | Fenster B |
+|---|---|---|
+| `nachrichten_gesamt` | **6.249** | **214.330** |
+| `mit_treffer` | **6.249** = **100 %** | **214.330** = **100 %** |
+| `ohne_treffer` | **0** | **0** |
+| `mehrfachtreffer` (≥ 2 geteilte Stellen) | **45** = 0,72 % | **5.396** = 2,52 % |
+| davon ≥ 3 geteilte Stellen | 0 | **4** |
+| Treffer auf dem **höchsten** Nutzdatenschritt der Nachricht | **6.249** = **100 %** | **214.330** = **100 %** |
+| Treffer *unterhalb* dieses Schritts | **0** | **0** |
+
+`nachrichten_gesamt` deckt sich in beiden Fenstern Zeichen für Zeichen mit der Nachrichtenzahl des
+Fensters (6.249 bzw. 214.330). **Jede** Nachricht trägt genau einen `Message.Payload.GUID`.
+
+**Je `(MessagePropertyName, MessageActionID)`, Fenster A.** Aufgeführt sind die Kombinationen mit
+mindestens einem Treffer; die Spalte `gleich` ist über die Kollation **und** über `BINARY` gerechnet
+und in **jeder** Zeile identisch, weshalb sie nur einmal steht.
+
+| `MessagePropertyName` | `MessageActionID` | `zeilen` | `gleich` |
+|---|---|---|---|
+| `FTPSender.Payload.GUID` | 2 | 4.019 | **4.004** |
+| `Converter.Payload.GUID` | 4 | 683 | **675** |
+| `Converter.Payload.GUID` | 1 | 5.199 | **560** |
+| `Converter.Payload.GUID` | 3 | 443 | **354** |
+| `Converter.Payload.GUID` | 2 | 1.537 | **323** |
+| `FTPSender.Payload.GUID` | 4 | 182 | **135** |
+| `FTPSender.Payload.GUID` | 1 | 99 | **99** |
+| `FTPSender.Payload.GUID` | 5 | 55 | **47** |
+| `AS2Sender.Payload.GUID` | 2 | 36 | **36** |
+| `FTPSender.Payload.GUID` | 3 | 127 | **23** |
+| `OFTPSender.Payload.GUID` | 3 | 11 | **11** |
+| `OFTPSender.Payload.GUID` | 2 | 9 | **9** |
+| `FTPSender.Payload.GUID` | 6 | 8 | **8** |
+| `OFTP2Sender.Payload.GUID` | 2 | 4 | **4** |
+| `AS2Sender.Payload.GUID` | 3 | 2 | **2** |
+| `OFTP2Sender.Payload.GUID` | 3 | 2 | **2** |
+| `AS2Sender.Payload.GUID` | 4 | 1 | **1** |
+| **`FileReader.Payload.GUID`** | **0** | 4.199 | **1** |
+| **Summe** | | | **6.294** |
+
+Die **43 übrigen** Kombinationen tragen `gleich = 0`. Darunter fallen, und das ist kein Randfall:
+
+| Ohne einen einzigen Treffer | Zeilen in Fenster A |
+|---|---|
+| **alle 30 `%.Log.GUID`-Kombinationen**, ausnahmslos | 18.565 |
+| `DataWarehouse.Payload.GUID` @ 1 | 950 |
+| `HTTPSender.Payload.GUID` @ 2 und @ 3 | 24 + 672 |
+| `SAPReader.Payload.GUID` @ 0 | 443 |
+| `OFTPReader.Payload.GUID` @ 0 | 218 |
+| `AS2Reader.Payload.GUID` @ 0 | 244 |
+| `FTPReader` / `MailReader` / `OFTP2Reader` / `SSHReader` / `HTTPReader` @ 0 | 111 / 32 / 46 / 5 / 1 |
+| `FileReader.Payload.GUID` @ 1 und @ 2 | 29 + 124 |
+
+**Kontrollrechnung.** 6.294 Treffer = 6.204 Nachrichten mit einer geteilten Stelle + 45 mit zwei
+(6.204 + 2 × 45 = 6.294) — und 6.204 + 45 = 6.249, die Nachrichtenzahl des Fensters. Die Auszählung
+umfasst **61** Kombinationen; ihre `zeilen` summieren sich über alle 61 — die 18 mit Treffern und
+die 43 ohne — auf **38.080**, zuzüglich der 6.249 Eingangszeilen also auf **44.329**, Zeichen für
+Zeichen die Artefaktzahl aus M54 (a) und M57 für Fenster A.
+
+**Die 45 Mehrfachtreffer im Einzelnen.** Ausgewiesen ist die Kombination der Stellen, nicht die
+Nachricht:
+
+| Kombination | Stellen | Nachrichten |
+|---|---|---|
+| `Converter.Payload.GUID`@1 + `AS2Sender.Payload.GUID`@2 | 2 | 36 |
+| `Converter.Payload.GUID`@1 + `OFTP2Sender.Payload.GUID`@2 | 2 | 4 |
+| `Converter.Payload.GUID`@2 + `AS2Sender.Payload.GUID`@3 | 2 | 2 |
+| `Converter.Payload.GUID`@2 + `OFTP2Sender.Payload.GUID`@3 | 2 | 2 |
+| `FTPSender.Payload.GUID`@3 + `AS2Sender.Payload.GUID`@4 | 2 | 1 |
+| **Summe** | | **45** |
+
+#### Fenster B — je `(MessagePropertyName, MessageActionID)`
+
+Aufgeführt sind wieder nur die Kombinationen mit mindestens einem Treffer. Kollation und `BINARY`
+stimmen auch hier in jeder Zeile überein.
+
+| `MessagePropertyName` | `MessageActionID` | `zeilen` | `gleich` |
+|---|---|---|---|
+| `FTPSender.Payload.GUID` | 2 | 99.827 | **99.614** |
+| `Converter.Payload.GUID` | 1 | 182.754 | **43.223** |
+| `Converter.Payload.GUID` | 3 | 28.910 | **26.524** |
+| `Converter.Payload.GUID` | 4 | 20.542 | **20.415** |
+| `Converter.Payload.GUID` | 2 | 66.230 | **15.112** |
+| `FTPSender.Payload.GUID` | 1 | 2.924 | **2.924** |
+| `OFTP2Sender.Payload.GUID` | 3 | 2.767 | **2.767** |
+| `FTPSender.Payload.GUID` | 4 | 3.768 | **2.667** |
+| `OFTP2Sender.Payload.GUID` | 2 | 1.526 | **1.526** |
+| `OFTPSender.Payload.GUID` | 2 | 1.147 | **1.146** |
+| `FTPSender.Payload.GUID` | 5 | 1.228 | **1.101** |
+| `OFTPSender.Payload.GUID` | 3 | 889 | **888** |
+| `AS2Sender.Payload.GUID` | 2 | 717 | **717** |
+| `FTPSender.Payload.GUID` | 3 | 2.162 | **363** |
+| `OFTP2Sender.Payload.GUID` | 4 | 284 | **284** |
+| `HTTPSender.Payload.GUID` | 2 | 943 | **169** |
+| `FTPSender.Payload.GUID` | 6 | 127 | **127** |
+| `AS2Sender.Payload.GUID` | 3 | 65 | **65** |
+| `AS2Sender.Payload.GUID` | 4 | 37 | **37** |
+| **`FileReader.Payload.GUID`** | **0** | 108.492 | **25** |
+| `OFTPSender.Payload.GUID` | 4 | 21 | **21** |
+| **`OFTP2Reader.Payload.GUID`** | **0** | 2.125 | **5** |
+| **`DBReader.Payload.GUID`** | **0** | 4 | **4** |
+| `AS2Sender.Payload.GUID` | 1 | 3 | **3** |
+| **`SAPReader.Payload.GUID`** | **0** | 45.333 | **2** |
+| `HTTPSender.Payload.GUID` | 4 | 1 | **1** |
+| **Summe** | | | **219.730** |
+
+**Kontrollrechnung.** 219.730 = 214.330 Nachrichten + 5.396 zweite Stellen + 4 dritte Stellen. Die
+Zeilensummen je Familie decken sich Zeichen für Zeichen mit M54 (a) Fenster B, wo alle Schritte
+einer Familie Treffer tragen: `FTPSender.Payload.GUID` 110.036, `Converter.Payload.GUID` 298.436,
+`OFTP2Sender.Payload.GUID` 4.577, `OFTPSender.Payload.GUID` 2.057, `AS2Sender.Payload.GUID` 822,
+`SAPReader.Payload.GUID` 45.333, `OFTP2Reader.Payload.GUID` 2.125, `DBReader.Payload.GUID` 4.
+
+**Nach Klasse, je Nachricht** — eine Nachricht zählt einmal; bei mehreren Treffern ist die
+alphabetisch größte Klasse ausgewiesen (`Sender` vor `Reader` vor `DataWarehouse` vor `Converter`).
+Für Fenster A ist aus der Mehrfachtreffer-Tabelle bekannt, dass **alle 45** betroffenen Nachrichten
+so auf `Sender` fallen; für Fenster B sind die **5.396** Mehrfachtreffer (2,52 %) nach derselben
+Regel zugeordnet und in dieser Runde **nicht** einzeln aufgeschlüsselt. Die beiden Auszählungen
+oben sind davon unberührt — sie zählen Stellen, nicht Nachrichten:
+
+| Klasse der treffenden Zeile | Fenster A | Anteil | Fenster B | Anteil |
+|---|---|---|---|---|
+| **Sendedienst** (`%Sender.%`) | **4.380** | **70,09 %** | **114.386** | **53,37 %** |
+| **`Converter`** | **1.868** | **29,89 %** | **99.911** | **46,62 %** |
+| **Lesedienst** (`%Reader.%`) | **1** | **0,016 %** | **33** | **0,015 %** |
+| `DataWarehouse` | 0 | 0 % | 0 | 0 % |
+| **ohne Treffer** | **0** | **0 %** | **0** | **0 %** |
+
+#### Stufe 3 — die Richtungsprobe, Fenster A
+
+| `hat_reader0` | `hat_sender` | Klasse der treffenden Zeile | Nachrichten |
+|---|---|---|---|
+| 1 | 1 | **Sender** | **4.380** |
+| 1 | 0 | Converter | 918 |
+| 1 | 0 | **Reader** | **1** |
+| 0 | 1 | Converter | 696 |
+| 0 | 0 | Converter | 254 |
+| **Summe** | | | **6.249** |
+
+In Fenster B: 185.714 Nachrichten (86,65 %) tragen einen Lesedienst auf Schritt `0`, 135.304
+(63,13 %) einen Sendedienst.
+
+**Gegenprobe zur Näherung** (Fenster A) — es gibt genau zwei Fälle, und sie sind vollständig
+komplementär:
+
+| `hat_reader0` | trägt `DataWarehouse.*` | Nachrichten |
+|---|---|---|
+| 0 | **ja** | **950** |
+| 1 | **nein** | **5.299** |
+
+#### Stufe 4 — die Mandantenprobe, Fenster A
+
+| `MandantID` | `nachrichten` | `mit_treffer` | `ohne_treffer` | `mehrfach` | Sender | Converter | Reader | auf höchstem Nutzdatenschritt |
+|---|---|---|---|---|---|---|---|---|
+| `NEXANS` | 5.043 | **5.043** | **0** | 7 | 4.018 | 1.025 | 0 | **5.043 = 100 %** |
+| `IBISGUS` | 81 | **81** | **0** | 0 | 0 | 80 | 1 | **81 = 100 %** |
+
+Je Name und Schritt:
+
+| `MandantID` | `MessagePropertyName` | `MessageActionID` | `zeilen` | `gleich` |
+|---|---|---|---|---|
+| `NEXANS` | `FTPSender.Payload.GUID` | 2 | 3.985 | **3.985** |
+| `NEXANS` | `Converter.Payload.GUID` | 1 | 4.841 | **438** |
+| `NEXANS` | `Converter.Payload.GUID` | 3 | 331 | **328** |
+| `NEXANS` | `Converter.Payload.GUID` | 2 | 611 | **262** |
+| `NEXANS` | `OFTPSender.Payload.GUID` | 3 | 10 | **10** |
+| `NEXANS` | `OFTPSender.Payload.GUID` | 2 | 9 | **9** |
+| `NEXANS` | `FTPSender.Payload.GUID` | 3 | 8 | **8** |
+| `NEXANS` | `OFTP2Sender.Payload.GUID` | 2 | 4 | **4** |
+| `NEXANS` | `Converter.Payload.GUID` | 4 | 3 | **3** |
+| `NEXANS` | `OFTP2Sender.Payload.GUID` | 3 | 2 | **2** |
+| `NEXANS` | `AS2Sender.Payload.GUID` | 4 | 1 | **1** |
+| `IBISGUS` | `Converter.Payload.GUID` | 1 | 80 | **72** |
+| `IBISGUS` | `Converter.Payload.GUID` | 2 | 8 | **8** |
+| `IBISGUS` | **`FileReader.Payload.GUID`** | **0** | 81 | **1** |
+
+#### Erreichbarkeit — der Beleg, den Zeile A verlangt
+
+Die Zeitleiste führt Schritt `0` nicht; das Backend nimmt ihn aus `schritte[]` aus
+([`nachrichtendetail.md`](nachrichtendetail.md) §4). Eine Nachricht, deren einzige gleichlautende
+Zeile auf Schritt `0` liegt, wäre nach dem Entfernen des Eingangsverweises unerreichbar.
+
+| | Fenster A | Fenster B |
+|---|---|---|
+| `nachrichten_gesamt` | 6.249 | 214.330 |
+| ohne Treffer | **0** | **0** |
+| **mindestens eine gleichlautende Zeile ab Schritt 1** | **6.248** = 99,98 % | **214.297** = 99,98 % |
+| gleichlautende Zeile **nur** auf Schritt `0` | **1** | **33** |
+| mindestens eine gleichlautende Stelle auf Schritt `0` | 1 | 36 |
+
+### 5. Befunde
+
+**Befund 1 — der Ausgang ist `G`, und `G` beschreibt nicht, was gemessen wurde.**
+*Gemessen war:* Kein vorformulierter Ausgang trägt die geforderten 95 %. In Fenster A liegt
+**A (Ausgang)** bei **70,09 %**, **W (Wandlung)** bei **29,89 %**, **E (Eingang)** bei **0,016 %**
+und **U (unverbunden)** bei **0 %**; in Fenster B bei **53,37 %**, **46,62 %**, **0,015 %** und
+**0 %**.
+*Behauptet wird:* Nach der Regel aus §3 gilt damit **G**, und G heißt „**Anhalten und berichten**".
+Das ist geschehen: An keiner Beschriftung, keiner Feature-Datei und keiner Zeile Code ist etwas
+geändert worden. **Die Zeile G unterstellt aber, es gebe „keine eine Regel", und das trifft nicht
+zu** — siehe Befund 2. Die 95-Prozent-Schwelle ist auf die *Familie* der treffenden Zeile gerechnet;
+die Regel liegt eine Ebene darunter.
+
+**Befund 2 — es gibt genau eine Regel, und sie ist in beiden Fenstern ausnahmslos:
+`Message.Payload.GUID` trägt den Verweis der Nutzdatenzeile mit dem höchsten `MessageActionID`.**
+*Gemessen war:* In **6.249 von 6.249** Nachrichten (Fenster A) und **214.330 von 214.330**
+(Fenster B) liegt die gleichlautende Zeile auf dem **höchsten** `MessageActionID`, der überhaupt
+eine `%.Payload.GUID`-Zeile trägt. `darunter = 0` in beiden Fenstern. Kein einziger Gegenfall.
+*Behauptet wird:* `Message.Payload.GUID` ist **nicht** an eine Familie gebunden, sondern an eine
+**Stelle im Ablauf** — die zuletzt erzeugte Nutzdatei der Nachricht. Ob dort ein Sendedienst steht
+(dann sieht es nach Ausgang A aus), ein `Converter` (dann nach W) oder in seltenen Fällen nur der
+Lesedienst (dann nach E), hängt allein daran, wo der Ablauf endet. Die vorregistrierte Tabelle
+kennt diese Zeile nicht; sie fragt nach einer Familie und misst deshalb einen Zufall.
+**Zehnte Stelle, an der ein Befund in keine vorformulierte Zeile passt.**
+*Ausdrücklich nicht behauptet:* dass „höchster `MessageActionID`" gleichbedeutend mit „zeitlich
+zuletzt" ist. Gemessen ist die Schrittnummer, nicht die Uhr.
+
+**Befund 3 — die Beschriftung *Eingegangene Datei* ist in 99,98 % der Fälle eine Falschauskunft.**
+*Gemessen war:* Die Entsprechung auf einem **Lesedienst** — der einzige Fall, in dem die
+Beschriftung stimmt — tritt in Fenster A **einmal** unter 6.249 Nachrichten auf und in Fenster B
+**33-mal** unter 214.330. Das sind **0,016 %** und **0,015 %**.
+*Behauptet wird:* Seit dem **18.08.2026** tragen zwei verbindliche Feature-Dateien eine falsche
+Aussage:
+> `rohdaten-frontend.md` §2, Tabelle „Die Regel": *„Der **Eingang** (`Message.Payload.GUID`) |
+> *Eingegangene Datei* | eine je Nachricht"*
+>
+> `rohdaten.md` §5: *„Auf Schritt `0` liegt die eingegangene Datei (`Message.Payload.GUID`) **und**
+> das Paar des Lesedienstes (M57)."*
+
+Beide Sätze bleiben stehen und werden **nicht** still ersetzt — dieselbe Behandlung, die
+`PROJEKTBESCHREIBUNG.md` §8 den korrigierten Zeilenzahlen gegeben hat. Die Korrektur ist eine eigene
+Runde mit eigenem Prompt (§6 des Auftrags); **diese Runde ändert nichts.**
+Die eine Nachricht in Fenster A und die 33 in Fenster B, bei denen die Beschriftung zutrifft, sind
+**kein** Beleg für sie: Es sind Nachrichten, deren Ablauf nach Schritt `0` endet. Dort ist die
+zuletzt erzeugte Datei zufällig auch die eingegangene — die Beschriftung stimmt aus demselben
+Grund, aus dem sie sonst nicht stimmt.
+
+**Befund 4 — das dritte Ziel in der Eingangszeile ist wörtlich dieselbe Datei wie das Ziel am
+letzten Schritt.**
+*Gemessen war:* `ohne_treffer = 0` in beiden Fenstern. Jede der 220.579 geprüften Nachrichten trägt
+den Verweis von `Message.Payload.GUID` **ein zweites Mal**, an einer anderen Stelle derselben
+Nachricht.
+*Behauptet wird:* Der Sichtbefund des Auftraggebers ist bestätigt und ist keine Verwechslung: Die
+Eingangszeile zeigt eine Datei, die die Zeitleiste bereits zeigt. Ausgang **U** — „eine eigene
+Datei" — ist mit **null von 220.579** ausgeschlossen; die in §7 vorbereitete Inhaltsmessung über
+Prüfsummen ist **nicht** nötig und **nicht** gefahren.
+
+**Befund 5 — das Ziel darf aus der Eingangszeile entfallen, ohne dass eine Datei verloren geht.**
+*Gemessen war:* In **6.248 von 6.249** und **214.297 von 214.330** Nachrichten liegt eine
+gleichlautende Zeile auf einem Schritt **ab 1** und damit an einer Zeile der Zeitleiste. Die
+verbleibenden **1** bzw. **33** haben ihre einzige Entsprechung auf Schritt `0` — in Fenster A
+`FileReader.Payload.GUID`, in Fenster B `FileReader` (25), `OFTP2Reader` (5), `DBReader` (4) und
+`SAPReader` (2). Diese 36 Zeilen verteilen sich auf **36** Nachrichten; bei **33** davon sind sie
+die einzige Entsprechung, bei den übrigen **3** liegt zusätzlich eine auf einem Schritt ab 1. Es
+ist genau das Paar des Lesedienstes, das **in derselben Eingangszeile** ohnehin hängt
+(M57, [`rohdaten-frontend.md`](rohdaten-frontend.md) §3).
+*Behauptet wird:* Der in der vorregistrierten Zeile A geforderte Beleg ist erbracht. In **keiner**
+der 220.579 geprüften Nachrichten führt das Entfernen des Eingangsverweises dazu, dass eine Datei
+unerreichbar wird. **Das gilt für die gemessenen Fenster und nicht für den Gesamtbestand.**
+
+**Befund 6 — die Richtungsnäherung misst keine Richtung, sondern trennt die
+`DataWarehouse`-Nachrichten ab.**
+*Gemessen war:* In Fenster A tragen **950** Nachrichten keinen Lesedienst auf Schritt `0`, und
+**dieselben 950** sind genau die Nachrichten mit `DataWarehouse.Payload.GUID`; die übrigen **5.299**
+tragen einen Lesedienst und **kein** `DataWarehouse`. Die beiden Mengen sind vollständig
+komplementär, ohne eine einzige Ausnahme. Die Zahl 950 deckt sich Zeichen für Zeichen mit
+`DataWarehouse.Payload.GUID` aus M54 (a) Fenster A; in Fenster B gilt dasselbe: 214.330 − 185.714 =
+**28.616**, und M54 (a) zählt dort **28.616** `DataWarehouse`-Zeilen.
+*Behauptet wird:* Die in §5 Stufe 3 vorgeschlagene Näherung `%Reader.%` auf Schritt `0` **trennt
+keine Richtungen**. Was sie trennt, ist eine Bauart von Nachricht. Die Sorge der Stufe — „wenn der
+Verweis in der einen Richtung auf den Eingang zeigt und in der anderen auf den Ausgang, ist das
+Ausgang G" — lässt sich mit dieser Näherung **nicht** beantworten, und ohne die Gegenprobe wäre die
+Tabelle der Stufe 3 als Richtungsaussage gelesen worden. Sie ist keine.
+**Elfte Stelle, an der ein Befund in keine vorformulierte Zeile passt.**
+Was Stufe 3 dennoch zeigt: Wo ein Sendedienst **und** ein Lesedienst auf Schritt `0` vorkommen
+(4.380 Nachrichten), fällt der Treffer **ausnahmslos** auf den Sendedienst; wo ein Sendedienst ohne
+Lesedienst auf Schritt `0` vorkommt (696), auf einen `Converter`. Das ist kein Widerspruch zu
+Befund 2, sondern seine Bestätigung, und die Herleitung ist zwingend: `HTTPSender.Payload.GUID`
+trägt in Fenster A auf Schritt 2 und 3 zusammen **696 Zeilen und null Treffer**; da jeder Treffer
+auf dem höchsten Nutzdatenschritt liegt, **muss** in diesen Nachrichten eine andere Nutzdatenzeile
+auf einem höheren Schritt stehen — und die einzige, die es sein kann, ist `Converter.Payload.GUID`
+auf Schritt 4 (683 Zeilen, 675 Treffer). Der Ablauf endet dort also **nicht** mit dem Senden,
+sondern mit einer Wandlung danach.
+*Hergeleitet, nicht einzeln gemessen:* Dass die 696 Nachrichten des Kastens `(0, 1)` **dieselben**
+sind wie die 696 Nachrichten mit `HTTPSender` (M54 (a) Fenster A), liegt nahe, weil beide Zahlen
+übereinstimmen — geprüft ist es nicht.
+
+**Befund 7 — die Regel gilt bei beiden Mandanten, und sie sieht bei beiden verschieden aus.**
+*Gemessen war:* `auf höchstem Nutzdatenschritt` ist bei `NEXANS` **5.043 von 5.043** und bei
+`IBISGUS` **81 von 81** — je 100 %. Die *Familie* der treffenden Zeile ist dagegen völlig
+verschieden: bei `NEXANS` in 79,7 % ein Sendedienst, bei `IBISGUS` in **0 %**; dort ist es in 98,8 %
+ein `Converter` und einmal der `FileReader`.
+*Behauptet wird:* Die Prüfung nach L15 ist bestanden — **auf der Ebene der Regel**. Auf der Ebene
+der Familie ist sie **nicht** bestanden, und genau davor warnt die Zeile G („die Verteilung hängt
+am Mandanten"). Beides zugleich ist der Beleg dafür, dass die Familie das falsche Merkmal ist: Eine
+Beschriftung, die aus der Familie kommt, wäre bei `IBISGUS` und `NEXANS` verschieden; eine, die aus
+der Stelle im Ablauf kommt, ist es nicht. **Eine Regel, die nur bei `NEXANS` gilt, ist im Projekt
+keine** — diese gilt bei beiden.
+
+**Befund 8 — kein einziger Protokollverweis trägt denselben Wert.**
+*Gemessen war:* Alle **30** `%.Log.GUID`-Kombinationen in Fenster A (18.565 Zeilen) und alle
+`%.Log.GUID`-Kombinationen in Fenster B tragen `gleich = 0`.
+*Behauptet wird:* Nutzdaten und Protokolle teilen sich in den gemessenen Fenstern **nie** eine
+Datei. Die Zweiteilung der Antwort in `nutzdaten` und `protokolle`
+([`rohdaten-backend.md`](rohdaten-backend.md) §1) beschreibt disjunkte Mengen — gemessen, nicht
+angenommen.
+
+**Befund 9 — 45 bzw. 5.396 Nachrichten hängen dieselbe Datei an zwei Stellen.**
+*Gemessen war:* **45** Nachrichten in Fenster A (0,72 %) und **5.396** in Fenster B (2,52 %) tragen
+den Verweis an **zwei** Stellen außerhalb des Eingangs, **4** davon in Fenster B an **drei**. In
+Fenster A ist die Kombination in **allen 45** Fällen dieselbe Gestalt: die Ausgabe eines
+`Converter` und die Nutzdatei eines Sendedienstes **einen Schritt später** — 44-mal
+`Converter` → `AS2Sender`/`OFTP2Sender`, einmal `FTPSender`@3 → `AS2Sender`@4.
+*Behauptet wird:* Der Auftrag warnt, ein nennenswerter Wert mache aus „wo gehört sie hin" die Frage
+„welche Stelle ist die eine". Der gemessene Fall ist **harmlos und erklärt sich selbst**: Der
+Sendedienst schickt die Ausgabe des Converters **unverändert** weiter, deshalb steht derselbe
+Verweis an beiden Schritten. Beide Stellen sind richtig, und beide stehen in der Zeitleiste. Eine
+Nachricht, in der dieselbe Datei an drei oder mehr *verschiedenen* Schritten hängt und die
+Zuordnung dadurch mehrdeutig würde, kommt in Fenster A **nicht** vor; in Fenster B betrifft der
+Fall **4 von 214.330**.
+
+**Nebenbefund, ohne eigene Nummer — M57 nennt für Fenster A 63 Kombinationen, gezählt sind 62.**
+*Gemessen war:* Dieselbe Menge, dieselbe Fenstergrenze, derselbe Namensfilter wie in M57 ergibt
+**61** Kombinationen aus Name und `MessageActionID` außerhalb von `Message.Payload.GUID`, also
+**62** mit ihm. Die Zeilensumme stimmt dagegen exakt: **38.080 + 6.249 = 44.329**, Zeichen für
+Zeichen der Wert aus M54 (a) und M57.
+*Behauptet wird:* Die Zahl **63** im Fließtext von M57 ist um eins zu hoch; die aufgeführte Tabelle
+dort enthält 62 Kombinationen. **Keine Zahl von M57 ist davon berührt** — weder `zeilen_gesamt` noch
+`ohne_schrittzeile` noch die 55,98 %. Der Satz steht hier, weil er sonst niemandem mehr auffällt,
+und **M57 ist nicht geändert worden.**
+
+### 6. Laufzeiten
+
+| Statement | Fenster | Dauer |
+|---|---|---|
+| Stufe 1, Umfang der Stichprobe | A (200 Nachrichten) | **0,044 s** |
+| Stufe 1, `EXPLAIN` | A (200 Nachrichten) | **2,703 s** |
+| Stufe 1, Vergleich je Name und Schritt | A (200 Nachrichten) | **0,043 s** |
+| Stufe 1, Verteilung der Trefferzahl | A (200 Nachrichten) | **0,042 s** |
+| Stufe 2, `EXPLAIN` | A | 0,002 s |
+| Stufe 2, je Name und Schritt | A | **0,784 s** |
+| Stufe 2, Kennzahlen | A | **0,742 s** |
+| Stufe 2, Lage des Treffers | A | **0,732 s** |
+| Stufe 2, Mehrfachtreffer im Einzelnen | A | **0,423 s** |
+| Stufe 3, Richtungsprobe | A | **0,756 s** |
+| Stufe 4, je Name und Schritt | A | **0,664 s** |
+| Stufe 4, Kennzahlen | A | **0,686 s** |
+| Erreichbarkeit | A | **0,758 s** |
+| Gegenprobe zur Richtungsnäherung | A | **0,389 s** |
+| Fenster B, `EXPLAIN` | B | 0,006 s |
+| **Fenster B, Kennzahlen und Lage des Treffers** | B | **50,554 s** |
+| Fenster B, je Name und Schritt | B | **24,700 s** |
+| Fenster B, Erreichbarkeit | B | **42,213 s** |
+
+Alle einmalig. **Kein Statement hat die Grenze von 60 Sekunden gerissen**; das teuerste liegt bei
+**84,3 %** davon. Die Grenze ist nicht angehoben worden.
+
+> **Eine Auffälligkeit in den Laufzeiten selbst.** Der `EXPLAIN` von Stufe 1 dauert **2,703 s**,
+> das erklärte Statement **0,043 s** — Faktor 63 in die falsche Richtung. Der Grund liegt in der
+> Gestalt von Stufe 1: Sie schneidet die Stichprobe über `ORDER BY MessageID LIMIT 200` heraus,
+> und MariaDB materialisiert für den Plan die abgeleiteten Tabellen, statt sie zu verschmelzen. In
+> Stufe 2 — ohne `LIMIT`, mit verschmolzenen Ausdrücken — kostet derselbe `EXPLAIN` **0,002 s**.
+> Das ist eine Beobachtung über `EXPLAIN` und **keine** über die gemessenen Statements.
 
 ---
 
@@ -2542,6 +3079,17 @@ Anteil des abrufbaren Bestands; jene Zahl steht unter „Die Rotationsgrenze" un
 **Kein Statement hat die Grenze von 60 Sekunden gerissen.** Das teuerste — M54 (a) Fenster B —
 liegt bei **98,9 %** davon. Die Grenze ist an keiner Stelle angehoben worden.
 
+**M73, 19.08.2026** — die vollständige Aufstellung steht bei M73 §6; hier die drei teuersten
+Statements, damit die Tabelle oben nicht als Gesamtbild gelesen wird:
+
+| Messung | Fenster A | Fenster B | Wiederholungen |
+|---|---|---|---|
+| M73 je Name und Schritt | 0,784 s | **24,700 s** | einmalig |
+| M73 Kennzahlen und Lage des Treffers | 0,742 s / 0,732 s | **50,554 s** | einmalig |
+| M73 Erreichbarkeit | 0,758 s | **42,213 s** | einmalig |
+
+Auch hier hat kein Statement die Grenze gerissen; das teuerste liegt bei **84,3 %** davon.
+
 ## Löschung des Arbeitsverzeichnisses
 
 Die Anfragen von Teil B liefen aus dem Sitzungs-Scratchpad, Unterverzeichnis `…\scratchpad\arbeit\`
@@ -2752,9 +3300,35 @@ Keiner davon ist entschieden. Sie sind der Ertrag dieser Runde, nicht ihr Rest.
     oder durch eine gesonderte Freigabe für einen einzelnen Abruf, wie sie M71 hatte.
     **Nicht entschieden.**
 
+### Nachträge vom 19.08.2026, nach M73
+
+30. **Die Korrektur der beiden Feature-Dateien ist nicht gefahren.** M73 belegt, dass
+    `rohdaten-frontend.md` §2 und `rohdaten.md` §5 seit dem 18.08.2026 eine falsche Aussage tragen.
+    Der Auftrag von M73 behält die Korrektur ausdrücklich einer eigenen Runde mit eigenem Prompt
+    vor (§6), und diese Runde hat sich daran gehalten: **keine Feature-Datei, keine Beschriftung
+    und keine Zeile Code ist angefasst worden.** Offen und **nicht entschieden** ist damit, wie die
+    Eingangszeile künftig aussieht — ob das dritte Ziel ersatzlos entfällt, ob es an den Schritt
+    wandert, auf dem es ohnehin steht, oder ob „der aktuelle Stand der Nutzdaten" eine eigene
+    Auskunft wert ist. **M73 stellt die Frage, er beantwortet sie nicht.**
+31. **Der Downloaddateiname hängt an derselben falschen Annahme — gelesen, nicht gemessen.**
+    `Downloaddateiname` sucht den Originalnamen über `%.FileProperty.OriginalFilename`
+    **auf demselben Schritt** (`rohdaten-backend.md` §5, `Downloaddateiname.java:9`). Für das
+    Artefakt auf Schritt `0` ist das `FileReader`/`FTPReader.FileProperty.OriginalFilename`, also
+    der Name der **eingegangenen** Datei — die Datei selbst ist nach M73 aber in 99,98 % der
+    Nachrichten eine **spätere**. Die Begründung im Kasten von `rohdaten-backend.md` §5
+    („Über die Familie gesucht bekäme ausgerechnet die eingegangene Datei … nie ihren echten
+    Namen") beschreibt damit ein Artefakt, das es so nicht gibt. **Nicht gemessen, nicht geändert,
+    nicht entschieden** — aber die Korrekturrunde darf es nicht übersehen.
+32. **Die Regel ist in zwei Fenstern gemessen, nicht im Bestand.** 220.579 Nachrichten sind rund
+    6,6 % der 3.341.519 des Gesamtbestands. Fenster C (`2024-10-01`) ist **nicht** gefahren, weil
+    der Auftrag von M73 nur A und B kennt. Ob die Regel am alten Ende des Bestands ebenso gilt, ist
+    offen — sie kostet dort eine einzige Sitzung.
+
 ## Abweichungen vom Auftrag
 
-Zwanzig, alle vorsätzlich und alle hier statt in einer Fußnote.
+Zwanzig, alle vorsätzlich und alle hier statt in einer Fußnote. **Sie betreffen den Lauf vom
+17.08.2026.** Die **zehn** Abweichungen von M73 (19.08.2026) stehen dort, wo sie hingehören: bei
+M73 §3, weil sie einen eigenen Auftrag betreffen und nicht diesen.
 
 1. **Der Prompt nennt Fassung 2, die vorliegende Auftragsdatei ist Fassung 3** vom 17.08.2026 und
    ersetzt Fassung 2 ausdrücklich („Ersetzt Fassung 2 vom selben Tag", Z. 3). Gefahren ist
@@ -2869,6 +3443,13 @@ Zwanzig, alle vorsätzlich und alle hier statt in einer Fußnote.
 bei der Statementform von M52 bis M55, M57 und M64a, bei der Sequenzialität (kein Statement lief
 gleichzeitig mit einem anderen, keine Anfrage parallel) und bei S1 (ausschließlich `SELECT`, `SET`,
 `EXPLAIN`, `SHOW PROFILES`).
+
+**Für M73 gilt dasselbe** — dieselben Fenstergrenzen, dieselbe Sequenzialität (vier Sitzungen
+nacheinander, jede eine eigene Verbindung), dasselbe S1. Zusätzlich eingehalten: die Planprüfung
+per `EXPLAIN` vor jedem Statement, die G1-Sperre auf jeden Verweis (in keiner Ausgabe und in keiner
+Skriptdatei steht eine `MessageID`, eine UUID oder eine Ablagenkennung im Zusammenhang mit einer
+Nachricht) und die Sperre aus §6 des M73-Auftrags: **kein Filestore-Abruf, keine Änderung an einer
+Feature-Datei, keine Änderung an der Oberfläche.**
 
 ---
 

@@ -70,6 +70,27 @@ public final class Downloaddateiname {
    * das eine andere Datei; ihm den Namen des Eingangs zu geben waere eine Falschauskunft. Deshalb
    * zaehlt nur, was auf <b>demselben</b> {@code MessageActionID} liegt: Auf Schritt 0 findet das
    * den Lesedienst, auf einem Wandlungsschritt nichts — und dann greift der konstruierte Name.
+   *
+   * <h2>Vermerk 19.08.2026 — der Anlassfall ist entfallen, die Regel bleibt</h2>
+   *
+   * <p><b>Der Absatz oben bleibt woertlich stehen und ist an einer Stelle ueberholt:</b> Das
+   * Artefakt, an dem der Unterschied „genau am wichtigsten Artefakt auffiel", gibt es nicht mehr.
+   * {@code Message.Payload.GUID} ist nach M73 kein eigenes Artefakt und faellt aus der Liste
+   * ({@link Artefaktnamen#NAME_ZEIGER}); „der Kopf der Liste" existiert damit ebenso wenig — die
+   * Antwort ist zweigeteilt.
+   *
+   * <p><b>Die Regel ist dadurch nicht falsch geworden, sondern gegenstandslos fuer den Fall, fuer
+   * den sie begruendet wurde.</b> Sie wird deshalb <b>nicht</b> umgebaut. Ein Unterschied zwischen
+   * Muster- und Familiensuche bleibt moeglich: Er tritt ein, sobald auf dem Schritt eines Artefakts
+   * ein {@code FileReader.} oder {@code FTPReader.FileProperty.OriginalFilename} liegt und das
+   * Artefakt einer <i>anderen</i> Familie angehoert — ueber das Muster bekaeme es dann einen Namen,
+   * ueber die Familie keinen.
+   *
+   * <p><b>Belegvermerk (L10).</b> <i>Gemessen ist:</i> welche Namen den Originalnamen tragen — nur
+   * {@code FileReader} und {@code FTPReader} (M56 a, beide Fenster). <i>Nicht gemessen ist:</i> auf
+   * welchem {@code MessageActionID} diese Zeilen liegen, und ob dort Artefakte fremder Familien
+   * sitzen. Ob der beschriebene Fall im Bestand vorkommt, ist damit <b>offen</b> und wird hier
+   * benannt statt entschieden.
    */
   static String likeMuster() {
     return "%" + MUSTER_ORIGINALNAME;

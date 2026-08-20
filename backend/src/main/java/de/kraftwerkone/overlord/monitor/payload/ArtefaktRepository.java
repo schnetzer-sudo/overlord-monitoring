@@ -84,6 +84,28 @@ public class ArtefaktRepository {
    * <p>Sortiert nach Schritt und dann Name. Nach Schritt zuerst, weil die Oberflaeche die Artefakte
    * <i>je Schritt</i> gruppiert; der Primaerschluessel fuehrt die andere Reihenfolge, der
    * Sortierlauf ueber drei bis fuenfzehn Zeilen (M55) kostet nichts.
+   *
+   * <h2>{@code Message.Payload.GUID} faellt hier heraus, und zwar im Code (M73, 19.08.2026)</h2>
+   *
+   * <p>Die Begruendung steht bei {@link Artefaktnamen#NAME_ZEIGER}: Der Name benennt kein eigenes
+   * Artefakt, sondern eine Datei, die ohnehin an ihrem Schritt haengt. <b>Warum die Ausnahme nicht
+   * im Statement steht</b>, sondern hinter dem Abruf:
+   *
+   * <ol>
+   *   <li><b>Am Statement aendert sich damit nichts.</b> Es kommt keine Bedingung hinzu und faellt
+   *       keine weg; der gemessene Zugriffsweg — {@code mp} ueber {@code PRIMARY} — bleibt der, der
+   *       in {@code docs/rohdaten-backend.md} §9 steht, ohne dass er neu zu belegen waere.
+   *   <li><b>Sie steht neben ihrer Begruendung.</b> Ein {@code <>} im Statement waere eine
+   *       Zeichenkette in einer Abfrage, deren Grund zwei Dateien weiter liegt.
+   *   <li><b>Sie greift auf beiden Wegen.</b> Diese Methode traegt die Liste <i>und</i> die
+   *       Aufloesung einer {@code artefaktId} ({@code ArtefaktService}); die Kennung {@code
+   *       0-Message.Payload.GUID} findet damit nichts mehr und wird zu {@code 404} — wie jede
+   *       unbekannte Kennung, ohne Sonderpfad.
+   * </ol>
+   *
+   * <p><b>Der Preis ist eine gelesene Zeile je Nachricht</b>, von drei bis fuenfzehn (M55). Sie
+   * wird ueber den Primaerschluessel mitgelesen und hier verworfen. Das ist der bewusst bezahlte
+   * Teil.
    */
   public List<Artefaktzeile> findeArtefakte(MandantContext mandant, String messageId) {
     return glassfishDsl
@@ -101,7 +123,10 @@ public class ArtefaktRepository {
         .fetch(
             satz ->
                 new Artefaktzeile(
-                    satz.value1(), satz.value2() == null ? 0 : satz.value2(), satz.value3()));
+                    satz.value1(), satz.value2() == null ? 0 : satz.value2(), satz.value3()))
+        .stream()
+        .filter(zeile -> Artefaktnamen.istArtefakt(zeile.name()))
+        .toList();
   }
 
   /**
@@ -165,9 +190,11 @@ public class ArtefaktRepository {
    * Nachrichten (M17); fehlt er, konstruiert {@link Downloaddateiname} einen.
    *
    * <p><b>Gesucht wird ueber das Muster, nicht ueber die Familie des Artefakts</b> — die
-   * Begruendung steht bei {@link Downloaddateiname#likeMuster()}. Kurz: Den Namen tragen nur die
-   * Lesedienste, und der Eingang heisst {@code Message.Payload.GUID}; ueber seine Familie gesucht
-   * bliebe er ohne Namen.
+   * Begruendung steht bei {@link Downloaddateiname#likeMuster()}. <b>Vermerk 19.08.2026:</b> Der
+   * Fall, fuer den diese Regel geschrieben wurde, ist mit {@code Message.Payload.GUID} entfallen
+   * (M73). Sie bleibt trotzdem stehen — sie ist nicht falsch geworden, nur gegenstandslos fuer
+   * ihren Anlassfall; ein anderer bleibt moeglich und ist <b>nicht gemessen</b>. Das Naehere steht
+   * bei {@link Downloaddateiname#likeMuster()} und in {@code docs/rohdaten-backend.md} §7.
    *
    * @return leer, wenn es den Namen nicht gibt, er leer ist <b>oder</b> die Nachricht fuer diesen
    *     Mandanten nicht sichtbar ist
@@ -184,8 +211,13 @@ public class ArtefaktRepository {
         .and(MESSAGEPROPERTY.MESSAGEACTIONID.eq(schritt))
         .and(mandantenkette(mandant))
         // Nach Namen sortiert, damit die Auswahl bei mehreren Lesediensten auf einem Schritt
-        // festliegt und nicht davon abhaengt, in welcher Reihenfolge MariaDB liefert. Gemessen
-        // kommt dieser Fall nicht vor: FileReader und FTPReader schliessen einander aus (M56 a).
+        // festliegt und nicht davon abhaengt, in welcher Reihenfolge MariaDB liefert.
+        //
+        // Belegvermerk (L10), berichtigt am 19.08.2026: Hier stand „Gemessen kommt dieser Fall
+        // nicht vor: FileReader und FTPReader schliessen einander aus (M56 a)." M56 (a) zaehlt je
+        // MessagePropertyName und misst kein DISTINCT ueber beide; die 71,4 % in Befund 1 sind
+        // eine Addition der beiden Zeilen. Dass die beiden einander ausschliessen, ist damit
+        // nicht gemessen, sondern gefolgert. Die feste Sortierung deckt den Fall ohnehin ab.
         .orderBy(MESSAGEPROPERTY.MESSAGEPROPERTYNAME.asc())
         .limit(1)
         .fetchOptional(MESSAGEPROPERTY.MESSAGEPROPERTYVALUE)

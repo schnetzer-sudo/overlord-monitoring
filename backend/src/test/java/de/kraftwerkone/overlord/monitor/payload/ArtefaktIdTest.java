@@ -28,7 +28,28 @@ class ArtefaktIdTest {
   @Test
   @DisplayName("Der Metadaten-Schritt 0 ebenso")
   void schritt_null() {
-    ArtefaktId kennung = new ArtefaktId((short) 0, Artefaktnamen.NAME_EINGANG);
+    ArtefaktId kennung = new ArtefaktId((short) 0, "FileReader.Payload.GUID");
+
+    assertThat(kennung.kodiere()).isEqualTo("0-FileReader.Payload.GUID");
+    assertThat(ArtefaktId.entschluessle("0-FileReader.Payload.GUID")).contains(kennung);
+  }
+
+  /**
+   * <b>Die Kennung des Zeigers zerfaellt weiterhin sauber — und findet trotzdem nichts.</b>
+   *
+   * <p>Seit dem 19.08.2026 fuehrt die Artefaktliste {@code Message.Payload.GUID} nicht mehr (M73,
+   * {@link Artefaktnamen#NAME_ZEIGER}). Diese Klasse ist rein syntaktisch und weiss davon nichts:
+   * Die Form ist unveraendert gueltig. Was fehlt, ist die <i>Zeile</i>, auf die sie passt — und
+   * damit antwortet der Endpunkt {@code 404}, wie bei jeder unbekannten Kennung.
+   *
+   * <p><b>Das ist kein Sonderpfad, sondern das Ausbleiben eines Sonderpfads.</b> Es ist bewusst
+   * kein Umleitungspfad fuer alte Kennungen gebaut worden: Das Feature ist einen Tag alt, ein
+   * bereits geteilter Verweis auf diese Kennung ist praktisch ausgeschlossen.
+   */
+  @Test
+  @DisplayName("Die Kennung des Zeigers zerfaellt weiterhin — sie trifft nur keine Zeile mehr")
+  void zeiger_zerfaellt_weiterhin() {
+    ArtefaktId kennung = new ArtefaktId((short) 0, Artefaktnamen.NAME_ZEIGER);
 
     assertThat(kennung.kodiere()).isEqualTo("0-Message.Payload.GUID");
     assertThat(ArtefaktId.entschluessle("0-Message.Payload.GUID")).contains(kennung);

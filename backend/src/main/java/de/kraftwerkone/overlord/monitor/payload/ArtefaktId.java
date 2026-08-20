@@ -26,15 +26,20 @@ import java.util.Optional;
  *
  * <h2>Form</h2>
  *
- * <p>{@code <MessageActionID>-<MessagePropertyName>}, also etwa {@code 0-Message.Payload.GUID} oder
- * {@code 2-FileReader.Log.GUID}. Zerlegt wird am <b>ersten</b> Bindestrich; der linke Teil muss
- * vollstaendig aus Ziffern bestehen, der rechte aus {@code A–Z}, {@code a–z}, {@code 0–9}, Punkt,
- * Bindestrich und Unterstrich. Alle vorkommenden Zeichen sind in einem URL-Pfad unreserviert, es
- * wird also nichts kodiert. Was nicht passt, ist kein Artefakt und ergibt {@code 404} — dieselbe
- * Antwort wie eine unbekannte Kennung.
+ * <p>{@code <MessageActionID>-<MessagePropertyName>}, also etwa {@code 0-FileReader.Payload.GUID}
+ * oder {@code 2-FileReader.Log.GUID}. Zerlegt wird am <b>ersten</b> Bindestrich; der linke Teil
+ * muss vollstaendig aus Ziffern bestehen, der rechte aus {@code A–Z}, {@code a–z}, {@code 0–9},
+ * Punkt, Bindestrich und Unterstrich. Alle vorkommenden Zeichen sind in einem URL-Pfad
+ * unreserviert, es wird also nichts kodiert. Was nicht passt, ist kein Artefakt und ergibt {@code
+ * 404} — dieselbe Antwort wie eine unbekannte Kennung.
  *
- * @param schritt {@code MessageActionID}. {@code 0} ist der Metadaten-Schritt und damit die
- *     eingegangene Datei, jede groessere Zahl ein Ablaufschritt
+ * <p><b>Das Beispiel hiess bis zum 19.08.2026 {@code 0-Message.Payload.GUID}.</b> Diese Kennung
+ * zerfaellt weiterhin sauber, trifft aber keine Zeile mehr: Die Artefaktliste fuehrt {@code
+ * Message.Payload.GUID} seit M73 nicht mehr ({@link Artefaktnamen#NAME_ZEIGER}). Als Beispiel fuer
+ * eine gueltige Form taugt sie damit nicht.
+ *
+ * @param schritt {@code MessageActionID}. {@code 0} ist der Metadaten-Schritt; dort liegen die
+ *     Zeilen des Lesedienstes, jede groessere Zahl ist ein Ablaufschritt
  * @param name {@code MessagePropertyName}, unveraendert
  */
 public record ArtefaktId(short schritt, String name) {

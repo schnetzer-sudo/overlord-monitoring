@@ -95,9 +95,9 @@ export function ArtefaktAnsicht({
   const liste = useArtefakte(messageId, true);
   const detail = useNachrichtendetail(messageId);
 
-  const eintrag = findeArtefakt(liste.data, artefaktId);
+  const artefakt = findeArtefakt(liste.data, artefaktId);
   const beschriftung =
-    eintrag === null ? null : artefaktBeschriftung(eintrag, detail.data?.schritte ?? [], texte);
+    artefakt === null ? null : artefaktBeschriftung(artefakt, detail.data?.schritte ?? [], texte);
 
   return (
     <section aria-labelledby={titelId} className="flex flex-col gap-4">

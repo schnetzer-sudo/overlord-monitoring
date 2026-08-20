@@ -1,5 +1,6 @@
 package de.kraftwerkone.overlord.monitor.payload;
 
+import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.MESSAGEPROPERTY;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
@@ -9,6 +10,7 @@ import java.util.Locale;
 import org.jooq.DSLContext;
 import org.jooq.Field;
 import org.jooq.Record1;
+import org.jooq.Record3;
 import org.jooq.Result;
 import org.jooq.SQLDialect;
 import org.jooq.impl.DSL;
@@ -169,5 +171,88 @@ class ArtefaktStatementsTest {
   @DisplayName("Die gerenderten Statements sind vollstaendig")
   void statements_sind_vollstaendig() {
     assertThat(alleStatements()).hasSize(4);
+  }
+
+  // ─── Der Zeiger Message.Payload.GUID (M73, 19.08.2026) ────────────────────────
+  //
+  // Die Ausnahme steht im CODE und nicht im Statement. Die beiden folgenden Tests halten beide
+  // Haelften dieser Entscheidung fest: dass das Statement unveraendert ist, und dass die Zeile
+  // trotzdem nicht durchkommt.
+
+  /**
+   * <b>Das Statement kennt die Ausnahme nicht.</b>
+   *
+   * <p>Waere sie darin — als {@code MessagePropertyName <> 'Message.Payload.GUID'} —, spaerte sie
+   * eine gelesene Zeile je Nachricht von drei bis fuenfzehn (M55) und kostete dafuer zweierlei: Der
+   * gemessene Zugriffsweg ({@code mp} ueber {@code PRIMARY}, {@code docs/rohdaten-backend.md} §9)
+   * waere neu zu belegen, und die Zeichenkette stuende in einer Abfrage, deren Grund zwei Dateien
+   * weiter liegt.
+   */
+  @Test
+  @DisplayName("Die Ausnahme steht NICHT im Statement — es ist unveraendert (M73)")
+  void ausnahme_steht_nicht_im_statement() {
+    repository.findeArtefakte(MANDANT, MESSAGE_ID);
+
+    String sql = gerendert.getLast();
+    assertThat(sql)
+        .as("Keine Ungleichheitsbedingung auf dem Namen: %s", sql)
+        .doesNotContain("<>")
+        .doesNotContain("!=")
+        .doesNotContain("not in");
+    assertThat(sql.toLowerCase(Locale.ROOT).split("`messagepropertyname` like \\?", -1))
+        .as(
+            "Genau die beiden gemessenen Namensmuster, unveraendert und ohne dritte Bedingung: %s",
+            sql)
+        .hasSize(3);
+  }
+
+  /**
+   * <b>Und trotzdem kommt die Zeile nicht durch.</b>
+   *
+   * <p>Die Attrappe liefert drei Zeilen, darunter {@code Message.Payload.GUID}. Zurueck kommen zwei
+   * — {@code findeArtefakte} wendet {@link Artefaktnamen#istArtefakt(String)} an.
+   *
+   * <p>Das gilt fuer <b>beide</b> Wege: Diese Methode traegt die Liste und die Aufloesung einer
+   * {@code artefaktId}. Die Kennung {@code 0-Message.Payload.GUID} findet damit nichts mehr und
+   * wird zu {@code 404}, wie jede unbekannte Kennung — <b>kein Umleitungspfad, kein Sonderfall</b>.
+   */
+  @Test
+  @DisplayName("Message.Payload.GUID kommt aus findeArtefakte nicht zurueck (M73)")
+  void zeiger_kommt_nicht_zurueck() {
+    ArtefaktRepository mitZeilen =
+        new ArtefaktRepository(
+            DSL.using(
+                new MockConnection(
+                    ausfuehrung -> {
+                      DSLContext leer = DSL.using(SQLDialect.MARIADB);
+                      Result<Record3<String, Short, String>> ergebnis =
+                          leer.newResult(
+                              MESSAGEPROPERTY.MESSAGEPROPERTYNAME,
+                              MESSAGEPROPERTY.MESSAGEACTIONID,
+                              MESSAGEPROPERTY.MESSAGEPROPERTYVALUE);
+                      ergebnis.add(zeile(leer, "Message.Payload.GUID", (short) 0));
+                      ergebnis.add(zeile(leer, "FileReader.Payload.GUID", (short) 0));
+                      ergebnis.add(zeile(leer, "FileReader.Log.GUID", (short) 0));
+                      return new MockResult[] {new MockResult(ergebnis.size(), ergebnis)};
+                    }),
+                SQLDialect.MARIADB));
+
+    List<Artefaktzeile> zeilen = mitZeilen.findeArtefakte(MANDANT, MESSAGE_ID);
+
+    assertThat(zeilen.stream().map(Artefaktzeile::name))
+        .as(
+            "Der Name traegt in 6.249 von 6.249 und 214.330 von 214.330 Nachrichten den Verweis der"
+                + " Nutzdatenzeile mit dem hoechsten MessageActionID derselben Nachricht (M73). Er"
+                + " benennt keine eigene Datei, und eine Liste, die jede Datei genau einmal fuehrt,"
+                + " ist die richtige Liste")
+        .containsExactly("FileReader.Payload.GUID", "FileReader.Log.GUID");
+  }
+
+  private static Record3<String, Short, String> zeile(DSLContext leer, String name, short schritt) {
+    return leer.newRecord(
+            MESSAGEPROPERTY.MESSAGEPROPERTYNAME,
+            MESSAGEPROPERTY.MESSAGEACTIONID,
+            MESSAGEPROPERTY.MESSAGEPROPERTYVALUE)
+        .values(name, schritt, "BEISPIELPROD42|deadbeef-0000-4000-8000-0123456789ab");
   }
 }

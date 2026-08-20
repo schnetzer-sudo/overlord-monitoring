@@ -32,26 +32,8 @@ import { METADATEN_POSITION } from "./detail";
    ───────────────────────────────────────────────────────────────────────────── */
 
 /**
- * Ein Artefakt samt der Auskunft, ob es der **Eingang** ist.
- *
- * Der Eingang (`Message.Payload.GUID`) steht in der Antwort in einem eigenen
- * Feld und nicht in einer der beiden Listen. Er ist damit keine Ableitung dieser
- * Datei, sondern eine Einordnung des Backends — das ist der Unterschied zwischen
- * „erkannt" und „geraten" (Regel Q4).
- */
-export type Artefakteintrag = {
-  artefakt: Artefakt;
-  /**
-   * Wahr für die eingegangene Datei. Sie hängt auf Schritt `0`, dem Ort der
-   * Metadaten, und ist **kein Ablaufschritt** (M57, M17 3) — sie steht deshalb
-   * in der Eingangszeile über der Zeitleiste und in keiner ihrer Zeilen.
-   */
-  istEingang: boolean;
-};
-
-/**
  * Alle Artefakte einer Nachricht in **einer** Liste, in Anzeigereihenfolge:
- * Eingang, Nutzdaten, Protokolle.
+ * Nutzdaten, dann Protokolle.
  *
  * Gebraucht wird sie zum Nachschlagen einer Kennung — die Ansicht auf ihrer
  * eigenen Route bekommt aus der URL nur die `artefaktId` und muss daraus dieselbe
@@ -61,23 +43,18 @@ export type Artefakteintrag = {
  * die des Backends (`ORDER BY MessageActionID, MessagePropertyName`, gemessen in
  * `docs/rohdaten-backend.md` §9) und steht damit an genau einer Stelle. Eine
  * zweite Sortierung hier wäre die Drift, gegen die diese Regel gerichtet ist.
+ *
+ * **Bis zum 19.08.2026 stand ein drittes Feld davor** — `eingang`, also
+ * `Message.Payload.GUID`, geführt als „die eingegangene Datei". Es ist entfallen
+ * (M73); die Antwort ist zweigeteilt, und diese Funktion hängt zwei Listen
+ * aneinander statt drei.
  */
-export function artefakteintraege(liste: Artefaktliste): Artefakteintrag[] {
-  const eintraege: Artefakteintrag[] = [];
-  if (liste.eingang !== null) {
-    eintraege.push({ artefakt: liste.eingang, istEingang: true });
-  }
-  for (const artefakt of liste.nutzdaten) {
-    eintraege.push({ artefakt, istEingang: false });
-  }
-  for (const artefakt of liste.protokolle) {
-    eintraege.push({ artefakt, istEingang: false });
-  }
-  return eintraege;
+export function artefakteintraege(liste: Artefaktliste): Artefakt[] {
+  return [...liste.nutzdaten, ...liste.protokolle];
 }
 
 /**
- * Der Eintrag zu einer Kennung, oder `null`.
+ * Das Artefakt zu einer Kennung, oder `null`.
  *
  * **`null` ist kein Fehlerzustand dieser Funktion**, sondern der Normalfall,
  * solange die Liste noch lädt. Die Ansicht kommt auch ohne sie aus — dann fehlt
@@ -86,13 +63,11 @@ export function artefakteintraege(liste: Artefaktliste): Artefakteintrag[] {
 export function findeArtefakt(
   liste: Artefaktliste | undefined,
   artefaktId: string,
-): Artefakteintrag | null {
+): Artefakt | null {
   if (liste === undefined) {
     return null;
   }
-  return (
-    artefakteintraege(liste).find((eintrag) => eintrag.artefakt.artefaktId === artefaktId) ?? null
-  );
+  return artefakteintraege(liste).find((artefakt) => artefakt.artefaktId === artefaktId) ?? null;
 }
 
 /**
@@ -113,25 +88,40 @@ export function findeArtefakt(
  * dem 17.08.2026 die Gruppenköpfe des Eigenschaftenblocks entstehen
  * (`detail.ts` `gruppiereEigenschaften`).
  *
- * ## Die Regel, in vier Zeilen
+ * ## Die Regel, in drei Zeilen
  *
  * | Lage | Beschriftung |
  * |---|---|
- * | Der Eingang (`Message.Payload.GUID`) | *Eingegangene Datei* |
- * | Sonst auf Schritt `0` — die Lesedienste (M57) | die **Familie allein**, `SAPReader` |
+ * | Auf Schritt `0` — die Lesedienste (M57) | die **Familie allein**, `SAPReader` |
  * | Der Schritt löst zu einem `SOSActionName` auf | dieser Name |
  * | Er löst nicht auf — **55,98 % der Artefakte** (M57) | `Schritt <n> · <Familie>` |
  *
+ * Die vierte Lage steht weiter unten am `@param`: Ohne Schrittfolge trägt alles
+ * den Rückfall.
+ *
+ * ### Die erste Zeile ist am 19.08.2026 entfallen
+ *
+ * Sie lautete *Der Eingang (`Message.Payload.GUID`) → Eingegangene Datei*. Nach
+ * **M73** trägt dieser Name in 6.249 von 6.249 (Fenster A) und 214.330 von
+ * 214.330 Nachrichten (Fenster B) den Verweis der Nutzdatenzeile mit dem
+ * **höchsten `MessageActionID`** derselben Nachricht — kein Gegenfall. Die
+ * Beschriftung *Eingegangene Datei* traf in 0,016 % bzw. 0,015 % der
+ * Nachrichten zu.
+ *
+ * Das Artefakt ist deshalb aus der Antwort des Backends entfallen und nicht
+ * umbenannt worden: Jede zutreffende Bezeichnung wäre entweder eine ungemessene
+ * Deutung oder sagte nur, dass es ein Duplikat ist. **Es kommt hier gar nicht
+ * mehr an**, und diese Funktion kennt es nicht.
+ *
  * ### Warum Schritt `0` seit dem 18.08.2026 eine eigene Zeile hat
  *
- * Auf Schritt `0` liegt **nicht nur** der Eingang. Gemessen sitzen dort die
- * Artefakte der Lesedienste, je Nachricht ein Paar aus Datei und Protokoll —
- * `SAPReader`, `FileReader`, `FTPReader`, `AS2Reader`, `MailReader`,
- * `OFTPReader`, `OFTP2Reader`, `HTTPReader`, `SSHReader` (M57, Fenster A).
+ * Auf Schritt `0` sitzen die Artefakte der Lesedienste, je Nachricht ein Paar
+ * aus Datei und Protokoll — `SAPReader`, `FileReader`, `FTPReader`, `AS2Reader`,
+ * `MailReader`, `OFTPReader`, `OFTP2Reader`, `HTTPReader`, `SSHReader` (M57,
+ * Fenster A).
  *
  * Für sie griff bis dahin der allgemeine Rückfall und schrieb
- * `Schritt 0 · SAPReader`. **Das ist technisch richtig und fachlich falsch** —
- * dieselbe Begründung, aus der der Eingang nicht „Schritt 0 · Message" heißt:
+ * `Schritt 0 · SAPReader`. **Das ist technisch richtig und fachlich falsch:**
  * Schritt `0` ist der Ort der Metadaten und **kein Ablaufschritt** (M57, M17 3);
  * er kommt in `schritte[]` gar nicht vor und steht deshalb in keiner Zeile der
  * Zeitleiste. Eine Nummer zu nennen, die der Nutzer nirgends wiederfindet, ist
@@ -153,24 +143,21 @@ export function findeArtefakt(
  *   Schrittfolge über das Artefakt bekannt ist.
  */
 export function artefaktBeschriftung(
-  eintrag: Artefakteintrag,
+  artefakt: Artefakt,
   schritte: readonly Schritt[],
   texte: Texte,
 ): string {
   const bausteine = texte.nachrichten.detail.dateien;
-  if (eintrag.istEingang) {
-    return bausteine.eingangTitel;
+  if (artefakt.schritt === METADATEN_POSITION) {
+    return artefakt.familie;
   }
-  if (eintrag.artefakt.schritt === METADATEN_POSITION) {
-    return eintrag.artefakt.familie;
-  }
-  const schritt = schritte.find((kandidat) => kandidat.position === eintrag.artefakt.schritt);
+  const schritt = schritte.find((kandidat) => kandidat.position === artefakt.schritt);
   if (schritt !== undefined && schritt.name !== "") {
     return schritt.name;
   }
   return einsetzen(bausteine.schrittFamilie, {
-    nummer: eintrag.artefakt.schritt,
-    familie: eintrag.artefakt.familie,
+    nummer: artefakt.schritt,
+    familie: artefakt.familie,
   });
 }
 
@@ -203,8 +190,11 @@ export type Artefaktziel = {
  * ({@link artefaktBeschriftung}) — die Lektion vom 17.08.2026: *Zwei Stellen,
  * die denselben Schritt verschieden benennen, sind der Fehler.* Davor steht die
  * Art, weil an einer Zeile zwei Ziele hängen und die beiden sich sonst nur über
- * ihr Zeichen unterschieden; **beim Eingang steht sie nicht** — *Nutzdaten ·
- * Eingegangene Datei* sagte zweimal dasselbe.
+ * ihr Zeichen unterschieden.
+ *
+ * **Die Ausnahme davon ist am 19.08.2026 entfallen.** Sie galt dem Eingang, weil
+ * *Nutzdaten · Eingegangene Datei* zweimal dasselbe sagte. Den Eingang als
+ * eigenes Ziel gibt es nicht mehr (M73); jedes Ziel trägt jetzt seine Art.
  *
  * **Der Ausschnitt wird angekündigt, bevor jemand klickt.** Das Backend liefert
  * `beschnittMoeglich` je Zeile genau dafür. Er steht im Namen *und* im `title`:
@@ -212,28 +202,25 @@ export type Artefaktziel = {
  * Vorleseprogramm liest ihn nicht verlässlich.
  */
 export function artefaktziel(
-  eintrag: Artefakteintrag,
+  artefakt: Artefakt,
   schritte: readonly Schritt[],
   texte: Texte,
 ): Artefaktziel {
   const bausteine = texte.nachrichten.detail.dateien;
-  const beschriftung = artefaktBeschriftung(eintrag, schritte, texte);
-  const ohneMarke = eintrag.istEingang
-    ? beschriftung
-    : einsetzen(bausteine.ziel, {
-        art: bausteine.art[eintrag.artefakt.art],
-        name: beschriftung,
-      });
+  const ohneMarke = einsetzen(bausteine.ziel, {
+    art: bausteine.art[artefakt.art],
+    name: artefaktBeschriftung(artefakt, schritte, texte),
+  });
 
   return {
-    artefaktId: eintrag.artefakt.artefaktId,
-    art: eintrag.artefakt.art,
-    name: eintrag.artefakt.beschnittMoeglich
+    artefaktId: artefakt.artefaktId,
+    art: artefakt.art,
+    name: artefakt.beschnittMoeglich
       ? einsetzen(bausteine.zielAusschnitt, { ziel: ohneMarke, marke: bausteine.ausschnittMarke })
       : ohneMarke,
-    titel: eintrag.artefakt.beschnittMoeglich
-      ? `${eintrag.artefakt.name}\n${bausteine.ausschnittAnkuendigung}`
-      : eintrag.artefakt.name,
+    titel: artefakt.beschnittMoeglich
+      ? `${artefakt.name}\n${bausteine.ausschnittAnkuendigung}`
+      : artefakt.name,
   };
 }
 
@@ -246,12 +233,14 @@ export function artefaktziel(
  * **eine** Ordnung, und das ist die der Zeitleiste; diese Funktion ordnet
  * deshalb selbst nichts, sie teilt nur ein.
  *
- * **Innerhalb eines Eimers bleibt die Reihenfolge die des Backends** — Eingang,
- * Nutzdaten, Protokolle, jeweils `ORDER BY MessageActionID,
+ * **Innerhalb eines Eimers bleibt die Reihenfolge die des Backends** —
+ * Nutzdaten, dann Protokolle, jeweils `ORDER BY MessageActionID,
  * MessagePropertyName` (`docs/rohdaten-backend.md` §9). Eine zweite Sortierung
  * hier wäre die Drift, gegen die diese Regel gerichtet ist.
  *
- * **Eimer `0` ist der Eingang** und gehört in keine Zeile der Zeitleiste.
+ * **Eimer `0` gehört in keine Zeile der Zeitleiste** — er hängt an der
+ * Eingangszeile darüber. Seit dem 19.08.2026 steht darin das Paar des
+ * Lesedienstes, Datei und Protokoll, und sonst nichts (M73).
  */
 export function zieleJeSchritt(
   liste: Artefaktliste | undefined,
@@ -262,11 +251,11 @@ export function zieleJeSchritt(
   if (liste === undefined) {
     return eimer;
   }
-  for (const eintrag of artefakteintraege(liste)) {
-    const ziel = artefaktziel(eintrag, schritte, texte);
-    const vorhandene = eimer.get(eintrag.artefakt.schritt);
+  for (const artefakt of artefakteintraege(liste)) {
+    const ziel = artefaktziel(artefakt, schritte, texte);
+    const vorhandene = eimer.get(artefakt.schritt);
     if (vorhandene === undefined) {
-      eimer.set(eintrag.artefakt.schritt, [ziel]);
+      eimer.set(artefakt.schritt, [ziel]);
     } else {
       vorhandene.push(ziel);
     }

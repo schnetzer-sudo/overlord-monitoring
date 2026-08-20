@@ -104,16 +104,14 @@ public class ArtefaktService {
       throw new RessourceNichtGefundenException("Nachricht nicht sichtbar oder nicht vorhanden");
     }
 
-    ArtefaktResponse eingang = null;
     List<ArtefaktResponse> nutzdaten = new ArrayList<>();
     List<ArtefaktResponse> protokolle = new ArrayList<>();
 
     for (Artefaktzeile zeile : zeilen) {
       Artefaktart art = Artefaktnamen.art(zeile.name());
       if (art == null) {
-        // Kann nicht vorkommen: die Abfrage filtert bereits auf die beiden Muster. Die Zeile steht
-        // hier, damit eine kuenftige Aenderung an der Abfrage nicht still eine NullPointerException
-        // erzeugt.
+        // Kann nicht vorkommen: das Repository laesst nur die beiden Muster durch. Die Zeile steht
+        // hier, damit eine kuenftige Aenderung dort nicht still eine NullPointerException erzeugt.
         continue;
       }
       ArtefaktResponse antwort =
@@ -124,16 +122,13 @@ public class ArtefaktService {
               art,
               zeile.schritt(),
               beschnittGreift(art, rolle));
-      if (Artefaktnamen.istEingang(zeile.name())) {
-        eingang = antwort;
-      } else if (art == Artefaktart.NUTZDATEN) {
+      if (art == Artefaktart.NUTZDATEN) {
         nutzdaten.add(antwort);
       } else {
         protokolle.add(antwort);
       }
     }
-    return new ArtefaktlisteResponse(
-        messageId, eingang, List.copyOf(nutzdaten), List.copyOf(protokolle));
+    return new ArtefaktlisteResponse(messageId, List.copyOf(nutzdaten), List.copyOf(protokolle));
   }
 
   // ─── Endpunkt 2: die Anzeige ──────────────────────────────────────────────────
