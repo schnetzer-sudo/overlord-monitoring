@@ -192,8 +192,10 @@ ist genau das Feld, das die Projektbeschreibung als millionenfach vorkommenden W
 als Spalte stünde dort auf fast jeder Zeile dasselbe. Die Lieferschein-Nr. liegt auf Platz sieben
 (Messung M7 in [`messungen-schritt4.md`](messungen-schritt4.md)).
 
-Also kuratiert statt geraten, wie bei Partner, Standort, Richtung und Belegart (Regel Q4): Die
+Also kuratiert statt geraten, wie bei Partner und Richtung (Regel Q4): Die
 Heuristik — hier der Sortierindex — befüllt vor, die Wahrheit steht in der Tabelle.
+*(Korrigiert 20.08.2026: Hier stand „Partner, Standort, Richtung und Belegart“ — Standort und
+Belegart entfallen, [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §4.4.)*
 **Vorbelegt wird ausschließlich die Ausnahme**, zwei Zeilen für `NEXANS`.
 
 **Die Auflösungsregel** (umgesetzt mit dem Listen-Endpunkt):

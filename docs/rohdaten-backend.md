@@ -1,9 +1,10 @@
 # Rohdaten und Protokolle — das Backend
 
-Stand: 18.08.2026 · Schritt 8 des MVP, Teil Backend
+Stand: 18.08.2026, **korrigiert am 19.08.2026 nach M73** (§1, §2, §7, §11) · Schritt 8 des MVP,
+Teil Backend
 Vorgabe: [`rohdaten.md`](rohdaten.md). Bei Widersprüchen gilt jene Datei; alle Abweichungen sind
 hier unter §10 benannt und begründet.
-Messungen: [`messungen-schritt8.md`](messungen-schritt8.md) M52–M72.
+Messungen: [`messungen-schritt8.md`](messungen-schritt8.md) M52–M72 und **M73**.
 
 **Kein Frontend.** Route, Ansicht und Beschriftungen sind ein eigener Schritt.
 
@@ -26,12 +27,32 @@ serverseitig hergeleitet.
 entsteht gar nicht erst, weil der Mandantenfilter im Statement steht und in beiden Fällen dieselbe
 leere Menge zurückkommt.
 
+> **Vermerk 19.08.2026 — „zweigeteilt" stimmt seit heute wörtlich.** Die Antwort trug bis dahin
+> **drei** Felder: `eingang`, `nutzdaten` und `protokolle`. `eingang` führte
+> `Message.Payload.GUID`; nach **M73** trägt dieser Name in 6.249 von 6.249 und 214.330 von 214.330
+> Nachrichten den Verweis der Nutzdatenzeile mit dem **höchsten `MessageActionID`** derselben
+> Nachricht und benennt kein eigenes Artefakt. Das Feld ist entfallen (§7 und
+> [`rohdaten.md`](rohdaten.md) §3).
+>
+> **Die Zweiteilung ist gemessen und nicht angenommen:** Alle 30 `%.Log.GUID`-Kombinationen in
+> Fenster A tragen `gleich = 0` — Nutzdaten und Protokolle teilen sich nie eine Datei (M73,
+> Befund 8).
+>
+> **Kein Umleitungspfad für alte Kennungen.** `0-Message.Payload.GUID` findet in der Menge nichts
+> mehr und ergibt `404` wie jede unbekannte Kennung. Das Feature war einen Tag alt; ein bereits
+> geteilter Verweis auf diese Kennung ist praktisch ausgeschlossen.
+
 ---
 
 ## 2. Die `artefaktId` — die sicherheitskritische Zeile
 
-`<MessageActionID>-<MessagePropertyName>`, also etwa `0-Message.Payload.GUID` oder
+`<MessageActionID>-<MessagePropertyName>`, also etwa `0-FileReader.Payload.GUID` oder
 `2-FileReader.Log.GUID`. Alle vorkommenden Zeichen sind in einem URL-Pfad unreserviert.
+
+> **Korrigiert 19.08.2026.** Das erste Beispiel lautete bis heute **„`0-Message.Payload.GUID`"**.
+> Die Kennung zerfällt weiterhin sauber — die Form ist unverändert gültig —, trifft aber keine
+> Zeile mehr: Die Artefaktliste führt `Message.Payload.GUID` seit M73 nicht mehr (§7). Als Beispiel
+> für eine gültige Kennung taugt ausgerechnet die eine, die nie auflöst, nicht.
 
 > **Sie enthält niemals die GUID und niemals die Ablagenkennung.**
 >
@@ -95,9 +116,16 @@ Wert, das L4 verbietet, und die Trennung ist ohnehin die gemessene Form (M58 (1)
 
 **Die Größengrenze greift *während* des Lesens**, an zwei Stellen: beim Lesen des SOAP-Anhangs und
 beim Entpacken des ZIP-Eintrags. Eine Vorabprüfung über `FileReader.FileProperty.Size` gäbe es nur
-für rund 69,6 % der Artefakte (M17, M60) — und eine Grenze, die in einem Drittel der Fälle nicht
-greift, ist keine. Beim Entpacken wird ebenfalls gezählt statt geglaubt: `ZipEntry.getSize()` ist
-eine Angabe aus dem Archiv und damit eine Behauptung der Gegenseite.
+für rund 69,6 % der **Nachrichten** in Fenster A und 57,2 % in Fenster B (M56, Befund 1) — und eine
+Grenze, die in vier von zehn Fällen nicht greift, ist keine. Beim Entpacken wird ebenfalls gezählt
+statt geglaubt: `ZipEntry.getSize()` ist eine Angabe aus dem Archiv und damit eine Behauptung der
+Gegenseite.
+
+> **Berichtigt 20.08.2026.** Hier stand „für rund 69,6 % der **Artefakte** (M17, M60)". Gemessen ist
+> die Abdeckung der **Nachrichten**, und nur in Fenster A: `FileReader.FileProperty.Size` deckt
+> **4.351 von 6.249** Nachrichten (69,63 %) und **122.604 von 214.330** in Fenster B (57,20 %),
+> M56 Befund 1. Auf Artefakte gerechnet läge der Anteil weit darunter. Die Schlussfolgerung — die
+> Grenze muss während des Lesens greifen — wird davon nur stärker.
 
 **Der `ServiceConnectString` enthält einen Hostnamen** (Regel G1). Er erscheint in keiner
 Fehlerantwort und in keiner Protokollzeile oberhalb von `DEBUG`. `Artefaktverweis`,
@@ -270,6 +298,52 @@ verwendet die `MessageID` (Q4) — 36 Zeichen, und für alle Artefakte derselben
 > Datei, die *eingegangen* ist. Für ein `Converter.Payload.GUID` auf Schritt 2 ist das eine andere
 > Datei; ihm den Namen des Eingangs zu geben wäre eine Falschauskunft. Auf einem Wandlungsschritt
 > greift deshalb der konstruierte Name.
+
+> **Korrigiert 19.08.2026 — der Kasten darüber beschreibt ein Artefakt, das es nicht mehr gibt, und
+> er beschrieb einen zweiten Fehler, den er selbst benennt.**
+>
+> **1. Was falsch ist.** „Der Eingang heißt `Message.Payload.GUID`" und „der Kopf der Liste" —
+> beides trifft nicht mehr zu. Nach **M73** trägt der Name in **6.249 von 6.249** und **214.330 von
+> 214.330** Nachrichten den Verweis der Nutzdatenzeile mit dem **höchsten `MessageActionID`**
+> derselben Nachricht; er ist aus der Artefaktliste entfallen, und die Antwort ist zweigeteilt.
+>
+> **2. Der zweite Fehler, und er ist der teurere.** Der zweite Absatz formuliert den Grundsatz
+> selbst: *„Der Originalname beschreibt die Datei, die eingegangen ist. Für ein
+> `Converter.Payload.GUID` auf Schritt 2 ist das eine andere Datei; ihm den Namen des Eingangs zu
+> geben wäre eine Falschauskunft."* **Genau das ist auf dem Umweg über Schritt `0` geschehen.**
+> Für `0-Message.Payload.GUID` suchte der Download `%.FileProperty.OriginalFilename` auf Schritt
+> `0` und fand den Namen der **eingegangenen** Datei — der Inhalt dahinter war nach M73 aber die
+> Datei des höchsten Nutzdatenschritts. Wer diese Datei herunterlud, **hätte** damit den Stand eines
+> späteren Schritts unter dem Namen seines eingegangenen Belegs gespeichert — in der Mehrheit den
+> eines Sendedienstes (70,09 % / 53,37 %), sonst den des Converters (29,89 % / 46,62 %), M73.
+> **Ob es jemand getan hat, ist nicht bekannt** und wird hier nicht behauptet: Das Feature war einen
+> Tag alt, und ein Zugriffsprotokoll ist dazu nicht ausgewertet worden. **Der Weg dorthin ist mit
+> dem Wegfall des Artefakts geschlossen** und stand einen Tag lang offen.
+>
+> **3. Die Regel bleibt trotzdem stehen.** Sie ist nicht falsch geworden, nur **gegenstandslos für
+> den Fall, für den sie begründet wurde**. Ein Umbau der Dateinamenssuche ist nicht Teil dieser
+> Runde.
+>
+> **4. Ob ein anderer Fall bleibt — benannt, nicht gemessen.** Muster- und Familiensuche gehen
+> weiterhin auseinander, sobald auf dem Schritt eines Artefakts ein
+> `FileReader.`/`FTPReader.FileProperty.OriginalFilename` liegt und das Artefakt einer **anderen**
+> Familie angehört: über das Muster bekäme es einen Namen, über die Familie keinen.
+>
+> > **Belegvermerk** (Regel L10).
+> >
+> > *Gemessen ist:* welche `MessagePropertyName` den Originalnamen tragen — nur `FileReader` und
+> > `FTPReader` (M56 a, beide Fenster).
+> >
+> > *Nicht gemessen ist:* auf welchem `MessageActionID` diese Zeilen liegen, und ob dort Artefakte
+> > fremder Familien sitzen. M56 (a) gruppiert nach Namen, nicht nach Schritt.
+> >
+> > *Ausdrücklich nicht behauptet:* dass der Fall vorkommt — und ebenso wenig, dass er nicht
+> > vorkommt. Er ist **offen** und steht als Punkt 9 in [`rohdaten.md`](rohdaten.md) §13.
+>
+> **5. Was unberührt bleibt.** Das Muster `%.FileProperty.OriginalFilename`, die Eingrenzung auf
+> denselben `MessageActionID`, der konstruierte Name ohne Endung, die Bereinigung des Namens vom
+> Partner — nichts davon ist angefasst worden. **Kein stilles Überschreiben:** Der Kasten oben
+> bleibt wörtlich stehen.
 
 > **Der konstruierte Name bekommt keine Endung.** M56 (c) hat die Endungen der Originalnamen
 > erhoben: **4.307 von 4.352** in Fenster A enden auf einen Punkt und eine reine *Ziffernfolge*;
@@ -507,7 +581,10 @@ Fünf, alle vorsätzlich und alle hier statt in einer Fußnote.
 | 5 | **Mehr als ein ZIP-Eintrag** ist nie vorgekommen (0 von 693). Der Fall wird behandelt, vermerkt und protokolliert — ob alle Einträge angeboten werden, ist offen (`rohdaten.md` §13, Punkt 6) |
 | 6 | **Die Schwelle der Binärerkennung (95 % druckbare Zeichen) ist gesetzt, nicht gemessen.** Gemessen ist, dass die Textdateien bei 100 % liegen und die Binärdateien Nullbytes tragen (M61, M71) — zwischen 100 % und 95 % liegt im gemessenen Bestand nichts. Ob es in Produktion etwas dazwischen gibt, ist unbekannt |
 | 7 | **Ein Umschalter auf UTF-8 ist nicht gebaut.** `rohdaten.md` §7 lässt ihn zu („zulässig"), verlangt ihn nicht. Die Voreinstellung `ISO-8859-1` ist gemessen |
-| 8 | **`app_user.download_allowed` wird nicht geprüft — und das ist ein Widerspruch zwischen zwei Vorgaben.** Die Migration `V2__app_user.sql:29–32` legt das Flag an mit dem Kommentar „**Fuer Schritt 8 vorbereitet** […], damit ein spaeterer Entzug keine Migration erfordert (Regel R6)"; `AngemeldeterNutzer.downloadAllowed` trägt es bis in die Sitzung und `GET /api/auth/me` gibt es aus (`authentifizierung.md`). `rohdaten.md` §3 Entscheidung 2 sagt dagegen: „Alle Rollen sehen **alle Dateien** der Nachrichten, die sie ohnehin erreichen. **Keine zweite Berechtigungsstufe**." **Gebaut ist nach `rohdaten.md`**, weil das die verbindliche Vorgabe dieses Features ist — eine Prüfung einzubauen hieße, genau die zweite Stufe zu errichten, die Entscheidung 2 ausschließt. Damit ist das Flag derzeit ein totes Feld. **Zu entscheiden: fällt Entscheidung 2, oder fällt das Flag?** |
+| 8 | **`app_user.download_allowed` wird nicht geprüft — und das ist ein Widerspruch zwischen zwei Vorgaben.** Die Migration `V2__app_user.sql:29–32` legt das Flag an mit dem Kommentar „**Fuer Schritt 8 vorbereitet** […], damit ein spaeterer Entzug keine Migration erfordert (Regel R6)"; `AngemeldeterNutzer.downloadAllowed` trägt es bis in die Sitzung und `GET /api/auth/me` gibt es aus (`authentifizierung.md`). `rohdaten.md` §3 Entscheidung 2 sagt dagegen: „Alle Rollen sehen **alle Dateien** der Nachrichten, die sie ohnehin erreichen. **Keine zweite Berechtigungsstufe**." **Gebaut ist nach `rohdaten.md`**, weil das die verbindliche Vorgabe dieses Features ist — eine Prüfung einzubauen hieße, genau die zweite Stufe zu errichten, die Entscheidung 2 ausschließt. Damit ist das Flag derzeit ein totes Feld. **Zu entscheiden: fällt Entscheidung 2, oder fällt das Flag?** — **Geschlossen 20.08.2026: Spalte entfernt.** Es fällt das Flag. `app_user.download_allowed` wird in Schritt 9a per Migration entfernt (E20), `AngemeldeterNutzer.downloadAllowed` und die Ausgabe in `GET /api/auth/me` entfallen mit ihr ([`authentifizierung.md`](authentifizierung.md) §1). `rohdaten.md` §3 Entscheidung 2 ist damit **bestätigt, nicht korrigiert**. Die drei Endpunkte aus Schritt 8 bleiben unangetastet — sie haben das Flag nie geprüft, und genau das war richtig |
+| 9 | **Der Anlassfall der Regel „Muster statt Familie" ist entfallen, ein anderer bleibt möglich** *(neu am 19.08.2026, = offener Punkt 31 in [`messungen-schritt8.md`](messungen-schritt8.md))*. Ausführlich im Korrekturkasten in §7 samt Belegvermerk. **Nicht gemessen, nicht geändert, nicht entschieden** — der Umbau der Dateinamenssuche ist eine eigene Runde |
+| 10 | **`Downloaddateiname` hat einen Tag lang eine falsch benannte Datei ausgeliefert** *(vermerkt 19.08.2026)*. Für `0-Message.Payload.GUID` fand die Suche `FileReader`/`FTPReader.FileProperty.OriginalFilename` auf Schritt `0` — den Namen der eingegangenen Datei — während der Inhalt nach M73 der des höchsten Nutzdatenschritts war. **Behoben** durch den Wegfall des Artefakts; hier vermerkt, weil ein Befund nicht mit der Zeile mitverschwinden soll, die ihn getragen hat |
+| 11 | **Die Aussage „FileReader und FTPReader schließen einander aus" war ungedeckt** *(berichtigt 19.08.2026)*. Sie stand als Kommentar an der Sortierung in `findeOriginaldateiname` und berief sich auf M56 (a). **M56 (a) gruppiert je `MessagePropertyName`** und misst kein `DISTINCT` über beide; die 71,4 % in Befund 1 sind eine Addition der beiden Zeilen. Der Kommentar ist berichtigt, das Verhalten nicht — die feste Sortierung nach Namen deckt den Fall ohnehin ab |
 
 ---
 
@@ -519,7 +596,7 @@ Fünf, alle vorsätzlich und alle hier statt in einer Fußnote.
 | `ArtefaktService` | Die Kette: auflisten, abrufen, aufbereiten, protokollieren. Ein Codepfad für Anzeige und Download |
 | `ArtefaktRepository` | Vier jOOQ-Statements, jedes mit dem Mandantenfilter als `EXISTS` |
 | `ArtefaktId` | Kennung aus Schritt und Name — ohne GUID, ohne Ablagenkennung. Streng geprüft |
-| `Artefaktnamen` | Die beiden gemessenen Namensmuster, Art und technische Familie |
+| `Artefaktnamen` | Die beiden gemessenen Namensmuster, Art und technische Familie — **und die eine Ausnahme**: `Message.Payload.GUID` ist kein Artefakt (`NAME_ZEIGER`, `istZeiger`, M73). Sie steht dort und nicht im Statement (§7) |
 | `Artefaktverweis` | `<Ablagenkennung>\|<UUID>` zerlegt. Verlässt das Backend nie |
 | `Artefaktzeile` | Eine Zeile aus `MessageProperty`, wie das Repository sie liefert |
 | `Artefaktart` | `NUTZDATEN` oder `PROTOKOLL` |
@@ -543,7 +620,7 @@ Fünf, alle vorsätzlich und alle hier statt in einer Fußnote.
 | Test | Deckt ab |
 |---|---|
 | `RohdatenIsolationDbIT` | **Die drei Pflicht-Isolationstests** (Regel M4), je Endpunkt einer, plus: keine Mandanten-ID, keine Rolle, kein Verweis als Parameter. `@Tag("db")` |
-| `ArtefaktStatementsTest` | Mandantenfilter in jedem Statement, kein Zugriff über den Wert, kein Join über den Verweis, kein Zeitfenster |
+| `ArtefaktStatementsTest` | Mandantenfilter in jedem Statement, kein Zugriff über den Wert, kein Join über den Verweis, kein Zeitfenster — **und beide Hälften der Ausnahme aus §7**: dass sie *nicht* im Statement steht, und dass `findeArtefakte` `Message.Payload.GUID` trotzdem nicht zurückgibt |
 | `ArtefaktServiceTest` | Rolle aus der Sitzung, Gleichlauf, fünf Zustände, Kodierung, Kappung, zwei ZIP-Einträge, Protokollierung |
 | `ProtokollbeschnittTest` | **Alle fünf Fälle** aus §5, gemischte Zeilenenden, eingeschleuste Marke, Maskierung |
 | `ArtefaktIdTest` | Kennung stabil, URL-tauglich, ohne Verweis; zwölf unbrauchbare Formen |

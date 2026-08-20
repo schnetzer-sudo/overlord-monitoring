@@ -414,7 +414,9 @@ geschlüsselt. Das ist der teurere Schnitt und der einzige, der alle drei Fälle
 - **Eine Sicherungsregel für handkuratierte Daten gab es nicht.** Geprüft über `docs/`, das
   Wurzelverzeichnis und die Migrationen. Sie ist mit Teil 2a in
   [`bam-sollaengen.md`](bam-sollaengen.md) §7.2 **angelegt** worden und führt von Anfang an auch
-  `process_catalog` und `partner` — beide existieren noch nicht.
+  `process_catalog` — die Tabelle existiert noch nicht. *Korrigiert 20.08.2026:* Hier stand
+  „`process_catalog` und `partner` — beide existieren noch nicht“. Die Tabelle `partner` entfällt
+  (E23); die Auswahlliste wird über `SELECT DISTINCT` aus den Katalogzeilen abgeleitet.
 
 ---
 
@@ -502,3 +504,304 @@ Sorte Prüfung für die übrigen entsteht, ist eine offene Frage
 - **Wie oft solche Werte gesucht werden.** Nicht erhoben und in diesem Projekt auch nicht erhebbar:
   Es führt kein Suchprotokoll. **Der Satz „der Defekt war selten im Weg" ist ein Schluss aus der
   Datenlage und keine Beobachtung** — dieselbe benannte Lücke wie bei den 585 Doppelpunkten.
+
+---
+
+## Vorfall 18.08.2026 (Schritt 8 — der schreibende Prüfagent)
+
+**Dies ist kein Befund über das Quellsystem, sondern ein Vorfall dieses Projekts.** Er steht hier aus
+demselben Grund wie die Korrektur zum Komma: weil diese Datei die Stelle ist, an der das Projekt seine
+Irrtümer führt — und weil er sonst gar nirgends stünde. Ein zurückgesetzter Schreibvorgang hinterlässt
+nicht einmal eine Zeile im Änderungsverlauf.
+
+### Der Vermerk
+
+**Ein Lauf, der prüfen sollte, hat die geprüfte Datei geändert — und zwar die Datei, in der die
+Entscheidungen stehen.**
+
+In der Nachbesserung zu Schritt 8 am **18.08.2026** hat ein Prüfagent in den Arbeitsbaum geschrieben.
+Betroffen war `frontend/src/features/nachrichten/rohdaten.ts`, und zwar an zwei Stellen: Er hat **den
+Anzeigevermerk beschnitten** und **`zieleJeSchritt` umgeschrieben**. Der Lauf wurde gestoppt, beide
+Änderungen wurden zurückgesetzt. Der Baum steht heute unverändert auf `8400952`.
+
+**Drei Angaben zum Vorgang fehlen und werden nach Regel Q4 als Lücke benannt statt ergänzt.** Der
+Auftrag zum Dokumentationslauf vom 19.08.2026 hat sie zum Eintragen vorgesehen und leer gelassen:
+
+| # | Offene Angabe | Warum sie hier nicht steht |
+|---|---|---|
+| (a) | Womit ist „der Baum ist geprüft sauber" belegt? | Nicht eingetragen. Aus dem Baum ist er **nachträglich** nicht mehr herzuleiten: Ein zurückgesetzter Schreibvorgang und ein Lauf, der nie geschrieben hat, sehen hinterher gleich aus — genau darum verlangt S3 den Nachweis **während** des Laufs |
+| (b) | Hat der Prüfagent **vor** oder **nach** seinen 39 Befunden geschrieben? | Nicht eingetragen. Die Antwort entscheidet, ob die 39 Befunde gegen den unveränderten oder gegen den eigenen Baum entstanden sind — also ob Satz 3 von S3 auf sie zutrifft. **Ohne sie sind sie nach Satz 3 als gegen einen veränderten Baum entstanden zu behandeln** |
+| (c) | Stammen die 336 Testfälle aus der Runner-Ausgabe? | Nicht eingetragen. Nachträglich prüfbar ist nur, ob die Zahl **heute** reproduziert (sie tut es, siehe unten) — nicht, woher sie am 18.08.2026 kam |
+
+### Warum er schwerer wiegt als jeder der 39 Befunde derselben Runde
+
+**Geschrieben wurde in `rohdaten.ts`** — der Datei, die laut
+[`rohdaten-frontend.md`](rohdaten-frontend.md) §12 „**die Entscheidungen als reine Funktionen**" trägt:
+Beschriftung, Ziele je Schritt, Gleichlauf, Vermerke, Pfade. Das ist keine Hilfsdatei und kein Markup.
+
+`zieleJeSchritt` umzuschreiben heißt damit, **eine Entscheidung zu ändern, ohne dass eine Entscheidung
+dahintersteht** — genau das, was dieses Projekt als stille Entscheidung ausschließt. Die Funktion setzt
+Entscheidung 6 in ihrer Fassung vom 18.08.2026 um ([`rohdaten.md`](rohdaten.md) §3): je Schritt die
+Artefakte, die auf ihm liegen, kein Ziel wo nichts liegt, nichts abgeschnitten wo mehr liegt. Wer sie
+umschreibt, verschiebt diese Fassung — und der Kasten unter §3 zeigt, was eine solche Verschiebung
+kostet, wenn sie unbemerkt bleibt: Entscheidung 6 ist in ihrer **ersten** Fassung an M57 vorbeigelaufen
+und erst im gebauten Zustand als Fehler sichtbar geworden.
+
+**Dass es aufgefallen ist, liegt am Zeitpunkt und nicht an einem Mechanismus.** Kein Test, kein Hook und
+keine Regel hat den Schreibvorgang gemeldet; er fiel auf, weil zu diesem Zeitpunkt jemand hinsah. Genau
+diese Lücke schließt **S3** ([`../DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) §4.2) — und
+sie schließt sie als Regel und nicht als Mechanismus, was hier ausdrücklich festgehalten wird: Ein
+Prüflauf, der die Regel bricht, wird weiterhin nur dann bemerkt, wenn der Nachweis nach Satz 2
+eingefordert wird.
+
+### Der zweite Vorfall derselben Runde: die Testzahl-Drift
+
+`tests/ansicht-umschalter.test.tsx` trug **seit Schritt 6 zwei Fälle**, gezählt war **einer** —
+berichtigt am 18.08.2026 im Kopf von `frontend/vitest.config.mts`, wo die Zahl der gerenderten Fälle an
+genau einer Stelle geführt wird.
+
+**Das ist dieselbe Klasse wie `information_schema.TABLE_ROWS`:** eine Zahl **fortgeschrieben statt
+gezählt**. Bei `MessageBAM` waren es 41,9 % Abweichung (M33‑0), bei `MessageProperty` 60,9 % (M44); hier
+war die geführte Summe **16, gezählt 17** — ein Fall von siebzehn, 5,9 %. Die Größe ist verschieden, der
+Fehler ist derselbe, und er fällt in allen drei Fällen erst auf, wenn jemand nachzählt.
+
+> **Belegvermerk (L10).** *Gemessen war:* die Fassung des Kopfes von `frontend/vitest.config.mts` im
+> Commit `4210b94` (18.08.2026) — dort „**sechzehn in fünf Dateien**", mit
+> `tests/ansicht-umschalter.test.tsx` bei **1**, während die Datei zwei Fälle trug (3 + 1 + 4 + 4 + 4 =
+> 16 geführt gegen 3 + 2 + 4 + 4 + 4 = 17 tatsächlich). *Behauptet wird:* dass die Zahl
+> **fortgeschrieben** und nicht gezählt wurde. Das ist der Schluss aus der Abweichung und keine
+> Beobachtung des Vorgangs — belegt ist die Abweichung, nicht ihre Entstehung.
+
+**Zu berichten, nicht zu beheben, war die Frage: Stammen die gemeldeten 336 Fälle aus der Ausgabe des
+Testrunners oder aus einer laufenden Summe?** Antwort, soweit sie aus dem Baum zu holen ist:
+
+| Was geprüft wurde | Ergebnis |
+|---|---|
+| `pnpm test` (`vitest run`) am **19.08.2026** gegen `8400952` | `Test Files 19 passed (19)` · `Tests 336 passed (336)` — **beide Zahlen reproduzieren wortgleich** die Angabe in [`rohdaten-frontend.md`](rohdaten-frontend.md) §9 |
+| Die sieben Einzelzahlen im Kopf von `frontend/vitest.config.mts`, je Datei einzeln gefahren | 2 · 9 · 4 · 3 · 4 · 4 · 8 — **alle sieben stimmen**, Summe **34**, wie dort geführt |
+| Eine statische Zählung der `it(`/`test(`-Aufrufe | **243** und damit unbrauchbar als Beleg: `it.each` erzeugt mehrere Fälle je Aufruf, sichtbar an `artefakt-ansicht.test.tsx` (6 Aufrufe, 9 Fälle) |
+
+> **Belegvermerk (L10).** *Gemessen war:* dass die beiden Zahlen und die sieben Einzelzahlen **heute**
+> gegen `8400952` reproduzieren. *Behauptet wird damit nicht,* dass sie am 18.08.2026 aus der
+> Runner-Ausgabe stammten — das ist Frage (b)/(c) oben und bleibt offen. **Die Reproduktion belegt den
+> Zustand, nicht die Herkunft.** Sie schließt allerdings die Drift für den heutigen Stand aus: Wäre die
+> Summe fortgeschrieben, müsste sie danebenliegen, und sie tut es an keiner der acht geprüften Stellen.
+
+**Und der Satz, der dazugehört:** Stammte die Zahl aus einer Summe, wäre die Korrektur an *einer* Datei
+kein Beleg für die übrigen achtzehn. Nach der Messung oben ist dieser Fall für den heutigen Stand
+ausgeschlossen — für den Stand vom 18.08.2026 ist er es **nicht**.
+
+### Was daran zu lernen ist — und was nicht
+
+**Nicht zu lernen ist daraus, dass Prüfläufe weniger dürfen sollten.** Ein Prüflauf, der den Baum liest,
+Tests fährt und Befunde schreibt, ist genau das Werkzeug, das den Kommadefekt gefunden hat. Die Lücke
+war nicht seine Reichweite, sondern die **fehlende Trennung von Finden und Beheben** — und die zweite
+Lücke war, dass niemand einen Nachweis verlangt hat.
+
+**Die beiden Vorfälle haben dieselbe Gestalt, und das ist der Grund, warum sie in einem Eintrag stehen:**
+In beiden Fällen ist etwas **behauptet statt belegt** worden — einmal ein sauberer Baum, einmal eine
+Fallzahl. Dieses Projekt hat für die zweite Sorte schon eine Regel (L10) und hat für die erste jetzt
+eine (S3).
+
+### Was dieser Vorfall **nicht** ändert
+
+- **Keine Zeile Code ist deswegen angefasst worden.** Weder `rohdaten.ts` noch ein Test noch ein
+  Endpunkt; die beiden Änderungen des Prüfagenten sind zurückgesetzt und nicht ersetzt worden.
+- **Keine Zahl aus M52 bis M72 ist angefasst worden**, und keine Messung ist wiederholt worden.
+- **Die 39 Befunde derselben Runde sind hier weder übernommen noch verworfen.** Ohne Angabe (b) ist
+  nicht bekannt, ob sie vor oder nach dem Schreibvorgang entstanden sind; nach S3 Satz 3 sind sie damit
+  vor einer Übernahme neu zu erheben. **Welche es waren, steht in keiner Datei dieses Projekts.**
+- **Kein offener Punkt aus [`rohdaten-frontend.md`](rohdaten-frontend.md) §11 oder
+  [`rohdaten-backend.md`](rohdaten-backend.md) §11 ist entschieden.**
+- **Die Sichtprüfung zu Schritt 8 ist nicht nachgeholt** und gilt weiter als ausstehend.
+
+### Neu offen
+
+- **Die drei Angaben (a), (b) und (c)** aus der Tabelle oben. (a) und (b) sind nur vom Auftraggeber zu
+  beantworten; (c) ist für den heutigen Stand gemessen und für den 18.08.2026 offen.
+- **Ob die 39 Befunde neu erhoben werden.** Sie sind in keiner Datei geführt. Ohne eine Liste ist Satz 3
+  von S3 auf sie nicht anwendbar, weil der Gegenstand fehlt.
+- **Ob S3 einen Mechanismus bekommt.** Heute ist die Regel eine Regel. Ob ein Hook oder ein Schritt im
+  Build den Nachweis nach Satz 2 erzwingt, ist eine Entscheidung des Auftraggebers und hier **nicht**
+  getroffen.
+- **Ob die übrigen achtzehn Testdateien ihre Fallzahlen einzeln führen.** Heute führt nur der Kopf von
+  `frontend/vitest.config.mts` Zahlen, und nur für die sieben rendernden Dateien. Für die übrigen gibt
+  es keine geführte Zahl — und damit auch keine, die driften könnte.
+
+---
+
+## Korrektur 19.08.2026 (Schritt 8 — `Message.Payload.GUID` ist nicht die eingegangene Datei)
+
+*Eingetragen am 20.08.2026, nachdem die Korrektur gefahren war.*
+
+**Diese Annahme ist nie durch dieses Verzeichnis gegangen.** Die Korrekturen oben gehen auf
+Aussagen zurück, die irgendwo als Annahme oder als dokumentierte Zahl standen — A6, A7, A8, das
+Mengengerüst, die Zeilenzahl aus `information_schema`. Diese hier ist am **18.08.2026** unmittelbar
+als **Tatsache** in zwei verbindliche Feature-Dateien geschrieben worden, ohne Messung und ohne
+Belegvermerk. Sie hat nie den Zustand „Annahme" gehabt, den man hätte prüfen können — und genau
+deshalb gehört sie hierher.
+
+### Der Vermerk
+
+**`Message.Payload.GUID` benennt kein eigenes Artefakt.** Er trägt in **6.249 von 6.249** Nachrichten
+(Fenster A) und **214.330 von 214.330** (Fenster B) denselben Verweis wie die Nutzdatenzeile mit dem
+**höchsten `MessageActionID`** derselben Nachricht — **kein Gegenfall** in beiden Fenstern. Der
+Verweis hat die Form `<Ablagenkennung>|<UUID>` und ist durchgängig so gebaut
+(M54); zwei gleiche Verweise heißen **dieselbe Datei**, nicht zwei ähnliche. Die Frage war damit ohne
+einen einzigen Filestore-Abruf entscheidbar — ein Zeichenkettenvergleich innerhalb einer Nachricht.
+
+Vollständig mit Statements, `EXPLAIN` und Laufzeiten in
+[`messungen-schritt8.md`](messungen-schritt8.md) unter **M73**.
+
+> **Belegvermerk (Regel L10).**
+>
+> *Gemessen ist:* dass der Verweis mit dem der Nutzdatenzeile auf dem **höchsten `MessageActionID`**
+> übereinstimmt — je Nachricht, in zwei Fenstern, zweimal gerechnet (Spaltenkollation und `BINARY`,
+> in jeder Zeile übereinstimmend).
+>
+> *Behauptet wird:* dass der Name deshalb keine eigene Datei benennt und aus der Artefaktliste
+> gehört.
+>
+> *Ausdrücklich **nicht** behauptet:* dass „höchster `MessageActionID`" gleichbedeutend mit
+> „zeitlich zuletzt" ist. Gemessen ist die **Schrittnummer**, nicht die Uhr. Die Deutung „die
+> zuletzt erzeugte Datei" ist plausibel und ungemessen; sie steht in keiner Beschriftung, keinem
+> Feldnamen und keinem Kommentar — und wo sie versehentlich stand ([`README.md`](README.md), Zeile
+> zu `messungen-schritt8.md`), ist sie am 19.08.2026 herausgenommen worden.
+
+### Woher der Fehler kam — und warum er zwei Schichten tief saß
+
+**Aus dem Namen.** `Message.` plus `Payload` liest sich wie „die Nutzdatei *der* Nachricht". Die
+Ableitung ist so naheliegend, dass sie nie als Ableitung aufgefallen ist — sie stand am 18.08.2026
+in [`rohdaten.md`](rohdaten.md) §5 und [`rohdaten-frontend.md`](rohdaten-frontend.md) §2 ohne
+Fundstelle, und **M57 hatte gemessen, welche Namen auf Schritt `0` liegen — nicht, worauf ihre
+Verweise zeigen.**
+
+**Die Annahme hat sich selbst gedeckt.** `rohdaten-frontend.md` §2 begründete sie mit dem Backend
+(„Das Backend liefert ihn in einem eigenen Feld der Antwort"), und das Backend-Feld hieß `eingang`,
+weil der Name das nahelegte. Ein Kreis aus zwei Schichten, in dem keine Messung vorkommt. Das ist
+die eigentliche Lehre dieses Eintrags: **Eine Vermutung, die durch zwei Schichten wandert, sieht am
+Ende aus wie ein Befund.**
+
+**Aufgefallen ist sie an der Oberfläche und nicht in einer Messung.** In der Eingangszeile der
+Zeitleiste hingen **drei** Ziele; der Auftraggeber hat sie am 19.08.2026 geöffnet und zugeordnet,
+und das dritte war die Ausgangsdatei, die die Leiste am letzten Schritt bereits führte. Gemessen
+bestätigt: `ohne_treffer = 0` in beiden Fenstern (M73, Befund 4). **Dass es aufgefallen ist, liegt
+daran, dass jemand hingesehen hat** — wie beim Vorfall vom 18.08.2026 einen Eintrag weiter oben.
+
+**Der vorregistrierte Ausgang war G, nicht A.** M73 hatte fünf Ausgänge vorab benannt und die
+95-Prozent-Schwelle festgeschrieben. Keiner der vorformulierten Ausgänge hat sie erreicht: Die
+Treffer zerfallen über die Sendedienste (**70,09 %** / **53,37 %**), den Converter (**29,89 %** /
+**46,62 %**) und die Lesedienste (**0,016 %** / **0,015 %**). Der Befund ist nicht *welche Familie*,
+sondern **welche Stelle im Ablauf** — und dafür gab es keine vorformulierte Zeile.
+
+### Der zweite Befund derselben Runde: der falsche Dateiname
+
+**Der Download von `0-Message.Payload.GUID` hat die falsche Datei unter dem falschen Namen
+ausgeliefert.** `Downloaddateiname` sucht den Originalnamen über
+`%.FileProperty.OriginalFilename` **auf demselben Schritt**; für Schritt `0` fand er
+`FileReader`/`FTPReader.FileProperty.OriginalFilename`, also den Namen der **eingegangenen** Datei —
+während der Inhalt dahinter nach M73 die Datei des höchsten Nutzdatenschritts war.
+
+Die Begründung dieser Suche formuliert den verletzten Grundsatz selbst: *„Der Originalname
+beschreibt die Datei, die eingegangen ist. Für ein `Converter.Payload.GUID` auf Schritt 2 ist das
+eine andere Datei; ihm den Namen des Eingangs zu geben wäre eine Falschauskunft."* Genau das ist auf
+dem Umweg über Schritt `0` geschehen. Wer diese Datei herunterlud, **hätte** den Stand eines
+späteren Schritts unter dem Namen seines eingegangenen Belegs gespeichert — in der Mehrheit den
+eines Sendedienstes (**70,09 %** / **53,37 %**), sonst den des Converters (**29,89 %** /
+**46,62 %**), M73. In einem Werkzeug, dessen Zweck „wo ist mein Beleg" ist, die teuerste Sorte
+Fehler.
+
+> **Belegvermerk (L10).** *Gemessen ist:* worauf der Verweis zeigt und über welches Muster der
+> Dateiname gesucht wird. *Behauptet wird:* dass der Download damit die falsche Datei unter dem
+> falschen Namen ausgeliefert **hätte**. *Nicht behauptet wird, dass es geschehen ist* — das
+> Feature war einen Tag alt, ein Zugriffs- oder Downloadprotokoll ist dazu nicht ausgewertet
+> worden, und die Sichtprüfung zu Schritt 8 steht ohnehin noch aus. Der Satz ist ein hergeleiteter
+> Folgefall und keine Beobachtung; die Datei rügt genau diese Verwechslung im Eintrag vom
+> 14.08.2026 an sich selbst.
+
+**Der Weg dorthin ist mit dem Wegfall des Artefakts geschlossen und stand einen Tag lang offen.**
+Der Befund steht hier, weil er sonst mit der Zeile verschwunden wäre, die ihn getragen hat.
+
+### Ein dritter Fund am Rand: eine Addition, die als Messung gelesen wurde
+
+Bei derselben Prüfung ist aufgefallen, dass der Kommentar an der Sortierung in
+`ArtefaktRepository.findeOriginaldateiname` behauptete, `FileReader` und `FTPReader` schlössen
+einander aus, und sich dafür auf **M56 (a)** berief. M56 (a) zählt **je `MessagePropertyName`** und
+misst kein `DISTINCT` über beide; die 71,4 % in Befund 1 sind eine **Addition** der beiden Zeilen.
+Der Kommentar ist berichtigt, das Verhalten nicht — die feste Sortierung nach Namen deckt den Fall
+ohnehin ab. **Dieselbe Gestalt wie die Hauptkorrektur:** aus zwei Zahlen ein Schluss, der nie
+gemessen wurde.
+
+### Was korrigiert worden ist
+
+| Ebene | Änderung |
+|---|---|
+| **Backend** | `Message.Payload.GUID` fällt aus der Artefaktliste. Die Ausnahme steht im **Code** (`Artefaktnamen.NAME_ZEIGER` / `istZeiger` / `istArtefakt`, angewandt in `ArtefaktRepository.findeArtefakte`) und **nicht im Statement** — so ändert sich am Statement nichts, der gemessene Zugriffsweg `mp` über `PRIMARY` bleibt belegt, und es entsteht keine neue L7-Pflicht |
+| **Schnittstelle** | `ArtefaktlisteResponse` verliert das Feld `eingang`; die Antwort ist zweigeteilt. Ein Feld dieses Namens, das den Ausgang trägt, wäre dieselbe Falschauskunft eine Schicht tiefer — und der Chatbot der Ausbaustufe 1 greift laut [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §10 auf **dieselben** Endpunkte zu |
+| **Oberfläche** | Die Beschriftungslage *Eingang → Eingegangene Datei* entfällt; aus fünf Lagen werden vier. Die Zeile über der Leiste heißt weiterhin *Eingang* und trägt zwei Ziele statt dreier |
+| **Alte Kennungen** | **Kein Umleitungspfad.** `0-Message.Payload.GUID` ergibt `404` wie jede unbekannte Kennung. Das Feature war einen Tag alt; das ist kein Sonderpfad, sondern das Ausbleiben eines Sonderpfads |
+| **Dokumentation** | Neun Dateien mit datierten Korrekturkästen — [`rohdaten.md`](rohdaten.md), [`rohdaten-frontend.md`](rohdaten-frontend.md), [`rohdaten-backend.md`](rohdaten-backend.md), [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) und [`README.md`](README.md) am 19.08.2026; [`nachrichtendetail.md`](nachrichtendetail.md), [`datenmodell.md`](datenmodell.md), [`IMPLEMENTIERUNGSPLAN_MVP.md`](IMPLEMENTIERUNGSPLAN_MVP.md) und [`frontend-grundlagen.md`](frontend-grundlagen.md) am 20.08.2026. **Jede falsche Aussage steht wörtlich weiter da** |
+
+**Die tückischste Fundstelle war [`IMPLEMENTIERUNGSPLAN_MVP.md`](IMPLEMENTIERUNGSPLAN_MVP.md).**
+Der Satz „die eingegangene Datei einzeln" ist dort **am 19.08.2026 neu geschrieben** worden — im
+selben Zug, mit dem der Abschnitt vom reinen Download auf die Anzeige gezogen wurde. Die widerlegte
+Annahme hat also nicht überlebt, sondern ist an dem Tag **neu eingetragen** worden, an dem sie fiel.
+
+### Was diese Korrektur **nicht** ändert
+
+- **Keine neue Messung.** M73 ist gefahren; keine Zahl ist neu erhoben und keine bestehende
+  nachgerechnet worden.
+- **Drei Zahlen bleiben deshalb bewusst falsch stehen** — sie rechnen über eine Menge, die die
+  entfallene Zeile einschließt, und sie nachzurechnen wäre eine Messung. **Die Richtung ist nicht
+  bei allen dieselbe:** M57 führt `Message.Payload.GUID` mit `ohne_schrittnamen = 6.249`, alle
+  entfallenen Zeilen liegen also in der Menge *ohne* auflösbaren Schrittnamen. Damit steht
+  **55,98 % zu hoch und 44,02 % zu niedrig**; nur die Spanne **3 bis 15** (M55) steht an beiden
+  Enden zu hoch. Vermerkt als offener Punkt 18 in
+  [`rohdaten-frontend.md`](rohdaten-frontend.md) §11. Die Spanne steht außerdem **unvermerkt im
+  Backend** — im Javadoc von `ArtefaktlisteResponse` und in `RohdatenIsolationDbIT`; beide sind am
+  20.08.2026 mit einem Vermerk versehen worden. `ArtefaktRepository.findeArtefakte` bleibt richtig,
+  weil es die **gelesenen** Zeilen meint und nicht die gelieferten.
+- **Kein Endpunkt, keine Migration, kein jOOQ-Statement ist geändert worden.** Der Filter sitzt
+  hinter dem Abruf.
+- **Die Dateinamenssuche ist nicht umgebaut** — die Regel „Muster statt Familie" bleibt, ihr
+  Anlassfall ist entfallen (siehe „Neu offen").
+- **Die drei Pflicht-Isolationstests sind unberührt** und laufen unverändert grün. Die
+  Mandantentrennung ist von M73 in keiner Weise berührt.
+- **Kein offener Punkt aus [`rohdaten.md`](rohdaten.md) §13,
+  [`rohdaten-frontend.md`](rohdaten-frontend.md) §11 oder
+  [`rohdaten-backend.md`](rohdaten-backend.md) §11 ist entschieden** — dazugekommen sind **vier**
+  neue Fragen (Sichtprüfung, Fensterbreite, Muster gegen Familie, die zu hohen Anteilswerte) und
+  **zwei** Vermerke über bereits Behobenes (der falsche Dateiname, die Addition aus M56).
+- **Die Sichtprüfung zu Schritt 8 ist weiterhin nicht nachgeholt.**
+
+### Neu offen
+
+- **Dass das Paar des Lesedienstes den *Eingang* der Nachricht bezeichnet, ist eine Sichtprüfung an
+  einer Nachricht und keine Messung.** Gemessen ist, **welche** Namen auf `MessageActionID = 0`
+  liegen (M57) — nicht, was die Dateien dahinter sind. Die Zeile heißt trotzdem weiter *Eingang*,
+  mit Belegvermerk nach L10. **Zu entscheiden: messen oder als Sichtbefund führen.**
+- **M73 ist in zwei Fenstern gemessen, nicht im Bestand.** Fenster C (`2024-10-01`) ist nicht
+  gefahren. Ob die Regel am alten Ende ebenso gilt, kostet **eine einzige Sitzung**.
+- **Die Deckungsangabe „220.579 Nachrichten" zählt Fenster A doppelt** *(neu am 20.08.2026)*.
+  Fenster A (`>= 2025-12-29`, `< 2025-12-30`; 6.249) liegt **vollständig innerhalb** von Fenster B
+  (`>= 2025-11-30`, `< 2025-12-30`; 214.330) — nachzulesen in
+  [`messungen-schritt8.md`](messungen-schritt8.md) unter „Die drei Zeitfenster". 6.249 + 214.330
+  ist die Zahl der **Prüfvorgänge**, nicht der verschiedenen Nachrichten; verschieden geprüft sind
+  **214.330**. Die Summe und die daraus gerechneten **6,6 %** stehen so in der Messdatei selbst
+  (M73 Befunde 4 und 5, offener Punkt 32) und von dort in [`rohdaten.md`](rohdaten.md) §13 und
+  [`rohdaten-frontend.md`](rohdaten-frontend.md) §11. **Nicht nachgerechnet und nicht geändert** —
+  die Messdatei bleibt unangetastet, und die Korrektur der abgeleiteten Stellen gehört in dieselbe
+  Runde wie ihre. **Am Befund selbst ändert es nichts:** In *jedem* der beiden Fenster ist die Regel
+  für sich ausnahmslos.
+- **Ob Muster- und Familiensuche noch irgendwo auseinandergehen.** Der Anlassfall ist entfallen; ein
+  anderer bleibt möglich, sobald auf dem Schritt eines Artefakts ein
+  `FileReader.`/`FTPReader.FileProperty.OriginalFilename` liegt und das Artefakt einer **anderen**
+  Familie angehört. *Gemessen ist,* welche Namen den Originalnamen tragen (M56 a); *nicht gemessen
+  ist,* auf welchem `MessageActionID` sie liegen. **Nicht gemessen, nicht geändert, nicht
+  entschieden.**
+- **Ob die Deutung „zuletzt erzeugt" jemals belegt wird.** Sie wäre die Aussage, dass die
+  Schrittnummer die Ausführungsreihenfolge ist. `MessageAction` trägt Zeitstempel; die Frage ist
+  messbar und **nicht gestellt worden**.
+- **Die Diskrepanz aus M57** — 63 genannte gegen 62 gezählte Kombinationen — bleibt offen. Der
+  Befund von M57 ist davon unberührt: Die 55,98 % rechnen mit der Zeilensumme 44.329, und die
+  stimmt aufs Zeichen.

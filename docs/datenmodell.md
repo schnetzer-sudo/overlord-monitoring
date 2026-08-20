@@ -86,15 +86,28 @@ Backend als `MessageLastUpdate + MessageTimeout` berechnet.
 > Die Größenordnung ändert sich damit um **Faktor 60**. Wer die Spalte in einer älteren Fassung als
 > Minuten gelesen hat, hat die Kategorie „Überfällig" um 29,5 Stunden zu spät ausgelöst.
 
-**Nutzbare Indizes:**
+**Nutzbare Indizes:** `Message` trägt **acht**.
 
 | Index | Spalten |
 |---|---|
+| `PRIMARY` | `MessageID` |
 | `MessageLastUpdateIDX` | `MessageLastUpdate` |
 | `MessageStatusIDX` | `MessageStatus` |
 | `MessageLastUpdateProcessMessageIDX` | `(MessageLastUpdate, ProcessID, MessageID)` |
+| `Message_ProcessFK` | `ProcessID` |
+| `ProejctIDIDX` *(sic)* | `ProcessID` |
 | `SourceMessageIDIDX` | `SourceMessageID` |
 | `TargetMessageIDIDX` | `TargetMessageID` |
+
+> **Korrigiert 20.08.2026.** Hier standen **fünf** Indizes, es sind **acht**. Nachgetragen sind
+> `PRIMARY`, **`Message_ProcessFK`** und **`ProejctIDIDX`** — die beiden letzten sind
+> **eigenständige Indizes auf `ProcessID`**, und dass sie fehlten, hat gewirkt: Ein Arbeitsauftrag
+> zu Schritt 9b trug am 20.08.2026 ein Abbruchkriterium, das auf ihrer Abwesenheit beruhte. Der
+> Indexname `ProejctIDIDX` ist im Altsystem so geschrieben — Buchstabendreher inbegriffen — und er
+> steht auf `ProcessID`, nicht auf `ProjectID`. Bestand, kein Tippfehler dieser Datei.
+> Dieselbe Korrektur in [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §3.2; erhoben in
+> [`messungen-schritt9.md`](messungen-schritt9.md), V2, gemessen bereits in
+> [`messungen-schritt4.md`](messungen-schritt4.md) M1 vom 01.08.2026.
 
 > **Die beiden Verkettungsindizes sind am 10.08.2026 nachgetragen**
 > ([`messungen-schritt6.md`](messungen-schritt6.md) M23‑1). Sie standen hier nicht, und ob es sie
@@ -229,10 +242,32 @@ Aggregation ungeeignet. (Regel L4)
 | `Message.VFN` | |
 | `Message.SOS` | |
 | `Message.SplitCount` | |
-| `Message.Payload.GUID` | Format `FILESTOREPROD09\|<uuid>` — Grundlage des Rohdaten-Downloads |
+| `Message.Payload.GUID` | Format `<Ablagenkennung>\|<UUID>`, etwa `FILESTOREPROD09\|d95499ff-...`. **Kein Artefakt** — siehe Kasten unten |
 | `Message.InterchangeNumber` | |
 | `Message.CommitInterchangeNumber` | |
 | `Message.SourceMessageID` | |
+
+> **Korrigiert 20.08.2026, nachgetragen zur Korrektur vom 19.08.2026.** Die Zeile zu
+> `Message.Payload.GUID` lautete bis heute: „Format **`FILESTOREPROD09|<uuid>`** — **Grundlage des
+> Rohdaten-Downloads**". Beide Hälften sind berichtigt.
+>
+> **1. Er ist die Grundlage von nichts.** Der Rohdatenzugriff läuft über `<Dienst>.Payload.GUID` und
+> `<Dienst>.Log.GUID` ([`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §7); `Message` ist kein
+> Dienst. Nach **M73** trägt dieser Name in **6.249 von 6.249** Nachrichten (Fenster A) und
+> **214.330 von 214.330** (Fenster B) denselben Verweis wie die Nutzdatenzeile mit dem **höchsten
+> `MessageActionID`** derselben Nachricht — kein Gegenfall. Er benennt kein eigenes Artefakt und ist
+> seit dem 19.08.2026 aus der Artefaktliste ([`rohdaten-backend.md`](rohdaten-backend.md) §7).
+>
+> **2. Die Formatangabe nannte eine konkrete Ablage als Format.** `FILESTOREPROD09` ist *eine*
+> `Service.ServiceID` von mehreren; die Ablage hängt am Zeitraum, und Kreuzabrufe scheitern
+> ausnahmslos (M53, M68). Dieselbe Präzisierung steht seit dem 19.08.2026 in
+> [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §3.2.
+>
+> *Ausdrücklich nicht behauptet:* dass „höchster `MessageActionID`" gleichbedeutend mit „zeitlich
+> zuletzt" ist. Gemessen ist die Schrittnummer, nicht die Uhr.
+>
+> **Unberührt bleibt** die Form des Werts selbst — `<Ablagenkennung>|<UUID>`, durchgängig, 52
+> Zeichen (M54) — und dass die Kennung vor der Pipe eine `Service.ServiceID` **ist** (M52).
 
 ### `MessageBAM` — fachliche Suchschlüssel
 
@@ -308,9 +343,23 @@ Liefert nur **Anzahlen**, keine Aufschlüsselung nach Status oder Partner — de
 
 ### `Service`
 
-Trägt den `ServiceConnectString`. Über ihn wird die `FilestoreID` aus `Message.Payload.GUID`
-(Servicetyp „TOMCAT Filestore") zum konkreten Filestore aufgelöst. Grundlage des
-Rohdaten-Download-Proxys.
+Trägt den `ServiceConnectString`. Über ihn wird die Ablagenkennung vor der Pipe — sie **ist** eine
+`Service.ServiceID` (M52) — zum konkreten Filestore aufgelöst (Servicetyp „TOMCAT Filestore").
+Grundlage des Rohdatenzugriffs.
+
+> **Korrigiert 20.08.2026, nachgetragen zur Korrektur vom 19.08.2026.** Hier stand bis heute: „Über
+> ihn wird die **`FilestoreID` aus `Message.Payload.GUID`** (Servicetyp „TOMCAT Filestore") zum
+> konkreten Filestore aufgelöst. Grundlage des **Rohdaten-Download-Proxys**." Drei Berichtigungen in
+> zwei Sätzen:
+>
+> - **Der Beispielname ist der falsche.** Aufgelöst werden die Kennungen aus
+>   `<Dienst>.Payload.GUID` und `<Dienst>.Log.GUID`. `Message.Payload.GUID` ist nach **M73** kein
+>   Artefakt und aus der Liste entfallen (siehe Kasten bei „Bekannte Namen" oben).
+> - **`FilestoreID` ist kein Spaltenname.** Die Kennung **ist** eine `Service.ServiceID`, gemessen
+>   und über den Primärschlüssel erreicht (M52) — kein zweiter Begriff für dieselbe Sache.
+> - **Ein Proxy ist es nicht.** Die Ablage spricht SOAP und liefert ein ZIP; das Backend liest,
+>   entpackt und gibt neu aus ([`rohdaten.md`](rohdaten.md) §2.3 und §4). Dieselbe Berichtigung
+>   steht seit dem 19.08.2026 in [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §7.
 
 ---
 
@@ -406,10 +455,17 @@ Namenskonventionen, und die Konventionen unterscheiden sich je Mandant:
   `DELFINGEN_DE_HA` bestehen aus mehreren Teilen
 - Granularität ist eine **fachliche** Frage: `BASF`, `BASFANTWERPEN`, `BASFPOLY`, `NONBASF`
 
-🚫 **Es wird nicht geparst, es wird kuratiert.** Partner, Standort, Richtung und Belegart sind
+🚫 **Es wird nicht geparst, es wird kuratiert.** Partner und Richtung sind
 Felder im `process_catalog`. Eine Heuristik befüllt vor, die Wahrheit steht im Katalog. Nicht
 zugeordnete Prozesse erscheinen in Auswertungen sichtbar als **„nicht zugeordnet"** — niemals als
 geratener Wert. (Regel Q4)
+
+*Korrigiert 20.08.2026:* Hier standen **vier** kuratierte Felder — „Partner, Standort, Richtung und
+Belegart“. Standort und Belegart entfallen; im MVP liest sie nichts. Die Überschrift dieses
+Abschnitts und der Satz „Diese vier Angaben“ bleiben stehen: Sie sagen, was in `GlassfishDB`
+**nicht als Daten vorhanden** ist, und das gilt unverändert für alle vier. Kuratiert werden nur
+zwei davon. Dieselbe Korrektur in
+[`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §4.4.
 
 **Sonderfall `00001_Undefined`**: ein Auffangprozess, in der Oberfläche gesondert behandelt.
 

@@ -3,6 +3,14 @@
 Stand: 01.08.2026 · Diese Datei ist der verbindliche Kontext für alle Arbeiten am Projekt.
 Bei Widersprüchen zwischen dieser Datei und einer Annahme im Code gilt diese Datei.
 
+> **Ausnahme, 20.08.2026 — Indizes.** Für die Indexlisten dieser Datei gilt der Satz oben **nicht**.
+> Dort entscheidet die Datenbank. Grund: §3.2 führte achtzehn Tage lang drei Indizes auf `Message`,
+> während acht existierten und die Messung seit dem 01.08.2026 vorlag — und die falsche Liste ist
+> in einen Arbeitsauftrag eingegangen. Ein Test gegen `information_schema.STATISTICS` bewacht die
+> Listen künftig **in beide Richtungen**: Er wird auch bei undokumentierten Indizes rot, denn genau
+> das war der eingetretene Fall. **Der Test ist am 20.08.2026 entschieden und noch nicht gebaut**
+> (E37); bis dahin ist diese Ausnahme eine Absichtserklärung und keine Zusage.
+
 **Korrektur 01.08.2026.** Annahme A1 (Abschnitt 11) nannte „Daten bis Ende 2025" und widersprach
 damit dem Datenstand in Abschnitt 8. Messung M0 gegen die Testkopie entscheidet zugunsten von
 Abschnitt 8 (**08.07.2026**); A1 ist entsprechend korrigiert und Abschnitt 8 um die Bestätigung
@@ -131,8 +139,37 @@ Wichtig:
   das — `SOSActionTimeout = 1800` steht 37.120-mal neben dem Ablaufschritt `WAIT|30M`, und 1800
   Sekunden sind exakt 30 Minuten. Die Größenordnung ändert sich um Faktor 60; Belegkette in
   [`messungen-schritt4.md`](messungen-schritt4.md) M8.
-- Nutzbare Indizes: `MessageLastUpdateIDX`, `MessageStatusIDX` und der zusammengesetzte
-  `MessageLastUpdateProcessMessageIDX (MessageLastUpdate, ProcessID, MessageID)`.
+- Nutzbare Indizes — `Message` trägt **acht**:
+
+| Index | Spalten | eindeutig |
+|---|---|---|
+| `PRIMARY` | `MessageID` | ja |
+| `MessageLastUpdateIDX` | `MessageLastUpdate` | nein |
+| `MessageLastUpdateProcessMessageIDX` | `MessageLastUpdate, ProcessID, MessageID` | nein |
+| `MessageStatusIDX` | `MessageStatus` | nein |
+| `Message_ProcessFK` | `ProcessID` | nein |
+| `ProejctIDIDX` *(sic)* | `ProcessID` | nein |
+| `SourceMessageIDIDX` | `SourceMessageID` | nein |
+| `TargetMessageIDIDX` | `TargetMessageID` | nein |
+
+Der Indexname `ProejctIDIDX` ist im Altsystem so geschrieben — Buchstabendreher inbegriffen — und
+er steht auf `ProcessID`, nicht auf `ProjectID`. Bestand, kein Tippfehler dieser Datei.
+
+> **Korrigiert 20.08.2026.** Hier standen **drei** Indizes, es sind **acht** — darunter **zwei
+> eigenständige auf `ProcessID`** (`Message_ProcessFK` und `ProejctIDIDX`).
+>
+> Die Messung lag seit **M1 vom 01.08.2026** vor: [`messungen-schritt4.md`](messungen-schritt4.md)
+> M1 trägt die Überschrift „Spaltennamen **und Indizes**“ und führt alle acht. **Diese Datei hat
+> sie nie übernommen.** Die Liste hier war nie gegen `information_schema` erhoben, sondern
+> übernommen; erhoben ist sie in [`messungen-schritt9.md`](messungen-schritt9.md), V2.
+>
+> **Folge:** Die Nachtragsmessung zu Schritt 9b trug am 20.08.2026 ein Abbruchkriterium, das auf
+> dieser überholten Liste beruhte — „es gibt keinen eigenständigen Index auf `ProcessID`“. Es gibt
+> zwei. **Die falsche Liste hat einen Arbeitsauftrag falsch gemacht**, und das ist der Grund, warum
+> sie hier benannt und nicht stillschweigend ersetzt wird.
+>
+> Ein Test gegen `information_schema.STATISTICS` bewacht die Liste künftig (E37). Siehe dazu die
+> **Ausnahme für Indizes** in der Präambel dieser Datei.
 
 **`MessageAction`** — die einzelnen Prozessschritte einer Nachricht.
 PK `(MessageID, MessageActionID)` · **`SOSID`** varchar(36) NOT NULL · **`SOSActionID`** smallint(6)
@@ -185,8 +222,28 @@ Aggregation ungeeignet. Jede Abfrage, die anders als über `MessageID` einsteigt
 Vielfaches dessen um, was `Message` insgesamt groß ist.
 
 Bekannte Namen: `Message.GUID`, `Message.SendingPartner`, `Message.SNDPRN`, `Message.VFN`,
-`Message.SOS`, `Message.SplitCount`, `Message.Payload.GUID` (Format `FILESTOREPROD09|<uuid>`),
-`Message.InterchangeNumber`, `Message.CommitInterchangeNumber`, `Message.SourceMessageID`.
+`Message.SOS`, `Message.SplitCount`, `Message.Payload.GUID` (Format `<Ablagenkennung>|<UUID>`,
+etwa `FILESTOREPROD09|d95499ff-...`), `Message.InterchangeNumber`,
+`Message.CommitInterchangeNumber`, `Message.SourceMessageID`.
+
+> **Gekennzeichnet 19.08.2026 — `Message.Payload.GUID` ist nicht die eingegangene Datei.** Der Name
+> legt genau das nahe: `Message.` plus `Payload` liest sich wie „die Nutzdatei *der* Nachricht".
+> **Gemessen ist das Gegenteil** — er trägt in **6.249 von 6.249** Nachrichten (Fenster A) und
+> **214.330 von 214.330** (Fenster B) denselben Verweis wie die Nutzdatenzeile mit dem **höchsten
+> `MessageActionID`** derselben Nachricht, ohne einen Gegenfall
+> ([`messungen-schritt8.md`](messungen-schritt8.md) M73, Befund 2).
+>
+> *Ausdrücklich nicht behauptet:* dass „höchster `MessageActionID`" gleichbedeutend mit „zeitlich
+> zuletzt" ist. Gemessen ist die Schrittnummer, nicht die Uhr.
+>
+> Der Zusatz steht hier, weil dies die einzige lebende Stelle dieser Datei ist, an der der Name
+> überhaupt noch vorkommt — und weil genau der Fehlschluss aus ihm am 18.08.2026 in zwei
+> Feature-Dateien als Tatsache gelandet ist. **Der Rohdatenzugriff führt nicht über diesen Namen**
+> (§7); die Artefaktliste führt ihn seit dem 19.08.2026 nicht mehr.
+>
+> Die Formatangabe ist zugleich präzisiert: Hier stand bis heute „**Format
+> `FILESTOREPROD09|<uuid>`**" — das ist eine *konkrete* Ablagenkennung als Format ausgegeben,
+> während §7 mehrere Ablagen führt und Kreuzabrufe ausdrücklich scheitern (M68).
 
 **`MessageBAM`** — fachliche Suchschlüssel (Business Activity Monitoring).
 PK `(MessageID, MessageBAMType, MessageBAMValue)` · `MessageBAMValue` varchar(70), eigener Index
@@ -422,10 +479,15 @@ Namenskonventionen, und die Konventionen unterscheiden sich je Mandant:
   `DELFINGEN_DE_HA` bestehen aus mehreren Teilen
 - Granularität ist eine fachliche Frage: `BASF`, `BASFANTWERPEN`, `BASFPOLY`, `NONBASF`
 
-**Entscheidung: Es wird nicht geparst, es wird kuratiert.** Partner, Standort, Richtung und
-Belegart sind Felder im Prozess-Katalog (Abschnitt 5). Eine Heuristik befüllt vor, die Wahrheit
+**Entscheidung: Es wird nicht geparst, es wird kuratiert.** Partner und Richtung sind Felder im
+Prozess-Katalog (Abschnitt 5). Eine Heuristik befüllt vor, die Wahrheit
 steht im Katalog. Nicht zugeordnete Prozesse erscheinen in Auswertungen sichtbar als
 "nicht zugeordnet" — niemals als geratener Wert.
+
+*Korrigiert 20.08.2026:* Hier standen **vier** Felder — „Partner, Standort, Richtung und Belegart“.
+Standort und Belegart entfallen; im MVP liest sie nichts. Abnehmer sind allein die Verteilung nach
+Partner, die nach Partner und Richtung, und die nach Partner gruppierte Prozessansicht
+(Abschnitt 9).
 
 Sonderfall: `00001_Undefined` ist ein Auffangprozess und wird in der Oberfläche gesondert behandelt.
 
@@ -440,11 +502,16 @@ Schreibrechten **ausschließlich** auf dieses Schema.
 |---|---|
 | `app_user` | Benutzer, Passwort-Hash, Mandant, Rolle, Sperrzustand |
 | `app_user_mandant` | n:m-Zuordnung (vorbereitet, MVP nutzt 1:1) |
-| `process_catalog` | je `ProcessID`: Partner, Standort, Richtung, Belegart, Pflegestatus |
-| `partner` | kuratierte Partnerstammdaten |
+| `process_catalog` | je `ProcessID`: Partner, Richtung, Pflegestatus |
 | `message_rollup` | stündliche Aggregate je Mandant, Prozess, Partner, Richtung, Status |
 | `audit_log` | Anmeldungen, Fehlversuche, Passwortänderungen, Katalogänderungen |
 | `saved_view` | gespeicherte Filter je Nutzer |
+
+*Korrigiert 20.08.2026:* Die Tabelle `partner` war hier geführt und entfällt. Ohne eigene
+Pflegeoberfläche und ohne Attribute über den Namen hinaus liefert sie nichts, was
+`SELECT DISTINCT` über die Katalogzeilen des aktiven Mandanten nicht auch liefert. Die
+Auswahlliste wird abgeleitet. `process_catalog` führte in derselben Zeile „Standort“ und
+„Belegart“ — beide entfallen, Begründung in Abschnitt 4.4.
 
 ### Zeichensatz und Sortierung — verbindlich
 
@@ -543,8 +610,8 @@ de.kraftwerkone.overlord.monitor
 ├─ audit/
 ├─ message/     Liste, Detail, Verkettung
 ├─ bam/
-├─ payload/     Download-Proxy
-├─ catalog/     process_catalog, partner
+├─ payload/     Rohdaten und Protokolle: Artefaktliste, Anzeige, Download
+├─ catalog/     process_catalog
 ├─ rollup/      per Profil separat startbar
 ├─ dashboard/
 ├─ admin/
@@ -552,6 +619,17 @@ de.kraftwerkone.overlord.monitor
 ```
 
 Fachpakete kennen einander nicht. Gemeinsames liegt in `common`, nicht in einem Nachbarmodul.
+
+**Korrektur 19.08.2026 zur Beschreibung von `payload`.** Hier stand wortgleich
+`├─ payload/     Download-Proxy`. Das beschrieb weder die **Protokolle** noch die **Anzeige**, und ein
+Proxy ist es nicht: Die Ablage spricht SOAP und liefert ein ZIP, das Backend liest, entpackt und gibt
+neu aus ([`rohdaten.md`](rohdaten.md) §4). Berichtigt ist allein die **Beschreibung**.
+
+> **Der Paketname `payload` bleibt unverändert.** Dass er nicht mehr passt, ist bekannt und als
+> offener Punkt geführt — [`rohdaten-backend.md`](rohdaten-backend.md) §11, Punkt 2, mit dem Vorschlag
+> `rohdaten`. Eine Umbenennung ist Code und berührt zusätzlich diesen Abschnitt,
+> [`IMPLEMENTIERUNGSPLAN_MVP.md`](IMPLEMENTIERUNGSPLAN_MVP.md) und `PaketstrukturTest`; sie gehört
+> nicht in denselben Diff wie eine Dokumentationskorrektur. Der Punkt bleibt **offen**.
 
 **Zwei getrennte Zielpakete für die jOOQ-Codegenerierung:**
 
@@ -664,10 +742,17 @@ kein Konto nutzbar** — Annahme A3 schließt eine Selbstbedienung per E-Mail au
 **Kein Endpunkt nimmt eine Mandanten-ID entgegen.** Der Mandant wird ausschließlich aus der
 Session gelesen.
 
-**Genau zwei Ausnahmen**, beide namentlich geführt in `docs/mandantentrennung.md`:
-`POST /api/auth/mandant` (Wechsel, geprüft gegen die zulässige Menge) und `POST /api/admin/users`
-(Anlegen eines Kontos, nur ADMIN). Die erste fragt einen Datenausschnitt, die zweite definiert ein
-Konto. Taucht dort jemals eine dritte auf, ist das ein Signal und keine Kleinigkeit.
+**Genau drei Ausnahmen**, alle namentlich geführt in `docs/mandantentrennung.md`:
+`POST /api/auth/mandant` (Wechsel, geprüft gegen die zulässige Menge), `POST /api/admin/users`
+(Anlegen eines Kontos, nur ADMIN) und `PUT /api/admin/users/{benutzername}/mandanten` (Pflege der
+Mandantenmenge eines Kontos, nur ADMIN). **Alle drei definieren eine Berechtigung, statt einen
+Datenausschnitt abzufragen** — das ist das Merkmal, an dem eine Ausnahme zulässig wird. Taucht dort
+jemals eine vierte auf, ist das ein Signal und keine Kleinigkeit.
+
+*Korrigiert 20.08.2026:* Hier stand „**Genau zwei Ausnahmen**“ und „Die erste fragt einen
+Datenausschnitt, die zweite definiert ein Konto“ — letzteres traf schon auf die erste nicht zu, die
+ebenfalls nichts abfragt, sondern aus der zulässigen Menge auswählt. Die dritte Ausnahme kommt mit
+Schritt 9a hinzu; `POST /api/admin/users` bleibt unverändert bei **einem** Mandanten.
 
 Beim Wechsel liefert ein **existierender, aber nicht zulässiger** Mandant dieselbe Antwort wie eine
 erfundene ID: `404`. Unterschieden sie sich, ließe sich die Mandantenliste abfragen.
@@ -681,6 +766,83 @@ ihn nie existiert hat.
 Pro Endpunkt existiert ein automatisierter Test, der mit Mandant A abfragt und nachweist, dass
 Daten von Mandant B unerreichbar sind. Ein neuer Endpunkt ohne diesen Test wird nicht gemergt.
 
+### Rohdatenzugriff
+
+Nutzer sehen zu einer Nachricht **alle zugehörigen Dateien** — die eingegangene Nutzdatei, die
+umgewandelten Fassungen und die Protokolle der einzelnen Schritte —, können sie **im Browser ansehen**
+und herunterladen. Das ist deutlich sensibler als die Metadaten: Dort stehen Preise, Mengen und
+Kundendaten.
+
+**Die Anzeige ist der Regelfall, nicht der Download**, und sie ist **Rohtext**: die Datei als Text,
+unverändert, in Festbreitenschrift, als Textknoten gerendert und niemals als HTML. Die
+**aufbereitete** Anzeige — EDIFACT, VDA und IDOC in Segmente zerlegt — bleibt ausgeschlossen
+(Abschnitt 9).
+
+**Jeder Abruf läuft immer über das Backend, niemals als direkter Link in den Browser.**
+Der Filestore kennt unsere Nutzer nicht und kann die Mandantenprüfung nicht leisten. Ein
+durchgereichter Link wäre ein unkontrollierter, per Copy-Paste teilbarer Zugang. Kein Endpunkt nimmt
+einen Verweis, eine Ablagenkennung oder eine GUID entgegen; die Kennung eines Artefakts ist
+`<MessageActionID>-<MessagePropertyName>` und der Verweis wird serverseitig hergeleitet.
+
+Ablauf: Die Verweise stehen als `<Dienst>.Payload.GUID` und `<Dienst>.Log.GUID` in `MessageProperty`
+und haben das Format `<Ablagenkennung>|<UUID>`, etwa `FILESTOREPROD09|d95499ff-...`. Die Kennung vor
+der Pipe **ist** eine `Service.ServiceID` und wird über den Primärschlüssel zur konkreten Ablage
+aufgelöst (Servicetyp "TOMCAT Filestore"). Das Backend prüft zuerst die Mandantenzugehörigkeit der
+Nachricht — im Statement, nicht nachgelagert —, ruft dann die Datei ab und **liest, entpackt und gibt
+sie neu aus**: Die Ablage spricht ausschließlich **SOAP** (Operation `RETRIEVE`, ohne WSDL, ohne
+Authentifizierung) und liefert die Datei als **ZIP-Anhang**. Ein Bytestrom, der bloß durchgereicht
+wird, ist es also nicht.
+
+**Die Ablagen sind keine Spiegel.** Löst eine Kennung nicht auf oder antwortet ihr Knoten nicht, ist
+das ein benannter Fehlerzustand — **kein Rückfall auf eine andere Ablage**. Gemessen scheitern 20 von
+20 Kreuzabrufen, während dieselben Verweise am eigenen Knoten gelingen
+([`rohdaten.md`](rohdaten.md) §2.2, M68).
+
+Regeln:
+- Ausschließlich `Content-Disposition: attachment`, **niemals inline rendern**. Eine EDI-Datei kann
+  gültiges HTML oder SVG enthalten — inline wäre das eine von außen befüllbare
+  Cross-Site-Scripting-Lücke.
+- `Content-Type: application/octet-stream`, kein Erraten des Typs. Der **Anzeigepfad** liefert
+  dagegen JSON beziehungsweise `text/plain` mit `nosniff` — niemals einen Bytestrom mit ratbarem Typ.
+- **Der Beschnitt bei Protokollen hängt an der Rolle, nicht an einem Flag.** `MANDANT` sieht bei
+  einem Protokoll nur den Bereich zwischen den Marken, pfadmaskiert; `ADMIN` sieht die vollständige,
+  unmaskierte Datei ([`rohdaten.md`](rohdaten.md) §3, Entscheidung 3, und §6).
+- **Gleichlauf von Anzeige und Download** (Entscheidung 9): Beide gehen durch **dieselbe**
+  Aufbereitung, einen Codepfad. Was `MANDANT` sieht, bekommt er auch als Datei — bei einem Protokoll
+  also die beschnittene und maskierte Fassung.
+- **Drei Ereignisarten im `audit_log`, nicht eine:** Artefakt angesehen · Artefakt heruntergeladen ·
+  Abruf fehlgeschlagen. Jede mit Nutzer, Nachricht, Zeitpunkt und IP, und **jede mit der Fassung** —
+  beschnitten oder vollständig — beziehungsweise mit dem Zustand, an dem der Abruf scheiterte.
+  **Die Fassung ist der Punkt:** Ein Eintrag, der beschnitten und vollständig nicht unterscheidet,
+  ist bei einer Rückfrage wertlos, und die Rückfrage ist der Grund, warum es das Protokoll gibt.
+- Alle Mandantennutzer sind berechtigt. Eine zweite Berechtigungsstufe für Dateien gibt es nicht.
+
+> **Das Flag ist heute ein totes Feld** *(vermerkt 19.08.2026)*. `app_user.download_allowed` ist
+> angelegt, wird bis in die Sitzung getragen und von `GET /api/auth/me` ausgegeben — **geprüft wird es
+> nirgends.** Das ist kein Widerspruch zu diesem Abschnitt, der es ausdrücklich nur als *modelliert*
+> führt, wohl aber zu einer Erwartung: [`rohdaten.md`](rohdaten.md) §3, Entscheidung 2 schließt eine
+> **zweite Berechtigungsstufe** aus, und eine Prüfung einzubauen hieße, genau sie zu errichten.
+> **Zu entscheiden: fällt Entscheidung 2, oder fällt das Flag?** Vollständig geführt in
+> [`rohdaten-backend.md`](rohdaten-backend.md) §11, Punkt 8, und
+> [`rohdaten-frontend.md`](rohdaten-frontend.md) §11, Punkt 8. **Hier ist nichts entschieden.**
+
+*Korrigiert 20.08.2026:* Hier stand, die Berechtigung werde als Flag an `app_user` modelliert
+(Standardwert: erlaubt), „damit ein späterer Entzug keine Migration erfordert“. Das Flag
+`download_allowed` war seit Schritt 3 tot — von keinem Endpunkt geprüft, in `GET /api/auth/me` aber
+ausgegeben. Es fällt per Migration. **Die Begründung wird damit ausdrücklich umgestoßen:** Ein
+späterer Entzug erfordert jetzt eine Migration. Bewusst in Kauf genommen, weil niemand danach
+gefragt hat. Damit ist die Frage aus dem Kasten darüber entschieden — **es fällt das Flag, nicht
+Entscheidung 2** (E20; [`rohdaten.md`](rohdaten.md) §3, Entscheidung 2 gilt unverändert).
+
+**Korrektur 19.08.2026 zu Abschnitt 7, „Rohdatenzugriff".** Der Abschnitt beschrieb durchgehend einen
+**Download-Proxy** und war seit dem **14.08.2026** überholt: [`rohdaten.md`](rohdaten.md) §1 führt seit
+diesem Tag die **Anzeige als Regelfall**, und genau so ist gebaut worden
+([`rohdaten-backend.md`](rohdaten-backend.md), [`rohdaten-frontend.md`](rohdaten-frontend.md), beide
+18.08.2026).
+
+**Der alte Abschnitt, wortgleich wie er bis zum 19.08.2026 hier stand:**
+
+```
 ### Rohdatenzugriff
 
 Nutzer dürfen die ursprüngliche EDI-Datei herunterladen. Das ist deutlich sensibler als die
@@ -704,6 +866,65 @@ Regeln:
 - Jeder Download wird mit Nutzer, Nachricht, Zeitpunkt und IP im `audit_log` protokolliert.
 - Alle Mandantennutzer sind berechtigt. Trotzdem wird die Berechtigung als Flag an `app_user`
   modelliert (Standardwert: erlaubt), damit ein späterer Entzug keine Migration erfordert.
+```
+
+**Was fünf Aussagen unberührt lässt.** „Niemals als direkter Link in den Browser", ausschließlich
+`Content-Disposition: attachment`, „niemals inline rendern", `Content-Type:
+application/octet-stream` und die Protokollpflicht stehen unverändert — sie sind so gebaut und in
+diesem Abschnitt nur ergänzt, nicht angetastet. Ebenso unverändert bleibt die Zeile zum
+Berechtigungsflag; sie ist um den Vermerk oben ergänzt.
+
+**Was geändert ist, und warum:** „als Proxy" und „holt dann die Datei und streamt sie durch" —
+die Ablage spricht SOAP und liefert ein ZIP, das Backend liest, entpackt und gibt neu aus
+([`rohdaten.md`](rohdaten.md) §2.3 und §4). Hinzugekommen sind die **Anzeige als Regelfall**, die
+**Protokolle** neben den Nutzdaten, das **Verbot des Rückfalls** zwischen den Ablagen, der
+**rollenabhängige Beschnitt**, der **Gleichlauf** und die **drei Ereignisarten** statt der einen
+Download-Zeile.
+
+> **Nachgetragen 19.08.2026 — die schwerste Änderung fehlte in beiden Listen, und die Auslassung ist
+> der Befund.**
+>
+> Die beiden Absätze darüber teilen jede Aussage des zitierten Altabschnitts in „unberührt" oder
+> „geändert" ein. **Eine fehlt in beiden:** dass der Einstieg in den Rohdatenzugriff nicht mehr
+> `Message.Payload.GUID` ist. Der Altabschnitt sagt „**Ablauf: `Message.Payload.GUID` hat das
+> Format `<FilestoreID>|<UUID>` …**"; die geltende Fassung sagt seit dem 19.08.2026 „Die Verweise
+> stehen als `<Dienst>.Payload.GUID` und `<Dienst>.Log.GUID` in `MessageProperty`". Das ist an
+> jenem Tag **still** geschehen — und genau das darf in dieser Datei nicht passieren.
+>
+> **1. Was falsch war.** `Message.Payload.GUID` war nie ein tauglicher Einstieg, und zwar aus einem
+> Grund, der erst am Abend desselben Tages gemessen wurde: Der Name benennt **kein eigenes
+> Artefakt**. Er trägt in **6.249 von 6.249** Nachrichten (Fenster A) und **214.330 von 214.330**
+> (Fenster B) denselben Verweis wie die Nutzdatenzeile mit dem **höchsten `MessageActionID`**
+> derselben Nachricht — kein Gegenfall — [`messungen-schritt8.md`](messungen-schritt8.md) M73,
+> Befund 2. Der Satz „Nutzer dürfen die **ursprüngliche** EDI-Datei herunterladen" im Altabschnitt
+> beschreibt damit ebenfalls die falsche Datei.
+>
+> **2. Woher der Fehler kam.** Aus dem Namen. `Message.` plus `Payload` liest sich wie „die
+> Nutzdatei *der* Nachricht", und niemand hat gefragt, worauf der Verweis zeigt. Dieselbe Ableitung
+> ist am 18.08.2026 als Tatsache in [`rohdaten.md`](rohdaten.md) §5 und
+> [`rohdaten-frontend.md`](rohdaten-frontend.md) §2 gelandet; beide Stellen tragen seit dem
+> 19.08.2026 ihren Korrekturkasten.
+>
+> **3. Und das ist der eigentliche Befund: Diese Datei ist laut ihrer eigenen Präambel die Instanz,
+> die Widersprüche entscheidet.** Genau deshalb wiegt sie hier schwerer als anderswo. Steht in ihr
+> eine Aussage ohne Herkunft, schlägt sie jede korrigierte Datei — es ist der **dritte** Fall
+> dieser Art nach den beiden in Abschnitt 8 (den 5.000 Nachrichten pro Tag am 07.08.2026 und der
+> `information_schema`-Zeilenzahl am 12.08.2026). Alle drei haben dieselbe Gestalt: eine Zahl oder
+> ein Name, der plausibel aussah und nie belegt worden ist.
+>
+> **4. Was unberührt bleibt — und das ist der größere Teil.** Der Weg über das Backend, die
+> Auflösung der Kennung über `Service`, das Verbot des direkten Links, `attachment`, `nosniff`,
+> `application/octet-stream`, die Protokollpflicht, der Beschnitt, der Gleichlauf, die Ablagen als
+> Nicht-Spiegel. Es fällt **ein Name** weg, kein Mechanismus. Die Kennung eines Artefakts bleibt
+> `<MessageActionID>-<MessagePropertyName>`.
+>
+> **5. Was daraus *nicht* folgt.** „Höchster `MessageActionID`" ist die gemessene Größe. „Zuletzt
+> erzeugt" wäre eine Deutung darüber, dass die Schrittnummer die Ausführungsreihenfolge ist — sie
+> ist plausibel und **nicht gemessen** und steht deshalb in keiner Beschriftung, keinem Feldnamen
+> und keinem Kommentar. Genau diese Art naheliegender Deutung ist gerade eingestürzt.
+>
+> **Kein stilles Überschreiben.** Der zitierte Altabschnitt bleibt Zeichen für Zeichen stehen; die
+> Erhebung im Volltext steht in [`messungen-schritt8.md`](messungen-schritt8.md) unter M73.
 
 ---
 
@@ -872,15 +1093,36 @@ Clock, sondern immer die Systemuhr.
 - Verkettung über Split, Merge und Quittung
 - Process View: gruppiert nach kuratiertem Partner, Projekt als Filter
 - Dashboard: Volumen im Zeitverlauf, die drei Problemkategorien, Verteilung nach Partner
-- Download der EDI-Rohdatei über den Backend-Proxy, mit Protokollierung
+- Rohdaten und Protokolle: alle Dateien einer Nachricht — Nutzdaten **und** Protokolle — als
+  **Rohtext ansehbar** und herunterladbar, immer über das Backend, mit Protokollierung
 - Administration: Benutzerverwaltung, Prozess-Katalog mit Massenzuordnung nach Projekt
 
 **Nicht enthalten**
 
 - Service- und Heartbeat-Überwachung (`Service.ServiceStatus`) — Betriebssicht, nicht Kundensicht
-- Formatierte Anzeige der Rohdaten im Browser (EDIFACT/VDA/IDOC aufbereitet) — nur Download
+- **Aufbereitete** Anzeige der Rohdaten im Browser (EDIFACT/VDA/IDOC in Segmente zerlegt) — gebaut
+  ist die **Rohtextanzeige**: die Datei als Text, unverändert, in Festbreitenschrift
 - Benachrichtigungen und Alarmierung
 - Chatbot
+
+**Korrektur 19.08.2026 zu Abschnitt 9.** Zwei Zeilen dieser Listen beschrieben Schritt 8 als reinen
+Download und waren seit dem **14.08.2026** überholt.
+
+> **Wortgleich, wie sie bis heute hier standen:**
+>
+> > - Download der EDI-Rohdatei über den Backend-Proxy, mit Protokollierung
+> >
+> > - Formatierte Anzeige der Rohdaten im Browser (EDIFACT/VDA/IDOC aufbereitet) — **nur Download**
+
+**Der Ausschluss bleibt bestehen, und die Klammer bleibt richtig.** Gefallen ist allein der Zusatz
+„nur Download": Ausgeschlossen ist die **aufbereitete** Anzeige, nicht die Anzeige überhaupt.
+[`rohdaten.md`](rohdaten.md) §1 führt seit dem 14.08.2026 die **Rohtextanzeige als Regelfall** und
+grenzt sie ausdrücklich gegen diesen Abschnitt ab; gebaut ist es so
+([`rohdaten-frontend.md`](rohdaten-frontend.md) §4). Bemerkenswert dazu, und der Grund ist offen: Das
+Altwerkzeug **hat** die aufbereitete Anzeige — vier Formate stehen in der Auswahl, alle vier sind
+abgeschaltet, der Umformatierungscode existiert ([`rohdaten.md`](rohdaten.md) §13, Punkt 3). In der
+Zeile unter „Enthalten" ist außerdem der **Proxy** gefallen und sind die **Protokolle** hinzugekommen
+— die Begründung dafür steht bei der Korrektur zu Abschnitt 7.
 
 ## 10. Geplante Ausbaustufen
 
@@ -902,7 +1144,7 @@ Clock, sondern immer die Systemuhr.
 | # | Annahme | Risiko wenn falsch |
 |---|---|---|
 | ~~A1~~ | **Geklärt.** Testkopie der Produktion vorhanden, zur Laufzeit wird auf der Produktion gelesen. **Korrigiert 01.08.2026:** Hier stand „Daten bis Ende 2025" — das widersprach Abschnitt 8, der **08.07.2026** nennt. Messung M0 gibt Abschnitt 8 recht: `MAX(Message.MessageLastUpdate) = 2026-07-08 17:21:10`. Die falsche Angabe stammte aus der Zeit vor der Erhebung vom 27.07.2026 und ist beim Nachziehen von Abschnitt 8 übersehen worden. Zur Verteilung innerhalb dieses Zeitraums siehe [`messungen-schritt4.md`](messungen-schritt4.md) | — |
-| A2 | Ein Nutzer gehört zu genau einem Mandanten | **Unter Druck.** `NEXANS`/`NXHBE` und `IBIS`/`IBISGUS` sind jeweils dasselbe Haus. `app_user_mandant` ist n:m vorbereitet, und der Wechsel prüft die Menge statt der Rolle — der Fall ist damit ohne Zusatzbau abgedeckt |
+| ~~A2~~ | **Geklärt 20.08.2026.** Schritt 9a pflegt die n:m-Zuordnung über `app_user_mandant`. Die Annahme „ein Mandant je Nutzer“ ist damit keine Ausgangslage mehr, sondern erledigt. `NEXANS`/`NXHBE` und `IBIS`/`IBISGUS` sind je dasselbe Haus; die Berechtigung wurde schon immer als **Menge** geprüft, es fehlte allein die Pflege. *Korrigiert 20.08.2026:* In der Spalte „Annahme“ stand „Ein Nutzer gehört zu genau einem Mandanten“, im Risiko „**Unter Druck.** `NEXANS`/`NXHBE` und `IBIS`/`IBISGUS` sind jeweils dasselbe Haus. `app_user_mandant` ist n:m vorbereitet, und der Wechsel prüft die Menge statt der Rolle — der Fall ist damit ohne Zusatzbau abgedeckt“ | — |
 | A3 | Kein SMTP-Relay verfügbar, Passwort-Reset erfolgt durch Admin | Selbstbedienung fehlt, später nachrüstbar |
 | ~~A4~~ | **Geklärt.** Rohdatenzugriff über Filestore-Links ist gewünscht und für alle Mandantennutzer freigegeben | — |
 | ~~A5~~ | **Geklärt.** Eigenständiger Betrieb möglich, GlassFish nicht vorgeschrieben (Instanz wäre Version 6/7) | — |

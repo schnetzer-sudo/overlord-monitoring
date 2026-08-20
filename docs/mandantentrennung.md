@@ -83,7 +83,7 @@ diese Zeile wüsste auch niemand warum.
 
 ---
 
-## 3. Die genau zwei Ausnahmen von Regel M1
+## 3. Die genau drei Ausnahmen von Regel M1
 
 **Kein Endpunkt nimmt eine Mandanten-ID entgegen.** Diese Liste ist vollständig und prüfbar:
 
@@ -91,14 +91,31 @@ diese Zeile wüsste auch niemand warum.
 |---|---|---|---|
 | 1 | `POST /api/auth/mandant` | wählt aus der **ohnehin zulässigen Menge** aus; die ID bestimmt nicht, *was* gelesen werden darf, sondern nur *welcher* der erlaubten Ausschnitte aktiv ist | `404` — ununterscheidbar von einer erfundenen ID |
 | 2 | `POST /api/admin/users` | hier wird ein Konto **definiert**, kein Datenausschnitt **abgefragt**; welchen Mandanten der anlegende Admin gerade aktiv hat, sagt nichts darüber aus, für wen das neue Konto gilt. Nur `ADMIN` | `404` — ein ADMIN kennt die Mandantenliste ohnehin |
+| 3 | `PUT /api/admin/users/{benutzername}/mandanten` | hier wird die **Mandantenmenge eines Kontos gepflegt**, kein Datenausschnitt **abgefragt**; die übergebenen IDs sagen nichts darüber aus, was der pflegende Admin lesen darf, sondern nur, für wen das fremde Konto künftig gilt. Nur `ADMIN` | `404` — ein ADMIN kennt die Mandantenliste ohnehin |
 
-**Taucht hier jemals eine dritte auf, ist das ein Signal und keine Kleinigkeit.**
+**Alle drei definieren eine Berechtigung, statt einen Datenausschnitt abzufragen.** Das ist das
+Merkmal, an dem eine Ausnahme zulässig wird — und das einzige.
+
+**Taucht hier jemals eine vierte auf, ist das ein Signal und keine Kleinigkeit.**
 
 > **Nachgetragen 06.08.2026 (Schritt 4, Aufgabe 12).** `GET /api/prozesse`
 > ([`prozessauswahl.md`](prozessauswahl.md)) liefert die Prozesse eines Mandanten und wäre der
 > naheliegende Kandidat für eine dritte Ausnahme — er ist **keine**. Der Endpunkt nimmt überhaupt
 > keinen Parameter entgegen; der Mandant kommt wie überall sonst aus der Sitzung über
 > `MandantService.aktuellerKontext`. **Die Liste bleibt bei zwei Einträgen.**
+
+> **Ergänzt 20.08.2026 (Schritt 9a).** Die dritte Ausnahme ist gesetzt:
+> `PUT /api/admin/users/{benutzername}/mandanten` pflegt die Mandantenmenge eines Kontos. Der
+> Satz über der Liste hieß bis heute „Taucht hier jemals eine **dritte** auf“ — er hat gewirkt,
+> und deshalb bleibt er stehen, verschoben auf die vierte. Diese Ausnahme ist bewusst gesetzt,
+> geprüft und begründet; sie zu streichen würde ihn für die vierte entwerten.
+>
+> `POST /api/admin/users` bleibt unverändert bei **einem** Mandanten — die Signatur aus Schritt 3
+> wird nicht angefasst. Die Menge wird nach dem Anlegen über die neue Ausnahme gepflegt, nicht
+> beim Anlegen.
+>
+> *Korrigiert 20.08.2026:* Die Überschrift dieses Abschnitts lautete „Die genau **zwei** Ausnahmen
+> von Regel M1“.
 
 ### Warum Ausnahme 1 nicht auf Existenz prüft
 
@@ -225,6 +242,19 @@ schlechter Beweis für eine Trennung, die zwischen Firmen greifen soll.
 > **absolutes** Zeitfenster: Außer `NEXANS` endet jeder Mandant am 30.12.2025, ein relatives Fenster
 > hinge damit am Datenstand der Testkopie. Der erste Testfall hält fest, dass beide Mandanten im
 > gewählten Fenster Daten haben — sonst bewiese der Test nur, dass leer leer ist.
+>
+> **Ergänzt 20.08.2026 (Schritt 9a).** Bei **mandantenfreien** Endpunkten gibt es keine
+> Mandantengrenze, an der ein Leck entstehen könnte: Die Nutzerverwaltung arbeitet auf `app_user`,
+> und `app_user` liegt in `overlord_monitor` — Regel M2 bindet nur Repositories auf
+> `jooq.glassfish`. Der Test verschiebt sich deshalb von der Mandantengrenze auf die
+> **Rollengrenze**: Jeder Admin-Endpunkt gibt einem MANDANT-Nutzer `403` — **auch dann, wenn er
+> auf dessen eigenes Konto zeigt.** Genau dieser Fall ist der Kern, denn er ist der einzige, bei
+> dem eine Berechtigungsprüfung über den Kontoinhaber plausibel aussieht und trotzdem falsch ist.
+>
+> **Das ist die zweite Übertragung derselben Regel**, nach der Verschiebung von der Eingabe auf
+> die Ausgabe bei `ProzesseIsolationDbIT`. **Keine Aufweichung** — die Regel verlangt einen Test
+> je Endpunkt, nicht eine bestimmte Grenze; wo die Mandantengrenze fehlt, tritt die Rollengrenze
+> an ihre Stelle, und ohne diesen Test wird genauso wenig gemergt.
 
 Der Test prüft zu Beginn, dass beide in der Testkopie existieren und die erfundene ID nicht. Schlägt
 das fehl, hat sich die Testkopie geändert — nicht der Code.

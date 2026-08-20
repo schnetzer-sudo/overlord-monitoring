@@ -260,14 +260,17 @@ grün.
 
 `bam_sollaenge` ist **kuratiert und nicht ableitbar**. Sie lässt sich zwar aus einer Messung
 *neu erzeugen* — aber nur, solange der Bestand dieselbe Gestalt hat; eine Zeile, die einmal von Hand
-korrigiert wurde, ist unwiederbringlich. Dieselbe Kategorie wie `process_catalog` (Schritt 9) und
-`partner`.
+korrigiert wurde, ist unwiederbringlich. Dieselbe Kategorie wie `process_catalog` (Schritt 9).
+*Korrigiert 20.08.2026:* Hier stand „… wie `process_catalog` (Schritt 9) und `partner`“ —
+`partner` entfällt (E23).
 
 > 📌 **Befund, 13.08.2026: Eine Sicherungsregel für diese Kategorie gab es nicht.** Der Auftrag zu
 > Teil 2a verlangt, die Tabelle „in dieselbe Sicherungsregel einzutragen und keine zweite
 > anzulegen". Geprüft über `docs/`, das Wurzelverzeichnis und die Migrationen: **es gab keine.**
 > `process_catalog` selbst existiert noch nicht (Schritt 9). Statt eine zweite Regel anzulegen,
 > entsteht die eine hier — und führt von Anfang an beide Tabellen.
+> *(Korrigiert 20.08.2026: „beide“ waren `process_catalog` und `partner`. `partner` entfällt,
+> die Regel führt jetzt zwei Tabellen — `bam_sollaenge` und `process_catalog`.)*
 
 **Die Regel.** Tabellen in `overlord_monitor`, deren Inhalt von Hand gepflegt und nicht aus einer
 Quelle wiederherstellbar ist, werden vor jedem Schemaeingriff gesichert und stehen in dieser Liste.
@@ -276,8 +279,14 @@ Es gibt genau **eine** Liste, und sie steht hier:
 | Tabelle | seit | Inhalt | wiederherstellbar aus |
 |---|---|---|---|
 | `bam_sollaenge` | Schritt 7 (V5) | Sollänge und Leerzeichen-Kennzeichen je (Mandant, Typ) | einer Neumessung nach M46 — **nur bei unverändertem Bestand** |
-| `process_catalog` | Schritt 9 *(noch nicht angelegt)* | Partner, Standort, Richtung, Belegart je `ProcessID` | **gar nicht** — Heuristik befüllt vor, die Wahrheit ist gepflegt |
-| `partner` | Schritt 9 *(noch nicht angelegt)* | kuratierte Partnerstammdaten | **gar nicht** |
+| `process_catalog` | Schritt 9 *(noch nicht angelegt)* | Partner, Richtung je `ProcessID` | **gar nicht** — Heuristik befüllt vor, die Wahrheit ist gepflegt |
+
+*Korrigiert 20.08.2026:* Hier stand zusätzlich die Zeile
+`| partner | Schritt 9 (noch nicht angelegt) | kuratierte Partnerstammdaten | gar nicht |`. Die
+Tabelle `partner` **entfällt** (E23); die Auswahlliste wird über `SELECT DISTINCT` aus den
+Katalogzeilen abgeleitet. `process_catalog` **bleibt** — unverändert mit dem Vermerk, dass sie
+in Schritt 9b entsteht; ihre Spaltenliste führte „Standort“ und „Belegart“, beide entfallen
+([`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §4.4 und §5).
 
 Nicht in dieser Liste: `app_user` (Konten, aber über `POST /api/admin/users` neu anlegbar),
 `audit_log` (Protokoll, wächst von selbst), `message_rollup` (aus `Message` neu berechenbar),

@@ -36,14 +36,19 @@ Alle Antworten sind `camelCase`/englisch, alle Fehlertexte deutsch und für den 
   "username": "lukas",
   "role": "MANDANT",
   "mandant": { "id": "VOTG", "name": "VOTG Tanktainer GmbH" },
-  "mustChangePassword": false,
-  "downloadAllowed": true
+  "mustChangePassword": false
 }
 ```
 
 `mandant` ist `null`, solange keiner gewählt ist — bei jedem ADMIN und bei jedem Nutzer mit mehreren
 Mandanten ist das der Zustand direkt nach dem Anmelden. Das ist **kein Fehler**, sondern eine offene
 Auswahl.
+
+*Korrigiert 20.08.2026:* Das Feld `downloadAllowed` ist entfallen; die Beispielantwort führte es
+hier als `"downloadAllowed": true`. Die Spalte `app_user.download_allowed` wird in Schritt 9a per
+Migration entfernt (E20). **Das ist ein Bruch an einem seit Schritt 3 dokumentierten Vertrag** und
+keine stillschweigende Anpassung. Siehe [`rohdaten.md`](rohdaten.md) §3 E2, die dadurch bestätigt
+statt korrigiert wird.
 
 ---
 
@@ -325,11 +330,15 @@ werden. Die Mandantenzuordnung wird **auch für ADMIN** gespeichert: Sie hat dor
 wählbare Menge, fällt aber bei einer späteren Herabstufung auf `MANDANT` nicht ins Leere — und eine
 stillschweigend verworfene Eingabe wäre schlechter als eine wirkungslose Zeile.
 
-Der Endpunkt nimmt eine Mandanten-ID entgegen und ist damit die zweite der genau zwei Ausnahmen von
-Regel M1; beide sind in [`mandantentrennung.md`](mandantentrennung.md) namentlich geführt.
+Der Endpunkt nimmt eine Mandanten-ID entgegen und ist damit die zweite der genau drei Ausnahmen von
+Regel M1; alle sind in [`mandantentrennung.md`](mandantentrennung.md) namentlich geführt.
+
+*Korrigiert 20.08.2026:* Hier stand „die zweite der genau **zwei** Ausnahmen“. Mit Schritt 9a kommt
+`PUT /api/admin/users/{benutzername}/mandanten` als dritte hinzu. **An diesem Endpunkt ändert das
+nichts** — er bleibt bei **einem** Mandanten, die Signatur aus Schritt 3 wird nicht angefasst.
 
 **Nicht in diesem Schritt:** Auflisten, Sperren, Rollenwechsel, Zurücksetzen durch den Admin,
-Löschen. Das ist Schritt 9.
+Löschen. Das ist **Schritt 9a**.
 
 ### Warum die Altnutzer nicht übernommen werden
 

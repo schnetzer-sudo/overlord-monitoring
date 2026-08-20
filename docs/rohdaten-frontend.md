@@ -1,13 +1,18 @@
 # Rohdaten und Protokolle — die Oberfläche
 
-Stand: 18.08.2026 · Schritt 8 des MVP, Teil Frontend
+Stand: 18.08.2026, **korrigiert am 19.08.2026 nach M73** (§2, §3, §9, §11) · Schritt 8 des MVP,
+Teil Frontend
 Vorgabe: [`rohdaten.md`](rohdaten.md). Bei Widersprüchen gilt jene Datei; alle Abweichungen sind
 hier unter §10 benannt und begründet.
 Bedient werden die drei Endpunkte aus [`rohdaten-backend.md`](rohdaten-backend.md).
-Messungen: [`messungen-schritt8.md`](messungen-schritt8.md) M52–M72.
+Messungen: [`messungen-schritt8.md`](messungen-schritt8.md) M52–M72 und **M73**.
 
-**Kein Backend.** Kein Endpunkt, keine Migration, kein jOOQ-Statement ist in diesem Schritt
-angefasst worden.
+**Kein Backend** — das galt am 18.08.2026. Die Korrektur vom 19.08.2026 fasst das Backend mit an:
+`ArtefaktlisteResponse` verliert das Feld `eingang`, und ein Artefakt fällt aus der Liste. Die
+Trennung läuft dort nicht zwischen Backend und Oberfläche, sondern zwischen **hinzufügen und
+wegnehmen** — fiele das Feld im Backend, während die Oberfläche es noch liest, wäre der Hauptzweig
+zwischen den beiden Teilen kaputt. **Weiterhin unberührt:** kein Endpunkt, keine Migration, kein
+jOOQ-Statement.
 
 > **Nachgebessert am 18.08.2026, am selben Tag.** Die Artefakte hängen jetzt **an der Zeitleiste**;
 > der eigene Block „Dateien und Protokolle" ist vollständig entfallen. Der Anlass steht im Kasten zu
@@ -55,10 +60,45 @@ Beide Datensätze liegen in der Detailansicht ohnehin im Baum.
 
 | Lage | Beschriftung | Anteil |
 |---|---|---|
-| Der **Eingang** (`Message.Payload.GUID`) | *Eingegangene Datei* | eine je Nachricht |
-| Sonst auf Schritt `0` — die Lesedienste | die **Familie allein**, `SAPReader` | in Fenster A rund 85 % der Nachrichten (M57) |
+| Auf Schritt `0` — die Lesedienste | die **Familie allein**, `SAPReader` | in Fenster A rund 85 % der Nachrichten (M57) |
 | Der Schritt löst zu einem `SOSActionName` auf | dieser Name | **44,02 %** (M57) |
 | Er löst **nicht** auf | `Schritt <n> · <Familie>` | Rest der **55,98 %** ohne Namen (M57) |
+
+Drei Zeilen, dazu die vierte Lage im Abschnitt weiter unten: Ohne Schrittfolge trägt alles den
+Rückfall.
+
+> **Korrigiert 19.08.2026 — die erste Zeile ist entfallen, nicht umbenannt.** Diese Tabelle führte
+> bis heute eine vierte Lage an erster Stelle: „**Der Eingang (`Message.Payload.GUID`)** |
+> *Eingegangene Datei* | eine je Nachricht". Aus fünf Lagen — den vier Zeilen und dem Rückfall ohne
+> Schrittfolge — sind damit vier geworden.
+>
+> **Gemessen ist (M73):** `Message.Payload.GUID` trägt in **6.249 von 6.249** Nachrichten (Fenster
+> A) und **214.330 von 214.330** (Fenster B) denselben Verweis wie die Nutzdatenzeile mit dem
+> **höchsten `MessageActionID`** derselben Nachricht. Kein Gegenfall in beiden Fenstern. Die
+> Beschriftung *Eingegangene Datei* traf damit in **0,016 %** bzw. **0,015 %** der Nachrichten zu —
+> [`messungen-schritt8.md`](messungen-schritt8.md) M73, Befunde 2 und 3.
+>
+> **Ausdrücklich nicht behauptet:** dass „höchster `MessageActionID`" gleichbedeutend mit „zeitlich
+> zuletzt" ist. Gemessen ist die Schrittnummer, nicht die Uhr. Genau diese Art naheliegender
+> Deutung ist am 19.08.2026 eingestürzt, und sie wird deshalb nirgends nachgeschoben.
+>
+> **Das Artefakt ist entfernt worden, nicht umbenannt.** In 100 % der gemessenen Nachrichten zeigt
+> es auf eine Datei, die über eine andere `artefaktId` erreichbar ist; eine Liste, die jede Datei
+> genau einmal führt, ist die richtige Liste. Verloren geht nichts: 6.248 von 6.249 bzw. 214.297
+> von 214.330 sind über einen Schritt ab `1` erreichbar, die restlichen 1 bzw. 33 über die Zeilen
+> auf Schritt `0`, die in derselben Eingangszeile ohnehin hängen (M73, Befund 5).
+>
+> **Was die Korrektur nicht anfasst — und das ist der größere Teil.** Die drei verbliebenen Zeilen
+> stehen unverändert; die Familie wird weiterhin nirgends übersetzt (Regel Q4); die Zeile *Eingang*
+> über der Leiste bleibt (§3); `zieleOhneZeile` bleibt gebaut, obwohl der Fall gemessen leer ist.
+>
+> **Offen bleibt die Anteilsspalte.** Die Werte **44,02 %** und **55,98 %** stammen aus M57 und
+> rechnen über eine Menge, die die 6.249 `Message.Payload.GUID`-Zeilen einschließt — also über
+> Artefakte, die die Oberfläche nicht mehr zeigt. **Die Richtung ist bekannt, der Betrag nicht:**
+> M57 führt diesen Namen mit `ohne_schrittnamen = 6.249`, alle entfallenen Zeilen liegen also in der
+> Menge *ohne* Schrittnamen — **55,98 % steht zu hoch, 44,02 % zu niedrig**. Sie
+> **nachzurechnen wäre eine Messung**, und diese Runde erhebt keine Zahl. Die Werte bleiben deshalb
+> stehen und sind als offener Punkt vermerkt (§11, Punkt 18).
 
 Gerechnet wird das in `features/nachrichten/rohdaten.ts` (`artefaktBeschriftung`), geprüft in
 `tests/rohdaten.test.ts` — eine reine Funktion, weil es eine **Entscheidung** ist und keine
@@ -74,10 +114,19 @@ Darstellung.
 
 ### Warum auf Schritt `0` **nie** eine Schrittnummer steht
 
-Er hängt auf Schritt `0`, und Schritt `0` ist der **Ort der Metadaten, kein Ablaufschritt** (M57,
-M17 (3)) — er kommt in `schritte[]` gar nicht vor, weil das Backend ihn dort ausnimmt. „Schritt 0"
-wäre technisch richtig und fachlich falsch. Dass es der Eingang ist, ist zudem **keine Ableitung
-dieser Oberfläche**: Das Backend liefert ihn in einem eigenen Feld der Antwort.
+Die Artefakte des Lesedienstes hängen auf Schritt `0`, und Schritt `0` ist der **Ort der Metadaten,
+kein Ablaufschritt** (M57, M17 (3)) — er kommt in `schritte[]` gar nicht vor, weil das Backend ihn
+dort ausnimmt. „Schritt 0" wäre technisch richtig und fachlich falsch.
+
+> **Korrigiert 19.08.2026.** Hier stand bis heute ein zweiter Satz: „**Dass es der Eingang ist, ist
+> zudem keine Ableitung dieser Oberfläche: Das Backend liefert ihn in einem eigenen Feld der
+> Antwort.**" Beides gilt nicht mehr. Das Feld `eingang` ist aus `ArtefaktlisteResponse` entfallen,
+> und es gab nichts, wovon sich sagen ließe, „dass es der Eingang ist" — M73 misst, dass der Name
+> auf die Nutzdatenzeile mit dem höchsten `MessageActionID` zeigt.
+>
+> Der Satz war die **Deckung** der falschen Annahme: Er berief sich auf das Backend statt auf eine
+> Messung, und das Backend berief sich auf den Namen. Genau so wandert eine Vermutung durch zwei
+> Schichten, bis sie wie ein Befund aussieht.
 
 > **Nachgezogen am 18.08.2026.** Dieselbe Begründung galt immer schon für die *anderen* Artefakte
 > auf Schritt `0` — nur trug sie dort niemand ein. Für sie griff der allgemeine Rückfall und schrieb
@@ -89,6 +138,14 @@ dieser Oberfläche**: Das Backend liefert ihn in einem eigenen Feld der Antwort.
 > `MailReader` (32), `OFTPReader` (218), `OFTP2Reader` (46), `HTTPReader` (1), `SSHReader` (5),
 > Fenster A. Sie tragen jetzt **ihre Familie allein**. Eine Nummer, die der Nutzer in der Zeitleiste
 > nirgends wiederfindet, ist keine Auskunft.
+
+> **Korrigiert 19.08.2026 zum Kasten darüber.** Der Kasten vom 18.08.2026 bleibt wörtlich stehen und
+> ist an zwei Wendungen überholt: Von den *„anderen* Artefakte[n] auf Schritt `0`" und davon, dass
+> dort „nicht nur der Eingang, sondern auch das Paar des Lesedienstes" liege. **Es gibt dort nur
+> noch das Paar des Lesedienstes** — die Zeile `Message.Payload.GUID` steht zwar weiterhin mit
+> `MessageActionID = 0` in `MessageProperty` (M57), ist aber kein Artefakt (M73) und kommt über die
+> Schnittstelle nicht mehr. Die Familienliste und die Zeilenzahlen daneben sind unberührt; die
+> Entscheidung, dass dort **die Familie allein** steht, ebenso.
 
 ### Ohne Schrittfolge trägt alles den Rückfall
 
@@ -107,12 +164,18 @@ bekannt ist. Dieselbe Bauform wie beim Eigenschaftenblock.
 ### Der Aufbau
 
 ```
-┆ Eingang                                              📄 📄 📜
+┆ Eingang                                                 📄 📜
 │ Datei konvertiert                    📄 📜   ▃▃▃▃▃▃▃▃      1,2 s
 │ Datei versendet                          📜   ▃▃▃             0,4 s
 │ Bestätigung verarbeitet                       ▃▃              0,2 s
 ▸ Technische Eigenschaften (23)
 ```
+
+> **Korrigiert 19.08.2026 — zwei Zeichen in der Eingangszeile statt dreier.** Hier stand bis heute
+> „`┆ Eingang     📄 📄 📜`". **Genau dieser Anblick war der Anlass von M73:** Der Auftraggeber hat
+> die drei Ziele geöffnet und zugeordnet, und das dritte war die Ausgangsdatei, die die Leiste am
+> letzten Schritt bereits führt. Gemessen bestätigt: `ohne_treffer = 0` in beiden Fenstern (M73,
+> Befund 4) — in der Eingangszeile stand dieselbe Datei ein zweites Mal.
 
 Ein Zeichen je Artefakt, in aller Regel zwei je Schritt — Datei und Protokoll. **Wo nichts liegt,
 hängt nichts**: kein Platzhalter, kein leeres Zeichen, keine ausgegraute Stelle.
@@ -122,21 +185,62 @@ hängt nichts**: kein Platzhalter, kein leeres Zeichen, keine ausgegraute Stelle
 Funktion, aus der auch die Überschrift der Ansicht kommt. Das ist die Lektion vom 17.08.2026:
 *Zwei Stellen, die denselben Schritt verschieden benennen, sind der Fehler.*
 
-### Die eingegangene Datei steht einzeln, über der Leiste
+### Schritt `0` steht einzeln, über der Leiste
 
-**Auf Schritt `0` liegt nicht nur der Eingang.** Gemessen sitzen dort auch die Artefakte des
-Lesedienstes, je Nachricht ein Paar aus Datei und Protokoll — `SAPReader`, `FileReader`,
-`FTPReader`, `AS2Reader`, `MailReader`, `OFTPReader`, `OFTP2Reader`, `HTTPReader`, `SSHReader`
-(M57, Fenster A). Die Zeitleiste führt Schritt `0` nicht: Das Backend nimmt den Metadaten-Schritt
-aus `schritte[]` aus ([`nachrichtendetail.md`](nachrichtendetail.md) §4).
+**Auf Schritt `0` sitzen die Artefakte des Lesedienstes**, je Nachricht ein Paar aus Datei und
+Protokoll — `SAPReader`, `FileReader`, `FTPReader`, `AS2Reader`, `MailReader`, `OFTPReader`,
+`OFTP2Reader`, `HTTPReader`, `SSHReader` (M57, Fenster A). Die Zeitleiste führt Schritt `0` nicht:
+Das Backend nimmt den Metadaten-Schritt aus `schritte[]` aus
+([`nachrichtendetail.md`](nachrichtendetail.md) §4).
 
 Er bekommt deshalb **eine eigene Zeile über der Leiste**, gestrichelt statt durchgezogen — dasselbe
 Vokabular wie die erwartete Zeile am Ende der Leiste: Was gestrichelt ist, ist kein ausgeführter
-Schritt. Kein Balken, keine Dauer.
+Schritt. Kein Balken, keine Dauer. **Liegt auf Schritt `0` nichts, gibt es die Zeile nicht** —
+dasselbe „wo nichts liegt, hängt nichts" wie an den Schrittzeilen, und seit dem 19.08.2026 kommt
+dieser Fall vor (Kasten unten).
 
-Beschriftet wird sie mit **Eingang** und nicht mit *Eingegangene Datei*: Das ist der Name eines der
-drei Artefakte darin, nicht der Name der Zeile. Die Artefakte des Lesedienstes heißen dort nach
-**ihrer Familie allein** — `SAPReader`, nicht `Schritt 0 · SAPReader` (§2).
+Beschriftet wird sie mit **Eingang**, und das bleibt sie. Die Artefakte des Lesedienstes heißen
+darin nach **ihrer Familie allein** — `SAPReader`, nicht `Schritt 0 · SAPReader` (§2).
+
+> **Korrigiert 19.08.2026 — die Überschrift und die Begründung der Beschriftung.** Der Abschnitt
+> hieß bis heute „**Die eingegangene Datei steht einzeln, über der Leiste**" und begann mit
+> „**Auf Schritt `0` liegt nicht nur der Eingang.** Gemessen sitzen dort *auch* die Artefakte des
+> Lesedienstes". Es liegt dort nur noch das Paar des Lesedienstes (M73, Befunde 2 und 3).
+>
+> Die Beschriftung der Zeile wurde bis heute so begründet: „**Beschriftet wird sie mit Eingang und
+> nicht mit *Eingegangene Datei*: Das ist der Name eines der drei Artefakte darin, nicht der Name
+> der Zeile.**" Es sind zwei Artefakte, und keines heißt mehr *Eingegangene Datei* — die Begründung
+> trägt nicht mehr, die Entscheidung bleibt.
+>
+> **Nachgetragen 20.08.2026: Die Zeile kann jetzt ganz fehlen.** Für `MessageActionID = 0` führt
+> M57 (Fenster A) ausschließlich die neun Lesedienst-Paare und `Message.Payload.GUID`. Wo kein
+> Lesedienst auf Schritt `0` liegt, lag dort also **nur** der entfallene Name — und weil `Zielzeile`
+> bei leerer Zielliste `null` liefert, wird die Zeile seither **gar nicht gezeichnet**. Das ist
+> dasselbe „wo nichts liegt, hängt nichts" wie an den Schrittzeilen, nur eine Ebene höher.
+>
+> **Gemessen (M73, Befund 6):** **950 von 6.249** Nachrichten in Fenster A und **28.616 von
+> 214.330** in Fenster B tragen keinen Lesedienst auf Schritt `0` — genau die Nachrichten mit
+> `DataWarehouse.Payload.GUID`, vollständig komplementär zu den **5.299** bzw. **185.714** mit
+> Lesedienst, ohne eine einzige Ausnahme. **Unerreichbar wird dadurch nichts:**
+> `DataWarehouse.Payload.GUID` liegt auf Schritt `1` (M57) und hängt an einer Zeile der Leiste.
+>
+> Vor dem 19.08.2026 hielt `Message.Payload.GUID` die Zeile in genau diesen Nachrichten allein am
+> Leben — und zeigte dort auf eine Datei, die die Leiste ohnehin führte.
+
+> **Warum die Zeile trotzdem *Eingang* heißt.** Ein Lesedienst liest ein, und der Auftraggeber hat
+> die beiden verbliebenen Artefakte am 19.08.2026 geöffnet und die Zuordnung bestätigt.
+>
+> > **Belegvermerk** (Regel L10).
+> >
+> > *Gemessen ist:* welche `MessagePropertyName` auf `MessageActionID = 0` liegen — die neun
+> > Reader-Familien oben (M57), und dass `Message.Payload.GUID` nicht zu ihnen gehört (M73).
+> >
+> > *Behauptet wird:* dass dieses Paar die **eingegangene** Datei und deren Protokoll ist, und dass
+> > *Eingang* es deshalb trifft.
+> >
+> > *Der Beleg ist eine Sichtprüfung an **einer** Nachricht vom 19.08.2026, keine Messung.* Sie
+> > steht als offener Punkt in §11 und wandert nicht als Tatsache in diese Datei — wir haben am
+> > selben Tag gesehen, was das kostet.
 
 ### Die Belastungsprobe sind fünfzehn Artefakte, nicht drei
 
@@ -145,6 +249,13 @@ Mandanten (M55). Fünfzehn Ziele verteilen sich auf bis zu acht Schrittzeilen un
 und kosten dort **keine einzige zusätzliche Zeile**. Genau das war der Grund für die Korrektur: Als
 eigener Block waren dieselben fünfzehn Artefakte fünfzehn Zeilen mit sich wiederholenden
 Schrittnamen.
+
+> **Vermerk 19.08.2026 zur Spanne.** **3 bis 15** stammt aus M55 und zählt die Zeile
+> `Message.Payload.GUID` mit. Sie trägt in **6.249 von 6.249** und **214.330 von 214.330**
+> gemessenen Nachrichten genau eine solche Zeile (M73); angezeigt wird seit dem 19.08.2026 also je
+> Nachricht **eine weniger**. **Neu ausgezählt ist die Spanne nicht** — das wäre eine Messung, und
+> diese Runde erhebt keine. Die Belastungsprobe im Test bleibt bei fünfzehn Artefakten: Sie prüft
+> die Obergrenze der Darstellung und nicht den Bestand.
 
 Die Ziele tragen `shrink-0` und geben keine Breite ab; was bei wenig Platz weicht, ist der gekürzte
 Schrittname daneben — die Regel aus [`nachrichtenliste.md`](nachrichtenliste.md) §8.1. **Name, Dauer
@@ -548,9 +659,20 @@ zusammen **46** Fällen.
 
 | Datei | Art | Deckt ab |
 |---|---|---|
-| `tests/rohdaten.test.ts` | reine Funktionen, 29 Fälle | Beschriftungsregel in allen fünf Lagen, **einschließlich Familie allein auf Schritt `0`** · die **Ziele** je Schritt: Art vor dem Namen, keine Art beim Eingang, Ausschnitt in Name und `title`, Einteilung ohne Umsortieren, leere Einteilung ohne Liste, der Rest ohne Zeile in beide Richtungen · Gleichlauf über alle fünf Zustände samt der Ausnahme „binäres Protokoll" · Reihenfolge und Nachschlagen der Artefakte · die drei Vermerke · zweiter Versuch nur bei nicht erreichbarer Ablage · die vier Zustandstexte paarweise verschieden, in **beiden** Sprachen · kein Pfad trägt GUID oder Ablagenkennung |
+| `tests/rohdaten.test.ts` | reine Funktionen, 29 Fälle | Beschriftungsregel in allen **vier** Lagen, **einschließlich Familie allein auf Schritt `0`** · **`Message.Payload.GUID` erzeugt kein Ziel** (M73) · die **Ziele** je Schritt: Art vor dem Namen — an jedem Ziel, auch an den beiden der Eingangszeile —, Ausschnitt in Name und `title`, Einteilung ohne Umsortieren, leere Einteilung ohne Liste, der Rest ohne Zeile in beide Richtungen · Gleichlauf über alle fünf Zustände samt der Ausnahme „binäres Protokoll" · Reihenfolge und Nachschlagen der Artefakte · die drei Vermerke · zweiter Versuch nur bei nicht erreichbarer Ablage · die vier Zustandstexte paarweise verschieden, in **beiden** Sprachen · kein Pfad trägt GUID oder Ablagenkennung |
 | `tests/artefakt-ansicht.test.tsx` | gerenderter Baum, 9 Fälle | **der Textknoten** · die **vier Zustände**, je einer · der Ausschnitt-Vermerk in beide Richtungen · der Download-Knopf · die Beschriftung ohne Nachladen |
-| `tests/zeitleiste-ziele.test.tsx` | gerenderter Baum, 8 Fälle | die **drei Lagen je Schritt** (beide Arten, nur eine, keine) · der **Eingang** über der Leiste, mit Familie statt Nummer und ohne dass die Leiste eine vierte Zeile bekäme · die **Belastungsprobe aus M55**: fünfzehn Artefakte, fünfzehn eigene Ziele, ohne doppelten React-Schlüssel · das **Anspringen** der Eigenschaftengruppe · die Gegenprobe: ohne Eigenschaften kein Schalter am Schrittnamen |
+| `tests/zeitleiste-ziele.test.tsx` | gerenderter Baum, 8 Fälle | die **drei Lagen je Schritt** (beide Arten, nur eine, keine) · die **Eingangszeile** über der Leiste mit **zwei** Zielen, mit Familie statt Nummer und ohne dass die Leiste eine vierte Zeile bekäme · die **Belastungsprobe aus M55**: fünfzehn Artefakte, fünfzehn eigene Ziele, ohne doppelten React-Schlüssel · das **Anspringen** der Eigenschaftengruppe · die Gegenprobe: ohne Eigenschaften kein Schalter am Schrittnamen |
+
+> **Korrigiert 19.08.2026 zu den beiden Zeilen darüber.** Die erste führte die Beschriftungsregel
+> „**in allen fünf Lagen**" und die Ziele mit „**keine Art beim Eingang**"; die dritte den
+> „**Eingang** über der Leiste" mit drei Zielen. Es sind vier Lagen, jedes Ziel trägt seine Art, und
+> über der Leiste hängen zwei Ziele (M73, §2 und §3).
+>
+> **Die Fallzahlen sind unverändert** — 29, 9 und 8, zusammen 46. In `tests/rohdaten.test.ts` sind
+> zwei Fälle entfallen (*nennt den Eingang die eingegangene Datei*, *lässt die Art beim Eingang
+> weg*) und zwei hinzugekommen (*erzeugt für `Message.Payload.GUID` kein Ziel*, *trägt die Art auch
+> an den beiden Zielen der Eingangszeile*). Dass die Summe gleich bleibt, ist Zufall und keine
+> Absicht; sie steht hier, weil sie nachgezählt ist.
 
 > **`tests/dateien-block.test.tsx` ist entfernt worden, nicht auskommentiert.** Der Block, den sie
 > prüfte, existiert nicht mehr; ihre beiden Fälle sind in `tests/zeitleiste-ziele.test.tsx`
@@ -646,7 +768,7 @@ Einschränkung — §5 legt die *Beschriftung* fest, und die steht im zugänglic
 | 5 | **Kein Sheet über der Detailansicht** — ausdrücklich eine spätere Zugabe (Entscheidung 7) und nicht Teil dieses Baus |
 | 6 | ~~**Der Block ordnet nach `MessageActionID`, die Zeitleiste nach `MessageActionStart`.**~~ **Erledigt am 18.08.2026.** Der Block ist entfallen; Ziele und Eigenschaftengruppen folgen beide der Zeitleiste. Es gibt nur noch **eine** Ordnung, und damit nichts mehr, was auseinanderfallen könnte |
 | 7 | **`Escape` schließt die Dateiansicht nicht.** Im Nachrichtendetail tut es das, weil der Schließen-Knopf dort hinter bis zu fünfzig Tabellenzeilen steht; hier ist der Rückweg der erste Tabstopp der Seite. Ob die Taste trotzdem einheitlich gelten soll, ist eine Frage an die Abnahme |
-| 8 | **`app_user.download_allowed` wird auch hier nicht geprüft** — dieselbe Lage wie im Backend ([`rohdaten-backend.md`](rohdaten-backend.md) §11, Punkt 8). Gebaut ist nach [`rohdaten.md`](rohdaten.md) §3, Entscheidung 2: keine zweite Berechtigungsstufe. **Zu entscheiden: fällt Entscheidung 2, oder fällt das Flag?** |
+| 8 | **`app_user.download_allowed` wird auch hier nicht geprüft** — dieselbe Lage wie im Backend ([`rohdaten-backend.md`](rohdaten-backend.md) §11, Punkt 8). Gebaut ist nach [`rohdaten.md`](rohdaten.md) §3, Entscheidung 2: keine zweite Berechtigungsstufe. **Zu entscheiden: fällt Entscheidung 2, oder fällt das Flag?** — **Geschlossen 20.08.2026: Spalte entfernt.** Es fällt das Flag; `app_user.download_allowed` wird in Schritt 9a per Migration entfernt (E20), und mit ihr `downloadAllowed` aus `GET /api/auth/me` ([`authentifizierung.md`](authentifizierung.md) §1). Entscheidung 2 ist damit **bestätigt, nicht korrigiert**. An dieser Oberfläche ändert sich nichts — sie hat das Feld nie gelesen |
 | 9 | **Das Verhalten bei 610 KB im `<pre>` ist ungemessen.** Ein Textknoten dieser Größe mit `pre-wrap` ist theoretisch unproblematisch und praktisch ungeprüft — im lokalen Bestand ist keine so große Datei abrufbar. Gehört zur Sichtprüfung aus Punkt 1 |
 | 10 | ~~**[`rohdaten.md`](rohdaten.md) selbst fehlt im Verzeichnis von `docs/README.md`.**~~ **Erledigt am 18.08.2026**, weil der Auftrag zur Nachbesserung den Eintrag ausdrücklich freigibt |
 | 11 | **Der Sprung in die Eigenschaften findet die Gruppe über `document.getElementById`.** Das ist der kürzeste Weg zwischen zwei Bausteinen, die sonst nichts voneinander wissen, und er ist geprüft — aber er greift am Baum vorbei. Ein `ref` durch beide Komponenten wäre React-reiner und hätte hier vier Ebenen zu durchqueren. **Zu entscheiden, wenn ein dritter Aufrufer dazukommt** |
@@ -655,6 +777,9 @@ Einschränkung — §5 legt die *Beschriftung* fest, und die steht im zugänglic
 | 14 | **Der Schrittname trägt die Antwort auf „wo steht der Beleg" und ist im Panel jetzt schmaler.** Zwei Ziele und die Schaltflächenpolsterung kosten rund 70 px von vorher rund 270. Gekürzt wird nach der Regel aus [`nachrichtenliste.md`](nachrichtenliste.md) §8.1, der Vollwert steht im `title`. **Ob das reicht, sagt erst die Sichtprüfung** (Punkt 1) |
 | 15 | **`components/ui/separator.tsx` wird seit dem Wegfall des Dateienblocks nirgends mehr verwendet.** Es liegt im Generatorbereich von shadcn/ui und war auch vor Schritt 8 ungenutzt; entfernt wird es deshalb **nicht** in dieser Runde. Wer im Generatorbereich aufräumt, tut es für alle Bausteine auf einmal |
 | 16 | **[`IMPLEMENTIERUNGSPLAN_MVP.md`](IMPLEMENTIERUNGSPLAN_MVP.md) beschreibt Schritt 8 weiterhin als reinen Download.** Dass die **Anzeige der Regelfall** ist, steht seit dem 14.08.2026 in [`rohdaten.md`](rohdaten.md) §1 — der Plan ist nie nachgezogen worden. Nach der Lesereihenfolge aus `CLAUDE.md` ist er verbindlich, und wer ihn liest, hält die gebaute Anzeige für einen Regelverstoß. **Nicht hier nachgeholt:** Der Auftrag zu dieser Nachbesserung gibt drei Dokumentationsdateien frei, und der Plan gehört nicht dazu. **Zu entscheiden vom Auftraggeber** |
+| 17 | **Dass das Paar des Lesedienstes den *Eingang* der Nachricht bezeichnet, ist eine Sichtprüfung und keine Messung** *(neu am 19.08.2026)*. Gemessen ist, **welche** Namen auf `MessageActionID = 0` liegen (M57) — nicht, was die Dateien dahinter sind. Der Auftraggeber hat die beiden Artefakte am 19.08.2026 an **einer** Nachricht geöffnet und die Zuordnung bestätigt; darauf beruht die Beschriftung *Eingang* (§3). Sie ist damit genau so belegt wie die Aussage, die am selben Tag eingestürzt ist — **eine Stufe besser nur dadurch, dass sie hier als Sichtprüfung dasteht und nicht als Tatsache.** **Zu entscheiden: messen oder als Sichtbefund führen** |
+| 18 | **Drei Zahlen in dieser Datei rechnen über eine Menge, die die Oberfläche nicht mehr zeigt** *(neu am 19.08.2026, in der Richtung berichtigt am 20.08.2026)*. Die Anteile **44,02 %** und **55,98 %** in §2 stammen aus M57 und schließen die 6.249 `Message.Payload.GUID`-Zeilen ein; die Spanne **3 bis 15** in §3 stammt aus M55 und zählt dieselbe Zeile mit. **Die Richtung ist bei den Anteilen nicht dieselbe:** M57 führt `Message.Payload.GUID` mit `ohne_schrittnamen = 6.249`, alle entfallenen Zeilen liegen also in der Menge *ohne* auflösbaren Schrittnamen. **55,98 % steht damit zu hoch und 44,02 % zu niedrig**; nur die Spanne aus M55 steht an beiden Enden zu hoch. **Nachgerechnet ist keine der drei** — das wäre eine Messung, und die Korrekturrunde erhebt ausdrücklich keine Zahl. Die Spanne steht außerdem unvermerkt im Backend: `ArtefaktlisteResponse` und `RohdatenIsolationDbIT` |
+| 19 | **Die Regel aus M73 ist in zwei Fenstern gemessen, nicht im Bestand** *(neu am 19.08.2026, = offener Punkt 32 in [`messungen-schritt8.md`](messungen-schritt8.md))*. 220.579 Nachrichten sind rund **6,6 %** der 3.341.519 des Gesamtbestands; Fenster C (`2024-10-01`) ist nicht gefahren. Ob `Message.Payload.GUID` am alten Ende des Bestands ebenso zeigt, ist offen — es kostet eine einzige Sitzung. **Betrifft diese Datei**, weil das entfallene Ziel eine Datei verdeckt haben könnte, die dort *nicht* über einen Schritt ab `1` erreichbar ist |
 
 ---
 

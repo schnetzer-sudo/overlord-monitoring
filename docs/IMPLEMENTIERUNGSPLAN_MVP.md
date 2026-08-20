@@ -12,6 +12,34 @@ Stand: 01.08.2026 · Ergänzt `PROJEKTBESCHREIBUNG.md`
 | 4 — Nachrichtenliste | erledigt, samt Nachbesserung (07.08.2026); Messungen in [`messungen-schritt4.md`](messungen-schritt4.md) |
 | 5 — Nachrichtendetail und Prozessschritte | **geteilt in Teil 1 (Backend) und Teil 2 (Frontend)**; beide Teile erledigt (07.08.2026). Messungen in [`messungen-schritt5.md`](messungen-schritt5.md) und [`nachrichtendetail.md`](nachrichtendetail.md) §8, die Oberfläche in §10 |
 | 6 — Verkettung | **geteilt in Teil 1 (additiv), Teil 2a (Löschungen), Teil 2b (Kettenfläche)**; alle drei erledigt (11.08.2026), dazu Nacharbeit Teil B und Nachbesserung 1. Messungen in [`messungen-schritt6.md`](messungen-schritt6.md), das Feature in [`verkettung.md`](verkettung.md) |
+| 7 — BAM-Suche | **geteilt in Teil 1, Teil 2a, Teil 2b, Teil 3 und Teil 4**; alle fünf Teile erledigt (12. bis 14.08.2026), dazu Nacharbeit und Nachbesserung zu Teil 1 (beide 13.08.2026) und der Nachtrag zum Kommadefekt (14.08.2026). Messungen in [`messungen-schritt7.md`](messungen-schritt7.md); die Features in [`bam-werte.md`](bam-werte.md) (Teil 1), [`bam-sollaengen.md`](bam-sollaengen.md) (Teil 2a) und [`bam-suche.md`](bam-suche.md) (Teil 2b, 3 und 4). **Drei Sichtprüfungen am schmalen Fenster stehen aus** ([`README.md`](README.md), „Offene Sichtprüfungen") |
+| 8 — Rohdaten und Protokolle | **geteilt in Teil Backend und Teil Frontend**; beide gebaut und dokumentiert (18.08.2026, die Oberfläche am selben Tag nachgebessert) — [`rohdaten.md`](rohdaten.md), [`rohdaten-backend.md`](rohdaten-backend.md), [`rohdaten-frontend.md`](rohdaten-frontend.md); Messungen in [`messungen-schritt8.md`](messungen-schritt8.md). **Nicht als erledigt geführt**, und zwar wegen zweier Posten: Die **Sichtprüfung im Browser steht aus** — an beiden Einhängepunkten und für die Ansicht ([`rohdaten-frontend.md`](rohdaten-frontend.md) §11, Punkt 1) —, und die **Antwortverarbeitung des `jakarta`-Zweigs ist ungemessen** ([`rohdaten-backend.md`](rohdaten-backend.md) §11, Punkt 3). Die **336 grünen Frontend-Testfälle** ([`rohdaten-frontend.md`](rohdaten-frontend.md) §9) nehmen eine Sichtprüfung nicht vorweg |
+
+**Korrektur 19.08.2026 zum Kopf: die Tabelle endete bei Schritt 6.** Sie führte Schritt 7 und
+Schritt 8 bis hierhin **gar nicht** — kein „offen", kein „erledigt", keine Zeile. Der Stand war
+damit nicht falsch, sondern **stumm**, und das ist die Form, die am schwersten auffällt: Wer die
+Tabelle liest, sieht sechs erledigte Schritte und keinen Hinweis darauf, dass zwei weitere gebaut
+sind. Nachgetragen ist beides aus den Dateien, die laut Dokumentationspflicht erst mit dem Feature
+entstehen, und nicht aus dem Zusammenhang erschlossen:
+
+- **Schritt 7 und seine Teilung** stehen in den Feature-Dateien selbst und in keiner Zeile dieses
+  Plans — der Abschnitt „Schritt 7" kennt bis heute keine Teile. Belegt sind sie so: Teil 1
+  (Backend §1–§10 und Oberfläche §11/§11a **in einem Stück**) durch den Kopf von
+  [`bam-werte.md`](bam-werte.md), datiert auf den **12.08.2026**, samt der Nacharbeit und der
+  Nachbesserung vom **13.08.2026**; Teil 2a durch die Standzeile von
+  [`bam-sollaengen.md`](bam-sollaengen.md), **13.08.2026**; Teil 2b (Backend §1–§9) und Teil 3
+  (Oberfläche §10–§14) durch den Kopf von [`bam-suche.md`](bam-suche.md), beide **13.08.2026**;
+  Teil 4 (Präfixsuche im Backend §15–§21) ebenfalls dort, **14.08.2026**, seine Oberfläche
+  (§23–§27) über die Verzeichniszeile in [`README.md`](README.md), **14.08.2026**; der Nachtrag §22
+  zum Kommadefekt über [`annahmen-korrekturen.md`](annahmen-korrekturen.md), „Korrektur
+  14.08.2026". Die drei offenen Sichtprüfungen stehen in [`README.md`](README.md).
+- **Schritt 8 wird nicht als erledigt geführt.** Der Eintrag trägt den Zustand, statt ihn
+  abzurunden: gebaut und dokumentiert, aber ungesehen und in einem Punkt ungemessen. Eine grüne
+  Testzahl ist kein Ersatz für eine Sichtprüfung — beides prüft Verschiedenes.
+- **Der Maßstab ist damit nicht einheitlich, und das gehört hierhin statt in eine Fußnote:** Die
+  Schritte 4 bis 7 stehen als *erledigt* und tragen jeder eine offene Sichtprüfung in
+  [`README.md`](README.md). Ob eine ausstehende Sichtprüfung einen Schritt offen hält, ist damit
+  eine Frage, die dieser Plan bisher nicht beantwortet — sie ist hier **nicht** entschieden.
 
 **Korrektur 07.08.2026 zu Schritt 4.** Die Tabelle führte Schritt 4 bis hierhin als **offen**.
 Dieser Stand war überholt: Der Listen-Endpunkt steht seit dem 06.08.2026 und ist am 07.08.2026
@@ -552,6 +580,143 @@ Suchbegriff wird abgelehnt statt die Datenbank zu belasten. Laufzeit gemessen.
 
 ---
 
+## Schritt 8 — Durchstich: Rohdaten und Protokolle
+
+**Ziel:** Zu einer Nachricht sind **alle zugehörigen Dateien** erreichbar — die eingegangene
+Nutzdatei, die umgewandelten Fassungen und die Protokolle der einzelnen Schritte. Sie werden **im
+Browser angesehen** und heruntergeladen, kontrolliert und protokolliert. **Die Anzeige ist der
+Regelfall, nicht der Download** ([`rohdaten.md`](rohdaten.md) §1).
+
+**Skills:** frontend-design, shadcn/ui
+
+**Backend**
+- **Drei Endpunkte** unter `…/{messageId}/dateien`: die Liste, die Anzeige
+  (`…/{artefaktId}/inhalt`) und der Download (`…/{artefaktId}/download`)
+- Artefakte über die beiden gemessenen Namensmuster `%.Payload.GUID` und `%.Log.GUID` in
+  `MessageProperty`, Einstieg **ausschließlich über die `MessageID`** (Regel L4). Jedes Artefakt
+  hängt über `MessageActionID` an seinem Schritt. **Eine Ausnahme:** `Message.Payload.GUID` trägt
+  das Muster und ist kein Artefakt (M73) — sie steht im **Code** und nicht im Statement
+  *(nachgetragen 20.08.2026)*
+- Auflösung des Verweises `<Ablagenkennung>|<UUID>`; die Kennung **ist** eine `Service.ServiceID`
+  und wird über den Primärschlüssel aufgelöst. **Keine Auflösung → benannter Fehlerzustand, kein
+  Rückfall auf eine andere Ablage** — die Ablagen sind keine Spiegel
+- **Kein Bytestrom-Proxy.** Die Ablage spricht ausschließlich **SOAP** (Operation `RETRIEVE`, ohne
+  WSDL, ohne Authentifizierung) und liefert die Datei als **ZIP-Anhang**. Das Backend liest,
+  entpackt den ersten Eintrag, prüft auf Binärinhalt, dekodiert `ISO-8859-1` und beschneidet
+  gegebenenfalls — **in dieser Reihenfolge**
+- Die Kennung eines Artefakts ist `<MessageActionID>-<MessagePropertyName>` und trägt **niemals die
+  GUID und niemals die Ablagenkennung**. Kein Endpunkt nimmt eine Mandanten-ID (Regel M1), eine
+  Rolle oder einen Verweis entgegen; erst Mandantenprüfung im Statement, dann Abruf
+- **Der Beschnitt bei Protokollen hängt an der Rolle, nicht an einem Flag:** `MANDANT` sieht den
+  Bereich zwischen den Marken, pfadmaskiert; `ADMIN` sieht vollständig und unmaskiert. **Keine
+  zweite Berechtigungsstufe** — `app_user.download_allowed` wird nicht geprüft
+  ([`rohdaten.md`](rohdaten.md) §3, Entscheidung 2). *Korrigiert 20.08.2026:* Hier stand, das Flag
+  „**bleibt modelliert**“. Es fällt in Schritt 9a per Migration (E20); an Schritt 8 selbst ändert
+  das nichts — geprüft hat er es nie
+- **Gleichlauf von Anzeige und Download** (Entscheidung 9): **ein** Codepfad für beide. Was
+  `MANDANT` sieht, bekommt er auch als Datei
+- Die **Anzeige liefert JSON**, niemals einen Bytestrom mit ratbarem Typ. Der **Download** liefert
+  `Content-Disposition: attachment` und `Content-Type: application/octet-stream`, **niemals inline**
+- **Fünf benannte Zustände** — der Regelfall und die vier inhaltslosen. Die Anzeige antwortet in
+  allen fünf mit `200`; ein Fehlerstatus wäre dort falsch, weil „Protokoll ohne Marken" bei
+  `FTPSender` der Normalfall ist und sich nicht von „Nachricht gibt es nicht" ununterscheidbar
+  anfühlen darf. Der Download kann das nicht und antwortet je Zustand mit `409`, `404` oder `502`
+- **Drei Ereignisarten** im `audit_log` statt einer — angesehen, heruntergeladen, Abruf
+  fehlgeschlagen —, jede mit der **Fassung** (beschnitten oder vollständig) beziehungsweise dem
+  Zustand. Geschrieben ausschließlich nach `overlord_monitor`
+- Grenzen: **8 MiB** je Datei, **1 MiB** für die Anzeige, 5 s Verbindungsaufbau, 15 s Antwort. Die
+  Größenprüfung greift **während** des Lesens, weil die Vorabgröße nur rund 69,6 % der
+  **Nachrichten** in Fenster A und 57,2 % in Fenster B deckt (M56, Befund 1) — auf Artefakte
+  gerechnet noch weit weniger *(berichtigt 20.08.2026)*
+
+**Frontend**
+- **Ziele an der Zeitleiste** des Nachrichtendetails: je Schritt bis zu zwei — die umgewandelte
+  Fassung und das Protokoll. Wo nichts liegt, hängt nichts; **kein Platzhalter, nichts ausgegraut**
+- **Schritt `0` einzeln**, in einer eigenen Zeile über der Leiste, beschriftet mit *Eingang*. Dort
+  liegt das Paar des Lesedienstes, Datei und Protokoll; Schritt `0` hängt an keinem Ablaufschritt,
+  und ohne diese Zeile wären seine Artefakte unerreichbar
+- **Eigene Route** `/nachrichten/{messageId}/dateien/{artefaktId}`, verlinkbar, mit eigenem
+  Bildlauf. Rohtext in Festbreitenschrift, als **Textknoten** gerendert und **niemals als HTML**
+- **Vier benannte Zustände**, keiner ein leeres Feld: Binärdatei · kein anzeigbarer Protokollteil ·
+  Datei nicht vorhanden · Ablage nicht erreichbar
+- Der **Download-Knopf steht in der Ansicht und nirgends sonst** — die Oberfläche bietet keinen
+  Knopf an, der etwas anderes verspricht als die Anzeige
+- Am schmalen Fenster **Umbruch statt waagerechtem Bildlauf**
+
+> **Nachtrag 20.08.2026 zur Korrektur vom 19.08.2026 — der zweite Punkt hieß anders.** Er lautete:
+> „Die **eingegangene Datei einzeln**, in einer eigenen Zeile über der Leiste. Sie hängt an keinem
+> Ablaufschritt, und ohne diese Zeile wären **ihre** Artefakte unerreichbar."
+>
+> **Das ist die tückischste Fundstelle dieser Runde**, weil der Satz **am 19.08.2026 neu geschrieben
+> worden ist** — im selben Zug, mit dem dieser Abschnitt vom reinen Download auf die Anzeige gezogen
+> wurde (Korrektur unten). Er hat die widerlegte Annahme also nicht überlebt, sondern ist mit ihr
+> **neu eingetragen** worden, an dem Tag, an dem sie fiel.
+>
+> **Gemessen ist (M73):** `Message.Payload.GUID` — bis dahin geführt als *die eingegangene Datei* —
+> trägt in **6.249 von 6.249** Nachrichten (Fenster A) und **214.330 von 214.330** (Fenster B)
+> denselben Verweis wie die Nutzdatenzeile mit dem **höchsten `MessageActionID`** derselben
+> Nachricht, ohne Gegenfall. Das Artefakt ist aus der Liste entfallen; über der Leiste steht seither
+> Schritt `0` mit dem Paar des Lesedienstes ([`rohdaten.md`](rohdaten.md) §5).
+>
+> *Ausdrücklich nicht behauptet:* dass „höchster `MessageActionID`" gleichbedeutend mit „zeitlich
+> zuletzt" ist. Gemessen ist die Schrittnummer, nicht die Uhr.
+>
+> **Der Satz „ohne diese Zeile wären seine Artefakte unerreichbar" bleibt** — und M73 belegt ihn
+> erstmals: In **1** Nachricht (Fenster A) und **33** (Fenster B) liegt die einzige gleichlautende
+> Zeile ausschließlich auf Schritt `0` (Befund 5).
+>
+> **Der zitierte Altabschnitt unten ist damit an zwei weiteren Stellen überholt.** Erstens seine
+> erste Backend-Zeile, „Auflösung von `Message.Payload.GUID` im Format `<FilestoreID>|<UUID>`" —
+> sie nennt als Einstieg des Rohdatenzugriffs einen Namen, der gar kein Artefakt benennt.
+> Zweitens sein **Ziel**, „Die **ursprüngliche** EDI-Datei ist herunterladbar": Was hinter
+> `Message.Payload.GUID` liegt, ist nach M73 nicht die ursprüngliche Datei. Die Auswertungstabelle
+> weiter unten hat das Ziel bis zum 20.08.2026 nur als *unvollständig* geführt; sie ist
+> entsprechend ergänzt. Beide Zeilen bleiben wörtlich stehen; die Begründung im Einzelnen steht in
+> [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §7, die dort für den gleichlautenden Satz
+> dieselbe Einordnung trifft.
+
+**Abgrenzung:** Keine **aufbereitete** Anzeige — EDIFACT, VDA und IDOC in Segmente zerlegt bleiben
+ausgeschlossen (`PROJEKTBESCHREIBUNG.md` §9). Gebaut wird die **Rohtextanzeige**. Kein Sheet über
+der Detailansicht (Entscheidung 7). Keine Zeilennummern, kein Umschalter auf UTF-8, keine
+Syntaxhervorhebung. Kein Rückfall zwischen den Ablagen.
+
+**Abnahme:** Eine Nutzdatei und ein Protokoll sind **angesehen** und **heruntergeladen**. Bei einem
+Protokoll sieht `MANDANT` nur den maskierten Innenbereich, `ADMIN` die vollständige Datei, und der
+Download liefert jeweils dasselbe wie die Anzeige. Die vier inhaltslosen Fälle tragen jeder einen
+eigenen, benannten Text. Der Versuch, eine fremde Nachricht abzurufen, liefert `404` —
+ununterscheidbar von einer erfundenen Kennung. Im Protokoll stehen die drei Ereignisarten, jede mit
+der Fassung. **Die Abnahme braucht eine Nachricht aus `2025-07-24` bis `2025-12-30`** — das einzige
+Fenster, in dem Datenbankkopie und Filestore-Kopie sich decken
+([`START-LOKAL.md`](START-LOKAL.md) §1).
+
+> **Kein Bytevergleich mit dem Altwerkzeug als Kriterium** — die alte Abnahme verlangte genau das,
+> und die Messrunde hat es widerlegt. Das Altwerkzeug liefert **in keinem Fall** die Bytes der
+> Ablage: Beide Zweige laufen über dieselbe `ISO-8859-1`-Dekodierung und vereinheitlichen Zeilenenden
+> auf `LF`, auch bei Nutzdaten und auch für `ADMIN`
+> ([`messungen-schritt8.md`](messungen-schritt8.md) QT9). Dazu sind zwei Beschnittfälle hier
+> **strenger** als dort ([`rohdaten.md`](rohdaten.md) §6). Unterschiede zur alten Ausgabe sind damit
+> zu erwarten und **kein Fehler**; verglichen wird gegen den Inhalt, den die Ablage liefert.
+
+**Dokumentation:** [`rohdaten.md`](rohdaten.md) (die Vorgabe mit den zehn Entscheidungen),
+[`rohdaten-backend.md`](rohdaten-backend.md) und [`rohdaten-frontend.md`](rohdaten-frontend.md).
+
+**Korrektur 19.08.2026 zu Schritt 8.** Der Abschnitt beschrieb Schritt 8 bis hierhin als **reinen
+Download** — Überschrift, Ziel, Backend, Frontend, Abgrenzung, Abnahme und Dokumentation. Dieser
+Stand war seit dem **14.08.2026** überholt: [`rohdaten.md`](rohdaten.md) §1 führt seit diesem Tag die
+**Anzeige als Regelfall**, und genau so ist gebaut worden. **Der Plan war der Ausreißer, nicht die
+Anzeige.** Nach der Präambel von [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) gilt jene Datei
+vor diesem Plan, und ihr §9 schließt allein die **aufbereitete** Anzeige aus — die bleibt
+ausgeschlossen. Falsch waren also die Sätze hier und nicht der gebaute Zustand. Der Widerspruch ist
+zweimal aufgeschoben worden: [`messungen-schritt8-auftrag.md`](messungen-schritt8-auftrag.md) hat ihn
+vor dem Bau als Dokumentationsfrage benannt und datiert zu entscheiden liegen gelassen,
+[`rohdaten-frontend.md`](rohdaten-frontend.md) §11 Punkt 16 hat ihn nach dem Bau erneut benannt und an
+den Auftraggeber verwiesen. Der überholte Abschnitt wird hier benannt und nicht stillschweigend
+überschrieben, nach demselben Muster wie die Korrekturen zu Schritt 3 und Schritt 4.
+
+**Der alte Abschnitt, wortgleich wie er bis zum 19.08.2026 hier stand** — als Codeblock zitiert,
+damit seine Überschrift nicht ein zweites Mal in der Gliederung erscheint:
+
+```
 ## Schritt 8 — Durchstich: Rohdaten-Download
 
 **Ziel:** Die ursprüngliche EDI-Datei ist herunterladbar, kontrolliert und protokolliert.
@@ -579,37 +744,123 @@ Suchbegriff wird abgelehnt statt die Datenbank zu belasten. Laufzeit gemessen.
 fremde Nachricht herunterzuladen, liefert 404. Der Eintrag im Protokoll existiert.
 
 **Dokumentation:** `docs/rohdaten-download.md`
+```
+
+**Was an der alten Fassung im Einzelnen nicht mehr stimmte:**
+
+| Stelle | Warum sie überholt war |
+|---|---|
+| Überschrift „Rohdaten-**Download**" | Der Download ist der kleinere Teil; die Anzeige ist der Regelfall ([`rohdaten.md`](rohdaten.md) §1) |
+| **Ziel** | nannte allein die Herunterladbarkeit der **ursprünglichen** EDI-Datei. Zweifach überholt: Gebaut sind **Nutzdaten und Protokolle**, angesehen **und** heruntergeladen — und das Wort „ursprüngliche" bezeichnete den Inhalt hinter `Message.Payload.GUID`, der nach **M73** gar nicht der ursprüngliche ist *(zweiter Halbsatz nachgetragen 20.08.2026)* |
+| „**Proxy-Endpunkt** … Weiterleitung des Datenstroms" | Es ist kein Bytestrom-Proxy. Die Ablage spricht **SOAP** und liefert ein **ZIP**; das Backend liest, entpackt und gibt neu aus ([`rohdaten.md`](rohdaten.md) §2.3 und §4) |
+| „**Berechtigungsflag** an `app_user`" | Gebaut ist ohne zweite Berechtigungsstufe ([`rohdaten.md`](rohdaten.md) §3, Entscheidung 2). Das Flag existiert und wird **nicht geprüft** ([`rohdaten-backend.md`](rohdaten-backend.md) §11, Punkt 8) |
+| „Download-Schaltfläche im Detailpanel, **deaktiviert wenn keine Nutzdaten vorliegen**" | Der deaktivierte Knopf hat die gemessene Häufigkeit **null** — jede Nachricht trägt 3 bis 15 Artefakte und immer mindestens ein Protokoll, bei jedem Mandanten (M55, [`rohdaten.md`](rohdaten.md) §2.1 — die Spanne zählt die am 19.08.2026 entfallene Zeile mit, die Liste zeigt seither eine weniger; das Minimum bleibt über null). Gebaut sind **Ziele an der Zeitleiste** und eine **eigene Route** |
+| „Keine Anzeige oder Aufbereitung im Browser. **Nur Download.**" | Der tragende falsche Satz. Ausgeschlossen ist die **aufbereitete** Anzeige; die Rohtextanzeige ist der Regelfall |
+| **Abnahme** | kannte nur den Download — die Anzeige, die vier benannten Zustände und der rollenabhängige Beschnitt fehlten |
+| **Abnahme**, „stimmt mit dem Altsystem überein" | **widerlegt**, nicht bloß unvollständig: Das Altwerkzeug liefert die Bytes der Ablage in keinem Fall ([`messungen-schritt8.md`](messungen-schritt8.md) QT9), und zwei Beschnittfälle sind hier strenger ([`rohdaten.md`](rohdaten.md) §6). Ein Dateivergleich als Kriterium hätte den Bau für fehlerhaft erklärt |
+| **Dokumentation** `docs/rohdaten-download.md` | Entstanden sind **drei** Dateien statt einer; die Vorschauzeile in [`README.md`](README.md) ist entsprechend durchgestrichen |
+
+**Unverändert richtig war** und ist so gebaut: die Auflösung von `<Kennung>|<UUID>` über `Service`
+und dessen `ServiceConnectString`, „erst Mandantenprüfung, dann Abruf", „niemals ein durchgereichter
+Link", `Content-Disposition: attachment`, `Content-Type: application/octet-stream`, „niemals inline",
+der Protokolleintrag mit Nutzer, Nachricht, Zeitpunkt und IP sowie Zeitüberschreitung und
+Größenbegrenzung beim Abruf. Diese Aussagen sind **nicht** angefasst worden.
 
 ---
 
 ## Schritt 9 — Durchstich: Administration
 
-**Ziel:** Das System ist ohne Datenbankzugriff betreibbar, und der Prozess-Katalog ist gefüllt.
-
 **Skills:** frontend-design, shadcn/ui
 
+> **Geschnitten am 20.08.2026 in 9a und 9b**, je Backend und Frontend — **vier Aufträge**. Die
+> Naht liegt hier wie bei Schritt 3 und 5 zwischen den Themen und dann zwischen Backend und
+> Oberfläche: Benutzerverwaltung und Prozess-Katalog teilen keine Tabelle, keinen Endpunkt und
+> keine Fläche außer dem Administrationsbereich, der sie trägt.
+>
+> **9b zuerst.** Der Katalog trägt die Partnerzuordnung, auf der Schritt 10 vollständig aufsetzt;
+> die Benutzerverwaltung hängt an nichts davon. Wird 9a zuerst gebaut und die Zeit knapp, steht
+> Schritt 10 ohne Katalog da und zeigt überwiegend „nicht zugeordnet".
+
+### Schritt 9b — Prozess-Katalog
+
+**Ziel:** Der Prozess-Katalog ist gefüllt.
+
 **Backend**
-- `process_catalog` und `partner` per Flyway
-- Einmaliger Heuristik-Import: Vorschläge für Partner, Standort, Richtung und Belegart aus
-  Projekt-, Prozess- und SOS-Namen. **Vorschläge, keine Wahrheit** — jeder Eintrag trägt einen
-  Pflegestatus
-- Pflegeliste absteigend nach Nachrichtenaufkommen der letzten 30 Tage
+- `process_catalog` per Flyway
+- **Wiederholbare Heuristik, per Knopf, für den aktiven Mandanten:** Vorschläge für Partner und
+  Richtung aus Projekt-, Prozess- und SOS-Namen. **Vorschläge, keine Wahrheit** — jeder Eintrag
+  trägt einen Pflegestatus. Der Lauf legt **nur fehlende Zeilen** an und fasst gepflegte niemals
+  an; er ist damit beliebig oft wiederholbar, auch wenn im Altsystem neue Prozesse entstehen
+- Pflegeliste sortiert nach **Projekt und Name**
 - **Massenzuordnung nach Projekt.** Bei Mandanten, deren Projekte den Partner tragen, wird das
   der Haupthebel
 - Sonderbehandlung von `00001_Undefined`
-- Benutzerverwaltung: anlegen, sperren, Rolle ändern, Passwort zurücksetzen
 
 **Frontend**
 - Administrationsbereich, nur für die Rolle `ADMIN` sichtbar
 - Katalogpflege mit Massenzuordnung und sichtbarem Fortschritt
-- Benutzerverwaltung
 
-**Abgrenzung:** Keine Selbstregistrierung, kein Passwort-Reset per E-Mail.
+**Abgrenzung 9b:** Keine Partner-Stammdatentabelle — die Auswahlliste wird über `SELECT DISTINCT`
+aus den Katalogzeilen des aktiven Mandanten abgeleitet (E23). Kuratiert werden **Partner und
+Richtung**, sonst nichts.
 
-**Abnahme:** Ein Admin legt einen Nutzer an, der sich anmelden kann. Die Prozesse mit dem höchsten
-Aufkommen sind zugeordnet, der Fortschritt ist ablesbar.
+**Abnahme 9b:** **Jeder Prozess des Mandanten ist entweder zugeordnet oder als
+gepflegt-ohne-Partner gekennzeichnet.** Der Fortschritt ist ablesbar. Ein zweiter Lauf der
+Heuristik ändert an gepflegten Zeilen nichts.
 
-**Dokumentation:** `docs/prozess-katalog.md`, `docs/benutzerverwaltung.md`
+**Dokumentation 9b:** `docs/prozess-katalog.md`
+
+### Schritt 9a — Benutzerverwaltung
+
+**Ziel:** Über zwanzig externe Nutzer ohne Datenbankzugang bekommen gepflegte Konten. Heute werden
+diese Konten per Zuruf gepflegt.
+
+**Backend**
+- Benutzerverwaltung: anlegen, sperren, Rolle ändern, Passwort zurücksetzen
+- **Pflege der Mandantenmenge je Konto** über `app_user_mandant` — die **dritte Ausnahme** von
+  Regel M1, namentlich geführt in [`mandantentrennung.md`](mandantentrennung.md) §3.
+  `POST /api/admin/users` bleibt unverändert bei **einem** Mandanten
+- `app_user.download_allowed` fällt per Migration (E20); `AngemeldeterNutzer.downloadAllowed` und
+  die Ausgabe in `GET /api/auth/me` entfallen mit ihr
+
+**Frontend**
+- Administrationsbereich, nur für die Rolle `ADMIN` sichtbar
+- Benutzerverwaltung einschließlich der Mandantenmenge je Konto
+
+**Abgrenzung 9a:** Keine Selbstregistrierung, kein Passwort-Reset per E-Mail.
+
+**Abnahme 9a:** Ein Admin legt einen Nutzer an, der sich anmelden kann. Ein Konto mit zwei
+Mandanten lässt sich pflegen und der Nutzer wechselt zwischen beiden. Jeder Admin-Endpunkt gibt
+einem MANDANT-Nutzer `403` — auch dann, wenn er auf dessen eigenes Konto zeigt
+([`mandantentrennung.md`](mandantentrennung.md) §5).
+
+**Dokumentation 9a:** `docs/benutzerverwaltung.md`
+
+> **Korrigiert 20.08.2026.** Was an diesem Abschnitt geändert wurde und warum:
+>
+> **1. Das Ziel von 9a hieß „Das System ist ohne Datenbankzugriff betreibbar".** Der Satz ist
+> **gestrichen** und nicht ersetzt worden, sondern neu begründet: Er beschrieb einen Zustand, den
+> niemand prüfen kann, und verschwieg den tatsächlichen Anlass — über zwanzig externe Nutzer ohne
+> Datenbankzugang, deren Konten sonst per Zuruf gepflegt werden.
+>
+> **2. Vier kuratierte Felder sind zwei.** Hier standen „Partner, Standort, Richtung und Belegart";
+> Standort und Belegart entfallen, im MVP liest sie nichts
+> ([`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §4.4).
+>
+> **3. Die Tabelle `partner` entfällt** (E23). Hier stand „`process_catalog` und `partner` per
+> Flyway".
+>
+> **4. Der Heuristik-Lauf war als „einmaliger Heuristik-Import" geführt.** Er ist **wiederholbar**,
+> per Knopf, für den aktiven Mandanten, und legt nur fehlende Zeilen an. Einmalig wäre er wertlos,
+> sobald im Altsystem ein Prozess dazukommt.
+>
+> **5. Die Sortierung der Pflegeliste lief „absteigend nach Nachrichtenaufkommen der letzten 30
+> Tage".** Das Aufkommen **entfällt** als Sortierkriterium; sortiert wird nach **Projekt und Name**.
+>
+> **6. Das Abnahmekriterium hieß „Die Prozesse mit dem höchsten Aufkommen sind zugeordnet".** Das
+> ist kein prüfbares Kriterium — es nennt keine Zahl und keine Grenze. An seiner Stelle steht die
+> vollständige Abdeckung: zugeordnet **oder** ausdrücklich als gepflegt-ohne-Partner
+> gekennzeichnet.
 
 ---
 
@@ -649,8 +900,9 @@ mit einer direkten Abfrage überein. Ein Klick auf eine Fehlerkachel führt in d
 als erwartet, wird geteilt: erst die Detailansicht mit Rohwerten, dann die Übersetzung.
 
 **Reihenfolge ist nicht beliebig.** Schritte 1 bis 3 sind Voraussetzung für alles Weitere.
-Schritt 10 setzt den gefüllten Katalog aus Schritt 9 voraus, sonst zeigt das Dashboard
-überwiegend "nicht zugeordnet".
+Schritt 10 setzt den gefüllten Katalog aus **Schritt 9b** voraus, sonst zeigt das Dashboard
+überwiegend "nicht zugeordnet". *Korrigiert 20.08.2026:* Hier stand „Schritt 9“; seit der
+Aufteilung trägt **9b** den Katalog, und deshalb steht 9b vor 9a.
 
 **Die CI erreicht die Datenbank nicht.** Das Repository liegt in der Cloud, die Testkopie im
 internen Netz. Deshalb gilt ab Schritt 2 dauerhaft: generierte jOOQ-Quellen sind eingecheckt,

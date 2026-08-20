@@ -1,7 +1,9 @@
 # Rohdaten und Protokolle
 
-Stand: 17.08.2026, **Entscheidung 6 korrigiert am 18.08.2026** (§3) · Schritt 8 des MVP
-Grundlage: `messungen-schritt8.md` (M52–M71, Abschnitt Q), `messungen-schritt8-auftrag.md` Fassung 3
+Stand: 17.08.2026, **Entscheidung 6 korrigiert am 18.08.2026 und am 19.08.2026** (§3, §5) ·
+Schritt 8 des MVP
+Grundlage: `messungen-schritt8.md` (M52–M71 und **M73**, Abschnitt Q),
+`messungen-schritt8-auftrag.md` Fassung 3
 
 Ergänzt `PROJEKTBESCHREIBUNG.md` §7 „Rohdatenzugriff". Bei Widersprüchen gilt die
 Projektbeschreibung — mit Ausnahme der in §3 datiert festgehaltenen Abweichungen.
@@ -38,8 +40,20 @@ Alles in diesem Abschnitt ist belegt. Fundstellen in `messungen-schritt8.md`.
 | Namensmuster | `<Dienst>.Payload.GUID` und `<Dienst>.Log.GUID` in `MessageProperty` (M54) |
 | Wertform | `<Ablagenkennung>\|<UUID>`, durchgängig (M54) |
 | Anzahl je Nachricht | **3 bis 15**, immer mindestens ein Protokoll, bei jedem Mandanten (M55) |
-| Ort | jedes Artefakt hängt über `MessageActionID` an seinem Schritt; `Message.Payload.GUID` steht auf Schritt `0` (M57, M17 (3)) |
+| Ort | jedes Artefakt hängt über `MessageActionID` an seinem Schritt; auf Schritt `0` liegt das Paar des Lesedienstes (M57, M17 (3)) |
 | Lesbarer Schrittname | **nur für 44,02 %** — 55,98 % der Artefakte lösen zu keinem `SOSActionName` auf, bei `ohne_schrittzeile = 0` (M57) |
+| **Kein Artefakt** | `Message.Payload.GUID` — er trägt in 6.249 von 6.249 und 214.330 von 214.330 Nachrichten den Verweis der Nutzdatenzeile mit dem **höchsten `MessageActionID`** derselben Nachricht (**M73**) und ist seit dem 19.08.2026 aus der Liste |
+
+> **Korrigiert 19.08.2026 in der Zeile „Ort".** Sie lautete bis heute: „jedes Artefakt hängt über
+> `MessageActionID` an seinem Schritt; **`Message.Payload.GUID` steht auf Schritt `0`** (M57,
+> M17 (3))". Der zweite Halbsatz ist als Zeilenlage weiterhin richtig und als Aussage über ein
+> *Artefakt* nicht mehr: Die Zeile steht in `MessageProperty`, die Liste führt sie nicht.
+>
+> **Die drei Zahlen darüber und daneben sind unberührt** — sie stammen aus M54, M55 und M57 und
+> sind für ihren Erhebungszeitpunkt richtig. Dass **3 bis 15** und **55,98 %** über eine Menge
+> rechnen, die die entfallene Zeile einschließt, ist als offener Punkt vermerkt
+> ([`rohdaten-frontend.md`](rohdaten-frontend.md) §11, Punkt 18). **Nachgerechnet wird in dieser
+> Runde nichts.**
 
 ### 2.2 Die Ablagen
 
@@ -96,15 +110,22 @@ Alles in diesem Abschnitt ist belegt. Fundstellen in `messungen-schritt8.md`.
 | # | Entscheidung | Datum |
 |---|---|---|
 | 1 | **Anzeige ist Regelfall**, Rohtext, nicht aufbereitet | 14.08.2026 |
-| 2 | Alle Rollen sehen **alle Dateien** der Nachrichten, die sie ohnehin erreichen. Keine zweite Berechtigungsstufe | 14.08.2026 |
+| 2 | Alle Rollen sehen **alle Dateien** der Nachrichten, die sie ohnehin erreichen. Keine zweite Berechtigungsstufe. **Bestätigt 20.08.2026** — Kasten unter dieser Tabelle | 14.08.2026, bestätigt 20.08.2026 |
 | 3 | Bei Protokollen sieht `MANDANT` nur den Bereich zwischen den Marken. `ADMIN` sieht vollständig. **Über die Rolle, nicht über ein Flag** | 14.08.2026 |
 | 4 | Kodierung **`ISO-8859-1`**, belegt durch M61 und deckungsgleich mit Q4 | 17.08.2026 |
 | 5 | Markenregel wie in §6, einschließlich **keine Startmarke → nichts** | 17.08.2026 |
-| 6 | **E1 = Artefakte an der Zeitleiste**, eingegangene Datei einzeln. **Korrigiert am 18.08.2026**, alte Fassung im Kasten unter dieser Tabelle | 17.08.2026, korrigiert 18.08.2026 |
+| 6 | **E1 = Artefakte an der Zeitleiste**, Schritt `0` einzeln darüber. **Korrigiert am 18.08.2026 und am 19.08.2026**, beide alten Fassungen in den Kästen unter dieser Tabelle | 17.08.2026, korrigiert 18.08. und 19.08.2026 |
 | 7 | **E2 = eigene Route.** Ein Sheet über der Detailansicht ist eine spätere Zugabe, kein MVP-Bestandteil | 17.08.2026 |
 | 8 | **E3 = Binärdateien werden erkannt und benannt**, nicht angezeigt | 17.08.2026 |
 | 9 | **E4 = Download liefert, was die Anzeige liefert.** Für `MANDANT` bei Protokollen also die beschnittene Fassung | 17.08.2026 |
 | 10 | „Keine Datei vorhanden" ist ein **Fehlerzustand**, kein Regelfall — produktiv decken sich Datenbank und Filestore (Auskunft 17.08.2026) | 17.08.2026 |
+
+> **Entscheidung 2 ist am 20.08.2026 bestätigt, nicht korrigiert.** Am selben Tag war
+> zwischenzeitlich entschieden, das Flag `app_user.download_allowed` in die Oberfläche zu holen und
+> E2 zu korrigieren — **diese Entscheidung ist zurückgenommen.** Die Spalte fällt stattdessen per
+> Migration in Schritt 9a (E20). **E2 gilt unverändert.** Der offene Punkt 8 in
+> [`rohdaten-backend.md`](rohdaten-backend.md) §11 ist damit geschlossen — mit „Spalte entfernt",
+> nicht mit „geprüft". Die drei Endpunkte aus Schritt 8 bleiben unangetastet.
 
 ### Entscheidung 6 ist am 18.08.2026 korrigiert worden
 
@@ -132,9 +153,27 @@ Nutzdaten", er will **einen Schritt aufmachen** und sehen, was dort liegt.
 | | |
 |---|---|
 | **Zeitleiste** | je Schritt zusätzlich **die Artefakte, die auf ihm liegen** — in aller Regel zwei, Datei und Protokoll. Wo nichts liegt, kein Ziel; und es wird auch nichts abgeschnitten, wo mehr liegt |
-| **Eingegangene Datei** | einzeln, in einer eigenen Zeile **über** der Zeitleiste. Sie hängt an keinem Ablaufschritt |
+| **Schritt `0`** | einzeln, in einer eigenen Zeile **über** der Zeitleiste, beschriftet mit *Eingang*. Er ist kein Ablaufschritt und kommt in `schritte[]` nicht vor |
 | **Technische Eigenschaften** | bleiben ein eigener Block, nach Schritt gruppiert — **anspringbar aus der Zeitleiste** |
 | **Block „Dateien und Protokolle"** | **entfällt vollständig** |
+
+> **Korrigiert 19.08.2026 — die zweite Zeile hieß „Eingegangene Datei".** Sie lautete: „**|
+> Eingegangene Datei | einzeln, in einer eigenen Zeile über der Zeitleiste. Sie hängt an keinem
+> Ablaufschritt |**". Was dort einzeln steht, ist **Schritt `0`** und nicht eine bestimmte Datei;
+> darin hängt seit dem 19.08.2026 das Paar des Lesedienstes, Datei und Protokoll.
+>
+> **Gemessen ist (M73):** `Message.Payload.GUID` — bis dahin geführt als *die eingegangene Datei* —
+> trägt in **6.249 von 6.249** und **214.330 von 214.330** Nachrichten denselben Verweis wie die
+> Nutzdatenzeile mit dem **höchsten `MessageActionID`** derselben Nachricht, ohne Gegenfall in
+> beiden Fenstern. Er ist damit kein eigenes Artefakt und aus der Liste entfallen —
+> [`messungen-schritt8.md`](messungen-schritt8.md) M73, Befunde 2 bis 5.
+>
+> **Ausdrücklich nicht behauptet:** dass „höchster `MessageActionID`" gleichbedeutend mit „zeitlich
+> zuletzt" ist. Gemessen ist die Schrittnummer, nicht die Uhr.
+>
+> **Die Entscheidung selbst ist unberührt.** Artefakte hängen an der Zeitleiste, Schritt `0` steht
+> darüber, der eigene Block bleibt entfallen. Was fällt, ist ein Ziel in der obersten Zeile — und
+> mit ihm die Behauptung, es sei die eingegangene Datei.
 
 **Warum die technischen Eigenschaften trotzdem ein eigener Block bleiben.** Die Trennlinie ist nicht
 „gehört zum Schritt oder nicht" — sie hängen genauso am Schritt —, sondern **„ein Ziel oder ein
@@ -146,6 +185,23 @@ sprengen sie.
 `eingang`, `nutzdaten` und `protokolle` getrennt — sie folgt aus dem Datenmodell und nicht aus einer
 Gestaltungsentscheidung, und die Oberfläche teilt daraus neu ein. **Kein Endpunkt ist geändert
 worden.**
+
+> **Korrigiert 19.08.2026 zum Absatz darüber.** Er gilt für den 18.08.2026 und ist seit dem
+> 19.08.2026 an einer Stelle überholt: Das Backend liefert `eingang` **nicht** mehr. Das Feld ist
+> aus `ArtefaktlisteResponse` entfallen, die Antwort ist zweigeteilt — `nutzdaten` und
+> `protokolle`.
+>
+> **Warum das Feld mitfällt und nicht nur die Beschriftung.** Ein Feld namens `eingang`, das den
+> Verweis der Nutzdatenzeile mit dem höchsten `MessageActionID` trägt, ist dieselbe Falschauskunft
+> eine Schicht tiefer. An diesen Endpunkten hängt nicht nur die Oberfläche: Der Chatbot der
+> Ausbaustufe 1 greift laut [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §10 auf **dieselben**
+> zu, und dort fiele es niemandem auf.
+>
+> **Der Satz „Kein Endpunkt ist geändert worden" gilt weiterhin für den 18.08.2026** und nicht mehr
+> für heute: Der Pfad ist derselbe, die Antwort trägt ein Feld weniger. Ein Umleitungspfad für die
+> Kennung `0-Message.Payload.GUID` ist **nicht** gebaut worden — das Feature war einen Tag alt, und
+> der Endpunkt antwortet auf sie mit `404` wie auf jede unbekannte Kennung. Das ist kein
+> Sonderpfad, sondern das Ausbleiben eines Sonderpfads.
 
 ---
 
@@ -178,25 +234,70 @@ deckt nur 69,6 % und taugt nicht als Vorabprüfung (M60).
 
 ## 5. Die Artefakte in der Oberfläche
 
-*Fassung vom 18.08.2026. Die alte steht im Kasten unter §3.*
+*Fassung vom 19.08.2026. Die Fassung vom 17.08.2026 steht im Kasten unter §3, die vom 18.08.2026 in
+den beiden Kästen unten.*
 
 **An der Zeitleiste, nicht in einem eigenen Block.** Es gibt **eine** Schrittfolge, die führt, und
 einen Block, der ihr folgt — statt dreier gleichrangiger Listen derselben Sache.
 
 - **Je Schritt bis zu zwei Ziele** an seiner Zeile: die umgewandelte Fassung und das Protokoll. Wo
   nichts liegt, hängt nichts — kein Platzhalter, kein ausgegrautes Zeichen.
-- **Der Eingang steht darüber, in einer eigenen Zeile.** Auf Schritt `0` liegt die eingegangene
-  Datei (`Message.Payload.GUID`) **und** das Paar des Lesedienstes (M57). Schritt `0` ist der Ort der
-  Metadaten und kein Ablaufschritt; er kommt in `schritte[]` gar nicht vor und steht deshalb in
-  keiner Zeile der Leiste. Ohne diese Zeile wären seine Artefakte unerreichbar.
+- **Schritt `0` steht darüber, in einer eigenen Zeile mit der Beschriftung *Eingang*.** Dort liegt
+  das Paar des Lesedienstes, Datei und Protokoll (M57). Schritt `0` ist der Ort der Metadaten und
+  kein Ablaufschritt; er kommt in `schritte[]` gar nicht vor und steht deshalb in keiner Zeile der
+  Leiste. Ohne diese Zeile wären seine Artefakte unerreichbar. **Liegt dort nichts, gibt es die
+  Zeile nicht** — seit dem 19.08.2026 kommt das vor, siehe Kasten unten.
 - **Die technischen Eigenschaften bleiben ein eigener Block** — und sind aus jeder Zeile der
   Zeitleiste anspringbar.
+
+> **Korrigiert 19.08.2026 — der Kernsatz dieses Abschnitts.** Der zweite Punkt lautete bis heute:
+> „**Der Eingang steht darüber, in einer eigenen Zeile.** Auf Schritt `0` liegt die eingegangene
+> Datei (`Message.Payload.GUID`) **und** das Paar des Lesedienstes (M57)."
+>
+> **Er ist die Stelle, an der eine Vermutung zur Tatsache geworden ist.** M57 hat gemessen, *welche
+> Namen* auf Schritt `0` liegen — nicht, *worauf ihre Verweise zeigen*. Die Klammer
+> „(`Message.Payload.GUID`)" hinter „die eingegangene Datei" ist am 18.08.2026 aus dem Namen
+> abgeleitet und nie belegt worden.
+>
+> **Gemessen ist (M73, 19.08.2026):** `Message.Payload.GUID` trägt in **6.249 von 6.249** Nachrichten
+> (Fenster A) und **214.330 von 214.330** (Fenster B) denselben Verweis wie die Nutzdatenzeile mit
+> dem **höchsten `MessageActionID`** derselben Nachricht. Kein Gegenfall. Die Beschriftung
+> *Eingegangene Datei* traf in **0,016 %** bzw. **0,015 %** der Nachrichten zu — Befunde 2 und 3.
+>
+> **Ausdrücklich nicht behauptet:** dass „höchster `MessageActionID`" gleichbedeutend mit „zeitlich
+> zuletzt" ist. Gemessen ist die Schrittnummer, nicht die Uhr.
+>
+> **Der Satz „Ohne diese Zeile wären seine Artefakte unerreichbar" bleibt** — und M73 belegt ihn
+> erstmals: In **1** Nachricht (Fenster A) und **33** (Fenster B) liegt die einzige gleichlautende
+> Zeile ausschließlich auf Schritt `0` (Befund 5).
+>
+> **Nachgetragen 20.08.2026: In einem messbaren Teil des Bestands ist die Zeile jetzt leer.** Für
+> `MessageActionID = 0` führt M57 (Fenster A) ausschließlich die neun Lesedienst-Paare und
+> `Message.Payload.GUID`. Wo kein Lesedienst auf Schritt `0` liegt, lag dort also **nur** der
+> entfallene Name, und die Zeile wird gar nicht mehr gezeichnet. **Gemessen (M73, Befund 6):**
+> **950 von 6.249** Nachrichten in Fenster A und **28.616 von 214.330** in Fenster B — genau die
+> Nachrichten mit `DataWarehouse.Payload.GUID`, vollständig komplementär zu den **5.299** bzw.
+> **185.714** mit Lesedienst, ohne eine einzige Ausnahme.
+>
+> **Unerreichbar wird dadurch nichts:** `DataWarehouse.Payload.GUID` liegt auf Schritt `1` (M57) und
+> hängt an einer Zeile der Leiste. Was verschwindet, ist die Zeile — nicht ein Artefakt.
 
 **Beschriftung.** Wo ein `SOSActionName` auflöst, wird er verwendet. Für die **55,98 % ohne** (M57)
 gilt Schrittnummer plus technische Familie — `Schritt 2 · Converter`. **Auf Schritt `0` steht die
 Familie allein** (`SAPReader`): Eine Nummer, die in der Zeitleiste nirgends auftaucht, ist keine
-Auskunft — dieselbe Begründung, aus der der Eingang nicht „Schritt 0 · Message" heißt. **Nichts wird
-geraten** (Regel Q4), und die Dienst*namen* aus `Service.ServiceName` bleiben unsichtbar (M15 (3)).
+Auskunft. **Nichts wird geraten** (Regel Q4), und die Dienst*namen* aus `Service.ServiceName`
+bleiben unsichtbar (M15 (3)).
+
+> **Korrigiert 19.08.2026 zum Absatz darüber.** Der Schluss lautete bis heute: „… ist keine Auskunft
+> — **dieselbe Begründung, aus der der Eingang nicht „Schritt 0 · Message" heißt.**" Der Vergleich
+> zeigt auf ein Artefakt, das die Liste nicht mehr führt; die Familie `Message` kommt in ihr nicht
+> mehr vor. Die Begründung selbst — eine Nummer, die der Nutzer nirgends wiederfindet, sagt nichts —
+> trägt unverändert.
+>
+> **Der Anteil 55,98 % bleibt stehen und ist zu hoch.** Er stammt aus M57 und rechnet über eine
+> Menge, die die 6.249 `Message.Payload.GUID`-Zeilen einschließt. **Nachgerechnet ist er nicht** —
+> das wäre eine Messung, und diese Runde erhebt keine Zahl. Als offener Punkt vermerkt in
+> [`rohdaten-frontend.md`](rohdaten-frontend.md) §11, Punkt 18.
 
 ---
 
@@ -321,3 +422,6 @@ Gegenstand dieser Datei.
 | 4 | **V4 bleibt unbeantwortet.** Die Aufbewahrungsfrist im Filestore ist nicht gemessen — die zuständigen Ablagen sind aus. Die 18 Monate sind Auskunft, keine Messung |
 | 5 | **Die Abnahme braucht eine Nachricht aus 2025-07-24 bis 2025-12-30.** Das ist das einzige Fenster, in dem Datenbankkopie und Filestore-Kopie sich decken |
 | 6 | **Mehr als ein ZIP-Eintrag** ist nie vorgekommen (0 von 693). Der Fall wird trotzdem behandelt — falls er auftritt, ist zu entscheiden, ob alle Einträge angeboten werden |
+| 7 | **Dass das Paar des Lesedienstes den *Eingang* der Nachricht bezeichnet, ist eine Sichtprüfung** *(neu am 19.08.2026)*. Gemessen ist, **welche** Namen auf `MessageActionID = 0` liegen (M57) — nicht, was die Dateien dahinter sind. Der Auftraggeber hat die beiden Artefakte am 19.08.2026 an **einer** Nachricht geöffnet und die Zuordnung bestätigt; darauf beruht die Beschriftung *Eingang* (§5). **Belegvermerk nach Regel L10**, ausführlich in [`rohdaten-frontend.md`](rohdaten-frontend.md) §3. **Zu entscheiden: messen oder als Sichtbefund führen** |
+| 8 | **M73 ist in zwei Fenstern gemessen, nicht im Bestand** *(neu am 19.08.2026, = offener Punkt 32 in [`messungen-schritt8.md`](messungen-schritt8.md))*. 220.579 Nachrichten sind rund **6,6 %** der 3.341.519 des Gesamtbestands; Fenster C (`2024-10-01`) ist nicht gefahren. Ob `Message.Payload.GUID` am alten Ende ebenso zeigt, kostet eine einzige Sitzung |
+| 9 | **Der Downloaddateiname hängt an derselben Annahme** *(neu am 19.08.2026, = offener Punkt 31 in [`messungen-schritt8.md`](messungen-schritt8.md))*. Der Anlassfall der Regel „Muster statt Familie" ist mit dem Artefakt entfallen; die Regel bleibt und ist **nicht** umgebaut worden. Ob ein anderer Fall bleibt, in dem Muster- und Familiensuche auseinandergehen, ist **benannt und nicht gemessen** — [`rohdaten-backend.md`](rohdaten-backend.md) §7 |
