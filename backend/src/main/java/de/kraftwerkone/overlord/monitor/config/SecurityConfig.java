@@ -116,6 +116,13 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers("/api/admin/**")
                     .hasRole("ADMIN")
+                    // Der Prozess-Katalog gehoert zum Administrationsbereich
+                    // (IMPLEMENTIERUNGSPLAN_MVP.md, Schritt 9b), liegt aber bewusst nicht unter
+                    // /api/admin: Er ist mandantengebunden, waehrend dort die mandantenfreie
+                    // Benutzerverwaltung sitzt. Ohne diese Zeile fiele er unter anyRequest() und
+                    // jeder angemeldete Nutzer koennte die Kuratierung seines Mandanten aendern.
+                    .requestMatchers("/api/katalog/**")
+                    .hasRole("ADMIN")
                     .anyRequest()
                     .authenticated())
         .securityContext(kontext -> kontext.securityContextRepository(securityContextRepository))

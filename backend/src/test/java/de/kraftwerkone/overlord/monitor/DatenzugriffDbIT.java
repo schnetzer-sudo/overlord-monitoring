@@ -5,7 +5,9 @@ import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.MESSAGE;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROCESS;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROJECT;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.AUDIT_LOG;
+import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.PROCESS_CATALOG;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
@@ -65,18 +67,45 @@ class DatenzugriffDbIT {
   @DisplayName("Schemauebergreifender Join laeuft in einem einzigen Statement durch")
   void schemauebergreifender_join_in_einem_statement() {
     // GlassfishDB.Process gegen overlord_monitor.audit_log — ueber den Lese-Kontext, eine
-    // Verbindung. Das Ergebnis ist erwartungsgemaess leer; geprueft wird der Mechanismus und die
-    // Vertraeglichkeit der Sortierungen beider Schemata. Daran haengt ab Schritt 9 die
-    // Partnerzuordnung.
+    // Verbindung. Geprueft wird der Mechanismus und die Vertraeglichkeit der Sortierungen beider
+    // Schemata. Daran haengt ab Schritt 9 die Partnerzuordnung.
+    //
+    // KORRIGIERT 20.08.2026. Hier stand zusaetzlich `assertThat(ergebnis).isEmpty()` mit der
+    // Begruendung "Das Ergebnis ist erwartungsgemaess leer". Das galt, solange niemand eine
+    // ProcessID nach audit_log.target_id schrieb. Seit Schritt 9b tut das jede Katalogaenderung —
+    // die Zusicherung ist damit nicht nur ungueltig, sie war nie der Gegenstand dieses Tests.
+    //
+    // Der Gegenstand ist, dass das Statement DURCHLAEUFT: Waeren die Sortierungen beider Schemata
+    // unvertraeglich, endete es mit "Illegal mix of collations" — und genau davor schuetzt die
+    // Zeile COLLATE=utf8mb4_general_ci in jeder Migration. Die Ausfuehrung selbst ist der Beweis.
+    assertThatCode(
+            () ->
+                glassfishDsl
+                    .select(PROCESS.PROCESSID, AUDIT_LOG.ID)
+                    .from(PROCESS)
+                    .join(AUDIT_LOG)
+                    .on(AUDIT_LOG.TARGET_ID.eq(PROCESS.PROCESSID))
+                    .limit(1)
+                    .fetch())
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  @DisplayName("Und derselbe Join auf die Tabelle, fuer die er gebaut wurde: process_catalog")
+  void schemauebergreifender_join_auf_den_prozess_katalog() {
+    // Seit Schritt 9b (V6) gibt es die Tabelle, um die es in dem Satz oben immer ging. Sie ist die
+    // erste des eigenen Schemas, die wirklich gegen GlassfishDB gejoint wird — bam_spalte und
+    // bam_sollaenge werden es ausdruecklich nie. Ob sie Zeilen traegt, ist gleichgueltig: Der
+    // LEFT JOIN muss durchlaufen, und der Bestand von Process ist nie leer.
     var ergebnis =
         glassfishDsl
-            .select(PROCESS.PROCESSID, AUDIT_LOG.ID)
+            .select(PROCESS.PROCESSID, PROCESS_CATALOG.PFLEGESTATUS)
             .from(PROCESS)
-            .join(AUDIT_LOG)
-            .on(AUDIT_LOG.TARGET_ID.eq(PROCESS.PROCESSID))
+            .leftJoin(PROCESS_CATALOG)
+            .on(PROCESS_CATALOG.PROCESS_ID.eq(PROCESS.PROCESSID))
             .limit(1)
             .fetch();
-    assertThat(ergebnis).isEmpty();
+    assertThat(ergebnis).hasSize(1);
   }
 
   @Test

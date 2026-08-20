@@ -15,6 +15,13 @@ Stand: 01.08.2026 · Ergänzt `PROJEKTBESCHREIBUNG.md`
 | 7 — BAM-Suche | **geteilt in Teil 1, Teil 2a, Teil 2b, Teil 3 und Teil 4**; alle fünf Teile erledigt (12. bis 14.08.2026), dazu Nacharbeit und Nachbesserung zu Teil 1 (beide 13.08.2026) und der Nachtrag zum Kommadefekt (14.08.2026). Messungen in [`messungen-schritt7.md`](messungen-schritt7.md); die Features in [`bam-werte.md`](bam-werte.md) (Teil 1), [`bam-sollaengen.md`](bam-sollaengen.md) (Teil 2a) und [`bam-suche.md`](bam-suche.md) (Teil 2b, 3 und 4). **Drei Sichtprüfungen am schmalen Fenster stehen aus** ([`README.md`](README.md), „Offene Sichtprüfungen") |
 | 8 — Rohdaten und Protokolle | **geteilt in Teil Backend und Teil Frontend**; beide gebaut und dokumentiert (18.08.2026, die Oberfläche am selben Tag nachgebessert) — [`rohdaten.md`](rohdaten.md), [`rohdaten-backend.md`](rohdaten-backend.md), [`rohdaten-frontend.md`](rohdaten-frontend.md); Messungen in [`messungen-schritt8.md`](messungen-schritt8.md). **Nicht als erledigt geführt**, und zwar wegen zweier Posten: Die **Sichtprüfung im Browser steht aus** — an beiden Einhängepunkten und für die Ansicht ([`rohdaten-frontend.md`](rohdaten-frontend.md) §11, Punkt 1) —, und die **Antwortverarbeitung des `jakarta`-Zweigs ist ungemessen** ([`rohdaten-backend.md`](rohdaten-backend.md) §11, Punkt 3). Die **336 grünen Frontend-Testfälle** ([`rohdaten-frontend.md`](rohdaten-frontend.md) §9) nehmen eine Sichtprüfung nicht vorweg |
 
+| 9 — Administration | **geschnitten in 9a und 9b** (20.08.2026); **9b Teil Backend gebaut und dokumentiert** (20.08.2026) — `V6__process_catalog.sql`, Heuristik, fünf Endpunkte unter `/api/katalog`, 64 Testfälle. [`prozess-katalog.md`](prozess-katalog.md) (Festlegung), [`prozess-katalog-backend.md`](prozess-katalog-backend.md) (Bau), Messung **M80** in [`messungen-schritt9.md`](messungen-schritt9.md). **Nicht als erledigt geführt:** die Oberfläche zu 9b fehlt, 9a ist unangetastet, und eine Sichtprüfung im Browser ist ohne Oberfläche nicht möglich |
+
+**Nachtrag 20.08.2026 zum Kopf.** Die Zeile zu Schritt 9 ist ergänzt, weil dieselbe Stummheit
+drohte, die die Korrektur vom 19.08.2026 unten beschreibt: Schritt 9b ist zur Hälfte gebaut, und
+ohne Zeile stünde in dieser Tabelle nichts davon. Der Maßstab bleibt der von Schritt 8 — gebaut und
+dokumentiert ist nicht erledigt, solange niemand hingesehen hat.
+
 **Korrektur 19.08.2026 zum Kopf: die Tabelle endete bei Schritt 6.** Sie führte Schritt 7 und
 Schritt 8 bis hierhin **gar nicht** — kein „offen", kein „erledigt", keine Zeile. Der Stand war
 damit nicht falsch, sondern **stumm**, und das ist die Form, die am schwersten auffällt: Wer die
@@ -861,6 +868,18 @@ einem MANDANT-Nutzer `403` — auch dann, wenn er auf dessen eigenes Konto zeigt
 > ist kein prüfbares Kriterium — es nennt keine Zahl und keine Grenze. An seiner Stelle steht die
 > vollständige Abdeckung: zugeordnet **oder** ausdrücklich als gepflegt-ohne-Partner
 > gekennzeichnet.
+>
+> **7. „Bei Mandanten, deren Projekte den Partner tragen, wird das der Haupthebel" — der Satz
+> bleibt stehen und ist gemessen.** Gemessen (M76) greift die Massenzuordnung nach Projekt für den
+> **Partner** bei VOTG und für die **Richtung** bei NEXANS, wo das Projekt sie trägt
+> (`300_KundenEingehend`). Der Hebel greift — aber nicht für das Feld, für das er hier benannt ist.
+> Bei SUTTONS ist er strukturell wirkungslos: ein Projekt, ein Wert. Und die 226 VOTG-Prozesse
+> unter `110_VTG_SalesInvoice`, die er nicht erreicht, deckt Regel A der Heuristik.
+>
+> *Nachgetragen 20.08.2026.* Der Vermerk gehört hierher und nicht in
+> [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §4.4: Dort steht der Hebel-Satz nicht, §4.4
+> beschreibt allein die Namenskonventionen. Der Korrekturkasten in
+> [`prozess-katalog.md`](prozess-katalog.md) §5 war an §4.4 adressiert und zeigt seither hierhin.
 
 ---
 

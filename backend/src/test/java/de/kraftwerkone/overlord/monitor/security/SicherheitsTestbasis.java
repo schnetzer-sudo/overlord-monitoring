@@ -193,6 +193,23 @@ public abstract class SicherheitsTestbasis {
       return fuehreAus(anfrage);
     }
 
+    /**
+     * Ein {@code PUT} mit CSRF-Kopf.
+     *
+     * <p>Er ist am 20.08.2026 fuer den Prozess-Katalog entstanden — bis dahin gab es im gesamten
+     * Backend kein einziges {@code PUT}, und ohne diesen Helfer waere der Endpunkt gar nicht
+     * pruefbar gewesen. Der CSRF-Kopf ist noetig: Die Pruefung greift fuer jede veraendernde
+     * Methode, nicht nur fuer {@code POST}.
+     */
+    public Antwort aendere(String pfad, String json) throws IOException, InterruptedException {
+      HttpRequest.Builder anfrage =
+          HttpRequest.newBuilder(uri(pfad))
+              .header("Content-Type", "application/json")
+              .PUT(HttpRequest.BodyPublishers.ofString(json));
+      cookieWert(CSRF_COOKIE).ifPresent(token -> anfrage.header(CSRF_HEADER, token));
+      return fuehreAus(anfrage);
+    }
+
     /** Bewusst ohne CSRF-Header — fuer den Nachweis, dass die Pruefung greift. */
     public Antwort sendeOhneCsrf(String pfad, String json)
         throws IOException, InterruptedException {

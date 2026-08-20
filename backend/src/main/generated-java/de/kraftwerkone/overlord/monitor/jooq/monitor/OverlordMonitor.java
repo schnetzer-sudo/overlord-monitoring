@@ -9,6 +9,7 @@ import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AppUserMandant;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AuditLog;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.BamSollaenge;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.BamSpalte;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.ProcessCatalog;
 
 import java.util.Arrays;
 import java.util.List;
@@ -58,6 +59,11 @@ public class OverlordMonitor extends SchemaImpl {
     public final BamSpalte BAM_SPALTE = BamSpalte.BAM_SPALTE;
 
     /**
+     * The table <code>overlord_monitor.process_catalog</code>.
+     */
+    public final ProcessCatalog PROCESS_CATALOG = ProcessCatalog.PROCESS_CATALOG;
+
+    /**
      * No further instances allowed
      */
     private OverlordMonitor() {
@@ -77,7 +83,8 @@ public class OverlordMonitor extends SchemaImpl {
             AppUserMandant.APP_USER_MANDANT,
             AuditLog.AUDIT_LOG,
             BamSollaenge.BAM_SOLLAENGE,
-            BamSpalte.BAM_SPALTE
+            BamSpalte.BAM_SPALTE,
+            ProcessCatalog.PROCESS_CATALOG
         );
     }
 }

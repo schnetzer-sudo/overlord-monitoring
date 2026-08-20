@@ -279,7 +279,19 @@ Es gibt genau **eine** Liste, und sie steht hier:
 | Tabelle | seit | Inhalt | wiederherstellbar aus |
 |---|---|---|---|
 | `bam_sollaenge` | Schritt 7 (V5) | Sollänge und Leerzeichen-Kennzeichen je (Mandant, Typ) | einer Neumessung nach M46 — **nur bei unverändertem Bestand** |
-| `process_catalog` | Schritt 9 *(noch nicht angelegt)* | Partner, Richtung je `ProcessID` | **gar nicht** — Heuristik befüllt vor, die Wahrheit ist gepflegt |
+| `process_catalog` | Schritt 9b (V6) | Partner, Richtung je `ProcessID` | **gar nicht** — Heuristik befüllt vor, die Wahrheit ist gepflegt |
+
+*Korrigiert 20.08.2026:* Die Zeile trug den Vermerk „*(noch nicht angelegt)*". Die Tabelle ist an
+diesem Tag mit `V6__process_catalog.sql` entstanden; die Sicherungspflicht gilt ab jetzt nicht mehr
+vorsorglich, sondern tatsächlich. Der Kasten darüber vom 13.08.2026 bleibt unverändert stehen — er
+gibt den damaligen Stand richtig wieder.
+
+> **Und sie ist die unwiederbringlichere der beiden.** `bam_sollaenge` ließe sich aus einer
+> Neumessung nach M46 wiedererzeugen, solange der Bestand dieselbe Gestalt hat. Für
+> `process_catalog` gibt es diesen Weg nicht: Die Heuristik erzeugt nur **Vorschläge** (78,4 % der
+> Prozesse, und für sieben von zehn Mandanten gar nichts), die Bestätigung selbst ist reine
+> Handarbeit. Ein Verlust wäre nicht eine Messung, sondern die Kuratierung von bis zu 1.490
+> Prozessen.
 
 *Korrigiert 20.08.2026:* Hier stand zusätzlich die Zeile
 `| partner | Schritt 9 (noch nicht angelegt) | kuratierte Partnerstammdaten | gar nicht |`. Die

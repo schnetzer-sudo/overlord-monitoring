@@ -9,6 +9,7 @@ import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AppUserMandant;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AuditLog;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.BamSollaenge;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.BamSpalte;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.ProcessCatalog;
 
 
 /**
@@ -41,4 +42,9 @@ public class Tables {
      * The table <code>overlord_monitor.bam_spalte</code>.
      */
     public static final BamSpalte BAM_SPALTE = BamSpalte.BAM_SPALTE;
+
+    /**
+     * The table <code>overlord_monitor.process_catalog</code>.
+     */
+    public static final ProcessCatalog PROCESS_CATALOG = ProcessCatalog.PROCESS_CATALOG;
 }

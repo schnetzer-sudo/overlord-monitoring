@@ -9,11 +9,13 @@ import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AppUserMandant;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AuditLog;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.BamSollaenge;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.BamSpalte;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.ProcessCatalog;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.AppUserMandantRecord;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.AppUserRecord;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.AuditLogRecord;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.BamSollaengeRecord;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.BamSpalteRecord;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.ProcessCatalogRecord;
 
 import org.jooq.ForeignKey;
 import org.jooq.TableField;
@@ -40,6 +42,7 @@ public class Keys {
     public static final UniqueKey<AuditLogRecord> KEY_AUDIT_LOG_PRIMARY = Internal.createUniqueKey(AuditLog.AUDIT_LOG, DSL.name("KEY_audit_log_PRIMARY"), new TableField[] { AuditLog.AUDIT_LOG.ID }, true);
     public static final UniqueKey<BamSollaengeRecord> KEY_BAM_SOLLAENGE_PRIMARY = Internal.createUniqueKey(BamSollaenge.BAM_SOLLAENGE, DSL.name("KEY_bam_sollaenge_PRIMARY"), new TableField[] { BamSollaenge.BAM_SOLLAENGE.MANDANT_ID, BamSollaenge.BAM_SOLLAENGE.MESSAGE_BAM_TYPE }, true);
     public static final UniqueKey<BamSpalteRecord> KEY_BAM_SPALTE_PRIMARY = Internal.createUniqueKey(BamSpalte.BAM_SPALTE, DSL.name("KEY_bam_spalte_PRIMARY"), new TableField[] { BamSpalte.BAM_SPALTE.MANDANT_ID, BamSpalte.BAM_SPALTE.POSITION }, true);
+    public static final UniqueKey<ProcessCatalogRecord> KEY_PROCESS_CATALOG_PRIMARY = Internal.createUniqueKey(ProcessCatalog.PROCESS_CATALOG, DSL.name("KEY_process_catalog_PRIMARY"), new TableField[] { ProcessCatalog.PROCESS_CATALOG.PROCESS_ID }, true);
 
     // -------------------------------------------------------------------------
     // FOREIGN KEY definitions

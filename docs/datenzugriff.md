@@ -260,6 +260,46 @@ Abfrage über den Bestand. Die Sammelform über alle Typen kostet 6,8 s und stir
 `max_statement_time=10` des Lese-Pools (§1) — je Paar bleibt sie weit darunter. **Der Test läuft
 nicht in der CI**, dieselbe bewusst akzeptierte Garantiestufe wie beim Statustest.
 
+### `V6__process_catalog.sql` (Schritt 9b)
+
+Der **Prozess-Katalog**: je `ProcessID` ein kuratierter Partner und eine kuratierte Richtung, dazu
+Pflegestatus, Herkunft des Vorschlags und ein Änderungsvermerk. Primärschlüssel `process_id`
+allein. Vollständig in [`prozess-katalog-backend.md`](prozess-katalog-backend.md), die fachliche
+Festlegung in [`prozess-katalog.md`](prozess-katalog.md).
+
+**Sie ist die erste Tabelle des eigenen Schemas, die wirklich gegen `GlassfishDB` gejoint wird.**
+`bam_sollaenge` wird ausdrücklich nie gejoint, `bam_spalte` ebenso wenig. Damit ist die Zeile
+`COLLATE=utf8mb4_general_ci` hier keine Vorsichtsmaßnahme mehr, sondern trägt: Die Pflegeliste
+verbindet `process_catalog.process_id` mit `GlassfishDB.Process.ProcessID`, und beide Seiten müssen
+dieselbe Sortierung haben. Der in §5 seit Schritt 2 beschriebene Bruchfall ist ab hier ein realer
+und kein hypothetischer.
+
+**Warum der Schlüssel den Mandanten *nicht* trägt** — anders als bei `bam_spalte` und
+`bam_sollaenge`. M74a hat es geprüft: `projekte_mit_mehreren_mandanten = 0`, 1.490 Joinzeilen auf
+1.490 verschiedene `ProcessID`. Eine Katalogzeile gehört immer genau einem Mandanten, und der Bezug
+fällt aus dem Join über `ProjectMandant`. Eine eigene Spalte wäre eine zweite Wahrheit, die mit der
+ersten auseinanderlaufen kann.
+
+**Kein Fremdschlüssel über die Schemagrenze**, aus demselben Grund wie bei `V4` und `V5` — und hier
+mit der schärfsten Folge: Verschwindet ein Prozess im Altsystem, verschwände sonst rückwirkend die
+Partnerzuordnung **aller** historischen Nachrichten. Verwaiste Einträge sind ausdrücklich erwünscht.
+
+**Keine Vorbelegung**, anders als bei `V4` und `V5`. Die Zeilen entstehen im Heuristik-Lauf je
+Mandant und per Hand; eine Vorbelegung in der Migration wäre geraten und nicht kuratiert (Regel Q4).
+
+**Zugriffspfad:** lesend **schemaübergreifend** über den Lese-Kontext (`glassfishDsl`), schreibend
+ausschließlich über den Schreib-Kontext (`monitorDsl`). Das ist keine Stilfrage — der Lese-Kontext
+weist über seinen `ReadOnlyExecuteListener` jeden Nicht-Lesezugriff ab, auch einen auf das eigene
+Schema.
+
+> **Die Falle, die dabei zugeschnappt ist.** `@Transactional` bindet ausschließlich den
+> Schreib-Kontext (§1). Der erste Entwurf von `PUT /api/katalog/prozesse/{processId}` hat die Zeile
+> nach dem Schreiben über den **Lese**-Pool nachgelesen, um sie zurückzugeben — also über eine
+> andere Verbindung außerhalb der Transaktion. Die Antwort meldete `OFFEN`, obwohl `GEPFLEGT`
+> geschrieben war. Gefunden hat es `ProzessKatalogDbIT.leerer_partner_ist_speicherbar`, behoben ist
+> es, indem die Antwort **gebaut** und nicht nachgelesen wird. Der Absatz steht hier, weil die Falle
+> jede künftige schreibende Fläche im eigenen Schema genauso trifft.
+
 ---
 
 ## 6. Zeitquellen

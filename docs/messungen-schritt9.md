@@ -914,3 +914,262 @@ Nummerierung im Anschluss an den projektweit höchsten Stand (**32**, in
 - Keine Aussage über die Produktion. Alles gilt für die Testkopie, Datenstand **08.07.2026**
 - Keine Entscheidung. Die Spalte „Was daraus folgt" ist die vorab vereinbarte Lesart des
   Messwerts, kein Beschluss
+
+---
+
+# Nachtrag vom 20.08.2026 — M80
+
+**Diese Messung gehört nicht zur Runde oben.** Sie ist nach dem Bau von Schritt 9b gefahren, gegen
+gebaute Statements statt gegen Nachbildungen, und sie beantwortet die eine Lücke, die M79
+ausdrücklich offengelassen hat:
+
+> *„Die eine verbleibende Lücke, benannt statt verschwiegen. Nicht gemessen ist der Join gegen
+> `process_catalog`, denn die Tabelle existiert nicht."*
+
+Jetzt existiert sie (`V6__process_catalog.sql`).
+
+| | |
+|---|---|
+| Sitzung | `scripts/messung-schritt9/m80-pflegeliste.sql`, Nachlauf `m80b-umfang.sql` |
+| Rohausgabe | `scripts/messung-schritt9/ergebnis/m80.txt` — über `.gitignore` ausgeschlossen |
+| Serverzeit | `2026-08-20 15:34:18` bis `15:34:19` |
+| **`@@global.read_only`** | **`1`** — Beginn und Ende. Testkopie |
+| Benutzer | `monitor_read@%`, ausschließlich `SELECT` |
+| Version | `10.6.22-MariaDB-0ubuntu0.22.04.1-log`, `@@div_precision_increment` = 4 |
+| Client | `mysql.exe` 8.0.46 aus MySQL Workbench, `--ssl-mode=DISABLED`, wie in allen Runden seit M32 |
+| **L7 / L15** | zwei Mandanten — `NEXANS` (733 Prozesse, größter) und `SUTTONS` (17, klein). Die Einstiegstabelle ist am `EXPLAIN` abgelesen, nicht angenommen. **Kein `STRAIGHT_JOIN`** |
+| **G1** | in der Sitzungsdatei steht kein Partnername, keine `ProjectID`, keine `ProcessID`. Das größte Projekt wird in der Sitzung deterministisch hergeleitet |
+
+**Der gemessene Text ist gerendert und nicht nachgebaut.** Er stammt aus `ProzessKatalogRepository`
+gegen eine jOOQ-Attrappe mit `StatementType.STATIC_STATEMENT` und unterscheidet sich vom
+ausgelieferten nur dort, wo eine Sitzungsvariable an die Stelle eines Literals tritt (M80‑5).
+
+> **Eine zweite Abweichung ist am selben Tag entstanden, nach der Messung.** Der gemessene Text
+> sortiert nach `ProjectName, ProcessName`. Am Nachmittag des 20.08.2026 ist E6 eindeutig gemacht
+> worden: Sortiert wird nach **`ProjectID, ProcessID`**
+> ([`prozess-katalog.md`](prozess-katalog.md) §4). **Der ausgelieferte Text ist an dieser einen
+> Stelle also nicht mehr der gemessene.** Der Sortierschritt geht über dieselbe Zeilenmenge und war
+> schon in dieser Messung ein `filesort` — nachgemessen ist er trotzdem nicht, und diese Zeile
+> steht hier, damit niemand das Gegenteil annimmt.
+
+**Der Zustand, in dem gemessen wurde.** `process_catalog` war über den echten Codepfad gefüllt —
+`POST /api/katalog/vorschlagen` je Mandant, **1.490 Zeilen**, alle mit Status `OFFEN`, davon 1.167
+mit Partner und 1.020 mit Richtung. **Die Zeilen sind nach der Messung wieder gelöscht worden**; die
+Tabelle steht seither leer. Wer M80 nachfahren will, muss sie erst wieder füllen — sonst misst er den
+Join gegen eine leere Tabelle, und das ist eine andere Messung.
+
+---
+
+## M80‑1 — Was kostet die Pflegeliste?
+
+**Frage.** L12 hat den GlassfishDB-Teil mit 4,2 ms gemessen. Was kostet der Join auf
+`process_catalog` obendrauf?
+
+### `EXPLAIN`, beide Mandanten identisch
+
+| Tabelle | Typ | Schlüssel | `rows` | Extra |
+|---|---|---|---:|---|
+| `ProjectMandant` | `ref` | `ProjectMandant_Mandant_idx` | 17 / 1 | `Using where; Using index; Using temporary; Using filesort` |
+| `Process` | `ref` | `Process_ProjectFK` | 5 | |
+| `Project` | `eq_ref` | `PRIMARY` | 1 | |
+| **`process_catalog`** | **`eq_ref`** | **`PRIMARY`** | **1** | |
+
+**Der Katalog hängt als `eq_ref` auf `PRIMARY` daran — der bestmögliche Zugriff.** Der Plan ist
+Zeichen für Zeichen derselbe wie in L12, mit einer zusätzlichen Zeile am Ende. Die Einstiegstabelle
+bleibt `ProjectMandant`, bei beiden Mandanten; die einzige Änderung ist ihr `rows`-Wert (17 gegen 1),
+und das ist Mengenverhalten und keine Planabweichung.
+
+### Laufzeit (beste von fünf, davor ein Aufwärmlauf)
+
+| Mandant | Zeilen | Pflegeliste **mit** Katalog | dieselbe Abfrage **ohne** Katalog | Aufschlag |
+|---|---:|---:|---:|---:|
+| `NEXANS` | 733 | **8,000 ms** | 4,764 ms | **+3,24 ms**, Faktor 1,68 |
+| `SUTTONS` | 17 | **0,812 ms** | — | — |
+
+Der Vergleichswert ohne Katalog ist in derselben Sitzung mitgefahren worden (M80‑2) und reproduziert
+L12 auf 12,8 % genau (4,764 gegen 4,225 ms am 06.08.2026).
+
+**Faktor 9,9 zwischen den beiden Mandanten bei Faktor 43 der Zeilenzahl** — dasselbe Bild wie in L12
+(dort Faktor 7 bei Faktor 43). Regel L15 hat nicht zugeschlagen.
+
+### Vorregistrierte Deutung, dagegengehalten
+
+| Vorab benannt | eingetreten? | Was daraus folgt |
+|---|---|---|
+| Der Katalog hängt als `eq_ref` auf `PRIMARY` → der Aufschlag ist eine Konstante je Zeile | **ja** | 3,24 ms auf 733 Zeilen sind **4,4 µs je Zeile**. Das ist der Preis, und er ist linear |
+| Beide Mandanten unter 50 ms | **ja** (8,0 / 0,8) | Keine Paginierung nötig, E8 bleibt |
+| Ein anderer Plan bei einem der beiden Mandanten → **anhalten**, Regel L15 | **nein** — identischer Plan | Kein `STRAIGHT_JOIN`, keine Umbauten |
+| Über 500 ms bei einem Mandanten → **anhalten**, Paginierung nötig | **nein** | — |
+
+**Der Befund, der in keiner vorformulierten Zeile stand:** Der Aufschlag ist mit **68 %** deutlich
+größer, als „ein Join mehr auf einen Primärschlüssel" vermuten lässt. Er ist trotzdem harmlos, weil
+die Ausgangszahl klein ist — aber wer die Zeile „ein `eq_ref` kostet nichts" als Faustregel
+mitnimmt, nimmt die falsche mit.
+
+> **Vorbehalt an genau diese Zahl, nachgetragen 20.08.2026.** **Die +68 % sind keine
+> Produktionszahl.** Sie sind das Verhältnis zweier kleiner Zahlen (4,764 → 8,000 ms), jeweils die
+> beste von fünf, auf der **Testkopie**, ohne Nebenlast und mit warmem Puffer.
+>
+> **Am Umfang liegt es nicht** — und das ist ausdrücklich festgehalten, weil der Vorbehalt zuerst
+> dort vermutet worden ist: V0 dieser Sitzung zählt **1.490 Katalogzeilen**, also eine je
+> erreichbarem Prozess, und der Join lief gegen genau diesen vollen Bestand (der `EXPLAIN` weist
+> `process_catalog` als `eq_ref` auf `PRIMARY` aus, `rows = 1`). Wächst der Katalog, wächst die
+> Baumtiefe kaum. **Der Vorbehalt gilt der Umgebung, nicht der Menge.**
+>
+> Die Richtung des Befunds steht damit. **Nachgemessen wird nicht.** Wenn die Aussage später
+> gebraucht wird, wird sie gegen die Produktion neu erhoben.
+
+---
+
+## M80‑2 bis M80‑5 — die übrigen Statements des Endpunkts
+
+Alle vier fahren denselben Einstieg über `ProjectMandant_Mandant_idx`.
+
+| # | Statement | Mandant | Laufzeit (beste) | Aufwärmlauf |
+|---|---|---|---:|---:|
+| M80‑2 | Pflegeliste **ohne** Katalog-Join (Vergleichsanker zu L12) | `NEXANS` | **4,764 ms** | 4,487 ms |
+| M80‑3 | Pflegeliste mit `nurOffene=true` | `NEXANS` | **8,006 ms** | 8,575 ms |
+| M80‑4 | abgeleitete Partnerliste | `NEXANS` | **4,084 ms** | 4,165 ms |
+| M80‑4 | abgeleitete Partnerliste | `SUTTONS` | **0,681 ms** | 0,724 ms |
+| M80‑5 | Projektbestand — das Statement, das **Vorschau und Ausführung teilen** | `VOTG`, größtes Projekt | **1,688 ms** | 1,730 ms |
+
+**M80‑3 ist so teuer wie M80‑1, und das hat einen benennbaren Grund, der die Zahl entwertet:** Im
+Messzustand standen **alle** 1.490 Zeilen auf `OFFEN`, der Filter hat also nichts ausgeblendet und
+dieselben 733 Zeilen geliefert. Gemessen ist damit die **obere** Schranke des Filters — was er
+kostet, wenn er nichts spart. Was er im Betrieb spart, hängt am Pflegefortschritt und ist hier
+**nicht** gemessen. Der `EXPLAIN` ist derselbe wie bei M80‑1, mit einem zusätzlichen `Using where`
+an `process_catalog`.
+
+**M80‑5 bestätigt die Zahl aus M76 aus der Gegenrichtung:** Das größte Projekt des Bestands trägt
+**226** Prozesse, hergeleitet statt eingetragen. Vorschau und Ausführung der Massenzuordnung fahren
+genau dieses Statement — die 1,688 ms fallen deshalb zweimal an, einmal beim Bestätigen und einmal
+beim Ausführen.
+
+---
+
+## M80‑6 — Was die Heuristik im Bestand wirklich trifft
+
+**Diese Messung stand nicht im Auftrag.** Sie ist entstanden, weil der Bau einen Regressionstest
+gegen die Zahlen aus [`prozess-katalog.md`](prozess-katalog.md) §3.5 bekommen hat
+(`HeuristikBestandDbIT`) — und der Test war beim ersten Lauf rot.
+
+| Mandant | Prozesse | Regel A | Regel B | ohne Vorschlag | §3.5 projizierte |
+|---|---:|---:|---:|---:|---|
+| `NEXANS` | 733 | **509** | 0 | 224 | 509 / 0 / 224 ✔ |
+| `VOTG` | 390 | **378** | 0 | 12 | 378 / 0 / 12 ✔ |
+| `IBIS` | 192 | 0 | **187** | **5** | 0 / **192** / 0 |
+| `IBISGUS` | 89 | 0 | **88** | **1** | 0 / **89** / 0 |
+| `SUTTONS` | 17 | 0 | 0 | 17 | ✔ |
+| `ZAST` | 35 | 0 | 0 | 35 | ✔ |
+| `NXHBE` | 17 | 0 | 0 | 17 | ✔ |
+| `EDITIONLINGERI` | 9 | 0 | **5** | **4** | 0 / **0** / **9** |
+| `WOC` | 4 | 0 | 0 | 4 | ✔ |
+| `SYSTEM` | 4 | 0 | 0 | 4 | ✔ |
+| **Summe** | **1.490** | **887** | **280** | **323** | 887 / 281 / 322 |
+
+**Regel A trifft die Projektion auf den Prozess genau — beide Mandanten, beide Zahlen.** Damit ist
+die Lesart „der Nummernpräfix ist Bedingung und nicht nur Namensgeber" belegt und nicht gewählt:
+Ohne sie bekämen 14 von 17 `NXHBE`-Prozessen einen Vorschlag, den §3.5 nicht kennt.
+
+**Regel B weicht an zwei Stellen ab, und die beiden heben einander fast auf.**
+
+1. **Sechs Prozesse weniger bei `IBIS`/`IBISGUS`.** Fünf bzw. einer tragen das Ankerwort
+   `Eingehend`/`Ausgehend` **überhaupt nicht** — es sind im Wesentlichen die mit Unterstrich, die
+   M75 dort gezählt hat. Keine Fassung der Regel kann sie erreichen. §3.5 hat für diese beiden
+   Mandanten schlicht *alle* Prozesse gezählt.
+2. **Fünf Prozesse mehr bei `EDITIONLINGERI`**, wo §3.5 alle neun unter „ohne Vorschlag" führt.
+   Regel B trifft dort sehr wohl. Die Projektion hatte sie stillschweigend auf `IBIS`/`IBISGUS`
+   beschränkt — **eine Regel gilt aber, wo ihr Muster steht, und nicht, wo man sie gemeint hat.**
+
+> **Die Gesamtzahl stimmt damit auf eins genau — aus zwei Fehlern.** §3.5 projiziert 1.168
+> Vorschläge, gemessen sind **1.167** (**78,32 %** statt 78,4 % — *der Prozentwert stand hier
+> zuerst mit 77,99 %, das war ein Rechenfehler und ist am 20.08.2026 berichtigt; 1.167 von 1.490
+> sind 78,32 %*). Wer nur die Summe geprüft hätte,
+> hätte beide Abweichungen für nicht vorhanden gehalten. Das ist der Grund, warum der
+> Regressionstest je Mandant zählt und nicht nur die Summe — und warum er alle zehn in einem
+> Durchgang berichtet statt beim ersten Unterschied abzubrechen.
+
+### Der Fehler, den diese Messung im gebauten Code gefunden hat
+
+Die erste Fassung von Regel B verlangte vor dem Ankerwort einen Kleinbuchstaben oder einen
+Nicht-Buchstaben. **Das war eine Erfindung** — die Vorgabe sagt „an Großbuchstaben zerlegen", und
+dann ist jeder Großbuchstabe ein Wortanfang. Sie kostete **26** Prozesse (`IBIS` 20, `IBISGUS` 6),
+die unmittelbar vor dem Anker ein zweibuchstabiges Kürzel in Großschreibung tragen.
+
+Gemessen war der Befund eindeutig und ließ keine zweite Deutung zu: Von den verfehlten Namen trugen
+**alle** den Anker in exakter CamelCase-Schreibweise, **keiner** in einer anderen. Es war die
+Wortgrenze und nichts sonst.
+
+---
+
+## M80‑7 — Die Richtung, die niemand projiziert hatte
+
+*(Nachlauf `m80b-umfang.sql`, reine Anzahlen)*
+
+| Mandant | Prozesse | verschiedene Partner | mit Partner | **mit Richtung** |
+|---|---:|---:|---:|---:|
+| `NEXANS` | 733 | 156 | 509 | **722** |
+| `VOTG` | 390 | 132 | 378 | **0** |
+| `IBIS` | 192 | 78 | 187 | 188 |
+| `IBISGUS` | 89 | 37 | 88 | 88 |
+| `NXHBE` | 17 | 0 | 0 | **17** |
+| `EDITIONLINGERI` | 9 | 3 | 5 | 5 |
+| `ZAST`, `SUTTONS`, `WOC`, `SYSTEM` | 60 | 0 | 0 | 0 |
+| **Summe** | **1.490** | — | **1.167** | **1.020** |
+
+**Die Heuristik füllt für 1.020 von 1.490 Prozessen eine Richtung — 68,5 %.** Diese Zahl steht in
+keinem Dokument, weil §3.5 nur den Partner zählt.
+
+Drei Befunde daraus, und alle drei schließen offene Punkte aus
+[`prozess-katalog.md`](prozess-katalog.md) §10:
+
+1. **`NEXANS` bekommt bei 722 von 733 Prozessen eine Richtung** — aus dem Projektnamen, ohne einen
+   einzigen Partner von dort. Genau die Arbeitsteilung, die §3.4 beschreibt, und deutlich wirksamer
+   als dort veranschlagt.
+2. **`VOTG` bekommt bei null Prozessen eine Richtung.** §3.4 sagt „VOTG bleibt der einzige Mandant,
+   dessen Richtung von Hand kommt" — das ist hiermit gemessen und nicht mehr angenommen. Alle 39
+   Projekte tragen keinen Anker.
+3. **Offener Punkt 4 ist für vier der fünf Mandanten beantwortet.** Der Anker in Projektnamen wirkt
+   bei **`NXHBE` für alle 17 Prozesse** — der einzige Mandant, der eine Richtung bekommt, ohne einen
+   einzigen Partnervorschlag zu haben. Bei `ZAST`, `WOC` und `SYSTEM` wirkt er **gar nicht**. Für
+   `EDITIONLINGERI` kommt die Richtung aus dem Prozessnamen (Regel B), nicht aus dem Projekt.
+
+**Was das für die Oberfläche heißt und hier nur benannt wird:** E9 verlangt den Hinweis „kein
+Vorschlag ableitbar" über der Liste, wenn für **keine** Zeile etwas abgeleitet werden konnte, und
+nennt dafür `SUTTONS`, `ZAST`, `NXHBE` und `EDITIONLINGERI`. Nach dieser Messung trifft das auf
+`NXHBE` und `EDITIONLINGERI` **nicht** zu — beide bekommen etwas, nur nicht das, was §3.5 erwartet
+hat. Vollständig leer bleiben `SUTTONS`, `ZAST`, `WOC` und `SYSTEM`.
+
+---
+
+## Laufzeiten des Nachtrags im Überblick
+
+| Messung | Statement | Laufzeit | Aufwärmlauf |
+|---|---|---:|---:|
+| V0 | Katalogbestand zählen | 1,887 ms | — |
+| V0 | Katalogzeilen `NEXANS` zählen | 3,471 ms | — |
+| **M80‑1** | **Pflegeliste `NEXANS` (733 Zeilen)** | **8,000 ms** | 8,591 ms |
+| **M80‑1** | **Pflegeliste `SUTTONS` (17 Zeilen)** | **0,812 ms** | 0,867 ms |
+| M80‑2 | dieselbe ohne Katalog-Join, `NEXANS` | 4,764 ms | 4,487 ms |
+| M80‑3 | Pflegeliste `nurOffene`, `NEXANS` | 8,006 ms | 8,575 ms |
+| M80‑4 | Partnerliste `NEXANS` | 4,084 ms | 4,165 ms |
+| M80‑4 | Partnerliste `SUTTONS` | 0,681 ms | 0,724 ms |
+| M80‑5 | Projektbestand, größtes Projekt (226) | 1,688 ms | 1,730 ms |
+| M80‑5 | größtes Projekt herleiten | 1,508 ms | — |
+| M80‑6 | Heuristik über 1.490 Prozesse *(Anwendungscode, nicht SQL)* | < 10 s für alle zehn Mandanten samt Schreiben | — |
+
+**Nichts in diesem Nachtrag ist teuer.** Das teuerste Statement liegt bei **8,0 ms** und damit bei
+0,08 % der Zeitgrenze des Lese-Pools. **Keine Abweichung vom Rahmen**, kein Statement über der
+60-Sekunden-Grenze, kein Abbruch.
+
+## Was dieser Nachtrag nicht gemessen hat
+
+- **Den Schreibweg.** Upsert und Stapel laufen über den Schreib-Pool und sind nicht `EXPLAIN`-bar;
+  belegt ist nur, dass 1.490 Zeilen über zehn Transaktionen in unter zehn Sekunden entstehen.
+- **Was der Filter `nurOffene` im Betrieb spart.** M80‑3 misst die obere Schranke, siehe dort.
+- **Die Pflegeliste bei teilweise gepflegtem Katalog.** Gemessen ist der Zustand „alles offen".
+- **Die Sortierung, die seit dem Nachmittag des 20.08.2026 gilt.** Gemessen ist `ORDER BY
+  ProjectName, ProcessName`, ausgeliefert wird `ORDER BY ProjectID, ProcessID` (E6) — siehe die
+  Vorbemerkung oben.
+- **Die Produktion.** Alles gilt für die Testkopie, Datenstand 08.07.2026. Das betrifft auch die
+  **+68 %** aus M80‑1, die dort einen eigenen Vorbehalt tragen.
