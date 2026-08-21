@@ -1382,3 +1382,529 @@ bewusst nicht: Ein Index, der stillschweigend im Zuge eines Features entsteht, i
 - **`app_user.last_login_at`.** Die Spalte existiert seit Schritt 3 und wird bei jeder erfolgreichen
   Anmeldung gepflegt; gelesen wird sie nirgends. Sie wäre die 0,39-ms-Antwort auf dieselbe Frage.
   E17 verwirft „eine **neue** Spalte" — diese ist nicht neu. **Nicht entschieden, hier vermerkt.**
+
+---
+
+# Nachtrag vom 21.08.2026 — M83 (Bestandsabfrage zu E14)
+
+**Auch dieser Nachtrag gehört nicht zur Runde oben.** Er ist vor dem Bau gefahren und erhebt die
+Zahlen, auf denen die Entscheidung **E14** gebaut oder verworfen wird: eine Spalte
+`traegt_nachrichten`, beim Heuristik-Lauf gefüllt. M74b hat die Frage „welche Prozesse tragen
+Nachrichten?" einmal beantwortet — **ohne Mandantenfilter und als einmalige Erhebung**. E14 macht
+daraus Anwendungscode, auf Knopfdruck, je aktivem Mandanten. Das ist eine andere Abfrage, und sie
+war ungemessen.
+
+**Diese Runde baut nichts, migriert nichts und entscheidet nichts.** Die Lesarten standen vor der
+Erhebung fest und sind je Messung als *Vorregistrierte Deutung* dagegengehalten. Welche Fassung
+gebaut wird, entscheidet der Auftraggeber.
+
+| | |
+|---|---|
+| Auftrag | „Messrunde M83 — die Bestandsabfrage vor E14", **Fassung 1**, vom 21.08.2026 |
+| Nummernvergabe | Geprüft wie in V1 vorgeschrieben: `grep -rnoE '\bM8[3-9]\b'` über `docs\`, das Wurzelverzeichnis und `scripts\` — **kein einziger Treffer**. `M83` frei, hier vergeben. Die Gegenprobe auf `M8[0-2]` findet M80, M81 und M82 und belegt, dass der Ausdruck greift |
+| Sitzungen | `scripts/messung-schritt9/m83-v0-rahmen.sql`, `m83-0-indizes.sql`, `m83-1-nexans-a.sql`, `m83-2-nexans-b.sql`, `m83-3a-suttons-a.sql`, `m83-3b-suttons-b.sql`, `m83-5-gegenprobe.sql`, `m83-6-nachpruefung.sql`, `m83-v9-abschluss.sql` — **neun**, sequenziell, jede eine eigene `mysql`-Ausführung |
+| Rohausgaben | `scripts/messung-schritt9/ergebnis/m83-*.txt` — über `.gitignore` ausgeschlossen |
+| Serverzeit | `2026-08-21 16:33:13` bis `16:40:39` |
+| **`@@global.read_only`** | **`1`** — Beginn und Ende. Testkopie |
+| Benutzer | `monitor_read@%`, ausschließlich `SELECT` |
+| Version | `10.6.22-MariaDB-0ubuntu0.22.04.1-log`, `@@div_precision_increment` = 4 |
+| Client | `mysql.exe` 8.0.46 aus MySQL Workbench, `--ssl-mode=DISABLED`, `--default-character-set=utf8mb4`, `-t` |
+| Passwortübergabe | über `MYSQL_PWD` aus `OVERLORD_DB_READ_PASSWORD`; **kein Passwort auf der Befehlszeile, keines in einer Skriptdatei** |
+| `profiling_history_size` | Vorgabe der Instanz **15**, in jeder Sitzung auf **100** gesetzt |
+| Laufzeitgrenze | `@@max_statement_time` der Instanz ist **`0`**; in jeder Sitzung auf **60** gesetzt. **Nicht ausgesetzt, nicht gerissen, kein Abbruch** |
+| Datenstand | `MAX(Message.MessageLastUpdate)` = **`2026-07-08 17:21:10`**, `Message` **3.341.519** Zeilen — beides zu Beginn **und** am Ende abgelesen, beide Male gleich |
+| **S1** | ausschließlich `SELECT`, `SET`, `EXPLAIN`. Kein `INSERT`, kein `UPDATE`, kein `DDL`, kein `FLUSH`, keine Migration, keine Zeile in `process_catalog` |
+| **L7** | jede Fassung gegen **zwei** Mandanten — `NEXANS` (733 Prozesse, größter) und `SUTTONS` (17, klein). Die Einstiegstabelle ist am `EXPLAIN` abgelesen, nicht angenommen. **Kein `STRAIGHT_JOIN`**, auch nicht probeweise (M42) |
+| **L9** | die Regel trägt in dieser Datei bisher keine Nummer; der Auftrag definiert sie als „jeder Vollzugriff auf `Message` wird mit seiner Begründung ausgewiesen". So gehandhabt — betroffen ist allein M83‑6, dort begründet |
+| **L10** | wo eine bestehende Behauptung geprüft wird, stehen *Gemessen war* und *Behauptet wird* nebeneinander |
+| **G1** | in den Sitzungsdateien steht kein Partnername, keine `ProjectID`, keine `ProcessID`. Die Ergebnisse dieses Nachtrags sind **Zahlen und Mandantenkürzel** — letztere sind nach [`annahmen-korrekturen.md`](annahmen-korrekturen.md) ausdrücklich nicht geschützt. Die 733 Prozesskennungen aus M83‑1 stehen **nur** in den ausgeschlossenen Rohdateien |
+
+**Der gemessene Text ist *nicht* gerendert — und das ist hier der Regelfall, nicht die Ausnahme.**
+Beide Fassungen stammen wörtlich aus dem Auftrag; Anwendungscode zu E14 existiert noch nicht.
+**Sobald er existiert, verlangt L7 eine neue Messung des gerenderten Textes** — jOOQ qualifiziert
+mit `GlassfishDB.` und rendert `EXISTS` anders, als man es von Hand tippt. Was hier steht, ist die
+Entscheidungsgrundlage für die Bauform, nicht der Nachweis am gebauten Code.
+
+---
+
+## M83‑0 — Welche Indizes liegen wirklich auf `Message.ProcessID`?
+
+**Frage.** Fassung A steht und fällt damit, ob `ProcessID` an **erster** Position eines Index steht.
+M74bs Plan nennt als bedienenden Index `ProejctIDIDX` — ein Name, der *Project* schreiben will und
+dabei `GROUP BY ProcessID` mit `Using index` bedient hat. **Was der Name sagt und was der Index
+enthält, ist zweierlei; hier wird der Inhalt gelesen**, aus `information_schema.STATISTICS`.
+
+### Ergebnis — acht Indizes, zehn Indexspalten
+
+| Index | `SEQ` | Spalte | eindeutig | `CARDINALITY` |
+|---|---:|---|---|---:|
+| `MessageLastUpdateIDX` | 1 | `MessageLastUpdate` | nein | 1.780.243 |
+| `MessageLastUpdateProcessMessageIDX` | 1 | `MessageLastUpdate` | nein | 1.780.243 |
+| `MessageLastUpdateProcessMessageIDX` | 2 | `ProcessID` | nein | 3.560.486 |
+| `MessageLastUpdateProcessMessageIDX` | 3 | `MessageID` | nein | 3.560.486 |
+| `MessageStatusIDX` | 1 | `MessageStatus` | nein | 18 |
+| **`Message_ProcessFK`** | **1** | **`ProcessID`** | nein | **18** |
+| `PRIMARY` | 1 | `MessageID` | **ja** | 3.560.486 |
+| **`ProejctIDIDX`** *(sic)* | **1** | **`ProcessID`** | nein | **18** |
+| `SourceMessageIDIDX` | 1 | `SourceMessageID` | nein | 1.780.243 |
+| `TargetMessageIDIDX` | 1 | `TargetMessageID` | nein | 63.580 |
+
+**Zwei Indizes führen `ProcessID` an erster Position** — `Message_ProcessFK` und `ProejctIDIDX`.
+Ein dritter nennt sie an zweiter (`MessageLastUpdateProcessMessageIDX`) und taugt für den
+`ref`-Zugriff deshalb nicht. Der Name `ProejctIDIDX` trägt den Buchstabendreher aus dem Altsystem
+und steht **auf `ProcessID`**; das ist an der Instanz abgelesen, nicht aus dem Namen geschlossen.
+
+Die Join-Spalten sind typgleich — `ProcessID`, `ProjectID` und `MandantID` sind durchgängig
+`varchar(36)` in `utf8mb4_general_ci`. Keine Kollations- oder Typkante, die einen `ref`-Zugriff
+verhindern könnte. `Message.ProcessID` ist als einzige davon `NULL`-fähig.
+
+### Vorregistrierte Deutung, dagegengehalten
+
+| Vorab benannt | eingetreten? | Was daraus folgt |
+|---|---|---|
+| Mindestens ein Index führt `ProcessID` an **erster** Position | **ja — zwei** | Der `ref`-Zugriff aus Fassung A ist möglich; weiter mit M83‑1 |
+| `ProcessID` steht nirgends an erster Position → **anhalten und melden** | nein | — |
+
+> **Eine Behauptung des Auftrags ist überholt, und zwar zugunsten des Auftrags.** Die Begründung zu
+> M83‑0 nennt „die drei aus `PROJEKTBESCHREIBUNG.md` §3.2". Dort stehen seit dem 20.08.2026
+> **acht**, mit offenem Korrekturvermerk; dieselbe Korrektur ist in
+> [`datenmodell.md`](datenmodell.md) nachgezogen. Der Bestand ist an dieser Stelle bereits richtig
+> — die Vorprüfung war trotzdem nicht überflüssig, denn sie liest die Instanz und nicht die Datei,
+> und genau darauf zielte sie.
+
+**Der erste Befund, der in keiner vorformulierten Zeile stand:** Die beiden Indizes, die
+`ProcessID` anführen, sind **deckungsgleich** — beide einspaltig, beide nicht eindeutig, beide auf
+derselben Spalte. Der Optimierer wählt in allen vier gemessenen Plänen `ProejctIDIDX`;
+`Message_ProcessFK` wird **nie** gewählt und trägt trotzdem Pflegeaufwand bei jedem Schreibvorgang
+des Altsystems. Dass beide existieren, steht seit dem 20.08.2026 in
+[`datenmodell.md`](datenmodell.md) — dass einer davon ungenutzt ist, steht nirgends. **Zu tun ist
+hier nichts**: Es ist die Datenbank des Altsystems, und dieses Werkzeug schreibt nicht auf ihr (S1).
+
+**Der zweite:** Die `CARDINALITY` beider `ProcessID`-Indizes steht auf **18**. Daraus schätzt der
+Optimierer `3.560.486 ÷ 18 = 197.804` Zeilen je Nachschlag — und genau diese Zahl steht in allen
+vier `EXPLAIN`-Plänen. **Der wahre Mittelwert ist 4.528** (3.341.519 Nachrichten auf 738 Prozesse
+mit Nachrichten, M74b); die Schätzung ist um **Faktor 43,7** zu hoch. Der Plan ist trotzdem der
+richtige, weil `Using index` und der `EXISTS`-Abbruch die Fehlschätzung folgenlos machen. **Das ist
+Glück und keine Garantie:** Ein Optimierer, der 197.804 Zeilen je Nachschlag erwartet, kann
+denselben Plan bei einer anderen Formulierung verwerfen. Wer E14 baut und den Plan verliert, findet
+die Ursache hier und nicht im eigenen Code.
+
+---
+
+## M83‑1 — Fassung A: ein `EXISTS` je Prozess des Mandanten
+
+**Frage.** Der Bestandslauf braucht **alle** Zeilen des Mandanten, auch die toten — er schreibt
+`true` *und* `false`. Was kostet die Fassung, die genau das liefert?
+
+```sql
+SELECT p.ProcessID,
+       EXISTS (SELECT 1 FROM GlassfishDB.Message m WHERE m.ProcessID = p.ProcessID) AS traegt
+FROM GlassfishDB.ProjectMandant pm
+JOIN GlassfishDB.Process     p  ON p.ProjectID = pm.ProjectID
+WHERE pm.MandantID = @mandant;
+```
+
+### `EXPLAIN`, beide Mandanten identisch bis auf `rows`
+
+| id | select_type | table | type | key | `rows` | Extra |
+|---:|---|---|---|---|---:|---|
+| 1 | PRIMARY | `ProjectMandant` | `ref` | `ProjectMandant_Mandant_idx` | 17 / 1 | `Using where; Using index` |
+| 1 | PRIMARY | `Process` | `ref` | `Process_ProjectFK` | 5 | `Using index` |
+| 2 | **DEPENDENT SUBQUERY** | `Message` | **`ref`** | **`ProejctIDIDX`** | **197.804** | **`Using index`** |
+
+**Die Einstiegstabelle ist `ProjectMandant`, bei beiden Mandanten** — dieselbe wie bei der
+Pflegeliste (M80), und der einzige Unterschied zwischen den Mandanten ist ihr `rows`-Wert
+(17 gegen 1). Das ist Mengenverhalten und keine Planabweichung. Die drei Zeilen tragen
+**dreimal `Using index`**: die Abfrage rührt die Datenseiten von `Message` nie an, sie liest
+ausschließlich Indexeinträge. `key_len = 147` bestätigt eine einzelne `varchar(36)`-Spalte.
+
+### Laufzeit (`NEXANS`, erster Lauf der Sitzung getrennt, dann beste von fünf)
+
+| Lauf | 1 *(erster)* | 2 | 3 | 4 | 5 | 6 |
+|---|---:|---:|---:|---:|---:|---:|
+| Laufzeit | **32,144 ms** | 23,525 | 22,523 | 22,883 | **22,154** | 22,619 |
+
+**Beste von fünf: 22,154 ms** bei 733 Zeilen — **30,2 µs je Prozess**. Der erste Lauf liegt mit
+32,144 ms um **Faktor 1,45** darüber.
+
+### Vorregistrierte Deutung, dagegengehalten
+
+Der Auftrag registriert für M83‑1 keine eigene Deutungstabelle; die Schwellen stehen in M83‑4 und
+sind dort dagegengehalten. Der Plan selbst hat die Bedingung aus M83‑0 erfüllt: `ref` statt `ALL`,
+`Using index`, Einstieg über `ProjectMandant`.
+
+---
+
+## M83‑2 — Fassung B: die Menge der lebenden Prozesse, Komplement im Dienst
+
+**Frage.** Der Dienst hält die Prozessliste des Mandanten ohnehin und kann das Komplement selbst
+bilden. Was kostet die Fassung, die dafür die **Nachrichtenzeilen** liest statt der Indexeinträge
+je Prozess?
+
+```sql
+SELECT DISTINCT m.ProcessID
+FROM GlassfishDB.Message        m
+JOIN GlassfishDB.Process        p  ON p.ProcessID = m.ProcessID
+JOIN GlassfishDB.ProjectMandant pm ON pm.ProjectID = p.ProjectID
+WHERE pm.MandantID = @mandant;
+```
+
+### `EXPLAIN`, beide Mandanten identisch bis auf `rows`
+
+| id | select_type | table | type | key | `rows` | Extra |
+|---:|---|---|---|---|---:|---|
+| 1 | SIMPLE | `ProjectMandant` | `ref` | `ProjectMandant_Mandant_idx` | 17 / 1 | **`Using where; Using index; Using temporary`** |
+| 1 | SIMPLE | `Process` | `ref` | `Process_ProjectFK` | 5 | `Using index` |
+| 1 | SIMPLE | `Message` | `ref` | `ProejctIDIDX` | 197.804 | `Using index` |
+
+**Derselbe Einstieg, derselbe Index, dieselbe Schätzung — und trotzdem eine völlig andere
+Abfrage.** Der Unterschied steht in zwei Wörtern: `Using temporary` für das `DISTINCT`, und das
+Fehlen von `DEPENDENT SUBQUERY`. Fassung A bricht je Prozess beim **ersten** gefundenen
+Indexeintrag ab; Fassung B läuft jeden einzelnen ab und wirft die Doubletten hinterher in einer
+Ablagetabelle weg.
+
+### Laufzeit (`NEXANS`)
+
+| Lauf | 1 *(erster)* | 2 | 3 | 4 | 5 | 6 |
+|---|---:|---:|---:|---:|---:|---:|
+| Laufzeit | **4.840,413 ms** | 4.823,736 | 4.806,826 | 4.813,526 | **4.797,038** | 4.810,341 |
+
+**Beste von fünf: 4.797,038 ms** bei 516 Zeilen. Gegen Fassung A ist das **Faktor 216,5**.
+
+### Vorregistrierte Deutung, dagegengehalten
+
+| Vorab benannt | eingetreten? | Was daraus folgt |
+|---|---|---|
+| Fassung B liest die Nachrichtenzeilen des Mandanten statt Indexeinträge je Prozess | **ja** | `NEXANS` hält **2.885.711** Nachrichten (M83‑6) — 1,66 µs je Zeile, und die Rechnung geht auf |
+
+**Der Befund, der in keiner vorformulierten Zeile stand:** Fassung B kostet **je Nachricht**, nicht
+je Prozess — 1,662 µs bei `NEXANS`, 1,526 µs bei `SUTTONS`. Fassung A kostet je Prozess. Damit
+unterscheiden sich die beiden nicht nur in der Höhe, sondern in der **Bezugsgröße**: die Zahl der
+Prozesse steht praktisch still (1.503 seit dem 01.08.2026 unverändert), die Zahl der Nachrichten
+wächst mit jedem Betriebstag. **Fassung A wird nicht teurer, Fassung B schon** — und zwar linear
+mit dem Bestand, den sie prüft.
+
+---
+
+## M83‑3 — Beide Fassungen gegen `SUTTONS` (L7)
+
+Dieselben zwei Statements, `@mandant = 'SUTTONS'`. **Der Plan ist bei beiden Fassungen Zeichen für
+Zeichen derselbe wie bei `NEXANS`**, mit `rows = 1` statt `17` in der Einstiegszeile. Regel L15 hat
+nicht zugeschlagen; der Optimierer steigt bei beiden Mandanten über `ProjectMandant` ein.
+
+| | `NEXANS` (733 / 516) | `SUTTONS` (17 / 17) | Verhältnis |
+|---|---:|---:|---:|
+| **Fassung A**, erster Lauf | 32,144 ms | 2,536 ms | 12,7 |
+| **Fassung A**, beste von fünf | **22,154 ms** | **1,109 ms** | **20,0** |
+| **Fassung B**, erster Lauf | 4.840,413 ms | 310,198 ms | 15,6 |
+| **Fassung B**, beste von fünf | **4.797,038 ms** | **300,935 ms** | **15,9** |
+| Fassung B ÷ Fassung A | **216,5** | **271,4** | — |
+
+### Vorregistrierte Deutung, dagegengehalten
+
+| Vorab benannt | eingetreten? | Was daraus folgt |
+|---|---|---|
+| `SUTTONS` deutlich billiger als `NEXANS` | **ja** — Faktor 20,0 (A) und 15,9 (B) | Die Kardinalität trägt, keine Sonderbehandlung nötig |
+| `SUTTONS` gleich teuer oder **teurer** → der Fall aus L7 (`IBIS` 13,2 s gegen `WOC` 11,9 ms), ein **Befund** | nein | — |
+
+**Der Befund, der in keiner vorformulierten Zeile stand:** `SUTTONS` ist zwar absolut billiger,
+**je Prozess aber doppelt so teuer** — 65,2 µs gegen 30,2 µs bei `NEXANS`. Bei Faktor 43 der
+Zeilenzahl steht nur Faktor 20 der Laufzeit; der Rest ist Festaufwand, der sich bei 17 Zeilen auf
+niemanden verteilt. Für die Entscheidung ist das harmlos — 1,1 ms bleiben 1,1 ms —, aber wer aus
+diesen Zahlen „Kosten je Prozess" als Faustregel mitnimmt, nimmt die falsche mit.
+
+---
+
+## M83‑4 — Der Kaltlauf ist hier der Regelfall
+
+**Ein echter Kaltlauf ist von hier aus nicht herstellbar.** `FLUSH TABLES` verlangt Rechte, die
+`monitor_read` nicht hat, und die Instanz gehört uns nicht. Gemessen ist deshalb der **erste** Lauf
+nach Sitzungsbeginn. **Er ist die untere Schranke des Kaltfalls, nicht dessen Obergrenze.**
+
+**Dieser Satz ist hier schwächer, als er klingt, und das gehört dazugesagt:**
+
+| | |
+|---|---:|
+| `innodb_buffer_pool_size` | **25.600 MiB** |
+| `Message` gesamt (Daten + Indizes) | 2.763,9 MiB |
+| Puffer je Tabelle | **9,26 ×** |
+| logische Leseanfragen seit dem Start | 7.885.714.699 |
+| davon physisch von der Platte | 1.951.428 — **0,025 %** |
+| Betriebsdauer | 6.825.469 s = **79,0 Tage** |
+
+Der Puffer ist mehr als neunmal so groß wie die ganze Tabelle, und die Instanz läuft seit
+79 Tagen mit einer Trefferquote von **99,975 %**. **Zwischen zwei `mysql`-Sitzungen wird nichts
+verdrängt** — die Sitzungsgrenze leert keinen Serverpuffer. Der „erste Lauf der Sitzung" misst
+damit im Wesentlichen den kalten *Abfrageplan-Cache* und die kalte Verbindung, nicht die kalte
+Platte. **Die Werte unten sind eine sehr schwache untere Schranke.**
+
+Die Reihenfolge der Sitzungen ist deshalb Teil der Messung und hier festgehalten: gefahren wurde
+`m83-1` (A/`NEXANS`) zuerst, dann `m83-2` (B/`NEXANS`), dann `m83-3a` und `m83-3b`. **Nur der erste
+Lauf der ersten Sitzung stand auf einem vergleichsweise unberührten Puffer**; alle späteren
+Erstläufe profitieren von dem, was vorher gelesen wurde.
+
+### Vorregistrierte Deutung, dagegengehalten
+
+| Vorab benannt (erster Lauf, `NEXANS`) | Fassung A — **32,144 ms** | Fassung B — **4.840,413 ms** |
+|---|---|---|
+| unter **2 s** → Tragbar, E14 wird gebaut wie beschlossen | **ja, mit Abstand** — 1,6 % der Schwelle | nein |
+| **2 bis 8 s** → tragbar nur mit angehobener Laufzeitgrenze; **Entscheidung des Auftraggebers**, melden, nicht selbst setzen | nein | **ja** — hiermit gemeldet, nicht gesetzt |
+| über **8 s** oder Abbruch → die Fassung fällt, Rückfall ist „auf Schritt 10 vertagen" | nein | nein |
+
+**Fassung A fällt in die erste Zeile, Fassung B in die zweite.** Beide sind unverändert
+dagegengehalten; welche gebaut wird, entscheidet der Auftraggeber.
+
+**Was der Vergleich mit dem Lese-Pool sagt.** Der Pool der Anwendung setzt
+`max_statement_time = 10` (`DataSourceConfig.java`, Pool `glassfish-read`). Gemessen sind das für
+Fassung A **0,22 %** dieser Grenze und für Fassung B **48,0 %**. Legt man M44s kalt-gegen-warm-Faktor
+**9,66** an — gemessen an einem Vollzugriff auf `MessageProperty`, hier also **Anschauung und keine
+Messung** —, käme Fassung A auf 0,21 s und Fassung B auf **46,3 s**. Fassung B stürbe an der Grenze
+des Lese-Pools, Fassung A nicht. **Das ist eine Hochrechnung und kein Befund**; sie steht hier, weil
+der Abstand zwischen 0,22 % und 48,0 % sonst kleiner aussieht, als er unter ungünstigen Bedingungen
+ist.
+
+**Der Befund, der in keiner vorformulierten Zeile stand:** Die beiden Fassungen reagieren nicht nur
+verschieden stark auf den Puffer, sondern **verschieden geartet**. Fassung A ist mit Faktor **1,45**
+zwischen erstem und bestem Lauf spürbar puffernah; Fassung B liegt bei **1,01** — sie ist praktisch
+unempfindlich, weil ihre Kosten nicht im Holen der Seiten liegen, sondern im Ablaufen von 2,9
+Millionen Indexeinträgen, die ohnehin im Puffer stehen. **Fassung B hat kein Kaltlaufproblem, sie
+hat ein Mengenproblem** — und ein Mengenproblem verschwindet nicht, wenn man die Abfrage öfter
+fährt.
+
+---
+
+## M83‑5 — Gegenprobe: liefern beide Fassungen dieselbe Menge wie M74b?
+
+**Sie liefern sie.** Beide Fassungen, beide Mandanten, kein Unterschied.
+
+| Mandant | | Prozesse | mit Nachrichten | ohne |
+|---|---|---:|---:|---:|
+| `NEXANS` | **M74b (Bestand)** | 733 | 516 | 217 |
+| `NEXANS` | **M83 gemessen** | **733** | **516** | **217** |
+| `SUTTONS` | **M74b (Bestand)** | 17 | 17 | 0 |
+| `SUTTONS` | **M83 gemessen** | **17** | **17** | **0** |
+
+Die Gegenprobe ist über eine eigene Sitzung mit `COUNT(*)` und `COUNT(DISTINCT …)` gefahren, nicht
+über die gezählten Ausgabezeilen. Der Weg über `ProjectMandant → Process` (Fassung A) und der Umweg
+über `ProjectMandant → Project → Process` liefern beide 733 bzw. 17; **`COUNT(*)` und
+`COUNT(DISTINCT ProcessID)` sind gleich**, der Join erzeugt also keine Doubletten. Verwaiste
+Projektzuordnungen gibt es keine.
+
+`SUTTONS` ist dabei die schärfere Probe gewesen — dort **muss** die Menge der toten Prozesse leer
+sein, und eine Fassung, die versehentlich Zeilen erzeugt, wäre genau dort aufgefallen. Sie ist es
+nicht.
+
+Mitgefahren ist das Gesamtbild, das M74b ebenfalls trägt:
+
+| | M74b (Bestand) | M83 gemessen |
+|---|---:|---:|
+| Prozesse gesamt | 1.503 | **1.503** |
+| davon mit Nachrichten | 738 | **738** |
+| davon ohne | 765 | **765** |
+| `VOTG` ohne Nachrichten | 89,74 % | **350 von 390 = 89,74 %** |
+
+Die Summe der zehn Mandantenzeilen ist **1.490**, nicht 1.503: **13 Prozesse hängen an keinem
+Mandanten** und **kein Prozess hängt an mehr als einem**. Beides ist Bestand (M74a, Annahme A8) und
+hier bestätigt; es ist für E14 trotzdem der Rede wert, weil ein Bestandslauf je Mandant für diese
+13 Zeilen **nie** etwas schreibt.
+
+> **Die 733 und die 734.** Die zählenden Statements liefern 733; die *gezählten Ausgabezeilen* der
+> Messsitzung liefern zunächst 734, weil im Tabellensatz des Clients die Kopfzeile der jeweils
+> **nächsten** Marke mitläuft. Das ist ein Zählfehler an der Rohausgabe und keine Abweichung an der
+> Abfrage — hier vermerkt, weil er beim Nachfahren wieder auftritt.
+
+---
+
+## M83‑6 — Zwei Behauptungen des Auftrags, nachgeprüft *(L9, L10)*
+
+**Nicht vom Auftrag vorgesehen.** Der Auftrag begründet die Kosten der Fassung B mit dem Satz, bei
+`NEXANS` sei das „der Bestand, in dem ein einzelner Prozess 1.472.788 Zeilen hält". Die **Zahl** ist
+in M74b belegt; die **Zuordnung zu `NEXANS`** steht dort an keiner Stelle. Sie ist hier gemessen
+worden, statt sie zu übernehmen.
+
+**L9 — Begründung des Vollzugriffs.** Beide Statements gruppieren `Message` vollständig. Ein
+Zeitfenster würde die Frage verfälschen: gefragt ist der Bestand über den gesamten Datenstand, nicht
+ein Ausschnitt. Einmalige Erhebung, kein Anwendungscode, kein Kandidat für E14.
+
+| *Behauptet wird* | *Gemessen war* |
+|---|---|
+| „bei `NEXANS` … hält ein einzelner Prozess 1.472.788 Zeilen" | **zutreffend.** Der größte Prozess des Bestands gehört zu `NEXANS` und hält **1.472.788** Nachrichten = **44,08 %** aller Nachrichten |
+
+Damit ist eine Aussage, die der Auftrag als bekannt führte und die im Bestand **nicht** belegt war,
+belegt. Mitgefahren als Bezugsgröße für M83‑2:
+
+| Mandant | Nachrichten | Prozesse mit Nachrichten | Nachrichten je Prozess |
+|---|---:|---:|---:|
+| `NEXANS` | **2.885.711** | 516 | 5.592 |
+| `SUTTONS` | 197.158 | 17 | 11.598 |
+| `VOTG` | 145.840 | 40 | 3.646 |
+| `IBIS` | 75.746 | 113 | 670 |
+| `IBISGUS` | 29.339 | 23 | 1.276 |
+| `ZAST` | 5.036 | 24 | 210 |
+| `WOC` | 2.529 | 2 | 1.265 |
+| `SYSTEM` | 151 | 1 | 151 |
+| `NXHBE` | 9 | 2 | 5 |
+| **Summe** | **3.341.519** ✓ | **738** ✓ | — |
+
+`NEXANS` hält **86,36 %** aller Nachrichten. Die Summe geht auf beide Kontrollzahlen auf: keine
+Nachricht hängt an einem Prozess ohne Mandanten. `EDITIONLINGERI` fehlt in der Tabelle, weil seine
+neun Prozesse **keine einzige** Nachricht tragen.
+
+**Damit ist auch der Faktor 216,5 aus M83‑2 erklärt und nicht nur gemessen:** `NEXANS` hat 3.937
+Nachrichten je Prozess der Pflegeliste. Fassung A zahlt einmal je Prozess, Fassung B einmal je
+Nachricht — das Mengenverhältnis ist der Faktor, bis auf die verschiedenen Stückkosten
+(30,2 µs gegen 1,66 µs).
+
+---
+
+## Die zwei Sätze, die E14 umkehrt
+
+Der Auftrag verlangt, sie zu **benennen** statt stillschweigend zu übergehen. Beide sind an der
+Quelle nachgeschlagen und stehen hier wörtlich; ihre datierte Korrektur in den Feature-Dateien
+gehört in den Bauauftrag und **nicht** hierher.
+
+| Fundstelle | Wortlaut | Status |
+|---|---|---|
+| [`prozess-katalog.md`](prozess-katalog.md) §9, Z. 386 | `\| Gespeicherte Spalte „trägt Nachrichten" \| Sie ginge still veraltet; mit E5 ist sie ohnehin gegenstandslos \|` | durch E14 umgekehrt |
+| [`prozess-katalog-backend.md`](prozess-katalog-backend.md) §1, Z. 29–30 | `… keine Ableitung der Richtung aus dem SOSName (§9), keine gespeicherte Spalte „trägt Nachrichten" (§9), kein dritter Pflegestatus (§9).` | durch E14 umgekehrt |
+| `messungen-schritt9.md` M74b, Z. 358 | „Tragbar. **Wird niemals Anwendungscode**, Regel L2 bleibt unberührt" | durch E14 umgekehrt |
+
+> **Der Auftrag zitiert §9 nicht ganz genau, und der fehlende Teil ist der wichtigere.** Er führt
+> den Satz als „Gespeicherte Spalte ‚trägt Nachrichten' — sie ginge still veraltet". Im Bestand
+> steht kein Gedankenstrich, und der Satz hört dort nicht auf: **„; mit E5 ist sie ohnehin
+> gegenstandslos"**. Die Verwerfung ruhte also auf **zwei** Gründen. E14 räumt den ersten aus (die
+> Spalte veraltet nicht still, wenn der Knopf sie neu füllt) — **den zweiten nicht.** E5 gilt
+> weiter: Die Pflegeliste zeigt alle Prozesse des Mandanten, auch die toten. E14 rechtfertigt die
+> Spalte damit über einen anderen Zweck als die Listenauswahl, und dieser Zweck gehört in den
+> Bauauftrag geschrieben, sonst liest E14 wie ein Widerspruch zu E5.
+
+> **`E14` ist zum Zeitpunkt dieser Runde noch nicht vergeben.** Die höchste in
+> [`prozess-katalog.md`](prozess-katalog.md) vergebene Nummer ist **E13**;
+> [`prozess-katalog-backend.md`](prozess-katalog-backend.md) führt in seiner Kopfzeile „(E1–E13)".
+> Auch die Spalte `traegt_nachrichten` gibt es nirgends — die Spaltentabelle der Backend-Datei
+> listet sieben Spalten. Der Bauauftrag hat beides anzulegen; **hier ist nichts angefasst worden.**
+
+### Zu Regel L2 — der Punkt, auf dem E14 steht
+
+Der Auftrag hält fest: „Regel L2 selbst ist nicht berührt — sie verbietet Live-Aggregation über
+`Message` für Dashboard-Kennzahlen je Anfrage. Hier läuft die Abfrage auf Knopfdruck."
+
+| *Behauptet wird* | *Gemessen war* — hier: nachgeschlagen |
+|---|---|
+| L2 verbiete Live-Aggregation „für Dashboard-Kennzahlen je Anfrage" | **Die Überschrift ist unbedingt**, die Einschränkung steht erst im Folgesatz: „**L2 — Keine Live-Aggregation über `Message`.** Dashboard-Kennzahlen kommen ausschließlich aus `message_rollup`. Ein stündlicher Job schreibt inkrementell fort." ([`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) Z. 349–350) |
+| Der Unterschied sei „auf Knopfdruck statt je Anfrage" | **Das Wort „Knopfdruck" und die Unterscheidung nach Auslöser kommen in L2 nicht vor.** Die Lesart ist aus dem zweiten Satz ableitbar, aber sie ist eine Lesart und steht nicht im Regeltext |
+
+**Eine Beobachtung, die der Entscheidung mehr hilft als die Auslegung:** Fassung A **aggregiert
+gar nicht.** Sie enthält keine Aggregatfunktion und kein `GROUP BY`; `EXISTS` ist ein
+Existenztest, den der Optimierer als `DEPENDENT SUBQUERY` mit `Using index` auflöst. Fassung B
+enthält mit `DISTINCT` eine Gruppierung und fährt sie über `Using temporary`. **Dem Wortlaut der
+L2-Überschrift nach ist Fassung A nicht einmal der Tatbestand** — Fassung B eher. Das ist ein
+Argument für A, das unabhängig von den Laufzeiten trägt, und es gehört in den Bauauftrag statt in
+eine Auslegung des Auslösers.
+
+---
+
+## Laufzeiten des Nachtrags im Überblick
+
+| Messung | Statement | Mandant | erster Lauf | beste von fünf |
+|---|---|---|---:|---:|
+| V0 | Rahmen, Datenstand, Bezugsgrößen | — | — | — |
+| M83‑0 | Indexerhebung aus `information_schema` | — | — | — |
+| **M83‑1** | **Fassung A** — `EXISTS` je Prozess | `NEXANS` | 32,144 ms | **22,154 ms** |
+| **M83‑2** | **Fassung B** — `DISTINCT` über `Message` | `NEXANS` | 4.840,413 ms | **4.797,038 ms** |
+| **M83‑3a** | Fassung A | `SUTTONS` | 2,536 ms | **1,109 ms** |
+| **M83‑3b** | Fassung B | `SUTTONS` | 310,198 ms | **300,935 ms** |
+| M83‑5 | Gegenprobe, zählend | beide | — | — |
+| M83‑6 | größter Prozess je Mandant *(L9)* | — | 5.992,130 ms | — |
+| M83‑6 | Nachrichten je Mandant *(L9)* | — | **26.385,973 ms** | — |
+| V9 | Abschluss, Puffer- und Trefferquoten | — | — | — |
+
+**Das teuerste Statement des Nachtrags ist keine der beiden Fassungen.** Es ist die
+Bezugsgrößenerhebung aus M83‑6 mit **26,386 s** — ein bewusster Vollzugriff nach L9, der nie
+Anwendungscode wird. Von den Kandidaten liegt Fassung A bei **0,22 %** der Zeitgrenze des
+Lese-Pools, Fassung B bei **48,0 %**. **Kein Statement über der 60-Sekunden-Grenze, kein Abbruch,
+keine Grenze ausgesetzt.**
+
+---
+
+## Die Kontrollen, die aufgehen mussten
+
+Alle zehn sind abgelesen, nicht abgeschrieben. **Alle gehen auf.**
+
+| | Kontrolle | erwartet | gemessen | |
+|---|---|---|---|---|
+| 1 | `@@global.read_only`, **Beginn** | `1` | **`1`** | ✓ |
+| 2 | `@@global.read_only`, **Ende** | `1` | **`1`** | ✓ |
+| 3 | Datenstand `MAX(MessageLastUpdate)` | `2026-07-08 17:21:10` | **`2026-07-08 17:21:10`**, Beginn und Ende | ✓ |
+| 4 | `Message` Zeilen | 3.341.519 | **3.341.519**, Beginn und Ende | ✓ |
+| 5 | `NEXANS` Prozesse | 733 | **733** | ✓ |
+| 6 | `SUTTONS` Prozesse | 17 | **17** | ✓ |
+| 7 | `NEXANS` mit Nachrichten | 516 | **516** | ✓ |
+| 8 | `SUTTONS` mit Nachrichten | 17 | **17** | ✓ |
+| 9 | Nummernvergabe `M83` frei (V1) | keine Treffer | **keine Treffer**, Gegenprobe auf `M8[0-2]` greift | ✓ |
+| 10 | Benutzer | `monitor_read@%` | **`monitor_read@%`** | ✓ |
+
+Mitgeprüft und ebenfalls unverändert: `Process` **1.503**, `Project` **140**, `ProjectMandant`
+**134**, **10** Mandanten, `@@div_precision_increment` **4**.
+
+---
+
+## Die Abweichungen vom Rahmen, einzeln benannt
+
+**Sechs — keine an einem Statement, alle methodisch oder am Auftragstext.**
+
+| | Abweichung | was passiert ist |
+|---|---|---|
+| **A** | **Eine Messung mehr, als der Auftrag vorsieht** | M83‑6 steht nicht im Auftrag. Sie prüft eine Behauptung nach, die der Auftrag selbst als bekannt führt und die im Bestand nicht belegt war (die Zuordnung der 1.472.788 Zeilen zu `NEXANS`). Sie ist die teuerste der Runde und nach L9 begründet. **Wer den Umfang eng liest, findet hier die Überschreitung** |
+| **B** | **`ANALYZE SELECT` nicht benutzt** | MariaDB hätte damit geschätzte **und** tatsächliche Zeilenzahlen nebeneinandergestellt und die Kardinalitätsfrage aus M83‑0 unmittelbar entschieden. S1 zählt nur `SELECT`, `SET`, `EXPLAIN`, `SHOW PROFILES` auf. **Nicht gefahren** — die Fehlschätzung ist deshalb aus `information_schema` hergeleitet und nicht am Plan abgelesen |
+| **C** | **`mysql.innodb_index_stats` nicht lesbar** | `ERROR 1142 … SELECT command denied`. Die beiden `ProcessID`-Indizes konnten deshalb **nicht einzeln vermessen** werden; die 2.763,9 MiB sind Daten und *alle* acht Indizes zusammen |
+| **D** | **Der Kaltlauf ist schwächer belegt, als der Auftrag annimmt** | Der Auftrag nennt den ersten Lauf der Sitzung eine untere Schranke. Das stimmt, ist aber sehr schwach: Der Puffer ist **9,26 ×** so groß wie die Tabelle und die Trefferquote steht bei **99,975 %** über 79 Tage. Eine Sitzungsgrenze leert keinen Serverpuffer. In M83‑4 ausgeschrieben |
+| **E** | **Die Reihenfolge der Sitzungen ist nicht neutral** | Nur der erste Lauf der **ersten** Sitzung stand auf einem vergleichsweise unberührten Puffer. Gefahren wurde A/`NEXANS`, B/`NEXANS`, A/`SUTTONS`, B/`SUTTONS`; die drei späteren Erstläufe sind dadurch begünstigt. Das benachteiligt Fassung A gegenüber Fassung B — also die Fassung, die gewinnt |
+| **F** | **`--skip-ssl` gegen `--ssl-mode=DISABLED`** | Der Workbench-Client kennt die MariaDB-Schreibweise nicht und bricht vor der Sitzung ab. Gefahren mit `--ssl-mode=DISABLED`, gleiche Wirkung, wie in allen Runden seit M32 |
+
+### Drei Zahlen im Auftragstext, die der Bestand nicht trägt *(L10)*
+
+Keine davon ändert ein Ergebnis; sie stehen hier, damit sie nicht weiterwandern.
+
+| *Behauptet wird* | *Gemessen war* — hier: nachgeschlagen |
+|---|---|
+| „M42 und M47 haben ihn zweimal … belegt (Faktor 219 bis 1.094)" | Die Spanne **219 bis 1.094 gehört allein M42** (M42‑1, M42‑2). **M47 trägt dazu keine Zahl** — dort steht das Gegenteil: „deshalb steht kein `STRAIGHT_JOIN` darin" |
+| „`IBIS` 13,2 s gegen `WOC` 12 ms" | `WOC` ist mit **11,9 ms** dokumentiert ([`messungen-schritt4.md`](messungen-schritt4.md), [`bam-suche.md`](bam-suche.md)). Die „12 ms" stehen im Bestand an anderer Stelle und mit anderer Bedeutung |
+| „`profiling_history_size` … auf **100** (Vorgabe der Instanz ist 15)" · „`SET max_statement_time = 60` wie in allen Runden **seit M32**" | Die **15** sind belegt; **„Maximum 100" ist es nicht** — 100 ist durchgängig der *gewählte* Sitzungswert. Und die 60-Sekunden-Grenze ist **Rahmen der Runde M32–M51**; das `SET` selbst kam erst **während M33** dazu |
+
+---
+
+## Die Befunde, die in keine vorformulierte Zeile passten
+
+**Fünf.** Jeder steht bei seiner Messung; hier sind sie gezählt und benannt.
+
+| # | Messung | Der Befund, der in keine Zeile passte |
+|---|---|---|
+| 1 | M83‑0 | Die beiden `ProcessID`-Indizes sind **deckungsgleich**. `ProejctIDIDX` wird in allen vier Plänen gewählt, `Message_ProcessFK` **nie** |
+| 2 | M83‑0 | Der Plan steht auf einer `CARDINALITY` von **18** und schätzt **197.804** Zeilen je Nachschlag, wo **4.528** wahr sind — **Faktor 43,7**. Er ist trotzdem der richtige Plan, aber aus Glück und nicht aus Statistik |
+| 3 | M83‑2 | Fassung B kostet **je Nachricht** (1,66 µs), Fassung A **je Prozess** (30,2 µs). Verschiedene Bezugsgrößen: die Prozesszahl steht still, die Nachrichtenzahl wächst — **Fassung A wird nicht teurer, Fassung B schon** |
+| 4 | M83‑3 | `SUTTONS` ist absolut billiger, **je Prozess aber doppelt so teuer** (65,2 gegen 30,2 µs). Faktor 43 der Zeilen ergibt Faktor 20 der Zeit; der Rest ist Festaufwand |
+| 5 | M83‑4 | Die Fassungen sind verschieden **geartet**, nicht nur verschieden teuer: Fassung A liegt bei Faktor **1,45** zwischen erstem und bestem Lauf, Fassung B bei **1,01**. **Fassung B hat kein Kaltlaufproblem, sie hat ein Mengenproblem** |
+
+---
+
+## Was dieser Nachtrag nicht gemessen hat
+
+- **Den Schreibweg.** Er läuft über den Schreib-Pool und ist nicht `EXPLAIN`-bar. Es gilt
+  unverändert die Schranke aus M80 — **1.490 Zeilen über zehn Transaktionen in unter zehn
+  Sekunden** —, hier zitiert und **nicht** neu erhoben.
+- **Den gerenderten Text.** Beide Fassungen stammen aus dem Auftrag, nicht aus gebautem Code; den
+  gibt es zu E14 noch nicht. **L7 verlangt eine neue Messung, sobald er existiert.**
+- **Die acht übrigen Mandanten.** Gemessen sind `NEXANS` (größter) und `SUTTONS` (klein), wie L7
+  vorschreibt. `VOTG` mit 390 Prozessen und 145.840 Nachrichten liegt zwischen beiden und ist
+  **nicht** gefahren.
+- **Den Bestandslauf über alle Mandanten in einem Zug.** E14 füllt je aktivem Mandanten; die
+  Summe über zehn Mandanten ist weder gemessen noch hochgerechnet.
+- **Den echten Kaltlauf.** Nicht herstellbar ohne Rechte, die `monitor_read` nicht hat. Was
+  gemessen ist, ist eine **schwache untere Schranke** — siehe M83‑4 und Abweichung D.
+- **Das Verhalten bei geändertem Plan.** Ob der Optimierer den `ref`-Zugriff bei einer anderen
+  Formulierung noch wählt, ist offen; die Fehlschätzung aus Befund 2 macht es zu einer echten
+  Frage und nicht zu einer rhetorischen.
+- **Die Produktion.** Alles gilt für die Testkopie, Datenstand **08.07.2026**, ohne Nebenlast, mit
+  einem Puffer, der die ganze Tabelle neunfach fasst. In der Produktion ist keine dieser
+  Bedingungen zugesichert.
