@@ -353,6 +353,24 @@ Größenordnung: 10.000 bis 100.000 Nachrichten pro Tag, ein Jahr Aufbewahrung. 
 Produktionsdatenbank gelesen.** Eine laufend aktualisierte Replica existiert nicht. Daher sind
 L1 bis L6 verbindlich und nicht verhandelbar.
 
+> **Korrigiert 21.08.2026.** Zwei Angaben dieses Vorspanns sind überholt, und beide sind in
+> [`docs/datenmodell.md`](docs/datenmodell.md) §3 ausdrücklich widerlegt:
+>
+> - **„ein Jahr Aufbewahrung"** — es sind **22 Monate**, ältester Datensatz 01.10.2024
+>   (`datenmodell.md` §8 und `PROJEKTBESCHREIBUNG.md` §8).
+> - **„mehrere hundert Millionen in `MessageProperty`"** — gezählt sind **75.571.462** Zeilen
+>   (M44, 12.08.2026). Genau diese Formulierung — „mehrere hundert Millionen bei einem Jahr" — ist
+>   im Korrekturkasten zu `datenmodell.md` §3 als falsch benannt, und zwar seit dem 07.08.2026.
+>
+> **Nicht angefasst sind die „rund 36 Millionen Zeilen in `Message`":** Das ist eine Hochrechnung
+> für die **Produktion** (100.000 am Tag über ein Jahr) und keine Messung. Sie bleibt eine Annahme
+> dieses Abschnitts; unter 22 Monaten Aufbewahrung fiele sie höher aus. **Zu entscheiden, nicht
+> hier entschieden.**
+>
+> **Die Regeln L1 bis L6 bleiben unberührt.** Sie werden von der wahren Größenordnung nicht milder,
+> sondern strenger. Der Vorspann bleibt stehen, damit lesbar bleibt, auf welcher Annahme sie
+> ursprünglich beruhten.
+
 **L1 — Jeder Listen-Endpunkt hat ein Pflicht-Zeitfenster.** Standard 24 Stunden, Maximum ein Jahr.
 Ohne Zeitfenster keine Abfrage. Fehlt es in der Anfrage, wird der Standard gesetzt — es wird nie
 unbegrenzt gelesen.

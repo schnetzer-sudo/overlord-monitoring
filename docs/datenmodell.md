@@ -209,6 +209,33 @@ NXS_MERGE|KE_OSTROV_734973|WAIT|30M|30406_..._MRG
 
 PK `(MessageID, MessagePropertyName, MessageActionID)` · `MessagePropertyValue` mediumtext
 
+**Nutzbare Indizes:** `MessageProperty` trägt **sechs**.
+
+| Index | Spalten | |
+|---|---|---|
+| `PRIMARY` | `(MessageID, MessagePropertyName, MessageActionID)` | |
+| `MessageProperty_MessageFK` | `MessageID` | |
+| `MessageProperty_MessageActionFK` | `(MessageID, MessageActionID)` | |
+| `MessagePropertyNameIDX` | `MessagePropertyName` | |
+| `MessagePropertyNameValueIDX` | `(MessagePropertyName, MessagePropertyValue)` | **Präfix 50** |
+| `MessagePropertyValueIDX` | `MessagePropertyValue` | **Präfix 50** |
+
+> **Nachgetragen 21.08.2026 (E37).** Hier stand keine Indexliste. Zwei der sechs — die beiden
+> Präfix-Indizes — waren seit dem 07.08.2026 **namentlich und mit Spalten** dokumentiert, aber in
+> **§5.4** und damit außerhalb des Abschnitts, in dem dieses Dokument seine Indexlisten führt. Die
+> übrigen vier standen nirgends. Wer hier nachsah, fand nichts und schloss daraus das Falsche.
+>
+> **Die Präfixlänge 50 stammt aus M14** (`SUB_PART = 50`,
+> [`messungen-schritt5.md`](messungen-schritt5.md), 07.08.2026) und **nicht** aus der Sollliste:
+> Die führt Spalten und Eindeutigkeit, aber keine Teillängen — der Test bewacht den Index, nicht
+> seine Breite. Die sechs Namen und ihre Spaltenfolge sind aus
+> [`backend/src/test/resources/indizes-sollliste.txt`](../backend/src/test/resources/indizes-sollliste.txt)
+> übernommen und dort am 21.08.2026 aus `information_schema` erhoben.
+>
+> **Regel L4 wird davon nicht berührt, sondern erklärt:** Zugriff ausschließlich über `MessageID` —
+> und die beiden Indizes, die zu einem Einstieg über den Wert verleiten, sind genau die beiden mit
+> der Teillänge. §5.4 bleibt stehen; sie ist die Stelle, an der die Folgerung steht.
+
 Rund **23 Zeilen pro Nachricht** im dichten Bestand (M17) — und **22,62** über den Gesamtbestand,
 seit die Zeilenzahl gezählt ist (M44). **75.571.462 Zeilen (gezählt, 12.08.2026), 61,0 GB**
 insgesamt; die Bytegröße stammt aus der Erhebung vom 27.07.2026 und ist seither über fünf Messtage
@@ -501,6 +528,19 @@ zugreifen.
 > [`messungen-schritt5.md`](messungen-schritt5.md) M14). Dass der Index dreimal so viel Platz braucht
 > wie die Nutzdaten, ist der eigentliche Grund für Regel L4: Eine Aggregation über den Wert wälzt
 > 61 GB um, nicht 15.
+
+> ⚠️ **Und die 47 Millionen sind seit dem 12.08.2026 ebenfalls überholt — benannt am 21.08.2026.**
+> Sie sind die `information_schema`-Schätzung und liegen **60,9 % zu niedrig**; gezählt sind
+> **75.571.462** Zeilen ([`messungen-schritt7.md`](messungen-schritt7.md) M44). **§3 dieser Datei
+> führt die gezählte Zahl seit dem 12.08.2026, dieser Abschnitt hat sie nicht mitbekommen** — und
+> der Kasten darüber hat die falsche Zahl am 07.08.2026 sogar noch einmal ausdrücklich bekräftigt.
+> Genau die Gestalt, die E37 an den Indexlisten aufgedeckt hat: Eine Korrektur wird an einer Stelle
+> nachgezogen und an der zweiten nicht.
+>
+> **Unberührt bleibt alles andere in diesem Abschnitt:** 61,0 GB, davon 45,9 GB Index, die
+> Präfixlänge 50 und beide Indexnamen. Die stammen aus belegten Seiten und aus M14, nicht aus einer
+> Schätzung — und der Schluss, um den es hier geht, wird von der höheren Zeilenzahl nur **strenger**.
+> **Regel L4 gilt unverändert.**
 
 ### 5.5 `MessageStatistic.Period` ist ein zusammengesetzter String
 

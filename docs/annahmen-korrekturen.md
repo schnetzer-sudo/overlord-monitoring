@@ -919,6 +919,56 @@ ohnehin unberührt**; sie hängen an Statistik und Schema, nicht am Puffer.
 
 ---
 
+## Befund 21.08.2026 (E37 — der Flyway-Stand der Testkopie)
+
+**Kein Befund über das Quellsystem und kein Irrtum eines Dokuments, sondern einer über die
+Arbeitsumgebung.** Er steht hier, weil er bei jedem Testlauf auf einem älteren Branch wieder
+auftaucht und dann wie ein Fehler aussieht.
+
+### Die Testkopie ist den älteren Branches voraus
+
+Beim Lauf von `IndexbestandDbIT` gegen die Testkopie meldet Flyway:
+
+```
+Successfully validated 7 migrations
+Current version of schema `overlord_monitor`: 7
+Schema `overlord_monitor` has a version (7) that is newer than the latest available migration (6) !
+```
+
+`V7__benutzerverwaltung.sql` gehört zu **Schritt 9a** und ist bereits gegen die Testkopie gefahren.
+Die Branches davor — dieser hier, `feat/schritt9b-prozess-katalog`, `main` — tragen nur bis `V6`.
+Alle teilen sich **dieselbe** Datenbank.
+
+**Was daraus folgt, geprüft:**
+
+- **Der Start scheitert nicht.** Flyway warnt und migriert nicht; die sechs bekannten Einträge
+  stimmen, den siebten kennt dieser Branch nur nicht.
+- **Die Sollliste ist nicht betroffen.** `V7` ändert zwei Spalten von `app_user` und legt
+  **keinen** Index an. Nachgezählt am 21.08.2026: `overlord_monitor` trägt **17** Indizes — genau
+  die siebzehn, die [`../backend/src/test/resources/indizes-sollliste.txt`](../backend/src/test/resources/indizes-sollliste.txt)
+  führt. `IndexbestandDbIT` ist auf diesem Branch grün, obwohl die Datenbank ihm voraus ist.
+- **Was ausdrücklich nicht geprüft ist:** ob ein anderer Integrationstest eines älteren Branches
+  über die **Spalten** stolpert. `download_allowed` ist mit `V7` gefallen, und ein Branch vor 9a
+  erwartet sie noch. Nicht gemessen, nicht entschieden.
+
+> **Daraus folgt keine Regel.** Eine geteilte Testkopie mit mehreren Branches darauf ist eine
+> Arbeitsweise und keine Panne; ein eigenes Schema je Branch wäre teurer als diese Warnung. Der
+> Eintrag hält nur fest, dass sie **erwartet** ist — damit sie beim nächsten Mal nicht als Befund
+> eines Prüflaufs gedeutet wird.
+
+### Offen — und bewusst hier nicht angefasst
+
+- **Regel R6 in [`../DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) §4.3** — „Die
+  Download-Berechtigung ist ein Flag an `app_user`, Standardwert erlaubt … damit ein späterer
+  Entzug keine Migration erfordert" — steht unverändert, obwohl `V7` (Entscheidung E18) genau
+  diese Spalte fallen lässt. Die Migration nennt `authentifizierung.md` und
+  `rohdaten-backend.md` als die Stellen, die den Vertragsbruch tragen; **R6 ist nicht darunter.**
+  Der Punkt gehört auf den Branch, der `V7` trägt. **Entschieden am 21.08.2026, ihn hier nicht
+  anzufassen:** Eine Korrektur an dieser Stelle beschriebe eine Migration, die es auf diesem
+  Branch nicht gibt.
+
+---
+
 ## 03.09.2026 — *Überfällig* ist widerlegt (Schritt 10b‑4, E‑71)
 
 **Art:** fachliche Auskunft des Auftraggebers. **Nicht gemessen.**
