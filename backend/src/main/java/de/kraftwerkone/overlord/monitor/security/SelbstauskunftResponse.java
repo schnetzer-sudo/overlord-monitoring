@@ -12,6 +12,9 @@ import java.time.ZoneId;
  *     sondern eine offene Auswahl.
  * @param mustChangePassword solange {@code true}, lehnt jeder Endpunkt ausser Selbstauskunft,
  *     Passwortaenderung und Abmeldung ab
+ * @implNote Das Feld {@code downloadAllowed} ist am 21.08.2026 entfallen (Schritt 9a, E18) — <b>ein
+ *     Bruch an einem seit Schritt 3 dokumentierten Vertrag</b>, datiert vermerkt in {@code
+ *     docs/authentifizierung.md} §1. Das Frontend hat es nie gelesen.
  * @param anzeigezone die IANA-Kennung der Zone, in der Zeitstempel <b>anzuzeigen</b> sind, etwa
  *     {@code Europe/Berlin} — siehe {@link #fuer}
  */
@@ -20,7 +23,6 @@ public record SelbstauskunftResponse(
     String role,
     MandantResponse mandant,
     boolean mustChangePassword,
-    boolean downloadAllowed,
     String anzeigezone) {
 
   /**
@@ -52,7 +54,6 @@ public record SelbstauskunftResponse(
         nutzer.rolle().name(),
         mandant,
         nutzer.mustChangePassword(),
-        nutzer.downloadAllowed(),
         anzeigezone.getId());
   }
 }

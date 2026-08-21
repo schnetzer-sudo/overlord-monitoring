@@ -22,10 +22,10 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Anlegen eines Kontos — <b>und nur das</b>.
  *
- * <p>Auflisten, Sperren, Rollenwechsel, Zuruecksetzen und Loeschen gehoeren zu Schritt 9. Hier
- * entsteht ausschliesslich das Anlegen, weil ohne mindestens einen Nutzer der Rolle {@code MANDANT}
- * nichts testbar waere: Der Nachweis, dass ein fremder Mandant dieselbe Antwort liefert wie eine
- * erfundene ID, braucht genau so einen Nutzer.
+ * <p>Auflisten, Sperren, Rollenwechsel und Zuruecksetzen sind mit Schritt 9a hinzugekommen und
+ * liegen in {@link BenutzerverwaltungService}; <b>geloescht wird nie</b> (E8). Diese Klasse bleibt
+ * beim Anlegen, weil {@code POST /api/admin/users} ein seit Schritt 3 getesteter Vertrag ist und
+ * nicht angefasst wird (E4). Geteilt wird genau eine Strecke: {@link #kodiereEinmalpasswort}.
  *
  * <p>Dieser Vorgang ersetzt den urspruenglich geplanten Migrationslauf ueber die
  * Alt-Benutzertabelle. Die wird <b>nicht</b> uebernommen: {@code GlassfishDB.User} bleibt dauerhaft
@@ -88,13 +88,7 @@ public class AdminUserService {
 
     Rolle rolle = rolleAus(rolleText);
     pruefeBenutzername(username);
-    if (einmalpasswort == null || einmalpasswort.length() < MINDESTLAENGE) {
-      throw new FachlicheAusnahme(
-          HttpStatus.BAD_REQUEST,
-          "passwort-zu-kurz",
-          "Passwort zu kurz",
-          "Das Einmalpasswort braucht mindestens " + MINDESTLAENGE + " Zeichen.");
-    }
+    String hash = kodiereEinmalpasswort(passwortKodierer, einmalpasswort);
     if (!mandantRepository.existiert(mandantId)) {
       throw new RessourceNichtGefundenException("Unbekannte MandantID beim Anlegen eines Kontos");
     }
@@ -105,9 +99,7 @@ public class AdminUserService {
     LocalDateTime jetztUtc = LocalDateTime.ofInstant(systemClock.instant(), ZoneOffset.UTC);
     long id;
     try {
-      id =
-          appUserRepository.legeAn(
-              username, passwortKodierer.encode(einmalpasswort), rolle, true, true, jetztUtc);
+      id = appUserRepository.legeAn(username, hash, rolle, true, true, jetztUtc);
     } catch (DuplicateKeyException ex) {
       // Der eindeutige Index ist die Wahrheit, die Vorabpruefung nur die freundliche Antwort.
       // Ueberschrieben wird nie.
@@ -130,6 +122,29 @@ public class AdminUserService {
             // Niemals das Passwort — weder hier noch im Anwendungsprotokoll.
             "angelegt: " + username + ", Rolle " + rolle.name() + ", Mandant " + mandantId));
     return new AngelegterNutzerResponse(id, username, rolle.name(), mandantId);
+  }
+
+  /**
+   * Prueft ein <b>eingetipptes</b> Einmalpasswort und liefert seinen BCrypt-Hash.
+   *
+   * <p><b>Der gemeinsame Codepfad von Anlegen und Zuruecksetzen</b> (E13). Beide Vorgaenge geben
+   * demselben Konto sein erstes bzw. neues Einmalpasswort, beide setzen anschliessend
+   * Aenderungszwang, und beide muessen dieselbe Grenze ziehen — stuende die Pruefung zweimal da,
+   * liefe sie beim naechsten Mal auseinander, und zwar an der Stelle, an der es am teuersten ist.
+   *
+   * <p>Der Aufrufer traegt danach nur noch, was ihn unterscheidet: Das Zuruecksetzen prueft
+   * zusaetzlich, dass das neue Passwort nicht dem aktuellen entspricht — beim Anlegen gibt es
+   * keinen gespeicherten Hash, gegen den sich das vergleichen liesse.
+   */
+  static String kodiereEinmalpasswort(PasswordEncoder passwortKodierer, String einmalpasswort) {
+    if (einmalpasswort == null || einmalpasswort.length() < MINDESTLAENGE) {
+      throw new FachlicheAusnahme(
+          HttpStatus.BAD_REQUEST,
+          "passwort-zu-kurz",
+          "Passwort zu kurz",
+          "Das Einmalpasswort braucht mindestens " + MINDESTLAENGE + " Zeichen.");
+    }
+    return passwortKodierer.encode(einmalpasswort);
   }
 
   /** Auch vom Bootstrap benutzt — die Grenze gilt fuer jedes Konto, nicht nur fuer angelegte. */

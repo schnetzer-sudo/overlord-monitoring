@@ -1173,3 +1173,212 @@ hat. Vollständig leer bleiben `SUTTONS`, `ZAST`, `WOC` und `SYSTEM`.
   Vorbemerkung oben.
 - **Die Produktion.** Alles gilt für die Testkopie, Datenstand 08.07.2026. Das betrifft auch die
   **+68 %** aus M80‑1, die dort einen eigenen Vorbehalt tragen.
+
+---
+
+# Nachtrag vom 21.08.2026 — M81 und M82 (Schritt 9a)
+
+**Auch dieser Nachtrag gehört nicht zur Runde oben.** Er ist vor und während des Baus von
+Schritt 9a gefahren und beantwortet zwei Fragen, die `benutzerverwaltung.md` ausdrücklich offen
+gelassen hat: **E7** (trägt der Sitzungsentzug?) und **E17** (was kostet die letzte Anmeldung aus
+dem Protokoll?).
+
+| | |
+|---|---|
+| Nummernvergabe | M80 war die höchste vergebene. `M81` und `M82` kamen in `docs\`, im Wurzelverzeichnis und in `scripts\` **nicht vor**; frei, hier vergeben |
+| Sitzung M81 | `backend/src/test/java/de/kraftwerkone/overlord/monitor/security/SitzungssucheDbIT.java` — **kein Wegwerftest**, er bleibt bestehen und läuft bei jedem `verify` mit |
+| Sitzung M82 | `scripts/messung-schritt9/m82-letzte-anmeldung.sql`, Rohausgabe `scripts/messung-schritt9/ergebnis/m82*.txt` — über `.gitignore` ausgeschlossen |
+| Serverzeit | `2026-08-21 09:24:59` |
+| **`@@global.read_only`** | **`1`** — Testkopie |
+| Benutzer | M81 über die Anwendung (`monitor_write`, eigenes Schema); M82 als `monitor_read@%`, ausschließlich `SELECT` |
+| Version | `10.6.22-MariaDB-0ubuntu0.22.04.1-log`, `@@div_precision_increment` = 4 |
+| Client | M82 über `mysql.exe` 8.0.46 aus MySQL Workbench, `--ssl-mode=DISABLED`, wie in allen Runden seit M32 |
+| **G1** | in `docs/` steht kein Benutzername aus dem Bestand. Die Kontenliste aus M82 ist gefahren, ihre Ausgabe steht **nur** in der ausgeschlossenen Rohdatei |
+
+---
+
+## M81 — Lassen sich alle Sitzungen eines Kontos finden? *(E7)*
+
+**Frage.** Der Sitzungsentzug (E5) steht und fällt damit, ob sich **alle** Sitzungen eines Kontos
+finden lassen. Das war bis heute aus der Spring-Session-Dokumentation *gelesen* und nie geprüft;
+`V3__spring_session.sql` ist nicht selbst entworfen, sondern aus der Distribution übernommen.
+
+**Bauform: ein Integrationstest, der bleibt.** Nicht ein einmaliger Blick — wenn der Entzug an einer
+fremden Eigenschaft hängt, gehört sie bewacht. Fällt der Index, ändert eine Spring-Session-Fassung
+den Indexnamen, oder landet nach einem Umbau der Anmeldung nichts mehr in `PRINCIPAL_NAME`, dann
+verwirft der Entzug still **null** Sitzungen und meldet trotzdem Erfolg.
+
+### Vorregistrierte Deutung — sie stand vor dem Ergebnis fest
+
+| Ergebnis | Was daraus folgt |
+|---|---|
+| Alle vier erfüllt | **Bauform A** — `findByPrincipalName`, dann jede gefundene Sitzung löschen |
+| Ein Punkt scheitert, Ursache **strukturell** | Bauform B — Generationszähler an `app_user` |
+| Ein Punkt scheitert, Ursache **behebbar** | anhalten und melden, nicht selbst reparieren |
+
+### a — Der Index, gegen `information_schema.STATISTICS`
+
+Gelesen wird die **Datenbank**, nicht die Migrationsdatei: Was in der Datei steht, sagt nichts
+darüber, was in der Instanz steht.
+
+```
+INDEX_NAME          SEQ_IN_INDEX  COLUMN_NAME     NON_UNIQUE  INDEX_TYPE
+PRIMARY                        1  PRIMARY_ID               0  BTREE
+SPRING_SESSION_IX1             1  SESSION_ID               0  BTREE
+SPRING_SESSION_IX2             1  EXPIRY_TIME              1  BTREE
+SPRING_SESSION_IX3             1  PRINCIPAL_NAME           1  BTREE
+```
+
+**Erfüllt.** `SPRING_SESSION_IX3` steht auf `PRINCIPAL_NAME`, und zwar als **erste** Spalte — an
+zweiter Position wäre er für diese Abfrage wertlos.
+
+### b — Steht nach der Anmeldung ein Wert darin?
+
+Nicht selbstverständlich: Die Anmeldung läuft über einen **eigenen Controller** (`AuthController`)
+statt `formLogin`, der Index wird also von keinem Standardfilter gefüllt.
+
+```
+SESSION_ID                            PRINCIPAL_NAME
+f8233caa-b617-435c-9916-a5de462f76e8  it-SitzungsFall
+```
+
+**Erfüllt.** Er wird gefüllt, weil `AngemeldeterNutzer.getName()` überschrieben ist — dieselbe
+Methode, die seit Schritt 3 verhindert, dass die Record-Darstellung in eine 100-Zeichen-Spalte
+läuft.
+
+### c — Injizierbar, wo zwei DataSources stehen und keine `@Primary` ist?
+
+```
+injizierter Typ: org.springframework.session.jdbc.JdbcIndexedSessionRepository
+findByPrincipalName("it-SitzungsFall") -> [2103b51e-…, 91673055-…]
+```
+
+**Erfüllt**, und mehr als das: Von **zwei** parallelen Sitzungen desselben Kontos werden **beide**
+gefunden. Der Test prüft bewusst zwei und nicht eine — der Fehler, den ein Test mit nur einer
+Sitzung nicht fände, ist der naheliegendste: nur die zuletzt angelegte zu verwerfen.
+
+Die Verdrahtung hängt an `@SpringSessionDataSource` am Schreib-Pool (`config/DataSourceConfig`);
+ohne diese Markierung suchte Spring Session eine eindeutige DataSource und fände zwei.
+
+### d — Zeichengenauigkeit und die Gegenprobe
+
+```
+app_user.username = 'it-SitzungsFall',  PRINCIPAL_NAME = 'it-SitzungsFall'
+PRINCIPAL_NAME COLLATION_NAME = utf8mb4_general_ci
+Anmeldung als 'it-sitzungsfall' -> PRINCIPAL_NAME = 'it-SitzungsFall'
+   findByPrincipalName kanonisch [a76ea19c-…], abweichend [a76ea19c-…]
+```
+
+**Erfüllt, in beide Richtungen.** Der Wert stammt aus der **gefundenen Zeile** in `app_user` und
+nicht aus der Eingabe — dieselbe Person hätte sonst je nach Tippweise mehrere Namen im Index. Und
+die Sortierung `utf8mb4_general_ci` vergleicht ohne Rücksicht auf Groß- und Kleinschreibung, die
+Suche findet die Sitzung also auch mit abweichender Schreibweise. **Das ist hier erwünscht** — es
+ist dieselbe Sortierung, die seit Schritt 3 verhindert, dass „Lukas" und „lukas" zwei Konten werden
+—, aber es ist jetzt **gesehen** statt angenommen.
+
+### Ergebnis
+
+**Alle vier Punkte erfüllt → Bauform A.** Keine Spalte `sitzungs_generation`, kein Filter je
+Anfrage, keine Datenbankabfrage bei jedem Aufruf.
+
+> **Ein Nebenbefund, der den ersten Lauf rot gemacht hat.** Das Sitzungs-Cookie trägt die ID
+> **Base64-kodiert** (`OWMzY2QzNzQt…`), die Tabelle und `findByPrincipalName` tragen die rohe
+> (`9c3cd374-…`). Wer beide gleichsetzt, vergleicht zwei Zeichenketten, die nie übereinstimmen
+> können. Der Test hält das als Kommentar fest, damit der nächste Leser den Unterschied nicht für
+> einen Defekt hält.
+
+> **Und eine stille Falle, die kein Lauf zeigt.** `findByIndexNameAndIndexValue` liefert bei einem
+> unbekannten Indexnamen eine **leere Map** statt einer Ausnahme. Ein wirkungsloser Entzug sieht
+> deshalb aus wie einer, der nichts zu tun hatte. Genau deshalb geht die Zahl verworfener Sitzungen
+> in das auslösende Protokollereignis (E15) — sie ist die einzige Stelle, an der ein reihenweise
+> wirkungsloser Entzug auffiele.
+
+---
+
+## M82 — Was kostet die letzte Anmeldung je Nutzer? *(Regel L7, E17)*
+
+**Frage.** E17 holt die letzte Anmeldung aus dem `audit_log` statt aus einer Spalte an `app_user` —
+über eine Tabelle, die **jeden Download** mitprotokolliert und entsprechend wächst. `EXPLAIN` plus
+Laufzeit vor dem Merge.
+
+**Der gemessene Text ist gerendert und nicht nachgebaut.** Er stammt aus
+`AppUserRepository.findeAlleKonten` gegen eine jOOQ-Attrappe mit `StatementType.STATIC_STATEMENT`
+und unterscheidet sich vom ausgelieferten nur darin, dass er keine Bindeplätze trägt — es gibt
+keine.
+
+### Der Bestand, in dem gemessen wurde
+
+| | |
+|---|---|
+| `audit_log` | **11.043** Zeilen |
+| davon `ANMELDUNG_ERFOLG` | **8.825** = **79,9 %** |
+| `app_user` | **3** Konten |
+| verschiedene `actor_user_id` in Anmeldezeilen | **8.541** |
+
+> **Die letzte Zahl ist die überraschende, und sie verzerrt die Messung — nach oben.** Drei Konten
+> stehen 8.541 verschiedenen Kennungen im Protokoll gegenüber: Es sind die Testkonten mit dem
+> Präfix `it-`, die jeder Integrationstestlauf anlegt und wieder löscht. Ihre Protokollzeilen
+> bleiben — `audit_log.actor_user_id` trägt bewusst keinen Fremdschlüssel, damit ein gelöschtes
+> Konto seine Zeilen nicht unlesbar macht (E8). **Die Gruppierung läuft hier also über 8.541 Gruppen
+> statt über dreißig**, und genau die Gruppierung ist der teure Teil. Die gemessene Zahl ist damit
+> eine **obere Schranke** und keine Schätzung des Normalfalls.
+
+### `EXPLAIN`, die ausgelieferte Abfrage
+
+| id | select_type | table | type | possible_keys | key | rows | Extra |
+|---:|---|---|---|---|---|---:|---|
+| 1 | PRIMARY | `app_user` | `ALL` | — | — | 2 | `Using filesort` |
+| 1 | PRIMARY | `<derived2>` | `ref` | `key0` | `key0` | 56 | |
+| 2 | DERIVED | `audit_log` | **`ALL`** | `idx_audit_type` | **`NULL`** | 11.329 | `Using where; Using temporary; Using filesort` |
+
+### Laufzeit (beste von fünf, davor ein Aufwärmlauf)
+
+| Was | beste von fünf | Aufwärmlauf |
+|---|---:|---:|
+| **Die ausgelieferte Abfrage** | **17,87 ms** | 20,02 ms |
+| nur die Aggregation (abgeleitete Tabelle) | 18,87 ms | — |
+| nur `app_user`, ohne Aggregation | **0,39 ms** | 0,72 ms |
+| die Aggregation mit `FORCE INDEX (idx_audit_type)` | **34,64 ms** | — |
+
+### Vorregistrierte Deutung, dagegengehalten
+
+| Vorab benannt | eingetreten? | Was daraus folgt |
+|---|---|---|
+| Ein passender Index fehlt → **Befund, keine Kleinigkeit**: melden, Plan zeigen, Vorschlag machen, **nicht anlegen** | **ja** | Siehe „Der Befund" |
+| Unter 50 ms → keine Paginierung nötig, E16 bleibt | **ja** (17,9 ms) | Die Liste bleibt ohne Paginierung und ohne serverseitige Suche |
+| Über 500 ms → anhalten, E17 überdenken | **nein** | — |
+
+### Der Befund: der vorhandene Index hilft nicht — und ihn zu erzwingen ist schlechter
+
+`idx_audit_type (event_type, occurred_at)` steht in `possible_keys`, wird aber **nicht gewählt**
+(`key = NULL`, `type = ALL`). Das ist **kein Optimiererfehler, sondern die richtige Wahl**, und es
+ist gemessen statt vermutet: Mit `FORCE INDEX` läuft dieselbe Abfrage in **34,64 ms** statt
+17,87 ms — **fast doppelt so lange**.
+
+Der Grund steht in der Bestandstabelle: **79,9 %** aller Protokollzeilen sind Anmeldungen. Ein Index
+auf `event_type` trennt hier nichts; er liest vier Fünftel der Tabelle über Indexeinträge statt
+sequenziell und zahlt zusätzlich für jeden Treffer einen Sprung in die Zeile.
+
+**Der Vorschlag — nicht angelegt, ausdrücklich zur Entscheidung:**
+
+```sql
+CREATE INDEX idx_audit_anmeldung ON audit_log (event_type, actor_user_id, occurred_at);
+```
+
+Damit stünde die Gruppierung in der Indexreihenfolge, `Using temporary; Using filesort` entfiele,
+und `MAX(occurred_at)` je Gruppe wäre der letzte Eintrag jeder Gruppe. **Das ist eine Ableitung aus
+dem Plan und keine Messung** — sie ließe sich erst nachweisen, wenn der Index steht, und er steht
+bewusst nicht: Ein Index, der stillschweigend im Zuge eines Features entsteht, ist genau die Art
+Änderung, die später niemand begründen kann.
+
+### Was hier nicht gemessen ist
+
+- **Der Index selbst.** Der Vorschlag ist aus dem Plan abgeleitet, nicht gefahren.
+- **Die Produktion.** Der Bestand ist die Testkopie mit 8.541 Protokollkennungen auf drei Konten; in
+  der Produktion stünden dreißig Konten und ein Protokoll ohne Testrückstände.
+- **Das Wachstum.** Die Abfrage liest `audit_log` **vollständig**; ihre Kosten wachsen linear mit
+  der Zahl aller Protokollzeilen, nicht mit der Zahl der Konten. Bei 11.043 Zeilen sind das 17,9 ms.
+  Eine Hochrechnung steht hier bewusst nicht — sie wäre eine Multiplikation und keine Messung.
+- **`app_user.last_login_at`.** Die Spalte existiert seit Schritt 3 und wird bei jeder erfolgreichen
+  Anmeldung gepflegt; gelesen wird sie nirgends. Sie wäre die 0,39-ms-Antwort auf dieselbe Frage.
+  E17 verwirft „eine **neue** Spalte" — diese ist nicht neu. **Nicht entschieden, hier vermerkt.**

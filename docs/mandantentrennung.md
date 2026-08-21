@@ -3,7 +3,7 @@
 Die wichtigste Regel des Projekts. Entsteht in Schritt 3, Teil 1 (Backend).
 
 Beschreibt den `MandantContext`, warum ADMIN einen Mandanten *wählt* statt alle zu sehen, die genau
-zwei Endpunkte, die eine Mandanten-ID entgegennehmen, die ArchUnit-Regel und die Vorlage für den
+drei Endpunkte, die eine Mandanten-ID entgegennehmen, die ArchUnit-Regel und die Vorlage für den
 Isolationstest.
 
 Anmeldung, Sperre und Sitzung stehen in [`authentifizierung.md`](authentifizierung.md).
@@ -91,7 +91,7 @@ diese Zeile wüsste auch niemand warum.
 |---|---|---|---|
 | 1 | `POST /api/auth/mandant` | wählt aus der **ohnehin zulässigen Menge** aus; die ID bestimmt nicht, *was* gelesen werden darf, sondern nur *welcher* der erlaubten Ausschnitte aktiv ist | `404` — ununterscheidbar von einer erfundenen ID |
 | 2 | `POST /api/admin/users` | hier wird ein Konto **definiert**, kein Datenausschnitt **abgefragt**; welchen Mandanten der anlegende Admin gerade aktiv hat, sagt nichts darüber aus, für wen das neue Konto gilt. Nur `ADMIN` | `404` — ein ADMIN kennt die Mandantenliste ohnehin |
-| 3 | `PUT /api/admin/users/{benutzername}/mandanten` | hier wird die **Mandantenmenge eines Kontos gepflegt**, kein Datenausschnitt **abgefragt**; die übergebenen IDs sagen nichts darüber aus, was der pflegende Admin lesen darf, sondern nur, für wen das fremde Konto künftig gilt. Nur `ADMIN` | `404` — ein ADMIN kennt die Mandantenliste ohnehin |
+| 3 | `PUT /api/admin/users/{id}/tenants` | hier wird die **Mandantenmenge eines Kontos gepflegt**, kein Datenausschnitt **abgefragt**; die übergebenen IDs sagen nichts darüber aus, was der pflegende Admin lesen darf, sondern nur, für wen das fremde Konto künftig gilt. Nur `ADMIN` | `404` — ein ADMIN kennt die Mandantenliste ohnehin |
 
 **Alle drei definieren eine Berechtigung, statt einen Datenausschnitt abzufragen.** Das ist das
 Merkmal, an dem eine Ausnahme zulässig wird — und das einzige.
@@ -105,7 +105,7 @@ Merkmal, an dem eine Ausnahme zulässig wird — und das einzige.
 > `MandantService.aktuellerKontext`. **Die Liste bleibt bei zwei Einträgen.**
 
 > **Ergänzt 20.08.2026 (Schritt 9a).** Die dritte Ausnahme ist gesetzt:
-> `PUT /api/admin/users/{benutzername}/mandanten` pflegt die Mandantenmenge eines Kontos. Der
+> `PUT /api/admin/users/{id}/tenants` pflegt die Mandantenmenge eines Kontos. Der
 > Satz über der Liste hieß bis heute „Taucht hier jemals eine **dritte** auf“ — er hat gewirkt,
 > und deshalb bleibt er stehen, verschoben auf die vierte. Diese Ausnahme ist bewusst gesetzt,
 > geprüft und begründet; sie zu streichen würde ihn für die vierte entwerten.
@@ -116,6 +116,17 @@ Merkmal, an dem eine Ausnahme zulässig wird — und das einzige.
 >
 > *Korrigiert 20.08.2026:* Die Überschrift dieses Abschnitts lautete „Die genau **zwei** Ausnahmen
 > von Regel M1“.
+>
+> *Korrigiert 21.08.2026 (Schritt 9a, Teil Backend):* Der Pfad stand hier zweimal als
+> `PUT /api/admin/users/{benutzername}/mandanten`. [`benutzerverwaltung.md`](benutzerverwaltung.md)
+> §5 führte dagegen `{id}/tenants` und begründet die englische Fassung ausdrücklich — **ein
+> Widerspruch zwischen zwei verbindlichen Dateien**, gemeldet und entschieden, bevor gebaut wurde.
+> **Gebaut ist `{id}/tenants`:** Die vier Nachbarendpunkte (`lock`, `active`, `role`, `password`)
+> tragen alle `{id}`, und ein deutscher Unterpfad unter einer englischen Sammlung wäre schlechter
+> als beide reinen Varianten. Dieselbe Korrektur steht in
+> [`authentifizierung.md`](authentifizierung.md) §8 und
+> [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §7; gebaut in
+> [`benutzerverwaltung-backend.md`](benutzerverwaltung-backend.md) §4.
 
 ### Warum Ausnahme 1 nicht auf Existenz prüft
 
@@ -164,7 +175,7 @@ an den drei Methoden von `security/MandantRepository`:
 Projekte. Sie liefern ausschließlich Stammdaten über Mandanten selbst.
 
 Die Markierung ist eine Ausnahme, kein Werkzeug. Sie wird genauso vollständig geführt wie die Liste
-der zwei Endpunkte oben.
+der drei Endpunkte oben.
 
 ---
 
@@ -331,7 +342,7 @@ Sortierungsfehler.
 
 | Regel | Wo umgesetzt |
 |---|---|
-| **M1** Kein Endpunkt nimmt eine Mandanten-ID entgegen | §3, zwei benannte Ausnahmen |
+| **M1** Kein Endpunkt nimmt eine Mandanten-ID entgegen | §3, drei benannte Ausnahmen |
 | **M2** Mandant als erster Pflichtparameter | §4, ArchUnit |
 | **M3** Filter im Statement, nicht nachgelagert | ab Schritt 4; hier über die zulässige Menge in `MandantService` |
 | **M4** Isolationstest je Endpunkt | §5 |

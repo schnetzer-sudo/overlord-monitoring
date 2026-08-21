@@ -21,6 +21,11 @@ import org.springframework.stereotype.Service;
  *
  * <p><b>Mindestlaenge zwoelf Zeichen, sonst keine Zusammensetzungsregeln.</b> Erzwungene
  * Sonderzeichen erhoehen die Entropie kaum und erzeugen vorhersagbare Muster; Laenge wirkt.
+ *
+ * <p><b>Seit Schritt 9a verwirft die Aenderung die uebrigen Sitzungen des Kontos</b> und behaelt
+ * die aktuelle (E6). Die Erneuerung der Sitzungs-ID bleibt zusaetzlich bestehen — sie schuetzt vor
+ * Sitzungsfestschreibung, der Entzug vor einer fremden, laengst laufenden Sitzung. Das sind zwei
+ * verschiedene Angriffe und deshalb zwei Massnahmen.
  */
 @Service
 public class PasswortService {
@@ -30,26 +35,37 @@ public class PasswortService {
   private final AppUserRepository appUserRepository;
   private final PasswordEncoder passwortKodierer;
   private final AuditLogWriter auditLogWriter;
+  private final Sitzungsentzug sitzungsentzug;
   private final Clock systemClock;
 
   PasswortService(
       AppUserRepository appUserRepository,
       PasswordEncoder passwortKodierer,
       AuditLogWriter auditLogWriter,
+      Sitzungsentzug sitzungsentzug,
       @Qualifier("systemClock") Clock systemClock) {
     this.appUserRepository = appUserRepository;
     this.passwortKodierer = passwortKodierer;
     this.auditLogWriter = auditLogWriter;
+    this.sitzungsentzug = sitzungsentzug;
     this.systemClock = systemClock;
   }
 
   /**
    * Setzt ein neues Passwort und hebt den Aenderungszwang auf.
    *
+   * @param aktuelleSitzungsId die rohe ID der Sitzung, aus der die Aenderung kommt. Sie
+   *     <b>ueberlebt</b>, alle uebrigen Sitzungen dieses Kontos werden verworfen (E6). Der Aufrufer
+   *     liest sie, <b>bevor</b> er die Sitzungs-ID erneuert — sonst schont der Entzug die alte und
+   *     verwirft die neue
    * @return derselbe Nutzer ohne Aenderungszwang — das Principal der Sitzung wird damit ersetzt
    */
   public AngemeldeterNutzer aendere(
-      AngemeldeterNutzer nutzer, String altesPasswort, String neuesPasswort, String ip) {
+      AngemeldeterNutzer nutzer,
+      String altesPasswort,
+      String neuesPasswort,
+      String aktuelleSitzungsId,
+      String ip) {
     AppUserZeile zeile =
         appUserRepository
             .findeNachId(nutzer.id())
@@ -87,7 +103,11 @@ public class PasswortService {
     }
 
     LocalDateTime jetztUtc = LocalDateTime.ofInstant(systemClock.instant(), ZoneOffset.UTC);
-    appUserRepository.setzePasswort(nutzer.id(), passwortKodierer.encode(neuesPasswort), jetztUtc);
+    appUserRepository.setzePasswort(
+        nutzer.id(), passwortKodierer.encode(neuesPasswort), false, jetztUtc);
+    // Wer sein Passwort aendert, weil er einen fremden Zugriff vermutet, erwartet genau das: die
+    // fremden Sitzungen los, die eigene behalten (E6). Der Admin-Reset verwirft dagegen ALLE.
+    int verworfen = sitzungsentzug.verwirfUebrige(nutzer.username(), aktuelleSitzungsId);
     auditLogWriter.schreibe(
         new AuditEvent(
             AuditEventType.PASSWORT_GEAENDERT,
@@ -97,7 +117,8 @@ public class PasswortService {
             "app_user",
             String.valueOf(nutzer.id()),
             ip,
-            null));
+            // Die Zahl gehoert an das ausloesende Ereignis und bekommt keine eigene Art (E15).
+            "uebrige Sitzungen verworfen: " + verworfen));
     return nutzer.ohneAenderungszwang();
   }
 }

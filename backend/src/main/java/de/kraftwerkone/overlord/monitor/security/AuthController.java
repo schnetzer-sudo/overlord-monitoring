@@ -114,19 +114,26 @@ public class AuthController {
   }
 
   /**
-   * Setzt ein neues Passwort. Danach ist der Aenderungszwang weg und die Sitzungs-ID erneuert —
-   * eine Rechteaenderung bekommt eine neue ID.
+   * Setzt ein neues Passwort. Danach ist der Aenderungszwang weg, die Sitzungs-ID erneuert — eine
+   * Rechteaenderung bekommt eine neue ID — und die <b>uebrigen</b> Sitzungen dieses Kontos sind
+   * verworfen (E6). Die aktuelle bleibt: Wer sein Passwort wegen eines vermuteten fremden Zugriffs
+   * aendert, will nicht sich selbst abmelden.
    */
   @PostMapping("/password")
   public SelbstauskunftResponse passwortAendern(
       @Valid @RequestBody PasswortRequest anfrage,
       HttpServletRequest request,
       HttpServletResponse response) {
+    // Die ID wird gelesen, BEVOR sie erneuert wird: erneuere() tauscht sie aus, und der Entzug
+    // muss die Sitzung schonen, aus der die Aenderung kommt. Gegen die alte ID abzugleichen,
+    // nachdem die neue entstanden ist, verwuerfe genau die eine, die bleiben soll.
+    String aktuelleSitzungsId = request.getSession(true).getId();
     AngemeldeterNutzer neu =
         passwortService.aendere(
             erforderlicherNutzer(),
             anfrage.oldPassword(),
             anfrage.newPassword(),
+            aktuelleSitzungsId,
             request.getRemoteAddr());
     sitzungsVerwaltung.erneuere(request, response, neu);
     return selbstauskunft(neu);

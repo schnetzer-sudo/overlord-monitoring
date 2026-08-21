@@ -23,6 +23,15 @@ Testkopie (MariaDB `10.6.22`) verifiziert, nicht angenommen.
 | `GET` | `/api/mandanten` | angemeldet | wählbare Mandanten — siehe `mandantentrennung.md` |
 | `POST` | `/api/auth/mandant` | angemeldet | Mandantenwechsel — siehe `mandantentrennung.md` |
 | `POST` | `/api/admin/users` | `ADMIN` | Nutzer anlegen |
+| `GET` | `/api/admin/users` | `ADMIN` | Alle Konten, mandantenfrei |
+| `PUT` | `/api/admin/users/{id}/lock` | `ADMIN` | Sperren und Entsperren |
+| `PUT` | `/api/admin/users/{id}/active` | `ADMIN` | Deaktivieren und Reaktivieren |
+| `PUT` | `/api/admin/users/{id}/role` | `ADMIN` | Rolle ändern |
+| `PUT` | `/api/admin/users/{id}/tenants` | `ADMIN` | Mandantenmenge pflegen — dritte M1-Ausnahme |
+| `POST` | `/api/admin/users/{id}/password` | `ADMIN` | Passwort zurücksetzen |
+
+*Ergänzt 21.08.2026:* Die sechs Zeilen unter `/api/admin/users` sind mit Schritt 9a hinzugekommen.
+Sie stehen ausführlich in [`benutzerverwaltung-backend.md`](benutzerverwaltung-backend.md) §4.
 
 `POST /api/auth/login` und `POST /api/auth/logout` sind ohne Sitzung erreichbar. Das Abmelden
 bewusst auch: Eine abgelaufene Sitzung soll sich abmelden lassen, ohne dass der Aufrufer erst ein
@@ -79,14 +88,22 @@ Selbstgebautes: `ChangeSessionIdAuthenticationStrategy` und
 | Unbekannter Benutzername | `401` | „Anmeldung fehlgeschlagen" |
 | Falsches Passwort | `401` | „Anmeldung fehlgeschlagen" |
 | Konto ohne Passwort-Hash | `401` | „Anmeldung fehlgeschlagen" |
-| Passwort **korrekt**, Konto gesperrt | `401` | „Konto gesperrt" |
+| Passwort **korrekt**, Konto gesperrt (fünf Fehlversuche) | `401` | „Konto gesperrt" |
+| Passwort **korrekt**, Konto **durch einen Admin** gesperrt | `401` | „Konto gesperrt" |
 | Passwort **korrekt**, Konto deaktiviert | `401` | „Konto deaktiviert" |
 | IP-Kontingent erschöpft | `429` | „Zu viele Anmeldeversuche" |
 
 Die ersten drei Zeilen sind **byte-gleich** — ein Test vergleicht die vollständigen Antwortrümpfe
 (ohne `traceId`) und schlägt fehl, sobald sie sich unterscheiden.
 
-**Die Ausnahme in Zeile 4 und 5 ist Absicht.** Wer das richtige Passwort kennt, erfährt nichts Neues;
+*Ergänzt 21.08.2026 (Schritt 9a):* Die **administrative** Sperre ist ein eigener Fall mit eigenem
+Problemtyp (`konto-administrativ-gesperrt`) und eigenem Text. Der bestehende sagt wörtlich „nach
+mehreren Fehlversuchen" — bei einem Verwaltungsakt wäre das eine falsche Auskunft, und der Nutzer
+wartete auf einen Ablauf, der nie kommt. Sie steht in einer eigenen Spalte
+`app_user.locked_by_admin` und wird **vor** der Zeitsperre geprüft; Begründung in
+[`benutzerverwaltung-backend.md`](benutzerverwaltung-backend.md) §2.2.
+
+**Die Ausnahme in Zeile 4 bis 6 ist Absicht.** Wer das richtige Passwort kennt, erfährt nichts Neues;
 wer es nicht kennt, bekommt weiterhin die unspezifische Meldung. Ohne diese Ausnahme rennt ein
 berechtigter Nutzer fünfzehn Minuten gegen eine Wand, ohne den Grund zu erfahren — und ruft an.
 
@@ -284,6 +301,17 @@ Entropie kaum und erzeugen vorhersagbare Muster; Länge wirkt.
 
 Nach erfolgreicher Änderung: Flag zurückgesetzt, Sitzungs-ID erneuert, Eintrag im `audit_log`.
 
+> **Ergänzt 21.08.2026 (Schritt 9a, E6).** Die Änderung verwirft zusätzlich die **übrigen**
+> Sitzungen dieses Kontos und behält die aktuelle. Wer sein Passwort ändert, weil er einen fremden
+> Zugriff vermutet, erwartet genau das; die Ungleichbehandlung zum Admin-Reset — der **alle**
+> verwirft — ist damit begründet und nicht vergessen. **Die Erneuerung der Sitzungs-ID bleibt
+> zusätzlich bestehen:** Sie schützt vor Sitzungsfestschreibung, der Entzug vor einer fremden,
+> längst laufenden Sitzung. Zwei Angriffe, zwei Maßnahmen.
+>
+> Die Zahl verworfener Sitzungen steht im `detail` des `PASSWORT_GEAENDERT`-Eintrags und bekommt
+> keine eigene Ereignisart (E15). Bauform und Reihenfolge — die ID wird gelesen, **bevor** sie
+> erneuert wird — in [`benutzerverwaltung-backend.md`](benutzerverwaltung-backend.md) §3.
+
 ---
 
 ## 7. Bootstrap des ersten Kontos
@@ -334,11 +362,23 @@ Der Endpunkt nimmt eine Mandanten-ID entgegen und ist damit die zweite der genau
 Regel M1; alle sind in [`mandantentrennung.md`](mandantentrennung.md) namentlich geführt.
 
 *Korrigiert 20.08.2026:* Hier stand „die zweite der genau **zwei** Ausnahmen“. Mit Schritt 9a kommt
-`PUT /api/admin/users/{benutzername}/mandanten` als dritte hinzu. **An diesem Endpunkt ändert das
-nichts** — er bleibt bei **einem** Mandanten, die Signatur aus Schritt 3 wird nicht angefasst.
+`PUT /api/admin/users/{id}/tenants` als dritte hinzu. **An diesem Endpunkt ändert das nichts** — er
+bleibt bei **einem** Mandanten, die Signatur aus Schritt 3 wird nicht angefasst.
 
-**Nicht in diesem Schritt:** Auflisten, Sperren, Rollenwechsel, Zurücksetzen durch den Admin,
-Löschen. Das ist **Schritt 9a**.
+*Korrigiert 21.08.2026:* Der Pfad stand hier als `PUT /api/admin/users/{benutzername}/mandanten`.
+[`benutzerverwaltung.md`](benutzerverwaltung.md) §5 führte dagegen `{id}/tenants` und begründet die
+englische Fassung ausdrücklich. **Gebaut ist `{id}/tenants`** — die vier Nachbarendpunkte tragen
+alle `{id}`, und ein deutscher Unterpfad unter einer englischen Sammlung wäre schlechter als beide
+reinen Varianten. Dieselbe Korrektur steht in [`mandantentrennung.md`](mandantentrennung.md) §3 und
+[`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §7.
+
+**Nicht in diesem Schritt:** Auflisten, Sperren, Rollenwechsel, Zurücksetzen durch den Admin. Das
+ist **Schritt 9a**.
+
+*Korrigiert 21.08.2026:* Hier stand zusätzlich „Löschen“. Das ist verworfen — es gibt **kein**
+Löschen von Konten ([`benutzerverwaltung.md`](benutzerverwaltung.md) E8): `audit_log.actor_user_id`
+verweist auf `app_user`, ein gelöschtes Konto machte seine Protokollzeilen unlesbar. An seine Stelle
+tritt das Deaktivieren.
 
 ### Warum die Altnutzer nicht übernommen werden
 

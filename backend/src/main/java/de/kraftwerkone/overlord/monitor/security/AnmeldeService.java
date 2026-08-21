@@ -15,7 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 /**
- * Prueft eine Anmeldung und fuehrt Fehlversuchszaehler und Sperre.
+ * Prueft eine Anmeldung und fuehrt Fehlversuchszaehler und Zeitsperre.
  *
  * <p><b>Die Reihenfolge der Pruefungen ist der eigentliche Inhalt dieser Klasse</b> und keine
  * Geschmacksfrage:
@@ -115,6 +115,14 @@ public class AnmeldeService {
     AppUserZeile nutzer = gefunden.get();
 
     // Ab hier ist das Passwort korrekt. Nur deshalb darf der Grund benannt werden.
+    //
+    // Die ADMINISTRATIVE Sperre zuerst: Sie laeuft nicht ab. Stuende sie hinter der Zeitsperre,
+    // bekaeme ein zugleich zeitgesperrtes Konto fuenfzehn Minuten lang die Auskunft "versuche es
+    // spaeter erneut" — und danach die richtige. Zwei Meldungen fuer denselben Zustand.
+    if (nutzer.adminGesperrt()) {
+      protokolliereFehlversuch(nutzer.id(), username, ip, "Konto administrativ gesperrt");
+      throw AnmeldungAbgelehntException.durchAdminGesperrt();
+    }
     if (nutzer.istGesperrt(jetztUtc)) {
       protokolliereFehlversuch(nutzer.id(), username, ip, "Konto gesperrt");
       throw AnmeldungAbgelehntException.gesperrt(nutzer.gesperrtBisUtc());

@@ -18,12 +18,17 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
  * MandantContextProvider}.
  *
  * <p>{@code mustChangePassword} wird bei der Passwortaenderung mit einem neuen Principal
- * ueberschrieben. Wird ein Konto ab Schritt 9 deaktiviert oder gesperrt, wirkt das nicht
- * rueckwirkend auf eine laufende Sitzung — dort wird die Sitzung des Nutzers verworfen. Das ist der
- * Grund, weshalb die Sitzung serverseitig liegt und kein JWT verwendet wird.
+ * ueberschrieben. Wird ein Konto deaktiviert oder gesperrt, wirkt das nicht rueckwirkend auf eine
+ * laufende Sitzung — dort wird die Sitzung des Nutzers verworfen ({@link Sitzungsentzug}, Schritt
+ * 9a). Das ist der Grund, weshalb die Sitzung serverseitig liegt und kein JWT verwendet wird.
+ *
+ * <p><b>Das Feld {@code downloadAllowed} ist am 21.08.2026 entfallen</b> (Schritt 9a, E18). Es war
+ * seit Schritt 3 tot: {@code rohdaten.md} §3 E2 schliesst eine zweite Berechtigungsstufe aus, die
+ * Endpunkte aus Schritt 8 haben es nie geprueft. Mit ihm ist {@code app_user.download_allowed}
+ * gefallen (V7). <b>Der Wegfall aendert die abgeleitete {@code serialVersionUID}</b> — vorher
+ * geschriebene Sitzungen in {@code SPRING_SESSION_ATTRIBUTES} sind danach nicht mehr lesbar.
  */
-public record AngemeldeterNutzer(
-    long id, String username, Rolle rolle, boolean mustChangePassword, boolean downloadAllowed)
+public record AngemeldeterNutzer(long id, String username, Rolle rolle, boolean mustChangePassword)
     implements AuthenticatedPrincipal, Serializable {
 
   /**
@@ -45,6 +50,6 @@ public record AngemeldeterNutzer(
 
   /** Derselbe Nutzer ohne Aenderungszwang — nach erfolgreicher Passwortaenderung. */
   public AngemeldeterNutzer ohneAenderungszwang() {
-    return new AngemeldeterNutzer(id, username, rolle, false, downloadAllowed);
+    return new AngemeldeterNutzer(id, username, rolle, false);
   }
 }

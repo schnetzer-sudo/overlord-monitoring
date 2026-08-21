@@ -744,7 +744,7 @@ Session gelesen.
 
 **Genau drei Ausnahmen**, alle namentlich geführt in `docs/mandantentrennung.md`:
 `POST /api/auth/mandant` (Wechsel, geprüft gegen die zulässige Menge), `POST /api/admin/users`
-(Anlegen eines Kontos, nur ADMIN) und `PUT /api/admin/users/{benutzername}/mandanten` (Pflege der
+(Anlegen eines Kontos, nur ADMIN) und `PUT /api/admin/users/{id}/tenants` (Pflege der
 Mandantenmenge eines Kontos, nur ADMIN). **Alle drei definieren eine Berechtigung, statt einen
 Datenausschnitt abzufragen** — das ist das Merkmal, an dem eine Ausnahme zulässig wird. Taucht dort
 jemals eine vierte auf, ist das ein Signal und keine Kleinigkeit.

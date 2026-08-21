@@ -74,9 +74,11 @@ public class MandantRepository {
 
   @OhneMandantenkontext(
       begruendung =
-          "Pruefung beim Anlegen eines Kontos (POST /api/admin/users). Dort wird ein Konto"
-              + " definiert und kein Datenausschnitt abgefragt; ein aktiver Mandant des Admins"
-              + " sagt nichts darueber aus, fuer welchen Mandanten das neue Konto gilt.")
+          "Pruefung beim Anlegen eines Kontos (POST /api/admin/users) und beim Pflegen seiner"
+              + " Mandantenmenge (PUT /api/admin/users/{id}/tenants, seit Schritt 9a). Beide Male"
+              + " wird ein Konto definiert und kein Datenausschnitt abgefragt; ein aktiver Mandant"
+              + " des Admins sagt nichts darueber aus, fuer welche Mandanten das fremde Konto"
+              + " gilt. Nur ADMIN erreicht beide Endpunkte.")
   public boolean existiert(String mandantId) {
     return glassfishDsl.fetchExists(
         glassfishDsl.selectOne().from(MANDANT).where(MANDANT.MANDANTID.eq(mandantId)));

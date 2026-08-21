@@ -17,9 +17,13 @@ import org.springframework.web.bind.annotation.RestController;
  * durchgesetzt in {@code config/SecurityConfig} ueber {@code /api/admin/**}, nicht hier per
  * Annotation, damit die Regel an einer Stelle steht.
  *
- * <p>Dieser Endpunkt nimmt eine Mandanten-ID entgegen und ist damit die <b>zweite und letzte</b>
- * Ausnahme von Regel M1. Beide Ausnahmen sind namentlich in {@code docs/mandantentrennung.md}
- * gefuehrt.
+ * <p>Dieser Endpunkt nimmt eine Mandanten-ID entgegen und ist damit die <b>zweite</b> Ausnahme von
+ * Regel M1. Die dritte ist seit Schritt 9a {@code PUT /api/admin/users/{id}/tenants} in {@link
+ * BenutzerverwaltungController}; alle drei sind namentlich in {@code docs/mandantentrennung.md}
+ * gefuehrt, und eine vierte waere ein Signal und keine Kleinigkeit.
+ *
+ * <p><b>Die Signatur bleibt bei einem Mandanten</b> (E4). Sie zu erweitern waere der teurere Weg zu
+ * dem, was die dritte Ausnahme ohnehin kann.
  */
 @RestController
 @RequestMapping("/api/admin")

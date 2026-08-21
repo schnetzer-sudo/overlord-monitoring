@@ -1,0 +1,62 @@
+-- Overlord Monitoring — Benutzerverwaltung (Schritt 9a).
+--
+-- Zwei Aenderungen an app_user, beide begruendet. Kein neuer Fremdschluessel,
+-- keine neue Tabelle: Die n:m-Zuordnung (app_user_mandant) steht seit Schritt 3
+-- und wird ab jetzt nur gepflegt statt neu gebaut (docs/benutzerverwaltung.md E9).
+--
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 1. download_allowed FAELLT (E18)
+--
+-- Die Spalte war seit Schritt 3 tot. V2 hat sie mit der Begruendung angelegt,
+-- "damit ein spaeterer Entzug keine Migration erfordert" — genau die wird jetzt
+-- faellig, und das ist bewusst in Kauf genommen: Es hat nie jemand danach
+-- gefragt. rohdaten.md §3 Entscheidung 2 schliesst eine zweite
+-- Berechtigungsstufe aus, die drei Endpunkte aus Schritt 8 haben das Flag nie
+-- geprueft, und GET /api/auth/me gab es trotzdem aus.
+--
+-- DAS IST EIN BRUCH AN EINEM SEIT SCHRITT 3 DOKUMENTIERTEN VERTRAG und keine
+-- stillschweigende Anpassung: authentifizierung.md §1 traegt den datierten
+-- Korrekturkasten, rohdaten-backend.md schliesst offenen Punkt 8 mit
+-- "Spalte entfernt". Geprueft ist, dass das Frontend das Feld nirgends LIEST —
+-- es steht dort nur als Typzeile (frontend/src/features/sitzung/api.ts).
+--
+-- FOLGE FUER LAUFENDE SITZUNGEN: AngemeldeterNutzer ist Serializable und liegt
+-- serialisiert in SPRING_SESSION_ATTRIBUTES. Faellt eine Record-Komponente weg,
+-- aendert sich die abgeleitete serialVersionUID und vor der Migration
+-- geschriebene Sitzungen sind nicht mehr lesbar. Das ist der Preis und kein
+-- Fehler; SPRING_SESSION wird beim Aufziehen einmal geleert.
+--
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 2. locked_by_admin KOMMT
+--
+-- WARUM NICHT locked_until MITBENUTZEN. Naheliegend waere, die administrative
+-- Sperre in die vorhandene Spalte zu schreiben. Das bricht am Bestand, und zwar
+-- nachweisbar an drei Stellen:
+--
+--   a) AnmeldeService reicht bei JEDEM Fehlversuch einen Wert an
+--      AppUserRepository.setzeFehlversuche, und die schreibt LOCKED_UNTIL
+--      bedingungslos — mit null, solange der Zaehler unter fuenf steht. Ein
+--      einziger falscher Anmeldeversuch loeschte damit die Sperre eines Admins.
+--      Der Schutzmechanismus waere der Weg an ihm vorbei.
+--   b) merkeAnmeldung setzt LOCKED_UNTIL bei jeder erfolgreichen Anmeldung auf
+--      null. Fuer eine Zeitsperre richtig, fuer einen Verwaltungsakt falsch.
+--   c) Eine Admin-Sperre hat kein "bis". Sie braeuchte ein Sentineldatum, und
+--      ENTSPERRT_DURCH_ADMIN waere anschliessend von einem regulaeren Ablauf
+--      nicht mehr zu unterscheiden.
+--
+-- Das ist E14 auf Datenebene fortgeschrieben: Ein Angriff (KONTO_GESPERRT, fuenf
+-- Fehlversuche, fuenfzehn Minuten) und ein Verwaltungsakt (SPERRE_DURCH_ADMIN,
+-- unbefristet) gehoeren nicht in dieselbe Zeile — und auch nicht in dieselbe
+-- Spalte.
+--
+-- BOOLEAN und nicht DATETIME: Die Sperre kennt keine Frist. Ein Zeitpunkt waere
+-- eine Angabe, die niemand fuellen kann, ohne sie zu erfinden; wann gesperrt
+-- wurde und von wem, steht im audit_log, wo es hingehoert.
+--
+-- KEIN DEFAULT-Wechsel an anderen Spalten, keine Datenmigration: Bestandszeilen
+-- bekommen FALSE, und das ist ihr wahrer Zustand — bis heute konnte niemand
+-- administrativ sperren.
+
+ALTER TABLE app_user
+  DROP COLUMN download_allowed,
+  ADD COLUMN locked_by_admin BOOLEAN NOT NULL DEFAULT FALSE AFTER must_change_password;

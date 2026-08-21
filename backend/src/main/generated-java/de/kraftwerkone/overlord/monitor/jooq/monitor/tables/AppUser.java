@@ -90,9 +90,9 @@ public class AppUser extends TableImpl<AppUserRecord> {
     public final TableField<AppUserRecord, Boolean> MUST_CHANGE_PASSWORD = createField(DSL.name("must_change_password"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("1"), SQLDataType.BOOLEAN)), this, "");
 
     /**
-     * The column <code>overlord_monitor.app_user.download_allowed</code>.
+     * The column <code>overlord_monitor.app_user.locked_by_admin</code>.
      */
-    public final TableField<AppUserRecord, Boolean> DOWNLOAD_ALLOWED = createField(DSL.name("download_allowed"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("1"), SQLDataType.BOOLEAN)), this, "");
+    public final TableField<AppUserRecord, Boolean> LOCKED_BY_ADMIN = createField(DSL.name("locked_by_admin"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("0"), SQLDataType.BOOLEAN)), this, "");
 
     /**
      * The column <code>overlord_monitor.app_user.failed_attempts</code>.

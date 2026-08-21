@@ -66,7 +66,7 @@ class AnmeldeServiceTest {
 
   private AppUserZeile nutzer(int fehlversuche, LocalDateTime gesperrtBis) {
     return new AppUserZeile(
-        7L, "lukas", "$2a$12$echt", Rolle.MANDANT, true, false, true, fehlversuche, gesperrtBis);
+        7L, "lukas", "$2a$12$echt", Rolle.MANDANT, true, false, false, fehlversuche, gesperrtBis);
   }
 
   private void kontoVorhanden(AppUserZeile zeile) {
@@ -150,7 +150,7 @@ class AnmeldeServiceTest {
   @Test
   @DisplayName("Ein Konto ohne Passwort-Hash rechnet trotzdem einen BCrypt-Vergleich")
   void konto_ohne_hash_rechnet_bcrypt() {
-    kontoVorhanden(new AppUserZeile(7L, "lukas", null, Rolle.MANDANT, true, false, true, 0, null));
+    kontoVorhanden(new AppUserZeile(7L, "lukas", null, Rolle.MANDANT, true, false, false, 0, null));
 
     assertThatThrownBy(() -> service.anmelden("lukas", "geheim", IP))
         .isInstanceOf(AnmeldungAbgelehntException.class);
@@ -191,7 +191,7 @@ class AnmeldeServiceTest {
   @DisplayName("Richtiges Passwort auf deaktiviertem Konto darf den Grund benennen")
   void deaktiviertes_konto_nennt_den_grund() {
     kontoVorhanden(
-        new AppUserZeile(7L, "lukas", "$2a$12$echt", Rolle.MANDANT, false, false, true, 0, null));
+        new AppUserZeile(7L, "lukas", "$2a$12$echt", Rolle.MANDANT, false, false, false, 0, null));
     passwortStimmt(true);
 
     assertThatThrownBy(() -> service.anmelden("lukas", "richtig", IP))
@@ -222,7 +222,7 @@ class AnmeldeServiceTest {
         .thenReturn(
             Optional.of(
                 new AppUserZeile(
-                    7L, "admin", "$2a$12$echt", Rolle.ADMIN, true, false, true, 0, null)));
+                    7L, "admin", "$2a$12$echt", Rolle.ADMIN, true, false, false, 0, null)));
     passwortStimmt(true);
 
     AnmeldeService.Ergebnis ergebnis = service.anmelden("admin", "richtig", IP);

@@ -61,7 +61,7 @@ class BamSucheKommabindungTest {
   private static final MandantContext MANDANT = new MandantContext("NEXANS");
 
   private static final AngemeldeterNutzer NUTZER =
-      new AngemeldeterNutzer(1L, "pruefer", Rolle.MANDANT, false, false);
+      new AngemeldeterNutzer(1L, "pruefer", Rolle.MANDANT, false);
 
   /** Die Antwort trägt keine Zeitpunkte — dieser Test misst die Bindung und nicht die Ausgabe. */
   private static final BamSucheResponse LEER =

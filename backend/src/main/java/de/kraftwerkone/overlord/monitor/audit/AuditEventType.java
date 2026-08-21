@@ -37,5 +37,46 @@ public enum AuditEventType {
   /** PAYLOAD_DOWNLOADED — Artefakt heruntergeladen (Schritt 8). */
   ROHDATEN_DOWNLOAD,
   /** PAYLOAD_FAILED — Abruf fehlgeschlagen, mit dem Zustand im Detail (Schritt 8). */
-  ROHDATEN_ABRUF_FEHLGESCHLAGEN
+  ROHDATEN_ABRUF_FEHLGESCHLAGEN,
+
+  // ─── Benutzerverwaltung, Schritt 9a ────────────────────────────────────────
+  //
+  // Ein Endpunkt, ein Vorgang, eine Ereignisart. Ein gemeinsames PATCH, das
+  // Rolle, Mandanten und Sperrzustand in einem Aufruf aendern koennte, erzeugte
+  // eine Zeile, die entweder aufgespalten werden muss oder zu einem
+  // nichtssagenden NUTZER_GEAENDERT verwaessert — und dann ist das Protokoll bei
+  // einem Vorfall nicht mehr lesbar (docs/benutzerverwaltung.md §5).
+  //
+  // Der Sitzungsentzug bekommt KEINE eigene Art (E15). Er ist nie ein
+  // eigenstaendiger Vorgang und stuende sonst als Anhaengsel in jeder zweiten
+  // Zeile; die Zahl verworfener Sitzungen steht im detail des ausloesenden
+  // Ereignisses.
+  //
+  // In keiner dieser Zeilen steht jemals ein Passwort — auch nicht gehasht,
+  // auch nicht abgekuerzt.
+
+  /**
+   * USER_LOCKED_BY_ADMIN — die <b>administrative</b> Sperre (Schritt 9a).
+   *
+   * <p><b>Nicht {@link #KONTO_GESPERRT}.</b> Das steht seit Schritt 2 fuer die automatische Sperre
+   * nach fuenf Fehlversuchen. Neben ihr waere {@code NUTZER_GESPERRT} um drei Uhr nachts nicht
+   * auseinanderzuhalten — deshalb benennt der Name die <b>Ursache</b> statt des Objekts, und die
+   * Ursache ist der Unterschied: ein Angriff und ein Verwaltungsakt gehoeren nicht in dieselbe
+   * Zeile (E14).
+   */
+  SPERRE_DURCH_ADMIN,
+  /**
+   * USER_UNLOCKED_BY_ADMIN — hebt sowohl die administrative als auch eine laufende Zeitsperre auf.
+   */
+  ENTSPERRT_DURCH_ADMIN,
+  /** USER_DEACTIVATED — es gibt kein Loeschen (E8). */
+  NUTZER_DEAKTIVIERT,
+  /** USER_REACTIVATED */
+  NUTZER_REAKTIVIERT,
+  /** USER_ROLE_CHANGED — mit alter und neuer Rolle im Detail. */
+  ROLLE_GEAENDERT,
+  /** USER_TENANTS_CHANGED — mit alter und neuer Menge im Detail (dritte M1-Ausnahme). */
+  MANDANTEN_GEAENDERT,
+  /** USER_PASSWORD_RESET — durch den Admin. <b>Niemals mit dem Passwort im Detail.</b> */
+  PASSWORT_ZURUECKGESETZT
 }

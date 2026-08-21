@@ -15,7 +15,7 @@ Stand: 01.08.2026 · Ergänzt `PROJEKTBESCHREIBUNG.md`
 | 7 — BAM-Suche | **geteilt in Teil 1, Teil 2a, Teil 2b, Teil 3 und Teil 4**; alle fünf Teile erledigt (12. bis 14.08.2026), dazu Nacharbeit und Nachbesserung zu Teil 1 (beide 13.08.2026) und der Nachtrag zum Kommadefekt (14.08.2026). Messungen in [`messungen-schritt7.md`](messungen-schritt7.md); die Features in [`bam-werte.md`](bam-werte.md) (Teil 1), [`bam-sollaengen.md`](bam-sollaengen.md) (Teil 2a) und [`bam-suche.md`](bam-suche.md) (Teil 2b, 3 und 4). **Drei Sichtprüfungen am schmalen Fenster stehen aus** ([`README.md`](README.md), „Offene Sichtprüfungen") |
 | 8 — Rohdaten und Protokolle | **geteilt in Teil Backend und Teil Frontend**; beide gebaut und dokumentiert (18.08.2026, die Oberfläche am selben Tag nachgebessert) — [`rohdaten.md`](rohdaten.md), [`rohdaten-backend.md`](rohdaten-backend.md), [`rohdaten-frontend.md`](rohdaten-frontend.md); Messungen in [`messungen-schritt8.md`](messungen-schritt8.md). **Nicht als erledigt geführt**, und zwar wegen zweier Posten: Die **Sichtprüfung im Browser steht aus** — an beiden Einhängepunkten und für die Ansicht ([`rohdaten-frontend.md`](rohdaten-frontend.md) §11, Punkt 1) —, und die **Antwortverarbeitung des `jakarta`-Zweigs ist ungemessen** ([`rohdaten-backend.md`](rohdaten-backend.md) §11, Punkt 3). Die **336 grünen Frontend-Testfälle** ([`rohdaten-frontend.md`](rohdaten-frontend.md) §9) nehmen eine Sichtprüfung nicht vorweg |
 
-| 9 — Administration | **geschnitten in 9a und 9b** (20.08.2026); **9b Teil Backend gebaut und dokumentiert** (20.08.2026) — `V6__process_catalog.sql`, Heuristik, fünf Endpunkte unter `/api/katalog`, 64 Testfälle. [`prozess-katalog.md`](prozess-katalog.md) (Festlegung), [`prozess-katalog-backend.md`](prozess-katalog-backend.md) (Bau), Messung **M80** in [`messungen-schritt9.md`](messungen-schritt9.md). **Nicht als erledigt geführt:** die Oberfläche zu 9b fehlt, 9a ist unangetastet, und eine Sichtprüfung im Browser ist ohne Oberfläche nicht möglich |
+| 9 — Administration | **geschnitten in 9a und 9b** (20.08.2026); **9a Teil Backend gebaut und dokumentiert** (21.08.2026) — `V7__benutzerverwaltung.sql` (`download_allowed` fällt, `locked_by_admin` kommt), Sitzungsentzug in **Bauform A**, sechs Endpunkte unter `/api/admin/users`, sieben neue Ereignisarten, 42 Testfälle. [`benutzerverwaltung.md`](benutzerverwaltung.md) (Festlegung), [`benutzerverwaltung-backend.md`](benutzerverwaltung-backend.md) (Bau), Messungen **M81** und **M82** in [`messungen-schritt9.md`](messungen-schritt9.md). **Nicht als erledigt geführt:** die Oberfläche zu 9a fehlt. Dazu **9b Teil Backend gebaut und dokumentiert** (20.08.2026) — `V6__process_catalog.sql`, Heuristik, fünf Endpunkte unter `/api/katalog`, 64 Testfälle. [`prozess-katalog.md`](prozess-katalog.md) (Festlegung), [`prozess-katalog-backend.md`](prozess-katalog-backend.md) (Bau), Messung **M80** in [`messungen-schritt9.md`](messungen-schritt9.md). **Nicht als erledigt geführt:** die Oberfläche zu 9b fehlt, 9a ist unangetastet, und eine Sichtprüfung im Browser ist ohne Oberfläche nicht möglich |
 
 **Nachtrag 20.08.2026 zum Kopf.** Die Zeile zu Schritt 9 ist ergänzt, weil dieselbe Stummheit
 drohte, die die Korrektur vom 19.08.2026 unten beschreibt: Schritt 9b ist zur Hälfte gebaut, und
@@ -822,13 +822,31 @@ Heuristik ändert an gepflegten Zeilen nichts.
 **Ziel:** Über zwanzig externe Nutzer ohne Datenbankzugang bekommen gepflegte Konten. Heute werden
 diese Konten per Zuruf gepflegt.
 
-**Backend**
-- Benutzerverwaltung: anlegen, sperren, Rolle ändern, Passwort zurücksetzen
+**Backend** — **gebaut und dokumentiert am 21.08.2026**,
+[`benutzerverwaltung-backend.md`](benutzerverwaltung-backend.md)
+
+- Benutzerverwaltung: anlegen, sperren, **deaktivieren**, Rolle ändern, Passwort zurücksetzen
 - **Pflege der Mandantenmenge je Konto** über `app_user_mandant` — die **dritte Ausnahme** von
   Regel M1, namentlich geführt in [`mandantentrennung.md`](mandantentrennung.md) §3.
   `POST /api/admin/users` bleibt unverändert bei **einem** Mandanten
-- `app_user.download_allowed` fällt per Migration (E20); `AngemeldeterNutzer.downloadAllowed` und
+- `app_user.download_allowed` fällt per Migration (E18); `AngemeldeterNutzer.downloadAllowed` und
   die Ausgabe in `GET /api/auth/me` entfallen mit ihr
+
+*Korrigiert 21.08.2026, drei Stellen:*
+
+1. Die Aufzählung nannte **kein Deaktivieren**. [`benutzerverwaltung.md`](benutzerverwaltung.md) E8
+   macht es zum Ersatz fürs Löschen — *„`audit_log.actor_user_id` verweist auf `app_user`. Ein
+   gelöschtes Konto macht seine Protokollzeilen unlesbar"* —, und `PUT /api/admin/users/{id}/active`
+   ist gebaut. **Ohne diese Zeile wäre die Abgrenzung des Schritts unvollständig**, und CLAUDE.md
+   bindet sie an diese Datei.
+2. Die E-Nummer der Migration stand als **E20**. `benutzerverwaltung.md` führt E1 bis **E18**; E19
+   und E20 gibt es dort nicht. Dieselbe fehlgreifende Nummer steht in fünf weiteren Dateien und ist
+   **nicht** überall nachgezogen — sie ist als Befund gemeldet, weil dahinter zwei Nummernkreise
+   stehen (projektweit in dieser Datei, je Feature-Datei bei 1 beginnend) und keine Datei sagt,
+   welcher gilt.
+3. „anlegen" gehört streng genommen **nicht** in 9a: `POST /api/admin/users` steht seit Schritt 3
+   (E4) und ist unangetastet geblieben. Die Zeile bleibt trotzdem stehen, weil die Benutzerverwaltung
+   erst mit 9a als Ganzes benutzbar wird.
 
 **Frontend**
 - Administrationsbereich, nur für die Rolle `ADMIN` sichtbar

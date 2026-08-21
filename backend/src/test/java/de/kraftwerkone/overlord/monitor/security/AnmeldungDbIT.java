@@ -26,6 +26,11 @@ class AnmeldungDbIT extends SicherheitsTestbasis {
     // Genau ein zulaessiger Mandant: der wird beim Anmelden gesetzt.
     assertThat(ich.<String>json("$.mandant.id")).isEqualTo(MANDANT_A);
     assertThat(ich.<Boolean>json("$.mustChangePassword")).isFalse();
+    // Am 21.08.2026 entfallen (Schritt 9a, E18) — ein Bruch an einem seit Schritt 3
+    // dokumentierten Vertrag, datiert vermerkt in docs/authentifizierung.md §1. Die Zusicherung
+    // steht hier, damit das Feld nicht unbemerkt wieder auftaucht.
+    assertThat(ich.hatFeld("$.downloadAllowed")).isFalse();
+    assertThat(ich.rumpf()).doesNotContain("downloadAllowed");
 
     assertThat(sitzung.sende("/api/auth/logout", "{}").status()).isEqualTo(204);
 

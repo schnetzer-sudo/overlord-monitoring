@@ -105,16 +105,16 @@ public class AppUserRecord extends UpdatableRecordImpl<AppUserRecord> {
     }
 
     /**
-     * Setter for <code>overlord_monitor.app_user.download_allowed</code>.
+     * Setter for <code>overlord_monitor.app_user.locked_by_admin</code>.
      */
-    public void setDownloadAllowed(Boolean value) {
+    public void setLockedByAdmin(Boolean value) {
         set(6, value);
     }
 
     /**
-     * Getter for <code>overlord_monitor.app_user.download_allowed</code>.
+     * Getter for <code>overlord_monitor.app_user.locked_by_admin</code>.
      */
-    public Boolean getDownloadAllowed() {
+    public Boolean getLockedByAdmin() {
         return (Boolean) get(6);
     }
 
@@ -211,7 +211,7 @@ public class AppUserRecord extends UpdatableRecordImpl<AppUserRecord> {
     /**
      * Create a detached, initialised AppUserRecord
      */
-    public AppUserRecord(Long id, String username, String passwordHash, String role, Boolean enabled, Boolean mustChangePassword, Boolean downloadAllowed, Integer failedAttempts, LocalDateTime lockedUntil, LocalDateTime lastLoginAt, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public AppUserRecord(Long id, String username, String passwordHash, String role, Boolean enabled, Boolean mustChangePassword, Boolean lockedByAdmin, Integer failedAttempts, LocalDateTime lockedUntil, LocalDateTime lastLoginAt, LocalDateTime createdAt, LocalDateTime updatedAt) {
         super(AppUser.APP_USER);
 
         setId(id);
@@ -220,7 +220,7 @@ public class AppUserRecord extends UpdatableRecordImpl<AppUserRecord> {
         setRole(role);
         setEnabled(enabled);
         setMustChangePassword(mustChangePassword);
-        setDownloadAllowed(downloadAllowed);
+        setLockedByAdmin(lockedByAdmin);
         setFailedAttempts(failedAttempts);
         setLockedUntil(lockedUntil);
         setLastLoginAt(lastLoginAt);

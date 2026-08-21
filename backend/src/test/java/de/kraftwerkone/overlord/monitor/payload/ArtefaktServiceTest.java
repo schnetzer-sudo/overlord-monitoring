@@ -56,9 +56,9 @@ class ArtefaktServiceTest {
   private static final String VERBINDUNG = "http://beispielknoten.invalid/WebApplication/Receiver";
 
   private static final AngemeldeterNutzer MANDANT_NUTZER =
-      new AngemeldeterNutzer(1L, "it-mandant", Rolle.MANDANT, false, true);
+      new AngemeldeterNutzer(1L, "it-mandant", Rolle.MANDANT, false);
   private static final AngemeldeterNutzer ADMIN_NUTZER =
-      new AngemeldeterNutzer(2L, "it-admin", Rolle.ADMIN, false, true);
+      new AngemeldeterNutzer(2L, "it-admin", Rolle.ADMIN, false);
 
   /** Ein erfundenes Protokoll mit vollstaendigem Markenpaar und einem maskierbaren Pfad. */
   private static final String PROTOKOLL =
