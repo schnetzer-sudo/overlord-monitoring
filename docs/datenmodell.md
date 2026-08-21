@@ -343,6 +343,28 @@ Steuert je Mandant, welche BAM-Typen sichtbar sind und in welcher Reihenfolge
 (`MessageBAMTypeSortIndex`). **Diese Konfiguration wird für die Spaltenauswahl und die Suchfelder
 übernommen, nicht neu erfunden.**
 
+**Nutzbare Indizes:** `PRIMARY (MessageBAMType, MandantID)` und
+`MandantIDSortIndexBAMTYpeIDX (MandantID, MessageBAMTypeSortIndex, MessageBAMType)` — sonst keine.
+
+> **Nachgetragen 21.08.2026 (E37).** Hier stand **gar keine** Indexangabe, obwohl beide Indizes seit
+> **M1 vom 01.08.2026** erhoben sind ([`messungen-schritt4.md`](messungen-schritt4.md), Abschnitt
+> „Indizes", mit Spaltenfolge und Kardinalität) — und obwohl der zweite die Typenauswahl trägt: Er
+> hält den Filter **und** beide Sortierschlüssel in dieser Reihenfolge, deshalb `Using index` und
+> **kein `filesort`** ([`messungen-schritt7.md`](messungen-schritt7.md) M48, 13.08.2026). Die Lücke
+> ist dieselbe wie bei `Message`, nur eine Stufe schlimmer: Dort stand eine unvollständige Liste,
+> hier keine.
+>
+> **Der Indexname trägt einen Buchstabendreher des Altsystems — `BAMTYpe` statt `BAMType`.**
+> Bestand, kein Tippfehler dieser Datei; dieselbe Lage wie bei `ProejctIDIDX` weiter oben. Er wird
+> nicht korrigiert, denn korrigiert wäre er ein anderer Objektname. **Bis heute war der Dreher in
+> keiner Datei unter `docs/` benannt** — nur im Kopf der Sollliste, und die gibt es erst seit dem
+> 21.08.2026.
+>
+> **In [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §3.2 wird diese Liste bewusst nicht
+> wiederholt.** Zwei Prosafassungen desselben Bestands sind genau der Vorgang, der zu E37 geführt
+> hat; verbindlich ist ohnehin die Sollliste in
+> [`backend/src/test/resources/indizes-sollliste.txt`](../backend/src/test/resources/indizes-sollliste.txt).
+
 ### `Process` / `Project` / `Mandant` / `ProjectMandant`
 
 Die Hierarchie. Reine Stammdaten.

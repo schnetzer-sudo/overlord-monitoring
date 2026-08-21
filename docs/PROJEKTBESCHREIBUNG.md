@@ -128,6 +128,23 @@ View `MessageMandantID` gekapselt:
 Message → Process → Project → ProjectMandant → Mandant
 ```
 
+> **Ergänzt 21.08.2026 (E42) — der Satz oben beschreibt das Quellsystem, nicht unseren Zugriff.**
+> Unsere Statements lösen die Kette **selbst** auf, als `EXISTS` über `Process → ProjectMandant`,
+> und zwar in jedem Statement statt als nachgelagerte Prüfung (Regel M3). Belegt im `EXPLAIN` des
+> gebauten Suchstatements ([`messungen-schritt7.md`](messungen-schritt7.md) M47) und entschieden
+> mit M4 in [`messungen-schritt4.md`](messungen-schritt4.md). Die Begründung — der Zugriffspfad der
+> View ist mit den Rechten dieser Anwendung strukturell nicht einsehbar (Fehler 1142 und 1345) und
+> kann Regel L7 deshalb nicht erfüllen — steht seit dem 06.08.2026 in
+> [`datenmodell.md`](datenmodell.md) §2.
+>
+> **Der bestehende Satz bleibt stehen, er ist nicht falsch** — er liest sich nur wie eine Aussage
+> über uns. Ein Suchlauf über die handgeschriebenen Quellen am 21.08.2026 findet den Namen an
+> **drei** Stellen, und **keine davon benutzt die View**: zweimal als Javadoc, das ausdrücklich
+> sagt, dass *nicht* über sie gegangen wird (`NachrichtenRepository`, `NachrichtendetailRepository`),
+> und einmal als Kommentar zur jOOQ-Codegenerierung in `backend/pom.xml`. Die generierte Klasse
+> `Messagemandantid` wird von handgeschriebenem Code nirgends referenziert. Die View bleibt im
+> Schema und in der Codegenerierung; sie ist nur nicht der Weg.
+
 `ProjectMandant` ist eine n:m-Beziehung. Ein Projekt kann mehreren Mandanten zugeordnet sein.
 
 ### 3.2 Kerntabellen
