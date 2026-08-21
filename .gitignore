@@ -135,3 +135,11 @@ scripts/messung-prozessansicht-frei/ergebnis/*.txt
 # eingecheckt, die Rohausgaben nicht. Sie tragen MessagePropertyValue und damit
 # Belegnummern und Partnernamen Dritter. (Regel G1)
 scripts/messung-property-suche/ergebnis/
+
+# ─── E39 — die Kandidatendatei zur Index-Sollliste ───────────────────────────
+# Der Erzeuger (scripts/indizes-kandidat.ps1) schreibt NIE in die Sollliste,
+# sondern nur hierhin; nachgezogen wird von Hand ueber den Diff. Die Datei ist
+# damit ein Zwischenstand und kein Stand: Laege sie im Repository, waere beim
+# naechsten Lesen nicht mehr erkennbar, welche der beiden Listen gilt. Der
+# Erzeuger selbst und sein Statement sind eingecheckt.
+backend/src/test/resources/indizes-sollliste.kandidat

@@ -279,6 +279,17 @@ markiert, und ein jOOQ-`ExecuteListener` weist auf dem Lese-`DSLContext` alles a
 
 **S2 — Flyway verwaltet ausschließlich `overlord_monitor`.**
 
+> **Jede Migration, die einen Index anlegt, ändert oder entfernt, zieht die Sollliste
+> `backend/src/test/resources/indizes-sollliste.txt` nach — von Hand, über den Diff der
+> Kandidatendatei** *(neu am 21.08.2026, E39)*.
+>
+> Erzeugt wird die Kandidatendatei mit `powershell.exe -NoProfile -File
+> scripts\indizes-kandidat.ps1`; sie liegt als `indizes-sollliste.kandidat` neben der Sollliste
+> und ist von Git ignoriert. **Der Erzeuger schreibt niemals in die Sollliste selbst.** Ein
+> Erzeuger, der sie überschreibt, macht `IndexbestandDbIT` zum Gummistempel — rot, Befehl laufen
+> lassen, grün, und niemand hat hingesehen. Der Test lebt davon, dass das Nachziehen ein
+> bewusster Akt ist.
+
 **S3 — Ein Prüflauf schreibt nicht in den Arbeitsbaum** *(neu am 19.08.2026)*.
 
 > 1. **Ein Prüflauf hat keine Schreibberechtigung auf den Arbeitsbaum.** Was er findet, wird

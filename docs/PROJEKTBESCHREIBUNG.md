@@ -189,6 +189,14 @@ er steht auf `ProcessID`, nicht auf `ProjectID`. Bestand, kein Tippfehler dieser
 > Quelle. Weicht sie von der Sollliste ab, gilt die Sollliste, und weicht die Sollliste von der
 > Datenbank ab, ist der Test rot.
 
+> **Und warum es die Sollliste zusätzlich zu `Indexes.java` gibt** (E40, 21.08.2026): Die
+> generierte
+> [`Indexes.java`](../backend/src/main/generated-java/de/kraftwerkone/overlord/monitor/jooq/glassfish/Indexes.java)
+> trägt den vollständigen Bestand des Quellschemas seit Schritt 2 — mehr Indizes als die
+> Sollliste, und ohne Zutun aktuell. Sie leistet trotzdem nichts für diese Frage: **Sie zieht bei
+> jedem Codegen still nach und kann deshalb nie rot werden.** Sie ist ein Abbild, die Sollliste
+> ist die geprüfte Fassung. Die Doppelung ist der Zweck und kein Versehen.
+
 > **Korrigiert 20.08.2026.** Hier standen **drei** Indizes, es sind **acht** — darunter **zwei
 > eigenständige auf `ProcessID`** (`Message_ProcessFK` und `ProejctIDIDX`).
 >

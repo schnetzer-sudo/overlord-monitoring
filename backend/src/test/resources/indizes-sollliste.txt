@@ -1,7 +1,9 @@
 # Sollliste der Datenbank-Indizes
 #
-# Erhoben am 21.08.2026 aus information_schema.STATISTICS der Testkopie.
-# Quelle ist die Datenbank, nicht ein Dokument.
+# Erhoben am 21.08.2026 aus information_schema.STATISTICS und information_schema.TABLES
+# der jeweils verbundenen Datenbank — bei dieser Erhebung der Testkopie (MariaDB 10.6),
+# ueber die beiden Schemata hinter OVERLORD_DB_GLASSFISH_SCHEMA und
+# OVERLORD_DB_MONITOR_SCHEMA. Quelle ist die Datenbank, nicht ein Dokument.
 #
 # Bewacht von IndexbestandDbIT (@Tag("db")), und zwar in BEIDE Richtungen:
 #
@@ -17,6 +19,50 @@
 # sich geaendert hat: die Datenbank oder diese Liste. Es wird kein Index angelegt, geaendert
 # oder geloescht, um einen Testlauf gruen zu bekommen — ein unerwarteter Befund ist ein
 # Befund und keine Aufgabe.
+#
+# ── Nachziehen — der Erzeuger schreibt nie in diese Datei (E39) ──────────────────────────
+#
+# DER ERZEUGER SCHREIBT NIEMALS IN DIESE DATEI. Er schreibt daneben:
+#
+#     powershell.exe -NoProfile -File scripts\indizes-kandidat.ps1
+#
+# Das legt backend/src/test/resources/indizes-sollliste.kandidat an — gleicher Ordner,
+# gleiches Format, nur die Saetze ohne diesen Kopf — und zeigt am Ende den Unterschied zu
+# dieser Datei an. Uebernommen wird von Hand, Zeile fuer Zeile, im Branch. Das Statement
+# dahinter steht in scripts/indizes-kandidat.sql und fasst nur information_schema an
+# (Regel S1). Die Kandidatendatei ist eine Wegwerfdatei und von Git ignoriert.
+#
+# Der Grund, und er ist der ganze Punkt:
+#
+#     Ein Erzeuger, der die Sollliste ueberschreibt, macht den Test zum Gummistempel:
+#     rot, Befehl laufen lassen, gruen — und niemand hat hingesehen. Der Test lebt
+#     davon, dass das Nachziehen ein bewusster Akt ist.
+#
+# WELCHE Quelltabelle bewacht wird, entscheidet der Erzeuger nicht: Er liest die
+# tabelle;glassfish;-Zeilen von hier und erhebt genau die. Fuer das eigene Schema erhebt
+# er alle Basistabellen — die Begruendung dieser Ungleichbehandlung steht bei den beiden
+# Schema-Bloecken unten.
+#
+# Derselbe Satz als Regel in DEVELOPMENT_GUIDELINES.md, Abschnitt 4.2 bei S2.
+#
+# ── Warum es diese Datei zusaetzlich zu Indexes.java gibt (E40) ──────────────────────────
+#
+# backend/src/main/generated-java/de/kraftwerkone/overlord/monitor/jooq/glassfish/Indexes.java
+# traegt den vollstaendigen Indexbestand seit Schritt 2 — mehr Indizes als diese Datei, und
+# ohne Zutun aktuell. Sie ersetzt diese Datei trotzdem nicht:
+#
+#     Indexes.java ZIEHT BEI JEDEM CODEGEN STILL NACH UND KANN DESHALB NIE ROT WERDEN.
+#
+# Sie ist ein Abbild des Bestands, kein Sollwert. Faellt ein Index weg oder kommt einer
+# hinzu, steht das beim naechsten Codegen ohne Zutun in ihr, und niemand sieht es. Diese
+# Datei ist die gepruefte Fassung: Sie aendert sich nur, wenn ein Mensch sie aendert. Die
+# Doppelung ist der Zweck und kein Versehen.
+#
+# ── Zum Umfang, damit es spaeter niemand fuer heimlich gewachsenen haelt ─────────────────
+#
+# E37 hatte den Schnitt "Ein Test, eine Sollliste, zwei Dokumentationsstellen. Sonst
+# nichts." Die Kandidatendatei (E39) und der Hinweis auf Indexes.java (E40) erweitern ihn.
+# BEWUSST, entschieden am 21.08.2026.
 #
 # ── Format ──────────────────────────────────────────────────────────────────────────────
 #

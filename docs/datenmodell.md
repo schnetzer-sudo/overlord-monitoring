@@ -111,6 +111,14 @@ Backend als `MessageLastUpdate + MessageTimeout` berechnet.
 > Festlegung als **Ausnahme für Indizes** in der Präambel von
 > [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md).
 
+> **Und warum es die Sollliste zusätzlich zu `Indexes.java` gibt** (E40, 21.08.2026): Die
+> generierte
+> [`Indexes.java`](../backend/src/main/generated-java/de/kraftwerkone/overlord/monitor/jooq/glassfish/Indexes.java)
+> trägt den vollständigen Bestand des Quellschemas seit Schritt 2 — mehr Indizes als die
+> Sollliste, und ohne Zutun aktuell. Sie leistet trotzdem nichts für diese Frage: **Sie zieht bei
+> jedem Codegen still nach und kann deshalb nie rot werden.** Sie ist ein Abbild, die Sollliste
+> ist die geprüfte Fassung. Die Doppelung ist der Zweck und kein Versehen.
+
 > **Korrigiert 20.08.2026.** Hier standen **fünf** Indizes, es sind **acht**. Nachgetragen sind
 > `PRIMARY`, **`Message_ProcessFK`** und **`ProejctIDIDX`** — die beiden letzten sind
 > **eigenständige Indizes auf `ProcessID`**, und dass sie fehlten, hat gewirkt: Ein Arbeitsauftrag
