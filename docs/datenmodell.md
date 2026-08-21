@@ -99,6 +99,18 @@ Backend als `MessageLastUpdate + MessageTimeout` berechnet.
 | `SourceMessageIDIDX` | `SourceMessageID` |
 | `TargetMessageIDIDX` | `TargetMessageID` |
 
+> **Bewacht seit dem 21.08.2026 (E37).** **Verbindlich für die Indexlisten dieses Abschnitts ist die
+> Datenbank**, nicht dieser Text. Die Sollliste liegt in
+> [`backend/src/test/resources/indizes-sollliste.txt`](../backend/src/test/resources/indizes-sollliste.txt)
+> — aus `information_schema.STATISTICS` erhoben, nicht übernommen — und wird von
+> **`IndexbestandDbIT`** bewacht, **in beide Richtungen**: Der Test wird auch dann rot, wenn die
+> Datenbank einen Index trägt, den die Sollliste **nicht** führt. Das ist der Fall, der hier
+> eingetreten war; in der Datenbank hatte nichts gefehlt.
+>
+> Diese Beschreibung bleibt stehen und bleibt nützlich — sie ist nur nicht die Quelle. Dieselbe
+> Festlegung als **Ausnahme für Indizes** in der Präambel von
+> [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md).
+
 > **Korrigiert 20.08.2026.** Hier standen **fünf** Indizes, es sind **acht**. Nachgetragen sind
 > `PRIMARY`, **`Message_ProcessFK`** und **`ProejctIDIDX`** — die beiden letzten sind
 > **eigenständige Indizes auf `ProcessID`**, und dass sie fehlten, hat gewirkt: Ein Arbeitsauftrag

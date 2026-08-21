@@ -1,0 +1,170 @@
+# Sollliste der Datenbank-Indizes
+#
+# Erhoben am 21.08.2026 aus information_schema.STATISTICS der Testkopie.
+# Quelle ist die Datenbank, nicht ein Dokument.
+#
+# Bewacht von IndexbestandDbIT (@Tag("db")), und zwar in BEIDE Richtungen:
+#
+#   ein Eintrag dieser Liste fehlt in der Datenbank    -> rot
+#   die Datenbank traegt einen Index, der hier fehlt   -> rot
+#
+# Die zweite Richtung ist der Grund fuer diese Datei. Am 20.08.2026 fehlte nichts in der
+# Datenbank — es fehlten fuenf Eintraege in der Dokumentation, achtzehn Tage lang, und die
+# falsche Liste ist in einen Arbeitsauftrag eingegangen. Ein Test, der nur die erste
+# Richtung prueft, waere die ganze Zeit gruen geblieben.
+#
+# Diese Datei wird nicht passend gemacht. Schlaegt der Test an, ist zuerst zu klaeren, WER
+# sich geaendert hat: die Datenbank oder diese Liste. Es wird kein Index angelegt, geaendert
+# oder geloescht, um einen Testlauf gruen zu bekommen — ein unerwarteter Befund ist ein
+# Befund und keine Aufgabe.
+#
+# ── Format ──────────────────────────────────────────────────────────────────────────────
+#
+# Zwei Satzarten, mit Semikolon getrennt, ohne Anfuehrungszeichen. Leere Zeilen und Zeilen,
+# die mit einer Raute beginnen, sind Kommentar. Bewusst schlichter Text: keine
+# Serialisierungsbibliothek, damit die Datei in jedem Diff lesbar bleibt.
+#
+#   tabelle;<schema>;<Tabelle>
+#       Diese Tabelle steht unter Bewachung. Nur fuer die hier gefuehrten Tabellen prueft
+#       der Test die Gegenrichtung.
+#
+#   index;<schema>;<Tabelle>;<Indexname>;<Spalte1,Spalte2,...>;<eindeutig: ja|nein>
+#       Spalten in der Reihenfolge von SEQ_IN_INDEX. Eindeutig heisst NON_UNIQUE = 0;
+#       PRIMARY ist immer eindeutig.
+#
+# <schema> ist ein logischer Name, kein Schemaname: glassfish ist das Quellschema, monitor
+# das eigene. Die tatsaechlichen Namen kommen aus den Umgebungsvariablen
+# (DatabaseProperties). Die Liste gilt damit auch dort, wo die Schemata anders heissen als
+# in der Testkopie.
+#
+# ── Namen ───────────────────────────────────────────────────────────────────────────────
+#
+# Alle Namen sind woertlich uebernommen. Zwei tragen einen Buchstabendreher des Altsystems:
+#
+#   Message.ProejctIDIDX                            — und er steht auf ProcessID, nicht auf
+#                                                     ProjectID
+#   MessageBAMMandant.MandantIDSortIndexBAMTYpeIDX
+#
+# Beide werden NICHT korrigiert. Sie sind die Namen der Objekte in der Datenbank.
+
+# ════════════════════════════════════════════════════════════════════════════════════════
+# glassfish — Quellschema, ausschliesslich lesend
+# ════════════════════════════════════════════════════════════════════════════════════════
+#
+# Aufgenommen sind die dreizehn Tabellen, die in Anwendungscode vorkommen. Das Quellschema
+# gehoert uns nicht; seine uebrigen zehn Basistabellen und seine zwei Views werden deshalb
+# nicht bewacht. Kommt eine weitere Tabelle in Anwendungscode, gehoert sie hierher — und
+# nach Regel L8 ohnehin vorher erhoben.
+
+tabelle;glassfish;Mandant
+tabelle;glassfish;Message
+tabelle;glassfish;MessageAction
+tabelle;glassfish;MessageBAM
+tabelle;glassfish;MessageBAMMandant
+tabelle;glassfish;MessageBAMType
+tabelle;glassfish;MessageProperty
+tabelle;glassfish;Process
+tabelle;glassfish;Project
+tabelle;glassfish;ProjectMandant
+tabelle;glassfish;Service
+tabelle;glassfish;SOS
+tabelle;glassfish;SOSAction
+
+index;glassfish;Mandant;PRIMARY;MandantID;ja
+
+index;glassfish;Message;MessageLastUpdateIDX;MessageLastUpdate;nein
+index;glassfish;Message;MessageLastUpdateProcessMessageIDX;MessageLastUpdate,ProcessID,MessageID;nein
+index;glassfish;Message;MessageStatusIDX;MessageStatus;nein
+index;glassfish;Message;Message_ProcessFK;ProcessID;nein
+index;glassfish;Message;PRIMARY;MessageID;ja
+index;glassfish;Message;ProejctIDIDX;ProcessID;nein
+index;glassfish;Message;SourceMessageIDIDX;SourceMessageID;nein
+index;glassfish;Message;TargetMessageIDIDX;TargetMessageID;nein
+
+index;glassfish;MessageAction;MessageAction_MessageFK;MessageID;nein
+index;glassfish;MessageAction;PRIMARY;MessageID,MessageActionID;ja
+
+index;glassfish;MessageBAM;MessageBAM_BAMValue;MessageBAMType,MessageBAMValue;nein
+index;glassfish;MessageBAM;MessageBAM_BAMValueOnly;MessageBAMValue;nein
+index;glassfish;MessageBAM;MessageBAM_MessageFK;MessageID;nein
+index;glassfish;MessageBAM;MessageBAM_MessageID;MessageID,MessageBAMType;nein
+index;glassfish;MessageBAM;PRIMARY;MessageID,MessageBAMType,MessageBAMValue;ja
+
+index;glassfish;MessageBAMMandant;MandantIDSortIndexBAMTYpeIDX;MandantID,MessageBAMTypeSortIndex,MessageBAMType;nein
+index;glassfish;MessageBAMMandant;PRIMARY;MessageBAMType,MandantID;ja
+
+index;glassfish;MessageBAMType;PRIMARY;MessageBAMType;ja
+
+index;glassfish;MessageProperty;MessagePropertyNameIDX;MessagePropertyName;nein
+index;glassfish;MessageProperty;MessagePropertyNameValueIDX;MessagePropertyName,MessagePropertyValue;nein
+index;glassfish;MessageProperty;MessagePropertyValueIDX;MessagePropertyValue;nein
+index;glassfish;MessageProperty;MessageProperty_MessageActionFK;MessageID,MessageActionID;nein
+index;glassfish;MessageProperty;MessageProperty_MessageFK;MessageID;nein
+index;glassfish;MessageProperty;PRIMARY;MessageID,MessagePropertyName,MessageActionID;ja
+
+index;glassfish;Process;PRIMARY;ProcessID;ja
+index;glassfish;Process;Process_ProjectFK;ProjectID;nein
+
+index;glassfish;Project;PRIMARY;ProjectID;ja
+
+index;glassfish;ProjectMandant;PRIMARY;ProjectID,MandantID;ja
+index;glassfish;ProjectMandant;ProjectMandant_Mandant_idx;MandantID;nein
+
+index;glassfish;Service;PRIMARY;ServiceID;ja
+index;glassfish;Service;Service_ServiceTypeFK;ServiceTypeID;nein
+
+index;glassfish;SOS;PRIMARY;SOSID;ja
+index;glassfish;SOS;SOS_ProcessFK;ProcessID;nein
+
+index;glassfish;SOSAction;PRIMARY;SOSID,SOSActionID;ja
+index;glassfish;SOSAction;SOSAction_ServiceFK;ServiceID;nein
+index;glassfish;SOSAction;SOSAction_SOSFK;SOSID;nein
+
+# ════════════════════════════════════════════════════════════════════════════════════════
+# monitor — eigenes Schema, von Flyway verwaltet
+# ════════════════════════════════════════════════════════════════════════════════════════
+#
+# Hier stehen ALLE Basistabellen des Schemas, nicht nur die von Anwendungscode benutzten.
+# Das Schema gehoert uns: Was Flyway darin anlegt, gehoert bewacht. IndexbestandDbIT prueft
+# deshalb zusaetzlich, dass diese Tabellenliste dem Bestand des Schemas entspricht — sonst
+# entkaeme eine neue Migration der Gegenrichtung schon dadurch, dass ihre Tabelle hier
+# nicht vorkommt.
+#
+# flyway_schema_history legt Flyway selbst an, nicht eine Migration. Sie steht trotzdem
+# hier: Sie ist eine Tabelle des Schemas, und die Gegenrichtung kennt keine Ausnahmen.
+
+tabelle;monitor;app_user
+tabelle;monitor;app_user_mandant
+tabelle;monitor;audit_log
+tabelle;monitor;bam_sollaenge
+tabelle;monitor;bam_spalte
+tabelle;monitor;flyway_schema_history
+tabelle;monitor;process_catalog
+tabelle;monitor;SPRING_SESSION
+tabelle;monitor;SPRING_SESSION_ATTRIBUTES
+
+index;monitor;app_user;PRIMARY;id;ja
+index;monitor;app_user;uq_app_user_username;username;ja
+
+index;monitor;app_user_mandant;PRIMARY;user_id,mandant_id;ja
+
+index;monitor;audit_log;idx_audit_actor;actor_username,occurred_at;nein
+index;monitor;audit_log;idx_audit_occurred;occurred_at;nein
+index;monitor;audit_log;idx_audit_type;event_type,occurred_at;nein
+index;monitor;audit_log;PRIMARY;id;ja
+
+index;monitor;bam_sollaenge;PRIMARY;mandant_id,message_bam_type;ja
+
+index;monitor;bam_spalte;PRIMARY;mandant_id,position;ja
+
+index;monitor;flyway_schema_history;flyway_schema_history_s_idx;success;nein
+index;monitor;flyway_schema_history;PRIMARY;installed_rank;ja
+
+index;monitor;process_catalog;PRIMARY;process_id;ja
+
+index;monitor;SPRING_SESSION;PRIMARY;PRIMARY_ID;ja
+index;monitor;SPRING_SESSION;SPRING_SESSION_IX1;SESSION_ID;ja
+index;monitor;SPRING_SESSION;SPRING_SESSION_IX2;EXPIRY_TIME;nein
+index;monitor;SPRING_SESSION;SPRING_SESSION_IX3;PRINCIPAL_NAME;nein
+
+index;monitor;SPRING_SESSION_ATTRIBUTES;PRIMARY;SESSION_PRIMARY_ID,ATTRIBUTE_NAME;ja

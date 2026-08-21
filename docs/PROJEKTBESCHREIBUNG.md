@@ -8,8 +8,14 @@ Bei Widersprüchen zwischen dieser Datei und einer Annahme im Code gilt diese Da
 > während acht existierten und die Messung seit dem 01.08.2026 vorlag — und die falsche Liste ist
 > in einen Arbeitsauftrag eingegangen. Ein Test gegen `information_schema.STATISTICS` bewacht die
 > Listen künftig **in beide Richtungen**: Er wird auch bei undokumentierten Indizes rot, denn genau
-> das war der eingetretene Fall. **Der Test ist am 20.08.2026 entschieden und noch nicht gebaut**
-> (E37); bis dahin ist diese Ausnahme eine Absichtserklärung und keine Zusage.
+> das war der eingetretene Fall. **Gebaut und in Kraft seit dem 21.08.2026** (E37): Der Test heißt
+> `IndexbestandDbIT`, seine Sollliste liegt in
+> [`backend/src/test/resources/indizes-sollliste.txt`](../backend/src/test/resources/indizes-sollliste.txt)
+> und ist aus `information_schema.STATISTICS` erhoben, nicht aus einem Dokument übernommen.
+>
+> *Hier stand bis zum 21.08.2026:* „**Der Test ist am 20.08.2026 entschieden und noch nicht gebaut**
+> (E37); bis dahin ist diese Ausnahme eine Absichtserklärung und keine Zusage." Der Satz ist
+> zurückgenommen — die Bewachung wird geleistet und nicht mehr nur angekündigt.
 
 **Korrektur 01.08.2026.** Annahme A1 (Abschnitt 11) nannte „Daten bis Ende 2025" und widersprach
 damit dem Datenstand in Abschnitt 8. Messung M0 gegen die Testkopie entscheidet zugunsten von
@@ -170,6 +176,18 @@ Wichtig:
 
 Der Indexname `ProejctIDIDX` ist im Altsystem so geschrieben — Buchstabendreher inbegriffen — und
 er steht auf `ProcessID`, nicht auf `ProjectID`. Bestand, kein Tippfehler dieser Datei.
+
+> **Bewacht seit dem 21.08.2026 (E37).** **Verbindlich für die Indexlisten dieses Abschnitts ist die
+> Datenbank**, nicht dieser Text — siehe die **Ausnahme für Indizes** in der Präambel. Die Sollliste
+> liegt in
+> [`backend/src/test/resources/indizes-sollliste.txt`](../backend/src/test/resources/indizes-sollliste.txt)
+> und wird von **`IndexbestandDbIT`** bewacht, **in beide Richtungen**: Der Test wird auch dann rot,
+> wenn die Datenbank einen Index trägt, den die Sollliste **nicht** führt. Genau dieser Fall war
+> eingetreten — in der Datenbank fehlte nichts.
+>
+> Die Beschreibung hier bleibt trotzdem stehen und bleibt nützlich; sie ist nur nicht mehr die
+> Quelle. Weicht sie von der Sollliste ab, gilt die Sollliste, und weicht die Sollliste von der
+> Datenbank ab, ist der Test rot.
 
 > **Korrigiert 20.08.2026.** Hier standen **drei** Indizes, es sind **acht** — darunter **zwei
 > eigenständige auf `ProcessID`** (`Message_ProcessFK` und `ProejctIDIDX`).
