@@ -2438,6 +2438,22 @@ nicht.
 Quellsystem), `SourceMessageIDIDX` und `TargetMessageIDIDX`. Die beiden letzten sind für die
 Verkettung in Schritt 6 einschlägig. `ProejctIDIDX` wurde in M3 (b) tatsächlich gewählt.
 
+> **Der Summensatz widerlegt sich im eigenen Absatz — benannt am 21.08.2026 (E37).** Er nennt
+> **sechs** plus `PRIMARY`; die Aufzählung darunter zählt **sieben** plus `PRIMARY` auf — die drei
+> aus `datenmodell.md` §3 und die vier zusätzlichen —, insgesamt also **acht**. **Die Aufzählung
+> bleibt unangetastet: Sie war richtig**, und die Indextabelle in M1 führt dieselben acht.
+>
+> **Auftrag E37 hat sich am 21.08.2026 auf diese Stelle berufen** — „M1 führt alle acht". Das
+> trifft auf die Aufzählung und auf die Indextabelle zu, auf den Summensatz nicht. Die Sechs ist von
+> hier aus weitergewandert: [`annahmen-korrekturen.md`](annahmen-korrekturen.md) trägt sie im
+> Eintrag vom 01.08.2026, ebenfalls mit datiertem Kasten.
+>
+> **Korrigiert wird nur der Summensatz, und nur hier daneben.** Eine Messdatei gehört der Runde,
+> die sie geschrieben hat; sie wird nicht nachträglich glattgezogen. Verbindlich ist ab jetzt die
+> Sollliste in
+> [`backend/src/test/resources/indizes-sollliste.txt`](../backend/src/test/resources/indizes-sollliste.txt),
+> bewacht von **`IndexbestandDbIT`**.
+
 ### G. Die Statistiken von `information_schema` sind veraltet
 
 | Kennzahl | `information_schema` | gezählt |

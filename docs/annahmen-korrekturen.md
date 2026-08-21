@@ -104,6 +104,25 @@ Durchschnitt, den es an keinem einzigen Tag gab.
 - Die Zählstände von `information_schema` sind veraltet (`Message` 3.560.486 gegenüber 3.341.519
   gezählt).
 
+> **Nachgezogen 21.08.2026 (E37).** Der Satz „**`Message` hat sechs Indizes**, `datenmodell.md` §3
+> nennt drei" ist an **beiden** Hälften überholt, und zwar aus zwei verschiedenen Gründen — beide
+> Fälle liegen hier gleichzeitig vor:
+>
+> - **„sechs Indizes" ist ein überholter Zählstand.** `Message` trägt **acht**: sieben plus
+>   `PRIMARY`. Dieselbe Sechs steht im Summensatz von
+>   [`messungen-schritt4.md`](messungen-schritt4.md), Auffälligkeit **F** — die vier Punkte dieser
+>   Liste fassen die dortigen Auffälligkeiten C, D, F und G zusammen —, und dieser Summensatz
+>   widerspricht der Aufzählung in seinem eigenen Absatz. Die Indextabelle derselben Messung
+>   (**M1**, 01.08.2026) führt alle acht. Der Kasten dazu steht dort.
+> - **„`datenmodell.md` §3 nennt drei" ist kein Zählstand mehr, sondern ein falsch gewordener
+>   Verweis.** §3 nennt seit dem **20.08.2026** acht, mit Namen und Spalten. Der Satz beschreibt
+>   eine Abweichung, die es nicht mehr gibt — sie lag vom 01.08.2026 bis zum 20.08.2026 offen.
+>
+> **Verbindlich ist ab jetzt keine der beiden Prosafassungen**, sondern die Sollliste in
+> [`backend/src/test/resources/indizes-sollliste.txt`](../backend/src/test/resources/indizes-sollliste.txt),
+> bewacht von **`IndexbestandDbIT`**. Der Eintrag oben bleibt stehen: Er ist der Ort, an dem die
+> Abweichung zuerst festgehalten wurde, und er belegt, wie lange sie offen lag.
+
 ---
 
 ## Erhebung 07.08.2026 (vor Schritt 5)
