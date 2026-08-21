@@ -298,6 +298,28 @@ die Erhebung, die Regel L8 für diese Tabelle nachgeholt hat. M32 hat die drei A
 darüber **bestätigt**: Primärschlüssel, `varchar(70)` und ein eigener Index auf dem Wert; der Index
 ist ein **Vollindex** über 70 Zeichen und kein Präfixindex.
 
+> **Nachgetragen 21.08.2026 (E37).** Der Satz „M32 hat die drei Angaben der Zeile darüber
+> **bestätigt**" ist wahr und hat trotzdem geschadet: Er gibt einer Liste aus **zwei** Indizes das
+> Ansehen einer Erhebung über **fünf**.
+>
+> - Die Bestätigung bezog sich auf drei **Angaben** — Primärschlüssel, `varchar(70)`, eigener Index
+>   auf dem Wert — und **nicht** auf die **Anzahl** der Indizes.
+> - M32 hat **fünf** erhoben, jeden mit Spalten, `SUB_PART` und Kardinalität: `PRIMARY`,
+>   `MessageBAM_MessageID`, `MessageBAM_BAMValue`, `MessageBAM_MessageFK` und
+>   `MessageBAM_BAMValueOnly`. Die Zeile darüber nennt **zwei**.
+> - **M32 hat nichts verloren.** Die zweizeilige Fassung ist älter als die Messung: Sie steht hier
+>   und in [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §3.2 seit dem **24.07.2026**, also
+>   achtzehn Tage vor M32 vom **11.08.2026**. Nicht die Messung war unvollständig, sondern ihre
+>   Übernahme.
+> - **Derselbe Vorgang wie bei `Message`** weiter oben in diesem Abschnitt — mit dem Unterschied,
+>   auf den es hier ankommt: Bei `Message` hat die Übernahme **nie** stattgefunden, die Liste blieb
+>   sichtbar unbelegt. Hier hat sie **stattgefunden** und die unvollständige Liste dabei
+>   **festgeschrieben**. Wer den Bestätigungssatz liest, hält die zwei Zeilen seither für geprüft.
+>
+> Der Satz bleibt stehen, er ist nicht falsch. Verbindlich für die Anzahl ist ohnehin die Sollliste
+> in
+> [`backend/src/test/resources/indizes-sollliste.txt`](../backend/src/test/resources/indizes-sollliste.txt).
+
 ⚠️ **Hartes Ergebnislimit und Mindestlänge des Suchbegriffs** sind Pflicht. Werte wie `050` kommen
 millionenfach vor. (Regel L5) — **gemessen unterlegt seit M33:** Das Maximum liegt bei **234.159**
 Treffern für einen einzigen Wert, das 99. Perzentil bei 75, der Median bei 1.
