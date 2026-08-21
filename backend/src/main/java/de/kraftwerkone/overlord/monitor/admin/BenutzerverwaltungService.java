@@ -21,7 +21,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Auflisten, sperren, deaktivieren, Rolle aendern, Mandanten pflegen, Passwort zuruecksetzen —
@@ -33,10 +32,11 @@ import org.springframework.transaction.annotation.Transactional;
  * NUTZER_GEAENDERT} verwaessert — und dann ist es bei einem Vorfall nicht mehr lesbar.
  *
  * <p><b>Jeder der fuenf schreibenden Vorgaenge verwirft alle Sitzungen des betroffenen Kontos</b>
- * (E5) — eine Regel, keine Fallunterscheidung. Ohne sie wirkte eine Sperre erst beim naechsten
- * Anmelden, und die Zusage, mit der dieses Projekt JWT abgelehnt hat, waere nicht eingeloest. Die
- * Zahl verworfener Sitzungen steht im Detail des ausloesenden Ereignisses und bekommt keine eigene
- * Art (E15).
+ * (E5) — eine Regel, keine Fallunterscheidung, und <b>immer erst, nachdem die Aenderung
+ * festgeschrieben ist</b> (Begruendung an {@link #abschluss}). Ohne sie wirkte eine Sperre erst
+ * beim naechsten Anmelden, und die Zusage, mit der dieses Projekt JWT abgelehnt hat, waere nicht
+ * eingeloest. Die Zahl verworfener Sitzungen steht im Detail des ausloesenden Ereignisses und
+ * bekommt keine eigene Art (E15).
  *
  * <p><b>Die Rollengrenze steht in {@code config/SecurityConfig}</b> ({@code /api/admin/**} verlangt
  * {@code ADMIN}) und nicht als Annotation hier — dieselbe Entscheidung wie bei {@link
@@ -87,7 +87,6 @@ public class BenutzerverwaltungService {
   // ───────────────────────────────────────────────────────────────────────────
 
   /** Sperren und Entsperren — ein Endpunkt mit Zustand, zwei Ereignisarten. */
-  @Transactional
   public NutzerzeileResponse setzeSperre(
       AngemeldeterNutzer admin, long id, boolean gesperrt, String ip) {
     KontoZeile ziel = konto(id);
@@ -101,14 +100,11 @@ public class BenutzerverwaltungService {
         admin,
         ziel,
         gesperrt ? AuditEventType.SPERRE_DURCH_ADMIN : AuditEventType.ENTSPERRT_DURCH_ADMIN,
-        gesperrt
-            ? "gesperrt"
-            : "entsperrt, dabei auch eine laufende Zeitsperre und der Fehlversuchszaehler",
+        gesperrt ? "gesperrt" : "entsperrt; Zeitsperre und Fehlversuchszaehler zurueckgesetzt",
         ip);
   }
 
   /** Deaktivieren und Reaktivieren. <b>Es gibt kein Loeschen</b> (E8). */
-  @Transactional
   public NutzerzeileResponse setzeAktiv(
       AngemeldeterNutzer admin, long id, boolean aktiv, String ip) {
     KontoZeile ziel = konto(id);
@@ -125,7 +121,6 @@ public class BenutzerverwaltungService {
   }
 
   /** Rollenwechsel. Die Herabstufung ist der Fall mit den Bedingungen (E11, E12). */
-  @Transactional
   public NutzerzeileResponse setzeRolle(
       AngemeldeterNutzer admin, long id, String rolleText, String ip) {
     KontoZeile ziel = konto(id);
@@ -165,7 +160,6 @@ public class BenutzerverwaltungService {
    * <p><b>Eine unbekannte Kennung ergibt {@code 404}</b>, wie beim Anlegen: Ein ADMIN kennt die
    * Mandantenliste ohnehin, hier ist also nichts zu verbergen.
    */
-  @Transactional
   public NutzerzeileResponse setzeMandanten(
       AngemeldeterNutzer admin, long id, List<String> mandantIds, String ip) {
     KontoZeile ziel = konto(id);
@@ -208,7 +202,6 @@ public class BenutzerverwaltungService {
    * /api/auth/password}; wer es hier auf sein eigenes Konto anwendet, wirft sich zwar aus allen
    * Sitzungen (E5), sperrt sich aber nicht aus — er kennt das eben getippte Passwort.
    */
-  @Transactional
   public NutzerzeileResponse setzePasswort(
       AngemeldeterNutzer admin, long id, String einmalpasswort, String ip) {
     KontoZeile ziel = konto(id);
@@ -246,6 +239,29 @@ public class BenutzerverwaltungService {
    * <p>Er steht an einer Stelle, weil E5 <b>eine Regel</b> ist. Waere der Entzug in jedem der fuenf
    * Vorgaenge einzeln aufgerufen, waere die Regel eine Aufzaehlung — und eine Aufzaehlung verliert
    * beim sechsten Vorgang einen Eintrag.
+   *
+   * <p><b>Der Aufrufer hat seine Aenderung bereits festgeschrieben, wenn er hier ankommt — und das
+   * ist der Grund, weshalb keine der fuenf Methoden {@code @Transactional} traegt.</b> Die
+   * Reihenfolge ist am 21.08.2026 umgedreht worden, nachdem eine Nachpruefung das Fenster gefunden
+   * hat:
+   *
+   * <p>Lief der Entzug <i>innerhalb</i> der offenen Transaktion, verwarf er die Sitzungen sofort —
+   * {@code JdbcIndexedSessionRepository.deleteById} laeuft ueber eine eigene Transaktion mit {@code
+   * PROPAGATION_REQUIRES_NEW} und committet also unabhaengig —, waehrend die Sperre selbst noch
+   * <b>uncommitted</b> war. In diesem Fenster sieht die Anmeldung auf einer anderen Verbindung
+   * weiterhin {@code locked_by_admin = 0}: Der eben ausgesperrte Nutzer konnte sich neu anmelden
+   * und bekam eine Sitzung, <b>die kein Entzug mehr traf</b> — sie entstand nach ihm. Auf der
+   * Testkopie dauert ein {@code COMMIT} zehn bis fuenfundzwanzig Sekunden; das Fenster ist keine
+   * theoretische Groesse.
+   *
+   * <p>Jetzt ist es umgekehrt: Wer sich im Fenster zwischen Festschreiben und Entzug anmeldet, wird
+   * bereits abgewiesen — die Sperre steht. Uebrig bleibt nur, dass eine <i>bestehende</i> Sitzung
+   * einen Wimpernschlag laenger lebt, und die faellt unmittelbar danach.
+   *
+   * <p>Die einzelnen Schreibwege brauchen dafuer keine Transaktion: Vier sind ein einzelnes {@code
+   * UPDATE} und damit von selbst atomar. Der fuenfte — die Mandantenmenge — ist {@code DELETE} plus
+   * {@code INSERT}s und traegt seine Transaktion in {@code AppUserRepository.ersetzeMandanten}, wo
+   * sie hingehoert und wo sie geschlossen ist, bevor der Entzug beginnt.
    */
   private NutzerzeileResponse abschluss(
       AngemeldeterNutzer admin, KontoZeile ziel, AuditEventType typ, String was, String ip) {

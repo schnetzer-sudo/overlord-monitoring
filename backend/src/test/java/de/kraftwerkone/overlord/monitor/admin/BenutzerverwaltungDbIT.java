@@ -353,6 +353,27 @@ class BenutzerverwaltungDbIT extends SicherheitsTestbasis {
     assertThat(antwort.<String>json("$.title")).isEqualTo("Passwort zu kurz");
   }
 
+  /**
+   * <b>Der leere Rumpf darf nicht still „false" bedeuten.</b> {@code locked} und {@code active}
+   * sind primitive {@code boolean}; unter Jackson 2 waere ein fehlendes Feld lautlos zu {@code
+   * false} geworden — ein {@code PUT} mit {@code &#123;&#125;} haette dann entsperrt
+   * beziehungsweise deaktiviert, ohne dass es jemand so gemeint hat. Jackson 3 lehnt das ab, und
+   * dieser Test haelt fest, dass das so bleibt: Das Projekt laeuft bewusst nicht auf Mustern der
+   * Vorgaengergeneration.
+   */
+  @Test
+  @DisplayName("Ein leerer Rumpf bedeutet nicht still false, sondern 400")
+  void leerer_rumpf_wird_abgelehnt() throws Exception {
+    Antwort sperre = alsAdmin.aendere("/api/admin/users/" + kundeId + "/lock", "{}");
+    Antwort aktiv = alsAdmin.aendere("/api/admin/users/" + kundeId + "/active", "{}");
+
+    assertThat(sperre.status()).isEqualTo(400);
+    assertThat(aktiv.status()).isEqualTo(400);
+    var unveraendert = appUserRepository.findeKonto(kundeId).orElseThrow();
+    assertThat(unveraendert.adminGesperrt()).isFalse();
+    assertThat(unveraendert.aktiv()).isTrue();
+  }
+
   @Test
   @DisplayName("Ein unbekanntes Konto liefert 404")
   void unbekanntes_konto_liefert_404() throws Exception {

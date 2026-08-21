@@ -160,6 +160,52 @@ class BenutzerverwaltungServiceTest {
     verify(appUserRepository, never()).existiertAdmin();
   }
 
+  /**
+   * <b>Die Reihenfolge der beiden Stufen, und warum sie einen eigenen Test braucht.</b> Beide
+   * Faelle ueberschneiden sich fast immer: Wer als einziger nutzbarer Admin angemeldet ist, trifft
+   * mit jedem entwertenden Vorgang auf sich selbst. Die uebrigen Faelle dieser Klasse halten Ziel
+   * und Handelnden bewusst auseinander (id 1 gegen id 2) und beruehren die Ueberschneidung deshalb
+   * nie — genau hier faellt sie zusammen.
+   *
+   * <p>Erwartet wird die Meldung der <i>zweiten</i> Stufe: Sie nennt die Bedingung, unter der es
+   * ginge („mach zuerst ein anderes Konto zum Administrator"), waehrend „nicht am eigenen Konto"
+   * den Nutzer im Dunkeln liesse. Kippte die Reihenfolge, waere die zweite Stufe praktisch
+   * unerreichbar und damit ungeprueft.
+   */
+  @Test
+  @DisplayName("Faellt beides zusammen, meldet der letzte Administrator — nicht der Selbstschutz")
+  void letzter_admin_geht_dem_selbstschutz_vor() {
+    KontoZeile selbst =
+        new KontoZeile(1L, "it-handelnder", Rolle.ADMIN, List.of("VOTG"), false, true, false, null);
+    when(appUserRepository.findeKonto(1L)).thenReturn(Optional.of(selbst));
+    when(appUserRepository.existiertAndererNutzbarerAdmin(1L)).thenReturn(false);
+
+    assertThatThrownBy(() -> service.setzeRolle(HANDELNDER, 1L, "MANDANT", IP))
+        .isInstanceOf(FachlicheAusnahme.class)
+        .satisfies(
+            ausnahme ->
+                assertThat(((FachlicheAusnahme) ausnahme).titel())
+                    .isEqualTo("Letzter Administrator"));
+
+    verify(appUserRepository, never()).setzeRolle(anyLong(), any(), any());
+  }
+
+  @Test
+  @DisplayName("Ohne den letzten Administrator greift auf dem eigenen Konto der Selbstschutz")
+  void selbstschutz_greift_wenn_es_noch_einen_admin_gibt() {
+    KontoZeile selbst =
+        new KontoZeile(1L, "it-handelnder", Rolle.ADMIN, List.of("VOTG"), false, true, false, null);
+    when(appUserRepository.findeKonto(1L)).thenReturn(Optional.of(selbst));
+    when(appUserRepository.existiertAndererNutzbarerAdmin(1L)).thenReturn(true);
+
+    assertThatThrownBy(() -> service.setzeRolle(HANDELNDER, 1L, "MANDANT", IP))
+        .isInstanceOf(FachlicheAusnahme.class)
+        .satisfies(
+            ausnahme ->
+                assertThat(((FachlicheAusnahme) ausnahme).titel())
+                    .isEqualTo("Nicht am eigenen Konto"));
+  }
+
   @Test
   @DisplayName(
       "Ein bereits gesperrtes Ziel ist kein nutzbarer ADMIN und faellt nicht unter die Regel")

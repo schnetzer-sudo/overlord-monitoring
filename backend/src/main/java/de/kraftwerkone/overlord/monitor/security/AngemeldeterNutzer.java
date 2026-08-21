@@ -25,8 +25,14 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
  * <p><b>Das Feld {@code downloadAllowed} ist am 21.08.2026 entfallen</b> (Schritt 9a, E18). Es war
  * seit Schritt 3 tot: {@code rohdaten.md} §3 E2 schliesst eine zweite Berechtigungsstufe aus, die
  * Endpunkte aus Schritt 8 haben es nie geprueft. Mit ihm ist {@code app_user.download_allowed}
- * gefallen (V7). <b>Der Wegfall aendert die abgeleitete {@code serialVersionUID}</b> — vorher
- * geschriebene Sitzungen in {@code SPRING_SESSION_ATTRIBUTES} sind danach nicht mehr lesbar.
+ * gefallen (V7).
+ *
+ * <p><b>Laufende Sitzungen ueberleben den Wegfall</b>, und das ist nachgemessen und nicht
+ * angenommen: Die {@code serialVersionUID} eines Record ist {@code 0} und haengt <b>nicht</b> an
+ * seinen Komponenten; ein mit fuenf Komponenten geschriebener Strom liest sich in denselben Record
+ * mit vier Komponenten sauber ein, das ueberzaehlige Feld wird verworfen. Wer eine Komponente
+ * <i>hinzufuegt</i>, bekommt sie beim Lesen alter Stroeme als Vorgabewert — auch das ist kein
+ * Fehler, aber es gehoert gewusst, bevor jemand ein Pflichtfeld daraus macht.
  */
 public record AngemeldeterNutzer(long id, String username, Rolle rolle, boolean mustChangePassword)
     implements AuthenticatedPrincipal, Serializable {

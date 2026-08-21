@@ -20,6 +20,7 @@ import org.jooq.Table;
 import org.jooq.impl.DSL;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Zugriff auf {@code overlord_monitor.app_user} und {@code app_user_mandant} — das <b>eigene</b>
@@ -113,14 +114,20 @@ public class AppUserRepository {
    * <p><b>Regel L2 ist nicht beruehrt.</b> Sie verbietet Live-Aggregation ueber {@code Message} im
    * Quellschema; {@code audit_log} ist unser eigenes und um Groessenordnungen kleiner.
    */
-  private static Table<?> letzteAnmeldungen() {
-    return DSL.select(
-            AUDIT_LOG.ACTOR_USER_ID, DSL.max(AUDIT_LOG.OCCURRED_AT).as("letzte_anmeldung"))
-        .from(AUDIT_LOG)
-        .where(AUDIT_LOG.EVENT_TYPE.eq(AuditEventType.ANMELDUNG_ERFOLG.name()))
-        .and(AUDIT_LOG.ACTOR_USER_ID.isNotNull())
-        .groupBy(AUDIT_LOG.ACTOR_USER_ID)
-        .asTable("anmeldung");
+  private static Table<?> letzteAnmeldungen(Long nurKonto) {
+    var abfrage =
+        DSL.select(AUDIT_LOG.ACTOR_USER_ID, DSL.max(AUDIT_LOG.OCCURRED_AT).as("letzte_anmeldung"))
+            .from(AUDIT_LOG)
+            .where(AUDIT_LOG.EVENT_TYPE.eq(AuditEventType.ANMELDUNG_ERFOLG.name()))
+            .and(AUDIT_LOG.ACTOR_USER_ID.isNotNull());
+    if (nurKonto != null) {
+      // Die Einschraenkung gehoert IN die abgeleitete Tabelle und nicht nur an die aeussere
+      // Bedingung: Sonst gruppierte jede Einzelabfrage ueber den gesamten Protokollbestand und
+      // warfe das Ergebnis anschliessend weg. Gemessen sind das 17,9 ms je Aufruf (M82), und die
+      // fuenf schreibenden Vorgaenge lesen zweimal.
+      abfrage = abfrage.and(AUDIT_LOG.ACTOR_USER_ID.eq(nurKonto));
+    }
+    return abfrage.groupBy(AUDIT_LOG.ACTOR_USER_ID).asTable("anmeldung");
   }
 
   /**
@@ -136,7 +143,7 @@ public class AppUserRepository {
    * trotzdem stabil.
    */
   public List<KontoZeile> findeAlleKonten() {
-    return konten(DSL.noCondition());
+    return konten(DSL.noCondition(), null);
   }
 
   /**
@@ -148,7 +155,7 @@ public class AppUserRepository {
    * Unterschied faellt erst auf, wenn jemand die beiden Antworten nebeneinanderlegt.
    */
   public Optional<KontoZeile> findeKonto(long id) {
-    return konten(APP_USER.ID.eq(id)).stream().findFirst();
+    return konten(APP_USER.ID.eq(id), id).stream().findFirst();
   }
 
   /**
@@ -173,13 +180,14 @@ public class AppUserRepository {
             .and(APP_USER.ID.ne(ausserId)));
   }
 
-  private List<KontoZeile> konten(Condition bedingung) {
-    Table<?> anmeldung = letzteAnmeldungen();
+  private List<KontoZeile> konten(Condition bedingung, Long nurKonto) {
+    Table<?> anmeldung = letzteAnmeldungen(nurKonto);
     Field<Long> anmeldungUserId = anmeldung.field(AUDIT_LOG.ACTOR_USER_ID);
     Field<LocalDateTime> anmeldungZeitpunkt =
         anmeldung.field("letzte_anmeldung", LocalDateTime.class);
 
-    Map<Long, List<String>> mandanten = mandantenJeKonto();
+    Map<Long, List<String>> mandanten =
+        nurKonto == null ? mandantenJeKonto() : Map.of(nurKonto, mandantenVon(nurKonto));
     return monitorDsl
         .select(
             APP_USER.ID,
@@ -375,7 +383,16 @@ public class AppUserRepository {
    * Konten und zehn Mandanten winzig, und eine Mengenersetzung hat genau ein Ergebnis, waehrend
    * eine Differenzbildung zwei Fehlerarten hat. Der Aufrufer stellt sicher, dass {@code mandantIds}
    * nicht leer ist (E10).
+   *
+   * <p><b>Die einzige Methode dieser Klasse mit {@link Transactional}</b>, und das ist kein
+   * Versehen: Sie ist die einzige, die mehr als eine Anweisung ausfuehrt. Ein Abbruch zwischen dem
+   * {@code DELETE} und dem letzten {@code INSERT} liesse ein Konto ohne jede Zuordnung zurueck —
+   * genau den Zustand, den E10 verbietet. Alle uebrigen Schreibwege sind ein einzelnes {@code
+   * UPDATE} und damit von selbst atomar; sie tragen bewusst <b>keine</b> Transaktion, damit der
+   * Sitzungsentzug erst nach dem Festschreiben laufen kann (Begruendung in {@code
+   * BenutzerverwaltungService.abschluss}).
    */
+  @Transactional
   public void ersetzeMandanten(long userId, Collection<String> mandantIds) {
     monitorDsl.deleteFrom(APP_USER_MANDANT).where(APP_USER_MANDANT.USER_ID.eq(userId)).execute();
     for (String mandantId : mandantIds) {

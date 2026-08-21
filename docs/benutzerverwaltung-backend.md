@@ -49,10 +49,27 @@ keinem Objektliteral aufgebaut und in keiner Bedingung verwendet. Der Download h
 Artefakts, nicht an einem Nutzerflag. **Die Typzeile bleibt vorerst stehen** und ist im Frontendteil
 zu streichen; dieser Auftrag ist Backend-only.
 
-> **Folge für laufende Sitzungen.** `AngemeldeterNutzer` ist `Serializable` und liegt serialisiert
-> in `SPRING_SESSION_ATTRIBUTES`. Fällt eine Record-Komponente weg, ändert sich die abgeleitete
-> `serialVersionUID`: **Vor der Migration geschriebene Sitzungen sind danach nicht mehr lesbar.**
-> Beim Aufziehen ist `SPRING_SESSION` einmal zu leeren. Das ist der Preis und kein Fehler.
+> **Laufende Sitzungen überleben den Wegfall — nachgemessen, nachdem hier das Gegenteil stand.**
+> `AngemeldeterNutzer` ist `Serializable` und liegt serialisiert in `SPRING_SESSION_ATTRIBUTES`.
+> Die naheliegende Sorge — eine wegfallende Record-Komponente ändere die `serialVersionUID` und
+> mache alte Sitzungen unlesbar — ist **falsch**, und zwar an beiden Gliedern der Kette:
+>
+> ```
+> serialVersionUID (5 Komponenten) = 0
+> serialVersionUID (4 Komponenten) = 0
+> GELESEN: Nutzer[id=7, username=lukas, rolle=ADMIN, mustChange=false]
+> ```
+>
+> Die `serialVersionUID` eines Record ist `0` und hängt **nicht** an seinen Komponenten; ein mit
+> fünf Komponenten geschriebener Strom liest sich in denselben Record mit vier Komponenten sauber
+> ein, das überzählige Feld wird verworfen. Gemessen am 21.08.2026 mit zwei Fassungen derselben
+> Klasse unter demselben JDK. **`SPRING_SESSION` muss also nicht geleert werden.**
+>
+> **Der Kommentar in `V7__benutzerverwaltung.sql` trägt die widerlegte Fassung weiter, und das ist
+> Absicht:** Die Migration ist aufgezogen, und Flyway prüft ihre Prüfsumme. Schon eine geänderte
+> Kommentarzeile ergibt beim nächsten Start `Validate failed — Migration checksum mismatch for
+> migration version 7`; das Backend startet dann nicht mehr. Eine aufgezogene Migration ist
+> eingefroren. Die richtige Fassung steht im Javadoc von `AngemeldeterNutzer` und hier.
 
 ### 2.2 `locked_by_admin` kommt — und warum nicht `locked_until`
 
@@ -104,6 +121,26 @@ erreicht, wenn das Passwort stimmt.
 **E7 ist gefahren, bevor eine Zeile geschrieben wurde** (M81). Alle vier Punkte halten am laufenden
 System, also gilt Bauform A: `findByPrincipalName(username)`, dann jede gefundene Sitzung löschen.
 **Kein Generationszähler, keine Abfrage je Anfrage.**
+
+**Der Entzug läuft immer erst, nachdem die Änderung festgeschrieben ist.** Die Reihenfolge ist am
+21.08.2026 umgedreht worden, nachdem eine adversarische Nachprüfung das Fenster gefunden hat:
+
+> Lief der Entzug *innerhalb* der offenen Transaktion, verwarf er die Sitzungen sofort — Spring
+> Sessions `deleteById` läuft über eine eigene Transaktion mit `PROPAGATION_REQUIRES_NEW` und
+> committet unabhängig —, während die Sperre selbst noch **uncommitted** war. In diesem Fenster
+> sieht die Anmeldung auf einer anderen Verbindung weiterhin `locked_by_admin = 0`: **Der eben
+> ausgesperrte Nutzer konnte sich neu anmelden und bekam eine Sitzung, die kein Entzug mehr traf**
+> — sie entstand nach ihm. Auf der Testkopie dauert ein `COMMIT` zehn bis fünfundzwanzig Sekunden;
+> das Fenster war keine theoretische Größe.
+>
+> Jetzt ist es umgekehrt: Wer sich zwischen Festschreiben und Entzug anmeldet, wird bereits
+> abgewiesen. Übrig bleibt, dass eine *bestehende* Sitzung einen Wimpernschlag länger lebt — und
+> die fällt unmittelbar danach.
+
+Deshalb trägt **keine** der fünf Dienstmethoden `@Transactional`. Vier sind ein einzelnes `UPDATE`
+und damit von selbst atomar; der fünfte — die Mandantenmenge — ist `DELETE` plus `INSERT`s und
+trägt seine Transaktion in `AppUserRepository.ersetzeMandanten`, wo sie geschlossen ist, bevor der
+Entzug beginnt.
 
 `security/Sitzungsentzug` hat genau zwei Methoden:
 
@@ -222,6 +259,14 @@ abgeleitete Tabelle. Zwei Gründe, beide zwingend:
 Regel L2 ist nicht berührt — sie verbietet Live-Aggregation über `Message` im Quellschema;
 `audit_log` ist unser eigenes und um Größenordnungen kleiner. **Gemessen in M82: 17,87 ms.**
 
+> **Die Einzelabfrage trägt diese Kosten nicht.** Jeder schreibende Vorgang liest die Zeile zweimal
+> — einmal vor der Änderung (für `pruefeEntwertung` und den Protokolltext) und einmal danach für
+> die Antwort. Bis zum 21.08.2026 zog jeder dieser Lesevorgänge dieselbe volle Aggregation über
+> `audit_log` und **alle** Zeilen aus `app_user_mandant`, um das Ergebnis anschließend bis auf ein
+> Konto wegzuwerfen: zweimal 17,9 ms je Schreibvorgang, für eine Zeile. Seit der Nachprüfung steht
+> die Einschränkung auf das eine Konto **in** der abgeleiteten Tabelle, und die Mandanten kommen
+> aus `mandantenVon(id)` statt aus dem Gesamtbestand.
+
 ### `PUT /api/admin/users/{id}/tenants` — die dritte M1-Ausnahme
 
 Nimmt Mandanten-IDs entgegen und ist damit die dritte und derzeit letzte Ausnahme von Regel M1. Sie
@@ -242,7 +287,7 @@ sie dort entfernen, entstünde beim nächsten Rollenwechsel genau der Zustand, d
 
 > **Die Pfadschreibweise ist am 21.08.2026 entschieden worden.** `benutzerverwaltung.md` §5 führte
 > `{id}/tenants` und begründet die englische Fassung ausdrücklich; `mandantentrennung.md` §3,
-> `authentifizierung.md` §7 und `PROJEKTBESCHREIBUNG.md` §7 führten `{benutzername}/mandanten`.
+> `authentifizierung.md` §8 und `PROJEKTBESCHREIBUNG.md` §7 führten `{benutzername}/mandanten`.
 > **Gebaut ist `{id}/tenants`**, weil die vier Nachbarendpunkte alle `{id}` tragen und ein deutscher
 > Unterpfad unter einer englischen Sammlung schlechter wäre als beide reinen Varianten. Die drei
 > anderen Dateien sind datiert nachgezogen.
@@ -301,7 +346,9 @@ trotzdem falsch ist: Wer sein eigenes Konto entsperren, sich selbst zum ADMIN ma
 Mandanten zuordnen darf, braucht die Benutzerverwaltung nicht mehr zu überwinden — er *ist* sie.
 
 Dazu die Gegenprobe, die den Beweis trägt: Dieselben Aufrufe mit einer **erfundenen** Konto-ID
-liefern einen **zeichengleichen** Antwortrumpf. Wäre es anders — `403` für ein existierendes, `404`
+liefern einen Antwortrumpf, der bis auf `traceId` und `instance` **zeichengleich** ist — beide sind
+je Anfrage verschieden und müssen es sein; `instance` spiegelt nach RFC 9457 den angefragten Pfad
+und trägt die Kennung deshalb zwangsläufig. Wäre es anders — `403` für ein existierendes, `404`
 für ein erfundenes Konto —, ließe sich über die Endpunkte durchzählen, welche Konto-IDs es gibt. Die
 Rollengrenze greift **vor** jedem Datenbankzugriff, weil sie in `SecurityConfig` steht und nicht im
 Service.
@@ -322,8 +369,9 @@ Service.
 | `security/SitzungsentzugDbIT` | `@Tag("db")` | 7 | E5 für alle fünf Vorgänge, E6 für die eigene Änderung, die Zahl im Protokoll |
 | `security/SitzungsentzugTest` | Einheit | 3 | Welche Sitzungen fallen — und dass eine leere Menge nichts löscht |
 | `admin/BenutzerverwaltungIsolationDbIT` | `@Tag("db")` | 6 | Regel M4 als Rollengrenze, **einer je Endpunkt**, mit Gegenprobe |
-| `admin/BenutzerverwaltungDbIT` | `@Tag("db")` | 15 | Liste, Sperre, Aktivzustand, Rolle, Mandanten, Passwort-Reset |
-| `admin/BenutzerverwaltungServiceTest` | Einheit | 6 | E12, zweite Stufe — siehe unten |
+| `admin/BenutzerverwaltungDbIT` | `@Tag("db")` | 16 | Liste, Sperre, Aktivzustand, Rolle, Mandanten, Passwort-Reset |
+| `admin/BenutzerverwaltungServiceTest` | Einheit | 8 | E12, zweite Stufe **und die Reihenfolge der beiden Stufen** — siehe unten |
+| `security/AppUserStatementsTest` | Einheit | 3 | Die Bedingung „nutzbar" steht **im** Statement — gerendert, nicht nachgebaut |
 
 **Zwei Sitzungen je Konto, nicht eine.** Der Fehler, den ein Test mit nur einer Sitzung nicht fände,
 ist der naheliegendste: nur die zuletzt angelegte zu verwerfen.
@@ -349,6 +397,7 @@ ist der naheliegendste: nur die zuletzt angelegte zu verwerfen.
 | 4 | **Neuer Problemtyp `konto-administrativ-gesperrt`** in der Anmeldung | Der bestehende Text sagt „nach mehreren Fehlversuchen" und wäre bei einem Verwaltungsakt falsch (§2.3) |
 | 5 | **E12, zweite Stufe als Einheitstest** statt `DbIT` | §7 |
 | 6 | **Der Entzug trifft auch den Handelnden** | E5 ist eine Regel ohne Fallunterscheidung; die Folge ist festgehalten statt weggebaut (§3) |
+| 7 | **Keine der fünf Dienstmethoden trägt `@Transactional`** | Der Entzug muss nach dem Festschreiben laufen, sonst überlebt eine im Fenster entstandene Sitzung die Sperre. Vier Vorgänge sind ohnehin ein einzelnes `UPDATE`; der fünfte trägt seine Transaktion im Repository (§3) |
 
 ---
 
@@ -361,7 +410,7 @@ ist der naheliegendste: nur die zuletzt angelegte zu verwerfen.
 | 3 | **Der Index-Vorschlag aus M82 ist nicht angelegt** und nicht gemessen: `(event_type, actor_user_id, occurred_at)`. Der vorhandene `idx_audit_type` hilft nicht, und ihn zu erzwingen ist fast doppelt so langsam |
 | 4 | **`app_user.last_login_at` bleibt eine gepflegte tote Spalte.** Sie wäre die 0,39-ms-Antwort auf dieselbe Frage wie die 17,9-ms-Aggregation. E17 verwirft „eine **neue** Spalte" — diese ist nicht neu. Nicht entschieden |
 | 5 | **Die automatische Zeitsperre ist in der Liste nicht sichtbar.** `locked` zeigt nur die administrative. Wer wissen will, warum sich jemand gerade nicht anmelden kann, sieht es der Liste nicht an |
-| 6 | **`SPRING_SESSION` ist beim Aufziehen einmal zu leeren** (§2.1). Bisher nicht geschehen |
+| 6 | **Der Kommentar in `V7__benutzerverwaltung.sql` trägt eine widerlegte Behauptung** zur `serialVersionUID` (§2.1). Er lässt sich nicht korrigieren, ohne die Prüfsumme der aufgezogenen Migration zu brechen; eine Berichtigung bräuchte ein `flyway repair` gegen die Testkopie. Nicht entschieden |
 
 ---
 
@@ -371,7 +420,10 @@ ist der naheliegendste: nur die zuletzt angelegte zu verwerfen.
 - Kein Löschen von Konten (E8) — es gibt nur Deaktivieren
 - Keine Spalte `letzte_anmeldung` (E17)
 - Keine eigene Ereignisart für den Sitzungsentzug (E15)
-- Keine Änderung an `POST /api/admin/users` (E4)
+- Keine Änderung am **Vertrag** von `POST /api/admin/users` — Pfad, Rumpf, Antwort und Statuscodes
+  sind unangetastet (E4). Der *Codepfad* hat sich sehr wohl geändert: Die Längenprüfung und das
+  Kodieren des Einmalpassworts sind nach `AdminUserService.kodiereEinmalpasswort` gewandert, damit
+  Anlegen und Zurücksetzen dieselbe Strecke gehen (E13)
 - Keine Änderung an den drei Rohdaten-Endpunkten aus Schritt 8
 - Keine Reparatur an der Spring-Session-Konfiguration — es war keine nötig (M81)
 - Kein Index auf `audit_log` — der Vorschlag steht in M82 und ist eine Entscheidung, keine Ableitung
