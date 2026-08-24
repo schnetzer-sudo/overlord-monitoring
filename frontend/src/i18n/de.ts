@@ -855,6 +855,61 @@ export const de = {
      * erfolgreichen nicht zu unterscheiden — dieselbe Falle wie bei der Zahl
      * verworfener Sitzungen in Schritt 9a.
      */
+    /**
+     * **Eine** Zahl über **alle** Prozesse des Mandanten (E18) — im Browser aus
+     * der vollen Liste gezählt, ohne eigene Abfrage.
+     *
+     * Bei `VOTG` steht dort lange eine schlechte Zahl, und sie ist richtig: 350
+     * von 390 Prozessen tragen keine Nachricht, gepflegt werden sie trotzdem.
+     */
+    fortschritt: {
+      satz: "{gepflegt} von {gesamt} Prozessen gepflegt",
+      alleZaehlenMit: "Tote Prozesse und der Auffangprozess zählen mit.",
+    },
+    /**
+     * Der Hinweis über der Liste (E17). Der **Wortlaut ist festgelegt**; der
+     * zweite Satz sagt, was daraus für die Arbeit folgt.
+     */
+    hinweis: {
+      ohnePartnervorschlag: "für keinen Prozess konnte ein Partner vorgeschlagen werden",
+      ohnePartnervorschlagFolge:
+        "Die Partner dieses Mandanten sind von Hand einzutragen. Die Auswahl füllt sich mit jedem, den du speicherst.",
+    },
+    /**
+     * Die Massenzuordnung nach Projekt (E11, E12).
+     *
+     * **`verlorenViele` ist die Zahl, die verloren geht.** Sie wird in Worten
+     * gesagt und nicht nur angezeigt: Dass gepflegte Zeilen überschrieben
+     * werden, ist gewollt — ein Schutzmodus machte genau die Korrektur
+     * unmöglich, für die man das Werkzeug braucht.
+     */
+    masse: {
+      oeffnen: "Massenzuordnung …",
+      titel: "Massenzuordnung nach Projekt",
+      einleitung:
+        "Setzt ein Feld für alle Prozesse eines Projekts. Bereits gepflegte Zeilen werden dabei überschrieben — das ist gewollt und der Grund für die Vorschau.",
+      projekt: "Projekt",
+      projektWaehlen: "Projekt wählen",
+      feld: "Feld",
+      felder: {
+        PARTNER: "Partner",
+        RICHTUNG: "Richtung",
+      },
+      wert: "Wert",
+      leerHinweis: "Ein leerer Wert löscht das Feld in allen betroffenen Zeilen.",
+      vorschauHolen: "Vorschau",
+      vorschauLaeuft: "Wird geprüft …",
+      ausfuehren: "Ausführen",
+      ausfuehrenLaeuft: "Wird gesetzt …",
+      abbrechen: "Abbrechen",
+      vorschauNoetig: "Hole zuerst die Vorschau — sie nennt, wie viele Zeilen es trifft.",
+      betroffenKeine: "Dieses Projekt trägt keinen Prozess. Es gibt nichts zu setzen.",
+      betroffenEins: "Betrifft einen Prozess.",
+      betroffenViele: "Betrifft {betroffen} Prozesse.",
+      verlorenKeine: "Keiner davon ist bereits gepflegt.",
+      verlorenEins: "Einer davon ist bereits gepflegt — sein bisheriger Wert geht verloren.",
+      verlorenViele: "{gepflegt} davon sind bereits gepflegt — ihr bisheriger Wert geht verloren.",
+    },
     lauf: {
       starten: "Vorschläge und Bestand erheben",
       hinweis:

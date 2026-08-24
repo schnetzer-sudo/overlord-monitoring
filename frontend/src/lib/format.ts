@@ -197,6 +197,26 @@ export function formatiereZahl(wert: number, sprache: Sprache): string {
 }
 
 /**
+ * Ein Anteil zwischen 0 und 1 als Prozentangabe, in der aktiven Sprache.
+ *
+ * **Über `Intl` und nicht von Hand.** Das Prozentzeichen steht nicht in jeder
+ * Sprache an derselben Stelle und nicht mit demselben Abstand davor — deutsch
+ * `56 %`, englisch `56%`. Eine selbst zusammengesetzte Zeichenkette wäre in
+ * genau einer der beiden Sprachen falsch, und zwar unauffällig.
+ *
+ * **Ohne Nachkommastellen.** Der Fortschritt der Kuratierung ist eine
+ * Größenordnung, keine Messung; `56,3 %` behauptete eine Genauigkeit, die die
+ * Zahl nicht hat.
+ */
+export function formatiereAnteil(anteil: number, sprache: Sprache): string {
+  const wert = Number.isFinite(anteil) ? anteil : 0;
+  return new Intl.NumberFormat(sprache, {
+    style: "percent",
+    maximumFractionDigits: 0,
+  }).format(wert);
+}
+
+/**
  * Die Einheitenbausteine für {@link formatiereDauer}.
  *
  * **Sie kommen aus der Sprachdatei und stehen nicht hier.** Auch „s" und „min"

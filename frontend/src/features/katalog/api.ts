@@ -197,3 +197,60 @@ export type Vorschlagslauf = {
 export function starteVorschlagslauf(): Promise<Vorschlagslauf> {
   return sende<Vorschlagslauf>("/katalog/vorschlagen");
 }
+
+/** Die zwei Modi der Massenzuordnung. Ohne Angabe gilt im Backend `VORSCHAU`. */
+export const MASSENMODI = ["VORSCHAU", "AUSFUEHREN"] as const;
+
+export type Massenmodus = (typeof MASSENMODI)[number];
+
+/** Das **eine** Feld, das eine Massenzuordnung setzt (E11). */
+export const ZUORDNUNGSFELDER = ["PARTNER", "RICHTUNG"] as const;
+
+export type Zuordnungsfeld = (typeof ZUORDNUNGSFELDER)[number];
+
+export type MassenzuordnungAnfrage = {
+  projectId: string;
+  feld: Zuordnungsfeld;
+  /** `null` ist zulässig und bedeutet „leeren". */
+  wert: string | null;
+  /** **Immer ausdrücklich mitgeschickt**, auch wenn er der Vorgabe entspricht. */
+  modus: Massenmodus;
+};
+
+/**
+ * Was eine Massenzuordnung betrifft — **in beiden Modi dieselbe Auskunft**.
+ *
+ * Die Zahlen stammen in `VORSCHAU` und in `AUSFUEHREN` aus demselben Statement
+ * mit derselben Bedingung. Getrennt gebaut driften die beiden auseinander, und
+ * der Nutzer bestätigt dann eine Zahl, die nicht die ist, die passiert.
+ */
+export type MassenzuordnungAntwort = {
+  modus: Massenmodus;
+  projectId: string;
+  feld: Zuordnungsfeld;
+  wert: string | null;
+  betroffen: number;
+  /** **Die Zahl, die verloren geht** — diese Zeilen werden überschrieben (E12). */
+  davonGepflegt: number;
+};
+
+/**
+ * Setzt **ein** Feld für alle Prozesse eines Projekts (E11) — in der Vorschau
+ * oder wirklich.
+ *
+ * **Der Modus wird immer ausdrücklich mitgeschickt**, auch wenn er der Vorgabe
+ * entspricht. Das Backend nimmt ohne Angabe `VORSCHAU` — sich darauf zu
+ * verlassen hieße, die harmloseste Wirkung dem Weglassen zu überlassen, und beim
+ * nächsten Umbau stünde dort vielleicht etwas anderes.
+ *
+ * **Sie überschreibt gepflegte Zeilen** (E12). Das ist gewollt: Der Schutzmodus
+ * „nur offene Zeilen" machte genau die Korrektur unmöglich, für die man sie
+ * braucht — einem ganzen Projekt einen falschen Partner in einem Zug
+ * richtigzustellen.
+ *
+ * Ein Projekt außerhalb des aktiven Mandanten ergibt `404`, ununterscheidbar von
+ * einem erfundenen.
+ */
+export function massenzuordnung(anfrage: MassenzuordnungAnfrage): Promise<MassenzuordnungAntwort> {
+  return sende<MassenzuordnungAntwort>("/katalog/massenzuordnung", anfrage);
+}

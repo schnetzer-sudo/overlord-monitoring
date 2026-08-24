@@ -8,9 +8,11 @@ import {
   KATALOG_SCHLUESSEL,
   holeKatalogzeilen,
   holePartner,
+  massenzuordnung,
   starteVorschlagslauf,
   zuordne,
   type Katalogzeile,
+  type MassenzuordnungAnfrage,
   type ZuordnenAnfrage,
 } from "./api";
 import { KATALOG_PARAMETER, type Katalogfilter } from "./filter";
@@ -138,6 +140,33 @@ export function useVorschlagslauf() {
   return useMutation({
     mutationFn: starteVorschlagslauf,
     onSuccess: () => {
+      void speicher.invalidateQueries({ queryKey: KATALOG_SCHLUESSEL.prozesseBereich });
+      void speicher.invalidateQueries({ queryKey: KATALOG_SCHLUESSEL.partner });
+    },
+  });
+}
+
+/**
+ * Die Massenzuordnung — **zwei Modi, ein Aufruf** (E11, E12).
+ *
+ * **Nur `AUSFUEHREN` rührt den Zwischenspeicher an.** Eine Vorschau hat nichts
+ * geschrieben; sie zu invalidieren hieße, 733 Zeilen für eine Frage neu zu
+ * holen, die niemand beantwortet bekommen wollte.
+ *
+ * Nach dem Ausführen wird **invalidiert und nicht gesetzt** — aus demselben
+ * Grund wie beim Lauf: Die Antwort nennt Zahlen, keine Zeilen. Bis zu 226
+ * Prozesse haben sich geändert, und welche das im Einzelnen sind, sagt sie
+ * nicht.
+ */
+export function useMassenzuordnung() {
+  const speicher = useQueryClient();
+
+  return useMutation({
+    mutationFn: (anfrage: MassenzuordnungAnfrage) => massenzuordnung(anfrage),
+    onSuccess: (antwort) => {
+      if (antwort.modus !== "AUSFUEHREN") {
+        return;
+      }
       void speicher.invalidateQueries({ queryKey: KATALOG_SCHLUESSEL.prozesseBereich });
       void speicher.invalidateQueries({ queryKey: KATALOG_SCHLUESSEL.partner });
     },

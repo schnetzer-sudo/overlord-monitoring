@@ -154,3 +154,23 @@ export function passendeVorschlaege(vorschlaege: readonly string[], eingabe: str
   }
   return vorschlaege.filter((name) => name.toLowerCase().includes(begriff));
 }
+
+/**
+ * Der Wert, den eine Massenzuordnung setzt — **ein** Feld, ein Wert (E11).
+ *
+ * `null` bedeutet „leeren" und ist ausdrücklich zulässig. Für den Partner gilt
+ * dieselbe Umsetzung wie in {@link alsAnfrage}: Leerraum ist leer, sonst
+ * entstünde über die Massenzuordnung ein Zustand, den die Einzelbearbeitung
+ * nicht erzeugen kann.
+ */
+export function massenwert(
+  feld: "PARTNER" | "RICHTUNG",
+  partner: string,
+  richtung: Richtungswahl,
+): string | null {
+  if (feld === "PARTNER") {
+    const wert = partner.trim();
+    return wert === "" ? null : wert;
+  }
+  return istRichtung(richtung) ? richtung : null;
+}

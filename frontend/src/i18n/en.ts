@@ -527,6 +527,42 @@ export const en: Texte = {
       speichernLaeuft: "Saving …",
       abbrechen: "Cancel",
     },
+    fortschritt: {
+      satz: "{gepflegt} of {gesamt} processes curated",
+      alleZaehlenMit: "Dead processes and the catch-all process count too.",
+    },
+    hinweis: {
+      ohnePartnervorschlag: "no partner could be suggested for any process",
+      ohnePartnervorschlagFolge:
+        "The partners of this tenant have to be typed by hand. The suggestion list fills up with every one you save.",
+    },
+    masse: {
+      oeffnen: "Bulk assignment …",
+      titel: "Bulk assignment by project",
+      einleitung:
+        "Sets one field for every process of a project. Rows that are already curated get overwritten — that is intended, and it is the reason for the preview.",
+      projekt: "Project",
+      projektWaehlen: "Pick a project",
+      feld: "Field",
+      felder: {
+        PARTNER: "Partner",
+        RICHTUNG: "Direction",
+      },
+      wert: "Value",
+      leerHinweis: "An empty value clears the field in every affected row.",
+      vorschauHolen: "Preview",
+      vorschauLaeuft: "Checking …",
+      ausfuehren: "Apply",
+      ausfuehrenLaeuft: "Applying …",
+      abbrechen: "Cancel",
+      vorschauNoetig: "Fetch the preview first — it names how many rows this hits.",
+      betroffenKeine: "This project carries no process. There is nothing to set.",
+      betroffenEins: "Affects one process.",
+      betroffenViele: "Affects {betroffen} processes.",
+      verlorenKeine: "None of them is curated yet.",
+      verlorenEins: "One of them is already curated — its current value is lost.",
+      verlorenViele: "{gepflegt} of them are already curated — their current values are lost.",
+    },
     lauf: {
       starten: "Derive suggestions and check stock",
       hinweis:
