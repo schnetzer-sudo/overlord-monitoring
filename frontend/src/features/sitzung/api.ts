@@ -24,6 +24,20 @@ export type Mandant = {
  * Antwort von `GET /api/auth/me` — und dieselbe Antwort nach Anmeldung,
  * Passwortänderung und Mandantenwechsel. Der Zustand muss nie aus mehreren
  * Antworten zusammengesetzt werden.
+ *
+ * > **`downloadAllowed` ist am 24.08.2026 gestrichen worden.** Hier stand
+ * > `downloadAllowed: boolean;`, und die Zeile war seit dem 21.08.2026 eine
+ * > Zusage, die das Backend nicht mehr einhält: Schritt 9a hat die Spalte per
+ * > Migration entfernt (`docs/benutzerverwaltung.md` E18), und `GET
+ * > /api/auth/me` liefert das Feld seither nicht — ein **Vertragsbruch aus
+ * > Schritt 3**, dort datiert vermerkt.
+ * >
+ * > Sie stehen zu lassen war beim Backend-Auftrag richtig, weil der Frontend-Teil
+ * > nicht zu seinem Umfang gehörte; sie **jetzt** stehen zu lassen wäre es nicht.
+ * > Gelesen wurde sie nie — nicht in einer Bedingung, nicht in einem
+ * > Objektliteral —, der Download hängt am Inhalt des Artefakts und nicht an
+ * > einem Nutzerflag (`docs/rohdaten.md` §3 E2). Eine Typzeile ohne Wert
+ * > dahinter ist genau die Art Angabe, auf die sich später jemand verlässt.
  */
 export type Selbstauskunft = {
   username: string;
@@ -32,7 +46,6 @@ export type Selbstauskunft = {
   /** `null`, solange keiner gewählt ist — kein Fehler, sondern eine offene Auswahl. */
   mandant: Mandant | null;
   mustChangePassword: boolean;
-  downloadAllowed: boolean;
   /**
    * IANA-Kennung der Zone, in der Zeitstempel **anzuzeigen** sind, etwa
    * `Europe/Berlin`.

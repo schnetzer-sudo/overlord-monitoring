@@ -48,8 +48,9 @@ gab sie trotzdem aus. Mit ihr entfallen `AppUserZeile.downloadErlaubt`,
 **Geprüft, bevor entfernt wurde: Das Frontend liest das Feld nicht.** Es steht dort an genau einer
 Stelle — als Typzeile in `frontend/src/features/sitzung/api.ts` — und wird nirgends gelesen, in
 keinem Objektliteral aufgebaut und in keiner Bedingung verwendet. Der Download hängt am Inhalt des
-Artefakts, nicht an einem Nutzerflag. **Die Typzeile bleibt vorerst stehen** und ist im Frontendteil
-zu streichen; dieser Auftrag ist Backend-only.
+Artefakts, nicht an einem Nutzerflag. ~~**Die Typzeile bleibt vorerst stehen** und ist im
+Frontendteil zu streichen; dieser Auftrag ist Backend-only.~~ **Am 24.08.2026 gestrichen**, im
+Frontend-Auftrag zu 9a; an ihrer Stelle steht ein datierter Vermerk im Typ `Selbstauskunft` selbst.
 
 > **Laufende Sitzungen überleben den Wegfall — nachgemessen, nachdem hier das Gegenteil stand.**
 > `AngemeldeterNutzer` ist `Serializable` und liegt serialisiert in `SPRING_SESSION_ATTRIBUTES`.
@@ -460,7 +461,7 @@ ist der naheliegendste: nur die zuletzt angelegte zu verwerfen.
 | | |
 |---|---|
 | 1 | **Kein Frontend.** Die Oberfläche zu 9a fehlt; ohne sie ist keine Sichtprüfung im Browser möglich |
-| 2 | **Die Typzeile `downloadAllowed` steht noch im Frontend** (`features/sitzung/api.ts`). Sie wird nirgends gelesen, ist aber seit dem 21.08.2026 eine Zusage, die das Backend nicht mehr einhält. Im Frontendteil zu streichen |
+| 2 | ~~**Die Typzeile `downloadAllowed` steht noch im Frontend** (`features/sitzung/api.ts`). Sie wird nirgends gelesen, ist aber seit dem 21.08.2026 eine Zusage, die das Backend nicht mehr einhält. Im Frontendteil zu streichen~~ · **Geschlossen am 24.08.2026** im Frontend-Auftrag zu 9a. An ihrer Stelle steht ein datierter Vermerk im Typ selbst |
 | 3 | **Der Index-Vorschlag aus M82 ist nicht angelegt** und nicht gemessen: `(event_type, actor_user_id, occurred_at)`. Der vorhandene `idx_audit_type` hilft nicht, und ihn zu erzwingen ist fast doppelt so langsam |
 | 4 | **`app_user.last_login_at` bleibt eine gepflegte tote Spalte.** Sie wäre die 0,39-ms-Antwort auf dieselbe Frage wie die 17,9-ms-Aggregation. E17 verwirft „eine **neue** Spalte" — diese ist nicht neu. Nicht entschieden |
 | 5 | ~~**Die automatische Zeitsperre ist in der Liste nicht sichtbar.** `locked` zeigt nur die administrative. Wer wissen will, warum sich jemand gerade nicht anmelden kann, sieht es der Liste nicht an~~ · **Geschlossen am 24.08.2026.** `lockedUntil` steht in der Zeile, sobald es in der Zukunft liegt ([`benutzerverwaltung.md`](benutzerverwaltung.md) E20). Der Punkt widersprach der Entscheidung, die §4 an derselben Sache traf; welche galt und warum, steht im Korrekturkasten dort |
