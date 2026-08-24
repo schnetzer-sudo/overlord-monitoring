@@ -820,6 +820,35 @@ Ansicht; sie ist in Schritt 4 ([`nachrichtenliste.md`](nachrichtenliste.md) §8.
 offener Punkt notiert worden. Beim dritten Mal ist das keine Beobachtung mehr, sondern eine
 Eigenschaft der Umgebung — und die gehört an eine Stelle, an der sie **vor** dem Bau gelesen wird.
 
+#### Ein 404 auf einer neuen Route ist erst der dritte Verdacht *(24.08.2026)*
+
+Nachgetragen bei der Sichtprüfung zu Schritt 9a, weil der Befund genau wie ein echter Defekt aussah
+und keiner war.
+
+> **Der laufende `next dev` verliert Routen.** `/administration/benutzer` **und**
+> `/administration/katalog` lieferten beide `404`, während `/administration`, `/` und
+> `/nachrichten` mit `200` antworteten. Ein `touch` auf die beiden `page.tsx` genügte, danach
+> standen beide wieder.
+
+**Warum das eine Falle ist und keine Fußnote:** Ein `404` auf einer eben gebauten Seite liest sich
+als „die Route ist falsch angelegt" — und am Tag davor war ein Befund derselben Gestalt ein echter
+Fehler im Code (`/administration` lud gar nicht, §8 oben). Die Unterscheidung ist billig und steht
+hier, damit sie nicht jedes Mal neu hergeleitet wird:
+
+| Beobachtung | Was es heißt |
+|---|---|
+| **Nur die neue Route** ist `404` | Verdacht auf den eigenen Code |
+| **Eine unberührte Nachbarroute ist es auch** | der Dev-Server, nicht der Code |
+| Fehlerüberlagerung oder Konsolenmeldung | ein Übersetzungs- oder Laufzeitfehler, kein `404` |
+
+Der zweite Fall lag hier vor: Die Katalogseite war seit dem Vortag unverändert und fiel mit aus.
+**Erst `touch`, dann zweifeln** — und wenn das nicht hilft, den Dev-Server neu starten, bevor am
+eigenen Diff gesucht wird.
+
+**`curl` taugt für diese Unterscheidung nicht.** Ohne Sitzungs-Cookie antwortet `src/proxy.ts` mit
+`307` auf *jede* dieser Adressen; der Statuscode sagt dann nichts über die Route. Geprüft wird im
+angemeldeten Browser.
+
 #### Die `clearOnDefault`-Falle, in einem Satz
 
 `nuqs` entfernt einen Parameter aus der URL, sobald er dem **Standardwert** gleicht — geprüft wird

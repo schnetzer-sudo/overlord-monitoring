@@ -534,17 +534,48 @@ und werden seit Schritt 3 auch vom Nutzermenü gelesen.
 
 ---
 
-## 14. Offene Punkte
+## 14. Die Sichtprüfung — und was sie offen lässt
+
+**Am 24.08.2026 durchgeklickt, bei 1920 × 889, ohne einen einzigen Vorgang auszuführen.** Ein
+Schutzgeländer im Browser hat jeden schreibenden Aufruf mitgeschrieben und abgewiesen; die geteilte
+Testkopie ist unberührt geblieben.
+
+### Belegt
+
+| | Was gesehen wurde |
+|---|---|
+| Die Liste | Drei Konten, neun Spalten, der Hinweis aus E21 darüber. **Kein Dokumentscroll**: `scrollHeight` = `clientHeight` = 889, der einzige Scrollbereich bleibt `main` |
+| Die klebende Kopfzelle | `position: sticky`, `top: -16px` — die Zahl aus dem Rahmen, wie bei der Pflegeliste |
+| Das Formular | Klappt unter der Zeile auf, alle fünf Vorgänge erreichbar, die Zeile bleibt lesbar darüber stehen |
+| **E11 vorweggenommen** | Am Bootstrap-Konto — dem einzigen ohne Mandanten — ist „Mandant" im Auswahlfeld **gesperrt**, mit dem Satz, was zuerst zu tun ist |
+| **E10 vorweggenommen** | Bei genau einer Zuordnung ist deren Haken **gesperrt**, mit dem Satz zum Zwischenschritt. An einem Konto mit zwei wäre er es nicht |
+| Die Mandantenauswahl | **Alle zehn**, einschließlich `SYSTEM` und `WOC` — dieselbe Quelle, dieselbe Behandlung wie die Mandantenauswahl aus Schritt 3 |
+| Die Sperre der übrigen Zeilen | Beide anderen Schaltflächen gesperrt, mit dem `title`, der den Grund nennt |
+| **E19, erste Hälfte** | Am eigenen Konto erscheint der Dialog — und **nachgemessen null Schreibaufrufe**, er steht also wirklich *vor* dem Aufruf und nicht danach |
+| **E19, zweite Hälfte** | Am fremden Konto erscheint **kein** Dialog, und der Aufruf läuft sofort |
+| Die Fehlerstelle | Der abgewiesene Aufruf hat seine Meldung **am auslösenden Abschnitt** gezeigt und nicht über dem Formular — nebenbei belegt |
+| Die Konsole | Ohne jede Meldung. Kein Schlüsselwarnung, kein Hydrationsfehler |
+
+### Offen — fünf Dinge, und keines ist Nachlässigkeit
 
 | | |
 |---|---|
-| 1 | **Die Sichtprüfung im Browser steht aus.** Kein Pfad dieser Seite ist am laufenden System durchgeklickt — insbesondere nicht die fünf Vorgänge, denn jeder von ihnen **schreibt auf die geteilte Testkopie** und wirft ein echtes Konto aus seinen Sitzungen. Eintrag in [`README.md`](README.md) |
-| 2 | **Das schmale Fenster ist ungeprüft.** Die Browsersteuerung kann das Fenster nicht verkleinern ([`frontend-grundlagen.md`](frontend-grundlagen.md) §8); geprüft ist das **Regelwerk** — welche Spalte an welchem Umbruchpunkt weicht —, nicht die Darstellung. Bei 360 px stehen fünf Spalten nebeneinander, und ob das trägt, ist von Hand nachzusehen |
-| 3 | **Die Vorwarnung ist nie ausgelöst worden.** Sie ist unit- und baumgeprüft; der Weg *durch* sie hindurch endet mit einer echten Abmeldung des prüfenden Kontos und ist deshalb nicht nebenbei zu machen |
-| 4 | **`lockedUntil` ist am laufenden System nie gefüllt gesehen worden.** Der Zustand entsteht nach fünf Fehlversuchen an einem echten Konto; hergestellt wurde er nicht |
-| 5 | **Keine Suche und kein Blättern** (E16). Bei dreißig Konten ist das richtig. Wächst der Bestand deutlich, ist es eine neue Entscheidung und kein Nachziehen |
-| 6 | **Kein Löschen von Konten** (E8) und **keine Änderung am Vertrag von `POST /api/admin/users`** (E4) — beides ausdrücklich außerhalb dieses Auftrags. Das Anlegen eines Kontos ist über die Oberfläche damit **nicht** möglich; es geht weiterhin nur über den Endpunkt aus Schritt 3 |
-| 7 | Die offenen Punkte **3, 4 und 6** aus [`benutzerverwaltung-backend.md`](benutzerverwaltung-backend.md) §9 — der Index aus M82, die tote Spalte `last_login_at`, der falsche Migrationskommentar — bleiben offen. Alle drei sind Entscheidungen und keine Ableitungen |
+| 1 | **Das schmale Fenster.** Die Browsersteuerung kann das Fenster nicht verkleinern ([`frontend-grundlagen.md`](frontend-grundlagen.md) §8); geprüft ist das Regelwerk, nicht die Darstellung. Bei 360 px stehen fünf Spalten nebeneinander — Benutzer, Sperre, Zeitsperre, Konto und der Knopf —, und ob das trägt, ist von Hand nachzusehen |
+| 2 | **Die klebende Kopfzeile im Scrollen.** Drei Konten scrollen nicht. Die Klasse ist zeichengleich die der Pflegeliste, und **dort** ist über 733 Zeilen gemessen (`main` und Kopfzeile beide bei y = 51); hier steht bislang nur der berechnete Stil |
+| 3 | **`lockedUntil` gefüllt.** Kein Konto trägt eine laufende Zeitsperre — der Zustand entsteht nach fünf Fehlversuchen an einem echten Konto und ist nicht nebenbei herzustellen. Die Spalte ist deshalb nur in ihrem leeren Zustand („keine") gesehen worden |
+| 4 | **`lastLogin = null`.** Jedes der drei Konten war schon angemeldet; „nie angemeldet" ist im Browser nie erschienen. Im Baum ist es geprüft, am laufenden System nicht |
+| 5 | **Ein wirklich ausgeführter Vorgang und der Zustand „kein Zugriff".** Der eine schreibt auf die geteilte Testkopie und wirft ein echtes Konto aus allen Sitzungen (E5); der andere braucht eine Anmeldung als MANDANT. Für beides gehört ein eigenes Wegwerfkonto angelegt — und dann gehört auch der Weg *durch* die Vorwarnung hindurch dazu, samt der Abmeldung, die ihr folgt |
+
+### Nicht in diesem Auftrag
+
+- **Kein Löschen von Konten** (E8) und **keine Suche, kein Blättern** (E16). Bei dreißig Konten ist
+  Letzteres richtig; wächst der Bestand deutlich, ist es eine neue Entscheidung und kein Nachziehen.
+- **Kein Anlegen über die Oberfläche.** `POST /api/admin/users` steht seit Schritt 3 und ist
+  unangetastet (E4); die Maske dazu gehört nicht zu 9a.
+- Die offenen Punkte **3, 4 und 6** aus
+  [`benutzerverwaltung-backend.md`](benutzerverwaltung-backend.md) §9 — der Index aus M82, die tote
+  Spalte `last_login_at`, der falsche Migrationskommentar. Alle drei sind Entscheidungen und keine
+  Ableitungen.
 
 ---
 
