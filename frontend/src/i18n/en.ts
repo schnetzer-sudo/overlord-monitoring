@@ -704,6 +704,8 @@ export const en: Texte = {
     "anmeldung-abgelehnt": "User name or password is wrong.",
     "konto-gesperrt":
       "The account is locked for a while after several failed attempts. Try again later or contact EDI support.",
+    "konto-administrativ-gesperrt":
+      "EDI support has locked this account. This lock does not expire on its own — please contact them.",
     "konto-deaktiviert": "The account is disabled. Contact EDI support.",
     "zu-viele-anmeldeversuche":
       "Too many sign-in attempts came from this address. Try again in a few minutes.",
@@ -755,6 +757,19 @@ export const en: Texte = {
     "altes-passwort-falsch": "The current password is not correct.",
     "passwort-zu-kurz": "The new password needs at least twelve characters.",
     "passwort-unveraendert": "The new password must differ from the current one.",
+
+    // User administration (step 9a). The four `409` are not permission problems:
+    // the input is fine, the state of the account rules it out. Each says what to
+    // do so that it works — that is the difference from a `403`.
+    selbstschutz:
+      "Not on your own account — locking, deactivating and downgrading are ruled out there. Another administrator can do it.",
+    "letzter-admin":
+      "This is the last usable administrator. Make another account an active, unlocked administrator first, then it will work.",
+    "letzte-mandantenzuordnung":
+      "An account needs at least one tenant. Assign a different one before removing this one.",
+    "rolle-ohne-mandant":
+      "This account has no tenant. Assign at least one first, then it can be downgraded.",
+    "unbekannte-rolle": "No such role. Choose “EDI support” or “Tenant”.",
 
     // Technical
     "technischer-fehler":

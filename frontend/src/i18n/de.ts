@@ -1084,6 +1084,13 @@ export const de = {
     "anmeldung-abgelehnt": "Benutzername oder Passwort ist falsch.",
     "konto-gesperrt":
       "Das Konto ist nach mehreren Fehlversuchen für einige Zeit gesperrt. Versuche es später erneut oder wende dich an die EDI-Betreuung.",
+    // Seit Schritt 9a: die **administrative** Sperre, und sie braucht einen
+    // eigenen Text. „Nach mehreren Fehlversuchen" wäre bei einem Verwaltungsakt
+    // eine falsche Auskunft — und der entscheidende Unterschied für den, der
+    // davorsteht, ist, dass diese hier **nicht** von selbst abläuft. Ohne den
+    // zweiten Satz wartete er eine Viertelstunde umsonst.
+    "konto-administrativ-gesperrt":
+      "Das Konto wurde von der EDI-Betreuung gesperrt. Diese Sperre läuft nicht von selbst ab — wende dich an sie.",
     "konto-deaktiviert": "Das Konto ist deaktiviert. Wende dich an die EDI-Betreuung.",
     "zu-viele-anmeldeversuche":
       "Von dieser Adresse kamen zu viele Anmeldeversuche. Versuche es in einigen Minuten erneut.",
@@ -1144,6 +1151,21 @@ export const de = {
     "altes-passwort-falsch": "Das bisherige Passwort stimmt nicht.",
     "passwort-zu-kurz": "Das neue Passwort braucht mindestens zwölf Zeichen.",
     "passwort-unveraendert": "Das neue Passwort muss sich vom bisherigen unterscheiden.",
+
+    // Benutzerverwaltung (Schritt 9a). **Die vier `409` sind kein Rechteproblem:**
+    // Die Eingabe ist in Ordnung, der Zustand des Kontos verbietet sie. Die Texte
+    // dürfen deshalb nicht wie „zugriff-verweigert" klingen — und jeder nennt,
+    // was zu tun ist, damit es doch geht. Genau darin liegt der Unterschied zu
+    // einem `403`: Dort gibt es nichts zu tun.
+    selbstschutz:
+      "Am eigenen Konto geht das nicht — sperren, deaktivieren und herabstufen sind dort ausgeschlossen. Ein anderer Administrator kann es.",
+    "letzter-admin":
+      "Das ist der letzte nutzbare Administrator. Mach zuerst ein anderes Konto zum aktiven, nicht gesperrten Administrator, dann geht es.",
+    "letzte-mandantenzuordnung":
+      "Ein Konto braucht mindestens einen Mandanten. Ordne einen anderen zu, bevor du diesen entfernst.",
+    "rolle-ohne-mandant":
+      "Dieses Konto hat keinen Mandanten. Ordne ihm zuerst mindestens einen zu, dann lässt es sich herabstufen.",
+    "unbekannte-rolle": "Diese Rolle gibt es nicht. Wähle „EDI-Betreuung“ oder „Mandant“.",
 
     // Technisch
     "technischer-fehler":
