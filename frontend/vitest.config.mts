@@ -10,8 +10,8 @@ import { defineConfig } from "vitest/config";
  * Das sind alles reine Funktionen. Ein gerenderter Baum brächte hier nichts
  * außer Laufzeit und Abhängigkeiten.
  *
- * **Die Ausnahmen sind gezählt, nicht gewachsen** — Stand 18.08.2026 sind es
- * **vierunddreißig in sieben Dateien**. Diese Zahl wird an genau dieser Stelle geführt;
+ * **Die Ausnahmen sind gezählt, nicht gewachsen** — Stand 24.08.2026 sind es
+ * **neununddreißig in acht Dateien**. Diese Zahl wird an genau dieser Stelle geführt;
  * `tests/hilfe/rendern.tsx` und `docs/frontend-grundlagen.md` §9 verweisen
  * darauf, statt sie zu wiederholen (drei Orte für dieselbe Zahl sind zwei zu
  * viel):
@@ -25,8 +25,9 @@ import { defineConfig } from "vitest/config";
  * | `tests/eigenschaften-block.test.tsx` *(17.08.2026)* | 4 | die Regression zum Schlüssel `${position}:${name}` — derselbe Name in drei Gruppen **ohne `console.error`** —, zweimal eine Aussage über **Abwesenheit** (kein Schalter und keine Anfrage bei `anzahl === 0`, und immer noch keine, solange niemand aufklappt), und der Rückfall „Schritt N", der erst im Baum entsteht |
  * | `tests/artefakt-ansicht.test.tsx` *(18.08.2026)* | 9 | **der Textknoten** — ob aus `<b>fett</b>` ein Element wird oder Text, entscheidet React beim Rendern und keine Funktion; derselbe Test belegt die Bauvorgabe aus M60 (**ein** Kind, kein Element je Zeile). Dazu die **vier Zustände** aus `docs/rohdaten.md` §8, je einer: „keiner ist ein leeres Feld" ist eine Aussage über Anwesenheit von Text und Abwesenheit des Inhaltsfelds. Dazu der Ausschnitt-Vermerk in **beide** Richtungen, der Download-Knopf (Entscheidung 9: Ein Knopf, der etwas anderes verspricht als die Anzeige, **darf nicht im Baum stehen**) und die Beschriftung ohne Nachladen |
  * | `tests/zeitleiste-ziele.test.tsx` *(18.08.2026, Nachbesserung)* | 8 | An die Stelle von `tests/dateien-block.test.tsx` getreten, als der eigene Dateienblock entfiel. Fünf Aussagen, die kein reiner Aufruf trägt: **welche Zeile welches Ziel bekommt** in den drei Lagen (beide Arten, nur eine, keine); dass die Artefakte des **Metadaten-Schritts** über der Leiste erreichbar bleiben, obwohl die Leiste Schritt `0` nicht führt (`docs/nachrichtendetail.md` §4) — eine Aussage über Anwesenheit an einer Stelle ohne Zeile; die **Belastungsprobe aus M55** mit fünfzehn eigenen Zielen und **ohne doppelten React-Schlüssel**; das **Anspringen** der Eigenschaftengruppe, das auf `document.activeElement` endet und damit auf einem Zustand des Dokuments; und die Gegenprobe dazu — ohne Eigenschaften **kein Schalter** am Schrittnamen |
+ * | `tests/katalog-tabelle.test.tsx` *(24.08.2026)* | 5 | Zwei Aussagen über **Anwesenheit und Abwesenheit im Baum**, und beide gehören zur Katalogpflege. Erstens: **`false` und `null` sagen Verschiedenes** — `zeile.traegtNachrichten ? A : B` ist die naheliegende Schreibweise und trifft beide im selben Zweig; keine reine Funktion fängt das, denn der Filter hält die Zeilen auseinander und die *Anzeige* muss es getrennt noch einmal tun (`docs/prozess-katalog.md` E14). Zweitens die **Verdrahtung** der Sperre aus E19: dass die andere Zeile ihre Schaltfläche wirklich gesperrt bekommt, dass die offene sie durch das Formular ersetzt, und die Gegenprobe ohne offene Zeile. Die *Regel* dahinter ist eine reine Funktion (`darfOeffnen`) — eine richtige Regel, die niemand abfragt, sieht von außen aus wie keine |
  *
- * Allen vierunddreißig ist dasselbe gemeinsam: **Es gibt keinen anderen Ort, an dem sie
+ * Allen neununddreißig ist dasselbe gemeinsam: **Es gibt keinen anderen Ort, an dem sie
  * belegbar wären.** Das ist die Bedingung, nicht „es ließe sich so leichter
  * prüfen". Sie schalten ihre Umgebung selbst über `// @vitest-environment jsdom`
  * um — die Voreinstellung bleibt `node`, damit die übrigen Dateien nichts von

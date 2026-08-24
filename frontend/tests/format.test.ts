@@ -7,6 +7,7 @@ import {
   formatiereDatum,
   formatiereDauer,
   formatiereRelativ,
+  formatiereAnteil,
   formatiereZahl,
   formatiereZeitpunkt,
   formatiereZeitpunktGenau,
@@ -204,6 +205,33 @@ describe("Zahlen", () => {
   it("werden in der aktiven Sprache getrennt", () => {
     expect(formatiereZahl(1234567, "de")).toBe("1.234.567");
     expect(formatiereZahl(1234567, "en")).toBe("1,234,567");
+  });
+});
+
+/**
+ * Der Anteil des Kuratierungsfortschritts (Schritt 9b).
+ *
+ * **Über `Intl` und nicht von Hand.** Das Prozentzeichen steht nicht in jeder
+ * Sprache an derselben Stelle und nicht mit demselben Abstand davor — und eine
+ * selbst zusammengesetzte Zeichenkette wäre in genau einer der beiden Sprachen
+ * falsch, und zwar unauffällig. Deshalb steht der Unterschied hier als Zusage.
+ */
+describe("Anteile", () => {
+  it("tragen in beiden Sprachen ihre eigene Schreibweise", () => {
+    // Deutsch mit schmalem geschütztem Leerzeichen vor dem Zeichen, englisch
+    // ohne. Genau das ist der Grund für `Intl`.
+    expect(formatiereAnteil(0.56, "de")).toBe("56\u00a0%");
+    expect(formatiereAnteil(0.56, "en")).toBe("56%");
+  });
+
+  it("runden auf ganze Prozent — der Fortschritt ist eine Größenordnung", () => {
+    expect(formatiereAnteil(0.5638, "de")).toBe("56\u00a0%");
+    expect(formatiereAnteil(1, "de")).toBe("100\u00a0%");
+    expect(formatiereAnteil(0, "de")).toBe("0\u00a0%");
+  });
+
+  it("machen aus einer unbrauchbaren Zahl `0` und keine Panne", () => {
+    expect(formatiereAnteil(Number.NaN, "de")).toBe("0\u00a0%");
   });
 });
 
