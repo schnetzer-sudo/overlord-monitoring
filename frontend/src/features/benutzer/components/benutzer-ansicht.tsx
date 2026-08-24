@@ -1,14 +1,18 @@
 "use client";
 
-import { Info } from "lucide-react";
+import { useCallback, useState } from "react";
+import { Info, SquarePen } from "lucide-react";
 
 import { KeinZugriff } from "@/components/kein-zugriff";
+import { Button } from "@/components/ui/button";
 import { Fehler, Laden, Leer } from "@/components/zustand";
+import { einsetzen } from "@/i18n";
 import { useTexte } from "@/i18n/provider";
 import { istKeinZugriff } from "@/lib/http";
 
 import { useNutzer } from "../hooks";
 import { BenutzerTabelle } from "./benutzer-tabelle";
+import { ZeilenFormular } from "./zeilen-formular";
 
 /**
  * Die Benutzerverwaltung: **alle Konten, mandantenfrei** (E2).
@@ -60,6 +64,12 @@ import { BenutzerTabelle } from "./benutzer-tabelle";
 export function BenutzerAnsicht() {
   const texte = useTexte();
   const liste = useNutzer();
+  const [offen, setOffen] = useState<number | null>(null);
+
+  const umschalten = useCallback(
+    (id: number) => setOffen((bisher) => (bisher === id ? null : id)),
+    [],
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -83,7 +93,28 @@ export function BenutzerAnsicht() {
           ) : liste.data.length === 0 ? (
             <Leer titel={texte.benutzer.leer.titel} hinweis={texte.benutzer.leer.hinweis} />
           ) : (
-            <BenutzerTabelle zeilen={liste.data} />
+            <BenutzerTabelle
+              zeilen={liste.data}
+              aktionenFuer={(zeile) => (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  aria-expanded={offen === zeile.id}
+                  onClick={() => umschalten(zeile.id)}
+                  title={texte.benutzer.bearbeiten}
+                  className="min-h-bedienelement"
+                >
+                  <SquarePen aria-hidden="true" />
+                  <span className="sr-only">
+                    {einsetzen(texte.benutzer.bearbeitenFuer, { benutzer: zeile.username })}
+                  </span>
+                </Button>
+              )}
+              formularFuer={(zeile) =>
+                offen === zeile.id ? <ZeilenFormular zeile={zeile} /> : null
+              }
+            />
           )}
         </>
       )}

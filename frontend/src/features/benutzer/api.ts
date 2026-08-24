@@ -1,4 +1,4 @@
-import { hole } from "@/lib/http";
+import { aendere, hole, sende } from "@/lib/http";
 
 /**
  * Die Benutzerverwaltung: **die eine Fläche, auf der Konten gepflegt werden**
@@ -130,4 +130,95 @@ export const BENUTZER_SCHLUESSEL = {
  */
 export function holeNutzer(): Promise<Nutzerzeile[]> {
   return hole<Nutzerzeile[]>("/admin/users");
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Die fünf schreibenden Vorgänge
+// ───────────────────────────────────────────────────────────────────────────
+
+/**
+ * **Ein Endpunkt, ein Vorgang, eine Ereignisart** — und der Grund ist das
+ * Protokoll (`docs/benutzerverwaltung.md` §5). Ein gemeinsames `PATCH`, das
+ * Rolle, Mandanten und Sperrzustand in einem Aufruf ändern könnte, erzeugte eine
+ * Protokollzeile, die entweder aufgespalten werden muss oder zu einem
+ * nichtssagenden `NUTZER_GEAENDERT` verwässert. Bei einem Vorfall ist sie dann
+ * nicht mehr lesbar.
+ *
+ * **Jeder der fünf antwortet mit derselben Zeile wie die Liste.** Damit wird der
+ * Zwischenspeicher aktualisiert, statt die Liste neu zu holen — der Aufrufer
+ * soll seinen Zustand nie aus mehreren Antworten zusammensetzen müssen.
+ *
+ * > **Jeder der fünf verwirft *alle* Sitzungen des betroffenen Kontos** (E5) —
+ * > eine Regel, keine Fallunterscheidung, und sie gilt auch, wenn das Ziel das
+ * > eigene Konto ist. Was die Oberfläche daraus macht, steht in
+ * > `selbstschutz.ts`.
+ */
+
+/** Der Pfad einer Zeile. Die `id` ist eine Zahl aus der Antwort und trotzdem kodiert. */
+function pfad(id: number, unterpfad: string): string {
+  return `/admin/users/${encodeURIComponent(String(id))}/${unterpfad}`;
+}
+
+/**
+ * Sperren und Entsperren — **ein Endpunkt mit Zustand, nicht zwei** (E21).
+ *
+ * **Er hebt die automatische Zeitsperre nicht auf, und das ist Absicht:** Sie
+ * läuft nach fünfzehn Minuten von selbst ab, ein eigener Knopf dafür wäre ein
+ * zweiter Weg zu einem Zustand, der sich selbst aufräumt. *Entsperren* räumt sie
+ * allerdings mit ab — das ist der Supportfall, um dessentwillen der Endpunkt
+ * existiert.
+ */
+export function setzeSperre(id: number, gesperrt: boolean): Promise<Nutzerzeile> {
+  return aendere<Nutzerzeile>(pfad(id, "lock"), { locked: gesperrt });
+}
+
+/** Deaktivieren und Reaktivieren. **Es gibt kein Löschen** (E8). */
+export function setzeAktiv(id: number, aktiv: boolean): Promise<Nutzerzeile> {
+  return aendere<Nutzerzeile>(pfad(id, "active"), { active: aktiv });
+}
+
+/**
+ * Rollenwechsel. Eine Herabstufung ohne Mandantenzuordnung lehnt das Backend mit
+ * `409 rolle-ohne-mandant` ab (E11) — die Oberfläche macht den Fall vorher
+ * erkennbar, fängt ihn aber trotzdem auf.
+ */
+export function setzeRolle(id: number, rolle: Rolle): Promise<Nutzerzeile> {
+  return aendere<Nutzerzeile>(pfad(id, "role"), { role: rolle });
+}
+
+/**
+ * Die Mandantenmenge — **die dritte und derzeit letzte Ausnahme von Regel M1**
+ * (E4).
+ *
+ * Sie ist zulässig aus demselben Grund wie die beiden anderen: Hier wird eine
+ * Berechtigung **definiert** und kein Datenausschnitt **abgefragt**. Die
+ * übergebenen Kennungen sagen nichts darüber aus, was der pflegende Admin lesen
+ * darf, sondern nur, für wen das fremde Konto künftig gilt.
+ *
+ * **Geschickt wird immer die vollständige Zielmenge**, nicht ein Zusatz und
+ * nicht ein Entzug. Bei dreißig Konten und zehn Mandanten ist die Menge winzig,
+ * und eine Mengenersetzung hat genau ein Ergebnis, während eine Differenzbildung
+ * zwei Fehlerarten hat.
+ *
+ * Doppelte Kennungen zieht das Backend still zusammen — die Oberfläche baut
+ * dafür **keine eigene Prüfung**; zwei Stellen für dieselbe Regel liefen
+ * auseinander.
+ */
+export function setzeMandanten(id: number, mandanten: readonly string[]): Promise<Nutzerzeile> {
+  return aendere<Nutzerzeile>(pfad(id, "tenants"), { tenants: [...mandanten] });
+}
+
+/**
+ * Passwort zurücksetzen — **der Admin tippt es** (E13), mindestens zwölf
+ * Zeichen, und es darf nicht dem aktuellen entsprechen.
+ *
+ * **Das Konto bekommt Änderungszwang.** Das gehört in der Oberfläche gesagt: Es
+ * ist die Folge, nach der der Nutzer als Nächstes fragt.
+ *
+ * **Das Passwort steht in keiner Antwort und in keinem Protokoll** — auch nicht
+ * gehasht und auch nicht abgekürzt. Es geht ausschließlich auf dem Weg zum
+ * Nutzer, den der Admin selbst wählt.
+ */
+export function setzePasswort(id: number, passwort: string): Promise<Nutzerzeile> {
+  return sende<Nutzerzeile>(pfad(id, "password"), { initialPassword: passwort });
 }

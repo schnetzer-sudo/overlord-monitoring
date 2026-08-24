@@ -983,6 +983,41 @@ export const de = {
       aktionen: "Bearbeiten",
     },
     ohneMandanten: "keine",
+    bearbeiten: "Bearbeiten",
+    bearbeitenFuer: "Konto {benutzer} bearbeiten",
+    formular: {
+      sperre: "Konto gesperrt",
+      sperreHinweis:
+        "Sperrt das Konto unbefristet. Das Entsperren räumt zugleich eine laufende Zeitsperre und den Fehlversuchszähler ab.",
+      aktiv: "Konto aktiv",
+      aktivHinweis:
+        "Deaktivierte Konten kommen nicht mehr herein. Gelöscht wird nie — sonst wären ihre Protokollzeilen nicht mehr lesbar.",
+      rolle: "Rolle",
+      rolleOhneMandant:
+        "Ohne Mandanten lässt sich dieses Konto nicht auf „Mandant“ herabstufen. Ordne ihm zuerst mindestens einen zu.",
+      passwort: "Neues Passwort vergeben",
+      passwortSetzen: "Passwort setzen",
+      passwortHinweis:
+        "Mindestens {laenge} Zeichen, und es darf nicht dem bisherigen entsprechen. Das Konto muss es beim nächsten Anmelden selbst ändern. Gib es dem Nutzer auf einem Weg, den du selbst wählst — hier steht es danach nirgends mehr.",
+      eigenesKonto:
+        "Das ist dein eigenes Konto. Jede Änderung daran meldet dich ab, und du musst dich neu anmelden.",
+    },
+    vorwarnung: {
+      titel: "Das ist dein eigenes Konto",
+      text: "„{vorgang}“ trifft dein eigenes Konto.",
+      folge:
+        "Der Vorgang wird ausgeführt — und weil dabei alle Sitzungen dieses Kontos verworfen werden, wirst du sofort abgemeldet und landest auf der Anmeldung. Neu anmelden kannst du dich anschließend ganz normal.",
+      vorgaenge: {
+        sperre: "Sperre ändern",
+        aktiv: "Konto aktivieren oder deaktivieren",
+        rolle: "Rolle ändern",
+        mandanten: "Mandanten ändern",
+        passwort: "Passwort setzen",
+      },
+      bestaetigen: "Ausführen und abmelden",
+      laeuft: "Wird ausgeführt …",
+      abbrechen: "Abbrechen",
+    },
     sperre: {
       gesperrt: "gesperrt",
       offen: "nicht gesperrt",

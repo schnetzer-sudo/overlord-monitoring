@@ -618,6 +618,41 @@ export const en: Texte = {
       aktionen: "Edit",
     },
     ohneMandanten: "none",
+    bearbeiten: "Edit",
+    bearbeitenFuer: "Edit account {benutzer}",
+    formular: {
+      sperre: "Account locked",
+      sperreHinweis:
+        "Locks the account indefinitely. Unlocking also clears a running timed lock and the failed-attempt counter.",
+      aktiv: "Account active",
+      aktivHinweis:
+        "Deactivated accounts can no longer sign in. Nothing is ever deleted — their audit entries would become unreadable.",
+      rolle: "Role",
+      rolleOhneMandant:
+        "Without tenants this account cannot be downgraded to “Tenant”. Assign at least one first.",
+      passwort: "Set a new password",
+      passwortSetzen: "Set password",
+      passwortHinweis:
+        "At least {laenge} characters, and it must differ from the current one. The account has to change it at the next sign-in. Pass it on by a route you choose yourself — it is not shown here again.",
+      eigenesKonto:
+        "This is your own account. Any change to it signs you out, and you will have to sign in again.",
+    },
+    vorwarnung: {
+      titel: "This is your own account",
+      text: "“{vorgang}” affects your own account.",
+      folge:
+        "The operation will go through — and because it discards every session of this account, you will be signed out at once and land on the sign-in page. You can sign in again right afterwards.",
+      vorgaenge: {
+        sperre: "Change lock",
+        aktiv: "Activate or deactivate account",
+        rolle: "Change role",
+        mandanten: "Change tenants",
+        passwort: "Set password",
+      },
+      bestaetigen: "Run and sign me out",
+      laeuft: "Running …",
+      abbrechen: "Cancel",
+    },
     sperre: {
       gesperrt: "locked",
       offen: "not locked",
