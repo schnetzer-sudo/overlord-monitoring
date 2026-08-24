@@ -97,7 +97,7 @@ aus dem bfcache. Der Schutz liegt deshalb im Anwendungsrahmen: Er hört auf `pag
 sobald `event.persisted` gesetzt ist. Die neue Anfrage läuft durch die Routensperre, und ohne
 Sitzungs-Cookie landet der Nutzer auf der Anmeldung.
 
-### Der Verwaltungsbereich *(21.08.2026)*
+### Der Administrationsbereich *(21.08.2026, umbenannt 24.08.2026)*
 
 **Ein Navigationseintrag, zwei Unterseiten.** Die Benutzerverwaltung (Schritt 9a) und die
 Katalogpflege (Schritt 9b) sind zwei Seiten desselben Bereichs und **kein zweiter Menüpunkt**:
@@ -109,13 +109,31 @@ Katalogpflege (Schritt 9b) sind zwei Seiten desselben Bereichs und **kein zweite
 | Benutzerverwaltung | `/administration/benutzer` |
 | Katalogpflege | `/administration/katalog` |
 
-> **Zur Route: Der Auftrag vom 21.08.2026 nennt `/verwaltung/benutzer` und `/verwaltung/katalog`.**
-> Hier steht `/administration/…`, weil der Pfad im Code bereits dreifach vergeben ist —
-> `ROUTEN.administration`, der Navigationseintrag und die Platzhalterseite unter
-> `app/(app)/administration/`. Eine Umbenennung ist möglich, aber sie ist eine **eigene**
-> Entscheidung mit eigenem Aufwand (Route, Navigation, Sprachschlüssel `navigation.eintraege`,
-> bestehende Verweise) und nicht der Nebeneffekt eines Backend-Auftrags. **Gemeldet, nicht
-> stillschweigend aufgelöst.**
+> **Zur Route — entschieden am 24.08.2026, der alte Wortlaut bleibt stehen.** Hier stand:
+> *„Der Auftrag vom 21.08.2026 nennt `/verwaltung/benutzer` und `/verwaltung/katalog`. Hier steht
+> `/administration/…`, weil der Pfad im Code bereits dreifach vergeben ist — `ROUTEN.administration`,
+> der Navigationseintrag und die Platzhalterseite unter `app/(app)/administration/`. Eine Umbenennung
+> ist möglich, aber sie ist eine **eigene** Entscheidung mit eigenem Aufwand (Route, Navigation,
+> Sprachschlüssel `navigation.eintraege`, bestehende Verweise) und nicht der Nebeneffekt eines
+> Backend-Auftrags. **Gemeldet, nicht stillschweigend aufgelöst.**"*
+>
+> **Der Auftrag zu Schritt 9b, Teil Frontend hat sie getroffen: Beschriftung und Route heißen beide
+> *Administration*** — ein Wort, das der Nutzer liest und das in der Adresszeile steht. Damit ist
+> `/verwaltung/…` erledigt und die Umbenennung findet nicht statt: Es gibt nichts umzubenennen.
+> Die Überschrift dieses Abschnitts lautete bis dahin „Der **Verwaltungs**bereich".
+>
+> **Zwei Feststellungen dazu, weil der Auftrag sie anders annimmt** — er trägt auf, „den erfundenen
+> Pfad in `docs/frontend-grundlagen.md` und in die E-Texte" zu korrigieren:
+>
+> - **`/verwaltung` steht im ganzen Repository an genau einer Stelle**, nämlich in dem oben
+>   zitierten alten Wortlaut — also dort, wo er *gemeldet* und nicht behauptet wird. Eine
+>   Code-Fundstelle gibt es nicht.
+> - **Die E-Texte tragen ihn nicht.** [`prozess-katalog.md`](prozess-katalog.md) nennt den Pfad in
+>   keiner seiner einundzwanzig Entscheidungen; §9 dort und §9, Abweichung 4 in
+>   [`prozess-katalog-backend.md`](prozess-katalog-backend.md) sprechen vom
+>   *Administrationsbereich* als Ort, nie von einer Route.
+>
+> Zu korrigieren war deshalb die **Benennung**, nicht ein falscher Pfad.
 
 **Der Menüpunkt ist ausgeblendet, und das ist Bequemlichkeit — genau wie die Routensperre darüber.**
 `sichtbareNavigation(rolle)` filtert den Eintrag heraus, solange die Rolle nicht `ADMIN` ist. Das
