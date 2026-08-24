@@ -647,6 +647,47 @@ importiert werden. Kommt in Schritt 10 eine eigene Prozessansicht, wandert der g
 Query. Auch `features/nachrichten/filter.ts` ist bewusst **frei von React** — die Umrechnung Zustand
 → Anfrage ist eine reine Funktion und wird als solche geprüft.
 
+#### Ein Baustein des Generators ist client-only, ohne es zu sagen *(24.08.2026)*
+
+> **`components/ui/button.tsx` trägt kein `"use client"` und lässt sich trotzdem nicht in einer
+> Server-Komponente verwenden.** Es importiert `Slot` aus dem Sammelpaket `radix-ui`, und dessen
+> Auswertung ruft `createContext`. Der Fehler fällt **beim Importieren**, nicht beim Rendern:
+>
+> ```
+> Runtime TypeError
+> createContext only works in Client Components.
+>   src/components/ui/button.tsx (3:1)  @ module evaluation
+> ```
+
+**Gefunden beim Aufrufen von `/administration`, nicht beim Bauen.** Die Übersichtsseite ist eine
+`page.tsx` und damit Server-Komponente; sie benutzte `Button asChild` um einen `Link`. Alle übrigen
+dreiundzwanzig Verwender von `Button` im Projekt sind Client-Komponenten — deshalb war die Falle
+seit Schritt 3 unsichtbar und schnappte beim allerersten Server-Verwender sofort zu.
+
+**Kein bestehender Prüfschritt konnte das finden, und keiner hätte es können:**
+
+| | |
+|---|---|
+| `pnpm check` | rendert **keine einzige Seite**. Lint, Typprüfung, Format und Vitest sagen nichts über die Grenze |
+| die rendernden Tests | laufen in `jsdom` — dort ist alles Client |
+| `next build` | prerendert diese Route nicht: `generateMetadata` liest die Sprache aus dem Cookie, die Route ist dynamisch |
+
+**Seit dem 24.08.2026 gibt es dafür ein Netz:** `tests/serverbausteine.test.ts` berechnet die Liste
+der serverunsicheren Bausteine aus den Dateien — `radix-ui` importiert, `"use client"` fehlt — und
+weist nach, dass keine Server-Komponente einen davon importiert. Berechnet und nicht geschrieben,
+weil `components/ui` Generatorbereich ist: Welche Datei die Auszeichnung trägt, entscheidet
+`shadcn add`. Das Netz ist gerissen worden, bevor es gezählt hat.
+
+**Was der Test ausdrücklich *nicht* verbietet:** dass eine Server-Komponente eine
+**Client**-Komponente importiert. Das ist der Normalfall und die Naht selbst —
+`seiten-platzhalter.tsx` ist Server und rendert `Leer`. Geprüft wird allein der Sonderfall des
+**falsch ausgezeichneten** Moduls: eines, das sich wie eine Server-Komponente verhält und keine ist.
+
+**Die Auflösung ist nicht `"use client"` an der Seite.** Jede `page.tsx` ist Server-Komponente, und
+eine Liste ohne jedes Verhalten ist der schlechteste denkbare Anlass, diese Grenze zu verschieben.
+Die Übersicht baut ihre Verweise stattdessen selbst — es ist ohnehin eine Liste von Links und keine
+von Schaltflächen.
+
 ### Filterzustand
 
 `lib/filter.ts` hält die nuqs-Abstraktion für das **Zeitfenster** — den einen Filter, den jeder
@@ -855,6 +896,7 @@ gerissen hat, ist eine Behauptung.
 | `ablauf.test.ts` | Änderungszwang vor Mandantenauswahl vor Startseite |
 | `sprachdateien.test.ts` | gleicher Schlüsselsatz; 404-Wortwahl; Rückfall auf `detail` |
 | `farbwerte.test.ts` | kein Hex-Wert, keine Tailwind-Farbklasse in einer Komponente |
+| **`serverbausteine.test.ts`** *(24.08.2026)* | **Blockierungstest, aus einem Befund am laufenden System.** Er berechnet aus den Dateien, welche Bausteine in `components/ui` `radix-ui` auswerten und trotzdem kein `"use client"` tragen — heute genau `button.tsx` —, und weist nach, dass **keine Server-Komponente** einen davon importiert. Der Anlass steht in §8: `/administration` warf beim Aufrufen *„createContext only works in Client Components"*, und **kein bestehender Prüfschritt konnte das finden** (`pnpm check` rendert keine Seite, `jsdom` kennt die Grenze nicht, `next build` prerendert die dynamische Route nicht). Die Liste ist berechnet und nicht geschrieben, weil `components/ui` Generatorbereich ist; ein eigener Fall hält fest, dass sie nicht leer laufen darf |
 | `zwischenspeicher.test.ts` | geleert **vor** dem Weitergehen, bei Wechsel und Abmeldung; das Ziel nach dem Mandantenwechsel trägt keine Filter |
 | `format.test.ts` | UTC → Anzeige in der gelieferten Zone; Rückfall auf UTC statt auf den Browser; relative Zeit; Wanduhrzeit der Eingabefelder, auch am Umstellungstag; **Dauern** mit höchstens zwei Einheiten und „< 1 s" statt „0 s"; **Anteile** über `Intl` — deutsch `56 %` mit schmalem geschütztem Leerzeichen, englisch `56%`, auf ganze Prozent gerundet *(24.08.2026)* |
 | `routen.test.ts` | `weiter` als offene Weiterleitung ausgeschlossen |

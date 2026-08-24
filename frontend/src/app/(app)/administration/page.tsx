@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
 import { aktiveTexte } from "@/i18n/server";
 import { ADMINISTRATION } from "@/lib/navigation";
 
@@ -24,6 +23,24 @@ export async function generateMetadata(): Promise<Metadata> {
  * Seite ruft kein Backend auf und kann deshalb auch nichts erfahren; wer sie
  * ohne die Rolle `ADMIN` erreicht, sieht zwei Verweise und bekommt den Zustand
  * „kein Zugriff" dort, wo er belegt ist: an der Katalogpflege, aus deren `403`.
+ *
+ * ## Warum hier kein `Button asChild` steht
+ *
+ * **`components/ui/button.tsx` ist in diesem Projekt client-only, ohne es zu
+ * sagen.** Es trägt kein `"use client"`, importiert aber `Slot` aus dem
+ * Sammelpaket `radix-ui` — und dessen Auswertung ruft `createContext`. In einer
+ * Server-Komponente ergibt das einen `TypeError` beim Modulauswerten, und zwar
+ * schon beim Importieren, nicht erst beim Rendern. Alle übrigen dreiundzwanzig
+ * Verwender im Projekt sind Client-Komponenten; das fällt deshalb sonst nie auf.
+ *
+ * **Aufgelöst wird das nicht mit `"use client"` an dieser Datei.** Jede
+ * `page.tsx` ist Server-Komponente (`docs/frontend-grundlagen.md` §8), und eine
+ * Liste ohne jedes Verhalten ist der schlechteste denkbare Anlass, diese Grenze
+ * zu verschieben.
+ *
+ * **Und es ist ohnehin eine Liste von Verweisen und keine von Schaltflächen.**
+ * Sie trägt deshalb die Gestalt, die `components/zustand.tsx` für seine Tafeln
+ * benutzt — gerahmte Karte auf `--card` —, dazu den Fokusring der Navigation.
  */
 export default async function AdministrationPage() {
   const texte = await aktiveTexte();
@@ -43,21 +60,16 @@ export default async function AdministrationPage() {
           const Symbol = bereich.symbol;
           return (
             <li key={bereich.pfad}>
-              <Button
-                asChild
-                variant="outline"
-                className="min-h-beruehrung h-auto w-full justify-start gap-3 px-3 py-2 text-left"
+              <Link
+                href={bereich.pfad}
+                className="border-border bg-card hover:bg-muted focus-visible:ring-ring min-h-beruehrung flex items-start gap-3 rounded-lg border px-3 py-2 focus-visible:ring-2 focus-visible:outline-none"
               >
-                <Link href={bereich.pfad}>
-                  <Symbol aria-hidden="true" className="size-4 shrink-0 self-start" />
-                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className="font-medium">{text.titel}</span>
-                    <span className="text-muted-foreground text-beiwerk whitespace-normal">
-                      {text.beschreibung}
-                    </span>
-                  </span>
-                </Link>
-              </Button>
+                <Symbol aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="font-medium">{text.titel}</span>
+                  <span className="text-muted-foreground text-beiwerk">{text.beschreibung}</span>
+                </span>
+              </Link>
             </li>
           );
         })}

@@ -89,7 +89,23 @@ Selbstauskunft wäre eine **Berechtigungsentscheidung im Browser** — dieselbe 
 mit einem eigenen Absatz zieht. Wer die Adresse ohne die Rolle eintippt, sieht zwei Verweise und
 bekommt die Auskunft dort, wo sie belegt ist: an der Katalogpflege, aus deren `403`.
 
----
+### Sie baut ihre Verweise selbst, und das ist kein Geschmack
+
+**`components/ui/button.tsx` lässt sich hier nicht verwenden.** Es trägt kein `"use client"`,
+importiert aber `Slot` aus dem Sammelpaket `radix-ui` — und dessen Auswertung ruft `createContext`.
+In einer Server-Komponente ist das ein `TypeError` beim **Importieren**, nicht erst beim Rendern.
+Die Übersicht war der erste Server-Verwender im ganzen Projekt; die übrigen dreiundzwanzig sind
+Client-Komponenten.
+
+**Aufgelöst nicht mit `"use client"` an der Seite.** Jede `page.tsx` ist Server-Komponente
+([`frontend-grundlagen.md`](frontend-grundlagen.md) §8), und eine Liste ohne jedes Verhalten ist der
+schlechteste denkbare Anlass, diese Grenze zu verschieben. Es ist ohnehin eine Liste von **Verweisen**
+und keine von Schaltflächen; sie trägt die Gestalt der gerahmten Tafel aus `components/zustand.tsx`
+und den Fokusring der Navigation.
+
+**Gefunden beim Aufrufen, nicht beim Prüfen** — und das ist der eigentliche Befund. Die vollständige
+Herleitung samt dem Netz, das seither darunter liegt, steht in
+[`frontend-grundlagen.md`](frontend-grundlagen.md) §8.
 
 ## 3. Die Pflegeliste
 
@@ -609,6 +625,7 @@ den Lauf fehlschlagen.
 | `tests/katalog.test.ts` | rein | der **leere Partner** als `null` (Feld, Leerraum, Massenzuordnung); `darfOeffnen` in allen drei Lagen; die Antwort im Zwischenspeicher; die Vorschläge; der **Fortschritt** über eine bekannte Liste; die **Hinweisbedingung** je einmal erfüllt und nicht erfüllt, dazu „hängt am Partner allein" und „bleibt nach Handarbeit stehen"; die Projektauswahl; **„kein Zugriff" bei `403`** und bei keinem der beiden anderen `403`; die Fehlerabbildung für `partner-zu-lang` und `richtung-unbekannt` in beiden Sprachen |
 | `tests/katalog-tabelle.test.tsx` | **gerenderter Baum**, fünf Fälle | dass **`false` und `null` drei verschiedene Sätze ergeben** und eine nie geprüfte Zeile nicht den Satz der toten trägt; dazu die **Verdrahtung** der Sperre aus E19 |
 | `tests/format.test.ts` | rein, ergänzt | **Anteile** über `Intl`: deutsch `56 %`, englisch `56%`, auf ganze Prozent gerundet |
+| `tests/serverbausteine.test.ts` | rein, **Blockierungstest** | dass **keine Server-Komponente einen Baustein importiert, der `radix-ui` auswertet und kein `"use client"` trägt**. Aus dem Befund an `/administration` (§2); vollständig in [`frontend-grundlagen.md`](frontend-grundlagen.md) §8 |
 
 ### Warum `katalog-tabelle.test.tsx` einen Baum rendern darf
 
@@ -706,7 +723,12 @@ alle zehn.**
 
 **11. Die klebende Kopfzeile trägt `-top-4` und nicht `top-0`.** Kein Punkt des Auftrags, sondern
 ein Befund der Sichtprüfung: `top-0` bleibt einen Innenabstand zu tief stehen, und durch die 16 px
-darüber liefen die Zeilen sichtbar hindurch. Gemessen und ausgeschrieben in §3.
+
+**12. Die Übersicht baut ihre Verweise selbst, statt `Button asChild` zu benutzen.** Kein Punkt des
+Auftrags, sondern ein Fehler dieser Runde und seine Behebung: `components/ui/button.tsx` ist
+client-only, ohne es zu sagen, und die Übersichtsseite ist eine Server-Komponente. Sie war der erste
+Server-Verwender von `Button` im ganzen Projekt. Ausgeschrieben in §2, das Netz darunter in
+[`frontend-grundlagen.md`](frontend-grundlagen.md) §8.
 
 ## 12. Offene Punkte
 
