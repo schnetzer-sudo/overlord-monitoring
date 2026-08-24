@@ -30,10 +30,21 @@ export function KatalogFilterleiste({
   filter,
   aufNurOffene,
   aufNurMitNachrichten,
+  gesperrt = false,
 }: {
   filter: Katalogfilter;
   aufNurOffene: (wert: boolean) => void;
   aufNurMitNachrichten: (wert: boolean) => void;
+  /**
+   * **Während eine Zeile bearbeitet wird, bleibt die Liste stehen.**
+   *
+   * Ein Filterwechsel holt die Liste neu; die offene Zeile könnte dabei aus der
+   * Antwort fallen, und mit ihr das Formular samt allem, was schon getippt ist.
+   * Genau das schließt E19 aus — ungespeicherte Änderungen werden nie
+   * stillschweigend verworfen. Die Sperre ist dieselbe Zusage wie „keine zweite
+   * Zeile öffnen", nur von der anderen Seite.
+   */
+  gesperrt?: boolean;
 }) {
   const texte = useTexte();
   const offeneId = useId();
@@ -43,13 +54,14 @@ export function KatalogFilterleiste({
     <div
       role="group"
       aria-label={texte.katalog.filter.bezeichnung}
-      className="flex flex-wrap gap-x-6 gap-y-3"
+      className="flex flex-wrap items-start gap-x-6 gap-y-3"
     >
       <Schalter
         kennung={offeneId}
         beschriftung={texte.katalog.filter.nurOffene}
         hinweis={texte.katalog.filter.nurOffeneHinweis}
         gesetzt={filter.nurOffene}
+        gesperrt={gesperrt}
         aufAenderung={aufNurOffene}
       />
       <Schalter
@@ -57,8 +69,14 @@ export function KatalogFilterleiste({
         beschriftung={texte.katalog.filter.nurMitNachrichten}
         hinweis={texte.katalog.filter.nurMitNachrichtenHinweis}
         gesetzt={filter.nurMitNachrichten}
+        gesperrt={gesperrt}
         aufAenderung={aufNurMitNachrichten}
       />
+      {gesperrt ? (
+        <p className="text-muted-foreground text-beiwerk min-h-beruehrung flex items-center">
+          {texte.katalog.filter.gesperrt}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -68,12 +86,14 @@ function Schalter({
   beschriftung,
   hinweis,
   gesetzt,
+  gesperrt,
   aufAenderung,
 }: {
   kennung: string;
   beschriftung: string;
   hinweis: string;
   gesetzt: boolean;
+  gesperrt: boolean;
   aufAenderung: (wert: boolean) => void;
 }) {
   return (
@@ -81,6 +101,7 @@ function Schalter({
       <Checkbox
         id={kennung}
         checked={gesetzt}
+        disabled={gesperrt}
         onCheckedChange={(wert) => aufAenderung(wert === true)}
         className="mt-1 shrink-0"
       />

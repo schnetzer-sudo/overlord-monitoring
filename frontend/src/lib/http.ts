@@ -260,11 +260,20 @@ export function hole<T>(pfad: string): Promise<T> {
   return anfrage<T>(pfad, { method: "GET", headers: { Accept: "application/json" } });
 }
 
-/** Schreibender Aufruf. Holt den CSRF-Token vorher, statt am ersten Versuch zu scheitern. */
-export async function sende<T>(pfad: string, koerper?: unknown): Promise<T> {
+/**
+ * Der gemeinsame Rumpf der schreibenden Aufrufe. **Er holt den CSRF-Token
+ * vorher**, statt den ersten Versuch scheitern zu lassen.
+ *
+ * Bis zum 24.08.2026 gab es hier nur `POST`. Die Katalogpflege setzt eine
+ * Katalogzeile mit `PUT` — und das ist keine Formsache: `PUT` schreibt beide
+ * Felder als Ganzes, ein fehlendes bedeutet also **leer** und nicht
+ * „unverändert". Genau darauf beruht E4, denn ein leerer Partner ist ein
+ * gültiger gepflegter Zustand.
+ */
+async function schreibe<T>(pfad: string, methode: "POST" | "PUT", koerper?: unknown): Promise<T> {
   const kopf = await csrfKopf();
   return anfrage<T>(pfad, {
-    method: "POST",
+    method: methode,
     headers: {
       Accept: "application/json",
       ...(koerper === undefined ? {} : { "Content-Type": "application/json" }),
@@ -272,4 +281,14 @@ export async function sende<T>(pfad: string, koerper?: unknown): Promise<T> {
     },
     body: koerper === undefined ? undefined : JSON.stringify(koerper),
   });
+}
+
+/** Schreibender Aufruf. Holt den CSRF-Token vorher, statt am ersten Versuch zu scheitern. */
+export function sende<T>(pfad: string, koerper?: unknown): Promise<T> {
+  return schreibe<T>(pfad, "POST", koerper);
+}
+
+/** Wie {@link sende}, nur mit `PUT` — der Aufruf setzt eine Ressource als Ganzes. */
+export function aendere<T>(pfad: string, koerper?: unknown): Promise<T> {
+  return schreibe<T>(pfad, "PUT", koerper);
 }

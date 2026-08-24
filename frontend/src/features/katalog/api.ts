@@ -1,4 +1,4 @@
-import { hole } from "@/lib/http";
+import { aendere, hole } from "@/lib/http";
 
 /**
  * Der Prozess-Katalog: **die Fläche, auf der aus etwas Lesbarem etwas
@@ -84,6 +84,15 @@ export const KATALOG_SCHLUESSEL = {
    * Anfrage nicht.
    */
   prozesse: (nurOffene: boolean) => ["katalog", "prozesse", nurOffene] as const,
+  /**
+   * Der Präfix beider Listenschlüssel.
+   *
+   * Nach einer Zuordnung wird **jede** zwischengespeicherte Fassung der Liste
+   * aktualisiert — die mit und die ohne `nurOffene`. Nur die gerade sichtbare zu
+   * setzen hieße, dass ein Haken hin und zurück die alte Zeile wieder
+   * hervorholt, und zwar ohne Anfrage und ohne Hinweis.
+   */
+  prozesseBereich: ["katalog", "prozesse"] as const,
   /** Die Partnervorschläge. Stammdaten des Mandanten, entsprechend länger gehalten. */
   partner: ["katalog", "partner"] as const,
 };
@@ -108,4 +117,38 @@ export function holeKatalogzeilen(nurOffene: boolean): Promise<Katalogzeile[]> {
  */
 export function holePartner(): Promise<string[]> {
   return hole<string[]>("/katalog/partner");
+}
+
+/**
+ * Was ein `PUT` setzt — **beide Felder, immer**.
+ *
+ * `null` heißt leer und nicht „unverändert": Der Endpunkt setzt die Zeile als
+ * Ganzes und macht sie damit `GEPFLEGT`. Ein leerer Partner ist genau deshalb
+ * ein gültiger Wert und bedeutet „hingesehen, es gibt nichts" (E4) — ohne ihn
+ * stünden Auffangprozesse dauerhaft auf „offen" und der Fortschritt erreichte
+ * nie sein Ende.
+ */
+export type ZuordnenAnfrage = {
+  partner: string | null;
+  richtung: Richtung | null;
+};
+
+/**
+ * Setzt Partner und Richtung **einer** Zeile (E19) — ein Aufruf je Zeile, kein
+ * Sammelspeichern.
+ *
+ * Die Antwort ist die geänderte Zeile. Damit wird der Zwischenspeicher
+ * aktualisiert und **nicht** die ganze Liste neu geholt: 733 Zeilen wegen einer
+ * einzigen Änderung noch einmal zu ziehen, wäre teuer und nähme dem Nutzer
+ * obendrein seine Seitenposition.
+ *
+ * **Die `processId` wird kodiert.** Sie kommt aus der Antwort des Backends und
+ * darf trotzdem alles enthalten; ein roher Pfad wäre eine Annahme über fremde
+ * Zeichenketten.
+ *
+ * Ein `404` heißt „gibt es nicht" und sagt **niemals** etwas über Berechtigung —
+ * das Backend hält eine erfundene und eine fremde Kennung ununterscheidbar.
+ */
+export function zuordne(processId: string, anfrage: ZuordnenAnfrage): Promise<Katalogzeile> {
+  return aendere<Katalogzeile>(`/katalog/prozesse/${encodeURIComponent(processId)}`, anfrage);
 }

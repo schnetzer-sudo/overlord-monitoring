@@ -511,6 +511,21 @@ export const en: Texte = {
       nurOffeneHinweis: "Hides the rows that are already curated.",
       nurMitNachrichten: "with messages only",
       nurMitNachrichtenHinweis: "Unchecked rows stay visible.",
+      gesperrt: "While a row is being edited, the list holds still.",
+    },
+    bearbeiten: {
+      oeffnen: "Edit",
+      gesperrt: "While this row is open, no second one can be opened.",
+      partner: "Partner",
+      partnerPlatzhalter: "Type a name or pick one",
+      partnerLeeren: "Clear partner",
+      vorschlaege: "Partner suggestions",
+      richtung: "Direction",
+      ohneRichtung: "none",
+      ohnePartnerHinweis: "Saving now means: looked at, there is no partner.",
+      speichern: "Save",
+      speichernLaeuft: "Saving …",
+      abbrechen: "Cancel",
     },
     leer: {
       titel: "No process",
@@ -579,6 +594,11 @@ export const en: Texte = {
     "suche-fenster-zu-gross": "This time window is too large for a search.",
     "suche-abgebrochen":
       "The search took too long and was cancelled. Shorten the time range or narrow the search term.",
+
+    "partner-zu-lang": "A partner name may hold at most 100 characters.",
+    "richtung-unbekannt": "Pick “Inbound”, “Outbound” — or no direction at all.",
+    "feld-unbekannt": "Pick exactly one of the fields partner or direction.",
+    "modus-unbekannt": "There is no such mode.",
     "limit-ungueltig": "This page size is not allowed.",
     "cursor-ungueltig": "The page position is no longer valid. Start again on page one.",
     "altes-passwort-falsch": "The current password is not correct.",

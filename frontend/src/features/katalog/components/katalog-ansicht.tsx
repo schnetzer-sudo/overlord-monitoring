@@ -1,13 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { KeinZugriff } from "@/components/kein-zugriff";
 import { Fehler, Laden, Leer } from "@/components/zustand";
 import { useTexte } from "@/i18n/provider";
 import { istKeinZugriff } from "@/lib/http";
 
-import { useKatalogfilter, useKatalogzeilen } from "../hooks";
+import { useKatalogfilter, useKatalogzeilen, usePartner } from "../hooks";
 import { sichtbareZeilen } from "../filter";
 import { KatalogFilterleiste } from "./katalog-filterleiste";
 import { KatalogTabelle } from "./katalog-tabelle";
@@ -44,14 +44,33 @@ import { KatalogTabelle } from "./katalog-tabelle";
  * Die drei zu verschmelzen hieße, dem Nutzer im Erfolgsfall dasselbe zu sagen
  * wie bei einem leeren Mandanten — und ihn im dritten Fall den Bestand
  * verdächtigen zu lassen, obwohl sein eigener Haken die Ursache ist.
+ *
+ * ## Die offene Zeile steht im Komponentenzustand und nicht in der URL
+ *
+ * Der Zweischritt aus §8: Die URL *könnte* die Kennung ausdrücken — aber der
+ * Zustand ist kein Ausschnitt, sondern eine **begonnene Eingabe**, und die
+ * Hälfte, auf die es ankommt (der getippte Text), lässt sich ohnehin nicht
+ * teilen. Ein geteilter Link zeigte dem Empfänger ein leeres Formular über einer
+ * Zeile und behauptete damit etwas, das der Absender nie gesehen hat. Die
+ * ableitende Regel steht als reine Funktion daneben ({@link darfOeffnen}).
+ *
+ * ## Die Partnervorschläge werden geholt, sobald die Seite steht
+ *
+ * Nicht erst beim Öffnen einer Zeile. Der Endpunkt kostet bei `NEXANS`
+ * gemessene 4,1 ms (M80), gilt fünfzehn Minuten und ist genau das, wofür diese
+ * Seite geöffnet wurde. Eine Auswahl, die beim ersten Aufklappen noch lädt, ist
+ * beim ersten Aufklappen keine.
  */
 export function KatalogAnsicht() {
   const texte = useTexte();
   const { filter, setzeNurOffene, setzeNurMitNachrichten } = useKatalogfilter();
   const liste = useKatalogzeilen(filter.nurOffene);
+  const partner = usePartner();
+  const [bearbeitet, setBearbeitet] = useState<string | null>(null);
 
   const zeilen = useMemo(() => liste.data ?? [], [liste.data]);
   const sichtbar = useMemo(() => sichtbareZeilen(zeilen, filter), [zeilen, filter]);
+  const schliessen = useCallback(() => setBearbeitet(null), []);
 
   return (
     <div className="flex flex-col gap-4">
@@ -67,6 +86,7 @@ export function KatalogAnsicht() {
             filter={filter}
             aufNurOffene={setzeNurOffene}
             aufNurMitNachrichten={setzeNurMitNachrichten}
+            gesperrt={bearbeitet !== null}
           />
 
           {liste.isPending ? (
@@ -85,7 +105,13 @@ export function KatalogAnsicht() {
           ) : sichtbar.length === 0 ? (
             <Leer titel={texte.katalog.leer.titel} hinweis={texte.katalog.leer.filterLeer} />
           ) : (
-            <KatalogTabelle zeilen={sichtbar} />
+            <KatalogTabelle
+              zeilen={sichtbar}
+              offeneZeile={bearbeitet}
+              aufOeffnen={setBearbeitet}
+              aufSchliessen={schliessen}
+              vorschlaege={partner.data ?? []}
+            />
           )}
         </>
       )}

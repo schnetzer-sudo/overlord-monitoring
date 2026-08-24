@@ -820,6 +820,30 @@ export const de = {
       nurOffeneHinweis: "Blendet die bereits gepflegten Zeilen aus.",
       nurMitNachrichten: "nur mit Nachrichten",
       nurMitNachrichtenHinweis: "Ungeprüfte Zeilen bleiben sichtbar.",
+      gesperrt: "Während eine Zeile bearbeitet wird, bleibt die Liste stehen.",
+    },
+    /**
+     * Die Bearbeitung in der Zeile (E19).
+     *
+     * **`ohnePartnerHinweis` ist der wichtigste Text dieses Abschnitts.** Er
+     * erscheint genau dann, wenn das Feld leer ist, und sagt, was das Speichern
+     * dann bedeutet: „hingesehen, es gibt keinen" (E4). In jeder anderen
+     * Oberfläche heißt ein leeres Feld „noch nicht ausgefüllt" — hier ist es
+     * eine Angabe, und zwar die einzige, die ein toter Prozess je bekommt.
+     */
+    bearbeiten: {
+      oeffnen: "Bearbeiten",
+      gesperrt: "Solange diese Zeile offen ist, lässt sich keine zweite öffnen.",
+      partner: "Partner",
+      partnerPlatzhalter: "Name eintippen oder wählen",
+      partnerLeeren: "Partner leeren",
+      vorschlaege: "Partnervorschläge",
+      richtung: "Richtung",
+      ohneRichtung: "keine",
+      ohnePartnerHinweis: "Gespeichert heißt hier: hingesehen, es gibt keinen Partner.",
+      speichern: "Speichern",
+      speichernLaeuft: "Wird gespeichert …",
+      abbrechen: "Abbrechen",
     },
     leer: {
       titel: "Kein Prozess",
@@ -905,6 +929,14 @@ export const de = {
     // steht im Satz.
     "suche-abgebrochen":
       "Die Suche hat zu lange gedauert und wurde abgebrochen. Verkleinere den Zeitraum oder schärfe den Suchbegriff.",
+
+    // Katalogpflege — beide kommen aus `PUT /api/katalog/prozesse/{processId}`.
+    // Ein unbekannter Wert faellt dort ausdruecklich nicht stillschweigend auf
+    // leer zurueck; sonst bliebe ein Tippfehler unbemerkt.
+    "partner-zu-lang": "Ein Partnername darf höchstens 100 Zeichen haben.",
+    "richtung-unbekannt": "Wähle „Eingehend“, „Ausgehend“ — oder gar keine Richtung.",
+    "feld-unbekannt": "Wähle genau eines der Felder Partner oder Richtung.",
+    "modus-unbekannt": "Diesen Modus gibt es nicht.",
     "limit-ungueltig": "Diese Seitengröße ist nicht zulässig.",
     "cursor-ungueltig": "Die Seitenposition ist nicht mehr gültig. Beginne wieder auf Seite eins.",
     "altes-passwort-falsch": "Das bisherige Passwort stimmt nicht.",

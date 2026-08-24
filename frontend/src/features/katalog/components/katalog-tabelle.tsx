@@ -1,9 +1,16 @@
 "use client";
 
+import { Fragment } from "react";
+import { SquarePen } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 import { useTexte } from "@/i18n/provider";
+import { cn } from "@/lib/utils";
 
 import type { Katalogzeile } from "../api";
+import { darfOeffnen } from "../zuordnung";
 import { KatalogZeile } from "./katalog-zeile";
+import { ZeilenFormular } from "./zeilen-formular";
 
 /**
  * Die Pflegeliste als Tabelle — **bis zu 733 Zeilen auf einmal** (E8, keine
@@ -45,17 +52,30 @@ import { KatalogZeile } from "./katalog-zeile";
  * Mit `border-collapse` gehören die Rahmen der Tabelle und nicht den Zellen —
  * eine klebende Kopfzeile ließe ihren Trennstrich beim Scrollen zurück. Die
  * Rahmen sitzen deshalb an den Zellen.
+ *
+ * ## Die offene Zeile bekommt eine zweite `<tr>`
+ *
+ * Nicht ihre Zellen werden zu Eingabefeldern, sondern **unter** ihr klappt ein
+ * Formular über die volle Breite auf. Die Begründung steht bei
+ * {@link ZeilenFormular}; hier zählt die Folge für die Tabelle: Der bisherige
+ * Stand der Zeile bleibt beim Tippen sichtbar, und die drei unter `md`
+ * ausgeblendeten Spalten nehmen der Bearbeitung nichts weg.
  */
 const KOPFZELLE =
   "bg-background border-border sticky top-0 z-10 border-b px-2 py-1.5 text-left align-bottom font-medium";
 
 export function KatalogTabelle({
   zeilen,
-  zeileAktionen,
+  offeneZeile,
+  aufOeffnen,
+  aufSchliessen,
+  vorschlaege,
 }: {
   zeilen: readonly Katalogzeile[];
-  /** Was in der Spalte „Pflege" unter dem Status steht — ab Teil 4 die Bearbeitung. */
-  zeileAktionen?: (zeile: Katalogzeile) => React.ReactNode;
+  offeneZeile: string | null;
+  aufOeffnen: (processId: string) => void;
+  aufSchliessen: () => void;
+  vorschlaege: readonly string[];
 }) {
   const texte = useTexte();
 
@@ -88,11 +108,45 @@ export function KatalogTabelle({
         </tr>
       </thead>
       <tbody>
-        {zeilen.map((zeile) => (
-          <tr key={zeile.processId} className="hover:bg-muted/50">
-            <KatalogZeile zeile={zeile} aktionen={zeileAktionen?.(zeile)} />
-          </tr>
-        ))}
+        {zeilen.map((zeile) => {
+          const offen = offeneZeile === zeile.processId;
+          return (
+            <Fragment key={zeile.processId}>
+              <tr className={cn(offen ? "bg-muted/50" : "hover:bg-muted/50")}>
+                <KatalogZeile
+                  zeile={zeile}
+                  aktionen={
+                    offen ? null : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        disabled={!darfOeffnen(offeneZeile, zeile.processId)}
+                        onClick={() => aufOeffnen(zeile.processId)}
+                        title={texte.katalog.bearbeiten.oeffnen}
+                        className="min-h-bedienelement"
+                      >
+                        <SquarePen aria-hidden="true" />
+                        <span className="sr-only">{texte.katalog.bearbeiten.oeffnen}</span>
+                      </Button>
+                    )
+                  }
+                />
+              </tr>
+              {offen ? (
+                <tr className="bg-muted/50">
+                  <td colSpan={6}>
+                    <ZeilenFormular
+                      zeile={zeile}
+                      aufSchliessen={aufSchliessen}
+                      vorschlaege={vorschlaege}
+                    />
+                  </td>
+                </tr>
+              ) : null}
+            </Fragment>
+          );
+        })}
       </tbody>
     </table>
   );
