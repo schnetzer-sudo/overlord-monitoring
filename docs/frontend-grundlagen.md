@@ -97,6 +97,57 @@ aus dem bfcache. Der Schutz liegt deshalb im Anwendungsrahmen: Er hört auf `pag
 sobald `event.persisted` gesetzt ist. Die neue Anfrage läuft durch die Routensperre, und ohne
 Sitzungs-Cookie landet der Nutzer auf der Anmeldung.
 
+### Der Verwaltungsbereich *(21.08.2026)*
+
+**Ein Navigationseintrag, zwei Unterseiten.** Die Benutzerverwaltung (Schritt 9a) und die
+Katalogpflege (Schritt 9b) sind zwei Seiten desselben Bereichs und **kein zweiter Menüpunkt**:
+
+| | |
+|---|---|
+| Navigationseintrag | **einer**, `nurAdmin: true` (`lib/navigation.ts`) |
+| Basisroute | **`/administration`** (`lib/routen.ts`), seit Schritt 4 vergeben |
+| Benutzerverwaltung | `/administration/benutzer` |
+| Katalogpflege | `/administration/katalog` |
+
+> **Zur Route: Der Auftrag vom 21.08.2026 nennt `/verwaltung/benutzer` und `/verwaltung/katalog`.**
+> Hier steht `/administration/…`, weil der Pfad im Code bereits dreifach vergeben ist —
+> `ROUTEN.administration`, der Navigationseintrag und die Platzhalterseite unter
+> `app/(app)/administration/`. Eine Umbenennung ist möglich, aber sie ist eine **eigene**
+> Entscheidung mit eigenem Aufwand (Route, Navigation, Sprachschlüssel `navigation.eintraege`,
+> bestehende Verweise) und nicht der Nebeneffekt eines Backend-Auftrags. **Gemeldet, nicht
+> stillschweigend aufgelöst.**
+
+**Der Menüpunkt ist ausgeblendet, und das ist Bequemlichkeit — genau wie die Routensperre darüber.**
+`sichtbareNavigation(rolle)` filtert den Eintrag heraus, solange die Rolle nicht `ADMIN` ist. Das
+schützt nichts: Wer den Pfad kennt, ruft ihn auf. **Verbindlich prüft das Backend**, das für
+`/api/admin/**` und `/api/katalog/**` die Rolle `ADMIN` verlangt.
+
+**Die Rolle kommt aus der Selbstauskunft, nicht aus `proxy.ts`.** `GET /api/auth/me` liefert `role`;
+der Anwendungsrahmen reicht sie an die Navigation weiter. `proxy.ts` **kennt die Rolle nicht und
+soll sie nicht kennen** — sie steht nicht im Cookie, und der Versuch, sie dort zu beschaffen, legte
+die Berechtigungsentscheidung in den Browser (§2 oben).
+
+**Daraus folgt ein Zustand, den es zu bauen gilt:** Ein Nutzer mit der Rolle `MANDANT`, der
+`/administration` von Hand aufruft, kommt durch die Routensperre — sie sieht nur das Cookie — und
+bekommt vom Backend ein `403`. Die Seite braucht dafür einen **sauberen eigenen Zustand** und darf
+weder leer bleiben noch in den Ladezustand hängen.
+
+> **Beim Wortlaut ist eine Falle zu umgehen.** `tests/sprachdateien.test.ts` prüft eine Wortliste
+> — `berecht`, `zugriff`, `erlaub`, `gesperrt`, `access`, `denied`, `forbidden` und weitere — und
+> bricht den Build, sobald eines davon vorkommt. **Sie prüft aber genau einen Schlüssel:**
+> `fehler["nicht-gefunden"]`, den 404-Text. Der Grund steht in §6: Ein 404 sagt niemals etwas über
+> Berechtigung, weil das Backend „existiert nicht" und „gehört einem fremden Mandanten"
+> ununterscheidbar hält.
+>
+> **Für ein echtes `403` gilt das nicht.** Dort *ist* fehlende Berechtigung die Wahrheit, und sie
+> darf benannt werden. Der Text bekommt einen **eigenen** Schlüssel und wird nicht aus dem
+> 404-Text abgeleitet — sonst fällt entweder die Prüfung oder die Aussage.
+
+**Was hier bewusst nicht steht:** wie die beiden Seiten innen aussehen. Das gehört in die
+Feature-Dateien ([`benutzerverwaltung.md`](benutzerverwaltung.md) §7a,
+[`prozess-katalog.md`](prozess-katalog.md) §4) und in die jeweiligen Frontend-Aufträge; **gebaut ist
+bislang nur der Platzhalter** unter `app/(app)/administration/page.tsx`.
+
 ---
 
 ## 3. Der Ablauf nach dem Anmelden

@@ -1,8 +1,12 @@
 # Benutzerverwaltung
 
-Stand: 20.08.2026 · Schritt 9a · Fachliche Festlegung
+Stand: 21.08.2026 · Schritt 9a · Fachliche Festlegung
 Baut auf [`authentifizierung.md`](authentifizierung.md) (Schritt 3) und
 [`mandantentrennung.md`](mandantentrennung.md) auf.
+
+**Entscheidungen E1 bis E21.** E19 bis E21 sind am 21.08.2026 dazugekommen und betreffen die
+Oberfläche (§7a); gebaut sind sie **nicht** — sie gehören in den 9a-Frontend-Auftrag, und **E20**
+verlangt zusätzlich eine Backend-Änderung.
 
 ---
 
@@ -201,6 +205,67 @@ Die drei Endpunkte aus Schritt 8 bleiben unangetastet.
 
 ---
 
+## 7a. Drei Entscheidungen zur Oberfläche (21.08.2026)
+
+**Gebaut wird hier nichts.** E19 bis E21 sind am 21.08.2026 gefallen und stehen hier, weil sie sonst
+nur im Gespräch existierten. Ihre Umsetzung gehört in den **9a-Frontend-Auftrag**; E20 verlangt
+zusätzlich eine Backend-Änderung, die unten benannt ist.
+
+**E19 — Vorwarnung, wenn ein Admin sein eigenes Konto trifft.** Wer sich selbst sperrt, deaktiviert
+oder die Rolle nimmt, bekommt vorher einen ausdrücklichen Hinweis — keine stille Ausführung.
+
+**Der Vergleich läuft über den Benutzernamen, ohne Rücksicht auf Groß- und Kleinschreibung.** Das
+ist keine Bequemlichkeit, sondern die einzige verfügbare Möglichkeit: **`GET /api/auth/me` liefert
+keine `id`.** Die Selbstauskunft trägt `username`, `role`, `mandant`, `mustChangePassword` und
+`anzeigezone` — mehr nicht (`security/SelbstauskunftResponse`). Die Verwaltungsliste führt daneben
+eine `id`, aber es gibt keinen Wert, über den sich die beiden verknüpfen ließen außer dem Namen.
+
+Ohne Rücksicht auf die Schreibweise, weil die Anmeldung sie ebenfalls nicht beachtet: Ein Konto
+`Admin`, das sich als `admin` anmeldet, sähe seine eigene Zeile sonst als fremde und bekäme die
+Warnung nicht — also genau im Grenzfall nicht, für den sie da ist.
+
+> **Die Alternative wäre, `id` in die Selbstauskunft aufzunehmen.** Sie ist **nicht** gewählt: Die
+> Selbstauskunft ist seit Schritt 3 ein Vertrag, der in 9a schon einmal gebrochen worden ist (E18,
+> `downloadAllowed`), und ein zweiter Bruch in derselben Runde für eine Bequemlichkeit der
+> Oberfläche wäre schlecht bezahlt. Der Namensvergleich trägt.
+
+**E20 — `lockedUntil` als eigenes Feld, nur wenn es in der Zukunft liegt — nie in `locked` gemischt.**
+Die automatische Sperre nach fünf Fehlversuchen bekommt ein eigenes Antwortfeld. Sie wird **nicht**
+in `locked` verrechnet; `locked` bleibt allein die administrative Sperre.
+
+> **Das kehrt eine Entscheidung aus 9a um und ist deshalb mehr als ein Absatz.** Heute liefert das
+> Backend `lockedUntil` **gar nicht** — `admin/NutzerzeileResponse` trägt acht Felder, keins davon
+> ist es, und `AppUserRepository` liest die Spalte erst gar nicht. Weggelassen ist sie **bewusst**,
+> mit dieser Begründung im Code (`NutzerzeileResponse`, Verweis auf **E14**): *„Nicht die
+> automatische nach fünf Fehlversuchen: die läuft nach fünfzehn Minuten von selbst ab, und ein
+> Zustand, der beim Hinsehen schon wieder anders ist, gehört nicht in eine Verwaltungsliste."*
+>
+> **Dieser Einwand bleibt richtig — er trifft nur nicht mehr, was E20 vorschlägt.** Er richtet sich
+> gegen einen Zustand, der als *gesperrt* in der Liste steht und beim nächsten Blick verschwunden
+> ist. E20 zeigt keinen Zustand, sondern einen **Zeitpunkt**, und genau deshalb steht die Bedingung
+> „nur wenn in der Zukunft" darin: Ein abgelaufener Wert wird nicht übertragen, statt als
+> abgelaufene Sperre erklärt werden zu müssen.
+>
+> **Wozu er trotzdem gebraucht wird:** Ein Admin, den ein Nutzer anruft, weil er nicht
+> hineinkommt, muss zwischen „ich habe dich gesperrt" und „du hast dich fünfmal vertippt"
+> unterscheiden können. Ohne das Feld sieht er `locked: false` und hat keine Erklärung.
+>
+> **Was das kostet:** die Spalte in `AppUserRepository` mitlesen, ein Feld an
+> `NutzerzeileResponse`, und der zitierte Kommentar bekommt einen datierten Vermerk. **Zu bauen im
+> 9a-Auftrag, nicht hier.** Der Wert ist UTC aus der Systemuhr und wird in der `anzeigezone`
+> formatiert wie jeder andere Zeitpunkt.
+
+**E21 — Der Umschalter bleibt, die Liste trägt den Hinweis.** Sperren und Entsperren bleiben ein
+Umschalter je Zeile; es entsteht kein zweiter Bedienweg für die automatische Sperre. Der Hinweis aus
+E20 steht **an der Zeile** und nicht in einem eigenen Bereich — er erklärt, warum sich jemand nicht
+anmelden kann, und ist damit an genau der Zeile richtig, die man ohnehin ansieht.
+
+Dass der Umschalter die automatische Sperre **nicht** aufhebt, ist Absicht und keine Lücke: Sie
+läuft nach fünfzehn Minuten von selbst ab. Ein Knopf, der sie vorzeitig löscht, wäre ein zweiter
+Weg zu einem Zustand, der sich selbst aufräumt.
+
+---
+
 ## 8. Verworfene Möglichkeiten
 
 | Verworfen | Grund |
@@ -217,6 +282,9 @@ Die drei Endpunkte aus Schritt 8 bleiben unangetastet.
 | Spaltenumbenennung `raw_data_allowed` | dito — hinfällig mit E18 |
 | Signaturänderung an `POST /api/admin/users` | E4 |
 | Zählung gesperrter ADMINs beim Selbstschutz | E12 |
+| `id` in `GET /api/auth/me` aufnehmen | E19 — der Namensvergleich trägt; kein zweiter Vertragsbruch an der Selbstauskunft in derselben Runde |
+| Die automatische Sperre in `locked` verrechnen | E20 — zwei Sperren mit verschiedener Ursache und verschiedener Behebung |
+| Eigener Knopf, der die automatische Sperre vorzeitig löscht | E21 — sie läuft nach fünfzehn Minuten selbst ab |
 
 ---
 

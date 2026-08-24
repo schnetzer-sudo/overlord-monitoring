@@ -805,3 +805,95 @@ Annahme hat also nicht überlebt, sondern ist an dem Tag **neu eingetragen** wor
 - **Die Diskrepanz aus M57** — 63 genannte gegen 62 gezählte Kombinationen — bleibt offen. Der
   Befund von M57 ist davon unberührt: Die 55,98 % rechnen mit der Zeilensumme 44.329, und die
   stimmt aufs Zeichen.
+
+---
+
+## Erhebung 21.08.2026 (Schritt 9b — was M83 über die Zahlen sagt, mit denen wir planen)
+
+Zwei Einträge aus dem Nachtrag **M83** ([`messungen-schritt9.md`](messungen-schritt9.md)). Beide
+betreffen **nicht** die gemessene Abfrage, sondern die Grundlage, auf der wir Messwerte lesen.
+Keiner von beiden ändert eine Zeile Code.
+
+### 1. `CARDINALITY` auf `Message.ProcessID` ist um Faktor 43,7 daneben
+
+**Der Vermerk.** Beide Indizes, die `Message.ProcessID` anführen, stehen auf einer `CARDINALITY`
+von **18**. Der Optimierer rechnet daraus `3.560.486 ÷ 18 = 197.804` Zeilen je Nachschlag, und
+**genau diese Zahl steht in allen vier `EXPLAIN`-Plänen** von M83. Der wahre Mittelwert ist
+**4.528** (3.341.519 Nachrichten auf 738 Prozesse mit Nachrichten, M74b). Die Schätzung liegt damit
+um **Faktor 43,7** zu hoch.
+
+> **Drei Zahlen, die nicht verwechselt werden dürfen.** Die **18** ist die `CARDINALITY` des Index,
+> also die geschätzte Zahl *verschiedener Werte* — nicht die geschätzte Zeilenzahl. Die geschätzte
+> **Zeilenzahl je Nachschlag** ist **197.804**, und ihr steht der wahre Mittelwert **4.528**
+> gegenüber. **Faktor 43,7 ist 197.804 ÷ 4.528.** Wer „18 geschätzt gegen 4.528 wahr" schreibt,
+> rechnet Faktor 251 und vergleicht zwei Größen verschiedener Art. *Der Fehler ist in einem
+> Bauauftrag vom 21.08.2026 aufgetreten und hier benannt, damit er nicht weiterwandert.*
+
+**Hier ist es folgenlos — und das ist Glück, kein Schutz.** Der Plan ist trotz der Fehlschätzung
+der richtige, weil `Using index` und der Abbruch des `EXISTS` beim ersten Treffer sie nicht zum
+Tragen kommen lassen. Ein Optimierer, der 197.804 Zeilen je Nachschlag erwartet, kann denselben
+Plan bei einer **anderen Formulierung** aber verwerfen.
+
+**`ANALYZE TABLE` können wir nicht fahren.** Es ist die Datenbank des Altsystems, `monitor_read`
+darf ausschließlich `SELECT`, und geschrieben wird auf `GlassfishDB` unter keinen Umständen (S1).
+Die Fehlschätzung bleibt also stehen.
+
+**Was daraus folgt:** **Jede künftige Planwahl, die an dieser Schätzung hängt, ist ein Münzwurf.**
+Wer eine Abfrage über `Message.ProcessID` umformuliert und den Plan verliert, findet die Ursache
+hier und nicht im eigenen Code.
+
+*Nebenbei, aus derselben Erhebung:* Die 4.528 sind **hergeleitet** (3.341.519 ÷ 738) und nicht am
+Plan abgelesen — `ANALYZE SELECT` hätte geschätzte und tatsächliche Zeilenzahlen nebeneinander
+gestellt, ist aber nicht gefahren worden, weil der Messrahmen nur `SELECT`, `SET` und `EXPLAIN`
+zuließ (M83, Abweichung B).
+
+### 2. Laufzeiten von der Testkopie sind für die Produktion eine optimistische Schranke
+
+**Der Vermerk.** M83‑4 hat den Zustand der Instanz erhoben, gegen die seit Schritt 4 **jede**
+Messung dieses Projekts läuft:
+
+| | |
+|---|---:|
+| `innodb_buffer_pool_size` | **25.600 MiB** |
+| `Message` gesamt (Daten + Indizes) | 2.763,9 MiB |
+| Puffer je Tabelle | **9,26 ×** |
+| logische Leseanfragen seit dem Start | 7.885.714.699 |
+| davon physisch von der Platte | 1.951.428 — **0,025 %** |
+| Betriebsdauer | 6.825.469 s = **79,0 Tage** |
+
+Der Puffer ist **mehr als neunmal so groß wie die ganze Tabelle**, und die Instanz läuft seit
+79 Tagen mit einer Trefferquote von **99,975 %**.
+
+**Was das über unsere Zahlen sagt.** Sie beschreiben eine Instanz, die außer uns **niemand
+belastet** und deren Arbeitsmenge vollständig im Speicher liegt. Die Produktion trägt denselben
+Bestand **unter laufendem EDI-Verkehr**. Ein „erster Lauf der Sitzung" misst deshalb im
+Wesentlichen den kalten Abfrageplan-Cache und die kalte Verbindung — **nicht die kalte Platte**:
+Eine Sitzungsgrenze leert keinen Serverpuffer.
+
+**Das gilt für jede M-Nummer, nicht nur für M83.** Es ist keine Einschränkung dieses einen
+Nachtrags, sondern der Rahmen, in dem sämtliche Laufzeiten dieses Projekts entstanden sind.
+
+**Was es nicht heißt.** Die Zahlen werden dadurch nicht wertlos — sie sind belastbar für den
+**Vergleich** zweier Fassungen (Faktor 216,5 zwischen Fassung A und B bleibt Faktor 216,5) und für
+Größenordnungen. Sie sind nur keine Zusage über die Produktion. **`EXPLAIN`-Pläne sind davon
+ohnehin unberührt**; sie hängen an Statistik und Schema, nicht am Puffer.
+
+### Was diese Erhebung **nicht** ändert
+
+- **Keine Regel wird gelockert.** Regel L7 („jede neue Abfrage wird vor dem Merge gegen die
+  Testkopie gemessen") bleibt unverändert. Sie verlangt eine Messung, nicht eine Produktionszahl —
+  und eine optimistische Schranke ist immer noch eine Schranke.
+- **Keine Zahl wird nachgerechnet oder zurückgezogen.** Alle bisherigen Laufzeiten stehen
+  unverändert; sie bekommen nur diesen Rahmen.
+- **Kein Code, kein Statement, keine Migration** ist wegen dieser beiden Einträge geändert worden.
+
+### Neu offen
+
+- **Ob eine der bisherigen Messungen unter Produktionslast anders ausfiele, ist ungemessen und
+  von hier aus nicht messbar.** Wir haben keinen Zugang zu einer belasteten Instanz. Der einzige
+  vorhandene Anhaltspunkt ist M44s kalt-gegen-warm-Faktor **9,66**, gemessen an einem Vollzugriff
+  auf `MessageProperty` — **Anschauung und keine Messung**, und auf andere Statements nicht
+  übertragbar.
+- **Ob `Message_ProcessFK` und `ProejctIDIDX` wirklich deckungsgleich sind und einer entfallen
+  könnte**, ist erhoben (M83‑0), aber **nicht unsere Entscheidung**: Es ist die Datenbank des
+  Altsystems. Vermerkt, damit die Beobachtung nicht verlorengeht.

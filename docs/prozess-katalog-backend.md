@@ -1,8 +1,9 @@
 # Prozess-Katalog — Backend
 
-Stand: 20.08.2026 · Schritt 9b, Teil Backend
-Fachliche Grundlage: [`prozess-katalog.md`](prozess-katalog.md) (E1–E13)
-Messgrundlage: [`messungen-schritt9.md`](messungen-schritt9.md), M74 bis M79 · Nachtrag **M80**
+Stand: 21.08.2026 · Schritt 9b, Teil Backend
+Fachliche Grundlage: [`prozess-katalog.md`](prozess-katalog.md) (E1–E21)
+Messgrundlage: [`messungen-schritt9.md`](messungen-schritt9.md), M74 bis M79 · Nachträge **M80** und
+**M83** (Bestandsabfrage zu E14)
 
 **Kein Frontend.** Dieser Schritt liefert die Migration, die Heuristik, den Datenzugriff und fünf
 Endpunkte. Die Oberfläche ist ein eigener Auftrag.
@@ -13,7 +14,7 @@ Endpunkte. Die Oberfläche ist ein eigener Auftrag.
 
 | | |
 |---|---|
-| Migration | `V6__process_catalog.sql` |
+| Migration | `V6__process_catalog.sql`, dazu `V8__bestandsspalte.sql` (21.08.2026, E14) |
 | Heuristik | `catalog/Partnerheuristik` — reine Funktionen, ohne Spring, ohne Datenbank |
 | Datenzugriff | `catalog/ProzessKatalogRepository` — zwei `DSLContext` |
 | Fachlogik | `catalog/ProzessKatalogService` |
@@ -26,8 +27,18 @@ Dazu die Aufzählungstypen `Pflegestatus`, `Richtung`, `VorschlagHerkunft`, `Zuo
 
 **Was ausdrücklich nicht entstanden ist:** keine Tabelle `partner` (E2), keine Felder Standort und
 Belegart (E1), keine Auswertung „seit wann kam nichts" (§8 der Festlegung — das ist Schritt 10 aus
-`message_rollup`), keine Ableitung der Richtung aus dem `SOSName` (§9), keine gespeicherte Spalte
-„trägt Nachrichten" (§9), kein dritter Pflegestatus (§9).
+`message_rollup`), keine Ableitung der Richtung aus dem `SOSName` (§9), kein dritter Pflegestatus
+(§9).
+
+> **Berichtigt 21.08.2026.** Hier stand zusätzlich *„keine gespeicherte Spalte ‚trägt Nachrichten'
+> (§9)"*. Das gilt nicht mehr: **E14** kehrt die Verwerfung um, `V8__bestandsspalte.sql` legt
+> `traegt_nachrichten` und `bestand_geprueft_am` an, und der Bestandslauf füllt sie (§3.5). Der alte
+> Wortlaut ist in [`messungen-schritt9.md`](messungen-schritt9.md) unter „Die zwei Sätze, die E14
+> umkehrt" festgehalten.
+>
+> **Was weiter nicht entsteht, ist die Auswertung daneben:** „seit wann kam von diesem Partner
+> nichts" bleibt Schritt 10 und bleibt Sache von `message_rollup`. E14 beantwortet **ob**, nicht
+> **seit wann**.
 
 ---
 
@@ -44,6 +55,8 @@ Belegart (E1), keine Auswertung „seit wann kam nichts" (§8 der Festlegung —
 | `vorschlag_herkunft` | `varchar(20)` | `REGEL_A` / `REGEL_B` / `KEINE`, NOT NULL |
 | `geaendert_am` | `DATETIME(3)` | UTC, NOT NULL |
 | `geaendert_von` | `varchar(100)` | Benutzername, NOT NULL |
+| `traegt_nachrichten` | `BOOLEAN` | **drei Zustände:** NULL = noch nie geprüft, `false` = geprüft und tot, `true` = geprüft und lebend (E14, `V8`) |
+| `bestand_geprueft_am` | `DATETIME(3)` | UTC, NULL erlaubt — der Zeitpunkt des letzten Bestandslaufs über diese Zeile (E14, `V8`) |
 
 Zeichensatz und Sortierung stehen explizit (`utf8mb4` / `utf8mb4_general_ci`), kein
 `utf8mb4_bin` — hier steht nichts Tokenartiges. Kein Fremdschlüssel über die Schemagrenze; verwaiste
@@ -51,6 +64,11 @@ Einträge sind erwünscht. Keine Sekundärindizes und keine Vorbelegung. Begrün
 Migration selbst und in [`datenzugriff.md`](datenzugriff.md) §5.
 
 **`geaendert_am` ist `DATETIME(3)` und nicht `timestamp`** — siehe §9, Abweichung 1.
+`bestand_geprueft_am` folgt derselben Wahl.
+
+**Die beiden letzten Spalten sind nicht kuratiert, sondern beobachtet** (E14). Sie tragen deshalb
+**keinen** Standardwert und **keinen** Index: `NULL` muss von `false` unterscheidbar bleiben (E20),
+und gefiltert wird im Browser und nicht in der Datenbank. Der Bestandslauf steht in §3.5.
 
 **`vorschlag_herkunft` beschreibt den Partner, nicht die Richtung.** Eine Zeile darf `KEINE` tragen
 und trotzdem eine Richtung haben; das ist bei 224 `NEXANS`-Prozessen der Regelfall. Die Zählweise

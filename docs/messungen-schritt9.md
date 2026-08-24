@@ -360,6 +360,27 @@ Sitzung gesamt 7,2 s.
 | **über 30 % ohne Nachricht → Kennzeichnung „trägt keine Nachrichten" nötig** | **ja, deutlich: 50,90 %** | Die Pflegeliste **braucht** die Kennzeichnung |
 | unter 5 % → nicht der Rede wert | nein | — |
 
+> **Umgekehrt am 21.08.2026 durch E14 — die erste Zeile hat sich nicht gehalten.** Der Wortlaut
+> oben bleibt stehen; er gibt den Stand vom 20.08.2026 richtig wieder.
+>
+> **Was umgekehrt ist:** *„Wird niemals Anwendungscode."* Genau das ist die Abfrage jetzt.
+> [`prozess-katalog.md`](prozess-katalog.md) E14 speichert das Ergebnis in `process_catalog`, und
+> ein Bestandslauf erhebt es je Mandant auf Knopfdruck. Die Zusage ist am **21.08.2026** vom
+> Auftraggeber aufgehoben worden, nachdem **M83** die Kosten dafür erhoben hatte — sie war eine
+> Deutung dieser Runde und keine Regel.
+>
+> **Zwei Einschränkungen, damit die Umkehr nicht mehr trägt, als sie soll.** Erstens ist es
+> **nicht dieses Statement**, das Anwendungscode wird: M74b ist ohne Mandantenfilter und als
+> einmalige Erhebung über den ganzen Bestand gefahren (1,4 s); Anwendungscode wird die Fassung A
+> aus **M83‑1** — je Mandant, mit `EXISTS` statt `GROUP BY`, gemessen mit **22,154 ms** für
+> `NEXANS` (beste von fünf; 32,144 ms im ersten Lauf). Zweitens bleibt **Regel L2 unberührt**,
+> und zwar aus dem Grund, den die Zeile selbst nennt: Der Lauf ist keine Kennzahl je Anfrage,
+> sondern ein Knopfdruck im Administrationsbereich.
+>
+> **Die dritte Zeile der Tabelle ist dagegen eingetreten und hat sich gehalten** — *„Die Pflegeliste
+> **braucht** die Kennzeichnung"*. Sie ist es, die E14 trägt; die erste Zeile sagte nur, wie die
+> Kennzeichnung **nicht** entstehen sollte.
+
 **Befund 1 — die Hälfte des Katalogs ist tot.** 765 von 1.503 Prozessen haben in einem Bestand,
 der bis zum 08.07.2026 reicht, **nie** eine Nachricht getragen. Ohne Kennzeichnung kuratiert
 jemand 765 Karteileichen, und das Abnahmekriterium „jeder Prozess ist zugeordnet oder als
