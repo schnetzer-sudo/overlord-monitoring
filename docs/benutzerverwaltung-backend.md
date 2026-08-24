@@ -1,12 +1,13 @@
 # Benutzerverwaltung — der Bau (Backend)
 
-Stand: 21.08.2026 · Schritt 9a, Teil Backend
-Vorgabe: [`benutzerverwaltung.md`](benutzerverwaltung.md) (E1–E18) · Grundlage:
-[`authentifizierung.md`](authentifizierung.md) und [`mandantentrennung.md`](mandantentrennung.md)
+Stand: 21.08.2026, nachgetragen am 24.08.2026 (`lockedUntil`, §4) · Schritt 9a, Teil Backend
+Vorgabe: [`benutzerverwaltung.md`](benutzerverwaltung.md) (E1–E18, dazu **E20** vom 21.08.2026) ·
+Grundlage: [`authentifizierung.md`](authentifizierung.md) und
+[`mandantentrennung.md`](mandantentrennung.md)
 Messungen: [`messungen-schritt9.md`](messungen-schritt9.md), **M81** und **M82**
 
-**Kein Frontend.** Die Oberfläche zu 9a ist nicht gebaut; dieser Text beschreibt ausschließlich das
-Backend.
+**Dieser Text beschreibt ausschließlich das Backend.** Die Oberfläche zu 9a ist ein eigener Auftrag
+mit eigener Datei.
 
 ---
 
@@ -20,6 +21,7 @@ Backend.
 | Dienst | `security/Sitzungsentzug` — **Bauform A**, über `SPRING_SESSION.PRINCIPAL_NAME` |
 | Geändert | `POST /api/auth/password` verwirft jetzt die *übrigen* Sitzungen (E6) |
 | Geändert | `GET /api/auth/me` verliert das Feld `downloadAllowed` — **Vertragsbruch aus Schritt 3**, datiert vermerkt |
+| Nachgetragen *(24.08.2026)* | `lockedUntil` in der Kontenzeile — **eine umgekehrte Entscheidung** (E20), begründet im Korrekturkasten in §4 |
 
 Neue Klassen: `admin/BenutzerverwaltungController`, `admin/BenutzerverwaltungService`,
 `admin/NutzerzeileResponse`, `security/KontoZeile`, `security/Sitzungsentzug`.
@@ -199,6 +201,7 @@ Aufrufer soll seinen Zustand nie aus mehreren Antworten zusammensetzen müssen.
   "role": "MANDANT",
   "tenants": ["SUTTONS", "VOTG"],
   "locked": false,
+  "lockedUntil": "2026-08-24T12:14:30Z",
   "active": true,
   "mustChangePassword": false,
   "lastLogin": "2026-08-20T06:01:10.374Z"
@@ -208,11 +211,62 @@ Aufrufer soll seinen Zustand nie aus mehreren Antworten zusammensetzen müssen.
 - `tenants` sind **nur die Kennungen**, aufsteigend sortiert — keine Anzeigenamen. Die lägen in
   `GlassfishDB.Mandant` und kosteten einen schemaübergreifenden Join je Zeile, während die Kennung
   selbst der sprechende Code ist, den auch `POST /api/admin/users` entgegennimmt.
-- `locked` ist die **administrative** Sperre, nicht die automatische nach fünf Fehlversuchen: Die
-  läuft nach fünfzehn Minuten von selbst ab, und ein Zustand, der beim Hinsehen schon wieder anders
-  ist, gehört nicht in eine Verwaltungsliste.
+- `locked` ist die **administrative** Sperre, die `PUT /api/admin/users/{id}/lock` umschaltet —
+  unbefristet, aufgehoben nur durch einen zweiten Verwaltungsakt.
+- `lockedUntil` ist das Ende der **automatischen** Sperre nach fünf Fehlversuchen, und es steht
+  **nur dann im Rumpf, wenn es in der Zukunft liegt**; sonst fehlt das Feld nicht, sondern ist
+  `null`. Die beiden werden **nie verrechnet** — siehe den Korrekturkasten unten.
 - `lastLogin` ist `null`, wenn sich das Konto **nie** angemeldet hat — bei über zwanzig externen
   Nutzern die häufigste Supportfrage (E17).
+
+> ### ⚠️ `lockedUntil` — nachgetragen am 24.08.2026, und das ist eine Umkehr
+>
+> **Bis zum 24.08.2026 trug die Zeile acht Felder, und `lockedUntil` fehlte mit Absicht.** Der alte
+> Wortlaut stand an dieser Stelle und lautete:
+>
+> > *„`locked` ist die **administrative** Sperre, nicht die automatische nach fünf Fehlversuchen:
+> > Die läuft nach fünfzehn Minuten von selbst ab, und ein Zustand, der beim Hinsehen schon wieder
+> > anders ist, gehört nicht in eine Verwaltungsliste."*
+>
+> **Was hier galt und was nicht.** Dieselbe Sache stand in diesem Dokument zweimal und einmal davon
+> falsch: als **Entscheidung** hier und als **offener Punkt 5** in §9 — *„Die automatische
+> Zeitsperre ist in der Liste nicht sichtbar … Wer wissen will, warum sich jemand gerade nicht
+> anmelden kann, sieht es der Liste nicht an."* Beides zugleich geht nicht. Verbindlich ist
+> [`benutzerverwaltung.md`](benutzerverwaltung.md) **E20** (21.08.2026), und die trägt die Umkehr
+> ausdrücklich; die Entscheidung hier war ihr gegenüber die unterlegene Stelle und ist es, die
+> korrigiert wird. Offener Punkt 5 ist damit geschlossen.
+>
+> **Der alte Einwand bleibt richtig — er trifft nur nicht, was gebaut ist.** Er richtet sich gegen
+> einen *Zustand*, der als „gesperrt“ in der Liste steht und beim nächsten Blick verschwunden ist.
+> Was hier steht, ist kein Zustand, sondern ein **Zeitpunkt**: nicht „gesperrt“, sondern *bis
+> wann*. Genau dafür trägt E20 die Bedingung „nur wenn in der Zukunft“ — ein abgelaufener Wert wird
+> gar nicht erst übertragen, statt als abgelaufene Sperre erklärt werden zu müssen.
+>
+> **Gebraucht wird er für den Fall, für den 9a überhaupt gebaut wird** (E1): Ein Admin, den einer
+> von über zwanzig externen Nutzern anruft, weil er nicht hineinkommt, muss zwischen „ich habe dich
+> gesperrt“ und „du hast dich fünfmal vertippt“ unterscheiden können. Ohne das Feld sieht er
+> `locked: false` und hat keine Erklärung.
+>
+> **Was es gekostet hat:** `APP_USER.LOCKED_UNTIL` wird in `AppUserRepository.konten` mitgelesen —
+> dieselbe Zeile, dieselbe Tabelle, kein zusätzlicher Join und keine zweite Abfrage —, `KontoZeile`
+> trägt `gesperrtBisUtc` roh aus der Spalte, und `NutzerzeileResponse.fuer` bekommt den
+> Vergleichszeitpunkt als Parameter.
+>
+> **Die Prüfung „läuft die Sperre noch“ rechnet mit der Systemuhr und nicht im Browser.** Ob eine
+> Sperre noch gilt, ist sicherheitsnahe Zeit ([`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md)
+> §7, `common/ZeitConfig`); ein verstellter Rechner sähe sonst eine abgelaufene Sperre als laufende
+> oder umgekehrt. Die Liste liest die Uhr **einmal für alle Zeilen** — sonst entschiede bei einer
+> Sperre, die während des Zusammenbauens abläuft, die Position der Zeile darüber, ob sie noch als
+> laufend gilt.
+>
+> **Der Grenzfall ist entschieden:** Ein Wert, der *genau jetzt* abläuft, gilt als abgelaufen.
+> „Nur wenn es in der Zukunft liegt“ wörtlich genommen.
+>
+> **Zwei Stellen bleiben unberührt, und beide mit Grund.** `V7__benutzerverwaltung.sql` trägt seine
+> Begründung gegen eine *gemeinsame Spalte* (§2.2) — die ist von dieser Umkehr gar nicht betroffen
+> und stünde ohnehin unter der eingefrorenen Prüfsumme. Und `KontoZeile.istNutzbarerAdmin` zählt
+> die Zeitsperre weiterhin **nicht** mit: Eine Herabstufung für eine Viertelstunde zu verweigern,
+> weil jemand sich vertippt hat, wäre eine Regel, die von der Uhr abhängt (§5).
 
 ### Die Statuscodes
 
@@ -409,7 +463,7 @@ ist der naheliegendste: nur die zuletzt angelegte zu verwerfen.
 | 2 | **Die Typzeile `downloadAllowed` steht noch im Frontend** (`features/sitzung/api.ts`). Sie wird nirgends gelesen, ist aber seit dem 21.08.2026 eine Zusage, die das Backend nicht mehr einhält. Im Frontendteil zu streichen |
 | 3 | **Der Index-Vorschlag aus M82 ist nicht angelegt** und nicht gemessen: `(event_type, actor_user_id, occurred_at)`. Der vorhandene `idx_audit_type` hilft nicht, und ihn zu erzwingen ist fast doppelt so langsam |
 | 4 | **`app_user.last_login_at` bleibt eine gepflegte tote Spalte.** Sie wäre die 0,39-ms-Antwort auf dieselbe Frage wie die 17,9-ms-Aggregation. E17 verwirft „eine **neue** Spalte" — diese ist nicht neu. Nicht entschieden |
-| 5 | **Die automatische Zeitsperre ist in der Liste nicht sichtbar.** `locked` zeigt nur die administrative. Wer wissen will, warum sich jemand gerade nicht anmelden kann, sieht es der Liste nicht an |
+| 5 | ~~**Die automatische Zeitsperre ist in der Liste nicht sichtbar.** `locked` zeigt nur die administrative. Wer wissen will, warum sich jemand gerade nicht anmelden kann, sieht es der Liste nicht an~~ · **Geschlossen am 24.08.2026.** `lockedUntil` steht in der Zeile, sobald es in der Zukunft liegt ([`benutzerverwaltung.md`](benutzerverwaltung.md) E20). Der Punkt widersprach der Entscheidung, die §4 an derselben Sache traf; welche galt und warum, steht im Korrekturkasten dort |
 | 6 | **Der Kommentar in `V7__benutzerverwaltung.sql` trägt eine widerlegte Behauptung** zur `serialVersionUID` (§2.1). Er lässt sich nicht korrigieren, ohne die Prüfsumme der aufgezogenen Migration zu brechen; eine Berichtigung bräuchte ein `flyway repair` gegen die Testkopie. Nicht entschieden |
 
 ---

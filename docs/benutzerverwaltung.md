@@ -254,6 +254,14 @@ in `locked` verrechnet; `locked` bleibt allein die administrative Sperre.
 > `NutzerzeileResponse`, und der zitierte Kommentar bekommt einen datierten Vermerk. **Zu bauen im
 > 9a-Auftrag, nicht hier.** Der Wert ist UTC aus der Systemuhr und wird in der `anzeigezone`
 > formatiert wie jeder andere Zeitpunkt.
+>
+> **Gebaut am 24.08.2026**, genau in diesem Umfang —
+> [`benutzerverwaltung-backend.md`](benutzerverwaltung-backend.md) §4 trägt den Korrekturkasten und
+> schließt damit ihren offenen Punkt 5, der dieselbe Sache als *Lücke* führte, während der Code sie
+> als *Entscheidung* führte. **Ein Befund nebenbei:** Die Prüfung „liegt in der Zukunft" steht im
+> Backend und nicht in der Oberfläche — ob eine Sperre noch läuft, ist sicherheitsnahe Zeit und
+> rechnet nach [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §7 mit der Systemuhr, niemals mit
+> der Uhr eines Browsers.
 
 **E21 — Der Umschalter bleibt, die Liste trägt den Hinweis.** Sperren und Entsperren bleiben ein
 Umschalter je Zeile; es entsteht kein zweiter Bedienweg für die automatische Sperre. Der Hinweis aus

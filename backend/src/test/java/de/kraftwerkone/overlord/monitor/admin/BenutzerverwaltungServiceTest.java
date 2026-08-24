@@ -74,7 +74,7 @@ class BenutzerverwaltungServiceTest {
   /** Das Ziel: ein nutzbarer Administrator mit Mandant, also ohne Nebenbedingung aus E11. */
   private KontoZeile zielIstNutzbarerAdmin() {
     KontoZeile ziel =
-        new KontoZeile(2L, "it-ziel", Rolle.ADMIN, List.of("VOTG"), false, true, false, null);
+        new KontoZeile(2L, "it-ziel", Rolle.ADMIN, List.of("VOTG"), false, null, true, false, null);
     when(appUserRepository.findeKonto(2L)).thenReturn(Optional.of(ziel));
     return ziel;
   }
@@ -176,7 +176,8 @@ class BenutzerverwaltungServiceTest {
   @DisplayName("Faellt beides zusammen, meldet der letzte Administrator — nicht der Selbstschutz")
   void letzter_admin_geht_dem_selbstschutz_vor() {
     KontoZeile selbst =
-        new KontoZeile(1L, "it-handelnder", Rolle.ADMIN, List.of("VOTG"), false, true, false, null);
+        new KontoZeile(
+            1L, "it-handelnder", Rolle.ADMIN, List.of("VOTG"), false, null, true, false, null);
     when(appUserRepository.findeKonto(1L)).thenReturn(Optional.of(selbst));
     when(appUserRepository.existiertAndererNutzbarerAdmin(1L)).thenReturn(false);
 
@@ -194,7 +195,8 @@ class BenutzerverwaltungServiceTest {
   @DisplayName("Ohne den letzten Administrator greift auf dem eigenen Konto der Selbstschutz")
   void selbstschutz_greift_wenn_es_noch_einen_admin_gibt() {
     KontoZeile selbst =
-        new KontoZeile(1L, "it-handelnder", Rolle.ADMIN, List.of("VOTG"), false, true, false, null);
+        new KontoZeile(
+            1L, "it-handelnder", Rolle.ADMIN, List.of("VOTG"), false, null, true, false, null);
     when(appUserRepository.findeKonto(1L)).thenReturn(Optional.of(selbst));
     when(appUserRepository.existiertAndererNutzbarerAdmin(1L)).thenReturn(true);
 
@@ -214,7 +216,7 @@ class BenutzerverwaltungServiceTest {
         .thenReturn(
             Optional.of(
                 new KontoZeile(
-                    2L, "it-ziel", Rolle.ADMIN, List.of("VOTG"), true, true, false, null)));
+                    2L, "it-ziel", Rolle.ADMIN, List.of("VOTG"), true, null, true, false, null)));
 
     service.setzeAktiv(HANDELNDER, 2L, false, IP);
 

@@ -196,6 +196,11 @@ public class AppUserRepository {
             APP_USER.ENABLED,
             APP_USER.MUST_CHANGE_PASSWORD,
             APP_USER.LOCKED_BY_ADMIN,
+            // Seit dem 24.08.2026 mitgelesen. Bis dahin blieb die Spalte hier aus, und das war eine
+            // Entscheidung und kein Versehen — sie ist am selben Tag umgekehrt worden
+            // (docs/benutzerverwaltung.md E20, docs/benutzerverwaltung-backend.md §4). Sie kostet
+            // nichts: dieselbe Zeile, dieselbe Tabelle, kein zusaetzlicher Join.
+            APP_USER.LOCKED_UNTIL,
             anmeldungZeitpunkt)
         .from(APP_USER)
         .leftJoin(anmeldung)
@@ -210,6 +215,7 @@ public class AppUserRepository {
                     Rolle.ausDatenbank(satz.get(APP_USER.ROLE)),
                     mandanten.getOrDefault(satz.get(APP_USER.ID), List.of()),
                     Boolean.TRUE.equals(satz.get(APP_USER.LOCKED_BY_ADMIN)),
+                    satz.get(APP_USER.LOCKED_UNTIL),
                     Boolean.TRUE.equals(satz.get(APP_USER.ENABLED)),
                     Boolean.TRUE.equals(satz.get(APP_USER.MUST_CHANGE_PASSWORD)),
                     satz.get(anmeldungZeitpunkt)));

@@ -77,9 +77,19 @@ public class BenutzerverwaltungService {
     this.systemClock = systemClock;
   }
 
-  /** Alle Konten, mandantenfrei, ohne Paginierung und ohne serverseitige Suche (E2, E16). */
+  /**
+   * Alle Konten, mandantenfrei, ohne Paginierung und ohne serverseitige Suche (E2, E16).
+   *
+   * <p><b>Ein Vergleichszeitpunkt fuer die ganze Liste</b>, nicht einer je Zeile. Sonst entschiede
+   * bei einer Sperre, die waehrend des Zusammenbauens ablaeuft, die Position der Zeile darueber, ob
+   * sie noch als laufend gilt — ein Unterschied, den niemand erklaeren koennte und den niemand
+   * braucht.
+   */
   public List<NutzerzeileResponse> liste() {
-    return appUserRepository.findeAlleKonten().stream().map(NutzerzeileResponse::fuer).toList();
+    LocalDateTime jetzt = jetztUtc();
+    return appUserRepository.findeAlleKonten().stream()
+        .map(zeile -> NutzerzeileResponse.fuer(zeile, jetzt))
+        .toList();
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -276,7 +286,7 @@ public class BenutzerverwaltungService {
             String.valueOf(ziel.id()),
             ip,
             ziel.username() + ": " + was + "; Sitzungen verworfen: " + verworfen));
-    return NutzerzeileResponse.fuer(konto(ziel.id()));
+    return NutzerzeileResponse.fuer(konto(ziel.id()), jetztUtc());
   }
 
   /**
