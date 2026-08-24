@@ -955,6 +955,65 @@ export const de = {
     },
   },
 
+  /**
+   * Die Benutzerverwaltung (Schritt 9a) — **das Feature selbst**.
+   *
+   * Der **Name** der Seite kommt weiterhin aus
+   * `administration.bereiche.benutzer.titel`; es gibt genau einen Wortlaut
+   * dafür, und er steht dort, wo auch die Navigation ihn liest.
+   *
+   * Die **Rollennamen** stehen nicht hier, sondern unter `rolle` — sie gelten
+   * im ganzen Werkzeug gleich und werden seit Schritt 3 auch vom Nutzermenü
+   * gelesen. Ein zweiter Wortlaut daneben wäre genau die Doppelpflege, vor der
+   * `docs/frontend-grundlagen.md` §6 warnt.
+   */
+  benutzer: {
+    tabelle: "Alle Konten, mandantenübergreifend",
+    mandantenfrei:
+      "Diese Liste gilt mandantenübergreifend: Sie zeigt alle Konten, unabhängig vom Mandanten, der oben eingestellt ist. Ein Wechsel dort ändert an ihr nichts.",
+    spalten: {
+      benutzer: "Benutzer",
+      rolle: "Rolle",
+      mandanten: "Mandanten",
+      sperre: "Sperre",
+      zeitsperre: "Zeitsperre",
+      aktiv: "Konto",
+      passwort: "Passwort",
+      letzteAnmeldung: "Letzte Anmeldung",
+      aktionen: "Bearbeiten",
+    },
+    ohneMandanten: "keine",
+    sperre: {
+      gesperrt: "gesperrt",
+      offen: "nicht gesperrt",
+    },
+    // Die zweite, ganz andere Sperre: nach fünf Fehlversuchen, und sie endet von
+    // selbst. Der Text nennt deshalb einen Zeitpunkt und keinen Zustand.
+    zeitsperre: {
+      bis: "bis {zeitpunkt}",
+      keine: "keine",
+    },
+    aktiv: {
+      aktiv: "aktiv",
+      deaktiviert: "deaktiviert",
+    },
+    passwort: {
+      wechselNoetig: "Wechsel erforderlich",
+      keinWechsel: "gesetzt",
+    },
+    // `null` heißt „noch nie angemeldet" und wird ausgeschrieben. Eine leere
+    // Zelle sähe aus wie eine fehlende Angabe und beantwortet die häufigste
+    // Supportfrage nicht.
+    anmeldung: {
+      nie: "nie angemeldet",
+    },
+    leer: {
+      titel: "Keine Konten",
+      hinweis:
+        "Die Liste ist leer. Das kann im Betrieb nicht vorkommen — wer sie sieht, hat selbst ein Konto. Bitte melde das der EDI-Betreuung.",
+    },
+  },
+
   zustand: {
     laedt: "Wird geladen …",
     leerTitel: "Nichts anzuzeigen",

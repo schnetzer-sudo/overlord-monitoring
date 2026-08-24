@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 
+import { MANDANTEN_SCHLUESSEL, holeMandanten } from "@/lib/mandanten";
 import { ROUTEN } from "@/lib/routen";
 import {
   nachAbmeldung,
@@ -13,7 +14,6 @@ import {
 import {
   SITZUNG_SCHLUESSEL,
   aenderePasswort,
-  holeMandanten,
   holeSelbstauskunft,
   meldeAb,
   meldeAn,
@@ -79,9 +79,15 @@ export function usePasswortAendern() {
   });
 }
 
+/**
+ * Die wählbaren Mandanten. Aufruf und Schlüssel stehen seit dem 24.08.2026 in
+ * `lib/mandanten.ts` — die Benutzerverwaltung liest dieselbe Liste unter
+ * demselben Schlüssel, und zwei Schlüssel nebeneinander hielten dieselbe Antwort
+ * zweimal.
+ */
 export function useMandanten() {
   return useQuery({
-    queryKey: SITZUNG_SCHLUESSEL.mandanten,
+    queryKey: MANDANTEN_SCHLUESSEL,
     queryFn: holeMandanten,
   });
 }

@@ -9,6 +9,7 @@ import { zielRoute, type Sitzungszustand } from "@/lib/ablauf";
 import { istNichtAngemeldet } from "@/lib/http";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import { AngemeldetProvider } from "./angemeldet";
 import { Fehler } from "./zustand";
 import { Kopfzeile } from "./kopfzeile";
 import { NavigationsListe } from "./navigations-liste";
@@ -113,51 +114,59 @@ export function Anwendungsrahmen({ children }: { children: ReactNode }) {
     // Der Rahmen ist die einzige Stelle, die sie hat, und jede Zeitangabe in
     // jedem Feature braucht sie — siehe `components/zeitzone.tsx`.
     <ZeitzoneProvider zone={auskunft.anzeigezone}>
-      {/* Die eine Meldung, die vom Suchfeld in der Kopfzeile zur Trefferansicht
+      {/* Wer angemeldet ist — dieselbe Naht wie die Anzeigezone, und zum dritten
+          Mal aus demselben Grund: Der Rahmen hat die Selbstauskunft, die
+          Benutzerverwaltung braucht daraus den Namen, und ein Feature importiert
+          nicht aus `features/sitzung` (`components/angemeldet.tsx`). Es ist eine
+          Auskunft und keine Berechtigung: Sie steuert einen Hinweis, sonst
+          nichts. */}
+      <AngemeldetProvider username={auskunft.username}>
+        {/* Die eine Meldung, die vom Suchfeld in der Kopfzeile zur Trefferansicht
           laufen muss: „diesen Begriff gibt es schon". Der Rahmen spannt sie über
           beide, weil keine der beiden Seiten die andere kennt — dieselbe Naht wie
           bei der Anzeigezone (`components/suchsignal.tsx`). */}
-      <SuchsignalProvider>
-        {/* `relative` ist hier kein Feinschliff — siehe den Kommentar an `main`. */}
-        <div className="relative flex h-dvh flex-col overflow-hidden">
-          <Kopfzeile
-            auskunft={auskunft}
-            navigationSichtbar={frei}
-            mandantenwechselErlaubt={!auskunft.mustChangePassword}
-          />
-          {/* `min-h-0` ist hier kein Feinschliff, sondern die Bedingung: Ohne ihn
+        <SuchsignalProvider>
+          {/* `relative` ist hier kein Feinschliff — siehe den Kommentar an `main`. */}
+          <div className="relative flex h-dvh flex-col overflow-hidden">
+            <Kopfzeile
+              auskunft={auskunft}
+              navigationSichtbar={frei}
+              mandantenwechselErlaubt={!auskunft.mustChangePassword}
+            />
+            {/* `min-h-0` ist hier kein Feinschliff, sondern die Bedingung: Ohne ihn
             wächst ein Flex-Kind über seinen Container hinaus, statt zu scrollen —
             und das Fenster bekommt eine zweite Bildlaufleiste. */}
-          <div className="flex min-h-0 flex-1">
-            {frei ? (
-              <aside className="border-border w-navspalte relative hidden shrink-0 overflow-y-auto border-r px-2.5 py-2 md:block">
-                <NavigationsListe rolle={auskunft.role} />
-              </aside>
-            ) : null}
-            {/*
-             * `relative` an jedem Scrollbereich, und zwar aus einem gemessenen Grund
-             * (06.08.2026): Ein absolut positioniertes Element ohne positionierten
-             * Vorfahren hängt am *Ursprungsblock der Seite* — und wird deshalb von
-             * `overflow-hidden` weiter oben **nicht** beschnitten. Sein Platz zählt
-             * dann zur Scrollfläche des Dokuments.
-             *
-             * Das ist kein theoretischer Fall: Tailwinds `sr-only` ist
-             * `position: absolute`. Die verborgene Beschriftung im Aktualisieren-Knopf
-             * unter der Tabelle lag damit 2.243 px unter dem Seitenanfang, das Dokument
-             * bekam 1.354 px Scrollfläche ohne einen einzigen sichtbaren Inhalt, und
-             * wer über das Listenende hinausscrollte, schob den gesamten
-             * Anwendungsrahmen aus dem Bild.
-             *
-             * Mit `relative` ist der Scrollbereich selbst der Bezug: Was in ihm liegt,
-             * scrollt mit ihm und wird von ihm beschnitten. Begründung und Messung in
-             * `docs/frontend-grundlagen.md` §7.
-             */}
-            <main className="relative min-h-0 min-w-0 flex-1 overflow-y-auto px-3 py-4 md:px-5">
-              {children}
-            </main>
+            <div className="flex min-h-0 flex-1">
+              {frei ? (
+                <aside className="border-border w-navspalte relative hidden shrink-0 overflow-y-auto border-r px-2.5 py-2 md:block">
+                  <NavigationsListe rolle={auskunft.role} />
+                </aside>
+              ) : null}
+              {/*
+               * `relative` an jedem Scrollbereich, und zwar aus einem gemessenen Grund
+               * (06.08.2026): Ein absolut positioniertes Element ohne positionierten
+               * Vorfahren hängt am *Ursprungsblock der Seite* — und wird deshalb von
+               * `overflow-hidden` weiter oben **nicht** beschnitten. Sein Platz zählt
+               * dann zur Scrollfläche des Dokuments.
+               *
+               * Das ist kein theoretischer Fall: Tailwinds `sr-only` ist
+               * `position: absolute`. Die verborgene Beschriftung im Aktualisieren-Knopf
+               * unter der Tabelle lag damit 2.243 px unter dem Seitenanfang, das Dokument
+               * bekam 1.354 px Scrollfläche ohne einen einzigen sichtbaren Inhalt, und
+               * wer über das Listenende hinausscrollte, schob den gesamten
+               * Anwendungsrahmen aus dem Bild.
+               *
+               * Mit `relative` ist der Scrollbereich selbst der Bezug: Was in ihm liegt,
+               * scrollt mit ihm und wird von ihm beschnitten. Begründung und Messung in
+               * `docs/frontend-grundlagen.md` §7.
+               */}
+              <main className="relative min-h-0 min-w-0 flex-1 overflow-y-auto px-3 py-4 md:px-5">
+                {children}
+              </main>
+            </div>
           </div>
-        </div>
-      </SuchsignalProvider>
+        </SuchsignalProvider>
+      </AngemeldetProvider>
     </ZeitzoneProvider>
   );
 }

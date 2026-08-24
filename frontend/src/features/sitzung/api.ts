@@ -1,4 +1,5 @@
 import { hole, sende } from "@/lib/http";
+import type { Mandant } from "@/lib/mandanten";
 
 /**
  * Anmeldung, Sitzung, Passwortwechsel und Mandantenwahl.
@@ -14,11 +15,13 @@ import { hole, sende } from "@/lib/http";
  * erlaubte Ausschnitt aktiv ist.
  */
 
-export type Mandant = {
-  /** Sprechender Code aus dem Altsystem, etwa `VOTG` — keine UUID. */
-  id: string;
-  name: string;
-};
+/**
+ * Der Typ liegt seit dem 24.08.2026 in `lib/mandanten.ts` und wird hier nur
+ * weitergereicht: Die Benutzerverwaltung pflegt die Mandantenmenge fremder
+ * Konten und braucht dieselbe Liste, und ein Feature importiert nicht aus einem
+ * Nachbarfeature (`docs/frontend-grundlagen.md` §8).
+ */
+export type { Mandant };
 
 /**
  * Antwort von `GET /api/auth/me` — und dieselbe Antwort nach Anmeldung,
@@ -65,7 +68,6 @@ export type Passwortdaten = { oldPassword: string; newPassword: string };
 
 export const SITZUNG_SCHLUESSEL = {
   selbstauskunft: ["sitzung", "selbstauskunft"] as const,
-  mandanten: ["sitzung", "mandanten"] as const,
 };
 
 export function holeSelbstauskunft(): Promise<Selbstauskunft> {
@@ -82,11 +84,6 @@ export function meldeAb(): Promise<void> {
 
 export function aenderePasswort(daten: Passwortdaten): Promise<Selbstauskunft> {
   return sende<Selbstauskunft>("/auth/password", daten);
-}
-
-/** Genau die Menge, aus der dieser Nutzer wählen darf — die Liste ist selbst eine Auskunft. */
-export function holeMandanten(): Promise<Mandant[]> {
-  return hole<Mandant[]>("/mandanten");
 }
 
 export function wechsleMandant(mandantId: string): Promise<Selbstauskunft> {

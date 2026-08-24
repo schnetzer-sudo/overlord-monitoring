@@ -598,6 +598,52 @@ export const en: Texte = {
     },
   },
 
+  /**
+   * User administration (step 9a) — the feature itself. The page **name** stays
+   * in `administration.bereiche.benutzer.titel`, the **role** names in `rolle`.
+   */
+  benutzer: {
+    tabelle: "All accounts, across all tenants",
+    mandantenfrei:
+      "This list spans all tenants: it shows every account regardless of the tenant selected above. Switching there does not change it.",
+    spalten: {
+      benutzer: "User",
+      rolle: "Role",
+      mandanten: "Tenants",
+      sperre: "Lock",
+      zeitsperre: "Timed lock",
+      aktiv: "Account",
+      passwort: "Password",
+      letzteAnmeldung: "Last sign-in",
+      aktionen: "Edit",
+    },
+    ohneMandanten: "none",
+    sperre: {
+      gesperrt: "locked",
+      offen: "not locked",
+    },
+    zeitsperre: {
+      bis: "until {zeitpunkt}",
+      keine: "none",
+    },
+    aktiv: {
+      aktiv: "active",
+      deaktiviert: "deactivated",
+    },
+    passwort: {
+      wechselNoetig: "change required",
+      keinWechsel: "set",
+    },
+    anmeldung: {
+      nie: "never signed in",
+    },
+    leer: {
+      titel: "No accounts",
+      hinweis:
+        "The list is empty. That cannot happen in practice — whoever sees it has an account. Please report this to EDI support.",
+    },
+  },
+
   zustand: {
     laedt: "Loading …",
     leerTitel: "Nothing to show",
