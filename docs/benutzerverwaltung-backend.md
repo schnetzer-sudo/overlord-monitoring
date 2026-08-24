@@ -428,6 +428,7 @@ Service.
 | `admin/BenutzerverwaltungDbIT` | `@Tag("db")` | 16 | Liste, Sperre, Aktivzustand, Rolle, Mandanten, Passwort-Reset |
 | `admin/BenutzerverwaltungServiceTest` | Einheit | 8 | E12, zweite Stufe **und die Reihenfolge der beiden Stufen** — siehe unten |
 | `security/AppUserStatementsTest` | Einheit | 3 | Die Bedingung „nutzbar" steht **im** Statement — gerendert, nicht nachgebaut |
+| `admin/NutzerzeileResponseTest` *(24.08.2026)* | Einheit | 7 | **`lockedUntil` nur, wenn die Sperre noch läuft** (§4) — laufend und abgelaufen als Gegenprobenpaar, der Grenzfall „genau jetzt", ohne Sperre, **beide Sperren getrennt**, die Umrechnung über UTC und `lastLogin = null` |
 
 **Zwei Sitzungen je Konto, nicht eine.** Der Fehler, den ein Test mit nur einer Sitzung nicht fände,
 ist der naheliegendste: nur die zuletzt angelegte zu verwerfen.

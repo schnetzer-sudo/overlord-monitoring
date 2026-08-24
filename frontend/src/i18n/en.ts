@@ -620,6 +620,8 @@ export const en: Texte = {
     ohneMandanten: "none",
     bearbeiten: "Edit",
     bearbeitenFuer: "Edit account {benutzer}",
+    bearbeitenGesperrt:
+      "Close the open row first. Otherwise the entries started there would be lost — including a password already typed.",
     formular: {
       sperre: "Account locked",
       sperreHinweis:

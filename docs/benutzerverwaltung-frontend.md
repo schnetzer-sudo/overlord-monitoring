@@ -98,7 +98,8 @@ mandantenübergreifend gilt.
 | Bearbeiten | — | immer |
 
 **Die drei fett gesetzten sind die Antwort auf „warum kommt der nicht hinein".** Sie bleiben bei
-jeder Breite stehen; alles andere weicht. Das ist die Regel aus
+jeder Breite stehen — zusammen mit dem **Benutzernamen**, ohne den keine Zeile zuzuordnen ist, und
+dem **Bearbeiten-Knopf**, ohne den die Seite nichts mehr könnte. Alles Übrige weicht. Das ist die Regel aus
 [`frontend-grundlagen.md`](frontend-grundlagen.md) §8 — *„Wer entscheiden muss, welche weicht, fragt
 nicht ‚was passt‘, sondern ‚was sucht der Nutzer‘."*
 
@@ -183,6 +184,13 @@ Aufrufwegen vergessen werden.
 Problemtypen dieser Seite sind `409` und sagen etwas über den *Zustand* des Kontos; welcher Vorgang
 gemeint ist, geht ohne die Nähe verloren.
 
+**Und genau deshalb lässt sich die Zeile nicht zuklappen, solange etwas läuft.** Die Meldung steht
+*im* Formular; verschwände es mitten im Aufruf, wäre ein `409` nirgends zu sehen und die Zeile sähe
+schlicht unverändert aus. Aus demselben Grund ist **jede andere Zeile gesperrt, solange eine offen
+ist** — dieselbe Regel wie bei der Katalogpflege (`darfOeffnen`), hier mit einem schwereren Einsatz:
+Das Formular hält ein bereits **getipptes Einmalpasswort**, und das steht danach an keiner Stelle
+mehr, auch nicht im Protokoll.
+
 ### Die Vorwarnung, wenn es das eigene Konto trifft (E19)
 
 Nach E5 verwirft **jeder** der fünf Vorgänge *alle* Sitzungen des betroffenen Kontos, ohne
@@ -190,9 +198,19 @@ Fallunterscheidung. Trifft es das eigene Konto, meldet der Admin sich mit dem Kl
 landet nach [`frontend-grundlagen.md`](frontend-grundlagen.md) §5 **wortlos** auf der Anmeldung —
 dort wird bei `401` umgeleitet und nicht gemeldet. **Ohne Vorwarnung sähe das aus wie ein Absturz.**
 
-Deshalb ein **Dialog** und kein Satz im Formular: Ein Satz erklärt, ein Dialog unterbricht und
-verlangt eine Antwort. Er steht *vor* dem Aufruf, denn danach gibt es keine Oberfläche mehr, die ihn
-zeigen könnte.
+**Beides steht da, und die Arbeitsteilung ist der Punkt.** Im Formular steht ein ruhiger Satz, sobald
+die Zeile das eigene Konto ist — er erklärt die Lage, bevor jemand etwas anfasst. Der **Dialog**
+kommt erst beim Auslösen, und er tut etwas anderes: **Er unterbricht und verlangt eine Antwort.**
+Ein Satz allein trüge das nicht — man überliest ihn, und genau für den Moment, in dem er zählt, wäre
+er gebaut und verfehlte ihn. Der Dialog steht *vor* dem Aufruf, denn danach gibt es keine Oberfläche
+mehr, die ihn zeigen könnte.
+
+**Und danach wird wirklich abgemeldet.** Der Vorgang verwirft die eigene Sitzung, das Backend weiß
+es — die Oberfläche von selbst noch nicht: Der Zwischenspeicher hält seine Daten dreißig Sekunden,
+die Selbstauskunft wird ohne Fensterfokus nicht nachgeladen, und bis zum nächsten Aufruf stünde eine
+Seite da, die es nicht mehr gibt. Nach einem erfolgreichen Vorgang am eigenen Konto geht die Ansicht
+deshalb denselben Weg wie das Abmelden: Zwischenspeicher leeren, dann **harte** Navigation auf die
+Anmeldung (`lib/zwischenspeicher.ts`). **Der Dialog verspricht es, also muss es auch passieren.**
 
 **Verglichen wird über den Benutzernamen, ohne Rücksicht auf Groß- und Kleinschreibung.** Das ist
 keine Bequemlichkeit, sondern die einzige verfügbare Möglichkeit: `GET /api/auth/me` liefert **keine
@@ -216,7 +234,8 @@ Richtung:
 | `lock` | entsperren | läuft durch → **Vorwarnung** |
 | `active` | deaktivieren | **409** |
 | `active` | reaktivieren | läuft durch → **Vorwarnung** |
-| `role` | auf `MANDANT` | **409** |
+| `role` | auf `MANDANT` (herabstufen) | **409** |
+| `role` | auf `ADMIN` | läuft durch → **Vorwarnung** |
 | `tenants` | — | läuft durch → **Vorwarnung** |
 | `password` | — | läuft durch → **Vorwarnung**; ausdrücklich ohne Selbstschutz |
 
@@ -441,7 +460,7 @@ frontend/src/
 │  ├─ api.ts                         Typ `Nutzerzeile`, `BENUTZER_SCHLUESSEL`, sechs Aufrufe
 │  ├─ selbstschutz.ts                `Vorgang`, das eigene Konto, die Vorwarnung, das Passwort
 │  ├─ zuordnung.ts                   die Mandantenmenge: Auswahl, Umschalten, E10, Mengenvergleich
-│  ├─ zeilen.ts                      die geänderte Zeile an ihrer Stelle
+│  ├─ zeilen.ts                      die geänderte Zeile an ihrer Stelle, `darfOeffnen`
 │  ├─ hooks.ts                       eine Abfrage, **eine** Mutation für alle fünf Vorgänge
 │  └─ components/
 │     ├─ benutzer-ansicht.tsx        die Zustände, der Hinweis aus E21, die offene Zeile
@@ -464,33 +483,36 @@ Backend (Teil 1 dieses Auftrags): `KontoZeile.gesperrtBisUtc`, `AppUserRepositor
 ## 12. Tests
 
 `pnpm test`, nach [`frontend-grundlagen.md`](frontend-grundlagen.md) §9. Ein `console.error` lässt
-den Lauf fehlschlagen. **529 Fälle in 25 Dateien**, davon neu:
+den Lauf fehlschlagen. **531 Fälle in 25 Dateien**, davon neu:
 
 | Datei | Art | Was |
 |---|---|---|
 | `tests/benutzer.test.ts` | rein | das eigene Konto samt abweichender Schreibweise und fehlender Selbstauskunft; **alle acht Richtungen** der Frage „läuft das am eigenen Konto"; die Vorwarnung in allen fünf Lagen; das Einmalpasswort und die Grenze zur Backend-Prüfung; die Mandantenmenge (technische Mandanten, der Mandant außerhalb der Wahl, E10 **mit dem Tausch als Gegenprobe**, Mengen- statt Reihenfolgevergleich); die Zeile im Zwischenspeicher; **alle neun Übersetzungen in beiden Sprachen** samt der Probe, dass die vier `409` nicht wie `403` klingen; „kein Zugriff" bei `zugriff-verweigert` und bei keinem der beiden anderen `403` |
-| `tests/benutzer-tabelle.test.tsx` | **gerenderter Baum**, acht Fälle | `lastLogin = null` als Satz und nicht als leere Zelle, mit Gegenprobe; die zwei Sperren in zwei Zellen, in beide Richtungen; die **Verdrahtung** der Vorwarnung (Dialog **vor** dem Aufruf, kein Aufruf beim eigenen Konto, sofortiger Aufruf beim fremden) und die vollständige Zielmenge auf der Leitung |
+| `tests/benutzer-tabelle.test.tsx` | **gerenderter Baum**, zehn Fälle | `lastLogin = null` als Satz und nicht als leere Zelle, mit Gegenprobe; die zwei Sperren in zwei Zellen, in beide Richtungen; die **Verdrahtung** der Vorwarnung (Dialog **vor** dem Aufruf, kein Aufruf beim eigenen Konto, danach die **wirkliche Abmeldung**; sofortiger Aufruf beim fremden und **keine** Abmeldung), die vollständige Zielmenge auf der Leitung, und die **Sperre der übrigen Zeilen**, solange eine offen ist — samt Gegenprobe |
 | `backend/.../NutzerzeileResponseTest` | Einheit, sieben Fälle | `lockedUntil` nur, wenn die Sperre noch läuft — laufend, abgelaufen, **der Grenzfall „genau jetzt"**, ohne Sperre, beide Sperren getrennt, die Umrechnung über UTC, `lastLogin = null` |
 
 ### Warum `benutzer-tabelle.test.tsx` einen Baum rendern darf
 
 Die Bedingung ist nicht „ein Baum wäre bequemer", sondern **„es gibt keinen anderen Ort, an dem der
-Satz belegbar wäre"**. Zwei Klassen erfüllen sie:
+Satz belegbar wäre"**. Drei Klassen erfüllen sie:
 
 1. **Anwesenheit und Abwesenheit im Baum.** Dass `lastLogin = null` einen *Satz* ergibt und keine
    leere Zelle, und dass **beide** Sperren mit je eigenem Wortlaut dastehen — beides entsteht erst in
    der Zelle. Es gibt nichts zu rechnen, nur etwas hinzuschreiben; die naheliegende Zusammenfassung
    zu einer Spalte „gesperrt" bestünde jede Prüfung an einer reinen Funktion.
-2. **Die Verdrahtung.** Die Regeln sind reine Funktionen und stehen daneben; belegt wird, dass
-   jemand sie **abfragt**, bevor der Aufruf losläuft. *Eine richtige Regel, die niemand abfragt,
-   sieht von außen aus wie keine.*
+2. **Die Verdrahtung der Vorwarnung.** Die Regeln sind reine Funktionen und stehen daneben; belegt
+   wird, dass jemand sie **abfragt**, bevor der Aufruf losläuft — und dass danach wirklich
+   abgemeldet wird.
+3. **Die Verdrahtung der Sperre.** Dass die Schaltfläche jeder *anderen* Zeile gesperrt ist,
+   solange eine offen ist, samt Gegenprobe. *Eine richtige Regel, die niemand abfragt, sieht von
+   außen aus wie keine.*
 
 **Ein Fund beim Schreiben, der hier stehen bleibt:** Die erste Fassung prüfte die Sperrzelle mit
 `toContain`. Das geht durch, ohne etwas zu belegen — **„nicht gesperrt" enthält „gesperrt"**.
 Geprüft wird deshalb der ganze Wortlaut der Zelle.
 
 Die Gesamtzahl der gerenderten Fälle steht **ausschließlich** im Kopf von
-`frontend/vitest.config.mts` und ist dort von 39 auf **47** in neun Dateien fortgeschrieben.
+`frontend/vitest.config.mts` und ist dort von 39 auf **49** in neun Dateien fortgeschrieben.
 
 ### Alle sichtbaren Texte stehen in den Sprachdateien
 

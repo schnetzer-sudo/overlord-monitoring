@@ -10,7 +10,8 @@ import { einsetzen } from "@/i18n";
 import { useTexte } from "@/i18n/provider";
 import { istKeinZugriff } from "@/lib/http";
 
-import { useNutzer } from "../hooks";
+import { useNutzer, useVorgang } from "../hooks";
+import { darfOeffnen } from "../zeilen";
 import { BenutzerTabelle } from "./benutzer-tabelle";
 import { ZeilenFormular } from "./zeilen-formular";
 
@@ -66,6 +67,16 @@ export function BenutzerAnsicht() {
   const liste = useNutzer();
   const [offen, setOffen] = useState<number | null>(null);
 
+  /*
+   * Die Mutation liegt **hier** und nicht im Formular, obwohl nur das Formular
+   * sie auslöst. Der Grund steht eine Ebene tiefer: Solange ein Vorgang läuft,
+   * darf die Zeile nicht zugeklappt werden — sonst verschwindet die einzige
+   * Stelle, an der seine Antwort gemeldet wird, und ein `409` sähe aus wie „es
+   * ist nichts passiert". Wer das verhindern will, muss beim Knopf wissen, ob
+   * gerade etwas läuft.
+   */
+  const vorgang = useVorgang();
+
   const umschalten = useCallback(
     (id: number) => setOffen((bisher) => (bisher === id ? null : id)),
     [],
@@ -101,8 +112,13 @@ export function BenutzerAnsicht() {
                   variant="outline"
                   size="icon"
                   aria-expanded={offen === zeile.id}
+                  disabled={!darfOeffnen(offen, zeile.id) || vorgang.isPending}
                   onClick={() => umschalten(zeile.id)}
-                  title={texte.benutzer.bearbeiten}
+                  title={
+                    darfOeffnen(offen, zeile.id)
+                      ? texte.benutzer.bearbeiten
+                      : texte.benutzer.bearbeitenGesperrt
+                  }
                   className="min-h-bedienelement"
                 >
                   <SquarePen aria-hidden="true" />
@@ -112,7 +128,7 @@ export function BenutzerAnsicht() {
                 </Button>
               )}
               formularFuer={(zeile) =>
-                offen === zeile.id ? <ZeilenFormular zeile={zeile} /> : null
+                offen === zeile.id ? <ZeilenFormular zeile={zeile} vorgang={vorgang} /> : null
               }
             />
           )}

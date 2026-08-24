@@ -25,3 +25,21 @@ export function mitAktualisierterZeile(
 ): Nutzerzeile[] {
   return liste.map((zeile) => (zeile.id === geaendert.id ? geaendert : zeile));
 }
+
+/**
+ * Ob sich **diese** Zeile öffnen lässt, solange eine andere offen ist.
+ *
+ * Dieselbe Regel und dieselbe Begründung wie bei der Katalogpflege
+ * (`features/katalog/zuordnung.ts` `darfOeffnen`): **Ungespeicherte Eingaben
+ * werden nie stillschweigend verworfen.** Ein aufgeklapptes Formular hält hier
+ * zwei Entwürfe, die nirgendwo sonst stehen — die gesetzten Mandanten-Häkchen
+ * und, schwerer wiegend, ein bereits **getipptes Einmalpasswort**. Klappte
+ * daneben eine zweite Zeile auf, wäre beides weg, ohne dass jemand danach
+ * gefragt hätte; und das Passwort steht danach an keiner Stelle mehr, auch
+ * nicht im Protokoll.
+ *
+ * Die offene Zeile selbst darf immer — das ist ihr Weg wieder zu.
+ */
+export function darfOeffnen(offeneZeile: number | null, id: number): boolean {
+  return offeneZeile === null || offeneZeile === id;
+}

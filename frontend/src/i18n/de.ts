@@ -985,6 +985,8 @@ export const de = {
     ohneMandanten: "keine",
     bearbeiten: "Bearbeiten",
     bearbeitenFuer: "Konto {benutzer} bearbeiten",
+    bearbeitenGesperrt:
+      "Erst die offene Zeile schließen. Sonst gingen die dort begonnenen Eingaben verloren — auch ein bereits getipptes Passwort.",
     formular: {
       sperre: "Konto gesperrt",
       sperreHinweis:

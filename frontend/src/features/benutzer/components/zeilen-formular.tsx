@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { useAngemeldeterName } from "@/components/angemeldet";
 import { Button } from "@/components/ui/button";
@@ -11,8 +12,11 @@ import { Fehler } from "@/components/zustand";
 import { einsetzen } from "@/i18n";
 import { useTexte } from "@/i18n/provider";
 
+import { nachAbmeldung } from "@/lib/zwischenspeicher";
+import { ROUTEN } from "@/lib/routen";
+
 import { ROLLEN, istRolle, type Nutzerzeile, type Rolle } from "../api";
-import { useVorgang } from "../hooks";
+import type { useVorgang } from "../hooks";
 import {
   PASSWORT_MINDESTLAENGE,
   brauchtVorwarnung,
@@ -73,10 +77,21 @@ import { Vorwarnung } from "./vorwarnung";
  * Was die Oberfläche sehr wohl vorwegnimmt, ist der Fall, den sie **allein aus
  * der Zeile** ablesen kann: eine Herabstufung ohne Mandantenzuordnung (E11).
  */
-export function ZeilenFormular({ zeile }: { zeile: Nutzerzeile }) {
+export function ZeilenFormular({
+  zeile,
+  vorgang,
+}: {
+  zeile: Nutzerzeile;
+  /**
+   * Die Mutation liegt in der Ansicht, weil auch der Öffnen-Knopf wissen muss,
+   * ob gerade etwas läuft — siehe dort. Sie wird durchgereicht und nicht hier
+   * angelegt.
+   */
+  vorgang: ReturnType<typeof useVorgang>;
+}) {
   const texte = useTexte();
+  const speicher = useQueryClient();
   const angemeldet = useAngemeldeterName();
-  const vorgang = useVorgang();
   const [wartend, setWartend] = useState<Vorgang | null>(null);
 
   const sperreId = useId();
@@ -109,6 +124,24 @@ export function ZeilenFormular({ zeile }: { zeile: Nutzerzeile }) {
           setWartend(null);
           if (neu.art === "passwort") {
             setPasswort("");
+          }
+          /*
+           * **Die Vorwarnung hat es versprochen, also muss es auch passieren.**
+           *
+           * Am eigenen Konto verwirft der Vorgang gerade die eigene Sitzung
+           * (E5) — der Nutzer ist ab jetzt abgemeldet, das Backend weiß es, die
+           * Oberfläche noch nicht. Von selbst fiele das erst beim **nächsten**
+           * Aufruf auf: Der Zwischenspeicher hält seine Daten dreißig Sekunden,
+           * die Selbstauskunft wird ohne Fensterfokus nicht nachgeladen. Bis
+           * dahin stünde eine Seite da, die es nicht mehr gibt.
+           *
+           * Deshalb hier derselbe Weg wie beim Abmelden: Zwischenspeicher
+           * leeren, dann **harte** Navigation — die wirft auch den Zustand im
+           * Speicher weg, den ein Router-Wechsel stehen ließe
+           * (`lib/zwischenspeicher.ts`).
+           */
+          if (eigenes) {
+            nachAbmeldung(speicher, () => window.location.replace(ROUTEN.anmeldung));
           }
         },
         // Bei einem Fehler bleibt der Dialog nicht stehen: Die Meldung gehört an
@@ -215,7 +248,7 @@ export function ZeilenFormular({ zeile }: { zeile: Nutzerzeile }) {
        * im Effekt wäre der naheliegende und der falsche Weg.
        */}
       <MandantenAuswahl
-        key={zeile.tenants.join(" ")}
+        key={zeile.tenants.join(",")}
         zeile={zeile}
         gesperrt={gesperrt}
         aufSpeichern={(mandanten) => starte({ art: "mandanten", mandanten })}

@@ -5,18 +5,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AngemeldetProvider } from "@/components/angemeldet";
 import type { Nutzerzeile } from "@/features/benutzer/api";
+import { BenutzerAnsicht } from "@/features/benutzer/components/benutzer-ansicht";
 import { BenutzerTabelle } from "@/features/benutzer/components/benutzer-tabelle";
 import { ZeilenFormular } from "@/features/benutzer/components/zeilen-formular";
+import { useVorgang } from "@/features/benutzer/hooks";
 import { texteFuer } from "@/i18n";
 
-import { rendere } from "./hilfe/rendern";
+import { neuerZwischenspeicher, rendere } from "./hilfe/rendern";
 
 /**
- * **Acht Fälle, für die ein gerenderter Baum die einzige Prüfung ist.**
+ * **Zehn Fälle, für die ein gerenderter Baum die einzige Prüfung ist.**
  *
  * Die Bedingung steht in `tests/hilfe/rendern.tsx`: nicht „ein Baum wäre
  * bequemer", sondern „es gibt keinen anderen Ort, an dem der Satz belegbar
- * wäre". Alle acht erfüllen sie, und sie zerfallen in zwei Klassen.
+ * wäre". Alle zehn erfüllen sie, und sie zerfallen in drei Klassen.
  *
  * **Aussagen über Anwesenheit und Abwesenheit im Baum** (vier Fälle, je mit
  * ihrer Gegenprobe — ohne sie bewiese jeder nur, dass irgendwo irgendetwas
@@ -40,10 +42,15 @@ import { rendere } from "./hilfe/rendern";
  * Zielmenge über die Leitung statt einer Differenz. **Eine richtige Regel, die
  * niemand abfragt, sieht von außen aus wie keine.**
  *
+ * **Die Verdrahtung der Sperre** (zwei Fälle): dass die Schaltfläche jeder
+ * *anderen* Zeile wirklich gesperrt ist, solange eine offen ist — und die
+ * Gegenprobe. Der Einsatz ist ein bereits getipptes Einmalpasswort, das danach
+ * an keiner Stelle mehr steht.
+ *
  * **Die Aufrufe gehen an ein gestelltes `fetch`** und nicht ins Netz. Das ist
- * hier nicht Bequemlichkeit, sondern die Bedingung dafür, dass die letzten vier
- * Fälle überhaupt etwas aussagen: Geprüft wird, **ob** und **womit** gerufen
- * wird.
+ * hier nicht Bequemlichkeit, sondern die Bedingung dafür, dass die Fälle zur
+ * Verdrahtung überhaupt etwas aussagen: Geprüft wird, **ob** und **womit**
+ * gerufen wird.
  */
 
 const TEXTE = texteFuer("de");
@@ -149,57 +156,84 @@ describe("Die zwei Sperren", () => {
   });
 });
 
-describe("Die Vorwarnung (E19)", () => {
-  let rufe: { pfad: string; koerper: unknown }[];
+let rufe: { pfad: string; koerper: unknown }[] = [];
+let navigationen: string[] = [];
+const urspruenglicherOrt = window.location;
 
-  beforeEach(() => {
-    rufe = [];
-    // Der CSRF-Token steht im Cookie, damit `lib/http` ihn nicht erst holt.
-    document.cookie = "XSRF-TOKEN=test-token";
-
-    vi.stubGlobal("fetch", (eingabe: RequestInfo | URL, init?: RequestInit) => {
-      const pfad = String(eingabe);
-      rufe.push({
-        pfad,
-        koerper: typeof init?.body === "string" ? JSON.parse(init.body) : undefined,
-      });
-      // Je Pfad die richtige Gestalt. Ein Stub, der überall dasselbe liefert,
-      // beantwortet `/api/mandanten` mit einem Objekt statt einer Liste — und
-      // die Auswahl fiele mit einem Fehler um, den kein Testfall meint.
-      const rumpf = pfad.includes("/api/mandanten") ? MANDANTEN : zeile();
-      return Promise.resolve(
-        new Response(JSON.stringify(rumpf), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        }),
-      );
+/**
+ * Netz und Navigation gestellt. Beides braucht jeder Block, der ein Formular
+ * aufklappt: Die Mandantenauswahl holt beim Einhängen ihre Liste, und ein
+ * erfolgreicher Vorgang am eigenen Konto navigiert.
+ */
+function stelleUmgebung() {
+  rufe = [];
+  navigationen = [];
+  document.cookie = "XSRF-TOKEN=test-token";
+  Object.defineProperty(window, "location", {
+    configurable: true,
+    value: { ...urspruenglicherOrt, replace: (ziel: string) => navigationen.push(ziel) },
+  });
+  vi.stubGlobal("fetch", (eingabe: RequestInfo | URL, init?: RequestInit) => {
+    const pfad = String(eingabe);
+    rufe.push({
+      pfad,
+      koerper: typeof init?.body === "string" ? JSON.parse(init.body) : undefined,
     });
+    const rumpf = pfad.includes("/api/mandanten") ? MANDANTEN : zeile();
+    return Promise.resolve(
+      new Response(JSON.stringify(rumpf), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
   });
+}
 
-  afterEach(() => {
-    vi.unstubAllGlobals();
+/**
+ * Nur die **schreibenden** Aufrufe. Ein aufgeklapptes Formular holt beim
+ * Einhängen die wählbaren Mandanten — ein lesender Aufruf, der mit der Frage
+ * dieser Fälle nichts zu tun hat und sie sonst um genau eins verschöbe.
+ */
+function schreibrufe() {
+  return rufe.filter((ruf) => ruf.pfad.includes("/api/admin/users/"));
+}
+
+function knopfMit(behaelter: HTMLElement, beschriftung: string): HTMLButtonElement | undefined {
+  return [...behaelter.querySelectorAll("button")].find((knopf) =>
+    (knopf.textContent ?? "").includes(beschriftung),
+  );
+}
+
+/** Lässt die gestellte Antwort ankommen — die Mandantenliste wird geholt, nicht gestellt. */
+async function warteAufAntwort() {
+  await act(async () => {
+    await new Promise((fertig) => setTimeout(fertig, 0));
   });
+}
+
+function raeumeUmgebung() {
+  vi.unstubAllGlobals();
+  Object.defineProperty(window, "location", { configurable: true, value: urspruenglicherOrt });
+}
+
+describe("Die Vorwarnung (E19)", () => {
+  beforeEach(stelleUmgebung);
+  afterEach(raeumeUmgebung);
+
+  /**
+   * Die Mutation liegt im Betrieb in der Ansicht und wird durchgereicht — hier
+   * legt diese Hülle sie an. Sie ist die kleinste Nachbildung des echten
+   * Einhängepunkts und tut sonst nichts.
+   */
+  function Huelle({ werte }: { werte: Partial<Nutzerzeile> }) {
+    return <ZeilenFormular zeile={zeile(werte)} vorgang={useVorgang()} />;
+  }
 
   async function formular(werte: Partial<Nutzerzeile>, angemeldet: string | undefined) {
     return rendere(
       <AngemeldetProvider username={angemeldet}>
-        <ZeilenFormular zeile={zeile(werte)} />
+        <Huelle werte={werte} />
       </AngemeldetProvider>,
-    );
-  }
-
-  /**
-   * Nur die **schreibenden** Aufrufe. Das Formular holt beim Einhängen die
-   * wählbaren Mandanten — ein lesender Aufruf, der mit der Frage dieser Fälle
-   * nichts zu tun hat und sie sonst um genau eins verschöbe.
-   */
-  function schreibrufe() {
-    return rufe.filter((ruf) => ruf.pfad.includes("/api/admin/users/"));
-  }
-
-  function knopfMit(behaelter: HTMLElement, beschriftung: string): HTMLButtonElement | undefined {
-    return [...behaelter.querySelectorAll("button")].find((knopf) =>
-      (knopf.textContent ?? "").includes(beschriftung),
     );
   }
 
@@ -253,6 +287,10 @@ describe("Die Vorwarnung (E19)", () => {
 
       expect(schreibrufe()).toHaveLength(1);
       expect(schreibrufe()[0].pfad).toContain("/api/admin/users/7/password");
+      // Und die Vorwarnung hält, was sie verspricht: Der Vorgang hat gerade die
+      // eigene Sitzung verworfen (E5), also führt die Oberfläche selbst auf die
+      // Anmeldung — statt eine Seite stehen zu lassen, die es nicht mehr gibt.
+      expect(navigationen).toEqual(["/anmeldung"]);
     } finally {
       await abbauen();
     }
@@ -267,6 +305,8 @@ describe("Die Vorwarnung (E19)", () => {
       expect(document.body.textContent ?? "").not.toContain(B.vorwarnung.titel);
       expect(schreibrufe()).toHaveLength(1);
       expect(schreibrufe()[0].pfad).toContain("/api/admin/users/7/password");
+      // Ein fremdes Konto meldet niemanden ab — die Gegenprobe zur Zeile darüber.
+      expect(navigationen).toEqual([]);
     } finally {
       await abbauen();
     }
@@ -279,26 +319,10 @@ describe("Die Vorwarnung (E19)", () => {
    * `{+NEXANS}` als Anweisung.
    */
   it("schickt bei der Mandantenmenge die vollständige Zielmenge", async () => {
-    const zwischenspeicher = (await import("@tanstack/react-query")).QueryClient;
-    const speicher = new zwischenspeicher({
-      defaultOptions: { queries: { retry: false, staleTime: Infinity, gcTime: Infinity } },
-    });
-    speicher.setQueryData(
-      ["mandanten"],
-      [
-        { id: "VOTG", name: "VOTG Tanktainer GmbH" },
-        { id: "NEXANS", name: "Nexans autoelectric GmbH" },
-      ],
-    );
-
-    const { behaelter, abbauen } = await rendere(
-      <AngemeldetProvider username="jemand-anders">
-        <ZeilenFormular zeile={zeile({ tenants: ["VOTG"] })} />
-      </AngemeldetProvider>,
-      speicher,
-    );
+    const { behaelter, abbauen } = await formular({ tenants: ["VOTG"] }, "jemand-anders");
 
     try {
+      await warteAufAntwort();
       const haken = [...behaelter.querySelectorAll('button[role="checkbox"]')];
       expect(haken).toHaveLength(2);
 
@@ -317,6 +341,74 @@ describe("Die Vorwarnung (E19)", () => {
       const mandantenruf = rufe.find((ruf) => ruf.pfad.includes("/tenants"));
       expect(mandantenruf).toBeDefined();
       expect(mandantenruf?.koerper).toEqual({ tenants: ["VOTG", "NEXANS"] });
+    } finally {
+      await abbauen();
+    }
+  });
+});
+
+/**
+ * **Die Verdrahtung der Sperre — zwei Fälle, und der zweite ist die Gegenprobe.**
+ *
+ * Die *Regel* ist eine reine Funktion (`darfOeffnen`, geprüft in
+ * `tests/benutzer.test.ts`). Belegt wird hier, dass sie jemand **abfragt**: dass
+ * die andere Zeile ihre Schaltfläche wirklich gesperrt bekommt, solange eine
+ * offen ist. Ohne diesen Nachweis sähe eine richtige Regel von außen aus wie
+ * keine — und der Preis wäre nicht theoretisch: Ein aufgeklapptes Formular hält
+ * ein bereits **getipptes Einmalpasswort**, und das steht danach an keiner
+ * Stelle mehr.
+ */
+describe("Solange eine Zeile offen ist", () => {
+  beforeEach(stelleUmgebung);
+  afterEach(raeumeUmgebung);
+
+  async function ansichtMitZweiZeilen() {
+    const speicher = neuerZwischenspeicher();
+    speicher.setQueryData(
+      ["benutzer", "liste"],
+      [zeile({ id: 1, username: "eins" }), zeile({ id: 2, username: "zwei" })],
+    );
+    return rendere(<BenutzerAnsicht />, speicher);
+  }
+
+  function bearbeitenKnoepfe(behaelter: HTMLElement) {
+    return [...behaelter.querySelectorAll("tbody button")].filter(
+      (knopf) => (knopf.getAttribute("title") ?? "").length > 0,
+    ) as HTMLButtonElement[];
+  }
+
+  it("ist die Schaltfläche jeder anderen Zeile gesperrt", async () => {
+    const { behaelter, abbauen } = await ansichtMitZweiZeilen();
+
+    try {
+      const vorher = bearbeitenKnoepfe(behaelter);
+      expect(vorher).toHaveLength(2);
+
+      await act(async () => {
+        vorher[0].click();
+      });
+      await warteAufAntwort();
+
+      const nachher = bearbeitenKnoepfe(behaelter);
+      // Die offene Zeile behält ihre Schaltfläche — sie ist ihr Weg wieder zu.
+      expect(nachher[0].disabled).toBe(false);
+      expect(nachher[1].disabled).toBe(true);
+      expect(nachher[1].getAttribute("title")).toBe(B.bearbeitenGesperrt);
+      // Und unter der Zeile steht wirklich das Formular, nicht nur ein Zustand.
+      expect(behaelter.querySelector('input[type="password"]')).not.toBeNull();
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("ist ohne offene Zeile keine gesperrt", async () => {
+    const { behaelter, abbauen } = await ansichtMitZweiZeilen();
+
+    try {
+      const knoepfe = bearbeitenKnoepfe(behaelter);
+      expect(knoepfe).toHaveLength(2);
+      expect(knoepfe.every((knopf) => !knopf.disabled)).toBe(true);
+      expect(behaelter.querySelector('input[type="password"]')).toBeNull();
     } finally {
       await abbauen();
     }
