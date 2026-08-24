@@ -1929,3 +1929,109 @@ Keine davon ändert ein Ergebnis; sie stehen hier, damit sie nicht weiterwandern
 - **Die Produktion.** Alles gilt für die Testkopie, Datenstand **08.07.2026**, ohne Nebenlast, mit
   einem Puffer, der die ganze Tabelle neunfach fasst. In der Produktion ist keine dieser
   Bedingungen zugesichert.
+
+---
+
+# Nachtrag vom 24.08.2026 — M84 (der **gerenderte** Text des Bestandslaufs)
+
+**Diese Runde schließt eine Lücke, die M83 selbst benannt hat.** M83 misst Fassung A in der
+Fassung, die **von Hand getippt** ist — Anwendungscode zu E14 existierte damals nicht. Der Nachtrag
+sagt das ausdrücklich dazu: *„Sobald er existiert, verlangt L7 eine neue Messung des gerenderten
+Textes — jOOQ qualifiziert mit `GlassfishDB.` und rendert `EXISTS` anders, als man es von Hand
+tippt."* Der Code existiert seit dem 21.08.2026. **Hier ist diese Messung.**
+
+| | |
+|---|---|
+| Anlass | Regel L7 / Leistungsregel 7 am **gebauten** Statement, nicht am beauftragten |
+| Nummernvergabe | Geprüft wie in V1 vorgeschrieben: `grep -rnoE '\bM8[4-9]\b'` über `docs\`, das Wurzelverzeichnis und `scripts\` — **kein einziger Treffer**. `M84` frei, hier vergeben. Die Gegenprobe auf `M8[0-3]` findet 139 Stellen und belegt, dass der Ausdruck greift |
+| Sitzung | `scripts/messung-schritt9/m84-gerendert.sql` — **eine**, sequenziell |
+| Rohausgabe | `scripts/messung-schritt9/ergebnis/m84-roh.txt` — über `.gitignore` ausgeschlossen |
+| Serverzeit | `2026-08-24 10:23:55` |
+| **`@@global.read_only`** | **`1`** — Beginn und Ende. Testkopie |
+| Benutzer | `monitor_read@%`, ausschließlich `SELECT` |
+| Version | `10.6.22-MariaDB-0ubuntu0.22.04.1-log` |
+| Datenstand | `MAX(Message.MessageLastUpdate)` = **`2026-07-08 17:21:10`**, `Message` **3.341.519** Zeilen — **identisch mit M83**, die Testkopie ist seither nicht neu befüllt |
+| **S1** | ausschließlich `SELECT`, `SET`, `EXPLAIN`, `SHOW`. Kein `INSERT`, kein `UPDATE`, kein `DDL`, keine Zeile in `process_catalog` |
+| **L7** | zwei Mandanten — `NEXANS` (733 Prozesse) und `SUTTONS` (17) |
+| **L9** | ein Vollzugriff auf `Message`: die Datenstandserhebung `COUNT(*)`/`MAX(MessageLastUpdate)`, **861,4 ms**. Sie ist der Rahmen und nicht der Gegenstand — dieselbe Erhebung wie in M83 |
+| **G1** | die 733 bzw. 17 Prozesskennungen stehen **nur** in der ausgeschlossenen Rohdatei |
+
+**Woher der gemessene Text stammt.** Er ist nicht abgeschrieben, sondern **aus dem Anwendungscode
+protokolliert**: `ProzessKatalogRepository.findeBestandsflags` lief gegen eine jOOQ-Attrappe
+(`MockConnection`), und der dabei herausfallende Text ist wörtlich in die Messsitzung übernommen
+worden. Der Parameter ist für die Messung durch die Sitzungsvariable `@mandant` ersetzt — im
+Anwendungscode steht dort ein Bindeplatz `?`. **Das ist die einzige Abweichung zwischen gemessenem
+und laufendem Text**, und es ist dieselbe, die M83 schon hatte.
+
+---
+
+## M84‑1 — Der Plan: **Zeichen für Zeichen der aus M83‑1**
+
+| id | select_type | table | type | key | key_len | `rows` | Extra |
+|---:|---|---|---|---|---:|---:|---|
+| 1 | PRIMARY | `ProjectMandant` | `ref` | `ProjectMandant_Mandant_idx` | 146 | 17 / 1 | `Using where; Using index` |
+| 1 | PRIMARY | `Process` | `ref` | `Process_ProjectFK` | 147 | 5 | `Using index` |
+| 2 | **DEPENDENT SUBQUERY** | `Message` | **`ref`** | **`ProejctIDIDX`** | 147 | **197.804** | **`Using index`** |
+
+**Beide Mandanten identisch bis auf `rows` in der Einstiegszeile** (17 gegen 1) — genau wie in
+M83‑1 und M83‑3. Einstieg über `ProjectMandant`, dreimal `Using index`, `Message_ProcessFK` steht
+als Möglichkeit in `possible_keys` und wird **wieder nicht gewählt**. Die `rows`-Schätzung von
+197.804 je Nachschlag steht unverändert; die Fehlschätzung aus M83‑0 (Faktor 43,7) ist damit auch
+am gerenderten Text folgenlos, und zwar aus demselben Grund: `Using index` plus `EXISTS`-Abbruch.
+
+**Damit ist die Frage beantwortet, die M83 offengelassen hat.** jOOQ rendert tatsächlich anders —
+voll qualifizierte Spaltennamen statt Aliase, Backticks, ``select 1 as `one` `` statt `SELECT 1`,
+und **kein** Spaltenalias `AS traegt`. **Keine dieser Abweichungen ist planbestimmend.** Der
+Optimierer sieht dieselbe Abfrage.
+
+---
+
+## M84‑2 — Laufzeit, fünf Läufe je Mandant
+
+| Mandant | 1 | 2 | 3 | 4 | 5 | **beste** |
+|---|---:|---:|---:|---:|---:|---:|
+| `NEXANS` (733) | 24,510 | 23,153 | 24,319 | 23,365 | 23,170 | **23,153 ms** |
+| `SUTTONS` (17) | 1,320 | 1,170 | 1,223 | 1,193 | 1,252 | **1,170 ms** |
+
+### Gegen M83 gehalten *(L10)*
+
+| | **M83‑1/3a** (von Hand) | **M84** (gerendert) | Abweichung |
+|---|---:|---:|---|
+| `NEXANS`, beste von fünf | 22,154 ms | **23,153 ms** | +4,5 % |
+| `SUTTONS`, beste von fünf | 1,109 ms | **1,170 ms** | +5,5 % |
+| je Prozess, `NEXANS` | 30,2 µs | **31,6 µs** | +4,5 % |
+
+**Der gerenderte Text ist rund 5 % teurer, und diese 5 % sind nicht gedeutet.** Sie liegen in der
+Größenordnung, in der auf dieser Instanz auch zwei Läufe desselben Statements auseinanderliegen
+(bei `NEXANS` spannen die fünf Läufe hier selbst 23,153 bis 24,510 ms, also 5,9 %). **Ob die
+Volltextqualifizierung wirklich etwas kostet oder ob es Rauschen ist, ist mit fünf Läufen nicht
+entscheidbar** — und für die Entscheidung ist es gleichgültig: Beide Zahlen liegen bei 0,23 % der
+Laufzeitgrenze des Lese-Pools (`max_statement_time = 10`).
+
+**Der erste Lauf ist hier keine Kaltlaufschranke**, anders als in M83‑1. Die Instanz hatte zum
+Messzeitpunkt bereits die Integrationstests desselben Vormittags hinter sich, und M83‑4 hat
+ohnehin gezeigt, dass eine Sitzungsgrenze auf dieser Instanz keinen Puffer leert (Trefferquote
+99,975 %). Der Abstand erster-zu-bester Lauf beträgt hier **1,06** gegen **1,45** in M83‑1 — das
+misst den wärmeren Puffer und nicht die Abfrage.
+
+### Vorregistrierte Deutung, dagegengehalten
+
+| Vorab benannt | eingetreten? | Was daraus folgt |
+|---|---|---|
+| Plan **identisch** mit M83‑1 → M83 trägt weiter, keine neue Entscheidung | **ja, in allen drei Zeilen** | Regel L7 ist am gebauten Statement erfüllt |
+| Anderer Einstieg, `IN` statt `EXISTS`, zusätzlicher Join → **Meldefall**, nicht Anpassungsfall | **nein** | — |
+| Laufzeit über **2 s** → die Bauform ist neu zu entscheiden | **nein** — 23,2 ms, 1,2 % der Schwelle | — |
+
+---
+
+## Was M84 **nicht** zeigt
+
+- **Nicht die Produktion.** Testkopie, Datenstand 08.07.2026, ohne Nebenlast, mit einem Puffer, der
+  `Message` neunfach fasst. Der Eintrag vom 21.08.2026 in
+  [`annahmen-korrekturen.md`](annahmen-korrekturen.md) gilt für diese Runde unverändert: **eine
+  optimistische Schranke.**
+- **Nicht das schreibende Ende.** Gemessen ist die Bestandsabfrage, nicht das `UPDATE` über alle
+  Zeilen des Mandanten. Für das Schreiben gilt weiter die Erfahrung aus M80: 1.490 Zeilen über zehn
+  Transaktionen in unter zehn Sekunden — **eine Beobachtung des Bauablaufs, keine Messung** dieser
+  oder jener Runde.
+- **Nicht den Lauf als Ganzes.** Der Knopf fährt drei Schritte; gemessen ist der dritte, lesende.

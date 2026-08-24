@@ -165,6 +165,96 @@ sicher trifft, liefert sie **nichts** — nicht einen wahrscheinlichen Wert. `KE
 nichts abgeleitet" und nicht „noch nicht gelaufen". Der Typ erzwingt das: Ein `Partnervorschlag` mit
 Partner und Herkunft `KEINE` lässt sich gar nicht bauen.
 
+### 3.5 Der Bestandslauf *(21.08.2026, E14–E16)*
+
+**Ein Knopf, drei Schritte.** `POST /api/katalog/vorschlagen` fährt seit dem 21.08.2026 nicht mehr
+nur die Heuristik, sondern erhebt anschließend den Bestand.
+
+| | Was er tut | Wen er anfasst |
+|---|---|---|
+| **1** | fehlende Katalogzeilen anlegen | Prozesse ohne Zeile |
+| **2** | Partner und Richtung vorschlagen | **nur `OFFEN`** — `GEPFLEGT` bleibt unberührt (E13) |
+| **3** | Bestand erheben | **alle** Zeilen des Mandanten, **auch `GEPFLEGT`** (E15) |
+
+**Schritt 2 und Schritt 3 sind verschieden vorsichtig, und das ist keine Nachlässigkeit.** E13
+schützt **Kuratierung**, nicht **Beobachtung**: Partner, Richtung, Pflegestatus und Herkunft hat ein
+Mensch entschieden; `traegt_nachrichten` sagt, was die Datenbank sagt. Eine Beobachtung, die für
+gepflegte Zeilen stehenbliebe, wäre nach dem ersten Lauf falsch — und gerade dort ist sie wertvoll:
+„kuratiert **und** ohne Verkehr" ist die Aussage, auf die Schritt 10 aufsetzt.
+
+**Im Code sind es deshalb zwei getrennte Methoden mit sprechenden Namen** —
+`speichereVorschlaege` und `speichereBestandsflags` — und kein Schalter an einer. Als Parameter wäre
+E15 beim Lesen nicht zu erkennen und würde beim nächsten Anfassen „repariert".
+
+**Schritt 3 läuft *nach* Schritt 1 und 2.** Danach trägt jeder Prozess des Mandanten eine
+Katalogzeile, und das `UPDATE` findet sie alle. Andersherum gingen die eben angelegten Zeilen leer
+aus und stünden bis zum nächsten Knopfdruck auf „noch nie geprüft".
+
+#### Das Statement — Fassung A aus M83‑1
+
+```sql
+SELECT p.ProcessID,
+       EXISTS (SELECT 1 FROM GlassfishDB.Message m WHERE m.ProcessID = p.ProcessID) AS traegt
+FROM GlassfishDB.ProjectMandant pm
+JOIN GlassfishDB.Process     p  ON p.ProjectID = pm.ProjectID
+WHERE pm.MandantID = ?;
+```
+
+**Die Form ist gemessen und nicht frei gewählt.** Die naheliegende Alternative — `SELECT DISTINCT
+m.ProcessID FROM Message …` und das Komplement im Dienst bilden — kostet **4.797 ms** statt 23 und
+damit **Faktor 216,5** (M83‑2). Der Grund ist keine Feinheit des Plans, sondern die Bezugsgröße:
+**Fassung A zahlt je Prozess, Fassung B je Nachricht.** Die Prozesszahl steht still, die
+Nachrichtenzahl wächst — Fassung A wird nicht teurer, Fassung B schon.
+
+Sie liefert `true` **und** `false`, nicht nur die lebenden Prozesse: Der Lauf schreibt beides, und
+eine Fassung, die nur die lebenden nennt, verlöre den Unterschied zwischen „geprüft und tot" und
+„nie geprüft".
+
+Gelesen wird über den **Lese-Pool** (`glassfishDsl`), geschrieben über den **Schreib-Pool** — wie
+überall in dieser Klasse. Kein `STRAIGHT_JOIN`, auch nicht als Reparatur (M42).
+
+#### Die drei Zustände der Spalte
+
+| Wert | Bedeutung |
+|---|---|
+| `NULL` | **noch nie geprüft** — für diese Zeile hat nie ein Bestandslauf stattgefunden |
+| `false` | geprüft, es hängt **keine** Nachricht daran |
+| `true` | geprüft, es hängen Nachrichten daran |
+
+`NULL` wird **nicht** auf `false` abgebildet, anders als bei `pflegestatus` (→ `OFFEN`) und
+`vorschlag_herkunft` (→ `KEINE`). Dort gibt es einen sinnvollen Ersatzwert, hier nicht: Der Filter
+aus E20 muss ungeprüfte Zeilen **zeigen**, sonst verschwindet eine nie gemessene Zeile aus **beiden**
+Filterstellungen. `KatalogzeileResponse.traegtNachrichten` ist deshalb `Boolean` und nicht `boolean`.
+
+#### Das Schreiben ist ein `UPDATE` und bewusst **kein** Upsert
+
+Es ist der einzige Schreibweg des Katalogs, der das ist — und der einzige, der auf gepflegte Zeilen
+geht. Ein `INSERT … ON DUPLICATE KEY UPDATE` müsste die `NOT NULL`-Spalten mitliefern
+(`pflegestatus`, `vorschlag_herkunft`, `geaendert_am`, `geaendert_von`) und überschriebe damit genau
+die Kuratierung, die E15 unangetastet lässt. Das `UPDATE` fasst **ausschließlich die zwei
+Beobachtungsspalten** an.
+
+**`geaendert_am` und `geaendert_von` bleiben stehen.** Der Bestandslauf ist keine Änderung an der
+Zeile im Sinne der Kuratierung; er trägt seinen eigenen Zeitstempel in `bestand_geprueft_am`. Zöge
+er `geaendert_am` mit, sähe nach jedem Knopfdruck jede Zeile des Mandanten frisch bearbeitet aus.
+
+**Die Uhr ist `systemClock`**, wie bei `geaendert_am` und beim `audit_log` (Regel A5) — **nicht** die
+Anwendungsuhr. Sie ist im Profil `dev` um den Rückstand der Testkopie zurückversetzt; ein
+Prüfzeitpunkt Wochen in der Vergangenheit wäre keiner, und zwei Zeitstempel derselben Zeile lägen
+Wochen auseinander. Regel Z1 verbietet den direkten `now()`-Aufruf und schreibt **keine** der beiden
+Uhren vor — sie verlangt für Protokollzeit ausdrücklich `systemClock`.
+
+#### Die Antwort nennt zwei Zahlen
+
+`VorschlagslaufResponse` trägt zusätzlich `bestandGeprueft` und `ohneNachrichten`. **Ohne sie ist
+ein reihenweise wirkungsloser Lauf von einem erfolgreichen nicht zu unterscheiden** — dieselbe Falle
+wie bei der Zahl verworfener Sitzungen in Schritt 9a. Die beiden Zahlen sind mit `angelegt`,
+`aufgefrischt` und `unberuehrt` **nicht** zu verrechnen: Sie zählen einen anderen Schritt über
+dieselbe Menge.
+
+`00001_Undefined` wird dabei markiert und zählt mit (E16). Ein Filter auf `^0+_` gäbe es nicht — er
+fängt vier reguläre Prozesse mit, darunter einen mit 1.602 Nachrichten (M78).
+
 ---
 
 ## 4. Die Endpunkte
@@ -175,8 +265,15 @@ Pfade deutsch, Antwortfelder camelCase, Fehlertexte deutsch.
 
 Die Pflegeliste des aktiven Mandanten. Parameter `nurOffene` (Vorgabe `false`).
 
-Je Zeile acht Felder: `processId`, `projectId`, `projectName`, `processName`, `partner`,
-`richtung`, `pflegestatus`, `vorschlagHerkunft`.
+Je Zeile zehn Felder: `processId`, `projectId`, `projectName`, `processName`, `partner`,
+`richtung`, `pflegestatus`, `vorschlagHerkunft`, `traegtNachrichten`, `bestandGeprueftAm`.
+
+- `traegtNachrichten` ist **nullable** und trägt drei Zustände (E14, §3.5): `null` = noch nie
+  geprüft, `false` = geprüft und ohne Verkehr, `true` = geprüft und mit. `null` wird **nicht** auf
+  `false` abgebildet.
+- `bestandGeprueftAm` ist UTC und `null`, solange kein Bestandslauf über die Zeile ging. Die
+  Oberfläche leitet daraus das Alter der Erhebung für die ganze Liste ab; **ein zusätzliches Feld
+  im Umschlag gibt es dafür bewusst nicht.**
 
 - **Alle** Prozesse des Mandanten, auch die ohne Nachrichten (E5) und auch die ohne Katalogzeile —
   `process_catalog` hängt als `LEFT JOIN` daran.
@@ -244,18 +341,25 @@ Größtes Projekt im Bestand: 226 Prozesse (`VOTG`, `110_VTG_SalesInvoice`), 161
 
 ### `POST /api/katalog/vorschlagen`
 
-Heuristik-Lauf für den aktiven Mandanten (E13), leerer Körper.
-Antwort: `angelegt`, `aufgefrischt`, `unberuehrt`, `regelA`, `regelB`, `keine`.
+Heuristik-Lauf **und Bestandslauf** für den aktiven Mandanten (E13, E14), leerer Körper.
+Antwort: `angelegt`, `aufgefrischt`, `unberuehrt`, `regelA`, `regelB`, `keine`,
+`bestandGeprueft`, `ohneNachrichten`.
 
 | | |
 |---|---|
 | legt an | fehlende Zeilen |
 | frischt auf | Zeilen mit `OFFEN`, **auch wenn sie schon einen Vorschlag tragen** |
-| rührt nie an | Zeilen mit `GEPFLEGT` |
+| rührt nie an | Zeilen mit `GEPFLEGT` — **soweit es die Kuratierung angeht** |
+| erhebt den Bestand auf | **allen** Zeilen des Mandanten, auch den gepflegten (E15, §3.5) |
 
-Die ersten drei Zahlen ergeben zusammen die Zahl der Prozesse des Mandanten. Die letzten drei zählen
+Die ersten drei Zahlen ergeben zusammen die Zahl der Prozesse des Mandanten. Die drei danach zählen
 nur die **geschriebenen** Zeilen nach der Herkunft ihres Partnervorschlags; unberührte Zeilen tragen
 ihre eigene, ältere Herkunft.
+
+**`bestandGeprueft` und `ohneNachrichten` sind mit den übrigen nicht zu verrechnen** — sie zählen
+den dritten Schritt über dieselbe Menge. `bestandGeprueft` entspricht der Zahl der Prozesse des
+Mandanten; `ohneNachrichten` ist die Teilmenge ohne jede Nachricht im Bestand. Ohne die beiden wäre
+ein reihenweise wirkungsloser Lauf von einem erfolgreichen nicht zu unterscheiden.
 
 **Nicht beim Anwendungsstart.** Kein `ApplicationRunner`, kein `@PostConstruct`, kein Scheduler.
 Ein `audit_log`-Eintrag hält jeden Lauf mit seinen Zahlen fest.
@@ -321,10 +425,11 @@ gegen jeden Bindesatz und fängt einen Rückfall.
 | Datei | Art | Fälle |
 |---|---|---|
 | `PartnerheuristikTest` | Unit, ohne Datenbank | 22 |
-| `ProzessKatalogStatementsTest` | Unit, jOOQ-Attrappe | 14 |
-| `ProzessKatalogDbIT` | `@Tag("db")` | 13 |
+| `ProzessKatalogStatementsTest` | Unit, jOOQ-Attrappe | **16** |
+| `ProzessKatalogDbIT` | `@Tag("db")` | **17** |
 | `ProzessKatalogIsolationDbIT` | `@Tag("db")` | 13 |
 | `HeuristikBestandDbIT` | `@Tag("db")`, **schreibt nichts** | 2 |
+| `BestandslaufDbIT` | `@Tag("db")`, **schreibt nichts** | **4** |
 
 **`HeuristikBestandDbIT` ist der Test, der sich bezahlt gemacht hat, bevor er einmal grün war.** Er
 lässt die Heuristik über den echten Prozessbestand jedes Mandanten laufen und vergleicht die
@@ -357,8 +462,39 @@ Mandanten ausdrücklich wählen. Je Endpunkt ein Nachweis, dazu die Rollengrenze
 aber sehr wohl), der Administrator ohne Mandantenwahl, und Regel M1 in zwei Formen — als
 Abfrageparameter und als untergeschobenes Feld im Anfragekörper.
 
+**`BestandslaufDbIT`** ist das Gegenstück zu `HeuristikBestandDbIT` für E14: Er liest die
+Bestandsabfrage gegen **zwei** Mandanten (Regel L7) und hält sie gegen die Gegenprobe aus M83‑5 —
+`NEXANS` **733 / 516 / 217**, `SUTTONS` **17 / 17 / 0**. Er schreibt nichts.
+
+**`SUTTONS` ist dabei die schärfere Probe, obwohl es der kleinere Bestand ist.** Dort **muss** die
+Menge der toten Prozesse leer bleiben. Eine Fassung, die versehentlich Zeilen erzeugt — ein Join zu
+viel, ein `LEFT` statt eines inneren —, fällt genau dort auf und bei `NEXANS` nicht, wo 217 tote
+Prozesse ohnehin erwartet werden. Dazu die Doublettenprobe (`COUNT` gegen `COUNT(DISTINCT …)`, wie
+M83‑5 sie gefahren hat) und die Mandantentrennung.
+
+**Vier neue Fälle in `ProzessKatalogDbIT`** decken E14 und E15 am laufenden Endpunkt ab: `null` vor
+dem ersten Lauf und auch nach einer Zuordnung (Kuratierung ist keine Erhebung); der Lauf setzt das
+Flag und meldet beide Zahlen; **eine `GEPFLEGT`-Zeile bekommt das Flag, während `unberuehrt = 1`
+bleibt und Partner, Richtung und Pflegestatus stehenbleiben** — E13 und E15 in einem Test; und eine
+Zuordnung nach dem Lauf trägt den erhobenen Bestand weiter, weil die Antwort gebaut und nicht
+nachgelesen wird.
+
+> **Eine bestehende Zusicherung ist dabei geschärft worden, nicht aufgeweicht.**
+> `schreibende_statements_sind_upserts` verlangte von **jedem** Schreiben ein `INSERT … ON DUPLICATE
+> KEY UPDATE`. Der Bestandslauf ist bewusst keins (§3.5). Der Test verlangt den Upsert jetzt von den
+> **drei kuratierenden** Schreibwegen und vom vierten ausdrücklich das Gegenteil — samt Nachweis,
+> dass er als eigener Schreibweg überhaupt auftaucht. Eine Ausnahme, die nur durch Weglassen
+> entstünde, wäre beim nächsten Umbau wieder da.
+
 **Aufgeräumt wird über `geaendert_von`** mit dem Testpräfix `it-`. Eine von Hand kuratierte Zeile
 überlebt jeden Testlauf.
+
+> **Eine Grenze dieser Aufräumregel, die E15 sichtbar macht.** Der Bestandslauf schreibt auf **alle**
+> Zeilen des Mandanten — auch auf solche, die ein Mensch angelegt hat und die das Präfix nicht
+> tragen. Ein Testlauf hinterlässt dort also einen aufgefrischten `traegt_nachrichten`-Wert und
+> einen neuen `bestand_geprueft_am`. **Das ist unschädlich und ausdrücklich in Kauf genommen:** Der
+> Wert ist eine Beobachtung und keine Kuratierung, er ist reproduzierbar, und der nächste Lauf
+> schriebe ihn ohnehin. Die kuratierten Felder bleiben unberührt — genau das prüft der E15-Fall.
 
 ---
 
@@ -399,6 +535,50 @@ Sortierschritt über dieselbe Zeilenmenge — aber nicht nachgemessen.
 Messzustand stand alles auf `OFFEN`, er sparte nichts — gemessen ist seine obere Schranke), und der
 Schreibweg, der über den Schreib-Pool läuft und nicht `EXPLAIN`-bar ist. Belegt ist dort nur, dass
 1.490 Zeilen über zehn Transaktionen in unter zehn Sekunden entstehen.
+
+### 8.1 Der Bestandslauf — **M83** und **M84** *(21./24.08.2026)*
+
+Zwei Runden, und die zweite ist keine Wiederholung:
+
+| | Was sie misst | Wann |
+|---|---|---|
+| **M83** | die **beauftragten** Fassungen A und B, von Hand getippt — die Entscheidungsgrundlage für die Bauform | 21.08.2026, **vor** dem Bau |
+| **M84** | den **gerenderten** Text aus `findeBestandsflags` — der Nachweis am gebauten Code | 24.08.2026, **nach** dem Bau |
+
+**M83 hat die zweite Runde selbst verlangt:** *„Der gemessene Text ist nicht gerendert … Sobald er
+existiert, verlangt L7 eine neue Messung des gerenderten Textes — jOOQ qualifiziert mit
+`GlassfishDB.` und rendert `EXISTS` anders, als man es von Hand tippt."* **Regel L7 ist deshalb
+nicht schon mit M83 erfüllt gewesen, sondern erst mit M84.**
+
+| Statement | Mandant | erster Lauf | beste von fünf |
+|---|---|---:|---:|
+| **Bestandsabfrage, gerendert** (M84) | `NEXANS` (733) | 24,510 ms | **23,153 ms** |
+| **Bestandsabfrage, gerendert** (M84) | `SUTTONS` (17) | 1,320 ms | **1,170 ms** |
+| dieselbe, von Hand getippt (M83) | `NEXANS` | 32,144 ms | 22,154 ms |
+| dieselbe, von Hand getippt (M83) | `SUTTONS` | 2,536 ms | 1,109 ms |
+| verworfene Fassung B (M83) | `NEXANS` | 4.840,413 ms | 4.797,038 ms |
+
+**Der Plan ist Zeile für Zeile derselbe wie in M83‑1** — Einstieg `ProjectMandant`, `ref` über
+`ProjectMandant_Mandant_idx`, `Process` über `Process_ProjectFK`, die Unterabfrage als `DEPENDENT
+SUBQUERY` mit `ref` auf `ProejctIDIDX`, **dreimal `Using index`**, `key_len` 146/147. Der Optimierer
+sieht dieselbe Abfrage; die Unterschiede im Text (volle Qualifizierung statt Aliase, Backticks,
+``select 1 as `one` ``, kein Spaltenalias) sind **nicht planbestimmend**.
+
+**Der gerenderte Text ist rund 5 % teurer — und diese 5 % sind nicht gedeutet.** Sie liegen in der
+Spanne, in der auf dieser Instanz auch fünf Läufe desselben Statements streuen (hier 23,153 bis
+24,510 ms, also 5,9 %). Für die Entscheidung ist es gleichgültig: **0,23 % der Laufzeitgrenze des
+Lese-Pools** (`max_statement_time = 10`).
+
+**Fassung B ist um Faktor 216,5 teurer, und der Grund ist die Bezugsgröße** — A zahlt je Prozess,
+B je Nachricht. Die Prozesszahl steht still, die Nachrichtenzahl wächst.
+
+**Nicht gemessen ist auch hier das Schreiben:** das `UPDATE` über alle Zeilen des Mandanten läuft
+über den Schreib-Pool und ist nicht `EXPLAIN`-bar. Es gilt dieselbe Schranke wie oben.
+
+**Und für beide Runden gilt der Vorbehalt vom 21.08.2026**
+([`annahmen-korrekturen.md`](annahmen-korrekturen.md)): Laufzeiten von der Testkopie sind für die
+Produktion eine **optimistische** Schranke — der Puffer fasst `Message` neunfach, die Trefferquote
+steht bei 99,975 %, und außer uns belastet die Instanz niemand.
 
 ---
 
@@ -473,6 +653,44 @@ stillschweigende Abweichung.
 Backend kein einziges `PUT`; ohne den Helfer wäre der Endpunkt nicht prüfbar gewesen. Er setzt den
 CSRF-Kopf wie `sende(…)`.
 
+### Zum Nachtrag vom 21.08.2026 (E14–E16)
+
+**8. `bestand_geprueft_am` kommt aus `systemClock`, nicht aus der Anwendungsuhr.** Der Bauauftrag
+verlangt ausdrücklich die **Anwendungsuhr** und beruft sich dabei auf Regel Z1. **Z1 trägt das
+nicht:** Sie verbietet den direkten `now()`-Aufruf und führt *beide* Uhren auf — für
+sicherheitsrelevante Zeit **und Protokollzeit** verlangt sie ausdrücklich `systemClock`
+(`DEVELOPMENT_GUIDELINES.md` §4.5). Sie entscheidet die Frage also nicht gegen den Bau, sondern für
+ihn.
+
+Dazu kommt ein Argument aus der Zeile selbst: `geaendert_am` steht seit `V6` daneben und kommt aus
+`systemClock` (Regel A5, dieselbe Wahl wie beim `audit_log`). Gemischt lägen **zwei Zeitstempel
+derselben Zeile im Profil `dev` Wochen auseinander**, weil die Anwendungsuhr um den Rückstand der
+Testkopie zurückversetzt ist — ein Prüfzeitpunkt in der Vergangenheit wäre keiner. **Gemeldet und
+nicht stillschweigend aufgelöst.**
+
+**9. Regel L7 war mit M83 *nicht* erfüllt — M84 ist nachgeholt worden.** Der Auftrag führt unter
+V3: *„M83 ist die Messung zu diesem Bau. Regel 7 … ist damit erfüllt, solange das gerenderte SQL dem
+gemessenen Text entspricht."* **M83 selbst sagt das Gegenteil:** Der dort gemessene Text ist von
+Hand getippt, Anwendungscode existierte nicht, und *„sobald er existiert, verlangt L7 eine neue
+Messung des gerenderten Textes"*.
+
+Das gerenderte SQL ist protokolliert und gegen den gemessenen Text gehalten worden. **Alle drei im
+Auftrag genannten Meldekriterien sind eingehalten** — Einstiegstabelle `ProjectMandant`, `EXISTS`
+statt `IN`, kein zusätzlicher Join. Die Unterschiede sind genau die, die M83 vorhergesagt hat: volle
+Qualifizierung statt Aliase, Backticks, ``select 1 as `one` ``, kein Spaltenalias `AS traegt`, und
+ein Bindeplatz `?` statt der Sitzungsvariablen `@mandant`. **Keiner davon ist planbestimmend** —
+`M84` weist denselben `EXPLAIN` nach, Zeile für Zeile (§8.1). Es war damit **kein** Meldefall im
+Sinne des Auftrags, wohl aber eine offene Messpflicht; sie ist geschlossen.
+
+**10. Der Bestandslauf ist der einzige Schreibweg ohne Upsert.** Das ist keine Abweichung vom
+Auftrag, sondern von einer bestehenden Zusicherung dieses Backends, und steht deshalb hier: Der
+Invariantentest verlangte von **jedem** Schreiben ein `INSERT … ON DUPLICATE KEY UPDATE`. Er ist
+geschärft worden statt aufgeweicht (§7).
+
+**11. Der Auftrag nennt `V8` ohne Dateinamen; gebaut ist `V8__bestandsspalte.sql`.** Erwähnt, weil
+Flyway-Migrationen nach dem ersten Lauf eingefroren sind — der Name ist ab jetzt nicht mehr
+änderbar, ohne den Anwendungsstart zu brechen.
+
 ---
 
 ## 10. Offene Punkte
@@ -503,3 +721,19 @@ CSRF-Kopf wie `sende(…)`.
    sonst behandelt er vier reguläre Prozesse als Auffangbecken.
 5. **Eine Sichtprüfung im Browser steht aus**, wie bei jedem Backend-Teil. Sie ist erst mit der
    Oberfläche möglich.
+6. **Das Schreiben des Bestandslaufs ist nicht gemessen.** Das `UPDATE` läuft über den Schreib-Pool
+   und ist nicht `EXPLAIN`-bar; belegt ist nur die Schranke aus M80 (1.490 Zeilen über zehn
+   Transaktionen in unter zehn Sekunden), und die ist eine **Beobachtung des Bauablaufs, keine
+   Messung**. Es ist jetzt ein Stapel über bis zu 733 Zeilen je Knopfdruck — und die Testkopie
+   braucht laut Erfahrung 10 bis 25 s je `COMMIT`. **Vor der Produktion zu erheben.**
+7. **Der Lauf hat kein Zeitlimit und keinen Fortschritt.** Er fährt drei Schritte hintereinander in
+   **einer** Transaktion; die Oberfläche bekommt erst am Ende eine Antwort. Bei `NEXANS` sind das
+   733 Zeilen — bislang unauffällig, aber ungemessen (Punkt 6).
+8. **`bestandGeprueft` zählt Anweisungen, nicht geänderte Zeilen.** MariaDB meldet für ein `UPDATE`
+   ohne Wertänderung **null** betroffene Zeilen. Gezählt wird deshalb jede Anweisung des Stapels,
+   die nicht fehlgeschlagen ist — sonst meldete der zweite Lauf in Folge `0`. Die Zahl beantwortet
+   damit „wie viele Zeilen hat der Lauf angefasst" und **nicht** „wie viele haben sich geändert".
+   Wer Letzteres braucht, braucht eine andere Zählung.
+9. **Der Filter aus E20 ist clientseitig und damit hier nicht gebaut.** Das Backend liefert die drei
+   Zustände; wer sie filtert, ist die Oberfläche. Vermerkt, damit niemand später einen
+   Serverparameter dafür sucht.
