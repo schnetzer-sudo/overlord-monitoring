@@ -78,6 +78,55 @@ export function ohneJedenPartnervorschlag(zeilen: readonly Katalogzeile[]): bool
   return zeilen.length > 0 && zeilen.every((zeile) => zeile.vorschlagHerkunft === "KEINE");
 }
 
+/**
+ * Hat für diesen Mandanten überhaupt schon ein Lauf stattgefunden?
+ *
+ * **Nachgetragen am 24.08.2026, aus der Sichtprüfung.** Auf einem frischen
+ * `NEXANS` — Katalog leer, Heuristik nie gelaufen — stand der Hinweis aus E17
+ * über der Liste, obwohl derselbe Mandant beim ersten Knopfdruck **509**
+ * Partnervorschläge bekommt. Er ist damit einer der fünf, die ihn nie zeigen
+ * dürften.
+ *
+ * **Der Grund liegt nicht in der Bedingung, sondern in dem, was auf der Leitung
+ * ankommt.** `VorschlagHerkunft.KEINE` heißt laut Festlegung *„geprüft, nichts
+ * abgeleitet" und nicht „noch nicht gelaufen"* — aber die Pflegeliste hängt
+ * `process_catalog` als `LEFT JOIN` an und setzt für Prozesse **ohne**
+ * Katalogzeile ebenfalls `KEINE` ein (`docs/prozess-katalog-backend.md` §4).
+ * Für den `pflegestatus` ist dieses Einebnen richtig — ein Prozess ohne Zeile
+ * *ist* für den Nutzer `OFFEN`. Für die Herkunft fällt dabei genau der
+ * Unterschied weg, den ihr eigener Typ behauptet.
+ *
+ * **Der Satz von E17 ist eine Aussage über einen Versuch:** *„für keinen Prozess
+ * **konnte** ein Partner vorgeschlagen werden"*. Vor dem ersten Lauf ist er
+ * nicht falsch, sondern gegenstandslos — und die Folge, die daneben steht
+ * („die Partner sind von Hand einzutragen"), wäre schlicht teuer: 733 Zeilen von
+ * Hand, wo ein Knopfdruck 509 liefert.
+ *
+ * **Erkannt wird der Lauf an `bestandGeprueftAm`.** Er ist der einzige Beleg,
+ * der auf der Leitung ankommt: Heuristik und Bestandserhebung laufen in
+ * **einem** Knopfdruck (E13, E14), und der dritte Schritt stempelt jede Zeile
+ * des Mandanten (E15). Trägt eine Zeile einen Zeitpunkt, hat ein Lauf
+ * stattgefunden.
+ *
+ * Die Prüfung ändert an keiner anderen Lage etwas. Trägt auch nur eine Zeile
+ * eine Herkunft außer `KEINE`, ist {@link ohneJedenPartnervorschlag} ohnehin
+ * falsch; der Zusatz greift **allein** in der Lage „alles `KEINE`" und
+ * unterscheidet dort *nie gelaufen* von *gelaufen und nichts gefunden*.
+ */
+export function einLaufHatStattgefunden(zeilen: readonly Katalogzeile[]): boolean {
+  return zeilen.some((zeile) => zeile.bestandGeprueftAm !== null);
+}
+
+/**
+ * Soll der Hinweis aus E17 über der Liste stehen?
+ *
+ * Zwei Bedingungen, und beide sind aus den Daten gerechnet: Ein Lauf hat
+ * stattgefunden, **und** er hat für keinen Prozess einen Partner vorgeschlagen.
+ */
+export function hinweisNoetig(zeilen: readonly Katalogzeile[]): boolean {
+  return einLaufHatStattgefunden(zeilen) && ohneJedenPartnervorschlag(zeilen);
+}
+
 export type Projekt = {
   projectId: string;
   projectName: string | null;

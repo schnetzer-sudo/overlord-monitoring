@@ -8,7 +8,7 @@ import { useSprache, useTexte } from "@/i18n/provider";
 import { formatiereAnteil, formatiereZahl } from "@/lib/format";
 
 import type { Katalogzeile } from "../api";
-import { fortschritt, ohneJedenPartnervorschlag } from "../kennzahlen";
+import { fortschritt, hinweisNoetig } from "../kennzahlen";
 
 /**
  * Die zwei Aussagen über der Liste: **der Fortschritt** (E18) und **der Hinweis**
@@ -56,7 +56,7 @@ export function KatalogKennzahlen({ zeilen }: { zeilen: readonly Katalogzeile[] 
         <span className="text-muted-foreground">{texte.katalog.fortschritt.alleZaehlenMit}</span>
       </p>
 
-      {ohneJedenPartnervorschlag(zeilen) ? (
+      {hinweisNoetig(zeilen) ? (
         <Alert>
           <Info aria-hidden="true" />
           <AlertTitle>{texte.katalog.hinweis.ohnePartnervorschlag}</AlertTitle>

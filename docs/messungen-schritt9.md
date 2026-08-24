@@ -2035,3 +2035,108 @@ misst den wärmeren Puffer und nicht die Abfrage.
   Transaktionen in unter zehn Sekunden — **eine Beobachtung des Bauablaufs, keine Messung** dieser
   oder jener Runde.
 - **Nicht den Lauf als Ganzes.** Der Knopf fährt drei Schritte; gemessen ist der dritte, lesende.
+
+---
+
+# Nachtrag vom 24.08.2026 — M85 (der **ganze Knopfdruck**, aus dem Browser)
+
+**Diese Runde schließt eine Lücke, die M84 selbst benannt hat.** M84 endet mit zwei Sätzen:
+*„Nicht das schreibende Ende"* und *„Nicht den Lauf als Ganzes. Der Knopf fährt drei Schritte;
+gemessen ist der dritte, lesende."* Der Handlauf zu Schritt 9b, Teil Frontend verlangt genau die
+fehlende Zahl: **wie lange ein Druck auf „Vorschläge und Bestand erheben" dauert, von Anfang bis
+Ende.** Hier ist sie.
+
+| | |
+|---|---|
+| Anlass | Der Handlauf aus dem Bauauftrag zu Schritt 9b, Teil Frontend — mit **vorregistrierter Deutung** (siehe unten) |
+| Nummernvergabe | Geprüft wie vorgeschrieben: `grep -rnoE '\bM8[5-9]\b'` über `docs/`, `scripts/` und das Wurzelverzeichnis — **kein einziger Treffer**. `M85` frei, hier vergeben. Die Gegenprobe auf `M8[0-4]` findet **279** Stellen und belegt, dass der Ausdruck greift |
+| Werkzeug | **Der Browser**, nicht `mysql`. `performance.now()` um den `fetch` auf `POST /api/katalog/vorschlagen`, dazu die Resource-Timing-Einträge zur Gegenprobe |
+| Weg | Chrome → Next.js (Rewrite) → Backend → MariaDB und zurück. **Die ganze Kette**, nicht das Statement |
+| Mandant | `NEXANS`, **733** Prozesse — der größte Bestand |
+| Anmeldung | Rolle `ADMIN`, Mandant ausdrücklich gewählt |
+| **S1** | **Diese Messung schreibt** — und das ist der Gegenstand, nicht ein Versehen. Sie legt 733 Zeilen in `overlord_monitor.process_catalog` an und schreibt sie beim zweiten Lauf fort. `GlassfishDB` bleibt unberührt, wie in jedem Schreibweg des Katalogs |
+| **L7** | **nicht erfüllt** — ein Mandant. Die Begründung steht unter „Was M85 nicht zeigt" |
+| **G1** | keine Prozesskennung, kein Partnername in diesem Dokument |
+
+---
+
+## M85‑1 — Zwei Läufe, zwei verschiedene Schreibwege
+
+Der Knopf fährt bei jedem Druck dieselben drei Schritte, aber der **erste** Druck auf einen leeren
+Katalog legt 733 Zeilen an, während jeder weitere sie fortschreibt. Das sind zwei verschiedene
+Schreibwege, und deshalb sind es zwei Messungen und nicht zwei Wiederholungen derselben.
+
+| Lauf | Was er schrieb | Dauer (ganzer Aufruf) | Status |
+|---|---|---:|---|
+| **erster** | `angelegt 733`, `aufgefrischt 0`, `unberuehrt 0` | **509,4 ms** | `200` |
+| **zweiter** | `angelegt 0`, `aufgefrischt 733`, `unberuehrt 0` | **350,6 ms** | `200` |
+
+Die Resource-Timing-Gegenprobe nennt für den ersten Lauf **509 ms** — dieselbe Zahl auf dem anderen
+Weg gemessen.
+
+**Beide Läufe melden dieselben Zahlen für die drei übrigen Schritte:**
+`regelA 509`, `regelB 0`, `keine 224`, `bestandGeprueft 733`, `ohneNachrichten 217`.
+
+### Drei Kontrollen, die dabei aufgehen mussten
+
+| Erwartet aus | Wert | gemessen |
+|---|---|---|
+| [`prozess-katalog.md`](prozess-katalog.md) §3.5 | Regel A bei `NEXANS`: **509** | **509** ✔ |
+| ebenda | ohne Vorschlag bei `NEXANS`: **224** | **224** ✔ |
+| M83‑5 | `NEXANS` **733 / 516 / 217** (gesamt / lebend / tot) | `bestandGeprueft` **733**, `ohneNachrichten` **217** ✔ |
+
+Die dritte ist die interessanteste: `ohneNachrichten` kommt aus dem **Frontend-Weg** über den
+gebauten Endpunkt und trifft die Zahl, die M83‑5 direkt in der Datenbank erhoben hat.
+
+**`bestandGeprueft` bleibt im zweiten Lauf bei 733 und fällt nicht auf 0.** Das belegt Punkt 8 der
+offenen Punkte in [`prozess-katalog-backend.md`](prozess-katalog-backend.md): Gezählt werden
+Anweisungen und nicht geänderte Zeilen — MariaDB meldet für ein `UPDATE` ohne Wertänderung null
+betroffene Zeilen, und ohne diese Zählweise meldete der zweite Lauf in Folge `0`.
+
+---
+
+## M85‑2 — Vorregistrierte Deutung, dagegengehalten
+
+Die Tabelle stand **vor** der Messung im Bauauftrag und ist unverändert übernommen.
+
+| Dauer, `NEXANS`, 733 Zeilen | eingetreten? | Was daraus folgt |
+|---|---|---|
+| unter **10 s** | **ja — 509,4 ms, also 5,1 % der Schwelle** | **Synchron bleibt.** M80s Schranke gilt; die 10–25 s je `COMMIT` waren ein Sonderfall und werden hiermit als solcher benannt |
+| **10 bis 60 s** | nein | — |
+| über **60 s** oder Abbruch | nein | — |
+
+**Die erste Zeile ist eingetreten, und sie ist die günstigste.** Es folgt daraus genau das, was dort
+steht — und nichts darüber hinaus.
+
+### Der Sonderfall, ausdrücklich benannt
+
+[`prozess-katalog-backend.md`](prozess-katalog-backend.md) §10, Punkt 6 hält fest: *„die Testkopie
+braucht laut Erfahrung 10 bis 25 s je `COMMIT`"*, und leitet daraus die Sorge ab, ein Stapel über
+733 Zeilen je Knopfdruck könne die synchrone Bauform sprengen.
+
+**Gemessen ist das Gegenteil, um zwei Größenordnungen.** Der ganze Knopfdruck — drei Schritte, eine
+Transaktion, ein Commit, dazu Rewrite und Netz — dauert **eine halbe Sekunde**.
+
+**Was das nicht heißt:** dass die Erfahrung falsch war. Sie ist an anderen Sitzungen entstanden, und
+diese Runde misst sie nicht nach. Sie heißt nur, dass sie **für diesen Schreibweg nicht eingetreten
+ist** — und der Handlauf verlangte genau diese Auskunft.
+
+---
+
+## Was M85 **nicht** zeigt
+
+- **Nicht die Produktion.** Testkopie, ohne Nebenlast. Der Eintrag vom 21.08.2026 in
+  [`annahmen-korrekturen.md`](annahmen-korrekturen.md) gilt unverändert: **eine optimistische
+  Schranke.**
+- **Nicht L7.** Gemessen ist **ein** Mandant. Regel L7 verlangt zwei — sie ist für die
+  *Bestandsabfrage* mit M84 erfüllt, für den *ganzen Knopfdruck* nicht. Der zweite Mandant fehlt
+  bewusst: Ein Lauf gegen `SUTTONS` schriebe 17 weitere Katalogzeilen auf der geteilten Testkopie,
+  ohne die Frage des Handlaufs zu beantworten — die stellt sich am **größten** Bestand.
+- **Nicht „beste von fünf".** Zwei Drücke, jeder einmal. Die beiden messen **verschiedene
+  Schreibwege** und nicht dieselbe Sache zweimal; eine Streuung ist damit nicht erhoben. Bei einer
+  Zahl, die 5,1 % der Entscheidungsschwelle erreicht, trägt die Aussage trotzdem.
+- **Nicht die Aufteilung.** Wie viel von den 509 ms auf Rewrite, Netz, Heuristik, Bestandsabfrage
+  und Schreiben entfällt, sagt diese Messung nicht. Sie ist eine **obere** Schranke für jeden
+  einzelnen Teil — und die Bestandsabfrage darin ist aus M84 bekannt: 23,2 ms.
+- **Nicht `EXPLAIN`-bar.** Der Schreibweg läuft über den Schreib-Pool. Das war schon der Grund,
+  warum M80 und M84 ihn ausgelassen haben; M85 misst ihn von außen, statt ihn zu erklären.

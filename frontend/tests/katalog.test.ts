@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import type { Katalogzeile } from "@/features/katalog/api";
-import { fortschritt, ohneJedenPartnervorschlag, projekteAus } from "@/features/katalog/kennzahlen";
+import {
+  einLaufHatStattgefunden,
+  fortschritt,
+  hinweisNoetig,
+  ohneJedenPartnervorschlag,
+  projekteAus,
+} from "@/features/katalog/kennzahlen";
 import {
   OHNE_RICHTUNG,
   alsAnfrage,
@@ -249,6 +255,54 @@ describe("Der Hinweis über der Liste", () => {
     // `every` wäre auf der leeren Liste wahr, und ein Hinweis über null Zeilen
     // sagt nichts über einen Mandanten.
     expect(ohneJedenPartnervorschlag([])).toBe(false);
+  });
+});
+
+describe("Vor dem ersten Lauf sagt der Hinweis nichts", () => {
+  // Gefunden in der Sichtpruefung am 24.08.2026: Auf einem frischen `NEXANS`
+  // stand der Hinweis, obwohl derselbe Mandant beim ersten Knopfdruck 509
+  // Partnervorschlaege bekommt. Der Grund ist das Einebnen auf der Leitung —
+  // Prozesse ohne Katalogzeile tragen ebenfalls `KEINE`.
+  const nieGelaufen = [
+    zeile({ processId: "a", bestandGeprueftAm: null }),
+    zeile({ processId: "b", bestandGeprueftAm: null }),
+  ];
+  const gelaufen = [
+    zeile({ processId: "a", bestandGeprueftAm: "2026-08-24T11:07:00" }),
+    zeile({ processId: "b", bestandGeprueftAm: "2026-08-24T11:07:00" }),
+  ];
+
+  it("erkennt den Lauf an `bestandGeprueftAm` und an nichts sonst", () => {
+    expect(einLaufHatStattgefunden(nieGelaufen)).toBe(false);
+    expect(einLaufHatStattgefunden(gelaufen)).toBe(true);
+    // Eine einzige gestempelte Zeile genuegt: Der dritte Schritt schreibt auf
+    // alle Zeilen des Mandanten (E15), ein Stempel belegt also den Lauf.
+    expect(einLaufHatStattgefunden([nieGelaufen[0], gelaufen[0]])).toBe(true);
+  });
+
+  it("haelt den Hinweis zurueck, solange nie ein Lauf stattgefunden hat", () => {
+    // Die Herkunftsbedingung allein ist erfuellt — und trotzdem steht der
+    // Hinweis nicht da.
+    expect(ohneJedenPartnervorschlag(nieGelaufen)).toBe(true);
+    expect(hinweisNoetig(nieGelaufen)).toBe(false);
+  });
+
+  it("zeigt ihn, sobald ein Lauf gelaufen ist und nichts gefunden hat", () => {
+    expect(hinweisNoetig(gelaufen)).toBe(true);
+  });
+
+  it("zeigt ihn nach einem Lauf mit Treffer nicht", () => {
+    const mitTreffer = [
+      zeile({ processId: "a", bestandGeprueftAm: "2026-08-24T11:07:00" }),
+      zeile({
+        processId: "b",
+        bestandGeprueftAm: "2026-08-24T11:07:00",
+        vorschlagHerkunft: "REGEL_A",
+        partner: "AMG",
+      }),
+    ];
+
+    expect(hinweisNoetig(mitTreffer)).toBe(false);
   });
 });
 

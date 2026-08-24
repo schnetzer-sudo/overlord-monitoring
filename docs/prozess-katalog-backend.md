@@ -721,14 +721,34 @@ Flyway-Migrationen nach dem ersten Lauf eingefroren sind — der Name ist ab jet
    sonst behandelt er vier reguläre Prozesse als Auffangbecken.
 5. **Eine Sichtprüfung im Browser steht aus**, wie bei jedem Backend-Teil. Sie ist erst mit der
    Oberfläche möglich.
+
+   > **Am 24.08.2026 zu vier Fünfteln nachgeholt**, mit der Oberfläche aus
+   > [`prozess-katalog-frontend.md`](prozess-katalog-frontend.md): `GET /prozesse`,
+   > `GET /partner`, `POST /vorschlagen` und `POST /massenzuordnung` im Modus `VORSCHAU` sind gegen
+   > `NEXANS` gefahren und liefern, was §3.5 und M83‑5 erwarten lassen — `regelA 509`, `keine 224`,
+   > `bestandGeprueft 733`, `ohneNachrichten 217`, und für das größte Projekt „betrifft 109
+   > Prozesse". **`PUT /prozesse/{processId}` und `AUSFUEHREN` sind bewusst nicht gedrückt worden:**
+   > Beide schreiben Kuratierung auf die geteilte Testkopie, und eine kuratierte Zeile überlebt nach
+   > §7 jeden Testlauf.
 6. **Das Schreiben des Bestandslaufs ist nicht gemessen.** Das `UPDATE` läuft über den Schreib-Pool
    und ist nicht `EXPLAIN`-bar; belegt ist nur die Schranke aus M80 (1.490 Zeilen über zehn
    Transaktionen in unter zehn Sekunden), und die ist eine **Beobachtung des Bauablaufs, keine
    Messung**. Es ist jetzt ein Stapel über bis zu 733 Zeilen je Knopfdruck — und die Testkopie
    braucht laut Erfahrung 10 bis 25 s je `COMMIT`. **Vor der Produktion zu erheben.**
+
+   > **Teilweise beantwortet am 24.08.2026 durch M85** — gemessen ist nicht das `UPDATE`, sondern
+   > der **ganze Knopfdruck** aus dem Browser: **509,4 ms** beim ersten Druck auf `NEXANS`
+   > (733 Zeilen angelegt), **350,6 ms** beim zweiten (733 aufgefrischt). Die Sorge, ein Stapel über
+   > 733 Zeilen könne die synchrone Bauform sprengen, ist damit für diesen Schreibweg **nicht
+   > eingetreten** — die Erfahrung mit 10 bis 25 s je `COMMIT` stammt aus anderen Sitzungen und
+   > wird durch M85 nicht nachgemessen. **Punkt 6 bleibt trotzdem offen:** M85 misst von außen und
+   > kann das `UPDATE` weiterhin nicht auftrennen, und für die **Produktion** gilt der Vorbehalt
+   > unverändert. Der Satz „vor der Produktion zu erheben" steht.
 7. **Der Lauf hat kein Zeitlimit und keinen Fortschritt.** Er fährt drei Schritte hintereinander in
    **einer** Transaktion; die Oberfläche bekommt erst am Ende eine Antwort. Bei `NEXANS` sind das
-   733 Zeilen — bislang unauffällig, aber ungemessen (Punkt 6).
+   733 Zeilen — gemessen am 24.08.2026 mit **509,4 ms** von Anfang bis Ende (M85, Punkt 6). Ein
+   Zeitlimit und ein Fortschritt bleiben trotzdem aus, und für die Produktion ist die Zahl eine
+   optimistische Schranke.
 8. **`bestandGeprueft` zählt Anweisungen, nicht geänderte Zeilen.** MariaDB meldet für ein `UPDATE`
    ohne Wertänderung **null** betroffene Zeilen. Gezählt wird deshalb jede Anweisung des Stapels,
    die nicht fehlgeschlagen ist — sonst meldete der zweite Lauf in Folge `0`. Die Zahl beantwortet

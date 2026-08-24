@@ -4,7 +4,8 @@ Stand: 24.08.2026 · Schritt 9b des MVP, Teil Frontend
 Vorgabe: [`prozess-katalog.md`](prozess-katalog.md) (E1–E21). Bei Widersprüchen gilt jene Datei;
 alle Abweichungen sind hier unter §11 benannt und begründet.
 Bedient werden die fünf Endpunkte aus [`prozess-katalog-backend.md`](prozess-katalog-backend.md).
-Messungen: [`messungen-schritt9.md`](messungen-schritt9.md) M74–M80, **M83** und **M84**.
+Messungen: [`messungen-schritt9.md`](messungen-schritt9.md) M74–M80, **M83**, **M84** und **M85**
+(der ganze Knopfdruck, aus dem Browser gemessen — §6).
 
 **Kein Backend, keine Migration, kein jOOQ-Statement.** Diese Runde fasst ausschließlich
 `frontend/` an — dazu drei Dokumentationsdateien und `docs/README.md`.
@@ -176,6 +177,34 @@ Liste**, und die Umsetzung besteht aus dem, was *nicht* dasteht:
    diesen Container mit. Seine Zellen-Gestalt ist nachgebildet, und breite Inhalte brechen um, statt
    waagerecht zu scrollen.
 3. **Keine Höhe am Fenster.** Kein `h-dvh`, kein `min-h-screen`, kein `h-full`.
+
+> ### `-top-4` statt `top-0`, und die Zahl ist gemessen *(24.08.2026)*
+>
+> **Eine klebende Zelle mit `top-0` bleibt einen Innenabstand zu tief stehen.** Der Scrollbereich
+> ist das `main` des Anwendungsrahmens, und das trägt `py-4`. Nachgemessen bei 1920 × 889 mit der
+> vollen Liste: `main` beginnt bei **y = 51**, die Kopfzeile blieb bei **y = 67** stehen. Durch die
+> 16 px dazwischen liefen die Zeilen sichtbar hindurch, und über der Kopfzeile stand dauerhaft eine
+> halbe fremde Zeile.
+>
+> **Gefunden in der Sichtprüfung, nicht beim Lesen.** Die drei Bedingungen aus §7 waren sämtlich
+> erfüllt — das Dokument scrollte nicht, es gab genau einen Scrollbereich, jeder war `relative`.
+> Der Fehler saß eine Ebene darunter, in der Frage, **woran** `top: 0` misst.
+>
+> Mit `-top-4` sitzen Kopfzeile und `main` beide bei y = 51. Nachgemessen mit 733 Zeilen:
+>
+> | | |
+> |---|---:|
+> | `main.scrollTop` (geprüft bei) | 4.000 |
+> | `main.scrollHeight` / `clientHeight` | 63.904 / 838 |
+> | `document.scrollHeight` / `clientHeight` | **889 / 889** — das Dokument scrollt nicht |
+> | `window.scrollY` erreichbar | **0** |
+> | Kopfzeile `top` / `main` `top` | **51 / 51** |
+> | `document.scrollWidth` / `clientWidth` | 1.920 / 1.920 — kein waagerechtes Scrollen |
+>
+> **Die Zahl gehört dem Rahmen und nicht dieser Tabelle.** Sie ist der Innenabstand aus
+> `components/anwendungsrahmen.tsx`; wer ihn dort ändert, ändert ihn hier mit. Ein eigenes
+> Dichtemaß dafür entsteht nicht — es hätte seinen einzigen Verwender hier, und der Rahmen
+> benutzte es nicht.
 
 **`border-separate` statt `border-collapse` ist kein Geschmack.** Mit `collapse` gehören die Rahmen
 der *Tabelle* und nicht den Zellen — eine klebende Kopfzeile ließe ihren Trennstrich beim Scrollen
@@ -384,9 +413,27 @@ drückt, liest die Zahl in der Oberfläche ab.
 > | **10 bis 60 s** | Synchron bleibt, aber die Zeitgrenzen der ganzen Kette sind zu prüfen: Backend, BFF, Reverse Proxy |
 > | über **60 s** oder Abbruch | Die Bauform fällt. Ein Hintergrundlauf mit Zustandsabfrage ist ein eigener Auftrag |
 >
-> **Die Zahl ist noch nicht genommen.** Sie braucht ein laufendes Backend und eine Anmeldung mit der
-> Rolle `ADMIN` und gewähltem Mandanten `NEXANS`. Sie steht als offener Punkt in §12 und ist
-> **vor der Abnahme dieses Schritts** nachzutragen.
+> **Die Zahl ist genommen — am 24.08.2026, als M85.** Gemessen aus dem Browser, über die ganze
+> Kette: Chrome → Next.js-Rewrite → Backend → MariaDB und zurück.
+>
+> | Lauf | Was er schrieb | Dauer |
+> |---|---|---:|
+> | **erster**, leerer Katalog | `angelegt 733` | **509,4 ms** |
+> | **zweiter** | `aufgefrischt 733` | **350,6 ms** |
+>
+> **Die erste Zeile der Tabelle ist eingetreten, mit 5,1 % der Schwelle.** Daraus folgt genau das,
+> was dort steht: Synchron bleibt, M80s Schranke gilt — und **die 10–25 s je `COMMIT` aus
+> `prozess-katalog-backend.md` §10, Punkt 6 waren ein Sonderfall und sind hiermit als solcher
+> benannt.** Das heißt nicht, dass jene Erfahrung falsch war; sie ist an anderen Sitzungen
+> entstanden und wird hier nicht nachgemessen. Sie ist für **diesen** Schreibweg nicht eingetreten.
+>
+> Drei Kontrollen sind dabei aufgegangen, und die dritte ist die interessanteste: `regelA 509` und
+> `keine 224` treffen [`prozess-katalog.md`](prozess-katalog.md) §3.5 genau, und
+> `ohneNachrichten 217` trifft die Zahl, die **M83‑5 direkt in der Datenbank** erhoben hat — hier
+> aber über den gebauten Endpunkt und die Oberfläche.
+>
+> **Was die Messung nicht zeigt**, steht vollständig in M85: nicht die Produktion, nicht L7 (ein
+> Mandant), nicht „beste von fünf", und nicht die Aufteilung der 509 ms auf die Teilschritte.
 
 ### Alle acht Zahlen, auch die Nullen
 
@@ -496,6 +543,35 @@ keiner.
 
 Er ist eine Auskunft und kein Fehler und trägt deshalb die **neutrale** Fassung von `Alert`; die rote
 gehört dem Fehlerzustand.
+
+> ### Und eine zweite Bedingung, die aus der Sichtprüfung kam *(24.08.2026)*
+>
+> **Auf einem frischen `NEXANS` stand der Hinweis da** — Katalog leer, Heuristik nie gelaufen —,
+> obwohl derselbe Mandant beim ersten Knopfdruck **509** Partnervorschläge bekommt. Er ist damit
+> einer der fünf, die ihn nie zeigen dürften.
+>
+> **Der Grund liegt nicht in der Bedingung, sondern in dem, was auf der Leitung ankommt.**
+> `VorschlagHerkunft.KEINE` heißt laut Festlegung *„geprüft, nichts abgeleitet" und nicht „noch
+> nicht gelaufen"* — aber die Pflegeliste hängt `process_catalog` als `LEFT JOIN` an und setzt für
+> Prozesse **ohne** Katalogzeile ebenfalls `KEINE` ein
+> ([`prozess-katalog-backend.md`](prozess-katalog-backend.md) §4). Für den `pflegestatus` ist dieses
+> Einebnen richtig — ein Prozess ohne Zeile *ist* für den Nutzer `OFFEN`. Für die Herkunft fällt
+> dabei genau der Unterschied weg, den ihr eigener Typ behauptet.
+>
+> **Der Satz von E17 ist eine Aussage über einen Versuch:** *„für keinen Prozess **konnte** ein
+> Partner vorgeschlagen werden"*. Vor dem ersten Lauf ist er nicht falsch, sondern gegenstandslos —
+> und die Folge daneben wäre schlicht teuer: 733 Zeilen von Hand, wo ein Knopfdruck 509 liefert.
+>
+> **Erkannt wird der Lauf an `bestandGeprueftAm`** (`einLaufHatStattgefunden`). Er ist der einzige
+> Beleg, der auf der Leitung ankommt: Heuristik und Bestandserhebung laufen in **einem** Knopfdruck
+> (E13, E14), und der dritte Schritt stempelt jede Zeile des Mandanten (E15).
+>
+> **Die Prüfung ändert an keiner anderen Lage etwas.** Trägt auch nur eine Zeile eine Herkunft außer
+> `KEINE`, ist die Herkunftsbedingung ohnehin falsch. Der Zusatz greift **allein** in der Lage
+> „alles `KEINE`" und unterscheidet dort *nie gelaufen* von *gelaufen und nichts gefunden*.
+>
+> Beobachtet wurde beides am selben Nachmittag: vor dem Lauf stand der Hinweis, nach dem Lauf war er
+> fort. Als Abweichung geführt unter §11, Punkt 10.
 
 ---
 
@@ -617,33 +693,56 @@ mögliche Bausteine (Popover, Command, Dialog, Tabelle). **Popover und Tabelle w
 genau einer. Die Nebenwirkung des Generators auf `button.tsx` war reine Formatierung und ist
 zurückgenommen worden.
 
----
+**10. Der Hinweis aus E17 bekommt eine zweite Bedingung: Es muss schon ein Lauf stattgefunden
+haben.** Der Auftrag nennt allein die Herkunftsbedingung — *„keine Zeile trägt eine
+`vorschlagHerkunft` außer `KEINE`"* —, und genau so war es zuerst gebaut. **Die Sichtprüfung hat
+gezeigt, dass das auf einem frischen Mandanten die falsche Auskunft gibt:** Vor dem ersten Lauf
+tragen *alle* Zeilen `KEINE`, weil die Pflegeliste Prozesse ohne Katalogzeile so einebnet — und der
+Hinweis stand über `NEXANS`, das beim ersten Knopfdruck 509 Vorschläge bekommt. Die Festlegung
+selbst trägt die Auflösung: `KEINE` heißt dort *„geprüft, nichts abgeleitet" und nicht „noch nicht
+gelaufen"*, und E17 spricht davon, was vorgeschlagen werden **konnte**. Ausgeschrieben in §8.
+**Der Auftrag nennt zur Kontrolle fünf Mandanten; ohne diese Bedingung wären es vor dem ersten Lauf
+alle zehn.**
+
+**11. Die klebende Kopfzeile trägt `-top-4` und nicht `top-0`.** Kein Punkt des Auftrags, sondern
+ein Befund der Sichtprüfung: `top-0` bleibt einen Innenabstand zu tief stehen, und durch die 16 px
+darüber liefen die Zeilen sichtbar hindurch. Gemessen und ausgeschrieben in §3.
 
 ## 12. Offene Punkte
 
-1. **Der Handlauf zu Teil 5 ist offen: die Dauer des Laufs ist nicht gemessen.** Sie braucht ein
-   laufendes Backend und eine Anmeldung mit der Rolle `ADMIN` und gewähltem Mandanten `NEXANS`. Die
-   Oberfläche zeigt sie an; genommen und hier eingetragen ist sie **nicht**. Die vorregistrierte
-   Deutung steht in §6 und gilt unverändert — **über 60 s oder Abbruch heißt: die Bauform fällt**.
-2. **Eine Sichtprüfung im Browser steht aus** (§13 der Vorbereitungsliste in
-   [`README.md`](README.md)). Sie ist bei dieser Ansicht besonders fällig: Die klebende Kopfzeile
-   über 733 Zeilen, das aufklappende Zeilenformular und die Vorschlagsliste über den Zeilen darunter
-   sind drei Dinge, die sich nur ansehen lassen.
-3. **Das schmale Fenster ist ungesehen.** `resize_window` wirkt nicht
+1. **Der Handlauf ist eingelöst, aber L7 nicht.** Die Dauer ist am 24.08.2026 als **M85** genommen —
+   509,4 ms beim ersten Druck, 350,6 ms beim zweiten (§6). Gemessen ist **ein** Mandant; Regel L7
+   verlangt zwei. Für die *Bestandsabfrage* ist sie mit M84 erfüllt, für den *ganzen Knopfdruck*
+   nicht. Nachzuholen, wenn die Zahl je gebraucht wird — bei 5,1 % der Entscheidungsschwelle war
+   ein zweiter Lauf auf der geteilten Testkopie den Schreibvorgang nicht wert.
+2. **Die Anzeige der Dauer rundet auf ganze Sekunden** und meldet für den gemessenen Lauf `< 1 s`.
+   Das beantwortet die Frage des Handlaufs — *unter zehn Sekunden?* — eindeutig, ist aber keine
+   Messung. Die genaue Zahl kam aus dem Browser und steht in M85. Eine zweite Dauerform mit
+   Millisekunden allein für diesen Knopf wäre ein eigenes Format neben dem der Zeitleiste; nicht
+   gebaut, hier vermerkt.
+3. **Zwei Wege sind in der Sichtprüfung bewusst nicht gedrückt worden: `PUT` und `AUSFUEHREN`.**
+   Beide schreiben Kuratierung auf die geteilte Testkopie, und eine kuratierte Zeile überlebt jeden
+   Testlauf ([`prozess-katalog-backend.md`](prozess-katalog-backend.md) §7). Geprüft sind sie durch
+   `ProzessKatalogDbIT` und die Tests dieser Runde; **von Hand angesehen wurde bis zum Absenden
+   alles** — das geöffnete Formular, der geleerte Partner samt seinem Satz, die Vorschlagsliste, das
+   zweistufige `Escape`, und die Massenzuordnung bis zur Vorschau einschließlich („Betrifft 109
+   Prozesse. Keiner davon ist bereits gepflegt."). **Nachzuholen von jemandem, der die Zeile
+   danach behalten will.**
+4. **Das schmale Fenster ist ungesehen.** `resize_window` wirkt nicht
    ([`frontend-grundlagen.md`](frontend-grundlagen.md) §8) — geprüft ist das Regelwerk, nicht die
    Darstellung. Zu sehen sind hier drei Dinge: ob die Tabelle bei 360 px mit drei Spalten trägt, ob
    das Zeilenformular dort gestapelt lesbar bleibt, und ob die Vorschlagsliste des Partnerfeldes
-   nicht aus dem Bild läuft.
-4. **Die Dauereinheiten stehen zweimal** (§11, Punkt 8). Sie gehören auf die oberste Ebene der
+   nicht aus dem Bild läuft. Bei 1920 × 889 ist das Regelwerk nachgemessen und geht auf (§3).
+5. **Die Dauereinheiten stehen zweimal** (§11, Punkt 8). Sie gehören auf die oberste Ebene der
    Sprachdateien.
-5. **Ein entfernter Partner bleibt bis zum nächsten Holen in der Auswahl** (§5). In Kauf genommen;
+6. **Ein entfernter Partner bleibt bis zum nächsten Holen in der Auswahl** (§5). In Kauf genommen;
    die Vorschläge sind ein Geländer und keine Schranke.
-6. **Es gibt keine Rückfrage beim Verlassen der Seite mit offener Zeile.** Ein `beforeunload` würde
+7. **Es gibt keine Rückfrage beim Verlassen der Seite mit offener Zeile.** Ein `beforeunload` würde
    den Fall abdecken, in dem jemand mit ungespeichertem Entwurf die Adresszeile benutzt. Innerhalb
    der Anwendung ist er gedeckt — Filter, Lauf und Massenzuordnung sind gesperrt —, außerhalb nicht.
    Nicht gebaut, weil der Auftrag es nicht verlangt und ein `beforeunload` eine
    anwendungsweite Entscheidung wäre.
-7. **Die Reihenfolge der Partnervorschläge folgt `localeCompare`**, das Backend liefert sie nach
+8. **Die Reihenfolge der Partnervorschläge folgt `localeCompare`**, das Backend liefert sie nach
    `utf8mb4_general_ci`. Die beiden sind einander nahe, aber nicht dasselbe. Nur ein neu getippter
    Name wird lokal einsortiert; er kann bis zum nächsten Holen eine Position danebenstehen.
 

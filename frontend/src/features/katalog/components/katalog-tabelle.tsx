@@ -61,8 +61,24 @@ import { ZeilenFormular } from "./zeilen-formular";
  * Stand der Zeile bleibt beim Tippen sichtbar, und die drei unter `md`
  * ausgeblendeten Spalten nehmen der Bearbeitung nichts weg.
  */
+/**
+ * Die Kopfzelle — und die eine Zahl darin ist gemessen und nicht gewählt.
+ *
+ * **`-top-4` und nicht `top-0`.** Der Scrollbereich ist das `main` des
+ * Anwendungsrahmens, und das trägt `py-4`. Eine klebende Zelle mit `top-0`
+ * bleibt deshalb **einen Innenabstand zu tief** stehen — nachgemessen am
+ * 24.08.2026 bei 1920 × 889: `main` beginnt bei y = 51, die Kopfzeile blieb bei
+ * y = **67** stehen. Durch die 16 px dazwischen liefen die Zeilen sichtbar
+ * hindurch, und über der Kopfzeile stand eine halbe fremde Zeile. Mit `-top-4`
+ * sind beide bei y = 51.
+ *
+ * **Die Zahl gehört zum Rahmen und nicht zu dieser Tabelle** — sie ist der
+ * Innenabstand aus `components/anwendungsrahmen.tsx`. Wer ihn dort ändert,
+ * ändert ihn hier mit. Ein eigenes Dichtemaß dafür entsteht nicht: Es gäbe
+ * seinen einzigen Verwender hier, und der Rahmen benutzte es nicht.
+ */
 const KOPFZELLE =
-  "bg-background border-border sticky top-0 z-10 border-b px-2 py-1.5 text-left align-bottom font-medium";
+  "bg-background border-border sticky -top-4 z-10 border-b px-2 py-1.5 text-left align-bottom font-medium";
 
 export function KatalogTabelle({
   zeilen,
