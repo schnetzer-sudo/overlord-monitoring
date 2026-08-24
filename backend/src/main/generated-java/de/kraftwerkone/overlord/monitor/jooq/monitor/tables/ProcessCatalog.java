@@ -87,6 +87,18 @@ public class ProcessCatalog extends TableImpl<ProcessCatalogRecord> {
      */
     public final TableField<ProcessCatalogRecord, String> GEAENDERT_VON = createField(DSL.name("geaendert_von"), SQLDataType.VARCHAR(100).nullable(false), this, "");
 
+    /**
+     * The column
+     * <code>overlord_monitor.process_catalog.traegt_nachrichten</code>.
+     */
+    public final TableField<ProcessCatalogRecord, Boolean> TRAEGT_NACHRICHTEN = createField(DSL.name("traegt_nachrichten"), SQLDataType.BOOLEAN.defaultValue(DSL.field(DSL.raw("NULL"), SQLDataType.BOOLEAN)), this, "");
+
+    /**
+     * The column
+     * <code>overlord_monitor.process_catalog.bestand_geprueft_am</code>.
+     */
+    public final TableField<ProcessCatalogRecord, LocalDateTime> BESTAND_GEPRUEFT_AM = createField(DSL.name("bestand_geprueft_am"), SQLDataType.LOCALDATETIME(3).defaultValue(DSL.field(DSL.raw("NULL"), SQLDataType.LOCALDATETIME)), this, "");
+
     private ProcessCatalog(Name alias, Table<ProcessCatalogRecord> aliased) {
         this(alias, aliased, (Field<?>[]) null, null);
     }

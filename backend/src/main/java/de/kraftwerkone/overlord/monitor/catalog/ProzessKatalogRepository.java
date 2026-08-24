@@ -1,5 +1,6 @@
 package de.kraftwerkone.overlord.monitor.catalog;
 
+import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.MESSAGE;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROCESS;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROJECT;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROJECTMANDANT;
@@ -12,7 +13,8 @@ import java.util.Optional;
 import org.jooq.BatchBindStep;
 import org.jooq.Condition;
 import org.jooq.DSLContext;
-import org.jooq.Record8;
+import org.jooq.Field;
+import org.jooq.Record10;
 import org.jooq.impl.DSL;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
@@ -118,7 +120,9 @@ public class ProzessKatalogRepository {
             PROCESS_CATALOG.PARTNER,
             PROCESS_CATALOG.RICHTUNG,
             PROCESS_CATALOG.PFLEGESTATUS,
-            PROCESS_CATALOG.VORSCHLAG_HERKUNFT)
+            PROCESS_CATALOG.VORSCHLAG_HERKUNFT,
+            PROCESS_CATALOG.TRAEGT_NACHRICHTEN,
+            PROCESS_CATALOG.BESTAND_GEPRUEFT_AM)
         .from(PROCESS)
         .join(PROJECTMANDANT)
         .on(PROJECTMANDANT.PROJECTID.eq(PROCESS.PROJECTID))
@@ -149,7 +153,9 @@ public class ProzessKatalogRepository {
             PROCESS_CATALOG.PARTNER,
             PROCESS_CATALOG.RICHTUNG,
             PROCESS_CATALOG.PFLEGESTATUS,
-            PROCESS_CATALOG.VORSCHLAG_HERKUNFT)
+            PROCESS_CATALOG.VORSCHLAG_HERKUNFT,
+            PROCESS_CATALOG.TRAEGT_NACHRICHTEN,
+            PROCESS_CATALOG.BESTAND_GEPRUEFT_AM)
         .from(PROCESS)
         .join(PROJECTMANDANT)
         .on(PROJECTMANDANT.PROJECTID.eq(PROCESS.PROJECTID))
@@ -258,6 +264,105 @@ public class ProzessKatalogRepository {
                     satz.value1(),
                     satz.value2(),
                     satz.value3() == null ? null : Pflegestatus.valueOf(satz.value3())));
+  }
+
+  /**
+   * <b>Der Bestandslauf, lesende Hälfte:</b> für jeden Prozess des aktiven Mandanten, ob im Bestand
+   * mindestens eine Nachricht an ihm hängt (E14).
+   *
+   * <p><b>Das ist Fassung A aus M83‑1, und die Form ist gemessen und nicht frei gewählt.</b> Der
+   * Einstieg steht über {@code ProjectMandant}, je Prozess steht ein {@code EXISTS}, und die
+   * Unterabfrage vergleicht {@code Message.ProcessID} gegen {@code Process.ProcessID}. Gemessen:
+   * <b>22,154 ms</b> für {@code NEXANS} (733 Zeilen, beste von fünf) und <b>1,109 ms</b> für {@code
+   * SUTTONS} (17 Zeilen); der Plan trägt dreimal {@code Using index} und rührt die Datenseiten von
+   * {@code Message} nie an.
+   *
+   * <p><b>Warum nicht die naheliegende Fassung B</b> ({@code SELECT DISTINCT m.ProcessID FROM
+   * Message …}, Komplement im Dienst): Sie kostet <b>4.797 ms</b> statt 22 — <b>Faktor 216,5</b>.
+   * Der Grund ist keine Feinheit des Plans, sondern die Bezugsgröße: Fassung A zahlt <b>je
+   * Prozess</b>, Fassung B <b>je Nachricht</b>. Die Prozesszahl steht still, die Nachrichtenzahl
+   * wächst — <b>Fassung A wird nicht teurer, Fassung B schon</b> (M83‑2).
+   *
+   * <p><b>Sie liefert {@code true} und {@code false}, nicht nur die lebenden Prozesse.</b> Der Lauf
+   * schreibt beides; eine Fassung, die nur die lebenden nennt, zwänge den Dienst zum Komplement und
+   * verlöre den Unterschied zwischen „geprüft und tot" und „nie geprüft".
+   *
+   * <p><b>Kein {@code STRAIGHT_JOIN}</b>, auch nicht als Reparatur, falls der Plan je kippt (M42).
+   */
+  public List<Bestandsflag> findeBestandsflags(MandantContext mandant) {
+    Field<Boolean> traegt =
+        DSL.field(
+            DSL.exists(
+                DSL.selectOne().from(MESSAGE).where(MESSAGE.PROCESSID.eq(PROCESS.PROCESSID))));
+    return glassfishDsl
+        .select(PROCESS.PROCESSID, traegt)
+        .from(PROJECTMANDANT)
+        .join(PROCESS)
+        .on(PROCESS.PROJECTID.eq(PROJECTMANDANT.PROJECTID))
+        .where(PROJECTMANDANT.MANDANTID.eq(mandant.mandantId()))
+        .fetch(satz -> new Bestandsflag(satz.value1(), satz.value2()));
+  }
+
+  /**
+   * <b>Der Bestandslauf, schreibende Hälfte — und er schont gepflegte Zeilen ausdrücklich nicht</b>
+   * (E15).
+   *
+   * <p>Das ist der Unterschied zu {@link #speichereVorschlaege}, und er steht bewusst in einer
+   * <b>eigenen Methode mit eigenem Namen</b> statt in einem Schalter: Wer den Code liest, muss
+   * sehen, dass die eine Hälfte des Laufs {@link Pflegestatus#GEPFLEGT} verschont und die andere
+   * über alles schreibt. Als Parameter wäre E15 nicht zu erkennen und würde beim nächsten Anfassen
+   * „repariert".
+   *
+   * <p><b>Warum das E13 nicht verletzt:</b> E13 schützt <b>Kuratierung</b>, nicht
+   * <b>Beobachtung</b>. Partner, Richtung, Pflegestatus und Herkunft hat ein Mensch entschieden;
+   * {@code traegt_nachrichten} sagt, was die Datenbank sagt. Eine Beobachtung, die für gepflegte
+   * Zeilen stehenbliebe, wäre nach dem ersten Lauf falsch — und gerade dort ist sie wertvoll:
+   * „kuratiert <b>und</b> ohne Verkehr" ist die Aussage, auf die Schritt 10 aufsetzt.
+   *
+   * <p><b>Ein {@code UPDATE} und kein {@code INSERT … ON DUPLICATE KEY}.</b> Das ist keine
+   * Geschmacksfrage: Ein {@code INSERT} müsste die {@code NOT NULL}-Spalten mitliefern — {@code
+   * pflegestatus}, {@code vorschlag_herkunft}, {@code geaendert_am}, {@code geaendert_von} — und
+   * überschriebe damit genau die Kuratierung, die E15 unangetastet lässt. Das {@code UPDATE} fasst
+   * <b>ausschließlich die zwei Beobachtungsspalten</b> an.
+   *
+   * <p><b>{@code geaendert_am} und {@code geaendert_von} bleiben stehen.</b> Der Bestandslauf ist
+   * keine Änderung an der Zeile im Sinne der Kuratierung; er trägt seinen eigenen Zeitstempel in
+   * {@code bestand_geprueft_am}. Würde er {@code geaendert_am} mitziehen, sähe jede Zeile des
+   * Mandanten nach jedem Knopfdruck frisch bearbeitet aus, und die Spalte verlöre ihre Aussage.
+   *
+   * <p>Zeilen ohne Katalogeintrag trifft das {@code UPDATE} nicht. Das ist folgenlos, weil der
+   * Dienst den Bestandslauf <b>nach</b> {@link #speichereVorschlaege} fährt und danach jeder
+   * Prozess des Mandanten eine Zeile hat — gezählt wird trotzdem, was wirklich geschrieben wurde.
+   *
+   * @return die Zahl der tatsächlich geschriebenen Zeilen
+   */
+  public int speichereBestandsflags(
+      MandantContext mandant, List<Bestandsflag> flags, LocalDateTime jetztUtc) {
+    if (flags.isEmpty()) {
+      return 0;
+    }
+    BatchBindStep stapel =
+        monitorDsl.batch(
+            monitorDsl
+                .update(PROCESS_CATALOG)
+                // Wie bei speichereFeld: jede Zeile der Vorlage ist ein Bindeplatz, gebunden wird
+                // unten in genau dieser Reihenfolge.
+                .set(PROCESS_CATALOG.TRAEGT_NACHRICHTEN, (Boolean) null)
+                .set(PROCESS_CATALOG.BESTAND_GEPRUEFT_AM, (LocalDateTime) null)
+                .where(PROCESS_CATALOG.PROCESS_ID.eq((String) null)));
+    for (Bestandsflag flag : flags) {
+      stapel = stapel.bind(flag.traegtNachrichten(), jetztUtc, flag.processId());
+    }
+    int[] ergebnis = stapel.execute();
+    int geschrieben = 0;
+    for (int zeilen : ergebnis) {
+      // MariaDB meldet 0 betroffene Zeilen, wenn der Wert sich nicht geaendert hat. Gezaehlt wird
+      // deshalb jede Anweisung, die nicht fehlgeschlagen ist — sonst zaehlte der zweite Lauf null.
+      if (zeilen >= 0) {
+        geschrieben++;
+      }
+    }
+    return geschrieben;
   }
 
   /**
@@ -412,7 +517,18 @@ public class ProzessKatalogRepository {
   }
 
   private static KatalogzeileResponse zeile(
-      Record8<String, String, String, String, String, String, String, String> satz) {
+      Record10<
+              String,
+              String,
+              String,
+              String,
+              String,
+              String,
+              String,
+              String,
+              Boolean,
+              LocalDateTime>
+          satz) {
     return new KatalogzeileResponse(
         satz.value1(),
         satz.value2(),
@@ -421,7 +537,12 @@ public class ProzessKatalogRepository {
         satz.value5(),
         richtung(satz.value6()),
         pflegestatus(satz.value7()),
-        herkunft(satz.value8()));
+        herkunft(satz.value8()),
+        // Bewusst NICHT durch false ersetzt, anders als bei pflegestatus und herkunft darunter:
+        // null heisst hier "noch nie geprueft" und ist ein eigener Zustand (E14). Ein Prozess ohne
+        // Katalogzeile traegt ihn genauso wie eine Zeile, ueber die noch kein Bestandslauf ging.
+        satz.value9(),
+        satz.value10());
   }
 
   /**
@@ -458,4 +579,13 @@ public class ProzessKatalogRepository {
 
   /** Ein zu schreibender Vorschlag. */
   public record Vorschlagszeile(String processId, Partnervorschlag vorschlag) {}
+
+  /**
+   * Was der Bestandslauf über einen Prozess erhoben hat.
+   *
+   * @param traegtNachrichten <b>nie {@code null}</b>: Das Ergebnis eines {@code EXISTS} ist immer
+   *     {@code true} oder {@code false}. Das {@code null} der Spalte entsteht nicht hier, sondern
+   *     davor — es heißt „für diese Zeile hat nie ein Lauf stattgefunden" (E14)
+   */
+  public record Bestandsflag(String processId, boolean traegtNachrichten) {}
 }

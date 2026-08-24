@@ -20,6 +20,22 @@ package de.kraftwerkone.overlord.monitor.catalog;
  * @param regelB geschriebene Zeilen mit Partner aus Regel B
  * @param keine geschriebene Zeilen ohne Partnervorschlag. <b>„Geprueft, nichts abgeleitet"</b> —
  *     nach Regel Q4 ein Ergebnis und kein fehlender Wert
+ * @param bestandGeprueft Zeilen, auf die der <b>Bestandslauf</b> geschrieben hat — <b>alle Zeilen
+ *     des Mandanten, auch die gepflegten</b> (E15). Die Zahl steht neben den drei ersten und ist
+ *     mit ihnen nicht zu verrechnen: Sie zaehlt einen anderen Schritt ueber dieselbe Menge
+ * @param ohneNachrichten davon die Zeilen, an denen im Bestand <b>keine</b> Nachricht haengt
+ * @implNote <b>Warum die beiden Zahlen ueberhaupt in der Antwort stehen.</b> Ohne sie ist ein
+ *     reihenweise wirkungsloser Lauf von einem erfolgreichen nicht zu unterscheiden — dieselbe
+ *     Falle wie bei der Zahl verworfener Sitzungen in Schritt 9a. Ein Bestandslauf, der wegen eines
+ *     Fehlers null Zeilen anfasst, sieht in einer Antwort ohne {@code bestandGeprueft} genauso aus
+ *     wie einer, der 733 Zeilen aufgefrischt hat.
  */
 public record VorschlagslaufResponse(
-    int angelegt, int aufgefrischt, int unberuehrt, int regelA, int regelB, int keine) {}
+    int angelegt,
+    int aufgefrischt,
+    int unberuehrt,
+    int regelA,
+    int regelB,
+    int keine,
+    int bestandGeprueft,
+    int ohneNachrichten) {}

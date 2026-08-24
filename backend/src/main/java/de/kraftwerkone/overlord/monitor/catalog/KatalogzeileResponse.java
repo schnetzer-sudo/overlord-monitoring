@@ -1,5 +1,7 @@
 package de.kraftwerkone.overlord.monitor.catalog;
 
+import java.time.LocalDateTime;
+
 /**
  * Eine Zeile der Pflegeliste: ein Prozess des aktiven Mandanten mit dem, was der Katalog ueber ihn
  * weiss.
@@ -26,6 +28,17 @@ package de.kraftwerkone.overlord.monitor.catalog;
  * @param richtung die kuratierte oder abgeleitete Richtung, oder {@code null}
  * @param pflegestatus niemals {@code null} — ohne Katalogzeile {@link Pflegestatus#OFFEN}
  * @param vorschlagHerkunft niemals {@code null} — ohne Katalogzeile {@link VorschlagHerkunft#KEINE}
+ * @param traegtNachrichten ob im Bestand mindestens eine Nachricht an diesem Prozess hängt (E14).
+ *     <b>{@code null} ist ein eigener Zustand und wird nicht auf {@code false} abgebildet:</b>
+ *     {@code null} heißt „noch nie geprüft", {@code false} heißt „geprüft und ohne Verkehr". Der
+ *     Filter aus E20 muss die ungeprüften Zeilen <b>zeigen</b>, sonst verschwindet eine nie
+ *     gemessene Zeile aus beiden Filterstellungen. Deshalb {@link Boolean} und nicht {@code
+ *     boolean} — anders als bei {@code pflegestatus} und {@code vorschlagHerkunft}, wo das {@code
+ *     null} der Spalte einen sinnvollen Ersatzwert hat
+ * @param bestandGeprueftAm wann der Bestandslauf diese Zeile zuletzt angesehen hat, UTC — {@code
+ *     null}, solange das nie geschehen ist. <b>Die Oberfläche leitet daraus das Alter der Erhebung
+ *     für die ganze Liste ab</b>; ein zusätzliches Feld im Umschlag gibt es dafür bewusst nicht,
+ *     denn die Angabe gehört an die Zeile, die sie beschreibt
  */
 public record KatalogzeileResponse(
     String processId,
@@ -35,4 +48,6 @@ public record KatalogzeileResponse(
     String partner,
     Richtung richtung,
     Pflegestatus pflegestatus,
-    VorschlagHerkunft vorschlagHerkunft) {}
+    VorschlagHerkunft vorschlagHerkunft,
+    Boolean traegtNachrichten,
+    LocalDateTime bestandGeprueftAm) {}

@@ -3,6 +3,7 @@ package de.kraftwerkone.overlord.monitor.catalog;
 import de.kraftwerkone.overlord.monitor.audit.AuditEvent;
 import de.kraftwerkone.overlord.monitor.audit.AuditEventType;
 import de.kraftwerkone.overlord.monitor.audit.AuditLogWriter;
+import de.kraftwerkone.overlord.monitor.catalog.ProzessKatalogRepository.Bestandsflag;
 import de.kraftwerkone.overlord.monitor.catalog.ProzessKatalogRepository.Bestandszeile;
 import de.kraftwerkone.overlord.monitor.catalog.ProzessKatalogRepository.Projektzeile;
 import de.kraftwerkone.overlord.monitor.catalog.ProzessKatalogRepository.Vorschlagszeile;
@@ -122,7 +123,13 @@ public class ProzessKatalogService {
         partner,
         richtung,
         Pflegestatus.GEPFLEGT,
-        vorher.vorschlagHerkunft());
+        vorher.vorschlagHerkunft(),
+        // Beide bleiben, was sie waren: Eine Zuordnung ist eine Kuratierung und keine Erhebung. Sie
+        // aendert nicht, ob der Prozess Nachrichten traegt, und sie prueft es auch nicht nach — das
+        // tut allein der Bestandslauf (E14, E15). Beim Anlegen einer bisher fehlenden Zeile steht
+        // hier null, und das ist richtig: "noch nie geprueft".
+        vorher.traegtNachrichten(),
+        vorher.bestandGeprueftAm());
   }
 
   /**
@@ -190,16 +197,25 @@ public class ProzessKatalogService {
   }
 
   /**
-   * Der Heuristik-Lauf fuer den aktiven Mandanten (E13) — <b>wiederholbar, per Knopf</b>.
+   * Der Lauf fuer den aktiven Mandanten — <b>ein Knopf, drei Schritte</b> (E13, E14, E15).
    *
    * <table border="1">
-   *   <caption>Was er mit welcher Zeile macht</caption>
-   *   <tr><td>legt an</td><td>fehlende Zeilen</td></tr>
-   *   <tr><td>frischt auf</td><td>Zeilen mit {@link Pflegestatus#OFFEN}, <b>auch wenn sie schon
-   *       einen Vorschlag tragen</b> — sonst friert der erste Lauf jeden spaeteren Regelfehler
-   *       ein</td></tr>
-   *   <tr><td>ruehrt nie an</td><td>Zeilen mit {@link Pflegestatus#GEPFLEGT}</td></tr>
+   *   <caption>Die drei Schritte, und wie vorsichtig jeder ist</caption>
+   *   <tr><td><b>1. legt an</b></td><td>fehlende Katalogzeilen</td></tr>
+   *   <tr><td><b>2. schlaegt vor</b></td><td>Zeilen mit {@link Pflegestatus#OFFEN}, <b>auch wenn
+   *       sie schon einen Vorschlag tragen</b> — sonst friert der erste Lauf jeden spaeteren
+   *       Regelfehler ein. Zeilen mit {@link Pflegestatus#GEPFLEGT} ruehrt er <b>nie</b> an
+   *       (E13)</td></tr>
+   *   <tr><td><b>3. erhebt den Bestand</b></td><td><b>alle</b> Zeilen des Mandanten, auch die
+   *       gepflegten (E15)</td></tr>
    * </table>
+   *
+   * <p><b>Schritt 2 und Schritt 3 sind verschieden vorsichtig, und das ist Absicht.</b> E13
+   * schuetzt <b>Kuratierung</b>, nicht <b>Beobachtung</b>: Was ein Mensch entschieden hat, bleibt
+   * stehen; was die Datenbank sagt, wird bei jedem Lauf neu gesagt. Die beiden Schritte stehen
+   * deshalb in zwei getrennten Repository-Methoden mit sprechenden Namen — {@code
+   * speichereVorschlaege} und {@code speichereBestandsflags} —, damit der Unterschied beim Lesen
+   * sichtbar ist und nicht in einem Schalter verschwindet.
    *
    * <p><b>Nicht beim Anwendungsstart.</b> Er liefe bei jedem Neustart ueber 1.503 Zeilen, obwohl
    * neue Prozesse selten entstehen — und ein Schreibzugriff im Startpfad ist die Sorte
@@ -239,7 +255,18 @@ public class ProzessKatalogService {
       zuSchreiben.add(new Vorschlagszeile(zeile.processId(), vorschlag));
     }
 
+    // Schritt 1 und 2 in einem Zug: fehlende Zeilen anlegen, offene auffrischen, gepflegte
+    // verschonen.
     repository.speichereVorschlaege(mandant, zuSchreiben, jetztUtc(), nutzer.username());
+
+    // Schritt 3, der Bestandslauf — und er laeuft NACH Schritt 1/2, nicht davor. Danach traegt
+    // jeder Prozess des Mandanten eine Katalogzeile, und das UPDATE unten findet sie alle. Davor
+    // gingen die eben erst angelegten Zeilen leer aus und stuenden bis zum naechsten Knopfdruck
+    // auf "noch nie geprueft".
+    List<Bestandsflag> flags = repository.findeBestandsflags(mandant);
+    int ohneNachrichten = (int) flags.stream().filter(flag -> !flag.traegtNachrichten()).count();
+    int bestandGeprueft = repository.speichereBestandsflags(mandant, flags, jetztUtc());
+
     protokolliere(
         nutzer,
         mandant,
@@ -256,9 +283,21 @@ public class ProzessKatalogService {
             + regelB
             + ", keine "
             + keine
-            + ")",
+            + "); Bestandslauf: "
+            + bestandGeprueft
+            + " geprueft, davon "
+            + ohneNachrichten
+            + " ohne Nachrichten",
         ip);
-    return new VorschlagslaufResponse(angelegt, aufgefrischt, unberuehrt, regelA, regelB, keine);
+    return new VorschlagslaufResponse(
+        angelegt,
+        aufgefrischt,
+        unberuehrt,
+        regelA,
+        regelB,
+        keine,
+        bestandGeprueft,
+        ohneNachrichten);
   }
 
   /**

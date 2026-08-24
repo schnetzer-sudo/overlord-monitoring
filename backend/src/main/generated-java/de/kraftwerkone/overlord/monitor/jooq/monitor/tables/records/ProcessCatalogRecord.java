@@ -120,6 +120,38 @@ public class ProcessCatalogRecord extends UpdatableRecordImpl<ProcessCatalogReco
         return (String) get(6);
     }
 
+    /**
+     * Setter for
+     * <code>overlord_monitor.process_catalog.traegt_nachrichten</code>.
+     */
+    public void setTraegtNachrichten(Boolean value) {
+        set(7, value);
+    }
+
+    /**
+     * Getter for
+     * <code>overlord_monitor.process_catalog.traegt_nachrichten</code>.
+     */
+    public Boolean getTraegtNachrichten() {
+        return (Boolean) get(7);
+    }
+
+    /**
+     * Setter for
+     * <code>overlord_monitor.process_catalog.bestand_geprueft_am</code>.
+     */
+    public void setBestandGeprueftAm(LocalDateTime value) {
+        set(8, value);
+    }
+
+    /**
+     * Getter for
+     * <code>overlord_monitor.process_catalog.bestand_geprueft_am</code>.
+     */
+    public LocalDateTime getBestandGeprueftAm() {
+        return (LocalDateTime) get(8);
+    }
+
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
@@ -143,7 +175,7 @@ public class ProcessCatalogRecord extends UpdatableRecordImpl<ProcessCatalogReco
     /**
      * Create a detached, initialised ProcessCatalogRecord
      */
-    public ProcessCatalogRecord(String processId, String partner, String richtung, String pflegestatus, String vorschlagHerkunft, LocalDateTime geaendertAm, String geaendertVon) {
+    public ProcessCatalogRecord(String processId, String partner, String richtung, String pflegestatus, String vorschlagHerkunft, LocalDateTime geaendertAm, String geaendertVon, Boolean traegtNachrichten, LocalDateTime bestandGeprueftAm) {
         super(ProcessCatalog.PROCESS_CATALOG);
 
         setProcessId(processId);
@@ -153,6 +185,8 @@ public class ProcessCatalogRecord extends UpdatableRecordImpl<ProcessCatalogReco
         setVorschlagHerkunft(vorschlagHerkunft);
         setGeaendertAm(geaendertAm);
         setGeaendertVon(geaendertVon);
+        setTraegtNachrichten(traegtNachrichten);
+        setBestandGeprueftAm(bestandGeprueftAm);
         resetTouchedOnNotNull();
     }
 }
