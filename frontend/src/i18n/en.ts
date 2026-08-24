@@ -470,6 +470,57 @@ export const en: Texte = {
       "The search took too long and was cancelled. Narrow the period or name a second document number.",
   },
 
+  katalog: {
+    spalten: {
+      prozess: "Process",
+      projekt: "Project",
+      partner: "Partner",
+      richtung: "Direction",
+      bestand: "Messages",
+      pflege: "Curation",
+    },
+    tabelle: "Processes of the active tenant",
+    nichtZugeordnet: "not assigned",
+    ohneNamen: "unnamed",
+    auffangprozess: "Catch-all process",
+    auffangprozessHinweis:
+      "Whatever could not be assigned to a process ends up here. It is curated and counted like every other row.",
+    richtungen: {
+      EINGEHEND: "Inbound",
+      AUSGEHEND: "Outbound",
+    },
+    pflegestatus: {
+      OFFEN: "open",
+      GEPFLEGT: "curated",
+    },
+    vermerk: {
+      vorschlag: "Suggestion",
+      keinVorschlag: "no suggestion could be derived",
+      ohnePartner: "looked at, there is none",
+    },
+    bestand: {
+      traegt: "carries messages",
+      traegtNicht: "carries no messages",
+      ungeprueft: "not checked",
+      geprueftAm: "Stock checked on {zeitpunkt}",
+      nieGeprueft: "No stock run has ever covered this row.",
+    },
+    filter: {
+      bezeichnung: "Filters",
+      nurOffene: "open only",
+      nurOffeneHinweis: "Hides the rows that are already curated.",
+      nurMitNachrichten: "with messages only",
+      nurMitNachrichtenHinweis: "Unchecked rows stay visible.",
+    },
+    leer: {
+      titel: "No process",
+      ohneProzesse: "No processes are on file for this tenant.",
+      allesGepflegt:
+        "Every row of this tenant is curated. Clear the “open only” box to see all of them.",
+      filterLeer: "No process matches the filters in place. Clear a box to see more.",
+    },
+  },
+
   zustand: {
     laedt: "Loading …",
     leerTitel: "Nothing to show",

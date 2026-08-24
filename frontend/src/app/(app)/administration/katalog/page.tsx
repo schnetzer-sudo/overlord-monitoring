@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { SeitenPlatzhalter } from "@/components/seiten-platzhalter";
+import { KatalogAnsicht } from "@/features/katalog/components/katalog-ansicht";
 import { aktiveTexte } from "@/i18n/server";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -8,14 +8,13 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: texte.administration.bereiche.katalog.titel };
 }
 
-/** Die Pflegeliste entsteht in Teil 3 dieses Auftrags. */
-export default async function KatalogPage() {
-  const texte = await aktiveTexte();
-  return (
-    <SeitenPlatzhalter
-      titel={texte.administration.bereiche.katalog.titel}
-      platzhalterTitel={texte.platzhalter.titel}
-      hinweis={texte.platzhalter.hinweis}
-    />
-  );
+/**
+ * Die Katalogpflege (`docs/prozess-katalog-frontend.md`).
+ *
+ * Server-Komponente ohne eigene Logik — die Ansicht braucht Zustand,
+ * TanStack Query und die URL und ist deshalb Client. `"use client"` steht so
+ * weit unten im Baum wie möglich.
+ */
+export default function KatalogPage() {
+  return <KatalogAnsicht />;
 }

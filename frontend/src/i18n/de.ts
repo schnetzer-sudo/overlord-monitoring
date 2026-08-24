@@ -757,6 +757,80 @@ export const de = {
       "Die Suche hat zu lange gedauert und wurde abgebrochen. Verkleinere den Zeitraum oder nenne eine zweite Belegnummer.",
   },
 
+  /**
+   * Die Katalogpflege — **auf oberster Ebene, nicht unter `administration`.**
+   *
+   * Dort steht die Möblierung des Bereichs: Unternavigation, Übersicht, die
+   * Namen der beiden Seiten. Hier steht das Feature selbst, wie `nachrichten`
+   * und `suche` daneben. Der **Name** der Seite kommt weiterhin aus
+   * `administration.bereiche.katalog.titel` — es gibt genau einen Wortlaut
+   * dafür, und er steht dort, wo auch die Navigation ihn liest.
+   */
+  katalog: {
+    spalten: {
+      prozess: "Prozess",
+      projekt: "Projekt",
+      partner: "Partner",
+      richtung: "Richtung",
+      bestand: "Nachrichten",
+      pflege: "Pflege",
+    },
+    tabelle: "Prozesse des aktiven Mandanten",
+    nichtZugeordnet: "nicht zugeordnet",
+    ohneNamen: "ohne Namen",
+    auffangprozess: "Auffangprozess",
+    auffangprozessHinweis:
+      "Hier landet, was keinem Prozess zugeordnet werden konnte. Er wird gepflegt und gezählt wie jede andere Zeile.",
+    richtungen: {
+      EINGEHEND: "Eingehend",
+      AUSGEHEND: "Ausgehend",
+    },
+    pflegestatus: {
+      OFFEN: "offen",
+      GEPFLEGT: "gepflegt",
+    },
+    /**
+     * Die Vermerke unter dem Partner — sie machen die drei Bedeutungen aus E4
+     * sichtbar, die aus zwei Feldern entstehen.
+     *
+     * `keinVorschlag` ist der Hinweis an der **einzelnen Zeile** aus E9. Über
+     * der Liste steht ein anderer Satz (E17); beide meinen den fehlenden
+     * Partner, aber der eine spricht von dieser Zeile und der andere vom
+     * ganzen Mandanten.
+     */
+    vermerk: {
+      vorschlag: "Vorschlag",
+      keinVorschlag: "kein Vorschlag ableitbar",
+      ohnePartner: "hingesehen, es gibt keinen",
+    },
+    /**
+     * Die drei Zustände von `traegtNachrichten` (E14) — **drei Wörter, keine
+     * Farbe.** `null` ist ausdrücklich nicht dasselbe wie `false`.
+     */
+    bestand: {
+      traegt: "trägt Nachrichten",
+      traegtNicht: "trägt keine Nachrichten",
+      ungeprueft: "nicht geprüft",
+      geprueftAm: "Bestand geprüft am {zeitpunkt}",
+      nieGeprueft: "Für diese Zeile hat noch kein Bestandslauf stattgefunden.",
+    },
+    filter: {
+      bezeichnung: "Filter",
+      nurOffene: "nur offene",
+      nurOffeneHinweis: "Blendet die bereits gepflegten Zeilen aus.",
+      nurMitNachrichten: "nur mit Nachrichten",
+      nurMitNachrichtenHinweis: "Ungeprüfte Zeilen bleiben sichtbar.",
+    },
+    leer: {
+      titel: "Kein Prozess",
+      ohneProzesse: "Für diesen Mandanten sind keine Prozesse hinterlegt.",
+      allesGepflegt:
+        "Jede Zeile dieses Mandanten ist gepflegt. Nimm den Haken bei „nur offene“ heraus, um alle zu sehen.",
+      filterLeer:
+        "Kein Prozess passt zu den gesetzten Filtern. Nimm einen Haken heraus, um mehr zu sehen.",
+    },
+  },
+
   zustand: {
     laedt: "Wird geladen …",
     leerTitel: "Nichts anzuzeigen",
