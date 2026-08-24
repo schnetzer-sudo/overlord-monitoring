@@ -1,4 +1,4 @@
-import { Home, Mails, Settings, Workflow, type LucideIcon } from "lucide-react";
+import { Home, Mails, Settings, Tags, Users, Workflow, type LucideIcon } from "lucide-react";
 
 import type { Texte } from "@/i18n";
 
@@ -51,4 +51,44 @@ export function istAktiv(eintrag: Navigationseintrag, pfad: string): boolean {
     return pfad === ROUTEN.startseite;
   }
   return pfad === eintrag.pfad || pfad.startsWith(`${eintrag.pfad}/`);
+}
+
+/**
+ * Die zwei Unterseiten des Administrationsbereichs.
+ *
+ * **Sie sind kein zweiter und dritter Menüpunkt** (`docs/frontend-grundlagen.md`
+ * §2): Der Hauptnavigation gehört genau ein Eintrag, `/administration`. Was hier
+ * steht, erscheint erst *innerhalb* des Bereichs — in seiner Übersicht und in
+ * seiner Unternavigation.
+ *
+ * Sie stehen trotzdem hier und nicht in einer Komponente, aus demselben Grund
+ * wie {@link NAVIGATION}: Navigation ist Daten. Ein dritter Bereich ist dann eine
+ * Zeile und keine Änderung an zwei Stellen.
+ *
+ * **Ohne `nurAdmin`.** Die Markierung säße hier an der falschen Stelle: Wer den
+ * Bereich überhaupt sieht, ist bereits am Eintrag darüber vorbeigekommen — und
+ * wer die Adresse eintippt, bekommt den Zustand „kein Zugriff" und keine
+ * ausgedünnte Liste.
+ */
+export type Unterbereich = {
+  readonly pfad: string;
+  /** Schlüssel in `texte.administration.bereiche` — nie ein fertiger Text. */
+  readonly schluessel: keyof Texte["administration"]["bereiche"];
+  readonly symbol: LucideIcon;
+};
+
+export const ADMINISTRATION: readonly Unterbereich[] = [
+  { pfad: ROUTEN.administrationKatalog, schluessel: "katalog", symbol: Tags },
+  { pfad: ROUTEN.administrationBenutzer, schluessel: "benutzer", symbol: Users },
+];
+
+/**
+ * Aktiv ist der Bereich, dessen Pfad auf den aktuellen passt.
+ *
+ * Anders als {@link istAktiv} braucht es hier keine Sonderregel für die
+ * Startseite: Beide Pfade liegen unter `/administration` und keiner ist Präfix
+ * des anderen.
+ */
+export function istAktiverBereich(bereich: Unterbereich, pfad: string): boolean {
+  return pfad === bereich.pfad || pfad.startsWith(`${bereich.pfad}/`);
 }

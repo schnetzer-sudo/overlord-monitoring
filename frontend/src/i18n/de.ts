@@ -119,6 +119,31 @@ export const de = {
     hinweis: "Diese Ansicht entsteht in einem späteren Schritt.",
   },
 
+  /**
+   * Der Administrationsbereich — **ein** Navigationseintrag, zwei Unterseiten
+   * (`docs/frontend-grundlagen.md` §2).
+   *
+   * Die Beschriftung des Menüpunkts steht weiterhin unter
+   * `navigation.eintraege.administration`; hier steht, was *innerhalb* des
+   * Bereichs zu lesen ist. Beide sagen dasselbe Wort — Beschriftung und Route
+   * heißen seit dem 24.08.2026 beide „Administration".
+   */
+  administration: {
+    einleitung: "Die Bereiche, die der EDI-Betreuung vorbehalten sind.",
+    bereichsnavigation: "Bereiche der Administration",
+    bereiche: {
+      katalog: {
+        titel: "Prozess-Katalog",
+        beschreibung:
+          "Partner und Richtung je Prozess pflegen — die Grundlage dafür, dass sich Übertragungen später nach Partner auswerten lassen.",
+      },
+      benutzer: {
+        titel: "Benutzer",
+        beschreibung: "Konten anlegen, sperren und ihre Mandanten pflegen.",
+      },
+    },
+  },
+
   nachrichten: {
     spalten: {
       zeitpunkt: "Zeitpunkt",
@@ -739,6 +764,17 @@ export const de = {
     erneutVersuchen: "Erneut versuchen",
     kennung: "Fehler-Kennung",
     kennungHinweis: "Gib diese Kennung an, wenn du die Störung meldest.",
+    /**
+     * Der vierte Zustand, und er ist keiner der drei anderen: **kein Zugriff.**
+     *
+     * Der *Satz* dazu steht nicht hier, sondern unter
+     * `fehler["zugriff-verweigert"]` — er kommt vom Backend als Problemtyp und
+     * gilt überall gleich. Hier steht allein die Überschrift, wie bei
+     * {@link leerTitel} und {@link fehlerTitel} auch. Zwei Wortlaute für
+     * dieselbe Sache wären genau die Doppelpflege, die `docs/frontend-grundlagen.md`
+     * §6 an anderer Stelle verbietet.
+     */
+    keinZugriffTitel: "Kein Zugriff",
   },
 
   fehler: {

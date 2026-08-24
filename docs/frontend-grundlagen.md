@@ -163,8 +163,30 @@ weder leer bleiben noch in den Ladezustand hängen.
 
 **Was hier bewusst nicht steht:** wie die beiden Seiten innen aussehen. Das gehört in die
 Feature-Dateien ([`benutzerverwaltung.md`](benutzerverwaltung.md) §7a,
-[`prozess-katalog.md`](prozess-katalog.md) §4) und in die jeweiligen Frontend-Aufträge; **gebaut ist
-bislang nur der Platzhalter** unter `app/(app)/administration/page.tsx`.
+[`prozess-katalog.md`](prozess-katalog.md) §4) und in die jeweiligen Frontend-Aufträge.
+
+> **Stand 24.08.2026.** Hier stand „**gebaut ist bislang nur der Platzhalter** unter
+> `app/(app)/administration/page.tsx`". Seit Schritt 9b, Teil Frontend steht der Bereich:
+>
+> | | |
+> |---|---|
+> | `app/(app)/administration/layout.tsx` | die Unternavigation, auf allen drei Seiten |
+> | `app/(app)/administration/page.tsx` | die Übersicht mit beiden Bereichen |
+> | `app/(app)/administration/katalog/page.tsx` | die Pflegeliste ([`prozess-katalog-frontend.md`](prozess-katalog-frontend.md)) |
+> | `app/(app)/administration/benutzer/page.tsx` | weiterhin der Platzhalter — Inhalt im 9a-Auftrag |
+>
+> **Der Zustand „kein Zugriff" ist gebaut, und zwar an genau einer Stelle:** an der
+> Katalogpflege, aus dem `403` ihres Endpunkts. `components/kein-zugriff.tsx` trägt ihn;
+> erkannt wird er über `istKeinZugriff` in `lib/http.ts` — **am Problemtyp und nicht am
+> Statuscode**, denn `403` ist in diesem Backend dreifach vergeben
+> (`zugriff-verweigert`, `csrf-token-ungueltig`, `kein-mandant-gewaehlt`) und die drei
+> bedeuten Verschiedenes.
+>
+> **Die Übersicht prüft die Rolle nicht.** Sie ruft kein Backend auf und könnte es deshalb
+> gar nicht belegen; eine Prüfung gegen `role` aus der Selbstauskunft wäre eine
+> Berechtigungsentscheidung im Browser — dieselbe Grenze, die §2 oben für `proxy.ts` zieht.
+> Wer die Adresse ohne die Rolle eintippt, sieht zwei Verweise und bekommt die Auskunft
+> dort, wo sie belegt ist.
 
 ---
 

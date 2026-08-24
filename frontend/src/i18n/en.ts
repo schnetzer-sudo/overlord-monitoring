@@ -100,6 +100,22 @@ export const en: Texte = {
     hinweis: "This view arrives in a later step.",
   },
 
+  administration: {
+    einleitung: "The areas reserved for EDI support.",
+    bereichsnavigation: "Administration areas",
+    bereiche: {
+      katalog: {
+        titel: "Process catalogue",
+        beschreibung:
+          "Curate partner and direction per process — the basis for evaluating transfers by partner later on.",
+      },
+      benutzer: {
+        titel: "Users",
+        beschreibung: "Create and lock accounts, and curate the tenants they may use.",
+      },
+    },
+  },
+
   nachrichten: {
     spalten: {
       zeitpunkt: "Time",
@@ -461,6 +477,7 @@ export const en: Texte = {
     erneutVersuchen: "Try again",
     kennung: "Error reference",
     kennungHinweis: "Quote this reference when you report the problem.",
+    keinZugriffTitel: "No access",
   },
 
   fehler: {

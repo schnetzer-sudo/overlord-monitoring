@@ -17,7 +17,21 @@ export const ROUTEN = {
    */
   suche: "/suche",
   prozesse: "/prozesse",
+  /**
+   * Der Administrationsbereich — **ein** Navigationseintrag, zwei Unterseiten
+   * (`docs/frontend-grundlagen.md` §2). Die Basisroute ist seit Schritt 4
+   * vergeben und trägt seit Schritt 9b eine Übersicht statt eines Platzhalters.
+   *
+   * **Beschriftung und Route heißen beide „Administration"** — ein Wort, das der
+   * Nutzer liest und das in der Adresszeile steht. Der Auftrag zu Schritt 9b hat
+   * das am 24.08.2026 entschieden; der Weg dorthin steht im Korrekturkasten von
+   * `docs/frontend-grundlagen.md` §2.
+   */
   administration: "/administration",
+  /** Die Katalogpflege (Schritt 9b). Das Backend verlangt dahinter die Rolle `ADMIN`. */
+  administrationKatalog: "/administration/katalog",
+  /** Die Benutzerverwaltung (Schritt 9a). Inhalt entsteht in ihrem eigenen Auftrag. */
+  administrationBenutzer: "/administration/benutzer",
 } as const;
 
 /** Query-Parameter, der nach der Anmeldung an den ursprünglichen Ort zurückführt. */

@@ -126,6 +126,28 @@ export function istPraefixfensterZuGross(fehler: unknown): boolean {
   return fehler instanceof ProblemFehler && fehler.typ === PRAEFIXSUCHE_FENSTER_ZU_GROSS;
 }
 
+/**
+ * Die Rolle reicht nicht — das Backend hat den **Bereich** verweigert, nicht
+ * eine Zeile.
+ *
+ * **Erkannt am `type` und nicht am Statuscode**, wie bei {@link istZeitgrenze}.
+ * `403` ist in diesem Backend dreifach vergeben und die drei bedeuten
+ * Verschiedenes: `zugriff-verweigert` (die Rolle reicht nicht — endgültig),
+ * `csrf-token-ungueltig` (ein erneuter Versuch hilft) und
+ * `kein-mandant-gewaehlt` (der Nutzer muss erst wählen; der Anwendungsrahmen
+ * schickt ihn dorthin). Eine Prüfung auf den Status zeigte allen dreien
+ * dieselbe Meldung, und zwei davon wären falsch.
+ *
+ * Gebraucht seit Schritt 9b: `/api/katalog/**` verlangt die Rolle `ADMIN`, und
+ * wer die Adresse eintippt, bekommt einen eigenen Zustand statt einer roten
+ * Meldung (`docs/frontend-grundlagen.md` §2).
+ */
+export const ZUGRIFF_VERWEIGERT = "zugriff-verweigert";
+
+export function istKeinZugriff(fehler: unknown): boolean {
+  return fehler instanceof ProblemFehler && fehler.typ === ZUGRIFF_VERWEIGERT;
+}
+
 export function istNichtAngemeldet(fehler: unknown): boolean {
   return fehler instanceof ProblemFehler && fehler.status === 401;
 }
