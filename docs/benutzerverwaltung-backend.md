@@ -6,8 +6,9 @@ Grundlage: [`authentifizierung.md`](authentifizierung.md) und
 [`mandantentrennung.md`](mandantentrennung.md)
 Messungen: [`messungen-schritt9.md`](messungen-schritt9.md), **M81** und **M82**
 
-**Dieser Text beschreibt ausschließlich das Backend.** Die Oberfläche zu 9a ist ein eigener Auftrag
-mit eigener Datei.
+**Dieser Text beschreibt ausschließlich das Backend.** Die Oberfläche zu 9a steht seit dem
+24.08.2026 in [`benutzerverwaltung-frontend.md`](benutzerverwaltung-frontend.md); damit ist auch
+offener Punkt 1 in §9 geschlossen.
 
 ---
 
@@ -460,7 +461,7 @@ ist der naheliegendste: nur die zuletzt angelegte zu verwerfen.
 
 | | |
 |---|---|
-| 1 | **Kein Frontend.** Die Oberfläche zu 9a fehlt; ohne sie ist keine Sichtprüfung im Browser möglich |
+| 1 | ~~**Kein Frontend.** Die Oberfläche zu 9a fehlt; ohne sie ist keine Sichtprüfung im Browser möglich~~ · **Geschlossen am 24.08.2026** — [`benutzerverwaltung-frontend.md`](benutzerverwaltung-frontend.md). Die Sichtprüfung selbst steht weiterhin aus und ist dort als offener Punkt 1 geführt |
 | 2 | ~~**Die Typzeile `downloadAllowed` steht noch im Frontend** (`features/sitzung/api.ts`). Sie wird nirgends gelesen, ist aber seit dem 21.08.2026 eine Zusage, die das Backend nicht mehr einhält. Im Frontendteil zu streichen~~ · **Geschlossen am 24.08.2026** im Frontend-Auftrag zu 9a. An ihrer Stelle steht ein datierter Vermerk im Typ selbst |
 | 3 | **Der Index-Vorschlag aus M82 ist nicht angelegt** und nicht gemessen: `(event_type, actor_user_id, occurred_at)`. Der vorhandene `idx_audit_type` hilft nicht, und ihn zu erzwingen ist fast doppelt so langsam |
 | 4 | **`app_user.last_login_at` bleibt eine gepflegte tote Spalte.** Sie wäre die 0,39-ms-Antwort auf dieselbe Frage wie die 17,9-ms-Aggregation. E17 verwirft „eine **neue** Spalte" — diese ist nicht neu. Nicht entschieden |

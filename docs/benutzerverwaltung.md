@@ -5,8 +5,15 @@ Baut auf [`authentifizierung.md`](authentifizierung.md) (Schritt 3) und
 [`mandantentrennung.md`](mandantentrennung.md) auf.
 
 **Entscheidungen E1 bis E21.** E19 bis E21 sind am 21.08.2026 dazugekommen und betreffen die
-Oberfläche (§7a); gebaut sind sie **nicht** — sie gehören in den 9a-Frontend-Auftrag, und **E20**
-verlangt zusätzlich eine Backend-Änderung.
+Oberfläche (§7a).
+
+> ⚠️ **Am 24.08.2026 gebaut, alle drei.** Hier stand: *„gebaut sind sie **nicht** — sie gehören in
+> den 9a-Frontend-Auftrag, und **E20** verlangt zusätzlich eine Backend-Änderung."* Beides ist
+> geschehen: die Backend-Änderung zu E20 in
+> [`benutzerverwaltung-backend.md`](benutzerverwaltung-backend.md) §4, die Oberfläche in
+> [`benutzerverwaltung-frontend.md`](benutzerverwaltung-frontend.md). Der alte Wortlaut bleibt
+> stehen, damit erkennbar ist, dass die drei nachträglich gefallen und nicht von Anfang an geplant
+> waren.
 
 ---
 
@@ -209,7 +216,8 @@ Die drei Endpunkte aus Schritt 8 bleiben unangetastet.
 
 **Gebaut wird hier nichts.** E19 bis E21 sind am 21.08.2026 gefallen und stehen hier, weil sie sonst
 nur im Gespräch existierten. Ihre Umsetzung gehört in den **9a-Frontend-Auftrag**; E20 verlangt
-zusätzlich eine Backend-Änderung, die unten benannt ist.
+zusätzlich eine Backend-Änderung, die unten benannt ist. — **Am 24.08.2026 sind alle drei umgesetzt**
+([`benutzerverwaltung-frontend.md`](benutzerverwaltung-frontend.md), §5 für E19, §4 für E20 und E21).
 
 **E19 — Vorwarnung, wenn ein Admin sein eigenes Konto trifft.** Wer sich selbst sperrt, deaktiviert
 oder die Rolle nimmt, bekommt vorher einen ausdrücklichen Hinweis — keine stille Ausführung.

@@ -1,6 +1,6 @@
 # Overlord Monitoring — Implementierungsplan MVP
 
-Stand: 01.08.2026 · Ergänzt `PROJEKTBESCHREIBUNG.md`
+Stand: 24.08.2026 · Ergänzt `PROJEKTBESCHREIBUNG.md`
 
 **Stand der Umsetzung**
 
@@ -15,7 +15,7 @@ Stand: 01.08.2026 · Ergänzt `PROJEKTBESCHREIBUNG.md`
 | 7 — BAM-Suche | **geteilt in Teil 1, Teil 2a, Teil 2b, Teil 3 und Teil 4**; alle fünf Teile erledigt (12. bis 14.08.2026), dazu Nacharbeit und Nachbesserung zu Teil 1 (beide 13.08.2026) und der Nachtrag zum Kommadefekt (14.08.2026). Messungen in [`messungen-schritt7.md`](messungen-schritt7.md); die Features in [`bam-werte.md`](bam-werte.md) (Teil 1), [`bam-sollaengen.md`](bam-sollaengen.md) (Teil 2a) und [`bam-suche.md`](bam-suche.md) (Teil 2b, 3 und 4). **Drei Sichtprüfungen am schmalen Fenster stehen aus** ([`README.md`](README.md), „Offene Sichtprüfungen") |
 | 8 — Rohdaten und Protokolle | **geteilt in Teil Backend und Teil Frontend**; beide gebaut und dokumentiert (18.08.2026, die Oberfläche am selben Tag nachgebessert) — [`rohdaten.md`](rohdaten.md), [`rohdaten-backend.md`](rohdaten-backend.md), [`rohdaten-frontend.md`](rohdaten-frontend.md); Messungen in [`messungen-schritt8.md`](messungen-schritt8.md). **Nicht als erledigt geführt**, und zwar wegen zweier Posten: Die **Sichtprüfung im Browser steht aus** — an beiden Einhängepunkten und für die Ansicht ([`rohdaten-frontend.md`](rohdaten-frontend.md) §11, Punkt 1) —, und die **Antwortverarbeitung des `jakarta`-Zweigs ist ungemessen** ([`rohdaten-backend.md`](rohdaten-backend.md) §11, Punkt 3). Die **336 grünen Frontend-Testfälle** ([`rohdaten-frontend.md`](rohdaten-frontend.md) §9) nehmen eine Sichtprüfung nicht vorweg |
 
-| 9 — Administration | **geschnitten in 9a und 9b** (20.08.2026); **9a Teil Backend gebaut und dokumentiert** (21.08.2026) — `V7__benutzerverwaltung.sql` (`download_allowed` fällt, `locked_by_admin` kommt), Sitzungsentzug in **Bauform A**, sechs Endpunkte unter `/api/admin/users`, sieben neue Ereignisarten, 48 Testfälle. [`benutzerverwaltung.md`](benutzerverwaltung.md) (Festlegung), [`benutzerverwaltung-backend.md`](benutzerverwaltung-backend.md) (Bau), Messungen **M81** und **M82** in [`messungen-schritt9.md`](messungen-schritt9.md). **Nicht als erledigt geführt:** die Oberfläche zu 9a fehlt. Dazu **9b Teil Backend gebaut und dokumentiert** (20.08.2026) — `V6__process_catalog.sql`, Heuristik, fünf Endpunkte unter `/api/katalog`, 64 Testfälle. [`prozess-katalog.md`](prozess-katalog.md) (Festlegung), [`prozess-katalog-backend.md`](prozess-katalog-backend.md) (Bau), Messung **M80** in [`messungen-schritt9.md`](messungen-schritt9.md). **Nicht als erledigt geführt:** die Oberfläche zu 9b fehlt, und eine Sichtprüfung im Browser ist ohne Oberfläche nicht möglich. *(Der Zusatz „9a ist unangetastet" ist am 21.08.2026 entfallen — 9a ist seither im Backend gebaut.)* |
+| 9 — Administration | **geschnitten in 9a und 9b** (20.08.2026); **9a Teil Backend gebaut und dokumentiert** (21.08.2026) — `V7__benutzerverwaltung.sql` (`download_allowed` fällt, `locked_by_admin` kommt), Sitzungsentzug in **Bauform A**, sechs Endpunkte unter `/api/admin/users`, sieben neue Ereignisarten, 48 Testfälle. [`benutzerverwaltung.md`](benutzerverwaltung.md) (Festlegung), [`benutzerverwaltung-backend.md`](benutzerverwaltung-backend.md) (Bau), Messungen **M81** und **M82** in [`messungen-schritt9.md`](messungen-schritt9.md). **Nicht als erledigt geführt:** die Oberfläche zu 9a fehlt. Dazu **9b Teil Backend gebaut und dokumentiert** (20.08.2026) — `V6__process_catalog.sql`, Heuristik, fünf Endpunkte unter `/api/katalog`, 64 Testfälle. [`prozess-katalog.md`](prozess-katalog.md) (Festlegung), [`prozess-katalog-backend.md`](prozess-katalog-backend.md) (Bau), Messung **M80** in [`messungen-schritt9.md`](messungen-schritt9.md). **Nicht als erledigt geführt:** die Oberfläche zu 9b fehlt, und eine Sichtprüfung im Browser ist ohne Oberfläche nicht möglich. *(Der Zusatz „9a ist unangetastet" ist am 21.08.2026 entfallen — 9a ist seither im Backend gebaut.)* **Nachtrag 24.08.2026: beide Oberflächen sind gebaut und dokumentiert** — 9b in [`prozess-katalog-frontend.md`](prozess-katalog-frontend.md), 9a in [`benutzerverwaltung-frontend.md`](benutzerverwaltung-frontend.md), dazu die Backend-Änderung zu E20 (`lockedUntil`). Damit ist **Schritt 9 vollständig gebaut**. **Als erledigt geführt wird er trotzdem nicht**, und zwar aus zwei Gründen, die beide in [`README.md`](README.md) unter „Offene Sichtprüfungen" stehen: Bei 9b fehlt das schmale Fenster; bei 9a ist **überhaupt noch nichts gedrückt worden**, weil jeder der fünf Vorgänge auf die geteilte Testkopie schreibt und ein echtes Konto abmeldet. Der Maßstab bleibt der von Schritt 8 — gebaut und dokumentiert ist nicht erledigt, solange niemand hingesehen hat |
 
 **Nachtrag 20.08.2026 zum Kopf.** Die Zeile zu Schritt 9 ist ergänzt, weil dieselbe Stummheit
 drohte, die die Korrektur vom 19.08.2026 unten beschreibt: Schritt 9b ist zur Hälfte gebaut, und
@@ -848,11 +848,21 @@ diese Konten per Zuruf gepflegt.
    (E4) und ist unangetastet geblieben. Die Zeile bleibt trotzdem stehen, weil die Benutzerverwaltung
    erst mit 9a als Ganzes benutzbar wird.
 
-**Frontend**
+**Frontend** — **gebaut und dokumentiert am 24.08.2026**,
+[`benutzerverwaltung-frontend.md`](benutzerverwaltung-frontend.md)
+
 - Administrationsbereich, nur für die Rolle `ADMIN` sichtbar
 - Benutzerverwaltung einschließlich der Mandantenmenge je Konto
 
-**Abgrenzung 9a:** Keine Selbstregistrierung, kein Passwort-Reset per E-Mail.
+*Nachtrag 24.08.2026.* Der Bau hat **drei Entscheidungen** eingelöst, die erst am 21.08.2026 gefallen
+sind und die dieser Abschnitt nicht kannte ([`benutzerverwaltung.md`](benutzerverwaltung.md) §7a):
+die **Vorwarnung**, wenn ein Vorgang das eigene Konto trifft (E19), das Feld **`lockedUntil`** in der
+Kontenzeile (E20 — eine Umkehr, sie hat eine Backend-Änderung gekostet) und der **Hinweis an der
+Liste**, dass sie mandantenübergreifend gilt (E21).
+
+**Abgrenzung 9a:** Keine Selbstregistrierung, kein Passwort-Reset per E-Mail. **Kein Anlegen über die
+Oberfläche** — `POST /api/admin/users` steht seit Schritt 3 und ist unangetastet (E4); die Maske
+dazu gehört nicht zu 9a. **Kein Löschen** (E8), keine Suche und kein Blättern (E16).
 
 **Abnahme 9a:** Ein Admin legt einen Nutzer an, der sich anmelden kann. Ein Konto mit zwei
 Mandanten lässt sich pflegen und der Nutzer wechselt zwischen beiden. Jeder Admin-Endpunkt gibt
@@ -922,6 +932,28 @@ einem MANDANT-Nutzer `403` — auch dann, wenn er auf dessen eigenes Konto zeigt
 - Process View
 - Sichtbarer Stand der letzten Aktualisierung
 
+> ### ⚠️ Schritt 10 hängt nicht am Code — nachgetragen am 24.08.2026
+>
+> **Mit Schritt 9 steht das Werkzeug, mit dem der Katalog gepflegt wird. Gepflegt ist er damit
+> nicht.** Das ist der Unterschied, der hier festgehalten gehört, weil er sonst erst beim Bau des
+> Dashboards auffällt — und dann als Fehler aussieht, der keiner ist.
+>
+> Der Katalog trägt die Partnerzuordnung, und **das Dashboard gruppiert danach**. Steht dort nichts,
+> zeigt es überwiegend „nicht zugeordnet" — nicht weil eine Abfrage falsch ist, sondern weil die
+> Zeilen leer sind. Die Heuristik legt Vorschläge an und keine Wahrheit
+> ([`prozess-katalog.md`](prozess-katalog.md)); jede Zeile braucht danach jemanden, der hinsieht und
+> entscheidet — auch die, bei der die Antwort „es gibt keinen Partner" lautet (E4 dort).
+>
+> **Das ist Handarbeit, sie steht in keinem Auftrag, und niemand kann sie stellvertretend tun.** Sie
+> braucht die fachliche Kenntnis, welcher Prozess zu welchem Partner gehört; für den größten
+> Mandanten sind das 733 Zeilen. Der Fortschritt dazu ist in der Katalogpflege ablesbar, und der
+> Zeitpunkt, an dem Schritt 10 sinnvoll beginnt, ist an dieser Zahl abzulesen und an keiner anderen.
+>
+> **Was daraus folgt und was nicht:** Schritt 10 lässt sich *bauen*, bevor der Katalog gepflegt ist —
+> das Rollup, der Job, die Kacheln hängen an keiner kuratierten Zeile. **Abnehmen** lässt er sich so
+> nicht: Sein Abnahmekriterium *„Die Zahlen stimmen stichprobenartig mit einer direkten Abfrage
+> überein"* ist über einer ungepflegten Grundlage erfüllbar und trotzdem wertlos.
+
 **Abgrenzung:** Keine frei konfigurierbaren Dashboards, keine Alarmierung.
 
 **Abnahme:** Das Dashboard lädt in unter 500 Millisekunden. Die Zahlen stimmen stichprobenartig
@@ -938,7 +970,9 @@ als erwartet, wird geteilt: erst die Detailansicht mit Rohwerten, dann die Über
 
 **Reihenfolge ist nicht beliebig.** Schritte 1 bis 3 sind Voraussetzung für alles Weitere.
 Schritt 10 setzt den gefüllten Katalog aus **Schritt 9b** voraus, sonst zeigt das Dashboard
-überwiegend "nicht zugeordnet". *Korrigiert 20.08.2026:* Hier stand „Schritt 9“; seit der
+überwiegend "nicht zugeordnet". *Nachgetragen 24.08.2026:* **„Gefüllt" heißt gepflegt und nicht
+gebaut.** Das Werkzeug dafür steht seit dem 24.08.2026; die Zeilen füllt es nicht. Der Kasten bei
+Schritt 10 führt das aus. *Korrigiert 20.08.2026:* Hier stand „Schritt 9“; seit der
 Aufteilung trägt **9b** den Katalog, und deshalb steht 9b vor 9a.
 
 **Die CI erreicht die Datenbank nicht.** Das Repository liegt in der Cloud, die Testkopie im
