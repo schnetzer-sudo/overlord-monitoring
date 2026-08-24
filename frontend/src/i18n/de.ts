@@ -1002,6 +1002,14 @@ export const de = {
       eigenesKonto:
         "Das ist dein eigenes Konto. Jede Änderung daran meldet dich ab, und du musst dich neu anmelden.",
     },
+    mandanten: {
+      titel: "Mandanten",
+      letzteZuordnung:
+        "Ein Konto braucht mindestens einen Mandanten. Setze erst einen zweiten Haken, dann lässt sich dieser abwählen.",
+      unbekannt: "steht nicht mehr in der Mandantenliste",
+      speichern: "Mandanten speichern",
+      verwerfen: "Verwerfen",
+    },
     vorwarnung: {
       titel: "Das ist dein eigenes Konto",
       text: "„{vorgang}“ trifft dein eigenes Konto.",

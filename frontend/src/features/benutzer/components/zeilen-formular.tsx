@@ -20,11 +20,12 @@ import {
   passwortBrauchbar,
   type Vorgang,
 } from "../selbstschutz";
+import { MandantenAuswahl } from "./mandanten-auswahl";
 import { Vorwarnung } from "./vorwarnung";
 
 /**
- * Alles, was sich an **einer** Zeile ändern lässt — vier der fünf Vorgänge; die
- * Mandantenmenge kommt in ihrem eigenen Teil dazu.
+ * Alles, was sich an **einer** Zeile ändern lässt — die fünf Vorgänge aus
+ * `docs/benutzerverwaltung.md` §5, jeder ein Aufruf auf genau diese Zeile.
  *
  * ## Warum das Formular unter der Zeile steht und nicht in ihr
  *
@@ -202,6 +203,24 @@ export function ZeilenFormular({ zeile }: { zeile: Nutzerzeile }) {
           {meldung("rolle")}
         </Abschnitt>
       </div>
+
+      {/*
+       * Die Mandantenmenge steht auf voller Breite und nicht neben den drei
+       * Abschnitten darüber: Sie ist die einzige mit einem eigenen Entwurf und
+       * einem eigenen Speichern — die anderen drei laufen beim Umlegen los. Und
+       * bei zehn Mandanten braucht sie die Breite.
+       *
+       * **Der `key` setzt den Entwurf nach dem Speichern zurück.** Ändert sich
+       * die gespeicherte Menge, hängt React die Auswahl neu ein; ein `setState`
+       * im Effekt wäre der naheliegende und der falsche Weg.
+       */}
+      <MandantenAuswahl
+        key={zeile.tenants.join(" ")}
+        zeile={zeile}
+        gesperrt={gesperrt}
+        aufSpeichern={(mandanten) => starte({ art: "mandanten", mandanten })}
+        fehler={meldung("mandanten")}
+      />
 
       <form
         className="flex flex-col gap-2"

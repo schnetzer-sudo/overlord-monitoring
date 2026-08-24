@@ -637,6 +637,14 @@ export const en: Texte = {
       eigenesKonto:
         "This is your own account. Any change to it signs you out, and you will have to sign in again.",
     },
+    mandanten: {
+      titel: "Tenants",
+      letzteZuordnung:
+        "An account needs at least one tenant. Tick a second one first, then this one can be cleared.",
+      unbekannt: "no longer in the tenant list",
+      speichern: "Save tenants",
+      verwerfen: "Discard",
+    },
     vorwarnung: {
       titel: "This is your own account",
       text: "“{vorgang}” affects your own account.",
