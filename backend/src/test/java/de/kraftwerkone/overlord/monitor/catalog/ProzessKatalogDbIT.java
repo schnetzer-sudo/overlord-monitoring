@@ -327,4 +327,93 @@ class ProzessKatalogDbIT extends SicherheitsTestbasis {
         .hasSize(alle.size() - 1)
         .doesNotContain(prozess);
   }
+
+  // ─── Der Bestandslauf (E14, E15) ─────────────────────────────────────────────
+
+  @Test
+  @DisplayName("Vor dem ersten Lauf ist traegtNachrichten null — nicht false (E14)")
+  void vor_dem_ersten_lauf_ist_der_bestand_unbekannt() throws Exception {
+    String prozess = prozesse().getFirst();
+
+    assertThat(feldVon(prozess, "traegtNachrichten"))
+        .as(
+            "null heisst „noch nie geprueft\" und ist etwas anderes als „geprueft und tot\"."
+                + " Wuerde hier false stehen, waere der Unterschied nicht wiederherstellbar (E20)")
+        .isNull();
+    assertThat(feldVon(prozess, "bestandGeprueftAm")).isNull();
+
+    // Auch eine kuratierte Zeile bleibt unbekannt: Zuordnen ist keine Erhebung.
+    sitzung.aendere("/api/katalog/prozesse/" + prozess, zuordnung(PARTNER, null));
+    assertThat(feldVon(prozess, "pflegestatus")).isEqualTo("GEPFLEGT");
+    assertThat(feldVon(prozess, "traegtNachrichten")).isNull();
+  }
+
+  @Test
+  @DisplayName("Der Bestandslauf setzt das Flag und meldet beide Zahlen (E14)")
+  void bestandslauf_setzt_das_flag() throws Exception {
+    int anzahl = prozesse().size();
+
+    Antwort lauf = sitzung.sende("/api/katalog/vorschlagen", "{}");
+
+    assertThat(lauf.status()).isEqualTo(200);
+    assertThat(lauf.<Integer>json("$.bestandGeprueft"))
+        .as("Ohne diese Zahl ist ein reihenweise wirkungsloser Lauf nicht erkennbar")
+        .isEqualTo(anzahl);
+    assertThat(lauf.<Integer>json("$.ohneNachrichten"))
+        .as("Bei SUTTONS traegt jeder der 17 Prozesse Nachrichten (M83-5) — hier bleibt es leer")
+        .isZero();
+
+    Antwort liste = sitzung.hole("/api/katalog/prozesse");
+    assertThat(liste.<List<Object>>json("$[*].traegtNachrichten"))
+        .as("Nach dem Lauf ist keine Zeile mehr unbekannt")
+        .hasSize(anzahl)
+        .containsOnly(Boolean.TRUE);
+    assertThat(liste.<List<Object>>json("$[*].bestandGeprueftAm")).hasSize(anzahl);
+  }
+
+  @Test
+  @DisplayName(
+      "Der Bestandslauf schreibt auch auf GEPFLEGT und laesst die Kuratierung stehen (E15)")
+  void bestandslauf_schreibt_auch_auf_gepflegte_zeilen() throws Exception {
+    String prozess = prozesse().getFirst();
+    sitzung.aendere("/api/katalog/prozesse/" + prozess, zuordnung(PARTNER, "AUSGEHEND"));
+    assertThat(feldVon(prozess, "traegtNachrichten"))
+        .as("Eine Zuordnung erhebt den Bestand nicht — sie ist Kuratierung, keine Beobachtung")
+        .isNull();
+
+    Antwort lauf = sitzung.sende("/api/katalog/vorschlagen", "{}");
+
+    assertThat(lauf.<Integer>json("$.unberuehrt"))
+        .as("Die Heuristik laesst die gepflegte Zeile in Ruhe (E13)")
+        .isEqualTo(1);
+    assertThat(feldVon(prozess, "traegtNachrichten"))
+        .as(
+            "Der Bestandslauf schreibt trotzdem auf sie: E13 schuetzt Kuratierung, nicht"
+                + " Beobachtung (E15)")
+        .isEqualTo("true");
+    assertThat(feldVon(prozess, "bestandGeprueftAm")).isNotNull();
+
+    // Und die kuratierten Felder sind unberuehrt geblieben.
+    assertThat(feldVon(prozess, "partner")).isEqualTo(PARTNER);
+    assertThat(feldVon(prozess, "richtung")).isEqualTo("AUSGEHEND");
+    assertThat(feldVon(prozess, "pflegestatus")).isEqualTo("GEPFLEGT");
+  }
+
+  @Test
+  @DisplayName("Eine Zuordnung nach dem Lauf traegt den erhobenen Bestand weiter (E14)")
+  void zuordnung_nach_dem_lauf_behaelt_den_bestand() throws Exception {
+    sitzung.sende("/api/katalog/vorschlagen", "{}");
+    String prozess = prozesse().getFirst();
+
+    Antwort zugeordnet =
+        sitzung.aendere("/api/katalog/prozesse/" + prozess, zuordnung(PARTNER, null));
+
+    assertThat(zugeordnet.status()).isEqualTo(200);
+    assertThat(zugeordnet.<Boolean>json("$.traegtNachrichten"))
+        .as(
+            "Die Antwort wird gebaut und nicht nachgelesen — sie muss den erhobenen Bestand"
+                + " trotzdem mitfuehren, sonst sieht die Zeile nach dem Speichern ungeprueft aus")
+        .isTrue();
+    assertThat(zugeordnet.<Object>json("$.bestandGeprueftAm")).isNotNull();
+  }
 }

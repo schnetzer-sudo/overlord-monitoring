@@ -159,6 +159,7 @@ class ProzessKatalogStatementsTest {
     repository.findeZeile(MANDANT, PROZESS);
     repository.findePartner(MANDANT);
     repository.findeBestand(MANDANT);
+    repository.findeBestandsflags(MANDANT);
     repository.findeProjektbestand(MANDANT, PROJEKT);
     ergebnisJa();
     repository.projektGehoertZumMandanten(MANDANT, PROJEKT);
@@ -176,7 +177,19 @@ class ProzessKatalogStatementsTest {
                 new Partnervorschlag("ERFUNDEN", Richtung.AUSGEHEND, VorschlagHerkunft.REGEL_B))),
         JETZT,
         BENUTZER);
+    repository.speichereBestandsflags(
+        MANDANT,
+        List.of(
+            new ProzessKatalogRepository.Bestandsflag(PROZESS, true),
+            new ProzessKatalogRepository.Bestandsflag("AuslagerungAusgehendERFUNDEN", false)),
+        JETZT);
     return List.copyOf(gerendert);
+  }
+
+  /** Nur das Statement des Bestandslaufs, ohne die uebrigen. */
+  private String bestandsStatement() {
+    repository.findeBestandsflags(MANDANT);
+    return gerendert.getLast();
   }
 
   private List<String> lesendeStatements() {
@@ -297,12 +310,35 @@ class ProzessKatalogStatementsTest {
     }
   }
 
+  /**
+   * <b>Jedes <i>kuratierende</i> Schreiben ist ein Upsert</b> — eine fehlende Zeile entsteht dabei.
+   *
+   * <p><b>Der Bestandslauf ist davon ausgenommen, und die Ausnahme ist die Aussage</b> (E15): Er
+   * ist das einzige Schreiben, das auf <b>gepflegte</b> Zeilen geht. Ein {@code INSERT … ON
+   * DUPLICATE KEY} muesste dabei die {@code NOT NULL}-Spalten mitliefern — {@code pflegestatus},
+   * {@code vorschlag_herkunft}, {@code geaendert_am}, {@code geaendert_von} — und ueberschriebe
+   * genau die Kuratierung, die er nicht anfassen darf. Fuer ihn ist das {@code UPDATE} deshalb
+   * nicht die schwaechere, sondern die einzig richtige Form.
+   *
+   * <p>Dass er dabei Prozesse <b>ohne</b> Katalogzeile nicht erreicht, ist folgenlos: Der Dienst
+   * faehrt ihn <b>nach</b> {@code speichereVorschlaege}, und danach hat jeder Prozess des Mandanten
+   * eine Zeile. Genau diese Reihenfolge sichert {@code ProzessKatalogDbIT} am laufenden Endpunkt
+   * ab.
+   */
   @Test
-  @DisplayName("Jedes Schreiben ist ein Upsert — eine fehlende Zeile entsteht dabei")
+  @DisplayName("Jedes kuratierende Schreiben ist ein Upsert — der Bestandslauf ist die Ausnahme")
   void schreibende_statements_sind_upserts() {
     List<String> schreibend =
         alleStatements().stream().filter(sql -> !klein(sql).startsWith("select")).toList();
-    for (String sql : schreibend) {
+    assertThat(schreibend).as("Ohne schreibende Statements prueft dieser Test nichts").isNotEmpty();
+
+    List<String> kuratierend =
+        schreibend.stream().filter(sql -> !klein(sql).contains("traegt_nachrichten")).toList();
+    List<String> bestand =
+        schreibend.stream().filter(sql -> klein(sql).contains("traegt_nachrichten")).toList();
+
+    assertThat(kuratierend).as("Die drei kuratierenden Schreibwege").isNotEmpty();
+    for (String sql : kuratierend) {
       assertThat(klein(sql))
           .as(
               "Ein reines UPDATE liesse Prozesse ohne Katalogzeile unberuehrt — und das sind genau"
@@ -311,6 +347,17 @@ class ProzessKatalogStatementsTest {
           .startsWith("insert into")
           .contains("on duplicate key update");
     }
+
+    assertThat(bestand)
+        .as("Der Bestandslauf muss als eigener Schreibweg auftauchen, sonst prueft der Rest nichts")
+        .hasSize(1);
+    assertThat(klein(bestand.getFirst()))
+        .as(
+            "Er ist bewusst KEIN Upsert: ein INSERT muesste die NOT-NULL-Spalten mitliefern und"
+                + " ueberschriebe die Kuratierung, die E15 unangetastet laesst: %s",
+            bestand.getFirst())
+        .startsWith("update")
+        .doesNotContain("on duplicate key update");
   }
 
   @Test
@@ -381,6 +428,89 @@ class ProzessKatalogStatementsTest {
   @Test
   @DisplayName("Die gerenderten Statements sind vollstaendig")
   void statements_sind_vollstaendig() {
-    assertThat(alleStatements()).hasSize(11);
+    assertThat(alleStatements()).hasSize(13);
+  }
+
+  /**
+   * <b>Der Bestandslauf rendert Fassung A aus M83‑1</b> — die gemessene Form und keine andere.
+   *
+   * <p>M83 sagt ausdruecklich, dass der dort gemessene Text <b>nicht gerendert</b> ist: Beide
+   * Fassungen stammen woertlich aus dem Messauftrag, Anwendungscode existierte noch nicht.
+   * Vergleichbar sind deshalb nicht die Zeichen, sondern die <b>planbestimmenden Merkmale</b> —
+   * genau die vier, an denen der gemessene {@code EXPLAIN} haengt:
+   *
+   * <ol>
+   *   <li>Einstiegstabelle {@code ProjectMandant}
+   *   <li>{@code EXISTS} und nicht {@code IN} — nur {@code EXISTS} bricht beim ersten Indexeintrag
+   *       ab
+   *   <li>die Unterabfrage vergleicht {@code Message.ProcessID} gegen {@code Process.ProcessID}
+   *   <li>kein zusaetzlicher Join, insbesondere <b>kein</b> {@code Project}
+   * </ol>
+   *
+   * <p>Weicht eines davon ab, ist die Messung nicht mehr die zu diesem Code — <b>dann ist neu zu
+   * messen und nicht nachzubessern</b>. Kein {@code STRAIGHT_JOIN}, auch nicht als Reparatur (M42).
+   */
+  @Test
+  @DisplayName("Der Bestandslauf rendert Fassung A aus M83-1 (Regel L7)")
+  void bestandslauf_rendert_fassung_a() {
+    String sql = bestandsStatement();
+    String klein = klein(sql);
+
+    assertThat(klein)
+        .as("Einstieg ueber ProjectMandant — die gemessene Fassung A. Gerendert: %s", sql)
+        .contains("from `glassfishdb`.`projectmandant`");
+    assertThat(klein)
+        .as("EXISTS statt IN: nur EXISTS bricht beim ersten Indexeintrag ab. Gerendert: %s", sql)
+        .contains("exists")
+        .doesNotContain(" in (select");
+    assertThat(klein)
+        .as("Die Unterabfrage liest Message. Gerendert: %s", sql)
+        .contains("`glassfishdb`.`message`");
+    assertThat(klein)
+        .as(
+            "Kein zusaetzlicher Join — Project gehoert nicht in dieses Statement. Gerendert: %s",
+            sql)
+        .doesNotContain("`glassfishdb`.`project`.");
+    assertThat(klein)
+        .as("Kein STRAIGHT_JOIN, auch nicht als Reparatur (M42). Gerendert: %s", sql)
+        .doesNotContain("straight_join");
+    assertThat(klein)
+        .as("Der Mandantenfilter steht IM Statement (Regel M3). Gerendert: %s", sql)
+        .contains("mandantid");
+  }
+
+  /**
+   * <b>Der Bestandslauf fasst ausschliesslich die zwei Beobachtungsspalten an</b> (E15).
+   *
+   * <p>Er schreibt auf <b>alle</b> Zeilen des Mandanten, auch auf gepflegte — und genau deshalb
+   * muss das Statement beweisen, dass es die Kuratierung nicht beruehrt. Ein {@code INSERT … ON
+   * DUPLICATE KEY} muesste die {@code NOT NULL}-Spalten mitliefern und ueberschriebe sie; ein
+   * {@code UPDATE} auf zwei Spalten kann es nicht.
+   */
+  @Test
+  @DisplayName("Der Bestandslauf schreibt nur traegt_nachrichten und bestand_geprueft_am (E15)")
+  void bestandslauf_schreibt_nur_die_beobachtungsspalten() {
+    repository.speichereBestandsflags(
+        MANDANT, List.of(new ProzessKatalogRepository.Bestandsflag(PROZESS, true)), JETZT);
+    String sql = klein(gerendert.getLast());
+
+    assertThat(sql)
+        .startsWith("update")
+        .contains("traegt_nachrichten")
+        .contains("bestand_geprueft_am");
+    assertThat(sql)
+        .as(
+            "Kuratierung bleibt unangetastet: weder Pflegestatus noch Herkunft noch die"
+                + " Aenderungsspuren duerfen im Statement stehen. Gerendert: %s",
+            sql)
+        .doesNotContain("pflegestatus")
+        .doesNotContain("vorschlag_herkunft")
+        .doesNotContain("geaendert_am")
+        .doesNotContain("geaendert_von")
+        .doesNotContain("partner")
+        .doesNotContain("richtung");
+    assertThat(sql)
+        .as("Kein INSERT — der wuerde die NOT-NULL-Spalten mitschreiben. Gerendert: %s", sql)
+        .doesNotContain("insert");
   }
 }
