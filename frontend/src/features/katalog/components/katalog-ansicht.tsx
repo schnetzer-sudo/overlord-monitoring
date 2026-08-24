@@ -9,6 +9,7 @@ import { istKeinZugriff } from "@/lib/http";
 
 import { useKatalogfilter, useKatalogzeilen, usePartner } from "../hooks";
 import { sichtbareZeilen } from "../filter";
+import { LaufKnopf } from "./lauf-knopf";
 import { KatalogFilterleiste } from "./katalog-filterleiste";
 import { KatalogTabelle } from "./katalog-tabelle";
 
@@ -82,6 +83,8 @@ export function KatalogAnsicht() {
         <KeinZugriff />
       ) : (
         <>
+          <LaufKnopf gesperrt={bearbeitet !== null} />
+
           <KatalogFilterleiste
             filter={filter}
             aufNurOffene={setzeNurOffene}

@@ -527,6 +527,32 @@ export const en: Texte = {
       speichernLaeuft: "Saving …",
       abbrechen: "Cancel",
     },
+    lauf: {
+      starten: "Derive suggestions and check stock",
+      hinweis:
+        "Creates missing rows, refreshes open suggestions and checks for every row whether messages hang off it.",
+      laeuft: "Running …",
+      laeuftSeit: "running for {dauer}",
+      ergebnisTitel: "The last run",
+      ergebnisDauer: "took: {dauer}",
+      zahlen: {
+        angelegt: "created",
+        aufgefrischt: "refreshed",
+        unberuehrt: "untouched",
+        regelA: "partner from rule A",
+        regelB: "partner from rule B",
+        keine: "without a partner suggestion",
+        bestandGeprueft: "stock checked",
+        ohneNachrichten: "of those without messages",
+      },
+      dauer: {
+        unterSekunde: "< 1 s",
+        sekunden: "{wert} s",
+        minuten: "{wert} min",
+        stunden: "{wert} h",
+        tage: "{wert} d",
+      },
+    },
     leer: {
       titel: "No process",
       ohneProzesse: "No processes are on file for this tenant.",

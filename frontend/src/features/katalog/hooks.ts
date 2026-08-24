@@ -8,6 +8,7 @@ import {
   KATALOG_SCHLUESSEL,
   holeKatalogzeilen,
   holePartner,
+  starteVorschlagslauf,
   zuordne,
   type Katalogzeile,
   type ZuordnenAnfrage,
@@ -113,6 +114,32 @@ export function useZuordnen() {
       speicher.setQueryData<string[]>(KATALOG_SCHLUESSEL.partner, (alt) =>
         alt === undefined ? alt : mitPartner(alt, zeile.partner),
       );
+    },
+  });
+}
+
+/**
+ * Der Lauf: Heuristik **und** Bestandserhebung in einem Knopfdruck (E13, E14).
+ *
+ * **Danach wird die Liste neu geholt und nicht gesetzt** — anders als bei
+ * {@link useZuordnen}, und aus dem umgekehrten Grund: Dort halten wir die
+ * geänderte Zeile in der Hand, hier hat sich die Liste **in der Breite**
+ * geändert. Der Lauf legt fehlende Zeilen an, frischt Vorschläge auf und
+ * schreibt `traegt_nachrichten` auf jede Zeile des Mandanten; welche das im
+ * Einzelnen sind, sagt die Antwort nicht. Aus acht Zahlen lässt sich keine
+ * Liste rekonstruieren.
+ *
+ * Die Partnervorschläge werden mit invalidiert: Ein Lauf kann neue Zeilen mit
+ * Vorschlägen angelegt haben, und die speisen die Auswahl (E2).
+ */
+export function useVorschlagslauf() {
+  const speicher = useQueryClient();
+
+  return useMutation({
+    mutationFn: starteVorschlagslauf,
+    onSuccess: () => {
+      void speicher.invalidateQueries({ queryKey: KATALOG_SCHLUESSEL.prozesseBereich });
+      void speicher.invalidateQueries({ queryKey: KATALOG_SCHLUESSEL.partner });
     },
   });
 }

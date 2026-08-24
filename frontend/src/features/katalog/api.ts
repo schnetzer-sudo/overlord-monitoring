@@ -1,4 +1,4 @@
-import { aendere, hole } from "@/lib/http";
+import { aendere, hole, sende } from "@/lib/http";
 
 /**
  * Der Prozess-Katalog: **die Fläche, auf der aus etwas Lesbarem etwas
@@ -151,4 +151,49 @@ export type ZuordnenAnfrage = {
  */
 export function zuordne(processId: string, anfrage: ZuordnenAnfrage): Promise<Katalogzeile> {
   return aendere<Katalogzeile>(`/katalog/prozesse/${encodeURIComponent(processId)}`, anfrage);
+}
+
+/**
+ * Was ein Lauf bewirkt hat — **acht Zahlen, und keine ist überflüssig**.
+ *
+ * Die ersten drei ergeben zusammen die Zahl der Prozesse des Mandanten. Die
+ * drei danach zählen nur die **geschriebenen** Zeilen nach der Herkunft ihres
+ * Partnervorschlags; unberührte Zeilen tragen ihre eigene, ältere Herkunft.
+ *
+ * **Die letzten beiden sind mit den übrigen nicht zu verrechnen.** Sie zählen
+ * einen anderen Schritt über dieselbe Menge: `bestandGeprueft` sind alle Zeilen
+ * des Mandanten — auch die gepflegten (E15) —, `ohneNachrichten` davon die ohne
+ * jede Nachricht im Bestand.
+ *
+ * **`bestandGeprueft` zählt Anweisungen, nicht geänderte Zeilen.** MariaDB
+ * meldet für ein `UPDATE` ohne Wertänderung null betroffene Zeilen; der zweite
+ * Lauf in Folge meldete sonst `0` (`docs/prozess-katalog-backend.md` §10,
+ * Punkt 8). Die Zahl beantwortet „wie viele Zeilen hat der Lauf angefasst".
+ */
+export type Vorschlagslauf = {
+  angelegt: number;
+  aufgefrischt: number;
+  unberuehrt: number;
+  regelA: number;
+  regelB: number;
+  keine: number;
+  bestandGeprueft: number;
+  ohneNachrichten: number;
+};
+
+/**
+ * Heuristik **und** Bestandslauf für den aktiven Mandanten (E13, E14) —
+ * **leerer Körper.**
+ *
+ * Der Endpunkt nimmt bewusst nichts entgegen: Der Mandant kommt aus der Sitzung
+ * (Regel M1), und der Lauf läuft für ihn und nicht für alle. `sende` schickt
+ * ohne Körper auch keinen `Content-Type` mit — der Controller erwartet keinen.
+ *
+ * **Er antwortet erst am Ende.** Er fährt drei Schritte in einer Transaktion,
+ * hat kein Zeitlimit und keinen Fortschritt (`docs/prozess-katalog-backend.md`
+ * §10, Punkt 7). Die Oberfläche zeigt deshalb die verstrichene Zeit und keinen
+ * Balken: Ein Balken verspricht bekannten Fortschritt, und es gibt keinen.
+ */
+export function starteVorschlagslauf(): Promise<Vorschlagslauf> {
+  return sende<Vorschlagslauf>("/katalog/vorschlagen");
 }

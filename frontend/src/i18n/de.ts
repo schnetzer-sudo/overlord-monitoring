@@ -845,6 +845,51 @@ export const de = {
       speichernLaeuft: "Wird gespeichert …",
       abbrechen: "Abbrechen",
     },
+    /**
+     * Der eine Knopf, der drei Schritte fährt (E13, E14, E15): fehlende Zeilen
+     * anlegen, offene Vorschläge auffrischen, und für **alle** Zeilen erheben,
+     * ob Nachrichten daran hängen.
+     *
+     * **Alle acht Zahlen werden gezeigt.** Ohne `bestandGeprueft` und
+     * `ohneNachrichten` wäre ein reihenweise wirkungsloser Lauf von einem
+     * erfolgreichen nicht zu unterscheiden — dieselbe Falle wie bei der Zahl
+     * verworfener Sitzungen in Schritt 9a.
+     */
+    lauf: {
+      starten: "Vorschläge und Bestand erheben",
+      hinweis:
+        "Legt fehlende Zeilen an, frischt offene Vorschläge auf und erhebt für jede Zeile, ob Nachrichten daran hängen.",
+      laeuft: "Läuft …",
+      laeuftSeit: "läuft seit {dauer}",
+      ergebnisTitel: "Der letzte Lauf",
+      ergebnisDauer: "gebraucht: {dauer}",
+      zahlen: {
+        angelegt: "angelegt",
+        aufgefrischt: "aufgefrischt",
+        unberuehrt: "unberührt",
+        regelA: "Partner aus Regel A",
+        regelB: "Partner aus Regel B",
+        keine: "ohne Partnervorschlag",
+        bestandGeprueft: "Bestand geprüft",
+        ohneNachrichten: "davon ohne Nachrichten",
+      },
+      /**
+       * Dieselben fünf Bausteine wie unter `nachrichten.detail.dauer`.
+       *
+       * **Bewusst noch einmal und nicht von dort gelesen.** Sie gehören keiner
+       * Ansicht und müssten auf der obersten Ebene stehen — genau wie `problem`
+       * und `suche`. Sie dorthin zu heben, hieße die Schlüssel des
+       * Nachrichtendetails anzufassen, und das ist eine eigene Runde. Als
+       * offener Punkt vermerkt.
+       */
+      dauer: {
+        unterSekunde: "< 1 s",
+        sekunden: "{wert} s",
+        minuten: "{wert} min",
+        stunden: "{wert} h",
+        tage: "{wert} d",
+      },
+    },
     leer: {
       titel: "Kein Prozess",
       ohneProzesse: "Für diesen Mandanten sind keine Prozesse hinterlegt.",
