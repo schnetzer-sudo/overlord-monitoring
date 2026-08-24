@@ -1,0 +1,90 @@
+-- Overlord Monitoring — Prozess-Katalog: traegt der Prozess Nachrichten? (Schritt 9b, Nachtrag).
+--
+-- WOZU. Die Haelfte des Katalogs ist tot: 765 von 1.503 Prozessen tragen im
+-- Bestand der Testkopie keine einzige Nachricht (M74b), bei VOTG sind es 350
+-- von 390 — 89,74 % (M83-5). Wer die Pflegeliste vor sich hat, sieht diesen
+-- Unterschied nicht. Er ordnet 350-mal einen Partner einem Vertrag zu, der
+-- nichts produziert, und weiss es nicht.
+--
+-- WAS SIE NICHT TUT. Sie verkleinert die Arbeit NICHT. Es werden weiterhin alle
+-- Prozesse kuratiert, auch die toten (docs/prozess-katalog.md E5), und der
+-- Fortschritt zaehlt weiterhin ueber alle (E18). Die Spalte ordnet und deutet,
+-- sie kuerzt nicht. Wer das verwechselt, baut als naechstes einen Filter, der
+-- die toten Zeilen aus der Pflege nimmt — und genau das ist seit dem 20.08.2026
+-- entschieden und verworfen.
+--
+-- SIE WAR SCHON EINMAL VERWORFEN. docs/prozess-katalog.md §9 fuehrte
+-- "Gespeicherte Spalte 'traegt Nachrichten'" mit der Begruendung: "Sie ginge
+-- still veraltet; mit E5 ist sie ohnehin gegenstandslos." Der Satz hat zwei
+-- Haelften, und nur die erste faellt: bestand_geprueft_am steht daneben, die
+-- Erhebung traegt ihr Alter an sich, aufgefrischt wird per Knopf. Sie kann
+-- veralten, aber nicht mehr STILL. Die zweite Haelfte gilt unveraendert — siehe
+-- "WAS SIE NICHT TUT". Der datierte Korrekturkasten steht in §9.
+--
+-- WARUM DAS REGEL L2 NICHT BRICHT. L2 verbietet Live-Aggregation ueber Message
+-- fuer Dashboard-Kennzahlen; begruendet ist sie damit, dass das Dashboard unter
+-- einer halben Sekunde laedt und die Produktion nichts davon merkt. Der
+-- Bestandslauf ist keine Kennzahl je Anfrage: Er laeuft auf Knopfdruck im
+-- Administrationsbereich, und M83-1 hat ihn gemessen — 22,154 ms fuer NEXANS
+-- (beste von fuenf), 32,144 ms im ersten Lauf der Sitzung. Das sind 0,22 % der
+-- Laufzeitgrenze des Lese-Pools. DAS ist das tragende Argument. Dass die
+-- gewaehlte Fassung dem Wortlaut nach gar nicht aggregiert (kein GROUP BY, nur
+-- ein EXISTS je Prozess), kommt hinzu und traegt nicht allein.
+
+ALTER TABLE process_catalog
+  -- DREI ZUSTAENDE, und der dritte ist der Grund fuer NULL:
+  --
+  --   NULL   noch nie geprueft — fuer diese Zeile hat nie ein Bestandslauf
+  --          stattgefunden
+  --   false  geprueft, es haengt KEINE Nachricht daran
+  --   true   geprueft, es haengen Nachrichten daran
+  --
+  -- NULL IST AUSDRUECKLICH ETWAS ANDERES ALS false. Daran haengt E20: Der
+  -- Filter "nur mit Nachrichten" muss ungepruefte Zeilen ZEIGEN und darf sie
+  -- nicht als "ohne Nachrichten" wegwerfen — sonst verschwindet eine Zeile, die
+  -- nie gemessen wurde, aus BEIDEN Filterstellungen und ist ueber die
+  -- Oberflaeche nicht mehr erreichbar.
+  --
+  -- KEIN DEFAULT. Ein DEFAULT false vernichtete den Unterschied in derselben
+  -- Sekunde, in der die Migration laeuft, und er waere nicht wiederherstellbar:
+  -- Nach einem DEFAULT false stuenden 1.490 Zeilen auf "geprueft und tot",
+  -- ohne dass je ein Lauf stattgefunden haette.
+  --
+  -- BOOLEAN ist in MariaDB TINYINT(1). Der Codegen bildet das fuer DIESES
+  -- Schema auf java.lang.Boolean ab (pom.xml, forcedType) — nullable also auf
+  -- Boolean und nicht auf boolean, womit die drei Zustaende bis in den
+  -- Antwortsatz durchtragen.
+  ADD COLUMN traegt_nachrichten   BOOLEAN     NULL,
+
+  -- Wann der Bestandslauf diese Zeile zuletzt angesehen hat. Sie ist die
+  -- Haelfte der Verwerfungsbegruendung, die E14 ausraeumt: Ohne sie ginge die
+  -- Spalte daneben still veralten. Die Oberflaeche leitet daraus das Alter der
+  -- Erhebung fuer die ganze Liste ab; ein zusaetzliches Feld im Umschlag
+  -- braucht es dafuer nicht.
+  --
+  -- DATETIME(3) in UTC und nicht TIMESTAMP — dieselbe Festlegung wie bei
+  -- geaendert_am, V1 und V2 (Zeitzonen und die 2038-Grenze). Gesetzt wird der
+  -- Wert von der Anwendung, nie von der Datenbank: kein DEFAULT
+  -- CURRENT_TIMESTAMP, kein ON UPDATE.
+  --
+  -- ZUR UHR: Der Wert kommt aus systemClock und NICHT aus der Anwendungsuhr —
+  -- dieselbe Wahl wie bei geaendert_am in derselben Zeile und beim audit_log
+  -- (Regel A5). Die Anwendungsuhr ist im Profil dev um den Rueckstand der
+  -- Testkopie zurueckversetzt; ein Pruefzeitpunkt, der Wochen in der
+  -- Vergangenheit liegt, waere kein Pruefzeitpunkt, und zwei Zeitstempel
+  -- derselben Zeile laegen Wochen auseinander. Regel Z1 verbietet den direkten
+  -- now()-Aufruf und schreibt KEINE der beiden Uhren vor; sie verlangt fuer
+  -- Protokollzeit ausdruecklich systemClock.
+  ADD COLUMN bestand_geprueft_am  DATETIME(3) NULL;
+
+-- KEIN INDEX. Die Spalte wird nie gefiltert — gefiltert wird im Browser (E20,
+-- die Liste liegt wegen E8 ohnehin vollstaendig dort). Ein Index kostete
+-- Pflegeaufwand bei jedem Bestandslauf, der ihn ueber ALLE Zeilen des Mandanten
+-- schreibt, und braechte an keiner Abfrage etwas ein.
+--
+-- KEINE DOWN-MIGRATION, wie ueberall in diesem Projekt.
+--
+-- KEINE VORBELEGUNG, dieselbe Entscheidung wie in V6: Die Werte entstehen im
+-- Bestandslauf je Mandant und nirgends sonst. Eine Vorbelegung waere geraten
+-- und nicht erhoben (Regel Q4) — und sie koennte es gar nicht, weil sie den
+-- Mandantenfilter nicht kennt.
