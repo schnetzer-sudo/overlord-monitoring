@@ -9,7 +9,9 @@ import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AppUserMandant;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AuditLog;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.BamSollaenge;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.BamSpalte;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.MessageRollup;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.ProcessCatalog;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.RollupLauf;
 
 import java.util.Arrays;
 import java.util.List;
@@ -59,9 +61,19 @@ public class OverlordMonitor extends SchemaImpl {
     public final BamSpalte BAM_SPALTE = BamSpalte.BAM_SPALTE;
 
     /**
+     * The table <code>overlord_monitor.message_rollup</code>.
+     */
+    public final MessageRollup MESSAGE_ROLLUP = MessageRollup.MESSAGE_ROLLUP;
+
+    /**
      * The table <code>overlord_monitor.process_catalog</code>.
      */
     public final ProcessCatalog PROCESS_CATALOG = ProcessCatalog.PROCESS_CATALOG;
+
+    /**
+     * The table <code>overlord_monitor.rollup_lauf</code>.
+     */
+    public final RollupLauf ROLLUP_LAUF = RollupLauf.ROLLUP_LAUF;
 
     /**
      * No further instances allowed
@@ -84,7 +96,9 @@ public class OverlordMonitor extends SchemaImpl {
             AuditLog.AUDIT_LOG,
             BamSollaenge.BAM_SOLLAENGE,
             BamSpalte.BAM_SPALTE,
-            ProcessCatalog.PROCESS_CATALOG
+            MessageRollup.MESSAGE_ROLLUP,
+            ProcessCatalog.PROCESS_CATALOG,
+            RollupLauf.ROLLUP_LAUF
         );
     }
 }
