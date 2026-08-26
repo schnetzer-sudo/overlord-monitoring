@@ -534,48 +534,71 @@ und werden seit Schritt 3 auch vom Nutzermenü gelesen.
 
 ---
 
-## 14. Die Sichtprüfung — und was sie offen lässt
+## 14. Die Sichtprüfung
 
-**Am 24.08.2026 durchgeklickt, bei 1920 × 889, ohne einen einzigen Vorgang auszuführen.** Ein
-Schutzgeländer im Browser hat jeden schreibenden Aufruf mitgeschrieben und abgewiesen; die geteilte
-Testkopie ist unberührt geblieben.
+**Zwei Runden.** Am 24.08.2026 wurde die Seite durchgeklickt, **ohne einen Vorgang auszuführen**; am
+26.08.2026 sind mit einem eigens angelegten Wegwerfkonto die Pfade nachgeholt worden, die dafür ein
+Konto brauchen, das man verbrauchen darf.
 
-### Belegt
+> **Das Wegwerfkonto heißt `zz-wegwerf-9a`** (Rolle `MANDANT`, Mandant `SYSTEM`) und **bleibt
+> stehen**: Es gibt kein Löschen (E8), `audit_log.actor_user_id` verweist auf `app_user`. Es ist
+> deshalb so benannt, dass sein Zweck auch in einem Jahr noch erkennbar ist, und sortiert ans Ende
+> der Liste.
+
+### Belegt am 24.08.2026 — ohne einen Schreibvorgang
+
+Die Liste mit neun Spalten und dem Hinweis aus E21; **kein Dokumentscroll**; das aufklappende
+Formular; **E11 und E10 vorweggenommen statt aufgefangen**; alle zehn Mandanten einschließlich
+`SYSTEM` und `WOC`; die Sperre der übrigen Zeilen; **E19 in beiden Hälften** — am eigenen Konto
+erscheint der Dialog bei *null* Schreibaufrufen, am fremden erscheint er nicht und der Aufruf läuft
+sofort. Konsole ohne Meldung.
+
+### Belegt am 26.08.2026 — mit dem Wegwerfkonto
 
 | | Was gesehen wurde |
 |---|---|
-| Die Liste | Drei Konten, neun Spalten, der Hinweis aus E21 darüber. **Kein Dokumentscroll**: `scrollHeight` = `clientHeight` = 889, der einzige Scrollbereich bleibt `main` |
-| Die klebende Kopfzelle | `position: sticky`, `top: -16px` — die Zahl aus dem Rahmen, wie bei der Pflegeliste |
-| Das Formular | Klappt unter der Zeile auf, alle fünf Vorgänge erreichbar, die Zeile bleibt lesbar darüber stehen |
-| **E11 vorweggenommen** | Am Bootstrap-Konto — dem einzigen ohne Mandanten — ist „Mandant" im Auswahlfeld **gesperrt**, mit dem Satz, was zuerst zu tun ist |
-| **E10 vorweggenommen** | Bei genau einer Zuordnung ist deren Haken **gesperrt**, mit dem Satz zum Zwischenschritt. An einem Konto mit zwei wäre er es nicht |
-| Die Mandantenauswahl | **Alle zehn**, einschließlich `SYSTEM` und `WOC` — dieselbe Quelle, dieselbe Behandlung wie die Mandantenauswahl aus Schritt 3 |
-| Die Sperre der übrigen Zeilen | Beide anderen Schaltflächen gesperrt, mit dem `title`, der den Grund nennt |
-| **E19, erste Hälfte** | Am eigenen Konto erscheint der Dialog — und **nachgemessen null Schreibaufrufe**, er steht also wirklich *vor* dem Aufruf und nicht danach |
-| **E19, zweite Hälfte** | Am fremden Konto erscheint **kein** Dialog, und der Aufruf läuft sofort |
-| Die Fehlerstelle | Der abgewiesene Aufruf hat seine Meldung **am auslösenden Abschnitt** gezeigt und nicht über dem Formular — nebenbei belegt |
-| Die Konsole | Ohne jede Meldung. Kein Schlüsselwarnung, kein Hydrationsfehler |
+| **`lastLogin = null`** | Das frisch angelegte Konto trägt **„nie angemeldet"** — der Zustand, den der Bestand vorher nicht hatte (E17) |
+| **Änderungszwang** | Dasselbe Konto trägt **„Wechsel erforderlich"**; auch diese Spalte war vorher nie gefüllt zu sehen |
+| **Alle fünf Vorgänge** | sperren, entsperren, deaktivieren, reaktivieren, hochstufen, herabstufen, drei Mengenersetzungen, Passwort — **je genau ein Aufruf, und danach kein `GET /api/admin/users`**. Die Antwort setzt die Zeile, die Liste wird nicht nachgeholt |
+| **Die Mengenersetzung auf der Leitung** | Der Rumpf trug `{"tenants":["SYSTEM","NEXANS"]}` — die **vollständige Zielmenge**, keine Differenz (E4) |
+| **Der Tausch aus E10** | Mit zwei Haken ist keiner mehr gesperrt und der Hinweis verschwindet; danach ließ sich `SYSTEM` abwählen und das Konto trug nur noch `NEXANS` |
+| **Das Passwort** | Zu kurz → der Knopf ist gesperrt, **kein Aufruf**. Dasselbe Passwort noch einmal → `400`, und `passwort-unveraendert` steht übersetzt **am Abschnitt**. Erfolg → das Feld leert sich |
+| **`409 selbstschutz`** | Am eigenen Konto „sperren": **kein Dialog**, der Aufruf läuft, die Übersetzung steht am Abschnitt, und der Schalter springt zurück. Es war `selbstschutz` und nicht `letzter-admin` — es gibt einen zweiten nutzbaren Administrator, und damit greift die zweite Stufe. **Das ist die Entscheidung aus §5 am laufenden System**: auffangen, nicht vorwegnehmen |
+| **`lockedUntil` gefüllt** | Nach fünf absichtlichen Fehlversuchen stand in der Zeile **„nicht gesperrt"** neben **„bis 26.08.2026, 09:44"** — zwei Spalten, zwei verschiedene Aussagen. **Das ist der Fall, für den E20 gebaut wurde**: Vorher hätte der Admin `locked: false` gesehen und keine Erklärung gehabt |
+| **Die klebende Kopfzeile** | Über **44 Zeilen** (im DOM vervielfacht — das Verhalten ist reines CSS): `main` und Kopfzeile beide bei **y = 51**, `documentElement` scrollt nicht, `window.scrollY` bleibt 0. Dieselben Zahlen wie die Pflegeliste über 733 Zeilen |
 
-### Offen — fünf Dinge, und keines ist Nachlässigkeit
+**Die IP-Drossel war vorher geprüft:** `AnmeldeSperre` greift erst bei **20** Fehlversuchen je Adresse
+in fünfzehn Minuten und schreibt nichts in die Datenbank; fünf Versuche bleiben weit darunter, und
+die nächste erfolgreiche Anmeldung setzt den Zähler ohnehin zurück.
+
+### Ein Befund, und er ist behoben
+
+**Nach jeder Mengenersetzung ging ein zusätzliches `GET /api/mandanten` hinaus.** Der Grund ist die
+Rücksetzung des Entwurfs über den `key`: React hängt die Auswahl neu ein, und `useQuery` holt beim
+Einhängen nach, sobald die Antwort älter als `staleTime` ist — mit den dreißig Sekunden aus
+`lib/query-client.ts` also fast immer. Auf einer Seite, deren ganzer Punkt ist, dass die Antwort den
+Zwischenspeicher **setzt** statt nachzuholen, ist das der falsche Aufruf.
+
+Behoben mit derselben Bauform, die die Katalogpflege für ihre Partnervorschläge hat: fünfzehn
+Minuten Haltbarkeit für Stammdaten, die sich während einer Pflegesitzung nicht ändern. **Nachgemessen
+danach:** Öffnen des Formulars kostet **null** Aufrufe, Speichern genau ein `PUT`.
+
+### Offen — zwei Dinge
 
 | | |
 |---|---|
-| 1 | **Das schmale Fenster.** Die Browsersteuerung kann das Fenster nicht verkleinern ([`frontend-grundlagen.md`](frontend-grundlagen.md) §8); geprüft ist das Regelwerk, nicht die Darstellung. Bei 360 px stehen fünf Spalten nebeneinander — Benutzer, Sperre, Zeitsperre, Konto und der Knopf —, und ob das trägt, ist von Hand nachzusehen |
-| 2 | **Die klebende Kopfzeile im Scrollen.** Drei Konten scrollen nicht. Die Klasse ist zeichengleich die der Pflegeliste, und **dort** ist über 733 Zeilen gemessen (`main` und Kopfzeile beide bei y = 51); hier steht bislang nur der berechnete Stil |
-| 3 | **`lockedUntil` gefüllt.** Kein Konto trägt eine laufende Zeitsperre — der Zustand entsteht nach fünf Fehlversuchen an einem echten Konto und ist nicht nebenbei herzustellen. Die Spalte ist deshalb nur in ihrem leeren Zustand („keine") gesehen worden |
-| 4 | **`lastLogin = null`.** Jedes der drei Konten war schon angemeldet; „nie angemeldet" ist im Browser nie erschienen. Im Baum ist es geprüft, am laufenden System nicht |
-| 5 | **Ein wirklich ausgeführter Vorgang und der Zustand „kein Zugriff".** Der eine schreibt auf die geteilte Testkopie und wirft ein echtes Konto aus allen Sitzungen (E5); der andere braucht eine Anmeldung als MANDANT. Für beides gehört ein eigenes Wegwerfkonto angelegt — und dann gehört auch der Weg *durch* die Vorwarnung hindurch dazu, samt der Abmeldung, die ihr folgt |
+| 1 | **Das schmale Fenster.** Die Browsersteuerung kann das Fenster nicht verkleinern ([`frontend-grundlagen.md`](frontend-grundlagen.md) §8); geprüft ist das Regelwerk, nicht die Darstellung. Bei 360 px stehen fünf Spalten nebeneinander — Benutzer, Sperre, Zeitsperre, Konto und der Knopf |
+| 2 | **Der Zustand „kein Zugriff".** Er braucht eine Anmeldung als `MANDANT`; das Wegwerfkonto trägt die Rolle und den Änderungszwang, sein Weg führt also erst über die Passwortseite. **Passwörter tippt Claude Code nicht** — dieser Pfad gehört von Hand gegangen |
 
 ### Nicht in diesem Auftrag
 
-- **Kein Löschen von Konten** (E8) und **keine Suche, kein Blättern** (E16). Bei dreißig Konten ist
-  Letzteres richtig; wächst der Bestand deutlich, ist es eine neue Entscheidung und kein Nachziehen.
+- **Kein Löschen von Konten** (E8) und **keine Suche, kein Blättern** (E16).
 - **Kein Anlegen über die Oberfläche.** `POST /api/admin/users` steht seit Schritt 3 und ist
-  unangetastet (E4); die Maske dazu gehört nicht zu 9a.
+  unangetastet (E4); die Maske dazu gehört nicht zu 9a. **Das Wegwerfkonto ist deshalb über den
+  Endpunkt entstanden und nicht über die Seite** — wer heute ein Konto anlegen will, geht denselben
+  Weg.
 - Die offenen Punkte **3, 4 und 6** aus
-  [`benutzerverwaltung-backend.md`](benutzerverwaltung-backend.md) §9 — der Index aus M82, die tote
-  Spalte `last_login_at`, der falsche Migrationskommentar. Alle drei sind Entscheidungen und keine
-  Ableitungen.
+  [`benutzerverwaltung-backend.md`](benutzerverwaltung-backend.md) §9.
 
 ---
 

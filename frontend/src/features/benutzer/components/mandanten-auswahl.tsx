@@ -66,6 +66,13 @@ import { istLetzteZuordnung, mengeGeaendert, umschalten, wahlmoeglichkeiten } fr
  * ausgeschlossen, und er hätte einen Zwischenzustand, in dem zwei Wahrheiten
  * nebeneinander stehen.
  */
+/**
+ * Wie lange die Mandantenliste als frisch gilt. Dieselbe Zahl und derselbe Grund
+ * wie bei den Partnervorschlägen der Katalogpflege: Stammdaten, die sich während
+ * einer Pflegesitzung nicht ändern.
+ */
+const MANDANTEN_HALTBARKEIT = 15 * 60 * 1000;
+
 export function MandantenAuswahl({
   zeile,
   gesperrt,
@@ -83,13 +90,26 @@ export function MandantenAuswahl({
 
   /*
    * Dieselbe Abfrage wie die Mandantenauswahl, deshalb meist schon beantwortet.
-   * Kein eigenes `staleTime`: Es sind Stammdaten des Altsystems, und die
-   * Voreinstellung aus `lib/query-client.ts` ist für eine Liste, die man
-   * höchstens einmal je Sitzung öffnet, genau richtig.
+   *
+   * **Länger gehalten als die Voreinstellung**, dieselbe Bauform wie die
+   * Partnervorschläge der Katalogpflege (`features/katalog/hooks.ts`
+   * `usePartner`): Es sind Stammdaten aus `GlassfishDB.Mandant`, zehn Zeilen,
+   * und sie ändern sich nicht, während jemand ein Konto pflegt.
+   *
+   * > **Der Grund ist gemessen und nicht vorgesorgt** (Sichtprüfung
+   * > 26.08.2026). Nach jedem Speichern wechselt der `key` dieser Komponente —
+   * > so setzt sich der Entwurf zurück —, React hängt sie neu ein, und
+   * > `useQuery` holt beim Einhängen nach, sobald die Antwort älter als
+   * > `staleTime` ist. Mit den dreißig Sekunden aus `lib/query-client.ts` ging
+   * > deshalb **nach jeder Mengenersetzung** ein zusätzliches
+   * > `GET /api/mandanten` hinaus — auf einer Seite, deren ganzer Punkt ist,
+   * > dass die Antwort den Zwischenspeicher setzt, statt nachzuholen.
    */
   const mandanten = useQuery<Mandant[]>({
     queryKey: MANDANTEN_SCHLUESSEL,
     queryFn: holeMandanten,
+    staleTime: MANDANTEN_HALTBARKEIT,
+    gcTime: MANDANTEN_HALTBARKEIT,
   });
 
   if (mandanten.isPending) {
