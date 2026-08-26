@@ -6,7 +6,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import de.kraftwerkone.overlord.monitor.security.Rolle;
 import de.kraftwerkone.overlord.monitor.security.SicherheitsTestbasis;
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -34,6 +36,19 @@ class ProzessKatalogDbIT extends SicherheitsTestbasis {
   private static final String PASSWORT = "einLangesPasswort1";
   private static final String PARTNER = "ERFUNDENERPARTNER";
   private static final String ZWEITER_PARTNER = "ANDERERPARTNER";
+
+  /**
+   * Wer die Zeilen der Uebernahmetests von Hand anlegt. <b>Mit dem Testpraefix</b>, sonst greift
+   * die Aufraeumregel aus §7 nicht.
+   */
+  private static final String ANLEGER = PRAEFIX + "vorschlag";
+
+  /**
+   * Der Zeitstempel der von Hand angelegten Zeilen — <b>fest und nicht {@code now()}</b>. Regel Z1
+   * gilt fuer den Anwendungscode; ein fester Wert macht hier sichtbar, dass der Endpunkt ihn
+   * ueberschreibt.
+   */
+  private static final LocalDateTime ANGELEGT_AM = LocalDateTime.parse("2026-01-01T00:00:00");
 
   private Sitzung sitzung;
 
@@ -87,6 +102,84 @@ class ProzessKatalogDbIT extends SicherheitsTestbasis {
     return """
         {"projectId":"%s","feld":"%s","wert":%s,"modus":"%s"}"""
         .formatted(projectId, feld, alsJson(wert), modus);
+  }
+
+  private static String uebernahme(String modus) {
+    return """
+        {"modus":"%s"}"""
+        .formatted(modus);
+  }
+
+  /**
+   * Prozesse des Mandanten, die <b>noch keine Katalogzeile tragen</b> — nur auf ihnen legt dieser
+   * Test etwas an.
+   *
+   * <p><b>Das ist nicht Vorsicht, sondern eine Lehre.</b> Der erste Entwurf schrieb die Testzeile
+   * per Upsert auf den <i>ersten</i> Prozess des Mandanten. Traegt der bereits eine kuratierte
+   * Zeile, ueberschreibt der Upsert deren {@code geaendert_von} mit dem Testpraefix — und die
+   * Aufraeumregel loescht danach eine <b>fremde</b> Zeile. Genau das ist am 26.08.2026 einmal
+   * passiert und hat eine Katalogzeile von {@code VOTG} gekostet.
+   */
+  private List<String> freieProzesse(int wieviele) throws IOException, InterruptedException {
+    List<String> alle = prozesse();
+    Set<String> vorhanden =
+        Set.copyOf(
+            monitorDsl
+                .select(PROCESS_CATALOG.PROCESS_ID)
+                .from(PROCESS_CATALOG)
+                .where(PROCESS_CATALOG.PROCESS_ID.in(alle))
+                .fetch(satz -> satz.value1()));
+    List<String> frei =
+        alle.stream().filter(kennung -> !vorhanden.contains(kennung)).limit(wieviele).toList();
+    assertThat(frei)
+        .as(
+            "Dieser Test legt keine fremde Zeile um — er braucht %d Prozesse ohne Katalogzeile."
+                + " Stehen weniger zur Verfuegung, ist der Katalog von %s kuratiert und das ist"
+                + " der Befund",
+            wieviele, MANDANT_B)
+        .hasSize(wieviele);
+    return frei;
+  }
+
+  /**
+   * Legt von Hand eine Katalogzeile an — <b>ohne jede Regel</b> und <b>ohne Upsert</b>.
+   *
+   * <p>Das ist der Grund, warum diese Tests auf {@code SUTTONS} laufen: Die Heuristik liefert dort
+   * <b>nichts</b>, es entsteht also keine Zeile mit {@code REGEL_A}/{@code REGEL_B} von selbst.
+   * Jede Vorschlagszeile hier ist gesetzt und keine abgeleitete — sonst pruefte der Test die
+   * Heuristik statt der Uebernahme.
+   *
+   * <p><b>Ein reines {@code INSERT}:</b> Eine Kollision schlaegt laut fehl, statt still eine fremde
+   * Zeile zu ueberschreiben. Die Kennungen kommen aus {@link #freieProzesse}.
+   *
+   * <p><b>{@code geaendert_von} traegt das Testpraefix.</b> Die Aufraeumregel aus §7 haengt daran;
+   * ohne sie hinterliesse der erste Lauf gepflegte Zeilen auf der geteilten Testkopie, und die
+   * ueberleben jeden weiteren Lauf.
+   */
+  private void legeZeileAn(
+      String processId, Pflegestatus status, VorschlagHerkunft herkunft, String richtung) {
+    monitorDsl
+        .insertInto(PROCESS_CATALOG)
+        .set(PROCESS_CATALOG.PROCESS_ID, processId)
+        .set(PROCESS_CATALOG.PARTNER, herkunft == VorschlagHerkunft.KEINE ? null : PARTNER)
+        .set(PROCESS_CATALOG.RICHTUNG, richtung)
+        .set(PROCESS_CATALOG.PFLEGESTATUS, status.name())
+        .set(PROCESS_CATALOG.VORSCHLAG_HERKUNFT, herkunft.name())
+        .set(PROCESS_CATALOG.GEAENDERT_AM, ANGELEGT_AM)
+        .set(PROCESS_CATALOG.GEAENDERT_VON, ANLEGER)
+        .execute();
+  }
+
+  /** Der Aenderungsvermerk direkt aus der Tabelle — er steht in keiner Antwort. */
+  private String[] vermerkVon(String processId) {
+    var satz =
+        monitorDsl
+            .select(PROCESS_CATALOG.GEAENDERT_AM, PROCESS_CATALOG.GEAENDERT_VON)
+            .from(PROCESS_CATALOG)
+            .where(PROCESS_CATALOG.PROCESS_ID.eq(processId))
+            .fetchOne();
+    assertThat(satz).as("Zeile %s fehlt in process_catalog", processId).isNotNull();
+    return new String[] {String.valueOf(satz.value1()), satz.value2()};
   }
 
   private String feldVon(String processId, String feld) throws IOException, InterruptedException {
@@ -415,5 +508,159 @@ class ProzessKatalogDbIT extends SicherheitsTestbasis {
                 + " trotzdem mitfuehren, sonst sieht die Zeile nach dem Speichern ungeprueft aus")
         .isTrue();
     assertThat(zugeordnet.<Object>json("$.bestandGeprueftAm")).isNotNull();
+  }
+
+  // ─── Die Vorschlagsuebernahme (E22 bis E24) ──────────────────────────────────
+
+  @Test
+  @DisplayName("Die Vorschau schreibt nicht und nennt die Zahl (E24)")
+  void uebernahme_vorschau_schreibt_nicht() throws Exception {
+    List<String> alle = freieProzesse(2);
+    legeZeileAn(alle.get(0), Pflegestatus.OFFEN, VorschlagHerkunft.REGEL_A, null);
+    legeZeileAn(alle.get(1), Pflegestatus.OFFEN, VorschlagHerkunft.REGEL_A, null);
+
+    Antwort vorschau =
+        sitzung.sende("/api/katalog/vorschlaege-uebernehmen", uebernahme("VORSCHAU"));
+
+    assertThat(vorschau.status()).isEqualTo(200);
+    assertThat(vorschau.<String>json("$.modus")).isEqualTo("VORSCHAU");
+    assertThat(vorschau.<Integer>json("$.betroffen")).isEqualTo(2);
+    assertThat(vorschau.<Integer>json("$.regelA")).isEqualTo(2);
+    assertThat(vorschau.<Integer>json("$.regelB")).isZero();
+
+    assertThat(feldVon(alle.get(0), "pflegestatus"))
+        .as("Wer den Modus vergisst oder die Vorschau holt, veraendert nichts")
+        .isEqualTo("OFFEN");
+    assertThat(feldVon(alle.get(1), "pflegestatus")).isEqualTo("OFFEN");
+  }
+
+  /**
+   * <b>Ausfuehren setzt genau den Status — und sonst nichts.</b>
+   *
+   * <p>Das ist der Kern von E22: Partner und Richtung stehen bereits in der Zeile, die Uebernahme
+   * kopiert keinen Feldwert. Und {@code vorschlag_herkunft} bleibt stehen, weil sie danach der
+   * einzige Hinweis darauf ist, dass der Wert aus einer Regel und nicht aus einem Kopf stammt.
+   */
+  @Test
+  @DisplayName("Ausfuehren setzt GEPFLEGT und laesst Partner, Richtung und Herkunft stehen (E22)")
+  void uebernahme_setzt_genau_den_status() throws Exception {
+    String prozess = freieProzesse(1).getFirst();
+    legeZeileAn(prozess, Pflegestatus.OFFEN, VorschlagHerkunft.REGEL_A, Richtung.EINGEHEND.name());
+    String[] vorher = vermerkVon(prozess);
+
+    Antwort ausgefuehrt =
+        sitzung.sende("/api/katalog/vorschlaege-uebernehmen", uebernahme("AUSFUEHREN"));
+
+    assertThat(ausgefuehrt.status()).isEqualTo(200);
+    assertThat(ausgefuehrt.<String>json("$.modus")).isEqualTo("AUSFUEHREN");
+    assertThat(ausgefuehrt.<Integer>json("$.betroffen")).isEqualTo(1);
+
+    assertThat(feldVon(prozess, "pflegestatus")).isEqualTo("GEPFLEGT");
+    assertThat(feldVon(prozess, "partner"))
+        .as("Uebernehmen ist eine Statusaenderung und kein Kopieren von Werten")
+        .isEqualTo(PARTNER);
+    assertThat(feldVon(prozess, "richtung")).isEqualTo("EINGEHEND");
+    assertThat(feldVon(prozess, "vorschlagHerkunft"))
+        .as("Sie ist der einzige verbliebene Beleg dafuer, dass der Wert aus einer Regel stammt")
+        .isEqualTo("REGEL_A");
+
+    String[] nachher = vermerkVon(prozess);
+    assertThat(nachher[0]).as("geaendert_am ist neu gesetzt").isNotEqualTo(vorher[0]);
+    assertThat(nachher[1])
+        .as(
+            "geaendert_von traegt den angemeldeten Testnutzer — und der MUSS das Praefix tragen,"
+                + " sonst greift die Aufraeumregel aus §7 nicht und die Zeile ueberlebt jeden"
+                + " weiteren Lauf auf der geteilten Testkopie")
+        .isEqualTo(NUTZER)
+        .startsWith(PRAEFIX);
+  }
+
+  /**
+   * <b>E22 am laufenden Endpunkt</b> — der Fall, der die 224 {@code NEXANS}-Zeilen schuetzt.
+   *
+   * <p>Eine Zeile mit {@code KEINE} und gefuellter Richtung wird nicht angefasst. „Gepflegt mit
+   * leerem Partner" heisst in diesem Katalog ausdruecklich <i>„hingesehen, es gibt keinen"</i> (E4)
+   * — ein Knopf, der solche Zeilen mitnaehme, erfaende Behauptungen, die kein Mensch getroffen hat.
+   */
+  @Test
+  @DisplayName("Eine Zeile mit KEINE und gefuellter Richtung bleibt offen (E22)")
+  void uebernahme_laesst_zeilen_ohne_partnervorschlag_offen() throws Exception {
+    String prozess = freieProzesse(1).getFirst();
+    legeZeileAn(prozess, Pflegestatus.OFFEN, VorschlagHerkunft.KEINE, Richtung.AUSGEHEND.name());
+
+    Antwort vorschau =
+        sitzung.sende("/api/katalog/vorschlaege-uebernehmen", uebernahme("VORSCHAU"));
+    assertThat(vorschau.<Integer>json("$.betroffen"))
+        .as("Eine Richtung ist kein Partnervorschlag")
+        .isZero();
+
+    sitzung.sende("/api/katalog/vorschlaege-uebernehmen", uebernahme("AUSFUEHREN"));
+
+    assertThat(feldVon(prozess, "pflegestatus")).isEqualTo("OFFEN");
+    assertThat(feldVon(prozess, "richtung")).isEqualTo("AUSGEHEND");
+    assertThat(feldVon(prozess, "partner")).isNull();
+  }
+
+  @Test
+  @DisplayName("Eine bereits gepflegte Zeile taucht in betroffen nicht auf und bleibt unberuehrt")
+  void uebernahme_faengt_gepflegte_zeilen_nicht_ein() throws Exception {
+    String prozess = freieProzesse(1).getFirst();
+    legeZeileAn(prozess, Pflegestatus.GEPFLEGT, VorschlagHerkunft.REGEL_B, null);
+    String[] vorher = vermerkVon(prozess);
+
+    Antwort vorschau =
+        sitzung.sende("/api/katalog/vorschlaege-uebernehmen", uebernahme("VORSCHAU"));
+    assertThat(vorschau.<Integer>json("$.betroffen"))
+        .as("Die Bedingung aus E22 verlangt OFFEN — eine gepflegte Zeile ist schon entschieden")
+        .isZero();
+
+    sitzung.sende("/api/katalog/vorschlaege-uebernehmen", uebernahme("AUSFUEHREN"));
+
+    assertThat(vermerkVon(prozess))
+        .as("Der Aenderungsvermerk einer gepflegten Zeile bleibt stehen")
+        .isEqualTo(vorher);
+  }
+
+  @Test
+  @DisplayName("Die leere Menge antwortet mit Nullen und wirft nicht")
+  void uebernahme_ohne_vorschlaege_ist_kein_fehler() throws Exception {
+    Antwort ausgefuehrt =
+        sitzung.sende("/api/katalog/vorschlaege-uebernehmen", uebernahme("AUSFUEHREN"));
+
+    assertThat(ausgefuehrt.status())
+        .as("„es gibt nichts zu uebernehmen\" ist kein Fehler")
+        .isEqualTo(200);
+    assertThat(ausgefuehrt.<Integer>json("$.betroffen"))
+        .as(
+            "Bei SUTTONS liefert die Heuristik nichts (M76). Steht hier eine Zahl, hat jemand"
+                + " kuratiert — dann ist das der Befund und nicht der Test")
+        .isZero();
+    assertThat(ausgefuehrt.<Integer>json("$.regelA")).isZero();
+    assertThat(ausgefuehrt.<Integer>json("$.regelB")).isZero();
+  }
+
+  @Test
+  @DisplayName("regelA plus regelB ergibt betroffen — bei gemischtem Bestand")
+  void uebernahme_schluesselt_die_herkunft_vollstaendig_auf() throws Exception {
+    List<String> alle = freieProzesse(5);
+    legeZeileAn(alle.get(0), Pflegestatus.OFFEN, VorschlagHerkunft.REGEL_A, null);
+    legeZeileAn(alle.get(1), Pflegestatus.OFFEN, VorschlagHerkunft.REGEL_B, null);
+    legeZeileAn(alle.get(2), Pflegestatus.OFFEN, VorschlagHerkunft.REGEL_B, null);
+    // Und zwei, die nicht mitzaehlen duerfen: ohne Partnervorschlag und bereits gepflegt.
+    legeZeileAn(alle.get(3), Pflegestatus.OFFEN, VorschlagHerkunft.KEINE, null);
+    legeZeileAn(alle.get(4), Pflegestatus.GEPFLEGT, VorschlagHerkunft.REGEL_A, null);
+
+    Antwort vorschau =
+        sitzung.sende("/api/katalog/vorschlaege-uebernehmen", uebernahme("VORSCHAU"));
+
+    int betroffen = vorschau.json("$.betroffen");
+    int regelA = vorschau.json("$.regelA");
+    int regelB = vorschau.json("$.regelB");
+
+    assertThat(regelA).isEqualTo(1);
+    assertThat(regelB).isEqualTo(2);
+    assertThat(regelA + regelB)
+        .as("Die Aufschluesselung ist vollstaendig — sonst waere sie als Kontrolle wertlos")
+        .isEqualTo(betroffen);
   }
 }

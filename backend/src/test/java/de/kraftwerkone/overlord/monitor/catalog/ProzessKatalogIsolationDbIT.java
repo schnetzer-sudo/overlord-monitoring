@@ -6,7 +6,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import de.kraftwerkone.overlord.monitor.security.Rolle;
 import de.kraftwerkone.overlord.monitor.security.SicherheitsTestbasis;
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -16,9 +18,11 @@ import org.junit.jupiter.api.Test;
  * Die Pflicht-Isolationstests des Prozess-Katalogs — <b>einer je Endpunkt</b> (Regel M4). Ohne sie
  * wird nicht gemergt.
  *
- * <p>Es sind fuenf Endpunkte, und drei davon <b>schreiben</b>. Das macht den Nachweis hier
- * schwerwiegender als bei einer Leseflaeche: Eine Luecke faende nicht nur fremde Daten, sie
- * ueberschriebe sie.
+ * <p>Es sind <b>sechs</b> Endpunkte, und <b>vier</b> davon <b>schreiben</b>. Das macht den Nachweis
+ * hier schwerwiegender als bei einer Leseflaeche: Eine Luecke faende nicht nur fremde Daten, sie
+ * ueberschriebe sie. Der sechste ist die Vorschlagsuebernahme (E22–E24, 26.08.2026); seine
+ * Gegenprobe steht auf der <b>Wirkung</b> und nicht auf der Eingabe, weil er keine Kennung
+ * entgegennimmt.
  *
  * <p><b>Zwei Rollengrenzen statt einer.</b> {@code /api/katalog/**} verlangt zusaetzlich die Rolle
  * {@code ADMIN}. Die Nutzer hier sind deshalb Administratoren, und weil ein Administrator fuer
@@ -42,6 +46,13 @@ class ProzessKatalogIsolationDbIT extends SicherheitsTestbasis {
 
   /** Eine ProjectID, die es garantiert nicht gibt. */
   private static final String ERFUNDENES_PROJEKT = "000_GibtEsNicht";
+
+  /**
+   * Der Zeitstempel der von Hand angelegten Zeilen. <b>Fest und nicht {@code now()}</b> — Regel Z1
+   * gilt fuer den Anwendungscode, und ein fester Wert macht sichtbar, dass der Endpunkt ihn
+   * ueberschreibt.
+   */
+  private static final LocalDateTime ANGELEGT_AM = LocalDateTime.parse("2026-01-01T00:00:00");
 
   private Sitzung aufVotg;
   private Sitzung aufSuttons;
@@ -117,6 +128,84 @@ class ProzessKatalogIsolationDbIT extends SicherheitsTestbasis {
     return """
         {"projectId":%s,"feld":%s,"wert":%s,"modus":%s}"""
         .formatted(alsJson(projectId), alsJson(feld), alsJson(wert), alsJson(modus));
+  }
+
+  private static String uebernahme(String modus) {
+    return """
+        {"modus":%s}"""
+        .formatted(alsJson(modus));
+  }
+
+  /**
+   * Ein Prozess des Mandanten, der <b>noch keine Katalogzeile traegt</b>.
+   *
+   * <p><b>Diese Pruefung ist nicht Vorsicht, sondern eine Lehre.</b> Der erste Entwurf legte die
+   * Testzeile per Upsert auf den <i>ersten</i> Prozess des Mandanten. Traegt der bereits eine
+   * kuratierte Zeile, ueberschreibt der Upsert deren {@code geaendert_von} mit dem Testpraefix —
+   * und die Aufraeumregel aus §7 loescht danach eine <b>fremde</b> Zeile. Genau das ist am
+   * 26.08.2026 einmal passiert und hat eine Katalogzeile von {@code VOTG} gekostet.
+   *
+   * <p>Angelegt wird deshalb ausschliesslich auf Prozessen ohne Zeile, und {@link #legeVorschlagAn}
+   * ist ein reines {@code INSERT}: Eine Kollision schlaegt laut fehl, statt still zu
+   * ueberschreiben.
+   */
+  private String prozessOhneKatalogzeile(Sitzung sitzung) throws IOException, InterruptedException {
+    List<String> alle = sitzung.hole("/api/katalog/prozesse").json("$[*].processId");
+    assertThat(alle).as("Ohne Prozesse bewiese der Test nur, dass leer leer ist").isNotEmpty();
+    Set<String> vorhanden =
+        Set.copyOf(
+            monitorDsl
+                .select(PROCESS_CATALOG.PROCESS_ID)
+                .from(PROCESS_CATALOG)
+                .where(PROCESS_CATALOG.PROCESS_ID.in(alle))
+                .fetch(satz -> satz.value1()));
+    return alle.stream()
+        .filter(kennung -> !vorhanden.contains(kennung))
+        .findFirst()
+        .orElseThrow(
+            () ->
+                new AssertionError(
+                    "Jeder Prozess dieses Mandanten traegt bereits eine Katalogzeile. Dieser Test"
+                        + " legt keine fremde Zeile um — er braucht eine freie."));
+  }
+
+  /**
+   * Legt von Hand eine offene Zeile mit einem Partnervorschlag an — <b>ohne jede Regel</b> und
+   * <b>ohne Upsert</b>.
+   *
+   * <p>Sie traegt das Testpraefix in {@code geaendert_von} und faellt damit unter die Aufraeumregel
+   * aus §7. Der Endpunkt ueberschreibt die Spalte spaeter mit dem Namen des angemeldeten
+   * Testnutzers — der ebenfalls das Praefix traegt, sonst hinterliesse der erste Lauf gepflegte
+   * Zeilen auf der geteilten Testkopie.
+   */
+  private void legeVorschlagAn(String processId) {
+    monitorDsl
+        .insertInto(PROCESS_CATALOG)
+        .set(PROCESS_CATALOG.PROCESS_ID, processId)
+        .set(PROCESS_CATALOG.PARTNER, "ERFUNDENERPARTNER")
+        .set(PROCESS_CATALOG.RICHTUNG, Richtung.EINGEHEND.name())
+        .set(PROCESS_CATALOG.PFLEGESTATUS, Pflegestatus.OFFEN.name())
+        .set(PROCESS_CATALOG.VORSCHLAG_HERKUNFT, VorschlagHerkunft.REGEL_A.name())
+        .set(PROCESS_CATALOG.GEAENDERT_AM, ANGELEGT_AM)
+        .set(PROCESS_CATALOG.GEAENDERT_VON, PRAEFIX + "vorschlag")
+        .execute();
+  }
+
+  private static int betroffen(Sitzung sitzung) throws IOException, InterruptedException {
+    Antwort vorschau =
+        sitzung.sende("/api/katalog/vorschlaege-uebernehmen", uebernahme("VORSCHAU"));
+    assertThat(vorschau.status()).isEqualTo(200);
+    return vorschau.json("$.betroffen");
+  }
+
+  private static String pflegestatusVon(Sitzung sitzung, String processId)
+      throws IOException, InterruptedException {
+    List<?> treffer =
+        sitzung
+            .hole("/api/katalog/prozesse")
+            .json("$[?(@.processId=='" + processId + "')].pflegestatus");
+    assertThat(treffer).as("Prozess %s nicht in der Pflegeliste", processId).hasSize(1);
+    return String.valueOf(treffer.getFirst());
   }
 
   // ─── Voraussetzung ───────────────────────────────────────────────────────────
@@ -290,10 +379,101 @@ class ProzessKatalogIsolationDbIT extends SicherheitsTestbasis {
         .isEqualTo(votgVorher);
   }
 
+  // ─── POST /api/katalog/vorschlaege-uebernehmen (E22 bis E24) ─────────────────
+
+  /**
+   * <b>Der sechste Endpunkt, und seine Gegenprobe steht auf der Ausgabe</b> (Regel M4).
+   *
+   * <p>Er nimmt keine Kennung entgegen — es gibt also keine Eingabe, ueber die sich Existenz
+   * erfragen liesse. Die Gegenprobe verschiebt sich damit auf die <b>Wirkung</b>, so wie schon bei
+   * {@code ProzesseIsolationDbIT} und beim Heuristik-Lauf: Beide Mandanten bekommen eine von Hand
+   * angelegte Vorschlagszeile, uebernommen wird als {@code SUTTONS} — und danach ist genau die
+   * eigene gepflegt und die fremde unveraendert offen.
+   *
+   * <p><b>{@code AUSFUEHREN} laeuft hier bewusst</b>, und ausschliesslich auf selbst angelegten
+   * Zeilen mit dem Testpraefix. Gegen einen echten Bestand wird der Modus nirgends gefahren.
+   */
+  @Test
+  @DisplayName("Vorschlagsuebernahme: sie erfasst nur die Zeilen des aktiven Mandanten")
+  void uebernahme_erfasst_nur_den_aktiven_mandanten() throws Exception {
+    // Der Ausgangsstand beider Mandanten. Was der Bestand von sich aus hergibt, ist kein Befund —
+    // gemessen wird die Veraenderung.
+    int suttonsVorher = betroffen(aufSuttons);
+    int votgVorher = betroffen(aufVotg);
+    assertThat(votgVorher)
+        .as(
+            "Sonst bewiese der Test nur, dass null gleich null bleibt. Steht hier 0, ist der"
+                + " Katalog von %s vollstaendig kuratiert und dieser Test braucht einen anderen"
+                + " Gegenmandanten",
+            MANDANT_A)
+        .isPositive();
+
+    String vonSuttons = prozessOhneKatalogzeile(aufSuttons);
+    legeVorschlagAn(vonSuttons);
+
+    assertThat(betroffen(aufSuttons))
+        .as("Die eine angelegte Zeile, und keine des anderen Mandanten")
+        .isEqualTo(suttonsVorher + 1);
+
+    Antwort ausgefuehrt =
+        aufSuttons.sende("/api/katalog/vorschlaege-uebernehmen", uebernahme("AUSFUEHREN"));
+    assertThat(ausgefuehrt.status()).isEqualTo(200);
+    assertThat(ausgefuehrt.<Integer>json("$.betroffen")).isEqualTo(suttonsVorher + 1);
+
+    assertThat(pflegestatusVon(aufSuttons, vonSuttons))
+        .as("Die eigene Zeile ist uebernommen")
+        .isEqualTo("GEPFLEGT");
+    assertThat(betroffen(aufVotg))
+        .as(
+            "Beim anderen Mandanten darf sich keine einzige Zeile geaendert haben — sonst schriebe"
+                + " der Knopf ueber Mandantengrenzen")
+        .isEqualTo(votgVorher);
+  }
+
+  /**
+   * <b>Regel M1 in beiden Formen</b> — als untergeschobenes Feld im Anfragekoerper und als
+   * Abfrageparameter.
+   *
+   * <p>Damit die Gegenprobe Zaehne hat, muessen die beiden Mandanten <b>verschieden viele</b>
+   * uebernehmbare Zeilen haben: Waeren beide Zahlen gleich, bewiese ein gleicher Rumpf nichts.
+   */
+  @Test
+  @DisplayName("Vorschlagsuebernahme: ein untergeschobener Mandant bleibt wirkungslos (M1)")
+  void uebernahme_ignoriert_untergeschobenen_mandanten() throws Exception {
+    int eigen = betroffen(aufSuttons);
+    int fremd = betroffen(aufVotg);
+    assertThat(fremd)
+        .as("Waeren beide Zahlen gleich, bewiese ein gleicher Antwortrumpf nichts")
+        .isNotEqualTo(eigen);
+
+    Antwort ohneFeld =
+        aufSuttons.sende("/api/katalog/vorschlaege-uebernehmen", uebernahme("VORSCHAU"));
+    Antwort mitFeld =
+        aufSuttons.sende(
+            "/api/katalog/vorschlaege-uebernehmen",
+            """
+            {"modus":"VORSCHAU","mandantId":"%s"}"""
+                .formatted(MANDANT_A));
+    Antwort mitParameter =
+        aufSuttons.sende(
+            "/api/katalog/vorschlaege-uebernehmen?mandant=" + MANDANT_A, uebernahme("VORSCHAU"));
+
+    assertThat(mitFeld.status()).isEqualTo(200);
+    assertThat(mitFeld.rumpf())
+        .as("Ein untergeschobenes Feld darf die Menge nicht veraendern")
+        .isEqualTo(ohneFeld.rumpf());
+    assertThat(mitParameter.rumpf())
+        .as("Der Mandant kommt aus der Sitzung — ein unbekannter Parameter aendert nichts")
+        .isEqualTo(ohneFeld.rumpf());
+    assertThat(mitFeld.<Integer>json("$.betroffen"))
+        .as("Und die Zahl ist die des aktiven Mandanten, nicht die des untergeschobenen")
+        .isEqualTo(eigen);
+  }
+
   // ─── Die Rollengrenze ────────────────────────────────────────────────────────
 
   @Test
-  @DisplayName("Ein MANDANT-Nutzer bekommt auf jedem der fuenf Endpunkte 403")
+  @DisplayName("Ein MANDANT-Nutzer bekommt auf jedem der sechs Endpunkte 403")
   void mandantennutzer_kommt_nicht_an_den_katalog() throws Exception {
     legeNutzerAn(NUTZER_OHNE_ROLLE, PASSWORT, Rolle.MANDANT, MANDANT_A);
     Sitzung ohneRolle = anmelden(NUTZER_OHNE_ROLLE, PASSWORT);
@@ -313,6 +493,11 @@ class ProzessKatalogIsolationDbIT extends SicherheitsTestbasis {
                 .status())
         .isEqualTo(403);
     assertThat(ohneRolle.sende("/api/katalog/vorschlagen", "{}").status()).isEqualTo(403);
+    assertThat(
+            ohneRolle
+                .sende("/api/katalog/vorschlaege-uebernehmen", uebernahme("VORSCHAU"))
+                .status())
+        .isEqualTo(403);
 
     // Und die Gegenprobe: Derselbe Nutzer erreicht seine eigene Nachrichtenflaeche sehr wohl.
     assertThat(ohneRolle.hole("/api/prozesse").status()).isEqualTo(200);
@@ -328,6 +513,10 @@ class ProzessKatalogIsolationDbIT extends SicherheitsTestbasis {
         .as("Ein Zugriff „einfach ohne Filter\" existiert nicht")
         .isEqualTo(403);
     assertThat(ohneWahl.sende("/api/katalog/vorschlagen", "{}").status()).isEqualTo(403);
+    assertThat(
+            ohneWahl.sende("/api/katalog/vorschlaege-uebernehmen", uebernahme("VORSCHAU")).status())
+        .as("Ein Knopf, der „alle Mandanten\" meinte, gibt es nicht")
+        .isEqualTo(403);
   }
 
   // ─── Regel M1 ────────────────────────────────────────────────────────────────

@@ -2140,3 +2140,359 @@ ist** — und der Handlauf verlangte genau diese Auskunft.
   einzelnen Teil — und die Bestandsabfrage darin ist aus M84 bekannt: 23,2 ms.
 - **Nicht `EXPLAIN`-bar.** Der Schreibweg läuft über den Schreib-Pool. Das war schon der Grund,
   warum M80 und M84 ihn ausgelassen haben; M85 misst ihn von außen, statt ihn zu erklären.
+
+---
+
+# Nachtrag vom 26.08.2026 — M93 (die Lesung der **Vorschlagsübernahme**, E22)
+
+**Diese Runde misst das eine neue Statement des Nachtrags E22–E24:**
+`ProzessKatalogRepository.findeUebernehmbareVorschlaege` — die offenen Zeilen eines Mandanten mit
+einem **Partner**vorschlag aus Regel A oder Regel B. Sie ist die Grundlage beider Modi des sechsten
+Katalog-Endpunkts; die Vorschau zählt, was sie liefert, und die Ausführung schreibt genau diese
+Liste.
+
+**Ihr Hauptbefund steht nicht in der Laufzeit, sondern im Katalogstand.** Die vorregistrierten
+Erwartungen des Bauauftrags sind auf der Testkopie **nicht erreichbar**, und zwar aus einem Grund,
+den der Auftrag selbst als Meldefall benennt: Es ist kuratiert worden.
+
+| | |
+|---|---|
+| Anlass | Leistungsregel 7 / Regel L7 am **gebauten** Statement des sechsten Endpunkts |
+| Nummernvergabe | Geprüft wie vorgeschrieben: `grep -rnoE '\bM9[3-9]\b'` über `docs/`, `scripts/` und das Wurzelverzeichnis — **ein einziger Treffer**, und der ist kein vergebener: `messungen-schritt10.md` Z. 21 schreibt „Der Bereich M86–M99 ist frei". `M93` hier vergeben. Die Gegenprobe auf `M9[0-2]` findet **222** Stellen und belegt, dass der Ausdruck greift |
+| Sitzung | `scripts/messung-schritt9/m93-uebernahme.sql` — **eine**, sequenziell |
+| Rohausgabe | `scripts/messung-schritt9/ergebnis/m93-roh.txt` — über `.gitignore` ausgeschlossen |
+| Client | `mysql.exe` **Ver 8.0.46** aus MySQL Workbench 8.0 CE, `--ssl-mode=DISABLED`, `--default-character-set=utf8mb4`, `-t`. Dieselbe Abweichung vom Rahmen wie in M80, M83, M84 und M86–M92, mit derselben Begründung: Ein Clientwechsel kostete die Vergleichbarkeit |
+| Passwortübergabe | über `MYSQL_PWD` aus `OVERLORD_DB_READ_PASSWORD` — kein Passwort auf der Befehlszeile, keines in einer Skriptdatei |
+| Benutzer | `monitor_read`, ausschließlich `SELECT` |
+| Serverzeit | Beginn `2026-08-26 12:04:55`, Ende `2026-08-26 12:04:56` |
+| **`@@global.read_only`** | **`1`** — als erste Abfrage der Sitzung und erneut am Ende. Testkopie |
+| Version | `10.6.22-MariaDB-0ubuntu0.22.04.1-log` |
+| Datenstand | `MAX(Message.MessageLastUpdate)` = **`2026-07-08 17:21:10`**, `Message` **3.341.519** Zeilen — **identisch mit M83, M84 und M86–M92** |
+| Grenze | `SET max_statement_time = 60`. **Nicht gerissen**; teuerstes Statement der Runde ist die Datenstandserhebung mit 868 ms |
+| Laufzeit | `SET profiling = 1`, `profiling_history_size = 100`, Auswertung über `SHOW PROFILES` |
+| `@@div_precision_increment` | **4** — deshalb steht in keiner Abfrage dieser Runde ein `AVG` über einen Wahrheitswert |
+| `innodb_buffer_pool_size` | **26.843.545.600** Byte (25.600 MiB) |
+| **S1** | ausschließlich `SELECT`, `SET`, `EXPLAIN`, `SHOW`. **Kein `INSERT`, kein `UPDATE`, kein DDL** — auch nicht in `overlord_monitor` |
+| **L7** | **vier** Mandanten: `NEXANS` (733 Prozesse), `VOTG` (390), `IBIS` (192), `IBISGUS` (89). Zwei davon sind die beauftragten, zwei sind dazugekommen — siehe M93‑0 |
+| **L9** | ein Vollzugriff auf `Message`: die Datenstandserhebung `COUNT(*)`/`MAX(MessageLastUpdate)`, **868,0 ms**. Sie ist der Rahmen und nicht der Gegenstand — dieselbe Erhebung wie in M83 und M84 |
+| **G1** | keine Prozesskennung und kein Partnername in diesem Dokument, mit **einer** benannten Ausnahme (M93‑6, der eigene Fehler) |
+
+**Woher der gemessene Text stammt.** Er ist nicht abgeschrieben, sondern **aus dem Anwendungscode
+protokolliert**: `findeUebernehmbareVorschlaege` lief gegen eine jOOQ-Attrappe (`MockConnection`),
+und der dabei herausfallende Text ist wörtlich in die Messsitzung übernommen worden. Die vier
+Bindeplätze `?` stehen dort als Sitzungsvariable `@mandant` bzw. als Literale `'OFFEN'`,
+`'REGEL_A'`, `'REGEL_B'`. **Das ist die einzige Abweichung zwischen gemessenem und laufendem
+Text** — dieselbe, die M83 und M84 schon hatten. Der Grund, dass es diesmal *vier* statt einer ist:
+Die Bedingung aus E22 bindet drei feste Werte, und feste Werte sind in jOOQ ebenfalls Bindeplätze
+(§6, Falle 1 von [`prozess-katalog-backend.md`](prozess-katalog-backend.md)).
+
+---
+
+## Die vorregistrierten Erwartungen — **vor** dem Lauf notiert
+
+Aus dem Bauauftrag, wörtlich:
+
+| Mandant | | Erwartung |
+|---|---|---|
+| `NEXANS` | großer Bestand, 733 Prozesse | `betroffen = 509`, `regelA = 509`, `regelB = 0` |
+| `IBISGUS` | kleiner Bestand, 89 Prozesse | `regelB = 88`, `regelA = 0` |
+
+Und die Deutung des Plans, ebenfalls vorab:
+
+| Vorab benannt | |
+|---|---|
+| Einstiegstabelle **`ProjectMandant`** | |
+| `process_catalog` als **`eq_ref` auf `PRIMARY`** | so hängt es seit M80 an jedem Plan dieser Klasse |
+| **kein `STRAIGHT_JOIN`**, keine Fassung, die eine Tabelle voll durchläuft | |
+| Weicht der Plan **zwischen den Mandanten** ab, ist die L15-Falle zugeschlagen und der Befund wird gemeldet, bevor irgendetwas „repariert" wird | |
+
+Der Auftrag stellt die Erwartungen ausdrücklich unter einen Vorbehalt: *„Sie gelten nur auf einem
+Katalog, der gelaufen und nicht kuratiert ist. … Weicht die Zahl danach ab, **ist die Abweichung
+der Befund** und wird gemeldet, nicht wegerklärt: Entweder hat jemand kuratiert, oder die Bedingung
+aus E22 trifft anders als gedacht."*
+
+**Es ist der erste Fall, und er ist eindeutig belegbar.**
+
+---
+
+## M93‑0 — Der Katalogstand, bevor irgendetwas gemessen wird
+
+Erste Abfrage nach dem Rahmen, und die wichtigste dieser Runde.
+
+| Mandant | Katalogzeilen | offen | gepflegt | `REGEL_A` | `REGEL_B` | verschiedene `geaendert_von` | zuletzt geändert |
+|---|---:|---:|---:|---:|---:|---:|---|
+| `NEXANS` | 733 | **0** | **733** | 509 | 0 | 1 (`admin`) | `2026-08-26 07:05:40` |
+| `VOTG` | 389 | 389 | 0 | 377 | 0 | 1 (`admin`) | `2026-08-26 07:06:41` |
+| `IBIS` | 192 | 169 | 23 | 0 | 171 | 1 (`admin`) | `2026-08-26 09:26:06` |
+| `ZAST` | 35 | 0 | 35 | 0 | 0 | 1 (`admin`) | `2026-08-24 11:53:17` |
+| `SYSTEM` | 4 | 0 | 4 | 0 | 0 | 1 (`admin`) | `2026-08-26 09:27:12` |
+| `IBISGUS` | **0** | — | — | — | — | — | — |
+
+Daneben die Prozesszahlen als Nenner: `NEXANS` **733**, `VOTG` **390**, `IBIS` **192**,
+`IBISGUS` **89** — unverändert gegenüber M74a und §3.5.
+
+### Warum die beiden Erwartungen nicht erreichbar sind
+
+**`NEXANS` steht auf 733 gepflegten Zeilen und null offenen.** Die Bedingung aus E22 verlangt
+`OFFEN`; `betroffen` ist dort zwangsläufig **0**. Die 509 aus Regel A sind nicht verschwunden — sie
+stehen unverändert in `vorschlag_herkunft`, aber die Zeilen sind schon entschieden. **Ein
+Heuristik-Lauf hilft dagegen nicht:** E13 rührt gepflegte Zeilen nie an, ein Knopfdruck auf
+`POST /api/katalog/vorschlagen` änderte an diesem Stand also **keine einzige Zeile**.
+
+**`IBISGUS` hat überhaupt keine Katalogzeile.** Ohne Zeile kein Vorschlag, und der `INNER JOIN` aus
+E22 findet nichts. Hier *würde* ein Lauf helfen — er legte 89 offene Zeilen an, davon 88 mit
+`REGEL_B` (§3.5, M80‑6). **Er ist bewusst nicht gefahren worden:** Er schriebe 89 Zeilen auf die
+geteilte Testkopie, und diese Runde ist als reine Lesesitzung angelegt (S1). Die Entscheidung
+darüber gehört dem Auftraggeber und nicht der Messung.
+
+> **Was das über die Zahlen aus §3.5 sagt: nichts.** Sie sind Aussagen über die **Heuristik** —
+> wie viele Prozesse eines Mandanten einen Partnervorschlag *bekommen können*. M93 misst, wie viele
+> Zeilen zu einem bestimmten Zeitpunkt *offen* sind und einen tragen. Das sind zwei verschiedene
+> Fragen, und die zweite hängt daran, was ein Mensch inzwischen getan hat. **Die Erwartungen des
+> Auftrags haben die beiden Fragen gleichgesetzt**, und der Vorbehalt, den er ihnen mitgibt, ist
+> genau die Stelle, an der sie auseinandergehen.
+
+### Deshalb zwei zusätzliche Mandanten
+
+`VOTG` und `IBIS` sind dazugenommen worden, weil bei ihnen die Bedingung aus E22 im aktuellen Stand
+**wirklich greift** — und `IBIS` greift sogar am interessanten Fall:
+
+| | warum er dazugehört |
+|---|---|
+| `VOTG` (390 Prozesse, 389 Zeilen, **alle offen**) | Der größte Bestand, bei dem `betroffen` nicht null ist. Die Erwartung dafür stammt aus [`prozess-katalog.md`](prozess-katalog.md) §3.5 und ist damit **vorregistriert und nicht aus dem Messstand abgelesen**: Regel A trifft bei `VOTG` **378** Prozesse — projiziert *und* gemessen (M80‑6) |
+| `IBIS` (192 Prozesse, **169 offen, 23 gepflegt**) | Der einzige Mandant mit **gemischtem** Stand. Hier muss E22 die gepflegten Zeilen ausschließen, und genau das lässt sich nur dort nachprüfen |
+
+---
+
+## M93‑1 bis M93‑4 — Der Plan: **bei allen vier Mandanten derselbe**
+
+| Mandant | id | table | type | key | key_len | `rows` | Extra |
+|---|---:|---|---|---|---:|---:|---|
+| alle vier | 1 | `ProjectMandant` | `ref` | `ProjectMandant_Mandant_idx` | 146 | 17 / 19 / 39 / 46 | `Using where; Using index; Using temporary; Using filesort` |
+| alle vier | 1 | `Process` | `ref` | `Process_ProjectFK` | 147 | 5 | `Using index` |
+| alle vier | 1 | `process_catalog` | **`eq_ref`** | **`PRIMARY`** | 146 | 1 | `Using where` |
+
+`rows` in der Einstiegszeile ist die **Projekt**zahl je Mandant: `NEXANS` 17, `IBISGUS` 19,
+`VOTG` 39, `IBIS` 46. Sonst ist der Plan **Zeile für Zeile identisch**.
+
+### Vorregistrierte Deutung, dagegengehalten
+
+| Vorab benannt | eingetreten? | Was daraus folgt |
+|---|---|---|
+| Einstiegstabelle `ProjectMandant` | **ja, bei allen vier** | Der Mandantenfilter treibt den Plan, wie in jedem Statement dieser Klasse |
+| `process_catalog` als `eq_ref` auf `PRIMARY` | **ja, bei allen vier** | Der bestmögliche Zugriff. So hängt es seit M80 an jedem Plan dieser Klasse — der `INNER JOIN` ändert daran nichts |
+| kein `STRAIGHT_JOIN`, kein voller Durchlauf | **ja** | Keine Tabelle wird voll gelesen; `Message` kommt gar nicht vor |
+| Plan weicht zwischen den Mandanten ab → L15-Falle, **Meldefall** | **nein** | Der Optimierer wählt viermal dasselbe |
+
+### Der Befund, der in keiner vorformulierten Zeile stand: `Using temporary`
+
+**Die Einstiegszeile trägt `Using temporary; Using filesort`, und `Using temporary` ist neu.** Der
+Plan der Pflegeliste aus M80 trägt `Using filesort`, aber keine temporäre Tabelle.
+
+**Die Ursache ist die Sortierung, nicht der Join.** Sortiert wird nach `Process.ProcessID`,
+eingestiegen wird über `ProjectMandant` — der Optimierer kann die Reihenfolge also nicht aus einem
+Index nehmen und materialisiert zwischendurch.
+
+**Gemessen ist, dass es folgenlos ist:** Die zu sortierende Menge ist die Prozesszahl des
+Mandanten, also höchstens 733 Zeilen mit je zwei kurzen Zeichenketten. Die teuerste Laufzeit der
+Runde liegt bei **3,5 ms**.
+
+> **Ausdrücklich nicht behauptet:** dass `ORDER BY` hier nichts kostet. Gemessen ist nur die
+> Gesamtlaufzeit, nicht ihre Aufteilung. Eine Fassung ohne Sortierung ist **nicht** gemessen worden
+> — sie stünde auch nicht zur Wahl: Ohne feste Reihenfolge wäre die `IN`-Liste des `UPDATE` bei
+> jedem Aufruf anders zusammengesetzt, und ein Vergleich zweier Läufe wäre nicht mehr möglich.
+
+---
+
+## M93‑1 bis M93‑4 — Laufzeit, fünf Läufe je Mandant
+
+Sequenziell in **einer** Sitzung, in dieser Reihenfolge. Alle Angaben in Millisekunden.
+
+| Mandant | Prozesse | Katalogzeilen | gelieferte Zeilen | 1 | 2 | 3 | 4 | 5 | **beste** |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `NEXANS` | 733 | 733 | **0** | 3,562 | 3,472 | 3,477 | 3,471 | 3,462 | **3,462** |
+| `VOTG` | 390 | 389 | **377** | 3,037 | 2,939 | 2,917 | 2,932 | 2,896 | **2,896** |
+| `IBIS` | 192 | 192 | **169** | 1,831 | 1,878 | 1,888 | 1,842 | 1,901 | **1,831** |
+| `IBISGUS` | 89 | 0 | **0** | 0,933 | 0,987 | 0,889 | 0,910 | 0,904 | **0,889** |
+
+**Die teuerste Zahl der Runde ist 3,562 ms — das sind 0,036 % der Laufzeitgrenze des Lese-Pools**
+(`max_statement_time = 10`). Zum Vergleich: Die Pflegeliste desselben Mandanten kostet 8,0 ms
+(M80‑1), die Bestandsabfrage 23,2 ms (M84).
+
+**Die Laufzeit hängt an der Prozesszahl und nicht an der Trefferzahl.** `NEXANS` liefert **null**
+Zeilen und ist trotzdem das teuerste der vier; `VOTG` liefert 377 und ist billiger. Das ist keine
+Überraschung, sondern die Bauform: Der Plan läuft über alle Prozesse des Mandanten und wirft an
+`process_catalog` weg, was die Bedingung nicht erfüllt. **Die Bezugsgröße ist die Prozesszahl, und
+die steht still** — dasselbe Argument, mit dem M83‑2 Fassung A gegen Fassung B entschieden hat.
+
+**Der erste Lauf ist hier keine Kaltlaufschranke.** Die Instanz hatte zum Messzeitpunkt die
+Integrationstests desselben Vormittags hinter sich, und M83‑4 hat gezeigt, dass eine
+Sitzungsgrenze auf dieser Instanz keinen Puffer leert (Trefferquote 99,975 %). Der Abstand
+erster-zu-bester Lauf liegt bei **1,03** (`NEXANS`) bis **1,05** (`IBISGUS`); bei `IBIS` ist der
+*erste* Lauf sogar der beste. Das misst Rauschen und nicht die Abfrage.
+
+---
+
+## M93‑5 — Die Zahlen, die der Endpunkt melden wird
+
+Dieselbe Bedingung, nur aggregiert statt aufgezählt — so, wie der Dienst sie zählt.
+
+| Mandant | `betroffen` | `regelA` | `regelB` | verschiedene `ProcessID` |
+|---|---:|---:|---:|---:|
+| `VOTG` | **377** | **377** | 0 | 377 |
+| `IBIS` | **169** | 0 | **169** | 169 |
+| `NEXANS` | **0** | 0 | 0 | — |
+| `IBISGUS` | **0** | 0 | 0 | — |
+
+`regelA + regelB = betroffen` geht bei beiden auf. Die Doublettenprobe (`COUNT` gegen
+`COUNT(DISTINCT ProcessID)`) ebenfalls: **keine Zeile doppelt** — der `INNER JOIN` auf einen
+Primärschlüssel kann keine erzeugen, und M74a hat schon belegt, dass ein Projekt nie zwei Mandanten
+hat.
+
+### Die Kontrollen gegen §3.5, einzeln
+
+| Erwartet aus | Wert | gemessen | |
+|---|---|---|---|
+| Auftrag, `NEXANS` | `betroffen` **509** | **0** | ✘ — vollständig kuratiert, siehe M93‑0 |
+| Auftrag, `IBISGUS` | `regelB` **88** | **0** | ✘ — kein Katalog, siehe M93‑0 |
+| [`prozess-katalog.md`](prozess-katalog.md) §3.5 (M80‑6), `VOTG` | Regel A **378** | **377** | ✔ *bis auf eine Zeile* — siehe M93‑6 |
+| ebenda, `VOTG` | Regel B **0** | **0** | ✔ |
+| ebenda, `IBIS` | Regel B **187** | **169** offen (**171** im Katalog) | ✘ — siehe unten |
+| ebenda, `IBIS` | Regel A **0** | **0** | ✔ |
+
+**Die `IBIS`-Abweichung ist erklärt und trotzdem als Abweichung geführt.** §3.5 sagt, Regel B
+*trifft* bei 187 der 192 `IBIS`-Prozesse. Im Katalog stehen **171** Zeilen mit `REGEL_B`, davon
+**169** offen. Die Differenz zerfällt in zwei Teile, und nur der zweite ist gemessen:
+
+- **169 gegen 171**: Zwei `REGEL_B`-Zeilen sind bereits gepflegt und fallen an der Bedingung aus
+  E22 heraus. **Das ist genau die gewollte Wirkung** und die schärfste Einzelkontrolle dieser
+  Runde.
+- **171 gegen 187**: Sechzehn Zeilen tragen im Katalog eine andere Herkunft, als die Heuristik für
+  sie liefern würde. **Warum, ist nicht gemessen.** Die naheliegende Erklärung: Sie sind durch eine
+  Kuratierung *angelegt* worden, bevor der Lauf über sie ging — beim Anlegen schreibt sowohl
+  `PUT /api/katalog/prozesse/{processId}` als auch die Massenzuordnung ausdrücklich `KEINE`
+  ([`prozess-katalog-backend.md`](prozess-katalog-backend.md) §4), und der spätere Lauf rührt eine
+  gepflegte Zeile nicht mehr an (E13). **Belegt ist das nicht**, und diese Runde belegt es auch
+  nicht: Sie zählt den Stand, sie rekonstruiert keine Geschichte.
+
+### M93‑5b — Die Gegenprobe zum `INNER JOIN`
+
+Dieselbe Abfrage mit `LEFT JOIN` statt `INNER JOIN` liefert **dieselben Zahlen** — `VOTG` 377,
+`IBIS` 169.
+
+**Das ist der erwartete Befund und trotzdem der Grund, ihn zu erheben.** Eine Zeile, die es nicht
+gibt, trägt `NULL` in `vorschlag_herkunft` und fällt an `IN ('REGEL_A','REGEL_B')` ohnehin heraus.
+**Der `INNER JOIN` ist damit die ehrlichere Schreibweise und nicht die engere Bedingung** — er sagt
+im Text, was die Bedingung ohnehin tut, statt es dem Leser zu überlassen.
+
+### M93‑5c — Die Zeilen, die E22 ausdrücklich liegenlässt
+
+Offene Zeilen mit Herkunft `KEINE`:
+
+| Mandant | offen ohne Partnervorschlag | davon mit Richtung |
+|---|---:|---:|
+| `VOTG` | 12 | **0** |
+
+**Der Fall, den E22 schützen soll, ist im aktuellen Bestand nicht sichtbar.** Die 224
+`NEXANS`-Prozesse mit `KEINE` **und** gefüllter Richtung — die eigentliche Begründung von E22 —
+stehen alle auf `GEPFLEGT` und tauchen hier nicht auf. Die zwölf `VOTG`-Zeilen tragen keine
+Richtung, weil `VOTG` überhaupt keine Richtungsvorschläge bekommt (§3.5, und das ist eine
+Entscheidung und keine Lücke).
+
+**Damit ist E22 an dieser Stelle *nicht* am Bestand belegt, sondern nur am Endpunkt** —
+`ProzessKatalogDbIT.uebernahme_laesst_zeilen_ohne_partnervorschlag_offen` legt die Lage von Hand
+an. Das steht hier, damit niemand die leere Spalte für eine Bestätigung hält.
+
+---
+
+## M93‑6 — Der Befund an der eigenen Arbeit: eine `VOTG`-Katalogzeile ist verlorengegangen
+
+**§3.5 nennt für `VOTG` 378 Prozesse mit Regel A; gemessen sind 377, und die fehlende Zeile ist
+durch einen Fehler in einem Test dieser Runde gelöscht worden.**
+
+Der erste Entwurf von `ProzessKatalogIsolationDbIT` legte seine Testzeile per **Upsert** auf den
+*ersten* Prozess des jeweiligen Mandanten. Trägt der bereits eine Zeile, überschreibt der Upsert
+deren `geaendert_von` mit dem Testpräfix `it-` — und die Aufräumregel aus §7 löscht sie danach als
+vermeintliche Testzeile. Betroffen ist **genau eine** Zeile: der Prozess `08100_ARCHROMA_IFTMIN`
+(Projekt `100_VTG_ARCHROMA`) bei `VOTG`.
+
+*Die Kennung steht hier ausnahmsweise im Klartext, entgegen G1: Ohne sie wäre der Befund nicht
+nachprüfbar, und ein Schaden, den man nicht benennen kann, ist nicht behebbar.*
+
+| | |
+|---|---|
+| **Was verloren ist** | eine offene, **unkuratierte** Katalogzeile mit dem Regel-A-Vorschlag der Heuristik. Keine Kuratierung — alle 390 `VOTG`-Zeilen standen auf `OFFEN` |
+| **Was nicht verloren ist** | jede andere Zeile. `SUTTONS` hatte keine, und die Gegenprobe nach dem Lauf zeigt **null** Zeilen mit dem Testpräfix und `NEXANS`/`IBIS`/`ZAST`/`SYSTEM` unverändert |
+| **Wie es zu beheben ist** | **ein** Druck auf „Vorschläge und Bestand erheben" für `VOTG`. Der Lauf legt fehlende Zeilen an (`angelegt 1`) und stellt den Vorschlag aus der Regel wieder her. Er frischt dabei die übrigen 389 offenen Zeilen auf und setzt ihren Änderungsvermerk neu — sie sind unkuratiert, es geht nichts verloren |
+| **Was dagegen gebaut ist** | Beide Testklassen legen Zeilen jetzt ausschließlich auf Prozessen **ohne** Katalogzeile an, und `legeZeileAn` ist ein reines `INSERT`: Eine Kollision schlägt laut fehl, statt still zu überschreiben |
+
+**Der Fehler ist die Kehrseite genau der Regel, die ihn möglich gemacht hat.** Die Aufräumung über
+`geaendert_von` ist ein guter Mechanismus — sie schont von Hand kuratierte Zeilen (§7) —, aber sie
+verlässt sich darauf, dass das Präfix nur auf Zeilen steht, die ein Test *angelegt* hat. Ein Upsert
+bricht diese Annahme, ohne dass irgendetwas rot wird.
+
+> **Als offener Punkt vermerkt:** Die Aufräumregel unterscheidet nicht zwischen „von einem Test
+> angelegt" und „von einem Test zuletzt angefasst". Solange kein Schreibweg dieses Backends
+> `geaendert_von` auf ein fremdes Präfix setzen kann, ist das folgenlos — und der einzige, der es
+> konnte, war ein Test.
+
+---
+
+## Laufzeiten der Runde im Überblick
+
+| Statement | Laufzeit |
+|---|---:|
+| Datenstandserhebung `COUNT(*)`/`MAX(MessageLastUpdate)` über `Message` (Rahmen, L9) | **868,0 ms** |
+| Katalogstand je Mandant (M93‑0) | 10,7 ms |
+| `betroffen`/`regelA`/`regelB` je Mandant (M93‑5) | 8,3 ms |
+| Gegenprobe `LEFT JOIN` (M93‑5b) | 7,2 ms |
+| offen ohne Partnervorschlag (M93‑5c) | 7,0 ms |
+| **Die gemessene Abfrage, teuerster Lauf** (`NEXANS`, erster) | **3,562 ms** |
+| **Die gemessene Abfrage, billigster Lauf** (`IBISGUS`, dritter) | **0,889 ms** |
+| Prozesszahl je Mandant (Nenner, M93‑0b) | 2,0 ms |
+| `EXPLAIN`, je Mandant | 0,56 bis 0,71 ms |
+
+**Keine Abweichung vom Rahmen.** Kein Statement über der 60-Sekunden-Grenze, keine ausgesetzte
+Grenze, kein Abbruch.
+
+---
+
+## Die Kontrollen, die aufgehen mussten
+
+| Kontrolle | erwartet | gemessen |
+|---|---|---|
+| `@@global.read_only` zu Beginn **und** am Ende | `1` | `1` / `1` ✔ |
+| Datenstand identisch mit M83/M84/M86–M92 | `2026-07-08 17:21:10` | dito ✔ |
+| `Message`-Zeilenzahl identisch | 3.341.519 | 3.341.519 ✔ |
+| Prozesszahl `NEXANS` (M74a, §3.5) | 733 | 733 ✔ |
+| Prozesszahl `VOTG` / `IBIS` / `IBISGUS` (§3.5) | 390 / 192 / 89 | 390 / 192 / 89 ✔ |
+| Regel A bei `VOTG` (§3.5, M80‑6) | 378 | 377 + 1 gelöschte (M93‑6) ✔ |
+| `regelA + regelB = betroffen` | Invariante | geht bei beiden auf ✔ |
+| keine Doublette (`COUNT` gegen `COUNT(DISTINCT …)`) | gleich | gleich ✔ |
+| `process_catalog` als `eq_ref` auf `PRIMARY` (seit M80) | ja | ja, viermal ✔ |
+| keine Reste mit Testpräfix nach den Integrationstests | 0 | 0 ✔ |
+
+---
+
+## Was M93 **nicht** zeigt
+
+- **Nicht die Produktion.** Testkopie, Datenstand 08.07.2026, ohne Nebenlast, mit einem Puffer, der
+  `Message` neunfach fasst. Der Eintrag vom 21.08.2026 in
+  [`annahmen-korrekturen.md`](annahmen-korrekturen.md) gilt unverändert: **eine optimistische
+  Schranke.**
+- **Nicht das Schreiben.** Das `UPDATE` mit der `IN`-Liste läuft über den Schreib-Pool und ist
+  **nicht `EXPLAIN`-bar** — dieselbe Lage wie beim Bestandslauf (M84) und beim Heuristik-Lauf
+  (M80). Belegt ist für den Schreibweg nur die Schranke aus M85: Ein ganzer Knopfdruck über 733
+  Zeilen kostet dort 509 ms, und das ist eine **Beobachtung von außen und keine Messung** dieses
+  Statements.
+- **Nicht die vom Auftrag erwarteten Zahlen.** `NEXANS` und `IBISGUS` liefern beide **0**, und der
+  Grund steht in M93‑0. Was die Heuristik *könnte*, ist unverändert §3.5; was heute *offen* ist,
+  steht hier.
+- **Nicht der Fall, für den E22 gebaut ist.** Offene Zeilen mit `KEINE` **und** Richtung gibt es im
+  aktuellen Bestand nicht (M93‑5c). Der Nachweis liegt beim Integrationstest, nicht bei dieser
+  Messung.
+- **Nicht die Kosten der Sortierung.** `Using temporary` ist neu gegenüber M80, und die Runde stellt
+  fest, dass es folgenlos ist — sie beziffert es nicht. Eine Fassung ohne `ORDER BY` ist nicht
+  gemessen worden und stünde auch nicht zur Wahl.
+- **Nicht, warum sechzehn `IBIS`-Zeilen eine andere Herkunft tragen, als die Heuristik liefern
+  würde.** Die Runde zählt den Stand; sie rekonstruiert keine Geschichte.
