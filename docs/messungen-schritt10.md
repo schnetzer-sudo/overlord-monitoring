@@ -714,3 +714,227 @@ fünfzehn Rollup-Zeilen** für über sechs Monate. Der Bestand der Testkopie hö
 30.12.2025 auf; was danach kommt, ist ein Rinnsal aus drei Prozessen. **Jede Messung dieser Runde,
 die über Fenster D (Juli 2026) läuft, misst deshalb an einem praktisch leeren Bestand** — das
 betrifft M88, M89 und M90 unmittelbar und ist dort erneut vermerkt.
+
+---
+
+# M88 — Was kostet der stündliche Delta-Lauf?
+
+Sitzung 4a (Vorprobe) und 4b — `s4a-m88-vorprobe.sql`, `s4b-m88-deltalauf.sql`.
+
+## Die Vorprobe, und warum sie nötig war
+
+Der Auftrag verlangt drei Fenster: **eine Stunde**, **Fenster D** (48 h) und **Fenster A** (ein Tag).
+*Welche* Stunde, sagt er nicht. Sie ist hergeleitet statt geraten — und dabei ist der Befund
+aufgetaucht, der M88, M89 und M90 gleichermaßen betrifft.
+
+**Fenster D ist auf der Testkopie praktisch leer:**
+
+```sql
+SELECT COUNT(*) AS zeilen_fenster_d, COUNT(DISTINCT ProcessID) AS prozesse,
+       COUNT(DISTINCT MessageStatus) AS status,
+       MIN(MessageLastUpdate) AS frueheste, MAX(MessageLastUpdate) AS spaeteste
+FROM GlassfishDB.Message
+WHERE MessageLastUpdate >= '2026-07-06 17:21:10' AND MessageLastUpdate < '2026-07-08 17:21:10';
+```
+
+| Zeilen | Prozesse | Status | früheste | späteste |
+|---:|---:|---:|---|---|
+| **256** | **2** | **2** | `2026-07-08 17:16:26` | `2026-07-08 17:20:29` |
+
+**256 Zeilen, zwei Prozesse — und alle innerhalb von vier Minuten.** Von den 48 Stunden des Fensters
+sind 47 Stunden und 56 Minuten vollständig leer.
+
+Die letzten dreißig Tage des Bestands bestätigen es: nur **fünf** Tage tragen überhaupt etwas.
+
+| Tag | Zeilen | Prozesse |
+|---|---:|---:|
+| 2026-06-09 | 2 | 1 |
+| 2026-06-14 | 2 | 1 |
+| 2026-06-17 | 1.425 | 2 |
+| 2026-06-18 | 3.419 | 2 |
+| 2026-07-08 | 285 | 2 |
+
+Summe 5.133 — das ganze Jahr 2026 (M87‑5c).
+
+**Daraus folgt der Zuschnitt der Messung.** Gefahren sind **sechs** statt drei Fenster: die drei des
+Auftrags plus zwei weitere Stunden, die den Bereich zwischen leer und dicht aufspannen, plus ein
+dichtes 48‑h‑Fenster als Gegenstück zu D. Ohne sie wäre M88 die Messung eines leeren Indexbereichs.
+
+| | Fenster | Zeilen | Ergebniszeilen |
+|---|---|---:|---:|
+| **H1** | dichteste Stunde des **ganzen Bestands**, `2025-12-07 17:00` | **8.630** | 14 |
+| **H2** | dichteste Stunde des **Fensters A**, `2025-12-29 22:00` | 2.883 | 19 |
+| **H3** | **letzte Stunde des Bestands**, `2026-07-08 17:00` | 285 | 2 |
+| **D** | **Fenster D**, 48 h bis zum Anker aus V5 | 256 | 2 |
+| **D2** | dichte 48 h, `2025-12-28` bis `2025-12-30` | 12.332 | 926 |
+| **A** | **Fenster A**, ein Tag | 6.249 | 575 |
+
+Die dichteste Stunde des Bestands ist deterministisch hergeleitet
+(`GROUP BY stunde ORDER BY zeilen DESC LIMIT 5`, Laufzeit 8.442,916 ms, unter L9 als Bezugsgröße):
+`2025-12-07 17:00` mit 8.630 Zeilen, davor `2024-11-13 18:00` (7.555), `2025-11-07 17:00` (7.043),
+`2024-10-09 20:00` (7.021), `2024-11-21 17:00` (6.808).
+
+## Die gemessene Abfrage
+
+Unverändert die des Auftrags. **Kein `STRAIGHT_JOIN`, in keiner Fassung** (M42, Faktor 219–1094×).
+
+```sql
+SELECT DATE_FORMAT(MessageLastUpdate, '%Y-%m-%d %H:00:00') AS stunde,
+       ProcessID,
+       MessageStatus,
+       COUNT(*) AS anzahl
+FROM GlassfishDB.Message
+WHERE MessageLastUpdate >= '2025-12-07 17:00:00'
+  AND MessageLastUpdate <  '2025-12-07 18:00:00'
+GROUP BY stunde, ProcessID, MessageStatus;
+```
+
+## `EXPLAIN` — bei allen gemessenen Fenstern derselbe Plan
+
+```
++------+-------------+---------+-------+---------------------------------------------------------+----------------------+---------+------+-------+--------------------------------------------------------+
+| id   | select_type | table   | type  | possible_keys                                           | key                  | key_len | ref  | rows  | Extra                                                  |
++------+-------------+---------+-------+---------------------------------------------------------+----------------------+---------+------+-------+--------------------------------------------------------+
+|    1 | SIMPLE      | Message | range | MessageLastUpdateIDX,MessageLastUpdateProcessMessageIDX | MessageLastUpdateIDX | 5       | NULL | 17730 | Using index condition; Using temporary; Using filesort |
++------+-------------+---------+-------+---------------------------------------------------------+----------------------+---------+------+-------+--------------------------------------------------------+
+```
+
+Nur `rows` unterscheidet sich: **H1 17.730 · H3 285 · D 256 · D2 24.218 · A 11.812.**
+Für **H2** ist kein `EXPLAIN` gefahren worden — die fünf gefahrenen decken den Mengenbereich von 256
+bis 24.218 ab, und der Plan ist über diesen ganzen Bereich unverändert. Das ist eine bewusste Lücke
+und keine übersehene: sie steht unter „Abweichungen vom Rahmen".
+
+**`EXPLAIN FORMAT=JSON` für H1, im Volltext:**
+
+```json
+{
+  "query_block": {
+    "select_id": 1,
+    "filesort": {
+      "sort_key": "date_format(Message.MessageLastUpdate,'%Y-%m-%d %H:00:00'), Message.ProcessID, Message.MessageStatus",
+      "temporary_table": {
+        "table": {
+          "table_name": "Message",
+          "access_type": "range",
+          "possible_keys": ["MessageLastUpdateIDX", "MessageLastUpdateProcessMessageIDX"],
+          "key": "MessageLastUpdateIDX",
+          "key_length": "5",
+          "used_key_parts": ["MessageLastUpdate"],
+          "rows": 17730,
+          "filtered": 100,
+          "index_condition": "Message.MessageLastUpdate >= '2025-12-07 17:00:00' and Message.MessageLastUpdate < '2025-12-07 18:00:00'"
+        }
+      }
+    }
+  }
+}
+```
+
+## Die Frage hinter M88, beantwortet
+
+> Gefragt war: *„Greift `MessageLastUpdateProcessMessageIDX (MessageLastUpdate, ProcessID,
+> MessageID)`, und wenn ja, wie weit? `MessageStatus` steht nicht in ihm — der Index kann also nicht
+> deckend sein. Zu messen ist, ob MariaDB trotzdem über ihn einsteigt oder auf
+> `MessageLastUpdateIDX` fällt."*
+
+**MariaDB fällt auf `MessageLastUpdateIDX`. Bei allen fünf geplanten Fenstern, ohne Ausnahme.**
+
+Der zusammengesetzte Index steht in `possible_keys`, wird aber nie gewählt. `used_key_parts` nennt
+**genau einen** Schlüsselteil — `MessageLastUpdate`. Das wäre auch bei ihm nicht anders: Die
+`WHERE`-Bedingung schränkt nur die erste Spalte ein; `ProcessID` und `MessageID` stehen dahinter und
+werden von keiner Bedingung getroffen, sie können den Bereich also nicht verengen.
+
+**Warum der schmalere Index gewinnt, und warum das kein Zufall ist.** Weil `MessageStatus` in keinem
+der beiden Indizes steht, braucht **jede** Fassung einen Rückgriff auf die Tabellenzeile. Damit ist
+der einzige Unterschied die Breite des Indexbereichs, der dafür gelesen wird:
+`MessageLastUpdateIDX` trägt eine Spalte plus Primärschlüssel, `MessageLastUpdateProcessMessageIDX`
+drei. Für dieselbe Zeilenmenge sind das mehr Indexseiten ohne jeden Gegenwert.
+
+> **Der Nebenschluss für 10a:** `MessageLastUpdateProcessMessageIDX` bringt dem Rollup-Job
+> **nichts**. Er ist für die Nachrichtenliste gebaut (Cursor über `(MessageLastUpdate, MessageID)`),
+> und dort trägt er. Wer den Delta-Lauf plant, plant ihn gegen `MessageLastUpdateIDX`.
+> **Ein deckender Index müsste `MessageStatus` enthalten** — er existiert nicht, und ihn anzulegen
+> hieße, auf `GlassfishDB` zu schreiben. Das ist ausgeschlossen (Regel 3), und damit ist diese
+> Möglichkeit nicht erst abzuwägen.
+
+## Laufzeit — ein Aufwärmlauf, dann beste von fünf
+
+| Fenster | Zeilen | Aufwärmlauf | **beste von fünf** | schlechteste | alle fünf (ms) |
+|---|---:|---:|---:|---:|---|
+| **H1** dichteste Stunde | 8.630 | 101,328 ms | **88,167 ms** | 90,321 ms | 88,167 · 88,326 · 90,321 · 88,986 · 88,606 |
+| **H2** dichteste Stunde in A | 2.883 | 31,523 ms | **30,251 ms** | 31,356 ms | 30,251 · 30,345 · 31,356 · 30,415 · 30,375 |
+| **H3** letzte Stunde | 285 | 3,890 ms | **3,190 ms** | 4,746 ms | 3,190 · 4,746 · 3,482 · 3,269 · 3,323 |
+| **D** Fenster D (48 h) | 256 | 2,947 ms | **2,889 ms** | 3,022 ms | 3,003 · 2,937 · 2,890 · 3,022 · 2,889 |
+| **D2** dichte 48 h | 12.332 | 140,311 ms | **136,258 ms** | 140,499 ms | 137,898 · 137,518 · 137,730 · 136,258 · 140,499 |
+| **A** Fenster A (1 Tag) | 6.249 | 69,052 ms | **68,733 ms** | 72,061 ms | 69,661 · 68,733 · 69,078 · 72,061 · 70,965 |
+
+**Die Laufzeit ist in der Zeilenzahl linear, nicht in der Fensterbreite.**
+
+| Fenster | Zeilen | beste v5 | **µs je Zeile** |
+|---|---:|---:|---:|
+| H1 | 8.630 | 88,167 ms | 10,2 |
+| H2 | 2.883 | 30,251 ms | 10,5 |
+| A | 6.249 | 68,733 ms | 11,0 |
+| D2 | 12.332 | 136,258 ms | 11,1 |
+| H3 | 285 | 3,190 ms | 11,2 |
+| D | 256 | 2,889 ms | 11,3 |
+
+**10,2 bis 11,3 µs je Zeile, über einen Mengenbereich von Faktor 48.** Fenster D ist nicht deshalb
+schnell, weil es günstig läge, sondern weil 256 Zeilen darin stehen; die 48 Stunden Fensterbreite
+kosten für sich genommen nichts. Der Aufwärmlauf kostet zwischen 1,4 % (D) und 22,0 % (H3) mehr als
+der beste Lauf.
+
+## Vorregistrierte Deutung, dagegengehalten
+
+> Vorregistriert: *„Unter 100 ms für ein Ein-Stunden-Fenster: Der stündliche Job ist unauffällig, und
+> Leistungsregel 6 („gedrosselt") ist an dieser Stelle Zeremonie statt Schutz — was dann so gesagt
+> wird. Über 1 s: Die Drosselung ist ernst zu nehmen und gehört als Bauvorgabe nach 10a. Über
+> `max_statement_time`: Der Job ist in dieser Form nicht baubar."*
+
+**Der obere Zweig trifft, und er trifft mit Abstand.** Die **dichteste Stunde des gesamten
+Bestands** kostet **88,167 ms** — unter der Schwelle von 100 ms. Das ist nicht die durchschnittliche
+Stunde, sondern die teuerste von rund 15.000. Die letzte Stunde des Bestands kostet 3,190 ms.
+
+**Also, wie vorregistriert, so gesagt:**
+
+> **Leistungsregel 6 („Der Rollup-Job läuft gedrosselt. Er teilt sich die Instanz mit der
+> Produktion.") ist an dieser Stelle Zeremonie statt Schutz.** Ein Statement, das 88 ms braucht und
+> einmal je Stunde läuft, belegt die Instanz zu **0,0024 %**. Wovor die Drosselung schützen soll,
+> tritt beim stündlichen Delta-Lauf nicht ein.
+
+**Wo sie nicht Zeremonie ist, ist der Rückwärtslauf** — und der ist M92, nicht M88. Die Regel trägt
+dort weiter; sie trägt nur nicht an der Stelle, an der sie am häufigsten zitiert wird.
+
+> **Zwei Vorbehalte, die dazugehören.**
+>
+> 1. **Der Aufwärmlauf ist keine Kaltlaufschranke.** `innodb_buffer_pool_size` beträgt 25.600 MiB,
+>    `Message` mit allen acht Indizes 2.763,9 MiB — der Puffer fasst die Tabelle 9,26‑mal (M83‑4).
+>    Eine `mysql`-Sitzungsgrenze leert keinen Serverpuffer. Gemessen ist der Warmfall; für den echten
+>    Kaltfall nennt M44 einen Faktor von bis zu **9,66**, was für H1 rund **850 ms** ergäbe. Auch das
+>    bliebe unter einer Sekunde. **Das ist eine Übertragung und keine Messung** — der Faktor stammt
+>    aus einer anderen Abfrage, und `FLUSH TABLES` steht `monitor_read` nicht zu.
+> 2. **In Produktion ist die dichteste Stunde größer.** 8.630 Zeilen sind das Maximum *dieser
+>    Testkopie*. Bei 11 µs je Zeile bliebe der Job auch bei **90.000 Zeilen je Stunde** unter einer
+>    Sekunde — das ist eine Hochrechnung aus der gemessenen Linearität, keine gemessene Zahl.
+
+## Befund 8 — die Zeilenschätzung ist bei großen Bereichen um Faktor 2 zu hoch, bei kleinen exakt
+
+| Fenster | `rows` im Plan | tatsächlich | Verhältnis |
+|---|---:|---:|---:|
+| H1 | 17.730 | 8.630 | **2,05** |
+| D2 | 24.218 | 12.332 | **1,96** |
+| A | 11.812 | 6.249 | **1,89** |
+| H3 | **285** | **285** | **1,00** |
+| D | **256** | **256** | **1,00** |
+
+Die beiden kleinen Bereiche sind **auf die Zeile genau** geschätzt, die drei großen um rund
+Faktor 2 zu hoch. Der Faktor ist kein Zufall: `CARDINALITY` steht für `MessageLastUpdateIDX` auf
+**1.780.243** gegen **3.341.519** gezählte Zeilen — also auf **genau der Hälfte** (V1, V3). Wo
+MariaDB nicht mehr im Bereich zählt, sondern aus dieser Kardinalität hochrechnet, verdoppelt sich
+die Schätzung.
+
+**Folge für M88: keine.** Der Plan ist bei beiden Schätzungen derselbe, es gibt nur einen möglichen
+Zugriffsweg. Der Befund steht hier, weil dieselbe halbierte Kardinalität in einer Abfrage mit
+**mehreren** Joinpartnern die Joinreihenfolge kippen kann — und M89 ist genau so eine Abfrage.
+Er schließt an Befund 2 aus M83 an, der dieselbe Statistik von der anderen Seite trifft
+(`CARDINALITY` 18 auf `ProcessID`, Faktor 43,7).
