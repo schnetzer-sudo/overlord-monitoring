@@ -40,8 +40,8 @@ Abschnitt in `messungen-schritt9.md` (Z. 1898–1909, M83-Nachtrag) führt fünf
 | Benutzer | **`monitor_read@%`**, ausschließlich `SELECT`. Ausnahme M89, siehe dort |
 | Sitzungen | sequenziell, jede eine eigene `mysql`-Ausführung mit einer Skriptdatei unter `scripts/messung-schritt10/` |
 | Serverzeit Beginn | `2026-08-26 09:45:52` |
-| Serverzeit Ende | `2026-08-26 10:37:44` |
-| `@@global.read_only` | **`1`** — in **jeder** der achtzehn Sitzungen als erste Abfrage, und in Sitzung 8 erneut am Ende |
+| Serverzeit Ende | `2026-08-26 10:48:52` (Sitzung 3c, nachgeholt; die Abschlusssitzung 8 endete um `10:37:44`) |
+| `@@global.read_only` | **`1`** — in **jeder** der neunzehn Sitzungen als erste Abfrage, und in Sitzung 8 erneut am Ende |
 | Client | `mysql.exe` **Ver 8.0.46** aus MySQL Workbench 8.0 CE, `--ssl-mode=DISABLED`, `--default-character-set=utf8mb4`, `-t`. **Abweichung vom Rahmen, siehe unten** |
 | Passwortübergabe | über `MYSQL_PWD` aus `OVERLORD_DB_READ_PASSWORD` — kein Passwort auf der Befehlszeile, keines in einer Skriptdatei |
 | Grenze | `SET max_statement_time = 60` in jeder Messsitzung. **Einmal gerissen** (M87‑5), siehe dort — nicht hochgesetzt, sondern in Jahresscheiben gefahren |
@@ -56,7 +56,7 @@ Abschnitt in `messungen-schritt9.md` (Z. 1898–1909, M83-Nachtrag) führt fünf
 
 | Regel | Stand | Begründung |
 |---|---|---|
-| **S1** — nur `SELECT` | **erfüllt mit der benannten Ausnahme** | Sechzehn der achtzehn Sitzungen fahren ausschließlich `SELECT`, `SET`, `EXPLAIN`, `SHOW` mit `monitor_read`. Die beiden Ausnahmen sind vom Auftrag freigegeben: **5a** legt `message_rollup_probe` an und befüllt sie, **8** löscht sie. Beide laufen mit `monitor_write`, das auf `GlassfishDB` nur `SELECT` hat. **Kein Schreibzugriff auf `GlassfishDB` in irgendeiner Sitzung** — gegengeprüft in 5a‑7 und 8‑6/8‑7 |
+| **S1** — nur `SELECT` | **erfüllt mit der benannten Ausnahme** | Siebzehn der neunzehn Sitzungen fahren ausschließlich `SELECT`, `SET`, `EXPLAIN`, `SHOW` mit `monitor_read`. Die beiden Ausnahmen sind vom Auftrag freigegeben: **5a** legt `message_rollup_probe` an und befüllt sie, **8** löscht sie. Beide laufen mit `monitor_write`, das auf `GlassfishDB` nur `SELECT` hat. **Kein Schreibzugriff auf `GlassfishDB` in irgendeiner Sitzung** — gegengeprüft in 5a‑7 und 8‑6/8‑7 |
 | **L4** — `MessageProperty` | **erfüllt** | Die Tabelle wird in dieser Runde **gar nicht** angefasst. Einziges Vorkommen ist ihre Größe in V1, aus `information_schema` |
 | **L7** — zwei Mandanten | **erfüllt** | M89, M90 je für `NEXANS` und `SUTTONS`; M91 zusätzlich für `VOTG`. M86, M87, M88 und M92 sind mandantenübergreifend und wären mit einem Mandantenfilter etwas anderes — begründet je Messung |
 | **L9** — voller Durchlauf | **erfüllt** | Jeder volle Durchlauf ist einzeln begründet: M87 (die Zeilenzahl einer Tabelle, die es nicht gibt, ist anders nicht zu bekommen), M92‑1 (Scheibengrenzen über den Bestand). **Keiner ist Vorbild für Anwendungscode**, und das steht an jeder Fundstelle |
@@ -67,7 +67,7 @@ Abschnitt in `messungen-schritt9.md` (Z. 1898–1909, M83-Nachtrag) führt fünf
 
 ### Die Sitzungen
 
-Achtzehn Sitzungen statt der acht des Sitzungsplans — jede Messung, die nachgefahren oder ergänzt
+Neunzehn Sitzungen statt der acht des Sitzungsplans — jede Messung, die nachgefahren oder ergänzt
 werden musste, hat eine eigene bekommen, damit die Reihenfolge nachvollziehbar bleibt. Alle
 sequenziell, jede eine eigene Verbindung, **kein paralleler Lauf**.
 
@@ -77,6 +77,7 @@ sequenziell, jede eine eigene Verbindung, **kein paralleler Lauf**.
 | 2 | `s2-m86-wandert-lastupdate.sql` | **M86** (a), (b), (c) | read | 09:50:36 – 09:51:33 |
 | 3 | `s3-m87-rollupzeilen.sql` | **M87**, vier Varianten | read | 09:56:25 – 09:58:26 |
 | 3b | `s3b-m87-jahresscheiben.sql` | M87‑5 in Jahresscheiben, nachdem die Grenze gerissen war | read | 09:59:39 – 10:00:31 |
+| 3c | `s3c-m87-belegte-stunden.sql` | M87‑7, zwei Zahlen, die in M87‑5 mit abgebrochen sind — **nachgeholt nach Sitzung 8** | read | 10:48:30 – 10:48:52 |
 | 4a | `s4a-m88-vorprobe.sql` | Vorprobe zu M88: welche Stunde, und was steht in Fenster D? | read | 10:06:11 – 10:06:19 |
 | 4b | `s4b-m88-deltalauf.sql` | **M88**, sechs Fenster à sechs Läufe | read | 10:08:28 – 10:08:30 |
 | 5a | `s5a-m89-probetabelle.sql` | **M89** — Probetabelle anlegen, in 22 Monatsscheiben füllen | **write** | 10:13:40 – 10:14:32 |
@@ -642,7 +643,45 @@ Alle vier fahren denselben Plan — es gibt keinen anderen:
 | **3** | Tag, `ProcessID`, `MessageStatus` | **123.049** | 10.359,044 ms |
 | **4** | Monat, `ProcessID`, `MessageStatus` | **11.957** | 7.714,630 ms |
 
-Zusätzlich: **belegte Stunden × Prozesse** und **belegte Stunden** stehen in M87‑5, siehe dort.
+### Wie dicht die Stundeneimer besetzt sind *(M87‑7, Sitzung 3c)*
+
+Zwei Zahlen, die in M87‑5 mit abgebrochen sind und deshalb getrennt nachgeholt wurden — ebenfalls
+in Jahresscheiben, aus demselben Grund und mit derselben Begründung für die Summierbarkeit:
+
+| Scheibe | Stunde × Prozess | belegte Stunden | Laufzeit |
+|---|---:|---:|---:|
+| 2024 (ab 01.10.) | 52.766 | 2.206 | 3.895,7 ms |
+| 2025 | 263.869 | 8.715 | 17.832,0 ms |
+| 2026 | 15 | 10 | 21,1 ms |
+| **Summe** | **316.650** | **10.931** | 21.748,8 ms |
+
+*(`COUNT(DISTINCT ProcessID)` ist hier bewusst **nicht** summiert — derselbe Prozess kommt in
+mehreren Jahren vor, die Scheiben sind für diese Spalte nicht disjunkt. Der Wert steht aus M87‑0
+mit **738** fest.)*
+
+**Drei Verhältnisse, die daraus folgen und die 10a braucht:**
+
+| | |
+|---|---:|
+| Rollupzeilen je belegter Stunde | **30,7** |
+| Prozesse je belegter Stunde | **29,0** |
+| **Statuswerte je (Stunde, Prozess)** | **1,06** |
+
+> **Der letzte Wert ist der interessante: 335.610 Rollupzeilen auf 316.650 Stunde-Prozess-Paare.**
+> Ein Prozess trägt in einer gegebenen Stunde fast immer **genau einen** Status. Nur in 6 % der
+> Fälle kommt ein zweiter dazu.
+>
+> **Das erklärt Befund 7 und den Preis von E‑g in einem Satz:** Der Rollup verdichtet deshalb nur
+> um Faktor 9,96, weil die Streuung nicht im Status liegt, sondern in der Kombination aus Stunde
+> und Prozess — 29 verschiedene Prozesse in jeder belegten Stunde. Und E‑g kostet deshalb nur eine
+> Zeile, weil zwei zusammenfassbare Rohwerte in derselben Stunde beim selben Prozess praktisch nie
+> zusammentreffen: Es treffen ja schon zwei **beliebige** Rohwerte kaum je zusammen.
+
+**Und der Bestand hat bis zu seinem Abbruch praktisch keine Lücke.** Zwischen dem ersten Zeitstempel
+`2024-10-01 02:00:28` und dem letzten des dichten Bestands `2025-12-30 04:09:47` liegen **2.206**
+Stundeneimer in 2024 und **8.717** in 2025. Belegt sind **2.206** und **8.715** — in 2024 **jede
+einzelne Stunde**, in 2025 alle bis auf zwei. Die einzigen wirklichen Lücken des Bestands sind die
+fünf leeren Monate von 2026 (M92).
 
 ## M87‑5 — die Gegenprobe, und die Grenze, die dabei gerissen ist
 
@@ -1992,6 +2031,7 @@ Tabellengrößen sind am Ende der Runde **byteidentisch** mit V1:
 | **A8** | **Kein `EXPLAIN` für Fenster H2 in M88** | Fünf der sechs Fenster sind geplant; die fünf decken den Mengenbereich von 256 bis 24.218 geschätzten Sätzen ab, und der Plan ist über diesen ganzen Bereich unverändert. Für H2 fehlt der Plan im Volltext — **L15 ist an dieser einen Stelle nicht vollständig erfüllt** |
 | **A9** | **M91 ohne Laufzeitmessung nach „beste von fünf"** | M91 ist eine Verteilungsfrage, keine Leistungsfrage; der Auftrag verlangt für sie keine Laufzeit. Die Einzellaufzeiten stehen trotzdem im Profil und in der Laufzeittabelle |
 | **A10** | **Die Runde schreibt in mehr als eine Datei** | Der Auftrag sagt „genau eine Datei: `docs/messungen-schritt10.md`". Dazu gekommen sind `scripts/messung-schritt10/*.sql` (dreizehn Sitzungsdateien) und eine Zeile in `.gitignore`. Das folgt der Konvention seit Schritt 8: Die Sitzungsdateien sind der Beleg dafür, **wie** gemessen wurde, und ohne sie ist die Runde nicht nachfahrbar; die Rohausgaben bleiben ausgeschlossen. **Keine der unter „Gesperrte Dateien" genannten Dateien ist angefasst worden** |
+| **A13** | **Sitzung 3c lief *nach* der Abschlusssitzung 8** | Beim Zusammenstellen der Ergebnisdatei ist aufgefallen, dass zwei Zahlen aus M87‑5 (belegte Stundeneimer und Stunde‑Prozess‑Paare) mit dem abgebrochenen Statement verlorengegangen und in den Jahresscheiben von Sitzung 3b nicht mitgeführt worden waren. Sie sind in Sitzung 3c nachgeholt worden — um `10:48:30`, also nach dem Löschen der Probetabelle um `10:37:44`. **Die Reihenfolge ist damit nicht die des Sitzungsplans.** Unschädlich, weil 3c ausschließlich `GlassfishDB` liest und die Probetabelle nicht braucht; `@@global.read_only` steht auch dort auf `1`. Der Nachweis der Löschung bleibt gültig — nach 3c ist nichts angelegt worden |
 | **A12** | **Kein Eintrag in `docs/README.md`, obwohl diese Datei neu ist** | `CLAUDE.md` verlangt unter „Dokumentationspflicht": „Neue Datei → Eintrag in `docs/README.md`". Der Auftrag dieser Runde führt `docs/README.md` unter **„Gesperrte Dateien — nicht anzufassen"**. Beides zusammen geht nicht. Aufgelöst zugunsten des Auftrags, weil er die spätere und die speziellere Vorgabe ist — **aber nicht stillschweigend**: Der Eintrag fehlt und gehört in die Korrekturrunde. Er ist unten unter den Korrekturen mitgeführt |
 | **A11** | **Sechs Zahlen sind vor dem Abschluss der Runde berichtigt worden** | Alle **abgeleiteten** Größen dieser Datei sind am Ende gegen die Rohausgaben nachgerechnet worden. Sechs stimmten nicht und stehen jetzt richtig: (1) die Laufzeit von M86b Fenster B — beim ersten Auswerten waren die Werte von Fenster A zugeordnet worden, **517,5 ms statt 17.182,4 ms**; (2) das Mittel der 15 vollen Monatsscheiben, **222.426 statt 219.359**, und damit (3) der Abstand der größten Scheibe, **11,6 % statt 7,6 %**, und (4) der von Oktober 2024, **8,4 % statt 10,0 %**; (5) der kleinste Aufwärmlauf-Aufschlag in M88, **0,5 % (A) statt 1,4 % (D)**; (6) der Anteil der Partner ab Rang 11 in M91, **7,34 % auf 105 Partner statt 23,07 % auf 115**. **Keine gemessene Zahl war betroffen und keine vorregistrierte Deutung hing an einer von ihnen** — alle sechs sind aus richtigen Messwerten falsch weitergerechnet. Sie stehen hier, weil eine Runde, die ihre eigenen Rechenfehler verschweigt, ihre übrigen Zahlen mit entwertet |
 
