@@ -938,3 +938,296 @@ Zugriffsweg. Der Befund steht hier, weil dieselbe halbierte Kardinalität in ein
 **mehreren** Joinpartnern die Joinreihenfolge kippen kann — und M89 ist genau so eine Abfrage.
 Er schließt an Befund 2 aus M83 an, der dieselbe Statistik von der anderen Seite trifft
 (`CARDINALITY` 18 auf `ProcessID`, Faktor 43,7).
+
+---
+
+# M89 — Die Leseabfrage des Dashboards, über die Schemagrenze
+
+Sitzungen 5a bis 5d. **Hier steht die einzige schreibende Handlung dieser Runde.**
+
+## Die Probetabelle — angelegt, befüllt, gemessen
+
+Vorgehen nach dem Muster von M80, enger gefasst. Freigegeben ist **genau eine** Tabelle.
+
+**Vorher:** `message_rollup_probe` existierte nicht (`information_schema.TABLES` → 0). `overlord_monitor`
+trug neun Tabellen: `app_user`, `app_user_mandant`, `audit_log`, `bam_sollaenge`, `bam_spalte`,
+`flyway_schema_history`, `process_catalog`, `SPRING_SESSION`, `SPRING_SESSION_ATTRIBUTES`.
+
+```sql
+CREATE TABLE overlord_monitor.message_rollup_probe (
+  stunde         DATETIME    NOT NULL,
+  process_id     VARCHAR(36) NOT NULL,
+  message_status VARCHAR(30) NOT NULL,
+  anzahl         INT         NOT NULL,
+  PRIMARY KEY (stunde, process_id, message_status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+```
+
+Der Schlüssel ist **`(Stunde, ProcessID, MessageStatus)`** — E‑a plus E‑g, die gebaute Fassung.
+Mandant, Partner und Richtung stehen **nicht** in der Zeile. Sortierung `utf8mb4_general_ci`, damit
+der Join über die Schemagrenze kollationsrein bleibt (V4).
+
+**Befüllt in 22 Monatsscheiben**, nicht in einem Zug. Grund: Ein einziges `INSERT … SELECT` über den
+Gesamtbestand liefe gegen `max_statement_time = 60` — M87‑5 hat die Grenze mit einer ähnlich großen
+Aggregation bereits gerissen. Der Rahmen verbietet, sie hochzusetzen. Also dieselbe Antwort wie dort:
+Scheiben.
+
+| Kontrolle | Wert |
+|---|---:|
+| Zeilen in der Probetabelle | **335.610** |
+| `SUM(anzahl)` | **3.341.519** |
+| verschiedene `process_id` | 738 |
+| verschiedene `message_status` | 12 |
+| früheste / späteste Stunde | `2024-10-01 02:00:00` / `2026-07-08 17:00:00` |
+| Größe (`DATA_LENGTH` + `INDEX_LENGTH`) | **18,59 MiB** (19.496.960 B Daten, 0 B Index) |
+
+**Beide Kontrollen gehen auf.** 335.610 ist Zeichen für Zeichen die Zahl aus M87 Variante 1, und
+`SUM(anzahl)` = 3.341.519 heißt: **jede Nachricht ist genau einmal gezählt**, keine doppelt, keine
+verloren.
+
+**Fülldauer, 22 Scheiben, `INSERT … SELECT` je Scheibe:**
+
+| Scheibe | ms | Scheibe | ms | Scheibe | ms |
+|---|---:|---|---:|---|---:|
+| 2024-10 | 3.668,4 | 2025-04 | 3.472,6 | 2025-10 | 3.721,9 |
+| 2024-11 | 3.205,9 | 2025-05 | 3.714,9 | 2025-11 | 3.645,0 |
+| 2024-12 | 2.561,6 | 2025-06 | 3.561,2 | 2025-12 | 3.304,5 |
+| 2025-01 | 2.984,1 | 2025-07 | 3.812,5 | 2026-01 … 2026-05 | 1,7 – 4,2 |
+| 2025-02 | 2.843,7 | 2025-08 | 3.562,5 | 2026-06 | 72,1 |
+| 2025-03 | 3.263,1 | 2025-09 | **3.827,1** | 2026-07 | 7,7 |
+
+**Summe 51,242 s für 22 Monate, teuerste Scheibe 3,827 s.** Das ist zugleich eine Vorwegnahme von
+M92 — mit dem Unterschied, dass hier das Schreiben enthalten ist und M92 nur die Aggregation misst.
+
+**Gegenprobe, dass `GlassfishDB` unberührt ist:** 3.341.519 Zeilen, Datenstand `2026-07-08 17:21:10`
+— unverändert. Geschrieben wurde ausschließlich in `overlord_monitor`.
+
+> **`@@global.read_only = 1` hat den Schreibvorgang nicht verhindert**, weil `monitor_write` die
+> dafür nötige Berechtigung trägt — dieselbe, mit der die Anwendung `SPRING_SESSION` schreibt.
+> Der `read_only`-Schalter ist in diesem Projekt der **Nachweis, dass es die Testkopie ist**, nicht
+> der Schutz vor Schreibzugriffen. Der Schutz von `GlassfishDB` kommt aus den Rechten von
+> `monitor_write`, das dort nur `SELECT` hat.
+
+## Die gemessene Abfrage, Variante A — die des Auftrags
+
+```sql
+SELECT r.stunde, r.message_status, SUM(r.anzahl) AS anzahl
+FROM overlord_monitor.message_rollup_probe r
+JOIN GlassfishDB.Process        p  ON p.ProcessID  = r.process_id
+JOIN GlassfishDB.Project        pr ON pr.ProjectID = p.ProjectID
+JOIN GlassfishDB.ProjectMandant pm ON pm.ProjectID = pr.ProjectID
+LEFT JOIN overlord_monitor.process_catalog c ON c.process_id = r.process_id
+WHERE pm.MandantID = 'NEXANS'
+  AND r.stunde >= '2026-07-06 17:00:00'
+  AND r.stunde <  '2026-07-08 18:00:00'
+GROUP BY r.stunde, r.message_status
+ORDER BY r.stunde, r.message_status;
+```
+
+`LEFT JOIN` auf `process_catalog` und nicht `JOIN`: Der Katalog deckt nur 1.160 der 1.503 Prozesse
+(V2). Ein innerer Join verlöre 343 Prozesse stillschweigend.
+
+**Zwei Fenster je Mandant**, aus demselben Grund wie in M88: Fenster D trägt 256 Nachrichten auf zwei
+Prozessen. Daneben läuft `D2` — dieselben 48 Stunden Breite, aber im dichten Bestand.
+
+| Fall | Ergebniszeilen | Nachrichten | Aufwärmlauf | **beste von fünf** |
+|---|---:|---:|---:|---:|
+| **NEXANS, Fenster D** | 2 | 285 | 2,481 ms | **0,738 ms** |
+| **SUTTONS, Fenster D** | **0** | — | 0,814 ms | **0,693 ms** |
+| NEXANS, D2 (dichte 48 h) | 110 | 10.252 | 6,940 ms | **6,793 ms** |
+| SUTTONS, D2 (dichte 48 h) | 53 | 1.357 | 6,112 ms | **6,092 ms** |
+
+**`SUTTONS` liefert in Fenster D null Zeilen.** Die beiden Prozesse, die den Bestand bis zuletzt
+tragen, gehören nicht zu diesem Mandanten. Das Dashboard von `SUTTONS` wäre in seinem
+Standardfenster leer — auf der Testkopie, nicht notwendig in Produktion.
+
+## Der Plan — und die Antwort auf die Frage, die M89 ausdrücklich stellt
+
+> Gefragt war: *„Zusätzlich festzuhalten: welche Tabelle der Plan als Einstieg wählt. Bei M80 war es
+> `ProjectMandant`, bei beiden Mandanten. Bleibt es dabei, ist die Mandantentrennung auch im Plan
+> sichtbar und nicht nur im Text."*
+
+**Es bleibt nicht dabei. Der Einstieg hängt am Mandanten.**
+
+**`NEXANS`** — Einstieg ist **`r`, die Rollup-Tabelle**:
+
+```
++------+-------------+-------+--------+------------------------------------+---------+---------+-------------------------------+------+----------------------------------------------+
+| id   | select_type | table | type   | possible_keys                      | key     | key_len | ref                           | rows | Extra                                        |
++------+-------------+-------+--------+------------------------------------+---------+---------+-------------------------------+------+----------------------------------------------+
+|    1 | SIMPLE      | r     | range  | PRIMARY                            | PRIMARY | 5       | NULL                          |  926 | Using where; Using temporary; Using filesort |
+|    1 | SIMPLE      | p     | eq_ref | PRIMARY,Process_ProjectFK          | PRIMARY | 146     | overlord_monitor.r.process_id |    1 | Using where                                  |
+|    1 | SIMPLE      | pm    | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY | 292     | GlassfishDB.p.ProjectID,const |    1 | Using where; Using index                     |
+|    1 | SIMPLE      | pr    | eq_ref | PRIMARY                            | PRIMARY | 146     | GlassfishDB.p.ProjectID       |    1 | Using index                                  |
++------+-------------+-------+--------+------------------------------------+---------+---------+-------------------------------+------+----------------------------------------------+
+```
+
+**`SUTTONS`** — Einstieg ist **`pm`, `ProjectMandant`**, wie bei M80:
+
+```
++------+-------------+-------+--------+------------------------------------+----------------------------+---------+-------------------------------+------+-----------------------------------------------------------+
+| id   | select_type | table | type   | possible_keys                      | key                        | key_len | ref                           | rows | Extra                                                     |
++------+-------------+-------+--------+------------------------------------+----------------------------+---------+-------------------------------+------+-----------------------------------------------------------+
+|    1 | SIMPLE      | pm    | ref    | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146     | const                         |    1 | Using where; Using index; Using temporary; Using filesort |
+|    1 | SIMPLE      | pr    | eq_ref | PRIMARY                            | PRIMARY                    | 146     | GlassfishDB.pm.ProjectID      |    1 | Using index                                               |
+|    1 | SIMPLE      | r     | range  | PRIMARY                            | PRIMARY                    | 5       | NULL                          |  926 | Using where; Using join buffer (flat, BNL join)           |
+|    1 | SIMPLE      | p     | eq_ref | PRIMARY,Process_ProjectFK          | PRIMARY                    | 146     | overlord_monitor.r.process_id |    1 | Using where                                               |
++------+-------------+-------+--------+------------------------------------+----------------------------+---------+-------------------------------+------+-----------------------------------------------------------+
+```
+
+**Das Muster ist stabil und hängt nicht an der Abfrageform:** In allen acht gemessenen Plänen
+(Variante A und B, Fenster D, D2 und B) steigt `NEXANS` über `r` ein und `SUTTONS` über `pm`.
+Der Grund liegt auf der Hand: `NEXANS` hält 733 von 1.503 Prozessen in 17 Projekten, `SUTTONS`
+17 Prozesse in **einem**. Für `SUTTONS` ist der Mandantenfilter die schärfste Bedingung im ganzen
+Statement, für `NEXANS` ist es das Zeitfenster.
+
+> **Ist die Mandantentrennung damit im Plan sichtbar? Ja — aber an zwei verschiedenen Stellen.**
+> Bei `SUTTONS` steht sie vorne, als `ref … const` auf `ProjectMandant_Mandant_idx`. Bei `NEXANS`
+> steht sie hinten, als `eq_ref` auf `PRIMARY` mit `key_len = 292` und
+> `ref = GlassfishDB.p.ProjectID,const` — **beide** Teile des Primärschlüssels
+> `(ProjectID, MandantID)` sind belegt, `used_key_parts: ["ProjectID", "MandantID"]`, und die
+> angehängte Bedingung lautet wörtlich `pm.MandantID = 'NEXANS'`. Die Trennung ist in beiden Fällen
+> im Plan nachweisbar; sie ist nur nicht in beiden Fällen die *Einstiegs*bedingung.
+>
+> **Das ist kein Mangel, sondern der Optimierer, der seine Arbeit tut** — aber es widerlegt den
+> Satz, dass die Mandantentrennung *immer* als Einstieg erscheint. Wer das als Prüfkriterium in
+> einen Test schreibt, bekommt bei großen Mandanten ein rotes Licht ohne Fehler. Siehe Befund 9.
+
+## Befund 9 — der `LEFT JOIN` auf `process_catalog` wird vollständig wegoptimiert
+
+**In keinem der vier Pläne aus Sitzung 5b kommt `process_catalog` vor. Kein einziges Mal.**
+`EXPLAIN FORMAT=JSON` führt genau vier Tabellen: `r`, `p`, `pm`, `pr`.
+
+Der Grund ist sauber: Keine Spalte von `c` wird verwendet, und der Join läuft auf den
+Primärschlüssel — er kann die Zeilenmenge also weder vergrößern noch verkleinern. MariaDB entfernt
+ihn und hat recht damit.
+
+> **Damit misst die Abfrage, die der Auftrag wörtlich beschreibt, den Katalog-Join nicht — sie misst
+> seine Abwesenheit.** Der Auftrag verlangt „gejoint … auf `process_catalog` für Partner und
+> Richtung, gruppiert nach Stunde und Rohstatus". Beides zusammen geht nicht: Wer nur nach Stunde
+> und Rohstatus gruppiert, *verwendet* Partner und Richtung nicht, und dann steht der Join zwar im
+> Text, aber nicht im Plan.
+
+**Variante B holt ihn zurück**, indem Partner und Richtung tatsächlich in die Gruppierung eingehen.
+Sie ist zugleich näher an dem, was 10b braucht. G1 bleibt gewahrt: Der Partnername verlässt die
+innere Abfrage nicht, nach außen dringen nur die Zahl der Partner-Eimer, die Richtung
+(`EINGEHEND`/`AUSGEHEND` ist Konfigurationsvokabular) und „zugeordnet ja/nein" nach E‑i.
+
+```sql
+SELECT t.stunde, t.message_status, t.richtung, t.zugeordnet,
+       COUNT(*) AS partner_eimer, SUM(t.anzahl) AS nachrichten
+FROM (
+  SELECT r.stunde,
+         r.message_status,
+         COALESCE(c.richtung, 'nicht zugeordnet') AS richtung,
+         CASE WHEN c.process_id IS NULL                THEN 'nein'
+              WHEN c.pflegestatus <> 'GEPFLEGT'        THEN 'nein'
+              WHEN c.partner IS NULL OR c.partner = '' THEN 'nein'
+              ELSE 'ja' END                            AS zugeordnet,
+         CASE WHEN c.process_id IS NULL                THEN NULL
+              WHEN c.pflegestatus <> 'GEPFLEGT'        THEN NULL
+              WHEN c.partner IS NULL OR c.partner = '' THEN NULL
+              ELSE c.partner END                       AS partner,
+         SUM(r.anzahl) AS anzahl
+  FROM overlord_monitor.message_rollup_probe r
+  JOIN GlassfishDB.Process        p  ON p.ProcessID  = r.process_id
+  JOIN GlassfishDB.Project        pr ON pr.ProjectID = p.ProjectID
+  JOIN GlassfishDB.ProjectMandant pm ON pm.ProjectID = pr.ProjectID
+  LEFT JOIN overlord_monitor.process_catalog c ON c.process_id = r.process_id
+  WHERE pm.MandantID = 'NEXANS'
+    AND r.stunde >= '2025-12-28 00:00:00'
+    AND r.stunde <  '2025-12-30 00:00:00'
+  GROUP BY r.stunde, r.message_status, richtung, zugeordnet, partner
+) t
+GROUP BY t.stunde, t.message_status, t.richtung, t.zugeordnet
+ORDER BY t.stunde, t.message_status;
+```
+
+Jetzt steht `c` im Plan — als **`eq_ref` auf `PRIMARY`, der bestmögliche Zugriff**, genau wie bei
+M80:
+
+```
++------+-------------+------------+--------+------------------------------------+---------+---------+-------------------------------+------+----------------------------------------------+
+| id   | select_type | table      | type   | possible_keys                      | key     | key_len | ref                           | rows | Extra                                        |
++------+-------------+------------+--------+------------------------------------+---------+---------+-------------------------------+------+----------------------------------------------+
+|    1 | PRIMARY     | <derived2> | ALL    | NULL                               | NULL    | NULL    | NULL                          |  926 | Using temporary; Using filesort              |
+|    2 | DERIVED     | r          | range  | PRIMARY                            | PRIMARY | 5       | NULL                          |  926 | Using where; Using temporary; Using filesort |
+|    2 | DERIVED     | c          | eq_ref | PRIMARY                            | PRIMARY | 146     | overlord_monitor.r.process_id |    1 |                                              |
+|    2 | DERIVED     | p          | eq_ref | PRIMARY,Process_ProjectFK          | PRIMARY | 146     | overlord_monitor.r.process_id |    1 | Using where                                  |
+|    2 | DERIVED     | pm         | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY | 292     | GlassfishDB.p.ProjectID,const |    1 | Using where; Using index                     |
+|    2 | DERIVED     | pr         | eq_ref | PRIMARY                            | PRIMARY | 146     | GlassfishDB.p.ProjectID       |    1 | Using index                                  |
++------+-------------+------------+--------+------------------------------------+---------+---------+-------------------------------+------+----------------------------------------------+
+```
+
+## Alle Laufzeiten im Überblick
+
+| Fall | Fenster | Katalog im Plan? | Ergebniszeilen | Nachrichten | **beste von fünf** |
+|---|---|---|---:|---:|---:|
+| A · NEXANS | **D** (48 h, Anker V5) | nein (wegoptimiert) | 2 | 285 | **0,738 ms** |
+| A · SUTTONS | **D** | nein | 0 | — | **0,693 ms** |
+| A · NEXANS | D2 (dichte 48 h) | nein | 110 | 10.252 | **6,793 ms** |
+| A · SUTTONS | D2 | nein | 53 | 1.357 | **6,092 ms** |
+| **B · NEXANS** | D2 | **ja, `eq_ref`** | — | 10.252 | **11,299 ms** |
+| **B · SUTTONS** | D2 | **ja, `eq_ref`** | — | 1.357 | **10,134 ms** |
+| A · NEXANS | **B** (ein Monat) | nein | — | **180.251** | **148,840 ms** |
+| A · SUTTONS | **B** | nein | — | 21.516 | **112,625 ms** |
+| **B · NEXANS** | **B** | **ja** | — | 180.251 | **237,673 ms** |
+| **B · SUTTONS** | **B** | **ja** | — | 21.516 | **150,521 ms** |
+
+**Was der Katalog-Join kostet:** Faktor **1,66** in Fenster D2 (beide Mandanten), Faktor **1,60**
+(NEXANS) bzw. **1,34** (SUTTONS) in Fenster B. Das deckt sich mit M80, das für die Pflegeliste
+**+68 %** gemessen hat — eine unabhängige Bestätigung an einer ganz anderen Abfrage.
+
+> **Eine Kontrolle, die aufgehen musste und aufgeht.** In Fenster B liefert die Abfrage für `NEXANS`
+> **180.251** Nachrichten. Das ist Zeichen für Zeichen die Zahl, die
+> [`messungen-schritt4.md`](messungen-schritt4.md) M11/M12 für „Fenster B, Mandant `NEXANS`" nennt
+> und die `messungen-schritt5.md` Z. 90–92 als Bezugsgröße zitiert. Über alle Mandanten summiert die
+> Probetabelle im selben Fenster **214.330** — die Zahl aus M17. **Der Rollup und die Mandantenkette
+> reproduzieren zwei unabhängig erhobene Zahlen aus früheren Runden auf die Einheit genau.**
+
+## Vorregistrierte Deutung, dagegengehalten
+
+> Vorregistriert: *„Das Budget ist **500 ms für die ganze Landingpage**, und diese Abfrage ist nur
+> ein Teil davon. Bleibt sie unter 150 ms, trägt E‑a A ohne Vorbehalt. Zwischen 150 und 400 ms:
+> E‑a A trägt, aber die Kachelabfragen dürfen nicht zusätzlich live rechnen. Über 400 ms: Der
+> Mandant gehört doch in den Schlüssel, und E‑a ist dem Auftraggeber erneut vorzulegen."*
+
+**Für das, was gefragt war — Fenster D — trifft der oberste Zweig, und zwar um mehr als zwei
+Größenordnungen: 0,738 ms und 0,693 ms.** Aber das ist die Messung eines fast leeren Fensters und
+trägt für sich genommen nichts.
+
+**Die belastbare Antwort steht in den dichten Fenstern, und sie ist gestaffelt:**
+
+| Fenster und Fassung | Laufzeit | Zweig der Deutung |
+|---|---:|---|
+| **48 h, Standardfenster des Dashboards (E‑a/Standard), ohne Katalog** | 6,79 ms | **unter 150 ms — E‑a A trägt ohne Vorbehalt** |
+| **48 h, mit Katalog-Join (die Fassung, die 10b braucht)** | 11,30 ms | **unter 150 ms — E‑a A trägt ohne Vorbehalt** |
+| ein Monat, ohne Katalog | 148,84 ms | knapp unter 150 ms |
+| **ein Monat, mit Katalog-Join** | **237,67 ms** | **zwischen 150 und 400 ms** |
+
+> **Die Deutung trifft — im Standardfenster ohne jeden Vorbehalt.** Bei Stundenauflösung über
+> 48 Stunden, also genau der Voreinstellung aus §2, kostet die Leseabfrage **11,30 ms** mit allem
+> Drum und Dran. Das sind **2,3 %** des 500‑ms‑Budgets der ganzen Landingpage. **E‑a A trägt: Der
+> Mandant muss nicht in den Schlüssel.**
+>
+> **Über 400 ms kommt keine der zehn gemessenen Fassungen.** Die Frage „gehört der Mandant doch in
+> den Schlüssel" ist damit **nicht** aufzuwerfen, auch nicht für ein Monatsfenster.
+>
+> **Der mittlere Zweig gilt trotzdem, und er gilt für das Monatsfenster:** Bei 237,67 ms bleiben von
+> 500 ms noch 262 ms für alles Übrige. **Die Kachelabfragen dürfen dann nicht zusätzlich live
+> rechnen** — und genau das täte die Überfällig-Kachel nach E‑c. Ob das trägt, entscheidet M90.
+
+**Ein Zusatz, den die Zahlen hergeben und der 10b gehört:** Die Laufzeit hängt nicht am Mandanten,
+sondern an der Zahl der Rollup-Zeilen im Fenster. `NEXANS` hat in Fenster B 8.861 Rollup-Zeilen und
+braucht 148,84 ms, `SUTTONS` 6.142 und braucht 112,63 ms — 16,8 bzw. 18,3 µs je Zeile. **Der große
+Mandant ist nicht überproportional teuer.** Beide Pläne lesen denselben Indexbereich der
+Rollup-Tabelle (`rows = 45.354` für den ganzen Monat) und werfen danach weg, was nicht zum Mandanten
+gehört; dass `NEXANS` 86 % davon behält und `SUTTONS` 10 %, ändert an der gelesenen Menge nichts.
+
+> **Und daran hängt der einzige Vorbehalt, den diese Messung wirklich trägt.** Der Mandantenfilter
+> greift **nach** dem Zeitfenster, nicht davor — jeder Mandant liest den Rollup-Bereich **aller**
+> Mandanten. Bei zehn Mandanten ist das der Faktor, um den zu viel gelesen wird. Genau das würde
+> ein Mandant im Schlüssel (E‑a B) sparen. Es lohnt sich hier trotzdem nicht: 11,30 ms im
+> Standardfenster lassen keinen Raum für eine Optimierung, die die Zeile breiter macht. **Sollte
+> die Zahl der Mandanten deutlich über zehn wachsen, ist das die Stelle, an der neu zu rechnen
+> ist** — nicht heute.
