@@ -1231,3 +1231,413 @@ gehört; dass `NEXANS` 86 % davon behält und `SUTTONS` 10 %, ändert an der gel
 > Standardfenster lassen keinen Raum für eine Optimierung, die die Zeile breiter macht. **Sollte
 > die Zahl der Mandanten deutlich über zehn wachsen, ist das die Stelle, an der neu zu rechnen
 > ist** — nicht heute.
+
+---
+
+# M90 — „Überfällig" live, mit Mandantenfilter und Fenster
+
+Sitzung 6, `s6-m90-ueberfaellig.sql`. Die Abfrage, die E‑c A verlangt — und sie ist eine **andere**
+als die in `docs/message-status.md` gemessene: Dort fehlten Mandantenfilter und Zeitfenster.
+
+## Die gemessene Abfrage
+
+```sql
+SELECT COUNT(*) AS ueberfaellig
+FROM GlassfishDB.Message m
+WHERE m.MessageStatus IN ('SUSPENDED','RUNNING')
+  AND m.MessageTimeout > 0
+  AND m.MessageLastUpdate + INTERVAL m.MessageTimeout SECOND < '2026-07-08 17:21:10'
+  AND m.MessageLastUpdate >= '2025-11-30 00:00:00'
+  AND m.MessageLastUpdate <  '2025-12-30 00:00:00'
+  AND EXISTS (
+        SELECT 1
+        FROM GlassfishDB.Process        p
+        JOIN GlassfishDB.Project        pr ON pr.ProjectID = p.ProjectID
+        JOIN GlassfishDB.ProjectMandant pm ON pm.ProjectID = pr.ProjectID
+        WHERE p.ProcessID = m.ProcessID
+          AND pm.MandantID = 'NEXANS'
+      );
+```
+
+**Z1 ist eingehalten:** Der Anker steht als **Literal** im Statement — `'2026-07-08 17:21:10'`, der
+Wert aus V5. Kein `NOW()`. **V4 ist eingehalten:** Die Spaltennamen der Kette sind gegen
+`information_schema` erhoben, nicht aus einer Projektdatei übernommen.
+
+## Die Zahlen — drei Fenster nebeneinander
+
+| Fassung | Fenster | `NEXANS` | `SUTTONS` |
+|---|---|---:|---:|
+| **1** | **D** — was die Kachel nach E‑h zeigt | **0** | **0** |
+| **2** | **B** — ein Monat | **538** | **0** |
+| **3** | **G** — was „insgesamt" wäre | **538** | **0** |
+
+Die Bezugsgrößen dazu, ohne Mandantenfilter:
+
+| | Zeilen |
+|---|---:|
+| offen (`SUSPENDED` oder `RUNNING`), Gesamtbestand | **538** |
+| davon `MessageTimeout > 0` | **538** |
+| davon überfällig gegen den Anker | **538** |
+| `RUNNING` (Gegenprobe) | **0** |
+| `MessageTimeout IS NULL` (Gegenprobe) | **0** |
+
+**Alle 538 offenen Zeilen gehören `NEXANS`**, und sie liegen zwischen `2025-12-23 11:04:13` und
+`2025-12-29 12:37:16`. Kein anderer Mandant hat auch nur eine.
+
+> **Die Zahl, um derentwillen die zweite Kachelzahl überhaupt erwogen wird — und sie fällt
+> maximal aus.** Der Abstand zwischen „im Zeitraum" und „insgesamt" ist auf dieser Testkopie
+> **0 gegen 538**. Die Kachel nach E‑h zeigt im Standardfenster **nichts**, während „insgesamt"
+> 538 stünde. Das ist nicht ein Unterschied in der Größenordnung, sondern der Unterschied zwischen
+> leer und nicht leer.
+>
+> **Und es ist ein Artefakt des Bestands, keine fachliche Aussage.** Die 538 offenen Zeilen enden am
+> 29.12.2025, der Anker liegt am 08.07.2026 — mehr als ein halbes Jahr später. Jedes Fenster, das
+> am Anker endet und kürzer als sechs Monate ist, enthält null davon. In Produktion, wo offene
+> Zeilen am aktuellen Rand entstehen, wäre das Verhältnis umgekehrt.
+
+## Die Pläne
+
+**`NEXANS`, Fenster D** — MariaDB setzt den `rowid`-Filter aus 10.6 ein und kombiniert zwei Indizes:
+
+```
++------+-------------+-------+--------------+--------------------------------------------------------------------------------------------------------+---------------------------------------+---------+-------------------------------+----------+--------------------------------------------------------+
+| id   | select_type | table | type         | possible_keys                                                                                          | key                                   | key_len | ref                           | rows     | Extra                                                  |
++------+-------------+-------+--------------+--------------------------------------------------------------------------------------------------------+---------------------------------------+---------+-------------------------------+----------+--------------------------------------------------------+
+|    1 | PRIMARY     | m     | range|filter | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageStatusIDX,MessageLastUpdateProcessMessageIDX | MessageLastUpdateIDX|MessageStatusIDX | 5|123   | NULL                          | 256 (0%) | Using index condition; Using where; Using rowid filter |
+|    1 | PRIMARY     | p     | eq_ref       | PRIMARY,Process_ProjectFK                                                                              | PRIMARY                               | 146     | GlassfishDB.m.ProcessID       | 1        | Using where                                            |
+|    1 | PRIMARY     | pm    | eq_ref       | PRIMARY,ProjectMandant_Mandant_idx                                                                     | PRIMARY                               | 292     | GlassfishDB.p.ProjectID,const | 1        | Using where; Using index                               |
+|    1 | PRIMARY     | pr    | eq_ref       | PRIMARY                                                                                                | PRIMARY                               | 146     | GlassfishDB.p.ProjectID       | 1        | Using index                                            |
++------+-------------+-------+--------------+--------------------------------------------------------------------------------------------------------+---------------------------------------+---------+-------------------------------+----------+--------------------------------------------------------+
+```
+
+**`NEXANS`, Fenster B und Fenster G** — Einstieg über **`MessageStatusIDX`**, `rows = 539`:
+
+```
++------+-------------+-------+--------+-------------------------------------------------+------------------+---------+-------------------------------+------+------------------------------------+
+| id   | select_type | table | type   | possible_keys                                   | key              | key_len | ref                           | rows | Extra                              |
++------+-------------+-------+--------+-------------------------------------------------+------------------+---------+-------------------------------+------+------------------------------------+
+|    1 | PRIMARY     | m     | range  | ProejctIDIDX,Message_ProcessFK,MessageStatusIDX | MessageStatusIDX | 123     | NULL                          |  539 | Using index condition; Using where |
+|    1 | PRIMARY     | p     | eq_ref | PRIMARY,Process_ProjectFK                       | PRIMARY          | 146     | GlassfishDB.m.ProcessID       |    1 | Using where                        |
+|    1 | PRIMARY     | pm    | eq_ref | PRIMARY,ProjectMandant_Mandant_idx              | PRIMARY          | 292     | GlassfishDB.p.ProjectID,const |    1 | Using where; Using index           |
+|    1 | PRIMARY     | pr    | eq_ref | PRIMARY                                         | PRIMARY          | 146     | GlassfishDB.p.ProjectID       |    1 | Using index                        |
++------+-------------+-------+--------+-------------------------------------------------+------------------+---------+-------------------------------+------+------------------------------------+
+```
+
+**`SUTTONS`** steigt in allen drei Fassungen über **`ProjectMandant_Mandant_idx`** ein, mit
+`Using join buffer (flat, BNL join)` auf `m` — dasselbe Muster wie in M89. **Der Einstieg hängt
+auch hier am Mandanten und nicht an der Abfrage.**
+
+> **`rows = 539` gegen 538 wahre Zeilen — die Schätzung ist hier auf eine Zeile genau.** Das ist
+> derselbe Wert, den `message-status.md` für die Fassung ohne Mandantenfilter nennt, und der
+> Gegenpol zu Befund 8: Wo MariaDB im Bereich zählen kann, zählt es richtig.
+> `MessageStatusIDX` hat `CARDINALITY = 18` (V3) — die Schätzung kommt hier also **nicht** aus der
+> Kardinalität, sondern aus einer Stichprobe über zwei diskrete Werte.
+
+## Laufzeit — ein Aufwärmlauf, dann beste von fünf
+
+| Fall | Fenster | Ergebnis | Aufwärmlauf | **beste von fünf** |
+|---|---|---:|---:|---:|
+| `NEXANS` | **D** | 0 | 3,744 ms | **2,275 ms** |
+| `SUTTONS` | **D** | 0 | 2,270 ms | **2,274 ms** |
+| `NEXANS` | **B** | 538 | 6,195 ms | **5,127 ms** |
+| `SUTTONS` | **B** | 0 | 6,215 ms | **5,371 ms** |
+| `NEXANS` | **G** | 538 | 4,612 ms | **4,275 ms** |
+| `SUTTONS` | **G** | 0 | 4,100 ms | **4,115 ms** |
+
+> **Ein Ergebnis, das der Erwartung widerspricht und das benannt gehört: Fenster G ist billiger als
+> Fenster B.** 4,275 ms ohne jedes Zeitfenster gegen 5,127 ms mit einem Monatsfenster.
+> Der Grund steht im Plan: **Ohne Zeitfenster bleibt nur ein Zugriffsweg** — `MessageStatusIDX`,
+> 539 Sätze, fertig. **Mit** Zeitfenster muss MariaDB zusätzlich prüfen, ob sich der Einstieg über
+> `MessageLastUpdateIDX` lohnt, und hängt eine weitere Bedingung an. Das Zeitfenster verengt hier
+> nichts, weil der Statusfilter bereits auf 539 von 3,34 Millionen Zeilen herunterführt — es kostet
+> nur.
+>
+> **Für 10b heißt das:** Die zweite Kachelzahl („insgesamt") ist **nicht teurer** als die erste,
+> sondern billiger. Wer sie aus Kostengründen weglassen wollte, hätte kein Kostenargument.
+
+## Vorregistrierte Deutung, dagegengehalten
+
+> Vorregistriert: *„Unter 50 ms in allen drei Fassungen: Die Ausnahme von L2 ist wohlfeil, und die
+> zweite Zahl an der Kachel kostet nichts. Über 500 ms in Fassung 3: Die zweite Zahl kommt nicht
+> live, und 10b braucht dafür einen anderen Weg. Über 500 ms in Fassung 1: **E‑c A trägt nicht**
+> und ist vorzulegen."*
+
+**Der oberste Zweig trifft, in allen drei Fassungen und für beide Mandanten.** Die teuerste
+gemessene Fassung kostet **5,371 ms** — ein Zehntel der 50‑ms‑Schwelle.
+
+> **Also, wie vorregistriert, so gesagt: Die Ausnahme von Regel L2 ist wohlfeil.** Eine
+> Live-Abfrage, die 5 ms kostet, ist keine Live-Aggregation über `Message` im Sinne der Regel —
+> sie liest 539 Indexsätze und schlägt für jeden einmal in der Mandantenkette nach. **E‑c A trägt.**
+>
+> **Und die zweite Zahl an der Kachel kostet nichts** — sie kostet sogar weniger als die erste.
+>
+> **Zusammen mit M89 ergibt das die Rechnung für die Landingpage:** 11,30 ms Rollup-Leseabfrage
+> (48 h, mit Katalog) plus 2,28 ms Überfällig-Kachel plus 4,28 ms für die zweite Zahl =
+> **17,86 ms** von 500 ms. Der Vorbehalt aus M89 („die Kachelabfragen dürfen nicht zusätzlich live
+> rechnen") greift beim Standardfenster **nicht** — er greift erst beim Monatsfenster, und auch
+> dort bleiben 237,67 + 5,13 + 4,28 = **247,08 ms** deutlich unter dem Budget.
+
+## Die Grenze, die in den Befund gehört
+
+Der Auftrag schreibt sie vor, und sie gilt unverändert und ungemildert:
+
+> **`RUNNING` kommt auf der Testkopie null Mal vor** (gegengeprüft: 0), und die 538 offenen Zeilen
+> enden am 29.12.2025, mehr als ein halbes Jahr vor dem Anker. **Gemessen sind hier der Plan und die
+> Laufzeit, nicht die fachliche Größenordnung.** Die Kategorie „Überfällig" ist gegen diese
+> Testkopie nicht prüfbar, und das steht seit Schritt 4 so in `docs/message-status.md`.
+>
+> Insbesondere: Dass Fassung 1 **null** liefert, sagt nichts darüber, ob die Kachel in Produktion
+> eine sinnvolle Zahl zeigt. Es sagt nur, dass sie hier keine zeigt.
+>
+> **Was die Messung dagegen sehr wohl trägt:** Der Plan ist bei 0 Treffern und bei 538 Treffern
+> derselbe, und die Laufzeit unterscheidet sich um 3 ms. Die Kategorie skaliert nicht mit ihrem
+> Ergebnis, sondern mit der Zahl der offenen Zeilen — und die ist durch `MessageStatusIDX`
+> begrenzt, nicht durch den Bestand.
+
+---
+
+# M91 — Trägt eine Verteilung nach Partner überhaupt?
+
+Sitzungen 6b bis 6e. Offener Punkt 39 aus `messungen-schritt9.md`.
+
+> **G1 gilt hier schärfer als sonst, und das ist der Kern der Darstellung.** Es wird **nie** ein
+> Partnername ausgegeben. Die Rangfolge entsteht über `ROW_NUMBER()` **im Server**; der Name
+> verlässt die innere Abfrage nicht. **Die Zuordnung von Rang zu echtem Namen ist nirgends
+> festgehalten** — auch nicht in der Rohausgabe unter `ergebnis/`, auch nicht in den
+> Sitzungsdateien. Die Richtung (`EINGEHEND`/`AUSGEHEND`) ist Konfigurationsvokabular und steht im
+> Klartext.
+
+## Der Katalogstand als Bezugsgröße — und er ist die eigentliche Antwort
+
+Der Auftrag sagt: *„Der Katalogstand aus V2 steht als Bezugsgröße daneben. Ist er dünn, ist die
+Verteilung entsprechend zu lesen — und das ist dann der Befund."* **Er ist nicht dünn. Er ist
+ungleich verteilt.**
+
+| Mandant | Prozesse | mit Katalogzeile | `GEPFLEGT` | gepflegt **mit Partner** | `OFFEN` | versch. Partner |
+|---|---:|---:|---:|---:|---:|---:|
+| **NEXANS** | 733 | **733** | **733** | **517** | 0 | 154 |
+| **VOTG** | 390 | **390** | **0** | **0** | **390** | 0 |
+| IBIS | 192 | 2 | 2 | 2 | 0 | 1 |
+| IBISGUS | 89 | **0** | — | 0 | — | 0 |
+| ZAST | 35 | 35 | 35 | 35 | 0 | 34 |
+| NXHBE | 17 | **0** | — | 0 | — | 0 |
+| **SUTTONS** | 17 | **0** | — | **0** | — | 0 |
+| EDITIONLINGERI | 9 | **0** | — | 0 | — | 0 |
+| WOC | 4 | **0** | — | 0 | — | 0 |
+| SYSTEM | 4 | **0** | — | 0 | — | 0 |
+
+Summen zur Kontrolle: 1.490 Prozesse in der Kette (13 weitere hängen an einem Projekt ohne
+Mandantenzeile, `Process.ProjectID IS NULL` kommt **null** Mal vor); 1.160 Katalogzeilen = V2;
+517 + 35 + 2 = **554** gepflegt mit Partner = V2.
+
+> **Drei von zehn Mandanten sind kuratiert, sechs haben keine einzige Katalogzeile, und einer hat
+> 390 offene.** Der Katalog ist kein dünner Gesamtstand, sondern ein **vollständiger Stand für
+> `NEXANS`, `ZAST` und zwei Zeilen von `IBIS`** — und ein leerer für alle übrigen.
+
+## Die Verteilung nach Partner, maskiert
+
+**`NEXANS`, Fenster A** (ein Tag, 5.043 Nachrichten):
+
+| Bezeichnung | Anzahl | Anteil |
+|---|---:|---:|
+| **Partner 1** | **4.187** | **83,0260 %** |
+| Partner 2 | 289 | 5,7307 % |
+| *nicht zugeordnet* | *453* | *8,9827 %* |
+| Partner 3 | 20 | 0,3966 % |
+| Partner 4 | 17 | 0,3371 % |
+| Partner 5 | 13 | 0,2578 % |
+| Partner 6 | 10 | 0,1983 % |
+| Partner 7 | 9 | 0,1785 % |
+| Partner 8 | 9 | 0,1785 % |
+| Partner 9 | 7 | 0,1388 % |
+| Partner 10 | 6 | 0,1190 % |
+| Partner 11–15 | 3 · 3 · 3 · 2 · 2 | je unter 0,06 % |
+
+**`NEXANS`, Fenster B** (ein Monat, 180.251 Nachrichten):
+
+| Bezeichnung | Anzahl | Anteil |
+|---|---:|---:|
+| **Partner 1** | **105.654** | **58,6149 %** |
+| *nicht zugeordnet* | *28.352* | *15,7292 %* |
+| Partner 2 | 19.839 | 11,0063 % |
+| Partner 3 | 2.895 | 1,6061 % |
+| Partner 4 | 2.019 | 1,1201 % |
+| Partner 5 | 1.901 | 1,0546 % |
+| Partner 6 | 1.827 | 1,0136 % |
+| Partner 7 | 1.212 | 0,6724 % |
+| Partner 8 | 1.174 | 0,6513 % |
+| Partner 9 | 1.171 | 0,6496 % |
+| Partner 10 | 981 | 0,5442 % |
+| Partner 11–15 | 908 · 836 · 800 · 548 · 546 | je unter 0,51 % |
+
+**`SUTTONS`** und **`VOTG`**, beide Fenster: **eine einzige Zeile, `nicht zugeordnet`, 100,0000 %.**
+
+| Mandant | Fenster | Nachrichten | *nicht zugeordnet* | versch. Partner |
+|---|---|---:|---:|---:|
+| SUTTONS | A | 685 | **685 (100 %)** | **0** |
+| SUTTONS | B | 21.516 | **21.516 (100 %)** | **0** |
+| VOTG | A | 206 | **206 (100 %)** | **0** |
+| VOTG | B | 6.104 | **6.104 (100 %)** | **0** |
+
+## Die Anteile
+
+| Mandant | Fenster | gesamt | versch. Partner | **größter** | **drei größte** | **zehn größte** |
+|---|---|---:|---:|---:|---:|---:|
+| NEXANS | A | 5.043 | 24 | 4.187 = **83,03 %** | 4.496 = **89,15 %** | 4.567 = **90,56 %** |
+| NEXANS | B | 180.251 | 115 | 105.654 = **58,61 %** | 128.388 = **71,23 %** | 138.673 = **76,93 %** |
+| SUTTONS | A / B | 685 / 21.516 | 0 | — | — | — |
+| VOTG | A / B | 206 / 6.104 | 0 | — | — | — |
+
+## „Nicht zugeordnet" nach E‑i — und wie es sich aufteilen *würde*
+
+**E‑i ist entschieden.** Die folgende Aufteilung steht **nur zur Kenntnis** und sagt lediglich, wie
+groß der Unterschied gewesen wäre.
+
+| Mandant | Fenster | (a) keine Katalogzeile | (b) `OFFEN` | (c) `GEPFLEGT` ohne Partner | (d) zugeordnet |
+|---|---|---:|---:|---:|---:|
+| NEXANS | A | 0 | 0 | **453** (12 Proz.) | 4.590 (45 Proz.) |
+| NEXANS | B | 0 | 0 | **28.352** (145 Proz.) | 151.899 (312 Proz.) |
+| SUTTONS | A | **685** (11 Proz.) | 0 | 0 | 0 |
+| SUTTONS | B | **21.516** (17 Proz.) | 0 | 0 | 0 |
+| VOTG | A | 0 | **206** (14 Proz.) | 0 | 0 |
+| VOTG | B | 0 | **6.104** (18 Proz.) | 0 | 0 |
+
+> **Der Unterschied, den E‑i zusammenfasst, ist bei diesen drei Mandanten gar keiner** — jeder von
+> ihnen hat **genau eine** der drei Ursachen: `NEXANS` ausschließlich (c), `SUTTONS` ausschließlich
+> (a), `VOTG` ausschließlich (b). Eine getrennte Darstellung hätte für keinen der drei eine zweite
+> Zeile ergeben. **E‑i kostet hier nichts an Aussagekraft.** Das ist ein Befund zugunsten von E‑i,
+> aber ein zufälliger: Er gilt für diesen Katalogstand, nicht grundsätzlich.
+
+## Die Verteilung nach Richtung
+
+| Mandant | Fenster | `AUSGEHEND` | `EINGEHEND` | *nicht zugeordnet* |
+|---|---|---:|---:|---:|
+| NEXANS | A | 457 (9,06 %) | 399 (7,91 %) | **4.187 (83,03 %)** |
+| NEXANS | B | 47.968 (26,61 %) | 26.629 (14,77 %) | **105.654 (58,61 %)** |
+| SUTTONS | B | 0 | 0 | **21.516 (100 %)** |
+| VOTG | B | 0 | 0 | **6.104 (100 %)** |
+
+Der Katalog trägt die Richtung eigentlich gut: 384 `EINGEHEND` und 338 `AUSGEHEND` bei `NEXANS`,
+nur **11** von 733 Katalogzeilen ohne Richtung. Trotzdem steht mehr als die Hälfte der Nachrichten
+in „nicht zugeordnet". Das ist Befund 10.
+
+## Befund 10 — elf Katalogzeilen, ein Partner, 54,44 % des Bestands, keine Richtung
+
+In Fenster B kam der größte Partner mit **105.654** Nachrichten heraus (58,6149 %) — und der Eimer
+„Richtung nicht zugeordnet" mit **exakt derselben Zahl**. Zwei voneinander unabhängige
+Gruppierungen, dieselbe Zahl. Nachgeprüft in Sitzung 6e, statt sie für Zufall zu halten:
+
+**Partner × Richtung, gekreuzt, `NEXANS` Fenster B:**
+
+| Partnerlage | Richtungslage | Nachrichten | Prozesse | Anteil |
+|---|---|---:|---:|---:|
+| **`GEPFLEGT` mit Partner** | **ohne Richtung** | **105.654** | **7** | **58,6149 %** |
+| `GEPFLEGT` ohne Partner | `AUSGEHEND` | 26.945 | 78 | 14,9486 % |
+| `GEPFLEGT` mit Partner | `EINGEHEND` | 25.222 | 159 | 13,9927 % |
+| `GEPFLEGT` mit Partner | `AUSGEHEND` | 21.023 | 146 | 11,6632 % |
+| `GEPFLEGT` ohne Partner | `EINGEHEND` | 1.407 | 67 | 0,7806 % |
+
+**Es ist kein Zufall.** Die **11** `NEXANS`-Katalogzeilen ohne Richtung tragen **alle** einen
+Partner — und zwar **alle denselben**: `COUNT(DISTINCT partner)` = **1**.
+
+**Über den Gesamtbestand von `NEXANS`** (Fenster G, unter L9 als Bezugsgröße):
+
+| Lage | Nachrichten | Prozesse | Anteil |
+|---|---:|---:|---:|
+| **ohne Richtung** | **1.571.027** | **9** | **54,4416 %** |
+| mit Richtung | 1.314.684 | 507 | 45,5584 % |
+
+> **Ein einziger Partner, neun lebende Prozesse, 54,44 % des gesamten Nachrichtenaufkommens des
+> größten Mandanten — und keine gepflegte Richtung.** Von 733 Katalogzeilen sind es elf, die
+> fehlen. Es sind die elf, auf die es ankommt.
+>
+> **Für 10b heißt das:** Eine Verteilung nach Richtung zeigt für `NEXANS` heute mehr als die Hälfte
+> des Volumens als „nicht zugeordnet" — nicht, weil der Katalog dünn wäre, sondern weil **elf
+> Zeilen** fehlen. Das ist die billigste Katalogpflege im ganzen Projekt: elf Zeilen, und die
+> Richtungsverteilung springt von 41,4 % Abdeckung auf 100 %.
+
+## Vorregistrierte Deutung, dagegengehalten
+
+> Vorregistriert: *„Hält der größte Partner über 50 %, trägt ein gewöhnliches Balkendiagramm nicht,
+> und 10b braucht Top‑N plus ‚Rest' oder eine anteilige Darstellung. Liegt `nicht zugeordnet` über
+> 30 %, ist der Katalog vor 10b weiter zu pflegen — dann steht Schritt 10 vor demselben Problem,
+> wegen dessen 9b vor 9a gezogen wurde."*
+
+**Beide Zweige treffen. Der erste für `NEXANS`, der zweite für `SUTTONS` und `VOTG`.**
+
+**Erstens — der größte Partner hält über 50 %, in beiden Fenstern.** 83,03 % im Tagesfenster,
+58,61 % im Monatsfenster. Die drei größten halten 89,15 % bzw. 71,23 %; die zehn größten 90,56 %
+bzw. 76,93 %. **115 Partner teilen sich in Fenster B die verbleibenden 23,07 %.**
+
+> **Ein gewöhnliches Balkendiagramm trägt nicht.** Bei 58,61 % für den ersten und 0,54 % für den
+> zehnten Balken ist das Verhältnis **109 : 1** — Rang 10 wäre bei 400 Pixeln Breite vier Pixel
+> lang, Rang 15 zwei. **10b braucht Top‑N plus „Rest" oder eine anteilige Darstellung**, wie
+> vorregistriert.
+>
+> **Offener Punkt 39 ist damit beantwortet, und die Antwort ist die unangenehme:** Die Konzentration
+> wird durch die Kuratierung **nicht** besser, sondern bleibt. Nachgemessen (Sitzung 6d, unter L9):
+> Der größte **Prozess** hält **1.472.788** Nachrichten = **44,0754 %** des Gesamtbestands und
+> **51,0373 %** innerhalb von `NEXANS` — Zeichen für Zeichen die 44,08 % aus Punkt 39, unabhängig
+> erneut erhoben. Der größte **Partner** fasst mehrere solcher Prozesse zusammen und kommt in
+> Fenster B auf 58,61 %. **Die Aggregation nach Partner verschärft die Konzentration, sie mildert
+> sie nicht.**
+
+**Zweitens — `nicht zugeordnet` liegt über 30 %, und zwar bei 100 %.** Für `NEXANS` sind es 8,98 %
+(Fenster A) und 15,73 % (Fenster B), also **unter** der Schwelle. Für `SUTTONS` und `VOTG` sind es
+**100 %** in beiden Fenstern.
+
+> **Also, wie vorregistriert: Der Katalog ist vor 10b weiter zu pflegen** — aber nicht überall.
+> **Für `NEXANS` trägt die Verteilung heute.** Für `SUTTONS`, `IBISGUS`, `NXHBE`, `EDITIONLINGERI`,
+> `WOC` und `SYSTEM` gibt es keine einzige Katalogzeile, für `VOTG` 390 offene. **Für sieben von
+> zehn Mandanten zeigt die Partnerverteilung heute genau einen Balken: „nicht zugeordnet, 100 %".**
+>
+> **Und ja — das ist dasselbe Problem, wegen dessen 9b vor 9a gezogen wurde.** Der Unterschied ist,
+> dass es diesmal nicht am Werkzeug liegt: Die Pflegeoberfläche steht seit 9b, der Katalog ist für
+> den größten Mandanten vollständig. Was fehlt, ist die Pflege der übrigen — eine Arbeit, kein Bau.
+
+## Der größte Prozess je Mandant *(L9, Bezugsgröße zu Punkt 39)*
+
+| Mandant | Prozesse mit Nachrichten | größter Prozess | Nachrichten gesamt | Anteil im Mandanten | Anteil am Bestand |
+|---|---:|---:|---:|---:|---:|
+| NEXANS | 516 | **1.472.788** | 2.885.711 | **51,04 %** | **44,08 %** |
+| SUTTONS | 17 | 26.921 | 197.158 | 13,65 % | 0,81 % |
+| VOTG | 40 | 43.661 | 145.840 | 29,94 % | 1,31 % |
+| IBIS | 113 | 8.842 | 75.746 | 11,67 % | 0,26 % |
+| IBISGUS | 23 | 7.981 | 29.339 | 27,20 % | 0,24 % |
+| ZAST | 24 | 1.906 | 5.036 | 37,85 % | 0,06 % |
+| **WOC** | **2** | **2.068** | **2.529** | **81,77 %** | 0,06 % |
+
+Laufzeit 22.491,0 ms (voller Durchlauf über `Message` mit der Mandantenkette).
+
+**Drei Mandanten fehlen in dieser Tabelle** — `NXHBE`, `EDITIONLINGERI` und `SYSTEM` tragen im
+Gesamtbestand **keine einzige** Nachricht. Zusammen mit E‑f („`SYSTEM` und `WOC` werden behandelt
+wie jeder andere Mandant") heißt das: **`SYSTEM` bekommt ein Dashboard, das nie etwas zeigen wird**,
+und `WOC` eines, in dem ein einziger Prozess 81,77 % hält. E‑f bleibt davon unberührt — es ist eine
+Entscheidung über Gleichbehandlung, nicht über Inhalt —, aber die Zahl gehört daneben.
+
+## Befund 11 — `GROUP BY` band an die Tabellenspalte, nicht an den Ausdrucksalias
+
+**Ein Fehler dieser Runde, gefunden und behoben, und er gehört hierhin, weil er in Anwendungscode
+genauso passieren wird.**
+
+Sitzung 6b hat den maskierten Partner als Ausdruck mit dem Alias `partner` berechnet und
+`GROUP BY nz, partner` geschrieben. **MariaDB löst `GROUP BY` zuerst gegen Tabellenspalten auf und
+erst dann gegen Ausdrucksaliasse** — und `process_catalog` trägt eine Spalte, die ebenfalls
+`partner` heißt. Gruppiert wurde deshalb nach `c.partner`, nicht nach dem `CASE`.
+
+**Die Folge war sichtbar und hätte auch unsichtbar bleiben können.** Sichtbar wurde sie bei `VOTG`:
+Der Eimer `nicht zugeordnet` zerfiel in **acht** Zeilen, weil die dortigen `OFFEN`-Zeilen
+verschiedene `REGEL_A`-Vorschläge tragen, die der `CASE` auf `NULL` hätte abbilden sollen. Bei
+`NEXANS` und `SUTTONS` fiel **nichts** auf — dort ist `c.partner` in genau den betroffenen Zeilen
+ohnehin `NULL`, und das Ergebnis war zufällig richtig.
+
+Die Anteilszahlen waren **nicht** betroffen (sie zählen über `nz`), die Verteilungstabelle schon.
+Nachgemessen in Sitzung 6c mit dem Alias `partner_kuratiert`; `gruppen_nicht_zugeordnet` ist
+seither in allen sechs Fällen **1**, wie es sein muss. Dieselbe Falle steckt in `richtung` —
+nachgemessen in Sitzung 6d.
+
+> **Für 10b ist das eine Bauvorgabe, keine Anekdote.** Der `CASE`, der E‑i umsetzt, wird in
+> `message_rollup`-Leseabfragen stehen, und die Spalten heißen dort `partner` und `richtung`. Wer
+> ihn mit dem naheliegenden Alias schreibt, bekommt **stillschweigend** eine Gruppierung nach dem
+> Rohwert — und sieht es nur bei einem Mandanten, dessen Daten es verraten. **Der Alias muss anders
+> heißen als die Spalte**, oder es ist `GROUP BY` über den vollen Ausdruck zu schreiben.
