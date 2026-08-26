@@ -86,8 +86,11 @@ public class RollupJob {
    *
    * <p><b>Voll:</b> immer vom fruehesten {@code MessageLastUpdate} bis jetzt.
    *
-   * <p>Ist {@code Message} leer, gibt es nichts zu rechnen; das Fenster ist dann eine einzelne,
-   * leere Stunde ab der Anwendungsuhr.
+   * <p>Ist {@code Message} leer, gibt es nichts zu rechnen. Das Fenster ist dann die laufende
+   * Stunde ab der Anwendungsuhr — beim Volllauf genau ein Eimer, beim Delta-Lauf in den ersten
+   * {@value RollupFenster#NACHLAUF_MINUTEN} Minuten einer Stunde zwei, weil der Rueckgriff dort in
+   * die vorige greift. Beide sind leer; der Unterschied kostet nichts und steht hier nur, damit die
+   * Beschreibung stimmt.
    */
   public RollupFenster ermittleFenster(LaufArt art) {
     LocalDateTime jetzt = uhren.datenzeit();
@@ -161,8 +164,12 @@ public class RollupJob {
    * {@code SELECT} besitzt und die Schreibgarantie unberuehrt bliebe. Der gebaute Weg ist gegen die
    * 51,242 s gemessen; das Ergebnis steht in {@code docs/rollup.md}.
    *
-   * <p>Beim Volllauf sind das <b>335.610 Zeilen</b> auf einmal (M89) — rund 30 MiB im Speicher. Das
-   * ist die Kehrseite der einen Transaktion aus Schritt 3 und ausdruecklich so gewollt.
+   * <p>Beim Volllauf sind das <b>335.610 Zeilen</b> auf einmal (M89). <b>Gerechnet, nicht
+   * gemessen:</b> Eine {@link RollupZeile} traegt neben dem Datensatzkopf einen {@code
+   * LocalDateTime} (drei Objekte) und zwei {@code String} — rund 220 Byte, also etwa <b>70 MiB</b>
+   * fuer den Gesamtbestand der Testkopie, im Spitzenwert mehr, weil die Scheibenliste und die
+   * Gesamtliste kurz nebeneinanderstehen. Das ist die Kehrseite der einen Transaktion aus Schritt 3
+   * und ausdruecklich so gewollt; die Zahl steht als offener Punkt in {@code docs/rollup.md}.
    */
   private List<RollupZeile> lies(List<RollupFenster> scheiben) {
     List<RollupZeile> zeilen = new ArrayList<>();
@@ -183,10 +190,14 @@ public class RollupJob {
    * gedrosselt. Er teilt sich die Instanz mit der Produktion."
    *
    * <p>Gewartet wird <b>zwischen</b> zwei Scheiben und nicht vor der ersten oder nach der letzten.
-   * Damit wartet ein Delta-Lauf <b>nie</b> — er hat genau eine Scheibe. Das ist kein Zufall,
-   * sondern der Punkt: Beim Delta-Lauf ist L6 nach M88 Zeremonie statt Schutz (88 ms fuer die
-   * dichteste Stunde von rund 15.000, also 0,0024 % Instanzbelegung), beim Volllauf ueber 22
-   * Scheiben ist sie es nicht.
+   * Damit wartet ein Delta-Lauf so gut wie nie — er hat in aller Regel genau eine Scheibe. <b>Die
+   * Ausnahme ist der Monatswechsel</b>: Faellt ein Delta-Fenster ueber den Monatsersten, schneidet
+   * der Kalender es in zwei, und der Lauf wartet einmal. Das trifft einen Lauf im Monat und kostet
+   * dort eine Sekunde.
+   *
+   * <p>Das ist kein Zufall, sondern der Punkt: Beim Delta-Lauf ist L6 nach M88 Zeremonie statt
+   * Schutz (88 ms fuer die dichteste Stunde von rund 15.000, also 0,0024 % Instanzbelegung), beim
+   * Volllauf ueber gut zwanzig Scheiben ist sie es nicht.
    *
    * <p>Die Dauer ist konfigurierbar und <b>ungemessen</b> — siehe {@link
    * RollupEigenschaften#scheibenPause()}.

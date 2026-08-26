@@ -203,14 +203,17 @@ class RollupFensterTest {
     }
 
     @Test
-    @DisplayName("Der Volllauf ueber den Bestand der Testkopie ergibt 22 Scheiben")
-    void volllauf_ergibt_22_scheiben() {
+    @DisplayName("Der Volllauf am Anker der Testkopie ergibt 15 Scheiben, nicht 22")
+    void volllauf_am_anker_ergibt_15_scheiben() {
       // Fruehester Zeitstempel und Anker der Testkopie — dieselben Werte wie in M92.
       RollupFenster fenster =
           RollupFenster.voll(zeit("2024-10-01T02:00:28"), zeit("2025-12-30T04:09:47"));
 
       assertThat(fenster.monatsscheiben())
-          .as("2024-10 bis 2025-12 sind 15 Monate — der Volllauf am Anker sieht 2026 nicht")
+          .as(
+              "2024-10 bis 2025-12 sind 15 Monate. Die 22 Scheiben aus M92 gibt es nur, wenn das"
+                  + " Fenster bis ans Ende des Bestands reicht — im Profil dev tut es das nicht,"
+                  + " weil die Anwendungsuhr am Anker steht (docs/rollup.md §4)")
           .hasSize(15);
     }
 

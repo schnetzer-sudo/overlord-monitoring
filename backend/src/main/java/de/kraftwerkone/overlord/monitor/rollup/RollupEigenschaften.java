@@ -41,12 +41,13 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param scheibenPause Wie lange der Volllauf zwischen zwei Monatsscheiben wartet.
  *     <b>Leistungsregel L6 („Der Rollup-Job laeuft gedrosselt. Er teilt sich die Instanz mit der
  *     Produktion."), und sie greift genau hier</b> — beim <b>Delta</b>-Lauf ist sie Zeremonie: Er
- *     hat genau eine Scheibe, wartet also nie, und mit 88 ms je Stunde belegt er die Instanz zu
- *     0,0024 % (M88).
+ *     hat in aller Regel genau eine Scheibe und wartet dann nicht (die Ausnahme ist der
+ *     Monatswechsel, einmal im Monat), und mit 88 ms je Stunde belegt er die Instanz zu 0,0024 %
+ *     (M88).
  *     <p><b>Der Wert ist ungemessen (Regel Q4).</b> Wie viel Last die Produktionsinstanz nachts
- *     vertraegt, ist nicht erhoben. Eine Sekunde je Scheibe verlaengert den Volllauf ueber den
- *     Bestand der Testkopie um 22 Sekunden — nachts folgenlos — und halbiert die anhaltende
- *     Belegung. Der offene Punkt steht in {@code docs/rollup.md}
+ *     vertraegt, ist nicht erhoben. Eine Sekunde je Scheibengrenze verlaengert den Volllauf ueber
+ *     den Bestand der Testkopie um 22 Sekunden (gemessen: 45,772 s ohne, 69,186 s mit) — nachts
+ *     folgenlos. Der offene Punkt steht in {@code docs/rollup.md}
  * @param beimStart Ein <b>einmaliger</b> Lauf beim Start der Anwendung, ausgeloest ueber
  *     Konfiguration oder Startparameter ({@code --overlord.rollup.beim-start=VOLL}). {@code null}
  *     heisst: nichts.

@@ -150,13 +150,6 @@ public class RollupSchreibRepository {
     return eingefuegt;
   }
 
-  /** Wie viele Rollup-Zeilen im Fenster stehen. Fuer Proben und Protokollmeldungen. */
-  public int zaehleZeilen(RollupFenster fenster) {
-    return monitorDsl.fetchCount(
-        MESSAGE_ROLLUP,
-        MESSAGE_ROLLUP.STUNDE.ge(fenster.von()).and(MESSAGE_ROLLUP.STUNDE.lt(fenster.bis())));
-  }
-
   /**
    * {@code SUM(anzahl)} ueber das Fenster — die Groesse der Summenprobe.
    *

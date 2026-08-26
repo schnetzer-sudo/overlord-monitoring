@@ -99,11 +99,13 @@ overlord:
     # worden. 03:00 ist die uebliche Wahl und keine hergeleitete; der offene
     # Punkt steht in docs/rollup.md.
     voll-plan: "0 0 3 * * *"
-    # Drosselung zwischen zwei Monatsscheiben -- Leistungsregel L6. Sie greift nur
-    # beim Volllauf (22 Scheiben); der Delta-Lauf hat genau eine und wartet nie.
+    # Drosselung zwischen zwei Monatsscheiben -- Leistungsregel L6. Sie greift beim
+    # Volllauf, der ueber den Bestand der Testkopie 23 Scheiben hat (22 Pausen). Der
+    # Delta-Lauf hat in aller Regel genau eine Scheibe und wartet dann nicht; die
+    # Ausnahme ist der Monatswechsel, wo der Kalender sein Fenster in zwei schneidet.
     # AUCH DIESER WERT IST UNGEMESSEN: Wie viel Last die Produktionsinstanz nachts
-    # vertraegt, ist nicht erhoben. Eine Sekunde je Scheibe verlaengert den
-    # Volllauf ueber den Bestand der Testkopie um 22 Sekunden.
+    # vertraegt, ist nicht erhoben. Gemessen ist nur, was er kostet -- 45,772 s ohne
+    # Drosselung gegen 69,186 s mit.
     #
     # Ein einmaliger Lauf von Hand laeuft ueber den Startparameter
     #   --overlord.rollup.beim-start=VOLL

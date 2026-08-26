@@ -118,6 +118,14 @@ WHERE beendet_am IS NOT NULL AND fehler IS NULL;
 Ist die Tabelle leer, fällt der Delta-Lauf auf `MIN(Message.MessageLastUpdate)` zurück — der erste
 Delta-Lauf holt damit den ganzen Bestand nach, ohne dass jemand einen Volllauf ansteuern müsste.
 
+> **Das heißt: Der allererste Lauf nach der Migration ist ein Volllauf, und er trägt trotzdem
+> `art = DELTA`.** Er kostet dann nicht die 20 bis 30 ms eines Delta-Laufs, sondern die rund 46 s
+> eines Volllaufs (§9), und er hält dabei den ganzen Bestand im Speicher. **Das ist gewollt** — die
+> Alternative wäre eine leere Rolluptabelle bis zum ersten Nachtlauf —, aber es ist beim ersten
+> Start nach der Auslieferung zu wissen: Der stündliche Job braucht dort einmalig eine knappe
+> Minute, und `rollup_lauf` weist ihn als `DELTA` aus. Wer die Zeile später liest, erkennt ihn an
+> seinem Fenster und nicht an seiner Art.
+
 ---
 
 ## 3. Der Zeitschnitt
@@ -288,9 +296,11 @@ ausschließlich `overlord_monitor`."* Ein `INSERT … SELECT` aus `GlassfishDB` 
 widerspricht dem Satz, auch wenn `monitor_write` dort `SELECT` besitzt und die Schreibgarantie
 unberührt bliebe.
 
-**Der gebaute Weg ist gegen die 51,242 s gemessen: 45,772 s.** Er ist also **10,7 % schneller**
-statt langsamer; die Faktor‑drei‑Schranke des Auftrags ist nicht in Sicht, und es gibt nichts
-vorzulegen. Zahlen in §9.
+**Der gebaute Weg ist gegen die 51,242 s gemessen: 45,772 s.** Die Faktor‑drei‑Schranke des
+Auftrags ist damit nicht in Sicht, und es gibt nichts vorzulegen. **Belastbar ist der Satz „nicht
+teurer" — nicht der Satz „schneller":** Die 51,242 s stammen aus einer anderen Sitzung an einem
+anderen Tag, und der Abstand von 10,7 % liegt in derselben Größenordnung wie die Aufwärmaufschläge
+dieser Runde. Der vollständige Belegvermerk nach Regel L10 steht in §9.
 
 ---
 
@@ -315,7 +325,12 @@ Eimer, der einmal Zeilen hatte und heute keine mehr hat, würde sonst nie geleer
 Die erste und die letzte Scheibe sind in der Regel angebrochen. Das ändert nichts an der
 Eimertreue: Beide Grenzen bleiben Stundenanfänge, und ein Monatserster um Mitternacht ist einer.
 
-**Ein Delta-Fenster ist genau eine Scheibe** — der stündliche Lauf zahlt für den Kalender nichts.
+**Ein Delta-Fenster ist in aller Regel genau eine Scheibe** — der stündliche Lauf zahlt für den
+Kalender fast nichts. **Die Ausnahme ist der Monatswechsel:** Fällt das Fenster über einen
+Monatsersten, schneidet der Kalender es in zwei. Das trifft einen Lauf im Monat, kostet eine
+zusätzliche sehr kleine Abfrage — und einmal die Drosselpause aus §8. Es ist gewollt und nicht zu
+reparieren: Ein Kalender, der die Monatsgrenze für kleine Fenster überspringt, wäre nicht mehr
+derselbe Kalender.
 
 ---
 
@@ -465,7 +480,9 @@ Wirkung dort, wo sie gebraucht wird.*
 
 **Gebraucht wird sie beim Nachtlauf**, und dort ist sie umgesetzt: eine Pause zwischen zwei
 Monatsscheiben. Gewartet wird **zwischen** den Scheiben, nicht vor der ersten oder nach der letzten
-— **ein Delta-Lauf hat genau eine Scheibe und wartet damit nie.**
+— **ein Delta-Lauf hat in aller Regel genau eine Scheibe und wartet dann nicht.** Einmal im Monat,
+wenn sein Fenster über den Monatsersten fällt, wartet er eine Sekunde. Das ist der Preis dafür, dass
+Delta- und Volllauf durch denselben Kalender gehen, und er ist gering genug, um ihn zu zahlen.
 
 > **Belegvermerk (Regel L10).**
 > *Gemessen ist:* Der Volllauf kostet ohne Pause 45,772 s, mit einer Sekunde je Scheibengrenze
@@ -607,7 +624,7 @@ Zeitfenster oder über die Laufart löschte fremde Zeilen. Die geschriebenen
 
 ---
 
-## 11. Die dritte benannte Ausnahme von Regel M2
+## 11. Die zweite benannte Ausnahme von Regel M2
 
 `rollup/RollupLeseRepository` bekommt **keinen `MandantContext`** — und das bricht eine
 ArchUnit-Regel, die [`mandantentrennung.md`](mandantentrennung.md) §4 durchsetzt.
@@ -691,12 +708,45 @@ nachgelagert.
     `monitor_read` nicht zu. Reißt eine Scheibe in Produktion die Grenze, steht es sichtbar in
     `rollup_lauf.fehler`, und die Scheibengröße ist die Stellschraube. Sie ist heute eine Konstante
     im Code (`RollupFenster.monatsscheiben()`).
-53. **Der Volllauf hält 335.610 Zeilen auf einmal im Speicher** — rund 30 MiB. Das ist die Kehrseite
-    der einen Transaktion und ausdrücklich gewollt. **Für die Produktion ist es nicht
-    hochgerechnet**: Wächst der Bestand um Faktor zehn, sind es 300 MiB. Die Stelle, an der dann neu
-    zu entscheiden wäre, ist dieselbe wie bei Punkt 52 — die Scheibengröße —, nur mit einer anderen
-    Folge: Kleinere Scheiben helfen dort nichts, weil alle Scheiben zusammen in **eine** Transaktion
-    gehen.
+53. **Der Volllauf hält 335.610 Zeilen auf einmal im Speicher, und wie viel das ist, ist gerechnet
+    und nicht gemessen.** Eine `RollupZeile` trägt neben dem Datensatzkopf einen `LocalDateTime`
+    (drei Objekte) und zwei `String` — rund **220 Byte**, also etwa **70 MiB** für den Bestand der
+    Testkopie; im Spitzenwert mehr, weil Scheibenliste und Gesamtliste kurz nebeneinanderstehen.
+    **Hier stand zuerst „rund 30 MiB", und das war eine Schätzung ohne Rechnung.** Gemessen ist
+    keine der beiden Zahlen — es wäre eine Heap-Messung wert, bevor der Bestand deutlich wächst.
+    Das ist die Kehrseite der einen Transaktion und ausdrücklich gewollt. Die Stelle, an der bei
+    Wachstum neu zu entscheiden wäre, ist dieselbe wie bei Punkt 52 — die Scheibengröße —, nur mit
+    einer anderen Folge: Kleinere Scheiben helfen dort nichts, weil alle Scheiben zusammen in
+    **eine** Transaktion gehen.
+
+54. **Der Volllauf kann Rollup-Zeilen unterhalb von `MIN(Message.MessageLastUpdate)` nie löschen —
+    und das ist der gewichtigste Punkt dieser Liste.** Die untere Grenze **beider** Laufarten kommt
+    aus dem **Quellbestand**: Der Volllauf beginnt bei `MIN(Message.MessageLastUpdate)`, der
+    Delta-Lauf beim Wasserstand (Rückfall ebenfalls dorthin). Gelöscht wird ausschließlich
+    innerhalb dieses Fensters, und einen zweiten Löschweg auf `message_rollup` gibt es nicht.
+
+    **Wandert `MIN` nach vorn, weil das Altsystem alte Nachrichten entfernt, bleiben die
+    Rollup-Zeilen davor für immer stehen.** Jeder künftige Lauf beginnt noch später; die
+    eingefrorenen Eimer sind für den Kalender unerreichbar. Danach liegt `SUM(anzahl)` über der
+    Zeilenzahl von `Message` — **genau die Abweichung, die dieser Bau an anderer Stelle als „ein
+    Befund und kein Rundungsfehler" bezeichnet** —, und das Dashboard aus 10b zeigte für den
+    abgelaufenen Zeitraum Nachrichten, die es nicht mehr gibt.
+
+    **Belegvermerk (Regel L10).** *Gemessen ist:* nichts — der Fall kann auf der Testkopie nicht
+    eintreten, weil dort nichts entfernt wird. *Behauptet wird:* Er tritt produktiv ein. Die
+    Grundlage dafür ist [`rohdaten.md`](rohdaten.md) §12 („produktiv rund 18 Monate, danach ein
+    Archivsystem") — eine **Auskunft, keine Messung**; die 22 Monate aus
+    [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §8 beschreiben nur, wie weit die *Kopie*
+    zurückreicht (M92, V6). Ob und wie produktiv gelöscht wird, ist damit **nicht belegt** — dass
+    der Rollup gegen diesen Fall nicht gewappnet ist, schon.
+
+    **Der Bau ist absichtlich nicht geändert worden.** Das Fenster des Volllaufs ist eine Vorgabe
+    des Auftrags („von `MIN(Message.MessageLastUpdate)` bis jetzt"), und für Vorgaben gilt dort:
+    melden, nicht umbauen. **Die naheliegende Lösung ist klein:** Die untere Grenze des Volllaufs
+    wird das **Minimum aus `MIN(Message.MessageLastUpdate)` und `MIN(message_rollup.stunde)`** —
+    dann deckt der Löschbereich immer auch die eigene Tabellenausdehnung ab. Sie ist prüfbar: Ein
+    Datenbanktest kann eine Rollup-Zeile vor den Bestandsanfang setzen und verlangen, dass der
+    Volllauf sie entfernt. **Das ist eine Entscheidung für den Auftraggeber.**
 
 ---
 
@@ -712,3 +762,7 @@ nachgelagert.
    sondern konfiguriert.
 4. **Nichts über 10b.** Die Leseabfrage des Dashboards ist in M89 gemessen (11,30 ms im
    Standardfenster mit Katalog-Join), aber nicht gebaut.
+5. **Was geschieht, wenn das Altsystem alte Nachrichten entfernt.** Die Testkopie wird nicht
+   beschnitten; der Fall ist hier weder eingetreten noch prüfbar. Er ist der Grund für offenen
+   Punkt 54 und der einzige bekannte Weg, auf dem die Summenprobe dieses Baus auseinanderlaufen
+   kann.
