@@ -37,8 +37,9 @@ CREATE TABLE message_rollup (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 ```
 
-**Die Definition ist übernommen und nicht entworfen.** M89 hat genau diese Tabelle als Probetabelle
-angelegt und über den Gesamtbestand gefüllt; die Zahlen unten in §9 sind gegen sie gemessen.
+**Die Definition ist übernommen und nicht entworfen.** M89 hat genau diese Spalten, denselben
+Schlüssel und dieselbe Sortierung als Probetabelle `message_rollup_probe` angelegt und über den
+Gesamtbestand gefüllt; die Zahlen unten in §9 halten den gebauten Lauf gegen sie.
 
 **Der Schlüssel ist `(stunde, process_id, message_status)` — Entscheidung E‑a.** Mandant, Partner
 und Richtung stehen **nicht** in der Zeile. Der Mandant kommt in 10b aus dem Join über
@@ -525,8 +526,9 @@ der Messrunde unverändert.
 > beide warm. *Behauptet wird:* Der gebaute Weg ist nicht teurer als der verworfene. **Die Lücke:**
 > Die 51,242 s stammen aus einer anderen Sitzung an einem anderen Tag; ein Aufwärmunterschied ist
 > nicht auszuschließen. Der Abstand von 10,7 % liegt in derselben Größenordnung wie die
-> Aufwärmaufschläge dieser Runde (0,9 % bis 33,7 %). **Belastbar ist deshalb nur der Satz „nicht
-> teurer", nicht der Satz „schneller".**
+> Aufwärmaufschläge dieser Runde — **1,9 % bis 33,1 %** über die fünf Aggregationsfenster
+> (und 86,8 % bei der Indexspitze, wo die absolute Zeit unter einer Millisekunde liegt).
+> **Belastbar ist deshalb nur der Satz „nicht teurer", nicht der Satz „schneller".**
 
 ### Der Delta-Lauf, durch die ganze Anwendung
 

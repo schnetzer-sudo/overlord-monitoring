@@ -36,8 +36,9 @@ import org.springframework.stereotype.Component;
  * </table>
  *
  * <p><b>Im Profil {@code dev} liegen die beiden Paare Monate auseinander</b> — Stand 26.08.2026
- * rund 214 Tage. Das ist der erwartete Anblick und kein Fehler. In Produktion ist die Anwendungsuhr
- * die Systemuhr; dort unterscheiden sich die Paare nur noch um die Zone.
+ * rund 239 Tage (gemessen im Startprotokoll). Das ist der erwartete Anblick und kein Fehler. In
+ * Produktion ist die Anwendungsuhr die Systemuhr; dort unterscheiden sich die Paare nur noch um die
+ * Zone.
  *
  * <p><b>Regel Z1 ist eingehalten:</b> {@code LocalDateTime.now()} wird nicht aufgerufen. Beide
  * Werte entstehen aus {@link Clock#instant()} — dieselbe Form wie in {@code audit/AuditLogWriter}
