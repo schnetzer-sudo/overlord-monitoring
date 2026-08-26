@@ -1,14 +1,18 @@
 package de.kraftwerkone.overlord.monitor.rollup;
 
+import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLUP;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.ROLLUP_LAUF;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
+import org.jooq.BatchBindStep;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Der <b>schreibende</b> Datenzugriff des Rollups — ausschliesslich auf {@code overlord_monitor},
@@ -56,10 +60,119 @@ public class RollupSchreibRepository {
    */
   static final Duration LAUFT_NOCH_HOECHSTENS = Duration.ofHours(1);
 
+  /** Wie viele Zeilen ein Einfuegestapel traegt. Begruendung an {@link #fuegeEin}. */
+  static final int STAPELGROESSE = 1_000;
+
   private final DSLContext monitorDsl;
 
   RollupSchreibRepository(@Qualifier("monitorDsl") DSLContext monitorDsl) {
     this.monitorDsl = monitorDsl;
+  }
+
+  /**
+   * <b>Ersetzt alle Rollup-Zeilen im Fenster: erst loeschen, dann einfuegen — in genau einer
+   * Transaktion.</b>
+   *
+   * <h2>Warum geloescht und neu geschrieben wird und niemals {@code anzahl = anzahl + n}</h2>
+   *
+   * <p>Zwei Gruende, und beide waeren stille Fehler:
+   *
+   * <ol>
+   *   <li><b>Der 15-Minuten-Rueckgriff ueberlappt mit dem letzten Lauf.</b> Hochzaehlen verdoppelte
+   *       den Ueberlapp — und zwar bei jedem Lauf aufs Neue, sodass der Fehler waechst statt
+   *       aufzufallen.
+   *   <li><b>Wechselt eine Nachricht innerhalb desselben Eimers den Status</b>, verschwindet die
+   *       alte Statuszeile nicht von selbst. Ein {@code INSERT … ON DUPLICATE KEY UPDATE} schriebe
+   *       die neue Zeile und liesse die alte mit ihrem alten Zaehlstand stehen. Die Summe waere zu
+   *       hoch, und die Verteilung nach Status waere falsch — beides ohne jede Fehlermeldung.
+   * </ol>
+   *
+   * <h2>Eine Transaktion, und beim Volllauf ausdruecklich eine grosse</h2>
+   *
+   * <p>{@code @Transactional} bindet den Schreib-Kontext ({@code docs/datenzugriff.md} §1) — hier
+   * ist das genau richtig. Beim Volllauf umfasst sie <b>335.610 Zeilen und 21,6 MiB</b> (M89). Das
+   * ist gewollt: <b>Eine halb geleerte Rolluptabelle um 03:00 waere ein leeres Dashboard.</b>
+   *
+   * <p><b>Das Lesen liegt bewusst NICHT in dieser Transaktion.</b> Es laeuft ueber den Lese-Pool
+   * und damit auf einer anderen Verbindung — es waere ohnehin nicht Teil von ihr (§2). Der Aufrufer
+   * liest deshalb erst vollstaendig und ruft danach diese Methode.
+   *
+   * @param fenster der Bereich, der ersetzt wird — {@code stunde >= von} und {@code stunde < bis}
+   * @param zeilen die neuen Zeilen. Sie muessen vollstaendig in das Fenster fallen; sonst
+   *     entstuenden Zeilen, die der naechste Lauf nicht mehr loeschen kann
+   * @return die Zahl der eingefuegten Zeilen
+   */
+  @Transactional
+  public int ersetzeFenster(RollupFenster fenster, List<RollupZeile> zeilen) {
+    monitorDsl
+        .deleteFrom(MESSAGE_ROLLUP)
+        .where(MESSAGE_ROLLUP.STUNDE.ge(fenster.von()))
+        .and(MESSAGE_ROLLUP.STUNDE.lt(fenster.bis()))
+        .execute();
+    return fuegeEin(zeilen);
+  }
+
+  /**
+   * Fuegt die Zeilen stapelweise ein.
+   *
+   * <p><b>{@value #STAPELGROESSE} Zeilen je Stapel.</b> Ein einziger Stapel ueber 335.610 Zeilen
+   * haelt 1,3 Millionen Bindewerte gleichzeitig im Speicher, ohne dafuer schneller zu sein; ein
+   * Stapel je Zeile zahlt 335.610-mal die Netzwerkrunde. Die Groesse ist eine Groessenordnung und
+   * kein gemessenes Optimum — <b>gemessen ist der Lauf als Ganzes</b>, und der steht in {@code
+   * docs/rollup.md} neben den 51,242 s aus M89.
+   *
+   * <p>Die Vorlage traegt je Spalte einen Bindeplatz; gebunden wird unten in genau dieser
+   * Reihenfolge. Dasselbe Muster wie in {@code ProzessKatalogRepository.speichereBestandsflags}.
+   */
+  private int fuegeEin(List<RollupZeile> zeilen) {
+    int eingefuegt = 0;
+    for (int anfang = 0; anfang < zeilen.size(); anfang += STAPELGROESSE) {
+      List<RollupZeile> stapel =
+          zeilen.subList(anfang, Math.min(anfang + STAPELGROESSE, zeilen.size()));
+      BatchBindStep bindung =
+          monitorDsl.batch(
+              monitorDsl
+                  .insertInto(MESSAGE_ROLLUP)
+                  .set(MESSAGE_ROLLUP.STUNDE, (LocalDateTime) null)
+                  .set(MESSAGE_ROLLUP.PROCESS_ID, (String) null)
+                  .set(MESSAGE_ROLLUP.MESSAGE_STATUS, (String) null)
+                  .set(MESSAGE_ROLLUP.ANZAHL, (Integer) null));
+      for (RollupZeile zeile : stapel) {
+        bindung =
+            bindung.bind(zeile.stunde(), zeile.processId(), zeile.messageStatus(), zeile.anzahl());
+      }
+      for (int betroffen : bindung.execute()) {
+        if (betroffen >= 0) {
+          eingefuegt++;
+        }
+      }
+    }
+    return eingefuegt;
+  }
+
+  /** Wie viele Rollup-Zeilen im Fenster stehen. Fuer Proben und Protokollmeldungen. */
+  public int zaehleZeilen(RollupFenster fenster) {
+    return monitorDsl.fetchCount(
+        MESSAGE_ROLLUP,
+        MESSAGE_ROLLUP.STUNDE.ge(fenster.von()).and(MESSAGE_ROLLUP.STUNDE.lt(fenster.bis())));
+  }
+
+  /**
+   * {@code SUM(anzahl)} ueber das Fenster — die Groesse der Summenprobe.
+   *
+   * <p>Ueber den Gesamtbestand muss sie <b>3.341.519</b> ergeben, also die gezaehlte Zeilenzahl von
+   * {@code Message} (M0, bestaetigt in M89). Weicht sie ab, ist das ein Befund und kein
+   * Rundungsfehler: Es hiesse, dass eine Nachricht doppelt oder gar nicht gezaehlt wird.
+   */
+  public long summiereAnzahl(RollupFenster fenster) {
+    Long summe =
+        monitorDsl
+            .select(DSL.sum(MESSAGE_ROLLUP.ANZAHL))
+            .from(MESSAGE_ROLLUP)
+            .where(MESSAGE_ROLLUP.STUNDE.ge(fenster.von()))
+            .and(MESSAGE_ROLLUP.STUNDE.lt(fenster.bis()))
+            .fetchOne(0, Long.class);
+    return summe == null ? 0L : summe;
   }
 
   /**

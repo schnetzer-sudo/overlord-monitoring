@@ -3,6 +3,8 @@ package de.kraftwerkone.overlord.monitor.rollup;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Der Zeitschnitt eines Laufs: <b>von</b> einschliesslich, <b>bis</b> ausschliesslich, und beide
@@ -141,6 +143,49 @@ public record RollupFenster(LocalDateTime von, LocalDateTime bis) {
     LocalDateTime bis = rohesBis.truncatedTo(ChronoUnit.HOURS).plusHours(1);
     LocalDateTime von = rohesVon.truncatedTo(ChronoUnit.HOURS);
     return new RollupFenster(von.isAfter(bis) ? bis : von, bis);
+  }
+
+  /**
+   * Zerlegt das Fenster in <b>Monatsscheiben</b> — die Einheit, in der gelesen wird.
+   *
+   * <h2>Warum ueberhaupt geschnitten wird: eine gemessene Grenze, keine Vorsicht</h2>
+   *
+   * <p>Der Lese-Pool setzt {@code SET SESSION max_statement_time=10} ({@code docs/datenzugriff.md}
+   * §1). Ein einziges Statement ueber den Gesamtbestand reisst diese Grenze — <b>gemessen am
+   * 26.08.2026: Fehler 1969 „Query execution was interrupted" nach zehn Sekunden</b>. Der Volllauf
+   * ist ohne Schnitt also nicht baubar, und das ist keine Auslegung.
+   *
+   * <p>Der Monat ist die Einheit, die M92 gemessen hat: <b>2,575 s</b> fuer die groesste Scheibe
+   * (2025-07, 248.320 Zeilen, beste von fuenf am 26.08.2026; M92 nennt 2,745 s). Das laesst
+   * <b>Faktor 3,9</b> Luft zur Zeitgrenze.
+   *
+   * <h2>Ueber den Kalender, nicht ueber die Daten</h2>
+   *
+   * <p>Das ist die Bauvorgabe aus M92 im Wortlaut: „Er iteriert ueber einen Kalender, nicht ueber
+   * die vorhandenen Daten." Eine leere Scheibe wird also <b>mitgerechnet</b> und nicht
+   * uebersprungen — auf der Testkopie sind das die fuenf Monate 2026-01 bis 2026-05. Sie kosten 1
+   * ms je Scheibe; sie zu ueberspringen waere eine Optimierung ohne Gegenwert und genau die, die
+   * den Lauf falsch machte: Ein Eimer, der einmal Zeilen hatte und heute keine mehr hat, wuerde
+   * sonst nie geleert.
+   *
+   * <p>Die <b>erste</b> Scheibe ist in der Regel angebrochen (vom Fensteranfang bis zum
+   * Monatsersten), die letzte ebenso. Das aendert nichts an der Eimertreue: Beide Grenzen bleiben
+   * Stundenanfaenge, und ein Monatserster um Mitternacht ist einer.
+   *
+   * @return die Scheiben in aufsteigender Reihenfolge, lueckenlos und ohne Ueberlapp; leer, wenn
+   *     das Fenster leer ist
+   */
+  public List<RollupFenster> monatsscheiben() {
+    List<RollupFenster> scheiben = new ArrayList<>();
+    LocalDateTime anfang = von;
+    while (anfang.isBefore(bis)) {
+      LocalDateTime monatswechsel =
+          anfang.toLocalDate().withDayOfMonth(1).plusMonths(1).atStartOfDay();
+      LocalDateTime ende = monatswechsel.isBefore(bis) ? monatswechsel : bis;
+      scheiben.add(new RollupFenster(anfang, ende));
+      anfang = ende;
+    }
+    return scheiben;
   }
 
   /** Nichts zu rechnen — beide Grenzen fallen zusammen. */

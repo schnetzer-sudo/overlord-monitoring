@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -173,6 +175,104 @@ class RollupFensterTest {
       assertThat(fenster.stundeneimer())
           .as("Rund 22 Monate in Stunden, ohne dass eine Scheibe uebersprungen wuerde")
           .isGreaterThan(10_000);
+    }
+  }
+
+  @Nested
+  @DisplayName("Monatsscheiben")
+  class Monatsscheiben {
+
+    @Test
+    @DisplayName("Ein Delta-Fenster ist genau eine Scheibe")
+    void delta_ist_eine_scheibe() {
+      RollupFenster fenster =
+          RollupFenster.delta(zeit("2025-12-30T05:00"), zeit("2025-12-30T05:10"));
+
+      assertThat(fenster.monatsscheiben())
+          .as("Sonst zahlte der stuendliche Lauf ohne Not mehrere Netzwerkrunden")
+          .containsExactly(fenster);
+    }
+
+    @Test
+    @DisplayName("Ein leeres Fenster hat keine Scheibe")
+    void leeres_fenster_hat_keine_scheibe() {
+      RollupFenster leer = RollupFenster.delta(zeit("2025-12-30T08:00"), zeit("2025-12-30T05:10"));
+
+      assertThat(leer.istLeer()).isTrue();
+      assertThat(leer.monatsscheiben()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Der Volllauf ueber den Bestand der Testkopie ergibt 22 Scheiben")
+    void volllauf_ergibt_22_scheiben() {
+      // Fruehester Zeitstempel und Anker der Testkopie — dieselben Werte wie in M92.
+      RollupFenster fenster =
+          RollupFenster.voll(zeit("2024-10-01T02:00:28"), zeit("2025-12-30T04:09:47"));
+
+      assertThat(fenster.monatsscheiben())
+          .as("2024-10 bis 2025-12 sind 15 Monate — der Volllauf am Anker sieht 2026 nicht")
+          .hasSize(15);
+    }
+
+    @Test
+    @DisplayName("Auch die fuenf leeren Monate bekommen ihre Scheibe")
+    void leere_monate_bekommen_ihre_scheibe() {
+      // Der Kalender kennt die Daten nicht. Genau das ist die Bauvorgabe aus M92: Ein Eimer, der
+      // einmal Zeilen hatte und heute keine mehr hat, wird sonst nie geleert.
+      RollupFenster fenster = new RollupFenster(zeit("2026-01-01T00:00"), zeit("2026-06-01T00:00"));
+
+      assertThat(fenster.monatsscheiben())
+          .as("2026-01 bis 2026-05 tragen null Zeilen und werden trotzdem gerechnet")
+          .hasSize(5);
+    }
+
+    @Test
+    @DisplayName("Die Scheiben sind lueckenlos, ohne Ueberlapp und decken das Fenster genau")
+    void scheiben_sind_lueckenlos_und_ohne_ueberlapp() {
+      RollupFenster fenster =
+          RollupFenster.voll(zeit("2024-10-01T02:00:28"), zeit("2026-07-08T17:21:10"));
+      List<RollupFenster> scheiben = fenster.monatsscheiben();
+
+      assertThat(scheiben).hasSize(22).allSatisfy(s -> assertThat(s.istLeer()).isFalse());
+      assertThat(scheiben.getFirst().von()).isEqualTo(fenster.von());
+      assertThat(scheiben.getLast().bis()).isEqualTo(fenster.bis());
+      for (int i = 1; i < scheiben.size(); i++) {
+        assertThat(scheiben.get(i).von())
+            .as(
+                "Scheibe %d beginnt genau dort, wo die vorige endet — keine Luecke, kein Ueberlapp",
+                i)
+            .isEqualTo(scheiben.get(i - 1).bis());
+      }
+      assertThat(scheiben.stream().mapToLong(RollupFenster::stundeneimer).sum())
+          .as("Und zusammen ergeben sie genau die Eimer des Fensters")
+          .isEqualTo(fenster.stundeneimer());
+    }
+
+    @Test
+    @DisplayName("Jede Scheibengrenze liegt auf einem vollen Stundenanfang")
+    void jede_scheibengrenze_liegt_auf_der_stunde() {
+      RollupFenster fenster =
+          RollupFenster.voll(zeit("2024-10-01T02:00:28"), zeit("2026-07-08T17:21:10"));
+
+      // Der Konstruktor von RollupFenster wuerde jede andere Grenze abweisen — dass die Zerlegung
+      // ueberhaupt durchlaeuft, ist damit schon der halbe Beleg. Der Rest steht hier ausdruecklich.
+      for (RollupFenster scheibe : fenster.monatsscheiben()) {
+        assertThat(scheibe.von().truncatedTo(ChronoUnit.HOURS)).isEqualTo(scheibe.von());
+        assertThat(scheibe.bis().truncatedTo(ChronoUnit.HOURS)).isEqualTo(scheibe.bis());
+      }
+    }
+
+    @Test
+    @DisplayName("Die erste und die letzte Scheibe duerfen angebrochen sein")
+    void erste_und_letzte_scheibe_duerfen_angebrochen_sein() {
+      RollupFenster fenster = new RollupFenster(zeit("2025-11-20T13:00"), zeit("2025-12-05T09:00"));
+      List<RollupFenster> scheiben = fenster.monatsscheiben();
+
+      assertThat(scheiben).hasSize(2);
+      assertThat(scheiben.getFirst())
+          .isEqualTo(new RollupFenster(zeit("2025-11-20T13:00"), zeit("2025-12-01T00:00")));
+      assertThat(scheiben.getLast())
+          .isEqualTo(new RollupFenster(zeit("2025-12-01T00:00"), zeit("2025-12-05T09:00")));
     }
   }
 
