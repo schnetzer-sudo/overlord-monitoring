@@ -10,9 +10,11 @@ import {
   holePartner,
   massenzuordnung,
   starteVorschlagslauf,
+  uebernimmVorschlaege,
   zuordne,
   type Katalogzeile,
   type MassenzuordnungAnfrage,
+  type VorschlagsuebernahmeAnfrage,
   type ZuordnenAnfrage,
 } from "./api";
 import { KATALOG_PARAMETER, type Katalogfilter } from "./filter";
@@ -169,6 +171,44 @@ export function useMassenzuordnung() {
       }
       void speicher.invalidateQueries({ queryKey: KATALOG_SCHLUESSEL.prozesseBereich });
       void speicher.invalidateQueries({ queryKey: KATALOG_SCHLUESSEL.partner });
+    },
+  });
+}
+
+/**
+ * Die Übernahme der Partnervorschläge — **zwei Modi, ein Aufruf** (E22 bis E24).
+ *
+ * **Nur `AUSFUEHREN` rührt den Zwischenspeicher an.** Eine Vorschau hat nichts
+ * geschrieben; sie zu invalidieren hieße, 733 Zeilen für eine Frage neu zu
+ * holen, die niemand beantwortet bekommen wollte.
+ *
+ * Nach dem Ausführen wird **invalidiert und nicht gesetzt** — dieselbe
+ * Begründung wie beim Lauf: Aus drei Zahlen lässt sich keine Liste
+ * rekonstruieren, und hier hat sich die Liste in der Breite geändert.
+ *
+ * ## Die Partnerliste wird ausdrücklich **nicht** invalidiert
+ *
+ * Das ist gegen die Erwartung, und der Befund entscheidet: `GET
+ * /api/katalog/partner` liest `SELECT DISTINCT partner` über **alle**
+ * Katalogzeilen des Mandanten und filtert **nicht** auf den Pflegestatus
+ * (`ProzessKatalogRepository.findePartner`). Ein Partner, den die Heuristik in
+ * eine offene Zeile geschrieben hat, steht damit **schon vor** der Übernahme in
+ * der Auswahl. Die Übernahme ändert allein den Status — die Menge der
+ * verschiedenen Partnernamen bleibt Zeichen für Zeichen dieselbe.
+ *
+ * Eine Invalidierung wäre also eine Anfrage über 733 Zeilen für eine Antwort,
+ * die sich nicht geändert haben kann.
+ */
+export function useVorschlagsuebernahme() {
+  const speicher = useQueryClient();
+
+  return useMutation({
+    mutationFn: (anfrage: VorschlagsuebernahmeAnfrage) => uebernimmVorschlaege(anfrage),
+    onSuccess: (antwort) => {
+      if (antwort.modus !== "AUSFUEHREN") {
+        return;
+      }
+      void speicher.invalidateQueries({ queryKey: KATALOG_SCHLUESSEL.prozesseBereich });
     },
   });
 }

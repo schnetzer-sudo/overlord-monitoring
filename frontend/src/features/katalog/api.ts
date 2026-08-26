@@ -254,3 +254,54 @@ export type MassenzuordnungAntwort = {
 export function massenzuordnung(anfrage: MassenzuordnungAnfrage): Promise<MassenzuordnungAntwort> {
   return sende<MassenzuordnungAntwort>("/katalog/massenzuordnung", anfrage);
 }
+
+/**
+ * Was die Übernahme der Partnervorschläge betrifft — **in beiden Modi dieselbe
+ * Auskunft** (E24).
+ *
+ * Die Zahlen stammen in `VORSCHAU` und in `AUSFUEHREN` aus derselben Lesung,
+ * und die Ausführung schreibt genau die Liste, die sie gezählt hat. Der Nutzer
+ * bestätigt damit die Zahl, die passiert.
+ *
+ * **`regelA + regelB = betroffen`** ist eine Invariante des Backends. Die
+ * Aufschlüsselung ist kein Schmuck: Sie ist die Kontrolle, an der sich ein Lauf
+ * gegen `docs/prozess-katalog.md` §3.5 halten lässt.
+ *
+ * **Ein `davonGepflegt` gibt es hier nicht**, anders als bei der
+ * Massenzuordnung. Es wäre konstruktionsbedingt immer `0`, weil nur offene
+ * Zeilen erfasst werden — und eine Zahl, die nie etwas anderes sagen kann, sagt
+ * nichts.
+ */
+export type Vorschlagsuebernahme = {
+  modus: Massenmodus;
+  /** Offene Zeilen mit einem Partnervorschlag aus Regel A oder Regel B (E22). */
+  betroffen: number;
+  regelA: number;
+  regelB: number;
+};
+
+export type VorschlagsuebernahmeAnfrage = {
+  /** **Immer ausdrücklich mitgeschickt**, auch wenn er der Vorgabe entspricht. */
+  modus: Massenmodus;
+};
+
+/**
+ * Setzt alle offenen Zeilen mit einem **Partnervorschlag** auf `GEPFLEGT` —
+ * in der Vorschau oder wirklich (E22 bis E24).
+ *
+ * **Es reist keine Liste von `ProcessID` über die Leitung** (E23). Die Menge
+ * berechnet das Backend aus der Bedingung von E22; läge sie zusätzlich hier,
+ * stünde dieselbe Regel an zwei Stellen und driftete. Aus demselben Grund hat
+ * der clientseitige Filter `nurMitNachrichten` (E20) auf die Übernahme **keine
+ * Wirkung** — wer ihn gesetzt hat, sieht eine Teilmenge und übernimmt trotzdem
+ * alles. Der Dialog sagt das ausdrücklich.
+ *
+ * **Es wird kein Feldwert kopiert.** Partner und Richtung stehen bereits in der
+ * Zeile; die Heuristik hat sie beim Lauf geschrieben, nur mit Status `OFFEN`.
+ * Übernehmen ist eine Statusänderung.
+ */
+export function uebernimmVorschlaege(
+  anfrage: VorschlagsuebernahmeAnfrage,
+): Promise<Vorschlagsuebernahme> {
+  return sende<Vorschlagsuebernahme>("/katalog/vorschlaege-uebernehmen", anfrage);
+}

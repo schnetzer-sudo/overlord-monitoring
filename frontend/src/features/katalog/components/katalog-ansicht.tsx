@@ -14,6 +14,7 @@ import { KatalogKennzahlen } from "./katalog-kennzahlen";
 import { KatalogTabelle } from "./katalog-tabelle";
 import { LaufKnopf } from "./lauf-knopf";
 import { Massenzuordnung } from "./massenzuordnung";
+import { VorschlaegeUebernehmen } from "./vorschlaege-uebernehmen";
 
 /**
  * Die Katalogpflege: **alle Prozesse des aktiven Mandanten**, auch die ohne
@@ -112,6 +113,17 @@ export function KatalogAnsicht() {
 
           <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
             <LaufKnopf gesperrt={gesperrt} />
+            {/*
+             * **Ohne Bedingung „gibt es überhaupt welche"** (E23): Diese Frage
+             * beantwortet die Vorschau, und zwar dort, wo die Regel aus E22
+             * lebt — im Backend. Gesperrt ist der Knopf allein, solange eine
+             * Zeile bearbeitet wird; er holt die Liste neu, und die offene
+             * Zeile könnte dabei aus der Antwort fallen.
+             */}
+            <VorschlaegeUebernehmen
+              gesperrt={gesperrt}
+              nurMitNachrichten={filter.nurMitNachrichten}
+            />
             <Massenzuordnung
               zeilen={alleZeilen}
               vorschlaege={partner.data ?? []}

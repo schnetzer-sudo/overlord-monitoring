@@ -563,6 +563,27 @@ export const en: Texte = {
       verlorenEins: "One of them is already curated — its current value is lost.",
       verlorenViele: "{gepflegt} of them are already curated — their current values are lost.",
     },
+    uebernahme: {
+      oeffnen: "Accept suggestions",
+      titel: "Accept partner suggestions",
+      einleitung:
+        "Confirms the suggestions the rules found during the last run. No value changes — only the curation status.",
+      keine: "There are no unconfirmed partner suggestions.",
+      uebernimmtEins: "Accepts one partner suggestion",
+      uebernimmtViele: "Accepts {betroffen} partner suggestions",
+      aufteilung: "— {regelA} from rule A, {regelB} from rule B.",
+      keinen: "none",
+      einen: "one",
+      folge:
+        "The rows get marked as curated; partner and direction stay exactly as the rule suggested them.",
+      ohneVorschlagBleibtOffen:
+        "Processes without a partner suggestion stay open, even when they carry a direction.",
+      filterWirktNicht:
+        "The “with messages only” filter has no effect here — the tenant’s processes are all taken.",
+      uebernehmen: "Accept",
+      uebernehmenLaeuft: "Accepting …",
+      abbrechen: "Cancel",
+    },
     lauf: {
       starten: "Derive suggestions and check stock",
       hinweis:

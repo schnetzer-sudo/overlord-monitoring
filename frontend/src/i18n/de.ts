@@ -910,6 +910,42 @@ export const de = {
       verlorenEins: "Einer davon ist bereits gepflegt — sein bisheriger Wert geht verloren.",
       verlorenViele: "{gepflegt} davon sind bereits gepflegt — ihr bisheriger Wert geht verloren.",
     },
+    /**
+     * Die Übernahme der Partnervorschläge (E22 bis E24).
+     *
+     * **`ohneVorschlagBleibtOffen` ist der Satz, ohne den der Dialog falsch
+     * gelesen wird.** Bei `NEXANS` stehen 509 Vorschläge über 733 Prozessen;
+     * ohne ihn sucht ein Administrator die fehlenden 224 in einem Fehler statt
+     * in E22. Sie tragen eine Richtung aus dem Projektnamen, aber nie einen
+     * Partnervorschlag — und „gepflegt mit leerem Partner" hieße in diesem
+     * Katalog „hingesehen, es gibt keinen" (E4).
+     *
+     * **`filterWirktNicht` steht daneben, sobald „nur mit Nachrichten" gesetzt
+     * ist.** Der Filter wird im Browser gerechnet (E20), die Übernahme läuft im
+     * Backend über alle Prozesse des Mandanten (E23). Das ist die Stelle, an der
+     * E23 sonst überrascht.
+     */
+    uebernahme: {
+      oeffnen: "Vorschläge übernehmen",
+      titel: "Partnervorschläge übernehmen",
+      einleitung:
+        "Bestätigt die Vorschläge, die die Regeln beim letzten Lauf gefunden haben. Es wird kein Wert geändert — nur der Pflegestatus.",
+      keine: "Es gibt keine unbestätigten Partnervorschläge.",
+      uebernimmtEins: "Übernimmt einen Partnervorschlag",
+      uebernimmtViele: "Übernimmt {betroffen} Partnervorschläge",
+      aufteilung: "— {regelA} aus Regel A, {regelB} aus Regel B.",
+      keinen: "keinen",
+      einen: "einen",
+      folge:
+        "Die Zeilen werden als gepflegt gekennzeichnet; Partner und Richtung bleiben, wie die Regel sie vorgeschlagen hat.",
+      ohneVorschlagBleibtOffen:
+        "Prozesse ohne Partnervorschlag bleiben offen, auch wenn sie eine Richtung tragen.",
+      filterWirktNicht:
+        "Der Filter „nur mit Nachrichten“ wirkt hier nicht — übernommen wird für alle Prozesse des Mandanten.",
+      uebernehmen: "Übernehmen",
+      uebernehmenLaeuft: "Wird übernommen …",
+      abbrechen: "Abbrechen",
+    },
     lauf: {
       starten: "Vorschläge und Bestand erheben",
       hinweis:
