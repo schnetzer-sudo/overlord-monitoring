@@ -910,8 +910,11 @@ drei. Für dieselbe Zeilenmenge sind das mehr Indexseiten ohne jeden Gegenwert.
 
 **10,2 bis 11,3 µs je Zeile, über einen Mengenbereich von Faktor 48.** Fenster D ist nicht deshalb
 schnell, weil es günstig läge, sondern weil 256 Zeilen darin stehen; die 48 Stunden Fensterbreite
-kosten für sich genommen nichts. Der Aufwärmlauf kostet zwischen 1,4 % (D) und 22,0 % (H3) mehr als
-der beste Lauf.
+kosten für sich genommen nichts. Der Aufwärmlauf kostet zwischen **0,5 %** (A) und **21,9 %** (H3)
+mehr als der beste Lauf — im Einzelnen: A 0,5 % · D 2,0 % · D2 3,0 % · H2 4,2 % · H1 14,9 % ·
+H3 21,9 %. **Der Aufschlag fällt dort am höchsten aus, wo absolut am wenigsten zu tun ist** (H3 mit
+285 Zeilen): Er ist im Wesentlichen ein fester Anteil für den kalten Abfrageplan, kein
+mengenabhängiger.
 
 ## Vorregistrierte Deutung, dagegengehalten
 
@@ -1583,7 +1586,9 @@ Partner — und zwar **alle denselben**: `COUNT(DISTINCT partner)` = **1**.
 > **Für 10b heißt das:** Eine Verteilung nach Richtung zeigt für `NEXANS` heute mehr als die Hälfte
 > des Volumens als „nicht zugeordnet" — nicht, weil der Katalog dünn wäre, sondern weil **elf
 > Zeilen** fehlen. Das ist die billigste Katalogpflege im ganzen Projekt: elf Zeilen, und die
-> Richtungsverteilung springt von 41,4 % Abdeckung auf 100 %.
+> Richtungsverteilung springt von **41,4 %** Abdeckung auf 100 % (Fenster B) beziehungsweise von
+> **45,6 %** auf 100 % (Gesamtbestand `NEXANS`: 1.314.684 von 2.885.711 Nachrichten hängen heute an
+> einem Prozess mit gepflegter Richtung).
 
 ## Vorregistrierte Deutung, dagegengehalten
 
@@ -1596,11 +1601,12 @@ Partner — und zwar **alle denselben**: `COUNT(DISTINCT partner)` = **1**.
 
 **Erstens — der größte Partner hält über 50 %, in beiden Fenstern.** 83,03 % im Tagesfenster,
 58,61 % im Monatsfenster. Die drei größten halten 89,15 % bzw. 71,23 %; die zehn größten 90,56 %
-bzw. 76,93 %. **115 Partner teilen sich in Fenster B die verbleibenden 23,07 %.**
+bzw. 76,93 %. **Die übrigen 105 Partner teilen sich in Fenster B zusammen 13.226 Nachrichten —
+7,34 %.**
 
-> **Ein gewöhnliches Balkendiagramm trägt nicht.** Bei 58,61 % für den ersten und 0,54 % für den
-> zehnten Balken ist das Verhältnis **109 : 1** — Rang 10 wäre bei 400 Pixeln Breite vier Pixel
-> lang, Rang 15 zwei. **10b braucht Top‑N plus „Rest" oder eine anteilige Darstellung**, wie
+> **Ein gewöhnliches Balkendiagramm trägt nicht.** Bei 105.654 Nachrichten für den ersten und 981
+> für den zehnten Balken ist das Verhältnis **108 : 1** — Rang 10 wäre bei 400 Pixeln Breite vier
+> Pixel lang, Rang 15 zwei. **10b braucht Top‑N plus „Rest" oder eine anteilige Darstellung**, wie
 > vorregistriert.
 >
 > **Offener Punkt 39 ist damit beantwortet, und die Antwort ist die unangenehme:** Die Konzentration
@@ -1737,13 +1743,18 @@ Bestand, und die fünf leeren Monate stehen ausdrücklich als `LEER` darin.
 | 2025-05 | 237.918 |
 | 2025-11 | 237.642 |
 
-**Sie bestimmt die Obergrenze, nicht der Durchschnitt** — und sie liegt nur **7,6 %** über dem
-Mittel der 15 vollen Monate (219.359). Der Bestand ist über die Monate gleichmäßig verteilt; es gibt
-keine Scheibe, die aus der Reihe fällt.
+**Sie bestimmt die Obergrenze, nicht der Durchschnitt** — und sie liegt nur **11,6 %** über dem
+Mittel der 15 vollen Monate (**222.426**). Der Bestand ist über die Monate gleichmäßig verteilt; es
+gibt keine Scheibe, die aus der Reihe fällt, und deshalb ist die Obergrenze hier nur wenig über dem
+Durchschnitt.
+
+> **Eine Kontrolle, die nebenbei aufgeht.** Die 15 vollen Monate summieren sich auf **3.336.386**
+> Zeilen — genau die Zahl, die `PROJEKTBESCHREIBUNG.md` §8 Z. 961 für „01.10.2024 bis 30.12.2025"
+> nennt. Die restlichen 5.133 Zeilen des Bestands liegen sämtlich im Juni und Juli 2026.
 
 > **Belegvermerk** (Regel L10) — **eine Angabe des Auftrags, die der Bestand nicht trägt.**
 > *Gemessen war:* **Oktober 2024 trägt 241.203 Zeilen und ist die drittgrößte der 22 Scheiben** —
-> 10,0 % **über** dem Mittel der vollen Monate.
+> 8,4 % **über** dem Mittel der vollen Monate.
 > *Behauptet wird* im Auftrag (§M92): „plus eine Scheibe aus dem **dünnen Anfang des Bestands**
 > (Oktober 2024)".
 > **Die Lücke:** Der Bestand hat keinen dünnen Anfang. Er beginnt am `2024-10-01 02:00:28` sofort
@@ -1982,7 +1993,7 @@ Tabellengrößen sind am Ende der Runde **byteidentisch** mit V1:
 | **A9** | **M91 ohne Laufzeitmessung nach „beste von fünf"** | M91 ist eine Verteilungsfrage, keine Leistungsfrage; der Auftrag verlangt für sie keine Laufzeit. Die Einzellaufzeiten stehen trotzdem im Profil und in der Laufzeittabelle |
 | **A10** | **Die Runde schreibt in mehr als eine Datei** | Der Auftrag sagt „genau eine Datei: `docs/messungen-schritt10.md`". Dazu gekommen sind `scripts/messung-schritt10/*.sql` (dreizehn Sitzungsdateien) und eine Zeile in `.gitignore`. Das folgt der Konvention seit Schritt 8: Die Sitzungsdateien sind der Beleg dafür, **wie** gemessen wurde, und ohne sie ist die Runde nicht nachfahrbar; die Rohausgaben bleiben ausgeschlossen. **Keine der unter „Gesperrte Dateien" genannten Dateien ist angefasst worden** |
 | **A12** | **Kein Eintrag in `docs/README.md`, obwohl diese Datei neu ist** | `CLAUDE.md` verlangt unter „Dokumentationspflicht": „Neue Datei → Eintrag in `docs/README.md`". Der Auftrag dieser Runde führt `docs/README.md` unter **„Gesperrte Dateien — nicht anzufassen"**. Beides zusammen geht nicht. Aufgelöst zugunsten des Auftrags, weil er die spätere und die speziellere Vorgabe ist — **aber nicht stillschweigend**: Der Eintrag fehlt und gehört in die Korrekturrunde. Er ist unten unter den Korrekturen mitgeführt |
-| **A11** | **Eine falsche Laufzeit stand kurzzeitig in dieser Datei** | Beim ersten Auswerten von Sitzung 2 sind die Laufzeiten von Fenster A denen von Fenster B zugeordnet worden (517,5 ms statt 17.182,4 ms). Beim Zusammenstellen der Laufzeittabelle aufgefallen und vor dem Abschluss der Runde berichtigt. Die Zahl steht jetzt richtig; die Deutung von M86 hing nie daran, weil M86 keine Laufzeitbehauptung trägt |
+| **A11** | **Sechs Zahlen sind vor dem Abschluss der Runde berichtigt worden** | Alle **abgeleiteten** Größen dieser Datei sind am Ende gegen die Rohausgaben nachgerechnet worden. Sechs stimmten nicht und stehen jetzt richtig: (1) die Laufzeit von M86b Fenster B — beim ersten Auswerten waren die Werte von Fenster A zugeordnet worden, **517,5 ms statt 17.182,4 ms**; (2) das Mittel der 15 vollen Monatsscheiben, **222.426 statt 219.359**, und damit (3) der Abstand der größten Scheibe, **11,6 % statt 7,6 %**, und (4) der von Oktober 2024, **8,4 % statt 10,0 %**; (5) der kleinste Aufwärmlauf-Aufschlag in M88, **0,5 % (A) statt 1,4 % (D)**; (6) der Anteil der Partner ab Rang 11 in M91, **7,34 % auf 105 Partner statt 23,07 % auf 115**. **Keine gemessene Zahl war betroffen und keine vorregistrierte Deutung hing an einer von ihnen** — alle sechs sind aus richtigen Messwerten falsch weitergerechnet. Sie stehen hier, weil eine Runde, die ihre eigenen Rechenfehler verschweigt, ihre übrigen Zahlen mit entwertet |
 
 ---
 
@@ -2030,7 +2041,7 @@ Nummerierung im Anschluss an den projektweit höchsten Stand (**40**, in
     10b, kein Bau** — die Oberfläche dafür steht seit 9b.
 45. **Elf `NEXANS`-Katalogzeilen ohne Richtung sind die billigste Katalogpflege im Projekt.** Sie
     tragen 54,44 % des Bestands des größten Mandanten. Elf Zeilen heben die Richtungsabdeckung von
-    41,4 % auf 100 %.
+    **41,4 % auf 100 %** in Fenster B und von **45,6 % auf 100 %** über den Gesamtbestand.
 46. **Der Alias-Fallstrick aus Befund 11 gehört als Bauvorgabe nach 10b.** Der `CASE`, der E‑i
     umsetzt, wird in Leseabfragen über `process_catalog` stehen, und die Spalten heißen dort
     `partner` und `richtung`. Der Alias muss anders heißen als die Spalte, oder `GROUP BY` schreibt
