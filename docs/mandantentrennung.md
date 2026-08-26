@@ -267,6 +267,31 @@ schlechter Beweis für eine Trennung, die zwischen Firmen greifen soll.
 > je Endpunkt, nicht eine bestimmte Grenze; wo die Mandantengrenze fehlt, tritt die Rollengrenze
 > an ihre Stelle, und ohne diesen Test wird genauso wenig gemergt.
 
+> **Ergänzt 26.08.2026 (Schritt 9b, Nachtrag E22–E24).** `ProzessKatalogIsolationDbIT` führt seit
+> dem 20.08.2026 einen Nachweis je Katalog-Endpunkt; mit
+> `POST /api/katalog/vorschlaege-uebernehmen` sind es **sechs**. **Er ist keine neue Ausnahme von
+> Regel M1** — er nimmt keine Mandanten-ID entgegen, sondern ausschließlich einen Modus, und die
+> Liste in §3 bleibt bei **drei** Einträgen.
+>
+> Zwei Dinge sind an diesem sechsten bemerkenswert:
+>
+> 1. **Die Gegenprobe steht auf der Wirkung, nicht auf der Eingabe** — dieselbe Übertragung wie bei
+>    `ProzesseIsolationDbIT`. Der Endpunkt nimmt keine Kennung entgegen, es gibt also nichts,
+>    worüber sich Existenz erfragen ließe. Geprüft wird stattdessen: `AUSFUEHREN` als Mandant B
+>    lässt die uebernehmbare Menge von Mandant A **unverändert**. Damit der Nachweis Zähne hat,
+>    verlangt der Test vorab, dass Mandant A überhaupt eine hat.
+> 2. **Regel M1 wird in beiden Formen geprüft** — als Abfrageparameter und als untergeschobenes
+>    Feld im Anfragekörper —, und die Gegenprobe verlangt vorab, dass die beiden Mandanten
+>    **verschieden viele** übernehmbare Zeilen haben. Wären beide Zahlen gleich, bewiese ein
+>    gleicher Antwortrumpf nichts.
+>
+> **Ein Nebenbefund derselben Runde gehört hierher**, weil er die Testkonten-Regel unten betrifft:
+> Die Aufräumung über das Präfix `it-` löscht, was das Präfix **trägt** — nicht nur, was ein Test
+> **angelegt** hat. Ein Test, der eine vorhandene Zeile per Upsert anfasst, setzt es und lässt sie
+> damit löschen. Genau das ist am 26.08.2026 passiert und hat eine fremde Katalogzeile gekostet;
+> vollständig in [`messungen-schritt9.md`](messungen-schritt9.md) unter **M93‑6**. Behoben an der
+> Ursache: Die Tests legen nur noch auf Prozessen **ohne** Katalogzeile an, mit reinem `INSERT`.
+
 Der Test prüft zu Beginn, dass beide in der Testkopie existieren und die erfundene ID nicht. Schlägt
 das fehl, hat sich die Testkopie geändert — nicht der Code.
 

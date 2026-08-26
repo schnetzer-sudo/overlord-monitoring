@@ -1,13 +1,24 @@
 # Prozess-Katalog
 
-Stand: 21.08.2026 · Schritt 9b · Fachliche Festlegung
-Messgrundlage: [`messungen-schritt9.md`](messungen-schritt9.md), M74 bis M79 · Nachträge **M80** und
-**M83** (Bestandsabfrage zu E14)
+Stand: 26.08.2026 · Schritt 9b · Fachliche Festlegung
+Messgrundlage: [`messungen-schritt9.md`](messungen-schritt9.md), M74 bis M79 · Nachträge **M80**,
+**M83** (Bestandsabfrage zu E14) und **M93** (Vorschlagsübernahme zu E22)
 
-**Entscheidungen E1 bis E21.** E14 bis E21 sind am 21.08.2026 dazugekommen und stehen dort, wohin
+**Entscheidungen E1 bis E24.** E14 bis E21 sind am 21.08.2026 dazugekommen und stehen dort, wohin
 sie fachlich gehören: **E14** in §2, **E15** und **E16** in §6.2, **E17** bis **E21** in §4. Zwei
 davon kehren Festgeschriebenes um — E14 die verworfene Spalte aus §9, E17 die Mandantenliste in E9;
 beide tragen einen Korrekturkasten an der alten Stelle.
+
+**E22 bis E24 sind am 26.08.2026 dazugekommen** und stehen in **§4**, hinter E21: die Übernahme der
+Partnervorschläge auf Knopfdruck. Sie kehren nichts um; sie schließen an E13 und E19 an. Drei
+verworfene Möglichkeiten dazu stehen in §9, zwei neue offene Punkte in §10.
+
+> **Eine Nummernkollision, die außerhalb dieser Datei entstanden ist.**
+> [`IMPLEMENTIERUNGSPLAN_MVP.md`](IMPLEMENTIERUNGSPLAN_MVP.md) beruft sich an zwei Stellen auf
+> „**E23**" für den Satz *„die Tabelle `partner` entfällt"*. Diese Datei hat E23 bis zum 26.08.2026
+> gar nicht geführt, und der gemeinte Beschluss ist **E2**. Mit E23 existiert die Nummer jetzt und
+> meint etwas anderes — der Plan trägt seit dem 26.08.2026 einen datierten Korrekturkasten an
+> beiden Stellen. **Gemeldet und nicht stillschweigend umgehängt.**
 
 ---
 
@@ -398,6 +409,77 @@ abgeleitete Liste aus E2; ein neuer Partnername lässt sich trotzdem eintippen. 
 Auswahl wäre falsch, weil die Liste sich selbst aus den bereits gepflegten Zeilen speist: Der
 erste Partner eines Mandanten stünde nie darin, und die Kuratierung käme nicht in Gang.
 
+### Die Vorschläge übernehmen *(26.08.2026, E22 bis E24)*
+
+**Ein Knopf über der Liste setzt alle offenen Zeilen mit einem Partnervorschlag auf *gepflegt*.**
+Er ist der Gegenpol zu E19: Dort setzt ein Mensch **eine** Zeile, hier bestätigt er in einem Zug,
+was die Regeln beim letzten Lauf gefunden haben.
+
+**Der entscheidende Punkt: Partner und Richtung stehen bereits in der Zeile.** Die Heuristik hat
+sie beim Lauf geschrieben, nur mit Status *offen* (E13, §3.4 dort). Übernehmen ist deshalb **kein
+Kopieren von Werten, sondern ausschließlich eine Statusänderung** plus Änderungsvermerk. Wer beim
+Lesen anfängt, sich Partner oder Richtung als kopierte Werte vorzustellen, hat den Vorgang
+missverstanden.
+
+**E22 — Übernehmbar ist nur, was einen *Partner*vorschlag trägt.**
+
+Die Bedingung, und sie ist vollständig:
+
+```
+pflegestatus = 'OFFEN'  UND  vorschlag_herkunft IN ('REGEL_A', 'REGEL_B')
+```
+
+**Nicht** übernommen werden Zeilen mit `vorschlag_herkunft = KEINE`, auch wenn sie eine
+**Richtung** tragen. Bei `NEXANS` ist das der Regelfall für **224 Prozesse**: Die Richtung kommt
+dort aus dem Projektnamen (§3.4), ein Partner ist nie vorgeschlagen worden.
+
+**Der Grund ist E4 und nicht Bequemlichkeit.** „Gepflegt mit leerem Partner" bedeutet in diesem
+Katalog ausdrücklich *„hingesehen, es gibt keinen"*. Nähme der Knopf diese 224 Zeilen mit, stünden
+sie mit einer Aussage da, die kein Mensch getroffen hat — und sie wären in der Oberfläche von
+echter Kuratierung nicht mehr zu unterscheiden. **Ein Knopf, der 224 Behauptungen erfindet, ist
+schlimmer als einer, der 224 Zeilen liegenlässt.**
+
+**E23 — Ein Knopfdruck erfasst *alle* Vorschläge des Mandanten.**
+
+Keine Einschränkung auf ein Projekt, keine auf die gerade sichtbar gefilterten Zeilen.
+
+**Die Menge wird im Backend berechnet, nicht im Browser.** Es reist **keine Liste von `ProcessID`**
+über die Leitung, sondern nur ein Modus. Der Grund ist derselbe, aus dem der Katalog seine
+Massenzuordnung serverseitig auflöst: Läge die Bedingung aus E22 zusätzlich im Browser, stünde
+dieselbe Regel an zwei Stellen und driftete.
+
+Der clientseitige Filter `nurMitNachrichten` (E20) hat auf die Übernahme **keine Wirkung**. Wer ihn
+gesetzt hat, sieht eine Teilmenge und übernimmt trotzdem alles. **Das steht in der Vorschau
+ausdrücklich als Satz** — sonst ist es genau die Stelle, an der E23 überrascht.
+
+**E24 — Vorschau und Ausführen, eine gemeinsame Lesung.**
+
+Dieselbe Bauform wie E12 bei der Massenzuordnung: zwei Modi, **eine** Menge, und die Zahl, die der
+Nutzer bestätigt, ist die Zahl, die passiert. Ohne `modus` gilt *Vorschau*; wer den Modus vergisst,
+verändert nichts.
+
+> **Hier ist die Zusicherung sogar stärker als bei E12.** Dort teilen sich zwei Wege *ein
+> Statement*, und ein Test hält die beiden gerenderten Texte gegeneinander. Hier gibt es **gar
+> keinen zweiten Text**: Gelesen wird einmal, gezählt wird über genau diese Liste, und geschrieben
+> wird genau sie. Es kann nichts driften, weil es nichts gibt, was auseinanderlaufen könnte.
+
+**Die Antwort nennt drei Zahlen** — die betroffenen Zeilen und ihre Aufschlüsselung nach Regel A
+und Regel B. **Die Aufschlüsselung ist kein Schmuck:** Sie ist die Kontrolle, an der sich ein Lauf
+gegen §3.5 halten lässt. Ein `davon gepflegt` wie bei der Massenzuordnung gibt es hier **nicht** —
+es wäre konstruktionsbedingt immer null, weil nur offene Zeilen erfasst werden, und eine Zahl, die
+nie etwas anderes sagen kann, sagt nichts.
+
+> **Der Preis, den dieser Knopf verbreitert, gehört danebengestellt.** Es gibt **keinen Weg von
+> *gepflegt* zurück nach *offen*** — `PUT` setzt immer *gepflegt*, der Lauf rührt gepflegte Zeilen
+> nicht an, und die Massenzuordnung setzt ein Feld und keinen Pflegestatus. Mit E22 wird diese
+> Einbahnstraße von einer Zeile auf bis zu 509 verbreitert. **Dagegen wird nichts gebaut**; der
+> Preis steht hier, bevor ihn jemand zahlt (§10, Punkt 5).
+>
+> Und: Nach dem Knopfdruck ist „per Regel übernommen" von „von Hand kuratiert" **in der Zeile
+> selbst nicht mehr zu unterscheiden**. `geaendert_von` trägt in beiden Fällen denselben Namen. Der
+> Unterschied steht nur noch im `audit_log`, und deshalb bekommt die Übernahme dort eine **eigene
+> Ereignisart** (§10, Punkt 6).
+
 ---
 
 ## 5. Massenzuordnung nach Projekt
@@ -544,6 +626,9 @@ Mit Grund festgehalten, damit sie in der Umsetzung nicht wieder aufkommen.
 | Richtung aus dem `SOSName` | §3.4 — Join und Konfliktregel für acht Prozesse mit mehreren SOS |
 | Gespeicherte Spalte „trägt Nachrichten" | Sie ginge still veraltet; mit E5 ist sie ohnehin gegenstandslos — **umgekehrt am 21.08.2026 durch E14**, siehe den Kasten unter der Tabelle |
 | Katalogfeld „Belegart" umbenennen | E1 — das Feld entsteht nicht |
+| Übernehmen, sobald Partner **oder** Richtung gefüllt ist | E22 — die Richtung ist kein Partnervorschlag. Bei `NEXANS` bekämen 224 Zeilen eine Aussage, die kein Mensch getroffen hat *(26.08.2026)* |
+| Jede offene Zeile übernehmen | E22 — dasselbe, nur weiter: Auch die Zeilen ohne jede Ableitung stünden danach als „hingesehen, es gibt keinen" da *(26.08.2026)* |
+| Nur die sichtbar gefilterten Zeilen übernehmen | E23 — der Filter `nurMitNachrichten` wird im Browser gerechnet, die Menge im Backend. Eine Bedingung, die an zwei Stellen steht, driftet *(26.08.2026)* |
 
 > **Umgekehrt am 21.08.2026 — die gespeicherte Spalte kommt doch, als E14.** Die Zeile oben bleibt
 > im alten Wortlaut stehen; sie beschreibt den Stand vom 20.08.2026 richtig.
@@ -583,3 +668,5 @@ Mit Grund festgehalten, damit sie in der Umsetzung nicht wieder aufkommen.
 | 2 | Sollen `WOC` (4) und `SYSTEM` (4) überhaupt kuratiert werden? Beide sind laut `PROJEKTBESCHREIBUNG.md` §3.2 technisch und keine Kunden |
 | 3 | Regel A bei **zwei** Unterstrichen ist für die neun NEXANS-Prozesse dieser Gestalt nicht geprüft |
 | 4 | Der Anker `Eingehend`/`Ausgehend` in Projektnamen war für `ZAST`, `NXHBE`, `EDITIONLINGERI`, `WOC` und `SYSTEM` nicht erhoben. **Vier der fünf sind mit M80‑7 beantwortet** (20.08.2026): Er wirkt bei `NXHBE` für **alle 17** Prozesse und bei `ZAST`, `WOC` und `SYSTEM` **gar nicht**. **Offen bleibt allein `EDITIONLINGERI`** — seine fünf Zeilen mit Richtung sind genau die fünf, die Regel B über den **Prozess**namen trifft; über den Projektnamen sagt die Zählung dort nichts |
+| 5 | **Es gibt keinen Weg von *gepflegt* zurück nach *offen*** *(26.08.2026)*. Gegen den Code geprüft: `PUT /api/katalog/prozesse/{processId}` setzt **immer** `GEPFLEGT`, der Lauf überspringt gepflegte Zeilen (E13), und die Massenzuordnung setzt ein **Feld** und keinen Pflegestatus. Mit E22 verbreitert sich diese Einbahnstraße von einer Zeile auf bis zu 509. **Gebaut wird nichts dagegen**; der Preis steht hier, bevor ihn jemand zahlt |
+| 6 | **„Per Regel übernommen" und „von Hand kuratiert" sind in der Zeile nicht mehr unterscheidbar** *(26.08.2026)* — nur noch im `audit_log`, das für die Übernahme eine eigene Ereignisart bekommt. Denkbar wären ein vierter Wert für `vorschlag_herkunft` oder eine eigene Spalte `uebernommen_am`. **Beides ist ausdrücklich nicht Teil dieser Runde**: Es wäre eine Migration und eine eigene Entscheidung |

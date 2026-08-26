@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Katalogzeile } from "@/features/katalog/api";
+import type { Katalogzeile, Vorschlagsuebernahme } from "@/features/katalog/api";
 import {
   einLaufHatStattgefunden,
   fortschritt,
@@ -19,6 +19,7 @@ import {
   passendeVorschlaege,
   speichertOhnePartner,
 } from "@/features/katalog/zuordnung";
+import { darfUebernehmen, uebernahmesaetze } from "@/features/katalog/uebernahme";
 import { de } from "@/i18n/de";
 import { en } from "@/i18n/en";
 import { fehleranzeige } from "@/lib/fehlertext";
@@ -388,5 +389,153 @@ describe("Die Fehler der Zeilenbearbeitung", () => {
 
     expect(fehleranzeige(antwort, de).text).toBe(de.fehler["nicht-gefunden"]);
     expect(istKeinZugriff(antwort)).toBe(false);
+  });
+});
+
+// ─── Die Übernahme der Partnervorschläge (E22 bis E24) ───────────────────────
+
+function uebernahme(werte: Partial<Vorschlagsuebernahme> = {}): Vorschlagsuebernahme {
+  return { modus: "VORSCHAU", betroffen: 0, regelA: 0, regelB: 0, ...werte };
+}
+
+describe("Was der Übernahme-Dialog sagt", () => {
+  it("nennt bei null Vorschlägen genau einen Satz und keine Zahl", () => {
+    // „Es gibt nichts zu übernehmen" ist eine Auskunft und kein Fehler. Die
+    // Aufschlüsselung wäre hier dreimal die Null und damit Rauschen.
+    expect(uebernahmesaetze(uebernahme(), false, de, "de")).toEqual([de.katalog.uebernahme.keine]);
+  });
+
+  it("schlüsselt bei reiner Regel A auf und sagt die Null in Worten", () => {
+    // Der Fall `NEXANS`: 509 aus Regel A, keiner aus Regel B (§3.5). „0 aus
+    // Regel B" läse sich als Tabelle, die in einen Satz gerutscht ist.
+    const saetze = uebernahmesaetze(
+      uebernahme({ betroffen: 509, regelA: 509, regelB: 0 }),
+      false,
+      de,
+      "de",
+    );
+
+    expect(saetze).toHaveLength(3);
+    expect(saetze[0]).toContain("509");
+    expect(saetze[0]).toContain(de.katalog.uebernahme.keinen);
+  });
+
+  it("nennt bei gemischtem Bestand beide Zahlen", () => {
+    const saetze = uebernahmesaetze(
+      uebernahme({ betroffen: 5, regelA: 2, regelB: 3 }),
+      false,
+      de,
+      "de",
+    );
+
+    expect(saetze[0]).toContain("2");
+    expect(saetze[0]).toContain("3");
+    expect(saetze[0]).not.toContain(de.katalog.uebernahme.keinen);
+  });
+
+  it("sagt „einen“ statt „1“ — an beiden Stellen", () => {
+    const saetze = uebernahmesaetze(
+      uebernahme({ betroffen: 1, regelA: 1, regelB: 0 }),
+      false,
+      de,
+      "de",
+    );
+
+    expect(saetze[0]).toContain(de.katalog.uebernahme.uebernimmtEins);
+    expect(saetze[0]).toContain(de.katalog.uebernahme.einen);
+  });
+
+  it("trägt den dritten Satz immer mit — er ist Pflicht und kein Beiwerk", () => {
+    // Ohne ihn liest ein Administrator bei `NEXANS` „509" über 733 Zeilen und
+    // sucht die fehlenden 224 in einem Fehler statt in E22.
+    for (const zahlen of [
+      { betroffen: 509, regelA: 509, regelB: 0 },
+      { betroffen: 1, regelA: 0, regelB: 1 },
+    ]) {
+      expect(uebernahmesaetze(uebernahme(zahlen), false, de, "de")).toContain(
+        de.katalog.uebernahme.ohneVorschlagBleibtOffen,
+      );
+    }
+  });
+});
+
+describe("Der Zusatzsatz zum Filter", () => {
+  it("erscheint **nur**, wenn „nur mit Nachrichten“ gesetzt ist", () => {
+    const zahlen = uebernahme({ betroffen: 509, regelA: 509, regelB: 0 });
+
+    expect(uebernahmesaetze(zahlen, false, de, "de")).not.toContain(
+      de.katalog.uebernahme.filterWirktNicht,
+    );
+    expect(uebernahmesaetze(zahlen, true, de, "de")).toContain(
+      de.katalog.uebernahme.filterWirktNicht,
+    );
+  });
+
+  it("erscheint auch bei null Vorschlägen — sonst verdächtigt der Nutzer den Filter", () => {
+    expect(uebernahmesaetze(uebernahme(), true, de, "de")).toEqual([
+      de.katalog.uebernahme.keine,
+      de.katalog.uebernahme.filterWirktNicht,
+    ]);
+  });
+
+  it("steht in beiden Sprachen und nennt in beiden den Filter beim Namen", () => {
+    expect(uebernahmesaetze(uebernahme(), true, en, "en")).toContain(
+      en.katalog.uebernahme.filterWirktNicht,
+    );
+    expect(de.katalog.uebernahme.filterWirktNicht).toContain(de.katalog.filter.nurMitNachrichten);
+    expect(en.katalog.uebernahme.filterWirktNicht).toContain(en.katalog.filter.nurMitNachrichten);
+  });
+});
+
+describe("„Übernehmen“ ist gesperrt, bis eine Zahl dasteht", () => {
+  it("bleibt ohne Vorschau gesperrt", () => {
+    // Der Nutzer bestätigt eine Zahl — ohne Vorschau gibt es keine.
+    expect(darfUebernehmen(null, false)).toBe(false);
+  });
+
+  it("bleibt bei `betroffen = 0` gesperrt", () => {
+    expect(darfUebernehmen(uebernahme(), false)).toBe(false);
+  });
+
+  it("bleibt gesperrt, solange der Aufruf läuft", () => {
+    expect(darfUebernehmen(uebernahme({ betroffen: 509, regelA: 509 }), true)).toBe(false);
+  });
+
+  it("gibt frei, sobald eine Vorschau mit Treffern vorliegt", () => {
+    expect(darfUebernehmen(uebernahme({ betroffen: 509, regelA: 509 }), false)).toBe(true);
+  });
+});
+
+describe("Die Fehler der Übernahme", () => {
+  it("übersetzt `modus-unbekannt` in beiden Sprachen", () => {
+    const antwort = new ProblemFehler({
+      status: 400,
+      typ: "modus-unbekannt",
+      detail: "Text aus dem Backend.",
+    });
+
+    for (const sprachdatei of [de, en]) {
+      expect(fehleranzeige(antwort, sprachdatei).text).toBe(sprachdatei.fehler["modus-unbekannt"]);
+    }
+  });
+
+  it("zeigt bei `403` mit `zugriff-verweigert` den Zustand und keine rote Meldung", () => {
+    // Der Dialog erbt die Rollengrenze von `/api/katalog/**`. Sie ist kein
+    // Fehler dieses Aufrufs, sondern eine Grenze der Ansicht.
+    const antwort = new ProblemFehler({ status: 403, typ: "zugriff-verweigert" });
+
+    expect(istKeinZugriff(antwort)).toBe(true);
+  });
+
+  it("fällt bei einem unübersetzten Typ auf `detail` zurück, in beiden Sprachen", () => {
+    const antwort = new ProblemFehler({
+      status: 500,
+      typ: "noch-nicht-uebersetzt",
+      detail: "Text aus dem Backend.",
+    });
+
+    for (const sprachdatei of [de, en]) {
+      expect(fehleranzeige(antwort, sprachdatei).text).toBe("Text aus dem Backend.");
+    }
   });
 });

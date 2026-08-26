@@ -1,11 +1,18 @@
 # Prozess-Katalog — die Oberfläche
 
-Stand: 24.08.2026 · Schritt 9b des MVP, Teil Frontend
-Vorgabe: [`prozess-katalog.md`](prozess-katalog.md) (E1–E21). Bei Widersprüchen gilt jene Datei;
+Stand: 26.08.2026 · Schritt 9b des MVP, Teil Frontend
+Vorgabe: [`prozess-katalog.md`](prozess-katalog.md) (E1–E24). Bei Widersprüchen gilt jene Datei;
 alle Abweichungen sind hier unter §11 benannt und begründet.
-Bedient werden die fünf Endpunkte aus [`prozess-katalog-backend.md`](prozess-katalog-backend.md).
-Messungen: [`messungen-schritt9.md`](messungen-schritt9.md) M74–M80, **M83**, **M84** und **M85**
-(der ganze Knopfdruck, aus dem Browser gemessen — §6).
+Bedient werden die **sechs** Endpunkte aus
+[`prozess-katalog-backend.md`](prozess-katalog-backend.md).
+Messungen: [`messungen-schritt9.md`](messungen-schritt9.md) M74–M80, **M83**, **M84**, **M85**
+(der ganze Knopfdruck, aus dem Browser gemessen — §6) und **M93** (die Lesung der Übernahme — §7a).
+
+> **Nachtrag vom 26.08.2026 — die Vorschlagsübernahme.** Ein zweiter Dialog neben dem Lauf-Knopf
+> setzt alle offenen Zeilen mit einem Partnervorschlag auf *gepflegt* (E22–E24). Er steht in
+> **§7a**, dem Muster aus §7 folgend; neue offene Punkte stehen in §12 ab Nummer 9. Der Satz „fünf
+> Endpunkte" ist oben mitgezogen, weil er den Bedienumfang dieser Datei beschreibt und nicht einen
+> historischen Stand.
 
 **Kein Backend, keine Migration, kein jOOQ-Statement.** Diese Runde fasst ausschließlich
 `frontend/` an — dazu drei Dokumentationsdateien und `docs/README.md`.
@@ -511,6 +518,114 @@ löscht das Feld in allen betroffenen Zeilen, und der Satz dazu steht da.
 
 ---
 
+## 7a. Die Vorschläge übernehmen *(26.08.2026, E22–E24)*
+
+`POST /api/katalog/vorschlaege-uebernehmen` in zwei Schritten. **Der zweite Dialog der Ansicht**,
+und er folgt dem Muster aus §7 — es entsteht nichts Neues, was dort schon steht.
+
+### Der Knopf trägt **keine** Bedingung „gibt es überhaupt welche"
+
+Er steht neben dem Lauf-Knopf und ist **immer bedienbar**. Diese Frage beantwortet die Vorschau,
+und zwar dort, wo die Regel aus E22 lebt: im Backend. **Stünde sie zusätzlich im Browser, stünde
+sie zweimal** — derselbe Gedanke wie bei E23, und dieselbe Klasse Fehler wie eine nachgelagerte
+Mandantenprüfung.
+
+Gesperrt ist er in genau zwei Lagen, beide bereits im Bestand vorhanden:
+
+| Lage | Warum |
+|---|---|
+| solange eine Zeile bearbeitet wird | Er holt die Liste neu, und die offene Zeile könnte dabei aus der Antwort fallen (§11, Punkt 7) |
+| solange der Lauf fährt | dieselbe Begründung; beide Zustände kommen als **ein** `gesperrt` an |
+
+### Die Vorschau wird beim Öffnen geholt, im **Ereignis** und nicht in einem Effekt
+
+Das Öffnen ist etwas, das *passiert*, und kein Zustand, mit dem sich etwas abgleichen ließe —
+dieselbe Wahl wie beim Halt der Laufzeituhr in §6. **Schließen und erneutes Öffnen holt sie neu**;
+eine alte Zahl wird nicht wiederverwendet. Sonst bestätigte der Nutzer eine Zahl, die zu einer
+anderen Anfrage gehört.
+
+Vier Zustände:
+
+| Lage | Was dasteht |
+|---|---|
+| lädt | die übliche Ladeanzeige (`Laden`, zwei Zeilen) |
+| Fehler | die übliche Fehlerbehandlung — **im Dialog** und nicht über der Liste: Die Liste ist richtig, nur diese eine Frage nicht |
+| `betroffen = 0` | *„Es gibt keine unbestätigten Partnervorschläge."* — **„Übernehmen" ist gesperrt** |
+| `betroffen > 0` | der dreiteilige Satz unten |
+
+### Der Satz ist dreiteilig, und der dritte Teil ist Pflicht
+
+> *„Übernimmt 509 Partnervorschläge — 509 aus Regel A, keinen aus Regel B. Die Zeilen werden als
+> gepflegt gekennzeichnet; Partner und Richtung bleiben, wie die Regel sie vorgeschlagen hat.
+> Prozesse ohne Partnervorschlag bleiben offen, auch wenn sie eine Richtung tragen."*
+
+**Ohne den dritten Teilsatz liest ein Administrator bei `NEXANS` „509" über einer Liste von 733
+Zeilen und sucht die fehlenden 224 in einem Fehler statt in E22.** Sie tragen eine Richtung aus dem
+Projektnamen, aber nie einen **Partner**vorschlag.
+
+**Die Null bekommt ein Wort und keine Ziffer.** „509 aus Regel A, keinen aus Regel B" liest sich als
+Aussage; „509 aus Regel A, 0 aus Regel B" liest sich als Tabelle, die in einen Satz gerutscht ist.
+Dieselbe Unterscheidung wie bei `verlorenKeine` in §7.
+
+**Ein vierter Satz, sobald `nurMitNachrichten` gesetzt ist:**
+
+> *„Der Filter „nur mit Nachrichten" wirkt hier nicht — übernommen wird für alle Prozesse des
+> Mandanten."*
+
+Das ist E23 an der Stelle, an der er sonst überrascht. **Er erscheint auch bei `betroffen = 0`**:
+Wer den Haken gesetzt hat und „keine Vorschläge" liest, soll nicht vermuten, der Filter habe sie
+weggenommen.
+
+**„Übernehmen" ist gesperrt, bis eine Vorschau vorliegt** — dieselbe Zusage wie bei der
+Massenzuordnung. Anders als dort gibt es **kein Formular, das sie verwerfen könnte**: Der Dialog
+nimmt nichts entgegen außer dem Modus.
+
+### Keine Bestätigungsstufe darüber hinaus
+
+Der Dialog **ist** die Bestätigung. Eine zweite Rückfrage („wirklich?") wäre die Sorte Klick, die
+man wegklickt, ohne sie zu lesen — und sie stünde ausgerechnet vor der harmloseren Hälfte des
+Vorgangs: Übernehmen **überschreibt nichts**. Anders als bei der Massenzuordnung (E12) geht kein
+einziger Wert verloren.
+
+**Deshalb steht hier auch nichts fett.** Die Massenzuordnung hebt `davonGepflegt` hervor, weil das
+die Zahl ist, die verloren geht. Hier geht nichts verloren, und eine Hervorhebung ohne Verlust
+dahinter gewöhnt den Leser daran, Hervorhebungen zu überlesen.
+
+### Danach
+
+- **Liste invalidieren, nicht setzen** — dieselbe Begründung wie beim Lauf (§6): Aus drei Zahlen
+  lässt sich keine Liste rekonstruieren, und hier hat sich die Liste in der Breite geändert.
+- **Die Partnerliste wird ausdrücklich *nicht* invalidiert**, und das ist gegen die Erwartung.
+  **Der Befund entscheidet:** `GET /api/katalog/partner` liest `SELECT DISTINCT partner` über
+  **alle** Katalogzeilen des Mandanten und filtert **nicht** auf den Pflegestatus
+  (`ProzessKatalogRepository.findePartner`, [`prozess-katalog-backend.md`](prozess-katalog-backend.md)
+  §4). Ein Partner, den die Heuristik in eine **offene** Zeile geschrieben hat, steht damit **schon
+  vor** der Übernahme in der Auswahl. Die Übernahme ändert allein den Status — die Menge der
+  verschiedenen Namen bleibt Zeichen für Zeichen dieselbe. Eine Invalidierung wäre eine Anfrage über
+  733 Zeilen für eine Antwort, die sich nicht geändert haben kann.
+- Der **Fortschritt** springt (E18). Das ist gewollt und braucht keine Sonderbehandlung: Er zählt
+  `pflegestatus === "GEPFLEGT"` über die volle Liste, und die kommt nach der Invalidierung neu.
+- Der **Hinweis aus E17 bleibt unberührt** — geprüft: `hinweisNoetig` hängt an
+  `vorschlagHerkunft` und `bestandGeprueftAm` (`kennzahlen.ts`), an keiner Stelle am Pflegestatus.
+  Eine Zeile, die eben `GEPFLEGT` geworden ist, trägt ihre Herkunft unverändert weiter, und der
+  Hinweis war ohnehin schon falsch, sobald *eine* Zeile eine Herkunft außer `KEINE` trug.
+- Der **Vermerk unter dem Partner** (§3) wechselt von „Vorschlag" auf **keinen** — das ist der
+  Normalfall aus E4 und richtig so: `GEPFLEGT` mit gefülltem Feld trägt keinen Vermerk.
+
+### Handwerk
+
+- Alle sichtbaren Texte stehen unter `katalog.uebernahme` in `i18n/de.ts` und `i18n/en.ts`. **Keiner
+  in einer Komponente.**
+- **Keine Farbrolle.** Diese Ansicht führt keine ein und nutzt keine; die vier Statusfarben des
+  Projekts sind fachlich an den **Nachrichtenstatus** vergeben (§3).
+- `components/ui/dialog.tsx` **ohne Schließen-Schaltfläche** (`showCloseButton={false}`) — dieselbe
+  feste englische Zeichenkette wie bei der Massenzuordnung. Das Formular hat seinen eigenen
+  Abbrechen-Knopf, `Escape` schließt weiterhin.
+- Die **Sätze** und die **Sperre** stehen als reine Funktionen in `features/katalog/uebernahme.ts`,
+  damit sie ohne gerenderten Baum prüfbar sind. Die Komponente daneben ist Verdrahtung.
+
+---
+
 ## 8. Fortschritt und Hinweis
 
 ### Der Fortschritt ist eine Zahl und kein Balken (E18)
@@ -622,7 +737,7 @@ den Lauf fehlschlagen.
 | Datei | Art | Was |
 |---|---|---|
 | `tests/katalogfilter.test.ts` | rein | die zwei Filter ↔ URL, auch in Kombination; der übergangene unbrauchbare Wert; **keine Vorgabe in der URL**; **`null` bleibt bei aktivem Filter sichtbar** samt Gegenprobe; der Auffangprozess an `Undefined` mit drei Gegenproben zu `^0+_` |
-| `tests/katalog.test.ts` | rein | der **leere Partner** als `null` (Feld, Leerraum, Massenzuordnung); `darfOeffnen` in allen drei Lagen; die Antwort im Zwischenspeicher; die Vorschläge; der **Fortschritt** über eine bekannte Liste; die **Hinweisbedingung** je einmal erfüllt und nicht erfüllt, dazu „hängt am Partner allein" und „bleibt nach Handarbeit stehen"; die Projektauswahl; **„kein Zugriff" bei `403`** und bei keinem der beiden anderen `403`; die Fehlerabbildung für `partner-zu-lang` und `richtung-unbekannt` in beiden Sprachen |
+| `tests/katalog.test.ts` | rein | der **leere Partner** als `null` (Feld, Leerraum, Massenzuordnung); `darfOeffnen` in allen drei Lagen; die Antwort im Zwischenspeicher; die Vorschläge; der **Fortschritt** über eine bekannte Liste; die **Hinweisbedingung** je einmal erfüllt und nicht erfüllt, dazu „hängt am Partner allein" und „bleibt nach Handarbeit stehen"; die Projektauswahl; **„kein Zugriff" bei `403`** und bei keinem der beiden anderen `403`; die Fehlerabbildung für `partner-zu-lang` und `richtung-unbekannt` in beiden Sprachen. **Seit 26.08.2026 dazu die Übernahme** (§7a): die drei Zustände des Dialogtextes (`0`, nur Regel A, gemischt), „einen" statt „1" an beiden Stellen, der **dritte Teilsatz in jeder Lage**, der Zusatzsatz zum Filter **nur** bei gesetztem Haken (und auch bei `betroffen = 0`, in beiden Sprachen samt Wortlautprobe gegen die Filterbeschriftung), `darfUebernehmen` in allen vier Lagen, und `modus-unbekannt` in beiden Sprachen samt Rückfall auf `detail` |
 | `tests/katalog-tabelle.test.tsx` | **gerenderter Baum**, fünf Fälle | dass **`false` und `null` drei verschiedene Sätze ergeben** und eine nie geprüfte Zeile nicht den Satz der toten trägt; dazu die **Verdrahtung** der Sperre aus E19 |
 | `tests/format.test.ts` | rein, ergänzt | **Anteile** über `Intl`: deutsch `56 %`, englisch `56%`, auf ganze Prozent gerundet |
 | `tests/serverbausteine.test.ts` | rein, **Blockierungstest** | dass **keine Server-Komponente einen Baustein importiert, der `radix-ui` auswertet und kein `"use client"` trägt**. Aus dem Befund an `/administration` (§2); vollständig in [`frontend-grundlagen.md`](frontend-grundlagen.md) §8 |
@@ -643,6 +758,16 @@ Satz belegbar wäre"**. Beide Fälle erfüllen sie:
 
 Die Gesamtzahl der gerenderten Fälle steht **ausschließlich** im Kopf von `frontend/vitest.config.mts`
 und ist dort von 34 auf **39** in acht Dateien fortgeschrieben.
+
+> **Berichtigt 26.08.2026 — die Zahl oben beschreibt den Stand vom 24.08.2026 und ist seither
+> überholt.** Sie steht unverändert da, weil sie diesen Stand richtig wiedergibt. Mit
+> `tests/benutzer-tabelle.test.tsx` (zehn Fälle, Schritt 9a) sind es **49 in neun Dateien**, und die
+> Zahl wird weiterhin an genau einer Stelle geführt: im Kopf von `frontend/vitest.config.mts`.
+>
+> **Die Übernahme (§7a) fügt keinen gerenderten Fall hinzu.** Ihre Sätze und ihre Sperre sind reine
+> Funktionen in `features/katalog/uebernahme.ts` und werden in `tests/katalog.test.ts` geprüft. Die
+> Bedingung aus §9 der Grundlagen ist damit nicht erfüllt — es gibt sehr wohl einen anderen Ort, an
+> dem sie belegbar sind —, und ein Baum wäre hier nur bequemer und nicht nötig.
 
 ### Alle sichtbaren Texte stehen in den Sprachdateien
 
@@ -768,6 +893,30 @@ Server-Verwender von `Button` im ganzen Projekt. Ausgeschrieben in §2, das Netz
    `utf8mb4_general_ci`. Die beiden sind einander nahe, aber nicht dasselbe. Nur ein neu getippter
    Name wird lokal einsortiert; er kann bis zum nächsten Holen eine Position danebenstehen.
 
+### Dazu seit dem 26.08.2026 (E22–E24)
+
+9. **Es gibt keinen Weg zurück, und die Oberfläche sagt das nicht.** Nach der Übernahme steht eine
+   Zeile auf *gepflegt*, und dorthin führt keine Schaltfläche zurück — `PUT` setzt immer *gepflegt*
+   ([`prozess-katalog-backend.md`](prozess-katalog-backend.md) §10, Punkt 10). **Der Dialog weist
+   nicht darauf hin.** Das ist eine Entscheidung und keine Auslassung: Der Satz stünde neben einer
+   Handlung, die nichts überschreibt, und würde damit die Massenzuordnung entwerten, wo er wirklich
+   gebraucht wird. Vermerkt, weil er beim nächsten Umbau leicht als „vergessen" gelesen wird.
+
+10. **Die Übernahme ist im Browser nur als Vorschau angesehen worden.** `AUSFUEHREN` schriebe
+    Kuratierung auf die geteilte Testkopie, und eine kuratierte Zeile überlebt jeden Testlauf
+    ([`prozess-katalog-backend.md`](prozess-katalog-backend.md) §7). Geprüft ist der Modus durch
+    `ProzessKatalogDbIT` und `ProzessKatalogIsolationDbIT`. **Nachzuholen von jemandem, der die
+    Zeilen danach behalten will** — dieselbe Lage wie bei Punkt 3.
+
+11. **Der Zustand `betroffen = 0` ist der einzige, den die Sichtprüfung auf `NEXANS` zeigt.** Der
+    Katalog dieses Mandanten steht auf der Testkopie vollständig auf *gepflegt* (M93‑0), der Dialog
+    sagt dort also „Es gibt keine unbestätigten Partnervorschläge." Der Satz mit den drei Zahlen ist
+    an `VOTG` zu sehen (377 aus Regel A). Vermerkt, damit niemand die Null für einen Fehler hält.
+
+12. **Das schmale Fenster ist auch für diesen Dialog ungesehen** — dieselbe Lage wie Punkt 4. Zu
+    sehen wäre dort, ob die vier Sätze bei 360 px lesbar umbrechen und die beiden Knöpfe nicht
+    aneinandergeraten.
+
 ---
 
 ## 13. Die Dateien
@@ -784,11 +933,12 @@ frontend/src/
 │  ├─ kein-zugriff.tsx               der Zustand aus dem `403`
 │  └─ ui/dialog.tsx                  Generatorbereich, neu
 ├─ features/katalog/
-│  ├─ api.ts                         Typen, fünf Aufrufe, `KATALOG_SCHLUESSEL`
+│  ├─ api.ts                         Typen, **sechs** Aufrufe, `KATALOG_SCHLUESSEL`
 │  ├─ filter.ts                      nuqs-Parser, Rundlauf, `istAuffangprozess`, `sichtbareZeilen`
 │  ├─ zuordnung.ts                   die Entscheidungen der Zeilenbearbeitung
 │  ├─ kennzahlen.ts                  Fortschritt, Hinweisbedingung, Projekte
-│  ├─ hooks.ts                       Filterbindung, zwei Abfragen, drei Mutationen
+│  ├─ uebernahme.ts                  die Sätze des Übernahme-Dialogs, `darfUebernehmen` *(26.08.)*
+│  ├─ hooks.ts                       Filterbindung, zwei Abfragen, **vier** Mutationen
 │  └─ components/
 │     ├─ katalog-ansicht.tsx         die Zustände, die zwei Listen, der offene Zeilenschlüssel
 │     ├─ katalog-kennzahlen.tsx      Fortschritt und Hinweis
@@ -798,7 +948,8 @@ frontend/src/
 │     ├─ zeilen-formular.tsx         Bearbeitung in der Zeile
 │     ├─ partner-feld.tsx            frei tippbar, mit Vorschlägen
 │     ├─ lauf-knopf.tsx              der Lauf, die verstrichene Zeit, acht Zahlen
-│     └─ massenzuordnung.tsx         Dialog mit Vorschau
+│     ├─ massenzuordnung.tsx         Dialog mit Vorschau
+│     └─ vorschlaege-uebernehmen.tsx Dialog mit Vorschau, drei Zahlen *(26.08.)*
 ├─ lib/
 │  ├─ http.ts                        `aendere` (PUT), `istKeinZugriff`
 │  ├─ routen.ts                      zwei Unterrouten
@@ -813,8 +964,8 @@ frontend/src/
 
 | Regel | Umsetzung |
 |---|---|
-| **M1** Kein Endpunkt nimmt eine Mandanten-ID entgegen | Keiner der fünf Aufrufe in `features/katalog/api.ts` kennt einen Mandantenparameter; der Mandant kommt aus der Sitzung |
-| **M3** Der Filter ist Bestandteil jedes Statements | Sache des Backends. Die Oberfläche filtert nichts nach und kennt keine Regel darüber, wer was sehen darf |
+| **M1** Kein Endpunkt nimmt eine Mandanten-ID entgegen | Keiner der **sechs** Aufrufe in `features/katalog/api.ts` kennt einen Mandantenparameter; der Mandant kommt aus der Sitzung. Die Übernahme schickt **nur einen Modus** — keine Liste von `ProcessID` (E23) |
+| **M3** Der Filter ist Bestandteil jedes Statements | Sache des Backends. Die Oberfläche filtert nichts nach und kennt keine Regel darüber, wer was sehen darf. **Auch die Bedingung aus E22 steht nur dort**: Der Übernahme-Knopf trägt sie ausdrücklich nicht, sonst stünde dieselbe Regel an zwei Stellen (§7a) |
 | **Q4** Nicht zugeordnet heißt nicht zugeordnet | Die drei Zustände von `traegtNachrichten` werden nie zusammengefasst; „kein Vorschlag ableitbar" steht als eigener Vermerk; der Auffangprozess wird über die gemessene Kennung erkannt und nicht über ein geratenes Muster |
 | **L1** Pflicht-Zeitfenster je Listen-Endpunkt | Gilt hier nicht: Der Katalog ist keine Nachrichtenliste und hat kein Zeitfenster (E8). Deshalb liegt sein Filter im Feature und nicht in `lib/filter.ts` |
 | **L2** Keine Live-Aggregation über `Message` | Die Oberfläche aggregiert nichts; sie zählt eine Liste, die sie ohnehin hält (E8) |

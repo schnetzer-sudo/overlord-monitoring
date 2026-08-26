@@ -811,6 +811,36 @@ Größenbegrenzung beim Abruf. Diese Aussagen sind **nicht** angefasst worden.
 aus den Katalogzeilen des aktiven Mandanten abgeleitet (E23). Kuratiert werden **Partner und
 Richtung**, sonst nichts.
 
+> **Korrigiert 26.08.2026 — die Nummer `E23` ist hier falsch, und seit demselben Tag ist sie
+> zusätzlich vergeben.** Der alte Wortlaut bleibt stehen; was gilt, steht hier.
+>
+> **Gemeint ist E2**, „Keine Tabelle `partner`" ([`prozess-katalog.md`](prozess-katalog.md) §2).
+> Jene Datei hat E23 bis zum 26.08.2026 gar nicht geführt — sie ging bis E21. Dieselbe fehlgreifende
+> Nummer steht weiter unten in Korrektur 3 desselben Abschnitts.
+>
+> **Seit dem 26.08.2026 gibt es E23**, und es meint etwas anderes: *„Ein Knopfdruck erfasst alle
+> Vorschläge des Mandanten"* (E22–E24, die Vorschlagsübernahme). Damit ist aus einem toten Verweis
+> ein irreführender geworden — deshalb dieser Kasten und nicht bloß ein Vermerk.
+>
+> **Es ist dieselbe Fehlerklasse wie bei E20 in Korrektur 2 des Abschnitts 9a**, nur eine Datei
+> weiter: eine E-Nummer, die aus dem Gedächtnis gesetzt und nie gegen die Festlegung geprüft wurde.
+
+> **Nachtrag 26.08.2026 — der Katalog bekommt einen sechsten Endpunkt.** „**Vorschläge
+> übernehmen**": Alle offenen Zeilen des Mandanten mit einem **Partner**vorschlag aus Regel A oder
+> Regel B werden auf einen Knopfdruck *gepflegt*, mit Vorschau und ohne dass ein Feldwert kopiert
+> wird. Der Plantext nennt ihn nicht — er kennt nur die Massenzuordnung als Sammelweg, und die setzt
+> ein **Feld**, keinen Pflegestatus.
+>
+> **Er ändert nichts an der Abnahme 9b**, sondern beschleunigt sie: „Jeder Prozess ist zugeordnet
+> oder als gepflegt-ohne-Partner gekennzeichnet" bleibt das Kriterium, und der Knopf erledigt davon
+> bei `NEXANS` 509 von 733 Zeilen in einem Zug. Die restlichen 224 tragen keinen Partnervorschlag
+> und bleiben ausdrücklich offen.
+>
+> Entschieden als **E22 bis E24** in [`prozess-katalog.md`](prozess-katalog.md) §4, gebaut in
+> [`prozess-katalog-backend.md`](prozess-katalog-backend.md) §3.6/§4 und
+> [`prozess-katalog-frontend.md`](prozess-katalog-frontend.md) §7a, gemessen als **M93**. **Ohne
+> Migration.**
+
 **Abnahme 9b:** **Jeder Prozess des Mandanten ist entweder zugeordnet oder als
 gepflegt-ohne-Partner gekennzeichnet.** Der Fortschritt ist ablesbar. Ein zweiter Lauf der
 Heuristik ändert an gepflegten Zeilen nichts.
@@ -883,7 +913,8 @@ einem MANDANT-Nutzer `403` — auch dann, wenn er auf dessen eigenes Konto zeigt
 > ([`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §4.4).
 >
 > **3. Die Tabelle `partner` entfällt** (E23). Hier stand „`process_catalog` und `partner` per
-> Flyway".
+> Flyway". *(Nummer berichtigt 26.08.2026: gemeint ist **E2**. Vollständig im Korrekturkasten unter
+> „Abgrenzung 9b" — E23 ist seit dem 26.08.2026 vergeben und meint die Vorschlagsübernahme.)*
 >
 > **4. Der Heuristik-Lauf war als „einmaliger Heuristik-Import" geführt.** Er ist **wiederholbar**,
 > per Knopf, für den aktiven Mandanten, und legt nur fehlende Zeilen an. Einmalig wäre er wertlos,

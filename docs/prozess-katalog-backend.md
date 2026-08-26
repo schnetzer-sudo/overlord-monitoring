@@ -1,12 +1,19 @@
 # Prozess-Katalog — Backend
 
-Stand: 21.08.2026 · Schritt 9b, Teil Backend
-Fachliche Grundlage: [`prozess-katalog.md`](prozess-katalog.md) (E1–E21)
-Messgrundlage: [`messungen-schritt9.md`](messungen-schritt9.md), M74 bis M79 · Nachträge **M80** und
-**M83** (Bestandsabfrage zu E14)
+Stand: 26.08.2026 · Schritt 9b, Teil Backend
+Fachliche Grundlage: [`prozess-katalog.md`](prozess-katalog.md) (E1–E24)
+Messgrundlage: [`messungen-schritt9.md`](messungen-schritt9.md), M74 bis M79 · Nachträge **M80**,
+**M83**/**M84** (Bestandsabfrage zu E14) und **M93** (Vorschlagsübernahme zu E22)
 
 **Kein Frontend.** Dieser Schritt liefert die Migration, die Heuristik, den Datenzugriff und fünf
 Endpunkte. Die Oberfläche ist ein eigener Auftrag.
+
+> **Nachtrag vom 26.08.2026 — der sechste Endpunkt.** Die **Vorschlagsübernahme** (E22–E24) kommt
+> dazu: `POST /api/katalog/vorschlaege-uebernehmen` setzt alle offenen Zeilen mit einem
+> Partnervorschlag auf `GEPFLEGT`. **Ohne Migration** — keine Spalte, kein neuer Pflegestatus,
+> `Massenmodus` wiederverwendet. Der Datenzugriff steht in **§3.6**, der Endpunkt in **§4**, die
+> Messung als **M93** in §8.2. Der Satz „fünf Endpunkte" oben bleibt stehen; er beschreibt den Stand
+> vom 21.08.2026 richtig.
 
 ---
 
@@ -18,12 +25,14 @@ Endpunkte. Die Oberfläche ist ein eigener Auftrag.
 | Heuristik | `catalog/Partnerheuristik` — reine Funktionen, ohne Spring, ohne Datenbank |
 | Datenzugriff | `catalog/ProzessKatalogRepository` — zwei `DSLContext` |
 | Fachlogik | `catalog/ProzessKatalogService` |
-| Endpunkte | `catalog/ProzessKatalogController` — fünf, alle unter `/api/katalog` |
+| Endpunkte | `catalog/ProzessKatalogController` — fünf, alle unter `/api/katalog`; **seit 26.08.2026 sechs** (§4) |
 | Rollengrenze | eine Zeile in `config/SecurityConfig` |
 
 Dazu die Aufzählungstypen `Pflegestatus`, `Richtung`, `VorschlagHerkunft`, `Zuordnungsfeld`,
 `Massenmodus` und die Antwortsätze `KatalogzeileResponse`, `MassenzuordnungResponse`,
-`VorschlagslaufResponse`.
+`VorschlagslaufResponse` — **seit 26.08.2026 dazu `VorschlagsuebernahmeResponse`** und die
+Ereignisart `AuditEventType.KATALOG_VORSCHLAEGE_UEBERNOMMEN`. **Kein neuer Aufzählungstyp:**
+`Massenmodus` wird wiederverwendet.
 
 **Was ausdrücklich nicht entstanden ist:** keine Tabelle `partner` (E2), keine Felder Standort und
 Belegart (E1), keine Auswertung „seit wann kam nichts" (§8 der Festlegung — das ist Schritt 10 aus
@@ -257,6 +266,91 @@ fängt vier reguläre Prozesse mit, darunter einen mit 1.602 Nachrichten (M78).
 
 ---
 
+### 3.6 Die Vorschlagsübernahme *(26.08.2026, E22–E24)*
+
+**Der zweite Schreibweg ohne Upsert — und der erste kuratierende.**
+
+Sie setzt alle offenen Zeilen des Mandanten mit einem **Partner**vorschlag aus Regel A oder Regel B
+auf `GEPFLEGT`. **Es wird kein einziger Feldwert kopiert:** Partner und Richtung stehen bereits in
+der Zeile, die Heuristik hat sie beim Lauf geschrieben (§3.4). Übernehmen ist eine Statusänderung
+plus Änderungsvermerk.
+
+#### Die Lesung — `findeUebernehmbareVorschlaege`
+
+```
+GlassfishDB.ProjectMandant
+  JOIN GlassfishDB.Process              ON Process.ProjectID = ProjectMandant.ProjectID
+  JOIN overlord_monitor.process_catalog ON process_catalog.process_id = Process.ProcessID
+WHERE ProjectMandant.MandantID = ?
+  AND process_catalog.pflegestatus = 'OFFEN'
+  AND process_catalog.vorschlag_herkunft IN ('REGEL_A','REGEL_B')
+ORDER BY Process.ProcessID
+```
+
+Über den **Lese-Pool** (`glassfishDsl`), wie jede lesende Methode dieser Klasse. Gelesen werden
+zwei Spalten: die Kennung und die Herkunft. Mehr wird nicht gebraucht.
+
+**`INNER JOIN` auf `process_catalog`, kein `LEFT JOIN`** — das ist der Unterschied zur Pflegeliste
+(§4), und er ist die Aussage. Die Pflegeliste ebnet Prozesse ohne Katalogzeile auf
+`OFFEN`/`KEINE` ein, weil sie für den Nutzer genau das sind. Hier wäre dieselbe Einebnung falsch:
+**Eine Zeile, die es nicht gibt, kann keinen Vorschlag tragen.**
+
+> **Gemessen ist, dass der `LEFT JOIN` an dieser Stelle *dieselben* Zahlen liefert** (M93‑5b): Die
+> `NULL`-Herkunft fällt an `IN ('REGEL_A','REGEL_B')` ohnehin heraus. **Der `INNER JOIN` ist damit
+> die ehrlichere Schreibweise und nicht die engere Bedingung** — er sagt im Text, was die Bedingung
+> ohnehin tut, statt es dem Leser zu überlassen.
+
+Einstieg `ProjectMandant`, Mandantenfilter im Statement (M3), **kein Zugriff auf `Message`**, kein
+`STRAIGHT_JOIN` (M42). Die Messung steht in §8.2.
+
+#### Das Schreiben ist ein `UPDATE` und bewusst **kein** Upsert
+
+```sql
+UPDATE overlord_monitor.process_catalog
+   SET pflegestatus = 'GEPFLEGT', geaendert_am = ?, geaendert_von = ?
+ WHERE process_id IN (?, ?, …)
+```
+
+**Ein einziges Statement, kein `batch`.** Die Massenzuordnung und der Lauf schreiben über
+`DSLContext.batch(…)`, und genau dort ist die Bindezähler-Falle zugeschnappt (§6, Falle 1). Hier
+gibt es keine Vorlage mit Zeilen — es gibt eine Bedingung mit einer `IN`-Liste. Die obere Schranke
+ist die Prozesszahl des größten Mandanten, also **733 Bindeplätze**; das ist unkritisch.
+
+**Warum kein Upsert:** Die Zeile existiert **notwendigerweise**. Nur der Lauf schreibt
+`REGEL_A`/`REGEL_B`, und er schreibt sie in eine vorhandene oder eben angelegte Zeile. Ein
+`INSERT`-Zweig wäre **unerreichbar**, und der Upsert müsste vier Spalten zurückschreiben, die er
+gar nicht ändern will: `partner`, `richtung`, `vorschlag_herkunft` und den Schlüssel.
+
+**`geaendert_am` und `geaendert_von` werden gesetzt** — anders als beim Bestandslauf (§3.5). Das
+hier **ist** eine Kuratierung: Ein Mensch hat entschieden, den Regelvorschlägen zu glauben. Die Uhr
+ist `systemClock` (Regel A5), nicht die Anwendungsuhr — dieselbe Wahl wie bei `geaendert_am` seit
+`V6` und beim `audit_log`.
+
+**`vorschlag_herkunft` bleibt stehen.** Sie ist nach diesem Knopfdruck der **einzige** Hinweis in
+der Zeile darauf, dass der Wert aus einer Regel und nicht aus einem Kopf stammt. Sie zu löschen
+wäre das Vernichten des einzigen verbliebenen Belegs.
+
+#### Die gemeldete Zeilenzahl geht nicht nach außen
+
+Nach außen geht die **Größe der gelesenen Liste**, damit Vorschau und Ausführung dieselbe Zahl
+nennen. Weicht die vom `UPDATE` gemeldete Zahl davon ab, schreibt der Dienst eine **`WARN`-Zeile
+mit beiden Zahlen**.
+
+**Das ist kein vorsorglicher Zusatz, sondern eine mögliche Lage:** Lesung und Schreiben laufen auf
+**verschiedenen Verbindungen** — eine Lesung innerhalb einer `@Transactional`-Methode ist nicht Teil
+dieser Transaktion ([`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §6,
+[`datenzugriff.md`](datenzugriff.md) §5). Eine Abweichung wäre ein Befund und kein Rauschen.
+
+#### Keine Migration
+
+Es entsteht keine Spalte und kein Aufzählungswert. `Massenmodus` (`VORSCHAU`/`AUSFUEHREN`) existiert
+seit dem 20.08.2026 und wird **wiederverwendet**; ein zweiter Typ mit demselben Inhalt entsteht
+nicht. Auch `AuditEventType.KATALOG_VORSCHLAEGE_UEBERNOMMEN` kostet keine Migration — die Whitelist
+ist ein Aufzählungstyp im Code, `audit_log.event_type` ist `VARCHAR(64)`, und der Name ist 35
+Zeichen lang.
+
+---
+
 ## 4. Die Endpunkte
 
 Pfade deutsch, Antwortfelder camelCase, Fehlertexte deutsch.
@@ -368,6 +462,45 @@ Für die Unterscheidung „anlegen" gegen „auffrischen" gibt es eine eigene Le
 (`findeBestand`): Die Pflegeliste ebnet den Unterschied bewusst ein, weil ein Prozess ohne
 Katalogzeile für den Nutzer genau `OFFEN` ist — der Lauf muss ihn aber auseinanderhalten.
 
+### `POST /api/katalog/vorschlaege-uebernehmen` *(26.08.2026, E22–E24)*
+
+**Der sechste Endpunkt.** Er erbt die Rollengrenze aus `SecurityConfig` (`/api/katalog/**` →
+`ADMIN`) und braucht dafür keine Zeile.
+
+Körper: `{"modus": "VORSCHAU"|"AUSFUEHREN"}`. Fehlt `modus`, gilt `VORSCHAU` — wer den Modus
+vergisst, verändert nichts. Ein *unbekannter* Wert ist `400` (`modus-unbekannt`) und fällt nicht
+stillschweigend auf die Vorgabe zurück.
+
+**Mehr nimmt er nicht entgegen** (E23): keine Liste von `ProcessID`, kein Projekt, keinen Filter.
+Die Menge berechnet der Dienst aus der Bedingung von E22 (§3.6).
+
+Antwort `VorschlagsuebernahmeResponse`:
+
+| Feld | |
+|---|---|
+| `modus` | der gefahrene Modus, zurückgespiegelt |
+| `betroffen` | Zahl der Zeilen, die die Bedingung aus E22 erfüllen |
+| `regelA` | davon mit `vorschlag_herkunft = REGEL_A` |
+| `regelB` | davon mit `REGEL_B` |
+
+- **Beide Modi lesen, und zwar dasselbe** (E24). Die Vorschau zählt und antwortet; die Ausführung
+  schreibt **genau die Liste, die sie gezählt hat**. Die Zahl, die der Nutzer bestätigt, ist damit
+  die Zahl, die passiert — und zwar nicht, weil zwei Statements gleich aussehen, sondern weil es
+  **nur eine Liste gibt**. Das ist eine stärkere Zusicherung als bei der Massenzuordnung.
+- **`regelA + regelB = betroffen`** ist eine Invariante und in `ProzessKatalogDbIT` geprüft. Die
+  Aufschlüsselung ist kein Schmuck: Sie ist die Kontrolle, an der sich ein Lauf gegen §3.5 der
+  Festlegung halten lässt.
+- **Ein `davonGepflegt` gibt es hier nicht**, anders als bei der Massenzuordnung. Es wäre
+  konstruktionsbedingt immer `0`, weil nur `OFFEN`-Zeilen erfasst werden — und eine Zahl, die nie
+  etwas anderes sagen kann, sagt nichts.
+- **Die Vorschau schreibt nichts** und hinterlässt **keinen** `audit_log`-Eintrag.
+- **Eine leere Menge ist kein Fehler.** Sie setzt kein `UPDATE` ab — eine `IN`-Liste ohne Werte wäre
+  entweder ein Syntaxfehler oder ein `UPDATE` ohne Bedingung — und antwortet trotzdem, mit lauter
+  Nullen.
+- Nur `AUSFUEHREN` schreibt ins Protokoll, und zwar unter **`KATALOG_VORSCHLAEGE_UEBERNOMMEN`** und
+  ausdrücklich **nicht** unter `KATALOG_GEAENDERT`. Der Eintrag trägt die drei Zahlen. Begründung
+  unter §9, Abweichung 12.
+
 ---
 
 ## 5. Mandantentrennung und Rollengrenze
@@ -384,7 +517,10 @@ Der Katalog erbt M1 bis M4 unverändert (§7 der Festlegung).
   fremde `ProcessID` errät, bekommt null Zeilen. Die schreibenden Statements setzen ihn nicht noch
   einmal, sondern schreiben ausschließlich auf Zeilen, die eine mandantengefilterte Lesung ergeben
   hat.
-- **Ein Isolationstest je Endpunkt** (M4), fünf an der Zahl.
+- **Ein Isolationstest je Endpunkt** (M4), **sechs** an der Zahl. Beim sechsten steht die Gegenprobe
+  auf der **Wirkung** und nicht auf der Eingabe — er nimmt keine Kennung entgegen, es gibt also
+  nichts, worüber sich Existenz erfragen ließe. Dieselbe Übertragung wie bei
+  `ProzesseIsolationDbIT` ([`mandantentrennung.md`](mandantentrennung.md) §5).
 
 **Zusätzlich eine Rollengrenze.** `/api/katalog/**` verlangt `ADMIN`:
 
@@ -425,9 +561,9 @@ gegen jeden Bindesatz und fängt einen Rückfall.
 | Datei | Art | Fälle |
 |---|---|---|
 | `PartnerheuristikTest` | Unit, ohne Datenbank | 22 |
-| `ProzessKatalogStatementsTest` | Unit, jOOQ-Attrappe | **16** |
-| `ProzessKatalogDbIT` | `@Tag("db")` | **17** |
-| `ProzessKatalogIsolationDbIT` | `@Tag("db")` | 13 |
+| `ProzessKatalogStatementsTest` | Unit, jOOQ-Attrappe | **22** |
+| `ProzessKatalogDbIT` | `@Tag("db")` | **23** |
+| `ProzessKatalogIsolationDbIT` | `@Tag("db")` | **15** |
 | `HeuristikBestandDbIT` | `@Tag("db")`, **schreibt nichts** | 2 |
 | `BestandslaufDbIT` | `@Tag("db")`, **schreibt nichts** | **4** |
 
@@ -486,8 +622,72 @@ nachgelesen wird.
 > dass er als eigener Schreibweg überhaupt auftaucht. Eine Ausnahme, die nur durch Weglassen
 > entstünde, wäre beim nächsten Umbau wieder da.
 
+> ### Und ein zweites Mal geschärft, am 26.08.2026 — mit demselben Satz begründet
+>
+> **Der alte Wortlaut darüber bleibt stehen; er beschreibt den Stand vom 21.08.2026 richtig.** Was
+> gilt, steht hier.
+>
+> Die Aufteilung des Tests lief bis zum 26.08.2026 über ein **Textmerkmal**: Ein Schreibstatement
+> mit `traegt_nachrichten` darin war der Bestandslauf, alles andere war kuratierend und musste ein
+> Upsert sein. **Mit der Vorschlagsübernahme fällt diese Aufteilung**, denn sie ist ein
+> *kuratierender* Schreibweg **ohne** Upsert (§3.6). Über das Textmerkmal wäre sie in die falsche
+> Hälfte gerutscht — und die naheliegende Reparatur wäre ein **zweites** Merkmal gewesen, mit dem
+> die Ausnahme wieder nur durch Weglassen entstünde.
+>
+> **Geführt werden deshalb die Wege und nicht die Merkmale.** Der Test ruft jeden der fünf
+> Schreibwege **einzeln** auf, rendert sein Statement und prüft es namentlich:
+>
+> | Schreibweg | | Warum |
+> |---|---|---|
+> | `speichereZuordnung` (E19) | **Upsert** | Der Nutzer kuratiert eine Zeile, die es noch nie gab |
+> | `speichereFeld` (E11) | **Upsert** | Ein Projekt enthält Prozesse ohne Katalogzeile |
+> | `speichereVorschlaege` (E13) | **Upsert** | Fehlende Zeilen anzulegen **ist** Schritt 1 des Laufs |
+> | `speichereBestandsflags` (E15) | **kein Upsert** | Das einzige Schreiben auf **gepflegte** Zeilen. Ein `INSERT` müsste die `NOT NULL`-Spalten mitliefern und überschriebe die Kuratierung |
+> | `uebernehmeVorschlaege` (E22) | **kein Upsert** | Die Zeile existiert **notwendigerweise** — ein `INSERT`-Zweig wäre unerreichbar |
+>
+> **Dazu ein Riegel:** Der Test zählt die Schreibwege und verlangt genau fünf. Kommt ein sechster
+> dazu, wird er hier rot, bevor jemand vergisst, ihn zu benennen.
+
 **Aufgeräumt wird über `geaendert_von`** mit dem Testpräfix `it-`. Eine von Hand kuratierte Zeile
 überlebt jeden Testlauf.
+
+> ### Eine zweite Grenze dieser Aufräumregel, und sie hat am 26.08.2026 zugeschlagen
+>
+> **Die Regel verlässt sich darauf, dass das Präfix nur auf Zeilen steht, die ein Test *angelegt*
+> hat.** Sie unterscheidet nicht zwischen „von einem Test angelegt" und „von einem Test zuletzt
+> **angefasst**".
+>
+> Der erste Entwurf der Übernahmetests legte seine Zeile per **Upsert** auf den *ersten* Prozess des
+> Mandanten. Trägt der bereits eine Zeile, überschreibt der Upsert deren `geaendert_von` mit dem
+> Präfix — und das Aufräumen löscht danach eine **fremde** Zeile. Genau das ist passiert und hat
+> eine `VOTG`-Katalogzeile gekostet; vollständig in [`messungen-schritt9.md`](messungen-schritt9.md)
+> unter **M93‑6**.
+>
+> **Behoben ist es an der Ursache**, nicht an der Aufräumregel: Beide Testklassen suchen sich
+> Prozesse **ohne** Katalogzeile und legen dort mit einem reinen `INSERT` an. Eine Kollision schlägt
+> laut fehl, statt still zu überschreiben. Bleibt keine freie Zeile übrig, schlägt der Test mit
+> einem Satz fehl, der sagt warum.
+>
+> **Solange kein Schreibweg dieses Backends `geaendert_von` auf ein fremdes Präfix setzen kann, ist
+> die Grenze folgenlos** — und der einzige, der es konnte, war ein Test. Als offener Punkt vermerkt
+> (§10, Punkt 12).
+
+**Sechs neue Fälle in `ProzessKatalogDbIT` und drei in `ProzessKatalogIsolationDbIT` decken E22 bis
+E24 ab** *(26.08.2026)*. Sie fahren wie der Rest auf `SUTTONS`, und **dort liefert die Heuristik
+nichts** — jede Vorschlagszeile in diesen Tests ist von Hand angelegt und kommt aus keiner Regel.
+Das ist kein Hindernis, sondern der Grund, warum der Test dort gut ist.
+
+Geprüft ist: Die Vorschau schreibt nicht und nennt trotzdem die Zahl; Ausführen setzt **genau den
+Status** und lässt Partner, Richtung und Herkunft stehen; eine Zeile mit `KEINE` und gefüllter
+Richtung bleibt offen (E22 am laufenden Endpunkt — der Fall, der die 224 `NEXANS`-Zeilen schützt);
+eine bereits gepflegte Zeile taucht in `betroffen` nicht auf und behält ihren Änderungsvermerk; die
+leere Menge antwortet mit Nullen und wirft nicht; und `regelA + regelB = betroffen` bei gemischtem
+Bestand.
+
+> **Ein Fall prüft die Aufräumregel selbst.** Der Endpunkt **überschreibt** `geaendert_von` mit dem
+> Namen des angemeldeten Testnutzers — und der muss das Präfix `it-` tragen, sonst hinterließe der
+> erste Testlauf gepflegte Zeilen auf der geteilten Testkopie. Er tut es (`it-katalog-pflege`), und
+> der Test sagt das ausdrücklich statt es anzunehmen.
 
 > **Eine Grenze dieser Aufräumregel, die E15 sichtbar macht.** Der Bestandslauf schreibt auf **alle**
 > Zeilen des Mandanten — auch auf solche, die ein Mensch angelegt hat und die das Präfix nicht
@@ -579,6 +779,65 @@ B je Nachricht. Die Prozesszahl steht still, die Nachrichtenzahl wächst.
 ([`annahmen-korrekturen.md`](annahmen-korrekturen.md)): Laufzeiten von der Testkopie sind für die
 Produktion eine **optimistische** Schranke — der Puffer fasst `Message` neunfach, die Trefferquote
 steht bei 99,975 %, und außer uns belastet die Instanz niemand.
+
+### 8.2 Die Vorschlagsübernahme — **M93** *(26.08.2026)*
+
+Vollständig als Nachtrag **M93** in [`messungen-schritt9.md`](messungen-schritt9.md), gefahren
+gegen die Testkopie mit dem **gerenderten** Text aus `findeUebernehmbareVorschlaege`. Reine
+Lesesitzung, kein `INSERT`, kein `UPDATE`.
+
+| Mandant | Prozesse | gelieferte Zeilen | erster Lauf | beste von fünf |
+|---|---:|---:|---:|---:|
+| `NEXANS` | 733 | **0** | 3,562 ms | **3,462 ms** |
+| `VOTG` | 390 | **377** | 3,037 ms | **2,896 ms** |
+| `IBIS` | 192 | **169** | 1,831 ms | **1,831 ms** |
+| `IBISGUS` | 89 | **0** | 0,933 ms | **0,889 ms** |
+
+**Der Plan ist bei allen vier Mandanten Zeile für Zeile derselbe:** Einstieg `ProjectMandant` als
+`ref` über `ProjectMandant_Mandant_idx`, `Process` über `Process_ProjectFK` mit `Using index`, und
+**`process_catalog` als `eq_ref` auf `PRIMARY`** — so hängt es seit M80 an jedem Plan dieser Klasse.
+`rows` in der Einstiegszeile ist die Projektzahl je Mandant (17/19/39/46), sonst gibt es keinen
+Unterschied. **Kein `STRAIGHT_JOIN`, keine Fassung, die eine Tabelle voll durchläuft.** Die
+L15-Falle hat nicht zugeschlagen.
+
+**Die teuerste Zahl der Runde ist 3,562 ms** — 0,036 % der Laufzeitgrenze des Lese-Pools. Zum
+Vergleich: die Pflegeliste 8,0 ms (M80‑1), die Bestandsabfrage 23,2 ms (M84).
+
+**Die Laufzeit hängt an der Prozesszahl und nicht an der Trefferzahl.** `NEXANS` liefert null
+Zeilen und ist trotzdem das teuerste der vier. Das ist die Bauform und keine Überraschung: Der Plan
+läuft über alle Prozesse des Mandanten und wirft an `process_catalog` weg, was die Bedingung nicht
+erfüllt. **Die Bezugsgröße ist die Prozesszahl, und die steht still** — dasselbe Argument, mit dem
+M83‑2 Fassung A entschieden hat.
+
+**Ein Befund, der in keiner vorformulierten Zeile stand:** Die Einstiegszeile trägt
+`Using temporary; Using filesort`. Das `Using temporary` ist **neu** gegenüber M80 und kommt aus
+der Sortierung nach `Process.ProcessID` bei Einstieg über `ProjectMandant`. Gemessen ist, dass es
+folgenlos ist — die zu sortierende Menge ist höchstens 733 Zeilen mit zwei kurzen Zeichenketten.
+**Beziffert ist es nicht**, und eine Fassung ohne `ORDER BY` stünde ohnehin nicht zur Wahl: Ohne
+feste Reihenfolge wäre die `IN`-Liste des `UPDATE` bei jedem Aufruf anders zusammengesetzt.
+
+> ### Die vorregistrierten Erwartungen sind **nicht** eingetreten — und das ist der Befund
+>
+> Der Bauauftrag registriert vorab: `NEXANS` `betroffen = 509 / regelA = 509 / regelB = 0` und
+> `IBISGUS` `regelB = 88 / regelA = 0`. **Gemessen ist bei beiden `betroffen = 0`.**
+>
+> | Mandant | warum |
+> |---|---|
+> | `NEXANS` | steht auf **733 gepflegten** Zeilen und **null offenen**. Die 509 aus Regel A sind nicht verschwunden — sie stehen unverändert in `vorschlag_herkunft`, aber die Zeilen sind schon entschieden. **Ein Lauf hilft dagegen nicht:** E13 rührt gepflegte Zeilen nie an |
+> | `IBISGUS` | hat **überhaupt keine** Katalogzeile. Hier *würde* ein Lauf helfen — er legte 89 offene Zeilen an, davon 88 mit `REGEL_B`. Er ist bewusst nicht gefahren worden: Die Runde ist als reine Lesesitzung angelegt, und die Entscheidung gehört dem Auftraggeber |
+>
+> **Was das über §3.5 sagt: nichts.** Jene Zahlen sind Aussagen über die **Heuristik** — wie viele
+> Prozesse einen Vorschlag *bekommen können*. M93 misst, wie viele Zeilen zu einem Zeitpunkt
+> *offen* sind und einen tragen. Das sind zwei Fragen, und die zweite hängt daran, was ein Mensch
+> inzwischen getan hat.
+>
+> **Belegt ist die Bedingung trotzdem, an zwei anderen Mandanten:** `VOTG` liefert **377 aus Regel
+> A** gegen die 378 aus §3.5 (die Differenz ist die eine Zeile aus M93‑6), und bei `IBIS` fallen
+> **zwei bereits gepflegte `REGEL_B`-Zeilen korrekt heraus** — 169 von 171. Das ist die schärfste
+> Einzelkontrolle der Runde.
+
+**Nicht gemessen ist auch hier das Schreiben:** Das `UPDATE` mit der `IN`-Liste läuft über den
+Schreib-Pool und ist nicht `EXPLAIN`-bar. Es gilt dieselbe Schranke wie oben.
 
 ---
 
@@ -691,6 +950,55 @@ geschärft worden statt aufgeweicht (§7).
 Flyway-Migrationen nach dem ersten Lauf eingefroren sind — der Name ist ab jetzt nicht mehr
 änderbar, ohne den Anwendungsstart zu brechen.
 
+### Zum Nachtrag vom 26.08.2026 (E22–E24)
+
+**12. Die Übernahme bekommt eine eigene Ereignisart, nicht `KATALOG_GEAENDERT`.** Das ist keine
+Abweichung vom Auftrag — er verlangt es —, sondern eine von Abweichung 5, die alle drei bisherigen
+Schreibwege in **eine** Art gelegt hat. Der Grund für die Ausnahme ist der Kern des Risikos dieser
+Funktion: **Nach dem Knopfdruck ist „per Regel übernommen" von „von Hand kuratiert" in der Zeile
+selbst nicht mehr zu unterscheiden.** `geaendert_von` trägt in beiden Fällen denselben Namen — das
+ist der offene Punkt 2 unten, und dieser Knopf hebt ihn von 733 Einzelfällen auf einen Massenfall.
+Das `audit_log` ist damit der **einzige** Ort, an dem der Unterschied überhaupt noch steht; er darf
+dort nicht mit der einzelnen Zuordnung in einen Topf fallen. **Ohne Migration** — die Whitelist ist
+ein Aufzählungstyp im Code.
+
+**13. Die Signatur des Schreibwegs weicht vom Auftragstext ab.** Er nennt
+`uebernehmeVorschlaege(MandantContext, List<String> processIds, String benutzer, Instant jetzt)`;
+gebaut ist `(MandantContext, List<String> processIds, LocalDateTime jetztUtc, String benutzer)`.
+
+Zwei Änderungen, beide aus der Nachbarschaft begründet: Die Spalte ist `DATETIME(3)` in UTC, und
+alle vier Nachbarmethoden dieser Klasse nehmen `LocalDateTime jetztUtc` in genau dieser Position
+entgegen. Ein `Instant` legte die Zeitzonenumrechnung für **einen** von fünf Schreibwegen ins
+Repository, während sie für die übrigen vier im Dienst steht (`ProzessKatalogService.jetztUtc`).
+**Der Zeitpunkt selbst ist unverändert der beauftragte:** `systemClock`, Regel A5.
+
+**14. Die Signatur des Dienstes weicht ebenfalls ab.** Der Auftrag nennt
+`uebernehmeVorschlaege(MandantContext mandant, Massenmodus modus)`; gebaut ist
+`(AngemeldeterNutzer nutzer, MandantContext mandant, String modusRoh, String ip)` — wie bei
+`massenzuordnung`. **Die beauftragte Fassung könnte den `audit_log`-Eintrag nicht schreiben, den
+derselbe Auftrag verlangt:** Er braucht Benutzer und IP. Und `Massenmodus.ausText` gehört in den
+Dienst, weil ein *unbekannter* Modus `400` ist und nicht stillschweigend auf die Vorgabe fällt.
+
+**15. Die `WARN`-Zeile steht im Dienst und nicht im Repository.** Der Auftrag ordnet sie keiner
+Schicht zu. Sie steht dort, wo **beide** Zahlen liegen — die Größe der gelesenen Liste und die vom
+`UPDATE` gemeldete —, und lässt das Repository eine reine Datenzugriffsmethode bleiben.
+
+**16. „Vorschau und Ausführung fahren denselben gerenderten Lesetext" ist nicht wörtlich prüfbar,
+und die gebaute Zusicherung ist stärker.** Der Auftrag verlangt den Vergleich zweier gerenderter
+Texte „wie der bestehende Fall für die Massenzuordnung". Dort ruft `speichereFeld` die Lesung
+selbst auf, und es *gibt* zwei Texte. Hier liest der **Dienst** einmal, zählt über genau diese
+Liste und schreibt genau sie; **der Schreibweg trägt gar kein `SELECT`**. Der Statementtest prüft
+deshalb beides: dass die Lesung Zeichen für Zeichen dieselbe bleibt, und dass das Schreiben keine
+eigene Lesung mitbringt. **Es kann nichts driften, weil es nichts gibt, was auseinanderlaufen
+könnte.**
+
+**17. „Regel L15" gibt es in `DEVELOPMENT_GUIDELINES.md` nicht.** Der Auftrag beruft sich darauf;
+§4.4 dort führt **L1 bis L10**. „L15" stammt aus [`messungen-schritt4.md`](messungen-schritt4.md)
+als Nummer einer *Messung* und ist seither Projektkürzel für „die Einstiegstabelle im `EXPLAIN`
+belegen statt annehmen, und kein `STRAIGHT_JOIN`". **Der Sache ist gefolgt worden**, der Nummer
+nicht: M93 weist den Plan für alle vier Mandanten im Volltext nach. **Gemeldet und nicht
+stillschweigend aufgelöst.**
+
 ---
 
 ## 10. Offene Punkte
@@ -757,3 +1065,46 @@ Flyway-Migrationen nach dem ersten Lauf eingefroren sind — der Name ist ab jet
 9. **Der Filter aus E20 ist clientseitig und damit hier nicht gebaut.** Das Backend liefert die drei
    Zustände; wer sie filtert, ist die Oberfläche. Vermerkt, damit niemand später einen
    Serverparameter dafür sucht.
+
+### Dazu seit dem 26.08.2026 (E22–E24)
+
+10. **Es gibt keinen Weg von `GEPFLEGT` zurück nach `OFFEN`, und die Übernahme verbreitert die
+    Einbahnstraße.** Gegen den Code geprüft: `PUT /api/katalog/prozesse/{processId}` setzt **immer**
+    `GEPFLEGT` (`speichereZuordnung`), der Lauf überspringt gepflegte Zeilen (E13, `vorschlagen`),
+    und die Massenzuordnung setzt **ein Feld** und keinen Pflegestatus — sie setzt ihn zwar
+    ebenfalls auf `GEPFLEGT`, aber nie zurück. Mit E22 wird aus einem Einzelfall ein Massenfall von
+    bis zu 509 Zeilen. **Gebaut wird nichts dagegen**; der Preis steht hier, bevor ihn jemand zahlt.
+
+    > **Was das praktisch heißt:** Wer die Vorschläge übernimmt und den Regeln zu Unrecht geglaubt
+    > hat, korrigiert von Hand oder über die Massenzuordnung — Zeile für Zeile oder Projekt für
+    > Projekt. Ein „Übernahme rückgängig" gibt es nicht und wäre eine eigene Entscheidung; es
+    > bräuchte einen Zustand, den die Tabelle heute nicht führt (siehe Punkt 11).
+
+11. **„Per Regel übernommen" und „von Hand kuratiert" sind in der Zeile nicht mehr
+    unterscheidbar** — nur noch im `audit_log`. Das ist Punkt 2 in verschärfter Form: Dort ging es
+    um `geaendert_von` nach einem Heuristik-Lauf, hier um den Pflegestatus nach einer Übernahme.
+    Denkbar wäre ein **vierter Wert für `vorschlag_herkunft`** (etwa `REGEL_A_UEBERNOMMEN`) oder
+    eine **eigene Spalte `uebernommen_am`**. **Beides ist ausdrücklich nicht gebaut**: Es wäre eine
+    Migration und eine eigene Entscheidung. Vermerkt, damit niemand die Spalte später als
+    Kuratierungsnachweis liest.
+
+12. **Die Aufräumregel der Tests unterscheidet nicht zwischen „angelegt" und „zuletzt angefasst".**
+    Sie löscht, was in `geaendert_von` das Präfix `it-` trägt. Ein Test, der eine **vorhandene**
+    Zeile per Upsert anfasst, setzt dieses Präfix — und lässt sie damit löschen. Am 26.08.2026 ist
+    genau das passiert und hat eine `VOTG`-Katalogzeile gekostet (§7, M93‑6). Behoben ist es an der
+    Ursache: Die Tests legen nur noch auf Prozessen **ohne** Zeile an, mit reinem `INSERT`. **Die
+    Regel selbst bleibt, wie sie ist** — sie ist folgenlos, solange kein Schreibweg dieses Backends
+    `geaendert_von` auf ein fremdes Präfix setzen kann, und der einzige, der es konnte, war ein
+    Test.
+
+13. **Das Schreiben der Übernahme ist nicht gemessen.** Dasselbe wie bei Punkt 6: Das `UPDATE`
+    läuft über den Schreib-Pool und ist nicht `EXPLAIN`-bar. Anders als der Bestandslauf ist es ein
+    **einzelnes** Statement mit bis zu 733 Bindeplätzen und kein Stapel — die Sorge aus Punkt 6
+    trifft es also nicht in derselben Form. Belegt ist trotzdem nichts. **Vor der Produktion zu
+    erheben.**
+
+14. **Die vorregistrierten Zahlen der Messung sind auf der Testkopie nicht reproduzierbar**, weil
+    der Katalog dort kuratiert ist: `NEXANS` steht auf 733 gepflegten Zeilen, `IBISGUS` hat keine
+    (M93‑0). Belegt ist die Bedingung an `VOTG` und `IBIS`. **Wer die beauftragten Zahlen sehen
+    will, braucht einen Katalog, der gelaufen und nicht kuratiert ist** — für `IBISGUS` genügt ein
+    Knopfdruck auf `POST /api/katalog/vorschlagen`, für `NEXANS` nicht (E13).
