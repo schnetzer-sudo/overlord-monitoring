@@ -58,8 +58,8 @@ Abschnitt in `messungen-schritt9.md` (Z. 1898–1909, M83-Nachtrag) führt fünf
 |---|---|---|
 | **S1** — nur `SELECT` | **erfüllt mit der benannten Ausnahme** | Siebzehn der neunzehn Sitzungen fahren ausschließlich `SELECT`, `SET`, `EXPLAIN`, `SHOW` mit `monitor_read`. Die beiden Ausnahmen sind vom Auftrag freigegeben: **5a** legt `message_rollup_probe` an und befüllt sie, **8** löscht sie. Beide laufen mit `monitor_write`, das auf `GlassfishDB` nur `SELECT` hat. **Kein Schreibzugriff auf `GlassfishDB` in irgendeiner Sitzung** — gegengeprüft in 5a‑7 und 8‑6/8‑7 |
 | **L4** — `MessageProperty` | **erfüllt** | Die Tabelle wird in dieser Runde **gar nicht** angefasst. Einziges Vorkommen ist ihre Größe in V1, aus `information_schema` |
-| **L7** — zwei Mandanten | **erfüllt** | M89, M90 je für `NEXANS` und `SUTTONS`; M91 zusätzlich für `VOTG`. M86, M87, M88 und M92 sind mandantenübergreifend und wären mit einem Mandantenfilter etwas anderes — begründet je Messung |
-| **L9** — voller Durchlauf | **erfüllt** | Jeder volle Durchlauf ist einzeln begründet: M87 (die Zeilenzahl einer Tabelle, die es nicht gibt, ist anders nicht zu bekommen), M92‑1 (Scheibengrenzen über den Bestand). **Keiner ist Vorbild für Anwendungscode**, und das steht an jeder Fundstelle |
+| **L7** — zwei Mandanten | **erfüllt für die Abfragen, die es betrifft** | L7 gilt für „jede Abfrage, die in Anwendungscode münden wird". Das sind **M89** (Variante A und B je `NEXANS`/`SUTTONS`), **M90** (alle drei Fassungen je `NEXANS`/`SUTTONS`) und **M91** (Partner und Richtung je `NEXANS`/`SUTTONS`/`VOTG`) — alle drei erfüllt. **M86, M87, M88 und M92 fahren bewusst ohne Mandantenfilter**: Sie messen den Rollup-Job und das Datenmodell, nicht den Ausschnitt eines Kunden. Ein Mandantenfilter machte aus der Frage „was kostet der Delta-Lauf" die Frage „was kostet ein Teil davon" — dieselbe Begründung wie in M14–M17 (`messungen-schritt5.md` Z. 79). **Diese Begründung stand bis zur Schlussprüfung nur hier und nicht bei den vier Messungen selbst**; sie ist jetzt bei M87 und M92 ergänzt |
+| **L9** — voller Durchlauf | **erfüllt, mit einer Einschränkung** | Vierzehn Statements laufen ohne Zeitfenster über `Message`. **Dreizehn davon sind an ihrer Fundstelle einzeln begründet** — M87 (vier Varianten plus M87‑0 und M87‑6), M87‑7, M88s Vorprobe, M91‑R5, 6e‑3, M92‑1, M92‑2, M92‑3 —, und **keiner ist Vorbild für Anwendungscode**, was an jeder Fundstelle steht. **Nicht eigens begründet sind die Rahmenabfragen**: `COUNT(*)` und `MIN`/`MAX` über `Message` in V1b, V5, 5a‑7 und 8‑6. Sie sind Bestandskontrollen von je unter vier Sekunden und keine Messungen; sauberer wäre gewesen, auch sie zu benennen |
 | **L10** — *gemessen war X / behauptet wird Y* | **erfüllt** | In V1, V2, V3, V6, M86 (a) und im Abschnitt „Drei Angaben des Auftrags, die der Bestand nicht trägt" |
 | **L15** — `EXPLAIN` im Volltext | **erfüllt bis auf eine Stelle** | Je Messabfrage, Pläne ungekürzt. **Nicht erfüllt für Fenster H2 in M88** — dort ist kein Plan erhoben. Die fünf erhobenen decken den Mengenbereich von 256 bis 24.218 geschätzten Sätzen ab und sind untereinander identisch; die Lücke ist trotzdem eine. Siehe Abweichung A8 |
 | **G1** — Geheimhaltung | **erfüllt** | Keine `ProcessID`, kein `ProcessName`, kein Partnername, keine `MessageID`, keine Belegnummer, kein Hostname, kein `MessagePropertyValue`. M91 gibt Partner und Prozesse **maskiert** als `Partner 1`, `Partner 2` … aus; die Zuordnung zu echten Namen ist **nirgends festgehalten**, auch nicht in den Sitzungsdateien |
@@ -497,7 +497,7 @@ Für einen **stündlichen** Eimer ist das die Antwort, auf die es ankommt:
 Nachlauffenster von wenigen Minuten** genügt auf diesem Bestand. Ein Nachlauffenster von 48 Stunden
 (Fenster D), wie es die Aufgabenstellung als Möglichkeit mitführt, ist durch diese Messung **nicht
 begründet** — es wäre um den Faktor 43.200 überdimensioniert. Ein Wasserstand **ohne jedes**
-Nachlauffenster ist es aber auch nicht: die 1.545 nachgeschriebenen Zeilen in Fenster B sind
+Nachlauffenster ist es aber auch nicht: die 1.548 nachgeschriebenen Zeilen in Fenster B sind
 gemessen und nicht null.
 
 ## Die Grenze dieser Messung — sie gehört in den Befund
@@ -516,10 +516,17 @@ Der Auftrag schreibt sie selbst vor, und sie gilt unverändert:
 > Sekunden nicht beobachtet."** Nicht: „Sie findet nicht statt." Die Messung kann eine Wanderung
 > belegen, wenn sie sie zeigt — sie kann sie nicht ausschließen, wenn sie sie nicht zeigt.
 >
-> **Ein Hinweis darauf, dass sie stattfindet, steht trotzdem in den Zahlen:** `COMMIT_RECEIVED` hat
-> mit **2,17 %** den höchsten Nachschriftanteil aller Status — und `COMMIT_RECEIVED` ist genau der
-> Wert, den `MatchInterchange` setzt. Die Menge ist mit 552 Zeilen zu klein, um daraus etwas
-> abzuleiten; sie zeigt in die Richtung, in die M31‑3 ohnehin zeigt.
+> **Ein Hinweis darauf, dass sie stattfindet, steht trotzdem in den Zahlen:** Unter den Statuswerten
+> mit mehr als hundert Zeilen im Fenster hat `COMMIT_RECEIVED` mit **2,17 %** den höchsten
+> Nachschriftanteil — zwei- bis dreimal so hoch wie `FINISHED` (0,62 %), `MERGED` (0,80 %) oder
+> `SPLITTED` (1,07 %). Und `COMMIT_RECEIVED` ist genau der Wert, den `MatchInterchange` setzt.
+>
+> *(Absolut betrachtet steht `ERROR_TIMEOUT` mit 33,33 % höher — das ist **eine** Zeile von dreien
+> und trägt nichts. Die Einschränkung „mit mehr als hundert Zeilen" ist deshalb nötig und steht
+> hier, statt die Zahl stillschweigend zu übergehen.)*
+>
+> Auch die 552 `COMMIT_RECEIVED`-Zeilen sind eine kleine Menge, aus der sich nichts ableiten lässt;
+> sie zeigen in die Richtung, in die M31‑3 ohnehin zeigt.
 
 ## Befund 6 — die Zeilen, deren letzte Aktion **nach** ihrer letzten Änderung endet
 
@@ -549,6 +556,11 @@ einer Tabelle, **die es noch nicht gibt**. Sie ist nur zu bekommen, indem man di
 Quellbestand zählt, und das geht ohne vollen Durchlauf nicht — kein Index trägt `MessageStatus`
 neben `MessageLastUpdate` und `ProcessID`. Der Durchlauf ist **Bezugsgröße** und ausdrücklich
 **kein Vorbild für Anwendungscode**: der gebaute Job fährt Deltas (M88), nicht den Bestand.
+
+**Und ohne Mandantenfilter, ebenfalls mit Grund (L7):** `message_rollup` ist **eine** Tabelle für
+alle Mandanten — E‑a führt den Mandanten nicht einmal in der Zeile. Ihre Zeilenzahl je Mandant zu
+erheben beantwortete eine andere Frage als die gestellte. Dieselbe Begründung wie in M14–M17
+(`messungen-schritt5.md` Z. 79). Was ein einzelner Mandant im Rollup belegt, steht in M89.
 
 `information_schema` ist hier bewusst nicht befragt — sie hat in diesem Projekt bei fünf von sechs
 Zeilen danebengelegen, zuletzt um 29,51 % (V1).
@@ -1000,9 +1012,14 @@ dort weiter; sie trägt nur nicht an der Stelle, an der sie am häufigsten zitie
 
 Die beiden kleinen Bereiche sind **auf die Zeile genau** geschätzt, die drei großen um rund
 Faktor 2 zu hoch. Der Faktor ist kein Zufall: `CARDINALITY` steht für `MessageLastUpdateIDX` auf
-**1.780.243** gegen **3.341.519** gezählte Zeilen — also auf **genau der Hälfte** (V1, V3). Wo
-MariaDB nicht mehr im Bereich zählt, sondern aus dieser Kardinalität hochrechnet, verdoppelt sich
-die Schätzung.
+**1.780.243** — das ist **genau die Hälfte von `TABLE_ROWS` = 3.560.486** (V1, V3). Wo MariaDB nicht
+mehr im Bereich zählt, sondern aus dieser Kardinalität hochrechnet, verdoppelt sich die Schätzung.
+
+> **Die Bezugsgröße ist dabei die geschätzte und nicht die gezählte Zeilenzahl, und das ist der
+> Punkt.** Gegen die **gezählten** 3.341.519 Zeilen wäre die Kardinalität 53,28 % und nicht die
+> Hälfte. Der Optimierer rechnet also mit einer Statistik, die auf einer zweiten Statistik beruht —
+> und `TABLE_ROWS` liegt bei `Message` um 6,55 % zu hoch (V1). Beide Fehler multiplizieren sich in
+> die Schätzung hinein.
 
 **Folge für M88: keine.** Der Plan ist bei beiden Schätzungen derselbe, es gibt nur einen möglichen
 Zugriffsweg. Der Befund steht hier, weil dieselbe halbierte Kardinalität in einer Abfrage mit
@@ -1050,11 +1067,26 @@ Scheiben.
 | verschiedene `process_id` | 738 |
 | verschiedene `message_status` | 12 |
 | früheste / späteste Stunde | `2024-10-01 02:00:00` / `2026-07-08 17:00:00` |
-| Größe (`DATA_LENGTH` + `INDEX_LENGTH`) | **18,59 MiB** (19.496.960 B Daten, 0 B Index) |
+| Größe (`DATA_LENGTH` + `INDEX_LENGTH`), unmittelbar nach dem Füllen | 18,59 MiB (19.496.960 B Daten, 0 B Index) |
+| Größe, in Sitzung 8 vor dem Löschen erneut abgelesen | **21,59 MiB** (22.642.688 B Daten, 0 B Index) |
 
 **Beide Kontrollen gehen auf.** 335.610 ist Zeichen für Zeichen die Zahl aus M87 Variante 1, und
 `SUM(anzahl)` = 3.341.519 heißt: **jede Nachricht ist genau einmal gezählt**, keine doppelt, keine
 verloren.
+
+> **Die beiden Größenangaben unterscheiden sich um 16 %, und der Unterschied gehört benannt.**
+> Zwischen beiden Ablesungen ist an der Tabelle **nichts** geändert worden — dazwischen liegen nur
+> lesende Sitzungen. Es sind zwei Ablesungen derselben `information_schema`-Statistik zu
+> verschiedenen Zeitpunkten: unmittelbar nach dem Massen-`INSERT` (`TABLE_ROWS` = 302.875, also
+> 9,8 % **unter** den tatsächlichen 335.610) und rund 23 Minuten später (`TABLE_ROWS` = 336.726,
+> 0,3 % **über** ihnen). **Die zweite Ablesung ist die belastbarere** — ihre Zeilenschätzung trifft
+> fast, die erste liegt um ein Zehntel daneben.
+>
+> **Als Planungszahl für 10a gilt deshalb 21,59 MiB**, nicht 18,59. Das ändert nichts an der
+> Größenordnung: `message_rollup` bleibt gegenüber `Message` (2.763,9 MiB) um den Faktor **128**
+> kleiner. Aber es ist erneut V1s Lehre — `information_schema` liegt in diesem Projekt daneben, und
+> zwar in beide Richtungen. **Wer die Tabelle wirklich vermessen will, misst sie nicht über
+> `information_schema`.**
 
 **Fülldauer, 22 Scheiben, `INSERT … SELECT` je Scheibe:**
 
@@ -1146,8 +1178,9 @@ Standardfenster leer — auf der Testkopie, nicht notwendig in Produktion.
 +------+-------------+-------+--------+------------------------------------+----------------------------+---------+-------------------------------+------+-----------------------------------------------------------+
 ```
 
-**Das Muster ist stabil und hängt nicht an der Abfrageform:** In allen acht gemessenen Plänen
-(Variante A und B, Fenster D, D2 und B) steigt `NEXANS` über `r` ein und `SUTTONS` über `pm`.
+**Das Muster ist stabil und hängt nicht an der Abfrageform:** In allen **zehn** gemessenen Plänen
+von M89 (Variante A und B, Fenster D, D2 und B) steigt `NEXANS` über `r` ein und `SUTTONS` über
+`pm`. *(In M90 gilt dasselbe für Fenster B und G, nicht aber für Fenster D — siehe dort.)*
 Der Grund liegt auf der Hand: `NEXANS` hält 733 von 1.503 Prozessen in 17 Projekten, `SUTTONS`
 17 Prozesse in **einem**. Für `SUTTONS` ist der Mandantenfilter die schärfste Bedingung im ganzen
 Statement, für `NEXANS` ist es das Zeitfenster.
@@ -1293,7 +1326,16 @@ sondern an der Zahl der Rollup-Zeilen im Fenster. `NEXANS` hat in Fenster B 8.86
 braucht 148,84 ms, `SUTTONS` 6.142 und braucht 112,63 ms — 16,8 bzw. 18,3 µs je Zeile. **Der große
 Mandant ist nicht überproportional teuer.** Beide Pläne lesen denselben Indexbereich der
 Rollup-Tabelle (`rows = 45.354` für den ganzen Monat) und werfen danach weg, was nicht zum Mandanten
-gehört; dass `NEXANS` 86 % davon behält und `SUTTONS` 10 %, ändert an der gelesenen Menge nichts.
+gehört; dass `NEXANS` davon **8.861** Zeilen behält und `SUTTONS` **6.142** — von 21.256, die alle
+Mandanten zusammen im Fenster belegen —, ändert an der **gelesenen** Menge nichts.
+
+> **Daran hängt zugleich die Erklärung, warum der große Mandant nur 1,32‑mal so teuer ist wie der
+> kleine, obwohl er 8,4‑mal so viele Nachrichten hat.** Die Laufzeit folgt den **Rollupzeilen**,
+> nicht den Nachrichten: `NEXANS` hat 180.251 Nachrichten auf 8.861 Rollupzeilen (**20,3** je
+> Zeile), `SUTTONS` 21.516 auf 6.142 (**3,5** je Zeile). Der kleine Mandant ist breiter gestreut
+> und holt damit fast auf. **Für 10b heißt das: Die Kosten einer Dashboard-Abfrage schätzt man
+> nicht am Nachrichtenaufkommen eines Mandanten ab, sondern daran, über wie viele Stunden und
+> Prozesse es sich verteilt.**
 
 > **Und daran hängt der einzige Vorbehalt, den diese Messung wirklich trägt.** Der Mandantenfilter
 > greift **nach** dem Zeitfenster, nicht davor — jeder Mandant liest den Rollup-Bereich **aller**
@@ -1394,9 +1436,19 @@ Die Bezugsgrößen dazu, ohne Mandantenfilter:
 +------+-------------+-------+--------+-------------------------------------------------+------------------+---------+-------------------------------+------+------------------------------------+
 ```
 
-**`SUTTONS`** steigt in allen drei Fassungen über **`ProjectMandant_Mandant_idx`** ein, mit
-`Using join buffer (flat, BNL join)` auf `m` — dasselbe Muster wie in M89. **Der Einstieg hängt
-auch hier am Mandanten und nicht an der Abfrage.**
+**`SUTTONS`** steigt in **zwei der drei** Fassungen über **`ProjectMandant_Mandant_idx`** ein — in
+Fenster B und Fenster G, jeweils mit `Using join buffer (flat, BNL join)` auf `m`. **In Fenster D
+nicht.**
+
+> **Fenster D ist die Ausnahme, und sie gehört benannt.** Dort ist die erste Planzeile für
+> **beide** Mandanten `m` mit `range|filter` über `MessageLastUpdateIDX|MessageStatusIDX` und
+> `rows = 256 (0%)`; `pm` folgt erst danach. Die Pläne von `NEX-D` und `SUT-D` sind in der
+> Einstiegszeile **identisch**. Sie unterscheiden sich erst in der Joinreihenfolge dahinter —
+> `NEXANS`: `m, p, pm, pr`; `SUTTONS`: `m, pm, pr, p`.
+>
+> **In Fenster D hängt der Einstieg also gerade nicht am Mandanten**, sondern am Zeitfenster: 256
+> Zeilen sind so wenig, dass der Zeitbereich für beide Mandanten die schärfste Bedingung ist. In
+> den beiden anderen Fassungen, wo das Zeitfenster nichts verengt, kehrt das Muster aus M89 zurück.
 
 > **`rows = 539` gegen 538 wahre Zeilen — die Schätzung ist hier auf eine Zeile genau.** Das ist
 > derselbe Wert, den `message-status.md` für die Fassung ohne Mandantenfilter nennt, und der
@@ -1680,14 +1732,26 @@ bzw. 76,93 %. **Die übrigen 105 Partner teilen sich in Fenster B zusammen 13.22
 | IBISGUS | 23 | 7.981 | 29.339 | 27,20 % | 0,24 % |
 | ZAST | 24 | 1.906 | 5.036 | 37,85 % | 0,06 % |
 | **WOC** | **2** | **2.068** | **2.529** | **81,77 %** | 0,06 % |
+| **SYSTEM** | **1** | **151** | **151** | **100,00 %** | 0,0045 % |
+| **NXHBE** | **2** | **5** | **9** | **55,56 %** | 0,0001 % |
 
 Laufzeit 22.491,0 ms (voller Durchlauf über `Message` mit der Mandantenkette).
 
-**Drei Mandanten fehlen in dieser Tabelle** — `NXHBE`, `EDITIONLINGERI` und `SYSTEM` tragen im
-Gesamtbestand **keine einzige** Nachricht. Zusammen mit E‑f („`SYSTEM` und `WOC` werden behandelt
-wie jeder andere Mandant") heißt das: **`SYSTEM` bekommt ein Dashboard, das nie etwas zeigen wird**,
-und `WOC` eines, in dem ein einziger Prozess 81,77 % hält. E‑f bleibt davon unberührt — es ist eine
-Entscheidung über Gleichbehandlung, nicht über Inhalt —, aber die Zahl gehört daneben.
+**Kontrolle:** Die Spalte „Prozesse mit Nachrichten" summiert sich auf **738** — genau die Zahl aus
+M87‑0. Die Spalte „Nachrichten gesamt" summiert sich auf **3.341.519** — der volle Bestand. **Alle
+Nachrichten der Testkopie hängen an einem Prozess mit Mandantenzuordnung**; keine fällt aus der
+Kette.
+
+**Ein Mandant fehlt in dieser Tabelle:** `EDITIONLINGERI` trägt auf seinen neun Prozessen im
+Gesamtbestand **keine einzige** Nachricht.
+
+**Und zwei tragen fast nichts.** `SYSTEM` hat **151** Nachrichten auf einem Prozess, `NXHBE`
+**neun** auf zweien — 0,0045 % und 0,0001 % des Bestands. Zusammen mit E‑f („`SYSTEM` und `WOC`
+werden behandelt wie jeder andere Mandant") heißt das: **Drei der zehn Mandanten bekommen ein
+Dashboard, auf dem im Standardfenster mit Sicherheit nichts steht** — `EDITIONLINGERI` hat nichts,
+`NXHBE` neun Zeilen im ganzen Bestand, `SYSTEM` 151. `WOC` bekommt eines, in dem ein einziger
+Prozess 81,77 % hält. E‑f bleibt davon unberührt — es ist eine Entscheidung über Gleichbehandlung,
+nicht über Inhalt —, aber die Zahlen gehören daneben.
 
 ## Befund 11 — `GROUP BY` band an die Tabellenspalte, nicht an den Ausdrucksalias
 
@@ -1768,8 +1832,8 @@ Bestand, und die fünf leeren Monate stehen ausdrücklich als `LEER` darin.
 >    außer 4.848 Zeilen im Juni 2026 und 285 im Juli, auf zwei bis drei Prozessen. **Der Bestand
 >    hat kein dünnes Ende, sondern einen Abbruch.**
 > 2. **Die Rollupzeilen je Monat schwanken zwischen 16.757 und 26.365** — bei Zeilenzahlen zwischen
->    169.237 und 248.320. Das Verhältnis liegt zwischen 9,4 und 12,1 Nachrichten je Rollupzeile und
->    ist über 15 Monate erstaunlich stabil. **Der Verdichtungsfaktor 9,96 aus Befund 7 ist kein
+>    169.237 und 248.320. Das Verhältnis liegt zwischen 9,0 und 12,1 Nachrichten je Rollupzeile und
+>    ist über 15 Monate erstaunlich stabil (Minimum 2025-10, Maximum 2024-10). **Der Verdichtungsfaktor 9,96 aus Befund 7 ist kein
 >    Mittelwert über heterogene Monate, sondern gilt in jedem einzelnen.**
 
 ## Die zweite Zahl, die keine Laufzeit ist: die größte Monatsscheibe
@@ -1805,6 +1869,10 @@ Durchschnitt.
 ## Die Laufzeit — vier Scheiben, je ein Aufwärmlauf und fünf Läufe
 
 Gemessen wird die Aggregation aus M88, unverändert. **Kein `STRAIGHT_JOIN`, in keiner Fassung.**
+
+**Ohne Mandantenfilter, mit Grund (L7):** Der Rückwärtslauf füllt `message_rollup` für **alle**
+Mandanten in einem Durchgang — er kennt keinen Mandanten, weil E‑a ihn nicht in die Zeile schreibt.
+Ihn je Mandant zu messen ergäbe eine Zahl, die es im Betrieb nicht gibt.
 
 | Scheibe | Zeilen | Rollupzeilen | Aufwärmlauf | **beste von fünf** | schlechteste | µs je Zeile |
 |---|---:|---:|---:|---:|---:|---:|
@@ -1939,28 +2007,52 @@ Tabellengrößen sind am Ende der Runde **byteidentisch** mit V1:
 **Das teuerste durchgelaufene Statement** ist die Jahresscheibe 2025 aus derselben Gegenprobe:
 **40,896 s** für 2.705.843 Zeilen mit vier gleichzeitigen `COUNT(DISTINCT …)`.
 
-## Die achtzehn teuersten Statements
+## Die fünfundzwanzig teuersten Statements
 
-| Laufzeit | Sitzung | Messung |
-|---:|---|---|
-| **60,219 s** | 3 | M87‑5 Gegenprobe, alle vier Varianten — **abgebrochen** |
-| 40,896 s | 3b | M87‑5b Jahresscheibe 2025 |
-| 22,491 s | 6d | M91‑R5 größter Prozess je Mandant (L9) |
-| 21,087 s | 7a | M92‑1 Scheibengrenzen über 22 Monate |
-| 20,557 s | 2 | M86b Perzentile der Differenz, Fenster B |
-| 17,408 s | 2 | M86b Differenzverteilung, Fenster B |
-| 17,182 s | 2 | M86b Anteile je Status, Fenster B |
-| 15,302 s | 3 | M87 Variante 2 (Stunde, Prozess, Einordnung) |
-| 14,062 s | 3 | M87 Variante 1 (Stunde, Prozess, Rohstatus) |
-| 10,670 s | 3b | M87‑5a Jahresscheibe 2024 |
-| 10,359 s | 3 | M87 Variante 3 (Tag) |
-| 10,110 s | 6e | 6e‑3 Richtungslücke über Fenster G (L9) |
-| 8,460 s | 3 | M87‑6 Einordnung je Rohstatus |
-| 8,443 s | 4a | dichteste Stunde des Bestands (L9) |
-| 7,715 s | 3 | M87 Variante 4 (Monat) |
-| 5,330 s | 7a | M92‑2 größte Monatsscheibe |
-| 3,939 s | 3 | M87‑0 Bezugsgrößen |
-| 3,827 s | 5a | M89 Füllen, teuerste Monatsscheibe (`INSERT … SELECT`) |
+Erhoben aus **allen** `SHOW PROFILES`-Blöcken der neunzehn Sitzungen — 330 profilierte
+Messstatements insgesamt, Markenzeilen (`SELECT '=== … ===' AS marke`) nicht mitgezählt.
+
+| Rang | Laufzeit | Sitzung | Messung |
+|---:|---:|---|---|
+| 1 | **60,219 s** | 3 | M87‑5 Gegenprobe, alle vier Varianten — **abgebrochen** |
+| 2 | 40,896 s | 3b | M87‑5b Jahresscheibe 2025 |
+| 3 | 22,491 s | 6d | M91‑R5 größter Prozess je Mandant (L9) |
+| 4 | 21,087 s | 7a | M92‑1 Scheibengrenzen über 22 Monate (L9) |
+| 5 | 20,557 s | 2 | M86b Perzentile der Differenz, Fenster B |
+| 6 | 17,832 s | 3c | M87‑7b belegte Stunden, Jahresscheibe 2025 (L9) |
+| 7 | 17,408 s | 2 | M86b Differenzverteilung, Fenster B |
+| 8 | 17,182 s | 2 | M86b Anteile je Status, Fenster B |
+| 9 | 15,302 s | 3 | M87 Variante 2 (Stunde, Prozess, Einordnung) |
+| 10 | 14,062 s | 3 | M87 Variante 1 (Stunde, Prozess, Rohstatus) |
+| 11 | 10,670 s | 3b | M87‑5a Jahresscheibe 2024 |
+| 12 | 10,359 s | 3 | M87 Variante 3 (Tag) |
+| 13 | 10,110 s | 6e | 6e‑3 Richtungslücke über Fenster G (L9) |
+| 14 | 8,460 s | 3 | M87‑6 Einordnung je Rohstatus |
+| 15 | 8,443 s | 4a | dichteste Stunde des Bestands (L9) |
+| 16 | 7,715 s | 3 | M87 Variante 4 (Monat) |
+| 17 | 6,231 s | 7b | M92‑4 Ergebnisgrößen der vier Scheiben |
+| 18 | 6,165 s | 6c | M91c Anteile, `NEXANS` Fenster B |
+| 19 | 5,330 s | 7a | M92‑2 größte Monatsscheibe (L9) |
+| 20 | 5,137 s | 6b | M91 Anteile, `NEXANS` Fenster B (erster Lauf) |
+| 21 | 4,952 s | 6c | M91c Anteile, `SUTTONS` Fenster B |
+| 22 | 4,097 s | 7a | M92‑3 Kontrolle, Zeilen und belegte Monate (L9) |
+| 23 | 3,961 s | 6b | M91 Anteile, `SUTTONS` Fenster B (erster Lauf) |
+| 24 | 3,939 s | 3 | M87‑0 Bezugsgrößen (L9) |
+| 25 | 3,896 s | 3c | M87‑7a belegte Stunden, Jahresscheibe 2024 (L9) |
+
+Das teuerste **schreibende** Statement der Runde ist die Monatsscheibe 2025‑09 beim Füllen der
+Probetabelle: **3,827 s** (`INSERT … SELECT`, Sitzung 5a). Es läge auf Rang 26.
+
+> **Was diese Liste über die Runde sagt:** **Dreizehn** der fünfundzwanzig laufen **ohne jedes
+> Zeitfenster** über `Message` (Ränge 1, 3, 4, 9, 10, 12, 13, 14, 15, 16, 19, 22, 24) — also genau
+> die Sorte Abfrage, die unter L9 einzeln begründet ist und **niemals** in Anwendungscode gehört.
+> Die übrigen zwölf tragen ein Zeitfenster, aber ein sehr großes: Jahres- oder Monatsscheiben.
+>
+> **Keine einzige der Abfragen, die in 10a oder 10b münden werden, steht in dieser Liste.** Die
+> teuerste davon ist der Rückwärtslauf mit 2,745 s je Monatsscheibe (M92) — er läge auf Rang 26 —,
+> die teuerste im Anfragepfad die Dashboard-Leseabfrage über ein Monatsfenster mit **237,673 ms**
+> (M89). **Zwischen der teuersten Messung dieser Runde und der teuersten künftigen Anwendungsabfrage
+> liegt der Faktor 253.**
 
 ## Die Zahlen, auf die es für 10a und 10b ankommt
 
@@ -1977,7 +2069,7 @@ Tabellengrößen sind am Ende der Runde **byteidentisch** mit V1:
 | **Rückwärtslauf über alle 22 Monate, mit Schreiben** (gemessen, Sitzung 5a) | **51,242 s** |
 | Aggregationskosten, über drei Größenordnungen stabil | **10,2 – 11,4 µs je Zeile** |
 | Zeilen in `message_rollup` (Variante 1, Gesamtbestand) | **335.610** |
-| Größe der Rollup-Tabelle | **18,59 MiB** |
+| Größe der Rollup-Tabelle (spätere, belastbarere Ablesung) | **21,59 MiB** |
 
 ---
 
@@ -2030,10 +2122,11 @@ Tabellengrößen sind am Ende der Runde **byteidentisch** mit V1:
 | **A7** | **M86 (b) über alle elf Statuswerte statt über die vier verlangten** | Der Auftrag nennt „mindestens `COMMIT_RECEIVED`, `FINISHED`, `MERGED`, `EERP_RECEIVED`". Alle elf zu nehmen kostet nichts und hat Befund 6 sichtbar gemacht, der in den vier nicht steckt |
 | **A8** | **Kein `EXPLAIN` für Fenster H2 in M88** | Fünf der sechs Fenster sind geplant; die fünf decken den Mengenbereich von 256 bis 24.218 geschätzten Sätzen ab, und der Plan ist über diesen ganzen Bereich unverändert. Für H2 fehlt der Plan im Volltext — **L15 ist an dieser einen Stelle nicht vollständig erfüllt** |
 | **A9** | **M91 ohne Laufzeitmessung nach „beste von fünf"** | M91 ist eine Verteilungsfrage, keine Leistungsfrage; der Auftrag verlangt für sie keine Laufzeit. Die Einzellaufzeiten stehen trotzdem im Profil und in der Laufzeittabelle |
-| **A10** | **Die Runde schreibt in mehr als eine Datei** | Der Auftrag sagt „genau eine Datei: `docs/messungen-schritt10.md`". Dazu gekommen sind `scripts/messung-schritt10/*.sql` (dreizehn Sitzungsdateien) und eine Zeile in `.gitignore`. Das folgt der Konvention seit Schritt 8: Die Sitzungsdateien sind der Beleg dafür, **wie** gemessen wurde, und ohne sie ist die Runde nicht nachfahrbar; die Rohausgaben bleiben ausgeschlossen. **Keine der unter „Gesperrte Dateien" genannten Dateien ist angefasst worden** |
+| **A10** | **Die Runde schreibt in mehr als eine Datei** | Der Auftrag sagt „genau eine Datei: `docs/messungen-schritt10.md`". Dazu gekommen sind `scripts/messung-schritt10/*.sql` (neunzehn Sitzungsdateien) und eine Zeile in `.gitignore`. Das folgt der Konvention seit Schritt 8: Die Sitzungsdateien sind der Beleg dafür, **wie** gemessen wurde, und ohne sie ist die Runde nicht nachfahrbar; die Rohausgaben bleiben ausgeschlossen. **Keine der unter „Gesperrte Dateien" genannten Dateien ist angefasst worden** |
 | **A13** | **Sitzung 3c lief *nach* der Abschlusssitzung 8** | Beim Zusammenstellen der Ergebnisdatei ist aufgefallen, dass zwei Zahlen aus M87‑5 (belegte Stundeneimer und Stunde‑Prozess‑Paare) mit dem abgebrochenen Statement verlorengegangen und in den Jahresscheiben von Sitzung 3b nicht mitgeführt worden waren. Sie sind in Sitzung 3c nachgeholt worden — um `10:48:30`, also nach dem Löschen der Probetabelle um `10:37:44`. **Die Reihenfolge ist damit nicht die des Sitzungsplans.** Unschädlich, weil 3c ausschließlich `GlassfishDB` liest und die Probetabelle nicht braucht; `@@global.read_only` steht auch dort auf `1`. Der Nachweis der Löschung bleibt gültig — nach 3c ist nichts angelegt worden |
 | **A12** | **Kein Eintrag in `docs/README.md`, obwohl diese Datei neu ist** | `CLAUDE.md` verlangt unter „Dokumentationspflicht": „Neue Datei → Eintrag in `docs/README.md`". Der Auftrag dieser Runde führt `docs/README.md` unter **„Gesperrte Dateien — nicht anzufassen"**. Beides zusammen geht nicht. Aufgelöst zugunsten des Auftrags, weil er die spätere und die speziellere Vorgabe ist — **aber nicht stillschweigend**: Der Eintrag fehlt und gehört in die Korrekturrunde. Er ist unten unter den Korrekturen mitgeführt |
-| **A11** | **Sechs Zahlen sind vor dem Abschluss der Runde berichtigt worden** | Alle **abgeleiteten** Größen dieser Datei sind am Ende gegen die Rohausgaben nachgerechnet worden. Sechs stimmten nicht und stehen jetzt richtig: (1) die Laufzeit von M86b Fenster B — beim ersten Auswerten waren die Werte von Fenster A zugeordnet worden, **517,5 ms statt 17.182,4 ms**; (2) das Mittel der 15 vollen Monatsscheiben, **222.426 statt 219.359**, und damit (3) der Abstand der größten Scheibe, **11,6 % statt 7,6 %**, und (4) der von Oktober 2024, **8,4 % statt 10,0 %**; (5) der kleinste Aufwärmlauf-Aufschlag in M88, **0,5 % (A) statt 1,4 % (D)**; (6) der Anteil der Partner ab Rang 11 in M91, **7,34 % auf 105 Partner statt 23,07 % auf 115**. **Keine gemessene Zahl war betroffen und keine vorregistrierte Deutung hing an einer von ihnen** — alle sechs sind aus richtigen Messwerten falsch weitergerechnet. Sie stehen hier, weil eine Runde, die ihre eigenen Rechenfehler verschweigt, ihre übrigen Zahlen mit entwertet |
+| **A11** | **Die Datei ist in zwei Durchgängen nachgeprüft worden, und beide haben Fehler gefunden** | **Erster Durchgang** (Nachrechnen der abgeleiteten Größen): sechs Fehler — (1) die Laufzeit von M86b Fenster B, **517,5 ms statt 17.182,4 ms**, weil die Werte von Fenster A zugeordnet worden waren; (2) das Mittel der 15 vollen Monatsscheiben, **222.426 statt 219.359**, und damit (3) der Abstand der größten Scheibe, **11,6 % statt 7,6 %**, und (4) der von Oktober 2024, **8,4 % statt 10,0 %**; (5) der kleinste Aufwärmlauf-Aufschlag in M88, **0,5 % (A) statt 1,4 % (D)**; (6) der Anteil der Partner ab Rang 11 in M91, **7,34 % auf 105 Partner statt 23,07 % auf 115**. **Zweiter Durchgang** (jede Zahl gegen die Rohausgabe, jede Regel gegen die Sitzungsdateien): **vierzehn weitere Fehler**, darunter zwei schwere — siehe A14. **Der erste Durchgang hat behauptet, vollständig zu sein. Er war es nicht**, und diese Zeile hat das behauptet, bis der zweite Durchgang sie widerlegt hat |
+| **A14** | **Was der zweite Prüfdurchgang gefunden hat** | **Zwei schwere Fehler.** (1) **Die Tabelle „Der größte Prozess je Mandant" war abgeschnitten**: Beim Auslesen der Rohausgabe hat eine Zeilenbegrenzung zwei der neun Mandanten verschluckt. Auf der verkürzten Tabelle stand dann der Satz, `NXHBE` und `SYSTEM` trügen „keine einzige Nachricht" — **falsch**, sie tragen 9 und 151. Offener Punkt 47 stand ebenso falsch da. Beides ist berichtigt; die Kontrollsummen (738 Prozesse, 3.341.519 Nachrichten) sind jetzt mitgeführt und hätten den Fehler sofort gezeigt. (2) **„`SUTTONS` steigt in allen drei Fassungen über `ProjectMandant` ein" war falsch** — in Fenster D steigen **beide** Mandanten über `Message` ein. Befund 13 trug denselben Fehler weiter. Berichtigt, und der Befund ist dabei **schärfer** geworden: Der Einstieg hängt am Verhältnis von Fenstergröße zu Mandantengröße, nicht am Mandanten allein. **Zwölf weitere Fehler**: 1.548 statt 1.545 nachgeschriebene Zeilen; 9,0 statt 9,4 als untere Grenze des Verdichtungsverhältnisses; die Kardinalität ist die Hälfte der **Schätzung**, nicht der gezählten Zeilenzahl; „dreizehn Sitzungsdateien" statt neunzehn; „acht" bzw. „elf gemessene Pläne" statt zehn bzw. sechzehn; die Liste der teuersten Statements war unvollständig (Sitzung 3c fehlte ganz) und ist jetzt auf fünfundzwanzig erweitert; die Größe der Probetabelle war mit der veralteten Ablesung geführt; die Regelzeilen zu L7 und L9 behaupteten Nachweise, die die Datei nicht führte; der Satz zum höchsten Nachschriftanteil übersah `ERROR_TIMEOUT`; der Anteil, den `NEXANS` vom gelesenen Indexbereich behält, war mit dem Nachrichtenanteil verwechselt. **Alle vierzehn sind berichtigt.** Betroffen war wieder **keine gemessene Zahl** — nur Weiterrechnungen, Zusammenfassungen und ein abgeschnittener Auszug |
 
 ---
 
@@ -2046,12 +2139,12 @@ fünf führt. **Sechs bis vierzehn.** Jeder steht bei seiner Messung; hier sind 
 |---|---|---|
 | **6** | M86 (b) | **1.803 `EERP_RECEIVED`- und 110 `COMMIT_RECEIVED`-Zeilen tragen ein `MessageLastUpdate`, das *vor* dem Ende ihres letzten Schrittes liegt** — bis zu 58 Sekunden davor, bei 26,14 % aller `EERP_RECEIVED`-Zeilen des Fensters. Für sie ist `MessageLastUpdate` **nicht** der Zeitpunkt der letzten Änderung |
 | **7** | M87 | **Der Rollup verdichtet nur um Faktor 9,96**, nicht um Größenordnungen — 335.610 Zeilen zu 3.341.519 Nachrichten, und das Verhältnis ist in jedem einzelnen Monat 9,4 bis 12,1. Dazu: **das Jahr 2026 trägt 5.133 Zeilen auf drei Prozessen** |
-| **8** | M88 | **Die Zeilenschätzung ist bei großen Bereichen um Faktor 2 zu hoch, bei kleinen auf die Zeile genau.** Ursache ist `CARDINALITY = 1.780.243` für `MessageLastUpdateIDX` gegen 3.341.519 gezählte Zeilen — **genau die Hälfte** |
+| **8** | M88 | **Die Zeilenschätzung ist bei großen Bereichen um Faktor 2 zu hoch, bei kleinen auf die Zeile genau.** Ursache ist `CARDINALITY = 1.780.243` für `MessageLastUpdateIDX` — **genau die Hälfte der Schätzung `TABLE_ROWS = 3.560.486`**, und die liegt ihrerseits um 6,55 % über den gezählten 3.341.519 Zeilen |
 | **9** | M89 | **Der `LEFT JOIN` auf `process_catalog` wird vollständig wegoptimiert**, wenn keine seiner Spalten verwendet wird. Die Abfrage, die der Auftrag beschreibt, misst den Katalog-Join nicht, sondern seine Abwesenheit |
 | **10** | M91 | **Elf Katalogzeilen ohne Richtung tragen alle denselben Partner und 54,44 % des gesamten `NEXANS`-Bestands.** Von 733 gepflegten Zeilen fehlen elf — es sind die elf, auf die es ankommt |
 | **11** | M91 | **`GROUP BY` band an die Tabellenspalte `process_catalog.partner` statt an den gleichnamigen Ausdrucksalias.** Bei zwei von drei Mandanten war das Ergebnis zufällig trotzdem richtig |
 | **12** | M88 (Vorprobe) | **Fenster D — das Standardfenster des Dashboards — trägt 256 Zeilen auf zwei Prozessen, alle innerhalb von vier Minuten.** 47 der 48 Stunden sind leer, und für `SUTTONS` ist das Fenster ganz leer |
-| **13** | M89, M90 | **Die Einstiegstabelle des Plans hängt am Mandanten, nicht an der Abfrage.** `NEXANS` steigt über die Rollup- bzw. `Message`-Tabelle ein, `SUTTONS` über `ProjectMandant` — in allen elf gemessenen Plänen. M80 hatte `ProjectMandant` für **beide** gefunden |
+| **13** | M89, M90 | **Die Einstiegstabelle des Plans hängt am Mandanten, nicht an der Abfrageform.** `NEXANS` steigt über die Rollup- bzw. `Message`-Tabelle ein, `SUTTONS` über `ProjectMandant` — in **vierzehn der sechzehn** gemessenen Pläne (zehn in M89, sechs in M90). M80 hatte `ProjectMandant` für **beide** Mandanten gefunden. **Die zwei Ausnahmen sind `NEX-D` und `SUT-D`**: In Fenster D, das nur 256 Zeilen trägt, steigen beide über `Message` ein — dort ist das Zeitfenster die schärfste Bedingung, nicht der Mandant. **Der Einstieg hängt also am Verhältnis von Fenstergröße zu Mandantengröße, nicht am Mandanten allein** |
 | **14** | M90 | **Fenster G ist billiger als Fenster B** — 4,275 ms ohne jedes Zeitfenster gegen 5,127 ms mit einem Monatsfenster. Das Zeitfenster verengt nichts, weil `MessageStatusIDX` bereits auf 539 von 3,34 Millionen Zeilen herunterführt; es kostet nur. **Die zweite Kachelzahl ist billiger als die erste** |
 
 ---
@@ -2086,10 +2179,12 @@ Nummerierung im Anschluss an den projektweit höchsten Stand (**40**, in
     umsetzt, wird in Leseabfragen über `process_catalog` stehen, und die Spalten heißen dort
     `partner` und `richtung`. Der Alias muss anders heißen als die Spalte, oder `GROUP BY` schreibt
     den vollen Ausdruck aus.
-47. **`SYSTEM` bekommt nach E‑f ein Dashboard, das nie etwas zeigen wird.** `SYSTEM`, `NXHBE` und
-    `EDITIONLINGERI` tragen im Gesamtbestand keine einzige Nachricht; `WOC` hat zwei Prozesse, von
-    denen einer 81,77 % hält. E‑f bleibt davon unberührt — es ist eine Entscheidung über
-    Gleichbehandlung, nicht über Inhalt —, aber die Zahl gehört daneben.
+47. **Drei Mandanten bekommen nach E‑f ein Dashboard, auf dem so gut wie nie etwas stehen wird.**
+    `EDITIONLINGERI` trägt im Gesamtbestand **keine einzige** Nachricht, `NXHBE` **neun**,
+    `SYSTEM` **151** — letzte beide auf zwei bzw. einem Prozess. `WOC` hat zwei Prozesse, von denen
+    einer 81,77 % hält. E‑f bleibt davon unberührt — es ist eine Entscheidung über
+    Gleichbehandlung, nicht über Inhalt —, aber die Zahlen gehören daneben, weil sie bestimmen,
+    was eine Abnahme von 10b bei diesen Mandanten überhaupt sehen kann.
 48. **`Project` ist aus der Mandantenkette entbehrlich.** V4: `Project` trägt außer dem Schlüssel
     nur Name und Beschreibung; `Process → ProjectMandant` über `Process.ProjectID` liefert dieselbe
     Menge. Die Verkürzung ist gemessen worden **nicht** — die Kette läuft in dieser Runde
