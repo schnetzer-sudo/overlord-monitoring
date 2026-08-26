@@ -81,6 +81,12 @@ scripts/messung-schritt8/arbeit/
 # Dritter. (Regel G1, geschaerft am 07.08.2026)
 scripts/messung-schritt9/ergebnis/
 
+# --- Messrunde vor Schritt 10a --------------------------------------------
+# Gleiche Trennung wie bei Schritt 8 und 9: die .sql-Sitzungen werden
+# eingecheckt, die Rohausgaben nicht. Sie tragen vollstaendige Prozess- und
+# Projektkennungen und damit Partnernamen Dritter. (Regel G1)
+scripts/messung-schritt10/ergebnis/
+
 # ─── Quelltext des Altwerkzeugs ──────────────────────────────────────────────
 # alterCode/ bleibt LOKAL. JsonServlet.java traegt drei produktive absolute
 # Pfade mit einem Produktionsknoten- und einem Dienstkontonamen; CLAUDE.md
