@@ -6,6 +6,7 @@ import de.kraftwerkone.overlord.monitor.audit.AuditLogWriter;
 import de.kraftwerkone.overlord.monitor.catalog.ProzessKatalogRepository.Bestandsflag;
 import de.kraftwerkone.overlord.monitor.catalog.ProzessKatalogRepository.Bestandszeile;
 import de.kraftwerkone.overlord.monitor.catalog.ProzessKatalogRepository.Projektzeile;
+import de.kraftwerkone.overlord.monitor.catalog.ProzessKatalogRepository.UebernehmbareZeile;
 import de.kraftwerkone.overlord.monitor.catalog.ProzessKatalogRepository.Vorschlagszeile;
 import de.kraftwerkone.overlord.monitor.common.error.FachlicheAusnahme;
 import de.kraftwerkone.overlord.monitor.common.error.RessourceNichtGefundenException;
@@ -16,6 +17,8 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -32,6 +35,8 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class ProzessKatalogService {
+
+  private static final Logger log = LoggerFactory.getLogger(ProzessKatalogService.class);
 
   /** {@code process_catalog.partner} ist {@code varchar(100)}. */
   private static final int PARTNER_MAXLAENGE = 100;
@@ -301,6 +306,79 @@ public class ProzessKatalogService {
   }
 
   /**
+   * <b>Die Uebernahme der Partnervorschlaege</b> (E22 bis E24) — ein Knopfdruck, alle offenen
+   * Zeilen des Mandanten mit einem Partnervorschlag aus Regel A oder Regel B.
+   *
+   * <p><b>Uebernehmen ist ausschliesslich eine Statusaenderung.</b> Partner und Richtung stehen
+   * bereits in der Zeile; die Heuristik hat sie beim Lauf geschrieben, nur mit Status {@link
+   * Pflegestatus#OFFEN}. Es wird deshalb <b>kein einziger Feldwert kopiert</b> — gesetzt werden
+   * {@code pflegestatus}, {@code geaendert_am} und {@code geaendert_von}, sonst nichts.
+   *
+   * <p><b>Die Menge wird hier berechnet und nicht im Browser</b> (E23). Ueber die Leitung reist
+   * <b>keine Liste von {@code ProcessID}</b>, sondern nur ein Modus. Laege die Bedingung aus E22
+   * zusaetzlich im Browser, stuende dieselbe Regel an zwei Stellen und driftete — genau das Muster,
+   * das dieses Projekt an mehreren Stellen dokumentiert. Der clientseitige Filter {@code
+   * nurMitNachrichten} (E20) hat auf die Uebernahme darum <b>keine Wirkung</b>.
+   *
+   * <p><b>Beide Modi lesen, und zwar dasselbe</b> (E24). Die Vorschau zaehlt und antwortet; die
+   * Ausfuehrung schreibt <b>genau die Liste, die sie gezaehlt hat</b>. Die Zahl, die der Nutzer
+   * bestaetigt, ist damit die Zahl, die passiert — und zwar nicht, weil zwei Statements gleich
+   * aussehen, sondern weil es nur eine Liste gibt.
+   *
+   * <p><b>Eine leere Menge ist kein Fehler.</b> Sie setzt kein {@code UPDATE} ab — eine {@code
+   * IN}-Liste ohne Werte waere entweder ein Syntaxfehler oder ein {@code UPDATE} ohne Bedingung —
+   * und antwortet trotzdem, mit lauter Nullen. „Es gibt nichts zu uebernehmen" ist eine Auskunft.
+   */
+  @Transactional
+  public VorschlagsuebernahmeResponse uebernehmeVorschlaege(
+      AngemeldeterNutzer nutzer, MandantContext mandant, String modusRoh, String ip) {
+    Massenmodus modus = Massenmodus.ausText(modusRoh);
+    List<UebernehmbareZeile> betroffen = repository.findeUebernehmbareVorschlaege(mandant);
+
+    int regelA = zaehle(betroffen, VorschlagHerkunft.REGEL_A);
+    int regelB = zaehle(betroffen, VorschlagHerkunft.REGEL_B);
+
+    if (modus == Massenmodus.AUSFUEHREN) {
+      if (!betroffen.isEmpty()) {
+        List<String> kennungen = betroffen.stream().map(UebernehmbareZeile::processId).toList();
+        int geschrieben =
+            repository.uebernehmeVorschlaege(mandant, kennungen, jetztUtc(), nutzer.username());
+        if (geschrieben != kennungen.size()) {
+          // Nach aussen geht die Groesse der gelesenen Liste, damit Vorschau und Ausfuehrung
+          // dieselbe Zahl nennen. Die Abweichung ist trotzdem ein Befund: Lesung und Schreiben
+          // laufen auf verschiedenen Verbindungen (PROJEKTBESCHREIBUNG.md §6 — eine Lesung
+          // innerhalb einer @Transactional-Methode ist nicht Teil dieser Transaktion).
+          log.warn(
+              "Vorschlagsuebernahme fuer Mandant {}: gelesen wurden {} Zeilen, das UPDATE meldet"
+                  + " {}. Lesung und Schreiben laufen auf verschiedenen Verbindungen; die"
+                  + " Abweichung ist ein Befund und kein Rauschen.",
+              mandant.mandantId(),
+              kennungen.size(),
+              geschrieben);
+        }
+      }
+      protokolliere(
+          AuditEventType.KATALOG_VORSCHLAEGE_UEBERNOMMEN,
+          nutzer,
+          mandant,
+          mandant.mandantId(),
+          "Vorschlagsuebernahme: "
+              + betroffen.size()
+              + " Zeilen auf GEPFLEGT gesetzt (Regel A "
+              + regelA
+              + ", Regel B "
+              + regelB
+              + ")",
+          ip);
+    }
+    return new VorschlagsuebernahmeResponse(modus, betroffen.size(), regelA, regelB);
+  }
+
+  private static int zaehle(List<UebernehmbareZeile> zeilen, VorschlagHerkunft herkunft) {
+    return (int) zeilen.stream().filter(zeile -> zeile.vorschlagHerkunft() == herkunft).count();
+  }
+
+  /**
    * Leerraum ist keine Angabe. Ein Partner aus Leerzeichen waere ein gefuelltes Feld ohne Inhalt —
    * und damit ein dritter Zustand durch die Hintertuer.
    */
@@ -350,9 +428,27 @@ public class ProzessKatalogService {
    */
   private void protokolliere(
       AngemeldeterNutzer nutzer, MandantContext mandant, String ziel, String detail, String ip) {
+    protokolliere(AuditEventType.KATALOG_GEAENDERT, nutzer, mandant, ziel, detail, ip);
+  }
+
+  /**
+   * Dieselbe Zeile, aber mit ausdruecklich gewaehlter Ereignisart.
+   *
+   * <p>Die Uebernahme der Partnervorschlaege bekommt eine <b>eigene</b> Art (E24, {@link
+   * AuditEventType#KATALOG_VORSCHLAEGE_UEBERNOMMEN}): Nach ihr ist „per Regel uebernommen" von „von
+   * Hand kuratiert" in der Zeile selbst nicht mehr zu unterscheiden, und das Protokoll ist der
+   * einzige Ort, an dem der Unterschied noch steht.
+   */
+  private void protokolliere(
+      AuditEventType art,
+      AngemeldeterNutzer nutzer,
+      MandantContext mandant,
+      String ziel,
+      String detail,
+      String ip) {
     auditLogWriter.schreibe(
         new AuditEvent(
-            AuditEventType.KATALOG_GEAENDERT,
+            art,
             nutzer.id(),
             nutzer.username(),
             mandant.mandantId(),

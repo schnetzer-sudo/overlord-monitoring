@@ -32,6 +32,22 @@ public enum AuditEventType {
   NUTZER_ANGELEGT,
   /** CATALOG_CHANGED */
   KATALOG_GEAENDERT,
+  /**
+   * CATALOG_SUGGESTIONS_ACCEPTED — die Uebernahme der Partnervorschlaege (Schritt 9b, Nachtrag
+   * 26.08.2026, E22–E24).
+   *
+   * <p><b>Bewusst nicht {@link #KATALOG_GEAENDERT}</b>, und der Grund ist der Kern des Risikos
+   * dieser Funktion: Nach dem Knopfdruck ist „per Regel uebernommen" von „von Hand kuratiert" <b>in
+   * der Zeile selbst nicht mehr zu unterscheiden</b>. {@code process_catalog.geaendert_von} traegt
+   * in beiden Faellen denselben Namen — das ist der offene Punkt 2 aus §10 von {@code
+   * docs/prozess-katalog-backend.md}, und dieser Knopf hebt ihn von 733 Einzelfaellen auf einen
+   * Massenfall.
+   *
+   * <p><b>Das {@code audit_log} ist damit der einzige Ort, an dem der Unterschied ueberhaupt noch
+   * steht.</b> Er darf dort nicht mit der einzelnen Zuordnung in einen Topf fallen. Der Eintrag
+   * traegt die drei Zahlen der Antwort.
+   */
+  KATALOG_VORSCHLAEGE_UEBERNOMMEN,
   /** PAYLOAD_VIEWED — Artefakt im Browser angesehen (Schritt 8). */
   ROHDATEN_ANGESEHEN,
   /** PAYLOAD_DOWNLOADED — Artefakt heruntergeladen (Schritt 8). */

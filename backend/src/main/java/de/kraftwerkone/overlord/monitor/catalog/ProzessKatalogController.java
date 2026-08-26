@@ -53,6 +53,19 @@ public class ProzessKatalogController {
   public record MassenzuordnungRequest(String projectId, String feld, String wert, String modus) {}
 
   /**
+   * Die Uebernahme der Partnervorschlaege: <b>nur ein Modus, sonst nichts</b> (E23, E24).
+   *
+   * <p>Ueber die Leitung reist <b>keine Liste von {@code ProcessID}</b> und kein Projekt. Die Menge
+   * berechnet der Dienst aus der Bedingung von E22; laege sie zusaetzlich im Browser, stuende
+   * dieselbe Regel an zwei Stellen und driftete.
+   *
+   * @param modus fehlt er, gilt {@link Massenmodus#VORSCHAU} — wer den Modus vergisst, veraendert
+   *     nichts. Ein <i>unbekannter</i> Wert ist dagegen {@code 400} und faellt nicht
+   *     stillschweigend auf die Vorgabe zurueck
+   */
+  public record VorschlagsuebernahmeRequest(String modus) {}
+
+  /**
    * Die Pflegeliste des aktiven Mandanten.
    *
    * <p><b>Keine Paginierung</b> (E8): 733 Prozesse beim groessten Mandanten kosten in der Datenbank
@@ -123,6 +136,31 @@ public class ProzessKatalogController {
   @PostMapping("/api/katalog/vorschlagen")
   public VorschlagslaufResponse vorschlagen(HttpServletRequest request) {
     return katalogService.vorschlagen(erforderlicherNutzer(), mandant(), request.getRemoteAddr());
+  }
+
+  /**
+   * Setzt alle offenen Zeilen des aktiven Mandanten mit einem <b>Partnervorschlag</b> aus Regel A
+   * oder Regel B auf {@link Pflegestatus#GEPFLEGT} — in der Vorschau oder wirklich (E22 bis E24).
+   *
+   * <p><b>Der sechste Endpunkt unter {@code /api/katalog}.</b> Er erbt die Rollengrenze aus {@code
+   * SecurityConfig} ({@code /api/katalog/**} verlangt {@code ADMIN}) und braucht dafuer keine
+   * Zeile.
+   *
+   * <p><b>Es wird kein Feldwert kopiert.</b> Partner und Richtung stehen bereits in der Zeile; die
+   * Heuristik hat sie beim Lauf geschrieben, nur mit Status {@link Pflegestatus#OFFEN}. Uebernehmen
+   * ist deshalb eine Statusaenderung plus Aenderungsvermerk.
+   *
+   * <p><b>Zeilen mit {@link VorschlagHerkunft#KEINE} bleiben offen</b>, auch wenn sie eine Richtung
+   * tragen (E22). Bei {@code NEXANS} sind das 224 Prozesse: Die Richtung kommt dort aus dem
+   * Projektnamen, ein Partner ist nie vorgeschlagen worden — und „gepflegt mit leerem Partner"
+   * hiesse in diesem Katalog „hingesehen, es gibt keinen" (E4). Ein Knopf, der 224 Behauptungen
+   * erfindet, waere schlimmer als einer, der 224 Zeilen liegenlaesst.
+   */
+  @PostMapping("/api/katalog/vorschlaege-uebernehmen")
+  public VorschlagsuebernahmeResponse vorschlaegeUebernehmen(
+      @RequestBody VorschlagsuebernahmeRequest anfrage, HttpServletRequest request) {
+    return katalogService.uebernehmeVorschlaege(
+        erforderlicherNutzer(), mandant(), anfrage.modus(), request.getRemoteAddr());
   }
 
   private MandantContext mandant() {
