@@ -148,15 +148,25 @@ Jeder Wechsel geht ins `audit_log` (`MANDANT_GEWECHSELT`), mit altem und neuem M
 > Pflichtparameter.** Keine Überladung ohne ihn — auch nicht `private`, auch nicht „nur für den
 > Test".
 
-`PaketstrukturTest` prüft zwei Dinge:
+`PaketstrukturTest` prüft vier Dinge:
 
 1. **`mandantcontext_ist_erster_parameter`** — sammelt alle handgeschriebenen Klassen, die
    irgendeinen Typ aus `…jooq.glassfish` verwenden, und verlangt für jede öffentliche Methode
    `MandantContext` an erster Stelle. Der Test schlägt außerdem fehl, wenn es **keine** solche Klasse
    mehr gibt — sonst prüfte er irgendwann nichts mehr.
 2. **`ausnahme_nur_im_mandantrepository`** — die Ausnahme-Markierung darf nur an einer Stelle stehen.
+3. **`rollup_ausnahme_ist_namentlich_und_eng`** *(seit 26.08.2026, Schritt 10a)* — die zweite
+   Ausnahme ist nicht leer, nicht breiter als die Liste, die sie benennt, und sie ist ehrlich.
+4. **`rollup_schreibt_nicht_auf_glassfish`** *(seit 26.08.2026)* — die Trennung, auf der die zweite
+   Ausnahme beruht, hält: Keine Klasse in `rollup`, die `jooq.glassfish` anfasst, ruft eine
+   schreibende jOOQ-Methode auf.
 
-### Die eine Ausnahme: `@OhneMandantenkontext`
+**Es gibt genau zwei Ausnahmen von Regel M2, und beide sind namentlich geführt.** Sie sind etwas
+anderes als die drei Endpunkt-Ausnahmen in §3: Dort geht es um Regel **M1** (kein Endpunkt nimmt
+eine Mandanten-ID entgegen), hier um Regel **M2** (jede Repository-Methode trägt den Mandanten).
+**Taucht hier jemals eine dritte auf, ist das ein Signal und keine Kleinigkeit.**
+
+### Die erste Ausnahme: `@OhneMandantenkontext`
 
 Die Menge der zulässigen Mandanten muss gelesen werden, **bevor** feststeht, welcher Mandant aktiv
 ist. Ein Kontext, der sich selbst voraussetzt, existiert nicht. Ohne eine benannte Ausnahme wäre
@@ -176,6 +186,34 @@ Projekte. Sie liefern ausschließlich Stammdaten über Mandanten selbst.
 
 Die Markierung ist eine Ausnahme, kein Werkzeug. Sie wird genauso vollständig geführt wie die Liste
 der drei Endpunkte oben.
+
+### Die zweite Ausnahme: `RollupLeseRepository`
+
+*Gesetzt am 26.08.2026 mit Schritt 10a.* Vollständig begründet in [`rollup.md`](rollup.md) §11.
+
+| | |
+|---|---|
+| **Wer** | genau eine Klasse: `rollup/RollupLeseRepository` |
+| **Was sie tut** | aggregiert `GlassfishDB.Message` zu Stundeneimern — `aggregiere(von, bis)` und `fruehesteAenderung()` |
+| **Warum zulässig** | **Der Rollup-Job hat keinen Mandanten.** `message_rollup` kennt nach Entscheidung E‑a keine Mandantenspalte; der Mandant kommt erst in **10b** aus dem Join über `Process → ProjectMandant`. Ein Job, der über alle Mandanten aggregiert, kann keinen Kontext haben, der einen einzelnen bezeichnet |
+| **Warum kein Schein-Kontext** | Ein `MandantContext.alle()` wäre eine **Lüge im Typsystem** und würde die Regel entwerten, deren einziger Zweck es ist, dass so etwas nicht existiert |
+| **Wie sie technisch steht** | als **namentliche Liste** in `PaketstrukturTest` (`ROLLUP_AUSNAHME`), nicht als Paketfilter. Eine zweite Klasse in `rollup`, die `jooq.glassfish` anfasst, fällt **nicht** von selbst darunter |
+
+**Was die Ausnahme nicht aufweicht.** `message_rollup` enthält keine Mandantenangabe, und keine
+Methode dieser Klasse liefert Daten an einen Aufrufer außerhalb des Rollup-Jobs. Die
+Mandantentrennung entsteht in 10b beim Join — **unverändert im Statement, nicht nachgelagert**.
+
+**Und was sie kostet.** `rollup` ist damit das einzige Fachpaket, in dem Lesen und Schreiben auf
+**zwei** Klassen verteilt sind: `RollupLeseRepository` hält ausschließlich `glassfishDsl`,
+`RollupSchreibRepository` ausschließlich `monitorDsl`. Der Katalog hält beide in einer Klasse und
+darf das — hier ginge es nicht, denn dann fiele auch der Schreibpfad unter die Ausnahme. Punkt 4
+der Liste oben hält diese Trennung maschinell fest.
+
+> **Zur Zählung, weil sie in Aufträgen bereits falsch zitiert worden ist.** Der Auftrag zu Schritt
+> 10a nennt diese Ausnahme „die dritte benannte Ausnahme des Projekts … wie die beiden
+> Endpunkt-Ausnahmen dort". Beides war am 26.08.2026 überholt: §3 führt seit dem 20.08.2026
+> **drei** Endpunkt-Ausnahmen von Regel M1, und diese hier ist die **zweite** von Regel M2. Die
+> Sache ist davon unberührt, die Zählung nicht.
 
 ---
 
@@ -368,10 +406,10 @@ Sortierungsfehler.
 | Regel | Wo umgesetzt |
 |---|---|
 | **M1** Kein Endpunkt nimmt eine Mandanten-ID entgegen | §3, drei benannte Ausnahmen |
-| **M2** Mandant als erster Pflichtparameter | §4, ArchUnit |
+| **M2** Mandant als erster Pflichtparameter | §4, ArchUnit — **zwei** benannte Ausnahmen: `@OhneMandantenkontext` und `RollupLeseRepository` |
 | **M3** Filter im Statement, nicht nachgelagert | ab Schritt 4; hier über die zulässige Menge in `MandantService` |
 | **M4** Isolationstest je Endpunkt | §5 |
-| **M5** Trennung gilt auch quer | ab Schritt 4 (Verkettung, Suche, Rollup, Download) |
+| **M5** Trennung gilt auch quer | ab Schritt 4 (Verkettung, Suche, Download). **Beim Rollup anders:** `message_rollup` traegt keinen Mandanten (E-a), die Trennung entsteht erst in 10b im Join — [`rollup.md`](rollup.md) §11 |
 | **404 statt 403** | §3, geprüft durch Vergleich beider Antwortrümpfe |
 
 ---
