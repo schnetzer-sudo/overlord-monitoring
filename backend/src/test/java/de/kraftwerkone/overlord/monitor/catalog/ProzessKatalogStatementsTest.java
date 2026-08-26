@@ -183,6 +183,9 @@ class ProzessKatalogStatementsTest {
             new ProzessKatalogRepository.Bestandsflag(PROZESS, true),
             new ProzessKatalogRepository.Bestandsflag("AuslagerungAusgehendERFUNDEN", false)),
         JETZT);
+    repository.findeUebernehmbareVorschlaege(MANDANT);
+    repository.uebernehmeVorschlaege(
+        MANDANT, List.of(PROZESS, "AuslagerungAusgehendERFUNDEN"), JETZT, BENUTZER);
     return List.copyOf(gerendert);
   }
 
@@ -190,6 +193,22 @@ class ProzessKatalogStatementsTest {
   private String bestandsStatement() {
     repository.findeBestandsflags(MANDANT);
     return gerendert.getLast();
+  }
+
+  /** Nur das lesende Statement der Vorschlagsuebernahme (E22). */
+  private String uebernahmeLesetext() {
+    gerendert.clear();
+    repository.findeUebernehmbareVorschlaege(MANDANT);
+    assertThat(gerendert).as("Die Lesung ist genau ein Statement").hasSize(1);
+    return gerendert.getFirst();
+  }
+
+  /** Nur das schreibende Statement der Vorschlagsuebernahme (E22). */
+  private String uebernahmeSchreibtext() {
+    gerendert.clear();
+    repository.uebernehmeVorschlaege(MANDANT, List.of(PROZESS), JETZT, BENUTZER);
+    assertThat(gerendert).as("Das Schreiben ist genau ein Statement, kein Stapel").hasSize(1);
+    return gerendert.getFirst();
   }
 
   private List<String> lesendeStatements() {
@@ -310,54 +329,128 @@ class ProzessKatalogStatementsTest {
     }
   }
 
+  /** Genau ein Schreibweg, einzeln gerendert — der Text, den er wirklich absetzt. */
+  private String schreibweg(Runnable aufruf) {
+    gerendert.clear();
+    aufruf.run();
+    List<String> schreibend =
+        gerendert.stream().filter(sql -> !klein(sql).startsWith("select")).toList();
+    assertThat(schreibend).as("Ein Schreibweg setzt genau ein Statement ab").hasSize(1);
+    return klein(schreibend.getFirst());
+  }
+
   /**
-   * <b>Jedes <i>kuratierende</i> Schreiben ist ein Upsert</b> — eine fehlende Zeile entsteht dabei.
+   * <b>Die Schreibwege des Katalogs, namentlich gefuehrt — drei mit Upsert, zwei ohne, jeder mit
+   * seinem Grund.</b>
    *
-   * <p><b>Der Bestandslauf ist davon ausgenommen, und die Ausnahme ist die Aussage</b> (E15): Er
-   * ist das einzige Schreiben, das auf <b>gepflegte</b> Zeilen geht. Ein {@code INSERT … ON
-   * DUPLICATE KEY} muesste dabei die {@code NOT NULL}-Spalten mitliefern — {@code pflegestatus},
-   * {@code vorschlag_herkunft}, {@code geaendert_am}, {@code geaendert_von} — und ueberschriebe
-   * genau die Kuratierung, die er nicht anfassen darf. Fuer ihn ist das {@code UPDATE} deshalb
-   * nicht die schwaechere, sondern die einzig richtige Form.
+   * <p>Dieser Test hat zwei Schaerfungen hinter sich, und beide sind aus demselben Satz begruendet:
+   * <b>Eine Ausnahme, die nur durch Weglassen entstuende, waere beim naechsten Umbau wieder da.</b>
    *
-   * <p>Dass er dabei Prozesse <b>ohne</b> Katalogzeile nicht erreicht, ist folgenlos: Der Dienst
-   * faehrt ihn <b>nach</b> {@code speichereVorschlaege}, und danach hat jeder Prozess des Mandanten
-   * eine Zeile. Genau diese Reihenfolge sichert {@code ProzessKatalogDbIT} am laufenden Endpunkt
-   * ab.
+   * <ol>
+   *   <li><b>21.08.2026, der Bestandslauf.</b> Der Test verlangte von <i>jedem</i> Schreiben ein
+   *       {@code INSERT … ON DUPLICATE KEY UPDATE}. Der Bestandslauf ist bewusst keins (E15) — also
+   *       ist er als eigener Schreibweg gefuehrt worden, mit der Forderung nach dem Gegenteil.
+   *   <li><b>26.08.2026, die Vorschlagsuebernahme.</b> Die Aufteilung lief bis dahin ueber ein
+   *       Textmerkmal ({@code traegt_nachrichten} im Statement). Ein zweiter Schreibweg ohne Upsert
+   *       waere darueber stillschweigend in die falsche Haelfte gerutscht und rot geworden — oder,
+   *       schlimmer, ueber ein zweites Merkmal wieder herausgenommen worden. <b>Gefuehrt werden
+   *       deshalb die Wege und nicht die Merkmale.</b>
+   * </ol>
+   *
+   * <p>Die Zaehlung unten ist der Riegel davor: Ein sechster Schreibweg laesst diesen Test
+   * fehlschlagen, bevor jemand vergisst, ihn hier zu benennen.
    */
   @Test
-  @DisplayName("Jedes kuratierende Schreiben ist ein Upsert — der Bestandslauf ist die Ausnahme")
+  @DisplayName("Fuenf Schreibwege, namentlich: drei kuratierende mit Upsert, zwei ohne")
   void schreibende_statements_sind_upserts() {
-    List<String> schreibend =
-        alleStatements().stream().filter(sql -> !klein(sql).startsWith("select")).toList();
-    assertThat(schreibend).as("Ohne schreibende Statements prueft dieser Test nichts").isNotEmpty();
+    // ─── Mit Upsert: die drei, bei denen die Zeile fehlen darf ────────────────
+    //
+    // Alle drei koennen auf einen Prozess treffen, zu dem es noch KEINE Katalogzeile gibt — und
+    // das sind genau die, um die es geht. Ein reines UPDATE liesse sie unberuehrt.
 
-    List<String> kuratierend =
-        schreibend.stream().filter(sql -> !klein(sql).contains("traegt_nachrichten")).toList();
-    List<String> bestand =
-        schreibend.stream().filter(sql -> klein(sql).contains("traegt_nachrichten")).toList();
+    // 1. Die einzelne Zuordnung (E19): Der Nutzer kuratiert eine Zeile, die es noch nie gab.
+    assertThat(
+            schreibweg(
+                () ->
+                    repository.speichereZuordnung(
+                        MANDANT, PROZESS, "BAYER", Richtung.EINGEHEND, JETZT, BENUTZER)))
+        .as("speichereZuordnung schreibt auf eine Zeile, die es noch nicht geben muss (E4)")
+        .startsWith("insert into")
+        .contains("on duplicate key update");
 
-    assertThat(kuratierend).as("Die drei kuratierenden Schreibwege").isNotEmpty();
-    for (String sql : kuratierend) {
-      assertThat(klein(sql))
-          .as(
-              "Ein reines UPDATE liesse Prozesse ohne Katalogzeile unberuehrt — und das sind genau"
-                  + " die, um die es geht: %s",
-              sql)
-          .startsWith("insert into")
-          .contains("on duplicate key update");
-    }
+    // 2. Die Massenzuordnung (E11): Ein Projekt enthaelt Prozesse ohne Katalogzeile.
+    assertThat(
+            schreibweg(
+                () -> {
+                  ergebnisEineProjektzeile();
+                  repository.speichereFeld(
+                      MANDANT, PROJEKT, Zuordnungsfeld.PARTNER, "BAYER", JETZT, BENUTZER);
+                }))
+        .as("speichereFeld legt fuer Prozesse ohne Zeile eine an (E11)")
+        .startsWith("insert into")
+        .contains("on duplicate key update");
 
-    assertThat(bestand)
-        .as("Der Bestandslauf muss als eigener Schreibweg auftauchen, sonst prueft der Rest nichts")
-        .hasSize(1);
-    assertThat(klein(bestand.getFirst()))
-        .as(
-            "Er ist bewusst KEIN Upsert: ein INSERT muesste die NOT-NULL-Spalten mitliefern und"
-                + " ueberschriebe die Kuratierung, die E15 unangetastet laesst: %s",
-            bestand.getFirst())
+    // 3. Der Heuristik-Lauf (E13): Sein erster Schritt IST das Anlegen fehlender Zeilen.
+    assertThat(
+            schreibweg(
+                () ->
+                    repository.speichereVorschlaege(
+                        MANDANT,
+                        List.of(
+                            new ProzessKatalogRepository.Vorschlagszeile(
+                                PROZESS, Partnervorschlag.KEINER)),
+                        JETZT,
+                        BENUTZER)))
+        .as("speichereVorschlaege legt fehlende Zeilen an — das ist Schritt 1 des Laufs (E13)")
+        .startsWith("insert into")
+        .contains("on duplicate key update");
+
+    // ─── Ohne Upsert: die zwei, bei denen die Zeile notwendigerweise existiert ─
+
+    // 4. Der Bestandslauf (E15) — das einzige Schreiben auf GEPFLEGTE Zeilen.
+    //    Ein INSERT muesste die NOT-NULL-Spalten mitliefern (pflegestatus, vorschlag_herkunft,
+    //    geaendert_am, geaendert_von) und ueberschriebe genau die Kuratierung, die er nicht
+    //    anfassen darf. Fuer ihn ist das UPDATE nicht die schwaechere, sondern die einzig
+    //    richtige Form. Dass er Prozesse ohne Katalogzeile nicht erreicht, ist folgenlos: Der
+    //    Dienst faehrt ihn NACH speichereVorschlaege.
+    String bestandslauf =
+        schreibweg(
+            () ->
+                repository.speichereBestandsflags(
+                    MANDANT,
+                    List.of(new ProzessKatalogRepository.Bestandsflag(PROZESS, true)),
+                    JETZT));
+    assertThat(bestandslauf)
+        .as("Der Bestandslauf ist bewusst kein Upsert (E15): %s", bestandslauf)
         .startsWith("update")
-        .doesNotContain("on duplicate key update");
+        .doesNotContain("on duplicate key update")
+        .contains("traegt_nachrichten");
+
+    // 5. Die Vorschlagsuebernahme (E22) — der erste KURATIERENDE Weg ohne Upsert.
+    //    Die Zeile existiert notwendigerweise: Nur der Lauf schreibt REGEL_A/REGEL_B, und er
+    //    schreibt sie in eine vorhandene oder eben angelegte Zeile. Ein INSERT-Zweig waere
+    //    unerreichbar, und der Upsert muesste vier Spalten zurueckschreiben, die er gar nicht
+    //    aendern will: partner, richtung, vorschlag_herkunft und den Schluessel.
+    String uebernahme =
+        schreibweg(
+            () -> repository.uebernehmeVorschlaege(MANDANT, List.of(PROZESS), JETZT, BENUTZER));
+    assertThat(uebernahme)
+        .as("Die Uebernahme ist bewusst kein Upsert (E22): %s", uebernahme)
+        .startsWith("update")
+        .doesNotContain("on duplicate key update")
+        .contains("pflegestatus");
+
+    // ─── Der Riegel: ein sechster Schreibweg faellt hier auf ──────────────────
+    // Geleert, weil die Aufrufe oben bereits in `gerendert` stehen: `alleStatements` haengt an,
+    // statt zu ersetzen.
+    gerendert.clear();
+    long schreibwege =
+        alleStatements().stream().filter(sql -> !klein(sql).startsWith("select")).count();
+    assertThat(schreibwege)
+        .as(
+            "Fuenf Schreibwege sind oben namentlich gefuehrt. Kommt ein sechster dazu, gehoert er"
+                + " hierher — mit seinem Grund und nicht durch Weglassen")
+        .isEqualTo(5);
   }
 
   @Test
@@ -428,7 +521,170 @@ class ProzessKatalogStatementsTest {
   @Test
   @DisplayName("Die gerenderten Statements sind vollstaendig")
   void statements_sind_vollstaendig() {
-    assertThat(alleStatements()).hasSize(13);
+    assertThat(alleStatements()).hasSize(15);
+  }
+
+  // ─── Die Vorschlagsuebernahme (E22 bis E24) ──────────────────────────────────
+
+  /**
+   * <b>Die Lesung der Uebernahme steht auf {@code ProjectMandant} und traegt die volle Bedingung
+   * aus E22.</b>
+   *
+   * <p>Geprueft werden Text <b>und</b> Bindewerte. Eine reine Textpruefung auf {@code 'OFFEN'}
+   * ginge still ins Leere: jOOQ <b>bindet</b> Werte, statt sie einzusetzen — im gerenderten
+   * Statement steht ein {@code ?}.
+   */
+  @Test
+  @DisplayName("Die Uebernahme liest ueber ProjectMandant und filtert auf OFFEN plus Regel A/B")
+  void uebernahme_liest_mit_der_vollen_bedingung() {
+    String sql = uebernahmeLesetext();
+    String klein = klein(sql);
+
+    assertThat(klein)
+        .as("Einstieg ueber ProjectMandant — wie in jedem lesenden Statement (M3). %s", sql)
+        .contains("from `glassfishdb`.`projectmandant`");
+    assertThat(klein).as("Und er filtert ueber die MandantID: %s", sql).contains("mandantid");
+    assertThat(sql)
+        .as("Ohne volle Qualifizierung laeuft der schemauebergreifende Join ins Leere: %s", sql)
+        .contains("GlassfishDB")
+        .contains("overlord_monitor");
+    assertThat(klein)
+        .as("Beide Spalten der Bedingung stehen im Text: %s", sql)
+        .contains("pflegestatus")
+        .contains("vorschlag_herkunft");
+    assertThat(bindungen)
+        .as("Uebernommen wird, was offen ist und einen Partnervorschlag traegt (E22)")
+        .contains(
+            MANDANT.mandantId(),
+            Pflegestatus.OFFEN.name(),
+            VorschlagHerkunft.REGEL_A.name(),
+            VorschlagHerkunft.REGEL_B.name());
+    assertThat(bindungen)
+        .as(
+            "KEINE gehoert ausdruecklich NICHT dazu — sonst erfaende der Knopf bei NEXANS 224"
+                + " Behauptungen, die kein Mensch getroffen hat (E4, E22)")
+        .doesNotContain(VorschlagHerkunft.KEINE.name());
+  }
+
+  /**
+   * <b>{@code INNER JOIN} auf {@code process_catalog}, kein {@code LEFT JOIN}</b> — der Unterschied
+   * zur Pflegeliste, und er ist die Aussage.
+   *
+   * <p>Die Pflegeliste ebnet Prozesse ohne Katalogzeile auf {@code OFFEN}/{@code KEINE} ein, weil
+   * sie fuer den Nutzer genau das sind. Hier waere dieselbe Einebnung falsch: Eine Zeile, die es
+   * nicht gibt, kann keinen Vorschlag tragen.
+   */
+  @Test
+  @DisplayName("Die Uebernahme haengt process_catalog als INNER JOIN an, nicht als LEFT JOIN")
+  void uebernahme_ebnet_fehlende_zeilen_nicht_ein() {
+    String sql = uebernahmeLesetext();
+    String klein = klein(sql);
+
+    assertThat(klein).contains("`overlord_monitor`.`process_catalog`");
+    assertThat(klein)
+        .as(
+            "Ein LEFT JOIN behauptete im Text, eine fehlende Zeile koenne einen Vorschlag tragen."
+                + " Gerendert: %s",
+            sql)
+        .doesNotContain("left outer join");
+    assertThat(klein)
+        .as("Gerendert: %s", sql)
+        .contains("join `overlord_monitor`.`process_catalog`");
+  }
+
+  @Test
+  @DisplayName("Die Uebernahme fasst Message nicht an und traegt keinen STRAIGHT_JOIN")
+  void uebernahme_kennt_keinen_verkehr() {
+    String klein = klein(uebernahmeLesetext());
+
+    assertThat(klein)
+        .as("Diese Abfrage kennt keinen Verkehr und will keinen (L2)")
+        .doesNotContain("`message`");
+    assertThat(klein)
+        .as("Kein STRAIGHT_JOIN, auch nicht als Reparatur (M42)")
+        .doesNotContain("straight_join");
+  }
+
+  /**
+   * <b>Vorschau und Ausfuehrung fahren denselben Lesetext</b> (E24) — und hier ist die Zusicherung
+   * <b>staerker</b> als bei der Massenzuordnung.
+   *
+   * <p>Dort ruft {@code speichereFeld} die Lesung selbst auf, und der Test vergleicht zwei
+   * gerenderte Texte. Hier gibt es <b>gar keinen zweiten Text</b>: Der Dienst liest <b>einmal</b>,
+   * zaehlt {@code regelA}/{@code regelB} ueber genau diese Liste und schreibt genau sie — der
+   * Schreibweg traegt <b>kein</b> {@code SELECT}. Damit kann nichts driften, weil es nichts gibt,
+   * was auseinanderlaufen koennte.
+   *
+   * <p>Geprueft wird beides: dass die Lesung Zeichen fuer Zeichen dieselbe bleibt, und dass das
+   * Schreiben keine eigene Lesung mitbringt.
+   */
+  @Test
+  @DisplayName("Die Uebernahme hat genau einen Lesetext, und das Schreiben bringt keinen zweiten")
+  void vorschau_und_ausfuehrung_teilen_ein_statement_bei_der_uebernahme() {
+    String ersteLesung = uebernahmeLesetext();
+    String zweiteLesung = uebernahmeLesetext();
+
+    assertThat(zweiteLesung)
+        .as(
+            "Getrennt gebaut driften die beiden auseinander, und der Nutzer bestaetigt eine Zahl,"
+                + " die nicht die ist, die passiert")
+        .isEqualTo(ersteLesung);
+
+    assertThat(klein(uebernahmeSchreibtext()))
+        .as(
+            "Ein SELECT im Schreibweg waere die zweite Stelle, an der dieselbe Bedingung stuende —"
+                + " genau das, was E24 ausschliesst")
+        .doesNotContain("select");
+  }
+
+  /**
+   * <b>Das Schreiben setzt genau drei Spalten</b> und fasst Partner, Richtung und Herkunft nicht
+   * an.
+   *
+   * <p>Uebernehmen ist <b>kein Kopieren von Werten</b>: Partner und Richtung stehen bereits in der
+   * Zeile, die Heuristik hat sie beim Lauf geschrieben. Und {@code vorschlag_herkunft} bleibt
+   * stehen, weil sie danach der einzige Hinweis darauf ist, dass der Wert aus einer Regel und nicht
+   * aus einem Kopf stammt.
+   */
+  @Test
+  @DisplayName("Das Schreiben der Uebernahme setzt genau drei Spalten (E22)")
+  void uebernahme_schreibt_nur_den_status_und_den_vermerk() {
+    String sql = uebernahmeSchreibtext();
+    String klein = klein(sql);
+
+    assertThat(klein)
+        .startsWith("update")
+        .contains("pflegestatus")
+        .contains("geaendert_am")
+        .contains("geaendert_von");
+    assertThat(klein)
+        .as(
+            "Partner und Richtung stehen schon da; die Herkunft ist der einzige verbliebene Beleg"
+                + " dafuer, dass der Wert aus einer Regel stammt. Gerendert: %s",
+            sql)
+        .doesNotContain("partner")
+        .doesNotContain("richtung")
+        .doesNotContain("vorschlag_herkunft");
+    assertThat(bindungen)
+        .as(
+            "Gesetzt wird GEPFLEGT — die Zahl, die der Nutzer bestaetigt hat, ist die, die passiert")
+        .contains(Pflegestatus.GEPFLEGT.name());
+    assertThat(sql)
+        .as("Kein Schreibzugriff beruehrt jemals GlassfishDB: %s", sql)
+        .doesNotContain("GlassfishDB");
+  }
+
+  @Test
+  @DisplayName("Eine leere Menge setzt gar kein UPDATE ab")
+  void uebernahme_ohne_zeilen_schreibt_nicht() {
+    int geschrieben = repository.uebernehmeVorschlaege(MANDANT, List.of(), JETZT, BENUTZER);
+
+    assertThat(geschrieben).isZero();
+    assertThat(gerendert)
+        .as(
+            "Eine IN-Liste ohne Werte waere entweder ein Syntaxfehler oder ein UPDATE ohne"
+                + " Bedingung — beides will hier niemand")
+        .isEmpty();
   }
 
   /**

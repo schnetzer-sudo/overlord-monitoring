@@ -516,6 +516,112 @@ public class ProzessKatalogRepository {
     stapel.execute();
   }
 
+  /**
+   * <b>Die uebernehmbaren Vorschlaege des aktiven Mandanten</b> (E22) — offene Zeilen, die einen
+   * <b>Partner</b>vorschlag aus Regel A oder Regel B tragen.
+   *
+   * <p><b>Die Bedingung ist vollstaendig und steht nur hier.</b> Sie lautet {@code pflegestatus =
+   * 'OFFEN' UND vorschlag_herkunft IN ('REGEL_A','REGEL_B')} — und sie steht ausdruecklich
+   * <b>nicht</b> zusaetzlich im Browser (E23). Laege dieselbe Regel an zwei Stellen, driftete sie;
+   * die Oberflaeche schickt deshalb keine Liste von {@code ProcessID}, sondern nur einen Modus.
+   *
+   * <p><b>Zeilen mit {@link VorschlagHerkunft#KEINE} bleiben aussen vor, auch wenn sie eine
+   * Richtung tragen.</b> Bei {@code NEXANS} ist das der Regelfall fuer <b>224</b> Prozesse: Die
+   * Richtung kommt dort aus dem Projektnamen (§3.3), ein Partner ist nie vorgeschlagen worden. Der
+   * Grund ist E4 und nicht Bequemlichkeit — „gepflegt mit leerem Partner" heisst in diesem Katalog
+   * ausdruecklich <i>„hingesehen, es gibt keinen"</i>. Naehme die Uebernahme diese Zeilen mit,
+   * stuenden sie mit einer Aussage da, die kein Mensch getroffen hat.
+   *
+   * <p><b>{@code INNER JOIN} auf {@code process_catalog}, kein {@code LEFT JOIN}.</b> Das ist der
+   * Unterschied zu {@link #findePflegeliste}: Die Pflegeliste ebnet Prozesse ohne Katalogzeile auf
+   * {@code OFFEN}/{@code KEINE} ein, weil sie fuer den Nutzer genau das sind. Hier waere dieselbe
+   * Einebnung falsch — <b>eine Zeile, die es nicht gibt, kann keinen Vorschlag tragen</b>, und ein
+   * {@code LEFT JOIN} liesse sie ueber die {@code NULL}-Herkunft ohnehin nicht durch, behauptete
+   * aber im Text das Gegenteil.
+   *
+   * <p><b>Einstieg ueber {@code ProjectMandant}</b> wie in jedem lesenden Statement dieser Klasse;
+   * der Mandantenfilter ist Bestandteil des Statements und keine nachgelagerte Pruefung (M3).
+   * <b>Kein Zugriff auf {@code Message}</b> — diese Abfrage kennt keinen Verkehr und will keinen.
+   * <b>Kein {@code STRAIGHT_JOIN}</b>, auch nicht als Reparatur, falls der Plan je kippt (M42).
+   *
+   * <p>Gelesen wird nur, was gebraucht wird: die Kennung und die Herkunft. Partner und Richtung
+   * stehen bereits in der Zeile und werden von der Uebernahme <b>nicht angefasst</b> — sie ist eine
+   * Statusaenderung und kein Kopieren von Werten.
+   */
+  public List<UebernehmbareZeile> findeUebernehmbareVorschlaege(MandantContext mandant) {
+    return glassfishDsl
+        .select(PROCESS.PROCESSID, PROCESS_CATALOG.VORSCHLAG_HERKUNFT)
+        .from(PROJECTMANDANT)
+        .join(PROCESS)
+        .on(PROCESS.PROJECTID.eq(PROJECTMANDANT.PROJECTID))
+        .join(PROCESS_CATALOG)
+        .on(PROCESS_CATALOG.PROCESS_ID.eq(PROCESS.PROCESSID))
+        .where(PROJECTMANDANT.MANDANTID.eq(mandant.mandantId()))
+        .and(PROCESS_CATALOG.PFLEGESTATUS.eq(Pflegestatus.OFFEN.name()))
+        .and(
+            PROCESS_CATALOG.VORSCHLAG_HERKUNFT.in(
+                VorschlagHerkunft.REGEL_A.name(), VorschlagHerkunft.REGEL_B.name()))
+        .orderBy(PROCESS.PROCESSID.asc())
+        .fetch(
+            satz ->
+                new UebernehmbareZeile(satz.value1(), VorschlagHerkunft.valueOf(satz.value2())));
+  }
+
+  /**
+   * <b>Die Uebernahme selbst — eine Statusaenderung, kein Kopieren von Werten</b> (E22, E24).
+   *
+   * <p>Partner und Richtung stehen bereits in der Zeile; die Heuristik hat sie beim Lauf
+   * geschrieben, nur mit Status {@link Pflegestatus#OFFEN}. Uebernehmen heisst deshalb: <b>drei
+   * Spalten setzen</b> — {@code pflegestatus}, {@code geaendert_am}, {@code geaendert_von} — und
+   * sonst nichts.
+   *
+   * <p><b>Ein einziges {@code UPDATE} mit einer {@code IN}-Liste, kein {@code batch}.</b> Die
+   * Massenzuordnung und der Lauf schreiben ueber {@code DSLContext.batch(…)}, und genau dort ist
+   * die Bindezaehler-Falle zugeschnappt (§6, Falle 1). Hier gibt es keine Vorlage mit Zeilen — es
+   * gibt eine Bedingung mit einer Liste. Die obere Schranke ist die Prozesszahl des groessten
+   * Mandanten, also <b>733</b> Bindeplaetze; das ist unkritisch.
+   *
+   * <p><b>Es ist ein {@code UPDATE} und ausdruecklich kein Upsert</b> — der zweite Schreibweg
+   * dieses Backends ohne {@code INSERT … ON DUPLICATE KEY UPDATE} und der erste
+   * <b>kuratierende</b>. Die Zeile existiert notwendigerweise: Nur der Lauf schreibt {@code
+   * REGEL_A}/{@code REGEL_B}, und er schreibt sie in eine vorhandene oder eben angelegte Zeile. Ein
+   * {@code INSERT}-Zweig waere <b>unerreichbar</b>, und der Upsert muesste vier Spalten
+   * zurueckschreiben, die er gar nicht aendern will ({@code partner}, {@code richtung}, {@code
+   * vorschlag_herkunft} und den Schluessel).
+   *
+   * <p><b>{@code vorschlag_herkunft} bleibt stehen.</b> Sie ist nach diesem Knopfdruck der einzige
+   * Hinweis in der Zeile darauf, dass der Wert aus einer Regel und nicht aus einem Kopf stammt. Sie
+   * zu loeschen waere das Vernichten des einzigen verbliebenen Belegs.
+   *
+   * <p><b>{@code geaendert_am} und {@code geaendert_von} werden gesetzt</b> — anders als beim
+   * Bestandslauf ({@link #speichereBestandsflags}). Das hier <b>ist</b> eine Kuratierung: Ein
+   * Mensch hat entschieden, den Regelvorschlaegen zu glauben.
+   *
+   * @return die vom {@code UPDATE} gemeldete Zeilenzahl. <b>Sie geht nicht nach aussen</b> — nach
+   *     aussen geht die Groesse der gelesenen Liste, damit Vorschau und Ausfuehrung dieselbe Zahl
+   *     nennen. Der Dienst haelt die beiden gegeneinander und protokolliert eine {@code
+   *     WARN}-Zeile, wenn sie auseinandergehen: Lesung und Schreiben laufen auf <b>verschiedenen
+   *     Verbindungen</b> ({@code PROJEKTBESCHREIBUNG.md} §6 — eine Lesung innerhalb einer
+   *     {@code @Transactional}-Methode ist nicht Teil dieser Transaktion), eine Abweichung ist
+   *     damit moeglich und waere ein Befund und kein Rauschen
+   */
+  public int uebernehmeVorschlaege(
+      MandantContext mandant, List<String> processIds, LocalDateTime jetztUtc, String benutzer) {
+    if (processIds.isEmpty()) {
+      // Eine IN-Liste ohne Werte waere entweder ein Syntaxfehler oder ein UPDATE ohne Bedingung.
+      // Der Dienst faengt den Fall schon ab; hier steht er ein zweites Mal, weil ein UPDATE ueber
+      // die ganze Tabelle der teuerste denkbare Fehler dieser Klasse waere.
+      return 0;
+    }
+    return monitorDsl
+        .update(PROCESS_CATALOG)
+        .set(PROCESS_CATALOG.PFLEGESTATUS, Pflegestatus.GEPFLEGT.name())
+        .set(PROCESS_CATALOG.GEAENDERT_AM, jetztUtc)
+        .set(PROCESS_CATALOG.GEAENDERT_VON, benutzer)
+        .where(PROCESS_CATALOG.PROCESS_ID.in(processIds))
+        .execute();
+  }
+
   private static KatalogzeileResponse zeile(
       Record10<
               String,
@@ -588,4 +694,18 @@ public class ProzessKatalogRepository {
    *     davor — es heißt „für diese Zeile hat nie ein Lauf stattgefunden" (E14)
    */
   public record Bestandsflag(String processId, boolean traegtNachrichten) {}
+
+  /**
+   * Eine offene Zeile mit einem <b>Partner</b>vorschlag aus einer Regel — mehr wird fuer die
+   * Uebernahme nicht gebraucht und mehr wird nicht gelesen (E22).
+   *
+   * <p><b>Kein Partner, keine Richtung.</b> Beide stehen bereits in der Zeile, und die Uebernahme
+   * fasst sie nicht an: Sie ist eine Statusaenderung. Wer sie hier mitlaese, um sie
+   * zurueckzuschreiben, haette den Vorgang missverstanden.
+   *
+   * @param vorschlagHerkunft niemals {@link VorschlagHerkunft#KEINE} — genau das schliesst die
+   *     Bedingung aus E22 aus. Sie steht hier, weil die Antwort die Aufschluesselung nennt: Sie ist
+   *     die Kontrolle, an der sich ein Lauf gegen §3.5 der Festlegung halten laesst
+   */
+  public record UebernehmbareZeile(String processId, VorschlagHerkunft vorschlagHerkunft) {}
 }
