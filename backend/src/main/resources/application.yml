@@ -76,6 +76,39 @@ overlord:
     # Gemessen sind 38 bis 244 ms je Abruf (M66, M60), langsamster Einzelabruf
     # 497 ms (M71). 15s fangen den Knoten ab, der annimmt und dann schweigt.
     lesezeitgrenze: 15s
+  # Der Rollup-Job (Schritt 10a). Er schreibt message_rollup fort; das Dashboard
+  # in 10b liest ausschliesslich daraus (Leistungsregel L2).
+  #
+  # ZWEI RIEGEL, und beide sind Absicht:
+  #   1. das Profil "rollup" -- ohne es gibt es RollupPlaner gar nicht. Im Betrieb
+  #      laeuft der Job damit als eigener Prozess derselben Anwendung
+  #      (SPRING_PROFILES_ACTIVE=prod,rollup), ohne eigenes Artefakt und ohne
+  #      eigenes Wurzelpaket (PROJEKTBESCHREIBUNG.md §6).
+  #   2. "aktiv" -- damit laesst er sich abschalten, ohne das Profil zu aendern.
+  #      Fehlt der Schluessel, ist die Ausloesung AUS.
+  rollup:
+    aktiv: true
+    # Stuendlich, kurz NACH der vollen Stunde. Die Minute ist nicht gemessen und
+    # auch folgenlos: Jeder Lauf ersetzt ganze Stundeneimer und greift 15 Minuten
+    # zurueck, die zuletzt geschriebene Stunde wird also ohnehin neu gerechnet.
+    # Der Abstand haelt den Job nur aus dem Gedraenge der Jobs heraus, die zur
+    # vollen Stunde starten.
+    delta-plan: "0 5 * * * *"
+    # Naechtlich. DIE UHRZEIT IST UNGEMESSEN (Regel Q4): Die Verteilung von
+    # MessageLastUpdate ueber die Tagesstunde ist in M86 bis M92 nicht erhoben
+    # worden. 03:00 ist die uebliche Wahl und keine hergeleitete; der offene
+    # Punkt steht in docs/rollup.md.
+    voll-plan: "0 0 3 * * *"
+    # Drosselung zwischen zwei Monatsscheiben -- Leistungsregel L6. Sie greift nur
+    # beim Volllauf (22 Scheiben); der Delta-Lauf hat genau eine und wartet nie.
+    # AUCH DIESER WERT IST UNGEMESSEN: Wie viel Last die Produktionsinstanz nachts
+    # vertraegt, ist nicht erhoben. Eine Sekunde je Scheibe verlaengert den
+    # Volllauf ueber den Bestand der Testkopie um 22 Sekunden.
+    #
+    # Ein einmaliger Lauf von Hand laeuft ueber den Startparameter
+    #   --overlord.rollup.beim-start=VOLL
+    # und ausdruecklich NICHT ueber einen HTTP-Endpunkt.
+    scheiben-pause: 1s
 
 server:
   port: ${SERVER_PORT:8080}
@@ -135,6 +168,16 @@ spring:
   config:
     activate:
       on-profile: dev
+
+overlord:
+  rollup:
+    # AUS, und zwar ausdruecklich -- nicht nur, weil das Profil "rollup" lokal
+    # ohnehin nicht aktiv ist. Wer zum Ausprobieren "dev,rollup" startet, soll
+    # trotzdem nicht unaufgefordert in die GETEILTE Testkopie schreiben. Ein Lauf
+    # von Hand geht ueber --overlord.rollup.beim-start=DELTA bzw. VOLL; der haengt
+    # weder am Profil noch an diesem Schalter, weil er ausdruecklich angefordert
+    # worden ist.
+    aktiv: false
 
 server:
   servlet:

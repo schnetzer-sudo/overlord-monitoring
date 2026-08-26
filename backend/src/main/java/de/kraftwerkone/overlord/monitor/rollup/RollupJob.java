@@ -62,14 +62,17 @@ public class RollupJob {
   private final RollupLeseRepository leseRepository;
   private final RollupSchreibRepository schreibRepository;
   private final RollupUhren uhren;
+  private final RollupEigenschaften eigenschaften;
 
   RollupJob(
       RollupLeseRepository leseRepository,
       RollupSchreibRepository schreibRepository,
-      RollupUhren uhren) {
+      RollupUhren uhren,
+      RollupEigenschaften eigenschaften) {
     this.leseRepository = leseRepository;
     this.schreibRepository = schreibRepository;
     this.uhren = uhren;
+    this.eigenschaften = eigenschaften;
   }
 
   /**
@@ -163,12 +166,45 @@ public class RollupJob {
    */
   private List<RollupZeile> lies(List<RollupFenster> scheiben) {
     List<RollupZeile> zeilen = new ArrayList<>();
-    for (RollupFenster scheibe : scheiben) {
+    for (int i = 0; i < scheiben.size(); i++) {
+      if (i > 0) {
+        drossle();
+      }
+      RollupFenster scheibe = scheiben.get(i);
       List<RollupZeile> gelesen = leseRepository.aggregiere(scheibe.von(), scheibe.bis());
       log.debug("Rollup-Scheibe {} liefert {} Zeilen", scheibe, gelesen.size());
       zeilen.addAll(gelesen);
     }
     return zeilen;
+  }
+
+  /**
+   * <b>Leistungsregel L6, an der einen Stelle, an der sie greift.</b> „Der Rollup-Job laeuft
+   * gedrosselt. Er teilt sich die Instanz mit der Produktion."
+   *
+   * <p>Gewartet wird <b>zwischen</b> zwei Scheiben und nicht vor der ersten oder nach der letzten.
+   * Damit wartet ein Delta-Lauf <b>nie</b> — er hat genau eine Scheibe. Das ist kein Zufall,
+   * sondern der Punkt: Beim Delta-Lauf ist L6 nach M88 Zeremonie statt Schutz (88 ms fuer die
+   * dichteste Stunde von rund 15.000, also 0,0024 % Instanzbelegung), beim Volllauf ueber 22
+   * Scheiben ist sie es nicht.
+   *
+   * <p>Die Dauer ist konfigurierbar und <b>ungemessen</b> — siehe {@link
+   * RollupEigenschaften#scheibenPause()}.
+   */
+  private void drossle() {
+    long millis = eigenschaften.scheibenPause().toMillis();
+    if (millis <= 0) {
+      return;
+    }
+    try {
+      Thread.sleep(millis);
+    } catch (InterruptedException unterbrochen) {
+      // Die Unterbrechung gehoert weitergereicht und nicht verschluckt: Beim Herunterfahren soll
+      // der Lauf abbrechen und nicht die Drosselung zu Ende warten.
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException(
+          "Rollup-Lauf waehrend der Drosselung unterbrochen", unterbrochen);
+    }
   }
 
   /**
