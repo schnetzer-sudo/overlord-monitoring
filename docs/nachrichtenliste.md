@@ -23,6 +23,7 @@ auch keiner entstehen.
 | `von`, `bis` | ISO 8601 UTC | — | zweiter Modus, schließt `zeitraum` aus; beide oder keiner |
 | `status` | mehrfach, Werte aus `MessageStatusKind` | alle | **keine Rohwerte** |
 | `prozess` | mehrfach, `ProcessID` | alle | |
+| `ueberfaellig` | `true`, `false` | `false` | **kein Filter, sondern eine zweite Abfrageform** (§5b). Unvereinbar mit einem `status`, der weder `WARTEND` noch `LAEUFT` enthält |
 | `suche` | Freitext, mindestens 3 Zeichen | — | Prozess-, Projekt- und Ablaufname |
 | `langeSuche` | `true`, `false` | `false` | hebt die Fenstergrenze der Suche auf — bis 90 Tage, nicht weiter |
 | `sortierung` | `neueste`, `aelteste` | `neueste` | ausschließlich über den Zeitpunkt |
@@ -96,6 +97,7 @@ anhand von `detail`.
 | `zeitraum-unbekannt` | 400 | anderer Wert als `24h`/`7d`/`30d` |
 | `sortierung-unbekannt` | 400 | anderer Wert als `neueste`/`aelteste` |
 | `status-unbekannt` | 400 | Wert ist keine `MessageStatusKind` (etwa ein Rohwert) |
+| `ueberfaellig-und-status-unvereinbar` | 400 | `ueberfaellig=true` mit einem `status`, der weder `WARTEND` noch `LAEUFT` enthält — die Antwort wäre ohne Rücksicht auf die Daten leer (§5b) |
 | `suchbegriff-zu-kurz` | 400 | unter drei Zeichen |
 | `suchbegriff-zu-unscharf` | 400 | mehr Treffer als die Grenze |
 | `suche-fenster-zu-gross` | 400 | `suche` gesetzt und Spanne über der Grenze (§5) |
@@ -1058,6 +1060,182 @@ Index, `key_len`, `rows`, `Extra` — in der Übersicht darunter. Die vollständ
 
 ---
 
+## 5b. `ueberfaellig` — ein Parameter, aber eine zweite Abfrageform (27.08.2026)
+
+**Entscheidung E‑j, gebaut in Schritt 10b‑1.** Ein boolescher Parameter an `GET /api/nachrichten`,
+Vorgabe **aus**. Er zeigt genau die Nachrichten, für die eine Frist abgelaufen ist.
+
+> ### ⚠️ Der Wortlaut „ein neuer Parameter" trägt nicht. Das gehört an den Anfang und nicht in eine Fußnote.
+>
+> `ueberfaellig` ist **kein Filter auf der bestehenden Abfrage, sondern eine zweite Abfrageform im
+> selben Endpunkt** (offener Punkt 56, M97). Er
+>
+> - zieht den Treiber von `MessageLastUpdateIDX` auf **`MessageStatusIDX`**,
+> - macht die Sortierung zum **`filesort`** — der Statusindex liefert die Sortierfolge nicht,
+> - und **entwertet den Cursor**: `key_len` bleibt bei 123 statt auf 151 zu steigen, die
+>   Cursor-Bedingung wird nachgelagert geprüft.
+>
+> **Die Cursor-Messung aus M4/L8 gilt für diese Form nicht.** Wer den Endpunkt anfasst, hat es mit
+> zwei Plänen zu tun und nicht mit einem.
+>
+> Das ist **kein Fehler und kein Grund, ihn nicht zu bauen** — die Laufzeit liegt bei 5,2 bis
+> 7,8 ms, bei beiden Mandanten. Es ist eine Eigenschaft, die man kennen muss, bevor man daneben
+> etwas baut.
+
+### Das Prädikat: aufgerufen, nicht nachgebaut
+
+Die Bedingung ist das SQL-Gegenstück zu `MessageStatusClassifier.istUeberfaellig` und liegt
+**neben ihm**, in derselben Klasse (`ueberfaelligBedingung`). Gerendert:
+
+```sql
+MessageStatus IN ('RUNNING','SUSPENDED')
+  AND MessageTimeout IS NOT NULL
+  AND MessageTimeout > 0
+  AND date_add(MessageLastUpdate, INTERVAL MessageTimeout SECOND) < ?
+```
+
+| | |
+|---|---|
+| **Die Statusmenge ist gezogen, nicht getippt** | Sie entsteht aus `istEndstatus` (`offeneRohwerte()`). Wäre sie hier aufgezählt, ergäbe ein neuer offener Statuswert **zwei** Wahrheiten: eine für die Detailansicht und eine für die Liste. `MessageStatusClassifierTest` hält beide Fassungen für jeden bekannten Rohwert gegeneinander |
+| **Ein `IN` ist hier vollständig, nicht verkürzt** | Anders als beim Statusfilter: `istEndstatus` liefert für jeden **unbekannten** Wert `true` — unbekannt heißt Endstatus heißt „kann nicht überfällig werden". Die offene Menge ist damit geschlossen |
+| **Kein `MessageLastUpdate IS NOT NULL`** | In SQL ist `NULL + INTERVAL … SECOND` selbst `NULL`, der Vergleich also nicht wahr. Die Bedingung wäre wirkungslos und wiche von der gemessenen Fassung ab |
+| **Der Stichtag kommt aus der Anwendungsuhr** | Ein Uhrenschlag je Anfrage, im Service gelesen und über `Nachrichtenabfrage` durchgereicht — ein Repository liest keine Uhr (Regel Z1). Mit der Systemuhr wäre lokal jede offene Zeile überfällig |
+| **Die Einheit steht an zwei Stellen** | `ChronoUnit.SECONDS` für Java, `DatePart.SECOND` für SQL. Ein Auseinanderlaufen wäre im Betrieb unsichtbar — aus dreißig Minuten würden dreißig Stunden. Ein Test hält sie gegeneinander |
+
+`NachrichtenStatementsTest` hält den gerenderten Text Zeichen für Zeichen fest. Regel L7 verlangt
+die Messung **der** Abfrage; die Zahlen unten sind an genau diesem Text erhoben, nicht an einem
+nachgebauten.
+
+### Die eine unvereinbare Kombination — `400`, keine leere Liste
+
+`ueberfaellig=true` zusammen mit einem Statusfilter, der weder `WARTEND` noch `LAEUFT` enthält, ist
+**ohne Rücksicht auf die Daten** leer. Der Endpunkt antwortet darauf `400` mit dem Problemtyp
+`ueberfaellig-und-status-unvereinbar`.
+
+**Warum nicht einfach eine leere Liste.** Sie hieße „in diesem Zeitfenster gibt es nichts" — eine
+Auskunft über den Bestand. Wahr ist etwas anderes: Die Frage widerspricht sich selbst, und kein
+Zeitfenster ändert daran etwas. Das ist derselbe Fall wie „Suchbegriff zu kurz" (Richtlinie §5.5,
+*Anfrage fachlich unbrauchbar*). Die Antwort nennt die zulässigen Statuswerte, damit die Oberfläche
+die Menge nicht ein zweites Mal kennen muss.
+
+**Ohne Statusfilter greift die Prüfung nicht** — eine leere Auswahl heißt „alle" und enthält die
+offenen Status. `ueberfaellig=true` allein ist der Normalfall.
+
+> **`UNGEKLAERT` fällt unter die Ablehnung**, und das ist kein Versehen. `istEndstatus` liefert
+> dafür `true`; die Weigerung, etwas zu behaupten, ist keine Offenheit
+> ([`message-status.md`](message-status.md)).
+
+### Gemessen am gebauten Statement (Regel L7, 27.08.2026)
+
+Testkopie, Anker `2025-12-30 04:09:47`, 30‑Tage‑Fenster, `LIMIT 51`, Aufwärmlauf und dann beste von
+fünf. **Die Statements sind die von jOOQ gerenderten**, aus dem Repository abgegriffen und nur in
+die Messhülle gepackt; Sitzungen `b-gebaut-nexans.sql` und `b-gebaut-suttons.sql`.
+
+| Fall | Mandant | Treiber / Index | `key_len` | `rows` | `Extra` | **beste von fünf** |
+|---|---|---|---:|---:|---|---:|
+| Referenz, ohne Cursor | NEXANS | `Message` / `MessageLastUpdateIDX` | 5 | 437.150 | `where` | 1,806 ms |
+| Referenz, mit Cursor | NEXANS | `Message` / `MessageLastUpdateIDX` | **151** | 437.035 | `where` | 2,265 ms |
+| **`ueberfaellig`, ohne Cursor** | NEXANS | `Message` / **`MessageStatusIDX`** | 123 | **539** | `index condition; where; **filesort**` | **5,227 ms** |
+| **`ueberfaellig`, mit Cursor** | NEXANS | `Message` / **`MessageStatusIDX`** | **123** | 539 | `… filesort` | **5,851 ms** |
+| Referenz, ohne Cursor | SUTTONS | `ProjectMandant` / `ProjectMandant_Mandant_idx` | 146 | 1 | `where; index; temporary; filesort` | 1.153,294 ms |
+| Referenz, mit Cursor | SUTTONS | `ProjectMandant` / `ProjectMandant_Mandant_idx` | 146 | 1 | `… temporary; filesort` | 1.169,565 ms |
+| **`ueberfaellig`, ohne Cursor** | SUTTONS | `Message` / **`MessageStatusIDX`** | 123 | **539** | `index condition; where; filesort` | **7,243 ms** |
+| **`ueberfaellig`, mit Cursor** | SUTTONS | `Message` / **`MessageStatusIDX`** | 123 | 539 | `… filesort` | **7,781 ms** |
+
+**Die Pläne sind Zeile für Zeile die aus M97**, obwohl dort mit der Hand geschriebenes SQL gemessen
+wurde und hier der gerenderte Text steht. Zwei Unterschiede im Text, beide ohne Wirkung: jOOQ
+schreibt `date_add(x, INTERVAL y SECOND)` statt `x + INTERVAL y SECOND` und `FETCH NEXT 51 ROWS
+ONLY` statt `LIMIT 51`. MariaDB bildet beides auf dasselbe ab.
+
+**Drei Beobachtungen, die dazugehören:**
+
+1. **Der Parameter *rettet* `SUTTONS`.** Die Referenzliste kostet dort 1,15 s (offener Punkt 57,
+   §5a), die überfällige 7,2 ms — Faktor **159**. Bei `NEXANS` ist es umgekehrt: Der Parameter
+   kostet dort Faktor 2,9. Derselbe Parameter, entgegengesetzte Wirkung.
+2. **`key_len` bleibt bei 123, mit und ohne Cursor.** Ohne den Parameter hebt der Cursor sie von 5
+   auf 151, also auf beide Spalten des Zeitindex. Mit ihm bringt er dem Plan **nichts** — er filtert
+   nur noch nachgelagert. `NachrichtenPlanDbIT` hält genau das fest.
+3. **`rows = 539` bei beiden Mandanten.** Der Statusindex kennt keinen Mandanten; der Bereich ist
+   für beide derselbe, die Mandantenkette wirkt erst danach. Auf dieser Testkopie sind **alle 538
+   überfälligen Zeilen `NEXANS`-Zeilen** — `SUTTONS` bekommt null, und das ist der Ausgangspunkt
+   des Isolationstests.
+
+### Der Cursor blättert trotzdem richtig — nachgewiesen über elf Seiten
+
+**Das ist die Frage, die offener Punkt 56 aufwirft**: Wenn der Cursor kein Indexbereich mehr ist,
+blättert er dann noch korrekt? `NachrichtenUeberfaelligDbIT` weist es nach, über den Dezember 2025
+bei `NEXANS` (538 Zeilen, `limit=50`):
+
+| | |
+|---|---|
+| Seite 1 → Seite 2 | 50 Zeilen je Seite, **keine gemeinsame Kennung**, Seite 2 schließt lückenlos an |
+| alle Seiten | **elf Seiten, 538 Zeilen, keine doppelt** — und über alle Seitengrenzen hinweg absteigend sortiert |
+| Vergleichsgröße | die 538 aus M97. Weicht sie ab, ist die Testkopie neu befüllt und nicht der Code kaputt |
+
+**Warum elf Seiten und nicht zwei.** Zwei Seiten zeigen, dass der Cursor greift; sie zeigen nicht,
+dass er über eine lange Folge nichts verliert. Ein Blättern, das eine Zeile überspringt, fällt bei
+zwei Seiten nicht auf.
+
+### Der Plantest — er hält fest, was heute gilt, nicht was gut ist
+
+`NachrichtenPlanDbIT` liest `EXPLAIN` und prüft **Treibertabelle und Index, nicht die Laufzeit**.
+
+**Die Begründung ist im Projekt belegt:** `BamIsolationDbIT` misst Wanduhrzeit gegen eine
+Faktor‑10‑Schranke und wird gelegentlich grundlos rot (279 ms gegen 20 ms). *Ein Sicherheitstest,
+der zufällig rot wird, wird nach der dritten Wiederholung nicht mehr gelesen.* Ein Plantest ist
+deterministisch und prüft die Ursache statt ihres Schattens.
+
+Er läuft für **beide** Mandanten (Regel L7) und prüft drei Dinge:
+
+1. Mit dem Parameter steigt die Abfrage bei beiden über `MessageStatusIDX` ein, als `range`, mit
+   `filesort`.
+2. Der Cursor ändert daran nichts — derselbe Plan mit und ohne ihn.
+3. **Ohne** den Parameter steht `MessageStatusIDX` in keiner Planzeile. Ohne diese Gegenprobe
+   zeigte der Test nur, dass irgendein Plan herauskommt.
+
+**Was er absichtlich nicht prüft:** auf welchem Plan die *Referenzliste* läuft. Der hängt am
+Mandanten (§5a), und diese Wahl ist heute ein Zufallstreffer der Statistik (offener Punkt 65).
+Einen Zufall festzuschreiben hieße, den Test bei der ersten Statistikänderung rot zu machen, ohne
+dass jemand etwas falsch gemacht hätte.
+
+**Er ist einmal absichtlich gebrochen worden** und war rot: Mit ausgehängter Bedingung stand dort
+`MessageLastUpdateIDX` statt `MessageStatusIDX`. Die Änderung ist zurückgenommen.
+
+### Der Isolationstest (Regel M4)
+
+Regel M4 verlangt ihn für **jeden Endpunktzustand** — auch für einen neuen Parameter am bestehenden
+Endpunkt. Hier ist er nicht Formalie: Ein zweiter Plan ist ein zweiter Ort, an dem der
+Mandantenfilter fehlen kann.
+
+**Und er ist schärfer als der gewöhnliche, weil die Daten es hergeben.** Alle überfälligen Zeilen
+des Gesamtbestands gehören `NEXANS` — 538, `SUTTONS` hat keine einzige. **Fiele der Mandantenfilter
+aus dieser Abfrageform heraus, sähe `SUTTONS` nicht ein paar fremde Zeilen, sondern genau diese
+538.** Die erwartete Null ist damit die schärfste Zusage, die dieser Bestand hergibt.
+
+Drei Tests in `NachrichtenIsolationDbIT`:
+
+- `SUTTONS` bekommt mit `ueberfaellig=true` **null** Zeilen, während `NEXANS` 538 sieht; keine
+  Kennung von `NEXANS` steht im Antwortrumpf.
+- Ein fremder, **existierender** Prozess und eine **erfundene** Kennung liefern auch mit
+  `ueberfaellig=true` eine **ununterscheidbare** Antwort.
+- Ein fremder Cursor öffnet keinen fremden Ausschnitt — hier ausdrücklich zu prüfen, weil der Plan
+  den Cursor in dieser Form anders behandelt. Was sich am Plan ändert, darf sich an der Trennung
+  nicht ändern.
+
+### Was der Parameter auf dieser Testkopie zeigt
+
+| Fenster | überfällige Zeilen |
+|---|---:|
+| 24 h ab dem Anker (das Standardfenster) | **1**, bei `NEXANS` |
+| 30 Tage | **538**, alle bei `NEXANS`, alle `SUSPENDED`, alle mit Frist 1.800 s |
+| jeder andere Mandant, jedes Fenster | **0** |
+
+Das ist ein Befund über den Bestand und nicht über die Kategorie; er steht seit Schritt 4 so in
+[`message-status.md`](message-status.md).
+
+
+---
+
 ## 6. Die BAM-Werte sind aus der Liste heraus — und warum
 
 Bis zur Nachbesserung von Schritt 4 trug jede Zeile zwei BAM-Spalten, nachgeladen in einer zweiten
@@ -1798,6 +1976,24 @@ Der alte Link (Punkt 6) *ist* eine von Hand geöffnete URL, denn genau das ist d
   verschiebt nur, **welche** Mandanten davon profitieren. `ANALYZE TABLE` ist keine Abhilfe: Es
   wäre ein Schreibzugriff auf `GlassfishDB`.
 
+
+### Zum Parameter `ueberfaellig` (Stand 27.08.2026, Schritt 10b-1 Teil B)
+
+- **Offener Punkt 56 ist erledigt** *(27.08.2026)*. Er verlangte, dass benannt wird, was
+  `ueberfaellig` wirklich ist, **bevor** er gebaut wird — das steht jetzt in §5b, mit den Plänen
+  daneben, und es steht zusätzlich am Code: an `MessageStatusClassifier.ueberfaelligBedingung`, am
+  Parameter des Controllers und in `NachrichtenPlanDbIT`, der die zweite Form maschinell festhält.
+  **Auch der zweite Satz des Punktes ist umgesetzt:** Dass die Cursor-Messung aus M4/L8 für diese
+  Form *nicht* gilt, steht in §5b und wird von `NachrichtenPlanDbIT` geprüft; dass sie trotzdem
+  richtig blättert, weist `NachrichtenUeberfaelligDbIT` über elf Seiten nach.
+
+- **66. Die zweite Abfrageform ist nur so lange billig, wie es wenige überfällige Zeilen gibt.**
+  Der Statusbereich umfasst heute **539** Zeilen im Gesamtbestand; die Mandantenkette wirkt erst
+  danach, und der `filesort` läuft über diesen Bereich. In einem Bestand, in dem `SUSPENDED` und
+  `RUNNING` häufiger sind — in Produktion durchaus möglich, `RUNNING` kommt auf der Testkopie null
+  Mal vor —, wächst er mit. **Gemessen ist er nur an 539 Zeilen.** Die Zahl gehört in eine spätere
+  Messrunde gegen den Produktionsbestand; ein Zeitfenster hilft dagegen nicht, weil es erst nach
+  dem Statusbereich greift.
 
 ### Zum Freitextfilter und zum Zeitfenster
 

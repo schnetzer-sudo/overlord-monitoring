@@ -11,6 +11,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 import org.jooq.Condition;
+import org.jooq.DatePart;
 import org.jooq.Field;
 import org.jooq.impl.DSL;
 import org.springframework.stereotype.Component;
@@ -253,6 +254,73 @@ public class MessageStatusClassifier {
    */
   public Condition fehlerBedingung(Field<String> messageStatus) {
     return messageStatus.like("ERROR\\_%", '\\').or(messageStatus.eq("COMMIT_REJECTED"));
+  }
+
+  /**
+   * {@link #TIMEOUT_EINHEIT} in SQL. Die beiden duerfen nicht auseinanderlaufen; {@code
+   * MessageStatusClassifierTest} haelt sie gegeneinander.
+   */
+  private static final DatePart TIMEOUT_DATEPART = DatePart.SECOND;
+
+  /**
+   * Problemkategorie <b>Ueberfaellig</b> in SQL — das Gegenstueck zu {@link #istUeberfaellig} und
+   * mit ihm zusammen an genau einer Stelle.
+   *
+   * <pre>
+   * MessageStatus IN ('RUNNING','SUSPENDED')
+   *   AND MessageTimeout IS NOT NULL AND MessageTimeout &gt; 0
+   *   AND date_add(MessageLastUpdate, INTERVAL MessageTimeout SECOND) &lt; ?
+   * </pre>
+   *
+   * <p><b>Die Statusmenge ist nicht abgeschrieben, sondern aus {@link #istEndstatus} gezogen</b>
+   * ({@link #offeneRohwerte()}). Waere sie hier aufgezaehlt, ergaebe ein neuer offener Statuswert
+   * in {@link MessageStatusKind} zwei Wahrheiten: eine fuer die Detailansicht, die {@link
+   * #istUeberfaellig} aufruft, und eine fuer die Liste, die dieses SQL schickt.
+   *
+   * <p><b>Sie ist eine geschlossene Menge, und das ist hier richtig.</b> {@link #istEndstatus}
+   * liefert fuer jeden unbekannten Wert {@code true} — unbekannt heisst Endstatus heisst „kann
+   * nicht ueberfaellig werden". Anders als bei {@link #bedingung(MessageStatusKind, Field)} ist ein
+   * {@code IN} hier deshalb keine Verkuerzung, sondern die vollstaendige Uebersetzung.
+   *
+   * <p><b>Kein {@code messageLastUpdate IS NOT NULL}</b>, obwohl {@link #timeoutZeitpunkt} den Fall
+   * behandelt: In SQL ist {@code NULL + INTERVAL … SECOND} selbst {@code NULL} und der Vergleich
+   * damit nicht wahr. Die Bedingung waere wirkungslos und wuerde nur von der Fassung abweichen, die
+   * gemessen worden ist (M97).
+   *
+   * <p><b>Diese Bedingung ist kein Filter, sondern eine zweite Abfrageform.</b> Sie zieht den
+   * Treiber der Nachrichtenliste von {@code MessageLastUpdateIDX} auf {@code MessageStatusIDX},
+   * macht die Sortierung zum {@code filesort} und entwertet den Cursor. Gemessen, begruendet und
+   * mit Plaenen belegt in {@code docs/nachrichtenliste.md} §5b.
+   *
+   * @param jetzt Stichtag, vom Aufrufer aus der <b>Anwendungsuhr</b> zu ziehen (Regel Z1) — im
+   *     Profil {@code dev} die zurueckversetzte
+   */
+  public Condition ueberfaelligBedingung(
+      Field<String> messageStatus,
+      Field<LocalDateTime> messageLastUpdate,
+      Field<? extends Number> messageTimeout,
+      LocalDateTime jetzt) {
+    // coerce statt cast: Es aendert nur den Java-Typ, nicht eine Zeile des gerenderten SQL. Die
+    // Spalte ist SMALLINT und damit Short; die Java-Fassung rechnet mit Integer.
+    Field<Integer> frist = messageTimeout.coerce(Integer.class);
+    return messageStatus
+        .in(offeneRohwerte())
+        .and(frist.isNotNull())
+        .and(frist.gt(0))
+        .and(DSL.localDateTimeAdd(messageLastUpdate, frist, TIMEOUT_DATEPART).lt(jetzt));
+  }
+
+  /**
+   * Die bekannten Rohwerte, die <b>kein</b> Endstatus sind — {@code RUNNING} und {@code SUSPENDED}.
+   *
+   * <p>Gezogen aus {@link #istEndstatus} und nicht aufgezaehlt, damit die SQL-Fassung der
+   * Ueberfaelligkeit nicht von der Java-Fassung abweichen kann.
+   */
+  SortedSet<String> offeneRohwerte() {
+    return BEKANNT.entrySet().stream()
+        .filter(eintrag -> !istEndstatus(eintrag.getValue()))
+        .map(Map.Entry::getKey)
+        .collect(Collectors.toCollection(TreeSet::new));
   }
 
   /**

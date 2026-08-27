@@ -245,6 +245,86 @@ class MessageStatusClassifierTest {
 
   // ─── Uebersetzung Einordnung → SQL (Schritt 4) ──────────────────────────────────────────────
 
+  /**
+   * <b>Die SQL-Fassung der Ueberfaelligkeit gegen die Java-Fassung.</b> Beide gehoeren derselben
+   * Frage, und beide sind aus {@link MessageStatusClassifier#istEndstatus} gezogen — waeren sie es
+   * nicht, rechnete die Liste anders als die Detailansicht.
+   */
+  @Test
+  @DisplayName("Die offenen Rohwerte des SQL sind genau die, die istEndstatus offen laesst")
+  void offene_rohwerte_stammen_aus_istEndstatus() {
+    assertThat(classifier.offeneRohwerte()).containsExactly("RUNNING", "SUSPENDED");
+    for (String rohwert : classifier.bekannteStatuswerte()) {
+      assertThat(classifier.offeneRohwerte().contains(rohwert))
+          .as("Rohwert %s", rohwert)
+          .isEqualTo(!classifier.istEndstatus(rohwert));
+    }
+  }
+
+  /**
+   * Die Einheit von {@code MessageTimeout} steht an zwei Stellen — als {@link ChronoUnit} fuer Java
+   * und als {@code DatePart} fuer SQL. Ein Auseinanderlaufen waere im Betrieb unsichtbar: Aus
+   * dreissig Minuten wuerden dreissig Stunden, und die Kachel „Ueberfaellig" bliebe leer.
+   */
+  @Test
+  @DisplayName("Java und SQL rechnen mit derselben Einheit: Sekunden")
+  void timeout_einheit_ist_in_beiden_fassungen_dieselbe() {
+    assertThat(MessageStatusClassifier.TIMEOUT_EINHEIT).isEqualTo(ChronoUnit.SECONDS);
+    assertThat(sql(ueberfaelligBedingung(JETZT))).contains(" second)");
+  }
+
+  /**
+   * Die SQL-Bedingung, Bedingungsteil fuer Bedingungsteil gegen {@link
+   * MessageStatusClassifier#istUeberfaellig} gehalten.
+   */
+  @Test
+  @DisplayName("Die SQL-Bedingung traegt alle vier Teile der Java-Fassung")
+  void ueberfaelligBedingung_traegt_alle_vier_teile() {
+    String sql = sql(ueberfaelligBedingung(JETZT));
+
+    assertThat(sql)
+        .contains("in ('RUNNING', 'SUSPENDED')")
+        .contains("`MessageTimeout` is not null")
+        .contains("`MessageTimeout` > 0")
+        .contains("date_add(`MessageLastUpdate`, interval `MessageTimeout` second)")
+        .contains("timestamp '2025-12-30 04:09:47.0'");
+    // Kein IS NOT NULL auf MessageLastUpdate: NULL + INTERVAL ist selbst NULL und damit nicht
+    // wahr. Die Bedingung waere wirkungslos und wiche von der gemessenen Fassung ab (M97).
+    assertThat(sql).doesNotContain("`MessageLastUpdate` is not null");
+  }
+
+  /**
+   * Die eine Zeile, die beide Fassungen zusammenhaelt: Was {@link
+   * MessageStatusClassifier#istUeberfaellig} fuer einen Rohwert sagt, muss die Statusmenge des SQL
+   * ebenso sagen — fuer <b>jeden</b> bekannten Wert und fuer einen unbekannten dazu.
+   */
+  @Test
+  @DisplayName("Java und SQL sind sich ueber jeden bekannten Statuswert einig")
+  void java_und_sql_stimmen_je_statuswert_ueberein() {
+    LocalDateTime laengstFaellig = LocalDateTime.parse("2025-12-30T00:00:00");
+    for (String rohwert : classifier.bekannteStatuswerte()) {
+      boolean javaSagtUeberfaellig = classifier.istUeberfaellig(rohwert, laengstFaellig, 60, JETZT);
+      assertThat(classifier.offeneRohwerte().contains(rohwert))
+          .as("Rohwert %s", rohwert)
+          .isEqualTo(javaSagtUeberfaellig);
+    }
+    // Ein unbekannter Wert ist Endstatus und steht folgerichtig in keiner der beiden Fassungen.
+    assertThat(classifier.istUeberfaellig("GIBTESNICHT", laengstFaellig, 60, JETZT)).isFalse();
+    assertThat(sql(ueberfaelligBedingung(JETZT))).doesNotContain("GIBTESNICHT");
+  }
+
+  private org.jooq.Condition ueberfaelligBedingung(LocalDateTime jetzt) {
+    return classifier.ueberfaelligBedingung(STATUS, LETZTE_AENDERUNG, FRIST, jetzt);
+  }
+
+  /** Der Anker der Anwendungsuhr im Profil {@code dev}. */
+  private static final LocalDateTime JETZT = LocalDateTime.parse("2025-12-30T04:09:47");
+
+  private static final Field<LocalDateTime> LETZTE_AENDERUNG =
+      DSL.field(DSL.name("MessageLastUpdate"), LocalDateTime.class);
+
+  private static final Field<Short> FRIST = DSL.field(DSL.name("MessageTimeout"), Short.class);
+
   private static String sql(org.jooq.Condition bedingung) {
     return DSL.using(SQLDialect.MARIADB).renderInlined(bedingung);
   }

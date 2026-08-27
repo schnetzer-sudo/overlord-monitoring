@@ -3,6 +3,7 @@ package de.kraftwerkone.overlord.monitor.message;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
 import de.kraftwerkone.overlord.monitor.common.Seitenposition;
 import de.kraftwerkone.overlord.monitor.common.Sortierrichtung;
@@ -23,7 +24,7 @@ class NachrichtenFilterTest {
 
   private static NachrichtenFilter filter(String zeitraum, String cursor, Integer limit) {
     return NachrichtenFilter.aus(
-        zeitraum, null, null, null, null, null, null, null, cursor, limit, UHR);
+        zeitraum, null, null, null, null, null, null, null, null, cursor, limit, UHR);
   }
 
   /** Ein absolutes Fenster von {@code tage} Tagen, endend am Bezugspunkt der Uhr. */
@@ -33,6 +34,7 @@ class NachrichtenFilterTest {
         null,
         bis.minusDays(tage) + "Z",
         bis + "Z",
+        null,
         null,
         null,
         suche,
@@ -86,6 +88,7 @@ class NachrichtenFilterTest {
             null,
             null,
             null,
+            null,
             UHR);
 
     assertThat(filter.status())
@@ -99,6 +102,7 @@ class NachrichtenFilterTest {
                         null,
                         null,
                         List.of("ERROR_DUPLICATE"),
+                        null,
                         null,
                         null,
                         null,
@@ -130,6 +134,7 @@ class NachrichtenFilterTest {
             null,
             null,
             null,
+            null,
             UHR);
 
     assertThat(beide.status())
@@ -144,6 +149,7 @@ class NachrichtenFilterTest {
                         null,
                         null,
                         List.of("ZWISCHENSCHRITT"),
+                        null,
                         null,
                         null,
                         null,
@@ -172,18 +178,19 @@ class NachrichtenFilterTest {
             problemTyp(
                 () ->
                     NachrichtenFilter.aus(
-                        null, null, null, null, null, "ab", null, null, null, null, UHR)))
+                        null, null, null, null, null, null, "ab", null, null, null, null, UHR)))
         .isEqualTo("suchbegriff-zu-kurz");
 
     assertThat(
             NachrichtenFilter.aus(
-                    null, null, null, null, null, "  AMG  ", null, null, null, null, UHR)
+                    null, null, null, null, null, null, "  AMG  ", null, null, null, null, UHR)
                 .suche())
         .as("Der Begriff wird getrimmt, bevor die Laenge zaehlt")
         .isEqualTo("AMG");
 
     assertThat(
-            NachrichtenFilter.aus(null, null, null, null, null, "   ", null, null, null, null, UHR)
+            NachrichtenFilter.aus(
+                    null, null, null, null, null, null, "   ", null, null, null, null, UHR)
                 .suche())
         .as("Ein leerer Parameter ist kein Filter")
         .isNull();
@@ -209,7 +216,18 @@ class NachrichtenFilterTest {
             problemTyp(
                 () ->
                     NachrichtenFilter.aus(
-                        null, null, null, null, null, null, null, "groesste", null, null, UHR)))
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        "groesste",
+                        null,
+                        null,
+                        UHR)))
         .isEqualTo("sortierung-unbekannt");
   }
 
@@ -286,11 +304,83 @@ class NachrichtenFilterTest {
             null,
             null,
             null,
+            null,
             UHR);
 
     assertThat(filter.prozessIds()).containsExactly("40000_AMG");
     assertThatThrownBy(() -> filter.prozessIds().add("x"))
         .as("Der Filter ist unveraenderlich")
         .isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  /** Ein Filter mit {@code ueberfaellig} und einem Statusfilter — die Kombination aus E-j. */
+  private static NachrichtenFilter mitUeberfaellig(Boolean ueberfaellig, List<String> status) {
+    return NachrichtenFilter.aus(
+        null, null, null, status, null, ueberfaellig, null, null, null, null, null, UHR);
+  }
+
+  @Test
+  @DisplayName("Die Vorgabe von ueberfaellig ist aus")
+  void ueberfaellig_vorgabe_ist_aus() {
+    assertThat(filter(null, null, null).ueberfaellig())
+        .isEqualTo(NachrichtenFilter.UEBERFAELLIG_VORGABE)
+        .isFalse();
+    assertThat(mitUeberfaellig(true, null).ueberfaellig()).isTrue();
+    assertThat(mitUeberfaellig(false, null).ueberfaellig()).isFalse();
+  }
+
+  /**
+   * <b>Die eine unvereinbare Kombination.</b> Ueberfaellig sein kann nur, was noch laeuft oder
+   * wartet; jeder andere Statusfilter macht die Antwort <b>ohne Ruecksicht auf die Daten</b> leer.
+   * Eine leere Liste waere dann eine Auskunft ueber den Bestand — und die waere falsch.
+   */
+  @Test
+  @DisplayName("ueberfaellig mit einem Statusfilter ohne offenen Status ist 400")
+  void ueberfaellig_mit_endstatus_wird_abgewiesen() {
+    assertThat(problemTyp(() -> mitUeberfaellig(true, List.of("ABGESCHLOSSEN"))))
+        .isEqualTo("ueberfaellig-und-status-unvereinbar");
+    assertThat(problemTyp(() -> mitUeberfaellig(true, List.of("FEHLER", "QUITTIERT"))))
+        .isEqualTo("ueberfaellig-und-status-unvereinbar");
+    // UNGEKLAERT ist Endstatus — die Weigerung, etwas zu behaupten, ist keine Offenheit.
+    assertThat(problemTyp(() -> mitUeberfaellig(true, List.of("UNGEKLAERT"))))
+        .isEqualTo("ueberfaellig-und-status-unvereinbar");
+  }
+
+  @Test
+  @DisplayName("ueberfaellig mit einem offenen Status oder ganz ohne Statusfilter geht durch")
+  void ueberfaellig_mit_offenem_status_geht_durch() {
+    assertThat(mitUeberfaellig(true, List.of("WARTEND")).ueberfaellig()).isTrue();
+    assertThat(mitUeberfaellig(true, List.of("LAEUFT")).ueberfaellig()).isTrue();
+    // Eine leere Auswahl heisst „alle" und enthaelt damit auch die offenen Status.
+    assertThat(mitUeberfaellig(true, List.of()).ueberfaellig()).isTrue();
+    assertThat(mitUeberfaellig(true, null).ueberfaellig()).isTrue();
+    // Eine gemischte Auswahl bleibt zulaessig: Sie hat einen nichtleeren Schnitt.
+    assertThat(mitUeberfaellig(true, List.of("ABGESCHLOSSEN", "WARTEND")).status())
+        .containsExactlyInAnyOrder(MessageStatusKind.ABGESCHLOSSEN, MessageStatusKind.WARTEND);
+  }
+
+  @Test
+  @DisplayName("Ohne ueberfaellig greift die Pruefung nicht")
+  void ohne_ueberfaellig_bleibt_jeder_statusfilter_zulaessig() {
+    assertThat(mitUeberfaellig(false, List.of("ABGESCHLOSSEN")).status())
+        .containsExactly(MessageStatusKind.ABGESCHLOSSEN);
+    assertThat(mitUeberfaellig(null, List.of("ABGESCHLOSSEN")).status())
+        .containsExactly(MessageStatusKind.ABGESCHLOSSEN);
+  }
+
+  /**
+   * Die Menge steht hier aufgezaehlt und im {@code MessageStatusClassifier} aus {@code
+   * istEndstatus} gezogen. Dieser Test ist die Klammer, die beide zusammenhaelt: Kaeme ein neuer
+   * offener Statuswert dazu, wuerde er hier rot und nicht erst im Betrieb still falsch.
+   */
+  @Test
+  @DisplayName("UEBERFAELLIG_MOEGLICH ist genau das, was istEndstatus offen laesst")
+  void ueberfaellig_moeglich_deckt_sich_mit_istEndstatus() {
+    MessageStatusClassifier classifier = new MessageStatusClassifier();
+    for (MessageStatusKind einordnung : MessageStatusKind.values()) {
+      assertThat(NachrichtenFilter.UEBERFAELLIG_MOEGLICH.contains(einordnung))
+          .as("Einordnung %s", einordnung)
+          .isEqualTo(!classifier.istEndstatus(einordnung));
+    }
   }
 }

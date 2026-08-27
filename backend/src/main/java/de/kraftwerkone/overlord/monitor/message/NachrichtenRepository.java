@@ -181,6 +181,18 @@ public class NachrichtenRepository {
     if (!abfrage.prozessIds().isEmpty()) {
       bedingungen.add(MESSAGE.PROCESSID.in(abfrage.prozessIds()));
     }
+    // E-j. Die Bedingung wird AUFGERUFEN und nicht nachgebaut: Sie ist das SQL-Gegenstueck zu
+    // MessageStatusClassifier.istUeberfaellig und liegt neben ihm, damit Liste und Detailansicht
+    // nicht verschieden rechnen. Was sie mit dem Plan macht, steht an ihr und in
+    // docs/nachrichtenliste.md §5b — sie ist eine zweite Abfrageform und kein Filter.
+    if (abfrage.ueberfaellig()) {
+      bedingungen.add(
+          statusClassifier.ueberfaelligBedingung(
+              MESSAGE.MESSAGESTATUS,
+              MESSAGE.MESSAGELASTUPDATE,
+              MESSAGE.MESSAGETIMEOUT,
+              abfrage.jetzt()));
+    }
     if (abfrage.suchtreffer() != null) {
       bedingungen.add(
           MESSAGE

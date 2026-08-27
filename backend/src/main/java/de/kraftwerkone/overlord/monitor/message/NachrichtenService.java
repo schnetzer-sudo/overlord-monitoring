@@ -8,6 +8,7 @@ import de.kraftwerkone.overlord.monitor.common.Zeitpunkte;
 import de.kraftwerkone.overlord.monitor.common.error.FachlicheAusnahme;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -59,8 +60,11 @@ public class NachrichtenService {
       return new Seite<>(List.of(), null, false);
     }
 
+    // Ein Uhrenschlag je Anfrage, und er gehoert hierher: Das Repository liest keine Uhr
+    // (Regel Z1), und zwei Schlaege innerhalb derselben Anfrage waeren zwei Stichtage.
     List<NachrichtZeile> gelesen =
-        nachrichtenRepository.finde(mandant, Nachrichtenabfrage.aus(filter, suchtreffer));
+        nachrichtenRepository.finde(
+            mandant, Nachrichtenabfrage.aus(filter, suchtreffer, LocalDateTime.now(anwendungsuhr)));
     Seite<NachrichtZeile> seite =
         Seite.aus(
             gelesen,
