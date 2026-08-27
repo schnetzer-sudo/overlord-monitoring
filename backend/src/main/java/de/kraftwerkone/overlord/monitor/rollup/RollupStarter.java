@@ -4,7 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
@@ -30,21 +29,46 @@ import org.springframework.stereotype.Component;
  * Grund steht in {@code rollup_lauf.fehler} und im Protokoll.
  */
 @Component
-@ConditionalOnProperty(prefix = "overlord.rollup", name = "beim-start")
 public class RollupStarter implements ApplicationRunner {
 
   private static final Logger log = LoggerFactory.getLogger(RollupStarter.class);
 
   private final RollupJob job;
+  private final RollupTagNachzug tagNachzug;
   private final RollupEigenschaften eigenschaften;
 
-  RollupStarter(RollupJob job, RollupEigenschaften eigenschaften) {
+  RollupStarter(RollupJob job, RollupTagNachzug tagNachzug, RollupEigenschaften eigenschaften) {
     this.job = job;
+    this.tagNachzug = tagNachzug;
     this.eigenschaften = eigenschaften;
   }
 
   @Override
   public void run(ApplicationArguments args) {
+    loeseLaufAus();
+    loeseTagNachzugAus();
+  }
+
+  /**
+   * Der Rueckwaertslauf der Tagesebene — <b>nach</b> dem Lauf und nicht davor. Beides zusammen ist
+   * zulaessig; in dieser Reihenfolge zieht der Nachzug den Stand nach, den der Lauf hinterlassen
+   * hat, und nicht den davor.
+   */
+  private void loeseTagNachzugAus() {
+    if (!eigenschaften.tagesebeneNachziehen()) {
+      return;
+    }
+    try {
+      tagNachzug.fuehreAus();
+    } catch (RuntimeException fehler) {
+      log.error(
+          "Rueckwaertslauf der Tagesebene gescheitert. Die Anwendung startet trotzdem; was schon"
+              + " geschrieben ist, bleibt richtig — jede Scheibe ist ihre eigene Transaktion.",
+          fehler);
+    }
+  }
+
+  private void loeseLaufAus() {
     LaufArt art = eigenschaften.beimStart();
     if (art == null) {
       return;

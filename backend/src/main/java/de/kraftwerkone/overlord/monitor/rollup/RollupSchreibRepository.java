@@ -12,6 +12,7 @@ import java.util.Optional;
 import org.jooq.BatchBindStep;
 import org.jooq.DSLContext;
 import org.jooq.Field;
+import org.jooq.Record2;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -159,7 +160,7 @@ public class RollupSchreibRepository {
    * keine mehr, verlaesst die Stundenebene; sein Tageseimer verschwaende ohne das {@code DELETE}
    * nie.
    */
-  private int rechneTageEbeneNeu(RollupFenster.Tagesbereich tage) {
+  public int rechneTageEbeneNeu(RollupFenster.Tagesbereich tage) {
     monitorDsl
         .deleteFrom(MESSAGE_ROLLUP_TAG)
         .where(MESSAGE_ROLLUP_TAG.TAG.ge(tage.erster()))
@@ -232,6 +233,32 @@ public class RollupSchreibRepository {
       }
     }
     return eingefuegt;
+  }
+
+  /**
+   * Der Bereich, den die <b>Stundenebene</b> heute traegt — {@code MIN(stunde)} bis {@code
+   * MAX(stunde)}, ausgedehnt auf die Stunde nach der letzten.
+   *
+   * <p><b>Er richtet sich nach dem, was dasteht, und nicht nach einer Uhr.</b> Genau darin
+   * unterscheidet er sich vom Fenster eines Volllaufs, dessen obere Grenze die Anwendungsuhr ist —
+   * im Profil {@code dev} liegt die am Anker der Testkopie und damit vor den letzten Rollupzeilen.
+   * Gebraucht wird er vom Rueckwaertslauf der Tagesebene ({@link RollupTagNachzug}).
+   *
+   * <p>Beide Grenzen liegen auf einem vollen Stundenanfang, weil {@code stunde} das immer tut; die
+   * obere wird um eine Stunde angehoben, weil {@link RollupFenster} sie ausschliessend fuehrt.
+   *
+   * @return leer, wenn die Stundenebene leer ist — dann gibt es nichts abzuleiten
+   */
+  public Optional<RollupFenster> bereichDerStundenebene() {
+    Record2<LocalDateTime, LocalDateTime> spitzen =
+        monitorDsl
+            .select(DSL.min(MESSAGE_ROLLUP.STUNDE), DSL.max(MESSAGE_ROLLUP.STUNDE))
+            .from(MESSAGE_ROLLUP)
+            .fetchOne();
+    if (spitzen == null || spitzen.value1() == null || spitzen.value2() == null) {
+      return Optional.empty();
+    }
+    return Optional.of(new RollupFenster(spitzen.value1(), spitzen.value2().plusHours(1)));
   }
 
   /**

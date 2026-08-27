@@ -27,6 +27,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *       <td>Drosselung zwischen zwei Monatsscheiben (Leistungsregel L6)</td></tr>
  *   <tr><td>{@code beim-start}</td><td>—</td>
  *       <td>{@code DELTA} oder {@code VOLL}: ein einmaliger Lauf beim Start, von Hand</td></tr>
+ *   <tr><td>{@code tagesebene-nachziehen}</td><td>{@code false}</td>
+ *       <td>der <b>einmalige</b> Rueckwaertslauf der Tagesebene (Schritt 10b-1)</td></tr>
  * </table>
  *
  * @param aktiv Ob die zeitgesteuerte Ausloesung laeuft. <b>Zweiter Riegel neben dem Profil {@code
@@ -55,9 +57,18 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *     eine Schreibflaeche im Anfragepfad — und die gaebe es dann auch fuer den, der sie nicht
  *     bedienen soll. Der Startparameter ist der Weg, der nur dem offensteht, der die Anwendung
  *     startet
+ * @param tagesebeneNachziehen Der <b>einmalige</b> Rueckwaertslauf der Tagesebene ({@link
+ *     RollupTagNachzug}), ausgeloest ueber {@code --overlord.rollup.tagesebene-nachziehen=true}.
+ *     <p><b>Er steht neben {@code beim-start} und nicht darin.</b> {@code beim-start} nimmt eine
+ *     {@link LaufArt}, und dieser Lauf ist keine: Er liest {@code Message} nicht an, hinterlaesst
+ *     keine Zeile in {@code rollup_lauf} und hebt keinen Wasserstand. Ihn als dritten Wert dort
+ *     einzureihen hiesse, drei verschiedene Dinge unter einem Namen zu fuehren.
+ *     <p>Beides zusammen ist zulaessig und in dieser Reihenfolge sinnvoll: erst der Lauf, dann der
+ *     Nachzug — sonst zieht der Nachzug einen Stand nach, den der Lauf gleich darauf aendert.
  */
 @ConfigurationProperties("overlord.rollup")
-public record RollupEigenschaften(boolean aktiv, Duration scheibenPause, LaufArt beimStart) {
+public record RollupEigenschaften(
+    boolean aktiv, Duration scheibenPause, LaufArt beimStart, boolean tagesebeneNachziehen) {
 
   /**
    * Das Profil, unter dem die zeitgesteuerte Ausloesung ueberhaupt entsteht.
