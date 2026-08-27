@@ -547,6 +547,517 @@ Einträge, ist das das Signal. Steht unter „Offene Punkte".
 
 ---
 
+## 5a. Der Plan der Liste — sechs Fassungen gemessen, keine gebaut (27.08.2026)
+
+**Offener Punkt 57** aus [`messungen-schritt10b.md`](messungen-schritt10b.md) hält fest, dass diese
+Abfrage bei `SUTTONS` über dreißig Tage **1.101,280 ms** kostet und bei `NEXANS` **1,803 ms** —
+Faktor 611, und der kleinere Mandant ist der langsame. Schritt 10b‑1 hatte den Auftrag, drei
+Fassungen dagegen zu messen und die beste zu bauen, **falls** eine trägt.
+
+**Sechs sind gemessen. Keine trägt, und keine ist gebaut worden.** Der Grund ist nicht, dass keine
+Fassung `SUTTONS` repariert — zwei tun das —, sondern dass jede von ihnen einen anderen Mandanten
+oder einen anderen Filter derselben Liste zerstört.
+
+**Am Code dieses Endpunkts ist deshalb nichts geändert worden.** Was bleibt, sind Zahlen: die zehn
+Mandanten einzeln, die anderen Filter einzeln, und die Erkenntnis, dass die Liste heute **zwei
+Planfamilien** hat, von denen jede für eine andere Klasse von Mandanten falsch ist.
+
+### Der Rahmen
+
+| | |
+|---|---|
+| Ziel | **Testkopie**, `SELECT @@global.read_only` = **1** als erste Abfrage jeder Sitzung |
+| Benutzer | `monitor_read`, ausschließlich `SELECT` / `SET` / `EXPLAIN` / `PREPARE` (Regel S1) |
+| Anker | **`2025-12-30 04:09:47`** (V5 der Vorrunde), als Literal im Statement (Regel Z1) |
+| Fenster | `zeitraum=30d` gegen diesen Anker, **beide Grenzen einschließlich** — wie `.ge`/`.le` es setzen. `24h` und `7d` in der Gegenprobe |
+| Statement | abgeschrieben aus diesem Repository, nicht nachgebaut: vier `LEFT JOIN`, `EXISTS`-Mandantenkette, `ORDER BY (MessageLastUpdate, MessageID) DESC`, `LIMIT 51` |
+| Laufzeit | Aufwärmlauf, dann **beste von fünf**, aus `information_schema.PROFILING` |
+| Plan | am **nackten** Statement — `EXPLAIN` führt es nicht aus und gibt keine Datenzeile aus (G1) |
+| Sitzungen | zwanzig, unter `scripts/messung-schritt10b-1/`. Rohausgaben über `.gitignore` ausgeschlossen |
+| `STRAIGHT_JOIN` | **in keiner Fassung** (M42: Faktor 219 bis 1094) |
+| `ANALYZE TABLE` | **nicht gefahren** — `monitor_read` hat auf `GlassfishDB` nur `SELECT`, und dort wird nie geschrieben |
+
+> **Warum die Laufzeit an einer aggregierenden Hülle gemessen ist und der Plan am nackten
+> Statement.** Dieselbe Bauform wie M97, aus denselben zwei Gründen: Das nackte Statement liefert
+> `MessageID`, `ProcessID`, `ProcessName` und `ProjectName` und darf nicht ausgegeben werden (G1);
+> und ohne eine Hülle, die **jede** gejointe Spalte anfasst, optimiert MariaDB die `LEFT JOIN` weg,
+> sodass die Messung die ihrer Abwesenheit wäre. Beide Pläne stehen in den Sitzungsdateien
+> nebeneinander und sind Zeile für Zeile gleich, bis auf die eine `<derived2>`-Zeile der Hülle.
+
+### Die sechs Fassungen
+
+| | Eingriff | Woher |
+|---|---|---|
+| **F0** | keiner — die heutige Fassung, Bezugsgröße | |
+| **F1** | Prozessliste des Mandanten vorab auflösen, dann `m.ProcessID IN (…)` statt `EXISTS` | Auftrag |
+| **F2** | `FORCE INDEX (MessageLastUpdateIDX)` auf `Message` | Auftrag |
+| **F3** | `IGNORE INDEX (ProejctIDIDX)` auf `Message` | Auftrag |
+| **F4** | `IGNORE INDEX FOR JOIN (ProejctIDIDX, Message_ProcessFK)` auf `Message` | ergänzt, weil F3 wirkungslos ist: der Optimierer weicht auf den Geschwisterindex aus |
+| **F5** | `LIMIT 1` in der `EXISTS`-Unterabfrage | ergänzt, um die Semi-Join-Umformung zu verhindern, ohne einen Index anzufassen |
+| **F6** | `IGNORE INDEX FOR JOIN (Process_ProjectFK)` auf **`Process` in der Mandantenkette** — auf `Message` liegt **kein** Hinweis | ergänzt, weil F4 den Prozessfilter mit erschlägt |
+
+**Alle sechs liefern zeilengleich dasselbe.** Die Hülle gibt Zeilenzahl, ältesten und jüngsten
+Zeitpunkt und die Zahl verschiedener Statuswerte aus; über alle Fassungen, alle Mandanten und beide
+Cursor-Stellungen stimmen diese vier Werte **jedes Mal** überein. Der Eingriff verändert den Weg,
+nicht das Ergebnis.
+
+### Das Ergebnis für die beiden Mandanten des Auftrags
+
+F0 und F6 in **derselben** Sitzung, abwechselnd gefahren — sonst wäre der Unterschied nur so genau
+wie zwei Sitzungen es sind (`a1-entscheidung-nexans.sql`, `a1-entscheidung-suttons.sql`).
+
+| Fall | Mandant | **F0** | **F6** | |
+|---|---|---:|---:|---|
+| 30 Tage, ohne Cursor | NEXANS | 1,861 ms | **1,789 ms** | unverändert |
+| 30 Tage, mit Cursor | NEXANS | 2,250 ms | **2,242 ms** | unverändert |
+| 30 Tage, `ueberfaellig` | NEXANS | 5,282 ms | 5,253 ms | unverändert |
+| 30 Tage, `ueberfaellig`, mit Cursor | NEXANS | 5,803 ms | 5,713 ms | unverändert |
+| **30 Tage, ohne Cursor** | **SUTTONS** | **1.034,784 ms** | **7,093 ms** | **Faktor 146** |
+| **30 Tage, mit Cursor** | **SUTTONS** | **1.149,164 ms** | **5,499 ms** | **Faktor 209** |
+| 30 Tage, `ueberfaellig` | SUTTONS | 7,081 ms | 6,991 ms | unverändert |
+| 30 Tage, `ueberfaellig`, mit Cursor | SUTTONS | 7,646 ms | 7,623 ms | unverändert |
+
+**Nach dem Tor des Auftrags wäre das ein Bauauftrag:** `SUTTONS` unter 50 ms, `NEXANS` nicht messbar
+schlechter. Die anderen fünf Fassungen fallen schon hier durch:
+
+| Fassung | Was sie tut | Was sie kaputt macht |
+|---|---|---|
+| **F1** | `SUTTONS` 1.034,784 → **4,598 ms** | **`NEXANS` mit Cursor 2,189 → 51,422 ms** (Faktor 23). 733 Bindeplätze werden je Kandidatenzeile geprüft |
+| **F2** | `SUTTONS` → **7,841 ms** | **`ueberfaellig` bei `NEXANS` 5,170 → 129,759 ms** (Faktor 25) und bei `SUTTONS` 6,904 → **1.379,042 ms** (Faktor 200). Der erzwungene Zeitindex verdrängt `MessageStatusIDX` — und genau der trägt die überfällige Liste |
+| **F3** | **nichts** — `SUTTONS` bleibt bei 1.139,967 ms | nichts. Der Optimierer weicht von `ProejctIDIDX` auf `Message_ProcessFK` aus: derselbe Plan, anderer Name |
+| **F4** | `SUTTONS` → **7,653 ms** | **Den Prozessfilter.** `NEXANS` mit drei kleinen Prozessen 1,730 → **1.547,772 ms** (Faktor 894), `SUTTONS` 5,887 → 1.544,238 ms (Faktor 262) |
+| **F5** | **nichts** — `SUTTONS` bleibt bei 1.117,393 ms | nichts. `LIMIT 1` verhindert die Semi-Join-Umformung nicht |
+
+> **Der Prozessfilter ist zweimal gemessen worden, und die erste Messung war falsch.** In der ersten
+> Fassung der Gegenprobe stand er als `m.ProcessID IN (@p1, @p2, @p3)` — mit Sitzungsvariablen, um
+> keine Kennung ins Skript zu schreiben (G1). **Darauf führt MariaDB keine Bereichsanalyse aus:**
+> `ProejctIDIDX` blieb in `possible_keys` und wurde nie als Bereich genutzt; gemessen war also nicht
+> der Prozessfilter, sondern seine Abwesenheit. Die Zahlen oben stammen aus der zweiten Fassung
+> (`a1-gegenprobe-prozessfilter-*.sql`), in der die Kennungen als **Literale** im Statement stehen —
+> dieselbe Form, die der Treiber auf die Leitung legt. Die erste Fassung ist nicht aufgehoben.
+
+### ⚠️ Die Gegenprobe über alle zehn Mandanten — und hier fällt die Entscheidung
+
+Offener Punkt 57 verlangt zu prüfen, „ob es weitere Mandanten betrifft (acht sind ungemessen)".
+Sie sind jetzt gemessen: 30 Tage, ohne Cursor, F0 gegen F6 in derselben Sitzung.
+
+| Mandant | Zeilen im Fenster | Zeilen insgesamt | Treiber bei **F0** | **F0** | **F6** | |
+|---|---:|---:|---|---:|---:|---|
+| NEXANS | 180.154 | 2.885.711 | `m` / Zeit | 1,861 ms | 1,789 ms | |
+| **SUTTONS** | 21.524 | 197.158 | **`pm` / Prozess** | **1.034,784 ms** | **7,093 ms** | **F6 hilft** |
+| VOTG | 6.106 | 145.840 | `m` / Zeit | 36,602 ms | 36,000 ms | |
+| IBIS | 4.331 | 75.746 | `m` / Zeit | 44,384 ms | 44,602 ms | |
+| IBISGUS | 1.722 | 29.339 | `m` / Zeit | 54,787 ms | 55,257 ms | |
+| ZAST | 283 | 5.036 | `m` / Zeit | 288,561 ms | 288,173 ms | beide schlecht |
+| **WOC** | 118 | 2.529 | **`pm` / Prozess** | **16,186 ms** | **1.488,784 ms** | **F6 schadet, Faktor 92** |
+| **SYSTEM** | 5 | 151 | **`pm` / Prozess** | **1,771 ms** | **3.267,541 ms** | **F6 schadet, Faktor 1.845** |
+| **NXHBE** | 0 | 9 | **`pm` / Prozess** | **1,128 ms** | **3.386,439 ms** | **F6 schadet, Faktor 3.002** |
+| **EDITIONLINGERI** | 0 | 0 | `m` / Zeit | **2.313,808 ms** | 2.292,054 ms | **beide schlecht** |
+
+Die beiden Zeilenspalten stammen aus `message_rollup` (Regel L2 — kein zweiter Durchlauf über die
+Quelle); `EDITIONLINGERI` steht dort überhaupt nicht und hat damit **keine einzige** Nachricht.
+
+**F6 repariert genau einen Mandanten und zerstört drei.** Das ist die zweite Zeile des Tors:
+*„Eine Fassung hilft dem einen und schadet dem anderen — nicht bauen. Melden."*
+
+### Die zwei Planfamilien, und warum keine für alle richtig ist
+
+Der Optimierer wählt heute zwischen genau zwei Wegen, und beide sind an einer Stelle blind:
+
+| | **Zeit-getrieben** (`m` range über `MessageLastUpdateIDX`) | **Prozess-getrieben** (`pm` → `mp` → `m` ref über `ProejctIDIDX`) |
+|---|---|---|
+| Was er liest | den Zeitbereich, Zeile für Zeile, **bis 51 Treffer beisammen sind** | **alle Zeilen aller Prozesse des Mandanten, über den ganzen Bestand**, danach erst Zeitfilter und Sortierung |
+| Sortierung | kommt aus dem Index — **kein `filesort`** | `Using temporary; Using filesort` |
+| Kosten hängen an | wie **dünn** der Mandant im Fenster liegt | wie **viel** der Mandant insgesamt hat |
+| Gut für | dichte Mandanten: `NEXANS` 1,861 ms bei 180.154 Zeilen im Fenster | dünne Mandanten: `NXHBE` 1,128 ms bei 9 Zeilen insgesamt |
+| Schlecht für | dünne: `EDITIONLINGERI` **2,3 s** für null Zeilen, `ZAST` 289 ms für 283 | volumige: `SUTTONS` **1,03 s** für 197.158 Zeilen insgesamt |
+
+**Die Schätzung, an der der Optimierer wählt, ist für jeden Mandanten dieselbe.** `ProejctIDIDX`,
+`Message_ProcessFK` und `MessageStatusIDX` tragen alle drei die `CARDINALITY` **18** — der Befund
+aus M83 —, und daraus folgt `3.560.486 / 18 = 197.804` geschätzte Zeilen je Prozessnachschlag. Diese
+197.804 stehen in **jedem** prozess-getriebenen Plan dieser Runde, ob der Mandant neun Zeilen hat
+oder zweihunderttausend. Dass die Wahl bei sechs von zehn Mandanten trotzdem richtig herauskommt,
+ist keine Leistung der Schätzung.
+
+**Und die 197.804 erklären zugleich den Zufall, aus dem offener Punkt 57 entstanden ist:**
+`SUTTONS` hat 197.158 Zeilen insgesamt. Der Mandant, bei dem die Schätzung fast genau stimmt, ist
+der, bei dem der Plan am teuersten ist.
+
+> **Ein Index, der beide Familien billig machte, existiert nicht — und darf nicht entstehen.**
+> Gebraucht würde `(ProcessID, MessageLastUpdate)` auf `Message`: Der Prozessnachschlag käme dann
+> schon im Zeitfenster an. Vorhanden ist nur die umgekehrte Reihenfolge
+> (`MessageLastUpdateProcessMessageIDX`, Spalten `MessageLastUpdate, ProcessID, MessageID`). Ihn
+> anzulegen hieße, auf `GlassfishDB` zu schreiben — die erste unverhandelbare Regel des Projekts.
+
+### Vier teure Fälle, und drei davon stehen in keinem offenen Punkt
+
+1. **`EDITIONLINGERI` kostet heute 2.313,808 ms** — ohne jeden Eingriff, ohne Filter, im zulässigen
+   Wert `zeitraum=30d`. Der Mandant hat keine einzige Nachricht; die Abfrage liest deshalb das ganze
+   Fenster, ohne je 51 Zeilen zu finden. Das ist mehr als das Doppelte des `SUTTONS`-Falls, den
+   Punkt 57 beschreibt.
+2. **`ZAST` kostet 288,561 ms**, aus demselben Grund, eine Größenordnung darunter.
+3. **Der Prozessfilter kostet bei `NEXANS` über 30 Tage 7.459,912 ms**, wenn die gewählten Prozesse
+   viel Verkehr tragen. Der Lese-Pool bricht bei **10 s** ab ([`datenzugriff.md`](datenzugriff.md)
+   §1) — das sind **74,6 %** der Grenze, warm gemessen, und der Kaltfaktor aus M44 geht bis 9,66.
+   **Diese Kombination stirbt in Produktion.** Sie ist heute über die Prozessauswahl (§8.2) mit zwei
+   Klicks erreichbar.
+4. **`SUTTONS` mit 1.034,784 ms** — der bekannte Fall aus Punkt 57, hier bestätigt.
+
+**Die Lesart „kleiner Mandant = langsam" aus Punkt 57 trägt nicht.** `SYSTEM` und `NXHBE` sind die
+kleinsten und zugleich die schnellsten. Was den Plan bestimmt, sind zwei Zahlen, die gegeneinander
+laufen: Dichte im Fenster und Gesamtvolumen.
+
+### Das Tor, angewandt
+
+| Zeile des Auftrags | Trifft zu? |
+|---|---|
+| Eine Fassung bringt `SUTTONS` unter 50 ms **und** verschlechtert `NEXANS` nicht messbar → **bauen** | F6 erfüllt das — **aber nur, solange man die anderen acht Mandanten nicht misst** |
+| Eine Fassung hilft dem einen und schadet dem anderen → **nicht bauen. Melden** | **Ja. Das ist die Lage.** F6 schadet `WOC`, `SYSTEM` und `NXHBE` um Faktor 92 bis 3.002; F1, F2 und F4 schaden schon bei den beiden Mandanten des Auftrags |
+| Keine Fassung trägt → **nicht bauen. Melden, mit allen Plänen im Volltext** | Ebenfalls ja, wenn man „trägt" als „ohne Schaden" liest |
+
+**Gebaut wird nichts.** Der Auftrag nennt für die zweite Zeile die Lehre aus M42, und sie passt hier
+Wort für Wort: Ein Eingriff, der die Planwahl festnagelt, hilft dem Fall, an dem er gemessen wurde,
+und trifft die anderen ungesehen.
+
+**Damit entfällt auch der Plantest aus A.3** — es gibt keine gewählte Fassung, deren Plan er
+festhalten könnte. Der Plantest **für den Parameter `ueberfaellig`** entsteht trotzdem, weil Teil B
+ihn eigenständig verlangt; er steht in §5b.
+
+### Was es bräuchte — Vorlage an den Auftraggeber, nicht Vorschlag zur Umsetzung
+
+Drei Wege sind denkbar; **keiner ist gemessen**, und keiner gehört in diesen Schritt.
+
+1. **Zwei Abfrageformen, ausgewählt an einer Zahl aus `message_rollup`.** Der Rollup weiß seit
+   Schritt 10a je Mandant und Zeitraum, wie viele Nachrichten im Fenster liegen und wie viele
+   insgesamt — die Tabelle oben ist genau daraus gerechnet und kostet Millisekunden. Damit ließe
+   sich die Planfamilie **wählen** statt raten. Das ist ein Entwurf und keine Kleinigkeit: Es macht
+   aus einem Endpunkt zwei Formen, und die Schwelle wäre eine gewählte Zahl.
+2. **Ein Index `(ProcessID, MessageLastUpdate)` auf `Message`.** Er löste beide Familien auf einmal
+   und träfe auch den Prozessfilter. Er verlangt einen Schreibzugriff auf `GlassfishDB` und damit
+   eine Entscheidung des Betreibers des Altsystems — **nicht dieses Projekts**.
+3. **`optimizer_switch` je Sitzung.** Der Lese-Pool setzt schon `max_statement_time`; er könnte
+   ebenso `semijoin=off` setzen. Das wirkte auf **jede** Abfrage der Anwendung, nicht nur auf diese,
+   und ist deshalb der weitreichendste der drei. Ungemessen.
+
+**Bis dahin gilt:** Der Endpunkt bleibt, wie er ist, und die vier teuren Fälle stehen unter
+„Offene Punkte".
+
+### Die Pläne (Regel L15)
+
+**Eine Abweichung, und sie ist zu benennen:** Diese Runde hat **126** Pläne erhoben — 63 Fälle, je am
+nackten Statement und an der Hülle. Sie alle im Volltext zu führen hieße, dieselben fünf
+`eq_ref`-Zeilen hundertfach zu wiederholen. Im Volltext stehen unten die **elf**, die die
+Entscheidung tragen; für **jeden** gemessenen Fall steht die Treiberzeile — Tabelle, Zugriffsart,
+Index, `key_len`, `rows`, `Extra` — in der Übersicht darunter. Die vollständigen Pläne lassen sich
+über die Sitzungsdateien unter `scripts/messung-schritt10b-1/` jederzeit neu erzeugen.
+
+
+#### Übersicht: die Treiberzeile jedes gemessenen Falls
+
+| Sitzung | Fall | Treiber | Zugriff | Index | `key_len` | `rows` | `Extra` | beste von fünf |
+|---|---|---|---|---|---:|---:|---|---:|
+| `entscheidung-nexans` | `F0-NEXANS-30d-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | where | 1,861 ms |
+| `entscheidung-nexans` | `F6-NEXANS-30d-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | where | 1,789 ms |
+| `entscheidung-nexans` | `F0-NEXANS-30d-referenz-mitCursor` | `m` | range | `MessageLastUpdateIDX` | 151 | 437.035 | where | 2,250 ms |
+| `entscheidung-nexans` | `F6-NEXANS-30d-referenz-mitCursor` | `m` | range | `MessageLastUpdateIDX` | 151 | 437.035 | where | 2,242 ms |
+| `entscheidung-nexans` | `F0-NEXANS-30d-ueberfaellig` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 5,282 ms |
+| `entscheidung-nexans` | `F6-NEXANS-30d-ueberfaellig` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 5,253 ms |
+| `entscheidung-nexans` | `F0-NEXANS-30d-ueberfaellig-mitCursor` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 5,803 ms |
+| `entscheidung-nexans` | `F6-NEXANS-30d-ueberfaellig-mitCursor` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 5,713 ms |
+| `entscheidung-suttons` | `F0-SUTTONS-30d-referenz` | `pm` | ref | `ProjectMandant_Mandant_idx` | 146 | 1 | where; index; temporary; filesort | 1.034,784 ms |
+| `entscheidung-suttons` | `F6-SUTTONS-30d-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | where | 7,093 ms |
+| `entscheidung-suttons` | `F0-SUTTONS-30d-referenz-mitCursor` | `pm` | ref | `ProjectMandant_Mandant_idx` | 146 | 1 | where; index; temporary; filesort | 1.149,164 ms |
+| `entscheidung-suttons` | `F6-SUTTONS-30d-referenz-mitCursor` | `m` | range | `MessageLastUpdateIDX` | 151 | 436.322 | where | 5,499 ms |
+| `entscheidung-suttons` | `F0-SUTTONS-30d-ueberfaellig` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 7,081 ms |
+| `entscheidung-suttons` | `F6-SUTTONS-30d-ueberfaellig` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 6,991 ms |
+| `entscheidung-suttons` | `F0-SUTTONS-30d-ueberfaellig-mitCursor` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 7,646 ms |
+| `entscheidung-suttons` | `F6-SUTTONS-30d-ueberfaellig-mitCursor` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 7,623 ms |
+| `gegenprobe-filter-nexans` | `F0-NEXANS-24h-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 13.534 | where | 1,782 ms |
+| `gegenprobe-filter-nexans` | `F4-NEXANS-24h-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 13.534 | where | 1,790 ms |
+| `gegenprobe-filter-nexans` | `F0-NEXANS-7d-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 52.752 | where | 1,729 ms |
+| `gegenprobe-filter-nexans` | `F4-NEXANS-7d-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 52.752 | where | 1,736 ms |
+| `gegenprobe-filter-nexans` | `F0-NEXANS-30d-prozess` | `pm` | ref | `ProjectMandant_Mandant_idx` | 146 | 17 | where; index; temporary; filesort | 7.437,391 ms |
+| `gegenprobe-filter-nexans` | `F4-NEXANS-30d-prozess` | `pm` | ref | `ProjectMandant_Mandant_idx` | 146 | 17 | where; index; temporary; filesort | 2.909,663 ms |
+| `gegenprobe-filter-nexans` | `F0-NEXANS-30d-fehler` | `m` | range | `MessageStatusIDX` | 123 | 6.257 | index condition; where; filesort | 23,404 ms |
+| `gegenprobe-filter-nexans` | `F4-NEXANS-30d-fehler` | `m` | range | `MessageStatusIDX` | 123 | 6.257 | index condition; where; filesort | 23,378 ms |
+| `gegenprobe-filter-suttons` | `F0-SUTTONS-24h-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 13.534 | where | 8,128 ms |
+| `gegenprobe-filter-suttons` | `F4-SUTTONS-24h-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 13.534 | where | 7,346 ms |
+| `gegenprobe-filter-suttons` | `F0-SUTTONS-7d-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 52.752 | where | 7,253 ms |
+| `gegenprobe-filter-suttons` | `F4-SUTTONS-7d-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 52.752 | where | 6,780 ms |
+| `gegenprobe-filter-suttons` | `F0-SUTTONS-30d-prozess` | `pm` | ref | `ProjectMandant_Mandant_idx` | 146 | 1 | where; index; temporary; filesort | 432,106 ms |
+| `gegenprobe-filter-suttons` | `F4-SUTTONS-30d-prozess` | `pm` | ref | `ProjectMandant_Mandant_idx` | 146 | 1 | where; index; temporary; filesort | 1.751,134 ms |
+| `gegenprobe-filter-suttons` | `F0-SUTTONS-30d-fehler` | `m` | range | `MessageStatusIDX` | 123 | 6.257 | index condition; where; filesort | 23,725 ms |
+| `gegenprobe-filter-suttons` | `F4-SUTTONS-30d-fehler` | `m` | range | `MessageStatusIDX` | 123 | 6.257 | index condition; where; filesort | 23,973 ms |
+| `gegenprobe-prozessfilter-nexans` | `F0-NEXANS-30d-prozess-gross` | `pm` | ref | `ProjectMandant_Mandant_idx` | 146 | 17 | where; index; temporary; filesort | 7.459,912 ms |
+| `gegenprobe-prozessfilter-nexans` | `F4-NEXANS-30d-prozess-gross` | `pm` | ref | `ProjectMandant_Mandant_idx` | 146 | 17 | where; index; temporary; filesort | 2.983,384 ms |
+| `gegenprobe-prozessfilter-nexans` | `F0-NEXANS-30d-prozess-klein` | `m` | range | `ProejctIDIDX` | 147 | 134 | index condition; where; filesort | 1,730 ms |
+| `gegenprobe-prozessfilter-nexans` | `F4-NEXANS-30d-prozess-klein` | `pm` | ref | `ProjectMandant_Mandant_idx` | 146 | 17 | where; index; temporary; filesort | 1.547,772 ms |
+| `gegenprobe-prozessfilter-suttons` | `F0-SUTTONS-30d-prozess-gross` | `pm` | ref | `ProjectMandant_Mandant_idx` | 146 | 1 | where; index; temporary; filesort | 446,649 ms |
+| `gegenprobe-prozessfilter-suttons` | `F4-SUTTONS-30d-prozess-gross` | `pm` | ref | `ProjectMandant_Mandant_idx` | 146 | 1 | where; index; temporary; filesort | 1.796,381 ms |
+| `gegenprobe-prozessfilter-suttons` | `F0-SUTTONS-30d-prozess-klein` | `m` | range | `ProejctIDIDX` | 147 | 740 | index condition; where; filesort | 5,887 ms |
+| `gegenprobe-prozessfilter-suttons` | `F4-SUTTONS-30d-prozess-klein` | `pm` | ref | `ProjectMandant_Mandant_idx` | 146 | 1 | where; index; temporary; filesort | 1.544,238 ms |
+| `mandanten-1` | `F0-VOTG-30d-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | where | 36,602 ms |
+| `mandanten-1` | `F6-VOTG-30d-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | where | 36,000 ms |
+| `mandanten-1` | `F0-IBIS-30d-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | where | 44,384 ms |
+| `mandanten-1` | `F6-IBIS-30d-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | where | 44,602 ms |
+| `mandanten-1` | `F0-IBISGUS-30d-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | where | 54,787 ms |
+| `mandanten-1` | `F6-IBISGUS-30d-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | where | 55,257 ms |
+| `mandanten-1` | `F0-ZAST-30d-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | where | 288,561 ms |
+| `mandanten-1` | `F6-ZAST-30d-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | where | 288,173 ms |
+| `mandanten-2` | `F0-NXHBE-30d-referenz` | `pm` | ref | `ProjectMandant_Mandant_idx` | 146 | 2 | where; index; temporary; filesort | 1,128 ms |
+| `mandanten-2` | `F6-NXHBE-30d-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | index condition; where; temporary; filesort | 3.386,439 ms |
+| `mandanten-2` | `F0-EDITIONLINGERI-30d-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | where | 2.313,808 ms |
+| `mandanten-2` | `F6-EDITIONLINGERI-30d-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | where | 2.292,054 ms |
+| `mandanten-2` | `F0-WOC-30d-referenz` | `pm` | ref | `ProjectMandant_Mandant_idx` | 146 | 1 | where; index; temporary; filesort | 16,186 ms |
+| `mandanten-2` | `F6-WOC-30d-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | where | 1.488,784 ms |
+| `mandanten-2` | `F0-SYSTEM-30d-referenz` | `pm` | ref | `ProjectMandant_Mandant_idx` | 146 | 2 | where; index; temporary; filesort | 1,771 ms |
+| `mandanten-2` | `F6-SYSTEM-30d-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | index condition; where; temporary; filesort | 3.267,541 ms |
+| `nexans-f0` | `F0-referenz-ohneCursor` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | where | 1,786 ms |
+| `nexans-f0` | `F0-referenz-mitCursor` | `m` | range | `MessageLastUpdateIDX` | 151 | 437.035 | where | 2,189 ms |
+| `nexans-f0` | `F0-ueberfaellig-ohneCursor` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 5,170 ms |
+| `nexans-f0` | `F0-ueberfaellig-mitCursor` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 5,639 ms |
+| `nexans-f1` | `F1-referenz-ohneCursor` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | where | 8,212 ms |
+| `nexans-f1` | `F1-referenz-mitCursor` | `m` | range | `MessageLastUpdateIDX` | 151 | 437.035 | where | 51,422 ms |
+| `nexans-f1` | `F1-ueberfaellig-ohneCursor` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 12,891 ms |
+| `nexans-f1` | `F1-ueberfaellig-mitCursor` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 52,987 ms |
+| `nexans-f2` | `F2-referenz-ohneCursor` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | where | 1,795 ms |
+| `nexans-f2` | `F2-referenz-mitCursor` | `m` | range | `MessageLastUpdateIDX` | 151 | 437.035 | where | 2,049 ms |
+| `nexans-f2` | `F2-ueberfaellig-ohneCursor` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | where | 129,759 ms |
+| `nexans-f2` | `F2-ueberfaellig-mitCursor` | `m` | range | `MessageLastUpdateIDX` | 151 | 389.409 | where | 1,976 ms |
+| `nexans-f3` | `F3-referenz-ohneCursor` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | where | 1,720 ms |
+| `nexans-f3` | `F3-referenz-mitCursor` | `m` | range | `MessageLastUpdateIDX` | 151 | 437.035 | where | 2,248 ms |
+| `nexans-f3` | `F3-ueberfaellig-ohneCursor` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 5,555 ms |
+| `nexans-f3` | `F3-ueberfaellig-mitCursor` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 7,651 ms |
+| `nexans-f4` | `F4-referenz-ohneCursor` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | where | 1,826 ms |
+| `nexans-f4` | `F4-referenz-mitCursor` | `m` | range | `MessageLastUpdateIDX` | 151 | 437.035 | where | 2,219 ms |
+| `nexans-f4` | `F4-ueberfaellig-ohneCursor` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 5,199 ms |
+| `nexans-f4` | `F4-ueberfaellig-mitCursor` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 5,841 ms |
+| `nexans-f5` | `F5-referenz-ohneCursor` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | where | 1,829 ms |
+| `nexans-f5` | `F5-referenz-mitCursor` | `m` | range | `MessageLastUpdateIDX` | 151 | 437.035 | where | 2,216 ms |
+| `nexans-f5` | `F5-ueberfaellig-ohneCursor` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 5,444 ms |
+| `nexans-f5` | `F5-ueberfaellig-mitCursor` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 6,283 ms |
+| `nexans-f6-a` | `F6-NEXANS-30d-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | where | 1,857 ms |
+| `nexans-f6-a` | `F6-NEXANS-30d-referenz-mitCursor` | `m` | range | `MessageLastUpdateIDX` | 151 | 437.035 | where | 2,282 ms |
+| `nexans-f6-a` | `F6-NEXANS-30d-ueberfaellig` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 6,071 ms |
+| `nexans-f6-a` | `F6-NEXANS-30d-ueberfaellig-mitCursor` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 6,209 ms |
+| `nexans-f6-b` | `F6-NEXANS-24h-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 13.534 | where | 1,803 ms |
+| `nexans-f6-b` | `F6-NEXANS-7d-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 52.752 | where | 1,736 ms |
+| `nexans-f6-b` | `F6-NEXANS-30d-fehler` | `m` | range | `MessageStatusIDX` | 123 | 6.257 | index condition; where; filesort | 25,050 ms |
+| `nexans-f6-b` | `F6-NEXANS-30d-prozess-gross` | `mp` | range | `PRIMARY` | 146 | 3 | where; temporary; filesort | 7.456,150 ms |
+| `nexans-f6-b` | `F6-NEXANS-30d-prozess-klein` | `m` | range | `ProejctIDIDX` | 147 | 134 | index condition; where; filesort | 1,826 ms |
+| `suttons-f0` | `F0-referenz-ohneCursor` | `pm` | ref | `ProjectMandant_Mandant_idx` | 146 | 1 | where; index; temporary; filesort | 1.037,139 ms |
+| `suttons-f0` | `F0-referenz-mitCursor` | `pm` | ref | `ProjectMandant_Mandant_idx` | 146 | 1 | where; index; temporary; filesort | 1.137,384 ms |
+| `suttons-f0` | `F0-ueberfaellig-ohneCursor` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 6,904 ms |
+| `suttons-f0` | `F0-ueberfaellig-mitCursor` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 7,349 ms |
+| `suttons-f1` | `F1-referenz-ohneCursor` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | where | 4,598 ms |
+| `suttons-f1` | `F1-referenz-mitCursor` | `m` | range | `MessageLastUpdateIDX` | 151 | 436.322 | where | 6,511 ms |
+| `suttons-f1` | `F1-ueberfaellig-ohneCursor` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 4,518 ms |
+| `suttons-f1` | `F1-ueberfaellig-mitCursor` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 5,451 ms |
+| `suttons-f2` | `F2-referenz-ohneCursor` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | where | 7,841 ms |
+| `suttons-f2` | `F2-referenz-mitCursor` | `m` | range | `MessageLastUpdateIDX` | 151 | 436.322 | where | 6,211 ms |
+| `suttons-f2` | `F2-ueberfaellig-ohneCursor` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | where | 1.379,042 ms |
+| `suttons-f2` | `F2-ueberfaellig-mitCursor` | `m` | range | `MessageLastUpdateIDX` | 151 | 436.322 | where | 1.367,099 ms |
+| `suttons-f3` | `F3-referenz-ohneCursor` | `pm` | ref | `ProjectMandant_Mandant_idx` | 146 | 1 | where; index; temporary; filesort | 1.139,967 ms |
+| `suttons-f3` | `F3-referenz-mitCursor` | `pm` | ref | `ProjectMandant_Mandant_idx` | 146 | 1 | where; index; temporary; filesort | 1.132,900 ms |
+| `suttons-f3` | `F3-ueberfaellig-ohneCursor` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 7,437 ms |
+| `suttons-f3` | `F3-ueberfaellig-mitCursor` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 8,942 ms |
+| `suttons-f4` | `F4-referenz-ohneCursor` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | where | 7,653 ms |
+| `suttons-f4` | `F4-referenz-mitCursor` | `m` | range | `MessageLastUpdateIDX` | 151 | 436.322 | where | 5,448 ms |
+| `suttons-f4` | `F4-ueberfaellig-ohneCursor` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 7,190 ms |
+| `suttons-f4` | `F4-ueberfaellig-mitCursor` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 7,314 ms |
+| `suttons-f5` | `F5-referenz-ohneCursor` | `pm` | ref | `ProjectMandant_Mandant_idx` | 146 | 1 | where; index; temporary; filesort | 1.117,393 ms |
+| `suttons-f5` | `F5-referenz-mitCursor` | `pm` | ref | `ProjectMandant_Mandant_idx` | 146 | 1 | where; index; temporary; filesort | 1.113,599 ms |
+| `suttons-f5` | `F5-ueberfaellig-ohneCursor` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 8,445 ms |
+| `suttons-f5` | `F5-ueberfaellig-mitCursor` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 7,447 ms |
+| `suttons-f6-a` | `F6-SUTTONS-30d-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | where | 7,359 ms |
+| `suttons-f6-a` | `F6-SUTTONS-30d-referenz-mitCursor` | `m` | range | `MessageLastUpdateIDX` | 151 | 436.322 | where | 6,940 ms |
+| `suttons-f6-a` | `F6-SUTTONS-30d-ueberfaellig` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 8,321 ms |
+| `suttons-f6-a` | `F6-SUTTONS-30d-ueberfaellig-mitCursor` | `m` | range | `MessageStatusIDX` | 123 | 539 | index condition; where; filesort | 8,667 ms |
+| `suttons-f6-b` | `F6-SUTTONS-24h-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 13.534 | where | 6,994 ms |
+| `suttons-f6-b` | `F6-SUTTONS-7d-referenz` | `m` | range | `MessageLastUpdateIDX` | 5 | 52.752 | where | 7,493 ms |
+| `suttons-f6-b` | `F6-SUTTONS-30d-fehler` | `m` | range | `MessageStatusIDX` | 123 | 6.257 | index condition; where; filesort | 25,572 ms |
+| `suttons-f6-b` | `F6-SUTTONS-30d-prozess-gross` | `m` | range | `MessageLastUpdateIDX` | 5 | 437.150 | where | 6,373 ms |
+| `suttons-f6-b` | `F6-SUTTONS-30d-prozess-klein` | `m` | range | `ProejctIDIDX` | 147 | 740 | index condition; where; filesort | 6,003 ms |
+
+#### Die elf Pläne im Volltext
+
+#### F0 · NEXANS · 30 Tage, ohne Cursor — die heutige Fassung
+
+```
++------+-------------+-------+--------+----------------------------------------------------------------------------------------+----------------------+---------+-----------------------------------------------+--------+--------------------------+
+| id   | select_type | table | type   | possible_keys                                                                          | key                  | key_len | ref                                           | rows   | Extra                    |
++------+-------------+-------+--------+----------------------------------------------------------------------------------------+----------------------+---------+-----------------------------------------------+--------+--------------------------+
+|    1 | PRIMARY     | m     | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageLastUpdateProcessMessageIDX | MessageLastUpdateIDX | 5       | NULL                                          | 437150 | Using where              |
+|    1 | PRIMARY     | p     | eq_ref | PRIMARY                                                                                | PRIMARY              | 146     | GlassfishDB.m.ProcessID                       | 1      | Using where              |
+|    1 | PRIMARY     | pr    | eq_ref | PRIMARY                                                                                | PRIMARY              | 146     | GlassfishDB.p.ProjectID                       | 1      | Using where              |
+|    1 | PRIMARY     | mp    | eq_ref | PRIMARY,Process_ProjectFK                                                              | PRIMARY              | 146     | GlassfishDB.m.ProcessID                       | 1      | Using where              |
+|    1 | PRIMARY     | pm    | eq_ref | PRIMARY,ProjectMandant_Mandant_idx                                                     | PRIMARY              | 292     | GlassfishDB.mp.ProjectID,const                | 1      | Using where; Using index |
+|    1 | PRIMARY     | s     | eq_ref | PRIMARY                                                                                | PRIMARY              | 146     | GlassfishDB.m.SOSID                           | 1      | Using where              |
+|    1 | PRIMARY     | sa    | eq_ref | PRIMARY,SOSAction_SOSFK                                                                | PRIMARY              | 148     | GlassfishDB.m.SOSID,GlassfishDB.m.SOSActionID | 1      | Using where              |
++------+-------------+-------+--------+----------------------------------------------------------------------------------------+----------------------+---------+-----------------------------------------------+--------+--------------------------+
+```
+
+#### F0 · SUTTONS · 30 Tage, ohne Cursor — die heutige Fassung
+
+```
++------+-------------+-------+--------+----------------------------------------------------------------------------------------+----------------------------+---------+-----------------------------------------------+--------+-----------------------------------------------------------+
+| id   | select_type | table | type   | possible_keys                                                                          | key                        | key_len | ref                                           | rows   | Extra                                                     |
++------+-------------+-------+--------+----------------------------------------------------------------------------------------+----------------------------+---------+-----------------------------------------------+--------+-----------------------------------------------------------+
+|    1 | PRIMARY     | pm    | ref    | PRIMARY,ProjectMandant_Mandant_idx                                                     | ProjectMandant_Mandant_idx | 146     | const                                         | 1      | Using where; Using index; Using temporary; Using filesort |
+|    1 | PRIMARY     | mp    | ref    | PRIMARY,Process_ProjectFK                                                              | Process_ProjectFK          | 147     | GlassfishDB.pm.ProjectID                      | 5      | Using index                                               |
+|    1 | PRIMARY     | m     | ref    | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageLastUpdateProcessMessageIDX | ProejctIDIDX               | 147     | GlassfishDB.mp.ProcessID                      | 197804 | Using where                                               |
+|    1 | PRIMARY     | p     | eq_ref | PRIMARY                                                                                | PRIMARY                    | 146     | GlassfishDB.mp.ProcessID                      | 1      |                                                           |
+|    1 | PRIMARY     | pr    | eq_ref | PRIMARY                                                                                | PRIMARY                    | 146     | GlassfishDB.p.ProjectID                       | 1      | Using where                                               |
+|    1 | PRIMARY     | s     | eq_ref | PRIMARY                                                                                | PRIMARY                    | 146     | GlassfishDB.m.SOSID                           | 1      | Using where                                               |
+|    1 | PRIMARY     | sa    | eq_ref | PRIMARY,SOSAction_SOSFK                                                                | PRIMARY                    | 148     | GlassfishDB.m.SOSID,GlassfishDB.m.SOSActionID | 1      | Using where                                               |
++------+-------------+-------+--------+----------------------------------------------------------------------------------------+----------------------------+---------+-----------------------------------------------+--------+-----------------------------------------------------------+
+```
+
+#### F6 · SUTTONS · 30 Tage, ohne Cursor
+
+```
++------+-------------+-------+--------+----------------------------------------------------------------------------------------+----------------------------+---------+-----------------------------------------------+--------+--------------------------+
+| id   | select_type | table | type   | possible_keys                                                                          | key                        | key_len | ref                                           | rows   | Extra                    |
++------+-------------+-------+--------+----------------------------------------------------------------------------------------+----------------------------+---------+-----------------------------------------------+--------+--------------------------+
+|    1 | PRIMARY     | m     | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageLastUpdateProcessMessageIDX | MessageLastUpdateIDX       | 5       | NULL                                          | 437150 | Using where              |
+|    1 | PRIMARY     | pm    | ref    | PRIMARY,ProjectMandant_Mandant_idx                                                     | ProjectMandant_Mandant_idx | 146     | const                                         | 1      | Using where; Using index |
+|    1 | PRIMARY     | p     | eq_ref | PRIMARY                                                                                | PRIMARY                    | 146     | GlassfishDB.m.ProcessID                       | 1      | Using where              |
+|    1 | PRIMARY     | pr    | eq_ref | PRIMARY                                                                                | PRIMARY                    | 146     | GlassfishDB.p.ProjectID                       | 1      | Using where              |
+|    1 | PRIMARY     | mp    | eq_ref | PRIMARY                                                                                | PRIMARY                    | 146     | GlassfishDB.m.ProcessID                       | 1      | Using where              |
+|    1 | PRIMARY     | s     | eq_ref | PRIMARY                                                                                | PRIMARY                    | 146     | GlassfishDB.m.SOSID                           | 1      | Using where              |
+|    1 | PRIMARY     | sa    | eq_ref | PRIMARY,SOSAction_SOSFK                                                                | PRIMARY                    | 148     | GlassfishDB.m.SOSID,GlassfishDB.m.SOSActionID | 1      | Using where              |
++------+-------------+-------+--------+----------------------------------------------------------------------------------------+----------------------------+---------+-----------------------------------------------+--------+--------------------------+
+```
+
+#### F0 · NXHBE · 30 Tage — 1,128 ms
+
+```
++------+-------------+-------+--------+----------------------------------------------------------------------------------------+----------------------------+---------+-----------------------------------------------+--------+-----------------------------------------------------------+
+| id   | select_type | table | type   | possible_keys                                                                          | key                        | key_len | ref                                           | rows   | Extra                                                     |
++------+-------------+-------+--------+----------------------------------------------------------------------------------------+----------------------------+---------+-----------------------------------------------+--------+-----------------------------------------------------------+
+|    1 | PRIMARY     | pm    | ref    | PRIMARY,ProjectMandant_Mandant_idx                                                     | ProjectMandant_Mandant_idx | 146     | const                                         | 2      | Using where; Using index; Using temporary; Using filesort |
+|    1 | PRIMARY     | mp    | ref    | PRIMARY,Process_ProjectFK                                                              | Process_ProjectFK          | 147     | GlassfishDB.pm.ProjectID                      | 5      | Using index                                               |
+|    1 | PRIMARY     | m     | ref    | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageLastUpdateProcessMessageIDX | ProejctIDIDX               | 147     | GlassfishDB.mp.ProcessID                      | 197804 | Using where                                               |
+|    1 | PRIMARY     | p     | eq_ref | PRIMARY                                                                                | PRIMARY                    | 146     | GlassfishDB.mp.ProcessID                      | 1      |                                                           |
+|    1 | PRIMARY     | pr    | eq_ref | PRIMARY                                                                                | PRIMARY                    | 146     | GlassfishDB.p.ProjectID                       | 1      | Using where                                               |
+|    1 | PRIMARY     | s     | eq_ref | PRIMARY                                                                                | PRIMARY                    | 146     | GlassfishDB.m.SOSID                           | 1      | Using where                                               |
+|    1 | PRIMARY     | sa    | eq_ref | PRIMARY,SOSAction_SOSFK                                                                | PRIMARY                    | 148     | GlassfishDB.m.SOSID,GlassfishDB.m.SOSActionID | 1      | Using where                                               |
++------+-------------+-------+--------+----------------------------------------------------------------------------------------+----------------------------+---------+-----------------------------------------------+--------+-----------------------------------------------------------+
+```
+
+#### F6 · NXHBE · 30 Tage — 3.386,439 ms
+
+```
++------+-------------+-------+--------+----------------------------------------------------------------------------------------+----------------------------+---------+-----------------------------------------------+--------+---------------------------------------------------------------------+
+| id   | select_type | table | type   | possible_keys                                                                          | key                        | key_len | ref                                           | rows   | Extra                                                               |
++------+-------------+-------+--------+----------------------------------------------------------------------------------------+----------------------------+---------+-----------------------------------------------+--------+---------------------------------------------------------------------+
+|    1 | PRIMARY     | m     | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageLastUpdateProcessMessageIDX | MessageLastUpdateIDX       | 5       | NULL                                          | 437150 | Using index condition; Using where; Using temporary; Using filesort |
+|    1 | PRIMARY     | p     | eq_ref | PRIMARY                                                                                | PRIMARY                    | 146     | GlassfishDB.m.ProcessID                       | 1      | Using where                                                         |
+|    1 | PRIMARY     | pr    | eq_ref | PRIMARY                                                                                | PRIMARY                    | 146     | GlassfishDB.p.ProjectID                       | 1      | Using where                                                         |
+|    1 | PRIMARY     | mp    | eq_ref | PRIMARY                                                                                | PRIMARY                    | 146     | GlassfishDB.m.ProcessID                       | 1      |                                                                     |
+|    1 | PRIMARY     | s     | eq_ref | PRIMARY                                                                                | PRIMARY                    | 146     | GlassfishDB.m.SOSID                           | 1      | Using where                                                         |
+|    1 | PRIMARY     | sa    | eq_ref | PRIMARY,SOSAction_SOSFK                                                                | PRIMARY                    | 148     | GlassfishDB.m.SOSID,GlassfishDB.m.SOSActionID | 1      | Using where                                                         |
+|    1 | PRIMARY     | pm    | range  | PRIMARY,ProjectMandant_Mandant_idx                                                     | ProjectMandant_Mandant_idx | 146     | NULL                                          | 2      | Using where; Using index; Using join buffer (flat, BNL join)        |
++------+-------------+-------+--------+----------------------------------------------------------------------------------------+----------------------------+---------+-----------------------------------------------+--------+---------------------------------------------------------------------+
+```
+
+#### F0 · EDITIONLINGERI · 30 Tage — 2.313,808 ms, ohne jeden Eingriff
+
+```
++------+-------------+-------+--------+----------------------------------------------------------------------------------------+----------------------+---------+-----------------------------------------------+--------+--------------------------+
+| id   | select_type | table | type   | possible_keys                                                                          | key                  | key_len | ref                                           | rows   | Extra                    |
++------+-------------+-------+--------+----------------------------------------------------------------------------------------+----------------------+---------+-----------------------------------------------+--------+--------------------------+
+|    1 | PRIMARY     | m     | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageLastUpdateProcessMessageIDX | MessageLastUpdateIDX | 5       | NULL                                          | 437150 | Using where              |
+|    1 | PRIMARY     | p     | eq_ref | PRIMARY                                                                                | PRIMARY              | 146     | GlassfishDB.m.ProcessID                       | 1      | Using where              |
+|    1 | PRIMARY     | pr    | eq_ref | PRIMARY                                                                                | PRIMARY              | 146     | GlassfishDB.p.ProjectID                       | 1      | Using where              |
+|    1 | PRIMARY     | mp    | eq_ref | PRIMARY,Process_ProjectFK                                                              | PRIMARY              | 146     | GlassfishDB.m.ProcessID                       | 1      | Using where              |
+|    1 | PRIMARY     | pm    | eq_ref | PRIMARY,ProjectMandant_Mandant_idx                                                     | PRIMARY              | 292     | GlassfishDB.mp.ProjectID,const                | 1      | Using where; Using index |
+|    1 | PRIMARY     | s     | eq_ref | PRIMARY                                                                                | PRIMARY              | 146     | GlassfishDB.m.SOSID                           | 1      | Using where              |
+|    1 | PRIMARY     | sa    | eq_ref | PRIMARY,SOSAction_SOSFK                                                                | PRIMARY              | 148     | GlassfishDB.m.SOSID,GlassfishDB.m.SOSActionID | 1      | Using where              |
++------+-------------+-------+--------+----------------------------------------------------------------------------------------+----------------------+---------+-----------------------------------------------+--------+--------------------------+
+```
+
+#### F2 · NEXANS · 30 Tage, ueberfaellig — 129,759 ms
+
+```
++------+-------------+-------+--------+------------------------------------+----------------------+---------+-----------------------------------------------+--------+--------------------------+
+| id   | select_type | table | type   | possible_keys                      | key                  | key_len | ref                                           | rows   | Extra                    |
++------+-------------+-------+--------+------------------------------------+----------------------+---------+-----------------------------------------------+--------+--------------------------+
+|    1 | PRIMARY     | m     | range  | MessageLastUpdateIDX               | MessageLastUpdateIDX | 5       | NULL                                          | 437150 | Using where              |
+|    1 | PRIMARY     | p     | eq_ref | PRIMARY                            | PRIMARY              | 146     | GlassfishDB.m.ProcessID                       | 1      | Using where              |
+|    1 | PRIMARY     | pr    | eq_ref | PRIMARY                            | PRIMARY              | 146     | GlassfishDB.p.ProjectID                       | 1      | Using where              |
+|    1 | PRIMARY     | mp    | eq_ref | PRIMARY,Process_ProjectFK          | PRIMARY              | 146     | GlassfishDB.m.ProcessID                       | 1      | Using where              |
+|    1 | PRIMARY     | pm    | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY              | 292     | GlassfishDB.mp.ProjectID,const                | 1      | Using where; Using index |
+|    1 | PRIMARY     | s     | eq_ref | PRIMARY                            | PRIMARY              | 146     | GlassfishDB.m.SOSID                           | 1      | Using where              |
+|    1 | PRIMARY     | sa    | eq_ref | PRIMARY,SOSAction_SOSFK            | PRIMARY              | 148     | GlassfishDB.m.SOSID,GlassfishDB.m.SOSActionID | 1      | Using where              |
++------+-------------+-------+--------+------------------------------------+----------------------+---------+-----------------------------------------------+--------+--------------------------+
+```
+
+#### F0 · NEXANS · 30 Tage, Prozessfilter (drei kleine) — 1,730 ms
+
+```
++------+-------------+-------+--------+----------------------------------------------------------------------------------------+--------------+---------+-----------------------------------------------+------+----------------------------------------------------+
+| id   | select_type | table | type   | possible_keys                                                                          | key          | key_len | ref                                           | rows | Extra                                              |
++------+-------------+-------+--------+----------------------------------------------------------------------------------------+--------------+---------+-----------------------------------------------+------+----------------------------------------------------+
+|    1 | PRIMARY     | m     | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageLastUpdateProcessMessageIDX | ProejctIDIDX | 147     | NULL                                          | 134  | Using index condition; Using where; Using filesort |
+|    1 | PRIMARY     | mp    | eq_ref | PRIMARY,Process_ProjectFK                                                              | PRIMARY      | 146     | GlassfishDB.m.ProcessID                       | 1    | Using where                                        |
+|    1 | PRIMARY     | pm    | eq_ref | PRIMARY,ProjectMandant_Mandant_idx                                                     | PRIMARY      | 292     | GlassfishDB.mp.ProjectID,const                | 1    | Using where; Using index                           |
+|    1 | PRIMARY     | p     | eq_ref | PRIMARY                                                                                | PRIMARY      | 146     | GlassfishDB.m.ProcessID                       | 1    |                                                    |
+|    1 | PRIMARY     | pr    | eq_ref | PRIMARY                                                                                | PRIMARY      | 146     | GlassfishDB.p.ProjectID                       | 1    | Using where                                        |
+|    1 | PRIMARY     | s     | eq_ref | PRIMARY                                                                                | PRIMARY      | 146     | GlassfishDB.m.SOSID                           | 1    | Using where                                        |
+|    1 | PRIMARY     | sa    | eq_ref | PRIMARY,SOSAction_SOSFK                                                                | PRIMARY      | 148     | GlassfishDB.m.SOSID,GlassfishDB.m.SOSActionID | 1    | Using where                                        |
++------+-------------+-------+--------+----------------------------------------------------------------------------------------+--------------+---------+-----------------------------------------------+------+----------------------------------------------------+
+```
+
+#### F4 · NEXANS · 30 Tage, Prozessfilter (drei kleine) — 1.547,772 ms
+
+```
++------+-------------+-------+--------+---------------------------------------------------------+----------------------------+---------+-----------------------------------------------+--------+------------------------------------------------------------------------+
+| id   | select_type | table | type   | possible_keys                                           | key                        | key_len | ref                                           | rows   | Extra                                                                  |
++------+-------------+-------+--------+---------------------------------------------------------+----------------------------+---------+-----------------------------------------------+--------+------------------------------------------------------------------------+
+|    1 | PRIMARY     | pm    | ref    | PRIMARY,ProjectMandant_Mandant_idx                      | ProjectMandant_Mandant_idx | 146     | const                                         | 17     | Using where; Using index; Using temporary; Using filesort              |
+|    1 | PRIMARY     | mp    | ref    | PRIMARY,Process_ProjectFK                               | Process_ProjectFK          | 147     | GlassfishDB.pm.ProjectID                      | 5      | Using where; Using index                                               |
+|    1 | PRIMARY     | m     | range  | MessageLastUpdateIDX,MessageLastUpdateProcessMessageIDX | MessageLastUpdateIDX       | 5       | NULL                                          | 437150 | Using index condition; Using where; Using join buffer (flat, BNL join) |
+|    1 | PRIMARY     | p     | eq_ref | PRIMARY                                                 | PRIMARY                    | 146     | GlassfishDB.mp.ProcessID                      | 1      |                                                                        |
+|    1 | PRIMARY     | pr    | eq_ref | PRIMARY                                                 | PRIMARY                    | 146     | GlassfishDB.p.ProjectID                       | 1      | Using where                                                            |
+|    1 | PRIMARY     | s     | eq_ref | PRIMARY                                                 | PRIMARY                    | 146     | GlassfishDB.m.SOSID                           | 1      | Using where                                                            |
+|    1 | PRIMARY     | sa    | eq_ref | PRIMARY,SOSAction_SOSFK                                 | PRIMARY                    | 148     | GlassfishDB.m.SOSID,GlassfishDB.m.SOSActionID | 1      | Using where                                                            |
++------+-------------+-------+--------+---------------------------------------------------------+----------------------------+---------+-----------------------------------------------+--------+------------------------------------------------------------------------+
+```
+
+#### F0 · NEXANS · 30 Tage, Prozessfilter (drei grosse) — 7.459,912 ms
+
+```
++------+-------------+-------+--------+----------------------------------------------------------------------------------------+----------------------------+---------+-----------------------------------------------+--------+-----------------------------------------------------------+
+| id   | select_type | table | type   | possible_keys                                                                          | key                        | key_len | ref                                           | rows   | Extra                                                     |
++------+-------------+-------+--------+----------------------------------------------------------------------------------------+----------------------------+---------+-----------------------------------------------+--------+-----------------------------------------------------------+
+|    1 | PRIMARY     | pm    | ref    | PRIMARY,ProjectMandant_Mandant_idx                                                     | ProjectMandant_Mandant_idx | 146     | const                                         | 17     | Using where; Using index; Using temporary; Using filesort |
+|    1 | PRIMARY     | mp    | ref    | PRIMARY,Process_ProjectFK                                                              | Process_ProjectFK          | 147     | GlassfishDB.pm.ProjectID                      | 5      | Using where; Using index                                  |
+|    1 | PRIMARY     | m     | ref    | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageLastUpdateProcessMessageIDX | ProejctIDIDX               | 147     | GlassfishDB.mp.ProcessID                      | 197804 | Using where                                               |
+|    1 | PRIMARY     | p     | eq_ref | PRIMARY                                                                                | PRIMARY                    | 146     | GlassfishDB.mp.ProcessID                      | 1      |                                                           |
+|    1 | PRIMARY     | pr    | eq_ref | PRIMARY                                                                                | PRIMARY                    | 146     | GlassfishDB.p.ProjectID                       | 1      | Using where                                               |
+|    1 | PRIMARY     | s     | eq_ref | PRIMARY                                                                                | PRIMARY                    | 146     | GlassfishDB.m.SOSID                           | 1      | Using where                                               |
+|    1 | PRIMARY     | sa    | eq_ref | PRIMARY,SOSAction_SOSFK                                                                | PRIMARY                    | 148     | GlassfishDB.m.SOSID,GlassfishDB.m.SOSActionID | 1      | Using where                                               |
++------+-------------+-------+--------+----------------------------------------------------------------------------------------+----------------------------+---------+-----------------------------------------------+--------+-----------------------------------------------------------+
+```
+
+#### F1 · NEXANS · 30 Tage, mit Cursor — 51,422 ms
+
+```
++------+-------------+-------+--------+------------------------------------------------------------------------------------------------+----------------------+---------+-----------------------------------------------+--------+-------------+
+| id   | select_type | table | type   | possible_keys                                                                                  | key                  | key_len | ref                                           | rows   | Extra       |
++------+-------------+-------+--------+------------------------------------------------------------------------------------------------+----------------------+---------+-----------------------------------------------+--------+-------------+
+|    1 | SIMPLE      | m     | range  | PRIMARY,ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageLastUpdateProcessMessageIDX | MessageLastUpdateIDX | 151     | NULL                                          | 437035 | Using where |
+|    1 | SIMPLE      | p     | eq_ref | PRIMARY                                                                                        | PRIMARY              | 146     | GlassfishDB.m.ProcessID                       | 1      | Using where |
+|    1 | SIMPLE      | pr    | eq_ref | PRIMARY                                                                                        | PRIMARY              | 146     | GlassfishDB.p.ProjectID                       | 1      | Using where |
+|    1 | SIMPLE      | s     | eq_ref | PRIMARY                                                                                        | PRIMARY              | 146     | GlassfishDB.m.SOSID                           | 1      | Using where |
+|    1 | SIMPLE      | sa    | eq_ref | PRIMARY,SOSAction_SOSFK                                                                        | PRIMARY              | 148     | GlassfishDB.m.SOSID,GlassfishDB.m.SOSActionID | 1      | Using where |
++------+-------------+-------+--------+------------------------------------------------------------------------------------------------+----------------------+---------+-----------------------------------------------+--------+-------------+
+```
+
+
+---
+
 ## 6. Die BAM-Werte sind aus der Liste heraus — und warum
 
 Bis zur Nachbesserung von Schritt 4 trug jede Zeile zwei BAM-Spalten, nachgeladen in einer zweiten
@@ -1249,6 +1760,46 @@ Der alte Link (Punkt 6) *ist* eine von Hand geöffnete URL, denn genau das ist d
 ---
 
 ## 9. Offene Punkte
+
+### Zum Plan der Liste (Stand 27.08.2026, Schritt 10b‑1 Teil A)
+
+> **Wo die Vermerke zu den Punkten 55 bis 57 stehen und warum hier.** Die Punkte sind in
+> [`messungen-schritt10b.md`](messungen-schritt10b.md) vergeben; diese Datei ist für Schritt 10b‑1
+> ausdrücklich **nicht anzufassen**. Die Vermerke stehen deshalb dort, wo die Sache hingehört: 56
+> und 57 hier, 55 in [`rollup.md`](rollup.md) §13.
+
+- **Offener Punkt 57 ist beantwortet und bleibt offen** *(27.08.2026)*. Beantwortet: Ja, es betrifft
+  weitere Mandanten, und die vermutete Ursache trägt nicht — §5a hat alle zehn gemessen. Offen:
+  **Es ist nichts repariert.** Sechs Fassungen sind gemessen, keine trägt ohne Schaden, und der
+  Auftrag sieht für diesen Fall „nicht bauen, melden" vor. Was es bräuchte, steht in §5a unter
+  „Was es bräuchte"; die Entscheidung gehört dem Auftraggeber.
+
+- **63. Zwei Mandanten zahlen für ihre Dünne, und keiner von beiden steht in Punkt 57.**
+  `EDITIONLINGERI` kostet über 30 Tage **2.313,808 ms**, `ZAST` **288,561 ms** — beide
+  zeit-getrieben, beide ohne jeden Filter, beide im zulässigen Wert `zeitraum=30d`. Der Grund ist
+  derselbe: Die Abfrage liest das ganze Fenster, weil sie nie 51 Zeilen findet.
+  `EDITIONLINGERI` ist damit **der teuerste Fall des Endpunkts nach dem Prozessfilter** und mehr als
+  doppelt so teuer wie der `SUTTONS`-Fall, um den Punkt 57 geht. **Ein Zeitfenster hilft dagegen
+  nicht** — es ist bereits gesetzt.
+
+- **64. Der Prozessfilter über 30 Tage liegt bei `NEXANS` auf 7.459,912 ms und damit auf 74,6 % der
+  Zeitgrenze des Lese-Pools.** Gemessen warm, mit drei Prozessen, die viel Verkehr tragen; der
+  Kaltfaktor aus M44 geht bis 9,66, und der Pool bricht nach 10 s ab
+  ([`datenzugriff.md`](datenzugriff.md) §1). **Der Fall ist heute über die Prozessauswahl mit zwei
+  Klicks erreichbar** und liefert dann `500` statt einer Liste. Er ist in §5a gemessen und in diesem
+  Schritt nicht angefasst worden — ein Eingriff hier hätte dieselbe Prüfung über alle zehn Mandanten
+  gebraucht wie der Listen-Fix selbst.
+
+- **65. Die Planwahl ruht auf einer Schätzung, die für jeden Mandanten dieselbe ist.**
+  `ProejctIDIDX`, `Message_ProcessFK` und `MessageStatusIDX` tragen alle die `CARDINALITY` **18**
+  (M83, unabhängig bestätigt in §5a). Daraus folgt für jeden Prozessnachschlag dieselbe Schätzung
+  von **197.804** Zeilen — bei einem Mandanten mit neun Zeilen wie bei einem mit zweihunderttausend.
+  Solange das so bleibt, ist jede Planwahl dieses Endpunkts ein Zufallstreffer, und jeder Eingriff
+  verschiebt nur, **welche** Mandanten davon profitieren. `ANALYZE TABLE` ist keine Abhilfe: Es
+  wäre ein Schreibzugriff auf `GlassfishDB`.
+
+
+### Zum Freitextfilter und zum Zeitfenster
 
 - **Der Freitextfilter bleibt teuer, und beide vorgesehenen Abhilfen sind widerlegt** (geprüft am
   06.08.2026, Messungen M10 und L11). Der Punkt bleibt offen — aber er ist jetzt ein *bekannter*
