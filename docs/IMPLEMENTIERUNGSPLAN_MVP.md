@@ -985,6 +985,63 @@ einem MANDANT-Nutzer `403` — auch dann, wenn er auf dessen eigenes Konto zeigt
 > nicht: Sein Abnahmekriterium *„Die Zahlen stimmen stichprobenartig mit einer direkten Abfrage
 > überein"* ist über einer ungepflegten Grundlage erfüllbar und trotzdem wertlos.
 
+> ### ⚠️ Schritt 10 ist geteilt, und der Abschnitt darüber ist an fünf Stellen überholt
+> *(Teilung entschieden am 24.08.2026, eingetragen am 27.08.2026)*
+>
+> **Der Kasten vom 24.08.2026 darüber bleibt unverändert** — er hat recht behalten, und M91 hat ihn
+> beziffert: Drei von zehn Mandanten sind kuratiert, sechs haben **keine einzige** Katalogzeile,
+> einer hat 390 offene.
+>
+> **Die Teilung.** Der Durchstich ist zu groß für einen Schritt und läuft in drei:
+>
+> | Teil | Inhalt | Stand |
+> |---|---|---|
+> | **10a** | Rollup: `message_rollup`, `rollup_lauf`, Delta- und Volllauf, kein Endpunkt | **fertig am 26.08.2026** ([`rollup.md`](rollup.md)) |
+> | **10b** | Dashboard: Leseabfrage, Kacheln, Verlaufsdiagramm, Verteilungen | offen |
+> | **10c** | Process View, gruppiert nach kuratiertem Partner | offen |
+>
+> **Und fünf Angaben des Abschnitts oben sind inhaltlich überholt.** Sie bleiben stehen; hier steht,
+> was gilt.
+>
+> **1. Der Rollup-Schlüssel.** Oben steht „`message_rollup` je Stunde, Mandant, Prozess, Partner,
+> Richtung und Status". Nach Entscheidung **E‑a** ist der Schlüssel
+> **`(stunde, process_id, message_status)`**; Mandant, Partner und Richtung stehen **nicht** in der
+> Zeile, sondern werden zur Lesezeit gejoint — damit wirkt jede Katalogkorrektur rückwirkend.
+> **Dieselbe falsche Angabe steht in [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §5** und ist
+> dort ebenso berichtigt; die ausführliche Begründung steht in jenem Kasten. Gemessen: M89, 11,299 ms
+> im Standardfenster mit Katalog-Join. Gebaut: [`rollup.md`](rollup.md) §2.
+>
+> **2. Nur die Stundenebene wird materialisiert** (Entscheidung **E‑b**). Tages- und Monatsansicht
+> werden zur Lesezeit aus der Stundentabelle hochaggregiert, es gibt keine zweite und dritte
+> Tabelle. **Gestützt von M87:** Die Verdichtung von der Stunden- auf die Tagesebene bringt nur
+> **Faktor 2,73** (335.610 gegen 123.049 Zeilen), auf die Monatsebene Faktor 28,07. Für 2,73 lohnt
+> keine zweite Tabelle, die eigenen Lauf, eigene Löschlogik und eigene Abweichungsmöglichkeit
+> mitbrächte. *Ungemessen bleibt, was die Hochaggregation zur Lesezeit **kostet*** —
+> [`messungen-schritt10.md`](messungen-schritt10.md), „Was diese Runde nicht zeigt", Punkt 8.
+>
+> **3. „Die drei getrennten Problemkategorien" sind zwei.** *Unquittiert* ist mit **E‑d** aus dem
+> MVP genommen — keine operative Definition, und die Kategorie hängt am ungedeckten Takt von
+> `MatchInterchange`. Begründung im Kasten bei
+> [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §4.2 Punkt 3. **Und *Überfällig* kommt nicht
+> aus dem Rollup**, sondern aus einer Live-Abfrage (**E‑c**) — die erste benannte Ausnahme der Zeile
+> „Dashboard-Kennzahlen ausschließlich aus dem Rollup" oben. Gemessen: M90, 2,275 ms.
+>
+> **4. Die Standardansicht ist Stundenauflösung über 48 Stunden.** Die Umschaltung Stunde/Tag/Monat
+> oben bleibt; was fehlte, war der Standard. Gemessen für genau dieses Fenster: 11,299 ms mit
+> Katalog-Join, **2,3 %** des 500‑ms‑Budgets aus der Abnahme unten.
+>
+> **5. „Verteilung nach Partner" wird Top‑10 plus „Rest".** Eine ungedeckelte Liste trägt nicht:
+> Nach M91 hält der **größte Partner 83,03 %** im Tagesfenster und **58,61 %** im Monatsfenster,
+> Rang 1 zu Rang 10 steht **108 : 1**, und die zehn größten decken 90,56 % bzw. 76,93 % ab. Die
+> Ränge 11 bis 115 sind in einem Diagramm nicht mehr unterscheidbar — sie gehören in **eine** Zeile
+> „Rest", die aufklappbar sein darf, aber nicht als hundert Balken unter einem. Entschieden am
+> 26.08.2026; die Frage stand seit dem 21.08.2026 als offener Punkt 39 in
+> [`messungen-schritt9.md`](messungen-schritt9.md).
+>
+> **Die Zeile „Nicht zugeordnete Prozesse werden als eigene Kategorie ausgewiesen" gilt unverändert
+> und wird durch Top‑10 nicht berührt** — „nicht zugeordnet" ist keine Rangposition und fällt nie
+> in den „Rest". Bei `SUTTONS` und `VOTG` ist es heute die **einzige** Zeile der Verteilung, 100 %.
+
 **Abgrenzung:** Keine frei konfigurierbaren Dashboards, keine Alarmierung.
 
 **Abnahme:** Das Dashboard lädt in unter 500 Millisekunden. Die Zahlen stimmen stichprobenartig
