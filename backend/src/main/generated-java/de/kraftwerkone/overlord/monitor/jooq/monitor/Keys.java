@@ -10,6 +10,7 @@ import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AuditLog;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.BamSollaenge;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.BamSpalte;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.MessageRollup;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.MessageRollupTag;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.ProcessCatalog;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.RollupLauf;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.AppUserMandantRecord;
@@ -18,6 +19,7 @@ import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.AuditLogReco
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.BamSollaengeRecord;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.BamSpalteRecord;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.MessageRollupRecord;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.MessageRollupTagRecord;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.ProcessCatalogRecord;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.RollupLaufRecord;
 
@@ -47,6 +49,7 @@ public class Keys {
     public static final UniqueKey<BamSollaengeRecord> KEY_BAM_SOLLAENGE_PRIMARY = Internal.createUniqueKey(BamSollaenge.BAM_SOLLAENGE, DSL.name("KEY_bam_sollaenge_PRIMARY"), new TableField[] { BamSollaenge.BAM_SOLLAENGE.MANDANT_ID, BamSollaenge.BAM_SOLLAENGE.MESSAGE_BAM_TYPE }, true);
     public static final UniqueKey<BamSpalteRecord> KEY_BAM_SPALTE_PRIMARY = Internal.createUniqueKey(BamSpalte.BAM_SPALTE, DSL.name("KEY_bam_spalte_PRIMARY"), new TableField[] { BamSpalte.BAM_SPALTE.MANDANT_ID, BamSpalte.BAM_SPALTE.POSITION }, true);
     public static final UniqueKey<MessageRollupRecord> KEY_MESSAGE_ROLLUP_PRIMARY = Internal.createUniqueKey(MessageRollup.MESSAGE_ROLLUP, DSL.name("KEY_message_rollup_PRIMARY"), new TableField[] { MessageRollup.MESSAGE_ROLLUP.STUNDE, MessageRollup.MESSAGE_ROLLUP.PROCESS_ID, MessageRollup.MESSAGE_ROLLUP.MESSAGE_STATUS }, true);
+    public static final UniqueKey<MessageRollupTagRecord> KEY_MESSAGE_ROLLUP_TAG_PRIMARY = Internal.createUniqueKey(MessageRollupTag.MESSAGE_ROLLUP_TAG, DSL.name("KEY_message_rollup_tag_PRIMARY"), new TableField[] { MessageRollupTag.MESSAGE_ROLLUP_TAG.TAG, MessageRollupTag.MESSAGE_ROLLUP_TAG.PROCESS_ID, MessageRollupTag.MESSAGE_ROLLUP_TAG.MESSAGE_STATUS }, true);
     public static final UniqueKey<ProcessCatalogRecord> KEY_PROCESS_CATALOG_PRIMARY = Internal.createUniqueKey(ProcessCatalog.PROCESS_CATALOG, DSL.name("KEY_process_catalog_PRIMARY"), new TableField[] { ProcessCatalog.PROCESS_CATALOG.PROCESS_ID }, true);
     public static final UniqueKey<RollupLaufRecord> KEY_ROLLUP_LAUF_PRIMARY = Internal.createUniqueKey(RollupLauf.ROLLUP_LAUF, DSL.name("KEY_rollup_lauf_PRIMARY"), new TableField[] { RollupLauf.ROLLUP_LAUF.ID }, true);
 
