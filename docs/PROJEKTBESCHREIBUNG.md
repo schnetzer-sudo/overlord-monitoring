@@ -291,6 +291,32 @@ Die zehn Mandanten, erhoben am 28.07.2026. Die `MandantID` ist ein lesbarer Code
 vermutlich das Gegenstück zum Auffangprozess `00001_Undefined` und braucht im Dashboard eine
 gesonderte Behandlung, sonst steht ein Auffangbecken zwischen echten Kunden.
 
+> **Entschieden am 24.08.2026 (E‑f), eingetragen am 27.08.2026: keine gesonderte Behandlung.**
+> `SYSTEM` und `WOC` werden **behandelt wie jeder andere Mandant** — keine Aussiebung aus der
+> Auswahl, kein Sonderpfad im Dashboard, keine eigene Darstellung.
+>
+> **Die Begründung ist eine über die Zielgruppe und nicht über die Daten.** Beide sind technische
+> Mandanten, denen **nie ein externes Konto zugeordnet wird**. Wer sie überhaupt zu sehen bekommt,
+> ist damit ausschließlich `ADMIN` — die interne EDI-Betreuung, die weiß, was ein Auffangbecken ist.
+> Ein Sonderpfad hätte eine Zielgruppe von einer Person, und er hätte dieselbe Fläche ein zweites
+> Mal zu pflegen. Der Absatz oben löst ein Problem, das die Rollenaufteilung schon gelöst hat.
+>
+> **Konsequent ist das auch anderswo:** Die Mandantenauswahl siebt beide seit Schritt 3 nicht aus,
+> und die Benutzerverwaltung tut es aus demselben Grund nicht
+> ([`benutzerverwaltung-frontend.md`](benutzerverwaltung-frontend.md)).
+>
+> **Die Zahlen, die daneben gehören** — M91 vom 26.08.2026
+> ([`messungen-schritt10.md`](messungen-schritt10.md)): `WOC` trägt **2.529** Nachrichten auf
+> **zwei** Prozessen, von denen einer **81,77 %** hält; `SYSTEM` trägt **151** auf **einem**
+> Prozess, also 0,0045 % des Bestands. E‑f bleibt davon unberührt — es ist eine Entscheidung über
+> **Gleichbehandlung, nicht über Inhalt**. Aber wer 10b an diesen beiden Mandanten abnimmt, sieht
+> ein fast leeres Dashboard, und das ist dann kein Fehler. Vollständig als offener Punkt 47 in
+> [`messungen-schritt10.md`](messungen-schritt10.md), zusammen mit `NXHBE` (neun Nachrichten) und
+> `EDITIONLINGERI` (keine einzige).
+>
+> **Der Absatz oben bleibt stehen.** Er war die Frage, die zu E‑f geführt hat, und ohne ihn wäre
+> nicht mehr erkennbar, dass die Gleichbehandlung eine Entscheidung ist und keine Unterlassung.
+
 **`SOS` / `SOSAction`** — "Sequence of Services", der konkrete, aus Bausteinen zusammengesetzte
 Ablauf. `SOSName` ist bereits in Klartext gepflegt ("Lieferabruf von AMG (VDA)", "Eingehender
 IFTMIN BAYER") und wird als Anzeigename verwendet. Das Verhältnis Process zu SOS ist meist 1:1,
@@ -453,9 +479,54 @@ Diese drei sind bewusst getrennt und dürfen nie zu "Fehler" zusammengefasst wer
    > *Fehler*; würden beide rot, verschmölzen sie in der Wahrnehmung, obwohl der Code sie trennt.
    > Eine eigene Farbrolle ist offen und in [`visuelles-konzept.md`](visuelles-konzept.md) §7 einer
    > späteren Entscheidung vorbehalten.
+   >
+   > **Berichtigt 27.08.2026 — der Verweis geht in den falschen Abschnitt, und der Termin ist
+   > inzwischen benannt.** Der richtige Abschnitt ist **§7a („Offene Punkte")**; §7 heißt „Was
+   > bewusst fehlt" und führt die Farbrolle nur als Aufzählungszeile. Die ausgeschriebene Fassung —
+   > Rahmen (orange, Ton höchstens 85), Umfang (drei Werte), nachzurechnender Textkontrast — steht
+   > in §7a. **Und „einer späteren Entscheidung vorbehalten" ist zu unbestimmt geworden:** §7a nennt
+   > den Zeitpunkt seit dem 10.08.2026 selbst — **spätestens beim Dashboard und nicht später**, denn
+   > dort stehen die Problemkategorien nebeneinander, und eine ohne Farbe neben einer roten ist
+   > keine neutrale Darstellung, sondern eine leisere. Das Dashboard ist nach der Teilung vom
+   > 24.08.2026 **Schritt 10b**. Der Satz oben bleibt stehen; er ist der Grund, warum die
+   > Entscheidung überhaupt aufgeschoben werden konnte.
 3. **Unquittiert** — ausgehende Nachricht ohne zugeordnete Empfangsbestätigung.
    **`COMMIT_REJECTED` gehört ausdrücklich nicht hierher.** Das ist eine Quittung, nur eine
    negative. Sonst erscheint derselbe Beleg in zwei Kacheln und die Zahlen wirken erfunden.
+
+   > ### ⚠️ Nicht im MVP *(Entscheidung E‑d vom 24.08.2026, eingetragen am 27.08.2026)*
+   >
+   > **„Unquittiert" ist aus dem MVP genommen.** Die Kategorie wird in Schritt 10b nicht gebaut,
+   > nicht gezählt und nicht angezeigt.
+   >
+   > **Zwei Gründe, und der zweite ist der härtere.**
+   >
+   > 1. **Sie hat in keiner Datei eine operative Definition.** Die drei Zeilen oben sagen, was
+   >    *nicht* dazugehört (`COMMIT_REJECTED`), und nennen keine Bedingung, die sich in ein
+   >    Statement schreiben ließe: kein Statuswert, keine Frist, keine Methode. Die beiden anderen
+   >    Kategorien haben je eine benannte Stelle im Code — `MessageStatusClassifier.fehlerBedingung`
+   >    und `…istUeberfaellig`. Diese hat keine. Eine Kachel danach zu bauen hieße, die Definition
+   >    beim Bauen zu erfinden, und das verbietet Regel Q4.
+   > 2. **Sie hängt am Takt von `MatchInterchange`** — dem Event, das die COMMIT-Zuordnung
+   >    nachträgt. Dessen Takt ist seit **M31‑3 (11.08.2026) ungedeckt**, siehe den Kasten in
+   >    Abschnitt 3.3. Eine Nachricht sieht so lange unquittiert aus, wie das Event noch nicht
+   >    gelaufen ist. Ohne den Takt ist nicht sagbar, ab wann „noch keine Quittung" etwas anderes
+   >    bedeutet als „das Event ist noch nicht durch" — und eine Kachel, die Verzögerung als Problem
+   >    ausweist, ist schlimmer als keine.
+   >
+   > **Gemessen ist dazu nichts, und das ist Absicht.** Die Messrunde vom 26.08.2026 führt es
+   > ausdrücklich unter „Was diese Runde nicht zeigt", Punkt 5: *„Eine Messung ohne Definition wäre
+   > geraten."*
+   >
+   > **Der Text oben bleibt vollständig stehen** — er ist die Vorarbeit für den Tag, an dem die
+   > Kategorie gebaut wird, und die Abgrenzung gegen `COMMIT_REJECTED` gilt unverändert. **Auch die
+   > Überschrift „Die drei Problemkategorien" bleibt.** Im MVP sind es zwei; drei bleiben es
+   > fachlich. Eine Überschrift auf „die zwei" zu ändern verlöre genau die Auskunft, dass eine
+   > dritte existiert und wo sie beschrieben ist.
+   >
+   > **Für die Farbrolle heißt das:** Die Aufschiebung in
+   > [`visuelles-konzept.md`](visuelles-konzept.md) §7a betrifft in 10b nur noch *Überfällig*.
+   > „Unquittiert" braucht bis auf Weiteres keine.
 
 ### 4.3 Verkettung (Lineage)
 
@@ -512,6 +583,34 @@ Pflegeoberfläche und ohne Attribute über den Namen hinaus liefert sie nichts, 
 `SELECT DISTINCT` über die Katalogzeilen des aktiven Mandanten nicht auch liefert. Die
 Auswahlliste wird abgeleitet. `process_catalog` führte in derselben Zeile „Standort“ und
 „Belegart“ — beide entfallen, Begründung in Abschnitt 4.4.
+
+> ### ⚠️ Der Schlüssel von `message_rollup` ist ein anderer *(berichtigt am 27.08.2026)*
+>
+> **Die Zeile oben ist überholt.** Sie führt `message_rollup` als „stündliche Aggregate je
+> **Mandant, Prozess, Partner, Richtung, Status**". Entscheidung **E‑a** der Sparringsrunde vom
+> **24.08.2026** hebt das auf: Der Schlüssel ist **`(stunde, process_id, message_status)`**.
+> **Mandant, Partner und Richtung stehen nicht in der Zeile.** Sie kommen zur **Lesezeit** dazu —
+> der Mandant über `Process → ProjectMandant`, Partner und Richtung über `process_catalog`.
+>
+> **Der Grund ist nicht Sparsamkeit, sondern Rückwirkung.** Stünde der kuratierte Partner in der
+> Rollup-Zeile, wäre er dort eingefroren: Jede Katalogkorrektur wirkte erst ab der nächsten
+> Aggregation, und die Vergangenheit bliebe für immer falsch beschriftet. Gejoint wirkt dieselbe
+> Korrektur rückwirkend über den ganzen Bestand. Bei einem Katalog, der zu sieben von zehn
+> Mandanten heute noch keine einzige gepflegte Zeile trägt (M91), ist das der Unterschied zwischen
+> „später richtig" und „später richtig, auch für gestern".
+>
+> **Gemessen — M89, 26.08.2026** ([`messungen-schritt10.md`](messungen-schritt10.md)): Die
+> Leseabfrage des Dashboards kostet im Standardfenster (48 Stunden, `NEXANS`) **11,299 ms**, und
+> zwar **mit** dem Katalog-Join. Das sind **2,3 %** des 500‑ms‑Budgets aus Abschnitt 8; keine der
+> zehn gemessenen Fassungen kommt über 400 ms. Ein Mandant im Schlüssel hätte etwas gespart und
+> sich trotzdem nicht gelohnt.
+>
+> **Gebaut ist es seit dem 26.08.2026 so** ([`rollup.md`](rollup.md) §2). **Die Zeile oben bleibt
+> stehen**, weil sonst nicht mehr erkennbar wäre, dass die verbindliche Datei den Rollup einen Tag
+> lang falsch beschrieben hat — und zwar während 10a bereits nach E‑a gebaut wurde. Der Widerspruch
+> war seit dem 26.08.2026 als offener Punkt 51 in [`rollup.md`](rollup.md) §13 notiert; **die
+> Ausführung ist diese Korrekturrunde.** Dieselbe falsche Angabe steht im
+> [`IMPLEMENTIERUNGSPLAN_MVP.md`](IMPLEMENTIERUNGSPLAN_MVP.md), Schritt 10 — dort ebenso berichtigt.
 
 ### Zeichensatz und Sortierung — verbindlich
 
@@ -1024,11 +1123,68 @@ Rund **7.300 Nachrichten pro Tag** im dichten Bestand. Die Aufbewahrung beträgt
 > Die Erhebung im Volltext steht in [`messungen-schritt7.md`](messungen-schritt7.md) M33‑0 und M44,
 > die Einordnung in [`annahmen-korrekturen.md`](annahmen-korrekturen.md).
 
+> ### ⚠️ Die Aufbewahrung von 22 Monaten ist ungedeckt *(gekennzeichnet am 27.08.2026)*
+>
+> **Der Satz „Die Aufbewahrung beträgt 22 Monate — ältester Datensatz 01.10.2024" beschreibt die
+> Testkopie und nicht die Produktion.** Die Zahl ist aus `MIN`/`MAX` über
+> `Message.MessageLastUpdate` **der Kopie** hergeleitet; sie sagt, wie weit diese Kopie
+> zurückreicht, und nicht, wie lange produktiv aufbewahrt wird. Eine Aussage des Betreibers steht
+> dahinter nicht.
+>
+> | Weg | Ergebnis |
+> |---|---|
+> | `MIN`/`MAX` über die Testkopie (V5 der Messrunde, 26.08.2026) | `2024-10-01 02:00:28` bis `2026-07-08 17:21:10` — **21,2 Monate**, darin eine fünfmonatige Lücke und ein praktisch leeres Jahr 2026 |
+> | [`rohdaten.md`](rohdaten.md) §12 | produktiv **rund 18 Monate**, danach ein Archivsystem — **eine Auskunft, keine Messung** |
+> | Nachfrage beim Betreiber des Altsystems | **nicht erfolgt** |
+>
+> > **Belegvermerk** (Regel L10).
+> > *Gemessen ist:* die Ausdehnung der **Testkopie**.
+> > *Behauptet wird* in dem Satz oben: die Aufbewahrungsdauer der **Produktion**.
+> > **Die Lücke ist grundsätzlich:** Aus der Ausdehnung einer Kopie folgt nichts über die
+> > Löschregel des Originals. Eine Kopie kann jünger sein als die Aufbewahrung, älter als sie —
+> > wenn sie vor der letzten Löschung gezogen wurde —, oder zufällig gleich lang. **Von hier aus
+> > ist der Unterschied nicht messbar**, weil auf der Testkopie nichts entfernt wird.
+>
+> **Die Zahl wird nicht ersetzt.** Weder 18 noch 22 sind belegt; 18 wäre nur eine ungedeckte Angabe
+> gegen eine andere getauscht. Sie wird **gekennzeichnet** — dieselbe Bauform wie beim Takt von
+> `MatchInterchange` in Abschnitt 3.3, und aus demselben Grund: In der verbindlichen Datei steht
+> eine Angabe ohne Herkunft als Tatsache. **Die Quelle liegt beim Betreiber des Altsystems, und
+> dort ist sie zu holen.**
+>
+> **Was daran hängt, und es ist mehr als eine Fußnote.** Offener Punkt 54 in
+> [`rollup.md`](rollup.md) §13 beschreibt den Fall, dass das Altsystem alte Nachrichten entfernt:
+> Dann bleiben Rollup-Zeilen unterhalb des neuen Bestandsanfangs für immer stehen, und
+> `SUM(anzahl)` läuft gegen die Zeilenzahl von `Message` auseinander. **Ob dieser Fall eintritt,
+> hängt genau an der hier ungedeckten Angabe.** M92 rechnet deshalb ausdrücklich mit der Testkopie
+> und rechnet nichts hoch.
+
 Die Zeilenzahl war nie die richtige Kennzahl. `MessageProperty` belegt 61 GB und ist damit 82
 Prozent der Datenbank; dort entscheidet die Bytegröße.
 
 1. **Jeder Listen-Endpunkt hat ein Pflicht-Zeitfenster.** Standard 24 Stunden, Maximum ein Jahr.
    Ohne Zeitfenster keine Abfrage.
+
+   > **Benannt am 27.08.2026 — die Spannung zwischen dieser Regel und der Aufbewahrung.** Oben
+   > steht ein Bestand von **22 Monaten**, hier ein Höchstfenster von **einem Jahr**. Daraus folgt:
+   > **Rund zehn Monate des Bestands sind über einen Listen-Endpunkt nicht erreichbar** — nicht in
+   > einer Abfrage, und auch nicht in mehreren, weil das Fenster immer am gewählten Ende hängt.
+   > Über einen Cursor lässt sich nach hinten weiterblättern, aber nur innerhalb desselben Fensters.
+   >
+   > **Das ist kein Fehler, und die Regel wird nicht gelockert.** Das Werkzeug beantwortet die
+   > Frage „wo ist mein Beleg", und die stellt niemand für einen Beleg von vor achtzehn Monaten.
+   > Ein Jahr ist bereits großzügig gegen den Leitsatz aus Abschnitt 1.
+   >
+   > **Benannt gehört es trotzdem**, aus zwei Gründen. Erstens sucht sonst irgendwann jemand den
+   > Fehler in der Abfrage, wenn eine Nachricht von vor 18 Monaten „nicht existiert". Zweitens ist
+   > die Zahl **22 selbst ungedeckt** — siehe den Kasten oben. Verkürzt sich die produktive
+   > Aufbewahrung auf die dort genannten rund 18 Monate, schrumpft die unerreichbare Spanne auf
+   > sechs; verlängert sie sich, wächst sie. **Die Spannung ist damit nicht bezifferbar, nur
+   > benannt.** Erhoben als Nebenbefund der Messrunde vom 26.08.2026
+   > ([`messungen-schritt10.md`](messungen-schritt10.md), Abschnitt „Korrekturen").
+   >
+   > **Wer die alten Monate braucht, braucht etwas anderes als einen Listen-Endpunkt** — die
+   > BAM-Suche über eine bekannte Belegnummer oder, jenseits der produktiven Aufbewahrung, das
+   > Archivsystem aus [`rohdaten.md`](rohdaten.md) §12. Beides ist kein Bau dieses MVP.
 2. **Keine Live-Aggregation über `Message`.** Dashboard-Kennzahlen kommen ausschließlich aus
    `message_rollup`. Ein stündlicher Job schreibt inkrementell fort.
    *Begründung korrigiert 27.07.2026:* Bei 3,3 Millionen Zeilen und 2,9 GB wäre eine
@@ -1036,11 +1192,80 @@ Prozent der Datenbank; dort entscheidet die Bytegröße.
    existiert, damit das Dashboard unter einer halben Sekunde lädt und die Produktionsdatenbank
    nichts davon merkt, nicht weil eine Live-Abfrage scheitern würde. Eine Regel, die mit einer
    falschen Zahl begründet ist, wird beim ersten Zweifel gekippt.
+
+   > ### Die erste benannte Ausnahme dieser Regel: „Überfällig" *(E‑c, 24.08.2026, eingetragen am 27.08.2026)*
+   >
+   > **Das Wort „ausschließlich" bleibt stehen, und daneben steht diese Ausnahme.** Die Kachel
+   > *Überfällig* kommt aus einer **Live-Abfrage** über `Message`, nicht aus `message_rollup`.
+   >
+   > **Der Grund ist, dass die Kategorie an `jetzt` hängt.** „Überfällig" heißt nach Abschnitt 4.2:
+   > nicht in einem Endstatus **und** `MessageLastUpdate + MessageTimeout` liegt in der
+   > Vergangenheit. Der zweite Teil bewegt sich mit der Uhr. Ein gespeicherter Zähler wäre in der
+   > Sekunde nach dem Rollup-Lauf falsch — und zwar in beide Richtungen: Zeilen laufen ohne jede
+   > Datenänderung in die Kategorie hinein, und eine Nachricht, die fertig wird, fällt heraus, ohne
+   > dass eine Aggregation davon erführe. Das ist kein Genauigkeitsproblem, das man mit einem
+   > kürzeren Takt löste; es ist eine Kennzahl, die es in gespeicherter Form nicht gibt.
+   >
+   > **Gemessen — M90, 26.08.2026** ([`messungen-schritt10.md`](messungen-schritt10.md)):
+   >
+   > | Fassung | Laufzeit |
+   > |---|---:|
+   > | Standardfenster (48 h, `NEXANS`, mit Mandantenfilter) | **2,275 ms** |
+   > | „insgesamt", ohne jedes Zeitfenster | **4,275 ms** |
+   > | teuerste gemessene Fassung überhaupt | 5,371 ms |
+   >
+   > Die Abfrage liest **539 Indexsätze** über `MessageStatusIDX` und schlägt für jeden einmal in
+   > der Mandantenkette nach. Sie skaliert mit der Zahl der **offenen** Zeilen, nicht mit dem
+   > Bestand — deshalb kostet die Fassung *ohne* Zeitfenster nur zwei Millisekunden mehr. **Das ist
+   > keine Live-Aggregation über `Message` im Sinne dieser Regel**, sondern ein Indexzugriff mit
+   > Nachschlagen. Zusammen mit der Rollup-Leseabfrage aus M89 steht die Landingpage bei
+   > **17,86 ms** von 500.
+   >
+   > **Eine benannte Ausnahme ist etwas anderes als eine aufgeweichte Regel.** Sie ist einzeln
+   > begründet, einzeln gemessen und einzeln gezählt — genau wie die Ausnahmen von M1 und M2, die
+   > dieses Projekt in [`mandantentrennung.md`](mandantentrennung.md) namentlich führt. **Taucht
+   > hier jemals eine zweite auf, ist das ein Signal und keine Kleinigkeit.** Wer eine zweite
+   > Kennzahl live rechnen will, trägt sie hier ein und begründet sie — und misst sie, denn der
+   > Vorbehalt aus M89 gilt: Beim Monatsfenster kostet die Rollup-Leseabfrage bereits 237,67 ms,
+   > und dort dürfen die Kacheln nicht zusätzlich live rechnen.
 3. **Keine `OFFSET`-Paginierung.** Cursor-basiert über `(MessageLastUpdate, MessageID)`.
 4. **`MessageProperty` nur über `MessageID`.** Nie filtern, gruppieren oder sortieren über den Wert.
 5. **BAM-Suche mit hartem Limit und Mindestlänge** des Suchbegriffs. BAM-Werte wie `050` kommen
    millionenfach vor.
 6. **Der Rollup-Job läuft gedrosselt.** Er teilt sich die Instanz mit der Produktion.
+
+   > **Verortet am 27.08.2026 — die Regel wird nicht gestrichen, sie bekommt ihre Stelle.**
+   > Gemessen in M88 und M92 (26.08.2026) und an der gebauten Fassung nachgemessen
+   > ([`rollup.md`](rollup.md) §9): **Der Rollup-Job hat zwei Laufarten, und die Regel trifft nur
+   > eine davon.**
+   >
+   > | Laufart | Kosten | Anteil an der Instanz |
+   > |---|---:|---|
+   > | **stündlicher Delta-Lauf**, dichteste Stunde des ganzen Bestands (8.630 Zeilen) | **88,167 ms** | **0,0024 %** einer Stunde |
+   > | stündlicher Delta-Lauf, letzte Stunde des Bestands (285 Zeilen) | 3,190 ms | 0,00009 % |
+   > | **nächtlicher Volllauf**, gebaut, ohne Drosselung (335.610 Zeilen) | **45,772 s** | — |
+   > | derselbe Volllauf mit `scheiben-pause: 1s` | 69,186 s | 51,2 % länger |
+   >
+   > **Beim Delta-Lauf ist die Regel Zeremonie.** Ein Statement, das in einer Stunde 88 Millisekunden
+   > der Instanz belegt, ist nicht drosselbar — es ist bereits vorbei, bevor eine Drosselung greifen
+   > könnte, und jede Pause dahinter verlängerte nur die Wanduhr, ohne Last zu verteilen. Der
+   > Delta-Lauf fährt deshalb ungedrosselt und in **einem** Statement.
+   >
+   > **Beim Volllauf greift sie.** Er liest den gesamten Bestand ohne Zeitfenster; der Gesamtbereich
+   > in einem Statement reißt die Zeitgrenze `max_statement_time = 10` des Lese-Pools. Er fährt
+   > deshalb in **Monatsscheiben**, mit einer konfigurierbaren Pause **zwischen** den Scheiben —
+   > dort, und nur dort, ist die Drosselung eine Stellschraube. Sie kostet auf der Testkopie 23,4
+   > Sekunden zusätzlich, und genau dafür ist sie da.
+   >
+   > **Warum das hier steht, obwohl es eine Kleinigkeit zu sein scheint.** Eine Regel, die überall
+   > zitiert wird, wirkt nirgends: Solange „gedrosselt" für beide Laufarten galt, war sie an der
+   > einen unerfüllbar und an der anderen selbstverständlich — und in beiden Fällen kein Maßstab,
+   > an dem sich eine Umsetzung prüfen ließe. **Verortet ist sie prüfbar.**
+   >
+   > **Was daran ungemessen bleibt** (offener Punkt 50 in [`rollup.md`](rollup.md) §13): *wie viel*
+   > Last die Produktionsinstanz nachts verträgt, und ob `03:00` die richtige Stunde ist. Beides ist
+   > nicht erhoben, beides ist konfigurierbar, damit eine Korrektur keine Codeänderung kostet. Und
+   > alle Zahlen oben stammen von der **Testkopie**; M92 rechnet ausdrücklich nicht hoch.
 7. **Jede neue Abfrage wird vor dem Merge gegen die Testkopie gemessen** (`EXPLAIN` plus
    Laufzeit). Kein Statement geht ungeprüft in Produktion.
 
@@ -1123,6 +1348,35 @@ Altwerkzeug **hat** die aufbereitete Anzeige — vier Formate stehen in der Ausw
 abgeschaltet, der Umformatierungscode existiert ([`rohdaten.md`](rohdaten.md) §13, Punkt 3). In der
 Zeile unter „Enthalten" ist außerdem der **Proxy** gefallen und sind die **Protokolle** hinzugekommen
 — die Begründung dafür steht bei der Korrektur zu Abschnitt 7.
+
+**Korrektur 27.08.2026 zu Abschnitt 9 — „die drei Problemkategorien" sind im MVP zwei.**
+
+> **Wortgleich, wie sie oben steht und stehen bleibt:**
+>
+> > - Dashboard: Volumen im Zeitverlauf, **die drei Problemkategorien**, Verteilung nach Partner
+
+**Es sind zwei: *Fehler* und *Überfällig*.** *Unquittiert* ist mit Entscheidung **E‑d** vom
+24.08.2026 aus dem MVP genommen; die vollständige Begründung steht im Kasten bei Abschnitt 4.2
+Punkt 3 — keine operative Definition, und die Kategorie hängt am ungedeckten Takt von
+`MatchInterchange`. **Die Beschreibung in Abschnitt 4.2 bleibt vollständig stehen**, und ihre
+Überschrift bleibt „Die drei Problemkategorien": Fachlich sind es drei, gebaut werden zwei.
+
+> **Ein Befund der Messrunde gehört dazu, und er verschiebt die Korrektur.** Der Auftrag zu dieser
+> Runde ging davon aus, in Abschnitt 9 stehe das Wort „Unquittiert" und sei zu streichen. **Es
+> steht hier nicht — nirgends.** Abschnitt 9 nennt die Kategorie überhaupt nicht, sondern
+> ausschließlich die Sammelformulierung „die drei Problemkategorien"
+> ([`messungen-schritt10.md`](messungen-schritt10.md), „Was diese Runde nicht zeigt", Punkt 5).
+>
+> **Das ist mehr als eine Formalie.** Eine Zeile, die eine Zahl nennt statt einer Aufzählung, ist
+> beim Nachschlagen nicht auffindbar: Wer nach „Unquittiert" sucht, um zu prüfen, wo die Kategorie
+> zugesagt ist, findet Abschnitt 9 nicht — und Abschnitt 9 ist die Datei, die den MVP-Umfang
+> festlegt. **Die Zahl „drei" war hier die einzige Zusage**, und sie stand ohne den Begriff, der
+> sie prüfbar gemacht hätte.
+
+**Was das für die Umsetzung heißt:** Das Dashboard aus Schritt 10b baut **zwei** Kacheln.
+*Überfällig* kommt dabei nicht aus dem Rollup, sondern aus einer Live-Abfrage — die erste benannte
+Ausnahme von Leistungsregel 2, siehe Abschnitt 8. Der [`IMPLEMENTIERUNGSPLAN_MVP.md`](IMPLEMENTIERUNGSPLAN_MVP.md)
+trägt dieselbe Angabe („die drei getrennten Problemkategorien") und ist dort ebenso berichtigt.
 
 ## 10. Geplante Ausbaustufen
 
