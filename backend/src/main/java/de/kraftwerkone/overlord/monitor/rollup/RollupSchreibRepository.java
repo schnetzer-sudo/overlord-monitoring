@@ -1,15 +1,19 @@
 package de.kraftwerkone.overlord.monitor.rollup;
 
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLUP;
+import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLUP_TAG;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.ROLLUP_LAUF;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.jooq.BatchBindStep;
 import org.jooq.DSLContext;
+import org.jooq.Field;
 import org.jooq.impl.DSL;
+import org.jooq.impl.SQLDataType;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -97,19 +101,99 @@ public class RollupSchreibRepository {
    * und damit auf einer anderen Verbindung — es waere ohnehin nicht Teil von ihr (§2). Der Aufrufer
    * liest deshalb erst vollstaendig und ruft danach diese Methode.
    *
+   * <h2>Und die Tagesebene liegt in <b>derselben</b> Transaktion</h2>
+   *
+   * <p>Seit Schritt 10b-1 schreibt diese Methode zwei Ebenen: erst die Stundeneimer des Fensters,
+   * dann die Tageseimer der beruehrten Kalendertage. <b>Braeche es dazwischen ab, stuenden die
+   * beiden auf verschiedenen Staenden — und niemand saehe es.</b> Das Dashboard liest je nach
+   * Fensterbreite aus der einen oder der anderen; zwei Ansichten desselben Zeitraums zeigten dann
+   * verschiedene Zahlen, ohne dass irgendwo ein Fehler protokolliert waere.
+   *
    * @param fenster der Bereich, der ersetzt wird — {@code stunde >= von} und {@code stunde < bis}
    * @param zeilen die neuen Zeilen. Sie muessen vollstaendig in das Fenster fallen; sonst
    *     entstuenden Zeilen, die der naechste Lauf nicht mehr loeschen kann
-   * @return die Zahl der eingefuegten Zeilen
+   * @return wie viele Zeilen in jeder der beiden Ebenen entstanden sind
    */
   @Transactional
-  public int ersetzeFenster(RollupFenster fenster, List<RollupZeile> zeilen) {
+  public RollupZeilenzahlen ersetzeFenster(RollupFenster fenster, List<RollupZeile> zeilen) {
     monitorDsl
         .deleteFrom(MESSAGE_ROLLUP)
         .where(MESSAGE_ROLLUP.STUNDE.ge(fenster.von()))
         .and(MESSAGE_ROLLUP.STUNDE.lt(fenster.bis()))
         .execute();
-    return fuegeEin(zeilen);
+    int stundenzeilen = fuegeEin(zeilen);
+    int tageszeilen = fenster.betroffeneTage().map(this::rechneTageEbeneNeu).orElse(0);
+    return new RollupZeilenzahlen(stundenzeilen, tageszeilen);
+  }
+
+  /**
+   * Rechnet die Tageseimer der beruehrten Kalendertage neu — <b>aus der Stundenebene</b>, die in
+   * derselben Transaktion unmittelbar davor geschrieben worden ist.
+   *
+   * <h2>Warum aus der Stundenebene und nicht aus {@code Message}</h2>
+   *
+   * <p>Zwei Gruende. <b>Der erste ist Geld:</b> Eine zweite Quelllesung kostete noch einmal, was
+   * die erste kostet — beim Volllauf sind das 45,772 s ({@code docs/rollup.md} §9). <b>Der zweite
+   * ist Wahrheit:</b> Zwei getrennte Lesungen derselben Quelle koennen abweichen, und zwar genau
+   * dann, wenn dazwischen etwas geschrieben wird. Aus der Stundenebene abgeleitet ist die
+   * Tagesebene <b>per Konstruktion</b> konsistent: Sie ist deren Summe und kann gar nichts anderes
+   * sein.
+   *
+   * <h2>Warum hier ein {@code INSERT … SELECT} steht und in {@code RollupJob} keines</h2>
+   *
+   * <p>{@code PROJEKTBESCHREIBUNG.md} §6 sagt: <i>„Der Schreib-DSLContext darf ausschliesslich
+   * {@code overlord_monitor}."</i> Genau daran haelt sich dieses Statement — Quelle und Ziel liegen
+   * <b>beide</b> in {@code overlord_monitor}. Verboten ist das {@code INSERT … SELECT} ueber die
+   * <b>Schemagrenze</b>, also aus {@code GlassfishDB} heraus; das steht in {@code RollupJob} und
+   * ist der Grund, warum die Stundenebene den Umweg ueber den Speicher nimmt.
+   *
+   * <h2>Ganze Tage, nicht das Fenster</h2>
+   *
+   * <p>Gerechnet wird ueber {@link RollupFenster.Tagesbereich#von()} bis {@link
+   * RollupFenster.Tagesbereich#bis()} — also ueber <b>ganze Kalendertage</b> und nicht ueber das
+   * Fenster des Laufs. Ein Tageseimer ist die Summe seiner 24 Stundeneimer; aus einem
+   * Zwei-Stunden-Fenster gerechnet truege er zwei Stunden und behauptete, ein Tag zu sein.
+   *
+   * <p><b>Geloescht und neu geschrieben, nie hochgezaehlt</b> — dieselben zwei Gruende wie oben,
+   * und hier kommt ein dritter dazu: Ein Prozess, der an einem Tag einmal Zeilen hatte und heute
+   * keine mehr, verlaesst die Stundenebene; sein Tageseimer verschwaende ohne das {@code DELETE}
+   * nie.
+   */
+  private int rechneTageEbeneNeu(RollupFenster.Tagesbereich tage) {
+    monitorDsl
+        .deleteFrom(MESSAGE_ROLLUP_TAG)
+        .where(MESSAGE_ROLLUP_TAG.TAG.ge(tage.erster()))
+        .and(MESSAGE_ROLLUP_TAG.TAG.le(tage.letzter()))
+        .execute();
+
+    // DATE(stunde) — Zeichen fuer Zeichen die Form, die M94 gemessen hat. jOOQ hat dafuer
+    // keinen eigenen Ausdruck: localDate() erwartet bereits ein Datum, und cast(… as date)
+    // waere eine andere Funktion mit demselben Ergebnis. DSL.function bleibt naeher an der
+    // gemessenen Fassung.
+    Field<LocalDate> tagAusStunde =
+        DSL.function("date", SQLDataType.LOCALDATE, MESSAGE_ROLLUP.STUNDE);
+    return monitorDsl
+        .insertInto(
+            MESSAGE_ROLLUP_TAG,
+            MESSAGE_ROLLUP_TAG.TAG,
+            MESSAGE_ROLLUP_TAG.PROCESS_ID,
+            MESSAGE_ROLLUP_TAG.MESSAGE_STATUS,
+            MESSAGE_ROLLUP_TAG.ANZAHL)
+        .select(
+            monitorDsl
+                .select(
+                    tagAusStunde,
+                    MESSAGE_ROLLUP.PROCESS_ID,
+                    MESSAGE_ROLLUP.MESSAGE_STATUS,
+                    DSL.sum(MESSAGE_ROLLUP.ANZAHL).cast(Integer.class))
+                .from(MESSAGE_ROLLUP)
+                .where(MESSAGE_ROLLUP.STUNDE.ge(tage.von()))
+                .and(MESSAGE_ROLLUP.STUNDE.lt(tage.bis()))
+                // Der volle Ausdruck in GROUP BY, nicht der Alias — die Lehre aus Befund 11 der
+                // Vorrunde: Hiesse ein Alias wie eine Tabellenspalte, baende MariaDB still an die
+                // Spalte, und bei zwei von drei Mandanten saehe das Ergebnis trotzdem richtig aus.
+                .groupBy(tagAusStunde, MESSAGE_ROLLUP.PROCESS_ID, MESSAGE_ROLLUP.MESSAGE_STATUS))
+        .execute();
   }
 
   /**

@@ -2,16 +2,20 @@ package de.kraftwerkone.overlord.monitor.rollup;
 
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.MESSAGE;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLUP;
+import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLUP_TAG;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.ROLLUP_LAUF;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.jooq.DSLContext;
+import org.jooq.Record3;
 import org.jooq.Record4;
 import org.jooq.Result;
+import org.jooq.impl.DSL;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -108,6 +112,38 @@ class RollupDbIT {
         .deleteFrom(MESSAGE_ROLLUP)
         .where(MESSAGE_ROLLUP.MESSAGE_STATUS.eq(ERFUNDENER_STATUS))
         .execute();
+    monitorDsl
+        .deleteFrom(MESSAGE_ROLLUP_TAG)
+        .where(MESSAGE_ROLLUP_TAG.MESSAGE_STATUS.eq(ERFUNDENER_STATUS))
+        .execute();
+  }
+
+  /** Der Inhalt eines Tages in der Tagesebene, sortiert. */
+  private Result<Record3<String, String, Integer>> tagesInhalt(LocalDate tag) {
+    return monitorDsl
+        .select(
+            MESSAGE_ROLLUP_TAG.PROCESS_ID,
+            MESSAGE_ROLLUP_TAG.MESSAGE_STATUS,
+            MESSAGE_ROLLUP_TAG.ANZAHL)
+        .from(MESSAGE_ROLLUP_TAG)
+        .where(MESSAGE_ROLLUP_TAG.TAG.eq(tag))
+        .orderBy(MESSAGE_ROLLUP_TAG.PROCESS_ID, MESSAGE_ROLLUP_TAG.MESSAGE_STATUS)
+        .fetch();
+  }
+
+  /** Dasselbe, aber aus der Stundenebene gerechnet — die Gegenprobe zur materialisierten Ebene. */
+  private Result<Record3<String, String, Integer>> tagesInhaltAusStunden(LocalDate tag) {
+    return monitorDsl
+        .select(
+            MESSAGE_ROLLUP.PROCESS_ID,
+            MESSAGE_ROLLUP.MESSAGE_STATUS,
+            DSL.sum(MESSAGE_ROLLUP.ANZAHL).cast(Integer.class))
+        .from(MESSAGE_ROLLUP)
+        .where(MESSAGE_ROLLUP.STUNDE.ge(tag.atStartOfDay()))
+        .and(MESSAGE_ROLLUP.STUNDE.lt(tag.plusDays(1).atStartOfDay()))
+        .groupBy(MESSAGE_ROLLUP.PROCESS_ID, MESSAGE_ROLLUP.MESSAGE_STATUS)
+        .orderBy(MESSAGE_ROLLUP.PROCESS_ID, MESSAGE_ROLLUP.MESSAGE_STATUS)
+        .fetch();
   }
 
   private RollupErgebnis lauf(LocalDateTime von, LocalDateTime bis, LaufArt art) {
@@ -338,5 +374,156 @@ class RollupDbIT {
         .get()
         .satisfies(
             fruehest -> assertThat(fruehest).isEqualTo(LocalDateTime.parse("2024-10-01T02:00:28")));
+  }
+
+  // ── Die Tagesebene (Schritt 10b-1, Teil C) ─────────────────────────────────────────────────
+
+  /**
+   * <b>Der wichtigste Test der Tagesebene.</b> Sie ist aus der Stundenebene abgeleitet und muss
+   * deshalb Zeile fuer Zeile deren Summe sein — nicht ungefaehr, sondern genau.
+   */
+  @Test
+  @DisplayName("Tagesebene: Zeile fuer Zeile die Summe der Stundenebene")
+  void tagesebene_ist_die_summe_der_stundenebene() {
+    lauf(TAG_VON, TAG_BIS, LaufArt.DELTA);
+
+    for (LocalDate tag : List.of(LocalDate.parse("2025-12-29"), LocalDate.parse("2025-12-30"))) {
+      assertThat(tagesInhaltAusStunden(tag))
+          .as("Der Tag %s traegt Verkehr — sonst prueft der Vergleich nichts", tag)
+          .isNotEmpty();
+      assertThat(tagesInhalt(tag))
+          .as("Die materialisierte Tagesebene fuer %s", tag)
+          .isEqualTo(tagesInhaltAusStunden(tag));
+    }
+  }
+
+  /**
+   * <b>Ein Tageseimer wird ueber den GANZEN Tag gerechnet, auch wenn das Fenster zwei Stunden
+   * umfasst.</b> Das ist die Eigenschaft, an der es sonst still schiefginge: Ein Tageseimer aus
+   * zwei Stunden truege zwei Stunden und behauptete, ein Tag zu sein.
+   *
+   * <p>Der Nachweis braucht ein Fenster, das <b>echt kleiner</b> ist als der Tag — und einen Tag,
+   * der ausserhalb dieses Fensters weiteren Verkehr traegt. Beides trifft auf den 30.12.2025 zu.
+   */
+  @Test
+  @DisplayName("Ein Zwei-Stunden-Fenster rechnet den ganzen Tageseimer, nicht nur seine Stunden")
+  void tageseimer_umfasst_den_ganzen_tag() {
+    LocalDate tag = LocalDate.parse("2025-12-30");
+    // Erst den ganzen Tag rechnen, damit die Stundenebene vollstaendig dasteht.
+    lauf(tag.atStartOfDay(), tag.plusDays(1).atStartOfDay(), LaufArt.DELTA);
+    int ganzerTag = tagesInhaltAusStunden(tag).stream().mapToInt(zeile -> zeile.value3()).sum();
+    Integer nurImFenster =
+        monitorDsl
+            .select(DSL.sum(MESSAGE_ROLLUP.ANZAHL))
+            .from(MESSAGE_ROLLUP)
+            .where(MESSAGE_ROLLUP.STUNDE.ge(DICHT_VON))
+            .and(MESSAGE_ROLLUP.STUNDE.lt(DICHT_BIS))
+            .fetchOne(0, Integer.class);
+
+    assertThat(nurImFenster)
+        .as("Die Vorbedingung: Das Zwei-Stunden-Fenster deckt nur einen Teil des Tages ab")
+        .isNotNull()
+        .isPositive()
+        .isLessThan(ganzerTag);
+
+    // Und jetzt nur die zwei Stunden neu rechnen.
+    lauf(DICHT_VON, DICHT_BIS, LaufArt.DELTA);
+
+    assertThat(tagesInhalt(tag).stream().mapToInt(zeile -> zeile.value3()).sum())
+        .as(
+            "Der Tageseimer ist die Summe seiner 24 Stundeneimer und nicht die der Stunden, die"
+                + " zufaellig im Fenster lagen")
+        .isEqualTo(ganzerTag);
+  }
+
+  /**
+   * Dasselbe fuer die Tagesebene, was {@link #alte_statuszeile_bleibt_nicht_stehen} fuer die
+   * Stundenebene prueft: Geloescht und neu geschrieben, nie hochgezaehlt.
+   */
+  @Test
+  @DisplayName("Tagesebene: Eine Zeile, die die Stundenebene nicht mehr hergibt, bleibt nicht")
+  void alte_tageszeile_bleibt_nicht_stehen() {
+    LocalDate tag = LocalDate.parse("2025-12-30");
+    lauf(DICHT_VON, DICHT_BIS, LaufArt.DELTA);
+    String prozess = tagesInhalt(tag).getFirst().value1();
+
+    monitorDsl
+        .insertInto(MESSAGE_ROLLUP_TAG)
+        .set(MESSAGE_ROLLUP_TAG.TAG, tag)
+        .set(MESSAGE_ROLLUP_TAG.PROCESS_ID, prozess)
+        .set(MESSAGE_ROLLUP_TAG.MESSAGE_STATUS, ERFUNDENER_STATUS)
+        .set(MESSAGE_ROLLUP_TAG.ANZAHL, 4711)
+        .execute();
+    assertThat(tagesInhalt(tag))
+        .as("Die Vorbedingung: Die Altlast steht wirklich in der Tagesebene")
+        .anySatisfy(zeile -> assertThat(zeile.value2()).isEqualTo(ERFUNDENER_STATUS));
+
+    lauf(DICHT_VON, DICHT_BIS, LaufArt.DELTA);
+
+    assertThat(tagesInhalt(tag))
+        .noneSatisfy(zeile -> assertThat(zeile.value2()).isEqualTo(ERFUNDENER_STATUS));
+  }
+
+  @Test
+  @DisplayName("Tagesebene: Derselbe Lauf zweimal ergibt zeilengleich dasselbe")
+  void tagesebene_ist_idempotent() {
+    LocalDate tag = LocalDate.parse("2025-12-30");
+    lauf(DICHT_VON, DICHT_BIS, LaufArt.DELTA);
+    Result<Record3<String, String, Integer>> nachDemErsten = tagesInhalt(tag);
+
+    RollupErgebnis zweiter = lauf(DICHT_VON, DICHT_BIS, LaufArt.DELTA);
+
+    assertThat(nachDemErsten).isNotEmpty();
+    assertThat(tagesInhalt(tag)).isEqualTo(nachDemErsten);
+    assertThat(zweiter.tageszeilenGeschrieben())
+        .as("Und der Lauf berichtet, wie viele Tageszeilen er geschrieben hat")
+        .isEqualTo(nachDemErsten.size());
+  }
+
+  /**
+   * Ein Fenster ueber die Mitternachtsgrenze beruehrt <b>zwei</b> Tage, und beide muessen danach
+   * stimmen. Ohne die Unterscheidung „letzte verarbeitete Stunde" statt „obere Fenstergrenze"
+   * bliebe hier ein Tageseimer geloescht und ungeschrieben zurueck.
+   */
+  @Test
+  @DisplayName("Ein Fenster ueber Mitternacht schreibt beide Tageseimer richtig")
+  void fenster_ueber_mitternacht_schreibt_beide_tage() {
+    lauf(
+        LocalDateTime.parse("2025-12-29T23:00"),
+        LocalDateTime.parse("2025-12-30T01:00"),
+        LaufArt.DELTA);
+
+    for (LocalDate tag : List.of(LocalDate.parse("2025-12-29"), LocalDate.parse("2025-12-30"))) {
+      assertThat(tagesInhalt(tag))
+          .as("Beide beruehrten Tage stehen und stimmen (%s)", tag)
+          .isNotEmpty()
+          .isEqualTo(tagesInhaltAusStunden(tag));
+    }
+  }
+
+  /**
+   * Die Summenprobe ueber <b>beide</b> Ebenen: Ueber ein abgeschlossenes Fenster tragen beide
+   * dieselbe Zahl — und beide dieselbe wie {@code Message} selbst.
+   */
+  @Test
+  @DisplayName("Summenprobe: Beide Ebenen tragen dieselbe Zahl wie die Quelle")
+  void beide_ebenen_tragen_dieselbe_summe() {
+    LocalDate tag = LocalDate.parse("2025-12-29");
+    lauf(tag.atStartOfDay(), tag.plusDays(1).atStartOfDay(), LaufArt.DELTA);
+
+    int ausDerQuelle = nachrichtenLautQuelle(tag.atStartOfDay(), tag.plusDays(1).atStartOfDay());
+    long ausDerStundenebene =
+        schreibRepository.summiereAnzahl(
+            new RollupFenster(tag.atStartOfDay(), tag.plusDays(1).atStartOfDay()));
+    int ausDerTagesebene = tagesInhalt(tag).stream().mapToInt(zeile -> zeile.value3()).sum();
+
+    assertThat(ausDerQuelle).isPositive();
+    assertThat(ausDerStundenebene).isEqualTo(ausDerQuelle);
+    assertThat(ausDerTagesebene)
+        .as("Die Tagesebene verdichtet die Zeilenzahl, nicht die Nachrichtenzahl")
+        .isEqualTo(ausDerQuelle);
+    assertThat(tagesInhalt(tag).size())
+        .as("Weniger Zeilen als die Stundenebene — M87 misst dafuer Faktor 2,73")
+        .isLessThan(inhalt(tag.atStartOfDay(), tag.plusDays(1).atStartOfDay()).size());
   }
 }

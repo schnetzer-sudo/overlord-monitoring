@@ -31,6 +31,10 @@ import org.springframework.stereotype.Service;
  *       ({@code docs/datenzugriff.md} §2).
  *   <li><b>Loeschen und Einfuegen in genau einer Transaktion</b> ({@link
  *       RollupSchreibRepository#ersetzeFenster}).
+ *   <li><b>Die Tageseimer der beruehrten Kalendertage neu rechnen</b> — <b>in derselben
+ *       Transaktion</b> und aus der eben geschriebenen Stundenebene, nicht aus {@code Message}.
+ *       Seit Schritt 10b-1; die Begruendung steht an {@code
+ *       RollupSchreibRepository.rechneTageEbeneNeu}.
  *   <li><b>{@code beendet_am} und {@code zeilen_geschrieben} nachtragen.</b> Erst danach zaehlt das
  *       Fenster zum Wasserstand.
  * </ol>
@@ -132,21 +136,30 @@ public class RollupJob {
 
     try {
       List<RollupZeile> zeilen = lies(scheiben);
-      int geschrieben = schreibRepository.ersetzeFenster(fenster, zeilen);
+      RollupZeilenzahlen geschrieben = schreibRepository.ersetzeFenster(fenster, zeilen);
       long nachrichten = zeilen.stream().mapToLong(RollupZeile::anzahl).sum();
       LocalDateTime beendetAm = uhren.protokollzeit();
-      schreibRepository.beendeLauf(laufId, beendetAm, geschrieben);
+      schreibRepository.beendeLauf(laufId, beendetAm, geschrieben.stundenzeilen());
 
       Duration dauer = Duration.between(gestartetAm, beendetAm);
       log.info(
-          "Rollup-Lauf {} (Nr. {}) fertig: {} Zeilen fuer {} Nachrichten in {} ms",
+          "Rollup-Lauf {} (Nr. {}) fertig: {} Stundenzeilen und {} Tageszeilen"
+              + " fuer {} Nachrichten in {} ms",
           art,
           laufId,
-          geschrieben,
+          geschrieben.stundenzeilen(),
+          geschrieben.tageszeilen(),
           nachrichten,
           dauer.toMillis());
       return new RollupErgebnis(
-          laufId, art, fenster, scheiben.size(), geschrieben, nachrichten, dauer);
+          laufId,
+          art,
+          fenster,
+          scheiben.size(),
+          geschrieben.stundenzeilen(),
+          geschrieben.tageszeilen(),
+          nachrichten,
+          dauer);
     } catch (RuntimeException fehler) {
       vermerke(laufId, art, fehler);
       throw fehler;

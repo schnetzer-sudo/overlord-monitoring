@@ -3,6 +3,7 @@ package de.kraftwerkone.overlord.monitor.rollup;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -331,6 +332,102 @@ class RollupFensterTest {
       assertThat(
               new RollupFenster(zeit("2025-12-30T05:00"), zeit("2025-12-30T05:00")).stundeneimer())
           .isZero();
+    }
+  }
+
+  @Nested
+  @DisplayName("Die beruehrten Kalendertage (Tagesebene, Schritt 10b-1)")
+  class BetroffeneTage {
+
+    private RollupFenster.Tagesbereich tage(String von, String bis) {
+      return new RollupFenster(zeit(von), zeit(bis)).betroffeneTage().orElseThrow();
+    }
+
+    @Test
+    @DisplayName("Ein Fenster innerhalb eines Tages beruehrt genau diesen einen")
+    void ein_tag() {
+      RollupFenster.Tagesbereich bereich = tage("2025-12-30T03:00", "2025-12-30T05:00");
+
+      assertThat(bereich.erster()).isEqualTo(LocalDate.parse("2025-12-30"));
+      assertThat(bereich.letzter()).isEqualTo(LocalDate.parse("2025-12-30"));
+      assertThat(bereich.tage()).isEqualTo(1);
+    }
+
+    /**
+     * <b>Der Fall, an dem es sonst still schiefginge.</b> {@code bis} ist ausschliessend: Ein
+     * Fenster, das um Mitternacht endet, beruehrt den neuen Tag <b>nicht</b>. Zaehlte man ihn mit,
+     * loeschte jeder Lauf um Mitternacht einen Tageseimer, den er anschliessend nicht neu schreibt.
+     */
+    @Test
+    @DisplayName("Ein Fenster, das um Mitternacht endet, beruehrt den neuen Tag NICHT")
+    void bis_ist_ausschliessend() {
+      RollupFenster.Tagesbereich bereich = tage("2025-12-29T23:00", "2025-12-30T00:00");
+
+      assertThat(bereich.erster()).isEqualTo(LocalDate.parse("2025-12-29"));
+      assertThat(bereich.letzter())
+          .as("Der 30. faengt erst dort an, wo das Fenster aufhoert")
+          .isEqualTo(LocalDate.parse("2025-12-29"));
+    }
+
+    @Test
+    @DisplayName("Ein Rueckgriff ueber Mitternacht beruehrt zwei Tage")
+    void rueckgriff_ueber_mitternacht() {
+      // Der praktische Fall: Delta-Lauf um 00:05, Wasserstand 00:00, Rueckgriff 15 Minuten.
+      RollupFenster fenster =
+          RollupFenster.delta(zeit("2025-12-30T00:00"), zeit("2025-12-30T00:05"));
+      RollupFenster.Tagesbereich bereich = fenster.betroffeneTage().orElseThrow();
+
+      assertThat(bereich.erster()).isEqualTo(LocalDate.parse("2025-12-29"));
+      assertThat(bereich.letzter()).isEqualTo(LocalDate.parse("2025-12-30"));
+      assertThat(bereich.tage()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("Ein leeres Fenster beruehrt keinen Tag")
+    void leeres_fenster() {
+      assertThat(
+              new RollupFenster(
+                      ANKER.truncatedTo(ChronoUnit.HOURS), ANKER.truncatedTo(ChronoUnit.HOURS))
+                  .betroffeneTage())
+          .isEmpty();
+    }
+
+    /**
+     * Der Zeitbereich, aus dem gerechnet wird, umfasst <b>ganze Tage</b> — er ist damit in aller
+     * Regel breiter als das Fenster des Laufs. Ein Tageseimer ist die Summe seiner 24 Stundeneimer
+     * und nicht die der Stunden, die zufaellig im Fenster lagen.
+     */
+    @Test
+    @DisplayName("Der Rechenbereich umfasst ganze Tage, von Mitternacht bis Mitternacht")
+    void rechenbereich_umfasst_ganze_tage() {
+      RollupFenster.Tagesbereich bereich = tage("2025-12-30T03:00", "2025-12-30T05:00");
+
+      assertThat(bereich.von()).isEqualTo(zeit("2025-12-30T00:00"));
+      assertThat(bereich.bis()).isEqualTo(zeit("2025-12-31T00:00"));
+    }
+
+    @Test
+    @DisplayName("Der Volllauf am Anker beruehrt jeden Tag des Bestands")
+    void volllauf_beruehrt_jeden_tag() {
+      RollupFenster.Tagesbereich bereich =
+          RollupFenster.voll(zeit("2024-10-01T02:00:28"), ANKER).betroffeneTage().orElseThrow();
+
+      assertThat(bereich.erster()).isEqualTo(LocalDate.parse("2024-10-01"));
+      assertThat(bereich.letzter()).isEqualTo(LocalDate.parse("2025-12-30"));
+      assertThat(bereich.tage())
+          .as("Vom 01.10.2024 bis zum 30.12.2025 einschliesslich")
+          .isEqualTo(456);
+    }
+
+    @Test
+    @DisplayName("Ein rueckwaerts laufender Tagesbereich ist eine Ausnahme")
+    void rueckwaerts_ist_eine_ausnahme() {
+      assertThatThrownBy(
+              () ->
+                  new RollupFenster.Tagesbereich(
+                      LocalDate.parse("2025-12-30"), LocalDate.parse("2025-12-29")))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("rueckwaerts");
     }
   }
 }

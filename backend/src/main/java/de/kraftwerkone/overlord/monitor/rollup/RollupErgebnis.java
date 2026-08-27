@@ -13,6 +13,10 @@ import java.time.Duration;
  *     eine, beim Volllauf ueber den Bestand der Testkopie 22
  * @param zeilenGeschrieben wie viele Zeilen in {@code message_rollup} stehen. <b>Nicht</b> die Zahl
  *     der gelesenen Nachrichten: Auf der Testkopie verdichtet der Rollup um Faktor 9,96 (M87)
+ * @param tageszeilenGeschrieben wie viele Zeilen in {@code message_rollup_tag} stehen (Schritt
+ *     10b-1). Gegenueber der Stundenebene verdichtet die Tagesebene noch einmal um Faktor 2,73:
+ *     123.049 gegen 335.610 ueber den Gesamtbestand. <b>Sie steht bewusst nicht in {@code
+ *     rollup_lauf.zeilen_geschrieben}</b> — Begruendung an {@link RollupZeilenzahlen}
  * @param nachrichten wie viele Nachrichten dahinterstehen, also {@code SUM(anzahl)}. Sie ist die
  *     Groesse, gegen die sich die Summenprobe fuehren laesst — ueber den Gesamtbestand 3.341.519
  * @param dauer Laufzeit von {@code gestartet_am} bis {@code beendet_am}, beide aus {@code
@@ -24,5 +28,6 @@ public record RollupErgebnis(
     RollupFenster fenster,
     int scheiben,
     int zeilenGeschrieben,
+    int tageszeilenGeschrieben,
     long nachrichten,
     Duration dauer) {}

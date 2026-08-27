@@ -1,10 +1,12 @@
 package de.kraftwerkone.overlord.monitor.rollup;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Der Zeitschnitt eines Laufs: <b>von</b> einschliesslich, <b>bis</b> ausschliesslich, und beide
@@ -186,6 +188,72 @@ public record RollupFenster(LocalDateTime von, LocalDateTime bis) {
       anfang = ende;
     }
     return scheiben;
+  }
+
+  /**
+   * Die <b>Kalendertage, die dieses Fenster beruehrt</b> — beide Grenzen <b>einschliesslich</b>.
+   * Leer, wenn das Fenster leer ist.
+   *
+   * <h2>Warum das nicht einfach {@code DATE(von)} bis {@code DATE(bis)} ist</h2>
+   *
+   * <p>{@code bis} ist <b>ausschliessend</b>. Ein Fenster von {@code 2025-12-29 23:00} bis {@code
+   * 2025-12-30 00:00} verarbeitet genau eine Stunde und beruehrt genau <b>einen</b> Tag, naemlich
+   * den 29. Der 30. faengt erst dort an, wo das Fenster aufhoert. Der letzte beruehrte Tag ist
+   * deshalb der Tag der letzten <b>verarbeiteten</b> Stunde, also {@code bis} minus einer Stunde.
+   *
+   * <p><b>Ohne diese Unterscheidung raeumte jeder Lauf um Mitternacht einen Tageseimer aus, den er
+   * anschliessend nicht neu schreibt</b> — und der Fehler waere still: Die Stundenebene bliebe
+   * richtig, die Tagesebene verloere einen Tag, und auffallen wuerde es erst im Dashboard.
+   *
+   * <p><b>Ein Rueckgriff ueber eine Mitternachtsgrenze beruehrt zwei Tage</b>, und genau dafuer
+   * gibt es diese Methode: Der Delta-Lauf greift {@value #NACHLAUF_MINUTEN} Minuten zurueck, und in
+   * der ersten Stunde eines Tages liegt der Rueckgriff im Vortag.
+   */
+  public Optional<Tagesbereich> betroffeneTage() {
+    if (istLeer()) {
+      return Optional.empty();
+    }
+    return Optional.of(new Tagesbereich(von.toLocalDate(), bis.minusHours(1).toLocalDate()));
+  }
+
+  /**
+   * Ein Bereich von Kalendertagen, <b>beide Grenzen einschliesslich</b>.
+   *
+   * @param erster der erste beruehrte Tag
+   * @param letzter der letzte beruehrte Tag — bei einem Fenster innerhalb eines Tages derselbe
+   */
+  public record Tagesbereich(LocalDate erster, LocalDate letzter) {
+
+    public Tagesbereich {
+      if (erster == null || letzter == null || erster.isAfter(letzter)) {
+        throw new IllegalArgumentException(
+            "Ein Tagesbereich laeuft nie rueckwaerts: erster=" + erster + ", letzter=" + letzter);
+      }
+    }
+
+    /**
+     * Der Zeitbereich, aus dem die Tageseimer gerechnet werden — <b>ganze Tage</b>, von
+     * einschliesslich bis ausschliessend.
+     *
+     * <p><b>Er ist breiter als das Fenster des Laufs, und das ist der Punkt.</b> Ein Tageseimer ist
+     * die Summe seiner 24 Stundeneimer; wuerde er nur aus den Stunden im Fenster gerechnet, truege
+     * er nach einem Delta-Lauf ueber zwei Stunden genau diese zwei Stunden. Deshalb wird die
+     * Tagesebene immer ueber den <b>ganzen</b> Tag neu gerechnet, aus der Stundenebene, die zu
+     * diesem Zeitpunkt bereits geschrieben ist.
+     */
+    public LocalDateTime von() {
+      return erster.atStartOfDay();
+    }
+
+    /** Siehe {@link #von()} — der Anfang des Tages <b>nach</b> dem letzten beruehrten. */
+    public LocalDateTime bis() {
+      return letzter.plusDays(1).atStartOfDay();
+    }
+
+    /** Wie viele Kalendertage der Bereich umfasst. Nur fuer Protokollmeldungen. */
+    public long tage() {
+      return ChronoUnit.DAYS.between(erster, letzter) + 1;
+    }
   }
 
   /** Nichts zu rechnen — beide Grenzen fallen zusammen. */
