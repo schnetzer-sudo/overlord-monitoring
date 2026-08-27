@@ -839,6 +839,32 @@ Nummerierung im Anschluss an den projektweit höchsten Stand (**32**, in
     Das ist die eigentliche Lücke: Es sind genau diese beiden, die die Begründung von M74b
     kippen — und sie stehen in **keiner** der beiden Dateien, die man beim Planen aufschlägt.
 
+    > ✔ **Erledigt am 20.08.2026** *(Vermerk nachgetragen am 27.08.2026)*.
+    > [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §3.2 führt seit dem 20.08.2026 **alle
+    > acht** Indizes, in einer Tabelle mit eigenem Korrekturkasten („Hier standen **drei** Indizes,
+    > es sind **acht**"); [`datenmodell.md`](datenmodell.md) ist mitgezogen worden. **V3 der
+    > Messrunde vom 26.08.2026** hat die Liste gegen `SHOW INDEX` und
+    > `information_schema.STATISTICS` bestätigt — Zeichen für Zeichen dieselbe wie in M83‑0.
+    >
+    > **Und der Grund, warum dieser Vermerk nicht als Formalie hier steht:** Weil er fünf Tage lang
+    > fehlte, sah der Punkt weiter offen aus — und die **überholte Fassung ist in den Auftrag der
+    > Messrunde geraten**. V3 ist dort als Prüfung eines Widerspruchs beschrieben, den es seit dem
+    > 20.08.2026 nicht mehr gibt. Gemeldet als offener Punkt **41** in
+    > [`messungen-schritt10.md`](messungen-schritt10.md); dieser bekommt mit demselben Datum seinen
+    > eigenen Erledigt-Vermerk.
+    >
+    > **Der Punkt beschreibt genau den Mechanismus, dem er dann selbst zum Opfer gefallen ist:**
+    > „Die falsche Liste hat einen Arbeitsauftrag falsch gemacht." Er hat es ein zweites Mal getan,
+    > nachdem er behoben war — weil der Haken fehlte. **Das ist der teuerste fehlende Haken dieses
+    > Projekts, und er kostet eine Zeile.**
+    >
+    > Was **nicht** erledigt ist: der Test gegen `information_schema.STATISTICS`, der die Listen
+    > künftig in beide Richtungen bewachen soll. Er ist am 20.08.2026 entschieden und **nicht
+    > gebaut** (E37) — siehe die Ausnahme in der Präambel von
+    > [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md). Ebenso offen bleibt Punkt 34: dass es
+    > keinen Schritt gibt, der die Übernahme einer erhobenen Tabelle in die verbindliche Datei
+    > erzwingt.
+
 34. **Nicht L8 ist lückenhaft — die Übernahme in die verbindliche Datei ist es.** L8 verlangt
     ausdrücklich, „ihre Spalten **und Indizes** gegen `information_schema`" zu erheben, und der
     Warnkasten unter der Stand-der-Erhebung-Tabelle sagt, die Liste führe genau beides; offen ist
@@ -866,6 +892,41 @@ Nummerierung im Anschluss an den projektweit höchsten Stand (**32**, in
 39. **Ein Prozess hält 44,08 % aller Nachrichten.** Für die Verteilungen aus Schritt 10 ist zu
     klären, ob eine Auswertung „nach Partner" mit dieser Konzentration überhaupt aussagekräftig
     ist oder eine logarithmische bzw. anteilige Darstellung braucht.
+
+    > ✔ **Beantwortet am 26.08.2026 durch M91** *(Vermerk eingetragen am 27.08.2026)* — **und die
+    > Antwort ist unangenehm.**
+    >
+    > **Die stille Erwartung hinter dem Punkt war, dass die Kuratierung die Konzentration mildert:**
+    > ein Partner bündelt mehrere Prozesse, die Verteilung wird flacher. **Sie tut das Gegenteil.**
+    >
+    > | Bezugsgröße | Größter Anteil |
+    > |---|---:|
+    > | größter **Prozess**, innerhalb von `NEXANS`, Gesamtbestand | 51,04 % |
+    > | größter **Partner**, `NEXANS`, Monatsfenster (180.251 Nachrichten) | **58,61 %** |
+    > | größter **Partner**, `NEXANS`, Tagesfenster (5.043 Nachrichten) | **83,03 %** |
+    > | Rang 1 zu Rang 10, Monatsfenster | **108 : 1** (105.654 gegen 981) |
+    > | die zehn größten zusammen | 76,93 % (Monat) · 90,56 % (Tag) |
+    >
+    > **Warum:** Der größte Partner fasst nach Befund 10 **sieben** Prozesse zusammen. Gruppieren
+    > nach Partner legt große Prozesse zusammen, statt sie zu verteilen — die Konzentration wandert
+    > nach oben, sie verschwindet nicht. Von den 115 verschiedenen Partnern des Monatsfensters
+    > teilen sich die **übrigen 105 zusammen 13.226 Nachrichten — 7,34 %**. Der Rest bis 100 % sind
+    > die 15,73 %, die auf *nicht zugeordnet* entfallen.
+    >
+    > **Die Entscheidung für 10b, gefallen am 26.08.2026: Top‑10 plus „Rest".** Zehn Balken decken
+    > 76,93 % bis 90,56 % ab; die Ränge 11 bis 115 sind in einem Diagramm nicht mehr voneinander
+    > unterscheidbar und gehören in **eine** Zeile. Eine logarithmische Achse ist damit **nicht**
+    > nötig und ausdrücklich nicht gewählt — sie machte aus 108 : 1 eine Grafik, die aussieht wie
+    > 2 : 1, und das ist keine Lesehilfe, sondern eine Verharmlosung. Eingetragen im
+    > [`IMPLEMENTIERUNGSPLAN_MVP.md`](IMPLEMENTIERUNGSPLAN_MVP.md), Schritt 10.
+    >
+    > **„Nicht zugeordnet" fällt nie in den „Rest".** Es ist keine Rangposition. Bei `SUTTONS` und
+    > `VOTG` ist es heute die einzige Zeile der Verteilung — 100 %, weil beide **keine einzige**
+    > kuratierte Katalogzeile haben (M91, offener Punkt 44 in
+    > [`messungen-schritt10.md`](messungen-schritt10.md)).
+    >
+    > **Der Punkt gilt als beantwortet, nicht als erledigt-durch-Bau.** Gebaut ist die Darstellung
+    > in 10b; gemessen ist, dass sie gebraucht wird.
 
 40. **`mandantentrennung.md` §2 nennt weiterhin „142 Projekten"** — gezählt sind 140, hier zum
     dritten Mal bestätigt. Der Punkt steht seit dem 13.08.2026 in

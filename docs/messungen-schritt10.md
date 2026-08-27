@@ -2270,6 +2270,15 @@ Nummerierung im Anschluss an den projektweit höchsten Stand (**40**, in
     ([`messungen-schritt9.md`](messungen-schritt9.md) Z. 827) sieht weiterhin offen aus. **Der
     Auftrag dieser Runde ist auf die alte Fassung hereingefallen** und beschreibt V3 als Prüfung
     eines Widerspruchs, der nicht mehr besteht.
+
+    > ✔ **Erledigt am 27.08.2026.** Offener Punkt 33 trägt seinen Erledigt-Vermerk, datiert auf den
+    > **20.08.2026** — den Tag, an dem die Indexliste tatsächlich vollständig wurde
+    > ([`messungen-schritt9.md`](messungen-schritt9.md)). Der Vermerk nennt V3 als Bestätigung und
+    > diesen Punkt hier als den Schaden, den sein Fehlen angerichtet hat.
+    >
+    > **Was damit nicht erledigt ist**, und es ist der größere Teil: dass es **keinen Schritt gibt,
+    > der einen solchen Haken erzwingt**. Das ist Punkt 34 derselben Liste, und er steht seit dem
+    > 21.08.2026 offen. Solange er es tut, ist dieser Fall wiederholbar.
 42. **`PROJEKTBESCHREIBUNG.md` §3.2 Z. 135 („`MessageLastUpdate` ist der Zeitpunkt der letzten
     Änderung") hat einen Gegenbeleg.** Befund 6: Bei 26,14 % der `EERP_RECEIVED`-Zeilen in Fenster B
     endet ein Schritt **nach** diesem Zeitpunkt. Der Satz stimmt als Näherung — die Abweichung liegt
