@@ -1,4 +1,4 @@
-# Messungen — Fensterverengung für die Nachrichtenliste (M99 bis M103)
+# Messungen — Fensterverengung für die Nachrichtenliste (M99 bis M104)
 
 Stand **27.08.2026** · Auftrag „Fensterverengung für die Nachrichtenliste" · Branch
 `fix/liste-fensterverengung` · Ergebnis in [`nachrichtenliste.md`](nachrichtenliste.md) §5c
@@ -15,6 +15,12 @@ Stand **27.08.2026** · Auftrag „Fensterverengung für die Nachrichtenliste" �
 > als 51 Zeilen in dreißig Tagen" den ganzen Rollup-Bereich lesen muss. Genau diese Mandanten
 > sind heute schon schnell. **Sechs Fälle werden messbar schlechter**, zwischen Faktor 1,03 und
 > 17,9. Das ist die zweite Zeile des Tors, Wort für Wort.
+>
+> **Nachtrag M104, nach dem Tor freigegeben:** Ein Index `(process_id, stunde)` auf unserer eigenen
+> Rolluptabelle — gemessen an einer Probetabelle nach dem Vorbild von M89 — senkt genau diese Kosten
+> um bis zu **Faktor 102**. Er reicht trotzdem nicht: Der Schaden schrumpft um eine Größenordnung,
+> aber **keine Zeile des Tors kippt**. Was übrig bleibt, ist ein Sockel von drei bis vier
+> Millisekunden auf der 24‑Stunden‑Stufe, den der Index nicht anrührt.
 
 ---
 
@@ -24,6 +30,7 @@ Stand **27.08.2026** · Auftrag „Fensterverengung für die Nachrichtenliste" �
 |---|---|
 | Prüfung | `grep -rnoE '\bM(99\|10[0-3])\b' docs/ scripts/ *.md` |
 | Ergebnis | **sieben Treffer auf `M99`, keiner davon eine Vergabe.** `M100` bis `M103`: **null Treffer**. **M99 bis M103 sind hier vergeben** |
+| Nachtrag | `grep -rnoE 'M10[4-9]'` → **null Treffer**; Gegenprobe auf `M10[0-3]` → **26** Treffer. **M104 ist hier vergeben** |
 | Gegenprobe | `grep -rnoE '\bM9[0-8]\b' docs/ scripts/ *.md` → **1.002 Treffer**. Der Ausdruck greift |
 
 > ### Der Auftrag erwartet **einen** Treffer auf `M99`. Es sind **sieben** — und alle sieben sind richtig
@@ -69,11 +76,11 @@ Dieser Befund steht deshalb in **§5c**.
 | Fenster | `zeitraum=30d` dagegen, **beide Grenzen einschließlich** — wie `.ge`/`.le` es setzen |
 | Statement | abgeschrieben aus dem Repository: vier `LEFT JOIN`, `EXISTS`-Mandantenkette, `ORDER BY (MessageLastUpdate, MessageID) DESC`, `LIMIT 51` |
 | Laufzeit | Aufwärmlauf, dann **beste von fünf**, aus `information_schema.PROFILING`; `anzahl_laeufe` ist in **jedem** Block 6 |
-| Sitzungen | sieben, unter `scripts/messung-liste-verengung/`. Rohausgaben über `.gitignore` ausgeschlossen |
+| Sitzungen | **fünfzehn**, unter `scripts/messung-liste-verengung/`. Rohausgaben über `.gitignore` ausgeschlossen |
 | `STRAIGHT_JOIN` | **in keiner Fassung** (M42) |
 | Indexhinweis | **in keiner Fassung.** Der Optimierer wird nirgends überstimmt — das ist der ganze Punkt |
 | `ANALYZE TABLE` | **nicht gefahren** — `monitor_read` hat auf `GlassfishDB` nur `SELECT` |
-| Geschrieben | **nichts.** Weder in `GlassfishDB` noch in `overlord_monitor`. Kein Index, keine Probetabelle |
+| Geschrieben | **in M99 bis M103 nichts** — weder in `GlassfishDB` noch in `overlord_monitor`. **M104 ist die eine benannte Ausnahme**: eine Probetabelle in `overlord_monitor`, angelegt, gemessen und wieder gelöscht (Bauform M89, Löschung nachgewiesen). Auf `GlassfishDB` ist auch dort nur gelesen worden |
 
 ### Zwei ausgewiesene Abweichungen
 
@@ -94,11 +101,11 @@ Diese Runde führt deshalb bei den tragenden Fällen den Plan im Volltext.
 
 | Regel | Stand | |
 |---|---|---|
-| **S1** | erfüllt | Nur `SELECT`/`SET`/`EXPLAIN`/`PREPARE`/`DEALLOCATE`. `read_only` = 1 am Anfang und am Ende jeder Sitzung belegt |
+| **S1** | **erfüllt mit der benannten Ausnahme** | Zwölf der fünfzehn Sitzungen fahren ausschließlich `SELECT`/`SET`/`EXPLAIN`/`PREPARE`/`DEALLOCATE` mit `monitor_read`. Die drei Ausnahmen sind M104 a, c, f und h: Sie legen mit `monitor_write` **eine** Probetabelle in `overlord_monitor` an, indizieren sie und löschen sie wieder. `monitor_write` hat auf `GlassfishDB` nur `SELECT`; **kein Schreibzugriff auf `GlassfishDB` in irgendeiner Sitzung**. `read_only` = 1 am Anfang und am Ende jeder Sitzung belegt |
 | **G1** | erfüllt | Keine `ProcessID`, keine `MessageID`, kein Partnername in Datei oder Ausgabe. Prozesslisten leben in `@proz`; Zeilenvergleiche laufen über **MD5** über die geordneten `MessageID` |
 | **Z1** | erfüllt | Anker als Literal, nie `NOW()` |
 | **L2** | erfüllt | Zeilenzahlen und Prozesswahl kommen aus `message_rollup`, nicht aus einem zweiten Durchlauf über `Message` |
-| **L7** | erfüllt | Jede gemessene Abfrage mit `EXPLAIN` **und** Laufzeit, über **zehn** Mandanten statt zwei |
+| **L7** | erfüllt, mit einer Lücke | Jede gemessene Abfrage mit `EXPLAIN` **und** Laufzeit, über **zehn** Mandanten statt zwei. **Die Lücke:** Für die 24‑Stunden‑ und die 7‑Tage‑Stufe der Vorabfrage ist kein Plan erhoben — und genau dort sitzt nach M104 der Rest des Problems (Punkt 76) |
 | **L15** | erfüllt, mit A1/A2 | Pläne erhoben; die tragenden im Volltext, für alle übrigen die Treiberzeile |
 
 ### Die Sitzungen
@@ -113,6 +120,8 @@ Diese Runde führt deshalb bei den tragenden Fällen den Plan im Volltext.
 | M101 | `m101-cursor.sql` | Zwei Seiten, jede mit eigener Verengung |
 | M102 | `m102-wasserstand.sql` | Die Wasserstandsgrenze, drei Lagen |
 | M103 | `m103-rueckfall.sql` | `ueberfaellig` und der Statusfilter |
+| M104 · a–e | `m104a-probe-anlegen.sql`, `m104b-ohne-index.sql`, `m104c-index-anlegen.sql`, `m104d-mit-index.sql`, `m104e-probe-loeschen.sql` | Die Probetabelle, ohne und mit Index — Literalfassung |
+| M104 · f–h | `m104f-probe-mit-index-anlegen.sql`, `m104g-exists-alle-stufen.sql`, `m104h-probe-loeschen.sql` | Die fehlende Zelle: `EXISTS` über alle Stufen, mit Index |
 
 ---
 
@@ -440,10 +449,144 @@ falls die Verengung je gebaut wird.
 
 ---
 
+## M104 — Der Index auf unserer eigenen Tabelle *(Nachtrag, freigegeben nach dem Tor)*
+
+> ### ⚠️ Die eine benannte Ausnahme vom Satz „diese Runde schreibt nirgends"
+>
+> M99 bis M103 haben nirgends geschrieben. **M104 legt eine Probetabelle in `overlord_monitor` an**,
+> befüllt sie aus `message_rollup`, misst gegen sie und löscht sie wieder — die Bauform von **M89**
+> ([`messungen-schritt10.md`](messungen-schritt10.md) Z. 1098 ff.), aus demselben Grund und mit
+> derselben Rechenschaft. Die Löschung ist unten nachgewiesen.
+>
+> **Die echte Tabelle `message_rollup` ist nicht angefasst worden** — weder ihre Daten noch ihr
+> Schema. Auf `GlassfishDB` ist ausschließlich gelesen worden; `monitor_write` hat dort nur `SELECT`.
+>
+> **Nummernvergabe:** `grep -rnoE '\bM10[4-9]\b'` → **null Treffer**. Gegenprobe auf `M10[0-3]` →
+> **26** Treffer, der Ausdruck greift. **M104 ist hier vergeben.**
+
+Die Frage ist offener Punkt 73: M99 zeigt, dass die dünnen Mandanten 13 bis 18 ms für die Vorabfrage
+zahlen, weil der Nachweis „weniger als 51 Zeilen in dreißig Tagen" alle **21.274** Rollupzeilen des
+Fensters lesen muss — `message_rollup` trägt keinen Sekundärindex. Genau daran ist das Tor
+gescheitert. Hilft ein Index `(process_id, stunde)`?
+
+### Der Aufbau
+
+| | |
+|---|---|
+| Probetabelle | `overlord_monitor.message_rollup_probe_idx`, Schema **zeichengleich** zu `message_rollup` |
+| Befüllt | in **23 Monatsscheiben** aus `message_rollup` (Muster M89: ein `INSERT … SELECT` über den Gesamtbestand liefe gegen `max_statement_time = 60`) |
+| Kontrolle | **335.610** Zeilen, `SUM(anzahl)` = **3.341.519**, und `EXCEPT` in beide Richtungen → **null** abweichende Zeilen |
+| Zwei Durchgänge | **a–e**: ohne Index messen, Index anlegen, mit Index messen, löschen — beide Messungen gegen **dieselbe** Tabelle, damit der Unterschied allein am Index hängt. **f–h**: zweiter Durchgang für die Zelle, die im ersten fehlte (`EXISTS` über alle Stufen) |
+| Index | `ALTER TABLE … ADD INDEX (process_id, stunde)` — **1.315 ms** für 335.610 Zeilen |
+| Kosten | `INDEX_LENGTH` **16,6 MiB** (nachträglich angelegt) bzw. **22,6 MiB** (beim Befüllen mitgeführt), gegen `DATA_LENGTH` 21,6 MiB. Also **+77 % bis +105 %** auf die Tabellengröße |
+| `CARDINALITY` | `process_id` → **932**. Anders als die `CARDINALITY` 18 auf `GlassfishDB` ist das ein brauchbarer Wert |
+
+### Was der Index bringt — und wo er nichts bringt
+
+Faktor `ohne Index / mit Index`, `EXISTS`-Fassung, je Stufe. Über 1,0 heißt: der Index hilft.
+
+| Mandant | 1 h | 24 h | 7 d | 30 d |
+|---|---:|---:|---:|---:|
+| NEXANS | 0,96× | 0,96× | 0,96× | 1,28× |
+| SUTTONS | 0,94× | 1,05× | 0,78× | 2,38× |
+| VOTG | 0,99× | 1,01× | 1,01× | 2,98× |
+| IBIS | 0,99× | 0,98× | 0,97× | 1,00× |
+| IBISGUS | 0,98× | 0,99× | 0,99× | 12,02× |
+| **ZAST** | 0,97× | 0,98× | **7,40×** | **38,33×** |
+| **WOC** | 0,95× | 1,00× | **11,43×** | **59,21×** |
+| **SYSTEM** | 0,95× | 0,98× | **16,47×** | **98,47×** |
+| **NXHBE** | 0,87× | 1,00× | **16,79×** | **101,62×** |
+| **EDITIONLINGERI** | 0,92× | 0,96× | **18,35×** | **94,46×** |
+
+**Der Index tut genau das, was Punkt 73 vermutet hat, und nichts darüber hinaus.** Er wirkt auf den
+**weiten** Stufen und **nur** bei den dünnen Mandanten — dort um Faktor 7 bis 102. Auf den engen
+Stufen kostet er nichts (0,87× bis 1,05×, das ist Rauschen). Der Plan zeigt den Wechsel:
+
+```
+SYSTEM, 30 Tage, ohne Index (96,997 ms)   mit Index (0,985 ms)
+────────────────────────────────────────  ──────────────────────────────────────────
+r  range  PRIMARY                         pm ref   ProjectMandant_Mandant_idx  2
+          (alle 21.274 Rollupzeilen,      mp ref   Process_ProjectFK           5
+           je Zeile eine EXISTS-Kette)    r  ref   probe_prozess_stunde_idx  1361
+                                                   Using index condition
+```
+
+Ohne Index liest die Abfrage den Zeitbereich und prüft jede Zeile; mit Index dreht sie um und geht
+von den **vier** Prozessen des Mandanten in den Rollup. Das ist der ganze Unterschied.
+
+> **Eine Warnung, die dazugehört: Index und Literalliste vertragen sich nicht.** In der
+> **Literal**fassung macht derselbe Index die engen Stufen *teurer* — `NEXANS` auf der 1‑Stunden‑Stufe
+> von **2,204 auf 7,813 ms**, `VOTG` von 1,771 auf 4,249, `IBIS` von 1,206 auf 2,798. Der Optimierer
+> plant die `IN`-Liste anders, sobald der Index da ist, und wählt schlechter. In der
+> `EXISTS`-Fassung tritt das nicht auf. **Wer den Index anlegt, muss die Vorabfrage als `EXISTS`
+> schreiben** — sonst verschiebt er den Schaden nur von den dünnen zu den dichten Mandanten.
+
+### Das Tor, mit Index
+
+`EXISTS`-Fassung, gestuft, Nullfall angewandt:
+
+| Fall | heute | Vorab **ohne** Index | Vorab **mit** Index | Summe mit Index | |
+|---|---:|---:|---:|---:|---|
+| EDITIONLINGERI | 2.126,876 | 123,173 | **6,912** | **6,912** | **308× besser** |
+| SUTTONS | 1.043,011 | 5,218 | 5,088 | 11,584 | **90× besser** |
+| ZAST | 270,891 | 21,339 | 7,170 | 277,994 | 1,03× schlechter |
+| IBISGUS | 52,129 | 5,008 | 5,076 | 56,176 | 1,08× schlechter |
+| IBIS | 41,377 | 5,095 | 5,174 | 46,303 | 1,12× schlechter |
+| VOTG | 33,672 | 5,252 | 5,222 | 38,218 | 1,14× schlechter |
+| WOC | 15,102 | 107,154 | **7,166** | 22,148 | 1,47× schlechter |
+| SYSTEM | 1,695 | 116,980 | **6,676** | 8,232 | 4,86× schlechter |
+| NEXANS | 1,634 | 1,002 | 1,039 | 2,654 | 1,62× schlechter |
+| NXHBE | 0,980 | 117,742 | **6,696** | 6,696 | 6,83× schlechter |
+
+Wählt man je Mandant die bessere der beiden Fassungen (Literal bei wenigen Prozessen, `EXISTS` bei
+vielen), wird es noch etwas besser: `NXHBE` **3,702 ms**, `SYSTEM` **3,143 ms**, `WOC` **3,766 ms**,
+`EDITIONLINGERI` **3,348 ms** — und `EDITIONLINGERI` fällt damit von 2.126,876 auf **3,348 ms**,
+Faktor **635**.
+
+> ### Der Index hilft entscheidend — und öffnet das Tor trotzdem nicht
+>
+> | | ohne Index | mit Index |
+> |---|---:|---:|
+> | NXHBE | 120,1× schlechter | **6,8× schlechter** (bzw. 3,8× in der besten Fassung) |
+> | SYSTEM | 69,9× schlechter | **4,9× schlechter** (bzw. 2,8×) |
+> | WOC | 8,1× schlechter | **1,5× schlechter** (bzw. 1,2×) |
+> | EDITIONLINGERI | 17,3× besser | **308× besser** (bzw. 635×) |
+>
+> Der Schaden schrumpft um eine Größenordnung, aber er verschwindet nicht. **Was übrig bleibt, ist
+> nicht mehr der 30‑Tage‑Nachweis, sondern die 24‑Stunden‑Stufe:** Sie kostet in der
+> `EXISTS`-Fassung **3,4 bis 4,4 ms** für jeden Mandanten, und **der Index rührt sie nicht an**
+> (0,96× bis 1,05×). `NXHBE` liegt heute bei 0,980 ms — gegen einen Sockel von drei bis vier
+> Millisekunden kommt kein Index an.
+>
+> Damit ist offener Punkt 73 **beantwortet, nicht erledigt**: Der Index ist notwendig und nicht
+> hinreichend. Die nächste Frage ist eine andere geworden und steht als Punkt **76**.
+
+### Der Löschnachweis
+
+Beide Durchgänge, Benutzer `monitor_write`:
+
+| Schritt | Ergebnis |
+|---|---|
+| `@@global.read_only` zu Beginn und am Ende | **`1`** |
+| **vorher** — Zeilen in der Probetabelle | **335.610** |
+| `DROP TABLE overlord_monitor.message_rollup_probe_idx` | ausgeführt, **zweimal** (Durchgang a–e und f–h) |
+| **nachher** — Zeilen in `information_schema.TABLES` für diese Tabelle | **`0`** |
+| **nachher** — Tabellen in `overlord_monitor` | `app_user`, `app_user_mandant`, `audit_log`, `bam_sollaenge`, `bam_spalte`, `flyway_schema_history`, `message_rollup`, `message_rollup_tag`, `process_catalog`, `rollup_lauf`, `SPRING_SESSION`, `SPRING_SESSION_ATTRIBUTES` |
+
+**Das sind genau die zwölf Tabellen, die vor der Anlage bestanden.** Die Probetabelle hat die Runde
+nicht überlebt. `message_rollup` trägt unverändert **335.610** Zeilen, `SUM(anzahl)` **3.341.519**
+und **keinen** Sekundärindex; `GlassfishDB` steht unverändert bei 3.341.519 Zeilen mit Datenstand
+`2026-07-08 17:21:10`.
+
+---
+
 ## Das Tor, angewandt
 
 Vorabfrage jeweils in der **besseren** der beiden gemessenen Fassungen, Stufen bis einschließlich
-der tragenden summiert, Nullfall angewandt (die Quellabfrage entfällt dann ganz).
+der tragenden summiert, Nullfall angewandt (die Quellabfrage entfällt dann ganz). Der Nachtrag M104
+zeigt, dass ein Index auf unserer eigenen Tabelle diese Zahlen für die dünnen Mandanten um eine
+Größenordnung verbessert — **aber keine einzige Zeile dieser Tabelle von „schlechter" auf „besser"
+kippt.** Die folgende Bewertung gilt deshalb mit und ohne ihn.
 
 | Fall | **heute** | Vorabfrage | Quelle | **Summe** | |
 |---|---:|---:|---:|---:|---|
@@ -514,9 +657,12 @@ Untergrenze über „wo liegt die 51. Zeile" definiert ist, **kann** sie diesem 
 
 - Sie sagt **nicht**, dass die Verengung eine schlechte Idee ist. Sie sagt, dass die Vorabfrage in
   der gemessenen Form für dünne Mandanten zu teuer ist.
-- Sie sagt **nichts** über eine Vorabfrage gegen einen Rollup mit einem Index auf `process_id`.
-  Das ist **nicht gemessen** (Punkt 73) — es hätte einen Schreibzugriff auf `overlord_monitor`
-  verlangt, und diese Runde hat nirgends geschrieben.
+- Sie sagt **nichts** über den Rollup-Lauf selbst unter einem zusätzlichen Index. M104 misst, was
+  der Index dem **Leser** bringt (Faktor bis 102) und was er an Platz und Aufbauzeit kostet
+  (16,6 MiB, 1,3 s) — **nicht**, was er den stündlichen Delta-Lauf kostet, der in die Tabelle
+  schreibt. Das ist ungemessen und gehört zu jeder Entscheidung über diesen Index dazu.
+- Sie sagt **nichts** über den Plan der 24‑Stunden‑Stufe. M104 hat Pläne nur für die 1‑Stunden‑ und
+  die 30‑Tage‑Stufe geführt, und genau dazwischen sitzt der Rest des Problems (Punkt 76).
 - Sie sagt **nichts** über kalte Läufe. Alles ist warm gemessen; der Kaltfaktor aus M44 geht bis
   9,66 und trifft Vorabfrage und Quellabfrage nicht notwendig gleich.
 - Sie sagt **nichts** über die Tagesebene `message_rollup_tag` als Grundlage der Verengung.
@@ -553,17 +699,31 @@ Nummerierung im Anschluss an den projektweit höchsten Stand (**69**, in
     künftigen Filter, der der Liste hinzugefügt wird — **wer einen Filter ergänzt, ergänzt zwei
     Dinge.**
 
-73. **Ob ein Index `(process_id, stunde)` auf `message_rollup` die dünnen Mandanten rettet, ist
-    ungemessen.** Sie zahlen 13 bis 18 ms, weil der Nachweis „weniger als 51 Zeilen in dreißig
-    Tagen" **21.274** Rollup-Zeilen lesen muss — die aller Mandanten, weil die Tabelle nach
-    `(stunde, process_id, message_status)` geschlüsselt ist und keinen Sekundärindex trägt
-    ([`rollup.md`](rollup.md) §2, ausdrückliche Entscheidung). Mit einem Index über `process_id`
-    läse `WOC` seine **47**, `SYSTEM` seine **5** und `NXHBE` und `EDITIONLINGERI` **keine**.
-    `message_rollup` liegt in `overlord_monitor`; ein Index dort ist erlaubt. **Er kostet Platz und
-    verlangsamt den Rollup-Lauf**, und beides ist ungemessen. Für **NEXANS** hilft er nachweislich
-    nicht (Nachtrag 1): Dessen Aufschlag steckt im Parsen der Literalliste, nicht im Lesen.
-    Der Weg dahin wäre eine Probetabelle, angelegt, gemessen und wieder gelöscht — die Bauform von
-    **M89**.
+73. **~~Ob ein Index `(process_id, stunde)` auf `message_rollup` die dünnen Mandanten rettet, ist
+    ungemessen.~~**
+
+    > ✔ **Gemessen am 27.08.2026 in M104** (Probetabelle nach dem Vorbild von M89, angelegt,
+    > befüllt, gemessen, gelöscht — Löschung nachgewiesen). **Die Antwort ist: notwendig, aber nicht
+    > hinreichend.**
+    >
+    > **Er wirkt, und zwar genau wie vermutet.** Auf der 30‑Tage‑Stufe fällt die Vorabfrage in der
+    > `EXISTS`-Fassung für `NXHBE` um Faktor **101,6**, für `SYSTEM` um **98,5**, für
+    > `EDITIONLINGERI` um **94,5**, für `WOC` um **59,2** und für `ZAST` um **38,3**. Der Plan dreht
+    > sich um: statt alle 21.274 Rollupzeilen zu lesen, geht er von den wenigen Prozessen des
+    > Mandanten in den Rollup. Auf den engen Stufen kostet er nichts (0,87× bis 1,05×). Er kostet
+    > **16,6 MiB** neben 21,6 MiB Daten und **1,3 s** Aufbauzeit.
+    >
+    > **Er reicht trotzdem nicht.** Der Schaden schrumpft um eine Größenordnung — `NXHBE` von 120,1×
+    > auf 6,8× (3,8× in der besten Fassung), `SYSTEM` von 69,9× auf 4,9× —, aber **keine Zeile des
+    > Tors kippt von „schlechter" auf „besser".** Was übrig bleibt, ist die 24‑Stunden‑Stufe, und
+    > die rührt er nicht an: siehe Punkt **76**.
+    >
+    > **Und er hat eine Bedingung.** In der **Literal**fassung macht derselbe Index die engen Stufen
+    > *teurer* (`NEXANS` 1 h: 2,204 → 7,813 ms). Wer ihn anlegt, muss die Vorabfrage als `EXISTS`
+    > schreiben — sonst verschiebt er den Schaden nur von den dünnen zu den dichten Mandanten.
+    >
+    > Für **NEXANS** hilft er nicht, wie Nachtrag 1 vorhergesagt hatte: Dessen Aufschlag steckt im
+    > Parsen der Literalliste, nicht im Lesen.
 
 74. **Die BAM-Suche ist als Rückfallpfad nicht gemessen.** Da nichts gebaut wurde, ist ihr Statement
     unverändert und eine Messung hätte nur den heutigen Wert wiederholt. Wird die Verengung je
@@ -574,15 +734,30 @@ Nummerierung im Anschluss an den projektweit höchsten Stand (**69**, in
     einer Stunde billiger (0,993 gegen 2,198 ms) und braucht keine Prozessliste; die Literalliste
     ist bei dreißig Tagen um Faktor 6 bis 8 billiger (13,0 gegen 88,9 ms bei `WOC`). Eine gebaute
     Fassung müsste je nach Stufe wechseln — oder die Prozessliste zwischenspeichern, was sie
-    zustandsbehaftet machte und in dieser Runde nicht betrachtet ist.
+    zustandsbehaftet machte und in dieser Runde nicht betrachtet ist. **M104 verschärft das:** Mit
+    Index kehrt sich das Verhältnis um — dann ist `EXISTS` auf den weiten Stufen die bessere und die
+    Literalliste dort die schlechtere Wahl, und auf den engen Stufen macht der Index die
+    Literalliste sogar messbar schlechter. Index und Fassung sind **eine** Entscheidung, nicht zwei.
+
+76. **Was jetzt im Weg steht, ist die 24‑Stunden‑Stufe — und der Index rührt sie nicht an.** Sie
+    kostet in der `EXISTS`-Fassung **3,4 bis 4,4 ms** bei jedem der zehn Mandanten, mit Index wie
+    ohne (0,96× bis 1,05×). Das ist der Sockel, an dem das Tor nach M104 noch scheitert: `NXHBE`
+    liegt heute bei **0,980 ms**, `SYSTEM` bei **1,695 ms**. Auffällig und ungeklärt: Die
+    24‑Stunden‑Scheibe umfasst nur **587** Rollupzeilen, die 1‑Stunden‑Scheibe **28** — also der
+    einundzwanzigfache Umfang bei rund vierfacher Laufzeit, während die 7‑Tage‑Stufe mit Index auf
+    **unter 1 ms** fällt, obwohl sie ein Vielfaches davon umfasst. **Der Optimierer nutzt den Index
+    auf der 24‑Stunden‑Stufe offenbar nicht**, obwohl er dort verfügbar wäre. Der Plan dieser Stufe
+    ist **nicht erhoben** worden — M104 hat Pläne nur für die 1‑Stunden‑ und die 30‑Tage‑Stufe
+    geführt. Das ist die nächste Messung, und sie ist billig.
 
 ---
 
 ## Was diese Runde nicht getan hat
 
 - **Nichts gebaut.** Kein Anwendungscode ist angefasst worden.
-- **Nichts geschrieben** — weder in `GlassfishDB` noch in `overlord_monitor`. Kein Index, keine
-  Probetabelle, keine Migration.
+- **In `GlassfishDB` nichts geschrieben** — in keiner der fünfzehn Sitzungen.
+- **Keinen Index auf `message_rollup` angelegt** und keine Migration geschrieben. M104 hat den
+  Index ausschließlich auf einer **Probetabelle** gemessen, die die Runde nicht überlebt hat.
 - **Keinen Hint, kein `STRAIGHT_JOIN`, keine erzwungene Reihenfolge.** Der Optimierer ist in keiner
   Fassung überstimmt worden.
 - **Das Dashboard nicht angefasst.**
