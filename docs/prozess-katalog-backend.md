@@ -1003,6 +1003,46 @@ stillschweigend aufgelöst.**
 
 ## 10. Offene Punkte
 
+> ### ⚠️ Zwei Tests in `ProzessKatalogIsolationDbIT` sind seit dem 27.08.2026 rot — und der Grund liegt in den Daten
+>
+> **Gefunden bei der Abnahme von Schritt 10b‑1**, der mit diesem Bereich nichts zu tun hat. Rot sind
+> `uebernahme_erfasst_nur_den_aktiven_mandanten` und
+> `uebernahme_ignoriert_untergeschobenen_mandanten`; beide scheitern an ihrer eigenen
+> **Vorbedingung**, nicht an der Sache, die sie prüfen.
+>
+> **Was gemessen ist** (27.08.2026, gegen die Testkopie):
+>
+> ```
+> SELECT pm.MandantID, c.pflegestatus, c.vorschlag_herkunft, COUNT(*)
+> FROM process_catalog c JOIN Process p … JOIN ProjectMandant pm …
+> WHERE c.pflegestatus = 'OFFEN' GROUP BY 1,2,3;
+> → VOTG | OFFEN | KEINE | 12     (und sonst nichts)
+> ```
+>
+> **Im gesamten Bestand gibt es keine einzige übernehmbare Zeile mehr.**
+> `findeUebernehmbareVorschlaege` verlangt `pflegestatus = 'OFFEN'` **und**
+> `vorschlag_herkunft IN ('REGEL_A','REGEL_B')`; die zwölf verbliebenen offenen Zeilen tragen alle
+> `KEINE`. Damit liefert die Vorschau für **jeden** Mandanten `betroffen = 0`, und beide Tests
+> verlangen von ihrem Gegenmandanten eine positive bzw. eine *andere* Zahl.
+>
+> **Der erste Test sagt seine eigene Diagnose:** *„Steht hier 0, ist der Katalog von `VOTG`
+> vollständig kuratiert und dieser Test braucht einen anderen Gegenmandanten."* Genau das ist
+> eingetreten — nur reicht ein anderer Gegenmandant nicht mehr, weil es **nirgends** mehr eine
+> übernehmbare Zeile gibt. Die Kuratierung vom 24. bis 27.08.2026 hat 1.486 Katalogzeilen angefasst,
+> davon 505 am Morgen des 27.08. ([`messungen-schritt10b.md`](messungen-schritt10b.md) V3, Befund
+> 22); `SUTTONS`, das dort noch 17 offene Zeilen trug, ist seither ebenfalls gepflegt.
+>
+> **Es ist kein Codefehler.** Der Endpunkt verhält sich richtig: Wo nichts zu übernehmen ist, ist
+> `betroffen = 0`. Rot ist die Annahme des Tests, der Bestand halte für ihn dauerhaft eine
+> unkuratierte Ecke bereit.
+>
+> **Nicht in Schritt 10b‑1 repariert, und zwar bewusst.** Die Reparatur gehört diesem Bereich und
+> nicht jenem Schritt, und sie ist keine Kleinigkeit: Der Test müsste sich seine Vorbedingung
+> **selbst anlegen** — eine offene Zeile mit `REGEL_A` beim Gegenmandanten — und dabei die Falle aus
+> §7 umgehen, die in `BestandslaufDbIT` schon einmal von Hand kuratierte Daten gekostet hat. **Das
+> ist eine Entscheidung und ein eigener Schritt.**
+
+
 1. **Drei der vier offenen Punkte aus [`prozess-katalog.md`](prozess-katalog.md) §10 bleiben offen,
    der vierte ist für vier seiner fünf Mandanten beantwortet.**
    - *Offen:* `ZAST` (35) und `NXHBE` (17) haben kein Verfahren für den **Partner**; ob `WOC` (4)
