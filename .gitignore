@@ -86,6 +86,7 @@ scripts/messung-schritt9/ergebnis/
 # eingecheckt, die Rohausgaben nicht. Sie tragen vollstaendige Prozess- und
 # Projektkennungen und damit Partnernamen Dritter. (Regel G1)
 scripts/messung-schritt10/ergebnis/
+scripts/messung-schritt10b/ergebnis/
 
 # ─── Quelltext des Altwerkzeugs ──────────────────────────────────────────────
 # alterCode/ bleibt LOKAL. JsonServlet.java traegt drei produktive absolute
