@@ -880,6 +880,52 @@ Punkt 55 trägt sie weiter; die Zahlen dafür stehen vollständig hier.
 
 ---
 
+## 9b. Der Rollup als Beschleuniger der Nachrichtenliste — geprüft, nicht gebaut *(27.08.2026)*
+
+**`message_rollup` ist weiterhin ausschließlich die Datenquelle des Dashboards.** Am 27.08.2026 ist
+geprüft worden, ob die Tabelle daneben eine **Kernabfrage** beschleunigen kann: die Nachrichtenliste.
+Der Gedanke ist, aus dem Rollup vorab zu bestimmen, in welchen Stunden ein Mandant überhaupt
+Nachrichten hat, und die Quellabfrage nur nach diesen Stunden zu fragen. Alle Zahlen stehen in
+[`messungen-liste-verengung.md`](messungen-liste-verengung.md) (M99 bis M103), die Bewertung in
+[`nachrichtenliste.md`](nachrichtenliste.md) §5c.
+
+**Es ist nichts gebaut worden**, und die Tabelle hat damit **keinen zweiten Verbraucher**. Drei
+Dinge aus dieser Prüfung gehören trotzdem hierher, weil sie den Rollup betreffen und sonst
+untergehen:
+
+1. **Der Rollup ist für `MessageLastUpdate` nachweislich lückenlos.** `SUM(anzahl)` über die
+   Stundenebene trifft `COUNT(*)` über `Message` auf die Zeile genau (**3.341.519**), und
+   `MessageLastUpdate` ist im Bestand nirgends `NULL`. Die Stundeneimer sind an drei Stichproben
+   gegen die Quelle geprüft und dreimal gleich. Wer die Tabelle als Zählwerk benutzt, darf sich
+   darauf verlassen — **solange die Eimergrenzen halboffen gelesen werden**: `[stunde, stunde+1h)`.
+   Ein Fenster, dessen Grenzen nicht auf einer vollen Stunde liegen, hat zwei **angebrochene**
+   Randstunden, und wer sie voll mitzählt, bekommt eine Überschätzung.
+
+2. **Der fehlende Sekundärindex ist der Grund, warum die Prüfung gescheitert ist.** §2 hält
+   ausdrücklich fest, dass `message_rollup` keinen Sekundärindex trägt. Für das Dashboard ist das
+   richtig — es fragt immer über einen Zeitbereich, und `stunde` führt den Primärschlüssel. Für eine
+   Frage der Form „hat *dieser Mandant* im Fenster überhaupt 51 Zeilen?" ist es teuer: Sie muss alle
+   **21.274** Rollupzeilen des 30‑Tage-Fensters lesen, auch wenn der Mandant nur **47** davon
+   besitzt. Das kostet 13 bis 18 ms und trifft ausgerechnet die dünnen Mandanten. Ob ein Index
+   `(process_id, stunde)` das löst — und was er den Rollup-Lauf kostet — ist **ungemessen**
+   (offener Punkt **73** in der Messdatei).
+
+3. **Der Mandant steht nicht in der Zeile, und das hat einen Preis, den 10a nicht sehen konnte.**
+   Entscheidung E‑a hält Mandant, Partner und Richtung bewusst aus dem Schlüssel heraus; der Mandant
+   wird erst beim Lesen über `Process → Project → ProjectMandant` angebunden. Für das Dashboard ist
+   das eine Verbindung je Anfrage. Für die Verengung ist es der Hauptkostenblock: Entweder man
+   löst die Prozessliste vorab auf und schickt sie als Literalliste mit — bei `NEXANS` sind das
+   **733** Kennungen und ein Statement von **19.285 Zeichen**, dessen bloßes Parsen 1,5 ms kostet —,
+   oder man hängt eine `EXISTS`-Kette an jede Rollupzeile, was bei weitem Bereich das Sechs- bis
+   Achtfache kostet. **Die Mandantenkette muss `EXISTS` sein und darf kein `JOIN` sein:**
+   `ProjectMandant` ist n:m, ein `JOIN` vervielfachte Zeilen und damit die Summe.
+
+**Wer diese Tabelle künftig ändert, ändert vorerst nur eine Sache** — das Dashboard. Sollte die
+Verengung je gebaut werden, gilt der Satz nicht mehr, und dieser Abschnitt ist der erste, der
+angepasst gehört.
+
+---
+
 ## 10. Tests
 
 ### Ohne Datenbank

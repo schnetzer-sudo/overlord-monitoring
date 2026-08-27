@@ -1239,6 +1239,83 @@ Das ist ein Befund über den Bestand und nicht über die Kategorie; er steht sei
 
 ---
 
+## 5c. Fensterverengung über `message_rollup` — gemessen, nicht gebaut (27.08.2026)
+
+§5a endet mit dem Satz, es bräuchte „zwei Abfrageformen, ausgewählt an einer Zahl aus
+`message_rollup`" — als Vorlage an den Auftraggeber, nicht als Vorschlag zur Umsetzung. Diese Runde
+hat den Gedanken gemessen, in einer Fassung, die **keine zweite Abfrageform** baut: Der Rollup weiß,
+in welchen Stunden ein Mandant Nachrichten hat; man fragt die Quelle nur nach diesen Stunden und
+überlässt die Planwahl dem Optimierer.
+
+**Nichts ist gebaut worden.** Alle Zahlen stehen in
+[`messungen-liste-verengung.md`](messungen-liste-verengung.md) (M99 bis M103, sieben Sitzungen,
+zehn Mandanten).
+
+### Wie sie rechnet
+
+Vom Fensterende rückwärts über die Stundeneimer summieren, bis die kumulierte `anzahl` **≥ 51**
+ist; diese Stunde wird die neue Untergrenze. Angebrochene Randstunden und Stunden oberhalb des
+Wasserstands (`MAX(fenster_bis)` aus `rollup_lauf`) gehen mit **0** ein. Die gezählte Menge ist damit
+stets eine **Unterschranke** — die Verengung geht nie zu weit und kann keine Zeile verlieren.
+
+### Was sie leistet
+
+| Fall | heute | verengt, samt Vorabfrage | |
+|---|---:|---:|---|
+| **NEXANS, Prozessfilter, drei verkehrsreiche Prozesse** | **7.459,912 ms** *(§5a)* / 7.519,513 ms *(neu)* | **6,797 ms** | **1.106×** |
+| **EDITIONLINGERI**, ohne Filter | **2.313,808 ms** *(§5a)* / 2.126,876 ms *(neu)* | **17,454 ms** | **122×** |
+| **SUTTONS**, ohne Filter | **1.034,784 ms** *(§5a)* / 1.043,011 ms *(neu)* | **8,605 ms** | **121×** |
+| **ZAST**, ohne Filter | **288,561 ms** *(§5a)* / 270,891 ms *(neu)* | 275,370 ms | **unverändert** |
+
+Der teuerste bekannte Fall des Projekts — die Kombination, von der §5a schreibt, sie „stirbt in
+Produktion" — kostet verengt **unter 7 ms**. Der Plan zeigt warum: Der Zugriff auf `Message`
+wechselt von `ref` über `ProejctIDIDX` mit den geschätzten **197.804** Zeilen (der
+`CARDINALITY`‑18‑Befund aus M83) auf `range` über `MessageLastUpdateIDX` mit **358**. Die *erste*
+Planzeile bleibt dabei unverändert — die Entscheidung liegt in der vierten.
+
+**Und der Optimierer bleibt, wo er richtig liegt.** `WOC`, `SYSTEM` und `NXHBE` behalten ihre
+prozessgetriebene Form; genau sie hatte Fassung F6 aus §5a um Faktor 92 bis 3.002 zerstört. Ein
+Fenster zu geben ist etwas anderes, als eine Form zu erzwingen.
+
+### Woran es scheitert
+
+**An der Vorabfrage, nicht am Plan.** Sie kostet jeden Mandanten etwas, und die dünnen am meisten:
+Der Nachweis „weniger als 51 Zeilen in dreißig Tagen" muss **21.274** Rollup-Zeilen lesen, weil
+`message_rollup` nach `(stunde, process_id, message_status)` geschlüsselt ist und keinen
+Sekundärindex trägt. Diese Mandanten sind heute schon schnell.
+
+| | heute | verengt | |
+|---|---:|---:|---|
+| NXHBE | 0,980 ms | 17,584 ms | 17,9× schlechter |
+| SYSTEM | 1,695 ms | 18,290 ms | 10,8× schlechter |
+| WOC | 15,102 ms | 32,256 ms | 2,14× schlechter |
+| VOTG / IBIS / IBISGUS | 33,7 / 41,4 / 52,1 ms | +2 bis +4 ms | 1,03× bis 1,10× schlechter |
+
+**Das ist die zweite Zeile des Tors, und sie gilt:** *„Ein Mandant wird schlechter — nicht bauen.
+Melden."* Dieselbe Zeile wie bei F6 in §5a, aber aus einem anderen Grund: Dort schadete der **Plan**
+unbegrenzt, hier ein **additiver Betrag** von höchstens rund 18 ms — auf einer Tabelle, die diesem
+Projekt gehört. Was fehlt, steht als offener Punkt **73** in der Messdatei.
+
+### Zwei Befunde, die über diese Runde hinaus gelten
+
+**Die Verengung kann einem bereits zeitgetriebenen Mandanten prinzipiell nichts sparen.** Der
+zeitgetriebene Plan liest vom Fensterende rückwärts und hört bei der 51. Zeile auf — genau dort
+setzt die Verengung die Untergrenze. Beide lesen dieselben Stunden. Das ist der Fall `ZAST`, und er
+ist nicht durch eine bessere Fassung zu heilen (Punkt **70**).
+
+> **⚠️ Eine Verengung, die nicht jeden Filter der Quellabfrage mitträgt, verliert stillschweigend
+> Zeilen.** Gemessen mit dem Statusfilter `FEHLER`: `SUTTONS` liefert **null statt fünf** Zeilen,
+> `NEXANS` **49 statt 51** — ohne Fehlermeldung. Der Rollup meldet 51 Nachrichten in der letzten
+> Stunde, die Verengung schneidet darauf zu, und in dieser Stunde liegt kein einziger Fehler. Ein
+> Mandant sähe „keine Fehler" und hätte fünf. **Wer der Liste künftig einen Filter hinzufügt, fügt
+> zwei Dinge hinzu** (Punkt **72**).
+
+`ueberfaellig` trägt die Verengung ohnehin nicht — `MessageTimeout` und `jetzt` stehen nicht im
+Rollup. Der Rückfallpfad ist gemessen und unverändert: NEXANS 4,993 ms, SUTTONS 6,631 ms.
+
+
+---
+
 ## 6. Die BAM-Werte sind aus der Liste heraus — und warum
 
 Bis zur Nachbesserung von Schritt 4 trug jede Zeile zwei BAM-Spalten, nachgeladen in einer zweiten
