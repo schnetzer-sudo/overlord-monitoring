@@ -1182,9 +1182,12 @@ Prozent der Datenbank; dort entscheidet die Bytegröße.
    > benannt.** Erhoben als Nebenbefund der Messrunde vom 26.08.2026
    > ([`messungen-schritt10.md`](messungen-schritt10.md), Abschnitt „Korrekturen").
    >
-   > **Wer die alten Monate braucht, braucht etwas anderes als einen Listen-Endpunkt** — die
-   > BAM-Suche über eine bekannte Belegnummer oder, jenseits der produktiven Aufbewahrung, das
-   > Archivsystem aus [`rohdaten.md`](rohdaten.md) §12. Beides ist kein Bau dieses MVP.
+   > **Und das MVP hat keinen zweiten Weg dorthin.** Die BAM-Suche ist ebenfalls an diese Regel
+   > gebunden — Vorgabe 30 Tage statt 24 Stunden, Maximum unverändert ein Jahr
+   > ([`bam-suche.md`](bam-suche.md) §2). Über eine bekannte `MessageID` ist eine Nachricht zwar
+   > ohne Fenster erreichbar, aber nur, wenn man sie schon hat. **Wer die alten Monate braucht,
+   > braucht das Archivsystem aus [`rohdaten.md`](rohdaten.md) §12 — und das ist kein Bau dieses
+   > Projekts.**
 2. **Keine Live-Aggregation über `Message`.** Dashboard-Kennzahlen kommen ausschließlich aus
    `message_rollup`. Ein stündlicher Job schreibt inkrementell fort.
    *Begründung korrigiert 27.07.2026:* Bei 3,3 Millionen Zeilen und 2,9 GB wäre eine
@@ -1353,7 +1356,7 @@ Zeile unter „Enthalten" ist außerdem der **Proxy** gefallen und sind die **Pr
 
 > **Wortgleich, wie sie oben steht und stehen bleibt:**
 >
-> > - Dashboard: Volumen im Zeitverlauf, **die drei Problemkategorien**, Verteilung nach Partner
+> > - Dashboard: Volumen im Zeitverlauf, die drei Problemkategorien, Verteilung nach Partner
 
 **Es sind zwei: *Fehler* und *Überfällig*.** *Unquittiert* ist mit Entscheidung **E‑d** vom
 24.08.2026 aus dem MVP genommen; die vollständige Begründung steht im Kasten bei Abschnitt 4.2
@@ -1361,17 +1364,17 @@ Punkt 3 — keine operative Definition, und die Kategorie hängt am ungedeckten 
 `MatchInterchange`. **Die Beschreibung in Abschnitt 4.2 bleibt vollständig stehen**, und ihre
 Überschrift bleibt „Die drei Problemkategorien": Fachlich sind es drei, gebaut werden zwei.
 
-> **Ein Befund der Messrunde gehört dazu, und er verschiebt die Korrektur.** Der Auftrag zu dieser
-> Runde ging davon aus, in Abschnitt 9 stehe das Wort „Unquittiert" und sei zu streichen. **Es
-> steht hier nicht — nirgends.** Abschnitt 9 nennt die Kategorie überhaupt nicht, sondern
-> ausschließlich die Sammelformulierung „die drei Problemkategorien"
+> **Ein Befund der Messrunde gehört dazu, und er verschiebt die Korrektur.** Der Auftrag der
+> Messrunde vom 26.08.2026 ging davon aus, in Abschnitt 9 stehe das Wort „Unquittiert" und sei zu
+> streichen. **Es steht hier nicht — nirgends.** Abschnitt 9 nennt die Kategorie überhaupt nicht,
+> sondern ausschließlich die Sammelformulierung „die drei Problemkategorien"
 > ([`messungen-schritt10.md`](messungen-schritt10.md), „Was diese Runde nicht zeigt", Punkt 5).
 >
 > **Das ist mehr als eine Formalie.** Eine Zeile, die eine Zahl nennt statt einer Aufzählung, ist
 > beim Nachschlagen nicht auffindbar: Wer nach „Unquittiert" sucht, um zu prüfen, wo die Kategorie
-> zugesagt ist, findet Abschnitt 9 nicht — und Abschnitt 9 ist die Datei, die den MVP-Umfang
-> festlegt. **Die Zahl „drei" war hier die einzige Zusage**, und sie stand ohne den Begriff, der
-> sie prüfbar gemacht hätte.
+> zugesagt ist, findet diesen Abschnitt nicht — und dieser Abschnitt ist die Stelle, die den
+> MVP-Umfang festlegt. **Die Zahl „drei" war hier die einzige Zusage**, und sie stand ohne den
+> Begriff, der sie prüfbar gemacht hätte.
 
 **Was das für die Umsetzung heißt:** Das Dashboard aus Schritt 10b baut **zwei** Kacheln.
 *Überfällig* kommt dabei nicht aus dem Rollup, sondern aus einer Live-Abfrage — die erste benannte

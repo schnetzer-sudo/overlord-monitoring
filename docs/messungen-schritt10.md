@@ -300,8 +300,9 @@ Dieser Wert wird in M90 und in Fenster D **wörtlich** eingesetzt. Er ist unver�
 >
 > **Nicht betroffen sind alle Leistungszahlen.** Fenster A, B, D2 und G stehen als absolute Daten in
 > den Statements und hängen am Anker nicht. Und die Runde hat das leere Fenster **selbst bemerkt**
-> und dichte Fenster ergänzt — Abweichungen A4 und A5 —, weshalb jede Laufzeit und jeder Plan über
-> den ganzen Mengenbereich von 256 bis 24.218 Sätzen gemessen ist. **Was der falsche Anker gekostet
+> und dichte Fenster ergänzt — Abweichungen A4 und A5 —, weshalb die Laufzeiten über den ganzen
+> Mengenbereich von 256 bis 24.218 geschätzten Sätzen vorliegen und der Plan über diesen Bereich
+> unverändert ist (fünf der sechs Fenster geplant, Abweichung A8). **Was der falsche Anker gekostet
 > hat, ist keine Zahl, sondern eine Deutung:** drei Aussagen über den Bestand, die in Wahrheit
 > Aussagen über die Fensterlage sind. Sie stehen unter K12 einzeln berichtigt — Befund 12, offener
 > Punkt 43 und „Was diese Runde nicht zeigt", Punkt 10.
@@ -872,7 +873,7 @@ sind 47 Stunden und 56 Minuten vollständig leer.
 > Fenstergrenzen oben stammen aus dem Anker von V5, und der ist falsch bestimmt — siehe den Kasten
 > dort. Am **geltenden** Anker der Anwendungsuhr (`2025-12-30 04:09:47`) läuft das 48‑h‑Fenster vom
 > `2025-12-28 04:09:47` bis `2025-12-30 04:09:47` und liegt damit im dichten Bestand; Fenster **D2**
-> weiter unten misst fast genau diesen Bereich und trägt **12.332 Zeilen auf 926 Ergebniszeilen**.
+> weiter unten misst fast genau diesen Bereich und trägt **12.332 Zeilen und 926 Ergebniszeilen**.
 > **Der Zuschnitt der Messung wird davon nicht schlechter, sondern begründet sich neu:** Fenster D
 > misst weiterhin den leeren Indexbereich — nur ist das jetzt ein Grenzfall und nicht der Regelfall.
 > Vollständig unter Befund 12 und bei offenem Punkt 43.
@@ -2169,8 +2170,9 @@ Probetabelle: **3,827 s** (`INSERT … SELECT`, Sitzung 5a). Es läge auf Rang 2
 
     > **Berichtigt 27.08.2026.** Der Satz stimmt für das gemessene Fenster und **nicht** für „das
     > Standardfenster": Fenster D ist am falschen Anker aufgespannt (Kasten bei V5). Am geltenden
-    > Anker liegt es im dichten Bestand — Fenster D2 misst denselben Bereich mit **12.332 Zeilen und
-    > 926 Ergebniszeilen** über sechs Mandanten. **Der Satz „Jede Sichtprüfung von 10b wird ein
+    > Anker liegt es im dichten Bestand — Fenster D2 misst fast denselben Bereich mit **12.332
+    > Zeilen und 926 Ergebniszeilen**, und das darin liegende 24‑h‑Fenster am Anker trägt nach M9
+    > Daten aus **sechs** Mandanten. **Der Satz „Jede Sichtprüfung von 10b wird ein
     > anderes Fenster brauchen" fällt damit weg**; sie braucht nur die Anwendungsuhr, und die setzt
     > das Fenster von selbst richtig. **Was bleibt, ist die Aussage über diese Runde:** Sie hat das
     > Dashboard im ankerrichtigen Standardfenster nicht gemessen — sie hat einen fast
@@ -2233,22 +2235,25 @@ fünf führt. **Sechs bis vierzehn.** Jeder steht bei seiner Messung; hier sind 
 > | Lage | `2026-07-06 17:21` – `2026-07-08 17:21` | `2025-12-28 04:09` – `2025-12-30 04:09` |
 > | Zeilen | **256** | rund **12.000** *(Fenster D2: 12.332)* |
 > | Prozesse | **2** | *(D2: 926 Ergebniszeilen)* |
-> | Mandanten mit Daten | 1 | **sechs** |
+> | Mandanten mit Daten | 1 | **mindestens sechs** |
 >
 > **Die Zahl für D2 ist die belastbare Näherung, nicht die Messung selbst.** D2 läuft von
 > `2025-12-28 00:00` bis `2025-12-30 00:00` und ist gegen das ankerrichtige Fenster um gut vier
 > Stunden verschoben; gemessen ist der ankerrichtige Zuschnitt in dieser Runde nicht. **Die
-> Größenordnung steht damit fest, die Zahl auf die Zeile nicht.**
+> Größenordnung steht damit fest, die Zahl auf die Zeile nicht.** Die „mindestens sechs" sind
+> dagegen hart: Das **24‑h**-Fenster am geltenden Anker trägt nach M9
+> ([`datenzugriff.md`](datenzugriff.md) §6) 6.382 Zeilen aus **sechs** Mandanten, und es liegt
+> vollständig im 48‑h‑Fenster.
 >
-> **Was daraus folgt und was nicht.** Der Satz „Das Standardfenster des Dashboards ist auf der
-> Testkopie praktisch leer" ist **falsch** und war die Grundlage von drei Aussagen dieser Runde —
+> **Was daraus folgt und was nicht.** Die Gleichsetzung von Fenster D mit „dem Standardfenster des
+> Dashboards" ist **falsch**, und sie war die Grundlage von drei Aussagen dieser Runde —
 > Befund 12, offener Punkt 43 und „Was diese Runde nicht zeigt", Punkt 10. Alle drei sind hier und
 > an ihrer Fundstelle berichtigt. **Der Zuschnitt der Messungen bleibt richtig:** Die sechs Fenster
-> von M88 decken 256 bis 24.218 geschätzte Sätze ab, und Fenster D misst weiterhin einen leeren
-> Indexbereich — nur ist das der Grenzfall und nicht der Regelfall.
+> von M88 spannen den Mengenbereich von 256 bis 24.218 geschätzten Sätzen auf, und Fenster D misst
+> weiterhin einen leeren Indexbereich — nur ist das der Grenzfall und nicht der Regelfall.
 >
 > **Und der Grund, warum der zweite Prüfdurchgang das nicht gefunden hat, gehört hierher.** Er hat
-> jede Zahl gegen die Rohausgaben geprüft (Abweichung A14) — und die Rohausgaben stammen aus
+> jede Zahl gegen die Rohausgaben geprüft (Abweichungen A11 und A14) — und die Rohausgaben stammen aus
 > Statements, die den falschen Anker als **Literal** tragen. Sie sind zu ihren Eingaben vollkommen
 > konsistent. **Eine Nachprüfung gegen die eigenen Ergebnisse findet einen falschen Eingabewert
 > nicht.** Gefunden hat ihn erst der Abgleich mit einer *anderen* Datei —
@@ -2277,8 +2282,8 @@ Nummerierung im Anschluss an den projektweit höchsten Stand (**40**, in
     > diesen Punkt hier als den Schaden, den sein Fehlen angerichtet hat.
     >
     > **Was damit nicht erledigt ist**, und es ist der größere Teil: dass es **keinen Schritt gibt,
-    > der einen solchen Haken erzwingt**. Das ist Punkt 34 derselben Liste, und er steht seit dem
-    > 21.08.2026 offen. Solange er es tut, ist dieser Fall wiederholbar.
+    > der einen solchen Haken erzwingt**. Das ist Punkt 34 derselben Liste, und er steht unverändert
+    > offen. Solange er es tut, ist dieser Fall wiederholbar.
 42. **`PROJEKTBESCHREIBUNG.md` §3.2 Z. 135 („`MessageLastUpdate` ist der Zeitpunkt der letzten
     Änderung") hat einen Gegenbeleg.** Befund 6: Bei 26,14 % der `EERP_RECEIVED`-Zeilen in Fenster B
     endet ein Schritt **nach** diesem Zeitpunkt. Der Satz stimmt als Näherung — die Abweichung liegt
@@ -2346,7 +2351,7 @@ sich daran: Keine der unter „Gesperrte Dateien" genannten Dateien ist angefass
 
 > ✔ **Ausgeführt am 27.08.2026** in der Korrekturrunde nach Schritt 10a — sechzehn Stellen als
 > datierte Blöcke, kein ersetzter Text. **Dieser Vermerk steht hier, weil sein Fehlen das teuerste
-> Versäumnis dieser Runde war:** Genau so sah offener Punkt 33 fünf Tage lang offen aus, obwohl er
+> Versäumnis dieser Runde war:** Genau so sah offener Punkt 33 sieben Tage lang offen aus, obwohl er
 > erledigt war, und genau deshalb steht die überholte Indexliste in V3 (offener Punkt 41).
 
 Die vier bereits im Auftrag benannten Stellen, mit dem Stand aus dieser Runde daneben:
@@ -2362,10 +2367,11 @@ Die vier bereits im Auftrag benannten Stellen, mit dem Stand aus dieser Runde da
 > *(berichtigt am 27.08.2026)*
 >
 > **Die Zeile bleibt stehen und wird nicht gelöscht.** Sie ist der Beleg dafür, wie die Verwechslung
-> zustande kam, und sie ist ein Fehler dieser Runde und nicht des Auftrags.
+> zustande kam, und sie ist ein Fehler der Messrunde und nicht des Auftrags.
 >
-> **§3.2 heißt „Kerntabellen", nicht „`Message`".** Der Abschnitt läuft von Z. 127 bis Z. 310 und
-> beschreibt sämtliche Kerntabellen — `Message`, `MessageAction`, `MessageProperty`, `MessageBAM`,
+> **§3.2 heißt „Kerntabellen", nicht „`Message`".** Der Abschnitt beginnt auf Z. 127 und reicht bis
+> zum Beginn von §3.3 — beim Stand vom 26.08.2026 bis Z. 310, nach den Blöcken dieser
+> Korrekturrunde weiter. Er beschreibt sämtliche Kerntabellen — `Message`, `MessageAction`, `MessageProperty`, `MessageBAM`,
 > `MessageBAMMandant`, **`Process` / `Project` / `Mandant` / `ProjectMandant`**, `SOS`/`SOSAction`,
 > `User` und `MessageStatisticHistory`. **Die vollständige Mandantenliste mit allen zehn Einträgen
 > steht darin**, und der Satz, um den es geht — *„`SYSTEM` und `WOC` gehören nicht in eine Auswahl,
@@ -2376,13 +2382,17 @@ Die vier bereits im Auftrag benannten Stellen, mit dem Stand aus dieser Runde da
 > sie am 27.08.2026 unter **K6**: E‑f steht jetzt als datierter Block neben dem Satz, samt der
 > Zahlen aus M91.
 >
-> **Wie der Fehler zustande kam, gehört dazu.** §3.2 beginnt mit `**Message**` und trägt dort seinen
-> längsten und meistzitierten Teil; wer den Abschnitt aus dem Gedächtnis kennt, kennt ihn als „den
-> Abschnitt über `Message`". **Gesucht worden ist nach dem Begriff, nicht nach der Stelle** — und
-> „E‑f" kommt in `PROJEKTBESCHREIBUNG.md` nirgends vor, weil die Entscheidung zwei Tage jünger ist
-> als jede Zeile darin. **Ein Fehlschlag beim Suchen nach einem Begriff ist kein Beleg dafür, dass
-> die Stelle nicht existiert** — dieselbe Sorte Schluss wie beim Takt von `MatchInterchange`
-> (M31‑3): Nicht-Finden ist kein Nachweis.
+> **Wie der Fehler zustande gekommen sein dürfte — als Vermutung gekennzeichnet, weil die Runde es
+> nicht festgehalten hat.** §3.2 beginnt mit `**Message**` und trägt dort seinen längsten und
+> meistzitierten Teil; wer den Abschnitt aus dem Gedächtnis kennt, kennt ihn als „den Abschnitt über
+> `Message`". Dazu kommt, dass „E‑f" in `PROJEKTBESCHREIBUNG.md` **nirgends** vorkommt — die
+> Entscheidung ist jünger als jede Zeile dieser Datei —, eine Suche nach der Kennung also
+> zwangsläufig leer ausgeht.
+>
+> **Was daran nicht Vermutung ist, ist der Schluss:** Ein Fehlschlag beim Suchen nach einem Begriff
+> ist kein Beleg dafür, dass die Stelle nicht existiert. Dieselbe Sorte Schluss wie beim Takt von
+> `MatchInterchange` (M31‑3) — **Nicht-Finden ist kein Nachweis**, und die Zeile oben hat aus einem
+> Nicht-Finden ein „geht nicht auf" gemacht.
 
 **Zwei weitere Stellen kommen hinzu**, die der Auftrag nicht nennt:
 

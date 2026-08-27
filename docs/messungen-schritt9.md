@@ -846,17 +846,20 @@ Nummerierung im Anschluss an den projektweit höchsten Stand (**32**, in
     > Messrunde vom 26.08.2026** hat die Liste gegen `SHOW INDEX` und
     > `information_schema.STATISTICS` bestätigt — Zeichen für Zeichen dieselbe wie in M83‑0.
     >
-    > **Und der Grund, warum dieser Vermerk nicht als Formalie hier steht:** Weil er fünf Tage lang
-    > fehlte, sah der Punkt weiter offen aus — und die **überholte Fassung ist in den Auftrag der
-    > Messrunde geraten**. V3 ist dort als Prüfung eines Widerspruchs beschrieben, den es seit dem
-    > 20.08.2026 nicht mehr gibt. Gemeldet als offener Punkt **41** in
-    > [`messungen-schritt10.md`](messungen-schritt10.md); dieser bekommt mit demselben Datum seinen
-    > eigenen Erledigt-Vermerk.
+    > **Und der Grund, warum dieser Vermerk nicht als Formalie hier steht:** Weil er **sieben Tage**
+    > lang fehlte, sah der Punkt weiter offen aus — und schon nach vieren ist die **überholte Fassung
+    > in den Auftrag der Messrunde geraten**. V3 dort hält es selbst fest: *„Die Korrektur ist am
+    > 20.08.2026 erfolgt, vier Tage vor Abfassung dieses Auftrags."* Beschrieben ist V3 als Prüfung
+    > eines Widerspruchs, den es zu diesem Zeitpunkt nicht mehr gab. Gemeldet als offener Punkt **41**
+    > in [`messungen-schritt10.md`](messungen-schritt10.md); dieser bekommt mit demselben Datum
+    > seinen eigenen Erledigt-Vermerk.
     >
-    > **Der Punkt beschreibt genau den Mechanismus, dem er dann selbst zum Opfer gefallen ist:**
-    > „Die falsche Liste hat einen Arbeitsauftrag falsch gemacht." Er hat es ein zweites Mal getan,
-    > nachdem er behoben war — weil der Haken fehlte. **Das ist der teuerste fehlende Haken dieses
-    > Projekts, und er kostet eine Zeile.**
+    > **Damit ist genau der Mechanismus eingetreten, den die Präambel von**
+    > [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) **am 20.08.2026 beschrieben hat** — *„und die
+    > falsche Liste ist in einen Arbeitsauftrag eingegangen"*. Er ist ein **zweites** Mal eingetreten,
+    > und zwar **nachdem** die Liste behoben war: Diesmal hat nicht die falsche Liste den Auftrag
+    > falsch gemacht, sondern der fehlende Haken an der richtigen. **Das ist der teuerste fehlende
+    > Haken dieses Projekts, und er kostet eine Zeile.**
     >
     > Was **nicht** erledigt ist: der Test gegen `information_schema.STATISTICS`, der die Listen
     > künftig in beide Richtungen bewachen soll. Er ist am 20.08.2026 entschieden und **nicht
@@ -925,8 +928,8 @@ Nummerierung im Anschluss an den projektweit höchsten Stand (**32**, in
     > kuratierte Katalogzeile haben (M91, offener Punkt 44 in
     > [`messungen-schritt10.md`](messungen-schritt10.md)).
     >
-    > **Der Punkt gilt als beantwortet, nicht als erledigt-durch-Bau.** Gebaut ist die Darstellung
-    > in 10b; gemessen ist, dass sie gebraucht wird.
+    > **Der Punkt gilt als beantwortet, nicht als erledigt-durch-Bau.** Gebaut wird die Darstellung
+    > erst in 10b; gemessen ist bisher allein, dass sie gebraucht wird.
 
 40. **`mandantentrennung.md` §2 nennt weiterhin „142 Projekten"** — gezählt sind 140, hier zum
     dritten Mal bestätigt. Der Punkt steht seit dem 13.08.2026 in

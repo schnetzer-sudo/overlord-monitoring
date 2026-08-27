@@ -1035,8 +1035,8 @@ einem MANDANT-Nutzer `403` — auch dann, wenn er auf dessen eigenes Konto zeigt
 > Rang 1 zu Rang 10 steht **108 : 1**, und die zehn größten decken 90,56 % bzw. 76,93 % ab. Die
 > Ränge 11 bis 115 sind in einem Diagramm nicht mehr unterscheidbar — sie gehören in **eine** Zeile
 > „Rest", die aufklappbar sein darf, aber nicht als hundert Balken unter einem. Entschieden am
-> 26.08.2026; die Frage stand seit dem 21.08.2026 als offener Punkt 39 in
-> [`messungen-schritt9.md`](messungen-schritt9.md).
+> 26.08.2026; die Frage stand als offener Punkt 39 in
+> [`messungen-schritt9.md`](messungen-schritt9.md) und ist dort beantwortet vermerkt.
 >
 > **Die Zeile „Nicht zugeordnete Prozesse werden als eigene Kategorie ausgewiesen" gilt unverändert
 > und wird durch Top‑10 nicht berührt** — „nicht zugeordnet" ist keine Rangposition und fällt nie
