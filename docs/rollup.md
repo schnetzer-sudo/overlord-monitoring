@@ -1,4 +1,4 @@
-# Rollup — `message_rollup` und der Job, der sie fortschreibt
+# Rollup — `message_rollup`, `message_rollup_tag` und der Job, der sie fortschreibt
 
 Schritt 10a, gebaut am 26.08.2026. Baut auf [`messungen-schritt10.md`](messungen-schritt10.md)
 (M86–M92) und der Sparringsrunde vom 24.08.2026.
@@ -14,6 +14,12 @@ Delta-Lauf und ein nächtlicher Volllauf schreiben sie fort.
 Dashboard unter einer halben Sekunde lädt und die Produktionsdatenbank nichts davon merkt
 ([`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §8, Begründung korrigiert am 27.07.2026).
 
+> **Nachtrag 27.08.2026 (Schritt 10b‑1).** Seit diesem Tag sind es **zwei** materialisierte
+> Ebenen: `message_rollup` je Stunde und `message_rollup_tag` je Kalendertag. Der Grund steht in §2
+> und ist gemessen: Die Zwölf‑Monats‑Ansicht kostete über die Stundenebene 2,2 bis 2,5 Sekunden.
+> **Beide Ebenen entstehen im selben Lauf und in derselben Transaktion**; die Tagesebene ist die
+> Summe der Stundenebene und kann nichts anderes sein.
+
 ### Was 10a ist und was nicht
 
 | | |
@@ -23,7 +29,7 @@ Dashboard unter einer halben Sekunde lädt und die Produktionsdatenbank nichts d
 
 ---
 
-## 2. Die zwei Tabellen (`V9__message_rollup.sql`)
+## 2. Die drei Tabellen (`V9__message_rollup.sql`, `V10__message_rollup_tag.sql`)
 
 ### `message_rollup`
 
@@ -72,6 +78,66 @@ Sitzungsschlüssel, sondern ein lesbarer Prozessname und ein Statuswort.
 **Zeitzone:** `stunde` ist **Wanduhrzeit des Quellservers** und nicht UTC. Zeitstempel aus
 `GlassfishDB` werden nirgends konvertiert ([`datenzugriff.md`](datenzugriff.md) §7). Die beiden
 UTC-Zeitstempel dieses Schritts stehen in `rollup_lauf` und heißen bewusst anders.
+
+### `message_rollup_tag` *(neu am 27.08.2026, Schritt 10b‑1)*
+
+```sql
+CREATE TABLE message_rollup_tag (
+  tag            DATE        NOT NULL,
+  process_id     VARCHAR(36) NOT NULL,
+  message_status VARCHAR(30) NOT NULL,
+  anzahl         INT         NOT NULL,
+  PRIMARY KEY (tag, process_id, message_status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+```
+
+**Dieselbe Bauform wie `message_rollup`, nur mit `tag` statt `stunde`** — derselbe Schlüssel,
+derselbe Rohwert (E‑g), kein Sekundärindex, Zeichensatz und Sortierung explizit. Die Begründungen
+oben gelten Wort für Wort; sie sind hier nicht wiederholt.
+
+> ### ⚠️ Warum es sie überhaupt gibt: E‑b trägt bei zwölf Monaten nicht
+>
+> **M94 hat die Zwölf‑Monats‑Ansicht über die Stundenebene mit 2.206,854 ms (Verlauf) und
+> 2.491,443 ms (Verteilung) gemessen** — das 5,5‑ bis 6,2‑Fache der vorregistrierten
+> 400‑ms‑Schwelle und das 4,4‑ bis 5,0‑Fache des 500‑ms‑Budgets der ganzen Landingpage. Das ist
+> offener Punkt 55.
+>
+> **Und es gibt nichts wegzuoptimieren.** M94 hat die Kosten je gelesener Rollupzeile über einen
+> Mengenbereich von Faktor 302 gemessen: **5,3 bis 11,5 µs**, also sauber linear. Der Katalog‑Join,
+> der naheliegende Verdächtige, trägt bei zwölf Monaten nur 5 bis 13 % (Befund 15). Die einzige
+> Stellschraube ist die **Zahl der gelesenen Zeilen**.
+
+**Zwei Zahlen, nachgerechnet statt übernommen** (27.08.2026, gegen die gefüllte Stundenebene):
+
+| | Stundenebene | Tagesebene | Faktor |
+|---|---:|---:|---:|
+| Zeilen über den Gesamtbestand | 335.610 | **123.049** | 2,73 |
+| `SUM(anzahl)` | 3.341.519 | **3.341.519** | — |
+| Zeilen, die ein Zwölf‑Monats‑Fenster liest | 280.186 | **100.270** | 2,79 |
+| Zeilen, die ein 30‑Tage‑Fenster liest | 20.971 | **6.843** | 3,06 |
+
+M87 hatte 123.000 vorhergesagt; gemessen sind 123.049. **`SUM(anzahl)` ist in beiden Ebenen
+dieselbe Zahl wie in `Message` selbst** — das ist die Summenprobe, und sie ist der einzige Grund,
+dem Faktor 2,73 zu trauen.
+
+> ### Eine eigene Tabelle und keine Ebenen-Spalte in `message_rollup`
+>
+> Lägen beide Ebenen in einer Tabelle, stünden ein Tageseimer und seine 24 Stundeneimer
+> **nebeneinander**. Jede Summe über die Tabelle zählte damit doppelt — und zwar lautlos:
+> `SUM(anzahl)` über den Gesamtbestand ergäbe **6.683.038 statt 3.341.519**, und niemand sähe der
+> Zahl an, dass sie zwei Ebenen addiert. Der Primärschlüssel trüge außerdem zwei Bedeutungen: In
+> der einen Zeile wäre die erste Spalte ein Stundenanfang, in der anderen ein Tagesanfang, und der
+> Unterschied stünde in einer Nachbarspalte.
+>
+> Zwei Tabellen kosten dafür eine zusätzliche `DELETE`/`INSERT`‑Runde je Lauf und rund 40 % des
+> Platzes der Stundenebene. Beides ist billig; eine Summe, die still das Doppelte ergibt, ist es
+> nicht.
+
+**`DATE` und nicht `DATETIME`:** Ein Tageseimer hat keine Uhrzeit. Ein `DATETIME` mit `00:00:00`
+sagte dasselbe und lüde dazu ein, ihn irgendwann mit einer Stundengrenze zu verwechseln.
+
+**Zeitzone wie bei `stunde`:** Wanduhrzeit des Quellservers, nicht UTC. Ein Tageseimer ist der Tag,
+wie ihn der Quellserver sieht.
 
 ### `rollup_lauf`
 
@@ -261,7 +327,9 @@ jemand gesehen hat. Die Laufart steht nur im Protokoll.
    Transaktion: Der Lesezugriff läuft auf einer anderen Verbindung und wäre ohnehin nicht Teil von
    ihr ([`datenzugriff.md`](datenzugriff.md) §2).
 3. **Alle Rollup-Zeilen im Fenster löschen, dann die neuen einfügen — in genau einer Transaktion.**
-4. **`beendet_am` und `zeilen_geschrieben` nachtragen.** Erst danach zählt das Fenster zum
+4. **Die Tageseimer der berührten Kalendertage neu rechnen** — *neu am 27.08.2026*, **in derselben
+   Transaktion** und **aus der eben geschriebenen Stundenebene**, nicht aus `Message`.
+5. **`beendet_am` und `zeilen_geschrieben` nachtragen.** Erst danach zählt das Fenster zum
    Wasserstand.
 
 Bei einer Ausnahme: `fehler` füllen, `beendet_am` setzen, Ausnahme weiterreichen. Schlägt *das*
@@ -280,8 +348,49 @@ fehl, wird es der ursprünglichen Ausnahme angehängt und nicht an ihre Stelle g
 >
 > Beide Fälle haben einen eigenen Datenbanktest (§10).
 
-**Schritt 3 läuft in genau einer Transaktion.** Beim Volllauf umfasst sie 335.610 Zeilen und
-21,6 MiB. Das ist gewollt: **Eine halb geleerte Rolluptabelle um 03:00 wäre ein leeres Dashboard.**
+**Schritt 3 und 4 laufen in genau einer Transaktion.** Beim Volllauf umfasst sie 335.610
+Stunden- und 123.049 Tageszeilen. Das ist gewollt: **Eine halb geleerte Rolluptabelle um 03:00 wäre
+ein leeres Dashboard** — und zwei Ebenen auf verschiedenen Ständen wären schlimmer als das: Das
+Dashboard liest je nach Fensterbreite aus der einen oder der anderen, und zwei Ansichten desselben
+Zeitraums zeigten dann verschiedene Zahlen, ohne dass irgendwo ein Fehler protokolliert wäre.
+
+### Schritt 4: die Tagesebene, aus der Stundenebene
+
+**Abgeleitet und nicht zweitgelesen.** Zwei Gründe. *Der erste ist Geld:* Eine zweite Quelllesung
+kostete noch einmal, was die erste kostet — beim Volllauf 45,772 s über den Lese-Pool, den sich die
+Anwendung mit der Produktion teilt. *Der zweite ist Wahrheit:* Zwei getrennte Lesungen derselben
+Quelle können abweichen. Aus der Stundenebene abgeleitet ist die Tagesebene **per Konstruktion**
+konsistent — sie ist deren Summe und kann gar nichts anderes sein.
+
+**Über *ganze* Tage, nicht über das Fenster.** Ein Tageseimer ist die Summe seiner 24
+Stundeneimer; aus einem Zwei‑Stunden‑Fenster gerechnet trüge er zwei Stunden und behauptete, ein
+Tag zu sein. Der Rechenbereich läuft deshalb von Mitternacht bis Mitternacht, unabhängig davon, wie
+schmal das Fenster des Laufs ist.
+
+> **Der letzte berührte Tag ist der Tag der letzten *verarbeiteten* Stunde**, also `bis` minus einer
+> Stunde — und nicht der Tag von `bis`. `bis` ist ausschließend: Ein Fenster von `23:00` bis
+> `00:00` verarbeitet eine Stunde und berührt **einen** Tag. **Ohne diese Unterscheidung räumte
+> jeder Lauf um Mitternacht einen Tageseimer aus, den er anschließend nicht neu schreibt** — die
+> Stundenebene bliebe richtig, die Tagesebene verlöre einen Tag, und auffallen würde es erst im
+> Dashboard.
+
+**Ein Rückgriff über eine Mitternachtsgrenze berührt zwei Tage.** Der praktische Fall ist der
+Delta-Lauf in der ersten Stunde eines Tages: Sein 15‑Minuten‑Rückgriff liegt im Vortag.
+
+**Hier steht ein `INSERT … SELECT`, und in Schritt 2 keines.** Der Unterschied ist die
+Schemagrenze: Quelle und Ziel liegen hier **beide** in `overlord_monitor`, und
+[`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §6 verbietet dem Schreib-Kontext genau das
+Verlassen dieses Schemas. Ein Test hält es fest: In keinem der vier Statements eines Laufs steht das
+Wort `GlassfishDB`.
+
+**Weiterhin löschen und neu schreiben, nie `anzahl = anzahl + n`** — dieselben zwei Gründe wie oben,
+und ein dritter kommt dazu: Ein Prozess, der an einem Tag einmal Zeilen hatte und heute keine mehr,
+verlässt die Stundenebene; sein Tageseimer verschwände ohne das `DELETE` nie.
+
+**`rollup_lauf.zeilen_geschrieben` bleibt die Zahl der Stundenzeilen.** Die Zeilen aus den Läufen
+vor dem 27.08.2026 stehen noch in der Tabelle; eine Summe beider Ebenen ab jetzt hineinzuschreiben
+hieße, dieselbe Spalte in alten und neuen Zeilen verschieden zu lesen, ohne dass der Zeile das
+anzusehen wäre. Die Tageszeilen stehen im Protokoll und in `RollupErgebnis`.
 
 **Eingefügt wird in Stapeln zu 1.000 Zeilen** (`monitorDsl.batch(…)`, dasselbe Muster wie in
 `ProzessKatalogRepository.speichereBestandsflags`). Die Größe ist eine Größenordnung und kein
@@ -331,6 +440,61 @@ Monatsersten, schneidet der Kalender es in zwei. Das trifft einen Lauf im Monat,
 zusätzliche sehr kleine Abfrage — und einmal die Drosselpause aus §8. Es ist gewollt und nicht zu
 reparieren: Ein Kalender, der die Monatsgrenze für kleine Fenster überspringt, wäre nicht mehr
 derselbe Kalender.
+
+---
+
+## 6a. Der einmalige Rückwärtslauf der Tagesebene *(27.08.2026)*
+
+Nach der Migration steht `message_rollup_tag` leer da, während `message_rollup` den Gesamtbestand
+trägt. Der laufende Job zieht nur die Tage nach, die sein Fenster berührt — die übrigen 460 bekäme
+er nie zu fassen. `rollup/RollupTagNachzug` holt sie einmal nach.
+
+```
+./mvnw spring-boot:run -Dspring-boot.run.arguments=--overlord.rollup.tagesebene-nachziehen=true
+```
+
+**Kein Volllauf, und das aus zwei Gründen.** Ein Volllauf könnte dasselbe — er rechnet beide Ebenen
+über den ganzen Bestand — und ist hier trotzdem der falsche Weg:
+
+1. **Er liest `Message` noch einmal**, 45,772 s über den Lese-Pool, den sich die Anwendung mit der
+   Produktion teilt. Die Tagesebene steht vollständig in der Stundenebene; die Quelle dafür noch
+   einmal zu befragen, ist Arbeit ohne Erkenntnisgewinn.
+2. **Im Profil `dev` deckte er den Bestand gar nicht ab.** Seine obere Grenze ist die Anwendungsuhr
+   (§4); die 15 Rollupzeilen aus Juni und Juli 2026 lägen dahinter. **Dieser Lauf richtet sich nach
+   dem, was in der Stundenebene *steht*, und nicht nach einer Uhr** —
+   `MIN(stunde)` bis `MAX(stunde)`.
+
+**In Monatsscheiben über einen Kalender**, mit der Drosselung aus §6 — dieselbe Form wie der
+Volllauf. **Anders als dort ist jede Scheibe ihre eigene Transaktion:** Der Ausgangszustand ist eine
+**leere** Tagesebene, und eine halb gefüllte ist besser als eine leere. Wiederholen lässt er sich
+ohnehin — jede Scheibe löscht ihren Bereich, bevor sie ihn schreibt.
+
+**Er hinterlässt keine Zeile in `rollup_lauf`, und das ist Absicht.** `rollup_lauf` trägt den
+**Wasserstand**: bis wohin ist aus `Message` gerechnet worden. Dieser Lauf rechnet nichts aus
+`Message`; er ordnet um, was schon da ist. Eine Zeile mit `art = 'VOLL'` und einem Fenster über den
+Gesamtbestand behauptete einen Wasserstand, den er nicht erarbeitet hat — und der nächste Delta-Lauf
+übersähe daraufhin einen Bereich. Seine Spur steht im Protokoll.
+
+**Gefahren am 27.08.2026 gegen die Testkopie:**
+
+| | |
+|---|---:|
+| Bereich | `2024-10-01 02:00` bis `2026-07-08 18:00` (15.496 Stundeneimer) |
+| Scheiben | **22** |
+| berührte Kalendertage | **646** — alle, auch die leeren |
+| geschriebene Zeilen | **123.049** |
+| `SUM(anzahl)` danach | **3.341.519** — dieselbe Zahl wie in der Stundenebene und wie in `Message` |
+| Laufzeit | **26.026 ms**, davon **21 s Drosselung** (21 Scheibengrenzen à 1 s) |
+
+**Die Arbeit selbst kostet also rund 5 Sekunden** — 123.049 Zeilen aus 335.610 zu gruppieren, in
+einer Datenbank, ohne die Quelle anzufassen. Der Vergleich mit dem Volllauf (45,772 s ohne
+Drosselung) ist die eigentliche Begründung dieses Wegs.
+
+**`overlord.rollup.tagesebene-nachziehen` steht neben `beim-start` und nicht darin.**
+`beim-start` nimmt eine `LaufArt`, und dieser Lauf ist keine: Er liest `Message` nicht an,
+hinterlässt keine Protokollzeile und hebt keinen Wasserstand. Ihn als dritten Wert dort einzureihen
+hieße, drei verschiedene Dinge unter einem Namen zu führen. Beides zusammen ist zulässig und in
+dieser Reihenfolge sinnvoll: erst der Lauf, dann der Nachzug.
 
 ---
 
@@ -420,6 +584,7 @@ ein neugieriges `dev,rollup` nicht schreibt.
 | `voll-plan` | `0 0 3 * * *` | Cron des nächtlichen Laufs — **ungemessen** |
 | `scheiben-pause` | `1s` | Drosselung zwischen zwei Monatsscheiben (L6) — **ungemessen** |
 | `beim-start` | — | `DELTA` oder `VOLL`: ein einmaliger Lauf beim Start |
+| `tagesebene-nachziehen` | `false` | der **einmalige** Rückwärtslauf der Tagesebene (§6a) |
 
 **Beide Ausdrücke stehen als Platzhalter in `application.yml` und nicht als Literal im Code.** Fehlt
 einer, scheitert der Start — das ist besser als ein Zeitplan, den niemand kennt.
@@ -584,6 +749,110 @@ jede Nachricht ist genau einmal gezählt, keine doppelt, keine verloren.
 
 ---
 
+## 9a. ⚠️ Das Tor bei zwölf Monaten — gemessen, und es löst aus *(27.08.2026)*
+
+**Der Auftrag zu Schritt 10b‑1 hat ein Tor gesetzt, bevor gemessen wurde:**
+
+> | Ergebnis (12 Monate, warm, größter Mandant) | Folge |
+> |---|---|
+> | unter **700 ms** | die Tagesebene genügt. Zahl in `rollup.md` festhalten |
+> | **700 ms oder mehr** | **anhalten und melden.** Die Monatsebene ist dann eine Vorlage an den Auftraggeber und **nicht** zu bauen |
+>
+> Woher die 700 ms kommen: Der Lese-Pool bricht ein Statement nach **10 s** ab, der Kaltfaktor aus
+> M44 geht bis **9,66**. Warm muss die Ansicht also unter rund **1,0 s** bleiben, sonst stirbt sie
+> kalt in Produktion. 700 ms sind 70 % davon.
+
+### Das Ergebnis
+
+Beide Ebenen in **derselben** Sitzung, abwechselnd gefahren — die Werte aus M94 stammen aus einer
+anderen Sitzung an einem anderen Tag. Aufwärmlauf, dann beste von fünf; Sitzungen
+`scripts/messung-schritt10b-1/c4-tor-*.sql`.
+
+| Ansicht | Mandant | **Stundenebene** | **Tagesebene** | Faktor |
+|---|---|---:|---:|---:|
+| **Verlauf, 12 Monate / Monat** | **NEXANS** | 2.203,423 ms | **767,128 ms** | **2,87** |
+| **Verteilung, 12 Monate** | **NEXANS** | 2.487,394 ms | **908,539 ms** | **2,74** |
+| Verlauf, 30 Tage / Tag | NEXANS | 149,663 ms | **45,990 ms** | 3,25 |
+| Verteilung, 30 Tage | NEXANS | 180,547 ms | **62,454 ms** | 2,89 |
+| Verlauf, 12 Monate / Monat | SUTTONS | 1.473,612 ms | **425,689 ms** | 3,46 |
+| Verteilung, 12 Monate | SUTTONS | 1.540,673 ms | **431,657 ms** | 3,57 |
+| Verlauf, 30 Tage / Tag | SUTTONS | 113,641 ms | **29,954 ms** | 3,79 |
+| Verteilung, 30 Tage | SUTTONS | 128,204 ms | **31,504 ms** | 4,07 |
+
+**Die Ersparnis ist über alle acht Paare Faktor 2,7 bis 4,1** — und sie deckt sich mit dem, was die
+Zeilenzahl vorhersagt: Die Tagesebene liest über zwölf Monate 100.270 statt 280.186 Zeilen (Faktor
+2,79) und über 30 Tage 6.843 statt 20.971 (Faktor 3,06). **Die Kosten hängen an der Zahl gelesener
+Zeilen und an nichts sonst** — genau wie M94 es gemessen hat.
+
+**Die Pläne sind Zeile für Zeile dieselben**, nur mit weniger Zeilen: `range` über `PRIMARY` mit
+`Using where; Using temporary; Using filesort` bei `NEXANS` (61.705 geschätzte Zeilen statt 167.152),
+Einstieg über `pm` bei `SUTTONS` — dasselbe Muster, das M94 in allen zwölf Plänen beschreibt.
+
+**Die Vorbedingung, ohne die der Rest nichts wert wäre:** Beide Ebenen liefern über alle zwölf
+Monate und für beide Mandanten **dieselben Zahlen**. Die Gleichheitsprobe steht als erste Abfrage in
+beiden Sitzungen.
+
+### ⚠️ Das Tor löst aus
+
+**Der größte Mandant liegt bei zwölf Monaten über 700 ms: 767,128 ms für den Verlauf und
+908,539 ms für die Verteilung.** Nach der vorregistrierten Lesart heißt das: **anhalten und melden.
+Die Monatsebene ist eine Vorlage an den Auftraggeber und wird hier nicht gebaut.**
+
+**Der Auftrag hat diesen Ausgang vorhergesehen** und ihn ausdrücklich als Absicht benannt: *„Die
+Schätzung, auf der die Entscheidung ruht, lag bei 780 ms — sie kann also schon knapp danebenliegen
+und das Tor auslösen."* Gemessen sind 767,128 ms; die Schätzung lag **1,7 % daneben**.
+
+**Was die Tagesebene trotzdem gebracht hat, und es ist nicht wenig:**
+
+| | |
+|---|---|
+| **30 Tage / Tag** — die Ansicht, die heute die teuerste gebaute wäre | von 149,663 auf **45,990 ms** (Verlauf) und von 180,547 auf **62,454 ms** (Verteilung). **Beide Paare unter 100 ms** |
+| **48 Stunden / Stunde** — die Ansicht beim Öffnen | unberührt, sie liest weiter die Stundenebene (6,834 ms, M94) |
+| **12 Monate / Monat** | von 2,2–2,5 s auf **0,77–0,91 s**. Tragbar wäre es fast; das Tor ist es nicht |
+
+**Zwei von drei Paaren sind damit erledigt.** Was offen bleibt, ist genau eines — und genau dafür
+ist das Tor da.
+
+> **Belegvermerk (Regel L10).**
+> *Gemessen ist:* acht Paare, beide Ebenen, in derselben Sitzung, **warm**, Aufwärmlauf und dann
+> beste von fünf.
+> *Behauptet wird:* Die Tagesebene senkt die Kosten um Faktor 2,7 bis 4,1, und das Tor löst
+> trotzdem aus.
+> **Die Lücke:** Alle acht Werte sind **Warmwerte**. `FLUSH TABLES` steht `monitor_read` nicht zu,
+> und der Puffer fasst die beiden Rolluptabellen um ein Vielfaches. Der Kaltfaktor aus M44 (bis
+> 9,66) ist auf **767 ms** angewandt rund 7,4 s und damit unter der 10‑s‑Grenze des Lese-Pools —
+> aber das ist eine **Übertragung und keine Messung**; der Faktor stammt aus einer anderen Abfrage
+> über eine andere Tabelle. **Genau dieser Abstand ist der Grund, warum das Tor bei 700 ms und
+> nicht bei 1,0 s steht.** Die zweite Lücke: Alle Zahlen stammen von der Testkopie, und die
+> Zwölf‑Monats‑Ansicht liest dort einen Bestand von 22 Monaten. In einem Bestand, der über zwölf
+> Monate dichter ist, liest sie mehr.
+
+### Warum nicht einfach die Monatsebene dazubauen
+
+Sie wäre klein: **11.957 Zeilen über den ganzen Bestand** (M87, Variante 4) — weniger, als die
+Zwölf‑Monats‑Ansicht heute allein für ihr Fenster liest. Der Bau wäre dieselbe Form noch einmal:
+eine dritte Tabelle, ein vierter Schritt im Lauf, ein zweiter Rückwärtslauf.
+
+**Er wird trotzdem nicht gebaut, und der Grund ist nicht Aufwand, sondern Verfahren.** Das Tor ist
+vor der Messung gesetzt worden, damit die Entscheidung nicht davon abhängt, wie nah die Zahl an der
+Schwelle liegt. 767 ms sind näher an 700 als an 900 — und genau deshalb wäre es jetzt die falsche
+Zeit, die Schwelle noch einmal anzusehen. **Die Entscheidung gehört dem Auftraggeber.** Offener
+Punkt 55 trägt sie weiter; die Zahlen dafür stehen vollständig hier.
+
+**Drei Dinge, die er dabei wissen sollte:**
+
+1. **Eine Monatsebene löste das Paar 12 Monate/Monat vollständig.** Zwölf Monate lesen dann zwölf
+   Monatszeilen je Prozess und Status statt 100.270 Tageszeilen — bei linearen Kosten wäre das der
+   Sprung in den einstelligen Millisekundenbereich, nicht eine weitere Halbierung.
+2. **Sie kostet eine dritte Ebene, die konsistent gehalten werden muss.** Aus der Tagesebene
+   abgeleitet wäre sie es per Konstruktion, so wie die Tagesebene aus der Stundenebene — der Lauf
+   bekäme einen fünften Schritt in derselben Transaktion.
+3. **Oder das Paar wird geändert statt der Tabelle.** Die Entscheidung „12 Monate / Monat" ist eine
+   Gestaltungsentscheidung; ein Jahr in **Wochen** läge bei rund 52 Eimern und läse dieselbe
+   Tagesebene. Das ist keine technische Frage und gehört deshalb erst recht dem Auftraggeber.
+
+---
+
 ## 10. Tests
 
 ### Ohne Datenbank
@@ -593,6 +862,7 @@ jede Nachricht ist genau einmal gezählt, keine doppelt, keine verloren.
 | `RollupFensterTest` (24) | Rückgriff, Ausdehnung auf ganze Stunden, leerer Wasserstand, zurückspringende Uhr, Scheibenzerlegung (lückenlos, ohne Überlapp, Summe der Eimer gleich dem Fenster), die Invarianten des Fensters |
 | `RollupUhrenTest` (4) | **Die Zuordnung der beiden Uhren.** Die Uhren stehen im Test acht Monate auseinander, damit ein vertauschter Aufruf auffällt — in Produktion wäre er unsichtbar |
 | `RollupStatementsTest` (6) | Das **gerenderte** Statement, Zeichen für Zeichen. Regel L7 verlangt die Messung *der* Abfrage, nicht einer ähnlichen |
+| `RollupTagStatementsTest` (7) | **Die vier Statements eines Laufs**, gerendert: die Reihenfolge (Stundenebene vor Tagesebene), ausschließlich `overlord_monitor`, **ganze Tage statt des Fensters**, `DATE(stunde)` auch im `GROUP BY`, kein Hochzählen, das Fenster über Mitternacht, das leere Fenster |
 | `PaketstrukturTest` (+2) | Die namentliche Ausnahme ist eng und nicht leer; nichts in `rollup`, das `jooq.glassfish` anfasst, ruft eine schreibende jOOQ-Methode auf |
 
 ### Mit Datenbank (`RollupDbIT`, `@Tag("db")`)
@@ -607,6 +877,12 @@ jede Nachricht ist genau einmal gezählt, keine doppelt, keine verloren.
 | **Wasserstand** | Ein abgebrochener Lauf hebt ihn nicht — und ein abgeschlossener mit `fehler` ebenfalls nicht |
 | **Leere Stunde** | Eine Stunde ohne Verkehr erzeugt keine Zeile und hebt den Wasserstand trotzdem |
 | **Anschluss** | Das Fenster des nächsten Delta-Laufs baut auf dem Wasserstand des vorigen auf, mit genau einem Eimer Rückgriff |
+| **Tagesebene: Summe der Stundenebene** | Zeile für Zeile — die materialisierte Tagesebene gegen die aus der Stundenebene gerechnete, für beide berührten Tage |
+| **Tagesebene: ganzer Tag** | Ein Zwei-Stunden-Fenster rechnet den **ganzen** Tageseimer. **Der Test, an dem es sonst still schiefginge** |
+| **Tagesebene: Statuswechsel** | Eine Tageszeile, die die Stundenebene nicht mehr hergibt, bleibt nicht stehen |
+| **Tagesebene: Idempotenz** | Derselbe Lauf zweimal ergibt zeilengleich dasselbe |
+| **Tagesebene: Mitternacht** | Ein Fenster über die Tagesgrenze schreibt **beide** Tage richtig |
+| **Summenprobe über beide Ebenen** | Beide tragen dieselbe Zahl wie `Message` — und die Tagesebene weniger Zeilen als die Stundenebene |
 | **Bestandsanfang** | `MIN(MessageLastUpdate)` ist `2024-10-01 02:00:28` — weicht er ab, ist die Testkopie neu befüllt und die Zahlen dieser Datei sind neu zu erheben |
 
 > ### Kein Mandantentrennungstest, und das ist Absicht
@@ -670,7 +946,7 @@ nachgelagert.
 |---|---|
 | **L2** Keine Live-Aggregation über `Message` | **erfüllt** — das ist der Zweck dieses Schritts. 10b liest ausschließlich aus `message_rollup` |
 | **L6** Der Rollup-Job läuft gedrosselt | **erfüllt beim Volllauf** (Pause zwischen den Scheiben), **beim Delta-Lauf Zeremonie** und als solche benannt (§8) |
-| **L7** Jede neue Abfrage gemessen | **erfüllt** — §9, `EXPLAIN` und Laufzeit für beide Abfragen, gegen das gerenderte Statement |
+| **L7** Jede neue Abfrage gemessen | **erfüllt** — §9 für die Aggregation, **§9a für beide Ebenen der Leseabfragen**, je `EXPLAIN` und Laufzeit gegen das gerenderte Statement |
 | **L9** Durchlauf ohne Zeitfenster nur begründet | **erfüllt** — nur `MIN(MessageLastUpdate)`, begründet in §7, und es ist eine Indexspitze ohne Tabellenzugriff |
 | **L10** Belegvermerk | **erfüllt** — drei Vermerke: Nachlauffenster (§3), Drosselung (§8), Volllauf gegen M89 (§9) |
 | **S1** Kein Schreibzugriff auf `GlassfishDB` | **erfüllt** — der Job liest über `glassfishDsl` mit `ReadOnlyExecuteListener`; eine ArchUnit-Regel verbietet zusätzlich schreibende jOOQ-Aufrufe in den Rollup-Klassen, die das Quellschema anfassen |
@@ -679,11 +955,47 @@ nachgelagert.
 | **Z1** Kein `now()` | **erfüllt** — beide Zeitpunkte aus `Clock.instant()`, ArchUnit prüft es |
 | **A5** Protokollzeit aus `systemClock` | **erfüllt** — §4 |
 | **Q4** Nichts raten | **eingehalten, indem das Geratene benannt ist**: Nachtlauf-Uhrzeit und Drosselung stehen als ungemessen im Code, in `application.yml` und unter den offenen Punkten |
-| **S2** Flyway nur für `overlord_monitor` | **erfüllt** — `V9__message_rollup.sql` |
+| **S2** Flyway nur für `overlord_monitor` | **erfüllt** — `V9__message_rollup.sql`, `V10__message_rollup_tag.sql` |
 
 ---
 
 ## 13. Offene Punkte
+
+### Zur Tagesebene (Stand 27.08.2026, Schritt 10b‑1 Teil C)
+
+> **Wo der Vermerk zu Punkt 55 steht und warum hier.** Der Punkt ist in
+> [`messungen-schritt10b.md`](messungen-schritt10b.md) vergeben; diese Datei ist für Schritt 10b‑1
+> ausdrücklich **nicht anzufassen**. Der Vermerk steht deshalb dort, wo die Sache hingehört.
+
+- **Offener Punkt 55 ist zur Hälfte erledigt und bleibt zur Hälfte offen** *(27.08.2026)*.
+  **Erledigt:** Die materialisierte **Tagesebene** ist gebaut, rückwärts gefüllt und gemessen (§2,
+  §5, §6a, §9a). Sie senkt die Zwölf‑Monats‑Ansicht um Faktor 2,7 bis 3,6 und die
+  30‑Tage‑Ansicht unter 100 ms. **Offen:** Die Zwölf‑Monats‑Ansicht liegt beim größten Mandanten
+  weiterhin bei **767,128 ms** (Verlauf) und **908,539 ms** (Verteilung) und damit über dem Tor von
+  700 ms. **Die Monatsebene ist eine Vorlage an den Auftraggeber und ist hier nicht gebaut worden**
+  — die Zahlen, die er dafür braucht, stehen vollständig in §9a.
+
+- **67. Der Rückwärtslauf ist ein einmaliger Weg ohne Wächter.** Er lässt sich beliebig oft fahren
+  und ist dabei harmlos — jede Scheibe löscht ihren Bereich, bevor sie ihn schreibt. Was ihm fehlt,
+  ist die Sperre aus §8: Zwei gleichzeitige Rückwärtsläufe wären fachlich nicht falsch, aber sie
+  verdoppelten die Last. Er hat sie nicht, weil er keine Zeile in `rollup_lauf` schreibt und die
+  Sperre genau daran hängt. **Für einen Lauf, den ein Mensch beim Start auslöst, ist das
+  vertretbar**; für einen zeitgesteuerten wäre es das nicht — und zeitgesteuert ist er nicht.
+
+- **68. Die Tagesebene kennt denselben Fall wie offener Punkt 54, und dort ist er schärfer.**
+  Der Rückwärtslauf richtet sich nach `MIN(stunde)`/`MAX(stunde)` der Stundenebene; der laufende
+  Job nach seinem Fenster. **Bleiben nach Punkt 54 Stundenzeilen unterhalb des Bestandsanfangs
+  eingefroren stehen, frieren die zugehörigen Tageszeilen mit ein** — und zwar konsistent, weil sie
+  aus jenen abgeleitet sind. Das ist die gutartige Richtung: Die beiden Ebenen laufen dabei nicht
+  auseinander. **Der Erkennungsweg aus der Entscheidung zu Punkt 54 sollte die Tagesebene
+  trotzdem mitprüfen**, sonst meldet er eine Abweichung nur für eine der beiden.
+
+- **69. Der Rückwärtslauf ist gegen 335.610 Stundenzeilen gemessen, nicht gegen mehr.** 26.026 ms
+  für 22 Scheiben, davon 21 s Drosselung — die Arbeit selbst rund 5 s. Wächst die Stundenebene um
+  eine Zehnerpotenz, wächst er linear mit; eine einzelne Scheibe liefe dann bei rund 2,3 s und
+  läge damit weiterhin weit unter der 30‑s‑Grenze des Schreib-Pools. **Gerechnet, nicht gemessen.**
+
+### Aus Schritt 10a
 
 49. **Das Nachlauffenster von 15 Minuten ist gegen einen Bestand gemessen, in dem der wahrscheinlichste
     Verursacher einer Wanderung nicht läuft.** `MatchInterchange` setzt `MessageStatus =
@@ -803,7 +1115,14 @@ nachgelagert.
    sondern konfiguriert.
 4. **Nichts über 10b.** Die Leseabfrage des Dashboards ist in M89 gemessen (11,30 ms im
    Standardfenster mit Katalog-Join), aber nicht gebaut.
-5. **Was geschieht, wenn das Altsystem alte Nachrichten entfernt.** Die Testkopie wird nicht
+5. **Ob die Zwölf‑Monats‑Ansicht kalt trägt** *(ergänzt 27.08.2026)*. §9a misst sie warm mit
+   767,128 ms. Was sie kalt kostet, ist nicht gemessen und mit dem übertragenen Faktor aus M44 nur
+   geschätzt — genau die Unsicherheit, für die das Tor bei 700 ms und nicht bei 1,0 s steht.
+6. **Ob die Monatsebene das Tor lösen würde** *(ergänzt 27.08.2026)*. M87 nennt für sie 11.957
+   Zeilen über den Gesamtbestand; **gemessen ist keine einzige Abfrage über sie**. Die Aussage in
+   §9a, sie brächte den einstelligen Millisekundenbereich, ist aus der Linearität der Kosten
+   gerechnet und nicht erhoben.
+7. **Was geschieht, wenn das Altsystem alte Nachrichten entfernt.** Die Testkopie wird nicht
    beschnitten; der Fall ist hier weder eingetreten noch prüfbar. Er ist der Grund für offenen
    Punkt 54 und der einzige bekannte Weg, auf dem die Summenprobe dieses Baus auseinanderlaufen
    kann.
