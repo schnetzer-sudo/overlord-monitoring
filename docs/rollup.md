@@ -906,9 +906,17 @@ untergehen:
    richtig — es fragt immer über einen Zeitbereich, und `stunde` führt den Primärschlüssel. Für eine
    Frage der Form „hat *dieser Mandant* im Fenster überhaupt 51 Zeilen?" ist es teuer: Sie muss alle
    **21.274** Rollupzeilen des 30‑Tage-Fensters lesen, auch wenn der Mandant nur **47** davon
-   besitzt. Das kostet 13 bis 18 ms und trifft ausgerechnet die dünnen Mandanten. Ob ein Index
-   `(process_id, stunde)` das löst — und was er den Rollup-Lauf kostet — ist **ungemessen**
-   (offener Punkt **73** in der Messdatei).
+   besitzt. Das kostet 13 bis 18 ms und trifft ausgerechnet die dünnen Mandanten.
+
+   **Ein Index `(process_id, stunde)` ist gemessen** (M104, an einer Probetabelle nach dem Vorbild
+   von M89 — angelegt, befüllt, gemessen, gelöscht; die Löschung ist nachgewiesen, die echte
+   Tabelle ist unberührt). Er senkt die 30‑Tage‑Stufe der Vorabfrage um **Faktor 38 bis 102**
+   (`NXHBE` 97,756 → 0,962 ms), weil der Plan sich umdreht: von den wenigen Prozessen des Mandanten
+   in den Rollup, statt alle Rollupzeilen zu lesen. Er kostet **16,6 MiB** neben 21,6 MiB Daten und
+   **1,3 s** Aufbauzeit. **Was er den stündlichen Delta‑Lauf kostet, der in diese Tabelle schreibt,
+   ist nicht gemessen** — und das gehört zu jeder Entscheidung über ihn dazu. Er hat das Tor der
+   Verengung nicht geöffnet; die Entscheidung über §2 bleibt davon unberührt (offene Punkte **73**
+   und **76** in der Messdatei).
 
 3. **Der Mandant steht nicht in der Zeile, und das hat einen Preis, den 10a nicht sehen konnte.**
    Entscheidung E‑a hält Mandant, Partner und Richtung bewusst aus dem Schlüssel heraus; der Mandant

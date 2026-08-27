@@ -1294,7 +1294,36 @@ Sekundärindex trägt. Diese Mandanten sind heute schon schnell.
 **Das ist die zweite Zeile des Tors, und sie gilt:** *„Ein Mandant wird schlechter — nicht bauen.
 Melden."* Dieselbe Zeile wie bei F6 in §5a, aber aus einem anderen Grund: Dort schadete der **Plan**
 unbegrenzt, hier ein **additiver Betrag** von höchstens rund 18 ms — auf einer Tabelle, die diesem
-Projekt gehört. Was fehlt, steht als offener Punkt **73** in der Messdatei.
+Projekt gehört.
+
+### Der Index auf der eigenen Tabelle — gemessen, und er reicht nicht
+
+Weil `message_rollup` uns gehört, ist die naheliegende Abhilfe geprüft worden (**M104**, an einer
+Probetabelle nach dem Vorbild von M89, angelegt, gemessen, gelöscht — Löschung nachgewiesen; die
+echte Tabelle ist unberührt). Ein Index `(process_id, stunde)` **wirkt genau dort, wo es weh tut**:
+
+| | Vorabfrage, 30 Tage | |
+|---|---|---|
+| NXHBE | 97,756 → **0,962 ms** | 101,6× |
+| SYSTEM | 96,997 → **0,985 ms** | 98,5× |
+| EDITIONLINGERI | 101,920 → **1,079 ms** | 94,5× |
+| WOC | 88,877 → **1,501 ms** | 59,2× |
+| ZAST | 102,942 → **2,686 ms** | 38,3× |
+
+Der Plan dreht sich um: Statt alle 21.274 Rollupzeilen zu lesen und je Zeile die Mandantenkette zu
+prüfen, geht er von den wenigen Prozessen des Mandanten in den Rollup. Auf den engen Stufen kostet
+der Index nichts. Er kostet **16,6 MiB** neben 21,6 MiB Daten und 1,3 s Aufbauzeit.
+
+**Und er öffnet das Tor trotzdem nicht.** Der Schaden schrumpft um eine Größenordnung — NXHBE von
+120,1× auf 6,8×, SYSTEM von 69,9× auf 4,9×, WOC von 8,1× auf 1,5×; `EDITIONLINGERI` fällt auf
+**3,348 ms**, Faktor 635 —, aber **keine Zeile kippt von „schlechter" auf „besser".** Was übrig
+bleibt, ist ein Sockel von 3,4 bis 4,4 ms auf der **24‑Stunden‑Stufe**, den der Index nicht anrührt;
+`NXHBE` liegt heute bei 0,980 ms. Dazu eine Bedingung: In der Literalfassung macht derselbe Index
+die engen Stufen *teurer* (NEXANS 2,204 → 7,813 ms) — **Index und Abfragefassung sind eine
+Entscheidung, nicht zwei.**
+
+Offener Punkt **73** ist damit beantwortet; was jetzt im Weg steht, steht als Punkt **76** in der
+Messdatei.
 
 ### Zwei Befunde, die über diese Runde hinaus gelten
 
