@@ -636,7 +636,10 @@ schlechter. Die anderen fünf Fassungen fallen schon hier durch:
 > `ProejctIDIDX` blieb in `possible_keys` und wurde nie als Bereich genutzt; gemessen war also nicht
 > der Prozessfilter, sondern seine Abwesenheit. Die Zahlen oben stammen aus der zweiten Fassung
 > (`a1-gegenprobe-prozessfilter-*.sql`), in der die Kennungen als **Literale** im Statement stehen —
-> dieselbe Form, die der Treiber auf die Leitung legt. Die erste Fassung ist nicht aufgehoben.
+> dieselbe Form, die der Treiber auf die Leitung legt. **Die erste Fassung ist trotzdem
+> aufgehoben** (`a1-gegenprobe-filter-*.sql`, mit einem Hinweis im Kopf): Ihre übrigen Fälle — 24
+> Stunden, sieben Tage, Statusfilter — sind von dem Fehler nicht berührt und stehen in der Übersicht
+> unten.
 
 ### ⚠️ Die Gegenprobe über alle zehn Mandanten — und hier fällt die Entscheidung
 
