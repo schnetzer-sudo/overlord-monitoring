@@ -699,12 +699,25 @@ der Messrunde unverändert.
 | **gebaut**, Systemuhr, ohne Drosselung | 23 | **335.610** | **3.341.519** | **45,772 s** |
 | **gebaut**, Systemuhr, mit `scheiben-pause: 1s` | 23 | 335.610 | 3.341.519 | **69,186 s** |
 | gebaut, dev-Anker, ohne Drosselung | 15 | 335.595 | 3.336.386 | 45,994 s |
+| **gebaut mit Tagesebene**, Systemuhr, mit `scheiben-pause: 1s` *(27.08.2026)* | 23 | **335.610** + **123.049** | **3.341.519** | **81,903 s** |
 
 > **Der Auftrag verlangt, den gebauten Weg gegen die 51,242 s zu messen und das Ergebnis zu melden;
 > läge er um mehr als Faktor drei darüber, wäre das eine Entscheidung für den Auftraggeber.**
 > **Er liegt darunter: 45,772 s gegen 51,242 s, also 10,7 % schneller.** Es gibt nichts vorzulegen.
 >
-> **Belegvermerk (Regel L10).** *Gemessen ist:* zwei Läufe auf derselben Instanz, derselbe Bestand,
+> ### Was die Tagesebene den Volllauf kostet *(27.08.2026)*
+>
+> **12,7 Sekunden, also +18,4 %** — 81,903 s gegen 69,186 s, beide mit derselben Drosselung, beide
+> gegen die Systemuhr, beide über 23 Scheiben. Das ist der Preis für 22 zusätzliche
+> `DELETE`/`INSERT`-Paare über eine Tabelle von 8,53 MiB, und er fällt **nachts** an.
+>
+> **Der Delta-Lauf zahlt ihn nicht in dieser Größenordnung**: Er berührt einen oder zwei
+> Kalendertage, nicht 646. Gemessen ist er in dieser Form nicht — der Datenbanktest fährt ihn, aber
+> mit dem Aufbau einer JVM darin, und das ist keine Laufzeitmessung. **Ungemessen, und hier als
+> solches benannt** (Regel Q4).
+>
+> **Belegvermerk (Regel L10).** *Gemessen ist:* zwei Läufe auf derselben Instanz, derselbe
+> Bestand,
 > beide warm. *Behauptet wird:* Der gebaute Weg ist nicht teurer als der verworfene. **Die Lücke:**
 > Die 51,242 s stammen aus einer anderen Sitzung an einem anderen Tag; ein Aufwärmunterschied ist
 > nicht auszuschließen. Der Abstand von 10,7 % liegt in derselben Größenordnung wie die
@@ -739,6 +752,19 @@ Verbindung und die erste Transaktion — kein mengenabhängiger Anteil.
 | **davon Indexanteil** | **0 Byte** | 0 Byte |
 | `TABLE_COLLATION` | `utf8mb4_general_ci` | — |
 | `rollup_lauf` | 3 Zeilen, 0,03 MiB | — |
+
+**Und die Tagesebene daneben** *(gemessen 27.08.2026, nach dem Volllauf Nr. 407)*:
+
+| | `message_rollup` | `message_rollup_tag` | Verhältnis |
+|---|---:|---:|---:|
+| Zeilen | 335.610 | **123.049** | 36,7 % |
+| `SUM(anzahl)` | 3.341.519 | **3.341.519** | **gleich** |
+| Größe | 21,53 MiB | **8,53 MiB** | **39,6 %** |
+| davon Indexanteil | 0 Byte | **0 Byte** | — |
+
+**`SUM(anzahl)` ist in beiden Ebenen dieselbe Zahl wie in `Message`** — das ist die Summenprobe über beide Tabellen, und sie ist die Abnahmebedingung dieses Schritts. Der Indexanteil ist auch hier **0 Byte**, wie bei der Stundenebene und aus demselben Grund.
+
+> Die 21,53 MiB gegen die 21,61 MiB oben sind `information_schema`-Rauschen und keine Abweichung — dieselbe Statistik hat in M89 zwischen zwei Ablesungen um 16 % geschwankt.
 
 **Alle sechs Kontrollen aus M89 treffen auf die Einheit genau.** `SUM(anzahl) = 3.341.519` heißt:
 jede Nachricht ist genau einmal gezählt, keine doppelt, keine verloren.
