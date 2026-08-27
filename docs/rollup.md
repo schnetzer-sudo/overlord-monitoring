@@ -748,6 +748,47 @@ nachgelagert.
     Datenbanktest kann eine Rollup-Zeile vor den Bestandsanfang setzen und verlangen, dass der
     Volllauf sie entfernt. **Das ist eine Entscheidung für den Auftraggeber.**
 
+    > ### ✔ Entschieden am 27.08.2026: **nicht löschen** — erkennen
+    >
+    > **Der Auftraggeber hat entschieden. Die naheliegende Lösung oben wird nicht gebaut:** Die
+    > untere Grenze des Volllaufs bleibt `MIN(Message.MessageLastUpdate)`, und Rollup-Zeilen
+    > unterhalb des Bestandsanfangs werden **nicht** entfernt. Stattdessen wird der Fall **erkannt
+    > und sichtbar gemacht**.
+    >
+    > **Warum nicht löschen.** Die eingefrorenen Eimer sind kein Müll, sondern der letzte Rest einer
+    > Auskunft, die es sonst nirgends mehr gibt: Hat das Altsystem die Nachrichten entfernt, ist
+    > `message_rollup` die einzige Stelle im Haus, an der noch steht, wie viel in jenem Zeitraum
+    > gelaufen ist. **Ein Monitoring, das seine eigene Geschichte wegräumt, sobald die Quelle sie
+    > vergisst, räumt genau das weg, wofür es gebaut wurde.** Das Löschen wäre außerdem
+    > unumkehrbar — und es würde einen Vorgang stillschweigend vollziehen, den niemand angeordnet
+    > hat: Der Rollup-Job entschiede von sich aus, dass eine Aufbewahrungsfrist abgelaufen ist,
+    > obwohl er sie nicht kennt (die Frist selbst ist ungedeckt, siehe
+    > [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §8 und V6 der Messrunde).
+    >
+    > **Was stattdessen gebaut wird — und was den Punkt offen hält.** Eine **Erkennung**: Der Lauf
+    > vergleicht `MIN(message_rollup.stunde)` mit `MIN(Message.MessageLastUpdate)`. Liegt die erste
+    > vor der zweiten, ist der Fall eingetreten; er gehört sichtbar in `rollup_lauf` und von dort in
+    > die Anzeige des Aktualisierungsstands aus 10b. **Der Schaden, den Punkt 54 beschreibt, ist
+    > nicht das Dastehen der Zeilen, sondern dass niemand es merkt** — `SUM(anzahl)` läuft gegen die
+    > Zeilenzahl von `Message` auseinander, und das Dashboard zeigte für den abgelaufenen Zeitraum
+    > Nachrichten, die es nicht mehr gibt, ohne dazuzusagen, dass sie nur noch hier stehen. Erkannt
+    > und benannt ist derselbe Zustand eine Auskunft statt eines Fehlers.
+    >
+    > **Der Punkt bleibt offen, bis die Erkennung gebaut ist.** Sie ist eine Codeänderung und gehört
+    > nach **10b** oder in eine eigene kleine Runde — die Korrekturrunde vom 27.08.2026 ändert
+    > ausschließlich Dokumentation. Prüfbar ist sie wie die verworfene Lösung: Ein Datenbanktest
+    > setzt eine Rollup-Zeile vor den Bestandsanfang und verlangt, dass der Lauf sie **meldet** und
+    > **stehen lässt**.
+    >
+    > **Der Absatz darüber bleibt vollständig stehen.** Die verworfene Lösung ist die bessere
+    > Beschreibung des Problems, und ohne sie wäre nicht mehr erkennbar, wogegen entschieden wurde.
+    >
+    > > **Zur Herkunft dieses Textes.** Die Entscheidung — *nicht löschen* — kommt vom
+    > > Auftraggeber und ist am 27.08.2026 zusammen mit dem Auftrag der Korrekturrunde ergangen.
+    > > **Die Begründung ist hier ausgeschrieben und nicht mitgeliefert worden**; sie folgt aus
+    > > diesem Punkt, aus §8 der Projektbeschreibung und aus V6 der Messrunde. Wer sie anders
+    > > begründet sähe, ändert diesen Text — die Entscheidung ändert das nicht.
+
 ---
 
 ## 14. Was dieser Schritt nicht zeigt

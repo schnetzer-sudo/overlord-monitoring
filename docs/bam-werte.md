@@ -478,6 +478,35 @@ wie in der Vorlage `MandantenIsolationDbIT`. Geprüft wird:
 6. Die Trennung gilt in **beide** Richtungen.
 7. Ohne aktiven Mandanten antwortet der Endpunkt `403` — auch für ADMIN.
 
+> ### ⚠️ Offener Punkt: Prüfung 4 wird gelegentlich grundlos rot *(nachgetragen am 27.08.2026)*
+>
+> **Die Laufzeitprüfung aus Punkt 4 vergleicht zwei Wanduhrzeiten gegen eine Faktor‑10‑Schranke —
+> und fällt, ohne dass sich am Code etwas geändert hätte.** Beobachtet: **279 ms gegen 20 ms**,
+> also Faktor 14 bei erlaubtem Faktor 10. Ein Wiederholungslauf ist danach grün.
+>
+> **Die Schranke ist bewusst grob gewählt** (Punkt 4 sagt das), und sie ist trotzdem zu eng: Sie
+> misst nicht nur den Zugriff, den sie meint, sondern auch alles, was beim **ersten** Aufruf
+> einmalig anfällt — kalter Abfrageplan, kalte Verbindung, erste Transaktion. Dass dieser Anteil
+> die Größenordnung des Messwerts erreicht, ist an anderer Stelle dieses Projekts belegt:
+> [`rollup.md`](rollup.md) §9 misst für den ersten Delta-Lauf einer JVM **387 ms gegen 20 bis
+> 31 ms** danach, also **das Zwölffache**, und nennt ausdrücklich denselben Grund.
+>
+> > **Belegvermerk** (Regel L10). *Beobachtet ist:* ein Fehlschlag mit 279 ms gegen 20 ms.
+> > *Behauptet wird* hier: dass die Ursache der kalte erste Aufruf ist. **Die Lücke:** Das ist aus
+> > der Bauform des Tests und aus der Parallele zum Rollup **erschlossen**, nicht an
+> > `BamIsolationDbIT` gemessen. Eine Messung wäre billig — dieselbe Prüfung mit einem
+> > vorgeschalteten Aufwärmaufruf — und ist nicht gefahren.
+>
+> **Der Punkt gehört behoben, aber nicht hier.** Die Korrekturrunde vom 27.08.2026 ändert
+> ausschließlich Dokumentation; jede Fassung dieser Prüfung ist eine Codeänderung. **Er gehört in
+> eine eigene Runde**, und dort ist zu entscheiden, ob ein Aufwärmaufruf davorgehört, ob mehrere
+> Läufe verglichen werden oder ob der Zeitkanal anders abgesichert wird als über die Wanduhr.
+>
+> **Bis dahin gilt: Fällt genau diese Prüfung, ist der Wiederholungslauf der erste Schritt und
+> nicht die Suche im eigenen Diff.** Die inhaltliche Aussage von Punkt 4 — eine nachgelagerte
+> Existenzprüfung wäre über genug Anfragen ein messbarer Kanal — bleibt davon unberührt und
+> richtig.
+
 **Das Zeitfenster ist absolut** (29.12.2025): Außer `NEXANS` endet jeder Mandant am 30.12.2025 (M3);
 in einem relativen Fenster sähe `SUTTONS` je nach Datenstand null Zeilen, und der Test bewiese nur,
 dass leer leer ist.
