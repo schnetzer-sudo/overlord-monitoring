@@ -129,8 +129,9 @@ dem Faktor 2,73 zu trauen.
 > der einen Zeile wäre die erste Spalte ein Stundenanfang, in der anderen ein Tagesanfang, und der
 > Unterschied stünde in einer Nachbarspalte.
 >
-> Zwei Tabellen kosten dafür eine zusätzliche `DELETE`/`INSERT`‑Runde je Lauf und rund 40 % des
-> Platzes der Stundenebene. Beides ist billig; eine Summe, die still das Doppelte ergibt, ist es
+> Zwei Tabellen kosten dafür eine zusätzliche `DELETE`/`INSERT`‑Runde je Lauf und **39,6 % des
+> Platzes der Stundenebene** (8,53 gegen 21,53 MiB, gemessen — §9); der Volllauf wird dadurch um
+> **12,7 Sekunden** länger. Beides ist billig; eine Summe, die still das Doppelte ergibt, ist es
 > nicht.
 
 **`DATE` und nicht `DATETIME`:** Ein Tageseimer hat keine Uhrzeit. Ein `DATETIME` mit `00:00:00`
