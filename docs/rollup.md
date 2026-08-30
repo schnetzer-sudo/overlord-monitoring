@@ -915,18 +915,34 @@ Punkt 55 trägt sie weiter; die Zahlen dafür stehen vollständig hier.
 
 ---
 
-## 9b. Der Rollup als Beschleuniger der Nachrichtenliste — geprüft, nicht gebaut *(27.08.2026)*
+## 9b. Der Rollup als Beschleuniger der Nachrichtenliste — gebaut *(30.08.2026)*
 
-**`message_rollup` ist weiterhin ausschließlich die Datenquelle des Dashboards.** Am 27.08.2026 ist
-geprüft worden, ob die Tabelle daneben eine **Kernabfrage** beschleunigen kann: die Nachrichtenliste.
-Der Gedanke ist, aus dem Rollup vorab zu bestimmen, in welchen Stunden ein Mandant überhaupt
-Nachrichten hat, und die Quellabfrage nur nach diesen Stunden zu fragen. Alle Zahlen stehen in
-[`messungen-liste-verengung.md`](messungen-liste-verengung.md) (M99 bis M103), die Bewertung in
-[`nachrichtenliste.md`](nachrichtenliste.md) §5c.
+> ### ⚠️ Diese Tabelle hat seit dem 30.08.2026 **zwei** Verbraucher
+>
+> Bis dahin war `message_rollup` ausschließlich die Datenquelle des Dashboards. Seither verengt die
+> **Nachrichtenliste** ihr Zeitfenster über dieselbe Tabelle
+> ([`nachrichtenliste.md`](nachrichtenliste.md) §5d): Sie fragt vorab, in welchen Stunden ein Mandant
+> überhaupt Nachrichten hat, und stellt die Quellabfrage nur für diese Stunden.
+>
+> **Wer diese Tabelle künftig ändert, ändert zwei Dinge** — und das zweite ist die Kernabfrage des
+> Werkzeugs, nicht ein Diagramm. Konkret betroffen wären:
+>
+> | Änderung | Was sie an der Liste bricht |
+> |---|---|
+> | Eine Spalte mit anderer Bedeutung füllen (etwa `message_status` klassifiziert statt roh) | Der Statusfilter der Verengung ist **derselbe Ausdruck** wie auf `Message` (`MessageStatusClassifier.bedingung`). Driftet die Bedeutung, verliert die Liste Zeilen — lautlos |
+> | Die Eimergrenze ändern (etwa auf Viertelstunden) | `Verengungsgrenzen` rechnet auf ganzen Stunden. Die Randstunden-Regel wäre falsch, und die gezählte Menge keine Unterschranke mehr |
+> | `rollup_lauf` anders schreiben (etwa `fenster_bis` einschließend) | Der Wasserstand verschöbe sich um eine Stunde nach oben, und die Verengung ginge über gerechnete Daten hinaus |
+> | Den Index aus `V11` entfernen | Die Vorabfrage fällt für die dünnen Mandanten um Faktor 38 bis 102 zurück (M104) |
+>
+> Der Schutz dagegen ist kein Kommentar, sondern `FensterverengungDbIT`: Er stellt verengt und
+> unverengt über alle zehn Mandanten gegeneinander. Wer eine dieser Änderungen macht, sieht ihn rot.
 
-**Es ist nichts gebaut worden**, und die Tabelle hat damit **keinen zweiten Verbraucher**. Drei
-Dinge aus dieser Prüfung gehören trotzdem hierher, weil sie den Rollup betreffen und sonst
-untergehen:
+Alle Zahlen der Prüfung stehen in
+[`messungen-liste-verengung.md`](messungen-liste-verengung.md) (M99 bis M104), die Kosten für die
+beiden Läufe in §9c, die Bewertung und die Abschlussmessung in
+[`nachrichtenliste.md`](nachrichtenliste.md) §5c und §5d.
+
+Drei Dinge aus dieser Prüfung gehören hierher, weil sie den Rollup betreffen und sonst untergehen:
 
 1. **Der Rollup ist für `MessageLastUpdate` nachweislich lückenlos.** `SUM(anzahl)` über die
    Stundenebene trifft `COUNT(*)` über `Message` auf die Zeile genau (**3.341.519**), und
@@ -948,10 +964,12 @@ untergehen:
    Tabelle ist unberührt). Er senkt die 30‑Tage‑Stufe der Vorabfrage um **Faktor 38 bis 102**
    (`NXHBE` 97,756 → 0,962 ms), weil der Plan sich umdreht: von den wenigen Prozessen des Mandanten
    in den Rollup, statt alle Rollupzeilen zu lesen. Er kostet **16,6 MiB** neben 21,6 MiB Daten und
-   **1,3 s** Aufbauzeit. **Was er den stündlichen Delta‑Lauf kostet, der in diese Tabelle schreibt,
-   ist nicht gemessen** — und das gehört zu jeder Entscheidung über ihn dazu. Er hat das Tor der
-   Verengung nicht geöffnet; die Entscheidung über §2 bleibt davon unberührt (offene Punkte **73**
-   und **76** in der Messdatei).
+   **1,3 s** Aufbauzeit. **Was er den beiden Läufen kostet, ist inzwischen gemessen** — §9c: Der
+   stündliche Delta‑Lauf zahlt nichts, der nächtliche Volllauf +52,8 % im Schreibpfad, die größte
+   Scheibe 3,669 s gegen die vor der Messung gesetzte Schranke von 5 s. **Angelegt ist er seit dem
+   30.08.2026** (`V11__message_rollup_prozess_index.sql`, §2). Offener Punkt 73 trägt seinen
+   Erledigt-Vermerk in [`nachrichtenliste.md`](nachrichtenliste.md) §9; **76 bleibt offen** — die
+   24‑Stunden‑Stufe der Vorabfrage rührt der Index nicht an.
 
 3. **Der Mandant steht nicht in der Zeile, und das hat einen Preis, den 10a nicht sehen konnte.**
    Entscheidung E‑a hält Mandant, Partner und Richtung bewusst aus dem Schlüssel heraus; der Mandant
@@ -963,9 +981,10 @@ untergehen:
    Achtfache kostet. **Die Mandantenkette muss `EXISTS` sein und darf kein `JOIN` sein:**
    `ProjectMandant` ist n:m, ein `JOIN` vervielfachte Zeilen und damit die Summe.
 
-**Wer diese Tabelle künftig ändert, ändert vorerst nur eine Sache** — das Dashboard. Sollte die
-Verengung je gebaut werden, gilt der Satz nicht mehr, und dieser Abschnitt ist der erste, der
-angepasst gehört.
+**Und eine vierte Sache, die erst der Bau gezeigt hat.** Die `EXISTS`-Fassung ist nicht nur die
+sichere (n:m), sondern seit `V11` auch die schnellere: Mit dem Index macht die **Literal**fassung
+die engen Stufen sogar *teurer* (`NEXANS` 2,204 → 7,813 ms, M104). **Index und Abfragefassung sind
+eine Entscheidung, nicht zwei** — wer die eine ändert, misst die andere neu.
 
 ---
 

@@ -1345,6 +1345,162 @@ Rollup. Der Rückfallpfad ist gemessen und unverändert: NEXANS 4,993 ms, SUTTON
 
 ---
 
+## 5d. Die Fensterverengung, gebaut (30.08.2026)
+
+§5c endet mit einem geschlossenen Tor: Die Annahme trägt, der Optimierer wechselt bei engem Fenster
+von selbst die Planfamilie — aber die Vorabfrage kostet die dünnen Mandanten mehr, als die Verengung
+ihnen bringt. Der Auftraggeber hat am 27.08.2026 entschieden, den Index `(process_id, stunde)` auf
+`message_rollup` anzulegen und die Verengung damit zu bauen.
+
+**Gebaut ist:** `V11__message_rollup_prozess_index.sql`, die Klassen `Fensterverengung`,
+`VerengungRepository`, `Verengungsgrenzen`, `Abfragemerkmal` und `Verengungsgrund` in `message/`, der
+Schalter `overlord.nachrichtenliste.verengung`. **Nicht gebaut ist** eine Behandlung von `ZAST` —
+Punkt 70 zeigt, dass die 275 ms strukturell nicht durch eine Verengung zu heilen sind.
+
+### Der Befund, der den Bau prägt
+
+> **Eine Verengung, die nicht jeden Filter der Quellabfrage mitträgt, verliert stillschweigend
+> Zeilen** (offener Punkt 72). Gemessen: mit `status=FEHLER` liefert sie für `SUTTONS` **null statt
+> fünf** Zeilen — ohne Fehlermeldung. **In einem Überwachungswerkzeug ist „keine Fehler" die
+> schlimmste falsche Antwort, die es gibt.**
+
+Sie ist deshalb **umgekehrt** gebaut: Sie greift nicht standardmäßig und setzt bei bekannten
+Ausnahmen aus, sondern greift **nur**, wenn für **jedes** gesetzte Merkmal ausdrücklich entschieden
+ist, dass der Rollup es trägt. Der Nachweis steht nicht in einer Prüfliste, sondern in zwei Riegeln,
+die zusammen keine Lücke lassen:
+
+| Riegel | Was er fängt |
+|---|---|
+| `Abfragemerkmal` — ein Wert je Bestandteil von `Nachrichtenabfrage`; `Fensterverengung` entscheidet darüber in **zwei** vollständigen `switch`-Ausdrücken ohne `default` | Ein neuer **Enum-Wert** bricht den Bau, zweimal |
+| `FensterverengungMerkmaleTest` geht über `Nachrichtenabfrage.class.getRecordComponents()` und verlangt für jeden Bestandteil einen zugeordneten Wert | Ein neues **Feld** im Record — das merkt der Compiler nicht |
+
+**Was der Rollup trägt:** Zeitfenster, Status (er speichert den Rohwert, E‑g, und
+`MessageStatusClassifier.bedingung` nimmt ein beliebiges `Field<String>` — es ist *derselbe
+Ausdruck*, nur mit anderem Feld), Prozesse, Cursor, Limit, Stichtag.
+
+**Was er nicht trägt** — und jeder dieser drei Fälle fällt auf den heutigen Pfad zurück:
+
+| | Warum |
+|---|---|
+| `ueberfaellig` | `MessageTimeout` steht nicht im Rollup und lässt sich aus `anzahl` nicht rekonstruieren. Das Nächste, was er könnte, wäre „offen" — und das ist nicht „überfällig" |
+| Suchbegriff | Der Suchtreffer wirkt als `ProcessID IN (…) OR SOSID IN (…)`, und `message_rollup` hat **keine `sos_id`**. Eine Verengung nur über den Prozesszweig wäre **zu eng** |
+| Sortierung `AELTESTE` | Dort stehen die ersten Zeilen am **Anfang** des Fensters; eine Untergrenze verschöbe die erste Seite und nicht den Suchraum. Die gespiegelte Rechnung wäre richtig, ist aber nicht gemessen — offener Punkt **77** |
+
+Die **BAM-Suche** kennt die Verengung nicht einmal; `PaketstrukturTest` hält das als Regel fest.
+
+### Wie sie rechnet — und warum sie nie zu weit geht
+
+Vom Fensterende rückwärts über die Stundeneimer summieren, bis die kumulierte `anzahl` **≥ limit+1**
+ist. Drei Dinge sorgen dafür, dass die gezählte Menge stets eine **Unterschranke** der wirklichen ist:
+
+1. **Nur vollständig im Fenster liegende Stunden zählen.** Die Eimer sind halboffen
+   (`[stunde, stunde+1h)`), das Fenster beginnt und endet fast immer mitten in einer Stunde. Die
+   beiden angebrochenen Randstunden gehen mit **0** ein. Zählte man die obere voll mit, wäre es eine
+   **Ober**schranke — läge dort ein Eimer mit sechzig Nachrichten, von denen nur fünf vor dem
+   Fensterende liegen, hielte man 51 Zeilen für gefunden und lieferte fünf.
+2. **Nie über den Wasserstand hinaus** (`MAX(fenster_bis)` über abgeschlossene, fehlerfreie Läufe).
+3. **Nur bei Merkmalen, die der Rollup mitträgt** — siehe oben.
+
+`Verengungsgrenzen` ist deshalb ein eigener Typ: Diese Rechnung ist die Stelle, an der ein Fehler
+**Zeilen kostet** statt Laufzeit, und sie wird ohne Datenbank bei jedem Build geprüft.
+
+**Gestuft gefragt** wird in drei Schritten — eine Stunde, vierundzwanzig, das ganze Fenster —, und
+abgebrochen, sobald eine Stufe trägt. Eine einzige Abfrage über dreißig Tage kostet `NEXANS` 91 ms,
+während seine Antwort in der letzten Stunde steht.
+
+**Der Nullfall:** Meldet der Rollup null Zeilen, wird gegen `Message` **gar nicht gefragt**.
+
+### Die Abschlussmessung (M106, alle zehn Mandanten)
+
+Gemessen ist, was der Code schickt — die Statements sind aus `VerengungRepository` und
+`NachrichtenRepository` **gerendert** und von dort abgeschrieben (Regel L7). Aufwärmlauf, dann beste
+von fünf. Die Vorabfrage steigt bei allen zehn Mandanten über **`message_rollup_prozess_idx`** ein
+(`ref`, 240 geschätzte Zeilen) — der Index aus `V11` wirkt.
+
+**Über dreißig Tage:**
+
+| Fall | heute | Vorabfrage | Quelle | **Summe** | |
+|---|---:|---:|---:|---:|---|
+| **NEXANS, Prozessfilter (drei verkehrsreiche)** | **7.433,790 ms** | 1,388 | 6,086 | **7,474 ms** | **995×** |
+| **EDITIONLINGERI** | **2.211,771 ms** | 6,335 | *(Nullfall)* | **6,335 ms** | **349×** |
+| **SUTTONS** | **1.107,092 ms** | 5,548 | 6,635 | **12,183 ms** | **91×** |
+| ZAST | 284,824 ms | 8,069 | 278,476 | 286,545 ms | unverändert |
+| IBISGUS | 53,515 ms | 5,519 | 54,501 | 60,020 ms | +6,5 ms |
+| IBIS | 43,965 ms | 5,604 | 43,531 | 49,135 ms | +5,2 ms |
+| VOTG | 34,518 ms | 5,749 | 33,037 | 38,786 ms | +4,3 ms |
+| WOC | 15,713 ms | 6,443 | 16,051 | 22,494 ms | +6,8 ms |
+| NEXANS, Prozessfilter (drei kleine) | 1,787 ms | 3,323 | 1,760 | 5,083 ms | +3,3 ms |
+| NEXANS, ohne Filter | 1,645 ms | 1,444 | 1,639 | 3,083 ms | +1,4 ms |
+| SYSTEM | 1,582 ms | 6,177 | 1,585 | 7,762 ms | +6,2 ms |
+| NXHBE | 1,019 ms | 6,186 | *(Nullfall)* | 6,186 ms | +5,2 ms |
+
+Der teuerste bekannte Fall des Projekts — die Kombination, von der §5a schreibt, sie „stirbt in
+Produktion" — kostet **7,474 ms**. **Der höchste Aufschlag über alle zwölf Fälle beträgt 6,8 ms**,
+und er trifft Fälle, die heute zwischen 1 und 16 ms liegen.
+
+> ### ⚠️ Und beim Vorgabefenster kehrt sich das Bild um
+>
+> **24 Stunden ist der Wert, den die Liste ohne Parameter nimmt** (Regel L1) — nicht dreißig Tage.
+> Dort greift bei vier Mandanten der **Nullfall**, und die Zahlen drehen sich:
+>
+> | Fall | heute | **verengt** | |
+> |---|---:|---:|---|
+> | **NXHBE** | **98,962 ms** | **5,212 ms** | **19,0× besser** |
+> | **SYSTEM** | **98,358 ms** | **5,155 ms** | **19,1× besser** |
+> | **ZAST** | **62,986 ms** | **5,380 ms** | **11,7× besser** |
+> | **EDITIONLINGERI** | **60,703 ms** | **5,324 ms** | **11,4× besser** |
+> | WOC | 82,996 ms | 85,913 ms | +2,9 ms |
+> | IBISGUS / IBIS / VOTG | 54,0 / 42,8 / 34,6 ms | +4,0 bis +4,9 ms | |
+> | SUTTONS | 6,777 ms | 12,147 ms | +5,4 ms |
+> | NEXANS | 1,680 ms | 3,060 ms | +1,4 ms |
+>
+> **Genau die vier Mandanten, die über dreißig Tage am meisten aufschlagen, sind über das
+> Vorgabefenster die größten Gewinner.** Der Grund steht im Plan: Über 24 Stunden laufen sie
+> **nicht** über die Mandantenkette, sondern über den Zeitindex — und lesen dessen 13.534 Zeilen
+> vergeblich, weil sie im Fenster gar keine Nachricht haben. Über dreißig Tage wählt der Optimierer
+> für sie die prozessgetriebene Form, die bei neun Zeilen Gesamtbestand sehr billig ist.
+>
+> **Das ist ein Befund über die heutige Liste, nicht über die Verengung**, und er war bis hierher
+> unbekannt: `NXHBE` und `SYSTEM` kosten über das **Vorgabefenster** rund 98 ms und über dreißig Tage
+> 1 ms. §5a hat nur dreißig Tage gemessen. Offener Punkt **78**.
+
+### Die vorregistrierten Erwartungen, dagegengehalten
+
+| Erwartung aus C.5 | |
+|---|---|
+| `NEXANS` mit Prozessfilter unter 10 ms | **trifft** — 7,474 ms |
+| `SUTTONS` unter 15 ms | **trifft** — 12,183 ms |
+| `ZAST` unverändert bei rund 275 ms | **trifft** — 286,545 ms |
+| `NXHBE` / `SYSTEM` / `WOC` höchstens rund 8 ms schlechter | **trifft** — +5,2 / +6,2 / +6,8 ms |
+| `EDITIONLINGERI` unter 5 ms | **verfehlt — 6,335 ms** |
+
+**Die eine Verfehlung ist klein und ihre Ursache benannt:** `EDITIONLINGERI` durchläuft alle drei
+Stufen (er hat keine Zeile, also trägt keine), und die 24‑Stunden‑Stufe allein kostet **3,950 ms**.
+Dazu kommt die Wasserstandsabfrage mit 0,422 ms, die in der Erwartung nicht mitgedacht war. Die
+Schranke von 5 ms war gegen die Zahlen aus M104 gesetzt, die beides nicht enthielten.
+**Nachgebessert ist nichts** — der Aufschlag ist die 24‑Stunden‑Stufe, und die ist offener Punkt
+**76**.
+
+### Der Schalter
+
+`overlord.nachrichtenliste.verengung`, Vorgabe `true`. Die Verengung ist die **erste Stelle, an der
+eine Kernabfrage von einer Tabelle abhängt, die dieses Projekt selbst fortschreibt**. Fällt der
+Rollup aus, läuft die Liste unverengt weiter — langsamer, aber richtig. **Ein fehlender Schlüssel
+schaltet ab, nicht ein.**
+
+### Die Tests
+
+| Test | Was er sichert |
+|---|---|
+| `FensterverengungDbIT` (27 Fälle) | **Verengt und unverengt liefern dieselben Zeilen** — alle zehn Mandanten, 24 h und 30 d, jede der acht Statusarten einzeln, zwei Seiten mit Cursor. Dazu ein Fall, der belegt, dass die Verengung überhaupt **greift**: Ohne ihn wäre die Gleichheitsprüfung grün, auch wenn sie stillschweigend nie zuschlüge |
+| `FensterverengungGrenzenTest` | Die Grenzrechnung **ohne Datenbank**, bei jedem Build: Randstunden, Wasserstand über/mitten/unter dem Fenster, Cursor, Stufenbildung |
+| `FensterverengungMerkmaleTest` | Der Riegel gegen ein neues Feld — und dass die Rückfallfälle das Repository **gar nicht anfassen** |
+| `NachrichtenPlanDbIT` (3 neue Fälle) | Dass `SUTTONS` bei engem Fenster auf den Zeitindex wechselt, dass `NEXANS` seine Planfamilie **behält**, und dass die Vorabfrage nicht über einen vollen Durchlauf der Rolluptabelle geht |
+| `PaketstrukturTest` | Die BAM-Suche kennt die Verengung nicht einmal |
+
+
+---
+
 ## 6. Die BAM-Werte sind aus der Liste heraus — und warum
 
 Bis zur Nachbesserung von Schritt 4 trug jede Zeile zwei BAM-Spalten, nachgeladen in einer zweiten
@@ -2047,6 +2203,69 @@ Der alte Link (Punkt 6) *ist* eine von Hand geöffnete URL, denn genau das ist d
 ---
 
 ## 9. Offene Punkte
+
+### Zur Fensterverengung (Stand 30.08.2026)
+
+> **Wo die Vermerke zu den Punkten 70 bis 76 stehen und warum hier.** Die Punkte sind in
+> [`messungen-liste-verengung.md`](messungen-liste-verengung.md) vergeben; Messdateien sind für
+> diesen Schritt ausdrücklich **nicht anzufassen**. Die Vermerke stehen deshalb dort, wo die Sache
+> hingehört — dieselbe Aufteilung, die Schritt 10b‑1 für die Punkte 55 bis 57 gewählt hat.
+
+- ~~**57. Die Listenabfrage kostet bei `SUTTONS` über dreißig Tage 1.101,280 ms.**~~
+  > ✔ **Erledigt am 30.08.2026 (§5d).** Verengt kostet derselbe Fall **12,183 ms** samt Vorabfrage —
+  > Faktor 91. Der Weg dahin war keiner der sechs Fassungen aus §5a, sondern ein engeres Fenster:
+  > Der Optimierer wechselt die Planfamilie dann von selbst, `pm`/`ref` → `m`/`range` über
+  > `MessageLastUpdateIDX` mit 470 statt 437.150 geschätzten Zeilen.
+
+- ~~**70. Die Verengung kann einem bereits zeitgetriebenen Mandanten nicht helfen.**~~
+  > ✔ **Entschieden am 27.08.2026, bestätigt am 30.08.2026.** Der Auftraggeber hat `ZAST` mit
+  > 275 ms ausdrücklich als tragbar entschieden und die Behandlung aus dem Bau herausgenommen. Die
+  > Abschlussmessung bestätigt den Befund unverändert: 284,824 → 286,545 ms. **Der Punkt ist damit
+  > nicht gelöst, sondern beantwortet** — er bleibt als Sachverhalt gültig und ist kein Auftrag mehr.
+
+- ~~**72. Eine Verengung, die nicht jeden Filter mitträgt, verliert stillschweigend Zeilen.**~~
+  > ✔ **Erledigt am 30.08.2026.** Der Bau ist umgekehrt herum gebaut: Er greift nur, wenn für jedes
+  > gesetzte Merkmal ausdrücklich entschieden ist, dass der Rollup es trägt (§5d). Zwei Riegel
+  > halten das — ein `Abfragemerkmal`-Enum mit zwei vollständigen `switch`-Ausdrücken ohne
+  > `default`, und ein Test über `getRecordComponents()`, der ein neues **Feld** fängt, das der
+  > Compiler nicht sieht. Der gemessene Fall selbst ist Test geworden:
+  > `FensterverengungDbIT.statusfilter_verliert_keine_zeilen_bei_suttons`, samt Vorbedingung, dass
+  > `SUTTONS` überhaupt Fehlerzeilen hat — sonst bewiese „null gleich null" nichts.
+
+- ~~**73. Ob ein Index `(process_id, stunde)` die dünnen Mandanten rettet.**~~
+  > ✔ **Erledigt am 30.08.2026.** Gebaut in `V11__message_rollup_prozess_index.sql`, nachdem M105
+  > gemessen hat, was er den beiden Läufen kostet: der stündliche Delta-Lauf **nichts**, der
+  > nächtliche Volllauf **+52,8 %** im Schreibpfad, die größte Scheibe 3,669 s gegen die vorher
+  > gesetzte Schranke von 5 s ([`rollup.md`](rollup.md) §9c). Die Vorabfrage steigt seither bei
+  > allen zehn Mandanten über `message_rollup_prozess_idx` ein.
+
+- **76. Die 24‑Stunden‑Stufe der Vorabfrage kostet 3,4 bis 4,4 ms, und der Index rührt sie nicht
+  an.** 🟡 **Bleibt offen.** Sie ist nach dem Bau der größte Einzelposten der Vorabfrage und die
+  Ursache dafür, dass `EDITIONLINGERI` die 5‑ms‑Erwartung aus C.5 mit 6,335 ms verfehlt. Auffällig
+  und weiterhin ungeklärt: Die 24‑Stunden‑Scheibe umfasst 587 Rollupzeilen, die 1‑Stunden‑Scheibe
+  28 — der einundzwanzigfache Umfang bei vierfacher Laufzeit, während die 30‑Tage‑Stufe mit Index
+  auf unter 1 ms fällt. **Der Plan dieser Stufe ist nach wie vor nicht erhoben.** Er ist die
+  billigste offene Messung des Projekts.
+
+- **77. Die Sortierrichtung `AELTESTE` fällt auf den heutigen Pfad zurück.** Die gespiegelte
+  Rechnung — vom Fensteranfang **vorwärts** summieren und eine **Ober**grenze setzen — wäre nach
+  demselben Argument richtig: Auch dort zählten nur vollständig im Fenster liegende Stunden, und die
+  gezählte Menge bliebe eine Unterschranke. **Sie ist nicht gemessen und deshalb nicht gebaut.** Wie
+  oft `sortierung=AELTESTE` überhaupt benutzt wird, ist ebenfalls nicht erhoben; ohne diese Zahl
+  wäre der Bau eine Vermutung über den Nutzen.
+
+- **78. 🔴 Die Liste ist über das Vorgabefenster teurer als über dreißig Tage — bei vier
+  Mandanten um Faktor 60 bis 97.** Gemessen in M106: `NXHBE` kostet über **24 Stunden** 98,962 ms
+  und über dreißig Tage **1,019 ms**; `SYSTEM` 98,358 gegen 1,582 ms; `ZAST` 62,986 gegen 284,824 ms
+  in der anderen Richtung. Der Grund steht im Plan: Über 24 Stunden wählt der Optimierer den
+  Zeitindex und liest dessen 13.534 Zeilen vergeblich, über dreißig Tage die prozessgetriebene Form,
+  die bei neun Zeilen Gesamtbestand fast nichts kostet.
+  **Das ist ein Befund über die heutige Liste und nicht über die Verengung** — §5a hat nur dreißig
+  Tage gemessen und diesen Fall deshalb nie gesehen. **24 Stunden ist der Wert, den die Liste ohne
+  Parameter nimmt** (Regel L1), also der häufigste Fall überhaupt. Die Verengung entschärft ihn für
+  drei der vier Mandanten über den Nullfall (98,962 → 5,212 ms); `WOC` bleibt bei 85,913 ms, weil er
+  eine einzige Nachricht im Fenster hat und damit weder unter den Nullfall noch über die Schwelle
+  fällt. **Für `WOC` ist damit nichts gewonnen und nichts verloren — der Fall bleibt offen.**
 
 ### Zum Plan der Liste (Stand 27.08.2026, Schritt 10b‑1 Teil A)
 
