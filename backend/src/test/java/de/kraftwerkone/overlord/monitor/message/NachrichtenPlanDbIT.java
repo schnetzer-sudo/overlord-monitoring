@@ -7,6 +7,7 @@ import de.kraftwerkone.overlord.monitor.common.Seitenposition;
 import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -189,5 +190,135 @@ class NachrichtenPlanDbIT {
           .as("Der Statusindex darf ohne den Parameter nirgends im Plan stehen (%s)", mandant)
           .noneMatch(zeile -> "MessageStatusIDX".equals(zeile.index()));
     }
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Die Fensterverengung (30.08.2026, docs/nachrichtenliste.md §5d)
+  // ───────────────────────────────────────────────────────────────────────────
+
+  /** Der Plan derselben Listenabfrage ueber ein <b>verengtes</b> Fenster. */
+  private List<Plan> planVerengt(String mandantId, LocalDateTime von) {
+    gerendert.clear();
+    attrappe.finde(
+        new MandantContext(mandantId),
+        new Nachrichtenabfrage(
+            new Zeitfenster(von, ANKER), Set.of(), List.of(), null, false, ANKER, true, null, 50));
+    assertThat(gerendert).hasSize(1);
+
+    List<Plan> zeilen = new ArrayList<>();
+    for (Record satz : glassfishDsl.fetch("explain " + gerendert.getFirst())) {
+      zeilen.add(
+          new Plan(
+              String.valueOf(satz.get("table")),
+              String.valueOf(satz.get("type")),
+              String.valueOf(satz.get("key")),
+              String.valueOf(satz.get("Extra")).toLowerCase(Locale.ROOT)));
+    }
+    return zeilen;
+  }
+
+  /**
+   * <b>Der Kern von §5c, als Test.</b> {@code SUTTONS} laeuft ueber dreissig Tage ueber die
+   * <b>Mandantenkette</b> — der Plan, der ihn 1.043 ms kostet. Ueber ein Fenster von zwei Stunden
+   * waehlt derselbe Optimierer <b>von selbst</b> den Zeitindex und braucht 6,5 ms.
+   *
+   * <p>Das ist die ganze Behauptung des Baus, und sie steht und faellt mit dieser einen Zeile:
+   * <b>Ein Fenster zu geben ist etwas anderes, als eine Form zu erzwingen.</b> Kein Hint, kein
+   * {@code STRAIGHT_JOIN}, kein Index auf {@code GlassfishDB} — nur ein engeres {@code von}.
+   *
+   * <p>Wird er rot, ist das kein Fehler, sondern ein Befund: Dann waehlt der Optimierer bei engem
+   * Fenster anders als am 27.08.2026, und die Verengung bringt nicht mehr, was sie bringen soll.
+   * Die <b>Richtigkeit</b> haengt nicht daran ({@code FensterverengungDbIT}) — nur der Nutzen.
+   */
+  @Test
+  @DisplayName("Bei engem Fenster wechselt SUTTONS von der Mandantenkette auf den Zeitindex")
+  void verengtes_fenster_zieht_suttons_auf_den_zeitindex() {
+    Plan weit = plan("SUTTONS", false, null).getFirst();
+    Plan eng = planVerengt("SUTTONS", ANKER.truncatedTo(ChronoUnit.HOURS).minusHours(1)).getFirst();
+
+    assertThat(weit.tabelle())
+        .as("Ueber dreissig Tage steigt SUTTONS ueber die Mandantenkette ein — der teure Plan")
+        .isEqualTo("ProjectMandant");
+    assertThat(eng.tabelle())
+        .as("Ueber zwei Stunden steigt derselbe Mandant ueber Message ein")
+        .isEqualTo("Message");
+    assertThat(eng.index()).isEqualTo("MessageLastUpdateIDX");
+    assertThat(eng.zugriff()).isEqualTo("range");
+  }
+
+  /**
+   * Und die Gegenprobe: {@code NEXANS} laeuft schon ueber dreissig Tage ueber den Zeitindex. Ein
+   * enges Fenster <b>aendert seine Planfamilie nicht</b> — es macht nur den Bereich kleiner. Ohne
+   * diesen Test bewiese der vorige nur, dass irgendein Plan herauskommt.
+   */
+  @Test
+  @DisplayName("NEXANS behaelt seine Planfamilie — das enge Fenster macht nur den Bereich kleiner")
+  void verengtes_fenster_aendert_nexans_planfamilie_nicht() {
+    Plan weit = plan("NEXANS", false, null).getFirst();
+    Plan eng = planVerengt("NEXANS", ANKER.truncatedTo(ChronoUnit.HOURS).minusHours(1)).getFirst();
+
+    assertThat(weit.tabelle()).isEqualTo("Message");
+    assertThat(eng.tabelle()).isEqualTo("Message");
+    assertThat(eng.index()).isEqualTo(weit.index()).isEqualTo("MessageLastUpdateIDX");
+  }
+
+  /**
+   * Der Plan der <b>Vorabfrage</b> selbst (Regel L7: gemessen wird die Abfrage, die der Code
+   * schickt). Sie muss ueber {@code message_rollup} einsteigen — und dort ueber einen der beiden
+   * Schluessel, die es gibt: den Primaerschluessel ueber {@code stunde} oder den Index {@code
+   * message_rollup_prozess_idx} aus {@code V11}. Steht dort {@code ALL}, liest sie die ganze
+   * Tabelle, und der ganze Bau waere teurer als das, was er spart.
+   */
+  @Test
+  @DisplayName("Die Vorabfrage steigt ueber message_rollup ein, nicht ueber einen vollen Durchlauf")
+  void vorabfrage_steigt_ueber_den_rollup_ein() {
+    VerengungRepository verengungAttrappe =
+        new VerengungRepository(
+            DSL.using(
+                new MockConnection(
+                    ausfuehrung -> {
+                      gerendert.add(ausfuehrung.sql());
+                      DSLContext leer = DSL.using(SQLDialect.MARIADB);
+                      return new MockResult[] {new MockResult(0, leer.newResult())};
+                    }),
+                SQLDialect.MARIADB,
+                new Settings().withStatementType(StatementType.STATIC_STATEMENT)),
+            new MessageStatusClassifier());
+
+    Nachrichtenabfrage abfrage =
+        new Nachrichtenabfrage(FENSTER, Set.of(), List.of(), null, false, ANKER, true, null, 50);
+    Verengungsgrenzen grenzen =
+        Verengungsgrenzen.aus(abfrage, LocalDateTime.parse("2026-08-27T15:00:00"));
+    assertThat(grenzen).isNotNull();
+
+    gerendert.clear();
+    verengungAttrappe.frageStufe(
+        new MandantContext("SUTTONS"), abfrage, grenzen, grenzen.hAllVon(), 51);
+    assertThat(gerendert).hasSize(1);
+
+    List<Plan> zeilen = new ArrayList<>();
+    for (Record satz : glassfishDsl.fetch("explain " + gerendert.getFirst())) {
+      zeilen.add(
+          new Plan(
+              String.valueOf(satz.get("table")),
+              String.valueOf(satz.get("type")),
+              String.valueOf(satz.get("key")),
+              String.valueOf(satz.get("Extra")).toLowerCase(Locale.ROOT)));
+    }
+
+    assertThat(zeilen)
+        .as("message_rollup muss im Plan vorkommen")
+        .anyMatch(zeile -> "message_rollup".equals(zeile.tabelle()));
+    assertThat(zeilen)
+        .filteredOn(zeile -> "message_rollup".equals(zeile.tabelle()))
+        .allSatisfy(
+            zeile -> {
+              assertThat(zeile.zugriff())
+                  .as("Kein voller Durchlauf ueber die Rolluptabelle")
+                  .isNotEqualTo("ALL");
+              assertThat(zeile.index())
+                  .as("Einstieg ueber den Primaerschluessel oder den Index aus V11")
+                  .isIn("PRIMARY", "message_rollup_prozess_idx");
+            });
   }
 }

@@ -93,11 +93,22 @@ class NachrichtenServiceTest {
         schritt);
   }
 
+  /**
+   * Die Fensterverengung <b>abgeschaltet</b>. Dieser Test prueft die Uebersetzung des Service,
+   * nicht die Verengung; abgeschaltet reicht sie die Abfrage unveraendert durch und fasst keine
+   * Datenbank an. Was die Verengung selbst tut, pruefen {@code FensterverengungMerkmaleTest},
+   * {@code FensterverengungGrenzenTest} und {@code FensterverengungDbIT}.
+   */
+  private static Fensterverengung verengungAus() {
+    return new Fensterverengung(null, new NachrichtenlisteEigenschaften(false));
+  }
+
   /** Die Zone der Anwendungsuhr ist die eine Stelle, an der die Wanduhrzeit nach UTC kommt. */
   private NachrichtenService service(ZoneId zone) {
     return new NachrichtenService(
         nachrichtenRepository,
         statusClassifier,
+        verengungAus(),
         Clock.fixed(Instant.parse("2025-12-30T04:09:47Z"), zone));
   }
 

@@ -241,6 +241,39 @@ class PaketstrukturTest {
     regel.check(KLASSEN);
   }
 
+  /**
+   * Die Fensterverengung stuetzt sich auf {@code message_rollup} und darf deshalb nur dort greifen,
+   * wo nachweislich jedes Merkmal der Abfrage im Rollup steht. Fuer die <b>BAM-Suche</b> gilt das
+   * nicht, und zwar strukturell: Sie sucht ueber {@code MessageBAM}-Werte, die der Rollup
+   * ueberhaupt nicht kennt.
+   *
+   * <p>Der Rueckfall ist dort deshalb kein Zweig, den jemand vergessen koennte, sondern die
+   * Abwesenheit jeder Verbindung. <b>Genau das prueft diese Regel</b> — ein Test, der nur die
+   * Laufzeit der BAM-Suche mit der von vorher vergliche, waere gruen, auch wenn die Verengung dort
+   * eines Tages doch aufgerufen wuerde.
+   */
+  @Test
+  @DisplayName("Die BAM-Suche kennt die Fensterverengung nicht einmal")
+  void bam_kennt_die_fensterverengung_nicht() {
+    ArchRule regel =
+        noClasses()
+            .that()
+            .resideInAPackage(musterFuer("bam"))
+            .should()
+            .dependOnClassesThat()
+            .haveSimpleNameStartingWith("Fensterverengung")
+            .orShould()
+            .dependOnClassesThat()
+            .haveSimpleNameStartingWith("Verengung")
+            .because(
+                "Der Rollup traegt keine BAM-Werte. Die Fensterverengung dort auch nur zu kennen"
+                    + " waere der erste Schritt dahin, sie zu benutzen -- und sie schnitte ein"
+                    + " Fenster zu, in dem der gesuchte Beleg nicht liegt."
+                    + " (docs/nachrichtenliste.md §5d)")
+            .allowEmptyShould(true);
+    regel.check(KLASSEN);
+  }
+
   @Test
   @DisplayName("Niemand haengt an config")
   void niemand_haengt_an_config() {
