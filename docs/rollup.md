@@ -934,6 +934,106 @@ angepasst gehört.
 
 ---
 
+## 9c. Was der Index den beiden Läufen kostet — M105 *(30.08.2026)*
+
+Offene Punkte 73 und 76 halten fest, dass der Index `(process_id, stunde)` dem **Leser** um Faktor
+bis 102 hilft und was er an Platz kostet — **nicht** aber, was er dem **Schreiber** kostet. Das ist
+hier nachgeholt, vor der Migration und mit einem Tor.
+
+> ### ⚠️ Die benannte Ausnahme vom Satz „es wird nur gelesen"
+>
+> M105 legt **zwei** Probetabellen in `overlord_monitor` an — eine Stunden- und eine Tagesebene —,
+> befüllt sie aus den echten Tabellen, misst gegen sie und löscht sie wieder. Bauform **M89** und
+> **M104**. Die Löschung ist unten nachgewiesen. Die echten Tabellen sind nur **gelesen** worden;
+> auf `GlassfishDB` ist in dieser Runde überhaupt nicht zugegriffen worden.
+>
+> **Nummernvergabe:** `grep -rnoE '\bM10[5-9]\b'` → **null Treffer**; Gegenprobe auf `M10[0-4]` →
+> **61** Treffer. **M105 ist hier vergeben.**
+
+### Was überhaupt teurer werden kann
+
+**Die Aggregation nicht.** Die Bezugswerte **84,999 ms** (dichteste Stunde) und **2.575,006 ms**
+(größte Monatsscheibe) aus §9 messen die Abfrage über `GlassfishDB.Message`. Ein Index auf
+`message_rollup` kann sie nicht berühren — sie liest diese Tabelle nicht. Teurer werden kann nur der
+**Schreibpfad**, und der besteht aus vier Schritten (`RollupSchreibRepository.ersetzeFenster`):
+
+| | Schritt | Warum der Index ihn treffen könnte |
+|---|---|---|
+| 1 | `DELETE` auf der Stundenebene | jede gelöschte Zeile muss aus dem Index entfernt werden |
+| 2 | Einfügen auf der Stundenebene | jede neue Zeile muss in den Index |
+| 3 | `DELETE` auf der Tagesebene | gar nicht — andere Tabelle |
+| 4 | Einfügen auf der Tagesebene | **es liest die Stundenebene.** Ein neuer Index kann seinen Plan kippen — der eigentliche Verdacht |
+
+### Die Zahlen
+
+Aufwärmlauf, dann beste von fünf, dieselbe Probetabelle vor und nach `ADD INDEX`.
+
+| Schritt | **ohne Index** | **mit Index** | |
+|---|---:|---:|---|
+| **Delta-Lauf, dichteste Stunde** `2025-12-07 17:00` — 14 Stunden-, 49 Tageszeilen | | | |
+| 1 `DELETE` Stunden | 2,236 ms | 2,130 ms | |
+| 2 `INSERT` Stunden | 2,387 ms | 2,318 ms | |
+| 3 `DELETE` Tage | 2,211 ms | 2,026 ms | |
+| 4 `INSERT` Tage | 2,705 ms | 2,523 ms | |
+| **zusammen** | **9,539 ms** | **8,997 ms** | **unverändert** |
+| **Monatsscheibe `2025-07`** — 26.365 Stunden-, 9.201 Tageszeilen | | | |
+| 1 `DELETE` Stunden | 157,586 ms | **287,965 ms** | +82,7 % |
+| 2 `INSERT` Stunden | 358,759 ms | **489,587 ms** | +36,5 % |
+| 3 `DELETE` Tage | 56,127 ms | 59,116 ms | +5,3 % |
+| 4 `INSERT` Tage | 255,415 ms | 257,071 ms | **+0,6 %** |
+| **zusammen** | **827,887 ms** | **1.093,739 ms** | **+32,1 %** |
+| **Volllauf, Schreibpfad über alle 23 Scheiben** | **7,737 s** | **11,818 s** | +52,8 % |
+| Index selbst | — | 16,6 MiB, 1,084 s Aufbau | |
+
+**Der Verdacht gegen Schritt 4 bestätigt sich nicht.** Die Tagesableitung bleibt bei `range` über
+`PRIMARY` mit `key_len 5` — der Optimierer greift den neuen Index nicht auf, obwohl er da ist. Das
+war die eine Stelle, an der ein Index auf der Stundenebene die Tagesebene hätte mitreißen können.
+
+**Der Delta-Lauf zahlt nichts.** Er berührt vierzehn Rollupzeilen; der Unterschied liegt unter dem
+Rauschen. Er ist der Lauf, der **stündlich** läuft — der teure ist der nächtliche.
+
+### Das Tor
+
+Eine Scheibe = Aggregation (unverändert) + Schreibpfad:
+
+| | ohne Index | mit Index |
+|---|---:|---:|
+| Aggregation der größten Scheibe | 2,575 s | 2,575 s |
+| Schreibpfad derselben Scheibe | 0,828 s | 1,094 s |
+| **zusammen** | **3,403 s** | **3,669 s** |
+
+**Die Schranke des Auftrags ist 5 s, und sie wird nicht erreicht.** Zur Zeitgrenze des Lese-Pools
+(10 s) bleibt Faktor **2,7** statt vorher 3,9. **Das Tor öffnet: bauen.**
+
+> **Belegvermerk (Regel L10).** *Gemessen ist:* der Schreibpfad als SQL, mit `INSERT … SELECT` aus
+> der echten in die Probetabelle. *Der gebaute Weg ist ein anderer:* Er liest in die JVM und schreibt
+> in Stapeln zu 1.000 Zeilen zurück, zahlt also je Stapel eine Netzwerkrunde. **Die Lücke:** Die
+> absoluten Schreibzeiten des gebauten Wegs liegen höher als die hier gemessenen — der Quervergleich
+> sagt um Faktor rund 1,4 (der gebaute Volllauf kostet 45,772 s, davon rund 34,8 s Aggregation bei
+> 10,4 µs je Zeile, also rund 11 s Schreiben gegen die hier gemessenen 7,7 s). **Übertragbar ist
+> deshalb das Verhältnis, nicht der Absolutwert.** Rechnet man den Aufschlag von 32,1 % auf einen um
+> Faktor 1,4 größeren Schreibanteil, liegt die größte Scheibe bei rund **3,9 s** — weiterhin unter
+> der Schranke, aber mit weniger Luft, als die Tabelle oben nahelegt.
+>
+> **Was daraus folgt und hier steht, damit es nicht untergeht:** Wächst der Bestand, wächst der
+> Schreibanteil linear mit, die Aggregation ebenso. Die Schranke von 5 s ist bei **rund einem
+> Drittel** mehr Bestand erreicht. Der nächtliche Volllauf ist damit die Stelle, die als Erste
+> anschlägt — nicht die Liste.
+
+### Der Löschnachweis
+
+| Schritt | Ergebnis |
+|---|---|
+| `@@global.read_only` zu Beginn und am Ende | **`1`** |
+| `DROP TABLE` beider Probetabellen | ausgeführt |
+| **nachher** — Tabellen mit `probe` im Namen | **`0`** |
+| **nachher** — Tabellen in `overlord_monitor` | die **zwölf**, die vorher bestanden |
+| `message_rollup` | **335.610** Zeilen, `SUM(anzahl)` **3.341.519** |
+| `message_rollup_tag` | **123.049** Zeilen, `SUM(anzahl)` **3.341.519** |
+| Sekundärindizes auf `message_rollup` **vor der Migration** | **`0`** |
+
+---
+
 ## 10. Tests
 
 ### Ohne Datenbank
