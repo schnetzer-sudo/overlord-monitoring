@@ -33,6 +33,7 @@ public class NachrichtenService {
 
   private final NachrichtenRepository nachrichtenRepository;
   private final MessageStatusClassifier statusClassifier;
+  private final Fensterverengung fensterverengung;
   private final Clock anwendungsuhr;
 
   /*
@@ -47,9 +48,11 @@ public class NachrichtenService {
   NachrichtenService(
       NachrichtenRepository nachrichtenRepository,
       MessageStatusClassifier statusClassifier,
+      Fensterverengung fensterverengung,
       Clock anwendungsuhr) {
     this.nachrichtenRepository = nachrichtenRepository;
     this.statusClassifier = statusClassifier;
+    this.fensterverengung = fensterverengung;
     this.anwendungsuhr = anwendungsuhr;
   }
 
@@ -62,9 +65,21 @@ public class NachrichtenService {
 
     // Ein Uhrenschlag je Anfrage, und er gehoert hierher: Das Repository liest keine Uhr
     // (Regel Z1), und zwei Schlaege innerhalb derselben Anfrage waeren zwei Stichtage.
-    List<NachrichtZeile> gelesen =
-        nachrichtenRepository.finde(
-            mandant, Nachrichtenabfrage.aus(filter, suchtreffer, LocalDateTime.now(anwendungsuhr)));
+    Nachrichtenabfrage abfrage =
+        Nachrichtenabfrage.aus(filter, suchtreffer, LocalDateTime.now(anwendungsuhr));
+
+    // Die Fensterverengung ist eine OPTIMIERUNG und kein Filter: Sie liefert dieselbe Abfrage mit
+    // einem engeren `von`, oder dieselbe unveraendert. Sie sitzt hier und nicht im Repository, weil
+    // hier der Cursor noch als Ganzes vorliegt und weil das Repository so bei einer Datenquelle
+    // bleibt. Details und Messungen: docs/nachrichtenliste.md §5d.
+    Fensterverengung.Ergebnis verengt = fensterverengung.verenge(mandant, abfrage);
+    if (verengt.sicherLeer()) {
+      // Der Rollup sagt fuer Mandant und Fenster null Zeilen. Dann wird gegen `Message` gar nicht
+      // erst gefragt -- der EDITIONLINGERI-Fall, 2.126,876 ms gespart.
+      return new Seite<>(List.of(), null, false);
+    }
+
+    List<NachrichtZeile> gelesen = nachrichtenRepository.finde(mandant, verengt.abfrage());
     Seite<NachrichtZeile> seite =
         Seite.aus(
             gelesen,

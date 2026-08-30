@@ -112,6 +112,28 @@ overlord:
     # und ausdruecklich NICHT ueber einen HTTP-Endpunkt.
     scheiben-pause: 1s
 
+  # Die Nachrichtenliste (Schritt 4, erweitert am 30.08.2026).
+  nachrichtenliste:
+    # Ob die Liste ihr Zeitfenster vorab ueber message_rollup verengt.
+    #
+    # WAS DAS BRINGT (docs/nachrichtenliste.md §5d, gemessen): Der teuerste
+    # bekannte Fall des Projekts -- der Prozessfilter mit verkehrsreichen
+    # Prozessen, 7,46 s bei einer 10-s-Grenze des Lese-Pools -- faellt auf
+    # unter 7 ms. SUTTONS faellt von 1.043 auf 8,6 ms, EDITIONLINGERI von
+    # 2.127 ms auf eine Abfrage, die gar nicht mehr gestellt wird.
+    #
+    # WARUM ES IHN TROTZDEM GIBT: Das ist die erste Stelle, an der eine
+    # KERNabfrage von einer Tabelle abhaengt, die dieses Projekt selbst
+    # fortschreibt. Ist der Rollup kaputt, muss die Liste ohne ihn
+    # weiterlaufen -- langsamer, aber richtig. Der Schalter ist der letzte
+    # der drei Schutzmechanismen; die beiden anderen (Wasserstand und
+    # fehlende Untergrenze) greifen von selbst.
+    #
+    # FEHLT DER SCHLUESSEL, IST DIE VERENGUNG AUS. boolean ohne Eintrag ist
+    # false, und das ist die sichere Richtung -- dieselbe Entscheidung wie
+    # bei overlord.rollup.aktiv.
+    verengung: true
+
 server:
   port: ${SERVER_PORT:8080}
   shutdown: graceful
