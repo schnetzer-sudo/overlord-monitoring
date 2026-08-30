@@ -1,0 +1,58 @@
+-- Overlord Monitoring — der Prozessindex auf der Stundenebene des Rollups.
+--
+-- WOZU. Die Nachrichtenliste verengt ihr Zeitfenster ab jetzt vorab ueber
+-- message_rollup: Sie fragt die Stundeneimer, in denen der Mandant ueberhaupt
+-- Nachrichten hat, und stellt die Quellabfrage nur fuer diese Stunden. Das ist
+-- docs/nachrichtenliste.md §5d. Die Frage, die dabei an diese Tabelle geht,
+-- lautet "hat DIESER Mandant im Fenster ueberhaupt 51 Zeilen?" — und die
+-- bedient der Primaerschluessel (stunde, process_id, message_status) nicht.
+--
+-- DIESE MIGRATION KEHRT EINE DOKUMENTIERTE ENTSCHEIDUNG UM. V9 schreibt an
+-- derselben Tabelle: "KEIN SEKUNDAERINDEX. … Ein Index fuer die Prozesssicht
+-- (10c) ist nicht gemessen und wird hier nicht auf Verdacht gebaut." Beide
+-- Haelften des Satzes waren richtig, und die zweite ist der Grund, warum diese
+-- Datei existiert: Der Index ist jetzt gemessen, und zwar zweimal.
+--
+--   M104 (27.08.2026, docs/messungen-liste-verengung.md) — was er dem LESER
+--   bringt. An einer Probetabelle mit demselben Inhalt: Die Vorabfrage ueber
+--   dreissig Tage faellt fuer NXHBE von 97,756 auf 0,962 ms (Faktor 101,6),
+--   fuer SYSTEM um 98,5, fuer EDITIONLINGERI um 94,5, fuer WOC um 59,2 und fuer
+--   ZAST um 38,3. Der Plan dreht sich um: statt alle 21.274 Rollupzeilen des
+--   Fensters zu lesen und je Zeile die Mandantenkette zu pruefen, geht er von
+--   den wenigen Prozessen des Mandanten in den Rollup. Auf engen Fenstern
+--   kostet er nichts (0,87x bis 1,05x, also Rauschen).
+--
+--   M105 (30.08.2026, docs/rollup.md §9c) — was er den beiden LAEUFEN kostet,
+--   denn die schreiben in diese Tabelle. Der stuendliche Delta-Lauf zahlt
+--   nichts (9,539 gegen 8,997 ms bei vierzehn Rollupzeilen, also unter dem
+--   Rauschen). Der naechtliche Volllauf zahlt: Der Schreibpfad einer
+--   Monatsscheibe steigt um 32,1 % (827,887 auf 1.093,739 ms), ueber alle 23
+--   Scheiben um 52,8 % (7,737 auf 11,818 s). Die groesste Scheibe kommt damit
+--   samt Aggregation auf 3,669 s gegen die Schranke von 5 s, die der Auftrag
+--   vor der Messung gesetzt hat. Zur Zeitgrenze des Lese-Pools (10 s) bleibt
+--   Faktor 2,7 statt vorher 3,9.
+--
+-- WAS DABEI AUSDRUECKLICH GEPRUEFT WORDEN IST. Die Tagesebene wird aus dieser
+-- Tabelle abgeleitet (RollupSchreibRepository.rechneTageEbeneNeu liest
+-- message_rollup). Ein neuer Index haette ihren Plan kippen koennen. Er tut es
+-- nicht: range ueber PRIMARY, key_len 5, mit Index wie ohne, +0,6 % Laufzeit.
+-- Das war der eigentliche Verdacht, und er hat sich nicht bestaetigt.
+--
+-- DIE SPALTENREIHENFOLGE IST (process_id, stunde) UND NICHT UMGEKEHRT. Die
+-- umgekehrte Reihenfolge steht bereits im Primaerschluessel und beantwortet die
+-- Frage nicht: Sie fuehrt ueber die Zeit und muss danach jede Zeile des
+-- Zeitbereichs auf ihren Prozess pruefen. Gebraucht wird der Einstieg ueber den
+-- Prozess mit anschliessendem Zeitbereich — genau das, was auf GlassfishDB.Message
+-- fehlt und dort nicht angelegt werden darf (§5a, "Ein Index, der beide Familien
+-- billig machte, existiert nicht — und darf nicht entstehen"). Hier darf er, weil
+-- diese Tabelle diesem Projekt gehoert.
+--
+-- NUR AUF DER STUNDENEBENE. message_rollup_tag bekommt keinen Index: Die
+-- Verengung liest die Tagesebene nicht, und ein Index auf Verdacht ist genau
+-- das, was V9 zu Recht abgelehnt hat.
+--
+-- WAS ER KOSTET. 16,6 MiB neben 21,6 MiB Daten (M105, an der Probetabelle
+-- gemessen), Aufbau 1,084 s ueber 335.610 Zeilen. Der Name traegt kein "idx"-
+-- Suffix aus Gewohnheit, sondern folgt rollup_lauf_stand_idx aus V9.
+
+CREATE INDEX message_rollup_prozess_idx ON message_rollup (process_id, stunde);

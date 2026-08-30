@@ -4,15 +4,19 @@
 package de.kraftwerkone.overlord.monitor.jooq.monitor.tables;
 
 
+import de.kraftwerkone.overlord.monitor.jooq.monitor.Indexes;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.Keys;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.OverlordMonitor;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.MessageRollupRecord;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 
 import org.jooq.Condition;
 import org.jooq.Field;
+import org.jooq.Index;
 import org.jooq.Name;
 import org.jooq.PlainSQL;
 import org.jooq.QueryPart;
@@ -105,6 +109,11 @@ public class MessageRollup extends TableImpl<MessageRollupRecord> {
     @Override
     public Schema getSchema() {
         return aliased() ? null : OverlordMonitor.OVERLORD_MONITOR;
+    }
+
+    @Override
+    public List<Index> getIndexes() {
+        return Arrays.asList(Indexes.MESSAGE_ROLLUP_MESSAGE_ROLLUP_PROZESS_IDX);
     }
 
     @Override

@@ -64,10 +64,40 @@ die sich ändern kann; der Rohwert ist eine Tatsache. Wäre die Kategorie materi
 Regeländerung die ganze Tabelle neu rechnen. **Der Preis dafür ist gemessen und beträgt eine
 Zeile:** 335.610 statt 335.609 (M87, Variante 1 gegen Variante 2).
 
-**Kein Sekundärindex.** Die Probetabelle aus M89 hatte 0 Byte Indexanteil, und beide dort gemessenen
+~~**Kein Sekundärindex.** Die Probetabelle aus M89 hatte 0 Byte Indexanteil, und beide dort gemessenen
 Pläne steigen über den Primärschlüssel ein. Die gebaute Tabelle bestätigt das: **0 Byte** auch nach
 dem Volllauf (§9). Ein Index für die Prozesssicht (10c) ist nicht gemessen und wird nicht auf
-Verdacht gebaut.
+Verdacht gebaut.~~
+
+> ### ⚠️ Korrigiert am 30.08.2026 — die Tabelle trägt jetzt einen Sekundärindex
+>
+> `V11__message_rollup_prozess_index.sql`:
+>
+> ```sql
+> CREATE INDEX message_rollup_prozess_idx ON message_rollup (process_id, stunde);
+> ```
+>
+> **Beide Hälften des durchgestrichenen Satzes waren richtig**, und die zweite ist der Grund für die
+> Migration: *„nicht gemessen und wird nicht auf Verdacht gebaut."* Er ist jetzt gemessen, zweimal —
+> und erst danach gebaut.
+>
+> | | |
+> |---|---|
+> | **Was er dem Leser bringt** (M104, [`messungen-liste-verengung.md`](messungen-liste-verengung.md)) | Die Vorabfrage der Nachrichtenliste über dreißig Tage fällt für `NXHBE` von 97,756 auf **0,962 ms** (Faktor 101,6), für `SYSTEM` um 98,5, für `EDITIONLINGERI` um 94,5, für `WOC` um 59,2, für `ZAST` um 38,3. Auf engen Fenstern kostet er nichts (0,87× bis 1,05×) |
+> | **Was er den Läufen kostet** (M105, §9c) | Der **stündliche** Delta-Lauf zahlt nichts: 9,539 → 8,997 ms bei vierzehn Rollupzeilen. Der **nächtliche** Volllauf zahlt: Schreibpfad einer Monatsscheibe +32,1 %, über alle 23 Scheiben +52,8 %. Größte Scheibe samt Aggregation **3,669 s** gegen die vor der Messung gesetzte Schranke von 5 s |
+> | **Was er kostet** | **16,6 MiB** neben 21,6 MiB Daten, Aufbau 1,084 s |
+> | **Warum `(process_id, stunde)` und nicht umgekehrt** | Die umgekehrte Reihenfolge steht schon im Primärschlüssel und beantwortet die Frage nicht: Sie führt über die Zeit und muss danach jede Zeile auf ihren Prozess prüfen. Gebraucht wird der Einstieg über den Prozess mit anschließendem Zeitbereich |
+>
+> **Der eine Verdacht, der ausdrücklich geprüft worden ist:** Die Tagesebene wird aus dieser Tabelle
+> abgeleitet (`rechneTageEbeneNeu` liest `message_rollup`). Ein neuer Index hätte ihren Plan kippen
+> können. Er tut es nicht — `range` über `PRIMARY`, `key_len` 5, mit Index wie ohne, +0,6 % Laufzeit.
+>
+> **Nur die Stundenebene.** `message_rollup_tag` bekommt keinen Index: Die Verengung liest die
+> Tagesebene nicht, und ein Index auf Verdacht ist genau das, was der durchgestrichene Satz zu Recht
+> abgelehnt hat.
+>
+> Der Satz bleibt lesbar, weil er die Lage bis zum 30.08.2026 richtig beschreibt und weil die
+> Begründung, mit der er fiel, ohne ihn nicht zu verstehen wäre.
 
 **`utf8mb4_general_ci` ist Absicht, nicht Nachlässigkeit.** `message_status` muss dieselbe Sortierung
 tragen wie `GlassfishDB.Message.MessageStatus`, sonst gruppieren Quelle und Rollup verschieden;
@@ -94,6 +124,11 @@ CREATE TABLE message_rollup_tag (
 **Dieselbe Bauform wie `message_rollup`, nur mit `tag` statt `stunde`** — derselbe Schlüssel,
 derselbe Rohwert (E‑g), kein Sekundärindex, Zeichensatz und Sortierung explizit. Die Begründungen
 oben gelten Wort für Wort; sie sind hier nicht wiederholt.
+
+> **„Kein Sekundärindex" gilt für die Tagesebene weiterhin** *(Stand 30.08.2026)* — anders als für
+> die Stundenebene, die seit `V11` einen trägt. Die Fensterverengung der Nachrichtenliste liest
+> ausschließlich Stundeneimer; für die Tagesebene gibt es keine gemessene Frage, die der
+> Primärschlüssel nicht bedient.
 
 > ### ⚠️ Warum es sie überhaupt gibt: E‑b trägt bei zwölf Monaten nicht
 >

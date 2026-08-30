@@ -5,6 +5,7 @@ package de.kraftwerkone.overlord.monitor.jooq.monitor;
 
 
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AuditLog;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.MessageRollup;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.RollupLauf;
 
 import org.jooq.Index;
@@ -26,5 +27,6 @@ public class Indexes {
     public static final Index AUDIT_LOG_IDX_AUDIT_ACTOR = Internal.createIndex(DSL.name("idx_audit_actor"), AuditLog.AUDIT_LOG, new OrderField[] { AuditLog.AUDIT_LOG.ACTOR_USERNAME, AuditLog.AUDIT_LOG.OCCURRED_AT }, false);
     public static final Index AUDIT_LOG_IDX_AUDIT_OCCURRED = Internal.createIndex(DSL.name("idx_audit_occurred"), AuditLog.AUDIT_LOG, new OrderField[] { AuditLog.AUDIT_LOG.OCCURRED_AT }, false);
     public static final Index AUDIT_LOG_IDX_AUDIT_TYPE = Internal.createIndex(DSL.name("idx_audit_type"), AuditLog.AUDIT_LOG, new OrderField[] { AuditLog.AUDIT_LOG.EVENT_TYPE, AuditLog.AUDIT_LOG.OCCURRED_AT }, false);
+    public static final Index MESSAGE_ROLLUP_MESSAGE_ROLLUP_PROZESS_IDX = Internal.createIndex(DSL.name("message_rollup_prozess_idx"), MessageRollup.MESSAGE_ROLLUP, new OrderField[] { MessageRollup.MESSAGE_ROLLUP.PROCESS_ID, MessageRollup.MESSAGE_ROLLUP.STUNDE }, false);
     public static final Index ROLLUP_LAUF_ROLLUP_LAUF_STAND_IDX = Internal.createIndex(DSL.name("rollup_lauf_stand_idx"), RollupLauf.ROLLUP_LAUF, new OrderField[] { RollupLauf.ROLLUP_LAUF.BEENDET_AM, RollupLauf.ROLLUP_LAUF.FENSTER_BIS }, false);
 }
