@@ -1088,6 +1088,155 @@ Eine Scheibe = Aggregation (unverändert) + Schreibpfad:
 
 ---
 
+## 9d. Was die Monatsebene bringt — M107 *(31.08.2026)*
+
+§9a endet mit einem Tor, das ausgelöst hat: Die Zwölf‑Monats‑Ansicht kostet über die Tagesebene
+**767,128 ms** (Verlauf) und **908,539 ms** (Verteilung) beim größten Mandanten, bei einer vor der
+Messung gesetzten Schwelle von 700 ms. Entscheidung des Auftraggebers vom 27.08.2026:
+**Monatsebene bauen.** `V12__message_rollup_monat.sql`, gebaut am 31.08.2026.
+
+**Nummernvergabe.** `grep -rnoE '\bM10[7-9]\b|\bM1[1-9][0-9]\b' docs/ scripts/ *.md` → **null
+Treffer**; Gegenprobe auf `M10[0-6]` → Treffer. **M107 ist hier vergeben.**
+
+### Die Bauform
+
+Übernommen aus §9a, Punkt für Punkt: beide Ebenen **in derselben Sitzung**, abwechselnd gefahren —
+die 767,128 ms stammen aus einer anderen Sitzung an einem anderen Tag. Aufwärmlauf, dann beste von
+fünf. Fenstergrenzen als Literal (Z1). Laufzeiten aus `information_schema.PROFILING`,
+`anzahl_laeufe` muss **6** sein. Sitzungen: `scripts/messung-monatsebene/m107-monat-nexans.sql`
+und `-suttons.sql`.
+
+**Ein Fall ist neu, und er ist eine Gegenprobe.** Auf der Monatsebene **fällt der Eimerausdruck
+weg** — `monat` *ist* der Eimer, `GROUP BY DATE_FORMAT(…)` wird zu `GROUP BY r.monat`. Damit die
+Ersparnis der **Zeilenzahl** zugeschrieben werden kann und nicht dem weggefallenen `DATE_FORMAT`,
+ist der Verlauf **zweimal** gemessen: einmal mit `r.monat`, einmal mit
+`DATE_FORMAT(r.monat, '%Y-%m-01')`.
+
+### Die Vorbedingung: alle drei Ebenen sagen dasselbe
+
+Erste Fachabfrage beider Sitzungen, vor jedem `SET profiling`.
+
+| | `NEXANS` | `SUTTONS` |
+|---|---:|---:|
+| Eimer, Stundenebene | 12 | 12 |
+| Eimer, Tagesebene | 12 | 12 |
+| Eimer, **Monatsebene** | **12** | **12** |
+| `SUM(anzahl)`, alle drei Ebenen | **2.308.005** | **196.536** |
+
+**Zeile für Zeile gleich, Monat für Monat** — und die Eimerzahl steht daneben, weil ein Eimer, den
+eine Ebene *nicht* hätte, im `JOIN` der Gleichheitsprobe lautlos verschwände.
+
+### Was jede Ebene liest
+
+Der Bereich ist **mandantenunabhängig**: Der Range‑Zugriff liest ihn ganz, der Mandantenfilter
+wirkt erst danach (derselbe Befund wie in M94).
+
+| | Zeilen im Zwölf‑Monats‑Fenster | gegen die Tagesebene |
+|---|---:|---:|
+| `message_rollup` | 280.186 | — |
+| `message_rollup_tag` | 100.270 | — |
+| **`message_rollup_monat`** | **9.649** | **Faktor 10,39** |
+
+**Die 9.649 sind Zeichen für Zeichen M87‑5, Jahresscheibe 2025, Variante 4** — dieselbe Herleitung,
+mit der §9a die 100.270 der Tagesebene belegt.
+
+### Das Ergebnis
+
+| Ansicht | Mandant | Tagesebene (§9a) | Tagesebene (M107) | **Monatsebene** | Faktor |
+|---|---|---:|---:|---:|---:|
+| **Verlauf, 12 Monate / Monat** | **NEXANS** | 767,128 ms | 743,461 ms | **65,350 ms** | **11,4** |
+| **Verteilung, 12 Monate** | **NEXANS** | 908,539 ms | 892,025 ms | **88,672 ms** | **10,1** |
+| Verlauf, 12 Monate / Monat | SUTTONS | 425,689 ms | 428,219 ms | **38,745 ms** | 11,05 |
+| Verteilung, 12 Monate | SUTTONS | 431,657 ms | 434,417 ms | **39,420 ms** | 11,02 |
+
+**Die vierte Spalte ist der Grund, der Messung zu trauen.** Sie ist die Tagesebene, gefahren in
+*dieser* Sitzung — sie liegt zwischen **0,6 % und 3,1 %** neben den Werten aus §9a. Die beiden
+Sitzungen sind also vergleichbar, und der Faktor ist kein Artefakt des Messtages.
+
+**Der Eimerausdruck ist nicht die Ursache der Ersparnis:**
+
+| Verlauf über die Monatsebene | `GROUP BY r.monat` | `GROUP BY DATE_FORMAT(…)` | Aufschlag |
+|---|---:|---:|---:|
+| NEXANS | 65,350 ms | 73,520 ms | +8,170 ms (+12,5 %) |
+| SUTTONS | 38,745 ms | 39,739 ms | +0,994 ms (+2,6 %) |
+
+Selbst mit dem Ausdruck bleibt der Faktor bei **10,1** beziehungsweise **10,8**. **Die Ersparnis
+kommt aus den gelesenen Zeilen und aus nichts sonst** — genau die Aussage, die M94 über einen
+Mengenbereich von Faktor 302 belegt hat.
+
+### Die Pläne (Regel L15)
+
+Zeile für Zeile dieselbe Form wie eine Ebene tiefer: `range` über `PRIMARY` mit
+`Using where; Using temporary; Using filesort`, danach die Mandantenkette als drei `eq_ref`.
+
+```
++------+-------------+-------+--------+------------------------------------+---------+---------+-------------------------------+------+----------------------------------------------+
+| id   | select_type | table | type   | possible_keys                      | key     | key_len | ref                           | rows | Extra                                        |
++------+-------------+-------+--------+------------------------------------+---------+---------+-------------------------------+------+----------------------------------------------+
+|    1 | SIMPLE      | r     | range  | PRIMARY                            | PRIMARY | 3       | NULL                          | 6132 | Using where; Using temporary; Using filesort |
+|    1 | SIMPLE      | p     | eq_ref | PRIMARY,Process_ProjectFK          | PRIMARY | 146     | overlord_monitor.r.process_id | 1    | Using where                                  |
+|    1 | SIMPLE      | pm    | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY | 292     | GlassfishDB.p.ProjectID,const | 1    | Using where; Using index                     |
+|    1 | SIMPLE      | pr    | eq_ref | PRIMARY                            | PRIMARY | 146     | GlassfishDB.p.ProjectID       | 1    | Using index                                  |
++------+-------------+-------+--------+------------------------------------+---------+---------+-------------------------------+------+----------------------------------------------+
+```
+
+`key_len 3` statt der 5 auf Stunden- und Tagesebene: Der Primärschlüssel steigt über `monat` ein,
+und ein `DATE` ist drei Byte. **Kein Sekundärindex im Spiel** — die Tabelle trägt keinen (0 Byte
+Indexanteil nach dem Rückwärtslauf), und der Plan braucht keinen.
+
+### ⚠️ Das Tor ist offen — und die vorregistrierte Erwartung trifft trotzdem nicht zu
+
+**Das Tor:** Schwelle 700 ms, gemessen **88,672 ms** im teuersten Fall. **Faktor 7,9 Luft** statt
+einer Überschreitung. Offener Punkt 55 ist damit erledigt.
+
+**Und die Erwartung des Auftrags stimmt nicht.** Sie lautete *„einstelliger bis niedriger
+zweistelliger Millisekundenbereich — rund 6.500 gelesene Monatszeilen statt 100.270 Tageszeilen"*.
+Beide Zahlen sind falsch, und beide Fehler sind **Rechenfehler in der Erwartung** und keine Befunde
+über den Bau:
+
+| | Auftrag | gemessen | woher der Unterschied kommt |
+|---|---:|---:|---|
+| gelesene Monatszeilen | rund 6.500 | **9.649** | 6.500 entsteht, wenn man die **11.957 Zeilen des Gesamtbestands** gleichmäßig auf dessen 22 Monate verteilt und mit zwölf multipliziert (11.957 × 12/22 ≈ 6.522). Auf diesem Bestand ist diese Mittelung falsch: 2024 trägt nur drei Monate (2.303 Zeilen), 2026 ist praktisch leer (5 Zeilen), **2025 allein trägt 9.649** |
+| Laufzeit | einstellig bis niedrig zweistellig | **65,4 / 88,7 ms** | 9.649 Zeilen × die **5,3 bis 11,5 µs je gelesener Rollupzeile** aus M94 ergeben **51 bis 111 ms**. Die Erwartung ist um Faktor 1.000 verrechnet |
+
+> ### Und das ist die eigentliche Nachricht dieser Messung: M94s Linearität hält über die dritte Ebene
+>
+> | | µs je gelesener Rollupzeile |
+> |---|---|
+> | Verlauf, NEXANS | Tag **7,41** · **Monat 6,77** |
+> | Verteilung, NEXANS | Tag **8,90** · **Monat 9,19** |
+> | Verlauf, SUTTONS | Tag 4,27 · **Monat 4,01** |
+> | Verteilung, SUTTONS | Tag 4,33 · **Monat 4,09** |
+>
+> **Die Kosten je Zeile ändern sich nicht, wenn man eine Ebene höher geht.** Bei `NEXANS` liegen
+> sie mitten im M94‑Band von 5,3 bis 11,5 µs, bei `SUTTONS` knapp darunter (M94 maß dort 5,32 bis
+> 6,43 µs, heute 4,0 bis 4,3 µs — dieselbe Größenordnung, andere Sitzung). Die Ansicht wird
+> schneller, **weil sie weniger liest**, und um genau den Faktor, um den sie weniger liest: 10,39
+> gelesene Zeilen gegen 10,1 bis 11,4 Laufzeit.
+>
+> **Das ist zugleich die Warnung für die nächste Ebene, falls sie je erwogen wird:** Über der
+> Monatsebene gibt es nichts mehr zu verdichten, was eine Zwölf‑Monats‑Ansicht noch bräuchte — sie
+> liest zwölf Eimer je Prozess und Status. Eine Jahresebene spart der Zwölf‑Monats‑Ansicht nichts.
+
+> **Belegvermerk** (Regel L10). *Gemessen ist:* vier Fälle über zwei Mandanten, jeder mit einem
+> Aufwärmlauf und fünf Läufen, **warm**, in einer Sitzung neben der Tagesebene. *Behauptet wird:*
+> die Zwölf‑Monats‑Ansicht liegt mit der Monatsebene unter dem Tor von 700 ms. **Die Lücke:** Alle
+> Werte sind Warmwerte; `FLUSH TABLES` steht `monitor_read` nicht zu (dieselbe Lücke wie in §9a).
+> Der Kaltfaktor aus M44 (bis 9,66) auf 88,672 ms angewandt ergibt rund **0,86 s** — das ist eine
+> Übertragung und keine Messung. Sie ist trotzdem der Vergleich, auf den es ankommt: **Dieselbe
+> Rechnung ergab für die Tagesebene rund 7,4 s**, also nahe an der Zeitgrenze des Lese‑Pools von
+> zehn Sekunden. Aus einem Fall, der kalt beinahe abbricht, wird einer mit Faktor elf Luft.
+
+> ### Was M107 **nicht** sagt
+>
+> - **Nichts über die anderen acht Mandanten.** Gemessen sind `NEXANS` (der größte) und `SUTTONS`.
+> - **Nichts über engere Fenster.** Dreißig Tage lesen auf der Monatsebene ein bis zwei Eimer und
+>   wären eine andere Frage; dort liest die Ansicht ohnehin die Tagesebene (45,990 ms, §9a).
+> - **Nichts über den kalten Fall.** Siehe Belegvermerk.
+> - **Nichts über einen Endpunkt.** Es gibt keinen; das Dashboard ist 10b.
+
+---
+
 ## 10. Tests
 
 ### Ohne Datenbank
