@@ -317,3 +317,55 @@ nachdem sie gefallen war.
 | **T-1** | **Zwei gleich viele Datenbankzugriffe könnten verschieden lange dauern** — etwa weil das eine Statement Zeilen liest und das andere keine. Die Zugriffszählung aus §4 deckt das nicht ab. **Ob das eine reale Lücke ist, ist nicht beantwortet.** Zu klären wäre zuerst, ob der Unterschied überhaupt messbar ist, und erst danach, wie man ihn absichert — nicht über die Wanduhr | §4, [`bam-werte.md`](bam-werte.md) §9 |
 | **T-2** | **Die Übernahme auf einem Mandanten mit *mehreren* übernehmbaren Zeilen ist ungeprüft.** Der Test aus §2 legt genau eine an. Dass die Übernahme bei fünf eigenen und drei fremden Zeilen genau die fünf erfasst, folgt daraus nicht — es folgt aus dem Statement, und das ist ein Argument, kein Test | §2 |
 | **T-3** | **Der Test aus §2 braucht weiterhin einen Prozess ohne Katalogzeile.** Heute haben nur `SUTTONS` (17 frei) und `WOC` (4 frei) welche. Werden auch die kuratiert, wird der Test wieder rot — dann allerdings mit einer Meldung, die genau das sagt, und nicht mit einer Zahl, die niemand einordnen kann. **Eine Abhilfe wäre, dass die Testkopie einen Prozess dauerhaft frei hält;** das ist eine Absprache und keine Codeänderung | §2 |
+
+---
+
+## 7. Der Suchlauf — wo sonst noch eine Wanduhr in einer Zusicherung steht
+
+Regel **T1** gilt rückwirkend. Der Testbestand ist deshalb am 31.08.2026 vollständig durchsucht
+worden — **86 Java-Dateien** unter `backend/src/test`, davon 36 `*DbIT`.
+
+**Gesucht wurde nach:** `System.nanoTime`, `System.currentTimeMillis`, `Duration.between`,
+`Instant.now`, `LocalDateTime.now`, `StopWatch`, `.toMillis(`, `.toNanos(`, `.toSeconds(`,
+`elapsed`, `dauer`, `laufzeit`, `verhaeltnis`, `isLessThan`, `isCloseTo`/`within(`, `Awaitility`,
+`Thread.sleep`, `@Timeout`, `assertTimeout`, `TimeUnit`, `Clock.system`, `new Date(`.
+
+> **Die entscheidende Unterscheidung ist nicht, ob eine Zeit gemessen wird, sondern ob der Messwert
+> in einer Zusicherung landet.** Ein Messtest, der Zahlen ausgibt, behauptet nichts über
+> Wanduhrzeit. Ein `assertThat` auf eine Dauer schon.
+
+### Ein Fund — und er wird nicht mitgeändert
+
+| Datei | Zeile | Was |
+|---|---|---|
+| `message/KettenIsolationDbIT.java` | 262–288 | `gegenprobe_mit_echter_fremder_kennung()` — **zeichengleich** zu der Fassung, die §4 gerade abgelöst hat: zwei `System.nanoTime` um zwei HTTP-Aufrufe, `assertThat(verhaeltnis).isLessThan(10.0)`. Nur der Pfad ist ein anderer (`…/{id}/kette`), und die Bezugsmessung heißt „eine halbe Millisekunde (M30-1)" statt 0,44 ms |
+
+**Es ist derselbe Test an einem anderen Endpunkt, mit demselben Mangel.** Die Bauform aus §4 lässt
+sich unverändert darauf übertragen: derselbe Zähler, dieselbe Vergleichsform.
+
+> **Er wird in dieser Runde nicht angefasst.** Ein Fund ist ein Befund für die nächste Runde — und
+> `KettenIsolationDbIT` ist heute grün. Ihn mitzuändern hieße, eine Änderung ohne Anlass in einen
+> Commit zu schieben, dessen Abnahme etwas anderes prüft. **Offener Punkt T-4.**
+
+### Kein Fund — vollständig, damit die Suche belegbar ist
+
+| Was | Wo | Warum es keiner ist |
+|---|---|---|
+| `rollup/MessungM96DbIT.java:130–170` | vier `dauer*`-Größen | Sie gehen **ausschließlich** über `melde(…)` nach `System.out`. Die Zusicherungen der Datei (Z. 186–200) betreffen nur Zeilen- und Summenzahlen. Der Wert stammt nicht einmal aus dem Test, sondern aus `RollupErgebnis.dauer()` |
+| `common/DevClockFactoryTest.java:47–59` | `Clock.systemUTC()` in einer Zusicherung | Geprüft wird nur **Monotonie** (`isAfterOrEqualTo`), keine Ober- oder Untergrenze. Kann durch Last nicht kippen |
+| `common/DevClockFactoryTest.java:29–44` | `Duration.between` in Zusicherungen | Beide Uhren sind `Clock.fixed(...)` mit Literal-Instants. Reine Arithmetik |
+| `PaketstrukturTest.java:300–331` | `System.currentTimeMillis` | Steht dort als **verbotener Aufruf** in einer ArchUnit-Regel, nicht als Messung |
+| `security/AnmeldeServiceTest.java:137–159` | Zeitkanal beim Anmelden | **Die zeitfreie Gegenvariante, und sie ist älter als T1:** Geprüft wird der `verify(passwortKodierer).matches(...)`-**Aufruf**, ausdrücklich nicht die Laufzeit. Das Klassen-Javadoc sagt es in Zeile 33 |
+| `message/NachrichtendetailDbIT`, `NachrichtendetailServiceTest` | „Dauer" als Fachfeld | Belegdurchlaufzeiten aus Datenbankzeitstempeln, gegen eine feste `JETZT`-Konstante — nicht gegen die Uhr des Testlaufs |
+| dreizehn weitere `isLessThan`-Stellen | Zählwerte, Positionen im gerenderten SQL, Schleifenbremsen | kein Messwert |
+
+**Negativbefunde:** kein `Thread.sleep`, kein `Awaitility`, kein `StopWatch`, kein `@Timeout`, kein
+`assertTimeout`, kein `Instant.now()`/`LocalDateTime.now()`, kein `new Date()`, kein `isCloseTo(…,
+within(…))` auf einer Dauer — im **gesamten** Testbestand. `System.nanoTime` kommt nach dem Umbau
+aus §4 nur noch an **einer** Stelle vor, und das ist der Fund oben.
+
+### Der offene Punkt
+
+| Nr. | Punkt | Woher |
+|---|---|---|
+| **T-4** | **`KettenIsolationDbIT.gegenprobe_mit_echter_fremder_kennung` behauptet weiterhin etwas über Wanduhrzeit** (`isLessThan(10.0)` auf ein Dauerverhältnis) und verstößt damit gegen Regel T1. Die Abhilfe ist bekannt und in §4 gebaut; sie ist hier bewusst nicht mitgezogen worden | §7 |
