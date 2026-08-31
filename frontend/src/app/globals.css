@@ -68,6 +68,19 @@
   --color-status-ungeklaert-flaeche: var(--status-ungeklaert-flaeche);
   --color-status-ungeklaert-kontur: var(--status-ungeklaert-kontur);
 
+  /* ── Ueberfaellig ─────────────────────────────────────────────────────────
+     Die fuenfte Farbrolle, und die einzige, die KEINE Statusart traegt:
+     "ueberfaellig" ist eine Problemkategorie (Regel Q3) und liegt quer zur
+     Einordnung — dieselbe WARTEND-Zeile kann ueberfaellig sein oder nicht.
+     Deshalb heisst sie nicht "status-*": Ein Name mit diesem Praefix
+     verspraeche eine Zuordnung ueber MessageStatusKind, die es nicht gibt.
+     Zugeordnet wird sie trotzdem in derselben Datei wie die vier anderen,
+     lib/status-farbe.ts. Begruendung und die gerechneten Werte:
+     docs/visuelles-konzept.md §7a. */
+  --color-ueberfaellig: var(--ueberfaellig);
+  --color-ueberfaellig-flaeche: var(--ueberfaellig-flaeche);
+  --color-ueberfaellig-kontur: var(--ueberfaellig-kontur);
+
   /* ── Akzent ───────────────────────────────────────────────────────────────
      Die Farbe der Anwendung selbst. Sie sagt nie etwas ueber die Daten.
 
@@ -175,6 +188,27 @@
   --status-ungeklaert-flaeche: oklch(0.98 0 0);
   --status-ungeklaert-kontur: oklch(0.9 0 0);
 
+  /* ── Ueberfaellig ─────────────────────────────────────────────────────────
+     Ton 80 — orange, und damit im Rahmen aus visuelles-konzept.md §7a
+     (hoechstens 85; zwischen 90 und 135 stuende die Rolle dem Akzent bei
+     112,4 zu nahe). Fuenf Grad Luft nach oben sind Absicht.
+
+     Die HELLIGKEIT ist die von --status-fehler, in beiden Bloecken. Das ist
+     kein Zufall: Regel Q3 fuehrt Fehler und Ueberfaellig getrennt und
+     GLEICHRANGIG, und zwei Kacheln nebeneinander, von denen eine dunkler
+     steht, lesen sich als Rangfolge. Unterschieden wird ueber den Ton.
+
+       ueberfaellig          #886108  5,59 : 1 auf --card, 5,35 : 1 auf
+                                      --background, 4,97 : 1 auf der Flaeche
+       ueberfaellig-flaeche  #fcf0dd  blasse Toenung, wie --status-*-flaeche
+       ueberfaellig-kontur   #b88513  3,29 : 1 auf --card (WCAG 1.4.11)
+
+     Alle Zahlen aus scripts/farbrolle-ueberfaellig/rechne.mjs. Wer einen
+     Wert aendert, laesst das Skript laufen — geschaetzt wird hier nichts. */
+  --ueberfaellig: oklch(0.52 0.105 80);
+  --ueberfaellig-flaeche: oklch(0.96 0.028 80);
+  --ueberfaellig-kontur: oklch(0.65 0.13 80);
+
   /* ── Akzent ───────────────────────────────────────────────────────────────
      #b9c022. Drei nachgerechnete Stufen, damit aus einer Fuellfarbe ein
      vollstaendiges Vokabular wird:
@@ -276,6 +310,21 @@
   --status-ungeklaert: oklch(0.62 0 0);
   --status-ungeklaert-flaeche: oklch(0.22 0 0);
   --status-ungeklaert-kontur: oklch(0.32 0 0);
+
+  /* Derselbe Ton 80, dieselbe Helligkeit wie --status-fehler — und gerechnet
+     und nicht gespiegelt: Gegen --card 0.21 gelten andere Zahlen als gegen
+     Weiss (6,53 : 1 / 7,15 : 1 / 5,75 : 1; die Kontur 3,31 : 1).
+
+     BEFUND, hier vermerkt, weil er an diesem Block haengt: Im Dunkelblock ist
+     der engere Nachbar nicht Rot, sondern der AKZENT — 0,117 in OKLab gegen
+     0,141 zu Rot. Der Akzent behaelt hier seinen hellen Wert, und eine
+     ueberfaellig-Schrift auf dunklem Grund muss selbst hell sein. Das ist
+     keine Eigenheit dieser Rolle: Das bestehende dunkle Gruen liegt 0,139
+     vom Akzent entfernt. Der ganze Block ist nie nachgerechnet worden.
+     Ausgeschrieben in docs/visuelles-konzept.md §7a. */
+  --ueberfaellig: oklch(0.7 0.14 80);
+  --ueberfaellig-flaeche: oklch(0.26 0.05 80);
+  --ueberfaellig-kontur: oklch(0.53 0.105 80);
 
   /* Dieselbe Fuellfarbe wie im Hellen — sie traegt auf dunklem Grund 9,82 : 1
      und braucht dort ebenfalls dunkle Schrift. Umgekehrt ist die abgedunkelte
