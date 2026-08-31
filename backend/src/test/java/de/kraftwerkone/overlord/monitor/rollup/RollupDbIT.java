@@ -183,6 +183,28 @@ class RollupDbIT {
         .fetch();
   }
 
+  /**
+   * Legt eine Monatszeile an, die die Tagesebene <b>nicht</b> hergibt.
+   *
+   * <p><b>Ohne sie waeren mehrere Monatstests zahnlos.</b> Sie vergleichen die materialisierte
+   * Monatsebene mit der aus der Tagesebene gerechneten — und eine Monatszeile, die aus einem
+   * <i>frueheren</i> Lauf korrekt dasteht, besteht diesen Vergleich auch dann, wenn der Lauf sie
+   * gar nicht angefasst hat. Die Altlast macht den Unterschied sichtbar: Sie verschwindet nur, wenn
+   * wirklich geloescht und neu geschrieben worden ist.
+   */
+  private void legeMonatsAltlastAn(LocalDate monat) {
+    monitorDsl
+        .insertInto(MESSAGE_ROLLUP_MONAT)
+        .set(MESSAGE_ROLLUP_MONAT.MONAT, monat)
+        .set(MESSAGE_ROLLUP_MONAT.PROCESS_ID, "it-altlast-prozess")
+        .set(MESSAGE_ROLLUP_MONAT.MESSAGE_STATUS, ERFUNDENER_STATUS)
+        .set(MESSAGE_ROLLUP_MONAT.ANZAHL, 4711)
+        .execute();
+    assertThat(monatsInhalt(monat))
+        .as("Die Vorbedingung: Die Altlast steht wirklich in der Monatsebene")
+        .anySatisfy(zeile -> assertThat(zeile.value2()).isEqualTo(ERFUNDENER_STATUS));
+  }
+
   private RollupErgebnis lauf(LocalDateTime von, LocalDateTime bis, LaufArt art) {
     RollupErgebnis ergebnis = job.fuehreAus(von, bis, art);
     eigeneLaeufe.add(ergebnis.laufId());
@@ -575,6 +597,10 @@ class RollupDbIT {
   @DisplayName("Monatsebene: Zeile fuer Zeile die Summe der Tagesebene")
   void monatsebene_ist_die_summe_der_tagesebene() {
     LocalDate monat = LocalDate.parse("2025-12-01");
+    // Ohne die Altlast bestuende der Vergleich unten auch dann, wenn der Lauf die Monatsebene gar
+    // nicht angefasst haette — eine korrekte Zeile aus einem frueheren Lauf saehe genauso aus.
+    legeMonatsAltlastAn(monat);
+
     lauf(TAG_VON, TAG_BIS, LaufArt.DELTA);
 
     assertThat(monatsInhaltAusTagen(monat))
@@ -595,13 +621,23 @@ class RollupDbIT {
   void monatseimer_umfasst_den_ganzen_monat() {
     LocalDate monat = LocalDate.parse("2025-12-01");
     LocalDate tag = LocalDate.parse("2025-12-30");
-    // Erst einen ganzen Tag rechnen, damit die Tagesebene mehr traegt als das Zwei-Stunden-Fenster.
-    lauf(tag.atStartOfDay(), tag.plusDays(1).atStartOfDay(), LaufArt.DELTA);
-    int ganzerMonat = monatsInhaltAusTagen(monat).stream().mapToInt(zeile -> zeile.value3()).sum();
-    int nurDerTag = tagesInhalt(tag).stream().mapToInt(zeile -> zeile.value3()).sum();
 
-    assertThat(nurDerTag)
-        .as("Die Vorbedingung: Der Monat traegt mehr als der eine Tag im Fenster")
+    // Erst einen GANZEN Tag rechnen. Damit traegt der Monatseimer nachweislich mehr als das
+    // Zwei-Stunden-Fenster darunter -- und zwar aus einem Lauf dieses Tests, nicht aus dem, was
+    // ein anderer Lauf in der geteilten Testkopie hinterlassen hat (Regel T2).
+    lauf(tag.atStartOfDay(), tag.plusDays(1).atStartOfDay(), LaufArt.DELTA);
+    int ganzerMonat = monatsInhalt(monat).stream().mapToInt(zeile -> zeile.value3()).sum();
+    Integer nurDasFenster =
+        monitorDsl
+            .select(DSL.sum(MESSAGE_ROLLUP.ANZAHL))
+            .from(MESSAGE_ROLLUP)
+            .where(MESSAGE_ROLLUP.STUNDE.ge(DICHT_VON))
+            .and(MESSAGE_ROLLUP.STUNDE.lt(DICHT_BIS))
+            .fetchOne(0, Integer.class);
+
+    assertThat(nurDasFenster)
+        .as("Die Vorbedingung: Der ganze Tag traegt mehr als die zwei Stunden in ihm")
+        .isNotNull()
         .isPositive()
         .isLessThan(ganzerMonat);
 
@@ -624,18 +660,8 @@ class RollupDbIT {
   void alte_monatszeile_bleibt_nicht_stehen() {
     LocalDate monat = LocalDate.parse("2025-12-01");
     lauf(DICHT_VON, DICHT_BIS, LaufArt.DELTA);
-    String prozess = monatsInhalt(monat).getFirst().value1();
 
-    monitorDsl
-        .insertInto(MESSAGE_ROLLUP_MONAT)
-        .set(MESSAGE_ROLLUP_MONAT.MONAT, monat)
-        .set(MESSAGE_ROLLUP_MONAT.PROCESS_ID, prozess)
-        .set(MESSAGE_ROLLUP_MONAT.MESSAGE_STATUS, ERFUNDENER_STATUS)
-        .set(MESSAGE_ROLLUP_MONAT.ANZAHL, 4711)
-        .execute();
-    assertThat(monatsInhalt(monat))
-        .as("Die Vorbedingung: Die Altlast steht wirklich in der Monatsebene")
-        .anySatisfy(zeile -> assertThat(zeile.value2()).isEqualTo(ERFUNDENER_STATUS));
+    legeMonatsAltlastAn(monat);
 
     lauf(DICHT_VON, DICHT_BIS, LaufArt.DELTA);
 
@@ -670,12 +696,17 @@ class RollupDbIT {
   @Test
   @DisplayName("Ein Fenster ueber den Monatswechsel schreibt beide Monatseimer richtig")
   void fenster_ueber_den_monatswechsel_schreibt_beide_monate() {
+    List<LocalDate> beide = List.of(LocalDate.parse("2025-11-01"), LocalDate.parse("2025-12-01"));
+    // In BEIDE Monate eine Altlast. Ohne sie bliebe der Test gruen, wenn der Lauf einen der beiden
+    // gar nicht anfasste — die korrekte Zeile aus einem frueheren Lauf staende ja noch da.
+    beide.forEach(this::legeMonatsAltlastAn);
+
     lauf(
         LocalDateTime.parse("2025-11-30T23:00"),
         LocalDateTime.parse("2025-12-01T01:00"),
         LaufArt.DELTA);
 
-    for (LocalDate monat : List.of(LocalDate.parse("2025-11-01"), LocalDate.parse("2025-12-01"))) {
+    for (LocalDate monat : beide) {
       assertThat(monatsInhalt(monat))
           .as("Beide beruehrten Monate stehen und stimmen (%s)", monat)
           .isNotEmpty()
@@ -690,7 +721,6 @@ class RollupDbIT {
   @Test
   @DisplayName("Summenprobe: Alle drei Ebenen tragen dieselbe Zahl wie die Quelle")
   void alle_drei_ebenen_tragen_dieselbe_summe() {
-    LocalDate tag = LocalDate.parse("2025-12-29");
     LocalDate monat = LocalDate.parse("2025-12-01");
     // Der ganze Monat, damit die Monatsebene mit der Quelle vergleichbar ist.
     lauf(monat.atStartOfDay(), monat.plusMonths(1).atStartOfDay(), LaufArt.DELTA);
@@ -725,7 +755,6 @@ class RollupDbIT {
     assertThat(monatsInhalt(monat).size())
         .as("M87 misst fuer Tag gegen Monat Faktor 10,29 — hier genuegt: es sind weniger")
         .isLessThan(tageszeilen);
-    assertThat(tag).isBefore(monat.plusMonths(1));
   }
 
   /**
@@ -735,8 +764,17 @@ class RollupDbIT {
    * RollupSchreibRepository.ersetzeFenster}: Braeche es dazwischen ab, stuenden sie auf
    * verschiedenen Staenden, und niemand saehe es. Ein Test, der das prueft, kann den Abbruch nicht
    * im Anwendungscode ausloesen, ohne ihn zu aendern — <b>er kann aber die Transaktion von aussen
-   * zuruecknehmen</b>, und das beweist dasselbe: Wenn alle drei Ebenen an derselben Transaktion
-   * haengen, verschwinden alle drei zusammen.
+   * zuruecknehmen</b>.
+   *
+   * <p><b>Was er damit beweist:</b> Keine der drei Ebenen macht eine <i>eigene</i> Transaktion auf
+   * und committet frueh. Bekaeme {@code rechneMonatsEbeneNeu} ein
+   * {@code @Transactional(REQUIRES_NEW)}, wuerde dieser Test rot.
+   *
+   * <p><b>Was er nicht beweist, und das gehoert hierher:</b> dass {@code ersetzeFenster} ueberhaupt
+   * eine Transaktion mitbringt. Er bringt seine eigene mit, und {@code monitorDsl} haengt ueber
+   * {@code TransactionAwareDataSourceProxy} an ihr — ohne die Annotation waere er genauso gruen.
+   * <b>Diese Haelfte prueft {@code RollupTransaktionsgrenzenTest}</b>, und sie ist am 31.08.2026
+   * aus einem Befund entstanden, der genau durch diese Luecke gefallen war.
    *
    * <p><b>Die Zaehne stecken im ersten Teil:</b> Innerhalb der Transaktion muss die Zeile in
    * <b>jeder</b> Ebene sichtbar sein. Ohne diesen Nachweis pruefte der zweite Teil nur, dass nichts

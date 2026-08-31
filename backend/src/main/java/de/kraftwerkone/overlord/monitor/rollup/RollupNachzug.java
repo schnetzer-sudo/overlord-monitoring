@@ -54,7 +54,9 @@ import org.springframework.stereotype.Service;
  * Tabelle von 21,6 MiB, nicht ueber die 2,7 GiB von {@code Message}. Eine Scheibe ist trotzdem
  * richtig — sie haelt die Transaktion klein und die Instanz frei.
  *
- * <p><b>Jede Scheibe ist ihre eigene Transaktion</b>, und das unterscheidet diesen Lauf vom
+ * <p><b>Jede Scheibe ist ihre eigene Transaktion</b> — sie liegt an {@link
+ * RollupSchreibRepository#rechneAbgeleiteteEbenenNeu}, und das ist der Grund, warum es diese
+ * Methode gibt: Zwei Einzelaufrufe waeren zwei Transaktionen. Das unterscheidet diesen Lauf vom
  * naechtlichen Volllauf. Dort ist die eine grosse Transaktion Absicht: Eine halb geleerte
  * Rolluptabelle um 03:00 waere ein leeres Dashboard. Hier ist der Ausgangszustand eine <b>leere</b>
  * Tagesebene; ein Abbruch nach der Haelfte hinterlaesst eine halb gefuellte, und die ist besser als
@@ -135,18 +137,21 @@ public class RollupNachzug {
       RollupFenster.Tagesbereich tagesbereich = scheibe.betroffeneTage().orElseThrow();
       RollupFenster.Monatsbereich monatsbereich = scheibe.betroffeneMonate().orElseThrow();
 
-      int tagesZeilenDerScheibe = schreibRepository.rechneTageEbeneNeu(tagesbereich);
-      int monatsZeilenDerScheibe = schreibRepository.rechneMonatsEbeneNeu(monatsbereich);
+      // In EINER Transaktion, und zwar ueber den Spring-Proxy: Zwei Einzelaufrufe waeren zwei
+      // Transaktionen, und ein Abbruch dazwischen liesse den Monat leer, waehrend die Tagesebene
+      // ihn vollstaendig traegt. Die Drosselung liegt bewusst ausserhalb.
+      AbgeleiteteZeilenzahlen geschrieben =
+          schreibRepository.rechneAbgeleiteteEbenenNeu(tagesbereich, monatsbereich);
 
-      tageszeilen += tagesZeilenDerScheibe;
-      monatszeilen += monatsZeilenDerScheibe;
+      tageszeilen += geschrieben.tageszeilen();
+      monatszeilen += geschrieben.monatszeilen();
       tage += tagesbereich.tage();
       log.debug(
           "Scheibe {} bis {}: {} Tageszeilen, {} Monatszeilen",
           tagesbereich.erster(),
           tagesbereich.letzter(),
-          tagesZeilenDerScheibe,
-          monatsZeilenDerScheibe);
+          geschrieben.tageszeilen(),
+          geschrieben.monatszeilen());
     }
 
     Duration dauer = Duration.between(begonnen, uhren.protokollzeit());

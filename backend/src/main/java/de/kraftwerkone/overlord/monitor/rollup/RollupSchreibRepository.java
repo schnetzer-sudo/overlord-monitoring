@@ -40,10 +40,13 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <h2>Transaktionen</h2>
  *
- * <p>Die Methoden dieser Klasse laufen bewusst <b>ausserhalb</b> einer Transaktion, mit einer
- * benannten Ausnahme (siehe {@code RollupJob}, Schritt 3). Insbesondere muss {@link #starteLauf}
- * <b>sofort sichtbar</b> sein: Sie ist die Sperre, an der ein zweiter Lauf erkennt, dass bereits
- * einer laeuft. Eine Zeile, die erst am Ende der Fachtransaktion sichtbar wuerde, sperrte nichts.
+ * <p>Die Methoden dieser Klasse laufen bewusst <b>ausserhalb</b> einer Transaktion, mit <b>zwei</b>
+ * benannten Ausnahmen: {@link #ersetzeFenster} (der Lauf, siehe {@code RollupJob}) und {@link
+ * #rechneAbgeleiteteEbenenNeu} (die Scheibe des Rueckwaertslaufs). <b>Die beiden Ebenenmethoden
+ * selbst tragen keine</b> — sie sind Bausteine beider Klammern und duerfen nicht je eine eigene
+ * aufmachen. Insbesondere muss {@link #starteLauf} <b>sofort sichtbar</b> sein: Sie ist die Sperre,
+ * an der ein zweiter Lauf erkennt, dass bereits einer laeuft. Eine Zeile, die erst am Ende der
+ * Fachtransaktion sichtbar wuerde, sperrte nichts.
  */
 @Repository
 public class RollupSchreibRepository {
@@ -129,9 +132,44 @@ public class RollupSchreibRepository {
         .and(MESSAGE_ROLLUP.STUNDE.lt(fenster.bis()))
         .execute();
     int stundenzeilen = fuegeEin(zeilen);
-    int tageszeilen = fenster.betroffeneTage().map(this::rechneTageEbeneNeu).orElse(0);
-    int monatszeilen = fenster.betroffeneMonate().map(this::rechneMonatsEbeneNeu).orElse(0);
-    return new RollupZeilenzahlen(stundenzeilen, tageszeilen, monatszeilen);
+    // Selbstaufruf, also am Proxy vorbei und ohne zweite Transaktion — hier laeuft bereits die
+    // dieser Methode, und genau das soll so sein.
+    AbgeleiteteZeilenzahlen abgeleitet =
+        fenster
+            .betroffeneTage()
+            .map(tage -> rechneAbgeleiteteEbenenNeu(tage, fenster.betroffeneMonate().orElseThrow()))
+            .orElseGet(() -> new AbgeleiteteZeilenzahlen(0, 0));
+    return new RollupZeilenzahlen(
+        stundenzeilen, abgeleitet.tageszeilen(), abgeleitet.monatszeilen());
+  }
+
+  /**
+   * <b>Beide abgeleiteten Ebenen in genau einer Transaktion</b> — die Klammer, die der
+   * Rueckwaertslauf je Scheibe braucht.
+   *
+   * <h2>Warum es diese Methode gibt und der Nachzug nicht einfach beide einzeln aufruft</h2>
+   *
+   * <p><b>Zwei Aufrufe von aussen sind zwei Transaktionen</b>, weil beide Ebenenmethoden bewusst
+   * keine eigene tragen: Innerhalb von {@link #ersetzeFenster} sind sie Teil von dessen Transaktion
+   * (Selbstaufruf, also am Proxy vorbei), und von aussen aufgerufen liefe jede im Autocommit. Der
+   * Rueckwaertslauf loeschte dann den Monatseimer, und wenn das folgende {@code INSERT … SELECT}
+   * scheiterte, staende der Monat leer da, waehrend die Tagesebene ihn vollstaendig traegt —
+   * <b>genau die zwei Staende, gegen die diese Klasse antritt</b>.
+   *
+   * <p><b>Und nicht {@code @Transactional} an {@code RollupNachzug.fuehreAus}:</b> Das machte den
+   * ganzen Lauf samt seiner Drosselung — 21 Sekunden {@code Thread.sleep} ueber 22 Scheiben — zu
+   * <b>einer</b> Transaktion. Die Scheibe ist die richtige Klammer, und die Drosselung liegt
+   * ausserhalb.
+   *
+   * <p>Der Aufruf hier ist <b>kein</b> Selbstaufruf: {@link RollupNachzug} ruft ueber den
+   * Spring-Proxy, {@code @Transactional} greift also. Innerhalb von {@link #ersetzeFenster} ist es
+   * einer, und das ist ebenfalls richtig — dort gibt es bereits eine Transaktion, und eine zweite
+   * waere eine zu viel.
+   */
+  @Transactional
+  public AbgeleiteteZeilenzahlen rechneAbgeleiteteEbenenNeu(
+      RollupFenster.Tagesbereich tage, RollupFenster.Monatsbereich monate) {
+    return new AbgeleiteteZeilenzahlen(rechneTageEbeneNeu(tage), rechneMonatsEbeneNeu(monate));
   }
 
   /**

@@ -279,10 +279,10 @@ public record RollupFenster(LocalDateTime von, LocalDateTime bis) {
      * Der Tagesbereich, aus dem die Monatseimer gerechnet werden — <b>ganze Monate</b>, von
      * einschliesslich bis ausschliessend.
      *
-     * <p><b>Er ist breiter als das Fenster des Laufs, und das ist derselbe Punkt wie eine Ebene
-     * hoeher:</b> Ein Monatseimer ist die Summe seiner Tageseimer; wuerde er nur aus den Tagen im
-     * Fenster gerechnet, truege er nach einem Delta-Lauf ueber zwei Stunden genau einen Tag und
-     * behauptete, ein Monat zu sein.
+     * <p><b>Er ist breiter als das Fenster des Laufs, und das ist derselbe Punkt wie bei {@link
+     * Tagesbereich#von()} eine Ebene tiefer:</b> Ein Monatseimer ist die Summe seiner Tageseimer;
+     * wuerde er nur aus den Tagen im Fenster gerechnet, truege er nach einem Delta-Lauf ueber zwei
+     * Stunden genau einen Tag und behauptete, ein Monat zu sein.
      */
     public LocalDate von() {
       return erster;
