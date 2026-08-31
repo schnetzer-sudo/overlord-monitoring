@@ -2,8 +2,10 @@ package de.kraftwerkone.overlord.monitor.rollup;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -42,6 +44,14 @@ import org.springframework.stereotype.Service;
  *       Fehler waere still.
  *   <li><b>{@code beendet_am} und {@code zeilen_geschrieben} nachtragen.</b> Erst danach zaehlt das
  *       Fenster zum Wasserstand.
+ *   <li><b>Beim Volllauf: den Bestandsanfang pruefen</b> — <i>neu am 31.08.2026</i>, {@link
+ *       #meldeEingefroreneEimer}. Stehen Rollup-Eimer unterhalb von {@code
+ *       MIN(Message.MessageLastUpdate)}, erreicht sie kein Lauf mehr; das wird <b>gemeldet und
+ *       nicht geloescht</b> (offener Punkt 54). Der Schritt steht <b>nach</b> {@code beendet_am},
+ *       weil ein Befund erst dann einer ist: Was jetzt noch unterhalb liegt, hat dieser Lauf
+ *       nachweislich nicht angefasst. Er ist ausserdem ausdruecklich <b>ausserhalb</b> der
+ *       Transaktion aus Schritt 3 bis 5 — eine Diagnose darf einen erfolgreichen Lauf nicht
+ *       zuruecknehmen.
  * </ol>
  *
  * <p>Bei einer Ausnahme wird {@code fehler} gefuellt, {@code beendet_am} gesetzt und die Ausnahme
@@ -145,6 +155,7 @@ public class RollupJob {
       long nachrichten = zeilen.stream().mapToLong(RollupZeile::anzahl).sum();
       LocalDateTime beendetAm = uhren.protokollzeit();
       schreibRepository.beendeLauf(laufId, beendetAm, geschrieben.stundenzeilen());
+      meldeEingefroreneEimer(art, laufId);
 
       Duration dauer = Duration.between(gestartetAm, beendetAm);
       log.info(
@@ -171,6 +182,81 @@ public class RollupJob {
       vermerke(laufId, art, fehler);
       throw fehler;
     }
+  }
+
+  /**
+   * <b>Die Erkennung zu offenem Punkt 54</b>, entschieden am 27.08.2026 und gebaut am 31.08.2026.
+   *
+   * <p>Der Volllauf vergleicht {@code MIN(message_rollup.stunde)} mit {@code
+   * MIN(Message.MessageLastUpdate)}. Liegt der Bestandsanfang <b>spaeter</b>, stehen Rollup-Eimer
+   * unterhalb von ihm, die kein Lauf je wieder anfasst — die untere Grenze beider Laufarten kommt
+   * aus dem Quellbestand, und geloescht wird ausschliesslich innerhalb des Fensters.
+   *
+   * <p><b>Gemeldet und nicht geloescht.</b> Die Begruendung steht an {@link EingefroreneEimer};
+   * kurz: Der Rollup ist dann die einzige Stelle, an der die Zahlen jenes Zeitraums noch stehen,
+   * und Nichtloeschen ist umkehrbar. <b>Der Schaden aus Punkt 54 ist nicht das Dastehen der Zeilen,
+   * sondern dass es niemand merkt</b> — genau das behebt diese Zeile.
+   *
+   * <h2>Nur der Volllauf, und das ist keine Nachlaessigkeit</h2>
+   *
+   * <p>Der Delta-Lauf beginnt beim Wasserstand und damit noch spaeter; er saehe denselben Befund
+   * und meldete ihn stuendlich. <b>Eine WARN-Zeile, die jede Stunde kommt, wird nach dem zweiten
+   * Tag nicht mehr gelesen.</b> Der naechtliche Volllauf meldet sie einmal je Nacht, und das ist
+   * die Frequenz, in der ein Bestandsanfang wandert.
+   *
+   * <h2>Was sie im Normalbetrieb kostet</h2>
+   *
+   * <p><b>Zwei Indexspitzen.</b> {@code MIN(Message.MessageLastUpdate)} ist {@code Select tables
+   * optimized away} (0,272 ms), {@code MIN/MAX(stunde)} laeuft ueber den Primaerschluessel. Die
+   * drei Zaehlungen laufen <b>nur</b>, wenn der Fall eingetreten ist.
+   */
+  private void meldeEingefroreneEimer(LaufArt art, long laufId) {
+    if (art != LaufArt.VOLL) {
+      return;
+    }
+    EingefroreneEimer eingefroren = eingefroreneEimer();
+    if (!eingefroren.vorhanden()) {
+      return;
+    }
+    log.warn(
+        "Rollup-Lauf {} (Nr. {}): {} Stunden-, {} Tages- und {} Monatseimer stehen unterhalb des"
+            + " Bestandsanfangs {} und werden von keinem Lauf mehr erreicht. Sie bleiben"
+            + " absichtlich stehen (offener Punkt 54) — aber die Summenprobe gilt ab hier nur noch"
+            + " ueber den ueberlappenden Bereich, nicht ueber die ganze Tabelle.",
+        art,
+        laufId,
+        eingefroren.stundeneimer(),
+        eingefroren.tageseimer(),
+        eingefroren.monatseimer(),
+        leseRepository.fruehesteAenderung().orElse(null));
+  }
+
+  /**
+   * Der Befund zu Punkt 54, ohne Protokollzeile — dieselbe Rechnung, die {@link
+   * #meldeEingefroreneEimer} meldet.
+   *
+   * <p>Paketprivat und nicht oeffentlich: Sie ist die pruefbare Ursache hinter der WARN-Zeile und
+   * kein Dienst, den jemand von aussen aufruefen soll. Wer den Zustand anzeigen will, bekommt ihn
+   * ueber das Protokoll — eine Spalte in {@code rollup_lauf} kommt, wenn das Frontend sie braucht,
+   * und nicht auf Verdacht.
+   *
+   * @return {@link EingefroreneEimer#KEINE}, wenn die Quelle oder die Stundenebene leer ist oder
+   *     der Rollup nirgends vor dem Bestandsanfang beginnt
+   */
+  EingefroreneEimer eingefroreneEimer() {
+    Optional<LocalDateTime> bestandsanfang = leseRepository.fruehesteAenderung();
+    Optional<LocalDateTime> ersteStunde =
+        schreibRepository.bereichDerStundenebene().map(RollupFenster::von);
+    if (bestandsanfang.isEmpty() || ersteStunde.isEmpty()) {
+      return EingefroreneEimer.KEINE;
+    }
+    // Abgerundet vergleichen: MIN(MessageLastUpdate) ist sekundengenau (2024-10-01T02:00:28),
+    // `stunde` immer ein Stundenanfang. Ohne das Abrunden meldete jeder einzelne Lauf einen
+    // Fehlbefund, weil 02:00 vor 02:00:28 liegt.
+    if (!ersteStunde.get().isBefore(bestandsanfang.get().truncatedTo(ChronoUnit.HOURS))) {
+      return EingefroreneEimer.KEINE;
+    }
+    return schreibRepository.zaehleEingefroreneEimer(bestandsanfang.get());
   }
 
   /**

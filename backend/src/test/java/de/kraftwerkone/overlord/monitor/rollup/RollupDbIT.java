@@ -7,11 +7,17 @@ import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLU
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.ROLLUP_LAUF;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
 import org.jooq.DSLContext;
 import org.jooq.Record3;
 import org.jooq.Record4;
@@ -21,6 +27,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -817,5 +824,234 @@ class RollupDbIT {
     assertThat(monatsInhalt(monat))
         .as("Und die Monatsebene — sonst haetten die drei Ebenen nicht dieselbe Transaktion")
         .isEmpty();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Offener Punkt 54: Eimer unterhalb des Bestandsanfangs (31.08.2026, Schritt 10b-2)
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Eine Rollupzeile in jeder Ebene, <b>vor</b> dem Bestandsanfang der Quelle.
+   *
+   * <p>Der frueheste {@code MessageLastUpdate} der Testkopie ist {@code 2024-10-01T02:00:28}; der
+   * September 2024 liegt sicher davor und ist in allen drei Ebenen leer. <b>Es ist dieselbe Lage,
+   * die entstuende, wenn das Altsystem alte Nachrichten entfernt</b> — nur hergestellt statt
+   * abgewartet, denn auf der Testkopie wird nichts entfernt (offener Punkt 54, Belegvermerk).
+   */
+  private static final LocalDateTime VOR_DEM_BESTAND = LocalDateTime.parse("2024-09-01T00:00");
+
+  /**
+   * Die Anzahl der angelegten Zeilen — dieselbe in allen drei Ebenen, damit die Differenz eindeutig
+   * ist.
+   */
+  private static final int EINGEFRORENE_ANZAHL = 17;
+
+  private void legeEingefroreneEimerAn() {
+    monitorDsl
+        .insertInto(MESSAGE_ROLLUP)
+        .set(MESSAGE_ROLLUP.STUNDE, VOR_DEM_BESTAND)
+        .set(MESSAGE_ROLLUP.PROCESS_ID, "it-eingefroren-prozess")
+        .set(MESSAGE_ROLLUP.MESSAGE_STATUS, ERFUNDENER_STATUS)
+        .set(MESSAGE_ROLLUP.ANZAHL, EINGEFRORENE_ANZAHL)
+        .execute();
+    monitorDsl
+        .insertInto(MESSAGE_ROLLUP_TAG)
+        .set(MESSAGE_ROLLUP_TAG.TAG, VOR_DEM_BESTAND.toLocalDate())
+        .set(MESSAGE_ROLLUP_TAG.PROCESS_ID, "it-eingefroren-prozess")
+        .set(MESSAGE_ROLLUP_TAG.MESSAGE_STATUS, ERFUNDENER_STATUS)
+        .set(MESSAGE_ROLLUP_TAG.ANZAHL, EINGEFRORENE_ANZAHL)
+        .execute();
+    monitorDsl
+        .insertInto(MESSAGE_ROLLUP_MONAT)
+        .set(MESSAGE_ROLLUP_MONAT.MONAT, VOR_DEM_BESTAND.toLocalDate())
+        .set(MESSAGE_ROLLUP_MONAT.PROCESS_ID, "it-eingefroren-prozess")
+        .set(MESSAGE_ROLLUP_MONAT.MESSAGE_STATUS, ERFUNDENER_STATUS)
+        .set(MESSAGE_ROLLUP_MONAT.ANZAHL, EINGEFRORENE_ANZAHL)
+        .execute();
+  }
+
+  /**
+   * Fuehrt {@code aufgabe} aus und sammelt die Protokollzeilen ein, die {@link RollupJob} dabei
+   * geschrieben hat.
+   *
+   * <p><b>Warum ueber einen Logback-Anhang und nicht ueber eine Rueckgabe:</b> Die Erkennung
+   * <i>ist</i> die Protokollzeile — sie schreibt bewusst keine Spalte und aendert am Lauf nichts.
+   * Ein Test, der nur {@link RollupJob#eingefroreneEimer()} riefe, bewiese, dass die Rechnung
+   * stimmt, aber nicht, dass der Lauf sie anstellt. Der Anhang ist deterministisch und behauptet
+   * nichts ueber Wanduhrzeit (Regel T1).
+   */
+  private <T> T mitMitschrift(List<ILoggingEvent> ziel, Supplier<T> aufgabe) {
+    Logger protokoll = (Logger) LoggerFactory.getLogger(RollupJob.class);
+    ListAppender<ILoggingEvent> anhang = new ListAppender<>();
+    anhang.start();
+    protokoll.addAppender(anhang);
+    try {
+      return aufgabe.get();
+    } finally {
+      protokoll.detachAppender(anhang);
+      anhang.stop();
+      ziel.addAll(anhang.list);
+    }
+  }
+
+  private static List<String> warnungen(List<ILoggingEvent> mitschrift) {
+    return mitschrift.stream()
+        .filter(zeile -> zeile.getLevel().toInt() >= Level.WARN.toInt())
+        .map(ILoggingEvent::getFormattedMessage)
+        .toList();
+  }
+
+  /**
+   * <b>Der Fall aus offenem Punkt 54, hergestellt statt abgewartet</b> — entschieden am 27.08.2026
+   * (<i>nicht loeschen, erkennen</i>), gebaut am 31.08.2026.
+   *
+   * <p>Der Test legt in jeder der drei Ebenen eine Zeile vor dem Bestandsanfang an und verlangt vom
+   * Volllauf <b>zweierlei</b>: Er <i>meldet</i> sie, und er <i>laesst sie stehen</i>. Beides
+   * gehoert zusammen — eine Meldung, die den Zustand anschliessend beseitigt, waere genau das
+   * Loeschen, das der Auftraggeber abgelehnt hat.
+   *
+   * <p><b>Alle drei Ebenen</b> (offener Punkt 68): Die abgeleiteten Ebenen frieren mit ein, weil
+   * ihre Rechenbereiche ebenfalls aus dem Fenster kommen. Ein Erkennungsweg, der nur die
+   * Stundenebene prueft, meldete eine Abweichung nur fuer eine von dreien.
+   *
+   * <p>Der Lauf geht ueber das kleine dichte Fenster und nicht ueber den Gesamtbestand: Die
+   * Erkennung haengt am Bestandsanfang und nicht am Fenster, und ein echter Volllauf kostete auf
+   * der Testkopie eine Dreiviertelminute.
+   */
+  @Test
+  @DisplayName(
+      "Punkt 54: Der Volllauf meldet Eimer unterhalb des Bestandsanfangs und laesst sie stehen")
+  void eingefrorene_eimer_werden_gemeldet_und_bleiben_stehen() {
+    legeEingefroreneEimerAn();
+
+    EingefroreneEimer vorher = job.eingefroreneEimer();
+    assertThat(vorher.vorhanden())
+        .as("Die Vorbedingung: Der Fall ist hergestellt — sonst prueft der Rest nichts")
+        .isTrue();
+    assertThat(vorher.stundeneimer()).isPositive();
+    assertThat(vorher.tageseimer()).isPositive();
+    assertThat(vorher.monatseimer()).isPositive();
+
+    List<ILoggingEvent> mitschrift = new ArrayList<>();
+    RollupErgebnis ergebnis =
+        mitMitschrift(mitschrift, () -> lauf(DICHT_VON, DICHT_BIS, LaufArt.VOLL));
+
+    assertThat(ergebnis.zeilenGeschrieben())
+        .as("Der Lauf selbst ist unberuehrt — die Erkennung ist eine Diagnose und kein Zweig")
+        .isPositive();
+
+    assertThat(warnungen(mitschrift))
+        .as(
+            "Der Schaden aus Punkt 54 ist nicht, dass die Zeilen dastehen, sondern dass es niemand"
+                + " merkt. Genau diese Zeile behebt das.")
+        .anySatisfy(
+            zeile ->
+                assertThat(zeile)
+                    .contains("unterhalb des")
+                    .contains("Bestandsanfangs")
+                    .contains("Stunden-")
+                    .contains("Tages-")
+                    .contains("Monatseimer"));
+
+    assertThat(
+            monitorDsl.fetchCount(
+                MESSAGE_ROLLUP, MESSAGE_ROLLUP.MESSAGE_STATUS.eq(ERFUNDENER_STATUS)))
+        .as(
+            "Und sie bleibt stehen: Der Rollup ist die einzige Stelle, an der diese Zahl noch steht")
+        .isEqualTo(1);
+    assertThat(
+            monitorDsl.fetchCount(
+                MESSAGE_ROLLUP_TAG, MESSAGE_ROLLUP_TAG.MESSAGE_STATUS.eq(ERFUNDENER_STATUS)))
+        .as("Die Tagesebene friert mit ein und wird deshalb mitgezaehlt (Punkt 68)")
+        .isEqualTo(1);
+    assertThat(
+            monitorDsl.fetchCount(
+                MESSAGE_ROLLUP_MONAT, MESSAGE_ROLLUP_MONAT.MESSAGE_STATUS.eq(ERFUNDENER_STATUS)))
+        .as("Und die Monatsebene ebenso")
+        .isEqualTo(1);
+  }
+
+  /**
+   * <b>Die Gegenprobe, ohne die der Test darueber nichts bewiese.</b> Ohne eine eingefrorene Zeile
+   * darf keine Warnung erscheinen — sonst zeigte die Meldung oben nur, dass der Lauf immer warnt.
+   *
+   * <p>Zugleich der Nachweis, dass der abgerundete Vergleich noetig ist: {@code
+   * MIN(Message.MessageLastUpdate)} ist {@code 2024-10-01T02:00:28}, {@code MIN(stunde)} ist {@code
+   * 2024-10-01T02:00}. Ohne das Abrunden laege die Stundenebene <i>immer</i> davor, und jeder
+   * einzelne Lauf meldete einen Fehlbefund.
+   */
+  @Test
+  @DisplayName("Punkt 54: Ohne eingefrorene Eimer meldet der Volllauf nichts")
+  void ohne_eingefrorene_eimer_keine_warnung() {
+    assertThat(job.eingefroreneEimer())
+        .as(
+            "Der Bestandsanfang der Testkopie liegt in derselben Stunde wie MIN(stunde) —"
+                + " abgerundet verglichen ist das kein Befund")
+        .isEqualTo(EingefroreneEimer.KEINE);
+
+    List<ILoggingEvent> mitschrift = new ArrayList<>();
+    mitMitschrift(mitschrift, () -> lauf(DICHT_VON, DICHT_BIS, LaufArt.VOLL));
+
+    assertThat(warnungen(mitschrift))
+        .as("Eine Warnung, die immer kommt, wird nach dem zweiten Tag nicht mehr gelesen")
+        .isEmpty();
+  }
+
+  /**
+   * <b>Die Summenprobe gilt ab jetzt ueber den ueberlappenden Bereich</b> — nicht ueber die ganze
+   * Tabelle <i>(31.08.2026)</i>.
+   *
+   * <p>Ohne diese Eingrenzung waere die schaerfste Kontrolle dieses Baus nach dem ersten
+   * produktiven Loeschlauf <b>dauerhaft rot</b>, und ein dauerhaft roter Test wird abgeschaltet.
+   * Sie ist deshalb keine Abschwaechung, sondern der Preis dafuer, dass die Probe ueberhaupt
+   * bestehen bleibt.
+   *
+   * <p><b>Der Test nennt keine Zahl aus dem Bestand</b> (Regel T2). Er misst beide Summen vor und
+   * nach dem Anlegen und prueft nur die <i>Differenz</i>: Ueber den ueberlappenden Bereich aendert
+   * sich nichts, ueber die ganze Tabelle genau die angelegte Anzahl. Damit haengt er an keinem
+   * Pflegestand und an keinem Rollup-Stand.
+   */
+  @Test
+  @DisplayName(
+      "Punkt 54: Die Summenprobe gilt ueber den ueberlappenden Bereich, nicht ueber die ganze Tabelle")
+  void summenprobe_gilt_ueber_den_ueberlappenden_bereich() {
+    LocalDateTime bestandsanfang =
+        leseRepository
+            .fruehesteAenderung()
+            .orElseThrow(
+                () -> new AssertionError("Die Quelle ist leer — dann prueft der Test nichts"));
+    RollupFenster ganzeTabelle =
+        new RollupFenster(VOR_DEM_BESTAND, LocalDateTime.parse("2099-01-01T00:00"));
+
+    RollupFenster ueberlappungVorher =
+        schreibRepository
+            .ueberlappenderBereich(bestandsanfang)
+            .orElseThrow(() -> new AssertionError("Ohne Ueberlappung prueft der Test nichts"));
+    long imUeberlappVorher = schreibRepository.summiereAnzahl(ueberlappungVorher);
+    long imGanzenVorher = schreibRepository.summiereAnzahl(ganzeTabelle);
+    assertThat(imUeberlappVorher)
+        .as("Der ueberlappende Bereich traegt Verkehr — sonst waere jede Differenz unten null")
+        .isPositive();
+
+    legeEingefroreneEimerAn();
+
+    RollupFenster ueberlappungNachher =
+        schreibRepository
+            .ueberlappenderBereich(bestandsanfang)
+            .orElseThrow(() -> new AssertionError("Ohne Ueberlappung prueft der Test nichts"));
+    assertThat(ueberlappungNachher.von())
+        .as(
+            "Der Bereich beginnt am Bestandsanfang und nicht am Anfang der Tabelle — genau deshalb"
+                + " zaehlt die eingefrorene Zeile nicht mit")
+        .isEqualTo(bestandsanfang.truncatedTo(ChronoUnit.HOURS));
+
+    assertThat(schreibRepository.summiereAnzahl(ueberlappungNachher))
+        .as("Ueber dem Bestandsanfang ist die Probe unveraendert scharf")
+        .isEqualTo(imUeberlappVorher);
+    assertThat(schreibRepository.summiereAnzahl(ganzeTabelle))
+        .as(
+            "Und ueber die ganze Tabelle laeuft sie auseinander — das ist der Zustand aus Punkt 54"
+                + " und kein Fehler")
+        .isEqualTo(imGanzenVorher + EINGEFRORENE_ANZAHL);
   }
 }

@@ -8,6 +8,7 @@ import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.ROLLUP_LAUF;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import org.jooq.BatchBindStep;
@@ -378,11 +379,69 @@ public class RollupSchreibRepository {
   }
 
   /**
+   * Der Bereich, in dem <b>Quelle und Rollup einander ueberlappen</b> — von der spaeteren der
+   * beiden unteren Grenzen bis zum Ende der Stundenebene.
+   *
+   * <p><b>Er ist der Geltungsbereich der Summenprobe</b> <i>(seit 31.08.2026, offener Punkt
+   * 54)</i>. Bis dahin galt {@code SUM(anzahl)} = {@code COUNT(Message)} ueber die ganze Tabelle.
+   * Sobald das Altsystem alte Nachrichten entfernt, stimmt das nicht mehr: Die Eimer unterhalb des
+   * neuen Bestandsanfangs bleiben stehen ({@link EingefroreneEimer}), und die Summe liegt dauerhaft
+   * darueber. <b>Eine Probe, die danach dauerhaft rot ist, wird abgeschaltet</b> — und damit waere
+   * die schaerfste Kontrolle dieses Baus weg, nicht nur eine unbequeme.
+   *
+   * <p><b>Die Aussage wird dadurch enger, nicht schwaecher.</b> Ueber dem Bestandsanfang ist sie
+   * unveraendert scharf: jede Nachricht genau einmal. Was sie nicht mehr behauptet, ist etwas ueber
+   * einen Zeitraum, den die Quelle gar nicht mehr kennt — dort gibt es nichts, wogegen sich pruefen
+   * liesse.
+   *
+   * @param bestandsanfang {@code MIN(Message.MessageLastUpdate)}; wird auf die Stunde abgerundet,
+   *     weil {@code stunde} immer auf einem Stundenanfang liegt
+   * @return leer, wenn die Stundenebene leer ist oder ganz vor dem Bestandsanfang liegt — dann gibt
+   *     es keinen Bereich, ueber den sich etwas beweisen liesse
+   */
+  public Optional<RollupFenster> ueberlappenderBereich(LocalDateTime bestandsanfang) {
+    LocalDateTime untergrenze = bestandsanfang.truncatedTo(ChronoUnit.HOURS);
+    return bereichDerStundenebene()
+        .filter(bereich -> untergrenze.isBefore(bereich.bis()))
+        .map(
+            bereich ->
+                new RollupFenster(
+                    bereich.von().isAfter(untergrenze) ? bereich.von() : untergrenze,
+                    bereich.bis()));
+  }
+
+  /**
+   * Zaehlt die Eimer <b>unterhalb des Bestandsanfangs</b>, in allen drei Ebenen. Die Begruendung
+   * und die Grenzen je Ebene stehen an {@link EingefroreneEimer}.
+   *
+   * <p><b>Drei Abfragen, und sie laufen nur, wenn etwas zu melden ist.</b> Der Aufrufer stellt
+   * vorher ueber {@link #bereichDerStundenebene()} fest, ob der Fall ueberhaupt eingetreten ist; im
+   * Normalbetrieb kostet die Erkennung damit genau eine Indexspitze und keine Zaehlung.
+   *
+   * @param bestandsanfang {@code MIN(Message.MessageLastUpdate)}, unabgerundet
+   */
+  public EingefroreneEimer zaehleEingefroreneEimer(LocalDateTime bestandsanfang) {
+    LocalDateTime vorStunde = bestandsanfang.truncatedTo(ChronoUnit.HOURS);
+    LocalDate vorTag = bestandsanfang.toLocalDate();
+    LocalDate vorMonat = vorTag.withDayOfMonth(1);
+    return new EingefroreneEimer(
+        monitorDsl.fetchCount(MESSAGE_ROLLUP, MESSAGE_ROLLUP.STUNDE.lt(vorStunde)),
+        monitorDsl.fetchCount(MESSAGE_ROLLUP_TAG, MESSAGE_ROLLUP_TAG.TAG.lt(vorTag)),
+        monitorDsl.fetchCount(MESSAGE_ROLLUP_MONAT, MESSAGE_ROLLUP_MONAT.MONAT.lt(vorMonat)));
+  }
+
+  /**
    * {@code SUM(anzahl)} ueber das Fenster — die Groesse der Summenprobe.
    *
-   * <p>Ueber den Gesamtbestand muss sie <b>3.341.519</b> ergeben, also die gezaehlte Zeilenzahl von
-   * {@code Message} (M0, bestaetigt in M89). Weicht sie ab, ist das ein Befund und kein
-   * Rundungsfehler: Es hiesse, dass eine Nachricht doppelt oder gar nicht gezaehlt wird.
+   * <p>Ueber den <b>ueberlappenden Bereich</b> ({@link #ueberlappenderBereich}) muss sie die
+   * gezaehlte Zeilenzahl von {@code Message} desselben Bereichs ergeben; ueber den Gesamtbestand
+   * der Testkopie sind das <b>3.341.519</b> (M0, bestaetigt in M89). Weicht sie ab, ist das ein
+   * Befund und kein Rundungsfehler: Es hiesse, dass eine Nachricht doppelt oder gar nicht gezaehlt
+   * wird.
+   *
+   * <p><b>Ueber die ganze Tabelle gilt sie seit dem 31.08.2026 nicht mehr</b> — sobald Eimer
+   * unterhalb des Bestandsanfangs eingefroren stehen, liegt sie dort dauerhaft darueber, und das
+   * ist kein Fehler, sondern der Zustand aus Punkt 54.
    */
   public long summiereAnzahl(RollupFenster fenster) {
     Long summe =

@@ -434,6 +434,10 @@ jemand gesehen hat. Die Laufart steht nur im Protokoll.
    davor, trüge sie den Stand von vor diesem Lauf — und der Fehler wäre still.
 6. **`beendet_am` und `zeilen_geschrieben` nachtragen.** Erst danach zählt das Fenster zum
    Wasserstand.
+7. **Beim Volllauf: den Bestandsanfang prüfen** — *neu am 31.08.2026, Schritt 10b‑2*. Liegt
+   `MIN(message_rollup.stunde)` **vor** `MIN(Message.MessageLastUpdate)`, stehen Eimer unterhalb des
+   Bestandsanfangs; sie werden **gemeldet und nicht gelöscht** (offener Punkt 54, §13). Einzelheiten
+   unten unter „Schritt 7".
 
 Bei einer Ausnahme: `fehler` füllen, `beendet_am` setzen, Ausnahme weiterreichen. Schlägt *das*
 fehl, wird es der ursprünglichen Ausnahme angehängt und nicht an ihre Stelle gesetzt.
@@ -520,6 +524,62 @@ Beiwerk:** Ohne es stünde eine Zeichenkette in einer `DATE`-Spalte, und MariaDB
 Einfügen still um — genau die Art Fehler, die dieses Projekt in Befund 11 der Vorrunde schon einmal
 Zeilen gekostet hat. `RollupMonatStatementsTest` hält beides fest, den Ausdruck und seine
 Wiederholung im `GROUP BY`.
+
+### Schritt 7: der Bestandsanfang, geprüft und gemeldet *(31.08.2026, Schritt 10b‑2)*
+
+**Das ist die Erkennung, die offener Punkt 54 seit dem 27.08.2026 verlangt** — und nichts darüber
+hinaus. Gelöscht wird weiterhin nichts.
+
+```
+Liegt MIN(message_rollup.stunde) vor MIN(Message.MessageLastUpdate), auf die Stunde abgerundet?
+  → nein: fertig, es hat zwei Indexspitzen gekostet
+  → ja:   zähle die Eimer unterhalb, in allen drei Ebenen, und schreibe eine WARN-Zeile
+```
+
+| | |
+|---|---|
+| **Wo** | `RollupJob.meldeEingefroreneEimer`, aufgerufen **nach** `beendet_am` |
+| **Wann** | nur beim **Volllauf** |
+| **Was** | eine `WARN`-Zeile mit der Zahl der betroffenen Eimer je Ebene und dem Bestandsanfang |
+| **Was nicht** | keine Spalte, keine Migration, kein Löschen, kein Abbruch des Laufs |
+
+**Warum nach `beendet_am` und nicht davor.** Ein Befund ist erst dann einer: Was *jetzt* noch
+unterhalb liegt, hat dieser Lauf nachweislich nicht angefasst. Der Schritt liegt außerdem
+ausdrücklich **außerhalb** der Transaktion aus Schritt 3 bis 5 — eine Diagnose darf einen
+erfolgreichen Lauf nicht zurücknehmen.
+
+**Warum nur der Volllauf.** Der Delta-Lauf beginnt beim Wasserstand und damit noch später; er sähe
+denselben Befund und meldete ihn **stündlich**. Eine `WARN`-Zeile, die jede Stunde kommt, wird nach
+dem zweiten Tag nicht mehr gelesen. Der nächtliche Volllauf meldet sie einmal je Nacht, und das ist
+die Frequenz, in der ein Bestandsanfang wandert.
+
+**Warum abgerundet verglichen wird.** `MIN(Message.MessageLastUpdate)` ist sekundengenau — auf der
+Testkopie `2024-10-01 02:00:28` —, `stunde` liegt immer auf einem Stundenanfang. Ohne das Abrunden
+läge die Stundenebene mit `02:00` **immer** davor, und **jeder einzelne Lauf meldete einen
+Fehlbefund**. Ein Test hält genau das fest (`ohne_eingefrorene_eimer_keine_warnung`).
+
+**Alle drei Ebenen, nicht nur die Stundenebene.** Das schließt offenen Punkt **68**: Die
+abgeleiteten Ebenen frieren mit ein, weil ihre Rechenbereiche (`betroffeneTage`,
+`betroffeneMonate`) ebenfalls aus dem Fenster kommen. Ein Erkennungsweg, der nur eine Ebene prüft,
+meldete eine Abweichung nur für eine von dreien.
+
+**Was es im Normalbetrieb kostet: zwei Indexspitzen.** `MIN(MessageLastUpdate)` ist `Select tables
+optimized away` (0,272 ms, §9), `MIN/MAX(stunde)` läuft über den Primärschlüssel. **Die drei
+Zählungen laufen nur, wenn der Fall eingetreten ist.**
+
+> ### Und die Abnahmeprobe ist damit eingegrenzt
+>
+> **`SUM(anzahl)` = `COUNT(Message)` gilt ab dem 31.08.2026 über den *überlappenden Bereich*, nicht
+> über die ganze Tabelle** — `RollupSchreibRepository.ueberlappenderBereich(bestandsanfang)`, von der
+> späteren der beiden unteren Grenzen bis zum Ende der Stundenebene.
+>
+> **Ohne diese Eingrenzung wäre die schärfste Kontrolle dieses Baus nach dem ersten produktiven
+> Löschlauf dauerhaft rot** — und ein dauerhaft roter Test wird abgeschaltet. Das ist derselbe
+> Mechanismus, den [`testfestigkeit.md`](testfestigkeit.md) §1 für die Katalogtests beschreibt.
+>
+> **Die Aussage wird dadurch enger, nicht schwächer.** Über dem Bestandsanfang ist sie unverändert
+> scharf: jede Nachricht genau einmal. Was sie nicht mehr behauptet, ist etwas über einen Zeitraum,
+> den die Quelle gar nicht mehr kennt — dort gibt es nichts, wogegen sich prüfen ließe.
 
 ### Kein `INSERT … SELECT` über die Schemagrenze
 
@@ -1426,7 +1486,7 @@ Beide Zahlen sind falsch, und beide Fehler sind **Rechenfehler in der Erwartung*
 | `RollupTransaktionsgrenzenTest` (2) | **Wo die Transaktionsklammern sitzen und wo ausdrücklich keine sitzt.** `ersetzeFenster` und `rechneAbgeleiteteEbenenNeu` tragen `@Transactional`, die beiden Ebenenmethoden nicht. Über Reflexion und nicht über Verhalten — der Datenbanktest kann eine **fehlende** Klammer nicht finden, weil er seine eigene Transaktion mitbringt |
 | `PaketstrukturTest` (+2) | Die namentliche Ausnahme ist eng und nicht leer; nichts in `rollup`, das `jooq.glassfish` anfasst, ruft eine schreibende jOOQ-Methode auf |
 
-### Mit Datenbank (`RollupDbIT`, `@Tag("db")`, 22 Fälle)
+### Mit Datenbank (`RollupDbIT`, `@Tag("db")`, 25 Fälle)
 
 | Test | Was er sichert |
 |---|---|
@@ -1452,6 +1512,9 @@ Beide Zahlen sind falsch, und beide Fehler sind **Rechenfehler in der Erwartung*
 | **Summenprobe über alle drei Ebenen** | Alle drei tragen dieselbe Zahl wie `Message`, und jede Ebene weniger Zeilen als die vorige |
 | **Abbruch** | Wird die Transaktion von außen zurückgenommen, behält **keine** der drei Ebenen eine Zeile. Die Zähne stecken im ersten Teil: Innerhalb der Transaktion muss die Zeile in *jeder* Ebene sichtbar sein — sonst prüfte der zweite Teil nur, dass nichts da ist, was nie da war |
 | **Bestandsanfang** | `MIN(MessageLastUpdate)` ist `2024-10-01 02:00:28` — weicht er ab, ist die Testkopie neu befüllt und die Zahlen dieser Datei sind neu zu erheben |
+| **Punkt 54: gemeldet und stehen gelassen** | Der Test legt in **jeder** der drei Ebenen eine Zeile vor dem Bestandsanfang an und verlangt vom Volllauf zweierlei: Er *meldet* sie, und er *lässt sie stehen*. Beides gehört zusammen — eine Meldung, die den Zustand anschließend beseitigt, wäre genau das Löschen, das der Auftraggeber abgelehnt hat. Geprüft wird die `WARN`-Zeile selbst, über einen Logback-Anhang |
+| **Punkt 54: die Gegenprobe** | Ohne eine eingefrorene Zeile erscheint **keine** Warnung — sonst zeigte die Meldung oben nur, dass der Lauf immer warnt. Zugleich der Nachweis, dass der **abgerundete** Vergleich nötig ist |
+| **Punkt 54: die eingegrenzte Summenprobe** | Über den überlappenden Bereich ändert die eingefrorene Zeile **nichts**, über die ganze Tabelle genau ihre `anzahl`. Der Test nennt dabei **keine Zahl aus dem Bestand** (Regel T2) — er prüft nur die Differenz und hängt damit an keinem Rollup-Stand |
 
 > ### Kein Mandantentrennungstest, und das ist Absicht
 >
@@ -1578,6 +1641,11 @@ nachgelagert.
   Abhilfe wäre dieselbe wie für offenen Punkt 68: ein Erkennungsweg, der alle drei Ebenen prüft,
   nicht nur eine.
 
+  > **Zur Hälfte erledigt am 31.08.2026.** Der Erkennungsweg über alle drei Ebenen ist gebaut
+  > (§5 „Schritt 7", Punkt 68). **Er greift hier aber nicht:** Er vergleicht gegen den
+  > *Bestandsanfang*, und Punkt 81 handelt von einer Unstimmigkeit **innerhalb** des Bereichs, den
+  > die Stundenebene trägt. **Der Punkt bleibt damit offen** — er ist jetzt nur genauer abgegrenzt.
+
 - **80. Die Monatsebene ist für zwei von zehn Mandanten gemessen** *(31.08.2026)*. `NEXANS` (der
   größte) und `SUTTONS`. Dass die Kosten linear an der Zahl gelesener Zeilen hängen, ist in M94
   über einen Mengenbereich von Faktor 302 belegt und in M107 über die dritte Ebene bestätigt —
@@ -1590,13 +1658,20 @@ nachgelagert.
   Sperre genau daran hängt. **Für einen Lauf, den ein Mensch beim Start auslöst, ist das
   vertretbar**; für einen zeitgesteuerten wäre es das nicht — und zeitgesteuert ist er nicht.
 
-- **68. Die Tagesebene kennt denselben Fall wie offener Punkt 54, und dort ist er schärfer.**
+- ~~**68. Die Tagesebene kennt denselben Fall wie offener Punkt 54, und dort ist er schärfer.**
   Der Rückwärtslauf richtet sich nach `MIN(stunde)`/`MAX(stunde)` der Stundenebene; der laufende
   Job nach seinem Fenster. **Bleiben nach Punkt 54 Stundenzeilen unterhalb des Bestandsanfangs
   eingefroren stehen, frieren die zugehörigen Tageszeilen mit ein** — und zwar konsistent, weil sie
   aus jenen abgeleitet sind. Das ist die gutartige Richtung: Die beiden Ebenen laufen dabei nicht
   auseinander. **Der Erkennungsweg aus der Entscheidung zu Punkt 54 sollte die Tagesebene
-  trotzdem mitprüfen**, sonst meldet er eine Abweichung nur für eine der beiden.
+  trotzdem mitprüfen**, sonst meldet er eine Abweichung nur für eine der beiden.~~
+
+  > **✔ Erledigt am 31.08.2026 (Schritt 10b‑2 Teil C).** Die Erkennung zählt **alle drei** Ebenen
+  > und nennt jede einzeln in der `WARN`-Zeile. Die Grenzen sind je Ebene verschieden und
+  > absichtlich: Stundeneimer **vor der Stunde** des Bestandsanfangs, Tageseimer **vor seinem
+  > Kalendertag**, Monatseimer **vor seinem Kalendermonat** — der Tag und der Monat des
+  > Bestandsanfangs selbst werden von jedem Volllauf neu gerechnet und sind damit nicht
+  > eingefroren. Der Datenbanktest legt in jeder Ebene eine Zeile an und prüft alle drei Zahlen.
 
 - **69. Der Rückwärtslauf ist gegen 335.610 Stundenzeilen gemessen, nicht gegen mehr.**
   *(fortgeschrieben 31.08.2026: mit der Monatsebene sind es 27.483 ms, die Arbeit ohne Drosselung
@@ -1701,6 +1776,26 @@ nachgelagert.
     > ausschließlich Dokumentation. Prüfbar ist sie wie die verworfene Lösung: Ein Datenbanktest
     > setzt eine Rollup-Zeile vor den Bestandsanfang und verlangt, dass der Lauf sie **meldet** und
     > **stehen lässt**.
+    >
+    > > ### ✔ Gebaut am 31.08.2026 (Schritt 10b‑2 Teil C) — der Punkt ist geschlossen
+    > >
+    > > **Die Erkennung steht** (§5, „Schritt 7"): Der Volllauf vergleicht
+    > > `MIN(message_rollup.stunde)` mit `MIN(Message.MessageLastUpdate)` — **auf die Stunde
+    > > abgerundet**, sonst meldete jeder Lauf einen Fehlbefund — und schreibt bei einem Befund eine
+    > > `WARN`-Zeile mit der Zahl der betroffenen Eimer **je Ebene**. Gelöscht wird nichts.
+    > >
+    > > **Drei Datenbanktests** halten das fest, genau in der Form, die der Absatz darüber verlangt:
+    > > gemeldet **und** stehen gelassen, die Gegenprobe ohne Befund, und die eingegrenzte
+    > > Summenprobe.
+    > >
+    > > **Und die Abnahmeprobe ist mit eingegrenzt:** `SUM(anzahl)` = `COUNT(Message)` gilt seit dem
+    > > 31.08.2026 über den **überlappenden Bereich**. Ohne das wäre sie nach dem ersten produktiven
+    > > Löschlauf dauerhaft rot — und ein dauerhaft roter Test wird abgeschaltet.
+    > >
+    > > **Was der Punkt weiterhin nicht deckt und auch nicht decken soll:** eine **Spalte** in
+    > > `rollup_lauf` und eine Anzeige des Zustands im Frontend. Beides ist eine Migration und eine
+    > > Gestaltungsentscheidung; es kommt, wenn das Frontend es braucht. Heute steht der Befund im
+    > > Protokoll, und das ist die Stelle, an der ein Betreiber ihn sucht.
     >
     > **Der Absatz darüber bleibt vollständig stehen.** Die verworfene Lösung ist die bessere
     > Beschreibung des Problems, und ohne sie wäre nicht mehr erkennbar, wogegen entschieden wurde.
