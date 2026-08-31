@@ -174,10 +174,13 @@ also *weniger* als einer ohne.
 
 > ### ⚠️ Bekannte Grenze 1: Bedingung 2 ist in der Praxis wirkungslos
 >
-> Sie sollte `WOC` fangen: **29 von 30 Tagen belegt bei 117 Nachrichten**, also knapp vier am Tag —
-> ein Diagramm mit Punkten, das nichts zeigt. **Weil EDI-Verkehr stoßweise ist, liegt aber mit
-> Sicherheit ein Tag über fünf, und `WOC` besteht die Bedingung.** Gemessen: Der größte Tageseimer
-> von `WOC` liegt deutlich darüber.
+> Sie sollte `WOC` fangen: **29 von 30 Tagen belegt bei 117 Nachrichten** (M95), also knapp vier am
+> Tag — ein Diagramm mit Punkten, das nichts zeigt. **Weil EDI-Verkehr stoßweise ist, liegt aber mit
+> hoher Wahrscheinlichkeit ein Tag über fünf, und `WOC` besteht die Bedingung.**
+>
+> **Das ist gerechnet und nicht gemessen** — M108 misst `NEXANS` und `SUTTONS`, nicht `WOC`. Die
+> Rechnung: 117 Nachrichten auf 29 Tage bei stoßweisem Verkehr; damit **kein** Tag über fünf liegt,
+> müssten sich die Nachrichten fast gleichmäßig verteilen, und genau das tun sie nicht.
 >
 > **Der Auftraggeber hat das am 31.08.2026 in Kenntnis dieser Folge so entschieden.** Es steht hier
 > als bekannte Grenze und wird **nicht nachgebessert**: Eine Schwelle, die `WOC` sicher fängt, finge
@@ -366,6 +369,17 @@ und war falsch gebaut — und der Plan sagt warum:
 | `SUTTONS`, 12 Monate, ganze Seite | **2.585,7 ms** | **127,0 ms** |
 | `VOTG`, 12 Monate | **`500`** — Abbruch an `max_statement_time` | läuft |
 
+Der Abbruch im Wortlaut, aus dem Messlauf vom 31.08.2026:
+
+```
+org.jooq.exception.DataAccessException: SQL [select … from `GlassfishDB`.`Message`
+  left outer join `GlassfishDB`.`SOS` … where ((`MessageStatus` like 'ERROR\_%' escape '\'
+  or `MessageStatus` = 'COMMIT_REJECTED') and `MessageLastUpdate` >= '2025-01-01 00:00:00'
+  and `MessageLastUpdate` < '2026-01-01 00:00:00' and exists (… `MandantID` = 'VOTG'))
+  order by `MessageLastUpdate` desc, `MessageID` desc fetch next 10 rows only];
+(conn=98969) Query execution was interrupted (max_statement_time exceeded)
+```
+
 **Der Grund ist die Deckelung.** `ORDER BY … LIMIT 10` ist nur billig, wenn die zehn Zeilen früh
 gefunden werden. Ein Mandant **ohne** Fehler im Fenster zwingt die Datenbank, den ganzen Bereich zu
 durchsuchen, bevor sie „nichts" sagen darf — **gerade der gute Fall ist der teure**.
@@ -505,7 +519,7 @@ M98: **Der Bereichszugriff liest die Rollupzeilen des ganzen Fensters**, unabhä
 davon dem Mandanten gehören. *„Ein kleiner Mandant zahlt im Verteilungsblock fast so viel wie der
 größte."*
 
-### Die Pläne (Regel L15)
+### Die Pläne (Regel L7)
 
 | Statement | Zugriffspfad auf die Quelle |
 |---|---|

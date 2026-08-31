@@ -81,9 +81,14 @@ public class DashboardService {
    *
    * <h2>Sie ist in der Praxis wirkungslos, und das ist bekannt</h2>
    *
-   * <p>Sie sollte {@code WOC} fangen: 29 von 30 Tagen belegt bei 117 Nachrichten, also knapp vier
-   * am Tag — ein Diagramm mit Punkten, das nichts zeigt. <b>Weil EDI-Verkehr stossweise ist, liegt
-   * aber mit Sicherheit ein Tag ueber fuenf, und {@code WOC} besteht die Bedingung.</b>
+   * <p>Sie sollte {@code WOC} fangen: 29 von 30 Tagen belegt bei 117 Nachrichten (M95), also knapp
+   * vier am Tag — ein Diagramm mit Punkten, das nichts zeigt. <b>Weil EDI-Verkehr stossweise ist,
+   * liegt aber mit hoher Wahrscheinlichkeit ein Tag ueber fuenf, und {@code WOC} besteht die
+   * Bedingung.</b>
+   *
+   * <p><b>Das ist gerechnet und nicht gemessen</b> — M108 misst {@code NEXANS} und {@code SUTTONS},
+   * nicht {@code WOC}. Damit <i>kein</i> Tag ueber fuenf laege, muessten sich 117 Nachrichten fast
+   * gleichmaessig auf 29 Tage verteilen, und genau das tun sie nicht.
    *
    * <p><b>Der Auftraggeber hat das am 31.08.2026 in Kenntnis dieser Folge so entschieden.</b> Sie
    * steht deshalb als <i>bekannte Grenze</i> in {@code docs/dashboard.md} und wird nicht
