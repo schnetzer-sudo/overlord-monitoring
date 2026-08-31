@@ -13,6 +13,7 @@ import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalLong;
 import java.util.TreeMap;
 import org.springframework.stereotype.Service;
 
@@ -80,12 +81,13 @@ public class DashboardService {
     List<Rollupsumme> summen = dashboardRepository.verlauf(mandant, zeitraum, fenster);
     List<Verteilungssumme> verteilt =
         dashboardRepository.verteilung(mandant, zeitraum, fenster, sicht);
+    UeberfaelligkachelResponse ueberfaellig = ueberfaellig(mandant, fenster, jetzt);
 
     return new DashboardResponse(
         zeitraum.code(),
         fensterAntwort(fenster),
         verlauf(summen),
-        kacheln(summen),
+        kacheln(summen, ueberfaellig),
         verteilung(verteilt, sicht));
   }
 
@@ -177,7 +179,28 @@ public class DashboardService {
    * <p>Die Fehlerarten kommen aus dem Rohwert und nicht aus der Einordnung: Die Einordnung sagt
    * <i>Fehler</i>, der Rohwert sagt <i>welcher</i>.
    */
-  private KachelnResponse kacheln(List<Rollupsumme> summen) {
+  /**
+   * Block 4 — <b>zwei Zahlen, und sie fallen zusammen</b>.
+   *
+   * <p>Bricht eine der beiden Live-Abfragen an der Zeitgrenze ab, ist die Kachel als Ganzes „nicht
+   * ermittelbar". Eine Kachel, in der eine Zahl steht und die andere fehlt, laedt zu genau der
+   * Rechnung ein, die dann nicht aufgeht — „im Zeitraum" und „insgesamt" liest man nebeneinander.
+   *
+   * <p>Zwei Aufrufe und nicht einer: Die zweite Zahl hat <b>kein</b> Zeitfenster und ist deshalb
+   * eine andere Abfrage. Sie ist dabei die billigere von beiden (M90, Befund 14).
+   */
+  private UeberfaelligkachelResponse ueberfaellig(
+      MandantContext mandant, Zeitfenster fenster, LocalDateTime jetzt) {
+    OptionalLong imFenster = dashboardRepository.ueberfaelligImFenster(mandant, fenster, jetzt);
+    OptionalLong insgesamt = dashboardRepository.ueberfaelligInsgesamt(mandant, jetzt);
+    if (imFenster.isEmpty() || insgesamt.isEmpty()) {
+      return UeberfaelligkachelResponse.nichtErmittelbar();
+    }
+    return UeberfaelligkachelResponse.von(imFenster.getAsLong(), insgesamt.getAsLong());
+  }
+
+  private KachelnResponse kacheln(
+      List<Rollupsumme> summen, UeberfaelligkachelResponse ueberfaellig) {
     long nachrichten = 0;
     long fehler = 0;
     Map<String, Long> jeRohwert = new LinkedHashMap<>();
@@ -205,6 +228,6 @@ public class DashboardService {
                         Comparator.nullsLast(Comparator.naturalOrder())))
             .toList();
 
-    return new KachelnResponse(nachrichten, new FehlerkachelResponse(fehler, arten));
+    return new KachelnResponse(nachrichten, new FehlerkachelResponse(fehler, arten), ueberfaellig);
   }
 }

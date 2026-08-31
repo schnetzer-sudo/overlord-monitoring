@@ -1,5 +1,6 @@
 package de.kraftwerkone.overlord.monitor.dashboard;
 
+import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.MESSAGE;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROCESS;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROJECTMANDANT;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLUP;
@@ -7,18 +8,25 @@ import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLU
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLUP_TAG;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.PROCESS_CATALOG;
 
+import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.Pflegestatus;
 import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
 import de.kraftwerkone.overlord.monitor.jooq.glassfish.tables.Process;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.math.BigDecimal;
+import java.sql.SQLTimeoutException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.OptionalLong;
 import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.Field;
 import org.jooq.Table;
+import org.jooq.exception.DataAccessException;
 import org.jooq.impl.DSL;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
 
@@ -68,10 +76,16 @@ public class DashboardRepository {
    */
   private static final Process KETTE_PROCESS = PROCESS.as("dashboard_process");
 
-  private final DSLContext glassfishDsl;
+  private static final Logger log = LoggerFactory.getLogger(DashboardRepository.class);
 
-  DashboardRepository(@Qualifier("glassfishDsl") DSLContext glassfishDsl) {
+  private final DSLContext glassfishDsl;
+  private final MessageStatusClassifier statusClassifier;
+
+  DashboardRepository(
+      @Qualifier("glassfishDsl") DSLContext glassfishDsl,
+      MessageStatusClassifier statusClassifier) {
     this.glassfishDsl = glassfishDsl;
+    this.statusClassifier = statusClassifier;
   }
 
   /**
@@ -202,6 +216,94 @@ public class DashboardRepository {
         .groupBy(schluessel)
         .orderBy(DSL.field(schluessel.isNull()), summe.desc())
         .fetch(satz -> new Verteilungssumme(satz.value1(), satz.value2().longValue()));
+  }
+
+  /**
+   * <b>Block 4, erste Zahl</b>: die ueberfaelligen Nachrichten <b>im Fenster</b> — dieselbe Zahl,
+   * die der Klick in die Liste liefert (Entscheidung E-h).
+   *
+   * <p>Gemessen in M90 mit <b>2,275 ms</b> ({@code NEXANS}, 48 Stunden).
+   */
+  public OptionalLong ueberfaelligImFenster(
+      MandantContext mandant, Zeitfenster fenster, LocalDateTime jetzt) {
+    return zaehleUeberfaellig(
+        mandant,
+        jetzt,
+        MESSAGE
+            .MESSAGELASTUPDATE
+            .ge(fenster.von())
+            .and(MESSAGE.MESSAGELASTUPDATE.lt(fenster.bis())));
+  }
+
+  /**
+   * <b>Block 4, zweite Zahl</b>: die ueberfaelligen Nachrichten <b>insgesamt</b>, ohne Zeitfenster.
+   *
+   * <p><b>Ohne Fenster, und das ist gedeckt (Regel L9).</b> Gefragt ist genau, was
+   * <i>ausserhalb</i> des gezeigten Zeitraums haengt — ein Fenster schnitte die Zeilen weg, um die
+   * es geht. Es ist ausserdem keine Aggregation ueber einen Bereich, sondern eine Zaehlung ueber
+   * die 539 Indexsaetze, auf die {@code MessageStatusIDX} herunterfuehrt.
+   *
+   * <p><b>Sie ist die billigere der beiden Zahlen</b>: 4,275 ms ohne jedes Zeitfenster gegen 5,127
+   * ms mit einem Monatsfenster (M90, Befund 14). Das Zeitfenster verengt nichts, es kostet nur.
+   * <b>Wer die zweite Zahl aus Kostengruenden weglassen wollte, haette kein Kostenargument.</b>
+   */
+  public OptionalLong ueberfaelligInsgesamt(MandantContext mandant, LocalDateTime jetzt) {
+    return zaehleUeberfaellig(mandant, jetzt, DSL.noCondition());
+  }
+
+  /**
+   * <b>Die erste benannte Ausnahme von Leistungsregel L2</b> — die einzige Stelle des Dashboards,
+   * die zur Laufzeit ueber {@code Message} aggregiert statt aus {@code message_rollup} zu lesen.
+   *
+   * <p>Der Grund ist fachlich: <i>Ueberfaellig</i> haengt an einer Frist, die zwischen zwei
+   * Rollup-Laeufen ablaeuft. Eine Kachel, die den Ablauf einer Frist erst nach dem naechsten
+   * Nachtlauf zeigt, zeigt ihn zu spaet. Begruendet und gemessen in {@code PROJEKTBESCHREIBUNG.md}
+   * §8 (E-c) und M90.
+   *
+   * <p><b>Die Bedingung wird gerufen, nicht nachgebaut</b>: {@code
+   * MessageStatusClassifier.ueberfaelligBedingung}. Sie ist das SQL-Gegenstueck zu {@code
+   * istUeberfaellig} und steht mit ihm zusammen an einer Stelle; {@code jetzt} zieht der Aufrufer
+   * aus der <b>Anwendungsuhr</b> (Regel Z1).
+   *
+   * <h2>Warum diese eine Abfrage einen Abbruch verkraften muss</h2>
+   *
+   * <p>Sie ist der einzige Teil der Antwort, der auf der Produktion <b>live</b> liest — dort raeumt
+   * {@code max_statement_time} nach zehn Sekunden ab. Der Rest kommt aus unserer eigenen Tabelle.
+   * <b>Stirbt sie, darf nicht die ganze Seite sterben</b>; sie liefert dann {@link
+   * OptionalLong#empty()}, und die Kachel sagt „nicht ermittelbar".
+   *
+   * <p><b>Gefangen wird genau eine Ausnahme und nicht pauschal alles</b> — dieselbe Unterscheidung
+   * wie in {@code NachrichtenRepository.anDerZeitgrenze}: MariaDB meldet Fehler {@code 1969} mit
+   * SQLState {@code 70100}, der Treiber macht daraus eine {@link SQLTimeoutException}, und jOOQ
+   * verpackt sie. Ein Syntaxfehler, eine abgerissene Verbindung oder ein fehlendes Recht kommen
+   * ebenfalls als {@link DataAccessException} an und bleiben, was sie sind: technische Fehler mit
+   * {@code 500}. <b>Ein pauschales {@code catch} machte aus jedem Bruch ein „nicht ermittelbar" —
+   * und damit aus einem Befund eine Beruhigung.</b>
+   */
+  private OptionalLong zaehleUeberfaellig(
+      MandantContext mandant, LocalDateTime jetzt, Condition zusatz) {
+    try {
+      return OptionalLong.of(
+          glassfishDsl.fetchCount(
+              MESSAGE,
+              statusClassifier
+                  .ueberfaelligBedingung(
+                      MESSAGE.MESSAGESTATUS,
+                      MESSAGE.MESSAGELASTUPDATE,
+                      MESSAGE.MESSAGETIMEOUT,
+                      jetzt)
+                  .and(zusatz)
+                  .and(mandantenkette(mandant, MESSAGE.PROCESSID))));
+    } catch (DataAccessException fehler) {
+      if (fehler.getCause(SQLTimeoutException.class) == null) {
+        throw fehler;
+      }
+      log.warn(
+          "Die Live-Abfrage der Kachel Ueberfaellig ist an der Zeitgrenze abgebrochen. Die uebrigen"
+              + " Bloecke kommen aus message_rollup und sind davon unberuehrt.",
+          fehler);
+      return OptionalLong.empty();
+    }
   }
 
   /**

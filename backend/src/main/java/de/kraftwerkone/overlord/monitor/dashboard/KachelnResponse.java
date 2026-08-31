@@ -13,5 +13,9 @@ package de.kraftwerkone.overlord.monitor.dashboard;
  *     —, aber sie erscheint in der Zaehlung eines Zeitraums, in dem sie nicht entstanden ist.
  *     Ausgeschrieben in {@code docs/dashboard.md}
  * @param fehler Zahl und Aufschluesselung nach Art
+ * @param ueberfaellig zwei Zahlen, beide <b>live</b> ueber {@code Message} — die erste benannte
+ *     Ausnahme von Leistungsregel L2, und die einzigen beiden Felder der ganzen Antwort, die „nicht
+ *     ermittelbar" sein duerfen
  */
-public record KachelnResponse(long nachrichten, FehlerkachelResponse fehler) {}
+public record KachelnResponse(
+    long nachrichten, FehlerkachelResponse fehler, UeberfaelligkachelResponse ueberfaellig) {}
