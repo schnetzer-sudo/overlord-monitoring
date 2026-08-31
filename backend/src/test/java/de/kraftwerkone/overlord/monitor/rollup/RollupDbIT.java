@@ -2,6 +2,7 @@ package de.kraftwerkone.overlord.monitor.rollup;
 
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.MESSAGE;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLUP;
+import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLUP_MONAT;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLUP_TAG;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.ROLLUP_LAUF;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -24,6 +25,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Der Rollup-Lauf gegen die Testkopie.
@@ -97,6 +100,8 @@ class RollupDbIT {
   @Autowired
   @Qualifier("monitorDsl") private DSLContext monitorDsl;
 
+  @Autowired private PlatformTransactionManager transaktionen;
+
   /** Die Laufzeilen, die dieser Test angelegt hat — und nur die werden abgeraeumt. */
   private final List<Long> eigeneLaeufe = new ArrayList<>();
 
@@ -115,6 +120,10 @@ class RollupDbIT {
     monitorDsl
         .deleteFrom(MESSAGE_ROLLUP_TAG)
         .where(MESSAGE_ROLLUP_TAG.MESSAGE_STATUS.eq(ERFUNDENER_STATUS))
+        .execute();
+    monitorDsl
+        .deleteFrom(MESSAGE_ROLLUP_MONAT)
+        .where(MESSAGE_ROLLUP_MONAT.MESSAGE_STATUS.eq(ERFUNDENER_STATUS))
         .execute();
   }
 
@@ -143,6 +152,34 @@ class RollupDbIT {
         .and(MESSAGE_ROLLUP.STUNDE.lt(tag.plusDays(1).atStartOfDay()))
         .groupBy(MESSAGE_ROLLUP.PROCESS_ID, MESSAGE_ROLLUP.MESSAGE_STATUS)
         .orderBy(MESSAGE_ROLLUP.PROCESS_ID, MESSAGE_ROLLUP.MESSAGE_STATUS)
+        .fetch();
+  }
+
+  /** Der Inhalt eines Monats in der Monatsebene, sortiert. */
+  private Result<Record3<String, String, Integer>> monatsInhalt(LocalDate monat) {
+    return monitorDsl
+        .select(
+            MESSAGE_ROLLUP_MONAT.PROCESS_ID,
+            MESSAGE_ROLLUP_MONAT.MESSAGE_STATUS,
+            MESSAGE_ROLLUP_MONAT.ANZAHL)
+        .from(MESSAGE_ROLLUP_MONAT)
+        .where(MESSAGE_ROLLUP_MONAT.MONAT.eq(monat))
+        .orderBy(MESSAGE_ROLLUP_MONAT.PROCESS_ID, MESSAGE_ROLLUP_MONAT.MESSAGE_STATUS)
+        .fetch();
+  }
+
+  /** Dasselbe, aber aus der Tagesebene gerechnet — die Gegenprobe zur materialisierten Ebene. */
+  private Result<Record3<String, String, Integer>> monatsInhaltAusTagen(LocalDate monat) {
+    return monitorDsl
+        .select(
+            MESSAGE_ROLLUP_TAG.PROCESS_ID,
+            MESSAGE_ROLLUP_TAG.MESSAGE_STATUS,
+            DSL.sum(MESSAGE_ROLLUP_TAG.ANZAHL).cast(Integer.class))
+        .from(MESSAGE_ROLLUP_TAG)
+        .where(MESSAGE_ROLLUP_TAG.TAG.ge(monat))
+        .and(MESSAGE_ROLLUP_TAG.TAG.lt(monat.plusMonths(1)))
+        .groupBy(MESSAGE_ROLLUP_TAG.PROCESS_ID, MESSAGE_ROLLUP_TAG.MESSAGE_STATUS)
+        .orderBy(MESSAGE_ROLLUP_TAG.PROCESS_ID, MESSAGE_ROLLUP_TAG.MESSAGE_STATUS)
         .fetch();
   }
 
@@ -525,5 +562,222 @@ class RollupDbIT {
     assertThat(tagesInhalt(tag).size())
         .as("Weniger Zeilen als die Stundenebene — M87 misst dafuer Faktor 2,73")
         .isLessThan(inhalt(tag.atStartOfDay(), tag.plusDays(1).atStartOfDay()).size());
+  }
+
+  // ─── Die Monatsebene (Schritt 10b-2) ───────────────────────────────────────────────────────
+
+  /**
+   * <b>Die Monatsebene ist Zeile fuer Zeile die Summe der Tagesebene</b> — dieselbe Probe wie eine
+   * Ebene tiefer, und aus demselben Grund die wichtigste der drei: Waere sie es nicht, waere der
+   * Fehler still.
+   */
+  @Test
+  @DisplayName("Monatsebene: Zeile fuer Zeile die Summe der Tagesebene")
+  void monatsebene_ist_die_summe_der_tagesebene() {
+    LocalDate monat = LocalDate.parse("2025-12-01");
+    lauf(TAG_VON, TAG_BIS, LaufArt.DELTA);
+
+    assertThat(monatsInhaltAusTagen(monat))
+        .as("Der Monat %s traegt Verkehr — sonst prueft der Vergleich nichts", monat)
+        .isNotEmpty();
+    assertThat(monatsInhalt(monat))
+        .as("Die materialisierte Monatsebene fuer %s", monat)
+        .isEqualTo(monatsInhaltAusTagen(monat));
+  }
+
+  /**
+   * <b>Ein Monatseimer wird ueber den GANZEN Monat gerechnet, auch wenn das Fenster zwei Stunden
+   * umfasst.</b> Das Gegenstueck zu {@link #tageseimer_umfasst_den_ganzen_tag}, eine Ebene hoeher —
+   * und die Eigenschaft, an der es sonst still schiefginge.
+   */
+  @Test
+  @DisplayName("Ein Zwei-Stunden-Fenster rechnet den ganzen Monatseimer, nicht nur seine Tage")
+  void monatseimer_umfasst_den_ganzen_monat() {
+    LocalDate monat = LocalDate.parse("2025-12-01");
+    LocalDate tag = LocalDate.parse("2025-12-30");
+    // Erst einen ganzen Tag rechnen, damit die Tagesebene mehr traegt als das Zwei-Stunden-Fenster.
+    lauf(tag.atStartOfDay(), tag.plusDays(1).atStartOfDay(), LaufArt.DELTA);
+    int ganzerMonat = monatsInhaltAusTagen(monat).stream().mapToInt(zeile -> zeile.value3()).sum();
+    int nurDerTag = tagesInhalt(tag).stream().mapToInt(zeile -> zeile.value3()).sum();
+
+    assertThat(nurDerTag)
+        .as("Die Vorbedingung: Der Monat traegt mehr als der eine Tag im Fenster")
+        .isPositive()
+        .isLessThan(ganzerMonat);
+
+    // Und jetzt nur zwei Stunden dieses Tages neu rechnen.
+    lauf(DICHT_VON, DICHT_BIS, LaufArt.DELTA);
+
+    assertThat(monatsInhalt(monat).stream().mapToInt(zeile -> zeile.value3()).sum())
+        .as(
+            "Der Monatseimer ist die Summe seiner Tageseimer und nicht die der Tage, die"
+                + " zufaellig im Fenster lagen")
+        .isEqualTo(ganzerMonat);
+  }
+
+  /**
+   * Dasselbe fuer die Monatsebene, was {@link #alte_tageszeile_bleibt_nicht_stehen} fuer die
+   * Tagesebene prueft: Geloescht und neu geschrieben, nie hochgezaehlt.
+   */
+  @Test
+  @DisplayName("Monatsebene: Eine Zeile, die die Tagesebene nicht mehr hergibt, bleibt nicht")
+  void alte_monatszeile_bleibt_nicht_stehen() {
+    LocalDate monat = LocalDate.parse("2025-12-01");
+    lauf(DICHT_VON, DICHT_BIS, LaufArt.DELTA);
+    String prozess = monatsInhalt(monat).getFirst().value1();
+
+    monitorDsl
+        .insertInto(MESSAGE_ROLLUP_MONAT)
+        .set(MESSAGE_ROLLUP_MONAT.MONAT, monat)
+        .set(MESSAGE_ROLLUP_MONAT.PROCESS_ID, prozess)
+        .set(MESSAGE_ROLLUP_MONAT.MESSAGE_STATUS, ERFUNDENER_STATUS)
+        .set(MESSAGE_ROLLUP_MONAT.ANZAHL, 4711)
+        .execute();
+    assertThat(monatsInhalt(monat))
+        .as("Die Vorbedingung: Die Altlast steht wirklich in der Monatsebene")
+        .anySatisfy(zeile -> assertThat(zeile.value2()).isEqualTo(ERFUNDENER_STATUS));
+
+    lauf(DICHT_VON, DICHT_BIS, LaufArt.DELTA);
+
+    assertThat(monatsInhalt(monat))
+        .noneSatisfy(zeile -> assertThat(zeile.value2()).isEqualTo(ERFUNDENER_STATUS));
+  }
+
+  @Test
+  @DisplayName("Monatsebene: Derselbe Lauf zweimal ergibt zeilengleich dasselbe")
+  void monatsebene_ist_idempotent() {
+    LocalDate monat = LocalDate.parse("2025-12-01");
+    lauf(DICHT_VON, DICHT_BIS, LaufArt.DELTA);
+    Result<Record3<String, String, Integer>> nachDemErsten = monatsInhalt(monat);
+
+    RollupErgebnis zweiter = lauf(DICHT_VON, DICHT_BIS, LaufArt.DELTA);
+
+    assertThat(nachDemErsten).isNotEmpty();
+    assertThat(monatsInhalt(monat)).isEqualTo(nachDemErsten);
+    assertThat(zweiter.monatszeilenGeschrieben())
+        .as("Und der Lauf berichtet, wie viele Monatszeilen er geschrieben hat")
+        .isEqualTo(nachDemErsten.size());
+  }
+
+  /**
+   * <b>Der Monatswechsel im Fenster</b> — das Gegenstueck zu {@link
+   * #fenster_ueber_mitternacht_schreibt_beide_tage}, eine Ebene hoeher.
+   *
+   * <p>Das Fenster laeuft vom 30.11.2025 23:00 bis zum 01.12.2025 01:00 und beruehrt damit zwei
+   * Kalendermonate. Beide muessen danach vollstaendig dastehen — und zwar ueber ihre <b>ganze</b>
+   * Laenge, nicht nur ueber die zwei Stunden.
+   */
+  @Test
+  @DisplayName("Ein Fenster ueber den Monatswechsel schreibt beide Monatseimer richtig")
+  void fenster_ueber_den_monatswechsel_schreibt_beide_monate() {
+    lauf(
+        LocalDateTime.parse("2025-11-30T23:00"),
+        LocalDateTime.parse("2025-12-01T01:00"),
+        LaufArt.DELTA);
+
+    for (LocalDate monat : List.of(LocalDate.parse("2025-11-01"), LocalDate.parse("2025-12-01"))) {
+      assertThat(monatsInhalt(monat))
+          .as("Beide beruehrten Monate stehen und stimmen (%s)", monat)
+          .isNotEmpty()
+          .isEqualTo(monatsInhaltAusTagen(monat));
+    }
+  }
+
+  /**
+   * <b>Die Summenprobe ueber alle drei Ebenen.</b> Sie ist der einzige Grund, den Verdichtungen zu
+   * trauen: Jede Ebene traegt dieselbe Zahl wie die Quelle und weniger Zeilen als die vorige.
+   */
+  @Test
+  @DisplayName("Summenprobe: Alle drei Ebenen tragen dieselbe Zahl wie die Quelle")
+  void alle_drei_ebenen_tragen_dieselbe_summe() {
+    LocalDate tag = LocalDate.parse("2025-12-29");
+    LocalDate monat = LocalDate.parse("2025-12-01");
+    // Der ganze Monat, damit die Monatsebene mit der Quelle vergleichbar ist.
+    lauf(monat.atStartOfDay(), monat.plusMonths(1).atStartOfDay(), LaufArt.DELTA);
+
+    int ausDerQuelle =
+        nachrichtenLautQuelle(monat.atStartOfDay(), monat.plusMonths(1).atStartOfDay());
+    long ausDerStundenebene =
+        schreibRepository.summiereAnzahl(
+            new RollupFenster(monat.atStartOfDay(), monat.plusMonths(1).atStartOfDay()));
+    int ausDerTagesebene =
+        monitorDsl
+            .select(DSL.sum(MESSAGE_ROLLUP_TAG.ANZAHL))
+            .from(MESSAGE_ROLLUP_TAG)
+            .where(MESSAGE_ROLLUP_TAG.TAG.ge(monat))
+            .and(MESSAGE_ROLLUP_TAG.TAG.lt(monat.plusMonths(1)))
+            .fetchOne(0, Integer.class);
+    int ausDerMonatsebene = monatsInhalt(monat).stream().mapToInt(zeile -> zeile.value3()).sum();
+
+    assertThat(ausDerQuelle).isPositive();
+    assertThat(ausDerStundenebene).isEqualTo(ausDerQuelle);
+    assertThat(ausDerTagesebene).isEqualTo(ausDerQuelle);
+    assertThat(ausDerMonatsebene)
+        .as("Die Monatsebene verdichtet die Zeilenzahl, nicht die Nachrichtenzahl")
+        .isEqualTo(ausDerQuelle);
+
+    int stundenzeilen = inhalt(monat.atStartOfDay(), monat.plusMonths(1).atStartOfDay()).size();
+    int tageszeilen =
+        monitorDsl.fetchCount(
+            MESSAGE_ROLLUP_TAG,
+            MESSAGE_ROLLUP_TAG.TAG.ge(monat).and(MESSAGE_ROLLUP_TAG.TAG.lt(monat.plusMonths(1))));
+    assertThat(tageszeilen).isLessThan(stundenzeilen);
+    assertThat(monatsInhalt(monat).size())
+        .as("M87 misst fuer Tag gegen Monat Faktor 10,29 — hier genuegt: es sind weniger")
+        .isLessThan(tageszeilen);
+    assertThat(tag).isBefore(monat.plusMonths(1));
+  }
+
+  /**
+   * <b>Keine Ebene bleibt bei einem Abbruch zurueck.</b>
+   *
+   * <p>Die drei Ebenen entstehen in <b>einer</b> Transaktion, und der Grund steht an {@code
+   * RollupSchreibRepository.ersetzeFenster}: Braeche es dazwischen ab, stuenden sie auf
+   * verschiedenen Staenden, und niemand saehe es. Ein Test, der das prueft, kann den Abbruch nicht
+   * im Anwendungscode ausloesen, ohne ihn zu aendern — <b>er kann aber die Transaktion von aussen
+   * zuruecknehmen</b>, und das beweist dasselbe: Wenn alle drei Ebenen an derselben Transaktion
+   * haengen, verschwinden alle drei zusammen.
+   *
+   * <p><b>Die Zaehne stecken im ersten Teil:</b> Innerhalb der Transaktion muss die Zeile in
+   * <b>jeder</b> Ebene sichtbar sein. Ohne diesen Nachweis pruefte der zweite Teil nur, dass nichts
+   * da ist, was nie da war.
+   *
+   * <p>Gearbeitet wird im leeren Februar 2026 mit dem erfundenen Status: Dort schreibt der Lauf von
+   * sich aus nichts, und die Zeile ist eindeutig die des Tests.
+   */
+  @Test
+  @DisplayName("Ein Abbruch nimmt alle drei Ebenen zurueck, nicht nur eine")
+  void keine_ebene_bleibt_bei_einem_abbruch_zurueck() {
+    LocalDate tag = LEER_VON.toLocalDate();
+    LocalDate monat = tag.withDayOfMonth(1);
+    List<RollupZeile> zeilen =
+        List.of(new RollupZeile(LEER_VON, "it-abbruch-prozess", ERFUNDENER_STATUS, 3));
+
+    new TransactionTemplate(transaktionen)
+        .executeWithoutResult(
+            status -> {
+              RollupZeilenzahlen geschrieben =
+                  schreibRepository.ersetzeFenster(new RollupFenster(LEER_VON, LEER_BIS), zeilen);
+
+              assertThat(geschrieben.stundenzeilen()).isEqualTo(1);
+              assertThat(geschrieben.tageszeilen())
+                  .as("Ohne eine Zeile in jeder Ebene bewiese die Ruecknahme unten nichts")
+                  .isEqualTo(1);
+              assertThat(geschrieben.monatszeilen()).isEqualTo(1);
+              assertThat(tagesInhalt(tag)).hasSize(1);
+              assertThat(monatsInhalt(monat)).hasSize(1);
+
+              status.setRollbackOnly();
+            });
+
+    assertThat(
+            monitorDsl.fetchCount(
+                MESSAGE_ROLLUP, MESSAGE_ROLLUP.MESSAGE_STATUS.eq(ERFUNDENER_STATUS)))
+        .as("Die Stundenebene ist zurueckgenommen")
+        .isZero();
+    assertThat(tagesInhalt(tag)).as("Und die Tagesebene ebenfalls").isEmpty();
+    assertThat(monatsInhalt(monat))
+        .as("Und die Monatsebene — sonst haetten die drei Ebenen nicht dieselbe Transaktion")
+        .isEmpty();
   }
 }

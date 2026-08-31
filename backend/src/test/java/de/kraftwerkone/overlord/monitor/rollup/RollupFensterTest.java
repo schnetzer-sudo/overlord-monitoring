@@ -430,4 +430,116 @@ class RollupFensterTest {
           .hasMessageContaining("rueckwaerts");
     }
   }
+
+  @Nested
+  @DisplayName("Die beruehrten Kalendermonate (Monatsebene, Schritt 10b-2)")
+  class BetroffeneMonate {
+
+    private RollupFenster.Monatsbereich monate(String von, String bis) {
+      return new RollupFenster(zeit(von), zeit(bis)).betroffeneMonate().orElseThrow();
+    }
+
+    @Test
+    @DisplayName("Ein Fenster innerhalb eines Monats beruehrt genau diesen einen")
+    void ein_monat() {
+      RollupFenster.Monatsbereich bereich = monate("2025-12-30T03:00", "2025-12-30T05:00");
+
+      assertThat(bereich.erster()).isEqualTo(LocalDate.parse("2025-12-01"));
+      assertThat(bereich.letzter()).isEqualTo(LocalDate.parse("2025-12-01"));
+      assertThat(bereich.monate()).isEqualTo(1);
+    }
+
+    /**
+     * <b>Der Fall, an dem es sonst still schiefginge</b>, eine Ebene hoeher als bei den Tagen:
+     * {@code bis} ist ausschliessend, ein Fenster, das am Monatsersten um Mitternacht endet,
+     * beruehrt den neuen Monat <b>nicht</b>. Zaehlte man ihn mit, loeschte jeder Lauf am
+     * Monatsersten einen Monatseimer, den er anschliessend nicht neu schreibt.
+     */
+    @Test
+    @DisplayName("Ein Fenster, das am Monatsersten endet, beruehrt den neuen Monat NICHT")
+    void bis_ist_ausschliessend() {
+      RollupFenster.Monatsbereich bereich = monate("2025-11-30T23:00", "2025-12-01T00:00");
+
+      assertThat(bereich.erster()).isEqualTo(LocalDate.parse("2025-11-01"));
+      assertThat(bereich.letzter())
+          .as("Der Dezember faengt erst dort an, wo das Fenster aufhoert")
+          .isEqualTo(LocalDate.parse("2025-11-01"));
+    }
+
+    @Test
+    @DisplayName("Ein Rueckgriff ueber den Monatswechsel beruehrt zwei Monate")
+    void rueckgriff_ueber_den_monatswechsel() {
+      // Der praktische Fall: Delta-Lauf am Monatsersten um 00:05, Rueckgriff 15 Minuten.
+      RollupFenster fenster =
+          RollupFenster.delta(zeit("2025-12-01T00:00"), zeit("2025-12-01T00:05"));
+      RollupFenster.Monatsbereich bereich = fenster.betroffeneMonate().orElseThrow();
+
+      assertThat(bereich.erster()).isEqualTo(LocalDate.parse("2025-11-01"));
+      assertThat(bereich.letzter()).isEqualTo(LocalDate.parse("2025-12-01"));
+      assertThat(bereich.monate()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("Ein leeres Fenster beruehrt keinen Monat")
+    void leeres_fenster() {
+      assertThat(
+              new RollupFenster(
+                      ANKER.truncatedTo(ChronoUnit.HOURS), ANKER.truncatedTo(ChronoUnit.HOURS))
+                  .betroffeneMonate())
+          .isEmpty();
+    }
+
+    /**
+     * Der Rechenbereich umfasst <b>ganze Monate</b> und ist damit in aller Regel viel breiter als
+     * das Fenster des Laufs. Er ist ein <b>Tages</b>bereich, weil die Monatsebene aus der
+     * Tagesebene gerechnet wird.
+     */
+    @Test
+    @DisplayName("Der Rechenbereich umfasst ganze Monate, vom Ersten bis zum naechsten Ersten")
+    void rechenbereich_umfasst_ganze_monate() {
+      RollupFenster.Monatsbereich bereich = monate("2025-12-30T03:00", "2025-12-30T05:00");
+
+      assertThat(bereich.von()).isEqualTo(LocalDate.parse("2025-12-01"));
+      assertThat(bereich.bis()).isEqualTo(LocalDate.parse("2026-01-01"));
+    }
+
+    @Test
+    @DisplayName("Der Volllauf am Anker beruehrt jeden Monat des Bestands")
+    void volllauf_beruehrt_jeden_monat() {
+      RollupFenster.Monatsbereich bereich =
+          RollupFenster.voll(zeit("2024-10-01T02:00:28"), ANKER).betroffeneMonate().orElseThrow();
+
+      assertThat(bereich.erster()).isEqualTo(LocalDate.parse("2024-10-01"));
+      assertThat(bereich.letzter()).isEqualTo(LocalDate.parse("2025-12-01"));
+      assertThat(bereich.monate())
+          .as("Vom Oktober 2024 bis zum Dezember 2025 einschliesslich")
+          .isEqualTo(15);
+    }
+
+    /**
+     * <b>Ein Monatsbereich traegt immer den ERSTEN des Monats.</b> Ein anderer Tag darin waere kein
+     * Formfehler, sondern eine zweite Bedeutung derselben Spalte — und die faende niemand.
+     */
+    @Test
+    @DisplayName("Eine Grenze, die nicht der Monatserste ist, wird abgewiesen")
+    void nur_monatserste_sind_grenzen() {
+      assertThatThrownBy(
+              () ->
+                  new RollupFenster.Monatsbereich(
+                      LocalDate.parse("2025-12-02"), LocalDate.parse("2025-12-02")))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("erste Tag ihres Monats");
+    }
+
+    @Test
+    @DisplayName("Ein rueckwaerts laufender Monatsbereich ist eine Ausnahme")
+    void rueckwaerts_ist_eine_ausnahme() {
+      assertThatThrownBy(
+              () ->
+                  new RollupFenster.Monatsbereich(
+                      LocalDate.parse("2025-12-01"), LocalDate.parse("2025-11-01")))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("rueckwaerts");
+    }
+  }
 }
