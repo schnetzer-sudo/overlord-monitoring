@@ -16,7 +16,8 @@ jetzt hängt.**
 > **Nachtrag vom 31.08.2026 (Schritt 10b‑2), §9.** Zwei der offenen Punkte aus §6 sind abgetragen:
 > **T‑3** über eine Absprache mit dem Auftraggeber (`WOC` bleibt unkuratiert) und **T‑4** über den
 > Umbau von `KettenIsolationDbIT` auf dieselbe Zugriffszählung, die §4 beschreibt. **Damit gilt
-> Regel T1 im gesamten Testbestand.** Offen bleiben T‑1, T‑2 und T‑5.
+> Regel T1 im gesamten Testbestand.** Offen bleiben T‑1, T‑2 und T‑5 — **und T‑6 ist dazugekommen**,
+> gefunden von einer Verletzungsprobe (§9.3).
 
 ---
 
@@ -329,6 +330,7 @@ nachdem sie gefallen war.
 |---|---|---|
 | **T-1** | **Zwei gleich viele Datenbankzugriffe könnten verschieden lange dauern** — etwa weil das eine Statement Zeilen liest und das andere keine. Die Zugriffszählung aus §4 deckt das nicht ab. **Ob das eine reale Lücke ist, ist nicht beantwortet.** Zu klären wäre zuerst, ob der Unterschied überhaupt messbar ist, und erst danach, wie man ihn absichert — nicht über die Wanduhr | §4, [`bam-werte.md`](bam-werte.md) §9 |
 | **T-2** | **Die Übernahme auf einem Mandanten mit *mehreren* übernehmbaren Zeilen ist ungeprüft.** Der Test aus §2 legt genau eine an. Dass die Übernahme bei fünf eigenen und drei fremden Zeilen genau die fünf erfasst, folgt daraus nicht — es folgt aus dem Statement, und das ist ein Argument, kein Test | §2 |
+| **T-6** | **Die Kennungsvergleiche der übrigen Isolationstests sind nicht auf ihre Richtung geprüft.** Sie fragen *„steht hier eine Kennung des anderen Mandanten?"*; die schärfere Frage ist *„gehört jede Kennung, die hier steht, mir?"* (§9.3). Bei Liste, Detail, Kette und BAM haben beide Fassungen vermutlich Zähne, weil dort Zeilen und nicht Zahlen zurückkommen — **vermutlich, nicht geprüft** | §9.3 |
 | **T-5** | **Die Übernahme auf einem Mandanten mit mehreren übernehmbaren Zeilen ist weiterhin ungeprüft** — und seit dem Umbau aus §8 lässt sich das auch nicht mehr durch einen fremden `AUSFUEHREN`-Lauf nachholen. Ein Testkonto mit einem eigenen, wegwerfbaren Mandanten wäre der saubere Weg; den gibt es nicht | §8 |
 | ~~**T-3**~~ | ~~**Der Test aus §2 braucht weiterhin einen Prozess ohne Katalogzeile.** Heute haben nur `SUTTONS` (17 frei) und `WOC` (4 frei) welche. Werden auch die kuratiert, wird der Test wieder rot — dann allerdings mit einer Meldung, die genau das sagt, und nicht mit einer Zahl, die niemand einordnen kann. **Eine Abhilfe wäre, dass die Testkopie einen Prozess dauerhaft frei hält;** das ist eine Absprache und keine Codeänderung~~ — **erledigt am 31.08.2026, siehe §9** | §2 |
 
@@ -493,10 +495,11 @@ fehlende.**
 
 ---
 
-## 9. Schritt 10b‑2 — T‑3 und T‑4 abgetragen *(31.08.2026)*
+## 9. Schritt 10b‑2 — T‑3 und T‑4 abgetragen, T‑6 gefunden *(31.08.2026)*
 
 Beide Punkte aus §6 sind erledigt, jeder in einem eigenen Commit und keiner davon durch eine
-abgeschwächte Zusicherung.
+abgeschwächte Zusicherung. **Dazu ein neuer Fund**, und er stammt nicht aus einer Durchsicht,
+sondern aus der Verletzungsprobe eines neu gebauten Tests (§9.3).
 
 ### 9.1 T‑3 — der Katalogtest hat eine dauerhaft freie Reserve
 
@@ -574,12 +577,57 @@ wäre allein die Lücke gewesen.
 > übertragen".
 
 **Damit gilt Regel T1 im gesamten Testbestand.** Die Suche aus §7 ist am 31.08.2026 wiederholt
-worden — `System.nanoTime`, `System.currentTimeMillis`, `StopWatch`, `Thread.sleep`,
-`assertTimeout`, `@Timeout`: **kein einziger Treffer im Anweisungsteil** von `backend/src/test`. Die
-beiden verbliebenen Vorkommen von `System.nanoTime` stehen in `BamIsolationDbIT` und
-`KettenIsolationDbIT` als **Zitat im Klassen-Javadoc** — sie beschreiben, was dort bis zum
-31.08.2026 stand, und behaupten nichts.
+worden — `System.currentTimeMillis`, `StopWatch`, `Thread.sleep`, `assertTimeout`, `@Timeout`:
+**kein einziger Treffer** in `backend/src/test`.
+
+> **`System.nanoTime` kommt weiterhin vor, und die Stelle gehört benannt** — eine falsche
+> Vollständigkeitsaussage ist schlimmer als eine fehlende.
+>
+> | Wo | Was | Zusicherung? |
+> |---|---|---|
+> | `BamIsolationDbIT`, `KettenIsolationDbIT` | **Zitat im Klassen-Javadoc**: was dort bis zum 31.08.2026 stand | nein — Prosa |
+> | `MessungM108DbIT` *(neu am 31.08.2026)* | die Laufzeiten des Dashboard-Endpunkts | **nein** — sie gehen ausschließlich über `melde(…)` nach `System.out`. Die einzige Zusicherung des Läufers ist ein Zählwert |
+>
+> **Die entscheidende Unterscheidung ist dieselbe wie in §7:** nicht, ob eine Zeit gemessen wird,
+> sondern ob der Messwert in einer Zusicherung landet. `MessungM108DbIT` ist derselbe Fall wie
+> `MessungM96DbIT` — ein Messläufer, kein Test.
 
 **Die Lücke bleibt dieselbe und bleibt benannt:** T‑1 gilt jetzt für zwei Tests statt für einen.
 Zwei gleich viele Zugriffe könnten verschieden lange dauern; ob das eine reale Lücke ist, ist
 weiterhin nicht beantwortet.
+
+### 9.3 Ein dritter Fund, und er stammt aus der Verletzungsprobe selbst
+
+**Der Pflicht-Isolationstest des Dashboards war beim ersten Bau zur Hälfte zahnlos.** Er hielt die
+Prozesskennungen des einen Mandanten gegen den Antwortrumpf des anderen — die Bauform, die bei
+Liste, Detail, Kette und BAM trägt. **Mit ausgehängtem Mandantenfilter blieb er grün.**
+
+> ### Der Grund ist strukturell und gilt für jedes Dashboard
+>
+> **Eine aggregierte Antwort trägt kaum Kennungen.** Der Verlauf besteht aus Zahlen, der
+> Verteilungsblock zeigt Partnernamen. Die einzigen Kennungen stehen in „Zuletzt aufgefallen" —
+> und die zehn Zeilen dort gehörten zufällig alle einem *dritten* Mandanten, gegen dessen Liste der
+> Test gar nicht geprüft hat.
+>
+> **Das ist derselbe Mangel wie in §1, nur andersherum:** Dort hing eine Vorbedingung an
+> veränderlichen Daten; hier hängt die *Aussage* daran, welche Zeilen zufällig oben stehen.
+
+**Zwei Zusicherungen tragen den Nachweis jetzt, und beide fallen:**
+
+| Zusicherung | Was sie zeigt | gemessen bei ausgehängtem Filter |
+|---|---|---|
+| `summen_sind_verschieden` | Zwei Mandanten sehen über dasselbe Fenster **verschiedene** Summen | beide sehen **12.004** — die Zahl des ganzen Bestands im 48‑Stunden‑Fenster (M95, P1) |
+| `nur_eigene_prozesse_in_den_zeilen` | Jede **gezeigte** Prozesskennung steht in der **eigenen** Prozessliste | `40090_BMW_LAB_VDA` erscheint bei `VOTG` |
+
+**Die zweite ist die allgemeinere.** Sie dreht die Frage um: statt *„steht hier eine Kennung des
+einen bestimmten anderen Mandanten?"* fragt sie *„gehört jede Kennung, die hier steht, mir?"* —
+und fällt damit unabhängig davon, wem die durchgerutschte Zeile gehört.
+
+> **Gefunden hat den Mangel nicht das Nachdenken, sondern die Verletzungsprobe.** Sie steht in der
+> Abnahme jedes Isolationstests, und dies ist der Lauf, der zeigt, wofür: Ein grüner Test, der seine
+> Aussage nicht trägt, sieht von außen genauso aus wie einer, der sie trägt.
+
+**Was das für die anderen Isolationstests heißt** — und es ist ausdrücklich **nicht** geprüft: Sie
+liefern alle *Zeilen* und nicht *Zahlen*, ihre Kennungsvergleiche haben dort also Zähne. **Ob die
+umgekehrte Fassung („gehört jede gezeigte Kennung mir?") auch dort schärfer wäre, ist offen** und
+steht als Punkt **T‑6** in §6.

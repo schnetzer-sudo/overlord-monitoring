@@ -1159,6 +1159,30 @@ Punkt 55 trägt sie weiter; die Zahlen dafür stehen vollständig hier.
 > ([`nachrichtenliste.md`](nachrichtenliste.md) §5d): Sie fragt vorab, in welchen Stunden ein Mandant
 > überhaupt Nachrichten hat, und stellt die Quellabfrage nur für diese Stunden.
 >
+> > ### ⚠️ Und seit dem 31.08.2026 sind es **drei** — der erste ist jetzt gebaut
+> >
+> > **Das Dashboard war bis dahin der Verbraucher, für den diese Tabelle existiert, und der einzige,
+> > der sie nicht las.** Mit Schritt 10b‑2 Teil D ist er da: `GET /api/dashboard`
+> > ([`dashboard.md`](dashboard.md)). Er liest **alle drei Ebenen** — je Zeitraumpaar eine — und
+> > hängt `process_catalog` an.
+> >
+> > | Verbraucher | Was er liest | Seit |
+> > |---|---|---|
+> > | **Dashboard** | `message_rollup`, `message_rollup_tag`, `message_rollup_monat`, je Paar eine | 31.08.2026 |
+> > | **Fensterverengung der Nachrichtenliste** | nur `message_rollup` | 30.08.2026 |
+> > | Der Rollup-Lauf selbst | schreibt alle drei, liest die jeweils feinere | 26. bzw. 27./31.08.2026 |
+> >
+> > **Die Änderungen aus der Tabelle unten treffen damit einen Verbraucher mehr**, und beim Dashboard
+> > jede der drei Ebenen. Zwei davon wiegen dort schwerer als bei der Liste:
+> >
+> > | Änderung | Was sie am Dashboard bricht |
+> > |---|---|
+> > | Eine Spalte mit anderer Bedeutung füllen (etwa `message_status` klassifiziert statt roh) | Die Einordnung entsteht beim **Lesen** (E‑g) über `MessageStatusClassifier`. Ein materialisierter Wert liefe still an der Liste vorbei, und die **Fehlerarten** — der Namensteil hinter `ERROR_` — wären gar nicht mehr ableitbar |
+> > | Die Eimergrenze ändern | Die Fenster des Dashboards liegen auf **Eimergrenzen**; eine andere Breite verschöbe jeden Balken, ohne dass eine Zahl falsch würde |
+> >
+> > Der Schutz dagegen ist derselbe wie bei der Liste: **kein Kommentar, sondern Tests** —
+> > `DashboardIsolationDbIT`, `DashboardStatementsTest` und `DashboardPlanDbIT`.
+>
 > **Wer diese Tabelle künftig ändert, ändert zwei Dinge** — und das zweite ist die Kernabfrage des
 > Werkzeugs, nicht ein Diagramm. Konkret betroffen wären:
 >
