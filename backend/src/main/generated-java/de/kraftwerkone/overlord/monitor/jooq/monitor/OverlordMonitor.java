@@ -10,6 +10,7 @@ import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AuditLog;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.BamSollaenge;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.BamSpalte;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.MessageRollup;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.MessageRollupMonat;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.MessageRollupTag;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.ProcessCatalog;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.RollupLauf;
@@ -67,6 +68,11 @@ public class OverlordMonitor extends SchemaImpl {
     public final MessageRollup MESSAGE_ROLLUP = MessageRollup.MESSAGE_ROLLUP;
 
     /**
+     * The table <code>overlord_monitor.message_rollup_monat</code>.
+     */
+    public final MessageRollupMonat MESSAGE_ROLLUP_MONAT = MessageRollupMonat.MESSAGE_ROLLUP_MONAT;
+
+    /**
      * The table <code>overlord_monitor.message_rollup_tag</code>.
      */
     public final MessageRollupTag MESSAGE_ROLLUP_TAG = MessageRollupTag.MESSAGE_ROLLUP_TAG;
@@ -103,6 +109,7 @@ public class OverlordMonitor extends SchemaImpl {
             BamSollaenge.BAM_SOLLAENGE,
             BamSpalte.BAM_SPALTE,
             MessageRollup.MESSAGE_ROLLUP,
+            MessageRollupMonat.MESSAGE_ROLLUP_MONAT,
             MessageRollupTag.MESSAGE_ROLLUP_TAG,
             ProcessCatalog.PROCESS_CATALOG,
             RollupLauf.ROLLUP_LAUF

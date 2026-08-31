@@ -10,6 +10,7 @@ import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.AuditLog;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.BamSollaenge;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.BamSpalte;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.MessageRollup;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.MessageRollupMonat;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.MessageRollupTag;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.ProcessCatalog;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.RollupLauf;
@@ -50,6 +51,11 @@ public class Tables {
      * The table <code>overlord_monitor.message_rollup</code>.
      */
     public static final MessageRollup MESSAGE_ROLLUP = MessageRollup.MESSAGE_ROLLUP;
+
+    /**
+     * The table <code>overlord_monitor.message_rollup_monat</code>.
+     */
+    public static final MessageRollupMonat MESSAGE_ROLLUP_MONAT = MessageRollupMonat.MESSAGE_ROLLUP_MONAT;
 
     /**
      * The table <code>overlord_monitor.message_rollup_tag</code>.
