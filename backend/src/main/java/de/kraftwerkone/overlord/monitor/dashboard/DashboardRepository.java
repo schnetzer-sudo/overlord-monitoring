@@ -19,6 +19,8 @@ import java.math.BigDecimal;
 import java.sql.SQLTimeoutException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
@@ -79,6 +81,29 @@ public class DashboardRepository {
    * damit der naechste Join nicht stillschweigend auf die falsche Tabelle zeigt.
    */
   private static final Process KETTE_PROCESS = PROCESS.as("dashboard_process");
+
+  /**
+   * Der Zeitindex auf {@code Message} — <b>der einzige Indexhinweis dieses Projekts</b>, und er
+   * verbietet genau eines: ihn <i>zur Sortierung</i> zu verwenden ({@link #auffaellige}).
+   *
+   * <p><b>Warum ueberhaupt ein Hinweis, wo {@code STRAIGHT_JOIN} ausgeschlossen ist.</b> Das eine
+   * ist ein Verbot der Join-Reihenfolge und war in M42 um Faktor 219 bis 1094 schlechter; dies hier
+   * nimmt dem Optimierer <b>eine einzige Moeglichkeit</b> und laesst ihm die Wahl des
+   * Zugriffspfads. Er ist ausserdem gemessen, und zwar in drei Fassungen (M108): ohne Hinweis, mit
+   * {@code IGNORE INDEX FOR ORDER BY} und mit {@code FORCE INDEX (MessageStatusIDX)}.
+   *
+   * <p><b>Das Ergebnis in einer Zeile:</b> ohne Hinweis 1,6 ms im besten und <b>2.174 ms</b> im
+   * schlechtesten gemessenen Fall — bei {@code VOTG} ueber zwoelf Monate lief das Statement in die
+   * Zeitgrenze des Lese-Pools und endete mit {@code 500}. Mit Hinweis <b>22 bis 25 ms, ueber alle
+   * drei gemessenen Mandanten und alle drei Fensterbreiten</b>. {@code IGNORE} und {@code FORCE}
+   * sind dabei gleich schnell; genommen ist der schwaechere Eingriff.
+   *
+   * <p><b>Der Preis ist benannt:</b> Im guten Fall — ein Mandant mit Fehlern am Fensterrand —
+   * kostet der Hinweis das Sieben- bis Fuenfzehnfache. <b>Getauscht wird Schwankung gegen
+   * Verlaesslichkeit:</b> konstante 24 ms bei einem Budget von 500 ms gegen einen Wert, der
+   * zwischen 1,6 ms und einem Abbruch liegt, je nachdem, ob der Mandant gerade Fehler hat.
+   */
+  private static final String ZEITINDEX = "MessageLastUpdateIDX";
 
   private static final Logger log = LoggerFactory.getLogger(DashboardRepository.class);
 
@@ -287,17 +312,20 @@ public class DashboardRepository {
   private OptionalLong zaehleUeberfaellig(
       MandantContext mandant, LocalDateTime jetzt, Condition zusatz) {
     try {
-      return OptionalLong.of(
-          glassfishDsl.fetchCount(
-              MESSAGE,
-              statusClassifier
-                  .ueberfaelligBedingung(
+      Long gezaehlt =
+          glassfishDsl
+              .select(DSL.count())
+              .from(MESSAGE)
+              .where(
+                  statusClassifier.ueberfaelligBedingung(
                       MESSAGE.MESSAGESTATUS,
                       MESSAGE.MESSAGELASTUPDATE,
                       MESSAGE.MESSAGETIMEOUT,
-                      jetzt)
-                  .and(zusatz)
-                  .and(mandantenkette(mandant, MESSAGE.PROCESSID))));
+                      jetzt))
+              .and(zusatz)
+              .and(mandantenkette(mandant, MESSAGE.PROCESSID))
+              .fetchOne(0, Long.class);
+      return OptionalLong.of(gezaehlt == null ? 0L : gezaehlt);
     } catch (DataAccessException fehler) {
       if (fehler.getCause(SQLTimeoutException.class) == null) {
         throw fehler;
@@ -341,11 +369,66 @@ public class DashboardRepository {
    * {@code ueberfaellig} abgeschaltet ({@code Abfragemerkmal.UEBERFAELLIG}), weil der Rollup keine
    * Frist kennt.
    *
+   * <h2>Zwei Statements und ein Indexhinweis — gemessen und nicht gewaehlt (M108, 31.08.2026)</h2>
+   *
+   * <p>Der erste Bau stellte beide Merkmale mit {@code OR} in <b>ein</b> Statement. Er lieferte das
+   * Richtige und war falsch gebaut, und der Plan sagt warum: Mit dem {@code OR} steigt MariaDB
+   * ueber <b>{@code MessageLastUpdateIDX}</b> ein und liest den <i>ganzen Zeitbereich</i> — 23.126
+   * Zeilen bei 48 Stunden, 209.408 bei dreissig Tagen, <b>2,7 Millionen bei zwoelf Monaten</b> —
+   * und wertet fuer jede die Mandantenkette aus.
+   *
+   * <p><b>Der Grund ist die Deckelung.</b> {@code ORDER BY … LIMIT 10} ist nur billig, wenn die
+   * zehn Zeilen frueh gefunden werden. Ein Mandant <i>ohne</i> Fehler im Fenster zwingt die
+   * Datenbank, den ganzen Bereich zu durchsuchen, bevor sie „nichts" sagen darf — <b>gerade der
+   * gute Fall ist der teure</b>.
+   *
+   * <p><b>Je Merkmal ein Statement genuegte nicht.</b> Auch die getrennte Fehlerabfrage stieg
+   * weiterhin ueber den Zeitindex ein — er liefert die Sortierung gratis, und das ist dem
+   * Optimierer mehr wert als der kleinere Bereich. Erst {@link #ZEITINDEX} als {@code IGNORE INDEX
+   * FOR ORDER BY} dreht den Plan um; dort steht die Messung.
+   *
+   * <p><b>Beides zusammen macht den Aufwand von der Fensterbreite unabhaengig:</b> Beide
+   * Bedingungen sind ueber {@code MessageStatusIDX} sehr selektiv — 822 Fehlerzeilen und 538 offene
+   * im <i>gesamten</i> Bestand —, und der Aufwand haengt danach an der Zahl der <b>auffaelligen</b>
+   * Zeilen statt an der Breite des Fensters.
+   *
    * @param hoechstens wie viele Zeilen zurueckkommen — die Landingpage zeigt eine kurze Liste und
    *     keine Seite
    */
   public List<Auffaelligkeitszeile> zuletztAufgefallen(
       MandantContext mandant, Zeitfenster fenster, LocalDateTime jetzt, int hoechstens) {
+    List<Auffaelligkeitszeile> zusammen = new ArrayList<>();
+    zusammen.addAll(
+        auffaellige(
+            mandant, fenster, statusClassifier.fehlerBedingung(MESSAGE.MESSAGESTATUS), hoechstens));
+    zusammen.addAll(
+        auffaellige(
+            mandant,
+            fenster,
+            statusClassifier.ueberfaelligBedingung(
+                MESSAGE.MESSAGESTATUS, MESSAGE.MESSAGELASTUPDATE, MESSAGE.MESSAGETIMEOUT, jetzt),
+            hoechstens));
+    // Aus zweimal zehn neuesten Zeilen sind die zehn neuesten dieselben wie aus einer
+    // gemeinsamen Abfrage: Die beiden Mengen sind disjunkt (Fehler ist Endstatus, ueberfaellig
+    // setzt das Gegenteil voraus), und keine Zeile kann durch die Deckelung der anderen Haelfte
+    // verlorengehen.
+    zusammen.sort(
+        Comparator.comparing(Auffaelligkeitszeile::zeitpunkt)
+            .thenComparing(Auffaelligkeitszeile::messageId)
+            .reversed());
+    return List.copyOf(zusammen.subList(0, Math.min(hoechstens, zusammen.size())));
+  }
+
+  /**
+   * Die eine Haelfte von Block 6 — <b>eine Bedingung, ein Statement, ein Indexbereich</b>.
+   *
+   * <p>Der zweite Sortierschluessel ist die Kennung: Zwei Nachrichten derselben Sekunde haetten
+   * sonst keine feste Reihenfolge, und der Block spraenge zwischen zwei Aufrufen.
+   *
+   * <p>Zum Indexhinweis siehe {@link #ZEITINDEX} — dort steht, was er kostet und was er spart.
+   */
+  private List<Auffaelligkeitszeile> auffaellige(
+      MandantContext mandant, Zeitfenster fenster, Condition merkmal, int hoechstens) {
     return glassfishDsl
         .select(
             MESSAGE.MESSAGEID,
@@ -353,23 +436,13 @@ public class DashboardRepository {
             MESSAGE.MESSAGESTATUS,
             MESSAGE.PROCESSID,
             SOS.SOSNAME)
-        .from(MESSAGE)
+        .from(MESSAGE.ignoreIndexForOrderBy(ZEITINDEX))
         .leftJoin(SOS)
         .on(SOS.SOSID.eq(MESSAGE.SOSID))
-        .where(MESSAGE.MESSAGELASTUPDATE.ge(fenster.von()))
+        .where(merkmal)
+        .and(MESSAGE.MESSAGELASTUPDATE.ge(fenster.von()))
         .and(MESSAGE.MESSAGELASTUPDATE.lt(fenster.bis()))
-        .and(
-            statusClassifier
-                .fehlerBedingung(MESSAGE.MESSAGESTATUS)
-                .or(
-                    statusClassifier.ueberfaelligBedingung(
-                        MESSAGE.MESSAGESTATUS,
-                        MESSAGE.MESSAGELASTUPDATE,
-                        MESSAGE.MESSAGETIMEOUT,
-                        jetzt)))
         .and(mandantenkette(mandant, MESSAGE.PROCESSID))
-        // Zweiter Sortierschluessel wie in der Liste: Zwei Nachrichten derselben Sekunde haetten
-        // sonst keine feste Reihenfolge, und der Block spraenge zwischen zwei Aufrufen.
         .orderBy(MESSAGE.MESSAGELASTUPDATE.desc(), MESSAGE.MESSAGEID.desc())
         .limit(hoechstens)
         .fetch(
