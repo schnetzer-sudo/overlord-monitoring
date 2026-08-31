@@ -232,6 +232,36 @@ for (const [name, P, weiss] of [
   }
 }
 
+console.log("\n=== Warum der Ton nicht auf 85 gelegt worden ist ===\n");
+{
+  // Groesste Chroma, die bei dieser Helligkeit und diesem Ton noch in sRGB
+  // liegt. Auf den Rand gesetzt wuerde die Farbe bei jedem abweichenden
+  // Rechenweg abgeschnitten — deshalb steht daneben, was gewaehlt worden ist.
+  const maxChroma = (L, h) => {
+    let lo = 0;
+    let hi = 0.45;
+    for (let i = 0; i < 60; i++) {
+      const m = (lo + hi) / 2;
+      if (srgb(ok(L, m, h)).imRaum) lo = m;
+      else hi = m;
+    }
+    return lo;
+  };
+  for (const [block, L, gewaehlt, bezug] of [
+    ["hell  ", 0.52, 0.105, HELL["status-fehler"]],
+    ["dunkel", 0.7, 0.14, DUNKEL["status-fehler"]],
+  ]) {
+    for (const h of [80, 85]) {
+      const c = Math.floor(maxChroma(L, h) * 10000) / 10000;
+      const f = ok(L, h === 80 ? gewaehlt : c, h);
+      console.log(
+        `  ${block} L=${L} Ton ${h}: Chroma hoechstens ${zahl(c, 4)}` +
+          `, gerechnet mit ${zahl(f.C, 4)} → Abstand zu Rot ${zahl(abstand(f, bezug), 4)}`,
+      );
+    }
+  }
+}
+
 console.log("\n=== Die bestehenden Konturen an der Schwelle aus WCAG 1.4.11 ===\n");
 for (const rolle of [
   "status-fehler-kontur",

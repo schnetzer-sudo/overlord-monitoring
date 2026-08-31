@@ -303,6 +303,26 @@ Kategorie *Fehler*; die eigene Farbrolle (orange) ist in
 [`visuelles-konzept.md`](visuelles-konzept.md) §7a entschieden. **Hier ist sie nicht gebaut** — der
 Endpunkt trennt die Kategorie sauber, gefärbt wird in der Oberfläche.
 
+> ### ⚠️ Berichtigung vom 31.08.2026 — am Tag dieses Satzes war sie **nicht** entschieden
+>
+> **Der Absatz oben bleibt im Wortlaut stehen**, weil die Berichtigung sonst nicht nachprüfbar wäre.
+> Falsch ist an ihm ein einziges Wort, und es ist das tragende: *entschieden*.
+>
+> | | |
+> |---|---|
+> | **Was am 31.08.2026 wirklich in §7a stand** | der Punkt als **„aufgeschoben, nicht entschieden"**, aufgenommen am 10.08.2026. Gesetzt war der **Rahmen** — orange, Ton höchstens 85, drei Werte, Kontrast nachzurechnen, spätestens beim Dashboard. Kein einziger Wert |
+> | **Woher die Angabe stammt** | aus dem Prompt zu Schritt 10b‑2 und **ungeprüft übernommen**. Sie ist nicht am Dokument nachgesehen worden, auf das sie verweist |
+> | **Warum es folgenlos blieb** | 10b‑2 ist ein Backend-Schritt und baut keine Oberfläche (§12, Punkt 1). Der Satz beschreibt eine Abgrenzung, die auch ohne die Farbrolle richtig ist: Der Endpunkt trennt die Kategorie, gefärbt wird woanders |
+> | **Seit wann er stimmt** | seit **Schritt 10b‑3a**, demselben 31.08.2026, ein paar Stunden später. `--ueberfaellig` liegt bei **Ton 80**; die drei Werte je Block und die vier Befunde dazu stehen jetzt tatsächlich in [`visuelles-konzept.md`](visuelles-konzept.md) §7a |
+>
+> **Der Befund ist nicht die Farbe, sondern der Weg der Angabe.** Ein Verweis auf einen fremden
+> Abschnitt behauptet, dort nachgesehen zu haben. Dieser hat es nicht getan, und die Aussage wurde
+> erst nachträglich wahr. Dass sie es wurde, macht sie nicht zu einer geprüften.
+>
+> **Der erste Satz desselben Absatzes ist davon nicht berührt**: dass „überfällig" keine Farbe von
+> *Fehler* trägt, folgt aus Regel Q3 und aus §3 und hing nie an §7a. Berichtigt wird die
+> Nebenbehauptung über den Stand eines anderen Dokuments, nicht die Aussage über diesen Endpunkt.
+
 ---
 
 ## 6. Der Leerzustand

@@ -114,6 +114,11 @@ umgesetzt:
 „überfällig" —, gehört sie auf die **orange** Seite, Ton höchstens 85. Zwischen 90 und 135 stünde
 sie dem Akzent zu nahe.
 
+> **Genau das ist am 31.08.2026 geschehen, und der Satz hat gehalten:** `--ueberfaellig` liegt bei
+> **Ton 80**. Es ist keine Statusrolle — *überfällig* ist eine Problemkategorie und liegt quer zur
+> Einordnung —, und sie steht deshalb nicht in der Tabelle oben, sondern in **§7a** mit allen
+> gerechneten Werten.
+
 **Der Fokusrahmen** ist `--akzent-schrift`, nicht `--akzent`: Er muss sich vom Untergrund abheben,
 nicht zur Marke passen. Auf hellem Grund sind das 5,40 : 1. Im Dunkelmodus-Block kehrt sich das um
 — dort ist `--akzent-schrift` eine aufgehellte Stufe (`#c9d151`, 10,7 : 1 auf `--card`).
@@ -354,11 +359,22 @@ Größe der Bedienflächen.
   drei Kategorien in der Wahrnehmung, obwohl sie im Code getrennt bleiben. Das ist der einzige
   bekannte offene Punkt am Farbsystem.
 
+  > **Nachgezogen am 31.08.2026 (Schritt 10b‑3a): Für *überfällig* gilt der Satz nicht mehr.** Die
+  > Rolle `--ueberfaellig` steht in `globals.css`, in beiden Blöcken, mit drei gerechneten Werten —
+  > die Herleitung samt vier Befunden in **§7a**. **Für *unquittiert* gilt er unverändert**, und
+  > zwar aus einem stärkeren Grund als „noch keine Ansicht": Die Kategorie ist mit Entscheidung E‑d
+  > vom 24.08.2026 aus dem MVP genommen und hat bis heute keine operative Definition
+  > ([`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §4.2).
+  >
+  > **Der Satz oben bleibt trotzdem stehen.** Er trägt die Begründung — *die Rolle darf nicht Rot
+  > sein* —, und die gilt für die entschiedene Farbe genauso wie für die offene. Gestrichen wäre sie
+  > nirgends mehr nachlesbar.
+
 ---
 
 ## 7a. Offene Punkte
 
-### „Überfällig" hat keine Farbrolle — aufgeschoben, nicht entschieden
+### „Überfällig" hat keine Farbrolle — ✔ **entschieden am 31.08.2026 (Schritt 10b‑3a)**
 
 *Aufgenommen am 10.08.2026 im Nachtrag zu Schritt 5.*
 
@@ -385,6 +401,161 @@ Kategorie ohne Farbe neben einer roten ist keine neutrale Darstellung, sie ist e
 
 **Für „unquittiert" gilt dasselbe**, nur später: Die Kategorie hat bis heute keine Ansicht.
 
+#### Der Abschluss — drei Werte je Block, jeder gerechnet *(31.08.2026)*
+
+**Der Vermerk oben wird nicht gestrichen und nicht umgeschrieben.** Er ist der Rahmen, gegen den
+gerechnet worden ist; ohne ihn wäre nicht nachlesbar, warum die Werte so und nicht anders ausfallen.
+Vier Vorgaben standen dort, und alle vier sind eingelöst:
+
+| Vorgabe von damals | Eingelöst |
+|---|---|
+| **Ton** orange, höchstens 85 | **80.** Fünf Grad Luft zur Grenze sind Absicht, nicht Rest |
+| **Umfang** drei Werte | Vordergrund, `-flaeche`, `-kontur` — im hellen **und** im dunklen Block |
+| **Nachzurechnen** | `scripts/farbrolle-ueberfaellig/rechne.mjs`. **Jede Zahl unten stammt aus seinem Lauf** |
+| **Zeitpunkt** spätestens beim Dashboard | **vor** dem Dashboard-Frontend, in einem eigenen Schritt und nicht nebenbei |
+
+##### Die Werte
+
+| Token | hell | gemessen auf | dunkel | gemessen auf |
+|---|---|---|---|---|
+| `--ueberfaellig` | `oklch(0.52 0.105 80)` · `#886108` | **5,59 : 1** auf `--card`, **5,35 : 1** auf `--background`, **4,97 : 1** auf `--ueberfaellig-flaeche` | `oklch(0.7 0.14 80)` · `#cb9317` | **6,53 : 1** auf `--card`, **7,15 : 1** auf `--background`, **5,75 : 1** auf `--ueberfaellig-flaeche` |
+| `--ueberfaellig-flaeche` | `oklch(0.96 0.028 80)` · `#fcf0dd` | blasse Tönung; L und Chroma sind die von `--status-fehler-flaeche` | `oklch(0.26 0.05 80)` · `#312103` | ebenso |
+| `--ueberfaellig-kontur` | `oklch(0.65 0.13 80)` · `#b88513` | **3,29 : 1** auf `--card` (WCAG 1.4.11) | `oklch(0.53 0.105 80)` · `#8b640f` | **3,31 : 1** auf `--card` |
+
+**Die Helligkeit ist in beiden Blöcken die von `--status-fehler`** (0.52 hell, 0.7 dunkel), und das
+ist die eine gestalterische Entscheidung, die hier fällt: Regel Q3 führt Fehler und Überfällig
+getrennt und **gleichrangig**. Zwei Kacheln nebeneinander, von denen eine dunkler steht, lesen sich
+als Rangfolge. Unterschieden wird über den **Ton**, nicht über das Gewicht.
+
+**Die Chroma bleibt knapp unter dem Rand des sRGB-Farbraums** — 0.105 bei einem Höchstwert von
+0.1077, dunkel 0.14 bei 0.145. Auf den Rand gesetzt hätte ein anderer Rechenweg die Farbe
+abgeschnitten; die zwei bis drei Prozent Abstand sind der Preis dafür, dass das nicht passiert.
+
+**Die Rolle heißt nicht `--status-ueberfaellig`.** Ein Name mit diesem Präfix verspräche eine
+Zuordnung über `MessageStatusKind`, und die gibt es nicht: *Überfällig* liegt **quer** zur
+Einordnung — dieselbe `WARTEND`-Zeile kann überfällig sein oder nicht. Zugeordnet wird sie trotzdem
+in derselben Datei wie die vier Statusrollen (`lib/status-farbe.ts`, zweite Tabelle
+`PROBLEM_ZUORDNUNG`); zwei Dateien mit Farbzuordnung weichten §2 auf.
+
+##### Die OKLab-Abstände — **berichtet, nicht als Bedingung geprüft**
+
+Vergleichsmaß ist §3: Grün 166 hat zum Akzent **0,343**, der Akzent zu Rot **0,352**.
+
+| Strecke | hell | dunkel |
+|---|---|---|
+| `--ueberfaellig` → `--status-fehler` (`#be2323`) | **0,152** | **0,141** |
+| `--ueberfaellig` → `--akzent` (`#b9c022`) | 0,274 | **0,117** |
+| `--ueberfaellig` → `--status-abgeschlossen` | 0,149 | 0,191 |
+| *zum Vergleich:* `--status-abgeschlossen` → `--akzent` | 0,343 | 0,139 |
+| *zum Vergleich:* `--akzent` → `--status-fehler` | 0,352 | 0,240 |
+| *zum Vergleich:* `--status-abgeschlossen` → `--status-fehler` | 0,276 | 0,286 |
+| die Flächen: `--ueberfaellig-flaeche` → `--status-fehler-flaeche` | 0,025 | 0,045 |
+| *zum Vergleich:* `--status-abgeschlossen-flaeche` → `--status-fehler-flaeche` | 0,049 | 0,084 |
+
+##### ⚠️ Befund 1: Der Abstand zu Rot ist 0,152 — **44 % des Vergleichsmaßes**
+
+**Er ist nicht durch einen anderen Wert zu retten, und ein Ton über 85 kommt nicht in Frage.** Die
+Rechnung dahinter ist kurz:
+
+1. Ein Vordergrund, der **4,5 : 1 auf Weiß** trägt, ist auf etwa L ≤ 0.55 gedeckelt.
+2. `--status-fehler` liegt bei L 0.52. Die Helligkeit trägt zum Abstand also **nichts** bei — anders
+   als beim Vergleichsmaß, wo Grün (0.46) und Akzent (0.777) über 0,3 allein in L auseinanderliegen.
+3. Was bleibt, ist die Tondifferenz. Sie ist bei Ton 80 gegen Rot bei Ton 27 **53 Grad**, und weil
+   beide Farben bei dieser Helligkeit nur rund 0,11 bis 0,19 Chroma tragen können, wird daraus kein
+   großer Weg.
+
+Bei Ton 85 — der Obergrenze — wären es **0,161** statt 0,152. **Das rechtfertigt die Grenze nicht
+auszureizen**: Der Gewinn ist ein Hundertstel, der Verlust wäre die Luft zum Akzent.
+
+**Das Vergleichsmaß aus §3 ist für diese Strecke ohnehin das falsche.** Es misst einen
+**Anwendungs**farbton gegen einen **Status**farbton. Die beiden bestehenden Statusfarben liegen
+untereinander bei **0,276**, nicht bei 0,343 — und dieser Wert ist die ehrlichere Schranke. Auch an
+ihr gemessen erreicht die neue Rolle nur **55 %**.
+
+**Was daraus folgt, folgt nicht aus der Farbe.** Regel Q3 verlangt, dass die Kategorien getrennt
+bleiben; §3 sagt, wie: **nie allein über Farbe**. Für zwei Kacheln, die nebeneinander stehen, heißt
+das Wort und Zeichen an jeder von beiden — und das war ohnehin verbindlich, bevor diese Zahl bekannt
+war. Die Farbe ist die halbe Aussage, und hier ist sie es messbar.
+
+##### ⚠️ Befund 2: Zu Grün ist die Rolle **genauso weit weg wie zu Rot** (0,149)
+
+Nicht erwartet und deshalb notiert. Der Grund ist derselbe: Alle drei sind dunkle, mäßig gesättigte
+Vordergrundfarben und liegen zwangsläufig eng beieinander. **Praktisch harmlos** — Grün und Orange
+sind über den Ton weit getrennt (166 gegen 80) und stehen nicht in derselben Kachelreihe. Es hält
+nur fest, dass die 0,343 aus §3 zwischen zwei *Vordergrund*farben von niemandem erreichbar sind.
+
+##### ⚠️ Befund 3: Im Dunkelblock ist der engere Nachbar der **Akzent** (0,117), nicht Rot
+
+Strukturell: Der Akzent behält im Dunkelblock seinen hellen Wert (`#b9c022`, §3), und eine Schrift,
+die auf dunklem Grund lesbar sein soll, muss selbst hell sein. Ein helles Orange und ein helles
+Gelbgrün liegen dann nah beieinander.
+
+**Das ist keine Eigenheit dieser Rolle.** Dieselbe Rechnung für den Bestand: `--status-abgeschlossen`
+liegt im Dunkelblock **0,139** vom Akzent entfernt — dichter, als die neue Rolle an Rot liegt. **Der
+Dunkelblock ist nie nachgerechnet worden**, und §7 sagt auch, warum: Er steht dort „nur, damit die
+shadcn-Komponenten vollständig bleiben". Die drei neuen Werte sind trotzdem gerechnet und nicht
+gespiegelt; sie halten alle Kontrastbedingungen gegen `--card` 0.21 und `--background` 0.16 ein.
+**Wer den Dunkelmodus einschaltet, rechnet den ganzen Block nach — nicht nur diese Rolle.**
+
+##### ⚠️ Befund 4: **Keine** der vier bestehenden Konturen erfüllt die 3 : 1 aus WCAG 1.4.11
+
+Gemessen gegen `--card`:
+
+| Kontur | auf `--card` | |
+|---|---|---|
+| `--status-fehler-kontur` `#fcc0b8` | 1,57 : 1 | verfehlt |
+| `--status-abgeschlossen-kontur` `#b0d9c6` | 1,55 : 1 | verfehlt |
+| `--status-offen-kontur` `#d4d4d4` | 1,48 : 1 | verfehlt |
+| `--status-ungeklaert-kontur` `#dedede` | 1,35 : 1 | verfehlt |
+| **`--ueberfaellig-kontur` `#b88513`** | **3,29 : 1** | **erfüllt** |
+
+Die Bedingung stand im Auftrag zu diesem Schritt und ist eingehalten. **Der Preis ist sichtbar:** Die
+neue Kontur ist bei L 0.65 deutlich dunkler als die vier bestehenden bei L 0.85 bis 0.90 und wird als
+Plakettenrand kräftiger wirken. **Das wird hier nicht heimlich geglättet** — weder durch eine hellere
+Kontur, die die Bedingung verfehlte, noch durch ein Nachdunkeln der vier anderen, das den Bestand
+umfärbte. Die Ungleichheit ist der Befund. Wer sie auflöst, tut es für alle fünf Rollen zugleich und
+rechnet dabei den ganzen Bestand nach.
+
+##### Wie gerechnet worden ist — und die Gegenprobe dazu
+
+**Der Kontrast wird aus den ungerundeten sRGB-Fließkommawerten gebildet**, nicht aus dem 8‑Bit-Hexwert.
+Das ist die Methode, mit der die vier Akzentstufen in §3 gemessen worden sind: **Nur sie gibt deren
+Zahlen wieder.** Deshalb rechnet das Skript sie zuerst nach und bricht ab, wenn eine abweicht —
+
+> `akzent auf card 1,98` · `akzent-schrift auf card 5,40` · `auf background 5,18` ·
+> `auf akzent-flaeche 4,91` · `akzent-vordergrund auf akzent 9,13` ·
+> `status-abgeschlossen auf card 6,78` · `Grün–Akzent 0,3435` · `Akzent–Rot 0,3523`
+
+— alle acht wiedergegeben, dazu die fünf Hexwerte aus §3. **Ohne diese Gegenprobe wäre die Methode
+und nicht das Ergebnis die offene Frage.** Neben jedem neuen Kontrast steht zusätzlich der aus dem
+gerundeten Hexwert; keiner der beiden liegt je auf der anderen Seite seiner Schwelle.
+
+**Der OKLab-Abstand ist der euklidische Abstand in (L, a, b) einschließlich der Helligkeit** — auch
+das ist die Methode aus §3 und keine andere.
+
+**Unabhängig bestätigt vom Werkzeug selbst:** Lightning CSS schreibt beim Bauen zu jedem `oklch()`
+einen Hex-Rückfall. Im gebauten CSS stehen `#886108`, `#fcf0dd`, `#b88513`, `#cb9317`, `#312103`,
+`#8b640f` — dieselben sechs Werte, die das Skript ausrechnet, Ziffer für Ziffer.
+
+##### Was hier ausdrücklich **nicht** geändert worden ist
+
+**Das Nachrichtendetail bleibt farblos.** §10.4 dort zeigt *überfällig* über Zeichen, Wort und
+Schriftstärke; die Rolle entsteht hier, ihre Verwendung dort ist eine Änderung an einer bestehenden,
+abgenommenen Ansicht. Steht als **offener Punkt 88** unten.
+
+**Für „unquittiert" ändert sich nichts.** Die Kategorie ist mit Entscheidung E‑d vom 24.08.2026 aus
+dem MVP genommen und hat bis heute keine operative Definition. Eine Farbe dafür wäre eine Farbe für
+nichts.
+
+### Offener Punkt 88 — das Nachrichtendetail zieht die Farbe nicht nach
+
+*Aufgenommen am 31.08.2026 (Schritt 10b‑3a). Projektweit höchste bis dahin vergebene Nummer: 87
+([`dashboard.md`](dashboard.md) §11).*
+
+| | |
+|---|---|
+| **88** | **Die Rolle `--ueberfaellig` ist gebaut, das Nachrichtendetail benutzt sie nicht.** [`nachrichtendetail.md`](nachrichtendetail.md) §10.4 hebt die Wartezeile bei `ueberfaellig` seit Schritt 5 **ohne jede Farbe** hervor — mit der ausdrücklichen Begründung, eine Rolle dort zu erfinden hieße, dieser Entscheidung vorzugreifen. Die Entscheidung ist jetzt gefallen, und damit ist die Begründung entfallen; die Darstellung bleibt trotzdem, wie sie ist. **Das ist Absicht und kein Vergessen:** Ein Schritt, der eine Farbe definiert, ändert keine abgenommene Ansicht mit. Wer sie nachzieht, tut es an der Ansicht und prüft dort, ob „Zeichen, Wort und Schriftstärke" **neben** der Farbe bestehen bleiben — nicht an ihrer Stelle (§3, „nie allein über Farbe") |
+
 ---
 
 ## 8. Wie man das Konzept ändert
@@ -393,7 +564,9 @@ Kategorie ohne Farbe neben einer roten ist keine neutrale Darstellung, sie ist e
 |---|---|---|
 | Andere Akzentfarbe | `src/app/globals.css`, die vier Werte `--akzent*` | vier Zeilen, **nachrechnen** |
 | Anderes Grün für „abgeschlossen" | `globals.css`, drei Werte `--status-abgeschlossen*` | drei Zeilen |
+| Anderes Orange für „überfällig" | `globals.css`, drei Werte `--ueberfaellig*` je Block | sechs Zeilen, **nachrechnen** — `scripts/farbrolle-ueberfaellig/rechne.mjs` prüft die vier Bedingungen und berichtet die Abstände (§7a) |
 | Status bekommt eine andere Rolle | `src/lib/status-farbe.ts`, Tabelle `ZUORDNUNG` | eine Zeile |
+| Eine Problemkategorie bekommt eine andere Rolle | `src/lib/status-farbe.ts`, Tabelle `PROBLEM_ZUORDNUNG` | eine Zeile |
 | Dichtere oder luftigere Navigation | `globals.css`, `--dichte-navzeile` | eine Zeile |
 | Dichtere oder luftigere Listen | `globals.css`, `--dichte-zeile` | eine Zeile |
 | Breitere oder schmalere Beschriftungsspalte | `globals.css`, `--dichte-beschriftung` | eine Zeile, **im Panel nachsehen** |
@@ -414,7 +587,7 @@ Verweise und Fokusringe unlesbar sind — geschätzt wird das nicht, gerechnet s
 
 | Regel | Umsetzung |
 |---|---|
-| **Q3** Die drei Problemkategorien bleiben getrennt | Rot ist ausschließlich `FEHLER`. „Überfällig" und „unquittiert" bekommen eine eigene Rolle, siehe §7 — offen, mit Rahmen und Zeitpunkt in §7a |
+| **Q3** Die drei Problemkategorien bleiben getrennt | Rot ist ausschließlich `FEHLER`. „Überfällig" hat seit dem 31.08.2026 die eigene Rolle `--ueberfaellig` (Ton 80), gerechnet und mit vier Befunden belegt in §7a. „Unquittiert" bekommt keine, solange die Kategorie nicht im MVP ist (E‑d). **Der Abstand zu Rot trägt die Trennung allein nicht** — 0,152 gegen 0,343 aus §3; sie hängt an „nie allein über Farbe" |
 | **Q4** Nicht zugeordnet heißt nicht zugeordnet | eigene Rolle `--status-ungeklaert`, kein geratener Wert |
 | Statusabbildung nur über den `MessageStatusClassifier` | `lib/status-farbe.ts` bildet nur die **Einordnung** auf Farbe ab, nie einen Rohwert |
 | Status nie allein über Farbe | §3; als Kommentar an `lib/status-farbe.ts`, wo die Zuordnung entsteht |
