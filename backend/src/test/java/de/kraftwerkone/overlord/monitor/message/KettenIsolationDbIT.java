@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import de.kraftwerkone.overlord.monitor.security.Rolle;
 import de.kraftwerkone.overlord.monitor.security.SicherheitsTestbasis;
+import de.kraftwerkone.overlord.monitor.security.Zugriffszaehler;
+import de.kraftwerkone.overlord.monitor.security.Zugriffszaehlung;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -11,10 +13,12 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import org.jooq.ExecuteListener;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Import;
 
 /**
  * <b>Die beiden Pflicht-Isolationstests der Verkettung</b> (Regel M4) — einer je Endpunkt. Ohne sie
@@ -39,7 +43,30 @@ import org.springframework.beans.factory.annotation.Autowired;
  * <p><b>Das Zeitfenster ist absolut</b> (29.12.2025). Ausser {@code NEXANS} endet jeder Mandant am
  * 30.12.2025 (M3); in einem relativen Fenster saehe {@code SUTTONS} je nach Datenstand null Zeilen
  * — und der Test bewiese nur, dass leer leer ist.
+ *
+ * <h2>Und die dritte Seite wird seit dem 31.08.2026 an der Ursache geprueft, nicht an der Uhr</h2>
+ *
+ * <p>Die Ununterscheidbarkeit hat eine Seite, die kein Rumpfvergleich erreicht: Eine
+ * <b>nachgelagerte Existenzpruefung</b> kostet einen zusaetzlichen Datenbankzugriff und waere ueber
+ * genug Anfragen ein messbarer Kanal, auch wenn beide Antworten Zeichen fuer Zeichen gleich sind.
+ *
+ * <p><b>Bis zum 31.08.2026 stand dafuer eine Wanduhrmessung</b> — zwei {@code System.nanoTime} um
+ * zwei HTTP-Aufrufe, verglichen gegen eine Faktor-10-Schranke. Sie war <b>zeichengleich</b> zu der
+ * Fassung, die {@code BamIsolationDbIT} am selben Tag abgeloest hat; nur der Pfad war ein anderer.
+ * Sie hat einen Zugriff von einer halben Millisekunde (M30‑1) ueber HTTP auf einem Testrechner
+ * geschuetzt. <b>Der Test war nicht ungenau, er hat die falsche Groesse gemessen</b> — das ist der
+ * Befund aus {@code docs/testfestigkeit.md} §7, offener Punkt <b>T-4</b>.
+ *
+ * <p>Gemessen wird stattdessen die Groesse, um die es geht: <b>die Zahl der abgesetzten
+ * Statements</b> auf dem Lese-Kontext. Der Zaehler ist ein zweiter jOOQ-{@link ExecuteListener} auf
+ * {@code glassfishDsl} ({@link Zugriffszaehler}, angebracht ueber {@link Zugriffszaehlung}), er
+ * lebt ausschliesslich in {@code src/test} und aendert am Anwendungscode nichts. <b>Es ist genau
+ * die Bauform aus {@code BamIsolationDbIT}, und zwar dieselbe Klasse und keine Abschrift.</b>
+ *
+ * <p><b>Was die Zaehlung nicht abdeckt</b>, steht als offener Punkt T-1 in {@code
+ * docs/testfestigkeit.md} §6: Zwei gleich viele Zugriffe koennten verschieden lange dauern.
  */
+@Import(Zugriffszaehlung.class)
 class KettenIsolationDbIT extends SicherheitsTestbasis {
 
   private static final String NUTZER_A = PRAEFIX + "kette-votg";
@@ -53,6 +80,7 @@ class KettenIsolationDbIT extends SicherheitsTestbasis {
   private static final LocalDateTime FENSTER_BIS = LocalDateTime.parse("2025-12-30T00:00:00");
 
   @Autowired private Clock anwendungsuhr;
+  @Autowired private Zugriffszaehler zugriffe;
 
   private Sitzung aufVotg;
   private Sitzung aufSuttons;
@@ -227,19 +255,35 @@ class KettenIsolationDbIT extends SicherheitsTestbasis {
    * Kennung, nicht nur mit einer erfundenen: als ADMIN den Mandanten wechseln, dort eine {@code
    * MessageID} holen, zurueckwechseln, dieselbe Kennung anfragen.
    *
-   * <p><b>Verglichen wird auch die Laufzeit.</b> Der Rumpfvergleich prueft die <i>Wirkung</i>,
-   * nicht die <i>Ursache</i>: Ein Code, der erst die Existenz nachschlaegt und dann denselben
-   * festen Text ausgibt, bestuende ihn — und waere trotzdem unterscheidbar, weil „gibt es nicht"
-   * einen Zugriff kostet und „gehoert einem anderen" zwei. Ueber genug Anfragen ist das ein
-   * messbarer Kanal.
+   * <p><b>Verglichen wird auch die Zahl der Datenbankzugriffe.</b> Der Rumpfvergleich prueft die
+   * <i>Wirkung</i>, nicht die <i>Ursache</i>: Ein Code, der erst die Existenz nachschluege und dann
+   * denselben festen Text ausgaebe, bestuende ihn — und waere trotzdem unterscheidbar, weil „gibt
+   * es nicht" einen Zugriff kostet und „gehoert einem anderen" zwei. Ueber genug Anfragen ist das
+   * ein messbarer Kanal.
    *
-   * <p>Die Grenze ist bewusst grob (Faktor zehn): Gemessen ist ein Zugriff von einer halben
-   * Millisekunde (M30‑1), waehrend HTTP, Sitzungspruefung und Zufallslast auf dem Testrechner
-   * deutlich mehr streuen. Der Test soll einen zusaetzlichen <i>Datenbankzugriff</i> auffallen
-   * lassen, nicht das Rauschen eines Testlaufs.
+   * <p><b>Gezaehlt und nicht gestoppt</b> <i>(seit 31.08.2026, Regel T1, offener Punkt T-4)</i>.
+   * Bis dahin stand hier ein Vergleich zweier Wanduhrzeiten gegen eine Faktor-10-Schranke — die
+   * <b>zeichengleiche</b> Fassung dessen, was {@code BamIsolationDbIT} am selben Tag abgeloest hat.
+   * Sie hat eine halbe Millisekunde (M30‑1) ueber HTTP geschuetzt und musste deshalb gelegentlich
+   * grundlos fallen. Die Zahl der abgesetzten Statements ist dieselbe Aussage ohne das Rauschen:
+   * Sie ist genau das, was eine nachgelagerte Existenzpruefung veraendern wuerde.
+   *
+   * <p>Verglichen wird nicht nur die <b>Zahl</b>, sondern die <b>Folge der Statements</b>. Der Text
+   * traegt Platzhalter statt Bindewerte; zwei Anfragen, die dasselbe Statement mit verschiedenen
+   * Kennungen absetzen, sind darin Zeichen fuer Zeichen gleich. Ein zusaetzlicher Zugriff faellt
+   * damit mit seinem Wortlaut auf und nicht nur als um eins hoehere Zahl.
+   *
+   * <p><b>Beide Endpunkte, nicht nur einer.</b> Die alte Fassung hat ausschliesslich {@code
+   * …/kette} gemessen; {@code …/kette/abwaerts} ist ein eigener Weg mit eigener Zaehlung und
+   * eigener Vorpruefung. Die Zaehlung ist billig genug, um ihn mitzunehmen — und teuer waere nur
+   * die Luecke.
+   *
+   * <p>Der <b>Aufwaermlauf bleibt</b>, und aus einem anderen Grund als zuvor: Er ist keine
+   * Beruhigung einer Messung mehr, sondern sorgt dafuer, dass ein einmaliger Zugriff beim ersten
+   * Aufruf — Metadaten, Sitzungsaufbau — nicht in genau einer der beiden Folgen landet.
    */
   @Test
-  @DisplayName("Eine echte fremde Kennung antwortet wie eine erfundene — auch in der Laufzeit")
+  @DisplayName("Eine echte fremde Kennung antwortet wie eine erfundene — auch in den Zugriffen")
   void gegenprobe_mit_echter_fremder_kennung() throws Exception {
     String admin = PRAEFIX + "kette-admin";
     legeNutzerAn(admin, PASSWORT, Rolle.ADMIN);
@@ -254,38 +298,60 @@ class KettenIsolationDbIT extends SicherheitsTestbasis {
             alsAdmin.sende("/api/auth/mandant", "{\"mandantId\":\"" + MANDANT_A + "\"}").status())
         .isEqualTo(200);
 
-    // Ein Aufwaermlauf, bevor gemessen wird — sonst traegt der erste der beiden Aufrufe die
-    // Kosten des ersten Zugriffs auf Message und der Vergleich beschriebe den Aufwaermeffekt.
-    alsAdmin.hole("/api/nachrichten/" + ERFUNDEN + "/kette");
-    alsAdmin.hole("/api/nachrichten/" + fremdeKennung + "/kette");
+    zugriffeSindUnunterscheidbar(alsAdmin, "/api/nachrichten/%s/kette", fremdeKennung);
+    zugriffeSindUnunterscheidbar(alsAdmin, "/api/nachrichten/%s/kette/abwaerts", fremdeKennung);
+  }
 
-    long vorEcht = System.nanoTime();
-    Antwort fremdAberEcht = alsAdmin.hole("/api/nachrichten/" + fremdeKennung + "/kette");
-    long dauerEcht = System.nanoTime() - vorEcht;
+  /**
+   * Fragt denselben Pfad einmal mit einer echten fremden und einmal mit einer erfundenen Kennung an
+   * und haelt beide Antworten samt der <b>Folge der abgesetzten Statements</b> gegeneinander.
+   *
+   * @param vorlage der Pfad mit genau einem {@code %s} fuer die Kennung
+   */
+  private void zugriffeSindUnunterscheidbar(Sitzung sitzung, String vorlage, String fremdeKennung)
+      throws IOException, InterruptedException {
+    String echterPfad = vorlage.formatted(fremdeKennung);
+    String erfundenerPfad = vorlage.formatted(ERFUNDEN);
 
-    long vorErfunden = System.nanoTime();
-    Antwort erfunden = alsAdmin.hole("/api/nachrichten/" + ERFUNDEN + "/kette");
-    long dauerErfunden = System.nanoTime() - vorErfunden;
+    // Ein Aufwaermlauf, bevor gezaehlt wird — sonst traegt der erste der beiden Aufrufe einen
+    // Zugriff, den es nur beim ersten Mal gibt, und der Vergleich beschriebe den Aufwaermeffekt.
+    sitzung.hole(erfundenerPfad);
+    sitzung.hole(echterPfad);
 
-    assertThat(fremdAberEcht.status()).isEqualTo(404);
-    assertThat(erfunden.status()).isEqualTo(404);
+    zugriffe.zuruecksetzen();
+    Antwort fremdAberEcht = sitzung.hole(echterPfad);
+    List<String> beiEchter = zugriffe.abgesetzt();
+
+    zugriffe.zuruecksetzen();
+    Antwort erfunden = sitzung.hole(erfundenerPfad);
+    List<String> beiErfundener = zugriffe.abgesetzt();
+
+    assertThat(fremdAberEcht.status()).as("%s", echterPfad).isEqualTo(404);
+    assertThat(erfunden.status()).as("%s", erfundenerPfad).isEqualTo(404);
     assertThat(vergleichbar(fremdAberEcht))
-        .as("eine echte fremde Kennung ist von einer erfundenen nicht zu unterscheiden")
+        .as(
+            "eine echte fremde Kennung ist von einer erfundenen nicht zu unterscheiden (%s)",
+            vorlage)
         .isEqualTo(vergleichbar(erfunden));
     assertThat(fremdAberEcht.<String>json("$.instance"))
         .as(
             "die einzige Stelle, an der die Kennung vorkommen darf, ist das Zitat der Frage —"
                 + " und dort steht sie zwangslaeufig, weil sie im Pfad steht (RFC 9457)")
-        .isEqualTo("/api/nachrichten/" + fremdeKennung + "/kette");
+        .isEqualTo(echterPfad);
 
-    double verhaeltnis =
-        (double) Math.max(dauerEcht, dauerErfunden) / Math.min(dauerEcht, dauerErfunden);
-    assertThat(verhaeltnis)
+    assertThat(beiEchter)
         .as(
-            "eine vorgelagerte Existenzpruefung kostete einen zusaetzlichen Zugriff und waere hier"
-                + " sichtbar (echt: %d ns, erfunden: %d ns)",
-            dauerEcht, dauerErfunden)
-        .isLessThan(10.0);
+            "Ohne einen einzigen Zugriff waere nichts gezaehlt worden und der Vergleich unten"
+                + " bewiese, dass leer gleich leer ist (%s)",
+            vorlage)
+        .isNotEmpty();
+    assertThat(beiEchter)
+        .as(
+            "eine nachgelagerte Existenzpruefung kostete einen zusaetzlichen Zugriff und waere"
+                + " hier sichtbar — %s, echt: %s, erfunden: %s",
+            vorlage, beiEchter, beiErfundener)
+        .hasSameSizeAs(beiErfundener)
+        .isEqualTo(beiErfundener);
   }
 
   /**

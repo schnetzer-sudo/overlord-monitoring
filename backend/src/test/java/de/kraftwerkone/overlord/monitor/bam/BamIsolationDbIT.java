@@ -4,29 +4,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import de.kraftwerkone.overlord.monitor.security.Rolle;
 import de.kraftwerkone.overlord.monitor.security.SicherheitsTestbasis;
+import de.kraftwerkone.overlord.monitor.security.Zugriffszaehler;
+import de.kraftwerkone.overlord.monitor.security.Zugriffszaehlung;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import org.jooq.Configuration;
-import org.jooq.DSLContext;
-import org.jooq.ExecuteContext;
 import org.jooq.ExecuteListener;
-import org.jooq.ExecuteListenerProvider;
-import org.jooq.impl.DefaultExecuteListenerProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.config.BeanPostProcessor;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 
 /**
@@ -69,7 +60,13 @@ import org.springframework.context.annotation.Import;
  * Statements</b> auf dem Lese-Kontext. Sie ist deterministisch, sie steigt genau dann, wenn jemand
  * eine Existenzpruefung davorbaut, und sie steigt <b>sofort</b> und nicht in einem von vier
  * Laeufen. Der Zaehler ist ein zweiter jOOQ-{@link ExecuteListener} auf {@code glassfishDsl}, er
- * lebt ausschliesslich in dieser Testklasse und aendert am Anwendungscode nichts.
+ * lebt ausschliesslich in {@code src/test} und aendert am Anwendungscode nichts.
+ *
+ * <p><b>Seit dem 31.08.2026 steht er nicht mehr in dieser Klasse</b>, sondern als {@link
+ * Zugriffszaehler} und {@link Zugriffszaehlung} neben {@code SicherheitsTestbasis}: {@code
+ * KettenIsolationDbIT} braucht denselben Mechanismus (offener Punkt T-4), und eine Bedingung, die
+ * an zwei Stellen steht, driftet. <b>Am Verhalten dieses Tests aendert das nichts</b> — es ist
+ * derselbe Zaehler, derselbe Anhaengepunkt, dieselbe Vergleichsform.
  *
  * <p><b>Was die Zaehlung nicht abdeckt</b> — und das ist ein offener Punkt und keine
  * Nebenbemerkung: Zwei gleich viele Zugriffe koennten verschieden lange dauern, etwa weil das eine
@@ -77,7 +74,7 @@ import org.springframework.context.annotation.Import;
  * beantwortet; die Frage steht als offener Punkt T-1 in {@code docs/testfestigkeit.md} §6 und in
  * {@code docs/bam-werte.md} §9.
  */
-@Import(BamIsolationDbIT.Zugriffszaehlung.class)
+@Import(Zugriffszaehlung.class)
 class BamIsolationDbIT extends SicherheitsTestbasis {
 
   private static final String NUTZER_A = PRAEFIX + "bam-votg";
@@ -95,75 +92,6 @@ class BamIsolationDbIT extends SicherheitsTestbasis {
 
   private Sitzung aufVotg;
   private Sitzung aufSuttons;
-
-  /**
-   * Zaehlt die Statements, die auf dem <b>Lese-Kontext</b> abgesetzt werden, und haelt ihren
-   * gerenderten Text fest.
-   *
-   * <p><b>Gezaehlt wird in {@code executeStart}</b>, weil {@link ExecuteContext#sql()} dort steht:
-   * Das Statement ist gerendert, die Bindewerte sind noch Platzhalter. Damit ist der Text zweier
-   * Anfragen, die dasselbe Statement mit anderen Werten absetzen, <b>identisch</b> — und ein
-   * zusaetzliches Statement faellt nicht nur als Zahl auf, sondern mit seinem Wortlaut.
-   *
-   * <p><b>Nur {@code glassfishDsl}.</b> Der Schreib-Kontext bleibt aussen vor; das Sitzungs- und
-   * Protokollschreiben in {@code overlord_monitor} laeuft ueber ihn und haette mit der Frage nichts
-   * zu tun.
-   */
-  static final class Zugriffszaehler implements ExecuteListener {
-
-    private final List<String> abgesetzt = new CopyOnWriteArrayList<>();
-
-    @Override
-    public void executeStart(ExecuteContext ctx) {
-      abgesetzt.add(String.valueOf(ctx.sql()));
-    }
-
-    void zuruecksetzen() {
-      abgesetzt.clear();
-    }
-
-    /**
-     * Die Statements seit dem letzten {@link #zuruecksetzen()}, in der Reihenfolge des Absetzens.
-     */
-    List<String> abgesetzt() {
-      return List.copyOf(abgesetzt);
-    }
-  }
-
-  /**
-   * Haengt den {@link Zugriffszaehler} an den vorhandenen Lese-Kontext, <b>ohne ihn zu ersetzen</b>
-   * — der {@code ReadOnlyExecuteListener} aus {@code JooqConfig} bleibt die dritte Schicht des
-   * Schreibschutzes und darf nicht verlorengehen.
-   *
-   * <p>Sie steht in {@code src/test} und ist ueber {@code @Import} nur an dieser Testklasse
-   * angebracht. Am Anwendungscode aendert sie nichts; sie kostet einen eigenen Anwendungskontext,
-   * und das ist der Preis dafuer, dass kein anderer Test einen fremden Zaehler mitschleppt.
-   */
-  @TestConfiguration
-  static class Zugriffszaehlung {
-
-    @Bean
-    Zugriffszaehler zugriffszaehler() {
-      return new Zugriffszaehler();
-    }
-
-    @Bean
-    static BeanPostProcessor zaehlerAnDenLesekontext(ObjectProvider<Zugriffszaehler> zaehler) {
-      return new BeanPostProcessor() {
-        @Override
-        public Object postProcessAfterInitialization(Object bean, String name) {
-          if ("glassfishDsl".equals(name) && bean instanceof DSLContext dsl) {
-            Configuration cfg = dsl.configuration();
-            ExecuteListenerProvider[] vorhanden = cfg.executeListenerProviders();
-            ExecuteListenerProvider[] erweitert = Arrays.copyOf(vorhanden, vorhanden.length + 1);
-            erweitert[vorhanden.length] = new DefaultExecuteListenerProvider(zaehler.getObject());
-            cfg.set(erweitert);
-          }
-          return bean;
-        }
-      };
-    }
-  }
 
   @BeforeEach
   void nutzerAnlegenUndAnmelden() throws IOException, InterruptedException {

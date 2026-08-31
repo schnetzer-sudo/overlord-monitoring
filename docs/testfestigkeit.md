@@ -13,9 +13,10 @@ jetzt hängt.**
 > bestehen, ist schlechter als der rote von heute. Wo eine Aussage verlorengeht, steht sie unten
 > als offener Punkt — sie wird nicht zugemauert.
 
-> **Nachtrag vom 31.08.2026 (Schritt 10b‑2), §9.** Einer der offenen Punkte aus §6 ist abgetragen:
-> **T‑3** über eine Absprache mit dem Auftraggeber — `WOC` bleibt unkuratiert und ist die Reserve des
-> Katalog-Isolationstests.
+> **Nachtrag vom 31.08.2026 (Schritt 10b‑2), §9.** Zwei der offenen Punkte aus §6 sind abgetragen:
+> **T‑3** über eine Absprache mit dem Auftraggeber (`WOC` bleibt unkuratiert) und **T‑4** über den
+> Umbau von `KettenIsolationDbIT` auf dieselbe Zugriffszählung, die §4 beschreibt. **Damit gilt
+> Regel T1 im gesamten Testbestand.** Offen bleiben T‑1, T‑2 und T‑5.
 
 ---
 
@@ -359,7 +360,9 @@ sich unverändert darauf übertragen: derselbe Zähler, dieselbe Vergleichsform.
 > **Er wird in dieser Runde nicht angefasst.** Ein Fund ist ein Befund für die nächste Runde — und
 > `KettenIsolationDbIT` ist heute grün. Ihn mitzuändern hieße, eine Änderung ohne Anlass in einen
 > Commit zu schieben, dessen Abnahme etwas anderes prüft. **Offener Punkt T-4.**
-
+>
+> **Nachgeholt am 31.08.2026 in Schritt 10b‑2** — die nächste Runde ist dieselbe geblieben, aber ein
+> eigener Commit. Siehe §9.2.
 
 ### Kein Fund — vollständig, damit die Suche belegbar ist
 
@@ -385,12 +388,17 @@ sich unverändert darauf übertragen: derselbe Zähler, dieselbe Vergleichsform.
 > kommt nicht vor. Der Unterschied gehört benannt, weil eine falsche Vollständigkeitsaussage
 > schlimmer ist als eine fehlende. `System.nanoTime` kommt nach dem Umbau
 aus §4 nur noch an **einer** Stelle vor, und das ist der Fund oben.
+>
+> **Fortgeschrieben am 31.08.2026 (Schritt 10b‑2):** Auch diese eine Stelle ist weg. `System.nanoTime`
+> steht seither in **keiner** Zusicherung mehr — die beiden verbliebenen Vorkommen sind Zitate im
+> Klassen-Javadoc von `BamIsolationDbIT` und `KettenIsolationDbIT` und beschreiben, was dort bis zu
+> diesem Tag stand. Siehe §9.2.
 
 ### Der offene Punkt
 
 | Nr. | Punkt | Woher |
 |---|---|---|
-| **T-4** | **`KettenIsolationDbIT.gegenprobe_mit_echter_fremder_kennung` behauptet weiterhin etwas über Wanduhrzeit** (`isLessThan(10.0)` auf ein Dauerverhältnis) und verstößt damit gegen Regel T1. Die Abhilfe ist bekannt und in §4 gebaut; sie ist hier bewusst nicht mitgezogen worden | §7 |
+| ~~**T-4**~~ | ~~**`KettenIsolationDbIT.gegenprobe_mit_echter_fremder_kennung` behauptet weiterhin etwas über Wanduhrzeit** (`isLessThan(10.0)` auf ein Dauerverhältnis) und verstößt damit gegen Regel T1. Die Abhilfe ist bekannt und in §4 gebaut; sie ist hier bewusst nicht mitgezogen worden~~ — **erledigt am 31.08.2026, siehe §9.2** | §7 |
 
 ---
 
@@ -485,7 +493,10 @@ fehlende.**
 
 ---
 
-## 9. Schritt 10b‑2 — T‑3 abgetragen *(31.08.2026)*
+## 9. Schritt 10b‑2 — T‑3 und T‑4 abgetragen *(31.08.2026)*
+
+Beide Punkte aus §6 sind erledigt, jeder in einem eigenen Commit und keiner davon durch eine
+abgeschwächte Zusicherung.
 
 ### 9.1 T‑3 — der Katalogtest hat eine dauerhaft freie Reserve
 
@@ -533,3 +544,42 @@ eigenen Zeilen.
 Prozesse von `WOC` kuratiert, ist der Test wieder rot — dann allerdings mit der Meldung *„Jeder
 Prozess dieses Mandanten trägt bereits eine Katalogzeile"*, die genau das sagt. Das ist kein
 Rückfall auf T‑3, sondern die Absprache, die gebrochen wurde.
+
+### 9.2 T‑4 — `KettenIsolationDbIT` zählt jetzt, statt zu stoppen
+
+**Der Fund aus §7 ist abgetragen.** `gegenprobe_mit_echter_fremder_kennung` misst keine Wanduhrzeit
+mehr; die Bauform aus §4 ist übertragen — derselbe Zähler, dieselbe Vergleichsform.
+
+| | vorher | nachher |
+|---|---|---|
+| Was verglichen wird | `max/min` zweier `System.nanoTime`-Differenzen gegen `isLessThan(10.0)` | die **Folge der gerenderten Statements** auf `glassfishDsl`, Zeichen für Zeichen |
+| Was geschützt wird | ein Datenbankzugriff von einer halben Millisekunde (M30‑1) über HTTP | derselbe Zugriff, an seiner Ursache |
+| Geprüfte Endpunkte | nur `…/{id}/kette` | **`…/{id}/kette` und `…/{id}/kette/abwaerts`** |
+
+**Der zweite Endpunkt ist dazugekommen, und das ist keine Zugabe.** `…/kette/abwaerts` ist ein
+eigener Weg mit eigener Vorprüfung; die alte Fassung hat ihn nie gemessen, weil eine zweite
+Wanduhrmessung den Test nur noch unzuverlässiger gemacht hätte. Eine Zählung kostet nichts — teuer
+wäre allein die Lücke gewesen.
+
+> ### Der Zähler steht seit dieser Runde an einer Stelle, nicht an zweien
+>
+> `Zugriffszaehler` und `Zugriffszaehlung` sind aus `BamIsolationDbIT` herausgelöst und liegen jetzt
+> als eigene Klassen neben `SicherheitsTestbasis` (beide ausschließlich in `src/test`). **Am
+> Verhalten von `BamIsolationDbIT` ändert das nichts** — es ist derselbe Zähler, derselbe
+> Anhängepunkt (`glassfishDsl`, angehängt statt ersetzt), dieselbe Vergleichsform.
+>
+> **Der Grund ist der, den [`prozess-katalog.md`](prozess-katalog.md) §9 für E23 nennt:** *eine
+> Bedingung, die an zwei Stellen steht, driftet.* Bei einem Mechanismus, der in **beiden** Klassen
+> die Sicherheitsaussage trägt, wäre eine Abschrift die schlechtere Hälfte von „unverändert
+> übertragen".
+
+**Damit gilt Regel T1 im gesamten Testbestand.** Die Suche aus §7 ist am 31.08.2026 wiederholt
+worden — `System.nanoTime`, `System.currentTimeMillis`, `StopWatch`, `Thread.sleep`,
+`assertTimeout`, `@Timeout`: **kein einziger Treffer im Anweisungsteil** von `backend/src/test`. Die
+beiden verbliebenen Vorkommen von `System.nanoTime` stehen in `BamIsolationDbIT` und
+`KettenIsolationDbIT` als **Zitat im Klassen-Javadoc** — sie beschreiben, was dort bis zum
+31.08.2026 stand, und behaupten nichts.
+
+**Die Lücke bleibt dieselbe und bleibt benannt:** T‑1 gilt jetzt für zwei Tests statt für einen.
+Zwei gleich viele Zugriffe könnten verschieden lange dauern; ob das eine reale Lücke ist, ist
+weiterhin nicht beantwortet.
