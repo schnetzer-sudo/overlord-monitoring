@@ -66,6 +66,15 @@ public class DashboardService {
   static final int VERTEILUNG_TOP = 10;
 
   /**
+   * Wie viele Zeilen „Zuletzt aufgefallen" zeigt.
+   *
+   * <p><b>Zehn, gewaehlt und nicht gemessen</b> — es ist eine kurze Liste auf einer Landingpage und
+   * keine Seite. Wer mehr will, klickt in die Nachrichtenliste; dort gibt es Cursor, Filter und
+   * Sortierung. Auch diese Zahl steht bewusst nicht in der Konfiguration.
+   */
+  static final int AUFFAELLIG_HOECHSTENS = 10;
+
+  /**
    * Die ganze Landingpage fuer den aktiven Mandanten.
    *
    * @param mandant Regel M2 — erster Pflichtparameter, und er kommt aus der Sitzung (Regel M1)
@@ -82,13 +91,16 @@ public class DashboardService {
     List<Verteilungssumme> verteilt =
         dashboardRepository.verteilung(mandant, zeitraum, fenster, sicht);
     UeberfaelligkachelResponse ueberfaellig = ueberfaellig(mandant, fenster, jetzt);
+    List<Auffaelligkeitszeile> aufgefallen =
+        dashboardRepository.zuletztAufgefallen(mandant, fenster, jetzt, AUFFAELLIG_HOECHSTENS);
 
     return new DashboardResponse(
         zeitraum.code(),
         fensterAntwort(fenster),
         verlauf(summen),
         kacheln(summen, ueberfaellig),
-        verteilung(verteilt, sicht));
+        verteilung(verteilt, sicht),
+        zuletztAufgefallen(aufgefallen));
   }
 
   /**
@@ -131,6 +143,34 @@ public class DashboardService {
     }
     zeilen.add(VerteilungszeileResponse.nichtZugeordnet(nichtZugeordnet));
     return new VerteilungResponse(sicht, zeilen);
+  }
+
+  /**
+   * Block 6: die Kategorie entsteht aus dem Rohwert und nicht aus einer zweiten Spalte.
+   *
+   * <p>Beide Faelle schliessen einander aus — <i>ueberfaellig</i> setzt voraus, dass die Nachricht
+   * <b>nicht</b> in einem Endstatus ist, und <i>Fehler</i> ist einer. Die Abfrage hat mit {@code
+   * fehlerBedingung OR ueberfaelligBedingung} gefiltert; was kein Fehler ist, ist damit
+   * ueberfaellig. <b>Geraten wird dabei nichts:</b> Die Einordnung kommt aus dem Klassifizierer,
+   * und die Ausschliesslichkeit ist dessen eigene Zusicherung ({@code istEndstatus}).
+   */
+  private List<AuffaelligeNachrichtResponse> zuletztAufgefallen(List<Auffaelligkeitszeile> zeilen) {
+    return zeilen.stream()
+        .map(
+            zeile -> {
+              MessageStatusKind einordnung = statusClassifier.einordnung(zeile.messageStatus());
+              return new AuffaelligeNachrichtResponse(
+                  zeile.messageId(),
+                  Zeitpunkte.nachUtc(zeile.zeitpunkt(), anwendungsuhr.getZone()),
+                  zeile.messageStatus(),
+                  einordnung,
+                  einordnung == MessageStatusKind.FEHLER
+                      ? Auffaelligkeit.FEHLER
+                      : Auffaelligkeit.UEBERFAELLIG,
+                  zeile.processId(),
+                  zeile.sosName());
+            })
+        .toList();
   }
 
   private FensterResponse fensterAntwort(Zeitfenster fenster) {

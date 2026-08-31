@@ -17,15 +17,18 @@ import java.util.List;
  * @param verlauf Block 1 — je Eimer die Aufschluesselung nach Einordnung
  * @param kacheln Bloecke 2 und 3 — Nachrichten und Fehler
  * @param verteilung Block 5 — Partner oder Richtung, Top 10 und zwei Restzeilen
+ * @param zuletztAufgefallen Block 6 — Fehler und Ueberfaellige im Fenster, neueste zuerst
  */
 public record DashboardResponse(
     String zeitraum,
     FensterResponse fenster,
     List<VerlaufspunktResponse> verlauf,
     KachelnResponse kacheln,
-    VerteilungResponse verteilung) {
+    VerteilungResponse verteilung,
+    List<AuffaelligeNachrichtResponse> zuletztAufgefallen) {
 
   public DashboardResponse {
     verlauf = List.copyOf(verlauf);
+    zuletztAufgefallen = List.copyOf(zuletztAufgefallen);
   }
 }

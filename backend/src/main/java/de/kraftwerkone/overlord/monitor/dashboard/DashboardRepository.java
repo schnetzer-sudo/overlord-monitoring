@@ -3,6 +3,7 @@ package de.kraftwerkone.overlord.monitor.dashboard;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.MESSAGE;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROCESS;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROJECTMANDANT;
+import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.SOS;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLUP;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLUP_MONAT;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLUP_TAG;
@@ -304,6 +305,74 @@ public class DashboardRepository {
           fehler);
       return OptionalLong.empty();
     }
+  }
+
+  /**
+   * <b>Block 6</b>: die auffaelligen Nachrichten des Fensters, neueste zuerst — Fehler <b>und</b>
+   * Ueberfaellige in <b>einer</b> Abfrage.
+   *
+   * <h2>Warum das nicht ueber das Listen-Repository laeuft, obwohl es dieselbe Frage ist</h2>
+   *
+   * <p>Zwei Gruende, und der zweite waere allein schon entscheidend.
+   *
+   * <ol>
+   *   <li><b>Die Liste kann diese Frage gar nicht beantworten.</b> Dort sind {@code status=FEHLER}
+   *       und {@code ueberfaellig=true} ausdruecklich <b>unvereinbar</b> und ergeben {@code 400}:
+   *       Ueberfaellig setzt {@code WARTEND} oder {@code LAEUFT} voraus, Fehler ist ein Endstatus.
+   *       Ueber die Liste braeuchte dieser Block <b>zwei</b> Aufrufe und ein Zusammenfuehren samt
+   *       Neusortierung im Speicher — und der Endpunkt haette zwei Zugriffe statt einem.
+   *   <li><b>Fachpakete kennen einander nicht.</b> {@code dashboard} darf nicht aus {@code message}
+   *       importieren ({@code PaketstrukturTest.fachpakete_kennen_einander_nicht}); braucht ein
+   *       zweites Fachpaket einen Typ, wandert der Typ nach {@code common}. <b>Genau das ist hier
+   *       geschehen:</b> Was geteilt gehoert, ist nicht das Repository, sondern die
+   *       <i>Bedingung</i> — und die steht in {@code common/MessageStatusClassifier} und wird von
+   *       beiden Seiten gerufen. Die Mandantenkette schreibt ohnehin jedes Fachpaket selbst; sie
+   *       kann nicht nach {@code common} wandern, weil dort keine {@code jooq.glassfish}-Typen
+   *       stehen duerfen.
+   * </ol>
+   *
+   * <p><b>Wiederverwendet ist damit das, was driften koennte</b> — die Fehlerbedingung und die
+   * Ueberfaelligkeitsbedingung. Nachgebaut ist nichts.
+   *
+   * <p><b>Die Fensterverengung faellt hier nicht weg, sie greift ohnehin nicht:</b> Sie ist fuer
+   * {@code ueberfaellig} abgeschaltet ({@code Abfragemerkmal.UEBERFAELLIG}), weil der Rollup keine
+   * Frist kennt.
+   *
+   * @param hoechstens wie viele Zeilen zurueckkommen — die Landingpage zeigt eine kurze Liste und
+   *     keine Seite
+   */
+  public List<Auffaelligkeitszeile> zuletztAufgefallen(
+      MandantContext mandant, Zeitfenster fenster, LocalDateTime jetzt, int hoechstens) {
+    return glassfishDsl
+        .select(
+            MESSAGE.MESSAGEID,
+            MESSAGE.MESSAGELASTUPDATE,
+            MESSAGE.MESSAGESTATUS,
+            MESSAGE.PROCESSID,
+            SOS.SOSNAME)
+        .from(MESSAGE)
+        .leftJoin(SOS)
+        .on(SOS.SOSID.eq(MESSAGE.SOSID))
+        .where(MESSAGE.MESSAGELASTUPDATE.ge(fenster.von()))
+        .and(MESSAGE.MESSAGELASTUPDATE.lt(fenster.bis()))
+        .and(
+            statusClassifier
+                .fehlerBedingung(MESSAGE.MESSAGESTATUS)
+                .or(
+                    statusClassifier.ueberfaelligBedingung(
+                        MESSAGE.MESSAGESTATUS,
+                        MESSAGE.MESSAGELASTUPDATE,
+                        MESSAGE.MESSAGETIMEOUT,
+                        jetzt)))
+        .and(mandantenkette(mandant, MESSAGE.PROCESSID))
+        // Zweiter Sortierschluessel wie in der Liste: Zwei Nachrichten derselben Sekunde haetten
+        // sonst keine feste Reihenfolge, und der Block spraenge zwischen zwei Aufrufen.
+        .orderBy(MESSAGE.MESSAGELASTUPDATE.desc(), MESSAGE.MESSAGEID.desc())
+        .limit(hoechstens)
+        .fetch(
+            satz ->
+                new Auffaelligkeitszeile(
+                    satz.value1(), satz.value2(), satz.value3(), satz.value4(), satz.value5()));
   }
 
   /**
