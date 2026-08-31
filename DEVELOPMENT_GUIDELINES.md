@@ -539,6 +539,73 @@ Vollständig in [`docs/authentifizierung.md`](docs/authentifizierung.md).
 Repository.** Alles über Umgebungsvariablen, Vorlage in `backend/.env.example`. `.env` ist
 ignoriert.
 
+### 4.9 Tests
+
+Diese beiden Regeln stehen hier und nicht in Abschnitt 7, weil sie **unverhandelbar** sind und
+weil Abschnitt 7 keine Kürzel führt. Abschnitt 7 beschreibt, wie getestet wird; hier steht, was
+ein Test **nicht** behaupten darf.
+
+**T1 — Kein Test behauptet etwas über Wanduhrzeit** *(neu am 31.08.2026)*.
+
+> Wo eine **Laufzeiteigenschaft** geprüft werden soll, wird die **Ursache** geprüft und nicht die
+> Uhr: die **Zahl der Datenbankzugriffe**, der **`EXPLAIN`-Plan**, der **Treiberindex**, der
+> **abgesetzte Statement-Text**. Eine Dauer darf gemessen und **ausgegeben** werden; in eine
+> Zusicherung gehört sie nicht.
+
+**Warum die Regel so scharf ist.** Der naheliegende Einwand lautet: eine großzügigere Schranke
+täte es auch. Er ist falsch, und der Fall unten zeigt warum — **eine großzügigere Schranke macht
+den Test stiller, nicht besser.** Sie fällt seltener und findet dafür auch das nicht mehr, wofür
+sie da war. Ein Test, der zufällig rot wird, wird nach der dritten Wiederholung nicht mehr gelesen;
+ein Test, der nie rot wird, wird gar nicht erst vermisst.
+
+**Der Anlass, und er ist ein Fall dieses Projekts.** `BamIsolationDbIT` hat bis zum 31.08.2026 den
+Zeitkanal der Mandantentrennung über zwei `System.nanoTime`-Messungen und eine
+Faktor-10-Schranke geprüft. **Geschützt wurden 0,44 ms; gemessen wurde über HTTP auf einem
+Testrechner.** Einmal fiel er mit 279 ms gegen 20 ms, danach war er dreimal grün. Er misst jetzt
+die Zahl der abgesetzten Statements — deterministisch, und rot in dem Augenblick, in dem jemand
+eine nachgelagerte Existenzprüfung einbaut. Vollständig in
+[`docs/testfestigkeit.md`](docs/testfestigkeit.md) §4, der Nachtrag in
+[`docs/bam-werte.md`](docs/bam-werte.md) §9.
+
+**Die Bauform, die stattdessen gilt, steht im Projekt schon zweimal:**
+[`docs/nachrichtenliste.md`](docs/nachrichtenliste.md) §5d prüft die Fensterverengung am
+gerenderten Statement und am Plan, nicht an der Uhr; `AnmeldeServiceTest` weist den Zeitkanal beim
+Anmelden über den **Aufruf** von `passwortKodierer.matches(...)` nach — nicht darüber, dass der
+unbekannte Fall genauso lange dauert.
+
+**Die Regel gilt rückwirkend.** Der Testbestand ist am 31.08.2026 vollständig durchsucht worden;
+der eine verbliebene Verstoß ist benannt und **nicht** stillschweigend mitgeändert worden
+([`docs/testfestigkeit.md`](docs/testfestigkeit.md) §7, offener Punkt T-4).
+
+> ⚠️ **Die Fehlbedienung, auf die zu achten ist:** Ein Aufwärmlauf vor der Messung sieht aus wie
+> die Abhilfe und ist keine. Er nimmt der Zusicherung einen Teil der Streuung und lässt sie
+> weiterhin die falsche Größe messen.
+
+**T2 — Kein Test hängt an veränderlichen Daten der geteilten Testkopie** *(neu am 31.08.2026)*.
+
+> Ein Test **legt sich an, was er braucht**, und räumt es weg — oder er prüft nur
+> **pflegeunabhängige** Eigenschaften: *„die Antwort enthält keine Zeile eines fremden Mandanten"*
+> statt *„genau n Zeilen"*. **Ein Erwartungswert nennt entweder eine Zahl, die der Test selbst
+> gebaut hat, oder gar keine.**
+>
+> Angelegt wird ausschließlich in `overlord_monitor` (S1) und ausschließlich auf Datensätzen, die
+> noch keine Zeile tragen — mit reinem `INSERT`, nie per Upsert auf eine vorhandene.
+
+**Der Anlass.** Am 27.08.2026 sind **505 Katalogzeilen** kuratiert worden. Zwei Testfälle in
+`ProzessKatalogIsolationDbIT` waren seither rot — nicht weil der Code falsch war, sondern weil ihre
+**Vorbedingung** an einer Zahl aus dem Pflegestand hing (`assertThat(votgVorher).isPositive()` und
+`assertThat(fremd).isNotEqualTo(eigen)`). Sie wären beim nächsten Pflegevorgang wieder rot geworden
+und beim übernächsten wieder. Vollständig in
+[`docs/testfestigkeit.md`](docs/testfestigkeit.md) §§1–3.
+
+**Die Erwartungswerte auf den jeweils heutigen Stand nachzuziehen ist ausdrücklich unzulässig.**
+Das ist grün bis zur nächsten Pflege und die Ursache, nicht die Abhilfe.
+
+> ⚠️ **Die Fehlbedienung, auf die zu achten ist:** Ein Test, der sich seine Zeile per
+> `INSERT … ON DUPLICATE KEY UPDATE` anlegt, überschreibt im Zweifel eine kuratierte fremde Zeile
+> und lässt sie anschließend von der eigenen Aufräumregel löschen. Genau das ist am 26.08.2026
+> passiert ([`docs/mandantentrennung.md`](docs/mandantentrennung.md) §5).
+
 ---
 
 ## 5. API-Konventionen

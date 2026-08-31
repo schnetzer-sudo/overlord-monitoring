@@ -2444,6 +2444,33 @@ Nummerierung im Anschluss an den projektweit höchsten Stand (**54**, in [`rollu
     über den *ganzen* Bestand 11.957 Zeilen** (M87 Variante 4) — weniger, als die
     Zwölf-Monats-Ansicht heute allein für ihr Fenster liest (280.186). Die Entscheidung gehört dem
     Auftraggeber; **diese Runde entscheidet sie nicht**.
+
+    > ### ✔ Erledigt am 31.08.2026 — beide Ebenen sind gebaut und gemessen
+    >
+    > **Der Auftraggeber hat am 27.08.2026 entschieden.** Beide in diesem Punkt genannten Ebenen
+    > sind inzwischen gebaut:
+    >
+    > | | gebaut | gemessen | Zwölf-Monats-Ansicht, `NEXANS` |
+    > |---|---|---|---|
+    > | **Tagesebene** `message_rollup_tag` | `V10`, 27.08.2026 | [`rollup.md`](rollup.md) §9a | 767,128 / 908,539 ms |
+    > | **Monatsebene** `message_rollup_monat` | `V12`, 31.08.2026 | [`rollup.md`](rollup.md) §9d, **M107** | **65,350 / 88,672 ms** |
+    >
+    > **Das Tor bei 700 ms ist damit offen, mit Faktor 7,9 Luft.** Die Tagesebene allein hat es
+    > nicht geöffnet — genau dafür war das Tor da.
+    >
+    > **Und die Vermutung dieses Punktes hat gehalten, ohne dass sie hätte halten müssen.** Er
+    > sagt: *„Die Kosten hängen linear an der Zahl gelesener Rollupzeilen."* M107 hat das über die
+    > **dritte** Ebene bestätigt — 6,77 µs je Monatszeile gegen 7,41 µs je Tageszeile bei `NEXANS`,
+    > beide mitten im hier genannten Band von 5,3 bis 11,5 µs. **Die Ansicht wird schneller, weil
+    > sie weniger liest, und um genau den Faktor, um den sie weniger liest.**
+    >
+    > **Eine Zahl dieses Punktes ist dabei falsch benutzt worden, und das gehört hierher:** Die
+    > 11.957 Zeilen sind der **Gesamtbestand** der Monatsebene, nicht das, was ein
+    > Zwölf-Monats-Fenster liest. Letzteres sind **9.649** (M87‑5, Jahresscheibe 2025, Variante 4).
+    > Wer die 11.957 gleichmäßig auf 22 Monate verteilt und mit zwölf multipliziert, landet bei
+    > rund 6.500 — und diese Mittelung ist auf diesem Bestand falsch: 2024 trägt drei Monate, 2026
+    > ist praktisch leer, **2025 trägt allein 9.649**. Der Satz in diesem Punkt ist trotzdem
+    > richtig, denn er vergleicht Gesamtbestand mit Fenster und sagt das auch.
 56. **`ueberfaellig` ist eine zweite Abfrageform und kein Filter.** Er wechselt den Treiberindex,
     erzwingt ein `filesort` und entwertet den Cursor. Das ist kein Fehler und kein Grund, ihn nicht
     zu bauen — aber es gehört in [`nachrichtenliste.md`](nachrichtenliste.md), bevor er gebaut wird,
