@@ -165,7 +165,7 @@ class RollupTagStatementsTest {
    * still und stuende erst im Dashboard.
    */
   @Test
-  @DisplayName("Kein ON DUPLICATE KEY UPDATE, in keinem der vier Statements")
+  @DisplayName("Kein ON DUPLICATE KEY UPDATE, in keinem der sechs Statements")
   void kein_hochzaehlen() {
     repository.ersetzeFenster(ZWEI_STUNDEN, List.of());
 

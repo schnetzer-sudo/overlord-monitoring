@@ -924,7 +924,7 @@ Alle drei neuen sind dieselbe Klasse wie der Doppelschlüssel vom 11.08.2026: zw
 | **M2** Mandant als erster Pflichtparameter | `BamRepository`, alle drei Methoden; ArchUnit prüft es |
 | **M3** Filter im Statement | `EXISTS` über `Process → ProjectMandant` in **jedem** Statement (§9), zusätzlich ohne DB geprüft |
 | **M4** Isolationstest je Endpunkt | `BamIsolationDbIT` |
-| **404 statt 403** | `RessourceNichtGefundenException`, fester Text; fremd und erfunden ununterscheidbar **in Rumpf und Laufzeit** (§9) |
+| **404 statt 403** | `RessourceNichtGefundenException`, fester Text; fremd und erfunden ununterscheidbar **in Rumpf und in der Zahl der Datenbankzugriffe** (§9, so seit dem 31.08.2026 — bis dahin „in der Laufzeit", Regel T1) |
 | **M5** die Trennung gilt auch quer | auch die **Zählung** trägt den Filter — sonst nennte die Antwort eine Zahl über fremden Bestand |
 | **L1** Pflicht-Zeitfenster | gilt für Listen über `Message`; hier ist die Menge über einen Primärschlüssel benannt, und `MessageBAM` trägt keinen Zeitstempel (§1) |
 | **L2** keine Live-Aggregation | zwei `COUNT`-Formen über **eine** Nachricht, beide `Using index` — keine Kennzahl über `Message` (§8) |

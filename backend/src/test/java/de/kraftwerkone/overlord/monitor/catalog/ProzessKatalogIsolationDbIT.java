@@ -197,6 +197,39 @@ class ProzessKatalogIsolationDbIT extends SicherheitsTestbasis {
         .execute();
   }
 
+  /**
+   * <b>Der Wachposten vor jedem {@code AUSFUEHREN}.</b>
+   *
+   * <p>Der Knopf uebernimmt <b>alle</b> uebernehmbaren Zeilen des aktiven Mandanten, nicht nur die
+   * dieses Tests. Traegt der Bestand welche, kuratierte der Testlauf sie mit — und die
+   * Aufraeumregel aus {@code @AfterEach} loeschte sie danach, weil der Endpunkt {@code
+   * geaendert_von} auf den Testnutzer setzt. <b>Das ist genau der Vorfall vom 26.08.2026, nur ueber
+   * einen anderen Weg</b> ({@code docs/mandantentrennung.md} §5).
+   *
+   * <p>Deshalb faehrt kein Testfall {@code AUSFUEHREN}, ohne vorher nachzusehen. Findet er eine
+   * fremde uebernehmbare Zeile, <b>bricht er ab, statt sie anzufassen</b>.
+   */
+  private void nurEigeneDuerfenUebernommenWerden(Sitzung sitzung)
+      throws IOException, InterruptedException {
+    List<String> prozesse = sitzung.hole("/api/katalog/prozesse").json("$[*].processId");
+    List<String> fremde =
+        monitorDsl
+            .select(PROCESS_CATALOG.PROCESS_ID)
+            .from(PROCESS_CATALOG)
+            .where(PROCESS_CATALOG.PROCESS_ID.in(prozesse))
+            .and(PROCESS_CATALOG.PFLEGESTATUS.eq(Pflegestatus.OFFEN.name()))
+            .and(
+                PROCESS_CATALOG.VORSCHLAG_HERKUNFT.in(
+                    VorschlagHerkunft.REGEL_A.name(), VorschlagHerkunft.REGEL_B.name()))
+            .and(PROCESS_CATALOG.GEAENDERT_VON.notLike(PRAEFIX + "%"))
+            .fetch(satz -> satz.value1());
+    assertThat(fremde)
+        .as(
+            "AUSFUEHREN wuerde diese kuratierten Zeilen mit uebernehmen, und die Aufraeumung"
+                + " loeschte sie danach. Der Test bricht lieber ab.")
+        .isEmpty();
+  }
+
   private static int betroffen(Sitzung sitzung) throws IOException, InterruptedException {
     Antwort vorschau =
         sitzung.sende("/api/katalog/vorschlaege-uebernehmen", uebernahme("VORSCHAU"));
@@ -403,71 +436,75 @@ class ProzessKatalogIsolationDbIT extends SicherheitsTestbasis {
    * dem Pflegestand einer geteilten Testkopie und haette beim naechsten Pflegevorgang erneut
    * gewechselt. Die Einzelheiten stehen in {@code docs/testfestigkeit.md} §1.
    *
-   * <p>Gebaut ist er deshalb <b>umgekehrt</b>: Die eine uebernehmbare Zeile gehoert {@code
-   * SUTTONS}, sie ist von diesem Test angelegt, und <b>der fremde Lauf ist der von {@code
-   * VOTG}</b>. Der Nachweis besteht aus zwei Schritten, die einander erst zu einem Beweis machen:
+   * <p>Gebaut ist er deshalb <b>umgekehrt</b>: Die eine uebernehmbare Zeile gehoert {@code SUTTONS}
+   * und ist von diesem Test angelegt. <b>Die Zaehne stecken auf der Leseseite</b>, und das ist kein
+   * Rueckzug, sondern die schaerfere Stelle:
    *
    * <ol>
-   *   <li><b>{@code AUSFUEHREN} als {@code VOTG} laesst die Zeile von {@code SUTTONS} offen.</b>
-   *       Das ist die Isolationsaussage.
-   *   <li><b>{@code AUSFUEHREN} als {@code SUTTONS} nimmt genau diese Zeile.</b> Das ist die
-   *       Gegenprobe, und sie ist es, die dem ersten Schritt seine Zaehne gibt: Sie zeigt, dass die
-   *       Zeile sehr wohl uebernehmbar war — der fremde Lauf hat sie also nicht deshalb liegen
-   *       lassen, weil ohnehin nichts zu tun war.
+   *   <li><b>Die Vorschau von {@code VOTG} sieht die neue Zeile von {@code SUTTONS} nicht.</b>
+   *       Verglichen wird die Zahl vor und nach dem Anlegen — sie muss <b>gleich</b> bleiben. Fiele
+   *       der Mandantenfilter aus {@code findeUebernehmbareVorschlaege}, stuende hier eine mehr.
+   *       Das ist die Isolationsaussage, und sie kostet keinen einzigen Schreibzugriff.
+   *   <li><b>{@code AUSFUEHREN} als {@code SUTTONS} nimmt genau diese Zeile.</b> Das gibt Schritt 1
+   *       seine Zaehne: Die Zeile <i>war</i> uebernehmbar — sie ist in der Vorschau von {@code
+   *       VOTG} also nicht deshalb ausgeblieben, weil es ohnehin nichts zu sehen gab.
+   *   <li><b>Und {@code VOTG} hat sich dabei in keiner Spalte veraendert.</b> Verglichen wird der
+   *       <b>ganze Antwortrumpf</b> der Pflegeliste vor und nach dem Lauf, nicht nur eine Zahl.
    * </ol>
    *
-   * <p>Die <b>Gegenrichtung</b> bleibt zusaetzlich erhalten und ist sogar schaerfer geworden: Statt
-   * einer Zahl wird der <b>ganze Antwortrumpf</b> der Pflegeliste von {@code VOTG} vor und nach dem
-   * Lauf von {@code SUTTONS} verglichen. Eine Veraenderung an irgendeiner Spalte einer beliebigen
-   * Zeile faellt damit auf, nicht nur eine an der Zahl der uebernehmbaren.
+   * <h2>Warum der fremde Lauf nicht {@code AUSFUEHREN} fahren darf</h2>
    *
-   * <p><b>{@code AUSFUEHREN} laeuft hier bewusst</b>, und ausschliesslich auf selbst angelegten
-   * Zeilen mit dem Testpraefix. Gegen einen echten Bestand wird der Modus nirgends gefahren; dass
-   * der Lauf von {@code VOTG} heute nichts vorfindet, ist dabei kein Zufall, sondern der
-   * Pflegestand — und der Test haengt nicht mehr daran.
+   * <p><b>Ein erster Entwurf dieser Runde hat genau das getan</b> — {@code AUSFUEHREN} als {@code
+   * VOTG}, um zu zeigen, dass die Zeile von {@code SUTTONS} liegen bleibt. Das ist auf einer
+   * <b>geteilten</b> Testkopie unzulaessig: Der Knopf uebernimmt <b>alle</b> uebernehmbaren Zeilen
+   * des aktiven Mandanten. Haette {@code VOTG} welche, kuratierte der Testlauf sie mit, setzte
+   * dabei {@code geaendert_von} auf den Testnutzer — und die Aufraeumung aus §7 loeschte sie
+   * danach. <b>Das ist der Vorfall vom 26.08.2026, nur ueber einen anderen Weg.</b>
+   *
+   * <p>Dass es heute nicht knallt, liegt allein daran, dass {@code VOTG} zurzeit keine
+   * uebernehmbare Zeile hat — also an genau dem Pflegestand, von dem dieser Test unabhaengig sein
+   * soll. {@link #nurEigeneDuerfenUebernommenWerden} steht deshalb vor jedem {@code AUSFUEHREN} und
+   * bricht ab, statt eine fremde Zeile anzufassen.
    */
   @Test
   @DisplayName("Vorschlagsuebernahme: sie erfasst nur die Zeilen des aktiven Mandanten")
   void uebernahme_erfasst_nur_den_aktiven_mandanten() throws Exception {
+    int suttonsVorher = betroffen(aufSuttons);
+    int votgVorher = betroffen(aufVotg);
+    String votgRumpfVorher = aufVotg.hole("/api/katalog/prozesse").rumpf();
+
     // Die eine Zeile, um die es geht. Sie ist von diesem Test angelegt und traegt das Praefix;
     // was der Bestand von sich aus hergibt, spielt fuer die Aussage keine Rolle mehr.
-    int suttonsVorher = betroffen(aufSuttons);
     String vonSuttons = prozessOhneKatalogzeile(aufSuttons);
     legeVorschlagAn(vonSuttons);
 
     assertThat(betroffen(aufSuttons))
-        .as("Die eine angelegte Zeile, und keine des anderen Mandanten")
+        .as("Die eine angelegte Zeile ist bei ihrem Mandanten angekommen")
         .isEqualTo(suttonsVorher + 1);
     assertThat(pflegestatusVon(aufSuttons, vonSuttons))
         .as("Ausgangszustand: die Zeile ist offen und damit uebernehmbar")
         .isEqualTo(Pflegestatus.OFFEN.name());
 
-    // 1. Der fremde Lauf. Er darf die Zeile von SUTTONS nicht erwischen.
-    Antwort fremderLauf =
-        aufVotg.sende("/api/katalog/vorschlaege-uebernehmen", uebernahme("AUSFUEHREN"));
-    assertThat(fremderLauf.status()).isEqualTo(200);
-
-    assertThat(pflegestatusVon(aufSuttons, vonSuttons))
+    // 1. Die Isolationsaussage, und sie kostet keinen Schreibzugriff: Beim anderen Mandanten ist
+    //    die neue Zeile nicht angekommen.
+    assertThat(betroffen(aufVotg))
         .as(
-            "Der Knopf von %s hat eine offene Zeile von %s uebernommen — er schreibt ueber"
-                + " Mandantengrenzen",
+            "Die Vorschau von %s zaehlt eine Zeile von %s mit — der Mandantenfilter der"
+                + " uebernehmbaren Vorschlaege traegt nicht",
             MANDANT_A, MANDANT_B)
-        .isEqualTo(Pflegestatus.OFFEN.name());
+        .isEqualTo(votgVorher);
 
-    // Der Ausgangsstand von VOTG — erhoben NACH dessen eigenem Lauf, damit der Vergleich unten
-    // nur die Wirkung des fremden Laufs misst und nicht die des eigenen.
-    String votgVorher = aufVotg.hole("/api/katalog/prozesse").rumpf();
-
-    // 2. Die Gegenprobe, die Schritt 1 seine Zaehne gibt: Dieselbe Zeile, derselbe Modus, nur der
-    // aktive Mandant ist ein anderer — und jetzt greift der Knopf.
+    // 2. Die Gegenprobe, die Schritt 1 seine Zaehne gibt: Dieselbe Zeile, und jetzt greift der
+    //    Knopf — sie war also sehr wohl uebernehmbar.
+    nurEigeneDuerfenUebernommenWerden(aufSuttons);
     Antwort eigenerLauf =
         aufSuttons.sende("/api/katalog/vorschlaege-uebernehmen", uebernahme("AUSFUEHREN"));
     assertThat(eigenerLauf.status()).isEqualTo(200);
     assertThat(eigenerLauf.<Integer>json("$.betroffen")).isEqualTo(suttonsVorher + 1);
     assertThat(pflegestatusVon(aufSuttons, vonSuttons))
         .as(
-            "Ohne diesen Schritt bewiese Schritt 1 nur, dass der Knopf gar nichts tut — die Zeile"
-                + " war uebernehmbar, der fremde Lauf hat sie trotzdem liegen lassen")
+            "Ohne diesen Schritt bewiese Schritt 1 nur, dass es bei %s ohnehin nichts zu sehen gab",
+            MANDANT_A)
         .isEqualTo(Pflegestatus.GEPFLEGT.name());
 
     // 3. Und die Gegenrichtung: der Lauf von SUTTONS hat bei VOTG keine einzige Spalte angefasst.
@@ -475,7 +512,8 @@ class ProzessKatalogIsolationDbIT extends SicherheitsTestbasis {
         .as(
             "Beim anderen Mandanten darf sich keine einzige Zeile geaendert haben — sonst schriebe"
                 + " der Knopf ueber Mandantengrenzen")
-        .isEqualTo(votgVorher);
+        .isEqualTo(votgRumpfVorher);
+    assertThat(betroffen(aufVotg)).isEqualTo(votgVorher);
   }
 
   /**

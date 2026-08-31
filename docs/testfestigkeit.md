@@ -99,6 +99,10 @@ nicht, dass jemand anderes sie hingelegt hat.
 
 `ProzessKatalogIsolationDbIT.uebernahme_erfasst_nur_den_aktiven_mandanten`.
 
+> **Dieser Abschnitt beschreibt den Entwurf; §8.2 beschreibt, wo er noch falsch war.** Der erste
+> Bau fuhr den fremden Lauf als `AUSFUEHREN` und hätte damit auf einer geteilten Testkopie
+> kuratierte Zeilen angefasst. Die Zähne stecken deshalb heute auf der **Leseseite**.
+
 **Der Weg, den der Test nicht gehen kann.** Naheliegend wäre: Der Test legt sich für **beide**
 Mandanten eine übernehmbare Zeile an. Das geht nicht — eine Katalogzeile darf nur auf einem Prozess
 **ohne** Zeile entstehen (reines `INSERT`, die Lehre vom 26.08.2026, siehe
@@ -316,6 +320,7 @@ nachdem sie gefallen war.
 |---|---|---|
 | **T-1** | **Zwei gleich viele Datenbankzugriffe könnten verschieden lange dauern** — etwa weil das eine Statement Zeilen liest und das andere keine. Die Zugriffszählung aus §4 deckt das nicht ab. **Ob das eine reale Lücke ist, ist nicht beantwortet.** Zu klären wäre zuerst, ob der Unterschied überhaupt messbar ist, und erst danach, wie man ihn absichert — nicht über die Wanduhr | §4, [`bam-werte.md`](bam-werte.md) §9 |
 | **T-2** | **Die Übernahme auf einem Mandanten mit *mehreren* übernehmbaren Zeilen ist ungeprüft.** Der Test aus §2 legt genau eine an. Dass die Übernahme bei fünf eigenen und drei fremden Zeilen genau die fünf erfasst, folgt daraus nicht — es folgt aus dem Statement, und das ist ein Argument, kein Test | §2 |
+| **T-5** | **Die Übernahme auf einem Mandanten mit mehreren übernehmbaren Zeilen ist weiterhin ungeprüft** — und seit dem Umbau aus §8 lässt sich das auch nicht mehr durch einen fremden `AUSFUEHREN`-Lauf nachholen. Ein Testkonto mit einem eigenen, wegwerfbaren Mandanten wäre der saubere Weg; den gibt es nicht | §8 |
 | **T-3** | **Der Test aus §2 braucht weiterhin einen Prozess ohne Katalogzeile.** Heute haben nur `SUTTONS` (17 frei) und `WOC` (4 frei) welche. Werden auch die kuratiert, wird der Test wieder rot — dann allerdings mit einer Meldung, die genau das sagt, und nicht mit einer Zahl, die niemand einordnen kann. **Eine Abhilfe wäre, dass die Testkopie einen Prozess dauerhaft frei hält;** das ist eine Absprache und keine Codeänderung | §2 |
 
 ---
@@ -323,7 +328,7 @@ nachdem sie gefallen war.
 ## 7. Der Suchlauf — wo sonst noch eine Wanduhr in einer Zusicherung steht
 
 Regel **T1** gilt rückwirkend. Der Testbestand ist deshalb am 31.08.2026 vollständig durchsucht
-worden — **86 Java-Dateien** unter `backend/src/test`, davon 36 `*DbIT`.
+worden — **86 Java-Dateien** unter `backend/src/test`, davon 36 `*DbIT` (Stand vor den drei Testklassen, die in dieser Runde dazugekommen sind).
 
 **Gesucht wurde nach:** `System.nanoTime`, `System.currentTimeMillis`, `Duration.between`,
 `Instant.now`, `LocalDateTime.now`, `StopWatch`, `.toMillis(`, `.toNanos(`, `.toSeconds(`,
@@ -360,8 +365,16 @@ sich unverändert darauf übertragen: derselbe Zähler, dieselbe Vergleichsform.
 | dreizehn weitere `isLessThan`-Stellen | Zählwerte, Positionen im gerenderten SQL, Schleifenbremsen | kein Messwert |
 
 **Negativbefunde:** kein `Thread.sleep`, kein `Awaitility`, kein `StopWatch`, kein `@Timeout`, kein
-`assertTimeout`, kein `Instant.now()`/`LocalDateTime.now()`, kein `new Date()`, kein `isCloseTo(…,
-within(…))` auf einer Dauer — im **gesamten** Testbestand. `System.nanoTime` kommt nach dem Umbau
+`assertTimeout`, kein `new Date()`, kein `isCloseTo(…, within(…))` auf einer Dauer — im
+**gesamten** Testbestand.
+
+> **Eine Zeile dieser Aufzählung war zu weit gefasst und ist am 31.08.2026 korrigiert worden.** Sie
+> sagte zusätzlich „kein `Instant.now()`/`LocalDateTime.now()`". Das stimmt so nicht:
+> `DatenzugriffDbIT:187` und `NachrichtenUeberfaelligDbIT:96` rufen **`LocalDateTime.now(anwendungsuhr)`**
+> auf — mit der **Anwendungsuhr** als Argument, und das ist genau die Form, die Regel Z1 vorschreibt.
+> **Kein Fund also, aber auch kein Negativbefund**: Verboten ist der argumentlose Aufruf, und der
+> kommt nicht vor. Der Unterschied gehört benannt, weil eine falsche Vollständigkeitsaussage
+> schlimmer ist als eine fehlende. `System.nanoTime` kommt nach dem Umbau
 aus §4 nur noch an **einer** Stelle vor, und das ist der Fund oben.
 
 ### Der offene Punkt
@@ -369,3 +382,94 @@ aus §4 nur noch an **einer** Stelle vor, und das ist der Fund oben.
 | Nr. | Punkt | Woher |
 |---|---|---|
 | **T-4** | **`KettenIsolationDbIT.gegenprobe_mit_echter_fremder_kennung` behauptet weiterhin etwas über Wanduhrzeit** (`isLessThan(10.0)` auf ein Dauerverhältnis) und verstößt damit gegen Regel T1. Die Abhilfe ist bekannt und in §4 gebaut; sie ist hier bewusst nicht mitgezogen worden | §7 |
+
+---
+
+## 8. Nachtrag vom selben Tag — was eine Durchsicht danach noch gefunden hat
+
+**Die elf Commits sind nach dem grünen `verify` durch eine adversariale Durchsicht gegangen**
+(vier Prüfer mit je eigener Linse, jeder Befund einzeln gegengelesen). Zwei Befunde haben die
+Gegenprobe überstanden, und **beide sind ernster als die Farbe eines Testlaufs** — kein Test war
+rot, und in einem Fall behauptete die Dokumentation das Gegenteil des Codes.
+
+### 8.1 Der Rückwärtslauf hatte keine Transaktion je Scheibe
+
+**Behauptet an drei Stellen, umgesetzt an keiner.** `RollupNachzug`, `docs/rollup.md` §6a und der
+Protokolltext für den Betreiber sagten *„jede Scheibe ist ihre eigene Transaktion"*. Im Code rief
+der Nachzug die beiden Ebenenmethoden **einzeln** auf; beide tragen bewusst kein eigenes
+`@Transactional`, und von außen aufgerufen lief jede im **Autocommit**.
+
+Die Einzelheiten und die Abhilfe stehen in [`rollup.md`](rollup.md) §6a. **Hier steht, was daraus
+für Tests folgt:**
+
+> **Der Datenbanktest zum Abbruch konnte den Fehler nicht finden — und zwar aus einem Grund, der
+> sich verallgemeinern lässt.** `RollupDbIT.keine_ebene_bleibt_bei_einem_abbruch_zurueck` nimmt eine
+> Transaktion von außen zurück und prüft, dass keine Ebene etwas behält. Das ist eine richtige
+> Prüfung, aber sie **bringt ihre Voraussetzung selbst mit**: `monitorDsl` hängt über
+> `TransactionAwareDataSourceProxy` an der Transaktion des Aufrufers, also nimmt jedes Statement
+> daran teil — ob die Methode annotiert ist oder nicht.
+>
+> **Ein Test, der die Bedingung herstellt, die er prüfen will, prüft sie nicht.** Das ist derselbe
+> Fehler wie eine Vorbedingung, die aus dem Bestand kommt (§1) — nur andersherum.
+
+Geprüft wird deshalb seit dem 31.08.2026 zusätzlich die **Ursache**:
+`RollupTransaktionsgrenzenTest` hält über Reflexion fest, wo die Klammern sitzen
+(`ersetzeFenster`, `rechneAbgeleiteteEbenenNeu`) und wo ausdrücklich keine sitzt (die beiden
+Ebenenmethoden, weil sie Bausteine beider Klammern sind). **Dieselbe Bauform, die Regel T1 für
+Laufzeiteigenschaften verlangt** — und derselbe Grund: Die Wirkung ist hier nicht prüfbar, die
+Ursache schon.
+
+### 8.2 Der neue Katalogtest fuhr `AUSFUEHREN` gegen den echten Bestand
+
+**Der Umbau aus §2 hat eine Gefahr eingebaut, die der alte Test nicht hatte.** Um zu zeigen, dass
+die Zeile von `SUTTONS` liegen bleibt, fuhr er `AUSFUEHREN` **als `VOTG`**. Der Knopf übernimmt
+aber **alle** übernehmbaren Zeilen des aktiven Mandanten:
+
+> Hätte `VOTG` welche, kuratierte der Testlauf sie mit, setzte dabei `geaendert_von` auf den
+> Testnutzer — **und die Aufräumregel löschte sie danach.** Das ist der Vorfall vom 26.08.2026, nur
+> über einen anderen Weg ([`mandantentrennung.md`](mandantentrennung.md) §5). Dass es nicht knallte,
+> lag allein daran, dass `VOTG` zurzeit keine hat — **also an genau dem Pflegestand, von dem der
+> Test unabhängig sein sollte.**
+
+**Behoben, indem die Zähne auf die Leseseite gewandert sind.** Der Nachweis lautet jetzt: Die
+**Vorschau** von `VOTG` zählt die neu angelegte Zeile von `SUTTONS` **nicht** mit — ein Vergleich
+der Zahl vor und nach dem Anlegen, ohne einen einzigen Schreibzugriff. Die Zähne gibt ihm wie zuvor
+der eigene `AUSFUEHREN`-Lauf von `SUTTONS`, der genau diese Zeile nimmt.
+
+**Die Verletzungsprobe ist neu gefahren** (31.08.2026): Mandantenfilter in
+`findeUebernehmbareVorschlaege` ausgehängt →
+
+```
+[Die Vorschau von VOTG zaehlt eine Zeile von SUTTONS mit — der Mandantenfilter der
+ uebernehmbaren Vorschlaege traegt nicht]
+expected: 0
+ but was: 1
+```
+
+**Der Test wird jetzt früher rot als vorher** — auf der Leseseite, bevor überhaupt geschrieben wird.
+
+**Und ein Wachposten steht vor jedem `AUSFUEHREN`:**
+`nurEigeneDuerfenUebernommenWerden` sucht übernehmbare Zeilen des aktiven Mandanten **ohne**
+Testpräfix und bricht ab, statt sie anzufassen. Er ist heute wirkungslos und wird es nicht bleiben.
+
+### 8.3 Drei Monatstests waren gegen ihren eigenen Vorzustand blind
+
+`monatsebene_ist_die_summe_der_tagesebene`, `fenster_ueber_den_monatswechsel_schreibt_beide_monate`
+und `monatseimer_umfasst_den_ganzen_monat` verglichen die materialisierte Monatsebene mit der aus
+der Tagesebene gerechneten. **Eine Monatszeile, die aus einem früheren Lauf korrekt dastand, besteht
+diesen Vergleich auch dann, wenn der Lauf sie gar nicht angefasst hat.** Die ersten beiden legen
+jetzt vorher eine Altlast an, die nur ein echtes Löschen-und-Neuschreiben entfernt; der dritte
+rechnet sich seinen Vergleichswert selbst, statt ihn aus fremden Tageszeilen zu ziehen (Regel T2).
+
+### Was die Durchsicht sonst noch fand
+
+Zehn Widersprüche zwischen Dokumentation und Code — ein Schaltername, der nicht mehr existierte,
+zwei Zahlen („vier Statements", „86 Dateien"), drei Stellen, die die Monatsebene weiterhin als
+ungebaut führten, ein Querverweis auf den falschen Abschnitt, ein „eine Ebene höher", das „tiefer"
+heißen musste, und die Vorlage in [`mandantentrennung.md`](mandantentrennung.md) §5, die weiterhin
+einen Laufzeitvergleich verlangte, den T1 verbietet. Alle behoben.
+
+**Ein Negativbefund dieser Datei war selbst falsch** und ist korrigiert: §7 sagte „kein
+`LocalDateTime.now()`" — es gibt zwei, beide mit der **Anwendungsuhr** als Argument und damit genau
+in der Form, die Z1 vorschreibt. **Eine falsche Vollständigkeitsaussage ist schlimmer als eine
+fehlende.**

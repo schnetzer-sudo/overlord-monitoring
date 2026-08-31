@@ -261,8 +261,17 @@ schlechter Beweis für eine Trennung, die zwischen Firmen greifen soll.
 >    [`verkettung.md`](verkettung.md) §2 sagt, warum es umbenannt wurde.)*
 > 2. **Die Gegenprobe läuft zusätzlich mit einer *echten* fremden Kennung**, nicht nur mit einer
 >    erfundenen: als ADMIN den Mandanten wechseln, dort eine `MessageID` holen, zurückwechseln,
->    dieselbe Kennung anfragen. Verglichen werden Rumpf **und Laufzeit** — genau der Kanal, den der
->    Absatz „Woran die Zusage tatsächlich hängt" unten beschreibt.
+>    dieselbe Kennung anfragen. Verglichen werden Rumpf ~~**und Laufzeit**~~ **und die Zahl der
+>    Datenbankzugriffe** — genau der Kanal, den der Absatz „Woran die Zusage tatsächlich hängt"
+>    unten beschreibt.
+>
+>    > **Korrigiert am 31.08.2026 (Regel T1).** Bis dahin stand hier „Laufzeit", und beide Kopien
+>    > haben das wörtlich umgesetzt: zwei `System.nanoTime` um zwei HTTP-Aufrufe, Faktor-10-Schranke.
+>    > **Damit werden 0,44 ms über HTTP geschützt** — `BamIsolationDbIT` ist daran gelegentlich
+>    > grundlos gefallen. Gemessen wird deshalb die **Ursache**: die Folge der abgesetzten
+>    > Statements auf dem Lese-Kontext, gezählt von einem zweiten jOOQ-`ExecuteListener`
+>    > ([`testfestigkeit.md`](testfestigkeit.md) §4). `KettenIsolationDbIT` trägt die alte Fassung
+>    > noch — offener Punkt T-4, bewusst nicht in derselben Runde mitgeändert.
 >
 > **Ergänzt 13.08.2026 (Schritt 7, Teil 2b).** `BamSucheIsolationDbIT`
 > ([`bam-suche.md`](bam-suche.md) §7) ist die erste Kopie, bei der die Gegenprobe **ohne `404`**

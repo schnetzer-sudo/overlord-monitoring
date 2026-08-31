@@ -40,6 +40,10 @@ stillschweigend gebrochen:
    naive `LIKE 'ERROR_%'` (`_` ist ein Platzhalter). Die dort umgesetzte Fassung und ihre
    Begründung stehen in `docs/message-status.md`.
 10. **Pro Endpunkt ein Mandanten-Isolationstest.** Ohne ihn wird nicht gemergt.
+11. **Kein Test behauptet etwas über Wanduhrzeit** — geprüft wird die Ursache: Zahl der Zugriffe,
+    `EXPLAIN`-Plan, Treiberindex, Statement-Text.
+12. **Kein Test hängt an veränderlichen Daten der geteilten Testkopie.** Er legt sich an, was er
+    braucht, oder prüft nur pflegeunabhängige Eigenschaften.
 
 ## Dokumentationspflicht
 

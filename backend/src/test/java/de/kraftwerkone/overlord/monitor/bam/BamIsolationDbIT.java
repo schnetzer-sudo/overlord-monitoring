@@ -74,8 +74,8 @@ import org.springframework.context.annotation.Import;
  * <p><b>Was die Zaehlung nicht abdeckt</b> — und das ist ein offener Punkt und keine
  * Nebenbemerkung: Zwei gleich viele Zugriffe koennten verschieden lange dauern, etwa weil das eine
  * Statement Zeilen liest und das andere keine. Ob das eine reale Luecke ist, ist <b>nicht</b>
- * beantwortet; die Frage steht in {@code docs/testfestigkeit.md} §2 und in {@code
- * docs/bam-werte.md} §9.
+ * beantwortet; die Frage steht als offener Punkt T-1 in {@code docs/testfestigkeit.md} §6 und in
+ * {@code docs/bam-werte.md} §9.
  */
 @Import(BamIsolationDbIT.Zugriffszaehlung.class)
 class BamIsolationDbIT extends SicherheitsTestbasis {
