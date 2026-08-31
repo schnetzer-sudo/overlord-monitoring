@@ -45,6 +45,33 @@ Richtung, und die nach kuratiertem Partner gruppierte Prozessansicht.
 >
 > Die Auswertung selbst gehört nicht hierher, sondern nach Schritt 10 — siehe §8.
 
+### ⚠️ `WOC` bleibt unkuratiert, und zwar absichtlich *(31.08.2026)*
+
+**Der Satz darüber — „es werden alle Prozesse kuratiert" — hat seit dem 31.08.2026 genau eine
+Ausnahme, und sie ist eine Zusage und kein Rückstand.**
+
+| | |
+|---|---|
+| **Wer** | `WOC` („Without Contract"), vier Prozesse, alle vier ohne Katalogzeile |
+| **Was gilt** | Diese vier Prozesse bekommen **keine** Katalogzeile — weder von Hand, noch über den Heuristik-Knopf, noch über die Massenzuordnung |
+| **Wer hat entschieden** | der Auftraggeber, am 31.08.2026, zusammen mit der Freigabe, `SUTTONS` zu kuratieren |
+| **Warum** | `ProzessKatalogIsolationDbIT` legt sich seine übernehmbare Zeile **selbst** an, und das geht nur auf einem Prozess **ohne** Zeile (reines `INSERT`; ein Upsert auf eine kuratierte Zeile hat am 26.08.2026 eine Katalogzeile von `VOTG` gekostet). Am 31.08.2026 hatten nur noch `SUTTONS` (17 frei) und `WOC` (4 frei) solche Prozesse |
+
+**Ohne diesen Satz kuratiert ihn jemand in einem halben Jahr weg** — und dann ist der
+Pflicht-Isolationstest der Vorschlagsübernahme rot, ohne dass jemand die Ursache in einer
+Pflegehandlung von vor sechs Monaten suchen würde. Das ist offener Punkt **T‑3** in
+[`testfestigkeit.md`](testfestigkeit.md) §6, und dies hier ist seine Abhilfe: **eine Absprache, kein
+Code.**
+
+> **Es kostet nichts.** `WOC` ist nach [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §3.2 ein
+> **technischer** Mandant und kein Kunde; für ihn wird keine Verteilung nach Partner ausgewertet.
+> Der Preis der Zusage ist damit genau das, was §1 sonst verteidigt — die Fähigkeit, Schweigen zu
+> benennen —, und zwar für vier Prozesse eines Mandanten, der niemandem Belege schickt.
+>
+> **`SYSTEM` ist damit nicht mitentschieden.** Er hat ebenfalls vier Prozesse, trägt aber auf allen
+> vieren bereits eine Katalogzeile und ist als Reserve deshalb ohnehin nicht verfügbar. Ob er
+> kuratiert bleibt, ist weiter offener Punkt 2 in §10.
+
 ---
 
 ## 2. Datenmodell
@@ -665,7 +692,7 @@ Mit Grund festgehalten, damit sie in der Umsetzung nicht wieder aufkommen.
 | | |
 |---|---|
 | 1 | **`ZAST` (35), `NXHBE` (17), `EDITIONLINGERI` (9) — 61 Zeilen ohne Verfahren.** `ZAST` trägt bei **allen 35** genau einen Unterstrich, `NXHBE` bei 14 von 17 genau zwei — das sind durchgängigere Muster als bei NEXANS. Ob sich daraus eine dritte Regel ergibt, entscheidet ein Blick auf die 61 Namen, nicht eine Messung |
-| 2 | Sollen `WOC` (4) und `SYSTEM` (4) überhaupt kuratiert werden? Beide sind laut `PROJEKTBESCHREIBUNG.md` §3.2 technisch und keine Kunden |
+| 2 | ~~Sollen `WOC` (4) und `SYSTEM` (4) überhaupt kuratiert werden? Beide sind laut `PROJEKTBESCHREIBUNG.md` §3.2 technisch und keine Kunden~~ — **für `WOC` beantwortet am 31.08.2026: nein, und dauerhaft nicht.** Er ist die Reserve des Katalog-Isolationstests, siehe den Kasten in §1 und T‑3 in [`testfestigkeit.md`](testfestigkeit.md) §6. **Für `SYSTEM` bleibt der Punkt offen** — er trägt auf allen vier Prozessen bereits eine Zeile |
 | 3 | Regel A bei **zwei** Unterstrichen ist für die neun NEXANS-Prozesse dieser Gestalt nicht geprüft |
 | 4 | Der Anker `Eingehend`/`Ausgehend` in Projektnamen war für `ZAST`, `NXHBE`, `EDITIONLINGERI`, `WOC` und `SYSTEM` nicht erhoben. **Vier der fünf sind mit M80‑7 beantwortet** (20.08.2026): Er wirkt bei `NXHBE` für **alle 17** Prozesse und bei `ZAST`, `WOC` und `SYSTEM` **gar nicht**. **Offen bleibt allein `EDITIONLINGERI`** — seine fünf Zeilen mit Richtung sind genau die fünf, die Regel B über den **Prozess**namen trifft; über den Projektnamen sagt die Zählung dort nichts |
 | 5 | **Es gibt keinen Weg von *gepflegt* zurück nach *offen*** *(26.08.2026)*. Gegen den Code geprüft: `PUT /api/katalog/prozesse/{processId}` setzt **immer** `GEPFLEGT`, der Lauf überspringt gepflegte Zeilen (E13), und die Massenzuordnung setzt ein **Feld** und keinen Pflegestatus. Mit E22 verbreitert sich diese Einbahnstraße von einer Zeile auf bis zu 509. **Gebaut wird nichts dagegen**; der Preis steht hier, bevor ihn jemand zahlt |

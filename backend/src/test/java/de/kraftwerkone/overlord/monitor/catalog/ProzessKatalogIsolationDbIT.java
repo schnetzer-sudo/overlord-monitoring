@@ -38,14 +38,47 @@ import org.junit.jupiter.api.Test;
  * legen sich jetzt an, was sie brauchen. Was dabei verloren ging und was nicht, steht in {@code
  * docs/testfestigkeit.md} §1 — hier steht nur, was gilt: <b>Eine Erwartung dieses Tests nennt
  * entweder eine Zahl, die er selbst gebaut hat, oder gar keine.</b>
+ *
+ * <h2>Ein dritter Mandant, und er ist der Grund fuer diese Runde</h2>
+ *
+ * <p>Anlegen kann sich ein Test seine Katalogzeile nur auf einem Prozess <b>ohne</b> Zeile (reines
+ * {@code INSERT}, siehe {@link #prozessOhneKatalogzeile}). Solche Prozesse hatten am 31.08.2026 nur
+ * noch zwei Mandanten: {@code SUTTONS} mit 17 und {@code WOC} mit 4 (offener Punkt T-3). <b>Der
+ * Auftraggeber hat am 31.08.2026 entschieden, {@code SUTTONS} zu kuratieren und {@code WOC}
+ * dauerhaft unkuratiert zu lassen</b> — die beiden Uebernahmetests laufen deshalb seit diesem Tag
+ * gegen {@code WOC} und nicht mehr gegen {@code SUTTONS}. Die Begruendung steht in {@code
+ * docs/prozess-katalog.md}, damit sie in einem halben Jahr nicht wegkuratiert wird.
+ *
+ * <p><b>Regel M4 bleibt erfuellt:</b> {@code VOTG} gegen {@code WOC} sind zwei verschiedene
+ * Haeuser, genau wie {@code VOTG} gegen {@code SUTTONS}. Die uebrigen Testfaelle bleiben auf {@code
+ * SUTTONS} — sie brauchen keinen freien Prozess, sondern nur einen fremden Bestand, und den hat
+ * {@code SUTTONS} kuratiert wie unkuratiert.
  */
 class ProzessKatalogIsolationDbIT extends SicherheitsTestbasis {
 
   private static final String NUTZER_A = PRAEFIX + "katalog-votg";
   private static final String NUTZER_B = PRAEFIX + "katalog-suttons";
+  private static final String NUTZER_FREI = PRAEFIX + "katalog-woc";
   private static final String NUTZER_OHNE_ROLLE = PRAEFIX + "katalog-mandant";
   private static final String NUTZER_OHNE_WAHL = PRAEFIX + "katalog-ohnewahl";
   private static final String PASSWORT = "einLangesPasswort1";
+
+  /**
+   * <b>Der Mandant, auf dem sich dieser Test seine Katalogzeilen anlegt</b> — und er steht hier
+   * ausdruecklich statt in {@code SicherheitsTestbasis}, weil er nur diese eine Eigenschaft
+   * mitbringen muss: <i>mindestens einen Prozess ohne Katalogzeile</i>.
+   *
+   * <p>Am 31.08.2026 hatten das nur {@code SUTTONS} (17 frei) und {@code WOC} (4 frei). Der
+   * Auftraggeber hat an diesem Tag entschieden, {@code SUTTONS} zu kuratieren und <b>{@code WOC}
+   * dauerhaft unkuratiert zu lassen</b>; {@code WOC} ist damit die Reserve dieses Tests. Der Satz
+   * dazu steht in {@code docs/prozess-katalog.md} — <b>ohne ihn kuratiert ihn jemand in einem
+   * halben Jahr weg</b>, und dann ist der Test wieder rot (offener Punkt T-3).
+   *
+   * <p>Zwei Prozesse werden gebraucht, nicht einer: {@link
+   * #uebernahme_ignoriert_untergeschobenen_mandanten} legt im schlechtesten Fall zwei Zeilen an.
+   * Vier freie reichen dafuer mit Reserve.
+   */
+  private static final String MANDANT_FREI = "WOC";
 
   /** Eine ProcessID, die es garantiert nicht gibt. */
   private static final String ERFUNDENER_PROZESS = "00000_GIBTESNICHT_XX_YY";
@@ -63,16 +96,22 @@ class ProzessKatalogIsolationDbIT extends SicherheitsTestbasis {
   private Sitzung aufVotg;
   private Sitzung aufSuttons;
 
+  /** Die Sitzung auf {@link #MANDANT_FREI} — nur die beiden Uebernahmetests brauchen sie. */
+  private Sitzung aufWoc;
+
   @BeforeEach
   void nutzerAnlegenUndAnmelden() throws IOException, InterruptedException {
     // Schlaegt das fehl, hat sich die Testkopie geaendert — nicht der Code.
     assertThat(mandantRepository.existiert(MANDANT_A)).isTrue();
     assertThat(mandantRepository.existiert(MANDANT_B)).isTrue();
+    assertThat(mandantRepository.existiert(MANDANT_FREI)).isTrue();
 
     legeNutzerAn(NUTZER_A, PASSWORT, Rolle.ADMIN, MANDANT_A);
     legeNutzerAn(NUTZER_B, PASSWORT, Rolle.ADMIN, MANDANT_B);
+    legeNutzerAn(NUTZER_FREI, PASSWORT, Rolle.ADMIN, MANDANT_FREI);
     aufVotg = angemeldetAuf(NUTZER_A, MANDANT_A);
     aufSuttons = angemeldetAuf(NUTZER_B, MANDANT_B);
+    aufWoc = angemeldetAuf(NUTZER_FREI, MANDANT_FREI);
   }
 
   @AfterEach
@@ -436,16 +475,16 @@ class ProzessKatalogIsolationDbIT extends SicherheitsTestbasis {
    * dem Pflegestand einer geteilten Testkopie und haette beim naechsten Pflegevorgang erneut
    * gewechselt. Die Einzelheiten stehen in {@code docs/testfestigkeit.md} §1.
    *
-   * <p>Gebaut ist er deshalb <b>umgekehrt</b>: Die eine uebernehmbare Zeile gehoert {@code SUTTONS}
-   * und ist von diesem Test angelegt. <b>Die Zaehne stecken auf der Leseseite</b>, und das ist kein
-   * Rueckzug, sondern die schaerfere Stelle:
+   * <p>Gebaut ist er deshalb <b>umgekehrt</b>: Die eine uebernehmbare Zeile gehoert {@link
+   * #MANDANT_FREI} und ist von diesem Test angelegt. <b>Die Zaehne stecken auf der Leseseite</b>,
+   * und das ist kein Rueckzug, sondern die schaerfere Stelle:
    *
    * <ol>
-   *   <li><b>Die Vorschau von {@code VOTG} sieht die neue Zeile von {@code SUTTONS} nicht.</b>
+   *   <li><b>Die Vorschau von {@code VOTG} sieht die neue Zeile von {@code WOC} nicht.</b>
    *       Verglichen wird die Zahl vor und nach dem Anlegen — sie muss <b>gleich</b> bleiben. Fiele
    *       der Mandantenfilter aus {@code findeUebernehmbareVorschlaege}, stuende hier eine mehr.
    *       Das ist die Isolationsaussage, und sie kostet keinen einzigen Schreibzugriff.
-   *   <li><b>{@code AUSFUEHREN} als {@code SUTTONS} nimmt genau diese Zeile.</b> Das gibt Schritt 1
+   *   <li><b>{@code AUSFUEHREN} als {@code WOC} nimmt genau diese Zeile.</b> Das gibt Schritt 1
    *       seine Zaehne: Die Zeile <i>war</i> uebernehmbar — sie ist in der Vorschau von {@code
    *       VOTG} also nicht deshalb ausgeblieben, weil es ohnehin nichts zu sehen gab.
    *   <li><b>Und {@code VOTG} hat sich dabei in keiner Spalte veraendert.</b> Verglichen wird der
@@ -455,11 +494,11 @@ class ProzessKatalogIsolationDbIT extends SicherheitsTestbasis {
    * <h2>Warum der fremde Lauf nicht {@code AUSFUEHREN} fahren darf</h2>
    *
    * <p><b>Ein erster Entwurf dieser Runde hat genau das getan</b> — {@code AUSFUEHREN} als {@code
-   * VOTG}, um zu zeigen, dass die Zeile von {@code SUTTONS} liegen bleibt. Das ist auf einer
-   * <b>geteilten</b> Testkopie unzulaessig: Der Knopf uebernimmt <b>alle</b> uebernehmbaren Zeilen
-   * des aktiven Mandanten. Haette {@code VOTG} welche, kuratierte der Testlauf sie mit, setzte
-   * dabei {@code geaendert_von} auf den Testnutzer — und die Aufraeumung aus §7 loeschte sie
-   * danach. <b>Das ist der Vorfall vom 26.08.2026, nur ueber einen anderen Weg.</b>
+   * VOTG}, um zu zeigen, dass die fremde Zeile liegen bleibt. Das ist auf einer <b>geteilten</b>
+   * Testkopie unzulaessig: Der Knopf uebernimmt <b>alle</b> uebernehmbaren Zeilen des aktiven
+   * Mandanten. Haette {@code VOTG} welche, kuratierte der Testlauf sie mit, setzte dabei {@code
+   * geaendert_von} auf den Testnutzer — und die Aufraeumung aus §7 loeschte sie danach. <b>Das ist
+   * der Vorfall vom 26.08.2026, nur ueber einen anderen Weg.</b>
    *
    * <p>Dass es heute nicht knallt, liegt allein daran, dass {@code VOTG} zurzeit keine
    * uebernehmbare Zeile hat — also an genau dem Pflegestand, von dem dieser Test unabhaengig sein
@@ -469,19 +508,19 @@ class ProzessKatalogIsolationDbIT extends SicherheitsTestbasis {
   @Test
   @DisplayName("Vorschlagsuebernahme: sie erfasst nur die Zeilen des aktiven Mandanten")
   void uebernahme_erfasst_nur_den_aktiven_mandanten() throws Exception {
-    int suttonsVorher = betroffen(aufSuttons);
+    int wocVorher = betroffen(aufWoc);
     int votgVorher = betroffen(aufVotg);
     String votgRumpfVorher = aufVotg.hole("/api/katalog/prozesse").rumpf();
 
     // Die eine Zeile, um die es geht. Sie ist von diesem Test angelegt und traegt das Praefix;
     // was der Bestand von sich aus hergibt, spielt fuer die Aussage keine Rolle mehr.
-    String vonSuttons = prozessOhneKatalogzeile(aufSuttons);
-    legeVorschlagAn(vonSuttons);
+    String vonWoc = prozessOhneKatalogzeile(aufWoc);
+    legeVorschlagAn(vonWoc);
 
-    assertThat(betroffen(aufSuttons))
+    assertThat(betroffen(aufWoc))
         .as("Die eine angelegte Zeile ist bei ihrem Mandanten angekommen")
-        .isEqualTo(suttonsVorher + 1);
-    assertThat(pflegestatusVon(aufSuttons, vonSuttons))
+        .isEqualTo(wocVorher + 1);
+    assertThat(pflegestatusVon(aufWoc, vonWoc))
         .as("Ausgangszustand: die Zeile ist offen und damit uebernehmbar")
         .isEqualTo(Pflegestatus.OFFEN.name());
 
@@ -491,23 +530,23 @@ class ProzessKatalogIsolationDbIT extends SicherheitsTestbasis {
         .as(
             "Die Vorschau von %s zaehlt eine Zeile von %s mit — der Mandantenfilter der"
                 + " uebernehmbaren Vorschlaege traegt nicht",
-            MANDANT_A, MANDANT_B)
+            MANDANT_A, MANDANT_FREI)
         .isEqualTo(votgVorher);
 
     // 2. Die Gegenprobe, die Schritt 1 seine Zaehne gibt: Dieselbe Zeile, und jetzt greift der
     //    Knopf — sie war also sehr wohl uebernehmbar.
-    nurEigeneDuerfenUebernommenWerden(aufSuttons);
+    nurEigeneDuerfenUebernommenWerden(aufWoc);
     Antwort eigenerLauf =
-        aufSuttons.sende("/api/katalog/vorschlaege-uebernehmen", uebernahme("AUSFUEHREN"));
+        aufWoc.sende("/api/katalog/vorschlaege-uebernehmen", uebernahme("AUSFUEHREN"));
     assertThat(eigenerLauf.status()).isEqualTo(200);
-    assertThat(eigenerLauf.<Integer>json("$.betroffen")).isEqualTo(suttonsVorher + 1);
-    assertThat(pflegestatusVon(aufSuttons, vonSuttons))
+    assertThat(eigenerLauf.<Integer>json("$.betroffen")).isEqualTo(wocVorher + 1);
+    assertThat(pflegestatusVon(aufWoc, vonWoc))
         .as(
             "Ohne diesen Schritt bewiese Schritt 1 nur, dass es bei %s ohnehin nichts zu sehen gab",
             MANDANT_A)
         .isEqualTo(Pflegestatus.GEPFLEGT.name());
 
-    // 3. Und die Gegenrichtung: der Lauf von SUTTONS hat bei VOTG keine einzige Spalte angefasst.
+    // 3. Und die Gegenrichtung: der Lauf von WOC hat bei VOTG keine einzige Spalte angefasst.
     assertThat(aufVotg.hole("/api/katalog/prozesse").rumpf())
         .as(
             "Beim anderen Mandanten darf sich keine einzige Zeile geaendert haben — sonst schriebe"
@@ -535,38 +574,41 @@ class ProzessKatalogIsolationDbIT extends SicherheitsTestbasis {
    * genau um eins darueber; dann sind es zwei. <b>Mehr als zwei sind nie noetig</b>, unabhaengig
    * vom Pflegestand. Die Erwartung unten nennt damit keine Zahl aus dem Katalog, sondern eine, die
    * dieser Test selbst gebaut hat.
+   *
+   * <p><b>Angelegt wird auf {@link #MANDANT_FREI}</b>, aus demselben Grund wie bei {@link
+   * #uebernahme_erfasst_nur_den_aktiven_mandanten}: Es ist der Mandant, der dauerhaft freie
+   * Prozesse behaelt. Zwei davon kann dieser Fall im schlechtesten Fall verbrauchen.
    */
   @Test
   @DisplayName("Vorschlagsuebernahme: ein untergeschobener Mandant bleibt wirkungslos (M1)")
   void uebernahme_ignoriert_untergeschobenen_mandanten() throws Exception {
-    int eigenVorher = betroffen(aufSuttons);
+    int eigenVorher = betroffen(aufWoc);
     int fremd = betroffen(aufVotg);
 
     // Eine Zeile genuegt — ausser die fremde Zahl liegt genau eins ueber der eigenen; dann
     // fuehrte eine einzelne Zeile die beiden zusammen, statt sie zu trennen.
     int anzulegen = fremd == eigenVorher + 1 ? 2 : 1;
     for (int i = 0; i < anzulegen; i++) {
-      legeVorschlagAn(prozessOhneKatalogzeile(aufSuttons));
+      legeVorschlagAn(prozessOhneKatalogzeile(aufWoc));
     }
     int eigen = eigenVorher + anzulegen;
 
-    assertThat(betroffen(aufSuttons))
+    assertThat(betroffen(aufWoc))
         .as("Die selbst angelegten Zeilen, und keine des anderen Mandanten")
         .isEqualTo(eigen);
     assertThat(eigen)
         .as("Waeren beide Zahlen gleich, bewiese ein gleicher Antwortrumpf nichts")
         .isNotEqualTo(fremd);
 
-    Antwort ohneFeld =
-        aufSuttons.sende("/api/katalog/vorschlaege-uebernehmen", uebernahme("VORSCHAU"));
+    Antwort ohneFeld = aufWoc.sende("/api/katalog/vorschlaege-uebernehmen", uebernahme("VORSCHAU"));
     Antwort mitFeld =
-        aufSuttons.sende(
+        aufWoc.sende(
             "/api/katalog/vorschlaege-uebernehmen",
             """
             {"modus":"VORSCHAU","mandantId":"%s"}"""
                 .formatted(MANDANT_A));
     Antwort mitParameter =
-        aufSuttons.sende(
+        aufWoc.sende(
             "/api/katalog/vorschlaege-uebernehmen?mandant=" + MANDANT_A, uebernahme("VORSCHAU"));
 
     assertThat(mitFeld.status()).isEqualTo(200);

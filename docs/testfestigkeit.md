@@ -13,6 +13,10 @@ jetzt hängt.**
 > bestehen, ist schlechter als der rote von heute. Wo eine Aussage verlorengeht, steht sie unten
 > als offener Punkt — sie wird nicht zugemauert.
 
+> **Nachtrag vom 31.08.2026 (Schritt 10b‑2), §9.** Einer der offenen Punkte aus §6 ist abgetragen:
+> **T‑3** über eine Absprache mit dem Auftraggeber — `WOC` bleibt unkuratiert und ist die Reserve des
+> Katalog-Isolationstests.
+
 ---
 
 ## 1. Die beiden roten Tests — der Befund
@@ -102,6 +106,10 @@ nicht, dass jemand anderes sie hingelegt hat.
 > **Dieser Abschnitt beschreibt den Entwurf; §8.2 beschreibt, wo er noch falsch war.** Der erste
 > Bau fuhr den fremden Lauf als `AUSFUEHREN` und hätte damit auf einer geteilten Testkopie
 > kuratierte Zeilen angefasst. Die Zähne stecken deshalb heute auf der **Leseseite**.
+>
+> **Und der Mandant ist seit dem 31.08.2026 ein anderer:** Wo unten `SUTTONS` steht, steht im Code
+> heute `WOC`. Die Begründung ist T‑3 und steht in §9.1; an der Bauform ändert sich nichts, nur an
+> der Kennung.
 
 **Der Weg, den der Test nicht gehen kann.** Naheliegend wäre: Der Test legt sich für **beide**
 Mandanten eine übernehmbare Zeile an. Das geht nicht — eine Katalogzeile darf nur auf einem Prozess
@@ -321,7 +329,7 @@ nachdem sie gefallen war.
 | **T-1** | **Zwei gleich viele Datenbankzugriffe könnten verschieden lange dauern** — etwa weil das eine Statement Zeilen liest und das andere keine. Die Zugriffszählung aus §4 deckt das nicht ab. **Ob das eine reale Lücke ist, ist nicht beantwortet.** Zu klären wäre zuerst, ob der Unterschied überhaupt messbar ist, und erst danach, wie man ihn absichert — nicht über die Wanduhr | §4, [`bam-werte.md`](bam-werte.md) §9 |
 | **T-2** | **Die Übernahme auf einem Mandanten mit *mehreren* übernehmbaren Zeilen ist ungeprüft.** Der Test aus §2 legt genau eine an. Dass die Übernahme bei fünf eigenen und drei fremden Zeilen genau die fünf erfasst, folgt daraus nicht — es folgt aus dem Statement, und das ist ein Argument, kein Test | §2 |
 | **T-5** | **Die Übernahme auf einem Mandanten mit mehreren übernehmbaren Zeilen ist weiterhin ungeprüft** — und seit dem Umbau aus §8 lässt sich das auch nicht mehr durch einen fremden `AUSFUEHREN`-Lauf nachholen. Ein Testkonto mit einem eigenen, wegwerfbaren Mandanten wäre der saubere Weg; den gibt es nicht | §8 |
-| **T-3** | **Der Test aus §2 braucht weiterhin einen Prozess ohne Katalogzeile.** Heute haben nur `SUTTONS` (17 frei) und `WOC` (4 frei) welche. Werden auch die kuratiert, wird der Test wieder rot — dann allerdings mit einer Meldung, die genau das sagt, und nicht mit einer Zahl, die niemand einordnen kann. **Eine Abhilfe wäre, dass die Testkopie einen Prozess dauerhaft frei hält;** das ist eine Absprache und keine Codeänderung | §2 |
+| ~~**T-3**~~ | ~~**Der Test aus §2 braucht weiterhin einen Prozess ohne Katalogzeile.** Heute haben nur `SUTTONS` (17 frei) und `WOC` (4 frei) welche. Werden auch die kuratiert, wird der Test wieder rot — dann allerdings mit einer Meldung, die genau das sagt, und nicht mit einer Zahl, die niemand einordnen kann. **Eine Abhilfe wäre, dass die Testkopie einen Prozess dauerhaft frei hält;** das ist eine Absprache und keine Codeänderung~~ — **erledigt am 31.08.2026, siehe §9** | §2 |
 
 ---
 
@@ -351,6 +359,7 @@ sich unverändert darauf übertragen: derselbe Zähler, dieselbe Vergleichsform.
 > **Er wird in dieser Runde nicht angefasst.** Ein Fund ist ein Befund für die nächste Runde — und
 > `KettenIsolationDbIT` ist heute grün. Ihn mitzuändern hieße, eine Änderung ohne Anlass in einen
 > Commit zu schieben, dessen Abnahme etwas anderes prüft. **Offener Punkt T-4.**
+
 
 ### Kein Fund — vollständig, damit die Suche belegbar ist
 
@@ -473,3 +482,54 @@ einen Laufzeitvergleich verlangte, den T1 verbietet. Alle behoben.
 `LocalDateTime.now()`" — es gibt zwei, beide mit der **Anwendungsuhr** als Argument und damit genau
 in der Form, die Z1 vorschreibt. **Eine falsche Vollständigkeitsaussage ist schlimmer als eine
 fehlende.**
+
+---
+
+## 9. Schritt 10b‑2 — T‑3 abgetragen *(31.08.2026)*
+
+### 9.1 T‑3 — der Katalogtest hat eine dauerhaft freie Reserve
+
+**T‑3 war kein Codefehler, sondern eine offene Absprache.** `ProzessKatalogIsolationDbIT` legt sich
+seine übernehmbare Zeile selbst an (§2), und das geht nur auf einem Prozess **ohne** Katalogzeile.
+Solche gab es am 31.08.2026 nur noch bei `SUTTONS` (17 frei) und `WOC` (4 frei) — und die
+Katalogpflege des Auftraggebers hätte beide aufgebraucht.
+
+**Der Auftraggeber hat am 31.08.2026 entschieden:** `SUTTONS` wird kuratiert, **`WOC` bleibt
+dauerhaft unkuratiert** und ist die Reserve des Tests.
+
+| | vorher | nachher |
+|---|---|---|
+| Mandant, auf dem der Test anlegt | `MANDANT_B` = `SUTTONS` | `MANDANT_FREI` = `WOC` |
+| Betroffene Testfälle | `uebernahme_erfasst_nur_den_aktiven_mandanten`, `uebernahme_ignoriert_untergeschobenen_mandanten` | dieselben zwei |
+| Paarung für Regel M4 | `VOTG` gegen `SUTTONS` | **`VOTG` gegen `WOC`** — ebenfalls zwei verschiedene Häuser |
+| Die übrigen elf Testfälle | `SUTTONS` | **unverändert `SUTTONS`** |
+
+**Warum nicht die ganze Klasse.** Nur diese beiden Fälle brauchen einen *freien* Prozess. Alle
+anderen brauchen bloß einen *fremden* Bestand, und den hat `SUTTONS` kuratiert wie unkuratiert.
+Sie mitzuziehen wäre eine Änderung ohne Anlass gewesen — und `WOC` hat mit vier Prozessen ohnehin
+den dünneren Bestand.
+
+**Die Konstante steht in der Testklasse und nicht in `SicherheitsTestbasis`.** `MANDANT_A` und
+`MANDANT_B` sind die Paarung *aller* Isolationstests; `MANDANT_FREI` ist eine Eigenschaft, die
+genau eine Klasse braucht — *mindestens ein Prozess ohne Katalogzeile*. Stünde sie in der Basis,
+sähe es aus wie eine dritte Standardpaarung.
+
+> ### Der Satz, ohne den die Abhilfe in einem halben Jahr weg wäre
+>
+> Eine Absprache, die nur im Kopf des Auftraggebers steht, ist keine. Sie steht deshalb in
+> [`prozess-katalog.md`](prozess-katalog.md) §1 als eigener Kasten — **dort**, wo der Text sonst
+> begründet, warum *alle* Prozesse kuratiert werden, und nicht in einer Fußnote am Ende. Der offene
+> Punkt 2 in §10 derselben Datei ist für `WOC` mit demselben Datum geschlossen und für `SYSTEM`
+> ausdrücklich offen geblieben.
+>
+> **`WOC` kostet nichts.** Er ist nach [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §3.2 ein
+> technischer Mandant und kein Kunde; die Verteilung nach Partner wird für ihn nicht ausgewertet.
+
+**Was verlorengegangen ist:** nichts. Der Test prüft dieselbe Aussage mit derselben Schärfe auf
+einem anderen Mandanten. Was er **nicht** kann, ist weiterhin T‑5: die Übernahme bei *mehreren*
+eigenen Zeilen.
+
+**Der offene Rand, und er wird benannt statt zugemauert:** Werden eines Tages auch die vier
+Prozesse von `WOC` kuratiert, ist der Test wieder rot — dann allerdings mit der Meldung *„Jeder
+Prozess dieses Mandanten trägt bereits eine Katalogzeile"*, die genau das sagt. Das ist kein
+Rückfall auf T‑3, sondern die Absprache, die gebrochen wurde.
