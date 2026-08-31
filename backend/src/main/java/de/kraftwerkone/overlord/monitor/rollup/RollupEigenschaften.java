@@ -27,8 +27,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *       <td>Drosselung zwischen zwei Monatsscheiben (Leistungsregel L6)</td></tr>
  *   <tr><td>{@code beim-start}</td><td>—</td>
  *       <td>{@code DELTA} oder {@code VOLL}: ein einmaliger Lauf beim Start, von Hand</td></tr>
- *   <tr><td>{@code tagesebene-nachziehen}</td><td>{@code false}</td>
- *       <td>der <b>einmalige</b> Rueckwaertslauf der Tagesebene (Schritt 10b-1)</td></tr>
+ *   <tr><td>{@code abgeleitete-ebenen-nachziehen}</td><td>{@code false}</td>
+ *       <td>der <b>einmalige</b> Rueckwaertslauf der Tages- <b>und</b> der Monatsebene
+ *       (Schritt 10b-1 bzw. 10b-2). Hiess bis zum 31.08.2026 {@code
+ *       tagesebene-nachziehen}</td></tr>
  * </table>
  *
  * @param aktiv Ob die zeitgesteuerte Ausloesung laeuft. <b>Zweiter Riegel neben dem Profil {@code
@@ -57,8 +59,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *     eine Schreibflaeche im Anfragepfad — und die gaebe es dann auch fuer den, der sie nicht
  *     bedienen soll. Der Startparameter ist der Weg, der nur dem offensteht, der die Anwendung
  *     startet
- * @param tagesebeneNachziehen Der <b>einmalige</b> Rueckwaertslauf der Tagesebene ({@link
- *     RollupTagNachzug}), ausgeloest ueber {@code --overlord.rollup.tagesebene-nachziehen=true}.
+ * @param abgeleiteteEbenenNachziehen Der <b>einmalige</b> Rueckwaertslauf der abgeleiteten Ebenen
+ *     ({@link RollupNachzug}), ausgeloest ueber {@code
+ *     --overlord.rollup.abgeleitete-ebenen-nachziehen=true}.
+ *     <p><b>Ein Schluessel fuer beide Ebenen, und das ist Absicht.</b> Zwei getrennte waeren die
+ *     Einladung, die eine nachzuziehen und die andere stehen zu lassen — danach staenden zwei
+ *     Ebenen auf zwei Staenden. Der Schluessel hiess bis zum 31.08.2026 {@code
+ *     tagesebene-nachziehen} und ist mit der dritten Ebene umbenannt worden; er ist ein einmaliger
+ *     Betriebsschalter ohne Eintrag in {@code application.yml}.
  *     <p><b>Er steht neben {@code beim-start} und nicht darin.</b> {@code beim-start} nimmt eine
  *     {@link LaufArt}, und dieser Lauf ist keine: Er liest {@code Message} nicht an, hinterlaesst
  *     keine Zeile in {@code rollup_lauf} und hebt keinen Wasserstand. Ihn als dritten Wert dort
@@ -68,7 +76,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  */
 @ConfigurationProperties("overlord.rollup")
 public record RollupEigenschaften(
-    boolean aktiv, Duration scheibenPause, LaufArt beimStart, boolean tagesebeneNachziehen) {
+    boolean aktiv, Duration scheibenPause, LaufArt beimStart, boolean abgeleiteteEbenenNachziehen) {
 
   /**
    * Das Profil, unter dem die zeitgesteuerte Ausloesung ueberhaupt entsteht.

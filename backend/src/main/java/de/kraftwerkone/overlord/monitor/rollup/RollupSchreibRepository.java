@@ -320,7 +320,7 @@ public class RollupSchreibRepository {
    * <p><b>Er richtet sich nach dem, was dasteht, und nicht nach einer Uhr.</b> Genau darin
    * unterscheidet er sich vom Fenster eines Volllaufs, dessen obere Grenze die Anwendungsuhr ist —
    * im Profil {@code dev} liegt die am Anker der Testkopie und damit vor den letzten Rollupzeilen.
-   * Gebraucht wird er vom Rueckwaertslauf der Tagesebene ({@link RollupTagNachzug}).
+   * Gebraucht wird er vom Rueckwaertslauf der Tagesebene ({@link RollupNachzug}).
    *
    * <p>Beide Grenzen liegen auf einem vollen Stundenanfang, weil {@code stunde} das immer tut; die
    * obere wird um eine Stunde angehoben, weil {@link RollupFenster} sie ausschliessend fuehrt.

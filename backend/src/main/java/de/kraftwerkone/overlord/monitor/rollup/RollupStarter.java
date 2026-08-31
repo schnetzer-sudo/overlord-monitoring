@@ -34,36 +34,37 @@ public class RollupStarter implements ApplicationRunner {
   private static final Logger log = LoggerFactory.getLogger(RollupStarter.class);
 
   private final RollupJob job;
-  private final RollupTagNachzug tagNachzug;
+  private final RollupNachzug nachzug;
   private final RollupEigenschaften eigenschaften;
 
-  RollupStarter(RollupJob job, RollupTagNachzug tagNachzug, RollupEigenschaften eigenschaften) {
+  RollupStarter(RollupJob job, RollupNachzug nachzug, RollupEigenschaften eigenschaften) {
     this.job = job;
-    this.tagNachzug = tagNachzug;
+    this.nachzug = nachzug;
     this.eigenschaften = eigenschaften;
   }
 
   @Override
   public void run(ApplicationArguments args) {
     loeseLaufAus();
-    loeseTagNachzugAus();
+    loeseNachzugAus();
   }
 
   /**
-   * Der Rueckwaertslauf der Tagesebene — <b>nach</b> dem Lauf und nicht davor. Beides zusammen ist
-   * zulaessig; in dieser Reihenfolge zieht der Nachzug den Stand nach, den der Lauf hinterlassen
-   * hat, und nicht den davor.
+   * Der Rueckwaertslauf der abgeleiteten Ebenen — <b>nach</b> dem Lauf und nicht davor. Beides
+   * zusammen ist zulaessig; in dieser Reihenfolge zieht der Nachzug den Stand nach, den der Lauf
+   * hinterlassen hat, und nicht den davor.
    */
-  private void loeseTagNachzugAus() {
-    if (!eigenschaften.tagesebeneNachziehen()) {
+  private void loeseNachzugAus() {
+    if (!eigenschaften.abgeleiteteEbenenNachziehen()) {
       return;
     }
     try {
-      tagNachzug.fuehreAus();
+      nachzug.fuehreAus();
     } catch (RuntimeException fehler) {
       log.error(
-          "Rueckwaertslauf der Tagesebene gescheitert. Die Anwendung startet trotzdem; was schon"
-              + " geschrieben ist, bleibt richtig — jede Scheibe ist ihre eigene Transaktion.",
+          "Rueckwaertslauf der abgeleiteten Ebenen gescheitert. Die Anwendung startet trotzdem; was"
+              + " schon geschrieben ist, bleibt richtig — jede Scheibe ist ihre eigene"
+              + " Transaktion.",
           fehler);
     }
   }
