@@ -8,6 +8,7 @@ import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLU
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLUP_MONAT;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLUP_TAG;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.PROCESS_CATALOG;
+import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.ROLLUP_LAUF;
 
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.Pflegestatus;
@@ -19,10 +20,12 @@ import java.sql.SQLTimeoutException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.OptionalLong;
 import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.Field;
+import org.jooq.Record2;
 import org.jooq.Table;
 import org.jooq.exception.DataAccessException;
 import org.jooq.impl.DSL;
@@ -408,19 +411,25 @@ public class DashboardRepository {
    * ihn und hat deshalb zwei eigene Fassungen.
    */
   private record Ebene(
-      Table<?> tabelle, Field<String> prozess, Field<Integer> anzahl, Condition bereich) {}
+      Table<?> tabelle,
+      Field<?> eimer,
+      Field<String> prozess,
+      Field<Integer> anzahl,
+      Condition bereich) {}
 
   private static Ebene ebene(Dashboardzeitraum zeitraum, Zeitfenster fenster) {
     return switch (zeitraum) {
       case STUNDEN_48 ->
           new Ebene(
               MESSAGE_ROLLUP,
+              MESSAGE_ROLLUP.STUNDE,
               MESSAGE_ROLLUP.PROCESS_ID,
               MESSAGE_ROLLUP.ANZAHL,
               MESSAGE_ROLLUP.STUNDE.ge(fenster.von()).and(MESSAGE_ROLLUP.STUNDE.lt(fenster.bis())));
       case TAGE_30 ->
           new Ebene(
               MESSAGE_ROLLUP_TAG,
+              MESSAGE_ROLLUP_TAG.TAG,
               MESSAGE_ROLLUP_TAG.PROCESS_ID,
               MESSAGE_ROLLUP_TAG.ANZAHL,
               MESSAGE_ROLLUP_TAG
@@ -430,6 +439,7 @@ public class DashboardRepository {
       case MONATE_12 ->
           new Ebene(
               MESSAGE_ROLLUP_MONAT,
+              MESSAGE_ROLLUP_MONAT.MONAT,
               MESSAGE_ROLLUP_MONAT.PROCESS_ID,
               MESSAGE_ROLLUP_MONAT.ANZAHL,
               MESSAGE_ROLLUP_MONAT
@@ -437,6 +447,72 @@ public class DashboardRepository {
                   .ge(fenster.von().toLocalDate())
                   .and(MESSAGE_ROLLUP_MONAT.MONAT.lt(fenster.bis().toLocalDate())));
     };
+  }
+
+  /**
+   * <b>Die Belegungsprobe</b> — Grundlage der Wahl des Standardfensters (D.3).
+   *
+   * <p>Zwei Zahlen aus <b>einem</b> Statement: wie viele Eimer des Paares ueberhaupt belegt sind,
+   * und wie gross der groesste ist. Innen wird je Eimer summiert, aussen gezaehlt und das Maximum
+   * genommen.
+   *
+   * <p><b>Sie liest dieselbe Tabelle wie der Verlauf und denselben Bereich</b> — der teure Teil ist
+   * der Bereichszugriff, und der ist derselbe. Sie ist deshalb keine zweite Art von Frage, sondern
+   * dieselbe Frage mit einer anderen Verdichtung.
+   *
+   * @return leere Eimer und leerer Bestand ergeben {@code new Belegung(0, 0)} — ein Mandant ohne
+   *     eine einzige Rollupzeile im Fenster erscheint in der Gruppierung gar nicht
+   */
+  public Belegung belegung(
+      MandantContext mandant, Dashboardzeitraum zeitraum, Zeitfenster fenster) {
+    Ebene ebene = ebene(zeitraum, fenster);
+    Field<BigDecimal> summe = DSL.sum(ebene.anzahl());
+    Table<?> jeEimer =
+        glassfishDsl
+            .select(ebene.eimer(), summe.as("nachrichten"))
+            .from(ebene.tabelle())
+            .where(ebene.bereich())
+            .and(mandantenkette(mandant, ebene.prozess()))
+            .groupBy(ebene.eimer())
+            .asTable("belegte_eimer");
+
+    Record2<Integer, BigDecimal> satz =
+        glassfishDsl
+            .select(DSL.count(), DSL.max(jeEimer.field("nachrichten", BigDecimal.class)))
+            .from(jeEimer)
+            .fetchOne();
+    if (satz == null || satz.value2() == null) {
+      return new Belegung(0, 0);
+    }
+    return new Belegung(satz.value1(), satz.value2().longValue());
+  }
+
+  /**
+   * <b>Block 7</b>: der letzte abgeschlossene, fehlerfreie Rollup-Lauf.
+   *
+   * <p><b>Dieselbe Bedingung wie der Wasserstand</b> ({@code
+   * RollupSchreibRepository.wasserstand()}): {@code beendet_am IS NOT NULL AND fehler IS NULL}. Ein
+   * abgebrochener Lauf hat nichts fortgeschrieben, und ein abgeschlossener mit Fehler ist nicht
+   * verlaesslich gerechnet — beide taugen nicht als Aktualitaetsangabe. <b>Waere die Bedingung hier
+   * eine andere, zeigte die Seite einen Stand an, den der Job selbst nicht anerkennt.</b>
+   *
+   * <p><b>Paketprivat, und das ist kein Versehen.</b> {@code rollup_lauf} traegt keinen Mandanten;
+   * ein {@code MandantContext} als erster Parameter waere ein Schein-Kontext — ein Parameter, der
+   * entgegengenommen und nicht verwendet wird, sieht von aussen wie Mandantentrennung aus. Regel M2
+   * greift nur fuer oeffentliche Methoden, und paketprivat ist hier der saubere Ausweg statt einer
+   * dritten benannten Ausnahme.
+   *
+   * @return leer, wenn es noch keinen abgeschlossenen, fehlerfreien Lauf gibt
+   */
+  Optional<Standzeile> letzterLauf() {
+    return glassfishDsl
+        .select(ROLLUP_LAUF.ART, ROLLUP_LAUF.BEENDET_AM)
+        .from(ROLLUP_LAUF)
+        .where(ROLLUP_LAUF.BEENDET_AM.isNotNull())
+        .and(ROLLUP_LAUF.FEHLER.isNull())
+        .orderBy(ROLLUP_LAUF.BEENDET_AM.desc())
+        .limit(1)
+        .fetchOptional(satz -> new Standzeile(satz.value1(), satz.value2()));
   }
 
   /**

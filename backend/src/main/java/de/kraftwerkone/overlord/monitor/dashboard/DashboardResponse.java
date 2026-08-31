@@ -17,15 +17,23 @@ import java.util.List;
  * @param verlauf Block 1 — je Eimer die Aufschluesselung nach Einordnung
  * @param kacheln Bloecke 2 und 3 — Nachrichten und Fehler
  * @param verteilung Block 5 — Partner oder Richtung, Top 10 und zwei Restzeilen
+ * @param leer <b>der Leerzustand</b> (D.6). Er unterscheidet <b>nicht</b> zwischen „im Zeitraum ist
+ *     nichts passiert" und „dieser Mandant hat ueberhaupt keine Daten" — der Satz, den die
+ *     Oberflaeche dann zeigt, ist in beiden Faellen wahr. Die bekannte Folge: Ein stiller Sonntag
+ *     und {@code EDITIONLINGERI} sehen gleich aus
  * @param zuletztAufgefallen Block 6 — Fehler und Ueberfaellige im Fenster, neueste zuerst
+ * @param stand Block 7 — der letzte abgeschlossene, fehlerfreie Rollup-Lauf. <b>{@code null}
+ *     heisst: Es hat noch keinen gegeben</b>, und das ist etwas anderes als „lange her"
  */
 public record DashboardResponse(
     String zeitraum,
     FensterResponse fenster,
+    boolean leer,
     List<VerlaufspunktResponse> verlauf,
     KachelnResponse kacheln,
     VerteilungResponse verteilung,
-    List<AuffaelligeNachrichtResponse> zuletztAufgefallen) {
+    List<AuffaelligeNachrichtResponse> zuletztAufgefallen,
+    StandResponse stand) {
 
   public DashboardResponse {
     verlauf = List.copyOf(verlauf);

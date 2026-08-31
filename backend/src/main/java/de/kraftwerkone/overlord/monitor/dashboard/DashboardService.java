@@ -7,6 +7,7 @@ import de.kraftwerkone.overlord.monitor.common.Zeitpunkte;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
@@ -75,6 +76,23 @@ public class DashboardService {
   static final int AUFFAELLIG_HOECHSTENS = 10;
 
   /**
+   * Die zweite Bedingung des Standardfensters: Mindestens ein Eimer muss <b>mehr als</b> so viele
+   * Nachrichten tragen.
+   *
+   * <h2>Sie ist in der Praxis wirkungslos, und das ist bekannt</h2>
+   *
+   * <p>Sie sollte {@code WOC} fangen: 29 von 30 Tagen belegt bei 117 Nachrichten, also knapp vier
+   * am Tag — ein Diagramm mit Punkten, das nichts zeigt. <b>Weil EDI-Verkehr stossweise ist, liegt
+   * aber mit Sicherheit ein Tag ueber fuenf, und {@code WOC} besteht die Bedingung.</b>
+   *
+   * <p><b>Der Auftraggeber hat das am 31.08.2026 in Kenntnis dieser Folge so entschieden.</b> Sie
+   * steht deshalb als <i>bekannte Grenze</i> in {@code docs/dashboard.md} und wird nicht
+   * nachgebessert: Eine Schwelle, die {@code WOC} sicher faengt, faenge auch Mandanten mit echtem,
+   * aber duennem Verkehr — und die haetten dann kein Diagramm, obwohl es etwas zu sehen gaebe.
+   */
+  static final long EIMER_MINDESTENS = 5;
+
+  /**
    * Die ganze Landingpage fuer den aktiven Mandanten.
    *
    * @param mandant Regel M2 — erster Pflichtparameter, und er kommt aus der Sitzung (Regel M1)
@@ -84,7 +102,7 @@ public class DashboardService {
   public DashboardResponse landingpage(
       MandantContext mandant, Dashboardzeitraum gewaehlt, Verteilungssicht sicht) {
     LocalDateTime jetzt = LocalDateTime.now(anwendungsuhr);
-    Dashboardzeitraum zeitraum = gewaehlt == null ? Dashboardzeitraum.STUNDEN_48 : gewaehlt;
+    Dashboardzeitraum zeitraum = gewaehlt == null ? standardfenster(mandant, jetzt) : gewaehlt;
     Zeitfenster fenster = zeitraum.fenster(jetzt);
 
     List<Rollupsumme> summen = dashboardRepository.verlauf(mandant, zeitraum, fenster);
@@ -94,13 +112,64 @@ public class DashboardService {
     List<Auffaelligkeitszeile> aufgefallen =
         dashboardRepository.zuletztAufgefallen(mandant, fenster, jetzt, AUFFAELLIG_HOECHSTENS);
 
+    KachelnResponse kacheln = kacheln(summen, ueberfaellig);
     return new DashboardResponse(
         zeitraum.code(),
         fensterAntwort(fenster),
+        kacheln.nachrichten() == 0,
         verlauf(summen),
-        kacheln(summen, ueberfaellig),
+        kacheln,
         verteilung(verteilt, sicht),
-        zuletztAufgefallen(aufgefallen));
+        zuletztAufgefallen(aufgefallen),
+        stand());
+  }
+
+  /**
+   * <b>D.3: Das Standardfenster richtet sich nach dem Mandanten.</b>
+   *
+   * <p>Genommen wird das <b>erste</b> Paar der Reihe 48 h → 30 Tage → 12 Monate, das <b>beide</b>
+   * Bedingungen erfuellt: mindestens die Haelfte der Eimer belegt <b>und</b> mindestens ein Eimer
+   * mit mehr als {@value #EIMER_MINDESTENS} Nachrichten.
+   *
+   * <p><b>Die Schwelle von 50 % ist aus M95 abgeleitet</b>, nicht gewaehlt: {@code NEXANS}, {@code
+   * SUTTONS} und {@code VOTG} liegen bei allen drei Paaren auf 100 %; {@code IBIS} und {@code
+   * IBISGUS} fallen bei 48 Stunden auf 37,50 % und 27,08 %. Der Sprung liegt also nicht zwischen
+   * gross und klein, sondern beim <b>verstreutesten</b> Verkehr — und genau den soll die Ansicht
+   * nicht als Diagramm mit Luecken zeigen.
+   *
+   * <p><b>Gesucht wird der Reihe nach und nicht in einem Statement.</b> Der Normalfall — ein
+   * Mandant mit Verkehr — ist nach der ersten, kleinsten Abfrage entschieden; nur wer bei 48
+   * Stunden durchfaellt, kostet eine zweite. Drei Belegungsproben auf einmal kosteten <b>immer</b>
+   * auch die teuerste, und die liest die Monatsebene.
+   *
+   * <p><b>Erfuellt keines der drei beide Bedingungen, greift der Leerzustand</b> — und der Endpunkt
+   * nennt dann trotzdem ein Paar, naemlich das erste der Reihe. Die Oberflaeche braucht eines: Ohne
+   * gewaehltes Paar gaebe es nichts hervorzuheben und nichts in die URL zu schreiben. Ein Mandant
+   * ohne Daten sieht damit dieselbe Auswahl wie jeder andere und darf durchschalten; er findet
+   * ueberall denselben Satz.
+   */
+  private Dashboardzeitraum standardfenster(MandantContext mandant, LocalDateTime jetzt) {
+    for (Dashboardzeitraum kandidat : Dashboardzeitraum.reihe()) {
+      Belegung belegung = dashboardRepository.belegung(mandant, kandidat, kandidat.fenster(jetzt));
+      boolean genugEimer = belegung.belegteEimer() * 2 >= kandidat.eimer();
+      boolean genugVerkehr = belegung.groessterEimer() > EIMER_MINDESTENS;
+      if (genugEimer && genugVerkehr) {
+        return kandidat;
+      }
+    }
+    return Dashboardzeitraum.reihe().getFirst();
+  }
+
+  /** Block 7 — {@code null}, solange es keinen abgeschlossenen, fehlerfreien Lauf gibt. */
+  private StandResponse stand() {
+    return dashboardRepository
+        .letzterLauf()
+        .map(
+            zeile ->
+                new StandResponse(
+                    zeile.beendetAm() == null ? null : zeile.beendetAm().toInstant(ZoneOffset.UTC),
+                    zeile.art()))
+        .orElse(null);
   }
 
   /**
