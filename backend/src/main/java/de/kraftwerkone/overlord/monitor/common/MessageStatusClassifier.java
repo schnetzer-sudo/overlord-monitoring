@@ -117,6 +117,57 @@ public class MessageStatusClassifier {
   }
 
   /**
+   * Der feste Text fuer {@code COMMIT_REJECTED} — <b>der einzige Anzeigetext in dieser Klasse</b>,
+   * und er steht hier, weil {@code PROJEKTBESCHREIBUNG.md} §4.2 ihn woertlich vorschreibt: <i>„bei
+   * {@code COMMIT_REJECTED} der feste Text ‚Vom Partner abgelehnt'"</i>.
+   *
+   * <p><b>Er ist eine Ausnahme und kein Muster.</b> Anzeigetexte gehoeren in die Oberflaeche;
+   * dieser gehoert hierher, weil er keine Uebersetzung eines Rohwertes ist, sondern eine
+   * <b>fachliche Festlegung</b>: {@code COMMIT_REJECTED} traegt keinen Namensteil hinter {@code
+   * ERROR_}, aus dem sich eine Fehlerart ableiten liesse. Die Oberflaeche kann ihn ueber den
+   * mitgelieferten Rohwert jederzeit uebersetzen.
+   */
+  public static final String ABGELEHNT_VOM_PARTNER = "Vom Partner abgelehnt";
+
+  /**
+   * Die <b>Fehlerart</b> zu einem Rohstatus — {@code PROJEKTBESCHREIBUNG.md} §4.2, an genau einer
+   * Stelle.
+   *
+   * <ul>
+   *   <li>{@code ERROR_DUPLICATE} → {@code DUPLICATE} — der Namensteil hinter dem Praefix
+   *   <li>{@code COMMIT_REJECTED} → {@link #ABGELEHNT_VOM_PARTNER}
+   *   <li><b>alles andere → der Rohwert, unveraendert</b>
+   * </ul>
+   *
+   * <p><b>Der letzte Fall ist Regel Q4 und keine Nachlaessigkeit.</b> Ein unbekannter Wert bekommt
+   * hier keine geratene Art; er steht so da, wie das Altsystem ihn geschrieben hat. Dasselbe gilt
+   * fuer ein blankes {@code ERROR_} ohne Namensteil: Daraus laesst sich nichts ableiten, also wird
+   * nichts abgeleitet.
+   *
+   * <p><b>Der Rohwert bleibt daneben stehen</b> — diese Methode ersetzt ihn nicht. Wer die Art
+   * anzeigt, zeigt sie <i>zu</i> einem Rohwert; das Dashboard liefert beide ({@code
+   * dashboard/FehlerartResponse}).
+   *
+   * <p>Verglichen wird auf dem <b>hochgestellten</b> Wert, aus demselben Grund wie in {@link
+   * #einordnung(String)}: Die Sortierung des Quellschemas ist {@code utf8mb4_general_ci}, {@link
+   * String#startsWith} ist es nicht. <b>Zurueckgegeben wird der Ausschnitt aus dem Original</b> —
+   * angeglichen wird der Vergleich, nicht die Auskunft.
+   */
+  public String fehlerart(String status) {
+    if (status == null) {
+      return null;
+    }
+    String hochgestellt = status.toUpperCase(Locale.ROOT);
+    if ("COMMIT_REJECTED".equals(hochgestellt)) {
+      return ABGELEHNT_VOM_PARTNER;
+    }
+    if (hochgestellt.startsWith(FEHLER_PRAEFIX) && status.length() > FEHLER_PRAEFIX.length()) {
+      return status.substring(FEHLER_PRAEFIX.length());
+    }
+    return status;
+  }
+
+  /**
    * Ist die Nachricht als Zeile fertig?
    *
    * <p><b>Diese Methode gehoert der Ueberfaelligkeitsrechnung und sonst niemandem.</b> Sie
