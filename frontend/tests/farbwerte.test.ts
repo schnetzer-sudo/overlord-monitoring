@@ -17,6 +17,21 @@ import { describe, expect, it } from "vitest";
  * shadcn/ui. Was der Generator schreibt, wird nicht von Hand umgebaut; es dort
  * zu prüfen hieße, den Test bei jedem `shadcn add` zu reparieren. Der Umweg über
  * eigene Bausteine bleibt trotzdem verbindlich.
+ *
+ * ## `var(--token)` ist erlaubt, und zwar von Anfang an *(vermerkt 31.08.2026)*
+ *
+ * Diagramme färben nicht über eine Klasse, sondern über ein Prop:
+ * `<Bar fill="…" />`. Die zulässige Form dafür ist `fill="var(--status-fehler)"`
+ * — und die **stand nie auf der Liste unten**: Die drei Muster treffen
+ * Hex-Werte, die Farbfunktionen `oklch|oklab|rgb|rgba|hsl|hsla|color-mix` und
+ * die Tailwind-Palette. `var(` ist keines davon.
+ *
+ * Der Vermerk steht hier, weil er beim Lesen sonst offen bleibt und weil er
+ * gemessen ist: Recharts 3.10.1 schreibt die Zeichenkette unverändert ins
+ * SVG-Attribut, und der Browser löst sie auf — an vier Stellen nachgesehen,
+ * einschließlich der Pixel im Bild (`docs/frontend-grundlagen.md` §8a).
+ * **Am Test war dafür nichts zu ändern.** Was er weiterhin blockiert, ist
+ * genau die Form aus der Recharts-Dokumentation: `fill="#b3261e"`.
  */
 
 const WURZEL = fileURLToPath(new URL("../src", import.meta.url));

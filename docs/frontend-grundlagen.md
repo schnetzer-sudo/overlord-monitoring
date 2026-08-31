@@ -864,6 +864,128 @@ zulässt.
 
 ---
 
+## 8a. Farbe in ein Diagramm — `var()` in einem Recharts-Prop *(31.08.2026)*
+
+**Der Abschnitt steht hier und nicht in einer Ansichtsdatei**, weil er nichts über eine Ansicht sagt,
+sondern darüber, **wie Farbe in die Anwendung kommt**. Das ist Unterbau.
+
+### Die Frage, und warum sie eine Messung war
+
+Recharts färbt über ein Prop: `<Bar fill="#b3261e" />`. Genau diese Form verbietet
+`tests/farbwerte.test.ts` in eigenen Komponenten, und das visuelle Konzept steht und fällt damit
+(§2 dort). Der naheliegende Ausweg ist `fill="var(--status-fehler)"` — mit der Erwartung, dass
+Recharts die Zeichenkette unverändert ins SVG-Attribut schreibt und der Browser sie auflöst.
+
+**Diese Erwartung war bis dahin niemandes Messung.** Sie ist vor dem Dashboard-Frontend belegt
+worden und nicht darin.
+
+### Wie gemessen worden ist
+
+**In einem echten Browser.** `jsdom` wertet kein CSS aus und kann `var()` nicht auflösen; ein grüner
+Test dort wäre kein Beleg gewesen. Eine Bauform für Browsertests gibt es im Projekt nicht (§9 —
+Vitest, `node`, für einige Dateien `jsdom`), und es ist auch keine entstanden.
+
+| | |
+|---|---|
+| **Browser** | das installierte **Chrome 151.0.7922.174**, kopflos, über das DevTools-Protokoll gesteuert. Keine neue Abhängigkeit, kein Playwright, kein heruntergeladener Browser |
+| **Recharts** | **3.10.1**, nur für die Messung installiert und danach wieder entfernt |
+| **Aufbau** | eine temporäre Route `src/app/farbprobe/page.tsx` — bewusst **außerhalb** der Gruppe `(app)`, damit weder Anwendungsrahmen noch Backend noch Anmeldung im Weg stehen. Die Routensperre prüft nur, ob ein Sitzungs-Cookie **da** ist (§2), ein Platzhalter genügte |
+| **Zweimal gefahren** | gegen `next dev` **und** gegen `next build` + `next start`. Beide Läufe sind Zeichen für Zeichen gleich ausgefallen |
+| **Gegenprobe auf derselben Seite** | ein Absatz mit `class="text-status-fehler"`. Er muss dieselbe Farbe ergeben wie das Segment — sonst wäre nicht das Prop, sondern das Token die Frage |
+
+**Der Probecode ist entfernt.** Es bleibt dieser Befund.
+
+### Was im DOM stand — der abgelesene Wortlaut
+
+Das Segment, unverändert aus `document.querySelector(…).outerHTML`:
+
+```html
+<path fill="var(--status-fehler)" name="Fehler" x="87.5" y="232.04" width="180" height="30.96"
+      radius="0" class="recharts-rectangle" d="M 87.5,232.04 h 180 v 30.96 h -180 Z"></path>
+```
+
+Der ganze Legendeneintrag. **Er trägt die Farbe zweimal und auf zwei verschiedene Arten** — am
+Symbol als SVG-Attribut wie beim Segment, an der Beschriftung als Inline-Stil:
+
+```html
+<li class="recharts-legend-item legend-item-0" style="display: inline-block; margin-right: 10px; white-space: nowrap;"><svg aria-label="Fehler legend icon" class="recharts-surface" width="14" height="14" viewBox="0 0 32 32" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><title></title><desc></desc><path stroke="none" fill="var(--status-fehler)" d="M0,4h32v24h-32z" class="recharts-legend-icon"></path></svg><span class="recharts-legend-item-text" style="color: var(--status-fehler); white-space: normal; overflow-wrap: break-word;">Fehler</span></li>
+```
+
+Der Tooltip-Eintrag — hier gibt es **kein** SVG und damit auch kein Attribut, die Farbe steht
+ausschließlich im Inline-Stil:
+
+```html
+<li class="recharts-tooltip-item" style="display: block; padding-top: 4px; padding-bottom: 4px; color: var(--status-fehler);"><span class="recharts-tooltip-item-name">Fehler</span><span class="recharts-tooltip-item-separator"> : </span><span class="recharts-tooltip-item-value">12</span><span class="recharts-tooltip-item-unit"></span></li>
+```
+
+**Genau deshalb waren Legende und Tooltip mitzuprüfen.** Wer nur das SVG-Attribut ansieht, hat zwei
+von vier Stellen gesehen; die anderen beiden gehen einen anderen Weg durch Recharts und hätten
+anders ausfallen können.
+
+### Was `getComputedStyle` daraus gemacht hat
+
+| Lage | wie die Farbe dort steht | Eigenschaft | aufgelöster Wert |
+|---|---|---|---|
+| Balkensegment | SVG-Attribut | `fill` | `lab(42.4236 59.8149 41.9956)` |
+| Legendensymbol | SVG-Attribut | `fill` | `lab(42.4236 59.8149 41.9956)` |
+| Legendenbeschriftung | Inline-Stil | `color` | `lab(42.4236 59.8149 41.9956)` |
+| Tooltip-Eintrag | Inline-Stil | `color` | `lab(42.4236 59.8149 41.9956)` |
+| *Gegenprobe* `text-status-fehler` | Tailwind-Klasse | `color` | `lab(42.4236 59.8149 41.9956)` |
+| *das Token selbst* | — | `--status-fehler` | `lab(42.4236% 59.8149 41.9956)` |
+
+**Alle fünf gleich, und gleich dem Token.** Dass dort `lab()` und nicht `oklch()` steht, ist
+Lightning CSS beim Bauen — es schreibt die Werte um; im gebauten CSS steht zu jedem zusätzlich ein
+Hex-Rückfall. Für die Frage hier ändert das nichts.
+
+### Und weil „aufgelöst" nicht „gemalt" heißt: das Pixel
+
+Ein Bildschirmfoto über das DevTools-Protokoll, zurück in die Seite als `data:`-URL, auf eine
+Leinwand gezeichnet, in der **Mitte jedes Segments** ein Pixel gelesen:
+
+| Prop im Quelltext | Pixel im Bild | Sollwert des Tokens |
+|---|---|---|
+| `fill="var(--status-fehler)"` | `#be2323` | `#be2323` |
+| `fill="var(--status-offen)"` | `#525252` | `#525252` |
+| `fill="var(--status-abgeschlossen)"` | `#01684c` | `#01684c` |
+| Legendensymbol, `var(--status-fehler)` | `#be2323` | `#be2323` |
+
+Die Sollwerte stammen aus `scripts/farbrolle-ueberfaellig/rechne.mjs`; `#01684c` ist zusätzlich der
+Wert, den [`visuelles-konzept.md`](visuelles-konzept.md) §3 seit Schritt 3 nennt.
+
+### Die Entscheidung: **Recharts**
+
+Die Regel stand vor der Messung fest und ist nicht neu erwogen worden: `var()` kommt an **und** löst
+auf, in allen drei Lagen — also Recharts, und kein Eigenbau aus Flex-Spalten.
+
+**Der dritte Weg bleibt ausgeschlossen**, auch als Notlösung: Farben zur Laufzeit über
+`getComputedStyle` auslesen und als Literal in das Prop geben wäre ein **zweiter Weg**, auf dem Farbe
+in die Anwendung kommt, und ein späterer Dunkelmodus käme ohne Neurendern nicht nach
+([`visuelles-konzept.md`](visuelles-konzept.md) §2 schließt genau das aus).
+
+#### ⚠️ Befund: `tests/farbwerte.test.ts` brauchte dafür **keine** Änderung
+
+Der Auftrag sah vor, den Test „um `var(--…)` als erlaubte Form zu erweitern". **Nachgesehen: Er hat
+diese Form nie verboten.** Die drei Muster treffen Hex-Werte, die Farbfunktionen
+`oklch|oklab|rgb|rgba|hsl|hsla|color-mix` und die Tailwind-Palette — `var(` steht in keinem davon.
+`fill="var(--status-fehler)"` ist heute schon zulässig, und `fill="#b3261e"` — die Form aus der
+Recharts-Dokumentation — bleibt es nicht.
+
+**Der Test steht damit genau richtig**, und die Datei hat nur einen Absatz bekommen, der das
+festhält. Eine Musteränderung wäre eine Lockerung ohne Anlass gewesen.
+
+### Was nicht gemessen ist
+
+1. **Nur Recharts 3.10.1.** Führte eine spätere Fassung eine eigene Farbverarbeitung ein — etwa um
+   einen Farbverlauf zu berechnen —, gälte der Befund nicht mehr. Er ist an eine Version gebunden
+   und trägt sie deshalb im Text.
+2. **Nur `<Bar>`, Legende und Tooltip**, jeweils in der Voreinstellung. `Cell`, `activeBar`,
+   Farbverläufe (`<linearGradient>`), Flächen- und Liniendiagramme sind **nicht** angesehen worden.
+   Wer eine davon braucht, misst sie nach demselben Muster nach.
+3. **Nichts über Barrierefreiheit.** Dass eine Farbe ankommt, sagt nicht, dass sie genügt — für ein
+   Diagramm gilt „nie allein über Farbe" unverändert.
+
+---
+
 ## 9. Tests
 
 `pnpm test` (Vitest, in `pnpm build` verankert). Bewusst klein: keine Testing Library, kein
