@@ -217,6 +217,89 @@ public record RollupFenster(LocalDateTime von, LocalDateTime bis) {
   }
 
   /**
+   * Die <b>Kalendermonate, die dieses Fenster beruehrt</b> — beide Grenzen <b>einschliesslich</b>,
+   * jeder Monat als sein <b>erster Tag</b>. Leer, wenn das Fenster leer ist.
+   *
+   * <h2>Abgeleitet aus {@link #betroffeneTage()} und nicht noch einmal aus dem Fenster gerechnet
+   * </h2>
+   *
+   * <p><b>Das ist derselbe Grund, aus dem die Monatsebene aus der Tagesebene entsteht und nicht aus
+   * {@code Message}:</b> Zwei getrennte Rechnungen derselben Sache koennen auseinanderlaufen. Die
+   * beruehrten Monate sind per Konstruktion die Monate der beruehrten Tage — insbesondere erbt
+   * diese Methode damit die Behandlung der <b>ausschliessenden</b> oberen Grenze. Ein Fenster von
+   * {@code 2025-12-31 23:00} bis {@code 2026-01-01 00:00} beruehrt den Dezember und <b>nicht</b>
+   * den Januar; der Januar faengt erst dort an, wo das Fenster aufhoert.
+   *
+   * <p><b>Ohne diese Unterscheidung raeumte jeder Lauf am Monatsersten um Mitternacht einen
+   * Monatseimer aus, den er anschliessend nicht neu schreibt</b> — und der Fehler waere still: Die
+   * Stunden- und die Tagesebene blieben richtig, die Monatsebene verloere einen Monat, und
+   * auffallen wuerde es erst im Dashboard.
+   */
+  public Optional<Monatsbereich> betroffeneMonate() {
+    return betroffeneTage().map(Monatsbereich::um);
+  }
+
+  /**
+   * Ein Bereich von Kalendermonaten, <b>beide Grenzen einschliesslich</b>. Jeder Monat steht als
+   * sein <b>erster Tag</b> da — genau so, wie {@code message_rollup_monat.monat} ihn fuehrt.
+   *
+   * @param erster der erste beruehrte Monat, als sein erster Tag
+   * @param letzter der letzte beruehrte Monat, als sein erster Tag — bei einem Fenster innerhalb
+   *     eines Monats derselbe
+   */
+  public record Monatsbereich(LocalDate erster, LocalDate letzter) {
+
+    public Monatsbereich {
+      if (erster == null || letzter == null) {
+        throw new IllegalArgumentException("Ein Monatsbereich ohne Grenzen gibt es nicht");
+      }
+      // Ein Monatseimer traegt den ERSTEN des Monats. Ein anderer Tag darin waere kein
+      // Formfehler, sondern eine zweite Bedeutung derselben Spalte -- und die faende niemand.
+      verlangeMonatsersten(erster, "erster");
+      verlangeMonatsersten(letzter, "letzter");
+      if (erster.isAfter(letzter)) {
+        throw new IllegalArgumentException(
+            "Ein Monatsbereich laeuft nie rueckwaerts: erster=" + erster + ", letzter=" + letzter);
+      }
+    }
+
+    private static void verlangeMonatsersten(LocalDate tag, String name) {
+      if (tag.getDayOfMonth() != 1) {
+        throw new IllegalArgumentException(
+            "Die Grenze " + name + " muss der erste Tag ihres Monats sein, war: " + tag);
+      }
+    }
+
+    /** Die Monate, in denen die Tage dieses Bereichs liegen. */
+    static Monatsbereich um(Tagesbereich tage) {
+      return new Monatsbereich(tage.erster().withDayOfMonth(1), tage.letzter().withDayOfMonth(1));
+    }
+
+    /**
+     * Der Tagesbereich, aus dem die Monatseimer gerechnet werden — <b>ganze Monate</b>, von
+     * einschliesslich bis ausschliessend.
+     *
+     * <p><b>Er ist breiter als das Fenster des Laufs, und das ist derselbe Punkt wie eine Ebene
+     * hoeher:</b> Ein Monatseimer ist die Summe seiner Tageseimer; wuerde er nur aus den Tagen im
+     * Fenster gerechnet, truege er nach einem Delta-Lauf ueber zwei Stunden genau einen Tag und
+     * behauptete, ein Monat zu sein.
+     */
+    public LocalDate von() {
+      return erster;
+    }
+
+    /** Siehe {@link #von()} — der erste Tag des Monats <b>nach</b> dem letzten beruehrten. */
+    public LocalDate bis() {
+      return letzter.plusMonths(1);
+    }
+
+    /** Wie viele Kalendermonate der Bereich umfasst. Nur fuer Protokollmeldungen. */
+    public long monate() {
+      return ChronoUnit.MONTHS.between(erster, letzter) + 1;
+    }
+  }
+
+  /**
    * Ein Bereich von Kalendertagen, <b>beide Grenzen einschliesslich</b>.
    *
    * @param erster der erste beruehrte Tag

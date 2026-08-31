@@ -22,8 +22,10 @@ import org.junit.jupiter.api.Test;
  * Die Statements der <b>Tagesebene</b> (Schritt 10b-1, Teil C), gerendert statt nachgebildet.
  *
  * <p>Gegenstueck zu {@code RollupStatementsTest}, der dasselbe fuer die Leseseite tut. Hier geht es
- * um die vier Statements, die {@code RollupSchreibRepository.ersetzeFenster} schickt — und
- * besonders um das eine, das die Tagesebene aus der Stundenebene ableitet.
+ * um die Statements, die {@code RollupSchreibRepository.ersetzeFenster} schickt — und besonders um
+ * das eine, das die Tagesebene aus der Stundenebene ableitet. <b>Seit Schritt 10b-2 sind es sechs
+ * statt vier</b>; die Reihenfolge <b>aller</b> sechs steht hier, die Monatsebene und ihr eigener
+ * Ausdruck in {@code RollupMonatStatementsTest}.
  *
  * <p><b>{@link StatementType#STATIC_STATEMENT}</b>, damit die Grenzen im Text stehen und nicht als
  * {@code ?}: Ein Test, der nur Fragezeichen sieht, kann den Unterschied zwischen dem Fenster des
@@ -67,12 +69,17 @@ class RollupTagStatementsTest {
   }
 
   /**
-   * <b>Vier Statements, in dieser Reihenfolge</b> — und die Reihenfolge ist nicht beliebig: Die
-   * Tagesebene wird aus der Stundenebene gerechnet, also muss die Stundenebene vorher stehen.
+   * <b>Sechs Statements, in dieser Reihenfolge</b> — und die Reihenfolge ist nicht beliebig: Jede
+   * Ebene wird aus der naechstfeineren gerechnet, also muss die naechstfeinere vorher stehen. Die
+   * Tagesebene aus der Stundenebene, die Monatsebene aus der Tagesebene.
+   *
+   * <p><b>Genau dieser Test faellt, wenn jemand die Monatsebene vor die Tagesebene zieht</b> — und
+   * der Fehler waere sonst still: Die Monatsebene truege den Stand von vor diesem Lauf, und eine
+   * Summenprobe ueber ein einzelnes Fenster faende das nicht.
    */
   @Test
-  @DisplayName("Ein Lauf schickt vier Statements: zweimal loeschen, zweimal einfuegen")
-  void vier_statements_in_dieser_reihenfolge() {
+  @DisplayName("Ein Lauf schickt sechs Statements: dreimal loeschen, dreimal einfuegen")
+  void sechs_statements_in_dieser_reihenfolge() {
     repository.ersetzeFenster(
         ZWEI_STUNDEN,
         List.of(new RollupZeile(LocalDateTime.parse("2025-12-30T03:00"), "p", "FINISHED", 7)));
@@ -81,11 +88,13 @@ class RollupTagStatementsTest {
         gerendert.stream()
             .map(s -> s.replaceAll("\\s+", " ").trim().toLowerCase(Locale.ROOT))
             .toList();
-    assertThat(knapp).hasSize(4);
+    assertThat(knapp).hasSize(6);
     assertThat(knapp.get(0)).startsWith("delete from `overlord_monitor`.`message_rollup` ");
     assertThat(knapp.get(1)).startsWith("insert into `overlord_monitor`.`message_rollup` ");
     assertThat(knapp.get(2)).startsWith("delete from `overlord_monitor`.`message_rollup_tag` ");
     assertThat(knapp.get(3)).startsWith("insert into `overlord_monitor`.`message_rollup_tag` ");
+    assertThat(knapp.get(4)).startsWith("delete from `overlord_monitor`.`message_rollup_monat` ");
+    assertThat(knapp.get(5)).startsWith("insert into `overlord_monitor`.`message_rollup_monat` ");
   }
 
   /**

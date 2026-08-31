@@ -1,6 +1,7 @@
 package de.kraftwerkone.overlord.monitor.rollup;
 
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLUP;
+import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLUP_MONAT;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLUP_TAG;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.ROLLUP_LAUF;
 
@@ -102,18 +103,23 @@ public class RollupSchreibRepository {
    * und damit auf einer anderen Verbindung — es waere ohnehin nicht Teil von ihr (§2). Der Aufrufer
    * liest deshalb erst vollstaendig und ruft danach diese Methode.
    *
-   * <h2>Und die Tagesebene liegt in <b>derselben</b> Transaktion</h2>
+   * <h2>Und die abgeleiteten Ebenen liegen in <b>derselben</b> Transaktion</h2>
    *
-   * <p>Seit Schritt 10b-1 schreibt diese Methode zwei Ebenen: erst die Stundeneimer des Fensters,
-   * dann die Tageseimer der beruehrten Kalendertage. <b>Braeche es dazwischen ab, stuenden die
-   * beiden auf verschiedenen Staenden — und niemand saehe es.</b> Das Dashboard liest je nach
+   * <p>Seit Schritt 10b-1 schreibt diese Methode mehr als eine Ebene, seit Schritt 10b-2 sind es
+   * <b>drei</b>: erst die Stundeneimer des Fensters, dann die Tageseimer der beruehrten
+   * Kalendertage, dann die Monatseimer der beruehrten Kalendermonate. <b>Braeche es dazwischen ab,
+   * stuenden sie auf verschiedenen Staenden — und niemand saehe es.</b> Das Dashboard liest je nach
    * Fensterbreite aus der einen oder der anderen; zwei Ansichten desselben Zeitraums zeigten dann
    * verschiedene Zahlen, ohne dass irgendwo ein Fehler protokolliert waere.
+   *
+   * <p><b>Die Reihenfolge ist keine Geschmacksfrage.</b> Jede Ebene wird aus der naechstfeineren
+   * gerechnet, die unmittelbar davor geschrieben worden ist. Stuende die Monatsebene vor der
+   * Tagesebene, truege sie den Stand von vorher.
    *
    * @param fenster der Bereich, der ersetzt wird — {@code stunde >= von} und {@code stunde < bis}
    * @param zeilen die neuen Zeilen. Sie muessen vollstaendig in das Fenster fallen; sonst
    *     entstuenden Zeilen, die der naechste Lauf nicht mehr loeschen kann
-   * @return wie viele Zeilen in jeder der beiden Ebenen entstanden sind
+   * @return wie viele Zeilen in jeder der drei Ebenen entstanden sind
    */
   @Transactional
   public RollupZeilenzahlen ersetzeFenster(RollupFenster fenster, List<RollupZeile> zeilen) {
@@ -124,7 +130,8 @@ public class RollupSchreibRepository {
         .execute();
     int stundenzeilen = fuegeEin(zeilen);
     int tageszeilen = fenster.betroffeneTage().map(this::rechneTageEbeneNeu).orElse(0);
-    return new RollupZeilenzahlen(stundenzeilen, tageszeilen);
+    int monatszeilen = fenster.betroffeneMonate().map(this::rechneMonatsEbeneNeu).orElse(0);
+    return new RollupZeilenzahlen(stundenzeilen, tageszeilen, monatszeilen);
   }
 
   /**
@@ -194,6 +201,77 @@ public class RollupSchreibRepository {
                 // Vorrunde: Hiesse ein Alias wie eine Tabellenspalte, baende MariaDB still an die
                 // Spalte, und bei zwei von drei Mandanten saehe das Ergebnis trotzdem richtig aus.
                 .groupBy(tagAusStunde, MESSAGE_ROLLUP.PROCESS_ID, MESSAGE_ROLLUP.MESSAGE_STATUS))
+        .execute();
+  }
+
+  /**
+   * Rechnet die Monatseimer der beruehrten Kalendermonate neu — <b>aus der Tagesebene</b>, die in
+   * derselben Transaktion unmittelbar davor geschrieben worden ist.
+   *
+   * <p><b>Diese Methode ist {@link #rechneTageEbeneNeu} eine Ebene hoeher, und sie ist es
+   * absichtlich Wort fuer Wort.</b> Jede Begruendung dort gilt hier unveraendert: aus der
+   * naechstfeineren Ebene abgeleitet statt zweitgelesen (Geld <i>und</i> Wahrheit), ueber
+   * <b>ganze</b> Monate statt ueber das Fenster, geloescht und neu geschrieben statt hochgezaehlt,
+   * der volle Ausdruck im {@code GROUP BY} statt des Alias. Sie sind hier nicht wiederholt.
+   *
+   * <h2>Was hier anders ist: der Monatsausdruck</h2>
+   *
+   * <p>Die Tagesebene kommt mit {@code DATE(stunde)} aus. Ein Monatsanfang braucht mehr, und die
+   * Form ist die, die dieses Projekt in jeder Monatsmessung benutzt: {@code DATE_FORMAT(tag,
+   * '%Y-%m-01')}. Sie liefert eine <b>Zeichenkette</b>; das umschliessende {@code DATE(…)} macht
+   * daraus wieder ein Datum.
+   *
+   * <p><b>Das {@code DATE(…)} ist kein Beiwerk.</b> Ohne es stuende in der Spalte eine
+   * Zeichenkette, die MariaDB beim Einfuegen still nach {@code DATE} umwandelte — und eine stille
+   * Umwandlung ist genau die Art Fehler, die dieses Projekt an anderer Stelle schon einmal Zeilen
+   * gekostet hat. Der Ausdruck steht deshalb explizit da, im {@code SELECT} <b>und</b> im {@code
+   * GROUP BY}.
+   *
+   * <h2>Warum aus der Tagesebene und nicht aus der Stundenebene</h2>
+   *
+   * <p><b>Dieselbe Begruendung wie eine Ebene tiefer, mit einer zusaetzlichen Zahl.</b> Aus der
+   * naechstfeineren Ebene abgeleitet ist die Monatsebene per Konstruktion konsistent — sie ist
+   * deren Summe und kann nichts anderes sein. Und sie liest dabei <b>123.049 statt 335.610</b>
+   * Zeilen ueber den Gesamtbestand (M87, Variante 3 gegen Variante 1). Beide Wege ergaeben
+   * dieselben Zahlen; einer davon liest 2,73-mal so viel.
+   */
+  public int rechneMonatsEbeneNeu(RollupFenster.Monatsbereich monate) {
+    monitorDsl
+        .deleteFrom(MESSAGE_ROLLUP_MONAT)
+        .where(MESSAGE_ROLLUP_MONAT.MONAT.ge(monate.erster()))
+        .and(MESSAGE_ROLLUP_MONAT.MONAT.le(monate.letzter()))
+        .execute();
+
+    Field<LocalDate> monatAusTag =
+        DSL.function(
+            "date",
+            SQLDataType.LOCALDATE,
+            DSL.function(
+                "date_format",
+                SQLDataType.VARCHAR,
+                MESSAGE_ROLLUP_TAG.TAG,
+                DSL.inline("%Y-%m-01")));
+    return monitorDsl
+        .insertInto(
+            MESSAGE_ROLLUP_MONAT,
+            MESSAGE_ROLLUP_MONAT.MONAT,
+            MESSAGE_ROLLUP_MONAT.PROCESS_ID,
+            MESSAGE_ROLLUP_MONAT.MESSAGE_STATUS,
+            MESSAGE_ROLLUP_MONAT.ANZAHL)
+        .select(
+            monitorDsl
+                .select(
+                    monatAusTag,
+                    MESSAGE_ROLLUP_TAG.PROCESS_ID,
+                    MESSAGE_ROLLUP_TAG.MESSAGE_STATUS,
+                    DSL.sum(MESSAGE_ROLLUP_TAG.ANZAHL).cast(Integer.class))
+                .from(MESSAGE_ROLLUP_TAG)
+                .where(MESSAGE_ROLLUP_TAG.TAG.ge(monate.von()))
+                .and(MESSAGE_ROLLUP_TAG.TAG.lt(monate.bis()))
+                // Der volle Ausdruck im GROUP BY, nicht der Alias — dieselbe Lehre aus Befund 11,
+                // die schon eine Ebene tiefer dasteht.
+                .groupBy(
+                    monatAusTag, MESSAGE_ROLLUP_TAG.PROCESS_ID, MESSAGE_ROLLUP_TAG.MESSAGE_STATUS))
         .execute();
   }
 

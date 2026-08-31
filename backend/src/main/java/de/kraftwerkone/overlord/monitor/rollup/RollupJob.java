@@ -35,6 +35,11 @@ import org.springframework.stereotype.Service;
  *       Transaktion</b> und aus der eben geschriebenen Stundenebene, nicht aus {@code Message}.
  *       Seit Schritt 10b-1; die Begruendung steht an {@code
  *       RollupSchreibRepository.rechneTageEbeneNeu}.
+ *   <li><b>Die Monatseimer der beruehrten Kalendermonate neu rechnen</b> — ebenfalls in derselben
+ *       Transaktion und aus der eben geschriebenen <b>Tagesebene</b>. Seit Schritt 10b-2. <b>Die
+ *       Reihenfolge ist der Punkt:</b> Jede Ebene entsteht aus der naechstfeineren, nachdem diese
+ *       geschrieben ist. Stuende sie davor, truege sie den Stand von vor diesem Lauf — und der
+ *       Fehler waere still.
  *   <li><b>{@code beendet_am} und {@code zeilen_geschrieben} nachtragen.</b> Erst danach zaehlt das
  *       Fenster zum Wasserstand.
  * </ol>
@@ -143,12 +148,13 @@ public class RollupJob {
 
       Duration dauer = Duration.between(gestartetAm, beendetAm);
       log.info(
-          "Rollup-Lauf {} (Nr. {}) fertig: {} Stundenzeilen und {} Tageszeilen"
+          "Rollup-Lauf {} (Nr. {}) fertig: {} Stundenzeilen, {} Tageszeilen und {} Monatszeilen"
               + " fuer {} Nachrichten in {} ms",
           art,
           laufId,
           geschrieben.stundenzeilen(),
           geschrieben.tageszeilen(),
+          geschrieben.monatszeilen(),
           nachrichten,
           dauer.toMillis());
       return new RollupErgebnis(
@@ -158,6 +164,7 @@ public class RollupJob {
           scheiben.size(),
           geschrieben.stundenzeilen(),
           geschrieben.tageszeilen(),
+          geschrieben.monatszeilen(),
           nachrichten,
           dauer);
     } catch (RuntimeException fehler) {
