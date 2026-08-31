@@ -32,6 +32,12 @@ import org.junit.jupiter.api.Test;
  * <p><b>Aufgeraeumt wird ueber {@code geaendert_von}.</b> Jede Zeile, die dieser Test schreibt,
  * traegt einen Benutzernamen mit dem Testpraefix; nichts anderes wird angefasst. Eine von Hand
  * kuratierte Zeile ueberlebt den Lauf.
+ *
+ * <p><b>Und kein Testfall setzt eine Zahl aus dem Pflegestand voraus</b> <i>(seit 31.08.2026, Regel
+ * T2)</i>. Zwei Faelle taten das bis dahin und waren seit der Kuratierung vom 27.08.2026 rot; sie
+ * legen sich jetzt an, was sie brauchen. Was dabei verloren ging und was nicht, steht in {@code
+ * docs/testfestigkeit.md} §1 — hier steht nur, was gilt: <b>Eine Erwartung dieses Tests nennt
+ * entweder eine Zahl, die er selbst gebaut hat, oder gar keine.</b>
  */
 class ProzessKatalogIsolationDbIT extends SicherheitsTestbasis {
 
@@ -478,15 +484,40 @@ class ProzessKatalogIsolationDbIT extends SicherheitsTestbasis {
    *
    * <p>Damit die Gegenprobe Zaehne hat, muessen die beiden Mandanten <b>verschieden viele</b>
    * uebernehmbare Zeilen haben: Waeren beide Zahlen gleich, bewiese ein gleicher Rumpf nichts.
+   *
+   * <h2>Den Unterschied stellt der Test her, statt ihn vorzufinden</h2>
+   *
+   * <p><b>Bis zum 31.08.2026 hat er ihn im Katalog vorausgesetzt</b> und war seit der Kuratierung
+   * vom 27.08.2026 rot: Seither haben <i>alle</i> Mandanten null uebernehmbare Zeilen, und null ist
+   * gleich null. Auch hier war der Mangel nicht die rote Farbe, sondern dass die Aussage des Tests
+   * am Pflegestand einer geteilten Testkopie hing ({@code docs/testfestigkeit.md} §1).
+   *
+   * <p>Der Test misst deshalb beide Ausgangszahlen und legt danach <b>so viele eigene Zeilen an,
+   * dass sie sich mit Sicherheit unterscheiden</b> — eine genuegt, ausser die fremde Zahl liegt
+   * genau um eins darueber; dann sind es zwei. <b>Mehr als zwei sind nie noetig</b>, unabhaengig
+   * vom Pflegestand. Die Erwartung unten nennt damit keine Zahl aus dem Katalog, sondern eine, die
+   * dieser Test selbst gebaut hat.
    */
   @Test
   @DisplayName("Vorschlagsuebernahme: ein untergeschobener Mandant bleibt wirkungslos (M1)")
   void uebernahme_ignoriert_untergeschobenen_mandanten() throws Exception {
-    int eigen = betroffen(aufSuttons);
+    int eigenVorher = betroffen(aufSuttons);
     int fremd = betroffen(aufVotg);
-    assertThat(fremd)
+
+    // Eine Zeile genuegt — ausser die fremde Zahl liegt genau eins ueber der eigenen; dann
+    // fuehrte eine einzelne Zeile die beiden zusammen, statt sie zu trennen.
+    int anzulegen = fremd == eigenVorher + 1 ? 2 : 1;
+    for (int i = 0; i < anzulegen; i++) {
+      legeVorschlagAn(prozessOhneKatalogzeile(aufSuttons));
+    }
+    int eigen = eigenVorher + anzulegen;
+
+    assertThat(betroffen(aufSuttons))
+        .as("Die selbst angelegten Zeilen, und keine des anderen Mandanten")
+        .isEqualTo(eigen);
+    assertThat(eigen)
         .as("Waeren beide Zahlen gleich, bewiese ein gleicher Antwortrumpf nichts")
-        .isNotEqualTo(eigen);
+        .isNotEqualTo(fremd);
 
     Antwort ohneFeld =
         aufSuttons.sende("/api/katalog/vorschlaege-uebernehmen", uebernahme("VORSCHAU"));

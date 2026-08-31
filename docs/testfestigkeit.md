@@ -148,3 +148,54 @@ danach über `git checkout --` wiederhergestellt worden; die Änderung ist in ke
 **Nichts an der M4-Aussage.** Verloren ist eine Aussage, die der alte Test nie belegt hat: dass die
 Übernahme auf einem Mandanten mit **mehreren** übernehmbaren Zeilen genau dessen Zeilen erfasst und
 keine fremde. Sie steht als offener Punkt in §6.
+
+---
+
+## 3. Der zweite Test — den Unterschied herstellen statt vorfinden
+
+`ProzessKatalogIsolationDbIT.uebernahme_ignoriert_untergeschobenen_mandanten`.
+
+Er prüft **Regel M1 in beiden Formen**: als untergeschobenes `mandantId`-Feld im Anfragekörper und
+als Abfrageparameter. Der Nachweis ist ein Vergleich dreier Antwortrümpfe — ohne Feld, mit Feld, mit
+Parameter —, und er trägt nur, wenn die beiden Mandanten **verschieden viele** übernehmbare Zeilen
+haben. Sonst sähe eine Antwort, die den untergeschobenen Mandanten befolgt, genauso aus wie eine,
+die ihn ignoriert.
+
+**Bisher hat der Test diesen Unterschied im Katalog vorausgesetzt.** Seit dem 27.08.2026 haben alle
+Mandanten null, und null ist gleich null.
+
+**Jetzt stellt er ihn her.** Er misst beide Ausgangszahlen und legt danach so viele eigene Zeilen
+an, dass sie sich mit Sicherheit unterscheiden:
+
+```java
+int anzulegen = fremd == eigenVorher + 1 ? 2 : 1;
+```
+
+**Mehr als zwei sind nie nötig**, und zwar unabhängig vom Pflegestand:
+
+| Ausgangslage | angelegt | danach |
+|---|---:|---|
+| `fremd ≠ eigenVorher + 1` | 1 | `eigenVorher + 1 ≠ fremd` — eine Zeile trennt sie, weil sie sie nicht genau zusammenführt |
+| `fremd = eigenVorher + 1` | 2 | `eigenVorher + 2 = fremd + 1 ≠ fremd` |
+
+Die Erwartung nennt damit **keine Zahl aus dem Katalog**, sondern eine, die der Test selbst gebaut
+hat: `assertThat(mitFeld.betroffen).isEqualTo(eigen)` mit `eigen = eigenVorher + anzulegen`.
+
+### Die Verletzungsprobe
+
+Ausprobiert am 31.08.2026 und **zurückgenommen**: `VorschlagsuebernahmeRequest` bekam ein Feld
+`mandantId`, und der Controller benutzte es, wenn es gesetzt war — Regel M1, gebrochen.
+
+```
+expected: "{"modus":"VORSCHAU","betroffen":1,"regelA":1,"regelB":0}"
+ but was: "{"modus":"VORSCHAU","betroffen":0,"regelA":0,"regelB":0}"
+        at ProzessKatalogIsolationDbIT.uebernahme_ignoriert_untergeschobenen_mandanten
+```
+
+Der untergeschobene Mandant hat die Antwort verändert — genau die Auskunft, die der Test verbietet.
+Der Arbeitsbaum ist danach über `git checkout --` wiederhergestellt worden.
+
+### Was verlorengegangen ist
+
+**Nichts.** Der Test prüft dieselbe Aussage mit derselben Schärfe; er beschafft sich die
+Vorbedingung nur selbst, statt sie vorauszusetzen.
