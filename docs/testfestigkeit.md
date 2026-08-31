@@ -95,8 +95,56 @@ nicht, dass jemand anderes sie hingelegt hat.
 
 ---
 
-## 2. Was daraus folgt
+## 2. Der erste Test — die Rollen sind vertauscht
 
-Der Umbau der drei Tests steht in den folgenden Abschnitten; dieser Stand hält nur den **Befund**
-fest, und zwar bevor eine einzige Zeile geändert worden ist. Das ist Absicht: Der Zustand, in dem
-zwei Tests rot sind, ist die Ausgangslage, gegen die sich jeder folgende Schritt messen lassen muss.
+`ProzessKatalogIsolationDbIT.uebernahme_erfasst_nur_den_aktiven_mandanten`.
+
+**Der Weg, den der Test nicht gehen kann.** Naheliegend wäre: Der Test legt sich für **beide**
+Mandanten eine übernehmbare Zeile an. Das geht nicht — eine Katalogzeile darf nur auf einem Prozess
+**ohne** Zeile entstehen (reines `INSERT`, die Lehre vom 26.08.2026, siehe
+[`mandantentrennung.md`](mandantentrennung.md) §5), und `VOTG` hat auf allen 390 Prozessen eine.
+Zwei Mandanten mit je einem freien Prozess gäbe es heute nur als `SUTTONS`/`WOC` — und die zu
+wählen hieße, den heutigen Pflegestand in den Test zu schreiben. Genau das ist untersagt.
+
+**Der Weg, den er geht: die Rollen tauschen.** Die eine übernehmbare Zeile gehört `SUTTONS` — das
+ist der Mandant, der freie Prozesse hat —, und der **fremde** Lauf ist der von `VOTG`. Der Nachweis
+besteht aus zwei Schritten, die einander erst zu einem Beweis machen:
+
+| | Schritt | was er zeigt |
+|---|---|---|
+| 1 | `AUSFUEHREN` als `VOTG` lässt die Zeile von `SUTTONS` **offen** | die Isolationsaussage |
+| 2 | `AUSFUEHREN` als `SUTTONS` nimmt **genau diese** Zeile | die Zähne für Schritt 1 |
+
+**Schritt 2 ist der Kern.** Ohne ihn bewiese Schritt 1 nur, dass der Knopf gar nichts tut. Mit ihm
+steht fest: Die Zeile *war* übernehmbar, und der fremde Lauf hat sie trotzdem liegen lassen. Der
+Mandant, der die Zeile besitzt, braucht dafür **keine** vorgefundene Zeile, und der Mandant, der den
+fremden Lauf fährt, braucht **gar nichts** — auch nicht, dass er selbst welche hat.
+
+**Die Gegenrichtung ist schärfer geworden, nicht schwächer.** Statt „die Zahl der übernehmbaren
+Zeilen von `VOTG` ist unverändert" vergleicht der Test jetzt den **ganzen Antwortrumpf** der
+Pflegeliste von `VOTG` vor und nach dem Lauf von `SUTTONS`. Eine Veränderung an irgendeiner Spalte
+einer beliebigen Zeile fällt damit auf. Der Rumpf wird **nach** dem eigenen Lauf von `VOTG` erhoben,
+damit der Vergleich die Wirkung des fremden Laufs misst und nicht die des eigenen.
+
+### Die Verletzungsprobe
+
+Ausprobiert am 31.08.2026 und **zurückgenommen**: In `ProzessKatalogRepository.findeUebernehmbareVorschlaege`
+wurde `PROJECTMANDANT.MANDANTID.eq(mandant.mandantId())` durch `isNotNull()` ersetzt — der
+Mandantenfilter aus Regel M3, ausgehängt.
+
+```
+[Der Knopf von VOTG hat eine offene Zeile von SUTTONS uebernommen — er schreibt ueber
+ Mandantengrenzen]
+expected: "OFFEN"
+ but was: "GEPFLEGT"
+        at ProzessKatalogIsolationDbIT.uebernahme_erfasst_nur_den_aktiven_mandanten:455
+```
+
+**Der Test wird rot, und seine Meldung nennt den Vorgang statt einer Zahl.** Der Arbeitsbaum ist
+danach über `git checkout --` wiederhergestellt worden; die Änderung ist in keinem Commit.
+
+### Was verlorengegangen ist
+
+**Nichts an der M4-Aussage.** Verloren ist eine Aussage, die der alte Test nie belegt hat: dass die
+Übernahme auf einem Mandanten mit **mehreren** übernehmbaren Zeilen genau dessen Zeilen erfasst und
+keine fremde. Sie steht als offener Punkt in §6.

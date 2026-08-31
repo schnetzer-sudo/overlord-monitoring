@@ -386,44 +386,86 @@ class ProzessKatalogIsolationDbIT extends SicherheitsTestbasis {
    *
    * <p>Er nimmt keine Kennung entgegen — es gibt also keine Eingabe, ueber die sich Existenz
    * erfragen liesse. Die Gegenprobe verschiebt sich damit auf die <b>Wirkung</b>, so wie schon bei
-   * {@code ProzesseIsolationDbIT} und beim Heuristik-Lauf: Beide Mandanten bekommen eine von Hand
-   * angelegte Vorschlagszeile, uebernommen wird als {@code SUTTONS} — und danach ist genau die
-   * eigene gepflegt und die fremde unveraendert offen.
+   * {@code ProzesseIsolationDbIT} und beim Heuristik-Lauf.
+   *
+   * <h2>Der Nachweis steht auf einer Zeile, die dieser Test selbst angelegt hat</h2>
+   *
+   * <p><b>Bis zum 31.08.2026 verlangte er stattdessen, dass Mandant A von sich aus eine
+   * uebernehmbare Zeile mitbringt</b> — {@code assertThat(votgVorher).isPositive()}. Seit der
+   * Kuratierung von 505 Katalogzeilen am 27.08.2026 bringt kein Mandant mehr eine mit, und der Test
+   * war rot. <b>Das war der Mangel, nicht die rote Farbe:</b> Seine Aussage hing an einer Zahl aus
+   * dem Pflegestand einer geteilten Testkopie und haette beim naechsten Pflegevorgang erneut
+   * gewechselt. Die Einzelheiten stehen in {@code docs/testfestigkeit.md} §1.
+   *
+   * <p>Gebaut ist er deshalb <b>umgekehrt</b>: Die eine uebernehmbare Zeile gehoert {@code
+   * SUTTONS}, sie ist von diesem Test angelegt, und <b>der fremde Lauf ist der von {@code
+   * VOTG}</b>. Der Nachweis besteht aus zwei Schritten, die einander erst zu einem Beweis machen:
+   *
+   * <ol>
+   *   <li><b>{@code AUSFUEHREN} als {@code VOTG} laesst die Zeile von {@code SUTTONS} offen.</b>
+   *       Das ist die Isolationsaussage.
+   *   <li><b>{@code AUSFUEHREN} als {@code SUTTONS} nimmt genau diese Zeile.</b> Das ist die
+   *       Gegenprobe, und sie ist es, die dem ersten Schritt seine Zaehne gibt: Sie zeigt, dass die
+   *       Zeile sehr wohl uebernehmbar war — der fremde Lauf hat sie also nicht deshalb liegen
+   *       lassen, weil ohnehin nichts zu tun war.
+   * </ol>
+   *
+   * <p>Die <b>Gegenrichtung</b> bleibt zusaetzlich erhalten und ist sogar schaerfer geworden: Statt
+   * einer Zahl wird der <b>ganze Antwortrumpf</b> der Pflegeliste von {@code VOTG} vor und nach dem
+   * Lauf von {@code SUTTONS} verglichen. Eine Veraenderung an irgendeiner Spalte einer beliebigen
+   * Zeile faellt damit auf, nicht nur eine an der Zahl der uebernehmbaren.
    *
    * <p><b>{@code AUSFUEHREN} laeuft hier bewusst</b>, und ausschliesslich auf selbst angelegten
-   * Zeilen mit dem Testpraefix. Gegen einen echten Bestand wird der Modus nirgends gefahren.
+   * Zeilen mit dem Testpraefix. Gegen einen echten Bestand wird der Modus nirgends gefahren; dass
+   * der Lauf von {@code VOTG} heute nichts vorfindet, ist dabei kein Zufall, sondern der
+   * Pflegestand — und der Test haengt nicht mehr daran.
    */
   @Test
   @DisplayName("Vorschlagsuebernahme: sie erfasst nur die Zeilen des aktiven Mandanten")
   void uebernahme_erfasst_nur_den_aktiven_mandanten() throws Exception {
-    // Der Ausgangsstand beider Mandanten. Was der Bestand von sich aus hergibt, ist kein Befund —
-    // gemessen wird die Veraenderung.
+    // Die eine Zeile, um die es geht. Sie ist von diesem Test angelegt und traegt das Praefix;
+    // was der Bestand von sich aus hergibt, spielt fuer die Aussage keine Rolle mehr.
     int suttonsVorher = betroffen(aufSuttons);
-    int votgVorher = betroffen(aufVotg);
-    assertThat(votgVorher)
-        .as(
-            "Sonst bewiese der Test nur, dass null gleich null bleibt. Steht hier 0, ist der"
-                + " Katalog von %s vollstaendig kuratiert und dieser Test braucht einen anderen"
-                + " Gegenmandanten",
-            MANDANT_A)
-        .isPositive();
-
     String vonSuttons = prozessOhneKatalogzeile(aufSuttons);
     legeVorschlagAn(vonSuttons);
 
     assertThat(betroffen(aufSuttons))
         .as("Die eine angelegte Zeile, und keine des anderen Mandanten")
         .isEqualTo(suttonsVorher + 1);
+    assertThat(pflegestatusVon(aufSuttons, vonSuttons))
+        .as("Ausgangszustand: die Zeile ist offen und damit uebernehmbar")
+        .isEqualTo(Pflegestatus.OFFEN.name());
 
-    Antwort ausgefuehrt =
-        aufSuttons.sende("/api/katalog/vorschlaege-uebernehmen", uebernahme("AUSFUEHREN"));
-    assertThat(ausgefuehrt.status()).isEqualTo(200);
-    assertThat(ausgefuehrt.<Integer>json("$.betroffen")).isEqualTo(suttonsVorher + 1);
+    // 1. Der fremde Lauf. Er darf die Zeile von SUTTONS nicht erwischen.
+    Antwort fremderLauf =
+        aufVotg.sende("/api/katalog/vorschlaege-uebernehmen", uebernahme("AUSFUEHREN"));
+    assertThat(fremderLauf.status()).isEqualTo(200);
 
     assertThat(pflegestatusVon(aufSuttons, vonSuttons))
-        .as("Die eigene Zeile ist uebernommen")
-        .isEqualTo("GEPFLEGT");
-    assertThat(betroffen(aufVotg))
+        .as(
+            "Der Knopf von %s hat eine offene Zeile von %s uebernommen — er schreibt ueber"
+                + " Mandantengrenzen",
+            MANDANT_A, MANDANT_B)
+        .isEqualTo(Pflegestatus.OFFEN.name());
+
+    // Der Ausgangsstand von VOTG — erhoben NACH dessen eigenem Lauf, damit der Vergleich unten
+    // nur die Wirkung des fremden Laufs misst und nicht die des eigenen.
+    String votgVorher = aufVotg.hole("/api/katalog/prozesse").rumpf();
+
+    // 2. Die Gegenprobe, die Schritt 1 seine Zaehne gibt: Dieselbe Zeile, derselbe Modus, nur der
+    // aktive Mandant ist ein anderer — und jetzt greift der Knopf.
+    Antwort eigenerLauf =
+        aufSuttons.sende("/api/katalog/vorschlaege-uebernehmen", uebernahme("AUSFUEHREN"));
+    assertThat(eigenerLauf.status()).isEqualTo(200);
+    assertThat(eigenerLauf.<Integer>json("$.betroffen")).isEqualTo(suttonsVorher + 1);
+    assertThat(pflegestatusVon(aufSuttons, vonSuttons))
+        .as(
+            "Ohne diesen Schritt bewiese Schritt 1 nur, dass der Knopf gar nichts tut — die Zeile"
+                + " war uebernehmbar, der fremde Lauf hat sie trotzdem liegen lassen")
+        .isEqualTo(Pflegestatus.GEPFLEGT.name());
+
+    // 3. Und die Gegenrichtung: der Lauf von SUTTONS hat bei VOTG keine einzige Spalte angefasst.
+    assertThat(aufVotg.hole("/api/katalog/prozesse").rumpf())
         .as(
             "Beim anderen Mandanten darf sich keine einzige Zeile geaendert haben — sonst schriebe"
                 + " der Knopf ueber Mandantengrenzen")
