@@ -470,42 +470,60 @@ wie in der Vorlage `MandantenIsolationDbIT`. Geprüft wird:
    Gruppenliste**.
 3. **Die Gegenprobe:** Eine fremde, *existierende* Kennung und eine *erfundene* liefern eine
    **ununterscheidbare** Antwort — gleicher Status **und** gleicher Rumpf.
-4. **Auch in der Laufzeit ununterscheidbar**: Eine nachgelagerte Existenzprüfung kostete einen
-   zusätzlichen Zugriff und wäre über genug Anfragen ein messbarer Kanal. Die Grenze ist bewusst grob
-   (Faktor zehn) — gemessen ist ein Zugriff von 0,44 ms, während HTTP und Testrechner deutlich mehr
-   streuen.
+4. **Auch in der Zahl der Datenbankzugriffe ununterscheidbar** *(so seit dem 31.08.2026 —
+   bis dahin: „auch in der Laufzeit")*. Eine nachgelagerte Existenzprüfung kostete einen
+   zusätzlichen Zugriff und wäre über genug Anfragen ein messbarer Kanal. Verglichen wird die
+   **Folge der abgesetzten Statements** auf dem Lese-Kontext, gezählt von einem zweiten
+   jOOQ-`ExecuteListener`, den ausschließlich diese Testklasse anhängt.
 5. Kein Anzeigename und keine Prozesskennung des fremden Mandanten steht im Rumpf.
 6. Die Trennung gilt in **beide** Richtungen.
 7. Ohne aktiven Mandanten antwortet der Endpunkt `403` — auch für ADMIN.
 
-> ### ⚠️ Offener Punkt: Prüfung 4 wird gelegentlich grundlos rot *(nachgetragen am 27.08.2026)*
+> ### ✔ Erledigt am 31.08.2026 — Prüfung 4 misst nicht mehr die Uhr
 >
-> **Die Laufzeitprüfung aus Punkt 4 vergleicht zwei Wanduhrzeiten gegen eine Faktor‑10‑Schranke —
-> und fällt, ohne dass sich am Code etwas geändert hätte.** Beobachtet: **279 ms gegen 20 ms**,
-> also Faktor 14 bei erlaubtem Faktor 10. Ein Wiederholungslauf ist danach grün.
+> **Der Punkt hat gehalten, was der Absatz darunter angekündigt hat: „Er gehört in eine eigene
+> Runde."** Die Entscheidung dieser Runde ist keine der drei dort genannten — kein Aufwärmaufruf,
+> keine mehreren Läufe, keine großzügigere Schranke. **Der Zeitkanal wird an seiner Ursache
+> geprüft: an der Zahl der Zugriffe.**
 >
-> **Die Schranke ist bewusst grob gewählt** (Punkt 4 sagt das), und sie ist trotzdem zu eng: Sie
-> misst nicht nur den Zugriff, den sie meint, sondern auch alles, was beim **ersten** Aufruf
-> einmalig anfällt — kalter Abfrageplan, kalte Verbindung, erste Transaktion. Dass dieser Anteil
-> die Größenordnung des Messwerts erreicht, ist an anderer Stelle dieses Projekts belegt:
-> [`rollup.md`](rollup.md) §9 misst für den ersten Delta-Lauf einer JVM **387 ms gegen 20 bis
-> 31 ms** danach, also **das Zwölffache**, und nennt ausdrücklich denselben Grund.
+> **Warum keine der drei anderen.** Alle drei lassen die Wanduhr in der Zusicherung stehen und
+> machen sie nur stiller. Eine großzügigere Schranke ist der schlechteste Fall davon: Sie fängt
+> weniger und fällt trotzdem gelegentlich. Und der Kern des Einwands bleibt bei allen dreien
+> unberührt — **geschützt werden 0,44 ms, gemessen wird über HTTP auf einem Testrechner.** Der
+> Test war nicht ungenau; er hat die falsche Größe gemessen.
 >
-> > **Belegvermerk** (Regel L10). *Beobachtet ist:* ein Fehlschlag mit 279 ms gegen 20 ms.
-> > *Behauptet wird* hier: dass die Ursache der kalte erste Aufruf ist. **Die Lücke:** Das ist aus
-> > der Bauform des Tests und aus der Parallele zum Rollup **erschlossen**, nicht an
-> > `BamIsolationDbIT` gemessen. Eine Messung wäre billig — dieselbe Prüfung mit einem
-> > vorgeschalteten Aufwärmaufruf — und ist nicht gefahren.
+> **Was jetzt dasteht.** Der Test setzt beide Anfragen ab und vergleicht die Folge der Statements,
+> die dabei auf `glassfishDsl` laufen. Der Text trägt Platzhalter statt Bindewerten; zwei Anfragen
+> mit verschiedenen Kennungen sind darin Zeichen für Zeichen gleich. Beide Fälle setzen heute
+> **zwei** Statements ab — die Mandantenliste der Sitzung und die eine `EXISTS`-Abfrage mit
+> Mandantenkette.
 >
-> **Der Punkt gehört behoben, aber nicht hier.** Die Korrekturrunde vom 27.08.2026 ändert
-> ausschließlich Dokumentation; jede Fassung dieser Prüfung ist eine Codeänderung. **Er gehört in
-> eine eigene Runde**, und dort ist zu entscheiden, ob ein Aufwärmaufruf davorgehört, ob mehrere
-> Läufe verglichen werden oder ob der Zeitkanal anders abgesichert wird als über die Wanduhr.
+> **Die Verletzungsprobe ist gefahren und zurückgenommen** (31.08.2026): eine ungefilterte
+> Existenzabfrage vor die gefilterte gesetzt — also genau die Bauform, die Punkt 4 verbietet. Der
+> Test wird rot, und die Meldung nennt das zusätzliche Statement im Wortlaut:
 >
-> **Bis dahin gilt: Fällt genau diese Prüfung, ist der Wiederholungslauf der erste Schritt und
-> nicht die Suche im eigenen Diff.** Die inhaltliche Aussage von Punkt 4 — eine nachgelagerte
-> Existenzprüfung wäre über genug Anfragen ein messbarer Kanal — bleibt davon unberührt und
-> richtig.
+> ```
+> select exists (select 1 as `one` from `GlassfishDB`.`Message`
+>                where `GlassfishDB`.`Message`.`MessageID` = ?)
+> ```
+>
+> **Zwanzig Läufe hintereinander, zwanzigmal grün** — jeder in einer eigenen JVM, also genau in
+> der Lage, in der die alte Prüfung gefallen ist. Bei einem Test, der wegen Unzuverlässigkeit
+> angefasst wurde, ist einmal grün kein Nachweis.
+>
+> > **Belegvermerk** (Regel L10). *Gemessen ist:* dass beide Fälle dieselbe Folge von Statements
+> > absetzen, und dass ein zusätzliches Statement den Test rot macht. *Behauptet wird:* dass damit
+> > der Zeitkanal aus Punkt 4 abgesichert ist. **Die Lücke:** Zwei gleich viele Zugriffe könnten
+> > verschieden lange dauern — etwa weil das eine Statement Zeilen liest und das andere keine. Ob
+> > das eine reale Lücke ist, ist **nicht** beantwortet und ausdrücklich **nicht** Gegenstand
+> > dieser Runde. Sie steht als offener Punkt in [`testfestigkeit.md`](testfestigkeit.md) §6.
+>
+> **Die Vorgeschichte bleibt lesbar, weil ohne sie nicht zu verstehen ist, warum hier gezählt und
+> nicht gestoppt wird:** Beobachtet war ein Fehlschlag mit **279 ms gegen 20 ms**, also Faktor 14
+> bei erlaubtem Faktor 10; ein Wiederholungslauf war danach grün. Als Ursache war der kalte erste
+> Aufruf einer JVM **erschlossen** — dieselbe Größenordnung, die [`rollup.md`](rollup.md) §9 für
+> den ersten Delta-Lauf mit 387 ms gegen 20 bis 31 ms misst —, und **an `BamIsolationDbIT` nie
+> gemessen.** Diese Lücke wird auch jetzt nicht geschlossen; sie wird gegenstandslos.
 
 **Das Zeitfenster ist absolut** (29.12.2025): Außer `NEXANS` endet jeder Mandant am 30.12.2025 (M3);
 in einem relativen Fenster sähe `SUTTONS` je nach Datenstand null Zeilen, und der Test bewiese nur,

@@ -199,3 +199,121 @@ Der Arbeitsbaum ist danach über `git checkout --` wiederhergestellt worden.
 
 **Nichts.** Der Test prüft dieselbe Aussage mit derselben Schärfe; er beschafft sich die
 Vorbedingung nur selbst, statt sie vorauszusetzen.
+
+---
+
+## 4. Der dritte Test — gezählt statt gestoppt
+
+`BamIsolationDbIT.gegenprobe_mit_echter_fremder_kennung`.
+
+### Was er soll
+
+[`bam-werte.md`](bam-werte.md) §9, Prüfung 4: Eine **fremde, existierende** und eine **erfundene**
+`MessageID` müssen ununterscheidbar sein — **auch in der Laufzeit**. Sonst ließe sich über die
+Antwortzeit herausfinden, ob eine Kennung existiert. Die Sorge steht dort im Klartext: *eine
+nachgelagerte Existenzprüfung kostete einen zusätzlichen Zugriff.*
+
+### Warum er das nicht konnte
+
+| | |
+|---|---|
+| **geschützt** | ein Datenbankzugriff von **0,44 ms** ([`bam-werte.md`](bam-werte.md) §4) |
+| **gemessen** | zwei HTTP-Aufrufe mit `System.nanoTime`, auf einem Testrechner |
+| **Schranke** | Verhältnis `max/min < 10`, „bewusst grob" |
+| **Verlauf** | einmal rot bei **279 ms gegen 20 ms** (Faktor 14), danach dreimal grün |
+
+Der Rest ist Arithmetik: Zwischen dem Signal (0,44 ms) und der Schranke (Faktor 10 auf einem
+Messwert von rund 20 ms) liegen zwei Größenordnungen Rauschen. **Der Test war nicht ungenau, er hat
+die falsche Größe gemessen.** Was er tatsächlich erfasst hat, ist mit hoher Wahrscheinlichkeit der
+erste Aufruf einer JVM — dasselbe Muster, das [`rollup.md`](rollup.md) §14 für den ersten
+Delta-Lauf mit 387 ms gegen 20–31 ms beschreibt.
+
+**Eine großzügigere Schranke hätte das nicht behoben, sondern verdeckt.** Sie macht den Test
+stiller, nicht besser: Er fiele seltener und fände einen zusätzlichen Zugriff dann gar nicht mehr.
+
+### Was jetzt dasteht: die Zahl der Datenbankzugriffe
+
+Der jOOQ-`ExecuteListener` ist im Projekt schon da — `config/ReadOnlyExecuteListener` hängt als
+dritte Schicht des Schreibschutzes auf dem Lese-Kontext
+([`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §6). Der Test hängt einen **zweiten** daneben,
+der zählt statt abzuweisen.
+
+| | |
+|---|---|
+| **Wo** | `BamIsolationDbIT.Zugriffszaehler`, angebracht über `@Import` einer `@TestConfiguration` in derselben Klasse — **ausschließlich `src/test`**, am Anwendungscode ändert sich nichts |
+| **Woran** | nur `glassfishDsl`. Der Schreib-Kontext bleibt außen vor; Sitzungs- und Protokollschreiben in `overlord_monitor` gehören nicht zur Frage |
+| **Wann** | in `executeStart`, weil `ExecuteContext.sql()` dort steht — gerendert, mit Platzhaltern statt Bindewerten |
+| **Was verglichen wird** | nicht nur die **Zahl**, sondern die **Folge der Statement-Texte**. Zwei Anfragen mit verschiedenen Kennungen sind darin Zeichen für Zeichen gleich |
+
+**Der `ReadOnlyExecuteListener` bleibt erhalten.** Der Zähler wird an die vorhandenen
+`ExecuteListenerProvider` **angehängt** und ersetzt sie nicht — ein Ersetzen hätte den
+Schreibschutz für die Dauer dieser Testklasse stillgelegt.
+
+**Der Aufwärmlauf bleibt**, aber aus einem anderen Grund als vorher: Er beruhigt keine Messung mehr,
+sondern sorgt dafür, dass ein einmaliger Zugriff beim ersten Aufruf nicht in genau einer der beiden
+Folgen landet.
+
+**Beide Fälle setzen heute zwei Statements ab** — die Mandantenliste der Sitzung und die eine
+`EXISTS`-Abfrage mit Mandantenkette.
+
+### Die Verletzungsprobe
+
+Ausprobiert am 31.08.2026 und **zurückgenommen**: In `BamService.werte` wurde eine **ungefilterte**
+Existenzabfrage vor die gefilterte gesetzt — die Bauform, vor der `bam-werte.md` §9 und
+[`mandantentrennung.md`](mandantentrennung.md) §5 ausdrücklich warnen. Eine erfundene Kennung endet
+danach nach einem Zugriff, eine fremde echte nach zweien.
+
+Der Test wird rot, und die Meldung nennt **das zusätzliche Statement im Wortlaut**:
+
+```
+[eine nachgelagerte Existenzpruefung kostete einen zusaetzlichen Zugriff und waere hier sichtbar]
+Expecting actual: [ …Mandant-Liste…,
+                    select exists (select 1 as `one` from `GlassfishDB`.`Message`
+                                   where `GlassfishDB`.`Message`.`MessageID` = ?),
+                    select exists ( … and exists ( … ProjectMandant.MandantID = ?)) ]
+to be equal to:   [ …Mandant-Liste…,
+                    select exists (select 1 as `one` from `GlassfishDB`.`Message`
+                                   where `GlassfishDB`.`Message`.`MessageID` = ?) ]
+```
+
+**Das ist der Unterschied zur Wanduhr in einem Bild:** Die alte Prüfung hätte hier zwei Zahlen
+genannt, die man deuten muss. Diese nennt das Statement, das durchgerutscht ist.
+
+### Zwanzig Läufe, zwanzigmal grün
+
+Bei einem Test, der wegen Unzuverlässigkeit angefasst wurde, ist einmal grün kein Nachweis. Gefahren
+am 31.08.2026: **zwanzig `verify`-Läufe hintereinander**, jeder in einer **eigenen JVM** — also
+genau in der Lage, in der die alte Prüfung gefallen ist. Ergebnis in §5.
+
+### Die Lücke, und sie wird benannt statt beantwortet
+
+**Die Zugriffszählung deckt nicht ab, dass zwei gleich viele Zugriffe verschieden lange dauern
+könnten** — etwa weil das eine Statement Zeilen liest und das andere keine. Ob das eine reale Lücke
+ist, ist in dieser Runde **nicht** beantwortet. Sie steht als offener Punkt in §6.
+
+---
+
+## 5. Zwanzig Läufe, zwanzigmal grün
+
+Gefahren am 31.08.2026, nach dem Umbau aus §4.
+
+| | |
+|---|---|
+| **Bauform** | zwanzig vollständige `mvnw verify`-Aufrufe hintereinander, jeder mit `-Dit.test=BamIsolationDbIT` |
+| **Warum zwanzig getrennte Aufrufe** | jeder startet eine **eigene JVM** und einen eigenen Anwendungskontext — also genau die Lage, in der die alte Prüfung mit 279 ms gegen 20 ms gefallen ist |
+| **Ergebnis** | **20 von 20 grün**, je sieben Testfälle, kein Fehlschlag und kein Fehler |
+| **Laufzeit je Lauf** | 19,54 s bis 21,29 s |
+
+**Die Zahl steht hier, weil sie zur Aussage gehört.** Bei einem Test, der wegen Unzuverlässigkeit
+angefasst wurde, ist einmal grün kein Nachweis — die alte Prüfung war *dreimal hintereinander* grün,
+nachdem sie gefallen war.
+
+---
+
+## 6. Offene Punkte
+
+| Nr. | Punkt | Woher |
+|---|---|---|
+| **T-1** | **Zwei gleich viele Datenbankzugriffe könnten verschieden lange dauern** — etwa weil das eine Statement Zeilen liest und das andere keine. Die Zugriffszählung aus §4 deckt das nicht ab. **Ob das eine reale Lücke ist, ist nicht beantwortet.** Zu klären wäre zuerst, ob der Unterschied überhaupt messbar ist, und erst danach, wie man ihn absichert — nicht über die Wanduhr | §4, [`bam-werte.md`](bam-werte.md) §9 |
+| **T-2** | **Die Übernahme auf einem Mandanten mit *mehreren* übernehmbaren Zeilen ist ungeprüft.** Der Test aus §2 legt genau eine an. Dass die Übernahme bei fünf eigenen und drei fremden Zeilen genau die fünf erfasst, folgt daraus nicht — es folgt aus dem Statement, und das ist ein Argument, kein Test | §2 |
+| **T-3** | **Der Test aus §2 braucht weiterhin einen Prozess ohne Katalogzeile.** Heute haben nur `SUTTONS` (17 frei) und `WOC` (4 frei) welche. Werden auch die kuratiert, wird der Test wieder rot — dann allerdings mit einer Meldung, die genau das sagt, und nicht mit einer Zahl, die niemand einordnen kann. **Eine Abhilfe wäre, dass die Testkopie einen Prozess dauerhaft frei hält;** das ist eine Absprache und keine Codeänderung | §2 |

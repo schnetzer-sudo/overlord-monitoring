@@ -10,11 +10,24 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import org.jooq.Configuration;
+import org.jooq.DSLContext;
+import org.jooq.ExecuteContext;
+import org.jooq.ExecuteListener;
+import org.jooq.ExecuteListenerProvider;
+import org.jooq.impl.DefaultExecuteListenerProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 
 /**
  * <b>Der Pflicht-Isolationstest des BAM-Endpunkts</b> (Regel M4). Ohne ihn wird nicht gemergt.
@@ -39,7 +52,32 @@ import org.springframework.beans.factory.annotation.Autowired;
  * <p><b>Das Zeitfenster ist absolut</b> (29.12.2025). Ausser {@code NEXANS} endet jeder Mandant am
  * 30.12.2025 (M3); in einem relativen Fenster saehe {@code SUTTONS} je nach Datenstand null Zeilen
  * — und der Test bewiese nur, dass leer leer ist.
+ *
+ * <h2>Und die dritte Seite wird seit dem 31.08.2026 an der Ursache geprueft, nicht an der Uhr</h2>
+ *
+ * <p>Die Ununterscheidbarkeit hat eine Seite, die kein Rumpfvergleich erreicht: Eine
+ * <b>nachgelagerte Existenzpruefung</b> kostet einen zusaetzlichen Datenbankzugriff und waere ueber
+ * genug Anfragen ein messbarer Kanal, auch wenn beide Antworten Zeichen fuer Zeichen gleich sind.
+ *
+ * <p><b>Bis zum 31.08.2026 stand dafuer eine Wanduhrmessung</b> — zwei {@code System.nanoTime} um
+ * zwei HTTP-Aufrufe, verglichen gegen eine Faktor-10-Schranke. Sie hat einen Zugriff von <b>0,44
+ * ms</b> geschuetzt und ueber HTTP auf einem Testrechner gemessen; einmal ist sie mit <b>279 ms
+ * gegen 20 ms</b> gefallen, danach dreimal gruen gelaufen. <b>Der Test war nicht ungenau, er hat
+ * die falsche Groesse gemessen.</b>
+ *
+ * <p>Gemessen wird stattdessen die Groesse, um die es geht: <b>die Zahl der abgesetzten
+ * Statements</b> auf dem Lese-Kontext. Sie ist deterministisch, sie steigt genau dann, wenn jemand
+ * eine Existenzpruefung davorbaut, und sie steigt <b>sofort</b> und nicht in einem von vier
+ * Laeufen. Der Zaehler ist ein zweiter jOOQ-{@link ExecuteListener} auf {@code glassfishDsl}, er
+ * lebt ausschliesslich in dieser Testklasse und aendert am Anwendungscode nichts.
+ *
+ * <p><b>Was die Zaehlung nicht abdeckt</b> — und das ist ein offener Punkt und keine
+ * Nebenbemerkung: Zwei gleich viele Zugriffe koennten verschieden lange dauern, etwa weil das eine
+ * Statement Zeilen liest und das andere keine. Ob das eine reale Luecke ist, ist <b>nicht</b>
+ * beantwortet; die Frage steht in {@code docs/testfestigkeit.md} §2 und in {@code
+ * docs/bam-werte.md} §9.
  */
+@Import(BamIsolationDbIT.Zugriffszaehlung.class)
 class BamIsolationDbIT extends SicherheitsTestbasis {
 
   private static final String NUTZER_A = PRAEFIX + "bam-votg";
@@ -53,9 +91,79 @@ class BamIsolationDbIT extends SicherheitsTestbasis {
   private static final LocalDateTime FENSTER_BIS = LocalDateTime.parse("2025-12-30T00:00:00");
 
   @Autowired private Clock anwendungsuhr;
+  @Autowired private Zugriffszaehler zugriffe;
 
   private Sitzung aufVotg;
   private Sitzung aufSuttons;
+
+  /**
+   * Zaehlt die Statements, die auf dem <b>Lese-Kontext</b> abgesetzt werden, und haelt ihren
+   * gerenderten Text fest.
+   *
+   * <p><b>Gezaehlt wird in {@code executeStart}</b>, weil {@link ExecuteContext#sql()} dort steht:
+   * Das Statement ist gerendert, die Bindewerte sind noch Platzhalter. Damit ist der Text zweier
+   * Anfragen, die dasselbe Statement mit anderen Werten absetzen, <b>identisch</b> — und ein
+   * zusaetzliches Statement faellt nicht nur als Zahl auf, sondern mit seinem Wortlaut.
+   *
+   * <p><b>Nur {@code glassfishDsl}.</b> Der Schreib-Kontext bleibt aussen vor; das Sitzungs- und
+   * Protokollschreiben in {@code overlord_monitor} laeuft ueber ihn und haette mit der Frage nichts
+   * zu tun.
+   */
+  static final class Zugriffszaehler implements ExecuteListener {
+
+    private final List<String> abgesetzt = new CopyOnWriteArrayList<>();
+
+    @Override
+    public void executeStart(ExecuteContext ctx) {
+      abgesetzt.add(String.valueOf(ctx.sql()));
+    }
+
+    void zuruecksetzen() {
+      abgesetzt.clear();
+    }
+
+    /**
+     * Die Statements seit dem letzten {@link #zuruecksetzen()}, in der Reihenfolge des Absetzens.
+     */
+    List<String> abgesetzt() {
+      return List.copyOf(abgesetzt);
+    }
+  }
+
+  /**
+   * Haengt den {@link Zugriffszaehler} an den vorhandenen Lese-Kontext, <b>ohne ihn zu ersetzen</b>
+   * — der {@code ReadOnlyExecuteListener} aus {@code JooqConfig} bleibt die dritte Schicht des
+   * Schreibschutzes und darf nicht verlorengehen.
+   *
+   * <p>Sie steht in {@code src/test} und ist ueber {@code @Import} nur an dieser Testklasse
+   * angebracht. Am Anwendungscode aendert sie nichts; sie kostet einen eigenen Anwendungskontext,
+   * und das ist der Preis dafuer, dass kein anderer Test einen fremden Zaehler mitschleppt.
+   */
+  @TestConfiguration
+  static class Zugriffszaehlung {
+
+    @Bean
+    Zugriffszaehler zugriffszaehler() {
+      return new Zugriffszaehler();
+    }
+
+    @Bean
+    static BeanPostProcessor zaehlerAnDenLesekontext(ObjectProvider<Zugriffszaehler> zaehler) {
+      return new BeanPostProcessor() {
+        @Override
+        public Object postProcessAfterInitialization(Object bean, String name) {
+          if ("glassfishDsl".equals(name) && bean instanceof DSLContext dsl) {
+            Configuration cfg = dsl.configuration();
+            ExecuteListenerProvider[] vorhanden = cfg.executeListenerProviders();
+            ExecuteListenerProvider[] erweitert = Arrays.copyOf(vorhanden, vorhanden.length + 1);
+            erweitert[vorhanden.length] = new DefaultExecuteListenerProvider(zaehler.getObject());
+            cfg.set(erweitert);
+          }
+          return bean;
+        }
+      };
+    }
+  }
 
   @BeforeEach
   void nutzerAnlegenUndAnmelden() throws IOException, InterruptedException {
@@ -194,19 +302,29 @@ class BamIsolationDbIT extends SicherheitsTestbasis {
    * Kennung, nicht nur mit einer erfundenen: als ADMIN den Mandanten wechseln, dort eine {@code
    * MessageID} holen, zurueckwechseln, dieselbe Kennung anfragen.
    *
-   * <p><b>Verglichen wird auch die Laufzeit.</b> Der Rumpfvergleich prueft die <i>Wirkung</i>,
-   * nicht die <i>Ursache</i>: Ein Code, der erst die Existenz nachschluege und dann denselben
-   * festen Text ausgaebe, bestuende ihn — und waere trotzdem unterscheidbar, weil „gibt es nicht"
-   * einen Zugriff kostet und „gehoert einem anderen" zwei. Ueber genug Anfragen ist das ein
-   * messbarer Kanal.
+   * <p><b>Verglichen wird auch die Zahl der Datenbankzugriffe.</b> Der Rumpfvergleich prueft die
+   * <i>Wirkung</i>, nicht die <i>Ursache</i>: Ein Code, der erst die Existenz nachschluege und dann
+   * denselben festen Text ausgaebe, bestuende ihn — und waere trotzdem unterscheidbar, weil „gibt
+   * es nicht" einen Zugriff kostet und „gehoert einem anderen" zwei. Ueber genug Anfragen ist das
+   * ein messbarer Kanal.
    *
-   * <p>Die Grenze ist bewusst grob (Faktor zehn): Gemessen ist ein Zugriff von 0,44 Millisekunden
-   * ({@code docs/bam-werte.md} §4), waehrend HTTP, Sitzungspruefung und Zufallslast auf dem
-   * Testrechner deutlich mehr streuen. Der Test soll einen zusaetzlichen <i>Datenbankzugriff</i>
-   * auffallen lassen, nicht das Rauschen eines Testlaufs.
+   * <p><b>Gezaehlt und nicht gestoppt</b> <i>(seit 31.08.2026, Regel T1)</i>. Bis dahin stand hier
+   * ein Vergleich zweier Wanduhrzeiten gegen eine Faktor-10-Schranke. Er hat 0,44 Millisekunden
+   * ({@code docs/bam-werte.md} §4) ueber HTTP geschuetzt und ist deshalb gelegentlich grundlos
+   * gefallen. Die Zahl der abgesetzten Statements ist dieselbe Aussage ohne das Rauschen: Sie ist
+   * genau das, was eine nachgelagerte Existenzpruefung veraendern wuerde.
+   *
+   * <p>Verglichen wird nicht nur die <b>Zahl</b>, sondern die <b>Folge der Statements</b>. Der Text
+   * traegt Platzhalter statt Bindewerte; zwei Anfragen, die dasselbe Statement mit verschiedenen
+   * Kennungen absetzen, sind darin Zeichen fuer Zeichen gleich. Ein zusaetzlicher Zugriff faellt
+   * damit mit seinem Wortlaut auf und nicht nur als um eins hoehere Zahl.
+   *
+   * <p>Der <b>Aufwaermlauf bleibt</b>, und aus einem anderen Grund als zuvor: Er ist keine
+   * Beruhigung einer Messung mehr, sondern sorgt dafuer, dass ein einmaliger Zugriff beim ersten
+   * Aufruf — Metadaten, Sitzungsaufbau — nicht in genau einer der beiden Folgen landet.
    */
   @Test
-  @DisplayName("Eine echte fremde Kennung antwortet wie eine erfundene — auch in der Laufzeit")
+  @DisplayName("Eine echte fremde Kennung antwortet wie eine erfundene — auch in den Zugriffen")
   void gegenprobe_mit_echter_fremder_kennung() throws Exception {
     String admin = PRAEFIX + "bam-admin";
     legeNutzerAn(admin, PASSWORT, Rolle.ADMIN);
@@ -221,18 +339,18 @@ class BamIsolationDbIT extends SicherheitsTestbasis {
             alsAdmin.sende("/api/auth/mandant", "{\"mandantId\":\"" + MANDANT_A + "\"}").status())
         .isEqualTo(200);
 
-    // Ein Aufwaermlauf, bevor gemessen wird — sonst traegt der erste der beiden Aufrufe die
-    // Kosten des ersten Zugriffs auf Message und der Vergleich beschriebe den Aufwaermeffekt.
+    // Ein Aufwaermlauf, bevor gezaehlt wird — sonst traegt der erste der beiden Aufrufe einen
+    // Zugriff, den es nur beim ersten Mal gibt, und der Vergleich beschriebe den Aufwaermeffekt.
     alsAdmin.hole(bam(ERFUNDEN));
     alsAdmin.hole(bam(fremdeKennung));
 
-    long vorEcht = System.nanoTime();
+    zugriffe.zuruecksetzen();
     Antwort fremdAberEcht = alsAdmin.hole(bam(fremdeKennung));
-    long dauerEcht = System.nanoTime() - vorEcht;
+    List<String> beiEchter = zugriffe.abgesetzt();
 
-    long vorErfunden = System.nanoTime();
+    zugriffe.zuruecksetzen();
     Antwort erfunden = alsAdmin.hole(bam(ERFUNDEN));
-    long dauerErfunden = System.nanoTime() - vorErfunden;
+    List<String> beiErfundener = zugriffe.abgesetzt();
 
     assertThat(fremdAberEcht.status()).isEqualTo(404);
     assertThat(erfunden.status()).isEqualTo(404);
@@ -245,14 +363,18 @@ class BamIsolationDbIT extends SicherheitsTestbasis {
                 + " und dort steht sie zwangslaeufig, weil sie im Pfad steht (RFC 9457)")
         .isEqualTo(bam(fremdeKennung));
 
-    double verhaeltnis =
-        (double) Math.max(dauerEcht, dauerErfunden) / Math.min(dauerEcht, dauerErfunden);
-    assertThat(verhaeltnis)
+    assertThat(beiEchter)
         .as(
-            "eine vorgelagerte Existenzpruefung kostete einen zusaetzlichen Zugriff und waere hier"
-                + " sichtbar (echt: %d ns, erfunden: %d ns)",
-            dauerEcht, dauerErfunden)
-        .isLessThan(10.0);
+            "Ohne einen einzigen Zugriff waere nichts gezaehlt worden und der Vergleich unten"
+                + " bewiese, dass leer gleich leer ist")
+        .isNotEmpty();
+    assertThat(beiEchter)
+        .as(
+            "eine nachgelagerte Existenzpruefung kostete einen zusaetzlichen Zugriff und waere"
+                + " hier sichtbar — echt: %s, erfunden: %s",
+            beiEchter, beiErfundener)
+        .hasSameSizeAs(beiErfundener)
+        .isEqualTo(beiErfundener);
   }
 
   /**
