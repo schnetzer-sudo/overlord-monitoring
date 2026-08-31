@@ -1,5 +1,6 @@
 package de.kraftwerkone.overlord.monitor.catalog;
 
+import de.kraftwerkone.overlord.monitor.common.Pflegestatus;
 import java.time.LocalDateTime;
 
 /**

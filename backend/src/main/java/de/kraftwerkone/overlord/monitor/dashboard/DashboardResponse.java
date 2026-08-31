@@ -16,12 +16,14 @@ import java.util.List;
  * @param fenster die tatsaechlich gelesenen Grenzen, in UTC
  * @param verlauf Block 1 — je Eimer die Aufschluesselung nach Einordnung
  * @param kacheln Bloecke 2 und 3 — Nachrichten und Fehler
+ * @param verteilung Block 5 — Partner oder Richtung, Top 10 und zwei Restzeilen
  */
 public record DashboardResponse(
     String zeitraum,
     FensterResponse fenster,
     List<VerlaufspunktResponse> verlauf,
-    KachelnResponse kacheln) {
+    KachelnResponse kacheln,
+    VerteilungResponse verteilung) {
 
   public DashboardResponse {
     verlauf = List.copyOf(verlauf);

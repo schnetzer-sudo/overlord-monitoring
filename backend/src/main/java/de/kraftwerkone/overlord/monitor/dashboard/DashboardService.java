@@ -54,20 +54,81 @@ public class DashboardService {
   }
 
   /**
+   * Wie viele benannte Werte der Verteilungsblock einzeln zeigt.
+   *
+   * <p><b>Zehn, und die Zahl ist gewaehlt und nicht gemessen.</b> Sie ist die Grenze, an der die
+   * Restzeile entsteht; M98 hat sie fuer vier Mandanten durchgerechnet (Top 10 traegt bei {@code
+   * NEXANS} 76,4 %, bei {@code VOTG} 76,5 %, bei {@code IBIS} 72,1 %). Sie steht hier als Konstante
+   * und nicht in der Konfiguration: Ein Schalter dafuer waere eine Gestaltungsentscheidung, die
+   * niemand getroffen hat.
+   */
+  static final int VERTEILUNG_TOP = 10;
+
+  /**
    * Die ganze Landingpage fuer den aktiven Mandanten.
    *
    * @param mandant Regel M2 — erster Pflichtparameter, und er kommt aus der Sitzung (Regel M1)
    * @param gewaehlt das Paar aus der URL, oder {@code null}
+   * @param sicht wonach der Verteilungsblock gruppiert
    */
-  public DashboardResponse landingpage(MandantContext mandant, Dashboardzeitraum gewaehlt) {
+  public DashboardResponse landingpage(
+      MandantContext mandant, Dashboardzeitraum gewaehlt, Verteilungssicht sicht) {
     LocalDateTime jetzt = LocalDateTime.now(anwendungsuhr);
     Dashboardzeitraum zeitraum = gewaehlt == null ? Dashboardzeitraum.STUNDEN_48 : gewaehlt;
     Zeitfenster fenster = zeitraum.fenster(jetzt);
 
     List<Rollupsumme> summen = dashboardRepository.verlauf(mandant, zeitraum, fenster);
+    List<Verteilungssumme> verteilt =
+        dashboardRepository.verteilung(mandant, zeitraum, fenster, sicht);
 
     return new DashboardResponse(
-        zeitraum.code(), fensterAntwort(fenster), verlauf(summen), kacheln(summen));
+        zeitraum.code(),
+        fensterAntwort(fenster),
+        verlauf(summen),
+        kacheln(summen),
+        verteilung(verteilt, sicht));
+  }
+
+  /**
+   * Block 5: Top 10, dann die beiden Restzeilen — <b>und die stehen immer unten</b>.
+   *
+   * <p>Die Abfrage liefert die benannten Werte bereits absteigend und „nicht zugeordnet" am Ende.
+   * <b>Sortiert wird hier trotzdem noch einmal</b>, und zwar mit dem Wert als zweitem Schluessel:
+   * Bei Gleichstand haengt die Reihenfolge sonst davon ab, in welcher Reihenfolge die Datenbank die
+   * Gruppen zurueckgibt, und der Block spraenge zwischen zwei Aufrufen.
+   *
+   * <p><b>„Übrige" fehlt, wenn es keinen Rang 11 gibt</b> — eine Null ist dort reines Rangartefakt.
+   * <b>„Nicht zugeordnet" erscheint immer, auch bei null:</b> Das ist eine Aussage ueber den
+   * Katalog, und ohne sie waere <i>vollstaendig gepflegt</i> nicht von <i>diese Ansicht zeigt das
+   * nicht</i> zu unterscheiden.
+   */
+  private VerteilungResponse verteilung(List<Verteilungssumme> summen, Verteilungssicht sicht) {
+    long nichtZugeordnet = 0;
+    List<Verteilungssumme> benannt = new ArrayList<>();
+    for (Verteilungssumme summe : summen) {
+      if (summe.schluessel() == null) {
+        nichtZugeordnet += summe.anzahl();
+      } else {
+        benannt.add(summe);
+      }
+    }
+    benannt.sort(
+        Comparator.comparingLong(Verteilungssumme::anzahl)
+            .reversed()
+            .thenComparing(Verteilungssumme::schluessel));
+
+    List<VerteilungszeileResponse> zeilen = new ArrayList<>();
+    for (Verteilungssumme summe : benannt.subList(0, Math.min(VERTEILUNG_TOP, benannt.size()))) {
+      zeilen.add(VerteilungszeileResponse.wert(summe.schluessel(), summe.anzahl()));
+    }
+    if (benannt.size() > VERTEILUNG_TOP) {
+      List<Verteilungssumme> rest = benannt.subList(VERTEILUNG_TOP, benannt.size());
+      zeilen.add(
+          VerteilungszeileResponse.uebrige(
+              rest.size(), rest.stream().mapToLong(Verteilungssumme::anzahl).sum()));
+    }
+    zeilen.add(VerteilungszeileResponse.nichtZugeordnet(nichtZugeordnet));
+    return new VerteilungResponse(sicht, zeilen);
   }
 
   private FensterResponse fensterAntwort(Zeitfenster fenster) {

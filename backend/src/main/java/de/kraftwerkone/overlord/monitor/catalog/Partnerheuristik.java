@@ -1,5 +1,6 @@
 package de.kraftwerkone.overlord.monitor.catalog;
 
+import de.kraftwerkone.overlord.monitor.common.Pflegestatus;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;

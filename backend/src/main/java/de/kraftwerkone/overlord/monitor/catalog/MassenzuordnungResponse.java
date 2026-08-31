@@ -1,5 +1,7 @@
 package de.kraftwerkone.overlord.monitor.catalog;
 
+import de.kraftwerkone.overlord.monitor.common.Pflegestatus;
+
 /**
  * Was eine Massenzuordnung betrifft — <b>in beiden Modi dieselbe Auskunft</b>.
  *

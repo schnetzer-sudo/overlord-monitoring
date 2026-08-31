@@ -19,11 +19,15 @@ import org.springframework.web.bind.annotation.RestController;
  * Ausnahme</b> — die drei, die es gibt, stehen in {@code docs/mandantentrennung.md} §3 und
  * definieren allesamt eine Berechtigung, statt einen Datenausschnitt abzufragen.
  *
- * <h2>Ein Parameter, und er ist freiwillig</h2>
+ * <h2>Zwei Parameter, und beide sind freiwillig</h2>
  *
  * <p>{@code zeitraum} waehlt eines der drei Paare ({@link Dashboardzeitraum}). Fehlt er, waehlt der
  * Endpunkt selbst und <b>nennt das gewaehlte Paar in der Antwort</b> — sonst wuesste die
  * Oberflaeche nicht, was sie hervorheben und in die URL schreiben soll.
+ *
+ * <p>{@code verteilung} stellt den Umschalter des Verteilungsblocks ({@link Verteilungssicht}),
+ * Vorgabe {@code PARTNER}. <b>Er aendert an keinem anderen Block etwas</b> und kostet keinen
+ * zusaetzlichen Lesevorgang: Es ist dasselbe Statement mit einer anderen Katalogspalte im Ausdruck.
  *
  * <h2>Kein Rolleneintrag in {@code SecurityConfig}, und das ist richtig</h2>
  *
@@ -49,9 +53,12 @@ public class DashboardController {
   }
 
   @GetMapping("/api/dashboard")
-  public DashboardResponse landingpage(@RequestParam(required = false) String zeitraum) {
+  public DashboardResponse landingpage(
+      @RequestParam(required = false) String zeitraum,
+      @RequestParam(required = false) String verteilung) {
     MandantContext mandant = mandantService.aktuellerKontext(erforderlicherNutzer());
-    return dashboardService.landingpage(mandant, Dashboardzeitraum.ausCode(zeitraum));
+    return dashboardService.landingpage(
+        mandant, Dashboardzeitraum.ausCode(zeitraum), Verteilungssicht.ausCode(verteilung));
   }
 
   private AngemeldeterNutzer erforderlicherNutzer() {

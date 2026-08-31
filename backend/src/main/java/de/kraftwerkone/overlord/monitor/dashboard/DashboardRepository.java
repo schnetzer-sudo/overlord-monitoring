@@ -5,10 +5,13 @@ import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROJECTMAND
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLUP;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLUP_MONAT;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLUP_TAG;
+import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.PROCESS_CATALOG;
 
+import de.kraftwerkone.overlord.monitor.common.Pflegestatus;
 import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
 import de.kraftwerkone.overlord.monitor.jooq.glassfish.tables.Process;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import org.jooq.Condition;
@@ -152,6 +155,117 @@ public class DashboardRepository {
             satz ->
                 new Rollupsumme(
                     satz.value1().atStartOfDay(), satz.value2(), satz.value3().longValue()));
+  }
+
+  /**
+   * <b>Block 5</b>: die Verteilung nach Partner oder Richtung, ein Eimer je kuratiertem Wert.
+   *
+   * <p><b>Beide Sichten laufen ueber dasselbe Statement</b>, nur mit einer anderen Katalogspalte im
+   * Ausdruck. Die Eimerbreite des Paares spielt keine Rolle — gruppiert wird ueber das ganze
+   * Fenster —, die Fensterbreite schon: Der Bereichszugriff liest dieselben Rollupzeilen wie der
+   * Verlauf.
+   *
+   * <p><b>{@code LEFT JOIN} und nicht {@code JOIN}.</b> {@code WOC} hat keine einzige Katalogzeile;
+   * ein innerer Join verloere seine vier Prozesse stillschweigend — und damit ausgerechnet die
+   * Zeilen, die als „nicht zugeordnet" erscheinen muessten.
+   *
+   * <p><b>Der {@code CASE} steht als <i>ein</i> Ausdruck in {@code SELECT}, {@code GROUP BY} und
+   * {@code ORDER BY}</b>, und das ist kein Stil, sondern Befund 11 der Vorrunde: MariaDB loest
+   * {@code GROUP BY} zuerst gegen <b>Tabellenspalten</b> auf und erst danach gegen
+   * Ausdrucksaliasse. Hiesse der Alias {@code partner}, gruppierte die Datenbank still nach {@code
+   * c.partner} statt nach dem Ausdruck — bei {@code NEXANS} und {@code SUTTONS} faellt das nicht
+   * auf, bei {@code VOTG} zerfiel der Eimer in acht Zeilen. Hier gibt es deshalb <b>gar keinen
+   * Alias</b>: dasselbe {@link Field}-Objekt an allen drei Stellen.
+   *
+   * <p><b>{@code ORDER BY (schluessel IS NULL), summe DESC}</b> — „nicht zugeordnet" ist keine
+   * Rangposition und faellt nie in „Übrige". Die Raenge 1…k gehoeren damit lueckenlos den benannten
+   * Werten (M91, offener Punkt 39).
+   */
+  public List<Verteilungssumme> verteilung(
+      MandantContext mandant,
+      Dashboardzeitraum zeitraum,
+      Zeitfenster fenster,
+      Verteilungssicht sicht) {
+    Ebene ebene = ebene(zeitraum, fenster);
+    Field<String> katalogwert =
+        sicht == Verteilungssicht.PARTNER ? PROCESS_CATALOG.PARTNER : PROCESS_CATALOG.RICHTUNG;
+    Field<String> schluessel = DSL.when(zugeordnet(katalogwert), katalogwert);
+    Field<BigDecimal> summe = DSL.sum(ebene.anzahl());
+
+    return glassfishDsl
+        .select(schluessel, summe)
+        .from(ebene.tabelle())
+        .leftJoin(PROCESS_CATALOG)
+        .on(PROCESS_CATALOG.PROCESS_ID.eq(ebene.prozess()))
+        .where(ebene.bereich())
+        .and(mandantenkette(mandant, ebene.prozess()))
+        .groupBy(schluessel)
+        .orderBy(DSL.field(schluessel.isNull()), summe.desc())
+        .fetch(satz -> new Verteilungssumme(satz.value1(), satz.value2().longValue()));
+  }
+
+  /**
+   * <b>Entscheidung E-i, als ein Ausdruck.</b> Zugeordnet ist ein Prozess nur, wenn alle drei
+   * Bedingungen halten; faellt eine, ist der Wert „nicht zugeordnet".
+   *
+   * <ol>
+   *   <li>Es gibt eine Katalogzeile ({@code LEFT JOIN} traf).
+   *   <li>Sie ist {@code GEPFLEGT} — ein offener Regelvorschlag ist eine Vermutung und keine
+   *       Zuordnung.
+   *   <li>Das Feld ist gefuellt — „gepflegt mit leerem Partner" heisst <i>hingesehen, es gibt
+   *       keinen</i> (E4) und faellt fachlich mit „nicht zugeordnet" zusammen.
+   * </ol>
+   *
+   * <p>Der Riegel unter Punkt 2 steht auch in der Richtungssicht. <b>Heute ist er dort
+   * folgenlos</b> — nach der Kuratierung tragen alle Zeilen mit Richtung {@code GEPFLEGT} —, aber
+   * die Regel ist E-i und nicht der Zufall dieses Katalogstands.
+   */
+  private static Condition zugeordnet(Field<String> katalogwert) {
+    return PROCESS_CATALOG
+        .PROCESS_ID
+        .isNotNull()
+        .and(PROCESS_CATALOG.PFLEGESTATUS.eq(Pflegestatus.GEPFLEGT.name()))
+        .and(katalogwert.isNotNull())
+        .and(katalogwert.ne(""));
+  }
+
+  /**
+   * Die Spalten und der Bereich der Ebene, die zu einem Zeitraumpaar gehoert.
+   *
+   * <p>Sie steht hier, damit die Abfragen, die den Eimer <b>nicht</b> in der Ausgabe brauchen —
+   * Verteilung und Belegungsprobe —, nicht dreimal geschrieben werden muessen. Der Verlauf braucht
+   * ihn und hat deshalb zwei eigene Fassungen.
+   */
+  private record Ebene(
+      Table<?> tabelle, Field<String> prozess, Field<Integer> anzahl, Condition bereich) {}
+
+  private static Ebene ebene(Dashboardzeitraum zeitraum, Zeitfenster fenster) {
+    return switch (zeitraum) {
+      case STUNDEN_48 ->
+          new Ebene(
+              MESSAGE_ROLLUP,
+              MESSAGE_ROLLUP.PROCESS_ID,
+              MESSAGE_ROLLUP.ANZAHL,
+              MESSAGE_ROLLUP.STUNDE.ge(fenster.von()).and(MESSAGE_ROLLUP.STUNDE.lt(fenster.bis())));
+      case TAGE_30 ->
+          new Ebene(
+              MESSAGE_ROLLUP_TAG,
+              MESSAGE_ROLLUP_TAG.PROCESS_ID,
+              MESSAGE_ROLLUP_TAG.ANZAHL,
+              MESSAGE_ROLLUP_TAG
+                  .TAG
+                  .ge(fenster.von().toLocalDate())
+                  .and(MESSAGE_ROLLUP_TAG.TAG.lt(fenster.bis().toLocalDate())));
+      case MONATE_12 ->
+          new Ebene(
+              MESSAGE_ROLLUP_MONAT,
+              MESSAGE_ROLLUP_MONAT.PROCESS_ID,
+              MESSAGE_ROLLUP_MONAT.ANZAHL,
+              MESSAGE_ROLLUP_MONAT
+                  .MONAT
+                  .ge(fenster.von().toLocalDate())
+                  .and(MESSAGE_ROLLUP_MONAT.MONAT.lt(fenster.bis().toLocalDate())));
+    };
   }
 
   /**
