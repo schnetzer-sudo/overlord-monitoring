@@ -170,7 +170,16 @@
      Ein festes 44px waere die schlechtere Loesung: Es naehme dem Nutzer mit
      vergroesserter Grundschrift den Zuwachs. So gilt der Boden nur dort, wo
      die Rechnung darunter faellt — in l (2,75 x 18 = 49,5 px) und bei
-     hochgesetzter Browserschrift greift weiterhin der rem-Wert. */
+     hochgesetzter Browserschrift greift weiterhin der rem-Wert.
+
+     WEN DAS AENDERT, und zwar auch in der Vorgabestufe m: den Nutzer, der
+     seine Grundschrift HERABgesetzt hat. Chrome bietet 9, 12, 16, 20 und
+     24 px an; bei 9 und 12 lieferte das Token bisher 24,75 bzw. 33 px und
+     damit weniger als die 44, die eine Zeile darueber als Mindestflaeche
+     stehen. Das war eine stille Verletzung, und sie ist hiermit behoben —
+     es ist die Korrektur eines Fehlers und keine Abweichung von der Zusage,
+     dass m bleibt, wie es war. Nachgemessen in
+     docs/dichte-umschalter.md §5.6. */
   --dichte-beruehrung: max(2.75rem, 44px);
   --dichte-bedienelement: 2rem; /* 32 px — Schaltflaeche im Rahmen am Zeigergeraet */
   --dichte-feld: 2.5rem; /* Eingabefeld im Formular — bleibt komfortabel */

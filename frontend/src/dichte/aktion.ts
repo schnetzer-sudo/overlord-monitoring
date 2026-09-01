@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
-import { DICHTE_COOKIE, DICHTE_COOKIE_DAUER, dichteAus } from "./index";
+import { DICHTE_COOKIE, DICHTE_COOKIE_DAUER, DICHTE_FELD, dichteAus } from "./index";
 
 /**
  * Dichtewahl umschalten.
@@ -14,16 +14,25 @@ import { DICHTE_COOKIE, DICHTE_COOKIE_DAUER, dichteAus } from "./index";
  * `revalidatePath("/", "layout")` erzwingt genau das — dasselbe Mittel und
  * derselbe Grund wie bei der Sprache (`i18n/aktion.ts`).
  *
- * Nebeneffekt, der es wert ist: Die Umschaltung ist ein Formular. Ohne
- * JavaScript trägt das nur so weit, wie das Menü darüber sich ohne JavaScript
- * öffnen lässt — der Weg selbst braucht keins.
+ * Die Umschaltung ist ein **Formular** und kein `onClick` — sie funktioniert
+ * damit auch dann, wenn die Hydratation der Seite hängt.
  *
- * Der Wert kommt aus `name="dichte"` der auslösenden Schaltfläche. Ein
- * unbekannter Wert fällt still auf die Vorgabe zurück; hier ist nichts zu
- * validieren, was ein Nutzer falsch machen könnte.
+ * > ⚠️ **Ohne JavaScript funktioniert sie trotzdem nicht, und das ist gemessen
+ * > und nicht geschätzt.** Der Anwendungsrahmen wird im Browser gebaut: Die
+ * > servergerenderte Antwort von `/nachrichten` ist **1.379 Zeichen** Markup —
+ * > kein `<header>`, kein `<form>`, keine `$ACTION_ID_`. Was der Server
+ * > ausliefert, ist ein leerer Rahmen. Der Nebeneffekt, den `i18n/aktion.ts`
+ * > für die Sprache in Anspruch nimmt, trägt deshalb **nur auf der
+ * > Anmeldeseite** — dort steht das Sprachformular wirklich im Markup.
+ * > Ausgeschrieben in `docs/dichte-umschalter.md`, offener Punkt 98.
+ *
+ * Der Wert kommt aus dem Feld {@link DICHTE_FELD} der auslösenden Schaltfläche;
+ * der Name steht dort und nicht als zweite Zeichenkette hier. Ein unbekannter
+ * Wert fällt still auf die Vorgabe zurück — hier ist nichts zu validieren, was
+ * ein Nutzer falsch machen könnte.
  */
 export async function dichteSetzen(daten: FormData): Promise<void> {
-  const gewaehlt = daten.get("dichte");
+  const gewaehlt = daten.get(DICHTE_FELD);
   const speicher = await cookies();
   speicher.set(DICHTE_COOKIE, dichteAus(typeof gewaehlt === "string" ? gewaehlt : null), {
     path: "/",

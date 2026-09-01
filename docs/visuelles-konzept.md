@@ -265,9 +265,11 @@ Lesebeginn beim Umschalten an derselben x-Position bleibt.
 > mit vergrößerter Grundschrift den Zuwachs.
 >
 > Gemessen bei `pointer: coarse`: 44 · 44 · 44 · 49,5 px. **Was das Token trägt, hält das Maß in
-> jeder Stufe** — Navigationseinträge, Mandantenumschalter, Sprachwahl, Nutzermenü und jeder
-> Menüeintrag. **Was es nicht trägt, hielt es auch vorher nicht**: `--dichte-feld` (40 px in `m`),
-> die Tabellenzeile (36 px) und der Sortierknopf im Tabellenkopf (20 px). Ausgeschrieben in
+> jeder Stufe — in der HÖHE**: Navigationseinträge, Mandantenumschalter, Sprachwahl, Nutzermenü und
+> jeder Menüeintrag. **Eine Fläche von 44 × 44 ist es nicht.** `min-h-*` sagt über die Breite
+> nichts, und ein Symbolknopf trägt daneben `size-8`; gemessen 28 × 44 px in `xs`, 32 × 44 in `m`.
+> **Was das Token gar nicht trägt, hielt das Maß auch vorher nicht**: `--dichte-feld` (40 px in
+> `m`), die Tabellenzeile (36 px) und der Sortierknopf im Tabellenkopf (20 px). Ausgeschrieben in
 > [`dichte-umschalter.md`](dichte-umschalter.md) §5.4, geführt als offener Punkt 96.
 
 > **`--dichte-beschriftung` ist heute an genau einer Stelle im Einsatz** — im Belegdaten-Block

@@ -25,9 +25,41 @@ import { en } from "@/i18n/en";
  * `38.5` oder `49.5` in dieser Datei: Der Test wertet die Deklaration aus, die er
  * gelesen hat. Wer die Stufenwerte in `globals.css` ändert, bekommt hier ein
  * neues Ergebnis und keine veraltete Behauptung.
+ *
+ * ## Warum hier ein CSS-Leser steht und keine Handvoll Regexe *(01.09.2026)*
+ *
+ * **Die erste Fassung war eine Textsuche, und eine Gegenprüfung hat sie
+ * zerlegt.** Von 23 Mutanten blieben **neun grün**, darunter drei, die den
+ * Umschalter vollständig totlegen:
+ *
+ * | Mutant | alte Fassung |
+ * |---|---|
+ * | die vier Stufenregeln nach `@media print` verschoben | grün |
+ * | die vier Stufenregeln unter `.dark` verschachtelt | grün |
+ * | die vier Stufenregeln **gelöscht** und als Kommentar stehen gelassen | grün |
+ * | `--dichte-wurzel` im `xs`-Block auskommentiert | grün |
+ * | eine **zweite** `--dichte-wurzel: 300%` im `m`-Block | grün |
+ * | `html { font-size: … }` nach `@media print` verschoben | grün |
+ * | `--dichte-beruehrung` aus `:root` nach `@media print { :root }` | grün |
+ * | `--spacing-beruehrung` auf ein anderes Token gezeigt | grün |
+ *
+ * Der Grund war immer derselbe: Die alte Fassung prüfte, dass Zeichenfolgen
+ * **vorkommen**, nie, dass sie **wirken**. Ein Wertetest, kein Lagetest.
+ *
+ * **Deshalb steht unten ein kleiner CSS-Leser.** Er entfernt zuerst die
+ * Kommentare, zerlegt die Datei dann in Regeln **mit ihrer Verschachtelung** und
+ * beantwortet damit die Frage, die eine Regex nicht beantworten kann: *in
+ * welchem Block steht das?* Geprüft wird seither beides — der Wert und die Lage.
+ *
+ * **Ein Wirkungstest im Browser wird er dadurch nicht.** Was die Regeln am
+ * laufenden System tatsächlich bewirken, steht gemessen in
+ * `docs/dichte-umschalter.md` §5 und nirgendwo sonst.
  */
 
-const CSS = readFileSync(fileURLToPath(new URL("../src/app/globals.css", import.meta.url)), "utf8");
+const CSS_ROH = readFileSync(
+  fileURLToPath(new URL("../src/app/globals.css", import.meta.url)),
+  "utf8",
+);
 
 /**
  * Die Grundschriftgröße, gegen die Prozentangaben an der Wurzel rechnen.
@@ -43,6 +75,106 @@ const BROWSERVORGABE = 16;
 /** Die Mindestfläche am Finger, in Pixeln (`docs/visuelles-konzept.md` §5). */
 const MINDESTFLAECHE = 44;
 
+// ───────────────────────────────────────────────────────────────────────────
+// Ein sehr kleiner CSS-Leser
+// ───────────────────────────────────────────────────────────────────────────
+
+/**
+ * Ersetzt jeden Kommentar durch **gleich viele Leerzeichen**.
+ *
+ * Gleich viele, damit sich keine Position verschiebt — und ersetzt statt
+ * übersprungen, damit ein auskommentierter Block nicht mehr wie ein vorhandener
+ * aussieht. Genau daran ist die erste Fassung gescheitert.
+ */
+function ohneKommentare(css: string): string {
+  return css.replace(/\/\*[\s\S]*?\*\//g, (treffer) => " ".repeat(treffer.length));
+}
+
+const CSS = ohneKommentare(CSS_ROH);
+
+type Regel = {
+  /** Der Selektor bzw. die At-Regel, etwa `:root` oder `@media (pointer: coarse)`. */
+  selektor: string;
+  /** Die umschließenden Selektoren, von außen nach innen. */
+  pfad: readonly string[];
+  /** Nur die eigenen Deklarationen — verschachtelte Blöcke sind entfernt. */
+  eigene: string;
+};
+
+function passendeKlammer(css: string, auf: number): number {
+  let tiefe = 0;
+  for (let i = auf; i < css.length; i++) {
+    if (css[i] === "{") tiefe++;
+    else if (css[i] === "}" && --tiefe === 0) return i;
+  }
+  throw new Error(`Keine schließende Klammer zu Position ${auf} — ist globals.css unvollständig?`);
+}
+
+/** Wirft jeden verschachtelten Block weg; übrig bleiben die eigenen Deklarationen. */
+function eigeneDeklarationen(rumpf: string): string {
+  let ergebnis = "";
+  let tiefe = 0;
+  for (const zeichen of rumpf) {
+    if (zeichen === "{") tiefe++;
+    else if (zeichen === "}") tiefe--;
+    else if (tiefe === 0) ergebnis += zeichen;
+  }
+  return ergebnis;
+}
+
+function lies(css: string, von: number, bis: number, pfad: readonly string[], hinein: Regel[]) {
+  let i = von;
+  let kopfAnfang = von;
+  while (i < bis) {
+    const zeichen = css[i];
+    if (zeichen === "{") {
+      const selektor = css.slice(kopfAnfang, i).trim().replace(/\s+/g, " ");
+      const ende = passendeKlammer(css, i);
+      hinein.push({ selektor, pfad, eigene: eigeneDeklarationen(css.slice(i + 1, ende)) });
+      lies(css, i + 1, ende, [...pfad, selektor], hinein);
+      i = ende + 1;
+      kopfAnfang = i;
+    } else if (zeichen === ";") {
+      i++;
+      kopfAnfang = i;
+    } else {
+      i++;
+    }
+  }
+}
+
+const REGELN: readonly Regel[] = (() => {
+  const gesammelt: Regel[] = [];
+  lies(CSS, 0, CSS.length, [], gesammelt);
+  return gesammelt;
+})();
+
+/** Steht die Regel unter einer Bedingung, die am Bildschirm nicht immer gilt? */
+function bedingt(regel: Regel): string | null {
+  return (
+    [...regel.pfad, regel.selektor].find(
+      (teil) => teil.startsWith("@media") || teil.startsWith("@supports") || /\.dark\b/.test(teil),
+    ) ?? null
+  );
+}
+
+/** Alle Regeln, deren **eigene** Deklarationen das Token setzen. */
+function setzer(token: string): Regel[] {
+  const muster = new RegExp(`(^|[;\\s])${token}\\s*:`);
+  return REGELN.filter((regel) => muster.test(regel.eigene));
+}
+
+/** Der Wert eines Tokens in den eigenen Deklarationen einer Regel — genau einmal. */
+function wert(regel: Regel, token: string): string {
+  const treffer = [...regel.eigene.matchAll(new RegExp(`${token}\\s*:\\s*([^;]+);`, "g"))];
+  expect(
+    treffer.length,
+    `${token} steht ${treffer.length}-mal in \`${regel.selektor}\`. ` +
+      `Bei zwei Deklarationen gewinnt in der Kaskade die zweite, und dieser Test läse die erste.`,
+  ).toBe(1);
+  return treffer[0][1].trim();
+}
+
 /**
  * Wertet eine CSS-Länge in Pixeln aus — `rem`, `px` und `max(…)` daraus.
  *
@@ -51,19 +183,19 @@ const MINDESTFLAECHE = 44;
  * hier das Schlimmste — der Test bestünde weiter und prüfte nichts mehr.
  */
 function inPixeln(ausdruck: string, wurzel: number): number {
-  const wert = ausdruck.trim();
+  const roh = ausdruck.trim();
 
-  const max = /^max\((.*)\)$/.exec(wert);
+  const max = /^max\(([^()]*)\)$/.exec(roh);
   if (max !== null) {
     return Math.max(...max[1].split(",").map((glied) => inPixeln(glied, wurzel)));
   }
 
-  const rem = /^([0-9.]+)rem$/.exec(wert);
+  const rem = /^([0-9.]+)rem$/.exec(roh);
   if (rem !== null) {
     return Number(rem[1]) * wurzel;
   }
 
-  const px = /^([0-9.]+)px$/.exec(wert);
+  const px = /^([0-9.]+)px$/.exec(roh);
   if (px !== null) {
     return Number(px[1]);
   }
@@ -75,36 +207,39 @@ function inPixeln(ausdruck: string, wurzel: number): number {
   );
 }
 
-/** Die Prozentwerte der vier Stufen, aus `html[data-dichte="…"]` gelesen. */
-function stufenAusCss(): Map<string, number> {
-  const gefunden = new Map<string, number>();
-  const muster = /html\[data-dichte="([^"]+)"\]\s*\{[^}]*?--dichte-wurzel:\s*([0-9.]+)%/g;
-  for (const treffer of CSS.matchAll(muster)) {
-    gefunden.set(treffer[1], Number(treffer[2]));
-  }
-  return gefunden;
+/** Die Regel `html[data-dichte="…"]` einer Stufe. */
+function stufenregel(stufe: string): Regel {
+  const gefunden = REGELN.find((regel) =>
+    new RegExp(`^html\\[data-dichte=["']?${stufe}["']?\\]$`).test(regel.selektor),
+  );
+  expect(gefunden, `Keine Regel html[data-dichte="${stufe}"] in globals.css`).toBeDefined();
+  return gefunden as Regel;
 }
-
-/** Die eine Deklaration eines Tokens — und die Zusicherung, dass es genau eine ist. */
-function deklaration(token: string): string {
-  const treffer = [...CSS.matchAll(new RegExp(`${token}:\\s*([^;]+);`, "g"))];
-  expect(
-    treffer.length,
-    `${token} ist ${treffer.length}-mal deklariert. Genau eine Deklaration wird ` +
-      `hier ausgewertet; eine zweite würde je nach Reihenfolge gewinnen und ` +
-      `dieser Test sähe die falsche.`,
-  ).toBe(1);
-  return treffer[0][1];
-}
-
-const STUFEN_IM_CSS = stufenAusCss();
 
 /** Die Wurzelschriftgröße einer Stufe, in Pixeln, bei einer gegebenen Browservorgabe. */
 function wurzelPx(stufe: Dichtestufe, vorgabe: number): number {
-  const prozent = STUFEN_IM_CSS.get(stufe);
-  expect(prozent, `Stufe ${stufe} fehlt in globals.css`).toBeDefined();
-  return (vorgabe * (prozent as number)) / 100;
+  const prozent = Number(wert(stufenregel(stufe), "--dichte-wurzel").replace("%", ""));
+  return (vorgabe * prozent) / 100;
 }
+
+// ───────────────────────────────────────────────────────────────────────────
+
+describe("Der CSS-Leser selbst", () => {
+  it("findet überhaupt Regeln, und die bekannten darunter", () => {
+    // Ohne diese Zusicherung bestünde jeder Test unten auch dann, wenn der
+    // Leser nichts fände — dieselbe Vorsorge wie in `tests/farbwerte.test.ts`.
+    expect(REGELN.length).toBeGreaterThan(8);
+    expect(REGELN.map((r) => r.selektor)).toContain(":root");
+    expect(REGELN.map((r) => r.selektor)).toContain("@theme inline");
+  });
+
+  it("entfernt Kommentare, statt sie zu übersehen", () => {
+    // Der Mutant, an dem die erste Fassung gescheitert ist: Regeln löschen und
+    // als Kommentar stehen lassen. Gleiche Länge, damit keine Position wandert.
+    expect(CSS).not.toContain("/*");
+    expect(CSS.length).toBe(CSS_ROH.length);
+  });
+});
 
 describe("Die vier Stufen in globals.css", () => {
   it("sind genau die vier, die der Code kennt — in beide Richtungen", () => {
@@ -112,36 +247,78 @@ describe("Die vier Stufen in globals.css", () => {
     // tut. Eine Regel ohne Stufe im Code wäre eine Größe, die niemand
     // erreichen kann. Beides fällt nur auf, wenn beide Seiten verglichen
     // werden.
-    expect([...STUFEN_IM_CSS.keys()].sort()).toEqual([...DICHTESTUFEN].sort());
+    const imCss = REGELN.map((r) => /^html\[data-dichte=["']?([^"'\]]+)["']?\]$/.exec(r.selektor))
+      .filter((treffer): treffer is RegExpExecArray => treffer !== null)
+      .map((treffer) => treffer[1]);
+    expect([...imCss].sort()).toEqual([...DICHTESTUFEN].sort());
   });
 
-  it("hängen an einem Attribut am Wurzelelement und wirken dort auch", () => {
-    // Ohne diese Zeile stünden vier Regeln da, die einen Wert setzen, den
-    // niemand liest. `rem` misst gegen das Wurzelelement — ein Wrapper
-    // darunter trüge nichts.
-    expect(CSS).toMatch(/html\s*\{[^}]*font-size:\s*var\(--dichte-wurzel\)/);
+  it.each(DICHTESTUFEN)("hängt Stufe %s unbedingt am Wurzelelement", (stufe) => {
+    // **Die Lage, nicht nur der Wert.** Eine Stufenregel in `@media print` oder
+    // unter `.dark` steht da und wirkt am Bildschirm nie.
+    const regel = stufenregel(stufe);
+    expect(
+      bedingt(regel),
+      `html[data-dichte="${stufe}"] steht unter \`${bedingt(regel)}\` und wirkt damit nicht ` +
+        `in jeder Lage. Die Stufen gehören auf die oberste Ebene.`,
+    ).toBeNull();
+    expect(wert(regel, "--dichte-wurzel")).toMatch(/^[0-9.]+%$/);
   });
 
-  it("machen `m` zu genau 100 % — dem heutigen Zustand", () => {
+  it("wirkt über die Wurzelschriftgröße — unbedingt", () => {
+    // Ohne diese Regel setzen vier Blöcke einen Wert, den niemand liest. Und
+    // stünde sie in `@media print`, änderte der Umschalter nur den Ausdruck.
+    const traeger = REGELN.filter(
+      (regel) =>
+        /(^|,)\s*html\s*$/.test(regel.selektor) &&
+        /font-size:\s*var\(--dichte-wurzel\)/.test(regel.eigene),
+    );
+    expect(
+      traeger.length,
+      "Keine Regel setzt `font-size: var(--dichte-wurzel)` am `html`-Element.",
+    ).toBeGreaterThan(0);
+    for (const regel of traeger) {
+      expect(
+        bedingt(regel),
+        `\`html { font-size: … }\` steht unter \`${bedingt(regel)}\``,
+      ).toBeNull();
+    }
+  });
+
+  it("macht `m` zu genau 100 % — dem heutigen Zustand", () => {
     // Die härteste Bedingung dieser Runde: Alle bisherigen Messungen des
     // Projekts sind gegen diesen Zustand gemessen. Verschöbe er sich, wären
     // sie Messungen eines Zustands, den niemand mehr sieht.
     expect(STANDARDDICHTE).toBe("m");
-    expect(STUFEN_IM_CSS.get("m")).toBe(100);
+    expect(wert(stufenregel("m"), "--dichte-wurzel")).toBe("100%");
     expect(wurzelPx("m", BROWSERVORGABE)).toBe(BROWSERVORGABE);
   });
 
   it("ordnet die Stufen von der dichtesten zur luftigsten", () => {
     // Die Oberfläche zeigt sie in dieser Reihenfolge. Eine Skala, die eine
     // Richtung hat und sie nicht einhält, liest sich als Zufall.
-    const prozente = DICHTESTUFEN.map((stufe) => STUFEN_IM_CSS.get(stufe) as number);
+    const prozente = DICHTESTUFEN.map((stufe) => wurzelPx(stufe, BROWSERVORGABE));
     expect(prozente).toEqual([...prozente].sort((a, b) => a - b));
     expect(new Set(prozente).size).toBe(prozente.length);
   });
 });
 
 describe("Die Mindestfläche am Finger", () => {
-  const beruehrung = deklaration("--dichte-beruehrung");
+  const setzende = setzer("--dichte-beruehrung");
+
+  it("wird an genau einer Stelle festgelegt, und die gilt immer", () => {
+    // Eine zweite Deklaration gewänne je nach Reihenfolge, und dieser Test
+    // sähe die falsche. Eine in `@media print` löste am Bildschirm zu nichts
+    // auf — nachgemessen: `0px`.
+    expect(
+      setzende.map((regel) => `${regel.pfad.join(" > ")} ${regel.selektor}`.trim()),
+      "--dichte-beruehrung wird an mehr als einer Stelle gesetzt",
+    ).toHaveLength(1);
+    expect(setzende[0].selektor).toBe(":root");
+    expect(bedingt(setzende[0]), `:root steht unter \`${bedingt(setzende[0])}\``).toBeNull();
+  });
+
+  const beruehrung = wert(setzende[0], "--dichte-beruehrung");
 
   it.each(DICHTESTUFEN)("wird in Stufe %s nicht unterschritten", (stufe) => {
     // Gegen drei Browservorgaben, nicht nur gegen 16: Der Boden muss auch
@@ -156,9 +333,8 @@ describe("Die Mindestfläche am Finger", () => {
   });
 
   it("bräuchte den Boden — ohne ihn fiele die kleinste Stufe darunter", () => {
-    // Die Gegenprobe. Ohne sie stünde das `max()` da, ohne dass jemand
-    // wüsste, ob es überhaupt etwas tut — und beim nächsten Aufräumen fiele
-    // es weg.
+    // Die Gegenprobe. Ohne sie stünde das `max()` da, ohne dass jemand wüsste,
+    // ob es überhaupt etwas tut — und beim nächsten Aufräumen fiele es weg.
     const remGlied = /([0-9.]+rem)/.exec(beruehrung)?.[1];
     expect(remGlied, `In \`${beruehrung}\` steht kein rem-Glied`).toBeDefined();
 
@@ -181,6 +357,38 @@ describe("Die Mindestfläche am Finger", () => {
     // 2.75 rem bei 16 px Wurzel waren 44 px, und 44 px sollen es bleiben.
     expect(inPixeln(beruehrung, wurzelPx("m", BROWSERVORGABE))).toBe(MINDESTFLAECHE);
   });
+
+  it("ist mit den Komponenten verdrahtet — sonst gilt sie für nichts", () => {
+    // Der Mutant, der am weitesten trug: `--spacing-beruehrung` auf ein anderes
+    // Token zeigen lassen. Über vierzig Komponenten benutzen
+    // `min-h-beruehrung`, und alle hingen dann an etwas anderem — ohne dass
+    // eine einzige Zahl in dieser Datei falsch geworden wäre.
+    const thema = REGELN.find((regel) => regel.selektor === "@theme inline");
+    expect(thema, "Kein `@theme inline`-Block in globals.css").toBeDefined();
+    expect((thema as Regel).eigene).toMatch(
+      /--spacing-beruehrung:\s*var\(--dichte-beruehrung\)\s*;/,
+    );
+    expect((thema as Regel).eigene).toMatch(
+      /--spacing-bedienelement:\s*var\(--dichte-bedienelement\)\s*;/,
+    );
+  });
+
+  it("trägt am Berührungsgerät auch das Bedienelement", () => {
+    // Am Zeigergerät ist `--dichte-bedienelement` 2 rem. Dass es am Finger auf
+    // die Mindestfläche zurückfällt, ist die halbe Zusicherung aus
+    // `visuelles-konzept.md` §5 — und sie steht in genau einer Regel.
+    //
+    // **Was das nicht zusichert:** eine Fläche von 44 × 44. Es ist eine Aussage
+    // über die Höhe; ein Symbolknopf (`size-8`) bleibt in jeder Stufe schmaler
+    // (`docs/dichte-umschalter.md` §5.4, offener Punkt 96).
+    const grob = REGELN.filter(
+      (regel) =>
+        [...regel.pfad, regel.selektor].some((teil) => /@media[^{]*pointer:\s*coarse/.test(teil)) &&
+        /--dichte-bedienelement\s*:/.test(regel.eigene),
+    );
+    expect(grob, "Kein `@media (pointer: coarse)` setzt --dichte-bedienelement").toHaveLength(1);
+    expect(wert(grob[0], "--dichte-bedienelement")).toBe("var(--dichte-beruehrung)");
+  });
 });
 
 describe("Der Rückfall bei fehlender oder unbekannter Wahl", () => {
@@ -194,8 +402,8 @@ describe("Der Rückfall bei fehlender oder unbekannter Wahl", () => {
     // Regel Q4 in klein: Nicht zugeordnet heißt nicht zugeordnet. Aus `xxs`
     // wird nicht `xs`, aus `XS` auch nicht — ein geratener Wert wäre eine
     // Behauptung über etwas, worüber nichts bekannt ist.
-    for (const wert of [undefined, null, "", "xxs", "XS", "M", "gross", "100%", "medium", "0"]) {
-      expect(dichteAus(wert), `Wert: ${String(wert)}`).toBe(STANDARDDICHTE);
+    for (const wahl of [undefined, null, "", "xxs", "XS", "M", "gross", "100%", "medium", "0"]) {
+      expect(dichteAus(wahl), `Wert: ${String(wahl)}`).toBe(STANDARDDICHTE);
     }
   });
 });

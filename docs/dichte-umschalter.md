@@ -171,12 +171,15 @@ Fenster, Fenstermaße über `Emulation.setDeviceMetricsOverride`
 
 ### 5.1 Der Recharts-Baum — kein Befund, und das ist die Auskunft
 
-`dashboard-frontend.md` §5.3 nennt Pixelkonstanten, die von der Wurzelgröße nichts wissen:
-Achsenbreite, `minTickGap={12}`, Diagrammhöhe 260, `maxBarSize={28}`, `fontSize: 11`. Die Erwartung
+Der Recharts-Baum steckt voller Pixelkonstanten, die von der Wurzelgröße nichts wissen.
+[`dashboard-frontend.md`](dashboard-frontend.md) §5.3 nennt davon die **Achsenbreite**, den
+`minTickGap={12}` und die **Diagrammhöhe 260 px**; `maxBarSize={28}` steht in §5.2 und
+`fontSize: 11` nur im Code (`features/dashboard/components/verlauf-diagramm.tsx`). Die Erwartung
 war, dass mindestens eine davon in `l` oder `xs` kippt.
 
 **Sie kippt nicht, und der Grund ist messbar: der Diagrammbaum ist von der Wurzelschrift
-vollständig entkoppelt.** Die y-Achse ist in allen vier Stufen **bitgleich**:
+vollständig entkoppelt.** Die y-Achse ist in allen vier Stufen **maßgleich** — dieselben
+Beschriftungen, dieselben Kastenbreiten, dieselbe Achsenlage:
 
 | | `xs` | `s` | `m` | `l` |
 |---|---|---|---|---|
@@ -185,6 +188,10 @@ vollständig entkoppelt.** Die y-Achse ist in allen vier Stufen **bitgleich**:
 | `x` des Achsentexts | 52 | 52 | 52 | 52 |
 | Schriftgröße der Achse | 11 px | 11 px | 11 px | 11 px |
 | **kleinster Abstand zum Rand** | **6,8 px** | 6,7 px | 6,8 px | 6,8 px |
+
+*(Die 6,7 px in `s` sind die einzige Abweichung der ganzen Tabelle und liegen bei einem Zehntel
+Pixel — Rundung des Textkastens, nicht Wirkung der Stufe. „Maßgleich" ist deshalb der richtige
+Ausdruck und „bitgleich" wäre der falsche.)*
 
 **Nichts wird abgeschnitten**, in keiner Stufe — nachgesehen an den Kästen der `<text>`-Knoten, wie
 §5.3 es getan hat, und ausdrücklich an dem Fall, an dem die feste Zahl damals gescheitert ist
@@ -202,9 +209,10 @@ vollständig entkoppelt.** Die y-Achse ist in allen vier Stufen **bitgleich**:
 allen zwölf Fällen.)*
 
 > **Die fette 8 ist der eigentliche Fund.** Bei 768 px und Stufe `l` **nimmt Recharts von sich aus
-> eine Beschriftung weniger**, um `minTickGap={12}` zu halten. Genau der Mechanismus, der in §10.4
-> die gerechnete Konstante `achsenabstand` abgelöst hat, trägt damit auch die Stufen — **ohne von
-> ihnen zu wissen**. Eine Zahl, die von der Breite nichts weiß, kann bei zwei Breiten nicht richtig
+> zwei Beschriftungen weniger** — 8 statt 10 —, um `minTickGap={12}` zu halten. Genau der
+> Mechanismus, der in [`dashboard-frontend.md`](dashboard-frontend.md) §10.4 die gerechnete
+> Konstante `achsenabstand` abgelöst hat, trägt damit auch die Stufen — **ohne von ihnen zu
+> wissen**. Eine Zahl, die von der Breite nichts weiß, kann bei zwei Breiten nicht richtig
 > sein; eine, die von der Schriftgröße nichts weiß, ebenso wenig. `equidistantPreserveStart` weiß
 > von beidem nichts und misst stattdessen nach.
 
@@ -261,7 +269,7 @@ falls je einer nötig wird — **niemals `getComputedStyle` zur Laufzeit**.
 ### 5.2 `--dichte-beschriftung` — das Verhältnis bleibt, und zwar gemessen
 
 Geprüft im **Belegdaten-Block im Panel** (10 rem) und auf der eigenen Route über
-`.beschriftung-breit` (16 rem), an Nachricht `ea1060ee-…f993e5` mit acht Belegdatengruppen.
+`.beschriftung-breit` (16 rem), an Nachricht `ea1060ee-…f993e5` mit **sieben** Belegdatengruppen.
 
 **Bei 1920 px Fensterbreite und Stufe `m` reproduziert die Messung [`bam-werte.md`](bam-werte.md)
 §11a auf den Pixel** — Gruppenzeile 454 px, 282 px bleiben dem Wert, die längste gemessene
@@ -286,6 +294,21 @@ Stufen sind mit ihr vergleichbar.
 | **`m`** | **256 px** | **858 px** | **1126 px** | **285 px** | ja |
 | `l` | 288 px | 965,5 px | 1267 px | 320,5 px | ja |
 
+**Im Panel bei 1500 px** — die zweite mitgemessene Breite, und die unbequemere:
+
+| Stufe | Beschriftungsspalte | bleibt dem Wert | Gruppenzeile | Marke mit 35 Zeichen | Rückstand |
+|---|---:|---:|---:|---:|---:|
+| `xs` | 140 px | 190,5 px | 341 px | 249,3 px | **58,8 px** |
+| `s` | 150 px | 204,25 px | 365,5 px | 267 px | 62,8 px |
+| **`m`** | **160 px** | **218 px** | **390 px** | **285 px** | **67,0 px** |
+| `l` | 180 px | 245,5 px | 439 px | 320,5 px | 75,0 px |
+
+> **Der Rückstand hängt an der Fensterbreite, nicht an der Stufe.** Bei 1920 px sind es 3 px, bei
+> 1500 px sind es 67 — das Panel ist schmaler, die Marke bleibt gleich lang. Auch das ist geerbt:
+> `bam-werte.md` §11a rechnet mit der Gruppenzeile von 454 px, und die gibt es erst ab etwa
+> 1900 px Fensterbreite. **Die Stufe verändert daran nichts** — der Rückstand skaliert mit
+> demselben Faktor wie alles andere (58,8 / 67,0 = 0,877 gegen den Stufenfaktor 0,875).
+
 **Die Erwartung ist der Befund**, und das ist hier ausnahmsweise die ganze Nachricht: Das Verhältnis
 zwischen dem, was die Marke braucht, und dem, was ihr bleibt, ist über alle vier Stufen auf **0,2 %
 konstant**. Jede beteiligte Größe skaliert mit demselben Faktor — die Spalte, weil sie in rem steht;
@@ -294,7 +317,7 @@ die Marke, weil ihre Schrift in rem steht.
 Dazu, in jeder Stufe und an beiden Einhängepunkten:
 
 - **Keine Marke bricht um.** Nicht eine, in keiner Stufe.
-- **Im Panel brechen 5 der 8 Beschriftungen um, höchstens auf 2 Zeilen** — in jeder Stufe dieselben
+- **Im Panel brechen 5 der 7 Beschriftungen um, höchstens auf 2 Zeilen** — in jeder Stufe dieselben
   fünf. Genau die Bauabsicht aus §11a: Die Beschriftung kostet zwei Zeilen in ihrer *eigenen* Zelle,
   statt die Hauptinformation in den Umbruch zu zwingen.
 - **Auf der eigenen Route bricht keine Beschriftung um** — 16 rem tragen sie in jeder Stufe einzeilig.
@@ -362,6 +385,19 @@ meldet in jeder Stufe `true`). Gemessen ist die **Layouthöhe** (`offsetHeight`)
 `--dichte-beruehrung` oder `--dichte-bedienelement` trägt: Navigationseinträge,
 Mandantenumschalter, Sprachwahl, Nutzermenü, sämtliche Menüeinträge.
 
+> ⚠️ **Und zwar in der HÖHE. Eine Fläche von 44 × 44 ist das nicht**, und der Unterschied gehört
+> hierher, weil er leicht überlesen wird. `min-h-beruehrung` hebt die Höhe an und sagt über die
+> Breite nichts. Ein Symbolknopf trägt daneben `size-8` (aus `components/ui/button.tsx`,
+> `size="icon"`), und `tailwind-merge` löst das nicht auf — beide Klassen bleiben stehen.
+>
+> Gemessen am Berührungsgerät, Breite × Höhe: **28 × 44** in `xs`, 30 × 44 in `s`, 32 × 44 in `m`,
+> 36 × 50 in `l`. Dasselbe gilt für die Sprachumschaltung (35–45 px breit) und die
+> Belegart-Auswahl (30–38 px). Auf `/administration/katalog` sind es 737 von 747 Trägern.
+>
+> **Das Abnahmekriterium spricht von „mindestens 44 px hoch", und in dieser Lesart ist es für
+> diese Elemente erfüllt.** Als Zusicherung einer Berührungsfläche wäre es das in keiner Stufe —
+> auch nicht in `m`, auch nicht vor dieser Runde.
+
 #### ⚠️ Befund: Drei Klassen bleiben darunter — in **jeder** Stufe, `m` eingeschlossen
 
 > **Gemessen war:** Von 80 sichtbaren Bedienelementen liegen 52 unter 44 px, und es sind in jeder
@@ -393,7 +429,8 @@ Durchgeklickt am echten Menüeintrag, `m → xs → l → s → m`:
 | Menü bleibt offen | **ja**, in allen vier Übergängen |
 | `aria-checked` folgt | **ja** — genau ein Eintrag `true`, die drei anderen `false` |
 | Häkchen folgt | **ja** — genau eines sichtbar, drei auf `invisible` |
-| Adresse und Liste unberührt | **ja** — Pfad bleibt `/nachrichten`, die 50 geladenen Zeilen werden nicht neu geholt |
+| Adresse unberührt | **ja** — der Pfad bleibt `/nachrichten`, kein Parameter kommt hinzu |
+| Liste bleibt stehen | **ja**, im Sinne von: nach jedem Übergang stehen wieder **50** Zeilen im Baum, und der Ladezustand erscheint nicht. **Ob die Liste dabei neu geholt wird, ist nicht gemessen** — dafür wäre ein Netzmitschnitt nötig, und der Zähler im Messskript war ein Blindgänger |
 | Cookie gesetzt | **ja** — `overlord_dichte=<stufe>` nach jedem Klick |
 
 **Kein Flackern beim nächsten Aufruf** — und das ist nicht angesehen, sondern am ausgelieferten
@@ -435,12 +472,30 @@ Sechzehn Zeilen, und in `m` ist jede davon wirkungsgleich zum Zustand davor:
 
 Gemessen bestätigt: Wurzel **16 px**, Basisschrift **15 px**, Zeilenhöhe **36 px**, Seitenkopf
 **51 px**, `--dichte-beruehrung` **44 px**, Gruppenzeile im Panel **454 px** bei 1920 px, auf der
-Route **1126 px**, y-Achsenbeschriftungen unverändert. Jede dieser Zahlen steht so schon in
-`visuelles-konzept.md` §5 bzw. `bam-werte.md` §11a.
+Route **1126 px**, y-Achsenbeschriftungen unverändert.
 
-**Die eine Ausnahme steht in §3**: Bei einer Browservorgabe unter 16 px liefert
-`--dichte-beruehrung` jetzt 44 px statt weniger. Das ist die Behebung einer stillen Verletzung von
-§5 und keine Abweichung von E‑z.
+**Vier dieser Werte stehen so schon im Projekt und sind damit Wiederholungen einer fremden
+Messung, keine neue Behauptung:** der Seitenkopf mit 51 px (`visuelles-konzept.md` §5), die
+Gruppenzeile mit 454 px, die 282 px für den Wert und die 1.126 px auf der Route
+([`bam-werte.md`](bam-werte.md) §11a). Wurzel, Basisschrift und Zeilenhöhe sind hier zum ersten
+Mal in Pixeln gemessen; `visuelles-konzept.md` §4 nennt die Basis als 15 px, die Zeilenhöhe steht
+dort nur als `2.25 rem`.
+
+**Zwei Ausnahmen, und beide sind benannt statt weggelassen:**
+
+1. **Bei einer Browservorgabe unter 16 px** liefert `--dichte-beruehrung` jetzt 44 px statt
+   weniger — bei Chromes Stufe 12 px waren es vorher 33 px, bei 9 px 24,75 px. Nachgemessen auf
+   `/passwort`: Der Absendeknopf springt von 33 auf 44 px, die Karte wird 11 px höher. Über eine
+   ganze Route gerechnet sind bei erzwungenen 12 px **15.663 von 15.776 Kästen** verschoben; bei
+   16 px sind es **null**. Das ist die Behebung einer stillen Verletzung von §5 und keine
+   Abweichung von E‑z — aber es ist eine Änderung, und sie steht deshalb hier.
+2. **Das geöffnete Nutzermenü ist 152,95 px höher** (286,90 statt 133,95 px bei 1280 × 900). Das
+   ist die neue Funktion selbst; „pixelgleich" ist trotzdem eine absolute Aussage, und ein
+   geöffnetes Menü gehört zur Oberfläche.
+
+**Was darüber hinaus aktiv gesucht und nicht gefunden wurde:** `html { font-size: 100% }` gegen
+gar keine Angabe ergibt über sechs Routen **null** verschobene Kästen und im verschränkten
+Bildvergleich (A/B/A/B/A/B auf `/passwort`, 1280 × 800) **null** dauerhaft abweichende Pixel.
 
 ### 5.7 Was **nicht** geprüft worden ist
 
@@ -453,13 +508,15 @@ Damit es dasteht und nicht fehlt:
   sechsstellige Achsenbeschriftung), für §5.3 nicht notwendigerweise — die Zeilenhöhe hängt nicht am
   Mandanten, die Spaltenbreiten könnten es. Dieselbe Einschränkung, die
   [`dashboard.md`](dashboard.md) als offenen Punkt 85 führt.
-- **Nur eine Nachricht für §5.2** (`ea1060ee-…f993e5`, acht Gruppen). Die längste Belegnummer des
+- **Nur eine Nachricht für §5.2** (`ea1060ee-…f993e5`, sieben Gruppen). Die längste Belegnummer des
   Bestands ist **nicht** an einer echten Nachricht gemessen, sondern als 35-Zeichen-Marke in der
   Gestalt der echten verborgen nachgemessen. Das ist die Zahl aus §11a und keine neue Messung.
 - **Kein echtes Berührungsgerät.** `pointer: coarse` ist emuliert. Die Emulation meldet sich
   korrekt, die Media-Regel greift — was ein Finger auf einem Glas tatsächlich trifft, sagt das nicht.
 - **Kein Vorleseprogramm.** Die Auszeichnung ist am Markup nachgesehen (`role="menuitemradio"`,
   `aria-checked`, `role="group"` mit `aria-labelledby`), nicht angehört.
+- **Kein Netzmitschnitt.** Dass beim Umschalten nichts nachgeladen wird, ist **nicht** gemessen;
+  gezählt sind nur die Zeilen im Baum (§5.5).
 - **Zwei Werkzeugbefunde, keine Anwendungsbefunde**, hier vermerkt, damit der nächste Lauf nicht
   wieder darauf hereinfällt: `Input.dispatchMouseEvent` über CDP öffnet das Radix-Menü **nicht**
   (`aria-expanded` bleibt `false`); synthetische `PointerEvent`s im Dokument öffnen es. Und
@@ -554,5 +611,7 @@ Listenform, Fließtext), und gegengeprüft.*
 | **95** | **Der Recharts-Baum skaliert nicht mit.** Achsenschrift (11 px), Diagrammhöhe (260/88 px), Balkenbreite (28 px), `minTickGap` (12 px) und die Ränder sind Pixel und wissen von der Wurzelgröße nichts. **Gemessen ist, dass nichts kaputtgeht** (§5.1) — nichts wird abgeschnitten, nichts überlappt, die Balken stehen übereinander. Sichtbar ist es trotzdem: In `l` steht die Diagrammschrift still, während alles daneben wächst. Der Weg wäre der Stufenfaktor als Parameter der reinen Funktion in `verlauf.ts`, **niemals** `getComputedStyle` zur Laufzeit |
 | **96** | **Drei Klassen von Bedienelementen bleiben am Berührungsgerät unter 44 px, in jeder Stufe einschließlich `m`** (§5.4): der Sortierknopf im Tabellenkopf (20 px in `m`), jede Tabellenzeile (36 px) und der `Switch` aus dem Generatorbereich (18,4 px, feste Pixel). Dazu `--dichte-feld` mit 40 px. **Alle vier waren es vorher auch.** Ein Boden an `--dichte-feld` scheidet aus, solange E‑z gilt — er änderte `m`. Es ist eine Entscheidung über die Nachrichtenliste und über den gemeinsamen Baustein, nicht über die Dichte |
 | **97** | **Die Tabellenkopfzeile der Nachrichtenliste hält nicht** (§5.3). `position: static`, sie scrollt vollständig weg — in jeder Stufe und schon vorher. `components/anwendungsrahmen.tsx` und [`frontend-grundlagen.md`](frontend-grundlagen.md) §7 behaupten beide das Gegenteil. `benutzer-tabelle.tsx` und `katalog-tabelle.tsx` machen es vor (`sticky -top-4`) |
-| **98** | **Ohne JavaScript ist der Umschalter nicht erreichbar.** Der *Weg* braucht keins — es ist ein Formular mit Server-Aktion, genau wie die Sprachumschaltung. Nur öffnet sich das Nutzermenü darüber ohne JavaScript nicht. Die Sprachwahl steht frei in der Kopfzeile und hat das Problem nicht. Der Nebeneffekt aus E‑x ist damit für dieses Bedienelement **nicht eingelöst**, und das steht hier, statt es zu behaupten |
+| **98** | **Ohne JavaScript ist der Umschalter nicht erreichbar — und die Sprachumschaltung im Anwendungsrahmen genauso wenig.** Der *Weg* braucht keins: Beides sind Formulare mit Server-Aktion. **Nur wird der Anwendungsrahmen im Browser gebaut.** Gemessen an der angemeldeten Antwort für `/nachrichten`: **1.379 Zeichen** Markup, darin **kein** `<header>`, **kein** `<form>`, **keine** `$ACTION_ID_` — die übrigen 47.456 Zeichen sind RSC-Nutzlast. Auf der **Anmeldeseite** steht das Sprachformular dagegen wirklich im Markup und funktioniert dort ohne JavaScript. Der Nebeneffekt, den [`frontend-grundlagen.md`](frontend-grundlagen.md) §4 seit Schritt 3 für die Sprache in Anspruch nimmt, trägt also nur dort — ein Befund über eine bestehende Zusage, nicht über diese Runde |
 | **99** | **Die Buchstabenreihe der Entscheidungs-IDs ist mit `E‑z` aufgebraucht** (§2). Es gibt keine Fortsetzungsregel. Sie zu erfinden betrifft das ganze Projekt und nicht diese Runde; [`README.md`](README.md) („Die Nummernkreise") ist der Ort dafür |
+| **100** | **Nach der Auswahl springt der Tastaturfokus aus der Gruppe heraus.** Dreimal über Fokusereignisse reproduziert: Der gewählte Eintrag bekommt den Fokus, und sobald die Antwort der Server-Aktion ankommt (rund 480 ms später), wandert er auf den Menürumpf; danach trägt kein Eintrag mehr `data-highlighted`, und das nächste `ArrowDown` beginnt wieder oben. Wer mit der Tastatur zwei Stufen vergleichen will, verliert dabei jedes Mal seine Stelle. Ursache ist das Neurendern des Menüs durch `revalidatePath` |
+| **101** | **`revalidatePath` läuft auch, wenn die gewählte Stufe schon die aktive ist.** Bei `role="menuitemradio"` ist das erneute Wählen des angehakten Eintrags eine normale Handlung; sie kostet dann einen vollen RSC-Umlauf und den anwendungsweiten Verwurf des Router-Zwischenspeichers für einen Nullvorgang. Ein Vergleich mit dem Cookie vor dem Schreiben genügte — hier bewusst nicht eingebaut, weil er einen eigenen Test bräuchte und die Runde ihn nicht verlangt |

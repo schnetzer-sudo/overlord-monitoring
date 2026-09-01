@@ -68,6 +68,18 @@ export const STANDARDDICHTE: Dichtestufe = "m";
 /** Name des Cookies mit der Dichtewahl. Kein `HttpOnly` — es ist keine Auskunft. */
 export const DICHTE_COOKIE = "overlord_dichte";
 
+/**
+ * Der Name des Formularfelds, über das die Stufe an die Server-Aktion geht.
+ *
+ * **Steht hier und nicht zweimal als nackte Zeichenkette.** Die auslösende
+ * Schaltfläche schreibt ihn als `name`, die Aktion liest ihn mit
+ * `daten.get(…)` — und eine Abweichung zwischen beiden fiele **still** aus:
+ * `FormData.get` lieferte `null`, {@link dichteAus} machte daraus die Vorgabe,
+ * und der Umschalter sähe aus, als tue nur *Standard* etwas. Kein Fehler, keine
+ * Meldung, kein roter Test.
+ */
+export const DICHTE_FELD = "dichte";
+
 /** Ein Jahr. Wie die Sprachwahl trifft niemand diese Wahl gern zweimal. */
 export const DICHTE_COOKIE_DAUER = 60 * 60 * 24 * 365;
 

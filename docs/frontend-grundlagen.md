@@ -314,10 +314,29 @@ beide Verwender ist der Nachrüstweg derselbe: eine Spalte an `app_user`, das Co
 Zwischenspeicher — kein Umbau der Oberfläche. Geführt als offene Punkte 94 (Dichte) und in diesem
 Abschnitt für die Sprache.
 
-**Ohne JavaScript trägt das Formular nur so weit wie das, worin es steht.** Die Sprachumschaltung
-steht frei in der Kopfzeile und funktioniert ohne JavaScript vollständig. Der Dichteumschalter steht
-in einem `DropdownMenu` — der *Weg* braucht kein JavaScript, das Menü darüber schon (offener Punkt
-98).
+#### ⚠️ Ohne JavaScript trägt das Formular nur so weit wie das, worin es steht
+
+> **Gemessen war** am 01.09.2026: Die servergerenderte Antwort auf `/nachrichten` enthält, mit
+> gültiger Sitzung, **1.379 Zeichen Markup** — darin **kein** `<header>`, **kein** `<form>` und
+> **keine** `$ACTION_ID_`. Die übrigen 47.456 Zeichen der Antwort sind RSC-Nutzlast in
+> `<script>`-Elementen. Der Anwendungsrahmen wird im Browser gebaut, und mit ihm die Kopfzeile und
+> die Sprachumschaltung darin.
+>
+> **Behauptet wird** wenige Zeilen weiter oben, seit Schritt 3: *Nebeneffekt, der es wert ist — die
+> Umschaltung funktioniert auch ohne JavaScript.*
+>
+> **Der Satz stimmt für die Anmeldeseite und sonst nirgends.** Auf `/anmeldung` steht das
+> Sprachformular samt `$ACTION_ID_` und beiden Absende-Schaltflächen wirklich im ausgelieferten
+> Markup — dort trägt er. Innerhalb der Anwendung ist die Kopfzeile ohne JavaScript nicht da, und
+> damit auch keine Umschaltung.
+>
+> **Er bleibt trotzdem stehen, und die Bauform auch.** Ein Formular mit Server-Aktion ist der
+> richtige Weg, weil der neue Wert auf dem *Server* ankommen muss; das ist der tragende Grund, und
+> er ist von der JavaScript-Frage unabhängig. Nur ist der Nebeneffekt kleiner als angenommen.
+> Geführt als offener Punkt 98 in [`dichte-umschalter.md`](dichte-umschalter.md).
+
+Für den Dichteumschalter gilt dasselbe, und zusätzlich, dass sich das `DropdownMenu` über ihm ohne
+JavaScript ohnehin nicht öffnete.
 
 ### Datum und Zahlen
 

@@ -9,7 +9,7 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { dichteSetzen } from "@/dichte/aktion";
-import { DICHTESTUFEN } from "@/dichte";
+import { DICHTESTUFEN, DICHTE_FELD } from "@/dichte";
 import { useDichte } from "@/dichte/provider";
 import { useTexte } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
@@ -35,10 +35,19 @@ import { cn } from "@/lib/utils";
  *
  * **Nachgeholt wird davon genau ein Attributpaar** — `role="menuitemradio"` und
  * `aria-checked` —, und das ist dieselbe Auszeichnung, die Radix an einem
- * `RadioItem` selbst erzeugt. Die **Gestalt** kommt unverändert aus dem
- * Generatorbereich: `DropdownMenuItem` bringt Abstände, Fokusfläche und die
- * Größe des Zeichens mit, `DropdownMenuGroup` die Gruppe. In `components/ui`
- * ist dafür nichts geändert und nichts nachinstalliert worden.
+ * `RadioItem` selbst erzeugt.
+ *
+ * > **Dass das Attribut gewinnt, hängt an Radix und nicht an uns.** `Slot`
+ * > mischt mit `{ ...slotProps, ...childProps }`, das Kind steht hinten und
+ * > setzt sich durch (`@radix-ui/react-slot`, nachgesehen im Paket). Kehrte
+ * > sich die Reihenfolge je um, stünde hier wieder `role="menuitem"` — und
+ * > **kein Test hielte das fest**, weil das Projekt gerenderte Bäume zählt.
+ * > Nachgemessen ist es am laufenden System (`docs/dichte-umschalter.md` §4).
+ *
+ * Die **Gestalt** kommt unverändert aus dem Generatorbereich:
+ * `DropdownMenuItem` bringt Abstände, Fokusfläche und die Größe des Zeichens
+ * mit, `DropdownMenuGroup` die Gruppe. In `components/ui` ist dafür nichts
+ * geändert und nichts nachinstalliert worden.
  *
  * ## Das Menü bleibt offen
  *
@@ -83,7 +92,7 @@ export function DichteUmschaltung() {
           >
             <button
               type="submit"
-              name="dichte"
+              name={DICHTE_FELD}
               value={stufe}
               role="menuitemradio"
               aria-checked={stufe === aktiv}
