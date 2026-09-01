@@ -6,6 +6,7 @@ import { useTexte } from "@/i18n/provider";
 
 import { hervorgehobenerZeitraum } from "../filter";
 import { useDashboard, useDashboardzustand } from "../hooks";
+import { AufgefallenBlock } from "./aufgefallen-block";
 import { Kacheln } from "./kacheln";
 import { VerteilungBlock } from "./verteilung-block";
 import { StandZeile } from "./stand-zeile";
@@ -89,13 +90,27 @@ export function DashboardAnsicht() {
             <VerlaufDiagramm punkte={antwort.data.verlauf} zeitraum={antwort.data.zeitraum} />
           </Card>
 
-          <Card size="sm" className="px-4">
-            <VerteilungBlock
-              verteilung={antwort.data.verteilung}
-              aufSicht={setzeSicht}
-              gesperrt={antwort.isFetching}
-            />
-          </Card>
+          {/*
+           * Am breiten Fenster **nebeneinander**, darunter untereinander. Beide
+           * Blöcke sind Nachschlagewerke und keine Meldungen; sie um die volle
+           * Breite streiten zu lassen kostete eine Bildschirmhöhe, ohne dass
+           * eine Zeile mehr zu sehen wäre.
+           *
+           * Die Zeilen stehen links: Sie sind das Konkrete — eine Kennung, auf
+           * die man klickt. Die Verteilung ist Hintergrund.
+           */}
+          <div className="grid gap-4 xl:grid-cols-[3fr_2fr]">
+            <Card size="sm" className="px-4">
+              <AufgefallenBlock zeilen={antwort.data.zuletztAufgefallen} />
+            </Card>
+            <Card size="sm" className="px-4">
+              <VerteilungBlock
+                verteilung={antwort.data.verteilung}
+                aufSicht={setzeSicht}
+                gesperrt={antwort.isFetching}
+              />
+            </Card>
+          </div>
 
           <StandZeile stand={antwort.data.stand} />
         </>
