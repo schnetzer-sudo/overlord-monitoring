@@ -981,8 +981,83 @@ festhält. Eine Musteränderung wäre eine Lockerung ohne Anlass gewesen.
 2. **Nur `<Bar>`, Legende und Tooltip**, jeweils in der Voreinstellung. `Cell`, `activeBar`,
    Farbverläufe (`<linearGradient>`), Flächen- und Liniendiagramme sind **nicht** angesehen worden.
    Wer eine davon braucht, misst sie nach demselben Muster nach.
+
+   > **Genau das ist am 01.09.2026 geschehen** — für Achsenlinie, Gitterlinie,
+   > Achsenbeschriftung und den Tooltip-Zeiger, die das Dashboard braucht. Der Satz oben bleibt im
+   > Wortlaut stehen; was dazugekommen ist, steht unten unter „Nachgemessen am 01.09.2026".
+   > `Cell`, `activeBar` und Farbverläufe sind **weiterhin ungemessen** und kommen dort auch nicht
+   > vor.
 3. **Nichts über Barrierefreiheit.** Dass eine Farbe ankommt, sagt nicht, dass sie genügt — für ein
    Diagramm gilt „nie allein über Farbe" unverändert.
+
+### Nachgemessen am 01.09.2026: Achse, Gitter und Tooltip-Zeiger
+
+Punkt 2 der Liste oben nennt `<Bar>`, Legende und Tooltip als gemessen — und alles andere als
+nicht angesehen. **Das Dashboard-Frontend braucht drei weitere Lagen**, und statt sie anzunehmen,
+sind sie nach demselben Muster nachgemessen worden.
+
+**Zwei der offenen Lagen sind dabei gar nicht entstanden**, und das ist keine Vorsicht, sondern
+folgt aus der Ansicht: Die Legende ist **eigenes Markup** (Recharts' eigene kann keine Reihe
+weglassen, die über alle Eimer null ist), und der Tooltip ist ein **eigener `content`** — beides
+also Tailwind-Klassen auf eigenem JSX und damit gar kein Recharts-Farbweg. `activeBar` steht
+ausdrücklich auf `false`, `Cell` und Farbverläufe kommen nicht vor.
+
+| | |
+|---|---|
+| **Browser** | dasselbe installierte Chrome, kopflos, über das DevTools-Protokoll |
+| **Recharts** | **3.10.1**, die Fassung, die das Projekt seit dem 01.09.2026 führt — exakt gepinnt, weil dieser Befund an ihr hängt |
+| **Aufbau** | eine temporäre Route `src/app/verlaufprobe/page.tsx`, außerhalb der Gruppe `(app)`, mit 48 statischen Stundeneimern. **Der Probecode ist entfernt** |
+| **Der Zeiger** | erscheint erst beim Überfahren. Gefahren wird ein echtes `Input.dispatchMouseEvent` über CDP, und zwar auf den **niedrigsten** Balken — nur dort bleibt über dem Balken ein Stück Zeiger übrig, an dem sich sein Pixel überhaupt lesen lässt |
+
+#### Was im DOM stand
+
+```html
+<line stroke="var(--border)" x1="48" y1="246" x2="1340" y2="246" fill="none"></line>
+<line class="recharts-cartesian-axis-line" stroke="var(--border)" x1="48" y1="58" x2="1340" y2="58"></line>
+<text font-size="11" class="recharts-text recharts-cartesian-axis-tick-value"
+      text-anchor="end" fill="var(--muted-foreground)"><tspan x="40" dy="0.355em">0</tspan></text>
+<path stroke="none" pointer-events="none" fill="var(--muted)"
+      class="recharts-rectangle recharts-tooltip-cursor" d="M 182.5833,4.5 h 26.9167 v 53 h -26.9167 Z"></path>
+```
+
+**Alle vier tragen die Zeichenkette unverändert ins SVG-Attribut** — dieselbe Beobachtung wie beim
+Balkensegment. Der Tooltip-Zeiger ist dabei bemerkenswert: Er ist selbst ein `recharts-rectangle`
+und geht denselben Weg wie ein Balken, obwohl ihn kein Prop des Diagramms benennt.
+
+#### Was `getComputedStyle` daraus gemacht hat — und was gemalt wurde
+
+| Lage | wie die Farbe dort steht | Eigenschaft | aufgelöster Wert | Pixel | Sollwert des Tokens |
+|---|---|---|---|---|---|
+| Balkensegment | SVG-Attribut | `fill` | `lab(42.4236 59.8149 41.9956)` | `#be2323` | `#be2323` |
+| **Gitterlinie** | SVG-Attribut | `stroke` | `lab(88.4 0 0.0000119209)` | `#dedede` | `#dedede` |
+| **Achsenlinie** | SVG-Attribut | `stroke` | `lab(88.4 0 0.0000119209)` | `#dedede` | `#dedede` |
+| **Achsenbeschriftung** | SVG-Attribut | `fill` | `lab(42 0 0)` | `#636363` | `#636363` |
+| **Tooltip-Zeiger** | SVG-Attribut | `fill` | `lab(95.36 0.0000596046 0)` | `#f2f2f2` | `#f2f2f2` |
+
+Die Sollwerte sind die **Hex-Rückfälle aus dem gebauten CSS**, das Lightning CSS neben jedes
+`oklch()` schreibt — nachgesehen in `.next/static/**/*.css`, nicht gerechnet.
+
+> **Wie das Pixel gelesen worden ist, und warum an zwei Stellen anders.** Für eine **Fläche**
+> genügt ein Punkt in der Mitte, wie in der Messung vom 31.08.2026. Für eine **ein Pixel breite
+> Linie** und für eine **Glyphe** genügt er nicht: Beide sind kantengeglättet, und ihr Mittelpixel
+> ist eine *Mischung* aus Farbe und Untergrund — beim ersten Versuch kam für die Gitterlinie
+> `#eeeeee` heraus, exakt die Hälfte zwischen `#dedede` und Weiß.
+>
+> Gelesen wird deshalb die **häufigste** Farbe der Gerätezeilen, die eine Linie belegt (sie steht
+> über die ganze Breite, die Balken nur stellenweise), und der **dunkelste** Punkt im Kasten einer
+> Glyphe. Aufgenommen wird mit `deviceScaleFactor: 2`.
+
+#### Ein Befund über das Werkzeug, nicht über Recharts
+
+**`Page.captureScreenshot` mit `captureBeyondViewport: true` liefert bei einem
+`ResponsiveContainer` ein leeres Bild.** Das Diagramm steht dabei vollständig im DOM — 117
+Balken, SVG 1344 × 260, `fill` aufgelöst —, aber die Aufnahme zeigt eine weiße Fläche. Recharts
+misst seine Breite über einen `ResizeObserver`, und die Aufnahme über den Viewport hinaus verstellt
+genau diese Größe mitten im Vorgang.
+
+**Aufgelöst durch die längere Fassung:** erst messen, dann `Emulation.setDeviceMetricsOverride` auf
+die volle Inhaltshöhe, kurz warten, dann normal aufnehmen. Das steht hier, weil ein leeres Bild wie
+ein kaputtes Diagramm aussieht — und es ist keins.
 
 ---
 
