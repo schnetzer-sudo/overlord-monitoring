@@ -6,6 +6,7 @@ import { useTexte } from "@/i18n/provider";
 
 import { hervorgehobenerZeitraum } from "../filter";
 import { useDashboard, useDashboardzustand } from "../hooks";
+import { Kacheln } from "./kacheln";
 import { StandZeile } from "./stand-zeile";
 import { VerlaufDiagramm } from "./verlauf-diagramm";
 import { ZeitraumUmschalter } from "./zeitraum-umschalter";
@@ -81,9 +82,12 @@ export function DashboardAnsicht() {
         </>
       ) : (
         <>
+          <Kacheln kacheln={antwort.data.kacheln} fenster={antwort.data.fenster} />
+
           <Card size="sm" className="px-4">
             <VerlaufDiagramm punkte={antwort.data.verlauf} zeitraum={antwort.data.zeitraum} />
           </Card>
+
           <StandZeile stand={antwort.data.stand} />
         </>
       )}
