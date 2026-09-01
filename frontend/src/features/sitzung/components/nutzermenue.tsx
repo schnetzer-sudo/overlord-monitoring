@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { DichteUmschaltung } from "@/components/dichte-umschaltung";
 import { useTexte } from "@/i18n/provider";
 import { ROUTEN } from "@/lib/routen";
 
@@ -23,6 +24,11 @@ import type { Selbstauskunft } from "../api";
  *
  * Die Rollenbezeichnung ist Anzeige, keine Berechtigung — was ein Nutzer darf,
  * entscheidet ausschließlich das Backend.
+ *
+ * **Die Reihenfolge seit dem 01.09.2026:** wer man ist, wie es aussehen soll,
+ * was man tun kann. Der Dichteumschalter steht damit bei der Auskunft über den
+ * Nutzer und nicht zwischen den beiden Vorgängen — und *Abmelden* bleibt der
+ * letzte Eintrag, wo jeder ihn sucht.
  */
 export function Nutzermenue({ auskunft }: { auskunft: Selbstauskunft }) {
   const texte = useTexte();
@@ -52,6 +58,8 @@ export function Nutzermenue({ auskunft }: { auskunft: Selbstauskunft }) {
           <span className="block truncate font-medium">{auskunft.username}</span>
           <span className="text-muted-foreground text-beiwerk block">{rollentext}</span>
         </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DichteUmschaltung />
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild className="min-h-bedienelement">
           <Link href={ROUTEN.passwort}>

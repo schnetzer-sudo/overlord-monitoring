@@ -55,6 +55,24 @@ export const de = {
     abmeldenLaeuft: "Wird abgemeldet …",
   },
 
+  // Im Code heißen die Stufen `xs`, `s`, `m`, `l` (`src/dichte/`) — in der
+  // Oberfläche nicht. Ein Nutzer, der einen Beleg sucht, liest „Anzeigegröße"
+  // und nicht „Dichte": Das eine ist, was er sieht, das andere ist, wie ein
+  // Gestalter es nennt.
+  //
+  // Drei der vier Stufen nennen die Größe, die vierte nennt die Vorgabe. Das
+  // ist Absicht: An dieser Stelle ist „hierhin komme ich zurück" die
+  // nützlichere Auskunft als „mittelgroß".
+  dichte: {
+    bezeichnung: "Anzeigegröße",
+    stufen: {
+      xs: "Sehr klein",
+      s: "Klein",
+      m: "Standard",
+      l: "Groß",
+    },
+  },
+
   rolle: {
     ADMIN: "EDI-Betreuung",
     MANDANT: "Mandant",

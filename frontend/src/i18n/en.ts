@@ -42,6 +42,16 @@ export const en: Texte = {
     abmeldenLaeuft: "Signing out …",
   },
 
+  dichte: {
+    bezeichnung: "Display size",
+    stufen: {
+      xs: "Very small",
+      s: "Small",
+      m: "Default",
+      l: "Large",
+    },
+  },
+
   rolle: {
     ADMIN: "EDI support",
     MANDANT: "Tenant",
