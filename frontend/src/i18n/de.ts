@@ -60,15 +60,20 @@ export const de = {
   // und nicht „Dichte": Das eine ist, was er sieht, das andere ist, wie ein
   // Gestalter es nennt.
   //
-  // Drei der vier Stufen nennen die Größe, die vierte nennt die Vorgabe. Das
-  // ist Absicht: An dieser Stelle ist „hierhin komme ich zurück" die
-  // nützlichere Auskunft als „mittelgroß".
+  // Die vier Stufen nennen alle vier eine Größe — seit dem 01.09.2026 auch die
+  // dritte. Sie hieß „Standard", und das war ein Name für eine Rolle in einer
+  // Reihe, die sonst Größen nennt. Vor allem kodierte er eine Entscheidung, die
+  // ausdrücklich offen ist: Ob `m` die Vorgabe bleibt, ist laut
+  // `docs/dichte-umschalter.md` E‑z eine eigene und spätere Entscheidung —
+  // wanderte sie, hieße „Standard" nicht mehr Standard. Welche Stufe die
+  // Vorgabe ist, muss die Beschriftung nicht tragen: Wer nie umgestellt hat,
+  // sieht den Haken dort.
   dichte: {
     bezeichnung: "Anzeigegröße",
     stufen: {
       xs: "Sehr klein",
       s: "Klein",
-      m: "Standard",
+      m: "Mittel",
       l: "Groß",
     },
   },

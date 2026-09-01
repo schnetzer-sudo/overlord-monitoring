@@ -47,7 +47,7 @@ export const en: Texte = {
     stufen: {
       xs: "Very small",
       s: "Small",
-      m: "Default",
+      m: "Medium",
       l: "Large",
     },
   },
