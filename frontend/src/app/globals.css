@@ -148,7 +148,30 @@
   /* ── Dichte ───────────────────────────────────────────────────────────────
      Werte fuer das Zeigergeraet. Die Rueckfallwerte fuer Beruehrung stehen in
      der @media-Regel unter diesem Block. */
-  --dichte-beruehrung: 2.75rem; /* 44 px — Mindestflaeche am Beruehrungsgeraet */
+
+  /* Die Schriftgroesse des WURZELELEMENTS und damit der Bezug jedes rem im
+     Projekt. Sie ist der eine Wert, den der Dichteumschalter umstellt — die
+     vier Stufen stehen im Block unter :root.
+
+     PROZENT und nicht Pixel. Eine feste Pixelangabe an der Wurzel ueberschriebe
+     die Grundschriftgroesse, die ein Nutzer im Browser eingestellt hat; wer sie
+     hochgesetzt hat, hat einen Grund. Mit Prozent bleibt seine Einstellung die
+     Basis und die Stufe wird darauf gerechnet. */
+  --dichte-wurzel: 100%;
+
+  /* Die Mindestflaeche am Finger, und die EINZIGE Groesse, die aus der
+     Skalierung heraus ist.
+
+     docs/visuelles-konzept.md §5 sagt zu diesem Token: "Wird nirgends
+     unterschritten." Skalierte es mit, faellt es in der Stufe xs auf 2,75 x 14
+     = 38,5 px und der Satz waere nicht mehr wahr. Das max() zieht in den beiden
+     kleinen Stufen den Boden bei 44 px ein.
+
+     Ein festes 44px waere die schlechtere Loesung: Es naehme dem Nutzer mit
+     vergroesserter Grundschrift den Zuwachs. So gilt der Boden nur dort, wo
+     die Rechnung darunter faellt — in l (2,75 x 18 = 49,5 px) und bei
+     hochgesetzter Browserschrift greift weiterhin der rem-Wert. */
+  --dichte-beruehrung: max(2.75rem, 44px);
   --dichte-bedienelement: 2rem; /* 32 px — Schaltflaeche im Rahmen am Zeigergeraet */
   --dichte-feld: 2.5rem; /* Eingabefeld im Formular — bleibt komfortabel */
   --dichte-kopfzeile: 3.125rem; /* 50 px */
@@ -262,6 +285,44 @@
   --sidebar-ring: var(--akzent-schrift);
 }
 
+/* ── Die vier Stufen des Dichteumschalters ───────────────────────────────────
+   Skaliert wird die WURZEL und nicht die drei Schriftrollen einzeln. Das Ziel
+   ist mehr Zeilen je Bildschirm; dafuer muss --dichte-zeile mitgehen, und die
+   Abstaende auch. Alle Groessen des Projekts liegen in rem — die drei
+   --schrift-*, saemtliche --dichte-* und ueber die Abstandsskala von Tailwind
+   auch jeder Innen- und Aussenabstand. Damit ist eine Stufe im Kern diese eine
+   Zahl.
+
+   Eingehaengt ueber ein Attribut am WURZELELEMENT und nicht ueber eine Klasse
+   an einem Wrapper: Die Wurzelschriftgroesse muss am Wurzelelement stehen,
+   sonst hat rem nichts, worauf es sich bezieht. Das Attribut setzt das
+   Wurzel-Layout serverseitig aus dem Cookie (src/dichte/).
+
+   Was die Stufe bei einer Browservorgabe von 16 px ergibt:
+
+     xs   87,5 %    14 px Wurzel   13,1 px Basisschrift
+     s    93,75 %   15 px Wurzel   14,1 px Basisschrift
+     m   100 %      16 px Wurzel   15,0 px Basisschrift  <- Vorgabe, der
+     l   112,5 %    18 px Wurzel   16,9 px Basisschrift     heutige Zustand
+
+   m IST der heutige Zustand und bleibt die Vorgabe. Alle bisherigen Messungen
+   des Projekts — die 10 rem aus docs/bam-werte.md §11a, die Achsenbreite aus
+   docs/dashboard-frontend.md §10.4, die 142 px fuer vier Navigationseintraege —
+   sind gegen ihn gemessen. Waere er nicht mehr die Vorgabe, waeren sie
+   Messungen eines Zustands, den niemand mehr sieht. */
+html[data-dichte="xs"] {
+  --dichte-wurzel: 87.5%;
+}
+html[data-dichte="s"] {
+  --dichte-wurzel: 93.75%;
+}
+html[data-dichte="m"] {
+  --dichte-wurzel: 100%;
+}
+html[data-dichte="l"] {
+  --dichte-wurzel: 112.5%;
+}
+
 /* Die Dichte gilt fuer das Zeigergeraet. Wo mit dem Finger bedient wird, gilt
    wieder die Mindestflaeche von 44 px — unterschieden ueber den Zeiger, nicht
    ueber die Bildschirmbreite: Ein schmales Browserfenster am Rechner ist kein
@@ -373,6 +434,9 @@
   }
   html {
     @apply font-sans;
+    /* Der Bezug jedes rem im Projekt. Steht hier und nicht an einem Wrapper:
+       rem misst gegen das Wurzelelement, sonst gar nichts. */
+    font-size: var(--dichte-wurzel);
     /* Bei 360 px Breite wird nichts horizontal gescrollt. Breite Inhalte
        scrollen ab Schritt 4 in ihrem eigenen Container, nie im Dokument. */
     overflow-x: hidden;
