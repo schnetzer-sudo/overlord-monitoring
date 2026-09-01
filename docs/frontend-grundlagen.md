@@ -820,6 +820,33 @@ Ansicht; sie ist in Schritt 4 ([`nachrichtenliste.md`](nachrichtenliste.md) §8.
 offener Punkt notiert worden. Beim dritten Mal ist das keine Beobachtung mehr, sondern eine
 Eigenschaft der Umgebung — und die gehört an eine Stelle, an der sie **vor** dem Bau gelesen wird.
 
+> ### ⚠️ Berichtigt am 01.09.2026: Über das DevTools-Protokoll geht es doch
+>
+> **Der Absatz oben bleibt im Wortlaut stehen**, denn er ist über das Werkzeug richtig, das er
+> nennt: `resize_window` der Browsererweiterung meldet Erfolg und ändert nichts. Falsch ist der
+> Schluss daraus — *„Verhalten am schmalen Fenster ist deshalb bei jedem Schritt **von Hand** zu
+> prüfen"*.
+>
+> **`Emulation.setDeviceMetricsOverride` im DevTools-Protokoll setzt die Breite wirklich.** Kopfloses
+> Chrome, dieselbe Bauform wie die Farbmessung in §8a, keine neue Abhängigkeit. Gemessen wird dann
+> nicht das Regelwerk, sondern die Seite: `window.innerWidth`, `document.documentElement.scrollWidth`
+> und die Kästen einzelner Elemente.
+>
+> **Erstmals genutzt in Schritt 10b‑3b**, und es hat sofort etwas gefunden: Die Zeitachse des
+> Verlaufs beschriftete bei 360 px **überlappend** — 12 Pixel Überdeckung, gemessen an den
+> `<text>`-Knoten. Die Konstante dahinter ist daraufhin entfallen
+> ([`dashboard-frontend.md`](dashboard-frontend.md) §10.4). Von Hand wäre das gesehen worden; über
+> die Erweiterung war es unsichtbar, und deshalb stand dieser Absatz seit dem 10.08.2026 hier.
+>
+> **Was weiterhin gilt:** Ein Bildschirmfoto ist keine Sichtprüfung, und die Zone zwischen zwei
+> Umbruchpunkten sieht niemand, der nur drei Breiten misst. Die Vorbereitungsliste bleibt — sie ist
+> jetzt aber kein Ersatz mehr für eine Messung, die es nicht gäbe.
+>
+> **Und eine Falle steckt in der Aufnahme selbst:** `Page.captureScreenshot` mit
+> `captureBeyondViewport: true` liefert bei einem Recharts-`ResponsiveContainer` ein **leeres Bild**,
+> obwohl das Diagramm vollständig im DOM steht. Erst messen, dann die Fensterhöhe setzen, dann
+> normal aufnehmen (§8a).
+
 #### Ein 404 auf einer neuen Route ist erst der dritte Verdacht *(24.08.2026)*
 
 Nachgetragen bei der Sichtprüfung zu Schritt 9a, weil der Befund genau wie ein echter Defekt aussah

@@ -13,7 +13,6 @@ import {
 } from "@/features/dashboard/filter";
 import {
   STAPELREIHENFOLGE,
-  achsenabstand,
   achsenaufloesung,
   einordnungenDerRolle,
   rolleKommtVor,
@@ -140,15 +139,15 @@ describe("Der Verlauf fasst acht Einordnungen zu vier Reihen zusammen", () => {
     expect(achsenaufloesung("12M")).toBe("monat");
   });
 
-  /**
-   * Bei 48 Eimern wird nicht jeder beschriftet — `interval` in der Zählweise von
-   * Recharts: `0` heißt „jeden", `n` heißt „einen, dann n überspringen".
+  /*
+   * **Hier stand ein Fall zu `achsenabstand`** — der gerechnete `interval`-Wert
+   * für die Zeitachse. Die Funktion ist am 01.09.2026 entfallen, weil sie bei
+   * 360 px Fensterbreite überlappende Beschriftungen ergab; die Dichte
+   * entscheidet seither Recharts über `equidistantPreserveStart` und
+   * `minTickGap`. Ein Test dafür wäre ein Test über Recharts und nicht über eine
+   * Entscheidung dieses Projekts — gemessen ist sie am laufenden System
+   * (`docs/dashboard-frontend.md` §5.3).
    */
-  it("beschriftet nicht jeden Eimer, aber jeden, solange sie passen", () => {
-    expect(achsenabstand(12)).toBe(0);
-    expect(achsenabstand(48)).toBe(3);
-    expect(achsenabstand(30)).toBe(2);
-  });
 });
 
 /**

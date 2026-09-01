@@ -10,8 +10,8 @@ import { rollenfuellung, type Statusrolle } from "@/lib/status-farbe";
 import type { Dashboardzeitraum } from "../api";
 import {
   STAPELREIHENFOLGE,
-  achsenabstand,
   achsenaufloesung,
+  achsenbreite,
   einordnungenDerRolle,
   rolleKommtVor,
   verlaufszeilen,
@@ -76,9 +76,6 @@ import {
  * über `Message` und steht nicht je Eimer im Rollup.
  */
 
-/** Beide Diagramme, damit die Balken übereinander stehen. */
-const ACHSENBREITE = 48;
-
 const HOEHE_VERLAUF = 260;
 const HOEHE_STREIFEN = 88;
 
@@ -99,12 +96,21 @@ export function VerlaufDiagramm({
 
   const zeilen = verlaufszeilen(punkte);
   const aufloesung = achsenaufloesung(zeitraum);
-  const abstand = achsenabstand(zeilen.length);
   const sichtbareRollen = STAPELREIHENFOLGE.filter((rolle) => rolleKommtVor(zeilen, rolle));
   const fehlerKommtVor = rolleKommtVor(zeilen, "fehler");
 
   const achsenzeit = (wert: string) => formatiereAchsenzeit(wert, aufloesung, sprache, zone);
   const zahl = (wert: number) => formatiereZahl(wert, sprache);
+
+  /*
+   * **Die Achsenbreite folgt der längsten Zahl, die vorkommen kann.** Mit einer
+   * festen war bei `NEXANS` über zwölf Monate `:20.000` statt `220.000` zu
+   * lesen — Recharts beschneidet an der Achsenbreite und meldet nichts.
+   * Gerechnet wird über die größte Eimersumme; **beide** Diagramme bekommen
+   * dieselbe Breite, sonst stünden ihre Balken nicht mehr übereinander.
+   */
+  const groesster = zeilen.reduce((hoechst, zeile) => Math.max(hoechst, zeile.gesamt), 0);
+  const achse = achsenbreite(zahl(groesster).length);
 
   return (
     <div className="flex flex-col gap-2">
@@ -131,7 +137,7 @@ export function VerlaufDiagramm({
           <CartesianGrid vertical={false} {...ACHSENLINIE} />
           <XAxis dataKey="eimer" hide />
           <YAxis
-            width={ACHSENBREITE}
+            width={achse}
             allowDecimals={false}
             tickLine={false}
             axisLine={false}
@@ -185,15 +191,33 @@ export function VerlaufDiagramm({
           <CartesianGrid vertical={false} {...ACHSENLINIE} />
           <XAxis
             dataKey="eimer"
-            interval={abstand}
+            /*
+             * **Wie viele Eimer beschriftet werden, entscheidet die Breite** und
+             * keine feste Zahl.
+             *
+             * Hier stand `interval={achsenabstand(zeilen.length)}` — gerechnet
+             * aus der Zahl der Eimer und einem Deckel von zwölf Beschriftungen.
+             * Am 1500 px breiten Fenster trug das; **bei 360 px überlappten die
+             * Beschriftungen um 12 Pixel** (gemessen am laufenden System über
+             * die Kästen der `<text>`-Knoten). Eine Zahl, die von der Breite
+             * nicht weiß, kann bei beiden nicht richtig sein.
+             *
+             * `equidistantPreserveStart` wählt einen **gleichabständigen**
+             * Ausschnitt, der in die vorhandene Breite passt, und `minTickGap`
+             * sagt, wie eng „passt" gemeint ist. Damit hängt die Dichte am
+             * Augenschein und nicht an einer geratenen Konstante — und sie
+             * stimmt an jedem Umbruchpunkt, auch an denen, die es noch nicht
+             * gibt.
+             */
+            interval="equidistantPreserveStart"
+            minTickGap={12}
             tickFormatter={achsenzeit}
             tickLine={false}
             axisLine={ACHSENLINIE}
             tick={ACHSENSCHRIFT}
-            minTickGap={0}
           />
           <YAxis
-            width={ACHSENBREITE}
+            width={achse}
             allowDecimals={false}
             tickLine={false}
             axisLine={false}

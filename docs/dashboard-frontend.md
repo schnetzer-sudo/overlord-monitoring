@@ -276,9 +276,18 @@ Block 1, zweimal dargestellt.
 (48 px), ihre Balken stehen damit übereinander; zweimal dieselbe Beschriftung wäre doppelt gelesener
 Platz.
 
-**Bei 48 Eimern wird nicht jeder beschriftet** — `achsenabstand(eimer)` rechnet aus der Zahl der
-Eimer und einer Höchstzahl von zwölf Beschriftungen den `interval`-Wert von Recharts. Bei 48 Eimern
-ist das jeder vierte.
+**Bei 48 Eimern wird nicht jeder beschriftet, und wie viele es sind, entscheidet die Breite.**
+`interval="equidistantPreserveStart"` mit `minTickGap={12}` wählt einen gleichabständigen
+Ausschnitt, der in die vorhandene Breite passt — gemessen 6 Beschriftungen bei 360 px, 10 bei 768
+und 24 bei 1500 (§10.4).
+
+> Hier stand eine gerechnete Konstante (`achsenabstand`, Deckel zwölf). Sie trug am breiten Fenster
+> und ließ die Beschriftungen **bei 360 px um 12 Pixel überlappen**. Eine Zahl, die von der Breite
+> nichts weiß, kann bei beiden nicht richtig sein.
+
+**Die Breite der y-Achse folgt der längsten Beschriftung**, die vorkommen kann, und beide
+Diagramme bekommen dieselbe — sonst stünden ihre Balken nicht mehr übereinander. Eine feste Zahl
+schnitt bei `NEXANS` über zwölf Monate `220.000` zu `:20.000` ab (§10.4).
 
 > ### Die Null der Hauptachse ist nachgesehen und nicht geschätzt
 >
@@ -550,5 +559,131 @@ ausgewiesen. Diese Ansicht fasst zwei davon nicht an und misst die dritte nach:
 | Nr. | Punkt |
 |---|---|
 | **89** | **Es gibt keinen Weg, „nur überfällige" in der Liste selbst einzuschalten** — vergeben und begründet in [`nachrichtenliste.md`](nachrichtenliste.md) §9 |
-| **90** | **Die Achsendichte ist am breiten Fenster angesehen und nicht am schmalsten.** `achsenabstand` deckelt auf zwölf Beschriftungen; bei 1440 px trägt das sichtbar. Was bei 360 px passiert, hängt an derselben Zahl — und die ist **gewählt und nicht gemessen** |
+| ~~**90**~~ | ~~Die Achsendichte ist am breiten Fenster angesehen und nicht am schmalsten.~~ ✔ **Erledigt am 01.09.2026, noch vor der ersten Abgabe.** Bei 360 px überlappten die Beschriftungen um 12 Pixel; die Konstante ist entfallen, die Dichte hängt jetzt an der Breite (§10.4). Der Punkt bleibt stehen, weil er die Messung trägt |
+| **92** | **Die gedrückte Schaltfläche des Umschalters ist mit 1,07 : 1 kaum zu sehen** (§10.5). Für ein Vorleseprogramm ist der Zustand sauber ausgezeichnet, für das Auge nicht. Es ist die Gestalt von `components/ui/toggle-group.tsx` — Generatorbereich — und die **Zeitfensterwahl der Nachrichtenliste** trägt sie seit Schritt 4 genauso. Eine Änderung ist eine Entscheidung über den gemeinsamen Baustein und gehört in einen eigenen Schritt |
 | **91** | **Der Verlauf ist ein Bild und trägt keine Tabelle daneben.** „Nie allein über Farbe" ist über Legende, Tooltip und die vier unterscheidbaren Rollen eingehalten; für ein Vorleseprogramm ist ein SVG voller `<path>` trotzdem kein Diagramm. Eine Textfassung der Zahlen wäre der nächste Schritt und ist hier nicht gebaut |
+
+---
+
+## 10. Die Abnahme am laufenden System *(01.09.2026)*
+
+Gefahren im angemeldeten Browser gegen die Testkopie im Profil `dev`, Anker
+`2025-12-30 04:09:47`. Der Browser lief kopflos steuerbar über das DevTools-Protokoll; die Anmeldung
+hat der Auftraggeber selbst vorgenommen.
+
+### 10.1 Was durchgelaufen ist
+
+| Punkt | Ergebnis |
+|---|---|
+| **`EDITIONLINGERI` liefert den Leerzustand** | ✔ ein Satz, ein **bedienbarer** Umschalter (alle drei Schaltflächen ohne `disabled`), keine Nullkacheln, **keine Verteilungszeile**. Die Standzeile bleibt |
+| **`NEXANS` ohne `zeitraum` bekommt 48 Stunden** | ✔ `data-state="on"` und `aria-pressed="true"` an „48 Stunden", **und in der URL steht nichts** |
+| **Ein Klick auf die Fehlerkachel zeigt dieselbe Zahl** | ✔ für **alle drei Paare**, siehe unten |
+| **Der Fehlerstreifen hat eine beschriftete Skala** | ✔ bei `NEXANS`/48 h steht dort **0 … 49** neben 9.950 Nachrichten im selben Fenster — an dieser Skala ist abzulesen, dass es um einzelne Zeilen geht |
+| **Ein Aufruf** | ✔ siehe 10.3 |
+| **`tests/farbwerte.test.ts` ohne neue Ausnahme** | ✔ auch mit Recharts im Baum |
+
+### 10.2 Kachel gegen Liste — die Probe aus C.2 mitgemessen
+
+Gezählt wurde die Liste **vollständig**, über den Cursor geblättert, nicht die erste Seite geschätzt:
+
+| Paar | Fenster (UTC) | Spanne | Kachel *Fehler* | Liste | Kachel *Überfällig* | Liste |
+|---|---|---:|---:|---:|---:|---:|
+| `48H` | `2025-12-28T04:00Z` → `2025-12-30T04:00Z` | 2 Tage | **50** | **50** | **1** | **1** |
+| `30T` | `2025-11-30T23:00Z` → `2025-12-30T23:00Z` | 30 Tage | **55** | **55** | **538** | **538** |
+| `12M` | `2024-12-31T23:00Z` → `2025-12-31T23:00Z` | **365 Tage** | **711** | **711** *(4 Seiten)* | **538** | **538** *(3 Seiten)* |
+
+**Damit ist C.2 nicht nur gerechnet, sondern gefahren:** Die Liste antwortet bei `12M` mit `200` und
+nicht mit `zeitfenster-zu-gross`. Die Fehlerkachel klickt bei allen drei Paaren, und die Zahl stimmt
+jedes Mal genau.
+
+**Und die Überfälligkeitsform trägt** — sie ist der Grund, warum
+[`nachrichtenliste.md`](nachrichtenliste.md) §5e entstanden ist. Ohne den nachgerüsteten Parameter
+stünden in der rechten Spalte 200, 200 und 200 statt 1, 538 und 538.
+
+### 10.3 Ein Aufruf — sechs Klicks, vier Anfragen
+
+Mitgeschrieben wurden **alle** `/api`-Anfragen der Seite:
+
+| Schritt | URL danach | Anfrage |
+|---|---|---|
+| Laden | *(leer)* | `GET /api/dashboard` |
+| Klick „Richtung" | `?verteilung=RICHTUNG` | `…?verteilung=RICHTUNG` |
+| Klick „Partner" | *(leer)* | **keine** — aus dem Zwischenspeicher |
+| Klick „30 Tage" | `?zeitraum=30T` | `…?zeitraum=30T` |
+| Klick „Richtung" | `?zeitraum=30T&verteilung=RICHTUNG` | `…?zeitraum=30T&verteilung=RICHTUNG` |
+| Klick „48 Stunden" | `?zeitraum=48H&verteilung=RICHTUNG` | `…?zeitraum=48H&verteilung=RICHTUNG` |
+
+**Drei Aussagen auf einmal**, und alle drei sind E‑n: Ohne Klick steht nichts in der URL. Die
+**Vorgabe** `PARTNER` verschwindet wieder, die ausdrückliche Wahl `48H` bleibt stehen, obwohl der
+Endpunkt sie ohnehin genommen hätte — sie ist eine Absicht und wird geteilt. Und der Rückweg auf
+eine schon gesehene Kombination kostet **keine** Anfrage.
+
+Kein einziger Aufruf ging an einen anderen Endpunkt. Die drei Anfragen des Rahmens
+(`/api/auth/me`, `/api/mandanten`, `/api/bam/typen`) gehören ihm und nicht dieser Ansicht.
+
+### 10.4 ⚠️ Zwei Befunde aus der Sichtprüfung — beide behoben
+
+**1. Die y-Achse schnitt sechsstellige Zahlen ab.** Bei `NEXANS` über zwölf Monate stand am oberen
+Rand `:20.000` statt `220.000`: Recharts beschneidet die Beschriftung an der Achsenbreite und meldet
+nichts. Die Breite war eine feste Zahl (48 px, genug für vier Stellen). Sie folgt jetzt der längsten
+Beschriftung, die vorkommen kann (`achsenbreite` in `verlauf.ts`), und **beide** Diagramme bekommen
+dieselbe — sonst stünden ihre Balken nicht mehr übereinander.
+
+> **Kein Test hätte das gefunden**, und das ist die eigentliche Auskunft: In den Prüfwerten stehen
+> zweistellige Zahlen, und eine abgeschnittene Beschriftung ist kein Fehler, den ein Baum meldet.
+
+**2. Die Achsendichte war eine Konstante und passte nur bei einer Breite.** `achsenabstand` rechnete
+aus der Zahl der Eimer und einem Deckel von zwölf Beschriftungen einen festen `interval`-Wert. Bei
+1500 px trug das; **bei 360 px überlappten die Beschriftungen um 12 Pixel** — gemessen an den Kästen
+der `<text>`-Knoten.
+
+Die Funktion ist **entfallen**. Die Dichte entscheidet jetzt `interval="equidistantPreserveStart"`
+mit `minTickGap={12}` — gleichabständig und so eng, wie die vorhandene Breite es hergibt:
+
+| Fensterbreite | beschriftete Eimer | kleinster Abstand |
+|---:|---:|---:|
+| 360 px | 6 | 15 px |
+| 768 px | 10 | 12 px |
+| 1500 px | 24 | 15 px |
+
+**Kein waagerechtes Scrollen** an keiner der drei Breiten (`scrollWidth === innerWidth`).
+
+Damit ist auch der Satz aus dem Auftrag eingelöst, der vorher nur behauptet war: *„Welche Dichte
+tragbar ist, entscheidet der Augenschein am schmalsten unterstützten Fenster."*
+
+### 10.5 ⚠️ Ein Befund, der **nicht** behoben ist
+
+**Die gedrückte Schaltfläche des Umschalters ist kaum zu sehen.** Gemessen am laufenden System:
+
+| | |
+|---|---|
+| Untergrund der Seite | `lab(98.26 0 0)` — `#fafafa` |
+| Fläche der gedrückten Schaltfläche | `lab(95.36 0 0)` — `#f2f2f2` |
+| **Kontrast** | **rund 1,07 : 1** |
+
+Für ein Vorleseprogramm ist der Zustand sauber ausgezeichnet (`data-state="on"`,
+`aria-pressed="true"`); **für das Auge ist er es kaum.**
+
+**Nicht geändert, und zwar aus zwei Gründen.** Erstens ist das die Gestalt von
+`components/ui/toggle-group.tsx` — Generatorbereich, der nicht von Hand umgebaut wird
+([`visuelles-konzept.md`](visuelles-konzept.md) §2). Zweitens trägt die **Zeitfensterwahl der
+Nachrichtenliste** dieselbe Gestalt seit Schritt 4: Hier eine zweite, kräftigere zu bauen hieße,
+dasselbe Bedienelement an zwei Stellen verschieden aussehen zu lassen.
+
+**Es ist eine Entscheidung über den gemeinsamen Baustein und keine über diese Ansicht** — offener
+Punkt **92**.
+
+### 10.6 Was die Abnahme über das Werkzeug gelernt hat
+
+> **Die Fensterbreite lässt sich sehr wohl ändern** — über
+> `Emulation.setDeviceMetricsOverride` im DevTools-Protokoll, nicht über
+> `resize_window` der Browsererweiterung.
+
+[`frontend-grundlagen.md`](frontend-grundlagen.md) §8 („Was der Browsertest nicht kann") hält seit
+dem 10.08.2026 fest, dass Verhalten am schmalen Fenster **von Hand** zu prüfen sei, weil
+`resize_window` wirkungslos bleibt. Der Satz ist über die Erweiterung richtig und über CDP nicht:
+Die Messung in 10.4 ist bei 360, 768 und 1500 px gefahren worden, und die Zahlen darin stammen aus
+dem Dokument selbst.
+
+**Der Abschnitt dort ist entsprechend ergänzt**, ohne den alten Wortlaut zu streichen — er
+beschreibt die Grenze des Werkzeugs, das er nennt.

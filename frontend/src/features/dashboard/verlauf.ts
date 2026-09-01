@@ -150,22 +150,46 @@ export function achsenaufloesung(zeitraum: Dashboardzeitraum): Zeitaufloesung {
   }
 }
 
-/**
- * Wie viele Eimer zwischen zwei beschrifteten Achsenwerten übersprungen werden.
+/*
+ * **Hier stand `achsenabstand(eimer, hoechstens)`** — der `interval`-Wert von
+ * Recharts, gerechnet aus der Zahl der Eimer und einem Deckel von zwölf
+ * Beschriftungen. Er ist am 01.09.2026 entfallen, und zwar an einer Messung:
+ * Am 1500 px breiten Fenster trug er, **bei 360 px überlappten die
+ * Beschriftungen um 12 Pixel**.
  *
- * **Bei 48 Eimern wird nicht jeder beschriftet** — die Beschriftungen
- * überlagerten sich schon am breiten Fenster. Gerechnet wird aus der Zahl der
- * Eimer und einer Höchstzahl an Beschriftungen; welche Höchstzahl tragbar ist,
- * ist am schmalsten unterstützten Fenster angesehen worden und keine Formel.
- *
- * Recharts erwartet hier den Wert von `interval`: `0` heißt „jeden", `n` heißt
- * „einen, dann n überspringen".
+ * Eine Zahl, die von der Breite nichts weiß, kann bei beiden nicht richtig
+ * sein — und der Auftrag sagt genau das: *„Welche Dichte tragbar ist,
+ * entscheidet der Augenschein am schmalsten unterstützten Fenster."* Die
+ * Entscheidung liegt seither bei `interval="equidistantPreserveStart"` und
+ * `minTickGap` am Diagramm selbst (`components/verlauf-diagramm.tsx`);
+ * gemessen: 6 Beschriftungen bei 360 px, 10 bei 768, 24 bei 1500, kleinster
+ * Abstand 12 px.
  */
-export const ACHSE_HOECHSTENS = 12;
 
-export function achsenabstand(eimer: number, hoechstens: number = ACHSE_HOECHSTENS): number {
-  if (eimer <= hoechstens) {
-    return 0;
-  }
-  return Math.ceil(eimer / hoechstens) - 1;
+/**
+ * Wie breit die y-Achse sein muss, damit ihre Beschriftung **hineinpasst**.
+ *
+ * ## Der Befund, der diese Funktion nötig gemacht hat *(01.09.2026)*
+ *
+ * Sie stand als feste Zahl da — 48 Pixel, genug für vier Stellen. Bei `NEXANS`
+ * über zwölf Monate steht am oberen Rand **220.000**, und davon war
+ * `:20.000` zu lesen: Recharts beschneidet die Beschriftung an der Achsenbreite,
+ * ohne etwas zu melden. Gefunden in der Sichtprüfung am laufenden System, nicht
+ * im Test — im Prüfwert der Tests stehen zweistellige Zahlen.
+ *
+ * **Gerechnet und nicht großzügig geschätzt.** Die Achse trägt
+ * `font-size: 11` und `tabular-nums`; eine Ziffer ist damit rund 6,2 Pixel
+ * breit, und zwischen Beschriftung und Zeichenfläche liegen zehn. Das eine
+ * Zeichen Zuschlag ist Absicht: Recharts rundet die oberste Marke **über** den
+ * größten Wert auf, und aus `99.000` wird dabei `100.000`.
+ *
+ * **Beide Diagramme bekommen dieselbe Breite** — die des Verlaufs, denn seine
+ * Zahlen sind die größeren. Sonst stünden die Balken des Streifens nicht mehr
+ * unter denen darüber, und die gemeinsame Zeitachse verspräche eine Zuordnung,
+ * die es nicht gäbe.
+ *
+ * @param laengste die längste Beschriftung, die vorkommen kann, in Zeichen
+ */
+export function achsenbreite(laengste: number): number {
+  return Math.max(48, Math.ceil((laengste + 1) * 6.2) + 10);
 }
