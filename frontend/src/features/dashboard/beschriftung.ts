@@ -1,6 +1,6 @@
-import type { Texte } from "@/i18n";
+import { einsetzen, type Texte } from "@/i18n";
 
-import type { Fehlerart } from "./api";
+import type { Fehlerart, Verteilungssicht, Verteilungszeile } from "./api";
 
 /**
  * Wie aus einem **Wert** ein **Anzeigetext** wird.
@@ -37,4 +37,47 @@ import type { Fehlerart } from "./api";
 export function fehlerartText(art: Pick<Fehlerart, "rohwert" | "art">, texte: Texte): string {
   const bekannt: Record<string, string> = texte.dashboard.fehlerarten;
   return bekannt[art.rohwert.toUpperCase()] ?? art.art;
+}
+
+/**
+ * Der Anzeigetext einer Verteilungszeile.
+ *
+ * | `art` | Was dasteht |
+ * |---|---|
+ * | `WERT` | der Wert. In der Richtungssicht übersetzt, in der Partnersicht **nie** |
+ * | `UEBRIGE` | „Übrige (n)" aus `enthaltene` |
+ * | `NICHT_ZUGEORDNET` | „nicht zugeordnet" |
+ *
+ * **Die Restzeilen tragen keinen Text aus der Antwort** — das Backend liefert
+ * dort ausdrücklich keinen (`docs/dashboard.md` §4).
+ *
+ * **Ein Partnername wird nie übersetzt.** Er ist ein kuratierter Wert aus dem
+ * Katalog und gehört dem Mandanten; die Richtung dagegen ist eine geschlossene
+ * Menge aus `catalog/Richtung`. Ein unbekannter Richtungswert bleibt roh
+ * (Regel Q4).
+ */
+export function verteilungszeileText(
+  zeile: Verteilungszeile,
+  sicht: Verteilungssicht,
+  texte: Texte,
+): string {
+  switch (zeile.art) {
+    case "UEBRIGE":
+      return einsetzen(texte.dashboard.verteilung.uebrige, {
+        anzahl: String(zeile.enthaltene ?? 0),
+      });
+    case "NICHT_ZUGEORDNET":
+      return texte.dashboard.verteilung.nichtZugeordnet;
+    case "WERT": {
+      const wert = zeile.wert ?? "";
+      if (sicht !== "RICHTUNG") {
+        return wert;
+      }
+      const richtungen: Record<string, string> = {
+        EINGEHEND: texte.dashboard.verteilung.EINGEHEND,
+        AUSGEHEND: texte.dashboard.verteilung.AUSGEHEND,
+      };
+      return richtungen[wert] ?? wert;
+    }
+  }
 }

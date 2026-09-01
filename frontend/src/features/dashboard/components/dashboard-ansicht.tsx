@@ -7,6 +7,7 @@ import { useTexte } from "@/i18n/provider";
 import { hervorgehobenerZeitraum } from "../filter";
 import { useDashboard, useDashboardzustand } from "../hooks";
 import { Kacheln } from "./kacheln";
+import { VerteilungBlock } from "./verteilung-block";
 import { StandZeile } from "./stand-zeile";
 import { VerlaufDiagramm } from "./verlauf-diagramm";
 import { ZeitraumUmschalter } from "./zeitraum-umschalter";
@@ -55,7 +56,7 @@ import { ZeitraumUmschalter } from "./zeitraum-umschalter";
  */
 export function DashboardAnsicht() {
   const texte = useTexte();
-  const { zustand, setzeZeitraum } = useDashboardzustand();
+  const { zustand, setzeZeitraum, setzeSicht } = useDashboardzustand();
   const antwort = useDashboard(zustand);
 
   const zeitraum = hervorgehobenerZeitraum(zustand, antwort.data?.zeitraum);
@@ -86,6 +87,14 @@ export function DashboardAnsicht() {
 
           <Card size="sm" className="px-4">
             <VerlaufDiagramm punkte={antwort.data.verlauf} zeitraum={antwort.data.zeitraum} />
+          </Card>
+
+          <Card size="sm" className="px-4">
+            <VerteilungBlock
+              verteilung={antwort.data.verteilung}
+              aufSicht={setzeSicht}
+              gesperrt={antwort.isFetching}
+            />
           </Card>
 
           <StandZeile stand={antwort.data.stand} />
