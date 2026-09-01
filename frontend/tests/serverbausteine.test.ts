@@ -85,7 +85,16 @@ function dateien(verzeichnis: string): string[] {
 }
 
 const ALLE = dateien(WURZEL).map((pfad) => relative(WURZEL, pfad).split("\\").join("/"));
-const VORHANDEN = new Set(ALLE);
+
+/**
+ * Kleingeschriebener Schlüssel → tatsächlicher Pfad.
+ *
+ * **Windows unterscheidet die Schreibweise nicht.** `@/components/UI/button`
+ * lädt hier dieselbe Datei und stürzt genauso ab; ein Vergleich über ein `Set`
+ * exakter Zeichenketten sähe daran vorbei. Auf einem Linux-Bauknecht wäre der
+ * Import ein Fehler — hier ist er einer, der läuft, und das ist der schlimmere.
+ */
+const VORHANDEN = new Map(ALLE.map((pfad) => [pfad.toLowerCase(), pfad]));
 
 function inhalt(pfad: string): string {
   return readFileSync(join(WURZEL, pfad), "utf8");
@@ -109,19 +118,34 @@ function istClient(text: string): boolean {
 /**
  * Alle Modulspezifizierer, die zur **Laufzeit** ausgewertet werden.
  *
- * `import type` steht ausdrücklich nicht darunter: Er verschwindet bei der
- * Übersetzung und kann nichts sprengen. Die erste Fassung hat ihn mitgezählt
- * und hätte einen reinen Typbezug als Verstoß gemeldet.
+ * **Nur `import type …` und `export type …` fallen heraus** — die Anweisung
+ * als ganze, erkennbar am Schlüsselwort unmittelbar hinter `import`. Ein
+ * einzelnes `type` **in** der Klammer tut es nicht:
+ * `import { buttonVariants, type ButtonVariante } from "…"` wertet das Modul
+ * aus, und das ist die im Projekt vorherrschende Schreibweise.
+ *
+ * **Genau daran ist die erste Härtung vom 01.09.2026 gescheitert.** Sie hielt
+ * jede Zeile für einen Typbezug, in der irgendwo vor dem Anführungszeichen
+ * `type` stand — und übersah damit den Anlassfehler in seiner häufigsten Form.
+ * Der Fund stammt aus der adversarischen Runde desselben Tages.
+ *
+ * Die Grenze wird bewusst zur **sicheren** Seite gezogen: `import { type X }`
+ * — eine Klammer, in der jedes Glied ein Typ ist — wird gemeldet, obwohl der
+ * Übersetzer sie unter Umständen wegwirft. Ein Fehlalarm kostet eine Minute,
+ * ein übersehener Serverabsturz eine Fehlersuche.
  */
 function spezifizierer(text: string): string[] {
   const gefunden: string[] = [];
   const muster = [
     // import … from "x" / export … from "x" — aber nicht `import type … from`
-    /(?<!\btype\s)(?:^|[\s;}])(?:import|export)\s+(?![^"']*\btype\b\s+[A-Za-z{])[^"';]*?\bfrom\s*["']([^"']+)["']/gm,
+    /(?:^|[\s;}])(?:import|export)\s+(?!type[\s{])[^"';]*?\bfrom\s*["']([^"']+)["']/gm,
     // Nebenwirkungsimport: import "x"
     /(?:^|[\s;}])import\s*["']([^"']+)["']/gm,
-    // import("x") und require("x") — beide werten das Modul aus
-    /\b(?:import|require)\s*\(\s*["']([^"']+)["']\s*\)/g,
+    // import("x") und require("x") — beide werten das Modul aus. Zwischen der
+    // Klammer und dem Spezifizierer darf ein Kommentar stehen: der Bündelname
+    // (`/* webpackChunkName: … */`) ist eine gängige Schreibweise, und die
+    // erste Härtung ließ dort nur Leerraum zu.
+    /\b(?:import|require)\s*\(\s*(?:\/\*[\s\S]*?\*\/\s*)*["']([^"']+)["']/g,
   ];
   for (const m of muster) {
     for (const treffer of text.matchAll(m)) {
@@ -155,7 +179,8 @@ function aufloesen(spez: string, von: string): string | null {
     ...ENDUNGEN.map((e) => ohneEndung + e),
     ...ENDUNGEN.map((e) => `${ohneEndung}/index${e}`),
   ]) {
-    if (VORHANDEN.has(kandidat)) return kandidat;
+    const treffer = VORHANDEN.get(kandidat.toLowerCase());
+    if (treffer !== undefined) return treffer;
   }
   return null;
 }
@@ -172,6 +197,8 @@ const UNSICHER = ALLE.filter((pfad) => {
   const text = TEXT.get(pfad) as string;
   return spezifizierer(text).some((s) => /^@?radix-ui(\/|$)/.test(s)) && !istClient(text);
 });
+
+const UNSICHER_MENGE = new Set(UNSICHER);
 
 /** Jede Datei ohne die Auszeichnung — für Next.js also eine Server-Komponente. */
 const SERVER = ALLE.filter((pfad) => !pfad.startsWith(GENERATOR)).filter(
@@ -190,13 +217,20 @@ function erreichbareUnsichere(start: string): string[] {
   const offen = [start];
   const gefunden: string[] = [];
 
+  // **Der Anfang zählt mit.** Eine `page.tsx`, die `radix-ui` unmittelbar
+  // importiert, statt den Umweg über `components/ui` zu nehmen, stürzt genauso
+  // ab — und die erste Härtung hat sie nie gemeldet, weil sie den Startknoten
+  // vorab als besucht markierte und nur *erreichbare* Module prüfte. Gefunden
+  // in der adversarischen Runde vom 01.09.2026.
+  if (UNSICHER_MENGE.has(start)) gefunden.push(start);
+
   while (offen.length > 0) {
     const pfad = offen.pop() as string;
     for (const spez of spezifizierer(TEXT.get(pfad) as string)) {
       const ziel = aufloesen(spez, pfad);
       if (ziel === null || gesehen.has(ziel)) continue;
       gesehen.add(ziel);
-      if (UNSICHER.includes(ziel)) {
+      if (UNSICHER_MENGE.has(ziel)) {
         gefunden.push(ziel);
         continue;
       }
@@ -251,10 +285,45 @@ describe("Server-Komponenten und der Generatorbereich", () => {
     // Übersetzung. Die erste Fassung meldete ihn trotzdem.
     expect(spezifizierer(`import { B } from "@/x";`)).toContain("@/x");
     expect(spezifizierer(`export { B } from "@/x";`)).toContain("@/x");
+    expect(spezifizierer(`export * from "@/x";`)).toContain("@/x");
     expect(spezifizierer(`import "@/x";`)).toContain("@/x");
     expect(spezifizierer(`const { B } = await import("@/x");`)).toContain("@/x");
     expect(spezifizierer(`const B = dynamic(() => import("@/x"));`)).toContain("@/x");
+    expect(spezifizierer(`await import(/* webpackChunkName: "k" */ "@/x");`)).toContain("@/x");
+
+    // **Der gemischte Import ist einer.** Die erste Härtung vom 01.09.2026
+    // verwarf ihn, weil irgendwo vor dem Anführungszeichen `type` stand — und
+    // übersah damit den Anlassfehler in seiner häufigsten Schreibweise.
+    expect(spezifizierer(`import { B, type T } from "@/x";`)).toContain("@/x");
+    expect(spezifizierer(`import B, { type T } from "@/x";`)).toContain("@/x");
+
+    // Und die eine Form, die wirklich verschwindet:
     expect(spezifizierer(`import type { B } from "@/x";`)).not.toContain("@/x");
+    expect(spezifizierer(`export type { B } from "@/x";`)).not.toContain("@/x");
+  });
+
+  it("meldet auch den Einstieg selbst, nicht nur was er erreicht", () => {
+    // Eine `page.tsx`, die `radix-ui` unmittelbar importiert, stürzt genauso
+    // ab wie eine, die den Umweg über `components/ui` nimmt. Die erste
+    // Härtung markierte den Startknoten vorab als besucht und konnte ihn
+    // deshalb nie melden.
+    for (const unsicher of UNSICHER) {
+      expect(erreichbareUnsichere(unsicher), unsicher).toContain(unsicher);
+    }
+  });
+
+  it("kennt genau einen Modulalias — ein zweiter käme unbemerkt durch", () => {
+    // `aufloesen` versteht `@/` und relative Pfade. Trüge `tsconfig.json` einen
+    // zweiten Alias auf dieselbe Wurzel (`~/*` ist die übliche Zweitform),
+    // fiele jeder Import darüber stillschweigend als „externes Paket" durch.
+    // Diese Zusicherung macht aus dem stillen Durchfallen ein rotes Testergebnis.
+    const tsconfig = JSON.parse(
+      readFileSync(fileURLToPath(new URL("../tsconfig.json", import.meta.url)), "utf8").replace(
+        /^\s*\/\/.*$/gm,
+        "",
+      ),
+    ) as { compilerOptions?: { paths?: Record<string, string[]> } };
+    expect(Object.keys(tsconfig.compilerOptions?.paths ?? {})).toEqual(["@/*"]);
   });
 
   it.each(SERVER)("%s erreicht keinen serverunsicheren Baustein", (pfad) => {

@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -62,6 +62,21 @@ import { describe, expect, it } from "vitest";
 
 const WURZEL = fileURLToPath(new URL("../src", import.meta.url));
 
+/**
+ * Das Frontend-Wurzelverzeichnis — der **zweite** Suchpfad.
+ *
+ * `src/` ist nicht der einzige Ort, aus dem Next.js lädt. Eine adversarische
+ * Runde am 01.09.2026 hat vier Wege daneben gefunden: `public/` (unverändert
+ * ausgeliefert), ein Geschwisterordner wie `styles/` (aus einer Komponente
+ * importiert), `instrumentation-client.ts` neben `package.json` (auf jeder
+ * Seite ausgewertet) und `next.config.ts` (`env` wird zur Bauzeit als Literal
+ * ins Bündel gesetzt). **Keiner davon lag im Suchpfad.**
+ */
+const RAHMEN = fileURLToPath(new URL("..", import.meta.url));
+
+/** Verzeichnisse neben `src`, aus denen Next.js ebenfalls lädt. */
+const NEBENVERZEICHNISSE = ["public", "styles", "app", "pages"];
+
 /** Der Generatorbereich von shadcn/ui — **mit** Schrägstrich, sonst trifft die
  *  Ausnahme auch `components/uikarte.tsx`. Genau daran ist die erste Fassung
  *  gescheitert. */
@@ -75,8 +90,17 @@ const AUSGENOMMEN = ["components/ui/"];
  */
 const KONZEPTDATEI = "app/globals.css";
 
-/** Alles, worin eine Farbe stehen kann. Die erste Fassung las nur `.tsx?`. */
-const ENDUNGEN = /\.(tsx?|jsx?|mjs|cjs|css)$/;
+/**
+ * Alles, worin eine Farbe stehen kann. Die erste Fassung las nur `.tsx?`.
+ *
+ * `.svg` steht dabei, weil Next.js `src/app/icon.svg` **allein über den
+ * Dateinamen** aufnimmt und auf jeder Seite einhängt — ohne einen einzigen
+ * Importbefehl, den irgendein Test sehen könnte.
+ */
+const ENDUNGEN = /\.(tsx?|jsx?|mjs|cjs|css|scss|sass|less|svg|json)$/;
+
+/** Stilblätter — davon darf es genau eines geben, und das ist das Konzept. */
+const STILBLATT = /\.(css|scss|sass|less)$/;
 
 const TAILWIND_PALETTE = [
   "slate",
@@ -131,14 +155,37 @@ const CSS_FARBNAMEN = [
   "yellowgreen",
 ].join("|");
 
+/**
+ * Die CSS-Systemfarben.
+ *
+ * **`Field` und `Mark` fehlen absichtlich.** Beide sind gewöhnliche Wörter;
+ * `i18n/en.ts` trägt heute das Literal `"Field"` als Spaltenüberschrift. Ein
+ * Test, der daran rot wird, wird abgeschaltet und nicht behoben. Die beiden
+ * sind damit eine benannte Lücke und keine übersehene.
+ */
+const SYSTEMFARBEN = [
+  "Canvas|CanvasText|LinkText|VisitedText|ActiveText|ButtonFace|ButtonText|ButtonBorder",
+  "AccentColor|AccentColorText|Highlight|HighlightText|SelectedItem|SelectedItemText",
+  "GrayText|FieldText|MarkText",
+].join("|");
+
+const ALLE_FARBNAMEN = `${CSS_FARBNAMEN}|${SYSTEMFARBEN}`;
+
 const VERBOTEN: readonly { name: string; muster: RegExp }[] = [
-  { name: "Hex-Farbwert", muster: /#[0-9a-fA-F]{3,8}\b/ },
+  {
+    // Auch **kodiert**: In einer `data:`-URL muss `#` als `%23` stehen, sonst
+    // begänne dort ein Fragmentbezeichner — jedes Inline-SVG schreibt es so.
+    // Und JSX löst `&#35;` in Attributwerten zum fertigen `#` auf.
+    name: "Hex-Farbwert",
+    muster: /(#|%23|&#0*35;)[0-9a-fA-F]{3,8}\b/,
+  },
   {
     // `i`, weil CSS die Schreibweise nicht unterscheidet und `RGB(…)` genauso
-    // malt wie `rgb(…)`. Dazu die Funktionen, die seit der ersten Fassung
-    // dazugekommen sind.
+    // malt wie `rgb(…)`. `color(` ist die generische Form aus CSS Color 4 und
+    // fehlte in der ersten Härtung; der Rückgriff verhindert, dass ein
+    // `.color(` aus einer Bibliothek daran hängenbleibt.
     name: "CSS-Farbfunktion",
-    muster: /\b(oklch|oklab|lch|lab|hwb|rgba?|hsla?|color-mix|light-dark)\s*\(/i,
+    muster: /(?<![\w.-])(oklch|oklab|lch|lab|hwb|rgba?|hsla?|color|color-mix|light-dark)\s*\(/i,
   },
   {
     // **Kein Präfixverzeichnis mehr.** Die erste Fassung zählte auf, welche
@@ -150,8 +197,29 @@ const VERBOTEN: readonly { name: string; muster: RegExp }[] = [
     muster: new RegExp(String.raw`\b[a-z][a-z0-9]*(?:-[a-z0-9]+)*-(${TAILWIND_PALETTE})\b`),
   },
   {
+    // Der Name **allein** zwischen den Anführungszeichen: `color: "red"`.
     name: "benannte CSS-Farbe",
-    muster: new RegExp(String.raw`(["'])(${CSS_FARBNAMEN})\1`, "i"),
+    muster: new RegExp(String.raw`(["'])(${ALLE_FARBNAMEN})\1`, "i"),
+  },
+  {
+    // Der Name in einem **zusammengesetzten** Wert: `"0 0 0 1px firebrick"`.
+    // Angehängt an eine CSS-Länge, damit Fließtext nicht mitgeht — „a badge
+    // with a question mark" enthält einen Farbnamen und ist keiner.
+    name: "benannte CSS-Farbe in einem zusammengesetzten Wert",
+    muster: new RegExp(
+      String.raw`["'][^"']*\d(?:px|rem|em|%|vh|vw)\s[^"']*(?<![a-zA-Z-])(${ALLE_FARBNAMEN})(?![a-zA-Z-])`,
+      "i",
+    ),
+  },
+  {
+    // Der Name in einem Tailwind-Beliebigwert: `bg-[crimson]`,
+    // `shadow-[0_0_0_2px_red]`, `[background-color:red]`. Dort trennt ein
+    // Unterstrich oder ein Doppelpunkt, und beide beendeten die Muster oben.
+    name: "benannte CSS-Farbe in einem Tailwind-Beliebigwert",
+    muster: new RegExp(
+      String.raw`\[[^\]\s]*(?<![a-zA-Z-])(${ALLE_FARBNAMEN})(?![a-zA-Z-])[^\]]*\]`,
+      "i",
+    ),
   },
 ];
 
@@ -167,9 +235,33 @@ function dateien(verzeichnis: string): string[] {
 
 const ALLE = dateien(WURZEL).map((pfad) => relative(WURZEL, pfad).split("\\").join("/"));
 
-const GEPRUEFT = ALLE.filter((pfad) => !AUSGENOMMEN.some((teil) => pfad.startsWith(teil))).filter(
-  (pfad) => pfad !== KONZEPTDATEI,
-);
+/**
+ * Die Dateien neben `src`, aus denen Next.js ebenfalls lädt: die
+ * Konfigurations- und Einstiegsdateien im Wurzelverzeichnis (**nicht**
+ * rekursiv — dort liegen `node_modules` und `.next`) und die vier
+ * Verzeichnisse aus `NEBENVERZEICHNISSE`, falls es sie gibt.
+ *
+ * Die Pfade tragen ein `../` im Namen, damit im Fehlertext sofort steht, dass
+ * der Fund außerhalb von `src` liegt.
+ */
+const DANEBEN = [
+  ...readdirSync(RAHMEN, { withFileTypes: true })
+    .filter((eintrag) => eintrag.isFile() && ENDUNGEN.test(eintrag.name))
+    .map((eintrag) => eintrag.name),
+  ...NEBENVERZEICHNISSE.filter((name) => existsSync(join(RAHMEN, name))).flatMap((name) =>
+    dateien(join(RAHMEN, name)).map((pfad) => relative(RAHMEN, pfad).split("\\").join("/")),
+  ),
+].map((pfad) => `../${pfad}`);
+
+function lies(pfad: string): string {
+  return pfad.startsWith("../")
+    ? readFileSync(join(RAHMEN, pfad.slice(3)), "utf8")
+    : readFileSync(join(WURZEL, pfad), "utf8");
+}
+
+const GEPRUEFT = [...ALLE, ...DANEBEN]
+  .filter((pfad) => !AUSGENOMMEN.some((teil) => pfad.startsWith(teil)))
+  .filter((pfad) => pfad !== KONZEPTDATEI);
 
 describe("Farbwerte", () => {
   it("prüft überhaupt Dateien", () => {
@@ -179,12 +271,32 @@ describe("Farbwerte", () => {
   });
 
   it("liest das visuelle Konzept als einzige Ausnahme — und keine zweite", () => {
-    // Der Suchpfad umfasst seit dem 01.09.2026 auch `.css`. Damit gibt es genau
-    // eine Datei unter `src/`, in der Farbwerte stehen dürfen. Käme eine zweite
-    // dazu, wäre das visuelle Konzept auf zwei Dateien verteilt — und der
-    // Ausschluss oben nähme sie stillschweigend mit heraus, wenn er über die
-    // Endung ginge statt über den Namen.
-    expect(ALLE.filter((pfad) => pfad.endsWith(".css"))).toEqual([KONZEPTDATEI]);
+    // Der Suchpfad umfasst seit dem 01.09.2026 auch Stilblätter. Damit gibt es
+    // genau eine Datei, in der Farbwerte stehen dürfen. Käme eine zweite dazu,
+    // wäre das visuelle Konzept auf zwei Dateien verteilt — und der Ausschluss
+    // oben nähme sie stillschweigend mit heraus, wenn er über die Endung ginge
+    // statt über den Namen.
+    //
+    // **Über beide Suchpfade**, denn ein `styles/marke.css` neben `src` wäre
+    // dieselbe zweite Stelle, nur einen Ordner weiter oben.
+    expect([...ALLE, ...DANEBEN].filter((pfad) => STILBLATT.test(pfad))).toEqual([KONZEPTDATEI]);
+  });
+
+  it("sieht auch neben `src` nach — dort lädt Next.js ebenfalls", () => {
+    // Vier Wege aus der adversarischen Runde vom 01.09.2026 lagen außerhalb
+    // von `src`. Diese Zusicherung hält fest, dass der zweite Suchpfad nicht
+    // leer läuft: `next.config.ts` gibt es, und die Nebenverzeichnisse werden
+    // aufgenommen, sobald jemand sie anlegt.
+    expect(DANEBEN).toContain("../next.config.ts");
+    expect(DANEBEN.length).toBeGreaterThan(3);
+    for (const name of NEBENVERZEICHNISSE) {
+      if (existsSync(join(RAHMEN, name))) {
+        expect(
+          DANEBEN.some((pfad) => pfad.startsWith(`../${name}/`)),
+          `${name}/ existiert und wird nicht gelesen`,
+        ).toBe(true);
+      }
+    }
   });
 
   it("nimmt genau den Generatorbereich aus, nicht seine Namensvettern", () => {
@@ -212,14 +324,27 @@ describe("Farbwerte", () => {
     expect(trifft(`style={{ color: "red" }}`)).toBe(true);
     expect(trifft(`background: oklch(0.6 0.2 25)`)).toBe(true);
 
+    // Die sechs aus der adversarischen Runde vom 01.09.2026:
+    expect(trifft(`fill="&#35;b3261e"`)).toBe(true);
+    expect(trifft(`url("data:image/svg+xml,%3Csvg fill='%23b3261e'")`)).toBe(true);
+    expect(trifft(`fill="color(srgb 0.7 0.7 0.7)"`)).toBe(true);
+    expect(trifft(`className="bg-[crimson]"`)).toBe(true);
+    expect(trifft(`className="shadow-[0_0_0_2px_red]"`)).toBe(true);
+    expect(trifft(`className="[background-color:red]"`)).toBe(true);
+    expect(trifft(`style={{ boxShadow: "0 0 0 1px firebrick" }}`)).toBe(true);
+    expect(trifft(`style={{ color: "Highlight" }}`)).toBe(true);
+
     // Und was ausdrücklich erlaubt bleibt:
     expect(trifft(`fill="var(--status-fehler)"`)).toBe(false);
     expect(trifft(`className="text-muted-foreground text-beiwerk"`)).toBe(false);
     expect(trifft(`className="min-h-beruehrung bg-card border-border"`)).toBe(false);
+    expect(trifft(`className="max-w-[24rem] grid-cols-[auto_1fr]"`)).toBe(false);
+    expect(trifft(`titel: "A badge with a question mark"`)).toBe(false);
+    expect(trifft(`// Der Akzent ist ein Gelbgrün, kein Orange`)).toBe(false);
   });
 
   it.each(GEPRUEFT)("%s enthält keinen festen Farbwert", (pfad) => {
-    const inhalt = readFileSync(join(WURZEL, pfad), "utf8");
+    const inhalt = lies(pfad);
     for (const { name, muster } of VERBOTEN) {
       const treffer = muster.exec(inhalt);
       expect(treffer, `${name} in ${pfad}: ${treffer?.[0]}`).toBeNull();
