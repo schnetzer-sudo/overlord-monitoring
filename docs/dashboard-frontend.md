@@ -195,6 +195,7 @@ allein über Farbe"* —, und §7a hat es für diese Rolle noch einmal ausdrück
 | **E‑r** | Das Dashboard liegt auf **`/`** | 01.09.2026 |
 | **E‑t** | Ein **zweiter, schmaler Balkenstreifen** unter dem Verlauf, nur `FEHLER`, mit **eigener beschrifteter Skala** | 01.09.2026 |
 | **E‑u** | Die beiden Problemkategorien tragen **Fläche und Vordergrund, keine Kontur** — Kachel wie Plakette (§3) | 01.09.2026 |
+| **E‑v** | Die Balkenbreite ist **gedeckelt** (`maxBarSize={28}`), an beiden Diagrammen mit demselben Wert. Wo die Slotbreite darunter liegt, bewirkt der Deckel nichts (§5.2) | 01.09.2026 |
 
 ---
 
@@ -255,6 +256,73 @@ nicht auffindbar.
 >
 > **Weggelassen wird sie nicht.** Dann wäre der Balken niedriger als `gesamt`, und die Zahl im
 > Tooltip passte nicht zu dem, was danebensteht. Der Test prüft beides.
+
+#### Die Balkenbreite ist gedeckelt (E‑v) — *gemessen am 01.09.2026*
+
+**Das Problem, gemessen:** Bei zwölf Eimern über die volle Fensterbreite war der Balken **94 px
+breit in einem Slot von 96,33 px** — 97,6 % Füllung, 2,33 px Luft zwischen zwei Zählungen. Der
+Verlauf las sich damit als **eine zusammenhängende Farbfläche** und nicht als Reihe einzelner
+Eimer. Bei 48 Eimern trat das nicht auf: dort sind es 22 px in einem Slot von 24,33 px. **Das Bild
+hängt an der Zahl der Eimer und nicht an der Bauform.**
+
+**Die Antwort ist ein Deckel und keine feste Breite:** `maxBarSize={28}`. Recharts rechnet
+`min(Slotbreite, maxBarSize)` und rückt den schmaleren Balken in die **Mitte** seines Slots; wo die
+Slotbreite ohnehin darunter liegt, bewirkt die Zahl **nichts**. Genau das unterscheidet sie von der
+gerechneten Konstante, die an dieser Stelle schon einmal gescheitert ist (`achsenabstand`, §5.3):
+Eine Zahl, die von der Breite nichts weiß, kann bei 360 und bei 1500 px nicht beide Male richtig
+sein — ein Deckel muss das auch nicht, er tritt nur an der einen Seite in Kraft.
+
+**Gemessen an den `<path class="recharts-rectangle">`-Knoten im DOM** (Attribute `x` und `width`),
+im Profil `dev` am Anker `2025-12-30 04:09:47`, angemeldet als `NEXANS`. Die Slotbreite ist der
+Abstand zweier benachbarter Eimer, die Lücke ist Slot minus Balken:
+
+| Fenster | Eimer | Slot | Balken **vorher** | Balken **jetzt** | Lücke vorher | Lücke jetzt | Füllung jetzt |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 360 px | 48 | 5,25 | 3 | **3** | 2,25 | 2,25 | 57,1 % |
+| 360 px | 30 | 8,20 | 6 | **6** | 2,20 | 2,20 | 73,2 % |
+| 360 px | 12 | 20,00 | 18 | **18** | 2,00 | 2,00 | 90,0 % |
+| 768 px | 48 | 8,77 | 7 | **7** | 1,77 | 1,77 | 79,8 % |
+| 768 px | 30 | 13,83 | 12 | **12** | 1,83 | 1,83 | 86,8 % |
+| 768 px | 12 | 34,08 | 32 | **28** | 2,08 | 6,08 | 82,2 % |
+| 1500 px | 48 | 24,33 | 22 | **22** | 2,33 | 2,33 | 90,4 % |
+| 1500 px | 30 | 38,73 | 37 | **28** | 1,73 | 10,73 | 72,3 % |
+| 1500 px | 12 | 96,33 | 94 | **28** | 2,33 | 68,33 | 29,1 % |
+
+**Der Deckel greift in drei von neun Fällen.** In den anderen sechs sind `x` **und** `width` jedes
+einzelnen Rechtecks vor und nach der Änderung **zeichengleich** — nachgesehen und nicht
+gefolgert. **Bei 360 px greift er in keinem der drei Paare**, und das ist die Stelle, an der die
+Zahl zu prüfen war: 48 Eimer ergeben dort 3 px Balken, und `min(3, 28) = 3`.
+
+**Verlauf und Fehlerstreifen stehen weiter übereinander.** Geprüft ist nicht die Absicht, sondern
+die Koordinate: die Menge der `x`-Werte des Streifens gegen die des Verlaufs — bei `NEXANS` in
+allen neun Fällen deckungsgleich und bei gleicher Balkenbreite, bei `SUTTONS` in den sechs, in
+denen der Streifen überhaupt Balken hat. Deshalb steht der Wert als **eine** Konstante
+(`MAX_BALKENBREITE`) an beiden Diagrammen — aus demselben Grund wie die gemeinsame Achsenbreite.
+Zwei verschiedene Deckel trennten die Balken bei kleiner Eimerzahl, und die gemeinsame Zeitachse
+verspräche dann eine Zuordnung, die es nicht gäbe.
+
+Beim kleinen Mandanten (`SUTTONS`) dieselben Zahlen bis auf die schmalere y-Achse: 12 Eimer bei
+1500 px von 95 auf 28 px bei einem Slot von 96,83, bei 768 px von 34 auf 28. Über 48 Stunden hat
+`SUTTONS` **keinen** Eimer mit Fehlern; der Streifen ist dort leer und zeigt seinen Satz — der
+Leerzustand aus E‑t, unverändert.
+
+> **Belegvermerk (L10).** *Gemessen war:* Balken- und Slotbreite an den Rechteck-Knoten beider
+> Diagramme, für drei Fensterbreiten × drei Paare × zwei Mandanten, dazu die Zeichengleichheit von
+> `x` und `width` vor und nach der Änderung. *Behauptet wird:* Der Deckel wirkt genau dort, wo der
+> Slot breiter als 28 px ist, verändert am schmalen Fenster nichts und trennt die beiden Diagramme
+> nie. — **Nicht gemessen, sondern Augenschein** ist der Schluss, dass 28 px die Balken *als
+> einzelne Zählungen* lesbar machen: Das ist eine Aussage über das Bild und keine über eine Zahl.
+
+**Die eine gemessene Grenze:** Bei **768 px und zwölf Eimern** bleiben 6,08 px Lücke bei 82 %
+Füllung. Die Balken trennen sich sichtbar — vorher waren es 2,08 px —, aber der Block liest sich
+dort weiter dicht. Ein kleinerer Deckel vergrößerte die Lücke dort und machte den Balken überall
+sonst schmaler; **wo dieser Abwägungspunkt liegt, ist nicht gemessen.** Entschieden ist er
+zugunsten der Breite, an der das Problem aufgetreten ist — und der Deckel bleibt an einer Stelle
+änderbar.
+
+**E‑l und E‑t bleiben unberührt.** Vier Reihen, ihre Reihenfolge, der Fehlerstreifen als zweites
+Diagramm mit eigener Skala, Legende, Tooltip und die Achsenlogik aus §5.3 sind nicht angefasst;
+`maxBarSize` ist das einzige geänderte Prop. **Dies ist keine Entscheidung über die Diagrammform.**
 
 ### 5.3 Der Fehlerstreifen (E‑t)
 
