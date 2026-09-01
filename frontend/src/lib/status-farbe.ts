@@ -141,27 +141,85 @@ const PROBLEM_ZUORDNUNG: Record<Problemkategorie, Problemrolle> = {
 };
 
 /**
- * Die Tailwind-Klassen je Rolle. Vollständige Zeichenketten, weil Tailwind den
+ * Vordergrund und Fläche je Rolle. Vollständige Zeichenketten, weil Tailwind den
  * Quelltext nach Klassennamen durchsucht — ein zusammengesetzter Name entstünde
  * nie im erzeugten CSS.
  */
-const KLASSEN: Record<Statusrolle | Problemrolle, string> = {
-  abgeschlossen:
-    "text-status-abgeschlossen bg-status-abgeschlossen-flaeche border-status-abgeschlossen-kontur",
-  fehler: "text-status-fehler bg-status-fehler-flaeche border-status-fehler-kontur",
-  offen: "text-status-offen bg-status-offen-flaeche border-status-offen-kontur",
-  ungeklaert: "text-status-ungeklaert bg-status-ungeklaert-flaeche border-status-ungeklaert-kontur",
+const FLAECHE_UND_SCHRIFT: Record<Statusrolle | Problemrolle, string> = {
+  abgeschlossen: "text-status-abgeschlossen bg-status-abgeschlossen-flaeche",
+  fehler: "text-status-fehler bg-status-fehler-flaeche",
+  offen: "text-status-offen bg-status-offen-flaeche",
+  ungeklaert: "text-status-ungeklaert bg-status-ungeklaert-flaeche",
   // Ohne `status-`-Präfix, weil es keine Statusart dahinter gibt — siehe
   // `Problemkategorie` oben und den Kommentar in `app/globals.css`.
-  ueberfaellig: "text-ueberfaellig bg-ueberfaellig-flaeche border-ueberfaellig-kontur",
+  ueberfaellig: "text-ueberfaellig bg-ueberfaellig-flaeche",
 };
+
+/**
+ * Der **dritte** Wert je Rolle, getrennt gehalten.
+ *
+ * ## Warum getrennt — die Sichtprobe vom 01.09.2026
+ *
+ * Bis dahin standen alle drei Werte in einer Zeichenkette, und es gab keinen
+ * Anlass, sie zu teilen: Die vier Statuskonturen liegen bei L 0.85 bis 0.90 und
+ * sind auf `--card` mit 1,35 : 1 bis 1,57 : 1 kaum zu sehen. **`--ueberfaellig-kontur`
+ * liegt bei L 0.65 und erreicht 3,29 : 1** — sie ist die einzige, die WCAG 1.4.11
+ * erfüllt, und genau deshalb fällt sie aus der Familie (`docs/visuelles-konzept.md`
+ * §7a, Befund 4).
+ *
+ * Im Dashboard stehen die beiden Problemkategorien **nebeneinander**, und dort
+ * ist das keine Fußnote mehr: Die Überfällig-Kachel bekommt einen sichtbar
+ * gezeichneten Rand, die Fehler-Kachel praktisch keinen — und zwei Kacheln, von
+ * denen eine umrandet ist, lesen sich als **Rangfolge**. Regel Q3 führt beide
+ * gleichrangig. §7a hat diese Überlegung für die *Helligkeit* des Vordergrunds
+ * gezogen und für die Kontur nicht; nachgeholt ist sie in
+ * `docs/dashboard-frontend.md` §3.
+ *
+ * **Nachgedunkelt oder aufgehellt wird nichts.** §7a schließt beides
+ * ausdrücklich aus — die Ungleichheit ist der Befund, und wer sie auflöst, tut
+ * es für alle fünf Rollen zugleich. Getrennt wird deshalb nicht der *Wert*,
+ * sondern seine **Verwendung**: Eine Ansicht, in der die Kategorien
+ * nebeneinander stehen, nimmt zwei der drei Werte.
+ */
+const KONTUR: Record<Statusrolle | Problemrolle, string> = {
+  abgeschlossen: "border-status-abgeschlossen-kontur",
+  fehler: "border-status-fehler-kontur",
+  offen: "border-status-offen-kontur",
+  ungeklaert: "border-status-ungeklaert-kontur",
+  ueberfaellig: "border-ueberfaellig-kontur",
+};
+
+/**
+ * Alle drei Werte — die Fassung für eine Ansicht, in der eine Rolle **allein**
+ * auftritt. So steht sie in der Nachrichtenliste, im Detail und im Kettenblock.
+ */
+function alleDrei(rolle: Statusrolle | Problemrolle): string {
+  return `${FLAECHE_UND_SCHRIFT[rolle]} ${KONTUR[rolle]}`;
+}
+
+/**
+ * Zwei der drei Werte — die Fassung für eine Ansicht, in der **zwei Rollen
+ * nebeneinander** stehen und keine lauter sein darf als die andere.
+ *
+ * `border-transparent` gehört dazu und ist kein Beiwerk: `Badge` mit
+ * `variant="outline"` setzt sonst `border-border` und zöge einen grauen Ring an
+ * genau die Stelle, die hier leer bleiben soll.
+ */
+function ohneKontur(rolle: Statusrolle | Problemrolle): string {
+  return `${FLAECHE_UND_SCHRIFT[rolle]} border-transparent`;
+}
 
 export function statusrolle(art: Statusart): Statusrolle {
   return ZUORDNUNG[art];
 }
 
 export function statusKlassen(art: Statusart): string {
-  return KLASSEN[statusrolle(art)];
+  return alleDrei(statusrolle(art));
+}
+
+/** Siehe {@link ohneKontur} — für zwei Rollen nebeneinander. */
+export function statusKlassenOhneKontur(art: Statusart): string {
+  return ohneKontur(statusrolle(art));
 }
 
 export function problemrolle(kategorie: Problemkategorie): Problemrolle {
@@ -169,5 +227,10 @@ export function problemrolle(kategorie: Problemkategorie): Problemrolle {
 }
 
 export function problemKlassen(kategorie: Problemkategorie): string {
-  return KLASSEN[problemrolle(kategorie)];
+  return alleDrei(problemrolle(kategorie));
+}
+
+/** Siehe {@link ohneKontur} — für zwei Rollen nebeneinander. */
+export function problemKlassenOhneKontur(kategorie: Problemkategorie): string {
+  return ohneKontur(problemrolle(kategorie));
 }
