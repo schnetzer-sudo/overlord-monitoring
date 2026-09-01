@@ -288,10 +288,15 @@
 /* ── Die vier Stufen des Dichteumschalters ───────────────────────────────────
    Skaliert wird die WURZEL und nicht die drei Schriftrollen einzeln. Das Ziel
    ist mehr Zeilen je Bildschirm; dafuer muss --dichte-zeile mitgehen, und die
-   Abstaende auch. Alle Groessen des Projekts liegen in rem — die drei
-   --schrift-*, saemtliche --dichte-* und ueber die Abstandsskala von Tailwind
-   auch jeder Innen- und Aussenabstand. Damit ist eine Stufe im Kern diese eine
-   Zahl.
+   Abstaende auch. Das traegt, weil jede Groesse, die etwas MISST, in rem liegt:
+   die drei --schrift-*, die uebrigen --dichte-* und ueber die Abstandsskala von
+   Tailwind auch jeder Innen- und Aussenabstand. Damit ist eine Stufe im Kern
+   diese eine Zahl.
+
+   Zwei Tokens dieser Datei sind kein rem, und beide mit Absicht:
+   --dichte-wurzel ist Prozent, weil es den BEZUG setzt statt ihn zu messen,
+   und --dichte-beruehrung traegt ein px-Glied im max(), weil sein Mindestwert
+   nicht mitskalieren darf. Die Begruendung steht je an ihrem Token.
 
    Eingehaengt ueber ein Attribut am WURZELELEMENT und nicht ueber eine Klasse
    an einem Wrapper: Die Wurzelschriftgroesse muss am Wurzelelement stehen,
