@@ -79,6 +79,33 @@ import {
 const HOEHE_VERLAUF = 260;
 const HOEHE_STREIFEN = 88;
 
+/**
+ * **Der Deckel für die Balkenbreite — an beiden Diagrammen derselbe.**
+ *
+ * Bei zwölf Eimern über die volle Fensterbreite gibt Recharts jedem Balken
+ * rund hundert Pixel und füllt sie bis auf `barCategoryGap` aus: Der Verlauf
+ * liest sich dann als **eine zusammenhängende Farbfläche** und nicht als Reihe
+ * einzelner Zählungen. Bei 48 Eimern tritt das nicht auf — das Bild hängt an
+ * der Zahl der Eimer und nicht an der Bauform.
+ *
+ * **Ein Deckel und keine feste Breite.** Recharts rechnet
+ * `min(Slotbreite, maxBarSize)` und rückt den schmaleren Balken in die Mitte
+ * seines Slots. Wo die Slotbreite ohnehin darunter liegt — 48 Eimer am
+ * schmalen Fenster —, bewirkt die Zahl **nichts**, und genau das ist der
+ * Unterschied zur gerechneten Konstante, die hier schon einmal gescheitert ist
+ * (`achsenabstand`, §5.3).
+ *
+ * **Beide Diagramme bekommen denselben Wert**, aus demselben Grund wie die
+ * gemeinsame Achsenbreite: Sonst stünden die Balken des Fehlerstreifens bei
+ * kleiner Eimerzahl nicht mehr unter denen des Verlaufs, und die gemeinsame
+ * Zeitachse verspräche eine Zuordnung, die es nicht gäbe.
+ *
+ * Die Zahl ist **gemessen und nicht gewählt**; die Balkenbreiten, aus denen sie
+ * folgt, stehen in
+ * [`docs/dashboard-frontend.md`](../../../../docs/dashboard-frontend.md) §5.2.
+ */
+const MAX_BALKENBREITE = 28;
+
 const ACHSENSCHRIFT = { fill: "var(--muted-foreground)", fontSize: 11 };
 const ACHSENLINIE = { stroke: "var(--border)" };
 const ZEIGER = { fill: "var(--muted)" };
@@ -164,6 +191,7 @@ export function VerlaufDiagramm({
               stackId="verlauf"
               name={texte.dashboard.verlauf.rollen[rolle]}
               fill={rollenfuellung(rolle)}
+              maxBarSize={MAX_BALKENBREITE}
               isAnimationActive={false}
               activeBar={false}
             />
@@ -259,6 +287,7 @@ export function VerlaufDiagramm({
             dataKey="fehler"
             name={texte.dashboard.verlauf.rollen.fehler}
             fill={rollenfuellung("fehler")}
+            maxBarSize={MAX_BALKENBREITE}
             isAnimationActive={false}
             activeBar={false}
           />
