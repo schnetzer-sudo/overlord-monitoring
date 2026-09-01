@@ -222,7 +222,7 @@ Die übrigen drei Fragen aus dem Auftrag, alle in jeder Stufe und bei jeder der 
 |---|---|
 | Stehen Verlauf und Fehlerstreifen übereinander? | **ja** — Versatz des ersten Balkens **0,0 px** in allen 24 gemessenen Lagen, Achsenbreite in beiden Diagrammen identisch |
 | Steht die Null der Hauptachse noch da? | **ja**, in allen 24 Lagen. Die 14 px Fußmarge aus §5.3 tragen unverändert |
-| Wird waagerecht gescrollt? | **nein** — `scrollWidth === innerWidth` bei 360, 768 und 1500 px, in jeder Stufe |
+| Wird waagerecht gescrollt? | **nein** — bei 360, 768 und 1500 px, in jeder Stufe. **Der ursprüngliche Test dafür war eine Tautologie**: `scrollWidth === innerWidth` kann wegen `html { overflow-x: hidden }` (`globals.css`) gar nicht fehlschlagen. Nachgehalten wird er von der elementweisen Prüfung gegen `window.innerWidth` in der Gegenprüfung — **kein Element steht über dem Rand**, in 204 Lagen |
 
 **Es ist deshalb nichts geändert worden.** Der Auftrag sagt: *„Behebe nur, was du als Befund
 gemessen hast."* Es gibt keinen. Der Weg über den Stufenfaktor als Parameter der reinen Funktion in
@@ -233,6 +233,30 @@ falls je einer nötig wird — **niemals `getComputedStyle` zur Laufzeit**.
 > Legende und Tooltip um 12,5 %, während Achsenschrift (11 px), Diagrammhöhe (260/88 px) und
 > Balkenbreite (28 px) stehen bleiben; in `xs` umgekehrt. Das ist sichtbar und kein Defekt —
 > geführt als offener Punkt **95**.
+
+#### Nachgeprüft, breiter als der Auftrag verlangt hat
+
+Die vier Aussagen oben sind gegen **204 frisch geladene Lagen** gehalten worden: drei Zeiträume
+(48 / 30 / 12 Eimer) × sieben Breiten (360 bis 2560 px) × vier Stufen, dazu ein **zweiter Mandant**
+(`SUTTONS`, dessen Größenordnungen vier Zehnerpotenzen unter `NEXANS` liegen) und die englische
+Sprachfassung. Überall dasselbe: **0 beschnittene Texte, 0 Überlappungen**, kleinster x-Abstand
+**exakt 12,0 px** — also der `minTickGap`, den `equidistantPreserveStart` hält und nie unterschreitet.
+
+Dabei springt die gerechnete Achsenbreite sichtbar mit den Daten (Achsentext bei `x = 40` für fünf
+Zeichen, 46 für sechs, 52 für sieben) — sie folgt also wirklich der längsten Beschriftung und keiner
+Konstante.
+
+**Der Melder ist gegengeprobt**, damit die Nullen keine blinden Nullen sind: Zwingt man die
+Achsenschrift per `!important` auf 16 px, meldet derselbe Melder sofort `2.400` und `3.200` als um
+4,2 bzw. 4,3 px beschnitten; bei 20 px überlappen bis zu 22 x-Beschriftungen.
+
+**Drei Vorbehalte, alle gemessen:**
+
+| | |
+|---|---|
+| **Der Tooltip in `l` bei 360 px hat seine Reserve aufgebraucht** | Er skaliert mit der Wurzelschrift, das Diagramm darunter wird mit steigender Stufe schmaler. Bei 360 px und `12M`: `xs` 184,7 px breit mit 65,3 px Luft zum Kartenrand, `m` 211,1 / 33,9, **`l` 237,5 px gegen 282 px Diagrammbreite — 15,5 px über den Diagrammkasten hinaus und 2,5 px vor dem Kartenrand.** Abgeschnitten wird nichts. Es ist die **einzige** Zahl der ganzen Messreihe, die sich mit steigender Dichte auf null zubewegt; ein längerer Rollenname, eine fünfte Stufe oder eine Stelle mehr im Eimer kippt sie |
+| **Ein latenter Fehler an der Millionengrenze** | `achsenbreite` gibt *ein* Zeichen Zuschlag, weil Recharts die oberste Marke aufrundet. An jeder Zehnerpotenz, an der ein **Tausenderpunkt dazukommt**, sind es zwei: aus 999.999 (7 Zeichen, 60 px Achse, 52 px Text) wird die Marke `1.000.000`, und die misst **53,55 px** — 1,55 px zu breit. Genau der Fehler, gegen den die Funktion geschrieben wurde. **Mit keinem der zehn Mandanten der Testkopie erreichbar** (größter Eimerwert: 220.000), deshalb kein Befund — und er hängt **nicht** an der Dichtestufe, er träfe alle vier gleich |
+| **Alles hängt daran, dass die Achsenschrift 11 px bleibt** | Eine im Browser eingestellte **Mindestschriftgröße** überlebt das feste `fontSize: 11` nicht. Bei erzwungenen 16 px fallen drei der vier Zusicherungen sofort. „Kein Befund" ist die Auskunft über einen Baum, der von der **Wurzelschrift** entkoppelt ist — nicht die Auskunft, dass er gegen größere Schrift robust wäre |
 
 #### Belegvermerk zu §5.3 und §10.4 (Regel L10)
 
@@ -342,6 +366,40 @@ zwischen der Unterkante des Tabellenkopfes und der Unterkante des Scrollbereichs
 sechs — für jemanden, der eine Liste überfliegt, ist das der Unterschied zwischen einem Blick und
 zwei.
 
+#### ⚠️ Befund: In `l` fehlt eine Zeile mehr, als die Skalierung erklärt
+
+Die drei kleineren Stufen skalieren **exakt** proportional. Der Kopf über der ersten Datenzeile
+misst 185,8 px in `xs`, 198,9 in `s`, 212,0 in `m` — bei einem Faktor von 0,875 bzw. 0,9375 wären
+185,5 und 198,8 zu erwarten. Abweichung: **drei Zehntel Pixel.**
+
+**In `l` sind es 283,3 px statt der proportionalen 238,5 — ein Überschuss von 44,8 px**, und der
+kostet genau die fünfte Zeile: ohne ihn wären es `(1080 − 238,5) / 40,5 = 20,8`, also 20 Zeilen
+statt der gemessenen 19.
+
+**Woher er kommt, ist nachgemessen und nicht geraten.** Der Überschuss sitzt in **einem** Element,
+der Filterleiste über der Tabelle (`flex flex-wrap items-start gap-2`):
+
+| | `m` | `l` | proportional wäre |
+|---|---:|---:|---:|
+| Filterleiste | 54,0 px | **105,8 px** | 60,8 px |
+| alles darüber und darunter | proportional | proportional | — |
+
+Sie ist `flex-wrap`, ihr Inhalt wächst um 12,5 %, und bei 1500 px passt er dann nicht mehr in eine
+Zeile: Sie **bricht um** und wird fast doppelt so hoch.
+
+#### Und der Grund dahinter: die Umbruchpunkte gehen nicht mit
+
+**`rem` in einer Media Query misst gegen die Anfangsschriftgröße, nicht gegen das Wurzelelement.**
+`--dichte-wurzel` verschiebt deshalb **keinen einzigen** Umbruchpunkt. Gemessen bei 1200 px und bei
+1279 px, in `xs`, `m` und `l`: `sm`/`md`/`lg` treffen zu, `xl` nicht — **in allen drei Stufen
+identisch**, während der Inhalt daneben um 28 % auseinanderliegt.
+
+Das ist keine Eigenheit dieses Projekts, sondern die Definition von `rem` in einer Media Query, und
+es ist die **eine** Stelle, an der der Satz „alles skaliert mit" nicht gilt. Für den Rahmen heißt
+es: Wo eine Zeile *knapp* passt, kann sie eine Stufe höher umbrechen, ohne dass der Umbruchpunkt
+sich bewegt. Gefunden ist genau ein solcher Fall (die Filterleiste bei 1500 px); **systematisch
+abgesucht ist der Rahmen nicht** — geführt als offener Punkt 95.
+
 > Der Seitenkopf von **51 px** in `m` bestätigt nebenbei `visuelles-konzept.md` §5 („die Kopfzeile
 > 51 px statt 57"). Der Wert setzt sich aus `--dichte-kopfzeile` (3,125 rem = 50 px) und der
 > Trennlinie (1 px) zusammen.
@@ -432,6 +490,7 @@ Durchgeklickt am echten Menüeintrag, `m → xs → l → s → m`:
 | Adresse unberührt | **ja** — der Pfad bleibt `/nachrichten`, kein Parameter kommt hinzu |
 | Liste bleibt stehen | **ja**, im Sinne von: nach jedem Übergang stehen wieder **50** Zeilen im Baum, und der Ladezustand erscheint nicht. **Ob die Liste dabei neu geholt wird, ist nicht gemessen** — dafür wäre ein Netzmitschnitt nötig, und der Zähler im Messskript war ein Blindgänger |
 | Cookie gesetzt | **ja** — `overlord_dichte=<stufe>` nach jedem Klick |
+| Cookie-Eigenschaften | nach echtem Klick über `Network.getCookies` abgelesen: **365,00 Tage**, `SameSite=Lax`, `httpOnly: false`, `path: "/"` — die vier Zusagen aus Teil 2, gemessen statt behauptet |
 
 **Kein Flackern beim nächsten Aufruf** — und das ist nicht angesehen, sondern am ausgelieferten
 Dokument nachgewiesen. `data-dichte` steht im servergerenderten HTML an **Byte 31**, also im
@@ -555,8 +614,8 @@ Zusammensetzung.
 
 ## 7. Tests
 
-`frontend/tests/dichte.test.ts`, achtzehn Zusicherungen, **alle rechnerisch und ohne Ansicht**. Der
-Test liest `globals.css` als Datei — dieselbe Bauform wie `tests/farbwerte.test.ts` und
+`frontend/tests/dichte.test.ts`, **siebenundzwanzig** Zusicherungen, alle rechnerisch und ohne
+Ansicht. Der Test liest `globals.css` als Datei — dieselbe Bauform wie `tests/farbwerte.test.ts` und
 `tests/serverbausteine.test.ts`; eine zweite Liste im Test wäre eine zweite Pflegestelle.
 
 **Es steht keine abgeleitete Zahl in der Datei** — kein `38,5` und kein `49,5`. Ein kleiner
@@ -577,8 +636,48 @@ lässt er fehlschlagen statt es zu überspringen.
 | beide Sprachdateien tragen alle vier Stufen, mit **vier verschiedenen** Texten | `tests/sprachdateien.test.ts` fängt Abweichungen, aber nur bei angelegten Schlüsseln |
 | `--dichte-beruehrung` ist **genau einmal** deklariert | Eine zweite Deklaration gewänne je nach Reihenfolge, und der Test sähe die falsche |
 
-**Der Test ist gegengeprüft worden**, nicht nur geschrieben: Wird das `max()` entfernt, fallen vier
-Zusicherungen; wird die Stufe `m` aus dem CSS gelöscht, fallen fünf.
+**Und seit dem 01.09.2026 sieben Zusicherungen über die _Lage_**, nicht nur über den Wert — sie
+sind der Inhalt der Nachbesserung und fehlten in der ersten Fassung vollständig:
+
+| Was | Warum |
+|---|---|
+| jede der vier Stufenregeln hängt **unbedingt** am Wurzelelement | Eine Regel in `@media print` oder unter `.dark` steht da und wirkt am Bildschirm nie |
+| `html { font-size: var(--dichte-wurzel) }` steht **unbedingt** da | Stünde sie in `@media print`, änderte der Umschalter nur den Ausdruck |
+| `--dichte-beruehrung` wird an **genau einer** Stelle gesetzt, und die ist ein unbedingtes `:root` | In `@media print` löst das Token am Bildschirm zu `0px` auf |
+| `--dichte-wurzel` steht **einmal** je Stufenblock | Bei zwei Deklarationen gewinnt die Kaskade die zweite, ein Textleser die erste |
+| `--spacing-beruehrung` zeigt auf `--dichte-beruehrung` | Die **einzige** Verbindung zwischen dem geprüften Token und den vierzig Komponenten mit `min-h-beruehrung` |
+| `--spacing-bedienelement` zeigt auf `--dichte-bedienelement` | dasselbe für das zweite Token |
+| genau **ein** `@media (pointer: coarse)` leitet `--dichte-bedienelement` auf `--dichte-beruehrung` um | Die halbe Zusicherung aus `visuelles-konzept.md` §5 — ohne sie gilt die Mindestfläche am Finger für nichts |
+
+Möglich wird das durch einen kleinen **CSS-Leser** im Test: Kommentare werden durch gleich viele
+Leerzeichen ersetzt, dann wird die Datei in Regeln **mit ihrer Verschachtelung** zerlegt. Damit ist
+die Frage beantwortbar, die eine Regex nicht beantworten kann: *in welchem Block steht das?*
+
+**Der Test ist gegengeprüft worden**, nicht nur geschrieben — und die erste Fassung hat die
+Gegenprüfung nicht überstanden. **Von 23 Mutanten blieben neun grün**, darunter das Löschen aller
+vier Stufenregeln, solange sie als Kommentar stehen blieben. Der Grund war immer derselbe: Sie
+prüfte, dass Zeichenfolgen *vorkommen*, nie, dass sie *wirken*.
+
+Gegen die heutige Fassung sind **zehn** Mutanten gefahren worden, darunter alle acht früheren
+Überlebenden. **Keiner überlebt:**
+
+| Mutant | tote Zusicherungen |
+|---|---:|
+| Stufenregeln nach `@media print` | 4 |
+| Stufenregeln unter `.dark` | 4 |
+| Stufenregeln gelöscht, als Kommentar stehen gelassen | 14 |
+| `--dichte-wurzel` im `xs`-Block auskommentiert | 4 |
+| zweite `--dichte-wurzel: 300%` im `m`-Block | 5 |
+| `html { font-size: … }` nach `@media print` | 1 |
+| `--dichte-beruehrung` nach `@media print { :root }` | 1 |
+| `--spacing-beruehrung` auf ein anderes Token gezeigt | 1 |
+| Boden im `max()` auf 40 px gesenkt | 4 |
+| `pointer: coarse`-Rückfall auf einen festen Wert | 1 |
+
+`globals.css` ist danach byte-gleich wiederhergestellt worden.
+
+> **Was der Test trotzdem nicht ist: ein Wirkungstest.** Er liest eine Datei und rechnet; ob die
+> Regeln im Browser das tun, was sie sollen, steht gemessen in §5 und nirgendwo sonst.
 
 `tests/farbwerte.test.ts` hat **keine neue Ausnahme** bekommen und ist grün.
 
@@ -608,10 +707,13 @@ Listenform, Fließtext), und gegengeprüft.*
 |---|---|
 | **93** | **Es gibt keinen Test, der feste `px`-Schriftgrößen in eigenen Komponenten verbietet.** `tests/farbwerte.test.ts` tut das für Farbe; das Analogon für Größe fehlt. Ohne es driftet die Tokendisziplin bei Größen genauso auseinander, wie sie es bei Farbe täte. **Heute wäre der Test grün**: Außerhalb von `components/ui` gibt es im ganzen Projekt keine Tailwind-Klasse der Form `[Npx]` und keine feste `font-size`; das einzige Pixel außerhalb von Kommentaren in `globals.css` ist der Boden im `max()`. Genau deshalb ist jetzt der billige Zeitpunkt |
 | **94** | **Die Stufe liegt nur im Cookie**, also je Gerät und Browser. Dieselbe Einschränkung, die [`frontend-grundlagen.md`](frontend-grundlagen.md) §4 für die Sprache bereits führt, und derselbe Nachrüstweg: eine Spalte an `app_user`, das Cookie wird zum Zwischenspeicher |
-| **95** | **Der Recharts-Baum skaliert nicht mit.** Achsenschrift (11 px), Diagrammhöhe (260/88 px), Balkenbreite (28 px), `minTickGap` (12 px) und die Ränder sind Pixel und wissen von der Wurzelgröße nichts. **Gemessen ist, dass nichts kaputtgeht** (§5.1) — nichts wird abgeschnitten, nichts überlappt, die Balken stehen übereinander. Sichtbar ist es trotzdem: In `l` steht die Diagrammschrift still, während alles daneben wächst. Der Weg wäre der Stufenfaktor als Parameter der reinen Funktion in `verlauf.ts`, **niemals** `getComputedStyle` zur Laufzeit |
+| **95** | **Der Recharts-Baum skaliert nicht mit.** Achsenschrift (11 px), Diagrammhöhe (260/88 px), Balkenbreite (28 px), `minTickGap` (12 px) und die Ränder sind Pixel und wissen von der Wurzelgröße nichts. **Gemessen ist, dass nichts kaputtgeht** (§5.1) — nichts wird abgeschnitten, nichts überlappt, die Balken stehen übereinander. Sichtbar ist es trotzdem: In `l` steht die Diagrammschrift still, während alles daneben wächst. Der Weg wäre der Stufenfaktor als Parameter der reinen Funktion in `verlauf.ts`, **niemals** `getComputedStyle` zur Laufzeit. **Derselbe Punkt trägt eine zweite, größere Hälfte:** Auch die **Umbruchpunkte von Tailwind** gehen nicht mit — `rem` in einer Media Query misst gegen die Anfangsschriftgröße, nicht gegen das Wurzelelement (gemessen bei 1200 und 1279 px: `sm`/`md`/`lg`/`xl` in `xs`, `m` und `l` identisch). Ein Fall ist gefunden und gemessen (die Filterleiste bricht in `l` um und kostet eine Zeile, §5.3); **systematisch abgesucht ist der Anwendungsrahmen nicht** |
 | **96** | **Drei Klassen von Bedienelementen bleiben am Berührungsgerät unter 44 px, in jeder Stufe einschließlich `m`** (§5.4): der Sortierknopf im Tabellenkopf (20 px in `m`), jede Tabellenzeile (36 px) und der `Switch` aus dem Generatorbereich (18,4 px, feste Pixel). Dazu `--dichte-feld` mit 40 px. **Alle vier waren es vorher auch.** Ein Boden an `--dichte-feld` scheidet aus, solange E‑z gilt — er änderte `m`. Es ist eine Entscheidung über die Nachrichtenliste und über den gemeinsamen Baustein, nicht über die Dichte |
 | **97** | **Die Tabellenkopfzeile der Nachrichtenliste hält nicht** (§5.3). `position: static`, sie scrollt vollständig weg — in jeder Stufe und schon vorher. `components/anwendungsrahmen.tsx` und [`frontend-grundlagen.md`](frontend-grundlagen.md) §7 behaupten beide das Gegenteil. `benutzer-tabelle.tsx` und `katalog-tabelle.tsx` machen es vor (`sticky -top-4`) |
 | **98** | **Ohne JavaScript ist der Umschalter nicht erreichbar — und die Sprachumschaltung im Anwendungsrahmen genauso wenig.** Der *Weg* braucht keins: Beides sind Formulare mit Server-Aktion. **Nur wird der Anwendungsrahmen im Browser gebaut.** Gemessen an der angemeldeten Antwort für `/nachrichten`: **1.379 Zeichen** Markup, darin **kein** `<header>`, **kein** `<form>`, **keine** `$ACTION_ID_` — die übrigen 47.456 Zeichen sind RSC-Nutzlast. Auf der **Anmeldeseite** steht das Sprachformular dagegen wirklich im Markup und funktioniert dort ohne JavaScript. Der Nebeneffekt, den [`frontend-grundlagen.md`](frontend-grundlagen.md) §4 seit Schritt 3 für die Sprache in Anspruch nimmt, trägt also nur dort — ein Befund über eine bestehende Zusage, nicht über diese Runde |
 | **99** | **Die Buchstabenreihe der Entscheidungs-IDs ist mit `E‑z` aufgebraucht** (§2). Es gibt keine Fortsetzungsregel. Sie zu erfinden betrifft das ganze Projekt und nicht diese Runde; [`README.md`](README.md) („Die Nummernkreise") ist der Ort dafür |
 | **100** | **Nach der Auswahl springt der Tastaturfokus aus der Gruppe heraus.** Dreimal über Fokusereignisse reproduziert: Der gewählte Eintrag bekommt den Fokus, und sobald die Antwort der Server-Aktion ankommt (rund 480 ms später), wandert er auf den Menürumpf; danach trägt kein Eintrag mehr `data-highlighted`, und das nächste `ArrowDown` beginnt wieder oben. Wer mit der Tastatur zwei Stufen vergleichen will, verliert dabei jedes Mal seine Stelle. Ursache ist das Neurendern des Menüs durch `revalidatePath` |
 | **101** | **`revalidatePath` läuft auch, wenn die gewählte Stufe schon die aktive ist.** Bei `role="menuitemradio"` ist das erneute Wählen des angehakten Eintrags eine normale Handlung; sie kostet dann einen vollen RSC-Umlauf und den anwendungsweiten Verwurf des Router-Zwischenspeichers für einen Nullvorgang. Ein Vergleich mit dem Cookie vor dem Schreiben genügte — hier bewusst nicht eingebaut, weil er einen eigenen Test bräuchte und die Runde ihn nicht verlangt |
+| **102** | **Kein Test rendert den Umschalter.** `tests/dichte.test.ts` prueft die Datei `globals.css` und die reine Funktion `dichteAus`; `components/dichte-umschaltung.tsx`, `dichte/provider.tsx`, `dichte/aktion.ts` und `dichte/server.ts` haben **keine** Abdeckung. Ungeprueft bleibt damit alles, was Teil 3 zugesagt hat: die vier Eintraege, `role="menuitemradio"`, `aria-checked`, das abgefangene `onSelect`, das Haekchen im Fluss. **Gemessen ist es** (§4, §5.5), zugesichert nicht. Das Projekt zaehlt gerenderte Testbaeume bewusst ab (`vitest.config.mts`) — ein weiterer waere also eine Entscheidung und keine Selbstverstaendlichkeit |
+| **103** | **Auch die vier Cookie-Eigenschaften sind gemessen und nicht zugesichert.** Ein Jahr, `SameSite=Lax`, kein `HttpOnly`, `path="/"` — am gesetzten Cookie abgelesen (§5.5), aber kein Test hielte eine Aenderung auf. Dasselbe gilt fuer den serverseitigen Leseweg und `revalidatePath` |
+| **104** | **Das Register der Nummernkreise kennt die Buchstabenreihe nicht.** [`README.md`](README.md) („Die Nummernkreise“, 21.08.2026) legt fuer `E` fest: *je Feature-Datei fortlaufend, beginnend bei E1* — und *„dasselbe E14 in zwei Feature-Dateien ist der Regelfall“*. Die Reihe `E‑a` … `E‑v` verhaelt sich nachweislich anders: Sie beginnt in **keiner** Datei neu (`dashboard.md` fuehrt c, d, g, h, i; `dashboard-frontend.md` daneben l bis v). Es gibt also **zwei** Reihen unter demselben Buchstaben, und das Register beschreibt nur eine. §2 dieser Datei ist nach der gelebten Praxis vergeben worden, nicht nach dem Register — festzulegen ist das in `README.md` und nicht hier (vgl. Punkt 99) |
