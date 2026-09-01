@@ -289,13 +289,19 @@ describe("Farbwerte", () => {
     // aufgenommen, sobald jemand sie anlegt.
     expect(DANEBEN).toContain("../next.config.ts");
     expect(DANEBEN.length).toBeGreaterThan(3);
+
+    // **Gezählt, nicht auf Existenz geprüft.** Ein leeres `styles/` trägt keine
+    // Farbe; an seiner blossen Anwesenheit rot zu werden hiesse, den Test an
+    // etwas zu hängen, das nichts aussagt. Gemessen wird, ob von dem, was
+    // wirklich darin liegt, nichts durchfällt.
     for (const name of NEBENVERZEICHNISSE) {
-      if (existsSync(join(RAHMEN, name))) {
-        expect(
-          DANEBEN.some((pfad) => pfad.startsWith(`../${name}/`)),
-          `${name}/ existiert und wird nicht gelesen`,
-        ).toBe(true);
-      }
+      const ort = join(RAHMEN, name);
+      if (!existsSync(ort)) continue;
+      const drin = dateien(ort).length;
+      expect(
+        DANEBEN.filter((pfad) => pfad.startsWith(`../${name}/`)).length,
+        `${name}/ trägt ${drin} Dateien und wird nicht vollständig gelesen`,
+      ).toBe(drin);
     }
   });
 
