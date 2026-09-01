@@ -274,6 +274,51 @@ erzwingt das. Nebeneffekt, der es wert ist: Die Umschaltung funktioniert auch oh
 niemand die Sprache geräteübergreifend erwartet. Wird das je gefordert, kommt eine Spalte an
 `app_user` dazu und das Cookie wird zum Zwischenspeicher — kein Umbau der Oberfläche.
 
+### Das Cookie-Muster — die Sprache war der erste Fall, nicht der einzige *(01.09.2026)*
+
+Was oben für die Sprache steht, ist seit dem 01.09.2026 ein **Muster mit zwei Verwendern**. Der
+zweite ist die **Anzeigedichte** ([`dichte-umschalter.md`](dichte-umschalter.md)), und er ist
+absichtlich Zeile für Zeile daneben gebaut worden und nicht daran vorbei.
+
+|  | Sprache | Dichte |
+|---|---|---|
+| Ordner | `src/i18n/` | `src/dichte/` |
+| Cookie | `overlord_sprache` | `overlord_dichte` |
+| Eigenschaften | ein Jahr, `SameSite=Lax`, **nicht** `HttpOnly` | ebenso |
+| Leseweg | `server.ts` → `aktiveSprache()` | `server.ts` → `aktiveDichte()` |
+| Am Dokument | `<html lang>` | `<html data-dichte>` |
+| Umschalten | Server-Aktion im Formular + `revalidatePath("/", "layout")` | ebenso |
+| Unbekannter Wert | fällt auf `de` | fällt auf `m` |
+| Im Client | `useTexte()` / `useSprache()` | `useDichte()` |
+
+#### Warum Cookie und **nicht `localStorage`**
+
+Der Grund ist bei beiden derselbe und er ist nicht Geschmack: **Das Wurzel-Layout liest den Wert
+serverseitig.** Es setzt `lang` und `data-dichte` am `<html>`-Tag, und das geschieht, bevor der
+Browser das erste Byte Stylesheet gesehen hat — nachgemessen: `data-dichte` steht an **Byte 31** des
+ausgelieferten Dokuments.
+
+Aus `localStorage` wäre der Wert **erst nach der Hydratation** zu haben. Die Anwendung erschiene bei
+**jedem** Aufruf einmal in der falschen Sprache bzw. der falschen Größe und spränge dann — bei der
+Größe sichtbar als Umbruch der ganzen Seite. Ein Skript im `<head>`, das `localStorage` liest und
+das Attribut vor dem Paint setzt, wäre der übliche Ausweg; er kostet ein blockierendes Skript, einen
+zweiten Ort für denselben Wert und funktioniert ohne JavaScript gar nicht.
+
+**Ein Cookie kostet nichts davon.** Es fährt ohnehin bei jeder Anfrage mit, und der Server hat es,
+bevor er das erste Zeichen HTML schreibt.
+
+#### Was das Muster nicht leistet
+
+**Die Wahl liegt je Gerät und Browser.** Wer an zwei Rechnern arbeitet, stellt sie zweimal. Für
+beide Verwender ist der Nachrüstweg derselbe: eine Spalte an `app_user`, das Cookie wird zum
+Zwischenspeicher — kein Umbau der Oberfläche. Geführt als offene Punkte 94 (Dichte) und in diesem
+Abschnitt für die Sprache.
+
+**Ohne JavaScript trägt das Formular nur so weit wie das, worin es steht.** Die Sprachumschaltung
+steht frei in der Kopfzeile und funktioniert ohne JavaScript vollständig. Der Dichteumschalter steht
+in einem `DropdownMenu` — der *Weg* braucht kein JavaScript, das Menü darüber schon (offener Punkt
+98).
+
 ### Datum und Zahlen
 
 Über `Intl` mit der aktiven Sprache (`lib/format.ts`).

@@ -344,6 +344,24 @@ Block 1, zweimal dargestellt.
 (48 px), ihre Balken stehen damit übereinander; zweimal dieselbe Beschriftung wäre doppelt gelesener
 Platz.
 
+> ⚠️ **Berichtigung vom 01.09.2026 — die Klammer „(48 px)" stimmt nicht mehr, der Satz davor und
+> danach schon.** Aufgefallen beim Nachmessen des Recharts-Baums für den Dichteumschalter
+> ([`dichte-umschalter.md`](dichte-umschalter.md) §5.1).
+>
+> **Gemessen war:** Die Achsenbreite ist **gerechnet und nicht fest** —
+> `Math.max(48, Math.ceil((laengste + 1) * 6.2) + 10)` in `features/dashboard/verlauf.ts`. Bei
+> `NEXANS` über zwölf Monate steht der Achsentext bei `x = 52`, nicht bei 48.
+>
+> **Behauptet wird** hier „(48 px)". Zwölf Zeilen weiter, **im selben Abschnitt**, steht bereits das
+> Gegenteil: *„Die Breite der y-Achse folgt der längsten Beschriftung … Eine feste Zahl schnitt bei
+> `NEXANS` über zwölf Monate `220.000` zu `:20.000` ab (§10.4)."*
+>
+> Die Klammer ist beim Umbau desselben Tages stehen geblieben. **48 ist heute die Untergrenze der
+> Rechnung, nicht die Breite.** Was der Satz *aussagt* — beide Diagramme bekommen **dieselbe**
+> Breite, damit ihre Balken übereinanderstehen — ist unverändert richtig und am 01.09.2026 in allen
+> vier Dichtestufen und bei drei Fensterbreiten nachgemessen: Versatz **0,0 px** in allen 24 Lagen.
+> Gelöscht wird deshalb nichts.
+
 **Bei 48 Eimern wird nicht jeder beschriftet, und wie viele es sind, entscheidet die Breite.**
 `interval="equidistantPreserveStart"` mit `minTickGap={12}` wählt einen gleichabständigen
 Ausschnitt, der in die vorhandene Breite passt — gemessen 6 Beschriftungen bei 360 px, 10 bei 768

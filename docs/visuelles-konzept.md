@@ -168,6 +168,35 @@ Listen, und eine Zeile mehr auf dem Bildschirm ist hier mehr wert als ein Punkt 
 Ziffern laufen in Tabellen und Zeitangaben mit fester Breite (`font-variant-numeric: tabular-nums`),
 sonst tanzen Zeitstempel von Zeile zu Zeile.
 
+### Die drei Rollen sind Verhältnisse, keine Pixel — seit dem 01.09.2026 sichtbar
+
+*Die Werte oben stehen in `rem`, und das war schon immer so. Was sich geändert hat, ist, dass es
+jetzt einen Unterschied macht.*
+
+**Der Nutzer wählt die Anzeigegröße in vier Stufen** (`docs/dichte-umschalter.md`). Umgestellt wird
+dabei **die Wurzel** und nicht die drei Rollen einzeln — `html { font-size: var(--dichte-wurzel) }`.
+Die Rollen bleiben unverändert dort stehen, wo sie stehen; sie rechnen ab jetzt nur gegen eine
+andere Bezugsgröße.
+
+| Rolle | Wert | `xs` (87,5 %) | `s` (93,75 %) | **`m` (100 %)** | `l` (112,5 %) |
+|---|---|---:|---:|---:|---:|
+| `--text-ueberschrift` | 1.125 rem | 15,75 px | 16,875 px | **18 px** | 20,25 px |
+| `--text-basis` | 0.9375 rem | 13,125 px | 14,0625 px | **15 px** | 16,875 px |
+| `--text-beiwerk` | 0.8125 rem | 11,375 px | 12,1875 px | **13 px** | 14,625 px |
+
+*(Bei einer Browservorgabe von 16 px. Die Basiszeile ist gemessen, die beiden anderen sind daraus
+gerechnet.)*
+
+**Warum die Wurzel und nicht die drei Rollen.** Das Ziel ist mehr Zeilen je Bildschirm. Dafür muss
+`--dichte-zeile` mitgehen und mit ihm jeder Innen- und Außenabstand — drei umgestellte
+Schriftgrößen in einem unveränderten Raster ergäben kleine Schrift in großen Zellen und keine
+einzige Zeile mehr. Gemessen: **28 statt 24 sichtbare Zeilen** in `xs`, 19 in `l`
+(`dichte-umschalter.md` §5.3).
+
+**`m` ist der heutige Zustand und bleibt die Vorgabe.** Jede Zahl in diesem Dokument ist gegen ihn
+gemessen; wäre er nicht mehr die Vorgabe, wären sie Messungen eines Zustands, den niemand mehr
+sieht.
+
 ---
 
 ## 5. Dichte und Breite
@@ -203,7 +232,8 @@ Lesebeginn beim Umschalten an derselben x-Position bleibt.
 
 | Token | Zeigergerät | Berührungsgerät | Warum |
 |---|---|---|---|
-| `--dichte-beruehrung` | 2.75 rem (44 px) | 2.75 rem | Mindestfläche am Finger. Wird **nirgends** unterschritten. |
+| `--dichte-wurzel` | **100 %** | 100 % | Die Schriftgröße des **Wurzelelements** und damit der Bezug jedes `rem`. Der eine Wert, den der Dichteumschalter umstellt — vier Stufen, siehe die Anmerkung unter dieser Tabelle |
+| `--dichte-beruehrung` | `max(2.75rem, 44px)` | ebenso | Mindestfläche am Finger. Wird **nirgends** unterschritten — und ist deshalb das einzige Maß, das aus der Skalierung **heraus** ist |
 | `--dichte-bedienelement` | 2 rem (32 px) | → `beruehrung` | Schaltfläche im Rahmen: Menü, Mandant, Sprache, Nutzermenü |
 | `--dichte-navzeile` | 2.125 rem (34 px) | → `beruehrung` | Navigationseintrag, vorher 44 px |
 | `--dichte-kopfzeile` | 3.125 rem (50 px) | 3.5 rem | Kopfzeile, vorher 56 px |
@@ -213,6 +243,32 @@ Lesebeginn beim Umschalten an derselben x-Position bleibt.
 | `--dichte-zeile` | 2.25 rem | 2.25 rem | Tabellenzeile ab Schritt 4 |
 | `--dichte-beschriftung` | **10 rem** im Panel · **16 rem** auf der eigenen Route | ebenso | **gedeckelte** Breite einer Beschriftungsspalte neben ihren Werten, seit Schritt 7. Der Deckel gehört zum **Einhängepunkt**: Die Route hebt den Wert über `.beschriftung-breit` herauf |
 | `--dichte-inhaltsbreite` | 72 rem | 72 rem | Maximalbreite **innerhalb** einer Ansicht |
+
+> ### `--dichte-wurzel` und die eine Ausnahme *(01.09.2026)*
+>
+> **Alle Maße dieser Tabelle liegen in `rem`**, und über die Abstandsskala von Tailwind gilt das
+> auch für jeden Innen- und Außenabstand. Deshalb genügt **eine** Zahl, um die ganze Oberfläche
+> dichter oder luftiger zu machen: die Schriftgröße des Wurzelelements. Der Dichteumschalter stellt
+> genau sie um, in vier Stufen — `87,5 % · 93,75 % · 100 % · 112,5 %`, eingehängt über
+> `html[data-dichte="…"]`. Begründung, Messung und Bedienung stehen in
+> [`dichte-umschalter.md`](dichte-umschalter.md).
+>
+> **Prozent und nicht Pixel:** Eine feste Pixelangabe an der Wurzel überschriebe die
+> Grundschriftgröße, die ein Nutzer im Browser eingestellt hat. Wer sie hochgesetzt hat, hat einen
+> Grund.
+>
+> **`--dichte-beruehrung` ist aus der Skalierung heraus, und das ist der Preis für den Satz in
+> seiner Zeile.** „Wird nirgends unterschritten" wäre nicht mehr wahr, wenn das Token mitskalierte:
+> In der Stufe `xs` fiele es auf 2,75 × 14 = **38,5 px**. Es steht deshalb als
+> `max(2.75rem, 44px)` da — der Boden greift in den beiden kleinen Stufen, die Skalierung greift in
+> `l` (49,5 px) weiterhin. **Ein festes `44px` wäre die schlechtere Lösung**: Es nähme dem Nutzer
+> mit vergrößerter Grundschrift den Zuwachs.
+>
+> Gemessen bei `pointer: coarse`: 44 · 44 · 44 · 49,5 px. **Was das Token trägt, hält das Maß in
+> jeder Stufe** — Navigationseinträge, Mandantenumschalter, Sprachwahl, Nutzermenü und jeder
+> Menüeintrag. **Was es nicht trägt, hielt es auch vorher nicht**: `--dichte-feld` (40 px in `m`),
+> die Tabellenzeile (36 px) und der Sortierknopf im Tabellenkopf (20 px). Ausgeschrieben in
+> [`dichte-umschalter.md`](dichte-umschalter.md) §5.4, geführt als offener Punkt 96.
 
 > **`--dichte-beschriftung` ist heute an genau einer Stelle im Einsatz** — im Belegdaten-Block
 > ([`bam-werte.md`](bam-werte.md) §11a). Es steht hier, weil die Dichtewerte in `globals.css` wohnen
@@ -567,6 +623,7 @@ nichts.
 | Anderes Orange für „überfällig" | `globals.css`, drei Werte `--ueberfaellig*` je Block | sechs Zeilen, **nachrechnen** — `scripts/farbrolle-ueberfaellig/rechne.mjs` prüft die vier Bedingungen und berichtet die Abstände (§7a) |
 | Status bekommt eine andere Rolle | `src/lib/status-farbe.ts`, Tabelle `ZUORDNUNG` | eine Zeile |
 | Eine Problemkategorie bekommt eine andere Rolle | `src/lib/status-farbe.ts`, Tabelle `PROBLEM_ZUORDNUNG` | eine Zeile |
+| Andere Stufenwerte des Dichteumschalters | `globals.css`, die vier `html[data-dichte="…"]` | vier Zeilen, **nachmessen** — `tests/dichte.test.ts` rechnet die Mindestfläche nach, aber ob die Nachrichtenliste, der Belegdaten-Block und der Recharts-Baum die neue Stufe tragen, sagt kein Test ([`dichte-umschalter.md`](dichte-umschalter.md) §5) |
 | Dichtere oder luftigere Navigation | `globals.css`, `--dichte-navzeile` | eine Zeile |
 | Dichtere oder luftigere Listen | `globals.css`, `--dichte-zeile` | eine Zeile |
 | Breitere oder schmalere Beschriftungsspalte | `globals.css`, `--dichte-beschriftung` | eine Zeile, **im Panel nachsehen** |
