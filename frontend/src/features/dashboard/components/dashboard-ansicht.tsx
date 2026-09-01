@@ -1,11 +1,13 @@
 "use client";
 
+import { Card } from "@/components/ui/card";
 import { Fehler, Laden, Leer } from "@/components/zustand";
 import { useTexte } from "@/i18n/provider";
 
 import { hervorgehobenerZeitraum } from "../filter";
 import { useDashboard, useDashboardzustand } from "../hooks";
 import { StandZeile } from "./stand-zeile";
+import { VerlaufDiagramm } from "./verlauf-diagramm";
 import { ZeitraumUmschalter } from "./zeitraum-umschalter";
 
 /**
@@ -79,6 +81,9 @@ export function DashboardAnsicht() {
         </>
       ) : (
         <>
+          <Card size="sm" className="px-4">
+            <VerlaufDiagramm punkte={antwort.data.verlauf} zeitraum={antwort.data.zeitraum} />
+          </Card>
           <StandZeile stand={antwort.data.stand} />
         </>
       )}

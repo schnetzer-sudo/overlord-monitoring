@@ -156,6 +156,33 @@ const FLAECHE_UND_SCHRIFT: Record<Statusrolle | Problemrolle, string> = {
 };
 
 /**
+ * Dieselben Vordergrundfarben als **Wert statt als Klasse** — für ein Diagramm.
+ *
+ * Recharts färbt nicht über `className`, sondern über ein Prop: `<Bar fill="…" />`.
+ * Die zulässige Form dafür ist `var(--token)`; dass sie ankommt **und** auflöst,
+ * ist in [`docs/frontend-grundlagen.md`](../../../docs/frontend-grundlagen.md)
+ * §8a gemessen — an vier Stellen, einschließlich der Pixel im Bild.
+ *
+ * **Sie steht hier und nicht im Diagramm.** Sonst kennte eine Komponente den
+ * Namen eines Farbtokens, und `docs/visuelles-konzept.md` §2 hinge an der
+ * Sorgfalt dessen, der das nächste Diagramm baut. Zusammengesetzt wird der Name
+ * ebenfalls nicht: Ein `var(--status-${rolle})` stünde nirgends vollständig im
+ * Quelltext und wäre bei einer Umbenennung nicht auffindbar.
+ */
+const FUELLUNG: Record<Statusrolle | Problemrolle, string> = {
+  abgeschlossen: "var(--status-abgeschlossen)",
+  fehler: "var(--status-fehler)",
+  offen: "var(--status-offen)",
+  ungeklaert: "var(--status-ungeklaert)",
+  ueberfaellig: "var(--ueberfaellig)",
+};
+
+/** Die Füllfarbe einer Rolle für ein Diagramm-Prop. Siehe {@link FUELLUNG}. */
+export function rollenfuellung(rolle: Statusrolle | Problemrolle): string {
+  return FUELLUNG[rolle];
+}
+
+/**
  * Der **dritte** Wert je Rolle, getrennt gehalten.
  *
  * ## Warum getrennt — die Sichtprobe vom 01.09.2026
