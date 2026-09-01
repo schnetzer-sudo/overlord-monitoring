@@ -13,6 +13,13 @@ jetzt hängt.**
 > bestehen, ist schlechter als der rote von heute. Wo eine Aussage verlorengeht, steht sie unten
 > als offener Punkt — sie wird nicht zugemauert.
 
+> **Nachtrag vom 01.09.2026, §10 — die Datei bekommt eine zweite Hälfte.** Bis hierher handelt sie
+> von **Backend**-Tests und davon, woran ihre Aussage hängt. §10 stellt dieselbe Frage an die
+> **Frontend**-Tests, und zwar an die drei, die Quelltext als Zeichenkette lesen: Von 46 Mutanten
+> überleben nach zwei Härtungen noch sieben, davon zwei absichtlich. **Der Befund ist nicht, dass
+> die Tests jetzt besser sind** — er ist, dass nie erhoben war, wie viel ihr Grünsein trägt. Neu
+> sind die offenen Punkte **T‑7** bis **T‑12** in §6 und die Entscheidungen **E‑27** bis **E‑31**.
+
 > **Nachtrag vom 31.08.2026 (Schritt 10b‑2), §9.** Zwei der offenen Punkte aus §6 sind abgetragen:
 > **T‑3** über eine Absprache mit dem Auftraggeber (`WOC` bleibt unkuratiert) und **T‑4** über den
 > Umbau von `KettenIsolationDbIT` auf dieselbe Zugriffszählung, die §4 beschreibt. **Damit gilt
@@ -332,6 +339,12 @@ nachdem sie gefallen war.
 | **T-2** | **Die Übernahme auf einem Mandanten mit *mehreren* übernehmbaren Zeilen ist ungeprüft.** Der Test aus §2 legt genau eine an. Dass die Übernahme bei fünf eigenen und drei fremden Zeilen genau die fünf erfasst, folgt daraus nicht — es folgt aus dem Statement, und das ist ein Argument, kein Test | §2 |
 | **T-6** | **Die Kennungsvergleiche der übrigen Isolationstests sind nicht auf ihre Richtung geprüft.** Sie fragen *„steht hier eine Kennung des anderen Mandanten?"*; die schärfere Frage ist *„gehört jede Kennung, die hier steht, mir?"* (§9.3). Bei Liste, Detail, Kette und BAM haben beide Fassungen vermutlich Zähne, weil dort Zeilen und nicht Zahlen zurückkommen — **vermutlich, nicht geprüft** | §9.3 |
 | **T-5** | **Die Übernahme auf einem Mandanten mit mehreren übernehmbaren Zeilen ist weiterhin ungeprüft** — und seit dem Umbau aus §8 lässt sich das auch nicht mehr durch einen fremden `AUSFUEHREN`-Lauf nachholen. Ein Testkonto mit einem eigenen, wegwerfbaren Mandanten wäre der saubere Weg; den gibt es nicht | §8 |
+| **T-7** | **Ein zur Laufzeit zusammengesetzter Farbwert ist mit einem Textleser nicht zu finden.** `"#" + "b3261e"` und `"text-" + "blue-600"` überleben `tests/farbwerte.test.ts` und werden es weiter tun: Der Test liest Text, die Farbe entsteht erst beim Auswerten. **Was fehlte, ist keine Regex, sondern eine Auswertung** — den Modulbaum übersetzen und die entstandenen Zeichenketten ansehen, oder die gebaute Seite abfragen. Beides ist ein anderer Test mit anderen Kosten, nicht eine Zeile mehr in diesem | §10.3 |
+| **T-8** | **Ein aus einer Variablen gebauter Importpfad ist für `tests/serverbausteine.test.ts` unsichtbar.** `const wohin = "@/components/ui/" + "button"; await import(wohin)` überlebt. Der Auflöser braucht einen Spezifizierer, den er lesen kann. **Dieselbe Ursache wie T‑7, andere Stelle** — und dieselbe Abhilfe wäre nötig: auswerten statt lesen | §10.3 |
+| **T-9** | **Eine handgeschriebene Datei in `components/ui/` ist von `tests/farbwerte.test.ts` ausgenommen und trägt jede Farbe.** Der Ausschluss ist **pfadbasiert**, weil er den Generatorbereich meint (E‑28) — aber der Pfad ist heute das einzige Merkmal, an dem eine Generatordatei erkennbar ist. **Was fehlt, ist eine Entscheidung**: woran eine Datei als vom Generator geschrieben erkannt wird. Eine gepflegte Liste scheidet aus, sie liefe dem nächsten `shadcn add` hinterher | §10.3 |
+| **T-10** | **Über die Farbwerte in `app/globals.css` selbst sichert kein Test etwas zu.** Wer `--status-fehler` von Rot auf Grün stellt, bekommt einen grünen Lauf. Das ist die **Abgrenzung** dieses Tests und kein Versehen — er blockiert Farben in Komponenten —, aber es heißt, dass an der einen Stelle, an der die Farben wirklich stehen, nichts hält. **Was fehlte, ist eine Entscheidung darüber, was dort überhaupt zusicherbar wäre**: Ein Sollwert je Token wäre eine zweite Pflegestelle, und eine Kontrastprüfung ist ein anderer Test (`visuelles-konzept.md` §7a rechnet sie von Hand) | §10.3 |
+| **T-11** | **Die unsichere Menge in `tests/serverbausteine.test.ts` ist als *radix*-Menge definiert, nicht als „was auf dem Server nicht ausgewertet werden kann".** `recharts` und `@tanstack/react-query` haben dieselbe Eigenschaft. **Gemessen ist die Vorbedingung, nicht der Fall:** `src/lib/query-client.ts` trägt kein `"use client"` und importiert `@tanstack/react-query`; heute erreicht es keine Server-Komponente (einziger Verwender ist `app/providers.tsx`, und der ist Client). **Erkannt in der adversarischen Runde, nicht mutiert.** Zu klären wäre zuerst, woran ein client-only Paket erkannt wird, ohne eine Liste zu pflegen | §10 |
+| **T-12** | **`"use client"` heißt „im Client-Bündel", nicht „läuft nie auf dem Server".** Client-Komponenten werden beim ersten Aufruf serverseitig gerendert; ein `window`-Zugriff auf Modulebene bricht dort. Die Kettensuche endet trotzdem an jeder Auszeichnung (E‑29) — für den Fehler, um den es geht, ist das richtig: `createContext` scheitert nur im RSC-Renderer. **Für die Fehlerklasse „Modulebene greift auf den Browser zu" hält kein Test etwas.** Erkannt in der adversarischen Runde, nicht mutiert | §10 |
 | ~~**T-3**~~ | ~~**Der Test aus §2 braucht weiterhin einen Prozess ohne Katalogzeile.** Heute haben nur `SUTTONS` (17 frei) und `WOC` (4 frei) welche. Werden auch die kuratiert, wird der Test wieder rot — dann allerdings mit einer Meldung, die genau das sagt, und nicht mit einer Zahl, die niemand einordnen kann. **Eine Abhilfe wäre, dass die Testkopie einen Prozess dauerhaft frei hält;** das ist eine Absprache und keine Codeänderung~~ — **erledigt am 31.08.2026, siehe §9** | §2 |
 
 ---
@@ -631,3 +644,211 @@ und fällt damit unabhängig davon, wem die durchgerutschte Zeile gehört.
 liefern alle *Zeilen* und nicht *Zahlen*, ihre Kennungsvergleiche haben dort also Zähne. **Ob die
 umgekehrte Fassung („gehört jede gezeigte Kennung mir?") auch dort schärfer wäre, ist offen** und
 steht als Punkt **T‑6** in §6.
+
+---
+
+## 10. Frontend — die Mutationsprüfung der Zusicherungstests *(01.09.2026)*
+
+> **Der Satz, unter dem diese Runde steht:** Ein grüner Test in einer Abnahmeliste ist eine
+> Zusicherung, und **wie viel sie trägt, war bis zu dieser Runde nicht erhoben.** Das ist der
+> Befund. Die Härtung ist die Folge.
+
+Der Anlass steht in [`dichte-umschalter.md`](dichte-umschalter.md) §7: Eine Gegenprüfung hat
+`tests/dichte.test.ts` zerlegt — **von 23 Mutanten blieben neun grün**, darunter „alle vier
+Stufenregeln löschen und als Kommentar stehen lassen". Der Test war eine Textsuche und kein
+Lagetest. Die Frage dieser Runde war nicht, ob er repariert ist, sondern **welche anderen Tests
+nach demselben Muster gebaut sind.**
+
+### 10.1 Die Prüfliste — erhoben und nicht gewählt
+
+**Schritt 1: Welche Tests werden in Abnahme- oder Prüflisten geführt?** Vier Linsen über `docs/`
+(der Implementierungsplan; die drei Register [`README.md`](README.md),
+[`frontend-grundlagen.md`](frontend-grundlagen.md) §9 und diese Datei; alle übrigen vierzig
+Feature-Dateien; die Abnahmeabschnitte selbst): **355 Fundstellen, davon 187 mit Abnahmecharakter,
+verteilt auf 89 namentlich geführte Tests.**
+
+**Schritt 2: Welche davon lesen Quelltext oder CSS als Zeichenkette?** Mechanisch über beide
+Testbestände:
+
+| | Dateien | lesen eine Datei von der Platte |
+|---|---:|---:|
+| `frontend/tests/*.test.ts(x)` | 28 | **3** |
+| `backend/src/test/**/*.java` | 97 | **0** |
+
+Gesucht wurde im Frontend nach `readFileSync`, `readdirSync`, `readFile`, `createReadStream`,
+`import.meta.url`, `process.cwd`, `__dirname`, `fileURLToPath`; im Backend nach `Files.*`,
+`getResourceAsStream`, `ClassPathResource`, `Paths.get`, `new File(`, `readAllBytes`, `readString`.
+
+**Die Schnittmenge — die Prüfliste:**
+
+| Test | Fundstellen mit Abnahmecharakter | liest |
+|---|---:|---|
+| `tests/farbwerte.test.ts` | **20** | jede `.tsx?` unter `src/` |
+| `tests/serverbausteine.test.ts` | 3 | dieselben Dateien |
+| `tests/dichte.test.ts` | 2 | `globals.css` — am 01.09.2026 gehärtet, hier nur **Kontrolle** |
+
+`farbwerte.test.ts` ist der am häufigsten als Zusicherung geführte Test des Projekts. Er steht in
+den Abnahmetabellen von neun Feature-Dateien; „Farben nur über Tokens ✔" heißt dort jedes Mal
+*„dieser Test ist grün"*.
+
+**Die Ausschlüsse, mit Grund** — ein Test, der importierte Strukturen vergleicht, hat das Problem
+strukturell nicht:
+
+| Ausgeschlossen | Warum es die Klasse nicht ist |
+|---|---|
+| die 25 übrigen Frontend-Tests | lesen keine Datei; sie prüfen Rückgabewerte, gerenderte Bäume oder importierte Strukturen |
+| alle 97 Java-Tests | kein Treffer für die sieben Lesemuster oben |
+| `PaketstrukturTest` | ArchUnit über **Bytecode** (`ClassFileImporter().importPackages`). Eine auskommentierte Regel kann dort nicht wie eine vorhandene aussehen, weil es keinen Text zu durchsuchen gibt |
+| die zehn `*StatementsTest` | Textsuche, aber über **gerendertes SQL** (`ausfuehrung.sql()`) — das Erzeugnis des Codes, nicht seine Quelle |
+| `sprachdateien.test.ts` | vergleicht die Blattpfade zweier importierter Objekte |
+
+### 10.2 Der Läufer, und warum er zweimal gelogen hat
+
+Mutiert wurde mit einem Werkzeug, das jeden Mutanten **einzeln** anwendet, den Test laufen lässt,
+zurücksetzt und den Baumzustand gegen den Anfangsstand hält, bevor der nächste kommt. **Zweimal hat
+es falsche Zahlen geliefert, und beide Male sah das Ergebnis plausibel aus:**
+
+| Fehler | Was er anrichtete | Woran er auffiel |
+|---|---|---|
+| `execFileSync` kann unter Windows `npx.cmd` nicht starten | **jeder** Mutant „fiel" — an einem Startfehler, nicht an einer Zusicherung. Zwei ganze Runden waren wertlos | Eine Trockenprobe gegen die Regexe hatte Überlebende vorhergesagt und widersprach dem Ergebnis |
+| Der Läufer löschte angelegte Dateien, aber nicht die angelegten **Verzeichnisse** | Ein zurückgelassenes leeres `styles/` ließ jeden späteren Farbmutanten an einer Wache fallen statt am Muster. Eine Runde war verfälscht | Vier Mutanten fielen an derselben Zusicherung, und es war die falsche |
+
+**`git status` zeigt leere Verzeichnisse nicht an** — die Sauberkeitsprüfung ging beide Male durch.
+Seither ist der Läufer **in beide Richtungen geeicht**: Eine folgenlose Änderung (ein Wort in einem
+Kommentar) **muss überleben**, ein echter Farbwert **muss fallen**. Ohne diese zweite Eichung sieht
+ein Läufer, der nur „gefallen" sagen kann, genauso aus wie einer, der funktioniert.
+
+> **Das ist derselbe Befund wie der über die Tests, nur eine Ebene höher.** Ein Werkzeug, das eine
+> Zusicherung prüft, ist selbst eine Zusicherung — und trägt genauso wenig, solange es niemand in
+> beide Richtungen gerissen hat.
+
+### 10.3 Was die Mutanten gefunden haben
+
+**46 Mutanten in vier Runden.** Die Klassen stammen aus dem Fall `dichte.test.ts` (auskommentieren,
+Wert ändern, toter Selektor, Zweitdefinition, Umgehung) und sind je Test um passende ergänzt.
+
+| Runde | wogegen | Mutanten | überlebt |
+|---|---|---:|---:|
+| 1 | der Ausgangsstand | 27 | **18** |
+| 3 | die erste Härtung, selbst erdachte neue Mutanten | 7 | **5** |
+| 4a | die erste Härtung, **adversarisch** gebaute Mutanten | 8 | **8** |
+| heute | der Stand nach beiden Härtungen, **alle 46** | 46 | **7** |
+
+**Die vierte Runde ist die wichtigste.** Nach der ersten Härtung fielen alle achtzehn früheren
+Überlebenden — und acht von acht neu gebauten Mutanten kamen trotzdem durch. *„Alle früheren
+Überlebenden sind tot"* ist eine wahre und **zu schwache** Aussage: Sie prüft nur, was schon
+repariert ist.
+
+#### `tests/farbwerte.test.ts` — 22 Mutanten, 9 → 4
+
+| Mutant | Klasse | Runde 1 | heute |
+|---|---|---|---|
+| Hex in einer `.css`-Datei unter `src` | Umgehung (Dateiendung) | grün | fällt |
+| Hex in einer `.js`-Datei unter `src` | Umgehung (Dateiendung) | grün | fällt |
+| Farbe in `src/components/uikarte.tsx` | Umgehung (Suchpfad) | grün | fällt |
+| `style={{ color: "red" }}` | Umgehung (Muster) | grün | fällt |
+| `RGB(179, 38, 30)` | Umgehung (Muster) | grün | fällt |
+| `ring-offset-red-500` | Umgehung (Muster) | grün | fällt |
+| Hex in `.scss` | Umgehung (Dateiendung) | — | fällt |
+| Farbe in `.json` unter `src` | Umgehung (Suchpfad) | — | fällt |
+| Systemfarbe `"Highlight"` | Umgehung (Farbform) | — | fällt |
+| `color(srgb …)` | Umgehung (Muster) | — | fällt |
+| `fill="&#35;b3261e"` (JSX-Entität) | Umgehung (Kodierung) | — | fällt |
+| `%23b3261e` in einer `data:`-URL | Umgehung (Kodierung) | — | fällt |
+| `bg-[crimson]` | Umgehung (Beliebigwert) | — | fällt |
+| `shadow-[0_0_0_2px_red]` | Umgehung (Beliebigwert) | — | fällt |
+| `[background-color:red]` | Umgehung (Beliebigwert) | — | fällt |
+| `"0 0 0 1px firebrick"` | Umgehung (zusammengesetzter Wert) | — | fällt |
+| `styles/marke.css` neben `src` | Umgehung (Suchpfad) | — | fällt |
+| `env: { MARKENFARBE: "#c62828" }` in `next.config.ts` | Umgehung (Bauzeit) | — | fällt |
+| **`"#" + "b3261e"`** | Umgehung (Muster) | grün | **grün — T‑7** |
+| **`"text-" + "blue-600"`** | Umgehung (Muster) | — | **grün — T‑7** |
+| **Statusfarbe in `globals.css` umgedreht** | Wert ändern | grün | **grün — T‑10** |
+| **handgeschriebene Datei in `components/ui/`** | Toter Suchpfad | grün | **grün — T‑9** |
+
+Der Farbwert **nur in einem Kommentar** fällt — und soll es. Bei einem *blockierenden* Test ist
+Kommentarblindheit die sichere Richtung: Ein Fehlalarm kostet eine Minute, eine durchgerutschte
+Farbe eine Projektsuche. **Das ist genau umgekehrt zu `dichte.test.ts`**, der Kommentare entfernen
+*muss*, weil er Anwesenheit prüft und nicht Abwesenheit.
+
+#### `tests/serverbausteine.test.ts` — 20 Mutanten, 9 → 1
+
+| Mutant | Klasse | Runde 1 | heute |
+|---|---|---|---|
+| Import über einen relativen Pfad | Umgehung (Schreibweise) | grün | fällt |
+| Import mit Endung: `…/button.tsx` | Umgehung (Schreibweise) | grün | fällt |
+| `await import("…/button")` | Umgehung (Importform) | grün | fällt |
+| `dynamic(() => import("…/button"))` | Umgehung (Importform) | grün | fällt |
+| `export * from "…/button"` | Umgehung (Importform) | — | fällt |
+| `import(/* webpackChunkName … */ "…")` | Umgehung (Importform) | — | fällt |
+| Hülle **in** `components/ui` | Umgehung (Zwischenstück) | grün | fällt |
+| Sammelausgang `components/ui/index.ts` | Umgehung (Zwischenstück) | grün | fällt |
+| zwei Hüllen hintereinander | Umgehung (Zwischenstück) | — | fällt |
+| `@radix-ui/react-slot` statt `radix-ui` | Umgehung (Erkennung) | grün | fällt |
+| radix-Baustein **außerhalb** `components/ui` | Umgehung (Erkennung) | grün | fällt |
+| `"use client"` ohne Semikolon | Erkennung | grün | fällt |
+| **`import { wert, type T }`** — gemischt | Umgehung (Importform) | — | fällt |
+| **`radix-ui` in der `page.tsx` selbst** | Graphstart | — | fällt |
+| **berechneter Importpfad** | Umgehung (Pfad) | — | **grün — T‑8** |
+
+Zwei Mutanten überleben **absichtlich**: der reine `import type` und ein Kommentar vor
+`"use client"`. Beide machten die erste Fassung rot, ohne dass etwas kaputt war — dass sie heute
+durchgehen, ist die Abstellung eines Fehlalarms und kein Loch.
+
+#### `tests/dichte.test.ts` — die Kontrolle
+
+Vier Mutanten aus der Runde vom selben Tag, darunter der Killer „Stufenregeln gelöscht, als
+Kommentar stehen gelassen". **Keiner überlebt**, in beiden Läufen. Die Kontrolle belegt, dass der
+Läufer Treffer erkennt; die Eichung aus §10.2 belegt, dass er auch Überlebende erkennt.
+
+### 10.4 Zwei Löcher hat die erste Härtung selbst eingebaut
+
+**Und eines davon war schon im Bestand wirksam.** Um den Fehlalarm beim reinen `import type`
+abzustellen, verwarf die erste Härtung *jede* Importzeile, in der vor dem Anführungszeichen das
+Wort `type` stand — also auch `import { buttonVariants, type ButtonVariante } from "…"`, die im
+Projekt vorherrschende Schreibweise. Gemessen an `src/i18n/server.ts`:
+
+| Fassung | gefundene Spezifizierer in `i18n/server.ts` |
+|---|---|
+| erste Härtung | `["next/headers"]` |
+| heute | `["next/headers", "./index"]` |
+
+**Die Kante `i18n/server.ts → i18n/index.ts` fehlte dem Graphen**, und dieselbe Form steht in
+`src/dichte/server.ts`. Das zweite Loch: Der Startknoten galt vorab als besucht, eine `page.tsx`
+mit einem unmittelbaren `radix-ui`-Import konnte deshalb nie gemeldet werden.
+
+### 10.5 Der Belegvermerk *(Regel L10)*
+
+> **Gemessen ist:** 46 Mutanten gegen den Stand vom 01.09.2026, sieben überleben — davon zwei
+> absichtlich (Fehlalarm-Proben) und fünf als benannte offene Punkte. Die Kontrolle gegen
+> `dichte.test.ts` fällt viermal von vier, die Eichung des Läufers greift in beide Richtungen.
+>
+> **Behauptet wird nicht,** dass die drei Tests damit vollständig sind. **Mutanten sind
+> ausgedacht, und ein nicht ausgedachter Mutant ist nicht widerlegt.** Runde 4a ist der Beleg dafür,
+> dass das keine Floskel ist: Gegen die erste Härtung — die alle achtzehn bekannten Überlebenden
+> tötete — kamen acht von acht neu erdachten Mutanten durch.
+>
+> **Nicht geprüft ist außerdem:** ob die Tests im Browser das bewirken, was sie sollen. Sie lesen
+> Dateien und rechnen. Was die Regeln am laufenden System tun, steht gemessen in
+> [`dichte-umschalter.md`](dichte-umschalter.md) §5 und
+> [`visuelles-konzept.md`](visuelles-konzept.md).
+
+### 10.6 Die Entscheidungen dieser Runde
+
+Die Buchstabenreihe der Entscheidungs-IDs ist mit `E‑z` aufgebraucht (offener Punkt 99). Diese Runde
+vergibt **numerisch weiter ab `E‑27`** — `E‑a` ist die erste, `E‑z` die sechsundzwanzigste. Geprüft:
+Vor dieser Runde trug **keine** Datei des Projekts eine numerische `E‑<n>`.
+
+| Nr. | Entscheidung | Warum nicht anders |
+|---|---|---|
+| **E‑27** | `farbwerte.test.ts` liest auch Stilblätter; **`app/globals.css` ist namentlich ausgenommen**, nicht über die Endung | Über die Endung auszunehmen hieße, eine zweite `.css` still mit herauszunehmen. So fällt sie auf: Eine eigene Zusicherung hält fest, dass es bei **einer** Stilblattdatei bleibt |
+| **E‑28** | Der Generatorbereich bleibt **pfadbasiert** ausgenommen (`components/ui/`, mit Schrägstrich) | Eine Liste der Generatordateien liefe dem nächsten `shadcn add` hinterher — genau der Grund, aus dem die unsichere Menge berechnet und nicht geschrieben wird. Der Preis steht als T‑9 |
+| **E‑29** | `serverbausteine.test.ts` prüft die **Erreichbarkeit** über die Importkette, nicht den direkten Import; die Kette endet an jedem `"use client"` | Sechs der neun Überlebenden waren nur eine andere Schreibweise oder ein Zwischenstück. Gegen Schreibweisen hilft kein weiteres Muster, sondern nur Auflösen |
+| **E‑30** | Nur `import type …` gilt als folgenlos; `import { wert, type T }` wird gemeldet | Die Grenze liegt zur **sicheren** Seite. `import { type X }` wird unter Umständen wegübersetzt und trotzdem gemeldet: Ein Fehlalarm kostet eine Minute, ein übersehener Serverabsturz eine Fehlersuche |
+| **E‑31** | Der Suchpfad von `farbwerte.test.ts` umfasst die Orte **neben** `src`, aus denen Next.js lädt: die Konfigurationsdateien im Wurzelverzeichnis sowie `public/`, `styles/`, `app/`, `pages/`, sobald es sie gibt | Vier der adversarischen Mutanten lagen dort. Den ganzen Ordner rekursiv zu lesen scheidet aus (`node_modules`, `.next`); die vier Namen sind die, die Next.js kennt |
+
+### 10.7 Offene Punkte
+
+Sie stehen in §6 als **T‑7** bis **T‑12**. T‑7 bis T‑10 sind **gemessene** Überlebende; T‑11 und
+T‑12 sind in der adversarischen Runde **erkannt und nicht mutiert** worden — der Unterschied ist
+benannt, weil eine ungemessene Behauptung neben gemessenen sonst wie eine davon aussieht.
