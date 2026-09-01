@@ -91,8 +91,8 @@ export function StatusPlakette({
   const Zeichen = ZEICHEN[art];
 
   const beschriftung = bedeutungNichtVerifiziert
-    ? (rohwert ?? texte.nachrichten.status.UNGEKLAERT)
-    : texte.nachrichten.status[art];
+    ? (rohwert ?? texte.einordnung.UNGEKLAERT)
+    : texte.einordnung[art];
 
   const hinweis = bedeutungNichtVerifiziert
     ? texte.nachrichten.bedeutungNichtVerifiziert

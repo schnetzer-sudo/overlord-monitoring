@@ -6,6 +6,7 @@ import {
   type Zeitfensterzustand,
 } from "@/lib/filter";
 import { ProblemFehler } from "@/lib/http";
+import { STATUSARTEN, type Statusart } from "@/lib/status-farbe";
 
 /**
  * Der Filterzustand der Nachrichtenliste — **in der URL, nicht im Komponentenzustand.**
@@ -49,19 +50,14 @@ import { ProblemFehler } from "@/lib/http";
  * Gegenteiliges — *aus eins wurde viel* gegen *aus viel wurde eins*. Der Filter
  * bietet sie deshalb einzeln an. Er bleibt eine ausdrückliche Nutzerentscheidung
  * und hat mit der Kette nichts zu tun.
+ *
+ * **Die Liste selbst wohnt seit dem 01.09.2026 in `lib/status-farbe.ts`** — das
+ * Dashboard braucht dieselbe Menge, und ein Feature importiert nicht aus dem
+ * Nachbarfeature (`docs/frontend-grundlagen.md` §8). Hier steht nur noch die
+ * Ausfuhr für die bestehenden Verwender dieses Moduls.
  */
-export const STATUSARTEN = [
-  "FEHLER",
-  "WARTEND",
-  "LAEUFT",
-  "AUFGETEILT",
-  "ZUSAMMENGEFUEHRT",
-  "ABGESCHLOSSEN",
-  "QUITTIERT",
-  "UNGEKLAERT",
-] as const;
-
-export type Statusart = (typeof STATUSARTEN)[number];
+export { STATUSARTEN };
+export type { Statusart };
 
 export function istStatusart(wert: string | null | undefined): wert is Statusart {
   return wert !== null && wert !== undefined && (STATUSARTEN as readonly string[]).includes(wert);

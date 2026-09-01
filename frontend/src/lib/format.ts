@@ -145,6 +145,54 @@ export function formatiereDatum(
   return zeitpunkt === null ? wert : formatierer(sprache, zone, DATUM).format(zeitpunkt);
 }
 
+/**
+ * Nur die Uhrzeit — für die **Achsenbeschriftung** eines Stundendiagramms.
+ *
+ * Dort steht das Datum schon in der Überschrift des Zeitraums und würde jede
+ * Beschriftung dreimal so breit machen; bei 48 Eimern entscheidet die Breite,
+ * wie viele überhaupt lesbar sind.
+ */
+const UHRZEIT: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit" };
+
+/** Tag und Monat ohne Jahr — die Achse eines Tagesdiagramms über 30 Tage. */
+const TAG_MONAT: Intl.DateTimeFormatOptions = { day: "2-digit", month: "2-digit" };
+
+/** Monat und Jahr — die Achse eines Monatsdiagramms über zwölf Monate. */
+const MONAT_JAHR: Intl.DateTimeFormatOptions = { month: "2-digit", year: "numeric" };
+
+/**
+ * Die drei Achsenauflösungen eines Zeitdiagramms.
+ *
+ * **Sie stehen hier und nicht im Diagramm.** Eine Achsenbeschriftung ist ein
+ * formatierter Zeitpunkt wie jeder andere: Sie läuft über dieselbe
+ * {@link ZEITZONE_RUECKFALL}-Regel, dieselbe Sprache und denselben unlesbaren
+ * Rückfall. Eine zweite `Intl`-Stelle in einer Komponente wäre genau die Drift,
+ * gegen die diese Datei angelegt ist.
+ */
+export type Zeitaufloesung = "stunde" | "tag" | "monat";
+
+const ACHSE: Record<Zeitaufloesung, Intl.DateTimeFormatOptions> = {
+  stunde: UHRZEIT,
+  tag: TAG_MONAT,
+  monat: MONAT_JAHR,
+};
+
+/** Ein Zeitpunkt in der Auflösung, die zur Eimerbreite passt. */
+export function formatiereAchsenzeit(
+  wert: string | null | undefined,
+  aufloesung: Zeitaufloesung,
+  sprache: Sprache,
+  zone: string | undefined,
+): string {
+  if (!wert) {
+    return "";
+  }
+  const zeitpunkt = alsZeitpunkt(wert);
+  return zeitpunkt === null
+    ? wert
+    : formatierer(sprache, zone, ACHSE[aufloesung]).format(zeitpunkt);
+}
+
 /** Absteigend geprüft: die erste Einheit, von der mindestens eine ganze vergangen ist. */
 const EINHEITEN: readonly (readonly [Intl.RelativeTimeFormatUnit, number])[] = [
   ["year", 365 * 24 * 60 * 60],

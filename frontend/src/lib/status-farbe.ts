@@ -46,6 +46,33 @@ export type Statusart =
   | "UNGEKLAERT";
 
 /**
+ * Dieselben acht als **Liste zur Laufzeit**, in der Reihenfolge von
+ * `common/MessageStatusKind`.
+ *
+ * **Sie stand bis zum 01.09.2026 in `features/nachrichten/filter.ts`** und ist
+ * mit dem Dashboard hierher gewandert: Ein zweites Fachpaket braucht sie, und
+ * ein Feature importiert nicht aus dem Nachbarfeature — der gemeinsame Teil
+ * wandert nach `lib` (`docs/frontend-grundlagen.md` §8). Die Liste steht
+ * bewusst **hier** und nicht in einer dritten Datei: Sie ist derselbe
+ * Schlüsselsatz wie {@link ZUORDNUNG} darunter, und zwei Orte liefen
+ * auseinander.
+ *
+ * Der Typ bleibt die von Hand geschriebene Vereinigung darüber. Ihn aus dieser
+ * Liste abzuleiten wäre möglich und würde die Reihenfolge zur Typinformation
+ * machen — sie ist eine Anzeigeentscheidung und keine.
+ */
+export const STATUSARTEN: readonly Statusart[] = [
+  "FEHLER",
+  "WARTEND",
+  "LAEUFT",
+  "AUFGETEILT",
+  "ZUSAMMENGEFUEHRT",
+  "ABGESCHLOSSEN",
+  "QUITTIERT",
+  "UNGEKLAERT",
+];
+
+/**
  * Die Farbrollen. Ihre Namen tragen die **Fachlichkeit**, nicht die Farbe —
  * sonst hieße die Rolle „grün" und ließe sich nie umfärben.
  */

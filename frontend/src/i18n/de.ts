@@ -22,8 +22,14 @@ export const de = {
     oeffnen: "Menü öffnen",
     schliessen: "Menü schließen",
     // Die Schlüssel hier sind zugleich die Schlüssel in lib/navigation.ts.
+    //
+    // Der erste Eintrag hieß bis zum 01.09.2026 „Startseite" — ein Wort über den
+    // Ort, nicht über den Inhalt. Seit dort das Dashboard steht, sagt er, was er
+    // zeigt. **Der Schlüssel bleibt `startseite`**: Er gehört zur Route und
+    // nicht zur Beschriftung, und ein zweiter Eintrag entsteht hier nicht
+    // (`lib/navigation.ts`).
     eintraege: {
-      startseite: "Startseite",
+      startseite: "Übersicht",
       nachrichten: "Nachrichten",
       prozesse: "Prozesse",
       administration: "Administration",
@@ -71,6 +77,33 @@ export const de = {
     ueberfaelligHinweis: "Die Frist für diese Nachricht ist abgelaufen.",
   },
 
+  /**
+   * Die acht Einordnungen aus `common/MessageStatusKind` — **auf oberster Ebene,
+   * seit dem 01.09.2026.**
+   *
+   * Sie standen bis dahin unter `nachrichten.status`, und das war richtig,
+   * solange die Liste ihr einziger Verbraucher war. Mit dem Dashboard sind es
+   * zwei: Die Liste beschriftet eine Plakette an einer Zeile, der Verlauf
+   * beschriftet dieselbe Einordnung über viele. **Beide müssen dasselbe Wort
+   * sagen** — dieselbe Begründung, die `problem` darüber schon trägt.
+   *
+   * AUFGETEILT und ZUSAMMENGEFUEHRT sind am 11.08.2026 an die Stelle des einen
+   * Wertes „Zwischenschritt" getreten. Technisch waren SPLITTED und MERGED
+   * dasselbe; für den Nutzer bedeuten sie Gegenteiliges — aus eins wurde viel
+   * gegen aus viel wurde eins. Das Wort „Zwischenschritt" kommt in keiner
+   * Oberflächenzeichenkette mehr vor.
+   */
+  einordnung: {
+    FEHLER: "Fehler",
+    WARTEND: "Wartend",
+    LAEUFT: "Läuft",
+    AUFGETEILT: "Aufgeteilt",
+    ZUSAMMENGEFUEHRT: "Zusammengeführt",
+    ABGESCHLOSSEN: "Abgeschlossen",
+    QUITTIERT: "Quittiert",
+    UNGEKLAERT: "Ungeklärt",
+  },
+
   anmeldung: {
     titel: "Anmeldung",
     einleitung: "Melde dich an, um den Zustand deiner EDI-Übertragungen zu sehen.",
@@ -107,11 +140,127 @@ export const de = {
       "Diesem Konto ist kein Mandant zugeordnet. Wende dich an die EDI-Betreuung, damit die Zuordnung ergänzt wird.",
   },
 
-  startseite: {
-    titel: "Startseite",
-    platzhalterTitel: "Noch nichts zu sehen",
-    platzhalterHinweis:
-      "Die Übersicht entsteht in einem späteren Schritt. Anmeldung, Mandantentrennung und der Anwendungsrahmen stehen bereits.",
+  /**
+   * Die Landingpage (`docs/dashboard-frontend.md`).
+   *
+   * **Sie hat den Block `startseite` abgelöst.** Dort standen bis zum 01.09.2026
+   * `titel`, `platzhalterTitel` und `platzhalterHinweis` der bewusst leeren
+   * Startseite — Texte, die es nicht mehr gibt, weil es den Platzhalter nicht
+   * mehr gibt. Die Route ist dieselbe geblieben (Entscheidung E‑r).
+   */
+  dashboard: {
+    titel: "Übersicht",
+    // Ein Text für beide Fälle — „im Zeitraum nichts" und „dieser Mandant hat
+    // keine Daten" werden nicht unterschieden (Entscheidung E‑p). Der Satz ist
+    // in beiden wahr, und die Antwort trägt kein Feld, das sie trennt
+    // (`docs/dashboard.md` §6, bekannte Grenze 2).
+    leerTitel: "Nichts im Zeitraum",
+    leerHinweis:
+      "In diesem Zeitraum ist keine Nachricht bewegt worden. Wähle einen größeren Zeitraum — " +
+      "bleibt es dabei, hat dieser Mandant keine Daten.",
+
+    zeitraum: {
+      bezeichnung: "Zeitraum",
+      "48H": "48 Stunden",
+      "30T": "30 Tage",
+      "12M": "12 Monate",
+    },
+
+    verlauf: {
+      titel: "Verlauf",
+      // Vier Reihen, eine je Farbrolle (Entscheidung E‑l). Die Beschriftungen
+      // gehören der Rolle und nicht einer Einordnung: „Offen" fasst vier
+      // Einordnungen zusammen, und die stehen einzeln im Tooltip.
+      rollen: {
+        fehler: "Fehler",
+        offen: "Offen",
+        abgeschlossen: "Abgeschlossen",
+        ungeklaert: "Ungeklärt",
+      },
+      gesamt: "Gesamt",
+      achseAnzahl: "Nachrichten",
+      streifenTitel: "Fehler im Zeitverlauf",
+      streifenAchse: "Fehler",
+      // Ohne diesen Satz liest jemand die Höhe des Streifens gegen den Balken
+      // darüber und hält fünf Fehler für ein Drittel des Verkehrs.
+      streifenHinweis:
+        "Eigene Skala: Die Höhe dieses Streifens ist nicht mit dem Verlauf darüber vergleichbar.",
+      streifenLeer: "Im Zeitraum ist keine Nachricht als Fehler eingeordnet.",
+    },
+
+    kacheln: {
+      nachrichten: "Nachrichten",
+      // Bekannte Grenze 3 aus `docs/dashboard.md` §2: Der Rollup gruppiert nach
+      // MessageLastUpdate. Ein Batchlauf, der alte Nachrichten anfasst, hebt den
+      // Balken der Nachtstunde, ohne dass eine neue eingegangen wäre.
+      nachrichtenHinweis:
+        "Gezählt wird Bewegung: Eine Nachricht erscheint in dem Zeitraum, in dem sie zuletzt " +
+        "verändert wurde — nicht in dem, in dem sie eingegangen ist.",
+      fehler: "Fehler",
+      fehlerVerweis: "Diese Nachrichten in der Liste öffnen",
+      artenAufklappen: "Nach Art aufschlüsseln",
+      artenZuklappen: "Aufschlüsselung schließen",
+      ueberfaellig: "Überfällig",
+      ueberfaelligImFenster: "im Zeitraum",
+      ueberfaelligInsgesamt: "insgesamt",
+      ueberfaelligVerweis: "Überfällige Nachrichten des Zeitraums in der Liste öffnen",
+      // Warum „insgesamt" nicht klickt (Entscheidung E‑m): Die Zahl hat kein
+      // Zeitfenster, die Liste hat ein Pflicht-Zeitfenster. Jedes Ziel zeigte
+      // eine andere Zahl als die Kachel.
+      insgesamtOhneVerweis:
+        "Diese Zahl kennt keinen Zeitraum. Die Nachrichtenliste braucht einen — ein Verweis " +
+        "führte deshalb auf eine andere Zahl als hier steht.",
+      // Entscheidung E‑q. Bewusst kein Rot und keine Fehler-Kennung: Für den
+      // Nutzer ist das eine Auskunft und kein technischer Fehler.
+      nichtErmittelbar: "—",
+      nichtErmittelbarHinweis:
+        "Diese beiden Zahlen werden bei jedem Aufruf frisch gezählt, und die Zählung ist an der " +
+        "Zeitgrenze der Datenbank abgebrochen. Die übrigen Zahlen dieser Seite stehen.",
+    },
+
+    // C.4: Der Endpunkt liefert Rohwert und Art. Beschriftet wird über den
+    // ROHWERT und nicht über die gelieferte Art — die ist ein deutscher
+    // Festtext aus dem Backend und stünde sonst auch im englischen Baum.
+    // Unbekannte Rohwerte bleiben Rohwerte (Regel Q4).
+    fehlerarten: {
+      COMMIT_REJECTED: "Vom Partner abgelehnt",
+    },
+
+    verteilung: {
+      titelPartner: "Nach Partner",
+      titelRichtung: "Nach Richtung",
+      bezeichnung: "Verteilung",
+      partner: "Partner",
+      richtung: "Richtung",
+      EINGEHEND: "Eingehend",
+      AUSGEHEND: "Ausgehend",
+      uebrige: "Übrige ({anzahl})",
+      // Eine Aussage über den KATALOG: Null heißt „alles kuratiert". Wird die
+      // Zeile bei null ausgeblendet, ist „vollständig gepflegt" nicht mehr von
+      // „diese Ansicht zeigt das nicht" zu unterscheiden.
+      nichtZugeordnet: "nicht zugeordnet",
+      nichtZugeordnetHinweis:
+        "Prozesse ohne gepflegten Eintrag im Katalog. Null heißt: Es ist alles zugeordnet.",
+      keineVerweise:
+        "Die Nachrichtenliste kennt keinen Partnerfilter — diese Zeilen klicken nicht.",
+    },
+
+    aufgefallen: {
+      titel: "Zuletzt aufgefallen",
+      leer: "Im Zeitraum ist nichts aufgefallen.",
+      ohneProzess: "ohne Prozess",
+      zeileOeffnen: "Diese Nachricht öffnen",
+    },
+
+    stand: {
+      // Absolut und nicht relativ (Entscheidung E‑o): Die Antwort trägt kein
+      // `jetzt`-Feld, und der Browser rechnet gegen die echte Uhr — im Profil
+      // `dev` stünde dort „vor acht Monaten".
+      satz: "Zahlen vom {zeitpunkt}",
+      artVOLL: "vollständiger Lauf",
+      artDELTA: "laufende Fortschreibung",
+      ohneLauf: "Es hat noch keinen abgeschlossenen Rollup-Lauf gegeben.",
+    },
   },
 
   platzhalter: {
@@ -188,22 +337,6 @@ export const de = {
     sortierungUmschalten: "Nach Zeitpunkt sortieren",
     sortierungNeueste: "Neueste zuerst",
     sortierungAelteste: "Älteste zuerst",
-
-    // AUFGETEILT und ZUSAMMENGEFUEHRT sind am 11.08.2026 an die Stelle des einen
-    // Wertes „Zwischenschritt" getreten. Technisch waren SPLITTED und MERGED
-    // dasselbe; für den Nutzer bedeuten sie Gegenteiliges — aus eins wurde viel
-    // gegen aus viel wurde eins. Das Wort „Zwischenschritt" kommt in keiner
-    // Oberflächenzeichenkette mehr vor.
-    status: {
-      FEHLER: "Fehler",
-      WARTEND: "Wartend",
-      LAEUFT: "Läuft",
-      AUFGETEILT: "Aufgeteilt",
-      ZUSAMMENGEFUEHRT: "Zusammengeführt",
-      ABGESCHLOSSEN: "Abgeschlossen",
-      QUITTIERT: "Quittiert",
-      UNGEKLAERT: "Ungeklärt",
-    },
 
     zeitfenster: {
       bezeichnung: "Zeitfenster",

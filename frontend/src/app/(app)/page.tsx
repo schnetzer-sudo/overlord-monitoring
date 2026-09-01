@@ -1,30 +1,28 @@
 import type { Metadata } from "next";
 
-import { Leer } from "@/components/zustand";
+import { DashboardAnsicht } from "@/features/dashboard/components/dashboard-ansicht";
 import { aktiveTexte } from "@/i18n/server";
 
 export async function generateMetadata(): Promise<Metadata> {
   const texte = await aktiveTexte();
-  return { title: texte.startseite.titel };
+  return { title: texte.dashboard.titel };
 }
 
 /**
- * Die Startseite: geschützt und bewusst leer.
+ * Die Landingpage — **das Dashboard liegt auf `/`** (Entscheidung E‑r,
+ * `docs/dashboard-frontend.md`).
  *
- * Auch sie behandelt ihre Zustände sichtbar — hier ist es der Zustand „leer",
- * und der sieht nicht aus wie ein Fehler. Ab Schritt 10 steht hier das
- * Dashboard.
+ * Hier stand bis zum 01.09.2026 die bewusst leere Startseite mit ihrem
+ * Platzhalter. Sie ist **gefüllt** worden und nicht ersetzt: dieselbe Route,
+ * derselbe Navigationseintrag, keine Weiterleitung und kein `/dashboard`
+ * daneben. `lib/routen.ts` und `lib/navigation.ts` haben das seit Schritt 3
+ * ausdrücklich so vorgesehen.
+ *
+ * Die Seite selbst bleibt **Server-Komponente**: `"use client"` steht so weit
+ * unten im Baum wie möglich, hier an der Ansicht. Sie holt nichts vor — der
+ * Zeitraum steht in der URL und wird im Browser gelesen, und eine serverseitig
+ * geholte Antwort wäre für jede andere Wahl sofort wieder verworfen.
  */
-export default async function StartseitePage() {
-  const texte = await aktiveTexte();
-
-  return (
-    <div className="space-y-4">
-      <h1 className="text-ueberschrift font-semibold">{texte.startseite.titel}</h1>
-      <Leer
-        titel={texte.startseite.platzhalterTitel}
-        hinweis={texte.startseite.platzhalterHinweis}
-      />
-    </div>
-  );
+export default function UebersichtPage() {
+  return <DashboardAnsicht />;
 }

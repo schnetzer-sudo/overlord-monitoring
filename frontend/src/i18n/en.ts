@@ -16,7 +16,7 @@ export const en: Texte = {
     oeffnen: "Open menu",
     schliessen: "Close menu",
     eintraege: {
-      startseite: "Home",
+      startseite: "Overview",
       nachrichten: "Messages",
       prozesse: "Processes",
       administration: "Administration",
@@ -50,6 +50,17 @@ export const en: Texte = {
   problem: {
     ueberfaellig: "Overdue",
     ueberfaelligHinweis: "The deadline for this message has passed.",
+  },
+
+  einordnung: {
+    FEHLER: "Error",
+    WARTEND: "Waiting",
+    LAEUFT: "Running",
+    AUFGETEILT: "Split",
+    ZUSAMMENGEFUEHRT: "Merged",
+    ABGESCHLOSSEN: "Completed",
+    QUITTIERT: "Acknowledged",
+    UNGEKLAERT: "Unclear",
   },
 
   anmeldung: {
@@ -88,11 +99,91 @@ export const en: Texte = {
       "This account has no tenant assigned. Contact EDI support so the assignment gets added.",
   },
 
-  startseite: {
-    titel: "Home",
-    platzhalterTitel: "Nothing here yet",
-    platzhalterHinweis:
-      "The overview arrives in a later step. Sign-in, tenant separation and the application frame are already in place.",
+  dashboard: {
+    titel: "Overview",
+    leerTitel: "Nothing in this period",
+    leerHinweis:
+      "No message moved during this period. Pick a longer period — if it stays empty, this tenant " +
+      "has no data.",
+
+    zeitraum: {
+      bezeichnung: "Period",
+      "48H": "48 hours",
+      "30T": "30 days",
+      "12M": "12 months",
+    },
+
+    verlauf: {
+      titel: "History",
+      rollen: {
+        fehler: "Errors",
+        offen: "Open",
+        abgeschlossen: "Completed",
+        ungeklaert: "Unclear",
+      },
+      gesamt: "Total",
+      achseAnzahl: "Messages",
+      streifenTitel: "Errors over time",
+      streifenAchse: "Errors",
+      streifenHinweis:
+        "Separate scale: the height of this strip cannot be compared with the history above it.",
+      streifenLeer: "No message in this period is classified as an error.",
+    },
+
+    kacheln: {
+      nachrichten: "Messages",
+      nachrichtenHinweis:
+        "What is counted is movement: a message appears in the period in which it last changed — " +
+        "not in the one in which it arrived.",
+      fehler: "Errors",
+      fehlerVerweis: "Open these messages in the list",
+      artenAufklappen: "Break down by kind",
+      artenZuklappen: "Close the breakdown",
+      ueberfaellig: "Overdue",
+      ueberfaelligImFenster: "in this period",
+      ueberfaelligInsgesamt: "in total",
+      ueberfaelligVerweis: "Open the overdue messages of this period in the list",
+      insgesamtOhneVerweis:
+        "This number has no period. The message list requires one — a link would therefore lead " +
+        "to a different number than the one shown here.",
+      nichtErmittelbar: "—",
+      nichtErmittelbarHinweis:
+        "These two numbers are counted afresh on every request, and the count hit the database time " +
+        "limit. The other numbers on this page are in place.",
+    },
+
+    fehlerarten: {
+      COMMIT_REJECTED: "Rejected by partner",
+    },
+
+    verteilung: {
+      titelPartner: "By partner",
+      titelRichtung: "By direction",
+      bezeichnung: "Distribution",
+      partner: "Partner",
+      richtung: "Direction",
+      EINGEHEND: "Inbound",
+      AUSGEHEND: "Outbound",
+      uebrige: "Others ({anzahl})",
+      nichtZugeordnet: "not assigned",
+      nichtZugeordnetHinweis:
+        "Processes without a curated catalogue entry. Zero means everything is assigned.",
+      keineVerweise: "The message list has no partner filter — these rows do not link anywhere.",
+    },
+
+    aufgefallen: {
+      titel: "Recently noticed",
+      leer: "Nothing was noticed during this period.",
+      ohneProzess: "no process",
+      zeileOeffnen: "Open this message",
+    },
+
+    stand: {
+      satz: "Figures as of {zeitpunkt}",
+      artVOLL: "full run",
+      artDELTA: "incremental update",
+      ohneLauf: "There has not been a completed rollup run yet.",
+    },
   },
 
   platzhalter: {
@@ -137,17 +228,6 @@ export const en: Texte = {
     sortierungUmschalten: "Sort by time",
     sortierungNeueste: "Newest first",
     sortierungAelteste: "Oldest first",
-
-    status: {
-      FEHLER: "Error",
-      WARTEND: "Waiting",
-      LAEUFT: "Running",
-      AUFGETEILT: "Split",
-      ZUSAMMENGEFUEHRT: "Merged",
-      ABGESCHLOSSEN: "Completed",
-      QUITTIERT: "Acknowledged",
-      UNGEKLAERT: "Unclear",
-    },
 
     zeitfenster: {
       bezeichnung: "Time window",

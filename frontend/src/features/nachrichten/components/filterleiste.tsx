@@ -345,7 +345,7 @@ function StatusFilter({
                       }
                     />
                     <Label htmlFor={kennung} className="flex-1 cursor-pointer py-1 font-normal">
-                      {texte.nachrichten.status[art]}
+                      {texte.einordnung[art]}
                     </Label>
                   </div>
                 </li>
