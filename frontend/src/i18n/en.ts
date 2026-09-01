@@ -243,6 +243,11 @@ export const en: Texte = {
       beideNoetig: "A custom time window still needs its second point in time.",
     },
 
+    ueberfaelligForm: {
+      marke: "Overdue only",
+      entfernen: "Clear the overdue-only view",
+    },
+
     statusfilter: {
       bezeichnung: "Status",
       alle: "All statuses",

@@ -86,6 +86,29 @@ export const SUCHE_MINDESTLAENGE = 3;
  */
 export const LANGE_SUCHE_VORGABE = false;
 
+/**
+ * `ueberfaellig` ist **kein Filter, sondern eine zweite Abfrageform**
+ * (`docs/nachrichtenliste.md` §5b). Vorgabe: aus — die Liste zeigt dann jede
+ * Zeile des Fensters.
+ *
+ * ## ⚠️ Nachgetragen am 01.09.2026, und warum er vorher fehlte
+ *
+ * Das **Backend** kennt den Parameter seit Schritt 4; die **Oberfläche** kannte
+ * ihn nicht. Es gab bis dahin auch keinen Weg zu ihm: Die Filterleiste bietet
+ * ihn nicht an, und niemand tippt ihn von Hand. Mit dem Dashboard gibt es einen
+ * — die Kachel *Überfällig, im Fenster* verweist genau hierher (Entscheidung
+ * E‑m in [`dashboard-frontend.md`](../../../../docs/dashboard-frontend.md)).
+ * **Ohne diesen Parameter wäre der Verweis eine Lüge:** `nuqs` überginge ihn
+ * stillschweigend, und der Nutzer landete auf der ungefilterten Liste, ohne
+ * Hinweis.
+ *
+ * **Ohne `clearOnDefault: false`, und das ist die Prüfung aus §8.** Die Vorgabe
+ * `false` lässt nichts weg — sie zeigt alles. Ein Standardwert, der etwas
+ * *weglässt*, gehört in die URL; einer, der etwas *zulässt*, nicht. Genau wie
+ * bei {@link LANGE_SUCHE_VORGABE}.
+ */
+export const UEBERFAELLIG_VORGABE = false;
+
 function literalParser<T extends string>(erlaubt: readonly T[]) {
   return createParser<T>({
     parse: (wert) => ((erlaubt as readonly string[]).includes(wert) ? (wert as T) : null),
@@ -134,6 +157,9 @@ export const NACHRICHTEN_PARAMETER = {
   // zugelassen. Steht der Parameter nicht da, gilt die Grenze — und das ist der
   // Normalfall, den keine URL erwähnen muss.
   langeSuche: parseAsBoolean.withDefault(LANGE_SUCHE_VORGABE),
+  // Siehe UEBERFAELLIG_VORGABE: dieselbe Bauform wie `langeSuche` und aus
+  // demselben Grund ohne `clearOnDefault: false`.
+  ueberfaellig: parseAsBoolean.withDefault(UEBERFAELLIG_VORGABE),
   sortierung: literalParser(SORTIERUNGEN),
 };
 
@@ -142,6 +168,13 @@ export type Nachrichtenfilter = Zeitfensterzustand & {
   prozess: string[] | null;
   suche: string | null;
   langeSuche: boolean;
+  /**
+   * Nur überfällige Nachrichten. **Unvereinbar mit einem Statusfilter**, der
+   * weder `WARTEND` noch `LAEUFT` enthält — das ist am Endpunkt `400`
+   * `ueberfaellig-und-status-unvereinbar`. Die Oberfläche lässt den Zustand gar
+   * nicht erst entstehen ({@link ohneUeberfaelligBeiStatus}).
+   */
+  ueberfaellig: boolean;
   sortierung: Sortierung | null;
   /**
    * Die geöffnete Nachricht. Sie ist Teil des URL-Zustands wie jeder Filter —
@@ -165,6 +198,33 @@ export type Nachrichtenfilter = Zeitfensterzustand & {
  */
 export function zeitfensterHalb(filter: Nachrichtenfilter): boolean {
   return (filter.von === null) !== (filter.bis === null);
+}
+
+/**
+ * **Eine Statuswahl beendet die Überfälligkeitsform.**
+ *
+ * Der Endpunkt weist `ueberfaellig=true` zusammen mit einem `status`, der weder
+ * `WARTEND` noch `LAEUFT` enthält, mit `400`
+ * `ueberfaellig-und-status-unvereinbar` ab — die Antwort wäre ohne Rücksicht auf
+ * die Daten leer. **Die Oberfläche lässt den Zustand gar nicht erst entstehen**,
+ * dieselbe Bauform wie bei den beiden Zeitfenstermodi (`lib/filter.ts`
+ * {@link mitVorwahl}): Ein Nutzer, der über eine Schaltfläche in einen
+ * Fehlerzustand gerät, hat keine Möglichkeit, ihn zu verstehen.
+ *
+ * **Gelöscht wird auch dann, wenn die Wahl zulässig wäre** — etwa
+ * `status=WARTEND`. Das ist Absicht und keine Vereinfachung: `ueberfaellig` ist
+ * *kein Filter, sondern eine zweite Abfrageform* (`docs/nachrichtenliste.md`
+ * §5b). Wer einen Status wählt, wählt die erste. Eine Regel, die je nach
+ * gewähltem Status etwas anderes tut, wäre an der Oberfläche nicht abzulesen.
+ *
+ * Als reine Funktion und nicht als Bedingung im Hook, damit die Regel prüfbar
+ * ist.
+ */
+export function ohneUeberfaelligBeiStatus(status: Statusart[]): {
+  status: Statusart[] | null;
+  ueberfaellig: boolean;
+} {
+  return { status: status.length === 0 ? null : status, ueberfaellig: UEBERFAELLIG_VORGABE };
 }
 
 /** Ist der Suchbegriff lang genug, um ihn überhaupt zu schicken? */
@@ -294,6 +354,12 @@ export function alsAbfrage(filter: Nachrichtenfilter, cursor?: string | null): s
       parameter.set("langeSuche", "true");
     }
   }
+  // **Nur wenn gesetzt.** Ein `ueberfaellig=false` waere kein Filter auf „nicht
+  // ueberfaellig", sondern die Vorgabe ein zweites Mal — und es machte den
+  // Abfrageschluessel des Zwischenspeichers unnoetig verschieden.
+  if (filter.ueberfaellig) {
+    parameter.set("ueberfaellig", "true");
+  }
   if (filter.sortierung !== null) {
     parameter.set("sortierung", filter.sortierung);
   }
@@ -347,6 +413,9 @@ export function alsSuchparameter(filter: Nachrichtenfilter): URLSearchParams {
   if (filter.langeSuche) {
     parameter.set("langeSuche", "true");
   }
+  if (filter.ueberfaellig) {
+    parameter.set("ueberfaellig", "true");
+  }
   if (filter.sortierung !== null) {
     parameter.set("sortierung", filter.sortierung);
   }
@@ -376,6 +445,7 @@ export function ausSuchparametern(suchparameter: URLSearchParams): Nachrichtenfi
   const zeitraum = suchparameter.get("zeitraum");
   const sortierung = suchparameter.get("sortierung");
   const langeSuche = suchparameter.get("langeSuche");
+  const ueberfaellig = suchparameter.get("ueberfaellig");
   const status = suchparameter.getAll("status").filter(istStatusart);
   const prozess = suchparameter.getAll("prozess").filter((wert) => wert !== "");
   // Eine leere Kennung ist keine Auswahl. Sie entstünde nur aus einer von Hand
@@ -391,6 +461,7 @@ export function ausSuchparametern(suchparameter: URLSearchParams): Nachrichtenfi
     prozess: prozess.length === 0 ? null : prozess,
     suche: suchparameter.get("suche"),
     langeSuche: langeSuche === null ? LANGE_SUCHE_VORGABE : langeSuche === "true",
+    ueberfaellig: ueberfaellig === null ? UEBERFAELLIG_VORGABE : ueberfaellig === "true",
     // `zwischenschritte` wird hier nicht gelesen und nicht abgewiesen — ein alter
     // Link trägt ihn schlicht ins Leere, wie jeden unbekannten Suchparameter.
     sortierung:

@@ -5,6 +5,7 @@ import {
   alsSuchparameter,
   ausSuchparametern,
   feldFehler,
+  ohneUeberfaelligBeiStatus,
   sucheTraegt,
   suchfeldFehler,
   zeitfensterFehler,
@@ -36,6 +37,7 @@ const LEER: Nachrichtenfilter = {
   prozess: null,
   suche: null,
   langeSuche: false,
+  ueberfaellig: false,
   sortierung: null,
   nachricht: null,
 };
@@ -55,6 +57,7 @@ describe("URL → Zustand", () => {
       prozess: ["abc", "def"],
       suche: "lieferschein",
       langeSuche: false,
+      ueberfaellig: false,
       sortierung: "aelteste",
       nachricht: null,
     });
@@ -481,5 +484,72 @@ describe("Das halb ausgefüllte freie Zeitfenster", () => {
 
     expect(zeitfensterFehler(mehrdeutig)).toBeUndefined();
     expect(feldFehler(mehrdeutig)).toBeUndefined();
+  });
+});
+
+/**
+ * Die **zweite Abfrageform** der Liste, in der Oberfläche seit dem 01.09.2026.
+ *
+ * Das Backend kennt `ueberfaellig` seit Schritt 4; die Oberfläche kannte ihn
+ * nicht, und es gab auch keinen Weg zu ihm. Mit dem Dashboard gibt es einen —
+ * die Kachel *Überfällig, im Fenster* verweist genau hierher. Ohne diesen
+ * Parameter überginge `nuqs` ihn stillschweigend und der Nutzer landete auf der
+ * **ungefilterten** Liste, ohne Hinweis (`docs/nachrichtenliste.md` §5e).
+ */
+describe("Nur überfällige", () => {
+  it("kommt aus einem geteilten Link an", () => {
+    const zustand = ausSuchparametern(new URLSearchParams("ueberfaellig=true&zeitraum=7d"));
+
+    expect(zustand.ueberfaellig).toBe(true);
+    expect(zustand.zeitraum).toBe("7d");
+  });
+
+  it("steht ohne Angabe auf der Vorgabe und geht dann in keine Anfrage", () => {
+    expect(ausSuchparametern(new URLSearchParams()).ueberfaellig).toBe(false);
+    // Ein `ueberfaellig=false` waere die Vorgabe ein zweites Mal — und machte
+    // den Abfrageschluessel des Zwischenspeichers unnoetig verschieden.
+    expect(alsAbfrage(LEER)).not.toContain("ueberfaellig");
+    expect(alsSuchparameter(LEER).has("ueberfaellig")).toBe(false);
+  });
+
+  it("geht gesetzt in Anfrage und URL", () => {
+    const filter: Nachrichtenfilter = { ...LEER, ueberfaellig: true };
+
+    expect(alsAbfrage(filter)).toContain("ueberfaellig=true");
+    expect(alsSuchparameter(filter).get("ueberfaellig")).toBe("true");
+  });
+
+  it("überlebt den Rundlauf URL → Zustand → URL", () => {
+    const filter: Nachrichtenfilter = { ...LEER, ueberfaellig: true, zeitraum: "30d" };
+
+    expect(ausSuchparametern(alsSuchparameter(filter))).toEqual(filter);
+  });
+
+  /**
+   * **Die beiden erscheinen nie zusammen.** Am Endpunkt sind `ueberfaellig=true`
+   * und ein `status`, der weder `WARTEND` noch `LAEUFT` enthaelt, unvereinbar
+   * und ergeben `400` `ueberfaellig-und-status-unvereinbar`. Die Oberflaeche
+   * laesst den Zustand gar nicht erst entstehen.
+   */
+  it("endet, sobald ein Status gewählt wird", () => {
+    expect(ohneUeberfaelligBeiStatus(["FEHLER"])).toEqual({
+      status: ["FEHLER"],
+      ueberfaellig: false,
+    });
+  });
+
+  /**
+   * **Auch bei einem Status, den das Backend zuliesse.** `ueberfaellig` ist kein
+   * Filter, sondern eine zweite Abfrageform: Wer einen Status waehlt, waehlt die
+   * erste. Eine Regel, die je nach gewaehltem Status etwas anderes taete, waere
+   * an der Oberflaeche nicht abzulesen.
+   */
+  it("endet auch bei WARTEND, obwohl das Backend die Kombination zuließe", () => {
+    expect(ohneUeberfaelligBeiStatus(["WARTEND"]).ueberfaellig).toBe(false);
+  });
+
+  /** Und die leere Statuswahl bleibt die leere Statuswahl. */
+  it("macht aus einer geleerten Statuswahl null", () => {
+    expect(ohneUeberfaelligBeiStatus([])).toEqual({ status: null, ueberfaellig: false });
   });
 });

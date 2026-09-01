@@ -359,6 +359,20 @@ export const de = {
       beideNoetig: "Für ein freies Zeitfenster fehlt noch der zweite Zeitpunkt.",
     },
 
+    /**
+     * Die **zweite Abfrageform** der Liste (`docs/nachrichtenliste.md` §5b),
+     * seit dem 01.09.2026 auch in der Oberfläche erreichbar — über den Verweis
+     * aus der Übersicht.
+     *
+     * Sie bekommt eine sichtbare, entfernbare Marke und keine Schaltfläche zum
+     * Einschalten: Ein Filter, der die Liste einschränkt und nirgends steht,
+     * wäre genau das, was der Ausblende-Schalter am 11.08.2026 war.
+     */
+    ueberfaelligForm: {
+      marke: "Nur überfällige",
+      entfernen: "Nur überfällige aufheben",
+    },
+
     statusfilter: {
       bezeichnung: "Status",
       alle: "Alle Status",

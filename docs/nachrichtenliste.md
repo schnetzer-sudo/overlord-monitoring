@@ -1501,6 +1501,65 @@ schaltet ab, nicht ein.**
 
 ---
 
+## 5e. ⚠️ Die Oberfläche kannte `ueberfaellig` nicht *(01.09.2026)*
+
+**Befund, gefunden beim Bau des Dashboard-Frontends.** Der Parameter steht seit Schritt 4 im
+Endpunkt (§1, §5b) und hat seither in **keiner** Stelle der Oberfläche existiert: nicht in
+`NACHRICHTEN_PARAMETER`, nicht in `Nachrichtenfilter`, nicht in `alsAbfrage`, nicht als
+Bedienelement.
+
+**Folgenlos war das, solange es keinen Weg dorthin gab.** Die Filterleiste bietet ihn nicht an,
+und niemand tippt `?ueberfaellig=true` von Hand. Mit dem Dashboard gibt es einen Weg: Die Kachel
+*Überfällig, im Fenster* verweist genau hierher (Entscheidung E‑m in
+[`dashboard-frontend.md`](dashboard-frontend.md)).
+
+> **Ohne den Parameter wäre der Verweis eine Lüge.** `nuqs` überginge ihn stillschweigend wie jeden
+> unbekannten Suchparameter; der Nutzer landete auf der **ungefilterten** Liste — mit dem
+> Zeitfenster der Kachel und ohne jeden Hinweis darauf, dass die eine Bedingung fehlt, um
+> derentwillen er geklickt hat. Eine Liste, die mehr zeigt, als sie verspricht, ist in einem
+> Überwachungswerkzeug dieselbe Art Fehler wie eine, die zu wenig zeigt.
+
+**Gebaut ist deshalb der Parameter und sonst nichts:**
+
+| | |
+|---|---|
+| Parser | `ueberfaellig: parseAsBoolean.withDefault(false)` — dieselbe Bauform wie `langeSuche` |
+| **ohne `clearOnDefault: false`** | Die Vorgabe `false` lässt nichts weg, sie zeigt alles. *Ein Standardwert, der etwas weglässt, gehört in die URL; einer, der etwas zulässt, nicht* ([`frontend-grundlagen.md`](frontend-grundlagen.md) §8) |
+| Anfrage | `ueberfaellig=true` **nur, wenn gesetzt**. Ein `false` wäre die Vorgabe ein zweites Mal und machte den Abfrageschlüssel des Zwischenspeichers unnötig verschieden |
+| Anzeige | eine **sichtbare, entfernbare Marke** in der Filterleiste |
+| **kein Einschalter** | Es gibt keine Schaltfläche, die die Form *einschaltet* |
+
+### Warum eine Marke und kein Schalter
+
+**Ein Filter, der die Liste einschränkt und nirgends steht, ist genau der Zustand, der den
+Ausblende-Schalter am 11.08.2026 gekostet hat** (§5): Er versteckte gemessen ausgerechnet die
+Zeile, die der Nutzer suchte, und niemand sah, dass etwas fehlte. Die Marke trägt die
+Marken-Gestalt des Projekts (`components/marke.tsx`) und **keine Farbrolle** — sie sagt etwas über
+den *Ausschnitt* und nichts über einen Zustand.
+
+**Ein Einschalter wäre dagegen eine Gestaltungsentscheidung über die Liste** — welchen Platz er in
+der Leiste bekommt, wie er neben dem Statusfilter steht, ob er die Vorwahlen verdrängt. Die ist in
+diesem Schritt von niemandem getroffen worden, und ein Frontend-Schritt für das Dashboard ist nicht
+der Ort, sie nebenbei zu treffen. Sie steht als offener Punkt **89**.
+
+### Die beiden erscheinen nie zusammen
+
+`ueberfaellig=true` und ein `status`, der weder `WARTEND` noch `LAEUFT` enthält, sind am Endpunkt
+unvereinbar und ergeben `400` `ueberfaellig-und-status-unvereinbar` (§5b). **Die Oberfläche lässt
+den Zustand gar nicht erst entstehen:** Eine Statuswahl beendet die Überfälligkeitsform —
+`ohneUeberfaelligBeiStatus` in `features/nachrichten/filter.ts`, dieselbe Bauform, mit der
+`mitVorwahl` und `mitFreiemFenster` die beiden Zeitfenstermodi auseinanderhalten.
+
+**Gelöscht wird auch dann, wenn die Wahl zulässig wäre** — etwa `status=WARTEND`. Das ist Absicht:
+`ueberfaellig` ist *kein Filter, sondern eine zweite Abfrageform*, und wer einen Status wählt, wählt
+die erste. Eine Regel, die je nach gewähltem Status etwas anderes täte, wäre an der Oberfläche nicht
+abzulesen.
+
+Sieben Fälle in `tests/nachrichtenfilter.test.ts` halten das fest: der geteilte Link, die Vorgabe in
+Anfrage **und** URL, der Rundlauf, und die drei Lagen der Ausschlussregel.
+
+---
+
 ## 6. Die BAM-Werte sind aus der Liste heraus — und warum
 
 Bis zur Nachbesserung von Schritt 4 trug jede Zeile zwei BAM-Spalten, nachgeladen in einer zweiten
@@ -2503,6 +2562,18 @@ Der alte Link (Punkt 6) *ist* eine von Hand geöffnete URL, denn genau das ist d
   ist es die Annahme, die die Anwendungsuhr ohnehin macht. Ein Auseinanderlaufen fiele als
   systematischer Versatz aller Zeitpunkte auf — und seit Aufgabe 11 an **einer** Stelle: Die
   Oberfläche formatiert mit derselben Zone, die das Backend zum Umrechnen benutzt.
+
+### Zur Überfälligkeitsform (01.09.2026)
+
+- **89. Es gibt keinen Weg, „nur überfällige" in der Liste selbst einzuschalten.** Der Parameter ist
+  seit dem 01.09.2026 in der Oberfläche vorhanden (§5e), sichtbar und entfernbar — aber **eingeschaltet
+  wird er ausschließlich über einen Verweis von außen**, heute die Kachel des Dashboards. Ein
+  Einschalter in der Filterleiste ist eine Gestaltungsentscheidung über die Liste: welchen Platz er
+  bekommt, wie er neben dem Statusfilter steht, was er mit einer bestehenden Statuswahl tut. **Die
+  hat in diesem Schritt niemand getroffen**, und ein Frontend-Schritt für das Dashboard ist nicht der
+  Ort, sie nebenbei zu treffen. Wer sie trifft, trifft dabei auch die Frage, ob die
+  Ausschlussregel dann noch stimmt — heute beendet **jede** Statuswahl die Form, auch eine, die das
+  Backend zuließe.
 
 ### Zur Oberfläche (Aufgaben 13 bis 15)
 
