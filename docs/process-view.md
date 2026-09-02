@@ -15,7 +15,7 @@ Vorklappen, Ladeverhalten und Virtualisierung. §8 ist die Antwort darauf.
 |---|---|
 | **Messungen** | `grep -rnoE '\bM1(09\|1[0-7])\b' docs/ scripts/ *.md` → **kein Treffer** außerhalb der eigenen Skripte. **M109 bis M117** sind hier vergeben. Gegenprobe `\bM10[5-8]\b` → Treffer in fünf Dateien, der Ausdruck greift |
 | **Entscheidungen** | **E‑32 bis E‑44**, numerisch fortgesetzt nach Punkt 99. Höchste vergebene ist **E‑31** ([`testfestigkeit.md`](testfestigkeit.md) §10.6, dort E‑27 bis E‑31); `grep -rnoE 'E‑(3[2-9]\|4[0-4])'` → kein Treffer |
-| **Offene Punkte** | ab **105**. Höchster vergebener Stand ist **104** ([`dichte-umschalter.md`](dichte-umschalter.md) §…) |
+| **Offene Punkte** | ab **105**. Höchster vergebener Stand ist **104** ([`dichte-umschalter.md`](dichte-umschalter.md) §9) |
 
 > ### ⚠️ Zur E‑Nummer, und die Falle ist echt
 >
