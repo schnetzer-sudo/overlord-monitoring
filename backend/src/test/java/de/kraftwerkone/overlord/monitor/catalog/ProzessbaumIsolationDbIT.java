@@ -2,13 +2,18 @@ package de.kraftwerkone.overlord.monitor.catalog;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
+import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import de.kraftwerkone.overlord.monitor.security.Rolle;
 import de.kraftwerkone.overlord.monitor.security.SicherheitsTestbasis;
 import java.io.IOException;
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * <b>Der Pflicht-Isolationstest von {@code GET /api/prozesse/baum}</b> (Regel M4). Ohne ihn wird
@@ -35,10 +40,34 @@ import org.junit.jupiter.api.Test;
  *       EDI-Beziehungen. Wer die Partnerliste eines fremden Mandanten liest, liest dessen
  *       Geschaeftsbeziehungen.
  *   <li><b>Die Kennzahlen kommen aus einer zweiten Abfrage mit einer zweiten Mandantenkette.</b>
- *       Sie koennte fuer sich allein leck sein, ohne dass ein einziger fremder Prozess im Baum
- *       auftauchte — die Summe waere dann still zu hoch. Deshalb prueft {@link
- *       #summen_bleiben_unter_dem_eigenen_bestand()} sie gegen die eigene Obergrenze.
+ *       Sie ist ueber den Antwortrumpf <b>nicht</b> pruefbar — und das ist ein Befund und keine
+ *       Nebensache, siehe den Kasten unten. Geprueft wird sie deshalb <b>am Repository</b>: {@link
+ *       #die_kennzahlenkette_liefert_keine_fremde_zeile()}.
  * </ul>
+ *
+ * <h2>⚠️ Warum eine Zusicherung dieses Tests am Repository haengt und nicht am Rumpf</h2>
+ *
+ * <p><b>Gemessen in der Verletzungsprobe vom 02.09.2026</b>, und das Ergebnis war nicht das
+ * erwartete:
+ *
+ * <table border="1">
+ *   <caption>Verletzungsprobe: ein Filter entfernt, was wird rot?</caption>
+ *   <tr><th>entfernt</th><th>Ergebnis</th></tr>
+ *   <tr><td>Mandantenfilter des Geruests</td><td><b>5 von 9 Faellen rot</b>, darunter der
+ *       Partnername</td></tr>
+ *   <tr><td>Mandantenkette der Kennzahlen</td><td><b>alle 9 gruen</b></td></tr>
+ * </table>
+ *
+ * <p><b>Der Grund ist die Bauform und nicht ein Loch im Test.</b> Der Dienst haengt die Kennzahlen
+ * ueber die {@code ProcessID} an die Blaetter des Geruests. Blaetter, die es nicht gibt, bekommen
+ * nichts — eine fremde Kennzahlzeile faellt beim Zusammensetzen lautlos heraus, und sie kann den
+ * Rumpf gar nicht erreichen. Fuer die <i>Sicherheit</i> ist das gut (die Trennung haengt an zwei
+ * unabhaengigen Riegeln), fuer den <i>Test</i> ist es das Gegenteil: Ein Leck im zweiten Statement
+ * bliebe unsichtbar, bis jemand die Bauform des Dienstes aendert.
+ *
+ * <p><b>Regel M3 verlangt den Filter im Statement und nicht dahinter.</b> Ein Test, der nur den
+ * Rumpf ansieht, waere mit einer nachgelagerten Pruefung zufrieden — also mit genau dem, was M3
+ * verbietet. Deshalb greift die eine Zusicherung eine Ebene tiefer.
  *
  * <h2>Regel T2: keine Zahl aus dem Pflegestand</h2>
  *
@@ -70,6 +99,16 @@ class ProzessbaumIsolationDbIT extends SicherheitsTestbasis {
   private Sitzung aufNexans;
   private Sitzung aufSuttons;
   private Sitzung aufVotg;
+
+  /**
+   * Fuer die eine Zusicherung, die eine Ebene tiefer greifen muss. Sie ist der Ausweg aus dem
+   * Befund im Kasten oben und keine Bequemlichkeit — ueber HTTP ist die zweite Mandantenkette nicht
+   * erreichbar.
+   */
+  @Autowired private ProzessbaumRepository prozessbaumRepository;
+
+  /** Die Anwendungsuhr (Regel Z1) — im Profil {@code dev} die zurueckversetzte. */
+  @Autowired private Clock anwendungsuhr;
 
   @BeforeEach
   void nutzerAnlegenUndAnmelden() throws IOException, InterruptedException {
@@ -164,13 +203,54 @@ class ProzessbaumIsolationDbIT extends SicherheitsTestbasis {
   }
 
   /**
-   * <b>Die zweite Mandantenkette, einzeln geprueft.</b> Die Kennzahlen kommen aus einem eigenen
-   * Statement mit einem eigenen {@code EXISTS}. Waere <i>nur dieses</i> leck, taeuchte kein fremder
-   * Prozess im Baum auf — die Summen waeren still zu hoch.
+   * <b>Die zweite Mandantenkette, dort geprueft, wo sie steht.</b>
    *
-   * <p>Geprueft wird gegen eine <b>pflegeunabhaengige Obergrenze</b>: Die Summe ueber den Baum kann
-   * niemals groesser sein als die Summe der Blaetter, und jedes Blatt gehoert dem Mandanten. Der
-   * Test nennt keine Zahl aus dem Bestand (Regel T2).
+   * <p>Diese Zusicherung greift auf das Repository und nicht auf den Rumpf, und der Grund steht im
+   * Kasten der Klassendokumentation: Ueber den Rumpf ist sie <b>nicht</b> pruefbar — die
+   * Verletzungsprobe hat es gemessen. Der Dienst haengt die Kennzahlen ueber die {@code ProcessID}
+   * an die Blaetter des Geruests; eine fremde Zeile faellt dabei lautlos heraus und erreicht die
+   * Antwort nie.
+   *
+   * <p>Geprueft wird ueber <b>zwoelf Monate</b> und nicht ueber das Standardfenster: Ein enges
+   * Fenster liefert wenige Zeilen, und eine Zusicherung ueber wenige Zeilen findet ein Leck
+   * schlechter als eine ueber viele.
+   *
+   * <p><b>Regel T2:</b> Der Test nennt keine Zahl. Er verlangt, dass die eigene Antwort nicht leer
+   * ist — sonst bewiese er nichts — und dass keine einzige fremde Kennung darin steht.
+   */
+  @Test
+  @DisplayName("Die Kennzahlenabfrage liefert keine Zeile eines fremden Mandanten")
+  void die_kennzahlenkette_liefert_keine_fremde_zeile() {
+    List<String> fremdeProzesse =
+        prozessbaumRepository.geruest(new MandantContext(MANDANT_SUTTONS)).stream()
+            .map(Prozessgeruestzeile::processId)
+            .toList();
+
+    List<String> ausDenKennzahlen =
+        prozessbaumRepository
+            .kennzahlen(
+                new MandantContext(MANDANT_NEXANS),
+                Rollupzeitraum.MONATE_12,
+                Rollupzeitraum.MONATE_12.fenster(LocalDateTime.now(anwendungsuhr)))
+            .stream()
+            .map(Prozesskennzahlzeile::processId)
+            .toList();
+
+    assertThat(fremdeProzesse).as("Ohne fremde Prozesse bewiese die Probe nichts").isNotEmpty();
+    assertThat(ausDenKennzahlen)
+        .as("Ohne eigene Zeilen bewiese die Probe nichts")
+        .isNotEmpty()
+        .doesNotContainAnyElementsOf(fremdeProzesse);
+  }
+
+  /**
+   * Die Kopfzahl ist genau die Summe der Blaetter — sie enthaelt nichts, was nicht an einem eigenen
+   * Blatt haengt.
+   *
+   * <p><b>Diese Zusicherung prueft die Mandantentrennung nicht</b>, und das steht hier, weil der
+   * erste Bau dieses Tests genau das behauptet hat und die Verletzungsprobe es widerlegt hat. Sie
+   * prueft die <i>Zusammensetzung</i> der Antwort: dass keine Ebene eine Zahl traegt, die ihre
+   * Kinder nicht hergeben.
    */
   @Test
   @DisplayName("Die Summen des Baums sind genau die Summen seiner eigenen Blaetter")
