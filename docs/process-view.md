@@ -649,12 +649,13 @@ Stichtag ist der Anker; die Schwelle sind drei Monate, also `2025-09-30 04:09:47
 | `WOC` | 4 | 2 | 0 | 2 | 50 % |
 | `SYSTEM` | 4 | 1 | 0 | 3 | 75 % |
 
-**„Still" ist überall die kleinste der drei Mengen** — 0 bis 28 Prozesse, nie über 4,2 % eines
-Mandanten. **Das ist die Zahl, die die Drei-Monats-Schwelle rechtfertigt:** Eine Markierung, die
-28 von 733 Zeilen trifft, ist eine Markierung. Eine kürzere Schwelle träfe den Normalfall.
+**„Still" ist bei jedem Mandanten die kleinste der drei Mengen** — 0 bis 28 Prozesse. Gemessen in
+Anteilen: bei den vier großen Mandanten 1,0 bis 4,2 %, bei `NXHBE` mit **2 von 17** aber 11,8 %.
+**Das ist die Zahl, die die Drei-Monats-Schwelle rechtfertigt:** Eine Markierung, die 28 von 733
+Zeilen trifft, ist eine Markierung. Eine kürzere Schwelle träfe den Normalfall.
 
-**„Nie" ist dagegen bei sechs von zehn Mandanten die *größte* Menge**, bei `EDITIONLINGERI` sogar
-die einzige. Das deckt sich mit M74b aus Schritt 9 (765 von 1.503 Prozessen tragen im Bestand keine
+**„Nie" ist dagegen bei fünf von zehn Mandanten die *größte* Menge** und bei `WOC` gleichauf mit
+„bewegt"; bei `EDITIONLINGERI` ist es die einzige. Das deckt sich mit M74b aus Schritt 9 (765 von 1.503 Prozessen tragen im Bestand keine
 Nachricht) und mit `V8`, und es ist die Zahl, die die Trennung von „still" und „nie" trägt: Wären
 beide ein Zustand, bestünde der Baum bei `VOTG` zu 90 % aus Markierungen.
 
