@@ -15,6 +15,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 
@@ -141,12 +142,24 @@ public class ProzessbaumService {
   /**
    * Die oberste Ebene, aufgebaut in zwei Schritten: erst schachteln, dann sortieren.
    *
-   * <p><b>Gruppiert wird ueber {@link Katalogzuordnung#schluessel(String, String)}</b> und nicht
-   * ueber den Rohwert. Der Unterschied ist Entscheidung E-i und keine Feinheit: Ein
-   * <i>Regelvorschlag</i> der Heuristik steht mit {@code pflegestatus = OFFEN} in derselben Spalte
-   * wie eine kuratierte Zuordnung. Gruppierte der Baum darueber, stuenden Prozesse unter einem
-   * Partner, den niemand bestaetigt hat — und der Nutzer saehe der Gruppe nicht an, dass sie
-   * geraten ist (Regel Q4).
+   * <p><b>Gruppiert wird ueber {@link Katalogzuordnung#gruppenschluessel(String, String)}</b> und
+   * nicht ueber den Rohwert. Daran haengen <b>zwei</b> Entscheidungen, und beide sind mehr als eine
+   * Feinheit:
+   *
+   * <ol>
+   *   <li><b>Entscheidung E-i:</b> Ein <i>Regelvorschlag</i> der Heuristik steht mit {@code
+   *       pflegestatus = OFFEN} in derselben Spalte wie eine kuratierte Zuordnung. Gruppierte der
+   *       Baum darueber, stuenden Prozesse unter einem Partner, den niemand bestaetigt hat — und
+   *       der Nutzer saehe der Gruppe nicht an, dass sie geraten ist (Regel Q4).
+   *   <li><b>Die Gleichheit kommt von der Spalte und nicht von Java</b> (M117): {@code
+   *       utf8mb4_general_ci} macht zwei Schreibweisen zu <i>einem</i> Wert. Ohne den
+   *       hochgestellten Schluessel zeigte der Baum bei {@code NEXANS} einen Partner zweimal, mit
+   *       geteilten Zahlen — und widerspraeche damit der Verteilung des Dashboards, die in SQL
+   *       gruppiert.
+   * </ol>
+   *
+   * <p><b>Angezeigt wird trotzdem der Rohwert</b>, nicht der hochgestellte Schluessel: Der Katalog
+   * ist die Wahrheit, und was dort steht, wird nicht umgeschrieben (Regel Q4).
    *
    * <p><b>Sortiert wird alphabetisch und nicht nach Volumen.</b> Ein Baum ist zum <i>Finden</i> da:
    * Wer wissen will, ob von einem bestimmten Partner etwas kam, sucht dessen Namen. Die Rangfolge
@@ -158,10 +171,21 @@ public class ProzessbaumService {
       List<Prozessgeruestzeile> geruest, Map<String, Kennzahl> jeProzess, LocalDateTime jetzt) {
     // Zwei Ebenen Schachtelung, Einfuegereihenfolge erhalten: Die Blaetter kommen bereits nach
     // ProcessName sortiert aus der Abfrage und behalten diese Reihenfolge.
+    //
+    // Geschachtelt wird ueber den GRUPPENSCHLUESSEL und angezeigt wird der ROHWERT. Die beiden
+    // fallen auseinander, sobald derselbe Partner im Katalog in zwei Schreibweisen steht — genau
+    // der Fall, den M117 bei NEXANS gefunden hat. Fuer die Datenbank ist das ein Wert
+    // (utf8mb4_general_ci), fuer String.equals waeren es zwei, und der Baum zeigte den Partner
+    // zweimal mit geteilten Zahlen.
     Map<String, Map<String, List<ProzessknotenResponse>>> geschachtelt = new LinkedHashMap<>();
+    Map<String, String> anzeige = new HashMap<>();
     for (Prozessgeruestzeile zeile : geruest) {
-      String partner = Katalogzuordnung.schluessel(zeile.pflegestatus(), zeile.partner());
-      String richtung = Katalogzuordnung.schluessel(zeile.pflegestatus(), zeile.richtung());
+      String partner = Katalogzuordnung.gruppenschluessel(zeile.pflegestatus(), zeile.partner());
+      String richtung = Katalogzuordnung.gruppenschluessel(zeile.pflegestatus(), zeile.richtung());
+      merkeAnzeige(
+          anzeige, partner, Katalogzuordnung.schluessel(zeile.pflegestatus(), zeile.partner()));
+      merkeAnzeige(
+          anzeige, richtung, Katalogzuordnung.schluessel(zeile.pflegestatus(), zeile.richtung()));
       geschachtelt
           .computeIfAbsent(partner, schluessel -> new LinkedHashMap<>())
           .computeIfAbsent(richtung, schluessel -> new ArrayList<>())
@@ -171,19 +195,44 @@ public class ProzessbaumService {
     List<PartnerknotenResponse> knoten = new ArrayList<>(geschachtelt.size());
     for (Map.Entry<String, Map<String, List<ProzessknotenResponse>>> eintrag :
         geschachtelt.entrySet()) {
-      List<RichtungsknotenResponse> richtungen = richtungsknoten(eintrag.getValue());
+      List<RichtungsknotenResponse> richtungen = richtungsknoten(eintrag.getValue(), anzeige);
       knoten.add(
           new PartnerknotenResponse(
-              eintrag.getKey(),
+              anzeige.get(eintrag.getKey()),
               richtungen.stream().mapToInt(RichtungsknotenResponse::anzahlProzesse).sum(),
               richtungen.stream().mapToLong(RichtungsknotenResponse::nachrichten).sum(),
               richtungen.stream().mapToLong(RichtungsknotenResponse::fehler).sum(),
               richtungen));
     }
+    // Sortiert wird ueber den hochgestellten Schluessel und nicht ueber den Rohwert: Sonst stuende
+    // eine kleingeschriebene Schreibweise hinter allen grossgeschriebenen, weil Kleinbuchstaben in
+    // der natuerlichen Ordnung hinter den Grossbuchstaben liegen.
     knoten.sort(
         Comparator.comparing(
-            PartnerknotenResponse::partner, Comparator.nullsLast(Comparator.naturalOrder())));
+            knoten2 -> schluesselVon(knoten2.partner()),
+            Comparator.nullsLast(Comparator.naturalOrder())));
     return List.copyOf(knoten);
+  }
+
+  /**
+   * Haelt zu einem Gruppenschluessel die <b>zuerst angetroffene</b> Schreibweise fest.
+   *
+   * <p><b>Die erste und nicht irgendeine.</b> Die Blaetter kommen nach {@code ProcessName} sortiert
+   * aus der Abfrage; „die erste" ist damit ueber zwei Aufrufe dieselbe. Waehlte der Dienst
+   * stattdessen die zuletzt gesehene, spraenge die Beschriftung, sobald der Katalog eine Zeile
+   * dazubekommt.
+   *
+   * <p>Welche der beiden Schreibweisen die richtige ist, entscheidet <b>niemand hier</b> — das ist
+   * eine Katalogfrage und steht als offener Punkt in {@code docs/process-view.md} §10.
+   */
+  private static void merkeAnzeige(Map<String, String> anzeige, String schluessel, String rohwert) {
+    if (schluessel != null) {
+      anzeige.putIfAbsent(schluessel, rohwert);
+    }
+  }
+
+  private static String schluesselVon(String anzeigewert) {
+    return anzeigewert == null ? null : anzeigewert.toUpperCase(Locale.ROOT);
   }
 
   /**
@@ -194,13 +243,13 @@ public class ProzessbaumService {
    * bekaeme sonst unter jedem Partner eine andere.
    */
   private static List<RichtungsknotenResponse> richtungsknoten(
-      Map<String, List<ProzessknotenResponse>> jeRichtung) {
+      Map<String, List<ProzessknotenResponse>> jeRichtung, Map<String, String> anzeige) {
     List<RichtungsknotenResponse> knoten = new ArrayList<>(jeRichtung.size());
     for (Map.Entry<String, List<ProzessknotenResponse>> eintrag : jeRichtung.entrySet()) {
       List<ProzessknotenResponse> blaetter = List.copyOf(eintrag.getValue());
       knoten.add(
           new RichtungsknotenResponse(
-              eintrag.getKey(),
+              anzeige.get(eintrag.getKey()),
               blaetter.size(),
               blaetter.stream().mapToLong(ProzessknotenResponse::nachrichten).sum(),
               blaetter.stream().mapToLong(ProzessknotenResponse::fehler).sum(),
@@ -208,9 +257,10 @@ public class ProzessbaumService {
     }
     knoten.sort(
         Comparator.comparingInt(
-                (RichtungsknotenResponse knoten2) -> richtungsrang(knoten2.richtung()))
+                (RichtungsknotenResponse knoten2) ->
+                    richtungsrang(schluesselVon(knoten2.richtung())))
             .thenComparing(
-                RichtungsknotenResponse::richtung,
+                knoten2 -> schluesselVon(knoten2.richtung()),
                 Comparator.nullsLast(Comparator.naturalOrder())));
     return List.copyOf(knoten);
   }
@@ -222,6 +272,10 @@ public class ProzessbaumService {
    * unbekannter</b> Wert — den die Spalte zulaesst, weil sie {@code varchar} ist und die Whitelist
    * im Code steht — faellt hinter die bekannten und <b>vor</b> „nicht ermittelt". Er verschwindet
    * damit nicht und wird auch nicht mit dem leeren Feld verwechselt.
+   *
+   * @param richtung der <b>Gruppenschluessel</b> und nicht der Rohwert. Damit ordnet sich ein
+   *     kleingeschriebenes {@code eingehend} im Katalog richtig ein, statt als „unbekannt" zu
+   *     gelten — dieselbe Gleichheit, die die Datenbank auf der Spalte anwendet
    */
   private static int richtungsrang(String richtung) {
     if (richtung == null) {

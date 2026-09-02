@@ -171,6 +171,51 @@ class ProzessbaumServiceTest {
       assertThat(antwort().partner().getFirst().partner()).isNull();
     }
 
+    /**
+     * <b>M117, als Zusicherung.</b> {@code process_catalog.partner} traegt {@code
+     * utf8mb4_general_ci}: Fuer die Datenbank sind zwei Schreibweisen desselben Namens ein Wert.
+     * Gruppierte der Baum ueber {@link String#equals}, zeigte er den Partner zweimal mit geteilten
+     * Zahlen — und widerspraeche der Verteilung des Dashboards, die in SQL gruppiert.
+     *
+     * <p><b>Der Fall ist nicht erfunden</b>: Bei {@code NEXANS} steht genau ein Partner in zwei
+     * Schreibweisen im Katalog (M117). Die Zahl steht nicht in diesem Test — er baut sich seinen
+     * Fall selbst (Regel T2).
+     */
+    @Test
+    @DisplayName("Zwei Schreibweisen desselben Partners sind ein Knoten")
+    void schreibweisen_fallen_zusammen() {
+      bestandMit(
+          List.of(
+              gepflegt("p1", "A", "AUDI", "EINGEHEND", WANDUHR),
+              gepflegt("p2", "B", "Audi", "EINGEHEND", WANDUHR)),
+          List.of(zahl("p1", "FINISHED", 7), zahl("p2", "FINISHED", 5)));
+
+      List<PartnerknotenResponse> partner = antwort().partner();
+
+      assertThat(partner).hasSize(1);
+      assertThat(partner.getFirst().anzahlProzesse()).isEqualTo(2);
+      assertThat(partner.getFirst().nachrichten()).isEqualTo(12);
+      // Angezeigt wird die zuerst angetroffene Schreibweise — der Katalog wird nicht umgeschrieben.
+      assertThat(partner.getFirst().partner()).isEqualTo("AUDI");
+    }
+
+    /** Dasselbe eine Ebene tiefer: Die Richtung gruppiert nach derselben Gleichheit. */
+    @Test
+    @DisplayName("Zwei Schreibweisen derselben Richtung sind ein Knoten")
+    void richtungsschreibweisen_fallen_zusammen() {
+      bestandMit(
+          List.of(
+              gepflegt("p1", "A", "ALPHA", "EINGEHEND", WANDUHR),
+              gepflegt("p2", "B", "ALPHA", "eingehend", WANDUHR)),
+          List.of());
+
+      List<RichtungsknotenResponse> richtungen = antwort().partner().getFirst().richtungen();
+
+      assertThat(richtungen).hasSize(1);
+      assertThat(richtungen.getFirst().anzahlProzesse()).isEqualTo(2);
+      assertThat(richtungen.getFirst().richtung()).isEqualTo("EINGEHEND");
+    }
+
     /** Ohne Katalogzeile — {@code SUTTONS} und {@code WOC} sind genau dieser Fall. */
     @Test
     @DisplayName("Ohne Katalogzeile faellt alles in die eine Gruppe")

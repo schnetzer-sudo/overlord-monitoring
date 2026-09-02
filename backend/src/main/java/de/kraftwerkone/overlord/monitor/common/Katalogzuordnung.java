@@ -1,5 +1,6 @@
 package de.kraftwerkone.overlord.monitor.common;
 
+import java.util.Locale;
 import org.jooq.Condition;
 import org.jooq.Field;
 
@@ -54,7 +55,7 @@ public final class Katalogzuordnung {
   }
 
   /**
-   * Der zugeordnete Wert oder {@code null} — die Form, die eine Gruppierung braucht.
+   * Der zugeordnete Wert oder {@code null} — der <b>Anzeigewert</b>, unveraendert wie im Katalog.
    *
    * <p><b>{@code null} und nicht ein Ersatztext.</b> Was der Nutzer anstelle einer fehlenden
    * Zuordnung liest, ist eine Oberflaechenentscheidung und gehoert in die Sprachdateien, nicht in
@@ -62,6 +63,40 @@ public final class Katalogzuordnung {
    */
   public static String schluessel(String pflegestatus, String wert) {
     return zugeordnet(pflegestatus, wert) ? wert : null;
+  }
+
+  /**
+   * Derselbe Wert als <b>Gruppierungsschluessel</b> — hochgestellt, damit Java so gruppiert, wie
+   * die Datenbank vergleicht.
+   *
+   * <h2>Der Anlass, und er ist gemessen (M117, 02.09.2026)</h2>
+   *
+   * <p>{@code process_catalog.partner} traegt die Sortierung {@code utf8mb4_general_ci}. Fuer die
+   * Datenbank sind zwei Schreibweisen desselben Namens <b>ein</b> Wert; fuer {@link String#equals}
+   * sind es zwei. Bei {@code NEXANS} steht genau ein Partner in zwei Schreibweisen im Katalog — die
+   * Verteilung des Dashboards zaehlt deshalb <b>154</b> Partner, der Baum zaehlte ohne diese Zeile
+   * <b>155</b> und zeigte denselben Partner zweimal, mit geteilten Zahlen.
+   *
+   * <p><b>Zwei Ansichten derselben Daten duerfen sich nicht widersprechen.</b> Welche Werte gleich
+   * sind, entscheidet die Sortierung der Spalte und nicht das Gruppierungsverfahren des Aufrufers.
+   *
+   * <h2>Was diese Naeherung nicht leistet, und das steht hier statt in einer Fussnote</h2>
+   *
+   * <p>{@code utf8mb4_general_ci} ignoriert <b>mehr</b> als die Gross- und Kleinschreibung: Es
+   * behandelt auch {@code a} und {@code ä} als gleich. {@link String#toUpperCase} tut das nicht.
+   * <b>Zwei Werte, die sich nur in einem Akzent unterscheiden, blieben hier zwei Gruppen und waeren
+   * fuer die Datenbank eine.</b> Der exakte Weg waere {@code WEIGHT_STRING} in SQL — der
+   * Sortierungsschluessel selbst. Er ist nicht gebaut: Der gemessene Fall ist eine
+   * Schreibweisenkollision, kein Akzent, und ein MariaDB-eigener Funktionsaufruf im Antwortpfad
+   * will eigens gemessen sein. Der Punkt steht offen in {@code docs/process-view.md} §10.
+   *
+   * <p>{@link Locale#ROOT}, damit die Umwandlung nicht an der Systemsprache haengt: Im tuerkischen
+   * Gebietsschema wird aus {@code i} ein {@code İ}. Dieselbe Ueberlegung wie in {@code
+   * MessageStatusClassifier.einordnung}.
+   */
+  public static String gruppenschluessel(String pflegestatus, String wert) {
+    String anzeige = schluessel(pflegestatus, wert);
+    return anzeige == null ? null : anzeige.toUpperCase(Locale.ROOT);
   }
 
   /**
