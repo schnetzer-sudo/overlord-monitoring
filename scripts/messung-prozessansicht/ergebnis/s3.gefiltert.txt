@@ -1,0 +1,379 @@
++--------------------------------------------------+
+| marke                                            |
++--------------------------------------------------+
+| === 00 read_only (erste Abfrage der Sitzung) === |
++--------------------------------------------------+
++-----------+---------------------+
+| read_only | serverzeit          |
++-----------+---------------------+
+|         1 | 2026-09-02 10:37:34 |
++-----------+---------------------+
++---------------------------------------------+
+| marke                                       |
++---------------------------------------------+
+| === M114-D-NEXANS Â· Plan (Regel L15) ===   |
++---------------------------------------------+
++------+--------------------+-------+--------+------------------------------------+----------------------------+---------+--------------------------+------+-----------------------------------------------------------+
+| id   | select_type        | table | type   | possible_keys                      | key                        | key_len | ref                      | rows | Extra                                                     |
++------+--------------------+-------+--------+------------------------------------+----------------------------+---------+--------------------------+------+-----------------------------------------------------------+
+|    1 | PRIMARY            | pm    | ref    | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146     | const                    | 17   | Using where; Using index; Using temporary; Using filesort |
+|    1 | PRIMARY            | p     | ref    | Process_ProjectFK                  | Process_ProjectFK          | 147     | GlassfishDB.pm.ProjectID | 5    |                                                           |
+|    1 | PRIMARY            | c     | eq_ref | PRIMARY                            | PRIMARY                    | 146     | GlassfishDB.p.ProcessID  | 1    |                                                           |
+|    2 | DEPENDENT SUBQUERY | r     | ref    | message_rollup_prozess_idx         | message_rollup_prozess_idx | 146     | GlassfishDB.p.ProcessID  | 453  | Using where; Using index                                  |
++------+--------------------+-------+--------+------------------------------------+----------------------------+---------+--------------------------+------+-----------------------------------------------------------+
++-----------------------------------------+
+| marke                                   |
++-----------------------------------------+
+| === M114-D-NEXANS Â· sechs Laeufe ===   |
+-- 4426 Ergebniszeilen entfernt (Regel G1)
+| M114-D-NEXANS |             6 |        3.413 |           3.417 | 3.417,3.786,3.433,3.449,3.554 |
++---------------+---------------+--------------+-----------------+-------------------------------+
++---------------------------------------------+
+| marke                                       |
++---------------------------------------------+
+| === M114-E-NEXANS Â· Plan (Regel L15) ===   |
++---------------------------------------------+
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+---------------------------+------+-----------------------------------------------------------+
+| id   | select_type | table      | type   | possible_keys                      | key                        | key_len | ref                       | rows | Extra                                                     |
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+---------------------------+------+-----------------------------------------------------------+
+|    1 | PRIMARY     | pm         | ref    | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146     | const                     | 17   | Using where; Using index; Using temporary; Using filesort |
+|    1 | PRIMARY     | p          | ref    | Process_ProjectFK                  | Process_ProjectFK          | 147     | GlassfishDB.pm.ProjectID  | 5    |                                                           |
+|    1 | PRIMARY     | c          | eq_ref | PRIMARY                            | PRIMARY                    | 146     | GlassfishDB.p.ProcessID   | 1    |                                                           |
+|    1 | PRIMARY     | <derived2> | ref    | key0                               | key0                       | 147     | GlassfishDB.p.ProcessID   | 25   |                                                           |
+|    2 | DERIVED     | pm2        | ref    | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146     | const                     | 17   | Using where; Using index; Using temporary; Using filesort |
+|    2 | DERIVED     | p2         | ref    | PRIMARY,Process_ProjectFK          | Process_ProjectFK          | 147     | GlassfishDB.pm2.ProjectID | 5    | Using index                                               |
+|    2 | DERIVED     | rr         | ref    | message_rollup_prozess_idx         | message_rollup_prozess_idx | 146     | GlassfishDB.p2.ProcessID  | 453  | Using index                                               |
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+---------------------------+------+-----------------------------------------------------------+
++-----------------------------------------+
+| marke                                   |
++-----------------------------------------+
+| === M114-E-NEXANS Â· sechs Laeufe ===   |
+-- 4426 Ergebniszeilen entfernt (Regel G1)
+| M114-E-NEXANS |             6 |      402.577 |         398.340 | 403.538,408.805,400.858,403.998,398.340 |
++---------------+---------------+--------------+-----------------+-----------------------------------------+
++---------------------------------------------+
+| marke                                       |
++---------------------------------------------+
+| === M114-G-NEXANS Â· Plan (Regel L15) ===   |
++---------------------------------------------+
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+--------------------------+------+-----------------------------------------------------------+
+| id   | select_type | table      | type   | possible_keys                      | key                        | key_len | ref                      | rows | Extra                                                     |
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+--------------------------+------+-----------------------------------------------------------+
+|    1 | PRIMARY     | pm         | ref    | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146     | const                    | 17   | Using where; Using index; Using temporary; Using filesort |
+|    1 | PRIMARY     | p          | ref    | Process_ProjectFK                  | Process_ProjectFK          | 147     | GlassfishDB.pm.ProjectID | 5    |                                                           |
+|    1 | PRIMARY     | c          | eq_ref | PRIMARY                            | PRIMARY                    | 146     | GlassfishDB.p.ProcessID  | 1    |                                                           |
+|    1 | PRIMARY     | <derived2> | ref    | key0                               | key0                       | 147     | GlassfishDB.p.ProcessID  | 10   |                                                           |
+|    2 | DERIVED     | rr         | range  | message_rollup_prozess_idx         | message_rollup_prozess_idx | 146     | NULL                     | 729  | Using index for group-by; Using temporary; Using filesort |
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+--------------------------+------+-----------------------------------------------------------+
++-----------------------------------------+
+| marke                                   |
++-----------------------------------------+
+| === M114-G-NEXANS Â· sechs Laeufe ===   |
+-- 4426 Ergebniszeilen entfernt (Regel G1)
+| M114-G-NEXANS |             6 |       22.465 |          17.237 | 17.887,17.783,17.526,17.237,17.592 |
++---------------+---------------+--------------+-----------------+------------------------------------+
++---------------------------------------------+
+| marke                                       |
++---------------------------------------------+
+| === M114-F-NEXANS Â· Plan (Regel L15) ===   |
++---------------------------------------------+
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+--------------------------+--------+-----------------------------------------------------------+
+| id   | select_type | table      | type   | possible_keys                      | key                        | key_len | ref                      | rows   | Extra                                                     |
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+--------------------------+--------+-----------------------------------------------------------+
+|    1 | PRIMARY     | pm         | ref    | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146     | const                    | 17     | Using where; Using index; Using temporary; Using filesort |
+|    1 | PRIMARY     | p          | ref    | Process_ProjectFK                  | Process_ProjectFK          | 147     | GlassfishDB.pm.ProjectID | 5      |                                                           |
+|    1 | PRIMARY     | c          | eq_ref | PRIMARY                            | PRIMARY                    | 146     | GlassfishDB.p.ProcessID  | 1      |                                                           |
+|    1 | PRIMARY     | <derived2> | ref    | key0                               | key0                       | 147     | GlassfishDB.p.ProcessID  | 221    |                                                           |
+|    2 | DERIVED     | rr         | index  | NULL                               | PRIMARY                    | 273     | NULL                     | 329979 | Using index; Using temporary; Using filesort              |
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+--------------------------+--------+-----------------------------------------------------------+
++-----------------------------------------+
+| marke                                   |
++-----------------------------------------+
+| === M114-F-NEXANS Â· sechs Laeufe ===   |
+-- 4426 Ergebniszeilen entfernt (Regel G1)
+| M114-F-NEXANS |             6 |      997.798 |         995.801 | 995.801,997.917,1008.395,1000.570,998.406 |
++---------------+---------------+--------------+-----------------+-------------------------------------------+
++-------------------------------------------+
+| marke                                     |
++-------------------------------------------+
+| === M114-D-VOTG Â· Plan (Regel L15) ===   |
++-------------------------------------------+
++------+--------------------+-------+--------+------------------------------------+----------------------------+---------+--------------------------+------+-----------------------------------------------------------+
+| id   | select_type        | table | type   | possible_keys                      | key                        | key_len | ref                      | rows | Extra                                                     |
++------+--------------------+-------+--------+------------------------------------+----------------------------+---------+--------------------------+------+-----------------------------------------------------------+
+|    1 | PRIMARY            | pm    | ref    | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146     | const                    | 39   | Using where; Using index; Using temporary; Using filesort |
+|    1 | PRIMARY            | p     | ref    | Process_ProjectFK                  | Process_ProjectFK          | 147     | GlassfishDB.pm.ProjectID | 5    |                                                           |
+|    1 | PRIMARY            | c     | eq_ref | PRIMARY                            | PRIMARY                    | 146     | GlassfishDB.p.ProcessID  | 1    |                                                           |
+|    2 | DEPENDENT SUBQUERY | r     | ref    | message_rollup_prozess_idx         | message_rollup_prozess_idx | 146     | GlassfishDB.p.ProcessID  | 453  | Using where; Using index                                  |
++------+--------------------+-------+--------+------------------------------------+----------------------------+---------+--------------------------+------+-----------------------------------------------------------+
++---------------------------------------+
+| marke                                 |
++---------------------------------------+
+| === M114-D-VOTG Â· sechs Laeufe ===   |
+-- 2368 Ergebniszeilen entfernt (Regel G1)
+| M114-D-VOTG |             6 |        2.549 |           2.513 | 2.721,2.757,2.518,2.513,2.536 |
++-------------+---------------+--------------+-----------------+-------------------------------+
++-------------------------------------------+
+| marke                                     |
++-------------------------------------------+
+| === M114-E-VOTG Â· Plan (Regel L15) ===   |
++-------------------------------------------+
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+---------------------------+------+-----------------------------------------------------------+
+| id   | select_type | table      | type   | possible_keys                      | key                        | key_len | ref                       | rows | Extra                                                     |
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+---------------------------+------+-----------------------------------------------------------+
+|    1 | PRIMARY     | pm         | ref    | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146     | const                     | 39   | Using where; Using index; Using temporary; Using filesort |
+|    1 | PRIMARY     | p          | ref    | Process_ProjectFK                  | Process_ProjectFK          | 147     | GlassfishDB.pm.ProjectID  | 5    |                                                           |
+|    1 | PRIMARY     | c          | eq_ref | PRIMARY                            | PRIMARY                    | 146     | GlassfishDB.p.ProcessID   | 1    |                                                           |
+|    1 | PRIMARY     | <derived2> | ref    | key0                               | key0                       | 147     | GlassfishDB.p.ProcessID   | 59   |                                                           |
+|    2 | DERIVED     | pm2        | ref    | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146     | const                     | 39   | Using where; Using index; Using temporary; Using filesort |
+|    2 | DERIVED     | p2         | ref    | PRIMARY,Process_ProjectFK          | Process_ProjectFK          | 147     | GlassfishDB.pm2.ProjectID | 5    | Using index                                               |
+|    2 | DERIVED     | rr         | ref    | message_rollup_prozess_idx         | message_rollup_prozess_idx | 146     | GlassfishDB.p2.ProcessID  | 453  | Using index                                               |
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+---------------------------+------+-----------------------------------------------------------+
++---------------------------------------+
+| marke                                 |
++---------------------------------------+
+| === M114-E-VOTG Â· sechs Laeufe ===   |
+-- 2368 Ergebniszeilen entfernt (Regel G1)
+| M114-E-VOTG |             6 |      176.617 |         175.557 | 176.097,176.159,175.557,177.344,175.604 |
++-------------+---------------+--------------+-----------------+-----------------------------------------+
++-------------------------------------------+
+| marke                                     |
++-------------------------------------------+
+| === M114-G-VOTG Â· Plan (Regel L15) ===   |
++-------------------------------------------+
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+--------------------------+------+-----------------------------------------------------------+
+| id   | select_type | table      | type   | possible_keys                      | key                        | key_len | ref                      | rows | Extra                                                     |
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+--------------------------+------+-----------------------------------------------------------+
+|    1 | PRIMARY     | pm         | ref    | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146     | const                    | 39   | Using where; Using index; Using temporary; Using filesort |
+|    1 | PRIMARY     | p          | ref    | Process_ProjectFK                  | Process_ProjectFK          | 147     | GlassfishDB.pm.ProjectID | 5    |                                                           |
+|    1 | PRIMARY     | c          | eq_ref | PRIMARY                            | PRIMARY                    | 146     | GlassfishDB.p.ProcessID  | 1    |                                                           |
+|    1 | PRIMARY     | <derived2> | ref    | key0                               | key0                       | 147     | GlassfishDB.p.ProcessID  | 10   |                                                           |
+|    2 | DERIVED     | rr         | range  | message_rollup_prozess_idx         | message_rollup_prozess_idx | 146     | NULL                     | 729  | Using index for group-by; Using temporary; Using filesort |
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+--------------------------+------+-----------------------------------------------------------+
++---------------------------------------+
+| marke                                 |
++---------------------------------------+
+| === M114-G-VOTG Â· sechs Laeufe ===   |
+-- 2368 Ergebniszeilen entfernt (Regel G1)
+| M114-G-VOTG |             6 |       13.944 |          13.401 | 13.585,13.553,13.401,14.691,13.748 |
++-------------+---------------+--------------+-----------------+------------------------------------+
++-------------------------------------------+
+| marke                                     |
++-------------------------------------------+
+| === M114-F-VOTG Â· Plan (Regel L15) ===   |
++-------------------------------------------+
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+--------------------------+--------+-----------------------------------------------------------+
+| id   | select_type | table      | type   | possible_keys                      | key                        | key_len | ref                      | rows   | Extra                                                     |
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+--------------------------+--------+-----------------------------------------------------------+
+|    1 | PRIMARY     | pm         | ref    | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146     | const                    | 39     | Using where; Using index; Using temporary; Using filesort |
+|    1 | PRIMARY     | p          | ref    | Process_ProjectFK                  | Process_ProjectFK          | 147     | GlassfishDB.pm.ProjectID | 5      |                                                           |
+|    1 | PRIMARY     | c          | eq_ref | PRIMARY                            | PRIMARY                    | 146     | GlassfishDB.p.ProcessID  | 1      |                                                           |
+|    1 | PRIMARY     | <derived2> | ref    | key0                               | key0                       | 147     | GlassfishDB.p.ProcessID  | 221    |                                                           |
+|    2 | DERIVED     | rr         | index  | NULL                               | PRIMARY                    | 273     | NULL                     | 329979 | Using index; Using temporary; Using filesort              |
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+--------------------------+--------+-----------------------------------------------------------+
++---------------------------------------+
+| marke                                 |
++---------------------------------------+
+| === M114-F-VOTG Â· sechs Laeufe ===   |
+-- 2368 Ergebniszeilen entfernt (Regel G1)
+| M114-F-VOTG |             6 |     1005.448 |        1004.013 | 1004.013,1018.634,1029.239,1008.605,1007.057 |
++-------------+---------------+--------------+-----------------+----------------------------------------------+
++-------------------------------------------+
+| marke                                     |
++-------------------------------------------+
+| === M114-D-IBIS Â· Plan (Regel L15) ===   |
++-------------------------------------------+
++------+--------------------+-------+--------+------------------------------------+----------------------------+---------+--------------------------+------+-----------------------------------------------------------+
+| id   | select_type        | table | type   | possible_keys                      | key                        | key_len | ref                      | rows | Extra                                                     |
++------+--------------------+-------+--------+------------------------------------+----------------------------+---------+--------------------------+------+-----------------------------------------------------------+
+|    1 | PRIMARY            | pm    | ref    | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146     | const                    | 46   | Using where; Using index; Using temporary; Using filesort |
+|    1 | PRIMARY            | p     | ref    | Process_ProjectFK                  | Process_ProjectFK          | 147     | GlassfishDB.pm.ProjectID | 5    |                                                           |
+|    1 | PRIMARY            | c     | eq_ref | PRIMARY                            | PRIMARY                    | 146     | GlassfishDB.p.ProcessID  | 1    |                                                           |
+|    2 | DEPENDENT SUBQUERY | r     | ref    | message_rollup_prozess_idx         | message_rollup_prozess_idx | 146     | GlassfishDB.p.ProcessID  | 453  | Using where; Using index                                  |
++------+--------------------+-------+--------+------------------------------------+----------------------------+---------+--------------------------+------+-----------------------------------------------------------+
++---------------------------------------+
+| marke                                 |
++---------------------------------------+
+| === M114-D-IBIS Â· sechs Laeufe ===   |
+-- 1180 Ergebniszeilen entfernt (Regel G1)
+| M114-D-IBIS |             6 |        3.091 |           2.524 | 2.524,2.807,2.620,2.776,2.823 |
++-------------+---------------+--------------+-----------------+-------------------------------+
++-------------------------------------------+
+| marke                                     |
++-------------------------------------------+
+| === M114-E-IBIS Â· Plan (Regel L15) ===   |
++-------------------------------------------+
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+---------------------------+------+-----------------------------------------------------------+
+| id   | select_type | table      | type   | possible_keys                      | key                        | key_len | ref                       | rows | Extra                                                     |
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+---------------------------+------+-----------------------------------------------------------+
+|    1 | PRIMARY     | pm         | ref    | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146     | const                     | 46   | Using where; Using index; Using temporary; Using filesort |
+|    1 | PRIMARY     | p          | ref    | Process_ProjectFK                  | Process_ProjectFK          | 147     | GlassfishDB.pm.ProjectID  | 5    |                                                           |
+|    1 | PRIMARY     | c          | eq_ref | PRIMARY                            | PRIMARY                    | 146     | GlassfishDB.p.ProcessID   | 1    |                                                           |
+|    1 | PRIMARY     | <derived2> | ref    | key0                               | key0                       | 147     | GlassfishDB.p.ProcessID   | 69   |                                                           |
+|    2 | DERIVED     | pm2        | ref    | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146     | const                     | 46   | Using where; Using index; Using temporary; Using filesort |
+|    2 | DERIVED     | p2         | ref    | PRIMARY,Process_ProjectFK          | Process_ProjectFK          | 147     | GlassfishDB.pm2.ProjectID | 5    | Using index                                               |
+|    2 | DERIVED     | rr         | ref    | message_rollup_prozess_idx         | message_rollup_prozess_idx | 146     | GlassfishDB.p2.ProcessID  | 453  | Using index                                               |
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+---------------------------+------+-----------------------------------------------------------+
++---------------------------------------+
+| marke                                 |
++---------------------------------------+
+| === M114-E-IBIS Â· sechs Laeufe ===   |
+-- 1180 Ergebniszeilen entfernt (Regel G1)
+| M114-E-IBIS |             6 |       98.651 |          98.432 | 98.442,98.689,98.932,98.627,98.432 |
++-------------+---------------+--------------+-----------------+------------------------------------+
++-------------------------------------------+
+| marke                                     |
++-------------------------------------------+
+| === M114-G-IBIS Â· Plan (Regel L15) ===   |
++-------------------------------------------+
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+--------------------------+------+-----------------------------------------------------------+
+| id   | select_type | table      | type   | possible_keys                      | key                        | key_len | ref                      | rows | Extra                                                     |
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+--------------------------+------+-----------------------------------------------------------+
+|    1 | PRIMARY     | pm         | ref    | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146     | const                    | 46   | Using where; Using index; Using temporary; Using filesort |
+|    1 | PRIMARY     | p          | ref    | Process_ProjectFK                  | Process_ProjectFK          | 147     | GlassfishDB.pm.ProjectID | 5    |                                                           |
+|    1 | PRIMARY     | c          | eq_ref | PRIMARY                            | PRIMARY                    | 146     | GlassfishDB.p.ProcessID  | 1    |                                                           |
+|    1 | PRIMARY     | <derived2> | ref    | key0                               | key0                       | 147     | GlassfishDB.p.ProcessID  | 10   |                                                           |
+|    2 | DERIVED     | rr         | range  | message_rollup_prozess_idx         | message_rollup_prozess_idx | 146     | NULL                     | 729  | Using index for group-by; Using temporary; Using filesort |
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+--------------------------+------+-----------------------------------------------------------+
++---------------------------------------+
+| marke                                 |
++---------------------------------------+
+| === M114-G-IBIS Â· sechs Laeufe ===   |
+-- 1180 Ergebniszeilen entfernt (Regel G1)
+| M114-G-IBIS |             6 |       11.721 |          10.789 | 11.073,10.906,10.789,10.864,11.176 |
++-------------+---------------+--------------+-----------------+------------------------------------+
++-------------------------------------------+
+| marke                                     |
++-------------------------------------------+
+| === M114-F-IBIS Â· Plan (Regel L15) ===   |
++-------------------------------------------+
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+--------------------------+--------+-----------------------------------------------------------+
+| id   | select_type | table      | type   | possible_keys                      | key                        | key_len | ref                      | rows   | Extra                                                     |
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+--------------------------+--------+-----------------------------------------------------------+
+|    1 | PRIMARY     | pm         | ref    | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146     | const                    | 46     | Using where; Using index; Using temporary; Using filesort |
+|    1 | PRIMARY     | p          | ref    | Process_ProjectFK                  | Process_ProjectFK          | 147     | GlassfishDB.pm.ProjectID | 5      |                                                           |
+|    1 | PRIMARY     | c          | eq_ref | PRIMARY                            | PRIMARY                    | 146     | GlassfishDB.p.ProcessID  | 1      |                                                           |
+|    1 | PRIMARY     | <derived2> | ref    | key0                               | key0                       | 147     | GlassfishDB.p.ProcessID  | 221    |                                                           |
+|    2 | DERIVED     | rr         | index  | NULL                               | PRIMARY                    | 273     | NULL                     | 329979 | Using index; Using temporary; Using filesort              |
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+--------------------------+--------+-----------------------------------------------------------+
++---------------------------------------+
+| marke                                 |
++---------------------------------------+
+| === M114-F-IBIS Â· sechs Laeufe ===   |
+-- 1180 Ergebniszeilen entfernt (Regel G1)
+| M114-F-IBIS |             6 |      993.012 |         989.618 | 1003.867,1003.642,996.003,991.675,989.618 |
++-------------+---------------+--------------+-----------------+-------------------------------------------+
++----------------------------------------------+
+| marke                                        |
++----------------------------------------------+
+| === M114-D-SUTTONS Â· Plan (Regel L15) ===   |
++----------------------------------------------+
++------+--------------------+-------+--------+------------------------------------+----------------------------+---------+--------------------------+------+-----------------------------------------------------------+
+| id   | select_type        | table | type   | possible_keys                      | key                        | key_len | ref                      | rows | Extra                                                     |
++------+--------------------+-------+--------+------------------------------------+----------------------------+---------+--------------------------+------+-----------------------------------------------------------+
+|    1 | PRIMARY            | pm    | ref    | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146     | const                    | 1    | Using where; Using index; Using temporary; Using filesort |
+|    1 | PRIMARY            | p     | ref    | Process_ProjectFK                  | Process_ProjectFK          | 147     | GlassfishDB.pm.ProjectID | 5    |                                                           |
+|    1 | PRIMARY            | c     | eq_ref | PRIMARY                            | PRIMARY                    | 146     | GlassfishDB.p.ProcessID  | 1    |                                                           |
+|    2 | DEPENDENT SUBQUERY | r     | ref    | message_rollup_prozess_idx         | message_rollup_prozess_idx | 146     | GlassfishDB.p.ProcessID  | 453  | Using where; Using index                                  |
++------+--------------------+-------+--------+------------------------------------+----------------------------+---------+--------------------------+------+-----------------------------------------------------------+
++------------------------------------------+
+| marke                                    |
++------------------------------------------+
+| === M114-D-SUTTONS Â· sechs Laeufe ===   |
+-- 130 Ergebniszeilen entfernt (Regel G1)
+| M114-D-SUTTONS |             6 |        1.629 |           1.460 | 1.486,1.460,1.466,1.490,1.462 |
++----------------+---------------+--------------+-----------------+-------------------------------+
++----------------------------------------------+
+| marke                                        |
++----------------------------------------------+
+| === M114-E-SUTTONS Â· Plan (Regel L15) ===   |
++----------------------------------------------+
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+---------------------------+------+-----------------------------------------------------------+
+| id   | select_type | table      | type   | possible_keys                      | key                        | key_len | ref                       | rows | Extra                                                     |
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+---------------------------+------+-----------------------------------------------------------+
+|    1 | PRIMARY     | pm         | ref    | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146     | const                     | 1    | Using where; Using index; Using temporary; Using filesort |
+|    1 | PRIMARY     | p          | ref    | Process_ProjectFK                  | Process_ProjectFK          | 147     | GlassfishDB.pm.ProjectID  | 5    |                                                           |
+|    1 | PRIMARY     | c          | eq_ref | PRIMARY                            | PRIMARY                    | 146     | GlassfishDB.p.ProcessID   | 1    |                                                           |
+|    1 | PRIMARY     | <derived2> | ref    | key0                               | key0                       | 147     | GlassfishDB.p.ProcessID   | 10   |                                                           |
+|    2 | DERIVED     | pm2        | ref    | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146     | const                     | 1    | Using where; Using index; Using temporary; Using filesort |
+|    2 | DERIVED     | p2         | ref    | PRIMARY,Process_ProjectFK          | Process_ProjectFK          | 147     | GlassfishDB.pm2.ProjectID | 5    | Using index                                               |
+|    2 | DERIVED     | rr         | ref    | message_rollup_prozess_idx         | message_rollup_prozess_idx | 146     | GlassfishDB.p2.ProcessID  | 453  | Using index                                               |
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+---------------------------+------+-----------------------------------------------------------+
++------------------------------------------+
+| marke                                    |
++------------------------------------------+
+| === M114-E-SUTTONS Â· sechs Laeufe ===   |
+-- 130 Ergebniszeilen entfernt (Regel G1)
+| M114-E-SUTTONS |             6 |      134.302 |         132.012 | 133.545,132.372,134.403,132.012,134.195 |
++----------------+---------------+--------------+-----------------+-----------------------------------------+
++----------------------------------------------+
+| marke                                        |
++----------------------------------------------+
+| === M114-G-SUTTONS Â· Plan (Regel L15) ===   |
++----------------------------------------------+
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+--------------------------+------+-----------------------------------------------------------+
+| id   | select_type | table      | type   | possible_keys                      | key                        | key_len | ref                      | rows | Extra                                                     |
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+--------------------------+------+-----------------------------------------------------------+
+|    1 | PRIMARY     | pm         | ref    | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146     | const                    | 1    | Using where; Using index; Using temporary; Using filesort |
+|    1 | PRIMARY     | p          | ref    | Process_ProjectFK                  | Process_ProjectFK          | 147     | GlassfishDB.pm.ProjectID | 5    |                                                           |
+|    1 | PRIMARY     | c          | eq_ref | PRIMARY                            | PRIMARY                    | 146     | GlassfishDB.p.ProcessID  | 1    |                                                           |
+|    1 | PRIMARY     | <derived2> | ref    | key0                               | key0                       | 147     | GlassfishDB.p.ProcessID  | 10   |                                                           |
+|    2 | DERIVED     | rr         | range  | message_rollup_prozess_idx         | message_rollup_prozess_idx | 146     | NULL                     | 729  | Using index for group-by; Using temporary; Using filesort |
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+--------------------------+------+-----------------------------------------------------------+
++------------------------------------------+
+| marke                                    |
++------------------------------------------+
+| === M114-G-SUTTONS Â· sechs Laeufe ===   |
+-- 130 Ergebniszeilen entfernt (Regel G1)
+| M114-G-SUTTONS |             6 |        9.165 |           8.336 | 8.336,10.011,10.304,9.574,9.872 |
++----------------+---------------+--------------+-----------------+---------------------------------+
++----------------------------------------------+
+| marke                                        |
++----------------------------------------------+
+| === M114-F-SUTTONS Â· Plan (Regel L15) ===   |
++----------------------------------------------+
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+--------------------------+--------+-----------------------------------------------------------+
+| id   | select_type | table      | type   | possible_keys                      | key                        | key_len | ref                      | rows   | Extra                                                     |
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+--------------------------+--------+-----------------------------------------------------------+
+|    1 | PRIMARY     | pm         | ref    | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146     | const                    | 1      | Using where; Using index; Using temporary; Using filesort |
+|    1 | PRIMARY     | p          | ref    | Process_ProjectFK                  | Process_ProjectFK          | 147     | GlassfishDB.pm.ProjectID | 5      |                                                           |
+|    1 | PRIMARY     | c          | eq_ref | PRIMARY                            | PRIMARY                    | 146     | GlassfishDB.p.ProcessID  | 1      |                                                           |
+|    1 | PRIMARY     | <derived2> | ref    | key0                               | key0                       | 147     | GlassfishDB.p.ProcessID  | 221    |                                                           |
+|    2 | DERIVED     | rr         | index  | NULL                               | PRIMARY                    | 273     | NULL                     | 329979 | Using index; Using temporary; Using filesort              |
++------+-------------+------------+--------+------------------------------------+----------------------------+---------+--------------------------+--------+-----------------------------------------------------------+
++------------------------------------------+
+| marke                                    |
++------------------------------------------+
+| === M114-F-SUTTONS Â· sechs Laeufe ===   |
+-- 130 Ergebniszeilen entfernt (Regel G1)
+| M114-F-SUTTONS |             6 |      998.352 |         984.864 | 987.448,987.429,984.864,990.902,992.469 |
++----------------+---------------+--------------+-----------------+-----------------------------------------+
++-------------------------------------------------------+
+| marke                                                 |
++-------------------------------------------------------+
+| === M114-Z Gleichheitsprobe der Fassungen, NEXANS === |
++-------------------------------------------------------+
++---------+----------+--------------+---------------------+
+| fassung | prozesse | mit_bewegung | juengste            |
++---------+----------+--------------+---------------------+
+| D       |      733 |          516 | 2026-07-08 17:00:00 |
+| G       |      733 |          516 | 2026-07-08 17:00:00 |
++---------+----------+--------------+---------------------+
++---------------------------------------------------------+
+| marke                                                   |
++---------------------------------------------------------+
+| === M113-Z Summenprobe EXISTS gegen JOIN, 12 Monate === |
++---------------------------------------------------------+
++---------+------------+----------+
+| mandant | aus_exists | aus_join |
++---------+------------+----------+
+| NEXANS  |    2308005 |  2308005 |
+| VOTG    |     113291 |   113291 |
+| IBIS    |      58672 |    58672 |
+| SUTTONS |     196536 |   196536 |
++---------+------------+----------+
++-------------------+
+| marke             |
++-------------------+
+| === 99 fertig === |
++-------------------+

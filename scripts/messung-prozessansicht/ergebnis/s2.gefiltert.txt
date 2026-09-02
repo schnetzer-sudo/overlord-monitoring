@@ -1,0 +1,494 @@
++--------------------------------------------------+
+| === 00 read_only (erste Abfrage der Sitzung) === |
++--------------------------------------------------+
++------+---------------------+
+|    1 | 2026-09-02 10:35:22 |
++------+---------------------+
++---------------------------------------------+
+|   === M112-A-NEXANS Â· Plan (Regel L15) === |
++---------------------------------------------+
++------+--------------------+------+------+------------------------------------+----------------------------+------+--------------------------+------+-----------------------------------------------------------+
+|    1 |            PRIMARY |   pm |  ref | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146  | const                    |   17 | Using where; Using index; Using temporary; Using filesort |
+|    1 |            PRIMARY |    p |  ref |                  Process_ProjectFK |          Process_ProjectFK | 147  | GlassfishDB.pm.ProjectID |    5 |                                                           |
+|    2 | DEPENDENT SUBQUERY |    r |  ref |         message_rollup_prozess_idx | message_rollup_prozess_idx | 146  | GlassfishDB.p.ProcessID  |  453 | Using index                                               |
++------+--------------------+------+------+------------------------------------+----------------------------+------+--------------------------+------+-----------------------------------------------------------+
++-----------------------------------------+
+|   === M112-A-NEXANS Â· sechs Laeufe === |
+-- 4412 Ergebniszeilen entfernt (Regel G1)
+| M112-A-NEXANS | 6 | 16.243 | 16.089 | 16.517,16.574,16.089,16.272,16.355 |
++---------------+---+--------+--------+------------------------------------+
++---------------------------------------------+
+|   === M112-B-NEXANS Â· Plan (Regel L15) === |
++---------------------------------------------+
++------+---------+----------------+-------+------------------------------------+----------------------------+------+--------------------------+------+-----------------------------------------------------------+
+|    1 | PRIMARY |             pm |   ref | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146  | const                    |   17 | Using where; Using index; Using temporary; Using filesort |
+|    1 | PRIMARY |              p |   ref |                  Process_ProjectFK |          Process_ProjectFK | 147  | GlassfishDB.pm.ProjectID |    5 |                                                           |
+|    1 | PRIMARY |     <derived2> |   ref |                               key0 |                       key0 | 147  | GlassfishDB.p.ProcessID  |   10 |                                                           |
+|    2 | DERIVED | message_rollup | range |         message_rollup_prozess_idx | message_rollup_prozess_idx | 146  | NULL                     |  729 | Using index for group-by; Using temporary; Using filesort |
++------+---------+----------------+-------+------------------------------------+----------------------------+------+--------------------------+------+-----------------------------------------------------------+
++-----------------------------------------+
+|   === M112-B-NEXANS Â· sechs Laeufe === |
+-- 4412 Ergebniszeilen entfernt (Regel G1)
+| M112-B-NEXANS | 6 | 14.436 | 14.213 | 14.213,14.791,14.663,14.475,14.492 |
++---------------+---+--------+--------+------------------------------------+
++---------------------------------------------+
+|   === M112-C-NEXANS Â· Plan (Regel L15) === |
++---------------------------------------------+
++------+--------------------+------+--------+------------------------------------+----------------------------+------+--------------------------+------+-----------------------------------------------------------+
+|    1 |            PRIMARY |   pm |    ref | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146  | const                    |   17 | Using where; Using index; Using temporary; Using filesort |
+|    1 |            PRIMARY |    p |    ref |                  Process_ProjectFK |          Process_ProjectFK | 147  | GlassfishDB.pm.ProjectID |    5 |                                                           |
+|    1 |            PRIMARY |    c | eq_ref |                            PRIMARY |                    PRIMARY | 146  | GlassfishDB.p.ProcessID  |    1 |                                                           |
+|    2 | DEPENDENT SUBQUERY |    r |    ref |         message_rollup_prozess_idx | message_rollup_prozess_idx | 146  | GlassfishDB.p.ProcessID  |  453 | Using index                                               |
++------+--------------------+------+--------+------------------------------------+----------------------------+------+--------------------------+------+-----------------------------------------------------------+
++-----------------------------------------+
+|   === M112-C-NEXANS Â· sechs Laeufe === |
+-- 4412 Ergebniszeilen entfernt (Regel G1)
+| M112-C-NEXANS | 6 | 16.903 | 16.420 | 16.928,16.420,16.733,16.616,16.850 |
++---------------+---+--------+--------+------------------------------------+
++-------------------------------------------+
+|   === M112-A-VOTG Â· Plan (Regel L15) === |
++-------------------------------------------+
++------+--------------------+------+------+------------------------------------+----------------------------+------+--------------------------+------+-----------------------------------------------------------+
+|    1 |            PRIMARY |   pm |  ref | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146  | const                    |   39 | Using where; Using index; Using temporary; Using filesort |
+|    1 |            PRIMARY |    p |  ref |                  Process_ProjectFK |          Process_ProjectFK | 147  | GlassfishDB.pm.ProjectID |    5 |                                                           |
+|    2 | DEPENDENT SUBQUERY |    r |  ref |         message_rollup_prozess_idx | message_rollup_prozess_idx | 146  | GlassfishDB.p.ProcessID  |  453 | Using index                                               |
++------+--------------------+------+------+------------------------------------+----------------------------+------+--------------------------+------+-----------------------------------------------------------+
++---------------------------------------+
+|   === M112-A-VOTG Â· sechs Laeufe === |
+-- 2354 Ergebniszeilen entfernt (Regel G1)
+| M112-A-VOTG | 6 | 2.382 | 2.364 | 2.751,2.364,2.395,2.414,2.421 |
++-------------+---+-------+-------+-------------------------------+
++-------------------------------------------+
+|   === M112-B-VOTG Â· Plan (Regel L15) === |
++-------------------------------------------+
++------+---------+----------------+-------+------------------------------------+----------------------------+------+--------------------------+------+-----------------------------------------------------------+
+|    1 | PRIMARY |             pm |   ref | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146  | const                    |   39 | Using where; Using index; Using temporary; Using filesort |
+|    1 | PRIMARY |              p |   ref |                  Process_ProjectFK |          Process_ProjectFK | 147  | GlassfishDB.pm.ProjectID |    5 |                                                           |
+|    1 | PRIMARY |     <derived2> |   ref |                               key0 |                       key0 | 147  | GlassfishDB.p.ProcessID  |   10 |                                                           |
+|    2 | DERIVED | message_rollup | range |         message_rollup_prozess_idx | message_rollup_prozess_idx | 146  | NULL                     |  729 | Using index for group-by; Using temporary; Using filesort |
++------+---------+----------------+-------+------------------------------------+----------------------------+------+--------------------------+------+-----------------------------------------------------------+
++---------------------------------------+
+|   === M112-B-VOTG Â· sechs Laeufe === |
+-- 2354 Ergebniszeilen entfernt (Regel G1)
+| M112-B-VOTG | 6 | 11.790 | 12.246 | 12.300,12.363,12.296,12.486,12.246 |
++-------------+---+--------+--------+------------------------------------+
++-------------------------------------------+
+|   === M112-C-VOTG Â· Plan (Regel L15) === |
++-------------------------------------------+
++------+--------------------+------+--------+------------------------------------+----------------------------+------+--------------------------+------+-----------------------------------------------------------+
+|    1 |            PRIMARY |   pm |    ref | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146  | const                    |   39 | Using where; Using index; Using temporary; Using filesort |
+|    1 |            PRIMARY |    p |    ref |                  Process_ProjectFK |          Process_ProjectFK | 147  | GlassfishDB.pm.ProjectID |    5 |                                                           |
+|    1 |            PRIMARY |    c | eq_ref |                            PRIMARY |                    PRIMARY | 146  | GlassfishDB.p.ProcessID  |    1 |                                                           |
+|    2 | DEPENDENT SUBQUERY |    r |    ref |         message_rollup_prozess_idx | message_rollup_prozess_idx | 146  | GlassfishDB.p.ProcessID  |  453 | Using index                                               |
++------+--------------------+------+--------+------------------------------------+----------------------------+------+--------------------------+------+-----------------------------------------------------------+
++---------------------------------------+
+|   === M112-C-VOTG Â· sechs Laeufe === |
+-- 2354 Ergebniszeilen entfernt (Regel G1)
+| M112-C-VOTG | 6 | 2.769 | 2.773 | 2.787,2.795,2.827,2.773,2.794 |
++-------------+---+-------+-------+-------------------------------+
++-------------------------------------------+
+|   === M112-A-IBIS Â· Plan (Regel L15) === |
++-------------------------------------------+
++------+--------------------+------+------+------------------------------------+----------------------------+------+--------------------------+------+-----------------------------------------------------------+
+|    1 |            PRIMARY |   pm |  ref | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146  | const                    |   46 | Using where; Using index; Using temporary; Using filesort |
+|    1 |            PRIMARY |    p |  ref |                  Process_ProjectFK |          Process_ProjectFK | 147  | GlassfishDB.pm.ProjectID |    5 |                                                           |
+|    2 | DEPENDENT SUBQUERY |    r |  ref |         message_rollup_prozess_idx | message_rollup_prozess_idx | 146  | GlassfishDB.p.ProcessID  |  453 | Using index                                               |
++------+--------------------+------+------+------------------------------------+----------------------------+------+--------------------------+------+-----------------------------------------------------------+
++---------------------------------------+
+|   === M112-A-IBIS Â· sechs Laeufe === |
+-- 1166 Ergebniszeilen entfernt (Regel G1)
+| M112-A-IBIS | 6 | 5.175 | 5.002 | 5.013,5.002,5.202,5.079,5.118 |
++-------------+---+-------+-------+-------------------------------+
++-------------------------------------------+
+|   === M112-B-IBIS Â· Plan (Regel L15) === |
++-------------------------------------------+
++------+---------+----------------+-------+------------------------------------+----------------------------+------+--------------------------+------+-----------------------------------------------------------+
+|    1 | PRIMARY |             pm |   ref | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146  | const                    |   46 | Using where; Using index; Using temporary; Using filesort |
+|    1 | PRIMARY |              p |   ref |                  Process_ProjectFK |          Process_ProjectFK | 147  | GlassfishDB.pm.ProjectID |    5 |                                                           |
+|    1 | PRIMARY |     <derived2> |   ref |                               key0 |                       key0 | 147  | GlassfishDB.p.ProcessID  |   10 |                                                           |
+|    2 | DERIVED | message_rollup | range |         message_rollup_prozess_idx | message_rollup_prozess_idx | 146  | NULL                     |  729 | Using index for group-by; Using temporary; Using filesort |
++------+---------+----------------+-------+------------------------------------+----------------------------+------+--------------------------+------+-----------------------------------------------------------+
++---------------------------------------+
+|   === M112-B-IBIS Â· sechs Laeufe === |
+-- 1166 Ergebniszeilen entfernt (Regel G1)
+| M112-B-IBIS | 6 | 10.932 | 9.983 | 10.104,9.983,10.333,10.438,10.101 |
++-------------+---+--------+-------+-----------------------------------+
++-------------------------------------------+
+|   === M112-C-IBIS Â· Plan (Regel L15) === |
++-------------------------------------------+
++------+--------------------+------+--------+------------------------------------+----------------------------+------+--------------------------+------+-----------------------------------------------------------+
+|    1 |            PRIMARY |   pm |    ref | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146  | const                    |   46 | Using where; Using index; Using temporary; Using filesort |
+|    1 |            PRIMARY |    p |    ref |                  Process_ProjectFK |          Process_ProjectFK | 147  | GlassfishDB.pm.ProjectID |    5 |                                                           |
+|    1 |            PRIMARY |    c | eq_ref |                            PRIMARY |                    PRIMARY | 146  | GlassfishDB.p.ProcessID  |    1 |                                                           |
+|    2 | DEPENDENT SUBQUERY |    r |    ref |         message_rollup_prozess_idx | message_rollup_prozess_idx | 146  | GlassfishDB.p.ProcessID  |  453 | Using index                                               |
++------+--------------------+------+--------+------------------------------------+----------------------------+------+--------------------------+------+-----------------------------------------------------------+
++---------------------------------------+
+|   === M112-C-IBIS Â· sechs Laeufe === |
+-- 1166 Ergebniszeilen entfernt (Regel G1)
+| M112-C-IBIS | 6 | 5.229 | 5.236 | 5.487,5.260,5.402,5.466,5.236 |
++-------------+---+-------+-------+-------------------------------+
++----------------------------------------------+
+|   === M112-A-SUTTONS Â· Plan (Regel L15) === |
++----------------------------------------------+
++------+--------------------+------+------+------------------------------------+----------------------------+------+--------------------------+------+-----------------------------------------------------------+
+|    1 |            PRIMARY |   pm |  ref | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146  | const                    |    1 | Using where; Using index; Using temporary; Using filesort |
+|    1 |            PRIMARY |    p |  ref |                  Process_ProjectFK |          Process_ProjectFK | 147  | GlassfishDB.pm.ProjectID |    5 |                                                           |
+|    2 | DEPENDENT SUBQUERY |    r |  ref |         message_rollup_prozess_idx | message_rollup_prozess_idx | 146  | GlassfishDB.p.ProcessID  |  453 | Using index                                               |
++------+--------------------+------+------+------------------------------------+----------------------------+------+--------------------------+------+-----------------------------------------------------------+
++------------------------------------------+
+|   === M112-A-SUTTONS Â· sechs Laeufe === |
+-- 116 Ergebniszeilen entfernt (Regel G1)
+| M112-A-SUTTONS | 6 | 32.964 | 32.577 | 32.610,32.577,32.915,32.852,32.580 |
++----------------+---+--------+--------+------------------------------------+
++----------------------------------------------+
+|   === M112-B-SUTTONS Â· Plan (Regel L15) === |
++----------------------------------------------+
++------+---------+----------------+-------+------------------------------------+----------------------------+------+--------------------------+------+-----------------------------------------------------------+
+|    1 | PRIMARY |             pm |   ref | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146  | const                    |    1 | Using where; Using index; Using temporary; Using filesort |
+|    1 | PRIMARY |              p |   ref |                  Process_ProjectFK |          Process_ProjectFK | 147  | GlassfishDB.pm.ProjectID |    5 |                                                           |
+|    1 | PRIMARY |     <derived2> |   ref |                               key0 |                       key0 | 147  | GlassfishDB.p.ProcessID  |   10 |                                                           |
+|    2 | DERIVED | message_rollup | range |         message_rollup_prozess_idx | message_rollup_prozess_idx | 146  | NULL                     |  729 | Using index for group-by; Using temporary; Using filesort |
++------+---------+----------------+-------+------------------------------------+----------------------------+------+--------------------------+------+-----------------------------------------------------------+
++------------------------------------------+
+|   === M112-B-SUTTONS Â· sechs Laeufe === |
+-- 116 Ergebniszeilen entfernt (Regel G1)
+| M112-B-SUTTONS | 6 | 9.221 | 8.280 | 8.843,8.401,8.280,8.844,9.072 |
++----------------+---+-------+-------+-------------------------------+
++----------------------------------------------+
+|   === M112-C-SUTTONS Â· Plan (Regel L15) === |
++----------------------------------------------+
++------+--------------------+------+--------+------------------------------------+----------------------------+------+--------------------------+------+-----------------------------------------------------------+
+|    1 |            PRIMARY |   pm |    ref | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146  | const                    |    1 | Using where; Using index; Using temporary; Using filesort |
+|    1 |            PRIMARY |    p |    ref |                  Process_ProjectFK |          Process_ProjectFK | 147  | GlassfishDB.pm.ProjectID |    5 |                                                           |
+|    1 |            PRIMARY |    c | eq_ref |                            PRIMARY |                    PRIMARY | 146  | GlassfishDB.p.ProcessID  |    1 |                                                           |
+|    2 | DEPENDENT SUBQUERY |    r |    ref |         message_rollup_prozess_idx | message_rollup_prozess_idx | 146  | GlassfishDB.p.ProcessID  |  453 | Using index                                               |
++------+--------------------+------+--------+------------------------------------+----------------------------+------+--------------------------+------+-----------------------------------------------------------+
++------------------------------------------+
+|   === M112-C-SUTTONS Â· sechs Laeufe === |
+-- 116 Ergebniszeilen entfernt (Regel G1)
+| M112-C-SUTTONS | 6 | 33.391 | 32.679 | 32.712,33.086,33.501,32.835,32.679 |
++----------------+---+--------+--------+------------------------------------+
++------------------------------------------------------+
+|   === M113-EXISTS-NEXANS-48H Â· Plan (Regel L15) === |
++------------------------------------------------------+
++------+---------+------+--------+------------------------------------+---------+------+-------------------------------+------+----------------------------------------------+
+|    1 | PRIMARY |    r |  range | PRIMARY,message_rollup_prozess_idx | PRIMARY | 5    | NULL                          |  929 | Using where; Using temporary; Using filesort |
+|    1 | PRIMARY |    p | eq_ref |          PRIMARY,Process_ProjectFK | PRIMARY | 146  | overlord_monitor.r.process_id |    1 | Using where                                  |
+|    1 | PRIMARY |   pm | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY | 292  | GlassfishDB.p.ProjectID,const |    1 | Using where; Using index                     |
++------+---------+------+--------+------------------------------------+---------+------+-------------------------------+------+----------------------------------------------+
++--------------------------------------------------+
+|   === M113-EXISTS-NEXANS-48H Â· sechs Laeufe === |
+-- 446 Ergebniszeilen entfernt (Regel G1)
+| M113-EXISTS-NEXANS-48H | 6 | 8.030 | 7.266 | 7.784,7.604,7.266,7.641,7.950 |
++------------------------+---+-------+-------+-------------------------------+
++----------------------------------------------------+
+|   === M113-JOIN-NEXANS-48H Â· Plan (Regel L15) === |
++----------------------------------------------------+
++------+--------+------+--------+------------------------------------+---------+------+-------------------------------+------+----------------------------------------------+
+|    1 | SIMPLE |    r |  range | PRIMARY,message_rollup_prozess_idx | PRIMARY | 5    | NULL                          |  929 | Using where; Using temporary; Using filesort |
+|    1 | SIMPLE |    p | eq_ref |          PRIMARY,Process_ProjectFK | PRIMARY | 146  | overlord_monitor.r.process_id |    1 | Using where                                  |
+|    1 | SIMPLE |   pm | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY | 292  | GlassfishDB.p.ProjectID,const |    1 | Using where; Using index                     |
++------+--------+------+--------+------------------------------------+---------+------+-------------------------------+------+----------------------------------------------+
++------------------------------------------------+
+|   === M113-JOIN-NEXANS-48H Â· sechs Laeufe === |
+-- 446 Ergebniszeilen entfernt (Regel G1)
+| M113-JOIN-NEXANS-48H | 6 | 7.521 | 6.763 | 6.899,6.937,6.778,6.763,6.827 |
++----------------------+---+-------+-------+-------------------------------+
++------------------------------------------------------+
+|   === M113-EXISTS-NEXANS-30T Â· Plan (Regel L15) === |
++------------------------------------------------------+
++------+---------+------+--------+------------------------------------+---------+------+-------------------------------+-------+----------------------------------------------+
+|    1 | PRIMARY |    r |  range |                            PRIMARY | PRIMARY | 3    | NULL                          | 14214 | Using where; Using temporary; Using filesort |
+|    1 | PRIMARY |    p | eq_ref |          PRIMARY,Process_ProjectFK | PRIMARY | 146  | overlord_monitor.r.process_id |     1 | Using where                                  |
+|    1 | PRIMARY |   pm | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY | 292  | GlassfishDB.p.ProjectID,const |     1 | Using where; Using index                     |
++------+---------+------+--------+------------------------------------+---------+------+-------------------------------+-------+----------------------------------------------+
++--------------------------------------------------+
+|   === M113-EXISTS-NEXANS-30T Â· sechs Laeufe === |
+-- 3656 Ergebniszeilen entfernt (Regel G1)
+| M113-EXISTS-NEXANS-30T | 6 | 53.097 | 53.062 | 53.402,53.062,53.223,55.056,53.158 |
++------------------------+---+--------+--------+------------------------------------+
++----------------------------------------------------+
+|   === M113-JOIN-NEXANS-30T Â· Plan (Regel L15) === |
++----------------------------------------------------+
++------+--------+------+--------+------------------------------------+---------+------+-------------------------------+-------+----------------------------------------------+
+|    1 | SIMPLE |    r |  range |                            PRIMARY | PRIMARY | 3    | NULL                          | 14214 | Using where; Using temporary; Using filesort |
+|    1 | SIMPLE |    p | eq_ref |          PRIMARY,Process_ProjectFK | PRIMARY | 146  | overlord_monitor.r.process_id |     1 | Using where                                  |
+|    1 | SIMPLE |   pm | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY | 292  | GlassfishDB.p.ProjectID,const |     1 | Using where; Using index                     |
++------+--------+------+--------+------------------------------------+---------+------+-------------------------------+-------+----------------------------------------------+
++------------------------------------------------+
+|   === M113-JOIN-NEXANS-30T Â· sechs Laeufe === |
+-- 3656 Ergebniszeilen entfernt (Regel G1)
+| M113-JOIN-NEXANS-30T | 6 | 52.850 | 53.239 | 54.785,53.520,53.239,57.623,53.556 |
++----------------------+---+--------+--------+------------------------------------+
++------------------------------------------------------+
+|   === M113-EXISTS-NEXANS-12M Â· Plan (Regel L15) === |
++------------------------------------------------------+
++------+---------+------+--------+------------------------------------+---------+------+-------------------------------+------+----------------------------------------------+
+|    1 | PRIMARY |    r |  range |                            PRIMARY | PRIMARY | 3    | NULL                          | 5961 | Using where; Using temporary; Using filesort |
+|    1 | PRIMARY |    p | eq_ref |          PRIMARY,Process_ProjectFK | PRIMARY | 146  | overlord_monitor.r.process_id |    1 | Using where                                  |
+|    1 | PRIMARY |   pm | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY | 292  | GlassfishDB.p.ProjectID,const |    1 | Using where; Using index                     |
++------+---------+------+--------+------------------------------------+---------+------+-------------------------------+------+----------------------------------------------+
++--------------------------------------------------+
+|   === M113-EXISTS-NEXANS-12M Â· sechs Laeufe === |
+-- 4286 Ergebniszeilen entfernt (Regel G1)
+| M113-EXISTS-NEXANS-12M | 6 | 77.345 | 77.184 | 78.784,78.087,77.230,77.666,77.184 |
++------------------------+---+--------+--------+------------------------------------+
++----------------------------------------------------+
+|   === M113-JOIN-NEXANS-12M Â· Plan (Regel L15) === |
++----------------------------------------------------+
++------+--------+------+--------+------------------------------------+---------+------+-------------------------------+------+----------------------------------------------+
+|    1 | SIMPLE |    r |  range |                            PRIMARY | PRIMARY | 3    | NULL                          | 5961 | Using where; Using temporary; Using filesort |
+|    1 | SIMPLE |    p | eq_ref |          PRIMARY,Process_ProjectFK | PRIMARY | 146  | overlord_monitor.r.process_id |    1 | Using where                                  |
+|    1 | SIMPLE |   pm | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY | 292  | GlassfishDB.p.ProjectID,const |    1 | Using where; Using index                     |
++------+--------+------+--------+------------------------------------+---------+------+-------------------------------+------+----------------------------------------------+
++------------------------------------------------+
+|   === M113-JOIN-NEXANS-12M Â· sechs Laeufe === |
+-- 4286 Ergebniszeilen entfernt (Regel G1)
+| M113-JOIN-NEXANS-12M | 6 | 76.232 | 77.172 | 81.321,80.482,78.085,77.172,77.980 |
++----------------------+---+--------+--------+------------------------------------+
++----------------------------------------------------+
+|   === M113-EXISTS-VOTG-48H Â· Plan (Regel L15) === |
++----------------------------------------------------+
++------+---------+------+--------+------------------------------------+---------+------+-------------------------------+------+----------------------------------------------+
+|    1 | PRIMARY |    r |  range | PRIMARY,message_rollup_prozess_idx | PRIMARY | 5    | NULL                          |  929 | Using where; Using temporary; Using filesort |
+|    1 | PRIMARY |    p | eq_ref |          PRIMARY,Process_ProjectFK | PRIMARY | 146  | overlord_monitor.r.process_id |    1 | Using where                                  |
+|    1 | PRIMARY |   pm | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY | 292  | GlassfishDB.p.ProjectID,const |    1 | Using where; Using index                     |
++------+---------+------+--------+------------------------------------+---------+------+-------------------------------+------+----------------------------------------------+
++------------------------------------------------+
+|   === M113-EXISTS-VOTG-48H Â· sechs Laeufe === |
+-- 98 Ergebniszeilen entfernt (Regel G1)
+| M113-EXISTS-VOTG-48H | 6 | 7.405 | 6.863 | 7.199,7.108,6.863,6.893,7.033 |
++----------------------+---+-------+-------+-------------------------------+
++--------------------------------------------------+
+|   === M113-JOIN-VOTG-48H Â· Plan (Regel L15) === |
++--------------------------------------------------+
++------+--------+------+--------+------------------------------------+---------+------+-------------------------------+------+----------------------------------------------+
+|    1 | SIMPLE |    r |  range | PRIMARY,message_rollup_prozess_idx | PRIMARY | 5    | NULL                          |  929 | Using where; Using temporary; Using filesort |
+|    1 | SIMPLE |    p | eq_ref |          PRIMARY,Process_ProjectFK | PRIMARY | 146  | overlord_monitor.r.process_id |    1 | Using where                                  |
+|    1 | SIMPLE |   pm | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY | 292  | GlassfishDB.p.ProjectID,const |    1 | Using where; Using index                     |
++------+--------+------+--------+------------------------------------+---------+------+-------------------------------+------+----------------------------------------------+
++----------------------------------------------+
+|   === M113-JOIN-VOTG-48H Â· sechs Laeufe === |
+-- 98 Ergebniszeilen entfernt (Regel G1)
+| M113-JOIN-VOTG-48H | 6 | 6.964 | 6.766 | 6.785,6.809,6.918,6.770,6.766 |
++--------------------+---+-------+-------+-------------------------------+
++----------------------------------------------------+
+|   === M113-EXISTS-VOTG-30T Â· Plan (Regel L15) === |
++----------------------------------------------------+
++------+---------+------+--------+------------------------------------+---------+------+-------------------------------+-------+----------------------------------------------+
+|    1 | PRIMARY |    r |  range |                            PRIMARY | PRIMARY | 3    | NULL                          | 14214 | Using where; Using temporary; Using filesort |
+|    1 | PRIMARY |    p | eq_ref |          PRIMARY,Process_ProjectFK | PRIMARY | 146  | overlord_monitor.r.process_id |     1 | Using where                                  |
+|    1 | PRIMARY |   pm | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY | 292  | GlassfishDB.p.ProjectID,const |     1 | Using where; Using index                     |
++------+---------+------+--------+------------------------------------+---------+------+-------------------------------+-------+----------------------------------------------+
++------------------------------------------------+
+|   === M113-EXISTS-VOTG-30T Â· sechs Laeufe === |
+-- 122 Ergebniszeilen entfernt (Regel G1)
+| M113-EXISTS-VOTG-30T | 6 | 33.673 | 33.227 | 34.391,33.227,33.227,33.511,33.393 |
++----------------------+---+--------+--------+------------------------------------+
++--------------------------------------------------+
+|   === M113-JOIN-VOTG-30T Â· Plan (Regel L15) === |
++--------------------------------------------------+
++------+--------+------+--------+------------------------------------+---------+------+-------------------------------+-------+----------------------------------------------+
+|    1 | SIMPLE |    r |  range |                            PRIMARY | PRIMARY | 3    | NULL                          | 14214 | Using where; Using temporary; Using filesort |
+|    1 | SIMPLE |    p | eq_ref |          PRIMARY,Process_ProjectFK | PRIMARY | 146  | overlord_monitor.r.process_id |     1 | Using where                                  |
+|    1 | SIMPLE |   pm | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY | 292  | GlassfishDB.p.ProjectID,const |     1 | Using where; Using index                     |
++------+--------+------+--------+------------------------------------+---------+------+-------------------------------+-------+----------------------------------------------+
++----------------------------------------------+
+|   === M113-JOIN-VOTG-30T Â· sechs Laeufe === |
+-- 122 Ergebniszeilen entfernt (Regel G1)
+| M113-JOIN-VOTG-30T | 6 | 33.406 | 33.239 | 33.679,33.441,33.239,33.314,33.481 |
++--------------------+---+--------+--------+------------------------------------+
++----------------------------------------------------+
+|   === M113-EXISTS-VOTG-12M Â· Plan (Regel L15) === |
++----------------------------------------------------+
++------+---------+------+--------+------------------------------------+---------+------+-------------------------------+------+----------------------------------------------+
+|    1 | PRIMARY |    r |  range |                            PRIMARY | PRIMARY | 3    | NULL                          | 5961 | Using where; Using temporary; Using filesort |
+|    1 | PRIMARY |    p | eq_ref |          PRIMARY,Process_ProjectFK | PRIMARY | 146  | overlord_monitor.r.process_id |    1 | Using where                                  |
+|    1 | PRIMARY |   pm | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY | 292  | GlassfishDB.p.ProjectID,const |    1 | Using where; Using index                     |
++------+---------+------+--------+------------------------------------+---------+------+-------------------------------+------+----------------------------------------------+
++------------------------------------------------+
+|   === M113-EXISTS-VOTG-12M Â· sechs Laeufe === |
+-- 254 Ergebniszeilen entfernt (Regel G1)
+| M113-EXISTS-VOTG-12M | 6 | 42.762 | 42.174 | 42.592,42.244,42.174,43.346,42.826 |
++----------------------+---+--------+--------+------------------------------------+
++--------------------------------------------------+
+|   === M113-JOIN-VOTG-12M Â· Plan (Regel L15) === |
++--------------------------------------------------+
++------+--------+------+--------+------------------------------------+---------+------+-------------------------------+------+----------------------------------------------+
+|    1 | SIMPLE |    r |  range |                            PRIMARY | PRIMARY | 3    | NULL                          | 5961 | Using where; Using temporary; Using filesort |
+|    1 | SIMPLE |    p | eq_ref |          PRIMARY,Process_ProjectFK | PRIMARY | 146  | overlord_monitor.r.process_id |    1 | Using where                                  |
+|    1 | SIMPLE |   pm | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY | 292  | GlassfishDB.p.ProjectID,const |    1 | Using where; Using index                     |
++------+--------+------+--------+------------------------------------+---------+------+-------------------------------+------+----------------------------------------------+
++----------------------------------------------+
+|   === M113-JOIN-VOTG-12M Â· sechs Laeufe === |
+-- 254 Ergebniszeilen entfernt (Regel G1)
+| M113-JOIN-VOTG-12M | 6 | 42.316 | 42.116 | 42.381,42.466,42.298,42.116,42.129 |
++--------------------+---+--------+--------+------------------------------------+
++----------------------------------------------------+
+|   === M113-EXISTS-IBIS-48H Â· Plan (Regel L15) === |
++----------------------------------------------------+
++------+---------+------+--------+------------------------------------+---------+------+-------------------------------+------+----------------------------------------------+
+|    1 | PRIMARY |    r |  range | PRIMARY,message_rollup_prozess_idx | PRIMARY | 5    | NULL                          |  929 | Using where; Using temporary; Using filesort |
+|    1 | PRIMARY |    p | eq_ref |          PRIMARY,Process_ProjectFK | PRIMARY | 146  | overlord_monitor.r.process_id |    1 | Using where                                  |
+|    1 | PRIMARY |   pm | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY | 292  | GlassfishDB.p.ProjectID,const |    1 | Using where; Using index                     |
++------+---------+------+--------+------------------------------------+---------+------+-------------------------------+------+----------------------------------------------+
++------------------------------------------------+
+|   === M113-EXISTS-IBIS-48H Â· sechs Laeufe === |
+-- 392 Ergebniszeilen entfernt (Regel G1)
+| M113-EXISTS-IBIS-48H | 6 | 6.298 | 6.268 | 6.453,6.327,6.268,7.749,7.469 |
++----------------------+---+-------+-------+-------------------------------+
++--------------------------------------------------+
+|   === M113-JOIN-IBIS-48H Â· Plan (Regel L15) === |
++--------------------------------------------------+
++------+--------+------+--------+------------------------------------+---------+------+-------------------------------+------+----------------------------------------------+
+|    1 | SIMPLE |    r |  range | PRIMARY,message_rollup_prozess_idx | PRIMARY | 5    | NULL                          |  929 | Using where; Using temporary; Using filesort |
+|    1 | SIMPLE |    p | eq_ref |          PRIMARY,Process_ProjectFK | PRIMARY | 146  | overlord_monitor.r.process_id |    1 | Using where                                  |
+|    1 | SIMPLE |   pm | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY | 292  | GlassfishDB.p.ProjectID,const |    1 | Using where; Using index                     |
++------+--------+------+--------+------------------------------------+---------+------+-------------------------------+------+----------------------------------------------+
++----------------------------------------------+
+|   === M113-JOIN-IBIS-48H Â· sechs Laeufe === |
+-- 392 Ergebniszeilen entfernt (Regel G1)
+| M113-JOIN-IBIS-48H | 6 | 6.388 | 6.737 | 6.952,6.825,7.024,6.804,6.737 |
++--------------------+---+-------+-------+-------------------------------+
++----------------------------------------------------+
+|   === M113-EXISTS-IBIS-30T Â· Plan (Regel L15) === |
++----------------------------------------------------+
++------+---------+------+--------+------------------------------------+---------+------+-------------------------------+-------+----------------------------------------------+
+|    1 | PRIMARY |    r |  range |                            PRIMARY | PRIMARY | 3    | NULL                          | 14214 | Using where; Using temporary; Using filesort |
+|    1 | PRIMARY |    p | eq_ref |          PRIMARY,Process_ProjectFK | PRIMARY | 146  | overlord_monitor.r.process_id |     1 | Using where                                  |
+|    1 | PRIMARY |   pm | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY | 292  | GlassfishDB.p.ProjectID,const |     1 | Using where; Using index                     |
++------+---------+------+--------+------------------------------------+---------+------+-------------------------------+-------+----------------------------------------------+
++------------------------------------------------+
+|   === M113-EXISTS-IBIS-30T Â· sechs Laeufe === |
+-- 650 Ergebniszeilen entfernt (Regel G1)
+| M113-EXISTS-IBIS-30T | 6 | 42.197 | 38.529 | 38.605,40.406,40.420,38.863,38.529 |
++----------------------+---+--------+--------+------------------------------------+
++--------------------------------------------------+
+|   === M113-JOIN-IBIS-30T Â· Plan (Regel L15) === |
++--------------------------------------------------+
++------+--------+------+--------+------------------------------------+---------+------+-------------------------------+-------+----------------------------------------------+
+|    1 | SIMPLE |    r |  range |                            PRIMARY | PRIMARY | 3    | NULL                          | 14214 | Using where; Using temporary; Using filesort |
+|    1 | SIMPLE |    p | eq_ref |          PRIMARY,Process_ProjectFK | PRIMARY | 146  | overlord_monitor.r.process_id |     1 | Using where                                  |
+|    1 | SIMPLE |   pm | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY | 292  | GlassfishDB.p.ProjectID,const |     1 | Using where; Using index                     |
++------+--------+------+--------+------------------------------------+---------+------+-------------------------------+-------+----------------------------------------------+
++----------------------------------------------+
+|   === M113-JOIN-IBIS-30T Â· sechs Laeufe === |
+-- 650 Ergebniszeilen entfernt (Regel G1)
+| M113-JOIN-IBIS-30T | 6 | 39.146 | 38.915 | 38.942,38.986,38.915,42.654,38.970 |
++--------------------+---+--------+--------+------------------------------------+
++----------------------------------------------------+
+|   === M113-EXISTS-IBIS-12M Â· Plan (Regel L15) === |
++----------------------------------------------------+
++------+---------+------+--------+------------------------------------+---------+------+-------------------------------+------+----------------------------------------------+
+|    1 | PRIMARY |    r |  range |                            PRIMARY | PRIMARY | 3    | NULL                          | 5961 | Using where; Using temporary; Using filesort |
+|    1 | PRIMARY |    p | eq_ref |          PRIMARY,Process_ProjectFK | PRIMARY | 146  | overlord_monitor.r.process_id |    1 | Using where                                  |
+|    1 | PRIMARY |   pm | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY | 292  | GlassfishDB.p.ProjectID,const |    1 | Using where; Using index                     |
++------+---------+------+--------+------------------------------------+---------+------+-------------------------------+------+----------------------------------------------+
++------------------------------------------------+
+|   === M113-EXISTS-IBIS-12M Â· sechs Laeufe === |
+-- 698 Ergebniszeilen entfernt (Regel G1)
+| M113-EXISTS-IBIS-12M | 6 | 48.172 | 47.905 | 48.384,48.372,47.980,48.085,47.905 |
++----------------------+---+--------+--------+------------------------------------+
++--------------------------------------------------+
+|   === M113-JOIN-IBIS-12M Â· Plan (Regel L15) === |
++--------------------------------------------------+
++------+--------+------+--------+------------------------------------+---------+------+-------------------------------+------+----------------------------------------------+
+|    1 | SIMPLE |    r |  range |                            PRIMARY | PRIMARY | 3    | NULL                          | 5961 | Using where; Using temporary; Using filesort |
+|    1 | SIMPLE |    p | eq_ref |          PRIMARY,Process_ProjectFK | PRIMARY | 146  | overlord_monitor.r.process_id |    1 | Using where                                  |
+|    1 | SIMPLE |   pm | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY | 292  | GlassfishDB.p.ProjectID,const |    1 | Using where; Using index                     |
++------+--------+------+--------+------------------------------------+---------+------+-------------------------------+------+----------------------------------------------+
++----------------------------------------------+
+|   === M113-JOIN-IBIS-12M Â· sechs Laeufe === |
+-- 698 Ergebniszeilen entfernt (Regel G1)
+| M113-JOIN-IBIS-12M | 6 | 47.966 | 47.721 | 47.833,48.248,47.936,47.896,47.721 |
++--------------------+---+--------+--------+------------------------------------+
++-------------------------------------------------------+
+|   === M113-EXISTS-SUTTONS-48H Â· Plan (Regel L15) === |
++-------------------------------------------------------+
++------+---------+------+--------+------------------------------------+----------------------------+------+-------------------------------+------+-----------------------------------------------------------+
+|    1 | PRIMARY |   pm |    ref | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146  | const                         |    1 | Using where; Using index; Using temporary; Using filesort |
+|    1 | PRIMARY |    r |  range | PRIMARY,message_rollup_prozess_idx |                    PRIMARY | 5    | NULL                          |  929 | Using where; Using join buffer (flat, BNL join)           |
+|    1 | PRIMARY |    p | eq_ref |          PRIMARY,Process_ProjectFK |                    PRIMARY | 146  | overlord_monitor.r.process_id |    1 | Using where                                               |
++------+---------+------+--------+------------------------------------+----------------------------+------+-------------------------------+------+-----------------------------------------------------------+
++---------------------------------------------------+
+|   === M113-EXISTS-SUTTONS-48H Â· sechs Laeufe === |
+-- 116 Ergebniszeilen entfernt (Regel G1)
+| M113-EXISTS-SUTTONS-48H | 6 | 6.951 | 6.762 | 6.824,6.790,6.762,6.839,6.818 |
++-------------------------+---+-------+-------+-------------------------------+
++-----------------------------------------------------+
+|   === M113-JOIN-SUTTONS-48H Â· Plan (Regel L15) === |
++-----------------------------------------------------+
++------+--------+------+--------+------------------------------------+----------------------------+------+-------------------------------+------+-----------------------------------------------------------+
+|    1 | SIMPLE |   pm |    ref | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146  | const                         |    1 | Using where; Using index; Using temporary; Using filesort |
+|    1 | SIMPLE |    r |  range | PRIMARY,message_rollup_prozess_idx |                    PRIMARY | 5    | NULL                          |  929 | Using where; Using join buffer (flat, BNL join)           |
+|    1 | SIMPLE |    p | eq_ref |          PRIMARY,Process_ProjectFK |                    PRIMARY | 146  | overlord_monitor.r.process_id |    1 | Using where                                               |
++------+--------+------+--------+------------------------------------+----------------------------+------+-------------------------------+------+-----------------------------------------------------------+
++-------------------------------------------------+
+|   === M113-JOIN-SUTTONS-48H Â· sechs Laeufe === |
+-- 116 Ergebniszeilen entfernt (Regel G1)
+| M113-JOIN-SUTTONS-48H | 6 | 6.821 | 6.795 | 6.907,6.807,6.795,6.824,6.798 |
++-----------------------+---+-------+-------+-------------------------------+
++-------------------------------------------------------+
+|   === M113-EXISTS-SUTTONS-30T Â· Plan (Regel L15) === |
++-------------------------------------------------------+
++------+---------+------+--------+------------------------------------+----------------------------+------+-------------------------------+-------+-----------------------------------------------------------+
+|    1 | PRIMARY |   pm |    ref | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146  | const                         |     1 | Using where; Using index; Using temporary; Using filesort |
+|    1 | PRIMARY |    r |  range |                            PRIMARY |                    PRIMARY | 3    | NULL                          | 14214 | Using where; Using join buffer (flat, BNL join)           |
+|    1 | PRIMARY |    p | eq_ref |          PRIMARY,Process_ProjectFK |                    PRIMARY | 146  | overlord_monitor.r.process_id |     1 | Using where                                               |
++------+---------+------+--------+------------------------------------+----------------------------+------+-------------------------------+-------+-----------------------------------------------------------+
++---------------------------------------------------+
+|   === M113-EXISTS-SUTTONS-30T Â· sechs Laeufe === |
+-- 164 Ergebniszeilen entfernt (Regel G1)
+| M113-EXISTS-SUTTONS-30T | 6 | 30.865 | 30.720 | 30.720,31.566,31.911,31.296,31.195 |
++-------------------------+---+--------+--------+------------------------------------+
++-----------------------------------------------------+
+|   === M113-JOIN-SUTTONS-30T Â· Plan (Regel L15) === |
++-----------------------------------------------------+
++------+--------+------+--------+------------------------------------+----------------------------+------+-------------------------------+-------+-----------------------------------------------------------+
+|    1 | SIMPLE |   pm |    ref | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146  | const                         |     1 | Using where; Using index; Using temporary; Using filesort |
+|    1 | SIMPLE |    r |  range |                            PRIMARY |                    PRIMARY | 3    | NULL                          | 14214 | Using where; Using join buffer (flat, BNL join)           |
+|    1 | SIMPLE |    p | eq_ref |          PRIMARY,Process_ProjectFK |                    PRIMARY | 146  | overlord_monitor.r.process_id |     1 | Using where                                               |
++------+--------+------+--------+------------------------------------+----------------------------+------+-------------------------------+-------+-----------------------------------------------------------+
++-------------------------------------------------+
+|   === M113-JOIN-SUTTONS-30T Â· sechs Laeufe === |
+-- 164 Ergebniszeilen entfernt (Regel G1)
+| M113-JOIN-SUTTONS-30T | 6 | 30.929 | 30.721 | 30.721,31.062,30.973,30.951,31.283 |
++-----------------------+---+--------+--------+------------------------------------+
++-------------------------------------------------------+
+|   === M113-EXISTS-SUTTONS-12M Â· Plan (Regel L15) === |
++-------------------------------------------------------+
++------+---------+------+--------+------------------------------------+----------------------------+------+-------------------------------+------+-----------------------------------------------------------+
+|    1 | PRIMARY |   pm |    ref | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146  | const                         |    1 | Using where; Using index; Using temporary; Using filesort |
+|    1 | PRIMARY |    r |  range |                            PRIMARY |                    PRIMARY | 3    | NULL                          | 5961 | Using where; Using join buffer (flat, BNL join)           |
+|    1 | PRIMARY |    p | eq_ref |          PRIMARY,Process_ProjectFK |                    PRIMARY | 146  | overlord_monitor.r.process_id |    1 | Using where                                               |
++------+---------+------+--------+------------------------------------+----------------------------+------+-------------------------------+------+-----------------------------------------------------------+
++---------------------------------------------------+
+|   === M113-EXISTS-SUTTONS-12M Â· sechs Laeufe === |
+-- 164 Ergebniszeilen entfernt (Regel G1)
+| M113-EXISTS-SUTTONS-12M | 6 | 39.008 | 38.843 | 38.843,39.164,38.853,38.844,38.910 |
++-------------------------+---+--------+--------+------------------------------------+
++-----------------------------------------------------+
+|   === M113-JOIN-SUTTONS-12M Â· Plan (Regel L15) === |
++-----------------------------------------------------+
++------+--------+------+--------+------------------------------------+----------------------------+------+-------------------------------+------+-----------------------------------------------------------+
+|    1 | SIMPLE |   pm |    ref | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146  | const                         |    1 | Using where; Using index; Using temporary; Using filesort |
+|    1 | SIMPLE |    r |  range |                            PRIMARY |                    PRIMARY | 3    | NULL                          | 5961 | Using where; Using join buffer (flat, BNL join)           |
+|    1 | SIMPLE |    p | eq_ref |          PRIMARY,Process_ProjectFK |                    PRIMARY | 146  | overlord_monitor.r.process_id |    1 | Using where                                               |
++------+--------+------+--------+------------------------------------+----------------------------+------+-------------------------------+------+-----------------------------------------------------------+
++-------------------------------------------------+
+|   === M113-JOIN-SUTTONS-12M Â· sechs Laeufe === |
+-- 164 Ergebniszeilen entfernt (Regel G1)
+| M113-JOIN-SUTTONS-12M | 6 | 39.149 | 39.050 | 39.438,39.059,39.050,39.262,39.381 |
++-----------------------+---+--------+--------+------------------------------------+
++---------------------------------------------------------+
+| === M113-Z Summenprobe EXISTS gegen JOIN, 12 Monate === |
++---------------------------------------------------------+
+mysql.exe : ERROR 1064 (42000) at line 2365: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '(SELECT SUM(r.anzahl) AS 
+summe
+In Zeile:6 Zeichen:8
++ $sql | & $mysql --host=$env:OVERLORD_DB_HOST --port=$env:OVERLORD_DB_ ...
++        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (ERROR 1064 (420...nzahl) AS summe:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+              FROM overlord_monitor.message_ro...' at line 4
