@@ -3,6 +3,7 @@ package de.kraftwerkone.overlord.monitor.dashboard;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
+import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
 import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.time.LocalDateTime;
@@ -70,13 +71,13 @@ class DashboardStatementsTest {
     return gerendert.getFirst().replaceAll("\\s+", " ").trim();
   }
 
-  private String verlauf(Dashboardzeitraum zeitraum) {
+  private String verlauf(Rollupzeitraum zeitraum) {
     gerendert.clear();
     repository.verlauf(MANDANT, zeitraum, zeitraum.fenster(JETZT));
     return einziges();
   }
 
-  private String verteilung(Dashboardzeitraum zeitraum, Verteilungssicht sicht) {
+  private String verteilung(Rollupzeitraum zeitraum, Verteilungssicht sicht) {
     gerendert.clear();
     repository.verteilung(MANDANT, zeitraum, zeitraum.fenster(JETZT), sicht);
     return einziges();
@@ -91,7 +92,7 @@ class DashboardStatementsTest {
     @Test
     @DisplayName("48H: message_rollup, gruppiert nach stunde und Rohstatus")
     void stundenebene() {
-      assertThat(verlauf(Dashboardzeitraum.STUNDEN_48))
+      assertThat(verlauf(Rollupzeitraum.STUNDEN_48))
           .isEqualTo(
               "select `overlord_monitor`.`message_rollup`.`stunde`,"
                   + " `overlord_monitor`.`message_rollup`.`message_status`,"
@@ -114,10 +115,10 @@ class DashboardStatementsTest {
     @Test
     @DisplayName("30T liest die Tagesebene, 12M die Monatsebene — und keines die Stundenebene")
     void abgeleitete_ebenen() {
-      assertThat(verlauf(Dashboardzeitraum.TAGE_30))
+      assertThat(verlauf(Rollupzeitraum.TAGE_30))
           .contains("`overlord_monitor`.`message_rollup_tag`")
           .doesNotContain("`overlord_monitor`.`message_rollup`.");
-      assertThat(verlauf(Dashboardzeitraum.MONATE_12))
+      assertThat(verlauf(Rollupzeitraum.MONATE_12))
           .contains("`overlord_monitor`.`message_rollup_monat`")
           .doesNotContain("`overlord_monitor`.`message_rollup_tag`");
     }
@@ -131,7 +132,7 @@ class DashboardStatementsTest {
     @Test
     @DisplayName("Um den Eimerschluessel steht keine Funktion")
     void kein_cast_um_den_schluessel() {
-      for (Dashboardzeitraum zeitraum : Dashboardzeitraum.reihe()) {
+      for (Rollupzeitraum zeitraum : Rollupzeitraum.reihe()) {
         assertThat(verlauf(zeitraum))
             .as("%s", zeitraum.code())
             .doesNotContain("cast(")
@@ -147,7 +148,7 @@ class DashboardStatementsTest {
     @Test
     @DisplayName("Die Mandantenkette ist ein EXISTS und steht im Statement (M3)")
     void mandantenkette_ist_exists() {
-      for (Dashboardzeitraum zeitraum : Dashboardzeitraum.reihe()) {
+      for (Rollupzeitraum zeitraum : Rollupzeitraum.reihe()) {
         String sql = verlauf(zeitraum);
         assertThat(sql).as("%s", zeitraum.code()).contains("exists (select 1 as `one`");
         assertThat(sql)
@@ -163,7 +164,7 @@ class DashboardStatementsTest {
     @Test
     @DisplayName("Project steht nicht in der Mandantenkette")
     void ohne_project() {
-      assertThat(verlauf(Dashboardzeitraum.STUNDEN_48)).doesNotContain("`GlassfishDB`.`Project`.");
+      assertThat(verlauf(Rollupzeitraum.STUNDEN_48)).doesNotContain("`GlassfishDB`.`Project`.");
     }
   }
 
@@ -182,7 +183,7 @@ class DashboardStatementsTest {
     @Test
     @DisplayName("Der CASE steht als voller Ausdruck im GROUP BY und nicht als Alias")
     void case_ohne_alias() {
-      String sql = verteilung(Dashboardzeitraum.STUNDEN_48, Verteilungssicht.PARTNER);
+      String sql = verteilung(Rollupzeitraum.STUNDEN_48, Verteilungssicht.PARTNER);
 
       assertThat(sql).contains("group by case when (");
       assertThat(sql)
@@ -201,7 +202,7 @@ class DashboardStatementsTest {
     @Test
     @DisplayName("Der Katalog haengt als LEFT JOIN an, nie als JOIN")
     void katalog_ist_left_join() {
-      assertThat(verteilung(Dashboardzeitraum.STUNDEN_48, Verteilungssicht.PARTNER))
+      assertThat(verteilung(Rollupzeitraum.STUNDEN_48, Verteilungssicht.PARTNER))
           .contains("left outer join `overlord_monitor`.`process_catalog`");
     }
 
@@ -209,7 +210,7 @@ class DashboardStatementsTest {
     @Test
     @DisplayName("E-i steht vollstaendig im CASE: Zeile vorhanden, GEPFLEGT, Feld gefuellt")
     void e_i_vollstaendig() {
-      assertThat(verteilung(Dashboardzeitraum.STUNDEN_48, Verteilungssicht.PARTNER))
+      assertThat(verteilung(Rollupzeitraum.STUNDEN_48, Verteilungssicht.PARTNER))
           .contains("`overlord_monitor`.`process_catalog`.`process_id` is not null")
           .contains("`overlord_monitor`.`process_catalog`.`pflegestatus` = ?")
           .contains("`overlord_monitor`.`process_catalog`.`partner` is not null")
@@ -225,8 +226,8 @@ class DashboardStatementsTest {
     @DisplayName(
         "Die Richtungssicht ist dasselbe Statement mit der anderen Spalte, Riegel inklusive")
     void richtung_ist_dieselbe_form() {
-      String partner = verteilung(Dashboardzeitraum.STUNDEN_48, Verteilungssicht.PARTNER);
-      String richtung = verteilung(Dashboardzeitraum.STUNDEN_48, Verteilungssicht.RICHTUNG);
+      String partner = verteilung(Rollupzeitraum.STUNDEN_48, Verteilungssicht.PARTNER);
+      String richtung = verteilung(Rollupzeitraum.STUNDEN_48, Verteilungssicht.RICHTUNG);
 
       assertThat(richtung)
           .contains("`overlord_monitor`.`process_catalog`.`richtung`")
@@ -245,16 +246,16 @@ class DashboardStatementsTest {
     @Test
     @DisplayName("Sortiert wird erst nach „ist null“, dann absteigend nach Summe")
     void sortierung() {
-      assertThat(verteilung(Dashboardzeitraum.STUNDEN_48, Verteilungssicht.PARTNER))
+      assertThat(verteilung(Rollupzeitraum.STUNDEN_48, Verteilungssicht.PARTNER))
           .contains("end is null), sum(`overlord_monitor`.`message_rollup`.`anzahl`) desc");
     }
 
     @Test
     @DisplayName("Jedes Paar verteilt ueber seine eigene Ebene")
     void je_paar_die_eigene_ebene() {
-      assertThat(verteilung(Dashboardzeitraum.TAGE_30, Verteilungssicht.PARTNER))
+      assertThat(verteilung(Rollupzeitraum.TAGE_30, Verteilungssicht.PARTNER))
           .contains("from `overlord_monitor`.`message_rollup_tag`");
-      assertThat(verteilung(Dashboardzeitraum.MONATE_12, Verteilungssicht.PARTNER))
+      assertThat(verteilung(Rollupzeitraum.MONATE_12, Verteilungssicht.PARTNER))
           .contains("from `overlord_monitor`.`message_rollup_monat`");
     }
   }
@@ -269,7 +270,7 @@ class DashboardStatementsTest {
     @DisplayName("Die Belegungsprobe ist ein Statement: innen je Eimer summiert, aussen gezaehlt")
     void belegung() {
       repository.belegung(
-          MANDANT, Dashboardzeitraum.STUNDEN_48, Dashboardzeitraum.STUNDEN_48.fenster(JETZT));
+          MANDANT, Rollupzeitraum.STUNDEN_48, Rollupzeitraum.STUNDEN_48.fenster(JETZT));
 
       assertThat(einziges())
           .startsWith("select count(*), max(`belegte_eimer`.`nachrichten`) from (select")
@@ -279,7 +280,7 @@ class DashboardStatementsTest {
     @Test
     @DisplayName("Ueberfaellig im Fenster: Statusmenge, Frist, Zeitfenster und Mandantenkette")
     void ueberfaellig_im_fenster() {
-      repository.ueberfaelligImFenster(MANDANT, Dashboardzeitraum.STUNDEN_48.fenster(JETZT), JETZT);
+      repository.ueberfaelligImFenster(MANDANT, Rollupzeitraum.STUNDEN_48.fenster(JETZT), JETZT);
 
       assertThat(einziges())
           .startsWith("select count(*) from `GlassfishDB`.`Message` where")
@@ -316,8 +317,7 @@ class DashboardStatementsTest {
     @DisplayName("Zuletzt aufgefallen: zwei Statements, je Merkmal eines")
     void zuletzt_aufgefallen() {
       gerendert.clear();
-      repository.zuletztAufgefallen(
-          MANDANT, Dashboardzeitraum.STUNDEN_48.fenster(JETZT), JETZT, 10);
+      repository.zuletztAufgefallen(MANDANT, Rollupzeitraum.STUNDEN_48.fenster(JETZT), JETZT, 10);
 
       assertThat(gerendert)
           .as(
@@ -376,11 +376,11 @@ class DashboardStatementsTest {
   @Test
   @DisplayName("Eine Landingpage mit genanntem Zeitraum kostet sieben Statements")
   void sieben_statements_je_seite() {
-    Zeitfenster fenster = Dashboardzeitraum.STUNDEN_48.fenster(JETZT);
+    Zeitfenster fenster = Rollupzeitraum.STUNDEN_48.fenster(JETZT);
     gerendert.clear();
 
-    repository.verlauf(MANDANT, Dashboardzeitraum.STUNDEN_48, fenster);
-    repository.verteilung(MANDANT, Dashboardzeitraum.STUNDEN_48, fenster, Verteilungssicht.PARTNER);
+    repository.verlauf(MANDANT, Rollupzeitraum.STUNDEN_48, fenster);
+    repository.verteilung(MANDANT, Rollupzeitraum.STUNDEN_48, fenster, Verteilungssicht.PARTNER);
     repository.ueberfaelligImFenster(MANDANT, fenster, JETZT);
     repository.ueberfaelligInsgesamt(MANDANT, JETZT);
     repository.zuletztAufgefallen(MANDANT, fenster, JETZT, 10);

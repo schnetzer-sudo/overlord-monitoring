@@ -1,9 +1,8 @@
-package de.kraftwerkone.overlord.monitor.dashboard;
+package de.kraftwerkone.overlord.monitor.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
 import de.kraftwerkone.overlord.monitor.common.error.FachlicheAusnahme;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,7 +23,7 @@ import org.junit.jupiter.api.Test;
  * genau deshalb duerfen sie hier stehen: Sie sind keine Zahl aus dem Bestand, sondern Arithmetik
  * ueber einem festen Zeitpunkt (Regel T2).
  */
-class DashboardzeitraumTest {
+class RollupzeitraumTest {
 
   /** Der Anker aus {@code datenzugriff.md} §6, dieselbe Zahl wie in M94. */
   private static final LocalDateTime ANKER = LocalDateTime.parse("2025-12-30T04:09:47");
@@ -36,7 +35,7 @@ class DashboardzeitraumTest {
     @Test
     @DisplayName("48H: 48 Stundeneimer, der angebrochene gehoert dazu")
     void achtundvierzig_stunden() {
-      assertThat(Dashboardzeitraum.STUNDEN_48.fenster(ANKER))
+      assertThat(Rollupzeitraum.STUNDEN_48.fenster(ANKER))
           .as("P1 aus M94, Zeichen fuer Zeichen")
           .isEqualTo(
               new Zeitfenster(
@@ -47,7 +46,7 @@ class DashboardzeitraumTest {
     @Test
     @DisplayName("30T: 30 Tageseimer, der angebrochene gehoert dazu")
     void dreissig_tage() {
-      assertThat(Dashboardzeitraum.TAGE_30.fenster(ANKER))
+      assertThat(Rollupzeitraum.TAGE_30.fenster(ANKER))
           .as("P2 aus M94")
           .isEqualTo(
               new Zeitfenster(
@@ -58,7 +57,7 @@ class DashboardzeitraumTest {
     @Test
     @DisplayName("12M: 12 Monatseimer, der angebrochene gehoert dazu")
     void zwoelf_monate() {
-      assertThat(Dashboardzeitraum.MONATE_12.fenster(ANKER))
+      assertThat(Rollupzeitraum.MONATE_12.fenster(ANKER))
           .as("P3 aus M94")
           .isEqualTo(
               new Zeitfenster(
@@ -77,7 +76,7 @@ class DashboardzeitraumTest {
     void auf_der_grenze() {
       LocalDateTime punkt = LocalDateTime.parse("2025-12-30T05:00:00");
 
-      assertThat(Dashboardzeitraum.STUNDEN_48.fenster(punkt))
+      assertThat(Rollupzeitraum.STUNDEN_48.fenster(punkt))
           .isEqualTo(
               new Zeitfenster(
                   LocalDateTime.parse("2025-12-28T06:00:00"),
@@ -88,13 +87,13 @@ class DashboardzeitraumTest {
     @Test
     @DisplayName("Die Zahl der Eimer stimmt mit der Fensterbreite ueberein")
     void eimerzahl_passt_zur_breite() {
-      Zeitfenster stunden = Dashboardzeitraum.STUNDEN_48.fenster(ANKER);
-      Zeitfenster tage = Dashboardzeitraum.TAGE_30.fenster(ANKER);
-      Zeitfenster monate = Dashboardzeitraum.MONATE_12.fenster(ANKER);
+      Zeitfenster stunden = Rollupzeitraum.STUNDEN_48.fenster(ANKER);
+      Zeitfenster tage = Rollupzeitraum.TAGE_30.fenster(ANKER);
+      Zeitfenster monate = Rollupzeitraum.MONATE_12.fenster(ANKER);
 
-      assertThat(stunden.spanne().toHours()).isEqualTo(Dashboardzeitraum.STUNDEN_48.eimer());
-      assertThat(tage.spanne().toDays()).isEqualTo(Dashboardzeitraum.TAGE_30.eimer());
-      assertThat(monate.von().plusMonths(Dashboardzeitraum.MONATE_12.eimer()))
+      assertThat(stunden.spanne().toHours()).isEqualTo(Rollupzeitraum.STUNDEN_48.eimer());
+      assertThat(tage.spanne().toDays()).isEqualTo(Rollupzeitraum.TAGE_30.eimer());
+      assertThat(monate.von().plusMonths(Rollupzeitraum.MONATE_12.eimer()))
           .as("Monate haben verschiedene Laengen — gezaehlt wird in Monaten und nicht in Tagen")
           .isEqualTo(monate.bis());
     }
@@ -106,7 +105,7 @@ class DashboardzeitraumTest {
     @Test
     @DisplayName("12M rechnet in Kalendermonaten und nicht in Tagen")
     void monate_sind_kalendermonate() {
-      assertThat(Dashboardzeitraum.MONATE_12.fenster(LocalDateTime.parse("2026-01-15T13:37:00")))
+      assertThat(Rollupzeitraum.MONATE_12.fenster(LocalDateTime.parse("2026-01-15T13:37:00")))
           .isEqualTo(
               new Zeitfenster(
                   LocalDateTime.parse("2025-02-01T00:00:00"),
@@ -121,37 +120,37 @@ class DashboardzeitraumTest {
     @Test
     @DisplayName("Die drei Codes sind 48H, 30T und 12M")
     void codes() {
-      assertThat(Dashboardzeitraum.reihe().stream().map(Dashboardzeitraum::code))
+      assertThat(Rollupzeitraum.reihe().stream().map(Rollupzeitraum::code))
           .containsExactly("48H", "30T", "12M");
     }
 
     @Test
     @DisplayName("Die Reihe ist die Suchreihenfolge des Standardfensters: eng vor weit")
     void reihenfolge() {
-      assertThat(Dashboardzeitraum.reihe())
+      assertThat(Rollupzeitraum.reihe())
           .as("Erst das engste Paar — sonst bekaeme jeder Mandant zwoelf Monate")
           .containsExactly(
-              Dashboardzeitraum.STUNDEN_48, Dashboardzeitraum.TAGE_30, Dashboardzeitraum.MONATE_12);
+              Rollupzeitraum.STUNDEN_48, Rollupzeitraum.TAGE_30, Rollupzeitraum.MONATE_12);
     }
 
     @Test
     @DisplayName("Gross- und Kleinschreibung sind gleichgueltig, Leerraum wird abgeschnitten")
     void schreibweise() {
-      assertThat(Dashboardzeitraum.ausCode(" 48h ")).isEqualTo(Dashboardzeitraum.STUNDEN_48);
-      assertThat(Dashboardzeitraum.ausCode("30t")).isEqualTo(Dashboardzeitraum.TAGE_30);
+      assertThat(Rollupzeitraum.ausCode(" 48h ")).isEqualTo(Rollupzeitraum.STUNDEN_48);
+      assertThat(Rollupzeitraum.ausCode("30t")).isEqualTo(Rollupzeitraum.TAGE_30);
     }
 
     @Test
     @DisplayName("Ohne Angabe waehlt der Endpunkt selbst — null ist kein Fehler")
     void ohne_angabe() {
-      assertThat(Dashboardzeitraum.ausCode(null)).isNull();
-      assertThat(Dashboardzeitraum.ausCode("  ")).isNull();
+      assertThat(Rollupzeitraum.ausCode(null)).isNull();
+      assertThat(Rollupzeitraum.ausCode("  ")).isNull();
     }
 
     @Test
     @DisplayName("Ein unbekannter Code ist 400 und nennt die erlaubten Werte")
     void unbekannter_code() {
-      assertThatThrownBy(() -> Dashboardzeitraum.ausCode("7d"))
+      assertThatThrownBy(() -> Rollupzeitraum.ausCode("7d"))
           .isInstanceOfSatisfying(
               FachlicheAusnahme.class,
               ausnahme -> {
@@ -165,12 +164,12 @@ class DashboardzeitraumTest {
 
     /**
      * Ein stiller Fehler, der sonst niemandem auffiele: Zwei Paare mit demselben Code liessen
-     * {@link Dashboardzeitraum#ausCode} immer dasselbe finden.
+     * {@link Rollupzeitraum#ausCode} immer dasselbe finden.
      */
     @Test
     @DisplayName("Kein Code kommt zweimal vor")
     void codes_sind_eindeutig() {
-      List<String> codes = Dashboardzeitraum.reihe().stream().map(Dashboardzeitraum::code).toList();
+      List<String> codes = Rollupzeitraum.reihe().stream().map(Rollupzeitraum::code).toList();
 
       assertThat(codes).doesNotHaveDuplicates();
     }

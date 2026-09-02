@@ -1,6 +1,5 @@
-package de.kraftwerkone.overlord.monitor.dashboard;
+package de.kraftwerkone.overlord.monitor.common;
 
-import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
 import de.kraftwerkone.overlord.monitor.common.error.FachlicheAusnahme;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -9,8 +8,22 @@ import java.util.List;
 import org.springframework.http.HttpStatus;
 
 /**
- * Die drei Zeitraumpaare des Dashboards — <b>Fensterbreite und Eimerbreite zusammen</b>, weil das
- * eine ohne das andere keine Ansicht ergibt.
+ * Die drei Zeitraumpaare der Rollup-Ansichten — <b>Fensterbreite und Eimerbreite zusammen</b>, weil
+ * das eine ohne das andere keine Ansicht ergibt.
+ *
+ * <h2>Warum diese Aufzaehlung in {@code common} steht und nicht in {@code dashboard}</h2>
+ *
+ * <p><i>(seit 02.09.2026, Schritt 10c-1.)</i> Sie hiess bis dahin {@code Dashboardzeitraum} und lag
+ * im Paket {@code dashboard}. Die <b>Prozessansicht</b> braucht dieselben drei Paare: dieselben
+ * Fenstergrenzen, dieselbe Eimerausrichtung, dieselbe Zuordnung Paar → Rollup-Ebene. <b>Fachpakete
+ * kennen einander nicht</b> — braucht ein zweites einen Typ, wandert der Typ nach {@code common}
+ * und nicht ins Nachbarpaket ({@code PaketstrukturTest.fachpakete_kennen_einander_nicht}). Das ist
+ * dieselbe Bewegung, die {@link Pflegestatus} am 31.08.2026 gemacht hat, und aus demselben Grund.
+ *
+ * <p><b>Die Alternative waere eine zweite Aufzaehlung mit denselben drei Codes gewesen</b> — und
+ * mit einer zweiten Fassung von {@link #fenster(LocalDateTime)}. Genau die driftet: Die
+ * Eimerausrichtung ist der Punkt, an dem eine Ansicht still falsch wird, und sie zweimal zu
+ * schreiben hiesse, sie zweimal richtig halten zu muessen.
  *
  * <p><b>Jedes Paar liest eine eigene Rollup-Ebene</b>, und das ist der ganze Grund, warum es drei
  * Ebenen gibt ({@code docs/rollup.md} §2, §9a, §9d):
@@ -49,7 +62,7 @@ import org.springframework.http.HttpStatus;
  * common/Zeitraum}, und aus demselben Grund: Der Wert in der URL und der Name im Code duerfen sich
  * unabhaengig voneinander aendern.
  */
-public enum Dashboardzeitraum {
+public enum Rollupzeitraum {
 
   /** 48 Stunden in Stundeneimern, gelesen aus {@code message_rollup}. */
   STUNDEN_48("48H", 48),
@@ -63,7 +76,7 @@ public enum Dashboardzeitraum {
   private final String code;
   private final int eimer;
 
-  Dashboardzeitraum(String code, int eimer) {
+  Rollupzeitraum(String code, int eimer) {
     this.code = code;
     this.eimer = eimer;
   }
@@ -86,7 +99,7 @@ public enum Dashboardzeitraum {
    * <p>Sie ist die Reihenfolge der Aufzaehlung und keine zweite Liste — eine zweite Liste liefe
    * irgendwann auseinander.
    */
-  public static List<Dashboardzeitraum> reihe() {
+  public static List<Rollupzeitraum> reihe() {
     return List.of(values());
   }
 
@@ -122,7 +135,7 @@ public enum Dashboardzeitraum {
    *
    * @throws FachlicheAusnahme {@code 400}, wenn der Code keinem Paar entspricht
    */
-  public static Dashboardzeitraum ausCode(String code) {
+  public static Rollupzeitraum ausCode(String code) {
     if (code == null || code.isBlank()) {
       return null;
     }

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
+import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
 import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.sql.SQLException;
@@ -39,7 +40,7 @@ class DashboardZeitgrenzeTest {
 
   private static final MandantContext MANDANT = new MandantContext("ERFUNDEN");
   private static final LocalDateTime JETZT = LocalDateTime.parse("2025-12-30T04:09:47");
-  private static final Zeitfenster FENSTER = Dashboardzeitraum.STUNDEN_48.fenster(JETZT);
+  private static final Zeitfenster FENSTER = Rollupzeitraum.STUNDEN_48.fenster(JETZT);
 
   private static DashboardRepository repositoryDas(MockDataProvider attrappe) {
     DSLContext kontext = DSL.using(new MockConnection(attrappe), SQLDialect.MARIADB);
@@ -93,16 +94,16 @@ class DashboardZeitgrenzeTest {
   void kein_allgemeiner_teilerfolg() {
     DashboardRepository repository = repositoryDas(anDerZeitgrenze());
 
-    assertThatThrownBy(() -> repository.verlauf(MANDANT, Dashboardzeitraum.STUNDEN_48, FENSTER))
+    assertThatThrownBy(() -> repository.verlauf(MANDANT, Rollupzeitraum.STUNDEN_48, FENSTER))
         .isInstanceOf(DataAccessException.class);
     assertThatThrownBy(
             () ->
                 repository.verteilung(
-                    MANDANT, Dashboardzeitraum.STUNDEN_48, FENSTER, Verteilungssicht.PARTNER))
+                    MANDANT, Rollupzeitraum.STUNDEN_48, FENSTER, Verteilungssicht.PARTNER))
         .isInstanceOf(DataAccessException.class);
     assertThatThrownBy(() -> repository.zuletztAufgefallen(MANDANT, FENSTER, JETZT, 10))
         .isInstanceOf(DataAccessException.class);
-    assertThatThrownBy(() -> repository.belegung(MANDANT, Dashboardzeitraum.STUNDEN_48, FENSTER))
+    assertThatThrownBy(() -> repository.belegung(MANDANT, Rollupzeitraum.STUNDEN_48, FENSTER))
         .isInstanceOf(DataAccessException.class);
     assertThatThrownBy(repository::letzterLauf).isInstanceOf(DataAccessException.class);
   }

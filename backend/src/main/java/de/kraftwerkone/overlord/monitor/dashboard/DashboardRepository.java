@@ -10,8 +10,9 @@ import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLU
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.PROCESS_CATALOG;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.ROLLUP_LAUF;
 
+import de.kraftwerkone.overlord.monitor.common.Katalogzuordnung;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
-import de.kraftwerkone.overlord.monitor.common.Pflegestatus;
+import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
 import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
 import de.kraftwerkone.overlord.monitor.jooq.glassfish.tables.Process;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
@@ -62,7 +63,7 @@ import org.springframework.stereotype.Repository;
  *
  * <h2>Drei Ebenen, drei Statements — und das ist Absicht</h2>
  *
- * <p>Jedes Zeitraumpaar liest seine eigene Tabelle ({@link Dashboardzeitraum}). Die Ebenen liessen
+ * <p>Jedes Zeitraumpaar liest seine eigene Tabelle ({@link Rollupzeitraum}). Die Ebenen liessen
  * sich mit einem {@code CAST} auf einen gemeinsamen Schluesseltyp zusammenfassen; das kostete eine
  * Funktion um die Schluesselspalte und damit den Bereichszugriff. <b>Gemessen ist, was der Code
  * schickt</b> (Regel L7) — und was er schickt, sind drei Statements ohne Funktion um den
@@ -133,7 +134,7 @@ public class DashboardRepository {
    *     Eimergrenze
    */
   public List<Rollupsumme> verlauf(
-      MandantContext mandant, Dashboardzeitraum zeitraum, Zeitfenster fenster) {
+      MandantContext mandant, Rollupzeitraum zeitraum, Zeitfenster fenster) {
     return switch (zeitraum) {
       case STUNDEN_48 -> verlaufDerStundenebene(mandant, fenster);
       case TAGE_30 ->
@@ -226,7 +227,7 @@ public class DashboardRepository {
    */
   public List<Verteilungssumme> verteilung(
       MandantContext mandant,
-      Dashboardzeitraum zeitraum,
+      Rollupzeitraum zeitraum,
       Zeitfenster fenster,
       Verteilungssicht sicht) {
     Ebene ebene = ebene(zeitraum, fenster);
@@ -452,28 +453,17 @@ public class DashboardRepository {
   }
 
   /**
-   * <b>Entscheidung E-i, als ein Ausdruck.</b> Zugeordnet ist ein Prozess nur, wenn alle drei
-   * Bedingungen halten; faellt eine, ist der Wert „nicht zugeordnet".
+   * <b>Entscheidung E-i, als ein Ausdruck.</b> Die Regel selbst steht seit dem 02.09.2026 in {@link
+   * Katalogzuordnung} — in beiden Sprachen nebeneinander, weil die Prozessansicht sie in Java
+   * braucht und dieses Statement sie in SQL. Was hier bleibt, ist die Bindung an die Spalten.
    *
-   * <ol>
-   *   <li>Es gibt eine Katalogzeile ({@code LEFT JOIN} traf).
-   *   <li>Sie ist {@code GEPFLEGT} — ein offener Regelvorschlag ist eine Vermutung und keine
-   *       Zuordnung.
-   *   <li>Das Feld ist gefuellt — „gepflegt mit leerem Partner" heisst <i>hingesehen, es gibt
-   *       keinen</i> (E4) und faellt fachlich mit „nicht zugeordnet" zusammen.
-   * </ol>
-   *
-   * <p>Der Riegel unter Punkt 2 steht auch in der Richtungssicht. <b>Heute ist er dort
+   * <p>Der Riegel „nur {@code GEPFLEGT}" steht auch in der Richtungssicht. <b>Heute ist er dort
    * folgenlos</b> — nach der Kuratierung tragen alle Zeilen mit Richtung {@code GEPFLEGT} —, aber
    * die Regel ist E-i und nicht der Zufall dieses Katalogstands.
    */
   private static Condition zugeordnet(Field<String> katalogwert) {
-    return PROCESS_CATALOG
-        .PROCESS_ID
-        .isNotNull()
-        .and(PROCESS_CATALOG.PFLEGESTATUS.eq(Pflegestatus.GEPFLEGT.name()))
-        .and(katalogwert.isNotNull())
-        .and(katalogwert.ne(""));
+    return Katalogzuordnung.zugeordnet(
+        PROCESS_CATALOG.PROCESS_ID, PROCESS_CATALOG.PFLEGESTATUS, katalogwert);
   }
 
   /**
@@ -490,7 +480,7 @@ public class DashboardRepository {
       Field<Integer> anzahl,
       Condition bereich) {}
 
-  private static Ebene ebene(Dashboardzeitraum zeitraum, Zeitfenster fenster) {
+  private static Ebene ebene(Rollupzeitraum zeitraum, Zeitfenster fenster) {
     return switch (zeitraum) {
       case STUNDEN_48 ->
           new Ebene(
@@ -536,8 +526,7 @@ public class DashboardRepository {
    * @return leere Eimer und leerer Bestand ergeben {@code new Belegung(0, 0)} — ein Mandant ohne
    *     eine einzige Rollupzeile im Fenster erscheint in der Gruppierung gar nicht
    */
-  public Belegung belegung(
-      MandantContext mandant, Dashboardzeitraum zeitraum, Zeitfenster fenster) {
+  public Belegung belegung(MandantContext mandant, Rollupzeitraum zeitraum, Zeitfenster fenster) {
     Ebene ebene = ebene(zeitraum, fenster);
     Field<BigDecimal> summe = DSL.sum(ebene.anzahl());
     Table<?> jeEimer =

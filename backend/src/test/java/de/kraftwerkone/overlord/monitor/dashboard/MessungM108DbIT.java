@@ -3,6 +3,7 @@ package de.kraftwerkone.overlord.monitor.dashboard;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
+import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
 import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.time.LocalDateTime;
@@ -153,7 +154,7 @@ class MessungM108DbIT {
     for (String mandantId : MANDANTEN) {
       MandantContext mandant = new MandantContext(mandantId);
 
-      for (Dashboardzeitraum zeitraum : Dashboardzeitraum.reihe()) {
+      for (Rollupzeitraum zeitraum : Rollupzeitraum.reihe()) {
         Zeitfenster fenster = zeitraum.fenster(ANKER);
         String marke = mandantId + "." + zeitraum.code();
         melde("fenster." + marke, fenster.von() + " bis " + fenster.bis());
@@ -194,7 +195,7 @@ class MessungM108DbIT {
                     () -> repository.belegung(mandant, zeitraum, fenster).belegteEimer())));
       }
 
-      Zeitfenster kachelfenster = Dashboardzeitraum.STUNDEN_48.fenster(ANKER);
+      Zeitfenster kachelfenster = Rollupzeitraum.STUNDEN_48.fenster(ANKER);
       melde(
           "ueberfaellig.imFenster." + mandantId,
           String.valueOf(
@@ -224,7 +225,7 @@ class MessungM108DbIT {
                   .zuletztAufgefallen(
                       mandant, kachelfenster, ANKER, DashboardService.AUFFAELLIG_HOECHSTENS)
                   .size()));
-      for (Dashboardzeitraum zeitraum : Dashboardzeitraum.reihe()) {
+      for (Rollupzeitraum zeitraum : Rollupzeitraum.reihe()) {
         Zeitfenster weit = zeitraum.fenster(ANKER);
         melde(
             "aufgefallen.ms." + mandantId + "." + zeitraum.code(),
@@ -248,7 +249,7 @@ class MessungM108DbIT {
       melde("stand.ms", ms(besteVonFuenf(() -> repository.letzterLauf().isPresent() ? 1 : 0)));
 
       // ── Die ganze Landingpage, so wie der Endpunkt sie baut ──────────────────
-      for (Dashboardzeitraum zeitraum : Dashboardzeitraum.reihe()) {
+      for (Rollupzeitraum zeitraum : Rollupzeitraum.reihe()) {
         long beste =
             besteVonFuenf(
                 () ->
@@ -275,7 +276,7 @@ class MessungM108DbIT {
     // ── Die Plaene, ueber das gerenderte Statement ────────────────────────────
     DashboardRepository attrappe = attrappe();
     MandantContext nexans = new MandantContext("NEXANS");
-    for (Dashboardzeitraum zeitraum : Dashboardzeitraum.reihe()) {
+    for (Rollupzeitraum zeitraum : Rollupzeitraum.reihe()) {
       Zeitfenster fenster = zeitraum.fenster(ANKER);
 
       gerendert.clear();
@@ -291,7 +292,7 @@ class MessungM108DbIT {
       planVon("belegung." + zeitraum.code(), gerendert.getFirst());
     }
 
-    Zeitfenster fenster = Dashboardzeitraum.STUNDEN_48.fenster(ANKER);
+    Zeitfenster fenster = Rollupzeitraum.STUNDEN_48.fenster(ANKER);
     gerendert.clear();
     attrappe.ueberfaelligImFenster(nexans, fenster, ANKER);
     planVon("ueberfaellig.imFenster", gerendert.getFirst());
@@ -300,7 +301,7 @@ class MessungM108DbIT {
     attrappe.ueberfaelligInsgesamt(nexans, ANKER);
     planVon("ueberfaellig.insgesamt", gerendert.getFirst());
 
-    for (Dashboardzeitraum zeitraum : Dashboardzeitraum.reihe()) {
+    for (Rollupzeitraum zeitraum : Rollupzeitraum.reihe()) {
       gerendert.clear();
       attrappe.zuletztAufgefallen(
           nexans, zeitraum.fenster(ANKER), ANKER, DashboardService.AUFFAELLIG_HOECHSTENS);
@@ -319,8 +320,8 @@ class MessungM108DbIT {
             repository
                 .verlauf(
                     new MandantContext("NEXANS"),
-                    Dashboardzeitraum.STUNDEN_48,
-                    Dashboardzeitraum.STUNDEN_48.fenster(ANKER))
+                    Rollupzeitraum.STUNDEN_48,
+                    Rollupzeitraum.STUNDEN_48.fenster(ANKER))
                 .size())
         .as("Ohne Zeilen im Fenster misst dieser Laeufer nichts")
         .isPositive();

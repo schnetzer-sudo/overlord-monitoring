@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
+import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
 import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.lang.reflect.RecordComponent;
@@ -359,18 +360,18 @@ class DashboardServiceTest {
       bestandMit(List.of(new Rollupsumme(EIMER, "FINISHED", 1)), List.of());
 
       assertThat(antwort().zeitraum()).isEqualTo("48H");
-      verify(repository).belegung(any(), eq(Dashboardzeitraum.STUNDEN_48), any());
+      verify(repository).belegung(any(), eq(Rollupzeitraum.STUNDEN_48), any());
       verify(repository, org.mockito.Mockito.never())
-          .belegung(any(), eq(Dashboardzeitraum.TAGE_30), any());
+          .belegung(any(), eq(Rollupzeitraum.TAGE_30), any());
     }
 
     @Test
     @DisplayName("Zu wenige belegte Eimer: das naechstweitere Paar kommt dran")
     void zu_wenige_eimer() {
       bestandMit(List.of(), List.of());
-      when(repository.belegung(any(), eq(Dashboardzeitraum.STUNDEN_48), any()))
+      when(repository.belegung(any(), eq(Rollupzeitraum.STUNDEN_48), any()))
           .thenReturn(new Belegung(23, 9_999));
-      when(repository.belegung(any(), eq(Dashboardzeitraum.TAGE_30), any()))
+      when(repository.belegung(any(), eq(Rollupzeitraum.TAGE_30), any()))
           .thenReturn(new Belegung(30, 9_999));
 
       assertThat(antwort().zeitraum()).isEqualTo("30T");
@@ -380,7 +381,7 @@ class DashboardServiceTest {
     @DisplayName("Genau die Haelfte belegt genuegt — die Schwelle ist einschliessend")
     void haelfte_genuegt() {
       bestandMit(List.of(), List.of());
-      when(repository.belegung(any(), eq(Dashboardzeitraum.STUNDEN_48), any()))
+      when(repository.belegung(any(), eq(Rollupzeitraum.STUNDEN_48), any()))
           .thenReturn(new Belegung(24, 6));
 
       assertThat(antwort().zeitraum()).isEqualTo("48H");
@@ -391,9 +392,9 @@ class DashboardServiceTest {
         "Fuenf Nachrichten im groessten Eimer genuegen nicht — verlangt ist mehr als fuenf")
     void zweite_bedingung_greift() {
       bestandMit(List.of(), List.of());
-      when(repository.belegung(any(), eq(Dashboardzeitraum.STUNDEN_48), any()))
+      when(repository.belegung(any(), eq(Rollupzeitraum.STUNDEN_48), any()))
           .thenReturn(new Belegung(48, 5));
-      when(repository.belegung(any(), eq(Dashboardzeitraum.TAGE_30), any()))
+      when(repository.belegung(any(), eq(Rollupzeitraum.TAGE_30), any()))
           .thenReturn(new Belegung(30, 6));
 
       assertThat(antwort().zeitraum()).isEqualTo("30T");
@@ -416,7 +417,7 @@ class DashboardServiceTest {
       bestandMit(List.of(), List.of());
 
       DashboardResponse antwort =
-          service().landingpage(MANDANT, Dashboardzeitraum.MONATE_12, Verteilungssicht.PARTNER);
+          service().landingpage(MANDANT, Rollupzeitraum.MONATE_12, Verteilungssicht.PARTNER);
 
       assertThat(antwort.zeitraum()).isEqualTo("12M");
       verify(repository, org.mockito.Mockito.never()).belegung(any(), any(), any());
@@ -469,7 +470,7 @@ class DashboardServiceTest {
     DashboardResponse antwort = antwort();
 
     verify(repository, org.mockito.Mockito.times(1))
-        .verlauf(eq(MANDANT), any(Dashboardzeitraum.class), any(Zeitfenster.class));
+        .verlauf(eq(MANDANT), any(Rollupzeitraum.class), any(Zeitfenster.class));
     assertThat(antwort.kacheln().nachrichten()).isEqualTo(11);
     assertThat(antwort.kacheln().fehler().anzahl()).isEqualTo(1);
     assertThat(antwort.verlauf()).hasSize(1);

@@ -2,6 +2,7 @@ package de.kraftwerkone.overlord.monitor.dashboard;
 
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
+import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
 import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
 import de.kraftwerkone.overlord.monitor.common.Zeitpunkte;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
@@ -105,9 +106,9 @@ public class DashboardService {
    * @param sicht wonach der Verteilungsblock gruppiert
    */
   public DashboardResponse landingpage(
-      MandantContext mandant, Dashboardzeitraum gewaehlt, Verteilungssicht sicht) {
+      MandantContext mandant, Rollupzeitraum gewaehlt, Verteilungssicht sicht) {
     LocalDateTime jetzt = LocalDateTime.now(anwendungsuhr);
-    Dashboardzeitraum zeitraum = gewaehlt == null ? standardfenster(mandant, jetzt) : gewaehlt;
+    Rollupzeitraum zeitraum = gewaehlt == null ? standardfenster(mandant, jetzt) : gewaehlt;
     Zeitfenster fenster = zeitraum.fenster(jetzt);
 
     List<Rollupsumme> summen = dashboardRepository.verlauf(mandant, zeitraum, fenster);
@@ -153,8 +154,8 @@ public class DashboardService {
    * ohne Daten sieht damit dieselbe Auswahl wie jeder andere und darf durchschalten; er findet
    * ueberall denselben Satz.
    */
-  private Dashboardzeitraum standardfenster(MandantContext mandant, LocalDateTime jetzt) {
-    for (Dashboardzeitraum kandidat : Dashboardzeitraum.reihe()) {
+  private Rollupzeitraum standardfenster(MandantContext mandant, LocalDateTime jetzt) {
+    for (Rollupzeitraum kandidat : Rollupzeitraum.reihe()) {
       Belegung belegung = dashboardRepository.belegung(mandant, kandidat, kandidat.fenster(jetzt));
       boolean genugEimer = belegung.belegteEimer() * 2 >= kandidat.eimer();
       boolean genugVerkehr = belegung.groessterEimer() > EIMER_MINDESTENS;
@@ -162,7 +163,7 @@ public class DashboardService {
         return kandidat;
       }
     }
-    return Dashboardzeitraum.reihe().getFirst();
+    return Rollupzeitraum.reihe().getFirst();
   }
 
   /** Block 7 — {@code null}, solange es keinen abgeschlossenen, fehlerfreien Lauf gibt. */

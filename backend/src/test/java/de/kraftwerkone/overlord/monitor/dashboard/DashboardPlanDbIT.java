@@ -3,6 +3,7 @@ package de.kraftwerkone.overlord.monitor.dashboard;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
+import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -139,7 +140,7 @@ class DashboardPlanDbIT {
   @DisplayName("Jedes Paar steigt ueber den Primaerschluessel seiner eigenen Rollup-Ebene ein")
   void verlauf_faehrt_ueber_den_primaerschluessel() {
     for (String mandantId : MANDANTEN) {
-      for (Dashboardzeitraum zeitraum : Dashboardzeitraum.reihe()) {
+      for (Rollupzeitraum zeitraum : Rollupzeitraum.reihe()) {
         gerendert.clear();
         attrappe.verlauf(new MandantContext(mandantId), zeitraum, zeitraum.fenster(ANKER));
         List<Plan> plan = plan(einziges());
@@ -169,7 +170,7 @@ class DashboardPlanDbIT {
   @Test
   @DisplayName("Die Verteilung faehrt denselben Weg und haengt den Katalog als eq_ref an")
   void verteilung_faehrt_denselben_weg() {
-    for (Dashboardzeitraum zeitraum : Dashboardzeitraum.reihe()) {
+    for (Rollupzeitraum zeitraum : Rollupzeitraum.reihe()) {
       for (Verteilungssicht sicht : Verteilungssicht.values()) {
         gerendert.clear();
         attrappe.verteilung(new MandantContext("NEXANS"), zeitraum, zeitraum.fenster(ANKER), sicht);
@@ -198,7 +199,7 @@ class DashboardPlanDbIT {
       MandantContext mandant = new MandantContext(mandantId);
 
       gerendert.clear();
-      attrappe.ueberfaelligImFenster(mandant, Dashboardzeitraum.STUNDEN_48.fenster(ANKER), ANKER);
+      attrappe.ueberfaelligImFenster(mandant, Rollupzeitraum.STUNDEN_48.fenster(ANKER), ANKER);
       List<Plan> imFenster = plan(einziges());
 
       gerendert.clear();
@@ -230,7 +231,7 @@ class DashboardPlanDbIT {
   @DisplayName("Beide Haelften von „Zuletzt aufgefallen“ steigen ueber MessageStatusIDX ein")
   void aufgefallen_faehrt_ueber_den_statusindex() {
     for (String mandantId : MANDANTEN) {
-      for (Dashboardzeitraum zeitraum : Dashboardzeitraum.reihe()) {
+      for (Rollupzeitraum zeitraum : Rollupzeitraum.reihe()) {
         gerendert.clear();
         attrappe.zuletztAufgefallen(
             new MandantContext(mandantId),
@@ -264,7 +265,7 @@ class DashboardPlanDbIT {
     gerendert.clear();
     attrappe.zuletztAufgefallen(
         new MandantContext("SUTTONS"),
-        Dashboardzeitraum.MONATE_12.fenster(ANKER),
+        Rollupzeitraum.MONATE_12.fenster(ANKER),
         ANKER,
         DashboardService.AUFFAELLIG_HOECHSTENS);
 

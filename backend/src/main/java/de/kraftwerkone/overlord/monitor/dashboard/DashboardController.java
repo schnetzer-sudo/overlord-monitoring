@@ -1,5 +1,6 @@
 package de.kraftwerkone.overlord.monitor.dashboard;
 
+import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
 import de.kraftwerkone.overlord.monitor.security.AngemeldeterNutzer;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import de.kraftwerkone.overlord.monitor.security.MandantService;
@@ -21,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <h2>Zwei Parameter, und beide sind freiwillig</h2>
  *
- * <p>{@code zeitraum} waehlt eines der drei Paare ({@link Dashboardzeitraum}). Fehlt er, waehlt der
+ * <p>{@code zeitraum} waehlt eines der drei Paare ({@link Rollupzeitraum}). Fehlt er, waehlt der
  * Endpunkt selbst und <b>nennt das gewaehlte Paar in der Antwort</b> — sonst wuesste die
  * Oberflaeche nicht, was sie hervorheben und in die URL schreiben soll.
  *
@@ -58,7 +59,7 @@ public class DashboardController {
       @RequestParam(required = false) String verteilung) {
     MandantContext mandant = mandantService.aktuellerKontext(erforderlicherNutzer());
     return dashboardService.landingpage(
-        mandant, Dashboardzeitraum.ausCode(zeitraum), Verteilungssicht.ausCode(verteilung));
+        mandant, Rollupzeitraum.ausCode(zeitraum), Verteilungssicht.ausCode(verteilung));
   }
 
   private AngemeldeterNutzer erforderlicherNutzer() {
