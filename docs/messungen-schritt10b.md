@@ -2501,3 +2501,148 @@ Nummerierung im Anschluss an den projektweit höchsten Stand (**54**, in [`rollu
 62. **Der Verteilungsblock muss fehlende Restzeilen vertragen.** Bei drei von vier gemessenen
     Mandanten gibt es nicht drei Zeilen. Und bei einer flachen Verteilung wie `IBIS` überragt
     „Übrige (n)" jeden einzelnen Balken. Beides ist Gestaltung und gehört in 10b.
+
+---
+
+# Messrunde 10b‑4 — *Überfällig* widerlegt, *Läuft* und *Wartend* gebaut *(03.09.2026)*
+
+**Eine eigene Runde in derselben Datei.** Sie gehört zu Schritt 10b und misst vier Dinge, die es
+vorher nicht gab; die Runde M94–M98 oben bleibt unberührt und wird nicht nachgerechnet.
+
+## Die Nummern — Regel V1 angewandt, und der Auftrag lag daneben
+
+Der Auftrag nennt als höchste bekannte vergebene Nummer **M126** ([`process-view.md`](process-view.md) §21)
+und schlägt M127 bis M130 vor. **Alle vier sind vergeben.** Erhoben über alle Markdown-Dateien in
+`docs/` und im Wurzelverzeichnis:
+
+| | |
+|---|---|
+| **M127–M130** | vergeben in [`process-view.md`](process-view.md) |
+| **M131–M141** | vergeben in [`dunkelmodus.md`](dunkelmodus.md) (Schritte 11a und 11b, 03.09.2026) |
+| **höchste tatsächlich vergebene** | **M141** |
+| **vergeben in dieser Runde** | **M142 bis M145** |
+
+Dasselbe gilt für die Entscheidungen: Der Auftrag nennt **E‑56** als höchste, tatsächlich ist es
+**E‑70** ([`dunkelmodus.md`](dunkelmodus.md)). Diese Runde vergibt **E‑71 bis E‑77**. Und für die
+offenen Punkte: die höchste vergebene ist **129** ([`dunkelmodus.md`](dunkelmodus.md) §15), diese
+Runde vergibt ab **130**.
+
+> **Das ist der zweite Fall dieser Art in Folge.** [`dunkelmodus.md`](dunkelmodus.md) §15 hält
+> denselben Befund für seine eigene Runde fest: die dort vorgeschlagenen Nummern kamen im Bestand
+> bereits vor. Die Nummern eines Auftrags sind Vorschläge; die Erhebung vor der Vergabe ist keine
+> Formalie, sondern die einzige Sicherung gegen zwei Messungen mit derselben Kennung.
+
+## Der Rahmen
+
+Wie in der Runde oben: Client `mysql.exe` 8.0.46 aus MySQL Workbench mit `--ssl-mode=DISABLED`,
+Benutzer `monitor_read`, ausschließlich `SELECT`/`SET`/`EXPLAIN`/`SHOW` (Regel S1). Ein
+Aufwärmlauf, dann die **beste von fünf**. Der `EXPLAIN` läuft über das **gerenderte** Statement mit
+Literalen. Zwei Mandanten, darunter ein kleiner (Regel L7): `NEXANS` und `SUTTONS`.
+
+`jetzt` ist der Anker der Anwendungsuhr im Profil `dev`, **`2025-12-30 04:09:47`** (M9), als
+Literal — kein `NOW()` (Regel Z1).
+
+---
+
+## Die vorregistrierten Deutungen — eingetragen **vor** dem ersten Lauf
+
+**Dieser Abschnitt ist vor der ersten Abfrage dieser Runde geschrieben worden.** Was hier steht,
+ist das Blatt, gegen das die Ergebnisse gehalten werden; es wird nachträglich **nicht**
+umformuliert.
+
+### M142 — trägt `SOSAction` das Wort, und was kostet es?
+
+**Die Frage.** Wie viele Zeilen hat `SOSAction`, was kosten `LIKE '%SUSPEND%'` und
+`LIKE '%WAITUNTIL%'` darüber, und tragen die **geplanten** Bausteine der 538 wartenden Nachrichten
+das Wort?
+
+**Erwartet:** `SOSAction` ist Stammdaten. M8 hat sie schon einmal vollständig mit einem `LIKE` über
+`SOSActionServiceProperties` gruppiert und dafür **70,9 ms** gebraucht, bei **3.944** Zeilen
+(11 + 2 + 3.743 + 186 + 1 + 1 aus der dortigen Tabelle). Beides ist hier nachzuzählen und nicht zu
+übernehmen. Erwartet wird eine Zeilenzahl in derselben Größenordnung und ein Aufwand **deutlich
+unter** den 70,9 ms, weil die hier gebaute Fassung ein `EXISTS` mit Mandantenkette ist und beim
+ersten Treffer abbrechen darf.
+
+> **Abbruchkriterium: mehr als 200 ms.** Dann ist §3.5 nicht so zu bauen, und der Schritt hält an.
+
+**Trägt der geplante Ablauf das Wort nicht**, ist die Übertragung von M29 widerlegt und §3.5
+ebenfalls offen. M29 (4) hat `SUSPEND` **und** `WAITUNTIL` bei **allen 538** gefunden — aber in
+`MessageAction.SOSActionServiceProperties`, also im **ausgeführten** Baustein. Diese Abfrage liest
+`SOSAction.SOSActionServiceProperties`, den **geplanten**.
+
+> ⚠️ **Die Lücke, die vorher zu benennen ist, und sie ist größer als „538".** M29 (4) hat neben den
+> beiden Marken auch gemessen: **eine einzige** `SOSActionID` und **ein einziger** Ablauf über alle
+> 538 Zeilen. Die Nachprüfung am geplanten Baustein hängt damit an **einer** `SOSAction`-Zeile,
+> nicht an 538. Sie kann die Übertragung **widerlegen**; bestätigen kann sie sie nur für diese eine
+> Gestalt.
+
+**Warum `SUSPEND` und nicht `WAITUNTIL`:** M29 hat beide bei allen 538 gefunden. `SUSPEND` ist das
+Wort, das den Zustand benennt. **Gemessen werden beide**, und die Entscheidung fällt danach.
+
+### M143 — die beiden neuen Kachelstatements
+
+**Die Frage.** Was kosten `COUNT(*)` und `MIN(MessageLastUpdate)` über `MessageStatus = 'RUNNING'`
+beziehungsweise `'SUSPENDED'` mit Mandantenkette, je Mandant?
+
+**Erwartet:** in der Größenordnung der alten Überfällig-Statements — **5,102 / 6,171 ms**
+(`NEXANS`) und **4,516 / 5,171 ms** (`SUTTONS`), gemessen in M108. Der Zugriffspfad ist `range`
+über **`MessageStatusIDX`**.
+
+> **Ein anderer Zugriffspfad als `range` über `MessageStatusIDX` ist ein Befund**, kein Detail. Das
+> neue Statement ist **einfacher** als das alte: `=` auf den Rohwert statt `IN` über zwei Werte,
+> und ohne die Fristbedingung. Ein `ref` statt `range` wäre deshalb kein Rückschritt, sondern die
+> erwartbare Folge eines einzelnen Wertes — auch das ist zu berichten und nicht als „passt schon"
+> abzutun.
+
+**Für `RUNNING` wird `anzahl = 0` erwartet, bei jedem Mandanten**, und `aelteste = NULL`. `RUNNING`
+kommt in der Testkopie null Mal vor. **Das ist keine Abnahmelücke**, sondern der bekannte Zustand
+dieser Kopie.
+
+### M144 — die Erscheinungsbedingung, je Mandant, für alle zehn
+
+**Die Frage.** Liefert das Statement aus §3.5 — hat der Mandant einen Prozess, dessen **geplanter**
+Ablauf einen `SUSPEND`-Baustein trägt — `true` oder `false`, für jeden der zehn Mandanten? Und wie
+verteilen sich die 538 `SUSPENDED` auf die Mandanten?
+
+**Erwartet:** wenige Mandanten mit `true`. **Das Ergebnis je Mandant ist die Zahl, die vorher
+niemand hatte** — es ist vollständig zu protokollieren, auch jedes `false`.
+
+> ⚠️ **Zur Aufteilung der 538 sagt der Auftrag, sie sei „nicht erhoben". Das trifft nicht zu.**
+> [`messungen-schritt10.md`](messungen-schritt10.md) M90 hat sie erhoben: *„Alle 538 offenen Zeilen
+> gehören `NEXANS` … Kein anderer Mandant hat auch nur eine."* Sie wird hier trotzdem nachgemessen,
+> und zwar aus einem Grund: M90 hat gegen den **falschen Anker** gemessen
+> (`2026-07-08 17:21:10` statt `2025-12-30 04:09:47`, [`dashboard.md`](dashboard.md) §8). Auf die
+> Zuordnung zum Mandanten wirkt der Anker nicht — auf die Zahl der *überfälligen* Zeilen sehr wohl.
+> **Erwartet ist deshalb: 538 für `NEXANS`, null für alle anderen, und M90 bestätigt.**
+
+**Trifft das zu, hat die Kachel *Wartend* lokal genau bei einem Mandanten eine Zahl über null.**
+Zeigt §3.5 für weitere Mandanten `true`, sehen diese die Kachel mit einer `0` — und genau das ist
+ihr Zweck: *„heute wartet nichts"* ist eine Auskunft, *„dieser Mandant wartet nie"* eine andere.
+
+### M145 — die ganze Landingpage
+
+**Die Frage.** Wie teuer ist die zusammengesetzte Landingpage nach dem Umbau, je Mandant und je
+Zeitraumpaar?
+
+**Budget 500 ms.** Bezugswerte aus M108:
+
+| Paar | `NEXANS` | `SUTTONS` |
+|---|---:|---:|
+| 48 h | 62,227 ms | 72,007 ms |
+| 30 Tage | 152,814 ms | 109,829 ms |
+| 12 Monate | **199,030 ms** | 127,038 ms |
+
+**Erwartet wird eine Verbesserung**, und die Rechnung dazu steht vorher fest:
+
+| | |
+|---|---:|
+| fällt weg: die Überfälligkeitshälfte von „Zuletzt aufgefallen" | **29 bis 34 ms** (M108) |
+| fällt weg: die zwei Überfällig-Kachelstatements | **9,7 bis 11,3 ms** (M108) |
+| kommt hinzu: die zwei neuen Kachelstatements | erwartet **9 bis 12 ms** (M143) |
+| kommt hinzu: die Erscheinungsbedingung | erwartet **unter 200 ms**, Abbruch darüber (M142) |
+
+> **Die Erwartung ist damit nicht eindeutig, und das gehört vorher gesagt.** Fällt M142 klein aus
+> (wenige Millisekunden), erwarten wir die Landingpage um **rund 30 ms billiger**. Fällt M142 nahe
+> an sein Abbruchkriterium, wird sie **teurer** — bei `NEXANS` über zwölf Monate rechnerisch
+> 199 − 30 + 200 = **rund 369 ms**, immer noch unter Budget, aber ohne Luft. **Beides ist ein
+> zulässiges Ergebnis; nur das Verschweigen wäre es nicht.**
