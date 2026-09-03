@@ -18,26 +18,34 @@ import type { Partnerknoten, Prozessbaum, Prozessknoten, Richtungsknoten } from 
  */
 
 /**
- * ## E‑45 — Eine Richtungsebene, die nur einen Knoten trüge, wird übersprungen
+ * ## E‑58 — Die Ebene fällt nur weg, wo es **nichts zu schreiben** gibt
  *
- * Der Prozess hängt dann direkt unter dem Partner, und **die Richtung wandert in
- * die Prozesszeile** — als Zeichen, nicht als eigene Ebene. Sie verschwindet
- * nicht, sie hört nur auf, eine Ebene zu rechtfertigen.
+ * *Entschieden am 03.09.2026, `docs/process-view.md` §29. Engt E‑45 ein und
+ * ersetzt E‑55.*
  *
- * **Was das kostet, und es gehört benannt: Der Baum wird ungleichförmig.** Am
- * gerenderten Baum ausgezählt (`docs/process-view.md` §17): Bei `NEXANS`
- * behalten **135 von 155 Partnerknoten** die Ebene und 20 verlieren sie; 31 von
- * 733 Blättern rücken dadurch eine Ebene herauf. Zwei Prozesse gleicher Tiefe
- * stehen dann verschieden weit eingerückt.
+ * **Eine bekannte Richtung steht immer als eigene Ebene**, auch wenn der Partner
+ * nur eine hat. Der Grund ist die **Einheitlichkeit**, und sie ist am Bild
+ * entschieden worden: Bei `ACOME` stand „Eingehend" als Zeile, bei `ADIENT`
+ * dasselbe Wort als Vorsatz in der Prozesszeile — zwei Schreibweisen für
+ * denselben Sachverhalt, direkt untereinander.
+ * Das Bild danebengestellt steht in `docs/process-view.md` §29 und bewusst nicht
+ * hier: Der Prozessname darin endet auf ein Kürzel, das `tests/farbwerte.test.ts`
+ * samt folgender Klammer als CSS-Farbfunktion liest — ein Fehlalarm, den ein
+ * Beispiel nicht wert ist.
  *
- * > Die 155 sind Knoten und keine Partner: 154 kuratierte Partner plus die
- * > Gruppe „nicht zugeordnet" (M117). Die 154 aus §9 und die 155 hier meinen
- * > dasselbe und zählen Verschiedenes.
+ * ## Was von E‑45 bleibt, und es ist der Fall, für den sie gebaut war
  *
- * **Das ist hinzunehmen und sichtbar zu machen, nicht zu kaschieren.** Eine
- * leere Ebene, die nur Einrückung erzeugt, kostet mehr — bei `VOTG` wären es
- * **133** Knoten ohne jede Aussage, einer je Partnerknoten, weil dort kein
- * einziger Prozess eine kuratierte Richtung trägt (M110).
+ * **Ist die Richtung `null`, fällt die Ebene weiter weg.** Ein Knoten „nicht
+ * ermittelt" über einem einzigen Kind ordnet nichts und schreibt nichts hin —
+ * bei `VOTG` wären es **133** solche Knoten, einer je Partner, weil dort kein
+ * einziger Prozess eine kuratierte Richtung trägt (M110). Offener Punkt 108
+ * bleibt damit geschlossen.
+ *
+ * **Der Preis ist gezählt** (M130, §29): Bei `NEXANS` bekommen 19 Partner ihre
+ * Ebene zurück, bei `IBIS` 19; einer bei `NEXANS` behält sie nicht
+ * (`SONDERPROZESS`, elf Prozesse ohne kuratierte Richtung). Der Baum ist damit
+ * **innerhalb dessen, was er zeigt, gleichförmig**: Wo eine Richtung steht,
+ * steht sie als Ebene — nirgends als Vorsatz.
  *
  * ## E‑46 — Das Überspringen geschieht in der Oberfläche, nicht im Endpunkt
  *
@@ -47,7 +55,13 @@ import type { Partnerknoten, Prozessbaum, Prozessknoten, Richtungsknoten } from 
  * Oberfläche beschriftet.
  */
 export function richtungsebeneFaelltWeg(partner: Partnerknoten): boolean {
-  return partner.richtungen.length <= 1;
+  if (partner.richtungen.length > 1) {
+    return false;
+  }
+  const einzige = partner.richtungen[0];
+  // Ein gepflegter, aber unbekannter vierter Katalogwert ist **bekannt** und
+  // bekommt seine Ebene: Er steht dort, wie er im Katalog steht (Regel Q4).
+  return einzige === undefined || einzige.richtung === null;
 }
 
 /**
@@ -138,13 +152,6 @@ export type Baumzeile =
   | (Zeilenrumpf & {
       readonly art: "PROZESS";
       readonly prozess: Prozessknoten;
-      /**
-       * Gesetzt, **wenn die Richtungsebene übersprungen wurde** — dann trägt die
-       * Prozesszeile die Richtung selbst (E‑45), seit E‑55 als **Wort** und
-       * nicht mehr als Zeichen ({@link richtungswort}). Steht die Ebene, ist es
-       * `undefined`: Die Angabe stünde sonst zweimal übereinander.
-       */
-      readonly richtung?: string | null;
     });
 
 /**
@@ -191,10 +198,13 @@ export function baumzeilen(
     }
 
     if (ohneEbene) {
-      // Die Blätter rücken eine Ebene herauf und tragen die Richtung selbst.
-      blattzeilen(einzige, 2, einzige === undefined ? null : einzige.richtung).forEach((zeile) =>
-        zeilen.push(zeile),
-      );
+      /*
+       * Die Blätter rücken eine Ebene herauf. **Sie tragen die Richtung nicht**
+       * (E‑58): Weggefallen ist die Ebene nur dort, wo die Richtung `null` ist,
+       * und dafür gibt es kein Wort. Vor dem 03.09.2026 stand hier ein Zeichen
+       * und danach ein Vorsatz vor dem Namen; beides ist entfallen.
+       */
+      blattzeilen(einzige, 2).forEach((zeile) => zeilen.push(zeile));
       return;
     }
 
@@ -216,7 +226,7 @@ export function baumzeilen(
       });
 
       if (richtungOffen) {
-        blattzeilen(richtung, 3, undefined).forEach((zeile) => zeilen.push(zeile));
+        blattzeilen(richtung, 3).forEach((zeile) => zeilen.push(zeile));
       }
     });
   });
@@ -224,11 +234,7 @@ export function baumzeilen(
   return zeilen;
 }
 
-function blattzeilen(
-  richtung: Richtungsknoten | undefined,
-  ebene: number,
-  mitRichtung: string | null | undefined,
-): Baumzeile[] {
+function blattzeilen(richtung: Richtungsknoten | undefined, ebene: number): Baumzeile[] {
   if (richtung === undefined) {
     return [];
   }
@@ -241,7 +247,6 @@ function blattzeilen(
     nachrichten: prozess.nachrichten,
     fehler: prozess.fehler,
     prozess,
-    ...(mitRichtung === undefined ? {} : { richtung: mitRichtung }),
   }));
 }
 
@@ -427,45 +432,6 @@ export function partnertext(partner: string | null, texte: Texte): string {
 }
 
 /**
- * ## E‑55 — Die einzelne Richtung steht als **Wort** in der Zeile
- *
- * *Entschieden am 02.09.2026, `docs/process-view.md` §17.* Fällt die
- * Richtungsebene weg (E‑45), trug das Blatt die Richtung bis dahin als
- * **Zeichen** — `↙`, `↗`, gestrichelter Kreis. Künftig steht dort das Wort, und
- * es **ersetzt** das Zeichen.
- *
- * | Zeile | Rückgabe |
- * |---|---|
- * | Gruppe (Partner, Richtung) | `null` — dort steht das Aufklappzeichen |
- * | Blatt unter einer **stehenden** Richtungsebene | `null` — die Angabe stünde zweimal übereinander |
- * | Blatt ohne Ebene, Richtung **nicht ermittelt** (`null`) | `null` — **bewusst nichts**, siehe unten |
- * | Blatt ohne Ebene, Richtung gesetzt | **das Wort** aus der Textquelle |
- *
- * **Dass „nicht ermittelt" seine Stelle verliert, ist ein Verzicht gegen
- * `docs/visuelles-konzept.md` §3** („eine leere Stelle sagt nichts") — und ein
- * bewusster: Die Angabe steht im Katalog, und ein Zeichen an *jeder* Zeile eines
- * Mandanten ohne kuratierte Richtung — bei `VOTG` alle 390 — sagt dort nichts,
- * was der Nutzer nicht schon weiß.
- *
- * **Ein gepflegter, aber unbekannter Wert bekommt sein Wort** (Regel Q4): Er
- * erscheint über {@link richtungstext}, wie er im Katalog steht. Das ist
- * zugleich die Berichtigung einer Ungenauigkeit der Zeichenfassung — dort fiel
- * ein vierter Wert in denselben gestrichelten Kreis wie `null` und war damit
- * von „nicht ermittelt" nicht zu unterscheiden.
- *
- * **Der Wortlaut kommt aus `texte` und nicht aus der Komponente**, und die
- * Eingrenzung greift weiterhin nicht auf ihn zu ({@link eingegrenzterBaum}):
- * Gefiltert wird über die Werte der Antwort, nicht über Oberflächentexte — sonst
- * fände dieselbe Eingabe je nach Sprache Verschiedenes.
- */
-export function richtungswort(zeile: Baumzeile, texte: Texte): string | null {
-  if (zeile.art !== "PROZESS" || zeile.richtung === undefined || zeile.richtung === null) {
-    return null;
-  }
-  return richtungstext(zeile.richtung, texte);
-}
-
-/**
  * Der Zusatz, der den Zustand eines Prozesses **in Worten** trägt.
  *
  * ## E‑56 — Von drei Zuständen sind in der Zeile **zwei** zu sehen *(02.09.2026)*
@@ -539,13 +505,18 @@ export function zeilenbeschriftung(
       einsetzen(texte.prozesse.baum.anzahlProzesse, { anzahl: zahl(zeile.anzahlProzesse) }),
     );
   } else {
+    /*
+     * **Die Richtung steht hier nicht**, und seit E‑58 in keinem Fall mehr: Wo
+     * sie bekannt ist, trägt sie eine eigene Ebene — die ein Vorleseprogramm
+     * über `aria-level` als Elternknoten findet —, und wo sie das nicht ist,
+     * gibt es sie nicht. Bis zum 03.09.2026 stand hier „nicht ermittelt" für
+     * genau die Blätter, die sichtbar nichts trugen; sichtbare und vorgelesene
+     * Fassung liefen damit auseinander.
+     */
     teile.push(
       zeile.prozess.processName ?? texte.prozesse.ohneNamen,
       texte.prozesse.baum.ebeneProzess,
     );
-    if (zeile.richtung !== undefined) {
-      teile.push(richtungstext(zeile.richtung, texte));
-    }
   }
 
   teile.push(einsetzen(texte.prozesse.baum.anzahlNachrichten, { anzahl: zahl(zeile.nachrichten) }));

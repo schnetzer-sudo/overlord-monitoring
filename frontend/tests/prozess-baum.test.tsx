@@ -64,10 +64,17 @@ const MIT_EBENE = knoten("ACME", [
   gruppe("AUSGEHEND", [blatt("p2", "ACME Lieferschein")]),
 ]);
 
-const OHNE_EBENE = knoten("BOSCH", [gruppe("EINGEHEND", [blatt("p3", "BOSCH Rechnung")])]);
+/**
+ * Ein Partner mit **einer, bekannten** Richtung — die Ebene steht trotzdem
+ * (E‑58). Der Fall aus dem Bild des Auftraggebers: `ADIENT` mit einem Prozess.
+ */
+const EINE_RICHTUNG = knoten("BOSCH", [gruppe("EINGEHEND", [blatt("p3", "BOSCH Rechnung")])]);
 
-/** Ein Partner ohne kuratierte Richtung — bei `VOTG` alle 133 (M123). */
-const OHNE_RICHTUNG = knoten("VOTG", [gruppe(null, [blatt("p4", "Freier Prozess")])]);
+/**
+ * Ein Partner ohne kuratierte Richtung — bei `VOTG` alle 133 (M123). **Nur hier
+ * fällt die Ebene weg**, und die Blätter bekommen keinen Ersatz.
+ */
+const OHNE_EBENE = knoten("VOTG", [gruppe(null, [blatt("p4", "Freier Prozess")])]);
 
 async function baum(partner: Partnerknoten[], gewaehlt: string | null = null) {
   return rendere(
@@ -109,7 +116,7 @@ describe("Der Prozessbaum im Baum", () => {
   it("legt den Tabstopp auf die gewählte Zeile und nicht auf die erste", async () => {
     // Wer über einen tiefen Link kommt und dann tabbt, landet an seiner Stelle
     // und nicht am Anfang des Baums.
-    const { behaelter, abbauen } = await baum([MIT_EBENE, OHNE_EBENE], "p3");
+    const { behaelter, abbauen } = await baum([MIT_EBENE, EINE_RICHTUNG], "p3");
 
     try {
       const tabbar = zeilen(behaelter).find((zeile) => zeile.getAttribute("tabindex") === "0");
@@ -149,7 +156,7 @@ describe("Der Prozessbaum im Baum", () => {
     }
   });
 
-  it("macht bei nur einer Richtung **keine** zweite Ebene auf (E‑45)", async () => {
+  it("macht bei nicht ermittelter Richtung **keine** zweite Ebene auf (E‑58)", async () => {
     const { behaelter, abbauen } = await baum([OHNE_EBENE]);
 
     try {
@@ -160,8 +167,29 @@ describe("Der Prozessbaum im Baum", () => {
       // Genau ein aufklappbarer Knoten: der Partner. Der Richtungsknoten, den es
       // im Endpunkt gibt, erscheint hier nicht.
       expect(alle.filter((zeile) => zeile.hasAttribute("aria-expanded"))).toHaveLength(1);
-      // Die Richtung ist trotzdem da — sie ist in die Prozesszeile gewandert.
+      // **Und die Richtung wird nirgends nachgetragen** — weder sichtbar noch
+      // im vorgelesenen Namen. „nicht ermittelt“ hätte hier nichts zu sagen.
+      expect(alle[1].getAttribute("aria-label")).not.toContain("ermittelt");
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("lässt die Ebene über einem einzigen Kind stehen, wenn die Richtung bekannt ist (E‑58)", async () => {
+    // ⚠️ **Die Umkehrung vom 03.09.2026, und sie ist am Bild entschieden
+    // worden:** Bei `ACOME` stand „Eingehend“ als Zeile, beim Nachbarn `ADIENT`
+    // dasselbe Wort als Vorsatz in der Prozesszeile. Zwei Schreibweisen für
+    // denselben Sachverhalt, direkt untereinander.
+    const { behaelter, abbauen } = await baum([EINE_RICHTUNG]);
+
+    try {
+      const alle = zeilen(behaelter);
+
+      expect(alle.map((zeile) => zeile.getAttribute("aria-level"))).toEqual(["1", "2", "3"]);
       expect(alle[1].getAttribute("aria-label")).toContain("Eingehend");
+      // Das Blatt trägt sie **nicht** noch einmal.
+      expect(alle[2].getAttribute("aria-label")).toContain("BOSCH Rechnung");
+      expect(alle[2].getAttribute("aria-label")).not.toContain("Eingehend");
     } finally {
       await abbauen();
     }
@@ -229,32 +257,35 @@ describe("Der Prozessbaum im Baum", () => {
     }
   });
 
-  it("schreibt die einzelne Richtung aus und zeichnet sie nicht (E‑55)", async () => {
-    // **Die Verdrahtung, nicht die Regel.** Welche Zeile das Wort trägt, steht
-    // als reine Funktion in `prozessbaum.ts` und wird dort geprüft; dass die
-    // Komponente sie benutzt und dass an ihrer Stelle **kein Zeichen mehr
-    // steht**, zeigt nur der gerenderte Baum.
+  it("schreibt die Richtung nur an die Ebene und nirgends in eine Blattzeile (E‑58)", async () => {
+    // **Die Verdrahtung, nicht die Regel.** Welche Ebene entsteht, steht als
+    // reine Funktion in `prozessbaum.ts` und wird dort geprüft; dass an der
+    // Blattzeile **weder ein Zeichen noch ein Wort** steht, zeigt nur der
+    // gerenderte Baum.
     //
-    // Gezählt werden die `svg` je Zeile: Die Gruppen behalten ihr
-    // Aufklappzeichen (eins), die Blätter tragen keines mehr (null). Bis zum
-    // 02.09.2026 trug jedes Blatt ohne Richtungsebene eines — `↙`, `↗` oder
-    // den gestrichelten Kreis.
-    const { behaelter, abbauen } = await baum([OHNE_EBENE, OHNE_RICHTUNG]);
+    // Die Zeile hat zwei Fassungen gehabt und keine gehalten: bis zum
+    // 02.09.2026 ein Zeichen (`↙`, `↗`, gestrichelter Kreis), danach einen Tag
+    // lang das Wort vor dem Namen. Gezählt werden hier die `svg` je Zeile —
+    // Gruppen behalten ihr Aufklappzeichen (eins), Blätter tragen keines (null).
+    const { behaelter, abbauen } = await baum([EINE_RICHTUNG, OHNE_EBENE]);
 
     try {
-      const [bosch, mitWort, votg, ohneWort] = zeilen(behaelter);
+      const [bosch, richtung, blatt3, votg, blatt4] = zeilen(behaelter);
 
-      expect(mitWort.textContent).toContain("Eingehend");
-      expect(mitWort.textContent).toContain("BOSCH Rechnung");
-      expect(mitWort.querySelectorAll("svg")).toHaveLength(0);
       expect(bosch.querySelectorAll("svg")).toHaveLength(1);
+      expect(richtung.textContent).toContain("Eingehend");
+      expect(richtung.querySelectorAll("svg")).toHaveLength(1);
 
-      // **„nicht ermittelt“ verliert seine Stelle ganz** — weder Wort noch
-      // Zeichen. Der bewusste Verzicht gegen `visuelles-konzept.md` §3.
-      expect(ohneWort.textContent).toContain("Freier Prozess");
-      expect(ohneWort.textContent).not.toContain("nicht ermittelt");
-      expect(ohneWort.querySelectorAll("svg")).toHaveLength(0);
+      // Das Blatt darunter trägt den Namen und sonst nichts.
+      expect(blatt3.textContent).toContain("BOSCH Rechnung");
+      expect(blatt3.textContent).not.toContain("Eingehend");
+      expect(blatt3.querySelectorAll("svg")).toHaveLength(0);
+
+      // **Und wo die Ebene wegfällt, wird sie nicht ersetzt.**
       expect(votg.querySelectorAll("svg")).toHaveLength(1);
+      expect(blatt4.textContent).toContain("Freier Prozess");
+      expect(blatt4.textContent).not.toContain("ermittelt");
+      expect(blatt4.querySelectorAll("svg")).toHaveLength(0);
     } finally {
       await abbauen();
     }
@@ -265,12 +296,10 @@ describe("Der Prozessbaum im Baum", () => {
     // Bliebe die Dämpfung allein stehen, wäre der Zustand nur über Helligkeit
     // ausgedrückt — der Fall, den `visuelles-konzept.md` §3 verbietet.
     //
-    // `text-muted-foreground` steht im Baum an anderen Stellen (Zahlenblock,
-    // Richtungswort); geprüft wird deshalb die **Zeile selbst**.
+    // `text-muted-foreground` steht im Baum an anderen Stellen (Zahlenblock);
+    // geprüft wird deshalb die **Zeile selbst**.
     const nie = knoten("ACME", [
-      gruppe("EINGEHEND", [
-        { ...blatt("p5", "Nie benutzt"), zustand: "NIE", letzteBewegung: null },
-      ]),
+      gruppe(null, [{ ...blatt("p5", "Nie benutzt"), zustand: "NIE", letzteBewegung: null }]),
     ]);
     const { behaelter, abbauen } = await baum([nie]);
 

@@ -91,11 +91,16 @@ Zwei Gründe, beide für sich ausreichend:
 >
 > ⚠️ **Die Abweichung betrifft nicht Farbe, sondern die leere Stelle.** Ein Blatt des Baums, dessen
 > Richtung *nicht ermittelt* ist, trug ein eigenes Zeichen — nach demselben Gedanken wie „nicht
-> zugeordnet heißt nicht zugeordnet": Eine leere Stelle sagt nichts. Seit E‑55 trägt es **nichts**.
+> zugeordnet heißt nicht zugeordnet": Eine leere Stelle sagt nichts. Seit E‑58 trägt es **nichts**.
 > Der Verzicht ist bewusst und begründet: Die Angabe steht im Katalog, und ein Zeichen an *jeder*
 > Zeile eines Mandanten ohne kuratierte Richtung — bei `VOTG` alle 390 — unterscheidet nichts mehr.
 > **Er gilt für diese eine Stelle und nicht als neue Regel**; überall sonst bekommt das Fehlende
-> weiterhin ein Wort ([`process-view.md`](process-view.md) §25).
+> weiterhin ein Wort ([`process-view.md`](process-view.md) §29).
+>
+> **Und er ist am 03.09.2026 kleiner geworden.** Einen Tag lang stand an derselben Stelle bei
+> *bekannter* Richtung ein Wort (E‑55) — damit gab es die Angabe in zwei Schreibweisen
+> nebeneinander, als Ebene und als Vorsatz. Seither trägt die Ebene sie überall, wo sie bekannt
+> ist; die leere Stelle bleibt nur dort, wo auch die Angabe fehlt.
 
 ### Der Akzent
 

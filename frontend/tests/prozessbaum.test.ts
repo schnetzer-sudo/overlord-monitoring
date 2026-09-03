@@ -21,7 +21,6 @@ import {
   richtungstext,
   sichtbareProzesse,
   tastenbefehl,
-  richtungswort,
   zeilenbeschriftung,
   zustandstext,
 } from "@/features/nachrichten/prozessbaum";
@@ -84,10 +83,20 @@ const MIT_EBENE = knoten("ACME", [
   gruppe("AUSGEHEND", [blatt("p2", "ACME Lieferschein", 5)]),
 ]);
 
-/** Ein Partner mit **einer** Richtung — die Ebene fällt weg (E‑45). */
+/**
+ * Ein Partner mit **einer, nicht ermittelten** Richtung — die Ebene fällt weg
+ * (E‑58). Sie trüge einen Knoten „nicht ermittelt“ über zwei Blättern und
+ * schriebe nichts hin.
+ */
 const OHNE_EBENE = knoten("BOSCH", [
-  gruppe("EINGEHEND", [blatt("p3", "BOSCH Rechnung", 0, 0, "STILL"), blatt("p4", null, 7)]),
+  gruppe(null, [blatt("p3", "BOSCH Rechnung", 0, 0, "STILL"), blatt("p4", null, 7)]),
 ]);
+
+/**
+ * Ein Partner mit **einer, bekannten** Richtung — die Ebene **steht** (E‑58).
+ * Der Fall aus dem Bild: `ADIENT` mit genau einem eingehenden Prozess.
+ */
+const EINE_RICHTUNG = knoten("CONTI", [gruppe("EINGEHEND", [blatt("p6", "CONTI Bestellung", 4)])]);
 
 /** „nicht zugeordnet“ — bei `SUTTONS` die einzige Gruppe, und ohne Richtung. */
 const OHNE_PARTNER = knoten(null, [gruppe(null, [blatt("p5", "Freier Prozess", 0, 0, "NIE")])]);
@@ -103,11 +112,38 @@ const BAUM: Prozessbaum = {
 const ALLES_OFFEN = () => true;
 const ALLES_ZU = () => false;
 
-describe("E‑45 — die Richtungsebene fällt weg, wenn sie nur einen Knoten trüge", () => {
-  it("erkennt beide Fälle am Knoten und nicht an der Antwort", () => {
-    expect(richtungsebeneFaelltWeg(MIT_EBENE)).toBe(false);
-    expect(richtungsebeneFaelltWeg(OHNE_EBENE)).toBe(true);
-    expect(richtungsebeneFaelltWeg(OHNE_PARTNER)).toBe(true);
+describe("E‑58 — die Richtungsebene fällt nur weg, wo es nichts zu schreiben gibt", () => {
+  it("erkennt die Fälle am Knoten und nicht an der Antwort", () => {
+    expect(richtungsebeneFaelltWeg(MIT_EBENE), "zwei Richtungen").toBe(false);
+    // ⚠️ **Das ist die Umkehrung vom 03.09.2026.** Bis dahin genügte „genau
+    // eine Richtung“; seither muss sie auch **unbekannt** sein. Eine bekannte
+    // Richtung steht immer als Ebene, sonst schriebe der Baum denselben
+    // Sachverhalt an zwei Stellen verschieden.
+    expect(richtungsebeneFaelltWeg(EINE_RICHTUNG), "eine bekannte Richtung").toBe(false);
+    expect(richtungsebeneFaelltWeg(OHNE_EBENE), "eine unbekannte Richtung").toBe(true);
+    expect(richtungsebeneFaelltWeg(OHNE_PARTNER), "ohne Partner, ohne Richtung").toBe(true);
+  });
+
+  it("lässt die Ebene auch über einem einzigen Kind stehen, wenn die Richtung bekannt ist", () => {
+    // Der Fall aus dem Bild: `ADIENT` trägt einen Prozess, und „Eingehend“
+    // stand deshalb als Vorsatz in seiner Zeile, während dasselbe Wort beim
+    // Nachbarn `ACOME` eine Zeile war.
+    const zeilen = baumzeilen([EINE_RICHTUNG], ALLES_OFFEN);
+
+    expect(zeilen.map((zeile) => zeile.art)).toEqual(["PARTNER", "RICHTUNG", "PROZESS"]);
+    expect(zeilen.map((zeile) => zeile.ebene)).toEqual([1, 2, 3]);
+    expect(zeilen[1].art === "RICHTUNG" && zeilen[1].richtung).toBe("EINGEHEND");
+  });
+
+  it("gibt auch einem gepflegten, aber unbekannten Wert seine Ebene (Regel Q4)", () => {
+    // Er ist **bekannt** — nur nicht übersetzbar. Er steht als Zeile da, wie er
+    // im Katalog steht; „nicht ermittelt“ ist etwas anderes.
+    const vierter = knoten("ACME", [gruppe("RUECKMELDUNG", [blatt("p9", "Quittung", 1)])]);
+    expect(richtungsebeneFaelltWeg(vierter)).toBe(false);
+
+    const zeilen = baumzeilen([vierter], ALLES_OFFEN);
+    expect(zeilen[1].art === "RICHTUNG" && zeilen[1].richtung).toBe("RUECKMELDUNG");
+    expect(zeilenbeschriftung(zeilen[1], SCHWELLE, TEXTE, ZAHL)).toContain("RUECKMELDUNG");
   });
 
   it("lässt bei zwei Richtungen die Ebene stehen und die Blätter auf Ebene 3", () => {
@@ -121,35 +157,31 @@ describe("E‑45 — die Richtungsebene fällt weg, wenn sie nur einen Knoten tr
       "PROZESS",
     ]);
     expect(zeilen.map((zeile) => zeile.ebene)).toEqual([1, 2, 3, 2, 3]);
-
-    // **Die Richtung steht dann NICHT in der Prozesszeile** — sie stünde sonst
-    // zweimal übereinander.
-    const blaetter = zeilen.filter((zeile) => zeile.art === "PROZESS");
-    expect(blaetter.every((zeile) => zeile.art === "PROZESS" && zeile.richtung === undefined)).toBe(
-      true,
-    );
   });
 
-  it("überspringt bei einer Richtung die Ebene und hängt sie an die Prozesszeile", () => {
+  it("überspringt die Ebene bei nicht ermittelter Richtung — und schreibt nichts nach", () => {
+    // Der Fall von `VOTG`: keine einzige kuratierte Richtung, 133 Knoten „nicht
+    // ermittelt“, die nichts ordnen. Die Ebene fällt weg, und die Blätter
+    // tragen **keinen Ersatz** — weder ein Zeichen noch ein Wort.
     const zeilen = baumzeilen([OHNE_EBENE], ALLES_OFFEN);
 
     expect(zeilen.map((zeile) => zeile.art)).toEqual(["PARTNER", "PROZESS", "PROZESS"]);
-    // Die Blätter rücken eine Ebene herauf.
     expect(zeilen.map((zeile) => zeile.ebene)).toEqual([1, 2, 2]);
-    // Und sie tragen die Richtung — sie verschwindet nicht, sie wandert.
-    expect(zeilen[1].art === "PROZESS" && zeilen[1].richtung).toBe("EINGEHEND");
-    expect(zeilen[2].art === "PROZESS" && zeilen[2].richtung).toBe("EINGEHEND");
   });
 
-  it("trägt „nicht ermittelt“ als Wert und nicht als Auslassung", () => {
-    // Der Fall von `VOTG`: keine einzige kuratierte Richtung. Die Prozesszeile
-    // trägt `null` — und `null` ist gesetzt, nicht abwesend.
-    const zeilen = baumzeilen([OHNE_PARTNER], ALLES_OFFEN);
-    const blattzeile = zeilen[1];
+  it("gibt einem Blatt in keinem Fall eine eigene Richtung mit", () => {
+    // **Die Abwesenheit ist die Regel** (E‑58): Wo die Richtung bekannt ist,
+    // trägt sie die Ebene; wo nicht, gibt es sie nicht. Ein Feld an der
+    // Blattzeile wäre die zweite Schreibweise, die abgeschafft worden ist.
+    const alle = [
+      ...baumzeilen([MIT_EBENE], ALLES_OFFEN),
+      ...baumzeilen([EINE_RICHTUNG], ALLES_OFFEN),
+      ...baumzeilen([OHNE_EBENE], ALLES_OFFEN),
+      ...baumzeilen([OHNE_PARTNER], ALLES_OFFEN),
+    ].filter((zeile) => zeile.art === "PROZESS");
 
-    expect(blattzeile.art).toBe("PROZESS");
-    expect(blattzeile.art === "PROZESS" && blattzeile.richtung).toBeNull();
-    expect(blattzeile.art === "PROZESS" && "richtung" in blattzeile).toBe(true);
+    expect(alle.length).toBeGreaterThan(0);
+    expect(alle.every((zeile) => !("richtung" in zeile))).toBe(true);
   });
 });
 
@@ -440,16 +472,26 @@ describe("Beschriftung", () => {
     expect(zeilenbeschriftung(ohneFehler, SCHWELLE, TEXTE, ZAHL)).not.toContain("Fehler");
   });
 
-  it("nennt die Richtung nur dort, wo die Prozesszeile sie trägt", () => {
-    const mitEbene = baumzeilen([MIT_EBENE], ALLES_OFFEN)[2];
-    const ohneEbene = baumzeilen([OHNE_EBENE], ALLES_OFFEN)[1];
+  it("nennt die Richtung an der Ebene und an keinem Blatt (E‑58)", () => {
+    // **Sichtbare und vorgelesene Fassung dürfen nicht auseinanderlaufen.** Bis
+    // zum 03.09.2026 stand „nicht ermittelt“ im Namen genau der Blätter, die
+    // sichtbar nichts trugen.
+    const richtungszeile = baumzeilen([EINE_RICHTUNG], ALLES_OFFEN)[1];
+    expect(zeilenbeschriftung(richtungszeile, SCHWELLE, TEXTE, ZAHL)).toContain(
+      TEXTE.prozesse.richtung.EINGEHEND,
+    );
 
-    expect(zeilenbeschriftung(mitEbene, SCHWELLE, TEXTE, ZAHL)).not.toContain(
-      TEXTE.prozesse.richtung.EINGEHEND,
-    );
-    expect(zeilenbeschriftung(ohneEbene, SCHWELLE, TEXTE, ZAHL)).toContain(
-      TEXTE.prozesse.richtung.EINGEHEND,
-    );
+    for (const knotenmenge of [[MIT_EBENE], [EINE_RICHTUNG], [OHNE_EBENE], [OHNE_PARTNER]]) {
+      for (const zeile of baumzeilen(knotenmenge, ALLES_OFFEN)) {
+        if (zeile.art !== "PROZESS") {
+          continue;
+        }
+        const name = zeilenbeschriftung(zeile, SCHWELLE, TEXTE, ZAHL);
+        expect(name).not.toContain(TEXTE.prozesse.richtung.EINGEHEND);
+        expect(name).not.toContain(TEXTE.prozesse.richtung.AUSGEHEND);
+        expect(name).not.toContain(TEXTE.prozesse.richtung.nichtErmittelt);
+      }
+    }
   });
 
   it("nennt den Zustand eines stillen Prozesses", () => {
@@ -457,59 +499,6 @@ describe("Beschriftung", () => {
     expect(zeilenbeschriftung(still, SCHWELLE, TEXTE, ZAHL)).toContain(
       zustandstext("STILL", SCHWELLE, TEXTE) as string,
     );
-  });
-});
-
-/**
- * **E‑55 — die einzelne Richtung als Wort** *(02.09.2026)*.
- *
- * Bis dahin trug das Blatt ohne Richtungsebene ein Zeichen: `↙`, `↗` oder einen
- * gestrichelten Kreis. Das Wort **ersetzt** es, und „nicht ermittelt" verliert
- * seine Stelle ganz — ein bewusster Verzicht gegen `visuelles-konzept.md` §3,
- * begründet an {@link richtungswort}.
- */
-describe("Das Richtungswort in der Zeile", () => {
-  it("steht nur am Blatt, dessen Richtungsebene weggefallen ist", () => {
-    // Dieselbe Fallunterscheidung wie beim Zeichen davor — geprüft an der
-    // **Entscheidung** und nicht am Markup.
-    const gruppenzeilen = baumzeilen([MIT_EBENE], ALLES_OFFEN);
-    expect(richtungswort(gruppenzeilen[0], TEXTE), "Partnerzeile").toBeNull();
-    expect(richtungswort(gruppenzeilen[1], TEXTE), "Richtungszeile").toBeNull();
-    // Steht die Ebene, stünde die Angabe zweimal übereinander.
-    expect(richtungswort(gruppenzeilen[2], TEXTE), "Blatt unter der Ebene").toBeNull();
-
-    const ohneEbene = baumzeilen([OHNE_EBENE], ALLES_OFFEN)[1];
-    expect(richtungswort(ohneEbene, TEXTE)).toBe(TEXTE.prozesse.richtung.EINGEHEND);
-  });
-
-  it("lässt „nicht ermittelt“ ohne Wort und ohne Ersatz", () => {
-    // **Der Verzicht, um den es geht.** Die Angabe steht im Katalog, und ein
-    // Zeichen an jeder Zeile eines Mandanten ohne kuratierte Richtung — bei
-    // `VOTG` alle 390 — sagt dort nichts, was der Nutzer nicht schon weiß.
-    const ohneRichtung = baumzeilen([OHNE_PARTNER], ALLES_OFFEN)[1];
-    expect(ohneRichtung.art === "PROZESS" && ohneRichtung.richtung).toBeNull();
-    expect(richtungswort(ohneRichtung, TEXTE)).toBeNull();
-  });
-
-  it("gibt einen gepflegten, aber unbekannten Wert unverändert weiter (Regel Q4)", () => {
-    // ⚠️ **Das berichtigt eine Ungenauigkeit der Zeichenfassung:** Dort fiel ein
-    // vierter Katalogwert in denselben gestrichelten Kreis wie `null` und war
-    // von „nicht ermittelt" nicht zu unterscheiden. Als Wort steht er da, wie
-    // er im Katalog steht — geraten wird nichts.
-    const vierter = knoten("ACME", [gruppe("RUECKMELDUNG", [blatt("p9", "Quittung", 1)])]);
-    const zeile = baumzeilen([vierter], ALLES_OFFEN)[1];
-
-    expect(richtungswort(zeile, TEXTE)).toBe("RUECKMELDUNG");
-    expect(richtungswort(zeile, TEXTE)).not.toBe(TEXTE.prozesse.richtung.nichtErmittelt);
-  });
-
-  it("kommt aus der Textquelle und ist in beiden Sprachen verschieden", () => {
-    // Der Wortlaut steht in `texte` und nicht in der Komponente. Zugleich die
-    // Probe, warum die Eingrenzung ihn **nicht** durchsucht: Dieselbe Eingabe
-    // fände sonst je nach Sprache Verschiedenes.
-    const zeile = baumzeilen([OHNE_EBENE], ALLES_OFFEN)[1];
-    expect(richtungswort(zeile, texteFuer("en"))).toBe(texteFuer("en").prozesse.richtung.EINGEHEND);
-    expect(richtungswort(zeile, texteFuer("en"))).not.toBe(richtungswort(zeile, TEXTE));
   });
 });
 

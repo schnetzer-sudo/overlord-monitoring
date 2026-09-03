@@ -16,7 +16,6 @@ import {
   partnertext,
   prozessSchluessel,
   richtungstext,
-  richtungswort,
   tastenbefehl,
   zeilenbeschriftung,
   zustandstext,
@@ -269,7 +268,6 @@ function BaumZeile({
   aufFokus: () => void;
 }) {
   const texte = useTexte();
-  const wort = richtungswort(zeile, texte);
   const zusatz =
     zeile.art === "PROZESS"
       ? zustandstext(zeile.prozess.zustand, stilleSchwelleMonate, texte)
@@ -344,22 +342,6 @@ function BaumZeile({
          * rechts und nicht dem Baum.
          */}
         <span className={cn("block break-words", zeile.art === "PARTNER" && "font-medium")}>
-          {/*
-           * **Die Richtung als Wort, im Textfluss vor dem Namen** (E‑55). Nicht
-           * in der Zeichenspalte davor: Dort wäre sie eine Spalte veränderlicher
-           * Breite, die jeden Namen unterschiedlich weit einrückt. Hier läuft sie
-           * mit dem Namen um, und was sie an Umbrüchen kostet, ist gemessen
-           * (M128, `docs/process-view.md` §25).
-           *
-           * Das `{" "}` ist die Umbruchstelle und kein Abstand: Ohne es stünden
-           * Wort und Name ohne Trennmöglichkeit nebeneinander, und `break-words`
-           * bräche mitten im Wort.
-           */}
-          {wort === null ? null : (
-            <>
-              <span className="text-muted-foreground">{wort}</span>{" "}
-            </>
-          )}
           {zeile.art === "PARTNER"
             ? partnertext(zeile.partner, texte)
             : zeile.art === "RICHTUNG"
@@ -387,22 +369,24 @@ function BaumZeile({
 }
 
 /**
- * Das Zeichen am Zeilenanfang — **eine Stelle, zwei Bedeutungen** *(E‑55,
- * 02.09.2026)*.
+ * Das Zeichen am Zeilenanfang — **eine Stelle, zwei Bedeutungen**.
  *
  * | Zeile | Zeichen |
  * |---|---|
  * | Gruppe (Partner, Richtung) | das Aufklappzeichen |
- * | Blatt unter einer **stehenden** Richtungsebene | ein Platzhalter der
- *   Zeichenbreite, damit der Name auf einer Höhe mit der Gruppe darüber beginnt |
- * | Blatt **ohne** Richtungsebene | nichts — die Richtung steht als **Wort** vor
- *   dem Prozessnamen ({@link richtungswort}), und „nicht ermittelt" bekommt gar
- *   keine Stelle mehr |
+ * | Blatt | ein Platzhalter der Zeichenbreite, damit der Name auf einer Höhe mit
+ *   der Gruppe darüber beginnt |
  *
- * **Bis zum 02.09.2026 standen hier drei Zeichen** — `↙` eingehend, `↗`
- * ausgehend, gestrichelter Kreis für „nicht ermittelt". Das Wort **ersetzt** sie;
- * die Begründung samt dem Verzicht gegen `docs/visuelles-konzept.md` §3 steht an
- * {@link richtungswort} und in `docs/process-view.md` §17.
+ * **Die Richtung steht hier nicht mehr, und zwar in keinem Fall** *(E‑58,
+ * 03.09.2026)*. Sie hat zwei Fassungen gehabt: bis zum 02.09.2026 drei Zeichen
+ * (`↙`, `↗`, gestrichelter Kreis), danach einen Tag lang das **Wort** vor dem
+ * Prozessnamen. Beides stand nur an den Blättern, deren Richtungsebene
+ * weggefallen war — und war damit eine zweite Schreibweise für denselben
+ * Sachverhalt, den die Ebene daneben als Zeile führt.
+ *
+ * **Seit E‑58 trägt die Ebene sie überall, wo sie bekannt ist**
+ * ({@link richtungsebeneFaelltWeg}); weg fällt die Ebene nur noch dort, wo die
+ * Richtung `null` ist — und dort gäbe es nichts zu schreiben.
  */
 function Zeichen({ zeile }: { zeile: Baumzeile }) {
   if (zeile.art !== "PROZESS") {
@@ -410,11 +394,7 @@ function Zeichen({ zeile }: { zeile: Baumzeile }) {
     return <Symbol aria-hidden="true" className="mt-1.5 size-3.5 shrink-0 opacity-70" />;
   }
 
-  if (zeile.richtung === undefined) {
-    return <span aria-hidden="true" className="mt-1.5 size-3.5 shrink-0" />;
-  }
-
-  return null;
+  return <span aria-hidden="true" className="mt-1.5 size-3.5 shrink-0" />;
 }
 
 /**

@@ -1228,6 +1228,23 @@ Am gerenderten Baum ausgezählt, mit den echten Daten:
 von 656 auf 523 Zeilen kürzer, und keine einzige leere Richtungsebene bleibt stehen. Das ist offener
 Punkt **108**, und er ist damit beantwortet.
 
+> ### ⚠️ Die Zahlen dieses Abschnitts sind mit E‑58 überholt *(03.09.2026, §29)*
+>
+> Sie zählen den Zustand, in dem **jede** einzelne Richtung die Ebene verlor. Seit E‑58 verliert sie
+> die Ebene nur noch, wenn sie `null` ist. **Nachgezählt am gerenderten Baum** (M130, §29):
+>
+> | | Zeilen offen | Richtungsknoten | Blätter auf Ebene 2 |
+> |---|---:|---:|---:|
+> | `NEXANS` | 1.177 *(1.158)* | **289** *(270)* | **11** *(31)* |
+> | `VOTG` | 523 *(523)* | **0** *(0)* | 390 *(390)* |
+> | `IBIS` | 409 *(391)* | **138** *(120)* | **4** *(24)* |
+> | `SUTTONS` | 18 *(18)* | 0 *(0)* | 17 *(17)* |
+>
+> Der Baum wächst um **19 Zeilen bei `NEXANS`** und 18 bei `IBIS`; `VOTG` und `SUTTONS` ändern sich
+> nicht. Von den 31 Blättern, die bei `NEXANS` eine Ebene weiter links standen, bleiben **elf** —
+> die von `SONDERPROZESS`, dessen einzige Richtung `null` ist. **Die Ungleichförmigkeit ist damit
+> nicht mehr sichtbar**, denn wo eine Zeile weiter links steht, trägt sie auch keine Richtung.
+
 **Bei `NEXANS` erweist sich E‑45 als die kleinere Wirkung, die sie ist:** 20 von 155 Partnerknoten
 verlieren die Ebene, 31 von 733 Blättern rücken herauf. **Die Ungleichförmigkeit ist damit sichtbar
 und gering** — 4,2 % der Blätter stehen eine Ebene weiter links als ihre Nachbarn. *Gemessen war die
@@ -1284,6 +1301,35 @@ nichts — bei `VOTG` trägt ihn jede der 390 Zeilen.
 > brechen über alle vier Mandanten **91 von 1.332** Namen um gegen 132 vorher. Das Wort ersetzt ein
 > Zeichen von 14 px samt 6 px Abstand; wo kein Wort tritt (`VOTG`, `SUTTONS`), wird die Zeile um
 > 20 px breiter.
+
+> ### ⚠️ Korrektur vom 03.09.2026 — **E‑55 hat einen Tag gehalten und ist durch E‑58 ersetzt** (§29)
+>
+> **Der Auftraggeber hat das Bild angesehen, und der Einwand steht in einem Satz:** Bei `ACOME`
+> stand „Eingehend" als **Zeile**, beim Nachbarn `ADIENT` dasselbe Wort als **Vorsatz** in der
+> Prozesszeile — zwei Schreibweisen für denselben Sachverhalt, direkt untereinander.
+>
+> ```
+> ACOME                     20        ACOME                     20
+>   > Eingehend              5          > Eingehend              5
+>   > Ausgehend             15          > Ausgehend             15
+> ADIENT                     0        ADIENT                     0
+>   Eingehend Adient …       0          > Eingehend              0
+>                                           Adient …             0
+>        vorher (E‑55)                        jetzt (E‑58)
+> ```
+>
+> **Der Vorsatz ist wieder weg, und die Richtung steht überall als Ebene** — auch dort, wo der
+> Partner nur eine hat. Die Tabelle im Block darüber gilt damit nicht mehr; sie beschreibt einen
+> Zustand, der einen Tag bestanden hat, und bleibt stehen, weil E‑58 nur mit ihr zu lesen ist.
+>
+> **Was bleibt, ist der Fall, für den E‑45 gebaut war:** Ist die Richtung `null`, fällt die Ebene
+> weiter weg — ein Knoten „nicht ermittelt" über einem einzigen Kind ordnet nichts und schreibt
+> nichts hin. Bei `VOTG` sind das weiterhin **null** Richtungsknoten bei 133 Partnern; offener
+> Punkt 108 bleibt geschlossen. **Und dort steht dann auch kein Ersatz** — weder Zeichen noch
+> Wort —, denn es gäbe nichts zu schreiben. Der Verzicht gegen
+> [`visuelles-konzept.md`](visuelles-konzept.md) §3 bleibt damit bestehen und wird kleiner: Er
+> betrifft nur noch die Zeilen, an denen die Angabe **fehlt**, und keine, an denen sie vorhanden
+> wäre.
 
 ### Die drei Zustände in der Zeile
 
@@ -2162,6 +2208,9 @@ die Sonderregel der verdeckten Liste in §18.
 **Alle drei Stände des Auftrags haben gestimmt.** Das ist erwähnenswert, weil sie es zweimal nicht
 getan haben (§18, der Kasten zu E‑44).
 
+> **Nachtrag vom 03.09.2026:** **E‑58** und **M130** sind am Tag darauf dazugekommen (§29). Höchste
+> vergebene waren E‑57 und M129, beide aus dieser Datei; neue offene Punkte sind keine entstanden.
+
 ---
 
 ## 23. Wie gemessen worden ist — und die zwei Fallen des Messrahmens
@@ -2612,3 +2661,139 @@ Runde).
 >   eine Auslegung
 >
 > **Und keine Zeit ist an einer Wanduhr gegen eine Zusicherung geprüft** (Regel T1).
+---
+
+# Nachtrag: die Richtung steht überall gleich (03.09.2026)
+
+*Ein Tag nach 10c‑3, nach einer zweiten Sichtprüfung des Auftraggebers am Bild.* Diese Runde nimmt
+**E‑55 zurück** und engt **E‑45** ein; sie ändert wieder ausschließlich die Darstellung.
+
+## 29. E‑58 — Die Richtungsebene fällt nur weg, wo es nichts zu schreiben gibt
+
+### Der Einwand, und er steht in einem Bild
+
+E‑55 hat die Richtung eines Blattes ohne Richtungsebene als **Wort vor den Prozessnamen** gestellt.
+Am laufenden System sieht das so aus:
+
+```
+ACOME                     20          ACOME                     20
+  > Eingehend              5            > Eingehend              5
+  > Ausgehend             15            > Ausgehend             15
+ADIENT                     0          ADIENT                     0
+  Eingehend Adient LAB …    0            > Eingehend              0
+                                            Adient LAB …          0
+
+       vorher (E‑55)                          jetzt (E‑58)
+```
+
+**Zwei Schreibweisen für denselben Sachverhalt, direkt untereinander.** Bei `ACOME` ist „Eingehend"
+eine Zeile, bei `ADIENT` ein Vorsatz — und der Unterschied sagt nichts über die Daten aus, sondern
+nur darüber, wie viele Richtungen der Partner zufällig führt. Das war schon der Kern des Einwands
+gegen die Zeichenfassung (§17); das Wort hat ihn nicht behoben, sondern nur besser lesbar gemacht.
+
+### Die Entscheidung
+
+**Eine bekannte Richtung steht immer als eigene Ebene**, auch über einem einzigen Kind. Das Blatt
+trägt sie in keinem Fall mehr — weder als Zeichen noch als Wort noch im `aria-label`.
+
+| Fall | Ebene | am Blatt |
+|---|---|---|
+| Partner mit **zwei** Richtungen | steht | nichts |
+| Partner mit **einer bekannten** Richtung | **steht** *(neu)* | nichts |
+| Partner mit einer Richtung **`null`** | **fällt weg** | **nichts** *(neu — vorher das Wort bzw. das Zeichen)* |
+| gepflegter, aber unbekannter vierter Wert | **steht**, mit dem Wert als Beschriftung | nichts |
+
+**Was von E‑45 bleibt, ist der Fall, für den sie gebaut war.** Ein Knoten „nicht ermittelt" über
+einem einzigen Kind ordnet nichts und schreibt nichts hin — bei `VOTG` wären es **133** solche
+Knoten, einer je Partner (M110). Offener Punkt 108 bleibt geschlossen. **Und dort steht auch kein
+Ersatz mehr**: Wo die Ebene fehlt, fehlt die Angabe, und das ist dieselbe Aussage.
+
+> **Der Verzicht gegen [`visuelles-konzept.md`](visuelles-konzept.md) §3 bleibt bestehen und wird
+> kleiner.** Er betrifft nur noch die Zeilen, an denen die Angabe **fehlt** — nicht mehr die, an
+> denen sie vorhanden ist. Ein Zeichen an jeder der 390 `VOTG`-Zeilen sagt weiterhin nichts, was
+> der Nutzer nicht schon weiß.
+
+**Ein gepflegter, aber unbekannter Wert ist *bekannt*** und bekommt seine Ebene (Regel Q4): Er
+steht als Zeile da, wie er im Katalog steht. Das ist die Fassung, die die Zeichenfassung nicht
+konnte — dort fiel er in denselben gestrichelten Kreis wie `null`.
+
+### Verworfen: die Ebene **immer** aufmachen, auch bei `null`
+
+Das wäre die vollständige Gleichförmigkeit, und sie kostet zu viel: **133 Knoten „nicht ermittelt"
+bei `VOTG`**, einer je Partner, über je einem Ast, den sie nicht ordnen. Genau dagegen ist E‑45
+entstanden, und die Zahl steht seit M110 fest. **Die halbe Gleichförmigkeit ist hier die richtige**,
+weil das, was ungleich bleibt, auch nichts anzeigt: Eine Zeile, die weiter links steht, trägt keine
+Richtung — es gibt an ihr nichts, was woanders anders stünde.
+
+### M130 — was die Umkehrung an Zeilen und Umbrüchen kostet
+
+Dieselbe Strecke wie M118 und M128: vier Mandanten, alle Gruppen aufgeklappt, Stufe `xs`, gezählt
+ist ein Blatt, dessen Prozessname mehr als eine Zeile braucht.
+
+**Die Baumgröße** (in Klammern der Stand von 10c‑2):
+
+| | Zeilen offen | Partnerknoten | Richtungsknoten | Blätter auf Ebene 2 |
+|---|---:|---:|---:|---:|
+| `NEXANS` | **1.177** *(1.158)* | 155 | **289** *(270)* | **11** *(31)* |
+| `VOTG` | 523 *(523)* | 133 | **0** *(0)* | 390 *(390)* |
+| `IBIS` | **409** *(391)* | 79 | **138** *(120)* | **4** *(24)* |
+| `SUTTONS` | 18 *(18)* | 1 | 0 *(0)* | 17 *(17)* |
+
+**19 Zeilen mehr bei `NEXANS`, 18 bei `IBIS`, keine bei `VOTG` und `SUTTONS`.** Von den 31
+`NEXANS`-Blättern, die eine Ebene weiter links standen, bleiben **elf** — die von `SONDERPROZESS`,
+dessen einzige Richtung `null` ist (§21). Bei `IBIS` bleiben vier.
+
+**Die Umbrüche** — und die Zeile, auf die es ankommt, ist die mit 26 rem:
+
+| Breite | `NEXANS` (733) | `VOTG` (390) | `IBIS` (192) | `SUTTONS` (17) | zusammen | M128 (10c‑2) | M118 (vor E‑55) |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 18 rem | 398 | 366 | 191 | 16 | 971 | 951 | 967 |
+| 20 rem | 202 | 304 | 152 | 10 | 668 | 615 | 665 |
+| 22 rem | 78 | 225 | 89 | 4 | 396 | 353 | 395 |
+| 24 rem | 38 | 145 | 40 | 2 | 225 | 198 | 224 |
+| **26 rem** | **17** | **99** | **17** | **0** | **133 (10,0 %)** | 91 | **132 (9,9 %)** |
+| 28 rem | 7 | 33 | 7 | 0 | 47 | 39 | 46 |
+| 30 rem | 1 | 16 | 3 | 0 | 20 | 14 | 20 |
+| 32 rem | 1 | 0 | 3 | 0 | 4 | 3 | 3 |
+| 34 rem | 0 | 0 | 2 | 0 | 2 | 3 | 0 |
+
+**Der Zustand liegt praktisch wieder auf M118, und das war zu erwarten:** `VOTG` und `SUTTONS` sind
+**Ziffer für Ziffer** identisch mit M118 — dort ist der gestrichelte Kreis durch einen Platzhalter
+derselben Breite ersetzt worden, sonst nichts. Was bleibt, ist der Preis der tieferen Einrückung
+für die 40 Blätter, die von Ebene 2 auf Ebene 3 gerückt sind: **1,25 rem weniger Platz**, und daraus
+folgt bei 26 rem **eine** zusätzliche Zeile gegenüber M118 (133 gegen 132), bei `IBIS`.
+
+> **E‑49 und die 26 rem sind zum zweiten Mal unangetastet.** `NEXANS` steht bei **17 von 733** — in
+> M118, in M128 und in M130 dieselbe Zahl. Die erste der drei Zahlen, auf denen E‑49 steht, hat
+> beide Umbauten überstanden.
+
+**Der Befund zu `IBIS` aus §25 bleibt und ist kein neuer mehr:** Dort beginnen die Prozessnamen mit
+„Eingehende…" / „Ausgehende…", und über ihnen steht jetzt die Ebene mit demselben Wort. **Das ist
+seit Schritt 10c‑2 der Normalfall für jeden Partner mit zwei Richtungen** und keine Eigenheit der
+weggefallenen Ebene mehr — die Doppelung ist eine Kuratierungsfrage geblieben und keine
+Darstellungsfrage.
+
+### Die Tests
+
+| Datei | was sich geändert hat |
+|---|---|
+| `tests/prozessbaum.test.ts` | Der `E‑45`-Block heißt jetzt **E‑58** und prüft **vier** Fälle statt zwei: zwei Richtungen, eine **bekannte** (Ebene steht — der Fall aus dem Bild), eine **unbekannte** (Ebene fällt weg), und ein gepflegter vierter Wert (Ebene steht, mit dem Wert als Beschriftung). Dazu **die Abwesenheit als Regel**: keine Blattzeile trägt über alle vier Knotenarten hinweg ein Feld `richtung`, und keine Blattbeschriftung nennt eine der drei Richtungen. **Die vier Fälle zu `richtungswort` sind entfallen**, weil die Funktion es ist |
+| `tests/prozess-baum.test.tsx` | Zwei Fälle statt einem: dass die Ebene über einem einzigen Kind **steht**, wenn die Richtung bekannt ist (`aria-level` 1/2/3, das Wort an der Ebene und **nicht** am Blatt), und dass sie bei `null` **wegfällt**, ohne dass irgendetwas nachgetragen würde. Die Zählung der `svg` je Zeile bleibt die Probe für „kein Zeichen am Blatt" |
+
+**`pnpm check` grün: 31 Dateien, 763 Fälle** — einer weniger als in 10c‑3, weil aus den vier Fällen
+zu `richtungswort` drei zu E‑58 geworden sind.
+
+> ### ⚠️ Belegvermerk zu M130 (Regel L10)
+>
+> *Gemessen war:* der gerenderte Baum der laufenden Anwendung, angemeldet, über dieselben vier
+> Mandanten und dieselben neun Spaltenbreiten wie M118 und M128 — Zeilenzahlen, Knotenarten je
+> `aria-level`, Umbrüche über die gemessene `line-height`. Dazu das Bild von `ACOME` und `ADIENT`
+> untereinander, in derselben Stufe wie das Bild des Auftraggebers.
+>
+> *Nicht neu gemessen:* M127 und M129. Die Zeilenhöhe ändert sich durch E‑58 nicht, und die
+> Breitenzustände der rechten Spalte auch nicht — der Baum weicht bei offenem Panel ohnehin
+> vollständig. **Was sich ändert, ist die Höhe des Baums** (19 Zeilen bei `NEXANS`), und das
+> verschiebt nur eine Zahl, die ohnehin als Größenordnung geführt wird.
+>
+> *Nicht angesehen:* dasselbe wie in 10c‑3 — kein echtes Berührungsgerät, kein zweiter Browser,
+> nur der helle Modus, nur Deutsch, kein Vorleseprogramm, kein Nutzer.
