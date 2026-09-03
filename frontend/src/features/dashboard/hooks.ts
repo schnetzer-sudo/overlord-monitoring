@@ -4,13 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useQueryStates } from "nuqs";
 import { useCallback } from "react";
 
-import {
-  DASHBOARD_SCHLUESSEL,
-  holeDashboard,
-  type Dashboard,
-  type Dashboardzeitraum,
-  type Verteilungssicht,
-} from "./api";
+import type { Rollupzeitraum } from "@/lib/rollupzeitraum";
+
+import { DASHBOARD_SCHLUESSEL, holeDashboard, type Dashboard, type Verteilungssicht } from "./api";
 import { DASHBOARD_PARAMETER, mitSicht, type Dashboardzustand } from "./filter";
 
 /**
@@ -36,7 +32,7 @@ export function useDashboardzustand() {
      * (`docs/dashboard.md` §3).
      */
     setzeZeitraum: useCallback(
-      (zeitraum: Dashboardzeitraum) => void setzeZustand({ zeitraum }),
+      (zeitraum: Rollupzeitraum) => void setzeZustand({ zeitraum }),
       [setzeZustand],
     ),
     /**

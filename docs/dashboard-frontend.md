@@ -206,6 +206,27 @@ allein über Farbe"* —, und §7a hat es für diese Rolle noch einmal ausdrück
 Drei Schaltflächen: 48 Stunden, 30 Tage, 12 Monate. Dazu der Umschalter der Verteilung
 (Partner ⇄ Richtung).
 
+> ### Der Umschalter ist am 02.09.2026 nach `components/` gewandert
+>
+> **Nicht weil am Dashboard etwas falsch war, sondern weil es einen zweiten Verbraucher gibt:** Die
+> Prozessansicht trägt denselben Umschalter mit denselben drei Paaren
+> ([`process-view.md`](process-view.md) E‑47). Ein Feature importiert nicht aus einem
+> Nachbarfeature; der gemeinsame Teil wandert nach `components/` und `lib/`
+> ([`frontend-grundlagen.md`](frontend-grundlagen.md) §8).
+>
+> | Was | Wo es jetzt steht |
+> |---|---|
+> | die Komponente | `components/zeitraum-umschalter.tsx` |
+> | die drei Codes samt Parser und der Regel „hervorgehoben ist, was gilt" | `lib/rollupzeitraum.ts` |
+> | die Beschriftungen | `texte.zeitraum` statt `texte.dashboard.zeitraum` |
+>
+> **`Dashboardzeitraum` heißt seither `Rollupzeitraum`** — dem Backend nach, das dieselbe Bewegung am
+> selben Tag gemacht hat (E‑44 dort). Eine Hülle unter dem alten Namen ist bewusst nicht
+> stehengeblieben: Zwei Namen für dieselbe Menge sind der Anfang zweier Mengen.
+>
+> **Am Dashboard ändert sich nichts, was ein Nutzer sähe.** `hervorgehobenerZeitraum` gibt es
+> weiterhin und mit derselben Bedeutung; es ruft nur die Regel, die jetzt in `lib` steht.
+
 | | |
 |---|---|
 | Ohne Klick | **kein** `zeitraum` in der URL, **kein** `verteilung`. Der Endpunkt wählt ([`dashboard.md`](dashboard.md) §3) |

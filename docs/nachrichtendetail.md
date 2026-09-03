@@ -1610,6 +1610,22 @@ aber erst beim Klick.
 > nichts** — sie geben beides weiterhin mit. Ob die Suche je einen eigenen Rückweg bekommt, ist
 > nicht entschieden und steht als offener Punkt in [`bam-suche.md`](bam-suche.md) §13.
 
+> **Ergänzt am 02.09.2026 (Schritt 10c‑2/10c‑3): Der vierte Einhängepunkt ist die Prozessansicht —
+> und seit E‑57 sieht er aus wie der erste.**
+>
+> Die Übertragungsliste der Prozessansicht öffnet dieselbe Komponente über denselben Parameter
+> ([`process-view.md`](process-view.md) §18). Auch dort **ohne** Umschalter, aus demselben Grund
+> wie bei der Belegsuche.
+>
+> **In 10c‑2 hing das Panel dort in einer eigenen Hülle** (`max-w-inhalt beschriftung-breit`): Es
+> trat an die Stelle der *Liste* und bekam deren volle Breite — bei 1920 px gemessene 1.223 px,
+> mehr als die eigene Route je hatte. **Mit E‑57 weicht dort der Baum statt der Liste**, und das
+> Panel bekommt ab `xl` wieder genau die Breite dieses Abschnitts: `xl:w-[26rem] 2xl:w-[30rem]`,
+> Klasse für Klasse wie neben der Nachrichtenliste. Die eigene Hülle ist damit **entfallen und
+> nicht nur überflüssig geworden**: Ein Deckel von 16 rem ließe der Beschriftungsspalte 256 px von
+> 416 px Panelbreite, und die 10 rem sind für genau dieses Panel gemessen
+> ([`bam-werte.md`](bam-werte.md) §11a).
+
 Ab `xl` (1280 px) steht das Panel **neben** der Liste (26 rem, ab `2xl` 30 rem), darunter **an ihrer
 Stelle**: Am Handy gibt es kein „neben der Liste", dort füllt die Ansicht den Bildschirm, und das
 Zurück des Browsers schließt sie, weil der Zustand in der URL steht.

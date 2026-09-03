@@ -391,6 +391,75 @@ describe("Die Mindestfläche am Finger", () => {
   });
 });
 
+/**
+ * Die **Bedienzeile** — die Zeile, die zugleich ein Ziel ist *(E‑54, 02.09.2026)*.
+ *
+ * Baumzeile der Prozessansicht und Auswahlzeile der Prozessauswahl. Sie hielten
+ * bis heute `--dichte-beruehrung` und damit in `xs`, `s` und `m` überall
+ * denselben Boden von 44 px; der Dichteumschalter bewegte im Baum drei Zeilen
+ * über die ganze Skala (M121). Seither tragen sie am **Zeigergerät**
+ * `--dichte-zeile` und fallen am **Berührungsgerät** auf die Mindestfläche
+ * zurück.
+ *
+ * **Die tragende Zusicherung ist die zweite Hälfte**, und sie steht in genau
+ * einer Regel: Ohne den Rückfall wäre die Fläche am Finger in jeder Stufe
+ * unterschritten — 36 px in `m`, 31,5 px in `xs`. Dass die Regel greift, ist
+ * am laufenden System gemessen (M127, `docs/process-view.md` §24); dass sie
+ * **dasteht**, prüft dieser Test.
+ */
+describe("Die Bedienzeile", () => {
+  const setzende = setzer("--dichte-bedienzeile");
+
+  it("steht am Zeigergerät auf der Zeilenhöhe und nicht auf der Fläche", () => {
+    // Der Punkt der Entscheidung: Was hier `var(--dichte-beruehrung)` stünde,
+    // wäre der Zustand vor E‑54 unter neuem Namen — der Umschalter bewegte
+    // die Zeile weiterhin nicht.
+    const amZeiger = setzende.filter((regel) => bedingt(regel) === null);
+    expect(amZeiger, "--dichte-bedienzeile wird in :root nicht gesetzt").toHaveLength(1);
+    expect(amZeiger[0].selektor).toBe(":root");
+    expect(wert(amZeiger[0], "--dichte-bedienzeile")).toBe("var(--dichte-zeile)");
+  });
+
+  it("fällt am Berührungsgerät auf die Mindestfläche zurück", () => {
+    // **`pointer` und nicht `any-pointer`, und der Preis ist benannt:** Ein
+    // Notebook mit Berührungsbildschirm und Trackpad meldet `fine` und bekommt
+    // die kürzere Zeile. `any-pointer: coarse` erfasste dieses Gerät — und
+    // ließe die Verkleinerung dann praktisch nirgends greifen
+    // (`docs/process-view.md` §24, E‑54).
+    const grob = REGELN.filter(
+      (regel) =>
+        [...regel.pfad, regel.selektor].some((teil) => /@media[^{]*pointer:\s*coarse/.test(teil)) &&
+        /--dichte-bedienzeile\s*:/.test(regel.eigene),
+    );
+    expect(grob, "Kein `@media (pointer: coarse)` setzt --dichte-bedienzeile").toHaveLength(1);
+    expect(grob[0].pfad.concat(grob[0].selektor).join(" > ")).not.toMatch(/any-pointer/);
+    expect(wert(grob[0], "--dichte-bedienzeile")).toBe("var(--dichte-beruehrung)");
+  });
+
+  it("bräuchte den Rückfall — ohne ihn läge die Zeile in jeder Stufe darunter", () => {
+    // Die Gegenprobe, dieselbe Bauform wie beim Boden im `max()` darüber: Ohne
+    // sie stünde die `@media`-Regel da, ohne dass jemand wüsste, ob sie etwas
+    // tut. Gerechnet und nicht hingeschrieben — 36 px in `m`, 31,5 px in `xs`.
+    const zeile = wert(setzer("--dichte-zeile")[0], "--dichte-zeile");
+    for (const stufe of DICHTESTUFEN) {
+      expect(
+        inPixeln(zeile, wurzelPx(stufe, BROWSERVORGABE)),
+        `Stufe ${stufe}: die Zeilenhöhe allein trägt die Fläche schon`,
+      ).toBeLessThan(MINDESTFLAECHE);
+    }
+  });
+
+  it("ist mit den Komponenten verdrahtet — sonst gilt sie für nichts", () => {
+    // Derselbe Mutant wie eine Beschreibung höher: `--spacing-bedienzeile` auf
+    // ein anderes Token zeigen lassen. `min-h-bedienzeile` hinge dann an etwas
+    // anderem, ohne dass eine einzige Zahl falsch geworden wäre.
+    const thema = REGELN.find((regel) => regel.selektor === "@theme inline");
+    expect((thema as Regel).eigene).toMatch(
+      /--spacing-bedienzeile:\s*var\(--dichte-bedienzeile\)\s*;/,
+    );
+  });
+});
+
 describe("Der Rückfall bei fehlender oder unbekannter Wahl", () => {
   it("nimmt jede der vier Stufen unverändert an", () => {
     for (const stufe of DICHTESTUFEN) {

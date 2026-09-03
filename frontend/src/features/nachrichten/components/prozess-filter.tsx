@@ -144,7 +144,7 @@ export function ProzessFilter({
                     <button
                       type="button"
                       onClick={() => umschalten(id)}
-                      className="hover:bg-muted focus-visible:ring-ring min-h-beruehrung flex w-full items-center gap-2 rounded-sm px-1 text-left focus-visible:ring-2 focus-visible:outline-none"
+                      className="hover:bg-muted focus-visible:ring-ring min-h-bedienzeile flex w-full items-center gap-2 rounded-sm px-1 text-left focus-visible:ring-2 focus-visible:outline-none"
                     >
                       <TriangleAlert aria-hidden="true" className="size-3.5 shrink-0 opacity-70" />
                       <span className="min-w-0 flex-1">
@@ -201,7 +201,17 @@ function ProzessZeile({
     <li>
       <div
         className={cn(
-          "hover:bg-muted min-h-beruehrung flex items-center gap-2 rounded-sm px-1",
+          /*
+           * **`--dichte-bedienzeile`: die Zeilenhöhe am Zeiger, die
+           * Berührungsfläche am Finger** (E‑54, `docs/process-view.md` §24).
+           *
+           * Bis zum 02.09.2026 stand hier `min-h-beruehrung`. Die Entscheidung
+           * ist im Prozessbaum gefallen und **hier mitgezogen, nicht
+           * ausgenommen**: Zwei Auswahllisten mit zwei Zeilenhöhen wären genau
+           * die Drift, die ein gemeinsames Token verhindern soll. Die
+           * Umschaltung steht in `globals.css`, nicht hier.
+           */
+          "hover:bg-muted min-h-bedienzeile flex items-center gap-2 rounded-sm px-1",
           gewaehlt && "bg-accent",
         )}
       >

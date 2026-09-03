@@ -116,6 +116,19 @@ function literalParser<T extends string>(erlaubt: readonly T[]) {
   });
 }
 
+export function istSortierung(wert: string | null | undefined): wert is Sortierung {
+  return wert !== null && wert !== undefined && (SORTIERUNGEN as readonly string[]).includes(wert);
+}
+
+/**
+ * Der Parser der Sortierung — **ausgeführt und nicht zweimal gebaut.**
+ *
+ * Die Prozessansicht zeigt dieselbe Tabelle und damit denselben
+ * Sortierumschalter (`prozessansicht.ts`). Zwei Parser für denselben Parameter
+ * liefen bei einem dritten Wert auseinander.
+ */
+export const parseAsSortierung = literalParser(SORTIERUNGEN);
+
 /**
  * Die Parameter, so wie sie in der URL stehen.
  *
@@ -160,7 +173,7 @@ export const NACHRICHTEN_PARAMETER = {
   // Siehe UEBERFAELLIG_VORGABE: dieselbe Bauform wie `langeSuche` und aus
   // demselben Grund ohne `clearOnDefault: false`.
   ueberfaellig: parseAsBoolean.withDefault(UEBERFAELLIG_VORGABE),
-  sortierung: literalParser(SORTIERUNGEN),
+  sortierung: parseAsSortierung,
 };
 
 export type Nachrichtenfilter = Zeitfensterzustand & {

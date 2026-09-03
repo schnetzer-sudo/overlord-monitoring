@@ -1,7 +1,8 @@
 import { STATUSARTEN, statusrolle, type Statusart, type Statusrolle } from "@/lib/status-farbe";
 import type { Zeitaufloesung } from "@/lib/format";
+import type { Rollupzeitraum } from "@/lib/rollupzeitraum";
 
-import type { Dashboardzeitraum, Einordnungszahl, Verlaufspunkt } from "./api";
+import type { Einordnungszahl, Verlaufspunkt } from "./api";
 
 /**
  * **Vier Reihen, nicht acht** (Entscheidung E‑l).
@@ -139,7 +140,7 @@ export function rolleKommtVor(zeilen: readonly Verlaufszeile[], rolle: Statusrol
  * Die Auflösung der Zeitachse — sie folgt der **Eimerbreite** des Paares und
  * nicht der Zahl der Eimer.
  */
-export function achsenaufloesung(zeitraum: Dashboardzeitraum): Zeitaufloesung {
+export function achsenaufloesung(zeitraum: Rollupzeitraum): Zeitaufloesung {
   switch (zeitraum) {
     case "48H":
       return "stunde";

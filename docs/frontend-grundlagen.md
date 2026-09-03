@@ -706,6 +706,30 @@ eigenen Feature `prozesse`: Es entstünde allein für einen Fetch und müsste so
 importiert werden. Kommt in Schritt 10 eine eigene Prozessansicht, wandert der gemeinsame Teil nach
 `components/` oder `lib/` — nicht ins Nachbarfeature.
 
+> ### Der Satz oben ist am 02.09.2026 fällig geworden — und er hat gehalten
+>
+> Schritt 10c‑2 hat die Prozessansicht gebaut. **Der gemeinsame Teil ist gewandert**, und zwar
+> genau dorthin, wo dieser Absatz ihn vorgesehen hat:
+>
+> | Was | Von | Nach |
+> |---|---|---|
+> | die drei Rollup-Paare `48H`/`30T`/`12M` samt Parser | `features/dashboard/api.ts` | **`lib/rollupzeitraum.ts`** |
+> | der Zeitraumumschalter | `features/dashboard/components/` | **`components/zeitraum-umschalter.tsx`** |
+> | seine Beschriftungen | `texte.dashboard.zeitraum` | **`texte.zeitraum`** |
+>
+> Die Umbenennung `Dashboardzeitraum` → `Rollupzeitraum` folgt dem Backend, das dieselbe Bewegung am
+> selben Tag gemacht hat ([`process-view.md`](process-view.md) E‑44). **Zwei Namen für dieselbe
+> Menge sind der Anfang zweier Mengen** — deshalb steht in `features/dashboard` keine Hülle, die den
+> alten Namen weiterführte.
+>
+> **Was *nicht* gewandert ist, ist der Baum selbst.** Die Prozessansicht liegt in
+> `features/nachrichten`, weil ihre rechte Spalte **die Nachrichtenliste ist** und das Panel darüber
+> **das Nachrichtendetail** — beides nach `components/` zu heben hieße, den halben Feature-Inhalt in
+> die Naht zu schieben, die hier für Rahmen, Kopfzeile und Zustände gedacht ist. Der Präzedenzfall
+> ist die Belegsuche, die seit Schritt 7 aus demselben Grund dort liegt. **Der Preis ist benannt:**
+> Das Verzeichnis trägt drei Ansichten, und sein Name sagt es nicht
+> ([`process-view.md`](process-view.md) E‑47, offener Punkt 116).
+
 `"use client"` steht so weit unten wie möglich. Server-Komponenten sind: Wurzel-Layout, alle
 `page.tsx`, `seiten-platzhalter.tsx`. Client sind: alles mit Zustand, Interaktion oder TanStack
 Query. Auch `features/nachrichten/filter.ts` ist bewusst **frei von React** — die Umrechnung Zustand
@@ -1237,6 +1261,9 @@ gerissen hat, ist eine Behauptung.
 | **`benutzer-tabelle.test.tsx`** *(24.08.2026)* | **gerenderter Baum**, zehn Fälle: **`lastLogin = null` als „nie angemeldet" und nicht als leere Zelle** (E17), mit Gegenprobe; die **zwei Sperren in zwei Zellen**, in beide Richtungen (E14, E20) — und ausdrücklich als Wortlautvergleich, denn „nicht gesperrt" enthält „gesperrt"; dazu die **Verdrahtung** in zwei Richtungen: dass die Vorwarnung abgefragt wird, *bevor* ein Aufruf losläuft, dass die Mengenersetzung die vollständige Zielmenge schickt, und dass die Schaltfläche jeder anderen Zeile gesperrt ist, solange eine offen ist — samt Gegenprobe |
 | `dashboard.test.ts` *(01.09.2026)* | die Entscheidungen des Dashboard-Frontends ohne Ansicht: die **Zusammenfassung acht → vier** (jede der acht in ihrer Rolle und in keiner anderen; ein unbekannter Wert nach `ungeklaert` und in **keinen** fachlich belegten Eimer, und die Summe der vier bleibt `gesamt`); der **URL-Zustand** nach E‑n — ohne Klick steht nichts darin, `RICHTUNG` schon und `PARTNER` nicht, beide Parameter auch in Kombination, und das vom Endpunkt **gewählte** Paar wird nie zurückgeschrieben; die **beiden Adressen** nach E‑m samt der Probe, dass sie die Filter nie mischen und das Fenster Zeichen für Zeichen durchreichen; und die **Beschriftungen** — `COMMIT_REJECTED` aus der Sprachdatei und nicht aus dem Feld `art`, ein unbekannter Rohwert bleibt roh |
 | **`dashboard-bloecke.test.tsx`** *(01.09.2026)* | **gerenderter Baum**, zehn Fälle. Die Zählung steht in `vitest.config.mts`; dort auch, warum es genau diese vier Klassen sind |
+| `prozessbaum.test.ts` *(02.09.2026)* | die Entscheidungen des Prozessbaums ohne Ansicht: **E‑45 in beiden Richtungen** — bei zwei Richtungen bleibt die Ebene und die Blätter tragen keine Richtung, bei einer fällt sie weg, die Blätter rücken herauf und **tragen sie**; `null` als Richtung ist gesetzt und nicht abwesend; Position und Geschwisterzahl je Ebene und nicht über die flache Liste; der **Pfad zum gewählten Prozess** mit und ohne Richtungsebene und **leer** bei einer fremden Kennung; die **Eingrenzung** (Partnertreffer behält alle Kinder, Kindtreffer behält den Partner mit nur diesem Kind, kein leerer Ast, ein `null`-Name trifft nie, die Richtung wird nicht durchsucht) samt der **Invariante**, dass die nachgerechneten Summen ohne Eingrenzung mit den gelieferten zusammenfallen; die Beschriftung mit der **Schwelle aus der Antwort** (3 und 6 Monate ergeben verschiedene Texte); und das ganze **WAI‑ARIA-Muster der Tastatur**, einschließlich des Elternknotens über eine weggefallene Ebene hinweg |
+| `prozessansicht.test.ts` *(02.09.2026)* | der URL-Zustand der Prozessansicht: Rundlauf URL → Zustand → URL, leer ohne Auswahl, feste Reihenfolge, der Schalter nur in der URL, wenn er etwas weglässt, unbekannter Zeitraum und unbekannte Sortierung **übergangen**, leere Kennung ist keine Auswahl. Dazu der Filter der Übertragungsliste: **kein Filter ohne Prozess und keiner ohne Fenster**, das Fenster **aus der Antwort** (E‑50), und **die Abfrage ist mit und ohne geöffnetes Panel Zeichen für Zeichen dieselbe** — ohne Cursor, ohne Kennung |
+| **`prozess-baum.test.tsx`** *(02.09.2026)* | **gerenderter Baum**, acht Fälle. Die Zählung steht in `vitest.config.mts`; dort auch, warum es genau diese drei Klassen sind |
 
 > **Korrigiert 20.08.2026, nachgetragen zur Korrektur vom 19.08.2026.** Die Zeile zu
 > `rohdaten.test.ts` führte die Beschriftungsregel „**in allen fünf Lagen** (aufgelöster

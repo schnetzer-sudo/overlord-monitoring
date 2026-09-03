@@ -1,4 +1,5 @@
 import { hole } from "@/lib/http";
+import type { Fenster, Rollupzeitraum } from "@/lib/rollupzeitraum";
 
 /**
  * Die Nachrichtenliste, ihr Detail und die Prozessauswahl dazu.
@@ -10,10 +11,32 @@ import { hole } from "@/lib/http";
  *
  * **Warum die Prozessauswahl hier liegt und nicht in einem eigenen Feature.**
  * Ein Feature importiert nicht aus einem Nachbarfeature. `/api/prozesse` wird
- * heute ausschließlich für den Prozessfilter dieser Liste gebraucht; ein Feature
- * `prozesse` entstünde allein für einen Fetch und müsste sofort von hier
- * importiert werden. Kommt in Schritt 10 eine eigene Prozessansicht, wandert der
- * gemeinsame Teil nach `components/` oder `lib/` — nicht ins Nachbarfeature.
+ * für den Prozessfilter dieser Liste gebraucht; ein Feature `prozesse` entstünde
+ * allein für einen Fetch und müsste sofort von hier importiert werden.
+ *
+ * ## Warum die Prozess**ansicht** seit dem 02.09.2026 ebenfalls hier liegt (E‑47)
+ *
+ * `docs/frontend-grundlagen.md` §8 hat für diesen Tag vorgesorgt: *„Kommt in
+ * Schritt 10 eine eigene Prozessansicht, wandert der gemeinsame Teil nach
+ * `components/` oder `lib/` — nicht ins Nachbarfeature."* **Genau das ist
+ * geschehen** — die drei Rollup-Paare stehen seither in `lib/rollupzeitraum.ts`,
+ * der Zeitraumumschalter in `components/`.
+ *
+ * **Der Baum selbst bleibt trotzdem hier, und das ist eine Entscheidung.** Was
+ * die Prozessansicht mit der Nachrichtenliste teilt, ist nicht *ein Fetch*: Ihre
+ * rechte Spalte **ist** die Nachrichtenliste, und das Panel darüber **ist** das
+ * Nachrichtendetail. Beide nach `components/` zu heben hieße, den halben
+ * Feature-Inhalt in die Naht zu schieben, die dort für Rahmen, Kopfzeile und
+ * Zustände gedacht ist.
+ *
+ * **Der Präzedenzfall steht daneben:** Die Belegsuche ist seit Schritt 7 eine
+ * eigene Route (`/suche`) mit eigener Trefferliste und liegt aus demselben Grund
+ * in diesem Feature — sie hängt das vorhandene Panel ein. Die Prozessansicht ist
+ * der dritte Einstieg in dieselbe Menge und nicht eine zweite Menge.
+ *
+ * **Der Preis ist benannt:** Dieses Feature trägt damit drei Ansichten, und sein
+ * Name sagt das nicht. Ob es später anders heißen soll, ist eine Umbenennung und
+ * keine Umstellung — offener Punkt **116**.
  */
 
 export type Nachricht = {
@@ -73,6 +96,93 @@ export type Prozess = {
   processId: string;
   processName: string | null;
   projectName: string | null;
+};
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Die Prozessansicht: der Baum Partner → Richtung → Prozess (Schritt 10c)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Die gelesenen Grenzen des Baums. Der Typ steht in `lib/rollupzeitraum.ts` —
+ * **dasselbe Feld wie im Dashboard, und deshalb nur einmal deklariert.**
+ */
+export type { Fenster };
+
+/**
+ * Die drei Zustände aus `docs/process-view.md` §4 — sie hängen **allein an der
+ * letzten Bewegung** und sind fensterunabhängig (Entscheidung E‑35).
+ *
+ * `STILL` und `NIE` sind zwei verschiedene Aussagen und werden nie
+ * zusammengefasst: Das eine ist ein **Vorfall** (es gab eine Beziehung, und sie
+ * ist verstummt), das andere eine **Katalogfrage** (der Vertrag steht, und es
+ * ist nie etwas darüber gelaufen). Bei `VOTG` bestünde der Baum sonst zu 90 %
+ * aus Markierungen.
+ */
+export type Prozesszustand = "BEWEGT" | "STILL" | "NIE";
+
+export type Prozessknoten = {
+  processId: string;
+  /** Darf `null` sein — „nicht zugeordnet heißt nicht zugeordnet" (Regel Q4). */
+  processName: string | null;
+  /** Im gewählten Zeitraum. **Null ist eine Aussage und kein fehlender Wert.** */
+  nachrichten: number;
+  /** Im gewählten Zeitraum, über `MessageStatusClassifier` eingeordnet. */
+  fehler: number;
+  /** **Ohne Zeitfenster** — der Wert, an dem die drei Zustände hängen. `null` bei `NIE`. */
+  letzteBewegung: string | null;
+  zustand: Prozesszustand;
+};
+
+/**
+ * Eine Richtungsgruppe unter einem Partner.
+ *
+ * `richtung` ist `EINGEHEND`, `AUSGEHEND`, ein gepflegter aber unbekannter Wert
+ * — oder **`null`: „nicht ermittelt"**. Die Antwort unterscheidet dabei bewusst
+ * nicht zwischen „gepflegt und leer" und „offen" (Entscheidung E‑40); dass die
+ * Unterscheidung gebraucht würde, ist nicht gemessen.
+ */
+export type Richtungsknoten = {
+  richtung: string | null;
+  anzahlProzesse: number;
+  nachrichten: number;
+  fehler: number;
+  prozesse: Prozessknoten[];
+};
+
+/** `partner === null` heißt „nicht zugeordnet" und steht **am Ende** (E‑39). */
+export type Partnerknoten = {
+  partner: string | null;
+  anzahlProzesse: number;
+  nachrichten: number;
+  fehler: number;
+  richtungen: Richtungsknoten[];
+};
+
+/** Die Kopfzahlen über den ganzen Baum. Die drei Zustände sind disjunkt und vollständig. */
+export type Baumsumme = {
+  anzahlProzesse: number;
+  bewegt: number;
+  still: number;
+  nie: number;
+  nachrichten: number;
+  fehler: number;
+};
+
+export type Prozessbaum = {
+  /** Das **gewählte** Paar, immer gesetzt — auch wenn der Aufrufer keins genannt hat. */
+  zeitraum: Rollupzeitraum;
+  fenster: Fenster;
+  /**
+   * Ab wie vielen Monaten ohne Bewegung ein Prozess als `STILL` gilt.
+   *
+   * **Die Oberfläche beschriftet damit und rechnet nichts nach** (Entscheidung
+   * E‑37): Sie muss „seit über drei Monaten" formulieren können, ohne die Drei
+   * selbst zu kennen — sonst stünde dieselbe fachliche Festlegung an zwei Orten
+   * und driftete.
+   */
+  stilleSchwelleMonate: number;
+  gesamt: Baumsumme;
+  partner: Partnerknoten[];
 };
 
 /*
@@ -686,6 +796,17 @@ export const NACHRICHTEN_SCHLUESSEL = {
   liste: (abfrage: string) => ["nachrichten", "liste", abfrage] as const,
   prozesse: ["nachrichten", "prozesse"] as const,
   /**
+   * Der Prozessbaum. **Der Zeitraum gehört in den Schlüssel**, denn er ist ein
+   * Anfrageparameter: ein anderes Paar ist eine andere Antwort.
+   *
+   * `null` heißt „ohne Parameter geholt" und ist ein **eigener** Schlüssel — und
+   * ausdrücklich nicht der des vom Endpunkt gewählten Paares. Schriebe die
+   * Ansicht das gewählte Paar zurück, entstünde beim ersten Rendern ein zweiter
+   * Schlüssel und damit eine zweite Anfrage für dieselbe Antwort
+   * (`docs/dashboard-frontend.md` §2).
+   */
+  baum: (zeitraum: Rollupzeitraum | null) => ["nachrichten", "prozessbaum", zeitraum] as const,
+  /**
    * Das Detail hängt an der Kennung und **nicht am Filter der Liste**. Ein
    * tiefer Link auf eine Nachricht außerhalb des aktuellen Zeitfensters zeigt sie
    * deshalb auch dann, wenn die Liste dahinter leer ist.
@@ -728,6 +849,22 @@ export function holeNachrichten(abfrage: string): Promise<Seite<Nachricht>> {
 
 export function holeProzesse(): Promise<Prozess[]> {
   return hole<Prozess[]>("/prozesse");
+}
+
+/**
+ * Den ganzen Baum in **einem** Aufruf (Entscheidung E‑33).
+ *
+ * **Kein Knoten wird nachgeladen.** Beim größten gemessenen Mandanten sind das
+ * 154 Partner, 290 Richtungsgruppen und 733 Blätter in 150,3 KiB (M117); ein
+ * Nachladen je Partner wären 154 Anfragen mit je einer Sitzungsprüfung, und auf
+ * der Testkopie schreibt jede Anfrage die Sitzung fort.
+ *
+ * **Was nicht gewählt ist, wird nicht geschickt.** Ohne `zeitraum` gilt am
+ * Endpunkt `48H` (E‑38), und die Antwort nennt das gewählte Paar. Eine Vorgabe
+ * im Frontend wäre ein zweiter Standardwert und liefe dem ersten hinterher.
+ */
+export function holeProzessbaum(zeitraum: Rollupzeitraum | null): Promise<Prozessbaum> {
+  return hole<Prozessbaum>(`/prozesse/baum${zeitraum === null ? "" : `?zeitraum=${zeitraum}`}`);
 }
 
 /**

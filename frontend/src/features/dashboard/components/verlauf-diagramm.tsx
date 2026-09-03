@@ -5,9 +5,8 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { useAnzeigezone } from "@/components/zeitzone";
 import { useSprache, useTexte } from "@/i18n/provider";
 import { formatiereAchsenzeit, formatiereZahl } from "@/lib/format";
+import type { Rollupzeitraum } from "@/lib/rollupzeitraum";
 import { rollenfuellung, type Statusrolle } from "@/lib/status-farbe";
-
-import type { Dashboardzeitraum } from "../api";
 import {
   STAPELREIHENFOLGE,
   achsenaufloesung,
@@ -115,7 +114,7 @@ export function VerlaufDiagramm({
   zeitraum,
 }: {
   punkte: Parameters<typeof verlaufszeilen>[0];
-  zeitraum: Dashboardzeitraum;
+  zeitraum: Rollupzeitraum;
 }) {
   const texte = useTexte();
   const sprache = useSprache();

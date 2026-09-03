@@ -81,6 +81,22 @@ Zwei Gründe, beide für sich ausreichend:
    Abschnitt 4.1 der Projektbeschreibung fachlich belegt. Eine farbige Hervorhebung darf nicht als
    Statusaussage lesbar sein.
 
+> ### Zwei Anwendungen dieser Regel in der Prozessansicht, und eine Abweichung davon *(02.09.2026)*
+>
+> **Die Regel selbst hat sich durchgesetzt.** Der Zustand „noch nie" trug im Prozessbaum eine
+> Dämpfung *und* ein Wort; als die Kennzeichnung fiel, fiel **beides zusammen**
+> ([`process-view.md`](process-view.md) §17, E‑56). Die Dämpfung allein stehen zu lassen wäre genau
+> der verbotene Fall gewesen — ein Zustand nur über Helligkeit. Das ist der Grund, warum die
+> Entscheidung nicht die halbe sein konnte.
+>
+> ⚠️ **Die Abweichung betrifft nicht Farbe, sondern die leere Stelle.** Ein Blatt des Baums, dessen
+> Richtung *nicht ermittelt* ist, trug ein eigenes Zeichen — nach demselben Gedanken wie „nicht
+> zugeordnet heißt nicht zugeordnet": Eine leere Stelle sagt nichts. Seit E‑55 trägt es **nichts**.
+> Der Verzicht ist bewusst und begründet: Die Angabe steht im Katalog, und ein Zeichen an *jeder*
+> Zeile eines Mandanten ohne kuratierte Richtung — bei `VOTG` alle 390 — unterscheidet nichts mehr.
+> **Er gilt für diese eine Stelle und nicht als neue Regel**; überall sonst bekommt das Fehlende
+> weiterhin ein Wort ([`process-view.md`](process-view.md) §25).
+
 ### Der Akzent
 
 `--akzent: oklch(0.777 0.1643 112.4)` — das ist genau `#b9c022`, ein Gelbgrün.
@@ -239,8 +255,10 @@ Lesebeginn beim Umschalten an derselben x-Position bleibt.
 | `--dichte-kopfzeile` | 3.125 rem (50 px) | 3.5 rem | Kopfzeile, vorher 56 px |
 | `--dichte-navspalte` | 13 rem (208 px) | 13 rem | Navigationsspalte einschließlich Innenabstand |
 | `--dichte-suchbereich` | 18 rem (288 px) | 18 rem | reservierter Platz für die BAM-Suche, Schritt 7 |
+| `--dichte-baumspalte` | **26 rem** (416 px) | ebenso | Breite der Baumspalte der Prozessansicht **ab `xl`**, seit dem 02.09.2026. Darunter bekommt sie einen **Anteil** (40 %) und keine feste Breite: Bei 768 px blieben von rund 520 px Inhalt sonst gut hundert für die Liste daneben. **Gemessen und nicht gewählt** — [`process-view.md`](process-view.md) §16 (M118) |
 | `--dichte-feld` | 2.5 rem | 2.5 rem | Eingabefeld im Formular — bleibt bewusst komfortabel |
 | `--dichte-zeile` | 2.25 rem | 2.25 rem | Tabellenzeile ab Schritt 4 |
+| `--dichte-bedienzeile` | → `zeile` | → `beruehrung` | **Die Zeile, die zugleich ein Bedienelement ist**, seit dem 02.09.2026: Baumzeile der Prozessansicht und Auswahlzeile der Prozessauswahl. Am Zeigergerät eine Zeile, am Finger ein Ziel — dieselbe Bauform wie `bedienelement` und `navzeile` eine Zeile höher. **Gemessen und nicht gewählt** — [`process-view.md`](process-view.md) §24 (E‑54, M127) |
 | `--dichte-beschriftung` | **10 rem** im Panel · **16 rem** auf der eigenen Route | ebenso | **gedeckelte** Breite einer Beschriftungsspalte neben ihren Werten, seit Schritt 7. Der Deckel gehört zum **Einhängepunkt**: Die Route hebt den Wert über `.beschriftung-breit` herauf |
 | `--dichte-inhaltsbreite` | 72 rem | 72 rem | Maximalbreite **innerhalb** einer Ansicht |
 
@@ -257,6 +275,26 @@ Lesebeginn beim Umschalten an derselben x-Position bleibt.
 > Grundschriftgröße, die ein Nutzer im Browser eingestellt hat. Wer sie hochgesetzt hat, hat einen
 > Grund.
 >
+> ### Die Bedienzeile — warum ein Token dazugekommen ist *(02.09.2026)*
+>
+> **Eine Zeile, die man anklickt, ist zwei Dinge zugleich**, und bis heute hat sie sich für eines
+> entschieden: Baumzeile und Auswahlzeile trugen `--dichte-beruehrung` und waren damit in `xs`, `s`
+> und `m` gleich hoch. **Gemessen** ([`process-view.md`](process-view.md) §16, M121): Der
+> Dichteumschalter bewegte im Prozessbaum drei Zeilen über die ganze Skala, in der Nachrichtenliste
+> neun.
+>
+> `--dichte-bedienzeile` löst das, **ohne `--dichte-beruehrung` anzufassen**: Es steht am
+> Zeigergerät auf `--dichte-zeile` und fällt unter `@media (pointer: coarse)` auf die Fläche zurück
+> — genau die Regel, die `--dichte-bedienelement` und `--dichte-navzeile` schon tragen.
+> Nachgemessen (M127): **26 / 24 / 22 / 19** sichtbare Baumzeilen statt 19/19/18/16, und am Finger
+> unverändert 44 / 44 / 44 / 49,5 px.
+>
+> ⚠️ **`pointer` und nicht `any-pointer`, und der Preis steht dazu:** Ein Notebook mit
+> Berührungsbildschirm **und** Trackpad meldet `fine` und bekommt die kürzere Zeile.
+> `any-pointer: coarse` erfasste es — und ließe die Verkleinerung dann praktisch nirgends greifen.
+> Die Wahl ist dieselbe wie in der `@media`-Regel, die diese Datei schon führt; eine zweite Antwort
+> daneben wären zwei Begriffe von „Berührungsgerät".
+
 > **`--dichte-beruehrung` ist aus der Skalierung heraus, und das ist der Preis für den Satz in
 > seiner Zeile.** „Wird nirgends unterschritten" wäre nicht mehr wahr, wenn das Token mitskalierte:
 > In der Stufe `xs` fiele es auf 2,75 × 14 = **38,5 px**. Es steht deshalb als
@@ -271,6 +309,25 @@ Lesebeginn beim Umschalten an derselben x-Position bleibt.
 > **Was das Token gar nicht trägt, hielt das Maß auch vorher nicht**: `--dichte-feld` (40 px in
 > `m`), die Tabellenzeile (36 px) und der Sortierknopf im Tabellenkopf (20 px). Ausgeschrieben in
 > [`dichte-umschalter.md`](dichte-umschalter.md) §5.4, geführt als offener Punkt 96.
+
+> ### Die 26 rem der Baumspalte sind **gemessen**, anders als die 72 rem darüber *(02.09.2026)*
+>
+> Drei Zahlen tragen sie, und alle drei stehen in [`process-view.md`](process-view.md) §16:
+>
+> 1. **Bei `NEXANS` brechen 17 von 733 Prozessnamen um** (2,3 %), und ab hier liegt die Gesamthöhe
+>    des aufgeklappten Baums innerhalb von 0,4 % ihres Grenzwerts.
+> 2. **Es ist der größte Wert, bei dem die Übertragungsliste daneben bei 1440 px noch vollständig
+>    steht** — ihre Tabelle braucht gemessene 744 px.
+> 3. **Es ist die Breite, die das Nachrichtenpanel ab `xl` ohnehin hat.** Eine Zahl statt zwei.
+>
+> **Die 34 rem der flachen Prozessauswahl (§7a dort) gelten hier ausdrücklich nicht.** Dort steht der
+> Name in einer Schublade über der ganzen Breite; hier kommen Einrückung, Aufklappzeichen und zwei
+> Zahlen dazu, und die Spalte steht neben einer Tabelle, der jeder Pixel fehlt, den der Baum nimmt.
+>
+> **Und ein Befund, der über diese Zahl hinausgeht:** Die Umbruchzahlen sind in **allen vier
+> Dichtestufen identisch**. Breite und Schriftgröße liegen beide in `rem` und skalieren mit derselben
+> Zahl — die Stufe ändert die Pixel, nicht die Umbrüche. Wer eine Breite in `rem` prüft, prüft sie
+> für alle vier Stufen zugleich.
 
 > **`--dichte-beschriftung` ist heute an genau einer Stelle im Einsatz** — im Belegdaten-Block
 > ([`bam-werte.md`](bam-werte.md) §11a). Es steht hier, weil die Dichtewerte in `globals.css` wohnen

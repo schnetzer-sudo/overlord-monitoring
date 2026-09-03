@@ -253,6 +253,21 @@ Schnitt 21,8.
 **Das Eingrenzungsfeld bleibt** — es ist bei 733 Einträgen der schnellere Weg als Scrollen, und es
 arbeitet weiterhin rein örtlich (§9).
 
+### Die Zeilenhöhe der Auswahl *(02.09.2026, mitgezogen)*
+
+Die Auswahlzeile trug `--dichte-beruehrung` und war damit in `xs`, `s` und `m` gleich hoch. Seit dem
+02.09.2026 trägt sie **`--dichte-bedienzeile`** — am Zeigergerät die Zeilenhöhe (32 / 34 / 36 /
+41 px), am Berührungsgerät weiterhin die Mindestfläche (44 / 44 / 44 / 49,5 px, gemessen).
+
+**Die Entscheidung ist im Prozessbaum gefallen** (E‑54,
+[`process-view.md`](process-view.md) §24) **und hier mitgezogen worden, nicht ausgenommen.** Zwei
+Auswahllisten mit zwei Zeilenhöhen wären genau die Drift, die ein gemeinsames Token verhindern soll
+— und dieselbe Begründung, die E‑51 hier hergeholt hatte („dieselbe Wahl trifft die Prozessauswahl
+seit Schritt 4"), trägt jetzt in die andere Richtung.
+
+**An der Breite von 34 rem und am Umbrechen ändert das nichts.** Beides steht oben und bleibt: Die
+Zeilenhöhe ist ein Mindestmaß, ein zweizeiliger Name macht seine Zeile weiterhin höher.
+
 ### Kein Virtualisieren — gemessen, nicht vermutet
 
 Die 733 Einträge stehen als **4.399 DOM-Knoten** in einem Bereich von **32.288 px** Höhe bei 288 px

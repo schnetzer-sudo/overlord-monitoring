@@ -1,11 +1,15 @@
-# Prozessansicht — der Baum, Backend
+# Prozessansicht — der Baum
 
-Entsteht in **Schritt 10c‑1** (02.09.2026). Auftrag: „Schritt 10c‑1: Prozessansicht, Backend",
-Stand 01.09.2026.
+Entstanden in zwei Schritten am selben Tag, dem 02.09.2026:
 
-**Backend, keine Oberfläche.** Der Frontend-Teil ist 10c‑2 und wird erst geschrieben, wenn die
-Messwerte hier vorliegen — wie groß der Baum je Mandant tatsächlich ist, entscheidet über
-Vorklappen, Ladeverhalten und Virtualisierung. §8 ist die Antwort darauf.
+| Teil | Auftrag | Steht in |
+|---|---|---|
+| **10c‑1** | „Schritt 10c‑1: Prozessansicht, Backend", Stand 01.09.2026 | §1 bis §14 |
+| **10c‑2** | „Schritt 10c‑2: Prozessansicht, Oberfläche", Stand 02.09.2026 | §15 bis §20 |
+
+**Der erste Teil war ausdrücklich ohne Oberfläche**, und der Grund steht in §9: Wie groß der Baum je
+Mandant tatsächlich ist, entscheidet über Vorklappen, Ladeverhalten und Virtualisierung. Der zweite
+Teil ist gegen diese Zahlen entworfen und hat **kein Feld am Backend ergänzt**.
 
 ---
 
@@ -692,6 +696,20 @@ beide ein Zustand, bestünde der Baum bei `VOTG` zu 90 % aus Markierungen.
 | **E‑43** | Überfälligkeit steht **nicht** im Baum (§5) |
 | **E‑44** | `Rollupzeitraum` (vormals `Dashboardzeitraum`) und `Katalogzuordnung` wandern nach `common`, weil ein zweites Fachpaket sie braucht |
 
+### Die Entscheidungen der Oberfläche (10c‑2)
+
+| | |
+|---|---|
+| **E‑45** | Eine Richtungsebene, die nur **einen** Knoten trüge, wird übersprungen; die Richtung wandert als Zeichen in die Prozesszeile (§17) |
+| **E‑46** | Das Überspringen geschieht in der **Oberfläche**, nicht im Endpunkt — dessen Antwort bleibt vollständig (§17) |
+| **E‑47** | Die Ansicht liegt in `features/nachrichten`; der gemeinsame Teil wandert nach `lib/rollupzeitraum.ts` und `components/zeitraum-umschalter.tsx` — nicht ins Nachbarfeature (§15) |
+| **E‑48** | Der Schalter „nur mit Verkehr im Zeitraum" steht **in der URL**, das Eingrenzungsfeld nicht: Der eine lässt weg, das andere ist eine Eingabe (§15) |
+| **E‑49** | Die Baumspalte ist **26 rem** ab `xl` und darunter ein Anteil von 40 % — gemessen an drei Zahlen, nicht gewählt (§16, M118) |
+| **E‑50** | Die Übertragungsliste bekommt **das Fenster aus der Antwort des Baums** (`von`/`bis`) und keinen eigenen Zeitraum — beide lesen dieselbe Spalte (§18) |
+| **E‑51** | Die Baumzeile hält `--dichte-beruehrung` und nicht `--dichte-zeile`; die Folge ist, dass der Dichteumschalter im Baum fast nichts bewirkt (§16) |
+| **E‑52** | Die Zeile bekommt ihren vorgelesenen Namen aus **einem `aria-label`** und nicht aus `sr-only`-Spannen neben jeder Zahl (§17) |
+| **E‑53** | Beim Öffnen des Panels weicht die **Liste**, der Baum bleibt. Im Auftrag hieß sie `E‑44`; die Nummer war seit 10c‑1 vergeben (§18) |
+
 ---
 
 ## 11. Tests
@@ -777,27 +795,1820 @@ nie den Umfang.
 |---|---|
 | **105** | **`toUpperCase` ist eine Näherung an `utf8mb4_general_ci`.** Die Sortierung ignoriert auch Akzente; zwei Werte, die sich nur darin unterscheiden, blieben im Baum zwei Gruppen und wären für die Datenbank eine. Der exakte Weg wäre `WEIGHT_STRING` in SQL — **ungemessen**, und ein MariaDB-eigener Funktionsaufruf im Antwortpfad will eigens gemessen sein (§2) |
 | **106** | **Ein Partner steht bei `NEXANS` im Katalog in zwei Schreibweisen.** Das ist eine Kuratierungsfrage und kein Codefehler; welche der beiden richtig ist, entscheidet niemand im Code. Der Baum zeigt seit E‑41 einen Knoten und die zuerst angetroffene Schreibweise (§2) |
-| **107** | **Bei `IBIS` ordnet der Baum kaum noch:** 139 Gruppen auf 192 Prozesse, größte Gruppe vier. Ob eine Baumdarstellung dafür die richtige Bauform ist, ist eine Gestaltungsfrage für 10c‑2 (§9) |
-| **108** | **`VOTG` trägt keine einzige kuratierte Richtung.** Die mittlere Ebene besteht dort aus 133 Knoten „nicht ermittelt". Ob 10c‑2 die Ebene dann einklappt, überspringt oder stehen lässt, ist nicht entschieden (§9) |
-| **109** | **Der Rumpf ist bei `NEXANS` 150,3 KiB.** Was das Rendern kostet, ist nicht gemessen — das ist 10c‑2 (§9) |
+| ~~**107**~~ | ~~**Bei `IBIS` ordnet der Baum kaum noch:** 139 Gruppen auf 192 Prozesse, größte Gruppe vier.~~ **Beantwortet am 02.09.2026, und die Antwort ist eine Zahl und keine Umgestaltung:** E‑45 nimmt `IBIS` 19 der 139 Gruppen; es bleiben 120 Richtungsknoten auf 192 Prozesse, also **391 Zeilen für 192 Blätter** (§17). Der Baum verlängert dort weiterhin mehr, als er ordnet. **Ob das den Nutzer stört, ist nicht geprüft** — dafür fehlt die Sichtprüfung, siehe **115**. Eine zweite Bauform ist bewusst nicht entstanden: Sie wäre eine zweite Ansicht für denselben Endpunkt |
+| ~~**108**~~ | ~~**`VOTG` trägt keine einzige kuratierte Richtung.**~~ **Geschlossen am 02.09.2026 durch E‑45:** Die Ebene wird übersprungen, wo sie nur einen Knoten trüge. Am gerenderten Baum ausgezählt: `VOTG` hat **null** Richtungsknoten statt 133, und keine einzige leere Ebene bleibt stehen (§17). Die Richtung ist nicht verschwunden — sie steht als Zeichen in jeder der 390 Prozesszeilen |
+| ~~**109**~~ | ~~**Der Rumpf ist bei `NEXANS` 150,3 KiB.**~~ **Geschlossen am 02.09.2026.** Erst zur Hälfte (§16, M120): Auswerten und Layouten des Baums kosten im Browser **9,2 ms zugeklappt** und 84,7 ms vollständig aufgeklappt; `JSON.parse` 0,42 ms, die Eingrenzung 0,07 ms je Tastendruck, das Scrollen 0,3 ms über dreißig Sprünge. Die fehlende Hälfte steht seit der Sichtprüfung da (§21, M123): **über die Leitung sind es 14,5 KiB**, der Endpunkt antwortet in 60 ms, und **React braucht 98 ms** von der fertigen Antwort bis zum Baum im DOM. Alle 425 Gruppen aufzuklappen kostet 454 ms |
 | **110** | **Die Antwort unterscheidet bei der Richtung nicht zwischen „gepflegt und leer" und „offen".** Dass die Unterscheidung gebraucht würde, ist **nicht gemessen**; ein drittes Katalogfeld entsteht deshalb nicht (§2) |
 | **111** | **Die Feldnamen der Antwort sind deutsch, Richtlinie §5.2 schreibt englisch.** Das Dashboard hat sich schon anders entschieden; diese Datei folgt den Nachbarn. Ob die Regel nachzuziehen oder das Projekt zurückzudrehen ist, ist eine eigene Runde (§1) |
 | **112** | **Überfälligkeit je Prozess ist nicht gemessen.** Wer den Punkt aufmacht, misst nicht die Zahl der Überfälligen, sondern den **Plan** einer Gruppierung je Prozess — und stellt daneben, was der Endpunkt dann an Bauform mitbekäme: ein drittes Statement, das als einziges live liest, samt Teilerfolg-Mechanismus (§5) |
 | **113** | **Die Ebenenzuordnung Paar → Rolluptabelle steht zweimal im Code** — in `DashboardRepository` und in `ProzessbaumRepository`. Sie ließe sich nicht nach `common` heben, ohne die generierten Tabellen dorthin mitzunehmen. Das vollständige `switch` ohne `default` macht die Doppelung compilergesichert, aber sie bleibt eine Doppelung |
 
+### Aus Teil 2, der Oberfläche (02.09.2026)
+
+| | |
+|---|---|
+| **114** | **Bei 1280 px steht die Übertragungsliste neben dem Baum nicht vollständig.** Ihre Tabelle braucht gemessene **744 px**; darunter fällt die **Ablaufspalte auf 0 px** und die Tabelle scrollt waagerecht in ihrem eigenen Container (M119, §18). **Es liegt nicht an der Breite des Baums** — dafür dürfte er höchstens 16 rem messen, und dort bricht mehr als die Hälfte aller Prozessnamen um. Wer den Punkt aufmacht, entscheidet über die **Spaltenbreiten der Nachrichtenliste** und nicht über diese Ansicht. ⚠️ **Verschärft am 02.09.2026 durch die Sichtprüfung** (§21, M126): Die 0 px breite Spalte beschneidet ihre Beschriftung nicht — bei 1280 px steht „Ablauf" **über „Projekt" gedruckt**, und der Tabellenkopf ist an der Breite unlesbar, für die E‑53 entworfen wurde. **Fortgeschrieben am 02.09.2026 mit E‑57** (§27, M129): Der Befund **wandert mit** — die Liste steht künftig neben dem Panel statt neben dem Baum, und der Klumpen steht dort genauso. Er wird dabei **nicht schlimmer, und das ist gerechnet und gemessen**: Bis `2xl` ersetzt eine 26‑rem-Spalte die andere, die Liste bekommt neben dem Panel **auf den Pixel dieselbe Breite** wie neben dem Baum (gemessen 585 px bei 1280, 745 px bei 1440 — in beiden Zuständen gleich). Erst ab `2xl` wächst das Panel auf 30 rem, und dort verliert die Liste **64 px** (777 statt 841 bei 1536, 1.161 statt 1.225 bei 1920) — die Ablaufspalte fällt von 95 auf 31 px beziehungsweise von 479 auf 415 px, bleibt aber sichtbar. **Nicht in dieser Runde zu lösen**; wer den Punkt aufmacht, entscheidet weiterhin über die Spaltenbreiten der Nachrichtenliste |
+| ~~**115**~~ | ~~**Es hat keine Sichtprüfung im Browser gegeben.**~~ **Nachgeholt am 02.09.2026, §21.** Die Anmeldung stand später am selben Tag zur Verfügung; jeder einzelne der hier aufgezählten Punkte ist abgearbeitet: die drei Breitenzustände (M124), die sichtbaren Zeilen je Dichtestufe (M121 — **19/19/18/16** gegen 28/26/24/19 in der Liste), die Renderzeit einschließlich React (M123), der tiefe Link, die Tastatur von Hand, die Ungleichförmigkeit aus E‑45 (135 Partner mit Ebene, 20 ohne, alle zwanzig namentlich), und die zwei Verhaltensregeln aus §19 — **der Fokus unter `md` landet auf „Zurück zum Baum", und der Baum springt bei geöffnetem Panel nicht.** Was die Sichtprüfung **neu** gefunden hat, steht als **118**, **119** und in der Verschärfung von **114** |
+| **116** | **`features/nachrichten` trägt drei Ansichten, und sein Name sagt das nicht** — Liste, Belegsuche, Prozessansicht (E‑47). Ob das Verzeichnis anders heißen soll, ist eine Umbenennung und keine Umstellung; sie beträfe rund vierzig Importpfade und keinen Nutzer |
+| ~~**117**~~ | ~~**Der Dichteumschalter bewegt im Baum fast nichts** (E‑51): Die Zeile hält `--dichte-beruehrung`, und das Token ist aus der Skalierung heraus — 44 px in `xs`, `s` und `m`, 49,5 px in `l`.~~ **Geschlossen am 02.09.2026 durch E‑54** (§24): Die Baumzeile trägt `--dichte-bedienzeile` — am Zeigergerät die Zeilenhöhe, am Berührungsgerät weiterhin die Mindestfläche. Nachgemessen (M127): **26 / 24 / 22 / 19** sichtbare Zeilen statt 19/19/18/16, also **sieben Zeilen über die Skala** statt drei; `xs` und `s` unterscheiden sich wieder. Am Berührungsgerät sind es unverändert 44 / 44 / 44 / 49,5 px. **Die Prozessauswahl ist mitgezogen** — dieselbe Wahl, dieselbe Begründung. **Offener Punkt 96 bleibt offen:** `--dichte-beruehrung` selbst ist unberührt |
+
+### Aus der Sichtprüfung (02.09.2026)
+
+| | |
+|---|---|
+| **118** | ⚠️ **Wer weit unten im Baum auswählt, bekommt das Ergebnis außerhalb des Bildes** (§21, M125). Baum und Liste teilen den **einen** Scrollbereich des Anwendungsrahmens ([`frontend-grundlagen.md`](frontend-grundlagen.md) §7); bei 155 Partnern steht die Überschrift der rechten Spalte dann bis zu **6.143 px** über dem Sichtfenster, und rechts bleibt eine leere Fläche. Betroffen ist alles unterhalb der ersten 18 bis 19 Zeilen, bei `NEXANS` also gut 130 der 155 Partner. **Zwei Auswege, beide Entscheidungen über §7 und nicht über diese Datei:** die rechte Spalte kleben lassen (`sticky`, wie der Baumkopf schon) — das widerspricht §7 nicht —, oder dem Baum einen eigenen Scrollbereich geben — das widerspricht ihm ausdrücklich |
+| **119** | **Der Rückweg unter `md` verliert den Fokus** (§21, Befund 3). „Zurück zum Baum" verschwindet mit dem Kopf der rechten Spalte und nimmt den Fokus auf `document.body` mit; der nächste Tabulator beginnt wieder oben am Anwendungsrahmen. Der Weg **hin** ist eigens dagegen gebaut (§15) — die Gegenrichtung ist es nicht. Der Fokus gehörte auf die zuletzt gewählte Zeile im Baum, der ja wieder sichtbar ist |
+
+### Aus den Korrekturen 10c‑3 (02.09.2026)
+
+| | |
+|---|---|
+| **120** | **Die Zahl „noch nie" aus der Kopfzeile ist im Baum nicht mehr einzeln auffindbar** (E‑56, §17). Der Baum zeigt den Zustand nicht mehr an der Zeile; wer wissen will, **welche** der 217 Prozesse bei `NEXANS` nie etwas getragen haben, hat dafür den Schalter „Nur mit Verkehr im Zeitraum" — er blendet genau die Gegenmenge aus, und was stehenbleibt, ist die Menge „nie" plus die stillen. **Dass das ausreicht, ist eine Auslegung und keine Messung**: Es ist ein Weg über zwei Schritte statt einer Angabe in der Zeile, und ein Nutzer ist dazu nicht befragt worden. Wer den Punkt aufmacht, entscheidet zwischen „Zeile trägt es wieder" (dann samt Dämpfung, §3) und „die Kopfzeile bekommt einen Filter je Zustand" |
+| **121** | **Unter `xl` aktualisiert die verdeckte Liste weiter, und ihr Schalter steckt im verdeckten Bereich** (§18, entfallene Sonderregel). Ab `xl` steht die Liste seit E‑57 neben dem Panel und ist bedienbar; darunter weicht sie, und dann läuft ihr Intervall für eine Liste, die niemand sieht — abschalten kann der Nutzer sie nicht. **Das ist nicht neu und nicht auf diese Ansicht beschränkt:** Die Nachrichtenliste trägt denselben Fall seit Schritt 5, mit derselben Ursache und ohne Gegenmittel. Zwei Auswege, und beide sind Entscheidungen über die **geteilte** Liste: den Aktualisierungsschalter aus dem Blätterblock in den Kopf der Ansicht heben (dann ist er immer erreichbar), oder die Sichtbarkeit an einen `IntersectionObserver` hängen (dann ist es kein zweiter Umbruchpunkt, sondern eine Messung). **Die Vorgabe ist aus** — der Fall tritt nur ein, wenn ein Nutzer die Aktualisierung selbst eingeschaltet hat |
+
 ---
 
-## 14. Was dieser Schritt nicht zeigt
+## 14. Was **dieser Schritt** nicht zeigt
 
-1. **Keine Oberfläche.** Das ist 10c‑2, und die Zahlen in §9 sind die Vorlage dafür.
-2. **Keine Sichtprüfung im Browser.** Es gibt nichts zu sehen; der Endpunkt ist über
-   `MessungM117DbIT` und die Isolationstests abgenommen und nicht über eine Ansicht.
+*Der Stand von 10c‑1. Was davon 10c‑2 eingelöst hat, ist gekennzeichnet; die Sätze bleiben stehen,
+damit erkennbar bleibt, was am 02.09.2026 noch offen war.*
+
+1. ~~**Keine Oberfläche.**~~ ✔ **Eingelöst in 10c‑2** — §15 bis §20. Die Zahlen aus §9 waren die
+   Vorlage und haben getragen: Vorklappen scheidet aus, ein Aufruf genügt, Virtualisieren ist
+   gemessen unnötig.
+2. ~~**Keine Sichtprüfung im Browser.**~~ ✔ **Nachgeholt am 02.09.2026** — §21. Beim Schreiben
+   dieser Zeile fehlte der Anmeldezugang; er stand später am selben Tag zur Verfügung. Der Endpunkt
+   ist über `MessungM117DbIT` und die Isolationstests abgenommen, die Ansicht über ihre Tests, über
+   Messungen an der gebauten Komponente **und jetzt am laufenden System** (M121 bis M126).
 3. **Keine Messung gegen die Produktion.** Alle Zahlen stammen von der Testkopie mit 3,34 Millionen
    Zeilen in `Message` und 335.610 im Rollup. Die Projektbeschreibung rechnet mit bis zu 36
    Millionen; die Rolluptabelle wächst mit, und die Kennzahlenabfrage liest sie im Bereich.
-4. **Kein Filter, keine Suche im Baum.** Bei 733 Blättern ist das eine berechtigte Frage — sie
-   gehört zu 10c‑2, wo auch entschieden wird, ob örtlich oder serverseitig gefiltert wird
-   (dieselbe Abwägung wie in [`prozessauswahl.md`](prozessauswahl.md) §9).
-5. **Kein Einstieg aus dem Baum in die Liste.** Der Prozessfilter der Übertragungsliste existiert
-   ([`nachrichtenliste.md`](nachrichtenliste.md) §1), und der Baum liefert die `processId`, die er
-   braucht. Verdrahtet ist nichts — das ist eine Oberflächenentscheidung.
+   **Für die Oberfläche gilt dasselbe an einer anderen Stelle:** Die Baumgröße wächst mit dem
+   Katalog, nicht mit der Nachrichtenmenge — 733 Blätter sind der heutige Höchstwert.
+4. ~~**Kein Filter, keine Suche im Baum.**~~ ✔ **Eingelöst in 10c‑2** (§17): örtlich, ohne
+   Entprellung, gemessene 0,07 ms je Tastendruck — dieselbe Abwägung wie in
+   [`prozessauswahl.md`](prozessauswahl.md) §9 und mit demselben Ergebnis.
+5. ~~**Kein Einstieg aus dem Baum in die Liste.**~~ ✔ **Eingelöst in 10c‑2** (§18): Der vorhandene
+   Prozessfilter ist verdrahtet und nicht nachgebaut, und das Zeitfenster kommt aus der Antwort des
+   Baums (E‑50).
+
+---
+
+# Die Oberfläche (Schritt 10c‑2, 02.09.2026)
+
+Entsteht in **Schritt 10c‑2**. Auftrag: „Schritt 10c‑2: Prozessansicht, Oberfläche", Stand
+02.09.2026. Alles ab hier beschreibt die Ansicht; §1 bis §14 bleiben unverändert und beschreiben
+den Endpunkt darunter.
+
+**Kein Feld ist am Backend ergänzt worden.** Was hier steht, ist ausschließlich Darstellung dessen,
+was §1 bis §9 liefert.
+
+## Nummernvergabe (Teil 2)
+
+| | |
+|---|---|
+| **Messungen** | **M118 bis M120**. `grep -rnoE '\bM1(1[89]\|20)\b' docs/ scripts/ *.md` → kein Treffer außerhalb dieser Datei; höchste vergebene war **M117** (§9). **Die Sichtprüfung hat M121 bis M126 belegt** (§21) |
+| **Entscheidungen** | **E‑45 bis E‑53**. `E‑45` und `E‑46` sind im Auftrag vergeben, `E‑47` bis `E‑53` hier; höchste vergebene war **E‑44** (§10). ⚠️ Der Auftrag führt die Panel-Entscheidung ebenfalls als `E‑44` — die Nummer war belegt, sie heißt hier **E‑53** (§18). **Die Sichtprüfung hat keine neue vergeben** — sie prüft nach, sie entscheidet nicht |
+| **Offene Punkte** | ab **114**. Höchster vergebener Stand ist **113** (§13). **Die Sichtprüfung hat 118 und 119 belegt** |
+
+---
+
+## 15. Route, Aufteilung und Zustand
+
+### Die Route gab es schon
+
+`/prozesse` steht seit Schritt 3 in `lib/routen.ts` und in `lib/navigation.ts`; dort saß bis heute
+ein Platzhalter mit dem Kommentar *„Die nach kuratiertem Partner gruppierte Ansicht entsteht in
+Schritt 10."* **Zu tun war nicht, eine Route anzulegen, sondern eine zu füllen** — dieselbe Lage wie
+beim Dashboard auf `/` (Entscheidung E‑r).
+
+### E‑47 — Die Ansicht liegt in `features/nachrichten`, der gemeinsame Teil wandert nach `lib` und `components`
+
+[`frontend-grundlagen.md`](frontend-grundlagen.md) §8 hat für diesen Tag vorgesorgt: *„Kommt in
+Schritt 10 eine eigene Prozessansicht, wandert der gemeinsame Teil nach `components/` oder `lib/` —
+nicht ins Nachbarfeature."* **Genau das ist geschehen**, und zwar zweimal:
+
+| Was | Von | Nach | Warum |
+|---|---|---|---|
+| die drei Rollup-Paare `48H`/`30T`/`12M` | `features/dashboard/api.ts` | `lib/rollupzeitraum.ts` | beide Ansichten brauchen dieselbe Menge — **dieselbe Bewegung wie im Backend am selben Tag** (E‑44: `Dashboardzeitraum` → `common/Rollupzeitraum`), und der Typ heißt seither in beiden Hälften gleich |
+| der Zeitraumumschalter | `features/dashboard/components/` | `components/zeitraum-umschalter.tsx` | dieselben drei Schaltflächen, dieselbe Regel „hervorgehoben ist, was gilt" |
+| die Beschriftungen dazu | `texte.dashboard.zeitraum` | `texte.zeitraum` | ein Baustein in `components/` liest keinen Textblock eines Features |
+
+**Der Baum selbst bleibt trotzdem in `features/nachrichten`, und das ist die Entscheidung.** Was die
+Prozessansicht mit der Nachrichtenliste teilt, ist nicht *ein Fetch*: Ihre rechte Spalte **ist** die
+Nachrichtenliste, und das Panel darüber **ist** das Nachrichtendetail. Beide nach `components/` zu
+heben hieße, den halben Feature-Inhalt in die Naht zu schieben, die dort für Rahmen, Kopfzeile und
+Zustände gedacht ist.
+
+**Der Präzedenzfall steht daneben:** Die Belegsuche ist seit Schritt 7 eine eigene Route (`/suche`)
+mit eigener Trefferliste und liegt aus demselben Grund in diesem Feature — sie hängt das vorhandene
+Panel ein ([`bam-suche.md`](bam-suche.md) §11.4). Die Prozessansicht ist der **dritte Einstieg in
+dieselbe Menge** und nicht eine zweite Menge.
+
+*Gemessen war: dass heute kein Feature aus einem Nachbarfeature importiert (`grep` über
+`src/features`, kein Treffer). Behauptet wird: dass ein Umbau der Liste nach `components/` teurer
+wäre als der Name dieses Verzeichnisses.* **Der Preis ist benannt:** `features/nachrichten` trägt
+damit drei Ansichten, und sein Name sagt das nicht — offener Punkt **116**.
+
+### Die drei Breitenzustände
+
+An den **vorhandenen** Schwellen. `md` (768 px) ist der Umbruchpunkt des Projekts
+([`visuelles-konzept.md`](visuelles-konzept.md) §6), `xl` (1280 px) der, an dem das
+Nachrichtenpanel neben die Liste tritt ([`nachrichtendetail.md`](nachrichtendetail.md) §10.7).
+**Kein neuer entsteht.**
+
+| Breite | Aufteilung |
+|---|---|
+| ab `xl` | Baum links in **fester** Breite (`--dichte-baumspalte`), Liste rechts im Rest |
+| `md` bis `xl` | beide nebeneinander, der Baum mit **40 % Anteil** statt fester Breite |
+| unter `md` | **eine** Spalte: Baum → Liste → Panel, mit „Zurück zum Baum" und dem Zurück des Browsers |
+
+**Warum unter `xl` ein Anteil und keine feste Breite.** Bei 768 px bleiben nach Navigationsspalte
+und Innenabstand rund 520 px Inhalt. Eine feste Baumspalte von 26 rem (416 px) ließe der Liste gut
+hundert — die Aufteilung wäre dem Namen nach zweispaltig und der Sache nach keine. Mit 40 % wächst
+der Baum mit dem Fenster und übernimmt bei 1280 px fast genau seine feste Breite: **412 px gegen
+416 px**, der Sprung an der Schwelle ist vier Pixel breit.
+
+**Unter `md` wird ausgeblendet, nicht ausgehängt** (`display: none`) — dieselbe Bauform wie in der
+Nachrichtenliste. Der Baum behält seinen Aufklappzustand und die Liste ihre Seitenposition; wer
+zurückgeht, findet beides wieder, ohne dass eine zweite Abfrage auf die Produktionsdatenbank geht.
+
+**Umgesetzt über Klassen und nicht über eine Abfrage der Fensterbreite in JavaScript.** Die wäre ein
+zweiter Umbruchpunkt neben dem der Ansicht, und zwei laufen auseinander — dieselbe Festlegung wie
+beim Ansichtsumschalter des Nachrichtendetails.
+
+### Der Zustand in der URL
+
+```
+/prozesse?zeitraum=30T&nurMitVerkehr=true&prozess=<ProcessID>&nachricht=<MessageID>&sortierung=aelteste
+```
+
+| Parameter | Verlauf | Warum |
+|---|---|---|
+| `zeitraum` | `replace` | wie im Dashboard: **nur die ausdrückliche Wahl**, nie das vom Endpunkt gewählte Paar (E‑n) |
+| `prozess` | **`push`** | er *öffnet* etwas: unter `md` tritt die Liste an die Stelle des Baums, und das Zurück des Browsers ist dort der Weg heraus |
+| `nachricht` | **`push`** | dasselbe eine Ebene tiefer; derselbe Parametername wie in Liste und Belegsuche (`lib/routen.ts` `NACHRICHT_PARAMETER`) |
+| `nurMitVerkehr` | `replace` | siehe E‑48 |
+| `sortierung` | `replace` | die Übertragungsliste behält ihren Sortierumschalter, und der beschreibt den gezeigten Ausschnitt |
+
+**Was ausdrücklich *nicht* in der URL steht**, und beides ist die Prüfung aus
+[`frontend-grundlagen.md`](frontend-grundlagen.md) §8:
+
+- **Der aufgeklappte Partner.** Er ergibt sich aus dem gewählten Prozess (`pfadZuProzess`). Zwei
+  Zustände für dieselbe Sache liefen auseinander, und ein Link mit `prozess=…` und einem
+  widersprechenden Aufklappzustand wäre nicht mehr zu deuten.
+- **Der Cursor der Liste.** Aus demselben Grund wie dort: Ein Link auf Seite sieben eines Fensters
+  zeigte beim Empfänger auf andere Zeilen.
+
+### E‑48 — Der Schalter steht in der URL, das Eingrenzungsfeld nicht
+
+Beides schränkt ein, und trotzdem gehört nur eines hinein. Die Regel dafür steht seit dem
+11.08.2026 fest: *Was ausgeblendet ist, muss man teilen können* — und sie hat einen Anlassfall,
+`zwischenschritte` in der Nachrichtenliste.
+
+| | in der URL | warum |
+|---|---|---|
+| **„Nur mit Verkehr im Zeitraum"** | **ja** | Er **lässt weg**. Wer bei `VOTG` einen Link weitergibt, in dem 354 von 390 Prozessen fehlen, muss das mitgeben — sonst sieht der Empfänger einen anderen Baum und weiß nicht, warum |
+| **Das Eingrenzungsfeld** | **nein** | Es ist eine **Eingabe**, durch die man beim Tippen hindurchläuft — dieselbe Bauform wie das Eingrenzungsfeld der Prozessauswahl, das seit Schritt 4 im Komponentenzustand liegt |
+
+**Ohne `clearOnDefault: false`, und das ist geprüft und nicht übersehen.** Die Vorgabe des Schalters
+ist `false` und lässt nichts weg; ein Standardwert, der etwas *zulässt*, gehört nicht in die URL —
+genau wie `langeSuche` und `ueberfaellig` in `filter.ts`.
+
+**Die Vorgabe ist aus.** Bei `VOTG` sind 89,7 % der Prozesse „nie" (M111); ohne den Schalter ist der
+Baum dort fast vollständig gedämpft. **Mit Vorgabe *an* wäre dagegen genau der Prozess unauffindbar,
+den jemand sucht, *weil* er nichts trägt** — und das ist der Fall, für den es diese Ansicht gibt
+([`prozessauswahl.md`](prozessauswahl.md) §3).
+
+---
+
+## 16. Die Baumspalte — gemessen, nicht gewählt
+
+### M118 — wie viele Namen umbrechen, bei welcher Breite, in welcher Stufe
+
+**Gemessen an der gebauten Komponente.** Der Baum ist über `react-dom/server` mit den echten Daten
+der Testkopie zu HTML gerendert und in die laufende Anwendung eingesetzt; damit gelten die echte
+Schrift (Geist über `next/font`), die echten Tokens aus `globals.css` und die echten Klassen der
+Zeile. Kopfloses Chrome über das DevTools-Protokoll, Fenstermaße über
+`Emulation.setDeviceMetricsOverride` — dieselbe Strecke wie in
+[`dichte-umschalter.md`](dichte-umschalter.md) §5.
+
+Gezählt ist ein **Blatt, dessen Prozessname mehr als eine Zeile braucht** (Höhe der Namensspanne
+gegen die gemessene `line-height`).
+
+| Breite (Stufe `xs`) | `NEXANS` (733) | `VOTG` (390) | `IBIS` (192) | `SUTTONS` (17) | zusammen (1.332) |
+|---:|---:|---:|---:|---:|---:|
+| 18 rem | 396 | 366 | 189 | 16 | 967 (72,6 %) |
+| 20 rem | 200 | 304 | 151 | 10 | 665 (49,9 %) |
+| 22 rem | 78 | 225 | 88 | 4 | 395 (29,7 %) |
+| 24 rem | 38 | 145 | 39 | 2 | 224 (16,8 %) |
+| **26 rem** | **17** | **99** | **16** | **0** | **132 (9,9 %)** |
+| 28 rem | 7 | 33 | 6 | 0 | 46 (3,5 %) |
+| 30 rem | 1 | 16 | 3 | 0 | 20 (1,5 %) |
+| 32 rem | 1 | 0 | 2 | 0 | 3 (0,2 %) |
+| 34 rem | 0 | 0 | 0 | 0 | 0 |
+
+> ### ⚠️ Der Befund, der die Tabelle kurz macht: **die Dichtestufe ändert nichts**
+>
+> Die Messung lief über alle vier Stufen. **Die Zahlen sind in `xs`, `s`, `m` und `l` identisch** —
+> mit genau einer Abweichung: `IBIS` bei 22 rem, 88 Umbrüche in `xs` gegen 89 in den drei anderen.
+>
+> **Der Grund ist keine Eigenheit dieser Ansicht, sondern die Definition von `rem`.** Spaltenbreite
+> und Schriftgröße liegen beide in `rem` und skalieren mit derselben Zahl; das Verhältnis von Text
+> zu Kasten bleibt. Die Stufe ändert die **Pixel**, nicht die **Umbrüche**.
+>
+> Daraus folgt für jeden, der die Zahl anfasst: **Eine Breite in `rem` gilt für alle vier Stufen
+> zugleich.** Sie in einer Stufe zu prüfen genügt — und sie in einer Stufe zu verbessern, verbessert
+> sie in allen.
+
+### Warum `VOTG` und nicht `NEXANS` der schwierige Fall ist
+
+Bei 26 rem brechen 2,3 % der `NEXANS`-Namen um und 25,4 % der `VOTG`-Namen. **Das liegt nicht an der
+Einrückung** — bei `VOTG` fällt die Richtungsebene überall weg (E‑45), die Blätter stehen also eine
+Ebene **weiter links** und haben 1,25 rem mehr Platz. Es liegt an den Namen:
+
+| | längster | Median | mit Leerzeichen |
+|---|---:|---:|---:|
+| `NEXANS` | 58 Zeichen | **21** | 315 von 733 (43 %) |
+| `VOTG` | 54 | **34** | 386 von 390 (99 %) |
+| `IBIS` | 56 | 30 | 192 von 192 (100 %) |
+| `SUTTONS` | 43 | 31 | 17 von 17 (100 %) |
+
+**Der Median entscheidet und nicht das Maximum.** `NEXANS` führt technische Kurznamen
+(`40000_AMG_LAB_VDA`), `VOTG` und `IBIS` führen Sätze (*„Ausgehender Anhang Rechnung Integra
+Petrochemicals Ltd"*). Die 58 Zeichen aus [`prozessauswahl.md`](prozessauswahl.md) §7a sind
+bestätigt und **für diese Frage die falsche Zahl**.
+
+### Die Gesamthöhe des offenen Baums, Stufe `m`
+
+| Breite | `NEXANS` | `VOTG` | `IBIS` |
+|---:|---:|---:|---:|
+| 18 rem | 60.704 px | 36.348 px | 22.134 px |
+| 22 rem | 55.570 | 32.788 | 19.900 |
+| **26 rem** | **54.626** | **30.126** | **18.684** |
+| 30 rem | 54.394 | 28.320 | 18.458 |
+| 34 rem | 54.382 | 27.968 | 18.422 |
+
+Bei `NEXANS` liegt die Höhe ab 26 rem innerhalb von **0,4 %** ihres Grenzwerts; jeder weitere
+Zentimeter Breite kauft dort nichts mehr. Bei `VOTG` sind es 7,7 % — dort trägt Breite länger.
+
+### E‑49 — 26 rem, und die drei Zahlen, die sie tragen
+
+1. **Bei `NEXANS` brechen 17 von 733 Namen um (2,3 %)**, und die Höhe ist praktisch am Grenzwert.
+   `NEXANS` ist der Fall, für den zu entwerfen ist (§9).
+2. **Es ist der größte Wert, bei dem die Übertragungsliste daneben bei 1440 px noch vollständig
+   steht** — die Tabelle braucht gemessene **744 px** (M119, §18).
+3. **Es ist die Breite, die das Nachrichtenpanel ab `xl` ohnehin hat.** Eine Zahl statt zwei.
+
+**Was gegen 30 rem spricht, ist allein Punkt 2.** Der Baum wäre dort besser (1 von 733 statt 17),
+und die Liste bei 1920 px merkte nichts davon. Sie merkte es bei **1440 px**, und das ist eine
+verbreitete Bildschirmbreite: 1440 − 26 rem lässt der Liste gerade genug, 1440 − 30 rem nicht mehr.
+
+> **Belegvermerk (Regel L10).** *Gemessen:* die Umbruchzahlen, die Gesamthöhen und die 744 px
+> Mindestbreite der Tabelle. *Gerechnet:* welche Fensterbreite daraus folgt — 26 rem (416 px) plus
+> 16 px Abstand plus 744 px sind 1.176 px Inhalt; dazu 40 px Innenabstand, 208 px Navigationsspalte,
+> 1 px Trennlinie und rund 15 px Bildlaufleiste ergeben **1.440 px**. Die 15 px stammen aus der
+> Messung in [`nachrichtendetail.md`](nachrichtendetail.md) §10.7 (1.697 px gemessen gegen 1.712 px
+> gerechnet bei 1920) und sind **nicht** für diese Ansicht neu erhoben. ~~*Nicht gemessen:* die
+> Schwelle selbst am laufenden System.~~ **Nachgemessen am 02.09.2026** (§21, M124): Bei 1.440 px
+> steht die Liste vollständig (Kasten 758 px, Tabelle 758 px, kein Querlauf), bei 1.280 px nicht
+> (598 gegen 744). **Die gerechnete Schwelle trägt** — mit der Einschränkung, dass die Ablaufspalte
+> bei 1.440 px nur noch 14 px misst; „vollständig" heißt hier „ohne Querlauf", nicht „gut lesbar".
+
+### E‑51 — Die Baumzeile hält die Berührungsfläche, nicht die Tabellenzeilenhöhe
+
+`--dichte-beruehrung` (`max(2.75rem, 44px)`) und nicht `--dichte-zeile` (2,25 rem). **Der Baum ist
+die Bedienfläche dieser Ansicht** — jede Zeile ist ein Ziel, das geklappt oder gewählt wird —,
+während eine Tabellenzeile eine Zeile Daten ist. Dieselbe Wahl trifft die Prozessauswahl seit
+Schritt 4.
+
+**Der Preis ist gemessen und er ist die interessanteste Zahl dieser Runde:**
+
+| Stufe | Wurzelschrift | Partnerzeile | Blatt, kürzeste | Blatt, Schnitt (`NEXANS`, 26 rem) | Blatt, längste |
+|---|---:|---:|---:|---:|---:|
+| `xs` | 14 px | **44 px** | 44 px | 46,5 px | 70 px |
+| `s` | 15 px | **44 px** | 44 px | 47,6 px | 75 px |
+| `m` | 16 px | **44 px** | 44 px | 49,0 px | 80 px |
+| `l` | 18 px | **50 px** | 50 px | 55,4 px | 90 px |
+
+**Der Dichteumschalter bewegt im Baum fast nichts**, und das ist kein Fehler, sondern die Folge
+einer bewussten Festlegung: `--dichte-beruehrung` ist aus der Skalierung **heraus**
+([`visuelles-konzept.md`](visuelles-konzept.md) §5), damit der Satz „wird nirgends unterschritten"
+wahr bleibt. In `xs`, `s` und `m` greift überall der Boden von 44 px; erst `l` rechnet darüber
+hinaus.
+
+**Zum Vergleich, und der Vergleich ist der Auftrag:** In der Nachrichtenliste bringt der Umschalter
+**28 / 26 / 24 / 19** sichtbare Zeilen ([`dichte-umschalter.md`](dichte-umschalter.md) §5.3). Im
+Baum sind es bei zugeklappten Partnern **rechnerisch 22,7 / 22,7 / 22,7 / 20,2 Zeilen je 1.000 px** —
+drei gleiche Stufen und eine, die weniger zeigt.
+
+> **Das ist ein Befund und keine Empfehlung.** Ob der Baum stattdessen `--dichte-zeile` tragen
+> sollte, ist eine Entscheidung über die **Berührungsfläche** und nicht über den Baum: Sie beträfe
+> die Prozessauswahl genauso, und sie hängt an offenem Punkt 96
+> ([`dichte-umschalter.md`](dichte-umschalter.md) §5.4), wo bereits steht, was das Token heute trägt
+> und was nicht. Geführt als offener Punkt **117**.
+
+> ### ⚠️ Korrektur vom 02.09.2026 — **E‑51 ist durch E‑54 ersetzt** (§24)
+>
+> Der Befund ist entschieden worden, und zwar gegen E‑51: Die Baumzeile trägt seither
+> **`--dichte-bedienzeile`** — am Zeigergerät die Zeilenhöhe, am Berührungsgerät weiterhin die
+> Mindestfläche. Die Tabelle oben und die Zahlen darunter beschreiben damit den Zustand **bis** zum
+> 02.09.2026; sie bleiben stehen, weil die neue Entscheidung nur mit ihnen zu lesen ist.
+>
+> Nachgemessen als **M127** (§24): **26 / 24 / 22 / 19** sichtbare Zeilen gegen die 19/19/18/16
+> hier — und am Berührungsgerät unverändert **44 / 44 / 44 / 49,5 px**. **Offener Punkt 117 ist
+> damit geschlossen, offener Punkt 96 ausdrücklich nicht:** `--dichte-beruehrung` selbst ist
+> unberührt geblieben.
+
+---
+
+## 17. Der Baum
+
+### Die Bauform: `role="tree"`, flach im DOM
+
+`role="tree"` am Behälter, `role="treeitem"` je Zeile, dazu `aria-level`, `aria-posinset`,
+`aria-setsize`, `aria-expanded` an Gruppen und `aria-selected` an jeder Zeile.
+
+**Gerendert wird die Liste der sichtbaren Zeilen und kein geschachtelter Baum.** Die Tiefe steht in
+`aria-level` — genau die Form, die die ARIA-Spezifikation für einen *flattened tree* vorsieht. Zwei
+Gründe:
+
+1. **Die Tastaturbedienung wird zu „eine Zeile weiter".** Pfeil auf und ab bewegen sich über die
+   *sichtbaren* Knoten; auf einer flachen Liste ist das ein Index, auf einem geschachtelten Baum ein
+   Durchlauf.
+2. **Der DOM bleibt flach.** Bei `NEXANS` vollständig aufgeklappt sind es 1.158 Zeilen; eine
+   Schachtelung legte 425 zusätzliche Gruppenelemente darum.
+
+**Kein Accordion-Baustein**, und die Prüfung, die der Auftrag verlangt, fällt aus zwei Gründen gegen
+ihn aus. **Die Bauform**: Ein Accordion ist eine Folge unabhängiger Abschnitte, ein Baum eine
+Hierarchie mit `aria-level`; die Tastaturbedienung ist eine andere. **Die Menge**: 155
+Partnerknoten, 270 Richtungsknoten, 733 Blätter — jeder Abschnitt eines Accordions brächte eine
+eigene Zustandsverwaltung mit.
+
+> **Zur Zählweise, einmal für diesen ganzen Abschnitt.** §9 zählt **154 Partner** und **290
+> Gruppen** — die kuratierten Werte, aus der Quelle erhoben (M117). §17 zählt **Knoten**: 155, denn
+> „nicht zugeordnet" ist im Baum ein Partnerknoten wie jeder andere, und 270, weil E‑45 zwanzig
+> Richtungsgruppen keine eigene Zeile mehr gibt. **Beide Zählungen sind richtig und zählen
+> Verschiedenes.** Die 155 aus §2 ist etwas Drittes: die *falsche* Zahl der Schreibweisenkollision,
+> die E‑41 behoben hat.
+
+### Ein Tabstopp, nicht 1.158
+
+Roving `tabindex`: Genau eine Zeile trägt `tabIndex={0}`, alle anderen `-1`. Wer aus dem
+Eingrenzungsfeld heraus tabbt, landet im Baum und nicht in seiner ersten von tausend Zeilen.
+
+**Der Tabstopp liegt auf der gewählten Zeile, wenn es eine gibt** — wer über einen tiefen Link
+kommt, tabbt an seiner Stelle weiter und nicht am Anfang.
+
+### Die Tastatur
+
+| Taste | Wirkung |
+|---|---|
+| ↓ / ↑ | eine sichtbare Zeile weiter, an den Enden **stehen bleiben** statt umzuspringen |
+| Pos1 / Ende | erste / letzte sichtbare Zeile |
+| → | zugeklappt: **aufklappen**. Offen: zum ersten Kind. Auf einem Blatt: nichts |
+| ← | offen: **zuklappen**. Sonst: zum Elternknoten |
+| Eingabe / Leertaste | Blatt: **auswählen**. Gruppe: umklappen |
+
+**Rechts klappt auf und springt nicht zugleich.** Zwei Tastendrücke, wie im WAI‑ARIA-Muster: Ein
+Sprung in einem Zug übersprünge die Rückmeldung, dass überhaupt etwas aufgegangen ist.
+
+**Die Regel steht als reine Funktion** (`prozessbaum.ts` `tastenbefehl`) und wird als solche geprüft
+— nicht über einen gerenderten Baum. Die Komponente führt nur aus.
+
+**Unterdrückt wird die Voreinstellung für jede Taste, die der Baum an sich zieht** — auch dort, wo
+sie nichts bewirkt: `ArrowDown` auf der letzten Zeile darf die Seite nicht scrollen.
+
+### Startzustand: alles zugeklappt
+
+154 Partner passen nicht auf einen Bildschirm (§9); Vorklappen scheidet aus. **Der Aufklappzustand
+ist abgeleitet und wird nicht nachgeführt:** Offen ist ein Knoten, wenn der Nutzer ihn umgeschaltet
+hat — hat er das nicht, entscheidet der Pfad zum gewählten Prozess. Damit öffnet ein tiefer Link den
+Baum an der richtigen Stelle, **ohne** dass ein Effekt Zustand nachträgt (`setState` im Effekt ist
+im Projekt verboten, und ein Effekt liefe hier ohnehin erst nach dem ersten Malen).
+
+**Ein tiefer Link zeigt die Stelle und nicht nur den offenen Ast.** `scrollIntoView` mit
+`block: "nearest"` — es scrollt **nur, wenn nötig**: Wer im Baum weiterklickt, sieht seine Zeile
+ohnehin, und ein Sprung bei jedem Klick wäre eine Bewegung, die niemand angefordert hat
+([`visuelles-konzept.md`](visuelles-konzept.md) §7). **Kein Fokussprung** — der nähme dem Nutzer die
+Stelle, an der er gerade war.
+
+> **Und gar kein Sprung, solange ein Panel offen ist.** Baum und rechte Spalte sitzen im *einen*
+> Scrollbereich; ein Sprung tief in den Baum nähme das Panel daneben mit nach oben aus dem Bild.
+> Bei `NEXANS` liegt eine Zeile in der Mitte des zugeklappten Baums rund 3.400 px unten — das Panel
+> stünde dann oberhalb des Sichtfensters. **Wer einen Link auf eine Nachricht öffnet, will zuerst
+> den Beleg sehen**; der Baum steht offen an der richtigen Stelle und wird nur nicht angesprungen.
+> Gefunden in der Gegenprüfung, §19.
+
+**Eine Modifiertaste gehört dem Browser.** Der Handler steigt bei `Alt`, `Strg`, `Meta` und
+`Umschalt` aus, **bevor** er die Voreinstellung unterdrückt. Sonst verschlucht der Baum `Alt+←` —
+ausgerechnet die Taste, für die `prozess` und `nachricht` mit `history: "push"` überhaupt erst
+Verlaufseinträge anlegen. Das WAI‑ARIA-Beispiel für `treeview` steigt an derselben Stelle aus.
+
+**Weicht der Baum, geht der Fokus mit.** Unter `md` verschwindet die Baumspalte, sobald ein Prozess
+gewählt ist — und mit ihr die Zeile, die gerade den Fokus trägt; er fiele sonst an `document.body`,
+und der nächste Tabulator begänne wieder am Anwendungsrahmen. Der Fokus geht deshalb auf „Zurück zum
+Baum", die Schaltfläche an genau der Stelle, an der der Baum eben war. **Ohne Abfrage der
+Fensterbreite in JavaScript:** Die Schaltfläche trägt `md:hidden`, und `focus()` tut auf einem
+`display: none`-Element nichts — ab `md` bleibt der Fokus damit von selbst dort, wo der Nutzer ihn
+hatte. **Nicht beim ersten Rendern**: Ein tiefer Link ist keine Handlung des Nutzers.
+
+### E‑45 in Zahlen — was das Überspringen tatsächlich tut
+
+Am gerenderten Baum ausgezählt, mit den echten Daten:
+
+| Mandant | Zeilen offen | Partnerknoten | Richtungsknoten | Blätter Ebene 2 | Blätter Ebene 3 |
+|---|---:|---:|---:|---:|---:|
+| `NEXANS` | 1.158 | 155 | **270** | 31 | 702 |
+| `VOTG` | 523 | 133 | **0** | 390 | 0 |
+| `IBIS` | 391 | 79 | **120** | 24 | 168 |
+| `SUTTONS` | 18 | 1 | **0** | 17 | 0 |
+
+**Bei `VOTG` verschwinden 133 Knoten**, die alle „nicht ermittelt" geheißen hätten — der Baum wird
+von 656 auf 523 Zeilen kürzer, und keine einzige leere Richtungsebene bleibt stehen. Das ist offener
+Punkt **108**, und er ist damit beantwortet.
+
+**Bei `NEXANS` erweist sich E‑45 als die kleinere Wirkung, die sie ist:** 20 von 155 Partnerknoten
+verlieren die Ebene, 31 von 733 Blättern rücken herauf. **Die Ungleichförmigkeit ist damit sichtbar
+und gering** — 4,2 % der Blätter stehen eine Ebene weiter links als ihre Nachbarn. *Gemessen war die
+Zahl; behauptet wird, dass ein Nutzer daran keinen Anstoß nimmt — das ist eine Auslegung und keine
+Messung.* **Angesehen ist sie seit dem 02.09.2026** (§21): Die beiden Sorten sind im Bild ohne Klick
+zu unterscheiden — die eine Zeile trägt ein Aufklappzeichen, die andere das Richtungszeichen. **Ein
+Nutzer ist dafür nicht befragt worden**; die Auslegung bleibt eine.
+
+**`SUTTONS` ist der Fall, an dem die Regel nicht scheitern darf**: kein Katalog, 17 Prozesse, alle
+ohne Partner. Der Baum zeigt **einen** Knoten „nicht zugeordnet" und darunter 17 Blätter, jedes mit
+dem Zeichen für „nicht ermittelt". **Die Ansicht ist dort nicht leer.**
+
+### Das Zeichen am Zeilenanfang — eine Stelle, drei Bedeutungen
+
+| Zeile | Zeichen |
+|---|---|
+| Gruppe (Partner, Richtung) | das Aufklappzeichen |
+| Blatt, dessen Richtungsebene wegfiel | **die Richtung** — `↙` eingehend, `↗` ausgehend, gestrichelter Kreis „nicht ermittelt" |
+| Blatt unter einer stehenden Richtungsebene | leer — die Angabe stünde sonst zweimal übereinander |
+
+**„Nicht ermittelt" ist ein eigenes Zeichen und nicht die Abwesenheit eines Zeichens.** §3 des
+visuellen Konzepts gilt: eine leere Stelle sagt nichts. Deshalb der gestrichelte Kreis und nicht
+nichts — bei `VOTG` trägt ihn jede der 390 Zeilen.
+
+> ### ⚠️ Korrektur vom 02.09.2026 — **E‑55: an dieser Stelle steht das Wort** (§25)
+>
+> Die Tabelle darüber beschreibt den Zustand **bis** zum 02.09.2026. Sie bleibt stehen, damit
+> erkennbar bleibt, wovon abgewichen wird. Seither gilt:
+>
+> | Zeile | neu |
+> |---|---|
+> | Gruppe (Partner, Richtung) | das Aufklappzeichen — **unverändert** |
+> | Blatt ohne Richtungsebene, Richtung **bekannt** | **das Wort** („Eingehend" / „Ausgehend"), gedämpft, vor dem Prozessnamen |
+> | Blatt ohne Richtungsebene, Richtung **nicht ermittelt** | **nichts** — der gestrichelte Kreis entfällt |
+> | Blatt unter einer stehenden Richtungsebene | leer — **unverändert** |
+>
+> **Der Verzicht ist der Kern, und er ist bewusst gegen
+> [`visuelles-konzept.md`](visuelles-konzept.md) §3 getroffen** („eine leere Stelle sagt nichts").
+> Die Begründung: Die Angabe steht im Katalog, und ein Zeichen an *jeder* Zeile eines Mandanten
+> ohne kuratierte Richtung — bei `VOTG` alle 390 — sagt dort nichts, was der Nutzer nicht schon
+> weiß. Ein Zeichen, das nie fehlt, unterscheidet nichts.
+>
+> **Der Wortlaut kommt aus der Textquelle** (`texte.prozesse.richtung`), nicht aus der Komponente,
+> und er steht in beiden Sprachen. **Die Eingrenzung greift weiterhin nicht auf ihn zu** — gefiltert
+> wird über die Werte der Antwort, sonst fände dieselbe Eingabe je nach Sprache Verschiedenes
+> (Regel Q4). Die Regel steht als reine Funktion `richtungswort` in `prozessbaum.ts`.
+>
+> **Nebenbei berichtigt:** Die Zeichenfassung ließ einen *gepflegten, aber unbekannten* vierten
+> Katalogwert in denselben gestrichelten Kreis fallen wie `null` — im Bild war er damit von „nicht
+> ermittelt" nicht zu unterscheiden, obwohl der `title` ihn nannte. Als Wort steht er da, wie er im
+> Katalog steht.
+>
+> **Was es kostet, ist gemessen** (M128, §25) — und es kostet weniger als gedacht: Bei 26 rem
+> brechen über alle vier Mandanten **91 von 1.332** Namen um gegen 132 vorher. Das Wort ersetzt ein
+> Zeichen von 14 px samt 6 px Abstand; wo kein Wort tritt (`VOTG`, `SUTTONS`), wird die Zeile um
+> 20 px breiter.
+
+### Die drei Zustände in der Zeile
+
+| Zustand | Darstellung | warum |
+|---|---|---|
+| **bewegt** | nichts | der unmarkierte Normalfall (E‑35) |
+| **still** | eine **Marke** in gedämpfter Fläche: „seit über 3 Monaten nichts" | ein **Vorfall** — es gab eine Beziehung, und sie ist verstummt. 0 bis 28 je Mandant (M111): eine Menge, die jemand durchsieht |
+| **nie** | die Zeile **gedämpft**, dazu das Wort „noch nie" in gedämpfter Schrift | eine **Katalogfrage** und kein Vorfall. Bei fünf von zehn Mandanten die größte Menge |
+
+**Keine eigene Farbrolle.** `--ueberfaellig` gehört der Kategorie *Überfällig* und darf nicht für
+einen zweiten Sachverhalt stehen; „still" nimmt deshalb die Marken-Gestalt aus
+`components/marke.tsx` — gedämpfte Fläche, kleiner Radius, kein Rahmen, keine Statusfarbe.
+
+> ### Warum „nie" trotzdem ein Wort bekommt, obwohl es „nicht markiert" sein soll
+>
+> **Weil eine Dämpfung allein eine Farbaussage ist.** §3 des Konzepts: *Status wird nie allein über
+> Farbe ausgedrückt.* Wäre „nie" nur eine hellere Zeile, unterschiede sich ein Prozess, der **noch
+> nie** etwas getragen hat, von einem, der im gewählten Fenster zufällig **null** Nachrichten hatte,
+> allein durch seine Helligkeit — und beide zeigen dieselbe `0`.
+>
+> **Das Wort ist trotzdem keine Markierung.** Keine Marke, keine Farbrolle, kein Zeichen: nur ein
+> Wort in gedämpfter Schrift. Der Unterschied zu „still" ist sichtbar und beabsichtigt.
+>
+> **Die Schwelle steht nicht im Code.** Sie kommt als `stilleSchwelleMonate` aus der Antwort
+> (E‑37); die Oberfläche beschriftet damit und rechnet nichts nach. Eine andere Antwort ergibt einen
+> anderen Text, ohne Codeänderung — `tests/prozessbaum.test.ts` hält genau das fest.
+
+> ### ⚠️ Korrektur vom 02.09.2026 — **E‑56: „nie" wird in der Zeile nicht mehr gekennzeichnet**
+>
+> Der Kasten darüber bleibt stehen: Seine Logik ist richtig, **solange** „nie" überhaupt in der
+> Zeile steht. Genau das ist entschieden worden — es steht nicht mehr darin. Von den drei Zuständen
+> sind sichtbar **zwei**:
+>
+> | Zustand | neu |
+> |---|---|
+> | **bewegt** | nichts — unverändert |
+> | **still** | die Marke „seit über 3 Monaten nichts" — **unverändert** |
+> | **nie** | **nichts**: weder das Wort noch die Dämpfung |
+>
+> **Beides zusammen, und das ist der Kern.** Bliebe die Dämpfung ohne das Wort stehen, wäre der
+> Zustand allein über Helligkeit ausgedrückt — genau der Fall, den der Kasten darüber beschreibt
+> und den [`visuelles-konzept.md`](visuelles-konzept.md) §3 verbietet. Der Kasten ist also nicht
+> widerlegt, sondern gegenstandslos geworden.
+>
+> **Der Grund ist die Sache selbst und nicht die Menge:** Der Katalog führt denselben Sachverhalt
+> (E‑36). Ein Prozess, über den noch nie etwas gelaufen ist, ist ein **Katalogeintrag ohne Verkehr**
+> und kein Vorfall; ein neu angelegter Partner sähe in der Zeile sonst aus wie ein Fehlerfall.
+> „still" bleibt, weil es das Gegenteil ist — es gab eine Beziehung, und sie ist verstummt.
+>
+> **Auch im `aria-label`** (E‑52): Sichtbare und vorgelesene Fassung dürfen nicht auseinanderlaufen,
+> und `tests/prozessbaum.test.ts` hält beides fest.
+>
+> **Was bleibt:** die Zählung in der Kopfzeile („… — 23 bewegt, 1 still, 11 noch nie"), der Schalter
+> „Nur mit Verkehr im Zeitraum" samt E‑48 und das Backend vollständig — E‑35 und E‑36 gelten
+> unverändert, `zustand` wird weiter geliefert.
+>
+> ⚠️ **Der Preis ist benannt:** Die Zahl aus der Kopfzeile ist im Baum nicht mehr **einzeln**
+> auffindbar. Der Weg dorthin ist der Schalter; dass er ausreicht, ist eine Auslegung und keine
+> Messung — offener Punkt **120**.
+
+### Die Zahlen je Knoten
+
+**Nachrichten und Fehler — nicht Überfällig** (E‑43): Die Kategorie steht nicht im Baum, und die
+Zahl steht in der Übertragungsliste rechts ohnehin.
+
+- **Die Nachrichtenzahl steht immer da, auch als `0`.** Null ist eine Aussage und kein fehlender
+  Wert (§3).
+- **Die Fehlerzahl nur, wenn es welche gibt**, mit Zeichen und in der Fehlerfarbe. Eine rote `0` auf
+  1.158 Zeilen wäre ein Flächenteppich, und die Farbe verlöre genau das, wofür sie da ist.
+
+Die Farbe kommt aus `lib/status-farbe.ts` (`statusVordergrund`), nicht aus der Komponente — die
+Datei hat dafür eine vierte Fassung bekommen: **nur der Vordergrund**, ohne Fläche und ohne Kontur.
+Eine Plakette je Zeile wäre bei dieser Menge eine Fläche und keine Auszeichnung.
+
+### E‑52 — Ein `aria-label` je Zeile statt vieler `sr-only`-Spannen
+
+Sichtbar trägt eine Zeile **zwei** Zahlen ohne Beschriftung: die Nachrichten und, wenn es welche
+gibt, die Fehler. Vorgelesen wäre das „ACME 8.608 2" — zwei Zahlen ohne Aussage.
+
+Stattdessen trägt jede Zeile einen zusammengesetzten Namen: *„ACME, Partner, Prozesse: 12,
+Nachrichten: 8.608, Fehler: 2"*. **Er nennt eine Angabe mehr als die Zeile zeigt** — die Zahl der
+Prozesse unter einem Knoten, die ein sehender Nutzer durch Aufklappen erfährt und ein hörender
+sonst gar nicht. **Die Zusammensetzung ist eine Entscheidung** — welche Angabe in welcher
+Reihenfolge — und steht als reine Funktion in `prozessbaum.ts`.
+
+**Der Zahlenblock der Zeile ist dabei `aria-hidden`**, damit die Zahlen nicht ein zweites Mal
+unbeschriftet danebenstehen.
+
+> ### Warum nicht `sr-only` neben jede Zahl
+>
+> Weil es der naheliegende Weg ist und der teurere. Zwei Spannen je Zeile sind bei 1.158 Zeilen über
+> zweitausend zusätzliche Knoten, **und jeder davon ist `position: absolute`** — also ein Kandidat
+> für genau den Befund aus [`frontend-grundlagen.md`](frontend-grundlagen.md) §7, bei dem vier
+> verirrte `sr-only`-Elemente 1.354 px Scrollfläche am Dokument erzeugt haben.
+>
+> Der zweite Grund wiegt schwerer: Ein Name, der aus dem Textinhalt zusammengelesen wird, ist die
+> Reihenfolge des Markups — und die ist keine Entscheidung, die irgendwo geprüft würde. Als
+> `aria-label` ist sie eine reine Funktion mit einem Test.
+
+**„Prozesse: 12" und nicht „12 Prozesse":** Diese Anwendung kennt keine Pluralregeln
+(`i18n/index.ts` `einsetzen`), und „1 Prozesse" wäre der Preis dafür.
+
+### Die Eingrenzung
+
+**Örtlich und nicht serverseitig.** Die Antwort liegt vollständig vor (E‑33); ein Serverparameter
+brächte genau die Fallstricke mit, die den Freitextfilter der Liste teuer machen
+([`prozessauswahl.md`](prozessauswahl.md) §9). **Deshalb auch keine Entprellung** — es geht keine
+Anfrage hinaus, und was 0,07 ms kostet, braucht keine.
+
+**Sie filtert Partner *und* Prozessnamen, und ein Partner bleibt stehen, dessen Kind trifft.**
+Trifft der **Partner** selbst, bleiben **alle** seine Prozesse stehen: Wer nach einem Partner sucht,
+will dessen Prozesse sehen und nicht die Teilmenge, deren Namen zufällig denselben Text tragen.
+
+**Sie greift nicht auf die Richtung zu** und nicht auf die Wörter „nicht zugeordnet" oder „nicht
+ermittelt": Beides sind Texte der *Oberfläche* und stünden in zwei Sprachen verschieden da.
+Gefiltert wird über die Werte, die die Antwort trägt (Regel Q4).
+
+> **Die Zahlen eines eingegrenzten Knotens sind die Summe seiner sichtbaren Blätter** — und nicht
+> die Zahl, die die Antwort für den ganzen Knoten nennt. Sonst stünde über zwei Zeilen „12
+> Prozesse". **Die Rechnung ist exakt und keine Näherung**: Alle drei Kennzahlen sind über die
+> Blätter additiv, und der Dienst bildet sie genauso. Ohne Eingrenzung fällt sie deshalb mit den
+> gelieferten Werten zusammen, und `tests/prozessbaum.test.ts` hält genau das fest — die Probe wäre
+> rot, wenn das Backend seine Summen je änderte.
+
+**Der Kopf der Baumspalte klebt** (`sticky`). Bei 154 Partnern und aufgeklappt 1.158 Zeilen wäre ein
+Eingrenzungsfeld, das mit dem Baum nach oben wandert, nach zwei Bildschirmen nicht mehr erreichbar.
+`sticky` braucht dafür **keinen** eigenen Scrollcontainer; es hängt sich an den des
+Anwendungsrahmens, genau wie die Tabellenkopfzeilen von Katalog und Benutzerverwaltung.
+
+### Kein eigener Scrollbereich — und was das kostet
+
+Beide Spalten sitzen im **einen** Scrollbereich des Anwendungsrahmens
+([`frontend-grundlagen.md`](frontend-grundlagen.md) §7). Kein `overflow-y-auto`, kein `h-full`, kein
+`h-dvh` — ein zweiter wäre der erste Verstoß gegen genau die Regeln, die dort gemessen worden sind,
+und dieselbe Festlegung wie beim Nachrichtenpanel
+([`nachrichtendetail.md`](nachrichtendetail.md) §10.7).
+
+**Die Folge ist benannt:** Ein weit aufgeklappter Baum ist mehrere Bildschirme hoch — bei `NEXANS`
+54.626 px — und schiebt die Liste daneben nach oben aus dem Bild. Wer weit unten im Baum etwas
+wählt, muss zurückscrollen. Der klebende Kopf mildert das für die Eingrenzung und nicht für die
+Liste.
+
+**Es gibt bewusst kein „alles aufklappen".** Damit entsteht der Zustand mit 1.158 Zeilen nur, wenn
+jemand **425 Knoten** einzeln öffnet — 155 Partnerknoten und die 270 Richtungsknoten darunter.
+
+### M120 — was der Baum kostet
+
+**Der Browser-Teil**, gemessen in kopflosem Chrome: HTML auswerten, Stil und Layout, beste von zehn
+nach einem Aufwärmlauf.
+
+| Mandant | zugeklappt | | vollständig aufgeklappt | |
+|---|---:|---:|---:|---:|
+| | Zeilen / Knoten | ms | Zeilen / Knoten | ms |
+| `NEXANS` | 155 / 1.092 | **9,2** | 1.158 / 7.802 | **84,7** |
+| `VOTG` | 133 / 932 | 8,2 | 523 / 7.136 | 56,8 |
+| `IBIS` | 79 / 554 | 5,0 | 391 / 2.729 | 30,2 |
+| `SUTTONS` | 1 / 8 | 0,1 | 18 / 263 | 2,3 |
+
+**Der Startzustand des größten Mandanten kostet 9,2 ms.** Die 84,7 ms sind der Zustand, den ein
+Nutzer sich in **425 Klicks** selbst baut — es gibt kein „alles aufklappen".
+
+**Die reinen Funktionen**, gemessen in Node, beste von 20 bis 50 Läufen:
+
+| | `NEXANS` (733) | `VOTG` (390) | `IBIS` (192) | `SUTTONS` (17) |
+|---|---:|---:|---:|---:|
+| `JSON.parse` der Antwort | 0,420 ms | 0,395 | 0,260 | 0,008 |
+| Eingrenzung, ohne Begriff | 0,067 | 0,029 | 0,025 | < 0,001 |
+| Eingrenzung, mit Begriff | 0,066 | 0,035 | 0,027 | 0,001 |
+| Eingrenzung, mit Schalter | 0,032 | 0,007 | 0,012 | < 0,001 |
+| Zeilen, zugeklappt | 0,005 | 0,006 | 0,003 | < 0,001 |
+| Zeilen, aufgeklappt | 0,080 | 0,041 | 0,044 | 0,001 |
+| alle `aria-label` | 0,959 | 0,731 | 0,640 | 0,013 |
+
+**Die Eingrenzung kostet je Tastendruck 0,07 ms.** Das ist die Zahl, die die Entscheidung gegen eine
+Entprellung trägt.
+
+**Kein Virtualisieren — gemessen, nicht vermutet.** Dreißig Sprünge à 1.000 px, jeder mit
+erzwungenem Layout, **dasselbe Verfahren wie in [`prozessauswahl.md`](prozessauswahl.md) §7a**:
+
+| | Knoten | Höhe | Summe über 30 Sprünge | schlechtester Einzelwert |
+|---|---:|---:|---:|---:|
+| `NEXANS`, alles offen | 7.802 | 54.626 px | **0,3 ms** | **0,1 ms** |
+| `VOTG`, alles offen | 7.136 | 30.126 px | 0,2 ms | 0,1 ms |
+
+Dieselben Zahlen wie dort (0,3 und 0,1) bei 1,8-mal so vielen Knoten. **Ruckelt es nicht, bleibt es
+beim Einfachen.**
+
+> ### ⚠️ Belegvermerk zu M118 und M120 (Regel L10)
+>
+> *Gemessen war:* die gebaute Komponente, mit den echten Daten der Testkopie, in der laufenden
+> Anwendung (echte Schrift, echtes Stylesheet, echte Klassen) — Umbrüche, Zeilenhöhen,
+> Gesamthöhen, Auswerte- und Layoutzeit, Scrollzeit; dazu die reinen Funktionen in Node.
+>
+> *Behauptet wird:* dass die Ansicht **als ganze** so schnell ist. **Das ist sie nicht belegt.** Was
+> fehlt, ist die Arbeit von React selbst und der Weg über den Endpunkt — beides braucht eine
+> Anmeldung an der laufenden Anwendung, und die stand für diese Runde nicht zur Verfügung.
+>
+> *Die Lücke ist benannt und nicht überbrückt:* Ein Versuch, die Renderzeit in `jsdom` zu messen,
+> hat Zahlen geliefert, die **nicht mit der Zeilenzahl steigen** (`VOTG` mit 523 Zeilen langsamer
+> als `NEXANS` mit 1.158). Sie stehen deshalb hier nicht — eine Zahl, deren Rauschen größer ist als
+> ihr Gegenstand, ist keine Messung. **Die Lücke ist am 02.09.2026 geschlossen worden** (§21, M123):
+> 98 ms zwischen der fertigen Antwort und dem Baum im DOM bei `NEXANS`, und die Werte steigen dort
+> mit der Zeilenzahl, wie sie es sollen.
+
+---
+
+## 18. Die Übertragungsliste und das Panel
+
+### Verdrahtet, nicht nachgebaut
+
+Rechts steht **die Nachrichtenliste** — dieselbe Tabelle (`NachrichtenTabelle`), dasselbe Blättern
+(`Blaettern`), derselbe Prozessfilter des Endpunkts ([`nachrichtenliste.md`](nachrichtenliste.md)
+§1). **An beiden Bausteinen ist nichts geändert worden.**
+
+Was fehlt, fehlt mit Grund: **keine Filterleiste.** Zeitraum und Prozess sind hier gesetzt, und ein
+zweiter Zeitraumschalter neben dem im Kopf wäre ein zweiter Standardwert.
+
+Was bleibt, bleibt aus demselben Grund: **Sortierumschalter und automatische Aktualisierung** sind
+Teil der Tabelle beziehungsweise des Blätterblocks, und sie hier wegzunehmen hieße, dieselbe Liste
+an zwei Orten verschieden zu bauen. Die Sortierung steht in der URL (sie beschreibt den Ausschnitt),
+der Aktualisierungsschalter im Komponentenzustand (er beschreibt die Arbeitsweise des Betrachters) —
+beides genau wie in der Nachrichtenliste.
+
+> **Die verdeckte Liste aktualisiert nicht weiter.** Sie bleibt montiert, wenn das Panel sie
+> verdeckt — das hält ihre Seitenposition —, aber ihr Intervall hängt an beidem: am Schalter **und**
+> daran, ob sie im Bild ist. `useNachrichtenSeite` prüft von sich aus nur `document.hidden`, also
+> die Registerkarte. Ohne diese Angabe ginge alle sechzig Sekunden eine Abfrage für eine Liste
+> hinaus, die niemand sieht — **und abschalten könnte der Nutzer sie nicht, denn der Schalter steckt
+> in demselben verdeckten Bereich.** In der Nachrichtenliste tritt das nicht auf: Dort weicht die
+> Liste erst unter `xl` und bleibt darüber bedienbar. Gefunden in der Gegenprüfung, §19.
+
+> ### ⚠️ Korrektur vom 02.09.2026 — **die Sonderregel ist mit E‑57 entfallen** (§27)
+>
+> Der Kasten beschreibt, was bis dahin galt, und er bleibt stehen: Ohne ihn wäre nicht mehr zu
+> sehen, wogegen die Angabe einmal gebaut war. **Mit E‑57 weicht der Baum und nicht die Liste** —
+> ab `xl` steht sie neben dem Panel und bleibt bedienbar. Der Grund für die Sonderregel ist damit
+> weg, und eine Bedingung stehen zu lassen, deren Grund entfallen ist, wäre schlechter als beides:
+> Sie sähe aus wie eine Regel und wäre keine. `useNachrichtenSeite` bekommt seither nur noch den
+> Schalter, genau wie in der Nachrichtenliste.
+>
+> ⚠️ **Was zurückbleibt, und es ist nicht nichts:** **Unter `xl` weicht die Liste weiterhin**, und
+> dort kehrt der alte Fall zurück — verdeckt, aktualisierend, und der Schalter dazu im verdeckten
+> Bereich. Er ist damit **derselbe**, den die Nachrichtenliste seit Schritt 5 trägt: Auch dort steht
+> `useNachrichtenSeite` ohne diese Angabe, und auch dort weicht die Liste unter `xl`. Der Satz oben
+> („In der Nachrichtenliste tritt das nicht auf") war für **ab** `xl` richtig und für darunter zu
+> großzügig. Ihn hier allein zu behandeln hieße wieder, dieselbe Liste an zwei Orten verschieden zu
+> bauen; ihn über die Fensterbreite zu behandeln hieße, einen zweiten Umbruchpunkt in JavaScript zu
+> führen. Geführt als offener Punkt **121**.
+
+**Vor der Wahl eines Prozesses steht rechts ein Leerzustand** und nicht die ganze Liste des
+Mandanten. Dafür gibt es die Nachrichtenliste, und dorthin führt ein Verweis. **Solange kein Prozess
+gewählt ist, läuft keine Abfrage** — die Liste ist eine eigene Komponente, damit das nicht von einem
+`enabled`-Schalter abhängt: Hooks laufen nicht bedingt, also läuft die Komponente bedingt.
+
+### E‑50 — Das Fenster kommt aus der Antwort des Baums
+
+Die Liste kennt die drei Rollup-Paare nicht; ihre relativen Zeiträume heißen `24h`, `7d`, `30d`
+(`lib/filter.ts`), und **keines der sechs fällt mit einem der anderen zusammen**. Es bleibt der
+zweite Modus: `von`/`bis`.
+
+**Und das ist nicht der Notausgang, sondern die richtige Antwort.** Beide Seiten lesen dieselbe
+Spalte: Der Rollup gruppiert nach `MessageLastUpdate`, und die Liste filtert über dieselbe
+(`NachrichtenRepository`, Zeile 171/172). Mit demselben Fenster zeigen Baum und Liste **denselben
+Ausschnitt**; mit einem eigenen Zeitraum stünden links und rechts zwei verschiedene Zahlen, und
+keine wäre falsch.
+
+**Gerechnet wird im Browser nichts.** Das Fenster kommt aus der Antwort, die es gegen die
+*Anwendungsuhr* aufgelöst hat (Regel Z1) — im Browser gerechnet wäre es gegen die Browseruhr
+gerechnet, und die Testkopie liegt Monate hinter der realen Uhrzeit.
+
+> **Die eine benannte Ungenauigkeit.** Die obere Grenze des Baums ist **ausschließend** und liegt auf
+> einer Eimergrenze; die Liste vergleicht mit `<=`. Eine Nachricht, die exakt auf `bis` liegt,
+> erschiene links nicht und rechts schon. Das wird **nicht ausgeglichen**: Eine Sekunde abzuziehen
+> wäre eine Rechnung in der Oberfläche, und die ist teurer als die Ungenauigkeit.
+
+**Solange der Baum kein Fenster genannt hat, läuft keine Listenabfrage.** Die Liste hängt damit am
+Baum — bei einem tiefen Link auf `?prozess=…` lädt erst der Baum, dann die Liste. Das kostet einen
+Umlauf und ist der Preis dafür, dass beide dasselbe Fenster meinen.
+
+### E‑53 — Beim Öffnen des Panels weicht die Liste, der Baum bleibt
+
+> ### ⚠️ Diese Entscheidung hieß im Auftrag **E‑44**, und die Nummer war vergeben
+>
+> Der Auftrag zu 10c‑2 führt sie als `E‑44` und weist zugleich an, „die höchste
+> [Nummer] zu ermitteln". **Beides zusammen geht nicht auf:** `E‑44` steht seit
+> 10c‑1 in §10 dieser Datei für den Umzug von `Rollupzeitraum` und
+> `Katalogzuordnung` nach `common` — vergeben am selben Tag, wenige Stunden
+> vorher, und aus [`dashboard-frontend.md`](dashboard-frontend.md) sowie
+> [`frontend-grundlagen.md`](frontend-grundlagen.md) verlinkt.
+>
+> Die Panel-Entscheidung bekommt deshalb **E‑53**, die nächste freie Nummer nach
+> E‑52. Der Auftrag hat die Kollision nicht sehen können: Er ist am 02.09.2026
+> geschrieben worden, als 10c‑1 noch nicht abgeschlossen war. **Dieselbe Lage wie
+> bei `E‑v` im Dichteumschalter** ([`dichte-umschalter.md`](dichte-umschalter.md)
+> §2), und dieselbe Auflösung — die Reihe zählt weiter, der Vorschlag des
+> Auftrags wird korrigiert und nicht übernommen.
+
+**Drei Spalten sind bei 1280 px unmöglich**, und das ist jetzt beziffert: Baum (26 rem = 416 px) und
+Panel (26 rem = 416 px) sind zusammen 832 px von rund **1.016 px nutzbarer** Inhaltsbreite.
+
+> **1.016 px und nicht 1.072 px, und beides ist richtig.**
+> [`nachrichtendetail.md`](nachrichtendetail.md) §10.7 rechnet mit 1.072 px — das ist `main`
+> **einschließlich** seines Innenabstands (1280 − 208 px Navigationsspalte). Hier steht, was dem
+> Inhalt davon bleibt: abzüglich 2 × 20 px Innenabstand und rund 15 px Bildlaufleiste. Dieselbe
+> Kiste, zwei Maße; wer sie gleichsetzt, findet einen Widerspruch, den es nicht gibt.
+
+**Der Baum ist der Kontext, den der Nutzer behalten will** — er hat gerade dort ausgewählt, und die
+Liste dazwischen ist der Weg und nicht das Ziel.
+
+**Die Liste weicht, wird aber nicht ausgehängt** (`display: none`): Ihre Seitenposition bleibt
+stehen, und beim Schließen geht keine zweite Abfrage hinaus. `Escape` schließt das Panel und bringt
+die Liste zurück — über denselben Hook wie überall (`useEscapeSchliesst`), mit denselben zwei
+Ausnahmen.
+
+**Das Panel ist der vierte Einhängepunkt derselben Komponente** und bekommt genau vier Angaben:
+Kennung, Schließen, Beschriftung, Öffnen. **Ohne Ansichtsumschalter** — sein Rückweg führt an die
+Nachrichtenliste (`lib/routen.ts` `ansichtNebenListe`) und damit woandershin, als er herkam; genau
+die Überlegung, mit der die Belegsuche ihn seit dem 13.08.2026 weglässt
+([`nachrichtendetail.md`](nachrichtendetail.md) §10.7). Die beiden Angaben sind seither freiwillig,
+und ohne sie erscheint der Knopf nicht. **Dafür war nichts zu bauen.**
+
+> ### ⚠️ Korrektur vom 02.09.2026 — **E‑57 dreht E‑53 um: es weicht der Baum** (§27)
+>
+> Alles oben bleibt gültig bis auf **welche** der drei Spalten weicht. Die Rechnung stimmt weiter:
+> Baum und Panel sind bei 1280 px zusammen 832 px von rund 1.016 px, drei Spalten gehen dort nicht.
+> Der Satz, der nicht mehr gilt, ist der tragende — *„Der Baum ist der Kontext, den der Nutzer
+> behalten will."*
+>
+> **Wer mehrere Nachrichten desselben Prozesses durchsieht, braucht die Liste und nicht den Baum.**
+> Der Baum wird einmal am Anfang benutzt; die Liste ist der Ort, an dem weitergeklickt wird. Der
+> Kontext geht dabei nicht verloren, er wechselt die Form: Die Überschrift der rechten Spalte trägt
+> den Prozessnamen ohnehin.
+>
+> **Die Bauform bleibt, sie wechselt nur die Spalte:** ausgeblendet und nicht ausgehängt
+> (`display: none`), der Aufklappzustand des Baums bleibt, beim Schließen geht keine zweite Abfrage
+> hinaus, `Escape` schließt weiter über `useEscapeSchliesst`. Belegt in M129 (§27).
+>
+> **Zwei Dinge hängen daran und stehen an ihrer Stelle:** die Sonderregel der verdeckten Liste (der
+> Kasten weiter oben, entfallen) und der Fokus, wenn der Baum unter ihm weggeblendet wird (§27, die
+> zweite Hälfte der Regel aus §15).
+
+### M119 — ⚠️ Der Befund: Bei 1280 px steht die Liste nicht vollständig
+
+**Die Tabelle der Nachrichtenliste braucht 744 px.** Gemessen an der gebauten Tabelle, in kopflosem
+Chrome, bei 1280 px und bei 1920 px Fensterbreite — **mit identischem Ergebnis**:
+
+| Spaltenbreite | Zeitpunkt | Status | **Ablauf** | Projekt | Tabelle |
+|---:|---:|---:|---:|---:|---:|
+| 500 px | 184 | 272 | **0** | 288 | 744 |
+| 568 px | 184 | 272 | **0** | 288 | 744 |
+| 700 px | 184 | 272 | **0** | 288 | 744 |
+| 750 px | 184 | 272 | 4 | 288 | 748 |
+| 800 px | 184 | 272 | 54 | 288 | 798 |
+| 1.000 px | 184 | 272 | 254 | 288 | 998 |
+
+**`table-fixed` schrumpft die festen Spalten nicht — es nimmt der einzigen freien Spalte alles.**
+Zeitpunkt (11,5 rem), Status (17 rem ab `lg`) und Projekt (18 rem) stehen fest; **Ablauf** hat keine
+Breitenangabe und bekommt den Rest. Ist kein Rest da, ist die Spalte **null Pixel breit**, und die
+Tabelle scrollt waagerecht in dem Container, den `components/ui/table.tsx` selbst mitbringt.
+
+**Was das für die Prozessansicht heißt:** Bei 1280 px bleiben der Liste neben dem Baum rund 584 px.
+Die Ablaufspalte — **der Name, an dem man eine Zeile erkennt** — ist dann nicht sichtbar, ohne
+waagerecht zu scrollen.
+
+**Und es liegt nicht an der Breite des Baums.** Damit die Liste 744 px bekäme, dürfte er höchstens
+**16 rem** breit sein — bei dieser Breite bricht mehr als die Hälfte aller Prozessnamen um (M118).
+**Bei 1280 px gibt es entweder einen brauchbaren Baum oder eine vollständige Liste, nicht beides.**
+
+> **Das ist ein Befund und kein Anlass für eine zweite Fassung der Liste.** Der Auftrag sagt das
+> selbst: *„Passt einer davon nicht, ist das ein Befund."* Die Tabelle so umzubauen, dass sie neben
+> einem Baum anders aussieht als allein, hieße dieselbe Liste zweimal zu bauen — und die feste
+> Zeilenhöhe samt fester Spaltenbreiten ist eine gemessene Entscheidung aus Schritt 4
+> ([`nachrichtenliste.md`](nachrichtenliste.md) §8.1). Geführt als offener Punkt **114**.
+>
+> **Ab welcher Fensterbreite sie vollständig steht, ist gerechnet und nicht gemessen:** 416 px Baum
+> + 16 px Abstand + 744 px Liste = 1.176 px Inhalt; dazu 40 px Innenabstand, 209 px Navigationsspalte
+> samt Trennlinie und rund 15 px Bildlaufleiste ergeben rund **1.440 px**. ~~Am laufenden System
+> nachzumessen.~~ **Nachgemessen** (§21, M124): Bei 1.440 px trägt der Kasten die Tabelle ohne
+> Querlauf, bei 1.280 px nicht.
+
+---
+
+---
+
+## 19. Tests der Oberfläche
+
+**Geprüft werden die Entscheidungen, nicht das Markup**
+([`frontend-grundlagen.md`](frontend-grundlagen.md) §9). Der Regelfall ist eine reine
+`*.test.ts`-Datei ohne DOM; die Ausnahme ist begründungspflichtig und wird an einer Stelle gezählt.
+
+| Datei | Was sie hält |
+|---|---|
+| `tests/prozessbaum.test.ts` | **46 Fälle, alle ohne DOM.** E‑45 in beiden Richtungen: bei zwei Richtungen bleibt die Ebene und die Blätter stehen auf Ebene 3 **ohne** Richtung in der Zeile; bei einer fällt sie weg, die Blätter rücken auf Ebene 2 und **tragen die Richtung**. `null` als Richtung ist **gesetzt und nicht abwesend**. Position und Geschwisterzahl je Ebene und nicht über die flache Liste. Der Pfad zum gewählten Prozess — mit Richtung, ohne Richtung, und **leer** bei einer fremden Kennung. Die Eingrenzung: Partnertreffer behält alle Kinder, Kindtreffer behält den Partner mit nur diesem Kind, kein leerer Ast bleibt stehen, ein `null`-Name trifft nie, die **Richtung** wird nicht durchsucht. **Die Invariante**: Ohne Eingrenzung fallen die nachgerechneten Summen mit den gelieferten zusammen. Die Beschriftung: drei Richtungsfälle samt unbekanntem Wert, die Schwelle **aus der Antwort** (3 und 6 Monate ergeben verschiedene Texte), kein Zusatz bei „bewegt", keine Fehlerzahl ohne Fehler. Und das ganze WAI‑ARIA-Muster der Tastatur, einschließlich des Elternknotens **über eine weggefallene Ebene hinweg**. Dazu `ohnePfad`: dass ein Prozesswechsel genau die Umschaltungen seines Pfades vergisst und sonst keine — und dieselbe Menge zurückgibt, wenn nichts zu räumen ist |
+| `tests/prozessansicht.test.ts` | **19 Fälle.** Rundlauf URL → Zustand → URL; leer, solange nichts gewählt ist; feste Reihenfolge; der Schalter steht nur in der URL, wenn er etwas weglässt; unbekannter Zeitraum und unbekannte Sortierung werden **übergangen**; eine leere Kennung ist keine Auswahl; ein unbekannter Parameter wird übergangen. Dazu der Listenfilter: **kein Filter ohne Prozess und keiner ohne Fenster**, das Fenster kommt aus der Antwort, genau ein Prozess, die Sortierung wird durchgereicht — und **die Abfrage ist mit und ohne geöffnetes Panel Zeichen für Zeichen dieselbe**, ohne Cursor, ohne Kennung, ohne `ueberfaellig`. Dazu zwei Proben an der Naht: dass `nachricht` in Parser, Zustand und `lib/routen.ts` **denselben** Parameter meint (der Parser steht unter einem berechneten Schlüssel, an dem der Übersetzer nichts merkt), und dass eine **leere Kennung schon im Parser** wegfällt und nicht erst in `ausSuchparametern` — sonst prüfte der Test eine Regel, die die Anwendung nicht anwendet |
+| `tests/prozess-baum.test.tsx` | **10 Fälle, gerenderter Baum — begründete Ausnahme.** Vier Klassen, und alle vier stehen nur im Baum: der **roving `tabindex`** („genau einer, und er liegt auf der gewählten Zeile"), die **ARIA-Ausgabe** der flachen Form (`aria-level` 1/2/3/2/3, `aria-expanded` nur an Gruppen, `aria-selected` an jeder Zeile), und zweimal **Abwesenheit** — bei einer Richtung entsteht **keine** zweite Ebene, und es gibt **keine `sr-only`-Spanne je Zahl**. Dazu die Klassen, die selbst die Regel *sind*: `min-h-beruehrung` an jeder Zeile, `relative` und **kein** `overflow-y` am Baum. Und viertens die **Verdrahtung der Tastatur**: dass ein Pfeil Fokus und roving `tabindex` wirklich weitersetzt — und dass eine **Modifiertaste durchgelassen** wird (`Alt+←` ist das Zurück des Browsers; `tastenbefehl` sieht Modifier gar nicht) |
+| `tests/dashboard-bloecke.test.tsx` | **angepasst**: Die drei Rollup-Paare stehen seit dieser Runde auf oberster Ebene der Sprachdateien (E‑47); der Test liest sie von dort |
+| `tests/sprachdateien.test.ts` | unverändert — beide Sprachdateien tragen den neuen Abschnitt `prozesse` vollständig, und der verschobene Block `zeitraum` steht in beiden an derselben Stelle |
+| `tests/farbwerte.test.ts` | unverändert und **ohne neue Ausnahme**. Die Fehlerfarbe der Zahl kommt über `statusVordergrund` aus `lib/status-farbe.ts`; in den neuen Komponenten steht kein Farbwert und keine Farbklasse |
+| `tests/serverbausteine.test.ts` | unverändert. `app/(app)/prozesse/page.tsx` bleibt Server-Komponente und importiert nur die Ansicht, die `"use client"` trägt |
+
+**Die Zählung der gerenderten Fälle wird an genau einer Stelle geführt** — im Kopf von
+`frontend/vitest.config.mts`. Sie steht dort jetzt bei **neunundsechzig in elf Dateien**; bei der
+Gelegenheit ist ein Widerspruch berichtigt worden, den dieselbe Datei mit sich selbst hatte (die
+Tabellensumme nannte neunundfünfzig, der Schlusssatz neunundvierzig).
+
+### ⚠️ Vier Befunde aus der Gegenprüfung — und was sie geändert haben
+
+Die Runde ist nach dem Bau gegen die Abnahmeliste, die Projektregeln und auf Fehler gegengelesen
+worden: vier Blickwinkel parallel, danach je eine Gegenprobe mit dem Auftrag, den Befund zu
+**widerlegen**. Von 37 Befunden haben 23 standgehalten. **Vier davon waren Fehler im Verhalten**,
+und sie stehen hier, weil jeder von ihnen an einer Naht saß, die keine reine Funktion abdeckt.
+
+#### 1. Der tiefe Link schob das Panel aus dem Bild
+
+**Der Fall:** `/prozesse?prozess=…&nachricht=…`, ein Prozess in der Mitte des Baums. Der Effekt, der
+die gewählte Zeile ins Bild holt, scrollte den **einen** Scrollbereich des Anwendungsrahmens — und
+damit die rechte Spalte mit. Bei `NEXANS` liegt die Zielzeile mehrere tausend Pixel unten; das
+Panel stand danach oberhalb des Sichtfensters. **Von den drei Dingen, die der Auftrag verlangt —
+Baum, Panel, richtige Stelle —, waren nur zwei zugleich zu haben.**
+
+**Die Änderung:** Der Baum springt nur, **wenn kein Panel offen ist** (`springeZurAuswahl`). Wer
+einen Link auf eine *Nachricht* öffnet, will zuerst den Beleg sehen; der Baum ist der Kontext, den
+er danach sucht — und er steht offen an der richtigen Stelle, nur eben nicht angesprungen.
+
+**Warum das kein Test gefunden hat:** Der Effekt ruft `scrollIntoView`, und `jsdom` rechnet kein
+Layout. ~~Der Fall bleibt am laufenden System nachzusehen.~~ **Nachgesehen am 02.09.2026** (§21,
+M125): Mit `&nachricht=` bleibt `main.scrollTop` auf **0**, das Panel steht im Bild — die Änderung
+hält. **Der Gegenfall ist dabei aufgefallen und ist der schwerere:** *ohne* `&nachricht=` springt der
+Baum wie vorgesehen, und damit verlässt die Liste das Bild (offener Punkt **118**).
+
+#### 2. Der Baum verschluckte `Alt+←` — das Zurück des Browsers
+
+**Der Fall:** `beiTaste` sah nur `ereignis.key` an. `Alt+←` traf damit auf `ArrowLeft`, wurde mit
+`preventDefault` abgefangen und klappte einen Knoten zu, statt zurückzunavigieren. **Ausgerechnet
+die Taste, für die `prozess` und `nachricht` mit `history: "push"` überhaupt erst Verlaufseinträge
+anlegen.** Dasselbe für `Strg+Pos1` und `Strg+Ende`.
+
+**Die Änderung:** Der Handler steigt bei jeder Modifiertaste aus, bevor er etwas unterdrückt — so
+wie das WAI‑ARIA-Beispiel für `treeview`.
+
+**Warum das kein Test gefunden hat:** `tastenbefehl` ist eine reine Funktion und **sieht Modifier
+gar nicht**; die Verdrahtung darum war ungeprüft. `tests/prozess-baum.test.tsx` hat dafür zwei
+Fälle bekommen — einen für `Alt+←`, einen für den Pfeil ohne Modifier als Gegenprobe.
+
+#### 3. `?prozess=` — die Schutzregel lief nur im Test
+
+**Der Fall:** Die Regel „eine leere Kennung ist keine Auswahl" stand in `ausSuchparametern` — also
+in der Funktion, die der **Test** ruft, und nicht in der, die die **Anwendung** ruft. Zur Laufzeit
+liest `nuqs` über `parseAsString`, und der hält einen leeren String **nicht für abwesend**:
+`/prozesse?prozess=` ergab `""`. Folge: Der Baum wich unter `md`, und der Listenfilter bekam
+`prozess: [""]`. **Das Backend wirft leere Werte weg, und ein leerer Prozessfilter heißt dort
+„alle"** — rechts stand unter der Überschrift eines Prozesses der gesamte Verkehr des Mandanten.
+
+**Die Änderung:** Die Regel ist in einen eigenen Parser gewandert (`parseAsKennung`), und
+`ausSuchparametern` benutzt denselben. **Test und Laufzeit prüfen seither dieselbe Regel.**
+
+> **Das ist die allgemeinere Lehre dieser Runde**, und sie gilt über diese Ansicht hinaus: Eine
+> Regel, die nur in der Funktion steht, die der Test ruft, ist keine Regel der Anwendung. Der
+> Zweischritt aus [`frontend-grundlagen.md`](frontend-grundlagen.md) §8 fragt, *ob* ein Zustand in
+> die URL gehört — er fragt nicht, *wer* ihn liest.
+
+#### 4. Die verdeckte Liste fragte weiter ab, und ihr Schalter war unerreichbar
+
+**Der Fall:** Die Übertragungsliste bleibt montiert, wenn das Panel sie verdeckt (E‑53) — das hält
+ihre Seitenposition. `useNachrichtenSeite` prüft für sein Intervall aber `document.hidden`, also die
+**Registerkarte**, nicht die Sichtbarkeit des Elements. Wer die automatische Aktualisierung
+einschaltete und dann eine Nachricht öffnete, schickte alle sechzig Sekunden eine Abfrage auf die
+Produktionsdatenbank für eine Liste, die niemand sieht — **und konnte sie nicht abschalten, weil der
+Schalter in demselben ausgeblendeten Bereich steckt.**
+
+**Die Änderung:** Die Liste bekommt mit, ob sie im Bild ist, und das Intervall hängt an beidem.
+
+> **In der Nachrichtenliste tritt das nicht auf**, und der Unterschied ist genau E‑53: Dort weicht
+> die Liste dem Panel erst unter `xl` und bleibt darüber sichtbar und bedienbar. Hier weicht sie auf
+> **jeder** Breite.
+
+#### Was die Gegenprobe verworfen hat, und warum das dazugehört
+
+Vierzehn Befunde haben nicht standgehalten — darunter drei, die aus einer richtigen Beobachtung
+einen falschen Schluss zogen: dass `132` und `133` bei `VOTG` ein Selbstwiderspruch seien (es sind
+Partner und Knoten), dass `1.016 px` und `1.072 px` dieselbe Größe meinten (es sind `main` mit und
+ohne Innenabstand), und dass der Tabellenkasten ein `relative` brauche (`components/ui/table.tsx`
+bringt seinen eigenen mit). **Die drei Stellen sind trotzdem angefasst worden** — nicht um einen
+Fehler zu beheben, sondern um den Unterschied hinzuschreiben, über den zwei Leser gestolpert sind.
+
+### Was **nicht** geprüft ist, und warum es nicht geprüft werden kann
+
+- **Das Verhalten an den Umbruchpunkten.** `md` und `xl` sind Klassen; ein gerenderter Baum in
+  `jsdom` rechnet kein Layout. Prüfbar ist das nur am laufenden System — **nachgeholt am
+  02.09.2026**, §21 (M124), einschließlich des Fokus auf „Zurück zum Baum" unter `md`.
+- **Der Zusammenbau** (`prozessansicht.tsx`) hat keinen eigenen Test. Seine Entscheidungen stehen als
+  reine Funktionen daneben und sind dort geprüft; was übrig bleibt, ist Verdrahtung.
+
+## 20. Was diese Runde nicht zeigt
+
+1. ~~**Keine Sichtprüfung im Browser.**~~ ✔ **Nachgeholt am selben Tag — §21.** Beim Schreiben
+   dieses Punktes stand keine Anmeldung zur Verfügung: Das Bootstrap-Konto wies die Zugangsdaten aus
+   der Umgebung mit `anmeldung-abgelehnt` ab, und die Browsererweiterung war nicht verbunden. Später
+   stand die laufende Sitzung des Auftraggebers zur Verfügung, und damit ist die Liste aus Punkt
+   **115** abgearbeitet. **Zwei Befunde sind dabei neu** (offene Punkte **118** und **119**), einer
+   hat den vorhandenen Punkt **114** verschärft — alle drei betreffen die Spalte **neben** dem Baum
+   und keinen der hier getroffenen Bauentscheidungen.
+
+   > **Was sich auch ohne Anmeldung belegen ließ, und es ist mehr als nichts.** Die Route liefert
+   > `200` und rendert serverseitig fehlerfrei; ruft man sie im Browser mit einem **erfundenen**
+   > Sitzungscookie auf — das kommt an `src/proxy.ts` vorbei, der nur prüft, *ob* eines da ist —,
+   > hängt der Komponentenbaum ein, und die Konsole bleibt **leer**: keine Meldung, keine Warnung,
+   > kein Wurf. Danach beantwortet das Backend die Baumabfrage mit `401`, und die Anwendung leitet
+   > auf `/anmeldung?weiter=%2Fprozesse` um — genau, was `lib/query-client.ts` zusagt.
+   >
+   > **Damit ist die Falle aus [`frontend-grundlagen.md`](frontend-grundlagen.md) §8 ausgeschlossen**
+   > — ein Baustein ohne `"use client"`, der schon beim Importieren wirft, und den `pnpm check` nicht
+   > findet. Belegt ist das Einhängen; **nicht** belegt ist alles, was Daten braucht.
+2. ~~**Keine Messung der Renderzeit der ganzen Ansicht.**~~ ✔ **Nachgeholt** (§21, M123): 98 ms von
+   der fertigen Antwort bis zum Baum im DOM bei `NEXANS`, 454 ms für alle 425 Gruppen. Die Zahlen
+   stammen aus dem Entwicklungsbetrieb und sind damit **obere** Schranken, kein Abnahmewert.
+3. **Keine Virtualisierung.** Gemessen, dass sie nicht nötig ist — nicht angenommen (§16).
+4. **Keine Überfälligkeit im Baum.** E‑43 gilt unverändert; die Zahl steht in der Liste rechts.
+5. ~~**Keine Gegenprüfung im Browser der Befunde aus §19.**~~ ✔ **Nachgeholt** (§21). Die zwei
+   Regeln, die nur am laufenden System zu *sehen* sind, halten: Der Baum springt bei geöffnetem
+   Panel nicht (`main.scrollTop` bleibt 0), und der Fokus geht unter `md` auf „Zurück zum Baum".
+   **Der dritte Befund — das verschluckte `Alt+←` — ist ebenfalls behoben und beinahe als Rückfall
+   missdeutet worden**: Im kopflosen Chrome bewegt sich der Verlauf bei `Alt+←` nicht, weil die
+   Browseroberfläche fehlt, die die Taste übersetzt. Die Anwendung unterdrückt das Ereignis
+   nachweislich nicht.
+6. **Kein zweiter Weg in die Ansicht.** Weder das Dashboard noch die Nachrichtenliste verweisen
+   hierher. Ob die Verteilung des Dashboards („nach Partner") auf den Partnerknoten des Baums zeigen
+   sollte, ist eine eigene Entscheidung — heute sagt sie ausdrücklich, dass ihre Zeilen nicht
+   klicken.
+
+---
+
+## 21. Die Sichtprüfung am laufenden System (02.09.2026, nachgeholt)
+
+*Dieser Abschnitt entsteht **nach** §20 und berichtigt dessen ersten Punkt.* Beim Schreiben von §20
+stand keine Anmeldung zur Verfügung; sie stand später am selben Tag zur Verfügung, und damit ist
+alles nachgeholt, was offener Punkt **115** einzeln aufgezählt hatte. **Zwei Befunde sind dabei neu**
+— beide betreffen nicht den Baum, sondern die Spalte daneben.
+
+**Wie gemessen wurde.** Kopfloses Chrome über das DevTools-Protokoll gegen die lokal laufende
+Anwendung (`localhost:3000`, Backend `localhost:8080`, Profil `dev`, Testkopie mit 3,34 Millionen
+Zeilen in `Message`), mit der **laufenden Sitzung** des Auftraggebers — kein zweites Konto, keine
+erfundene Sitzung. Fenstermaße über `Emulation.setDeviceMetricsOverride`, Klicks und Tasten über
+`Input.dispatchMouseEvent` und `Input.dispatchKeyEvent`, also **echte Eingabeereignisse** und keine
+zugewiesenen Werte (dieselbe Regel wie in [`nachrichtenliste.md`](nachrichtenliste.md) §8.2). Die
+Anwendungsuhr steht im Profil `dev` auf dem 30.12.2025; die Zeitfenster in den Bildern sind deshalb
+Dezember 2025 und kein Fehler.
+
+**In keinem einzigen Lauf, über alle vier Mandanten und alle Breiten, ist eine Konsolenmeldung
+angefallen** — keine Warnung, keine Fehlermeldung, kein Wurf.
+
+### M121 — Sichtbare Baumzeilen bei 1080 px, je Dichtestufe
+
+Gezählt sind die Zeilen, die **ganz** zwischen der Unterkante des klebenden Baumkopfes und der
+Unterkante des Scrollbereichs liegen — dasselbe Verfahren wie in
+[`dichte-umschalter.md`](dichte-umschalter.md) §5.3 für die Nachrichtenliste.
+
+| Stufe | Wurzelschrift | Zeilenhöhe | Seitenkopf + Baumkopf | **sichtbare Zeilen** | Baumspalte |
+|---|---:|---:|---:|---:|---:|
+| `xs` | 14 px | 44 px | 213 px | **19** | 364 px |
+| `s` | 15 px | 44 px | 225 px | **19** | 390 px |
+| `m` | 16 px | 44 px | 237 px | **18** | 416 px |
+| `l` | 18 px | 50 px | 267 px | **16** | 468 px |
+
+**Die Vergleichszahl aus der Nachrichtenliste ist 28/26/24/19 — der Baum liefert 19/19/18/16.** Der
+Unterschied ist keine Überraschung, sondern E‑51 in Zahlen: Die Baumzeile hält
+`--dichte-beruehrung` (44 px in `xs`, `s` und `m`, 49,5 px in `l`) und nicht `--dichte-zeile`.
+
+**Zwei Folgerungen, und die zweite ist unangenehm.** Erstens: `xs` und `s` zeigen **gleich viele**
+Zeilen — die kleinste Stufe kauft dem Nutzer nichts. Zweitens: Über die ganze Skala bewegt der
+Umschalter **drei Zeilen**; in der Liste sind es neun. Wer die Dichte stellt, um mehr zu sehen,
+bekommt im Baum fast nichts dafür. Das ist die gemessene Fassung von offenem Punkt **117**, und die
+Entscheidung dort ist damit nicht leichter, aber sie steht auf Zahlen.
+
+### M122 — Berührungsziele am Berührungsgerät
+
+1024 × 1366, Berührungsemulation aktiv, `matchMedia("(pointer: coarse)")` meldet `true` — dasselbe
+Verfahren wie [`dichte-umschalter.md`](dichte-umschalter.md) §5.4.
+
+| Element | `xs` | `s` | `m` | `l` |
+|---|---:|---:|---:|---:|
+| Baumzeile | 44 | 44 | 44 | 50 |
+| Eingrenzungsfeld | 44 | 44 | 44 | 50 |
+| **Beschriftung** des Schalters | 44 | 44 | 44 | 50 |
+| Zeitraumknopf | 44 | 44 | 44 | 50 |
+| Navigationseintrag | 44 | 44 | 44 | 50 |
+| der `Switch` selbst | 18 | 18 | 18 | 18 |
+| … mit seiner `::after`-Vergrößerung | 32 | 33 | 34 | 36 |
+
+**Alles, was diese Ansicht selbst baut, hält die Fläche.** Der `Switch` hält sie nicht — er ist der
+Baustein aus dem Generatorbereich mit fester Pixelhöhe und steht seit dem 31.08.2026 als offener
+Punkt **96** in [`dichte-umschalter.md`](dichte-umschalter.md). Die Ansicht hat ihn nicht
+verschlechtert und repariert ihn auch nicht; sie legt die Berührungsfläche in die **Beschriftung**.
+
+**Und die trägt wirklich** — nachgefahren, nicht behauptet: ein echter Klick auf die Mitte der
+Beschriftung (44 px hoch) schaltet den Schalter von `unchecked` auf `checked`, die Adresse bekommt
+`?nurMitVerkehr=true`, und der Baum geht von 155 auf 25 Zeilen.
+
+### M123 — Die vier Mandanten, am laufenden System
+
+| | `NEXANS` | `IBIS` | `VOTG` | `SUTTONS` |
+|---|---:|---:|---:|---:|
+| Antwort **über die Leitung** | 14,5 KiB | 3,9 KiB | 7,1 KiB | 0,6 KiB |
+| Antwortzeit des Endpunkts | 60 ms | 42 ms | 43 ms | 33 ms |
+| **React: fertige Antwort → Baum im DOM** | **98 ms** | 62 ms | 88 ms | 12 ms |
+| Zeilen zugeklappt | 155 | 79 | 133 | 1 |
+| Zeilen vollständig aufgeklappt | 1.158 | 391 | 523 | 18 |
+| Partnerknoten | 155 | 79 | 133 | 1 |
+| **Richtungsknoten** | 270 | 120 | **0** | **0** |
+| Blätter | 733 | 192 | 390 | 17 |
+| Partner **mit** Richtungsebene | 135 | 60 | **0** | 0 |
+| Partner **ohne** (E‑45) | 20 | 19 | **133** | 1 |
+| alle Gruppen aufklappen | 454 ms | 227 ms | 238 ms | 43 ms |
+| Höhe des offenen Baums | 54.626 px | 18.684 px | 30.126 px | 792 px |
+
+**Das schließt die offene Hälfte von Punkt 109.** Die 150,3 KiB des Rumpfes sind **über die Leitung
+14,5 KiB** — der Nutzer wartet auf die komprimierte Zahl. Die Arbeit von React zwischen der fertigen
+Antwort und dem Baum im Bild ist **98 ms** beim größten Mandanten; M120 hatte für den Browser-Teil
+allein 9,2 ms gemessen, React ist also die größere Hälfte. Alle 425 Gruppen des größten Mandanten
+aufzuklappen kostet **454 ms** — der Zustand, für den M120 84,7 ms Auswerten und Layouten gemessen
+hatte und für den es weiterhin **kein „alles aufklappen"** gibt.
+
+**Die Zeilenzahlen decken sich mit den Vorhersagen aus §9 und §17, Zeile für Zeile** — 1.158 bei
+`NEXANS`, 391 bei `IBIS`, 523 bei `VOTG`, 18 bei `SUTTONS`. Ein Unterschied ist erklärungsbedürftig
+und keine Abweichung: §9 zählt **154** Partner, der Baum zeigt **155** Zeilen der Ebene 1. Die
+155. ist „nicht zugeordnet" — sie ist kein Partner des Katalogs, steht aber als Knoten da, und sie
+trägt bei `NEXANS` selbst Richtungsebenen. Deshalb heißt es dort 134 von 154, hier 135 von 155; es
+sind dieselben 20 Partner ohne Ebene.
+
+### E‑45, am Bild geprüft — und sie hält
+
+**Die 20 Partner bei `NEXANS`, die ihre Richtungsebene verlieren**, ausgezählt am gerenderten Baum:
+`ADIENT`, `AMPHENOL`, `ARVINMERITOR`, `AUDIO`, `AUTOLIV`, `BMWEVEREST`, `BMWHH`, `BMWSTEYR`,
+`COFICABP`, `FALCON`, `GEBAUER`, `HALDEX`, `HENGST`, `KONGSBERG`, `OECHSLER`, `PBELEKTRO`, `PKC`,
+`SAAB`, `SIEMENSVDO`, `SONDERPROZESS`. **Achtzehn von ihnen tragen genau einen Prozess** — dort fällt
+die Ebene über einem einzigen Enkel weg und wäre reine Einrückung. **Zwei tragen mehr:**
+`BMWEVEREST` zwei Prozesse, `SONDERPROZESS` elf. Zusammen sind es die 31 Blätter, die eine Ebene
+weiter links stehen als ihre Nachbarn.
+
+> **`SONDERPROZESS` ist der härteste Fall von E‑45, den die Daten hergeben — und er ist der beste
+> Beleg für sie.** Elf Prozesse hängen dort direkt unter dem Partner, und die eine Richtung, die der
+> Katalog kennt, ist **`null`**: Es ist die **einzige** leere Richtung im ganzen `NEXANS`-Baum (148
+> mal `EINGEHEND`, 141 mal `AUSGEHEND`, einmal nichts). Ohne E‑45 stünde dort ein Knoten „nicht
+> ermittelt" über elf Zeilen, der nichts ordnet und nur einrückt. Die elf tragen das Zeichen für
+> „nicht ermittelt" stattdessen selbst — §3 des Konzepts, eine leere Stelle sagt nichts.
+
+Das Paar, an dem sich die Ungleichförmigkeit ansehen lässt, steht direkt untereinander:
+
+```
+ACOME                                   20      ← Ebene 1
+  Eingehend                              5      ← Ebene 2, Richtungsknoten
+  Ausgehend                             15
+ADIENT                                   0      ← Ebene 1
+  ↙ Adient LAB (EDIFACT)                 0      ← Ebene 2, aber ein Prozess
+AE-SAP                                   0
+```
+
+**Die Einrückung ist dieselbe, die Bedeutung nicht** — und genau das war die Sorge bei E‑45. Am Bild
+trägt sie: Die Prozesszeile steht mit dem Richtungszeichen am Anfang da, die Richtungszeile ohne
+eines; die eine hat ein Aufklappzeichen, die andere nicht. **Zwei Zeilen gleicher Tiefe sind
+unterscheidbar, ohne dass man sie anklickt.** Bei `VOTG` ist die Frage gegenstandslos: **null**
+Richtungsknoten bei 133 Partnern, keine einzige leere Ebene, und die Richtung steht in jeder der 390
+Prozesszeilen. Bei `SUTTONS` steht ein einziger Knoten „nicht zugeordnet" mit 17 Prozessen und 1.337
+Nachrichten — die Ansicht ist dort **nicht leer**.
+
+### Die drei Zustände, nebeneinander im Bild
+
+Unter `SONDERPROZESS` stehen sie zufällig alle drei untereinander, und damit ist die Regel aus §3 des
+Konzepts — **nie allein über Farbe** — am Bild geprüft:
+
+| Zustand | Was zu sehen ist |
+|---|---|
+| **bewegt** | normale Zeile, nichts weiter (`Prüfroutinen`, 390) |
+| **still** | die Zeile normal, darunter **„seit über 3 Monaten nichts" als Marke** mit eigenem Grund (`PreProzessor/Datenrouter`) |
+| **nie** | der ganze Text gedämpft, darunter **das Wort „noch nie"** (`Sonderprozesse-Status ungleich OK`) |
+
+**Kein Zustand hängt an der Farbe allein**: „still" trägt einen Satz, „nie" trägt ein Wort *und*
+die Dämpfung, „bewegt" trägt nichts — und die Abwesenheit ist hier die Aussage, weil die beiden
+anderen sichtbar etwas tragen. Die Schwelle im Text kommt aus `stilleSchwelleMonate` der Antwort (E‑37); im
+Bild steht „3", weil das Backend 3 schickt.
+
+### M124 — Die drei Breitenzustände
+
+Das Fenster wurde **ohne Neuladen** verstellt; die Umbruchpunkte sind Klassen, und ein Neuladen
+misste den Ladevorgang statt des Layouts. Die Spalten „Liste" und „Panel" stammen aus zwei
+Durchgängen — mit `?prozess=…` und mit `?prozess=…&nachricht=…` —, denn beide stehen nie zugleich
+(E‑53).
+
+| Breite | `main` | Baum | Baumspalte | Liste | Panel | „Zurück zum Baum" |
+|---:|---:|---|---:|---|---|---|
+| 1920 | 1712 | ✔ | 416 px | 1238 px | 1152 px | — |
+| 1440 | 1232 | ✔ | 416 px | 758 px | 760 px | — |
+| 1280 | 1072 | ✔ | **416 px** | 598 px ⚠️ | 600 px | — |
+| 1279 | 1071 | ✔ | 412 px | 601 px | 603 px | — |
+| 1024 | 816 | ✔ | 310 px | 448 px | 450 px | — |
+| 768 | 560 | ✔ | 208 px | 294 px | 296 px | — |
+| 767 | 767 | weicht | — | 741 px | 743 px | ✔ |
+| 375 | 375 | weicht | — | 349 px | 351 px | ✔ |
+
+**Die 26 rem stehen ab `xl` und keinen Pixel früher** (416 px bei Wurzelschrift 16 px); unterhalb
+übernimmt der Anteil von 40 %, und bei 768 px bleiben davon 208 px — schmal, aber die Namen brechen
+dort um statt abzuschneiden (M118). **Das Dokument scrollt in keiner der neun Breiten waagerecht**,
+von 375 bis 1920 px; wo etwas quer läuft, läuft es im eigenen Kasten der Tabelle.
+
+**Unter `md` weicht der Baum, und der Fokus geht mit.** Nachgefahren bei 700 px: Nach der Auswahl
+eines Prozesses ist der Baum `display: none`, „Zurück zum Baum" ist sichtbar, und
+`document.activeElement` **ist diese Schaltfläche**. Die Regel aus §15 hält am laufenden System —
+und sie hält über die Klasse `md:hidden`, ohne dass irgendwo eine Fensterbreite abgefragt würde: bei
+1920 px bleibt der Fokus nach derselben Auswahl auf der Baumzeile stehen.
+
+### Die Tastatur, von Hand nachgefahren
+
+**Ein Tabstopp**: unter 25 Zeilen trägt genau eine `tabindex="0"`, die übrigen 24 tragen `-1`. Ein
+Tabulator führt aus dem Baum heraus auf das nächste Bedienelement — den Sortierknopf „Zeitpunkt"
+der Liste rechts. **Pfeil ab und auf** bewegen, **rechts** klappt auf und steigt hinein, **links**
+klappt zu und steigt hinauf, **Pos1** springt auf den ersten Partner, **Ende** auf den letzten Knoten
+(bei `NEXANS`: „nicht zugeordnet, Partner, Prozesse: 216"). **Eingabetaste und Leertaste wählen** —
+beide setzen `?prozess=…` und die Auswahl im Baum. Der Fokus folgt dem roving `tabindex`, und die
+gewählte Zeile behält ihn.
+
+### ⚠️ Befund 1 — Ein Scrollbereich, 155 Partner: die rechte Spalte verlässt das Bild (M125)
+
+**Der Fall.** Baum und Übertragungsliste sitzen im **einen** Scrollbereich des Anwendungsrahmens
+([`frontend-grundlagen.md`](frontend-grundlagen.md) §7); §15 nennt das und nennt auch die Folge.
+Gemessen ist die Folge jetzt, und sie ist größer als „die Liste rutscht etwas nach oben":
+
+| Vorgang bei 1920 × 1080 | `main.scrollTop` | Oberkante der rechten Spalte | im Bild? |
+|---|---:|---:|---|
+| Partner `VW` aufgeklappt, Prozess gewählt | 6.258 px | **−6.143 px** | **nein** |
+| tiefer Link `?prozess=` auf `LEAR` (Platz 79 von 155) | 2.729 px | **−2.614 px** | **nein** |
+| derselbe Link **mit** `&nachricht=` | 0 px | +115 px | ja |
+
+**Wer weit unten im Baum auswählt, bekommt das Ergebnis außerhalb des Bildes.** Die Überschrift des
+Prozesses, das Zeitfenster und die Tabelle stehen mehrere tausend Pixel über dem Sichtfenster; auf
+dem Bildschirm bleibt rechts eine leere Fläche stehen. Bei `NEXANS` betrifft das jeden Partner
+unterhalb des ersten Bildschirms — bei 1080 px Höhe stehen 18 bis 19 Zeilen im Bild (M121), es sind
+also gut 130 der 155.
+
+**Der tiefe Link mit Nachricht ist der Gegenfall, und er ist der Grund, warum es nicht schlimmer
+kommt.** Dort springt der Baum bewusst nicht (§19, Befund 1): Das Panel steht oben und ist lesbar,
+der Baum ist an der richtigen Stelle **geöffnet** — die gewählte Zeile liegt dann aber 3.765 px
+unter der Kante, und der Nutzer sieht links den Anfang des Alphabets. **Von den drei Dingen, die die
+Abnahme verlangt — Baum, Panel, richtige Stelle —, sind auch am laufenden System nur zwei zugleich
+sichtbar.** Der Unterschied zu §19 ist, dass jetzt feststeht, welche zwei: Panel und richtige Stelle,
+nicht das Bild des Baums.
+
+**Das ist kein Fehler dieser Runde, sondern die Rechnung für eine Regel** — und die Regel ist
+älter als diese Ansicht. Zwei Auswege wären denkbar, und beide sind Entscheidungen über
+`frontend-grundlagen.md` §7 und nicht über diese Datei: die rechte Spalte kleben lassen
+(`sticky`, wie der Baumkopf), oder dem Baum einen eigenen Scrollbereich geben. Der zweite
+widerspricht §7 ausdrücklich, der erste nicht. **Offener Punkt 118.**
+
+### ⚠️ Befund 2 — Bei 1280 px steht der Tabellenkopf übereinander (M126)
+
+**Der Fall.** Offener Punkt **114** hielt fest, dass die Ablaufspalte der Liste unter 1280 px auf
+0 px fällt und die Tabelle in ihrem Kasten waagerecht scrollt. Was niemand gesehen hatte: **Die
+Spalte ist 0 px breit, ihre Beschriftung wird trotzdem gezeichnet.**
+
+| Breite | Kasten | Tabelle | Ablauf (`th`) | Projekt (`th`) | Kopfzeile |
+|---:|---:|---:|---:|---:|---|
+| 1920 | 1238 | 1238 | 494 px | 288 px | lesbar |
+| 1440 | 758 | 758 | **14 px** | 288 px | lesbar, Spalte praktisch weg |
+| 1280 | 598 | **744** | **0 px** | 288 px | **„Ablauf" über „Projekt" gedruckt** |
+| 1024 | 448 | 744 | 0 px | 288 px | dasselbe |
+| 768 | 294 | 640 | 0 px | 288 px | dasselbe |
+
+Die Kästen selbst überlappen nicht — die Zelle ist 0 px breit und sitzt genau dort, wo „Projekt"
+beginnt. **Der Text ist nur nicht beschnitten**, und deshalb liegen zwei Wörter aufeinander. Im Bild
+ist die Stelle als unlesbarer Klumpen zu sehen.
+
+**Das trifft ausgerechnet 1280 px** — die Breite, für die E‑53 entworfen wurde und mit der §18
+gerechnet hat. In der Nachrichtenliste tritt es nicht auf: Dort bekommt die Tabelle die volle
+Inhaltsbreite, und die Ablaufspalte behält ihren Platz. **Es entsteht erst, wenn dieselbe Tabelle in
+die schmale Spalte neben dem Baum gesetzt wird.**
+
+**Punkt 114 bleibt damit eine Entscheidung über die Spaltenbreiten der Nachrichtenliste**, wie schon
+festgehalten — er hat jetzt nur ein sichtbares Gesicht und nicht bloß eine Zahl. Ein Deckel wäre in
+dieser Ansicht zu setzen (die Ablaufspalte ausblenden, statt sie auf 0 px zu quetschen) oder in der
+gemeinsamen Tabelle (Beschriftungen beschneiden). **Beides ändert eine geteilte Komponente und ist
+in dieser Runde nicht getan worden.**
+
+### Befund 3 — Der Rückweg unter `md` verliert den Fokus
+
+Der Weg **hin** ist geprüft und hält (oben): Auswahl → Fokus auf „Zurück zum Baum". Der Weg
+**zurück** endet auf `document.body`. Die Schaltfläche verschwindet mit dem Kopf der rechten Spalte,
+sobald kein Prozess mehr gewählt ist, und nimmt den Fokus mit — der nächste Tabulator beginnt wieder
+oben am Anwendungsrahmen. **Das ist genau der Bruch, den die Gegenrichtung vermeidet.** Der Fokus
+gehörte auf die zuletzt gewählte Zeile im Baum, der ja wieder da ist. **Offener Punkt 119.**
+
+### Was die Gegenprobe entlastet hat
+
+**`Alt+←` funktioniert — der erste Anschein täuschte.** Im kopflosen Chrome bewegt sich der Verlauf
+bei `Alt+←` nicht, und das sah nach dem verschluckten Zurück aus, das §19 (Befund 2) behoben zu
+haben behauptet. Die Gegenprobe trennt beides sauber: Ein Horcher in der Blasenphase am Dokument
+zeigt, dass die Anwendung das Ereignis **nicht** unterdrückt (`defaultPrevented: false`), während
+derselbe Pfeil **ohne** Modifier sehr wohl unterdrückt wird (`true`) — und `history.back()` aus
+demselben Zustand geht zurück. **Die Anwendung reicht die Taste durch; das Übersetzen in eine
+Rücknavigation macht die Browseroberfläche, und die gibt es im kopflosen Betrieb nicht.** Ohne diese
+Gegenprobe wäre ein Werkzeugartefakt als Befund in die Dokumentation gewandert.
+
+**Der Ansichtsumschalter steht nicht im Panel.** Eine Textsuche im Dokument fand „Ohne Liste
+anzeigen" und ließ es so aussehen, als wäre er doch da. Er ist es nicht: Der Treffer steckt in einem
+`<script>` des Entwicklungsservers (die Sprachdatei im Datenstrom), nicht in einem sichtbaren
+Element — kein einziger Knoten und kein `title` trägt den Text. **`document.body.textContent` sieht
+Skripte mit**, und das ist die Falle, nicht die Ansicht.
+
+**Die leere rechte Fläche in den ersten Bildern war kein fehlender Aufbau.** Sie hatte zwei
+Ursachen, beide harmlos beziehungsweise anderswo behandelt: der gewählte Prozess trug null
+Nachrichten (Leerzustand), und der Baum war weit nach unten gescrollt (Befund 1).
+
+### Die Abnahmeliste, Punkt für Punkt
+
+| Abnahme | Stand | Beleg |
+|---|---|---|
+| `pnpm check` grün, `farbwerte.test.ts` ohne neue Ausnahme | ✔ | 31 Dateien, 753 Fälle, 02.09.2026 |
+| `serverbausteine.test.ts` grün | ✔ | derselbe Lauf |
+| Baum mit der Tastatur vollständig bedienbar | ✔ | ein Tabstopp, alle sieben Tasten, Eingabe **und** Leertaste |
+| in allen vier Dichtestufen benutzbar, Berührungsziele halten | ✔ | M121, M122 — der `Switch` über seine Beschriftung |
+| tiefer Link `?prozess=…&nachricht=…` zeigt Baum, Panel und die richtige Stelle | **teilweise** | M125: Panel und Stelle ja, das Bild des Baums nein — Befund 1 |
+| bei `VOTG` keine leere Richtungsebene | ✔ | M123: 0 Richtungsknoten bei 133 Partnern |
+| bei `SUTTONS` nicht leer, „nicht zugeordnet" | ✔ | M123: 1 Knoten, 17 Prozesse, 1.337 Nachrichten |
+| Renderzeit bei `NEXANS` gemessen und dokumentiert | ✔ | M123: 98 ms React, 60 ms Endpunkt, 14,5 KiB |
+
+> ### ⚠️ Belegvermerk zu M121 bis M126 (Regel L10)
+>
+> *Gemessen war:* die laufende Anwendung im Entwicklungsbetrieb (`next dev`, Turbopack), mit den
+> echten Daten der Testkopie, angemeldet, über vier Mandanten, neun Fensterbreiten und vier
+> Dichtestufen — Zeilenzahlen, Höhen, Breiten, Spaltenmaße, Scrollstände, Fokus, Tastenereignisse,
+> Zeitmarken aus `PerformanceResourceTiming` und einem `MutationObserver`.
+>
+> *Behauptet wird nicht:* dass die Zeitwerte für den Produktionsbau gelten. `next dev` baut anders
+> und langsamer; die 98 ms sind eine **obere** Schranke für React, kein Abnahmewert. Was von den
+> Zeiten trägt, ist ihr Verhältnis zueinander und zu M120.
+>
+> *Nicht angesehen — vollständig, damit niemand mehr hineinliest, als dasteht:*
+>
+> - **kein echtes Berührungsgerät** (die Emulation meldet `pointer: coarse`, mehr nicht), **kein
+>   anderer Browser als Chromium**, **keine Produktionsdatenbank**
+> - **nur der helle Modus und nur Deutsch.** Die dunkle Fassung und die englischen Texte sind in
+>   dieser Ansicht nie am Bild gewesen; die Sprachdateien sind über `sprachdateien.test.ts` geprüft,
+>   das Bild nicht
+> - **nur die vier beauftragten Mandanten** — `NEXANS`, `IBIS`, `VOTG`, `SUTTONS`. Die übrigen sechs
+>   sind nicht aufgerufen worden
+> - **kein Vorleseprogramm.** Die `aria-label` sind aus dem DOM gelesen und in ihrer Reihenfolge
+>   geprüft; **vorgelesen** hat sie niemand
+> - **kein Nutzer.** Ob die Ungleichförmigkeit aus E‑45 oder die 391 Zeilen bei `IBIS` jemanden
+>   stören, bleibt eine Auslegung (offener Punkt 107)
+>
+> **Und keine Zeit ist an einer Wanduhr gegen eine Zusicherung geprüft** — die Zahlen beschreiben,
+> sie sichern nichts zu (Regel T1).
+---
+
+# Vier Korrekturen aus der Sichtprüfung (Schritt 10c‑3, 02.09.2026)
+
+Entsteht in **Schritt 10c‑3**. Auftrag: „Schritt 10c‑3: Prozessansicht — vier Korrekturen aus der
+Sichtprüfung", Stand 02.09.2026. Die vier Punkte stammen aus der Sichtprüfung des Auftraggebers am
+laufenden System, nach dem Abschluss von 10c‑2.
+
+**Diese Runde ändert ausschließlich die Darstellung.** Kein Endpunkt, kein Statement, kein Feld der
+Antwort ist angefasst worden; `zustand`, `richtung` und `stilleSchwelleMonate` werden unverändert
+geliefert und unverändert gelesen. Was sich ändert, ändert sich in der Oberfläche — dieselbe
+Trennung wie bei E‑46.
+
+**Wo eine Entscheidung eine frühere umdreht, ist die frühere nicht gelöscht**, sondern mit einem
+datierten Korrekturblock versehen: E‑51 in §16, das Zeichen und der „nie"-Kasten in §17, E‑53 und
+die Sonderregel der verdeckten Liste in §18.
+
+## 22. Nummernvergabe (Teil 3)
+
+| | |
+|---|---|
+| **Entscheidungen** | **E‑54 bis E‑57**. Höchste vergebene war **E‑53** (§18) — nachgeprüft über `docs/` und alle Markdown-Dateien der Wurzel, kein höherer Treffer |
+| **Messungen** | **M127 bis M129**. Höchste vergebene war **M126** (§21) — ebenso nachgeprüft |
+| **Offene Punkte** | **120** und **121**. Höchster vergebener war **119** (§13). Die Zahlen 256, 500 bis 502 und 538 aus `messungen-schritt5.md` und `messungen-schritt10.md` sind Messwerte in Tabellen und keine Punkte |
+
+**Alle drei Stände des Auftrags haben gestimmt.** Das ist erwähnenswert, weil sie es zweimal nicht
+getan haben (§18, der Kasten zu E‑44).
+
+---
+
+## 23. Wie gemessen worden ist — und die zwei Fallen des Messrahmens
+
+**Am laufenden System, in der Sitzung des Auftraggebers** (`localhost:3000`, Backend
+`localhost:8080`, Profil `dev`, Testkopie), über die verbundene Browsererweiterung. Kein zweites
+Konto, keine erfundene Sitzung.
+
+**Der Messrahmen ist ein gleichherkunftiger `<iframe>` und nicht das Browserfenster.** Die
+Erweiterung kann die Fenstergröße nicht setzen — `resize_window` meldet Erfolg, und `innerHeight`
+bleibt, wo es war (gemessen: 945 px bei angeblich 1080). Ein `<iframe>` derselben Herkunft ist
+dagegen ein **eigenes Sichtfenster exakter Größe**, dessen DOM von außen vollständig lesbar ist. Das
+trägt hier, weil die Anwendung ihre Höhe **nirgends am Fenster bemisst**
+([`frontend-grundlagen.md`](frontend-grundlagen.md) §7): Sie rechnet im Rahmen genau so, wie sie es
+in einem Fenster dieser Größe täte. Belegt ist das an der Gegenprobe zu M121 (siehe M127).
+
+> ### ⚠️ Zwei Fallen, und beide hätten als Befund in diese Datei gewandert
+>
+> Dieselbe Klasse wie das verschluckte `Alt+←` aus §21 — ein Werkzeugartefakt, das aussieht wie ein
+> Fehler der Anwendung.
+>
+> **1. In einem `visibility: hidden`-Rahmen ruht `requestAnimationFrame`.** Der erste Aufbau
+> versteckte den Messrahmen, um die Seite darunter nicht zu verdecken. Layoutmaße sind davon
+> unberührt — Chrome rechnet Layout auch für unsichtbare Rahmen —, aber die Fokusregel aus E‑57
+> hängt an einem `requestAnimationFrame`, und **das lief nie**. Die Regel sah kaputt aus und war es
+> nicht: Mit sichtbarem Rahmen greift sie in jedem Lauf. Alle Layoutzahlen sind hinterher mit
+> **sichtbarem** Rahmen wiederholt worden und Ziffer für Ziffer identisch.
+>
+> **2. Die Zeitachse des Rahmens steht still.** Die Schublade der Prozessauswahl blendet mit
+> `zoom-in-95` ein (0,1 s). Im Rahmen bleibt diese Einblendung auf `running` stehen, und die
+> **gemalte** Zeilenhöhe misst deshalb 95 % der Layouthöhe — 41,8 px statt 44. Das sah nach einer
+> Verletzung der Mindestfläche aus. `getAnimations().finish()` löst den Endzustand auf: Transform
+> `none`, gemalte Höhe **44 px**. Gemessen wird seither `offsetHeight` (transformfrei) und die
+> gemalte Höhe erst nach abgelaufener Einblendung.
+
+**Was nicht gemessen worden ist, steht im Belegvermerk am Ende** — und dort vollständig.
+
+---
+
+## 24. E‑54 — Die Baumzeile trägt die Zeilenhöhe, die Berührungsfläche nur am Finger
+
+*Schließt offenen Punkt **117**. Ersetzt E‑51 (§16).*
+
+### Die Lage, die es ausgelöst hat
+
+Die Baumzeile hielt `--dichte-beruehrung` (`max(2.75rem, 44px)`), und dieses Token ist aus der
+Dichteskalierung **heraus** ([`visuelles-konzept.md`](visuelles-konzept.md) §5). Gemessene Folge
+(M121): **19 / 19 / 18 / 16** sichtbare Zeilen über `xs`/`s`/`m`/`l` gegen 28 / 26 / 24 / 19 in der
+Nachrichtenliste. In drei von vier Stufen griff überall derselbe Boden von 44 px — der Umschalter
+bewegte im Baum nichts, und der Auftraggeber hat genau das beim Umstellen auf `s` bemerkt.
+
+### Was gebaut ist
+
+Ein eigenes Token, `--dichte-bedienzeile`, **neben** `--dichte-beruehrung` und nicht an dessen
+Stelle:
+
+```css
+:root { --dichte-bedienzeile: var(--dichte-zeile); }        /* Zeigergerät: eine Zeile */
+@media (pointer: coarse) {
+  :root { --dichte-bedienzeile: var(--dichte-beruehrung); } /* Finger: ein Ziel */
+}
+```
+
+**Der Name ist die Begründung.** `--dichte-bedienelement` ist ein Bedienelement im Rahmen (2 rem, am
+Finger die Fläche); `--dichte-bedienzeile` ist die **Zeile, die zugleich ein Bedienelement ist** —
+Baumzeile und Auswahlzeile. Dieselbe Bauform, dieselbe `@media`-Regel, eine Zeile darunter.
+
+**Warum ein eigenes Token und nicht `--dichte-zeile` in der Komponente.** Am Finger gilt die
+Mindestfläche weiterhin, und sie soll an **einer** Stelle stehen statt in zwei Komponenten. Genau
+deshalb bleibt **offener Punkt 96 offen**: `--dichte-beruehrung` selbst ist unberührt geblieben, und
+die Frage, was dieses Token trägt und was nicht, ist hier nicht entschieden worden.
+
+### `pointer` und nicht `any-pointer` — und was das kostet
+
+`pointer` beschreibt das **primäre** Eingabegerät. **Ein Notebook mit Berührungsbildschirm und
+Trackpad meldet `fine` und bekommt die kürzere Zeile** — wer es am Bildschirm bedient, zielt dort
+auf 36 px statt auf 44.
+
+**Die Alternative wäre schlechter.** `any-pointer: coarse` trifft, sobald **irgendein**
+angeschlossenes Gerät grob ist; dasselbe Notebook fiele dann auf 44 px zurück, und mit ihm jedes
+Gerät mit erkanntem Berührungsbildschirm. Die Verkleinerung griffe praktisch nirgends, und das Token
+wäre eine Umbenennung von `--dichte-beruehrung`. **Die Wahl ist getroffen, der Preis ist benannt** —
+und sie ist dieselbe, die `globals.css` schon für `--dichte-bedienelement` und `--dichte-navzeile`
+trifft. Eine dritte Antwort daneben wären zwei Begriffe von „Berührungsgerät".
+
+### Die Prozessauswahl ist mitgezogen
+
+Dieselbe Wahl, dieselbe Begründung — `prozess-filter.tsx`, beide Zeilenarten. **Nicht ausgenommen:**
+Zwei Auswahllisten mit zwei Zeilenhöhen wären genau die Drift, die ein gemeinsames Token verhindern
+soll.
+
+### M127 — sichtbare Baumzeilen bei 1080 px, je Dichtestufe
+
+`NEXANS`, Baum zugeklappt (155 Partnerzeilen), 1920 × 1080, dieselbe Strecke wie M121: gezählt sind
+die Zeilen, die **ganz** zwischen der Unterkante des klebenden Baumkopfes und der Unterkante des
+Scrollbereichs liegen.
+
+| Stufe | Wurzelschrift | Kopfunterkante | untere Grenze | **Zeilenhöhe** | **sichtbar** | vorher (M121) |
+|---|---:|---:|---:|---:|---:|---:|
+| `xs` | 14 px | 215 px | 1.066 px | **31,5 px** | **26** | 19 |
+| `s` | 15 px | 225 px | 1.065 px | **33,75 px** | **24** | 19 |
+| `m` | 16 px | 235 px | 1.064 px | **36 px** | **22** | 18 |
+| `l` | 18 px | 260,5 px | 1.062 px | **40,5 px** | **19** | 16 |
+
+**Der Umschalter bewegt im Baum jetzt sieben Zeilen statt drei**, und `xs` und `s` unterscheiden
+sich wieder (26 gegen 24) — die erste Folgerung aus M121 („die kleinste Stufe kauft dem Nutzer
+nichts") ist damit erledigt. Zum Vergleich die Nachrichtenliste: **28 / 26 / 24 / 19**. Der Baum
+liegt jetzt eine bis zwei Zeilen darunter und nicht mehr neun.
+
+> **Die Gegenprobe, die den Messrahmen trägt.** Dieselbe Messung mit
+> `--dichte-bedienzeile: var(--dichte-beruehrung)` stellt den Zustand **vor** E‑54 wieder her. Nach
+> der Zählweise von M121 — `floor((untere Grenze − Kopfunterkante) ÷ Zeilenhöhe)` — ergibt sie
+> **19 / 19 / 18 / 16**, also M121 Ziffer für Ziffer. Der Rahmen misst dieselbe Anwendung wie das
+> Fenster.
+>
+> **Zwei Zählweisen, und der Unterschied ist eine Zeile.** Direkt ausgezählt (jede Zeile muss
+> wirklich ganz im Kasten stehen) sind es 19/18/18/16 vor und **26/24/22/19** nach E‑54; nach der
+> M121-Formel 19/19/18/16 und **27/24/23/19**. Der Unterschied ist der Abstand von 7 bis 9 px
+> zwischen Baumkopf und erster Zeile, den die Formel überspringt. **Die direkte Zählung steht in der
+> Tabelle**, weil eine Zeile erst sichtbar ist, wenn sie im Bild steht; die Formelwerte stehen hier,
+> damit der Vergleich mit M121 einer bleibt.
+
+### M127, zweiter Teil — die Mindestfläche am Berührungsgerät
+
+**Das ist die tragende Zusicherung von Teil A**, und sie hält:
+
+| Stufe | Baumzeile am Finger | Auswahlzeile der Prozessauswahl am Finger |
+|---|---:|---:|
+| `xs` | **44 px** | **44 px** |
+| `s` | **44 px** | **44 px** |
+| `m` | **44 px** | **44 px** |
+| `l` | **49,5 px** | **49,5 px** |
+
+**44 px werden in keiner Stufe unterschritten**, in beiden Ansichten. Die Zahlen decken sich mit
+M122 (dort 44/44/44/50 — die 50 ist die gerundete 49,5).
+
+> **Belegvermerk (Regel L10) zu dieser Tabelle.** *Gemessen:* die Höhen, die die Regel des
+> Berührungsgeräts an den echten Zeilen der laufenden Anwendung erzeugt — angewandt wurde dafür
+> genau die eine Deklaration, die `globals.css` unter `@media (pointer: coarse)` trägt.
+> *Nicht emuliert:* das Gerät. Das Messgerät meldet `any-pointer: fine`, und die Erweiterung kann
+> `pointer: coarse` nicht vortäuschen (M122 konnte es über das DevTools-Protokoll). **Dass die
+> Deklaration in dieser `@media`-Regel steht und in keiner anderen, hält `tests/dichte.test.ts`
+> fest** — samt der Gegenprobe, dass die Zeilenhöhe allein die Fläche in **keiner** Stufe trüge
+> (36 px in `m`, 31,5 px in `xs`). Regel und Wirkung sind damit je einzeln belegt, ihr
+> Zusammentreffen am echten Finger nicht.
+
+---
+
+## 25. E‑55 — Die einzelne Richtung steht als Wort
+
+*Korrekturblock in §17.* Fällt die Richtungsebene weg (E‑45), trägt das Blatt die Richtung — seit
+dem 02.09.2026 als **Wort** statt als Zeichen, und „nicht ermittelt" bekommt gar keine Stelle mehr.
+Die Tabelle steht im Korrekturblock in §17, die Regel als reine Funktion `richtungswort` in
+`prozessbaum.ts`.
+
+### M128 — die Umbruchmessung, wiederholt
+
+**Dieselbe Strecke wie M118, unverändert**: vier Mandanten, Breiten von 18 bis 34 rem, gezählt ist
+ein Blatt, dessen Prozessname mehr als eine Zeile braucht (Höhe der Namensspanne gegen die gemessene
+`line-height`). Gemessen am **gerenderten** Baum der laufenden Anwendung, alle Gruppen aufgeklappt.
+
+| Breite | `NEXANS` (733) | `VOTG` (390) | `IBIS` (192) | `SUTTONS` (17) | zusammen (1.332) | M118 |
+|---:|---:|---:|---:|---:|---:|---:|
+| 18 rem | 407 | 339 | 191 | 14 | 951 (71,4 %) | 967 (72,6 %) |
+| 20 rem | 206 | 248 | 156 | 5 | 615 (46,2 %) | 665 (49,9 %) |
+| 22 rem | 81 | 177 | 93 | 2 | 353 (26,5 %) | 395 (29,7 %) |
+| 24 rem | 38 | 111 | 47 | 2 | 198 (14,9 %) | 224 (16,8 %) |
+| **26 rem** | **17** | **52** | **22** | **0** | **91 (6,8 %)** | **132 (9,9 %)** |
+| 28 rem | 8 | 22 | 9 | 0 | 39 (2,9 %) | 46 (3,5 %) |
+| 30 rem | 1 | 9 | 4 | 0 | 14 (1,1 %) | 20 (1,5 %) |
+| 32 rem | 0 | 0 | 3 | 0 | 3 (0,2 %) | 3 (0,2 %) |
+| 34 rem | 0 | 0 | **3** | 0 | **3 (0,2 %)** | **0** |
+
+### ✔ 26 rem trägt weiter, und E‑49 wird nicht angetastet
+
+**Bei `NEXANS` brechen unverändert 17 von 733 Namen um** — die erste der drei Zahlen, auf denen
+E‑49 steht, ist Ziffer für Ziffer dieselbe. Über alle vier Mandanten sind es **91 statt 132**.
+
+**Der Grund, warum das Wort weniger kostet, als der Auftrag befürchtet hat, ist eine Rechnung, die
+niemand gemacht hatte:** Das Wort **ersetzt** ein Zeichen. Das Zeichen maß `size-3.5` (14 px) und
+stand mit `gap-1.5` (6 px) vor dem Namen — jede Zeile ohne Richtungsebene bekommt also **20 px**
+zurück. Wo ein Wort tritt, ist es netto „rund zehn Zeichen minus 20 px"; wo keines tritt, sind es
+20 px geschenkt.
+
+**Und Blätter mit Wort sind viel seltener als angenommen:**
+
+| Mandant | Blätter ohne Richtungsebene | davon **mit Wort** | ohne (Richtung `null`) |
+|---|---:|---:|---:|
+| `NEXANS` | 31 | **20** | 11 |
+| `VOTG` | 390 | **0** | 390 |
+| `IBIS` | 20 | **20** | 0 |
+| `SUTTONS` | 17 | **0** | 17 |
+| **zusammen** | **458** | **40 (3,0 % aller Blätter)** | 418 |
+
+> **Die 31 aus dem Auftrag sind für `NEXANS` richtig gezählt und für diese Frage die falsche Zahl.**
+> Elf der 31 hängen unter `SONDERPROZESS`, und dessen einzige Richtung ist `null` — es ist die
+> einzige leere Richtung im ganzen `NEXANS`-Baum (§21). Diese elf tragen kein Wort und verlieren nur
+> den gestrichelten Kreis. **Betroffen sind 20 Zeilen, nicht 31.**
+
+**`VOTG` ist der große Gewinner und war der befürchtete Verlierer:** null Wörter, 390 gestrichelte
+Kreise weniger, und die Umbrüche fallen bei 26 rem von 99 auf **52**.
+
+### ⚠️ Was das Wort kostet, und es steht bei `IBIS`
+
+`IBIS` ist der einzige Mandant, der schlechter wird: 22 statt 16 Umbrüche bei 26 rem, und **erstmals
+brechen drei Namen selbst bei 34 rem um**, wo M118 über alle vier Mandanten null gezählt hatte. Alle
+drei tragen ein Wort:
+
+```
+Ausgehend  Ausgehende Rechnung Kaufland KEM (Versand an Markant)
+Ausgehend  Ausgehende Rechnung Kaufland KEM PL (Versand an Markant)
+Ausgehend  Ausgehende Rechnung Kaufland KEM RO (Versand an Markant)
+```
+
+**Das Wort steht dort doppelt, und es ist kein Einzelfall:** Bei `IBIS` beginnen **16 von 20** Namen
+mit Wort selbst mit „Eingehende…" oder „Ausgehende…". Bei `NEXANS` sind es **0 von 20** — dort
+stehen technische Kurznamen (`AMPHENOL_700026_LAB`). **Der Katalog beschreibt bei `IBIS` also
+zweimal dasselbe**, einmal im Feld `richtung` und einmal im Namen.
+
+> **Das ist ein Befund und keine Änderung an E‑55.** Ein Wort zu unterdrücken, weil der Name mit ihm
+> beginnt, wäre eine Regel über **Oberflächentext** — genau das, was Regel Q4 und §17 überall sonst
+> verbieten (die Eingrenzung greift aus demselben Grund nicht auf ihn zu). Und es wäre eine Regel,
+> die in der englischen Fassung nicht mehr griffe. **Die Doppelung ist eine Kuratierungsfrage und
+> keine Darstellungsfrage** — dieselbe Art von Befund wie die zwei Schreibweisen aus Punkt 106. Sie
+> ist hier gezählt und nicht gelöst.
+
+### Die Stufenprobe — nachgeprüft und nicht übernommen
+
+M118 behauptet, die Dichtestufe ändere die Umbrüche nicht. **In einer zweiten Stufe nachgemessen**
+(`NEXANS`, `xs` gegen `m`):
+
+| Breite | `xs` | `m` |
+|---:|---:|---:|
+| 18 rem | 407 | **408** |
+| 22 rem | 81 | 81 |
+| 26 rem | 17 | 17 |
+| 30 rem | 1 | 1 |
+| 34 rem | 0 | 0 |
+
+**Die Aussage hält** — eine Abweichung von einer Zeile bei der schmalsten Breite, dieselbe
+Größenordnung wie M118s eigene Ausnahme (`IBIS` bei 22 rem, 88 gegen 89). Breite und Schriftgröße
+liegen beide in `rem`; die Stufe ändert die Pixel und nicht die Umbrüche.
+
+---
+
+## 26. E‑56 — „nie" wird in der Zeile nicht mehr gekennzeichnet
+
+*Korrekturblock in §17, unter dem Kasten „Warum ‚nie' trotzdem ein Wort bekommt".* Die Tabelle der
+drei Zustände, die Begründung und der Preis stehen dort; hier steht nur, was daran **kein** Messwert
+ist:
+
+**Diese Entscheidung hat keine Messung.** Sie ist eine Aussage darüber, was ein Zustand *ist* —
+Katalogfrage gegen Vorfall —, und die entscheidet sich nicht an einer Zahl. Was gezählt werden
+könnte, ist bereits gezählt: 217 von 733 Prozessen bei `NEXANS` sind „nie" (Kopfzeile, Zeitraum
+30 T), bei `VOTG` 89,7 % (M111). **Diese Zahlen sind das Argument für die Entscheidung und nicht ihr
+Beleg** — sie sagen, dass die Kennzeichnung häufig ist, nicht, dass sie falsch ist.
+
+**Offener Punkt 120** hält fest, was dabei verloren geht.
+
+---
+
+## 27. E‑57 — Bei offenem Panel weicht der Baum
+
+*Korrekturblock in §18, dreht E‑53 um.* Die Aufteilung und die Begründung stehen dort.
+
+### M129 — die Breitenzustände mit offenem Panel
+
+Dieselbe Strecke wie M124, Stufe `m` (16 px Wurzelschrift, damit die Zahlen mit M119, M124 und M126
+vergleichbar bleiben), `NEXANS`, tiefer Link auf `?prozess=…&nachricht=…`.
+
+| Breite | `main` | Baum | Liste (Kasten) | Tabelle | Panel | Ablaufspalte | Querlauf im Dokument |
+|---:|---:|---|---:|---:|---:|---:|---|
+| 1280 | 1.072 | **weicht** | 585 | 744 | 416 | **0 px** ⚠️ | nein |
+| 1440 | 1.232 | **weicht** | 745 | 744 | 416 | **0 px** ⚠️ | nein |
+| 1536 | 1.328 | **weicht** | 777 | 775 | **480** | 31 px | nein |
+| 1920 | 1.712 | **weicht** | 1.161 | 1.159 | **480** | 415 px | nein |
+
+Zur Gegenprobe dieselben Breiten mit **geschlossenem** Panel, also Baum neben Liste:
+
+| Breite | `main` | Baum | Liste (Kasten) | Tabelle | Ablaufspalte |
+|---:|---:|---:|---:|---:|---:|
+| 1280 | 1.072 | 416 | 585 | 744 | 0 px |
+| 1440 | 1.232 | 416 | 745 | 744 | 0 px |
+| 1536 | 1.328 | 416 | 841 | 839 | 95 px |
+| 1920 | 1.712 | 416 | 1.225 | 1.223 | 479 px |
+
+**Die beiden Tabellen tragen die Antwort auf Punkt 114, und sie ist besser als befürchtet.** Bis
+`2xl` bekommt die Liste neben dem Panel **auf den Pixel dieselbe Breite** wie neben dem Baum — beide
+Spalten sind 26 rem, eine ersetzt die andere. Erst ab `2xl` wächst das Panel auf 30 rem, und dort
+kostet der Wechsel **64 px**: Die Ablaufspalte fällt von 95 auf 31 px (1536) und von 479 auf 415 px
+(1920), bleibt aber in beiden Fällen sichtbar.
+
+> **Die Rechnung des Auftrags ist bestätigt.** *Gerechnet war:* 1.016 px nutzbar minus 416 px Panel
+> minus 16 px Abstand sind **584 px**. *Gemessen sind* **585 px**. Die Ablaufspalte fällt dort auf
+> 0 px, und „Ablauf" steht über „Projekt" — beide `th` beginnen bei 685 px. **Befund 114 wandert mit
+> und bleibt bestehen**, wie der Auftrag es festhält.
+>
+> ⚠️ **Eine Abweichung gegen M124, die benannt gehört:** Dort steht die Liste bei 1.440 px mit
+> **758 px** und die Ablaufspalte mit 14 px; hier sind es 745 px und 0 px. Die 13 px Unterschied
+> sind die Bildlaufleiste von `main`, die der Messrahmen zeichnet. **Welche der beiden Zahlen für
+> das echte Fenster gilt, ist nicht entschieden** — und der Punkt daran ist nicht die Zahl, sondern
+> dass **bei 1.440 px gut zehn Pixel darüber entscheiden**, ob die Ablaufspalte 14 px hat oder gar
+> keine. Für den Vergleich der beiden Tabellen oben ist es gleichgültig: Der Versatz trifft beide
+> Zustände gleich.
+
+### Die drei Dinge, die daran hängen
+
+**1. Der Aufklappzustand bleibt.** Nachgefahren bei 1920 px: drei Partner weit unten aufgeklappt
+(`ETO`, `LEARGUS`, `SIEMENSVDO`), Prozess gewählt, Nachricht geöffnet, `Escape`. **Dieselben drei
+stehen vor und nach dem Öffnen offen**, und die 160 Baumzeilen bleiben im DOM — `display: none`
+hängt nichts aus. `Escape` schließt über `useEscapeSchliesst`, `nachricht` fällt aus der Adresse.
+
+**2. `main.scrollTop` springt — und der Sprung ist die Verbesserung.**
+
+| Vorgang | `main.scrollTop` | Höhe von `main` | Oberkante der rechten Spalte |
+|---|---:|---:|---|
+| tief im Baum, Prozess gewählt | 3.701 px | 5.970 px | **−3.586 px** — außerhalb des Bildes |
+| Nachricht geöffnet | **0 px** | **1.029 px** | **+115 px** — im Bild |
+| `Escape` | **3.701 px** | 5.970 px | −3.586 px |
+
+**Der Auftrag verlangt zu belegen, dass der Scrollstand nicht springt; er springt, und die Aussage
+ist damit widerlegt.** Der Grund ist nicht, dass die Anwendung scrollt, sondern dass die Seite
+schrumpft: Mit dem Baum verschwinden fünf Sechstel ihrer Höhe, und der Browser kappt den Scrollstand
+auf das, was übrig ist. **Beim Schließen kommt er zurück** — dieselbe Zahl, weil die Höhe
+zurückkommt.
+
+**Das entschärft offenen Punkt 118 an genau der Stelle, an der er am meisten weh tat.** Unter E‑53
+stand die Überschrift der rechten Spalte 3.586 px über dem Sichtfenster, und der Nutzer sah rechts
+eine leere Fläche (M125). Unter E‑57 steht das Panel **im Bild**, ohne dass irgendwo ein Sprung
+programmiert wäre. **Punkt 118 bleibt trotzdem offen:** Er betrifft den Schritt **davor** — den Weg
+vom Baum zur *Liste* —, und dort ist nichts anders geworden.
+
+**3. Der Fokus — er kann im Baum liegen, und der Fall ist geregelt.**
+
+Der Auftrag fragt, ob der Fokus beim Öffnen des Panels im Baum liegen kann. **Er kann, und der Weg
+ist nachgefahren:**
+
+| Weg ins Panel | wo der Fokus vorher liegt | wo er danach liegt |
+|---|---|---|
+| tiefer Link `?prozess=…&nachricht=…` | `document.body` | `document.body` — **unverändert**, kein Sprung |
+| Klick oder Eingabetaste auf einer Listenzeile | auf der Zeile (`tabIndex={0}`) | **auf der Zeile** — nichts verschoben |
+| Kettenglied im Panel | im Panel | im Panel |
+| **Zurück/Vorwärts des Browsers, während eine Baumzeile den Fokus trägt** | **auf der Baumzeile** | **auf dem Panelbereich** |
+
+**Über den Baum selbst ist der Fall nicht erreichbar** — er setzt nur `prozess`, nie `nachricht`.
+Erreichbar ist er über den Verlauf, und `prozess` und `nachricht` legen mit `history: "push"` eigens
+die Einträge dafür an. Vor der Regel fiel der Fokus dort auf `document.body` oder blieb auf der
+**weggeblendeten** Baumzeile stehen; beides bricht die Tabulatorkette an derselben Stelle wie
+Befund 3 aus §21.
+
+> **Zwei Fassungen der Regel sind an der Messung gescheitert, und beide Male war die Bedingung
+> richtig und nur falsch gestellt:**
+>
+> 1. *Die Abfrage im Effekt selbst.* Wenn der Effekt läuft, steht `document.activeElement` **noch
+>    auf der Baumzeile** — der Browser setzt den Fokus erst zurück, wenn er das Rendern das nächste
+>    Mal auffrischt. Daher `requestAnimationFrame`.
+> 2. *Nur `document.body` abfragen.* Der Fokus fällt **nicht zuverlässig** dorthin: In einem Teil
+>    der Läufe bleibt `document.activeElement` die Baumzeile, obwohl ihr Vorfahr `display: none`
+>    trägt. Die Bedingung fängt seither **beide** Fälle.
+>
+> Ohne den Messrahmen wäre die erste Fassung als „gebaut" in diese Datei gewandert — sie sieht im
+> Code richtig aus und tut nichts.
+
+**Aufgefangen wird vom Panel*bereich*** (`tabIndex={-1}`) und nicht von der Schaltfläche
+„Schließen". Die wäre das genauere Gegenstück zu „Zurück zum Baum", steht aber in
+`nachricht-detail.tsx` — einem Baustein, den diese Ansicht als vierter Einhängepunkt benutzt und in
+dieser Runde nicht anfasst. Der Bereich setzt die Tabulatorstelle an den Anfang des Panels; der
+nächste Tabulator führt hinein und nicht an den Anwendungsrahmen.
+
+**Kein neuer Umbruchpunkt und keine Abfrage der Fensterbreite.** Die Regel gilt in **jeder** Breite,
+weil der Baum seit E‑57 in jeder Breite weicht — sie braucht deshalb keine Klasse wie `md:hidden`,
+die §15 für den Rückweg gebraucht hat.
+
+### Zwei Sonderregeln, die gegenstandslos geworden sind
+
+**1. Das Aktualisierungsintervall der verdeckten Liste** — Kasten in §18, dort mit seinem Rest als
+offener Punkt **121**.
+
+**2. `max-w-inhalt` und `beschriftung-breit` am Panel.** Sie standen dort, weil das Panel unter E‑53
+an die Stelle der Liste trat und deren volle Breite bekam (bei 1920 px gemessene 1.223 px, mehr als
+die eigene Route je hatte). **Ab `xl` tut es das nicht mehr, und dort wären beide falsch:** Ein
+Deckel von 16 rem ließe der Beschriftungsspalte 256 px von 416 px Panelbreite. Die 10 rem sind genau
+für dieses Panel gemessen ([`bam-werte.md`](bam-werte.md) §11a). Das Panel trägt seither **Klasse
+für Klasse dieselbe Hülle wie in der Nachrichtenliste** — `xl:w-[26rem] 2xl:w-[30rem]` —, und das
+ist die eigentliche Wirkung von E‑57: Der vierte Einhängepunkt sieht aus wie der erste.
+
+---
+
+## 28. Tests, Regelbezug und was diese Runde nicht getan hat
+
+### Die Tests
+
+**Angepasst, nicht entfernt.** `pnpm check` läuft durch: 31 Dateien, **764 Fälle** (753 vor dieser
+Runde).
+
+| Datei | was dazugekommen ist |
+|---|---|
+| `tests/dichte.test.ts` | **Vier Fälle für `--dichte-bedienzeile`**, dieselbe Bauform wie für `--dichte-beruehrung` daneben: dass es am Zeigergerät auf `--dichte-zeile` steht (stünde dort die Fläche, wäre E‑54 eine Umbenennung), dass **genau eine** `@media (pointer: coarse)`-Regel es auf die Fläche zurücksetzt und keine davon `any-pointer` heißt, dass der Rückfall **gebraucht** wird (die Zeilenhöhe allein trüge die 44 px in keiner Stufe — gerechnet, nicht hingeschrieben), und dass `--spacing-bedienzeile` verdrahtet ist |
+| `tests/prozessbaum.test.ts` | **Vier Fälle für `richtungswort`**: nur am Blatt ohne Ebene; „nicht ermittelt" bekommt nichts; ein vierter Katalogwert steht da, wie er im Katalog steht (Regel Q4); der Wortlaut kommt aus `texte` und unterscheidet sich zwischen den Sprachen — die Probe, warum die Eingrenzung ihn nicht durchsucht. Dazu **zwei angepasste**: `zustandstext("NIE", …)` ist `null`, und der vorgelesene Name nennt „nie" nicht mehr, während „still" darin bleibt |
+| `tests/prozess-baum.test.tsx` | **Zwei Fälle am gerenderten Baum** — die Verdrahtung, die keine reine Funktion zeigt: dass an der Stelle des Zeichens **kein `svg` mehr steht** (Gruppen behalten ihres) und dass die „nie"-Zeile weder das Wort noch `text-muted-foreground` trägt. Dazu der angepasste Höhenfall: `min-h-bedienzeile` an jeder Zeile **und `min-h-beruehrung` an keiner** |
+
+### Regelbezug
+
+| Regel | wie sie hier greift |
+|---|---|
+| **L10** Belegvermerke | Jeder Zahlensatz trägt seinen Vermerk; die Rechnung aus Teil D ist als gerechnet gekennzeichnet und von M129 mit 585 gegen 584 px belegt |
+| **Q4** nichts raten | Kein Oberflächentext wird zur Filtergrundlage. Der vierte Katalogwert der Richtung erscheint, wie er dasteht — und ist damit erstmals von „nicht ermittelt" unterscheidbar. Die Doppelung bei `IBIS` ist gezählt und **nicht** durch eine Textregel behoben |
+| **T1** Plantests | Keine Laufzeit als Zusicherung. **Kein Statement ist angefasst**, kein Plan hat sich geändert |
+| **Z1** Anwendungsuhr | Nicht berührt |
+| **L7** mehrere Mandanten | M128 über dieselben vier Mandanten wie M118, einer davon klein (`SUTTONS`, 17 Blätter) |
+
+### Was diese Runde nicht getan hat
+
+1. **Kein Endpunkt, kein Statement, kein Feld.** `zustand` und `richtung` werden unverändert
+   geliefert; E‑35, E‑36 und E‑37 gelten.
+2. **Keine zweite Fassung der Nachrichtenliste.** Offener Punkt 114 bleibt offen und ist nur
+   fortgeschrieben.
+3. **Keine Entscheidung über `--dichte-beruehrung` selbst.** Offener Punkt 96 bleibt offen; das neue
+   Token steht **neben** ihm.
+4. **Kein neuer Umbruchpunkt.** `md`, `xl` und `2xl` genügen; keine Fensterbreite wird in JavaScript
+   abgefragt.
+5. **Kein freier Zeitraum.** Der ist Gegenstand von 10c‑4.
+6. **Keine Regel gegen die Doppelung „Ausgehend Ausgehende…".** Sie wäre eine Regel über
+   Oberflächentext (§25).
+
+> ### ⚠️ Belegvermerk zu M127 bis M129 (Regel L10)
+>
+> *Gemessen war:* die laufende Anwendung im Entwicklungsbetrieb (`next dev`), angemeldet, mit den
+> echten Daten der Testkopie, über vier Mandanten, neun Spaltenbreiten, vier Dichtestufen und vier
+> Fensterbreiten — Zeilenhöhen, Kopfhöhen, sichtbare Zeilen, Umbrüche, Spalten- und Kastenbreiten,
+> Scrollstände, Seitenhöhen, Aufklappzustände und `document.activeElement`.
+>
+> *Gemessen im **Rahmen** und nicht im Fenster* (§23). Die Gegenprobe zu M121 stimmt Ziffer für
+> Ziffer; die eine bekannte Abweichung ist die Bildlaufleiste von `main` bei 1.440 px (13 px, §27).
+>
+> *Nicht angesehen — vollständig:*
+>
+> - **kein echtes Berührungsgerät und keine Emulation.** Angewandt ist die Deklaration, nicht das
+>   Gerät; die Regel selbst hält `tests/dichte.test.ts` fest
+> - **kein anderer Browser als Chromium**, **keine Produktionsdatenbank**
+> - **nur der helle Modus und nur Deutsch.** Die englischen Richtungswörter sind über
+>   `sprachdateien.test.ts` und `tests/prozessbaum.test.ts` geprüft, das **Bild** nicht
+> - **nur die vier beauftragten Mandanten**
+> - **kein Vorleseprogramm.** Dass „nie" aus dem `aria-label` verschwunden ist, ist im Test belegt
+>   und nicht gehört
+> - **kein Nutzer.** Ob das Wort besser liest als das Zeichen, ob der weggeblendete Baum stört und
+>   ob der Schalter den verlorenen „nie"-Hinweis ersetzt (Punkt 120), bleibt in allen drei Fällen
+>   eine Auslegung
+>
+> **Und keine Zeit ist an einer Wanduhr gegen eine Zusicherung geprüft** (Regel T1).

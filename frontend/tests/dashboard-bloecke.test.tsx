@@ -34,6 +34,10 @@ import { rendere } from "./hilfe/rendern";
 
 const TEXTE = texteFuer("de");
 const D = TEXTE.dashboard;
+// Die drei Rollup-Paare stehen seit dem 02.09.2026 auf oberster Ebene: Der
+// Umschalter ist nach `components/` gewandert und liest keinen Textblock eines
+// Features mehr (`docs/process-view.md` E-47).
+const Z = TEXTE.zeitraum;
 
 const FENSTER = { von: "2025-12-28T05:00:00Z", bis: "2025-12-30T05:00:00Z" };
 
@@ -313,7 +317,7 @@ describe("Der Leerzustand", () => {
       // **Der Umschalter bleibt bedienbar** — er ist der einzige Weg
       // herauszufinden, ob es am Zeitraum liegt.
       const schalter = [...gerendert.behaelter.querySelectorAll("button")].filter(
-        (knopf) => knopf.textContent === D.zeitraum["30T"],
+        (knopf) => knopf.textContent === Z["30T"],
       );
       expect(schalter).toHaveLength(1);
       expect(schalter[0]?.hasAttribute("disabled")).toBe(false);

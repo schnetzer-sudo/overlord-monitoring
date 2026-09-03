@@ -109,19 +109,19 @@ export const en: Texte = {
       "This account has no tenant assigned. Contact EDI support so the assignment gets added.",
   },
 
+  zeitraum: {
+    bezeichnung: "Period",
+    "48H": "48 hours",
+    "30T": "30 days",
+    "12M": "12 months",
+  },
+
   dashboard: {
     titel: "Overview",
     leerTitel: "Nothing in this period",
     leerHinweis:
       "No message moved during this period. Pick a longer period — if it stays empty, this tenant " +
       "has no data.",
-
-    zeitraum: {
-      bezeichnung: "Period",
-      "48H": "48 hours",
-      "30T": "30 days",
-      "12M": "12 months",
-    },
 
     verlauf: {
       titel: "History",
@@ -465,6 +465,55 @@ export const en: Texte = {
       geladen: "{anzahl} links loaded",
       tiefeErreicht: "The chain is longer than shown here.",
       zyklusErkannt: "The chain runs in a circle — it stops here.",
+    },
+  },
+
+  prozesse: {
+    nichtZugeordnet: "not assigned",
+    ohneNamen: "Process without a name",
+
+    richtung: {
+      EINGEHEND: "Inbound",
+      AUSGEHEND: "Outbound",
+      nichtErmittelt: "not recorded",
+    },
+
+    baum: {
+      bezeichnung: "Process tree",
+      eingrenzung: "Narrow down by partner or process",
+      eingrenzungLeeren: "Clear the filter",
+      keineTreffer: "No partner and no process matches that.",
+      leerTitel: "No process",
+      leerHinweis:
+        "The source holds no process for this tenant. Without a process there is no transfer " +
+        "either — that is not a setting of this view.",
+      nurMitVerkehr: "Only with traffic in the period",
+      nurMitVerkehrHinweis:
+        "Hides processes that carried nothing during the selected period. Leave it off when you " +
+        "want to find out why nothing arrives.",
+      verteilung: "{prozesse} processes — {bewegt} active, {still} silent, {nie} never used",
+      gezeigt: "{sichtbar} of {gesamt} shown",
+      ebenePartner: "Partner",
+      ebeneRichtung: "Direction",
+      ebeneProzess: "Process",
+      anzahlProzesse: "Processes: {anzahl}",
+      anzahlNachrichten: "Messages: {anzahl}",
+      anzahlFehler: "Errors: {anzahl}",
+      still: "nothing for over {monate} months",
+    },
+
+    liste: {
+      leerTitel: "No process selected",
+      leerHinweis:
+        "Pick a process on the left. Its transfers for the selected period will show up here.",
+      zurNachrichtenliste: "All transfers in the message list",
+      zurueckZumBaum: "Back to the tree",
+      nichtGefunden: "No process with this id in this tenant",
+      leerImZeitraumTitel: "Nothing in this period",
+      leerImZeitraum:
+        "Nothing ran through this process during the selected period. A longer period shows " +
+        "more — if it stays empty, the process carried nothing.",
+      fenster: "Period {von} to {bis}",
     },
   },
 

@@ -1779,6 +1779,38 @@ hat, auf die sich kürzen lässt. Die Höhe ist `--dichte-zeile`
 und der Innenabstand der Zellen ebenfalls — zusammen mit den zwei entfallenen Spalten passen
 spürbar mehr Zeilen ins Fenster.
 
+> ### ⚠️ Was „Ablauf bekommt den Rest" heißt, wenn kein Rest da ist — gemessen am 02.09.2026
+>
+> Aufgefallen beim Bau der Prozessansicht, die diese Tabelle in einer **schmalen Spalte neben einem
+> Baum** zeigt ([`process-view.md`](process-view.md) §18, M119). Gemessen an der gebauten Tabelle in
+> kopflosem Chrome, bei 1280 px **und** bei 1920 px Fensterbreite, mit identischem Ergebnis:
+>
+> | Spaltenbreite | Zeitpunkt | Status | **Ablauf** | Projekt | Tabelle |
+> |---:|---:|---:|---:|---:|---:|
+> | 568 px | 184 | 272 | **0** | 288 | 744 |
+> | 700 px | 184 | 272 | **0** | 288 | 744 |
+> | 750 px | 184 | 272 | 4 | 288 | 748 |
+> | 1.000 px | 184 | 272 | 254 | 288 | 998 |
+>
+> **`table-fixed` schrumpft die festen Spalten nicht — es nimmt der einzigen freien Spalte alles.**
+> Unterhalb von **744 px** ist „Ablauf" null Pixel breit, und die Tabelle scrollt waagerecht in dem
+> Container, den `components/ui/table.tsx` selbst mitbringt. Die Spalte mit dem Namen, an dem man
+> eine Zeile erkennt, ist dann ohne waagerechtes Scrollen nicht zu sehen.
+>
+> **Auf der eigenen Route ist das kein Fall** — dort hat die Liste die volle Inhaltsbreite. Es ist
+> einer, sobald etwas daneben steht: Baum, Panel, oder was auch immer noch kommt. **Wer die
+> Spaltenbreiten ändert, ändert damit die Schwelle**, ab der eine zweispaltige Ansicht die Liste
+> vollständig zeigen kann. Geführt als offener Punkt 114 in
+> [`process-view.md`](process-view.md) §13.
+>
+> **Nachtrag vom 02.09.2026, aus der Sichtprüfung** ([`process-view.md`](process-view.md) §21,
+> M126): Die null Pixel breite Spalte **beschneidet ihre Kopfzeile nicht**. „Ablauf" wird an
+> derselben Stelle gezeichnet, an der „Projekt" beginnt, und die beiden Wörter stehen übereinander —
+> in der Prozessansicht bei 1280 px als unlesbarer Klumpen zu sehen. **Der Kopf verliert damit
+> früher seine Lesbarkeit als die Zellen**, denn deren Inhalt ist über `truncate` gekürzt. Wer
+> Punkt 114 aufmacht, hat also zwei Dinge zu entscheiden: die Breiten **und** ob eine Spalte ohne
+> Platz ihre Beschriftung überhaupt noch zeichnen soll.
+
 #### Der aktuelle Schritt steht in der Statuszelle — bei offenen Nachrichten
 
 Bei `WARTEND` und `LAEUFT` steht **neben** der Statusplakette der Schritt, auf dem die Nachricht

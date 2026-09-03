@@ -11,6 +11,7 @@ import {
   type Zeitfensterzustand,
   type Zeitraum,
 } from "@/lib/filter";
+import type { Rollupzeitraum } from "@/lib/rollupzeitraum";
 
 import {
   NACHRICHTEN_SCHLUESSEL,
@@ -24,6 +25,7 @@ import {
   holeKettenAbwaerts,
   holeNachrichten,
   holeNachrichtendetail,
+  holeProzessbaum,
   holeProzesse,
   type Artefaktanzeige,
   type Artefaktliste,
@@ -36,8 +38,10 @@ import {
   type Nachricht,
   type Nachrichtendetail,
   type Prozess,
+  type Prozessbaum,
   type Seite,
 } from "./api";
+import { PROZESSANSICHT_PARAMETER, type Prozessansichtzustand } from "./prozessansicht";
 import {
   NACHRICHTEN_PARAMETER,
   alsAbfrage,
@@ -750,4 +754,102 @@ export function useNachrichtenSeite(
     zurueck: useCallback(() => setStapel((bisher) => bisher.slice(0, -1)), []),
     aktualisiere: useCallback(() => void nachladen(), [nachladen]),
   };
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Die Prozessansicht (Schritt 10c‑2)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Der Zustand der Prozessansicht, gebunden an die URL.
+ *
+ * **`history: "replace"` als Grundeinstellung**, wie bei jeder Filterleiste. Die
+ * beiden Parameter, die eine Ansicht *öffnen* — `prozess` und `nachricht` —
+ * bringen ihr `push` am Parser mit (`prozessansicht.ts`) und werden davon nicht
+ * berührt: Unter 768 px tritt die Liste an die Stelle des Baums und das Panel
+ * an die Stelle der Liste, und das Zurück des Browsers ist dort der Weg heraus.
+ */
+export function useProzessansichtzustand() {
+  const [zustand, setzeZustand] = useQueryStates(PROZESSANSICHT_PARAMETER, { history: "replace" });
+
+  return {
+    zustand: zustand as Prozessansichtzustand,
+    /**
+     * **Der gewählte Wert wird immer geschrieben, auch wenn er dem entspricht,
+     * was der Endpunkt ohnehin genommen hätte.** Ein Klick ist eine Absicht,
+     * und eine geteilte URL soll sie tragen. Die Auswahl bleibt dabei stehen:
+     * Der Zeitraum ändert die Zahlen, nie den Umfang des Baums — ein Prozess,
+     * den man gerade ansieht, verschwindet durch einen Zeitraumwechsel nicht.
+     */
+    setzeZeitraum: useCallback(
+      (zeitraum: Rollupzeitraum) => void setzeZustand({ zeitraum }),
+      [setzeZustand],
+    ),
+    /**
+     * Wählt einen Prozess — oder schließt ihn mit `null`.
+     *
+     * **Ein Prozesswechsel schließt die geöffnete Nachricht.** Sie gehoert zum
+     * vorigen Prozess; stehen zu lassen hieße, im Panel einen Beleg zu zeigen,
+     * der in der Liste daneben gar nicht vorkommt. Das ist kein Sonderfall,
+     * sondern der Normalfall des Weiterklickens im Baum.
+     */
+    setzeProzess: useCallback(
+      (processId: string | null) => void setzeZustand({ prozess: processId, nachricht: null }),
+      [setzeZustand],
+    ),
+    /**
+     * Öffnet oder schließt die Nachricht an der Stelle der Liste (E‑44).
+     *
+     * **`null` schließt und lässt den übrigen Zustand unberührt** — es wird
+     * genau ein Parameter entfernt. Der Verlaufseintrag entsteht am Parser und
+     * nicht hier.
+     */
+    setzeNachricht: useCallback(
+      (messageId: string | null) => void setzeZustand({ nachricht: messageId }),
+      [setzeZustand],
+    ),
+    /**
+     * Der Schalter „nur mit Verkehr im Zeitraum".
+     *
+     * **Die Auswahl bleibt stehen**, auch wenn der gewählte Prozess durch das
+     * Ausblenden aus dem Baum fällt. Ihn mitzuschliessen hieße, dem Nutzer
+     * seine Liste wegzunehmen, weil er den Baum aufgeräumt hat; die Ansicht
+     * zeigt stattdessen weiter, was er geöffnet hat.
+     */
+    setzeNurMitVerkehr: useCallback(
+      (nurMitVerkehr: boolean) => void setzeZustand({ nurMitVerkehr }),
+      [setzeZustand],
+    ),
+    /**
+     * Die Sortierung der Übertragungsliste.
+     *
+     * **Sie steht in der URL wie in der Nachrichtenliste** — sie beschreibt den
+     * gezeigten Ausschnitt. Die geöffnete Nachricht bleibt dabei stehen: Eine
+     * andere Reihenfolge ist derselbe Beleg an anderer Stelle.
+     */
+    setzeSortierung: useCallback(
+      (sortierung: Sortierung) => void setzeZustand({ sortierung }),
+      [setzeZustand],
+    ),
+  };
+}
+
+/**
+ * Der Prozessbaum — **ein Aufruf, eine Antwort** (Entscheidung E‑33).
+ *
+ * **Länger gehalten als die Liste, aber nicht so lang wie die Prozessauswahl.**
+ * Das Gerüst sind Stammdaten, die Kennzahlen daneben nicht: Sie hängen am
+ * gewählten Fenster, und das wandert mit der Anwendungsuhr weiter. Es bleibt
+ * deshalb bei der Vorgabe des Clients — dieselbe Überlegung, die die Belegsuche
+ * von den Belegarten trennt.
+ *
+ * **Beim Mandantenwechsel wird der gesamte Zwischenspeicher geleert**, nicht
+ * invalidiert (`lib/zwischenspeicher.ts`); der Mandant steht aus demselben Grund
+ * in keinem Schlüssel.
+ */
+export function useProzessbaum(zeitraum: Rollupzeitraum | null) {
+  return useQuery<Prozessbaum>({
+    queryKey: NACHRICHTEN_SCHLUESSEL.baum(zeitraum),
+    queryFn: () => holeProzessbaum(zeitraum),
+  });
 }

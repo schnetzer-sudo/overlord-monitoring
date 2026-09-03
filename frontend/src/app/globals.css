@@ -45,6 +45,8 @@
   --spacing-navzeile: var(--dichte-navzeile);
   --spacing-navspalte: var(--dichte-navspalte);
   --spacing-suchbereich: var(--dichte-suchbereich);
+  --spacing-baumspalte: var(--dichte-baumspalte);
+  --spacing-bedienzeile: var(--dichte-bedienzeile);
   --spacing-zeile: var(--dichte-zeile);
   --container-inhalt: var(--dichte-inhaltsbreite);
   /* Beschriftung links in gedeckelter Breite, Werte rechts im Rest. Das
@@ -187,7 +189,49 @@
   --dichte-navzeile: 2.125rem; /* 34 px — Navigationseintrag */
   --dichte-navspalte: 13rem; /* 208 px einschliesslich Innenabstand */
   --dichte-suchbereich: 18rem; /* 288 px — reserviert fuer die BAM-Suche, Schritt 7 */
+  /* Die Baumspalte der Prozessansicht AB xl. Darunter bekommt sie einen ANTEIL
+     (40 %) und keine feste Breite: Bei 768 px blieben von rund 520 px Inhalt
+     sonst gut hundert fuer die Liste daneben.
+
+     GEMESSEN und nicht gewaehlt (M118, docs/process-view.md §16). Die 34 rem der
+     flachen Prozessauswahl gelten hier NICHT: Dort steht der Name in einer
+     Schublade ueber der ganzen Breite, hier kommen Einrueckung, Aufklappzeichen
+     und zwei Zahlen dazu -- und die Spalte steht neben einer Tabelle, der jeder
+     Pixel fehlt, den der Baum nimmt.
+
+     Drei Zahlen tragen die 26 rem:
+       1. Bei NEXANS -- dem Fall, fuer den zu entwerfen ist -- brechen 17 von 733
+          Namen um (2,3 %). Ab hier liegt die Gesamthoehe des offenen Baums
+          innerhalb von 0,4 % ihres Grenzwerts (54.626 gegen 54.382 px).
+       2. Es ist der groesste Wert, bei dem die Uebertragungsliste daneben bei
+          1440 px noch VOLLSTAENDIG steht. Ihre Tabelle braucht gemessene 744 px;
+          darunter faellt die Ablaufspalte auf 0 px (M119).
+       3. Es ist die Breite, die das Nachrichtenpanel ab xl ohnehin hat -- eine
+          Zahl statt zwei.
+
+     Die Umbruchzahlen sind in ALLEN VIER Dichtestufen gleich: Breite und Schrift
+     liegen beide in rem und skalieren miteinander. Wer diesen Wert aendert,
+     aendert ihn fuer alle vier Stufen zugleich. */
+  --dichte-baumspalte: 26rem;
   --dichte-zeile: 2.25rem; /* Tabellenzeile ab Schritt 4 */
+  /* Die Zeile, die zugleich BEDIENELEMENT ist -- die Baumzeile der
+     Prozessansicht und die Auswahlzeile der Prozessauswahl (E-54, 02.09.2026).
+     Am Zeigergeraet die Zeilenhoehe, am Beruehrungsgeraet die
+     Mindestflaeche; die Umschaltung steht in der @media-Regel weiter unten,
+     dieselbe Bauform wie bei --dichte-bedienelement und --dichte-navzeile.
+
+     WARUM ES DIESES TOKEN GIBT und nicht einfach --dichte-zeile in der
+     Komponente: Am Finger gilt die Mindestflaeche weiterhin, und sie steht
+     genau einmal an einer Stelle statt in zwei Komponenten.
+
+     GEMESSEN war der Anlass (M121): Die Baumzeile hielt --dichte-beruehrung und
+     damit in xs, s und m ueberall denselben Boden von 44 px -- 19/19/18/16
+     sichtbare Zeilen bei 1080 px gegen 28/26/24/19 in der Nachrichtenliste. Der
+     Dichteumschalter bewegte im Baum drei Zeilen ueber die ganze Skala.
+     Nachgemessen als M127, docs/process-view.md §24.
+
+     --dichte-beruehrung selbst bleibt unberuehrt; offener Punkt 96 auch. */
+  --dichte-bedienzeile: var(--dichte-zeile);
   /* Gedeckelte Breite einer Beschriftungsspalte neben ihren Werten. GEDECKELT
      und nicht inhaltsbreit: Eine lange Beschriftung setzte sonst die Breite
      fuer alle und naehme vier kurzen rund die Haelfte des Panels weg. Mit dem
@@ -345,6 +389,7 @@ html[data-dichte="l"] {
   :root {
     --dichte-bedienelement: var(--dichte-beruehrung);
     --dichte-navzeile: var(--dichte-beruehrung);
+    --dichte-bedienzeile: var(--dichte-beruehrung);
     --dichte-kopfzeile: 3.5rem;
   }
 }

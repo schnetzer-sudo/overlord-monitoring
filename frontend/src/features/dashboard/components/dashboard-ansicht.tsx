@@ -1,6 +1,7 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
+import { ZeitraumUmschalter } from "@/components/zeitraum-umschalter";
 import { Fehler, Laden, Leer } from "@/components/zustand";
 import { useTexte } from "@/i18n/provider";
 
@@ -11,7 +12,6 @@ import { Kacheln } from "./kacheln";
 import { VerteilungBlock } from "./verteilung-block";
 import { StandZeile } from "./stand-zeile";
 import { VerlaufDiagramm } from "./verlauf-diagramm";
-import { ZeitraumUmschalter } from "./zeitraum-umschalter";
 
 /**
  * Die Landingpage (`docs/dashboard-frontend.md`).

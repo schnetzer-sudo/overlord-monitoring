@@ -1,12 +1,16 @@
 import { createParser } from "nuqs";
 
 import {
-  DASHBOARD_ZEITRAEUME,
+  hervorgehobenesPaar,
+  istRollupzeitraum,
+  parseAsRollupzeitraum,
+  type Rollupzeitraum,
+} from "@/lib/rollupzeitraum";
+
+import {
   VERTEILUNGSSICHTEN,
   VERTEILUNG_VORGABE,
-  istDashboardzeitraum,
   istVerteilungssicht,
-  type Dashboardzeitraum,
   type Verteilungssicht,
 } from "./api";
 
@@ -40,19 +44,13 @@ import {
  * Zustand → Adresse ist eine reine Funktion und wird als solche geprüft.
  */
 
-/** Ein unbekannter Code landet nicht in der URL — er wäre ein garantiertes `400`. */
-export const parseAsDashboardzeitraum = createParser<Dashboardzeitraum>({
-  parse: (wert) => (istDashboardzeitraum(wert) ? wert : null),
-  serialize: (wert) => wert,
-});
-
 export const parseAsVerteilungssicht = createParser<Verteilungssicht>({
   parse: (wert) => (istVerteilungssicht(wert) ? wert : null),
   serialize: (wert) => wert,
 });
 
 export const DASHBOARD_PARAMETER = {
-  zeitraum: parseAsDashboardzeitraum,
+  zeitraum: parseAsRollupzeitraum,
   verteilung: parseAsVerteilungssicht,
 };
 
@@ -66,7 +64,7 @@ export const DASHBOARD_PARAMETER = {
  * Rendern keiner mehr.
  */
 export type Dashboardzustand = {
-  zeitraum: Dashboardzeitraum | null;
+  zeitraum: Rollupzeitraum | null;
   verteilung: Verteilungssicht | null;
 };
 
@@ -83,9 +81,11 @@ export const LEERER_ZUSTAND: Dashboardzustand = { zeitraum: null, verteilung: nu
  */
 export function hervorgehobenerZeitraum(
   zustand: Dashboardzustand,
-  ausDerAntwort: Dashboardzeitraum | undefined,
-): Dashboardzeitraum | null {
-  return zustand.zeitraum ?? ausDerAntwort ?? null;
+  ausDerAntwort: Rollupzeitraum | undefined,
+): Rollupzeitraum | null {
+  // Die Regel selbst steht in `lib/rollupzeitraum.ts` — die Prozessansicht
+  // braucht sie wörtlich genauso, und zweimal geschrieben liefe sie auseinander.
+  return hervorgehobenesPaar(zustand.zeitraum, ausDerAntwort);
 }
 
 /**
@@ -135,13 +135,10 @@ export function ausSuchparametern(suchparameter: URLSearchParams): Dashboardzust
   const zeitraum = suchparameter.get("zeitraum");
   const verteilung = suchparameter.get("verteilung");
   return {
-    zeitraum: istDashboardzeitraum(zeitraum) ? zeitraum : null,
+    zeitraum: istRollupzeitraum(zeitraum) ? zeitraum : null,
     verteilung: istVerteilungssicht(verteilung) ? verteilung : null,
   };
 }
-
-/** Die drei Paare in der Reihenfolge, in der sie im Umschalter stehen. */
-export const ZEITRAUM_REIHE = DASHBOARD_ZEITRAEUME;
 
 /** Die beiden Sichten in der Reihenfolge, in der sie im Umschalter stehen. */
 export const SICHT_REIHE = VERTEILUNGSSICHTEN;

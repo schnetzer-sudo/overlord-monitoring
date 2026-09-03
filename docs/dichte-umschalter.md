@@ -366,6 +366,29 @@ zwischen der Unterkante des Tabellenkopfes und der Unterkante des Scrollbereichs
 sechs — für jemanden, der eine Liste überfliegt, ist das der Unterschied zwischen einem Blick und
 zwei.
 
+> ### ⚠️ Und die Gegenzahl aus einer anderen Ansicht: **im Prozessbaum bewegt der Umschalter fast
+> nichts** *(02.09.2026)*
+>
+> Die Baumzeile der Prozessansicht hält `--dichte-beruehrung` und nicht `--dichte-zeile` — sie ist
+> ein Bedienziel und keine Zeile Daten ([`process-view.md`](process-view.md) E‑51). Damit greift in
+> `xs`, `s` und `m` überall der Boden von 44 px, und nur `l` rechnet darüber hinaus:
+>
+> | Stufe | Partnerzeile im Baum | Tabellenzeile der Liste |
+> |---|---:|---:|
+> | `xs` | **44 px** | 31,5 px |
+> | `s` | **44 px** | 33,75 px |
+> | `m` | **44 px** | 36 px |
+> | `l` | **50 px** | 40,5 px |
+>
+> **Das ist kein Fehler, sondern der Preis für den Satz in §3:** „Wird nirgends unterschritten."
+> Wo eine Ansicht ihn einhält, hört der Dichteumschalter auf zu wirken — drei gleiche Stufen und
+> eine, die weniger zeigt.
+>
+> **Der Zusammenhang ist derselbe wie in §5.4 und in offenem Punkt 96**: Was das Token trägt, hält
+> das Maß; was es nicht trägt (die Tabellenzeile), hielt es auch vorher nicht. Neu ist nur, dass
+> jetzt eine ganze Ansicht auf der einen Seite dieser Grenze steht. Geführt als offener Punkt 117 in
+> [`process-view.md`](process-view.md) §13.
+
 #### ⚠️ Befund: In `l` fehlt eine Zeile mehr, als die Skalierung erklärt
 
 Die drei kleineren Stufen skalieren **exakt** proportional. Der Kopf über der ersten Datenzeile
@@ -437,11 +460,26 @@ meldet in jeder Stufe `true`). Gemessen ist die **Layouthöhe** (`offsetHeight`)
 | `--dichte-kopfzeile` | 49 | 52,5 | 56 | 63 |
 | `--dichte-feld` | 35 | 37,5 | 40 | 45 |
 | `--dichte-zeile` | 31,5 | 33,75 | 36 | 40,5 |
+| `--dichte-bedienzeile` *(ab 02.09.2026)* | **44** | **44** | **44** | 49,5 |
 | **Eintrag des Umschalters** | **44** | **44** | **44** | **50** |
 
 **Der Umschalter selbst erfüllt das Kriterium in jeder Stufe**, und mit ihm alles, was
 `--dichte-beruehrung` oder `--dichte-bedienelement` trägt: Navigationseinträge,
 Mandantenumschalter, Sprachwahl, Nutzermenü, sämtliche Menüeinträge.
+
+> ### `--dichte-bedienzeile` ist am 02.09.2026 dazugekommen — und ändert an Punkt 96 nichts
+>
+> Baumzeile und Auswahlzeile trugen bis dahin `--dichte-beruehrung` und waren damit in `xs`, `s`
+> und `m` gleich hoch; der Umschalter bewegte im Prozessbaum drei Zeilen über die ganze Skala
+> ([`process-view.md`](process-view.md) §16, M121). Seither steht das neue Token am Zeigergerät auf
+> `--dichte-zeile` und **fällt hier auf die Fläche zurück** — die Zeile darüber in der Tabelle zeigt
+> es. Nachgemessen als M127 ([`process-view.md`](process-view.md) §24), mit **derselben
+> Einschränkung wie überall in diesem Abschnitt**: gemessen ist die Layouthöhe, nicht die Fläche.
+>
+> **Offener Punkt 96 bleibt unberührt**, in beide Richtungen: `--dichte-beruehrung` ist nicht
+> angefasst worden, und die drei Klassen, die dort unter 44 px bleiben, sind dieselben. Die
+> **Tabellenzeile** (`--dichte-zeile`, 36 px) bleibt ausdrücklich darunter — sie ist eine Zeile
+> Daten und kein Ziel, und genau diese Unterscheidung trägt das neue Token im Namen.
 
 > ⚠️ **Und zwar in der HÖHE. Eine Fläche von 44 × 44 ist das nicht**, und der Unterschied gehört
 > hierher, weil er leicht überlesen wird. `min-h-beruehrung` hebt die Höhe an und sagt über die

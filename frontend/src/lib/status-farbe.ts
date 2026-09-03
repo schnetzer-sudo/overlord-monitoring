@@ -236,8 +236,34 @@ function ohneKontur(rolle: Statusrolle | Problemrolle): string {
   return `${FLAECHE_UND_SCHRIFT[rolle]} border-transparent`;
 }
 
+/**
+ * Nur der **Vordergrund** — die Fassung für eine Zahl, die in einer Zeile
+ * mitläuft und keine Plakette ist.
+ *
+ * Gebraucht seit dem 02.09.2026 vom Prozessbaum: Dort steht neben jedem Knoten
+ * die Zahl der Fehler, und eine Plakette je Zeile wäre bei 1.158 Zeilen ein
+ * Flächenteppich. **Die Farbe bleibt trotzdem hier** — eine Komponente kennt
+ * keinen Farbnamen (`tests/farbwerte.test.ts`).
+ *
+ * **Farbe allein genügt nicht**, und das ist keine Frage dieser Datei: Wer diese
+ * Klassen nimmt, stellt ein Zeichen oder eine Beschriftung daneben
+ * (`docs/visuelles-konzept.md` §3).
+ */
+const VORDERGRUND: Record<Statusrolle | Problemrolle, string> = {
+  abgeschlossen: "text-status-abgeschlossen",
+  fehler: "text-status-fehler",
+  offen: "text-status-offen",
+  ungeklaert: "text-status-ungeklaert",
+  ueberfaellig: "text-ueberfaellig",
+};
+
 export function statusrolle(art: Statusart): Statusrolle {
   return ZUORDNUNG[art];
+}
+
+/** Siehe {@link VORDERGRUND} — für eine Zahl in einer Zeile, ohne Fläche und ohne Kontur. */
+export function statusVordergrund(art: Statusart): string {
+  return VORDERGRUND[statusrolle(art)];
 }
 
 export function statusKlassen(art: Statusart): string {

@@ -164,6 +164,25 @@ export const de = {
   },
 
   /**
+   * Die drei Rollup-Paare — **an einer Stelle für beide Ansichten**, die sie
+   * tragen: das Dashboard und die Prozessansicht.
+   *
+   * Bis zum 02.09.2026 standen sie unter `dashboard.zeitraum`. Der Umschalter
+   * ist an diesem Tag nach `components/` gewandert, weil ein Feature nicht aus
+   * einem Nachbarfeature importiert (`docs/frontend-grundlagen.md` §8) — und ein
+   * Baustein in `components/` liest keinen Textblock eines Features.
+   *
+   * Die Schlüssel sind die **Codes des Backends** und keine Namen: `48H`, `30T`,
+   * `12M` stehen so in der URL und in der Antwort.
+   */
+  zeitraum: {
+    bezeichnung: "Zeitraum",
+    "48H": "48 Stunden",
+    "30T": "30 Tage",
+    "12M": "12 Monate",
+  },
+
+  /**
    * Die Landingpage (`docs/dashboard-frontend.md`).
    *
    * **Sie hat den Block `startseite` abgelöst.** Dort standen bis zum 01.09.2026
@@ -181,13 +200,6 @@ export const de = {
     leerHinweis:
       "In diesem Zeitraum ist keine Nachricht bewegt worden. Wähle einen größeren Zeitraum — " +
       "bleibt es dabei, hat dieser Mandant keine Daten.",
-
-    zeitraum: {
-      bezeichnung: "Zeitraum",
-      "48H": "48 Stunden",
-      "30T": "30 Tage",
-      "12M": "12 Monate",
-    },
 
     verlauf: {
       titel: "Verlauf",
@@ -763,6 +775,106 @@ export const de = {
       // wo abgebrochen wurde, „im Kreis" warum.
       tiefeErreicht: "Die Kette ist länger als hier gezeigt.",
       zyklusErkannt: "Die Kette führt im Kreis — hier ist sie abgebrochen.",
+    },
+  },
+
+  /**
+   * Die Prozessansicht (`docs/process-view.md`, Schritt 10c‑2).
+   *
+   * **Der Baum links, die Übertragungen rechts.** Die Beschriftungen der
+   * Nachrichtenliste stehen weiterhin unter `nachrichten` — sie ist dieselbe
+   * Liste, und ein zweiter Satz Spaltenüberschriften wäre der Anfang zweier
+   * Listen.
+   */
+  prozesse: {
+    /** Regel Q4: Was der Nutzer anstelle einer fehlenden Zuordnung liest, ist eine
+     * Oberflächenentscheidung und gehört hierher, nicht in eine Abfrage. */
+    nichtZugeordnet: "nicht zugeordnet",
+
+    /**
+     * Ein Prozess **ohne Namen** — und ausdrücklich nicht „nicht zugeordnet".
+     *
+     * Die beiden Wörter stehen im selben Baum eine Ebene höher für etwas
+     * anderes: Beim Partner fehlt die **Zuordnung**, hier fehlt der **Name**.
+     * Derselbe Text für beides wäre auf dem Bildschirm nicht zu unterscheiden.
+     *
+     * Steht auf oberster Ebene dieses Blocks, weil ihn **Baum und Überschrift**
+     * benutzen — dieselbe Tatsache soll links und rechts gleich heißen.
+     */
+    ohneNamen: "Prozess ohne Namen",
+
+    /**
+     * Die Richtung. **`nichtErmittelt` ist ein eigenes Wort und keine leere
+     * Stelle** — bei `VOTG` trägt keine einzige der 390 Katalogzeilen eine
+     * Richtung, und eine Ansicht, die dort nichts hinschriebe, behauptete, es
+     * gäbe keine.
+     *
+     * Ein gepflegter, aber unbekannter Wert steht hier **nicht** und wird auch
+     * nicht geraten: Er erscheint, wie er im Katalog steht.
+     */
+    richtung: {
+      EINGEHEND: "Eingehend",
+      AUSGEHEND: "Ausgehend",
+      nichtErmittelt: "nicht ermittelt",
+    },
+
+    baum: {
+      bezeichnung: "Prozessbaum",
+      eingrenzung: "Partner oder Prozess eingrenzen",
+      eingrenzungLeeren: "Eingrenzung aufheben",
+      keineTreffer: "Kein Partner und kein Prozess passt dazu.",
+      leerTitel: "Kein Prozess",
+      leerHinweis:
+        "Für diesen Mandanten steht in der Quelle kein Prozess. Ohne Prozess gibt es auch keine " +
+        "Übertragung — das ist keine Einstellung dieser Ansicht.",
+      // Vorgabe aus (Entscheidung E‑48). Mit Vorgabe *an* wäre genau der Prozess
+      // unauffindbar, den jemand sucht, weil er nichts trägt.
+      nurMitVerkehr: "Nur mit Verkehr im Zeitraum",
+      nurMitVerkehrHinweis:
+        "Blendet Prozesse aus, über die im gewählten Zeitraum nichts gelaufen ist. Wer wissen " +
+        "will, warum nichts ankommt, lässt den Schalter aus.",
+      // Die drei Zustände nebeneinander — sie sind disjunkt und vollständig,
+      // ihre Summe ist die Prozesszahl (`docs/process-view.md` §4).
+      verteilung: "{prozesse} Prozesse — {bewegt} bewegt, {still} still, {nie} noch nie",
+      gezeigt: "{sichtbar} von {gesamt} gezeigt",
+      // Die Ebenennamen stehen nur im vorgelesenen Namen einer Zeile, nicht auf
+      // dem Bildschirm: Dort sagt die Einrückung, was eine Zeile ist.
+      ebenePartner: "Partner",
+      ebeneRichtung: "Richtung",
+      ebeneProzess: "Prozess",
+      // „Prozesse: 12" statt „12 Prozesse": Diese Anwendung kennt keine
+      // Pluralregeln, und „1 Prozesse" wäre der Preis dafür.
+      anzahlProzesse: "Prozesse: {anzahl}",
+      anzahlNachrichten: "Nachrichten: {anzahl}",
+      anzahlFehler: "Fehler: {anzahl}",
+      // Die Zahl kommt aus der Antwort (`stilleSchwelleMonate`, Entscheidung
+      // E‑37) — die Oberfläche beschriftet damit und rechnet nichts nach.
+      //
+      // **Ein Gegenstück `nie` gibt es seit dem 02.09.2026 nicht mehr** (E‑56):
+      // „noch nie" ist eine Katalogfrage und kein Vorfall; in der Zeile steht
+      // dafür weder ein Wort noch eine Dämpfung. Die Zahl bleibt — sie steht in
+      // `verteilung` und im Schalter darunter.
+      still: "seit über {monate} Monaten nichts",
+    },
+
+    liste: {
+      // Vor der Wahl eines Prozesses steht rechts **nicht** die ganze Liste des
+      // Mandanten. Dafür gibt es die Nachrichtenliste, und dorthin führt der Weg.
+      leerTitel: "Kein Prozess gewählt",
+      leerHinweis:
+        "Wähle links einen Prozess. Rechts stehen dann seine Übertragungen im gewählten Zeitraum.",
+      zurNachrichtenliste: "Alle Übertragungen in der Nachrichtenliste",
+      zurueckZumBaum: "Zurück zum Baum",
+      // `undefined` heißt „nicht gefunden", `null` heißt „ohne Namen" — die
+      // beiden fallen ausdrücklich nicht zusammen (Regel Q4). Ein geteilter
+      // Link kann eine Kennung eines anderen Mandanten tragen; über deren
+      // Namen ist dann gar nichts bekannt.
+      nichtGefunden: "Zu dieser Kennung steht in diesem Mandanten kein Prozess",
+      leerImZeitraumTitel: "Nichts im Zeitraum",
+      leerImZeitraum:
+        "Über diesen Prozess ist im gewählten Zeitraum nichts gelaufen. Ein größerer Zeitraum " +
+        "zeigt mehr — bleibt es dabei, hat der Prozess nichts getragen.",
+      fenster: "Zeitraum {von} bis {bis}",
     },
   },
 

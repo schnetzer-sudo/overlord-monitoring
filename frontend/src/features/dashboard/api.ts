@@ -1,4 +1,5 @@
 import { hole } from "@/lib/http";
+import type { Fenster, Rollupzeitraum } from "@/lib/rollupzeitraum";
 import type { Statusart } from "@/lib/status-farbe";
 
 /**
@@ -25,26 +26,21 @@ import type { Statusart } from "@/lib/status-farbe";
  */
 
 /**
- * Die drei Paare aus Fensterbreite und Eimerbreite (`Dashboardzeitraum` im
- * Backend). Der Code steht in der URL; ein unbekannter Wert ist dort `400`
- * `zeitraum-unbekannt` und wird **nicht** stillschweigend auf die Vorgabe
- * gezogen.
+ * Die drei Paare aus Fensterbreite und Eimerbreite stehen seit dem 02.09.2026 in
+ * `lib/rollupzeitraum.ts` und heißen dort `Rollupzeitraum` — wie im Backend seit
+ * Entscheidung E‑44.
+ *
+ * **Der Grund ist die Prozessansicht**, die dieselben drei Codes braucht: Ein
+ * Feature importiert nicht aus einem Nachbarfeature, also wandert der
+ * gemeinsame Teil nach `lib` (`docs/frontend-grundlagen.md` §8). Hier steht
+ * nichts mehr davon — auch keine Hülle, die den alten Namen weiterführte: Zwei
+ * Namen für dieselbe Menge sind der Anfang zweier Mengen.
  *
  * **Ohne Angabe wählt der Endpunkt selbst** (`docs/dashboard.md` §3) und nennt
  * das gewählte Paar in der Antwort. Eine Vorgabe im Frontend wäre ein zweiter
- * Standardwert und liefe dem ersten irgendwann hinterher.
+ * Standardwert und liefe dem ersten irgendwann hinterher — deshalb steht auch in
+ * `lib` keine.
  */
-export const DASHBOARD_ZEITRAEUME = ["48H", "30T", "12M"] as const;
-
-export type Dashboardzeitraum = (typeof DASHBOARD_ZEITRAEUME)[number];
-
-export function istDashboardzeitraum(wert: string | null | undefined): wert is Dashboardzeitraum {
-  return (
-    wert !== null &&
-    wert !== undefined &&
-    (DASHBOARD_ZEITRAEUME as readonly string[]).includes(wert)
-  );
-}
 
 /**
  * Die zwei Sichten des Verteilungsblocks. **`PARTNER` ist die Vorgabe des
@@ -65,14 +61,11 @@ export function istVerteilungssicht(wert: string | null | undefined): wert is Ve
 }
 
 /**
- * Die gelesenen Grenzen, UTC, **`bis` ausschließend**.
- *
- * Beide liegen auf einer Eimergrenze; die obere ist der Anfang des *nächsten*
- * Eimers. Das unterscheidet sich absichtlich vom Listen-Endpunkt, der auf die
- * Sekunde genau auflöst — für ein Diagramm wäre das falsch
- * (`docs/dashboard.md` §2).
+ * Die gelesenen Grenzen stehen seit dem 02.09.2026 als `Fenster` in
+ * `lib/rollupzeitraum.ts` — die Prozessansicht bekommt dasselbe Feld, und ein
+ * Feature importiert nicht aus einem Nachbarfeature.
  */
-export type Fenster = { von: string; bis: string };
+export type { Fenster };
 
 /** Je Eimer nur die Einordnungen, die **vorkommen** — nie alle acht mit Nullen. */
 export type Einordnungszahl = { einordnung: Statusart; anzahl: number };
@@ -171,7 +164,7 @@ export type Stand = { beendetAm: string | null; art: string | null };
 
 export type Dashboard = {
   /** Das **gewählte** Paar, immer gesetzt — auch im Leerzustand. */
-  zeitraum: Dashboardzeitraum;
+  zeitraum: Rollupzeitraum;
   fenster: Fenster;
   /**
    * Der Leerzustand, und er **unterscheidet nicht**: „im Zeitraum ist nichts
@@ -201,7 +194,7 @@ export type Dashboard = {
  * Endpunkt zusätzlich die Belegungsprobe.
  */
 export const DASHBOARD_SCHLUESSEL = {
-  landingpage: (zeitraum: Dashboardzeitraum | null, sicht: Verteilungssicht | null) =>
+  landingpage: (zeitraum: Rollupzeitraum | null, sicht: Verteilungssicht | null) =>
     ["dashboard", "landingpage", zeitraum, sicht] as const,
 };
 
@@ -215,7 +208,7 @@ export const DASHBOARD_SCHLUESSEL = {
  * einen Parameter zu setzen, den der Nutzer nicht ausgedrückt hat.
  */
 export function holeDashboard(
-  zeitraum: Dashboardzeitraum | null,
+  zeitraum: Rollupzeitraum | null,
   sicht: Verteilungssicht | null,
 ): Promise<Dashboard> {
   const parameter = new URLSearchParams();
