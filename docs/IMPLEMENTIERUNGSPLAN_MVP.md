@@ -997,7 +997,7 @@ einem MANDANT-Nutzer `403` — auch dann, wenn er auf dessen eigenes Konto zeigt
 > | Teil | Inhalt | Stand |
 > |---|---|---|
 > | **10a** | Rollup: `message_rollup`, `rollup_lauf`, Delta- und Volllauf, kein Endpunkt | **fertig am 26.08.2026** ([`rollup.md`](rollup.md)) |
-> | **10b** | Dashboard: Leseabfrage, Kacheln, Verlaufsdiagramm, Verteilungen | offen |
+> | **10b** | Dashboard: Leseabfrage, Kacheln, Verlaufsdiagramm, Verteilungen | **fertig am 03.09.2026** — 10b‑1 bis 10b‑5, siehe darunter |
 > | **10c** | Process View, gruppiert nach kuratiertem Partner | offen |
 >
 > **Und fünf Angaben des Abschnitts oben sind inhaltlich überholt.** Sie bleiben stehen; hier steht,
@@ -1011,6 +1011,78 @@ einem MANDANT-Nutzer `403` — auch dann, wenn er auf dessen eigenes Konto zeigt
 > dort ebenso berichtigt; die ausführliche Begründung steht in jenem Kasten. Gemessen: M89, 11,299 ms
 > im Standardfenster mit Katalog-Join. Gebaut: [`rollup.md`](rollup.md) §2.
 >
+> ### Der Umfang von 10b, wie er tatsächlich gelaufen ist *(Stand 03.09.2026)*
+>
+> | Teil | Inhalt | Stand |
+> |---|---|---|
+> | **10b‑1** | Plan der Liste (M100–M104), der Parameter `ueberfaellig`, die Tagesebene `V10`/`V11` | fertig 27.–30.08.2026 |
+> | **10b‑2** | Die Monatsebene `V12`, der Dashboard-Endpunkt, M107 und M108 | fertig 31.08.2026 |
+> | **10b‑3a** | Die Farbrolle `--ueberfaellig`, gerechnet und gegengeprobt | fertig 31.08.2026 |
+> | **10b‑3b** | Das Dashboard-Frontend | fertig 01.09.2026 |
+> | **10b‑4** | ***Überfällig* widerlegt, *Läuft* und *Wartend* gebaut** | **fertig 03.09.2026** |
+> | **10b‑5** | **Die Oberfläche zieht nach** — vier Kacheln, asymmetrische Verlinkung, der Wegfall der Überfällig-Plakette | **fertig 03.09.2026** |
+>
+> **Damit ist Schritt 10b abgeschlossen.**
+>
+> #### ⚠️ Was 10b‑4 am Umfang von 10b geändert hat
+>
+> **Der Auftrag für 10b sah drei Problemkategorien vor, dann zwei (E‑d), jetzt ist es eine.**
+> *Überfällig* ist am 03.09.2026 durch eine **fachliche Auskunft des Auftraggebers** widerlegt und
+> aus dem MVP genommen (**E‑71**) — nicht durch eine Messung, sondern durch eine Auskunft über das
+> Verhalten des Altsystems: `SUSPENDED` wartet absichtlich, `RUNNING` wird von einem Wächter
+> automatisch auf `ERROR_TIMEOUT` gesetzt. **Die Kategorie hatte auf der Testkopie 538 Treffer und
+> keinen einzigen wahren.**
+>
+> **An ihre Stelle treten zwei Zustandskacheln** — *Läuft* und *Wartend* (E‑72, E‑73), beide live
+> über `Message`, beide ohne Zeitfenster, je mit Zahl und Alter der ältesten Zeile. **Die Kachel
+> *Wartend* erscheint strukturell** und nicht nach der Zahl (E‑74).
+>
+> **Was damit im MVP fehlt und benannt ist:** Die Frage *„hängt hier etwas zu lange?"* ist
+> unbeantwortet. Eine Schwelle dafür steht nirgends in den Daten — `MessageTimeout` ist es
+> nachweislich nicht —, und sie zu erfinden verbietet Regel Q4. **Offener Punkt 130** in
+> [`dashboard.md`](dashboard.md) §11. Es ist wörtlich die Lage, in der *Unquittiert* mit E‑d
+> gestorben ist.
+>
+> **Die Auskunft ist nicht gemessen**, und die eine Abfrage, die sie entscheiden würde, steht als
+> **„Die offene Prüfung"** in [`message-status.md`](message-status.md) — gegen die **Produktion**.
+>
+> #### Was 10b‑4 hinterlässt
+>
+> **Sechs neue offene Punkte** — 130 (die unbeantwortete Frage), 131 (die Oberfläche verweist
+> weiterhin auf einen entfallenen Parameter), 132 (`fristSekunden` bei den Endstatus), 133 (eine
+> Aufzählung mit einem Wert), 134 (27 ms Drift im Verteilungsblock ohne gemessene Ursache) und 135
+> (die Isolation der Kachel *Läuft* ist lokal nicht nachweisbar).
+>
+> **Und ein Zwischenstand, der ausdrücklich in Kauf genommen ist:** Das Dashboard-Frontend aus
+> 10b‑3b liest `kacheln.ueberfaellig` und bekommt das Feld nicht mehr. **Bis 10b‑5 ist die
+> Landingpage im Browser defekt** — der Endpunkt ist es nicht. Vollständig in
+> [`dashboard-frontend.md`](dashboard-frontend.md) wird das **nicht** vermerkt: Die Datei ist in
+> diesem Schritt nicht angefasst worden, und 10b‑5 fasst sie ohnehin an.
+>
+> **4 Messungen (M142–M145), 7 Entscheidungen (E‑71 bis E‑77), keine Migration.** Höchste
+> Flyway-Version bleibt `V12`.
+>
+> #### Was 10b‑5 daraus gemacht hat *(03.09.2026)*
+>
+> **Reine Frontend-Arbeit** — kein Statement, kein Repository, keine Java-Datei, keine Migration.
+> Höchste Flyway-Version bleibt `V12`.
+>
+> | | |
+> |---|---|
+> | **Vier Kacheln statt drei** | *Fehler · Läuft · Wartend · Nachrichten* (**E‑78**), und bei einem Mandanten ohne suspendierende Abläufe sind es drei ohne Lücke |
+> | **Drei Zustände, drei Bilder** (**E‑81**) | strukturell abwesend · nicht ermittelbar · ermittelt. **Abwesenheit und „nicht ermittelbar" dürfen nie gleich aussehen** |
+> | **Genau eine Kachel trägt Fläche** (**E‑79**) | *Fehler*. Die Zustandskacheln tragen `--status-offen` in der Statusplakette der Liste — **schärft E‑u**, das für zwei Problemkacheln geschrieben war |
+> | **Asymmetrische Verlinkung** (**E‑80**) | *Läuft* erbt den Zeitraum, *Wartend* bringt seinen aus `aeltesteSekunden` mit; über einem Jahr greift eine Notbremse. **Löst, was E‑m nur vermied** |
+> | **Der Wegfall** | die Kachel *Überfällig*, die Kategoriekennzeichnung je Zeile in „Zuletzt aufgefallen", die Bedienung in der Liste samt URL-Zustand, die Kennzeichnung im Detail — und die Frist bei `WARTEND` (E‑76) |
+> | **Ein alter Link bricht nicht** | `?ueberfaellig=true` ist an beiden Enden ein unbekannter Parameter: wirkungslos und kein Fehler |
+>
+> **Zwei offene Punkte geschlossen** — 131 und 133 ([`dashboard.md`](dashboard.md) §11) —, **einer
+> neu**: 136, der Rohstatus je Zeile in „Zuletzt aufgefallen"
+> ([`dashboard-frontend.md`](dashboard-frontend.md) §9). Punkt **89** ist gegenstandslos geworden.
+>
+> **Vier Entscheidungen (E‑78 bis E‑81), keine Messung.** Leistung war kein Thema: Die Landingpage
+> liegt bei 49,5–195,0 ms gegen ein Budget von 500 ms (M145).
+
 > **2. Nur die Stundenebene wird materialisiert** (Entscheidung **E‑b**). Tages- und Monatsansicht
 > werden zur Lesezeit aus der Stundentabelle hochaggregiert, es gibt keine zweite und dritte
 > Tabelle. **Gestützt von M87:** Die Verdichtung von der Stunden- auf die Tagesebene bringt nur
@@ -1048,6 +1120,121 @@ einem MANDANT-Nutzer `403` — auch dann, wenn er auf dessen eigenes Konto zeigt
 mit einer direkten Abfrage überein. Ein Klick auf eine Fehlerkachel führt in die gefilterte Liste.
 
 **Dokumentation:** `docs/rollup.md`, `docs/dashboard.md`, `docs/process-view.md`
+
+---
+
+## Schritt 11 — Dunkelmodus
+
+*Eingetragen am 03.09.2026, mit der Teilung, mit der er begonnen hat.*
+
+**Warum es überhaupt einen Schritt gibt.** [`visuelles-konzept.md`](visuelles-konzept.md) §7 führt
+„Kein Dunkelmodus" als bewusste Auslassung, und §7a Befund 3 sagt, was der Preis dafür ist: *„Der
+Dunkelblock ist nie nachgerechnet worden … **Wer den Dunkelmodus einschaltet, rechnet den ganzen
+Block nach — nicht nur diese Rolle.**"* Der Satz ist die Aufgabenstellung.
+
+**Die Teilung.** Der Schritt läuft in zwei, und die Reihenfolge ist keine Vorliebe: **Erst
+rechnen, dann einschalten.** Umgekehrt gingen ungemessene Werte in eine Ansicht, und die Rechnung
+fände hinterher statt.
+
+| Teil | Inhalt | Stand |
+|---|---|---|
+| **11a** | **Die Werte.** Den Dunkelblock durchrechnen, belegen, von einem Test halten lassen — **ohne Umschalter und ohne sichtbare Änderung** | **fertig am 03.09.2026** ([`dunkelmodus.md`](dunkelmodus.md)) |
+| **11b** | **Der Umschalter.** `src/thema/` (Cookie, Server-Aktion, Provider), Eintrag im Nutzermenü, beide Sprachdateien, die Umzeigung des Selektors, die dritte Wahl *System* | **fertig am 03.09.2026** ([`dunkelmodus.md`](dunkelmodus.md) §12 ff.) |
+
+> ### ✅ **Schritt 11 ist abgeschlossen** — beide Hälften am selben Tag *(03.09.2026)*
+>
+> **Erst rechnen, dann einschalten** — die Reihenfolge hat getragen: 11a hat den Block
+> durchgerechnet, während ihn nichts erreichen konnte, und 11b hat ihn eingeschaltet, **ohne einen
+> einzigen Farbwert anzufassen** (51 aufgelöste Werte vor und nach dem Umbau, 0 Abweichungen).
+> Wäre es umgekehrt gelaufen, wären ungemessene Werte in eine Ansicht gegangen — und der Fehler,
+> den 11a im *hellen* Block gefunden hat, wäre nebenbei ausgeliefert worden.
+
+### Was 11a ergeben hat
+
+**Kein einziger Dunkelwert ist geändert worden** — der Block hielt jede der sechs vorregistrierten
+Schwellen. Geändert worden ist **ein Wert im hellen Block**: `--status-ungeklaert` verfehlte die
+4,5 : 1 dreifach (4,04 / 4,28 / 4,10) und steht seither auf `oklch(0.55 0 0)`. Das war nicht
+vorgesehen und ist der eigentliche Ertrag der Runde: Nachgerechnet worden ist der Block, von dem
+niemand etwas wusste; herausgefallen ist ein Fehler in dem, den alle für sicher hielten.
+
+Entstanden sind: `scripts/farbwerte/` (aus `scripts/farbrolle-ueberfaellig/`),
+`tests/farbkontrast.test.ts` und der ausgelagerte CSS-Leser `tests/hilfe/css-leser.ts`.
+**T‑10 aus [`testfestigkeit.md`](testfestigkeit.md) §6 ist damit zur Hälfte geschlossen.**
+
+### Die drei Entscheidungen, die 11b vorwegnehmen — getroffen am 03.09.2026
+
+**Sie sind hier festgehalten und in 11a nicht umgesetzt.** Wer 11b baut, findet sie hier und
+beginnt die Abwägung nicht von vorn.
+
+| | Entscheidung | Verworfen, und warum | Gehört zu |
+|---|---|---|---|
+| **E‑59** | Der Modus steht als **Attribut** `data-thema` am Wurzelelement, gesetzt im Wurzel-Layout aus dem Cookie. Die `dark`-Variante wird in `globals.css` einmal umgezeigt, damit der Generatorbereich unverändert weiterläuft | Die `.dark`-Klasse: sie liefe ohne Zutun, stellte aber zwei Nutzereinstellungen am selben Element in zwei Bauformen nebeneinander — `data-dichte` ist ein Attribut. Und eine Klasse ist eine Menge, in der ein dritter Wert *System* keine Stelle hat | **11b** |
+| **E‑60** | Die Wahl hat **drei Werte**: hell, dunkel, System. *System* ist eine Medienabfrage und keine Auswertung im Browser — deshalb ohne Aufblitzen. Die Dunkelwerte stehen **einmal**, die beiden Blöcke zeigen nur um | Zwei Werte: nähmen dem Nutzer die Auskunft, die sein Betriebssystem schon gegeben hat. Nur `prefers-color-scheme`: keine Wahl | **11b** |
+| **E‑61** | Nachgerechnet werden die **fünf Rollen** (je drei Werte) und die **vier Akzentstufen**. Die shadcn-Basistokens werden übernommen und sind der **Bezug**, nicht der Gegenstand | Alles nachrechnen: `components/ui` ist Generatorbereich, eine eigene Basispalette wäre eine zweite Pflegestelle gegen jedes künftige `shadcn add`. Nur die fünf Rollen: der Akzent ist ein Gelbgrün, auf dunklem Grund verschiebt sich seine Wirkung stärker als die der Statusfarben — ihn auszulassen hieße, ihn zu raten | **11a** ✔ |
+
+⚠️ **E‑59 widerspricht [`visuelles-konzept.md`](visuelles-konzept.md) §8.** Die Tabelle dort führt
+`Dunkelmodus | globals.css, Block .dark, plus ein Umschalter`. **Der Block heißt in 11a weiterhin
+`.dark`**; die Umzeigung kommt in 11b. Der §8-Eintrag trägt seit dem 03.09.2026 einen datierten
+Vermerk darüber — sonst liest ihn in 11b jemand als Vorgabe und baut die Klasse.
+
+**Was 11b vorfindet.** Vier offene Punkte aus 11a, und der erste ist der teuerste:
+
+- **122** — Im Dunkelblock kippt die Rangfolge zwischen Überfällig und Fehler, und Grün wird zur
+  lautesten Kachel. Gemessen und gesehen ([`dunkelmodus.md`](dunkelmodus.md) §6.2)
+- **123** — `--status-fehler-flaeche` liegt im hellen Block außerhalb sRGB
+- **124** — `--border` und `--input` tragen im Dunkelblock einen Alphaanteil und sind nicht als
+  deckende Farbe nachgerechnet
+- **125** — Diagramm, Prozessbaum, Formulare, Dialoge und Rohdatenansicht sind im Dunkelblock
+  **ungesehen**
+
+Dazu gelten die offenen Punkte des Dichteumschalters sinngemäß: Er ist dieselbe Bauform, und
+**100 bis 103** ([`dichte-umschalter.md`](dichte-umschalter.md) §9) beschreiben, was an ihr
+ungeprüft geblieben ist.
+
+**Abgrenzung von 11a:** kein Umschalter, kein `src/thema/`, kein `data-thema`, keine Auflösung der
+vier Konturen, `components/ui` unberührt, keine Datenbank.
+
+**Abnahme von 11a:** Teil 0 belegt; `pnpm check` und `pnpm test` grün ohne neue Ausnahme in
+`tests/farbwerte.test.ts`; die vierzehn Gegenproben laufen durch; `tests/farbkontrast.test.ts` ist
+grün gegen **beide** Blöcke und gegengeprüft; die Sichtprobe ist gefahren und ihr Befund
+ausgeschrieben; der Probecode ist entfernt. **Nicht gehalten:** „Am hellen Block ist kein Byte
+geändert" — die Abweichung ist eine Entscheidung des Auftraggebers (E‑62) und in
+[`dunkelmodus.md`](dunkelmodus.md) §4.2 ausgeschrieben.
+
+**Dokumentation:** `docs/dunkelmodus.md`
+
+### Was 11b ergeben hat *(03.09.2026)*
+
+**Der Umschalter steht.** `src/thema/` in derselben Vierteilung wie `i18n/` und `dichte/`, Cookie
+`overlord_thema`, drei Werte **hell · dunkel · system**, `data-thema` am Wurzelelement und ein
+Untermenü im Nutzermenü unter *Anzeigegröße*. E‑59 und E‑60 sind damit umgesetzt; **die Klasse
+`.dark` ist nicht gebaut worden**, der Vermerk in
+[`visuelles-konzept.md`](visuelles-konzept.md) §8 hat getan, wofür er dastand.
+
+| | |
+|---|---|
+| **Die Form, die E‑60 offengelassen hat** *(E‑66)* | Die 50 Dunkelwerte stehen **einmal** als `--dunkel-<token>` im unbedingten `:root`; der ausdrückliche Zweig und der System-Zweig unter `@media (prefers-color-scheme: dark)` **zeigen nur um**. Ein Selektor kann beide nicht treffen — eine Medienabfrage ist keine Selektorbedingung |
+| **`@custom-variant dark`** *(E‑67)* | Blockform mit **zwei `@slot`**; sonst blieben im System-Fall vierzig Generatorbausteine hell. Im gebauten CSS nachgezählt: **15 verschiedene Selektoren, je Zweig dieselben** — und an einem echten `Switch` am laufenden System belegt |
+| **`color-scheme`** | in beiden Zweigen `dark`, für `hell` ausdrücklich `light` *(E‑68)*. Dass sie etwas tut, ist ausgelöst statt geglaubt: ohne sie wird die Bildlaufleiste neben der fast schwarzen Seite **weiß** |
+| **M136** | `data-thema` an **Byte 47**, vor dem ersten `<link>` (266) und dem ersten `<script>` (578). Kein Aufblitzen |
+| **M137** | **Die nie geprüfte Zusage aus [`frontend-grundlagen.md`](frontend-grundlagen.md) §8a hält:** Recharts zieht beim Themawechsel nach — **0 Mutationen, 49 von 49 Knoten identisch**. ⚠️ Über den Menüeintrag sind es **6 Mutationen und 0 von 49**, weil `revalidatePath` den Baum erneuert; die Farbe bräuchte das nicht (Punkt **127**) |
+| **M138** | Bei `system` und dunklem Gerät steht der Dunkelzustand ab dem ersten `<html>` und bis first-contentful-paint — **kein einziges helles Einzelbild** im Ladevorgang, mit heller Eichung gegengeprobt |
+| **Tests** | **neu `tests/thema.test.ts`** (23 Fälle, der *Weg* statt der Zahlen); `farbkontrast.test.ts` liest über ein Präfix statt über zwei Selektoren *(E‑69)* und bleibt bei **69 Fällen**. Gegengeprüft mit **sieben Mutanten, in beide Richtungen geeicht**, beide Dateien danach byte-gleich |
+
+**Die Sichtprobe ist über die vier Bereiche gefahren** — Verlaufsdiagramm samt Legende und Tooltip,
+Prozessbaum, Formulare und Eingabefelder, Dialoge und Schubladen —, am angemeldeten System, in
+allen drei Zuständen und beiden Sprachen. **Korrigiert ist nichts.**
+
+**Abgrenzung von 11b:** kein Farbwert, **Punkt 122 bleibt offen** (Entscheidung des Auftraggebers),
+123 und 124 unberührt, Rohdatenansicht und Benutzerverwaltung nicht angesehen, `components/ui`
+unberührt, 88 und 92 unberührt, keine Spalte an `app_user`, keine Datenbank.
+
+**Was 11b hinterlässt.** Vier neue offene Punkte — **126** (die Dialog-Überlagerung dunkelt im
+Dunkeln praktisch nicht ab), **127** (der Umschalter rendert das Diagramm neu, obwohl die Farbe es
+nicht braucht), **128** (kein Test rendert den Umschalter) und **129** (die Cookie-Eigenschaften
+sind nicht gemessen) —, dazu **T‑13** in [`testfestigkeit.md`](testfestigkeit.md) §6: Der Test
+liest den Quelltext, nicht das Erzeugnis, und kann deshalb nicht sehen, ob Tailwind die Blockform
+der `@custom-variant` weiterhin übersetzt. **Punkt 125 ist fortgeschrieben, nicht geschlossen.**
 
 ---
 

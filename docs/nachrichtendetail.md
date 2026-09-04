@@ -391,11 +391,37 @@ dort `null`.
 lautet nicht „wie lange lag sie zwischen zwei Schritten", sondern **„wie lange steht sie schon"**.
 Der Endpunkt beantwortet sie, statt die Oberfläche rechnen zu lassen.
 
+> ### ⚠️ Zwei Änderungen am 03.09.2026 (Schritt 10b‑4)
+>
+> **`ueberfaellig` ist als Feld ersatzlos entfallen** (E‑71). Die Problemkategorie ist durch eine
+> fachliche Auskunft des Auftraggebers widerlegt — vollständig in
+> [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §4.2 Punkt 2. Mit ihm ist
+> `MessageStatusClassifier.istUeberfaellig` entfallen, an dem dieser Abschnitt hing.
+>
+> **`fristSekunden` ist bei `WARTEND` jetzt `null`** (E‑76). Bis dahin stand dort `1800` — **eine
+> Frist, die auf eine wartende Nachricht nicht angewendet wird.** Eine `SUSPENDED`-Nachricht wartet
+> absichtlich und wird vom Wächter des Altsystems nie beendet. **Ein Feld, das eine Frist nennt,
+> die niemand durchsetzt, ist eine falsche Auskunft.**
+>
+> **Bei `RUNNING` bleibt es und wird erst jetzt richtig:** Zusammen mit `wartetSeitSekunden` sagt es,
+> **wann die Nachricht in `ERROR_TIMEOUT` kippt**.
+>
+> **Für die übrigen Einordnungen ändert sich nichts**, und das ist eine Entscheidung: Bei einer
+> abgeschlossenen Nachricht ist die Frist eine Tatsache über die Zeile und keine Zusage über die
+> Zukunft. **Ob sie auch dort `null` werden sollte, ist offener Punkt 132** — in diesem Schritt
+> nicht entschieden.
+>
+> **Herkunft:** fachliche Auskunft des Auftraggebers vom 03.09.2026. **Nicht gemessen.**
+> Die Testkopie kann sie nicht belegen: `RUNNING` kommt dort null Mal vor, und die 538
+> `SUSPENDED` sind der Bestand *eines* Status in *einer* Gestalt. **Gegen die Produktion zu
+> prüfen** mit der Abfrage in [`message-status.md`](message-status.md), Abschnitt „Die offene
+> Prüfung".
+
 | Feld | Wert |
 |---|---|
 | `wartetSeitSekunden` | der Bezugspunkt hängt am offenen Zustand — siehe die Tabelle darunter |
-| `fristSekunden` | `Message.MessageTimeout` — eine Dauer in **Sekunden**, kein Zeitpunkt (M8). `null` bei `NULL` und bei `0` |
-| `ueberfaellig` | ob `MessageLastUpdate + MessageTimeout` in der Vergangenheit liegt **und** die Nachricht nicht in einem Endstatus ist |
+| `fristSekunden` | `Message.MessageTimeout` — eine Dauer in **Sekunden**, kein Zeitpunkt (M8). `null` bei `NULL`, bei `0` **und seit dem 03.09.2026 bei `WARTEND`** |
+| ~~`ueberfaellig`~~ | **entfallen am 03.09.2026 (E‑71)** — die Kategorie ist widerlegt |
 | `gesamtdauerSekunden` | fachlicher Start bis `MessageLastUpdate`, für **jede** Nachricht |
 
 **Die Berechnung läuft im Backend gegen die Anwendungsuhr, niemals im Browser.** Im Dev-Profil ist
@@ -494,7 +520,15 @@ geklärt („keine Frist gesetzt"), je Schritt ist sie eine offene Frage (Frage 
 [`messungen-schritt5.md`](messungen-schritt5.md)). Ein Feld, das eine ungeklärte `0` in ein `null`
 übersetzte, nähme die Antwort vorweg.
 
-### `ueberfaellig` ist Problemkategorie 2, und sie entsteht an genau einer Stelle
+### ~~`ueberfaellig` ist Problemkategorie 2, und sie entsteht an genau einer Stelle~~
+
+> **Der ganze Abschnitt darunter ist am 03.09.2026 gegenstandslos geworden (E‑71) und bleibt
+> vollständig stehen.** Er ist die Vorarbeit, gegen die die Widerlegung zu lesen ist. **Was von ihm
+> unberührt bleibt, ist der Absatz über `istEndstatus`:** Die Methode ist geblieben, sie beantwortet
+> weiterhin genau eine Frage, und die Kacheln *Läuft* und *Wartend* des Dashboards sind über
+> `einzigerRohwert` an sie gebunden.
+
+#### Der Stand bis zum 03.09.2026, wortgleich
 
 `MessageStatusClassifier.istUeberfaellig` in `common` — eine benannte, von außen aufrufbare Einheit,
 die das Dashboard später **ruft** statt sie dort nachzubauen. Dasselbe Muster wie die Einordnung
@@ -1149,6 +1183,43 @@ erscheint und welches Verb sie trägt — gerechnet wird hier nichts, weil die A
 
 Fehlt die Frist, steht eben nur die eine Hälfte da. Eine erfundene Frist wäre schlechter als keine.
 
+> ### ⚠️ Die Hervorhebung ist gegenstandslos *(03.09.2026, E‑71)*
+>
+> **Der Absatz darunter bleibt wortgleich stehen.** Das Feld `ueberfaellig` gibt es nicht mehr; die
+> Zeile wird seither **nie** hervorgehoben, weil die Bedingung dafür nie zutrifft.
+>
+> **Die Oberfläche ist in diesem Schritt ausdrücklich nicht angefasst worden** (Schritt 10b‑4 ist
+> ein Backend-Schritt). `zeitleiste.tsx` liest `warten.ueberfaellig` weiterhin; das Feld kommt nicht
+> mehr, JavaScript liest `undefined`, und der Zweig läuft in den `false`-Fall. **Das ist ein
+> stiller, aber harmloser Zwischenstand** — er fällt mit Schritt 10b‑5, der die Oberfläche nachzieht.
+>
+> #### ✔ Nachgezogen am 03.09.2026 *(Schritt 10b‑5)*
+>
+> **Der Zweig ist fort**, samt dem Feld `ueberfaellig` in `Nachrichtendetail` und `Wartezeile` und
+> samt dem Wort aus beiden Sprachdateien. Ein Zweig, dessen Bedingung nie zutrifft, ist eine
+> Behauptung über einen Zustand, den es nicht gibt — und `undefined` in einer Bedingung ist ein
+> stiller Zwischenstand und kein Zielzustand.
+>
+> **Was die Zeile jetzt zeigt, und es sind genau zwei Gestalten:**
+>
+> | Einordnung | Zeile | Warum |
+> |---|---|---|
+> | `WARTEND` | **„wartet seit X"** | `fristSekunden` ist seit E‑76 `null`; eine Frist, die niemand durchsetzt, stünde sonst daneben |
+> | `LAEUFT` | **„läuft seit X · Frist Y"** | Zusammen sagen die beiden, **wann die Nachricht in `ERROR_TIMEOUT` kippt** — die Frist wird hier durchgesetzt |
+>
+> **Die Komponente prüft das nicht nach.** Sie zeigt die Hälften, die da sind; welche kommt,
+> entscheidet der Endpunkt (§3a). Eine Bedingung auf die Einordnung hier wäre dieselbe Regel ein
+> zweites Mal — und die zweite liefe der ersten irgendwann hinterher.
+>
+> **Der Grundsatz aus dem Absatz darunter gilt unverändert:** Rot gehört ausschließlich der Kategorie
+> *Fehler*, und eine Hervorhebung kommt ohne Farbe aus. Die Farbrolle `--ueberfaellig` bleibt ohne
+> jeden Verbraucher bestehen ([`visuelles-konzept.md`](visuelles-konzept.md) §7a, E‑77).
+>
+> **Was der Absatz weiterhin richtig sagt**, und deshalb steht er hier: dass Rot ausschließlich der
+> Kategorie *Fehler* gehört, und dass eine Hervorhebung über Zeichen, Wort und Schriftstärke ohne
+> Farbe auskommt. Die Farbrolle `--ueberfaellig` ist inzwischen gebaut, bleibt aber **ohne
+> Verbraucher** ([`visuelles-konzept.md`](visuelles-konzept.md) §7a, E‑77).
+
 **Bei `ueberfaellig` wird die Zeile hervorgehoben — und zwar ohne eine einzige Farbe.** Nicht nur
 „nie allein über Farbe", sondern hier **gar nicht** über Farbe: Rot gehört nach
 [`visuelles-konzept.md`](visuelles-konzept.md) §7 ausschließlich der Kategorie *Fehler*. Würde
@@ -1162,6 +1233,11 @@ Schriftstärke** gegen die gedämpfte Umgebung.
 nicht unter `nachrichten`: Das Detail benennt die Kategorie an einer Nachricht, das Dashboard zählt
 sie über viele — beide müssen dasselbe Wort sagen, sonst hält ein Nutzer dieselbe Sache für zwei
 Sachen.
+
+> *Der Block `texte.problem` ist am 03.09.2026 entfallen — ohne Verbraucher und mit einem
+> Hinweistext, der seit E‑76 nicht mehr stimmte. **Die Begründung überlebt ihn** und trägt seither
+> `texte.einordnung`: Dieselbe Sache heißt an drei Stellen gleich — Statusfilter, Plakette und die
+> beiden Zustandskacheln des Dashboards.*
 
 #### Die Lückenzeile ist entfernt worden
 

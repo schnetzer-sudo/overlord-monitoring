@@ -356,8 +356,11 @@ function BaumZeile({
            * Zustand mit einem Zusatz — die Fallunterscheidung, die hier stand,
            * hätte keinen zweiten Zweig mehr zu unterscheiden.
            *
-           * **Keine eigene Farbrolle:** `--ueberfaellig` gehört der Kategorie
-           * *Überfällig* und darf nicht für einen zweiten Sachverhalt stehen.
+           * **Keine eigene Farbrolle:** `--ueberfaellig` ist für die Kategorie
+           * *Überfällig* gerechnet und bleibt ihr vorbehalten — auch seit sie am
+           * 03.09.2026 widerlegt und die Rolle ohne Verbraucher ist (E‑71,
+           * E‑77). Sie hier zu nehmen hieße, einen gerechneten Wert für einen
+           * zweiten Sachverhalt zu vergeben.
            */
           <span className={cn("mt-0.5 inline-block", MARKE_GESTALT)}>{zusatz}</span>
         )}

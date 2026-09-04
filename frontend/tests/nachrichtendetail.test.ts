@@ -61,7 +61,6 @@ function detail(werte: Partial<Nachrichtendetail> = {}): Nachrichtendetail {
     offenerZustand: "KEINER",
     naechsterSchritt: null,
     wartetSeitSekunden: null,
-    ueberfaellig: false,
     schritte: [],
     kuratierteEigenschaften: [],
     ...werte,
@@ -302,14 +301,26 @@ describe("Der offene Zustand", () => {
 /**
  * **Die Wartezeile am offenen Zustand** — sie ersetzt die Lückenzeile.
  *
- * Gerechnet wird hier nichts: `wartetSeitSekunden`, `fristSekunden` und
- * `ueberfaellig` kommen fertig aus dem Backend, gegen die **Anwendungsuhr**
- * gerechnet. Die Uhr steht im Profil `dev` Monate zurück — eine Dauer aus
- * `Date.now()` wäre dort um Monate falsch. Entschieden wird hier nur, ob die
- * Zeile erscheint und welches Verb sie trägt.
+ * Gerechnet wird hier nichts: `wartetSeitSekunden` und `fristSekunden` kommen
+ * fertig aus dem Backend, gegen die **Anwendungsuhr** gerechnet. Die Uhr steht im
+ * Profil `dev` Monate zurück — eine Dauer aus `Date.now()` wäre dort um Monate
+ * falsch. Entschieden wird hier nur, ob die Zeile erscheint und welches Verb sie
+ * trägt.
+ *
+ * ⚠️ **Die Kategorie ist am 03.09.2026 aus der Zeile gefallen** (E‑71). Hier
+ * stand ein drittes Feld `ueberfaellig`, und zwei Fälle prüften es. Sie sind
+ * **entfernt und nicht übersprungen**: Ein `skip` hinterließe einen Test, der
+ * eine Gestalt bezeugt, die es nicht mehr gibt.
  */
 describe("Die Wartezeile", () => {
-  it("erscheint beim Warten und trägt Dauer, Frist und Kategorie", () => {
+  /**
+   * **Der Rumpf trägt hier `fristSekunden`, obwohl `WARTEND` es seit E‑76 nie
+   * mehr liefert** — und das ist Absicht: Geprüft ist, dass die Zeile *durchreicht
+   * und nicht nachrechnet*. Dass bei `WARTEND` `null` kommt, ist eine Zusage des
+   * Backends (`NachrichtendetailDbIT`) und keine Bedingung dieser Funktion; sie
+   * hier nachzubauen wäre dieselbe Regel ein zweites Mal.
+   */
+  it("erscheint beim Warten und reicht Dauer und Frist durch", () => {
     expect(
       wartezeile(
         detail({
@@ -317,10 +328,9 @@ describe("Die Wartezeile", () => {
           offenerZustand: "WARTET_IN",
           wartetSeitSekunden: 15_120,
           fristSekunden: 1800,
-          ueberfaellig: true,
         }),
       ),
-    ).toEqual({ laeuft: false, sekunden: 15_120, fristSekunden: 1800, ueberfaellig: true });
+    ).toEqual({ laeuft: false, sekunden: 15_120, fristSekunden: 1800 });
   });
 
   it("unterscheidet Laufen vom Warten, damit die Zeile das richtige Verb trägt", () => {
@@ -349,7 +359,7 @@ describe("Die Wartezeile", () => {
           fristSekunden: null,
         }),
       ),
-    ).toMatchObject({ fristSekunden: null, ueberfaellig: false });
+    ).toMatchObject({ fristSekunden: null });
   });
 
   /**
@@ -376,10 +386,9 @@ describe("Die Wartezeile", () => {
           statusKind: "WARTEND",
           offenerZustand: "EMPFANGEN",
           wartetSeitSekunden: 4620,
-          ueberfaellig: true,
         }),
       ),
-    ).toEqual({ laeuft: false, sekunden: 4620, fristSekunden: 1800, ueberfaellig: true });
+    ).toEqual({ laeuft: false, sekunden: 4620, fristSekunden: 1800 });
   });
 });
 

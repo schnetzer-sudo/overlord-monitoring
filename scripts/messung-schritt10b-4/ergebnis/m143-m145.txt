@@ -1,0 +1,150 @@
+M108 | anker | 2025-12-30T04:09:47
+M108 | fenster.NEXANS.48H | 2025-12-28T05:00 bis 2025-12-30T05:00
+M108 | verlauf.zeilen.NEXANS.48H | 111
+M108 | verlauf.nachrichten.NEXANS.48H | 9950
+M108 | verlauf.ms.NEXANS.48H | 9,556
+M108 | verteilung.eimer.NEXANS.48H | 25
+M108 | verteilung.ms.NEXANS.48H | 12,415
+M108 | belegung.NEXANS.48H | 48 von 48, groesster Eimer 3068
+M108 | belegung.ms.NEXANS.48H | 7,891
+M108 | fenster.NEXANS.30T | 2025-12-01T00:00 bis 2025-12-31T00:00
+M108 | verlauf.zeilen.NEXANS.30T | 149
+M108 | verlauf.nachrichten.NEXANS.30T | 176050
+M108 | verlauf.ms.NEXANS.30T | 47,256
+M108 | verteilung.eimer.NEXANS.30T | 116
+M108 | verteilung.ms.NEXANS.30T | 70,531
+M108 | belegung.NEXANS.30T | 30 von 30, groesster Eimer 15254
+M108 | belegung.ms.NEXANS.30T | 36,295
+M108 | fenster.NEXANS.12M | 2025-01-01T00:00 bis 2026-01-01T00:00
+M108 | verlauf.zeilen.NEXANS.12M | 84
+M108 | verlauf.nachrichten.NEXANS.12M | 2308005
+M108 | verlauf.ms.NEXANS.12M | 64,532
+M108 | verteilung.eimer.NEXANS.12M | 125
+M108 | verteilung.ms.NEXANS.12M | 96,081
+M108 | belegung.NEXANS.12M | 12 von 12, groesster Eimer 208766
+M108 | belegung.ms.NEXANS.12M | 48,500
+M108 | kachel.laeuft.anzahl.NEXANS | 0
+M108 | kachel.laeuft.aelteste.NEXANS | null
+M108 | kachel.laeuft.aeltesteSekunden.NEXANS | null
+M108 | kachel.laeuft.ms.NEXANS | 1,293
+M108 | kachel.wartend.anzahl.NEXANS | 538
+M108 | kachel.wartend.aelteste.NEXANS | 2025-12-23T11:04:13
+M108 | kachel.wartend.aeltesteSekunden.NEXANS | 579934
+M108 | kachel.wartend.ms.NEXANS | 4,658
+M108 | erscheinungsbedingung.wartend.NEXANS | true
+M108 | erscheinungsbedingung.ms.NEXANS | 1,511
+M108 | aufgefallen.zeilen.NEXANS | 10
+M108 | aufgefallen.ms.NEXANS.48H | 26,132
+M108 | aufgefallen.ms.NEXANS.30T | 24,302
+M108 | aufgefallen.ms.NEXANS.12M | 25,747
+M108 | aufgefallen.ms.NEXANS | 25,121
+M108 | stand.ms | 0,926
+M108 | landingpage.ms.NEXANS.48H | 57,579
+M108 | landingpage.ms.NEXANS.30T | 155,538
+M108 | landingpage.ms.NEXANS.12M | 195,019
+M108 | landingpage.ms.NEXANS.standardfenster | 61,178
+M108 | landingpage.zeitraum.NEXANS | 48H
+M108 | fenster.SUTTONS.48H | 2025-12-28T05:00 bis 2025-12-30T05:00
+M108 | verlauf.zeilen.SUTTONS.48H | 54
+M108 | verlauf.nachrichten.SUTTONS.48H | 1337
+M108 | verlauf.ms.SUTTONS.48H | 7,515
+M108 | verteilung.eimer.SUTTONS.48H | 1
+M108 | verteilung.ms.SUTTONS.48H | 10,258
+M108 | belegung.SUTTONS.48H | 48 von 48, groesster Eimer 34
+M108 | belegung.ms.SUTTONS.48H | 6,813
+M108 | fenster.SUTTONS.30T | 2025-12-01T00:00 bis 2025-12-31T00:00
+M108 | verlauf.zeilen.SUTTONS.30T | 73
+M108 | verlauf.nachrichten.SUTTONS.30T | 20964
+M108 | verlauf.ms.SUTTONS.30T | 31,295
+M108 | verteilung.eimer.SUTTONS.30T | 1
+M108 | verteilung.ms.SUTTONS.30T | 51,348
+M108 | belegung.SUTTONS.30T | 30 von 30, groesster Eimer 812
+M108 | belegung.ms.SUTTONS.30T | 30,246
+M108 | fenster.SUTTONS.12M | 2025-01-01T00:00 bis 2026-01-01T00:00
+M108 | verlauf.zeilen.SUTTONS.12M | 47
+M108 | verlauf.nachrichten.SUTTONS.12M | 196536
+M108 | verlauf.ms.SUTTONS.12M | 39,650
+M108 | verteilung.eimer.SUTTONS.12M | 1
+M108 | verteilung.ms.SUTTONS.12M | 67,253
+M108 | belegung.SUTTONS.12M | 12 von 12, groesster Eimer 22023
+M108 | belegung.ms.SUTTONS.12M | 39,124
+M108 | kachel.laeuft.anzahl.SUTTONS | 0
+M108 | kachel.laeuft.aelteste.SUTTONS | null
+M108 | kachel.laeuft.aeltesteSekunden.SUTTONS | null
+M108 | kachel.laeuft.ms.SUTTONS | 0,941
+M108 | kachel.wartend.anzahl.SUTTONS | 0
+M108 | kachel.wartend.aelteste.SUTTONS | null
+M108 | kachel.wartend.aeltesteSekunden.SUTTONS | null
+M108 | kachel.wartend.ms.SUTTONS | 3,335
+M108 | erscheinungsbedingung.wartend.SUTTONS | false
+M108 | erscheinungsbedingung.ms.SUTTONS | 1,422
+M108 | aufgefallen.zeilen.SUTTONS | 0
+M108 | aufgefallen.ms.SUTTONS.48H | 23,721
+M108 | aufgefallen.ms.SUTTONS.30T | 23,909
+M108 | aufgefallen.ms.SUTTONS.12M | 24,978
+M108 | aufgefallen.ms.SUTTONS | 24,011
+M108 | stand.ms | 0,683
+M108 | landingpage.ms.SUTTONS.48H | 49,494
+M108 | landingpage.ms.SUTTONS.30T | 116,044
+M108 | landingpage.ms.SUTTONS.12M | 139,713
+M108 | landingpage.ms.SUTTONS.standardfenster | 55,057
+M108 | landingpage.zeitraum.SUTTONS | 48H
+M108 | landingpage.teuerstes_paar.ms.NEXANS | 195,019
+M108 | landingpage.teuerstes_paar.ms.SUTTONS | 139,713
+M108 | plan.verlauf.48H | message_rollup | range | key=PRIMARY | key_len=5 | rows=929 | Using where; Using temporary; Using filesort
+M108 | plan.verlauf.48H | dashboard_process | eq_ref | key=PRIMARY | key_len=146 | rows=1 | Using where
+M108 | plan.verlauf.48H | ProjectMandant | eq_ref | key=PRIMARY | key_len=292 | rows=1 | Using where; Using index
+M108 | plan.verteilung.48H | message_rollup | range | key=PRIMARY | key_len=5 | rows=929 | Using where; Using temporary; Using filesort
+M108 | plan.verteilung.48H | process_catalog | eq_ref | key=PRIMARY | key_len=146 | rows=1 | 
+M108 | plan.verteilung.48H | dashboard_process | eq_ref | key=PRIMARY | key_len=146 | rows=1 | Using where
+M108 | plan.verteilung.48H | ProjectMandant | eq_ref | key=PRIMARY | key_len=292 | rows=1 | Using where; Using index
+M108 | plan.belegung.48H | <derived2> | ALL | key=null | key_len=null | rows=929 | 
+M108 | plan.belegung.48H | message_rollup | range | key=PRIMARY | key_len=5 | rows=929 | Using where
+M108 | plan.belegung.48H | dashboard_process | eq_ref | key=PRIMARY | key_len=146 | rows=1 | Using where
+M108 | plan.belegung.48H | ProjectMandant | eq_ref | key=PRIMARY | key_len=292 | rows=1 | Using where; Using index
+M108 | plan.verlauf.30T | message_rollup_tag | range | key=PRIMARY | key_len=3 | rows=14214 | Using where; Using temporary; Using filesort
+M108 | plan.verlauf.30T | dashboard_process | eq_ref | key=PRIMARY | key_len=146 | rows=1 | Using where
+M108 | plan.verlauf.30T | ProjectMandant | eq_ref | key=PRIMARY | key_len=292 | rows=1 | Using where; Using index
+M108 | plan.verteilung.30T | message_rollup_tag | range | key=PRIMARY | key_len=3 | rows=14214 | Using where; Using temporary; Using filesort
+M108 | plan.verteilung.30T | process_catalog | eq_ref | key=PRIMARY | key_len=146 | rows=1 | 
+M108 | plan.verteilung.30T | dashboard_process | eq_ref | key=PRIMARY | key_len=146 | rows=1 | Using where
+M108 | plan.verteilung.30T | ProjectMandant | eq_ref | key=PRIMARY | key_len=292 | rows=1 | Using where; Using index
+M108 | plan.belegung.30T | <derived2> | ALL | key=null | key_len=null | rows=14214 | 
+M108 | plan.belegung.30T | message_rollup_tag | range | key=PRIMARY | key_len=3 | rows=14214 | Using where
+M108 | plan.belegung.30T | dashboard_process | eq_ref | key=PRIMARY | key_len=146 | rows=1 | Using where
+M108 | plan.belegung.30T | ProjectMandant | eq_ref | key=PRIMARY | key_len=292 | rows=1 | Using where; Using index
+M108 | plan.verlauf.12M | message_rollup_monat | range | key=PRIMARY | key_len=3 | rows=6000 | Using where; Using temporary; Using filesort
+M108 | plan.verlauf.12M | dashboard_process | eq_ref | key=PRIMARY | key_len=146 | rows=1 | Using where
+M108 | plan.verlauf.12M | ProjectMandant | eq_ref | key=PRIMARY | key_len=292 | rows=1 | Using where; Using index
+M108 | plan.verteilung.12M | message_rollup_monat | range | key=PRIMARY | key_len=3 | rows=6000 | Using where; Using temporary; Using filesort
+M108 | plan.verteilung.12M | process_catalog | eq_ref | key=PRIMARY | key_len=146 | rows=1 | 
+M108 | plan.verteilung.12M | dashboard_process | eq_ref | key=PRIMARY | key_len=146 | rows=1 | Using where
+M108 | plan.verteilung.12M | ProjectMandant | eq_ref | key=PRIMARY | key_len=292 | rows=1 | Using where; Using index
+M108 | plan.belegung.12M | <derived2> | ALL | key=null | key_len=null | rows=6000 | 
+M108 | plan.belegung.12M | message_rollup_monat | range | key=PRIMARY | key_len=3 | rows=6000 | Using where
+M108 | plan.belegung.12M | dashboard_process | eq_ref | key=PRIMARY | key_len=146 | rows=1 | Using where
+M108 | plan.belegung.12M | ProjectMandant | eq_ref | key=PRIMARY | key_len=292 | rows=1 | Using where; Using index
+M108 | plan.kachel.laeuft | Message | ref | key=MessageStatusIDX | key_len=123 | rows=1 | Using index condition; Using where
+M108 | plan.kachel.laeuft | dashboard_process | eq_ref | key=PRIMARY | key_len=146 | rows=1 | Using where
+M108 | plan.kachel.laeuft | ProjectMandant | eq_ref | key=PRIMARY | key_len=292 | rows=1 | Using where; Using index
+M108 | plan.kachel.wartend | Message | ref | key=MessageStatusIDX | key_len=123 | rows=538 | Using index condition; Using where
+M108 | plan.kachel.wartend | dashboard_process | eq_ref | key=PRIMARY | key_len=146 | rows=1 | Using where
+M108 | plan.kachel.wartend | ProjectMandant | eq_ref | key=PRIMARY | key_len=292 | rows=1 | Using where; Using index
+M108 | plan.erscheinungsbedingung | null | null | key=null | key_len=null | rows=null | No tables used
+M108 | plan.erscheinungsbedingung | ProjectMandant | ref | key=ProjectMandant_Mandant_idx | key_len=146 | rows=17 | Using where; Using index
+M108 | plan.erscheinungsbedingung | dashboard_process | ref | key=Process_ProjectFK | key_len=147 | rows=5 | Using index
+M108 | plan.erscheinungsbedingung | SOS | ref | key=SOS_ProcessFK | key_len=147 | rows=1 | Using index
+M108 | plan.erscheinungsbedingung | SOSAction | ref | key=PRIMARY | key_len=146 | rows=1 | Using where
+M108 | plan.aufgefallen.48H.1 | Message | range | key=MessageStatusIDX | key_len=123 | rows=6257 | Using index condition; Using where; Using filesort
+M108 | plan.aufgefallen.48H.1 | dashboard_process | eq_ref | key=PRIMARY | key_len=146 | rows=1 | Using where
+M108 | plan.aufgefallen.48H.1 | ProjectMandant | eq_ref | key=PRIMARY | key_len=292 | rows=1 | Using where; Using index
+M108 | plan.aufgefallen.48H.1 | SOS | eq_ref | key=PRIMARY | key_len=146 | rows=1 | Using where
+M108 | plan.aufgefallen.30T.1 | Message | range | key=MessageStatusIDX | key_len=123 | rows=6257 | Using index condition; Using where; Using filesort
+M108 | plan.aufgefallen.30T.1 | dashboard_process | eq_ref | key=PRIMARY | key_len=146 | rows=1 | Using where
+M108 | plan.aufgefallen.30T.1 | ProjectMandant | eq_ref | key=PRIMARY | key_len=292 | rows=1 | Using where; Using index
+M108 | plan.aufgefallen.30T.1 | SOS | eq_ref | key=PRIMARY | key_len=146 | rows=1 | Using where
+M108 | plan.aufgefallen.12M.1 | Message | range | key=MessageStatusIDX | key_len=123 | rows=6257 | Using index condition; Using where; Using filesort
+M108 | plan.aufgefallen.12M.1 | dashboard_process | eq_ref | key=PRIMARY | key_len=146 | rows=1 | Using where
+M108 | plan.aufgefallen.12M.1 | ProjectMandant | eq_ref | key=PRIMARY | key_len=292 | rows=1 | Using where; Using index
+M108 | plan.aufgefallen.12M.1 | SOS | eq_ref | key=PRIMARY | key_len=146 | rows=1 | Using where
+M108 | plan.stand | rollup_lauf | range | key=rollup_lauf_stand_idx | key_len=8 | rows=5 | Using where

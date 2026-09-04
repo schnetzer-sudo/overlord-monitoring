@@ -43,11 +43,17 @@ public enum Abfragemerkmal {
   /** {@code suchtreffer} — der aufgeloeste Freitext, {@code null} heisst „nicht gesucht". */
   SUCHBEGRIFF,
 
-  /** {@code ueberfaellig} — keine Einschraenkung, sondern eine zweite Abfrageform. */
-  UEBERFAELLIG,
-
-  /** {@code jetzt} — der Stichtag der Anwendungsuhr, einmal je Anfrage gezogen. */
-  JETZT,
+  /*
+   * Hier standen bis zum 03.09.2026 `UEBERFAELLIG` und `JETZT`. Beide sind mit ihren
+   * Bestandteilen in `Nachrichtenabfrage` entfallen (E-71): Die Problemkategorie `Ueberfaellig`
+   * ist widerlegt, und `jetzt` hatte ausser ihr keinen Verbraucher.
+   *
+   * DAMIT VERLIERT DIE VERENGUNG IHRE EINZIGE ABSCHALTUNG UEBER DEN STATUS: `UEBERFAELLIG` war das
+   * eine Merkmal, das der Rollup nicht mittragen konnte, weil `MessageTimeout` dort nicht steht.
+   * Uebrig bleibt `SUCHBEGRIFF` als einziges `false` -- und die Begruendung dort ist eine andere
+   * (message_rollup hat keine sos_id). Das ist kein Verlust an Sicherheit: Ein Merkmal, das es
+   * nicht mehr gibt, kann auch nicht falsch als tragbar gelten.
+   */
 
   /** {@code absteigend} — die Sortierrichtung. Sie entscheidet, an welchem Ende gezaehlt wird. */
   SORTIERUNG,

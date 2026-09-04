@@ -61,8 +61,6 @@ class FensterverengungMerkmaleTest {
           "status", Abfragemerkmal.STATUS,
           "prozessIds", Abfragemerkmal.PROZESSE,
           "suchtreffer", Abfragemerkmal.SUCHBEGRIFF,
-          "ueberfaellig", Abfragemerkmal.UEBERFAELLIG,
-          "jetzt", Abfragemerkmal.JETZT,
           "absteigend", Abfragemerkmal.SORTIERUNG,
           "cursor", Abfragemerkmal.CURSOR,
           "limit", Abfragemerkmal.LIMIT);
@@ -82,15 +80,13 @@ class FensterverengungMerkmaleTest {
       Set<MessageStatusKind> status,
       List<String> prozessIds,
       Suchtreffer suchtreffer,
-      boolean ueberfaellig,
       boolean absteigend,
       Seitenposition cursor) {
-    return new Nachrichtenabfrage(
-        FENSTER, status, prozessIds, suchtreffer, ueberfaellig, JETZT, absteigend, cursor, 50);
+    return new Nachrichtenabfrage(FENSTER, status, prozessIds, suchtreffer, absteigend, cursor, 50);
   }
 
   private static Nachrichtenabfrage schlicht() {
-    return abfrage(Set.of(), List.of(), null, false, true, null);
+    return abfrage(Set.of(), List.of(), null, true, null);
   }
 
   // ── Der Riegel gegen ein neues Feld ───────────────────────────────────────
@@ -127,17 +123,16 @@ class FensterverengungMerkmaleTest {
 
   // ── Was der Rollup nicht traegt, faellt zurueck ───────────────────────────
 
-  @Test
-  @DisplayName("ueberfaellig: die Verengung wird gar nicht erst betreten")
-  void ueberfaellig_faellt_zurueck() {
-    Fensterverengung.Ergebnis ergebnis =
-        verengung(true).verenge(MANDANT, abfrage(Set.of(), List.of(), null, true, true, null));
-
-    assertThat(ergebnis.grund()).isEqualTo(Verengungsgrund.MERKMAL_NICHT_TRAGBAR);
-    assertThat(ergebnis.abfrage().fenster()).isEqualTo(FENSTER);
-    assertThat(ergebnis.sicherLeer()).isFalse();
-    verifyNoInteractions(repository);
-  }
+  /*
+   * Hier stand bis zum 03.09.2026 der Fall `ueberfaellig: die Verengung wird gar nicht erst
+   * betreten`. Er ist mit E-71 entfallen -- zusammen mit dem Merkmal selbst.
+   *
+   * WAS DAMIT VERLORENGEHT, GEHOERT BENANNT: `UEBERFAELLIG` war das einzige Merkmal, das der
+   * Rollup aus einem Grund nicht tragen konnte, der am BESTAND lag (MessageTimeout steht dort
+   * nicht). Uebrig bleibt `SUCHBEGRIFF`, und dessen Grund liegt am SCHEMA (message_rollup hat
+   * keine sos_id). Der Riegel prueft damit weiterhin beide Richtungen -- tragbar und nicht tragbar
+   * --, aber nur noch an einer Sorte von Grund.
+   */
 
   @Test
   @DisplayName("Suchbegriff: der Rollup hat keine sos_id, also faellt sie zurueck")
@@ -145,7 +140,7 @@ class FensterverengungMerkmaleTest {
     Suchtreffer treffer = new Suchtreffer(List.of("p-1"), List.of("s-1"), false);
 
     Fensterverengung.Ergebnis ergebnis =
-        verengung(true).verenge(MANDANT, abfrage(Set.of(), List.of(), treffer, false, true, null));
+        verengung(true).verenge(MANDANT, abfrage(Set.of(), List.of(), treffer, true, null));
 
     assertThat(ergebnis.grund()).isEqualTo(Verengungsgrund.MERKMAL_NICHT_TRAGBAR);
     assertThat(ergebnis.abfrage().fenster()).isEqualTo(FENSTER);
@@ -156,7 +151,7 @@ class FensterverengungMerkmaleTest {
   @DisplayName("Sortierung AELTESTE: eine Untergrenze verschoebe dort die erste Seite")
   void aelteste_faellt_zurueck() {
     Fensterverengung.Ergebnis ergebnis =
-        verengung(true).verenge(MANDANT, abfrage(Set.of(), List.of(), null, false, false, null));
+        verengung(true).verenge(MANDANT, abfrage(Set.of(), List.of(), null, false, null));
 
     assertThat(ergebnis.grund()).isEqualTo(Verengungsgrund.MERKMAL_NICHT_TRAGBAR);
     assertThat(ergebnis.abfrage().fenster()).isEqualTo(FENSTER);
@@ -192,7 +187,6 @@ class FensterverengungMerkmaleTest {
                     Set.of(MessageStatusKind.FEHLER),
                     List.of("p-1"),
                     null,
-                    false,
                     true,
                     new Seitenposition(JETZT.minusHours(2), "m-1")));
 

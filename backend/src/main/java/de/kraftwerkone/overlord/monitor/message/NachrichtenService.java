@@ -8,7 +8,6 @@ import de.kraftwerkone.overlord.monitor.common.Zeitpunkte;
 import de.kraftwerkone.overlord.monitor.common.error.FachlicheAusnahme;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.time.Clock;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -65,8 +64,7 @@ public class NachrichtenService {
 
     // Ein Uhrenschlag je Anfrage, und er gehoert hierher: Das Repository liest keine Uhr
     // (Regel Z1), und zwei Schlaege innerhalb derselben Anfrage waeren zwei Stichtage.
-    Nachrichtenabfrage abfrage =
-        Nachrichtenabfrage.aus(filter, suchtreffer, LocalDateTime.now(anwendungsuhr));
+    Nachrichtenabfrage abfrage = Nachrichtenabfrage.aus(filter, suchtreffer);
 
     // Die Fensterverengung ist eine OPTIMIERUNG und kein Filter: Sie liefert dieselbe Abfrage mit
     // einem engeren `von`, oder dieselbe unveraendert. Sie sitzt hier und nicht im Repository, weil

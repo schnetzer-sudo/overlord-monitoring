@@ -224,6 +224,20 @@ Die übrigen drei Fragen aus dem Auftrag, alle in jeder Stufe und bei jeder der 
 | Steht die Null der Hauptachse noch da? | **ja**, in allen 24 Lagen. Die 14 px Fußmarge aus §5.3 tragen unverändert |
 | Wird waagerecht gescrollt? | **nein** — bei 360, 768 und 1500 px, in jeder Stufe. **Der ursprüngliche Test dafür war eine Tautologie**: `scrollWidth === innerWidth` kann wegen `html { overflow-x: hidden }` (`globals.css`) gar nicht fehlschlagen. Nachgehalten wird er von der elementweisen Prüfung gegen `window.innerWidth` in der Gegenprüfung — **kein Element steht über dem Rand**, in 204 Lagen |
 
+> ### ⚠️ Die erste Zeile ist seit dem 04.09.2026 eine Aussage über **zwei Balkendiagramme**
+>
+> Sie ist für ihren Gegenstand richtig und bleibt stehen. Der Gegenstand hat sich geändert: Der
+> Verlauf ist seither **eine Fläche** (**E‑83**,
+> [`dashboard-frontend.md`](dashboard-frontend.md) §5.2), und einen „ersten Balken" gibt es dort
+> nicht mehr.
+>
+> **Was an die Stelle tritt, in neun Lagen nachgemessen:** Die Achsenbreite ist in beiden
+> Diagrammen unverändert identisch; die Stützstellen der Fläche liegen auf **0,0005 px** genau auf
+> der gemeinsamen Zeitachse; die **Balkenmitte** des Streifens liegt bis zu **0,21 px** daneben,
+> weil Recharts die Balkenbreite auf eine ganze Zahl rundet. Das galt für den Balken auch vorher —
+> nur hoben sich damals zwei gleich gerundete Balken gegeneinander auf.
+> ([`frontend-grundlagen.md`](frontend-grundlagen.md) §8b.)
+
 **Es ist deshalb nichts geändert worden.** Der Auftrag sagt: *„Behebe nur, was du als Befund
 gemessen hast."* Es gibt keinen. Der Weg über den Stufenfaktor als Parameter der reinen Funktion in
 `features/dashboard/verlauf.ts` bleibt ungegangen und ist damit weiterhin der einzige zulässige,

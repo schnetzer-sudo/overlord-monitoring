@@ -897,3 +897,148 @@ ohnehin unberührt**; sie hängen an Statistik und Schema, nicht am Puffer.
 - **Ob `Message_ProcessFK` und `ProejctIDIDX` wirklich deckungsgleich sind und einer entfallen
   könnte**, ist erhoben (M83‑0), aber **nicht unsere Entscheidung**: Es ist die Datenbank des
   Altsystems. Vermerkt, damit die Beobachtung nicht verlorengeht.
+
+---
+
+## 03.09.2026 — *Überfällig* ist widerlegt (Schritt 10b‑4, E‑71)
+
+**Art:** fachliche Auskunft des Auftraggebers. **Nicht gemessen.**
+
+| | |
+|---|---|
+| **Was behauptet wird** | (1) Eine Nachricht, die länger als `MessageTimeout` in `RUNNING` steht, wird vom Altsystem automatisch auf `ERROR_TIMEOUT` gesetzt. (2) `SUSPENDED`-Nachrichten warten **absichtlich** — auf einen Folgeprozess, etwa den Versand zu einem bestimmten Zeitpunkt — und werden nie automatisch beendet. (3) In der Praxis liegen sie höchstens **rund eine Woche** |
+| **Herkunft** | Auftraggeber, 03.09.2026. Keine Messung, kein Statement, kein `EXPLAIN` |
+| **Stand** | **ungemessen.** Die Testkopie kann sie nicht belegen: `RUNNING` kommt dort null Mal vor, und die 538 `SUSPENDED` sind der Bestand *eines* Status in *einer* Gestalt |
+| **Wie sie zu prüfen wäre** | [`message-status.md`](message-status.md), Abschnitt „Die offene Prüfung" — eine Abfrage gegen die **Produktion**, mit vor dem Ergebnis festgehaltener Erwartung |
+| **Was auf ihr ruht** | die Streichung der Problemkategorie *Überfällig* aus dem MVP samt Klassifizierermethode, Listenparameter und Detailfeld; die zwei neuen Kacheln *Läuft* und *Wartend*; `fristSekunden = null` bei `WARTEND` |
+
+### Warum sie hier steht und nicht als Befund
+
+**Regel Q4 verbietet Raten, nicht Auskünfte.** Eine Auskunft des Auftraggebers ist eine zulässige
+Quelle — sie ist sogar die **einzige** für Fragen, die die Testkopie nicht beantworten kann.
+
+**Was sie nicht ist, ist ein Befund.** Eine Auskunft, die als Befund abgelegt wird, ist genau der
+Fehler, den [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §3.3 beim Takt von `MatchInterchange`
+dokumentiert: *„In der verbindlichen Datei stand ein Satz, der eine Angabe ohne Herkunft als
+Tatsache ausgibt."*
+
+**Deshalb trägt jede Datei, die die Regel führt, denselben Herkunftsvermerk — wörtlich und
+unverändert.** Er steht an sieben Stellen: `PROJEKTBESCHREIBUNG.md` §3.2, §4.1 und §4.2,
+[`message-status.md`](message-status.md) (zweimal), [`rollup.md`](rollup.md) §13 Punkt 49,
+[`nachrichtendetail.md`](nachrichtendetail.md) §3a — und im Code an
+`MessageStatusClassifier.TIMEOUT_EINHEIT` und `NachrichtendetailService.frist`.
+
+### Was die Testkopie dazu sagt — und warum es nichts entscheidet
+
+Gemessen als **M144 (c)** am 03.09.2026:
+
+| Status | Zeilen | ältestes Alter gegen den Anker |
+|---|---:|---:|
+| `SUSPENDED` | **538** | **579.934 s = 6,71 Tage** |
+| `RUNNING` | *kommt nicht vor* | — |
+
+**Die 6,71 Tage sind mit „rund einer Woche" verträglich und belegen sie nicht.** Eine Gestalt, ein
+Status, ein Zeitraum von sieben Tagen — und über die Behauptung, an der alles hängt (dass der
+Wächter auf `RUNNING` zuschlägt), sagt die Kopie **nichts**.
+
+### Die Gegenrechnung, die dazugehört
+
+**M8 hat gemessen, dass `ERROR_TIMEOUT` *nicht* das Ablaufen von `MessageTimeout` ist** — 52 von 52
+Nachrichten sind nach höchstens 5,6 Minuten tot, nicht nach 30. **Das widerspricht der Auskunft
+scheinbar und tut es nicht:** 49 der 52 sind ein **einziger Vorfall** (M22), und M8 sagt selbst, es
+habe „auf die falsche Grundgesamtheit" gezielt. Es gibt offenbar **zwei Wege** in denselben Status.
+Vollständig als Belegvermerk bei M8 in [`messungen-schritt4.md`](messungen-schritt4.md).
+
+---
+
+## 04.09.2026 — „Offen" war eine Beschriftung und keine Definition (Nacharbeit zu 10b‑3b, E‑82)
+
+**Art:** Befund am eigenen Code, in der Oberfläche gesehen. **Keine Messung, keine neue Abfrage.**
+
+| | |
+|---|---|
+| **Was dastand** | Legende und Tooltip des Verlaufs beschrifteten die Farbrolle `--status-offen` mit **„Offen"** und `--status-abgeschlossen` mit **„Abgeschlossen"** |
+| **Warum das erste falsch ist** | `istEndstatus` liefert für `AUFGETEILT` und `ZUSAMMENGEFUEHRT` **`true`** ([`message-status.md`](message-status.md)). Die Überschrift behauptete das Gegenteil über zwei ihrer vier Mitglieder |
+| **Der Beleg** | ein Eimer mit 60 Nachrichten: *Offen 49* über *Aufgeteilt 1* und *Zusammengeführt 48*. **48 der 49 Zeilen stehen in einem Endstatus** |
+| **Warum das zweite falsch ist** | nicht falsch, sondern **doppelt**: „Abgeschlossen" stand als Überschrift über einem gleichlautenden Eintrag mit anderer Zahl |
+| **Korrigiert zu** | **„Ohne Ergebnis"** und **„Erledigt"**, englisch *No outcome* und *Done*. Tokennamen, Zuordnung, Stapelreihenfolge, Farbwerte und die Beschriftungen der **Einordnungen** sind unverändert |
+| **Herkunft der Wörter** | **nicht erfunden.** „Ohne Ergebnis" ist die Formulierung, mit der [`visuelles-konzept.md`](visuelles-konzept.md) §3 die Rolle seit jeher begründet: *„Kein Ergebnis, kein Problem."* |
+
+### Die Vorhersage stand seit dem 06.08.2026 in der Datei
+
+*„Wer ‚offen‘ im Sinne der Oberfläche braucht, definiert das dort — und begründet es dort."*
+([`message-status.md`](message-status.md), Warnkasten zu `istEndstatus`.) **Die Definition ist nie
+getroffen worden.** Was stattdessen geschah, ist genau der Weg, vor dem der Satz warnt: Ein
+*Tokenname* — vergeben nach der Farbe, die die Rolle trägt, und fachlich nach der Hälfte ihrer
+Mitglieder benannt, die passt — ist unbemerkt in die *Beschriftungsposition* gerutscht und dort als
+fachliche Aussage gelesen worden.
+
+**Der Fehler saß im Namen und nicht in der Gruppierung.** Die Zusammenfassung acht → vier ist als
+**Farb**entscheidung begründet (E‑l) und bleibt: *Kein Ergebnis, kein Problem* ist eine Aussage über
+Neutralität und war nie eine über Offenheit. `features/dashboard/verlauf.ts`,
+`lib/status-farbe.ts` und `app/globals.css` sind nicht angefasst.
+
+### Was daran nicht gemessen ist
+
+**An dieser Korrektur ist nichts gemessen, und es gibt nichts zu messen.** Es entsteht keine neue
+Datenbankabfrage — Regel L7 **liegt nicht vor**, statt ausgenommen zu sein; die fehlende M‑Nummer
+ist keine Auslassung.
+
+Die 49/48‑Beobachtung ist **Augenschein an der laufenden Oberfläche** und kein Messwert. Sie
+belegt, *dass* der Satz an einer Stelle falsch dastand — nicht, wie häufig das über den Bestand
+geschieht. Die Größenordnung dazu ist alt und stammt aus einer richtigen Messung: **39,6 %** aller
+`NEXANS`‑Zeilen sind `SPLITTED`/`MERGED`, und bei `IBIS`, `IBISGUS`, `ZAST`, `WOC` und `SYSTEM`
+kommen beide über den **gesamten** Bestand **nicht ein einziges Mal** vor (M12,
+[`messungen-schritt4.md`](messungen-schritt4.md)). Bei diesen fünf Mandanten wäre der Fehler nie
+sichtbar gewesen: Eine Rolle, die über alle Eimer null ist, bekommt nach E‑l keinen
+Legendeneintrag.
+
+
+---
+
+## 04.09.2026 — die Annahme „das Token kommt an" galt für Farbverläufe nicht (E‑83 bis E‑86)
+
+**Art:** Messung an der laufenden Anwendung, **vor** dem Einbau gefahren. Keine neue Abfrage, keine
+Aussage über das Quellsystem — die Korrektur betrifft eine Annahme über die **Anzeige**.
+
+Der Verlauf des Dashboards ist von vier gestapelten Balkenreihen auf **eine Fläche mit Farbverlauf**
+umgestellt worden ([`dashboard-frontend.md`](dashboard-frontend.md) §5.2). Zwei Sätze, die vorher
+richtig dastanden, stimmen seither nicht mehr in der Form, in der sie dastanden.
+
+### 1. `fillOpacity` — der Befund, der ohne die Messung mitgeliefert worden wäre
+
+| | |
+|---|---|
+| **Was angenommen war** | Was in [`frontend-grundlagen.md`](frontend-grundlagen.md) §8a für `<Bar fill>` gemessen ist, gilt sinngemäß auch für eine Fläche: Die Zeichenkette `var(--token)` kommt ins Attribut, der Browser löst sie auf, und **das** wird gemalt |
+| **Was gemessen ist** | Das Attribut stimmt, der aufgelöste Wert stimmt — und **gemalt wurde `#d5d97b` statt `#b9c022`** |
+| **Die Ursache** | `<Area>` trägt in Recharts 3.10.1 die Voreinstellung `fillOpacity: 0.6`. Sie liegt *über* der Füllung, gleich ob dort ein Token oder ein Farbverlauf steht |
+| **Die Behebung** | `fillOpacity={1}` am `<Area>`. Eine Zeile |
+| **Warum es keine Ansicht gefunden hätte** | Eine um 40 % aufgehellte Fläche sieht nicht falsch aus, sie sieht blasser aus. Und `tests/farbwerte.test.ts` kann es nicht finden: Er **liest Text**, und im Text stand das richtige Token |
+
+**Die Annahme war ausdrücklich als ungeprüft gekennzeichnet.** §8a führt Farbverläufe und
+Flächendiagramme unter „Was nicht gemessen ist" auf und verlangt die Nachmessung nach demselben
+Muster — genau das ist geschehen, und sie hat sich gelohnt. **Der Vermerk hat gehalten, die
+Vermutung nicht.**
+
+### 2. „Versatz 0,0 px" war eine Aussage über zwei Balkendiagramme
+
+| | |
+|---|---|
+| **Was dastand** | *„Versatz des ersten Balkens **0,0 px** in allen 24 gemessenen Lagen"* ([`dichte-umschalter.md`](dichte-umschalter.md) §5.1, 01.09.2026) |
+| **Warum es galt** | Beide Diagramme trugen Balken, beide bekamen dieselbe Rundung — der Fehler war in beiden derselbe und hob sich auf |
+| **Was jetzt gilt** | Die **Fläche** liegt auf der Zeitachse, auf 0,0005 px genau; die **Balkenmitte** bis zu 0,21 px daneben. In neun Lagen gemessen und auf 0,0001 px vorhergesagt |
+| **Die Ursache** | `combineAllBarPositions.js` rundet die Balkenbreite auf eine ganze Zahl; die halbe Rundungsdifferenz verschiebt die Mitte. Schranke **0,25 px**, unabhängig von `maxBarSize` und von der Zahl der Eimer |
+
+**Der alte Wortlaut bleibt stehen.** Er war für seinen Gegenstand richtig, und der Gegenstand hat
+sich geändert, nicht die Messung. Herleitung in [`frontend-grundlagen.md`](frontend-grundlagen.md)
+§8b, Fortschreibung in [`dashboard-frontend.md`](dashboard-frontend.md) §5.3.
+
+### Was daran nicht gemessen ist
+
+**Der Zustand vor dem Umbau.** Dass der Balken auch vorher neben seiner eigenen Achsenbeschriftung
+stand, folgt aus dem Quelltext — weder die Balkenlage noch die Achsenmarken sind in dieser Runde
+angefasst worden — und **nicht** aus einer Aufnahme des alten Standes. Wer die Aussage härter
+braucht, misst sie dort nach.
+
+**Und keine der beiden Korrekturen sagt etwas über die Daten.** Es geht in beiden Fällen um Pixel,
+nicht um Nachrichten; `PROJEKTBESCHREIBUNG.md` ist unberührt.

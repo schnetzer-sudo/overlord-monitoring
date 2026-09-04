@@ -500,6 +500,27 @@ eine Messung ein Problem mit dem Index, ist die Alternative
 (ausgehend ohne Empfangsbestätigung) werden nie zu „Fehler" zusammengefasst. `SUSPENDED` ist
 **kein** Fehler.
 
+> ### ⚠️ Im MVP ist die Regel seit dem 03.09.2026 einstellig
+>
+> **Der Satz oben bleibt stehen — er gilt fachlich unverändert.** Gebaut ist davon aber nur noch
+> *Fehler*:
+>
+> | Kategorie | Stand |
+> |---|---|
+> | *Fehler* | **gebaut** |
+> | *Überfällig* | **widerlegt und aus dem MVP genommen** — E‑71 vom 03.09.2026 |
+> | *Unquittiert* | nicht im MVP — E‑d vom 24.08.2026, keine operative Definition |
+>
+> **Die Regel ist damit in der Sache nicht mehr prüfbar:** Es gibt nichts mehr, wovon zu trennen
+> wäre. **Sie wird trotzdem nicht gestrichen** und wird an dem Tag wieder wirksam, an dem eine
+> zweite Kategorie gebaut wird.
+>
+> **Und die Definition von *Überfällig* oben ist die widerlegte.** Sie steht hier weiter, weil die
+> Regel sie zitiert; was an ihr falsch ist, steht vollständig in
+> [`docs/PROJEKTBESCHREIBUNG.md`](docs/PROJEKTBESCHREIBUNG.md) §4.2 Punkt 2 samt Herkunftsvermerk.
+>
+> **`SUSPENDED` ist kein Fehler — dieser Satz ist von alldem unberührt** und war nie strittig.
+
 **Q4 — Nicht zugeordnet heißt „nicht zugeordnet".** Partner, Standort, Richtung und Belegart
 werden **kuratiert, nicht geparst**. Eine Heuristik befüllt vor, die Wahrheit steht im
 `process_catalog`. Nicht zugeordnete Prozesse erscheinen in Auswertungen sichtbar als „nicht

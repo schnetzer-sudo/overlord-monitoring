@@ -1,6 +1,8 @@
 # Dashboard — die Oberfläche
 
-Stand: 01.09.2026 · Schritt 10b‑3b · **Frontend**
+Stand: **04.09.2026 — der Verlauf ist eine Fläche (E‑83 bis E‑86, §5.2)** und die beiden
+Sammelrollen heißen anders (E‑82, §5.2) · zuvor 03.09.2026, Schritt 10b‑5 · zuvor 01.09.2026,
+Schritt 10b‑3b · **Frontend**
 
 Die Landingpage. Der Endpunkt und seine Begründung stehen in
 [`dashboard.md`](dashboard.md) — **die Datei ist der Vertrag**, hier steht, was die Oberfläche
@@ -8,6 +10,19 @@ daraus macht und warum sie es so macht.
 
 **Keine Backend-Änderung, kein neuer Endpunkt, keine Migration.** Höchste Migrationsversion bleibt
 `V12`.
+
+> ### ⚠️ Schritt 10b‑5 ist eine Reparatur, keine Ergänzung *(03.09.2026)*
+>
+> Die Oberfläche aus 10b‑3b liest `kacheln.ueberfaellig` und bekommt das Feld seit 10b‑4 nicht mehr:
+> Die Problemkategorie *Überfällig* ist durch eine fachliche Auskunft des Auftraggebers widerlegt
+> (**E‑71**, [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §4.2). **Die Landingpage war im
+> Browser defekt, der Endpunkt nicht** — bewusst in Kauf genommen und als offener Punkt **131**
+> geführt. Dieser Schritt schließt ihn.
+>
+> **Was sich ändert:** §5.4 (drei Kacheln → vier, samt Verlinkung und Fläche), §5.6 (die
+> Kategoriekennzeichnung je Zeile fällt), §6 (eine bekannte Grenze fällt, eine kommt) und die
+> Entscheidungen **E‑78** bis **E‑81** in §4. **Alter Wortlaut bleibt überall lesbar**; ersetzte
+> Abschnitte stehen als Korrekturblock am Ende ihres Kapitels.
 
 ---
 
@@ -145,6 +160,23 @@ einer Problemkategorie und einer Zählung.
 Fehler ist derselbe, nur in der Zeile dichter. Zwei verschiedene Regeln für dieselbe Frage wären
 zwei Stellen, an denen jemand die falsche wählt.
 
+> ### ⚠️ Korrektur vom 03.09.2026 — E‑u hatte zwei Fälle, jetzt hat es einen (**E‑79**)
+>
+> **Der Wortlaut oben bleibt stehen; er war für zwei Problemkacheln richtig.** Seit E‑71 gibt es
+> eine: *Fehler*. Die Überfällig-Kachel und die Überfällig-Plakette, um derentwillen die Probe
+> gefahren wurde, gibt es nicht mehr.
+>
+> | | |
+> |---|---|
+> | **Was von E‑u gilt** | *Fehler* trägt weiterhin **Fläche und Vordergrund, keine Kontur** — Kachel wie Plakette. `statusKlassenOhneKontur` und `problemKlassenOhneKontur` stehen unverändert in `lib/status-farbe.ts` |
+> | **Was E‑79 hinzufügt** | *Läuft*, *Wartend* und *Nachrichten* tragen **keine Fläche**. „Gefüllt heißt, hier ist etwas zu tun" wird dadurch eindeutig, weil es nur noch einen Fall gibt |
+> | **Was die Zustandskacheln stattdessen tragen** | `--status-offen` in der **Statusplakette**, mit allen drei Werten wie in der Liste. Zwei Kacheln **derselben** Rolle können keine Rangfolge bilden — der Fall, den die Probe gefunden hat, entsteht hier nicht |
+> | **Was die Probe wert bleibt** | alles. Sie hat gemessen, dass **0,025** Unterschied als Rangfolge gelesen werden, und genau diese Zahl trägt E‑79: Sie ist der Grund, die Fläche **nicht** auf vier Kacheln auszudehnen |
+>
+> **`problemKlassenOhneKontur` hat damit keinen Verbraucher mehr** und bleibt — dieselbe Begründung
+> wie für die Farbrolle selbst ([`visuelles-konzept.md`](visuelles-konzept.md) §7a, **E‑77**): Die
+> Zuordnung Rolle → Token gehört zur Rolle und nicht zu ihrem Verbraucher.
+
 | | |
 |---|---|
 | **Was sie nicht ist** | eine neue Farbe. §7a ist abgeschlossen; entschieden ist, **welche der drei Werte** die Ansicht benutzt, nicht wie sie aussehen |
@@ -187,15 +219,24 @@ allein über Farbe"* —, und §7a hat es für diese Rolle noch einmal ausdrück
 | | Entscheidung | Datum |
 |---|---|---|
 | **E‑l** | Der Verlauf zeigt **vier Reihen, nicht acht** — eine je Farbrolle. Die Legende hat vier Einträge, der Tooltip nennt die enthaltenen Einordnungen einzeln | 01.09.2026 |
-| **E‑m** | Klickbar sind **Fehler** und **Überfällig im Fenster**. *Überfällig insgesamt* und *Nachrichten* tragen keinen Verweis | 01.09.2026 |
+| **E‑m** | Klickbar sind **Fehler** und **Überfällig im Fenster**. *Überfällig insgesamt* und *Nachrichten* tragen keinen Verweis — *gelöst statt vermieden durch **E‑80**, 03.09.2026* | 01.09.2026 |
 | **E‑n** | In der URL steht **nur die ausdrückliche Wahl**. Der vom Endpunkt gewählte Zeitraum wird nie zurückgeschrieben | 01.09.2026 |
 | **E‑o** | Zeitpunkte **absolut** in der Anzeigezone, nie relativ | 01.09.2026 |
 | **E‑p** | Der Leerzustand zeigt **einen Satz und den bedienbaren Umschalter**, sonst nichts | 01.09.2026 |
 | **E‑q** | `ermittelbar: false` wird zu gedämpftem Text mit Zeichen — **keine `0`**, kein Rot, kein Fehlerzustand | 01.09.2026 |
 | **E‑r** | Das Dashboard liegt auf **`/`** | 01.09.2026 |
 | **E‑t** | Ein **zweiter, schmaler Balkenstreifen** unter dem Verlauf, nur `FEHLER`, mit **eigener beschrifteter Skala** | 01.09.2026 |
-| **E‑u** | Die beiden Problemkategorien tragen **Fläche und Vordergrund, keine Kontur** — Kachel wie Plakette (§3) | 01.09.2026 |
+| **E‑u** | Die beiden Problemkategorien tragen **Fläche und Vordergrund, keine Kontur** — Kachel wie Plakette (§3). *Geschärft durch **E‑79**, 03.09.2026: Es ist nur noch eine* | 01.09.2026 |
 | **E‑v** | Die Balkenbreite ist **gedeckelt** (`maxBarSize={28}`), an beiden Diagrammen mit demselben Wert. Wo die Slotbreite darunter liegt, bewirkt der Deckel nichts (§5.2) | 01.09.2026 |
+| **E‑78** | Reihenfolge **Fehler · Läuft · Wartend · Nachrichten** — erst was zu tun ist, dann was in Arbeit ist, dann die Zählung. *Wartend* steht **vor** *Nachrichten*, damit sein Wegfall die Reihe von hinten zusammenzieht (§5.4) | 03.09.2026 |
+| **E‑79** | **Fläche nur bei der einen Problemkachel.** Die Zustandskacheln tragen `--status-offen` im kleinen Träger — der Statusplakette der Liste. **Schärft E‑u** (§5.4) | 03.09.2026 |
+| **E‑80** | ***Läuft* erbt den Zeitraum, *Wartend* bringt seinen mit**, aus `aeltesteSekunden`; über einem Jahr greift die Notbremse. **Löst, was E‑m nur vermied** (§5.4) | 03.09.2026 |
+| **E‑81** | **Drei Zustände, drei Bilder.** Abwesenheit und „nicht ermittelbar" dürfen nie gleich aussehen (§5.4) | 03.09.2026 |
+| **E‑82** | **Eine Farbrolle, die mehrere Einordnungen bündelt, trägt eine Beschriftung, die für alle ihre Mitglieder gilt und keines von ihnen wiederholt.** Aus *Offen* wird **„Ohne Ergebnis"**, aus *Abgeschlossen* wird **„Erledigt"** — die Token bleiben `--status-offen` und `--status-abgeschlossen` (§5.2) | 04.09.2026 |
+| **E‑83** | **Der Verlauf ist eine Fläche mit der Gesamtsumme je Eimer, keine vier gestapelten Reihen.** Die Legende entfällt; die Aufteilung steht nur noch im Tooltip. **Hebt die Bildhälfte von E‑l auf** (§5.2) | 04.09.2026 |
+| **E‑84** | **Die Fläche trägt `--akzent`, ihre Oberkante `--akzent-schrift`** — eine Summe hat keinen Status, und der Akzent ist die eine Farbe, die über die Daten nichts behauptet. Keine neue Farbe, keine Zeile in `globals.css` (§5.2) | 04.09.2026 |
+| **E‑85** | **Bewegung nur beim Aufbau** von Verlauf und Fehlerstreifen, im Gleichlauf, 600 ms — sonst keine. Mit `prefers-reduced-motion: reduce` gar keine. **Schränkt [`visuelles-konzept.md`](visuelles-konzept.md) §7 ein, streicht ihn nicht** (§5.2) | 04.09.2026 |
+| **E‑86** | **Der Zeitraumwechsel ist ein Neuaufbau und kein Morphing** — ein `key` am Container trägt das Zeitraumpaar. Sonst interpolierte Recharts zwischen Pfaden mit verschieden vielen Stützstellen (§5.2) | 04.09.2026 |
 
 ---
 
@@ -249,7 +290,206 @@ die Belegungsprobe weniger — aber nur, wenn der Parameter eine Absicht ausdrü
 Wahl schlägt die Antwort, und ohne beides ist **keine** Schaltfläche gedrückt — eine vorgemerkte
 wäre eine Vermutung, die beim Eintreffen der Antwort springt.
 
-### 5.2 Der Verlauf: vier Reihen, nicht acht (E‑l)
+### 5.2 Der Verlauf: vier Reihen, nicht acht (E‑l) — **seit dem 04.09.2026 eine Fläche (E‑83)**
+
+> ### ⚠️ Umbau vom 04.09.2026 — der Verlauf ist **eine Fläche** (**E‑83** bis **E‑86**)
+>
+> **E‑l fällt zur Hälfte.** Die Zusammenfassung acht Einordnungen → vier Farbrollen bleibt und ist
+> unverändert begründet; sie steht ab heute aber **nur noch im Tooltip** und nicht mehr im Bild.
+> An die Stelle der vier gestapelten Reihen tritt **eine Fläche mit der Gesamtsumme je Eimer**.
+>
+> **Die Begründung ist die des Auftraggebers und keine gemessene:** *Die Lesbarkeit der
+> Gesamtmenge wiegt schwerer als die Eimertreue der Darstellung.* Wer den Verlauf ansieht, fragt
+> zuerst **wie viel** — und ein Stapel aus vier Farben beantwortet das schlechter als eine Linie.
+> Der Preis steht daneben und wird nicht kleingeredet: Die Aufteilung ist im Bild nicht mehr zu
+> sehen, sondern erst beim Überfahren.
+>
+> | | vorher | jetzt |
+> |---|---|---|
+> | Der Verlauf | vier gestapelte Balkenreihen | **eine Fläche**, Farbverlauf nach unten, weiche Kurve |
+> | Die Reihe | je Farbrolle eine | **die Gesamtsumme**, `dataKey="gesamt"` |
+> | Die Legende | vier Einträge (E‑l) | **entfällt** — bei einer Reihe verspricht sie nichts mehr |
+> | Der Tooltip | Rollen mit ihren Einordnungen | **unverändert**, Zeile für Zeile, samt Farbquadraten |
+> | Der Fehlerstreifen | Balken, eigene Skala (E‑t) | **unverändert** |
+> | Bewegung | keine | **nur beim Aufbau** (E‑85) |
+>
+> **Vorbild ist das interaktive Flächendiagramm von shadcn/ui** (`ui.shadcn.com/charts/area`).
+> Übernommen sind Farbverlauf, weiche Kurve und Aufbau; **nicht** übernommen ist `ChartContainer` —
+> die Ansicht färbt seit dem 31.08.2026 über `var(--token)` in einem Prop und hat einen eigenen
+> Tooltip, und beides ist gemessen (§8a, §8b in
+> [`frontend-grundlagen.md`](frontend-grundlagen.md)).
+>
+> #### E‑84 — die Fläche trägt den **Akzent**, keine Statusrolle
+>
+> Eine **Summe hat keinen Status**. `--status-abgeschlossen` behauptete über ihr „alles fertig",
+> `--status-offen` das Gegenteil; beides wäre eine Aussage, die die Zahl nicht trägt.
+> [`visuelles-konzept.md`](visuelles-konzept.md) §3 beschreibt den Akzent als die eine Farbe, die
+> *„nichts sagt, was die Anwendung über die Daten sagt"* — genau das wird hier gebraucht.
+>
+> **Zwei vorhandene Stufen, beide in beiden Blöcken, beide so vergeben, wie §3 sie vergibt:**
+>
+> | | Token | warum diese Stufe | gemessen |
+> |---|---|---|---|
+> | die Fläche | `--akzent` | §3: *„nur Fläche.* Gefüllte Schaltfläche, Kennzeichnung" — und der Farbverlauf ist eine Fläche | in beiden Blöcken **derselbe Wert**, `#b9c022` |
+> | die Oberkante | `--akzent-schrift` | §3: *„Verweise, aktive Beschriftungen, **dünne Linien**"* | 5,40 : 1 hell, 10,72 : 1 dunkel auf `--card` ([`dunkelmodus.md`](dunkelmodus.md) §3.2/§3.3) |
+>
+> **Die Kontur ist keine Zutat, sondern die Behebung, die §3 selbst vorschreibt.** Dort steht als
+> *einzige bekannte Grenze* der Farbe: Eine gefüllte Akzentfläche erreicht auf Weiß nur 1,98 : 1 und
+> verfehlt die 3 : 1 aus WCAG 1.4.11 — *„wer die Lücke schließen will, gibt gefüllten Flächen
+> zusätzlich eine Kontur in `--akzent-schrift`."* Die Datenkante des Diagramms ist genau so eine
+> dünne Linie, und sie trägt damit 5,40 : 1 statt 1,98 : 1.
+>
+> **Verworfen sind:** `--akzent-flaeche` (die blasse Tönung; auf `--card` praktisch unsichtbar) und
+> `--akzent-vordergrund` (im Dunkelblock **dunkler als die Karte** — eine Fläche, die als Loch
+> gelesen würde). **Keine neue Farbe, keine OKLab-Rechnung, keine Zeile in `globals.css`.**
+>
+> #### E‑85 — Bewegung, eng gefasst
+>
+> [`visuelles-konzept.md`](visuelles-konzept.md) §7 sagt *„keine Animationen"*. Der Satz wird
+> **eingeschränkt und nicht gestrichen**: Erlaubt ist Bewegung **beim Aufbau** des Verlaufs und des
+> Fehlerstreifens, sonst nichts. Die Zitate in [`nachrichtendetail.md`](nachrichtendetail.md)
+> bleiben gültig.
+>
+> **Beide Diagramme bauen im Gleichlauf auf**, 600 ms, Beginn 0. Das ist kein Selbstläufer:
+> Recharts' Voreinstellungen sind **verschieden** — `<Area>` 1500 ms, `<Bar>` 400 ms. Ohne die
+> gemeinsame Konstante liefe der Streifen fertig, während die Fläche noch wächst.
+>
+> **Der Ausschalter musste nicht gebaut werden — er war schon da, und das ist nachgesehen.**
+> Recharts 3.10.1 setzt `isAnimationActive` standardmäßig auf `'auto'`, und `'auto'` heißt dort:
+> kein Aufbau bei `prefers-reduced-motion: reduce` und keiner beim Serverrendern
+> (`util/usePrefersReducedMotion.js`). Ein eigener Schalter wäre ein zweiter Weg zu derselben
+> Entscheidung gewesen.
+>
+> #### E‑86 — Zeitraumwechsel ist Neuaufbau
+>
+> Die Zahl der Eimer wechselt mit dem Zeitraumpaar. Ohne Eingriff interpolierte Recharts zwischen
+> zwei Pfaden mit **unterschiedlich vielen** Stützstellen — für den Bruchteil einer Sekunde stünde
+> eine Kurve da, die es in keinem der beiden Zeiträume gibt. Umgesetzt über einen `key` am
+> Container, der das Zeitraumpaar trägt; er steht an **beiden** Containern, sonst liefen die
+> Aufbauten auseinander.
+>
+> #### Was am laufenden System gemessen worden ist *(NEXANS, Profil `dev`, Anker `2025-12-30 04:09:47`)*
+>
+> **Neun Lagen** — drei Zeiträume × drei Breiten (die Karte auf 1673 / 768 / 360 px gesetzt):
+>
+> | Zeitraum | Breite | Zeichenbereich | Bandbreite | Eimer | Balkenbreite | Zeitmarke ↔ Bandmitte | Zeitmarke ↔ Balkenmitte | Vorhersage |
+> |---|---:|---|---:|---:|---:|---:|---:|---:|
+> | 48 Stunden | 1673 | 48…1639 | 34,587 | 46 | 28 | **0,0000** | 0,2065 | 0,2065 |
+> | 48 Stunden | 768 | 48…734 | 14,913 | 46 | 13 | **0,0000** | 0,0435 | 0,0435 |
+> | 48 Stunden | 360 | 48…326 | 6,0435 | 46 | 4 | **0,0000** | 0,0218 | 0,0217 |
+> | 30 Tage | 1673 | 54…1639 | 52,8333 | 30 | 28 | **0,0000** | 0,0834 | 0,0833 |
+> | 30 Tage | 768 | 54…734 | 22,6667 | 30 | 21 | **0,0000** | 0,1667 | 0,1667 |
+> | 30 Tage | 360 | 54…326 | 9,0667 | 30 | 7 | **0,0000** | 0,0334 | 0,0333 |
+> | 12 Monate | 1673 | 60…1639 | 131,5833 | 12 | 28 | **0,0000** | 0,2084 | 0,2083 |
+> | 12 Monate | 768 | 60…734 | 56,1667 | 12 | 28 | **0,0000** | 0,0834 | 0,0833 |
+> | 12 Monate | 360 | 60…326 | 22,1667 | 12 | 20 | **0,0000** | 0,0834 | 0,0833 |
+>
+> **Der Zeichenbereich ist in allen neun Lagen zeichengleich** — die gerechnete Achsenbreite trägt
+> unverändert, und sie wächst mit den Zahlen mit (48 → 54 → 60).
+>
+> **Die Fläche liegt auf der Zeitachse**, auf **0,0005 px** genau über 23 Marken nachgezählt. **Der
+> Balken liegt bis zu 0,21 px daneben** — das ist Recharts' `Math.round` auf die Balkenbreite,
+> nicht eine Folge dieses Umbaus; Herleitung, Formel und die Schranke von 0,25 px in
+> [`frontend-grundlagen.md`](frontend-grundlagen.md) §8b. **Die alte Zusage „Versatz 0,0 px" gilt
+> damit nicht mehr wörtlich**, und sie ist hier nicht stillschweigend ersetzt worden.
+>
+> **Der Aufbau, Bild für Bild gemessen** (Wechsel 48 Stunden → 12 Monate, `requestAnimationFrame`):
+> Beide Diagramme beginnen im **selben Bild** (186 ms nach dem Klick, davor läuft die Abfrage) und
+> enden im **selben Bild** (zwischen 746 und 773 ms). Der Fortschritt — Breite des Aufbau-Clips der
+> Fläche gegen die Summe der Balkenhöhen, je auf ihren Endwert bezogen — stimmt in **jedem
+> abgetasteten Bild auf drei Nachkommastellen** überein: 0,028 · 0,079 · 0,153 · 0,347 · 0,834 ·
+> 0,998.
+>
+> **Mit `prefers-reduced-motion: reduce` steht das Bild sofort:** **0** Bilder mit Aufbau-Clip und
+> **genau eine** Balkenhöhensumme über den ganzen Beobachtungszeitraum, gegen **41** Bilder und
+> **36** verschiedene Summen ohne die Vorgabe. Gemessen auf einer temporären Route außerhalb
+> `(app)`, die die **echte** Komponente rendert, weil die Medienabfrage nur über CDP zu stellen ist.
+>
+> **Der Zeitraumwechsel baut neu auf:** Über den ganzen Wechsel standen im DOM nur **zwei**
+> Eimerzahlen — 46 und 12 —, nie eine dritte; der markierte Knoten der alten Fläche war nach 66 ms
+> aus dem Dokument verschwunden.
+>
+> **Nicht angefasst:** `app/globals.css` (**keine Zeile** — die Akzentstufen werden *benutzt*, nicht
+> angelegt), `lib/status-farbe.ts`, `tests/farbwerte.test.ts`, die Tooltip-Gruppierung und ihre
+> Beschriftungen aus E‑82, der Fehlerstreifen als Diagrammform, die gerechnete Achsenbreite,
+> `MAX_BALKENBREITE` (der Wert; sein Kommentar sagt jetzt, dass ihn nur noch ein Diagramm trägt),
+> Backend, Endpunkt und Antwortrumpf.
+>
+> **Eine Zeichenkette ist neu in Gebrauch, aber nicht neu:** Mit der Legende ist das letzte Wort
+> gefallen, das den Verlauf beschriftete. Neben der Überschrift steht deshalb `achseAnzahl`
+> („Nachrichten" / „Messages") — seit dem 01.09.2026 in beiden Sprachdateien, bis heute ungenutzt.
+>
+> > **Belegvermerk (L10).** *Gemessen war:* neun Lagen Geometrie am laufenden System (Zeichenbereich
+> > beider Diagramme, Bandbreite, Balkenbreite, Lage der Zeitmarken, Lage der Balkenmitten), der
+> > Aufbau beider Diagramme Bild für Bild, das Verhalten unter `prefers-reduced-motion: reduce`, und
+> > die Zahl der im DOM beobachteten Eimerzahlen während eines Zeitraumwechsels. *Behauptet wird:*
+> > Beide Diagramme teilen den Zeichenbereich zeichengleich, die Fläche liegt auf der Zeitachse, die
+> > Balkenmitte bis zu 0,21 px daneben, beide bauen im Gleichlauf auf, und mit der Vorgabe *reduce*
+> > bewegt sich nichts. — **Nicht gemessen, sondern Augenschein** ist, dass 600 ms die richtige
+> > Dauer sind und dass eine Fläche die Gesamtmenge besser lesbar macht als ein Stapel: Beides sind
+> > Aussagen über das Bild und keine über eine Zahl. **Nicht gemessen** ist außerdem der Zustand
+> > *vor* dem Umbau — die 0,21 px sind über den unveränderten Quelltext hergeleitet und nicht am
+> > alten Stand nachgestellt.
+
+> ### ⚠️ Korrektur vom 04.09.2026 — die Beschriftung der beiden Sammelrollen war falsch (**E‑82**)
+>
+> **Die Gruppierung stimmt, der Name stimmte nicht.** Vier Reihen bleiben vier Reihen, die
+> Reihenfolge bleibt, die Farben bleiben. Geändert sind zwei Zeichenketten je Sprachdatei.
+>
+> | Rolle (Token bleibt) | Beschriftung neu | bisher |
+> |---|---|---|
+> | `--status-offen` | **„Ohne Ergebnis"** | „Offen" |
+> | `--status-abgeschlossen` | **„Erledigt"** | „Abgeschlossen" |
+>
+> **Der Befund, im Wortlaut.** Beobachtet in einem Eimer mit 60 Nachrichten: *Offen 49* über
+> *Aufgeteilt 1* und *Zusammengeführt 48* — **48 dieser 49 Zeilen stehen in einem Endstatus.**
+> `istEndstatus` liefert für `AUFGETEILT` und `ZUSAMMENGEFUEHRT` `true`
+> ([`message-status.md`](message-status.md), Abschnitt „Endstatus und Überfälligkeit"); die
+> Überschrift behauptete das Gegenteil. Die zweite Rolle war nicht falsch, sondern **doppelt**:
+> „Abgeschlossen" stand als Überschrift über einem gleichlautenden Eintrag mit anderer Zahl.
+>
+> > **Nachgerechnet bei der Sichtprobe am 04.09.2026 — der Satz oben untertreibt.** Der Eimer ist
+> > wiedergefunden worden (`NEXANS`, 48 Stunden, Eimer **19:00** am 29.12.2025, *Gesamt 60*), und
+> > die Aufschlüsselung stimmt aufs Wort: *Ohne Ergebnis 49* über *Aufgeteilt 1* und
+> > *Zusammengeführt 48*. **Es sind aber nicht 48 der 49 Zeilen im Endstatus, sondern alle 49** —
+> > `AUFGETEILT` ist nach derselben Tabelle ebenso Endstatus wie `ZUSAMMENGEFUEHRT`. Der
+> > ursprüngliche Wortlaut bleibt oben stehen; die Zahl macht den Befund nicht kleiner, sondern
+> > größer.
+>
+> **Der Fehler saß im Namen, nicht in der Gruppierung.** Die Zusammenfassung *als Farbe* ist in
+> [`visuelles-konzept.md`](visuelles-konzept.md) §3 begründet und bleibt: *„Kein Ergebnis, kein
+> Problem. Farbe wäre hier eine Aussage, die es nicht gibt."* Das ist eine Aussage über
+> **Neutralität**, nicht über Offenheit — der Rollenname stammte aus der Hälfte seiner Mitglieder,
+> die passt. **„Ohne Ergebnis" ist deshalb nicht erfunden**, sondern die Formulierung, mit der das
+> visuelle Konzept die Rolle schon vorher begründet hat.
+>
+> **Vorhergesagt war es.** [`message-status.md`](message-status.md) schreibt seit dem 06.08.2026:
+> *„Wer ‚offen‘ im Sinne der Oberfläche braucht, definiert das dort — und begründet es dort."*
+> Diese Definition ist nie getroffen worden; stattdessen ist der Name einer Farbrolle in die
+> Beschriftungsposition gerutscht.
+>
+> **Verworfen wurden vier naheliegende Fassungen.** *Zwischenschritt* und *Zwischenstand* sind am
+> 11.08.2026 bewusst aus jeder Sprachdatei entfernt worden
+> ([`nachrichtenliste.md`](nachrichtenliste.md) §5) — die Fassung mit anderem Suffix holte denselben
+> Begriff zurück. *Unterwegs*, *In Bearbeitung* und *Läuft* sind eine Aussage über **Fortschritt**,
+> und ob eine gesplittete Nachricht weiterläuft oder hängt, sagt der Status nicht (Regel Q4).
+> *Mit Ergebnis* als Gegenstück schäde daran, dass **ein Fehler auch ein Ergebnis ist** — der Name
+> gälte für zwei Rollen. *Angekommen* und *Bestätigt* höben `ABGESCHLOSSEN` auf die Aussage von
+> `QUITTIERT`, und genau dieser Unterschied ist der ganze Grund, warum es zwei Einordnungen sind.
+>
+> **Die Beschriftungen der Einordnungen sind unangetastet.** „Aufgeteilt", „Zusammengeführt",
+> „Abgeschlossen" und „Quittiert" bleiben, wie sie seit dem 11.08.2026 getrennt geführt werden.
+> Dass die Einordnung *Abgeschlossen* jetzt unter der Gruppe *Erledigt* steht, ist gewollt: **Die
+> Gruppe ist die weitere Menge.**
+>
+> **Die Legende liest sich seither: Fehler · Ohne Ergebnis · Erledigt · Ungeklärt.** In der
+> englischen Fassung *Errors · No outcome · Done · Unclear* — dort trug die Rolle mit
+> „Completed" **wörtlich denselben Text** wie die Einordnung `ABGESCHLOSSEN`.
+>
+> **Nicht geändert:** `app/globals.css`, `lib/status-farbe.ts`, `features/dashboard/verlauf.ts`,
+> die Stapelreihenfolge `fehler, offen, abgeschlossen, ungeklaert`, jeder Bezeichner im Quelltext
+> und `tests/farbwerte.test.ts`. Es ist **keine** Entscheidung über Farbe, Gruppierung oder
+> Diagrammform.
 
 Der Endpunkt liefert je Eimer die vorkommenden **Einordnungen** — acht mögliche.
 `lib/status-farbe.ts` bildet sie auf **vier** Farbrollen ab. Acht Reihen mit vier Farben ergäben
@@ -383,6 +623,25 @@ Platz.
 > vier Dichtestufen und bei drei Fensterbreiten nachgemessen: Versatz **0,0 px** in allen 24 Lagen.
 > Gelöscht wird deshalb nichts.
 
+> ### ⚠️ Fortschreibung vom 04.09.2026 — der Streifen bleibt, die Null nicht
+>
+> **E‑t ist unberührt.** Der Fehlerstreifen bleibt ein **Balken**diagramm mit eigener Skala, zwei
+> Beschriftungen und derselben Zeitachse; über ihm steht seit heute eine Fläche (**E‑83**, §5.2).
+> **Die verschiedene Form ist erwünscht** — sie hält auseinander, was verschiedene Größen sind, und
+> sie sagt dasselbe noch einmal, was der Satz neben der Überschrift in Worten sagt.
+>
+> **Was der Satz oben aussagt, gilt weiter:** Beide Diagramme bekommen **dieselbe** Achsenbreite,
+> und der Zeichenbereich ist in allen neun am 04.09.2026 gemessenen Lagen zeichengleich
+> (48…1639 · 54…1639 · 60…1639, je nach Zeitraum).
+>
+> **Was nicht mehr gilt, ist die Zahl 0,0 px aus dem Vermerk darüber.** Sie stammt aus einer Zeit,
+> in der beide Diagramme Balken trugen und dieselbe Rundung bekamen. Die Fläche liegt heute auf der
+> Zeitachse — auf **0,0005 px** genau nachgezählt —, der Balken darunter bis zu **0,21 px** daneben.
+> Ursache ist `Math.round` auf die Balkenbreite in Recharts (`combineAllBarPositions.js`), Schranke
+> 0,25 px, hergeleitet und in neun Lagen auf 0,0001 px bestätigt:
+> [`frontend-grundlagen.md`](frontend-grundlagen.md) §8b. **Der alte Wortlaut bleibt stehen**, weil
+> die Aussage, um derentwillen er dasteht, unverändert richtig ist.
+
 **Bei 48 Eimern wird nicht jeder beschriftet, und wie viele es sind, entscheidet die Breite.**
 `interval="equidistantPreserveStart"` mit `minTickGap={12}` wählt einen gleichabständigen
 Ausschnitt, der in die vorhandene Breite passt — gemessen 6 Beschriftungen bei 360 px, 10 bei 768
@@ -406,49 +665,190 @@ schnitt bei `NEXANS` über zwölf Monate `220.000` zu `:20.000` ab (§10.4).
 **Überfällig läuft nicht mit**, in keiner Variante: Die Kategorie entsteht live über `Message` und
 steht nicht je Eimer im Rollup.
 
-### 5.4 Die drei Kacheln (E‑m, E‑q)
+### 5.4 Die vier Kacheln (E‑m, E‑q, **E‑78** bis **E‑81**)
 
-Reihenfolge **Fehler, Überfällig, Nachrichten**. Sie folgt dem Leitsatz; die Zählkachel beantwortet
-keine Frage, mit der jemand herkommt, und steht deshalb hinten.
+*Neu am 03.09.2026 (Schritt 10b‑5). Bis dahin standen hier drei Kacheln, und die mittlere hieß
+**Überfällig**; der alte Abschnitt steht als Korrekturblock am Ende dieses Kapitels.*
 
-| Kachel | Ziel |
-|---|---|
-| **Fehler** | `/nachrichten?status=FEHLER&von=…&bis=…`, Grenzen aus `fenster` |
-| **Überfällig, im Fenster** | `/nachrichten?ueberfaellig=true&von=…&bis=…` |
-| **Überfällig, insgesamt** | **nicht klickbar** |
-| **Nachrichten** | nicht klickbar |
+**Reihenfolge: Fehler · Läuft · Wartend · Nachrichten** (**E‑78**). Sie folgt dem Leitsatz: erst was
+zu tun ist, dann was in Arbeit ist, dann die Zählung. **Und *Wartend* steht vor *Nachrichten*, nicht
+dahinter** — sein Wegfall zieht die Reihe dann von hinten auf drei zusammen, statt eine Lücke in die
+Mitte zu schlagen.
 
-**Warum „insgesamt" nicht klickt:** Die Zahl hat bewusst kein Zeitfenster (Regel L9), die Liste hat
-ein Pflicht-Zeitfenster (Regel L1). Jedes Ziel zeigte eine **andere Zahl** als die Kachel — und eine
-Kachel, die auf eine andere Zahl führt als sie nennt, ist schlechter als eine, die nicht klickt. Ein
-Satz sagt das an der Kachel.
+#### Es sind drei oder vier, und der Unterschied ist eine Auskunft (**E‑81**)
 
-**Die beiden Filter werden nie kombiniert.** `status=FEHLER` und `ueberfaellig=true` sind am
-Listen-Endpunkt ausdrücklich unvereinbar und ergeben `400`. Die Adressen entstehen deshalb in **zwei
-getrennten Funktionen**, und keine von beiden nimmt den anderen Parameter entgegen.
+| Zustand | Antwort | Anzeige |
+|---|---|---|
+| **strukturell abwesend** | Schlüssel `wartend` fehlt | **keine Kachel.** Kein Platzhalter, keine gedämpfte Kachel, kein „nicht verfügbar" |
+| **nicht ermittelbar** | `ermittelbar = false` | **Kachel da**, Text nach E‑q, **nicht klickbar** |
+| **ermittelt** | `ermittelbar = true` | die Zahl, bei `anzahl > 0` zusätzlich das Alter |
 
-**Verlinkt ist ein Bereich der Kachel und nicht die ganze.** In der Fehlerkachel steht darunter die
-Schaltfläche für die Aufschlüsselung, und ein `<button>` in einem `<a>` ist kein gültiges Markup.
+> **Abwesenheit ist eine Auskunft über den Mandanten** („hat keine Abläufe, die suspendieren"),
+> `ermittelbar = false` eine über **uns** („wissen es gerade nicht"). Verschwände die Kachel bei
+> einem Fehlschlag, würde ein Ausfall stillschweigend in eine **strukturelle Behauptung** übersetzt.
+> Das ist der schlimmste der drei denkbaren Fehler an dieser Stelle, und deshalb sind es drei Bilder
+> und nicht zwei.
 
-> ### ⚠️ Der Verweis auf „überfällig" hat die Liste eine Änderung gekostet
+Für *Läuft* gilt dasselbe ohne den ersten Fall: **Die Kachel ist immer da**, laufen kann jeder
+Mandant.
+
+> ### ⚠️ Nachgesehen und nicht angenommen: Was, wenn die Erscheinungsbedingung selbst fällt?
 >
-> Das Backend kennt den Parameter seit Schritt 4 — **die Oberfläche kannte ihn nicht.** Ein Klick
-> wäre auf der *ungefilterten* Liste gelandet, mit dem Zeitfenster der Kachel und ohne jeden
-> Hinweis. Der Befund samt Bau steht in [`nachrichtenliste.md`](nachrichtenliste.md) §5e; hier steht
-> nur, warum er hier auffiel: **Vor dem Dashboard gab es keinen Weg zu diesem Parameter.**
+> Genau dann entstünde der Fehler, den E‑81 ausschließt — der Schlüssel fiele weg, und die
+> Oberfläche läse einen Ausfall als „dieser Mandant wartet nie".
+>
+> **Der Endpunkt lässt das nicht zu**, und es steht dort ausgeschrieben
+> ([`dashboard.md`](dashboard.md) §5): *„Auch die Erscheinungsbedingung bekommt keinen
+> [Teilerfolg-Mechanismus]. Sie liest **Stammdaten** und ist damit dieselbe Art Zugriff wie die
+> Mandantenkette in jedem anderen Statement."* Bricht sie, ist die **ganze Antwort** ein Fehler und
+> die Seite zeigt ihren Fehlerzustand. **Kein offener Punkt** — die Frage ist beantwortet, bevor sie
+> die Oberfläche erreicht.
+
+#### Genau eine Kachel trägt eine Fläche (**E‑79**)
+
+**E‑u ist für zwei Problemkacheln geschrieben worden; seit E‑71 gibt es eine** — *Fehler*. *Läuft*,
+*Wartend* und *Nachrichten* tragen keine Fläche.
+
+**Das ist keine Aufweichung von E‑u, sondern seine Schärfung.** „Gefüllt heißt, hier ist etwas zu
+tun" wird eindeutig, weil es nur noch einen Fall gibt. Trügen die beiden Zustandskacheln ebenfalls
+Fläche, wäre die Unterscheidung wieder aufgelöst — und [`visuelles-konzept.md`](visuelles-konzept.md)
+§7a hat gemessen, wie wenig dafür nötig ist: **0,025** Unterschied sind in der Sichtprobe A.2 als
+Rangfolge gelesen worden.
+
+**Damit sie nicht wie nackte Zahlen aussehen**, tragen *Läuft* und *Wartend* `--status-offen` in
+einem **kleinen Träger**: der **Statusplakette**, in derselben Gestalt und über dieselbe Verwendung,
+die auch die Liste nimmt (`statusKlassen` in `lib/status-farbe.ts`). **Die Kachel sieht aus wie die
+Zeilen, auf die sie führt.**
+
+| | |
+|---|---|
+| **Der Träger steht an der Stelle des Kopfes** | Er trägt Zeichen **und** Wort; ein Kopf darüber sagte dasselbe Wort ein zweites Mal |
+| **Alle drei Werte, also mit Kontur** | anders als bei *Fehler*, wo E‑u zwei nimmt. E‑u galt zwei Kategorien, von denen keine lauter sein durfte; hier stehen zwei Kacheln **derselben Rolle** nebeneinander, und `--status-offen-kontur` ist mit 1,35 : 1 auf `--card` die zurückhaltendste der fünf |
+| **Keine geteilte Komponente** | `StatusPlakette` liegt in `features/nachrichten`, und ein Feature importiert nicht aus einem Nachbarfeature ([`frontend-grundlagen.md`](frontend-grundlagen.md) §8). Geteilt ist die **Farbe** in `lib/status-farbe.ts`, nicht die Komponente — die Plakette der Liste kann Rohwert, unbestätigte Bedeutung und den aktuellen Schritt, und nichts davon gibt es an einer Kachel |
+
+#### Was daraufsteht
+
+- **Die Wörter sind „Läuft" und „Wartend"** — und sie stehen nicht in `dashboard.kacheln`, sondern
+  in `texte.einordnung`. Es sind dieselben, die der Statusfilter und die Plakette der Liste tragen;
+  ein eigenes Wort hier wäre dieselbe Sache zum zweiten Mal benannt.
+- **Zweite Zeile: „ältester seit 7 Tagen".** Sie **entfällt bei `anzahl = 0`** — kein „—", kein
+  „keine". Ohne Zeile gibt es kein Alter, und die Null steht für sich.
+- **Beide Kacheln sagen, dass sie den Bestand zählen und nicht den Zeitraum.** Ohne diesen Satz
+  widersprechen sich zwei Zahlen auf derselben Seite sichtbar, sobald 48 Stunden gewählt sind — der
+  Normalfall.
+
+> **Der Satz steht *in* der Kachel und nicht als geteilte Zeile darunter**, obwohl die Bauform
+> daneben (bekannte Grenze 3, unter der Reihe) genau das täte. Der Grund ist E‑81: Eine geteilte
+> Zeile müsste **beide Kacheln benennen** — und nennte damit bei einem Mandanten ohne suspendierende
+> Abläufe eine Kachel, die es auf seiner Seite gar nicht gibt. Die Bauform ist dieselbe geblieben:
+> ein **sichtbarer** Satz und kein `title`, weil es auf einem Berührungsgerät kein Überfahren gibt.
+
+- **Zeitspannen formatiert der vorhandene Formatierer** — `formatiereDauer`, derselbe wie für
+  `wartetSeitSekunden` im Detail. Ein zweiter wäre eine zweite Wahrheit über dieselbe Größe.
+
+> ⚠️ **Die fünf Dauerbausteine stehen damit zum dritten Mal in den Sprachdateien** — unter
+> `nachrichten.detail.dauer`, `katalog.lauf.dauer` und jetzt `dashboard.kacheln.dauer`. Der offene
+> Punkt dazu steht seit dem 26.08.2026 in
+> [`prozess-katalog-frontend.md`](prozess-katalog-frontend.md) §11 (Punkt 8) und betrifft jetzt drei
+> Stellen statt zwei. **Geteilt ist der Formatierer, nicht der Text** — die Bausteine gehören keiner
+> Ansicht und müssten auf die oberste Ebene; sie dorthin zu heben fasst die Schlüssel des
+> Nachrichtendetails an und ist eine eigene Runde.
+
+#### Die Verlinkung ist asymmetrisch (**E‑80**)
+
+| Kachel | Ziel | Zeitraum |
+|---|---|---|
+| **Fehler** | `/nachrichten?status=FEHLER&von=…&bis=…` | **erbt** |
+| **Läuft** | `/nachrichten?status=LAEUFT&von=…&bis=…` | **erbt** |
+| **Wartend** | `/nachrichten?status=WARTEND&von=…&bis=…` | **eigener**, aus `aeltesteSekunden` |
+| **Nachrichten** | — | nicht klickbar |
+
+**Läuft darf erben.** Eine laufende Nachricht ist nach E‑71 höchstens so alt wie die Wächterfrist —
+rund 30 Minuten — und liegt damit in jedem Zeitraum, den der Umschalter anbietet.
+
+**Wartend darf nicht.** 579.934 Sekunden sind 6,71 Tage; bei 48 Stunden zeigte das Ziel einen
+Bruchteil der genannten Zahl. **E‑m hat für genau diesen Fall die Klickbarkeit abgeschaltet** —
+*„Überfällig insgesamt"* trug keinen Verweis, weil die Zahl kein Zeitfenster hat und die Liste eines
+braucht. **Hier wird derselbe Fall gelöst statt vermieden:** Der Link bringt sein Fenster mit, und
+weil das eine ausdrückliche Wahl ist, steht es nach **E‑n** in der URL.
+
+#### Zu weit zu greifen kostet nichts, zu kurz kostet die Zeile
+
+`aeltesteSekunden` ist ein **Alter** und kein Zeitpunkt; sein Bezug ist die Anwendungsuhr des
+Backends, und die darf im Browser nicht nachgerechnet werden — im Profil `dev` steht sie Monate
+zurück. Der einzige Anker in der Antwort ist `fenster.bis`, und der liegt **hinter** `jetzt`: Er ist
+der Anfang des *nächsten* Eimers ([`dashboard.md`](dashboard.md) §2). `bis - aeltesteSekunden` läge
+damit **nach** der ältesten Zeile und schnitte sie weg.
+
+Deshalb lässt `verweise.ts` zweimal Luft nach hinten:
+
+1. **eine Eimerbreite** als feste Obergrenze je Paar — 1 h bei `48H`, 1 d bei `30T`, 31 d bei `12M`.
+   `bis` minus eine Eimerbreite liegt garantiert **nicht später** als `jetzt`.
+2. **die Abrundung auf den Tagesanfang** — bis zu 24 Stunden mehr, und nebenbei eine Adresse, die
+   man in einem geteilten Link lesen kann.
+
+> **Das darf großzügig sein, und zwar beweisbar:** `aeltesteSekunden` gehört zur **ältesten**
+> wartenden Zeile, gemessen über `MIN(MessageLastUpdate)` — dieselbe Spalte, nach der die Liste
+> filtert. Ein früheres `von` kann deshalb **keine einzige Zeile hinzufügen**; es gibt keine ältere.
+> Ein zu spätes ließe genau die Zeile weg, um derentwillen jemand klickt.
+>
+> **Die Eimerbreite steht als feste Millisekundenzahl da und wird nicht kalendarisch gerechnet.**
+> Ein Kalendermonat über `Date` hinge an der Zone, in der man ihn abzieht — das Backend richtet die
+> Eimer in der Anwendungszone aus, die Antwort nennt sie in UTC. Nach oben abzurunden kostet nichts,
+> also steht für `12M` schlicht der längste Monat.
+
+#### Die Notbremse
+
+**Über der Höchstspanne der Liste — ein Jahr, Regel L1 — ist die Kachel nicht klickbar** und sagt in
+einem Satz warum. Ein Link, der weniger zeigt als die Kachel nennt, entsteht nicht, auch nicht still;
+der Endpunkt wiese ihn mit `zeitfenster-zu-gross` ab.
+
+> **Eine Stunde Spielraum, und sie ist gerechnet.** Der Listen-Endpunkt misst das Jahr als
+> **Kalenderjahr in der Anwendungszone** (`common/Zeitfenster.absolutes`:
+> `von.isBefore(bis.minusYears(1))`), `verweise.ts` rechnet in UTC. Die beiden Ergebnisse können sich
+> um den Unterschied der Zonenversätze an den beiden Enden unterscheiden — **höchstens eine Stunde**.
+> Eine Stunde zu früh zu bremsen ist die richtige Richtung: Die Kachel sagt dann einen Satz, statt
+> auf eine Fehlerseite zu führen.
+
+#### Die zweite Zeile ist eine Prüfung
+
+**E‑75 hat `aeltesteSekunden` dafür gebaut**, und das ist ihre wichtigere Aufgabe. Schritt 10b‑4 ruht
+auf einer **fachlichen Auskunft und keiner Messung** (E‑71); bis die offene Prüfung gegen die
+Produktion gefahren ist ([`message-status.md`](message-status.md)), ist diese Zeile der Ort, an dem
+sie beobachtbar bleibt:
+
+> **„ältester seit 40 Tagen" widerlegt die eine Woche. *Läuft* über einer halben Stunde heißt, der
+> Wächter hängt.**
+
+Das ist **keine Schwelle und keine Warnung** — die Zeile trägt eine Zahl und kein Urteil, und ob
+sieben Tage viel sind, entscheidet niemand hier (Regel Q4, offener Punkt 130). Sie macht die
+ungemessene Auskunft nur beobachtbar, und das ist das Höchste, was eine Anzeige ohne Schwelle für sie
+tun kann.
+
+#### Die Umbruchregel ist erweitert und nicht ersetzt
+
+`sm:grid-cols-2` bleibt; **nur die Spaltenzahl am breiten Fenster folgt der Zahl der Kacheln** —
+`xl:grid-cols-4` bei vier, `xl:grid-cols-3` bei drei. Sonst bliebe bei `SUTTONS` eine leere vierte
+Spalte stehen, und eine Lücke sähe aus wie eine fehlende Zahl. Zusammengesetzte Klassennamen
+entstehen dafür nicht: Tailwind sucht den Quelltext ab, und beide Formen stehen vollständig da.
 
 #### „Nicht ermittelbar" (E‑q)
 
 | | |
 |---|---|
-| Der Kacheltitel | bleibt |
+| Die Plakette | bleibt |
 | An der Stelle der Zahl | gedämpfter Text mit Zeichen — **keine `0`**, kein Rot, keine Fehler-Kennung |
 | Die Kachel | ist **nicht klickbar** |
 | Ein Satz | nennt den Grund. Für den Nutzer ist das eine Auskunft, kein technischer Fehler |
 
-**Beide Zahlen fallen zusammen** — das gibt der Vertrag vor. Die übrigen Blöcke stehen normal. Und
-es gibt hier keine Schaltfläche „Erneut versuchen": Sie verspräche, dass ein zweiter Versuch etwas
-ändern könnte, und die übrige Seite steht ja bereits.
+**E‑q bleibt als Mechanismus und gilt jetzt für `laeuft.ermittelbar` und `wartend.ermittelbar`.**
+Geändert hat sich der Umfang: **Die beiden Zahlen *einer* Kachel fallen zusammen, die beiden
+*Kacheln* nicht.** Bei *Überfällig* waren „im Zeitraum" und „insgesamt" ein Paar, das man
+nebeneinander liest; *Läuft* und *Wartend* sind zwei Statements und zwei Auskünfte. Fällt eine, steht
+die andere ([`dashboard.md`](dashboard.md) §5).
+
+Und es gibt hier weiterhin keine Schaltfläche „Erneut versuchen": Sie verspräche, dass ein zweiter
+Versuch etwas ändern könnte, und die übrige Seite steht ja bereits.
 
 #### Die Fehlerarten (C.4)
 
@@ -467,6 +867,53 @@ daneben.
 > Anzeigetext, sondern ein **Wert** — der Namensteil hinter `ERROR_` oder der Rohwert selbst —, und
 > Werte werden nicht übersetzt (Regel Q4). Der Test belegt beide Richtungen, einschließlich eines
 > Rumpfes, in dem `art` etwas anderes sagt.
+
+---
+
+> ## ⚠️ Der Stand bis zum 03.09.2026 — die drei Kacheln mit *Überfällig*
+>
+> **Er bleibt wortgleich stehen.** Ohne ihn wäre nicht mehr nachlesbar, warum E‑m die Klickbarkeit
+> einmal abgeschaltet hat — und E‑80 löst genau den Fall, den E‑m vermieden hat.
+>
+> > ### 5.4 Die drei Kacheln (E‑m, E‑q)
+> >
+> > Reihenfolge **Fehler, Überfällig, Nachrichten**. Sie folgt dem Leitsatz; die Zählkachel
+> > beantwortet keine Frage, mit der jemand herkommt, und steht deshalb hinten.
+> >
+> > | Kachel | Ziel |
+> > |---|---|
+> > | **Fehler** | `/nachrichten?status=FEHLER&von=…&bis=…`, Grenzen aus `fenster` |
+> > | **Überfällig, im Fenster** | `/nachrichten?ueberfaellig=true&von=…&bis=…` |
+> > | **Überfällig, insgesamt** | **nicht klickbar** |
+> > | **Nachrichten** | nicht klickbar |
+> >
+> > **Warum „insgesamt" nicht klickt:** Die Zahl hat bewusst kein Zeitfenster (Regel L9), die Liste
+> > hat ein Pflicht-Zeitfenster (Regel L1). Jedes Ziel zeigte eine **andere Zahl** als die Kachel —
+> > und eine Kachel, die auf eine andere Zahl führt als sie nennt, ist schlechter als eine, die
+> > nicht klickt. Ein Satz sagt das an der Kachel.
+> >
+> > **Die beiden Filter werden nie kombiniert.** `status=FEHLER` und `ueberfaellig=true` sind am
+> > Listen-Endpunkt ausdrücklich unvereinbar und ergeben `400`. Die Adressen entstehen deshalb in
+> > **zwei getrennten Funktionen**, und keine von beiden nimmt den anderen Parameter entgegen.
+> >
+> > **Verlinkt ist ein Bereich der Kachel und nicht die ganze.** In der Fehlerkachel steht darunter
+> > die Schaltfläche für die Aufschlüsselung, und ein `<button>` in einem `<a>` ist kein gültiges
+> > Markup.
+> >
+> > > ### ⚠️ Der Verweis auf „überfällig" hat die Liste eine Änderung gekostet
+> > >
+> > > Das Backend kennt den Parameter seit Schritt 4 — **die Oberfläche kannte ihn nicht.** Ein
+> > > Klick wäre auf der *ungefilterten* Liste gelandet, mit dem Zeitfenster der Kachel und ohne
+> > > jeden Hinweis. Der Befund samt Bau steht in [`nachrichtenliste.md`](nachrichtenliste.md) §5e;
+> > > hier steht nur, warum er hier auffiel: **Vor dem Dashboard gab es keinen Weg zu diesem
+> > > Parameter.**
+>
+> **Was daran gefallen ist:** die Kachel *Überfällig* samt beider Zahlen, ihr Verweis und der Satz
+> daneben. **Was unberührt bleibt, und es ist der größere Teil:** die Bauform — Kachel mit Kopf,
+> Zahl, Verweis auf einen Bereich statt auf die ganze Kachel, E‑q als eigener Zweig. **Die beiden
+> neuen Kacheln erben sie vollständig.**
+
+---
 
 ### 5.5 Die Verteilung (Teil D)
 
@@ -495,17 +942,47 @@ Farbe dort wäre eine Aussage, die es nicht gibt.
 
 ### 5.6 Zuletzt aufgefallen (Teil E)
 
-Fehler und Überfällige im Fenster, neueste zuerst. Je Zeile Zeitpunkt, Plakette, Prozess bzw.
-`sosName`, Verweis ins Nachrichtendetail auf seiner **eigenen Route** — `/nachrichten/<id>` und
+*Geändert am 03.09.2026 (Schritt 10b‑5): die Kategoriekennzeichnung je Zeile ist entfallen. Der alte
+Wortlaut steht darunter.*
+
+Die auffälligen Nachrichten im Fenster, neueste zuerst. Je Zeile **Zeitpunkt** und **Prozess bzw.
+`sosName`**, mit Verweis ins Nachrichtendetail auf seiner **eigenen Route** — `/nachrichten/<id>` und
 nicht `?nachricht=<id>`, das brächte eine Liste mit, die niemand angefragt hat.
 
-**Die Plakette trägt `kategorie`, nicht `status`.** Ein Rohstatus beantwortete hier eine andere
-Frage — *welcher Fehler* statt *ist es einer*. Der Rohwert steht im `title` und für Vorleseprogramme
-im Markup.
+**Die Überschrift bleibt, die Plakette je Zeile fällt.** Der Block ist seit 10b‑4 **ein einziges
+Statement** und trägt nur noch Fehler ([`dashboard.md`](dashboard.md) §7a); `kategorie` ist eine
+**Aufzählung mit einem Wert** (offener Punkt 133). Eine Plakette, die an jeder Zeile dasselbe Wort
+sagt, unterscheidet nichts mehr und behauptet eine Auswahl, die es nicht gibt. Die Auskunft steht
+jetzt einmal über dem Block statt einmal je Zeile — an der Stelle, an der sie noch etwas
+unterscheidet.
 
-Beide Mengen sind **disjunkt** ([`dashboard.md`](dashboard.md) §7a): *Überfällig* setzt voraus, dass
-die Nachricht nicht in einem Endstatus ist, und *Fehler* ist einer. Es gibt deshalb keine Zeile mit
-zwei Plaketten.
+> ### ⚠️ Mit der Plakette ist der Rohstatus je Zeile gefallen — **offener Punkt 136**
+>
+> Er stand ausschließlich in ihrem `title` und im Vorlese-Markup, **nie sichtbar**. Ihn jetzt
+> sichtbar nachzuziehen wäre eine **neue Gestaltungsentscheidung** über diesen Block — welchen Platz
+> er in der Zeile bekommt, ob er eine Plakette trägt, wie er neben dem Zeitpunkt steht — und keine
+> Aufräumarbeit. Sie ist in diesem Schritt von niemandem getroffen worden.
+>
+> **Was der Nutzer heute verliert:** die Angabe, *welcher* Fehler es ist, ohne die Zeile zu öffnen.
+> Sie steht im Detail, einen Klick entfernt. **Benannt und nicht nebenbei entschieden.**
+
+**Das Feld `kategorie` bleibt trotzdem im Vertrag.** Regel Q3 verlangt, dass Problemkategorien
+getrennt geführt und nie zu „Problem" zusammengefasst werden; kommt je eine zweite zurück, steht dort
+ihr Platz — und dann kommt die Plakette mit ihr zurück.
+
+> #### Der Stand bis zum 03.09.2026, wortgleich
+>
+> > Fehler und Überfällige im Fenster, neueste zuerst. Je Zeile Zeitpunkt, Plakette, Prozess bzw.
+> > `sosName`, Verweis ins Nachrichtendetail auf seiner **eigenen Route** — `/nachrichten/<id>` und
+> > nicht `?nachricht=<id>`, das brächte eine Liste mit, die niemand angefragt hat.
+> >
+> > **Die Plakette trägt `kategorie`, nicht `status`.** Ein Rohstatus beantwortete hier eine andere
+> > Frage — *welcher Fehler* statt *ist es einer*. Der Rohwert steht im `title` und für
+> > Vorleseprogramme im Markup.
+> >
+> > Beide Mengen sind **disjunkt** ([`dashboard.md`](dashboard.md) §7a): *Überfällig* setzt voraus,
+> > dass die Nachricht nicht in einem Endstatus ist, und *Fehler* ist einer. Es gibt deshalb keine
+> > Zeile mit zwei Plaketten.
 
 ### 5.7 Stand und Leerzustand (Teil F)
 
@@ -521,7 +998,17 @@ ist, und das gilt auch dann, wenn die Auskunft „nichts" lautet.
 
 ---
 
-## 6. Die drei bekannten Grenzen
+## 6. Die bekannten Grenzen
+
+> ### Es waren drei, seit dem 03.09.2026 sind es vier
+>
+> **Die drei aus 10b‑3b stehen unverändert** — keine von ihnen hing an *Überfällig*. Dazu kommt
+> **§6.4**: *Läuft* zeigt lokal immer `0`.
+>
+> ⚠️ **Was der Auftrag zu 10b‑5 hier vermutet hat, stand nicht hier.** Er nennt „die alte bekannte
+> Grenze zur Überfällig-Kachel"; die Aussage *„insgesamt klickt nicht"* stand aber in **§5.4** und
+> nie in diesem Kapitel. Sie ist dort als Korrekturblock nachzulesen — **nachgesehen, nicht
+> übernommen** (Regel V1).
 
 ### 6.1 Der Leerzustand unterscheidet nicht
 
@@ -581,6 +1068,23 @@ Zeichen für Zeichen durchgereicht werden.
 > **Nicht umgangen, und zwar bewusst.** Eine Sekunde abzuziehen machte die Adresse zu einem anderen
 > Fenster als dem der Kachel — genau der Fehler, den C.1 und C.2 ausschließen. Der Unterschied ist
 > auf einen einzigen Zeitpunkt begrenzt, das Umgehen wäre systematisch.
+
+### 6.4 *Läuft* zeigt lokal immer `0` — und das ist keine Aussage über den Bau
+
+**`RUNNING` kommt auf der Testkopie null Mal vor.** Jeder Mandant sieht dort `0`, mit und ohne
+Mandantenfilter; die zweite Zeile erscheint nie, und der Verweis führt auf eine leere Liste. **Das
+gilt für die Anzeige genauso wie für den Endpunkt** — dort ist es offener Punkt **135** in
+[`dashboard.md`](dashboard.md) §11.
+
+| Was daraus folgt | |
+|---|---|
+| **Nicht gezeigt** | eine *Läuft*-Zahl über null, das Alter einer laufenden Nachricht, und damit auch die Lage, in der die zweite Zeile die Wächterfrist widerlegt |
+| **Belegt ist es trotzdem** | über gestellte Antworten in `tests/dashboard-bloecke.test.tsx`, nicht über Daten — und **niemals durch Schreiben in die Testkopie** (Regel S1) |
+| **Nachzuholen** | gegen die Produktion, zusammen mit Punkt 135 |
+
+**Dasselbe gilt für drei weitere Lagen**, und alle drei sind über Tests und gestellte Antworten
+belegt statt gefahren: „läuft seit X von Y" im Detail, die Notbremse über einem Jahr und
+`ermittelbar = false`.
 
 ---
 
@@ -665,7 +1169,8 @@ ausgewiesen. Diese Ansicht fasst zwei davon nicht an und misst die dritte nach:
 
 | Nr. | Punkt |
 |---|---|
-| **89** | **Es gibt keinen Weg, „nur überfällige" in der Liste selbst einzuschalten** — vergeben und begründet in [`nachrichtenliste.md`](nachrichtenliste.md) §9 |
+| ~~**89**~~ | ~~Es gibt keinen Weg, „nur überfällige" in der Liste selbst einzuschalten.~~ ✔ **Gegenstandslos seit dem 03.09.2026 (E‑71).** Die Abfrageform gibt es nicht mehr — weder am Endpunkt noch in der Oberfläche. Der Punkt bleibt stehen, weil er die Begründung trägt, warum eine Marke und kein Schalter gebaut worden war ([`nachrichtenliste.md`](nachrichtenliste.md) §5e) |
+| **136** | **Der Rohstatus je Zeile ist mit der Plakette aus „Zuletzt aufgefallen" gefallen** (§5.6). Er stand nur im `title`, war also nie sichtbar; ihn jetzt sichtbar nachzuziehen wäre eine neue Gestaltungsentscheidung über den Block und keine Aufräumarbeit. **Benannt und nicht nebenbei entschieden** |
 | ~~**90**~~ | ~~Die Achsendichte ist am breiten Fenster angesehen und nicht am schmalsten.~~ ✔ **Erledigt am 01.09.2026, noch vor der ersten Abgabe.** Bei 360 px überlappten die Beschriftungen um 12 Pixel; die Konstante ist entfallen, die Dichte hängt jetzt an der Breite (§10.4). Der Punkt bleibt stehen, weil er die Messung trägt |
 | **92** | **Die gedrückte Schaltfläche des Umschalters ist mit 1,07 : 1 kaum zu sehen** (§10.5). Für ein Vorleseprogramm ist der Zustand sauber ausgezeichnet, für das Auge nicht. Es ist die Gestalt von `components/ui/toggle-group.tsx` — Generatorbereich — und die **Zeitfensterwahl der Nachrichtenliste** trägt sie seit Schritt 4 genauso. Eine Änderung ist eine Entscheidung über den gemeinsamen Baustein und gehört in einen eigenen Schritt |
 | **91** | **Der Verlauf ist ein Bild und trägt keine Tabelle daneben.** „Nie allein über Farbe" ist über Legende, Tooltip und die vier unterscheidbaren Rollen eingehalten; für ein Vorleseprogramm ist ein SVG voller `<path>` trotzdem kein Diagramm. Eine Textfassung der Zahlen wäre der nächste Schritt und ist hier nicht gebaut |
@@ -794,3 +1299,104 @@ dem Dokument selbst.
 
 **Der Abschnitt dort ist entsprechend ergänzt**, ohne den alten Wortlaut zu streichen — er
 beschreibt die Grenze des Werkzeugs, das er nennt.
+
+---
+
+## 11. Die Sichtprüfung zu 10b‑5 *(03.09.2026)*
+
+**Zwölf Aufnahmen, alle gefahren.** Acht am laufenden System im angemeldeten Browser gegen die
+Testkopie im Profil `dev`; vier auf einer temporären Route mit gestellten Antworten — die
+Fensterbreite und der Fall `ermittelbar = false` sind anders nicht herstellbar. Die Route lag
+außerhalb der Gruppe `(app)` (Verfahren aus §3), ist **entfernt** und steht in keinem Commit.
+
+> ### ⚠️ Zuerst ein Befund über die Umgebung, und er hat die Prüfung fast gekippt
+>
+> **Das laufende Backend hielt noch die Klassen von vor 10b‑4.** Der Prozess war am 02.09.2026
+> gestartet, das Kompilat stammte vom 03.09.; die Antwort trug weiterhin `kacheln.ueberfaellig`, und
+> die nachgezogene Oberfläche lief in einen `TypeError` — *„Cannot read properties of undefined
+> (reading 'ermittelbar')"*.
+>
+> **Das sah aus wie ein Fehler im eigenen Diff und war keiner.** Nach einem Neustart des Backends
+> — **ohne eine Zeile Code** — lieferte derselbe Aufruf `laeuft` und `wartend`. Der Vermerk gehört
+> hierher, weil der nächste, der die Landingpage nach einem Backend-Schritt ansieht, denselben
+> Fehler sehen wird.
+
+### Was gefahren worden ist
+
+| # | Was | Mandant | Ergebnis |
+|---|---|---|---|
+| **1** | vier Kacheln, *Wartend* mit Zahl **und** Alter | `NEXANS` | ✔ `538` · *ältester seit 6 d 17 h* |
+| **2** | **vier Kacheln, *Wartend* mit `0` ohne zweite Zeile** | **`VOTG`** | ✔ die Kachel steht da und zeigt `0` |
+| **3** | drei Kacheln, keine Lücke | `SUTTONS` | ✔ die Reihe füllt die Breite, kein Platzhalter |
+| **4** | alle drei im **schmalen** Fenster | gestellt | ✔ 390 px, eine Spalte, nichts abgeschnitten, kein waagerechtes Scrollen |
+| **5** | genau **eine** Kachel mit Fläche | `NEXANS` | ✔ nur *Fehler*; *Läuft* und *Wartend* tragen die Plakette auf `--card` |
+| **6** | **Klick auf *Wartend* → Ziel zeigt 538** | `NEXANS` | ✔ **538 = 538**, über elf Seiten vollständig gezählt |
+| **7** | Klick auf *Läuft* → leere Liste, keine Fehlermeldung | `NEXANS` | ✔ `200`, null Zeilen, der Leerzustand der Liste |
+| **8** | „Zuletzt aufgefallen" ohne verwaiste Kategoriekennzeichnung | `NEXANS` | ✔ Überschrift bleibt, keine Plakette je Zeile |
+| **9** | Detail einer `SUSPENDED`-Nachricht | `NEXANS` | ✔ *„wartet seit 15 h 35 min"*, **keine Frist**, keine Kennzeichnung |
+| **10** | alter Link `?ueberfaellig=true` | `NEXANS` | ✔ ungefilterte Liste, *„Status: Alle Status"*, keine Fehlerseite, keine Marke |
+| **11** | dunkler Modus, beide neuen Kacheln | gestellt | ✔ Plakette und Zahl lesbar, weiterhin genau eine Fläche |
+| **12** | `ermittelbar = false` | gestellt | ✔ **sichtbar anders als 3** — siehe unten |
+
+### 6 ist die Abnahme, und sie geht auf
+
+**Die Kachel nennt 538, das Ziel zeigt 538.** Gezählt wurde die Liste vollständig über den Cursor,
+nicht die erste Seite geschätzt: **elf Seiten, 538 Zeilen.**
+
+Die Adresse, die der Klick erzeugt hat:
+
+```
+/nachrichten?status=WARTEND&von=2025-12-23T00:00:00Z&bis=2025-12-30T04:00:00Z
+```
+
+`aeltesteSekunden` war zum Zeitpunkt der Aufnahme **579.953** — 6 d 17 h 5 min 53 s. Gerechnet:
+`bis` 04:00 Z minus eine Eimerbreite (1 h) minus das Alter ergibt `2025-12-23T09:54:07Z`, abgerundet
+auf den Tagesanfang **`2025-12-23T00:00:00Z`**. Genau so steht es in der URL.
+
+> ### ⚠️ Und das ist die Zahl, die E‑80 rechtfertigt
+>
+> **Mit dem *geerbten* Fenster hätte dasselbe Ziel `1` gezeigt** — nachgemessen am selben Bestand:
+> `status=WARTEND` über `2025-12-28T04:00Z … 2025-12-30T04:00Z` liefert **eine** Zeile.
+>
+> **Eine Kachel, die 538 nennt und auf 1 führt.** Genau davor hat E‑m die Klickbarkeit
+> abgeschaltet; E‑80 löst denselben Fall, statt ihn zu vermeiden. Der Unterschied zwischen den
+> beiden Entscheidungen ist an dieser einen Zahl abzulesen.
+
+### 12 ist die einzige Aufnahme, die E‑81 belegt
+
+**Drei Bilder, und die beiden mittleren dürfen nie zusammenfallen:**
+
+| Zustand | Was im Bild steht |
+|---|---|
+| **3 — strukturell abwesend** (`SUTTONS`) | Die Kachel **existiert nicht**. Drei Kacheln, die Reihe zieht sich zusammen |
+| **12 — nicht ermittelbar** (gestellt) | Die Kachel **steht da**: Plakette *Wartend*, an der Stelle der Zahl ein durchgestrichenes Zeichen und ein Gedankenstrich, darunter der Satz mit dem Grund. **Kein Verweis** |
+| **1 — ermittelt** (`NEXANS`) | Plakette, Zahl, Alter, Verweis |
+
+**Der Unterschied zwischen 3 und 12 ist auf einen Blick zu sehen** — die eine Kachel ist weg, die
+andere ist da und sagt, dass sie es gerade nicht weiß. Das war die Anforderung.
+
+**Und die übrigen Kacheln bleiben in 12 unberührt:** *Läuft* zeigt seine `0` und klickt weiter. Die
+beiden Zahlen **einer** Kachel fallen zusammen, die beiden **Kacheln** nicht.
+
+### Was auf derselben Route mitgeprüft worden ist
+
+Zwei Lagen, die auf der Testkopie nicht vorkommen, sind auf der Probeseite gestellt worden — und
+beide sind **auch über Tests** belegt, nie durch Schreiben in die Testkopie (Regel S1):
+
+| Lage | Was zu sehen war |
+|---|---|
+| **Die Notbremse** | `aeltesteSekunden = 400 d` → die Zahl steht, das Alter steht (*„ältester seit 400 d"*), **kein Verweis**, und der Satz nennt den Grund |
+| ***Läuft* über null** | `3` mit *„ältester seit 40 min"*. **Das ist zugleich die Prüfung aus E‑75 in Aktion:** 40 Minuten über einer Wächterfrist von rund 30 wären der Befund, dass der Wächter hängt |
+
+### Das Werkzeug
+
+**Kopfloses Chrome über das DevTools-Protokoll, `deviceScaleFactor: 2`**, für die vier gestellten
+Aufnahmen; die acht übrigen im angemeldeten Browser über die Erweiterung.
+
+> **`resize_window` der Erweiterung meldet weiterhin Erfolg und ändert nichts.** Der Befund aus
+> §10.6 gilt unverändert: `Emulation.setDeviceMetricsOverride` über CDP wirkt, die Erweiterung
+> nicht. Für Aufnahme 4 war das der Grund, überhaupt auf CDP zu gehen.
+>
+> **Die Probeseite braucht keine Anmeldung, aber ein Cookie.** `src/proxy.ts` prüft nur die
+> **Anwesenheit** von `OVERLORD_SESSION`, nicht seine Gültigkeit — ein erfundener Wert über
+> `Network.setCookie` genügt, und die Route spricht ohnehin nicht mit dem Backend.

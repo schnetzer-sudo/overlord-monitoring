@@ -128,6 +128,17 @@ Das Feld wird als Parameter übergeben, damit dieser gemeinsame Baustein nicht a
 > ist in der Überfälligkeitsrechnung die vorsichtige Antwort (keine Behauptung, die Nachricht hänge);
 > in einem Sichtbarkeitsfilter wäre dieselbe `true` die unvorsichtige. Wer „offen" im Sinne der
 > Oberfläche braucht, definiert das dort — und begründet es dort.
+>
+> ✅ **Der Fall ist am 04.09.2026 eingetreten — und so ist er aufgelöst worden.** Die
+> Oberfläche hat „offen" nie definiert. Stattdessen war der **Tokenname** der Farbrolle
+> `--status-offen` in die **Beschriftungsposition** von Legende und Tooltip des
+> Verlaufsdiagramms gerutscht und behauptete dort über `AUFGETEILT` und `ZUSAMMENGEFUEHRT`
+> das Gegenteil der Tabelle darunter — gesehen als *Offen 49* über *Aufgeteilt 1* und
+> *Zusammengeführt 48* in einem Eimer mit 60 Nachrichten. **Aufgelöst ist er nicht durch eine
+> Definition, sondern durch den Verzicht auf das Wort:** Die Rolle heißt in der Oberfläche
+> seither **„Ohne Ergebnis"**, der Token bleibt `--status-offen` (E‑82,
+> [`dashboard-frontend.md`](dashboard-frontend.md) §5.2). **`istEndstatus` und diese Tabelle
+> sind nicht angefasst.**
 
 | Einordnung | Endstatus? | Rohwerte |
 |---|---|---|
@@ -161,6 +172,63 @@ Umgesetzt als vollständiges `switch` ohne `default`: Ein neuer Wert in `Message
 einen Compilerfehler aus und erbt keine stille Voreinstellung.
 
 ### Überfälligkeit
+
+> ## ⚠️ Diese Kategorie ist am 03.09.2026 widerlegt und aus dem MVP genommen (E‑71)
+>
+> **Der ganze Abschnitt darunter bleibt im Wortlaut stehen** — er ist die Vorarbeit, gegen die die
+> Widerlegung zu lesen ist, und ohne ihn wäre nicht mehr erkennbar, worauf sie sich bezieht.
+> **Gebaut ist davon nichts mehr:** `MessageStatusClassifier.istUeberfaellig`,
+> `timeoutZeitpunkt` und `ueberfaelligBedingung` sind entfallen, der Listenparameter
+> `ueberfaellig` ebenso, und das Dashboard zeigt statt der Kachel *Überfällig* die beiden Kacheln
+> *Läuft* und *Wartend* ([`dashboard.md`](dashboard.md)).
+>
+> ### Die Regel, die sie widerlegt
+>
+> 1. Eine Nachricht, die länger als `MessageTimeout` in `RUNNING` steht, wird vom Altsystem
+>    automatisch auf `ERROR_TIMEOUT` gesetzt.
+> 2. `SUSPENDED`-Nachrichten warten **absichtlich** — auf einen Folgeprozess, etwa auf den Versand
+>    zu einem bestimmten Zeitpunkt. Sie werden nie automatisch beendet und sind **nicht
+>    überfällig**.
+> 3. In der Praxis liegen sie höchstens **rund eine Woche**.
+>
+> ### Herkunft
+>
+> **Herkunft:** fachliche Auskunft des Auftraggebers vom 03.09.2026. **Nicht gemessen.**
+> Die Testkopie kann sie nicht belegen: `RUNNING` kommt dort null Mal vor, und die 538
+> `SUSPENDED` sind der Bestand *eines* Status in *einer* Gestalt. **Gegen die Produktion zu
+> prüfen** mit der Abfrage in `docs/message-status.md`, Abschnitt „Die offene Prüfung".
+>
+> ### Was daraus folgt
+>
+> *Überfällig* ist definiert als **nicht in einem Endstatus** und **Frist abgelaufen**. Offen sind
+> genau zwei Statuswerte, und beide fallen weg:
+>
+> | | |
+> |---|---|
+> | `SUSPENDED` | wartet absichtlich → nie überfällig. **Falsch positiv, per Definition** |
+> | `RUNNING` | über der Frist nur im Spalt zwischen Fristablauf und dem Zuschlagen des Wächters. Danach `ERROR_TIMEOUT` und damit **Fehler** |
+>
+> **Die Kategorie hat im eingeschwungenen Zustand keine wahren Treffer.** Gemessen an der
+> Testkopie markierte `istUeberfaellig` im Gesamtbestand **538** Zeilen, davon **538 `SUSPENDED`**
+> und **0 `RUNNING`** — **538 Fehlalarme und kein einziger Treffer.** Nicht die Mehrheit, alle.
+>
+> **Die Rechnung, die das Werkzeug anstellte, stellt das Altsystem bereits an;** sein Ergebnis
+> heißt `ERROR_TIMEOUT` und steht bei uns in der Fehlerkachel, namentlich aufgeschlüsselt. Eine
+> zweite Fassung derselben Auskunft, mit anderer Uhr und ohne Schreibrecht, ist keine zusätzliche
+> Aussage.
+>
+> > **Belegvermerk** (Regel L10).
+> > *Gemessen ist:* dass `istUeberfaellig` auf der Testkopie 538 Zeilen markiert, davon 538
+> > `SUSPENDED` und null `RUNNING` (M90, in M144 am geltenden Anker bestätigt); und dass die
+> > älteste dieser Zeilen **6,71 Tage** vor dem Anker liegt (M144 c).
+> > *Behauptet wird:* Die Kategorie hat **keine** wahren Treffer.
+> > **Die Lücke, und sie ist der ganze Inhalt dieses Vermerks:** Der Schluss ruht **nicht** auf der
+> > Messung, sondern auf der Auskunft oben. Gemessen ist nur, dass alle 538 Treffer `SUSPENDED`
+> > sind — dass `SUSPENDED` nie überfällig *ist*, sagt der Auftraggeber und nicht der Bestand. Die
+> > 6,71 Tage sind mit „höchstens rund eine Woche" **verträglich** und belegen sie nicht: Eine
+> > Gestalt, ein Status, ein Zeitraum von sieben Tagen.
+
+**Der Stand bis zum 03.09.2026, wortgleich:**
 
 > **Überfällig** = **nicht** in einem Endstatus **und** `MessageLastUpdate + MessageTimeout` liegt
 > vor dem Zeitpunkt der **Anwendungsuhr**.
@@ -231,6 +299,53 @@ nahezu unsichtbar**, weil der Anker weit hinter allen offenen Zeilen liegt. In P
 Nachrichten in Minuten laufen, ist es der Unterschied zwischen 30 Minuten und 30 Stunden. Ein Test,
 der die Einheit gegen die Testkopie belegen wollte, könnte das nicht leisten — deshalb steht sie als
 benannte Konstante im Code und ihre Begründung in `messungen-schritt4.md` M8.
+
+---
+
+## Die offene Prüfung
+
+**Sie entscheidet die Regel aus dem Abschnitt „Überfälligkeit", und sie gehört gegen die
+Produktion.** Die Testkopie kann sie nicht beantworten: `RUNNING` kommt dort null Mal vor.
+
+**Ausdrücklich nicht im Anfragepfad.** Das ist eine Erhebung und kein Anwendungscode.
+
+```sql
+SELECT MessageStatus, COUNT(*) AS zeilen,
+       MIN(MessageLastUpdate) AS aelteste,
+       MAX(TIMESTAMPDIFF(SECOND, MessageLastUpdate, NOW())) AS aeltestes_alter_sekunden
+FROM GlassfishDB.Message
+WHERE MessageStatus IN ('SUSPENDED','RUNNING')
+GROUP BY MessageStatus;
+```
+
+### Die Erwartung, **vor** dem Ergebnis festgehalten
+
+| Status | erwartet |
+|---|---|
+| `RUNNING` | trägt **kein** Alter oberhalb von `MessageTimeout` zuzüglich eines Wächtertakts |
+| `SUSPENDED` | trägt eines, aber **keines über rund einer Woche** |
+
+**Trifft das nicht zu, ist die Regel falsch oder unvollständig, und Schritt 10b‑4 ist neu zu
+bewerten.**
+
+### Was dieselbe Abfrage gegen die Testkopie sagt — und warum das nichts entscheidet
+
+Gefahren am 03.09.2026 als M144 (c):
+
+| Status | Zeilen | älteste | ältestes Alter |
+|---|---:|---|---:|
+| `SUSPENDED` | **538** | `2025-12-23 11:04:13` | **579.934 s = 6,71 Tage** |
+| `RUNNING` | — | — | *kommt nicht vor* |
+
+**Die zweite Zeile ist der Grund, warum die Prüfung offen bleibt.** Über `SUSPENDED` sagt die
+Testkopie etwas, das mit der Auskunft verträglich ist — 6,71 Tage liegen unter „rund einer Woche".
+Über `RUNNING` sagt sie **nichts**, und genau dort steht die Behauptung, an der die ganze
+Widerlegung hängt: dass der Wächter zuschlägt.
+
+> **Belegvermerk** (Regel L10).
+> *Gemessen ist:* der Bestand **eines** Status auf **einer** Kopie.
+> *Behauptet wird:* eine Eigenschaft **beider** offenen Status in der **Produktion**.
+> **Die Lücke ist grundsätzlich** und durch keine Messung an dieser Kopie zu schließen.
 
 ---
 

@@ -1,0 +1,150 @@
+mysql: [Warning] Using a password on the command line interface can be insecure.
++--------------------------------------------------+
+| marke                                            |
++--------------------------------------------------+
+| === 00 read_only (erste Abfrage der Sitzung) === |
++--------------------------------------------------+
++-----------+---------------------+
+| read_only | serverzeit          |
++-----------+---------------------+
+|         1 | 2026-09-03 16:10:06 |
++-----------+---------------------+
++----------------------------------------------------------------------+
+| marke                                                                |
++----------------------------------------------------------------------+
+| === M144a Erscheinungsbedingung SUSPEND und WAITUNTIL, alle zehn === |
++----------------------------------------------------------------------+
++----------------+----------------------+------------------------+
+| mandant        | hat_suspend_baustein | hat_waituntil_baustein |
++----------------+----------------------+------------------------+
+| EDITIONLINGERI |                    0 |                      0 |
+| IBIS           |                    0 |                      0 |
+| IBISGUS        |                    0 |                      0 |
+| NEXANS         |                    1 |                      1 |
+| NXHBE          |                    0 |                      0 |
+| SUTTONS        |                    0 |                      0 |
+| SYSTEM         |                    0 |                      0 |
+| VOTG           |                    1 |                      0 |
+| WOC            |                    0 |                      0 |
+| ZAST           |                    0 |                      0 |
++----------------+----------------------+------------------------+
++-----------------------------------------------------------------------------------------+
+| marke                                                                                   |
++-----------------------------------------------------------------------------------------+
+| === M144a-2 Wie viele SOSAction-Zeilen mit SUSPEND je Mandant? (Gegenprobe zur 0/1) === |
++-----------------------------------------------------------------------------------------+
++---------+-----------------------+-----------------------+-----------------------+
+| mandant | sosaction_mit_suspend | verschiedene_ablaeufe | verschiedene_prozesse |
++---------+-----------------------+-----------------------+-----------------------+
+| NEXANS  |                     7 |                     7 |                     2 |
+| VOTG    |                     1 |                     1 |                     1 |
++---------+-----------------------+-----------------------+-----------------------+
++-----------------------------------------+
+| marke                                   |
++-----------------------------------------+
+| === M144a-3 Dasselbe fuer WAITUNTIL === |
++-----------------------------------------+
++---------+-------------------------+-----------------------+-----------------------+
+| mandant | sosaction_mit_waituntil | verschiedene_ablaeufe | verschiedene_prozesse |
++---------+-------------------------+-----------------------+-----------------------+
+| NEXANS  |                      30 |                    30 |                    16 |
++---------+-------------------------+-----------------------+-----------------------+
++---------------------------------------------------------------------------------+
+| marke                                                                           |
++---------------------------------------------------------------------------------+
+| === M144b Alle offenen Zeilen (SUSPENDED/RUNNING) je Mandant, Gesamtbestand === |
++---------------------------------------------------------------------------------+
++---------+-----------+--------+---------------------+---------------------+-------------------+
+| mandant | status    | zeilen | aelteste            | juengste            | aeltestes_alter_s |
++---------+-----------+--------+---------------------+---------------------+-------------------+
+| NEXANS  | SUSPENDED |    538 | 2025-12-23 11:04:13 | 2025-12-29 12:37:16 |            579934 |
++---------+-----------+--------+---------------------+---------------------+-------------------+
++----------------------------------------------------------------+
+| marke                                                          |
++----------------------------------------------------------------+
+| === M144b-2 Gegenprobe ohne Mandantenkette: die Gesamtzahl === |
++----------------------------------------------------------------+
++-----------+--------+---------------------+---------------------+
+| status    | zeilen | aelteste            | juengste            |
++-----------+--------+---------------------+---------------------+
+| SUSPENDED |    538 | 2025-12-23 11:04:13 | 2025-12-29 12:37:16 |
++-----------+--------+---------------------+---------------------+
++-----------------------------------------------------------------------+
+| marke                                                                 |
++-----------------------------------------------------------------------+
+| === M144c Die offene Pruefung aus Paragraf 2, gegen die Testkopie === |
++-----------------------------------------------------------------------+
++---------------+--------+---------------------+--------------------------+----------------------+
+| MessageStatus | zeilen | aelteste            | aeltestes_alter_sekunden | aeltestes_alter_tage |
++---------------+--------+---------------------+--------------------------+----------------------+
+| SUSPENDED     |    538 | 2025-12-23 11:04:13 |                   579934 |                 6.71 |
++---------------+--------+---------------------+--------------------------+----------------------+
++-------------------------------------------------+
+| marke                                           |
++-------------------------------------------------+
+| === M144d MessageTimeout der offenen Zeilen === |
++-------------------------------------------------+
++---------------+----------------+--------+
+| MessageStatus | MessageTimeout | zeilen |
++---------------+----------------+--------+
+| SUSPENDED     |           1800 |    538 |
++---------------+----------------+--------+
++---------------------+
+| marke               |
++---------------------+
+| === M144 Profil === |
++---------------------+
++----------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Query_ID | Duration   | Query                                                                                                                                                                                                                                                                                                        |
++----------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|        1 | 0.00018047 | SET profiling_history_size = 200                                                                                                                                                                                                                                                                             |
+|        2 | 0.00018224 | SELECT '=== M144a Erscheinungsbedingung SUSPEND und WAITUNTIL, alle zehn ===' AS marke                                                                                                                                                                                                                       |
+|        3 | 0.02293552 | SELECT md.MandantID AS mandant,
+       EXISTS (SELECT 1
+               FROM GlassfishDB.SOSAction sa
+               JOIN GlassfishDB.SOS s ON s.SOSID = sa.SOSID
+               WHERE sa.SOSActionServiceProperties LIKE '%SUSPEND%'
+                 AND EXISTS (SELECT 1
+                             FROM |
+|        4 | 0.00026766 | SELECT '=== M144a-2 Wie viele SOSAction-Zeilen mit SUSPEND je Mandant? (Gegenprobe zur 0/1) ===' AS marke                                                                                                                                                                                                    |
+|        5 | 0.01998682 | SELECT pm.MandantID AS mandant,
+       COUNT(*)                                                   AS sosaction_mit_suspend,
+       COUNT(DISTINCT s.SOSID)                                    AS verschiedene_ablaeufe,
+       COUNT(DISTINCT s.ProcessID)                                AS verschiedene_pr |
+|        6 | 0.00026252 | SELECT '=== M144a-3 Dasselbe fuer WAITUNTIL ===' AS marke                                                                                                                                                                                                                                                    |
+|        7 | 0.01961411 | SELECT pm.MandantID AS mandant,
+       COUNT(*)                    AS sosaction_mit_waituntil,
+       COUNT(DISTINCT s.SOSID)     AS verschiedene_ablaeufe,
+       COUNT(DISTINCT s.ProcessID) AS verschiedene_prozesse
+FROM GlassfishDB.SOSAction sa
+JOIN GlassfishDB.SOS s            ON s.SOSID     = sa. |
+|        8 | 0.00023204 | SELECT '=== M144b Alle offenen Zeilen (SUSPENDED/RUNNING) je Mandant, Gesamtbestand ===' AS marke                                                                                                                                                                                                            |
+|        9 | 0.00769288 | SELECT pm.MandantID       AS mandant,
+       m.MessageStatus    AS status,
+       COUNT(*)           AS zeilen,
+       MIN(m.MessageLastUpdate) AS aelteste,
+       MAX(m.MessageLastUpdate) AS juengste,
+       TIMESTAMPDIFF(SECOND, MIN(m.MessageLastUpdate), '2025-12-30 04:09:47') AS aeltestes_alter_s |
+|       10 | 0.00020385 | SELECT '=== M144b-2 Gegenprobe ohne Mandantenkette: die Gesamtzahl ===' AS marke                                                                                                                                                                                                                             |
+|       11 | 0.00317798 | SELECT m.MessageStatus AS status,
+       COUNT(*)        AS zeilen,
+       MIN(m.MessageLastUpdate) AS aelteste,
+       MAX(m.MessageLastUpdate) AS juengste
+FROM GlassfishDB.Message m
+WHERE m.MessageStatus IN ('SUSPENDED','RUNNING')
+GROUP BY m.MessageStatus                                            |
+|       12 | 0.00019592 | SELECT '=== M144c Die offene Pruefung aus Paragraf 2, gegen die Testkopie ===' AS marke                                                                                                                                                                                                                      |
+|       13 | 0.00365228 | SELECT MessageStatus, COUNT(*) AS zeilen,
+       MIN(MessageLastUpdate) AS aelteste,
+       MAX(TIMESTAMPDIFF(SECOND, MessageLastUpdate, '2025-12-30 04:09:47')) AS aeltestes_alter_sekunden,
+       ROUND(MAX(TIMESTAMPDIFF(SECOND, MessageLastUpdate, '2025-12-30 04:09:47')) / 86400, 2) AS aeltestes_alt |
+|       14 | 0.00021362 | SELECT '=== M144d MessageTimeout der offenen Zeilen ===' AS marke                                                                                                                                                                                                                                            |
+|       15 | 0.00325657 | SELECT MessageStatus,
+       MessageTimeout,
+       COUNT(*) AS zeilen
+FROM GlassfishDB.Message
+WHERE MessageStatus IN ('SUSPENDED','RUNNING')
+GROUP BY MessageStatus, MessageTimeout
+ORDER BY MessageStatus, MessageTimeout                                                                                 |
+|       16 | 0.00020978 | SELECT '=== M144 Profil ===' AS marke                                                                                                                                                                                                                                                                        |
++----------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+

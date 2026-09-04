@@ -3,6 +3,7 @@ package de.kraftwerkone.overlord.monitor.dashboard;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
+import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
 import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.time.LocalDateTime;
@@ -188,32 +189,60 @@ class DashboardPlanDbIT {
   }
 
   /**
-   * <b>Die erste benannte Ausnahme von L2, und sie ist billig, weil der Statusindex sie traegt.</b>
-   * 539 Indexsaetze von 3,34 Millionen Zeilen — das ist der ganze Unterschied zwischen 5 ms und
-   * einer Live-Aggregation, die man nicht bauen darf.
+   * <b>Die beiden benannten Ausnahmen von L2, und sie sind billig, weil der Statusindex sie
+   * traegt.</b> Ein einzelner Rohwert von 3,34 Millionen Zeilen — das ist der ganze Unterschied
+   * zwischen wenigen Millisekunden und einer Live-Aggregation, die man nicht bauen darf.
+   *
+   * <p><b>Erwartet ist {@code range} oder {@code ref}, und beides ist richtig.</b> Das neue
+   * Statement vergleicht mit {@code =} auf einen einzelnen Wert, wo das alte ein {@code IN} ueber
+   * zwei trug; ein einzelner Wert ergibt bei MariaDB ein {@code ref} statt eines {@code range}.
+   * <b>Festgeschrieben ist deshalb der Index und nicht die Zugriffsart</b> — sie ist eine Folge der
+   * Zahl der Werte und keine Eigenschaft, die dieser Bau zusichert. Was er zusichert: <b>nicht der
+   * Zeitindex, und kein voller Durchlauf.</b>
    */
   @Test
-  @DisplayName("Ueberfaellig steigt ueber MessageStatusIDX ein — mit und ohne Zeitfenster")
-  void ueberfaellig_faehrt_ueber_den_statusindex() {
+  @DisplayName("Laeuft und Wartend steigen ueber MessageStatusIDX ein, nie ueber den Zeitindex")
+  void offene_kacheln_fahren_ueber_den_statusindex() {
     for (String mandantId : MANDANTEN) {
       MandantContext mandant = new MandantContext(mandantId);
 
-      gerendert.clear();
-      attrappe.ueberfaelligImFenster(mandant, Rollupzeitraum.STUNDEN_48.fenster(ANKER), ANKER);
-      List<Plan> imFenster = plan(einziges());
+      for (MessageStatusKind einordnung :
+          List.of(MessageStatusKind.LAEUFT, MessageStatusKind.WARTEND)) {
+        gerendert.clear();
+        attrappe.offeneNachrichten(mandant, einordnung);
+        List<Plan> plan = plan(einziges());
+        String marke = mandantId + "/" + einordnung;
 
-      gerendert.clear();
-      attrappe.ueberfaelligInsgesamt(mandant, ANKER);
-      List<Plan> insgesamt = plan(einziges());
-
-      for (List<Plan> plan : List.of(imFenster, insgesamt)) {
-        assertThat(zeileFuer(plan, "Message", mandantId).index())
-            .as("Nicht der Zeitindex — %s", mandantId)
+        assertThat(zeileFuer(plan, "Message", marke).index())
+            .as("Nicht der Zeitindex — %s", marke)
             .isEqualTo("MessageStatusIDX");
         assertThat(plan)
-            .as("Keine Tabelle wird voll gelesen (%s)", mandantId)
+            .as("Keine Tabelle wird voll gelesen (%s)", marke)
             .noneMatch(zeile -> "ALL".equals(zeile.zugriff()));
       }
+    }
+  }
+
+  /**
+   * <b>Die Erscheinungsbedingung, und der Plan ist ihre eigentliche Rechtfertigung.</b> Ein {@code
+   * LIKE '%…%'} ueber eine Textspalte sieht nach vollem Durchlauf aus; M8 hat fuer dasselbe Muster
+   * ueber {@code MessageAction} 97,976 s gemessen. <b>Hier steigt der Optimierer beim Mandanten
+   * ein</b> ({@code ProjectMandant}), und das {@code LIKE} laeuft nur ueber dessen eigene {@code
+   * SOSAction}-Zeilen.
+   *
+   * <p><b>Geprueft wird genau das:</b> keine Tabelle voll gelesen — {@code SOSAction}
+   * eingeschlossen. Die Reihenfolge steht auch hier nicht fest.
+   */
+  @Test
+  @DisplayName("Die Erscheinungsbedingung liest keine Tabelle voll, auch SOSAction nicht")
+  void erscheinungsbedingung_liest_keine_tabelle_voll() {
+    for (String mandantId : MANDANTEN) {
+      gerendert.clear();
+      attrappe.hatWartendeAblaeufe(new MandantContext(mandantId));
+
+      assertThat(plan(einziges()))
+          .as("Keine Tabelle wird voll gelesen (%s)", mandantId)
+          .noneMatch(zeile -> "ALL".equals(zeile.zugriff()));
     }
   }
 
@@ -228,7 +257,7 @@ class DashboardPlanDbIT {
    * fuer <b>alle drei Paare</b> geprueft und nicht nur fuer das engste.
    */
   @Test
-  @DisplayName("Beide Haelften von „Zuletzt aufgefallen“ steigen ueber MessageStatusIDX ein")
+  @DisplayName("„Zuletzt aufgefallen“ steigt ueber MessageStatusIDX ein")
   void aufgefallen_faehrt_ueber_den_statusindex() {
     for (String mandantId : MANDANTEN) {
       for (Rollupzeitraum zeitraum : Rollupzeitraum.reihe()) {
@@ -236,9 +265,8 @@ class DashboardPlanDbIT {
         attrappe.zuletztAufgefallen(
             new MandantContext(mandantId),
             zeitraum.fenster(ANKER),
-            ANKER,
             DashboardService.AUFFAELLIG_HOECHSTENS);
-        assertThat(gerendert).as("Je Merkmal ein Statement").hasSize(2);
+        assertThat(gerendert).as("Seit E-71 nur noch die Fehlerhaelfte").hasSize(1);
 
         for (String sql : gerendert) {
           String marke = mandantId + "/" + zeitraum.code();
@@ -266,7 +294,6 @@ class DashboardPlanDbIT {
     attrappe.zuletztAufgefallen(
         new MandantContext("SUTTONS"),
         Rollupzeitraum.MONATE_12.fenster(ANKER),
-        ANKER,
         DashboardService.AUFFAELLIG_HOECHSTENS);
 
     for (String sql : gerendert) {

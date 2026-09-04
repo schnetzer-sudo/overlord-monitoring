@@ -181,18 +181,10 @@ public class NachrichtenRepository {
     if (!abfrage.prozessIds().isEmpty()) {
       bedingungen.add(MESSAGE.PROCESSID.in(abfrage.prozessIds()));
     }
-    // E-j. Die Bedingung wird AUFGERUFEN und nicht nachgebaut: Sie ist das SQL-Gegenstueck zu
-    // MessageStatusClassifier.istUeberfaellig und liegt neben ihm, damit Liste und Detailansicht
-    // nicht verschieden rechnen. Was sie mit dem Plan macht, steht an ihr und in
-    // docs/nachrichtenliste.md §5b — sie ist eine zweite Abfrageform und kein Filter.
-    if (abfrage.ueberfaellig()) {
-      bedingungen.add(
-          statusClassifier.ueberfaelligBedingung(
-              MESSAGE.MESSAGESTATUS,
-              MESSAGE.MESSAGELASTUPDATE,
-              MESSAGE.MESSAGETIMEOUT,
-              abfrage.jetzt()));
-    }
+    // Hier stand bis zum 03.09.2026 der Zweig fuer `ueberfaellig` (E-j) -- die zweite Abfrageform,
+    // die den Treiber von MessageLastUpdateIDX auf MessageStatusIDX zog und den Cursor entwertete.
+    // Er ist mit E-71 entfallen: Die Problemkategorie ist widerlegt. Die Liste hat damit wieder
+    // GENAU EINEN Zugriffspfad, und die Cursor-Messung aus M4/L8 gilt fuer jede Fassung.
     if (abfrage.suchtreffer() != null) {
       bedingungen.add(
           MESSAGE

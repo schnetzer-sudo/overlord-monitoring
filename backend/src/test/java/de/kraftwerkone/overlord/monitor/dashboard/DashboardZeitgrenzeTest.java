@@ -4,13 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
+import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
 import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
 import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.sql.SQLException;
 import java.sql.SQLTimeoutException;
 import java.time.LocalDateTime;
-import java.util.OptionalLong;
 import org.jooq.DSLContext;
 import org.jooq.SQLDialect;
 import org.jooq.exception.DataAccessException;
@@ -55,13 +55,12 @@ class DashboardZeitgrenzeTest {
   }
 
   @Test
-  @DisplayName("An der Zeitgrenze liefern beide Zahlen leer statt einer Ausnahme")
+  @DisplayName("An der Zeitgrenze liefern beide Kacheln leer statt einer Ausnahme")
   void zeitgrenze_ergibt_leer() {
     DashboardRepository repository = repositoryDas(anDerZeitgrenze());
 
-    assertThat(repository.ueberfaelligImFenster(MANDANT, FENSTER, JETZT))
-        .isEqualTo(OptionalLong.empty());
-    assertThat(repository.ueberfaelligInsgesamt(MANDANT, JETZT)).isEqualTo(OptionalLong.empty());
+    assertThat(repository.offeneNachrichten(MANDANT, MessageStatusKind.LAEUFT)).isEmpty();
+    assertThat(repository.offeneNachrichten(MANDANT, MessageStatusKind.WARTEND)).isEmpty();
   }
 
   /**
@@ -78,7 +77,7 @@ class DashboardZeitgrenzeTest {
               throw new SQLException("You have an error in your SQL syntax", "42000", 1064);
             });
 
-    assertThatThrownBy(() -> repository.ueberfaelligInsgesamt(MANDANT, JETZT))
+    assertThatThrownBy(() -> repository.offeneNachrichten(MANDANT, MessageStatusKind.WARTEND))
         .as("Ein pauschales catch machte aus einem Befund eine Beruhigung")
         .isInstanceOf(DataAccessException.class);
   }
@@ -90,7 +89,7 @@ class DashboardZeitgrenzeTest {
    * Luecken und nennt das eine Antwort.
    */
   @Test
-  @DisplayName("Kein anderer Block faengt die Zeitgrenze ab — genau diese zwei Felder")
+  @DisplayName("Kein anderer Block faengt die Zeitgrenze ab — genau diese zwei Kacheln")
   void kein_allgemeiner_teilerfolg() {
     DashboardRepository repository = repositoryDas(anDerZeitgrenze());
 
@@ -101,10 +100,15 @@ class DashboardZeitgrenzeTest {
                 repository.verteilung(
                     MANDANT, Rollupzeitraum.STUNDEN_48, FENSTER, Verteilungssicht.PARTNER))
         .isInstanceOf(DataAccessException.class);
-    assertThatThrownBy(() -> repository.zuletztAufgefallen(MANDANT, FENSTER, JETZT, 10))
+    assertThatThrownBy(() -> repository.zuletztAufgefallen(MANDANT, FENSTER, 10))
         .isInstanceOf(DataAccessException.class);
     assertThatThrownBy(() -> repository.belegung(MANDANT, Rollupzeitraum.STUNDEN_48, FENSTER))
         .isInstanceOf(DataAccessException.class);
     assertThatThrownBy(repository::letzterLauf).isInstanceOf(DataAccessException.class);
+    assertThatThrownBy(() -> repository.hatWartendeAblaeufe(MANDANT))
+        .as(
+            "Auch die Erscheinungsbedingung faengt nichts ab: Sie liest Stammdaten und ist damit"
+                + " dieselbe Art Zugriff wie die Mandantenkette in jedem anderen Statement")
+        .isInstanceOf(DataAccessException.class);
   }
 }

@@ -10,7 +10,6 @@ import {
 import type { Fenster } from "./api";
 import {
   LANGE_SUCHE_VORGABE,
-  UEBERFAELLIG_VORGABE,
   istSortierung,
   parseAsSortierung,
   type Nachrichtenfilter,
@@ -102,7 +101,7 @@ export const parseAsKennung = createParser<string>({
  * **Ohne `clearOnDefault: false`, und das ist geprüft, nicht übersehen.** Die
  * Vorgabe `false` lässt nichts weg — sie zeigt alles. Ein Standardwert, der
  * etwas *weglässt*, gehört in die URL; einer, der etwas *zulässt*, nicht. Genau
- * wie bei `langeSuche` und `ueberfaellig` in `filter.ts`.
+ * wie bei `langeSuche` in `filter.ts`.
  */
 export const PROZESSANSICHT_PARAMETER = {
   zeitraum: parseAsRollupzeitraum,
@@ -258,7 +257,6 @@ export function listenfilter(
     prozess: [zustand.prozess],
     suche: null,
     langeSuche: LANGE_SUCHE_VORGABE,
-    ueberfaellig: UEBERFAELLIG_VORGABE,
     sortierung: zustand.sortierung,
     /**
      * **Nicht `zustand.nachricht`.** Die geöffnete Nachricht ist Zustand der

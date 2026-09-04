@@ -3,7 +3,6 @@ package de.kraftwerkone.overlord.monitor.message;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
 import de.kraftwerkone.overlord.monitor.common.Seitenposition;
 import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
@@ -15,34 +14,30 @@ import java.util.Set;
  * Abfrage ist. Das Repository bekommt damit ausschliesslich Werte, aus denen es Bedingungen bauen
  * kann, und muss keine Reihenfolge von Abfragen kennen.
  *
+ * <p><b>Hier standen bis zum 03.09.2026 zwei weitere Bestandteile:</b> {@code ueberfaellig} (die
+ * zweite Abfrageform, E‑j) und {@code jetzt} (ihr Stichtag aus der Anwendungsuhr). Beide sind mit
+ * E‑71 entfallen — die Problemkategorie <i>Ueberfaellig</i> ist widerlegt, und {@code jetzt} hatte
+ * ausser ihr keinen Verbraucher. <b>Die Liste liest damit keine Uhr mehr</b>, ausser fuer die
+ * Aufloesung des Zeitfensters, und die geschieht in {@code NachrichtenFilter}.
+ *
  * @param suchtreffer {@code null}, wenn nicht gesucht wurde — leere Listen hiessen „nichts
  *     gefunden" und waeren etwas anderes
- * @param ueberfaellig nur ueberfaellige Nachrichten (E-j)
- * @param jetzt der Stichtag der Ueberfaelligkeit, aus der <b>Anwendungsuhr</b> (Regel Z1). Er steht
- *     hier und nicht im Repository, weil ein Repository keine Uhr liest — und er steht auch dann
- *     hier, wenn {@code ueberfaellig} aus ist: Ein Feld, das je nach Nachbarfeld gesetzt ist oder
- *     nicht, ist die Sorte Zustand, die man beim Lesen uebersieht
  */
 public record Nachrichtenabfrage(
     Zeitfenster fenster,
     Set<MessageStatusKind> status,
     List<String> prozessIds,
     Suchtreffer suchtreffer,
-    boolean ueberfaellig,
-    LocalDateTime jetzt,
     boolean absteigend,
     Seitenposition cursor,
     int limit) {
 
-  public static Nachrichtenabfrage aus(
-      NachrichtenFilter filter, Suchtreffer suchtreffer, LocalDateTime jetzt) {
+  public static Nachrichtenabfrage aus(NachrichtenFilter filter, Suchtreffer suchtreffer) {
     return new Nachrichtenabfrage(
         filter.fenster(),
         filter.status(),
         filter.prozessIds(),
         suchtreffer,
-        filter.ueberfaellig(),
-        jetzt,
         filter.sortierung().absteigend(),
         filter.cursor(),
         filter.limit());

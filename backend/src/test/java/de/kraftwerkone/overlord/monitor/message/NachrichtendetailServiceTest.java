@@ -361,13 +361,15 @@ class NachrichtendetailServiceTest {
      * MessageTimeout} und {@code istEndstatus}, nicht am offenen Zustand.
      */
     @Test
-    @DisplayName("EMPFANGEN und ueber der Frist ist ueberfaellig")
-    void empfangen_kann_ueberfaellig_sein() {
+    @DisplayName("EMPFANGEN und wartend: die Frist steht nicht mehr da (E-76)")
+    void empfangen_und_wartend_ohne_frist() {
       gib(kopf("SUSPENDED"), List.of(metadatenSchritt(T1)));
 
-      assertThat(service().detail(MANDANT, MESSAGE_ID).ueberfaellig())
-          .as("MessageLastUpdate 10:30 + 1800 s = 11:00, die Anwendungsuhr steht auf 12:00")
-          .isTrue();
+      assertThat(service().detail(MANDANT, MESSAGE_ID).fristSekunden())
+          .as(
+              "Der Waechter beendet eine wartende Nachricht nie — die 1800 waeren eine Zahl"
+                  + " ohne Durchsetzung")
+          .isNull();
     }
 
     @Test
@@ -544,27 +546,53 @@ class NachrichtendetailServiceTest {
       NachrichtendetailResponse detail = service().detail(MANDANT, MESSAGE_ID);
 
       assertThat(detail.wartetSeitSekunden()).isNull();
-      assertThat(detail.ueberfaellig())
-          .as("ein Endstatus kann nicht ueberfaellig werden — istEndstatus entscheidet das")
-          .isFalse();
+      assertThat(detail.fristSekunden())
+          .as(
+              "Bei einem Endstatus bleibt die Frist stehen — sie ist eine Tatsache ueber die Zeile"
+                  + " und keine Zusage ueber die Zukunft (offener Punkt 132)")
+          .isEqualTo(1800);
     }
 
+    /**
+     * <b>E-76, und es sind zwei eigene Faelle.</b> Bei {@code SUSPENDED} faellt die Frist weg — der
+     * Waechter des Altsystems beendet eine wartende Nachricht nie. Bei {@code RUNNING} bleibt sie
+     * und wird erst dadurch richtig: Zusammen mit {@code wartetSeitSekunden} sagt sie, wann die
+     * Nachricht in {@code ERROR_TIMEOUT} kippt.
+     */
     @Test
-    @DisplayName("Ueberfaellig: offen und die Frist ist abgelaufen")
-    void ueberfaellig_wenn_offen_und_frist_abgelaufen() {
+    @DisplayName("WARTEND traegt keine Frist mehr — die Zahl stand fuer nichts")
+    void wartend_traegt_keine_frist() {
       gib(kopf("SUSPENDED"), List.of(metadatenSchritt(), aktion((short) 1, (short) 1, T0, T1)));
 
       NachrichtendetailResponse detail = service().detail(MANDANT, MESSAGE_ID);
 
-      assertThat(detail.ueberfaellig())
-          .as("10:30 + 1800 s = 11:00, die Anwendungsuhr steht auf 12:00")
-          .isTrue();
-      assertThat(detail.fristSekunden()).isEqualTo(1800);
+      assertThat(detail.fristSekunden())
+          .as("Bis zum 03.09.2026 stand hier 1800 — eine Frist, die niemand durchsetzt")
+          .isNull();
+      assertThat(detail.wartetSeitSekunden())
+          .as("Die Wartedauer bleibt: Sie sagt weiterhin, wie lange die Nachricht steht")
+          .isNotNull();
     }
 
     @Test
-    @DisplayName("Innerhalb der Frist ist nichts ueberfaellig")
-    void innerhalb_der_frist_nicht_ueberfaellig() {
+    @DisplayName("LAEUFT traegt die Frist weiterhin — dort greift der Waechter")
+    void laeuft_traegt_die_frist() {
+      gib(kopf("RUNNING"), List.of(metadatenSchritt(), aktion((short) 1, (short) 1, T0, T1)));
+
+      assertThat(service().detail(MANDANT, MESSAGE_ID).fristSekunden())
+          .as("Zusammen mit wartetSeitSekunden sagt sie, wann die Nachricht in ERROR_TIMEOUT kippt")
+          .isEqualTo(1800);
+    }
+
+    /**
+     * <b>Der Fall hiess bis zum 03.09.2026 „Innerhalb der Frist ist nichts ueberfaellig".</b> Die
+     * Kategorie ist entfallen (E-71); was er jetzt zusichert, ist, dass die Streichung der Frist an
+     * {@code WARTEND} haengt und nicht an ihrem Ablauf: Auch eine Nachricht <i>innerhalb</i> der
+     * Frist bekommt bei {@code SUSPENDED} kein {@code fristSekunden}.
+     */
+    @Test
+    @DisplayName("Auch innerhalb der Frist traegt WARTEND keine Frist — es haengt am Status")
+    void innerhalb_der_frist_traegt_wartend_keine_frist() {
       NachrichtKopfZeile kopf =
           new NachrichtKopfZeile(
               MESSAGE_ID,
@@ -586,25 +614,12 @@ class NachrichtendetailServiceTest {
               null);
       gib(kopf, List.of(metadatenSchritt(), aktion((short) 1, (short) 1, T0, T1)));
 
-      assertThat(service().detail(MANDANT, MESSAGE_ID).ueberfaellig()).isFalse();
-    }
-
-    /**
-     * {@code UNGEKLAERT} liefert {@code istEndstatus == true} — in dieser Rechnung die vorsichtige
-     * Antwort: keine Behauptung, die Nachricht haenge. Genau dafuer ist die Methode da, und fuer
-     * sonst nichts ({@code message-status.md}).
-     */
-    @Test
-    @DisplayName("UNGEKLAERT wird nicht ueberfaellig — die vorsichtige Antwort")
-    void ungeklaert_wird_nicht_ueberfaellig() {
-      gib(kopf("COMMIT_SENT"), List.of(metadatenSchritt(), aktion((short) 1, (short) 1, T0, T1)));
-
-      assertThat(service().detail(MANDANT, MESSAGE_ID).ueberfaellig()).isFalse();
+      assertThat(service().detail(MANDANT, MESSAGE_ID).fristSekunden()).isNull();
     }
 
     @Test
-    @DisplayName("Ohne Frist gibt es keine Frist und keine Ueberfaelligkeit — keine erfundene Null")
-    void ohne_frist_keine_ueberfaelligkeit() {
+    @DisplayName("Ohne Frist gibt es keine Frist — keine erfundene Null")
+    void ohne_frist_keine_frist() {
       for (Short timeout : new Short[] {null, 0}) {
         NachrichtKopfZeile kopf =
             new NachrichtKopfZeile(
@@ -630,7 +645,6 @@ class NachrichtendetailServiceTest {
         NachrichtendetailResponse detail = service().detail(MANDANT, MESSAGE_ID);
 
         assertThat(detail.fristSekunden()).as("MessageTimeout = %s", timeout).isNull();
-        assertThat(detail.ueberfaellig()).as("MessageTimeout = %s", timeout).isFalse();
       }
     }
 

@@ -61,14 +61,17 @@ public class NachrichtenController {
    * @param von absoluter Beginn, ISO 8601 in UTC — nur zusammen mit {@code bis}
    * @param status mehrfach; Werte aus {@code MessageStatusKind}, nicht Rohwerte
    * @param prozess mehrfach; {@code ProcessID}
-   * @param ueberfaellig nur ueberfaellige Nachrichten; Vorgabe {@code false}. Unvereinbar mit einem
-   *     Statusfilter, der weder {@code WARTEND} noch {@code LAEUFT} enthaelt — das ist {@code 400}.
-   *     <b>Er ist kein Filter, sondern eine zweite Abfrageform</b> ({@code
-   *     docs/nachrichtenliste.md} §5b)
    * @param suche Freitext auf Prozess-, Projekt- und Ablaufnamen, mindestens drei Zeichen
    * @param langeSuche hebt die Fenstergrenze der Suche auf; Vorgabe {@code false}. Wirkt nur
    *     zusammen mit {@code suche} und nur bis {@link NachrichtenFilter#SUCHE_FENSTER_LANG}.
    * @param cursor undurchsichtige Seitenposition der vorigen Antwort
+   * @implNote <b>{@code ?ueberfaellig=true} ist seit dem 03.09.2026 wirkungslos und kein Fehler</b>
+   *     (E‑71). Der Parameter ist entfallen, weil die Problemkategorie <i>Ueberfaellig</i>
+   *     widerlegt ist; ein unbekannter Anfrageparameter wird von Spring ignoriert — dieselbe
+   *     Bauform wie ein {@code ?mandant=…} am Dashboard. <b>Ein alter, geteilter Link fuehrt damit
+   *     auf die ungefilterte Liste und nicht auf eine Fehlerseite.</b> Die frueher zugesicherte
+   *     {@code 400} {@code ueberfaellig-und-status-unvereinbar} gibt es nicht mehr; {@code
+   *     NachrichtenIsolationDbIT} haelt beides fest.
    */
   @GetMapping("/api/nachrichten")
   public Seite<NachrichtResponse> liste(
@@ -77,7 +80,6 @@ public class NachrichtenController {
       @RequestParam(required = false) String bis,
       @RequestParam(required = false) List<String> status,
       @RequestParam(required = false) List<String> prozess,
-      @RequestParam(required = false) Boolean ueberfaellig,
       @RequestParam(required = false) String suche,
       @RequestParam(required = false) Boolean langeSuche,
       @RequestParam(required = false) String sortierung,
@@ -92,7 +94,6 @@ public class NachrichtenController {
             bis,
             status,
             prozess,
-            ueberfaellig,
             suche,
             langeSuche,
             sortierung,

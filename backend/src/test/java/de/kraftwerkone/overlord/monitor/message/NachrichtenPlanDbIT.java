@@ -43,12 +43,16 @@ import org.springframework.test.context.ActiveProfiles;
  *
  * <h2>Was er festhaelt und was das <i>nicht</i> heisst</h2>
  *
- * <p>Er haelt fest, dass der Parameter {@code ueberfaellig} die Abfrage auf {@code
- * MessageStatusIDX} zieht und die Sortierung zum {@code filesort} macht — <b>nicht, weil das gut
- * waere, sondern damit eine Aenderung daran auffaellt</b> (offener Punkt 56, {@code
- * docs/nachrichtenliste.md} §5b). Wird er eines Tages rot, ist das kein Fehler, sondern ein Befund:
- * Dann hat sich am Optimierer, am Statistikstand oder am Statement etwas geaendert, und die
- * gemessenen Zahlen sind neu zu erheben.
+ * <p><b>Er hielt bis zum 03.09.2026 fest, dass der Parameter {@code ueberfaellig} die Abfrage auf
+ * {@code MessageStatusIDX} zieht und die Sortierung zum {@code filesort} macht</b> — nicht, weil
+ * das gut waere, sondern damit eine Aenderung daran auffaellt (offener Punkt 56, {@code
+ * docs/nachrichtenliste.md} §5b). Der Parameter ist mit E-71 entfallen, und mit ihm die zweite
+ * Abfrageform.
+ *
+ * <p><b>Was bleibt, ist die Gegenprobe — und sie ist jetzt die Zusicherung selbst:</b> Die Liste
+ * laeuft <i>nicht</i> ueber {@code MessageStatusIDX}. Sie hat wieder <b>genau einen</b>
+ * Zugriffspfad, und damit gilt die Cursor-Messung aus M4/L8 wieder fuer jede Fassung. Wird der Test
+ * rot, steht die zweite Form wieder da, ohne dass jemand sie gebaut haette.
  *
  * <h2>Beide Mandanten (Regel L7)</h2>
  *
@@ -101,12 +105,11 @@ class NachrichtenPlanDbIT {
   }
 
   /** Der Plan des Statements, das das Repository fuer diese Abfrage schickt. */
-  private List<Plan> plan(String mandantId, boolean ueberfaellig, Seitenposition cursor) {
+  private List<Plan> plan(String mandantId, Seitenposition cursor) {
     gerendert.clear();
     attrappe.finde(
         new MandantContext(mandantId),
-        new Nachrichtenabfrage(
-            FENSTER, Set.of(), List.of(), null, ueberfaellig, ANKER, true, cursor, 50));
+        new Nachrichtenabfrage(FENSTER, Set.of(), List.of(), null, true, cursor, 50));
     assertThat(gerendert).hasSize(1);
 
     List<Plan> zeilen = new ArrayList<>();
@@ -123,58 +126,30 @@ class NachrichtenPlanDbIT {
   }
 
   /** Die Zeile, mit der der Optimierer einsteigt — die Treibertabelle. */
-  private Plan treiber(String mandantId, boolean ueberfaellig, Seitenposition cursor) {
-    return plan(mandantId, ueberfaellig, cursor).getFirst();
+  private Plan treiber(String mandantId, Seitenposition cursor) {
+    return plan(mandantId, cursor).getFirst();
   }
 
   private record Plan(String tabelle, String zugriff, String index, String extra) {}
 
-  /**
-   * <b>Der Befund aus M97, als Test.</b> Mit dem Parameter steigt die Abfrage bei <b>beiden</b>
-   * Mandanten ueber {@code Message} und {@code MessageStatusIDX} ein — und die Sortierung wird zum
-   * {@code filesort}, weil dieser Index die Sortierfolge nicht liefert.
+  /*
+   * Hier standen bis zum 03.09.2026 zwei Faelle zum Parameter `ueberfaellig`: dass er die Abfrage
+   * auf MessageStatusIDX zieht (Befund aus M97) und dass der Cursor daran nichts aendert. Beide
+   * sind mit E-71 entfallen -- der Parameter existiert nicht mehr.
    *
-   * <p>Die Treibertabelle heisst hier {@code Message} und nicht {@code m} wie in den Messskripten:
-   * jOOQ vergibt fuer die aeussere Tabelle keinen Alias. Es ist dieselbe Tabelle und derselbe Plan.
+   * WAS SIE FESTHIELTEN, IST DAMIT NICHT WERTLOS GEWORDEN, SONDERN GEGENSTANDSLOS: Es gibt keine
+   * zweite Abfrageform mehr, deren Plan man gegen die erste halten koennte. Der Fall darunter --
+   * frueher die Gegenprobe -- traegt seither die ganze Zusicherung.
    */
-  @Test
-  @DisplayName("Mit ueberfaellig laeuft die Abfrage bei beiden Mandanten ueber MessageStatusIDX")
-  void ueberfaellig_laeuft_ueber_den_statusindex() {
-    for (String mandant : List.of("NEXANS", "SUTTONS")) {
-      Plan treiber = treiber(mandant, true, null);
-
-      assertThat(treiber.tabelle()).as("Treibertabelle bei %s", mandant).isEqualTo("Message");
-      assertThat(treiber.index()).as("Treiberindex bei %s", mandant).isEqualTo("MessageStatusIDX");
-      assertThat(treiber.zugriff()).as("Zugriffsart bei %s", mandant).isEqualTo("range");
-      assertThat(treiber.extra())
-          .as("Die Sortierung kommt nicht mehr aus dem Index (%s)", mandant)
-          .contains("filesort");
-    }
-  }
-
-  /**
-   * <b>Und der Cursor aendert daran nichts</b> — das ist der unangenehme Teil von offenem Punkt 56.
-   * Ohne den Parameter hebt er die Bereichsbreite auf beide Spalten des Zeitindex; mit ihm bleibt
-   * er eine nachgelagerte Bedingung. Dass die Zeilen trotzdem stimmen, weist {@code
-   * NachrichtenUeberfaelligDbIT} nach — hier steht, dass es den Plan nichts kostet und nichts
-   * bringt.
-   */
-  @Test
-  @DisplayName("Mit ueberfaellig bleibt der Cursor ohne Wirkung auf den Plan")
-  void cursor_aendert_den_plan_der_zweiten_form_nicht() {
-    Seitenposition cursor = new Seitenposition(LocalDateTime.parse("2025-12-24T06:19:16"), "abc");
-
-    for (String mandant : List.of("NEXANS", "SUTTONS")) {
-      assertThat(treiber(mandant, true, cursor))
-          .as("Der Cursor darf den Plan der zweiten Abfrageform nicht veraendern (%s)", mandant)
-          .isEqualTo(treiber(mandant, true, null));
-    }
-  }
 
   /**
    * Die Gegenprobe, ohne die der Test nur zeigte, dass irgendein Plan herauskommt: <b>Ohne</b> den
    * Parameter laeuft dieselbe Abfrage <b>nicht</b> ueber {@code MessageStatusIDX}. Der Parameter
    * ist damit nachweislich die Ursache und nicht ein zufaelliger Begleiter.
+   *
+   * <p><b>Seit dem 03.09.2026 ist er nicht mehr die Gegenprobe, sondern die Zusicherung.</b> Es
+   * gibt keinen Parameter mehr, gegen den er gegenprueft; er haelt jetzt fest, dass die Liste
+   * <b>einen</b> Zugriffspfad hat und der Statusindex in keinem Plan steht.
    *
    * <p><b>Auf welchem Plan die Referenzliste laeuft, prueft dieser Test bewusst nicht.</b> Er
    * haengt am Mandanten — {@code NEXANS} ueber {@code MessageLastUpdateIDX}, {@code SUTTONS} ueber
@@ -183,11 +158,11 @@ class NachrichtenPlanDbIT {
    * zu machen, ohne dass jemand etwas falsch gemacht haette.
    */
   @Test
-  @DisplayName("Ohne den Parameter laeuft dieselbe Abfrage nicht ueber MessageStatusIDX")
-  void ohne_parameter_kein_statusindex() {
+  @DisplayName("Die Liste laeuft nicht ueber MessageStatusIDX — sie hat einen Zugriffspfad")
+  void liste_laeuft_nicht_ueber_den_statusindex() {
     for (String mandant : List.of("NEXANS", "SUTTONS")) {
-      assertThat(plan(mandant, false, null))
-          .as("Der Statusindex darf ohne den Parameter nirgends im Plan stehen (%s)", mandant)
+      assertThat(plan(mandant, null))
+          .as("Der Statusindex darf in keiner Planzeile der Liste stehen (%s)", mandant)
           .noneMatch(zeile -> "MessageStatusIDX".equals(zeile.index()));
     }
   }
@@ -202,7 +177,7 @@ class NachrichtenPlanDbIT {
     attrappe.finde(
         new MandantContext(mandantId),
         new Nachrichtenabfrage(
-            new Zeitfenster(von, ANKER), Set.of(), List.of(), null, false, ANKER, true, null, 50));
+            new Zeitfenster(von, ANKER), Set.of(), List.of(), null, true, null, 50));
     assertThat(gerendert).hasSize(1);
 
     List<Plan> zeilen = new ArrayList<>();
@@ -233,7 +208,7 @@ class NachrichtenPlanDbIT {
   @Test
   @DisplayName("Bei engem Fenster wechselt SUTTONS von der Mandantenkette auf den Zeitindex")
   void verengtes_fenster_zieht_suttons_auf_den_zeitindex() {
-    Plan weit = plan("SUTTONS", false, null).getFirst();
+    Plan weit = plan("SUTTONS", null).getFirst();
     Plan eng = planVerengt("SUTTONS", ANKER.truncatedTo(ChronoUnit.HOURS).minusHours(1)).getFirst();
 
     assertThat(weit.tabelle())
@@ -254,7 +229,7 @@ class NachrichtenPlanDbIT {
   @Test
   @DisplayName("NEXANS behaelt seine Planfamilie — das enge Fenster macht nur den Bereich kleiner")
   void verengtes_fenster_aendert_nexans_planfamilie_nicht() {
-    Plan weit = plan("NEXANS", false, null).getFirst();
+    Plan weit = plan("NEXANS", null).getFirst();
     Plan eng = planVerengt("NEXANS", ANKER.truncatedTo(ChronoUnit.HOURS).minusHours(1)).getFirst();
 
     assertThat(weit.tabelle()).isEqualTo("Message");
@@ -286,7 +261,7 @@ class NachrichtenPlanDbIT {
             new MessageStatusClassifier());
 
     Nachrichtenabfrage abfrage =
-        new Nachrichtenabfrage(FENSTER, Set.of(), List.of(), null, false, ANKER, true, null, 50);
+        new Nachrichtenabfrage(FENSTER, Set.of(), List.of(), null, true, null, 50);
     Verengungsgrenzen grenzen =
         Verengungsgrenzen.aus(abfrage, LocalDateTime.parse("2026-08-27T15:00:00"));
     assertThat(grenzen).isNotNull();

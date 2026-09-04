@@ -221,33 +221,43 @@ class NachrichtendetailDbIT extends SicherheitsTestbasis {
   }
 
   /**
-   * Die Problemkategorie <b>Ueberfaellig</b> (§4.2 Nr. 2), an echten Daten.
+   * <b>Die Frist an echten Daten — und sie haengt seit dem 03.09.2026 am Status</b> (E-76).
    *
-   * <p>Der Test verlangt <b>keinen</b> bestimmten Wert: Ob eine Nachricht ueberfaellig ist, haengt
-   * am Stand der Anwendungsuhr und damit am Befuellstand der Testkopie. Geprueft wird die
-   * <i>Kopplung</i> — ohne Frist keine Ueberfaelligkeit, und wer ueberfaellig ist, ist offen. Genau
-   * die beiden Bedingungen, die {@code MessageStatusClassifier.istUeberfaellig} verbindet.
+   * <p>Hier stand bis dahin die Problemkategorie <i>Ueberfaellig</i>: geprueft wurde die
+   * <i>Kopplung</i> — ohne Frist keine Ueberfaelligkeit, und wer ueberfaellig ist, ist offen. Die
+   * Kategorie ist widerlegt (E-71), das Feld gibt es nicht mehr.
+   *
+   * <p><b>Was an seine Stelle tritt, ist die neue Kopplung:</b> Eine wartende Nachricht traegt
+   * <b>keine</b> Frist. Der Waechter des Altsystems beendet sie nie; eine Zahl dort waere eine
+   * Frist, die niemand durchsetzt.
+   *
+   * <p><b>Der Test verlangt auch hier keinen bestimmten Wert.</b> Wie viele wartende Nachrichten im
+   * Fenster liegen, haengt am Befuellstand der Testkopie (Regel T2). Geprueft wird die Regel, nicht
+   * der Bestand — und dass ueberhaupt Zeilen angesehen worden sind.
    */
   @Test
-  @DisplayName("Ueberfaellig setzt eine Frist und einen offenen Zustand voraus")
-  void ueberfaellig_haengt_an_frist_und_offenheit() throws Exception {
+  @DisplayName("Eine wartende Nachricht traegt keine Frist, jede andere ihre eigene")
+  void wartend_traegt_keine_frist() throws Exception {
     int geprueft = 0;
+    int davonWartend = 0;
     for (String kennung : kennungen("")) {
       Antwort detail = detail(kennung);
-      boolean ueberfaellig = Boolean.TRUE.equals(detail.<Boolean>json("$.ueberfaellig"));
+      String einordnung = detail.json("$.statusKind");
 
-      if (ueberfaellig) {
-        assertThat(detail.<Integer>json("$.fristSekunden"))
-            .as("Nachricht %s: ohne Frist gibt es keine Ueberfaelligkeit", kennung)
-            .isNotNull()
-            .isPositive();
-        assertThat(detail.<String>json("$.offenerZustand"))
-            .as("Nachricht %s: ein Endstatus kann nicht ueberfaellig werden", kennung)
-            .isNotEqualTo("KEINER");
+      if ("WARTEND".equals(einordnung)) {
+        assertThat(detail.<Object>json("$.fristSekunden"))
+            .as("Nachricht %s wartet — die Frist wird auf sie nicht angewendet (E-76)", kennung)
+            .isNull();
+        davonWartend++;
       }
+      assertThat(detail.rumpf())
+          .as("Nachricht %s: die Problemkategorie Ueberfaellig gibt es nicht mehr", kennung)
+          .doesNotContain("\"ueberfaellig\"");
       geprueft++;
     }
-    assertThat(geprueft).isPositive();
+    assertThat(geprueft).as("Ohne angesehene Zeilen bewiese der Test nichts").isPositive();
+    // Wie viele davon wartend sind, sagt der Bestand -- der Test haengt nicht daran (Regel T2).
+    assertThat(davonWartend).isNotNegative();
   }
 
   /**

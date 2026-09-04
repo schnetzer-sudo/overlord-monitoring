@@ -18,7 +18,7 @@ import {
   rolleKommtVor,
   verlaufszeilen,
 } from "@/features/dashboard/verlauf";
-import { fehlerZiel, ueberfaelligZiel } from "@/features/dashboard/verweise";
+import { fehlerZiel, laeuftZiel, wartendFenster, wartendZiel } from "@/features/dashboard/verweise";
 import { STATUSARTEN, statusrolle } from "@/lib/status-farbe";
 
 /**
@@ -229,11 +229,17 @@ describe("Der URL-Zustand", () => {
 });
 
 /**
- * **Die Verlinkung** (Entscheidung E‑m).
+ * **Die Verlinkung — asymmetrisch** (Entscheidungen E‑m und **E‑80**).
  *
- * Das Zeitfenster wird **unverändert** durchgereicht: Ein Ziel, das ein anderes
- * Fenster zeigt als die Kachel, ist derselbe Fehler wie eine Zahl, die nicht
- * stimmt.
+ * *Fehler* und *Läuft* erben das Fenster der Antwort; **es geht Zeichen für
+ * Zeichen durch**, denn ein Ziel, das ein anderes Fenster zeigt als die Kachel,
+ * ist derselbe Fehler wie eine Zahl, die nicht stimmt. *Wartend* bringt seinen
+ * eigenen Zeitraum mit — genau der Fall, für den E‑m die Klickbarkeit
+ * abgeschaltet hatte.
+ *
+ * ⚠️ **Keine Zahl aus dem Bestand** (Regel T2). Die Werte hier sind gewählt und
+ * rund; was die Testkopie heute liefert, steht in der Sichtprüfung und in keiner
+ * Erwartung.
  */
 describe("Die Verweise der Kacheln", () => {
   it("baut die Adresse der Fehlerkachel", () => {
@@ -242,21 +248,111 @@ describe("Die Verweise der Kacheln", () => {
     );
   });
 
-  it("baut die Adresse der Überfälligkachel", () => {
-    expect(ueberfaelligZiel(FENSTER)).toBe(
-      "/nachrichten?ueberfaellig=true&von=2025-12-28T05%3A00%3A00Z&bis=2025-12-30T05%3A00%3A00Z",
+  /**
+   * **Läuft erbt.** Eine laufende Nachricht ist höchstens so alt wie die
+   * Wächterfrist des Altsystems — rund 30 Minuten — und liegt damit in jedem
+   * Zeitraum, den der Umschalter anbietet.
+   */
+  it("lässt die Kachel Läuft das Fenster der Antwort erben", () => {
+    expect(laeuftZiel(FENSTER)).toBe(
+      "/nachrichten?status=LAEUFT&von=2025-12-28T05%3A00%3A00Z&bis=2025-12-30T05%3A00%3A00Z",
     );
   });
 
   /**
-   * **Die beiden Filter erscheinen nie zusammen.** Am Listen-Endpunkt sind sie
-   * ausdrücklich unvereinbar und ergeben `400`
-   * `ueberfaellig-und-status-unvereinbar`: Überfällig setzt `WARTEND` oder
-   * `LAEUFT` voraus, Fehler ist ein Endstatus.
+   * **Wartend bringt seinen Zeitraum mit.** Ohne das zeigte das Ziel bei 48
+   * Stunden einen Bruchteil der Zahl, die auf der Kachel steht.
    */
-  it("mischt die beiden Filter in keiner der beiden Adressen", () => {
-    expect(fehlerZiel(FENSTER)).not.toContain("ueberfaellig");
-    expect(ueberfaelligZiel(FENSTER)).not.toContain("status");
+  it("weitet das Fenster der Kachel Wartend bis vor die älteste Zeile", () => {
+    expect(wartendZiel(FENSTER, "48H", 6 * 24 * 3600)).toBe(
+      "/nachrichten?status=WARTEND&von=2025-12-24T00%3A00%3A00Z&bis=2025-12-30T05%3A00%3A00Z",
+    );
+  });
+
+  /**
+   * **Die Untergrenze ist der Punkt.** `aeltesteSekunden` ist ein Alter gegen
+   * die Anwendungsuhr; der einzige Anker in der Antwort ist `fenster.bis`, und
+   * der liegt **hinter** `jetzt`. Ohne Luft nach hinten fiele genau die Zeile
+   * aus dem Ziel, um derentwillen jemand klickt.
+   *
+   * Geprüft wird der ungünstigste Fall: `jetzt` ganz am Anfang seines Eimers,
+   * also `bis` minus eine Eimerbreite. Die älteste Zeile liegt dann so früh, wie
+   * sie überhaupt liegen kann — und `von` muss trotzdem davor liegen.
+   */
+  it("greift nie zu spät, auch am ungünstigsten Punkt des Eimers nicht", () => {
+    const alter = 6 * 24 * 3600;
+    const eimerbreite48H = 60 * 60 * 1000;
+    const fruehestesJetzt = new Date(FENSTER.bis).getTime() - eimerbreite48H;
+    const aelteste = fruehestesJetzt - alter * 1000;
+
+    const eigenes = wartendFenster(FENSTER, "48H", alter);
+    if (eigenes === null) {
+      throw new Error("Das Fenster der Kachel Wartend fehlt");
+    }
+
+    expect(new Date(eigenes.von).getTime()).toBeLessThanOrEqual(aelteste);
+    // `bis` bleibt das Ende des gewählten Zeitraums, unverändert.
+    expect(eigenes.bis).toBe(FENSTER.bis);
+  });
+
+  /**
+   * Bei `12M` ist der Eimer ein Monat: `fenster.bis` kann Wochen hinter `jetzt`
+   * liegen, und die Luft nach hinten wächst entsprechend mit.
+   */
+  it("nimmt bei einem breiteren Eimer mehr Luft", () => {
+    const alter = 6 * 24 * 3600;
+    const eng = wartendFenster(FENSTER, "48H", alter);
+    const weit = wartendFenster(FENSTER, "12M", alter);
+    if (eng === null || weit === null) {
+      throw new Error("Beide Fenster liegen unter einem Jahr und dürfen nicht fehlen");
+    }
+
+    expect(new Date(weit.von).getTime()).toBeLessThan(new Date(eng.von).getTime());
+  });
+
+  /**
+   * **Ohne älteste Zeile wird geerbt.** Das ist der Fall `anzahl = 0`: Es gibt
+   * nichts, wofür das Fenster geweitet werden müsste, und das Ziel ist eine
+   * leere Liste — die richtige Antwort auf eine Kachel, die `0` zeigt.
+   */
+  it("erbt, wenn es keine älteste Zeile gibt", () => {
+    expect(wartendFenster(FENSTER, "48H", null)).toEqual(FENSTER);
+  });
+
+  /**
+   * **Die Notbremse** (E‑80). Über der Höchstspanne der Liste — ein Jahr, Regel
+   * L1 — weist der Endpunkt mit `zeitfenster-zu-gross` ab. Ein Link, der weniger
+   * zeigt als die Kachel nennt, entsteht dann gar nicht erst; die Kachel klickt
+   * nicht und sagt in einem Satz warum.
+   */
+  it("bremst über einem Jahr und gibt kein Ziel aus", () => {
+    expect(wartendFenster(FENSTER, "48H", 366 * 24 * 3600)).toBeNull();
+    expect(wartendZiel(FENSTER, "48H", 366 * 24 * 3600)).toBeNull();
+  });
+
+  /**
+   * Die Gegenprobe. Ohne sie bewiese der Test oben nur, dass irgendwann `null`
+   * herauskommt — nicht, dass die Grenze bei einem Jahr liegt.
+   */
+  it("bremst knapp darunter nicht", () => {
+    expect(wartendZiel(FENSTER, "48H", 360 * 24 * 3600)).toContain("status=WARTEND");
+  });
+
+  /**
+   * **Das Wort „überfällig" kommt in keiner Adresse mehr vor** (E‑71). Der
+   * Parameter ist am Endpunkt seit dem 03.09.2026 unbekannt — wirkungslos und
+   * kein Fehler —, und die Oberfläche erzeugt ihn nicht mehr.
+   */
+  it("erzeugt in keiner Adresse den alten Parameter", () => {
+    const ziele = [
+      fehlerZiel(FENSTER),
+      laeuftZiel(FENSTER),
+      wartendZiel(FENSTER, "48H", 6 * 24 * 3600) ?? "",
+    ];
+
+    for (const ziel of ziele) {
+      expect(ziel).not.toContain("ueberfaellig");
+    }
   });
 
   /**

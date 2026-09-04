@@ -101,26 +101,68 @@ export type Fehlerart = { rohwert: string; art: string; anzahl: number };
 export type Fehlerkachel = { anzahl: number; arten: Fehlerart[] };
 
 /**
- * Die einzigen beiden Felder der ganzen Antwort, die *nicht ermittelbar*
- * zurückgeben dürfen (`docs/dashboard.md` §5).
+ * Eine der beiden Kacheln für die **offenen** Zustände — *Läuft* und *Wartend*.
+ * Beide haben dieselbe Gestalt und deshalb denselben Typ
+ * (`docs/dashboard.md` §5).
  *
- * **Sie fallen zusammen.** Fällt eine, ist auch die andere `null` — sie stehen
- * als Paar nebeneinander, und eine Kachel mit einer Zahl und einer Lücke lädt zu
- * einer Rechnung ein, die nicht aufgeht. **`ermittelbar: false` ist nicht `0`:**
- * Null hieße „es hängt nichts", und das ist in einem Überwachungswerkzeug die
- * schlimmste falsche Antwort.
+ * **Sie sind die einzigen Felder der ganzen Antwort, die *nicht ermittelbar*
+ * zurückgeben dürfen.** Sie sind der einzige Teil, der zur Laufzeit live über
+ * `Message` liest, wo die Zeitgrenze der Datenbank nach zehn Sekunden abräumt;
+ * der Rest kommt aus unserer eigenen Tabelle. **Stirbt die Live-Abfrage, darf
+ * nicht die ganze Seite sterben.**
+ *
+ * **Die beiden Kacheln fallen dabei *nicht* zusammen** — und das ist der
+ * Unterschied zur alten Kachel *Überfällig*: Dort waren „im Zeitraum" und
+ * „insgesamt" ein Paar, das man nebeneinander liest. *Läuft* und *Wartend* sind
+ * zwei verschiedene Auskünfte aus zwei Statements. Fällt eine, steht die andere.
+ *
+ * **`ermittelbar: false` ist nicht `0`:** Null hieße „es läuft nichts", und das
+ * ist in einem Überwachungswerkzeug die schlimmste falsche Antwort.
  */
-export type Ueberfaelligkachel = {
-  imFenster: number | null;
-  /** Ohne Zeitfenster, und das ist der Sinn: Gefragt ist, was *außerhalb* hängt. */
-  insgesamt: number | null;
+export type OffeneKachel = {
+  /** Ohne Zeitfenster, und das ist der Sinn: Gefragt ist, was *jetzt* offen ist. */
+  anzahl: number | null;
+  /**
+   * Wie lange die älteste dieser Nachrichten schon steht, in ganzen Sekunden,
+   * im Backend gegen die **Anwendungsuhr** gerechnet (Regel Z1) — **niemals
+   * hier**: Im Profil `dev` steht sie Monate zurück.
+   *
+   * **`null` bei `anzahl = 0`** — ohne Zeile gibt es kein Alter, und eine `0`
+   * hieße „seit null Sekunden". `null` auch, wenn nicht ermittelbar.
+   */
+  aeltesteSekunden: number | null;
   ermittelbar: boolean;
 };
 
+/**
+ * Die vier Kacheln.
+ *
+ * ## `wartend` fehlt, wenn es den Zustand beim Mandanten nicht gibt (E‑74)
+ *
+ * **Das Feld ist entweder vollständig da oder gar nicht** — kein `null`, kein
+ * `sichtbar: false`. Die Erscheinungsbedingung ist **strukturell**: Sie fragt
+ * über `SOSAction`, ob überhaupt ein Ablauf des Mandanten suspendiert. Zeigt die
+ * Kachel dann `0`, ist das eine Auskunft und kein Rauschen — *heute wartet
+ * nichts* und *dieser Mandant wartet nie* sind zwei verschiedene Sätze.
+ *
+ * **Deshalb ist `wartend` optional und `laeuft` nicht.** Laufen kann jeder
+ * Mandant.
+ *
+ * > ⚠️ **Fehlt der Schlüssel, wird keine Kachel gezeichnet** — kein Platzhalter,
+ * > keine gedämpfte Kachel, kein „nicht verfügbar". Abwesenheit ist eine
+ * > Auskunft über den **Mandanten**, `ermittelbar: false` eine über **uns**.
+ * > Die beiden dürfen nie gleich aussehen; verschwände die Kachel bei einem
+ * > Fehlschlag, würde ein Ausfall stillschweigend in eine strukturelle
+ * > Behauptung übersetzt. **Der Endpunkt hält das ein:** Die
+ * > Erscheinungsbedingung bekommt keinen Teilerfolg-Mechanismus — sie liest
+ * > Stammdaten wie jede Mandantenkette, und bricht sie, ist die ganze Antwort
+ * > ein Fehler (`docs/dashboard.md` §5).
+ */
 export type Kacheln = {
   nachrichten: number;
   fehler: Fehlerkachel;
-  ueberfaellig: Ueberfaelligkachel;
+  laeuft: OffeneKachel;
+  wartend?: OffeneKachel;
 };
 
 export type Verteilungszeilenart = "WERT" | "UEBRIGE" | "NICHT_ZUGEORDNET";
@@ -141,8 +183,22 @@ export type Verteilungszeile = {
 
 export type Verteilung = { sicht: Verteilungssicht; zeilen: Verteilungszeile[] };
 
-/** Die beiden Problemkategorien, die dieser Block führt — nie zu „Problem" vereint (Regel Q3). */
-export type Auffaelligkeit = "FEHLER" | "UEBERFAELLIG";
+/**
+ * Warum eine Nachricht in „Zuletzt aufgefallen" steht.
+ *
+ * ⚠️ **Seit dem 03.09.2026 nur noch ein Wert.** *Überfällig* ist mit E‑71
+ * widerlegt und entfallen; der Block liest seither nur noch die Fehlerbedingung
+ * und ist ein einziges Statement (`docs/dashboard.md` §7a). **Die Oberfläche
+ * zeichnet je Zeile deshalb keine Kategoriekennzeichnung mehr** — eine Plakette,
+ * die an jeder Zeile dasselbe sagt, unterscheidet nichts.
+ *
+ * **Das Feld bleibt trotzdem im Vertrag.** Regel Q3 verlangt, dass
+ * Problemkategorien getrennt geführt und nie zu „Problem" zusammengefasst
+ * werden; kommt je eine zweite zurück, steht hier ihr Platz. Dass hier heute
+ * eine Aufzählung mit einem Wert steht, ist ein benannter Zwischenstand —
+ * offener Punkt 133.
+ */
+export type Auffaelligkeit = "FEHLER";
 
 export type AuffaelligeNachricht = {
   messageId: string;

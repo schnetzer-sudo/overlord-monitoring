@@ -78,7 +78,6 @@ function detail(): Nachrichtendetail {
     offenerZustand: "KEINER",
     naechsterSchritt: null,
     wartetSeitSekunden: null,
-    ueberfaellig: false,
     schritte: [
       {
         position: 2,

@@ -7,6 +7,7 @@ import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
 import de.kraftwerkone.overlord.monitor.common.Zeitpunkte;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -15,7 +16,6 @@ import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.OptionalLong;
 import java.util.TreeMap;
 import org.springframework.stereotype.Service;
 
@@ -114,11 +114,16 @@ public class DashboardService {
     List<Rollupsumme> summen = dashboardRepository.verlauf(mandant, zeitraum, fenster);
     List<Verteilungssumme> verteilt =
         dashboardRepository.verteilung(mandant, zeitraum, fenster, sicht);
-    UeberfaelligkachelResponse ueberfaellig = ueberfaellig(mandant, fenster, jetzt);
+    OffeneKachelResponse laeuft = offeneKachel(mandant, MessageStatusKind.LAEUFT, jetzt);
+    // Die Erscheinungsbedingung wird bei JEDEM Aufruf mitgelesen und nicht bedingt: Sonst haenge
+    // die Zahl der Statements am Mandanten, und DashboardStatementsTest waere nicht mehr
+    // deterministisch. Entschieden wird erst hier, ob die Kachel in die Antwort kommt.
+    boolean zeigeWartend = dashboardRepository.hatWartendeAblaeufe(mandant);
+    OffeneKachelResponse wartend = offeneKachel(mandant, MessageStatusKind.WARTEND, jetzt);
     List<Auffaelligkeitszeile> aufgefallen =
-        dashboardRepository.zuletztAufgefallen(mandant, fenster, jetzt, AUFFAELLIG_HOECHSTENS);
+        dashboardRepository.zuletztAufgefallen(mandant, fenster, AUFFAELLIG_HOECHSTENS);
 
-    KachelnResponse kacheln = kacheln(summen, ueberfaellig);
+    KachelnResponse kacheln = kacheln(summen, laeuft, zeigeWartend ? wartend : null);
     return new DashboardResponse(
         zeitraum.code(),
         fensterAntwort(fenster),
@@ -221,30 +226,31 @@ public class DashboardService {
   }
 
   /**
-   * Block 6: die Kategorie entsteht aus dem Rohwert und nicht aus einer zweiten Spalte.
+   * Block 6: die Einordnung entsteht aus dem Rohwert und nicht aus einer zweiten Spalte.
    *
-   * <p>Beide Faelle schliessen einander aus — <i>ueberfaellig</i> setzt voraus, dass die Nachricht
-   * <b>nicht</b> in einem Endstatus ist, und <i>Fehler</i> ist einer. Die Abfrage hat mit {@code
-   * fehlerBedingung OR ueberfaelligBedingung} gefiltert; was kein Fehler ist, ist damit
-   * ueberfaellig. <b>Geraten wird dabei nichts:</b> Die Einordnung kommt aus dem Klassifizierer,
-   * und die Ausschliesslichkeit ist dessen eigene Zusicherung ({@code istEndstatus}).
+   * <p><b>Die Kategorie ist seit dem 03.09.2026 nicht mehr abzuleiten, sondern festzustellen.</b>
+   * Bis dahin filterte die Abfrage mit {@code fehlerBedingung OR ueberfaelligBedingung}, und was
+   * kein Fehler war, war ueberfaellig. Die Ueberfaelligkeitshaelfte ist mit E‑71 entfallen; der
+   * Block liest nur noch die Fehlerbedingung, und {@link Auffaelligkeit} traegt nur noch einen
+   * Wert.
+   *
+   * <p><b>Die Einordnung wird trotzdem weiterhin gerufen</b> und nicht durch ein Literal ersetzt:
+   * Sie steht als eigenes Feld in der Antwort ({@code statusKind}) und sagt dort etwas, das die
+   * Kategorie nicht sagt — welcher Rohwert es genau ist. <b>Nur die Kategorie ist konstant, nicht
+   * die Einordnung.</b>
    */
   private List<AuffaelligeNachrichtResponse> zuletztAufgefallen(List<Auffaelligkeitszeile> zeilen) {
     return zeilen.stream()
         .map(
-            zeile -> {
-              MessageStatusKind einordnung = statusClassifier.einordnung(zeile.messageStatus());
-              return new AuffaelligeNachrichtResponse(
-                  zeile.messageId(),
-                  Zeitpunkte.nachUtc(zeile.zeitpunkt(), anwendungsuhr.getZone()),
-                  zeile.messageStatus(),
-                  einordnung,
-                  einordnung == MessageStatusKind.FEHLER
-                      ? Auffaelligkeit.FEHLER
-                      : Auffaelligkeit.UEBERFAELLIG,
-                  zeile.processId(),
-                  zeile.sosName());
-            })
+            zeile ->
+                new AuffaelligeNachrichtResponse(
+                    zeile.messageId(),
+                    Zeitpunkte.nachUtc(zeile.zeitpunkt(), anwendungsuhr.getZone()),
+                    zeile.messageStatus(),
+                    statusClassifier.einordnung(zeile.messageStatus()),
+                    Auffaelligkeit.FEHLER,
+                    zeile.processId(),
+                    zeile.sosName()))
         .toList();
   }
 
@@ -295,27 +301,46 @@ public class DashboardService {
    * <i>Fehler</i>, der Rohwert sagt <i>welcher</i>.
    */
   /**
-   * Block 4 — <b>zwei Zahlen, und sie fallen zusammen</b>.
+   * Bloecke 4 und 4a — <b>eine Kachel je offenem Zustand, zwei Werte aus einem Statement</b>.
    *
-   * <p>Bricht eine der beiden Live-Abfragen an der Zeitgrenze ab, ist die Kachel als Ganzes „nicht
-   * ermittelbar". Eine Kachel, in der eine Zahl steht und die andere fehlt, laedt zu genau der
-   * Rechnung ein, die dann nicht aufgeht — „im Zeitraum" und „insgesamt" liest man nebeneinander.
+   * <p>Bricht die Live-Abfrage an der Zeitgrenze ab, ist <i>diese</i> Kachel „nicht ermittelbar" —
+   * die andere bleibt davon unberuehrt. Das ist der Unterschied zur alten Ueberfaellig-Kachel, wo
+   * zwei Zahlen <i>derselben</i> Kachel zusammenfielen: Dort waren „im Zeitraum" und „insgesamt"
+   * ein Paar, das man nebeneinander liest. <i>Laeuft</i> und <i>Wartend</i> sind zwei verschiedene
+   * Auskuenfte und keine Rechnung.
    *
-   * <p>Zwei Aufrufe und nicht einer: Die zweite Zahl hat <b>kein</b> Zeitfenster und ist deshalb
-   * eine andere Abfrage. Sie ist dabei die billigere von beiden (M90, Befund 14).
+   * <h2>{@code aeltesteSekunden} entsteht hier und nicht im Repository</h2>
+   *
+   * <p>Das Repository liefert den rohen Zeitpunkt; die Dauer wird gegen die <b>Anwendungsuhr</b>
+   * gerechnet (Regel Z1) — <b>ein Repository liest keine Uhr</b>. {@code jetzt} ist derselbe
+   * Uhrenschlag, den auch das Fenster benutzt.
+   *
+   * <p><b>{@code null} bei {@code anzahl = 0}</b>: Ohne Zeile gibt es kein Alter. Und {@code null}
+   * bei einem negativen Abstand — dieselbe Regel wie in {@code docs/nachrichtendetail.md} §3a:
+   * „wartet seit minus drei Sekunden" ist schlechter als gar keine Angabe. Vorgekommen ist das
+   * nicht; die Anwendungsuhr laeuft vorwaerts.
    */
-  private UeberfaelligkachelResponse ueberfaellig(
-      MandantContext mandant, Zeitfenster fenster, LocalDateTime jetzt) {
-    OptionalLong imFenster = dashboardRepository.ueberfaelligImFenster(mandant, fenster, jetzt);
-    OptionalLong insgesamt = dashboardRepository.ueberfaelligInsgesamt(mandant, jetzt);
-    if (imFenster.isEmpty() || insgesamt.isEmpty()) {
-      return UeberfaelligkachelResponse.nichtErmittelbar();
+  private OffeneKachelResponse offeneKachel(
+      MandantContext mandant, MessageStatusKind einordnung, LocalDateTime jetzt) {
+    return dashboardRepository
+        .offeneNachrichten(mandant, einordnung)
+        .map(
+            stand ->
+                OffeneKachelResponse.von(stand.anzahl(), alterSekunden(stand.aelteste(), jetzt)))
+        .orElseGet(OffeneKachelResponse::nichtErmittelbar);
+  }
+
+  /** Der Abstand in ganzen Sekunden, {@code null} bei fehlendem Wert und bei negativem Abstand. */
+  private static Long alterSekunden(LocalDateTime aelteste, LocalDateTime jetzt) {
+    if (aelteste == null) {
+      return null;
     }
-    return UeberfaelligkachelResponse.von(imFenster.getAsLong(), insgesamt.getAsLong());
+    long sekunden = Duration.between(aelteste, jetzt).toSeconds();
+    return sekunden < 0 ? null : sekunden;
   }
 
   private KachelnResponse kacheln(
-      List<Rollupsumme> summen, UeberfaelligkachelResponse ueberfaellig) {
+      List<Rollupsumme> summen, OffeneKachelResponse laeuft, OffeneKachelResponse wartend) {
     long nachrichten = 0;
     long fehler = 0;
     Map<String, Long> jeRohwert = new LinkedHashMap<>();
@@ -343,6 +368,7 @@ public class DashboardService {
                         Comparator.nullsLast(Comparator.naturalOrder())))
             .toList();
 
-    return new KachelnResponse(nachrichten, new FehlerkachelResponse(fehler, arten), ueberfaellig);
+    return new KachelnResponse(
+        nachrichten, new FehlerkachelResponse(fehler, arten), laeuft, wartend);
   }
 }

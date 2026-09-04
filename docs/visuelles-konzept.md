@@ -57,6 +57,29 @@ der jeder Nutzer ankommt, und sie umzudeuten kostet mehr, als jede Gestaltung ge
 | `--status-offen` | wartend, laufend, **aufgeteilt, zusammengeführt** | Neutral | Kein Ergebnis, kein Problem. Farbe wäre hier eine Aussage, die es nicht gibt — `SPLITTED` und `MERGED` machen zusammen rund ein Drittel aller Zeilen aus. **Beide teilen sich seit dem 11.08.2026 diese eine Rolle, obwohl sie zwei Statusarten sind:** Der Unterschied zwischen „aufgeteilt" und „zusammengeführt" ist keine Aussage über *gut oder schlecht*, und nur die trägt eine Farbe. Er steckt in Beschriftung und Zeichen. |
 | `--status-ungeklaert` | unbekannter Statuswert | Neutral, gedämpft | „Nicht zugeordnet heißt nicht zugeordnet" (Regel Q4). Ein geratener Wert wäre schlimmer als sichtbare Zurückhaltung. |
 
+> ### ⚠️ Tokenname und Beschriftung fallen auseinander — seit dem 04.09.2026 mit Absicht (E‑82)
+>
+> **Die Namen in der Spalte „Rolle" sind Tokennamen und keine Oberflächentexte.** Bei zwei von
+> ihnen ist das jetzt sichtbar, und es ist **kein Rest, der nachzuziehen wäre**:
+>
+> | Token | Beschriftung in der Oberfläche | bis 04.09.2026 |
+> |---|---|---|
+> | `--status-offen` | **„Ohne Ergebnis"** | „Offen" |
+> | `--status-abgeschlossen` | **„Erledigt"** | „Abgeschlossen" |
+>
+> **Der Grund ist E‑82:** Eine Farbrolle, die mehrere Einordnungen bündelt, trägt eine
+> Beschriftung, die für **alle** ihre Mitglieder gilt und **keines** von ihnen wiederholt. „Offen"
+> galt für zwei ihrer vier Mitglieder nicht — `AUFGETEILT` und `ZUSAMMENGEFUEHRT` sind
+> **Endstatus** ([`message-status.md`](message-status.md)) —, und „Abgeschlossen" war der Name
+> einer ihrer beiden Einordnungen. Der Befund steht in
+> [`dashboard-frontend.md`](dashboard-frontend.md) §5.2.
+>
+> **Der Tokenname wird nicht nachgezogen, und die Zeile darüber bleibt richtig.** *„Kein Ergebnis,
+> kein Problem"* begründet die Rolle unverändert; sie ist eine Aussage über **Neutralität** und war
+> nie eine über Offenheit. Der Token steht in `globals.css`, in `lib/status-farbe.ts` und in
+> `tests/farbwerte.test.ts` — ihn umzubenennen wäre eine Änderung an drei Stellen, die keine Frage
+> beantwortet. **Wer die beiden wieder angleichen will, liest zuerst diesen Kasten.**
+
 Jede Rolle hat drei Werte: Vordergrund, `-flaeche` und `-kontur`. Damit lässt sich ein Status als
 Text, als Plakette oder als Zeilenmarkierung zeigen, ohne dass irgendwo ein vierter Wert erfunden
 wird.
@@ -152,6 +175,28 @@ Grenze der Farbe und bewusst nicht heimlich umgangen worden.
 
 Der Akzent trägt Schaltflächen, den Fokusring und die aktive Navigationszeile — also alles, was die
 Anwendung über sich selbst sagt, und nichts, was sie über die Daten sagt.
+
+> ### Nachtrag vom 04.09.2026 — er trägt seither **eine** Zahl, und zwar aus diesem Grund
+>
+> Die Fläche des Verlaufsdiagramms auf der Übersichtsseite ist `--akzent`, ihre Oberkante
+> `--akzent-schrift` (Entscheidung **E‑84**, [`dashboard-frontend.md`](dashboard-frontend.md)
+> §5.2). Der Satz oben liest sich damit zunächst wie ein Widerspruch: Dort steht Akzent auf Daten.
+>
+> **Er ist keiner, sondern die Anwendung des Satzes.** Die Fläche trägt eine **Gesamtsumme**, und
+> eine Summe hat keinen Status. Jede der vier Statusrollen behauptete über ihr etwas, das die Zahl
+> nicht trägt — `--status-abgeschlossen` „alles fertig", `--status-offen` das Gegenteil. Gebraucht
+> wurde genau eine Farbe, die **nichts** über die Daten sagt, und der Akzent ist im ganzen Bestand
+> die einzige.
+>
+> **Was der Satz weiterhin ausschließt:** Akzent als *Unterscheidung* zwischen Daten. Zwei Reihen,
+> von denen eine den Akzent trägt, wären eine Aussage — die eine Reihe hier ist keine. Und die
+> Regel *„Status wird nie allein über Farbe ausgedrückt"* ist unberührt: Diese Fläche drückt
+> keinen Status aus.
+>
+> **Die Tabelle darüber ist eingehalten und nicht gedehnt.** `--akzent` steht dort als *„nur
+> Fläche"* und ist hier eine Fläche; `--akzent-schrift` steht dort für *„dünne Linien"* und ist
+> hier die Oberkante. Auch der Absatz *„Was diese Farbe nicht kann"* ist befolgt: Die gefüllte
+> Fläche bekommt genau die Kontur in `--akzent-schrift`, die er als Behebung vorschlägt.
 
 ### Die Grundfläche
 
@@ -471,8 +516,65 @@ Größe der Bedienflächen.
 - **Kein Dunkelmodus.** Der Block in `globals.css` steht nur, damit die shadcn-Komponenten
   vollständig bleiben; umgeschaltet wird nichts. Ein späterer Dunkelmodus entsteht an genau dieser
   Stelle.
+
+  > **Der Satz bleibt stehen und gilt weiter — für den *Umschalter*, nicht mehr für die *Werte*
+  > *(03.09.2026, Schritt 11a)*.** Umgeschaltet wird unverändert nichts: Es gibt keinen Umschalter,
+  > kein `src/thema/`, kein `data-thema`, und **nichts im Frontend setzt die Klasse `dark`** — das
+  > ist belegt und nicht angenommen, samt der Liste des Gesuchten in
+  > [`dunkelmodus.md`](dunkelmodus.md) §1.
+  >
+  > **Geändert hat sich, was über die Werte bekannt ist.** Sie sind jetzt gerechnet, alle
+  > fünf Rollen und alle vier Akzentstufen, und `tests/farbkontrast.test.ts` hält sie. Der
+  > zweite Halbsatz oben — *„Ein späterer Dunkelmodus entsteht an genau dieser Stelle"* — ist
+  > damit eingelöst, soweit er die Stelle betrifft; das Einschalten bleibt Schritt 11b.
+  >
+  > **Und die Runde hat den Satz an einer Stelle widerlegt, an der ihn niemand geprüft hatte:**
+  > Der Dunkelblock hielt jede Bedingung auf Anhieb, der **helle** nicht. `--status-ungeklaert`
+  > verfehlte dort die 4,5 : 1 dreifach (§7a, Nachtrag vom 03.09.2026).
+
+  > ### ⚠️ **Der Satz fällt jetzt auch für den Umschalter** *(03.09.2026, Schritt 11b)*
+  >
+  > Der Vermerk eine Zeile höher hielt den Satz *„für den Umschalter, nicht mehr für die Werte"*
+  > aufrecht. **Auch das gilt seit heute nicht mehr:** Es gibt einen Umschalter. `src/thema/`,
+  > das Cookie `overlord_thema`, drei Werte — **hell, dunkel, System** —, `data-thema` am
+  > Wurzelelement und ein Eintrag im Nutzermenü. Der Block heißt seither
+  > `html[data-thema="dunkel"]` und hat einen zweiten Zweig unter
+  > `@media (prefers-color-scheme: dark)`; die Werte stehen dabei **einmal** und beide Zweige
+  > zeigen nur um (E‑66). Ausgeschrieben in [`dunkelmodus.md`](dunkelmodus.md) §12 ff.
+  >
+  > **Gestrichen ist der Satz trotzdem nicht**, und der Grund ist derselbe wie bei allen anderen
+  > Auslassungen dieses Abschnitts: Er trägt die **Begründung**, warum ein späterer Dunkelmodus an
+  > *genau dieser einen Stelle* entsteht — in `globals.css` und nirgends sonst. Diese Begründung
+  > ist eingelöst und nicht widerlegt: **Kein Farbwert ist beim Einschalten angefasst worden**
+  > (51 aufgelöste Werte vor und nach dem Umbau, 0 Abweichungen), und in `components/ui` ist
+  > nichts geändert worden.
+  >
+  > **Was jetzt ohne Einschränkung fehlt**, ist die zweite Hälfte der Zeile: *„keine
+  > Barrierefreiheit über die Grundlagen hinaus"* — die gilt weiter.
 - **Keine Animationen** außer denen, die shadcn/ui für Schublade und Menü mitbringt. Bewegung zieht
   Aufmerksamkeit, und die gehört den Daten.
+
+  > ### ⚠️ **Eingeschränkt am 04.09.2026 — um genau zwei Stellen**
+  >
+  > **Der Satz gilt weiter, mit einer benannten Ausnahme:** Erlaubt ist Bewegung **beim Aufbau des
+  > Verlaufsdiagramms und des Fehlerstreifens** auf der Übersichtsseite, und sonst nirgends. Kein
+  > Übergang beim Überfahren, keiner beim Filtern, keiner an einer Zahl, keiner an einer Plakette.
+  >
+  > **Warum die Ausnahme dem Satz nicht widerspricht.** *„Bewegung zieht Aufmerksamkeit, und die
+  > gehört den Daten"* — der Aufbau **ist** die Aufmerksamkeit auf die Daten: Er zeigt, dass gerade
+  > neue Zahlen angekommen sind, und er zeigt es an der Stelle, an der sie stehen. Danach steht das
+  > Bild still. Ein Übergang, der bei jedem Überfahren wackelt, täte etwas anderes.
+  >
+  > **Der Ausschalter ist Teil der Ausnahme und nicht ihr Nachtrag:** Mit
+  > `prefers-reduced-motion: reduce` steht das Bild **sofort**, in beiden Diagrammen. Das ist
+  > gemessen — 0 Bilder mit Aufbau gegen 41 ohne die Vorgabe
+  > ([`dashboard-frontend.md`](dashboard-frontend.md) §5.2) — und es ist Recharts' eigene
+  > Voreinstellung, nicht ein selbst gebauter Schalter.
+  >
+  > **Die Zitate in [`nachrichtendetail.md`](nachrichtendetail.md) bleiben gültig.** Sie berufen
+  > sich an zwei Stellen auf *„keine Animation, kein Übergang"* — für das Nachrichtendetail, und
+  > dort ändert sich nichts. Die Einschränkung nennt eine Ansicht und zwei Diagramme, nicht eine
+  > Regel für die Anwendung.
 - **Keine Farbe für „überfällig" und „unquittiert".** Diese beiden Problemkategorien bleiben laut
   Regel Q3 von „Fehler" getrennt, haben aber noch keine Ansicht. Sie brauchen ab Schritt 4
   beziehungsweise 10 eine eigene Rolle — und die darf **nicht** Rot sein, sonst verschmelzen die
@@ -531,7 +633,7 @@ Vier Vorgaben standen dort, und alle vier sind eingelöst:
 |---|---|
 | **Ton** orange, höchstens 85 | **80.** Fünf Grad Luft zur Grenze sind Absicht, nicht Rest |
 | **Umfang** drei Werte | Vordergrund, `-flaeche`, `-kontur` — im hellen **und** im dunklen Block |
-| **Nachzurechnen** | `scripts/farbrolle-ueberfaellig/rechne.mjs`. **Jede Zahl unten stammt aus seinem Lauf** |
+| **Nachzurechnen** | `scripts/farbrolle-ueberfaellig/rechne.mjs`. **Jede Zahl unten stammt aus seinem Lauf** *(der Ordner heißt seit dem 03.09.2026 `scripts/farbwerte/` — derselbe Lauf, dieselben Zahlen, die Gegenprobe unverändert)* |
 | **Zeitpunkt** spätestens beim Dashboard | **vor** dem Dashboard-Frontend, in einem eigenen Schritt und nicht nebenbei |
 
 ##### Die Werte
@@ -617,6 +719,37 @@ shadcn-Komponenten vollständig bleiben". Die drei neuen Werte sind trotzdem ger
 gespiegelt; sie halten alle Kontrastbedingungen gegen `--card` 0.21 und `--background` 0.16 ein.
 **Wer den Dunkelmodus einschaltet, rechnet den ganzen Block nach — nicht nur diese Rolle.**
 
+> #### ✔ Der letzte Satz ist eingelöst *(03.09.2026, Schritt 11a)*
+>
+> **Der ganze Block ist nachgerechnet** — fünf Rollen zu je drei Werten und vier Akzentstufen, in
+> beiden Blöcken, mit `scripts/farbwerte/rechne.mjs` (so heißt
+> `scripts/farbrolle-ueberfaellig/` seither). Vollständig in [`dunkelmodus.md`](dunkelmodus.md) §3.
+> Vier Ergebnisse, und das erste war nicht erwartet:
+>
+> 1. **Der Dunkelblock hält jede Bedingung, ohne dass ein Wert geändert werden musste.** Alle
+>    **fünf** Vordergründe tragen ≥ 4,5 : 1 auf ihrer Fläche, auf `--card` und auf `--background`
+>    — fünfzehn Bedingungen, fünfzehnmal gehalten; der knappste ist `--status-ungeklaert` mit
+>    4,75 : 1. **Nachgerechnet worden ist er, geändert nicht** (E‑63).
+> 2. **Der *helle* Block hielt sie nicht.** `--status-ungeklaert` `oklch(0.58 0 0)` erreichte
+>    **4,04 / 4,28 / 4,10** — dreifach unter der Schwelle, und die Rolle ist Schrift. Sie steht
+>    seit dem 03.09.2026 auf `oklch(0.55 0 0)` (4,58 / 4,85 / 4,65). Das ist die **einzige**
+>    Wertänderung dieser Runde, und sie betrifft nicht den Block, um den es ging (E‑62).
+> 3. **Die 0,117 sind bestätigt.** Sie bleiben die kürzeste Strecke zum Akzent im ganzen Bestand;
+>    das dunkle Grün mit 0,139 folgt, dann `--status-offen` mit 0,164. Die drei Werte von
+>    `--ueberfaellig` sind Ziffer für Ziffer nachgerechnet und **unverändert**.
+> 4. **Befund 4 unten gilt im Dunkelblock genauso** — vier von fünf Konturen verfehlen die 3 : 1,
+>    dieselbe eine erfüllt sie (3,31 : 1). Sie liegen dort nur enger beieinander: 1,40 bis 2,00
+>    statt 1,35 bis 1,57.
+>
+> ⚠️ **Und die Sichtprobe hat etwas gefunden, was die Rechnung nicht sagt.** Bei *gleicher*
+> Helligkeit (beide L 0.7) trägt das dunkle Gold **6,53 : 1** auf `--card` gegen **6,16 : 1** beim
+> Rot — im hellen Block ist es umgekehrt. Die Rangfolge zwischen Überfällig und Fehler **kippt
+> zwischen den Blöcken**, und die Gleichheit der Helligkeit, die oben als *die eine gestalterische
+> Entscheidung* eingeführt wird, trägt die Gleichrangigkeit aus Regel Q3 damit **nicht**. OKLab
+> bildet den Helmholtz-Kohlrausch-Effekt konstruktionsbedingt nicht ab. Offener Punkt **122**,
+> ausgeschrieben in [`dunkelmodus.md`](dunkelmodus.md) §6.2 — **aufzulösen wäre er nur für alle
+> fünf Rollen zugleich**, genau wie Befund 4 es unten für die Konturen sagt.
+
 ##### ⚠️ Befund 4: **Keine** der vier bestehenden Konturen erfüllt die 3 : 1 aus WCAG 1.4.11
 
 Gemessen gegen `--card`:
@@ -657,6 +790,50 @@ das ist die Methode aus §3 und keine andere.
 einen Hex-Rückfall. Im gebauten CSS stehen `#886108`, `#fcf0dd`, `#b88513`, `#cb9317`, `#312103`,
 `#8b640f` — dieselben sechs Werte, die das Skript ausrechnet, Ziffer für Ziffer.
 
+##### ⚠️ Die Rolle hat seit dem 03.09.2026 keinen Verbraucher mehr — und bleibt *(E‑77)*
+
+**Die Problemkategorie *Überfällig* ist widerlegt und aus dem MVP genommen** (E‑71,
+[`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §4.2 Punkt 2). Damit gibt es **nichts mehr, was
+`--ueberfaellig` einfärben könnte**: kein Feld im Nachrichtendetail, keine Kachel im Dashboard,
+keine Plakette in der Liste.
+
+| | |
+|---|---|
+| **Die drei Werte bleiben in `globals.css`** | unverändert, in beiden Blöcken, samt der Zuordnung in `lib/status-farbe.ts` |
+| **Sie sind als *ohne Verbraucher* gekennzeichnet** | hier, und nur hier — im CSS steht kein Vermerk, weil ein Kommentar dort niemanden erreicht, der die Rolle sucht |
+| **Die vier Befunde und die Rechnung bleiben** | Sie sind die teuerste Arbeit dieses Abschnitts, und sie sind **nicht** an die Kategorie gebunden: Befund 1 bis 3 sind Aussagen über den **Farbraum**, Befund 4 über **alle fünf** Konturen |
+
+**Warum sie nicht gelöscht wird.** Sie ist der Beleg für den Tag, an dem *„hängt zu lange"* mit
+einer **echten Schwelle** zurückkommt — als offener Punkt 130 in [`dashboard.md`](dashboard.md) §11
+geführt. Eine Rolle, die gerechnet, gegengeprobt und in zwei Blöcken belegt ist, wegzuwerfen und
+später neu zu rechnen, wäre derselbe Aufwand ein zweites Mal und dazu ein zweites Ergebnis.
+
+**Der Preis, und er ist zu benennen:** Im Bestand steht damit ein Farbtoken, das nichts färbt. Wer
+`--ueberfaellig` sucht, findet drei Werte, eine Zuordnung und keinen Aufruf. **Genau deshalb steht
+dieser Kasten hier** — er ist die Antwort auf die Frage, die dann kommt.
+
+> ### ✔ Ausgeführt am 03.09.2026 (Schritt 10b‑5)
+>
+> Am Tag von E‑77 war die Rolle **im Backend** ohne Verbraucher; die **Oberfläche** las sie noch —
+> die Kachel *Überfällig* und die Plakette in „Zuletzt aufgefallen" färbten sich weiterhin darüber,
+> weil 10b‑4 ein Backend-Schritt war und die Ansicht nicht angefasst hat. **Seit 10b‑5 sind auch
+> diese beiden fort** ([`dashboard-frontend.md`](dashboard-frontend.md) §5.4 und §5.6).
+>
+> | | |
+> |---|---|
+> | **Was gefallen ist** | die beiden Aufrufe von `problemKlassenOhneKontur` — die Kachel und die Plakette. Und aus den Sprachdateien der Block `problem` mit dem Wort *Überfällig*: Sein Hinweistext behauptete eine abgelaufene **Frist**, und seit E‑76 gibt es an einer wartenden Nachricht keine |
+> | **Was bleibt** | die **drei Werte in `globals.css`, in beiden Blöcken**, und die Zuordnung in `lib/status-farbe.ts` — `Problemkategorie`, `PROBLEM_ZUORDNUNG`, `problemKlassen`, `problemKlassenOhneKontur`. Unverändert |
+> | **Warum der Text fällt und die Farbe nicht** | Die Rolle ist **gerechnet und gegengeprobt** — sie wegzuwerfen und später neu zu rechnen wäre derselbe Aufwand ein zweites Mal und dazu ein zweites Ergebnis. Ein übersetztes Wort ist an dem Tag, an dem eine echte Schwelle zurückkommt, in einer Minute wieder da |
+> | **Nachgesehen** | Weder `tests/farbwerte.test.ts` noch `tests/farbkontrast.test.ts` setzt einen Verbraucher voraus: Der eine sucht Farbwerte **in Komponenten**, der andere liest die Werte **aus `globals.css`**. Beide laufen unverändert grün, **keine Ausnahme eingetragen** |
+>
+> **Damit ist der Preis oben eingelöst statt beschrieben:** Wer `--ueberfaellig` heute sucht, findet
+> drei Werte, eine Zuordnung, diesen Kasten — und keinen einzigen Aufruf mehr, auch nicht im
+> Frontend.
+
+> **Dasselbe gilt im Backend für `MessageStatusClassifier.TIMEOUT_EINHEIT`**, und aus demselben
+> Grund: Die Einheit ist über M8 teuer belegt, hat seit E‑71 keinen Verbraucher im Anwendungscode
+> und bleibt stehen. Ihr einziger Leser ist der Test.
+
 ##### Was hier ausdrücklich **nicht** geändert worden ist
 
 **Das Nachrichtendetail bleibt farblos.** §10.4 dort zeigt *überfällig* über Zeichen, Wort und
@@ -668,6 +845,16 @@ dem MVP genommen und hat bis heute keine operative Definition. Eine Farbe dafür
 nichts.
 
 ### Offener Punkt 88 — das Nachrichtendetail zieht die Farbe nicht nach
+
+> ### ✔ Gegenstandslos seit dem 03.09.2026 *(E‑71)*
+>
+> **Der Punkt ist nicht erledigt, sondern entfallen.** Er verlangte, die Farbe im Nachrichtendetail
+> nachzuziehen; das Feld `ueberfaellig` gibt es dort nicht mehr, und die Wartezeile wird nie mehr
+> hervorgehoben ([`nachrichtendetail.md`](nachrichtendetail.md) §10.4).
+>
+> **Er bleibt stehen, weil seine Begründung überlebt:** *Ein Schritt, der eine Farbe definiert,
+> ändert keine abgenommene Ansicht mit.* Genau nach dieser Regel ist auch 10b‑4 verfahren — es ist
+> ein Backend-Schritt und hat die Oberfläche nicht angefasst.
 
 *Aufgenommen am 31.08.2026 (Schritt 10b‑3a). Projektweit höchste bis dahin vergebene Nummer: 87
 ([`dashboard.md`](dashboard.md) §11).*
@@ -684,7 +871,7 @@ nichts.
 |---|---|---|
 | Andere Akzentfarbe | `src/app/globals.css`, die vier Werte `--akzent*` | vier Zeilen, **nachrechnen** |
 | Anderes Grün für „abgeschlossen" | `globals.css`, drei Werte `--status-abgeschlossen*` | drei Zeilen |
-| Anderes Orange für „überfällig" | `globals.css`, drei Werte `--ueberfaellig*` je Block | sechs Zeilen, **nachrechnen** — `scripts/farbrolle-ueberfaellig/rechne.mjs` prüft die vier Bedingungen und berichtet die Abstände (§7a) |
+| Anderes Orange für „überfällig" *(die Rolle hat seit dem 03.09.2026 keinen Verbraucher, §7a)* | `globals.css`, drei Werte `--ueberfaellig*` je Block | sechs Zeilen, **nachrechnen** — `scripts/farbwerte/rechne.mjs` prüft die vier Bedingungen und berichtet die Abstände (§7a). *Der Ordner hieß bis zum 03.09.2026 `farbrolle-ueberfaellig`; seit er den ganzen Bestand rechnet, trägt er den allgemeinen Namen.* Zusätzlich hält seither `tests/farbkontrast.test.ts` die Kontraste **beider** Blöcke |
 | Status bekommt eine andere Rolle | `src/lib/status-farbe.ts`, Tabelle `ZUORDNUNG` | eine Zeile |
 | Eine Problemkategorie bekommt eine andere Rolle | `src/lib/status-farbe.ts`, Tabelle `PROBLEM_ZUORDNUNG` | eine Zeile |
 | Andere Stufenwerte des Dichteumschalters | `globals.css`, die vier `html[data-dichte="…"]` | vier Zeilen, **nachmessen** — `tests/dichte.test.ts` rechnet die Mindestfläche nach, aber ob die Nachrichtenliste, der Belegdaten-Block und der Recharts-Baum die neue Stufe tragen, sagt kein Test ([`dichte-umschalter.md`](dichte-umschalter.md) §5) |
@@ -693,7 +880,49 @@ nichts.
 | Breitere oder schmalere Beschriftungsspalte | `globals.css`, `--dichte-beschriftung` | eine Zeile, **im Panel nachsehen** |
 | Schmalere oder breitere Navigationsspalte | `globals.css`, `--dichte-navspalte` | eine Zeile |
 | Andere Schrift | `src/app/layout.tsx` (`next/font`) | zwei Zeilen |
-| Dunkelmodus | `globals.css`, Block `.dark`, plus ein Umschalter | überschaubar |
+| Dunkelmodus | ~~`globals.css`, Block `.dark`, plus ein Umschalter~~ **`globals.css`, die Werte `--dunkel-*` unter `:root` — gebaut, siehe darunter** | ~~überschaubar~~ **gerechnet und gebaut, siehe darunter** |
+
+> ### ⚠️ Die Zeile „Dunkelmodus" trug eine Schätzung. Jetzt trägt sie eine Zahl *(03.09.2026)*
+>
+> Der Aufwand ist in **11a** erhoben worden und teilt sich in zwei Hälften, von denen die erste
+> erledigt ist ([`dunkelmodus.md`](dunkelmodus.md)):
+>
+> | | Was | Aufwand, gemessen |
+> |---|---|---|
+> | **11a — die Werte** ✔ | den Block nachrechnen, belegen, von einem Test halten lassen | **Null Zeilen im Dunkelblock.** Er hielt jede Bedingung. Was entstanden ist: das erweiterte Skript, `tests/farbkontrast.test.ts` (69 Fälle), der ausgelagerte CSS-Leser — und **eine** geänderte Zeile im *hellen* Block, weil dort eine Unterschreitung lag |
+> | **11b — der Umschalter** | `src/thema/` (Cookie, Server-Aktion, Provider), Eintrag im Nutzermenü, Zeichenketten in beiden Sprachdateien, die Umzeigung des Selektors, die dritte Wahl *System* | **noch nicht erhoben.** Als Maßstab dient der Dichteumschalter: dieselbe Bauform, dieselben sechs Dateien ([`dichte-umschalter.md`](dichte-umschalter.md) §6) — und dessen offene Punkte 100 bis 103 gelten dann sinngemäß mit |
+>
+> **„Überschaubar" war für 11a richtig und für 11b unbelegt.** Der teure Teil ist nicht die
+> Farbe, sondern der Weg zur Wahl.
+>
+> ⚠️ **Der Selektor in dieser Zeile wechselt.** Mit Entscheidung **E‑59** vom 03.09.2026 steht der
+> Modus in 11b als **Attribut `data-thema`** am Wurzelelement, gesetzt im Wurzel-Layout aus dem
+> Cookie; die `dark`-Variante wird in `globals.css` einmal umgezeigt, damit der Generatorbereich
+> unverändert weiterläuft. Verworfen wurde die `.dark`-Klasse: Sie liefe ohne Zutun, stellte aber
+> zwei Nutzereinstellungen am selben Element in zwei Bauformen nebeneinander — `data-dichte` ist
+> ein Attribut —, und eine Klasse ist eine Menge, in der ein dritter Wert *System* keine Stelle
+> hat. **In 11a heißt der Block weiterhin `.dark`;** der Vermerk steht schon jetzt hier, damit ihn
+> in 11b niemand als Vorgabe liest und die Klasse baut.
+>
+> > ### ✅ **Eingelöst am 03.09.2026 (11b) — und der Aufwand ist jetzt erhoben**
+> >
+> > Der Vermerk oben hat getan, wofür er dastand: In 11b ist die Klasse **nicht** gebaut worden.
+> > `globals.css` kennt seither `html[data-thema="hell" | "dunkel" | "system"]` und keinen
+> > `.dark`-Block mehr.
+> >
+> > **Und die Zeile „11b — der Umschalter · noch nicht erhoben" trägt jetzt Zahlen:**
+> >
+> > | | Was entstanden ist |
+> > |---|---|
+> > | **Code** | `src/thema/` (vier Dateien, dieselbe Vierteilung wie `dichte/`), `components/thema-umschaltung.tsx`, je ein Eintrag in `i18n/de.ts` und `en.ts`, drei Zeilen in `layout.tsx`/`providers.tsx`/`nutzermenue.tsx` |
+> > | **`globals.css`** | die `@custom-variant` in Blockform, **50 Werte** als `--dunkel-*` unter `:root` und **zweimal 50 Umzeigungen** — die Datei wird dabei **länger**, nicht kürzer (E‑66) |
+> > | **Tests** | `tests/thema.test.ts` (23 Fälle); `farbkontrast.test.ts` liest über ein Präfix statt über zwei Selektoren und bleibt bei **69 Fällen** |
+> > | **Nicht angefasst** | **kein Farbwert** — 51 aufgelöste Werte vor und nach dem Umbau, 0 Abweichungen. `components/ui` unberührt, kein `shadcn add` |
+> >
+> > **Der teure Teil war weder die Farbe noch der Weg zur Wahl, sondern die zweite Bedingung:**
+> > *System* verlangt einen Zweig, den kein Selektor mit dem ersten teilen kann. Ausgeschrieben in
+> > [`dunkelmodus.md`](dunkelmodus.md) §12; die offenen Punkte 100 bis 103 des Dichteumschalters
+> > gelten sinngemäß mit und stehen dort als **127** bis **129**.
 
 Keine dieser Änderungen fasst eine Komponente an. Der Wechsel auf `#b9c022` ist der Beleg: Er hat
 ausschließlich `globals.css` berührt.

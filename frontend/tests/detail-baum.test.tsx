@@ -93,7 +93,6 @@ function detail(werte: Partial<Nachrichtendetail> = {}): Nachrichtendetail {
     offenerZustand: "KEINER",
     naechsterSchritt: null,
     wartetSeitSekunden: null,
-    ueberfaellig: false,
     schritte: [],
     kuratierteEigenschaften: [],
     ...werte,

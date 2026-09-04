@@ -7,6 +7,8 @@ import { DICHTESTUFEN, STANDARDDICHTE, dichteAus, type Dichtestufe } from "@/dic
 import { de } from "@/i18n/de";
 import { en } from "@/i18n/en";
 
+import { stilblatt, type Regel } from "./hilfe/css-leser";
+
 /**
  * Der Dichteumschalter — **rechnerisch geprüft, ohne Ansicht.**
  *
@@ -46,10 +48,18 @@ import { en } from "@/i18n/en";
  * Der Grund war immer derselbe: Die alte Fassung prüfte, dass Zeichenfolgen
  * **vorkommen**, nie, dass sie **wirken**. Ein Wertetest, kein Lagetest.
  *
- * **Deshalb steht unten ein kleiner CSS-Leser.** Er entfernt zuerst die
+ * **Deshalb steht ein kleiner CSS-Leser dahinter.** Er entfernt zuerst die
  * Kommentare, zerlegt die Datei dann in Regeln **mit ihrer Verschachtelung** und
  * beantwortet damit die Frage, die eine Regex nicht beantworten kann: *in
  * welchem Block steht das?* Geprüft wird seither beides — der Wert und die Lage.
+ *
+ * **Er stand bis zum 03.09.2026 in dieser Datei** und liegt seither in
+ * `tests/hilfe/css-leser.ts`: `tests/farbkontrast.test.ts` braucht denselben,
+ * und zwei Kopien wären zwei Pflegestellen. Verändert hat sich dabei nichts —
+ * die Aufrufstellen unten sind Zeichen für Zeichen dieselben geblieben, und
+ * dass die Zusicherungen weiter durchlaufen, ist der Beleg. (`docs/dichte-umschalter.md`
+ * §7 zählt siebenundzwanzig; `vitest` meldet 31 Fälle, weil `it.each` sie aufspannt —
+ * dieselbe Menge, zweimal gezählt.)
  *
  * **Ein Wirkungstest im Browser wird er dadurch nicht.** Was die Regeln am
  * laufenden System tatsächlich bewirken, steht gemessen in
@@ -76,104 +86,10 @@ const BROWSERVORGABE = 16;
 const MINDESTFLAECHE = 44;
 
 // ───────────────────────────────────────────────────────────────────────────
-// Ein sehr kleiner CSS-Leser
+// Der CSS-Leser steht in `tests/hilfe/css-leser.ts` — siehe den Kopf oben.
 // ───────────────────────────────────────────────────────────────────────────
 
-/**
- * Ersetzt jeden Kommentar durch **gleich viele Leerzeichen**.
- *
- * Gleich viele, damit sich keine Position verschiebt — und ersetzt statt
- * übersprungen, damit ein auskommentierter Block nicht mehr wie ein vorhandener
- * aussieht. Genau daran ist die erste Fassung gescheitert.
- */
-function ohneKommentare(css: string): string {
-  return css.replace(/\/\*[\s\S]*?\*\//g, (treffer) => " ".repeat(treffer.length));
-}
-
-const CSS = ohneKommentare(CSS_ROH);
-
-type Regel = {
-  /** Der Selektor bzw. die At-Regel, etwa `:root` oder `@media (pointer: coarse)`. */
-  selektor: string;
-  /** Die umschließenden Selektoren, von außen nach innen. */
-  pfad: readonly string[];
-  /** Nur die eigenen Deklarationen — verschachtelte Blöcke sind entfernt. */
-  eigene: string;
-};
-
-function passendeKlammer(css: string, auf: number): number {
-  let tiefe = 0;
-  for (let i = auf; i < css.length; i++) {
-    if (css[i] === "{") tiefe++;
-    else if (css[i] === "}" && --tiefe === 0) return i;
-  }
-  throw new Error(`Keine schließende Klammer zu Position ${auf} — ist globals.css unvollständig?`);
-}
-
-/** Wirft jeden verschachtelten Block weg; übrig bleiben die eigenen Deklarationen. */
-function eigeneDeklarationen(rumpf: string): string {
-  let ergebnis = "";
-  let tiefe = 0;
-  for (const zeichen of rumpf) {
-    if (zeichen === "{") tiefe++;
-    else if (zeichen === "}") tiefe--;
-    else if (tiefe === 0) ergebnis += zeichen;
-  }
-  return ergebnis;
-}
-
-function lies(css: string, von: number, bis: number, pfad: readonly string[], hinein: Regel[]) {
-  let i = von;
-  let kopfAnfang = von;
-  while (i < bis) {
-    const zeichen = css[i];
-    if (zeichen === "{") {
-      const selektor = css.slice(kopfAnfang, i).trim().replace(/\s+/g, " ");
-      const ende = passendeKlammer(css, i);
-      hinein.push({ selektor, pfad, eigene: eigeneDeklarationen(css.slice(i + 1, ende)) });
-      lies(css, i + 1, ende, [...pfad, selektor], hinein);
-      i = ende + 1;
-      kopfAnfang = i;
-    } else if (zeichen === ";") {
-      i++;
-      kopfAnfang = i;
-    } else {
-      i++;
-    }
-  }
-}
-
-const REGELN: readonly Regel[] = (() => {
-  const gesammelt: Regel[] = [];
-  lies(CSS, 0, CSS.length, [], gesammelt);
-  return gesammelt;
-})();
-
-/** Steht die Regel unter einer Bedingung, die am Bildschirm nicht immer gilt? */
-function bedingt(regel: Regel): string | null {
-  return (
-    [...regel.pfad, regel.selektor].find(
-      (teil) => teil.startsWith("@media") || teil.startsWith("@supports") || /\.dark\b/.test(teil),
-    ) ?? null
-  );
-}
-
-/** Alle Regeln, deren **eigene** Deklarationen das Token setzen. */
-function setzer(token: string): Regel[] {
-  const muster = new RegExp(`(^|[;\\s])${token}\\s*:`);
-  return REGELN.filter((regel) => muster.test(regel.eigene));
-}
-
-/** Der Wert eines Tokens in den eigenen Deklarationen einer Regel — genau einmal. */
-function wert(regel: Regel, token: string): string {
-  const treffer = [...regel.eigene.matchAll(new RegExp(`${token}\\s*:\\s*([^;]+);`, "g"))];
-  expect(
-    treffer.length,
-    `${token} steht ${treffer.length}-mal in \`${regel.selektor}\`. ` +
-      `Bei zwei Deklarationen gewinnt in der Kaskade die zweite, und dieser Test läse die erste.`,
-  ).toBe(1);
-  return treffer[0][1].trim();
-}
+const { css: CSS, regeln: REGELN, setzer, wert, bedingt } = stilblatt(CSS_ROH);
 
 /**
  * Wertet eine CSS-Länge in Pixeln aus — `rem`, `px` und `max(…)` daraus.

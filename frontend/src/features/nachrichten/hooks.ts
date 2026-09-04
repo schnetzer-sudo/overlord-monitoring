@@ -45,7 +45,6 @@ import { PROZESSANSICHT_PARAMETER, type Prozessansichtzustand } from "./prozessa
 import {
   NACHRICHTEN_PARAMETER,
   alsAbfrage,
-  ohneUeberfaelligBeiStatus,
   type Nachrichtenfilter,
   type Sortierung,
   type Statusart,
@@ -158,24 +157,8 @@ export function useNachrichtenfilter() {
       () => setzeZeitfenster(ohneZeitfenster()),
       [setzeZeitfenster],
     ),
-    /**
-     * **Eine Statuswahl beendet die Überfälligkeitsform.** Die Regel steht als
-     * reine Funktion in `filter.ts` ({@link ohneUeberfaelligBeiStatus}) und
-     * nicht hier — sie ist eine Entscheidung und keine Verdrahtung.
-     */
     setzeStatus: useCallback(
-      (status: Statusart[]) => void setzeFilter(ohneUeberfaelligBeiStatus(status)),
-      [setzeFilter],
-    ),
-    /**
-     * Beendet die Überfälligkeitsform. **Nur in diese Richtung:** Eingeschaltet
-     * wird sie ausschließlich über einen Verweis von außen — heute aus der
-     * Kachel des Dashboards. Eine Schaltfläche dafür in der Filterleiste wäre
-     * eine Gestaltungsentscheidung über die Liste und gehört in deren eigenen
-     * Schritt.
-     */
-    setzeUeberfaellig: useCallback(
-      (ueberfaellig: boolean) => void setzeFilter({ ueberfaellig }),
+      (status: Statusart[]) => void setzeFilter({ status: status.length === 0 ? null : status }),
       [setzeFilter],
     ),
     setzeProzesse: useCallback(

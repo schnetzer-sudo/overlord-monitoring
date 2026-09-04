@@ -1002,6 +1002,45 @@ eine `MessageAction` mit `SOSActionTimeout = 0` trägt (52 Zeilen) neben 149 Zei
 > damit auf die falsche Grundgesamtheit — nicht auf die Nachrichten, an denen `MessageTimeout`
 > tatsächlich abläuft.
 
+> ### ⚠️ Belegvermerk, nachgetragen am 03.09.2026 (Regel L10) — **der Satz oben ist zu stark**
+>
+> **Er bleibt im Wortlaut stehen.** Er hat die Einheitenfrage richtig entschieden, und die
+> Belegkette darunter trägt unverändert. **Zu stark ist er in einem Punkt**, und der ist erst
+> aufgefallen, als eine fachliche Auskunft des Auftraggebers vom 03.09.2026 dieselbe Spalte betraf.
+>
+> > *Gemessen war:* ein **Vorfall** mit `n = 49` von 52. M22 hat die 52 `ERROR_TIMEOUT`-Nachrichten
+> > zeitlich aufgeschlüsselt: **49 davon liegen am 30.12.2025 in einer Spanne von 62 Sekunden**, an
+> > genau einem Tag, und nur sie tragen eine offene Aktion. Die übrigen drei sind Einzelfälle an
+> > drei aufeinanderfolgenden Samstagen.
+> >
+> > *Behauptet wurde:* eine Eigenschaft **des Status** — dass `ERROR_TIMEOUT` nicht durch Ablaufen
+> > von `MessageTimeout` entsteht.
+> >
+> > **Die Lücke:** Belegt ist, dass **diese** 52 nicht durch Fristablauf entstanden sind. Nicht
+> > belegt ist, dass der Status **so nicht entsteht**. Aus 49 gleichzeitigen Zeilen eines einzigen
+> > Vorfalls folgt keine Aussage über den Normalbetrieb.
+>
+> **Die Messung sagt es selbst, und der Satz steht unmittelbar darüber:** *„Die Messung zielte damit
+> auf die falsche Grundgesamtheit — nicht auf die Nachrichten, an denen `MessageTimeout`
+> tatsächlich abläuft."* **Genau diese Grundgesamtheit ist nie gemessen worden**, und sie ist auf
+> der Testkopie auch nicht zu bekommen: `RUNNING` kommt dort null Mal vor.
+>
+> #### Es gibt offenbar zwei Wege in denselben Status
+>
+> | Weg | Frist | belegt durch |
+> |---|---|---|
+> | eine **kurze Dienstfrist** | höchstens 120 s nach dem Start der letzten Aktion | M8 (a), gemessen an 52 von 52 |
+> | der **Wächter** auf `RUNNING` | `MessageTimeout`, also 1.800 s | fachliche Auskunft des Auftraggebers vom 03.09.2026, **nicht gemessen** |
+>
+> **Beide führen zu `ERROR_TIMEOUT`, und M8 hat nur den ersten gesehen.** Das ist kein Widerspruch
+> zu dieser Messung — es ist der Grund, warum ihr Satz eine Einschränkung braucht.
+>
+> **Was daran hängt:** Der zweite Weg ist die Begründung dafür, dass die Problemkategorie
+> *Überfällig* am 03.09.2026 gefallen ist (E‑71). **Eine Auskunft, die nicht gemessen ist, stürzt
+> eine Kategorie, die auf einer Messung ruhte, welche die falsche Grundgesamtheit traf.** Beides
+> gehört nebeneinander gelesen; die offene Prüfung dazu steht in
+> [`message-status.md`](message-status.md).
+
 ### Die Gegenprobe, die entscheidet
 
 `datenmodell.md` nennt das Muster `WAIT|30M` in `SOSActionServiceProperties`. Steht daneben ein

@@ -10,13 +10,11 @@ import de.kraftwerkone.overlord.monitor.common.error.FachlicheAusnahme;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 
 /**
@@ -29,8 +27,6 @@ import org.springframework.http.HttpStatus;
  * @param fenster das Pflicht-Zeitfenster (Regel L1)
  * @param status leere Menge heisst „alle"
  * @param prozessIds ausdruecklich gewaehlte {@code ProcessID}s, leer heisst „alle"
- * @param ueberfaellig nur ueberfaellige Nachrichten (E-j). <b>Kein Filter, sondern eine zweite
- *     Abfrageform</b> — Begruendung in {@code docs/nachrichtenliste.md} §5b
  * @param suche Freitext oder {@code null}; die Aufloesung zu IDs macht das Repository
  * @param langeSuche ob die Fenstergrenze der Suche bewusst aufgehoben wurde. Wirkt nur zusammen mit
  *     {@code suche} und hebt sie nur bis {@link #SUCHE_FENSTER_LANG}.
@@ -40,7 +36,6 @@ public record NachrichtenFilter(
     Zeitfenster fenster,
     Set<MessageStatusKind> status,
     List<String> prozessIds,
-    boolean ueberfaellig,
     String suche,
     boolean langeSuche,
     Sortierrichtung sortierung,
@@ -116,21 +111,18 @@ public record NachrichtenFilter(
   /** Die Vorgabe: Die Grenze steht. */
   public static final boolean LANGE_SUCHE_VORGABE = false;
 
-  /** Die Vorgabe von {@code ueberfaellig}: aus. Die Liste zeigt jede Zeile des Fensters. */
-  public static final boolean UEBERFAELLIG_VORGABE = false;
-
-  /**
-   * Die Einordnungen, die ueberhaupt ueberfaellig werden koennen — {@link
-   * MessageStatusKind#WARTEND} und {@link MessageStatusKind#LAEUFT}.
+  /*
+   * Hier standen bis zum 03.09.2026 `UEBERFAELLIG_VORGABE` und `UEBERFAELLIG_MOEGLICH`, dazu der
+   * Bestandteil `ueberfaellig` und die Pruefung `pruefeUeberfaelligMitStatus`. Sie sind mit E-71
+   * entfallen: Die Problemkategorie `Ueberfaellig` ist durch eine fachliche Auskunft des
+   * Auftraggebers vom 03.09.2026 widerlegt.
    *
-   * <p><b>Aufgezaehlt und nicht ueber {@code MessageStatusClassifier.istEndstatus} gezogen</b>, und
-   * das ist hier bewusst anders als in {@code MessageStatusClassifier.offeneRohwerte()}: Diese
-   * Klasse ist ein reiner Wertetyp ohne Spring-Bean im Ruecken, und die Pruefung unten braucht die
-   * Menge, bevor irgendein Dienst beteiligt ist. Damit die beiden nicht auseinanderlaufen, haelt
-   * {@code NachrichtenFilterTest} sie gegeneinander.
+   * MIT IHNEN ENTFAELLT DIE EINZIGE 400 DIESES ENDPUNKTS, DIE EINE KOMBINATION BETRAF --
+   * `ueberfaellig-und-status-unvereinbar`. Ein `?ueberfaellig=true` ist seither ein unbekannter
+   * Anfrageparameter: wirkungslos und kein Fehler, dieselbe Bauform wie ein `?mandant=...` am
+   * Dashboard. Ein alter, geteilter Link fuehrt damit auf die UNGEFILTERTE Liste und nicht auf eine
+   * Fehlerseite. Vollstaendig in docs/nachrichtenliste.md Paragraf 5e.
    */
-  static final Set<MessageStatusKind> UEBERFAELLIG_MOEGLICH =
-      Set.of(MessageStatusKind.WARTEND, MessageStatusKind.LAEUFT);
 
   public NachrichtenFilter {
     status = Set.copyOf(status);
@@ -150,7 +142,6 @@ public record NachrichtenFilter(
       String bis,
       List<String> status,
       List<String> prozess,
-      Boolean ueberfaellig,
       String suche,
       Boolean langeSuche,
       String sortierung,
@@ -170,14 +161,11 @@ public record NachrichtenFilter(
     pruefeSuchfenster(begriff, fenster, langes);
 
     Set<MessageStatusKind> gewaehlt = einordnungen(status);
-    boolean nurUeberfaellige = ueberfaellig == null ? UEBERFAELLIG_VORGABE : ueberfaellig;
-    pruefeUeberfaelligMitStatus(nurUeberfaellige, gewaehlt);
 
     return new NachrichtenFilter(
         fenster,
         gewaehlt,
         werte(prozess),
-        nurUeberfaellige,
         begriff,
         langes,
         sortierung == null ? Sortierrichtung.NEUESTE : Sortierrichtung.ausCode(sortierung),
@@ -220,46 +208,6 @@ public record NachrichtenFilter(
             + (langeSuche ? "." : " oder suche ausdruecklich ueber den laengeren Zeitraum."),
         "Suchfenster ueber der Grenze: " + angefragtTage + " statt " + grenzeTage + " Tage",
         Map.of("grenzeTage", grenzeTage, "angefragtTage", angefragtTage));
-  }
-
-  /**
-   * Die eine unvereinbare Kombination — {@code 400} mit eigenem Problemtyp.
-   *
-   * <p><b>Ueberfaellig sein kann nur, was nicht in einem Endstatus steht</b> ({@code
-   * MessageStatusClassifier.istUeberfaellig}), also allein {@link MessageStatusKind#WARTEND} und
-   * {@link MessageStatusKind#LAEUFT}. Waehlt jemand {@code ueberfaellig=true} zusammen mit einem
-   * Statusfilter, der keine dieser beiden enthaelt, ist die Antwort <b>ohne Ruecksicht auf die
-   * Daten</b> leer.
-   *
-   * <p><b>Und genau deshalb ist eine leere Liste hier die falsche Antwort.</b> Sie hiesse „in
-   * diesem Zeitfenster gibt es nichts" — eine Auskunft ueber den Bestand. Wahr ist etwas anderes:
-   * Die Frage widerspricht sich selbst, und kein Zeitfenster der Welt aendert daran etwas. Das ist
-   * derselbe Fall wie „Suchbegriff zu kurz": Die Anfrage ist so, wie sie gestellt wurde, nicht
-   * beantwortbar, und was sich aendern muss, ist die Anfrage (Richtlinie §5.5).
-   *
-   * <p><b>Ohne Statusfilter greift die Pruefung nicht.</b> Eine leere Auswahl heisst „alle" und
-   * enthaelt damit auch die offenen Status — {@code ueberfaellig=true} allein ist der Normalfall
-   * und der einzige, den die Oberflaeche heute erzeugt.
-   *
-   * <p>Die Antwort nennt die zulaessigen Werte, damit die Oberflaeche nicht dieselbe Menge ein
-   * zweites Mal kennen muss.
-   */
-  private static void pruefeUeberfaelligMitStatus(
-      boolean ueberfaellig, Set<MessageStatusKind> status) {
-    if (!ueberfaellig || status.isEmpty() || !Collections.disjoint(status, UEBERFAELLIG_MOEGLICH)) {
-      return;
-    }
-    String moeglich =
-        UEBERFAELLIG_MOEGLICH.stream().map(Enum::name).sorted().collect(Collectors.joining(", "));
-    throw new FachlicheAusnahme(
-        HttpStatus.BAD_REQUEST,
-        "ueberfaellig-und-status-unvereinbar",
-        "Ueberfaellig und Statusfilter passen nicht zusammen",
-        "Ueberfaellig kann nur sein, was noch laeuft oder wartet. Waehle einen dieser Status ("
-            + moeglich
-            + ") oder nimm den Statusfilter heraus.",
-        "ueberfaellig=true mit einem Statusfilter ohne offenen Status",
-        Map.of("moeglicheStatus", moeglich));
   }
 
   private static Set<MessageStatusKind> einordnungen(List<String> status) {

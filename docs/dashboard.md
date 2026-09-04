@@ -1,6 +1,11 @@
 # Dashboard — die Landingpage
 
-Stand: 31.08.2026 · Schritt 10b‑2 Teil D · **Backend, keine Oberfläche**
+Stand: 03.09.2026 · Schritt 10b‑4 · **Backend, keine Oberfläche**
+
+> **Was 10b‑4 geändert hat:** Die Problemkategorie *Überfällig* ist widerlegt und aus dem MVP
+> genommen (E‑71); an die Stelle ihrer Kachel treten *Läuft* und *Wartend* (§5). Alle übrigen
+> Abschnitte sind vom 31.08.2026 (Schritt 10b‑2 Teil D) und unverändert, soweit kein
+> Korrekturblock daneben steht.
 
 Der eine Endpunkt, aus dem die Landingpage entsteht. Er liest die drei Rollup-Ebenen aus
 [`rollup.md`](rollup.md), ordnet die Rohwerte über `MessageStatusClassifier` ein
@@ -56,7 +61,8 @@ Katalog etwa, weil er `ADMIN` verlangt.
     "nachrichten": 9950,
     "fehler":      { "anzahl": 50,
                      "arten": [ { "rohwert": "ERROR_TIMEOUT", "art": "TIMEOUT", "anzahl": 49 } ] },
-    "ueberfaellig":{ "imFenster": 1, "insgesamt": 538, "ermittelbar": true }
+    "laeuft":      { "anzahl": 0,   "aeltesteSekunden": null,   "ermittelbar": true },
+    "wartend":     { "anzahl": 538, "aeltesteSekunden": 579934, "ermittelbar": true }
   },
   "verteilung": { "sicht": "PARTNER",
                   "zeilen": [ { "art": "WERT", "wert": "…", "anzahl": 8608, "enthaltene": null },
@@ -72,16 +78,22 @@ Katalog etwa, weil er `ADMIN` verlangt.
 
 ---
 
-## 2. Die sieben Blöcke
+## 2. Die Blöcke — acht, und weiterhin sieben Statements
+
+> ⚠️ **Die Zahl der Statements ist dieselbe geblieben, und das ist eine Falle.** In Schritt
+> 10b‑4 sind **drei** weggefallen (zweimal *Überfällig*, die Überfälligkeitshälfte von Block 6)
+> und **drei** hinzugekommen (*Läuft*, *Wartend*, die Erscheinungsbedingung). `DashboardStatementsTest`
+> hat deshalb aufgehört zu zählen und **benennt** seither jedes Statement einzeln (§9).
 
 | # | Block | Quelle | Statements |
 |---|---|---|---:|
 | 1 | **Verlauf** je Eimer, nach Einordnung | Rollup-Ebene des Paares × Mandantenkette | 1 |
 | 2 | **Kachel Nachrichten** | *derselbe Lesevorgang wie 1* | — |
 | 3 | **Kachel Fehler** samt Aufschlüsselung nach Art | *derselbe Lesevorgang wie 1* | — |
-| 4 | **Kachel Überfällig** — zwei Zahlen | **live** über `Message` | 2 |
+| 4 | **Kachel Läuft** — Zahl und Alter der ältesten | **live** über `Message` | 1 |
+| 4a | **Kachel Wartend** — dieselben zwei Werte, dazu die Erscheinungsbedingung | **live** über `Message` bzw. `SOSAction` | 2 |
 | 5 | **Verteilung** — Partner oder Richtung | Rollup-Ebene × Mandantenkette × `process_catalog` | 1 |
-| 6 | **Zuletzt aufgefallen** | `Message`, je Merkmal ein Statement (§7a) | 2 |
+| 6 | **Zuletzt aufgefallen** | `Message`, nur noch die Fehlerbedingung (§7a) | 1 |
 | 7 | **Stand** — Zeitpunkt und Laufart | `rollup_lauf` | 1 |
 
 ### Die Einordnung entsteht beim Lesen
@@ -263,65 +275,219 @@ niemand getroffen hat.
 
 ---
 
-## 5. Überfällig — die erste benannte Ausnahme von L2
+## 5. Läuft und Wartend — die zwei benannten Ausnahmen von L2
 
-Zwei Zahlen, **beide live** über `Message`, beide über
-`MessageStatusClassifier.ueberfaelligBedingung` (gerufen, nicht nachgebaut), `jetzt` aus der
-**Anwendungsuhr** (Regel Z1):
+*Neu am 03.09.2026 (Schritt 10b‑4). Bis dahin stand hier die Kachel **Überfällig** als die erste
+benannte Ausnahme; der alte Abschnitt steht als Korrekturblock am Ende dieses Kapitels.*
 
-- **im Fenster** (E‑h) — dieselbe Zahl, die der Klick in die Liste liefert
-- **insgesamt** — ohne Zeitfenster
+Zwei Kacheln, **beide live** über `Message`, **beide ohne Zeitfenster**, je **zwei Werte aus einem
+Statement**:
 
-**Das Wort „ausschließlich" in L2 bleibt stehen, und daneben steht diese Ausnahme** (E‑c vom
-24.08.2026, [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §8). Sie ist einzeln begründet und
-einzeln gemessen.
-
-**Die zweite Zahl hat kein Zeitfenster, und das ist durch Regel L9 gedeckt:** Gefragt ist genau, was
-*außerhalb* des gezeigten Zeitraums hängt — ein Fenster schnitte die Zeilen weg, um die es geht. Sie
-ist dabei die **billigere** von beiden (M90, Befund 14): Das Zeitfenster verengt nichts, weil
-`MessageStatusIDX` bereits auf 539 von 3,34 Millionen Zeilen herunterführt.
-
-### „Nicht ermittelbar" — und nur hier
-
-Diese beiden sind die **einzigen Felder der ganzen Antwort**, die *nicht ermittelbar* zurückgeben
-dürfen. Sie sind der einzige Teil, der zur Laufzeit auf der **Produktion** live liest, wo
-`max_statement_time` nach zehn Sekunden abräumt. Der Rest kommt aus unserer eigenen Tabelle.
-**Stirbt die Live-Abfrage, darf nicht die ganze Seite sterben.**
+```sql
+SELECT COUNT(*) AS anzahl, MIN(m.MessageLastUpdate) AS aelteste
+FROM GlassfishDB.Message m
+WHERE m.MessageStatus = ?              -- 'RUNNING' bzw. 'SUSPENDED'
+  AND EXISTS ( … Mandantenkette … );
+```
 
 | | |
 |---|---|
-| **Kein allgemeiner Teilerfolg-Mechanismus** | Genau diese zwei Felder. Ein Dashboard, das jeden Block einzeln scheitern lassen kann, zeigt irgendwann eine Seite voller Lücken und nennt das eine Antwort |
-| **Gefangen wird genau eine Ausnahme** | `DataAccessException` **mit** `SQLTimeoutException` als Ursache — dieselbe Unterscheidung wie in `NachrichtenRepository.anDerZeitgrenze`. Ein Syntaxfehler, eine abgerissene Verbindung oder ein fehlendes Recht bleiben technische Fehler mit `500`. **Ein pauschales `catch` machte aus jedem Bruch eine Beruhigung** |
-| **Die beiden Zahlen fallen zusammen** | Fällt eine, ist auch die andere `null`. Sie stehen als *Paar* nebeneinander, und eine Kachel mit einer Zahl und einer Lücke lädt zu einer Rechnung ein, die nicht aufgeht |
-| **`ermittelbar: false` ist nicht `0`** | Null hieße „es hängt nichts". In einem Überwachungswerkzeug ist das die schlimmste falsche Antwort |
+| **`=` auf den Rohwert, nicht der Klassifizierer** | Die Einordnungen `LAEUFT` und `WARTEND` haben je genau **einen** Rohwert, und `MessageStatusIDX` trägt den Rohwert. Ein `IN` über eine einelementige Menge wäre derselbe Zugriff mit einer Unwahrheit darin |
+| **Der Rohwert wird trotzdem gerufen** | `MessageStatusClassifier.einzigerRohwert(einordnung)`. Ein Literal `"SUSPENDED"` im Dashboard wäre dieselbe Zuordnung ein zweites Mal, und sie driftete beim nächsten Statuswert von der Liste weg. Die Methode **wirft**, sobald eine der beiden Einordnungen einen zweiten Rohwert bekäme |
+| **Die Mandantenkette ist Bestandteil des Statements** (Regel M3) | als `EXISTS` und nicht als Join — `ProjectMandant` ist n:m, und ein Join vervielfachte Zeilen |
+| **`aeltesteSekunden` rechnet das Backend** (E‑75) | gegen die **Anwendungsuhr** (Regel Z1). Bei `anzahl = 0` ist es `null` — ohne Zeile gibt es kein Alter, und eine `0` hieße „seit null Sekunden" |
+
+### Warum das Alter der ältesten Zeile daneben steht (E‑75)
+
+**Es hat zwei Aufgaben, und die zweite ist die wichtigere.**
+
+**Erstens: Es ist die Grundlage eines Fensters, das die Oberfläche selbst wählen kann.** Eine Zahl
+ohne Alter sagt „538 warten"; mit Alter sagt sie „538 warten, die älteste seit sieben Tagen". Das
+ist der Unterschied zwischen einer Zahl und einer Auskunft, und die Kachel braucht dafür **keinen**
+zweiten Aufruf — `MIN(MessageLastUpdate)` liest denselben Indexbereich wie `COUNT(*)`.
+
+**Zweitens: Es ist die laufende Prüfung der Auskunft, auf der dieser ganze Schritt ruht.** Die Regel
+sagt, `SUSPENDED`-Nachrichten lägen „höchstens rund eine Woche". **Das Feld zeigt bei jedem Aufruf,
+ob das noch stimmt.** Steht dort eines Tages ein Alter von Monaten, ist die Auskunft widerlegt — und
+zwar dort, wo jemand hinsieht, statt in einer Messung, die niemand wiederholt.
+
+> **Das ist ausdrücklich keine Schwelle und keine Warnung.** Das Feld trägt eine Zahl und kein
+> Urteil; ob sieben Tage viel sind, entscheidet niemand im Backend (Regel Q4). **Es macht die
+> ungemessene Auskunft nur beobachtbar** — und das ist das Höchste, was ein Werkzeug ohne Schwelle
+> für sie tun kann.
+
+### Ohne Zeitfenster, und das ist durch Regel L9 gedeckt
+
+Gefragt ist, was **jetzt** offen ist. Ein Zeitfenster schnitte gerade die **ältesten** Zeilen weg —
+also die, um die es geht: Eine Nachricht, die seit sechs Tagen wartet, fiele aus einem
+48‑Stunden‑Fenster heraus und ist trotzdem der Grund, warum es die Kachel gibt.
+
+Es ist außerdem keine Aggregation über einen Bereich, sondern eine Zählung über die wenigen
+Indexsätze, auf die `MessageStatusIDX` herunterführt — **538 im ganzen Bestand**.
+
+### Warum sie nicht aus dem Rollup kommen können
+
+**`message_rollup` trägt keine Statushistorie.** Der nächtliche Volllauf rechnet jeden Eimer aus dem
+*heutigen* Zustand jeder Nachricht neu; eine Nachricht, die im März `SUSPENDED` war und im April
+fertig wurde, hinterlässt im März **nichts**. Der Rollup ist nach jedem Volllauf eine Projektion des
+Jetzt, gebucht nach letzter Änderung. Ausgeschrieben in [`rollup.md`](rollup.md) §7a.
+
+**Das ist ein anderer Grund als bei *Überfällig*.** Dort hing die Kennzahl an einer **Frist**, die
+zwischen zwei Läufen abläuft. Hier hängt sie an einem **flüchtigen Status**. Beide Male ist das
+Ergebnis dasselbe — eine Live-Abfrage —, aber die Begründung ist es nicht, und sie ist einzeln
+einzutragen (`PROJEKTBESCHREIBUNG.md` §8).
+
+### 5a. Die Kachel *Wartend* erscheint strukturell (Entscheidung E‑74)
+
+**Sie erscheint nur bei Mandanten, deren Abläufe überhaupt suspendieren.** Zeigt sie dann `0`, ist
+das eine Auskunft und kein Rauschen.
+
+```sql
+SELECT EXISTS (
+  SELECT 1
+  FROM GlassfishDB.SOSAction sa
+  JOIN GlassfishDB.SOS s ON s.SOSID = sa.SOSID
+  WHERE sa.SOSActionServiceProperties LIKE '%SUSPEND%'
+    AND EXISTS ( … Mandantenkette über s.ProcessID … )
+) AS hat_wartende_ablaeufe;
+```
+
+**Die Beziehung ist vor dem Bau geprüft** (M142 a): `SOS` trägt eine `ProcessID`, sie ist
+`NULL`-fähig, und **alle 1.818 `SOS`-Zeilen haben eine** — verteilt auf 1.502 der 1.503 Prozesse.
+Die Kette ist damit dieselbe wie überall, nur mit `SOS.ProcessID` statt `Message.ProcessID`.
+
+> ### Zwei Wege sind geprüft und beide verworfen
+>
+> **Nicht über die Zahl selbst.** „Kachel erscheint bei `anzahl > 0`" flackert: *heute wartet
+> nichts* und *dieser Mandant wartet nie* sähen gleich aus, und ein Mandant mit nächtlichem
+> Sammelversand hätte die Kachel tagsüber nicht. Das ist die bekannte Grenze 2 dieses Dokuments ein
+> zweites Mal — **Abwesenheit ist der schwächste Kanal, den ein Zustand haben kann.**
+>
+> **Nicht über den Rollup.** Er trägt keine Statushistorie (siehe oben). Eine Frage nach *„hat der
+> Mandant je gewartet"* ist dort nicht beantwortbar.
+
+#### `SUSPEND` und nicht `WAITUNTIL` — und das ist gemessen, nicht gewählt
+
+M29 (4) hat **beide** Marken bei **allen 538** wartenden Nachrichten gefunden; die Beobachtung am
+Bestand entscheidet also nichts. **M144 entscheidet es, über die Stammdaten:**
+
+| Marke | Mandanten mit `true` |
+|---|---|
+| **`SUSPEND`** | **`NEXANS` und `VOTG`** |
+| `WAITUNTIL` | nur `NEXANS` |
+
+**`WAITUNTIL` verlöre `VOTG`.** Dessen einzige `SUSPEND`-Zeile trägt die andere Marke nicht.
+`SUSPEND` ist damit zugleich das Wort, das den Zustand benennt, **und** das treffsicherere — die
+Entscheidung fällt nicht auf die Bedeutung, sondern auf die Messung.
+
+#### Die Lücke, die dazugehört
+
+M29 hat `MessageAction.SOSActionServiceProperties` gemessen — den **ausgeführten** Baustein. Diese
+Abfrage liest `SOSAction.SOSActionServiceProperties` — den **geplanten**.
+
+**M142 (c) hat die Übertragung nachgeprüft:** Bei **538 von 538** trägt auch der geplante Baustein
+das Wort, und über beide Schritte aller 538 (1.076 Zeilen) gibt es **null Abweichungen** zwischen
+ausgeführt und geplant.
+
+> **Belegvermerk** (Regel L10).
+> *Gemessen ist:* dass der geplante Baustein bei 538 von 538 wartenden Nachrichten `SUSPEND` und
+> `WAITUNTIL` trägt, und dass ausgeführt und geplant über 1.076 Zeilen nirgends auseinanderfallen.
+> *Behauptet wird:* Der geplante Ablauf ist ein tragfähiger Ersatz für den ausgeführten.
+> **Die Lücke, und sie ist größer als „538":** Die 538 hängen an **einer** `SOSAction`-Zeile — ein
+> Ablauf, eine `SOSActionID`, der Baustein `Send Message to Pool` (M29 4, M142 c). `n = 538` ist
+> die Zahl der **Zeilen**, nicht die der **Fälle**; an Vielfalt liegt **eine** vor. Die Messung
+> kann die Übertragung **widerlegen**; bestätigen kann sie sie nur für diese eine Gestalt.
+
+#### Sie wird bei jedem Aufruf mitgelesen, nicht bedingt
+
+Sonst hinge die Zahl der Statements am Mandanten und `DashboardStatementsTest` wäre nicht mehr
+deterministisch. Die Entscheidung, ob die Kachel in der Antwort steht, fällt im Zusammenbau.
+
+#### Warum ein `LIKE '%…%'` hier zulässig ist, wo M8 dafür 97,976 s gemessen hat
+
+Jene Messung lief über **`MessageAction`** — 10,3 Millionen Zeilen, 3,0 GB. **`SOSAction` ist
+Stammdaten: 3.944 Zeilen, 2,0 MiB** (M142 a, gezählt, nicht aus `information_schema`).
+
+**Und der Plan ist die eigentliche Rechtfertigung:** Der Optimierer steigt über
+`ProjectMandant_Mandant_idx` ein, also **beim Mandanten** — das `LIKE` läuft nur über dessen eigene
+`SOSAction`-Zeilen und **nie über die Tabelle**.
+
+```
+pm  ref  ProjectMandant_Mandant_idx  rows 17  Using where; Using index
+p   ref  Process_ProjectFK           rows  5  Using index
+s   ref  SOS_ProcessFK               rows  1  Using index
+sa  ref  PRIMARY                     rows  1  Using where
+```
+
+**Gemessen 1,24–1,40 ms** (M143). Das Abbruchkriterium des Auftrags lag bei **200 ms**.
+
+### „Nicht ermittelbar" — und nur hier
+
+Diese beiden Kacheln sind die **einzigen Felder der ganzen Antwort**, die *nicht ermittelbar*
+zurückgeben dürfen. Sie sind der einzige Teil, der zur Laufzeit auf der **Produktion** live über
+`Message` liest, wo `max_statement_time` nach zehn Sekunden abräumt. Der Rest kommt aus unserer
+eigenen Tabelle. **Stirbt die Live-Abfrage, darf nicht die ganze Seite sterben.**
+
+| | |
+|---|---|
+| **Kein allgemeiner Teilerfolg-Mechanismus** | Genau diese zwei Kacheln. Ein Dashboard, das jeden Block einzeln scheitern lassen kann, zeigt irgendwann eine Seite voller Lücken und nennt das eine Antwort |
+| **Auch die Erscheinungsbedingung bekommt keinen** | Sie liest **Stammdaten** und ist damit dieselbe Art Zugriff wie die Mandantenkette in jedem anderen Statement. Ein dritter Block mit eigenem Ausfall wäre der Anfang genau dieser Seite |
+| **Gefangen wird genau eine Ausnahme** | `DataAccessException` **mit** `SQLTimeoutException` als Ursache. Ein Syntaxfehler, eine abgerissene Verbindung oder ein fehlendes Recht bleiben technische Fehler mit `500`. **Ein pauschales `catch` machte aus jedem Bruch eine Beruhigung** |
+| **Die beiden Kacheln fallen *nicht* zusammen** | Und das ist der Unterschied zur alten Kachel *Überfällig*: Dort waren „im Zeitraum" und „insgesamt" ein **Paar**, das man nebeneinander liest, und eine Zahl ohne die andere lud zu einer Rechnung ein, die nicht aufgeht. *Läuft* und *Wartend* sind **zwei verschiedene Auskünfte**. Fällt eine, steht die andere |
+| **`ermittelbar: false` ist nicht `0`** | Null hieße „es läuft nichts". In einem Überwachungswerkzeug ist das die schlimmste falsche Antwort |
 
 `DashboardZeitgrenzeTest` stellt beide Fälle her — den Abbruch an der Zeitgrenze und den
 Syntaxfehler — und prüft, dass nur der erste geschluckt wird.
 
-**In der Anzeige trägt „überfällig" keine Farbe von *Fehler*.** Rot gehört ausschließlich der
-Kategorie *Fehler*; die eigene Farbrolle (orange) ist in
-[`visuelles-konzept.md`](visuelles-konzept.md) §7a entschieden. **Hier ist sie nicht gebaut** — der
-Endpunkt trennt die Kategorie sauber, gefärbt wird in der Oberfläche.
+### Was diese beiden Kacheln **nicht** beantworten
 
-> ### ⚠️ Berichtigung vom 31.08.2026 — am Tag dieses Satzes war sie **nicht** entschieden
+**„Hängt hier etwas zu lange?"** Das war die Frage von *Überfällig*, und sie ist mit E‑71
+unbeantwortet geblieben. *Läuft* und *Wartend* zählen einen **Zustand** und behaupten kein Problem;
+das Alter der ältesten Zeile steht daneben, **ohne eine Schwelle**. Eine Schwelle zu erfinden
+verbietet Regel Q4 — `MessageTimeout` ist es nachweislich nicht. **Offener Punkt 130.**
+
+---
+
+> ## ⚠️ Der Stand bis zum 03.09.2026 — die Kachel *Überfällig*
 >
-> **Der Absatz oben bleibt im Wortlaut stehen**, weil die Berichtigung sonst nicht nachprüfbar wäre.
-> Falsch ist an ihm ein einziges Wort, und es ist das tragende: *entschieden*.
+> **Er bleibt wortgleich stehen.** Ohne ihn wäre nicht mehr nachlesbar, dass die erste benannte
+> Ausnahme von L2 einmal eine andere war, und woran sie gescheitert ist.
 >
-> | | |
-> |---|---|
-> | **Was am 31.08.2026 wirklich in §7a stand** | der Punkt als **„aufgeschoben, nicht entschieden"**, aufgenommen am 10.08.2026. Gesetzt war der **Rahmen** — orange, Ton höchstens 85, drei Werte, Kontrast nachzurechnen, spätestens beim Dashboard. Kein einziger Wert |
-> | **Woher die Angabe stammt** | aus dem Prompt zu Schritt 10b‑2 und **ungeprüft übernommen**. Sie ist nicht am Dokument nachgesehen worden, auf das sie verweist |
-> | **Warum es folgenlos blieb** | 10b‑2 ist ein Backend-Schritt und baut keine Oberfläche (§12, Punkt 1). Der Satz beschreibt eine Abgrenzung, die auch ohne die Farbrolle richtig ist: Der Endpunkt trennt die Kategorie, gefärbt wird woanders |
-> | **Seit wann er stimmt** | seit **Schritt 10b‑3a**, demselben 31.08.2026, ein paar Stunden später. `--ueberfaellig` liegt bei **Ton 80**; die drei Werte je Block und die vier Befunde dazu stehen jetzt tatsächlich in [`visuelles-konzept.md`](visuelles-konzept.md) §7a |
+> > ### 5. Überfällig — die erste benannte Ausnahme von L2
+> >
+> > Zwei Zahlen, **beide live** über `Message`, beide über
+> > `MessageStatusClassifier.ueberfaelligBedingung` (gerufen, nicht nachgebaut), `jetzt` aus der
+> > **Anwendungsuhr** (Regel Z1):
+> >
+> > - **im Fenster** (E‑h) — dieselbe Zahl, die der Klick in die Liste liefert
+> > - **insgesamt** — ohne Zeitfenster
+> >
+> > **Das Wort „ausschließlich" in L2 bleibt stehen, und daneben steht diese Ausnahme** (E‑c vom
+> > 24.08.2026). Sie ist einzeln begründet und einzeln gemessen.
+> >
+> > **Die zweite Zahl hat kein Zeitfenster, und das ist durch Regel L9 gedeckt:** Gefragt ist genau,
+> > was *außerhalb* des gezeigten Zeitraums hängt — ein Fenster schnitte die Zeilen weg, um die es
+> > geht. Sie ist dabei die **billigere** von beiden (M90, Befund 14).
+> >
+> > **In der Anzeige trägt „überfällig" keine Farbe von *Fehler*.** Rot gehört ausschließlich der
+> > Kategorie *Fehler*; die eigene Farbrolle (orange) ist in
+> > [`visuelles-konzept.md`](visuelles-konzept.md) §7a entschieden.
 >
-> **Der Befund ist nicht die Farbe, sondern der Weg der Angabe.** Ein Verweis auf einen fremden
-> Abschnitt behauptet, dort nachgesehen zu haben. Dieser hat es nicht getan, und die Aussage wurde
-> erst nachträglich wahr. Dass sie es wurde, macht sie nicht zu einer geprüften.
+> **Was daran gefallen ist und warum:** Die Problemkategorie *Überfällig* ist am 03.09.2026 durch
+> eine fachliche Auskunft des Auftraggebers widerlegt (E‑71). Sie markierte auf der Testkopie 538
+> Zeilen — **538 `SUSPENDED`, 0 `RUNNING`, also 538 Fehlalarme und kein Treffer.** Vollständig samt
+> Herkunftsvermerk in `PROJEKTBESCHREIBUNG.md` §4.2 Punkt 2 und
+> [`message-status.md`](message-status.md).
 >
-> **Der erste Satz desselben Absatzes ist davon nicht berührt**: dass „überfällig" keine Farbe von
-> *Fehler* trägt, folgt aus Regel Q3 und aus §3 und hing nie an §7a. Berichtigt wird die
-> Nebenbehauptung über den Stand eines anderen Dokuments, nicht die Aussage über diesen Endpunkt.
+> **Was daran unberührt bleibt, und es ist der größere Teil:** die Bauform. Live über `Message`,
+> ohne Zeitfenster nach L9, mit `EXISTS` als Mandantenkette, mit dem engen `catch` auf die
+> Zeitgrenze und mit `ermittelbar` als eigenem Feld. **Die beiden neuen Kacheln erben sie
+> vollständig** — gefallen ist die Kennzahl, nicht ihr Bau.
+>
+> **Die Berichtigung vom 31.08.2026 zur Farbrolle** — dass sie am Tag jenes Satzes noch nicht
+> entschieden war — steht weiterhin in [`visuelles-konzept.md`](visuelles-konzept.md) §7a und ist
+> von E‑71 nicht berührt. Die Rolle `--ueberfaellig` bleibt dort bestehen, **ohne Verbraucher**
+> (E‑77).
 
 ---
 
@@ -404,6 +570,26 @@ org.jooq.exception.DataAccessException: SQL [select … from `GlassfishDB`.`Mess
 gefunden werden. Ein Mandant **ohne** Fehler im Fenster zwingt die Datenbank, den ganzen Bereich zu
 durchsuchen, bevor sie „nichts" sagen darf — **gerade der gute Fall ist der teure**.
 
+> ### ⚠️ Korrektur vom 03.09.2026 — die Begründung der Disjunktheit ist gegenstandslos
+>
+> **Der Abschnitt darunter bleibt vollständig stehen.** Sein Befund gilt unverändert: Mit einem
+> gemeinsamen `OR` steigt MariaDB über den Zeitindex ein, und der Indexhinweis dreht den Plan um.
+> **Gegenstandslos ist genau ein Argument** — das der Disjunktheit.
+>
+> Es lautete: *Aus zweimal zehn neuesten Zeilen sind die zehn neuesten dieselben wie aus einer
+> gemeinsamen Abfrage, weil die beiden Mengen disjunkt sind (Fehler ist Endstatus, überfällig setzt
+> das Gegenteil voraus).* **Das war richtig und wird nicht mehr gebraucht:** Mit E‑71 ist die
+> Überfälligkeitshälfte entfallen, es gibt nur noch **eine** Menge, keine Zusammenführung und keine
+> Nachsortierung.
+>
+> **Der Indexhinweis bleibt, und seine Messung auch.** Er hing nie an der zweiten Hälfte, sondern an
+> der Deckelung: `ORDER BY … LIMIT 10` ist nur billig, wenn die zehn Zeilen früh gefunden werden.
+> Das gilt für die Fehlerhälfte allein genauso.
+>
+> **Gemessen nach dem Umbau** (M145): Der Block kostet **21,9 bis 26,1 ms** über alle sechs
+> Kombinationen — vorher 29,7 bis 34,1 ms für **beide** Hälften zusammen. Er bleibt von der
+> Fensterbreite unabhängig, und das war der Zweck.
+
 ### Zwei Änderungen, und die erste allein genügte nicht
 
 **1. Je Merkmal ein Statement.** Zusammengeführt und gedeckelt wird in Java; aus zweimal zehn
@@ -453,7 +639,10 @@ steht.
 Der Auftrag nennt als Quelle für Block 6 *„das bestehende Listen-Repository"*. **Das geht nicht, und
 zwar aus zwei Gründen — der erste allein genügte schon:**
 
-1. **Die Liste kann diese Frage gar nicht beantworten.** Dort sind `status=FEHLER` und
+1. ~~**Die Liste kann diese Frage gar nicht beantworten.**~~ **Entfallen am 03.09.2026 (E‑71):**
+   Den Parameter `ueberfaellig` gibt es nicht mehr, und mit ihm nicht die `400`. **Der zweite Grund
+   trägt allein — und hat immer allein getragen.** Der Satz bleibt im Wortlaut stehen: Dort sind
+   `status=FEHLER` und
    `ueberfaellig=true` ausdrücklich **unvereinbar** und ergeben `400`
    (`ueberfaellig-und-status-unvereinbar`): Überfällig setzt `WARTEND` oder `LAEUFT` voraus, Fehler
    ist ein Endstatus. Über die Liste bräuchte der Block **zwei** Aufrufe, ein Zusammenführen und
@@ -462,13 +651,17 @@ zwar aus zwei Gründen — der erste allein genügte schon:**
    (`PaketstrukturTest.fachpakete_kennen_einander_nicht`); braucht ein zweites Fachpaket einen Typ,
    **wandert der Typ nach `common`**.
 
-**Wiederverwendet ist damit genau das, was driften könnte:** die Fehlerbedingung und die
-Überfälligkeitsbedingung, beide aus `common/MessageStatusClassifier`. **Nachgebaut ist nichts.** Die
+**Wiederverwendet ist damit genau das, was driften könnte:** die Fehlerbedingung, aus
+`common/MessageStatusClassifier`. **Nachgebaut ist nichts.** *(Bis zum 03.09.2026 stand hier „die
+Fehlerbedingung und die Überfälligkeitsbedingung"; die zweite ist mit E‑71 entfallen.)* Die
 Mandantenkette schreibt ohnehin jedes Fachpaket selbst — sie kann nicht nach `common` wandern, weil
 dort keine `jooq.glassfish`-Typen stehen dürfen.
 
-**Die Fensterverengung fällt dabei nicht weg, sie greift ohnehin nicht:** Für `ueberfaellig` ist sie
-abgeschaltet ([`nachrichtenliste.md`](nachrichtenliste.md) §5d), weil der Rollup keine Frist kennt.
+~~**Die Fensterverengung fällt dabei nicht weg, sie greift ohnehin nicht:** Für `ueberfaellig` ist sie
+abgeschaltet, weil der Rollup keine Frist kennt.~~ **Gegenstandslos seit dem 03.09.2026:** Das
+Merkmal `UEBERFAELLIG` ist mit E‑71 aus `Abfragemerkmal` entfallen. Es war das **einzige**, das der
+Rollup aus einem Grund nicht mittragen konnte, der am *Bestand* lag; übrig bleibt `SUCHBEGRIFF`, und
+dessen Grund liegt am *Schema* ([`nachrichtenliste.md`](nachrichtenliste.md) §5d).
 
 > **Aus demselben Grund ist `Pflegestatus` von `catalog` nach `common` gewandert:** Der
 > Verteilungsblock braucht `GEPFLEGT`. Die Alternative wäre ein Literal `"GEPFLEGT"` im Dashboard
@@ -476,7 +669,86 @@ abgeschaltet ([`nachrichtenliste.md`](nachrichtenliste.md) §5d), weil der Rollu
 
 ---
 
-## 8. Die Messung — M108 *(31.08.2026)*
+## 8. Die Messung — M108 *(31.08.2026)*, überholt durch M145 *(03.09.2026)*
+
+> ### ⚠️ M108 ist für drei Zeilen überholt und für den Rest gültig
+>
+> **Die ganze Messung bleibt stehen.** Überholt sind genau die Zeilen, deren Statements es nicht
+> mehr gibt: *Überfällig — im Fenster*, *Überfällig — insgesamt* und *Zuletzt aufgefallen (beide
+> Statements)*. **M145 misst, was an ihrer Stelle steht**, und dazu die ganze Landingpage neu.
+>
+> #### Die neuen Statements (M143)
+>
+> | Statement | `NEXANS` | `SUTTONS` | Plan |
+> |---|---:|---:|---|
+> | Kachel *Läuft* | **1,09–1,25 ms** | **0,94–1,04 ms** | `Message`, `ref` über `MessageStatusIDX`, `key_len 123`, `rows = 1` |
+> | Kachel *Wartend* | **4,40–4,66 ms** | **3,34–3,55 ms** | dasselbe, `rows = 538` |
+> | Erscheinungsbedingung | **1,24–1,40 ms** | **1,40–1,42 ms** | Einstieg über `ProjectMandant_Mandant_idx`, dann `Process_ProjectFK`, `SOS_ProcessFK`, `SOSAction.PRIMARY` — alle `ref` |
+>
+> **`ref` statt `range`, und das ist der vorregistrierte Befund.** Erwartet war `range` über
+> `MessageStatusIDX` wie bei der alten Kachel. Herausgekommen ist **`ref` über denselben Index** —
+> die erwartbare Folge davon, dass das neue Statement mit `=` auf **einen** Rohwert vergleicht, wo
+> das alte ein `IN` über zwei trug. **Derselbe Index, engerer Zugriff, kein Rückschritt.**
+> `DashboardPlanDbIT` schreibt deshalb den **Index** fest und nicht die Zugriffsart.
+>
+> #### Die ganze Landingpage (M145) — und sie ist für einen Mandanten teurer geworden
+>
+> | Paar | `NEXANS` M108 → M145 | `SUTTONS` M108 → M145 |
+> |---|---:|---:|
+> | 48 h | 62,227 → **49,5–57,7 ms** | 72,007 → **49,5–53,4 ms** |
+> | 30 Tage | 152,814 → **149,4–149,8 ms** | 109,829 → **116,0–119,5 ms** |
+> | 12 Monate | 199,030 → **194,2–195,0 ms** | 127,038 → **139,7–144,6 ms** |
+> | ohne `zeitraum` | 64,706 → **59,2–59,9 ms** | 77,957 → **55,1–59,9 ms** |
+>
+> **Das Budget von 500 ms ist in jeder Kombination weit unterschritten** — die teuerste überhaupt
+> mögliche liegt bei 195 ms.
+>
+> ##### ⚠️ Die vorregistrierte Erwartung trifft nicht zu, und zwar aus zwei Gründen
+>
+> Erwartet war eine **Verbesserung** für beide Mandanten. Eingetreten ist sie für `NEXANS`
+> (−4 ms bei zwölf Monaten) und **nicht** für `SUTTONS` (+13 bis +18 ms). Zwei Dinge sind
+> auseinanderzuhalten:
+>
+> **1. Die Rechnung der Vorregistrierung war falsch, und der Fehler ist meiner.** Dort stand: *„es
+> fällt weg: die Überfälligkeitshälfte von ‚Zuletzt aufgefallen' — **29 bis 34 ms** (M108)."* Die
+> 29–34 ms sind in M108 aber die Kosten **beider Hälften zusammen** — die Zeile heißt dort
+> ausdrücklich *„Zuletzt aufgefallen (beide Statements)"*. **Die Hälfte, die wegfällt, ist rund
+> 8–10 ms wert, nicht 29–34.** Der eigene Beitrag dieses Schritts ist damit:
+>
+> | | |
+> |---|---:|
+> | fällt weg: zwei Überfällig-Statements | **−9,7 ms** (`SUTTONS`, M108) |
+> | fällt weg: die zweite Hälfte von Block 6 | **−8 bis −10 ms** |
+> | kommt hinzu: drei neue Statements | **+5,8 ms** (M143) |
+> | **netto** | **rund −13 ms** |
+>
+> **2. Die Mehrkosten bei `SUTTONS` liegen in einem Block, den dieser Schritt nicht anfasst.**
+> Aufgeschlüsselt:
+>
+> | Block, `SUTTONS` 12 Monate | M108 | M145 |
+> |---|---:|---:|
+> | Verlauf | 39,687 ms | **39,650 ms** |
+> | **Verteilung** | 40,223 ms | **67,253 ms** |
+> | Zuletzt aufgefallen | 34,084 ms (beide) | **24,978 ms** (eine) |
+>
+> **Die Verteilung ist um 27 ms teurer geworden, und an ihr ist keine Zeile geändert worden.**
+>
+> > **Belegvermerk** (Regel L10).
+> > *Gemessen ist:* die Laufzeit je Block, zweimal, ein Aufwärmlauf und die beste von fünf; dazu
+> > der Bestand — `message_rollup` trägt unverändert **335.610** Zeilen, der letzte Volllauf
+> > stammt vom **31.08.2026**, also demselben Tag wie M108, und `SUTTONS` hat **keine einzige**
+> > Katalogzeile (die siebzehn aus offenem Punkt 58 sind nicht mehr da).
+> > *Behauptet wird:* Die Mehrkosten stammen **nicht** aus diesem Schritt.
+> > **Die Lücke:** Woher sie *stammen*, ist **nicht gemessen**. Weder Datenmenge noch Katalogstand
+> > noch Rollup-Stand haben sich geändert; bleibt der Zustand der Instanz (Puffer, Fremdlast). Das
+> > ist **plausibel und nicht belegt**, und es wird hier nicht als Ursache behauptet. Offener Punkt
+> > **134**.
+>
+> **Was das für die Abnahme heißt:** Das Budget hält mit Faktor 2,6 Luft, und der eigene Beitrag des
+> Schritts ist gemessen negativ. Die Drift im Verteilungsblock ist ein **eigener** Befund und wird
+> nicht in diesem Schritt geheilt.
+
+### Die ursprüngliche Messung im Wortlaut — M108 *(31.08.2026)*
 
 Gemessen mit `MessungM108DbIT`: **das, was der Code schickt**, gegen die Testkopie, im Profil `dev`
 gegen den Anker `2025-12-30 04:09:47`. Ein Aufwärmlauf, dann die **beste von fünf** — dieselbe
@@ -548,9 +820,12 @@ größte."*
 | Verlauf 12M | `message_rollup_monat`, `range` über `PRIMARY`, `key_len 3` |
 | Verteilung, alle drei | wie der Verlauf, plus `process_catalog` als `eq_ref` über `PRIMARY` |
 | Belegung, alle drei | derselbe Bereich, gekapselt in einer abgeleiteten Tabelle |
-| Überfällig, beide | `Message`, `range` über **`MessageStatusIDX`**, `key_len 123`, `rows = 539` |
+| ~~Überfällig, beide~~ | *entfallen (E‑71). An ihrer Stelle:* |
+| **Läuft** | `Message`, **`ref`** über **`MessageStatusIDX`**, `key_len 123`, `rows = 1` |
+| **Wartend** | `Message`, **`ref`** über **`MessageStatusIDX`**, `key_len 123`, `rows = 538` |
+| **Erscheinungsbedingung Wartend** | `ProjectMandant` `ref` über `ProjectMandant_Mandant_idx` → `Process` → `SOS` → `SOSAction`, alle `ref` über Index; **keine Tabelle wird voll gelesen** |
 | Zuletzt aufgefallen, Fehlerhälfte | `Message`, `range` über **`MessageStatusIDX`**, `rows = 6.257` |
-| Zuletzt aufgefallen, Überfälligkeitshälfte | `Message`, `range` über **`MessageStatusIDX`**, `rows = 539` |
+| ~~Zuletzt aufgefallen, Überfälligkeitshälfte~~ | *entfallen (E‑71)* |
 | Stand | `rollup_lauf`, `range` über `rollup_lauf_stand_idx` |
 
 Die Mandantenkette steht in **jedem** Plan als `eq_ref` über Primärschlüssel — nie als Durchlauf.
@@ -579,11 +854,11 @@ Die Mandantenkette steht in **jedem** Plan als `eq_ref` über Primärschlüssel 
 
 | Test | Was er sichert |
 |---|---|
-| `DashboardIsolationDbIT` | **Regel M4, Pflicht.** Zwei Zusicherungen tragen den Nachweis: **verschiedene Summen** über dasselbe Fenster (fiele der Filter, sähen beide die Zahl des ganzen Bestands) und **jede gezeigte Prozesskennung gehört dem eigenen Mandanten**. Dazu: keine fremde Kennung im Rumpf, kein Mandantenparameter, Standardfenster und Leerzustand, alle Blöcke in einer Antwort |
+| `DashboardIsolationDbIT` | **Regel M4, Pflicht.** Seit 10b‑4 **je neuem Statement einzeln**: *Wartend* zeigt für zwei Mandanten verschiedene Zahlen (fiele der Filter, sähen beide den ganzen Bestand); die Erscheinungsbedingung trennt `NEXANS`/`VOTG` von `SUTTONS`; *Läuft* ist lokal **nicht** prüfbar, weil `RUNNING` null Mal vorkommt — dort trägt der Statementtest.  Zwei Zusicherungen tragen den Nachweis: **verschiedene Summen** über dasselbe Fenster (fiele der Filter, sähen beide die Zahl des ganzen Bestands) und **jede gezeigte Prozesskennung gehört dem eigenen Mandanten**. Dazu: keine fremde Kennung im Rumpf, kein Mandantenparameter, Standardfenster und Leerzustand, alle Blöcke in einer Antwort |
 | `DashboardServiceTest` | Einordnung, Fehlerarten, die beiden Restzeilen, „nicht ermittelbar", Standardfenster, Leerzustand — **ohne Datenbank**, alle Prüfwerte erfunden |
-| `DashboardStatementsTest` | Das **gerenderte** SQL: `EXISTS` statt `JOIN`, `CASE` ohne Alias, `LEFT JOIN` auf den Katalog, keine Funktion um den Eimerschlüssel, sieben Statements je Seite |
-| `DashboardPlanDbIT` | **`EXPLAIN`, Treibertabelle und Index — keine Zeitmessung.** Der Wächter über den Befund aus §7a |
-| `DashboardZeitgrenzeTest` | Der Abbruch an der Zeitgrenze wird zu „nicht ermittelbar", **jeder andere Fehler nicht** |
+| `DashboardStatementsTest` | Das **gerenderte** SQL: `EXISTS` statt `JOIN`, `CASE` ohne Alias, `LEFT JOIN` auf den Katalog, keine Funktion um den Eimerschlüssel. **Seit dem 03.09.2026 benennt er die sieben Statements einzeln, statt sie zu zählen** — in 10b‑4 sind drei weggefallen und drei hinzugekommen, die Zahl blieb sieben, und ein zählender Test hätte bestanden, ohne noch etwas zu bezeugen. Dazu ein Verbot: **kein Statement der Seite rechnet noch mit `MessageTimeout`** |
+| `DashboardPlanDbIT` | **`EXPLAIN`, Treibertabelle und Index — keine Zeitmessung.** Der Wächter über den Befund aus §7a. Seit 10b‑4 zusätzlich: beide neuen Kacheln über `MessageStatusIDX`, und die Erscheinungsbedingung liest **keine Tabelle voll** — auch `SOSAction` nicht |
+| `DashboardZeitgrenzeTest` | Der Abbruch an der Zeitgrenze wird zu „nicht ermittelbar", **jeder andere Fehler nicht** — seit 10b‑4 an den Kacheln *Läuft* und *Wartend*, und mit der Gegenprobe, dass auch die **Erscheinungsbedingung** nichts abfängt |
 | `DashboardzeitraumTest` | Die Fenstergrenzen, gegen den Anker — Eimergrenzen, obere Grenze ausschließend, Kalendermonate statt 365 Tagen |
 | `MessungM108DbIT` | Die Messung. Kein Test |
 
@@ -633,6 +908,39 @@ Der Arbeitsbaum ist danach wiederhergestellt worden; die Änderung ist in keinem
 
 ---
 
+## 9a. Die Entscheidungen aus Schritt 10b‑4 *(03.09.2026)*
+
+**Sieben, und die erste trägt die übrigen sechs.** Die Nummern sind nach Regel V1 vor der Vergabe
+erhoben worden: Die höchste tatsächlich vergebene war **E‑70** ([`dunkelmodus.md`](dunkelmodus.md)),
+nicht E‑56 wie im Auftrag angenommen.
+
+| Kennung | Entscheidung |
+|---|---|
+| **E‑71** | ***Überfällig* ist widerlegt und fällt aus dem MVP** — samt `istUeberfaellig`, `timeoutZeitpunkt`, `ueberfaelligBedingung`, dem Listenparameter `ueberfaellig` und dem Detailfeld. Grundlage ist eine **fachliche Auskunft des Auftraggebers**, keine Messung; der Herkunftsvermerk steht überall dort, wo die Regel geführt wird |
+| **E‑72** | **Kachel *Läuft*** — live über `Message`, ohne Zeitfenster, `=` auf den Rohwert `RUNNING`. Erste der zwei neuen benannten Ausnahmen von L2 |
+| **E‑73** | **Kachel *Wartend*** — dasselbe für `SUSPENDED`. Zweite Ausnahme |
+| **E‑74** | **Die Erscheinungsbedingung ist strukturell** — über `SOSAction`, nicht über die Zahl und nicht über den Rollup. `SUSPEND` und nicht `WAITUNTIL`, **weil M144 es so gemessen hat** |
+| **E‑75** | **`aeltesteSekunden` an beiden Kacheln** — als Fenstergrundlage **und** als laufende Prüfung der Auskunft aus E‑71 (§5) |
+| **E‑76** | **`fristSekunden` ist bei `WARTEND` `null`** — eine Frist, die niemand durchsetzt, ist eine falsche Auskunft. Bei `RUNNING` bleibt sie und wird erst dadurch richtig ([`nachrichtendetail.md`](nachrichtendetail.md) §3a) |
+| **E‑77** | **`--ueberfaellig` bleibt ohne Verbraucher bestehen** — die Farbrolle ist gerechnet und gegengeprobt und wird an dem Tag gebraucht, an dem eine echte Schwelle zurückkommt ([`visuelles-konzept.md`](visuelles-konzept.md) §7a). Dasselbe gilt im Backend für `TIMEOUT_EINHEIT` |
+
+> ### Was an dieser Runde ungewöhnlich ist, und es gehört benannt
+>
+> **Sechs dieser sieben Entscheidungen hängen an einem Satz, der nicht gemessen ist.** Das Projekt
+> hat bisher jede tragende Aussage entweder gemessen oder als ungedeckt gekennzeichnet — hier fällt
+> eine gebaute, getestete und gemessene Kategorie **auf eine Auskunft hin**.
+>
+> **Das ist zulässig und trotzdem eine andere Art von Entscheidung.** Regel Q4 verbietet Raten,
+> nicht Auskünfte; und für die Frage, was das Altsystem mit einer Nachricht in `RUNNING` tut, ist
+> der Auftraggeber die **einzige** verfügbare Quelle — die Testkopie kennt den Status nicht.
+>
+> **Was daraus folgt, ist die Disziplin drumherum:** der wörtlich gleiche Herkunftsvermerk an jeder
+> Stelle, die offene Prüfung gegen die Produktion in
+> [`message-status.md`](message-status.md), und `aeltesteSekunden` als Feld, das die Auskunft im
+> laufenden Betrieb beobachtbar hält (E‑75).
+
+---
+
 ## 10. Regelbezug
 
 | Regel | Stand |
@@ -664,14 +972,34 @@ Der Arbeitsbaum ist danach wiederhergestellt worden; die Änderung ist in keinem
 | **85** | **Acht von zehn Mandanten sind ungemessen.** Gemessen sind `NEXANS` und `SUTTONS` (Regel L7). `IBIS` ist der Mandant, bei dem der Verteilungsblock am ungünstigsten aussieht — flache Verteilung, „Übrige (40)" als größter Balken (M98, Befund 21). **Die Gestaltung wird ihn brauchen, die Laufzeit nicht** |
 | **86** | **Der Leerzustand ist nicht unterscheidbar** (§6, bekannte Grenze 2). Gewollt, und hier nur benannt, damit es nicht als Fehler gemeldet wird |
 | **87** | **Die Kachel *Nachrichten* zählt Aktivität und nicht Nachrichten** (§2, bekannte Grenze 3). Ebenfalls gewollt und ebenfalls nur benannt |
+| **130** | **„Hängt hier etwas zu lange?" ist seit E‑71 unbeantwortet.** *Läuft* und *Wartend* zählen einen Zustand und liefern das Alter der ältesten Zeile — **ohne Schwelle**. Eine Schwelle steht nirgends in den Daten; `MessageTimeout` ist es nachweislich nicht (§5). Sie zu erfinden verbietet Regel Q4 — es ist wörtlich die Lage, in der *Unquittiert* mit E‑d gestorben ist. **Als offener Punkt eingetragen und nicht gebaut** |
+| **134** | **Der Verteilungsblock ist bei `SUTTONS` um 27 ms teurer geworden, ohne dass eine Zeile daran geändert wurde** (§8). Bestand, Rollup und Katalogstand sind nachweislich unverändert. **Die Ursache ist nicht gemessen**; plausibel ist der Zustand der Instanz, belegt ist er nicht. Wer M145 nachmisst, sieht, ob es bleibt |
+| **135** | **Die Isolation der Kachel *Läuft* ist lokal nicht nachweisbar.** `RUNNING` kommt auf der Testkopie null Mal vor; jeder Mandant sieht `0`, mit und ohne Mandantenfilter. Der Nachweis ruht auf dem **gerenderten Statement** (`DashboardStatementsTest`) und nicht auf Daten. **Gegen die Produktion nachzuholen** |
 
 ### Und was hier geschlossen wird
 
+*Die beiden ersten Zeilen sind am **03.09.2026 mit Schritt 10b‑5** nachgetragen, nachdem die
+Oberfläche nachgezogen war.*
+
 | Nr. | Woher | Stand |
 |---|---|---|
+| **131** | [`nachrichtenliste.md`](nachrichtenliste.md) §5e | **erledigt** — die Landingpage war zwischen dem 03.09.2026 und Schritt 10b‑5 im Browser defekt, weil sie `kacheln.ueberfaellig` las. Sie liest jetzt `laeuft` und `wartend`, der Verweis auf die entfallene Abfrageform ist fort, und ein alter Link `?ueberfaellig=true` lädt ohne Fehler ([`dashboard-frontend.md`](dashboard-frontend.md) §5.4) |
+| **133** | dieser Datei, `Auffaelligkeit` | **erledigt** — die Aufzählung hat weiterhin **einen** Wert, und das Feld `kategorie` bleibt im Vertrag (Regel Q3). Was den Punkt offen hielt, war die Oberfläche: Sie las ihn und durfte nicht an einem fehlenden Feld brechen. **Sie zeichnet ihn seit 10b‑5 nicht mehr** — eine Plakette, die an jeder Zeile dasselbe Wort sagt, unterscheidet nichts. Was daraus für die Anzeige folgt, ist als Punkt **136** in [`dashboard-frontend.md`](dashboard-frontend.md) §9 benannt |
 | **61** | [`messungen-schritt10b.md`](messungen-schritt10b.md) | **erledigt** — die Schwelle ist festgelegt, beide Bedingungen sind gebaut, und die zweite ist als gewählte und nicht gemessene Zahl benannt (§3) |
 | **62** | [`messungen-schritt10b.md`](messungen-schritt10b.md) | **erledigt** — der Block verträgt fehlende Restzeilen und hält beide unten (§4) |
 | **58** | [`messungen-schritt10b.md`](messungen-schritt10b.md) | **berührt, nicht erledigt.** Er verlangt, `SUTTONS` vor der Abnahme von 10b zu kuratieren. Die Katalogpflege ist mit Teil A freigegeben ([`prozess-katalog.md`](prozess-katalog.md) §1); dass sie geschieht, ist eine Handlung des Auftraggebers und keine Codeänderung |
+
+> ### Nachgesehen und **nicht** als Punkt eingetragen *(03.09.2026, Schritt 10b‑5)*
+>
+> **Was liefert der Endpunkt, wenn die *Erscheinungsbedingung selbst* nicht auswertbar ist?** Fiele
+> der Schlüssel `wartend` dann weg, würde ein Ausfall stillschweigend in die strukturelle Behauptung
+> *„dieser Mandant wartet nie"* übersetzt — der schlimmste der drei denkbaren Fehler an dieser
+> Stelle ([`dashboard-frontend.md`](dashboard-frontend.md) §5.4, E‑81).
+>
+> **Er tut es nicht, und §5 sagt es ausdrücklich:** Die Erscheinungsbedingung bekommt **keinen**
+> Teilerfolg-Mechanismus. Sie liest Stammdaten und ist damit dieselbe Art Zugriff wie die
+> Mandantenkette in jedem anderen Statement; bricht sie, ist die **ganze Antwort** ein Fehler.
+> **Kein offener Punkt** — die Frage ist beantwortet, bevor sie die Oberfläche erreicht.
 
 > **Warum die Vermerke zu 58, 61 und 62 hier stehen und nicht dort, wo die Punkte vergeben sind:**
 > [`messungen-schritt10b.md`](messungen-schritt10b.md) ist eine Messdatei und in diesem Schritt
@@ -687,3 +1015,10 @@ Der Arbeitsbaum ist danach wiederhergestellt worden; die Änderung ist in keinem
 4. **Nichts über die acht übrigen Mandanten.** Gemessen sind `NEXANS` und `SUTTONS` (Regel L7).
 5. **Nicht, ob die Kategorie *Überfällig* fachlich richtig geschnitten ist.** `RUNNING` kommt auf der
    Testkopie null Mal vor; gemessen sind Plan und Laufzeit, nicht die fachliche Größenordnung.
+
+   > **Nachtrag 03.09.2026:** Sie war es nicht. Die Frage ist am 03.09.2026 durch eine fachliche
+   > Auskunft des Auftraggebers entschieden worden — **gegen die Kategorie** (E‑71). Der Satz oben
+   > bleibt stehen: Er benennt genau die Lücke, die diese Messrunde nicht schließen konnte, und die
+   > geschlossen worden ist, ohne dass eine Messung sie geschlossen hätte.
+6. **Nicht, ob die Auskunft stimmt, die *Überfällig* gestürzt hat.** Sie ist **nicht gemessen**;
+   die offene Prüfung dafür steht in [`message-status.md`](message-status.md).

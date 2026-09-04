@@ -2,7 +2,34 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/* Die dark-Variante von Tailwind — UMGEZEIGT am 03.09.2026 (Schritt 11b, E-59).
+   Sie stand bis dahin auf der Klasse `.dark` und traf damit genau einen Zweig.
+
+   WARUM SIE HIER STEHT UND NICHT WEGGELASSEN WERDEN KANN: Ueber vierzig
+   Bausteine in components/ui tragen `dark:`-Klassen. Sie sind der
+   Generatorbereich und werden nicht von Hand umgebaut; ihre einzige Verbindung
+   zum Dunkelzustand ist diese eine Zeile. Traefe sie nur den AUSDRUECKLICHEN
+   Zweig, bliebe im System-Fall der eigene Bestand dunkel und die vierzig
+   Bausteine hell -- und niemand saehe es, weil niemand beide Wege zugleich geht.
+
+   Deshalb die Blockform mit ZWEI @slot: Tailwind ersetzt jedes @slot durch die
+   Deklarationen der Klasse, und beide Zweige bekommen dieselbe Regel.
+
+   `:is(…, … *)` und nicht nur `… *`: data-thema steht am Wurzelelement selbst,
+   und eine `dark:`-Klasse dort traefe die Nachfahrenform nicht. Die
+   Spezifitaet bleibt dabei die von vorher (`:is(.dark *)` war ebenfalls 0,1,0).
+
+   Gemessen im gebauten CSS, nicht angenommen: docs/dunkelmodus.md §13. */
+@custom-variant dark {
+  &:is([data-thema="dunkel"], [data-thema="dunkel"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:is([data-thema="system"], [data-thema="system"] *) {
+      @slot;
+    }
+  }
+}
 
 /* ─────────────────────────────────────────────────────────────────────────────
    Das visuelle Konzept liegt vollstaendig in dieser Datei.
@@ -255,12 +282,53 @@
   --status-abgeschlossen-flaeche: oklch(0.96 0.024 166);
   --status-abgeschlossen-kontur: oklch(0.85 0.05 166);
   --status-fehler: oklch(0.52 0.19 27);
+  /* BEFUND, nicht geaendert: Dieser Wert liegt AUSSERHALB des sRGB-Farbraums.
+     Der rote Kanal kommt auf 1,0211 und wird abgeschnitten; was der Bildschirm
+     zeigt, ist #ffebe8. Bei L 0.96 und Ton 27 traegt sRGB hoechstens Chroma
+     0,0199, hier stehen 0,028. Die beiden Geschwister halten den Rahmen
+     (--status-abgeschlossen-flaeche 0,024 bei 0,0587 moeglich,
+     --ueberfaellig-flaeche 0,028 bei 0,0368 moeglich).
+
+     WARUM ES TROTZDEM STEHENBLEIBT: Es ist eine FLAECHE und kein Vordergrund;
+     die abgeschnittene Farbe ist eine gueltige blasse Toenung, und ihr Kontrast
+     zu --status-fehler ist mit 5,30 : 1 gemessen und ausreichend. Sie zu
+     korrigieren hiesse, den Rotton der Fehlerflaeche im ganzen Bestand zu
+     verschieben — das ist eine eigene Entscheidung. Offener Punkt 123,
+     docs/dunkelmodus.md §4. Der Ueberschuss ist in tests/farbkontrast.test.ts
+     festgenagelt, damit er nicht unbemerkt waechst. */
   --status-fehler-flaeche: oklch(0.96 0.028 27);
   --status-fehler-kontur: oklch(0.86 0.07 27);
   --status-offen: oklch(0.44 0 0);
   --status-offen-flaeche: oklch(0.96 0 0);
   --status-offen-kontur: oklch(0.87 0 0);
-  --status-ungeklaert: oklch(0.58 0 0);
+  /* GEAENDERT am 03.09.2026, von 0.58 auf 0.55 — und es ist die Behebung eines
+     Fehlers, keine Umfaerbung nach Geschmack.
+
+     Der Wert stand seit Schritt 3 auf oklch(0.58 0 0) = #7a7a7a und ist nie
+     nachgerechnet worden; §3 hat den Akzent und das Gruen gemessen, die beiden
+     neutralen Rollen nicht. Gemessen war (M131):
+
+       auf --status-ungeklaert-flaeche  4,04 : 1
+       auf --card                       4,28 : 1
+       auf --background                 4,10 : 1
+
+     Alle drei unter den 4,5 : 1, die WCAG 1.4.3 fuer Fliesstext verlangt — und
+     die Rolle IST Schrift: `text-status-ungeklaert` steht in der Plakette, im
+     Prozessbaum und als Diagrammfuellung (lib/status-farbe.ts).
+
+     Mit 0.55 = #717171 sind es 4,58 / 4,85 / 4,65, ungerundet wie aus dem
+     Hexwert. Die Grenze liegt bei L 0.554 — dort traegt der gerundete Hexwert
+     schon nicht mehr; die 0.55 sind der naechste glatte Wert mit Luft.
+
+     WAS ES KOSTET, und es ist aufgeschrieben statt geglaettet: Der OKLab-Abstand
+     zu --status-offen faellt von 0,140 auf 0,110. Die beiden neutralen Rollen
+     ruecken zusammen. Sie sind ueber die Helligkeit weiterhin klar getrennt
+     (0.44 gegen 0.55) und tragen ohnehin Wort und Zeichen (§3, „nie allein ueber
+     Farbe"). Der Abstand zum Akzent waechst dabei von 0,257 auf 0,280.
+
+     Gerechnet in scripts/farbwerte/rechne.mjs, zugesichert in
+     tests/farbkontrast.test.ts, ausgeschrieben in docs/dunkelmodus.md §4. */
+  --status-ungeklaert: oklch(0.55 0 0);
   --status-ungeklaert-flaeche: oklch(0.98 0 0);
   --status-ungeklaert-kontur: oklch(0.9 0 0);
 
@@ -279,8 +347,11 @@
        ueberfaellig-flaeche  #fcf0dd  blasse Toenung, wie --status-*-flaeche
        ueberfaellig-kontur   #b88513  3,29 : 1 auf --card (WCAG 1.4.11)
 
-     Alle Zahlen aus scripts/farbrolle-ueberfaellig/rechne.mjs. Wer einen
-     Wert aendert, laesst das Skript laufen — geschaetzt wird hier nichts. */
+     Alle Zahlen aus scripts/farbwerte/rechne.mjs (bis zum 03.09.2026 hiess
+     der Ordner farbrolle-ueberfaellig; die Gegenprobe ist dieselbe
+     geblieben). Wer einen Wert aendert, laesst das Skript laufen —
+     geschaetzt wird hier nichts. Seit dem 03.09.2026 haelt zusaetzlich
+     tests/farbkontrast.test.ts die Kontraste beider Bloecke. */
   --ueberfaellig: oklch(0.52 0.105 80);
   --ueberfaellig-flaeche: oklch(0.96 0.028 80);
   --ueberfaellig-kontur: oklch(0.65 0.13 80);
@@ -336,6 +407,110 @@
   --sidebar-accent-foreground: var(--akzent-schrift);
   --sidebar-border: oklch(0.9 0 0);
   --sidebar-ring: var(--akzent-schrift);
+
+  /* ══ Die Dunkelwerte ═══════════════════════════════════════════════════════
+     Sie stehen HIER, unter :root, und sie WIRKEN hier nicht: --dunkel-* liest
+     niemand ausser den beiden Zweigen weiter unten. Das ist eine
+     Zwischenschicht und kein zweiter Bestand.
+
+     WARUM NICHT DIREKT IN DEN DUNKELBLOCK (Entscheidung E-60, 03.09.2026):
+     Der Dunkelzustand hat ZWEI Zweige — den ausdruecklichen
+     (html[data-thema="dunkel"]) und den System-Zweig
+     (@media (prefers-color-scheme: dark) html[data-thema="system"]). Ein
+     Selektor kann beide nicht zugleich treffen: Eine Medienabfrage ist keine
+     Selektorbedingung. Staenden die Werte in beiden Bloecken, gaebe es sie
+     zweimal — und eine spaetere Aenderung an nur einer Stelle waere im anderen
+     Zweig unsichtbar, weil niemand beide Wege zugleich geht.
+
+     So stehen die Werte EINMAL, und die beiden Zweige zeigen nur um. Dass sie
+     dabei DIESELBE Tokenmenge umzeigen, haelt tests/thema.test.ts in beide
+     Richtungen fest.
+
+     GEAENDERT IST KEIN WERT. Sie sind in Schritt 11a gerechnet und belegt
+     (M132, docs/dunkelmodus.md §3) und stehen hier Ziffer fuer Ziffer so, wie
+     sie bis zum 03.09.2026 im Block `.dark` standen. Nachgewiesen ueber den
+     Diff und ueber die vorher/nachher aufgeloesten Werte am laufenden Chrome
+     (docs/dunkelmodus.md §12).
+
+     Der knappste Wert ist --dunkel-status-ungeklaert mit 4,75 : 1 auf seiner
+     eigenen Flaeche — 0,25 Luft zur Schwelle aus WCAG 1.4.3. */
+  --dunkel-status-abgeschlossen: oklch(0.75 0.13 166);
+  --dunkel-status-abgeschlossen-flaeche: oklch(0.26 0.04 166);
+  --dunkel-status-abgeschlossen-kontur: oklch(0.4 0.07 166);
+  --dunkel-status-fehler: oklch(0.7 0.17 27);
+  --dunkel-status-fehler-flaeche: oklch(0.26 0.05 27);
+  --dunkel-status-fehler-kontur: oklch(0.4 0.09 27);
+  --dunkel-status-offen: oklch(0.78 0 0);
+  --dunkel-status-offen-flaeche: oklch(0.25 0 0);
+  --dunkel-status-offen-kontur: oklch(0.35 0 0);
+  --dunkel-status-ungeklaert: oklch(0.62 0 0);
+  --dunkel-status-ungeklaert-flaeche: oklch(0.22 0 0);
+  --dunkel-status-ungeklaert-kontur: oklch(0.32 0 0);
+
+  /* Derselbe Ton 80, dieselbe Helligkeit wie --status-fehler — und gerechnet
+     und nicht gespiegelt: Gegen --card 0.21 gelten andere Zahlen als gegen
+     Weiss (6,53 : 1 / 7,15 : 1 / 5,75 : 1; die Kontur 3,31 : 1).
+
+     BEFUND, hier vermerkt, weil er an diesen Werten haengt: Im Dunkeln ist der
+     engere Nachbar nicht Rot, sondern der AKZENT — 0,117 in OKLab gegen 0,141
+     zu Rot. Der Akzent behaelt hier seinen hellen Wert, und eine
+     ueberfaellig-Schrift auf dunklem Grund muss selbst hell sein. Das ist keine
+     Eigenheit dieser Rolle: Das dunkle Gruen liegt 0,139 vom Akzent entfernt.
+     Ausgeschrieben in docs/visuelles-konzept.md §7a.
+
+     EINGELOEST am 03.09.2026 (11a): Der Bestand ist nachgerechnet. Die 0,117
+     bleiben die kuerzeste Strecke zum Akzent und sind damit bestaetigt und
+     nicht widerlegt; die zweitkuerzeste ist weiterhin das Gruen mit 0,139, dann
+     --status-offen mit 0,164.
+
+     UND SEIT 11b SICHTBAR: Genau diese Enge ist offener Punkt 122 — im
+     Dunkelzustand liest sich Ueberfaellig lauter als Fehler, obwohl beide auf
+     L 0.7 stehen. Bekannt, dokumentiert, bewusst stehen gelassen. */
+  --dunkel-ueberfaellig: oklch(0.7 0.14 80);
+  --dunkel-ueberfaellig-flaeche: oklch(0.26 0.05 80);
+  --dunkel-ueberfaellig-kontur: oklch(0.53 0.105 80);
+
+  /* Dieselbe Fuellfarbe wie im Hellen — sie traegt auf dunklem Grund 8,97 : 1
+     und braucht dort ebenfalls dunkle Schrift. Umgekehrt ist die abgedunkelte
+     Stufe hier unbrauchbar; an ihre Stelle tritt eine aufgehellte. */
+  --dunkel-akzent: oklch(0.777 0.1643 112.4);
+  --dunkel-akzent-schrift: oklch(0.83 0.15 112.4);
+  --dunkel-akzent-flaeche: oklch(0.28 0.06 112.4);
+  --dunkel-akzent-vordergrund: oklch(0.2 0.04 112.4);
+
+  /* Die shadcn-Basistokens. Sie sind BEZUG und nicht Gegenstand (E-61): Sie
+     kommen aus dem Generator und werden uebernommen, nicht gerechnet. */
+  --dunkel-background: oklch(0.16 0 0);
+  --dunkel-foreground: oklch(0.97 0 0);
+  --dunkel-card: oklch(0.21 0 0);
+  --dunkel-card-foreground: oklch(0.97 0 0);
+  --dunkel-popover: oklch(0.21 0 0);
+  --dunkel-popover-foreground: oklch(0.97 0 0);
+  --dunkel-primary: var(--dunkel-akzent);
+  --dunkel-primary-foreground: var(--dunkel-akzent-vordergrund);
+  --dunkel-secondary: oklch(0.27 0 0);
+  --dunkel-secondary-foreground: oklch(0.97 0 0);
+  --dunkel-muted: oklch(0.27 0 0);
+  --dunkel-muted-foreground: oklch(0.7 0 0);
+  --dunkel-accent: var(--dunkel-akzent-flaeche);
+  --dunkel-accent-foreground: var(--dunkel-akzent-schrift);
+  --dunkel-destructive: var(--dunkel-status-fehler);
+  --dunkel-border: oklch(1 0 0 / 12%);
+  --dunkel-input: oklch(1 0 0 / 16%);
+  --dunkel-ring: var(--dunkel-akzent-schrift);
+  --dunkel-chart-1: oklch(0.87 0 0);
+  --dunkel-chart-2: oklch(0.556 0 0);
+  --dunkel-chart-3: oklch(0.439 0 0);
+  --dunkel-chart-4: oklch(0.371 0 0);
+  --dunkel-chart-5: oklch(0.269 0 0);
+  --dunkel-sidebar: oklch(0.21 0 0);
+  --dunkel-sidebar-foreground: oklch(0.97 0 0);
+  --dunkel-sidebar-primary: var(--dunkel-akzent);
+  --dunkel-sidebar-primary-foreground: var(--dunkel-akzent-vordergrund);
+  --dunkel-sidebar-accent: var(--dunkel-akzent-flaeche);
+  --dunkel-sidebar-accent-foreground: var(--dunkel-akzent-schrift);
+  --dunkel-sidebar-border: oklch(1 0 0 / 12%);
+  --dunkel-sidebar-ring: var(--dunkel-akzent-schrift);
 }
 
 /* ── Die vier Stufen des Dichteumschalters ───────────────────────────────────
@@ -414,77 +589,154 @@ html[data-dichte="l"] {
   --dichte-beschriftung: 16rem;
 }
 
-/* Kein Dunkelmodus im MVP — hier wird nichts umgeschaltet. Der Block bleibt
-   stehen, damit die Komponenten aus components/ui vollstaendig bleiben und ein
-   spaeterer Dunkelmodus an genau dieser einen Stelle entsteht. */
-.dark {
-  --status-abgeschlossen: oklch(0.75 0.13 166);
-  --status-abgeschlossen-flaeche: oklch(0.26 0.04 166);
-  --status-abgeschlossen-kontur: oklch(0.4 0.07 166);
-  --status-fehler: oklch(0.7 0.17 27);
-  --status-fehler-flaeche: oklch(0.26 0.05 27);
-  --status-fehler-kontur: oklch(0.4 0.09 27);
-  --status-offen: oklch(0.78 0 0);
-  --status-offen-flaeche: oklch(0.25 0 0);
-  --status-offen-kontur: oklch(0.35 0 0);
-  --status-ungeklaert: oklch(0.62 0 0);
-  --status-ungeklaert-flaeche: oklch(0.22 0 0);
-  --status-ungeklaert-kontur: oklch(0.32 0 0);
+/* ── Das Erscheinungsbild — drei Werte an der Wurzel ─────────────────────────
+   Bis zum 03.09.2026 stand hier der Block `.dark`, und nichts schaltete ihn je
+   ein (belegt in docs/dunkelmodus.md §1). Seit Schritt 11b haengt er an dem
+   Attribut `data-thema` am WURZELELEMENT, gesetzt vom Wurzel-Layout
+   serverseitig aus dem Cookie `overlord_thema` (src/thema/).
 
-  /* Derselbe Ton 80, dieselbe Helligkeit wie --status-fehler — und gerechnet
-     und nicht gespiegelt: Gegen --card 0.21 gelten andere Zahlen als gegen
-     Weiss (6,53 : 1 / 7,15 : 1 / 5,75 : 1; die Kontur 3,31 : 1).
+   EIN ATTRIBUT UND KEINE KLASSE (E-59): `data-dichte` steht als Attribut am
+   selben Element; eine Klasse daneben stellte zwei Nutzereinstellungen in zwei
+   Bauformen an dasselbe Element. Vor allem ist eine Klasse eine MENGE, in der
+   ein dritter Wert `system` keine Stelle hat.
 
-     BEFUND, hier vermerkt, weil er an diesem Block haengt: Im Dunkelblock ist
-     der engere Nachbar nicht Rot, sondern der AKZENT — 0,117 in OKLab gegen
-     0,141 zu Rot. Der Akzent behaelt hier seinen hellen Wert, und eine
-     ueberfaellig-Schrift auf dunklem Grund muss selbst hell sein. Das ist
-     keine Eigenheit dieser Rolle: Das bestehende dunkle Gruen liegt 0,139
-     vom Akzent entfernt. Der ganze Block ist nie nachgerechnet worden.
-     Ausgeschrieben in docs/visuelles-konzept.md §7a. */
-  --ueberfaellig: oklch(0.7 0.14 80);
-  --ueberfaellig-flaeche: oklch(0.26 0.05 80);
-  --ueberfaellig-kontur: oklch(0.53 0.105 80);
+   DREI WERTE UND NICHT ZWEI (E-60): `system` ist eine MEDIENABFRAGE und keine
+   Auswertung im Browser — deshalb steht der Zustand beim ersten Paint und
+   blitzt nicht auf. Zwei Werte naehmen dem Nutzer die Auskunft, die sein
+   Betriebssystem schon gegeben hat; nur prefers-color-scheme waere keine Wahl.
 
-  /* Dieselbe Fuellfarbe wie im Hellen — sie traegt auf dunklem Grund 9,82 : 1
-     und braucht dort ebenfalls dunkle Schrift. Umgekehrt ist die abgedunkelte
-     Stufe hier unbrauchbar; an ihre Stelle tritt eine aufgehellte. */
-  --akzent: oklch(0.777 0.1643 112.4);
-  --akzent-schrift: oklch(0.83 0.15 112.4);
-  --akzent-flaeche: oklch(0.28 0.06 112.4);
-  --akzent-vordergrund: oklch(0.2 0.04 112.4);
+   DIE WERTE STEHEN EINMAL, oben unter :root als --dunkel-*. Die beiden Zweige
+   hier zeigen nur um. Zwei Bloecke mit gleichem Inhalt waeren eine zweite
+   Pflegestelle, und eine Aenderung an nur einem waere im anderen unsichtbar.
 
-  --background: oklch(0.16 0 0);
-  --foreground: oklch(0.97 0 0);
-  --card: oklch(0.21 0 0);
-  --card-foreground: oklch(0.97 0 0);
-  --popover: oklch(0.21 0 0);
-  --popover-foreground: oklch(0.97 0 0);
-  --primary: var(--akzent);
-  --primary-foreground: var(--akzent-vordergrund);
-  --secondary: oklch(0.27 0 0);
-  --secondary-foreground: oklch(0.97 0 0);
-  --muted: oklch(0.27 0 0);
-  --muted-foreground: oklch(0.7 0 0);
-  --accent: var(--akzent-flaeche);
-  --accent-foreground: var(--akzent-schrift);
-  --destructive: var(--status-fehler);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 16%);
-  --ring: var(--akzent-schrift);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.21 0 0);
-  --sidebar-foreground: oklch(0.97 0 0);
-  --sidebar-primary: var(--akzent);
-  --sidebar-primary-foreground: var(--akzent-vordergrund);
-  --sidebar-accent: var(--akzent-flaeche);
-  --sidebar-accent-foreground: var(--akzent-schrift);
-  --sidebar-border: oklch(1 0 0 / 12%);
-  --sidebar-ring: var(--akzent-schrift);
+   color-scheme GEHOERT DAZU und ist kein Beiwerk: Ohne sie blieben
+   Bildlaufleisten, Auswahlfelder, Datumswaehler und jedes andere native
+   Bedienelement hell — auf einer Anwendung, die sonst vollstaendig dunkel ist.
+   Das faellt erst im Betrieb auf. */
+
+/* Hell ist der Grundzustand: Die Werte stehen in :root und werden hier nicht
+   wiederholt. Die Regel steht trotzdem da, und zwar fuer color-scheme — wer
+   HELL ausdruecklich gewaehlt hat, soll sie auch dann bekommen, wenn sein
+   Betriebssystem dunkel steht. Ohne die Zeile bliebe sie auf `normal`. */
+html[data-thema="hell"] {
+  color-scheme: light;
+}
+
+/* Zweig 1 — die ausdrueckliche Wahl. */
+html[data-thema="dunkel"] {
+  color-scheme: dark;
+
+  --status-abgeschlossen: var(--dunkel-status-abgeschlossen);
+  --status-abgeschlossen-flaeche: var(--dunkel-status-abgeschlossen-flaeche);
+  --status-abgeschlossen-kontur: var(--dunkel-status-abgeschlossen-kontur);
+  --status-fehler: var(--dunkel-status-fehler);
+  --status-fehler-flaeche: var(--dunkel-status-fehler-flaeche);
+  --status-fehler-kontur: var(--dunkel-status-fehler-kontur);
+  --status-offen: var(--dunkel-status-offen);
+  --status-offen-flaeche: var(--dunkel-status-offen-flaeche);
+  --status-offen-kontur: var(--dunkel-status-offen-kontur);
+  --status-ungeklaert: var(--dunkel-status-ungeklaert);
+  --status-ungeklaert-flaeche: var(--dunkel-status-ungeklaert-flaeche);
+  --status-ungeklaert-kontur: var(--dunkel-status-ungeklaert-kontur);
+  --ueberfaellig: var(--dunkel-ueberfaellig);
+  --ueberfaellig-flaeche: var(--dunkel-ueberfaellig-flaeche);
+  --ueberfaellig-kontur: var(--dunkel-ueberfaellig-kontur);
+  --akzent: var(--dunkel-akzent);
+  --akzent-schrift: var(--dunkel-akzent-schrift);
+  --akzent-flaeche: var(--dunkel-akzent-flaeche);
+  --akzent-vordergrund: var(--dunkel-akzent-vordergrund);
+  --background: var(--dunkel-background);
+  --foreground: var(--dunkel-foreground);
+  --card: var(--dunkel-card);
+  --card-foreground: var(--dunkel-card-foreground);
+  --popover: var(--dunkel-popover);
+  --popover-foreground: var(--dunkel-popover-foreground);
+  --primary: var(--dunkel-primary);
+  --primary-foreground: var(--dunkel-primary-foreground);
+  --secondary: var(--dunkel-secondary);
+  --secondary-foreground: var(--dunkel-secondary-foreground);
+  --muted: var(--dunkel-muted);
+  --muted-foreground: var(--dunkel-muted-foreground);
+  --accent: var(--dunkel-accent);
+  --accent-foreground: var(--dunkel-accent-foreground);
+  --destructive: var(--dunkel-destructive);
+  --border: var(--dunkel-border);
+  --input: var(--dunkel-input);
+  --ring: var(--dunkel-ring);
+  --chart-1: var(--dunkel-chart-1);
+  --chart-2: var(--dunkel-chart-2);
+  --chart-3: var(--dunkel-chart-3);
+  --chart-4: var(--dunkel-chart-4);
+  --chart-5: var(--dunkel-chart-5);
+  --sidebar: var(--dunkel-sidebar);
+  --sidebar-foreground: var(--dunkel-sidebar-foreground);
+  --sidebar-primary: var(--dunkel-sidebar-primary);
+  --sidebar-primary-foreground: var(--dunkel-sidebar-primary-foreground);
+  --sidebar-accent: var(--dunkel-sidebar-accent);
+  --sidebar-accent-foreground: var(--dunkel-sidebar-accent-foreground);
+  --sidebar-border: var(--dunkel-sidebar-border);
+  --sidebar-ring: var(--dunkel-sidebar-ring);
+}
+
+/* Zweig 2 — keine Wahl getroffen, und das Betriebssystem sagt dunkel.
+   DIESELBE Tokenmenge wie oben; tests/thema.test.ts vergleicht beide in beide
+   Richtungen. Ein Token, das nur in einem der beiden Zweige steht, waere im
+   System-Fall hell und im ausdruecklichen dunkel. */
+@media (prefers-color-scheme: dark) {
+  html[data-thema="system"] {
+    color-scheme: dark;
+
+    --status-abgeschlossen: var(--dunkel-status-abgeschlossen);
+    --status-abgeschlossen-flaeche: var(--dunkel-status-abgeschlossen-flaeche);
+    --status-abgeschlossen-kontur: var(--dunkel-status-abgeschlossen-kontur);
+    --status-fehler: var(--dunkel-status-fehler);
+    --status-fehler-flaeche: var(--dunkel-status-fehler-flaeche);
+    --status-fehler-kontur: var(--dunkel-status-fehler-kontur);
+    --status-offen: var(--dunkel-status-offen);
+    --status-offen-flaeche: var(--dunkel-status-offen-flaeche);
+    --status-offen-kontur: var(--dunkel-status-offen-kontur);
+    --status-ungeklaert: var(--dunkel-status-ungeklaert);
+    --status-ungeklaert-flaeche: var(--dunkel-status-ungeklaert-flaeche);
+    --status-ungeklaert-kontur: var(--dunkel-status-ungeklaert-kontur);
+    --ueberfaellig: var(--dunkel-ueberfaellig);
+    --ueberfaellig-flaeche: var(--dunkel-ueberfaellig-flaeche);
+    --ueberfaellig-kontur: var(--dunkel-ueberfaellig-kontur);
+    --akzent: var(--dunkel-akzent);
+    --akzent-schrift: var(--dunkel-akzent-schrift);
+    --akzent-flaeche: var(--dunkel-akzent-flaeche);
+    --akzent-vordergrund: var(--dunkel-akzent-vordergrund);
+    --background: var(--dunkel-background);
+    --foreground: var(--dunkel-foreground);
+    --card: var(--dunkel-card);
+    --card-foreground: var(--dunkel-card-foreground);
+    --popover: var(--dunkel-popover);
+    --popover-foreground: var(--dunkel-popover-foreground);
+    --primary: var(--dunkel-primary);
+    --primary-foreground: var(--dunkel-primary-foreground);
+    --secondary: var(--dunkel-secondary);
+    --secondary-foreground: var(--dunkel-secondary-foreground);
+    --muted: var(--dunkel-muted);
+    --muted-foreground: var(--dunkel-muted-foreground);
+    --accent: var(--dunkel-accent);
+    --accent-foreground: var(--dunkel-accent-foreground);
+    --destructive: var(--dunkel-destructive);
+    --border: var(--dunkel-border);
+    --input: var(--dunkel-input);
+    --ring: var(--dunkel-ring);
+    --chart-1: var(--dunkel-chart-1);
+    --chart-2: var(--dunkel-chart-2);
+    --chart-3: var(--dunkel-chart-3);
+    --chart-4: var(--dunkel-chart-4);
+    --chart-5: var(--dunkel-chart-5);
+    --sidebar: var(--dunkel-sidebar);
+    --sidebar-foreground: var(--dunkel-sidebar-foreground);
+    --sidebar-primary: var(--dunkel-sidebar-primary);
+    --sidebar-primary-foreground: var(--dunkel-sidebar-primary-foreground);
+    --sidebar-accent: var(--dunkel-sidebar-accent);
+    --sidebar-accent-foreground: var(--dunkel-sidebar-accent-foreground);
+    --sidebar-border: var(--dunkel-sidebar-border);
+    --sidebar-ring: var(--dunkel-sidebar-ring);
+  }
 }
 
 @layer base {

@@ -2646,3 +2646,293 @@ Zeitraumpaar?
 > an sein Abbruchkriterium, wird sie **teurer** — bei `NEXANS` über zwölf Monate rechnerisch
 > 199 − 30 + 200 = **rund 369 ms**, immer noch unter Budget, aber ohne Luft. **Beides ist ein
 > zulässiges Ergebnis; nur das Verschweigen wäre es nicht.**
+
+---
+
+# Die Ergebnisse — dagegengehalten
+
+**Gefahren am 03.09.2026.** Sitzung 1 und 2 mit `mysql.exe` gegen die Testkopie
+(`scripts/messung-schritt10b-4/`), M143 bis M145 über `MessungM108DbIT` im Profil `dev` — also über
+**das, was der Code schickt**. Ein Aufwärmlauf, dann die beste von fünf.
+
+---
+
+## M142 — `SOSAction`, und das Abbruchkriterium ist um Faktor 250 verfehlt
+
+### (a) Die Größe der Stammdaten
+
+| Tabelle | `TABLE_ROWS` (geschätzt) | **gezählt** | Bytes |
+|---|---:|---:|---:|
+| `SOSAction` | 4.232 | **3.944** | 2.129.920 (**2,03 MiB**) |
+| `SOS` | 1.865 | **1.818** | 524.288 |
+| `Process` | 1.490 | **1.503** | 442.368 |
+| `ProjectMandant` | 134 | **134** | 32.768 |
+
+**Die 3.944 bestätigen die Zahl, die aus M8 herzuleiten war** (11 + 2 + 3.743 + 186 + 1 + 1). Die
+Schätzung liegt mit 4.232 um **7,3 % zu hoch** — dieselbe Richtung wie bei `Message` (6,5 %) und
+das dritte Beispiel dafür, dass eine `rows`-Angabe kein Vorzeichen trägt.
+
+**Die Beziehung ist geprüft und nicht angenommen** (§3.5 des Auftrags verlangt es ausdrücklich):
+`SOS.ProcessID` existiert, ist `varchar(36)`, `NULL`-fähig und mit `SOS_ProcessFK` indiziert.
+**Alle 1.818 `SOS`-Zeilen tragen eine** — verteilt auf **1.502** der 1.503 Prozesse. Es gibt keinen
+Ablauf ohne Prozess.
+
+### (b) Was das `LIKE` kostet und wie viele Zeilen es trifft
+
+| | Zeilen | voller Durchlauf, beste von fünf |
+|---|---:|---:|
+| `SOSActionServiceProperties LIKE '%SUSPEND%'` | **8** | **5,166 ms** |
+| `… LIKE '%WAITUNTIL%'` | **30** | **4,959 ms** |
+| beide zugleich | 7 | — |
+| ohne Bausteine (`NULL`) | 0 | — |
+
+**Acht gegen dreißig, und die Mengen sind nicht ineinander enthalten.** Eine `SOSAction` trägt
+`SUSPEND` ohne `WAITUNTIL`, 23 tragen `WAITUNTIL` ohne `SUSPEND`. **Das entscheidet die Wortwahl,
+und zwar erst zusammen mit M144.**
+
+### (c) Trägt der **geplante** Baustein der 538 das Wort?
+
+| | |
+|---|---:|
+| wartende Nachrichten | **538** |
+| verschiedene Abläufe (`SOSID`) | **1** |
+| verschiedene `SOSActionID` | **1** |
+| Verweis löst in `SOSAction` auf | **538** |
+| **geplanter Baustein mit `SUSPEND`** | **538** |
+| **geplanter Baustein mit `WAITUNTIL`** | **538** |
+
+Der Baustein heißt **`Send Message to Pool`**, ist 75 Zeichen lang und trägt `SOSActionTimeout =
+1800`.
+
+**Die Gegenprobe über den zuletzt ausgeführten Schritt** — der Join, den M15 mit 100 %
+Übereinstimmung belegt (`MessageAction.SOSID`, `.SOSActionID`):
+
+| Zeilen | ausgeführt mit `SUSPEND` | geplant mit `SUSPEND` | **Abweichungen** |
+|---:|---:|---:|---:|
+| 1.076 | 538 | 538 | **0** |
+
+> **Belegvermerk** (Regel L10).
+> *Gemessen ist:* Bei 538 von 538 wartenden Nachrichten trägt auch der **geplante** Baustein das
+> Wort, und über beide Schritte aller 538 fallen ausgeführt und geplant nirgends auseinander.
+> *Behauptet wird:* Die Übertragung von M29 (ausgeführt) auf `SOSAction` (geplant) trägt.
+> **Die Lücke, und sie ist größer als „538":** Alle 538 hängen an **einer** `SOSAction`-Zeile. `n =
+> 538` ist die Zahl der **Zeilen**, nicht die der **Fälle**. Die Messung kann die Übertragung
+> **widerlegen**; bestätigen kann sie sie nur für diese eine Gestalt.
+
+### (d) Die Erscheinungsbedingung — der Plan ist die Antwort
+
+```
+pm  ref  ProjectMandant_Mandant_idx  key_len 146  rows 17  Using where; Using index
+p   ref  Process_ProjectFK           key_len 147  rows  5  Using index
+s   ref  SOS_ProcessFK               key_len 147  rows  1  Using index
+sa  ref  PRIMARY                     key_len 146  rows  1  Using where
+```
+
+**Der Optimierer steigt beim Mandanten ein.** Das `LIKE` läuft nur über dessen eigene
+`SOSAction`-Zeilen und **nie über die Tabelle** — bei `NEXANS` über rund 85 Zeilen, bei `SUTTONS`
+über rund fünf. Für **beide** Mandanten ist der Plan zeichengleich.
+
+| | beste von fünf |
+|---|---:|
+| `NEXANS` | **0,800 ms** |
+| `SUTTONS` | **0,785 ms** |
+
+### Vorregistrierte Deutung, dagegengehalten
+
+| Erwartet | Eingetreten |
+|---|---|
+| Zeilenzahl in der Größenordnung von 3.944 | **3.944**, gezählt |
+| Aufwand **deutlich unter** den 70,9 ms aus M8 | **0,79–0,80 ms** — Faktor 89 darunter |
+| **Abbruch bei > 200 ms** | **nicht ausgelöst**, um Faktor 250 verfehlt |
+| Trägt der geplante Ablauf das Wort nicht, ist §3.5 offen | **Er trägt es, 538 von 538** |
+
+**Die Vorhersage ist in allen vier Zeilen eingetroffen.** Der Grund für die 0,8 ms ist allerdings
+ein anderer als vermutet: Erwartet war, dass das `EXISTS` beim ersten Treffer abbricht. **Gemessen
+ist etwas Besseres** — der Optimierer kommt gar nicht erst in die Nähe der ganzen Tabelle, weil er
+über die Mandantenkette einsteigt.
+
+---
+
+## M143 — die drei neuen Statements
+
+Gemessen über `MessungM108DbIT`, also an dem, was der Code schickt. Zwei Läufe, je Aufwärmlauf und
+beste von fünf; angegeben ist die Spanne beider Läufe.
+
+| Statement | `NEXANS` | `SUTTONS` |
+|---|---:|---:|
+| Kachel *Läuft* | **1,09–1,25 ms** | **0,94–1,04 ms** |
+| Kachel *Wartend* | **4,40–4,66 ms** | **3,34–3,55 ms** |
+| Erscheinungsbedingung | **1,24–1,40 ms** | **1,40–1,42 ms** |
+| **zusammen** | **6,7–7,3 ms** | **5,7–6,0 ms** |
+
+### Die Pläne
+
+| Statement | Plan |
+|---|---|
+| *Läuft* | `Message` **`ref`** über `MessageStatusIDX`, `key_len 123`, `rows = 1`; Kette als `eq_ref` |
+| *Wartend* | dasselbe, `rows = 538` |
+| Erscheinungsbedingung | siehe M142 (d) |
+
+### Die Werte, die die Kacheln zeigen
+
+| | `NEXANS` | `SUTTONS` |
+|---|---|---|
+| *Läuft* | `anzahl = 0`, `aeltesteSekunden = null` | dasselbe |
+| *Wartend* | `anzahl = 538`, älteste `2025-12-23 11:04:13`, **`aeltesteSekunden = 579934`** | `anzahl = 0`, `null` |
+| Erscheinungsbedingung | **`true`** | **`false`** — die Kachel fehlt ganz |
+
+### Vorregistrierte Deutung, dagegengehalten
+
+| Erwartet | Eingetreten |
+|---|---|
+| in der Größenordnung von 5,1 / 6,2 ms (`NEXANS`) bzw. 4,5 / 5,2 ms (`SUTTONS`) | **billiger**: 1,1 + 4,5 statt 5,1 + 6,2 |
+| `range` über `MessageStatusIDX`; **ein anderer Zugriffspfad ist ein Befund** | **`ref` über `MessageStatusIDX`** — derselbe Index, engerer Zugriff |
+| `RUNNING` überall `0`, `aelteste = null` | **eingetreten**, bei beiden Mandanten |
+
+> **Der Befund zur Zugriffsart, und er ist der vorhergesagte.** Die Vorregistrierung verlangt, ein
+> `ref` statt `range` **zu berichten und nicht abzutun**. Es ist eingetreten, und die Erklärung
+> stand schon dort: Das neue Statement vergleicht mit `=` auf **einen** Rohwert, wo das alte ein
+> `IN` über zwei trug. **`ref` ist bei einem einzelnen Wert der engere Zugriff, nicht der
+> schlechtere.** `DashboardPlanDbIT` schreibt deshalb den **Index** fest und ausdrücklich nicht die
+> Zugriffsart.
+
+---
+
+## M144 — die Erscheinungsbedingung für alle zehn Mandanten
+
+**Das Ergebnis je Mandant ist die Zahl, die vorher niemand hatte.** Vollständig, auch die `false`:
+
+| Mandant | `SUSPEND` | `WAITUNTIL` | `SOSAction`-Zeilen mit `SUSPEND` |
+|---|:---:|:---:|---:|
+| `EDITIONLINGERI` | ✗ | ✗ | — |
+| `IBIS` | ✗ | ✗ | — |
+| `IBISGUS` | ✗ | ✗ | — |
+| **`NEXANS`** | **✓** | **✓** | **7** (7 Abläufe, 2 Prozesse) |
+| `NXHBE` | ✗ | ✗ | — |
+| `SUTTONS` | ✗ | ✗ | — |
+| `SYSTEM` | ✗ | ✗ | — |
+| **`VOTG`** | **✓** | ✗ | **1** (1 Ablauf, 1 Prozess) |
+| `WOC` | ✗ | ✗ | — |
+| `ZAST` | ✗ | ✗ | — |
+
+`WAITUNTIL` findet bei `NEXANS` 30 Zeilen in 30 Abläufen und 16 Prozessen — und **bei keinem
+anderen Mandanten eine einzige**.
+
+### ⚠️ Damit ist die Wortwahl entschieden, und nicht nach der Bedeutung
+
+**`SUSPEND` findet zwei Mandanten, `WAITUNTIL` einen.** `WAITUNTIL` verlöre **`VOTG`** — dessen
+einzige `SUSPEND`-Zeile trägt die andere Marke nicht.
+
+**Die Begründung des Auftrags („`SUSPEND` ist das Wort, das den Zustand benennt") trägt also, aber
+sie ist nicht der Grund.** Der Grund ist, dass die andere Marke einen Mandanten übersieht. **Hätte
+die Messung umgekehrt ausgeschlagen, wäre `WAITUNTIL` zu nehmen gewesen** — die Entscheidung fällt
+an der Messung und nicht am schöneren Wort.
+
+## M144 (b) — die Aufteilung der 538 auf die Mandanten
+
+| Mandant | Status | Zeilen | älteste | jüngste |
+|---|---|---:|---|---|
+| **`NEXANS`** | `SUSPENDED` | **538** | `2025-12-23 11:04:13` | `2025-12-29 12:37:16` |
+| *alle übrigen* | — | **0** | — | — |
+
+**Gegenprobe ohne Mandantenkette:** `SUSPENDED` **538**, `RUNNING` kommt nicht vor.
+**`MessageTimeout`:** alle 538 tragen `1800`, kein anderer Wert.
+
+> ⚠️ **Der Auftrag führt diese Aufteilung als „nicht erhoben". Das trifft nicht zu.**
+> [`messungen-schritt10.md`](messungen-schritt10.md) M90 hat sie erhoben: *„Alle 538 offenen Zeilen
+> gehören `NEXANS` … Kein anderer Mandant hat auch nur eine."* **Hier ist sie am geltenden Anker
+> bestätigt** — M90 hatte gegen `2026-07-08 17:21:10` gerechnet statt gegen `2025-12-30 04:09:47`
+> ([`dashboard.md`](dashboard.md) §8). Auf die **Zuordnung** wirkt der Anker nicht; auf die Zahl der
+> *überfälligen* Zeilen hätte er gewirkt. **Die vorregistrierte Erwartung ist eingetreten.**
+
+## M144 (c) — die offene Prüfung, einmal gegen die Testkopie
+
+| Status | Zeilen | älteste | ältestes Alter |
+|---|---:|---|---:|
+| `SUSPENDED` | **538** | `2025-12-23 11:04:13` | **579.934 s = 6,71 Tage** |
+| `RUNNING` | *kommt nicht vor* | — | — |
+
+**6,71 Tage sind mit „höchstens rund eine Woche" verträglich.** Sie belegen es nicht: eine Gestalt,
+ein Status, ein Zeitraum von sieben Tagen. **Und über `RUNNING` — die Hälfte, an der die ganze
+Widerlegung hängt — sagt die Kopie nichts.** Die Prüfung bleibt offen und gehört gegen die
+Produktion ([`message-status.md`](message-status.md)).
+
+---
+
+## M145 — die ganze Landingpage
+
+Zwei Läufe, je Aufwärmlauf und beste von fünf. Angegeben ist die Spanne beider Läufe, daneben M108.
+
+| Paar | `NEXANS` M108 | **M145** | `SUTTONS` M108 | **M145** |
+|---|---:|---:|---:|---:|
+| 48 h | 62,227 | **49,5–57,7** | 72,007 | **49,5–53,4** |
+| 30 Tage | 152,814 | **149,4–149,8** | 109,829 | **116,0–119,5** |
+| 12 Monate | **199,030** | **194,2–195,0** | 127,038 | **139,7–144,6** |
+| ohne `zeitraum` | 64,706 | **59,2–59,9** | 77,957 | **55,1–59,9** |
+
+**Das Budget von 500 ms ist in jeder Kombination weit unterschritten.** Die teuerste überhaupt
+mögliche liegt bei **195 ms** — Faktor 2,6 Luft.
+
+### ⚠️ Vorregistrierte Deutung, dagegengehalten — **sie trifft nicht zu**
+
+Erwartet war eine **Verbesserung** für beide Mandanten. Eingetreten ist sie für `NEXANS`
+(−4 ms bei zwölf Monaten) und **nicht** für `SUTTONS` (+13 bis +18 ms). **Zwei Dinge sind
+auseinanderzuhalten, und das erste ist ein Fehler in der Vorregistrierung selbst.**
+
+#### 1. Die vorregistrierte Rechnung war falsch
+
+Dort steht: *„es fällt weg: die Überfälligkeitshälfte von ‚Zuletzt aufgefallen' — **29 bis 34 ms**
+(M108)."* **Die 29–34 ms sind in M108 die Kosten *beider* Hälften zusammen** — die Zeile heißt dort
+ausdrücklich *„Zuletzt aufgefallen (beide Statements)"*. Die Hälfte, die wegfällt, ist rund
+**8–10 ms** wert.
+
+**Gemessen bestätigt:** Der Block kostet jetzt **21,9–26,1 ms** über alle sechs Kombinationen, vorher
+29,7–34,1 ms. Die korrigierte Rechnung:
+
+| | |
+|---|---:|
+| fällt weg: zwei Überfällig-Statements (`SUTTONS`) | **−9,7 ms** |
+| fällt weg: die zweite Hälfte von Block 6 | **−8 bis −10 ms** |
+| kommt hinzu: drei neue Statements | **+5,8 ms** |
+| **eigener Beitrag dieses Schritts** | **rund −13 ms** |
+
+#### 2. Die Mehrkosten liegen in einem Block, den dieser Schritt nicht anfasst
+
+| Block, `SUTTONS` 12 Monate | M108 | M145 |
+|---|---:|---:|
+| Verlauf | 39,687 ms | **39,650 ms** |
+| **Verteilung** | 40,223 ms | **67,253 ms** |
+| Zuletzt aufgefallen | 34,084 ms (beide) | **24,978 ms** (eine) |
+
+**Die Verteilung ist um 27 ms teurer geworden, und an ihr ist keine Zeile geändert worden.**
+
+> **Belegvermerk** (Regel L10).
+> *Gemessen ist:* die Laufzeit je Block, zweimal, warm; dazu der Bestand — `message_rollup` trägt
+> unverändert **335.610** Zeilen, `message_rollup_tag` 123.049, `message_rollup_monat` 11.957, der
+> letzte Volllauf stammt vom **31.08.2026** (demselben Tag wie M108), und `SUTTONS` hat **keine
+> einzige** Katalogzeile — die siebzehn aus offenem Punkt 58 sind nicht mehr da.
+> *Behauptet wird:* Die Mehrkosten stammen **nicht** aus diesem Schritt.
+> **Die Lücke:** Woher sie stammen, ist **nicht gemessen**. Weder Datenmenge noch Katalogstand noch
+> Rollup-Stand haben sich geändert; bleibt der Zustand der Instanz (Puffer, Fremdlast). Das ist
+> **plausibel und nicht belegt**, und es wird hier nicht als Ursache behauptet. Offener Punkt
+> **134** in [`dashboard.md`](dashboard.md) §11.
+
+**Was das für die Abnahme heißt:** Das Budget hält mit Faktor 2,6, und der eigene Beitrag des
+Schritts ist gemessen negativ. **Die Drift im Verteilungsblock ist ein eigener Befund** und wird in
+diesem Schritt nicht geheilt.
+
+---
+
+## Was diese Runde nicht zeigt
+
+1. **Nichts über die Produktion.** Alle Zahlen stammen von der Testkopie.
+2. **Nicht, ob die Auskunft stimmt, die *Überfällig* gestürzt hat.** Sie ist nicht gemessen; die
+   offene Prüfung steht in [`message-status.md`](message-status.md). `RUNNING` kommt hier null Mal
+   vor, und damit ist die Hälfte der Auskunft von hier aus grundsätzlich unprüfbar.
+3. **Nicht die Isolation der Kachel *Läuft*.** Jeder Mandant sieht `0`, mit und ohne
+   Mandantenfilter. Der Nachweis ruht auf dem gerenderten Statement und nicht auf Daten (offener
+   Punkt 135).
+4. **Den Kaltlauf nicht.** `FLUSH TABLES` steht `monitor_read` nicht zu.
+5. **Nichts über die acht übrigen Mandanten** — außer der Erscheinungsbedingung, die für **alle
+   zehn** erhoben ist (M144).
+6. **Nicht, woher die 27 ms im Verteilungsblock kommen.** Siehe den Belegvermerk zu M145.

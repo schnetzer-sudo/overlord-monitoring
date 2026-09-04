@@ -3,9 +3,11 @@ package de.kraftwerkone.overlord.monitor.dashboard;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
+import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
 import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
 import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -196,34 +198,49 @@ class MessungM108DbIT {
       }
 
       Zeitfenster kachelfenster = Rollupzeitraum.STUNDEN_48.fenster(ANKER);
+
+      // ── M143: die beiden neuen Kachelstatements, je Status und je Mandant ────────────────
+      for (MessageStatusKind einordnung :
+          List.of(MessageStatusKind.LAEUFT, MessageStatusKind.WARTEND)) {
+        String kachel = einordnung.name().toLowerCase(Locale.ROOT);
+        Offenstand stand =
+            repository.offeneNachrichten(mandant, einordnung).orElse(new Offenstand(-1, null));
+        melde("kachel." + kachel + ".anzahl." + mandantId, String.valueOf(stand.anzahl()));
+        melde(
+            "kachel." + kachel + ".aelteste." + mandantId,
+            stand.aelteste() == null ? "null" : stand.aelteste().toString());
+        melde(
+            "kachel." + kachel + ".aeltesteSekunden." + mandantId,
+            stand.aelteste() == null
+                ? "null"
+                : String.valueOf(Duration.between(stand.aelteste(), ANKER).toSeconds()));
+        melde(
+            "kachel." + kachel + ".ms." + mandantId,
+            ms(
+                besteVonFuenf(
+                    () ->
+                        (int)
+                            repository
+                                .offeneNachrichten(mandant, einordnung)
+                                .map(Offenstand::anzahl)
+                                .orElse(-1L)
+                                .longValue())));
+      }
+
+      // ── M144: die Erscheinungsbedingung, gemessen an dem, was der Code schickt ───────────
       melde(
-          "ueberfaellig.imFenster." + mandantId,
-          String.valueOf(
-              repository.ueberfaelligImFenster(mandant, kachelfenster, ANKER).orElse(-1)));
+          "erscheinungsbedingung.wartend." + mandantId,
+          String.valueOf(repository.hatWartendeAblaeufe(mandant)));
       melde(
-          "ueberfaellig.imFenster.ms." + mandantId,
-          ms(
-              besteVonFuenf(
-                  () ->
-                      (int)
-                          repository
-                              .ueberfaelligImFenster(mandant, kachelfenster, ANKER)
-                              .orElse(-1))));
-      melde(
-          "ueberfaellig.insgesamt." + mandantId,
-          String.valueOf(repository.ueberfaelligInsgesamt(mandant, ANKER).orElse(-1)));
-      melde(
-          "ueberfaellig.insgesamt.ms." + mandantId,
-          ms(
-              besteVonFuenf(
-                  () -> (int) repository.ueberfaelligInsgesamt(mandant, ANKER).orElse(-1))));
+          "erscheinungsbedingung.ms." + mandantId,
+          ms(besteVonFuenf(() -> repository.hatWartendeAblaeufe(mandant) ? 1 : 0)));
 
       melde(
           "aufgefallen.zeilen." + mandantId,
           String.valueOf(
               repository
                   .zuletztAufgefallen(
-                      mandant, kachelfenster, ANKER, DashboardService.AUFFAELLIG_HOECHSTENS)
+                      mandant, kachelfenster, DashboardService.AUFFAELLIG_HOECHSTENS)
                   .size()));
       for (Rollupzeitraum zeitraum : Rollupzeitraum.reihe()) {
         Zeitfenster weit = zeitraum.fenster(ANKER);
@@ -234,7 +251,7 @@ class MessungM108DbIT {
                     () ->
                         repository
                             .zuletztAufgefallen(
-                                mandant, weit, ANKER, DashboardService.AUFFAELLIG_HOECHSTENS)
+                                mandant, weit, DashboardService.AUFFAELLIG_HOECHSTENS)
                             .size())));
       }
       melde(
@@ -244,7 +261,7 @@ class MessungM108DbIT {
                   () ->
                       repository
                           .zuletztAufgefallen(
-                              mandant, kachelfenster, ANKER, DashboardService.AUFFAELLIG_HOECHSTENS)
+                              mandant, kachelfenster, DashboardService.AUFFAELLIG_HOECHSTENS)
                           .size())));
       melde("stand.ms", ms(besteVonFuenf(() -> repository.letzterLauf().isPresent() ? 1 : 0)));
 
@@ -292,19 +309,21 @@ class MessungM108DbIT {
       planVon("belegung." + zeitraum.code(), gerendert.getFirst());
     }
 
-    Zeitfenster fenster = Rollupzeitraum.STUNDEN_48.fenster(ANKER);
-    gerendert.clear();
-    attrappe.ueberfaelligImFenster(nexans, fenster, ANKER);
-    planVon("ueberfaellig.imFenster", gerendert.getFirst());
+    for (MessageStatusKind einordnung :
+        List.of(MessageStatusKind.LAEUFT, MessageStatusKind.WARTEND)) {
+      gerendert.clear();
+      attrappe.offeneNachrichten(nexans, einordnung);
+      planVon("kachel." + einordnung.name().toLowerCase(Locale.ROOT), gerendert.getFirst());
+    }
 
     gerendert.clear();
-    attrappe.ueberfaelligInsgesamt(nexans, ANKER);
-    planVon("ueberfaellig.insgesamt", gerendert.getFirst());
+    attrappe.hatWartendeAblaeufe(nexans);
+    planVon("erscheinungsbedingung", gerendert.getFirst());
 
     for (Rollupzeitraum zeitraum : Rollupzeitraum.reihe()) {
       gerendert.clear();
       attrappe.zuletztAufgefallen(
-          nexans, zeitraum.fenster(ANKER), ANKER, DashboardService.AUFFAELLIG_HOECHSTENS);
+          nexans, zeitraum.fenster(ANKER), DashboardService.AUFFAELLIG_HOECHSTENS);
       for (int i = 0; i < gerendert.size(); i++) {
         planVon("aufgefallen." + zeitraum.code() + "." + (i + 1), gerendert.get(i));
       }

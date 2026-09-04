@@ -63,7 +63,7 @@ public class NachrichtendetailService {
     OffenerZustand zustand = zustand(einordnung, kopf, aktionen, schrittfolge);
     ZoneId zone = anwendungsuhr.getZone();
     LocalDateTime jetzt = LocalDateTime.now(anwendungsuhr);
-    Integer frist = frist(kopf);
+    Integer frist = frist(kopf, einordnung);
     LocalDateTime start = fachlicherStart(aktionen);
 
     return new NachrichtendetailResponse(
@@ -92,7 +92,6 @@ public class NachrichtendetailService {
         zustand,
         zustand.istWartend() ? kopf.naechsterSchrittName() : null,
         wartetSeitSekunden(zustand, aktionen, schrittfolge, jetzt),
-        statusClassifier.istUeberfaellig(kopf.status(), kopf.zeitpunkt(), frist, jetzt),
         schrittResponses(schrittfolge, namen, zustand, zone),
         kuratierte(detailRepository.findeKuratierteEigenschaften(mandant, messageId)));
   }
@@ -300,13 +299,46 @@ public class NachrichtendetailService {
   /**
    * Die Frist der Nachricht: {@code Message.MessageTimeout} in <b>Sekunden</b> (Regel Z2, M8).
    *
-   * <p><b>{@code 0} und {@code NULL} werden beide zu {@code null}</b> — „keine Frist gesetzt". Eine
-   * gelieferte {@code 0} liesse sich als „sofort faellig" lesen, und das steht nirgends. Dass die
-   * {@code 0} „kein Timeout" bedeutet, ist eine Analogie und kein Befund; die Begruendung samt
-   * ihrem Gegenbeleg steht an der Stelle, an der sie wirkt ({@code
-   * MessageStatusClassifier.timeoutZeitpunkt}).
+   * <h2>Bei {@link MessageStatusKind#WARTEND} ist sie {@code null} — seit dem 03.09.2026 (E‑76)
+   * </h2>
+   *
+   * <p><b>Bis dahin stand dort {@code 1800}</b>, und das war eine falsche Auskunft: Nach der
+   * fachlichen Auskunft des Auftraggebers vom 03.09.2026 wartet eine {@code SUSPENDED}-Nachricht
+   * <i>absichtlich</i> — auf einen Folgeprozess, etwa den Versand zu einem bestimmten Zeitpunkt —
+   * und wird <b>nie automatisch beendet</b>. Die Frist wird auf sie also nicht angewendet. <b>Ein
+   * Feld, das eine Frist nennt, die niemand durchsetzt, nennt eine Zahl statt einer Auskunft.</b>
+   *
+   * <p><b>Bei {@code RUNNING} bleibt sie und wird erst jetzt richtig:</b> Dort <i>gibt</i> es einen
+   * Waechter — laeuft die Frist ab, setzt das Altsystem den Status auf {@code ERROR_TIMEOUT}.
+   * Zusammen mit {@code wartetSeitSekunden} sagt das Feld damit, <b>wann die Nachricht kippt</b>.
+   *
+   * <p><b>Herkunft:</b> fachliche Auskunft des Auftraggebers vom 03.09.2026. <b>Nicht gemessen.</b>
+   * Die Testkopie kann sie nicht belegen: {@code RUNNING} kommt dort null Mal vor, und die 538
+   * {@code SUSPENDED} sind der Bestand <i>eines</i> Status in <i>einer</i> Gestalt. <b>Gegen die
+   * Produktion zu pruefen</b> mit der Abfrage in {@code docs/message-status.md}, Abschnitt „Die
+   * offene Pruefung".
+   *
+   * <p><b>Fuer die uebrigen Einordnungen aendert sich nichts</b>, und das ist eine Entscheidung und
+   * keine Auslassung: Bei einer abgeschlossenen Nachricht ist die Frist eine Tatsache ueber die
+   * Zeile und keine Zusage ueber die Zukunft. Ob sie auch dort {@code null} werden sollte, ist
+   * offener Punkt 132 — <b>in diesem Schritt nicht entschieden</b>.
+   *
+   * <p><b>{@code 0} und {@code NULL} werden weiterhin beide zu {@code null}</b> — „keine Frist
+   * gesetzt". Eine gelieferte {@code 0} liesse sich als „sofort faellig" lesen, und das steht
+   * nirgends. <b>Dass die {@code 0} „kein Timeout" bedeutet, ist eine Analogie und kein Befund:</b>
+   * Bei allen 52 {@code ERROR_TIMEOUT}-Nachrichten traegt die fehlschlagende Aktion {@code
+   * SOSActionTimeout = 0}, und trotzdem greift dort eine Frist von hoechstens 120 Sekunden (M8). In
+   * dieser Spalte heisst {@code 0} also eher „nimm die Vorgabe" als „keine Frist". Praktisch
+   * folgenlos ist das nur, weil alle 6.915 Zeilen mit {@code MessageTimeout = 0} in einem Endstatus
+   * stehen (M2). <b>Taucht in Produktion eine offene Zeile mit {@code 0} auf, ist hier
+   * nachzusehen.</b> Die Begruendung stand bis zum 03.09.2026 an {@code
+   * MessageStatusClassifier.timeoutZeitpunkt}; jene Methode ist mit E‑71 entfallen, und die
+   * Ueberlegung ist hierher gewandert — an die einzige Stelle, an der sie noch wirkt.
    */
-  private static Integer frist(NachrichtKopfZeile kopf) {
+  private static Integer frist(NachrichtKopfZeile kopf, MessageStatusKind einordnung) {
+    if (einordnung == MessageStatusKind.WARTEND) {
+      return null;
+    }
     return kopf.timeoutSekunden() == null || kopf.timeoutSekunden() <= 0
         ? null
         : (int) kopf.timeoutSekunden();

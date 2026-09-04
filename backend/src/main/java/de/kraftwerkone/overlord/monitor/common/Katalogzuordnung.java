@@ -29,9 +29,16 @@ import org.jooq.Field;
  * muessen — und die beiden Fassungen liefen beim naechsten Katalogzustand auseinander, ohne dass es
  * jemandem auffiele: Die Verteilung des Dashboards und der Baum zeigten dieselbe Zahl verschieden.
  *
- * <p><b>Das ist dieselbe Bauform wie in {@link MessageStatusClassifier}</b> — {@code
- * istUeberfaellig} und {@code ueberfaelligBedingung} stehen dort aus demselben Grund nebeneinander:
- * eine Regel, zwei Ausdrucksformen, ein Ort.
+ * <p><b>Das ist dieselbe Bauform wie in {@link MessageStatusClassifier}</b> — {@link
+ * MessageStatusClassifier#einordnung(String)} und {@link
+ * MessageStatusClassifier#bedingung(MessageStatusKind, Field)} stehen dort aus demselben Grund
+ * nebeneinander: eine Regel, zwei Ausdrucksformen, ein Ort.
+ *
+ * <p><i>(Berichtigt am 03.09.2026.)</i> Hier standen bis dahin {@code istUeberfaellig} und {@code
+ * ueberfaelligBedingung} als Beispielpaar. <b>Beide sind mit E-71 entfallen</b> — die
+ * Problemkategorie <i>Ueberfaellig</i> ist widerlegt. <b>Das Beispiel ist ausgetauscht, die Aussage
+ * nicht:</b> Die Einordnung und ihre SQL-Fassung sind dasselbe Paar und stehen seit Schritt 2
+ * nebeneinander.
  *
  * <p><b>Die Felder werden uebergeben und nicht importiert.</b> {@code process_catalog} liegt zwar
  * im eigenen Schema und nicht in {@code jooq.glassfish}, aber {@code common} soll auch von

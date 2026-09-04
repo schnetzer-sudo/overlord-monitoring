@@ -20,7 +20,6 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.OptionalLong;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -50,6 +49,23 @@ class DashboardServiceTest {
   private static final Instant JETZT = Instant.parse("2025-12-30T04:09:47Z");
   private static final LocalDateTime EIMER = LocalDateTime.parse("2025-12-30T03:00:00");
 
+  /**
+   * 412 Sekunden vor dem Anker — die Groesse, die die Kachel <i>Laeuft</i> als Alter ausweist.
+   *
+   * <p><b>In Ortszeit und nicht in UTC:</b> Die Uhr steht auf {@code 04:09:47Z}, die Zone ist
+   * {@code Europe/Berlin}, und im Dezember sind das {@code 05:09:47} — dieselbe Bruchstelle, die
+   * {@code docs/datenzugriff.md} §7 beschreibt. Zeitstempel aus {@code GlassfishDB} sind
+   * Wanduhrzeit des Servers und werden nirgends konvertiert.
+   */
+  private static final LocalDateTime LAEUFT_SEIT = LocalDateTime.parse("2025-12-30T05:02:55");
+
+  /**
+   * 579.934 Sekunden vor dem Anker, also 6 Tage 17 Stunden. <b>Die Zahl ist erfunden und trotzdem
+   * nicht beliebig:</b> Sie ist die Groessenordnung der aeltesten wartenden Zeile der Testkopie
+   * (M144 b) — ein Prueffall, der aussieht wie der Ernstfall, ohne an ihm zu haengen (Regel T2).
+   */
+  private static final LocalDateTime WARTET_SEIT = LocalDateTime.parse("2025-12-23T12:04:13");
+
   @Mock private DashboardRepository repository;
 
   private DashboardService service() {
@@ -62,9 +78,12 @@ class DashboardServiceTest {
     when(repository.belegung(any(), any(), any())).thenReturn(new Belegung(48, 999));
     when(repository.verlauf(any(), any(), any())).thenReturn(verlauf);
     when(repository.verteilung(any(), any(), any(), any())).thenReturn(verteilung);
-    when(repository.ueberfaelligImFenster(any(), any(), any())).thenReturn(OptionalLong.of(3));
-    when(repository.ueberfaelligInsgesamt(any(), any())).thenReturn(OptionalLong.of(7));
-    when(repository.zuletztAufgefallen(any(), any(), any(), anyInt())).thenReturn(List.of());
+    when(repository.offeneNachrichten(any(), eq(MessageStatusKind.LAEUFT)))
+        .thenReturn(java.util.Optional.of(new Offenstand(3, LAEUFT_SEIT)));
+    when(repository.offeneNachrichten(any(), eq(MessageStatusKind.WARTEND)))
+        .thenReturn(java.util.Optional.of(new Offenstand(7, WARTET_SEIT)));
+    when(repository.hatWartendeAblaeufe(any())).thenReturn(true);
+    when(repository.zuletztAufgefallen(any(), any(), anyInt())).thenReturn(List.of());
     when(repository.letzterLauf()).thenReturn(java.util.Optional.empty());
   }
 
@@ -180,7 +199,7 @@ class DashboardServiceTest {
               KachelnResponse.class,
               FehlerkachelResponse.class,
               FehlerartResponse.class,
-              UeberfaelligkachelResponse.class)) {
+              OffeneKachelResponse.class)) {
         Arrays.stream(klasse.getRecordComponents())
             .map(RecordComponent::getName)
             .forEach(felder::add);
@@ -302,34 +321,52 @@ class DashboardServiceTest {
   // ─── Ueberfaellig ─────────────────────────────────────────────────────────────
 
   @Nested
-  @DisplayName("Die Kachel Ueberfaellig")
-  class Ueberfaellig {
+  @DisplayName("Die Kacheln Laeuft und Wartend")
+  class OffeneKacheln {
 
     @Test
-    @DisplayName("Beide Zahlen stehen da, wenn beide Abfragen durchlaufen")
-    void beide_zahlen() {
+    @DisplayName("Beide Kacheln tragen Zahl und Alter, wenn beide Abfragen durchlaufen")
+    void beide_kacheln() {
       bestandMit(List.of(new Rollupsumme(EIMER, "FINISHED", 1)), List.of());
 
-      assertThat(antwort().kacheln().ueberfaellig())
-          .isEqualTo(new UeberfaelligkachelResponse(3L, 7L, true));
+      // LAEUFT_SEIT liegt 412 s vor dem Anker, WARTET_SEIT 579.934 s (6 d 17 h) — dieselbe
+      // Groessenordnung wie die aelteste wartende Zeile der Testkopie (M144 b).
+      assertThat(antwort().kacheln().laeuft()).isEqualTo(new OffeneKachelResponse(3L, 412L, true));
+      assertThat(antwort().kacheln().wartend())
+          .isEqualTo(new OffeneKachelResponse(7L, 579934L, true));
     }
 
     /**
-     * <b>Der Fall, den D.5 verlangt:</b> Stirbt die Live-Abfrage, liefert die Antwort die uebrigen
-     * Bloecke und die zwei Felder als „nicht ermittelbar" — <b>und nicht als Null</b>. Eine Null
-     * hiesse „es haengt nichts", und das waere in einem Ueberwachungswerkzeug die schlimmste
-     * falsche Antwort.
+     * <b>{@code aeltesteSekunden} ist {@code null}, wenn es keine Zeile gibt</b> — nicht {@code 0}.
+     * Eine Null hiesse „seit null Sekunden", und das ist etwas anderes als „es gibt nichts".
      */
     @Test
-    @DisplayName("Stirbt die Live-Abfrage, steht die Seite und die Kachel sagt „nicht ermittelbar“")
+    @DisplayName("Bei anzahl = 0 ist aeltesteSekunden null und nicht null Sekunden")
+    void kein_alter_ohne_zeile() {
+      bestandMit(List.of(), List.of());
+      when(repository.offeneNachrichten(any(), eq(MessageStatusKind.LAEUFT)))
+          .thenReturn(java.util.Optional.of(new Offenstand(0, null)));
+
+      assertThat(antwort().kacheln().laeuft()).isEqualTo(new OffeneKachelResponse(0L, null, true));
+    }
+
+    /**
+     * <b>Der Fall, den {@code docs/dashboard.md} §5 verlangt:</b> Stirbt die Live-Abfrage, liefert
+     * die Antwort die uebrigen Bloecke und die Kachel als „nicht ermittelbar" — <b>und nicht als
+     * Null</b>. Eine Null hiesse „es laeuft nichts", und das waere in einem Ueberwachungswerkzeug
+     * die schlimmste falsche Antwort.
+     */
+    @Test
+    @DisplayName(
+        "Stirbt eine Live-Abfrage, steht die Seite und die Kachel sagt „nicht ermittelbar“")
     void nicht_ermittelbar() {
       bestandMit(List.of(new Rollupsumme(EIMER, "FINISHED", 42)), List.of(partner("P", 42)));
-      when(repository.ueberfaelligImFenster(any(), any(), any())).thenReturn(OptionalLong.empty());
+      when(repository.offeneNachrichten(any(), eq(MessageStatusKind.LAEUFT)))
+          .thenReturn(java.util.Optional.empty());
 
       DashboardResponse antwort = antwort();
 
-      assertThat(antwort.kacheln().ueberfaellig())
-          .isEqualTo(new UeberfaelligkachelResponse(null, null, false));
+      assertThat(antwort.kacheln().laeuft()).isEqualTo(new OffeneKachelResponse(null, null, false));
       assertThat(antwort.kacheln().nachrichten())
           .as("Die uebrigen Bloecke kommen aus message_rollup und sind unberuehrt")
           .isEqualTo(42);
@@ -337,14 +374,85 @@ class DashboardServiceTest {
       assertThat(antwort.verlauf()).isNotEmpty();
     }
 
-    /** Faellt nur die zweite Abfrage, faellt die Kachel als Ganzes — sie ist ein Paar. */
+    /**
+     * <b>Und das ist der Unterschied zur alten Ueberfaellig-Kachel:</b> Dort fielen zwei Zahlen
+     * <i>derselben</i> Kachel zusammen, weil man sie nebeneinander liest. <i>Laeuft</i> und
+     * <i>Wartend</i> sind zwei verschiedene Auskuenfte und keine Rechnung — faellt eine, steht die
+     * andere.
+     */
     @Test
-    @DisplayName("Auch wenn nur eine der beiden Zahlen faellt, ist die Kachel nicht ermittelbar")
-    void eine_zahl_genuegt_zum_fallen() {
+    @DisplayName("Faellt eine der beiden Kacheln, bleibt die andere ermittelbar")
+    void die_kacheln_fallen_nicht_zusammen() {
       bestandMit(List.of(), List.of());
-      when(repository.ueberfaelligInsgesamt(any(), any())).thenReturn(OptionalLong.empty());
+      when(repository.offeneNachrichten(any(), eq(MessageStatusKind.LAEUFT)))
+          .thenReturn(java.util.Optional.empty());
 
-      assertThat(antwort().kacheln().ueberfaellig().ermittelbar()).isFalse();
+      assertThat(antwort().kacheln().laeuft().ermittelbar()).isFalse();
+      assertThat(antwort().kacheln().wartend().ermittelbar())
+          .as("Zwei Statements, zwei Auskuenfte")
+          .isTrue();
+    }
+  }
+
+  // ─── Die Erscheinungsbedingung der Kachel Wartend ─────────────────────────────
+
+  @Nested
+  @DisplayName("Die Kachel Wartend erscheint strukturell und nicht nach der Zahl (E-74)")
+  class ErscheinungsbedingungWartend {
+
+    /**
+     * <b>Der Kern von E-74.</b> Ein Mandant, dessen Ablaeufe suspendieren, sieht die Kachel — auch
+     * wenn gerade nichts wartet. <i>Heute wartet nichts</i> und <i>dieser Mandant wartet nie</i>
+     * sind zwei verschiedene Auskuenfte, und die Kachel unterscheidet sie.
+     */
+    @Test
+    @DisplayName(
+        "Bei anzahl = 0 erscheint sie trotzdem, wenn der Mandant suspendierende Ablaeufe hat")
+    void null_ist_eine_auskunft() {
+      bestandMit(List.of(), List.of());
+      when(repository.hatWartendeAblaeufe(any())).thenReturn(true);
+      when(repository.offeneNachrichten(any(), eq(MessageStatusKind.WARTEND)))
+          .thenReturn(java.util.Optional.of(new Offenstand(0, null)));
+
+      assertThat(antwort().kacheln().wartend())
+          .as("Eine Null, die etwas sagt — nicht eine fehlende Kachel")
+          .isEqualTo(new OffeneKachelResponse(0L, null, true));
+    }
+
+    /**
+     * <b>Fehlt sie, dann ganz.</b> Kein {@code null}, kein {@code sichtbar: false} — ein Feld, das
+     * seine eigene Abwesenheit beschriebe, verlangte von der Oberflaeche zwei Pruefungen statt
+     * einer.
+     */
+    @Test
+    @DisplayName("Ohne suspendierende Ablaeufe fehlt die Kachel ganz")
+    void ohne_suspendierende_ablaeufe_fehlt_sie() {
+      bestandMit(List.of(), List.of());
+      when(repository.hatWartendeAblaeufe(any())).thenReturn(false);
+
+      assertThat(antwort().kacheln().wartend()).isNull();
+      assertThat(antwort().kacheln().laeuft())
+          .as("Laeuft ist davon unberuehrt und immer da")
+          .isNotNull();
+    }
+
+    /**
+     * <b>Die Bedingung wird bei jedem Aufruf mitgelesen, nicht bedingt.</b> Sonst haenge die Zahl
+     * der Statements am Mandanten, und {@code DashboardStatementsTest} waere nicht mehr
+     * deterministisch — die Zahl der Zugriffe ist die Groesse, die dieses Projekt statt der Uhr
+     * prueft (Regel T1).
+     */
+    @Test
+    @DisplayName("Beide Statements laufen auch dann, wenn die Kachel nicht erscheint")
+    void beide_statements_laufen_immer() {
+      bestandMit(List.of(), List.of());
+      when(repository.hatWartendeAblaeufe(any())).thenReturn(false);
+
+      antwort();
+
+      verify(repository).hatWartendeAblaeufe(any());
+      verify(repository).offeneNachrichten(any(), eq(MessageStatusKind.WARTEND));
+      verify(repository).offeneNachrichten(any(), eq(MessageStatusKind.LAEUFT));
     }
   }
 

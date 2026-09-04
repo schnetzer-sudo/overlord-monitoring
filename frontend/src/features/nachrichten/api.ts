@@ -449,12 +449,6 @@ export type Nachrichtendetail = {
    * nur bei `OHNE_AKTION` und `KEINER`: Dort gibt es keinen Anker.
    */
   wartetSeitSekunden: number | null;
-  /**
-   * Problemkategorie 2 aus `PROJEKTBESCHREIBUNG.md` §4.2: nicht in einem
-   * Endstatus **und** Frist abgelaufen. Kommt fertig aus dem Backend
-   * (`MessageStatusClassifier.istUeberfaellig`) und wird hier nicht nachgerechnet.
-   */
-  ueberfaellig: boolean;
   schritte: Schritt[];
   kuratierteEigenschaften: KuratierteEigenschaft[];
 };

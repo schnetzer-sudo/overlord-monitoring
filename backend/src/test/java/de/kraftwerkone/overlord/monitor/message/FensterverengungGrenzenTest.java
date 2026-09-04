@@ -39,7 +39,7 @@ class FensterverengungGrenzenTest {
   private static Nachrichtenabfrage abfrage(
       LocalDateTime von, LocalDateTime bis, Seitenposition cursor) {
     return new Nachrichtenabfrage(
-        new Zeitfenster(von, bis), Set.of(), List.of(), null, false, JETZT, true, cursor, 50);
+        new Zeitfenster(von, bis), Set.of(), List.of(), null, true, cursor, 50);
   }
 
   // ── Die angebrochenen Randstunden ────────────────────────────────────────

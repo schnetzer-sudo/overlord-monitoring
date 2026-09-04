@@ -136,7 +136,8 @@ const PROBLEM_ZUORDNUNG: Record<Problemkategorie, Problemrolle> = {
   // drei Problemkategorien in der Wahrnehmung, obwohl Regel Q3 sie im Code
   // sorgfältig trennt und ausdrücklich gleichrangig führt. Die drei Werte
   // stehen in `app/globals.css`, gerechnet in
-  // `scripts/farbrolle-ueberfaellig/rechne.mjs`.
+  // `scripts/farbwerte/rechne.mjs` (bis zum 03.09.2026
+  // `scripts/farbrolle-ueberfaellig/`).
   UEBERFAELLIG: "ueberfaellig",
 };
 

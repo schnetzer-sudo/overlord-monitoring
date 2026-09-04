@@ -268,7 +268,7 @@ class DashboardIsolationDbIT extends SicherheitsTestbasis {
   // ─── Ein Aufruf ──────────────────────────────────────────────────────────────
 
   /**
-   * <b>Ein Aufruf, eine Antwort.</b> Alle sieben Bloecke stehen in derselben Antwort; keiner wird
+   * <b>Ein Aufruf, eine Antwort.</b> Alle Bloecke stehen in derselben Antwort; keiner wird
    * nachgeladen. Faellt das, merkt es niemand an einer Zahl — nur an der Ladezeit, und dort erst in
    * Produktion.
    */
@@ -285,7 +285,8 @@ class DashboardIsolationDbIT extends SicherheitsTestbasis {
         .contains("\"kacheln\"")
         .contains("\"nachrichten\"")
         .contains("\"fehler\"")
-        .contains("\"ueberfaellig\"")
+        .contains("\"laeuft\"")
+        .contains("\"wartend\"")
         .contains("\"verteilung\"")
         .contains("\"zuletztAufgefallen\"")
         .contains("\"stand\"");
@@ -301,23 +302,109 @@ class DashboardIsolationDbIT extends SicherheitsTestbasis {
   }
 
   /**
-   * Die Kachel ist auf der Testkopie ermittelbar; die 538 ueberfaelligen Zeilen gehoeren alle
-   * {@code NEXANS} (M90). <b>Geprueft wird nicht die Zahl</b>, sondern dass die beiden Felder da
-   * sind und nicht als „nicht ermittelbar" ankommen — sonst zeigte der Test nur, dass ein Feld
-   * existiert.
+   * <b>Die Kachel <i>Laeuft</i> steht bei jedem Mandanten</b> — auch bei einem ohne laufende
+   * Nachrichten, und auch im Leerzustand. Dass gerade nichts laeuft, ist eine Auskunft.
+   *
+   * <p><b>Geprueft wird nicht die Zahl</b>, sondern dass die Kachel da ist und nicht als „nicht
+   * ermittelbar" ankommt. Auf der Testkopie ist sie ueberall {@code 0}: {@code RUNNING} kommt dort
+   * null Mal vor ({@code docs/message-status.md}). <b>Das ist kein Fehler und keine
+   * Abnahmeluecke</b>, aber es heisst, dass dieser Test die Zahl nicht pruefen kann.
    */
   @Test
-  @DisplayName("Die Kachel Ueberfaellig traegt zwei Zahlen und nicht „nicht ermittelbar“")
-  void ueberfaellig_ist_ermittelbar() throws Exception {
-    Antwort antwort = aufNexans.hole(pfad("48H"));
+  @DisplayName("Die Kachel Laeuft steht bei jedem Mandanten und ist ermittelbar")
+  void laeuft_steht_bei_jedem_mandanten() throws Exception {
+    for (Sitzung sitzung : List.of(aufVotg, aufSuttons, aufNexans, aufLeer)) {
+      Antwort antwort = sitzung.hole(pfad("48H"));
 
-    assertThat(antwort.<Boolean>json("$.kacheln.ueberfaellig.ermittelbar")).isTrue();
-    assertThat(((Number) antwort.<Object>json("$.kacheln.ueberfaellig.imFenster")).longValue())
-        .isNotNegative();
-    assertThat(((Number) antwort.<Object>json("$.kacheln.ueberfaellig.insgesamt")).longValue())
-        .as("Ohne Zeitfenster kann die Zahl nur groesser oder gleich sein")
-        .isGreaterThanOrEqualTo(
-            ((Number) antwort.<Object>json("$.kacheln.ueberfaellig.imFenster")).longValue());
+      assertThat(antwort.<Boolean>json("$.kacheln.laeuft.ermittelbar")).isTrue();
+      assertThat(((Number) antwort.<Object>json("$.kacheln.laeuft.anzahl")).longValue())
+          .isNotNegative();
+    }
+  }
+
+  /**
+   * <b>Der Isolationsnachweis der beiden neuen Kachelstatements (Regel M4).</b>
+   *
+   * <p><b>Er haengt an einer einzigen Eigenschaft der Testkopie, und die ist gemessen:</b> Alle 538
+   * wartenden Zeilen gehoeren {@code NEXANS}; kein anderer Mandant hat auch nur eine (M90, in M144
+   * am geltenden Anker bestaetigt). <b>Fiele der Mandantenfilter aus, saehe jeder Mandant dieselbe
+   * Zahl</b> — naemlich die des ganzen Bestands. Der Vergleich faellt genau dann.
+   *
+   * <p><b>Warum das die schaerfere Fassung ist als „die Zahl stimmt":</b> Eine Zahl aus dem Bestand
+   * waere ein Erwartungswert, der bei der naechsten Neubefuellung rot wird, ohne dass jemand etwas
+   * falsch gemacht haette (Regel T2). Der <i>Unterschied</i> zwischen zwei Mandanten ist
+   * pflegeunabhaengig — er verschwindet nur, wenn der Filter verschwindet.
+   */
+  @Test
+  @DisplayName("Wartend: zwei Mandanten sehen verschiedene Zahlen (Regel M4)")
+  void wartend_ist_je_mandant_verschieden() throws Exception {
+    long beiNexans = wartendAnzahl(aufNexans);
+    long beiVotg = wartendAnzahl(aufVotg);
+
+    assertThat(beiNexans)
+        .as("Ohne Mandantenfilter saehen beide die Zahl des ganzen Bestands")
+        .isNotEqualTo(beiVotg);
+  }
+
+  private static long wartendAnzahl(Sitzung sitzung) throws IOException, InterruptedException {
+    Antwort antwort = sitzung.hole(pfad("48H"));
+    assertThat(antwort.<Boolean>json("$.kacheln.wartend.ermittelbar")).isTrue();
+    return ((Number) antwort.<Object>json("$.kacheln.wartend.anzahl")).longValue();
+  }
+
+  /**
+   * <b>Der Isolationsnachweis der Erscheinungsbedingung (Regel M4), und er ist der schaerfste der
+   * drei.</b> Sie liefert einen einzelnen {@code boolean}; faellt der Mandantenfilter aus, ist er
+   * fuer <b>jeden</b> Mandanten {@code true}, weil es die Bausteine im Bestand gibt.
+   *
+   * <p><b>Gemessen (M144):</b> {@code NEXANS} und {@code VOTG} haben Prozesse, deren geplanter
+   * Ablauf einen {@code SUSPEND}-Baustein traegt; {@code SUTTONS} und die uebrigen sechs nicht.
+   * <b>Die Kachel fehlt dort ganz</b> — kein {@code null}, kein {@code sichtbar: false}.
+   */
+  @Test
+  @DisplayName("Die Kachel Wartend fehlt genau dort, wo der Mandant nie suspendiert (E-74)")
+  void wartend_erscheint_nur_bei_suspendierenden_ablaeufen() throws Exception {
+    assertThat(aufNexans.hole(pfad("48H")).rumpf())
+        .as("NEXANS hat suspendierende Ablaeufe (M144)")
+        .contains("\"wartend\"");
+    assertThat(aufSuttons.hole(pfad("48H")).rumpf())
+        .as(
+            "SUTTONS hat keine — fiele der Mandantenfilter der Erscheinungsbedingung aus, staende"
+                + " die Kachel auch hier")
+        .doesNotContain("\"wartend\"");
+  }
+
+  /**
+   * <b>Und der Fall, um dessentwillen E-74 strukturell entschieden worden ist.</b> {@code VOTG} hat
+   * suspendierende Ablaeufe, aber gerade keine wartende Nachricht. <b>Die Kachel steht trotzdem,
+   * mit einer Null</b> — <i>heute wartet nichts</i> und <i>dieser Mandant wartet nie</i> sind zwei
+   * verschiedene Auskuenfte, und genau das war der Grund, sie nicht ueber {@code anzahl &gt; 0} zu
+   * steuern.
+   */
+  @Test
+  @DisplayName("Bei VOTG steht die Kachel mit einer Null — und die Null sagt etwas")
+  void bei_votg_steht_die_kachel_mit_einer_null() throws Exception {
+    Antwort antwort = aufVotg.hole(pfad("48H"));
+
+    assertThat(antwort.rumpf()).contains("\"wartend\"");
+    assertThat(((Number) antwort.<Object>json("$.kacheln.wartend.anzahl")).longValue())
+        .as("Eine Null, die eine Auskunft ist — nicht eine fehlende Kachel")
+        .isZero();
+    assertThat(antwort.<Object>json("$.kacheln.wartend.aeltesteSekunden"))
+        .as("Ohne Zeile gibt es kein Alter")
+        .isNull();
+  }
+
+  /** <b>Die Kategorie <i>Ueberfaellig</i> kommt in keiner Antwort mehr vor</b> (E-71). */
+  @Test
+  @DisplayName("Die Antwort kennt kein „ueberfaellig“-Feld mehr")
+  void kein_ueberfaellig_mehr() throws Exception {
+    for (String zeitraum : List.of("48H", "30T", "12M")) {
+      assertThat(aufNexans.hole(pfad(zeitraum)).rumpf().toLowerCase(java.util.Locale.ROOT))
+          .as("%s", zeitraum)
+          .doesNotContain("ueberfaellig")
+          .doesNotContain("überfällig");
+    }
   }
 
   // ─── Die Raender ─────────────────────────────────────────────────────────────

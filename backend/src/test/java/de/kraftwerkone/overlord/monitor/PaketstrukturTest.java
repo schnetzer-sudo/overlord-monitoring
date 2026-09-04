@@ -8,6 +8,7 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaMethod;
@@ -365,6 +366,32 @@ class PaketstrukturTest {
     regel.check(KLASSEN);
   }
 
+  /**
+   *
+   *
+   * <h2>⚠️ Praezisiert am 03.09.2026 — die Regel war zu breit, und zwar messbar</h2>
+   *
+   * <p><b>Sie verbot bis heute {@code com.fasterxml.jackson..} vollstaendig.</b> Das ist fuer
+   * {@code databind} und {@code core} richtig — beide sind in Jackson 3 nach {@code tools.jackson}
+   * gewandert. <b>Fuer die Annotationen ist es falsch:</b> Jackson 3 hat sie bewusst dort gelassen,
+   * und {@code tools.jackson.core:jackson-databind:3.1.4} <b>haengt selbst</b> von {@code
+   * com.fasterxml.jackson.core:jackson-annotations:2.21} ab — nachgesehen im Abhaengigkeitsbaum
+   * dieses Projekts, nicht angenommen. Ein {@code tools.jackson.annotation} gibt es nicht; unter
+   * {@code tools.jackson.databind.annotation} liegen nur die databind-eigenen ({@code
+   * JsonSerialize}, {@code JsonNaming} und so fort), <b>nicht</b> {@code JsonInclude}.
+   *
+   * <p><b>Aufgefallen ist das, weil die Regel etwas Richtiges verboten hat:</b> {@code
+   * KachelnResponse} braucht {@code @JsonInclude(NON_NULL)}, damit die Kachel <i>Wartend</i> ganz
+   * aus der Antwort faellt statt als {@code null} darin zu stehen (E-74). Es gibt dafuer keinen
+   * Ersatz unter {@code tools.jackson} — die Alternative waere eine globale Einstellung am {@code
+   * ObjectMapper} gewesen, und die traefe jedes Feld jeder Antwort.
+   *
+   * <p><b>Der Riegel wird dabei nicht schwaecher, sondern genauer.</b> Verboten bleiben die beiden
+   * Pakete, deren Verwendung wirklich ein Muster aus Spring Boot 3 waere; erlaubt ist genau das
+   * eine, das Jackson 3 selbst mitbringt. <b>Die Gegenprobe steht darunter</b> ({@link
+   * #jackson_annotationen_sind_die_einzige_ausnahme()}): Sie faellt, sobald jemand {@code databind}
+   * oder {@code core} aus dem alten Paket zieht.
+   */
   @Test
   @DisplayName("Kein Jackson 2 — Spring Boot 4 bringt Jackson 3")
   void kein_jackson_2() {
@@ -374,10 +401,39 @@ class PaketstrukturTest {
             .resideOutsideOfPackage(musterFuer(GENERIERT))
             .should()
             .dependOnClassesThat()
-            .resideInAnyPackage("com.fasterxml.jackson..")
+            .resideInAnyPackage("com.fasterxml.jackson.databind..", "com.fasterxml.jackson.core..")
             .because(
                 "Spring Boot 4 bringt Jackson 3 unter tools.jackson. Ein Import auf"
-                    + " com.fasterxml.jackson ist fast immer ein Muster aus Spring Boot 3.")
+                    + " com.fasterxml.jackson.databind oder .core ist ein Muster aus Spring Boot 3."
+                    + " Die ANNOTATIONEN sind ausgenommen: Jackson 3 laesst sie in"
+                    + " com.fasterxml.jackson.annotation, und jackson-databind 3.1.4 haengt selbst"
+                    + " von jackson-annotations 2.21 ab.")
+            .allowEmptyShould(true);
+    regel.check(KLASSEN);
+  }
+
+  /**
+   * <b>Die Gegenprobe zur Ausnahme oben.</b> Ohne sie hiesse „Annotationen sind erlaubt" in der
+   * Praxis „irgendetwas unter {@code com.fasterxml} ist erlaubt", und die Praezisierung waere eine
+   * Aufweichung. Dieser Test haelt fest, <b>welches</b> Paket als einziges vorkommt.
+   */
+  @Test
+  @DisplayName("Aus dem alten Jackson-Namensraum kommen ausschliesslich Annotationen")
+  void jackson_annotationen_sind_die_einzige_ausnahme() {
+    ArchRule regel =
+        noClasses()
+            .that()
+            .resideOutsideOfPackage(musterFuer(GENERIERT))
+            .should()
+            .dependOnClassesThat(
+                JavaClass.Predicates.resideInAPackage("com.fasterxml..")
+                    .and(
+                        DescribedPredicate.not(
+                            JavaClass.Predicates.resideInAPackage(
+                                "com.fasterxml.jackson.annotation.."))))
+            .because(
+                "Erlaubt ist genau com.fasterxml.jackson.annotation — alles andere unter"
+                    + " com.fasterxml ist Jackson 2 und damit ein Muster aus Spring Boot 3.")
             .allowEmptyShould(true);
     regel.check(KLASSEN);
   }

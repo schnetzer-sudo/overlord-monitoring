@@ -137,6 +137,45 @@ export function rolleKommtVor(zeilen: readonly Verlaufszeile[], rolle: Statusrol
 }
 
 /**
+ * **Die Farbe der Fläche — der Akzent, und ausdrücklich keine Statusrolle**
+ * (Entscheidung E‑84).
+ *
+ * Die Fläche trägt seit dem 04.09.2026 die **Gesamtsumme** je Eimer, und eine
+ * Summe hat keinen Status. `--status-abgeschlossen` behauptete darüber „alles
+ * fertig", `--status-offen` das Gegenteil; beides wäre eine Aussage, die die
+ * Zahl nicht trägt. Der Akzent ist die einzige Farbe des Bestands, die
+ * *nichts* über die Daten sagt — genau deshalb steht er hier
+ * ([`docs/visuelles-konzept.md`](../../../../docs/visuelles-konzept.md) §3).
+ *
+ * **Zwei Stufen und nicht eine, und beide sind vergeben, wie §3 sie vergibt:**
+ * `--akzent` ist dort die **Füllfarbe** („nur Fläche"), `--akzent-schrift` die
+ * Stufe für „Verweise, aktive Beschriftungen, **dünne Linien**". Der Farbverlauf
+ * ist die Fläche, die Oberkante ist die dünne Linie. §3 nennt dieselbe Paarung
+ * als die eine bekannte Grenze der Farbe und ihre Behebung: *„wer die Lücke
+ * schließen will, gibt gefüllten Flächen zusätzlich eine Kontur in
+ * `--akzent-schrift`"* — eine gefüllte Akzentfläche erreicht auf Weiß nur
+ * 1,98 : 1 und verfehlt die 3 : 1 aus WCAG 1.4.11. Die Kontur trägt 5,40 : 1 im
+ * hellen und 10,72 : 1 im dunklen Block ([`docs/dunkelmodus.md`](../../../../docs/dunkelmodus.md)
+ * §3.3).
+ *
+ * **Sie stehen hier und nicht im Diagramm** — derselbe Grund wie bei
+ * `FUELLUNG` in `lib/status-farbe.ts`: Eine Komponente kennt keinen
+ * Farbtokennamen. **Und nicht in `lib/status-farbe.ts`**, obwohl dort die
+ * andere Diagrammfarbe wohnt: Diese Datei ist „die eine Stelle, an der eine
+ * fachliche Aussage auf eine Farbrolle trifft", und hier trifft ausdrücklich
+ * **keine** fachliche Aussage auf eine Farbe. Ein Eintrag dort verspräche eine
+ * Zuordnung, die es nicht gibt.
+ *
+ * Dass `var()` auch **durch einen `<linearGradient>`** ankommt und auflöst, ist
+ * am 04.09.2026 gemessen und nicht angenommen
+ * ([`docs/frontend-grundlagen.md`](../../../../docs/frontend-grundlagen.md) §8b).
+ */
+export const VERLAUFSFLAECHE = "var(--akzent)";
+
+/** Die Oberkante der Fläche. Siehe {@link VERLAUFSFLAECHE}. */
+export const VERLAUFSKONTUR = "var(--akzent-schrift)";
+
+/**
  * Die Auflösung der Zeitachse — sie folgt der **Eimerbreite** des Paares und
  * nicht der Zahl der Eimer.
  */

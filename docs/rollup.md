@@ -780,6 +780,48 @@ ihn anzulegen hieße, auf `GlassfishDB` zu schreiben, und das ist ausgeschlossen
 doch auf den zusammengesetzten Index** (M92, Monatsscheiben). Auf die Laufzeit wirkt sich das nicht
 sichtbar aus: 11,4 µs je Zeile mit dem schmalen, 11,1 µs mit dem breiten.
 
+### 7a. ⚠️ Der Rollup trägt keine Statushistorie — und das gilt für jeden flüchtigen Status
+
+*Neu am 03.09.2026 (Schritt 10b‑4). Der Befund ist alt; er stand bisher nirgends.*
+
+> **`message_rollup` beantwortet keine Frage der Form „wie viele stehen gerade in Status X".**
+
+**Warum nicht.** Der nächtliche Volllauf rechnet **jeden Eimer aus dem heutigen Zustand jeder
+Nachricht neu** (§5). Er liest `Message` und gruppiert nach `MessageLastUpdate`, `ProcessID` und
+`MessageStatus` — nach dem Status, den die Zeile **jetzt** trägt, nicht nach dem, den sie im Eimer
+trug.
+
+**Die Folge in einem Satz:** Eine Nachricht, die im März `SUSPENDED` war und im April fertig wurde,
+hinterlässt im März **nichts**. Sie steht im April als `FINISHED`, und im März steht an ihrer Stelle
+keine Zeile. **Der Rollup ist nach jedem Volllauf eine Projektion des Jetzt, gebucht nach letzter
+Änderung.**
+
+**Das ist keine Lücke im Bau, sondern die Bauform.** Der Schlüssel ist `(stunde, process_id,
+message_status)`, und die Zeile hält eine Anzahl. Eine Historie bräuchte eine zweite Dimension —
+*welcher Status wann galt* —, und die gibt es in `Message` nicht: Dort steht **ein** Status und
+**ein** Zeitstempel.
+
+### Was daraus folgt, und es sind zwei verschiedene Dinge
+
+| | |
+|---|---|
+| **Für den Verlauf und die Verteilung** | folgt **nichts**. Sie fragen „wie viel Aktivität lag in diesem Zeitraum" und nicht „welchen Status hatte etwas damals". Die bekannte Grenze 3 in [`dashboard.md`](dashboard.md) §2 beschreibt genau das und ist davon unberührt |
+| **Für jede Frage nach einem *jetzigen* Zustand** | folgt, dass sie **live** gestellt werden muss. Das ist die Begründung der beiden benannten Ausnahmen von L2 (E‑72, E‑73): Die Kacheln *Läuft* und *Wartend* lesen `Message` und nicht den Rollup |
+| **Für die Frage „hat dieser Mandant je gewartet"** | folgt, dass sie hier **gar nicht** beantwortbar ist — auch nicht über einen langen Zeitraum. Deshalb ist die Erscheinungsbedingung der Kachel *Wartend* **strukturell** gebaut, über `SOSAction` und nicht über den Rollup ([`dashboard.md`](dashboard.md) §5a, E‑74) |
+
+**Der Satz gilt für jeden flüchtigen Status, nicht nur für `SUSPENDED`.** `RUNNING` ist der
+deutlichere Fall: Er existiert nur, solange eine Nachricht in Arbeit ist, und der Rollup hat ihn
+noch **nie** gesehen — auf der Testkopie kommt er null Mal vor.
+
+> **Belegvermerk** (Regel L10).
+> *Gemessen ist:* nichts Neues. Der Befund folgt aus der Aggregation in §7 und aus dem Schlüssel in
+> §2 — beide sind gemessen und beide stehen seit dem 26.08.2026.
+> *Behauptet wird:* dass daraus die Unmöglichkeit einer Statushistorie folgt.
+> **Die Lücke:** Der Schluss ist eine **Herleitung aus dem Bau** und keine Messung an den Daten. Er
+> ließe sich messen — eine Nachricht über zwei Volllaufe verfolgen —, und er ist es nicht. Dass er
+> trägt, hängt daran, dass `Message` je Zeile genau einen Status führt; das ist in §3.2 der
+> [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) erhoben.
+
 ### Der früheste Zeitstempel
 
 ```sql
@@ -1712,6 +1754,35 @@ nachgelagert.
     **ungedeckt**); `RUNNING` kommt null Mal vor. **In Produktion ist zu prüfen, ob die Wanderung
     dort größer ist** — die Prüfung selbst ist einfach: dieselbe Abfrage wie M86 (b), gegen den
     Produktionsbestand. Bis dahin trägt der nächtliche Volllauf.
+
+    > ### ⚠️ Ergänzt am 03.09.2026 — ein zweites Argument, und es zeigt in dieselbe Richtung
+    >
+    > **Auf `RUNNING` wirkt ein Wächter des Altsystems.** Eine Nachricht, die länger als
+    > `MessageTimeout` in diesem Status steht, wird automatisch auf `ERROR_TIMEOUT` gesetzt
+    > ([`message-status.md`](message-status.md)). **Das ist ein Schreibzugriff auf
+    > `MessageLastUpdate`, den niemand von uns auslöst und den die Testkopie nie zeigen kann.**
+    >
+    > **Er begrenzt die Wanderung nach oben** — und zwar auf `MessageTimeout` zuzüglich eines
+    > Wächtertakts. Bei dem einzigen Wert, den `MessageTimeout` im Bestand trägt (`1800`), sind das
+    > **30 Minuten plus Takt**.
+    >
+    > **Daraus folgt ein Argument für ein größeres Nachlauffenster als 15 Minuten** — die Wanderung
+    > durch den Wächter wäre größer als jede, die M86 beobachtet hat (dort höchstens vier Sekunden).
+    >
+    > **Der Wert wird trotzdem nicht geändert, und das ist Absicht.** Ein größeres Fenster kostet am
+    > **Volllauf**, und was es kostet, ist **nicht gemessen** — das wäre eine eigene Messrunde mit
+    > eigenen Kosten. Eingetragen ist hier das **Argument**, nicht der Wert. `NACHLAUF_MINUTEN`
+    > bleibt bei 15.
+    >
+    > **Herkunft:** fachliche Auskunft des Auftraggebers vom 03.09.2026. **Nicht gemessen.**
+    > Die Testkopie kann sie nicht belegen: `RUNNING` kommt dort null Mal vor, und die 538
+    > `SUSPENDED` sind der Bestand *eines* Status in *einer* Gestalt. **Gegen die Produktion zu
+    > prüfen** mit der Abfrage in [`message-status.md`](message-status.md), Abschnitt „Die offene
+    > Prüfung".
+    >
+    > **Und es macht den offenen Punkt dringlicher, nicht kleiner:** Bisher stand hier ein
+    > *unsichtbarer* Verursacher (`MatchInterchange`, Takt ungedeckt). Jetzt stehen **zwei**, und der
+    > zweite hat eine bekannte Größenordnung.
 50. **Zwei ungemessene Vorgaben, beide in `application.yml` markiert.** (a) Die Uhrzeit des
     Nachtlaufs (`03:00`) — die Verteilung von `MessageLastUpdate` über die Tagesstunde ist nicht
     erhoben. (b) Die Drosselung (`1s` je Scheibengrenze) — wie viel Last die Produktionsinstanz

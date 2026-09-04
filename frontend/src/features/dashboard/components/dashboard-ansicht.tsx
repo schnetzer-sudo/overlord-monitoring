@@ -29,7 +29,7 @@ import { VerlaufDiagramm } from "./verlauf-diagramm";
  *
  * ## Die Reihenfolge der Blöcke folgt dem Leitsatz
  *
- * Zuerst die drei Zahlen, dann das Bild, dann die einzelnen Zeilen, zuletzt der
+ * Zuerst die Kacheln, dann das Bild, dann die einzelnen Zeilen, zuletzt der
  * Hintergrund. *Das Werkzeug wird geöffnet, wenn etwas nicht stimmt* — wer es
  * öffnet, will zuerst wissen **ob**, dann **seit wann**, dann **welche**. Die
  * Verteilung beantwortet keine dieser drei Fragen; sie steht deshalb unten und
@@ -84,7 +84,19 @@ export function DashboardAnsicht() {
         </>
       ) : (
         <>
-          <Kacheln kacheln={antwort.data.kacheln} fenster={antwort.data.fenster} />
+          {/*
+           * **`zeitraum` kommt aus der Antwort und nicht aus dem Zustand.** Die
+           * Kachel *Wartend* rechnet daraus die Eimerbreite, mit der ihr eigenes
+           * Fenster Luft nach hinten bekommt (`verweise.ts`) — und maßgeblich
+           * ist das Paar, mit dem der Endpunkt geantwortet hat, nicht das, was
+           * jemand angeklickt hat. Solange nichts gewählt ist, gibt es das
+           * zweite gar nicht (E‑n).
+           */}
+          <Kacheln
+            kacheln={antwort.data.kacheln}
+            fenster={antwort.data.fenster}
+            zeitraum={antwort.data.zeitraum}
+          />
 
           <Card size="sm" className="px-4">
             <VerlaufDiagramm punkte={antwort.data.verlauf} zeitraum={antwort.data.zeitraum} />

@@ -1501,7 +1501,77 @@ schaltet ab, nicht ein.**
 
 ---
 
-## 5e. ⚠️ Die Oberfläche kannte `ueberfaellig` nicht *(01.09.2026)*
+## 5e. ⚠️ Die Oberfläche kannte `ueberfaellig` nicht *(01.09.2026)* — und der Parameter ist zwei Tage später gefallen
+
+> ### ⚠️ Der Parameter ist am 03.09.2026 entfallen — **drei Tage nach seinem Bau** *(E‑71)*
+>
+> **Der ganze Abschnitt darunter bleibt vollständig stehen, und das ist wichtiger als sonst.** Er
+> ist am **01.09.2026** geschrieben worden, um einen Befund festzuhalten: dass der Parameter seit
+> Schritt 4 im Endpunkt stand und in der Oberfläche nie existiert hatte. Zwei Tage später ist die
+> Problemkategorie *Überfällig* widerlegt worden, und der Parameter mit ihr.
+>
+> **Das gehört benannt und nicht versteckt.** Am 01.09.2026 ist Aufwand in eine Sache geflossen, die
+> am 03.09.2026 wieder herausgefallen ist: ein Parser, eine Marke in der Filterleiste, eine
+> Ausschlussregel und **sieben Testfälle**. Der Befund daran ist nicht „zu früh gebaut" — der Bau am
+> 01.09. war richtig, weil die Kachel des Dashboards sonst auf eine Lüge verwiesen hätte.
+> **Der Befund ist, dass zwischen Bau und Widerlegung zwei Tage lagen und niemand es hätte wissen
+> können:** Die Auskunft, die die Kategorie stürzt, lag nicht vor. Sie ist eine Auskunft und kein
+> Messergebnis, und sie war nicht zu beschaffen, indem man länger nachgedacht hätte.
+>
+> #### Was jetzt gilt
+>
+> | | |
+> |---|---|
+> | **Am Endpunkt** | `?ueberfaellig=true` ist ein **unbekannter Anfrageparameter**: wirkungslos und **kein Fehler**. Dieselbe Bauform wie ein `?mandant=…` am Dashboard |
+> | **Die `400` ist weg** | `ueberfaellig-und-status-unvereinbar` gibt es nicht mehr. Es war die **einzige** `400` dieses Endpunkts, die eine *Kombination* betraf |
+> | **Ein alter Link** | führt auf die **ungefilterte** Liste — mit dem Zeitfenster der Kachel und ohne die eine Bedingung, um derentwillen jemand geklickt hat |
+> | **Die Oberfläche** | ist in diesem Schritt **nicht** angefasst. Parser, Marke und Ausschlussregel stehen weiterhin in `features/nachrichten/filter.ts`, und die Kachel *Überfällig* des Dashboards verweist weiterhin hierher — **sie fällt mit Schritt 10b‑5** *(✔ am 03.09.2026 geschehen, siehe unten)* |
+>
+> **Der Zwischenstand ist damit genau der, den der Abschnitt darunter als Fehler beschreibt:** eine
+> Liste, die mehr zeigt, als der Verweis verspricht. **Er ist bewusst in Kauf genommen** — Schritt
+> 10b‑4 ist ein Backend-Schritt, und eine halb nachgezogene Oberfläche wäre schlimmer als eine, die
+> vollständig in einem eigenen Schritt nachgezogen wird. **Offener Punkt 131.**
+>
+> **Zwei Tests halten das neue Verhalten fest** (`NachrichtenlisteDbIT`): dass der alte Parameter
+> dieselbe Antwort liefert wie gar keiner, und dass die früher unvereinbare Kombination jetzt eine
+> gewöhnliche Anfrage ist.
+
+> ### ✔ Die Bedienung ist am 03.09.2026 gefallen *(Schritt 10b‑5)*
+>
+> Was am 01.09.2026 an der Oberfläche gebaut worden war, ist wieder heraus:
+>
+> | | |
+> |---|---|
+> | Parser | `ueberfaellig` steht nicht mehr in `NACHRICHTEN_PARAMETER` |
+> | Zustand | nicht mehr in `Nachrichtenfilter`, nicht in `alsAbfrage`, nicht in `alsSuchparameter`, nicht in `ausSuchparametern` |
+> | Marke | die entfernbare Marke in der Filterleiste ist fort, `setzeUeberfaellig` mit ihr |
+> | Ausschlussregel | `ohneUeberfaelligBeiStatus` ist fort. `setzeStatus` setzt jetzt nur noch den Status — es gibt nichts mehr zu beenden |
+> | Sprachdateien | `nachrichten.ueberfaelligForm` ist in beiden Dateien entfallen |
+>
+> **Der Statusfilter mit acht Einträgen bleibt** — und `Wartend` und `Läuft` sind jetzt die Ziele
+> der beiden neuen Kacheln des Dashboards ([`dashboard-frontend.md`](dashboard-frontend.md) §5.4).
+> Die zweite Abfrageform ist damit durch zwei gewöhnliche Filterwerte ersetzt.
+>
+> ### ⚠️ Ein alter Link darf nicht brechen — und tut es nicht
+>
+> Ein geteiltes `?ueberfaellig=true&zeitraum=7d` von vorgestern führt heute auf die **ungefilterte**
+> Liste mit dem gewählten Zeitraum. **Keine Fehlerseite, keine Meldung, kein `400`** — an beiden
+> Enden:
+>
+> - **Am Endpunkt** ist er ein unbekannter Anfrageparameter, wirkungslos und kein Fehler
+>   (`NachrichtenlisteDbIT.alter_parameter_wird_uebergangen`).
+> - **In der Oberfläche** liest ihn niemand mehr in den Zustand. Er verhält sich wie
+>   `zwischenschritte`, der am 11.08.2026 auf demselben Weg gefallen ist.
+>
+> **Geprüft wird dafür der Weg, den `nuqs` wirklich nimmt.** Zur Laufzeit liest `nuqs` über die
+> Parser in `NACHRICHTEN_PARAMETER`, nicht über `ausSuchparametern` — die Funktion ist der Spiegel
+> für den Test. Eine Aussage nur über den Spiegel bliebe grün, wenn der Parameter im Parser
+> stehenbliebe; `tests/nachrichtenfilter.test.ts` prüft deshalb **beides**.
+>
+> **Die sieben Testfälle von damals sind entfernt und nicht übersprungen.** Ein `skip` hinterließe
+> Tests, die eine Gestalt bezeugen, die es nicht mehr gibt. An ihre Stelle treten zwei.
+
+### Der Stand vom 01.09.2026, wortgleich
 
 **Befund, gefunden beim Bau des Dashboard-Frontends.** Der Parameter steht seit Schritt 4 im
 Endpunkt (§1, §5b) und hat seither in **keiner** Stelle der Oberfläche existiert: nicht in
@@ -2595,7 +2665,25 @@ Der alte Link (Punkt 6) *ist* eine von Hand geöffnete URL, denn genau das ist d
   systematischer Versatz aller Zeitpunkte auf — und seit Aufgabe 11 an **einer** Stelle: Die
   Oberfläche formatiert mit derselben Zone, die das Backend zum Umrechnen benutzt.
 
-### Zur Überfälligkeitsform (01.09.2026)
+### Zur Sortierrichtung (03.09.2026, Schritt 10b‑4)
+
+- **136. Ob die Fensterverengung auch aufsteigend rechnen kann, ist nicht geprüft — und wird hier
+  nicht zugesagt.** `Abfragemerkmal.SORTIERUNG` trägt der Rollup nur bei `absteigend`; bei
+  `AELTESTE` stehen die ersten Zeilen am **Anfang** des Fensters, und eine Untergrenze verschöbe
+  dort die erste Seite statt des Suchraums. **Die gespiegelte Rechnung wäre vermutlich richtig und
+  ist nicht gemessen**, deshalb gilt die sichere Antwort (`false`, die Verengung fällt zurück).
+  **Das ist in 10b‑4 aufgefallen und nicht behoben worden:** Mit dem Wegfall von `UEBERFAELLIG` ist
+  `SUCHBEGRIFF` das einzige verbliebene Merkmal, das der Rollup nicht mitträgt — die Sortierung ist
+  damit der einzige Fall, in dem eine **Messung** die Verengung erweitern könnte, statt einer
+  Schemaänderung. Sie gehört in eine eigene Messrunde.
+
+### Zur Überfälligkeitsform (01.09.2026) — mit E‑71 gegenstandslos
+
+> **Punkt 89 unten ist am 03.09.2026 gegenstandslos geworden.** Er verlangte eine
+> Gestaltungsentscheidung über einen Einschalter für eine Abfrageform, die es nicht mehr gibt
+> (E‑71). Er bleibt stehen, weil die Frage, die er stellt — *welchen Platz bekommt ein Filter, den
+> nur ein Verweis von außen setzt* —, beim nächsten Verweis dieser Art wiederkommt.
+
 
 - **89. Es gibt keinen Weg, „nur überfällige" in der Liste selbst einzuschalten.** Der Parameter ist
   seit dem 01.09.2026 in der Oberfläche vorhanden (§5e), sichtbar und entfernbar — aber **eingeschaltet

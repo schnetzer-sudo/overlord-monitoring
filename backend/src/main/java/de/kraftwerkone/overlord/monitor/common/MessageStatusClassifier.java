@@ -1,17 +1,14 @@
 package de.kraftwerkone.overlord.monitor.common;
 
-import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 import org.jooq.Condition;
-import org.jooq.DatePart;
 import org.jooq.Field;
 import org.jooq.impl.DSL;
 import org.springframework.stereotype.Component;
@@ -114,6 +111,39 @@ public class MessageStatusClassifier {
         .filter(eintrag -> eintrag.getValue() == einordnung)
         .map(Map.Entry::getKey)
         .collect(Collectors.toCollection(TreeSet::new));
+  }
+
+  /**
+   * Der <b>eine</b> Rohwert einer Einordnung, die genau einen traegt.
+   *
+   * <p><b>Wozu es die Methode gibt.</b> Die Kacheln <i>Laeuft</i> und <i>Wartend</i> des Dashboards
+   * vergleichen mit {@code =} auf den <b>Rohwert</b> und nicht ueber {@link
+   * #bedingung(MessageStatusKind, Field)}: {@code MessageStatusIDX} traegt den Rohwert, und ein
+   * {@code IN} ueber eine einelementige Menge waere derselbe Zugriff mit einer Unwahrheit darin —
+   * es behauptete, es koenne mehrere geben.
+   *
+   * <p><b>Der Rohwert wird trotzdem hier geholt und nicht dort hingeschrieben.</b> Ein Literal
+   * {@code "SUSPENDED"} im Dashboard waere dieselbe Zuordnung ein zweites Mal, und sie driftete
+   * beim naechsten Statuswert von {@link #BEKANNT} weg — genau die Bauform, die {@code
+   * docs/message-status.md} fuer die Einordnung selbst ausschliesst.
+   *
+   * @throws IllegalStateException wenn die Einordnung keinen oder mehr als einen bekannten Rohwert
+   *     traegt. <b>Das ist Absicht und kein Versaeumnis:</b> Bekommt {@link
+   *     MessageStatusKind#WARTEND} je einen zweiten Rohwert, ist die Kachel eine andere Frage
+   *     geworden, und das soll auffallen — nicht stillschweigend zu einer halben Antwort werden.
+   */
+  public String einzigerRohwert(MessageStatusKind einordnung) {
+    SortedSet<String> gefunden = rohwerte(einordnung);
+    if (gefunden.size() != 1) {
+      throw new IllegalStateException(
+          "Die Einordnung "
+              + einordnung
+              + " traegt "
+              + gefunden.size()
+              + " bekannte Rohwerte statt genau einem: "
+              + gefunden);
+    }
+    return gefunden.first();
   }
 
   /**
@@ -233,63 +263,51 @@ public class MessageStatusClassifier {
    * weil dort keine Nachricht existiert, an der diese Frist sichtbar ablaeuft. Deshalb steht die
    * Einheit hier als Konstante: Ein Gegenbeleg aus der Produktion kostet ein Wort und keine Suche.
    * Vollstaendig in {@code docs/messungen-schritt4.md}, Abschnitt M8.
+   *
+   * <h2>⚠️ Die Konstante traegt seit dem 03.09.2026 eine andere Bedeutung — und keinen Verbraucher
+   * mehr</h2>
+   *
+   * <p><b>{@code MessageTimeout} ist die Frist des Waechters im Altsystem, und sie gilt nur fuer
+   * {@code RUNNING}.</b> Eine Nachricht, die laenger als {@code MessageTimeout} in {@code RUNNING}
+   * steht, wird vom Altsystem automatisch auf {@code ERROR_TIMEOUT} gesetzt; {@code SUSPENDED}
+   * wartet absichtlich und wird nie automatisch beendet.
+   *
+   * <p><b>Herkunft:</b> fachliche Auskunft des Auftraggebers vom 03.09.2026. <b>Nicht gemessen.</b>
+   * Die Testkopie kann sie nicht belegen: {@code RUNNING} kommt dort null Mal vor, und die 538
+   * {@code SUSPENDED} sind der Bestand <i>eines</i> Status in <i>einer</i> Gestalt. <b>Gegen die
+   * Produktion zu pruefen</b> mit der Abfrage in {@code docs/message-status.md}, Abschnitt „Die
+   * offene Pruefung".
+   *
+   * <p><b>Sie steht hier ohne Verbraucher im Anwendungscode</b>, seit die Ueberfaelligkeitsrechnung
+   * entfallen ist (E‑71). Das ist Absicht und dieselbe Behandlung, die {@code --ueberfaellig} in
+   * {@code globals.css} bekommt (E‑77): Die Einheit ist teuer erarbeitet, die Belegkette steht, und
+   * sie wird an dem Tag wieder gebraucht, an dem eine echte Schwelle fuer {@code RUNNING}
+   * zurueckkommt. {@code MessageStatusClassifierTest} haelt sie fest.
    */
   public static final ChronoUnit TIMEOUT_EINHEIT = ChronoUnit.SECONDS;
 
-  /**
-   * Der Zeitpunkt, zu dem die Nachricht ueberfaellig wird — {@code MessageLastUpdate +
-   * MessageTimeout}.
+  /*
+   * Hier standen bis zum 03.09.2026 `timeoutZeitpunkt(messageLastUpdate, messageTimeout)` und
+   * `istUeberfaellig(status, messageLastUpdate, messageTimeout, jetzt)` — die Problemkategorie
+   * `Ueberfaellig` in Java, und darunter `ueberfaelligBedingung(...)` als ihr Gegenstueck in SQL,
+   * dazu `offeneRohwerte()` und `TIMEOUT_DATEPART` als deren Bausteine.
    *
-   * <p>Leer, wenn es keinen gibt: bei {@code MessageTimeout = 0} und bei {@code NULL}.
+   * ALLE FUENF SIND ENTFALLEN (Entscheidung E-71, Schritt 10b-4). Der Grund ist nicht Aufraeumen,
+   * sondern eine fachliche Auskunft des Auftraggebers vom 03.09.2026: `SUSPENDED` wartet
+   * absichtlich und wird nie ueberfaellig; `RUNNING` ueber der Frist ist nur der Spalt zwischen
+   * Fristablauf und dem Zuschlagen des Waechters, danach heisst der Status `ERROR_TIMEOUT` und
+   * damit FEHLER. Damit hat die Kategorie im eingeschwungenen Zustand keine wahren Treffer.
    *
-   * <p><b>Dass {@code 0} „kein Timeout" heisst, ist eine Analogie und kein Befund.</b> Ein
-   * Gegenbeleg steht in derselben Messung, die die Einheit geklaert hat: Bei allen 52 {@code
-   * ERROR_TIMEOUT}-Nachrichten traegt die fehlschlagende Aktion {@code SOSActionTimeout = 0} — und
-   * trotzdem greift dort eine Frist von hoechstens 120 Sekunden. In dieser Spalte bedeutet {@code
-   * 0} also eher „nimm die Vorgabe" als „keine Frist". Praktisch folgenlos ist das nur, weil alle
-   * 6.915 Zeilen mit {@code MessageTimeout = 0} in einem Endstatus stehen und damit ohnehin nie
-   * ueberfaellig werden. Sollte in Produktion je eine offene Zeile mit {@code 0} auftauchen, ist
-   * <b>hier</b> nachzusehen. {@code NULL} kommt in 3,34 Millionen Zeilen der Testkopie <b>kein
-   * einziges Mal</b> vor (Messung M2), wird aber behandelt — die Spalte laesst es zu, und eine
-   * Neubefuellung oder die Produktion muss sich nicht daran halten, was die Testkopie zufaellig
-   * enthaelt.
+   * Gemessen an der Testkopie markierte `istUeberfaellig` im Gesamtbestand 538 Zeilen -- davon 538
+   * `SUSPENDED` und 0 `RUNNING`. Nach der Regel sind das 538 Fehlalarme und kein einziger Treffer.
    *
-   * <p>Ein negativer Wert wird wie {@code 0} behandelt: Eine Frist, die vor ihrem Beginn ablaeuft,
-   * ist keine Frist. Vorgekommen ist das nicht.
+   * Die Auskunft ist NICHT GEMESSEN. Vollstaendig samt Herkunftsvermerk und der offenen Pruefung
+   * gegen die Produktion in docs/message-status.md, Abschnitt "Ueberfaelligkeit"; die Kategorie
+   * selbst in PROJEKTBESCHREIBUNG.md Paragraf 4.2, Punkt 2.
+   *
+   * `istEndstatus` ist ausdruecklich GEBLIEBEN: Sie beantwortet weiterhin eine eigene, richtige
+   * Frage, und die Kacheln `Laeuft` und `Wartend` sind ueber `einzigerRohwert` an sie gebunden.
    */
-  public Optional<LocalDateTime> timeoutZeitpunkt(
-      LocalDateTime messageLastUpdate, Integer messageTimeout) {
-    if (messageLastUpdate == null || messageTimeout == null || messageTimeout <= 0) {
-      return Optional.empty();
-    }
-    return Optional.of(messageLastUpdate.plus(messageTimeout, TIMEOUT_EINHEIT));
-  }
-
-  /**
-   * Problemkategorie <b>Ueberfaellig</b>: Die Nachricht ist <b>nicht</b> in einem Endstatus, und
-   * ihr Timeout-Zeitpunkt liegt in der Vergangenheit.
-   *
-   * <p>Getrennt von <i>Fehler</i> und <i>Unquittiert</i> und niemals mit ihnen zusammengefasst
-   * (Regel Q3). {@code SUSPENDED} ist kein Fehler — aber es ist offen und kann damit ueberfaellig
-   * werden; das ist der fachliche Kern dieser Kategorie.
-   *
-   * <p><b>„Laeuft noch" heisst „nicht in einem Endstatus"</b>, nicht {@code MessageStatus =
-   * 'RUNNING'}: Diesen Wert gibt es in der Testkopie null Mal, er ist fluechtig und existiert nur,
-   * solange eine Nachricht tatsaechlich in Arbeit ist.
-   *
-   * @param jetzt Referenzzeitpunkt, vom Aufrufer aus der <b>Anwendungsuhr</b> zu ziehen (Regel Z1)
-   *     — im Profil {@code dev} die zurueckversetzte. Mit der Systemuhr waere lokal jede Nachricht
-   *     ueberfaellig.
-   */
-  public boolean istUeberfaellig(
-      String status, LocalDateTime messageLastUpdate, Integer messageTimeout, LocalDateTime jetzt) {
-    if (istEndstatus(status)) {
-      return false;
-    }
-    return timeoutZeitpunkt(messageLastUpdate, messageTimeout)
-        .filter(zeitpunkt -> zeitpunkt.isBefore(jetzt))
-        .isPresent();
-  }
 
   /**
    * Die <b>eine</b> wiederverwendbare Fehlerbedingung fuer SQL:
@@ -305,73 +323,6 @@ public class MessageStatusClassifier {
    */
   public Condition fehlerBedingung(Field<String> messageStatus) {
     return messageStatus.like("ERROR\\_%", '\\').or(messageStatus.eq("COMMIT_REJECTED"));
-  }
-
-  /**
-   * {@link #TIMEOUT_EINHEIT} in SQL. Die beiden duerfen nicht auseinanderlaufen; {@code
-   * MessageStatusClassifierTest} haelt sie gegeneinander.
-   */
-  private static final DatePart TIMEOUT_DATEPART = DatePart.SECOND;
-
-  /**
-   * Problemkategorie <b>Ueberfaellig</b> in SQL — das Gegenstueck zu {@link #istUeberfaellig} und
-   * mit ihm zusammen an genau einer Stelle.
-   *
-   * <pre>
-   * MessageStatus IN ('RUNNING','SUSPENDED')
-   *   AND MessageTimeout IS NOT NULL AND MessageTimeout &gt; 0
-   *   AND date_add(MessageLastUpdate, INTERVAL MessageTimeout SECOND) &lt; ?
-   * </pre>
-   *
-   * <p><b>Die Statusmenge ist nicht abgeschrieben, sondern aus {@link #istEndstatus} gezogen</b>
-   * ({@link #offeneRohwerte()}). Waere sie hier aufgezaehlt, ergaebe ein neuer offener Statuswert
-   * in {@link MessageStatusKind} zwei Wahrheiten: eine fuer die Detailansicht, die {@link
-   * #istUeberfaellig} aufruft, und eine fuer die Liste, die dieses SQL schickt.
-   *
-   * <p><b>Sie ist eine geschlossene Menge, und das ist hier richtig.</b> {@link #istEndstatus}
-   * liefert fuer jeden unbekannten Wert {@code true} — unbekannt heisst Endstatus heisst „kann
-   * nicht ueberfaellig werden". Anders als bei {@link #bedingung(MessageStatusKind, Field)} ist ein
-   * {@code IN} hier deshalb keine Verkuerzung, sondern die vollstaendige Uebersetzung.
-   *
-   * <p><b>Kein {@code messageLastUpdate IS NOT NULL}</b>, obwohl {@link #timeoutZeitpunkt} den Fall
-   * behandelt: In SQL ist {@code NULL + INTERVAL … SECOND} selbst {@code NULL} und der Vergleich
-   * damit nicht wahr. Die Bedingung waere wirkungslos und wuerde nur von der Fassung abweichen, die
-   * gemessen worden ist (M97).
-   *
-   * <p><b>Diese Bedingung ist kein Filter, sondern eine zweite Abfrageform.</b> Sie zieht den
-   * Treiber der Nachrichtenliste von {@code MessageLastUpdateIDX} auf {@code MessageStatusIDX},
-   * macht die Sortierung zum {@code filesort} und entwertet den Cursor. Gemessen, begruendet und
-   * mit Plaenen belegt in {@code docs/nachrichtenliste.md} §5b.
-   *
-   * @param jetzt Stichtag, vom Aufrufer aus der <b>Anwendungsuhr</b> zu ziehen (Regel Z1) — im
-   *     Profil {@code dev} die zurueckversetzte
-   */
-  public Condition ueberfaelligBedingung(
-      Field<String> messageStatus,
-      Field<LocalDateTime> messageLastUpdate,
-      Field<? extends Number> messageTimeout,
-      LocalDateTime jetzt) {
-    // coerce statt cast: Es aendert nur den Java-Typ, nicht eine Zeile des gerenderten SQL. Die
-    // Spalte ist SMALLINT und damit Short; die Java-Fassung rechnet mit Integer.
-    Field<Integer> frist = messageTimeout.coerce(Integer.class);
-    return messageStatus
-        .in(offeneRohwerte())
-        .and(frist.isNotNull())
-        .and(frist.gt(0))
-        .and(DSL.localDateTimeAdd(messageLastUpdate, frist, TIMEOUT_DATEPART).lt(jetzt));
-  }
-
-  /**
-   * Die bekannten Rohwerte, die <b>kein</b> Endstatus sind — {@code RUNNING} und {@code SUSPENDED}.
-   *
-   * <p>Gezogen aus {@link #istEndstatus} und nicht aufgezaehlt, damit die SQL-Fassung der
-   * Ueberfaelligkeit nicht von der Java-Fassung abweichen kann.
-   */
-  SortedSet<String> offeneRohwerte() {
-    return BEKANNT.entrySet().stream()
-        .filter(eintrag -> !istEndstatus(eintrag.getValue()))
-        .map(Map.Entry::getKey)
-        .collect(Collectors.toCollection(TreeSet::new));
   }
 
   /**

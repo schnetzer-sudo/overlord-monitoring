@@ -3,6 +3,7 @@ package de.kraftwerkone.overlord.monitor.dashboard;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
+import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
 import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
 import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
@@ -278,78 +279,102 @@ class DashboardStatementsTest {
     }
 
     @Test
-    @DisplayName("Ueberfaellig im Fenster: Statusmenge, Frist, Zeitfenster und Mandantenkette")
-    void ueberfaellig_im_fenster() {
-      repository.ueberfaelligImFenster(MANDANT, Rollupzeitraum.STUNDEN_48.fenster(JETZT), JETZT);
+    @DisplayName("Laeuft: = auf den Rohwert, COUNT und MIN in einem Statement")
+    void kachel_laeuft() {
+      gerendert.clear();
+      repository.offeneNachrichten(MANDANT, MessageStatusKind.LAEUFT);
 
       assertThat(einziges())
-          .startsWith("select count(*) from `GlassfishDB`.`Message` where")
-          .contains("`GlassfishDB`.`Message`.`MessageStatus` in (?, ?)")
-          .contains(
-              "date_add(`GlassfishDB`.`Message`.`MessageLastUpdate`, interval"
-                  + " `GlassfishDB`.`Message`.`MessageTimeout` second) < ?")
-          .contains("`GlassfishDB`.`Message`.`MessageLastUpdate` >= ?")
+          .startsWith(
+              "select count(*), min(`GlassfishDB`.`Message`.`MessageLastUpdate`) from"
+                  + " `GlassfishDB`.`Message` where")
+          .as("= auf den Rohwert und nicht IN ueber eine einelementige Menge")
+          .contains("`GlassfishDB`.`Message`.`MessageStatus` = ?")
+          .doesNotContain("`GlassfishDB`.`Message`.`MessageStatus` in (")
           .contains("exists (select 1 as `one`");
     }
 
     /**
-     * <b>Regel L9, am Statement nachweisbar.</b> Die zweite Zahl hat kein Zeitfenster — gefragt ist
-     * genau, was <i>ausserhalb</i> des gezeigten Zeitraums haengt. Sie ist dabei die billigere von
-     * beiden (M90, Befund 14).
+     * <b>Regel L9, am Statement nachweisbar.</b> Beide Kacheln haben <b>kein</b> Zeitfenster —
+     * gefragt ist, was <i>jetzt</i> offen ist, und ein Fenster schnitte gerade die aeltesten Zeilen
+     * weg.
      */
     @Test
-    @DisplayName("Ueberfaellig insgesamt hat kein Zeitfenster, und das ist der Unterschied")
-    void ueberfaellig_insgesamt() {
-      repository.ueberfaelligInsgesamt(MANDANT, JETZT);
+    @DisplayName("Wartend traegt kein Zeitfenster, und das ist der Punkt")
+    void kachel_wartend_ohne_zeitfenster() {
+      gerendert.clear();
+      repository.offeneNachrichten(MANDANT, MessageStatusKind.WARTEND);
 
       assertThat(einziges())
-          .contains("`GlassfishDB`.`Message`.`MessageStatus` in (?, ?)")
+          .contains("`GlassfishDB`.`Message`.`MessageStatus` = ?")
           .doesNotContain("`GlassfishDB`.`Message`.`MessageLastUpdate` >= ?")
           .doesNotContain("`GlassfishDB`.`Message`.`MessageLastUpdate` < ?");
     }
 
     /**
-     * <b>Die Fehlerbedingung ist die gerufene und nicht das naive {@code LIKE 'ERROR_%'}.</b> In
-     * SQL ist {@code _} ein Platzhalter fuer ein beliebiges Zeichen; ohne {@code ESCAPE} traefe die
-     * Bedingung auch {@code ERRORX…}.
+     * <b>Keine Frist im Statement.</b> Bis zum 03.09.2026 stand hier die Ueberfaelligkeitsbedingung
+     * mit {@code date_add(… interval MessageTimeout second)}. Sie ist mit E-71 entfallen; bliebe
+     * sie stehen, zaehlte die Kachel etwas anderes, als ihr Name sagt.
      */
     @Test
-    @DisplayName("Zuletzt aufgefallen: zwei Statements, je Merkmal eines")
+    @DisplayName("Keine der beiden Kacheln rechnet noch mit einer Frist")
+    void kacheln_ohne_frist() {
+      for (MessageStatusKind einordnung :
+          List.of(MessageStatusKind.LAEUFT, MessageStatusKind.WARTEND)) {
+        gerendert.clear();
+        repository.offeneNachrichten(MANDANT, einordnung);
+        assertThat(einziges())
+            .as("%s", einordnung)
+            .doesNotContain("date_add(")
+            .doesNotContain("MessageTimeout");
+      }
+    }
+
+    /**
+     * <b>Die Erscheinungsbedingung der Kachel <i>Wartend</i></b> (E-74). Sie fragt die
+     * <b>Stammdaten</b> und nicht den Bestand: Hat der Mandant einen Prozess, dessen geplanter
+     * Ablauf einen {@code SUSPEND}-Baustein traegt?
+     */
+    @Test
+    @DisplayName("Die Erscheinungsbedingung geht ueber SOSAction, SOS und die Mandantenkette")
+    void erscheinungsbedingung() {
+      gerendert.clear();
+      repository.hatWartendeAblaeufe(MANDANT);
+
+      assertThat(einziges())
+          .startsWith("select exists (select 1 as `one` from `GlassfishDB`.`SOSAction`")
+          .contains("join `GlassfishDB`.`SOS` on `GlassfishDB`.`SOS`.`SOSID` =")
+          .as("Das LIKE steht auf dem GEPLANTEN Baustein, nicht auf dem ausgefuehrten")
+          .contains("`GlassfishDB`.`SOSAction`.`SOSActionServiceProperties` like ?")
+          .as("Die Kette haengt an SOS.ProcessID — Message kommt hier gar nicht vor")
+          .contains("`dashboard_process`.`ProcessID` = `GlassfishDB`.`SOS`.`ProcessID`")
+          .doesNotContain("`GlassfishDB`.`Message`");
+    }
+
+    /**
+     * <b>Der Block hatte zwei Haelften und hat seit dem 03.09.2026 eine.</b> Die
+     * Ueberfaelligkeitshaelfte ist mit E-71 entfallen; der Indexhinweis darunter gilt unveraendert
+     * (M108).
+     */
+    @Test
+    @DisplayName("Zuletzt aufgefallen: ein Statement, und es traegt nur die Fehlerbedingung")
     void zuletzt_aufgefallen() {
       gerendert.clear();
-      repository.zuletztAufgefallen(MANDANT, Rollupzeitraum.STUNDEN_48.fenster(JETZT), JETZT, 10);
+      repository.zuletztAufgefallen(MANDANT, Rollupzeitraum.STUNDEN_48.fenster(JETZT), 10);
 
-      assertThat(gerendert)
-          .as(
-              "Mit einem gemeinsamen OR steigt MariaDB ueber MessageLastUpdateIDX ein und liest den"
-                  + " ganzen Zeitbereich (M108) — je Merkmal ein Statement dreht den Plan um")
-          .hasSize(2);
-      List<String> beide =
-          gerendert.stream().map(sql -> sql.replaceAll("\\s+", " ").trim()).toList();
-      String fehler =
-          beide.stream().filter(sql -> sql.contains("like ?")).findFirst().orElseThrow();
-      String ueberfaellig =
-          beide.stream().filter(sql -> sql.contains("date_add(")).findFirst().orElseThrow();
-
-      assertThat(fehler)
-          .as("Die Fehlerhaelfte: das LIKE mit ESCAPE und COMMIT_REJECTED, und keine Frist")
+      assertThat(gerendert).as("Die Ueberfaelligkeitshaelfte ist entfallen").hasSize(1);
+      assertThat(einziges())
+          .as("Das LIKE mit ESCAPE und COMMIT_REJECTED, und keine Frist")
           .contains("`GlassfishDB`.`Message`.`MessageStatus` like ? escape")
           .contains("or `GlassfishDB`.`Message`.`MessageStatus` = ?")
-          .doesNotContain("date_add(");
-      assertThat(ueberfaellig)
-          .as("Die Ueberfaelligkeitshaelfte: die offene Statusmenge und die Frist, und kein LIKE")
-          .contains("`GlassfishDB`.`Message`.`MessageStatus` in (?, ?)")
-          .contains("date_add(`GlassfishDB`.`Message`.`MessageLastUpdate`, interval")
-          .doesNotContain("like ?");
-      for (String sql : List.of(fehler, ueberfaellig)) {
-        assertThat(sql)
-            .contains("`GlassfishDB`.`Message`.`MessageLastUpdate` >= ?")
-            .contains(
-                "order by `GlassfishDB`.`Message`.`MessageLastUpdate` desc,"
-                    + " `GlassfishDB`.`Message`.`MessageID` desc")
-            .contains("rows only")
-            .contains("exists (select 1 as `one`");
-      }
+          .doesNotContain("date_add(")
+          .doesNotContain("`GlassfishDB`.`Message`.`MessageStatus` in (")
+          .contains("`GlassfishDB`.`Message`.`MessageLastUpdate` >= ?")
+          .contains(
+              "order by `GlassfishDB`.`Message`.`MessageLastUpdate` desc,"
+                  + " `GlassfishDB`.`Message`.`MessageID` desc")
+          .contains("rows only")
+          .contains("exists (select 1 as `one`");
     }
 
     /**
@@ -369,25 +394,87 @@ class DashboardStatementsTest {
   }
 
   /**
-   * <b>Die Zahl der Statements einer Landingpage.</b> Sie steht hier, weil sie sonst unbemerkt
-   * wachsen kann: Ein Block, der sich seine Zahl selbst nachholt, faellt in keinem fachlichen Test
-   * auf — nur in der Laufzeit, und dort erst in Produktion.
+   * <b>Die Statements einer Landingpage — benannt und nicht gezaehlt.</b>
+   *
+   * <h2>⚠️ Warum dieser Test am 03.09.2026 umgebaut worden ist, obwohl er gruen war</h2>
+   *
+   * <p>Er hielt fest, dass eine Seite <b>sieben</b> Statements kostet. In diesem Schritt fallen
+   * <b>drei</b> weg (zweimal <i>Ueberfaellig</i>, die Ueberfaelligkeitshaelfte von Block 6) und
+   * <b>drei</b> kommen hinzu (<i>Laeuft</i>, <i>Wartend</i>, die Erscheinungsbedingung). <b>Die
+   * Zahl bleibt sieben — und der Test haette bestanden, ohne noch etwas zu bezeugen.</b>
+   *
+   * <p>Ein Test, der eine Zahl prueft, wo eine Gestalt gemeint ist, wird in genau dem Augenblick
+   * still, in dem sich die Gestalt aendert. Er nennt deshalb jetzt <b>jedes</b> Statement bei
+   * seinem Gegenstand. Kommt eines hinzu, faellt er; faellt eines weg, faellt er auch — und die
+   * Meldung sagt, welches.
+   *
+   * <p>Das ist derselbe Befund wie in {@code docs/testfestigkeit.md}: ein gruener Test, der seine
+   * Aussage nicht traegt. Gefunden hat ihn nicht das Nachdenken, sondern die Buchhaltung des
+   * Auftrags.
    */
   @Test
-  @DisplayName("Eine Landingpage mit genanntem Zeitraum kostet sieben Statements")
-  void sieben_statements_je_seite() {
+  @DisplayName("Eine Landingpage mit genanntem Zeitraum setzt genau diese sieben Statements ab")
+  void die_sieben_statements_je_seite() {
     Zeitfenster fenster = Rollupzeitraum.STUNDEN_48.fenster(JETZT);
     gerendert.clear();
 
     repository.verlauf(MANDANT, Rollupzeitraum.STUNDEN_48, fenster);
     repository.verteilung(MANDANT, Rollupzeitraum.STUNDEN_48, fenster, Verteilungssicht.PARTNER);
-    repository.ueberfaelligImFenster(MANDANT, fenster, JETZT);
-    repository.ueberfaelligInsgesamt(MANDANT, JETZT);
-    repository.zuletztAufgefallen(MANDANT, fenster, JETZT, 10);
+    repository.offeneNachrichten(MANDANT, MessageStatusKind.LAEUFT);
+    repository.hatWartendeAblaeufe(MANDANT);
+    repository.offeneNachrichten(MANDANT, MessageStatusKind.WARTEND);
+    repository.zuletztAufgefallen(MANDANT, fenster, 10);
+    repository.letzterLauf();
+
+    List<String> knapp = gerendert.stream().map(sql -> sql.replaceAll("\s+", " ").trim()).toList();
+
+    assertThat(knapp)
+        .as("Sieben Statements — und jedes einzeln benannt, damit ein Tausch auffaellt")
+        .hasSize(7);
+    assertThat(knapp.get(0)).as("1 Verlauf").contains("from `overlord_monitor`.`message_rollup`");
+    assertThat(knapp.get(1))
+        .as("2 Verteilung")
+        .contains("left outer join `overlord_monitor`.`process_catalog`");
+    assertThat(knapp.get(2))
+        .as("3 Kachel Laeuft")
+        .startsWith("select count(*), min(")
+        .contains("`MessageStatus` = ?");
+    assertThat(knapp.get(3))
+        .as("4 Erscheinungsbedingung der Kachel Wartend")
+        .startsWith("select exists (")
+        .contains("`GlassfishDB`.`SOSAction`");
+    assertThat(knapp.get(4))
+        .as("5 Kachel Wartend")
+        .startsWith("select count(*), min(")
+        .contains("`MessageStatus` = ?");
+    assertThat(knapp.get(5))
+        .as("6 Zuletzt aufgefallen — eine Haelfte, nicht zwei")
+        .contains("`MessageStatus` like ? escape");
+    assertThat(knapp.get(6)).as("7 Stand").contains("from `overlord_monitor`.`rollup_lauf`");
+  }
+
+  /**
+   * <b>Die Gegenprobe zum Test darueber, und sie ist der Grund fuer diesen Schritt.</b> Kein
+   * Statement der Landingpage rechnet noch mit {@code MessageTimeout} — die Problemkategorie
+   * <i>Ueberfaellig</i> ist widerlegt (E-71), und ein uebriggebliebenes {@code date_add} waere die
+   * Kategorie an einer Stelle, an der niemand sie mehr vermutet.
+   */
+  @Test
+  @DisplayName("Kein Statement der Landingpage rechnet noch mit MessageTimeout")
+  void keine_frist_mehr_in_der_ganzen_seite() {
+    Zeitfenster fenster = Rollupzeitraum.STUNDEN_48.fenster(JETZT);
+    gerendert.clear();
+
+    repository.verlauf(MANDANT, Rollupzeitraum.STUNDEN_48, fenster);
+    repository.verteilung(MANDANT, Rollupzeitraum.STUNDEN_48, fenster, Verteilungssicht.PARTNER);
+    repository.offeneNachrichten(MANDANT, MessageStatusKind.LAEUFT);
+    repository.hatWartendeAblaeufe(MANDANT);
+    repository.offeneNachrichten(MANDANT, MessageStatusKind.WARTEND);
+    repository.zuletztAufgefallen(MANDANT, fenster, 10);
     repository.letzterLauf();
 
     assertThat(gerendert)
-        .as("Verlauf, Verteilung, zweimal Ueberfaellig, zweimal Block 6 und der Stand — sieben")
-        .hasSize(7);
+        .allSatisfy(
+            sql -> assertThat(sql).doesNotContain("MessageTimeout").doesNotContain("date_add("));
   }
 }

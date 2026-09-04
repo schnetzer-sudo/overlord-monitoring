@@ -372,6 +372,26 @@ WARN ... ZeitConfig : Dev-Clock aktiv: Anwendungszeit auf 2025-12-30T04:09:47 zu
                       Sicherheitsrelevante Zeit nutzt weiterhin die Systemuhr.
 ```
 
+> ### ⚠️ Der Anker ist zugleich die Bezugsgröße jedes Altersarguments *(nachgetragen 03.09.2026)*
+>
+> **Das Ende des dichten Bestands ist `2025-12-30 04:09:47`, nicht `2026-07-08 17:21:10`.** Der
+> Anker steht darauf. **Dass er damit die Bezugsgröße für jede Aussage über das *Alter* einer Zeile
+> ist, stand bisher nirgends** — und der Fehler, den das erlaubt, ist in der Vorbereitung von
+> Schritt 10b‑4 **zweimal** gemacht worden.
+>
+> **Der Fehler in einer Zeile:** Wer das Alter der 538 wartenden Nachrichten gegen das Ende der
+> *Datei* rechnet (`MAX(MessageLastUpdate) = 2026-07-08`), kommt auf **rund sechs Monate**. Gegen
+> das Ende der *Daten* — den Anker — sind es **6,71 Tage** (M144 c). Das ist der Unterschied
+> zwischen „hängt seit einem halben Jahr" und „wartet seit einer Woche", und nur die zweite Zahl
+> beschreibt, was die Anwendung lokal zeigt.
+>
+> **Die Regel daraus:** Jede Aussage über eine Dauer, ein Alter oder eine Frist rechnet gegen die
+> **Anwendungsuhr** — im Profil `dev` also gegen den Anker. Das gilt für Messungen genauso wie für
+> den Code, und im Code hält es Regel Z1 ohnehin fest.
+>
+> **Dieselbe Verwechslung steckt in M90.** Dort ist gegen `2026-07-08 17:21:10` gemessen worden;
+> [`dashboard.md`](dashboard.md) §8 führt das als Abweichung 1 und offenen Punkt 84.
+
 **Geprüft wird die Eigenschaft, nicht das Datum.** `DatenzugriffDbIT` verlangt, dass das
 24-Stunden-Fenster ab der Anwendungsuhr Daten von mehreren Mandanten zeigt. Ein Test auf das konkrete
 Datum wäre bei der nächsten Neubefüllung rot, ohne dass sich etwas verschlechtert hätte.

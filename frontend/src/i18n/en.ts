@@ -52,14 +52,18 @@ export const en: Texte = {
     },
   },
 
+  thema: {
+    bezeichnung: "Appearance",
+    werte: {
+      hell: "Light",
+      dunkel: "Dark",
+      system: "System setting",
+    },
+  },
+
   rolle: {
     ADMIN: "EDI support",
     MANDANT: "Tenant",
-  },
-
-  problem: {
-    ueberfaellig: "Overdue",
-    ueberfaelligHinweis: "The deadline for this message has passed.",
   },
 
   einordnung: {
@@ -125,10 +129,13 @@ export const en: Texte = {
 
     verlauf: {
       titel: "History",
+      // Entscheidung E‑82, siehe `de.ts`: Die Beschriftung gilt für alle
+      // Mitglieder der Rolle und wiederholt keines von ihnen. „Completed" stand
+      // hier zugleich als `einordnung.ABGESCHLOSSEN`.
       rollen: {
         fehler: "Errors",
-        offen: "Open",
-        abgeschlossen: "Completed",
+        offen: "No outcome",
+        abgeschlossen: "Done",
         ungeklaert: "Unclear",
       },
       gesamt: "Total",
@@ -149,17 +156,24 @@ export const en: Texte = {
       fehlerVerweis: "Open these messages in the list",
       artenAufklappen: "Break down by kind",
       artenZuklappen: "Close the breakdown",
-      ueberfaellig: "Overdue",
-      ueberfaelligImFenster: "in this period",
-      ueberfaelligInsgesamt: "in total",
-      ueberfaelligVerweis: "Open the overdue messages of this period in the list",
-      insgesamtOhneVerweis:
-        "This number has no period. The message list requires one — a link would therefore lead " +
-        "to a different number than the one shown here.",
+      laeuftVerweis: "Open the running messages in the list",
+      wartendVerweis: "Open the waiting messages in the list",
+      aeltesterSeit: "oldest for {dauer}",
+      wartendOhneVerweis:
+        "The oldest of these messages goes back more than a year. The message list shows at most " +
+        "one year — a link would therefore lead to a smaller number than the one shown here.",
+      bestandHinweis: "What is counted is the entire stock, not the selected period.",
       nichtErmittelbar: "—",
       nichtErmittelbarHinweis:
-        "These two numbers are counted afresh on every request, and the count hit the database time " +
+        "This number is counted afresh on every request, and the count hit the database time " +
         "limit. The other numbers on this page are in place.",
+      dauer: {
+        unterSekunde: "< 1 s",
+        sekunden: "{wert} s",
+        minuten: "{wert} min",
+        stunden: "{wert} h",
+        tage: "{wert} d",
+      },
     },
 
     fehlerarten: {
@@ -251,11 +265,6 @@ export const en: Texte = {
       zuruecksetzen: "Reset time window",
       unvollstaendig: "Please enter both date and time.",
       beideNoetig: "A custom time window still needs its second point in time.",
-    },
-
-    ueberfaelligForm: {
-      marke: "Overdue only",
-      entfernen: "Clear the overdue-only view",
     },
 
     statusfilter: {

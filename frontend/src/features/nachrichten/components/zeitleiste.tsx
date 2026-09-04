@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Clock, PlayCircle } from "lucide-react";
+import { Clock, PlayCircle } from "lucide-react";
 
 import { useAnzeigezone } from "@/components/zeitzone";
 import { einsetzen } from "@/i18n";
@@ -325,20 +325,26 @@ function Balken({ anteil }: { anteil: number | null }) {
  * `dev` steht die Monate zurück; `Date.now()` gegen einen gelieferten Zeitstempel
  * ergäbe dort „vor 7 Monaten" statt „vor 4 Stunden".
  *
- * ## Überfällig wird hervorgehoben — und zwar ohne eine einzige Farbe
+ * ## ~~Überfällig wird hervorgehoben~~
  *
- * Nicht nur „nie allein über Farbe", sondern hier **gar nicht** über Farbe. Der
- * Grund steht in `visuelles-konzept.md` §7 und ist Regel Q3: Rot gehört
- * ausschließlich der Kategorie *Fehler*. Würde „überfällig" rot, verschmölzen
- * zwei der drei Problemkategorien in der Wahrnehmung, obwohl der Code sie
- * sorgfältig trennt. Ein Status-Gelb gibt es in diesem Farbsystem nicht, und
- * eine eigene Rolle dafür ist dort ausdrücklich einer späteren Entscheidung
- * vorbehalten — sie hier zu erfinden hieße, dieser Entscheidung vorzugreifen.
+ * ⚠️ **Die Hervorhebung ist am 03.09.2026 entfallen** *(E‑71)*. Hier stand ein
+ * dritter Zweig: Bei `ueberfaellig` wurde die Zeile achromatisch hervorgehoben —
+ * über Zeichen, Wort und Schriftstärke, ausdrücklich ohne Farbe, weil Rot allein
+ * der Kategorie *Fehler* gehört. **Die Problemkategorie ist widerlegt**, das Feld
+ * gibt es nicht mehr, und ein Zweig, dessen Bedingung nie zutrifft, ist eine
+ * Behauptung über einen Zustand, den es nicht gibt.
  *
- * Die Hervorhebung ist deshalb achromatisch: **Zeichen, Wort und Schriftstärke**
- * gegen die gedämpfte Umgebung. Das Wort kommt aus `texte.problem` — auf oberster
- * Ebene, damit das Dashboard später dieselbe Kategorie gleich benennt und nicht
- * „abgelaufen" schreibt, wo hier „Überfällig" steht.
+ * **Was von dem Zweig bleibt, steht anderswo:** Der Grundsatz — Rot ist der
+ * Kategorie *Fehler* vorbehalten, eine Hervorhebung kommt ohne Farbe aus — gilt
+ * unverändert (`docs/visuelles-konzept.md` §3). Die Farbrolle `--ueberfaellig`
+ * bleibt ohne Verbraucher bestehen (E‑77).
+ *
+ * ## Die Frist erscheint jetzt nur noch, wo sie durchgesetzt wird (E‑76)
+ *
+ * **Bei `LAEUFT` steht beides** — *läuft seit X* und *Frist Y* —, und zusammen
+ * sagen sie, wann die Nachricht in `ERROR_TIMEOUT` kippt. **Bei `WARTEND` liefert
+ * das Backend `fristSekunden = null`**, und dann steht nur *wartet seit X*. Diese
+ * Komponente prüft das nicht nach: Sie zeigt die Hälften, die da sind.
  */
 function WarteZeile({ warten }: { warten: NonNullable<ReturnType<typeof wartezeile>> }) {
   const texte = useTexte();
@@ -349,12 +355,7 @@ function WarteZeile({ warten }: { warten: NonNullable<ReturnType<typeof wartezei
   );
 
   return (
-    <p
-      className={cn(
-        "text-beiwerk flex flex-wrap items-center gap-x-2 gap-y-1",
-        warten.ueberfaellig ? "text-foreground" : "text-muted-foreground",
-      )}
-    >
+    <p className="text-beiwerk text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1">
       <span className="flex items-center gap-1.5">
         <Clock aria-hidden="true" className="size-3.5 shrink-0" />
         {satz}
@@ -367,16 +368,6 @@ function WarteZeile({ warten }: { warten: NonNullable<ReturnType<typeof wartezei
           })}
         </span>
       )}
-
-      {warten.ueberfaellig ? (
-        <span
-          className="flex items-center gap-1 font-medium"
-          title={texte.problem.ueberfaelligHinweis}
-        >
-          <AlertTriangle aria-hidden="true" className="size-3.5 shrink-0" />
-          {texte.problem.ueberfaellig}
-        </span>
-      ) : null}
     </p>
   );
 }

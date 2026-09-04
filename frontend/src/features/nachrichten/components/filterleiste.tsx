@@ -3,7 +3,6 @@
 import { useEffect, useId, useState } from "react";
 import { ChevronsUpDown, Search, X } from "lucide-react";
 
-import { Marke } from "@/components/marke";
 import { useAnzeigezone } from "@/components/zeitzone";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -38,7 +37,6 @@ type Steuerung = {
   setzeFreiesFenster: (von: Date | null, bis: Date | null) => void;
   setzeZeitfensterZurueck: () => void;
   setzeStatus: (status: Statusart[]) => void;
-  setzeUeberfaellig: (ueberfaellig: boolean) => void;
   setzeProzesse: (prozesse: string[]) => void;
   setzeSuche: (suche: string) => void;
 };
@@ -73,36 +71,11 @@ export function Filterleiste({
   /** Hebt die Fenstergrenze der Suche auf — „Trotzdem suchen". */
   aufLangeSuche: () => void;
 }) {
-  const texte = useTexte();
-
   return (
     <div className="flex flex-wrap items-start gap-2">
       <Zeitfensterwahl filter={filter} steuerung={steuerung} fehler={zeitfensterfehler} />
       <StatusFilter gewaehlt={filter.status ?? []} aufAuswahl={steuerung.setzeStatus} />
       <ProzessFilter gewaehlt={filter.prozess ?? []} aufAuswahl={steuerung.setzeProzesse} />
-      {/*
-       * **Die Überfälligkeitsform steht sichtbar da**, sobald sie greift.
-       *
-       * Sie ist kein Filter der Leiste — eingeschaltet wird sie ausschließlich
-       * über einen Verweis von außen (heute die Kachel des Dashboards). Ohne
-       * diese Marke schränkte sie die Liste ein, ohne dass irgendwo stünde,
-       * warum: genau der Zustand, den der Ausblende-Schalter am 11.08.2026
-       * hinterlassen hat und der ihn gekostet hat
-       * (`docs/nachrichtenliste.md` §5).
-       *
-       * Sie trägt die Marken-Gestalt des Projekts und **keine Farbrolle**: Sie
-       * sagt etwas über den *Ausschnitt* und nichts über einen Zustand.
-       */}
-      {filter.ueberfaellig ? (
-        <Marke
-          className="min-h-bedienelement inline-flex items-center"
-          aufEntfernen={() => steuerung.setzeUeberfaellig(false)}
-          entfernenText={texte.nachrichten.ueberfaelligForm.entfernen}
-        >
-          {texte.nachrichten.ueberfaelligForm.marke}
-        </Marke>
-      ) : null}
-
       <Suchfeld
         wert={filter.suche ?? ""}
         aufSuche={steuerung.setzeSuche}

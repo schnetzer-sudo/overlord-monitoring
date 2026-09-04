@@ -25,10 +25,16 @@ import org.junit.jupiter.api.Test;
 /**
  * Das Statement der Nachrichtenliste, <b>gerendert statt nachgebildet</b> — ohne Datenbank.
  *
- * <p>Der Anlass ist der Parameter {@code ueberfaellig} aus Schritt 10b-1: Er ist gemessen worden
- * (M97 und {@code docs/nachrichtenliste.md} §5b), <b>bevor</b> er gebaut war. Regel L7 verlangt die
- * Messung <b>der</b> Abfrage — dieser Test haelt fest, dass der Code Zeichen fuer Zeichen dieselbe
- * Bedingung schickt, die gemessen wurde.
+ * <p><b>Der Anlass war der Parameter {@code ueberfaellig} aus Schritt 10b-1</b>: Er ist gemessen
+ * worden (M97 und {@code docs/nachrichtenliste.md} §5b), <b>bevor</b> er gebaut war. Regel L7
+ * verlangt die Messung <b>der</b> Abfrage, und dieser Test hielt fest, dass der Code Zeichen fuer
+ * Zeichen dieselbe Bedingung schickt.
+ *
+ * <p><b>Der Parameter ist am 03.09.2026 mit E-71 entfallen</b>, und mit ihm drei der vier Faelle.
+ * <b>Die Klasse bleibt trotzdem, und ihr wichtigster Fall ist jetzt ein Verbot:</b> dass im
+ * Statement der Liste <i>keine</i> Frist mehr steht. Ein uebriggebliebenes {@code date_add} waere
+ * die widerlegte Kategorie an einer Stelle, an der niemand sie mehr vermutet — und es zoege den
+ * Treiber der Liste still von {@code MessageLastUpdateIDX} auf {@code MessageStatusIDX}.
  *
  * <p><b>{@link StatementType#STATIC_STATEMENT}</b>, damit die Werte im Text stehen und nicht als
  * {@code ?}: Ein Test, der nur Fragezeichen sieht, kann den Stichtag nicht pruefen. Im Betrieb
@@ -71,20 +77,19 @@ class NachrichtenStatementsTest {
     return gerendert.getFirst().replaceAll("\\s+", " ").trim();
   }
 
-  private Nachrichtenabfrage abfrage(boolean ueberfaellig, Seitenposition cursor) {
-    return new Nachrichtenabfrage(
-        FENSTER, Set.of(), List.of(), null, ueberfaellig, JETZT, true, cursor, 50);
+  private Nachrichtenabfrage abfrage(Seitenposition cursor) {
+    return new Nachrichtenabfrage(FENSTER, Set.of(), List.of(), null, true, cursor, 50);
   }
 
   /**
-   * {@code MessageStatus} steht ohne den Parameter nur in der Spaltenliste — die Liste zeigt den
-   * Rohwert auf jeder Zeile. Geprueft wird deshalb auf die Bestandteile der <b>Bedingung</b>:
-   * {@code MessageTimeout} kommt in der Spaltenliste gar nicht vor, und {@code date_add} nur hier.
+   * <b>Der Waechter ueber E-71.</b> {@code MessageTimeout} kommt in der Spaltenliste der Liste gar
+   * nicht vor und {@code date_add} nirgends sonst — beide Woerter koennen nur aus der entfallenen
+   * Ueberfaelligkeitsbedingung stammen.
    */
   @Test
-  @DisplayName("Ohne den Parameter steht keine Ueberfaelligkeitsbedingung im Statement")
-  void ohne_parameter_keine_ueberfaelligkeitsbedingung() {
-    repository.finde(MANDANT, abfrage(false, null));
+  @DisplayName("Das Statement der Liste rechnet mit keiner Frist mehr")
+  void keine_ueberfaelligkeitsbedingung_mehr() {
+    repository.finde(MANDANT, abfrage(null));
 
     assertThat(einziges())
         .doesNotContain("MessageTimeout")
@@ -93,69 +98,34 @@ class NachrichtenStatementsTest {
   }
 
   /**
-   * Die Bedingung Zeichen fuer Zeichen. Sie ist das SQL-Gegenstueck zu {@code
-   * MessageStatusClassifier.istUeberfaellig} und in M97 in genau dieser Form gemessen worden — dort
-   * als {@code MessageLastUpdate + INTERVAL MessageTimeout SECOND}, was MariaDB auf dasselbe {@code
-   * date_add} abbildet.
+   * <b>Und die Gegenprobe, ohne die das Verbot oben nichts wert waere:</b> Das Statement steht
+   * ueberhaupt und traegt sein Pflicht-Zeitfenster (Regel L1) und die Mandantenkette (Regel M3).
+   * Ohne sie bezeugte der Test nur, dass irgendein Text ohne {@code date_add} herauskommt.
    */
   @Test
-  @DisplayName("Mit dem Parameter steht die gemessene Ueberfaelligkeitsbedingung im Statement")
-  void mit_parameter_steht_die_gemessene_bedingung_da() {
-    repository.finde(MANDANT, abfrage(true, null));
+  @DisplayName("Zeitfenster und Mandantenkette stehen weiterhin im Statement")
+  void fenster_und_kette_stehen_da() {
+    repository.finde(MANDANT, abfrage(null));
 
     assertThat(einziges())
-        .contains(
-            "`GlassfishDB`.`Message`.`MessageStatus` in ('RUNNING', 'SUSPENDED')"
-                + " and `GlassfishDB`.`Message`.`MessageTimeout` is not null"
-                + " and `GlassfishDB`.`Message`.`MessageTimeout` > 0"
-                + " and date_add(`GlassfishDB`.`Message`.`MessageLastUpdate`,"
-                + " interval `GlassfishDB`.`Message`.`MessageTimeout` second)"
-                + " < timestamp '2025-12-30 04:09:47.0'");
+        .contains("`GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp")
+        .contains("`GlassfishDB`.`Message`.`MessageLastUpdate` <= timestamp")
+        .contains("exists (select 1 as `one`");
   }
 
   /**
-   * <b>Der Stichtag kommt aus der Anwendungsuhr und nirgendwo sonst.</b> Im Profil {@code dev}
-   * liegt sie Monate zurueck; mit der Systemuhr waere lokal jede offene Nachricht ueberfaellig, und
-   * der Parameter waere dort ohne Aussage.
+   * <b>Der Cursor, und er ist seit E-71 wieder der Normalfall.</b> Neben der Ueberfaelligkeitsform
+   * wirkte er <i>anders</i> — der Plan nutzte ihn nicht mehr als Indexbereich ({@code
+   * docs/nachrichtenliste.md} §5b). Die Form ist entfallen; die Liste hat wieder genau einen
+   * Zugriffspfad, und die Cursor-Messung aus M4/L8 gilt fuer jede Fassung.
    */
   @Test
-  @DisplayName("Der Stichtag ist der uebergebene Zeitpunkt und nicht die obere Fenstergrenze")
-  void stichtag_ist_die_anwendungsuhr() {
+  @DisplayName("Der Cursor filtert ueber beide Schluessel, mit dem Tiebreaker auf der MessageID")
+  void cursor_filtert_ueber_beide_schluessel() {
     repository.finde(
-        MANDANT,
-        new Nachrichtenabfrage(
-            new Zeitfenster(
-                LocalDateTime.parse("2020-01-01T00:00:00"),
-                LocalDateTime.parse("2020-12-31T00:00:00")),
-            Set.of(),
-            List.of(),
-            null,
-            true,
-            LocalDateTime.parse("2024-06-05T12:00:00"),
-            true,
-            null,
-            50));
+        MANDANT, abfrage(new Seitenposition(LocalDateTime.parse("2025-12-24T06:19:16"), "abc")));
 
     assertThat(einziges())
-        .contains("< timestamp '2024-06-05 12:00:00.0'")
-        .doesNotContain("< timestamp '2020-12-31 00:00:00.0'");
-  }
-
-  /**
-   * Der Cursor bleibt neben der Ueberfaelligkeit stehen. Er wirkt dort <b>anders</b> — der Plan
-   * nutzt ihn nicht mehr als Indexbereich ({@code docs/nachrichtenliste.md} §5b) —, aber er filtert
-   * weiterhin, und genau darauf ruht die Richtigkeit des Blaetterns.
-   */
-  @Test
-  @DisplayName("Cursor und Ueberfaelligkeit stehen beide im Statement")
-  void cursor_und_ueberfaelligkeit_zusammen() {
-    repository.finde(
-        MANDANT,
-        abfrage(true, new Seitenposition(LocalDateTime.parse("2025-12-24T06:19:16"), "abc")));
-
-    String sql = einziges();
-    assertThat(sql).contains("date_add(").contains("interval");
-    assertThat(sql)
         .contains(
             "`GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-24 06:19:16.0'"
                 + " or (`GlassfishDB`.`Message`.`MessageLastUpdate`"

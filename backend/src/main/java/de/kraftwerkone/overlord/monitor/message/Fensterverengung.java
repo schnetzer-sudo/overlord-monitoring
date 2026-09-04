@@ -137,11 +137,10 @@ public class Fensterverengung {
    */
   private static boolean gesetzt(Abfragemerkmal merkmal, Nachrichtenabfrage abfrage) {
     return switch (merkmal) {
-      case ZEITFENSTER, JETZT, SORTIERUNG, LIMIT -> true;
+      case ZEITFENSTER, SORTIERUNG, LIMIT -> true;
       case STATUS -> !abfrage.status().isEmpty();
       case PROZESSE -> !abfrage.prozessIds().isEmpty();
       case SUCHBEGRIFF -> abfrage.suchtreffer() != null;
-      case UEBERFAELLIG -> abfrage.ueberfaellig();
       case CURSOR -> abfrage.cursor() != null;
     };
   }
@@ -170,9 +169,6 @@ public class Fensterverengung {
       // traegt sie zusaetzlich (process_id, stunde).
       case PROZESSE -> true;
 
-      // Der Stichtag geht in die Verengung gar nicht ein; sie rechnet ueber Stundeneimer.
-      case JETZT -> true;
-
       // Er setzt nur die Schwelle: gebraucht werden limit + 1 Zeilen, so viele liest das
       // Repository fuer die Frage "gibt es eine naechste Seite".
       case LIMIT -> true;
@@ -187,10 +183,6 @@ public class Fensterverengung {
       // Untergrenze verschoebe dort die erste Seite und nicht den Suchraum. Die gespiegelte
       // Rechnung waere richtig, ist aber nicht gemessen; bis dahin gilt die sichere Antwort.
       case SORTIERUNG -> abfrage.absteigend();
-
-      // MessageTimeout steht nicht im Rollup und laesst sich aus `anzahl` nicht rekonstruieren.
-      // Das Naechste, was der Rollup koennte, waere "offen" -- und das ist nicht "ueberfaellig".
-      case UEBERFAELLIG -> false;
 
       // Der Suchtreffer wirkt als `ProcessID IN (...) OR SOSID IN (...)`, und message_rollup hat
       // KEINE sos_id. Eine Verengung, die nur den Prozesszweig betrachtete, waere zu eng und
@@ -264,8 +256,6 @@ public class Fensterverengung {
         abfrage.status(),
         abfrage.prozessIds(),
         abfrage.suchtreffer(),
-        abfrage.ueberfaellig(),
-        abfrage.jetzt(),
         abfrage.absteigend(),
         abfrage.cursor(),
         abfrage.limit());

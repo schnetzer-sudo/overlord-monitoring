@@ -78,26 +78,27 @@ export const de = {
     },
   },
 
+  // „Erscheinungsbild" und nicht „Thema", und erst recht nicht „Dunkelmodus":
+  // Die Wahl hat drei Werte, und einer davon ist *hell*. „Dunkelmodus" wäre der
+  // Name eines der drei Zustände als Name für die Wahl selbst. „Thema" wiederum
+  // ist das Wort des Codes (`src/thema/`) — der Nutzer liest, was er sieht.
+  //
+  // Der dritte Wert heißt „Systemeinstellung" und nicht „Automatisch": Er sagt,
+  // WOHER die Auskunft kommt, und das ist die nützlichere Angabe. „Automatisch"
+  // ließe offen, ob nach Uhrzeit, nach Umgebungslicht oder nach dem Gerät
+  // geschaltet wird.
+  thema: {
+    bezeichnung: "Erscheinungsbild",
+    werte: {
+      hell: "Hell",
+      dunkel: "Dunkel",
+      system: "Systemeinstellung",
+    },
+  },
+
   rolle: {
     ADMIN: "EDI-Betreuung",
     MANDANT: "Mandant",
-  },
-
-  /**
-   * Die drei Problemkategorien aus `PROJEKTBESCHREIBUNG.md` §4.2 — **auf oberster
-   * Ebene, nicht unter `nachrichten`.**
-   *
-   * Sie gehören keiner Ansicht: Das Detail benennt sie an einer Nachricht, das
-   * Dashboard zählt sie über viele. Beide müssen dasselbe Wort sagen, sonst heißt
-   * dieselbe Sache an zwei Stellen verschieden — und der Nutzer hält sie für zwei
-   * Sachen. Die Kategorien werden nie zu „Fehler" zusammengefasst (Regel Q3).
-   *
-   * Angelegt ist nur, was heute gezeigt wird: `ueberfaellig`. „Fehler" hat seine
-   * Beschriftung bereits an der Statusplakette, „Unquittiert" gibt es noch nicht.
-   */
-  problem: {
-    ueberfaellig: "Überfällig",
-    ueberfaelligHinweis: "Die Frist für diese Nachricht ist abgelaufen.",
   },
 
   /**
@@ -107,8 +108,17 @@ export const de = {
    * Sie standen bis dahin unter `nachrichten.status`, und das war richtig,
    * solange die Liste ihr einziger Verbraucher war. Mit dem Dashboard sind es
    * zwei: Die Liste beschriftet eine Plakette an einer Zeile, der Verlauf
-   * beschriftet dieselbe Einordnung über viele. **Beide müssen dasselbe Wort
-   * sagen** — dieselbe Begründung, die `problem` darüber schon trägt.
+   * beschriftet dieselbe Einordnung über viele; seit dem 03.09.2026 nimmt das
+   * Dashboard sie auch für die beiden Zustandskacheln. **Alle drei müssen
+   * dasselbe Wort sagen**, sonst heißt dieselbe Sache an drei Stellen
+   * verschieden — und der Nutzer hält sie für drei Sachen.
+   *
+   * Auf derselben Ebene stand bis zum 03.09.2026 `problem` mit dem Wort für
+   * *Überfällig*. Die Kategorie ist mit E‑71 widerlegt; der Block ist ohne
+   * Verbraucher entfallen. **Anders als die Farbrolle `--ueberfaellig`, die
+   * nach E‑77 bleibt** — die ist gerechnet und gegengeprobt, ein übersetztes
+   * Wort ist an dem Tag, an dem eine echte Schwelle zurückkommt, in einer
+   * Minute wieder da.
    *
    * AUFGETEILT und ZUSAMMENGEFUEHRT sind am 11.08.2026 an die Stelle des einen
    * Wertes „Zwischenschritt" getreten. Technisch waren SPLITTED und MERGED
@@ -204,12 +214,23 @@ export const de = {
     verlauf: {
       titel: "Verlauf",
       // Vier Reihen, eine je Farbrolle (Entscheidung E‑l). Die Beschriftungen
-      // gehören der Rolle und nicht einer Einordnung: „Offen" fasst vier
-      // Einordnungen zusammen, und die stehen einzeln im Tooltip.
+      // gehören der Rolle und nicht einer Einordnung: Die Rolle `offen` fasst
+      // vier Einordnungen zusammen, und die stehen einzeln im Tooltip.
+      //
+      // Entscheidung E‑82 vom 04.09.2026: Eine Rolle, die mehrere Einordnungen
+      // bündelt, trägt eine Beschriftung, die für alle ihre Mitglieder gilt und
+      // keines von ihnen wiederholt. Bis dahin stand hier „Offen" und
+      // „Abgeschlossen" — das erste war falsch (AUFGETEILT und ZUSAMMENGEFUEHRT
+      // sind Endstatus, `docs/message-status.md`), das zweite wiederholte den
+      // Namen einer seiner beiden Einordnungen.
+      //
+      // Der Tokenname bleibt `--status-offen` beziehungsweise
+      // `--status-abgeschlossen`; Name und Beschriftung fallen ab hier mit
+      // Absicht auseinander (`docs/visuelles-konzept.md` §2).
       rollen: {
         fehler: "Fehler",
-        offen: "Offen",
-        abgeschlossen: "Abgeschlossen",
+        offen: "Ohne Ergebnis",
+        abgeschlossen: "Erledigt",
         ungeklaert: "Ungeklärt",
       },
       gesamt: "Gesamt",
@@ -235,22 +256,60 @@ export const de = {
       fehlerVerweis: "Diese Nachrichten in der Liste öffnen",
       artenAufklappen: "Nach Art aufschlüsseln",
       artenZuklappen: "Aufschlüsselung schließen",
-      ueberfaellig: "Überfällig",
-      ueberfaelligImFenster: "im Zeitraum",
-      ueberfaelligInsgesamt: "insgesamt",
-      ueberfaelligVerweis: "Überfällige Nachrichten des Zeitraums in der Liste öffnen",
-      // Warum „insgesamt" nicht klickt (Entscheidung E‑m): Die Zahl hat kein
-      // Zeitfenster, die Liste hat ein Pflicht-Zeitfenster. Jedes Ziel zeigte
-      // eine andere Zahl als die Kachel.
-      insgesamtOhneVerweis:
-        "Diese Zahl kennt keinen Zeitraum. Die Nachrichtenliste braucht einen — ein Verweis " +
-        "führte deshalb auf eine andere Zahl als hier steht.",
+      // Die Wörter für die beiden Zustandskacheln stehen NICHT hier, sondern in
+      // `einordnung.LAEUFT` und `einordnung.WARTEND` — dieselben, die der
+      // Statusfilter und die Plakette der Liste tragen. Ein eigenes Wort hier
+      // wäre dieselbe Sache zum zweiten Mal benannt.
+      laeuftVerweis: "Laufende Nachrichten in der Liste öffnen",
+      wartendVerweis: "Wartende Nachrichten in der Liste öffnen",
+      // Entscheidung E‑75: Das Alter der ältesten Zeile ist die laufende Prüfung
+      // der Auskunft, auf der E‑71 ruht. Es entfällt bei `anzahl = 0` — ohne
+      // Zeile gibt es kein Alter, und die Null steht für sich.
+      aeltesterSeit: "ältester seit {dauer}",
+      // Die Notbremse (E‑80): Über der Höchstspanne der Liste (ein Jahr, L1)
+      // klickt die Kachel nicht. Ein Link, der weniger zeigt als die Kachel
+      // nennt, entsteht nicht — auch nicht still.
+      wartendOhneVerweis:
+        "Die älteste dieser Nachrichten liegt länger als ein Jahr zurück. Die Nachrichtenliste " +
+        "zeigt höchstens ein Jahr — ein Verweis führte deshalb auf eine kleinere Zahl als hier " +
+        "steht.",
+      // Ohne diesen Satz widersprechen sich zwei Zahlen auf derselben Seite
+      // sichtbar, sobald 48 Stunden gewählt sind — der Normalfall.
+      //
+      // **Er steht IN der Kachel und nicht als geteilte Zeile darunter.** Eine
+      // geteilte Zeile müsste die beiden Kacheln benennen — und nennte damit bei
+      // einem Mandanten ohne suspendierende Abläufe eine Kachel, die es auf
+      // seiner Seite gar nicht gibt.
+      bestandHinweis: "Gezählt wird der gesamte Bestand, nicht der gewählte Zeitraum.",
       // Entscheidung E‑q. Bewusst kein Rot und keine Fehler-Kennung: Für den
-      // Nutzer ist das eine Auskunft und kein technischer Fehler.
+      // Nutzer ist das eine Auskunft und kein technischer Fehler. Sie gilt seit
+      // dem 03.09.2026 für `laeuft` und `wartend` — und je Kachel einzeln: Die
+      // beiden Zahlen EINER Kachel fallen zusammen, die beiden Kacheln nicht.
       nichtErmittelbar: "—",
       nichtErmittelbarHinweis:
-        "Diese beiden Zahlen werden bei jedem Aufruf frisch gezählt, und die Zählung ist an der " +
-        "Zeitgrenze der Datenbank abgebrochen. Die übrigen Zahlen dieser Seite stehen.",
+        "Diese Zahl wird bei jedem Aufruf frisch gezählt, und die Zählung ist an der Zeitgrenze " +
+        "der Datenbank abgebrochen. Die übrigen Zahlen dieser Seite stehen.",
+      /**
+       * Dieselben fünf Bausteine wie unter `nachrichten.detail.dauer` und
+       * `katalog.lauf.dauer` — die **dritte** Kopie.
+       *
+       * **Bewusst noch einmal und nicht von dort gelesen.** Sie gehören keiner
+       * Ansicht und müssten auf die oberste Ebene; sie dorthin zu heben, fasst
+       * die Schlüssel des Nachrichtendetails an und ist eine eigene Runde. Der
+       * offene Punkt steht seit dem 26.08.2026 in
+       * `docs/prozess-katalog-frontend.md` §11 (Punkt 8) — mit dieser Kopie
+       * betrifft er drei Stellen statt zwei.
+       *
+       * **Der Formatierer bleibt derselbe** (`formatiereDauer`): Ein zweiter
+       * wäre eine zweite Wahrheit über dieselbe Größe.
+       */
+      dauer: {
+        unterSekunde: "< 1 s",
+        sekunden: "{wert} s",
+        minuten: "{wert} min",
+        stunden: "{wert} h",
+        tage: "{wert} d",
+      },
     },
 
     // C.4: Der Endpunkt liefert Rohwert und Art. Beschriftet wird über den
@@ -392,20 +451,6 @@ export const de = {
       unvollstaendig: "Bitte Datum und Uhrzeit vollständig eintragen.",
       // Beide Zeitpunkte fehlen noch: kein Fehler, sondern ein Zwischenzustand.
       beideNoetig: "Für ein freies Zeitfenster fehlt noch der zweite Zeitpunkt.",
-    },
-
-    /**
-     * Die **zweite Abfrageform** der Liste (`docs/nachrichtenliste.md` §5b),
-     * seit dem 01.09.2026 auch in der Oberfläche erreichbar — über den Verweis
-     * aus der Übersicht.
-     *
-     * Sie bekommt eine sichtbare, entfernbare Marke und keine Schaltfläche zum
-     * Einschalten: Ein Filter, der die Liste einschränkt und nirgends steht,
-     * wäre genau das, was der Ausblende-Schalter am 11.08.2026 war.
-     */
-    ueberfaelligForm: {
-      marke: "Nur überfällige",
-      entfernen: "Nur überfällige aufheben",
     },
 
     statusfilter: {
@@ -1250,8 +1295,8 @@ export const de = {
        * Dieselben fünf Bausteine wie unter `nachrichten.detail.dauer`.
        *
        * **Bewusst noch einmal und nicht von dort gelesen.** Sie gehören keiner
-       * Ansicht und müssten auf der obersten Ebene stehen — genau wie `problem`
-       * und `suche`. Sie dorthin zu heben, hieße die Schlüssel des
+       * Ansicht und müssten auf der obersten Ebene stehen — genau wie `suche`.
+       * Sie dorthin zu heben, hieße die Schlüssel des
        * Nachrichtendetails anzufassen, und das ist eine eigene Runde. Als
        * offener Punkt vermerkt.
        */

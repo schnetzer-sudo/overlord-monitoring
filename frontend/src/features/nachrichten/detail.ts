@@ -222,8 +222,15 @@ export type Wartezeile = {
   /** `true` bei `LAEUFT_AUF`: Sie läuft, sie wartet nicht. */
   laeuft: boolean;
   sekunden: number;
+  /**
+   * ⚠️ **Bei `WARTEND` immer `null`** *(seit dem 03.09.2026, E‑76)*. Eine
+   * wartende Nachricht wird vom Wächter des Altsystems nie beendet, die Frist
+   * wird auf sie also nicht angewendet — und ein Feld, das eine Frist nennt, die
+   * niemand durchsetzt, ist eine falsche Auskunft. **Bei `LAEUFT` bleibt sie
+   * und wird erst dadurch richtig:** zusammen mit `sekunden` sagt sie, wann die
+   * Nachricht in `ERROR_TIMEOUT` kippt.
+   */
   fristSekunden: number | null;
-  ueberfaellig: boolean;
 };
 
 export function wartezeile(detail: Nachrichtendetail): Wartezeile | null {
@@ -234,7 +241,6 @@ export function wartezeile(detail: Nachrichtendetail): Wartezeile | null {
     laeuft: detail.offenerZustand === "LAEUFT_AUF",
     sekunden: detail.wartetSeitSekunden,
     fristSekunden: detail.fristSekunden,
-    ueberfaellig: detail.ueberfaellig,
   };
 }
 

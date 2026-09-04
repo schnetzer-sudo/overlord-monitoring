@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { DichteUmschaltung } from "@/components/dichte-umschaltung";
+import { ThemaUmschaltung } from "@/components/thema-umschaltung";
 import { useTexte } from "@/i18n/provider";
 import { ROUTEN } from "@/lib/routen";
 
@@ -29,6 +30,12 @@ import type { Selbstauskunft } from "../api";
  * was man tun kann. Der Dichteumschalter steht damit bei der Auskunft über den
  * Nutzer und nicht zwischen den beiden Vorgängen — und *Abmelden* bleibt der
  * letzte Eintrag, wo jeder ihn sucht.
+ *
+ * **Seit dem 03.09.2026 steht der Themaumschalter daneben** (Schritt 11b), im
+ * selben Abschnitt „wie es aussehen soll" und ohne eigenen Trenner: Es sind
+ * zwei Fragen desselben Themas, und ein Trenner dazwischen behauptete zwei.
+ * Anzeigegröße zuerst, Erscheinungsbild darunter — die Reihenfolge, in der
+ * beide entstanden sind, und kein Grund spricht dagegen.
  */
 export function Nutzermenue({ auskunft }: { auskunft: Selbstauskunft }) {
   const texte = useTexte();
@@ -60,6 +67,7 @@ export function Nutzermenue({ auskunft }: { auskunft: Selbstauskunft }) {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DichteUmschaltung />
+        <ThemaUmschaltung />
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild className="min-h-bedienelement">
           <Link href={ROUTEN.passwort}>

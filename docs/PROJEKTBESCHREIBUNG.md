@@ -139,6 +139,22 @@ Wichtig:
   das — `SOSActionTimeout = 1800` steht 37.120-mal neben dem Ablaufschritt `WAIT|30M`, und 1800
   Sekunden sind exakt 30 Minuten. Die Größenordnung ändert sich um Faktor 60; Belegkette in
   [`messungen-schritt4.md`](messungen-schritt4.md) M8.
+
+  > **Präzisiert 03.09.2026: `MessageTimeout` ist der Parameter eines Wächters und keine
+  > Anzeigegröße.** Er sagt, wann das Altsystem eine Nachricht in `RUNNING` automatisch auf
+  > `ERROR_TIMEOUT` setzt — und **er gilt nur für `RUNNING`.** Auf `SUSPENDED` wird er nicht
+  > angewendet; solche Nachrichten warten absichtlich und werden nie automatisch beendet.
+  >
+  > **Folge im Code:** Das Nachrichtendetail liefert `fristSekunden` bei `WARTEND` als `null`
+  > (E‑76) — ein Feld, das eine Frist nennt, die niemand durchsetzt, ist eine falsche Auskunft.
+  > `MessageStatusClassifier.TIMEOUT_EINHEIT` trägt die Einheit weiterhin, hat aber seit E‑71
+  > **keinen Verbraucher mehr im Anwendungscode**.
+  >
+  > **Herkunft:** fachliche Auskunft des Auftraggebers vom 03.09.2026. **Nicht gemessen.**
+  > Die Testkopie kann sie nicht belegen: `RUNNING` kommt dort null Mal vor, und die 538
+  > `SUSPENDED` sind der Bestand *eines* Status in *einer* Gestalt. **Gegen die Produktion zu
+  > prüfen** mit der Abfrage in [`message-status.md`](message-status.md), Abschnitt „Die offene
+  > Prüfung".
 - Nutzbare Indizes — `Message` trägt **acht**:
 
 | Index | Spalten | eindeutig |
@@ -422,6 +438,17 @@ Problemkategorie "Überfällig" ist gegen die Testkopie nicht prüfbar, und "lä
 als `MessageStatus = 'RUNNING'` definiert werden — die Kategorie wäre sonst konstruktionsbedingt
 leer.
 
+> **Ergänzt 03.09.2026: Auf `RUNNING` wirkt ein Wächter des Altsystems.** Eine Nachricht, die
+> länger als `MessageTimeout` in diesem Status steht, wird automatisch auf `ERROR_TIMEOUT` gesetzt.
+> Der Status ist damit nicht nur flüchtig, sondern **nach oben begrenzt** — und das ist der Grund,
+> warum die Problemkategorie *Überfällig* mit E‑71 gefallen ist (§4.2, Punkt 2).
+>
+> **Herkunft:** fachliche Auskunft des Auftraggebers vom 03.09.2026. **Nicht gemessen.**
+> Die Testkopie kann sie nicht belegen: `RUNNING` kommt dort null Mal vor, und die 538
+> `SUSPENDED` sind der Bestand *eines* Status in *einer* Gestalt. **Gegen die Produktion zu
+> prüfen** mit der Abfrage in [`message-status.md`](message-status.md), Abschnitt „Die offene
+> Prüfung".
+
 **`CHECKED`, `CKECKED` und `COMMIT_SENT` gelten als bekannt, aber fachlich ungeklärt.** Sie werden
 neutral behandelt und mit Rohwert plus dem Hinweis "Bedeutung nicht verifiziert" angezeigt. Es
 wird nichts geraten.
@@ -463,6 +490,56 @@ Diese drei sind bewusst getrennt und dürfen nie zu "Fehler" zusammengefasst wer
 2. **Überfällig** — die Nachricht ist **nicht in einem Endstatus** und
    `MessageLastUpdate + MessageTimeout` liegt in der Vergangenheit. Nicht über
    `MessageStatus = 'RUNNING'` definieren, siehe 4.1.
+
+   > ### ⚠️ Widerlegt und aus dem MVP genommen *(Entscheidung E‑71 vom 03.09.2026)*
+   >
+   > **Der Text oben bleibt vollständig stehen.** Er ist die Vorarbeit, gegen die die Widerlegung
+   > zu lesen ist — und er ist der Grund, warum die Kategorie überhaupt gebaut worden ist. **Gebaut
+   > ist davon nichts mehr:** `MessageStatusClassifier.istUeberfaellig`, `timeoutZeitpunkt` und
+   > `ueberfaelligBedingung` sind entfallen, der Listenparameter `ueberfaellig` ebenso, das Feld
+   > `ueberfaellig` im Nachrichtendetail ebenso, und das Dashboard zeigt statt der Kachel
+   > *Überfällig* die beiden Kacheln *Läuft* und *Wartend*.
+   >
+   > **Die Regel, die sie widerlegt** — fachliche Auskunft des Auftraggebers vom 03.09.2026:
+   >
+   > 1. Eine Nachricht, die länger als `MessageTimeout` in `RUNNING` steht, wird vom Altsystem
+   >    automatisch auf `ERROR_TIMEOUT` gesetzt.
+   > 2. `SUSPENDED`-Nachrichten warten **absichtlich** — auf einen Folgeprozess, etwa auf den
+   >    Versand zu einem bestimmten Zeitpunkt. Sie werden nie automatisch beendet und sind **nicht
+   >    überfällig**.
+   > 3. In der Praxis liegen sie höchstens **rund eine Woche**.
+   >
+   > **Herkunft:** fachliche Auskunft des Auftraggebers vom 03.09.2026. **Nicht gemessen.**
+   > Die Testkopie kann sie nicht belegen: `RUNNING` kommt dort null Mal vor, und die 538
+   > `SUSPENDED` sind der Bestand *eines* Status in *einer* Gestalt. **Gegen die Produktion zu
+   > prüfen** mit der Abfrage in [`message-status.md`](message-status.md), Abschnitt „Die offene
+   > Prüfung".
+   >
+   > **Was daraus folgt.** Offen sind genau zwei Statuswerte, und beide fallen weg: `SUSPENDED`
+   > wartet absichtlich und ist damit ein **Fehlalarm per Definition**; `RUNNING` steht über der
+   > Frist nur im Spalt zwischen Fristablauf und dem Zuschlagen des Wächters — danach heißt es
+   > `ERROR_TIMEOUT` und gehört in die **Fehlerkachel**.
+   >
+   > | | |
+   > |---|---:|
+   > | von `istUeberfaellig` im Gesamtbestand markiert | **538** |
+   > | davon `SUSPENDED` | **538** |
+   > | davon `RUNNING` | **0** |
+   > | **wahre Treffer** | **0** |
+   >
+   > **538 Fehlalarme und kein einziger Treffer** — nicht die Mehrheit, alle. Die Rechnung, die das
+   > Werkzeug anstellte, stellt das Altsystem bereits an; sein Ergebnis heißt `ERROR_TIMEOUT` und
+   > steht bei uns namentlich aufgeschlüsselt in der Fehlerkachel. **Eine zweite Fassung derselben
+   > Auskunft, mit anderer Uhr und ohne Schreibrecht, ist keine zusätzliche Aussage.**
+   >
+   > **Was an ihre Stelle tritt.** Zwei Kacheln, die keine Frist behaupten, sondern einen Zustand
+   > zählen: *Läuft* (`RUNNING`) und *Wartend* (`SUSPENDED`), je mit dem Alter der ältesten Zeile
+   > ([`dashboard.md`](dashboard.md) §5). **Sie beantworten die Frage nicht, die *Überfällig*
+   > beantworten sollte** — *hängt hier etwas zu lange* —, und das ist benannt: Eine Schwelle dafür
+   > steht nirgends in den Daten, und sie zu erfinden verbietet Regel Q4. Offener Punkt **130**.
+   >
+   > **Die Überschrift „Die drei Problemkategorien" bleibt**, nach demselben Muster wie bei E‑d.
+   > Fachlich sind es drei; **im MVP ist es seit heute eine.**
 
    > **Diese Kategorie entsteht an genau einer Stelle im Code:**
    > `common/MessageStatusClassifier.istUeberfaellig(status, messageLastUpdate, messageTimeout,
@@ -1231,6 +1308,48 @@ Prozent der Datenbank; dort entscheidet die Bytegröße.
    > Kennzahl live rechnen will, trägt sie hier ein und begründet sie — und misst sie, denn der
    > Vorbehalt aus M89 gilt: Beim Monatsfenster kostet die Rollup-Leseabfrage bereits 237,67 ms,
    > und dort dürfen die Kacheln nicht zusätzlich live rechnen.
+
+   > ### ⚠️ Die Ausnahme ist am 03.09.2026 gefallen — und es sind jetzt zwei andere *(E‑71, E‑72, E‑73)*
+   >
+   > **Der Kasten oben bleibt vollständig stehen.** Er ist die Begründung, an der sich ablesen
+   > lässt, wofür eine benannte Ausnahme überhaupt gut ist — und sein letzter Satz ist genau der,
+   > der hier eingelöst wird.
+   >
+   > **Die Ausnahme *Überfällig* ist entfallen**, weil die Problemkategorie widerlegt ist (§4.2,
+   > Punkt 2). **An ihre Stelle treten zwei:**
+   >
+   > | Ausnahme | Was sie live liest | Warum sie nicht aus dem Rollup kommen kann |
+   > |---|---|---|
+   > | **Kachel *Läuft*** (E‑72) | `COUNT(*)` und `MIN(MessageLastUpdate)` über `MessageStatus = 'RUNNING'` | — |
+   > | **Kachel *Wartend*** (E‑73) | dasselbe über `SUSPENDED` | — |
+   >
+   > **Der Grund ist ein anderer als bei *Überfällig*, und das ist der Punkt.** Nicht mehr, dass
+   > die Kennzahl an einer **Frist** hängt, die zwischen zwei Läufen abläuft — sondern dass sie an
+   > einem **flüchtigen Status** hängt. `message_rollup` trägt **keine Statushistorie**: Der
+   > nächtliche Volllauf rechnet jeden Eimer aus dem *heutigen* Zustand jeder Nachricht neu, und
+   > eine Nachricht, die im März `SUSPENDED` war und im April fertig wurde, hinterlässt im März
+   > nichts. *„Wie viele warten gerade"* ist dort nicht beantwortbar
+   > ([`rollup.md`](rollup.md) §7a).
+   >
+   > **Gemessen — M143, 03.09.2026** ([`messungen-schritt10b.md`](messungen-schritt10b.md)), an
+   > dem, was der Code schickt, ein Aufwärmlauf und dann die beste von fünf:
+   >
+   > | Statement | `NEXANS` | `SUTTONS` |
+   > |---|---:|---:|
+   > | Kachel *Läuft* | **1,09–1,25 ms** | **0,94–1,04 ms** |
+   > | Kachel *Wartend* | **4,40–4,66 ms** | **3,34–3,55 ms** |
+   > | Erscheinungsbedingung *Wartend* | **1,24–1,40 ms** | **1,40–1,42 ms** |
+   >
+   > Alle drei steigen über einen Index ein und lesen keine Tabelle voll. **Zusammen kosten sie
+   > weniger als die eine Ausnahme, die sie ersetzen** (9,7 bis 11,3 ms in M108).
+   >
+   > **Die dritte Abfrage ist ausdrücklich keine dritte Ausnahme.** Die Erscheinungsbedingung der
+   > Kachel *Wartend* liest **Stammdaten** (`SOSAction`, 3.944 Zeilen, 2,0 MiB) und nicht `Message`
+   > — sie ist damit dieselbe Art Zugriff wie die Mandantenkette, die in jedem Statement dieses
+   > Dashboards steht. **Sie aggregiert nicht.**
+   >
+   > **Die Zählung bleibt damit bei zwei, und der Satz oben gilt unverändert:** Wer eine dritte
+   > Kennzahl live rechnen will, trägt sie hier ein, begründet sie und misst sie.
 3. **Keine `OFFSET`-Paginierung.** Cursor-basiert über `(MessageLastUpdate, MessageID)`.
 4. **`MessageProperty` nur über `MessageID`.** Nie filtern, gruppieren oder sortieren über den Wert.
 5. **BAM-Suche mit hartem Limit und Mindestlänge** des Suchbegriffs. BAM-Werte wie `050` kommen
@@ -1364,6 +1483,22 @@ Punkt 3 — keine operative Definition, und die Kategorie hängt am ungedeckten 
 `MatchInterchange`. **Die Beschreibung in Abschnitt 4.2 bleibt vollständig stehen**, und ihre
 Überschrift bleibt „Die drei Problemkategorien": Fachlich sind es drei, gebaut werden zwei.
 
+> ### ⚠️ Seit dem 03.09.2026 ist es **eine** *(E‑71)*
+>
+> **Der Absatz oben bleibt stehen und war am Tag seiner Niederschrift richtig.** *Überfällig* ist
+> mit Entscheidung **E‑71** widerlegt und aus dem MVP genommen; die vollständige Begründung samt
+> Herkunftsvermerk steht im Kasten bei Abschnitt 4.2, Punkt 2.
+>
+> **Im MVP bleibt *Fehler*.** Regel Q3 — „die Problemkategorien bleiben getrennt" — ist damit
+> **einstellig** und in der Sache nicht mehr prüfbar: Es gibt nichts mehr, wovon zu trennen wäre.
+> **Die Regel wird trotzdem nicht gestrichen.** Sie gilt fachlich für drei Kategorien und wird an
+> dem Tag wieder wirksam, an dem eine zweite gebaut wird.
+>
+> **Was das Dashboard aus Schritt 10b stattdessen baut:** eine Problemkachel (*Fehler*) und zwei
+> **Zustandskacheln** (*Läuft*, *Wartend*). Zustandskacheln sind keine Problemkategorien — sie
+> behaupten kein Problem, sie zählen einen Zustand. **Genau deshalb tragen sie auch keine
+> Problemfarbe** ([`visuelles-konzept.md`](visuelles-konzept.md) §7a).
+
 > **Ein Befund der Messrunde gehört dazu, und er verschiebt die Korrektur.** Der Auftrag der
 > Messrunde vom 26.08.2026 ging davon aus, in Abschnitt 9 stehe das Wort „Unquittiert" und sei zu
 > streichen. **Es steht hier nicht — nirgends.** Abschnitt 9 nennt die Kategorie überhaupt nicht,
@@ -1378,7 +1513,9 @@ Punkt 3 — keine operative Definition, und die Kategorie hängt am ungedeckten 
 
 **Was das für die Umsetzung heißt:** Das Dashboard aus Schritt 10b baut **zwei** Kacheln.
 *Überfällig* kommt dabei nicht aus dem Rollup, sondern aus einer Live-Abfrage — die erste benannte
-Ausnahme von Leistungsregel 2, siehe Abschnitt 8. Der [`IMPLEMENTIERUNGSPLAN_MVP.md`](IMPLEMENTIERUNGSPLAN_MVP.md)
+Ausnahme von Leistungsregel 2, siehe Abschnitt 8. *(Überholt seit dem 03.09.2026: siehe den Kasten
+darüber. Gebaut sind eine Problemkachel und zwei Zustandskacheln; die Live-Abfragen sind jetzt
+zwei und heißen* Läuft *und* Wartend*.)* Der [`IMPLEMENTIERUNGSPLAN_MVP.md`](IMPLEMENTIERUNGSPLAN_MVP.md)
 trägt dieselbe Angabe („die drei getrennten Problemkategorien") und ist dort ebenso berichtigt.
 
 ## 10. Geplante Ausbaustufen

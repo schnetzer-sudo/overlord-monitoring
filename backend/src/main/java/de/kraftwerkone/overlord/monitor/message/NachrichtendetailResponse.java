@@ -53,9 +53,15 @@ import java.util.List;
  *     System kommt — und das ist der Metadaten-Schritt. Der letzte Schritt ist dagegen etwas, das
  *     der Nutzer in der Leiste sieht
  * @param fristSekunden {@code Message.MessageTimeout}, Dauer in <b>Sekunden</b> (Regel Z2, M8 —
- *     nicht Minuten). <b>{@code null}, wenn keine Frist gesetzt ist</b>: bei {@code NULL} und bei
- *     {@code 0}. Keine erfundene Frist, und keine {@code 0}, die als „sofort faellig" gelesen
- *     werden koennte.
+ *     nicht Minuten). <b>{@code null} bei {@link
+ *     de.kraftwerkone.overlord.monitor.common.MessageStatusKind#WARTEND}</b> <i>(seit dem
+ *     03.09.2026, E‑76)</i>: Eine wartende Nachricht wird vom Waechter des Altsystems nie beendet,
+ *     die Frist wird auf sie also <b>nicht angewendet</b> — und ein Feld, das eine Frist nennt, die
+ *     niemand durchsetzt, ist eine falsche Auskunft. Bis dahin stand dort {@code 1800}. <b>Bei
+ *     {@code RUNNING} bleibt es und wird erst jetzt richtig:</b> zusammen mit {@code
+ *     wartetSeitSekunden} sagt es, wann die Nachricht in {@code ERROR_TIMEOUT} kippt. <b>{@code
+ *     null} auch, wenn keine Frist gesetzt ist</b>: bei {@code NULL} und bei {@code 0}. Keine
+ *     erfundene Frist, und keine {@code 0}, die als „sofort faellig" gelesen werden koennte.
  *     <p>Das Feld hiess bis zum 10.08.2026 {@code timeoutSekunden} und lieferte die {@code 0} roh.
  *     Umbenannt statt ergaenzt: Zwei Felder aus derselben Spalte mit verschiedener {@code
  *     null}-Bedeutung waeren eine zweite Wahrheit. Der Timeout <i>je Schritt</i> heisst weiterhin
@@ -106,16 +112,6 @@ import java.util.List;
  *     <b>Anwendungsuhr</b> — im Profil {@code dev} die um Monate zurueckversetzte. Eine
  *     Oberflaeche, die {@code Date.now()} gegen einen gelieferten Zeitstempel rechnete, zeigte dort
  *     Monate statt Stunden; genau dafuer gibt es die Uhr
- * @param ueberfaellig Problemkategorie <b>2</b> aus {@code PROJEKTBESCHREIBUNG.md} §4.2: nicht in
- *     einem Endstatus <b>und</b> {@code MessageLastUpdate + MessageTimeout} in der Vergangenheit.
- *     <p><b>Entsteht an genau einer Stelle</b> — {@code MessageStatusClassifier.istUeberfaellig} —,
- *     damit das Dashboard sie spaeter ruft statt nachbaut. Dieselbe Bauform wie die Einordnung
- *     selbst. {@code false}, wenn keine Frist gesetzt ist.
- *     <p><b>Sie haengt nicht am offenen Zustand</b>, sondern an {@code MessageLastUpdate +
- *     MessageTimeout} und {@code istEndstatus} — und aendert sich deshalb durch die Aufteilung von
- *     {@code OHNE_SCHRITT} nicht. Erwaehnenswert ist trotzdem, dass die Kategorie mit {@link
- *     OffenerZustand#EMPFANGEN} zum ersten Mal einen Zustand bekommt, in dem sie wirklich etwas
- *     sagt: eine Nachricht, die eingegangen und ueber ihre Frist hinaus nicht weitergelaufen ist
  * @param schritte die Schrittfolge, nach {@code MessageActionStart} sortiert, bei Gleichstand nach
  *     {@code MessageActionID}. <b>Ohne Obergrenze</b>: M16 (2) hat hoechstens sieben Aktionen je
  *     Nachricht gemessen, davon eine der Metadaten-Schritt. Eine Deckelung schuetzte vor nichts und
@@ -142,6 +138,5 @@ public record NachrichtendetailResponse(
     OffenerZustand offenerZustand,
     String naechsterSchritt,
     Long wartetSeitSekunden,
-    boolean ueberfaellig,
     List<SchrittResponse> schritte,
     List<KuratierteEigenschaftResponse> kuratierteEigenschaften) {}

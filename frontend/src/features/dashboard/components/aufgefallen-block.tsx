@@ -1,43 +1,36 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, Clock } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { useAnzeigezone } from "@/components/zeitzone";
 import { useSprache, useTexte } from "@/i18n/provider";
 import { formatiereZeitpunkt, formatiereZeitpunktGenau } from "@/lib/format";
-import { problemKlassenOhneKontur, statusKlassenOhneKontur } from "@/lib/status-farbe";
-import { cn } from "@/lib/utils";
 
-import type { AuffaelligeNachricht, Auffaelligkeit } from "../api";
+import type { AuffaelligeNachricht } from "../api";
 import { nachrichtZiel } from "../verweise";
 
 /**
- * „Zuletzt aufgefallen" — Fehler **und** Überfällige im Fenster, neueste zuerst.
+ * „Zuletzt aufgefallen" — die auffälligen Nachrichten im Fenster, neueste
+ * zuerst.
  *
- * ## Die Plakette trägt `kategorie`, nicht `status`
+ * ## ⚠️ Die Kategoriekennzeichnung je Zeile ist am 03.09.2026 verwaist
  *
- * Das ist die eigentliche Aussage dieses Blocks: Hier stehen **zwei
- * Problemkategorien untereinander**, und beide sind gleichrangig (Regel Q3).
- * Ein Rohstatus an dieser Stelle beantwortete eine andere Frage — *welcher
- * Fehler* statt *ist es einer*. Der Rohwert geht trotzdem nicht verloren: Er
- * steht im `title` der Plakette, damit man ihn gegen das Altwerkzeug halten kann.
+ * Hier trug jede Zeile eine **Plakette mit der Kategorie** — *Fehler* oder
+ * *Überfällig* —, und das war die eigentliche Aussage des Blocks: zwei
+ * gleichrangige Problemkategorien untereinander (Regel Q3). **Seit E‑71 gibt es
+ * eine.** Der Block ist ein einziges Statement und trägt nur noch Fehler; eine
+ * Plakette, die an jeder Zeile dasselbe Wort sagt, unterscheidet nichts mehr und
+ * behauptet eine Auswahl, die es nicht gibt.
  *
- * **Die beiden Mengen sind disjunkt.** *Überfällig* setzt voraus, dass die
- * Nachricht **nicht** in einem Endstatus ist, und *Fehler* ist einer — das
- * Backend leitet die Kategorie daraus ab und rät nichts (`docs/dashboard.md`
- * §7a). Deshalb gibt es hier keine Zeile mit zwei Plaketten.
+ * **Die Überschrift bleibt und trägt die Aussage jetzt allein.** Sie steht
+ * einmal über dem Block statt einmal je Zeile — dieselbe Auskunft, an der
+ * Stelle, an der sie noch etwas unterscheidet.
  *
- * ## Die Gestalt ist dieselbe wie bei den Kacheln (Entscheidung E‑u)
- *
- * Fläche und Vordergrund, **keine Kontur** — und hier ist der Grund am
- * dichtesten zu sehen: Die beiden Kategorien wechseln sich Zeile für Zeile ab.
- * Mit Kontur trüge jede zweite Zeile einen sichtbar gezeichneten Ring und die
- * Liste sähe gestreift aus, ohne dass die Streifen etwas bedeuteten.
- * **Für Kachel und Zeile fällt die Entscheidung deshalb gleich aus**; der
- * Fehler wäre derselbe, nur in der Zeile dichter
- * ([`docs/dashboard-frontend.md`](../../../../docs/dashboard-frontend.md) §3).
+ * > **Mit der Plakette ist auch der Rohstatus je Zeile gefallen.** Er stand
+ * > ausschließlich in ihrem `title` und im Vorlese-Markup, nie sichtbar. Ihn
+ * > sichtbar nachzuziehen wäre eine neue Gestaltungsentscheidung über diesen
+ * > Block und keine Aufräumarbeit; er steht im Detail, einen Klick entfernt.
+ * > Als offener Punkt vermerkt (`docs/dashboard.md` §11).
  *
  * ## Zeitpunkte absolut (Entscheidung E‑o)
  *
@@ -72,33 +65,10 @@ export function AufgefallenBlock({ zeilen }: { zeilen: readonly AuffaelligeNachr
   );
 }
 
-const ZEICHEN: Record<Auffaelligkeit, typeof AlertTriangle> = {
-  FEHLER: AlertTriangle,
-  UEBERFAELLIG: Clock,
-};
-
-/**
- * Die Farbe der Plakette — **über die Kategorie, an genau einer Stelle
- * zugeordnet**.
- *
- * `FEHLER` läuft über die Statusrolle, `UEBERFAELLIG` über die Problemrolle;
- * das sind die beiden Tabellen in `lib/status-farbe.ts` und nicht zwei Wege zu
- * derselben Farbe. Ein zweiter Weg zu Rot ist genau das, was die Datei dort
- * verhindert.
- */
-function plakettenKlassen(kategorie: Auffaelligkeit): string {
-  return kategorie === "FEHLER"
-    ? statusKlassenOhneKontur("FEHLER")
-    : problemKlassenOhneKontur("UEBERFAELLIG");
-}
-
 function Zeile({ zeile }: { zeile: AuffaelligeNachricht }) {
   const texte = useTexte();
   const sprache = useSprache();
   const zone = useAnzeigezone();
-  const Zeichen = ZEICHEN[zeile.kategorie];
-  const beschriftung =
-    zeile.kategorie === "FEHLER" ? texte.einordnung.FEHLER : texte.problem.ueberfaellig;
 
   return (
     <li className="border-border flex items-center gap-3 border-b py-1.5 last:border-b-0">
@@ -108,22 +78,6 @@ function Zeile({ zeile }: { zeile: AuffaelligeNachricht }) {
       >
         {formatiereZeitpunkt(zeile.zeitpunkt, sprache, zone)}
       </span>
-
-      <Badge
-        variant="outline"
-        className={cn(
-          "h-auto shrink-0 gap-1.5 border px-2 py-0.5",
-          plakettenKlassen(zeile.kategorie),
-        )}
-        title={`${texte.nachrichten.rohwert}: ${zeile.status}`}
-      >
-        <Zeichen aria-hidden="true" />
-        {beschriftung}
-        <span className="sr-only">
-          {" "}
-          — {texte.nachrichten.rohwert}: {zeile.status}
-        </span>
-      </Badge>
 
       {/*
        * **Prozess bzw. `sosName`, und beide dürfen fehlen.** „Nicht zugeordnet

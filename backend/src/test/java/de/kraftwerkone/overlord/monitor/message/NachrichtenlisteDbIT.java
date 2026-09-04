@@ -432,4 +432,69 @@ class NachrichtenlisteDbIT extends SicherheitsTestbasis {
     assertThat(antwort.status()).isEqualTo(200);
     assertThat(antwort.rumpf()).doesNotContain("bamWerte");
   }
+
+  // ─── Der Parameter, den es nicht mehr gibt (E-71, 03.09.2026) ────────────────
+
+  /**
+   * <b>Der Parameter {@code ueberfaellig} ist entfallen, und ein alter Link darf daran nicht
+   * zerbrechen.</b> Er stand seit Schritt 4 im Endpunkt, seit dem 01.09.2026 auch in der
+   * Oberflaeche ({@code docs/nachrichtenliste.md} §5e), und die Kachel <i>Ueberfaellig</i> des
+   * Dashboards verwies genau hierher. Mit E-71 ist die Problemkategorie widerlegt und der Parameter
+   * gefallen.
+   *
+   * <p><b>Was jetzt gilt: wirkungslos und kein Fehler.</b> Spring ignoriert unbekannte
+   * Anfrageparameter — dieselbe Bauform wie ein {@code ?mandant=…} am Dashboard. Ein geteilter Link
+   * fuehrt damit auf die <b>ungefilterte</b> Liste. Das ist bewusst so und nicht schoen: Eine
+   * Liste, die mehr zeigt als der Link verspricht, ist ein bekannter Abstrich — er steht als
+   * offener Punkt 131 und faellt mit Schritt 10b-5, der den Verweis entfernt.
+   */
+  @Test
+  @DisplayName("Ein alter ?ueberfaellig=true ist wirkungslos und ergibt keine 400")
+  void alter_ueberfaellig_parameter_ist_wirkungslos() throws Exception {
+    Antwort ohne = sitzung.hole("/api/nachrichten?zeitraum=24h");
+    Antwort mit = sitzung.hole("/api/nachrichten?zeitraum=24h&ueberfaellig=true");
+
+    assertThat(mit.status())
+        .as("Frueher war das ein gueltiger Parameter, jetzt ein unbekannter")
+        .isEqualTo(200);
+    assertThat(mit.rumpf())
+        .as("Wirkungslos heisst: dieselbe Antwort, nicht eine andere und nicht eine Fehlerseite")
+        .isEqualTo(ohne.rumpf());
+  }
+
+  /**
+   * <b>Die Gegenprobe, und sie ist der Kern:</b> Frueher war {@code ueberfaellig=true} zusammen mit
+   * einem Statusfilter ohne offenen Status ausdruecklich unvereinbar und ergab {@code 400} {@code
+   * ueberfaellig-und-status-unvereinbar}. <b>Diese Antwort gibt es nicht mehr</b> — und ohne diesen
+   * Fall bewiese der Test darueber nur, dass irgendein Parameter ignoriert wird.
+   */
+  @Test
+  @DisplayName("Die frueher unvereinbare Kombination ist jetzt eine gewoehnliche Anfrage")
+  void die_frueher_unvereinbare_kombination_geht_durch() throws Exception {
+    Antwort antwort =
+        sitzung.hole("/api/nachrichten?zeitraum=24h&ueberfaellig=true&status=ABGESCHLOSSEN");
+
+    assertThat(antwort.status()).isEqualTo(200);
+    assertThat(antwort.rumpf()).doesNotContain("ueberfaellig-und-status-unvereinbar");
+  }
+
+  /**
+   * <b>Und die beiden Statusfilter, die die neuen Kacheln des Dashboards ansteuern, wirken
+   * unveraendert.</b> Sie sind ab Schritt 10b-5 die Ziele der Kacheln <i>Laeuft</i> und
+   * <i>Wartend</i>; faellt hier etwas, zeigt die Kachel auf eine Liste, die nicht das zeigt, was
+   * sie zaehlt.
+   */
+  @Test
+  @DisplayName("status=WARTEND und status=LAEUFT wirken unveraendert")
+  void wartend_und_laeuft_wirken_unveraendert() throws Exception {
+    for (String status : List.of("WARTEND", "LAEUFT")) {
+      Antwort antwort =
+          sitzung.hole("/api/nachrichten?zeitraum=30d&status=" + status + "&limit=50");
+
+      assertThat(antwort.status()).as("status=%s", status).isEqualTo(200);
+      assertThat(antwort.<List<String>>json("$.items[*].statusKind"))
+          .as("Der Filter liefert ausschliesslich Zeilen dieser Einordnung (%s)", status)
+          .allSatisfy(gefunden -> assertThat(gefunden).isEqualTo(status));
+    }
+  }
 }

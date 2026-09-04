@@ -80,15 +80,7 @@ class FensterverengungDbIT {
   private static Nachrichtenabfrage abfrage(
       int tage, Set<MessageStatusKind> status, List<String> prozesse, Seitenposition cursor) {
     return new Nachrichtenabfrage(
-        new Zeitfenster(ANKER.minusDays(tage), ANKER),
-        status,
-        prozesse,
-        null,
-        false,
-        ANKER,
-        true,
-        cursor,
-        50);
+        new Zeitfenster(ANKER.minusDays(tage), ANKER), status, prozesse, null, true, cursor, 50);
   }
 
   /** Die Zeilen, die der Endpunkt mit dieser Verengung liefern wuerde. */
@@ -281,29 +273,14 @@ class FensterverengungDbIT {
 
   // ── Der Rueckfall ────────────────────────────────────────────────────────
 
-  @ParameterizedTest(name = "{0}")
-  @ValueSource(strings = {"NEXANS", "SUTTONS"})
-  @DisplayName("ueberfaellig: unveraendert, und die Verengung wird nicht betreten")
-  void ueberfaellig_bleibt_unveraendert(String mandantId) {
-    Nachrichtenabfrage ueberfaellig =
-        new Nachrichtenabfrage(
-            new Zeitfenster(ANKER.minusDays(30), ANKER),
-            Set.of(),
-            List.of(),
-            null,
-            true,
-            ANKER,
-            true,
-            null,
-            50);
-
-    Fensterverengung.Ergebnis ergebnis = an().verenge(new MandantContext(mandantId), ueberfaellig);
-
-    assertThat(ergebnis.grund()).isEqualTo(Verengungsgrund.MERKMAL_NICHT_TRAGBAR);
-    assertThat(ergebnis.abfrage()).isSameAs(ueberfaellig);
-    assertThat(kennungen(zeilen(an(), mandantId, ueberfaellig)))
-        .isEqualTo(kennungen(zeilen(aus(), mandantId, ueberfaellig)));
-  }
+  /*
+   * Hier stand bis zum 03.09.2026 der Rueckfallfall `ueberfaellig: unveraendert, und die Verengung
+   * wird nicht betreten`. Er ist mit E-71 entfallen -- zusammen mit dem Merkmal.
+   *
+   * Der Rueckfall selbst ist damit nicht ungeprueft: `SUCHBEGRIFF` und die Sortierung AELTESTE
+   * decken ihn weiterhin ab (FensterverengungMerkmaleTest). Was fehlt, ist der einzige Rueckfall,
+   * dessen Grund am BESTAND lag und nicht am Schema -- vermerkt dort.
+   */
 
   @Test
   @DisplayName(

@@ -17,14 +17,16 @@ import { rendere } from "./hilfe/rendern";
  * ist.**
  *
  * Alles Übrige steht als reine Funktion in `tests/dashboard.test.ts` — die
- * Zusammenfassung auf vier Reihen, der URL-Zustand, die beiden Adressen, die
- * Beschriftungen. Hier stehen vier Fälle, und alle vier sind Aussagen über
- * **Abwesenheit** oder über **Reihenfolge**; beide sind ohne Baum nicht zu
- * treffen (`docs/frontend-grundlagen.md` §9).
+ * Zusammenfassung auf vier Reihen, der URL-Zustand, die Adressen der Kacheln,
+ * die Beschriftungen. Hier stehen die Fälle, die Aussagen über **Abwesenheit**
+ * oder über **Reihenfolge** sind; beide sind ohne Baum nicht zu treffen
+ * (`docs/frontend-grundlagen.md` §9).
  *
  * | Fall | Warum genau dieser |
  * |---|---|
- * | „nicht ermittelbar" | **Keine `0` und kein Verweis** im Baum, und die übrigen Blöcke stehen. Eine reine Funktion sagt nichts darüber, was *nicht* gerendert wird — und die naheliegende Schreibweise `imFenster ?? 0` bestünde jede Prüfung an ihr |
+ * | **die drei Zustände von *Wartend*** | strukturell abwesend, nicht ermittelbar, ermittelt — **drei Bilder, und zwei davon dürfen nie gleich aussehen** (E‑81). Alle drei sind Aussagen über Abwesenheit; eine reine Funktion sagt nichts darüber, was *nicht* gerendert wird, und die naheliegende Schreibweise `anzahl ?? 0` bestünde jede Prüfung an ihr |
+ * | die Notbremse und die zweite Zeile | ein Verweis, der **nicht** da ist, und eine Zeile, die bei `anzahl = 0` **entfällt** |
+ * | die Reihenfolge und der Umbruch | **vier Kacheln, und bei drei keine Lücke.** Eine Reihenfolge ist ohne Baum nicht zu treffen, und die Spaltenzahl steht in der Klassenkette des Gitters |
  * | die beiden Restzeilen | „Übrige" **fehlt**, wenn der Endpunkt sie nicht liefert; „nicht zugeordnet" **steht da**, auch bei null. Dazu die **Reihenfolge**: Beide bleiben unten, auch wenn „Übrige" der größte Balken ist. Ein Sortiervergleich ist kein Vorhandensein |
  * | der Leerzustand | **Satz und Umschalter, sonst nichts** — samt der Gegenprobe, dass die Nullzeile der Verteilung dort *nicht* steht |
  * | ein Aufruf | Genau **eine** Anfrage an `/api/dashboard`, und ein Sichtwechsel lädt **nicht nach**, sondern ruft neu. Beides sind Aussagen über die Zahl der Anfragen |
@@ -74,7 +76,8 @@ function antwort(ueberschreibung: Partial<Dashboard> = {}): Dashboard {
         anzahl: 50,
         arten: [{ rohwert: "ERROR_TIMEOUT", art: "TIMEOUT", anzahl: 49 }],
       },
-      ueberfaellig: { imFenster: 1, insgesamt: 538, ermittelbar: true },
+      laeuft: { anzahl: 0, aeltesteSekunden: null, ermittelbar: true },
+      wartend: { anzahl: 12, aeltesteSekunden: 6 * 24 * 3600, ermittelbar: true },
     },
     verteilung: VERTEILUNG_VOLL,
     zuletztAufgefallen: [],
@@ -141,79 +144,236 @@ async function rendereAnsicht(suchparameter = "") {
   return gerendert;
 }
 
+const D_KACHELN = D.kacheln;
+
+/** Die Bausteine der gestellten Kachelantworten — bewusst runde, gewählte Zahlen (Regel T2). */
+const FEHLERKACHEL = { anzahl: 50, arten: [] };
+const LAEUFT_LEER = { anzahl: 0, aeltesteSekunden: null, ermittelbar: true };
+const SECHS_TAGE = 6 * 24 * 3600;
+
+async function rendereKacheln(kacheln: Dashboard["kacheln"]) {
+  return rendere(<Kacheln kacheln={kacheln} fenster={FENSTER} zeitraum="48H" />);
+}
+
+function ziele(behaelter: HTMLElement): (string | null)[] {
+  return [...behaelter.querySelectorAll("a")].map((a) => a.getAttribute("href"));
+}
+
 /**
- * **„Nicht ermittelbar" ist nicht `0`** (Entscheidung E‑q).
+ * **Drei Zustände, drei Bilder** (Entscheidung E‑81).
  *
- * Null hieße „es hängt nichts", und das ist in einem Überwachungswerkzeug die
- * schlimmste falsche Antwort.
+ * Abwesenheit ist eine Auskunft über den **Mandanten** („hat keine Abläufe, die
+ * suspendieren"), `ermittelbar: false` eine über **uns** („wissen es gerade
+ * nicht"). Verschwände die Kachel bei einem Fehlschlag, würde ein Ausfall
+ * stillschweigend in eine strukturelle Behauptung übersetzt — der schlimmste der
+ * drei denkbaren Fehler an dieser Stelle.
  */
-describe("Die Kachel Überfällig, wenn die Live-Abfrage gestorben ist", () => {
-  it("zeigt keine Null und keinen Verweis, und die übrigen Kacheln stehen", async () => {
-    const gerendert = await rendere(
-      <Kacheln
-        kacheln={{
-          nachrichten: 9950,
-          fehler: { anzahl: 50, arten: [] },
-          ueberfaellig: { imFenster: null, insgesamt: null, ermittelbar: false },
-        }}
-        fenster={FENSTER}
-      />,
-    );
+describe("Die drei Zustände der Kachel Wartend", () => {
+  /**
+   * **Fehlt der Schlüssel, gibt es die Kachel nicht.** Kein Platzhalter, keine
+   * gedämpfte Kachel, kein „nicht verfügbar" — und die Reihe zieht sich von
+   * hinten auf drei zusammen, statt eine Lücke in die Mitte zu schlagen.
+   */
+  it("zeichnet ohne den Schlüssel gar keine Kachel", async () => {
+    const gerendert = await rendereKacheln({
+      nachrichten: 9950,
+      fehler: FEHLERKACHEL,
+      laeuft: LAEUFT_LEER,
+    });
 
     try {
       const text = gerendert.behaelter.textContent ?? "";
 
-      // Der Kacheltitel bleibt, und der Grund steht daneben.
-      expect(text).toContain(D.kacheln.ueberfaellig);
-      expect(text).toContain(D.kacheln.nichtErmittelbarHinweis);
-      expect(text).toContain(D.kacheln.nichtErmittelbar);
-
-      // **Kein Verweis in die Liste.** Der einzige Verweis der drei Kacheln ist
-      // der der Fehlerkachel; einer auf `ueberfaellig=true` darf nicht dastehen.
-      const ziele = [...gerendert.behaelter.querySelectorAll("a")].map((a) =>
-        a.getAttribute("href"),
-      );
-      expect(ziele.some((ziel) => ziel?.includes("ueberfaellig"))).toBe(false);
-
-      // Die übrigen Blöcke stehen normal — der Vertrag lässt genau diese zwei
-      // Felder ausfallen und keinen ganzen Block.
-      expect(text).toContain(D.kacheln.nachrichten);
-      expect(ziele.some((ziel) => ziel?.includes("status=FEHLER"))).toBe(true);
+      expect(text).not.toContain(TEXTE.einordnung.WARTEND);
+      expect(text).not.toContain(D_KACHELN.nichtErmittelbarHinweis);
+      // Die drei übrigen stehen, und keine von ihnen führt auf `WARTEND`.
+      expect(text).toContain(TEXTE.einordnung.LAEUFT);
+      expect(text).toContain(D_KACHELN.fehler);
+      expect(text).toContain(D_KACHELN.nachrichten);
+      expect(ziele(gerendert.behaelter).some((ziel) => ziel?.includes("WARTEND"))).toBe(false);
     } finally {
       await gerendert.abbauen();
     }
   });
 
   /**
-   * Die Gegenprobe. Ohne sie bewiese der Test oben nur, dass irgendetwas fehlt —
-   * nicht, dass es **wegen** `ermittelbar: false` fehlt.
+   * **„Nicht ermittelbar" ist nicht `0`** (Entscheidung E‑q) und **sichtbar
+   * anders als die fehlende Kachel**: Die Plakette steht da, ein Satz nennt den
+   * Grund, und geklickt wird nicht.
    */
-  it("zeigt mit ermittelbar: true beide Zahlen und den Verweis", async () => {
-    const gerendert = await rendere(
-      <Kacheln
-        kacheln={{
-          nachrichten: 9950,
-          fehler: { anzahl: 50, arten: [] },
-          ueberfaellig: { imFenster: 1, insgesamt: 538, ermittelbar: true },
-        }}
-        fenster={FENSTER}
-      />,
-    );
+  it("zeigt bei ermittelbar: false weder Null noch Verweis — und steht trotzdem da", async () => {
+    const gerendert = await rendereKacheln({
+      nachrichten: 9950,
+      fehler: FEHLERKACHEL,
+      laeuft: LAEUFT_LEER,
+      wartend: { anzahl: null, aeltesteSekunden: null, ermittelbar: false },
+    });
 
     try {
       const text = gerendert.behaelter.textContent ?? "";
-      expect(text).toContain("538");
-      expect(text).not.toContain(D.kacheln.nichtErmittelbarHinweis);
 
-      const ziele = [...gerendert.behaelter.querySelectorAll("a")].map((a) =>
-        a.getAttribute("href"),
-      );
-      expect(ziele.some((ziel) => ziel?.includes("ueberfaellig=true"))).toBe(true);
+      // Genau der Unterschied zum Fall darüber: Die Kachel ist da.
+      expect(text).toContain(TEXTE.einordnung.WARTEND);
+      expect(text).toContain(D_KACHELN.nichtErmittelbar);
+      expect(text).toContain(D_KACHELN.nichtErmittelbarHinweis);
+      expect(ziele(gerendert.behaelter).some((ziel) => ziel?.includes("WARTEND"))).toBe(false);
 
-      // **„Insgesamt" trägt trotzdem keinen Verweis.** Kein zweiter Verweis auf
-      // die Überfälligkeitsform, und der Satz sagt, warum.
-      expect(ziele.filter((ziel) => ziel?.includes("ueberfaellig")).length).toBe(1);
-      expect(text).toContain(D.kacheln.insgesamtOhneVerweis);
+      // **Die beiden Kacheln fallen nicht zusammen** — zwei Statements, zwei
+      // Auskünfte. Läuft steht mit seiner Null da und klickt weiter.
+      expect(text).toContain(TEXTE.einordnung.LAEUFT);
+      expect(ziele(gerendert.behaelter).some((ziel) => ziel?.includes("LAEUFT"))).toBe(true);
+    } finally {
+      await gerendert.abbauen();
+    }
+  });
+
+  /**
+   * Die Gegenprobe zu beiden. Ohne sie bewiesen die Tests oben nur, dass
+   * irgendetwas fehlt — nicht, dass es **wegen** des Zustands fehlt.
+   */
+  it("zeigt ermittelt die Zahl, das Alter und den Verweis mit eigenem Fenster", async () => {
+    const gerendert = await rendereKacheln({
+      nachrichten: 9950,
+      fehler: FEHLERKACHEL,
+      laeuft: LAEUFT_LEER,
+      wartend: { anzahl: 12, aeltesteSekunden: SECHS_TAGE, ermittelbar: true },
+    });
+
+    try {
+      const text = gerendert.behaelter.textContent ?? "";
+
+      expect(text).toContain("12");
+      expect(text).not.toContain(D_KACHELN.nichtErmittelbarHinweis);
+      // Die zweite Zeile — nach E‑75 die laufende Prüfung der Auskunft, auf der
+      // E‑71 ruht.
+      expect(text).toContain("6 d");
+      // **Das eigene Fenster steht in der Adresse** (E‑80): weiter zurück als
+      // das der Antwort, damit die älteste Zeile im Ziel liegt.
+      const wartend = ziele(gerendert.behaelter).find((ziel) => ziel?.includes("WARTEND"));
+      expect(wartend).toContain("von=2025-12-24T00%3A00%3A00Z");
+      expect(wartend).toContain("bis=2025-12-30T05%3A00%3A00Z");
+    } finally {
+      await gerendert.abbauen();
+    }
+  });
+
+  /**
+   * **Die zweite Zeile entfällt bei `anzahl = 0`** — kein „—", kein „keine". Die
+   * Null steht für sich; ohne Zeile gibt es kein Alter. Das ist der Fall, den
+   * die Erscheinungsbedingung von „dieser Mandant wartet nie" unterscheidet: Die
+   * Kachel steht da und zeigt eine Null.
+   */
+  it("lässt die zweite Zeile bei null weg und klickt trotzdem", async () => {
+    const gerendert = await rendereKacheln({
+      nachrichten: 9950,
+      fehler: FEHLERKACHEL,
+      laeuft: LAEUFT_LEER,
+      wartend: { anzahl: 0, aeltesteSekunden: null, ermittelbar: true },
+    });
+
+    try {
+      const text = gerendert.behaelter.textContent ?? "";
+
+      expect(text).toContain(TEXTE.einordnung.WARTEND);
+      expect(text).not.toContain(D_KACHELN.aeltesterSeit.replace(" {dauer}", ""));
+      // Das Ziel erbt dann das Fenster der Antwort und zeigt eine leere Liste —
+      // die richtige Antwort auf eine Kachel, die `0` zeigt.
+      const wartend = ziele(gerendert.behaelter).find((ziel) => ziel?.includes("WARTEND"));
+      expect(wartend).toContain("von=2025-12-28T05%3A00%3A00Z");
+    } finally {
+      await gerendert.abbauen();
+    }
+  });
+
+  /**
+   * **Die Notbremse im Baum** (E‑80): Liegt die älteste Zeile über einem Jahr
+   * zurück, klickt die Kachel **nicht** und sagt in einem Satz warum. Die Zahl
+   * bleibt stehen — sie ist richtig, nur ihr Ziel wäre es nicht.
+   */
+  it("klickt über einem Jahr nicht und nennt den Grund", async () => {
+    const gerendert = await rendereKacheln({
+      nachrichten: 9950,
+      fehler: FEHLERKACHEL,
+      laeuft: LAEUFT_LEER,
+      wartend: { anzahl: 12, aeltesteSekunden: 366 * 24 * 3600, ermittelbar: true },
+    });
+
+    try {
+      const text = gerendert.behaelter.textContent ?? "";
+
+      expect(text).toContain("12");
+      expect(text).toContain(D_KACHELN.wartendOhneVerweis);
+      expect(ziele(gerendert.behaelter).some((ziel) => ziel?.includes("WARTEND"))).toBe(false);
+      // Kein Fehlerzustand: Die übrigen Kacheln klicken weiter.
+      expect(ziele(gerendert.behaelter).some((ziel) => ziel?.includes("status=FEHLER"))).toBe(true);
+    } finally {
+      await gerendert.abbauen();
+    }
+  });
+});
+
+/**
+ * **Fehler · Läuft · Wartend · Nachrichten** (Entscheidung E‑78) — erst was zu
+ * tun ist, dann was in Arbeit ist, dann die Zählung.
+ *
+ * *Wartend* steht **vor** *Nachrichten*, damit sein Wegfall die Reihe von hinten
+ * auf drei zusammenzieht statt eine Lücke in die Mitte zu schlagen. Und die
+ * Spaltenzahl am breiten Fenster folgt der Zahl der Kacheln: Bei drei bliebe
+ * sonst eine leere vierte Spalte stehen, und eine Lücke sähe aus wie eine
+ * fehlende Zahl.
+ */
+describe("Die Reihenfolge der Kacheln", () => {
+  /** Die Kachelköpfe in der Reihenfolge, in der sie im Baum stehen. */
+  function reihenfolge(behaelter: HTMLElement): string[] {
+    const text = behaelter.textContent ?? "";
+    return [
+      D_KACHELN.fehler,
+      TEXTE.einordnung.LAEUFT,
+      TEXTE.einordnung.WARTEND,
+      D_KACHELN.nachrichten,
+    ]
+      .map((wort) => [wort, text.indexOf(wort)] as const)
+      .filter(([, stelle]) => stelle >= 0)
+      .sort((eins, zwei) => eins[1] - zwei[1])
+      .map(([wort]) => wort);
+  }
+
+  it("steht bei vier Kacheln in der Reihenfolge des Leitsatzes", async () => {
+    const gerendert = await rendereKacheln({
+      nachrichten: 9950,
+      fehler: FEHLERKACHEL,
+      laeuft: LAEUFT_LEER,
+      wartend: { anzahl: 12, aeltesteSekunden: SECHS_TAGE, ermittelbar: true },
+    });
+
+    try {
+      expect(reihenfolge(gerendert.behaelter)).toEqual([
+        D_KACHELN.fehler,
+        TEXTE.einordnung.LAEUFT,
+        TEXTE.einordnung.WARTEND,
+        D_KACHELN.nachrichten,
+      ]);
+      expect(gerendert.behaelter.querySelector("[class*='xl:grid-cols-4']")).not.toBeNull();
+    } finally {
+      await gerendert.abbauen();
+    }
+  });
+
+  it("zieht sich bei drei Kacheln zusammen, ohne eine Spalte leer zu lassen", async () => {
+    const gerendert = await rendereKacheln({
+      nachrichten: 9950,
+      fehler: FEHLERKACHEL,
+      laeuft: LAEUFT_LEER,
+    });
+
+    try {
+      expect(reihenfolge(gerendert.behaelter)).toEqual([
+        D_KACHELN.fehler,
+        TEXTE.einordnung.LAEUFT,
+        D_KACHELN.nachrichten,
+      ]);
+      expect(gerendert.behaelter.querySelector("[class*='xl:grid-cols-3']")).not.toBeNull();
+      expect(gerendert.behaelter.querySelector("[class*='xl:grid-cols-4']")).toBeNull();
     } finally {
       await gerendert.abbauen();
     }

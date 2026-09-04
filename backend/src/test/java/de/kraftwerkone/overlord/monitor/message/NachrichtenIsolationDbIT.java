@@ -202,102 +202,22 @@ class NachrichtenIsolationDbIT extends SicherheitsTestbasis {
    * vollstaendig, einschliesslich der Gegenprobe mit der erfundenen Kennung.
    */
 
-  /**
-   * <b>Der Isolationstest des Parameters {@code ueberfaellig}</b> (E-j, Schritt 10b-1). Regel M4
-   * verlangt ihn fuer jeden Endpunktzustand, also auch fuer einen neuen Parameter am bestehenden
-   * Endpunkt — er erzeugt eine <b>zweite Abfrageform</b> mit eigenem Plan ({@code
-   * docs/nachrichtenliste.md} §5b), und ein zweiter Plan ist ein zweiter Ort, an dem der
-   * Mandantenfilter fehlen kann.
+  /*
+   * Hier standen bis zum 03.09.2026 DREI Isolationsfaelle zum Parameter `ueberfaellig` (E-j):
+   * dass SUTTONS keine der 538 ueberfaelligen Zeilen von NEXANS sieht, dass ein fremder Prozess
+   * und eine erfundene Kennung ununterscheidbar antworten, und dass ein fremder Cursor keinen
+   * fremden Ausschnitt oeffnet.
    *
-   * <p><b>Dieser Test ist schaerfer als der gewoehnliche, und der Grund liegt in den Daten:</b> Auf
-   * der Testkopie sind <b>alle</b> ueberfaelligen Zeilen des Gesamtbestands {@code NEXANS}-Zeilen —
-   * 538 Stueck, alle mit {@code SUSPENDED} und einer Frist von 1.800 Sekunden (M97). {@code
-   * SUTTONS} hat keine einzige, in keinem Fenster. Faellt der Mandantenfilter aus dieser
-   * Abfrageform heraus, sieht {@code SUTTONS} deshalb nicht ein paar fremde Zeilen, sondern
-   * <b>genau die 538 von {@code NEXANS}</b>. Die erwartete Null ist hier also keine schwache
-   * Zusage, sondern die schaerfste, die dieser Bestand hergibt.
+   * SIE SIND MIT E-71 ENTFALLEN, ZUSAMMEN MIT DEM PARAMETER -- und mit ihm die ZWEITE
+   * ABFRAGEFORM, fuer die Regel M4 sie ueberhaupt verlangt hat. Es gibt nur noch einen Plan und
+   * damit nur noch einen Ort, an dem der Mandantenfilter fehlen koennte; den decken die uebrigen
+   * Faelle dieser Klasse vollstaendig ab.
    *
-   * <p>Das Fenster ist deshalb der ganze Dezember 2025 und nicht der eine Tag der uebrigen Tests:
-   * Im Tagesfenster traegt {@code NEXANS} genau <b>eine</b> ueberfaellige Zeile, im Dezember alle
-   * 538. Ein Leck faellt bei 538 auf, bei einer nicht unbedingt.
+   * WAS DABEI TATSAECHLICH VERLORENGEHT, GEHOERT BENANNT: Jene drei Faelle waren die SCHAERFSTEN
+   * dieser Klasse. Alle 538 ueberfaelligen Zeilen des Gesamtbestands gehoerten NEXANS, SUTTONS
+   * hatte keine einzige -- ein Leck haette dort nicht ein paar fremde Zeilen gezeigt, sondern
+   * genau 538. Die verbliebenen Faelle arbeiten mit kleineren Mengen und sind damit etwas
+   * stumpfer. Das ist der Preis dafuer, dass die Kategorie widerlegt ist, und keine Nachlaessigkeit.
    */
-  @Test
-  @DisplayName("ueberfaellig: SUTTONS sieht keine der 538 ueberfaelligen Zeilen von NEXANS")
-  void ueberfaellig_zeigt_keine_fremden_zeilen() throws Exception {
-    Antwort vonNexans = aufNexans.hole(dezemberAbfrage("&ueberfaellig=true"));
-    List<String> ueberfaelligeVonNexans = vonNexans.json("$.items[*].messageId");
 
-    assertThat(ueberfaelligeVonNexans)
-        .as("Ohne Zeilen bei NEXANS bewiese der Test nur, dass leer leer ist")
-        .isNotEmpty();
-
-    Antwort vonSuttons = aufSuttons.hole(dezemberAbfrage("&ueberfaellig=true"));
-
-    assertThat(vonSuttons.status()).as("Niemals 403").isEqualTo(200);
-    assertThat(vonSuttons.<List<String>>json("$.items[*].messageId")).isEmpty();
-    for (String fremd : ueberfaelligeVonNexans) {
-      assertThat(vonSuttons.rumpf()).doesNotContain(fremd);
-    }
-  }
-
-  /**
-   * Die Gegenprobe des Musters, auf die zweite Abfrageform uebertragen: Ein fremder,
-   * <b>existierender</b> Prozess und eine <b>erfundene</b> Kennung muessen auch mit {@code
-   * ueberfaellig=true} eine ununterscheidbare Antwort liefern.
-   */
-  @Test
-  @DisplayName("ueberfaellig: fremder Prozess und erfundene Kennung sind ununterscheidbar")
-  void ueberfaellig_fremder_prozess_und_erfundene_kennung() throws Exception {
-    String fremderProzess =
-        aufSuttons.hole(abfrage("")).<List<String>>json("$.items[*].processId").getFirst();
-
-    Antwort fremdAberEcht =
-        aufNexans.hole(
-            dezemberAbfrage(
-                "&ueberfaellig=true&prozess="
-                    + URLEncoder.encode(fremderProzess, StandardCharsets.UTF_8)));
-    Antwort erfunden = aufNexans.hole(dezemberAbfrage("&ueberfaellig=true&prozess=" + ERFUNDEN));
-
-    assertThat(fremdAberEcht.status()).isEqualTo(200);
-    assertThat(fremdAberEcht.<List<String>>json("$.items[*].messageId")).isEmpty();
-    assertThat(fremdAberEcht.rumpfOhneTraceId()).isEqualTo(erfunden.rumpfOhneTraceId());
-  }
-
-  /**
-   * Der Cursor der zweiten Abfrageform traegt so wenig Berechtigung wie der der ersten. Das ist
-   * hier ausdruecklich zu pruefen, weil der Plan ihn <b>anders behandelt</b>: Er ist dort kein
-   * Indexbereich mehr, sondern eine nachgelagerte Bedingung ({@code key_len} bleibt 123 statt auf
-   * 151 zu steigen, M97). Was sich am Plan aendert, darf sich an der Trennung nicht aendern.
-   */
-  @Test
-  @DisplayName("ueberfaellig: ein fremder Cursor oeffnet keinen fremden Ausschnitt")
-  void ueberfaellig_fremder_cursor_oeffnet_nichts() throws Exception {
-    Antwort seiteVonNexans = aufNexans.hole(dezemberAbfrage("&ueberfaellig=true&limit=5"));
-    String cursorVonNexans = seiteVonNexans.json("$.nextCursor");
-    List<String> zeilenVonNexans = seiteVonNexans.json("$.items[*].messageId");
-
-    assertThat(cursorVonNexans).as("NEXANS muss hier mehr als fuenf Zeilen haben").isNotNull();
-
-    Antwort antwort =
-        aufSuttons.hole(
-            dezemberAbfrage(
-                "&ueberfaellig=true&cursor="
-                    + URLEncoder.encode(cursorVonNexans, StandardCharsets.UTF_8)));
-
-    assertThat(antwort.status()).isEqualTo(200);
-    List<String> zeilenVonSuttons = antwort.json("$.items[*].messageId");
-    assertThat(zeilenVonSuttons).doesNotContainAnyElementsOf(zeilenVonNexans).isEmpty();
-  }
-
-  /**
-   * Das Fenster fuer die Ueberfaelligkeit: der ganze Dezember 2025. Es ist absolut und aus
-   * demselben Grund wie {@link #FENSTER_VON} — ein relatives Fenster haenge am Datenstand.
-   */
-  private String dezemberAbfrage(String zusatz) {
-    return "/api/nachrichten?limit=200&von="
-        + URLEncoder.encode(iso(LocalDateTime.parse("2025-12-01T00:00:00")), StandardCharsets.UTF_8)
-        + "&bis="
-        + URLEncoder.encode(iso(LocalDateTime.parse("2025-12-31T00:00:00")), StandardCharsets.UTF_8)
-        + zusatz;
-  }
 }

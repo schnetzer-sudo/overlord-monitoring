@@ -1064,7 +1064,8 @@ Leinwand gezeichnet, in der **Mitte jedes Segments** ein Pixel gelesen:
 | `fill="var(--status-abgeschlossen)"` | `#01684c` | `#01684c` |
 | Legendensymbol, `var(--status-fehler)` | `#be2323` | `#be2323` |
 
-Die Sollwerte stammen aus `scripts/farbrolle-ueberfaellig/rechne.mjs`; `#01684c` ist zusätzlich der
+Die Sollwerte stammen aus `scripts/farbrolle-ueberfaellig/rechne.mjs` *(seit dem 03.09.2026
+`scripts/farbwerte/rechne.mjs` — dieselben Zahlen)*; `#01684c` ist zusätzlich der
 Wert, den [`visuelles-konzept.md`](visuelles-konzept.md) §3 seit Schritt 3 nennt.
 
 ### Die Entscheidung: **Recharts**
@@ -1076,6 +1077,43 @@ auf, in allen drei Lagen — also Recharts, und kein Eigenbau aus Flex-Spalten.
 `getComputedStyle` auslesen und als Literal in das Prop geben wäre ein **zweiter Weg**, auf dem Farbe
 in die Anwendung kommt, und ein späterer Dunkelmodus käme ohne Neurendern nicht nach
 ([`visuelles-konzept.md`](visuelles-konzept.md) §2 schließt genau das aus).
+
+> ### ✅ Die Zusage im letzten Halbsatz ist geprüft — **sie hält** *(M137, 03.09.2026)*
+>
+> *„… ein späterer Dunkelmodus käme ohne Neurendern nicht nach."* Dieser Satz stand seit dem
+> 31.08.2026 als **Begründung** da und war bis heute **niemandes Messung**. Schritt 11b hat den
+> Dunkelmodus eingeschaltet und ist damit der Anlass.
+>
+> **Gemessen am laufenden, angemeldeten System** (Mandant NEXANS, Übersichtsseite, 49
+> Balkensegmente): Das Attribut `data-thema` am Wurzelelement umgestellt — ohne React, ohne
+> Server-Aktion — und mit drei Mitteln zugleich nachgesehen: einer **Marke am DOM-Knoten** (wäre er
+> neu erzeugt worden, wäre sie weg), einem **`MutationObserver`** über den ganzen Diagrammbaum und
+> `getComputedStyle`.
+>
+> | | dunkel | hell |
+> |---|---|---|
+> | `fill`-Attribut | `var(--status-fehler)` | **unverändert** |
+> | Balken *Fehler*, aufgelöst | `lab(63.5691 52.8643 33.3674)` | `lab(42.4236 59.8149 41.9956)` |
+> | Balken *Offen*, aufgelöst | `lab(74.48 0 0)` | `lab(35.04 0 0)` |
+> | Achsenbeschriftung | `lab(65.2 0 0)` | `lab(42 0 0)` |
+> | Gitterlinie | `lab(100 0 0 / 0.12)` | `lab(88.4 0 0.0000119209)` |
+> | **Mutationen im Diagrammbaum** | **0** | |
+> | **Knoten mit erhaltener Marke** | **49 von 49** | |
+>
+> **Die beiden hellen Werte sind Ziffer für Ziffer die aus den Tabellen weiter oben** —
+> `lab(42.4236 59.8149 41.9956)` ist dort das Pixel `#be2323`, `lab(88.4 0 0.0000119209)` das Pixel
+> `#dedede`. Die Kette *Prop → aufgelöster Wert → Pixel* ist an genau diesen Knoten bereits belegt;
+> 11b misst das erste Glied unter Themawechsel und nicht das letzte noch einmal.
+>
+> **Der `var()`-Weg trägt einen Themawechsel also ohne Neurendern.** Der ausgeschlossene dritte Weg
+> täte es nicht — die Begründung von Schritt 3 ist **bestätigt und nicht widerlegt**.
+>
+> ⚠️ **Und der Gegenbefund, weil er danebengehört:** Der Weg, den der Nutzer wirklich geht, nimmt
+> die Zusage nicht in Anspruch. Über den Menüeintrag ruft die Server-Aktion
+> `revalidatePath("/", "layout")`, und derselbe Melder zählt dann **6 `childList`-Mutationen** und
+> **0 von 49** erhaltenen Knoten: Der Baum wird neu erzeugt. **Die Farbe bräuchte das nicht** — es
+> ist eine Eigenschaft der Server-Aktion und keine der Farbe. Geführt als offener Punkt **127** in
+> [`dunkelmodus.md`](dunkelmodus.md) §22.
 
 #### ⚠️ Befund: `tests/farbwerte.test.ts` brauchte dafür **keine** Änderung
 
@@ -1102,6 +1140,12 @@ festhält. Eine Musteränderung wäre eine Lockerung ohne Anlass gewesen.
    > Wortlaut stehen; was dazugekommen ist, steht unten unter „Nachgemessen am 01.09.2026".
    > `Cell`, `activeBar` und Farbverläufe sind **weiterhin ungemessen** und kommen dort auch nicht
    > vor.
+
+   > **Und am 04.09.2026 noch einmal** — für **Farbverläufe** und **Flächendiagramme**, weil der
+   > Verlauf des Dashboards auf eine Fläche umgestellt worden ist. Der Satz oben bleibt im Wortlaut
+   > stehen; die Nachmessung steht in **§8b**, samt einem Befund, der ohne sie mitgeliefert worden
+   > wäre (`fillOpacity`). **`Cell` und `activeBar` sind weiterhin ungemessen**, ebenso ein
+   > Farbverlauf mit zwei **verschiedenen** Farben — in §8b tragen beide Stopps dasselbe Token.
 3. **Nichts über Barrierefreiheit.** Dass eine Farbe ankommt, sagt nicht, dass sie genügt — für ein
    Diagramm gilt „nie allein über Farbe" unverändert.
 
@@ -1173,6 +1217,217 @@ genau diese Größe mitten im Vorgang.
 **Aufgelöst durch die längere Fassung:** erst messen, dann `Emulation.setDeviceMetricsOverride` auf
 die volle Inhaltshöhe, kurz warten, dann normal aufnehmen. Das steht hier, weil ein leeres Bild wie
 ein kaputtes Diagramm aussieht — und es ist keins.
+
+---
+
+## 8b. Farbe durch einen **Farbverlauf** — `<linearGradient>` und `<Area>` *(04.09.2026)*
+
+§8a führt unter „Was nicht gemessen ist" ausdrücklich auf: *„`Cell`, `activeBar`, Farbverläufe
+(`<linearGradient>`), Flächen- und Liniendiagramme sind **nicht** angesehen worden. Wer eine davon
+braucht, misst sie nach demselben Muster nach."* Der Verlauf des Dashboards ist am 04.09.2026 von
+vier gestapelten Balkenreihen auf **eine Fläche mit Farbverlauf** umgestellt worden
+([`dashboard-frontend.md`](dashboard-frontend.md) §5.2, Entscheidungen E‑83 bis E‑86). Das ist der
+Anlass, und dies ist die Nachmessung.
+
+**Sie ist nicht formal.** Beim Balken steht das Token in *einem* Attribut, und was gemalt wird, ist
+dieses Token. Ein Farbverlauf hat **zwei Stopps**, und die untere Kante ist absichtlich
+durchscheinend — was dort gemalt wird, ist eine **Mischung mit dem Untergrund**, und der Untergrund
+ist in Hell und Dunkel verschieden. Die Frage „kommt das Token an" zerfällt damit in zwei, und nur
+die obere ist die des Balkens.
+
+### Die Deutungen sind vor dem ersten Lauf festgelegt worden
+
+| Befund | Was folgt |
+|---|---|
+| Attribut trifft das Token, Pixel trifft den Rückfall, beide Kanten, beide Schemata | wie beim Balken. Weiterbauen |
+| **obere** Kante weicht ab | Das Token kommt durch den Farbverlauf **nicht** durch. Abbrechen und berichten — dann ist der Farbverlauf nicht nutzbar, und das ist eine Entscheidung des Auftraggebers |
+| nur die **untere** Kante weicht ab | erwartbare Mischung mit dem Untergrund. Weiterbauen, aber den Wert je Schema berichten |
+
+### Wie gemessen worden ist
+
+| | |
+|---|---|
+| **Browser** | das installierte **Chrome 152.0.7977.65**, kopflos, über das DevTools-Protokoll. §8a lief auf 151.0.7922.174; die Fassung hat sich seither erhöht, und deshalb steht sie hier |
+| **Recharts** | **3.10.1**, die gepinnte Fassung des Projekts |
+| **Aufbau** | eine temporäre Route `src/app/verlaufsflaeche/page.tsx`, **außerhalb** der Gruppe `(app)` — dieselbe Bauform wie `farbprobe` (31.08.) und `verlaufprobe` (01.09.). **Der Probecode ist entfernt** |
+| **Anmeldung** | keine. Die Routensperre prüft nur, **ob** ein Sitzungs-Cookie da ist (§2); ein über `Network.setCookie` erfundenes genügt, und die Messroute spricht kein Backend an |
+| **Auflösung** | `deviceScaleFactor: 2`, wie am 01.09.2026 |
+| **Lagen** | drei Fensterbreiten (1500 · 768 · 360) × zwei Farbschemata, umgeschaltet über `data-thema` am Wurzelelement — **sechs Lagen, und jede Zahl unten gilt in allen sechs**, sofern nicht anders vermerkt |
+
+#### Vier Proben auf einer Seite, und warum es vier sind
+
+| | |
+|---|---|
+| **A** | die Fläche mit Farbverlauf, **ohne** Kontur. Nur so ist die oberste voll gedeckte Gerätezeile der Farbverlauf und nichts sonst |
+| **B** | dieselbe Fläche **mit** Kontur — die Fassung, die eingebaut ist |
+| **C** | der Fehlerstreifen als Balkendiagramm, für die Geometrie |
+| **E** | **die Kontrolle:** derselbe Farbverlauf, aber **beide** Stopps voll gedeckt. Ohne Alpha-Rampe ist jede Zeile der Fläche exakt das Token — damit ist die Frage *„kommt `var()` durch einen `<linearGradient>` durch"* von der Frage *„wie quantisiert der Rasterer eine Alpha-Rampe"* getrennt |
+
+**Und die Daten der Probe haben ein flaches Plateau.** Am Scheitel einer Kurve ist die oberste
+Gerätezeile kantengeglättet und damit selbst eine Mischung — dieselbe Falle wie bei der Gitterlinie
+am 01.09.2026. Über sieben gleich hohen Eimern ist sie voll gedeckt, und weil der Farbverlauf in
+`objectBoundingBox`-Einheiten steht, liegt Versatz 0 **genau auf dieser Strecke**.
+
+### ⚠️ Der Befund, und er ist vor dem Einbau entstanden: `fillOpacity`
+
+**Der erste Lauf ergab an der oberen Kante `#d5d97b` statt `#b9c022`** — das Token zu **60 %** über
+Weiß, und im Dunkelblock entsprechend eine andere Farbe. Das ist genau der Fall, für den die
+Deutung oben „abbrechen" vorsah.
+
+**Die Ursache ist keine Eigenschaft des Farbverlaufs, sondern eine Voreinstellung darüber:**
+`<Area>` trägt in Recharts 3.10.1 `fillOpacity: 0.6` (`recharts/es6/cartesian/Area.js`, Zeile 98).
+Sie liegt *über* der Füllung, gleich ob die ein Token oder ein Farbverlauf ist. Mit
+`fillOpacity={1}` am `<Area>` ist der Befund weg; alle Zahlen unten sind mit dieser Zeile gemessen.
+
+**Ohne die Messung wäre er mitgeliefert worden**, und zwar unsichtbar: Eine um 40 % aufgehellte
+Fläche sieht nicht falsch aus, sie sieht nur blasser aus. `tests/farbwerte.test.ts` kann das nicht
+finden — er liest Text, und im Text stand das richtige Token. Die abweichende Farbe entstand erst
+im Rasterer.
+
+### Was im DOM stand — der abgelesene Wortlaut
+
+```html
+<stop offset="0%" stop-color="var(--akzent)" stop-opacity="1"></stop>
+<stop offset="100%" stop-color="var(--akzent)" stop-opacity="0.08"></stop>
+```
+
+Die Fläche verweist darauf (`fill="url(#probe-a)"`, aufgelöst `url("#probe-a")`), und die Kontur
+geht denselben Weg wie ein Balken:
+
+```html
+<path class="recharts-curve recharts-area-curve" stroke="var(--akzent-schrift)" fill="none" …>
+```
+
+**Die Zeichenkette steht unverändert im SVG-Attribut** — dieselbe Beobachtung wie bei
+`<Bar fill>`, und sie gilt für `stop-color` genauso wie für `stroke`.
+
+### Was `getComputedStyle` daraus gemacht hat
+
+| Lage | Eigenschaft | hell | dunkel |
+|---|---|---|---|
+| `<stop offset="0%">` | `stop-color` | `lab(75.2632 -15.2671 69.6454)` | **derselbe Wert** |
+| `<stop offset="0%">` | `stop-opacity` | `1` | `1` |
+| `<stop offset="100%">` | `stop-opacity` | `0.08` | `0.08` |
+| `<Area stroke>` | `stroke` | `lab(45.0772 -10.2198 46.636)` | `lab(81.368 -14.7569 60.378)` |
+| *das Token selbst* | `--akzent` | `lab(75.2632% -15.2671 69.6454)` | **derselbe Wert** |
+| *das Token selbst* | `--akzent-schrift` | `lab(45.0772% -10.2198 46.636)` | `lab(81.368% -14.7569 60.378)` |
+
+**`--akzent` steht in beiden Blöcken auf demselben Wert** (`globals.css`: `--dunkel-akzent` ist
+ziffernweise `--akzent`). Das ist keine Nachlässigkeit, sondern die Absicht des Farbsystems — und
+für diese Messung ein Vorteil: Am oberen Stopp ändert sich zwischen den Schemata **nichts**, und
+der einzige Unterschied, den die Pixel zeigen können, ist die Mischung am Fuß.
+
+### Und weil „aufgelöst" nicht „gemalt" heißt: das Pixel
+
+Aufgenommen mit `deviceScaleFactor: 2`, gelesen wird die **häufigste** Farbe einer Gerätezeile über
+dem Plateau (234 Gerätepixel breit bei 1500, 112 bei 768, 43 bei 360). Sollwerte sind die
+**Hex-Rückfälle aus dem gebauten CSS** (`.next/static/**/*.css`), nachgesehen und nicht gerechnet.
+
+| Lage | hell | dunkel | Sollwert hell · dunkel |
+|---|---|---|---|
+| **E — Kontrolle, Farbverlauf ohne Rampe** | `#b9c022` / `#b9c023` | **ziffernweise dieselbe Verteilung** | `#b9c022` |
+| **A — obere Kante, mit Rampe** | `#b9c023` | `#b9c022` | `#b9c022` · `#b9c022` |
+| **A — untere Kante** (Deckung 0,08) | `#f9faec` | `#262619` | Mischung, siehe unten |
+| **B — die Kontur** | `#6a6f0f` | `#c9d151` | `#6a6f0f` · `#c9d151` |
+| *Gegenprobe* `bg-akzent` | `#b9c022` | `#b9c022` | `#b9c022` |
+| *Gegenprobe* `bg-akzent-schrift` | `#6a6f0f` | `#c9d151` | `#6a6f0f` · `#c9d151` |
+| *Gegenprobe* `bg-card` | `#ffffff` | `#181818` | `#fff` · `#181818` |
+
+### Die Deutung, gegen die vorher festgelegte Tabelle gehalten
+
+**Die obere Kante weicht nicht ab — und die Kontrollprobe sagt genauer, was „nicht abweichen"
+hier überhaupt heißen kann.**
+
+Die Kontrolle E trägt keine Alpha-Rampe: Jede Zeile ihrer Fläche *ist* das Token. Gemalt werden
+dort **zwei** Farben, `#b9c022` und `#b9c023`, zu etwa gleichen Teilen — die beiden benachbarten
+Achtbit-Stufen desselben Wertes. Und zwar **in Hell und Dunkel mit ziffernweise identischer
+Verteilung** (bei 1500 px: 0,752 zu 0,248 in der ersten Zeile, 0,5 zu 0,5 tiefer unten, in beiden
+Schemata gleich). Der Untergrund hat darauf keinen Einfluss, und das muss er bei voller Deckung
+auch nicht haben.
+
+Daneben steht die Gegenprobe: dieselbe Farbe als **flache** Füllung über eine Tailwind-Klasse
+(`bg-akzent`) malt `#b9c022` **einheitlich, ohne zweite Farbe**. Der Unterschied liegt also nicht
+am Token, sondern daran, dass Chrome innerhalb eines `<linearGradient>` zwischen den beiden
+nächstliegenden Stufen **rastert**.
+
+Damit ist auch die eine Einheit erklärt, die Probe A im hellen Block trägt (`#b9c023` statt
+`#b9c022`, Blaukanal 35 statt 34): Sie liegt **innerhalb** des Rasterpaars, das die Kontrolle ohne
+jede Rampe schon zeigt. Der Sollwert wird getroffen; das letzte Bit gehört dem Rasterer.
+
+**Ein Token, das nicht durchkäme, sähe völlig anders aus.** Der erste Lauf hat das gezeigt: Dort
+stand `#d5d97b` gegen `#b9c022` — **89 Einheiten** im Blaukanal, nicht eine.
+
+**Die untere Kante weicht ab, wie vorgesehen, und hier stehen die Werte je Schema:** `#f9faec` auf
+`--card` `#ffffff`, `#262619` auf `--card` `#181818`. Rechnerisch erwartbar wären `#f9faed`
+beziehungsweise `#252519`; gemessen ist eine Einheit daneben, in derselben Größenordnung wie oben.
+**Der Wert ist keine Eigenschaft des Tokens**, sondern eine des Untergrunds — deshalb steht er hier
+zweimal und nicht als Sollwert.
+
+> ### Belegvermerk *(Regel L10)*
+>
+> **Gemessen war:** die Attribute `stop-color` und `stop-opacity` am `<stop>`, das Attribut
+> `stroke` an der Konturkurve, `getComputedStyle` zu beiden, und das gemalte Pixel an oberer und
+> unterer Kante der Fläche sowie auf der Kontur — je in sechs Lagen (drei Fensterbreiten × zwei
+> Farbschemata), dazu drei Gegenproben über Tailwind-Klassen auf derselben Seite und eine
+> Kontrollprobe mit einem Farbverlauf **ohne** Alpha-Rampe.
+>
+> **Behauptet wird:** `var(--token)` kommt in `<stop stop-color>` und in `<Area stroke>`
+> unverändert an, löst auf und wird als der Hex-Rückfall des gebauten CSS gemalt — in beiden
+> Farbschemata. Am Fuß der Fläche malt die Deckung 0,08 eine Mischung mit `--card`, deren Wert je
+> Schema oben steht.
+>
+> **Nicht gemessen** ist alles außerhalb dieser Lagen: `Cell`, `activeBar`, Farbverläufe mit
+> **zwei verschiedenen Farben** (hier tragen beide Stopps dasselbe Token), `radialGradient`,
+> Linien- und andere Diagrammformen. Und **nicht gemessen, sondern Augenschein** ist, dass 0,08 die
+> richtige Deckung für den Fuß ist — das ist eine Aussage über das Bild und keine über eine Zahl.
+>
+> **Die eine Einheit im Blaukanal ist nicht erklärt, sondern eingegrenzt.** Dass sie aus der
+> Rundung der Alpha-Rampe stammt, folgt aus der Kontrollprobe und aus dem Vorzeichenwechsel
+> zwischen hellem und dunklem Grund; die Rundungsregel des Rasterers selbst ist nicht nachgelesen.
+
+### Nebenbefund: `Math.round` in der Balkenlage — und wer eigentlich auf der Achse steht
+
+Die Nachmessung hat eine zweite Zahl geliefert, die vorher niemand gebraucht hatte, weil beide
+Diagramme Balken waren.
+
+**Die Zeitachse steht unter dem Fehlerstreifen und gilt für beide Diagramme.** Ihre Marken sitzen
+auf den **Bandmitten** (`combineAxisTicks` addiert `bandwidth / 2`). Gemessen am laufenden System
+(NEXANS, Dev-Anker, drei Zeiträume × drei Breiten = neun Lagen):
+
+| | Befund |
+|---|---|
+| Zeichenbereich beider Diagramme | in allen neun Lagen **zeichengleich** (`x1`/`x2` der Gitterlinie) |
+| Zeitmarke ↔ Bandmitte | **0,0000 px** in allen neun Lagen |
+| Zeitmarke ↔ Stützstelle der Fläche | **≤ 0,0005 px** über 23 Marken (bei voller Breite nachgezählt) |
+| Zeitmarke ↔ **Balkenmitte** | **0,0218 bis 0,2084 px** |
+
+**Der Balken ist es, der nicht ganz auf seiner Bandmitte steht, und das war er vorher auch schon.**
+`combineAllBarPositions.js` rundet die Balkenbreite auf eine ganze Zahl
+(`if (originalSize > 1) originalSize = Math.round(originalSize)`), und die halbe Rundungsdifferenz
+verschiebt die Mitte:
+
+```
+Versatz = (round(Bandbreite − 2·barCategoryGap) − (Bandbreite − 2·barCategoryGap)) / 2
+```
+
+Der Ausdruck trifft **alle neun gemessenen Lagen auf 0,0001 px**. Er ist betragsmäßig durch
+**0,25 px** beschränkt, unabhängig von `maxBarSize` und von der Zahl der Eimer.
+
+**Was sich dadurch geändert hat, und was nicht.** Bis zum 04.09.2026 trugen beide Diagramme Balken,
+beide bekamen dieselbe Rundung, und der Versatz **zwischen ihnen** war deshalb 0,0 px
+([`dichte-umschalter.md`](dichte-umschalter.md) §5.1, 24 Lagen). Seither steht oben eine Fläche,
+und ihre Stützstellen liegen auf der **echten** Bandmitte.
+
+Die Aussage „beide stehen übereinander" ist damit **an einer Stelle genauer geworden und an einer
+anderen nicht mehr exakt**: Die Fläche liegt jetzt auf der Zeitachse, gemessen auf 0,0005 px
+genau; der Balken darunter steht bis zu 0,21 px neben derselben Achse.
+
+> **Was daran gemessen ist und was gelesen.** Gemessen sind die neun Lagen von heute. **Nicht
+> gemessen** ist der Zustand vor dieser Runde — dass der Balken auch damals neben seiner eigenen
+> Beschriftung stand, folgt aus dem Quelltext und nicht aus einer Aufnahme: Weder die Balkenlage
+> (`combineAllBarPositions.js`) noch die Achsenmarken (`combineAxisTicks`) sind in dieser Runde
+> angefasst worden, und beide sind dieselben Zeilen wie am 01.09.2026. Wer die Aussage härter
+> braucht, misst sie am alten Stand nach.
 
 ---
 
@@ -1305,4 +1560,16 @@ gerissen hat, ist eine Behauptung.
   dem Generator. Generatorbereich; wenn sie stört, wird die Komponente umschlossen, nicht geändert.
 - **Kein Dunkelmodus, keine Barrierefreiheit über die Grundlagen hinaus** — bewusst außerhalb dieses
   Schritts.
+
+  > **Die erste Hälfte ist am 03.09.2026 entfallen** *(Schritt 11b)*. **Es gibt einen Dunkelmodus**:
+  > drei Werte im Cookie `overlord_thema`, `data-thema` am Wurzelelement, ein Eintrag im
+  > Nutzermenü — dieselbe Bauform wie die Sprachwahl in §4 und der Dichteumschalter, und aus
+  > demselben Grund im **Cookie** und nicht in `localStorage`: `data-thema` steht an **Byte 47** des
+  > servergerenderten Dokuments, vor jedem Stylesheet und jedem Skript. Ausgeschrieben in
+  > [`dunkelmodus.md`](dunkelmodus.md) §12 ff.
+  >
+  > **Die zweite Hälfte gilt unverändert.** Was 11b an Barrierefreiheit dazugetan hat, ist der
+  > Kontrast in beiden Wertesätzen (`tests/farbkontrast.test.ts`, 11a) und `color-scheme`, damit
+  > native Bedienelemente mitgehen — **kein Vorleseprogramm, kein Berührungsgerät, keine
+  > Tastaturprüfung über die Grundlagen hinaus.**
 - **Die Sprachwahl liegt nur im Cookie**, also je Gerät und Browser.
