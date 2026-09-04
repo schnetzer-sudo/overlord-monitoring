@@ -431,6 +431,64 @@ wäre eine Vermutung, die beim Eintreffen der Antwort springt.
 > > *vor* dem Umbau — die 0,21 px sind über den unveränderten Quelltext hergeleitet und nicht am
 > > alten Stand nachgestellt.
 
+> ### ✔ Die Kurve verlässt das Datenintervall nicht — nachgemessen am 04.09.2026
+>
+> **`type="monotone"` und nicht `natural`, und das ist keine Änderung dieser Runde.** Der Auftrag
+> zur Nachbesserung nannte als Befund, die Glättung überschwinge und zeichne Werte, die in den Daten
+> nicht vorkommen. **Der Quelltext trug `monotone` schon beim ersten Bau von E‑83** — nachgesehen im
+> Verlauf der Datei, nicht erinnert: In keinem Stand hat je `natural` dagestanden. Was gefehlt hat,
+> war der **Nachweis**; er steht jetzt hier.
+>
+> **Beide sind weiche Kurven, und nur eine kann überschwingen.** Recharts bildet `natural` auf d3s
+> natürliche kubische Spline ab; sie legt eine zweimal stetig differenzierbare Kurve durch alle
+> Stützstellen und darf dafür zwischen zweien über sie hinausgehen. `monotone` bildet auf
+> `curveMonotoneX` ab: An einem lokalen Hoch- oder Tiefpunkt ist die Steigung **null**, und die
+> Kontrolpunkte liegen auf demselben Wert wie die Stützstelle. Zwischen zwei Stützstellen bleibt die
+> Kurve damit im Intervall der beiden.
+>
+> #### Gemessen ist der **gezeichnete Pfad**, nicht die Absicht
+>
+> Aus dem `d`-Attribut von `.recharts-area-curve` am laufenden System, jede kubische Bézierkurve in
+> 200 Schritten abgetastet, das Ergebnis über die y‑Achsenmarken in Nachrichten zurückgerechnet.
+> `NEXANS`, Profil `dev`, Anker `2025-12-30 04:09:47`:
+>
+> | Zeitraum | Eimer | die Daten | der gezeichnete Pfad | Überschwingen oben / unten |
+> |---|---:|---|---|---|
+> | **48 Stunden** | 45 | **8 … 3.068** | **8,00 … 3.067,99** | **0,0000 px / 0,0000 px** |
+> | 30 Tage | 30 | 626 … 15.254 | 625,98 … 15.254,02 | 0,0000 px / 0,0000 px |
+> | 12 Monate | 12 | 174.176 … 208.766 | 174.176,36 … 208.766,36 | 0,0000 px / 0,0000 px |
+>
+> **Die beiden Zahlen, um die es geht, stehen in der ersten Zeile.** Der höchste Eimer trägt 3.068
+> Nachrichten, der Pfad erreicht dort 3.067,99; der niedrigste trägt 8, der Pfad erreicht dort 8,00.
+> Die Abweichung ist die Auflösung der Rückrechnung über die Achse und kein Überschwingen: In
+> **Pixeln** — der Einheit, in der der Pfad wirklich steht — ist der Abstand zwischen dem Scheitel
+> der Kurve und der höchsten Stützstelle **0,0000**.
+>
+> #### Die Gegenprobe: dieselbe Messung fände den schlechten Fall
+>
+> **Ein Nachweis, der nur in eine Richtung eicht, ist keiner.** Über *dieselben* 45 Stützstellen ist
+> deshalb die natürliche Spline nachgerechnet worden — mit dem Rechenweg aus d3s
+> `curve/natural.js`, den Recharts für `type="natural"` benutzt:
+>
+> | | oben | unten |
+> |---|---|---|
+> | gezeichnet (`monotone`) | 3.067,99 | **8,00** |
+> | dieselben Punkte als `natural` | 3.068,74 | **−395,60** |
+> | Überschwingen | 0,06 px | **30,52 px** |
+>
+> **`natural` zöge die Kurve 30,5 Pixel unter die Nulllinie** — gemalte **−396 Nachrichten**, und
+> zwar genau an der Stelle, an der auf 3.068 der Eimer mit 8 folgt. Der Befund des Auftrags ist damit
+> als *Eigenschaft der Kurvenform* bestätigt, auch wenn er auf diesen Quelltext nie zutraf.
+>
+> > **Belegvermerk (L10).** *Gemessen war:* das `d`-Attribut der gezeichneten Kurve in allen drei
+> > Zeiträumen, dicht abgetastet, gegen die Eimersummen derselben Antwort; dazu die natürliche
+> > Spline über dieselben Stützstellen. *Behauptet wird:* Die gezeichnete Kurve verlässt das
+> > Intervall zwischen dem niedrigsten und dem höchsten Eimer in keinem der drei Zeiträume, und die
+> > Messung wäre in der Lage gewesen, das Gegenteil zu zeigen. — **Nicht gemessen** ist ein anderer
+> > Mandant als `NEXANS` und eine andere Fensterbreite als die des Messfensters; die Aussage folgt
+> > aber aus der Kurvenform und nicht aus diesen Daten, und die Gegenprobe zeigt, dass die Daten
+> > allein sie nicht tragen würden.
+
 > ### ⚠️ Korrektur vom 04.09.2026 — die Beschriftung der beiden Sammelrollen war falsch (**E‑82**)
 >
 > **Die Gruppierung stimmt, der Name stimmte nicht.** Vier Reihen bleiben vier Reihen, die

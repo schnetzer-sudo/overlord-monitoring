@@ -1042,3 +1042,37 @@ braucht, misst sie dort nach.
 
 **Und keine der beiden Korrekturen sagt etwas über die Daten.** Es geht in beiden Fällen um Pixel,
 nicht um Nachrichten; `PROJEKTBESCHREIBUNG.md` ist unberührt.
+
+---
+
+## 04.09.2026 — der Befund „die Kurve überschwingt" traf auf diesen Quelltext nie zu
+
+**Art:** Nachmessung an der laufenden Anwendung. Keine Aussage über das Quellsystem — korrigiert
+wird eine Annahme über den **eigenen Stand**, und zwar eine, die im Auftrag stand.
+
+**Was angenommen war:** Die Fläche des Verlaufs sei mit `type="natural"` gezeichnet; die Glättung
+überschwinge und male Werte, die in den Daten nicht vorkommen. Verlangt war der Wechsel auf
+`type="monotone"`.
+
+**Was zutrifft:** Der Quelltext trägt `type="monotone"`, seit die Fläche gebaut worden ist
+(E‑83, 04.09.2026). **In keinem Stand hat je `natural` dagestanden** — nachgesehen im Verlauf der
+Datei, nicht erinnert. Es war nichts zu ändern.
+
+**Woher die Annahme vermutlich stammt, und warum das kein Vorwurf ist:** Das Vorbild, an dem die
+Fläche gebaut ist, ist das Flächendiagramm von shadcn/ui, und **das benutzt `natural`**
+([`dashboard-frontend.md`](dashboard-frontend.md) §5.2 nennt es als Vorbild). Wer den Umbau am Bild
+beurteilt, sieht eine weiche Kurve und hat keinen Anlass anzunehmen, dass an genau dieser Stelle vom
+Vorbild abgewichen worden ist. **Der Auftrag hat eine reale Eigenschaft der Vorlage benannt.**
+
+**Was gefehlt hat, ist der Nachweis — und der fehlt jetzt nicht mehr.** Der gezeichnete Pfad ist in
+allen drei Zeiträumen aus dem `d`-Attribut ausgelesen und dicht abgetastet worden: Er verlässt das
+Intervall zwischen niedrigstem und höchstem Eimer um **0,0000 px**. Dieselbe Rechnung mit der
+natürlichen Spline über dieselben Stützstellen läge bei **−395,6 Nachrichten**, also 30,5 px unter
+der Nulllinie. **Der Befund des Auftrags gilt für die Kurvenform und nicht für diesen Stand.**
+
+Zahlen, Rechenweg und Belegvermerk in [`dashboard-frontend.md`](dashboard-frontend.md) §5.2.
+
+**Die Lehre, und sie ist die teurere Hälfte:** Bis heute stand in der Ansicht ein Kommentar, der
+`monotone` gegen `natural` begründete — **ohne eine einzige Zahl**. Eine Begründung ohne Messung
+liest sich wie eine Behauptung, und eine Behauptung lädt dazu ein, ihr Gegenteil zu vermuten. Der
+Kommentar hatte recht und konnte es nicht zeigen.

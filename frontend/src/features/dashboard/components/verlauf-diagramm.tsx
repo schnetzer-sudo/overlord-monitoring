@@ -295,6 +295,16 @@ export function VerlaufDiagramm({
            * Eimer eine Kurve **unter null**. Das wäre eine negative Anzahl
            * Nachrichten, gemalt. `monotone` kann das nicht.
            *
+           * **Seit dem 04.09.2026 steht eine Zahl daneben statt einer
+           * Behauptung.** Der gezeichnete Pfad ist aus dem `d`-Attribut
+           * ausgelesen und dicht abgetastet worden, in allen drei Zeiträumen:
+           * Er verlässt das Intervall zwischen niedrigstem und höchstem Eimer
+           * um **0,0000 px**. Über dieselben 45 Stützstellen läge die
+           * natürliche Spline bei **−395,6 Nachrichten** — 30,5 px unter der
+           * Nulllinie. Zahlen und Gegenprobe in
+           * [`docs/dashboard-frontend.md`](../../../../docs/dashboard-frontend.md)
+           * §5.2.
+           *
            * **`fillOpacity={1}` ist kein Beiwerk.** Recharts' Voreinstellung
            * für `<Area>` ist **0,6** (`cartesian/Area.js`), und sie liegt
            * *über* dem Farbverlauf: Ohne diese Zeile malte die Oberkante nicht
