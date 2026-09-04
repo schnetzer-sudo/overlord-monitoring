@@ -1,0 +1,648 @@
+mysql: [Warning] Using a password on the command line interface can be insecure.
++----------------------+
+| marke                |
++----------------------+
+| === 00 read_only === |
++----------------------+
++-----------+---------------------+
+| read_only | serverzeit          |
++-----------+---------------------+
+|         1 | 2026-09-04 15:38:40 |
++-----------+---------------------+
++-----------------------------------+
+| marke                             |
++-----------------------------------+
+| --- NEXANS 48H alt (6 Laeufe) --- |
++-----------------------------------+
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus | ProcessID         | SOSName                   |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| ea1060ee-c5d9-43d7-99fd-1fb9d7f993e5 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e59f6ee7-58d4-43ae-846d-610d12364152 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e5180fd2-51e5-458b-851b-7ca8ca6e1768 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| d4c9ecfb-ee86-4c8e-8aff-53e867b21bc8 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| c6e962bf-e001-41ac-b64f-cb7418260339 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| b7ffbd5c-d10c-433e-8437-2e4b4f7b8a8c | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a8c32098-85c6-48b2-9622-eee145aa3d22 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a4ee2b61-61cc-4bcb-9a1c-2a8ef6e72f46 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9e91d98a-b856-4d7a-8859-b44b7066aaf3 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9c1e5aa2-e444-4390-b909-488d42ab9a65 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus | ProcessID         | SOSName                   |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| ea1060ee-c5d9-43d7-99fd-1fb9d7f993e5 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e59f6ee7-58d4-43ae-846d-610d12364152 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e5180fd2-51e5-458b-851b-7ca8ca6e1768 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| d4c9ecfb-ee86-4c8e-8aff-53e867b21bc8 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| c6e962bf-e001-41ac-b64f-cb7418260339 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| b7ffbd5c-d10c-433e-8437-2e4b4f7b8a8c | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a8c32098-85c6-48b2-9622-eee145aa3d22 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a4ee2b61-61cc-4bcb-9a1c-2a8ef6e72f46 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9e91d98a-b856-4d7a-8859-b44b7066aaf3 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9c1e5aa2-e444-4390-b909-488d42ab9a65 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus | ProcessID         | SOSName                   |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| ea1060ee-c5d9-43d7-99fd-1fb9d7f993e5 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e59f6ee7-58d4-43ae-846d-610d12364152 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e5180fd2-51e5-458b-851b-7ca8ca6e1768 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| d4c9ecfb-ee86-4c8e-8aff-53e867b21bc8 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| c6e962bf-e001-41ac-b64f-cb7418260339 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| b7ffbd5c-d10c-433e-8437-2e4b4f7b8a8c | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a8c32098-85c6-48b2-9622-eee145aa3d22 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a4ee2b61-61cc-4bcb-9a1c-2a8ef6e72f46 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9e91d98a-b856-4d7a-8859-b44b7066aaf3 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9c1e5aa2-e444-4390-b909-488d42ab9a65 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus | ProcessID         | SOSName                   |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| ea1060ee-c5d9-43d7-99fd-1fb9d7f993e5 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e59f6ee7-58d4-43ae-846d-610d12364152 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e5180fd2-51e5-458b-851b-7ca8ca6e1768 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| d4c9ecfb-ee86-4c8e-8aff-53e867b21bc8 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| c6e962bf-e001-41ac-b64f-cb7418260339 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| b7ffbd5c-d10c-433e-8437-2e4b4f7b8a8c | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a8c32098-85c6-48b2-9622-eee145aa3d22 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a4ee2b61-61cc-4bcb-9a1c-2a8ef6e72f46 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9e91d98a-b856-4d7a-8859-b44b7066aaf3 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9c1e5aa2-e444-4390-b909-488d42ab9a65 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus | ProcessID         | SOSName                   |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| ea1060ee-c5d9-43d7-99fd-1fb9d7f993e5 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e59f6ee7-58d4-43ae-846d-610d12364152 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e5180fd2-51e5-458b-851b-7ca8ca6e1768 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| d4c9ecfb-ee86-4c8e-8aff-53e867b21bc8 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| c6e962bf-e001-41ac-b64f-cb7418260339 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| b7ffbd5c-d10c-433e-8437-2e4b4f7b8a8c | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a8c32098-85c6-48b2-9622-eee145aa3d22 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a4ee2b61-61cc-4bcb-9a1c-2a8ef6e72f46 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9e91d98a-b856-4d7a-8859-b44b7066aaf3 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9c1e5aa2-e444-4390-b909-488d42ab9a65 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus | ProcessID         | SOSName                   |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| ea1060ee-c5d9-43d7-99fd-1fb9d7f993e5 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e59f6ee7-58d4-43ae-846d-610d12364152 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e5180fd2-51e5-458b-851b-7ca8ca6e1768 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| d4c9ecfb-ee86-4c8e-8aff-53e867b21bc8 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| c6e962bf-e001-41ac-b64f-cb7418260339 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| b7ffbd5c-d10c-433e-8437-2e4b4f7b8a8c | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a8c32098-85c6-48b2-9622-eee145aa3d22 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a4ee2b61-61cc-4bcb-9a1c-2a8ef6e72f46 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9e91d98a-b856-4d7a-8859-b44b7066aaf3 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9c1e5aa2-e444-4390-b909-488d42ab9a65 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
++-----------------------------------+
+| marke                             |
++-----------------------------------+
+| --- NEXANS 48H neu (6 Laeufe) --- |
++-----------------------------------+
++----------------------+------------------------------+----------+--------------------------+
+| ProcessID            | ProcessName                  | COUNT(*) | MAX(m.MessageLastUpdate) |
++----------------------+------------------------------+----------+--------------------------+
+| 40090_BMW_LAB_VDA    | BMW LAB (VDA)                |       49 | 2025-12-30 04:09:47      |
+| 40105_BMW_GI_EDIFACT | BMW Global Invoice (EDIFACT) |        1 | 2025-12-29 12:48:16      |
++----------------------+------------------------------+----------+--------------------------+
++----------------------+------------------------------+----------+--------------------------+
+| ProcessID            | ProcessName                  | COUNT(*) | MAX(m.MessageLastUpdate) |
++----------------------+------------------------------+----------+--------------------------+
+| 40090_BMW_LAB_VDA    | BMW LAB (VDA)                |       49 | 2025-12-30 04:09:47      |
+| 40105_BMW_GI_EDIFACT | BMW Global Invoice (EDIFACT) |        1 | 2025-12-29 12:48:16      |
++----------------------+------------------------------+----------+--------------------------+
++----------------------+------------------------------+----------+--------------------------+
+| ProcessID            | ProcessName                  | COUNT(*) | MAX(m.MessageLastUpdate) |
++----------------------+------------------------------+----------+--------------------------+
+| 40090_BMW_LAB_VDA    | BMW LAB (VDA)                |       49 | 2025-12-30 04:09:47      |
+| 40105_BMW_GI_EDIFACT | BMW Global Invoice (EDIFACT) |        1 | 2025-12-29 12:48:16      |
++----------------------+------------------------------+----------+--------------------------+
++----------------------+------------------------------+----------+--------------------------+
+| ProcessID            | ProcessName                  | COUNT(*) | MAX(m.MessageLastUpdate) |
++----------------------+------------------------------+----------+--------------------------+
+| 40090_BMW_LAB_VDA    | BMW LAB (VDA)                |       49 | 2025-12-30 04:09:47      |
+| 40105_BMW_GI_EDIFACT | BMW Global Invoice (EDIFACT) |        1 | 2025-12-29 12:48:16      |
++----------------------+------------------------------+----------+--------------------------+
++----------------------+------------------------------+----------+--------------------------+
+| ProcessID            | ProcessName                  | COUNT(*) | MAX(m.MessageLastUpdate) |
++----------------------+------------------------------+----------+--------------------------+
+| 40090_BMW_LAB_VDA    | BMW LAB (VDA)                |       49 | 2025-12-30 04:09:47      |
+| 40105_BMW_GI_EDIFACT | BMW Global Invoice (EDIFACT) |        1 | 2025-12-29 12:48:16      |
++----------------------+------------------------------+----------+--------------------------+
++----------------------+------------------------------+----------+--------------------------+
+| ProcessID            | ProcessName                  | COUNT(*) | MAX(m.MessageLastUpdate) |
++----------------------+------------------------------+----------+--------------------------+
+| 40090_BMW_LAB_VDA    | BMW LAB (VDA)                |       49 | 2025-12-30 04:09:47      |
+| 40105_BMW_GI_EDIFACT | BMW Global Invoice (EDIFACT) |        1 | 2025-12-29 12:48:16      |
++----------------------+------------------------------+----------+--------------------------+
++-----------------------------------+
+| marke                             |
++-----------------------------------+
+| --- NEXANS 30T alt (6 Laeufe) --- |
++-----------------------------------+
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus | ProcessID         | SOSName                   |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| ea1060ee-c5d9-43d7-99fd-1fb9d7f993e5 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e59f6ee7-58d4-43ae-846d-610d12364152 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e5180fd2-51e5-458b-851b-7ca8ca6e1768 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| d4c9ecfb-ee86-4c8e-8aff-53e867b21bc8 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| c6e962bf-e001-41ac-b64f-cb7418260339 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| b7ffbd5c-d10c-433e-8437-2e4b4f7b8a8c | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a8c32098-85c6-48b2-9622-eee145aa3d22 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a4ee2b61-61cc-4bcb-9a1c-2a8ef6e72f46 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9e91d98a-b856-4d7a-8859-b44b7066aaf3 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9c1e5aa2-e444-4390-b909-488d42ab9a65 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus | ProcessID         | SOSName                   |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| ea1060ee-c5d9-43d7-99fd-1fb9d7f993e5 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e59f6ee7-58d4-43ae-846d-610d12364152 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e5180fd2-51e5-458b-851b-7ca8ca6e1768 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| d4c9ecfb-ee86-4c8e-8aff-53e867b21bc8 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| c6e962bf-e001-41ac-b64f-cb7418260339 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| b7ffbd5c-d10c-433e-8437-2e4b4f7b8a8c | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a8c32098-85c6-48b2-9622-eee145aa3d22 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a4ee2b61-61cc-4bcb-9a1c-2a8ef6e72f46 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9e91d98a-b856-4d7a-8859-b44b7066aaf3 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9c1e5aa2-e444-4390-b909-488d42ab9a65 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus | ProcessID         | SOSName                   |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| ea1060ee-c5d9-43d7-99fd-1fb9d7f993e5 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e59f6ee7-58d4-43ae-846d-610d12364152 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e5180fd2-51e5-458b-851b-7ca8ca6e1768 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| d4c9ecfb-ee86-4c8e-8aff-53e867b21bc8 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| c6e962bf-e001-41ac-b64f-cb7418260339 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| b7ffbd5c-d10c-433e-8437-2e4b4f7b8a8c | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a8c32098-85c6-48b2-9622-eee145aa3d22 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a4ee2b61-61cc-4bcb-9a1c-2a8ef6e72f46 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9e91d98a-b856-4d7a-8859-b44b7066aaf3 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9c1e5aa2-e444-4390-b909-488d42ab9a65 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus | ProcessID         | SOSName                   |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| ea1060ee-c5d9-43d7-99fd-1fb9d7f993e5 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e59f6ee7-58d4-43ae-846d-610d12364152 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e5180fd2-51e5-458b-851b-7ca8ca6e1768 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| d4c9ecfb-ee86-4c8e-8aff-53e867b21bc8 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| c6e962bf-e001-41ac-b64f-cb7418260339 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| b7ffbd5c-d10c-433e-8437-2e4b4f7b8a8c | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a8c32098-85c6-48b2-9622-eee145aa3d22 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a4ee2b61-61cc-4bcb-9a1c-2a8ef6e72f46 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9e91d98a-b856-4d7a-8859-b44b7066aaf3 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9c1e5aa2-e444-4390-b909-488d42ab9a65 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus | ProcessID         | SOSName                   |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| ea1060ee-c5d9-43d7-99fd-1fb9d7f993e5 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e59f6ee7-58d4-43ae-846d-610d12364152 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e5180fd2-51e5-458b-851b-7ca8ca6e1768 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| d4c9ecfb-ee86-4c8e-8aff-53e867b21bc8 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| c6e962bf-e001-41ac-b64f-cb7418260339 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| b7ffbd5c-d10c-433e-8437-2e4b4f7b8a8c | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a8c32098-85c6-48b2-9622-eee145aa3d22 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a4ee2b61-61cc-4bcb-9a1c-2a8ef6e72f46 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9e91d98a-b856-4d7a-8859-b44b7066aaf3 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9c1e5aa2-e444-4390-b909-488d42ab9a65 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus | ProcessID         | SOSName                   |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| ea1060ee-c5d9-43d7-99fd-1fb9d7f993e5 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e59f6ee7-58d4-43ae-846d-610d12364152 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e5180fd2-51e5-458b-851b-7ca8ca6e1768 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| d4c9ecfb-ee86-4c8e-8aff-53e867b21bc8 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| c6e962bf-e001-41ac-b64f-cb7418260339 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| b7ffbd5c-d10c-433e-8437-2e4b4f7b8a8c | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a8c32098-85c6-48b2-9622-eee145aa3d22 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a4ee2b61-61cc-4bcb-9a1c-2a8ef6e72f46 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9e91d98a-b856-4d7a-8859-b44b7066aaf3 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9c1e5aa2-e444-4390-b909-488d42ab9a65 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
++-----------------------------------+
+| marke                             |
++-----------------------------------+
+| --- NEXANS 30T neu (6 Laeufe) --- |
++-----------------------------------+
++---------------------------+------------------------------+----------+--------------------------+
+| ProcessID                 | ProcessName                  | COUNT(*) | MAX(m.MessageLastUpdate) |
++---------------------------+------------------------------+----------+--------------------------+
+| 40090_BMW_LAB_VDA         | BMW LAB (VDA)                |       49 | 2025-12-30 04:09:47      |
+| 40105_BMW_GI_EDIFACT      | BMW Global Invoice (EDIFACT) |        3 | 2025-12-29 12:48:16      |
+| 60040_CUMMINS_LAB_EDIFACT | CUMMINS LAB (EDIFACT)        |        3 | 2025-12-27 07:22:11      |
++---------------------------+------------------------------+----------+--------------------------+
++---------------------------+------------------------------+----------+--------------------------+
+| ProcessID                 | ProcessName                  | COUNT(*) | MAX(m.MessageLastUpdate) |
++---------------------------+------------------------------+----------+--------------------------+
+| 40090_BMW_LAB_VDA         | BMW LAB (VDA)                |       49 | 2025-12-30 04:09:47      |
+| 40105_BMW_GI_EDIFACT      | BMW Global Invoice (EDIFACT) |        3 | 2025-12-29 12:48:16      |
+| 60040_CUMMINS_LAB_EDIFACT | CUMMINS LAB (EDIFACT)        |        3 | 2025-12-27 07:22:11      |
++---------------------------+------------------------------+----------+--------------------------+
++---------------------------+------------------------------+----------+--------------------------+
+| ProcessID                 | ProcessName                  | COUNT(*) | MAX(m.MessageLastUpdate) |
++---------------------------+------------------------------+----------+--------------------------+
+| 40090_BMW_LAB_VDA         | BMW LAB (VDA)                |       49 | 2025-12-30 04:09:47      |
+| 40105_BMW_GI_EDIFACT      | BMW Global Invoice (EDIFACT) |        3 | 2025-12-29 12:48:16      |
+| 60040_CUMMINS_LAB_EDIFACT | CUMMINS LAB (EDIFACT)        |        3 | 2025-12-27 07:22:11      |
++---------------------------+------------------------------+----------+--------------------------+
++---------------------------+------------------------------+----------+--------------------------+
+| ProcessID                 | ProcessName                  | COUNT(*) | MAX(m.MessageLastUpdate) |
++---------------------------+------------------------------+----------+--------------------------+
+| 40090_BMW_LAB_VDA         | BMW LAB (VDA)                |       49 | 2025-12-30 04:09:47      |
+| 40105_BMW_GI_EDIFACT      | BMW Global Invoice (EDIFACT) |        3 | 2025-12-29 12:48:16      |
+| 60040_CUMMINS_LAB_EDIFACT | CUMMINS LAB (EDIFACT)        |        3 | 2025-12-27 07:22:11      |
++---------------------------+------------------------------+----------+--------------------------+
++---------------------------+------------------------------+----------+--------------------------+
+| ProcessID                 | ProcessName                  | COUNT(*) | MAX(m.MessageLastUpdate) |
++---------------------------+------------------------------+----------+--------------------------+
+| 40090_BMW_LAB_VDA         | BMW LAB (VDA)                |       49 | 2025-12-30 04:09:47      |
+| 40105_BMW_GI_EDIFACT      | BMW Global Invoice (EDIFACT) |        3 | 2025-12-29 12:48:16      |
+| 60040_CUMMINS_LAB_EDIFACT | CUMMINS LAB (EDIFACT)        |        3 | 2025-12-27 07:22:11      |
++---------------------------+------------------------------+----------+--------------------------+
++---------------------------+------------------------------+----------+--------------------------+
+| ProcessID                 | ProcessName                  | COUNT(*) | MAX(m.MessageLastUpdate) |
++---------------------------+------------------------------+----------+--------------------------+
+| 40090_BMW_LAB_VDA         | BMW LAB (VDA)                |       49 | 2025-12-30 04:09:47      |
+| 40105_BMW_GI_EDIFACT      | BMW Global Invoice (EDIFACT) |        3 | 2025-12-29 12:48:16      |
+| 60040_CUMMINS_LAB_EDIFACT | CUMMINS LAB (EDIFACT)        |        3 | 2025-12-27 07:22:11      |
++---------------------------+------------------------------+----------+--------------------------+
++-----------------------------------+
+| marke                             |
++-----------------------------------+
+| --- NEXANS 12M alt (6 Laeufe) --- |
++-----------------------------------+
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus | ProcessID         | SOSName                   |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| ea1060ee-c5d9-43d7-99fd-1fb9d7f993e5 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e59f6ee7-58d4-43ae-846d-610d12364152 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e5180fd2-51e5-458b-851b-7ca8ca6e1768 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| d4c9ecfb-ee86-4c8e-8aff-53e867b21bc8 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| c6e962bf-e001-41ac-b64f-cb7418260339 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| b7ffbd5c-d10c-433e-8437-2e4b4f7b8a8c | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a8c32098-85c6-48b2-9622-eee145aa3d22 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a4ee2b61-61cc-4bcb-9a1c-2a8ef6e72f46 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9e91d98a-b856-4d7a-8859-b44b7066aaf3 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9c1e5aa2-e444-4390-b909-488d42ab9a65 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus | ProcessID         | SOSName                   |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| ea1060ee-c5d9-43d7-99fd-1fb9d7f993e5 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e59f6ee7-58d4-43ae-846d-610d12364152 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e5180fd2-51e5-458b-851b-7ca8ca6e1768 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| d4c9ecfb-ee86-4c8e-8aff-53e867b21bc8 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| c6e962bf-e001-41ac-b64f-cb7418260339 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| b7ffbd5c-d10c-433e-8437-2e4b4f7b8a8c | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a8c32098-85c6-48b2-9622-eee145aa3d22 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a4ee2b61-61cc-4bcb-9a1c-2a8ef6e72f46 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9e91d98a-b856-4d7a-8859-b44b7066aaf3 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9c1e5aa2-e444-4390-b909-488d42ab9a65 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus | ProcessID         | SOSName                   |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| ea1060ee-c5d9-43d7-99fd-1fb9d7f993e5 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e59f6ee7-58d4-43ae-846d-610d12364152 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e5180fd2-51e5-458b-851b-7ca8ca6e1768 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| d4c9ecfb-ee86-4c8e-8aff-53e867b21bc8 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| c6e962bf-e001-41ac-b64f-cb7418260339 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| b7ffbd5c-d10c-433e-8437-2e4b4f7b8a8c | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a8c32098-85c6-48b2-9622-eee145aa3d22 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a4ee2b61-61cc-4bcb-9a1c-2a8ef6e72f46 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9e91d98a-b856-4d7a-8859-b44b7066aaf3 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9c1e5aa2-e444-4390-b909-488d42ab9a65 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus | ProcessID         | SOSName                   |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| ea1060ee-c5d9-43d7-99fd-1fb9d7f993e5 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e59f6ee7-58d4-43ae-846d-610d12364152 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e5180fd2-51e5-458b-851b-7ca8ca6e1768 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| d4c9ecfb-ee86-4c8e-8aff-53e867b21bc8 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| c6e962bf-e001-41ac-b64f-cb7418260339 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| b7ffbd5c-d10c-433e-8437-2e4b4f7b8a8c | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a8c32098-85c6-48b2-9622-eee145aa3d22 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a4ee2b61-61cc-4bcb-9a1c-2a8ef6e72f46 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9e91d98a-b856-4d7a-8859-b44b7066aaf3 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9c1e5aa2-e444-4390-b909-488d42ab9a65 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus | ProcessID         | SOSName                   |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| ea1060ee-c5d9-43d7-99fd-1fb9d7f993e5 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e59f6ee7-58d4-43ae-846d-610d12364152 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e5180fd2-51e5-458b-851b-7ca8ca6e1768 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| d4c9ecfb-ee86-4c8e-8aff-53e867b21bc8 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| c6e962bf-e001-41ac-b64f-cb7418260339 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| b7ffbd5c-d10c-433e-8437-2e4b4f7b8a8c | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a8c32098-85c6-48b2-9622-eee145aa3d22 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a4ee2b61-61cc-4bcb-9a1c-2a8ef6e72f46 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9e91d98a-b856-4d7a-8859-b44b7066aaf3 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9c1e5aa2-e444-4390-b909-488d42ab9a65 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus | ProcessID         | SOSName                   |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
+| ea1060ee-c5d9-43d7-99fd-1fb9d7f993e5 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e59f6ee7-58d4-43ae-846d-610d12364152 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| e5180fd2-51e5-458b-851b-7ca8ca6e1768 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| d4c9ecfb-ee86-4c8e-8aff-53e867b21bc8 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| c6e962bf-e001-41ac-b64f-cb7418260339 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| b7ffbd5c-d10c-433e-8437-2e4b4f7b8a8c | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a8c32098-85c6-48b2-9622-eee145aa3d22 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| a4ee2b61-61cc-4bcb-9a1c-2a8ef6e72f46 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9e91d98a-b856-4d7a-8859-b44b7066aaf3 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
+| 9c1e5aa2-e444-4390-b909-488d42ab9a65 | 2025-12-30 04:09:47 | ERROR_TIMEOUT | 40090_BMW_LAB_VDA | Lieferabruf von BMW (VDA) |
++--------------------------------------+---------------------+---------------+-------------------+---------------------------+
++-----------------------------------+
+| marke                             |
++-----------------------------------+
+| --- NEXANS 12M neu (6 Laeufe) --- |
++-----------------------------------+
++---------------------------+------------------------------+----------+--------------------------+
+| ProcessID                 | ProcessName                  | COUNT(*) | MAX(m.MessageLastUpdate) |
++---------------------------+------------------------------+----------+--------------------------+
+| 40090_BMW_LAB_VDA         | BMW LAB (VDA)                |       49 | 2025-12-30 04:09:47      |
+| 40105_BMW_GI_EDIFACT      | BMW Global Invoice (EDIFACT) |      659 | 2025-12-29 12:48:16      |
+| 60040_CUMMINS_LAB_EDIFACT | CUMMINS LAB (EDIFACT)        |        3 | 2025-12-27 07:22:11      |
++---------------------------+------------------------------+----------+--------------------------+
++---------------------------+------------------------------+----------+--------------------------+
+| ProcessID                 | ProcessName                  | COUNT(*) | MAX(m.MessageLastUpdate) |
++---------------------------+------------------------------+----------+--------------------------+
+| 40090_BMW_LAB_VDA         | BMW LAB (VDA)                |       49 | 2025-12-30 04:09:47      |
+| 40105_BMW_GI_EDIFACT      | BMW Global Invoice (EDIFACT) |      659 | 2025-12-29 12:48:16      |
+| 60040_CUMMINS_LAB_EDIFACT | CUMMINS LAB (EDIFACT)        |        3 | 2025-12-27 07:22:11      |
++---------------------------+------------------------------+----------+--------------------------+
++---------------------------+------------------------------+----------+--------------------------+
+| ProcessID                 | ProcessName                  | COUNT(*) | MAX(m.MessageLastUpdate) |
++---------------------------+------------------------------+----------+--------------------------+
+| 40090_BMW_LAB_VDA         | BMW LAB (VDA)                |       49 | 2025-12-30 04:09:47      |
+| 40105_BMW_GI_EDIFACT      | BMW Global Invoice (EDIFACT) |      659 | 2025-12-29 12:48:16      |
+| 60040_CUMMINS_LAB_EDIFACT | CUMMINS LAB (EDIFACT)        |        3 | 2025-12-27 07:22:11      |
++---------------------------+------------------------------+----------+--------------------------+
++---------------------------+------------------------------+----------+--------------------------+
+| ProcessID                 | ProcessName                  | COUNT(*) | MAX(m.MessageLastUpdate) |
++---------------------------+------------------------------+----------+--------------------------+
+| 40090_BMW_LAB_VDA         | BMW LAB (VDA)                |       49 | 2025-12-30 04:09:47      |
+| 40105_BMW_GI_EDIFACT      | BMW Global Invoice (EDIFACT) |      659 | 2025-12-29 12:48:16      |
+| 60040_CUMMINS_LAB_EDIFACT | CUMMINS LAB (EDIFACT)        |        3 | 2025-12-27 07:22:11      |
++---------------------------+------------------------------+----------+--------------------------+
++---------------------------+------------------------------+----------+--------------------------+
+| ProcessID                 | ProcessName                  | COUNT(*) | MAX(m.MessageLastUpdate) |
++---------------------------+------------------------------+----------+--------------------------+
+| 40090_BMW_LAB_VDA         | BMW LAB (VDA)                |       49 | 2025-12-30 04:09:47      |
+| 40105_BMW_GI_EDIFACT      | BMW Global Invoice (EDIFACT) |      659 | 2025-12-29 12:48:16      |
+| 60040_CUMMINS_LAB_EDIFACT | CUMMINS LAB (EDIFACT)        |        3 | 2025-12-27 07:22:11      |
++---------------------------+------------------------------+----------+--------------------------+
++---------------------------+------------------------------+----------+--------------------------+
+| ProcessID                 | ProcessName                  | COUNT(*) | MAX(m.MessageLastUpdate) |
++---------------------------+------------------------------+----------+--------------------------+
+| 40090_BMW_LAB_VDA         | BMW LAB (VDA)                |       49 | 2025-12-30 04:09:47      |
+| 40105_BMW_GI_EDIFACT      | BMW Global Invoice (EDIFACT) |      659 | 2025-12-29 12:48:16      |
+| 60040_CUMMINS_LAB_EDIFACT | CUMMINS LAB (EDIFACT)        |        3 | 2025-12-27 07:22:11      |
++---------------------------+------------------------------+----------+--------------------------+
++----------------------------------------+
+| marke                                  |
++----------------------------------------+
+| === EXPLAIN verdichtet, NEXANS 12M === |
++----------------------------------------+
++------+-------------+-------+--------+---------------------------------------------------------------------------------------------------------+------------------+---------+--------------------------------+------+---------------------------------------------------------------------+
+| id   | select_type | table | type   | possible_keys                                                                                           | key              | key_len | ref                            | rows | Extra                                                               |
++------+-------------+-------+--------+---------------------------------------------------------------------------------------------------------+------------------+---------+--------------------------------+------+---------------------------------------------------------------------+
+|    1 | PRIMARY     | m     | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageStatusIDX,MessageLastUpdateProcessMessageIDX | MessageStatusIDX | 123     | NULL                           | 6257 | Using index condition; Using where; Using temporary; Using filesort |
+|    1 | PRIMARY     | p     | eq_ref | PRIMARY                                                                                                 | PRIMARY          | 146     | GlassfishDB.m.ProcessID        | 1    | Using where                                                         |
+|    1 | PRIMARY     | dp    | eq_ref | PRIMARY,Process_ProjectFK                                                                               | PRIMARY          | 146     | GlassfishDB.m.ProcessID        | 1    | Using where                                                         |
+|    1 | PRIMARY     | dpm   | eq_ref | PRIMARY,ProjectMandant_Mandant_idx                                                                      | PRIMARY          | 292     | GlassfishDB.dp.ProjectID,const | 1    | Using where; Using index                                            |
++------+-------------+-------+--------+---------------------------------------------------------------------------------------------------------+------------------+---------+--------------------------------+------+---------------------------------------------------------------------+
++---------------------------------+
+| marke                           |
++---------------------------------+
+| === EXPLAIN alt, NEXANS 12M === |
++---------------------------------+
++------+-------------+-------+--------+---------------------------------------------------------------------------------------------------------+------------------+---------+--------------------------------+------+----------------------------------------------------+
+| id   | select_type | table | type   | possible_keys                                                                                           | key              | key_len | ref                            | rows | Extra                                              |
++------+-------------+-------+--------+---------------------------------------------------------------------------------------------------------+------------------+---------+--------------------------------+------+----------------------------------------------------+
+|    1 | PRIMARY     | m     | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageStatusIDX,MessageLastUpdateProcessMessageIDX | MessageStatusIDX | 123     | NULL                           | 6257 | Using index condition; Using where; Using filesort |
+|    1 | PRIMARY     | dp    | eq_ref | PRIMARY,Process_ProjectFK                                                                               | PRIMARY          | 146     | GlassfishDB.m.ProcessID        | 1    | Using where                                        |
+|    1 | PRIMARY     | dpm   | eq_ref | PRIMARY,ProjectMandant_Mandant_idx                                                                      | PRIMARY          | 292     | GlassfishDB.dp.ProjectID,const | 1    | Using where; Using index                           |
+|    1 | PRIMARY     | s     | eq_ref | PRIMARY                                                                                                 | PRIMARY          | 146     | GlassfishDB.m.SOSID            | 1    | Using where                                        |
++------+-------------+-------+--------+---------------------------------------------------------------------------------------------------------+------------------+---------+--------------------------------+------+----------------------------------------------------+
++----------------+
+| marke          |
++----------------+
+| === Profil === |
++----------------+
++----------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Query_ID | Duration   | Query                                                                                                                                                                                                                                                                                                        |
++----------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|        1 | 0.00020780 | SET profiling_history_size = 100                                                                                                                                                                                                                                                                             |
+|        2 | 0.00022980 | SELECT '--- NEXANS 48H alt (6 Laeufe) ---' AS marke                                                                                                                                                                                                                                                          |
+|        3 | 0.02560671 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|        4 | 0.02337837 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|        5 | 0.02424343 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|        6 | 0.02478918 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|        7 | 0.02510323 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|        8 | 0.02378074 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|        9 | 0.00025539 | SELECT '--- NEXANS 48H neu (6 Laeufe) ---' AS marke                                                                                                                                                                                                                                                          |
+|       10 | 0.02217718 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       11 | 0.02220126 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       12 | 0.02295611 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       13 | 0.02242094 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       14 | 0.02358995 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       15 | 0.02383304 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       16 | 0.00026410 | SELECT '--- NEXANS 30T alt (6 Laeufe) ---' AS marke                                                                                                                                                                                                                                                          |
+|       17 | 0.02416616 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       18 | 0.02432025 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       19 | 0.02391493 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       20 | 0.02405754 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       21 | 0.02492560 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       22 | 0.02530269 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       23 | 0.00025777 | SELECT '--- NEXANS 30T neu (6 Laeufe) ---' AS marke                                                                                                                                                                                                                                                          |
+|       24 | 0.02277882 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       25 | 0.02280874 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       26 | 0.02248827 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       27 | 0.02326963 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       28 | 0.02293124 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       29 | 0.02325724 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       30 | 0.00029408 | SELECT '--- NEXANS 12M alt (6 Laeufe) ---' AS marke                                                                                                                                                                                                                                                          |
+|       31 | 0.02549634 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       32 | 0.02647936 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       33 | 0.02358717 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       34 | 0.02329074 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       35 | 0.02310829 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       36 | 0.02342411 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       37 | 0.00027769 | SELECT '--- NEXANS 12M neu (6 Laeufe) ---' AS marke                                                                                                                                                                                                                                                          |
+|       38 | 0.02665216 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       39 | 0.02679804 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       40 | 0.02626882 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       41 | 0.02622026 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       42 | 0.02772393 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       43 | 0.02660491 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       44 | 0.00027042 | SELECT '=== EXPLAIN verdichtet, NEXANS 12M ===' AS marke                                                                                                                                                                                                                                                     |
+|       45 | 0.00129040 | EXPLAIN SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'C |
+|       46 | 0.00019767 | SELECT '=== EXPLAIN alt, NEXANS 12M ===' AS marke                                                                                                                                                                                                                                                            |
+|       47 | 0.00082642 | EXPLAIN SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'CO |
+|       48 | 0.00017773 | SELECT '=== Profil ===' AS marke                                                                                                                                                                                                                                                                             |
++----------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+

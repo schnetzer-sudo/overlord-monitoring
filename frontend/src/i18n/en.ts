@@ -198,8 +198,9 @@ export const en: Texte = {
     aufgefallen: {
       titel: "Recently noticed",
       leer: "Nothing was noticed during this period.",
-      ohneProzess: "no process",
-      zeileOeffnen: "Open this message",
+      anzahlEins: "1 message",
+      anzahlViele: "{anzahl} messages",
+      zeileOeffnen: "Show these {anzahl} in the message list",
     },
 
     stand: {

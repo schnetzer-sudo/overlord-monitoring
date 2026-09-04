@@ -352,17 +352,17 @@ class DashboardStatementsTest {
     }
 
     /**
-     * <b>Der Block hatte zwei Haelften und hat seit dem 03.09.2026 eine.</b> Die
-     * Ueberfaelligkeitshaelfte ist mit E-71 entfallen; der Indexhinweis darunter gilt unveraendert
-     * (M108).
+     * <b>Der Block hatte zwei Haelften, dann eine — und seit dem 04.09.2026 gruppiert er.</b> Die
+     * Ueberfaelligkeitshaelfte ist mit E-71 entfallen; E-90 macht aus der Zeile je Nachricht eine
+     * Zeile je Prozess. Der Indexhinweis darunter gilt unveraendert (M108, nachgemessen in M146).
      */
     @Test
-    @DisplayName("Zuletzt aufgefallen: ein Statement, und es traegt nur die Fehlerbedingung")
+    @DisplayName("Zuletzt aufgefallen: ein Statement, gruppiert nach Prozess")
     void zuletzt_aufgefallen() {
       gerendert.clear();
       repository.zuletztAufgefallen(MANDANT, Rollupzeitraum.STUNDEN_48.fenster(JETZT), 10);
 
-      assertThat(gerendert).as("Die Ueberfaelligkeitshaelfte ist entfallen").hasSize(1);
+      assertThat(gerendert).as("Ein Statement, nicht zwei").hasSize(1);
       assertThat(einziges())
           .as("Das LIKE mit ESCAPE und COMMIT_REJECTED, und keine Frist")
           .contains("`GlassfishDB`.`Message`.`MessageStatus` like ? escape")
@@ -370,11 +370,26 @@ class DashboardStatementsTest {
           .doesNotContain("date_add(")
           .doesNotContain("`GlassfishDB`.`Message`.`MessageStatus` in (")
           .contains("`GlassfishDB`.`Message`.`MessageLastUpdate` >= ?")
-          .contains(
-              "order by `GlassfishDB`.`Message`.`MessageLastUpdate` desc,"
-                  + " `GlassfishDB`.`Message`.`MessageID` desc")
           .contains("rows only")
           .contains("exists (select 1 as `one`");
+
+      assertThat(einziges())
+          .as("Gruppiert wird nach dem SCHLUESSEL und dem Namen — nicht nach dem Namen allein")
+          .contains(
+              "group by `GlassfishDB`.`Message`.`ProcessID`,"
+                  + " `GlassfishDB`.`Process`.`ProcessName`")
+          .as("Anzahl und juengster Zeitpunkt je Gruppe")
+          .contains("count(*)")
+          .contains("max(`GlassfishDB`.`Message`.`MessageLastUpdate`)")
+          .as("Sortiert wird nach dem juengsten Zeitpunkt, nicht nach der Spalte")
+          .contains("order by max(`GlassfishDB`.`Message`.`MessageLastUpdate`) desc")
+          .as("Der zweite Schluessel haelt die Reihenfolge fest")
+          .contains("`GlassfishDB`.`Message`.`ProcessID` desc");
+
+      assertThat(einziges())
+          .as("Der Name kommt aus Process und nicht mehr aus SOS — sonst waere er geraten")
+          .contains("left outer join `GlassfishDB`.`Process`")
+          .doesNotContain("`GlassfishDB`.`SOS`.`SOSName`");
     }
 
     /**
@@ -448,8 +463,9 @@ class DashboardStatementsTest {
         .startsWith("select count(*), min(")
         .contains("`MessageStatus` = ?");
     assertThat(knapp.get(5))
-        .as("6 Zuletzt aufgefallen — eine Haelfte, nicht zwei")
-        .contains("`MessageStatus` like ? escape");
+        .as("6 Zuletzt aufgefallen — eine Haelfte, nicht zwei, und je Prozess gruppiert")
+        .contains("`MessageStatus` like ? escape")
+        .contains("group by `GlassfishDB`.`Message`.`ProcessID`");
     assertThat(knapp.get(6)).as("7 Stand").contains("from `overlord_monitor`.`rollup_lauf`");
   }
 

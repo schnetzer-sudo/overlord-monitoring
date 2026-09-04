@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { texteFuer } from "@/i18n";
 import type { Dashboard, Verteilung } from "@/features/dashboard/api";
 import { DashboardAnsicht } from "@/features/dashboard/components/dashboard-ansicht";
+import { AufgefallenBlock } from "@/features/dashboard/components/aufgefallen-block";
 import { Kacheln } from "@/features/dashboard/components/kacheln";
 import { VerteilungBlock } from "@/features/dashboard/components/verteilung-block";
 
@@ -570,6 +571,121 @@ describe("Die Zahl der Anfragen", () => {
 
       expect(anfragen).toEqual(["/api/dashboard", "/api/dashboard?verteilung=RICHTUNG"]);
       expect(anfragen.every((adresse) => adresse.startsWith("/api/dashboard"))).toBe(true);
+    } finally {
+      await gerendert.abbauen();
+    }
+  });
+});
+
+/**
+ * **„Zuletzt aufgefallen" — eine Zeile je Prozess** (Entscheidung **E‑90**).
+ *
+ * Der Block steht hier und nicht in `tests/dashboard.test.ts`, weil seine
+ * Aussagen **Reihenfolge** und **Zusammenfassung** betreffen: dass aus zehn
+ * gleichen Zeilen zwei verschiedene werden, dass die jüngste oben steht und dass
+ * die Zahl daneben zu dem Verweis passt, der darauf zeigt. Nichts davon ist ohne
+ * Baum zu treffen.
+ */
+describe("Zuletzt aufgefallen", () => {
+  const ZEILEN = [
+    {
+      processId: "40105_BMW_GI_EDIFACT",
+      processName: "BMW Global Invoice (EDIFACT)",
+      anzahl: 1,
+      zuletzt: "2025-12-29T11:48:16Z",
+      kategorie: "FEHLER" as const,
+    },
+    {
+      processId: "40090_BMW_LAB_VDA",
+      processName: "BMW LAB (VDA)",
+      anzahl: 49,
+      zuletzt: "2025-12-30T03:09:47Z",
+      kategorie: "FEHLER" as const,
+    },
+  ];
+
+  /**
+   * **Der Fall, um dessentwillen der Block umgebaut worden ist.** Vorher standen
+   * hier zehn Zeilen mit demselben Zeitstempel und demselben Ablauf; jetzt sagt
+   * jede Zeile etwas Eigenes. Geprüft wird beides: dass es **so viele Zeilen wie
+   * Prozesse** sind, und dass jede ihre **eigene Zahl** trägt.
+   */
+  it("zeigt eine Zeile je Prozess, mit Anzahl und jüngstem Zeitpunkt", async () => {
+    const gerendert = await rendere(<AufgefallenBlock zeilen={ZEILEN} fenster={FENSTER} />);
+
+    try {
+      const eintraege = [...gerendert.behaelter.querySelectorAll("li")];
+      expect(eintraege).toHaveLength(2);
+
+      const namen = eintraege.map((eintrag) => eintrag.querySelector("a")?.textContent);
+      expect(namen).toEqual(["BMW Global Invoice (EDIFACT)", "BMW LAB (VDA)"]);
+
+      // Die Zahlen stehen je Zeile und nicht als Summe darunter.
+      const zahlen = eintraege.map((eintrag) => eintrag.querySelector("[aria-label]")?.textContent);
+      expect(zahlen).toEqual(["1", "49"]);
+
+      // Und sie tragen ihr Wort für das Vorleseprogramm — Einzahl und Mehrzahl
+      // getrennt, weil die englische Fassung sie unterscheidet.
+      const beschriftungen = eintraege.map((eintrag) =>
+        eintrag.querySelector("[aria-label]")?.getAttribute("aria-label"),
+      );
+      expect(beschriftungen).toEqual([D.aufgefallen.anzahlEins, "49 Nachrichten"]);
+    } finally {
+      await gerendert.abbauen();
+    }
+  });
+
+  /**
+   * **Der Verweis führt in die Liste und nicht ins Detail** — und zwar auf genau
+   * die Menge, die die Zahl daneben nennt: dieser Prozess, `FEHLER`, dasselbe
+   * Fenster. Eine einzelne Nachricht herauszugreifen wäre eine Behauptung, die
+   * die Zeile nicht macht.
+   */
+  it("verweist auf die Liste, gefiltert auf diesen Prozess und auf Fehler", async () => {
+    const gerendert = await rendere(<AufgefallenBlock zeilen={ZEILEN} fenster={FENSTER} />);
+
+    try {
+      const ziele = [...gerendert.behaelter.querySelectorAll("a")].map((verweis) =>
+        verweis.getAttribute("href"),
+      );
+      for (const ziel of ziele) {
+        expect(ziel).toContain("status=FEHLER");
+        expect(ziel).toContain(`von=${encodeURIComponent(FENSTER.von)}`);
+        expect(ziel).toContain(`bis=${encodeURIComponent(FENSTER.bis)}`);
+      }
+      expect(ziele[0]).toContain("prozess=40105_BMW_GI_EDIFACT");
+      expect(ziele[1]).toContain("prozess=40090_BMW_LAB_VDA");
+
+      // Die Gegenprobe: kein Verweis zeigt mehr auf eine einzelne Nachricht.
+      expect(ziele.some((ziel) => ziel?.startsWith("/nachrichten/"))).toBe(false);
+    } finally {
+      await gerendert.abbauen();
+    }
+  });
+
+  /**
+   * **Ohne Namen steht die Kennung da und kein Ersatztext** (Regel Q4). Das
+   * Backend liefert `processName` als `null`, wenn die Spalte im Altsystem leer
+   * ist — geraten wird hier nichts, auch nicht aus der Kennung.
+   */
+  it("fällt ohne Klarnamen auf die Prozesskennung zurück", async () => {
+    const gerendert = await rendere(
+      <AufgefallenBlock zeilen={[{ ...ZEILEN[1], processName: null }]} fenster={FENSTER} />,
+    );
+
+    try {
+      expect(gerendert.behaelter.querySelector("a")?.textContent).toBe("40090_BMW_LAB_VDA");
+    } finally {
+      await gerendert.abbauen();
+    }
+  });
+
+  it("zeigt im Leerzustand einen Satz und keine leere Liste", async () => {
+    const gerendert = await rendere(<AufgefallenBlock zeilen={[]} fenster={FENSTER} />);
+
+    try {
+      expect(gerendert.behaelter.querySelector("ul")).toBeNull();
+      expect(gerendert.behaelter.textContent).toContain(D.aufgefallen.leer);
     } finally {
       await gerendert.abbauen();
     }

@@ -21,7 +21,8 @@ import java.util.List;
  *     nichts passiert" und „dieser Mandant hat ueberhaupt keine Daten" — der Satz, den die
  *     Oberflaeche dann zeigt, ist in beiden Faellen wahr. Die bekannte Folge: Ein stiller Sonntag
  *     und {@code EDITIONLINGERI} sehen gleich aus
- * @param zuletztAufgefallen Block 6 — Fehler und Ueberfaellige im Fenster, neueste zuerst
+ * @param zuletztAufgefallen Block 6 — die auffaelligen <b>Prozesse</b> im Fenster mit Anzahl und
+ *     juengstem Zeitpunkt, der juengste zuerst (E‑90)
  * @param stand Block 7 — der letzte abgeschlossene, fehlerfreie Rollup-Lauf. <b>{@code null}
  *     heisst: Es hat noch keinen gegeben</b>, und das ist etwas anderes als „lange her"
  */
@@ -32,7 +33,7 @@ public record DashboardResponse(
     List<VerlaufspunktResponse> verlauf,
     KachelnResponse kacheln,
     VerteilungResponse verteilung,
-    List<AuffaelligeNachrichtResponse> zuletztAufgefallen,
+    List<AuffaelligerProzessResponse> zuletztAufgefallen,
     StandResponse stand) {
 
   public DashboardResponse {

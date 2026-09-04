@@ -1,0 +1,378 @@
+mysql: [Warning] Using a password on the command line interface can be insecure.
++----------------------+
+| marke                |
++----------------------+
+| === 00 read_only === |
++----------------------+
++-----------+---------------------+
+| read_only | serverzeit          |
++-----------+---------------------+
+|         1 | 2026-09-04 15:38:42 |
++-----------+---------------------+
++---------------------------------+
+| marke                           |
++---------------------------------+
+| --- VOTG 48H alt (6 Laeufe) --- |
++---------------------------------+
++---------------------------------+
+| marke                           |
++---------------------------------+
+| --- VOTG 48H neu (6 Laeufe) --- |
++---------------------------------+
++---------------------------------+
+| marke                           |
++---------------------------------+
+| --- VOTG 30T alt (6 Laeufe) --- |
++---------------------------------+
++---------------------------------+
+| marke                           |
++---------------------------------+
+| --- VOTG 30T neu (6 Laeufe) --- |
++---------------------------------+
++---------------------------------+
+| marke                           |
++---------------------------------+
+| --- VOTG 12M alt (6 Laeufe) --- |
++---------------------------------+
++--------------------------------------+---------------------+-----------------+--------------------------------+---------------------------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus   | ProcessID                      | SOSName                                     |
++--------------------------------------+---------------------+-----------------+--------------------------------+---------------------------------------------+
+| ef8e1e7c-8e20-414f-9302-5a92f60f3436 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| b60167fb-ed72-49ee-930a-eb1f8d261671 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| b0056f95-f634-4206-b80a-3be01a1e7b04 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| a390e2c5-62aa-411b-92ca-93d7911d7787 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| 9edac04e-2955-44c6-9777-5c2b9d0d2e76 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| 442961fe-9fba-4e18-a939-91c92bda5c51 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| 363efea4-7ef8-4068-88cd-bedf0d954825 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| 15ac3cc2-0583-4d54-a634-548ee297b831 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
++--------------------------------------+---------------------+-----------------+--------------------------------+---------------------------------------------+
++--------------------------------------+---------------------+-----------------+--------------------------------+---------------------------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus   | ProcessID                      | SOSName                                     |
++--------------------------------------+---------------------+-----------------+--------------------------------+---------------------------------------------+
+| ef8e1e7c-8e20-414f-9302-5a92f60f3436 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| b60167fb-ed72-49ee-930a-eb1f8d261671 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| b0056f95-f634-4206-b80a-3be01a1e7b04 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| a390e2c5-62aa-411b-92ca-93d7911d7787 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| 9edac04e-2955-44c6-9777-5c2b9d0d2e76 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| 442961fe-9fba-4e18-a939-91c92bda5c51 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| 363efea4-7ef8-4068-88cd-bedf0d954825 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| 15ac3cc2-0583-4d54-a634-548ee297b831 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
++--------------------------------------+---------------------+-----------------+--------------------------------+---------------------------------------------+
++--------------------------------------+---------------------+-----------------+--------------------------------+---------------------------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus   | ProcessID                      | SOSName                                     |
++--------------------------------------+---------------------+-----------------+--------------------------------+---------------------------------------------+
+| ef8e1e7c-8e20-414f-9302-5a92f60f3436 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| b60167fb-ed72-49ee-930a-eb1f8d261671 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| b0056f95-f634-4206-b80a-3be01a1e7b04 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| a390e2c5-62aa-411b-92ca-93d7911d7787 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| 9edac04e-2955-44c6-9777-5c2b9d0d2e76 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| 442961fe-9fba-4e18-a939-91c92bda5c51 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| 363efea4-7ef8-4068-88cd-bedf0d954825 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| 15ac3cc2-0583-4d54-a634-548ee297b831 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
++--------------------------------------+---------------------+-----------------+--------------------------------+---------------------------------------------+
++--------------------------------------+---------------------+-----------------+--------------------------------+---------------------------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus   | ProcessID                      | SOSName                                     |
++--------------------------------------+---------------------+-----------------+--------------------------------+---------------------------------------------+
+| ef8e1e7c-8e20-414f-9302-5a92f60f3436 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| b60167fb-ed72-49ee-930a-eb1f8d261671 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| b0056f95-f634-4206-b80a-3be01a1e7b04 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| a390e2c5-62aa-411b-92ca-93d7911d7787 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| 9edac04e-2955-44c6-9777-5c2b9d0d2e76 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| 442961fe-9fba-4e18-a939-91c92bda5c51 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| 363efea4-7ef8-4068-88cd-bedf0d954825 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| 15ac3cc2-0583-4d54-a634-548ee297b831 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
++--------------------------------------+---------------------+-----------------+--------------------------------+---------------------------------------------+
++--------------------------------------+---------------------+-----------------+--------------------------------+---------------------------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus   | ProcessID                      | SOSName                                     |
++--------------------------------------+---------------------+-----------------+--------------------------------+---------------------------------------------+
+| ef8e1e7c-8e20-414f-9302-5a92f60f3436 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| b60167fb-ed72-49ee-930a-eb1f8d261671 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| b0056f95-f634-4206-b80a-3be01a1e7b04 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| a390e2c5-62aa-411b-92ca-93d7911d7787 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| 9edac04e-2955-44c6-9777-5c2b9d0d2e76 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| 442961fe-9fba-4e18-a939-91c92bda5c51 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| 363efea4-7ef8-4068-88cd-bedf0d954825 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| 15ac3cc2-0583-4d54-a634-548ee297b831 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
++--------------------------------------+---------------------+-----------------+--------------------------------+---------------------------------------------+
++--------------------------------------+---------------------+-----------------+--------------------------------+---------------------------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus   | ProcessID                      | SOSName                                     |
++--------------------------------------+---------------------+-----------------+--------------------------------+---------------------------------------------+
+| ef8e1e7c-8e20-414f-9302-5a92f60f3436 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| b60167fb-ed72-49ee-930a-eb1f8d261671 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| b0056f95-f634-4206-b80a-3be01a1e7b04 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| a390e2c5-62aa-411b-92ca-93d7911d7787 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| 9edac04e-2955-44c6-9777-5c2b9d0d2e76 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| 442961fe-9fba-4e18-a939-91c92bda5c51 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| 363efea4-7ef8-4068-88cd-bedf0d954825 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
+| 15ac3cc2-0583-4d54-a634-548ee297b831 | 2025-10-29 12:51:50 | COMMIT_REJECTED | 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |
++--------------------------------------+---------------------+-----------------+--------------------------------+---------------------------------------------+
++---------------------------------+
+| marke                           |
++---------------------------------+
+| --- VOTG 12M neu (6 Laeufe) --- |
++---------------------------------+
++--------------------------------+---------------------------------------------+----------+--------------------------+
+| ProcessID                      | ProcessName                                 | COUNT(*) | MAX(m.MessageLastUpdate) |
++--------------------------------+---------------------------------------------+----------+--------------------------+
+| 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |        8 | 2025-10-29 12:51:50      |
++--------------------------------+---------------------------------------------+----------+--------------------------+
++--------------------------------+---------------------------------------------+----------+--------------------------+
+| ProcessID                      | ProcessName                                 | COUNT(*) | MAX(m.MessageLastUpdate) |
++--------------------------------+---------------------------------------------+----------+--------------------------+
+| 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |        8 | 2025-10-29 12:51:50      |
++--------------------------------+---------------------------------------------+----------+--------------------------+
++--------------------------------+---------------------------------------------+----------+--------------------------+
+| ProcessID                      | ProcessName                                 | COUNT(*) | MAX(m.MessageLastUpdate) |
++--------------------------------+---------------------------------------------+----------+--------------------------+
+| 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |        8 | 2025-10-29 12:51:50      |
++--------------------------------+---------------------------------------------+----------+--------------------------+
++--------------------------------+---------------------------------------------+----------+--------------------------+
+| ProcessID                      | ProcessName                                 | COUNT(*) | MAX(m.MessageLastUpdate) |
++--------------------------------+---------------------------------------------+----------+--------------------------+
+| 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |        8 | 2025-10-29 12:51:50      |
++--------------------------------+---------------------------------------------+----------+--------------------------+
++--------------------------------+---------------------------------------------+----------+--------------------------+
+| ProcessID                      | ProcessName                                 | COUNT(*) | MAX(m.MessageLastUpdate) |
++--------------------------------+---------------------------------------------+----------+--------------------------+
+| 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |        8 | 2025-10-29 12:51:50      |
++--------------------------------+---------------------------------------------+----------+--------------------------+
++--------------------------------+---------------------------------------------+----------+--------------------------+
+| ProcessID                      | ProcessName                                 | COUNT(*) | MAX(m.MessageLastUpdate) |
++--------------------------------+---------------------------------------------+----------+--------------------------+
+| 08900_KOMBIVERKEHR_NS_RSP_TXML | Eingehende Quittung Neusystem Transport XML |        8 | 2025-10-29 12:51:50      |
++--------------------------------+---------------------------------------------+----------+--------------------------+
++--------------------------------------+
+| marke                                |
++--------------------------------------+
+| === EXPLAIN verdichtet, VOTG 12M === |
++--------------------------------------+
++------+-------------+-------+--------+---------------------------------------------------------------------------------------------------------+------------------+---------+--------------------------------+------+---------------------------------------------------------------------+
+| id   | select_type | table | type   | possible_keys                                                                                           | key              | key_len | ref                            | rows | Extra                                                               |
++------+-------------+-------+--------+---------------------------------------------------------------------------------------------------------+------------------+---------+--------------------------------+------+---------------------------------------------------------------------+
+|    1 | PRIMARY     | m     | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageStatusIDX,MessageLastUpdateProcessMessageIDX | MessageStatusIDX | 123     | NULL                           | 6257 | Using index condition; Using where; Using temporary; Using filesort |
+|    1 | PRIMARY     | p     | eq_ref | PRIMARY                                                                                                 | PRIMARY          | 146     | GlassfishDB.m.ProcessID        | 1    | Using where                                                         |
+|    1 | PRIMARY     | dp    | eq_ref | PRIMARY,Process_ProjectFK                                                                               | PRIMARY          | 146     | GlassfishDB.m.ProcessID        | 1    | Using where                                                         |
+|    1 | PRIMARY     | dpm   | eq_ref | PRIMARY,ProjectMandant_Mandant_idx                                                                      | PRIMARY          | 292     | GlassfishDB.dp.ProjectID,const | 1    | Using where; Using index                                            |
++------+-------------+-------+--------+---------------------------------------------------------------------------------------------------------+------------------+---------+--------------------------------+------+---------------------------------------------------------------------+
++-------------------------------+
+| marke                         |
++-------------------------------+
+| === EXPLAIN alt, VOTG 12M === |
++-------------------------------+
++------+-------------+-------+--------+---------------------------------------------------------------------------------------------------------+------------------+---------+--------------------------------+------+----------------------------------------------------+
+| id   | select_type | table | type   | possible_keys                                                                                           | key              | key_len | ref                            | rows | Extra                                              |
++------+-------------+-------+--------+---------------------------------------------------------------------------------------------------------+------------------+---------+--------------------------------+------+----------------------------------------------------+
+|    1 | PRIMARY     | m     | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageStatusIDX,MessageLastUpdateProcessMessageIDX | MessageStatusIDX | 123     | NULL                           | 6257 | Using index condition; Using where; Using filesort |
+|    1 | PRIMARY     | dp    | eq_ref | PRIMARY,Process_ProjectFK                                                                               | PRIMARY          | 146     | GlassfishDB.m.ProcessID        | 1    | Using where                                        |
+|    1 | PRIMARY     | dpm   | eq_ref | PRIMARY,ProjectMandant_Mandant_idx                                                                      | PRIMARY          | 292     | GlassfishDB.dp.ProjectID,const | 1    | Using where; Using index                           |
+|    1 | PRIMARY     | s     | eq_ref | PRIMARY                                                                                                 | PRIMARY          | 146     | GlassfishDB.m.SOSID            | 1    | Using where                                        |
++------+-------------+-------+--------+---------------------------------------------------------------------------------------------------------+------------------+---------+--------------------------------+------+----------------------------------------------------+
++----------------+
+| marke          |
++----------------+
+| === Profil === |
++----------------+
++----------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Query_ID | Duration   | Query                                                                                                                                                                                                                                                                                                        |
++----------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|        1 | 0.00015600 | SET profiling_history_size = 100                                                                                                                                                                                                                                                                             |
+|        2 | 0.00020721 | SELECT '--- VOTG 48H alt (6 Laeufe) ---' AS marke                                                                                                                                                                                                                                                            |
+|        3 | 0.02328271 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|        4 | 0.02282861 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|        5 | 0.02265317 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|        6 | 0.02274122 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|        7 | 0.02278149 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|        8 | 0.02194067 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|        9 | 0.00031368 | SELECT '--- VOTG 48H neu (6 Laeufe) ---' AS marke                                                                                                                                                                                                                                                            |
+|       10 | 0.02078497 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       11 | 0.01997891 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       12 | 0.02014808 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       13 | 0.02087985 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       14 | 0.02109239 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       15 | 0.02117219 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       16 | 0.00027234 | SELECT '--- VOTG 30T alt (6 Laeufe) ---' AS marke                                                                                                                                                                                                                                                            |
+|       17 | 0.02241391 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       18 | 0.02161425 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       19 | 0.02186737 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       20 | 0.02172643 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       21 | 0.02360049 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       22 | 0.02261629 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       23 | 0.00027293 | SELECT '--- VOTG 30T neu (6 Laeufe) ---' AS marke                                                                                                                                                                                                                                                            |
+|       24 | 0.02169076 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       25 | 0.02089964 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       26 | 0.02091095 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       27 | 0.02314194 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       28 | 0.02165049 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       29 | 0.02036970 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       30 | 0.00025892 | SELECT '--- VOTG 12M alt (6 Laeufe) ---' AS marke                                                                                                                                                                                                                                                            |
+|       31 | 0.02328511 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       32 | 0.02301459 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       33 | 0.02446766 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       34 | 0.02433320 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       35 | 0.02404304 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       36 | 0.02413076 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       37 | 0.00027359 | SELECT '--- VOTG 12M neu (6 Laeufe) ---' AS marke                                                                                                                                                                                                                                                            |
+|       38 | 0.02238459 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       39 | 0.02280150 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       40 | 0.02211842 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       41 | 0.02250777 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       42 | 0.02322011 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       43 | 0.02310387 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       44 | 0.00027195 | SELECT '=== EXPLAIN verdichtet, VOTG 12M ===' AS marke                                                                                                                                                                                                                                                       |
+|       45 | 0.00131586 | EXPLAIN SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'C |
+|       46 | 0.00017439 | SELECT '=== EXPLAIN alt, VOTG 12M ===' AS marke                                                                                                                                                                                                                                                              |
+|       47 | 0.00080796 | EXPLAIN SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'CO |
+|       48 | 0.00017156 | SELECT '=== Profil ===' AS marke                                                                                                                                                                                                                                                                             |
++----------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+

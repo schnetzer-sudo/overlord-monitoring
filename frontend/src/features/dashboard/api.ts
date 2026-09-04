@@ -200,16 +200,25 @@ export type Verteilung = { sicht: Verteilungssicht; zeilen: Verteilungszeile[] }
  */
 export type Auffaelligkeit = "FEHLER";
 
-export type AuffaelligeNachricht = {
-  messageId: string;
-  zeitpunkt: string;
-  /** Der Rohwert des Altsystems. */
-  status: string;
-  statusKind: Statusart;
+/**
+ * Eine Zeile aus „Zuletzt aufgefallen" — **ein Prozess, nicht eine Nachricht**
+ * (Entscheidung **E‑90**, 04.09.2026).
+ *
+ * Bis dahin stand hier `AuffaelligeNachricht` mit `messageId`, `status`,
+ * `statusKind` und `sosName`. Der Block zeigte damit zehnmal dieselbe Auskunft,
+ * sobald ein Prozess mehr als zehn Fehler im Fenster hatte — und das ist der
+ * Normalfall: Bei `NEXANS` über 48 Stunden stammen **49 der 50 Fehler aus einem
+ * einzigen Prozess** (M146).
+ */
+export type AuffaelligerProzess = {
+  processId: string;
+  /** Der Klarname aus `Process.ProcessName`. Darf `null` sein (Regel Q4). */
+  processName: string | null;
+  /** Wie viele auffällige Nachrichten dieser Prozess im Fenster hat. */
+  anzahl: number;
+  /** Der **jüngste** Zeitpunkt darunter. */
+  zuletzt: string;
   kategorie: Auffaelligkeit;
-  processId: string | null;
-  /** Darf `null` sein — „nicht zugeordnet heißt nicht zugeordnet". */
-  sosName: string | null;
 };
 
 /**
@@ -231,7 +240,7 @@ export type Dashboard = {
   verlauf: Verlaufspunkt[];
   kacheln: Kacheln;
   verteilung: Verteilung;
-  zuletztAufgefallen: AuffaelligeNachricht[];
+  zuletztAufgefallen: AuffaelligerProzess[];
   stand: Stand | null;
 };
 

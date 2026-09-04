@@ -1,0 +1,176 @@
+mysql: [Warning] Using a password on the command line interface can be insecure.
++--------------------------------------------------+
+| marke                                            |
++--------------------------------------------------+
+| === 00 read_only (erste Abfrage der Sitzung) === |
++--------------------------------------------------+
++-----------+---------------------+----------+
+| read_only | serverzeit          | grenze   |
++-----------+---------------------+----------+
+|         1 | 2026-09-04 15:36:05 | 0.000000 |
++-----------+---------------------+----------+
++--------------------------------------------------------------------------+
+| marke                                                                    |
++--------------------------------------------------------------------------+
+| === M146-0 Vorprobe: Fehlerzeilen und betroffene Prozesse je Mandant === |
++--------------------------------------------------------------------------+
++---------+----------------------------+---------------------+
+| mandant | fehlerzeilen_gesamtbestand | betroffene_prozesse |
++---------+----------------------------+---------------------+
+| NEXANS  |                       3300 |                   3 |
+| SUTTONS |                        103 |                   1 |
+| VOTG    |                          8 |                   1 |
++---------+----------------------------+---------------------+
++-------------------------------------------+
+| marke                                     |
++-------------------------------------------+
+| === M146-1 NEXANS 48H, vier Fassungen === |
++-------------------------------------------+
++-----------------+
+| fassung         |
++-----------------+
+| V1 ohne Hinweis |
++-----------------+
++----------------------+------------------------------+--------+---------------------+
+| prozess              | name                         | anzahl | zuletzt             |
++----------------------+------------------------------+--------+---------------------+
+| 40090_BMW_LAB_VDA    | BMW LAB (VDA)                |     49 | 2025-12-30 04:09:47 |
+| 40105_BMW_GI_EDIFACT | BMW Global Invoice (EDIFACT) |      1 | 2025-12-29 12:48:16 |
++----------------------+------------------------------+--------+---------------------+
++------------------------------+
+| fassung                      |
++------------------------------+
+| V2 IGNORE INDEX FOR ORDER BY |
++------------------------------+
++----------------------+------------------------------+--------+---------------------+
+| prozess              | name                         | anzahl | zuletzt             |
++----------------------+------------------------------+--------+---------------------+
+| 40090_BMW_LAB_VDA    | BMW LAB (VDA)                |     49 | 2025-12-30 04:09:47 |
+| 40105_BMW_GI_EDIFACT | BMW Global Invoice (EDIFACT) |      1 | 2025-12-29 12:48:16 |
++----------------------+------------------------------+--------+---------------------+
++------------------------+
+| fassung                |
++------------------------+
+| V3 IGNORE INDEX (voll) |
++------------------------+
++----------------------+------------------------------+--------+---------------------+
+| prozess              | name                         | anzahl | zuletzt             |
++----------------------+------------------------------+--------+---------------------+
+| 40090_BMW_LAB_VDA    | BMW LAB (VDA)                |     49 | 2025-12-30 04:09:47 |
+| 40105_BMW_GI_EDIFACT | BMW Global Invoice (EDIFACT) |      1 | 2025-12-29 12:48:16 |
++----------------------+------------------------------+--------+---------------------+
++-----------------------------------+
+| fassung                           |
++-----------------------------------+
+| V4 FORCE INDEX (MessageStatusIDX) |
++-----------------------------------+
++----------------------+------------------------------+--------+---------------------+
+| prozess              | name                         | anzahl | zuletzt             |
++----------------------+------------------------------+--------+---------------------+
+| 40090_BMW_LAB_VDA    | BMW LAB (VDA)                |     49 | 2025-12-30 04:09:47 |
+| 40105_BMW_GI_EDIFACT | BMW Global Invoice (EDIFACT) |      1 | 2025-12-29 12:48:16 |
++----------------------+------------------------------+--------+---------------------+
++-----------------------------------------------+
+| marke                                         |
++-----------------------------------------------+
+| === M146-1 EXPLAIN je Fassung, NEXANS 48H === |
++-----------------------------------------------+
++------+-------------+-------+--------+---------------------------------------------------------------------------------------------------------+------------------+---------+--------------------------------+------+---------------------------------------------------------------------+
+| id   | select_type | table | type   | possible_keys                                                                                           | key              | key_len | ref                            | rows | Extra                                                               |
++------+-------------+-------+--------+---------------------------------------------------------------------------------------------------------+------------------+---------+--------------------------------+------+---------------------------------------------------------------------+
+|    1 | PRIMARY     | m     | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageStatusIDX,MessageLastUpdateProcessMessageIDX | MessageStatusIDX | 123     | NULL                           | 6257 | Using index condition; Using where; Using temporary; Using filesort |
+|    1 | PRIMARY     | p     | eq_ref | PRIMARY                                                                                                 | PRIMARY          | 146     | GlassfishDB.m.ProcessID        | 1    | Using where                                                         |
+|    1 | PRIMARY     | dp    | eq_ref | PRIMARY,Process_ProjectFK                                                                               | PRIMARY          | 146     | GlassfishDB.m.ProcessID        | 1    | Using where                                                         |
+|    1 | PRIMARY     | dpm   | eq_ref | PRIMARY,ProjectMandant_Mandant_idx                                                                      | PRIMARY          | 292     | GlassfishDB.dp.ProjectID,const | 1    | Using where; Using index                                            |
++------+-------------+-------+--------+---------------------------------------------------------------------------------------------------------+------------------+---------+--------------------------------+------+---------------------------------------------------------------------+
++------+-------------+-------+--------+---------------------------------------------------------------------------------------------------------+------------------+---------+--------------------------------+------+---------------------------------------------------------------------+
+| id   | select_type | table | type   | possible_keys                                                                                           | key              | key_len | ref                            | rows | Extra                                                               |
++------+-------------+-------+--------+---------------------------------------------------------------------------------------------------------+------------------+---------+--------------------------------+------+---------------------------------------------------------------------+
+|    1 | PRIMARY     | m     | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageStatusIDX,MessageLastUpdateProcessMessageIDX | MessageStatusIDX | 123     | NULL                           | 6257 | Using index condition; Using where; Using temporary; Using filesort |
+|    1 | PRIMARY     | p     | eq_ref | PRIMARY                                                                                                 | PRIMARY          | 146     | GlassfishDB.m.ProcessID        | 1    | Using where                                                         |
+|    1 | PRIMARY     | dp    | eq_ref | PRIMARY,Process_ProjectFK                                                                               | PRIMARY          | 146     | GlassfishDB.m.ProcessID        | 1    | Using where                                                         |
+|    1 | PRIMARY     | dpm   | eq_ref | PRIMARY,ProjectMandant_Mandant_idx                                                                      | PRIMARY          | 292     | GlassfishDB.dp.ProjectID,const | 1    | Using where; Using index                                            |
++------+-------------+-------+--------+---------------------------------------------------------------------------------------------------------+------------------+---------+--------------------------------+------+---------------------------------------------------------------------+
++------+-------------+-------+--------+------------------------------------------------------------------------------------+------------------+---------+--------------------------------+------+---------------------------------------------------------------------+
+| id   | select_type | table | type   | possible_keys                                                                      | key              | key_len | ref                            | rows | Extra                                                               |
++------+-------------+-------+--------+------------------------------------------------------------------------------------+------------------+---------+--------------------------------+------+---------------------------------------------------------------------+
+|    1 | PRIMARY     | m     | range  | ProejctIDIDX,Message_ProcessFK,MessageStatusIDX,MessageLastUpdateProcessMessageIDX | MessageStatusIDX | 123     | NULL                           | 6257 | Using index condition; Using where; Using temporary; Using filesort |
+|    1 | PRIMARY     | p     | eq_ref | PRIMARY                                                                            | PRIMARY          | 146     | GlassfishDB.m.ProcessID        | 1    | Using where                                                         |
+|    1 | PRIMARY     | dp    | eq_ref | PRIMARY,Process_ProjectFK                                                          | PRIMARY          | 146     | GlassfishDB.m.ProcessID        | 1    | Using where                                                         |
+|    1 | PRIMARY     | dpm   | eq_ref | PRIMARY,ProjectMandant_Mandant_idx                                                 | PRIMARY          | 292     | GlassfishDB.dp.ProjectID,const | 1    | Using where; Using index                                            |
++------+-------------+-------+--------+------------------------------------------------------------------------------------+------------------+---------+--------------------------------+------+---------------------------------------------------------------------+
++------+-------------+-------+--------+------------------------------------+------------------+---------+--------------------------------+------+---------------------------------------------------------------------+
+| id   | select_type | table | type   | possible_keys                      | key              | key_len | ref                            | rows | Extra                                                               |
++------+-------------+-------+--------+------------------------------------+------------------+---------+--------------------------------+------+---------------------------------------------------------------------+
+|    1 | PRIMARY     | m     | range  | MessageStatusIDX                   | MessageStatusIDX | 123     | NULL                           | 6257 | Using index condition; Using where; Using temporary; Using filesort |
+|    1 | PRIMARY     | p     | eq_ref | PRIMARY                            | PRIMARY          | 146     | GlassfishDB.m.ProcessID        | 1    | Using where                                                         |
+|    1 | PRIMARY     | dp    | eq_ref | PRIMARY,Process_ProjectFK          | PRIMARY          | 146     | GlassfishDB.m.ProcessID        | 1    | Using where                                                         |
+|    1 | PRIMARY     | dpm   | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY          | 292     | GlassfishDB.dp.ProjectID,const | 1    | Using where; Using index                                            |
++------+-------------+-------+--------+------------------------------------+------------------+---------+--------------------------------+------+---------------------------------------------------------------------+
++-----------------------+
+| marke                 |
++-----------------------+
+| === M146-1 Profil === |
++-----------------------+
++----------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Query_ID | Duration   | Query                                                                                                                                                                                                                                                                                                        |
++----------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|        1 | 0.00018716 | SET profiling_history_size = 400                                                                                                                                                                                                                                                                             |
+|        2 | 0.00019253 | SELECT '=== M146-0 Vorprobe: Fehlerzeilen und betroffene Prozesse je Mandant ===' AS marke                                                                                                                                                                                                                   |
+|        3 | 0.04294867 | SELECT md.MandantID AS mandant,
+       COUNT(*) AS fehlerzeilen_gesamtbestand,
+       COUNT(DISTINCT m.ProcessID) AS betroffene_prozesse
+FROM GlassfishDB.Mandant md
+JOIN GlassfishDB.ProjectMandant pm ON pm.MandantID = md.MandantID
+JOIN GlassfishDB.Process p ON p.ProjectID = pm.ProjectID
+JOIN Glassfi |
+|        4 | 0.00026190 | SELECT '=== M146-1 NEXANS 48H, vier Fassungen ===' AS marke                                                                                                                                                                                                                                                  |
+|        5 | 0.00019316 | SELECT 'V1 ohne Hinweis' AS fassung                                                                                                                                                                                                                                                                          |
+|        6 | 0.02085340 | SELECT m.ProcessID AS prozess, p.ProcessName AS name,
+       COUNT(*) AS anzahl, MAX(m.MessageLastUpdate) AS zuletzt
+FROM GlassfishDB.Message m
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+       OR m.MessageStatus = 'COMMIT_REJECTED |
+|        7 | 0.00030889 | SELECT 'V2 IGNORE INDEX FOR ORDER BY' AS fassung                                                                                                                                                                                                                                                             |
+|        8 | 0.02048578 | SELECT m.ProcessID AS prozess, p.ProcessName AS name,
+       COUNT(*) AS anzahl, MAX(m.MessageLastUpdate) AS zuletzt
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE  |
+|        9 | 0.00028987 | SELECT 'V3 IGNORE INDEX (voll)' AS fassung                                                                                                                                                                                                                                                                   |
+|       10 | 0.02027239 | SELECT m.ProcessID AS prozess, p.ProcessName AS name,
+       COUNT(*) AS anzahl, MAX(m.MessageLastUpdate) AS zuletzt
+FROM GlassfishDB.Message m IGNORE INDEX (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+       O |
+|       11 | 0.00025935 | SELECT 'V4 FORCE INDEX (MessageStatusIDX)' AS fassung                                                                                                                                                                                                                                                        |
+|       12 | 0.01992937 | SELECT m.ProcessID AS prozess, p.ProcessName AS name,
+       COUNT(*) AS anzahl, MAX(m.MessageLastUpdate) AS zuletzt
+FROM GlassfishDB.Message m FORCE INDEX (MessageStatusIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+       OR m.M |
+|       13 | 0.00027164 | SELECT '=== M146-1 EXPLAIN je Fassung, NEXANS 48H ===' AS marke                                                                                                                                                                                                                                              |
+|       14 | 0.00125954 | EXPLAIN SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\' OR m.MessageStatus = 'COMMIT_REJECTED')
+  AND m.MessageLastUpdate >= '2025-12-28 09 |
+|       15 | 0.00084290 | EXPLAIN SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\' OR m.MessageStatus = 'COMMIT_REJEC |
+|       16 | 0.00081216 | EXPLAIN SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\' OR m.MessageStatus = 'COMMIT_REJECTED')
+  AND m |
+|       17 | 0.00072399 | EXPLAIN SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m FORCE INDEX (MessageStatusIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\' OR m.MessageStatus = 'COMMIT_REJECTED')
+  AND m.Mess |
+|       18 | 0.00017945 | SELECT '=== M146-1 Profil ===' AS marke                                                                                                                                                                                                                                                                      |
++----------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+

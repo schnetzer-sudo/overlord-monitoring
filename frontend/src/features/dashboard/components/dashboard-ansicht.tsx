@@ -113,7 +113,10 @@ export function DashboardAnsicht() {
            */}
           <div className="grid gap-4 xl:grid-cols-[3fr_2fr]">
             <Card size="sm" className="px-4">
-              <AufgefallenBlock zeilen={antwort.data.zuletztAufgefallen} />
+              <AufgefallenBlock
+                zeilen={antwort.data.zuletztAufgefallen}
+                fenster={antwort.data.fenster}
+              />
             </Card>
             <Card size="sm" className="px-4">
               <VerteilungBlock

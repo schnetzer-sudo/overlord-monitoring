@@ -198,11 +198,30 @@ export function wartendZiel(
 }
 
 /**
- * Eine einzelne Nachricht aus „Zuletzt aufgefallen" → das Detail auf seiner
- * **eigenen Route**.
+ * Eine Zeile aus „Zuletzt aufgefallen" → **die Liste, gefiltert auf diesen
+ * Prozess und auf `FEHLER`**, mit dem Fenster der Antwort.
  *
- * Nicht `/nachrichten?nachricht=…`: Das öffnete das Panel *neben der Liste* und
- * brächte damit eine Liste mit, die niemand angefragt hat — samt ihrem
- * Standardfenster, das mit dem des Dashboards nichts zu tun hat.
+ * ## Warum nicht mehr ins Nachrichtendetail
+ *
+ * Bis zum 04.09.2026 trug jede Zeile eine **Nachricht** und führte auf
+ * `/nachrichten/<id>`. Seit **E‑90** trägt sie einen **Prozess** mit `n`
+ * Nachrichten darunter — eine davon herauszugreifen wäre eine Behauptung, die
+ * die Zeile nicht macht. Das Ziel ist deshalb die Liste, und zwar **genau die
+ * Menge, die die Zahl daneben nennt**: derselbe Zeitraum, dieselbe Bedingung,
+ * dieser eine Prozess.
+ *
+ * **Damit kommt zurück, was der Verdichtung zum Opfer fiel.** Die Kennung der
+ * einzelnen Nachricht und ihr Rohstatus stehen nicht mehr in der Zeile; sie
+ * stehen einen Klick entfernt und dort vollständig, mit Cursor, Filter und
+ * Sortierung. Offener Punkt 136 verlangte den Rohstatus je Zeile zurück — eine
+ * Zeile, die einen ganzen Prozess zusammenfasst, hat keinen.
+ *
+ * `prozess=` ist derselbe Parameter, den die Liste ohnehin kennt; das Backend
+ * filtert darüber auf `Message.ProcessID`.
  */
-export { nachrichtAnsicht as nachrichtZiel } from "@/lib/routen";
+export function prozessFehlerZiel(fenster: Fenster, processId: string): string {
+  const parameter = new URLSearchParams();
+  parameter.set("status", "FEHLER");
+  parameter.set("prozess", processId);
+  return ziel(mitFenster(parameter, fenster));
+}

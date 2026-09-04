@@ -431,23 +431,42 @@ public class DashboardRepository {
   }
 
   /**
-   * <b>Block 6</b>: die auffaelligen Nachrichten des Fensters, neueste zuerst — <b>seit dem
-   * 03.09.2026 nur noch Fehler</b>.
+   * <b>Block 6</b>: die auffaelligen Prozesse des Fensters, neueste zuerst — <b>seit dem 04.09.2026
+   * eine Zeile je Prozess</b> (E‑90).
    *
-   * <h2>⚠️ Der Block hatte zwei Haelften und hat jetzt eine</h2>
+   * <h2>⚠️ Der Block listete Nachrichten, wo er Prozesse listen sollte</h2>
    *
-   * <p>Bis zum 03.09.2026 stellte diese Methode <b>zwei</b> Statements ab — eines fuer Fehler,
-   * eines fuer Ueberfaellige — und fuehrte sie in Java zusammen. Die <b>Ueberfaelligkeitshaelfte
-   * ist entfallen</b> (E‑71): Die Kategorie ist widerlegt, sie hat im eingeschwungenen Zustand
-   * keine wahren Treffer, und ein Block, der Fehlalarme neben Fehler stellt, ist schlechter als
-   * einer, der nur Fehler zeigt.
+   * <p>Bis heute lieferte diese Methode <b>eine Zeile je Nachricht</b>. Am laufenden System sah das
+   * so aus: zehn Zeilen, zehnmal derselbe Zeitstempel, zehnmal derselbe Ablauf. Der Grund steht in
+   * den Daten und nicht im Bau — bei {@code NEXANS} ueber 48 Stunden stammen <b>49 der 50 Fehler
+   * aus einem einzigen Prozess</b>, und ueber den <i>gesamten</i> Bestand hat {@code NEXANS} Fehler
+   * in genau <b>drei</b> Prozessen, {@code SUTTONS} in <b>einem</b>, {@code VOTG} in <b>einem</b>
+   * (M146). Ein einziger Prozess fuellte die Liste allein, und keine Zeile trug eine eigene
+   * Auskunft.
    *
-   * <p><b>Damit ist die Begruendung der Disjunktheit gegenstandslos.</b> Sie lautete: Aus zweimal
-   * zehn neuesten Zeilen sind die zehn neuesten dieselben wie aus einer gemeinsamen Abfrage, weil
-   * die beiden Mengen disjunkt sind (Fehler ist Endstatus, ueberfaellig setzt das Gegenteil
-   * voraus). Das war richtig und wird nicht gebraucht: Es gibt nur noch <b>eine</b> Menge, keine
-   * Zusammenfuehrung und keine Nachsortierung. {@code docs/dashboard.md} §7a fuehrt den Befund
-   * weiter, weil der Indexhinweis darunter unveraendert gilt.
+   * <p>Seither traegt jede Zeile <b>Anzahl</b> und <b>juengsten Zeitpunkt</b> je Prozess. Aus zehn
+   * gleichen Zeilen werden zwei verschiedene.
+   *
+   * <h2>Was das mit dem Indexhinweis macht — gemessen, nicht gefolgert (M146)</h2>
+   *
+   * <p><b>Die Sorge war berechtigt und hat sich nicht bestaetigt.</b> {@link #ZEITINDEX} wirkte in
+   * M108, weil er verbot, den Zeitindex <i>zur Sortierung</i> zu nehmen; ueber einer Gruppierung
+   * gibt es keine freie Sortierung mehr, und der Hinweis koennte damit ins Leere greifen, waehrend
+   * der Optimierer den Zeitindex fuer den <i>Bereich</i> waehlt. <b>Vier Fassungen gemessen</b> —
+   * ohne Hinweis, mit {@code IGNORE INDEX FOR ORDER BY}, mit dem vollen {@code IGNORE INDEX} und
+   * mit {@code FORCE INDEX (MessageStatusIDX)}: <b>alle vier steigen ueber {@code MessageStatusIDX}
+   * ein</b>, alle vier lesen dieselben 6.257 Zeilen, alle vier liegen bei 20 ms.
+   *
+   * <p><b>Der Hinweis bleibt trotzdem stehen, und zwar als Riegel und nicht als Wirkung.</b> Er
+   * kostet nichts (gemessen zeichengleich), {@code DashboardPlanDbIT} haelt fest, dass der
+   * Zeitindex in keiner Planzeile dieses Blocks steht, und die Wette auf die heutige Statistik ist
+   * seit M108 als offener Punkt 82 benannt. Ihn zu ziehen waere eine eigene Entscheidung mit einer
+   * eigenen Messung — <b>diese Runde hat sie nicht getroffen</b>.
+   *
+   * <p><b>{@code Using temporary; Using filesort} steht jetzt im Plan, und es ist nicht das, wovor
+   * §7a warnt.</b> Sortiert und gruppiert wird die <i>Ergebnismenge</i> — hoechstens ein paar
+   * hundert Zeilen —, nicht der Statusbereich; der Treiberindex und die gelesene Zeilenzahl sind
+   * Ziffer fuer Ziffer die von M108.
    *
    * <h2>Warum das nicht ueber das Listen-Repository laeuft, obwohl es dieselbe Frage ist</h2>
    *
@@ -463,73 +482,64 @@ public class DashboardRepository {
    * schreibt ohnehin jedes Fachpaket selbst; sie kann nicht nach {@code common} wandern, weil dort
    * keine {@code jooq.glassfish}-Typen stehen duerfen.
    *
-   * <h2>Der Indexhinweis — gemessen und nicht gewaehlt (M108, 31.08.2026)</h2>
-   *
-   * <p>Der erste Bau stellte beide Merkmale mit {@code OR} in <b>ein</b> Statement. Er lieferte das
-   * Richtige und war falsch gebaut, und der Plan sagt warum: Mit dem {@code OR} steigt MariaDB
-   * ueber <b>{@code MessageLastUpdateIDX}</b> ein und liest den <i>ganzen Zeitbereich</i> — 23.126
-   * Zeilen bei 48 Stunden, 209.408 bei dreissig Tagen, <b>2,7 Millionen bei zwoelf Monaten</b> —
-   * und wertet fuer jede die Mandantenkette aus.
-   *
-   * <p><b>Der Grund ist die Deckelung.</b> {@code ORDER BY … LIMIT 10} ist nur billig, wenn die
-   * zehn Zeilen frueh gefunden werden. Ein Mandant <i>ohne</i> Fehler im Fenster zwingt die
-   * Datenbank, den ganzen Bereich zu durchsuchen, bevor sie „nichts" sagen darf — <b>gerade der
-   * gute Fall ist der teure</b>.
-   *
-   * <p><b>Je Merkmal ein Statement genuegte nicht.</b> Auch die getrennte Fehlerabfrage stieg
-   * weiterhin ueber den Zeitindex ein — er liefert die Sortierung gratis, und das ist dem
-   * Optimierer mehr wert als der kleinere Bereich. Erst {@link #ZEITINDEX} als {@code IGNORE INDEX
-   * FOR ORDER BY} dreht den Plan um; dort steht die Messung.
-   *
-   * <p><b>Beides zusammen macht den Aufwand von der Fensterbreite unabhaengig:</b> Die Bedingung
-   * ist ueber {@code MessageStatusIDX} sehr selektiv — 822 Fehlerzeilen im <i>gesamten</i> Bestand
-   * —, und der Aufwand haengt danach an der Zahl der <b>auffaelligen</b> Zeilen statt an der Breite
-   * des Fensters.
-   *
    * @param hoechstens wie viele Zeilen zurueckkommen — die Landingpage zeigt eine kurze Liste und
    *     keine Seite
    */
-  public List<Auffaelligkeitszeile> zuletztAufgefallen(
+  public List<AuffaelligerProzess> zuletztAufgefallen(
       MandantContext mandant, Zeitfenster fenster, int hoechstens) {
     return auffaellige(
         mandant, fenster, statusClassifier.fehlerBedingung(MESSAGE.MESSAGESTATUS), hoechstens);
   }
 
   /**
-   * Block 6 als Statement — <b>eine Bedingung, ein Statement, ein Indexbereich</b>.
+   * Block 6 als Statement — <b>eine Bedingung, ein Statement, ein Indexbereich, eine Zeile je
+   * Prozess</b>.
    *
    * <p><b>Die Bedingung ist weiterhin ein Parameter</b>, obwohl es seit dem 03.09.2026 nur noch
    * einen Aufrufer gibt. Sie ist die Stelle, an der der Block seinen Gegenstand nennt; ein
    * eingebautes {@code fehlerBedingung} verstellte den Blick darauf, dass hier ein <i>Merkmal</i>
    * gesucht wird und nicht ein Status.
    *
-   * <p>Der zweite Sortierschluessel ist die Kennung: Zwei Nachrichten derselben Sekunde haetten
-   * sonst keine feste Reihenfolge, und der Block spraenge zwischen zwei Aufrufen.
+   * <p><b>Der Name kommt aus {@code Process.ProcessName} und nicht mehr aus {@code SOS.SOSName}</b>
+   * — und das folgt aus der Verdichtung. Das Verhaeltnis Process zu SOS ist meist 1:1, gelegentlich
+   * 1:n; eine Gruppe je Prozess kann damit <i>mehrere</i> Ablaufnamen enthalten, und einen davon zu
+   * waehlen hiesse raten (Regel Q4). {@code ProcessName} gehoert dem Prozess allein und ist
+   * derselbe Anzeigename, den Prozesskatalog und Prozessansicht tragen. Der {@code LEFT JOIN}
+   * bleibt ein {@code LEFT}: Ein Prozess ohne gepflegten Namen faellt nicht aus der Liste, er kommt
+   * ohne Namen.
    *
-   * <p>Zum Indexhinweis siehe {@link #ZEITINDEX} — dort steht, was er kostet und was er spart.
+   * <p><b>{@code ProcessName} steht in der {@code GROUP BY}, obwohl es vom Schluessel funktional
+   * abhaengt.</b> Das aendert die Gruppen nicht — {@code ProcessID} ist der Primaerschluessel von
+   * {@code Process} — und macht die Abfrage unabhaengig davon, wie streng {@code
+   * only_full_group_by} auf der jeweiligen Instanz steht. Gruppiert wird nach dem <b>Schluessel</b>
+   * und nicht nach dem Namen; zwei Prozesse mit gleichem Namen bleiben zwei Zeilen.
+   *
+   * <p>Der zweite Sortierschluessel ist die Prozesskennung: Zwei Prozesse mit demselben juengsten
+   * Zeitpunkt haetten sonst keine feste Reihenfolge, und der Block spraenge zwischen zwei Aufrufen.
+   *
+   * <p>Zum Indexhinweis siehe {@link #ZEITINDEX} und {@link #zuletztAufgefallen} — dort steht, was
+   * er heute noch bewirkt und warum er trotzdem bleibt.
    */
-  private List<Auffaelligkeitszeile> auffaellige(
+  private List<AuffaelligerProzess> auffaellige(
       MandantContext mandant, Zeitfenster fenster, Condition merkmal, int hoechstens) {
+    Field<Integer> anzahl = DSL.count();
+    Field<LocalDateTime> zuletzt = DSL.max(MESSAGE.MESSAGELASTUPDATE);
     return glassfishDsl
-        .select(
-            MESSAGE.MESSAGEID,
-            MESSAGE.MESSAGELASTUPDATE,
-            MESSAGE.MESSAGESTATUS,
-            MESSAGE.PROCESSID,
-            SOS.SOSNAME)
+        .select(MESSAGE.PROCESSID, PROCESS.PROCESSNAME, anzahl, zuletzt)
         .from(MESSAGE.ignoreIndexForOrderBy(ZEITINDEX))
-        .leftJoin(SOS)
-        .on(SOS.SOSID.eq(MESSAGE.SOSID))
+        .leftJoin(PROCESS)
+        .on(PROCESS.PROCESSID.eq(MESSAGE.PROCESSID))
         .where(merkmal)
         .and(MESSAGE.MESSAGELASTUPDATE.ge(fenster.von()))
         .and(MESSAGE.MESSAGELASTUPDATE.lt(fenster.bis()))
         .and(mandantenkette(mandant, MESSAGE.PROCESSID))
-        .orderBy(MESSAGE.MESSAGELASTUPDATE.desc(), MESSAGE.MESSAGEID.desc())
+        .groupBy(MESSAGE.PROCESSID, PROCESS.PROCESSNAME)
+        .orderBy(zuletzt.desc(), MESSAGE.PROCESSID.desc())
         .limit(hoechstens)
         .fetch(
             satz ->
-                new Auffaelligkeitszeile(
-                    satz.value1(), satz.value2(), satz.value3(), satz.value4(), satz.value5()));
+                new AuffaelligerProzess(
+                    satz.value1(), satz.value2(), satz.value3(), satz.value4()));
   }
 
   /**

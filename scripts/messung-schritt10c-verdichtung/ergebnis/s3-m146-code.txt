@@ -1,0 +1,65 @@
+M146 | zeilen.NEXANS.48H | 2 Prozesse, Summe 50 Nachrichten
+M146 | zeile.NEXANS.48H | 49 × …
+M146 | zeile.NEXANS.48H | 1 × …
+M146 | ms.NEXANS.48H | 25,974
+M146 | plan.NEXANS.48H | Message | range | key=MessageStatusIDX | rows=6257 | Using index condition; Using where; Using temporary; Using filesort
+M146 | plan.NEXANS.48H | Process | eq_ref | key=PRIMARY | rows=1 | Using where
+M146 | plan.NEXANS.48H | dashboard_process | eq_ref | key=PRIMARY | rows=1 | Using where
+M146 | plan.NEXANS.48H | ProjectMandant | eq_ref | key=PRIMARY | rows=1 | Using where; Using index
+M146 | zeilen.NEXANS.30T | 3 Prozesse, Summe 55 Nachrichten
+M146 | zeile.NEXANS.30T | 49 × …
+M146 | zeile.NEXANS.30T | 3 × …
+M146 | zeile.NEXANS.30T | 3 × …
+M146 | ms.NEXANS.30T | 26,137
+M146 | plan.NEXANS.30T | Message | range | key=MessageStatusIDX | rows=6257 | Using index condition; Using where; Using temporary; Using filesort
+M146 | plan.NEXANS.30T | Process | eq_ref | key=PRIMARY | rows=1 | Using where
+M146 | plan.NEXANS.30T | dashboard_process | eq_ref | key=PRIMARY | rows=1 | Using where
+M146 | plan.NEXANS.30T | ProjectMandant | eq_ref | key=PRIMARY | rows=1 | Using where; Using index
+M146 | zeilen.NEXANS.12M | 3 Prozesse, Summe 711 Nachrichten
+M146 | zeile.NEXANS.12M | 49 × …
+M146 | zeile.NEXANS.12M | 659 × …
+M146 | zeile.NEXANS.12M | 3 × …
+M146 | ms.NEXANS.12M | 30,216
+M146 | plan.NEXANS.12M | Message | range | key=MessageStatusIDX | rows=6257 | Using index condition; Using where; Using temporary; Using filesort
+M146 | plan.NEXANS.12M | Process | eq_ref | key=PRIMARY | rows=1 | Using where
+M146 | plan.NEXANS.12M | dashboard_process | eq_ref | key=PRIMARY | rows=1 | Using where
+M146 | plan.NEXANS.12M | ProjectMandant | eq_ref | key=PRIMARY | rows=1 | Using where; Using index
+M146 | zeilen.SUTTONS.48H | 0 Prozesse, Summe 0 Nachrichten
+M146 | ms.SUTTONS.48H | 24,659
+M146 | plan.SUTTONS.48H | ProjectMandant | ref | key=ProjectMandant_Mandant_idx | rows=1 | Using where; Using index; Using temporary; Using filesort
+M146 | plan.SUTTONS.48H | Message | range | key=MessageStatusIDX | rows=6257 | Using index condition; Using where; Using join buffer (flat, BNL join)
+M146 | plan.SUTTONS.48H | Process | eq_ref | key=PRIMARY | rows=1 | Using where
+M146 | plan.SUTTONS.48H | dashboard_process | eq_ref | key=PRIMARY | rows=1 | Using where
+M146 | zeilen.SUTTONS.30T | 1 Prozesse, Summe 5 Nachrichten
+M146 | zeile.SUTTONS.30T | 5 × …
+M146 | ms.SUTTONS.30T | 24,629
+M146 | plan.SUTTONS.30T | ProjectMandant | ref | key=ProjectMandant_Mandant_idx | rows=1 | Using where; Using index; Using temporary; Using filesort
+M146 | plan.SUTTONS.30T | Message | range | key=MessageStatusIDX | rows=6257 | Using index condition; Using where; Using join buffer (flat, BNL join)
+M146 | plan.SUTTONS.30T | Process | eq_ref | key=PRIMARY | rows=1 | Using where
+M146 | plan.SUTTONS.30T | dashboard_process | eq_ref | key=PRIMARY | rows=1 | Using where
+M146 | zeilen.SUTTONS.12M | 1 Prozesse, Summe 103 Nachrichten
+M146 | zeile.SUTTONS.12M | 103 × …
+M146 | ms.SUTTONS.12M | 26,741
+M146 | plan.SUTTONS.12M | ProjectMandant | ref | key=ProjectMandant_Mandant_idx | rows=1 | Using where; Using index; Using temporary; Using filesort
+M146 | plan.SUTTONS.12M | Message | range | key=MessageStatusIDX | rows=6257 | Using index condition; Using where; Using join buffer (flat, BNL join)
+M146 | plan.SUTTONS.12M | Process | eq_ref | key=PRIMARY | rows=1 | Using where
+M146 | plan.SUTTONS.12M | dashboard_process | eq_ref | key=PRIMARY | rows=1 | Using where
+M146 | zeilen.VOTG.48H | 0 Prozesse, Summe 0 Nachrichten
+M146 | ms.VOTG.48H | 23,327
+M146 | plan.VOTG.48H | Message | range | key=MessageStatusIDX | rows=6257 | Using index condition; Using where; Using temporary; Using filesort
+M146 | plan.VOTG.48H | Process | eq_ref | key=PRIMARY | rows=1 | Using where
+M146 | plan.VOTG.48H | dashboard_process | eq_ref | key=PRIMARY | rows=1 | Using where
+M146 | plan.VOTG.48H | ProjectMandant | eq_ref | key=PRIMARY | rows=1 | Using where; Using index
+M146 | zeilen.VOTG.30T | 0 Prozesse, Summe 0 Nachrichten
+M146 | ms.VOTG.30T | 23,865
+M146 | plan.VOTG.30T | Message | range | key=MessageStatusIDX | rows=6257 | Using index condition; Using where; Using temporary; Using filesort
+M146 | plan.VOTG.30T | Process | eq_ref | key=PRIMARY | rows=1 | Using where
+M146 | plan.VOTG.30T | dashboard_process | eq_ref | key=PRIMARY | rows=1 | Using where
+M146 | plan.VOTG.30T | ProjectMandant | eq_ref | key=PRIMARY | rows=1 | Using where; Using index
+M146 | zeilen.VOTG.12M | 1 Prozesse, Summe 8 Nachrichten
+M146 | zeile.VOTG.12M | 8 × …
+M146 | ms.VOTG.12M | 25,732
+M146 | plan.VOTG.12M | Message | range | key=MessageStatusIDX | rows=6257 | Using index condition; Using where; Using temporary; Using filesort
+M146 | plan.VOTG.12M | Process | eq_ref | key=PRIMARY | rows=1 | Using where
+M146 | plan.VOTG.12M | dashboard_process | eq_ref | key=PRIMARY | rows=1 | Using where
+M146 | plan.VOTG.12M | ProjectMandant | eq_ref | key=PRIMARY | rows=1 | Using where; Using index

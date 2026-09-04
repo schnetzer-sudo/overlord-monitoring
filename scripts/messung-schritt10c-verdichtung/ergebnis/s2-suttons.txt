@@ -1,0 +1,474 @@
+mysql: [Warning] Using a password on the command line interface can be insecure.
++----------------------+
+| marke                |
++----------------------+
+| === 00 read_only === |
++----------------------+
++-----------+---------------------+
+| read_only | serverzeit          |
++-----------+---------------------+
+|         1 | 2026-09-04 15:38:41 |
++-----------+---------------------+
++------------------------------------+
+| marke                              |
++------------------------------------+
+| --- SUTTONS 48H alt (6 Laeufe) --- |
++------------------------------------+
++------------------------------------+
+| marke                              |
++------------------------------------+
+| --- SUTTONS 48H neu (6 Laeufe) --- |
++------------------------------------+
++------------------------------------+
+| marke                              |
++------------------------------------+
+| --- SUTTONS 30T alt (6 Laeufe) --- |
++------------------------------------+
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus   | ProcessID                  | SOSName                                     |
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
+| eec08f00-11e2-463a-b79b-8ea80ff54635 | 2025-12-22 09:44:33 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 9e446028-4be7-4fb0-808d-6edcdc1d9411 | 2025-12-19 14:44:14 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 102dd39b-ada3-46c7-a859-58317e9091ea | 2025-12-17 14:29:39 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| e8b907a5-aedd-4b5b-bec5-ecc7d9412dc4 | 2025-12-17 09:59:37 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 54b9fdc7-5f76-476e-8110-301f8332ecaf | 2025-12-04 15:17:23 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus   | ProcessID                  | SOSName                                     |
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
+| eec08f00-11e2-463a-b79b-8ea80ff54635 | 2025-12-22 09:44:33 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 9e446028-4be7-4fb0-808d-6edcdc1d9411 | 2025-12-19 14:44:14 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 102dd39b-ada3-46c7-a859-58317e9091ea | 2025-12-17 14:29:39 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| e8b907a5-aedd-4b5b-bec5-ecc7d9412dc4 | 2025-12-17 09:59:37 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 54b9fdc7-5f76-476e-8110-301f8332ecaf | 2025-12-04 15:17:23 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus   | ProcessID                  | SOSName                                     |
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
+| eec08f00-11e2-463a-b79b-8ea80ff54635 | 2025-12-22 09:44:33 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 9e446028-4be7-4fb0-808d-6edcdc1d9411 | 2025-12-19 14:44:14 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 102dd39b-ada3-46c7-a859-58317e9091ea | 2025-12-17 14:29:39 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| e8b907a5-aedd-4b5b-bec5-ecc7d9412dc4 | 2025-12-17 09:59:37 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 54b9fdc7-5f76-476e-8110-301f8332ecaf | 2025-12-04 15:17:23 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus   | ProcessID                  | SOSName                                     |
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
+| eec08f00-11e2-463a-b79b-8ea80ff54635 | 2025-12-22 09:44:33 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 9e446028-4be7-4fb0-808d-6edcdc1d9411 | 2025-12-19 14:44:14 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 102dd39b-ada3-46c7-a859-58317e9091ea | 2025-12-17 14:29:39 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| e8b907a5-aedd-4b5b-bec5-ecc7d9412dc4 | 2025-12-17 09:59:37 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 54b9fdc7-5f76-476e-8110-301f8332ecaf | 2025-12-04 15:17:23 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus   | ProcessID                  | SOSName                                     |
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
+| eec08f00-11e2-463a-b79b-8ea80ff54635 | 2025-12-22 09:44:33 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 9e446028-4be7-4fb0-808d-6edcdc1d9411 | 2025-12-19 14:44:14 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 102dd39b-ada3-46c7-a859-58317e9091ea | 2025-12-17 14:29:39 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| e8b907a5-aedd-4b5b-bec5-ecc7d9412dc4 | 2025-12-17 09:59:37 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 54b9fdc7-5f76-476e-8110-301f8332ecaf | 2025-12-04 15:17:23 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus   | ProcessID                  | SOSName                                     |
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
+| eec08f00-11e2-463a-b79b-8ea80ff54635 | 2025-12-22 09:44:33 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 9e446028-4be7-4fb0-808d-6edcdc1d9411 | 2025-12-19 14:44:14 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 102dd39b-ada3-46c7-a859-58317e9091ea | 2025-12-17 14:29:39 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| e8b907a5-aedd-4b5b-bec5-ecc7d9412dc4 | 2025-12-17 09:59:37 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 54b9fdc7-5f76-476e-8110-301f8332ecaf | 2025-12-04 15:17:23 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
++------------------------------------+
+| marke                              |
++------------------------------------+
+| --- SUTTONS 30T neu (6 Laeufe) --- |
++------------------------------------+
++----------------------------+---------------------------------------------+----------+--------------------------+
+| ProcessID                  | ProcessName                                 | COUNT(*) | MAX(m.MessageLastUpdate) |
++----------------------------+---------------------------------------------+----------+--------------------------+
+| 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |        5 | 2025-12-22 09:44:33      |
++----------------------------+---------------------------------------------+----------+--------------------------+
++----------------------------+---------------------------------------------+----------+--------------------------+
+| ProcessID                  | ProcessName                                 | COUNT(*) | MAX(m.MessageLastUpdate) |
++----------------------------+---------------------------------------------+----------+--------------------------+
+| 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |        5 | 2025-12-22 09:44:33      |
++----------------------------+---------------------------------------------+----------+--------------------------+
++----------------------------+---------------------------------------------+----------+--------------------------+
+| ProcessID                  | ProcessName                                 | COUNT(*) | MAX(m.MessageLastUpdate) |
++----------------------------+---------------------------------------------+----------+--------------------------+
+| 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |        5 | 2025-12-22 09:44:33      |
++----------------------------+---------------------------------------------+----------+--------------------------+
++----------------------------+---------------------------------------------+----------+--------------------------+
+| ProcessID                  | ProcessName                                 | COUNT(*) | MAX(m.MessageLastUpdate) |
++----------------------------+---------------------------------------------+----------+--------------------------+
+| 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |        5 | 2025-12-22 09:44:33      |
++----------------------------+---------------------------------------------+----------+--------------------------+
++----------------------------+---------------------------------------------+----------+--------------------------+
+| ProcessID                  | ProcessName                                 | COUNT(*) | MAX(m.MessageLastUpdate) |
++----------------------------+---------------------------------------------+----------+--------------------------+
+| 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |        5 | 2025-12-22 09:44:33      |
++----------------------------+---------------------------------------------+----------+--------------------------+
++----------------------------+---------------------------------------------+----------+--------------------------+
+| ProcessID                  | ProcessName                                 | COUNT(*) | MAX(m.MessageLastUpdate) |
++----------------------------+---------------------------------------------+----------+--------------------------+
+| 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |        5 | 2025-12-22 09:44:33      |
++----------------------------+---------------------------------------------+----------+--------------------------+
++------------------------------------+
+| marke                              |
++------------------------------------+
+| --- SUTTONS 12M alt (6 Laeufe) --- |
++------------------------------------+
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus   | ProcessID                  | SOSName                                     |
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
+| eec08f00-11e2-463a-b79b-8ea80ff54635 | 2025-12-22 09:44:33 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 9e446028-4be7-4fb0-808d-6edcdc1d9411 | 2025-12-19 14:44:14 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 102dd39b-ada3-46c7-a859-58317e9091ea | 2025-12-17 14:29:39 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| e8b907a5-aedd-4b5b-bec5-ecc7d9412dc4 | 2025-12-17 09:59:37 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 54b9fdc7-5f76-476e-8110-301f8332ecaf | 2025-12-04 15:17:23 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 9dddfb17-ebbc-456d-b73c-06cb38795652 | 2025-11-11 12:29:16 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 2630cf21-b125-4676-aed6-36b368750d63 | 2025-11-10 12:13:52 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 9f2b507c-20d9-4675-b4e6-daa8f02c85a9 | 2025-11-07 11:59:15 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 90b33d7d-f72f-48d8-ab5a-9764894ca65e | 2025-11-04 13:39:11 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 4abc6a25-962c-4267-9554-0f2063460f80 | 2025-11-04 13:39:11 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus   | ProcessID                  | SOSName                                     |
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
+| eec08f00-11e2-463a-b79b-8ea80ff54635 | 2025-12-22 09:44:33 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 9e446028-4be7-4fb0-808d-6edcdc1d9411 | 2025-12-19 14:44:14 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 102dd39b-ada3-46c7-a859-58317e9091ea | 2025-12-17 14:29:39 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| e8b907a5-aedd-4b5b-bec5-ecc7d9412dc4 | 2025-12-17 09:59:37 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 54b9fdc7-5f76-476e-8110-301f8332ecaf | 2025-12-04 15:17:23 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 9dddfb17-ebbc-456d-b73c-06cb38795652 | 2025-11-11 12:29:16 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 2630cf21-b125-4676-aed6-36b368750d63 | 2025-11-10 12:13:52 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 9f2b507c-20d9-4675-b4e6-daa8f02c85a9 | 2025-11-07 11:59:15 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 90b33d7d-f72f-48d8-ab5a-9764894ca65e | 2025-11-04 13:39:11 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 4abc6a25-962c-4267-9554-0f2063460f80 | 2025-11-04 13:39:11 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus   | ProcessID                  | SOSName                                     |
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
+| eec08f00-11e2-463a-b79b-8ea80ff54635 | 2025-12-22 09:44:33 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 9e446028-4be7-4fb0-808d-6edcdc1d9411 | 2025-12-19 14:44:14 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 102dd39b-ada3-46c7-a859-58317e9091ea | 2025-12-17 14:29:39 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| e8b907a5-aedd-4b5b-bec5-ecc7d9412dc4 | 2025-12-17 09:59:37 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 54b9fdc7-5f76-476e-8110-301f8332ecaf | 2025-12-04 15:17:23 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 9dddfb17-ebbc-456d-b73c-06cb38795652 | 2025-11-11 12:29:16 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 2630cf21-b125-4676-aed6-36b368750d63 | 2025-11-10 12:13:52 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 9f2b507c-20d9-4675-b4e6-daa8f02c85a9 | 2025-11-07 11:59:15 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 90b33d7d-f72f-48d8-ab5a-9764894ca65e | 2025-11-04 13:39:11 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 4abc6a25-962c-4267-9554-0f2063460f80 | 2025-11-04 13:39:11 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus   | ProcessID                  | SOSName                                     |
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
+| eec08f00-11e2-463a-b79b-8ea80ff54635 | 2025-12-22 09:44:33 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 9e446028-4be7-4fb0-808d-6edcdc1d9411 | 2025-12-19 14:44:14 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 102dd39b-ada3-46c7-a859-58317e9091ea | 2025-12-17 14:29:39 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| e8b907a5-aedd-4b5b-bec5-ecc7d9412dc4 | 2025-12-17 09:59:37 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 54b9fdc7-5f76-476e-8110-301f8332ecaf | 2025-12-04 15:17:23 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 9dddfb17-ebbc-456d-b73c-06cb38795652 | 2025-11-11 12:29:16 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 2630cf21-b125-4676-aed6-36b368750d63 | 2025-11-10 12:13:52 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 9f2b507c-20d9-4675-b4e6-daa8f02c85a9 | 2025-11-07 11:59:15 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 90b33d7d-f72f-48d8-ab5a-9764894ca65e | 2025-11-04 13:39:11 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 4abc6a25-962c-4267-9554-0f2063460f80 | 2025-11-04 13:39:11 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus   | ProcessID                  | SOSName                                     |
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
+| eec08f00-11e2-463a-b79b-8ea80ff54635 | 2025-12-22 09:44:33 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 9e446028-4be7-4fb0-808d-6edcdc1d9411 | 2025-12-19 14:44:14 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 102dd39b-ada3-46c7-a859-58317e9091ea | 2025-12-17 14:29:39 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| e8b907a5-aedd-4b5b-bec5-ecc7d9412dc4 | 2025-12-17 09:59:37 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 54b9fdc7-5f76-476e-8110-301f8332ecaf | 2025-12-04 15:17:23 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 9dddfb17-ebbc-456d-b73c-06cb38795652 | 2025-11-11 12:29:16 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 2630cf21-b125-4676-aed6-36b368750d63 | 2025-11-10 12:13:52 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 9f2b507c-20d9-4675-b4e6-daa8f02c85a9 | 2025-11-07 11:59:15 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 90b33d7d-f72f-48d8-ab5a-9764894ca65e | 2025-11-04 13:39:11 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 4abc6a25-962c-4267-9554-0f2063460f80 | 2025-11-04 13:39:11 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
+| MessageID                            | MessageLastUpdate   | MessageStatus   | ProcessID                  | SOSName                                     |
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
+| eec08f00-11e2-463a-b79b-8ea80ff54635 | 2025-12-22 09:44:33 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 9e446028-4be7-4fb0-808d-6edcdc1d9411 | 2025-12-19 14:44:14 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 102dd39b-ada3-46c7-a859-58317e9091ea | 2025-12-17 14:29:39 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| e8b907a5-aedd-4b5b-bec5-ecc7d9412dc4 | 2025-12-17 09:59:37 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 54b9fdc7-5f76-476e-8110-301f8332ecaf | 2025-12-04 15:17:23 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 9dddfb17-ebbc-456d-b73c-06cb38795652 | 2025-11-11 12:29:16 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 2630cf21-b125-4676-aed6-36b368750d63 | 2025-11-10 12:13:52 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 9f2b507c-20d9-4675-b4e6-daa8f02c85a9 | 2025-11-07 11:59:15 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 90b33d7d-f72f-48d8-ab5a-9764894ca65e | 2025-11-04 13:39:11 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
+| 4abc6a25-962c-4267-9554-0f2063460f80 | 2025-11-04 13:39:11 | COMMIT_REJECTED | 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |
++--------------------------------------+---------------------+-----------------+----------------------------+---------------------------------------------+
++------------------------------------+
+| marke                              |
++------------------------------------+
+| --- SUTTONS 12M neu (6 Laeufe) --- |
++------------------------------------+
++----------------------------+---------------------------------------------+----------+--------------------------+
+| ProcessID                  | ProcessName                                 | COUNT(*) | MAX(m.MessageLastUpdate) |
++----------------------------+---------------------------------------------+----------+--------------------------+
+| 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |      103 | 2025-12-22 09:44:33      |
++----------------------------+---------------------------------------------+----------+--------------------------+
++----------------------------+---------------------------------------------+----------+--------------------------+
+| ProcessID                  | ProcessName                                 | COUNT(*) | MAX(m.MessageLastUpdate) |
++----------------------------+---------------------------------------------+----------+--------------------------+
+| 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |      103 | 2025-12-22 09:44:33      |
++----------------------------+---------------------------------------------+----------+--------------------------+
++----------------------------+---------------------------------------------+----------+--------------------------+
+| ProcessID                  | ProcessName                                 | COUNT(*) | MAX(m.MessageLastUpdate) |
++----------------------------+---------------------------------------------+----------+--------------------------+
+| 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |      103 | 2025-12-22 09:44:33      |
++----------------------------+---------------------------------------------+----------+--------------------------+
++----------------------------+---------------------------------------------+----------+--------------------------+
+| ProcessID                  | ProcessName                                 | COUNT(*) | MAX(m.MessageLastUpdate) |
++----------------------------+---------------------------------------------+----------+--------------------------+
+| 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |      103 | 2025-12-22 09:44:33      |
++----------------------------+---------------------------------------------+----------+--------------------------+
++----------------------------+---------------------------------------------+----------+--------------------------+
+| ProcessID                  | ProcessName                                 | COUNT(*) | MAX(m.MessageLastUpdate) |
++----------------------------+---------------------------------------------+----------+--------------------------+
+| 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |      103 | 2025-12-22 09:44:33      |
++----------------------------+---------------------------------------------+----------+--------------------------+
++----------------------------+---------------------------------------------+----------+--------------------------+
+| ProcessID                  | ProcessName                                 | COUNT(*) | MAX(m.MessageLastUpdate) |
++----------------------------+---------------------------------------------+----------+--------------------------+
+| 08501_S_EG_BookingResponse | Bookingresponse (RS, technical) from EDIGES |      103 | 2025-12-22 09:44:33      |
++----------------------------+---------------------------------------------+----------+--------------------------+
++-----------------------------------------+
+| marke                                   |
++-----------------------------------------+
+| === EXPLAIN verdichtet, SUTTONS 12M === |
++-----------------------------------------+
++------+-------------+-------+--------+---------------------------------------------------------------------------------------------------------+----------------------------+---------+-------------------------+------+------------------------------------------------------------------------+
+| id   | select_type | table | type   | possible_keys                                                                                           | key                        | key_len | ref                     | rows | Extra                                                                  |
++------+-------------+-------+--------+---------------------------------------------------------------------------------------------------------+----------------------------+---------+-------------------------+------+------------------------------------------------------------------------+
+|    1 | PRIMARY     | dpm   | ref    | PRIMARY,ProjectMandant_Mandant_idx                                                                      | ProjectMandant_Mandant_idx | 146     | const                   | 1    | Using where; Using index; Using temporary; Using filesort              |
+|    1 | PRIMARY     | m     | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageStatusIDX,MessageLastUpdateProcessMessageIDX | MessageStatusIDX           | 123     | NULL                    | 6257 | Using index condition; Using where; Using join buffer (flat, BNL join) |
+|    1 | PRIMARY     | p     | eq_ref | PRIMARY                                                                                                 | PRIMARY                    | 146     | GlassfishDB.m.ProcessID | 1    | Using where                                                            |
+|    1 | PRIMARY     | dp    | eq_ref | PRIMARY,Process_ProjectFK                                                                               | PRIMARY                    | 146     | GlassfishDB.m.ProcessID | 1    | Using where                                                            |
++------+-------------+-------+--------+---------------------------------------------------------------------------------------------------------+----------------------------+---------+-------------------------+------+------------------------------------------------------------------------+
++----------------------------------+
+| marke                            |
++----------------------------------+
+| === EXPLAIN alt, SUTTONS 12M === |
++----------------------------------+
++------+-------------+-------+--------+---------------------------------------------------------------------------------------------------------+----------------------------+---------+-------------------------+------+----------------------------------------------------+
+| id   | select_type | table | type   | possible_keys                                                                                           | key                        | key_len | ref                     | rows | Extra                                              |
++------+-------------+-------+--------+---------------------------------------------------------------------------------------------------------+----------------------------+---------+-------------------------+------+----------------------------------------------------+
+|    1 | PRIMARY     | m     | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageStatusIDX,MessageLastUpdateProcessMessageIDX | MessageStatusIDX           | 123     | NULL                    | 6257 | Using index condition; Using where; Using filesort |
+|    1 | PRIMARY     | dpm   | ref    | PRIMARY,ProjectMandant_Mandant_idx                                                                      | ProjectMandant_Mandant_idx | 146     | const                   | 1    | Using where; Using index                           |
+|    1 | PRIMARY     | dp    | eq_ref | PRIMARY,Process_ProjectFK                                                                               | PRIMARY                    | 146     | GlassfishDB.m.ProcessID | 1    | Using where                                        |
+|    1 | PRIMARY     | s     | eq_ref | PRIMARY                                                                                                 | PRIMARY                    | 146     | GlassfishDB.m.SOSID     | 1    | Using where                                        |
++------+-------------+-------+--------+---------------------------------------------------------------------------------------------------------+----------------------------+---------+-------------------------+------+----------------------------------------------------+
++----------------+
+| marke          |
++----------------+
+| === Profil === |
++----------------+
++----------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Query_ID | Duration   | Query                                                                                                                                                                                                                                                                                                        |
++----------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|        1 | 0.00014743 | SET profiling_history_size = 100                                                                                                                                                                                                                                                                             |
+|        2 | 0.00020704 | SELECT '--- SUTTONS 48H alt (6 Laeufe) ---' AS marke                                                                                                                                                                                                                                                         |
+|        3 | 0.02344374 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|        4 | 0.02257605 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|        5 | 0.02259816 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|        6 | 0.02310082 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|        7 | 0.02248083 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|        8 | 0.02285508 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|        9 | 0.00031254 | SELECT '--- SUTTONS 48H neu (6 Laeufe) ---' AS marke                                                                                                                                                                                                                                                         |
+|       10 | 0.02044113 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       11 | 0.02010391 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       12 | 0.02014923 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       13 | 0.02024316 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       14 | 0.02156947 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       15 | 0.02046662 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       16 | 0.00026219 | SELECT '--- SUTTONS 30T alt (6 Laeufe) ---' AS marke                                                                                                                                                                                                                                                         |
+|       17 | 0.02130081 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       18 | 0.02145236 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       19 | 0.02157444 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       20 | 0.02278751 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       21 | 0.02278505 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       22 | 0.02250633 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       23 | 0.00027889 | SELECT '--- SUTTONS 30T neu (6 Laeufe) ---' AS marke                                                                                                                                                                                                                                                         |
+|       24 | 0.02135585 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       25 | 0.02116500 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       26 | 0.02194544 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       27 | 0.02160173 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       28 | 0.02495338 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       29 | 0.02298426 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       30 | 0.00028535 | SELECT '--- SUTTONS 12M alt (6 Laeufe) ---' AS marke                                                                                                                                                                                                                                                         |
+|       31 | 0.02402912 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       32 | 0.02387301 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       33 | 0.02319420 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       34 | 0.02323821 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       35 | 0.02368208 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       36 | 0.02408514 | SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_REJ |
+|       37 | 0.00026915 | SELECT '--- SUTTONS 12M neu (6 Laeufe) ---' AS marke                                                                                                                                                                                                                                                         |
+|       38 | 0.02387484 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       39 | 0.02408692 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       40 | 0.02426718 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       41 | 0.02423542 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       42 | 0.02424315 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       43 | 0.02415359 | SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'COMMIT_RE |
+|       44 | 0.00026064 | SELECT '=== EXPLAIN verdichtet, SUTTONS 12M ===' AS marke                                                                                                                                                                                                                                                    |
+|       45 | 0.00129730 | EXPLAIN SELECT m.ProcessID, p.ProcessName, COUNT(*), MAX(m.MessageLastUpdate)
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.Process p ON p.ProcessID = m.ProcessID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'C |
+|       46 | 0.00020642 | SELECT '=== EXPLAIN alt, SUTTONS 12M ===' AS marke                                                                                                                                                                                                                                                           |
+|       47 | 0.00080103 | EXPLAIN SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID, s.SOSName
+FROM GlassfishDB.Message m IGNORE INDEX FOR ORDER BY (MessageLastUpdateIDX)
+LEFT JOIN GlassfishDB.SOS s ON s.SOSID = m.SOSID
+  WHERE (m.MessageStatus LIKE 'ERROR\_%' ESCAPE '\\'
+         OR m.MessageStatus = 'CO |
+|       48 | 0.00019275 | SELECT '=== Profil ===' AS marke                                                                                                                                                                                                                                                                             |
++----------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+

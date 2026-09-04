@@ -120,7 +120,7 @@ public class DashboardService {
     // deterministisch. Entschieden wird erst hier, ob die Kachel in die Antwort kommt.
     boolean zeigeWartend = dashboardRepository.hatWartendeAblaeufe(mandant);
     OffeneKachelResponse wartend = offeneKachel(mandant, MessageStatusKind.WARTEND, jetzt);
-    List<Auffaelligkeitszeile> aufgefallen =
+    List<AuffaelligerProzess> aufgefallen =
         dashboardRepository.zuletztAufgefallen(mandant, fenster, AUFFAELLIG_HOECHSTENS);
 
     KachelnResponse kacheln = kacheln(summen, laeuft, zeigeWartend ? wartend : null);
@@ -226,31 +226,33 @@ public class DashboardService {
   }
 
   /**
-   * Block 6: die Einordnung entsteht aus dem Rohwert und nicht aus einer zweiten Spalte.
+   * Block 6: aus Zeilen des Repositorys werden Zeilen der Antwort — <b>eine je Prozess</b>.
    *
-   * <p><b>Die Kategorie ist seit dem 03.09.2026 nicht mehr abzuleiten, sondern festzustellen.</b>
-   * Bis dahin filterte die Abfrage mit {@code fehlerBedingung OR ueberfaelligBedingung}, und was
-   * kein Fehler war, war ueberfaellig. Die Ueberfaelligkeitshaelfte ist mit E‑71 entfallen; der
-   * Block liest nur noch die Fehlerbedingung, und {@link Auffaelligkeit} traegt nur noch einen
-   * Wert.
+   * <h2>⚠️ Hier stand ein Aufruf des {@code MessageStatusClassifier}, und er ist entfallen</h2>
    *
-   * <p><b>Die Einordnung wird trotzdem weiterhin gerufen</b> und nicht durch ein Literal ersetzt:
-   * Sie steht als eigenes Feld in der Antwort ({@code statusKind}) und sagt dort etwas, das die
-   * Kategorie nicht sagt — welcher Rohwert es genau ist. <b>Nur die Kategorie ist konstant, nicht
-   * die Einordnung.</b>
+   * <p>Bis zum 04.09.2026 trug jede Zeile einen <b>Rohstatus</b> und die daraus gebildete
+   * Einordnung ({@code statusKind}). Beides gehoerte zu einer einzelnen Nachricht. <b>Eine Zeile,
+   * die einen ganzen Prozess zusammenfasst, hat keinen Rohstatus</b> — sie kann zwanzig
+   * verschiedene enthalten. Der Aufruf ist deshalb nicht weggespart, sondern gegenstandslos
+   * geworden; die Bedingung, <i>welche</i> Zeilen ueberhaupt auffaellig sind, ruft weiterhin
+   * derselbe Klassifizierer im Repository.
+   *
+   * <p><b>Die Kategorie bleibt und bleibt konstant.</b> Regel Q3 verlangt, dass Problemkategorien
+   * getrennt und nie zu „Problem" zusammengefasst werden; heute ist es eine Aufzaehlung mit einem
+   * Wert (offener Punkt 133). Kommt je eine zweite zurueck, steht in der Antwort ihr Platz — und
+   * dann ist die Gruppierung nach Prozess <b>je Kategorie</b> zu fuehren und nicht darueber hinweg.
+   * Das steht hier als Warnung und nicht als Bau: Es gibt keine zweite Kategorie.
    */
-  private List<AuffaelligeNachrichtResponse> zuletztAufgefallen(List<Auffaelligkeitszeile> zeilen) {
+  private List<AuffaelligerProzessResponse> zuletztAufgefallen(List<AuffaelligerProzess> zeilen) {
     return zeilen.stream()
         .map(
             zeile ->
-                new AuffaelligeNachrichtResponse(
-                    zeile.messageId(),
-                    Zeitpunkte.nachUtc(zeile.zeitpunkt(), anwendungsuhr.getZone()),
-                    zeile.messageStatus(),
-                    statusClassifier.einordnung(zeile.messageStatus()),
-                    Auffaelligkeit.FEHLER,
+                new AuffaelligerProzessResponse(
                     zeile.processId(),
-                    zeile.sosName()))
+                    zeile.processName(),
+                    zeile.anzahl(),
+                    Zeitpunkte.nachUtc(zeile.zuletzt(), anwendungsuhr.getZone()),
+                    Auffaelligkeit.FEHLER))
         .toList();
   }
 

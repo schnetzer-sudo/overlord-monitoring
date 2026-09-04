@@ -342,8 +342,18 @@ export const de = {
     aufgefallen: {
       titel: "Zuletzt aufgefallen",
       leer: "Im Zeitraum ist nichts aufgefallen.",
-      ohneProzess: "ohne Prozess",
-      zeileOeffnen: "Diese Nachricht öffnen",
+      // Entscheidung E‑90 vom 04.09.2026: Der Block trägt seither eine Zeile je
+      // PROZESS mit Anzahl und jüngstem Zeitpunkt. `ohneProzess` ist damit
+      // entfallen — eine Zeile ohne Prozess kann es nicht geben, sie käme durch
+      // die Mandantenkette nicht hindurch.
+      //
+      // Sichtbar steht an der Zeile nur die Ziffer; der Blockkopf sagt schon,
+      // worum es geht, und das Wort an jeder Zeile sagte es zehnmal. Diese
+      // beiden Sätze stehen im `aria-label`, wo die nackte Zahl keine Auskunft
+      // wäre.
+      anzahlEins: "1 Nachricht",
+      anzahlViele: "{anzahl} Nachrichten",
+      zeileOeffnen: "Diese {anzahl} in der Nachrichtenliste zeigen",
     },
 
     stand: {

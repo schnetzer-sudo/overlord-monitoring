@@ -10,7 +10,7 @@ package de.kraftwerkone.overlord.monitor.dashboard;
  * noch die Fehlerbedingung</b> ({@code DashboardRepository.zuletztAufgefallen}). Ein Enum-Wert, den
  * keine Zeile mehr tragen kann, waere eine Auswahl, die es nicht gibt.
  *
- * <p><b>Das Feld {@code kategorie} in {@link AuffaelligeNachrichtResponse} bleibt.</b> Der
+ * <p><b>Das Feld {@code kategorie} in {@link AuffaelligerProzessResponse} bleibt.</b> Der
  * Antwortblock ist in diesem Schritt ausdruecklich unveraendert, und die Oberflaeche liest ihn
  * heute — sie darf nicht an einem fehlenden Feld brechen, bevor Schritt 10b‑5 sie anfasst. <b>Dass
  * hier eine Aufzaehlung mit einem Wert steht, ist damit ein benannter Zwischenstand</b> und kein
