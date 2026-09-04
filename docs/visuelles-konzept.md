@@ -198,6 +198,94 @@ Anwendung über sich selbst sagt, und nichts, was sie über die Daten sagt.
 > hier die Oberkante. Auch der Absatz *„Was diese Farbe nicht kann"* ist befolgt: Die gefüllte
 > Fläche bekommt genau die Kontur in `--akzent-schrift`, die er als Behebung vorschlägt.
 
+> ### ⚠️ Widerrufen am selben Tag — die Fläche trägt eine **eigene Rolle** (E‑87)
+>
+> **Der Kasten darüber bleibt vollständig stehen.** Er ist die Begründung, gegen die entschieden
+> worden ist, und ohne ihn wäre nicht nachlesbar, was der Wechsel kostet. Seine erste Hälfte gilt
+> unverändert: *Eine Summe hat keinen Status*, und keine der vier Statusrollen darf über ihr stehen.
+>
+> **Widerlegt ist seine zweite Hälfte.** Der Satz *„der Akzent ist im ganzen Bestand die einzige
+> Farbe, die nichts über die Daten sagt"* stimmt — und er übersieht, was der Akzent **stattdessen**
+> sagt. Er ist die Farbe der **Anwendung**: Schaltfläche, Fokusring, aktive Navigationszeile. Die
+> größte Fläche der Übersichtsseite trug damit dieselbe Farbe wie jedes Bedienelement, und der
+> letzte Absatz oben — *„alles, was die Anwendung über sich selbst sagt, und nichts, was sie über
+> die Daten sagt"* — war damit an der größten Stelle der Seite gebrochen.
+>
+> **Dazu die Messung, und sie ist der härtere Teil.** `--akzent` erreicht auf `--card` **1,98 : 1**;
+> dieser Abschnitt nennt das selbst *„die einzige bekannte Grenze"* der Farbe. Als Fläche war er
+> ein Hauch, und die 3 : 1 aus WCAG 1.4.11 trug allein die Kontur.
+>
+> #### Die neue Rolle: `--verlauf-flaeche` und `--verlauf-kontur`, Ton 230
+>
+> | Token | hell | dunkel |
+> |---|---|---|
+> | `--verlauf-flaeche` | `oklch(0.62 0.118 230)` · **#1992bf** | **derselbe Wert** |
+> | `--verlauf-kontur` | `oklch(0.45 0.085 230)` · #0e5d7b | `oklch(0.78 0.11 230)` · #64c4f0 |
+> | `--verlauf-deckung-oben` / `-unten` | 0.35 / 0.03 | 0.28 / 0.04 |
+>
+> **Ton 230 behauptet nichts, weil ihn nichts belegt:** Rot 27, Überfällig 80, Akzent 112,4, Grün
+> 166. Das ist genau die Eigenschaft, wegen der E‑84 den Akzent nahm — nur ohne dessen zweite
+> Bedeutung. **Die Rolle heißt nicht `--status-*`**, aus demselben Grund wie `--ueberfaellig`: Ein
+> Name mit diesem Präfix verspräche eine Zuordnung über `MessageStatusKind`, und es gibt keine.
+>
+> **Sie steht nicht in `lib/status-farbe.ts`.** Jene Datei ist „die eine Stelle, an der eine
+> fachliche Aussage auf eine Farbrolle trifft" — und hier trifft ausdrücklich **keine** fachliche
+> Aussage auf eine Farbe. Ein Eintrag dort verspräche eine Zuordnung, die es nicht gibt; die beiden
+> Tokennamen stehen in `features/dashboard/verlauf.ts`.
+>
+> #### Die Deckung ist die Stellschraube, nicht der Wert
+>
+> **Das Token ist die volle Farbe; gemalt wird sie nur durch zwei Stopps hindurch.** Jeder Abstand
+> unten ist deshalb gegen den **gemalten** oberen Stopp gerechnet und nicht gegen die Deklaration —
+> ein Abstand gegen das Token beschriebe eine Fläche, die niemand vor sich hat.
+>
+> | | gemalt hell | gemalt dunkel |
+> |---|---|---|
+> | oberer Stopp | **#aed9e9** | **#183a47** |
+> | Fuß | #f8fcfd | #181d1f |
+>
+> #### Die sechs Abstände, beide Blöcke **getrennt** gerechnet
+>
+> Untergrenze ist überall die Sichtprobe A.2 aus §7a: **0,025** in OKLab sind dort als *Rangfolge*
+> gelesen worden. Gerechnet mit `scripts/farbwerte/rechne.mjs`; jede Zahl stammt aus seinem Lauf.
+>
+> | | hell | dunkel |
+> |---|---|---|
+> | **1** Stopp ↔ `--card` | **0,1485** *(Kontrast 1,51 : 1 — Bericht)* | **0,1287** *(1,47 : 1)* |
+> | **2** Gitterlinie: oberer Stopp / Fuß | 0,0669 / 0,0973 | 0,0741 / 0,1086 |
+> | **3** Stopp ↔ `--status-offen` | **0,4229** | **0,4517** |
+> | *engste Strecke zu irgendeiner Rolle* | 0,3139 (`--status-ungeklaert`) | 0,2929 |
+> | **4** Stopp ↔ Fehlerkachelfläche | **159,6°** Buntton | **157,1°** |
+> | **5** Zahl auf der Kachel | 5,38 : 1 *(Hexwert 5,39)* | 5,46 : 1 |
+> | **6** Banding über 245 px, gerastert | 187 Stufen, längstes Band **4 px** | 165 Stufen, **4 px** |
+> | die Kontur auf `--card` | **7,29 : 1** | **9,06 : 1** |
+>
+> #### ⚠️ Die 3 : 1 hängen an der **Kontur** und nicht an der Fläche
+>
+> **Die Linie trägt den Kurvenverlauf — sie ist die Aussage —, die Fläche trägt Gewicht.** Eine
+> Tönung an der Umriss-Schwelle aus WCAG 1.4.11 zu messen hieße, sie zu einem Umriss zu erklären.
+> Der Kontrast der Fläche wird **berichtet** und nicht gefordert; die Bedingung, die sie halten
+> muss, ist der OKLab-Abstand zur Karte.
+>
+> **Zum Vergleich derselbe Stopp mit dem Akzent:** 0,1085 hell und **0,1876** dunkel. Bei *gleicher*
+> Deckung trug das Gelbgrün auf dunklem Grund die schwerere Fläche — die größte Fläche der Seite
+> war im Dunkeln die lauteste.
+>
+> #### ⚠️ Was hier neu am engsten liegt, und warum es trotzdem trägt
+>
+> Die engste Strecke der neuen Rolle ist **nicht** die zu einer Statusfarbe, sondern die vom
+> **Token** zu `--status-ungeklaert` im Dunkelblock: dort steht die neutrale Rolle auf derselben
+> Helligkeit 0.62, und der Abstand ist damit **genau die Chroma**, also 0,118. Das liegt knapp über
+> der engsten Strecke des ganzen Bestands (0,1169659, §7a Befund 3) und unter der sRGB-Decke von
+> 0,1236 — **wer die Chroma senkt, rückt die Fläche an eine neutrale Statusrolle heran**.
+>
+> **Gemalt ist der Abstand ein Vielfaches davon** (0,2929), und er ist fast reine **Chroma**: ein
+> Grau gegen ein sattes Petrol. Das ist die leichteste aller Unterscheidungen — anders als die
+> 0,117 aus §7a, die zwischen zwei *satten* Farben lagen.
+>
+> **Nicht geändert:** `lib/status-farbe.ts`, die vier Statusrollen, `--ueberfaellig`, der Akzent und
+> jede seiner vier Stufen.
+
 ### Die Grundfläche
 
 Achromatisches Neutral. **Begründung:** In einer Liste, die zu einem Drittel aus Zwischenprodukten
@@ -673,6 +761,60 @@ Vergleichsmaß ist §3: Grün 166 hat zum Akzent **0,343**, der Akzent zu Rot **
 | *zum Vergleich:* `--status-abgeschlossen` → `--status-fehler` | 0,276 | 0,286 |
 | die Flächen: `--ueberfaellig-flaeche` → `--status-fehler-flaeche` | 0,025 | 0,045 |
 | *zum Vergleich:* `--status-abgeschlossen-flaeche` → `--status-fehler-flaeche` | 0,049 | 0,084 |
+
+> ### ⚠️ Die Zeile mit den 0,025 misst seit dem 04.09.2026 etwas anderes (E‑88)
+>
+> **`--status-fehler-flaeche` ist gedämpft worden**, und damit stimmt die Zahl in der Tabelle
+> darüber für das Paar nicht mehr: Sie lautet jetzt **0,0238** hell und **0,0432** dunkel. Die alte
+> Zeile bleibt stehen, weil die Rechnung, für die sie gebraucht wurde, an ihrem Datum richtig war.
+>
+> ⚠️ **Das Paar ist damit im hellen Block unter die 0,025 gerutscht** — beide Flächen haben Chroma
+> verloren, und der Ton ist von 27 auf 22 gewandert, also *auf* das Gold zu. Es steht hier und wird
+> nicht kleingeredet. **Folgenlos ist es trotzdem**, und zwar aus dem Grund, der eine Zeile weiter
+> unten steht: `--ueberfaellig` hat seit E‑77 **keinen Verbraucher**; die beiden Flächen treffen
+> sich auf keiner Ansicht. **Wer die Rolle zurückholt, rechnet dieses Paar neu** — und findet dann
+> eine Strecke, die die Sichtprobe nicht mehr trägt.
+>
+> **Die Sichtprobe selbst ist davon unberührt.** Sie hat gemessen, dass **0,025 Unterschied als
+> Rangfolge gelesen werden** — das ist ein Befund über die *Wahrnehmung bei diesem Abstand* und
+> keiner über dieses Paar. Als Untergrenze für „unterscheidbar" trägt die Zahl weiter, und E‑87
+> misst sechs Abstände gegen sie.
+>
+> **Was sich geändert hat und warum**, steht in §3 im Kasten zu E‑87: Die Verlaufsfläche der
+> Übersicht trägt seither einen kräftigen Petrolton, und wo zwei Flächen reiben, weicht nach diesem
+> Abschnitt die **ohne** Bedeutung. Zuerst gewichen ist deshalb die Verlaufsfläche (über die
+> Deckung); die Kachelfläche gibt zusätzlich nach, **weil sie es kann, ohne etwas zu verlieren** —
+> sie ist eine Tönung, und die Aussage trägt die Zahl darauf.
+>
+> | | hell | dunkel |
+> |---|---|---|
+> | bis 04.09.2026 | `oklch(0.96 0.028 27)` | `oklch(0.26 0.05 27)` |
+> | **seither** | **`oklch(0.96 0.016 22)`** · #fdeeed | **`oklch(0.26 0.035 22)`** · #331d1c |
+> | `--status-fehler` darauf | 5,30 → **5,38 : 1** | 5,49 → **5,46 : 1** |
+> | Abstand zu `--card` | 0,0497 *(gezeigt)* → **0,0431** | 0,0707 → **0,0610** |
+>
+> **Weniger Chroma und eine Spur kühler — die Helligkeit bleibt, und das Signalrot bleibt Ziffer
+> für Ziffer.** Der Tonwechsel 27 → 22 ist bei dieser Chroma **nicht zu sehen**; was man sieht, ist
+> die Dämpfung der Chroma. Das steht hier, weil „eine Spur kühler" sonst mehr verspräche, als die
+> Zahl hält.
+>
+> ⚠️ **Der Wert färbt mehr als die Kachel:** jede Fehlerplakette in Liste, Detail, Kette und
+> Prozessansicht. Eine kachel-eigene Farbe hätte die Zuordnung Rolle → Token aus
+> `lib/status-farbe.ts` herausgelöst, und §2 lässt sie nur an **einer** Stelle stehen. Am
+> laufenden System angesehen, hell und dunkel, an einer Liste mit fünfzig Plaketten: Die Plakette
+> trägt in der Liste **alle drei** Werte (mit Kontur, anders als die Kachel nach E‑u) und liest
+> sich weiter als gefüllt.
+>
+> #### ✔ Offener Punkt 123 ist damit geschlossen — und das war nicht der Anlass
+>
+> `oklch(0.96 0.028 27)` lag **außerhalb des sRGB-Farbraums**: Der rote Kanal kam auf 1,0211, der
+> Browser schnitt ab, und was auf dem Schirm stand, war `#ffebe8` = `oklch(0,9555 0,0221 29,4)` —
+> **weder die eingetragene Helligkeit noch der eingetragene Ton**. Der neue Wert liegt mit 0,016 bei
+> 80 % der Decke von 0,0199 und wird nicht mehr abgeschnitten.
+>
+> **Die Ausnahme in `tests/farbkontrast.test.ts` ist entfallen statt gelockert** — der Test fordert
+> die sRGB-Bedingung jetzt für **jeden** Wert ohne Ausnahme und ist damit schärfer geworden.
+> Geprüft in beide Richtungen: Mit dem alten Wert wird er rot.
 
 ##### ⚠️ Befund 1: Der Abstand zu Rot ist 0,152 — **44 % des Vergleichsmaßes**
 

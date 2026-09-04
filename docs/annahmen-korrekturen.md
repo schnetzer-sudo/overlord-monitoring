@@ -1076,3 +1076,74 @@ Zahlen, Rechenweg und Belegvermerk in [`dashboard-frontend.md`](dashboard-fronte
 `monotone` gegen `natural` begründete — **ohne eine einzige Zahl**. Eine Begründung ohne Messung
 liest sich wie eine Behauptung, und eine Behauptung lädt dazu ein, ihr Gegenteil zu vermuten. Der
 Kommentar hatte recht und konnte es nicht zeigen.
+
+---
+
+## 04.09.2026 — der Browser mischt Deckung in sRGB, nicht im linearen Licht
+
+**Art:** Messung an der laufenden Anwendung, **während** der Rechnung gefunden. Keine Aussage über
+das Quellsystem — korrigiert wird ein **Rechenweg**, mit dem zwei Vorlagen bereits ausgeliefert
+worden waren.
+
+**Was angenommen war:** Eine Farbe mit Deckung über einem Untergrund mischt sich im **linearen
+Licht**. Das ist die physikalisch richtige Art, Licht zu addieren, und es ist die Art, in der die
+Rechnung dieses Projekts sonst arbeitet (OKLab setzt lineares sRGB voraus).
+
+**Was zutrifft:** Der Browser mischt im **gammakodierten** Raum. `color-interpolation` steht in SVG
+auf `sRGB`, und die Alphamischung folgt dem. In Chrome an drei Proben nachgesehen — ein SVG über
+eine `data:`-URL auf ein Canvas gelegt und das Pixel ausgelesen:
+
+| | gemessen | sRGB | linear |
+|---|---|---|---|
+| `#1992bf` zu 28 % über `#181818` | **#183a46** | #183a47 | #18536d |
+| `#1992bf` zu 35 % über `#ffffff` | **#afd9e9** | #afd9e9 | #d3e1eb |
+| `#ffffff` zu 12 % über `#181818` | **#343434** | #343434 | #646464 |
+
+**Die dritte Zeile ist die teuerste.** Sie ist `--border` im Dunkelblock — `oklch(1 0 0 / 12%)` über
+der Karte, also die **Gitterlinie** des Verlaufsdiagramms. Die beiden Rechenwege liegen dort
+**0,19 in OKLab** auseinander, mehr als das Siebenfache der Sichtprobe von 0,025.
+
+**Was das gekostet hat:** In der ersten Vorlage der Farbwerte standen sechs Zahlen, die den
+Farbverlauf beschrieben — alle sechs waren nach dem linearen Rechenweg gebildet und beschrieben
+eine Fläche, die niemand vor sich hat. **Der Fehler ist vor der Abnahme aufgefallen**, und zwar
+nicht durch Nachdenken: Die gerasterte Gegenprobe am Browser lieferte `#183a46`, wo die Rechnung
+`#18536d` sagte.
+
+**Die Lehre, und sie ist die verallgemeinerbare Hälfte:** Die Rechnung war für **Farbwerte** gebaut
+und ist für **Kompositionen** benutzt worden. Ein Wert aus `globals.css` ist dasselbe wie das, was
+gemalt wird — eine Fläche mit Deckung ist es nicht. **Wo eine Zahl eine Mischung beschreibt, gehört
+sie am Bildschirm gegengeprobt**, auch wenn der Rechenweg für die unvermischten Werte belegt ist.
+
+Umgestellt in `scripts/farbwerte/rechne.mjs` und `tests/farbkontrast.test.ts`, mit der Messung als
+Kommentar an der Funktion. Ausgeschrieben in [`dunkelmodus.md`](dunkelmodus.md) §4.4.
+
+---
+
+## 04.09.2026 — „zehn verschiedene Prozesse" gibt der Bestand nicht her
+
+**Art:** Erhebung gegen die Testkopie (M146). Eine Aussage über den **Bestand**, nicht über den
+Code.
+
+**Was angenommen war:** Der Block „Zuletzt aufgefallen" zeigt nach der Verdichtung **zehn
+verschiedene Prozesse** mit Anzahl und Zeitpunkt. So steht es in der Abnahme des Auftrags.
+
+**Was zutrifft:** Über den **gesamten** Bestand hat `NEXANS` Fehler in **drei** Prozessen,
+`SUTTONS` in **einem**, `VOTG` in **einem**. Der Block zeigt damit **null bis drei** Zeilen — nie
+zehn.
+
+| über den gesamten Bestand | Fehlerzeilen | betroffene Prozesse |
+|---|---:|---:|
+| `NEXANS` | 3.300 | **3** |
+| `SUTTONS` | 103 | **1** |
+| `VOTG` | 8 | **1** |
+
+**Die Verdichtung wirkt trotzdem, und zwar genau wie beabsichtigt:** Aus zehn identischen Zeilen
+werden zwei verschiedene (*49 × BMW LAB (VDA)*, *1 × BMW Global Invoice (EDIFACT)*). **Der Deckel
+von zehn bleibt** — er greift auf diesen Daten nur nicht.
+
+**Und die Zahl ist selbst die Auskunft.** Dass ein einziger Prozess 49 von 50 Fehlern trägt, war an
+zehn gleichen Zeilen nicht abzulesen; jetzt steht es da. Wer den Block für „zu leer" hält, liest
+darin die richtige Aussage über einen Mandanten, der seine Fehler an wenigen Stellen hat.
+
+**Was daraus nicht folgt:** eine Aussage über die **Produktion**. Ob der Block dort zehn Zeilen
+füllt, ist nicht gemessen und kann es von hier aus nicht sein.

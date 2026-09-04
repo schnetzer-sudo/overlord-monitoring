@@ -590,6 +590,82 @@ durchsuchen, bevor sie „nichts" sagen darf — **gerade der gute Fall ist der 
 > Kombinationen — vorher 29,7 bis 34,1 ms für **beide** Hälften zusammen. Er bleibt von der
 > Fensterbreite unabhängig, und das war der Zweck.
 
+> ### ⚠️ Fortschreibung vom 04.09.2026 — der Block trägt **Prozesse** (E‑90)
+>
+> **Der Abschnitt darunter bleibt vollständig stehen.** Der Indexhinweis, sein Befund und seine
+> Messung gelten unverändert; geändert hat sich, **was eine Zeile ist**.
+>
+> #### Der Befund: Er listete Nachrichten, wo er Prozesse listen sollte
+>
+> Am laufenden System zeigte der Block zehn Zeilen mit **demselben Zeitstempel und demselben
+> Ablauf**. Der Grund steht in den Daten und nicht im Bau — und er ist erst mit M146 gemessen
+> worden:
+>
+> | über den **gesamten** Bestand | Fehlerzeilen | betroffene **Prozesse** |
+> |---|---:|---:|
+> | `NEXANS` | 3.300 | **3** |
+> | `SUTTONS` | 103 | **1** |
+> | `VOTG` | 8 | **1** |
+>
+> Bei `NEXANS` über 48 Stunden stammen **49 der 50 Fehler aus einem einzigen Prozess**. Ein Prozess
+> füllte die Liste allein, und **keine Zeile trug eine eigene Auskunft**.
+>
+> #### Was jetzt dasteht
+>
+> Eine Zeile **je Prozess**, mit **Anzahl** und **jüngstem Zeitpunkt**, weiterhin höchstens zehn,
+> sortiert nach dem jüngsten Zeitpunkt. Aus zehn gleichen Zeilen werden zwei verschiedene: *49 ×
+> BMW LAB (VDA)* und *1 × BMW Global Invoice (EDIFACT)*.
+>
+> > **Es sind selten zehn, und das ist die Auskunft und kein Mangel.** Auf dieser Testkopie zeigt
+> > der Block **null bis drei** Zeilen. Er sagt damit etwas, das die zehn gleichen Zeilen davor
+> > verschwiegen haben: *Es ist immer derselbe Prozess.* Der Deckel von zehn bleibt, er greift auf
+> > diesen Daten nur nicht.
+>
+> #### Der Name kommt aus `Process.ProcessName`
+>
+> **Das folgt aus der Verdichtung und ist keine Geschmacksfrage.** Das Verhältnis Process zu SOS ist
+> meist 1:1, gelegentlich 1:n ([`datenmodell.md`](datenmodell.md)) — eine Gruppe je Prozess kann
+> damit *mehrere* Ablaufnamen enthalten, und einen davon zu wählen hieße raten (Regel Q4).
+> `ProcessName` gehört dem Prozess allein, ist in Klartext gepflegt und ist derselbe Anzeigename,
+> den Prozesskatalog und Prozessansicht tragen. Der `LEFT JOIN` bleibt ein `LEFT`: Ein Prozess ohne
+> gepflegten Namen fällt nicht aus der Liste, er kommt ohne Namen.
+>
+> **`ProcessName` steht in der `GROUP BY`**, obwohl es vom Primärschlüssel funktional abhängt. Das
+> ändert die Gruppen nicht und macht die Abfrage unabhängig davon, wie streng `only_full_group_by`
+> auf der Instanz steht. **Gruppiert wird nach dem Schlüssel, nicht nach dem Namen** — zwei Prozesse
+> mit gleichem Namen bleiben zwei Zeilen.
+>
+> #### Der Indexhinweis: die Sorge war berechtigt und hat sich nicht bestätigt
+>
+> Der Indexhinweis wirkte, weil er verbot, den Zeitindex **zur Sortierung** zu nehmen. Über einer
+> Gruppierung gibt es keine freie Sortierung mehr — der Hinweis könnte ins Leere greifen, während
+> der Optimierer den Zeitindex für den **Bereich** wählt. **Vier Fassungen gemessen** (M146): ohne
+> Hinweis, `IGNORE INDEX FOR ORDER BY`, volles `IGNORE INDEX`, `FORCE INDEX (MessageStatusIDX)` —
+> **alle vier steigen über `MessageStatusIDX` ein**, alle vier lesen dieselben 6.257 Zeilen, alle
+> vier liegen bei 20 ms.
+>
+> **Der Hinweis bleibt trotzdem — als Riegel und nicht als Wirkung.** Er kostet gemessen nichts,
+> `DashboardPlanDbIT` hält fest, dass der Zeitindex in keiner Planzeile steht, und die Wette auf die
+> heutige Statistik ist seit M108 als offener Punkt 82 benannt. Ihn zu ziehen wäre eine eigene
+> Entscheidung mit einer eigenen Messung; **diese Runde hat sie nicht getroffen.**
+>
+> **`Using temporary; Using filesort` steht jetzt im Plan, und es ist nicht das, wovor dieser
+> Abschnitt warnt.** Sortiert und gruppiert wird die *Ergebnismenge* — höchstens ein paar hundert
+> Zeilen —, nicht der Statusbereich; Treiberindex und gelesene Zeilenzahl sind Ziffer für Ziffer die
+> von M108.
+>
+> #### Der Verweis führt in die Liste
+>
+> Die Zeile trägt einen Prozess mit *n* Nachrichten; eine davon herauszugreifen wäre eine
+> Behauptung, die sie nicht macht. Das Ziel ist `/nachrichten?status=FEHLER&prozess=…` mit dem
+> Fenster der Antwort — **genau die Menge, die die Zahl daneben nennt**. Am laufenden System
+> nachgesehen: Der Klick auf *49* zeigt 49 Zeilen.
+>
+> **Damit ist offener Punkt 136 gegenstandslos** statt erledigt. Er verlangte den Rohstatus je Zeile
+> zurück; eine Zeile, die einen ganzen Prozess zusammenfasst, hat keinen — sie kann zwanzig
+> verschiedene enthalten. Der Rohstatus steht in der Liste, einen Klick entfernt und dort
+> vollständig.
+
 ### Zwei Änderungen, und die erste allein genügte nicht
 
 **1. Je Merkmal ein Statement.** Zusammengeführt und gedeckelt wird in Java; aus zweimal zehn
@@ -748,6 +824,75 @@ dessen Grund liegt am *Schema* ([`nachrichtenliste.md`](nachrichtenliste.md) §5
 > Schritts ist gemessen negativ. Die Drift im Verteilungsblock ist ein **eigener** Befund und wird
 > nicht in diesem Schritt geheilt.
 
+> ### M146 *(04.09.2026)* — der verdichtete Block, drei Mandanten, drei Fenster
+>
+> **Anlass:** Der Block gruppiert seit E‑90 nach Prozess (§7a). Zu messen war die Frage, ob die
+> Gruppierung den Plan zurück auf den Zeitindex dreht — der Hinweis kann sie nicht mehr verhindern,
+> weil er nur die *Sortierung* betrifft.
+>
+> #### Der Plan: unverändert
+>
+> | Mandant | Treibertabelle | Index auf `Message` | `rows` | `Extra` |
+> |---|---|---|---:|---|
+> | `NEXANS` | `Message` | **`MessageStatusIDX`** | 6.257 | `Using index condition; Using where; Using temporary; Using filesort` |
+> | `VOTG` | `Message` | **`MessageStatusIDX`** | 6.257 | dasselbe |
+> | `SUTTONS` | **`ProjectMandant`** | **`MessageStatusIDX`** | 6.257 | dazu `Using join buffer (flat, BNL join)` |
+>
+> **Welche Tabelle den Einstieg macht, hängt am Mandanten** — dieselbe Beobachtung wie in M108, und
+> `DashboardPlanDbIT` schreibt deshalb weiterhin Zugriffsart und Index fest und nicht die
+> Reihenfolge. `MessageLastUpdateIDX` steht in `possible_keys` und in **keinem** Plan als `key`.
+>
+> #### Die Laufzeit: beste von fünf, ein Aufwärmlauf davor
+>
+> **In SQL gegen die Testkopie**, beide Fassungen mit demselben Indexhinweis, damit der Vergleich
+> die *Gruppierung* misst und nicht den Hinweis:
+>
+> | | `NEXANS` | `SUTTONS` | `VOTG` |
+> |---|---|---|---|
+> | 48 h — alt → **verdichtet** | 23,378 → **22,201** | 22,481 → **20,104** | 21,941 → **19,979** |
+> | 30 T | 23,915 → **22,488** | 21,452 → **21,165** | 21,614 → **20,370** |
+> | 12 M | 23,108 → **26,220** | 23,194 → **24,087** | 23,015 → **22,118** |
+>
+> **Fünf von neun Kombinationen werden schneller, eine wird um 3,1 ms teurer** — `NEXANS` über
+> zwölf Monate, also der Mandant mit den meisten Fehlerzeilen im breitesten Fenster. Spannweite:
+> alt 21,5 bis 23,9 ms, verdichtet **20,0 bis 26,2 ms**.
+>
+> **An dem, was der Code schickt** (`MessungM146DbIT`, also mit jOOQ-Rendering, Verbindung und
+> Zeilenabbildung): **23,3 bis 30,2 ms** über dieselben neun Kombinationen, der Höchstwert wieder
+> bei `NEXANS`/12 M.
+>
+> **Gegen das Vergleichsmaß:** M108 nennt 22 bis 25 ms, M145 21,9 bis 26,1 ms. Die Größenordnung
+> hält; der eine Ausreißer liegt vier Millisekunden über der bisherigen Obergrenze, bei einem
+> Budget von 500 ms für die ganze Seite.
+>
+> #### Was der Block jetzt liefert
+>
+> | | 48 h | 30 T | 12 M |
+> |---|---|---|---|
+> | `NEXANS` | **2** Prozesse / 50 Nachrichten | 3 / 55 | 3 / 711 |
+> | `SUTTONS` | 0 / 0 | 1 / 5 | 1 / 103 |
+> | `VOTG` | 0 / 0 | 0 / 0 | 1 / 8 |
+>
+> > **Belegvermerk (Regel L10).**
+> > *Gemessen ist:* `EXPLAIN` und Laufzeit für drei Mandanten × drei Fenster, in zwei Fassungen
+> > (alt und verdichtet) und für die verdichtete zusätzlich in vier Indexfassungen; ein Aufwärmlauf
+> > und die beste von fünf, warm, gegen die Testkopie im Profil `dev` am Anker
+> > `2025-12-30 04:09:47`. Die Laufzeit ist **zweimal** erhoben — in SQL und an dem, was der Code
+> > schickt.
+> > *Behauptet wird:* Die Gruppierung dreht den Plan nicht auf den Zeitindex, und der Block bleibt
+> > in derselben Größenordnung wie M108.
+> > **Die Lücken, und es sind drei.** Alle Werte sind **Warmwerte**; `FLUSH TABLES` steht
+> > `monitor_read` nicht zu. Gemessen sind **drei von zehn** Mandanten. Und die Zahl der
+> > betroffenen Prozesse ist eine Eigenschaft **dieser Testkopie** — über die Produktion sagt sie
+> > nichts, und ob der Block dort zehn Zeilen füllt, ist **nicht** gemessen.
+> >
+> > **Nicht gemessen ist außerdem der Zustand vor dem Umbau an derselben Instanz zur selben
+> > Stunde** für die Fassung *durch den Code*: Dort liegt nur die neue Zahl vor, die alte stammt
+> > aus M145 (03.09.2026). Der Vergleich alt/neu oben ist deshalb der aus SQL, wo beide Fassungen
+> > **in derselben Sitzung** gelaufen sind.
+>
+> Skripte, Auswerter und Rohausgaben: `scripts/messung-schritt10c-verdichtung/`.
+
 ### Die ursprüngliche Messung im Wortlaut — M108 *(31.08.2026)*
 
 Gemessen mit `MessungM108DbIT`: **das, was der Code schickt**, gegen die Testkopie, im Profil `dev`
@@ -824,7 +969,7 @@ größte."*
 | **Läuft** | `Message`, **`ref`** über **`MessageStatusIDX`**, `key_len 123`, `rows = 1` |
 | **Wartend** | `Message`, **`ref`** über **`MessageStatusIDX`**, `key_len 123`, `rows = 538` |
 | **Erscheinungsbedingung Wartend** | `ProjectMandant` `ref` über `ProjectMandant_Mandant_idx` → `Process` → `SOS` → `SOSAction`, alle `ref` über Index; **keine Tabelle wird voll gelesen** |
-| Zuletzt aufgefallen, Fehlerhälfte | `Message`, `range` über **`MessageStatusIDX`**, `rows = 6.257` |
+| Zuletzt aufgefallen, Fehlerhälfte | `Message`, `range` über **`MessageStatusIDX`**, `rows = 6.257`. *Seit E‑90 zusätzlich `Using temporary; Using filesort` über der **Ergebnismenge** — Index und Zeilenzahl unverändert (M146)* |
 | ~~Zuletzt aufgefallen, Überfälligkeitshälfte~~ | *entfallen (E‑71)* |
 | Stand | `rollup_lauf`, `range` über `rollup_lauf_stand_idx` |
 

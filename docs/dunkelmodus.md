@@ -371,6 +371,85 @@ Auftraggeber getroffen hat.
 `tests/farbkontrast.test.ts`. Er darf bleiben, wo er ist; wächst er, fällt es auf. **Eine
 übersprungene Ausnahme sähe irgendwann aus wie ein geprüfter Wert.**
 
+> ### ✔ Geschlossen am 04.09.2026 (E‑88) — und der Anlass war ein anderer
+>
+> **Der Abschnitt darüber bleibt vollständig stehen.** Er beschreibt den Zustand, der bis heute
+> galt, und er nennt den Grund, aus dem er stehen blieb: Eine Korrektur verschöbe den Rotton der
+> Fehlerfläche im ganzen Bestand und wäre eine eigene Entscheidung. **Genau die ist jetzt getroffen
+> worden — nur nicht wegen des Farbraums.**
+>
+> Die Verlaufsfläche der Übersicht trägt seit **E‑87** einen kräftigen Petrolton. Wo zwei Flächen
+> reiben, weicht nach [`visuelles-konzept.md`](visuelles-konzept.md) §3 die **ohne** Bedeutung;
+> gewichen ist zuerst die Verlaufsfläche (über die Deckung), und die Kachelfläche gibt zusätzlich
+> nach, weil sie es kann, ohne etwas zu verlieren. **Der Austritt aus dem Farbraum fällt dabei mit
+> — als Nebenwirkung, nicht als Zweck.**
+>
+> | | hell | dunkel |
+> |---|---|---|
+> | bis 04.09.2026 | `oklch(0.96 0.028 27)`, gezeigt `#ffebe8` | `oklch(0.26 0.05 27)` |
+> | **seither** | `oklch(0.96 0.016 22)` · **#fdeeed** | `oklch(0.26 0.035 22)` · **#331d1c** |
+> | Chroma von der Decke | 0,016 von 0,0199 — **80 %** | 0,035 von 0,1049 — 33 % |
+> | Überschuss | **0** *(war 0,021112)* | 0 *(war 0)* |
+> | `--status-fehler` darauf | 5,30 → **5,38 : 1** *(Hexwert 5,39)* | 5,49 → **5,46 : 1** |
+>
+> **Der Dunkelblock lag immer im Farbraum** — der Austritt war ein Befund des hellen. Er ist
+> trotzdem mitgewandert, und zwar **getrennt gerechnet und nicht gespiegelt**: Bei L 0.26 trägt
+> sRGB bis 0,1049 Chroma, die Dämpfung ist dort also frei wählbar und folgt dem hellen Block im
+> Verhältnis, nicht in der Zahl.
+>
+> **Die Ausnahme in `tests/farbkontrast.test.ts` ist entfallen statt gelockert.** Der Test fordert
+> die sRGB-Bedingung jetzt für jeden Wert ohne Ausnahme — er ist **schärfer** geworden. Geprüft in
+> beide Richtungen: Mit dem alten Wert läuft er rot.
+
+### 4.4 Die neue Rolle `--verlauf-*` — beide Blöcke, getrennt gerechnet *(E‑87, 04.09.2026)*
+
+**Der Dunkelblock ist hier keine Umkehrung des hellen, und an einer Stelle ist er es doch — mit
+Grund.** Die **Fläche** trägt in beiden Blöcken denselben Wert, wie `--akzent` es tut: Sie ist nie
+Schrift, und was von ihr gemalt wird, regelt ohnehin die Deckung darunter. Die **Kontur** kehrt
+sich um, aus demselben Grund wie `--akzent-schrift`: Sie liegt auf der Grenze zwischen Fläche und
+Karte, und welche der beiden die dunklere ist, hängt am Block.
+
+| Token | hell | dunkel |
+|---|---|---|
+| `--verlauf-flaeche` | `oklch(0.62 0.118 230)` · #1992bf | **derselbe Wert** |
+| `--verlauf-kontur` | `oklch(0.45 0.085 230)` · #0e5d7b | `oklch(0.78 0.11 230)` · #64c4f0 |
+| `--verlauf-deckung-oben` | 0.35 | **0.28** |
+| `--verlauf-deckung-unten` | 0.03 | **0.04** |
+
+**Die beiden Deckungen sind der Teil, den der Dunkelblock wirklich für sich hat.** Dieselbe Deckung
+trägt auf `--card` 0.21 *etwas* mehr auf als auf Weiß — bei 0,35 wären es 0,1597 OKLab gegen
+0,1485, also acht Prozent. Mit 0,28 sind es **0,1287**; die Deckung geht damit über den Ausgleich
+hinaus und stellt die dunkle Fläche dreizehn Prozent leiser als die helle. **Das ist eine
+Entscheidung nach Augenschein und keine, die aus einer Zahl folgt** — sie steht hier als solche.
+Der Fuß liegt umgekehrt höher (0,04 gegen 0,03), weil eine Tönung auf dunklem Grund schneller
+verschwindet als auf hellem.
+
+**Der Kontrast auf `--card`:** die Kontur 7,29 : 1 hell und 9,06 : 1 dunkel — die 3 : 1 aus WCAG
+1.4.11 hängen an ihr und nicht an der Fläche. Der gemalte obere Stopp liegt bei 1,51 : 1 bzw.
+1,47 : 1; **das ist ein Bericht und keine Bedingung**.
+
+> #### ⚠️ Ein Befund über den **Rechenweg**, und er betrifft jede Deckung in dieser Datei
+>
+> Die erste Fassung von `ueber()` mischte im **linearen Licht**. Das ist die physikalisch richtige
+> Art, Licht zu addieren — und es ist **nicht**, was der Browser tut: `color-interpolation` steht in
+> SVG auf `sRGB`, und die Alphamischung läuft im gammakodierten Raum. Am 04.09.2026 in Chrome an
+> drei Proben nachgesehen (SVG über `data:`-URL auf ein Canvas, Pixel ausgelesen):
+>
+> | | gemessen | sRGB | linear |
+> |---|---|---|---|
+> | `#1992bf` zu 28 % über `#181818` | **#183a46** | #183a47 | #18536d |
+> | `#1992bf` zu 35 % über `#ffffff` | **#afd9e9** | #afd9e9 | #d3e1eb |
+> | `#ffffff` zu 12 % über `#181818` | **#343434** | #343434 | #646464 |
+>
+> **Die dritte Zeile ist die teuerste:** Sie ist `--border` im Dunkelblock, also `oklch(1 0 0 /
+> 12%)` über der Karte — die **Gitterlinie** des Verlaufsdiagramms. Die beiden Rechenwege liegen
+> dort **0,19 in OKLab** auseinander, mehr als das Siebenfache der Sichtprobe. Wer hier linear
+> mischt, beschreibt eine Linie, die niemand sieht.
+>
+> Umgestellt in `scripts/farbwerte/rechne.mjs` und in `tests/farbkontrast.test.ts`, mit der Messung
+> als Kommentar an der Funktion. **Alle Zahlen dieses Abschnitts stammen aus dem Lauf nach der
+> Umstellung.**
+
 ---
 
 ## 5. Die sechs vorregistrierten Schwellen und ihre Ergebnisse
@@ -684,7 +763,7 @@ Messwerte in Tabellen und keine Punkte.*
 | Nr. | Punkt |
 |---|---|
 | **122** | **Im Dunkelblock kippt die Rangfolge zwischen Überfällig und Fehler, und Grün wird zur lautesten Kachel** (§6.2). Gemessen: `--ueberfaellig` trägt auf `--card` **6,53 : 1** gegen **6,16 : 1** beim Fehler, auf `--background` 7,15 gegen 6,74 — im hellen Block ist es umgekehrt. Ursache ist der Helmholtz-Kohlrausch-Effekt, den OKLab konstruktionsbedingt nicht abbildet; die gleiche Helligkeit (L 0.7) trägt die Gleichrangigkeit aus Regel Q3 deshalb **nicht**. Dasselbe in der zweiten Richtung: dunkles Grün trägt 8,43 : 1 und zieht den Blick vor dem Rot mit 6,16 : 1 — auf einer Übersicht, die geöffnet wird, *weil* etwas nicht stimmt. **Aufzulösen wäre es nur für alle fünf Rollen zugleich** (§7a, Befund 4), und dann mit einem Maß, das Sättigung einbezieht — nicht mit OKLab-Helligkeit allein. Gehört zu 11b, wenn der Block eingeschaltet wird |
-| **123** | **`--status-fehler-flaeche` liegt im hellen Block außerhalb des sRGB-Farbraums** (§4.3) und wird auf `#ffebe8` abgeschnitten — seit Schritt 3, unbemerkt. Der Überschuss ist in Skript und Test festgenagelt und kann nicht mehr unbemerkt wachsen; behoben ist er nicht. Eine Korrektur verschöbe den Rotton der Fehlerfläche im ganzen Bestand und ist eine eigene Entscheidung |
+| ~~**123**~~ | ~~**`--status-fehler-flaeche` liegt im hellen Block außerhalb des sRGB-Farbraums** (§4.3) und wird auf `#ffebe8` abgeschnitten — seit Schritt 3, unbemerkt. Der Überschuss ist in Skript und Test festgenagelt und kann nicht mehr unbemerkt wachsen; behoben ist er nicht. Eine Korrektur verschöbe den Rotton der Fehlerfläche im ganzen Bestand und ist eine eigene Entscheidung~~ — ✔ **geschlossen am 04.09.2026 (E‑88)**, und der Anlass war ein anderer: Die Fläche ist gedämpft worden, weil die neue Verlaufsfläche daneben steht; der Austritt fällt als Nebenwirkung mit. Der Wert liegt jetzt bei 80 % der Chroma-Decke, die **Ausnahme im Test ist entfallen statt gelockert** (§4.3) |
 | **124** | **`--border` und `--input` tragen im Dunkelblock einen Alphaanteil** (`oklch(1 0 0 / 12%)` und `/ 16%`) und sind deshalb **nicht als deckende Farbe nachgerechnet**. Sie sind Bezug und nicht Gegenstand (E‑61), und der Test lässt jede Form, die er nicht kennt, ausdrücklich **fehlschlagen** statt sie zu überspringen — er liest sie nur nicht. Wer sie nachrechnen will, muss sie zuerst über `--card` und `--background` überlagern, und das ist eine Rechnung, die dieses Projekt noch nirgends führt |
 | **125** | **Die Sichtprobe deckt nicht die ganze Anwendung ab.** Gezeigt worden sind die Bausteine aus dem Auftrag — Plakette, Kachel, Liste, Navigationszeile, Schaltflächen, Fokusring. **Ungesehen im Dunkelblock sind:** das Verlaufsdiagramm samt Legende und Tooltip (Recharts färbt über `var()`-Props, [`frontend-grundlagen.md`](frontend-grundlagen.md) §8a), der Prozessbaum mit seinen 1.158 Zeilen, Formulare und Eingabefelder, Dialoge und Schubladen, die Rohdatenansicht und die Benutzerverwaltung. Das ist keine Lücke dieser Runde — sie hatte den Auftrag, die Werte zu belegen —, aber es ist der Umfang, den 11b vor sich hat |
 

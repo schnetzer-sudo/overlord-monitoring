@@ -237,6 +237,10 @@ allein über Farbe"* —, und §7a hat es für diese Rolle noch einmal ausdrück
 | **E‑84** | **Die Fläche trägt `--akzent`, ihre Oberkante `--akzent-schrift`** — eine Summe hat keinen Status, und der Akzent ist die eine Farbe, die über die Daten nichts behauptet. Keine neue Farbe, keine Zeile in `globals.css` (§5.2) | 04.09.2026 |
 | **E‑85** | **Bewegung nur beim Aufbau** von Verlauf und Fehlerstreifen, im Gleichlauf, 600 ms — sonst keine. Mit `prefers-reduced-motion: reduce` gar keine. **Schränkt [`visuelles-konzept.md`](visuelles-konzept.md) §7 ein, streicht ihn nicht** (§5.2) | 04.09.2026 |
 | **E‑86** | **Der Zeitraumwechsel ist ein Neuaufbau und kein Morphing** — ein `key` am Container trägt das Zeitraumpaar. Sonst interpolierte Recharts zwischen Pfaden mit verschieden vielen Stützstellen (§5.2) | 04.09.2026 |
+| **E‑87** | **Die Fläche trägt eine eigene Rolle in Ton 230** (`--verlauf-flaeche` / `--verlauf-kontur`) und nicht mehr den Akzent. **Widerruft E‑84 zur Hälfte:** Eine Summe hat weiterhin keinen Status — aber der Akzent sagt sehr wohl etwas, nämlich über die **Anwendung**, und als Fläche erreichte er auf `--card` nur 1,98 : 1 (§5.2) | 04.09.2026 |
+| **E‑88** | **Die Fläche der Fehlerkachel wird gedämpft** — weniger Chroma, eine Spur kühler. **Nur die Fläche:** Zahl, Text, Balken, Plaketten und Fehlerart behalten `--status-fehler` Ziffer für Ziffer. Schließt nebenbei offenen Punkt 123 (§5.2, [`visuelles-konzept.md`](visuelles-konzept.md) §7a) | 04.09.2026 |
+| **E‑89** | **Die Deckung der beiden Farbverlaufsstopps steht als Token und ist je Block verschieden** (hell 0,35 / 0,03, dunkel 0,28 / 0,04). `fillOpacity` bleibt `1` — die Durchsicht gehört in die Stopps, wo sie ausdrücklich dasteht (§5.2) | 04.09.2026 |
+| **E‑90** | **„Zuletzt aufgefallen" trägt eine Zeile je Prozess** mit Anzahl und jüngstem Zeitpunkt, nicht mehr eine je Nachricht. Der Verweis führt in die **Liste**, gefiltert auf diesen Prozess (§5.6) | 04.09.2026 |
 
 ---
 
@@ -430,6 +434,76 @@ wäre eine Vermutung, die beim Eintreffen der Antwort springt.
 > > Aussagen über das Bild und keine über eine Zahl. **Nicht gemessen** ist außerdem der Zustand
 > > *vor* dem Umbau — die 0,21 px sind über den unveränderten Quelltext hergeleitet und nicht am
 > > alten Stand nachgestellt.
+
+> ### ⚠️ Nachbesserung vom 04.09.2026 — die Farbe der Fläche (**E‑87** bis **E‑89**)
+>
+> **E‑84 fällt zur Hälfte, und die Hälfte, die bleibt, ist die tragende.** *Eine Summe hat keinen
+> Status* gilt unverändert; keine der vier Statusrollen darf über der Fläche stehen. **Gefallen ist
+> die Wahl des Akzents.**
+>
+> | | vorher (E‑84) | jetzt (E‑87) |
+> |---|---|---|
+> | die Fläche | `--akzent` · #b9c022 | **`--verlauf-flaeche`** · `oklch(0.62 0.118 230)` · **#1992bf** |
+> | die Kontur | `--akzent-schrift` | **`--verlauf-kontur`** · #0e5d7b hell / #64c4f0 dunkel |
+> | die Stopps | `1` → `0.08`, in der Ansicht | **Token, je Block verschieden** (E‑89) |
+> | `globals.css` | *„keine Zeile"* | **sechs neue Token**, in beiden Blöcken |
+>
+> **Der Grund in einem Satz:** Der Akzent sagt nichts über die *Daten* — aber sehr wohl etwas über
+> die **Anwendung**, und die größte Fläche der Seite trug damit dieselbe Farbe wie jede
+> Schaltfläche, jeder Fokusring und die aktive Navigationszeile. Dazu die Messung: `--akzent`
+> erreicht auf `--card` **1,98 : 1**, was §3 selbst *„die einzige bekannte Grenze"* der Farbe nennt.
+>
+> **Ton 230 behauptet nichts, weil ihn nichts belegt** — Rot 27, Überfällig 80, Akzent 112,4,
+> Grün 166. Die vollständige Rechnung mit allen sechs Abständen, beide Blöcke getrennt, steht in
+> [`visuelles-konzept.md`](visuelles-konzept.md) §3.
+>
+> #### E‑89 — die Deckung ist die Stellschraube, nicht der Wert
+>
+> Die beiden Stopps stehen als **Token** und nicht als Zahl in der Ansicht: Dieselbe Deckung trägt
+> auf Weiß weniger auf als auf `--card` 0.21, und eine Zahl in der Komponente wäre eine Zahl für
+> zwei Fälle. **`fillOpacity` bleibt `1`** — eine zweite Deckung darüber multiplizierte sich mit
+> dieser und wäre in keiner der beiden Zahlen mehr abzulesen; genau dieser Fehler ist am selben Tag
+> gemessen worden, als Recharts' Voreinstellung von 0,6 unbemerkt über der Füllung lag.
+>
+> Eingesetzt über `style` und **nicht** über das Attribut `stop-opacity`: Ein Präsentationsattribut
+> löst `var()` nicht auf, eine Stildeklaration schon. Am laufenden System nachgesehen — das Attribut
+> steht auf `null`, `getComputedStyle(stop).stopOpacity` liefert `0.28` bzw. `0.04`.
+>
+> #### E‑88 — die Fehlerkachel gibt nach, das Rot nicht
+>
+> **Wo zwei Flächen reiben, weicht nach [`visuelles-konzept.md`](visuelles-konzept.md) §3 die
+> *ohne* Bedeutung.** Gewichen ist zuerst die Verlaufsfläche — über die Deckung. Die Kachelfläche
+> gibt zusätzlich nach, **weil sie es kann, ohne etwas zu verlieren**: Sie ist eine Tönung, und die
+> Aussage trägt die Zahl darauf.
+>
+> `--status-fehler-flaeche` geht von `oklch(0.96 0.028 27)` auf **`oklch(0.96 0.016 22)`** (dunkel
+> 0.05 → 0.035). **Zahl, Text, Balken, Plaketten und Fehlerart behalten `--status-fehler`
+> unverändert.** Der Kontrast der Zahl auf der Kachel *steigt* dabei von 5,30 auf **5,38 : 1**.
+>
+> ⚠️ **Der Wert färbt mehr als die Kachel** — jede Fehlerplakette in Liste, Detail, Kette und
+> Prozessansicht. Eine kachel-eigene Farbe hätte die Zuordnung aus `lib/status-farbe.ts`
+> herausgelöst, und §2 lässt sie nur an einer Stelle stehen. **Nachgesehen an einer Liste mit
+> fünfzig Plaketten, hell und dunkel:** Die Plakette der Liste trägt `statusKlassen`, also **alle
+> drei** Werte mit Kontur — anders als die Kachel nach E‑u — und liest sich weiter als gefüllt.
+>
+> #### Was die Sichtprobe gefunden hat, und was sie nicht sagt
+>
+> Gefahren als `NEXANS` am Anker `2025-12-30 04:09:47`, **beide Blöcke, alle drei Zeiträume**,
+> beurteilt an **zwölf Monaten** — dort schwankt der Bestand nur zwischen 165.000 und 220.000 auf
+> einer Achse ab null, und die Fläche füllt rund 80 % des Diagramms.
+>
+> **Das Banding ist gerastert und nicht geschätzt:** Der Farbverlauf ist mit den *aufgelösten*
+> Stoppwerten über ein `data:`-SVG auf ein Canvas gelegt und Zeile für Zeile ausgelesen worden —
+> 187 verschiedene Stufen im hellen und 165 im dunklen Block über 230 px, **längstes flaches Band
+> je 4 px**. Auf den Aufnahmen ist kein Streifen zu sehen; **dass es auf einem anderen Schirm
+> genauso ist, sagt diese Zahl nicht.**
+>
+> **Versatz Verlauf ↔ Streifen: 0,0000 px** — beide Zeichenbereiche 54…1639 bei dreißig Tagen, also
+> zeichengleich mit dem Wert von vor der Änderung.
+>
+> **Nicht angefasst:** `lib/status-farbe.ts`, die vier Statusrollen, `--ueberfaellig`, der Akzent
+> und seine vier Stufen, der Fehlerstreifen als Diagrammform, `MAX_BALKENBREITE`, die gerechnete
+> Achsenbreite, Backend, Endpunkt und Antwortrumpf.
 
 > ### ✔ Die Kurve verlässt das Datenintervall nicht — nachgemessen am 04.09.2026
 >
@@ -1000,6 +1074,61 @@ Farbe dort wäre eine Aussage, die es nicht gibt.
 
 ### 5.6 Zuletzt aufgefallen (Teil E)
 
+> ### ⚠️ Umbau vom 04.09.2026 — **eine Zeile je Prozess** (**E‑90**)
+>
+> **Der Befund:** Der Block zeigte zehn Zeilen mit demselben Zeitstempel und demselben Ablauf. Er
+> listete **Nachrichten**, wo er **Prozesse** listen sollte — und bei `NEXANS` über 48 Stunden
+> stammen 49 der 50 Fehler aus *einem* Prozess. Ein Prozess füllte die Liste allein, und keine
+> Zeile trug eine eigene Auskunft.
+>
+> | | vorher | jetzt |
+> |---|---|---|
+> | eine Zeile ist | eine **Nachricht** | ein **Prozess** |
+> | sie trägt | Zeitpunkt, Prozess bzw. `sosName` | Zeitpunkt (**jüngster**), Prozessname, **Anzahl** |
+> | der Name kommt aus | `SOS.SOSName` | **`Process.ProcessName`** |
+> | der Verweis führt | ins Detail, `/nachrichten/<id>` | in die **Liste**, gefiltert auf diesen Prozess |
+> | sortiert nach | Zeitpunkt | **jüngstem** Zeitpunkt je Prozess |
+> | höchstens | zehn | **zehn** (unverändert) |
+>
+> **Der Name wechselt, weil die Zeile wechselt.** Process zu SOS ist meist 1:1, gelegentlich 1:n —
+> eine Gruppe je Prozess kann *mehrere* Ablaufnamen enthalten, und einen davon zu wählen hieße raten
+> (Regel Q4). `ProcessName` gehört dem Prozess allein und ist derselbe Anzeigename, den
+> Prozesskatalog und Prozessansicht tragen. Fehlt er, steht die Kennung da — **kein Ersatztext**.
+>
+> **Sichtbar steht an der Zeile nur die Ziffer.** Der Blockkopf sagt bereits, worum es geht; das
+> Wort an jeder Zeile sagte es zehnmal. Für ein Vorleseprogramm ist die nackte Zahl aber keine
+> Auskunft — dort steht der ganze Satz im `aria-label`, in Einzahl und Mehrzahl getrennt, weil die
+> englische Fassung sie unterscheidet.
+>
+> #### Der Verweis führt in die Liste, und das ist der Ersatz für das Verlorene
+>
+> Die Zeile trägt einen Prozess mit *n* Nachrichten; eine davon herauszugreifen wäre eine
+> Behauptung, die sie nicht macht. Das Ziel ist `/nachrichten?status=FEHLER&prozess=…` mit dem
+> Fenster der Antwort — **genau die Menge, die die Zahl daneben nennt**. Am laufenden System
+> nachgesehen: Der Klick auf *49* zeigt **49 Zeilen**, und der Rohstatus `ERROR_TIMEOUT` steht dort
+> in jeder.
+>
+> #### ✔ Offener Punkt 136 ist damit **gegenstandslos**, nicht erledigt
+>
+> Er verlangte den Rohstatus je Zeile zurück, der mit der Plakette gefallen war. **Eine Zeile, die
+> einen ganzen Prozess zusammenfasst, hat keinen Rohstatus** — sie kann zwanzig verschiedene
+> enthalten. Der Auftrag hat es vorhergesagt: *„erledigt sich mit — durch weniger Zeilen statt mehr
+> Angaben je Zeile."*
+>
+> #### ⚠️ Es sind selten zehn, und das ist die Auskunft und kein Mangel
+>
+> Über den **gesamten** Bestand der Testkopie hat `NEXANS` Fehler in **drei** Prozessen, `SUTTONS`
+> in **einem**, `VOTG` in **einem** (M146). Der Block zeigt damit **null bis drei** Zeilen statt
+> zehn. **Der Deckel von zehn bleibt** — er greift auf diesen Daten nur nicht, und ob er es auf der
+> Produktion tut, ist **nicht gemessen**.
+>
+> **Was diese Zahl sagt, ist mehr als das, was die zehn gleichen Zeilen davor sagten:** Es ist immer
+> derselbe Prozess.
+>
+> **Nicht geändert:** die Überschrift, der Leerzustand, `kategorie` im Antwortrumpf (Regel Q3 — kommt
+> je eine zweite Kategorie zurück, ist dann **je Kategorie** zu gruppieren und nicht darüber
+> hinweg), Rollup, Endpunkt und der übrige Antwortrumpf.
+
 *Geändert am 03.09.2026 (Schritt 10b‑5): die Kategoriekennzeichnung je Zeile ist entfallen. Der alte
 Wortlaut steht darunter.*
 
@@ -1228,7 +1357,7 @@ ausgewiesen. Diese Ansicht fasst zwei davon nicht an und misst die dritte nach:
 | Nr. | Punkt |
 |---|---|
 | ~~**89**~~ | ~~Es gibt keinen Weg, „nur überfällige" in der Liste selbst einzuschalten.~~ ✔ **Gegenstandslos seit dem 03.09.2026 (E‑71).** Die Abfrageform gibt es nicht mehr — weder am Endpunkt noch in der Oberfläche. Der Punkt bleibt stehen, weil er die Begründung trägt, warum eine Marke und kein Schalter gebaut worden war ([`nachrichtenliste.md`](nachrichtenliste.md) §5e) |
-| **136** | **Der Rohstatus je Zeile ist mit der Plakette aus „Zuletzt aufgefallen" gefallen** (§5.6). Er stand nur im `title`, war also nie sichtbar; ihn jetzt sichtbar nachzuziehen wäre eine neue Gestaltungsentscheidung über den Block und keine Aufräumarbeit. **Benannt und nicht nebenbei entschieden** |
+| ~~**136**~~ | ~~**Der Rohstatus je Zeile ist mit der Plakette aus „Zuletzt aufgefallen" gefallen** (§5.6). Er stand nur im `title`, war also nie sichtbar; ihn jetzt sichtbar nachzuziehen wäre eine neue Gestaltungsentscheidung über den Block und keine Aufräumarbeit. **Benannt und nicht nebenbei entschieden**~~ — ✔ **gegenstandslos seit dem 04.09.2026 (E‑90)**, und zwar nicht erledigt: Der Block trägt eine Zeile je **Prozess**, und die hat keinen Rohstatus — sie kann zwanzig verschiedene enthalten. Er steht in der Liste, auf die der Verweis führt (§5.6) |
 | ~~**90**~~ | ~~Die Achsendichte ist am breiten Fenster angesehen und nicht am schmalsten.~~ ✔ **Erledigt am 01.09.2026, noch vor der ersten Abgabe.** Bei 360 px überlappten die Beschriftungen um 12 Pixel; die Konstante ist entfallen, die Dichte hängt jetzt an der Breite (§10.4). Der Punkt bleibt stehen, weil er die Messung trägt |
 | **92** | **Die gedrückte Schaltfläche des Umschalters ist mit 1,07 : 1 kaum zu sehen** (§10.5). Für ein Vorleseprogramm ist der Zustand sauber ausgezeichnet, für das Auge nicht. Es ist die Gestalt von `components/ui/toggle-group.tsx` — Generatorbereich — und die **Zeitfensterwahl der Nachrichtenliste** trägt sie seit Schritt 4 genauso. Eine Änderung ist eine Entscheidung über den gemeinsamen Baustein und gehört in einen eigenen Schritt |
 | **91** | **Der Verlauf ist ein Bild und trägt keine Tabelle daneben.** „Nie allein über Farbe" ist über Legende, Tooltip und die vier unterscheidbaren Rollen eingehalten; für ein Vorleseprogramm ist ein SVG voller `<path>` trotzdem kein Diagramm. Eine Textfassung der Zahlen wäre der nächste Schritt und ist hier nicht gebaut |
