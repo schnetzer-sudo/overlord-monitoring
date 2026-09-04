@@ -104,6 +104,48 @@ function abstand(x, y) {
 const ok = (L, C, h) => ({ L, C, h });
 const zahl = (n, s = 2) => n.toFixed(s).replace(".", ",");
 
+/** sRGB (linear, 0..1) zurueck nach OKLCH — fuer alles, was VERMISCHT entsteht. */
+function nachOklch(linearRgb) {
+  const [r, g, b] = linearRgb;
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  const L = 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s;
+  const A = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s;
+  const B = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s;
+  return { L, C: Math.hypot(A, B), h: ((Math.atan2(B, A) * 180) / Math.PI + 360) % 360 };
+}
+
+/**
+ * `vorne` mit der Deckung `alpha` ueber `hinten`.
+ *
+ * GEMISCHT WIRD IN sRGB UND NICHT IM LINEAREN LICHT, und das ist gemessen und
+ * nicht gewaehlt. Der erste Bau dieser Funktion mischte im linearen Licht — das
+ * ist die physikalisch richtige Art, Licht zu addieren, und es ist NICHT, was
+ * der Browser tut: `color-interpolation` steht in SVG auf `sRGB`, und die
+ * Alphamischung laeuft im gammakodierten Raum.
+ *
+ * Am 04.09.2026 in Chrome an drei Proben nachgesehen (SVG ueber data:-URL auf
+ * ein Canvas, Pixel ausgelesen):
+ *
+ *   #1992bf zu 28 % ueber #181818   gemessen #183a46   sRGB #183a47   linear #18536d
+ *   #1992bf zu 35 % ueber #ffffff   gemessen #afd9e9   sRGB #afd9e9   linear #d3e1eb
+ *   #ffffff zu 12 % ueber #181818   gemessen #343434   sRGB #343434   linear #646464
+ *
+ * Der Unterschied ist keine Feinheit: Beim dritten Paar liegen die beiden
+ * Rechenwege 0,19 in OKLab auseinander — mehr als das Siebenfache der
+ * Sichtprobe. Wer hier linear mischt, beschreibt eine Flaeche, die niemand
+ * sieht.
+ */
+function ueber(vorne, hinten, alpha) {
+  const klemme = (c) => Math.min(1, Math.max(0, c));
+  const v = srgb(vorne).roh.map(klemme);
+  const h = srgb(hinten).roh.map(klemme);
+  const misch = v.map((c, i) => alpha * c + (1 - alpha) * h[i]);
+  // Erst nach dem Mischen linearisieren: nachOklch() erwartet lineares sRGB.
+  return nachOklch(misch.map(entgamma));
+}
+
 // ─── Die Palette, wie sie in src/app/globals.css steht ───────────────────────
 //
 // GELESEN und nicht gewaehlt: Die shadcn-Basistokens (card, background, muted)
@@ -122,7 +164,9 @@ const HELL = {
   "status-abgeschlossen-flaeche": ok(0.96, 0.024, 166),
   "status-abgeschlossen-kontur": ok(0.85, 0.05, 166),
   "status-fehler": ok(0.52, 0.19, 27),
-  "status-fehler-flaeche": ok(0.96, 0.028, 27),
+  // GEDAEMPFT am 04.09.2026 (E-88), von ok(0.96, 0.028, 27) — weniger Chroma,
+  // eine Spur kuehler. Damit zugleich IM sRGB-Farbraum: offener Punkt 123 zu.
+  "status-fehler-flaeche": ok(0.96, 0.016, 22),
   "status-fehler-kontur": ok(0.86, 0.07, 27),
   "status-offen": ok(0.44, 0, 0),
   "status-offen-flaeche": ok(0.96, 0, 0),
@@ -135,6 +179,10 @@ const HELL = {
   ueberfaellig: ok(0.52, 0.105, 80),
   "ueberfaellig-flaeche": ok(0.96, 0.028, 80),
   "ueberfaellig-kontur": ok(0.65, 0.13, 80),
+  // ── neu, 04.09.2026 (E-87) ──
+  "verlauf-flaeche": ok(0.62, 0.118, 230),
+  "verlauf-kontur": ok(0.45, 0.085, 230),
+  border: ok(0.9, 0, 0),
 };
 
 const DUNKEL = {
@@ -149,7 +197,8 @@ const DUNKEL = {
   "status-abgeschlossen-flaeche": ok(0.26, 0.04, 166),
   "status-abgeschlossen-kontur": ok(0.4, 0.07, 166),
   "status-fehler": ok(0.7, 0.17, 27),
-  "status-fehler-flaeche": ok(0.26, 0.05, 27),
+  // GEDAEMPFT am 04.09.2026 (E-88), von ok(0.26, 0.05, 27) — getrennt gerechnet.
+  "status-fehler-flaeche": ok(0.26, 0.035, 22),
   "status-fehler-kontur": ok(0.4, 0.09, 27),
   "status-offen": ok(0.78, 0, 0),
   "status-offen-flaeche": ok(0.25, 0, 0),
@@ -161,7 +210,16 @@ const DUNKEL = {
   ueberfaellig: ok(0.7, 0.14, 80),
   "ueberfaellig-flaeche": ok(0.26, 0.05, 80),
   "ueberfaellig-kontur": ok(0.53, 0.105, 80),
+  // ── neu, 04.09.2026 (E-87). DERSELBE Flaechenwert wie im hellen Block, wie
+  //    beim Akzent; die Kontur kehrt sich um. Beides getrennt nachgerechnet. ──
+  "verlauf-flaeche": ok(0.62, 0.118, 230),
+  "verlauf-kontur": ok(0.78, 0.11, 230),
 };
+
+/* --border ist im Dunkelblock oklch(1 0 0 / 12%) — halbdurchlaessig und damit
+   keine Farbe, sondern eine Deckung. Was die Linie zeigt, ist Weiss zu 12 %
+   ueber --card. GERECHNET und nicht eingetippt. */
+DUNKEL.border = ueber(ok(1, 0, 0), DUNKEL.card, 0.12);
 
 /** Die fuenf Farbrollen — vier Statusrollen und die Problemkategorie. */
 const ROLLEN = [
@@ -174,6 +232,14 @@ const ROLLEN = [
 
 /** Die vier Akzentstufen. Sie sind Gegenstand der Rechnung, nicht ihr Bezug. */
 const AKZENTSTUFEN = ["akzent", "akzent-schrift", "akzent-vordergrund", "akzent-flaeche"];
+
+/**
+ * Die zwei Stufen der Verlaufsflaeche (E-87, 04.09.2026). Sie sind KEINE Rolle im
+ * Sinne von ROLLEN: Sie tragen keine fachliche Aussage und stehen deshalb nicht in
+ * lib/status-farbe.ts, sondern in features/dashboard/verlauf.ts. Gerechnet werden
+ * sie trotzdem — eine Flaeche ohne Bedeutung darf nicht aussehen wie eine mit.
+ */
+const VERLAUFSSTUFEN = ["verlauf-flaeche", "verlauf-kontur"];
 
 // ─── Lauf ────────────────────────────────────────────────────────────────────
 
@@ -266,8 +332,7 @@ for (const [name, P] of [
       const k = kontrast(P[rolle], P[was]);
       pruefe(
         k.roh >= 4.5,
-        `--${rolle} ${grund}`.padEnd(50) +
-          ` ${zahl(k.roh)} : 1  (aus dem Hexwert ${zahl(k.acht)})`,
+        `--${rolle} ${grund}`.padEnd(50) + ` ${zahl(k.roh)} : 1  (aus dem Hexwert ${zahl(k.acht)})`,
       );
       pruefe(
         k.roh >= 4.5 === k.acht >= 4.5,
@@ -303,37 +368,31 @@ for (const [name, P] of [
     );
   }
 
-  console.log(`\n--- SCHWELLE 3: Fehler und Ueberfaellig auf derselben Helligkeit (Bedingung) ---\n`);
+  console.log(
+    `\n--- SCHWELLE 3: Fehler und Ueberfaellig auf derselben Helligkeit (Bedingung) ---\n`,
+  );
   pruefe(
     P.ueberfaellig.L === P["status-fehler"].L,
     `--ueberfaellig L=${P.ueberfaellig.L} == --status-fehler L=${P["status-fehler"].L}  (Regel Q3)`,
   );
 
-  console.log(`\n--- Alle Werte liegen im sRGB-Farbraum (Bedingung, mit einer Ausnahme) ---\n`);
+  console.log(`\n--- Alle Werte liegen im sRGB-Farbraum (Bedingung, OHNE Ausnahme) ---\n`);
   {
-    // Die Ausnahme ist BENANNT und ihr Ueberschuss FESTGENAGELT, nicht
-    // uebersprungen: `hell --status-fehler-flaeche` liegt seit Schritt 3
-    // ausserhalb und wird abgeschnitten (offener Punkt 123). Der Lauf laesst
-    // sie durch, solange sie genau dort bleibt, wo sie ist — waechst der
-    // Ueberschuss, faellt er auf.
-    const AUSNAHME = { block: "HELL", token: "status-fehler-flaeche", ueberschuss: 0.021112 };
-    const ueberschuss = (f) => Math.max(0, ...srgb(f).roh.map((c) => c - 1), ...srgb(f).roh.map((c) => -c));
-    const pruefeRaum = (n) => {
-      if (name === AUSNAHME.block && n === AUSNAHME.token) {
-        const u = ueberschuss(P[n]);
-        pruefe(
-          Math.abs(u - AUSNAHME.ueberschuss) < 0.0005,
-          `--${n} liegt AUSSERHALB sRGB — benannte Ausnahme, Ueberschuss ${u.toFixed(6)} ` +
-            `(festgenagelt auf ${AUSNAHME.ueberschuss}; offener Punkt 123)`,
-        );
-        return;
-      }
-      pruefe(srgb(P[n]).imRaum, `--${n} liegt im sRGB-Farbraum`);
-    };
+    // HIER STAND EINE AUSNAHME, und sie ist am 04.09.2026 ENTFALLEN statt gelockert:
+    // `hell --status-fehler-flaeche` lag seit Schritt 3 ausserhalb des Farbraums
+    // (Ueberschuss 0,021112, hier festgenagelt), wurde abgeschnitten und zeigte
+    // #ffebe8 = oklch(0,9555 0,0221 29,4) — also weder die eingetragene Helligkeit
+    // noch den eingetragenen Ton. Mit der Daempfung aus E-88 (Chroma 0,028 -> 0,016)
+    // liegt der Wert im Farbraum. OFFENER PUNKT 123 IST GESCHLOSSEN, und die
+    // Bedingung gilt jetzt fuer jeden Wert ohne Ausnahme.
     for (const rolle of ROLLEN) {
-      for (const teil of ["", "-flaeche", "-kontur"]) pruefeRaum(`${rolle}${teil}`);
+      for (const teil of ["", "-flaeche", "-kontur"]) {
+        pruefe(srgb(P[`${rolle}${teil}`]).imRaum, `--${rolle}${teil} liegt im sRGB-Farbraum`);
+      }
     }
-    for (const stufe of AKZENTSTUFEN) pruefeRaum(stufe);
+    for (const stufe of [...AKZENTSTUFEN, ...VERLAUFSSTUFEN]) {
+      pruefe(srgb(P[stufe]).imRaum, `--${stufe} liegt im sRGB-Farbraum`);
+    }
   }
 
   console.log(`\n--- SCHWELLE 5: die Konturen auf --card (BERICHT, keine Bedingung) ---\n`);
@@ -395,7 +454,9 @@ for (const [name, P] of [
     }
   }
 
-  console.log(`\n--- Offener Punkt 92: die gedrueckte Schaltflaeche (Messung, keine Bedingung) ---\n`);
+  console.log(
+    `\n--- Offener Punkt 92: die gedrueckte Schaltflaeche (Messung, keine Bedingung) ---\n`,
+  );
   {
     // `toggleVariants` faerbt den gedrueckten Zustand mit `bg-muted`; darunter
     // liegt die Seitenflaeche `--background`. Im Hellen sind das 1,07 : 1
@@ -468,6 +529,202 @@ console.log("=== Warum der Ton nicht auf 85 gelegt worden ist ===\n");
       );
     }
   }
+}
+
+// ─── E-87 und E-88: die Verlaufsflaeche und die gedaempfte Fehlerflaeche ─────
+//
+// Vorgegeben waren ABSTAENDE, keine Werte (Auftrag vom 04.09.2026, Korrektur
+// desselben Tages). Die sechs stehen hier einzeln, in BEIDEN Bloecken getrennt —
+// der Dunkelblock ist keine Umkehrung des hellen.
+//
+// GERECHNET WIRD GEGEN DAS, WAS GEMALT WIRD. Das Token ist die volle Farbe;
+// auf dem Schirm steht sie nur durch die beiden Stopp-Deckungen hindurch. Ein
+// Abstand gegen das Token beschriebe eine Flaeche, die niemand sieht.
+//
+// UNTERGRENZE fuer "unterscheidbar" ist die Sichtprobe A.2 aus
+// docs/visuelles-konzept.md §7a: 0,025 in OKLab sind dort als RANGFOLGE gelesen
+// worden. Was darueber liegt, ist sichtbar verschieden; das ist die Schranke,
+// nicht das Ziel.
+//
+// DIE 3 : 1 AUS WCAG 1.4.11 HAENGEN AN DER KONTUR und nicht an der Flaeche. Die
+// Linie traegt den Kurvenverlauf — sie ist die Aussage —, die Flaeche traegt
+// Gewicht. Der Kontrast der Flaeche wird BERICHTET und nicht gefordert.
+
+console.log("\n\n########## E-87 / E-88: die sechs Abstaende ##########");
+
+const SICHTPROBE = 0.025;
+/**
+ * Die engste Strecke des Bestands: --ueberfaellig -> --akzent im Dunkelblock
+ * (docs/visuelles-konzept.md §7a, Befund 3). Ungerundet, aus demselben Grund,
+ * aus dem sie oben bei SCHWELLE 4 ungerundet steht.
+ */
+const ENGSTE_STRECKE = 0.1169659;
+
+/* Die Deckung der beiden Farbverlaufsstopps, aus app/globals.css. Sie sind je
+   Block verschieden: Dieselbe Deckung traegt auf Weiss weniger auf als auf
+   --card 0.21. */
+HELL.deckungOben = 0.35;
+HELL.deckungUnten = 0.03;
+DUNKEL.deckungOben = 0.28;
+DUNKEL.deckungUnten = 0.04;
+
+for (const [name, P] of [
+  ["HELL", HELL],
+  ["DUNKEL", DUNKEL],
+]) {
+  const token = P["verlauf-flaeche"];
+  const kontur = P["verlauf-kontur"];
+  const kachel = P["status-fehler-flaeche"];
+  const gemalt = ueber(token, P.card, P.deckungOben);
+  const fuss = ueber(token, P.card, P.deckungUnten);
+
+  console.log(`\n--- ${name}  (Stopps ${P.deckungOben} / ${P.deckungUnten}) ---\n`);
+  console.log(`  Token unvermischt        ${srgb(token).hex}`);
+  console.log(
+    `  GEMALTER oberer Stopp    ${srgb(gemalt).hex}  ` +
+      `oklch(${zahl(gemalt.L, 4)} ${zahl(gemalt.C, 4)} ${zahl(gemalt.h, 1)})`,
+  );
+  console.log(`  GEMALTER Fuss            ${srgb(fuss).hex}\n`);
+
+  // 1. Flaeche ↔ Kartenhintergrund am oberen Stopp. KEINE Kontrastbedingung —
+  //    die steht bei 7 an der Kontur. Hier zaehlt, ob die Toenung ueberhaupt zu
+  //    sehen ist.
+  {
+    const d = abstand(gemalt, P.card);
+    const k = kontrast(gemalt, P.card);
+    const akzentGemalt = ueber(P.akzent, P.card, P.deckungOben);
+    pruefe(
+      d >= SICHTPROBE,
+      `1  gemalter Stopp ↔ --card            ${zahl(d, 4)} OKLab  ` +
+        `(Kontrast ${zahl(k.roh)} : 1 — BERICHT, keine Bedingung)`,
+    );
+    console.log(
+      `  ----  … derselbe Stopp mit --akzent`.padEnd(52) +
+        `${zahl(abstand(akzentGemalt, P.card), 4)} / ${zahl(kontrast(akzentGemalt, P.card).roh)} : 1`,
+    );
+  }
+
+  // 2. Flaeche ↔ Gitterlinien. Die Linie liegt UNTER der Flaeche (nachgesehen an
+  //    den Recharts-Lagen im DOM, nicht angenommen), also haengt alles an der
+  //    Deckung: gemessen wird der Abstand zwischen "Flaeche ueber Linie" und
+  //    "Flaeche ueber Karte". Der SCHLECHTESTE Fall ist der obere Stopp.
+  {
+    const beiOben = abstand(
+      ueber(token, P.border, P.deckungOben),
+      ueber(token, P.card, P.deckungOben),
+    );
+    const beiUnten = abstand(
+      ueber(token, P.border, P.deckungUnten),
+      ueber(token, P.card, P.deckungUnten),
+    );
+    pruefe(
+      Math.min(beiOben, beiUnten) >= SICHTPROBE,
+      `2  Gitterlinie unter der Flaeche      ${zahl(beiOben, 4)} am oberen Stopp, ` +
+        `${zahl(beiUnten, 4)} am Fuss`,
+    );
+    console.log(
+      `  ----  … mit voller Deckung waere sie`.padEnd(52) +
+        `${zahl(abstand(ueber(token, P.border, 1), ueber(token, P.card, 1)), 4)} — unsichtbar`,
+    );
+  }
+
+  // 3. Flaeche ↔ --status-offen. Die neutrale Statusrolle: zu nah, und die
+  //    Flaeche laese sich wieder als Statusaussage. GEGEN DEN GEMALTEN STOPP,
+  //    denn das ist, was jemand sieht. Der Wert des Tokens steht daneben — er
+  //    ist die Schranke fuer den Tag, an dem jemand die Deckung hochdreht.
+  {
+    const d = abstand(gemalt, P["status-offen"]);
+    pruefe(
+      d >= SICHTPROBE,
+      `3  gemalter Stopp ↔ --status-offen    ${zahl(d, 4)} OKLab  ` +
+        `(das Token allein: ${zahl(abstand(token, P["status-offen"]), 4)})`,
+    );
+    let engste = [null, Infinity];
+    for (const rolle of ROLLEN) {
+      const dr = abstand(gemalt, P[rolle]);
+      if (dr < engste[1]) engste = [rolle, dr];
+      console.log(
+        `  ----  … zu --${rolle}`.padEnd(52) +
+          `${zahl(dr, 4)}   (Token: ${zahl(abstand(token, P[rolle]), 4)})`,
+      );
+    }
+    pruefe(
+      engste[1] >= ENGSTE_STRECKE,
+      `3b engste Strecke zu einer Rolle: --${engste[0]}  ${zahl(engste[1], 4)}  ` +
+        `(>= ${zahl(ENGSTE_STRECKE, 4)}, der engsten des Bestands)`,
+    );
+  }
+
+  // 4. Flaeche ↔ Fehlerkachelflaeche. HIER IST DER BUNTTON DAS MASS und nicht
+  //    die Helligkeit. Der Ton des gemalten Stopps weicht leicht vom Ton des
+  //    Tokens ab — Mischen im linearen Licht dreht ihn ein paar Grad —, deshalb
+  //    steht hier der gemessene und nicht die 230 aus der Deklaration.
+  {
+    const roh = Math.abs(gemalt.h - kachel.h);
+    const dTon = Math.min(roh, 360 - roh);
+    pruefe(
+      dTon >= 90 && abstand(gemalt, kachel) >= SICHTPROBE,
+      `4  gemalter Stopp ↔ Fehlerkachel      ${dTon.toFixed(1)} Grad Buntton, ` +
+        `${zahl(abstand(gemalt, kachel), 4)} OKLab`,
+    );
+  }
+
+  // 5. Kachelflaeche ↔ Zahl und Text darauf. Die Schwelle aus SCHWELLE 1 gilt
+  //    unveraendert; sie steht hier ein zweites Mal, weil der Auftrag sie
+  //    ausdruecklich nachgerechnet sehen wollte. Dazu die Frage, ob die Kachel
+  //    ueberhaupt noch als GEFUELLT gelesen wird.
+  {
+    const k = kontrast(P["status-fehler"], kachel);
+    pruefe(
+      Math.min(k.roh, k.acht) >= 4.5,
+      `5  --status-fehler auf der Kachel     ${zahl(k.roh)} : 1  (aus dem Hexwert ${zahl(k.acht)})`,
+    );
+    const d = abstand(kachel, P.card);
+    pruefe(
+      d >= SICHTPROBE,
+      `5b Kachelflaeche ↔ --card             ${zahl(d, 4)} OKLab — die Kachel liest sich weiter als gefuellt`,
+    );
+  }
+
+  // 6. Banding. Der Farbverlauf laeuft ueber die DECKUNG vom oberen Stopp bis
+  //    zum Fuss; ueber die Hoehe der Flaeche (gemessen 245 px) ergibt das so
+  //    viele 8-Bit-Stufen je Pixel. BERICHT — was das Auge sieht, entscheidet
+  //    die Sichtprobe, und die ist am laufenden System gefahren worden.
+  {
+    const hoehe = 245;
+    const a = srgb(token).acht;
+    const c = srgb(P.card).acht;
+    const groesste = Math.max(...a.map((v, i) => Math.abs(v - c[i])));
+    const proPixel = (groesste * (P.deckungOben - P.deckungUnten)) / hoehe;
+    console.log(
+      `  ----  6  Banding`.padEnd(52) +
+        `${proPixel.toFixed(3)} Stufen/px → eine Stufe alle ${(1 / proPixel).toFixed(1)} px`,
+    );
+  }
+
+  // 7. DIE KONTUR — hier und nur hier gilt die 3 : 1 aus WCAG 1.4.11. Sie liegt
+  //    auf der Grenze zwischen Flaeche und Karte und muss gegen beide bestehen.
+  {
+    const kCard = kontrast(kontur, P.card);
+    pruefe(
+      Math.min(kCard.roh, kCard.acht) >= 3,
+      `7  Kontur auf --card                  ${zahl(kCard.roh)} : 1  ` +
+        `(aus dem Hexwert ${zahl(kCard.acht)}; WCAG 1.4.11)`,
+    );
+    pruefe(
+      abstand(kontur, gemalt) >= SICHTPROBE,
+      `7b Kontur ↔ gemalter oberer Stopp     ${zahl(abstand(kontur, gemalt), 4)} OKLab`,
+    );
+    pruefe(
+      abstand(kontur, fuss) >= SICHTPROBE,
+      `7c Kontur ↔ gemalter Fuss             ${zahl(abstand(kontur, fuss), 4)} OKLab`,
+    );
+  }
+
+  console.log(
+    `\n  Die Hexwerte: Token ${srgb(token).hex}, Kontur ${srgb(kontur).hex}, ` +
+      `Kachelflaeche ${srgb(kachel).hex}`,
+  );
 }
 
 console.log(

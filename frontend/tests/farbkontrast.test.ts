@@ -108,6 +108,33 @@ const TEILE = ["", "-flaeche", "-kontur"] as const;
  */
 const AKZENTSTUFEN = ["akzent", "akzent-schrift", "akzent-vordergrund", "akzent-flaeche"] as const;
 
+/**
+ * Die zwei Stufen der **Verlaufsfläche** (E‑87, 04.09.2026).
+ *
+ * Sie sind **keine Rolle** im Sinne von {@link ROLLEN}: Sie tragen keine fachliche
+ * Aussage, stehen nicht in `lib/status-farbe.ts` und färben keinen Status. Genau
+ * deshalb werden sie geprüft — eine Fläche ohne Bedeutung darf nicht aussehen wie
+ * eine mit, und sie ist die **größte** Fläche der Übersichtsseite.
+ */
+const VERLAUFSSTUFEN = ["verlauf-flaeche", "verlauf-kontur"] as const;
+
+/**
+ * Die Untergrenze für „unterscheidbar" — **gemessen und nicht gewählt**.
+ *
+ * `visuelles-konzept.md` §7a hält aus der Sichtprobe A.2 fest, dass **0,025** in
+ * OKLab als **Rangfolge** gelesen worden sind. Was darüber liegt, ist sichtbar
+ * verschieden. Die Zahl ist eine Schranke und kein Ziel.
+ */
+const SICHTPROBE = 0.025;
+
+/**
+ * Die engste Strecke des Bestands: `--ueberfaellig` → `--akzent` im Dunkelblock
+ * (§7a, Befund 3). **Ungerundet**, aus demselben Grund, aus dem
+ * `scripts/farbwerte/rechne.mjs` sie ungerundet führt: Gegen die gerundete Zahl
+ * geprüft fiele der unveränderte Bestand an seiner eigenen Untergrenze durch.
+ */
+const ENGSTE_STRECKE = 0.1169659;
+
 // ───────────────────────────────────────────────────────────────────────────
 // OKLCH → OKLab → lineares sRGB → sRGB → WCAG
 // ───────────────────────────────────────────────────────────────────────────
@@ -175,6 +202,54 @@ function abstand(x: Farbe, y: Farbe): number {
   const a = oklab(x);
   const b = oklab(y);
   return Math.hypot(a.L - b.L, a.a - b.a, a.b - b.b);
+}
+
+/** Lineares sRGB zurück nach OKLCH — für alles, was **vermischt** entsteht. */
+function nachOklch(lin: number[]): Farbe {
+  const [r, g, b] = lin;
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  const L = 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s;
+  const A = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s;
+  const B = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s;
+  return { L, C: Math.hypot(A, B), h: ((Math.atan2(B, A) * 180) / Math.PI + 360) % 360 };
+}
+
+/**
+ * `vorne` mit der Deckung `alpha` über `hinten`.
+ *
+ * **Gemischt wird in sRGB und nicht im linearen Licht** — gemessen und nicht
+ * gewählt. Der erste Bau mischte im linearen Licht; das ist die physikalisch
+ * richtige Art, Licht zu addieren, und es ist **nicht**, was der Browser tut:
+ * `color-interpolation` steht in SVG auf `sRGB`, und die Alphamischung läuft im
+ * gammakodierten Raum.
+ *
+ * Am 04.09.2026 in Chrome an drei Proben nachgesehen (SVG über `data:`-URL auf
+ * ein Canvas, Pixel ausgelesen):
+ *
+ * | | gemessen | sRGB | linear |
+ * |---|---|---|---|
+ * | `#1992bf` zu 28 % über `#181818` | `#183a46` | `#183a47` | `#18536d` |
+ * | `#1992bf` zu 35 % über `#ffffff` | `#afd9e9` | `#afd9e9` | `#d3e1eb` |
+ * | `#ffffff` zu 12 % über `#181818` | `#343434` | `#343434` | `#646464` |
+ *
+ * Der Unterschied ist keine Feinheit: Beim dritten Paar liegen die beiden
+ * Rechenwege **0,19** in OKLab auseinander — mehr als das Siebenfache der
+ * Sichtprobe.
+ *
+ * **Das ist der Unterschied zwischen dem Token und dem Bild.** Die
+ * Verlaufsfläche steht in `globals.css` als volle Farbe; auf dem Schirm ist sie
+ * nur durch zwei Stopp-Deckungen hindurch zu sehen. Ein Abstand gegen das Token
+ * beschriebe eine Fläche, die niemand vor sich hat.
+ */
+function ueber(vorne: Farbe, hinten: Farbe, alpha: number): Farbe {
+  const klemme = (c: number) => Math.min(1, Math.max(0, c));
+  const v = srgb(vorne).roh.map(klemme);
+  const h = srgb(hinten).roh.map(klemme);
+  const misch = v.map((c, i) => alpha * c + (1 - alpha) * h[i]);
+  // Erst nach dem Mischen linearisieren: nachOklch() erwartet lineares sRGB.
+  return nachOklch(misch.map(entgamma));
 }
 
 const zahl = (n: number, s = 2): string => n.toFixed(s).replace(".", ",");
@@ -256,6 +331,25 @@ function farbe(praefix: string, token: string): Farbe {
   ).not.toBeNull();
   const [, L, C, h] = treffer as RegExpExecArray;
   return { L: Number(L), C: Number(C), h: Number(h) };
+}
+
+/**
+ * Eine **Deckung** aus einem Wertesatz — eine blanke Zahl zwischen 0 und 1.
+ *
+ * Sie steht in derselben Datei wie die Farben und wird genauso gelesen: Was der
+ * Test rechnet, soll aus dem stammen, was ausgeliefert wird. Ein stiller
+ * Rückfall auf einen Vorgabewert wäre hier dasselbe Übel wie bei {@link farbe} —
+ * der Test bestünde weiter und prüfte eine Fläche, die es nicht gibt.
+ */
+function deckung(praefix: string, token: string): number {
+  const name = `--${praefix}${token}`;
+  const roh = wert(wurzel(), name);
+  const n = Number(roh);
+  expect(
+    Number.isFinite(n) && n >= 0 && n <= 1,
+    `\`${name}: ${roh}\` ist keine Deckung zwischen 0 und 1.`,
+  ).toBe(true);
+  return n;
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -368,6 +462,16 @@ describe.each(BLOECKE)("Der Wertesatz %s (`--%s…`)", (block, praefix) => {
     }
   });
 
+  it("deklariert beide Stufen der Verlaufsfläche", () => {
+    // Dieselbe Vorsorge wie eine Zeile tiefer: Fehlte `--verlauf-flaeche` im
+    // Dunkelblock, fiele die Fläche auf den hellen Wert zurück — hier wäre das
+    // folgenlos, weil beide Blöcke denselben Wert tragen, und genau deshalb
+    // fiele es niemandem auf, wenn sich das änderte.
+    for (const stufe of VERLAUFSSTUFEN) {
+      expect(farbe(praefix, stufe).L, `--${praefix}${stufe} in ${block}`).toBeGreaterThan(0);
+    }
+  });
+
   it("deklariert alle vier Akzentstufen", () => {
     // Dieselbe Begründung eine Zeile höher, für die Stufen statt für die
     // Rollen: Fehlte `--akzent-schrift` im Dunkelblock, stünde dort die
@@ -436,34 +540,170 @@ describe.each(BLOECKE)("Der Wertesatz %s (`--%s…`)", (block, praefix) => {
   });
 
   /**
-   * Jeder Wert liegt im sRGB-Farbraum — **mit genau einer benannten Ausnahme.**
+   * Jeder Wert liegt im sRGB-Farbraum — **ohne Ausnahme, seit dem 04.09.2026.**
    *
-   * `hell --status-fehler-flaeche` liegt seit Schritt 3 außerhalb und wird vom
-   * Browser abgeschnitten. Sie ist hier nicht übersprungen, sondern
-   * **festgenagelt**: Der Überschuss darf bleiben, wo er ist, und nicht wachsen.
-   * Eine übersprungene Ausnahme sähe irgendwann aus wie ein geprüfter Wert
-   * (offener Punkt 123, `docs/dunkelmodus.md` §4).
+   * ## Hier stand eine Ausnahme, und sie ist **entfallen statt gelockert**
+   *
+   * `hell --status-fehler-flaeche` lag seit Schritt 3 außerhalb: `oklch(0.96 0.028 27)`
+   * trieb den roten Kanal auf **1,0211**, der Browser schnitt ab, und was auf dem
+   * Schirm stand, war `#ffebe8` = `oklch(0,9555 0,0221 29,4)` — **weder die
+   * eingetragene Helligkeit noch der eingetragene Ton**. Der Überschuss war hier
+   * festgenagelt, damit er nicht unbemerkt wächst.
+   *
+   * Mit der Dämpfung aus **E‑88** (Chroma 0,028 → 0,016, Ton 27 → 22) liegt der Wert
+   * im Farbraum. **Offener Punkt 123 ist damit geschlossen** (`docs/dunkelmodus.md`
+   * §4), und die Bedingung gilt jetzt für jeden Wert — sie ist **schärfer** geworden
+   * und nicht weicher. Wer die Ausnahme zurückholen will, holt den Befund mit.
    */
-  it("hält jeden Wert im sRGB-Farbraum — bis auf die eine benannte Ausnahme", () => {
-    const AUSNAHME = { block: "hell", token: "status-fehler-flaeche", ueberschuss: 0.0211 };
-    const alle = [...ROLLEN.flatMap((r) => TEILE.map((t) => `${r}${t}`)), ...AKZENTSTUFEN];
+  it("hält jeden Wert im sRGB-Farbraum — ohne Ausnahme", () => {
+    const alle = [
+      ...ROLLEN.flatMap((r) => TEILE.map((t) => `${r}${t}`)),
+      ...AKZENTSTUFEN,
+      ...VERLAUFSSTUFEN,
+    ];
 
     for (const token of alle) {
       const u = srgb(farbe(praefix, token)).ueberschuss;
-      if (block === AUSNAHME.block && token === AUSNAHME.token) {
-        expect(
-          u,
-          `Der bekannte Austritt von --${token} hat sich verschoben: ${u.toFixed(6)} statt ` +
-            `${AUSNAHME.ueberschuss}. Er ist festgenagelt, damit er nicht unbemerkt wächst.`,
-        ).toBeCloseTo(AUSNAHME.ueberschuss, 3);
-        continue;
-      }
       expect(
         u,
         `--${token} in ${block} liegt außerhalb des sRGB-Farbraums (Überschuss ${u.toFixed(6)}) ` +
           `und wird abgeschnitten. Was der Bildschirm zeigt, ist dann nicht der Wert, der dasteht.`,
       ).toBe(0);
     }
+  });
+
+  /**
+   * **Die Verlaufsfläche (E‑87) — die Abstände aus dem Auftrag.**
+   *
+   * Vorgegeben waren *Abstände*, keine Werte. Sie stehen hier als Zusicherung und
+   * nicht nur im Skript, weil sie sonst genau das wären, was `farbwerte.test.ts`
+   * über sich selbst sagt: eine Behauptung, die niemand nachrechnet.
+   *
+   * ## Gerechnet wird gegen den **gemalten** Stopp, nicht gegen das Token
+   *
+   * Das Token ist die volle Farbe; auf dem Schirm steht sie nur durch die beiden
+   * Stopp-Deckungen hindurch (hell 0,35 / 0,03, dunkel 0,28 / 0,04). Ein Abstand
+   * gegen `--verlauf-flaeche` beschriebe eine Fläche, die niemand vor sich hat.
+   * Die Werte des Tokens bleiben trotzdem geprüft — bei den Rollen, als Schranke
+   * für den Tag, an dem jemand die Deckung wieder hochdreht.
+   *
+   * ## Die 3 : 1 hängen an der **Kontur**
+   *
+   * Die Linie trägt den Kurvenverlauf und ist die Aussage des Diagramms; die
+   * Fläche darunter trägt Gewicht. Eine Tönung an der Umriss-Schwelle aus WCAG
+   * 1.4.11 zu messen hieße, sie zu einem Umriss zu erklären. Ihr Kontrast steht
+   * als **Bericht** in `scripts/farbwerte/rechne.mjs` (1,51 : 1 hell,
+   * 1,47 : 1 dunkel) und ist hier ausdrücklich keine Bedingung.
+   *
+   * **Was hier NICHT steht:** der Abstand zu den Gitterlinien und die
+   * Banding-Rechnung. Beide hängen zusätzlich an der Höhe der gezeichneten
+   * Fläche und damit an nichts, was in `globals.css` steht; sie stehen mit ihren
+   * Zahlen im Skript und in `docs/visuelles-konzept.md` §3.
+   */
+  describe("Die Verlaufsfläche", () => {
+    /** Was oben wirklich gemalt wird: das Token durch die obere Deckung. */
+    const gemalt = () =>
+      ueber(
+        farbe(praefix, "verlauf-flaeche"),
+        farbe(praefix, "card"),
+        deckung(praefix, "verlauf-deckung-oben"),
+      );
+
+    it("hebt sich als Tönung von der Karte ab", () => {
+      // Keine Kontrastbedingung — die steht an der Kontur. Hier zählt, ob die
+      // Tönung überhaupt zu sehen ist. Der Akzent, den sie ablöst, käme an
+      // derselben Deckung im hellen Block auf 0,1085.
+      const d = abstand(gemalt(), farbe(praefix, "card"));
+      expect(
+        d,
+        `Der gemalte obere Stopp steht --card in ${block} auf ${zahl(d, 4)} nahe — unter ` +
+          `${zahl(SICHTPROBE, 3)} wäre die Fläche kein Bild mehr, sondern ein Hauch.`,
+      ).toBeGreaterThanOrEqual(SICHTPROBE);
+    });
+
+    it("steht keiner Statusrolle näher als der Bestand sich selbst", () => {
+      // Zu nah an --status-offen, und die Fläche läse sich wieder als
+      // Statusaussage. Geprüft wird darüber hinaus JEDE Rolle, und zwar gegen
+      // den gemalten Stopp UND gegen das Token: Das Token ist die Schranke für
+      // den Tag, an dem jemand die Deckung hochdreht.
+      const zuOffen = abstand(gemalt(), farbe(praefix, "status-offen"));
+      expect(zuOffen, `zu --status-offen in ${block}: ${zahl(zuOffen, 4)}`).toBeGreaterThanOrEqual(
+        SICHTPROBE,
+      );
+
+      for (const rolle of ROLLEN) {
+        for (const [was, f] of [
+          ["Der gemalte obere Stopp", gemalt()],
+          ["Das Token --verlauf-flaeche", farbe(praefix, "verlauf-flaeche")],
+        ] as const) {
+          const d = abstand(f, farbe(praefix, rolle));
+          expect(
+            d,
+            `${was} steht --${rolle} in ${block} auf ${zahl(d, 4)} nahe — enger als die ` +
+              `engste Strecke des Bestands (${zahl(ENGSTE_STRECKE, 4)}, §7a Befund 3).`,
+          ).toBeGreaterThanOrEqual(ENGSTE_STRECKE);
+        }
+      }
+    });
+
+    it("hält Abstand zur Fehlerkachelfläche, und zwar im Buntton", () => {
+      // Hier ist der Ton das Maß und nicht die Helligkeit: Die beiden liegen
+      // ohnehin in verschiedenen Registern, und was sie auseinanderhält, ist der
+      // Ton. Gemessen wird der Ton des GEMALTEN Stopps — Mischen im linearen
+      // Licht dreht ihn ein paar Grad gegenüber der Deklaration.
+      const kachel = farbe(praefix, "status-fehler-flaeche");
+      const roh = Math.abs(gemalt().h - kachel.h);
+      const ton = Math.min(roh, 360 - roh);
+      expect(ton, `Buntton-Abstand in ${block}: ${ton.toFixed(1)} Grad`).toBeGreaterThanOrEqual(90);
+      expect(abstand(gemalt(), kachel)).toBeGreaterThanOrEqual(SICHTPROBE);
+    });
+
+    it("läuft nach unten aus, statt als Block zu enden", () => {
+      // Die beiden Deckungen sind die eigentliche Stellschraube, und sie haben
+      // eine Richtung: Oben trägt die Fläche auf, unten läuft sie aus. Ohne
+      // diese Zusicherung ließe sich das Paar vertauschen, ohne dass eine Zahl
+      // hier falsch würde — und das Bild stünde auf dem Kopf.
+      const oben = deckung(praefix, "verlauf-deckung-oben");
+      const unten = deckung(praefix, "verlauf-deckung-unten");
+      expect(
+        oben,
+        `Der obere Stopp (${oben}) deckt in ${block} nicht mehr als der Fuß (${unten}).`,
+      ).toBeGreaterThan(unten);
+      expect(
+        oben,
+        `Der obere Stopp deckt in ${block} voll (${oben}). Dann verschwindet die Gitterlinie ` +
+          `unter ihm vollständig — gemessen 0,0000 statt der geforderten ${zahl(SICHTPROBE, 3)}.`,
+      ).toBeLessThan(1);
+    });
+
+    it("trägt eine Kontur, die die 3 : 1 hält und sich von der Fläche abhebt", () => {
+      // **Die einzige Stelle, an der die Umriss-Schwelle gefordert wird.**
+      const kontur = farbe(praefix, "verlauf-kontur");
+      const k = kontrast(kontur, farbe(praefix, "card"));
+      expect(
+        Math.min(k.roh, k.acht),
+        `--verlauf-kontur auf --card in ${block}: ${zahl(k.roh)} : 1 (Hexwert ${zahl(k.acht)}). ` +
+          `Die Linie trägt den Kurvenverlauf; sie ist die Aussage des Diagramms.`,
+      ).toBeGreaterThanOrEqual(SCHWELLE_UMRISS);
+      expect(abstand(kontur, gemalt())).toBeGreaterThanOrEqual(SICHTPROBE);
+    });
+  });
+
+  /**
+   * **Die gedämpfte Fehlerkachelfläche (E‑88) liest sich weiter als gefüllt.**
+   *
+   * „Gefüllt heißt, hier ist etwas zu tun" (E‑79). Eine Tönung, die von der Karte
+   * nicht mehr zu unterscheiden ist, nähme der einen Problemkachel genau das. Der
+   * Kontrast der **Zahl** darauf steht bereits in der Schleife über {@link ROLLEN}
+   * und ist hier nicht wiederholt.
+   */
+  it("lässt die Fehlerkachel als gefüllt lesbar", () => {
+    const d = abstand(farbe(praefix, "status-fehler-flaeche"), farbe(praefix, "card"));
+    expect(
+      d,
+      `--status-fehler-flaeche steht --card in ${block} auf ${zahl(d, 4)} nahe. Unter ` +
+        `${zahl(SICHTPROBE, 3)} wäre die Kachel keine gefüllte mehr.`,
+    ).toBeGreaterThanOrEqual(SICHTPROBE);
   });
 });
 

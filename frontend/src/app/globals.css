@@ -282,21 +282,43 @@
   --status-abgeschlossen-flaeche: oklch(0.96 0.024 166);
   --status-abgeschlossen-kontur: oklch(0.85 0.05 166);
   --status-fehler: oklch(0.52 0.19 27);
-  /* BEFUND, nicht geaendert: Dieser Wert liegt AUSSERHALB des sRGB-Farbraums.
-     Der rote Kanal kommt auf 1,0211 und wird abgeschnitten; was der Bildschirm
-     zeigt, ist #ffebe8. Bei L 0.96 und Ton 27 traegt sRGB hoechstens Chroma
-     0,0199, hier stehen 0,028. Die beiden Geschwister halten den Rahmen
-     (--status-abgeschlossen-flaeche 0,024 bei 0,0587 moeglich,
-     --ueberfaellig-flaeche 0,028 bei 0,0368 moeglich).
+  /* GEDAEMPFT am 04.09.2026 (E-88), von oklch(0.96 0.028 27) auf 0.016 / Ton 22.
+     WENIGER CHROMA und eine Spur kuehler — die HELLIGKEIT bleibt, das
+     Signalrot --status-fehler bleibt Ziffer fuer Ziffer.
 
-     WARUM ES TROTZDEM STEHENBLEIBT: Es ist eine FLAECHE und kein Vordergrund;
-     die abgeschnittene Farbe ist eine gueltige blasse Toenung, und ihr Kontrast
-     zu --status-fehler ist mit 5,30 : 1 gemessen und ausreichend. Sie zu
-     korrigieren hiesse, den Rotton der Fehlerflaeche im ganzen Bestand zu
-     verschieben — das ist eine eigene Entscheidung. Offener Punkt 123,
-     docs/dunkelmodus.md §4. Der Ueberschuss ist in tests/farbkontrast.test.ts
-     festgenagelt, damit er nicht unbemerkt waechst. */
-  --status-fehler-flaeche: oklch(0.96 0.028 27);
+     WARUM: Die Verlaufsflaeche daneben traegt seit E-87 einen kraeftigen
+     Petrolton. Zwei kraeftige Flaechen auf derselben Seite reiben; nach
+     docs/visuelles-konzept.md §3 weicht dann die Flaeche OHNE Bedeutung — und
+     das ist die Verlaufsflaeche. Sie ist deshalb zuerst gedaempft worden
+     (0,3979 statt 0,2770 Abstand zur Karte ist der Koerper, den sie braucht,
+     und keiner mehr). Die Kachelflaeche gibt zusaetzlich nach, WEIL SIE ES
+     KANN, ohne etwas zu verlieren: Sie ist eine Toenung und keine Aussage.
+     Die Aussage traegt die Zahl darauf, und die ist unveraendert rot.
+
+     DER ALTE BEFUND IST DAMIT MITERLEDIGT, und das war nicht sein Anlass:
+     oklch(0.96 0.028 27) lag AUSSERHALB des sRGB-Farbraums. Der rote Kanal
+     kam auf 1,0211 und wurde abgeschnitten; was der Bildschirm zeigte, war
+     #ffebe8 = oklch(0,9555 0,0221 29,4) — also WEDER die eingetragene
+     Helligkeit NOCH der eingetragene Ton. Bei L 0.96 traegt sRGB hoechstens
+     Chroma 0,0199. Der neue Wert liegt mit 0,016 bei 80 % dieser Decke und
+     wird nicht mehr abgeschnitten: Was dasteht, ist was gemalt wird. Damit
+     ist OFFENER PUNKT 123 geschlossen (docs/dunkelmodus.md §4), und die
+     Ausnahme in tests/farbkontrast.test.ts ist entfallen statt gelockert.
+
+     NACHGERECHNET, nicht geschaetzt (scripts/farbwerte/rechne.mjs):
+       status-fehler-flaeche  #fdeeed  --status-fehler darauf 5,38 : 1
+                                       (aus dem Hexwert 5,39; vorher 5,30)
+       Abstand zur Karte      0,0431   (vorher gezeigt 0,0497) — die Kachel
+                                       liest sich weiter als GEFUELLT, denn
+                                       0,0431 liegt ueber der Sichtprobe von
+                                       0,025 (visuelles-konzept.md §7a)
+
+     WAS DIESER WERT SONST NOCH FAERBT, und es ist zu benennen: Er ist die
+     Flaeche JEDER Fehlerplakette — Nachrichtenliste, Detail, Kette,
+     Prozessansicht —, nicht nur die der Kachel. Eine Kachel-eigene Farbe haette
+     die Zuordnung Rolle -> Token aus lib/status-farbe.ts herausgeloest, und §2
+     laesst sie nur an einer Stelle stehen. */
+  --status-fehler-flaeche: oklch(0.96 0.016 22);
   --status-fehler-kontur: oklch(0.86 0.07 27);
   --status-offen: oklch(0.44 0 0);
   --status-offen-flaeche: oklch(0.96 0 0);
@@ -369,6 +391,73 @@
   --akzent-flaeche: oklch(0.965 0.035 112.4);
   --akzent-vordergrund: oklch(0.2 0.04 112.4);
 
+  /* ── Verlauf ──────────────────────────────────────────────────────────────
+     NEU am 04.09.2026 (E-87). Die Flaeche des Verlaufsdiagramms auf der
+     Uebersicht — bis heute --akzent, siehe docs/dashboard-frontend.md §5.2.
+
+     ES IST WEDER EINE STATUSROLLE NOCH DER AKZENT, und beides mit Grund:
+
+     Keine Statusrolle, weil die Flaeche eine SUMME traegt und eine Summe
+     keinen Status hat. Das ist unveraendert das Argument von E-84.
+
+     Nicht mehr der Akzent, weil der Akzent die Anwendung meint — Schaltflaeche,
+     Fokusring, aktive Navigationszeile — und die groesste Flaeche der Seite
+     damit dieselbe Farbe trug wie jedes Bedienelement.
+
+     TON 230, also blau-gruen ("Petrol"), und dieser Ton ist frei: Rot 27,
+     Ueberfaellig 80, Akzent 112,4, Gruen 166. Er behauptet nichts, weil ihn
+     nichts belegt — GENAU DIE Eigenschaft, wegen der E-84 den Akzent gewaehlt
+     hatte, nur ohne dessen zweite Bedeutung.
+
+     DERSELBE FLAECHENWERT IN BEIDEN BLOECKEN, wie beim Akzent. Die KONTUR
+     kehrt sich um, aus demselben Grund wie --akzent-schrift: Sie liegt auf der
+     Grenze zwischen Flaeche und Karte, und welche der beiden die dunklere ist,
+     haengt am Block.
+
+     DIE DREI ZAHLEN GEHOEREN ZUSAMMEN und keine von ihnen fuer sich: Das Token
+     ist die VOLLE Farbe, gemalt wird sie nur durch die beiden Stopp-Deckungen
+     darunter. Wer eine der drei aendert, rechnet alle drei nach.
+
+     WAS DIE 3 : 1 AUS WCAG 1.4.11 HAELT, IST DIE KONTUR und nicht die Flaeche.
+     Die Kontur traegt den Kurvenverlauf — sie ist die Aussage —, die Flaeche
+     traegt Gewicht. Gemessen: 7,29 : 1 hell, 9,06 : 1 dunkel auf --card.
+     Der gemalte obere Stopp liegt bei 1,51 : 1 bzw. 1,47 : 1; das ist ein
+     BERICHT und keine Bedingung.
+
+     NACHGERECHNET (scripts/farbwerte/rechne.mjs), beide Bloecke getrennt und
+     jeder Abstand gegen das, was WIRKLICH GEMALT wird. Gemischt wird dabei in
+     sRGB und nicht im linearen Licht — am Browser gemessen, siehe ueber() im
+     Skript:
+       Token                     #1992bf   (hell wie dunkel)
+       gemalter oberer Stopp     #aed9e9 hell / #183a47 dunkel
+       gemalter Fuss             #f8fcfd hell / #181d1f dunkel
+       Stopp ↔ --card            0,1485 hell / 0,1287 dunkel
+       Stopp ↔ naechste Rolle    0,3139 hell / 0,2929 dunkel (--status-ungeklaert)
+       Stopp ↔ Fehlerkachel      159,6 Grad hell / 157,1 Grad dunkel
+
+     DIE CHROMA DES TOKENS bleibt die engste Stelle, wenn jemand die Deckung
+     wieder hochdreht: Im Dunkelblock steht --status-ungeklaert auf derselben
+     Helligkeit 0.62, der OKLab-Abstand ist dann GENAU die Chroma. 0,118 liegt
+     ueber der engsten Strecke des Bestands (0,1169659) und unter der sRGB-Decke
+     von 0,1236. Ausgeschrieben in docs/visuelles-konzept.md §3. */
+  --verlauf-flaeche: oklch(0.62 0.118 230);
+  --verlauf-kontur: oklch(0.45 0.085 230);
+
+  /* Die beiden Stopps des Farbverlaufs — DIE EIGENTLICHE STELLSCHRAUBE.
+
+     Sie stehen HIER und nicht in der Ansicht, weil sie sich zwischen den
+     Bloecken unterscheiden: Auf Weiss traegt dieselbe Deckung mehr auf als auf
+     --card 0.21. Eine Zahl in der Komponente koennte das nicht wissen; sie
+     stuende dort als eine Zahl fuer zwei Faelle.
+
+     fillOpacity BLEIBT AUF 1 (verlauf-diagramm.tsx). Die Durchsicht gehoert in
+     die Stopps, wo sie ausdruecklich dasteht — eine zweite Deckung darueber
+     multiplizierte sich mit dieser und waere in keiner der beiden Zahlen mehr
+     abzulesen. Der Befund, der das gelehrt hat, steht in
+     docs/annahmen-korrekturen.md (04.09.2026, fillOpacity 0,6). */
+  --verlauf-deckung-oben: 0.35;
+  --verlauf-deckung-unten: 0.03;
+
   /* ── Grundflaechen ──────────────────────────────────────────────────────── */
   --background: oklch(0.985 0 0);
   --foreground: oklch(0.16 0 0);
@@ -438,7 +527,12 @@
   --dunkel-status-abgeschlossen-flaeche: oklch(0.26 0.04 166);
   --dunkel-status-abgeschlossen-kontur: oklch(0.4 0.07 166);
   --dunkel-status-fehler: oklch(0.7 0.17 27);
-  --dunkel-status-fehler-flaeche: oklch(0.26 0.05 27);
+  /* GEDAEMPFT am 04.09.2026 (E-88), von oklch(0.26 0.05 27) auf 0.035 / Ton 22 —
+     dieselbe Bewegung wie im hellen Block und GETRENNT gerechnet, nicht
+     gespiegelt: --status-fehler darauf 5,46 : 1 (vorher 5,49), Abstand zur
+     Karte 0,0610 (vorher 0,0707). Der Wert lag hier immer im sRGB-Farbraum;
+     der Austritt war ein Befund des HELLEN Blocks. */
+  --dunkel-status-fehler-flaeche: oklch(0.26 0.035 22);
   --dunkel-status-fehler-kontur: oklch(0.4 0.09 27);
   --dunkel-status-offen: oklch(0.78 0 0);
   --dunkel-status-offen-flaeche: oklch(0.25 0 0);
@@ -477,6 +571,33 @@
   --dunkel-akzent-schrift: oklch(0.83 0.15 112.4);
   --dunkel-akzent-flaeche: oklch(0.28 0.06 112.4);
   --dunkel-akzent-vordergrund: oklch(0.2 0.04 112.4);
+
+  /* Die Verlaufsflaeche traegt DENSELBEN Wert wie im hellen Block — sie ist nie
+     Schrift, und was von ihr gemalt wird, regelt ohnehin die Deckung darunter.
+
+     DIE KONTUR KEHRT SICH UM, aus demselben Grund wie --akzent-schrift: Sie
+     liegt auf der Grenze zwischen Flaeche und Karte, und welche der beiden die
+     dunklere ist, haengt am Block. Gerechnet und nicht gespiegelt: 9,06 : 1 auf
+     --card. HIER und nur hier gilt die 3 : 1 aus WCAG 1.4.11 — die Linie traegt
+     den Kurvenverlauf, die Flaeche traegt Gewicht.
+
+     Der Vergleich zum Akzent, den sie abloest: Sein gemalter oberer Stopp laege
+     im Dunkelblock 0,1876 von der Karte entfernt, der Petrolton liegt bei
+     0,1287 — bei GLEICHER Deckung traegt das Gelbgruen auf dunklem Grund die
+     schwerere Flaeche. Unvermischt sind es 8,97 : 1 gegen 5,00 : 1 auf --card.
+     Die groesste Flaeche der Seite war damit im Dunkeln die lauteste. */
+  --dunkel-verlauf-flaeche: oklch(0.62 0.118 230);
+  --dunkel-verlauf-kontur: oklch(0.78 0.11 230);
+  /* NIEDRIGER ALS IM HELLEN BLOCK, und der Rest ist gerechnet statt behauptet:
+     Dieselbe Deckung traegt auf --card 0.21 ETWAS mehr auf als auf Weiss — bei
+     0,35 waeren es 0,1597 OKLab gegen 0,1485, also acht Prozent. Mit 0,28 sind
+     es 0,1287; die Deckung geht damit UEBER den Ausgleich hinaus und stellt die
+     dunkle Flaeche dreizehn Prozent leiser als die helle. Das ist eine
+     Entscheidung nach Augenschein und keine, die aus einer Zahl folgt.
+     Der Fuss liegt hoeher (0,04 gegen 0,03), weil eine Toenung auf dunklem
+     Grund schneller verschwindet als auf hellem. */
+  --dunkel-verlauf-deckung-oben: 0.28;
+  --dunkel-verlauf-deckung-unten: 0.04;
 
   /* Die shadcn-Basistokens. Sie sind BEZUG und nicht Gegenstand (E-61): Sie
      kommen aus dem Generator und werden uebernommen, nicht gerechnet. */
@@ -645,6 +766,10 @@ html[data-thema="dunkel"] {
   --akzent-schrift: var(--dunkel-akzent-schrift);
   --akzent-flaeche: var(--dunkel-akzent-flaeche);
   --akzent-vordergrund: var(--dunkel-akzent-vordergrund);
+  --verlauf-flaeche: var(--dunkel-verlauf-flaeche);
+  --verlauf-kontur: var(--dunkel-verlauf-kontur);
+  --verlauf-deckung-oben: var(--dunkel-verlauf-deckung-oben);
+  --verlauf-deckung-unten: var(--dunkel-verlauf-deckung-unten);
   --background: var(--dunkel-background);
   --foreground: var(--dunkel-foreground);
   --card: var(--dunkel-card);
@@ -705,6 +830,10 @@ html[data-thema="dunkel"] {
     --akzent-schrift: var(--dunkel-akzent-schrift);
     --akzent-flaeche: var(--dunkel-akzent-flaeche);
     --akzent-vordergrund: var(--dunkel-akzent-vordergrund);
+    --verlauf-flaeche: var(--dunkel-verlauf-flaeche);
+    --verlauf-kontur: var(--dunkel-verlauf-kontur);
+    --verlauf-deckung-oben: var(--dunkel-verlauf-deckung-oben);
+    --verlauf-deckung-unten: var(--dunkel-verlauf-deckung-unten);
     --background: var(--dunkel-background);
     --foreground: var(--dunkel-foreground);
     --card: var(--dunkel-card);

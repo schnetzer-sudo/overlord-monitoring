@@ -19,6 +19,8 @@ import type { Rollupzeitraum } from "@/lib/rollupzeitraum";
 import { rollenfuellung, type Statusrolle } from "@/lib/status-farbe";
 import {
   STAPELREIHENFOLGE,
+  VERLAUFSDECKUNG_OBEN,
+  VERLAUFSDECKUNG_UNTEN,
   VERLAUFSFLAECHE,
   VERLAUFSKONTUR,
   achsenaufloesung,
@@ -74,8 +76,14 @@ import {
  *
  * `VERLAUFSFLAECHE` und `VERLAUFSKONTUR` stehen in `features/dashboard/verlauf.ts`
  * mit der ganzen Begründung. Kurz: Die Fläche trägt eine **Summe**, und eine
- * Summe hat keinen Status; der Akzent ist die einzige Farbe des Bestands, die
- * über die Daten nichts behauptet.
+ * Summe hat keinen Status. Seit dem 04.09.2026 trägt sie dafür eine **eigene
+ * Rolle** in Ton 230 (E‑87) und nicht mehr den Akzent — der sagt über die Daten
+ * zwar nichts, über die **Anwendung** aber sehr wohl etwas.
+ *
+ * **Die Aussage trägt die Kontur, die Fläche trägt Gewicht.** Deshalb gilt die
+ * 3 : 1 aus WCAG 1.4.11 an `VERLAUFSKONTUR` (7,29 : 1 hell, 9,06 : 1 dunkel)
+ * und ausdrücklich **nicht** an der Fläche: Die ist eine Tönung, und ihr
+ * Kontrast wird berichtet statt gefordert.
  *
  * ## Zwei Diagramme und nicht zwei Achsen in einem
  *
@@ -141,17 +149,31 @@ const ZEIGERLINIE = { stroke: "var(--border)" };
 const FUELLUNGS_ID = "verlauf-flaeche";
 
 /**
- * **Die Deckung am unteren Ende des Farbverlaufs.**
+ * **Die Deckung der beiden Stopps steht nicht mehr hier** — sie sind seit dem
+ * 04.09.2026 Token in `app/globals.css` und je Block verschieden (hell
+ * 0,35 / 0,03, dunkel 0,28 / 0,04). Die Begründung steht an
+ * `VERLAUFSDECKUNG_OBEN` in `features/dashboard/verlauf.ts`; hier stünde sie
+ * ein zweites Mal.
  *
- * Oben steht der Akzent voll (`1`), unten fast nichts — die Fläche verliert
- * sich zur Nulllinie hin, statt dort als Block zu enden. Was das am Fuß malt,
- * ist in beiden Farbschemata gemessen und steht mit Zahlen in §8b: eine
- * Tönung, die die Gitterlinie noch durchscheinen lässt.
+ * ## Wo die Gitterlinie steht, und es ist der Verlauf und nicht die Farbe
  *
- * **Die Zahl ist gewählt und nicht gemessen** — sie ist eine Aussage über das
- * Bild. Gemessen ist nur, was sie malt.
+ * Das Gitter liegt **unter** der Fläche — nachgesehen an den Recharts-Lagen im
+ * DOM (`recharts-zIndex-layer_-100` gegen `_100`), nicht angenommen. Was von
+ * einer Linie übrig bleibt, hängt damit allein an der Deckung an ihrer Höhe.
+ * Gemessen als OKLab-Abstand zwischen „Fläche über Linie" und „Fläche über
+ * Karte", gegen die Sichtprobe von 0,025 aus `visuelles-konzept.md` §7a:
+ *
+ * | Deckung | hell | dunkel |
+ * |---|---|---|
+ * | oberer Stopp | 0,0669 | 0,0741 |
+ * | Fuß | 0,0973 | 0,1086 |
+ *
+ * **Die Linie verschwindet an keiner Stelle mehr.** Mit dem alten oberen Stopp
+ * von `1` war sie unter dem Scheitel vollständig gedeckt (0,0000) und kam erst
+ * unterhalb von rund 87 % Deckung wieder durch; das war eine Eigenschaft der
+ * vollen Deckung und keine der Farbe. Der niedrigste gemessene Wert liegt jetzt
+ * bei **0,0669** und damit zweieinhalbfach über der Schwelle.
  */
-const GRUNDDECKUNG = 0.08;
 
 /**
  * **Die Dauer des Aufbaus — an beiden Diagrammen dieselbe.**
@@ -250,8 +272,24 @@ export function VerlaufDiagramm({
              * genauso satt wie bei einem hohen.
              */}
             <linearGradient id={FUELLUNGS_ID} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={VERLAUFSFLAECHE} stopOpacity={1} />
-              <stop offset="100%" stopColor={VERLAUFSFLAECHE} stopOpacity={GRUNDDECKUNG} />
+              {/*
+               * **`style` und nicht `stopOpacity`.** Beide schreiben dieselbe
+               * Eigenschaft, aber nur die Stildeklaration löst `var()` auf:
+               * Ein Präsentationsattribut trüge die Zeichenkette unverändert
+               * ins SVG, und der Stopp fiele auf seine Voreinstellung `1`
+               * zurück — sichtbar als Fläche ohne jede Durchsicht. Am
+               * laufenden System nachgesehen, nicht angenommen.
+               */}
+              <stop
+                offset="0%"
+                stopColor={VERLAUFSFLAECHE}
+                style={{ stopOpacity: VERLAUFSDECKUNG_OBEN }}
+              />
+              <stop
+                offset="100%"
+                stopColor={VERLAUFSFLAECHE}
+                style={{ stopOpacity: VERLAUFSDECKUNG_UNTEN }}
+              />
             </linearGradient>
           </defs>
           <CartesianGrid vertical={false} {...ACHSENLINIE} />

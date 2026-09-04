@@ -137,26 +137,53 @@ export function rolleKommtVor(zeilen: readonly Verlaufszeile[], rolle: Statusrol
 }
 
 /**
- * **Die Farbe der Fläche — der Akzent, und ausdrücklich keine Statusrolle**
- * (Entscheidung E‑84).
+ * **Die Farbe der Fläche — eine eigene Rolle, und ausdrücklich keine
+ * Statusrolle** (Entscheidung **E‑87**, 04.09.2026; davor E‑84).
  *
- * Die Fläche trägt seit dem 04.09.2026 die **Gesamtsumme** je Eimer, und eine
- * Summe hat keinen Status. `--status-abgeschlossen` behauptete darüber „alles
- * fertig", `--status-offen` das Gegenteil; beides wäre eine Aussage, die die
- * Zahl nicht trägt. Der Akzent ist die einzige Farbe des Bestands, die
- * *nichts* über die Daten sagt — genau deshalb steht er hier
- * ([`docs/visuelles-konzept.md`](../../../../docs/visuelles-konzept.md) §3).
+ * Die Fläche trägt die **Gesamtsumme** je Eimer, und eine Summe hat keinen
+ * Status. `--status-abgeschlossen` behauptete darüber „alles fertig",
+ * `--status-offen` das Gegenteil; beides wäre eine Aussage, die die Zahl nicht
+ * trägt. **Dieser Teil von E‑84 gilt unverändert.**
  *
- * **Zwei Stufen und nicht eine, und beide sind vergeben, wie §3 sie vergibt:**
- * `--akzent` ist dort die **Füllfarbe** („nur Fläche"), `--akzent-schrift` die
- * Stufe für „Verweise, aktive Beschriftungen, **dünne Linien**". Der Farbverlauf
- * ist die Fläche, die Oberkante ist die dünne Linie. §3 nennt dieselbe Paarung
- * als die eine bekannte Grenze der Farbe und ihre Behebung: *„wer die Lücke
- * schließen will, gibt gefüllten Flächen zusätzlich eine Kontur in
- * `--akzent-schrift`"* — eine gefüllte Akzentfläche erreicht auf Weiß nur
- * 1,98 : 1 und verfehlt die 3 : 1 aus WCAG 1.4.11. Die Kontur trägt 5,40 : 1 im
- * hellen und 10,72 : 1 im dunklen Block ([`docs/dunkelmodus.md`](../../../../docs/dunkelmodus.md)
- * §3.3).
+ * ## Was sich geändert hat: es ist nicht mehr der Akzent
+ *
+ * E‑84 hat den Akzent gewählt, weil er *„die einzige Farbe des Bestands ist,
+ * die nichts über die Daten sagt"*. Der Satz stimmt — und er übersieht, was
+ * der Akzent **stattdessen** sagt: Er ist die Farbe der **Anwendung**
+ * (Schaltfläche, Fokusring, aktive Navigationszeile,
+ * [`docs/visuelles-konzept.md`](../../../../docs/visuelles-konzept.md) §3).
+ * Die größte Fläche der Seite trug damit dieselbe Farbe wie jedes
+ * Bedienelement.
+ *
+ * ## Die Fläche trägt Gewicht, die Kontur trägt die Aussage
+ *
+ * **Die 3 : 1 aus WCAG 1.4.11 gilt an der Kontur und nicht an der Fläche.** Wer
+ * den Verlauf liest, liest die **Linie** — sie sagt, wo die Kurve steht; die
+ * Fläche darunter sagt nur, wie viel darunter liegt. Eine Tönung an einer
+ * Umriss-Schwelle zu messen hieße, sie zu einem Umriss zu erklären.
+ *
+ * **Gemessen wird sie trotzdem, nur als Bericht:** Der gemalte obere Stopp
+ * erreicht 1,51 : 1 im hellen und 1,47 : 1 im dunklen Block. Zum Vergleich
+ * derselbe Stopp mit dem Akzent: 1,26 : 1 und 1,84 : 1 — bei **gleicher**
+ * Deckung trug das Gelbgrün auf dunklem Grund die schwerere Fläche
+ * (0,1876 zur Karte gegen 0,1287), und die größte Fläche der Seite war damit
+ * im Dunkeln die lauteste.
+ *
+ * **Der OKLab-Abstand zur Karte ist die Bedingung**, die die Fläche halten
+ * muss: 0,1485 hell und 0,1287 dunkel gegen die Sichtprobe von 0,025.
+ *
+ * ## Warum Ton 230 nichts behauptet
+ *
+ * Weil ihn nichts belegt: Rot 27, Überfällig 80, Akzent 112,4, Grün 166. Ein
+ * freier Ton ist genau die Eigenschaft, wegen der E‑84 den Akzent nahm — nur
+ * ohne dessen zweite Bedeutung. Die sechs nachgerechneten Abstände stehen in
+ * [`docs/visuelles-konzept.md`](../../../../docs/visuelles-konzept.md) §3 und
+ * in `app/globals.css` am Token.
+ *
+ * **Zwei Stufen und nicht eine:** `--verlauf-flaeche` ist die Füllung des
+ * Farbverlaufs, `--verlauf-kontur` die Oberkante — dieselbe Aufteilung, die §3
+ * für den Akzent kennt, nur mit eigenen Werten. Die Kontur trägt 7,29 : 1 im
+ * hellen und 9,06 : 1 im dunklen Block auf `--card`.
  *
  * **Sie stehen hier und nicht im Diagramm** — derselbe Grund wie bei
  * `FUELLUNG` in `lib/status-farbe.ts`: Eine Komponente kennt keinen
@@ -170,10 +197,44 @@ export function rolleKommtVor(zeilen: readonly Verlaufszeile[], rolle: Statusrol
  * am 04.09.2026 gemessen und nicht angenommen
  * ([`docs/frontend-grundlagen.md`](../../../../docs/frontend-grundlagen.md) §8b).
  */
-export const VERLAUFSFLAECHE = "var(--akzent)";
+export const VERLAUFSFLAECHE = "var(--verlauf-flaeche)";
 
-/** Die Oberkante der Fläche. Siehe {@link VERLAUFSFLAECHE}. */
-export const VERLAUFSKONTUR = "var(--akzent-schrift)";
+/**
+ * Die Oberkante der Fläche — **sie trägt den Kurvenverlauf, die Fläche trägt
+ * Gewicht.** Siehe {@link VERLAUFSFLAECHE}.
+ *
+ * **Hier und nur hier gilt die 3 : 1 aus WCAG 1.4.11.** Die Linie ist die
+ * Aussage des Diagramms; sie hält 7,29 : 1 im hellen und 9,06 : 1 im dunklen
+ * Block auf `--card`. Die Fläche darunter ist eine Tönung und wird an dieser
+ * Schwelle **nicht** gemessen — ihr Kontrast steht als *Bericht* in
+ * `scripts/farbwerte/rechne.mjs` (1,34 : 1 bzw. 2,12 : 1) und ist keine
+ * Bedingung.
+ */
+export const VERLAUFSKONTUR = "var(--verlauf-kontur)";
+
+/**
+ * **Die Deckung der beiden Farbverlaufsstopps — die eigentliche Stellschraube.**
+ *
+ * Oben trägt die Fläche kräftig auf, unten läuft sie zur Nulllinie aus. Beide
+ * Zahlen stehen als **Token in `app/globals.css`** und nicht hier als Konstante,
+ * und der Grund ist gemessen: Dieselbe Deckung trägt auf Weiß weniger auf als
+ * auf `--card` 0.21. Eine Zahl in der Ansicht wäre eine Zahl für zwei Fälle —
+ * hell 0,35 / 0,03, dunkel 0,28 / 0,04.
+ *
+ * **`fillOpacity` bleibt auf `1`.** Die Durchsicht gehört in die Stopps, wo sie
+ * ausdrücklich dasteht; eine zweite Deckung darüber multiplizierte sich mit
+ * dieser und wäre in keiner der beiden Zahlen mehr abzulesen. Genau dieser
+ * Fehler ist am 04.09.2026 gemessen worden, als Recharts' Voreinstellung von
+ * 0,6 unbemerkt über der Füllung lag
+ * ([`docs/annahmen-korrekturen.md`](../../../../docs/annahmen-korrekturen.md)).
+ *
+ * Eingesetzt werden sie über `style`, nicht über das Attribut `stop-opacity`:
+ * Ein Präsentationsattribut löst `var()` nicht auf, eine Stildeklaration schon.
+ */
+export const VERLAUFSDECKUNG_OBEN = "var(--verlauf-deckung-oben)";
+
+/** Die Deckung am Fuß. Siehe {@link VERLAUFSDECKUNG_OBEN}. */
+export const VERLAUFSDECKUNG_UNTEN = "var(--verlauf-deckung-unten)";
 
 /**
  * Die Auflösung der Zeitachse — sie folgt der **Eimerbreite** des Paares und
