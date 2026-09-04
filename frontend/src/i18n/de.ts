@@ -354,6 +354,21 @@ export const de = {
       anzahlEins: "1 Nachricht",
       anzahlViele: "{anzahl} Nachrichten",
       zeileOeffnen: "Diese {anzahl} in der Nachrichtenliste zeigen",
+      // Das Wort zum Zeichen (E‑91). Es steht als **Verzeichnis über
+      // `Auffaelligkeit`** und nicht als ein Wort: `kategorie` ist heute eine
+      // Aufzählung mit einem Wert (offener Punkt 133), und Regel Q3 verlangt,
+      // dass Problemkategorien getrennt geführt werden. Kommt eine zweite
+      // zurück, ist hier eine Zeile zu ergänzen — und der Zeilenkopf im
+      // Quelltext meldet sich, wenn sie fehlt.
+      //
+      // NICHT `einordnung.FEHLER` wiederverwendet, obwohl dort dasselbe Wort
+      // steht: Das ist die `Statusart`, dies ist die `Auffaelligkeit`. Zwei
+      // Aufzählungen, die heute zufällig einen Namen teilen — E‑82 ist genau
+      // daran entstanden, dass ein Name aus der einen Menge in die
+      // Beschriftungsposition der anderen gerutscht ist.
+      kategorie: {
+        FEHLER: "Fehler",
+      },
     },
 
     stand: {

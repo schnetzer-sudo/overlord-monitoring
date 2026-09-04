@@ -636,6 +636,50 @@ describe("Zuletzt aufgefallen", () => {
   });
 
   /**
+   * **Das Zeichen je Zeile** (E‑91). Es steht wieder da, nachdem die Plakette am
+   * 03.09.2026 gefallen war — als **Zeichen**, nicht als Wort: Ohne es sagt im
+   * Bild nichts mehr, dass es sich um Fehler handelt („Zuletzt aufgefallen" ist
+   * keine Kategorie).
+   *
+   * Geprüft ist beides, was daran leicht auseinanderfällt: dass **jede** Zeile
+   * eines trägt, und dass das **Wort** nur im Vorlese-Markup steht und nicht im
+   * Bild. Ohne die zweite Zusicherung wäre die naheliegende Verschlimmbesserung
+   * — das Wort danebenzuschreiben — nicht zu bemerken.
+   */
+  it("trägt je Zeile das Zeichen der Kategorie, und das Wort nur für Vorleser", async () => {
+    const gerendert = await rendere(<AufgefallenBlock zeilen={ZEILEN} fenster={FENSTER} />);
+
+    try {
+      const eintraege = [...gerendert.behaelter.querySelectorAll("li")];
+
+      for (const eintrag of eintraege) {
+        const traeger = eintrag.querySelector(`[title="${D.aufgefallen.kategorie.FEHLER}"]`);
+        expect(traeger, "Jede Zeile trägt das Zeichen ihrer Kategorie").not.toBeNull();
+        expect(traeger?.querySelector("svg")).not.toBeNull();
+
+        // Die Farbe kommt aus `lib/status-farbe.ts` und steht nicht als Wert in
+        // der Komponente — geprüft an der Klasse, nicht am Pixel.
+        expect(traeger?.className).toContain("text-status-fehler");
+
+        // Das Wort steht im Markup, aber nicht im Bild: `sr-only` blendet es aus.
+        const wort = traeger?.querySelector(".sr-only");
+        expect(wort?.textContent).toBe(D.aufgefallen.kategorie.FEHLER);
+      }
+
+      // Die Gegenprobe: sichtbar steht es nirgends. Der sichtbare Text der Zeile
+      // sind Zeitpunkt, Name und Zahl — sonst nichts.
+      const sichtbar = eintraege.map((eintrag) => {
+        const kopie = eintrag.cloneNode(true) as HTMLElement;
+        kopie.querySelectorAll(".sr-only").forEach((knoten) => knoten.remove());
+        return kopie.textContent ?? "";
+      });
+      expect(sichtbar.some((text) => text.includes(D.aufgefallen.kategorie.FEHLER))).toBe(false);
+    } finally {
+      await gerendert.abbauen();
+    }
+  });
+
+  /**
    * **Der Verweis führt in die Liste und nicht ins Detail** — und zwar auf genau
    * die Menge, die die Zahl daneben nennt: dieser Prozess, `FEHLER`, dasselbe
    * Fenster. Eine einzelne Nachricht herauszugreifen wäre eine Behauptung, die

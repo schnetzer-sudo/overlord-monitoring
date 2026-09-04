@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { AlertTriangle, type LucideIcon } from "lucide-react";
 
 import { useAnzeigezone } from "@/components/zeitzone";
 import { einsetzen } from "@/i18n";
 import { useSprache, useTexte } from "@/i18n/provider";
 import { formatiereZahl, formatiereZeitpunkt, formatiereZeitpunktGenau } from "@/lib/format";
+import { statusVordergrund, type Statusart } from "@/lib/status-farbe";
 
-import type { AuffaelligerProzess, Fenster } from "../api";
+import type { Auffaelligkeit, AuffaelligerProzess, Fenster } from "../api";
 import { prozessFehlerZiel } from "../verweise";
 
 /**
@@ -42,6 +44,26 @@ import { prozessFehlerZiel } from "../verweise";
  * damit gegenstandslos** statt erledigt — er verlangte den Rohstatus je Zeile
  * zurück, und die Zeile, um die es ging, gibt es nicht mehr.
  *
+ * ## Das Zeichen je Zeile (Entscheidung **E‑91**, 04.09.2026)
+ *
+ * **Am 03.09.2026 ist die Kategoriekennzeichnung je Zeile gefallen**, und die
+ * Begründung war richtig: *Eine Plakette, die an jeder Zeile dasselbe Wort
+ * sagt, unterscheidet nichts mehr.* Sie hat aber mehr mitgenommen als das Wort
+ * — seither steht **nirgends im Bild**, dass es sich um Fehler handelt. Die
+ * Überschrift lautet „Zuletzt aufgefallen"; *aufgefallen* ist keine Kategorie.
+ *
+ * **Das Zeichen kehrt zurück, das Wort nicht.** Es ist dieselbe Abwägung wie in
+ * der Statusplakette der Liste: `visuelles-konzept.md` §3 verlangt „zusätzlich
+ * eine Beschriftung **oder** ein Zeichen", und die Zeichen unterscheiden sich in
+ * ihrer **Form**, nicht in ihrer Farbe. Ein Zeichen kostet eine Zeile nichts an
+ * Breite; ein Wort an jeder Zeile kostete sie und sagte zehnmal dasselbe.
+ *
+ * **Es ist nicht die `StatusPlakette`.** Die liegt in `features/nachrichten`,
+ * und ein Feature importiert nicht aus einem Nachbarfeature
+ * (`frontend-grundlagen.md` §8) — dieselbe Abgrenzung, aus der die Kacheln ihr
+ * Zeichen selbst setzen. **Geteilt ist die Farbe**, über `statusVordergrund` in
+ * `lib/status-farbe.ts`, und nicht die Komponente.
+ *
  * ## Zeitpunkte absolut (Entscheidung E‑o)
  *
  * In der Anzeigezone und **nicht relativ**. Die Antwort trägt kein `jetzt`-Feld,
@@ -74,6 +96,39 @@ export function AufgefallenBlock({
   );
 }
 
+/**
+ * Das Zeichen je Auffälligkeit — **ein Verzeichnis und kein fester Wert**.
+ *
+ * Heute steht darin ein Eintrag, weil `Auffaelligkeit` eine Aufzählung mit einem
+ * Wert ist (offener Punkt 133). Als Verzeichnis geschrieben, weil Regel Q3
+ * verlangt, dass Problemkategorien **getrennt** geführt und nie zu „Problem"
+ * zusammengefasst werden: Kommt eine zweite zurück, ist hier eine Zeile zu
+ * ergänzen — und TypeScript verlangt sie, statt still das Warndreieck
+ * weiterzumalen.
+ */
+const ZEICHEN: Record<Auffaelligkeit, LucideIcon> = {
+  FEHLER: AlertTriangle,
+};
+
+/**
+ * Woher die **Farbe** des Zeichens kommt — und warum über einen Umweg.
+ *
+ * `lib/status-farbe.ts` hält zwei Zuordnungen: `Statusart` → Rolle und
+ * `Problemkategorie` → Rolle. **`FEHLER` steht in der ersten**, und der Kopf
+ * jener Datei sagt auch, warum das so bleibt: *„Fehler ist ein Statuswert und
+ * läuft über `Statusart`; eine zweite Zuordnung dorthin wäre ein zweiter Weg zu
+ * Rot."*
+ *
+ * `zeile.kategorie` ist aber eine **`Auffaelligkeit`** und keine `Statusart` —
+ * zwei Aufzählungen, die heute zufällig einen Namen teilen. Dieses Verzeichnis
+ * schreibt die Brücke **einmal und sichtbar** hin, statt den einen Typ in den
+ * anderen zu reichen, weil der Aufruf zufällig durchginge. Rot bleibt damit an
+ * genau einer Stelle vergeben.
+ */
+const FARBQUELLE: Record<Auffaelligkeit, Statusart> = {
+  FEHLER: "FEHLER",
+};
+
 function Zeile({ zeile, fenster }: { zeile: AuffaelligerProzess; fenster: Fenster }) {
   const texte = useTexte();
   const sprache = useSprache();
@@ -85,6 +140,9 @@ function Zeile({ zeile, fenster }: { zeile: AuffaelligerProzess; fenster: Fenste
       ? texte.dashboard.aufgefallen.anzahlEins
       : texte.dashboard.aufgefallen.anzahlViele;
 
+  const Zeichen = ZEICHEN[zeile.kategorie];
+  const kategorie = texte.dashboard.aufgefallen.kategorie[zeile.kategorie];
+
   return (
     <li className="border-border flex items-center gap-3 border-b py-1.5 last:border-b-0">
       <span
@@ -92,6 +150,25 @@ function Zeile({ zeile, fenster }: { zeile: AuffaelligerProzess; fenster: Fenste
         title={formatiereZeitpunktGenau(zeile.zuletzt, sprache, zone)}
       >
         {formatiereZeitpunkt(zeile.zuletzt, sprache, zone)}
+      </span>
+
+      {/*
+       * **Das Zeichen steht zwischen Zeitpunkt und Name** — dieselbe Reihenfolge
+       * wie in der Nachrichtenliste, deren Spalten *Zeitpunkt · Status · Ablauf*
+       * lauten. Die Zeile, auf die der Verweis führt, sieht damit aus wie die
+       * Zeile, von der er ausgeht.
+       *
+       * **Das Wort steht im `title` und im Vorlese-Markup, nicht im Bild.** Es
+       * wäre an jeder Zeile dasselbe — genau der Grund, aus dem die Plakette am
+       * 03.09.2026 gefallen ist. Das Zeichen unterscheidet sich dagegen in der
+       * **Form**, sobald es je eine zweite Kategorie gibt.
+       */}
+      <span
+        className={`shrink-0 ${statusVordergrund(FARBQUELLE[zeile.kategorie])}`}
+        title={kategorie}
+      >
+        <Zeichen aria-hidden="true" className="size-4" />
+        <span className="sr-only">{kategorie}</span>
       </span>
 
       {/*

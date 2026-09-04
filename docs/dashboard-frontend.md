@@ -241,6 +241,7 @@ allein über Farbe"* —, und §7a hat es für diese Rolle noch einmal ausdrück
 | **E‑88** | **Die Fläche der Fehlerkachel wird gedämpft** — weniger Chroma, eine Spur kühler. **Nur die Fläche:** Zahl, Text, Balken, Plaketten und Fehlerart behalten `--status-fehler` Ziffer für Ziffer. Schließt nebenbei offenen Punkt 123 (§5.2, [`visuelles-konzept.md`](visuelles-konzept.md) §7a) | 04.09.2026 |
 | **E‑89** | **Die Deckung der beiden Farbverlaufsstopps steht als Token und ist je Block verschieden** (hell 0,35 / 0,03, dunkel 0,28 / 0,04). `fillOpacity` bleibt `1` — die Durchsicht gehört in die Stopps, wo sie ausdrücklich dasteht (§5.2) | 04.09.2026 |
 | **E‑90** | **„Zuletzt aufgefallen" trägt eine Zeile je Prozess** mit Anzahl und jüngstem Zeitpunkt, nicht mehr eine je Nachricht. Der Verweis führt in die **Liste**, gefiltert auf diesen Prozess (§5.6) | 04.09.2026 |
+| **E‑91** | **Jede Zeile in „Zuletzt aufgefallen" trägt das Zeichen ihrer Kategorie**, das Wort nur im `title` und für Vorleser. **Nimmt die Hälfte von 10b‑5 zurück, die zu viel war:** Mit der Plakette ist auch die Auskunft *dass es Fehler sind* aus dem Bild verschwunden — *aufgefallen* ist keine Kategorie (§5.6) | 04.09.2026 |
 
 ---
 
@@ -1125,6 +1126,42 @@ Farbe dort wäre eine Aussage, die es nicht gibt.
 > **Was diese Zahl sagt, ist mehr als das, was die zehn gleichen Zeilen davor sagten:** Es ist immer
 > derselbe Prozess.
 >
+> #### ⚠️ Nachtrag desselben Tages — das **Zeichen** kehrt zurück (**E‑91**)
+> 
+> **10b‑5 hat mit der Plakette mehr mitgenommen als das Wort.** Die Begründung von damals
+> ist richtig geblieben: *Eine Plakette, die an jeder Zeile dasselbe Wort sagt, unterscheidet
+> nichts mehr.* Sie hat aber auch die Auskunft **dass es Fehler sind** aus dem Bild genommen —
+> und die stand danach **nirgends** mehr: Die Überschrift lautet „Zuletzt aufgefallen", und
+> *aufgefallen* ist keine Kategorie.
+> 
+> | | 10b‑5 | **seit E‑91** |
+> |---|---|---|
+> | Zeichen je Zeile | — | **Warndreieck in `--status-fehler`** |
+> | Wort je Zeile | — | nur `title` und `sr-only` |
+> | Plakette (Fläche, Kontur) | — | **weiterhin keine** |
+> 
+> **Das ist keine Rücknahme von 10b‑5, sondern seine Hälfte.** §3 verlangt *„zusätzlich
+> eine Beschriftung **oder** ein Zeichen"* — die Zeichen unterscheiden sich in ihrer **Form**,
+> nicht in ihrer Farbe. Ein Zeichen kostet die Zeile nichts an Breite; ein Wort kostete sie und
+> sagte an jeder Zeile dasselbe.
+> 
+> **Nicht die `StatusPlakette`.** Die liegt in `features/nachrichten`, und ein Feature importiert
+> nicht aus einem Nachbarfeature ([`frontend-grundlagen.md`](frontend-grundlagen.md) §8) —
+> dieselbe Abgrenzung, aus der die Kacheln ihr Zeichen selbst setzen. **Geteilt ist die Farbe**
+> über `statusVordergrund` in `lib/status-farbe.ts`; die Datei ist dafür **nicht** geändert
+> worden, die Funktion gab es bereits.
+> 
+> **Zwei Verzeichnisse statt zweier fester Werte**, beide über `Auffaelligkeit` geschlüsselt:
+> eines für das Zeichen, eines für die Statusart, aus der die Farbe kommt. Heute steht in beiden
+> ein Eintrag. **Der Umweg über die zweite Aufzählung ist Absicht:** `zeile.kategorie` ist eine
+> `Auffaelligkeit`, `statusVordergrund` erwartet eine `Statusart` — zwei Mengen, die heute
+> zufällig einen Namen teilen. E‑82 ist genau daran entstanden, dass ein Name aus der einen
+> Menge in die Position der anderen gerutscht ist.
+> 
+> **Kommt je eine zweite Kategorie zurück** (Regel Q3), verlangt TypeScript beide Einträge —
+> statt still das Warndreieck weiterzumalen. Der Rendertest prüft beides und ist in beide
+> Richtungen geeicht: ohne Zeichen rot, mit sichtbarem Wort ebenfalls rot.
+
 > **Nicht geändert:** die Überschrift, der Leerzustand, `kategorie` im Antwortrumpf (Regel Q3 — kommt
 > je eine zweite Kategorie zurück, ist dann **je Kategorie** zu gruppieren und nicht darüber
 > hinweg), Rollup, Endpunkt und der übrige Antwortrumpf.

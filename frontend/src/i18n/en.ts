@@ -201,6 +201,9 @@ export const en: Texte = {
       anzahlEins: "1 message",
       anzahlViele: "{anzahl} messages",
       zeileOeffnen: "Show these {anzahl} in the message list",
+      kategorie: {
+        FEHLER: "Error",
+      },
     },
 
     stand: {
