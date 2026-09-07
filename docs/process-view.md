@@ -538,6 +538,16 @@ kaum mit dem Mandanten (6,2 bis 6,9 ms bei 48 Stunden, 39 bis 76 ms bei zwölf M
 Teil ist der Bereichszugriff auf die Rolluptabelle, und den zahlt jeder Mandant gleich — er liest
 denselben Bereich und wirft danach weg, was ihm nicht gehört.
 
+> ### Ergänzt am 07.09.2026 — der Satz gilt für die drei Paare, und nur für sie (M147, §31)
+>
+> Der Absatz darüber bleibt stehen; für `48H`, `30T` und `12M` beschreibt er die gemessene Lage.
+> **Über weitere Fenster auf der Stundenebene gilt er nicht:** Ab einer mandantenabhängigen Spanne —
+> bei `NEXANS` zwischen 7 und 30 Tagen, bei `VOTG` und `IBIS` zwischen 30 und 90 — steigt der
+> Optimierer über `ProjectMandant` und `message_rollup_prozess_idx` ein und liest **nur die Zeilen
+> des Mandanten**. Dann zahlt nicht jeder Mandant gleich: über 365 Tage `NEXANS` 832,090 ms, `IBIS`
+> 194,514 ms. Der Preis hängt an den Zeilen, die der gewählte Plan liest — und welcher das ist, ist
+> eine Eigenschaft der Spanne und des Mandanten, nicht der Tabelle.
+
 ### Die Pläne (Regel L15)
 
 **Gerüst**, identisch über alle vier Mandanten bis auf die Zeilenschätzung:
@@ -2797,3 +2807,604 @@ zu `richtungswort` drei zu E‑58 geworden sind.
 >
 > *Nicht angesehen:* dasselbe wie in 10c‑3 — kein echtes Berührungsgerät, kein zweiter Browser,
 > nur der helle Modus, nur Deutsch, kein Vorleseprogramm, kein Nutzer.
+
+---
+
+# Teil 4 — die Messrunde zum freien Zeitfenster *(10c‑4a, 07.09.2026)*
+
+**Diese Runde misst. Sie baut nichts und entscheidet nichts.** Auftrag: „Prozessansicht — freies
+Zeitfenster, Messrunde (Schritt 10c‑4a)", Stand 07.09.2026. Anlass: Die Prozessansicht soll neben
+`48H` / `30T` / `12M` ein **freies Zeitfenster** bekommen, stundengenau (E1′‑b), über einen vierten
+optionalen Knopf des geteilten Umschalters (E3‑a). Die Vorgabe, aus der alles Weitere folgt: *Der
+Nutzer soll nicht sehen, aus welcher Ebene die Daten kommen; wichtig ist nur, dass die Zahlen stimmen
+und alles aus dem abgefragten Zeitraum stammt.* Also **kein Ausweiten** auf Eimergrenzen und **kein
+Beschneiden** — das Fenster wird exakt beantwortet oder gar nicht.
+
+Zwei Bauformen standen zur Wahl, und diese Runde beziffert sie:
+
+| | |
+|---|---|
+| **Fassung E** — eine Ebene | Gelesen wird die **gröbste** Ebene, auf deren Eimergrenzen **beide** Fenstergrenzen fallen. Ein stundengenaues, krummes Fenster fällt damit auf die **Stundenebene**, auch über zwölf Monate |
+| **Fassung Z** — die Zerlegung | Ränder fein, Mitte grob: Stunden bis zur nächsten Tagesgrenze, Tage bis zur nächsten Monatsgrenze, dazwischen Monate. In zwei Bauformen: **Z‑U**, ein Statement mit `UNION ALL` in einer Ableitung; **Z‑D**, drei Statements, eines je Ebene, in Java summiert |
+
+**Das Tor stand vor der Messung fest** (Auftrag §7) und ist in §36 angewandt — **ohne Auslegung**,
+und zwar deshalb, weil die Lesart vorher aufgeschrieben war.
+
+---
+
+## 30. Rahmen, Nummernvergabe, Vergleichsanker, Belegungsprobe
+
+### Nummernvergabe (Teil 4)
+
+| | |
+|---|---|
+| **Messungen** | **M147 bis M151.** `grep -rnoE '\bM1(4[7-9]\|5[01])\b' docs/ scripts/ *.md` → **kein Treffer**. Gegenprobe `\bM14[0-6]\b` → Treffer (M145 in `messungen-schritt10b.md` und `dashboard.md`, M146 in `dashboard.md`, `dashboard-frontend.md`, `annahmen-korrekturen.md`, `README.md` und `scripts/messung-schritt10c-verdichtung/`) — der Ausdruck greift, jeder Treffer gelesen. **M146 ist die höchste vergebene**, wie der Auftrag sagt |
+| **Entscheidungen** | **keine.** `grep -rnE 'E‑9[2-9]'` → kein Treffer; E‑91 steht in `dashboard-frontend.md` und `README.md`. **E‑92 bleibt frei** |
+| **Offene Punkte** | ab **137**. Höchster vergebener ist **136** (`dashboard-frontend.md` §9, seit E‑90 gegenstandslos) — der Stand des Auftrags stimmt |
+
+**Alle drei Nummernstände des Auftrags haben gestimmt.**
+
+### Der Rahmen
+
+| | |
+|---|---|
+| **Datenbank** | Testkopie, `10.6.22-MariaDB-0ubuntu0.22.04.1-log`, `@@global.read_only = 1` in jeder Sitzung geprüft. Benutzer `monitor_read`. **Es ist nichts geschrieben worden, auch nicht in `overlord_monitor`** |
+| **Client** | `mysql.exe` 8.0.46 aus MySQL Workbench 8.0 CE, `--ssl-mode=DISABLED`, `--default-character-set=utf8mb4`, `-t` — dieselbe Form wie M116 und wie seit M32 (**Abweichung A1** der Messreihen: `--skip-ssl` ist die MariaDB-Schreibweise, dieser Client kennt sie nicht; ein Clientwechsel kostete die Vergleichbarkeit) |
+| **Verfahren** | `SET profiling = 1`, `profiling_history_size = 100`, Laufzeiten aus `information_schema.PROFILING` je `QUERY_ID` — **Aufwärmlauf, dann beste von fünf**, exakt die Form aus M116 (`erzeuge-s4.py` der Vorrunde) |
+| **Zeitgrenze** | `SET max_statement_time = 60` in jeder Sitzung. **Kein Statement dieser Runde hat sie gerissen** — der längste Lauf liegt bei 854,991 ms (Aufwärmlauf `NEXANS`/365 T, M147) |
+| **Statementtext** | **nicht abgetippt.** `scripts/messung-prozessansicht-frei/erzeuge.py` liest `scripts/messung-prozessansicht/gerendert.txt` — den Text, der in M116 aus `ProzessbaumRepository` gegen die jOOQ‑Attrappe gefallen ist und den `ProzessbaumStatementsTest` wörtlich festhält — und ersetzt **ausschließlich** das Bereichsprädikat und den Mandanten; jede Ersetzung wird gezählt und muss genau einmal greifen. Die vier Eigenschaften aus §6 bleiben damit im Text: `EXISTS` statt Join, keine Funktion um den Eimerschlüssel, jede Lesung auf ihrer Ebene (die Deckelung betrifft nur das Gerüst, das hier nicht gemessen ist) |
+| **Mandanten** | `NEXANS` (733) · `VOTG` (390) · `IBIS` (192) · `SUTTONS` (17) — dieselben vier wie M116, drei Größenordnungen (L7) |
+| **Skripte** | `scripts/messung-prozessansicht-frei/`: `erzeuge.py` (Generator), sechs Sitzungen `s0` bis `s4`, `filtere-ergebnis.py` (nimmt die Ergebniszeilen heraus — sie tragen Prozesskennungen, G1), `werte.py` (liest die Laufzeiten aus den gefilterten Protokollen, damit keine Zahl abgetippt wird). Eingecheckt sind Generator, Sitzungen und die **gefilterten** Protokolle `ergebnis/*.gefiltert.txt`; die Rohausgaben stehen in `.gitignore` |
+
+**Die Sitzungen**, Serverzeit vom 07.09.2026:
+
+| # | Datei | Inhalt | Serverzeit |
+|---|---|---|---|
+| 0 | `s0-rahmen.sql` | Bestand, Vergleichsanker, Belegungsprobe, Ergebniszeilen je Mandant | 12:08:25 |
+| 1 | `s1-m147-stundenebene.sql` | **M147**, vier Mandanten × fünf Spannen | 12:08:44 – 12:09:01 |
+| 2 | `s2-m148-tagesebene.sql` | **M148**, vier Mandanten × fünf Spannen | 12:09:01 – 12:09:19 |
+| 3 | `s3-m149-m150-zerlegung.sql` | **M149 / M150**, erster Lauf — **verworfen**, Abweichung A2 | 12:09:19 – 12:09:23 |
+| 4 | `s4-m151-gleichheitsprobe.sql` | **M151**, vier Mandanten, je zwei Proben | 12:09:32 |
+| 0b | `s0b-zeilen-je-mandant.sql` | Nachtrag: Rollupzeilen **je Mandant** im Fenster — nötig geworden durch die Pläne aus M147 | 12:13:22 |
+| 3 | `s3-m149-m150-zerlegung.sql` | **M149 / M150**, zweiter Lauf, mit korrigierter Auswertung | 12:13:25 – 12:13:28 |
+
+> **Abweichung A2 — der erste Lauf von Sitzung 3 ist verworfen.** Die Auswertung „Summe je Runde"
+> in M150 zählte die unmittelbar davor gelaufene Auswertung „je Ebene" als siebte Runde mit
+> (`anzahl_runden = 7`, und die „beste" war mit 9,435 ms die Auswertungsabfrage selbst). Der
+> Generator setzt seither eine obere Schranke auf die `QUERY_ID` (`@basis + 1 + 18`), und die
+> Sitzung ist vollständig neu gefahren. Die Werte je Ebene des ersten Laufs — `NEXANS` Z‑U 71,236 ms,
+> Z‑D 2,087 / 56,228 / 69,503 ms — liegen innerhalb von 1 % der unten ausgewiesenen; sie stehen hier,
+> damit niemand den verworfenen Lauf für einen anderen Befund hält.
+
+### Der Bestand — die Testkopie ist unverändert
+
+| Ebene | Zeilen | `SUM(anzahl)` | erster Eimer | letzter Eimer |
+|---|---:|---:|---|---|
+| Stunde | **335.610** | 3.341.519 | `2024-10-01 02:00` | `2026-07-08 17:00` |
+| Tag | **123.049** | 3.341.519 | `2024-10-01` | `2026-07-08` |
+| Monat | **11.957** | 3.341.519 | `2024-10-01` | `2026-07-01` |
+
+Zeichen für Zeichen die Zahlen aus [`rollup.md`](rollup.md) §2 (M87/M94, M107). Die Summenprobe
+hält über alle drei Ebenen.
+
+### Der Vergleichsanker — M116 wiederholt
+
+Die beiden Statements aus `gerendert.txt` unverändert, mit den gebundenen Werten von M116:
+
+| Fall | M116 (02.09.2026) | **heute** | Abweichung |
+|---|---:|---:|---:|
+| `NEXANS`, Kennzahlen 48 h / Stunde | 6,781 ms | **6,761 ms** | **−0,3 %** |
+| `NEXANS`, Kennzahlen 12 M / Monat | 75,743 ms | **76,243 ms** | **+0,7 %** |
+
+Beide weit innerhalb der ±25 %, die der Auftrag als Grenze der Vergleichbarkeit gesetzt hat. Die
+Pläne sind dieselben wie in §8 (`range` über `PRIMARY`, `key_len` 5 bzw. 3, danach die
+`eq_ref`‑Kette); nur die Zeilenschätzung der Monatsebene lautet heute `6117` statt `5961` — eine
+Stichprobenschätzung von InnoDB, keine Änderung der Daten (Bestand oben).
+
+### Die Belegungsprobe — mandantenfrei, die Zeilen des Bereichs
+
+Alle Fenster enden auf **`2025-12-30 03:00:00`**, unterhalb des Dev‑Ankers `2025-12-30 04:09:47`
+und vollständig im dichten Bestand.
+
+**Stundenebene** (`stunde >= von AND stunde < '2025-12-30 03:00:00'`):
+
+| Spanne | von | Zeilen | `SUM(anzahl)` | belegte Eimer | Prozesse |
+|---|---|---:|---:|---:|---:|
+| 24 h | `2025-12-29 03:00` | 575 | 6.238 | 24 | 156 |
+| 7 T | `2025-12-23 03:00` | 3.097 | 26.961 | 168 | 246 |
+| 30 T | `2025-11-30 03:00` | 21.263 | 214.114 | 720 | 643 |
+| 90 T | `2025-10-01 03:00` | 70.809 | 680.534 | 2.160 | 693 |
+| **365 T** | `2024-12-30 03:00` | **280.980** | 2.713.420 | 8.758 von 8.760 | 732 |
+
+**Tagesebene** (`tag >= von AND tag < '2025-12-30'`):
+
+| Spanne | von | Zeilen | `SUM(anzahl)` | belegte Eimer | Prozesse |
+|---|---|---:|---:|---:|---:|
+| 1 T | `2025-12-29` | 171 | 6.249 | 1 | 158 |
+| 7 T | `2025-12-23` | 710 | 27.026 | 7 | 248 |
+| 30 T | `2025-11-30` | 6.865 | 214.330 | 30 | 643 |
+| 90 T | `2025-10-01` | 24.060 | 680.872 | 90 | 693 |
+| **365 T** | `2024-12-30` | **100.597** | 2.713.376 | 365 | 732 |
+
+Die Summen der beiden Ebenen weichen um wenige Dutzend Nachrichten voneinander ab, **und das ist
+richtig**: Die tagesgenauen Fenster liegen um drei Stunden am Anfang und drei Stunden am Ende anders
+als die stundengenauen. Zwei verschiedene Fenster, zwei verschiedene Summen.
+
+**Der Bösfall** `2024-12-29 14:00` → `2025-12-30 03:00`, in seine fünf Abschnitte zerlegt und daneben
+die ungeteilte Stundenlesung:
+
+| Abschnitt | Ebene | Zeilen | `SUM(anzahl)` | Eimer | Prozesse |
+|---|---|---:|---:|---:|---:|
+| 1 · 29.12.2024 14:00–24:00 | Stunde | 79 | 286 | 10 | 20 |
+| 2 · 30.12.–31.12.2024 | Tag | 356 | 8.309 | 2 | 232 |
+| 3 · Januar–November 2025 | Monat | 8.847 | 2.496.435 | 11 | 725 |
+| 4 · 01.12.–29.12.2025 | Tag | 6.814 | 208.632 | 29 | 643 |
+| 5 · 30.12.2025 00:00–03:00 | Stunde | 52 | 418 | 3 | 22 |
+| **zerlegt, Summe** | | **14.148** | **2.714.080** | **55** | |
+| **E · ungeteilt** | Stunde | **281.090** | **2.714.080** | 8.771 von 8.773 | 732 |
+
+**Die Zerlegung liest 14.148 Zeilen statt 281.090 — Faktor 19,9 —, und die Summen stimmen schon
+mandantenfrei überein.** Die eigentliche Probe je Prozess und Status steht in §34.
+
+> **Abweichung A3 — die Stundenzahl des Bösfalls.** Der Auftrag nennt „55 Zeitscheiben statt
+> 8.749 Stunden". Nach dem Kalender umfasst das Fenster **8.773** Stundeneimer (10 + 48 + 8.016 +
+> 696 + 3), davon sind **8.771** belegt. Die Zahl im Auftrag ist um einen Tag zu niedrig; sie trägt
+> keine Entscheidung und ist hier nur richtiggestellt.
+>
+> **Abweichung A4 — „die Zeilen, die ein 12‑Monats‑Fenster liest".** Die 280.186 / 100.270 aus
+> [`rollup.md`](rollup.md) §2 gelten für Januar bis Dezember 2025. Die 365‑Tage‑Fenster dieser
+> Runde beginnen am 30.12.2024 und lesen **280.980 / 100.597** — dieselbe Größenordnung, nicht
+> dieselbe Zahl.
+
+### Was je Mandant übrig bleibt — und was der Plan liest
+
+Die Kennzahlenabfrage gibt je `(process_id, message_status)` eine Zeile aus. Gezählt statt aus der
+Rohausgabe abgelesen (Sitzung 0, Abschnitt 06, und Sitzung 0b):
+
+| Mandant | Ergebniszeilen 365 T / Bösfall | Rollupzeilen **des Mandanten** im 365‑T‑Fenster, Stunde | dito Tag | in der Zerlegung des Bösfalls behalten |
+|---|---:|---:|---:|---:|
+| `NEXANS` | 711 / 711 | **130.169** | 65.297 | 11.120 |
+| `VOTG` | 40 / 40 | 51.652 | 7.660 | 863 |
+| `IBIS` | 114 / 114 | 29.422 | 16.011 | 2.376 |
+| `SUTTONS` | 25 / 25 | 56.352 | 5.267 | 761 |
+
+**Die dritte Spalte ist die, an der M147 hängt** — und sie stand vor dieser Runde nirgends. Warum
+sie gebraucht wird, sagt der Plan in §31.
+
+---
+
+## 31. M147 — die Stundenebene über wachsende Spannen (Fassung E im Bösfall)
+
+**Das Statement**, `NEXANS` über 365 Tage — das Kennzahlenstatement aus §6, nur mit anderem
+Bereich:
+
+```sql
+select `overlord_monitor`.`message_rollup`.`process_id`,
+       `overlord_monitor`.`message_rollup`.`message_status`,
+       sum(`overlord_monitor`.`message_rollup`.`anzahl`)
+from `overlord_monitor`.`message_rollup`
+where (`overlord_monitor`.`message_rollup`.`stunde` >= timestamp '2024-12-30 03:00:00.0'
+   and `overlord_monitor`.`message_rollup`.`stunde` <  timestamp '2025-12-30 03:00:00.0'
+   and exists (select 1 as `one`
+               from `GlassfishDB`.`Process` as `baum_process`
+               join `GlassfishDB`.`ProjectMandant`
+                 on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `baum_process`.`ProjectID`
+               where (`baum_process`.`ProcessID` = `overlord_monitor`.`message_rollup`.`process_id`
+                  and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'NEXANS')))
+group by `overlord_monitor`.`message_rollup`.`process_id`,
+         `overlord_monitor`.`message_rollup`.`message_status`
+```
+
+### Die Laufzeiten — beste von fünf, in Millisekunden
+
+| Mandant | 24 h | 7 T | 30 T | 90 T | **365 T** |
+|---|---:|---:|---:|---:|---:|
+| `NEXANS` | 4,511 | 21,065 | 107,691 | 239,126 | **832,090** |
+| `VOTG` | 4,410 | 21,511 | 123,612 | 85,670 | **337,603** |
+| `IBIS` | 4,454 | 18,229 | 117,828 | 55,546 | **194,514** |
+| `SUTTONS` | 4,257 | 24,616 | 52,415 | 124,365 | **345,637** |
+
+**`NEXANS` über 365 Tage: 832,090 ms — 18,9 % über dem Tor von 700 ms.** Alle fünf Läufe liegen
+zwischen 832,090 und 850,021 ms; der Aufwärmlauf bei 854,991 ms.
+
+**Und zwei Zeilen, die nicht monoton sind:** `VOTG` braucht über 90 Tage **weniger** als über 30
+(85,670 gegen 123,612 ms), `IBIS` ebenso (55,546 gegen 117,828 ms). Das ist kein Messfehler — die
+fünf Werte je Fall streuen um höchstens 3 % —, sondern **ein Planwechsel**.
+
+### Die Pläne (Regel L15) — zwei Planfamilien, und die Spanne entscheidet
+
+| Familie | Einstieg | dann | Rolluptabelle |
+|---|---|---|---|
+| **A — der Bereich** | `message_rollup` `range` über `PRIMARY` (`key_len` 5) | `baum_process` `eq_ref` `PRIMARY` → `ProjectMandant` `eq_ref` `PRIMARY` | liest **alle** Zeilen des Fensters und wirft weg, was nicht zum Mandanten gehört |
+| **B — der Mandant** | `ProjectMandant` `ref` über `ProjectMandant_Mandant_idx` | `baum_process` `ref` `Process_ProjectFK` (`Using index`) | `message_rollup` **`ref` über `message_rollup_prozess_idx`**, `Using index condition` — liest **je Prozess des Mandanten** dessen Zeitbereich, geschätzt 459 Zeilen je Prozess |
+| C — `SUTTONS`, 24 h | `ProjectMandant` `ref` | `message_rollup` `range` `PRIMARY` mit `Using join buffer (flat, BNL join)` → `baum_process` `eq_ref` | dieselbe Drehung wie in M116 bei `SUTTONS`/12 M |
+
+Welche Familie der Optimierer nimmt, je Fall:
+
+| Mandant | 24 h | 7 T | 30 T | 90 T | 365 T |
+|---|---|---|---|---|---|
+| `NEXANS` | A | A | **B** | **B** | **B** |
+| `VOTG` | A | A | A | **B** | **B** |
+| `IBIS` | A | A | A | **B** | **B** |
+| `SUTTONS` | C | **B** | **B** | **B** | **B** |
+
+**Der Wechsel auf Familie B ist der Grund, warum die Stundenebene über ein Jahr nicht drei Sekunden
+kostet.** Der Index `message_rollup_prozess_idx (process_id, stunde)` aus `V11` — gebaut am
+30.08.2026 für die Fensterverengung der Nachrichtenliste, [`rollup.md`](rollup.md) §2 — erlaubt es,
+über den Mandanten einzusteigen und **nur dessen Zeilen** zu lesen. Genau das tut der Optimierer,
+sobald der Bereich groß und die Mandantenmenge klein genug ist; die Schwelle liegt bei `NEXANS`
+zwischen 7 und 30 Tagen, bei `VOTG` und `IBIS` zwischen 30 und 90, bei `SUTTONS` unter 7. Und weil
+in Familie B die Zeilen **des Mandanten** gelesen werden und nicht die des Fensters, ist `VOTG` über
+90 Tage schneller als über 30: 51.652 Zeilen über den Index gegen 21.263 Zeilen des Bereichs plus
+`EXISTS` je Zeile.
+
+**Die Kosten je gelesener Zeile — und jetzt stimmt die Zeilenzahl aus §30:**
+
+| Fall | Plan | gelesene Zeilen | Laufzeit | **µs je Zeile** |
+|---|---|---:|---:|---:|
+| `NEXANS` 365 T | B | 130.169 (des Mandanten) | 832,090 ms | **6,39** |
+| `VOTG` 365 T | B | 51.652 | 337,603 ms | 6,54 |
+| `IBIS` 365 T | B | 29.422 | 194,514 ms | 6,61 |
+| `SUTTONS` 365 T | B | 56.352 | 345,637 ms | 6,13 |
+| `VOTG` 30 T | A | 21.263 (des Fensters) | 123,612 ms | 5,81 |
+| `IBIS` 30 T | A | 21.263 | 117,828 ms | 5,54 |
+| `NEXANS` 7 T | A | 3.097 | 21,065 ms | 6,80 |
+
+**Alle sieben liegen in den 5,3 bis 11,5 µs aus M94.** Die Kosten hängen an der Zahl gelesener
+Zeilen — nur ist *welche* Zeilen der Plan liest keine Eigenschaft des Fensters, sondern der Wahl des
+Optimierers.
+
+### Die vorregistrierten Erwartungen
+
+| # | Erwartung | Befund |
+|---|---|---|
+| **1** | M147 wächst linear mit der gelesenen Zeilenzahl; aus M116 hochgerechnet rund 713 ms, aus den µs‑Kosten 1,5 bis 3,2 s — *„welche trägt, ist genau die offene Frage"* | **trifft zu, mit einer Wendung.** Linear ist es — in den Zeilen, die **der Plan** liest. Die zweite Vorhersage rechnete mit den 280.980 Zeilen des Fensters; gelesen hat Familie B die **130.169 Zeilen des Mandanten**, und 130.169 × 5,3 bis 11,5 µs sind **690 bis 1.497 ms** — 832 ms liegen darin. Die erste Vorhersage (713 ms) rechnete aus einem Tagesebenen-Wert hoch und liegt 14 % unter dem Ergebnis; dass sie so nah liegt, ist Zufall der Zahlen, nicht Bestätigung des Wegs. **Die µs‑Kosten tragen — sobald man die richtige Zeilenzahl einsetzt** |
+| **2** | M147 reißt das Tor bei `NEXANS`/365 T | **trifft zu.** 832,090 ms |
+
+> **Belegvermerk (Regel L10).**
+> *Gemessen war:* zwanzig Fälle, vier Mandanten × fünf Spannen, warm, Aufwärmlauf und beste von fünf,
+> alle bis `2025-12-30 03:00`; je Fall der `EXPLAIN`; die Zeilen je Mandant im 365‑T‑Fenster aus
+> Sitzung 0b.
+> *Behauptet wird:* Fassung E kostet auf der Stundenebene über ein Jahr beim größten Mandanten
+> 832 ms und ist damit über dem Tor; und der Plan kippt ab einer mandantenabhängigen Spanne auf den
+> Einstieg über den Mandanten.
+> **Die Lücke:** Wo genau die Schwelle liegt, ist **nicht** gemessen — nur, dass sie bei `NEXANS`
+> zwischen 7 und 30 Tagen liegt. Sie hängt an den InnoDB‑Statistiken und kann sich mit dem Bestand
+> verschieben; auf der Produktion, deren Bestand dichter sein kann, ist sie eine andere. Und die
+> µs‑Kosten je Zeile sind auf Familie B **übertragen** — M94 hat sie an Familie A gemessen; dass sie
+> hier in denselben Bereich fallen, ist eine Beobachtung an vier Punkten, kein Nachweis.
+
+---
+
+## 32. M148 — die Tagesebene über dieselben Spannen
+
+**Das Statement:** dasselbe wie in §31 mit `message_rollup_tag`, `tag >= date '2024-12-30' and
+tag < date '2025-12-30'` — der Text, den der Code heute für `30T` schickt, nur mit anderem Bereich.
+
+### Die Laufzeiten — beste von fünf, in Millisekunden
+
+| Mandant | 1 T | 7 T | 30 T | 90 T | **365 T** |
+|---|---:|---:|---:|---:|---:|
+| `NEXANS` | 1,993 | 5,817 | 53,421 | 183,014 | **764,233** |
+| `VOTG` | 1,602 | 4,641 | 32,993 | 113,155 | **477,748** |
+| `IBIS` | 1,914 | 5,194 | 38,199 | 128,647 | **536,110** |
+| `SUTTONS` | 1,527 | 4,158 | 30,774 | 105,183 | **430,026** |
+
+**`NEXANS` über 365 Tage: 764,233 ms — 9,2 % über dem Tor.** Die fünf Läufe liegen zwischen 764,233
+und 765,910 ms; die Tagesebene misst sich enger als die Stundenebene.
+
+**Der 30‑Tage‑Wert reproduziert M116** (53,421 gegen 53,163 ms; das M116‑Fenster war der Dezember,
+dieses der 30.11. bis 29.12. — dieselbe Zeilenzahl auf ein paar Dutzend).
+
+### Die Pläne (Regel L15) — eine Familie, über alle zwanzig Fälle
+
+`NEXANS`, `VOTG`, `IBIS`: **Familie A** bei jeder Spanne — `message_rollup_tag` `range` über
+`PRIMARY` (`key_len` 3, geschätzt 171 / 710 / 14.450 / 51.326 / 62.172 Zeilen), dann `baum_process`
+`eq_ref` und `ProjectMandant` `eq_ref`. `SUTTONS`: **Familie C** bei jeder Spanne — Einstieg über
+`ProjectMandant`, die Tagesebene als `range` mit `BNL`‑Join.
+
+**Familie B gibt es hier nicht, und der Grund steht in [`rollup.md`](rollup.md) §2:** *„Kein
+Sekundärindex gilt für die Tagesebene weiterhin."* Ohne einen Index `(process_id, tag)` kann der
+Optimierer nicht über den Mandanten einsteigen. Er liest die **100.597 Zeilen des Fensters** und
+prüft jede gegen die Mandantenkette — bei jedem Mandanten dieselben Zeilen.
+
+**Die Kosten je gelesener Zeile** (Zeilen des Fensters, weil Familie A sie alle liest):
+
+| Fall | gelesene Zeilen | Laufzeit | µs je Zeile |
+|---|---:|---:|---:|
+| `NEXANS` 30 T | 6.865 | 53,421 ms | 7,78 |
+| `NEXANS` 90 T | 24.060 | 183,014 ms | 7,61 |
+| `NEXANS` 365 T | 100.597 | 764,233 ms | **7,60** |
+| `VOTG` 365 T | 100.597 | 477,748 ms | 4,75 |
+| `IBIS` 365 T | 100.597 | 536,110 ms | 5,33 |
+| `SUTTONS` 365 T | 100.597 | 430,026 ms | 4,27 |
+
+**Linear über die Spanne** — `NEXANS` von 30 auf 365 Tage: 14,65‑mal so viele Zeilen, 14,31‑mal so
+viel Zeit. Und je Mandant verschieden bei gleicher Zeilenzahl, weil hinter der Kette die Gruppierung
+steht: `NEXANS` behält 65.297 der 100.597 Zeilen und gruppiert sie, `SUTTONS` behält 5.267.
+
+### Der Befund, der über den Auftrag hinausweist
+
+**Stundenebene 832 ms, Tagesebene 764 ms — 8 % Unterschied bei 2,8‑mal weniger Zeilen im Fenster.**
+Das liegt nicht daran, dass die Tagesebene teuer wäre (7,6 µs je Zeile, mitten in M94), sondern daran,
+dass die Stundenebene dank `V11` **weniger Zeilen liest, als im Fenster stehen**, und die Tagesebene
+das nicht kann.
+
+**Für das freie Zeitfenster heißt das:** Ein **tagesgenaues** Jahresfenster — beide Grenzen auf
+Mitternacht, keine Stunde krumm — läge in Fassung E auf der Tagesebene und kostete beim größten
+Mandanten **764 ms**. Fassung E ist damit **nicht nur bei krummen Eingaben** über dem Tor, sondern
+bei jedem langen Fenster, das keine Monatsgrenzen trifft. *Was daraus folgt, entscheidet diese Runde
+nicht* (offener Punkt 137).
+
+**Die Zahl ist außerdem alt.** [`rollup.md`](rollup.md) §9a hat das Dashboard über die Tagesebene
+mit **767,128 ms** gemessen (Verlauf, zwölf Monate, `NEXANS`, 100.270 Zeilen) — 3 ms neben den
+764,233 ms hier, über eine andere Abfrage mit einer anderen Gruppierung. Der Preis der Tagesebene
+über ein Jahr ist der Preis ihres Bereichszugriffs, gleich, wer ihn bezahlt.
+
+### Die vorregistrierte Erwartung
+
+| # | Erwartung | Befund |
+|---|---|---|
+| **3** | M148 reißt vermutlich ebenfalls: rund 780 ms bei `NEXANS`. *Falls ja, ist auch ein tagesgenaues freies Jahresfenster ohne Zerlegung nicht tragbar* | **trifft zu.** 764,233 ms, die Schätzung lag 2,1 % daneben. Und der Folgesatz gilt |
+
+> **Belegvermerk (Regel L10).**
+> *Gemessen war:* zwanzig Fälle, tagesgenaue Fenster, warm, beste von fünf, je Fall der `EXPLAIN`;
+> die Zeilen je Mandant aus Sitzung 0b.
+> *Behauptet wird:* Die Tagesebene liest über ein Jahr alle Zeilen des Fensters, weil sie keinen
+> Index trägt, der den Einstieg über den Mandanten erlaubte; und ein tagesgenaues Jahresfenster ist
+> in Fassung E nicht tragbar.
+> **Die Lücke:** Dass ein Index `(process_id, tag)` die Tagesebene auf Familie B brächte, ist aus
+> §31 **geschlossen und nicht gemessen** — und ob er gebaut werden sollte, ist eine Frage, die
+> [`rollup.md`](rollup.md) §2 ausdrücklich an eine Messung bindet. Sie wird hier gestellt (Punkt 138)
+> und nicht beantwortet.
+
+---
+
+## 33. M149 und M150 — die Zerlegung in zwei Bauformen
+
+Der Bösfall aus §30: `2024-12-29 14:00` → `2025-12-30 03:00`, beide Enden krumm, fünf Abschnitte,
+alle drei Ebenen beteiligt.
+
+### M149 — Z‑U, **ein** Statement
+
+```sql
+select `t`.`process_id`, `t`.`message_status`, sum(`t`.`anzahl`)
+from (select `overlord_monitor`.`message_rollup`.`process_id`,
+             `overlord_monitor`.`message_rollup`.`message_status`,
+             `overlord_monitor`.`message_rollup`.`anzahl`
+      from `overlord_monitor`.`message_rollup`
+      where ((`overlord_monitor`.`message_rollup`.`stunde` >= timestamp '2024-12-29 14:00:00.0'
+          and `overlord_monitor`.`message_rollup`.`stunde` <  timestamp '2024-12-30 00:00:00.0')
+          or (`overlord_monitor`.`message_rollup`.`stunde` >= timestamp '2025-12-30 00:00:00.0'
+          and `overlord_monitor`.`message_rollup`.`stunde` <  timestamp '2025-12-30 03:00:00.0'))
+      union all
+      select `overlord_monitor`.`message_rollup_tag`.`process_id`,
+             `overlord_monitor`.`message_rollup_tag`.`message_status`,
+             `overlord_monitor`.`message_rollup_tag`.`anzahl`
+      from `overlord_monitor`.`message_rollup_tag`
+      where ((`overlord_monitor`.`message_rollup_tag`.`tag` >= date '2024-12-30'
+          and `overlord_monitor`.`message_rollup_tag`.`tag` <  date '2025-01-01')
+          or (`overlord_monitor`.`message_rollup_tag`.`tag` >= date '2025-12-01'
+          and `overlord_monitor`.`message_rollup_tag`.`tag` <  date '2025-12-30'))
+      union all
+      select `overlord_monitor`.`message_rollup_monat`.`process_id`,
+             `overlord_monitor`.`message_rollup_monat`.`message_status`,
+             `overlord_monitor`.`message_rollup_monat`.`anzahl`
+      from `overlord_monitor`.`message_rollup_monat`
+      where `overlord_monitor`.`message_rollup_monat`.`monat` >= date '2025-01-01'
+        and `overlord_monitor`.`message_rollup_monat`.`monat` <  date '2025-12-01') as `t`
+where exists (select 1 as `one`
+              from `GlassfishDB`.`Process` as `baum_process`
+              join `GlassfishDB`.`ProjectMandant`
+                on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `baum_process`.`ProjectID`
+              where (`baum_process`.`ProcessID` = `t`.`process_id`
+                 and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'NEXANS'))
+group by `t`.`process_id`, `t`.`message_status`
+```
+
+**Drei Bereichslesungen ohne Mandantenkette in einer Ableitung; die Kette und die Gruppierung stehen
+einmal, außen.** Stunden- und Tagesebene tragen je zwei Bereiche (Kopf und Fuß) als `OR` zweier
+Intervalle — kein Eimer doppelt, keiner außerhalb des Fensters. **Dieses Statement ist von Hand
+gebaut und nicht aus Code gefallen** — den Code gibt es nicht. Was ein Bauauftrag rendert, ist nach
+L7 erneut zu messen.
+
+### M150 — Z‑D, **drei** Statements
+
+Jedes ist das Kennzahlenstatement aus §6 mit seiner Ebene; die Prädikate:
+
+| Ebene | Prädikat |
+|---|---|
+| Stunde | `(stunde >= '2024-12-29 14:00' and stunde < '2024-12-30 00:00') or (stunde >= '2025-12-30 00:00' and stunde < '2025-12-30 03:00')` |
+| Tag | `(tag >= '2024-12-30' and tag < '2025-01-01') or (tag >= '2025-12-01' and tag < '2025-12-30')` |
+| Monat | `monat >= '2025-01-01' and monat < '2025-12-01'` |
+
+Sechs Runden zu je drei Statements in der Reihenfolge Stunde, Tag, Monat; ausgewertet **je Ebene**
+(beste von fünf) und **je Runde** (die Summe der drei, beste von fünf).
+
+### Die Laufzeiten — beste von fünf, in Millisekunden
+
+| Mandant | **M149 · Z‑U** | M150 Stunde | M150 Tag | M150 Monat | **M150 · Σ der Bestwerte** | M150 · beste Runde | Faktor Z‑D / Z‑U |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `NEXANS` | **71,055** | 1,912 | 55,884 | 68,877 | **126,673** | 127,342 | 1,78 |
+| `VOTG` | **34,753** | 2,190 | 35,522 | 38,727 | **76,439** | 76,659 | 2,20 |
+| `IBIS` | **39,527** | 1,599 | 41,135 | 43,685 | **86,419** | 86,621 | 2,19 |
+| `SUTTONS` | **33,556** | 1,631 | 34,431 | 36,077 | **72,139** | 72,178 | 2,15 |
+
+**Z‑U ist bei allen vier Mandanten die schnellere Bauform — um Faktor 1,8 bis 2,2.** Und die
+M150‑Zahl ist dabei noch **zu klein**: Sie enthält weder die Summierung in Java noch die zwei
+zusätzlichen Umläufe zwischen Anwendung und Datenbank. Beides macht Z‑D nur langsamer; die Richtung
+des Befunds kann daran nicht kippen.
+
+**Was die drei Z‑D‑Statements einzeln zeigen:** Die Tageslesung über 31 Tage (7.170 Zeilen) kostet
+55,884 ms und die Monatslesung über elf Monate (8.847 Zeilen) 68,877 ms — **je 7,8 µs je Zeile**,
+dieselben Kosten wie in M116 und M148. Jedes der drei zahlt die Mandantenkette **je Zeile**.
+
+### Die Pläne (Regel L15)
+
+**Z‑U**, Zeile für Zeile gleich bei allen vier Mandanten (nur die Schätzung für `ProjectMandant`
+lautet 17 / 39 / 46 / 1):
+
+| id | select_type | table | type | key | rows | Extra |
+|---|---|---|---|---|---:|---|
+| 1 | PRIMARY | `ProjectMandant` | `ref` | `ProjectMandant_Mandant_idx` | 17 | `Using where; Using index; Using temporary; Using filesort` |
+| 1 | PRIMARY | `baum_process` | `ref` | `Process_ProjectFK` | 5 | `Using index` |
+| 1 | PRIMARY | **`<derived2>`** | **`ref`** | **`key0`** | 13 | |
+| 2 | DERIVED | `message_rollup` | `range` | `PRIMARY` | 131 | `Using where` |
+| 3 | UNION | `message_rollup_tag` | `range` | `PRIMARY` | 14.512 | `Using where` |
+| 4 | UNION | `message_rollup_monat` | `range` | `PRIMARY` | 6.117 | `Using where` |
+
+**Das ist der Grund für Faktor zwei, und er ist von M114 verschieden.** Die Ableitung wird **einmal
+materialisiert** — drei Bereichszugriffe über `PRIMARY`, zusammen 14.148 Zeilen, ohne jede Kette —
+und bekommt einen **automatischen Schlüssel** `key0` auf `process_id`. Danach läuft der Plan wie
+Familie B aus §31: über den Mandanten einsteigen, je Prozess in die materialisierte Ableitung
+greifen. Die Mandantenkette wird **je Prozess** ausgewertet (733 bei `NEXANS`) und nicht je Zeile
+(14.148). In M114 stand die Kette in der Ableitung **und** außen und wurde zweimal ausgewertet; hier
+steht sie einmal, außen, und der Optimierer hat sie zum Einstieg gemacht.
+
+**Z‑D**: jedes der drei Statements ist **Familie A** — `range` über `PRIMARY` (131 / 14.512 / 6.117
+geschätzte Zeilen), dann die `eq_ref`‑Kette — bei `NEXANS`, `VOTG`, `IBIS`; **Familie C** (Einstieg
+über `ProjectMandant`, `BNL`‑Join) bei `SUTTONS`. Dieselben Familien wie in M116, und sie sind
+gemessen nicht der Engpass: Auch Familie C bleibt bei `SUTTONS` bei 72 ms.
+
+**Was Z‑U nach oben begrenzt, und das folgt aus der Konstruktion:** Ein Fenster von höchstens einem
+Jahr zerfällt in höchstens 23 + 23 Stundeneimer, 30 + 30 Tageseimer und 11 Monatseimer. Die
+Ableitung materialisiert damit nie mehr als das, was diese 117 Scheiben tragen — auf diesem Bestand
+im Bösfall 14.148 Zeilen. *Das ist eine Schranke aus der Bauform, keine gemessene; gemessen ist ein
+Fenster.*
+
+### Die vorregistrierten Erwartungen
+
+| # | Erwartung | Befund |
+|---|---|---|
+| **4** | M149 und M150 bleiben unter 100 ms | **trifft für Z‑U zu** (33,6 bis 71,1 ms) und **für Z‑D bei `NEXANS` nicht** (126,673 ms; die drei anderen 72 bis 86 ms). Die Herleitung — „elf Zwölftel von M116" — war für die Monatslesung richtig (68,9 gegen 75,7 ms), hatte aber die Tageslesung über 31 Tage unterschätzt: Die kostet allein 55,9 ms, so viel wie M116 über 30 Tage |
+| **6** | Z‑U ist langsamer als Z‑D, weil die Ableitung dieselbe ist, die M114 mit 98 bis 398 ms gemessen hat | **trifft nicht zu.** Z‑U ist bei allen vier Mandanten um Faktor 1,8 bis 2,2 schneller. Die Ableitung ist **nicht** dieselbe: In M114 stand die Mandantenkette innen und außen; hier steht sie einmal, außen, und der Plan nimmt sie als Einstieg über einen automatischen Schlüssel auf die materialisierte Ableitung |
+
+> **Belegvermerk (Regel L10).**
+> *Gemessen war:* ein Fenster (der Bösfall), vier Mandanten, beide Bauformen, warm, beste von fünf
+> — M149 als ein Statement, M150 als sechs Runden zu drei Statements, ausgewiesen als **Summe der
+> drei SQL‑Laufzeiten**; je Fall die Pläne.
+> *Behauptet wird:* Z‑U ist die schnellere Bauform, und beide bleiben weit unter dem Tor.
+> **Die Lücke, dreifach:** Die Java‑Summierung und die zwei zusätzlichen Umläufe von Z‑D sind
+> **nicht** gemessen — die M150‑Zahl ist eine Untergrenze, und der Abstand zu Z‑U ist in Wahrheit
+> größer, nicht kleiner. Z‑U ist ein **von Hand gebautes** Statement, kein gerendertes; Regel L7
+> verlangt für die gebaute Fassung eine eigene Messung. Und die Schranke „höchstens 117 Scheiben"
+> ist gerechnet, nicht gemessen — ein Fenster ist gemessen, und es ist eines mit fünf Abschnitten.
+
+> **Für den Bauauftrag, ohne hier zu entscheiden:** Z‑U lässt die Zahl der Statements je Aufruf bei
+> **zwei** — das Gerüst und eine Kennzahlenabfrage. Was am Text von `ProzessbaumStatementsTest`
+> fällt, ist die vierte Eigenschaft aus §6 („jedes Paar liest seine Ebene und keine andere") für das
+> freie Fenster; und `ProzessbaumPlanDbIT` müsste für Z‑U die Zugriffsart `<derived2>`/`ref` über den
+> automatischen Schlüssel festschreiben — die Reihenfolge nicht, aus demselben Grund wie in §8.
+
+---
+
+## 34. M151 — die Gleichheitsprobe, zerlegt gegen ungeteilt
+
+**Die Frage:** Liefert die Zerlegung über dasselbe Fenster **je `(process_id, message_status)`**
+dieselbe Summe wie die ungeteilte Lesung der Stundenebene — nicht nur als Gesamtsumme, die schon in
+§30 mandantenfrei übereinstimmt (2.714.080)?
+
+**Die Form:** MariaDB kennt kein `FULL OUTER JOIN`; zwei Anti‑Joins in einem `UNION ALL` leisten
+dasselbe. Verglichen wird **über den Schlüssel und über die Summe** — eine Zeile, die auf der anderen
+Seite fehlt oder dort eine andere Summe trägt, fällt heraus. Als `LEFT JOIN … IS NULL` und nicht als
+`NOT EXISTS`, damit jede Ableitung je Zweig genau einmal ausgewertet wird und die 60‑s‑Grenze nicht in
+Gefahr kommt:
+
+```sql
+SELECT 'nur in Z-U' AS nur_auf_seite, COUNT(*) AS abweichende_zeilen
+FROM (<Z-U, mit sum(...) as summe>) AS l
+LEFT JOIN (<E ungeteilt, Stundenebene, mit sum(...) as summe>) AS r
+  ON r.process_id = l.process_id AND r.message_status = l.message_status AND r.summe = l.summe
+WHERE r.process_id IS NULL
+UNION ALL
+SELECT 'nur in E ungeteilt', COUNT(*)
+FROM (<E ungeteilt>) AS r
+LEFT JOIN (<Z-U>) AS l
+  ON l.process_id = r.process_id AND l.message_status = r.message_status AND l.summe = r.summe
+WHERE l.process_id IS NULL
+```
+
+**Zweimal je Mandant:** Z‑U gegen E, und die **Z‑D‑Summe** gegen E — die drei Z‑D‑Statements in
+einem `UNION ALL` und darüber `sum(summe)` je Schlüssel. Das ist die Arithmetik, die Java täte, in
+SQL nachgebildet; **Java selbst ist nicht gelaufen.**
+
+### Das Ergebnis
+
+| Mandant | Zeilen E / Z‑U / Z‑D‑Summe | Nachrichten E / Z‑U / Z‑D‑Summe | nur in Z‑U | nur in E | nur in Z‑D‑Summe | nur in E |
+|---|---|---|---:|---:|---:|---:|
+| `NEXANS` | 711 / 711 / 711 | 2.314.856 / 2.314.856 / 2.314.856 | **0** | **0** | **0** | **0** |
+| `VOTG` | 40 / 40 / 40 | 114.264 / 114.264 / 114.264 | **0** | **0** | **0** | **0** |
+| `IBIS` | 114 / 114 / 114 | 58.960 / 58.960 / 58.960 | **0** | **0** | **0** | **0** |
+| `SUTTONS` | 25 / 25 / 25 | 196.510 / 196.510 / 196.510 | **0** | **0** | **0** | **0** |
+
+**Null abweichende Zeilen in allen acht Proben.** Die Zerlegung ist auf diesem Bestand über dieses
+Fenster exakt — je Prozess, je Rohstatus, in der Summe.
+
+### Die vorregistrierte Erwartung
+
+| # | Erwartung | Befund |
+|---|---|---|
+| **5** | M151 findet null abweichende Zeilen | **trifft zu** |
+
+> **Belegvermerk (Regel L10).**
+> *Gemessen war:* ein Fenster mit fünf Abschnitten über alle drei Ebenen und beide Randarten, vier
+> Mandanten, beide Bauformen, je `(process_id, message_status, summe)` in beide Richtungen.
+> *Behauptet wird:* Die Zerlegung ist exakt.
+> **Die Lücke:** Was diese Probe **trägt**, ist die Konstruktion aus [`rollup.md`](rollup.md) §5 —
+> die Tagesebene ist die Summe ihrer Stundeneimer, die Monatsebene die Summe ihrer Tageseimer, alle
+> drei entstehen in **einer** Transaktion und tragen den gesamten Bestand. Dass die Ebenen
+> zueinander stimmen, ist damit Sache des Laufs und seiner Tests (`RollupDbIT`), nicht dieser Probe.
+> Was die Probe **hinzufügt**, ist der Nachweis, dass die **Schnittführung** des Bösfalls stimmt —
+> kein Eimer doppelt, keiner ausgelassen, an allen vier Übergängen. Das gilt für dieses Fenster; für
+> jedes andere ist es die Arithmetik der Fensterzerlegung, und die gehört in einen Test des
+> Bauauftrags, nicht in eine Messung. Und die Z‑D‑Summe ist in SQL nachgebildet; ob der Java‑Code,
+> der sie einmal rechnet, dasselbe tut, ist eine Frage an dessen Test.
+
+---
+
+## 35. Was diese Runde nicht zeigt
+
+- **Keine Messung gegen die Produktion.** Alle Zahlen stammen von der Testkopie mit ihrem Bestand
+  von 22 Monaten und rund 7.300 Nachrichten je Tag im dichten Teil. Ein dichterer Bestand liest je
+  Fenster mehr Zeilen, und die Schwelle des Planwechsels aus §31 liegt dort anderswo.
+- **Alle Werte sind warm.** `FLUSH TABLES` steht `monitor_read` nicht zu, und der Puffer fasst die
+  drei Rolluptabellen um ein Vielfaches ([`rollup.md`](rollup.md) §9a). Der Kaltfaktor 9,66 aus M44
+  ([`messungen-schritt7.md`](messungen-schritt7.md)) ist eine **Übertragung** aus einer anderen
+  Abfrage über eine andere Tabelle: Auf
+  832 ms angewandt wären es 8,0 s, auf 764 ms 7,4 s, auf 71 ms 0,69 s — alle unter der 10‑s‑Grenze
+  des Lese‑Pools, und keine dieser drei Zahlen ist gemessen. **Genau dieser Abstand ist der Grund,
+  warum das Tor bei 700 ms steht und nicht bei 1,0 s.**
+- **Die Java‑Summierung in Z‑D ist nicht gemessen**, ebenso wenig die zwei zusätzlichen Umläufe. Die
+  M150‑Zahl ist eine Untergrenze.
+- **Ein Bösfall, ein Bestand.** M149 bis M151 sind über **ein** Fenster gefahren. Dass es alle drei
+  Ebenen und beide Randarten enthält, macht es zum schwersten Fall der Bauform, nicht zum einzigen.
+- **Z‑U ist von Hand gebaut.** Es gibt keinen Code, der es rendert; die Messung nach L7 für die
+  gebaute Fassung steht dem Bauauftrag bevor. Die vier Z‑D‑Statements dagegen sind Zeichen für
+  Zeichen der gerenderte Text mit anderem Prädikat.
+- **Das Gerüst ist nicht neu gemessen.** Es kennt kein Fenster (§6) und ändert sich mit dem freien
+  Zeitfenster nicht.
+- **Die Schwelle des Planwechsels ist nicht bestimmt** — nur eingegrenzt (§31).
+- **Nichts über die Oberfläche**, nichts über den Endpunkt, nichts über die Eingabe. Der Auftrag hat
+  beides ausdrücklich ausgeschlossen; E3‑a und E1′‑b stehen unverändert.
+
+### Offene Punkte aus dieser Runde
+
+| # | Punkt |
+|---|---|
+| **137** | **Ein tagesgenaues Jahresfenster ist ohne Zerlegung nicht tragbar** (M148, 764 ms). Fassung Z gilt damit nicht nur für krumme Eingaben, sondern für jedes lange Fenster, das keine Monatsgrenzen trifft. Ob die Regel aus Fassung E — „die gröbste Ebene, auf deren Grenzen beide Enden fallen" — als Sonderfall innerhalb von Z stehen bleibt oder ob Z immer zerlegt, ist im Bauauftrag zu entscheiden; gemessen ist nur, dass E allein nicht reicht |
+| **138** | **Die Tagesebene trägt keinen Sekundärindex** und kann deshalb nicht über den Mandanten gelesen werden (§32). Ob ein Index `(process_id, tag)` sie auf Familie B brächte, ist **nicht gemessen**; [`rollup.md`](rollup.md) §2 bindet einen solchen Index an eine gemessene Frage. Unter Fassung Z liest kein Fenster mehr als 60 Tageseimer, und dann stellt sich die Frage nicht — sie stellt sich nur, wenn jemand die Tagesebene über lange Bereiche lesen will |
+
+---
+
+## 36. Der Ausgang des Tors
+
+Die Lesart aus dem Auftrag (§7), vor der Messung festgeschrieben:
+
+| Ausgang | Bedingung | gemessen |
+|---|---|---|
+| 1 | M151 findet auch nur eine abweichende Zeile | **nein** — null Zeilen, vier Mandanten, acht Proben (§34) |
+| 2 | M147 bleibt bei 365 T und `NEXANS` unter 700 ms | **nein** — 832,090 ms (§31) |
+| **3** | M147 reißt, die schnellere von M149/M150 bleibt darunter | **ja** — M149 (Z‑U) 71,055 ms (§33) |
+| 4 | beide reißen | nein |
+
+**Ausgang 3: Fassung Z, in der Bauform Z‑U.**
