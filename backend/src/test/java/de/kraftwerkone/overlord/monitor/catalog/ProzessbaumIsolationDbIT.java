@@ -339,4 +339,124 @@ class ProzessbaumIsolationDbIT extends SicherheitsTestbasis {
         .containsExactlyElementsOf(eigeneKennungen)
         .doesNotContainAnyElementsOf(fremdeKennungen);
   }
+
+  // ─── Das freie Zeitfenster (10c-4b) ───────────────────────────────────────────
+
+  /**
+   * Der Boesfall <b>am Endpunkt</b>: {@code 2024-12-30 14:00} bis einschliesslich {@code 2025-12-30
+   * 02:00} Wanduhrzeit — fuenf Segmente ueber alle drei Ebenen, wie in M149, aber <b>einen Tag
+   * kuerzer</b>. Das Fenster aus M149 ({@code 2024-12-29 14:00} bis {@code 2025-12-30 03:00}
+   * ausschliessend) umfasst 365 Tage und 13 Stunden und uebersteigt damit das Kalenderjahr, das der
+   * Endpunkt zulaesst; am Repository ist es weiterhin messbar ({@code ProzessbaumGleichheitDbIT}),
+   * durch den Endpunkt nicht. In UTC geschrieben, wie die API es verlangt; die Zone der
+   * Anwendungsuhr rechnet beim Empfang zurueck — im Winter eine Stunde.
+   */
+  private static final String FREI = "?von=2024-12-30T13:00:00Z&bis=2025-12-30T01:00:00Z";
+
+  /**
+   * Regel M4, fuer den zweiten Modus: Ein freies Fenster oeffnet keinen zweiten Weg zu fremden
+   * Daten. Dieselbe Gegenprobe wie ueber die Paare — kein fremder Prozess, kein fremder Name im
+   * Rumpf.
+   */
+  @Test
+  @DisplayName("Im freien Fenster sieht der Nutzer auf NEXANS keinen einzigen Prozess von SUTTONS")
+  void freies_fenster_keine_fremde_kennung() throws Exception {
+    Antwort vonSuttons = aufSuttons.hole(PFAD + FREI);
+    assertThat(vonSuttons.status()).isEqualTo(200);
+    List<String> fremdeKennungen = kennungen(vonSuttons);
+    List<String> fremdeNamen = namen(vonSuttons);
+
+    Antwort vonNexans = aufNexans.hole(PFAD + FREI);
+    assertThat(vonNexans.status()).isEqualTo(200);
+    assertThat(vonNexans.<String>json("$.zeitraum")).isEqualTo("FREI");
+
+    assertThat(kennungen(vonNexans)).isNotEmpty().doesNotContainAnyElementsOf(fremdeKennungen);
+    for (String fremd : fremdeKennungen) {
+      assertThat(vonNexans.rumpf()).doesNotContain(fremd);
+    }
+    for (String fremd : fremdeNamen) {
+      assertThat(vonNexans.rumpf()).doesNotContain(fremd);
+    }
+  }
+
+  /**
+   * <b>Die zweite Mandantenkette des freien Fensters, dort geprueft, wo sie steht.</b> Ueber den
+   * Rumpf ist sie aus demselben Grund nicht pruefbar wie bei den Paaren (Kasten oben): Fremde
+   * Zeilen fallen beim Zusammensetzen lautlos heraus. Die Vereinigung traegt die Kette <b>einmal,
+   * aussen</b> — und genau die wird hier ueber fuenf Segmente und drei Ebenen befragt.
+   */
+  @Test
+  @DisplayName("Die vereinigte Kennzahlenabfrage liefert keine Zeile eines fremden Mandanten")
+  void die_vereinigte_kette_liefert_keine_fremde_zeile() {
+    List<String> fremdeProzesse =
+        prozessbaumRepository.geruest(new MandantContext(MANDANT_SUTTONS)).stream()
+            .map(Prozessgeruestzeile::processId)
+            .toList();
+
+    List<String> ausDenKennzahlen =
+        prozessbaumRepository
+            .kennzahlen(
+                new MandantContext(MANDANT_NEXANS),
+                Baumfenster.zerlegung(
+                    LocalDateTime.parse("2024-12-29T14:00"),
+                    LocalDateTime.parse("2025-12-30T03:00")))
+            .stream()
+            .map(Prozesskennzahlzeile::processId)
+            .toList();
+
+    assertThat(fremdeProzesse).as("Ohne fremde Prozesse bewiese die Probe nichts").isNotEmpty();
+    assertThat(ausDenKennzahlen)
+        .as("Ohne eigene Zeilen bewiese die Probe nichts")
+        .isNotEmpty()
+        .doesNotContainAnyElementsOf(fremdeProzesse);
+  }
+
+  /** Regel M1 gilt in beiden Modi: Ein {@code ?mandant=…} bleibt auch neben von/bis wirkungslos. */
+  @Test
+  @DisplayName("Ein mandant-Parameter ist auch im freien Fenster wirkungslos")
+  void mandantenparameter_im_freien_fenster_wirkungslos() throws Exception {
+    Antwort ohne = aufNexans.hole(PFAD + FREI);
+    Antwort mit = aufNexans.hole(PFAD + FREI + "&mandant=" + MANDANT_SUTTONS);
+
+    assertThat(mit.status()).isEqualTo(200);
+    assertThat(kennungen(mit)).containsExactlyElementsOf(kennungen(ohne));
+  }
+
+  /** Auch das freie Fenster aendert die Zahlen und nie den Umfang. */
+  @Test
+  @DisplayName("Das freie Fenster zeigt denselben Baum wie die Paare")
+  void der_umfang_haengt_nicht_am_freien_fenster() throws Exception {
+    List<String> ausDerVorgabe = kennungen(aufNexans.hole(PFAD));
+
+    assertThat(kennungen(aufNexans.hole(PFAD + FREI))).containsExactlyElementsOf(ausDerVorgabe);
+  }
+
+  /**
+   * Die sieben Fehlerfaelle sind in {@code BaumfensterTest} einzeln geprueft; hier nur, dass sie
+   * den Endpunkt als {@code 400} mit ihrem Typ verlassen — und dass ein Fenster in der Zukunft
+   * <b>kein</b> Fehler ist, sondern Nullen.
+   */
+  @Test
+  @DisplayName(
+      "Ein fehlerhaftes Fenster ist 400 mit seinem Typ, ein leeres Fenster ist 200 mit Nullen")
+  void fehlerfaelle_und_zukunft() throws Exception {
+    Antwort mehrdeutig = aufNexans.hole(PFAD + FREI + "&zeitraum=48H");
+    assertThat(mehrdeutig.status()).isEqualTo(400);
+    assertThat(mehrdeutig.<String>json("$.type")).endsWith("/zeitfenster-mehrdeutig");
+
+    Antwort zuGenau = aufNexans.hole(PFAD + "?von=2025-12-29T13:30:00Z&bis=2025-12-30T01:00:00Z");
+    assertThat(zuGenau.status()).isEqualTo(400);
+    assertThat(zuGenau.<String>json("$.type")).endsWith("/zeitfenster-zu-genau");
+
+    // Das Fenster aus M149 selbst ist einen Tag zu lang fuer den Endpunkt — und das ist die
+    // Jahresgrenze aus Regel L1, kein Sonderfall der Zerlegung.
+    Antwort zuGross = aufNexans.hole(PFAD + "?von=2024-12-29T13:00:00Z&bis=2025-12-30T01:00:00Z");
+    assertThat(zuGross.status()).isEqualTo(400);
+    assertThat(zuGross.<String>json("$.type")).endsWith("/zeitfenster-zu-gross");
+
+    Antwort zukunft = aufNexans.hole(PFAD + "?von=2099-01-01T00:00:00Z&bis=2099-01-01T05:00:00Z");
+    assertThat(zukunft.status()).isEqualTo(200);
+    assertThat(((Number) zukunft.json("$.gesamt.nachrichten")).longValue()).isZero();
+    assertThat(kennungen(zukunft)).containsExactlyElementsOf(kennungen(aufNexans.hole(PFAD)));
+  }
 }
