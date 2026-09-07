@@ -726,3 +726,281 @@ Erhebungen über den Bestand und keine Kandidaten für eine gebaute Abfrage; ihr
 Prüfkriterium, sondern nur ein Hinweis auf die Kosten. Sechs Läufe des 125-Sekunden-Statements
 hätten die geteilte Testkopie zwölf Minuten lang belegt, ohne eine Aussage zu tragen. **Die volle
 Disziplin steht dort, wo sie zählt: in M155, M158, M159 und M160.**
+
+---
+
+## M158 — Der Plan des Wertprädikats
+
+**Sitzungen** `s13-m158.sql`, Diagnose `s15-m158d-m160g.sql`.
+
+`EXPLAIN` und Laufzeit für `MessagePropertyName = ? AND MessagePropertyValue = ?`, **ohne Join**,
+für den bestbelegten, den schlechtestbelegten und einen Namen mit hoher Wertkardinalität. Gemessen
+sind **alle vier** Typ‑1‑Namen, je in zwei Fällen: mit dem **häufigsten** und mit dem
+**seltensten** Wert des 30-Tage-Fensters.
+
+> **Vorregistrierte Deutung.** `ref` über **`MessagePropertyNameValueIDX`**, beide Spalten genutzt.
+> **Wählt der Optimizer stattdessen `MessagePropertyNameIDX`, ist das der Befund der Runde** — die
+> Kardinalität 18 schlägt dann zu, und der Zugriff läuft über einen Namen statt über das Paar.
+
+**Wie die Prüfwerte hergeleitet sind (Regel G1).** Je Fall wählt eine Unterabfrage im Statement den
+häufigsten beziehungsweise seltensten Wert des Fensters deterministisch aus
+(`ORDER BY COUNT(*) DESC|ASC, MessagePropertyValue ASC LIMIT 1`), legt ihn über `QUOTE()` in eine
+Sitzungsvariable und setzt ihn über `PREPARE … FROM CONCAT(…)` als **Literal** ein. **Kein Wert
+berührt das Skript, keiner erscheint in der Ausgabe** — ausgegeben ist nur seine Zeichenlänge.
+*Das Literal ist nötig, weil eine Sitzungsvariable im Prädikat keine Bereichsanalyse bekommt; dann
+stünde der Index in `possible_keys` und würde nie benutzt.*
+
+### Die Deutung hat in zwei von vier Fällen getroffen — und die beiden anderen sind der Befund
+
+| Name | Fall | Wertlänge | gewählter Index | `key_len` | `rows` | Treffer | **beste von fünf** |
+|---|---|---:|---|---:|---:|---:|---:|
+| `Message.GUID` | häufigster | 36 | **`MessagePropertyValueIDX`** | 203 | 1 | 1 | **0,456 ms** |
+| `Message.GUID` | seltenster | 36 | **`MessagePropertyValueIDX`** | 203 | 1 | 1 | **0,451 ms** |
+| `Converter.TransactionID` | häufigster | 6 | `MessagePropertyNameValueIDX` | 605 | 17 | 17 | **0,565 ms** |
+| `Converter.TransactionID` | seltenster | 5 | `MessagePropertyNameValueIDX` | 605 | 7 | 7 | **0,471 ms** |
+| `Message.ReceiverID` | häufigster | 10 | `MessagePropertyNameValueIDX` | 605 | 192.284 | **81.307** | **601,269 ms** |
+| `Message.ReceiverID` | seltenster | 10 | `MessagePropertyNameValueIDX` | 605 | 50 | 50 | **0,810 ms** |
+| **`Service.Type`** | **häufigster** | 9 | **`NULL` — `type = ALL`** | — | **46.964.279** | **4.366.602** | **81.429,454 ms** |
+| `Service.Type` | seltenster | 10 | `MessagePropertyNameValueIDX` | 605 | 48.050 | 28.348 | **217,699 ms** |
+
+Alle Index-Fälle tragen `Using index condition; Using where`. Der `key_len` **605** ist das Paar
+(402 für den Namen, 203 für die 50 Zeichen Wertpräfix); **203** allein ist der reine Wertindex.
+
+### Befund 1 — bei `Message.GUID` wählt der Optimizer den **reinen Wertindex**
+
+Nicht `MessagePropertyNameIDX`, wie der Auftrag als Bösfall vorweggenommen hatte, sondern
+`MessagePropertyValueIDX` — der Index **ohne** den Namen. Er schätzt eine Zeile und trifft damit
+genau: Der Wert ist bestandsweit eindeutig (M157). Der Namensfilter wird zur Nachprüfung auf der
+Zeile.
+
+**Die Diagnose zeigt, dass es folgenlos ist.** Mit `FORCE INDEX (MessagePropertyNameValueIDX)`:
+
+| `Message.GUID`, häufigster Wert | Index | `rows` | beste von fünf |
+|---|---|---:|---:|
+| **gewählt** | `MessagePropertyValueIDX` | 1 | **0,456 ms** |
+| erzwungen *(Diagnose)* | `MessagePropertyNameValueIDX` | 1 | **0,411 ms** |
+
+**Der Unterschied ist 45 Mikrosekunden und liegt innerhalb der Streuung der einzelnen Läufe**
+(0,411 bis 0,806 ms über fünf). Bei einem eindeutigen Wert ist die Indexwahl gleichgültig, weil
+beide Wege genau eine Zeile finden.
+
+### Befund 2 — bei `Service.Type` gibt der Optimizer den Index **ganz auf**
+
+`type = ALL`, `key = NULL`, `rows = 46.964.279`: **ein voller Tabellenscan über
+`MessageProperty`.** Er kostet **81,4 Sekunden** — das **Achtfache** der Zeitgrenze des Lese-Pools.
+
+**Und die `rows`-Zahl ist genau die falsche Statistik aus M155:** Der Optimizer scannt eine
+Tabelle, die er für 46,96 Millionen Zeilen hält, während sie 75,57 Millionen trägt. **Der
+tatsächliche Scan ist um 60,9 % teurer als der, den er kalkuliert hat.**
+
+**Die Diagnose — und sie ist ausdrücklich eine Diagnose und keine Bauempfehlung:**
+
+| `Service.Type`, häufigster Wert | Zugriff | `rows` | beste von *drei* |
+|---|---|---:|---:|
+| **gewählt** | voller Tabellenscan | 46.964.279 | **81.429,454 ms** |
+| erzwungen *(Diagnose)* | `ref` über `MessagePropertyNameValueIDX` | 9.262.588 | **27.892,210 ms** |
+| Faktor | | | **2,92** |
+
+> ⚠️ **`FORCE INDEX` ist hier Diagnose und keine Bauempfehlung.** Es zeigt, dass der Optimizer den
+> billigeren Weg übersieht — und **es löst nichts**: 27,9 Sekunden sind das **2,8‑Fache** der
+> Zehn-Sekunden-Grenze des Lese-Pools. Der Fall ist mit keiner Indexwahl tragbar; er ist erst mit
+> einem Zeitfenster tragbar, und auch dann nicht immer (M159). **`STRAIGHT_JOIN` ist in diesem
+> Projekt schon einmal als Allheilmittel missverstanden worden** ([`bam-suche.md`](bam-suche.md)
+> §4); `FORCE INDEX` soll nicht der zweite Fall werden.
+>
+> *Abweichung: Für diesen Fall stehen Aufwärmlauf und **zwei** Läufe statt fünf. Sechs Läufe à 80
+> Sekunden hätten die geteilte Testkopie acht Minuten belegt. Die drei Werte liegen mit 27.892,210,
+> 27.901,920 und 28.232,718 ms um 1,2 % auseinander; eine engere Schranke änderte an der Aussage
+> nichts.*
+
+### Befund 3 — die Selektivität kommt vom Wert, und der Name trägt nichts bei
+
+Die Laufzeiten desselben Namens unterscheiden sich um bis zu **Faktor 742** (`Message.ReceiverID`:
+0,810 gegen 601,269 ms), je nachdem, welcher Wert gesucht wird. **Zwischen den Namen liegt keine
+vergleichbare Ordnung.** Ein Wertprädikat ist genau so teuer, wie sein Wert häufig ist — und die
+Kardinalität 18 aus M155 sorgt dafür, dass der Optimizer das vorher nie richtig schätzt.
+
+*Belegvermerk (L10): gemessen sind Plan und Laufzeit für acht Wertprädikate ohne Join am
+07.09.2026. Behauptet wird nicht, dass der Optimizer bei anderen Werten dieselbe Wahl trifft — die
+Wahl hängt an seiner Schätzung, und die ist nachweislich falsch.*
+
+---
+
+## M159 — Der ganze Weg
+
+**Sitzung** `s14-m159.sql`. Wertprädikat + Verdichtung auf `MessageID` + Join auf `Message` +
+Mandantenkette + Zeitfenster, **in der Bauform aus [`bam-suche.md`](bam-suche.md) §4**: erst
+deckeln, dann beschriften.
+
+```sql
+SELECT COUNT(*), MAX(CHAR_LENGTH(p2.ProcessName)), MAX(CHAR_LENGTH(prj.ProjectName))
+FROM (SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID
+        FROM GlassfishDB.MessageProperty mp
+        JOIN GlassfishDB.Message m ON m.MessageID = mp.MessageID
+       WHERE mp.MessagePropertyName = ? AND mp.MessagePropertyValue = ?
+         AND m.MessageLastUpdate >= ? AND m.MessageLastUpdate < '2025-12-30 00:00:00'
+         AND EXISTS (SELECT 1 FROM GlassfishDB.Process pr
+                       JOIN GlassfishDB.ProjectMandant pm ON pm.ProjectID = pr.ProjectID
+                      WHERE pr.ProcessID = m.ProcessID AND pm.MandantID = ?)
+       GROUP BY m.MessageID
+       ORDER BY m.MessageLastUpdate DESC, m.MessageID DESC LIMIT 51) AS treffer
+LEFT JOIN GlassfishDB.Process p2 ON p2.ProcessID = treffer.ProcessID
+LEFT JOIN GlassfishDB.Project prj ON prj.ProjectID = p2.ProjectID
+```
+
+*Zwei Abweichungen von der Vorlage, beide ohne Wirkung auf den Plan der abgeleiteten Tabelle und
+beide wegen G1: Die äußere Auswahl gibt **Längen statt Namen** aus, damit kein Partnername in die
+Rohausgabe gerät und die beiden `LEFT JOIN` trotzdem ausgeführt werden; und das äußere `ORDER BY`
+über 51 bereits sortierte Zeilen entfällt. `SOS` und `SOSAction` sind nicht mitgemessen — sie
+hängen wie `Process` und `Project` als `eq_ref` über der Deckelung.*
+
+**Der Prüfwert ist je Fall der häufigste Wert des 30-Tage-Fensters** — der **Bösfall**, und derselbe
+über alle drei Fenster desselben Mandanten.
+
+> **Die Grenze dieser Messung ist 10 Sekunden — die des Lese-Pools**
+> ([`datenzugriff.md`](datenzugriff.md) §1), nicht die 60 der übrigen Sitzungen. **Ein Abbruch ist
+> damit unmittelbar die Aussage „so scheitert es in der Anwendung".** Die Sitzung lief mit
+> `--force`, damit ein Abbruch die folgenden Fälle nicht mitnimmt.
+
+> **Vorregistrierte Deutung.** Unter **500 ms** im 30-Tage-Fenster (Budget aus §8 der
+> Projektbeschreibung). Die 90 Tage sind die Grenze, die der Freitextfilter der Liste trägt — sie
+> ist hier **nicht** gesetzt, sondern wird gemessen.
+
+**`EXPLAIN` — für alle 15 Fälle dieselbe Gestalt:** `<derived2>` als `ALL` (die höchstens 51
+gedeckelten Zeilen), darüber `p2` und `prj` je `eq_ref` über `PRIMARY`. **Die Beschriftung hängt
+über der Deckelung und fasst nie mehr als 51 Zeilen an** — der Befund aus M47 trägt hier
+unverändert.
+
+### Ergebnis — beste von fünf nach einem Aufwärmlauf, in Millisekunden
+
+**`NEXANS`**
+
+| Name | 24 Stunden | **30 Tage** | 90 Tage | Zeilen |
+|---|---:|---:|---:|---:|
+| `Message.GUID` | 1,062 | **0,942** | 0,946 | 0 / 1 / 1 |
+| `Message.ReceiverID` | 94,972 | **1.222,763** | 1.276,108 | 51 / 51 / 51 |
+| `Service.Type` | 136,354 | **⛔ Abbruch bei 10 s** | **⛔ Abbruch bei 10 s** | 51 / — / — |
+
+**`SUTTONS`**
+
+| Name | 24 Stunden | **30 Tage** | 90 Tage | Zeilen |
+|---|---:|---:|---:|---:|
+| `Message.GUID` | 0,876 | **0,901** | 0,898 | 0 / 1 / 1 |
+| `Message.ReceiverID` | *entfällt* | *entfällt* | *entfällt* | keine Zeile im Bestand (M156) |
+| `Service.Type` | 70,665 | **1.396,667** | 3.725,905 | 51 / 51 / 51 |
+
+*Die 24-Stunden-Zeile von `Message.GUID` hat **null** Treffer: Der Bösfall-Wert stammt aus dem
+30-Tage-Fenster und liegt nicht im letzten Tag. Sie misst damit den Leerlauf des Zugriffs, nicht
+einen Treffer — und der kostet dasselbe.*
+
+### Die Deutung ist in einem von drei Fällen getroffen
+
+| Fall | 30 Tage | gegen 500 ms |
+|---|---:|---|
+| `Message.GUID` (`NEXANS` / `SUTTONS`) | 0,942 / 0,901 ms | **getroffen**, Faktor 530 beziehungsweise 555 darunter |
+| `Message.ReceiverID` (`NEXANS`) | 1.222,763 ms | **gerissen**, Faktor 2,45 darüber |
+| `Service.Type` (`NEXANS`) | **Abbruch bei 10.005 ms** | **gerissen**, mindestens Faktor 20 darüber |
+| `Service.Type` (`SUTTONS`) | 1.396,667 ms | **gerissen**, Faktor 2,79 darüber |
+
+**Die 500-ms-Zusage hält genau für die Namen, deren Wert eindeutig ist.** Sobald ein Wert
+zehntausende Nachrichten trägt, hilft weder die Deckelung auf 51 noch das Zeitfenster: Das
+`ORDER BY MessageLastUpdate DESC` zwingt dazu, **alle** Kandidaten zu finden, bevor die ersten 51
+feststehen. Die Deckelung schützt die Beschriftung, nicht den Kern — genau wie in der BAM-Suche,
+nur dass dort der schlimmste Wert 234.159 Zeilen trägt und hier 4.366.602.
+
+### Die 90 Tage, die nicht gesetzt waren
+
+Sie sind gemessen worden, um zu sehen, ob die Grenze des Freitextfilters hier passt. **Sie passt
+nicht:**
+
+| Fall | 30 Tage | 90 Tage | Aufschlag |
+|---|---:|---:|---:|
+| `Message.GUID`, `NEXANS` | 0,942 | 0,946 | **+0,4 %** |
+| `Message.ReceiverID`, `NEXANS` | 1.222,763 | 1.276,108 | +4,4 % |
+| `Service.Type`, `SUTTONS` | 1.396,667 | 3.725,905 | **+167 %** |
+| `Service.Type`, `NEXANS` | Abbruch | Abbruch | — |
+
+**Bei einem eindeutigen Wert ist das Fenster gleichgültig** — der Zugriff findet eine Zeile,
+gleich wie weit er zurückschaut. **Bei einem häufigen Wert kostet das dreifache Fenster fast das
+Dreifache**, weil genau dreimal so viele Kandidaten zu sortieren sind. **Eine einheitliche
+Fenstergrenze ist deshalb das falsche Werkzeug**: Sie wäre für die Schlüssel-Namen unnötig eng und
+für `Service.Type` immer noch zu weit.
+
+### Zwei Fälle, die in der Anwendung nicht existieren
+
+`Service.Type` bei `NEXANS` über 30 und über 90 Tage ist **sechsmal** an der Zehn-Sekunden-Grenze
+abgebrochen, jeder Lauf bei 10.004 bis 10.008 ms. **Das ist kein Messfehler und wird nicht durch
+ein kleineres Fenster ersetzt.** Über 24 Stunden läuft derselbe Fall in 136,354 ms — die Grenze
+liegt also **zwischen einem Tag und dreißig**, und wo genau, ist in dieser Runde nicht erhoben.
+**Offener Punkt 145.**
+
+*Belegvermerk (L10): gemessen sind 15 Fälle über zwei Mandanten, drei Fenster und drei Namen, jeder
+mit dem häufigsten Wert seines 30-Tage-Fensters. Behauptet wird nicht, dass ein anderer Wert
+dieselben Zeiten trägt — M158 zeigt Faktor 742 zwischen dem häufigsten und dem seltensten Wert
+desselben Namens. Die hier gemessenen Zahlen sind **Bösfälle**, nicht Durchschnitte.*
+
+---
+
+## M160 — Werte über die Präfixgrenze hinaus
+
+**Sitzungen** `s12-m157b-m160.sql`, Gegenprobe in `s15-m158d-m160g.sql`.
+
+> **Vorregistrierte Deutung.** Die Namen dieser Tabelle tragen Kennungen und Nummern, also
+> überwiegend kurze Werte. Trifft das nicht zu, ist der Präfixindex für den betroffenen Namen ein
+> **Vorfilter** und kein Zugriffspfad — mit Folgen für M158 und M159.
+
+**Die Deutung hat getroffen, und zwar vollständig.** Fenster B, `NEXANS`:
+
+| Name | Zeilen | **länger als 50 Zeichen** | Wert `NULL` | kürzeste | längste | mittlere Länge |
+|---|---:|---:|---:|---:|---:|---:|
+| `Converter.TransactionID` | 239.533 | **0** | 0 | 2 | 7 | 6,21 |
+| `Message.GUID` | 180.251 | **0** | 0 | **36** | **36** | **36,00** |
+| `Message.ReceiverID` | 46.986 | **0** | 0 | **10** | **10** | **10,00** |
+| `Service.Type` | 532.215 | **0** | 0 | 8 | 13 | 9,35 |
+
+**Kein einziger Wert der vier Typ‑1‑Namen überschreitet die Präfixgrenze von 50 Zeichen.** Zwei von
+ihnen haben eine **feste** Länge: `Message.GUID` immer 36 Zeichen (die Gestalt einer UUID),
+`Message.ReceiverID` immer 10.
+
+**Und `MessagePropertyValue` ist bei diesen vier Namen nirgends `NULL`** — obwohl es die einzige
+`NULL`-fähige Spalte der Tabelle ist (M44).
+
+### Die Gegenprobe — der Ausdruck greift, er findet hier nur nichts
+
+Ein Prädikat, das über 999.000 Zeilen kein einziges Mal wahr wird, muss zeigen, dass es überhaupt
+wahr werden kann. Dieselbe Messung über **alle** Namen, 24 Stunden, `NEXANS`:
+
+| | |
+|---|---:|
+| Zeilen | 111.092 |
+| verschiedene Namen darin | **77** |
+| **länger als 50 Zeichen** | **35.325** (31,8 %) |
+| länger als 200 Zeichen | 6 |
+| **längster Wert** | **2.124 Zeichen** |
+
+**Fast ein Drittel aller `MessageProperty`-Zeilen trägt einen Wert über der Präfixgrenze — nur
+keine der vier konfigurierten.** Der Ausdruck greift also; die vier Nullen oben sind eine
+Eigenschaft der Daten und kein blinder Messfehler.
+
+### Was die Nachprüfung auf der Zeile kostet — **nicht messbar, und das ist die Antwort**
+
+Der Auftrag fragt, was die Nachprüfung eines Werts über 50 Zeichen gegenüber einem Wert kostet, der
+in den Präfix passt. **Diese Frage hat auf den Typ‑1‑Namen keinen Gegenstand:** Es gibt unter ihnen
+keinen einzigen Wert über 50 Zeichen, also auch kein Paar, das sich vergleichen ließe. **Die Lücke
+wird benannt und nicht mit einem Ersatzfall gefüllt** — ein Vergleich über einen fremden, nicht
+konfigurierten Namen beantwortete eine andere Frage.
+
+**Was daraus folgt, ist trotzdem eindeutig.** Für die vier Namen ist
+`MessagePropertyNameValueIDX` ein **echter Zugriffspfad** und kein Vorfilter: Der Präfix von 50
+Zeichen enthält den vollständigen Wert, und `Using index condition` in allen M158-Plänen
+bestätigt, dass die Bedingung im Index ausgewertet wird. **Die Kosten aus M158 und M159 sind damit
+nicht durch Nachprüfungen auf der Zeile erklärbar** — sie kommen allein aus der Zahl der Treffer.
+
+> **Für einen künftigen Eintrag gilt das nicht.** Trägt ein neu konfigurierter Name Werte über 50
+> Zeichen — und 31,8 % der Zeilen im Bestand tun das —, dann wird derselbe Index für ihn zum
+> Vorfilter, und die Kosten aus M158 und M159 sind für ihn nicht übertragbar. **Offener Punkt 146.**
+
+*Belegvermerk (L10): gemessen sind Längenverteilung und `NULL`-Anteil der vier Typ‑1‑Namen über
+Fenster B sowie die Gegenprobe über alle 77 im 24-Stunden-Fenster vorkommenden Namen. Behauptet
+wird nicht, dass kein Wert dieser vier Namen irgendwo im Gesamtbestand länger als 50 Zeichen ist —
+gemessen ist das Fenster, nicht der Bestand.*
