@@ -3,14 +3,26 @@ import { describe, expect, it } from "vitest";
 import type { Fenster } from "@/features/nachrichten/api";
 import { alsAbfrage } from "@/features/nachrichten/filter";
 import {
+  AM_BAUMFENSTER,
   LEERE_PROZESSANSICHT,
   PROZESSANSICHT_PARAMETER,
+  baumabfrage,
+  baumfensterFehler,
   parseAsKennung,
   alsSuchparameter,
   ausSuchparametern,
   listenfilter,
   type Prozessansichtzustand,
 } from "@/features/nachrichten/prozessansicht";
+import { ProblemFehler } from "@/lib/http";
+import {
+  FREI,
+  angezeigterBaumfenstermodus,
+  baumfenstermodus,
+  hervorgehobenerBaumzeitraum,
+  mitFreiemBaumfenster,
+  mitPaar,
+} from "@/lib/rollupzeitraum";
 import { NACHRICHT_PARAMETER } from "@/lib/routen";
 
 /**
@@ -196,5 +208,101 @@ describe("Der Filter der Übertragungsliste", () => {
     expect(
       listenfilter(zustand({ prozess: "p1" }), { von: "keinDatum", bis: "auchNicht" }),
     ).toBeNull();
+  });
+});
+
+/**
+ * Das freie Zeitfenster (10c‑4b): die beiden Modi löschen einander, der
+ * Zwischenzustand steht nicht in der URL, und die Abfrage trägt genau einen
+ * Modus. Alle Zeitpunkte erfunden.
+ */
+describe("Das freie Zeitfenster", () => {
+  const VON = new Date("2025-12-29T13:00:00.000Z");
+  const BIS = new Date("2025-12-30T01:00:00.000Z");
+
+  it("läuft mit von und bis in beide Richtungen rund", () => {
+    const frei = zustand({ von: VON, bis: BIS, prozess: "p1" });
+
+    const url = urlVon(frei);
+    expect(url).toContain("von=2025-12-29T13%3A00%3A00.000Z");
+    expect(url).toContain("bis=2025-12-30T01%3A00%3A00.000Z");
+    expect(url).not.toContain("zeitraum=");
+    expect(ausSuchparametern(alsSuchparameter(frei))).toEqual(frei);
+  });
+
+  it("übergeht einen unlesbaren Zeitpunkt, statt ihn weiterzureichen", () => {
+    const gelesen = ausSuchparametern(new URLSearchParams("von=gestern&bis=2025-12-30T01:00:00Z"));
+    expect(gelesen.von).toBeNull();
+    expect(gelesen.bis?.toISOString()).toBe("2025-12-30T01:00:00.000Z");
+  });
+
+  it("lässt die beiden Modi einander löschen", () => {
+    // Ein Paar löscht das Fenster, ein Fenster löscht das Paar — beide zugleich
+    // wären am Endpunkt `400` `zeitfenster-mehrdeutig`, und diesen Zustand soll
+    // die Bedienung gar nicht erreichen können.
+    expect(mitPaar("30T")).toEqual({ zeitraum: "30T", von: null, bis: null });
+    expect(mitFreiemBaumfenster(VON, BIS)).toEqual({ zeitraum: null, von: VON, bis: BIS });
+    expect(baumfenstermodus(mitPaar("30T"))).toBe("vorwahl");
+    expect(baumfenstermodus(mitFreiemBaumfenster(VON, null))).toBe("frei");
+    expect(baumfenstermodus(mitFreiemBaumfenster(null, null))).toBe("offen");
+  });
+
+  it("hält den Zwischenzustand „frei gewählt“ im Komponentenzustand, nicht in der URL", () => {
+    // Beides ist `zeitraum=null, von=null, bis=null` — und soll es sein: Der
+    // freie Modus beginnt leer, und ein leeres Fenster zeigt denselben Baum wie
+    // gar keine Auswahl. Ohne die eigene Funktion wäre der Modus über die
+    // Oberfläche nicht erreichbar.
+    const leer = mitFreiemBaumfenster(null, null);
+    expect(urlVon(zustand(leer))).toBe("");
+    expect(angezeigterBaumfenstermodus(leer, false)).toBe("offen");
+    expect(angezeigterBaumfenstermodus(leer, true)).toBe("frei");
+    // Die URL gewinnt, sobald sie etwas sagt.
+    expect(angezeigterBaumfenstermodus(mitPaar("48H"), true)).toBe("vorwahl");
+    expect(angezeigterBaumfenstermodus(mitFreiemBaumfenster(VON, null), false)).toBe("frei");
+  });
+
+  it("hebt im freien Modus „Frei“ hervor, sonst das Paar, das gilt", () => {
+    expect(hervorgehobenerBaumzeitraum(mitFreiemBaumfenster(null, null), true, "48H")).toBe(FREI);
+    expect(hervorgehobenerBaumzeitraum(mitFreiemBaumfenster(VON, BIS), false, FREI)).toBe(FREI);
+    // Unverändert die Regel des Dashboards: Die Wahl schlägt die Antwort, und
+    // ohne beides ist keine Schaltfläche gedrückt.
+    expect(hervorgehobenerBaumzeitraum(mitPaar("12M"), false, "48H")).toBe("12M");
+    expect(hervorgehobenerBaumzeitraum(mitFreiemBaumfenster(null, null), false, "48H")).toBe("48H");
+    expect(hervorgehobenerBaumzeitraum(mitFreiemBaumfenster(null, null), false, undefined)).toBe(
+      null,
+    );
+  });
+
+  it("baut die Abfrage aus genau einem Modus", () => {
+    expect(baumabfrage(LEERE_PROZESSANSICHT)).toBe("");
+    expect(baumabfrage(zustand({ zeitraum: "30T" }))).toBe("?zeitraum=30T");
+    expect(baumabfrage(zustand({ von: VON, bis: BIS }))).toBe(
+      "?von=2025-12-29T13%3A00%3A00.000Z&bis=2025-12-30T01%3A00%3A00.000Z",
+    );
+    // Ein halbes Fenster wird mitgeschickt und nicht hier abgefangen — das
+    // Backend antwortet `zeitfenster-unvollstaendig`.
+    expect(baumabfrage(zustand({ von: VON }))).toBe("?von=2025-12-29T13%3A00%3A00.000Z");
+  });
+
+  it("stellt die Antworten zum Fenster an die Felder und die mehrdeutige über die Ansicht", () => {
+    const problem = (typ: string) => new ProblemFehler({ status: 400, typ });
+    for (const typ of AM_BAUMFENSTER) {
+      expect(baumfensterFehler(problem(typ))?.typ).toBe(typ);
+    }
+    expect(AM_BAUMFENSTER).toContain("zeitfenster-zu-genau");
+    expect(AM_BAUMFENSTER).toContain("zeitfenster-zu-gross");
+    // `zeitfenster-mehrdeutig` lässt die Bedienung nicht entstehen — käme es
+    // doch, ist es ein Befund und gehört sichtbar.
+    expect(baumfensterFehler(problem("zeitfenster-mehrdeutig"))).toBeUndefined();
+    expect(baumfensterFehler(problem("zeitraum-unbekannt"))).toBeUndefined();
+    expect(baumfensterFehler(new Error("kein Problem"))).toBeUndefined();
+  });
+
+  it("gibt das Fenster der Antwort an die Liste weiter, nicht das der URL", () => {
+    // E‑50 unverändert: Das Fenster kommt aus der Antwort — im freien Modus mit
+    // dem ausschließenden `bis`, das das Backend gerechnet hat.
+    const filter = listenfilter(zustand({ prozess: "p1", von: VON, bis: BIS }), FENSTER);
+    expect(filter?.von?.getTime()).toBe(Date.parse(FENSTER.von));
+    expect(filter?.bis?.getTime()).toBe(Date.parse(FENSTER.bis));
   });
 });

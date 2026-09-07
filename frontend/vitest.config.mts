@@ -11,7 +11,7 @@ import { defineConfig } from "vitest/config";
  * außer Laufzeit und Abhängigkeiten.
  *
  * **Die Ausnahmen sind gezählt, nicht gewachsen** — Stand 07.09.2026 sind es
- * **fünfundsiebzig in zwölf Dateien**. Diese Zahl wird an genau dieser Stelle geführt;
+ * **siebenundsiebzig in dreizehn Dateien**. Diese Zahl wird an genau dieser Stelle geführt;
  * `tests/hilfe/rendern.tsx` und `docs/frontend-grundlagen.md` §9 verweisen
  * darauf, statt sie zu wiederholen (drei Orte für dieselbe Zahl sind zwei zu
  * viel):
@@ -31,12 +31,14 @@ import { defineConfig } from "vitest/config";
  * | `tests/prozess-baum.test.tsx` *(02.09.2026)* | 10 | **Vier Klassen, und alle vier stehen nur im Baum.** Der **roving `tabindex`**: „genau ein Tabstopp, nicht 1.158" ist eine Aussage über den Baum als ganzen, und dass er auf der *gewählten* Zeile liegt, entscheidet, wo ein tiefer Link den Nutzer beim ersten Tabben absetzt. Die **ARIA-Ausgabe der flachen Form**: `aria-level` je Ebene, `aria-expanded` nur an Gruppen und `aria-selected` an jeder Zeile (`aria-posinset`/`aria-setsize` entstehen in `baumzeilen` und sind dort geprüft) — die Zeilen selbst sind in `tests/prozessbaum.test.ts` geprüft, ihr Niederschlag im DOM ist es nicht. Und **zwei Aussagen über Abwesenheit**: bei einem Partner mit einer Richtung entsteht **keine** zweite Ebene (E‑45), und es gibt **keine `sr-only`-Spanne je Zahl** — die Beschriftung steht in einem `aria-label`, weil zweitausend absolut positionierte Knoten in einer langen Liste genau der Befund aus `docs/frontend-grundlagen.md` §7 wären. Dazu die Klassen, die selbst die Regel *sind*: `min-h-beruehrung` an jeder Zeile, `relative` und **kein** `overflow-y` am Baum. Und viertens die **Verdrahtung der Tastatur**, die keine reine Funktion trägt: dass ein Pfeil den Fokus und den roving `tabindex` wirklich weitersetzt — und dass eine **Modifiertaste durchgelassen** wird. `Alt+←` ist das Zurück des Browsers und damit der Weg, den `prozess` und `nachricht` mit `history: "push"` erst anlegen; `tastenbefehl` sieht Modifier gar nicht, der Satz ist nirgends sonst belegbar |
  * | `tests/konto-anlegen.test.tsx` *(07.09.2026)* | 6 | **Drei Klassen, und keine davon steht in einer reinen Funktion.** Die **Verdrahtung der Sperre in beide Richtungen** (E22): Die *Regel* ist `darfOeffnen`, um `MASKE` erweitert und in `tests/benutzer.test.ts` geprüft — belegt wird hier, dass jemand sie abfragt, und zwar je mit der Gegenprobe im selben Fall (vorher frei, danach gesperrt). Zweitens **was nach dem Erfolg passiert**: dass wirklich ein `GET /api/admin/users` **nach** dem `POST` hinausgeht und im Zwischenspeicher danach genau dessen Antwort steht (E24) — die naheliegende Abkürzung, die neun Felder der Zeile aus den vier der `POST`-Antwort zu ergänzen, bestünde jede Prüfung, die nur auf den Bildschirm sieht; dazu das **leere Passwortfeld** und die Meldung *in* der Maske (E25). Drittens der Ort einer Meldung: ein `409` steht **im Formular**, die Maske bleibt offen, und solange der Aufruf läuft, lässt sie sich nicht zuklappen — sonst wäre er nirgends zu sehen. **Fünf Mutanten gesetzt, fünf gefallen**, jeder in genau seinem Fall |
  *
+ * | `tests/zeitraum-umschalter.test.tsx` *(07.09.2026)* | 2 | **Eine Aussage über Abwesenheit und eine über Verdrahtung.** Der vierte Knopf „Frei" ist **freiwillig** (`docs/process-view.md` §37 ff.): Ohne `aufFrei` sind es drei Knöpfe, mit ihr vier — die naheliegende Schreibweise (der Knopf immer da, nur ohne Wirkung) bestünde jede Prüfung an einer reinen Funktion, und das Dashboard ruft den Umschalter ohne. Dazu, dass ein Klick auf „Frei" `aufFrei` ruft und **nicht** `aufAuswahl` — sonst käme im Feature ein Code an, den die Liste der drei Paare nicht kennt; mit der Gegenprobe, dass ein Paar weiterhin die Auswahl ruft |
+ *
  * > ⚠️ **Zwei Zahlen im selben Kopf gingen auseinander** — die Tabellensumme
  * > stand oben richtig, der Schlusssatz nannte „neunundvierzig". Berichtigt am
  * > 02.09.2026. Genau die Drift, gegen die die Regel „an einer Stelle geführt"
  * > gerichtet ist; sie greift nur, wenn die *eine* Stelle auch eine ist.
  *
- * Allen fünfundsiebzig ist dasselbe gemeinsam: **Es gibt keinen anderen Ort, an dem sie
+ * Allen siebenundsiebzig ist dasselbe gemeinsam: **Es gibt keinen anderen Ort, an dem sie
  * belegbar wären.** Das ist die Bedingung, nicht „es ließe sich so leichter
  * prüfen". Sie schalten ihre Umgebung selbst über `// @vitest-environment jsdom`
  * um — die Voreinstellung bleibt `node`, damit die übrigen Dateien nichts von

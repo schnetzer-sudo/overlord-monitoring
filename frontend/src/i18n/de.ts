@@ -190,6 +190,18 @@ export const de = {
     "48H": "48 Stunden",
     "30T": "30 Tage",
     "12M": "12 Monate",
+    // Der vierte Knopf, freiwillig — nur die Prozessansicht ruft ihn
+    // (`components/zeitraum-umschalter.tsx`).
+    FREI: "Frei",
+    von: "Von",
+    bis: "Bis",
+    // Bewusst ohne Ebene und ohne Korrektur: Das Backend zerlegt das Fenster
+    // und rundet nichts; die Felder sagen nur, was sie erwarten.
+    freiHinweis: "Volle Stunden; „Bis“ ist die letzte enthaltene Stunde.",
+    // Ein datetime-local liefert erst dann einen Wert, wenn Datum UND Uhrzeit
+    // vollständig sind — erkannt an validity.badInput (`docs/nachrichtenliste.md` §8.2).
+    unvollstaendig: "Bitte Datum und Uhrzeit vollständig eintragen.",
+    beideNoetig: "Für ein freies Zeitfenster fehlt noch der zweite Zeitpunkt.",
   },
 
   /**
@@ -1537,6 +1549,8 @@ export const de = {
     "zeitfenster-unvollstaendig": "Ein freies Zeitfenster braucht beide Zeitpunkte.",
     "zeitfenster-ungueltig": "Der Zeitpunkt „bis“ muss nach „von“ liegen.",
     "zeitfenster-zu-gross": "Das Zeitfenster darf höchstens ein Jahr umfassen.",
+    // Prozessansicht, freies Fenster: abgewiesen statt gerundet (`docs/process-view.md` §37 ff.).
+    "zeitfenster-zu-genau": "Beide Zeitpunkte müssen auf einer vollen Stunde liegen.",
     "zeitpunkt-ungueltig": "Einer der beiden Zeitpunkte ist nicht lesbar.",
     "zeitraum-unbekannt": "Diesen Zeitraum gibt es nicht.",
     "sortierung-unbekannt": "Diese Sortierung gibt es nicht.",

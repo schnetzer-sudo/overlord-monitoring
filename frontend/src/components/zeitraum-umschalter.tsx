@@ -2,10 +2,16 @@
 
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useTexte } from "@/i18n/provider";
-import { ROLLUPZEITRAEUME, type Rollupzeitraum } from "@/lib/rollupzeitraum";
+import {
+  FREI,
+  ROLLUPZEITRAEUME,
+  type Baumzeitraum,
+  type Rollupzeitraum,
+} from "@/lib/rollupzeitraum";
 
 /**
- * Die drei Zeiträume der Rollup-Ansichten: 48 Stunden, 30 Tage, 12 Monate.
+ * Die drei Zeiträume der Rollup-Ansichten: 48 Stunden, 30 Tage, 12 Monate —
+ * und auf Wunsch ein vierter Knopf „Frei".
  *
  * ## Warum er in `components/` liegt und nicht mehr im Dashboard
  *
@@ -19,6 +25,15 @@ import { ROLLUPZEITRAEUME, type Rollupzeitraum } from "@/lib/rollupzeitraum";
  *
  * **Kein Satz seiner Begründung ist dadurch falsch geworden** — er tut, was er
  * vorher tat, an einer Stelle, die beide Ansichten erreichen.
+ *
+ * ## Der vierte Knopf ist freiwillig *(07.09.2026, Schritt 10c‑4b)*
+ *
+ * Die Prozessansicht kennt seither ein **freies Zeitfenster**; das Dashboard
+ * nicht. Der Knopf erscheint nur, wenn der Aufrufer `aufFrei` übergibt — **ohne
+ * die Angabe sind es drei Knöpfe**, und das Dashboard ruft ihn ohne. Die
+ * Datumsfelder des freien Modus stehen **neben** dem Umschalter, nicht darin:
+ * Nur so bleibt die Verwendung im Dashboard zeichengleich, und der Umschalter
+ * trägt keinen Zustand, den nur eine seiner Verwendungen kennt.
  *
  * ## Hervorgehoben ist, was gilt — nicht, was in der URL steht
  *
@@ -45,11 +60,20 @@ import { ROLLUPZEITRAEUME, type Rollupzeitraum } from "@/lib/rollupzeitraum";
 export function ZeitraumUmschalter({
   gewaehlt,
   aufAuswahl,
+  aufFrei,
   gesperrt = false,
 }: {
-  /** Das Paar, das gilt — aus der URL oder aus der Antwort. `null`, solange keins feststeht. */
-  gewaehlt: Rollupzeitraum | null;
+  /**
+   * Das Paar, das gilt — aus der URL oder aus der Antwort. `null`, solange keins
+   * feststeht. `FREI` nur dort, wo es den vierten Knopf gibt.
+   */
+  gewaehlt: Baumzeitraum | null;
   aufAuswahl: (zeitraum: Rollupzeitraum) => void;
+  /**
+   * **Freiwillig.** Ist die Angabe da, gibt es den vierten Knopf, und ein Klick
+   * darauf ruft sie — ohne einen Zeitpunkt, denn der freie Modus beginnt leer.
+   */
+  aufFrei?: () => void;
   gesperrt?: boolean;
 }) {
   const texte = useTexte();
@@ -62,6 +86,10 @@ export function ZeitraumUmschalter({
       value={gewaehlt ?? ""}
       onValueChange={(wert) => {
         if (wert === "") {
+          return;
+        }
+        if (wert === FREI) {
+          aufFrei?.();
           return;
         }
         aufAuswahl(wert as Rollupzeitraum);
@@ -77,6 +105,11 @@ export function ZeitraumUmschalter({
           {texte.zeitraum[zeitraum]}
         </ToggleGroupItem>
       ))}
+      {aufFrei === undefined ? null : (
+        <ToggleGroupItem value={FREI} disabled={gesperrt} className="min-h-bedienelement px-2.5">
+          {texte.zeitraum[FREI]}
+        </ToggleGroupItem>
+      )}
     </ToggleGroup>
   );
 }

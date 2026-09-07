@@ -765,7 +765,21 @@ export function useProzessansichtzustand() {
      * den man gerade ansieht, verschwindet durch einen Zeitraumwechsel nicht.
      */
     setzeZeitraum: useCallback(
-      (zeitraum: Rollupzeitraum) => void setzeZustand({ zeitraum }),
+      // Ein Paar löscht ein freies Fenster — beide zugleich wären `400`
+      // `zeitfenster-mehrdeutig`, und diesen Zustand lässt die Oberfläche gar
+      // nicht erst entstehen (`lib/rollupzeitraum.ts`, `mitPaar`).
+      (zeitraum: Rollupzeitraum) => void setzeZustand({ zeitraum, von: null, bis: null }),
+      [setzeZustand],
+    ),
+    /**
+     * Das freie Fenster — und umgekehrt: Es löscht das Paar. **Auch ein halbes
+     * Fenster wird geschrieben**; das Backend prüft und die Felder zeigen die
+     * Antwort. Beide `null` heißt „frei gewählt, noch nichts eingetragen" und
+     * steht in der URL nicht anders als gar keine Auswahl — der Zwischenzustand
+     * liegt im Komponentenzustand der Ansicht.
+     */
+    setzeFreiesFenster: useCallback(
+      (von: Date | null, bis: Date | null) => void setzeZustand({ zeitraum: null, von, bis }),
       [setzeZustand],
     ),
     /**
@@ -830,9 +844,9 @@ export function useProzessansichtzustand() {
  * invalidiert (`lib/zwischenspeicher.ts`); der Mandant steht aus demselben Grund
  * in keinem Schlüssel.
  */
-export function useProzessbaum(zeitraum: Rollupzeitraum | null) {
+export function useProzessbaum(abfrage: string) {
   return useQuery<Prozessbaum>({
-    queryKey: NACHRICHTEN_SCHLUESSEL.baum(zeitraum),
-    queryFn: () => holeProzessbaum(zeitraum),
+    queryKey: NACHRICHTEN_SCHLUESSEL.baum(abfrage),
+    queryFn: () => holeProzessbaum(abfrage),
   });
 }

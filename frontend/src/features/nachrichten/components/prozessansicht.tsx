@@ -14,7 +14,7 @@ import { einsetzen } from "@/i18n";
 import { useSprache, useTexte } from "@/i18n/provider";
 import { useAnzeigezone } from "@/components/zeitzone";
 import { formatiereZahl, formatiereZeitpunkt } from "@/lib/format";
-import { hervorgehobenesPaar } from "@/lib/rollupzeitraum";
+import { angezeigterBaumfenstermodus, hervorgehobenerBaumzeitraum } from "@/lib/rollupzeitraum";
 import { ROUTEN } from "@/lib/routen";
 import { cn } from "@/lib/utils";
 
@@ -26,7 +26,7 @@ import {
   useProzessansichtzustand,
   useProzessbaum,
 } from "../hooks";
-import { listenfilter } from "../prozessansicht";
+import { baumabfrage, baumfensterFehler, listenfilter } from "../prozessansicht";
 import {
   eingegrenzterBaum,
   ohnePfad,
@@ -37,6 +37,7 @@ import {
   richtungstext,
   sichtbareProzesse,
 } from "../prozessbaum";
+import { BaumfensterFelder } from "./baumfenster-felder";
 import { Blaettern } from "./blaettern";
 import { NachrichtDetail } from "./nachricht-detail";
 import { NachrichtenTabelle } from "./nachrichten-tabelle";
@@ -102,13 +103,38 @@ export function ProzessAnsicht() {
   const {
     zustand,
     setzeZeitraum,
+    setzeFreiesFenster,
     setzeProzess,
     setzeNachricht,
     setzeNurMitVerkehr,
     setzeSortierung,
   } = useProzessansichtzustand();
-  const antwort = useProzessbaum(zustand.zeitraum);
-  const baum = antwort.data;
+  const antwort = useProzessbaum(baumabfrage(zustand));
+
+  /*
+   * „Frei gedrückt, aber noch nichts eingetragen" steht bewusst nicht in der
+   * URL — es ist derselbe Baum wie gar keine Auswahl. Ohne diesen
+   * Komponentenzustand wäre der freie Modus über die Oberfläche gar nicht
+   * erreichbar (`lib/rollupzeitraum.ts`, `angezeigterBaumfenstermodus`).
+   */
+  const [freiGewaehlt, setFreiGewaehlt] = useState(false);
+  const fenstermodus = angezeigterBaumfenstermodus(zustand, freiGewaehlt);
+  const fehlerAnDenFeldern = baumfensterFehler(antwort.error);
+
+  /*
+   * **Der letzte gelieferte Baum bleibt stehen, solange die Antwort an die
+   * Datumsfelder gehört.** Wer zwischen „Von" und „Bis" tippt, bekommt vom
+   * Backend `zeitfenster-unvollstaendig`; ihm dafür den Baum wegzunehmen hieße,
+   * die Ansicht zu leeren, weil er noch nicht fertig ist. Dieselbe Bauform wie
+   * `letzteSeite` in `useNachrichtenSeite`: ausdrücklich gehalten und nicht über
+   * `placeholderData`, damit ein Fensterwechsel weiterhin als Laden sichtbar ist.
+   * Angepasst während des Renderns, nicht in einem Effekt.
+   */
+  const [letzterBaum, setLetzterBaum] = useState<Prozessbaum | undefined>(undefined);
+  if (antwort.data !== undefined && antwort.data !== letzterBaum) {
+    setLetzterBaum(antwort.data);
+  }
+  const baum = antwort.data ?? (fehlerAnDenFeldern === undefined ? undefined : letzterBaum);
 
   const [eingrenzung, setEingrenzung] = useState("");
 
@@ -297,18 +323,39 @@ export function ProzessAnsicht() {
          * das mit dem Inhalt verschwindet, dem Nutzer genau dann fehlt, wenn er
          * etwas ausprobieren will. Im Ladezustand gesperrt.
          */}
-        <ZeitraumUmschalter
-          gewaehlt={hervorgehobenesPaar(zustand.zeitraum, baum?.zeitraum)}
-          aufAuswahl={setzeZeitraum}
-          gesperrt={antwort.isPending}
-        />
+        <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
+          <ZeitraumUmschalter
+            gewaehlt={hervorgehobenerBaumzeitraum(zustand, freiGewaehlt, baum?.zeitraum)}
+            aufAuswahl={(zeitraum) => {
+              setFreiGewaehlt(false);
+              setzeZeitraum(zeitraum);
+            }}
+            aufFrei={() => {
+              // Der freie Modus beginnt leer: Ein vorbelegtes Fenster wäre ein
+              // zweiter Standardwert. Sichtbar wird die Wahl über `freiGewaehlt`.
+              setFreiGewaehlt(true);
+              setzeFreiesFenster(null, null);
+            }}
+            gesperrt={antwort.isPending}
+          />
+          {/* Die Felder stehen **neben** dem Umschalter, nicht darin — nur so
+              bleibt das Dashboard zeichengleich. */}
+          {fenstermodus === "frei" ? (
+            <BaumfensterFelder
+              von={zustand.von}
+              bis={zustand.bis}
+              aufAenderung={setzeFreiesFenster}
+              fehler={fehlerAnDenFeldern}
+            />
+          ) : null}
+        </div>
       </div>
 
       {antwort.isPending ? (
         <Laden zeilen={8} />
-      ) : antwort.isError ? (
+      ) : antwort.isError && fehlerAnDenFeldern === undefined ? (
         <Fehler fehler={antwort.error} aufWiederholen={() => void antwort.refetch()} />
-      ) : antwort.data.gesamt.anzahlProzesse === 0 ? (
+      ) : baum === undefined ? null : baum.gesamt.anzahlProzesse === 0 ? (
         <Leer titel={texte.prozesse.baum.leerTitel} hinweis={texte.prozesse.baum.leerHinweis} />
       ) : (
         <div className="flex flex-col gap-4 md:flex-row md:items-start">
@@ -328,7 +375,7 @@ export function ProzessAnsicht() {
             )}
           >
             <Baumspalte
-              baum={antwort.data}
+              baum={baum}
               gefiltert={gefiltert}
               eingrenzung={eingrenzung}
               aufEingrenzung={setEingrenzung}
@@ -361,7 +408,7 @@ export function ProzessAnsicht() {
                   prozess={gewaehlterProzess}
                   processId={zustand.prozess as string}
                   zuordnung={zuordnung}
-                  fenster={antwort.data.fenster}
+                  fenster={baum.fenster}
                   zurueckKnopf={zurueckKnopf}
                   aufZurueck={() => setzeProzess(null)}
                 />

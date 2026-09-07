@@ -118,6 +118,12 @@ export const en: Texte = {
     "48H": "48 hours",
     "30T": "30 days",
     "12M": "12 months",
+    FREI: "Custom",
+    von: "From",
+    bis: "To",
+    freiHinweis: "Full hours; “To” is the last hour included.",
+    unvollstaendig: "Please enter both date and time.",
+    beideNoetig: "A custom time window still needs its second point in time.",
   },
 
   dashboard: {
@@ -935,6 +941,7 @@ export const en: Texte = {
     "zeitfenster-unvollstaendig": "A custom time window needs both points in time.",
     "zeitfenster-ungueltig": "“To” must lie after “from”.",
     "zeitfenster-zu-gross": "The time window may span at most one year.",
+    "zeitfenster-zu-genau": "Both points in time must be on the full hour.",
     "zeitpunkt-ungueltig": "One of the two points in time cannot be read.",
     "zeitraum-unbekannt": "This range does not exist.",
     "sortierung-unbekannt": "This sort order does not exist.",

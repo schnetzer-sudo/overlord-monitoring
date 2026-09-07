@@ -1,11 +1,13 @@
-import { createParser, parseAsBoolean } from "nuqs";
+import { createParser, parseAsBoolean, parseAsIsoDateTime } from "nuqs";
 
-import { NACHRICHT_PARAMETER } from "@/lib/routen";
+import { ProblemFehler } from "@/lib/http";
 import {
+  baumfensterAlsParameter,
   istRollupzeitraum,
   parseAsRollupzeitraum,
   type Rollupzeitraum,
 } from "@/lib/rollupzeitraum";
+import { NACHRICHT_PARAMETER } from "@/lib/routen";
 
 import type { Fenster } from "./api";
 import {
@@ -21,7 +23,14 @@ import {
  *
  * ```
  * /prozesse?zeitraum=30T&prozess=<ProcessID>&nachricht=<MessageID>&nurMitVerkehr=true
+ * /prozesse?von=<ISO,UTC>&bis=<ISO,UTC>&prozess=<ProcessID>
  * ```
+ *
+ * **Seit dem 07.09.2026 (10c‑4b) gibt es den zweiten Modus:** `von`/`bis`
+ * stehen in der URL, sobald sie stehen — auch einzeln, denn das Backend prüft,
+ * nicht die Oberfläche. `zeitraum` und `von`/`bis` löschen einander
+ * (`lib/rollupzeitraum.ts`, {@link mitPaar} / {@link mitFreiemBaumfenster});
+ * „frei gewählt, noch nichts eingetragen" steht **nicht** in der URL.
  *
  * **Frei von React**, wie `filter.ts` und `suche.ts`: Die Umrechnung Zustand →
  * URL und Zustand → Anfrage ist eine reine Funktion und wird als solche geprüft
@@ -105,6 +114,13 @@ export const parseAsKennung = createParser<string>({
  */
 export const PROZESSANSICHT_PARAMETER = {
   zeitraum: parseAsRollupzeitraum,
+  /**
+   * Das freie Fenster, **ISO in UTC**, `bis` als letzte enthaltene Stunde. Ohne
+   * `withDefault` — ein Standardwert hier wäre ein zweiter neben dem des
+   * Endpunkts. Derselbe Parser wie `von`/`bis` der Nachrichtenliste.
+   */
+  von: parseAsIsoDateTime,
+  bis: parseAsIsoDateTime,
   prozess: parseAsKennung.withOptions({ history: "push" }),
   [NACHRICHT_PARAMETER]: parseAsKennung.withOptions({ history: "push" }),
   nurMitVerkehr: parseAsBoolean.withDefault(NUR_MIT_VERKEHR_VORGABE),
@@ -126,6 +142,9 @@ export type Prozessansichtzustand = {
    * der Oberfläche).
    */
   zeitraum: Rollupzeitraum | null;
+  /** Das freie Fenster. Steht eines von beiden, ist `zeitraum` `null` — und umgekehrt. */
+  von: Date | null;
+  bis: Date | null;
   /** Die gewählte `ProcessID`. `null` heißt: rechts steht der Leerzustand. */
   prozess: string | null;
   /** Die geöffnete Nachricht. `null` heißt: rechts steht die Übertragungsliste. */
@@ -137,6 +156,8 @@ export type Prozessansichtzustand = {
 
 export const LEERE_PROZESSANSICHT: Prozessansichtzustand = {
   zeitraum: null,
+  von: null,
+  bis: null,
   prozess: null,
   nachricht: null,
   nurMitVerkehr: NUR_MIT_VERKEHR_VORGABE,
@@ -155,6 +176,12 @@ export function alsSuchparameter(zustand: Prozessansichtzustand): URLSearchParam
   const parameter = new URLSearchParams();
   if (zustand.zeitraum !== null) {
     parameter.set("zeitraum", zustand.zeitraum);
+  }
+  if (zustand.von !== null) {
+    parameter.set("von", zustand.von.toISOString());
+  }
+  if (zustand.bis !== null) {
+    parameter.set("bis", zustand.bis.toISOString());
   }
   if (zustand.nurMitVerkehr) {
     parameter.set("nurMitVerkehr", "true");
@@ -181,6 +208,8 @@ export function alsSuchparameter(zustand: Prozessansichtzustand): URLSearchParam
  */
 export function ausSuchparametern(suchparameter: URLSearchParams): Prozessansichtzustand {
   const zeitraum = suchparameter.get("zeitraum");
+  const von = suchparameter.get("von");
+  const bis = suchparameter.get("bis");
   const prozess = suchparameter.get("prozess");
   const nachricht = suchparameter.get(NACHRICHT_PARAMETER);
   const nurMitVerkehr = suchparameter.get("nurMitVerkehr");
@@ -191,8 +220,14 @@ export function ausSuchparametern(suchparameter: URLSearchParams): Prozessansich
   // Anwendung nicht anwendet — genau der Fall, der hier einmal vorlag.
   const kennung = (wert: string | null) => (wert === null ? null : parseAsKennung.parse(wert));
 
+  // Derselbe Parser wie zur Laufzeit; ein unlesbarer Zeitpunkt wird übergangen.
+  const zeitpunkt = (wert: string | null) =>
+    wert === null ? null : parseAsIsoDateTime.parse(wert);
+
   return {
     zeitraum: istRollupzeitraum(zeitraum) ? zeitraum : null,
+    von: zeitpunkt(von),
+    bis: zeitpunkt(bis),
     prozess: kennung(prozess),
     nachricht: kennung(nachricht),
     nurMitVerkehr: nurMitVerkehr === null ? NUR_MIT_VERKEHR_VORGABE : nurMitVerkehr === "true",
@@ -265,4 +300,48 @@ export function listenfilter(
      */
     nachricht: null,
   };
+}
+
+/**
+ * Die Abfrage des Baum-Endpunkts aus dem Zustand — `?zeitraum=…`, `?von=…&bis=…`
+ * oder nichts. **Sie ist der Abfrageschlüssel**: Ein anderes Fenster ist eine
+ * andere Antwort, und das Fenster ohne Parameter ist ein eigener Schlüssel und
+ * nicht der des vom Endpunkt gewählten Paares (`docs/dashboard-frontend.md` §2).
+ */
+export function baumabfrage(zustand: Prozessansichtzustand): string {
+  const parameter = new URLSearchParams(baumfensterAlsParameter(zustand));
+  const text = parameter.toString();
+  return text === "" ? "" : `?${text}`;
+}
+
+/**
+ * Die Problemtypen, die den **Datumsfeldern** des freien Fensters gelten und
+ * nicht der Ansicht — dieselbe Bauform wie `AM_ZEITFENSTER` in `filter.ts`,
+ * und aus demselben Grund: Wer ein freies Fenster ausfüllt, ist mitten in einer
+ * Eingabe, und zwischen „Von" und „Bis" liegt zwangsläufig ein Moment mit nur
+ * einem Zeitpunkt. **Die Prüfung bleibt im Backend**; hier wird nur
+ * entschieden, *wo* die Antwort erscheint.
+ *
+ * Zwei mehr als bei der Liste: `zeitfenster-zu-genau` (die von Hand gebaute
+ * Adresse mit einer krummen Stunde) und `zeitfenster-zu-gross` (dort geht die
+ * Grenze über einen eigenen Weg, hier ist sie eine Eingabe an denselben Feldern).
+ *
+ * `zeitfenster-mehrdeutig` gehört ausdrücklich **nicht** dazu: Diesen Zustand
+ * lässt die Oberfläche gar nicht erst entstehen — käme er doch, ist er ein
+ * Befund und gehört sichtbar über die Ansicht.
+ */
+export const AM_BAUMFENSTER = [
+  "zeitfenster-unvollstaendig",
+  "zeitfenster-ungueltig",
+  "zeitpunkt-ungueltig",
+  "zeitfenster-zu-genau",
+  "zeitfenster-zu-gross",
+] as const;
+
+/** Gehört diese Fehlerantwort an die Datumsfelder des Baums? */
+export function baumfensterFehler(fehler: unknown): ProblemFehler | undefined {
+  return fehler instanceof ProblemFehler &&
+    (AM_BAUMFENSTER as readonly string[]).includes(fehler.typ)
+    ? fehler
+    : undefined;
 }

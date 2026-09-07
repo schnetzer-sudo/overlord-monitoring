@@ -1,5 +1,5 @@
 import { hole } from "@/lib/http";
-import type { Fenster, Rollupzeitraum } from "@/lib/rollupzeitraum";
+import type { Baumzeitraum, Fenster } from "@/lib/rollupzeitraum";
 
 /**
  * Die Nachrichtenliste, ihr Detail und die Prozessauswahl dazu.
@@ -169,8 +169,12 @@ export type Baumsumme = {
 };
 
 export type Prozessbaum = {
-  /** Das **gewählte** Paar, immer gesetzt — auch wenn der Aufrufer keins genannt hat. */
-  zeitraum: Rollupzeitraum;
+  /**
+   * Das **gewählte** Paar, immer gesetzt — auch wenn der Aufrufer keins genannt
+   * hat; `FREI` für ein freies Fenster. **`FREI` verrät keine Ebene** — die
+   * Oberfläche braucht das Feld nur, um zu wissen, welcher Knopf hervorgehoben ist.
+   */
+  zeitraum: Baumzeitraum;
   fenster: Fenster;
   /**
    * Ab wie vielen Monaten ohne Bewegung ein Prozess als `STILL` gilt.
@@ -790,16 +794,17 @@ export const NACHRICHTEN_SCHLUESSEL = {
   liste: (abfrage: string) => ["nachrichten", "liste", abfrage] as const,
   prozesse: ["nachrichten", "prozesse"] as const,
   /**
-   * Der Prozessbaum. **Der Zeitraum gehört in den Schlüssel**, denn er ist ein
-   * Anfrageparameter: ein anderes Paar ist eine andere Antwort.
+   * Der Prozessbaum. **Das Fenster gehört in den Schlüssel**, denn es ist der
+   * Anfrageparameter: ein anderes Paar oder ein anderes freies Fenster ist eine
+   * andere Antwort (`prozessansicht.ts`, `baumabfrage`).
    *
-   * `null` heißt „ohne Parameter geholt" und ist ein **eigener** Schlüssel — und
-   * ausdrücklich nicht der des vom Endpunkt gewählten Paares. Schriebe die
-   * Ansicht das gewählte Paar zurück, entstünde beim ersten Rendern ein zweiter
-   * Schlüssel und damit eine zweite Anfrage für dieselbe Antwort
-   * (`docs/dashboard-frontend.md` §2).
+   * Die leere Abfrage heißt „ohne Parameter geholt" und ist ein **eigener**
+   * Schlüssel — und ausdrücklich nicht der des vom Endpunkt gewählten Paares.
+   * Schriebe die Ansicht das gewählte Paar zurück, entstünde beim ersten
+   * Rendern ein zweiter Schlüssel und damit eine zweite Anfrage für dieselbe
+   * Antwort (`docs/dashboard-frontend.md` §2).
    */
-  baum: (zeitraum: Rollupzeitraum | null) => ["nachrichten", "prozessbaum", zeitraum] as const,
+  baum: (abfrage: string) => ["nachrichten", "prozessbaum", abfrage] as const,
   /**
    * Das Detail hängt an der Kennung und **nicht am Filter der Liste**. Ein
    * tiefer Link auf eine Nachricht außerhalb des aktuellen Zeitfensters zeigt sie
@@ -857,8 +862,8 @@ export function holeProzesse(): Promise<Prozess[]> {
  * Endpunkt `48H` (E‑38), und die Antwort nennt das gewählte Paar. Eine Vorgabe
  * im Frontend wäre ein zweiter Standardwert und liefe dem ersten hinterher.
  */
-export function holeProzessbaum(zeitraum: Rollupzeitraum | null): Promise<Prozessbaum> {
-  return hole<Prozessbaum>(`/prozesse/baum${zeitraum === null ? "" : `?zeitraum=${zeitraum}`}`);
+export function holeProzessbaum(abfrage: string): Promise<Prozessbaum> {
+  return hole<Prozessbaum>(`/prozesse/baum${abfrage}`);
 }
 
 /**
