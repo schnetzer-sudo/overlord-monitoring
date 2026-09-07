@@ -2,6 +2,8 @@ package de.kraftwerkone.overlord.monitor.catalog;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import de.kraftwerkone.overlord.monitor.common.Baumfenster;
+import de.kraftwerkone.overlord.monitor.common.Baumfenster.Segment;
 import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.time.LocalDateTime;
@@ -106,11 +108,31 @@ class ProzessbaumPlanDbIT {
   }
 
   private String kennzahlenSql(String mandant, Rollupzeitraum zeitraum) {
+    return kennzahlenSql(mandant, Baumfenster.paar(zeitraum).segmente(ANKER));
+  }
+
+  private String kennzahlenSql(String mandant, List<Segment> segmente) {
     gerendert.clear();
-    attrappe.kennzahlen(new MandantContext(mandant), zeitraum, zeitraum.fenster(ANKER));
+    attrappe.kennzahlen(new MandantContext(mandant), segmente);
     assertThat(gerendert).hasSize(1);
     return gerendert.getFirst();
   }
+
+  /**
+   * Die drei Fensterschnitte des freien Modus, die M152 misst: der Boesfall aus M149 (fuenf
+   * Segmente, alle drei Ebenen), krumme 30 Tage (Stunden und Tage, kein Monat) und ein
+   * monatsbuendiges Jahr (ein Monatssegment — die ungeteilte Bauform mit anderen Werten).
+   *
+   * <p>Alle drei enden auf oder vor dem Anker der Dev-Uhr, im dichten Bestand der Testkopie.
+   */
+  private static final List<List<Segment>> FREIE_FENSTER =
+      List.of(
+          Baumfenster.zerlegung(
+              LocalDateTime.parse("2024-12-29T14:00"), LocalDateTime.parse("2025-12-30T03:00")),
+          Baumfenster.zerlegung(
+              LocalDateTime.parse("2025-11-29T14:00"), LocalDateTime.parse("2025-12-29T14:00")),
+          Baumfenster.zerlegung(
+              LocalDateTime.parse("2025-01-01T00:00"), LocalDateTime.parse("2026-01-01T00:00")));
 
   private List<Plan> plan(String sql) {
     List<Plan> zeilen = new ArrayList<>();
@@ -281,6 +303,92 @@ class ProzessbaumPlanDbIT {
             .noneMatch(zeile -> zeile.tabelle().equalsIgnoreCase("Message"));
       }
     }
+  }
+
+  // ─── Das freie Fenster ────────────────────────────────────────────────────────
+
+  /**
+   * <b>Je Zweig ein Bereichszugriff ueber den Primaerschluessel seiner Ebene</b> — das ist die
+   * Zusicherung fuer die Bauform Z-U, und es ist die einzige.
+   *
+   * <p><b>Was hier absichtlich nicht festgeschrieben wird:</b> die Materialisierung der Ableitung
+   * ({@code <derived2>}), der automatische Schluessel ({@code key0}) und die Reihenfolge der
+   * Tabellen. Materialisierung und automatischer Schluessel sind der Grund, warum Z-U schneller ist
+   * als Z-D (M149 gegen M150, {@code docs/process-view.md} §33) — aber sie sind eine Entscheidung
+   * des Optimierers, und Annahme A10 fuehrt ein Upgrade auf MariaDB 11 als offenes Risiko. Ein
+   * Test, der sie festschriebe, wuerde an dem Tag rot, an dem sich nichts Fachliches geaendert hat.
+   * Die Beobachtung gehoert in die Datei, nicht in die Zusicherung — dieselbe Ueberlegung wie bei
+   * der Reihenfolge in {@code DashboardPlanDbIT}.
+   */
+  @Test
+  @DisplayName("Im freien Fenster liest jeder Zweig einen Bereich ueber den Primaerschluessel")
+  void freies_fenster_je_zweig_ein_bereich_ueber_primary() {
+    for (String mandant : MANDANTEN) {
+      for (List<Segment> segmente : FREIE_FENSTER) {
+        String marke = "Frei/" + mandant + "/" + segmente.size() + " Segmente";
+        List<Plan> plan = plan(kennzahlenSql(mandant, segmente));
+
+        for (Segment segment : segmente) {
+          Plan zweig = zeileFuer(plan, tabelle(segment), marke);
+          assertThat(zweig.zugriff())
+              .as("%s: Zugriffsart auf %s", marke, tabelle(segment))
+              .isEqualTo("range");
+          assertThat(zweig.index())
+              .as("%s: Treiberindex auf %s", marke, tabelle(segment))
+              .isEqualTo("PRIMARY");
+        }
+      }
+    }
+  }
+
+  /**
+   * Eigenschaft 4 in der Fassung vom 07.09.2026, im Plan: Es steht keine Ebene im Plan, die kein
+   * Segment traegt. Ein leerer Zweig waere ein Bereichszugriff ueber ein leeres Intervall.
+   */
+  @Test
+  @DisplayName("Im freien Fenster steht keine Ebene im Plan, die kein Segment traegt")
+  void freies_fenster_keine_ebene_ohne_segment() {
+    for (List<Segment> segmente : FREIE_FENSTER) {
+      List<Plan> plan = plan(kennzahlenSql("NEXANS", segmente));
+      List<String> getragen =
+          segmente.stream().map(ProzessbaumPlanDbIT::tabelle).distinct().toList();
+      for (String ebene : List.of("message_rollup", "message_rollup_tag", "message_rollup_monat")) {
+        boolean imPlan = plan.stream().anyMatch(zeile -> zeile.tabelle().equals(ebene));
+        assertThat(imPlan)
+            .as("%d Segmente: %s im Plan", segmente.size(), ebene)
+            .isEqualTo(getragen.contains(ebene));
+      }
+    }
+  }
+
+  /** Die Mandantenkette bleibt auch ueber der Ableitung ein Indexzugriff und kein Durchlauf. */
+  @Test
+  @DisplayName("Die Mandantenkette des freien Fensters laeuft nie als Durchlauf")
+  void freies_fenster_mandantenkette_nie_als_durchlauf() {
+    for (String mandant : MANDANTEN) {
+      for (List<Segment> segmente : FREIE_FENSTER) {
+        String marke = "Frei/" + mandant + "/" + segmente.size() + " Segmente";
+        List<Plan> plan = plan(kennzahlenSql(mandant, segmente));
+
+        assertThat(zeileFuer(plan, "baum_process", marke).zugriff())
+            .as("%s: Process in der Kette", marke)
+            .isIn("eq_ref", "ref", "const");
+        assertThat(zeileFuer(plan, "ProjectMandant", marke).zugriff())
+            .as("%s: ProjectMandant in der Kette", marke)
+            .isIn("eq_ref", "ref", "const");
+        assertThat(plan)
+            .as("%s: Regel L2", marke)
+            .noneMatch(zeile -> zeile.tabelle().equalsIgnoreCase("Message"));
+      }
+    }
+  }
+
+  private static String tabelle(Segment segment) {
+    return switch (segment.ebene()) {
+      case STUNDE -> "message_rollup";
+      case TAG -> "message_rollup_tag";
+      case MONAT -> "message_rollup_monat";
+    };
   }
 
   private static String tabelle(Rollupzeitraum zeitraum) {

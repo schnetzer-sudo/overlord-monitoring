@@ -1,5 +1,6 @@
 package de.kraftwerkone.overlord.monitor.catalog;
 
+import de.kraftwerkone.overlord.monitor.common.Baumfenster;
 import de.kraftwerkone.overlord.monitor.common.Katalogzuordnung;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
@@ -108,7 +109,8 @@ public class ProzessbaumService {
 
     List<Prozessgeruestzeile> geruest = prozessbaumRepository.geruest(mandant);
     Map<String, Kennzahl> jeProzess =
-        kennzahlenJeProzess(prozessbaumRepository.kennzahlen(mandant, zeitraum, fenster));
+        kennzahlenJeProzess(
+            prozessbaumRepository.kennzahlen(mandant, Baumfenster.paar(zeitraum).segmente(jetzt)));
 
     return new ProzessbaumResponse(
         zeitraum.code(),

@@ -2,6 +2,9 @@ package de.kraftwerkone.overlord.monitor.catalog;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import de.kraftwerkone.overlord.monitor.common.Baumfenster;
+import de.kraftwerkone.overlord.monitor.common.Baumfenster.Segment;
+import de.kraftwerkone.overlord.monitor.common.Rollupebene;
 import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.time.LocalDateTime;
@@ -77,9 +80,26 @@ class ProzessbaumStatementsTest {
   }
 
   private String kennzahlen(Rollupzeitraum zeitraum) {
+    return kennzahlen(Baumfenster.paar(zeitraum).segmente(JETZT));
+  }
+
+  private String kennzahlen(List<Segment> segmente) {
     gerendert.clear();
-    repository.kennzahlen(MANDANT, zeitraum, zeitraum.fenster(JETZT));
+    repository.kennzahlen(MANDANT, segmente);
     return einziges();
+  }
+
+  private static LocalDateTime t(String iso) {
+    return LocalDateTime.parse(iso);
+  }
+
+  private static Segment segment(Rollupebene ebene, String von, String bis) {
+    return new Segment(ebene, t(von), t(bis));
+  }
+
+  /** Der Boesfall aus M149: fuenf Segmente, alle drei Ebenen, beide Randarten. */
+  private static List<Segment> boesfall() {
+    return Baumfenster.zerlegung(t("2024-12-29T14:00"), t("2025-12-30T03:00"));
   }
 
   // ─── Das Geruest ──────────────────────────────────────────────────────────────
@@ -197,6 +217,54 @@ class ProzessbaumStatementsTest {
                   + " `overlord_monitor`.`message_rollup`.`message_status`");
     }
 
+    /**
+     * <b>Die tragende Zusage von Schritt 10c-4b:</b> Die drei Paare rendern nach dem Bau des freien
+     * Zeitfensters <b>denselben</b> Text wie davor — Zeichen fuer Zeichen. Der Text hier ist am
+     * 07.09.2026 gegen den unveraenderten Code gepinnt worden, bevor die Zerlegung gebaut wurde.
+     */
+    @Test
+    @DisplayName("30T: message_rollup_tag, woertlich der Text von vor 10c-4b")
+    void tagesebene_woertlich() {
+      assertThat(kennzahlen(Rollupzeitraum.TAGE_30))
+          .isEqualTo(
+              "select `overlord_monitor`.`message_rollup_tag`.`process_id`,"
+                  + " `overlord_monitor`.`message_rollup_tag`.`message_status`,"
+                  + " sum(`overlord_monitor`.`message_rollup_tag`.`anzahl`) from"
+                  + " `overlord_monitor`.`message_rollup_tag` where"
+                  + " (`overlord_monitor`.`message_rollup_tag`.`tag` >= ? and"
+                  + " `overlord_monitor`.`message_rollup_tag`.`tag` < ? and exists (select 1 as"
+                  + " `one` from `GlassfishDB`.`Process` as `baum_process` join"
+                  + " `GlassfishDB`.`ProjectMandant` on"
+                  + " `GlassfishDB`.`ProjectMandant`.`ProjectID` = `baum_process`.`ProjectID`"
+                  + " where (`baum_process`.`ProcessID` ="
+                  + " `overlord_monitor`.`message_rollup_tag`.`process_id` and"
+                  + " `GlassfishDB`.`ProjectMandant`.`MandantID` = ?))) group by"
+                  + " `overlord_monitor`.`message_rollup_tag`.`process_id`,"
+                  + " `overlord_monitor`.`message_rollup_tag`.`message_status`");
+    }
+
+    /** Siehe {@link #tagesebene_woertlich()}. */
+    @Test
+    @DisplayName("12M: message_rollup_monat, woertlich der Text von vor 10c-4b")
+    void monatsebene_woertlich() {
+      assertThat(kennzahlen(Rollupzeitraum.MONATE_12))
+          .isEqualTo(
+              "select `overlord_monitor`.`message_rollup_monat`.`process_id`,"
+                  + " `overlord_monitor`.`message_rollup_monat`.`message_status`,"
+                  + " sum(`overlord_monitor`.`message_rollup_monat`.`anzahl`) from"
+                  + " `overlord_monitor`.`message_rollup_monat` where"
+                  + " (`overlord_monitor`.`message_rollup_monat`.`monat` >= ? and"
+                  + " `overlord_monitor`.`message_rollup_monat`.`monat` < ? and exists (select 1"
+                  + " as `one` from `GlassfishDB`.`Process` as `baum_process` join"
+                  + " `GlassfishDB`.`ProjectMandant` on"
+                  + " `GlassfishDB`.`ProjectMandant`.`ProjectID` = `baum_process`.`ProjectID`"
+                  + " where (`baum_process`.`ProcessID` ="
+                  + " `overlord_monitor`.`message_rollup_monat`.`process_id` and"
+                  + " `GlassfishDB`.`ProjectMandant`.`MandantID` = ?))) group by"
+                  + " `overlord_monitor`.`message_rollup_monat`.`process_id`,"
+                  + " `overlord_monitor`.`message_rollup_monat`.`message_status`");
+    }
+
     @Test
     @DisplayName("30T liest die Tagesebene, 12M die Monatsebene — und keines die Stundenebene")
     void abgeleitete_ebenen() {
@@ -277,6 +345,183 @@ class ProzessbaumStatementsTest {
     }
   }
 
+  // ─── Das freie Fenster ────────────────────────────────────────────────────────
+
+  /**
+   * Die Bauform Z-U ({@code docs/process-view.md} §33), gerendert statt von Hand gebaut. M149 hat
+   * ein handgeschriebenes Statement gemessen; Regel L7 verlangt fuer die gebaute Fassung eine
+   * eigene Messung (M152) — und dieser Test haelt fest, <b>was</b> gemessen wird.
+   */
+  @Nested
+  @DisplayName("Das freie Fenster: eine Ableitung mit UNION ALL, darueber alles einmal")
+  class FreiesFenster {
+
+    /** Der ganze Text des Boesfalls, Zeichen fuer Zeichen — das ist die Fassung, die M152 misst. */
+    @Test
+    @DisplayName("Der Boesfall aus M149, woertlich")
+    void boesfall_woertlich() {
+      assertThat(kennzahlen(boesfall()))
+          .isEqualTo(
+              "select `t`.`process_id`, `t`.`message_status`, sum(`t`.`anzahl`) from (select"
+                  + " `overlord_monitor`.`message_rollup`.`process_id`,"
+                  + " `overlord_monitor`.`message_rollup`.`message_status`,"
+                  + " `overlord_monitor`.`message_rollup`.`anzahl` from"
+                  + " `overlord_monitor`.`message_rollup` where"
+                  + " ((`overlord_monitor`.`message_rollup`.`stunde` >= ? and"
+                  + " `overlord_monitor`.`message_rollup`.`stunde` < ?) or"
+                  + " (`overlord_monitor`.`message_rollup`.`stunde` >= ? and"
+                  + " `overlord_monitor`.`message_rollup`.`stunde` < ?)) union all select"
+                  + " `overlord_monitor`.`message_rollup_tag`.`process_id`,"
+                  + " `overlord_monitor`.`message_rollup_tag`.`message_status`,"
+                  + " `overlord_monitor`.`message_rollup_tag`.`anzahl` from"
+                  + " `overlord_monitor`.`message_rollup_tag` where"
+                  + " ((`overlord_monitor`.`message_rollup_tag`.`tag` >= ? and"
+                  + " `overlord_monitor`.`message_rollup_tag`.`tag` < ?) or"
+                  + " (`overlord_monitor`.`message_rollup_tag`.`tag` >= ? and"
+                  + " `overlord_monitor`.`message_rollup_tag`.`tag` < ?)) union all select"
+                  + " `overlord_monitor`.`message_rollup_monat`.`process_id`,"
+                  + " `overlord_monitor`.`message_rollup_monat`.`message_status`,"
+                  + " `overlord_monitor`.`message_rollup_monat`.`anzahl` from"
+                  + " `overlord_monitor`.`message_rollup_monat` where"
+                  + " (`overlord_monitor`.`message_rollup_monat`.`monat` >= ? and"
+                  + " `overlord_monitor`.`message_rollup_monat`.`monat` < ?)) as `t` where exists"
+                  + " (select 1 as `one` from `GlassfishDB`.`Process` as `baum_process` join"
+                  + " `GlassfishDB`.`ProjectMandant` on"
+                  + " `GlassfishDB`.`ProjectMandant`.`ProjectID` = `baum_process`.`ProjectID`"
+                  + " where (`baum_process`.`ProcessID` = `t`.`process_id` and"
+                  + " `GlassfishDB`.`ProjectMandant`.`MandantID` = ?)) group by `t`.`process_id`,"
+                  + " `t`.`message_status`");
+    }
+
+    /**
+     * <b>Eigenschaft 4 in der Fassung vom 07.09.2026:</b> Jedes Segment liest seine Ebene und keine
+     * andere, und es steht keine Ebene im Text, die kein Segment traegt. Ein leerer Zweig kostete
+     * einen Bereichszugriff ueber ein leeres Intervall — nicht falsch, aber ein Zugriff.
+     */
+    @Test
+    @DisplayName("Keine Ebene im Text, die kein Segment traegt")
+    void keine_ebene_ohne_segment() {
+      // Stunden und Tage, kein Monat: die krummen 30 Tage.
+      String ohneMonat =
+          kennzahlen(
+              List.of(
+                  segment(Rollupebene.STUNDE, "2025-11-29T14:00", "2025-11-30T00:00"),
+                  segment(Rollupebene.TAG, "2025-11-30T00:00", "2025-12-29T00:00"),
+                  segment(Rollupebene.STUNDE, "2025-12-29T00:00", "2025-12-29T14:00")));
+      assertThat(ohneMonat)
+          .contains("`overlord_monitor`.`message_rollup`.")
+          .contains("`overlord_monitor`.`message_rollup_tag`")
+          .doesNotContain("`overlord_monitor`.`message_rollup_monat`");
+
+      // Tage und Monate, keine Stunde.
+      String ohneStunde =
+          kennzahlen(
+              List.of(
+                  segment(Rollupebene.TAG, "2025-01-30T00:00", "2025-02-01T00:00"),
+                  segment(Rollupebene.MONAT, "2025-02-01T00:00", "2025-04-01T00:00"),
+                  segment(Rollupebene.TAG, "2025-04-01T00:00", "2025-04-03T00:00")));
+      assertThat(ohneStunde)
+          .doesNotContain("`overlord_monitor`.`message_rollup`.")
+          .contains("`overlord_monitor`.`message_rollup_tag`")
+          .contains("`overlord_monitor`.`message_rollup_monat`");
+    }
+
+    /**
+     * Ein einzelnes Segment — gleich auf welcher Ebene und gleich, ob es aus einem Paar oder einer
+     * Zerlegung kommt — rendert die <b>ungeteilte</b> Bauform: kein {@code union}, keine Ableitung.
+     * Ein monatsbuendiges Jahr liest damit denselben Text wie {@code 12M}, nur mit anderen Werten.
+     */
+    @Test
+    @DisplayName("Ein Segment rendert die ungeteilte Bauform ohne Ableitung")
+    void ein_segment_ungeteilt() {
+      List<Segment> jahr = Baumfenster.zerlegung(t("2025-01-01T00:00"), t("2026-01-01T00:00"));
+      assertThat(jahr).hasSize(1);
+      assertThat(kennzahlen(jahr))
+          .isEqualTo(kennzahlen(Rollupzeitraum.MONATE_12))
+          .doesNotContain("union")
+          .doesNotContain("`t`.");
+    }
+
+    /**
+     * Eigenschaft 3, <b>fuer jeden Zweig einzeln</b>: Um keine der drei Schluesselspalten steht
+     * eine Funktion. Der Vergleichswert fuer {@code tag} und {@code monat} wird in Java auf das
+     * Datum geschnitten, nicht in SQL.
+     */
+    @Test
+    @DisplayName("Um den Eimerschluessel steht in keinem Zweig eine Funktion")
+    void keine_funktion_in_keinem_zweig() {
+      assertThat(kennzahlen(boesfall()))
+          .contains("`overlord_monitor`.`message_rollup`.`stunde` >= ?")
+          .contains("`overlord_monitor`.`message_rollup_tag`.`tag` >= ?")
+          .contains("`overlord_monitor`.`message_rollup_monat`.`monat` >= ?")
+          .doesNotContain("date(")
+          .doesNotContain("date_format(")
+          .doesNotContain("cast(");
+    }
+
+    /**
+     * Eigenschaft 2, und dazu die Bauform Z-U: Die Mandantenkette steht <b>einmal, aussen</b>, auf
+     * der Ableitung — nicht in jedem Zweig (das waere M114 mit doppelter Auswertung) und nicht als
+     * Join (das vervielfachte die Summe).
+     */
+    @Test
+    @DisplayName("Die Mandantenkette steht genau einmal, aussen, als EXISTS auf der Ableitung")
+    void mandantenkette_einmal_aussen() {
+      String text = kennzahlen(boesfall());
+      assertThat(text.split("exists \\(", -1)).as("genau ein EXISTS").hasSize(2);
+      assertThat(text)
+          .contains("where (`baum_process`.`ProcessID` = `t`.`process_id`")
+          .doesNotContain("join `overlord_monitor`");
+    }
+
+    /**
+     * Kopf und Fuss eines Fensters liegen auf derselben Ebene und stehen als <b>zwei Bereiche in
+     * einem Zweig</b> — nicht als zwei Zweige. Jeder Bereich ist fuer sich ein Bereichszugriff
+     * ueber den Primaerschluessel; M149 hat genau diese Form gemessen.
+     */
+    @Test
+    @DisplayName("Kopf und Fuss derselben Ebene stehen als OR zweier Intervalle in einem Zweig")
+    void kopf_und_fuss_als_or() {
+      String text = kennzahlen(boesfall());
+      assertThat(text.split("from `overlord_monitor`.`message_rollup` where", -1))
+          .as("ein Zweig auf der Stundenebene")
+          .hasSize(2);
+      assertThat(text)
+          .contains(
+              "(`overlord_monitor`.`message_rollup`.`stunde` >= ? and"
+                  + " `overlord_monitor`.`message_rollup`.`stunde` < ?) or"
+                  + " (`overlord_monitor`.`message_rollup`.`stunde` >= ? and"
+                  + " `overlord_monitor`.`message_rollup`.`stunde` < ?)");
+    }
+
+    /**
+     * Derselbe Fensterschnitt ergibt denselben Text, gleich in welcher Reihenfolge die Segmente
+     * ankommen — die Zweige stehen in der festen Reihenfolge Stunde, Tag, Monat. Sonst zaehlte ein
+     * Zwischenspeicher der Datenbank zwei Texte fuer eine Frage.
+     */
+    @Test
+    @DisplayName("Die Reihenfolge der Zweige haengt nicht an der Reihenfolge der Segmente")
+    void feste_reihenfolge() {
+      List<Segment> vorwaerts = boesfall();
+      List<Segment> rueckwaerts = new ArrayList<>(vorwaerts);
+      java.util.Collections.reverse(rueckwaerts);
+
+      assertThat(kennzahlen(rueckwaerts)).isEqualTo(kennzahlen(vorwaerts));
+    }
+
+    /** Eine Gruppierung, ueber der Ableitung — und kein {@code ORDER BY}, wie bei den Paaren. */
+    @Test
+    @DisplayName("Gruppiert wird einmal ueber der Ableitung, nach Rohstatus, ohne Sortierung")
+    void eine_gruppierung() {
+      String text = kennzahlen(boesfall());
+      assertThat(text.split("group by", -1)).hasSize(2);
+      assertThat(text)
+          .endsWith("group by `t`.`process_id`, `t`.`message_status`")
+          .doesNotContain("order by")
+          .doesNotContain("case");
+    }
+  }
+
   // ─── Der Umfang ───────────────────────────────────────────────────────────────
 
   /**
@@ -290,8 +535,21 @@ class ProzessbaumStatementsTest {
   void genau_zwei_statements() {
     gerendert.clear();
     repository.geruest(MANDANT);
-    repository.kennzahlen(
-        MANDANT, Rollupzeitraum.STUNDEN_48, Rollupzeitraum.STUNDEN_48.fenster(JETZT));
+    repository.kennzahlen(MANDANT, Baumfenster.paar(Rollupzeitraum.STUNDEN_48).segmente(JETZT));
+    assertThat(gerendert).hasSize(2);
+  }
+
+  /**
+   * <b>E-42 faellt mit dem freien Zeitfenster nicht.</b> Auch fuenf Segmente ueber drei Ebenen sind
+   * <b>eine</b> Kennzahlenabfrage (Bauform Z-U, M149) — nicht drei (Z-D, M150). Faellt dieser Test,
+   * hat jemand die Vereinigung in Einzelstatements zerlegt, und die Summierung liefe in Java.
+   */
+  @Test
+  @DisplayName("Auch ein freies Fenster kostet genau zwei Statements")
+  void genau_zwei_statements_im_freien_fenster() {
+    gerendert.clear();
+    repository.geruest(MANDANT);
+    repository.kennzahlen(MANDANT, boesfall());
     assertThat(gerendert).hasSize(2);
   }
 
@@ -306,8 +564,9 @@ class ProzessbaumStatementsTest {
     gerendert.clear();
     repository.geruest(MANDANT);
     for (Rollupzeitraum zeitraum : Rollupzeitraum.values()) {
-      repository.kennzahlen(MANDANT, zeitraum, zeitraum.fenster(JETZT));
+      repository.kennzahlen(MANDANT, Baumfenster.paar(zeitraum).segmente(JETZT));
     }
+    repository.kennzahlen(MANDANT, boesfall());
     assertThat(gerendert)
         .isNotEmpty()
         .allSatisfy(sql -> assertThat(sql).doesNotContain("`GlassfishDB`.`Message`"));

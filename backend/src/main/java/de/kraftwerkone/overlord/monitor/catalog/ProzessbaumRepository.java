@@ -7,15 +7,18 @@ import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLU
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLUP_TAG;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.PROCESS_CATALOG;
 
-import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
-import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
+import de.kraftwerkone.overlord.monitor.common.Baumfenster.Segment;
+import de.kraftwerkone.overlord.monitor.common.Rollupebene;
 import de.kraftwerkone.overlord.monitor.jooq.glassfish.tables.Process;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.Field;
+import org.jooq.Record3;
+import org.jooq.Select;
 import org.jooq.Table;
 import org.jooq.impl.DSL;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -45,6 +48,11 @@ import org.springframework.stereotype.Repository;
  * <p>In <i>einem</i> Statement waere die zweite Menge ein {@code LEFT JOIN} auf eine Aggregation
  * und damit ein zweiter Zugriffspfad im selben Plan; getrennt hat jede ihren eigenen, und jeder ist
  * gemessen (Regel L7, {@code docs/process-view.md} §7).
+ *
+ * <p><b>Das gilt auch fuer das freie Zeitfenster</b> <i>(seit 07.09.2026, Schritt 10c-4b)</i>: Die
+ * Kennzahlen eines freien Fensters bleiben <b>ein</b> Statement, auch wenn sie bis zu drei
+ * Rollup-Ebenen lesen — Bauform Z-U aus {@code docs/process-view.md} §33, gemessen gegen die
+ * Bauform mit drei Statements (M149 gegen M150: Faktor 1,8 bis 2,2 schneller). E-42 faellt nicht.
  *
  * <h2>Die Mandantenkette steht zweimal verschieden da — und das ist kein Versehen</h2>
  *
@@ -78,6 +86,9 @@ public class ProzessbaumRepository {
    * heute nicht tut, damit der naechste Join nicht stillschweigend auf die falsche Tabelle zeigt.
    */
   private static final Process KETTE_PROCESS = PROCESS.as("baum_process");
+
+  /** Der Alias der Ableitung, in der die Bereichslesungen des freien Fensters zusammenlaufen. */
+  private static final String ABLEITUNG = "t";
 
   private final DSLContext glassfishDsl;
 
@@ -190,17 +201,52 @@ public class ProzessbaumRepository {
    * ProzessbaumService} — nach Partner, Richtung und Name, nicht nach Prozesskennung. Ein {@code
    * ORDER BY} hier kostete eine Sortierung, die niemand liest.
    *
-   * @param zeitraum bestimmt, welche der drei Rollup-Ebenen gelesen wird
-   * @param fenster {@code von} einschliesslich, {@code bis} ausschliessend, beide auf einer
-   *     Eimergrenze
+   * <h2>Ein Segment oder mehrere — zwei Bauformen, ein Statement</h2>
+   *
+   * <p><b>Ein Segment</b> — das ist jedes der drei Paare — rendert <b>Zeichen fuer Zeichen den Text
+   * von vor dem 07.09.2026</b>: Bereich und Mandantenkette in einem {@code WHERE}, gemessen in
+   * M116, festgehalten in {@code ProzessbaumStatementsTest}. Dass dieser Text unveraendert bleibt,
+   * ist die tragende Zusage von Schritt 10c-4b.
+   *
+   * <p><b>Mehrere Segmente</b> — nur das freie Fenster — fuehren ihre Bereichslesungen in einer
+   * Ableitung mit {@code UNION ALL} zusammen: je Ebene <b>ein</b> Zweig, dessen Bereiche als {@code
+   * OR} nebeneinanderstehen (Kopf und Fuss eines Fensters liegen auf derselben Ebene), darueber
+   * <b>eine</b> Gruppierung und <b>eine</b> Mandantenkette. <b>Leere Ebenen erzeugen keinen
+   * Zweig</b>: Traegt ein Fenster keine Monatssegmente, steht keine Monatsebene im Text.
+   *
+   * <p><b>Warum die Kette aussen steht und nicht in jedem Zweig</b> (M149 gegen M114): Die
+   * Ableitung wird vom Optimierer <b>einmal materialisiert</b> und ueber einen automatischen
+   * Schluessel je Prozess geprobt; die Mandantenkette laeuft damit je Prozess (733 bei {@code
+   * NEXANS}) statt je Zeile (14.148 im Boesfall). Stuende sie innen <i>und</i> aussen wie in M114,
+   * wuerde sie zweimal ausgewertet. <b>Das ist eine Beobachtung ueber den Optimierer und keine
+   * Zusicherung</b> — {@code ProzessbaumPlanDbIT} schreibt je Zweig den Bereichszugriff fest und
+   * nicht die Materialisierung.
+   *
+   * <p><b>Die vier Eigenschaften aus {@code docs/process-view.md} §6 gelten je Zweig</b>: keine
+   * Funktion um die Schluesselspalte, {@code EXISTS} statt Join, und — in der Fassung vom
+   * 07.09.2026 — <i>jedes Segment liest seine Ebene und keine andere, und es steht keine Ebene im
+   * Text, die kein Segment traegt</i>.
+   *
+   * @param segmente ein bis fuenf Segmente aus {@code Baumfenster.segmente(jetzt)}, {@code von}
+   *     einschliessend, {@code bis} ausschliessend, beide auf einer Eimergrenze ihrer Ebene
    */
-  public List<Prozesskennzahlzeile> kennzahlen(
-      MandantContext mandant, Rollupzeitraum zeitraum, Zeitfenster fenster) {
-    Ebene ebene = ebene(zeitraum, fenster);
+  public List<Prozesskennzahlzeile> kennzahlen(MandantContext mandant, List<Segment> segmente) {
+    if (segmente.isEmpty()) {
+      throw new IllegalArgumentException("Kennzahlen ohne Segment gibt es nicht");
+    }
+    if (segmente.size() == 1) {
+      return ungeteilt(mandant, segmente.getFirst());
+    }
+    return vereinigt(mandant, segmente);
+  }
+
+  /** Die Bauform der drei Paare — und der eine Text, der sich nicht aendern darf. */
+  private List<Prozesskennzahlzeile> ungeteilt(MandantContext mandant, Segment segment) {
+    Ebene ebene = ebene(segment.ebene());
     return glassfishDsl
         .select(ebene.prozess(), ebene.status(), DSL.sum(ebene.anzahl()))
         .from(ebene.tabelle())
-        .where(ebene.bereich())
+        .where(bereich(segment))
         .and(mandantenkette(mandant, ebene.prozess()))
         .groupBy(ebene.prozess(), ebene.status())
         .fetch(
@@ -208,59 +254,113 @@ public class ProzessbaumRepository {
                 new Prozesskennzahlzeile(satz.value1(), satz.value2(), satz.value3().longValue()));
   }
 
+  /** Die Bauform Z-U des freien Fensters: eine Ableitung mit {@code UNION ALL}, darueber alles. */
+  private List<Prozesskennzahlzeile> vereinigt(MandantContext mandant, List<Segment> segmente) {
+    Select<Record3<String, String, Integer>> ableitung = null;
+    // Feste Reihenfolge der Zweige — Stunde, Tag, Monat —, damit derselbe Fensterschnitt immer
+    // denselben Text ergibt, gleich in welcher Reihenfolge die Segmente ankommen.
+    for (Rollupebene rollupebene : Rollupebene.values()) {
+      List<Condition> bereiche = new ArrayList<>();
+      Ebene ebene = ebene(rollupebene);
+      for (Segment segment : segmente) {
+        if (segment.ebene() == rollupebene) {
+          bereiche.add(bereich(segment));
+        }
+      }
+      if (bereiche.isEmpty()) {
+        continue;
+      }
+      Select<Record3<String, String, Integer>> zweig =
+          glassfishDsl
+              .select(ebene.prozess(), ebene.status(), ebene.anzahl())
+              .from(ebene.tabelle())
+              .where(DSL.or(bereiche));
+      ableitung = ableitung == null ? zweig : ableitung.unionAll(zweig);
+    }
+
+    Table<Record3<String, String, Integer>> t = ableitung.asTable(ABLEITUNG);
+    Field<String> prozess = t.field(MESSAGE_ROLLUP.PROCESS_ID);
+    Field<String> status = t.field(MESSAGE_ROLLUP.MESSAGE_STATUS);
+    Field<Integer> anzahl = t.field(MESSAGE_ROLLUP.ANZAHL);
+    return glassfishDsl
+        .select(prozess, status, DSL.sum(anzahl))
+        .from(t)
+        .where(mandantenkette(mandant, prozess))
+        .groupBy(prozess, status)
+        .fetch(
+            satz ->
+                new Prozesskennzahlzeile(satz.value1(), satz.value2(), satz.value3().longValue()));
+  }
+
   /**
-   * Die Spalten und der Bereich der Ebene, die zu einem Zeitraumpaar gehoert.
+   * Die Spalten einer Rollup-Ebene.
    *
    * <p><b>Diese Zuordnung steht auch in {@code dashboard/DashboardRepository}, und das ist hier
    * hinnehmbar.</b> Sie liesse sich nicht nach {@code common} heben, ohne die generierten Tabellen
    * dorthin mitzunehmen — und ein Fundament, das an der Codegenerierung haengt, ist keines. Was die
    * Doppelung ungefaehrlich macht, ist das <b>vollstaendige {@code switch} ohne {@code default}</b>
    * an beiden Stellen: Eine vierte Rollup-Ebene loest an beiden einen Compilerfehler aus und keine
-   * stille Voreinstellung.
+   * stille Voreinstellung. Offener Punkt 113, fortgeschrieben am 07.09.2026: Seit {@code
+   * common/Rollupebene} den Namen der Ebene traegt, ist hier die Zuordnung Name → Tabelle, dort die
+   * Zuordnung Paar → Tabelle.
    */
   private record Ebene(
-      Table<?> tabelle,
-      Field<String> prozess,
-      Field<String> status,
-      Field<Integer> anzahl,
-      Condition bereich) {}
+      Table<?> tabelle, Field<String> prozess, Field<String> status, Field<Integer> anzahl) {}
 
-  private static Ebene ebene(Rollupzeitraum zeitraum, Zeitfenster fenster) {
-    return switch (zeitraum) {
-      case STUNDEN_48 ->
+  private static Ebene ebene(Rollupebene ebene) {
+    return switch (ebene) {
+      case STUNDE ->
           new Ebene(
               MESSAGE_ROLLUP,
               MESSAGE_ROLLUP.PROCESS_ID,
               MESSAGE_ROLLUP.MESSAGE_STATUS,
-              MESSAGE_ROLLUP.ANZAHL,
-              MESSAGE_ROLLUP.STUNDE.ge(fenster.von()).and(MESSAGE_ROLLUP.STUNDE.lt(fenster.bis())));
-      case TAGE_30 ->
+              MESSAGE_ROLLUP.ANZAHL);
+      case TAG ->
           new Ebene(
               MESSAGE_ROLLUP_TAG,
               MESSAGE_ROLLUP_TAG.PROCESS_ID,
               MESSAGE_ROLLUP_TAG.MESSAGE_STATUS,
-              MESSAGE_ROLLUP_TAG.ANZAHL,
-              MESSAGE_ROLLUP_TAG
-                  .TAG
-                  .ge(fenster.von().toLocalDate())
-                  .and(MESSAGE_ROLLUP_TAG.TAG.lt(fenster.bis().toLocalDate())));
-      case MONATE_12 ->
+              MESSAGE_ROLLUP_TAG.ANZAHL);
+      case MONAT ->
           new Ebene(
               MESSAGE_ROLLUP_MONAT,
               MESSAGE_ROLLUP_MONAT.PROCESS_ID,
               MESSAGE_ROLLUP_MONAT.MESSAGE_STATUS,
-              MESSAGE_ROLLUP_MONAT.ANZAHL,
-              MESSAGE_ROLLUP_MONAT
-                  .MONAT
-                  .ge(fenster.von().toLocalDate())
-                  .and(MESSAGE_ROLLUP_MONAT.MONAT.lt(fenster.bis().toLocalDate())));
+              MESSAGE_ROLLUP_MONAT.ANZAHL);
+    };
+  }
+
+  /**
+   * Das Bereichspraedikat eines Segments auf seiner Ebene — <b>ohne Funktion um die
+   * Schluesselspalte</b>, sonst faellt der Bereichszugriff weg (Eigenschaft 3 aus §6).
+   *
+   * <p>{@code stunde} ist {@code DATETIME}, {@code tag} und {@code monat} sind {@code DATE} ({@code
+   * docs/rollup.md} §2). Der Vergleichswert wird deshalb <b>in Java</b> auf das Datum geschnitten
+   * und nicht in SQL — die Zerlegung stellt sicher, dass Tages- und Monatssegmente auf Mitternacht
+   * liegen.
+   */
+  private static Condition bereich(Segment segment) {
+    return switch (segment.ebene()) {
+      case STUNDE ->
+          MESSAGE_ROLLUP.STUNDE.ge(segment.von()).and(MESSAGE_ROLLUP.STUNDE.lt(segment.bis()));
+      case TAG ->
+          MESSAGE_ROLLUP_TAG
+              .TAG
+              .ge(segment.von().toLocalDate())
+              .and(MESSAGE_ROLLUP_TAG.TAG.lt(segment.bis().toLocalDate()));
+      case MONAT ->
+          MESSAGE_ROLLUP_MONAT
+              .MONAT
+              .ge(segment.von().toLocalDate())
+              .and(MESSAGE_ROLLUP_MONAT.MONAT.lt(segment.bis().toLocalDate()));
     };
   }
 
   /**
    * <b>Regel M3, als Bestandteil des Statements und nicht als nachgelagerte Pruefung.</b>
    *
-   * @param prozessSpalte die {@code process_id} der jeweiligen Rollup-Ebene
+   * @param prozessSpalte die {@code process_id} der jeweiligen Rollup-Ebene — oder die der
+   *     Ableitung, wenn mehrere Ebenen zusammenlaufen
    */
   private static Condition mandantenkette(MandantContext mandant, Field<String> prozessSpalte) {
     return DSL.exists(

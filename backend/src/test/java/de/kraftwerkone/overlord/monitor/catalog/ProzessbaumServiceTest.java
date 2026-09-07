@@ -58,7 +58,7 @@ class ProzessbaumServiceTest {
 
   private void bestandMit(List<Prozessgeruestzeile> geruest, List<Prozesskennzahlzeile> zahlen) {
     when(repository.geruest(any())).thenReturn(geruest);
-    when(repository.kennzahlen(any(), any(), any())).thenReturn(zahlen);
+    when(repository.kennzahlen(any(), any())).thenReturn(zahlen);
   }
 
   private ProzessbaumResponse antwort() {

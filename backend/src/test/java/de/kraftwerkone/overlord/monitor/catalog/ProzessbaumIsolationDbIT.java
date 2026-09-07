@@ -2,6 +2,7 @@ package de.kraftwerkone.overlord.monitor.catalog;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import de.kraftwerkone.overlord.monitor.common.Baumfenster;
 import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import de.kraftwerkone.overlord.monitor.security.Rolle;
@@ -230,8 +231,8 @@ class ProzessbaumIsolationDbIT extends SicherheitsTestbasis {
         prozessbaumRepository
             .kennzahlen(
                 new MandantContext(MANDANT_NEXANS),
-                Rollupzeitraum.MONATE_12,
-                Rollupzeitraum.MONATE_12.fenster(LocalDateTime.now(anwendungsuhr)))
+                Baumfenster.paar(Rollupzeitraum.MONATE_12)
+                    .segmente(LocalDateTime.now(anwendungsuhr)))
             .stream()
             .map(Prozesskennzahlzeile::processId)
             .toList();
