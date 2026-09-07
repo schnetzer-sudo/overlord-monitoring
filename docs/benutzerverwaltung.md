@@ -282,6 +282,48 @@ Weg zu einem Zustand, der sich selbst aufräumt.
 
 ---
 
+## 7b. Vier Entscheidungen zum Anlegen (E22–E25)
+
+**Gefallen und gebaut am 07.09.2026** mit Schritt 9c
+([`benutzerverwaltung-frontend.md`](benutzerverwaltung-frontend.md) §16). Sie betreffen
+ausschließlich die Oberfläche: `POST /api/admin/users` steht seit Schritt 3 und ist **unangetastet**
+(E4) — es ist ein Bedienweg dazugekommen, keine Signatur geändert.
+
+**E22 — Die Maske steht aufklappbar über der Liste und teilt sich die Sperre mit den
+Zeilenformularen.** Kein Dialog, keine eigene Route. Begründung: Die Seite hat bereits genau ein
+Muster für „etwas Bedienbares aufklappen und dabei alles andere sperren"; ein zweites daneben wäre
+ein zweiter Bedienweg für dieselbe Sache. Die Sperre gilt **in beide Richtungen** — solange die
+Maske offen ist, lässt sich keine Zeile öffnen, und solange eine Zeile offen ist, nicht die Maske.
+Der Grund ist derselbe wie bei den Zeilen: Das Formular hält ein **getipptes Einmalpasswort**, das
+danach an keiner Stelle mehr steht, auch nicht im Protokoll.
+
+**E23 — Genau ein Mandant beim Anlegen. Weitere werden danach an der Zeile gepflegt.** Der Endpunkt
+nimmt einen (E4, unangetastet). **Verworfen: die Maske als Mehrfachauswahl zu bauen und intern
+`POST` und anschließend `PUT {id}/tenants` zu fahren.** Das wären zwei Vorgänge und zwei
+Protokollzeilen für eine Handlung, und scheitert der zweite, steht ein halb angelegtes Konto in der
+Liste. Die Maske sagt stattdessen selbst, wo weitere Mandanten hinzukommen.
+
+**E24 — Nach dem Erfolg wird die Liste neu geholt, der Zwischenspeicher wird nicht gesetzt.** Die
+Antwort trägt vier der neun Felder; die fünf übrigen aus dem dokumentierten Verhalten zu ergänzen
+(`active: true`, `mustChangePassword: true`, `locked: false`, `lastLogin: null`,
+`tenants: [einer]`) hieße, in den Zwischenspeicher zu schreiben, was der Server nicht gesagt hat.
+**Das ist die ausdrückliche Ausnahme vom Muster „jeder schreibende Vorgang setzt die Zeile"** — sie
+kostet einen zweiten Aufruf über rund dreißig Konten (`GET /api/admin/users`, 17,87 ms, M82).
+*Verworfen ist auch, den Vertrag zu ändern, damit `POST` die Zeile liefert (E4).*
+
+**E25 — Nach dem Erfolg bleibt die Maske offen, geleert, mit der Meldung darin.** Das Passwortfeld
+wird dabei **zuerst** geleert. Begründung: Die Meldung steht am auslösenden Abschnitt wie überall
+sonst auf dieser Seite; schlösse sich die Maske, hätte sie keinen Ort. Und ein Admin, der ein Konto
+anlegt, legt oft ein zweites an.
+
+> **Ein Befund nebenbei, am Code abgelesen und nirgends dokumentiert:** `POST /api/admin/users`
+> antwortet auf einen vergebenen Benutzernamen mit dem Problemtyp **`benutzername-vergeben`** und
+> auf einen zu langen mit **`benutzername-zu-lang`** (Grenze 100 Zeichen, aus
+> `SPRING_SESSION.PRINCIPAL_NAME` und nicht aus `app_user.username`). Beide bestehen seit Schritt 3;
+> übersetzt sind sie erst mit 9c, weil es vorher keinen Bedienweg dorthin gab.
+
+---
+
 ## 8. Verworfene Möglichkeiten
 
 | Verworfen | Grund |
@@ -301,6 +343,9 @@ Weg zu einem Zustand, der sich selbst aufräumt.
 | `id` in `GET /api/auth/me` aufnehmen | E19 — der Namensvergleich trägt; kein zweiter Vertragsbruch an der Selbstauskunft in derselben Runde |
 | Die automatische Sperre in `locked` verrechnen | E20 — zwei Sperren mit verschiedener Ursache und verschiedener Behebung |
 | Eigener Knopf, der die automatische Sperre vorzeitig löscht | E21 — sie läuft nach fünfzehn Minuten selbst ab |
+| Mehrfachauswahl beim Anlegen über `POST` + `PUT {id}/tenants` | E23 — zwei Vorgänge und zwei Protokollzeilen für eine Handlung; scheitert der zweite, steht ein halb angelegtes Konto in der Liste |
+| Die Zeile aus der Antwort des Anlegens zusammensetzen | E24 — sie trägt vier der neun Felder; die fünf übrigen zu ergänzen hieße, in den Zwischenspeicher zu schreiben, was der Server nicht gesagt hat |
+| Dialog oder eigene Route für die Anlegemaske | E22 — die Seite hat bereits genau ein Muster für „aufklappen und alles andere sperren"; ein zweites wäre ein zweiter Bedienweg für dieselbe Sache |
 
 ---
 
@@ -309,6 +354,6 @@ Weg zu einem Zustand, der sich selbst aufräumt.
 | | |
 |---|---|
 | 1 | **E7 fahren, bevor an 9a eine Zeile geschrieben wird.** Fällt einer der vier Punkte aus, gilt die Rückfallebene und der Endpunktschnitt bleibt unberührt — aber es ist vorher zu wissen |
-| 2 | Trägt das Bootstrap-Konto wirklich keine Mandantenzuordnung? Gehört in dieselbe Verifikation |
+| 2 | ~~Trägt das Bootstrap-Konto wirklich keine Mandantenzuordnung? Gehört in dieselbe Verifikation~~ — **geschlossen am 07.09.2026: ja, es trägt keine.** Am Code abgelesen: `BootstrapAdminRunner` ruft `appUserRepository.legeAn(...)` und **nicht** `ordneMandantZu`; die Klasse nennt den Mandanten an keiner Stelle. Damit ist es das einzige Konto ohne Zuordnung — und genau das ist der Anlass für E11 (§4). Gegenprobe im selben Zug: `POST /api/admin/users` verlangt `mandantId` als `@NotBlank` (`AdminUserController.AnlegenRequest`), über den Endpunkt kann also kein zweites zuordnungsloses Konto entstehen |
 | 3 | Messung zu E17: `MAX(zeitpunkt)` je Nutzer über `audit_log` |
 | 4 | Ist der `MandantContext` je Anfrage gegen die zulässige Menge geprüft, oder nur beim Wechsel? Siehe §3 — **das ist die sicherheitsrelevanteste der vier Fragen** |

@@ -597,6 +597,12 @@ danach:** Öffnen des Formulars kostet **null** Aufrufe, Speichern genau ein `PU
   unangetastet (E4); die Maske dazu gehört nicht zu 9a. **Das Wegwerfkonto ist deshalb über den
   Endpunkt entstanden und nicht über die Seite** — wer heute ein Konto anlegen will, geht denselben
   Weg.
+
+  > *Nachgetragen am 07.09.2026:* **Gebaut mit 9c** — die Maske steht seitdem aufklappbar über der
+  > Liste (§16). Der Satz darüber bleibt wortgleich stehen, weil er für 9a richtig war und bleibt.
+  > **E4 ist unberührt:** Der Vertrag von `POST /api/admin/users` ist nicht angefasst worden, es ist
+  > ein Bedienweg dazugekommen. Der letzte Halbsatz — „wer heute ein Konto anlegen will, geht
+  > denselben Weg" — gilt seit 9c **nicht mehr**: Er geht über die Seite.
 - Die offenen Punkte **3, 4 und 6** aus
   [`benutzerverwaltung-backend.md`](benutzerverwaltung-backend.md) §9.
 
@@ -615,3 +621,176 @@ danach:** Öffnen des Formulars kostet **null** Aufrufe, Speichern genau ein `PU
 | **Z1** Kein direkter `now()`-Aufruf | Betrifft das Backend, und dort ist es der Kern von `lockedUntil`: Der Vergleichszeitpunkt kommt als Parameter aus der `systemClock`. **Im Browser wird für die Sperrfrist keine Uhr gelesen** — die Oberfläche stellt nur dar |
 | **Q4** Nicht zugeordnet heißt nicht zugeordnet | `lastLogin = null` heißt „nie angemeldet" und wird so geschrieben; die zwei Sperren werden nie zusammengefasst; ein unbekannter Rollenwert wird **roh** gezeigt und nicht auf einen bekannten gebogen |
 | Farben nur über Tokens | Diese Ansicht führt **keine** Farbrolle ein und nutzt keine; `tests/farbwerte.test.ts` deckt die neuen Dateien mit ab |
+
+> **Ergänzt am 07.09.2026 (9c), zu M1.** Die Anlegemaske ruft `POST /api/admin/users`, und der
+> nimmt eine Mandanten-ID entgegen. Das ist die **zweite** der genau drei Ausnahmen von M1 und seit
+> Schritt 3 namentlich in [`mandantentrennung.md`](mandantentrennung.md) §3 geführt — die Maske
+> **ruft sie auf und schafft keine vierte.** Sie ist zulässig aus demselben Grund wie die beiden
+> anderen: Dort wird ein Konto *definiert* und kein Datenausschnitt *abgefragt*. Welchen Mandanten
+> der anlegende Admin gerade aktiv hat, sagt nichts darüber aus, für wen das neue Konto gilt.
+
+---
+
+## 16. Anlegen über die Oberfläche (9c)
+
+**Am 07.09.2026 gebaut.** Bis dahin entstand jedes Konto von Hand am Endpunkt — auch das
+Wegwerfkonto der Sichtprüfung vom 26.08.2026 (§14). `POST /api/admin/users` steht seit Schritt 3
+und ist **unangetastet**: Es ist eine Maske dazugekommen, keine Signatur geändert (E4).
+
+### Die vier Entscheidungen
+
+**E22 — Die Maske steht aufklappbar über der Liste und teilt sich die Sperre mit den
+Zeilenformularen.** Kein Dialog, keine eigene Route. Die Seite hat bereits genau ein Muster für
+„etwas Bedienbares aufklappen und dabei alles andere sperren"; ein zweites daneben wäre ein zweiter
+Bedienweg für dieselbe Sache. Die Sperre gilt **in beide Richtungen** — solange die Maske offen
+ist, lässt sich keine Zeile öffnen, und solange eine Zeile offen ist, nicht die Maske. Der Grund ist
+derselbe wie bei den Zeilen (§5): Das Formular hält ein **getipptes Einmalpasswort**, das danach an
+keiner Stelle mehr steht, auch nicht im Protokoll.
+
+**E23 — Genau ein Mandant beim Anlegen. Weitere werden danach an der Zeile gepflegt.** Der Endpunkt
+nimmt einen (E4). Die Maske sagt selbst, wo weitere hinzukommen.
+
+**E24 — Nach dem Erfolg wird die Liste neu geholt, der Zwischenspeicher wird nicht gesetzt.** Das
+ist die **ausdrückliche Ausnahme** vom Muster dieser Seite, nach dem jeder schreibende Vorgang die
+Zeile aus seiner Antwort setzt (§3).
+
+**E25 — Nach dem Erfolg bleibt die Maske offen, geleert, mit der Meldung darin.** Das Passwortfeld
+wird dabei zuerst geleert. Die Meldung steht am auslösenden Abschnitt wie überall sonst auf dieser
+Seite; schlösse sich die Maske, hätte sie keinen Ort — und ein Admin, der ein Konto anlegt, legt oft
+ein zweites an.
+
+Ihre Begründungen in voller Länge stehen in [`benutzerverwaltung.md`](benutzerverwaltung.md) §7b.
+
+### Warum E24 die Ausnahme wert ist
+
+Die Antwort trägt **vier** Felder, die Zeile hat **neun**. Es fehlen `tenants`, `locked`,
+`lockedUntil`, `active`, `mustChangePassword` und `lastLogin`. Sie aus dem dokumentierten Verhalten
+zu ergänzen — `active: true`, `mustChangePassword: true`, `locked: false`, `lastLogin: null`,
+`tenants: [der eine]` — hieße, **in den Zwischenspeicher zu schreiben, was der Server nicht gesagt
+hat.** Das ist genau dann falsch, wenn sich das Backend einmal ändert, und dann steht es in der
+Liste, ohne dass jemand nachsieht.
+
+Die Ausnahme kostet **einen zweiten Aufruf über rund dreißig Konten** — `GET /api/admin/users`,
+17,87 ms (M82, §8). Das ist der ganze Preis.
+
+*Verworfen ist auch, den Vertrag zu ändern, damit `POST` die Zeile liefert* (E4).
+
+`invalidateQueries` und nicht `refetchQueries`: Die Liste ist eingehängt und wird dadurch sofort
+nachgeholt; bis die Antwort da ist, steht die bisherige da. Anders als bei den fünf gibt es hier
+keine Zeile, die währenddessen falsch aussähe — und der Einwand aus §3 gegen `invalidateQueries`
+trifft nicht: Er richtet sich gegen das *Nachholen einer Zeile, die man schon in der Hand hält*.
+
+### Der Aufbau der Maske
+
+Ein Knopf über der Liste klappt sie auf. Darin, in dieser Reihenfolge:
+
+| | |
+|---|---|
+| **Zwei Sätze, bevor sie gebraucht werden** | die Mindestlänge von zwölf Zeichen (E13) und dass das Konto das Passwort bei der ersten Anmeldung selbst ändern muss |
+| **Ein dritter** | dass weitere Mandanten nach dem Anlegen an der Zeile hinzukommen (E23) |
+| Benutzername | Textfeld |
+| Rolle | natives Auswahlfeld, **beide** Werte wählbar — auch `ADMIN` |
+| Mandant | **Einfachauswahl** aus `lib/mandanten.ts`, dieselbe Quelle wie die Mengenpflege; **`SYSTEM` und `WOC` werden nicht ausgesiebt** (§6) |
+| Einmalpasswort | Passwortfeld, `autocomplete="new-password"` |
+| Knopf | gesperrt, solange der Entwurf unvollständig ist oder ein Aufruf läuft |
+
+**Die Fehlermeldung steht im Formular**, nicht über der Liste — dieselbe Regel wie an der Zeile
+(§5): Ein `409 benutzername-vergeben` sagt etwas über genau diese Eingabe. **Und solange der Aufruf
+läuft, lässt sich die Maske nicht zuklappen**, sonst wäre ein `409` nirgends zu sehen.
+
+**Der Entwurf bleibt nach einem Fehler stehen.** Wer den Namen ändern soll, soll nicht alles noch
+einmal tippen. Nur der Erfolg leert.
+
+### Was die Maske **nicht** tut
+
+- **Keine Vorwarnung (E19) und kein Selbstschutz (E12).** Anlegen trifft nie das eigene Konto und
+  verwirft keine Sitzung. Die Vorwarnung hier einzuhängen wäre eine Regel ohne Fall — und dieselbe
+  Strecke für zwei Dinge, von denen eines sie nicht braucht, ist der Weg, auf dem die Regel für das
+  andere später verloren geht. Deshalb eine **eigene** Mutation und nicht die der fünf.
+- **Keine Berechtigungsentscheidung.** Die Seite prüft die Rolle weiterhin nicht; ein `403` nimmt
+  die ganze Ansicht mit, die Maske eingeschlossen. Sie steht **unterhalb** von „kein Zugriff" und im
+  Datenzweig der Kette — wer die Liste nicht lesen kann, soll nicht in sie hinein schreiben. **Die
+  vier Zustände bleiben vier**; die Maske ist keiner, sondern ein Bedienelement in einem von ihnen.
+- **Kein Erzeugen des Einmalpassworts** (E13, ausdrücklich verworfen) und **keine zweite Prüfung
+  außer der Länge** — ob es sich vom bisherigen unterscheidet, weiß nur das Backend, und beim
+  Anlegen gibt es gar keinen gespeicherten Hash.
+- **Keine Vorabprüfung auf einen vergebenen Benutzernamen.** Das weiß nur die Datenbank, und
+  zwischen Prüfung und Abschicken wäre die Antwort ohnehin veraltet.
+- **Kein Löschen** (E8). Ein versehentlich angelegtes Konto wird deaktiviert und bleibt stehen.
+- **Keine Farbrolle.** Diese Maske führt keine ein und nutzt keine; `tests/farbwerte.test.ts` deckt
+  die neuen Dateien mit ab.
+
+### Zwei Problemtypen, die keine Dokumentationsdatei nannte
+
+Beide kommen aus `POST /api/admin/users` und standen dort **seit Schritt 3** — übersetzt sind sie
+erst mit 9c, weil es vorher keinen Bedienweg dorthin gab. Ohne Schlüssel fiele die Anzeige auf
+`detail` zurück: ein richtiger Satz, aber ein deutscher in einer englischen Oberfläche
+([`frontend-grundlagen.md`](frontend-grundlagen.md) §6).
+
+| Problemtyp | Status | Woher |
+|---|---|---|
+| `benutzername-vergeben` | `409` | `AdminUserService.benutzernameVergeben` — **am Code abgelesen**, keine Dokumentationsdatei nannte ihn |
+| `benutzername-zu-lang` | `400` | ebenda, Grenze **100 Zeichen**. Sie kommt nicht von `app_user.username` (190), sondern von `SPRING_SESSION.PRINCIPAL_NAME`: Ein längerer Name ließe sich anlegen, könnte sich aber nie anmelden |
+
+Die Grenze wird im Browser **nicht** vorweggenommen — geprüft werden nur die vier Bedingungen, die
+der Auftrag nennt. Ein längerer Name läuft in den `400` und bekommt dort seinen Satz.
+
+### Die Dateien
+
+```
+frontend/src/features/benutzer/
+├─ anlegen.ts                          NEU — der Entwurf, `LEERER_ENTWURF`, `anfrageAus`
+├─ api.ts                              der siebte Aufruf: `legeKontoAn`, `Anlegedaten`, `AngelegtesKonto`
+├─ zeilen.ts                           `MASKE`, `Aufgeklappt`; `darfOeffnen` erweitert
+├─ hooks.ts                            `useAnlegen` (eigene Mutation), `useMandanten` (geteilt)
+└─ components/
+   ├─ konto-anlegen.tsx                NEU — die Maske
+   ├─ benutzer-ansicht.tsx             hängt sie ein, hält den Zustand `Aufgeklappt`
+   └─ mandanten-auswahl.tsx            liest die Mandanten ab jetzt aus `useMandanten`
+frontend/src/i18n/{de,en}.ts           Zweig `benutzer.anlegen`, zwei neue Fehlerschlüssel
+frontend/tests/benutzer.test.ts        der Entwurf, die Länge am Rand, `darfOeffnen` beidseitig
+frontend/tests/konto-anlegen.test.tsx  NEU — sechs gerenderte Fälle
+```
+
+**`darfOeffnen` ist erweitert und nicht dupliziert.** Der Rumpf ist unverändert
+(`aufgeklappt === null || aufgeklappt === was`); erweitert ist, **was „offen" sein kann** — eine
+Zeile, die Maske, oder nichts. Die Signatur ist dabei gewachsen: Der zweite Parameter nimmt jetzt
+auch `MASKE`, die Stelligkeit ist dieselbe geblieben, und alle bestehenden Aufrufstellen tragen
+unverändert. Eine zweite Funktion „darf die Maske öffnen" wäre dieselbe Bedingung ein zweites Mal
+gewesen, und die zweite liefe der ersten irgendwann hinterher.
+
+**`useMandanten` ist entstanden**, und `mandanten-auswahl.tsx` ist dafür angefasst worden. Die
+Haltbarkeit von fünfzehn Minuten ist **gemessen** (Sichtprüfung 26.08.2026, §6) und gilt für jeden
+Verwender; zwei Bausteine mit je einer eigenen Fassung derselben Zahl liefen auseinander — an einer
+Stelle, an der es niemandem auffiele. **Die Maske ruft die Abfrage selbst** und damit erst beim
+Aufklappen: In der Ansicht gelesen liefe beim Betreten der Seite ein `GET /api/mandanten` los, das
+niemand braucht, solange niemand aufklappt.
+
+### Tests
+
+`tests/benutzer.test.ts` (rein) trägt den Entwurf in beide Richtungen — jede der vier Bedingungen
+einzeln weggenommen ergibt `null` —, die Passwortlänge an allen drei Rändern (elf, zwölf,
+dreizehn), das Leeren nach dem Erfolg einschließlich des Passwortfelds, `darfOeffnen` in allen fünf
+Lagen und die neuen Texte in **beiden** Sprachen samt ihren Einsetzstellen.
+
+`tests/konto-anlegen.test.tsx` (gerenderter Baum, **sechs Fälle**) trägt ausschließlich, was an
+einer reinen Funktion nicht belegbar wäre: die **Verdrahtung** der Sperre in beide Richtungen, je
+mit der Gegenprobe im selben Fall; dass nach dem Erfolg wirklich ein `GET /api/admin/users`
+**nach** dem `POST` hinausgeht und im Zwischenspeicher danach genau dessen Antwort steht; das leere
+Passwortfeld bei offener Maske; und dass ein `409` **im Formular** steht, während sich die Maske
+nicht zuklappen lässt.
+
+**Fünf Mutanten gesetzt, fünf gefallen** — jeder in genau seinem Fall: die Zeile aus der
+`POST`-Antwort zusammensetzen; die Maske sperrt die Zeilen nicht; die Zeile sperrt die Maske nicht;
+die Maske schließt sich nach dem Erfolg; das Passwortfeld wird nicht geleert.
+
+Die Gesamtzahl der gerenderten Fälle steht **ausschließlich** im Kopf von
+`frontend/vitest.config.mts` und ist dort von 69 auf **75** in zwölf Dateien fortgeschrieben.
+
+### Offen
+
+**Die Sichtprüfung.** Sie ist mit 9c **nicht** gefahren worden: Sie braucht eine Anmeldung als
+ADMIN, und **Passwörter tippt Claude Code nicht.** Ein über die Maske angelegtes Konto wäre zudem
+ein echter Schreibvorgang, der stehen bleibt — es gibt kein Löschen (E8). Der Weg „neues Konto
+meldet sich an und ändert sein Passwort" gehört ohnehin von Hand gegangen und steht in der
+Checkliste.

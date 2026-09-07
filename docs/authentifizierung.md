@@ -375,6 +375,11 @@ reinen Varianten. Dieselbe Korrektur steht in [`mandantentrennung.md`](mandanten
 **Nicht in diesem Schritt:** Auflisten, Sperren, Rollenwechsel, Zurücksetzen durch den Admin. Das
 ist **Schritt 9a**.
 
+*Nachgetragen 07.09.2026:* Seit Schritt 9c gibt es einen **Bedienweg** zu diesem Endpunkt — die
+Anlegemaske über der Kontenliste ([`benutzerverwaltung-frontend.md`](benutzerverwaltung-frontend.md)
+§16). **Der Vertrag darüber ist nicht angefasst worden** (E4): derselbe Rumpf, dieselben vier
+Antwortfelder, dieselben Statuscodes. Bis dahin entstand jedes Konto von Hand am Endpunkt.
+
 *Korrigiert 21.08.2026:* Hier stand zusätzlich „Löschen“. Das ist verworfen — es gibt **kein**
 Löschen von Konten ([`benutzerverwaltung.md`](benutzerverwaltung.md) E8): `audit_log.actor_user_id`
 verweist auf `app_user`, ein gelöschtes Konto machte seine Protokollzeilen unlesbar. An seine Stelle

@@ -894,6 +894,12 @@ Liste**, dass sie mandantenübergreifend gilt (E21).
 Oberfläche** — `POST /api/admin/users` steht seit Schritt 3 und ist unangetastet (E4); die Maske
 dazu gehört nicht zu 9a. **Kein Löschen** (E8), keine Suche und kein Blättern (E16).
 
+> *Nachgetragen am 07.09.2026:* **Kein Widerspruch, sondern ein Nachtrag.** Der Satz oben bleibt
+> wortgleich stehen und war für 9a richtig — die Maske gehörte nicht dazu. **Gebaut ist sie mit
+> Schritt 9c** (unten). **E4 ist unberührt:** Der Vertrag von `POST /api/admin/users` ist nicht
+> angefasst worden, es ist ein Bedienweg dazugekommen. Die übrigen Abgrenzungen gelten weiter, 9c
+> eingeschlossen: kein Löschen, keine Suche, kein Blättern.
+
 **Abnahme 9a:** Ein Admin legt einen Nutzer an, der sich anmelden kann. Ein Konto mit zwei
 Mandanten lässt sich pflegen und der Nutzer wechselt zwischen beiden. Jeder Admin-Endpunkt gibt
 einem MANDANT-Nutzer `403` — auch dann, wenn er auf dessen eigenes Konto zeigt
@@ -939,6 +945,38 @@ einem MANDANT-Nutzer `403` — auch dann, wenn er auf dessen eigenes Konto zeigt
 > [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §4.4: Dort steht der Hebel-Satz nicht, §4.4
 > beschreibt allein die Namenskonventionen. Der Korrekturkasten in
 > [`prozess-katalog.md`](prozess-katalog.md) §5 war an §4.4 adressiert und zeigt seither hierhin.
+
+---
+
+### Schritt 9c — Anlegen über die Oberfläche
+
+**Fertig am 07.09.2026.** Ein ADMIN legt ein Konto über `/administration/benutzer` an, statt
+`POST /api/admin/users` von Hand aufzurufen. **Reiner Frontend-Bau** — keine Backend-Änderung,
+keine Migration, keine Vertragsänderung.
+
+Die Maske klappt über der Liste auf und teilt sich die Sperre mit den Zeilenformularen (E22); sie
+nimmt **einen** Mandanten (E23), holt nach dem Erfolg die Liste neu, statt den Zwischenspeicher zu
+setzen (E24), und bleibt danach offen und geleert, mit der Meldung darin (E25). Die vier
+Entscheidungen stehen in [`benutzerverwaltung.md`](benutzerverwaltung.md) §7b, der Bau in
+[`benutzerverwaltung-frontend.md`](benutzerverwaltung-frontend.md) §16.
+
+**Abgrenzung 9c:** Kein Löschen (E8) und kein Weg, ein Konto wieder loszuwerden — ein Probekonto
+bleibt stehen. Keine Mehrfachauswahl von Mandanten (E23). Kein systemseitig erzeugtes
+Einmalpasswort (E13) und keine zweite Prüfung im Browser außer der Länge. Keine Suche, kein
+Blättern (E16). Keine Berechtigungsentscheidung im Browser — die Seite prüft die Rolle nicht und
+fängt weiter den `403` des Backends ab. **Keine vierte Ausnahme von M1:** Der Endpunkt ist die
+zweite, seit Schritt 3 geführte, und die Maske ruft sie nur auf.
+
+**Abnahme 9c:** Ein Admin legt über die Maske ein Konto an; es erscheint in der Liste, ohne dass
+die Oberfläche seine Zeile selbst zusammensetzt. Ein vergebener Benutzername ergibt einen `409`,
+dessen Satz **im Formular** steht, und die Maske bleibt dabei offen. Solange die Maske offen ist,
+lässt sich keine Zeile öffnen, und umgekehrt. Nach dem Erfolg ist das Passwortfeld leer.
+
+**Offen:** Die Sichtprüfung. Sie braucht eine Anmeldung als ADMIN, und Passwörter tippt Claude Code
+nicht; der Weg „neues Konto meldet sich an und ändert sein Passwort" gehört von Hand gegangen.
+
+**Dokumentation 9c:** [`benutzerverwaltung-frontend.md`](benutzerverwaltung-frontend.md) §16,
+[`benutzerverwaltung.md`](benutzerverwaltung.md) §7b.
 
 ---
 
