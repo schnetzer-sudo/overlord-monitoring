@@ -356,3 +356,118 @@ ist ein in [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §3.2 offen gefüh
 
 *Belegvermerk (L10): gemessen ist die Verteilung auf der Testkopie am 07.09.2026. Behauptet wird
 nicht, dass sie in der Produktion so aussieht, und nicht, dass `NULL` „alle Mandanten" bedeutet.*
+
+---
+
+## M155 — Gegenprobe der Typ-Lesart
+
+**Sitzung** `scripts/messung-property-suche/s3-m155.sql`, Nachtrag `s3b-nachtrag.sql`. Für **jeden**
+Namen aus M153: Existiert er in `MessageProperty.MessagePropertyName`? Als **`EXISTS`-Probe je
+Name** gegen `MessagePropertyNameIDX`, ausdrücklich **nicht** als
+`SELECT DISTINCT MessagePropertyName FROM MessageProperty` — letzteres liest gegen 75,6 Mio. Zeilen
+an und ist für diese Frage nicht nötig.
+
+> **Vorregistrierte Deutung.** Typ 1 → kommt vor. Typ 0 → kommt **nicht** vor, weil es eine Spalte
+> von `Message`, `Process` oder `SOS` benennt. **Ein einziger Gegenfall in beide Richtungen kippt
+> E‑101.**
+
+```sql
+SELECT e.MessagePropertyType, e.MessagePropertyName, e.MandantID,
+       EXISTS (SELECT 1 FROM GlassfishDB.MessageProperty p
+                WHERE p.MessagePropertyName = e.MessagePropertyName) AS kommtVor
+  FROM GlassfishDB.MessagePropertySearchListEntry e
+ ORDER BY e.MessagePropertyType, e.MessagePropertyName
+```
+
+*Der Name kommt aus der Tabelle selbst und wird nirgends abgeschrieben — das hält G1 ein und macht
+die Probe zugleich vom Kuratierungsstand unabhängig.*
+
+**`EXPLAIN` (Regel L15).** Zwölf Zeilen aus der Konfiguration, je eine abhängige Unterabfrage:
+
+| id | select_type | table | type | key | key_len | ref | rows | Extra |
+|---|---|---|---|---|---:|---|---:|---|
+| 1 | PRIMARY | `e` | `index` | `PRIMARY` | 402 | — | 7 | `Using index` |
+| 2 | DEPENDENT SUBQUERY | `p` | **`ref`** | **`MessagePropertyNameIDX`** | 402 | `e.MessagePropertyName` | **2.609.126** | `Using index` |
+
+`EXPLAIN FORMAT=JSON` weist zusätzlich einen `expression_cache` über der Unterabfrage aus. Die
+Tabelle selbst wird nie angefasst — `Using index` auf beiden Seiten.
+
+**Die Deutung hat getroffen, in beide Richtungen, ohne einen einzigen Gegenfall.**
+
+| Typ | Name | Mandant | kommt in `MessageProperty` vor |
+|---:|---|---|:--:|
+| 0 | `Message.MessageID` | *`NULL`* | **nein** |
+| 0 | `Message.MessageIDSource` | *`NULL`* | **nein** |
+| 0 | `Message.MessageIDTarget` | *`NULL`* | **nein** |
+| 0 | `Message.ProcessID` | *`NULL`* | **nein** |
+| 0 | `Message.ProcessName` | *`NULL`* | **nein** |
+| 0 | `Message.SOSID` | *`NULL`* | **nein** |
+| 0 | `Message.SOSName` | *`NULL`* | **nein** |
+| 0 | `Message.Status` | *`NULL`* | **nein** |
+| **1** | `Converter.TransactionID` | `NEXANS` | **ja** |
+| **1** | `Message.GUID` | `NEXANS` | **ja** |
+| **1** | `Message.ReceiverID` | `NEXANS` | **ja** |
+| **1** | `Service.Type` | `NEXANS` | **ja** |
+
+**Acht von acht Typ‑0‑Namen fehlen, vier von vier Typ‑1‑Namen sind da. E‑101 steht** — die Trennung
+zwischen Spaltenprädikat und EAV-Zugriff hat eine Entsprechung in den Daten.
+
+**Laufzeit** — Aufwärmlauf und danach fünf Läufe, je `information_schema.PROFILING`:
+
+| Lauf | 1 *(Aufwärmlauf)* | 2 | 3 | 4 | 5 | 6 |
+|---|---:|---:|---:|---:|---:|---:|
+| ms | 0,792 | 0,455 | 0,482 | 0,478 | 0,474 | 0,455 |
+
+**Beste von fünf: 0,455 ms.** Zwölf Indexzugriffe über eine 75,6-Millionen-Zeilen-Tabelle kosten
+zusammen weniger als eine halbe Millisekunde, weil jeder von ihnen beim ersten Treffer abbricht.
+Genau das war der Grund, die Probe als `EXISTS` und nicht als `DISTINCT` zu bauen.
+
+### Die vermutete Quellspalte je Typ‑0‑Name — **Vermutung, kein Befund**
+
+Der Auftrag verlangt die Zuordnung und ihre Kennzeichnung. **Gemessen ist ausschließlich, dass die
+genannte Spalte existiert** (`information_schema.COLUMNS`); dass der Name *sie* meint, ist eine
+Vermutung aus der Namensähnlichkeit und aus nichts sonst.
+
+| Typ‑0‑Name | vermutete Quellspalte | existiert | Verhältnis |
+|---|---|:--:|---|
+| `Message.MessageID` | `Message.MessageID` `varchar(36)` | ja | **wörtlich** |
+| `Message.ProcessID` | `Message.ProcessID` `varchar(36)` | ja | **wörtlich** |
+| `Message.SOSID` | `Message.SOSID` `varchar(36)` | ja | **wörtlich** |
+| `Message.MessageIDSource` | `Message.SourceMessageID` `varchar(36)` | ja | **umgestellt** |
+| `Message.MessageIDTarget` | `Message.TargetMessageID` `varchar(36)` | ja | **umgestellt** |
+| `Message.Status` | `Message.MessageStatus` `varchar(30)` | ja | **umbenannt** |
+| `Message.ProcessName` | `Process.ProcessName` `varchar(255)` | ja | **andere Tabelle** |
+| `Message.SOSName` | `SOS.SOSName` `varchar(255)` | ja | **andere Tabelle** |
+
+> ⚠️ **Nur drei von acht Namen sind wörtliche Spaltennamen — eine Abbildung ist nötig und sie ist
+> nicht ableitbar.** Zwei stellen die Wortteile um, einer heißt anders als seine Spalte, und zwei
+> tragen das Präfix `Message.`, obwohl sie in `Process` beziehungsweise `SOS` wohnen. Wer E‑101
+> baut, kann die Spalte **nicht** aus dem Namen rechnen; er braucht eine Tabelle im Code, und
+> jeder künftige Eintrag in `MessagePropertySearchListEntry` mit Typ 0 fällt aus ihr heraus, bis
+> jemand sie ergänzt. **Offener Punkt 143.**
+
+*Belegvermerk (L10): gemessen ist die Existenz beziehungsweise Abwesenheit jedes der zwölf Namen in
+`MessageProperty` am 07.09.2026, und die Existenz der acht vermuteten Spalten. Behauptet wird
+nicht, dass ein Typ‑0‑Name die ihm zugeordnete Spalte meint — dafür fehlt jeder Beleg außer der
+Ähnlichkeit.*
+
+### Nebenbefund — die Statistik, an der M158 hängt, ist um 37,9 % zu niedrig
+
+Die `rows`-Schätzung 2.609.126 im Plan oben ist nicht willkürlich. Erhoben im Nachtrag:
+
+| Größe | Wert |
+|---|---:|
+| `MessageProperty`, **gezählt** (M44) | **75.571.462** |
+| `information_schema.TABLE_ROWS` — die Grundlage des Optimizers | **46.964.279** |
+| Kardinalität `MessagePropertyNameIDX` | **18** |
+| 46.964.279 / 18 | **2.609.126,6** — die Zahl aus dem Plan |
+
+**Der Optimizer rechnet mit einer Tabelle, die es nicht gibt.** Er hält sie für 37,9 % kleiner als
+sie ist, und er hält den Namensfilter für rund fünfmal selektiver als er ist (18 gegen die 101 in
+M17‑2 an *einem* Tag gemessenen Namen). **Beide Fehler zeigen in dieselbe Richtung: Ein Zugriff
+über den Namen sieht im Plan billiger aus, als er ist.** Das ist die Lage, die M158 prüft, und es
+ist dieselbe, die bei `MessageStatusIDX` den 13,2-Sekunden-Fall aus L15 erzeugt hat.
+
+*Die 46.964.279 sind zugleich die Zahl, die bis zum 12.08.2026 als „gemessen" in der
+Projektbeschreibung stand und dort im Kasten zu §8 korrigiert ist. Sie ist aus der Dokumentation
+verschwunden und **im Optimizer geblieben**.*
