@@ -237,13 +237,16 @@ def block_dreier(fall, statements):
     for _ in range(LAEUFE):
         for _, sql in statements:
             zeilen.append(sql + ";")
+    # Die obere Schranke ist noetig: Die erste Auswertung (je Ebene) steht zum
+    # Zeitpunkt der zweiten (je Runde) selbst schon im Profil und wuerde sonst
+    # als siebte, einzelne Runde gezaehlt -- und als "beste" ausgegeben.
     je_lauf = (
         "SELECT ELT(((rn - 1) MOD 3) + 1, 'stunde', 'tag', 'monat') AS ebene,\n"
         "       FLOOR((rn - 1) / 3) + 1 AS runde, ms\n"
         "FROM (SELECT ROW_NUMBER() OVER (ORDER BY QUERY_ID) AS rn,\n"
         "             ROUND(SUM(DURATION) * 1000, 3) AS ms\n"
         "      FROM information_schema.PROFILING\n"
-        "      WHERE QUERY_ID > @basis + 1\n"
+        f"      WHERE QUERY_ID > @basis + 1 AND QUERY_ID <= @basis + 1 + {3 * LAEUFE}\n"
         "      GROUP BY QUERY_ID) t"
     )
     zeilen.append(
@@ -367,6 +370,39 @@ def s0():
     schreibe("s0-rahmen.sql", "".join(teile))
 
 
+def s0b():
+    """Nachtrag nach dem ersten Blick auf die Plaene: Bei weiten Fenstern kippt
+    der Optimierer auf den Einstieg ueber ProjectMandant und liest dann nicht
+    das Fenster, sondern die Zeilen des Mandanten im Fenster. Die Zahl, gegen
+    die M147 dann zu normieren ist, ist diese -- und sie steht sonst nirgends."""
+    teile = [kopf(
+        "Sitzung 0b: Rollupzeilen je Mandant im Fenster",
+        "-- ZWECK. Wie viele Rollupzeilen gehoeren im 365T-Fenster (Stunde und Tag)\n"
+        "-- und in den fuenf Abschnitten des Boesfalls zum jeweiligen Mandanten?\n"
+        "-- Das ist die Zeilenzahl, die der mandantengetriebene Plan liest, und die\n"
+        "-- Zeilenzahl, die die Ableitung in Z-U nach der Mandantenkette behaelt.\n")]
+    teile.append("SELECT '=== 07 Rollupzeilen je Mandant: 365T Stunde, 365T Tag, Boesfall zerlegt ===' AS marke;\n")
+    von_s, von_t = SPANNEN[4][1], SPANNEN[4][2]
+    for m in MANDANTEN:
+        kette_s = mandantenkette(m, "`overlord_monitor`.`message_rollup`.`process_id`")
+        kette_t = mandantenkette(m, "`overlord_monitor`.`message_rollup_tag`.`process_id`")
+        kette_z = mandantenkette(m, "`t`.`process_id`")
+        ableitung = " union all ".join([
+            lesung("stunde", [STUNDE_KOPF, STUNDE_FUSS]),
+            lesung("tag", [TAG_KOPF, TAG_FUSS]),
+            lesung("monat", [MONAT_MITTE]),
+        ])
+        teile.append(
+            f"SELECT '{m}' AS mandant, '365T stunde' AS fall, COUNT(*) AS rollupzeilen, SUM(anzahl) AS nachrichten"
+            f" FROM `overlord_monitor`.`message_rollup` WHERE {bereich('stunde', von_s, BIS_STUNDE)} and {kette_s}\n"
+            f"UNION ALL SELECT '{m}', '365T tag', COUNT(*), SUM(anzahl)"
+            f" FROM `overlord_monitor`.`message_rollup_tag` WHERE {bereich('tag', von_t, BIS_TAG)} and {kette_t}\n"
+            f"UNION ALL SELECT '{m}', 'boesfall zerlegt', COUNT(*), SUM(`t`.`anzahl`)"
+            f" FROM ({ableitung}) as `t` WHERE {kette_z};\n")
+    teile.append("\nSELECT '=== 99 fertig ===' AS marke;\n")
+    schreibe("s0b-zeilen-je-mandant.sql", "".join(teile))
+
+
 # ─── s1: M147, s2: M148 ──────────────────────────────────────────────────────
 
 def s1():
@@ -468,6 +504,7 @@ def s4():
 
 if __name__ == "__main__":
     s0()
+    s0b()
     s1()
     s2()
     s3()

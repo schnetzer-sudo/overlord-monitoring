@@ -93,7 +93,7 @@ FROM (SELECT ELT(((rn - 1) MOD 3) + 1, 'stunde', 'tag', 'monat') AS ebene,
 FROM (SELECT ROW_NUMBER() OVER (ORDER BY QUERY_ID) AS rn,
              ROUND(SUM(DURATION) * 1000, 3) AS ms
       FROM information_schema.PROFILING
-      WHERE QUERY_ID > @basis + 1
+      WHERE QUERY_ID > @basis + 1 AND QUERY_ID <= @basis + 1 + 18
       GROUP BY QUERY_ID) t) u
 GROUP BY ebene ORDER BY FIELD(ebene, 'stunde', 'tag', 'monat');
 SELECT 'M150-ZD-NEXANS' AS fall, 'summe_je_runde' AS ebene,
@@ -106,7 +106,7 @@ FROM (SELECT runde, ROUND(SUM(ms), 3) AS ms FROM (SELECT ELT(((rn - 1) MOD 3) + 
 FROM (SELECT ROW_NUMBER() OVER (ORDER BY QUERY_ID) AS rn,
              ROUND(SUM(DURATION) * 1000, 3) AS ms
       FROM information_schema.PROFILING
-      WHERE QUERY_ID > @basis + 1
+      WHERE QUERY_ID > @basis + 1 AND QUERY_ID <= @basis + 1 + 18
       GROUP BY QUERY_ID) t) u
       GROUP BY runde) r;
 
@@ -167,7 +167,7 @@ FROM (SELECT ELT(((rn - 1) MOD 3) + 1, 'stunde', 'tag', 'monat') AS ebene,
 FROM (SELECT ROW_NUMBER() OVER (ORDER BY QUERY_ID) AS rn,
              ROUND(SUM(DURATION) * 1000, 3) AS ms
       FROM information_schema.PROFILING
-      WHERE QUERY_ID > @basis + 1
+      WHERE QUERY_ID > @basis + 1 AND QUERY_ID <= @basis + 1 + 18
       GROUP BY QUERY_ID) t) u
 GROUP BY ebene ORDER BY FIELD(ebene, 'stunde', 'tag', 'monat');
 SELECT 'M150-ZD-VOTG' AS fall, 'summe_je_runde' AS ebene,
@@ -180,7 +180,7 @@ FROM (SELECT runde, ROUND(SUM(ms), 3) AS ms FROM (SELECT ELT(((rn - 1) MOD 3) + 
 FROM (SELECT ROW_NUMBER() OVER (ORDER BY QUERY_ID) AS rn,
              ROUND(SUM(DURATION) * 1000, 3) AS ms
       FROM information_schema.PROFILING
-      WHERE QUERY_ID > @basis + 1
+      WHERE QUERY_ID > @basis + 1 AND QUERY_ID <= @basis + 1 + 18
       GROUP BY QUERY_ID) t) u
       GROUP BY runde) r;
 
@@ -241,7 +241,7 @@ FROM (SELECT ELT(((rn - 1) MOD 3) + 1, 'stunde', 'tag', 'monat') AS ebene,
 FROM (SELECT ROW_NUMBER() OVER (ORDER BY QUERY_ID) AS rn,
              ROUND(SUM(DURATION) * 1000, 3) AS ms
       FROM information_schema.PROFILING
-      WHERE QUERY_ID > @basis + 1
+      WHERE QUERY_ID > @basis + 1 AND QUERY_ID <= @basis + 1 + 18
       GROUP BY QUERY_ID) t) u
 GROUP BY ebene ORDER BY FIELD(ebene, 'stunde', 'tag', 'monat');
 SELECT 'M150-ZD-IBIS' AS fall, 'summe_je_runde' AS ebene,
@@ -254,7 +254,7 @@ FROM (SELECT runde, ROUND(SUM(ms), 3) AS ms FROM (SELECT ELT(((rn - 1) MOD 3) + 
 FROM (SELECT ROW_NUMBER() OVER (ORDER BY QUERY_ID) AS rn,
              ROUND(SUM(DURATION) * 1000, 3) AS ms
       FROM information_schema.PROFILING
-      WHERE QUERY_ID > @basis + 1
+      WHERE QUERY_ID > @basis + 1 AND QUERY_ID <= @basis + 1 + 18
       GROUP BY QUERY_ID) t) u
       GROUP BY runde) r;
 
@@ -315,7 +315,7 @@ FROM (SELECT ELT(((rn - 1) MOD 3) + 1, 'stunde', 'tag', 'monat') AS ebene,
 FROM (SELECT ROW_NUMBER() OVER (ORDER BY QUERY_ID) AS rn,
              ROUND(SUM(DURATION) * 1000, 3) AS ms
       FROM information_schema.PROFILING
-      WHERE QUERY_ID > @basis + 1
+      WHERE QUERY_ID > @basis + 1 AND QUERY_ID <= @basis + 1 + 18
       GROUP BY QUERY_ID) t) u
 GROUP BY ebene ORDER BY FIELD(ebene, 'stunde', 'tag', 'monat');
 SELECT 'M150-ZD-SUTTONS' AS fall, 'summe_je_runde' AS ebene,
@@ -328,7 +328,7 @@ FROM (SELECT runde, ROUND(SUM(ms), 3) AS ms FROM (SELECT ELT(((rn - 1) MOD 3) + 
 FROM (SELECT ROW_NUMBER() OVER (ORDER BY QUERY_ID) AS rn,
              ROUND(SUM(DURATION) * 1000, 3) AS ms
       FROM information_schema.PROFILING
-      WHERE QUERY_ID > @basis + 1
+      WHERE QUERY_ID > @basis + 1 AND QUERY_ID <= @basis + 1 + 18
       GROUP BY QUERY_ID) t) u
       GROUP BY runde) r;
 
