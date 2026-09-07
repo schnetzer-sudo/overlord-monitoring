@@ -140,6 +140,21 @@ oben gelten Wort für Wort; sie sind hier nicht wiederholt.
 > ausschließlich Stundeneimer; für die Tagesebene gibt es keine gemessene Frage, die der
 > Primärschlüssel nicht bedient.
 
+> ### ⚠️ Gekennzeichnet am 07.09.2026 — die gemessene Frage gibt es jetzt, und der Index bleibt trotzdem aus
+>
+> **M148 ist diese Frage** ([`process-view.md`](process-view.md) §32): Die Tagesebene über 365 Tage
+> kostet bei `NEXANS` **764,233 ms**, weil der Optimierer ohne einen Index `(process_id, tag)` nicht
+> über den Mandanten einsteigen kann und alle 100.597 Zeilen des Fensters liest — die Stundenebene
+> tut das dank `V11` nicht und ist deshalb über dieselbe Spanne bei drei von vier Mandanten
+> billiger. Der Satz darüber bleibt stehen, weil er die Lage bis zum 07.09.2026 richtig beschreibt;
+> der Halbsatz *„keine gemessene Frage"* gilt seither nicht mehr.
+>
+> **Gebaut wird der Index trotzdem nicht** (E‑98 dort): Das freie Zeitfenster zerlegt jedes Fenster
+> so, dass keine Lesung mehr als 60 Tageseimer trägt — die Frage stellt sich auf dem kritischen Pfad
+> nicht —, und §9c hat gemessen, was ein Sekundärindex den nächtlichen Volllauf kostet: **+52,8 %**
+> über alle 23 Scheiben. Ob er für eine andere Frage gebaut werden sollte, ist offener Punkt **138**
+> in [`process-view.md`](process-view.md) und bleibt offen.
+
 > ### ⚠️ Warum es sie überhaupt gibt: E‑b trägt bei zwölf Monaten nicht
 >
 > **M94 hat die Zwölf‑Monats‑Ansicht über die Stundenebene mit 2.206,854 ms (Verlauf) und

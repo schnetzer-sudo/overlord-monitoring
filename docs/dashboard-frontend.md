@@ -295,6 +295,10 @@ die Belegungsprobe weniger — aber nur, wenn der Parameter eine Absicht ausdrü
 Wahl schlägt die Antwort, und ohne beides ist **keine** Schaltfläche gedrückt — eine vorgemerkte
 wäre eine Vermutung, die beim Eintreffen der Antwort springt.
 
+**Seit dem 07.09.2026 trägt der geteilte Umschalter einen freiwilligen vierten Knopf „Frei"**
+(`aufFrei`, [`process-view.md`](process-view.md) §41, E‑96) — und das Dashboard ruft ihn ohne. Ohne
+die Angabe sind es weiterhin drei Knöpfe; an dieser Stelle ändert sich nichts, was ein Nutzer sähe.
+
 ### 5.2 Der Verlauf: vier Reihen, nicht acht (E‑l) — **seit dem 04.09.2026 eine Fläche (E‑83)**
 
 > ### ⚠️ Umbau vom 04.09.2026 — der Verlauf ist **eine Fläche** (**E‑83** bis **E‑86**)

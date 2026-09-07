@@ -6,6 +6,7 @@ Entstanden in zwei Schritten am selben Tag, dem 02.09.2026:
 |---|---|---|
 | **10c‑1** | „Schritt 10c‑1: Prozessansicht, Backend", Stand 01.09.2026 | §1 bis §14 |
 | **10c‑2** | „Schritt 10c‑2: Prozessansicht, Oberfläche", Stand 02.09.2026 | §15 bis §20 |
+| **10c‑4b** | „Prozessansicht — freies Zeitfenster, Bau", Stand 07.09.2026 | §37 bis §44 (auf §30 bis §36, der Messrunde 10c‑4a) |
 
 **Der erste Teil war ausdrücklich ohne Oberfläche**, und der Grund steht in §9: Wie groß der Baum je
 Mandant tatsächlich ist, entscheidet über Vorklappen, Ladeverhalten und Virtualisierung. Der zweite
@@ -44,11 +45,31 @@ Teil ist gegen diese Zahlen entworfen und hat **kein Feld am Backend ergänzt**.
 
 ```
 GET /api/prozesse/baum?zeitraum={48H|30T|12M}
+GET /api/prozesse/baum?von=<ISO,UTC>&bis=<ISO,UTC>
 ```
 
 | Parameter | Werte | Vorgabe |
 |---|---|---|
 | `zeitraum` | `48H`, `30T`, `12M` | **`48H`** (E‑38) — die Antwort nennt das gewählte Paar |
+| `von`, `bis` *(seit 07.09.2026, §37 ff.)* | ISO‑Zeitpunkte, UTC, beide auf einer **vollen Stunde** | keine — das freie Fenster wird absolut eingegeben und gegen keine Uhr aufgelöst |
+
+> ### Ergänzt am 07.09.2026 — der zweite Modus (10c‑4b, E‑94)
+>
+> **Die beiden Modi schließen einander aus.** `zeitraum` und `von`/`bis` zugleich sind `400`
+> `zeitfenster-mehrdeutig` und **keine stille Vorrangregel** — dieselbe Festlegung wie in
+> [`nachrichtenliste.md`](nachrichtenliste.md) §2 und mit derselben Begründung.
+>
+> **`bis` ist in der Anfrage einschließend, `fenster.bis` in der Antwort ausschließend.** In der
+> Anfrage ist `bis` die **letzte enthaltene Stunde** — beidseitig geschlossen, genau wie `von`/`bis`
+> der Nachrichtenliste; wer `bis = 30.12. 23:00` einträgt, bekommt den Eimer 23:00–24:00 mit. In der
+> Antwort bleibt `fenster.bis` **ausschließend**, wie seit 10c‑1. Das Backend rechnet
+> `bisAusschliessend = bis + 1 Stunde`, serverseitig und in der Zone der Anwendungsuhr — nicht im
+> Browser, weil eine Stunde am Umstellungstag keine Stunde ist. Der Grund für die Asymmetrie: Jede
+> Seite hält die Konvention ihrer Nachbarn. `von = bis` ist erlaubt und heißt *ein Stundeneimer*.
+>
+> Die Antwort nennt dann `"zeitraum": "FREI"` — und **`FREI` verrät keine Ebene**. Das Fenster wird
+> in Segmente über bis zu drei Rollup-Ebenen zerlegt (§39); die Oberfläche braucht das Feld nur, um
+> zu wissen, welcher Knopf hervorgehoben ist. Vollständig in §37 bis §44.
 
 **Kein Mandantenparameter, in keiner Form** (Regel M1). Der Mandant kommt aus der Sitzung, über
 `SitzungsVerwaltung` und `MandantService`, der den Sitzungswert gegen die zulässige Menge prüft,
@@ -72,8 +93,8 @@ ist zugesichert und nicht behauptet (`ProzessbaumIsolationDbIT.baum_und_auswahl_
 
 ```jsonc
 {
-  "zeitraum": "48H",                        // das gewaehlte Paar, immer gesetzt
-  "fenster": { "von": "…Z", "bis": "…Z" },  // die gelesenen Grenzen, UTC, bis ausschliessend
+  "zeitraum": "48H",                        // "48H" | "30T" | "12M" | "FREI" (seit 07.09.2026), immer gesetzt
+  "fenster": { "von": "…Z", "bis": "…Z" },  // die gelesenen Grenzen, UTC, bis ausschliessend — auch bei FREI
   "stilleSchwelleMonate": 3,                // die fachliche Festlegung, mitgeliefert (E-37)
   "gesamt": { "anzahlProzesse": 733, "bewegt": 488, "still": 28, "nie": 217,
               "nachrichten": 9950, "fehler": 50 },
@@ -118,6 +139,17 @@ Dashboard, und dieselbe Zahl an Statements zum Vergleich: dort sieben je Seite, 
 | `zeitraum-unbekannt` | 400 | `zeitraum` ist kein Code der drei Paare |
 
 Mehr gibt es nicht — es gibt genau einen Parameter, der falsch sein kann.
+
+> ### Ergänzt am 07.09.2026 — sechs weitere, alle am freien Fenster (§38)
+>
+> Der Satz darüber gilt für den ersten Modus weiter. Mit `von`/`bis` kommen dazu, in der
+> Reihenfolge der Prüfung: `zeitpunkt-ungueltig` (nicht als ISO‑Zeitpunkt lesbar),
+> `zeitfenster-mehrdeutig` (`zeitraum` **und** `von`/`bis`), `zeitfenster-unvollstaendig` (nur
+> einer der beiden), **`zeitfenster-zu-genau`** (nicht auf einer vollen Stunde der Anwendungszone —
+> abgewiesen, nicht gerundet, E‑95), `zeitfenster-ungueltig` (`von` hinter `bis`) und
+> `zeitfenster-zu-gross` (mehr als ein Kalenderjahr, gerechnet mit dem ausschließenden Ende). Alle
+> `400`. **Die Codes sind aus der Nachrichtenliste übernommen**, bis auf den einen neuen. Ein
+> Fenster in der Zukunft ist kein Fehler — es liefert Nullen.
 
 ---
 
@@ -424,6 +456,15 @@ abgetippt. Vier Eigenschaften hängen am Text und nirgends sonst:
 3. Um die Schlüsselspalte der Rollup-Ebene steht **keine Funktion** — sonst fällt der
    Bereichszugriff weg, und die Abfrage wäre langsamer, ohne falsch zu sein.
 4. Jedes Paar liest **seine** Ebene und keine andere.
+
+> ### ⚠️ Korrektur vom 07.09.2026 — Eigenschaft 4 ist ersetzt, nicht gestrichen (E‑97, §40)
+>
+> Der Satz darüber bleibt stehen; für die drei Paare sagt die neue Fassung dasselbe. Seit dem
+> freien Zeitfenster liest **ein** Kennzahlenstatement bis zu drei Ebenen — in einer Ableitung mit
+> `UNION ALL`, je Ebene ein Zweig —, und die Eigenschaft lautet seither: **Jedes *Segment* liest
+> seine Ebene und keine andere, und es steht keine Ebene im Text, die kein Segment trägt.** Die
+> Eigenschaften 1 bis 3 gelten unverändert, die dritte für jeden Zweig einzeln. **E‑42 fällt nicht:**
+> Es bleiben zwei Statements je Aufruf, auch im freien Fenster.
 
 **`process_catalog` hängt als `LEFT JOIN` dran.** `SUTTONS` und `WOC` haben keine einzige
 Katalogzeile (M110); ein innerer Join verlöre ihre 17 bzw. 4 Prozesse stillschweigend — und damit
@@ -3408,3 +3449,402 @@ Die Lesart aus dem Auftrag (§7), vor der Messung festgeschrieben:
 | 4 | beide reißen | nein |
 
 **Ausgang 3: Fassung Z, in der Bauform Z‑U.**
+
+
+---
+
+## 37. Das freie Zeitfenster, gebaut (10c‑4b, 07.09.2026)
+
+Der Bauauftrag zur Messrunde §30 bis §36. **Gebaut ist Ausgang 3 des Tors: Fassung Z in der
+Bauform Z‑U** — ein Statement, dessen Ableitung bis zu drei Rollup-Ebenen mit `UNION ALL`
+zusammenführt. Die Wahl ist gemessen (M147 bis M151) und in diesem Schritt nicht mehr aufgemacht
+worden.
+
+### Nummernvergabe (Teil 5)
+
+| | |
+|---|---|
+| **Entscheidungen** | **E‑92 bis E‑98.** `grep -rnoE 'E‑9[2-9]\|E‑1[0-9]{2}'` → ein Treffer, und das ist der Satz *„E‑92 bleibt frei"* in §30. E‑91 steht in `dashboard-frontend.md` und `README.md` — der Stand des Auftrags stimmt |
+| **Messungen** | **M152.** `grep -rnoE '\bM15[2-9]\b'` über `docs/`, `scripts/`, Backend und Frontend → kein Treffer; M151 ist die höchste vergebene |
+| **Offene Punkte** | ab **139**. `grep -rnE '\*\*(139\|14[0-9])\*\*' docs/` → Treffer sind `key_len`‑Werte (146, 148) und Zeilenzahlen (140), kein Punkt; 138 ist der höchste (§35) |
+
+**Alle drei Nummernstände des Auftrags haben gestimmt.**
+
+### Der Rahmen
+
+| | |
+|---|---|
+| **Reihenfolge der Commits** | Der Auftrag nannte den Endpunkt vor den Kennzahlen. Gebaut ist umgekehrt — erst das Repository mit `UNION ALL`, dann der Endpunkt —, weil der Dienst für ein freies Fenster die Vereinigung schon braucht; ein Endpunkt, der auf ein Repository trifft, das nur ein Segment kennt, wäre ein Zwischenstand gewesen, der kompiliert und falsch antwortet. Die Inhalte der sieben Commits sind die des Auftrags |
+| **Die tragende Zusage, vorab gepinnt** | Bevor die Zerlegung gebaut wurde, sind die Texte aller **drei** Paare Zeichen für Zeichen in `ProzessbaumStatementsTest` festgehalten worden — `30T` und `12M` hatten bis dahin nur Teilprüfungen. Der Test lief gegen den unveränderten Code grün und läuft nach dem Bau grün: **Die drei Paare rendern denselben Text wie vorher** |
+| **Datenbank** | Testkopie, Profil `dev`, Anker `2025-12-30 04:09:47`. Nichts geschrieben außer den Testkonten der `DbIT`s, die sich selbst wegräumen |
+
+---
+
+## 38. Der Vertrag (E‑94, E‑95)
+
+```
+GET /api/prozesse/baum?zeitraum={48H|30T|12M}
+GET /api/prozesse/baum?von=<ISO,UTC>&bis=<ISO,UTC>
+```
+
+Die Ergänzung von §1 in Kurzform: Die beiden Modi schließen einander aus (`zeitfenster-mehrdeutig`,
+keine stille Vorrangregel — dieselbe Festlegung wie in [`nachrichtenliste.md`](nachrichtenliste.md)
+§2). Kein Mandantenparameter, in keiner Form; der freie Modus ist keine neue benannte Ausnahme.
+
+### E‑94 — `bis` ist in der Anfrage einschließend, `fenster.bis` in der Antwort ausschließend
+
+**In der Anfrage** ist `bis` die letzte enthaltene Stunde — beidseitig geschlossen wie `von`/`bis`
+der Nachrichtenliste. **In der Antwort** bleibt `fenster.bis` ausschließend, wie seit 10c‑1. Das
+Backend rechnet `bisAusschliessend = bis + 1 Stunde`, in der Zone der Anwendungsuhr
+(`Baumfenster.ausAnfrage`) — nicht im Browser, weil eine Stunde am Umstellungstag keine Stunde ist.
+Der Grund für die Asymmetrie ist, dass jede Seite die Konvention ihrer Nachbarn hält; sie steht in
+§1 und nicht nur in einem Kommentar. `von = bis` ist erlaubt und heißt *ein Stundeneimer*.
+
+### E‑95 — Ein nicht stundengenaues Fenster wird abgewiesen, nicht gerundet
+
+`zeitfenster-zu-genau`, der einzige neue Code. Nach unten runden weitete das Fenster (`von`)
+beziehungsweise beschnitte es (`bis`); beides verstieße gegen *alles kommt aus dem abgefragten
+Zeitraum, und alles aus ihm kommt vor*. Die Oberfläche lässt den Zustand über `step=3600` gar nicht
+erst entstehen; die Prüfung fängt die von Hand gebaute Adresse. **Geprüft wird der in die Zone der
+Anwendungsuhr umgerechnete Wert** — `BaumfensterTest.Anfrage` hält das an `Asia/Kolkata` fest, wo
+`08:30Z` die volle Wanduhrstunde ist und `08:00Z` nicht.
+
+### Die sieben Fehlerfälle, in der Reihenfolge der Prüfung
+
+| # | `type` | Wann |
+|---|---|---|
+| 1 | `zeitraum-unbekannt` | `zeitraum` ist kein Code der drei Paare — unverändert |
+| 2 | `zeitpunkt-ungueltig` | ein Zeitpunkt ist nicht als ISO‑Zeitpunkt lesbar — `Zeitpunkte.ausIso`, unverändert |
+| 3 | `zeitfenster-mehrdeutig` | `zeitraum` **und** `von`/`bis`, auch neben einem halben Fenster |
+| 4 | `zeitfenster-unvollstaendig` | nur einer der beiden Zeitpunkte (ein leerer Wert gilt als nicht angegeben) |
+| 5 | `zeitfenster-zu-genau` | ein Zeitpunkt liegt nicht auf einer vollen Stunde der Anwendungszone |
+| 6 | `zeitfenster-ungueltig` | `von` liegt hinter `bis` |
+| 7 | `zeitfenster-zu-gross` | `von.isBefore(bisAusschliessend.minusYears(1))` — ein Kalenderjahr, gerechnet mit dem ausschließenden Ende |
+
+Die Reihenfolge folgt der Liste: Dort werden die Zeitpunkte in `NachrichtenFilter.aus` gelesen,
+bevor `Zeitfenster.aufloesen` die Modi prüft. **Ein Fenster in der Zukunft ist kein Fehler** — es
+liefert Nullen, und `ProzessbaumIsolationDbIT.fehlerfaelle_und_zukunft` hält beides fest.
+
+> ⚠️ **Befund: Das Fenster aus M149 ist am Endpunkt zu groß.** `2024-12-29 14:00` bis
+> `2025-12-30 03:00` (ausschließend) umfasst 365 Tage und **13 Stunden** — Abweichung A3 in §30 hat
+> die 8.773 Stundeneimer schon gezählt. Mit der Regel aus Fall 7 ist das `zeitfenster-zu-gross`;
+> der Auftrag hat denselben Bösfall für die Sichtprüfung und für M152 „durch den Endpunkt"
+> vorgesehen. **Gelöst, nicht stillschweigend:** Am Repository bleibt das M149‑Fenster messbar und
+> ist es (`ProzessbaumGleichheitDbIT.boesfall_zerlegt_gleich_ungeteilt`, M151 als Test); am
+> Endpunkt tragen Isolationstest und M152 einen **um einen Tag kürzeren** Bösfall — `2024-12-30
+> 14:00` bis einschließlich `2025-12-30 02:00` —, der dieselben fünf Segmente über alle drei Ebenen
+> hat, mit einem Tagessegment am Kopf, das einen statt zwei Tage trägt. Ob die Jahresgrenze des
+> Baums am einschließenden `bis` hängen sollte (dann wäre ein Jahr *plus* die letzte Stunde
+> erlaubt), ist offener Punkt **139** und nicht hier entschieden.
+
+---
+
+## 39. Die Zerlegung (E‑92, E‑93)
+
+### Der Typ: `common/Baumfenster`, und `Rollupzeitraum` bleibt bei drei Werten
+
+`FREI` ist **kein** vierter Wert von `Rollupzeitraum`: Er hätte weder ein `fenster(jetzt)` noch eine
+Ebene, und das vollständige `switch` ohne `default` in den Repositories (offener Punkt 113) verlöre
+genau die Eigenschaft, die es trägt. Stattdessen `Baumfenster` in `common`, das **beides** aufnimmt
+— eines der drei Paare oder ein freies Fenster — und in beiden Fällen `segmente(jetzt)` liefert:
+
+| Eingang | Ausgang |
+|---|---|
+| eines der drei Paare | **genau ein** Segment, auf der Ebene des Paares (`Rollupzeitraum.ebene()`), mit dem heutigen Fenster |
+| ein freies Fenster | die Zerlegung, **ein bis fünf** Segmente — unabhängig von jeder Uhr |
+
+Dazu `common/Rollupebene` (`STUNDE`, `TAG`, `MONAT`) als **Name** der Ebene. Die Zuordnung Name →
+generierte Tabelle bleibt im Repository; Punkt 113 ist damit **fortgeschrieben und nicht
+geschlossen** (§43).
+
+### E‑93 — Die drei Paare bleiben unzerlegt
+
+Ein 48‑Stunden‑Fenster reicht über zwei Tage und würde als freies Fenster in drei Segmente zerlegt
+(`BaumfensterTest.Paare.achtundvierzig_stunden_bleiben_ungeteilt`). Als Paar bleibt es **ein**
+Segment: Es ist gemessen (M116) und gebaut, und sein Text ist die tragende Zusage dieses Schritts.
+**Das ist eine bewusste Ungleichbehandlung**, und `ProzessbaumGleichheitDbIT` hält fest, dass beide
+Wege je `(process_id, message_status)` dieselben Zahlen liefern.
+
+### E‑92 — Das freie Fenster wird immer zerlegt
+
+Nicht nur bei krummen Eingaben: M148 hat gezeigt, dass auch ein tagesgenaues Jahresfenster auf der
+Tagesebene das Tor reißt (764,233 ms). Die Regel aus Fassung E — *die gröbste Ebene, auf deren
+Grenzen beide Enden fallen* — steht **nicht** als Sonderfall in Z; **Punkt 137 ist damit
+beantwortet.** Was die Zerlegung bei einem monatsbündigen Fenster liefert, ist ohnehin ein
+einzelnes Monatssegment, und das rendert die ungeteilte Bauform (§40).
+
+### Der Algorithmus — über den Kalender, nicht über Dauern
+
+`Baumfenster.zerlegung(von, bisAusschliessend)`: Der erste ganze Tag beginnt an der nächsten
+Tagesgrenze (oder an `von`), der letzte endet an der Tagesgrenze, die `bisAusschliessend` nicht
+überschreitet; dazwischen ebenso der erste und der letzte ganze Monat (`YearMonth`). Was leer
+bleibt, entsteht nicht — **zwei benachbarte Bereiche derselben Ebene sind einer.** Deshalb ist ein
+Fenster über Mitternacht ohne ganzen Tag ein einziges Stundensegment, und 30 ganze Tage über eine
+Monatsgrenze hinweg sind ein einziges Tagessegment — nicht Kopf und Fuß getrennt.
+
+| Eingang | Zerlegung |
+|---|---|
+| innerhalb eines Tages, auch über Mitternacht ohne ganzen Tag | **ein** Stundensegment |
+| genau ein ganzer Tag, auch am Monatsanfang und am Monatsende | **ein** Tagessegment |
+| genau ganze Monate | **ein** Monatssegment |
+| 30 ganze Tage, nicht monatsbündig | **ein** Tagessegment |
+| der Bösfall aus M149 | **fünf** Segmente: 10 Stunden, 2 Tage, 11 Monate, 29 Tage, 3 Stunden — 8.773 Stundeneimer, die Zahl aus Abweichung A3 |
+| die beiden Umstellungstage | je **ein** Tagessegment; in `Europe/Berlin` hat der Tag 23 bzw. 25 Stunden, und `plusHours(24)` auf einem Zeitpunkt mit Zone träfe `01:00` bzw. `23:00` statt Mitternacht |
+
+**Zwei Eigenschaften über 231 erfundene Fenster** (22 Grenzpunkte — krumme Stunden, Mitternacht,
+Monatsanfang, Monatsende, Jahreswechsel, Schaltjahr, beide Umstellungstage — paarweise):
+lückenlos, überschneidungsfrei, jede Grenze auf einer Eimergrenze ihrer Ebene, keine zwei
+benachbarten Segmente derselben Ebene, und die Stundeneimer aller Segmente sind genau die des
+Fensters. Dazu die Schranke der Bauform aus §33, je Ebene nachgezählt: **höchstens 46 Stunden‑, 60
+Tages‑ und 12 Monatseimer** für ein Fenster bis ein Jahr — §33 nannte 30 + 30 Tageseimer und 11
+Monate; die 60 sind Kopf plus Fuß in einem Segment, die 12 ein monatsbündiges Jahr.
+
+Alle Prüfwerte sind Kalenderarithmetik über erfundenen Zeitpunkten (Regel T2), und keine Uhr wird
+gelesen (Regel T1).
+
+---
+
+## 40. Das Statement — Z‑U, gerendert (E‑97)
+
+**Ein Statement für die Kennzahlen, wie heute; weiterhin zwei je Aufruf.** `ProzessbaumRepository.kennzahlen(mandant, segmente)`:
+
+- **Ein Segment** — jedes Paar, und jedes freie Fenster, das die Zerlegung in einem Segment lässt —
+  rendert die **ungeteilte** Bauform: Zeichen für Zeichen den Text von vor diesem Schritt.
+- **Mehrere Segmente** führen ihre Bereichslesungen in einer Ableitung `t` mit `UNION ALL`
+  zusammen, je Ebene **ein** Zweig in der festen Reihenfolge Stunde, Tag, Monat, dessen Bereiche als
+  `OR` nebeneinanderstehen; darüber **eine** Gruppierung und **eine** Mandantenkette als `EXISTS`.
+  **Leere Ebenen erzeugen keinen Zweig.**
+
+Der Bösfall, so wie der Code ihn rendert (`ProzessbaumStatementsTest.FreiesFenster.boesfall_woertlich`;
+mit `?` statt der Literale ist es Zeichen für Zeichen das handgebaute Statement aus M149):
+
+```sql
+select `t`.`process_id`, `t`.`message_status`, sum(`t`.`anzahl`)
+from (select `overlord_monitor`.`message_rollup`.`process_id`,
+             `overlord_monitor`.`message_rollup`.`message_status`,
+             `overlord_monitor`.`message_rollup`.`anzahl`
+      from `overlord_monitor`.`message_rollup`
+      where ((`overlord_monitor`.`message_rollup`.`stunde` >= ? and `overlord_monitor`.`message_rollup`.`stunde` < ?)
+          or (`overlord_monitor`.`message_rollup`.`stunde` >= ? and `overlord_monitor`.`message_rollup`.`stunde` < ?))
+      union all
+      select `overlord_monitor`.`message_rollup_tag`.`process_id`,
+             `overlord_monitor`.`message_rollup_tag`.`message_status`,
+             `overlord_monitor`.`message_rollup_tag`.`anzahl`
+      from `overlord_monitor`.`message_rollup_tag`
+      where ((`overlord_monitor`.`message_rollup_tag`.`tag` >= ? and `overlord_monitor`.`message_rollup_tag`.`tag` < ?)
+          or (`overlord_monitor`.`message_rollup_tag`.`tag` >= ? and `overlord_monitor`.`message_rollup_tag`.`tag` < ?))
+      union all
+      select `overlord_monitor`.`message_rollup_monat`.`process_id`,
+             `overlord_monitor`.`message_rollup_monat`.`message_status`,
+             `overlord_monitor`.`message_rollup_monat`.`anzahl`
+      from `overlord_monitor`.`message_rollup_monat`
+      where (`overlord_monitor`.`message_rollup_monat`.`monat` >= ? and `overlord_monitor`.`message_rollup_monat`.`monat` < ?)) as `t`
+where exists (select 1 as `one`
+              from `GlassfishDB`.`Process` as `baum_process`
+              join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `baum_process`.`ProjectID`
+              where (`baum_process`.`ProcessID` = `t`.`process_id` and `GlassfishDB`.`ProjectMandant`.`MandantID` = ?))
+group by `t`.`process_id`, `t`.`message_status`
+```
+
+### E‑97 — Eigenschaft 4 aus §6 wird ersetzt, E‑42 bleibt
+
+| | Stand |
+|---|---|
+| 1. Letzte Bewegung über die Deckelung, nicht `MAX()` | **unverändert** |
+| 2. Mandantenkette im Gerüst Join, in den Kennzahlen `EXISTS` | **unverändert** — und in der Vereinigung **einmal, außen**, auf der Ableitung; nicht in jedem Zweig (das wäre M114 mit doppelter Auswertung) |
+| 3. Keine Funktion um die Schlüsselspalte der Rollup-Ebene | **unverändert, für jeden Zweig einzeln** — der `DATE`‑Wert für `tag` und `monat` wird in Java geschnitten, nicht in SQL |
+| 4. *Jedes Paar liest seine Ebene und keine andere* | **ersetzt** durch: *Jedes **Segment** liest seine Ebene und keine andere, und es steht keine Ebene im Text, die kein Segment trägt.* Für die drei Paare sagt das dasselbe wie bisher |
+
+**E‑42 fällt nicht.** Es sind weiterhin zwei Statements je Aufruf — Gerüst und Kennzahlen —, auch
+im freien Fenster; `ProzessbaumStatementsTest` hält das für die Paare und für den Bösfall fest. Der
+Auftrag zu 10c‑4a hatte anderes angekündigt; die Korrektur stammt vom Auftraggeber.
+
+Was der Text sonst noch hält: Derselbe Fensterschnitt ergibt denselben Text, gleich in welcher
+Reihenfolge die Segmente ankommen; Kopf und Fuß derselben Ebene stehen als `OR` zweier Intervalle
+in **einem** Zweig; gruppiert wird einmal, über der Ableitung, ohne `ORDER BY`; ein monatsbündiges
+Jahr rendert denselben Text wie `12M`.
+
+### Der Plantest
+
+`ProzessbaumPlanDbIT` schreibt für drei Fensterschnitte — den Bösfall, krumme 30 Tage, ein
+monatsbündiges Jahr — bei allen vier Mandanten fest: **je Zweig ein `range` über `PRIMARY` der
+jeweiligen Ebene**, keine Ebene im Plan, die kein Segment trägt, die Mandantenkette über Index und
+kein `Message` im Plan. **Nicht festgeschrieben:** die Materialisierung (`<derived2>`), der
+automatische Schlüssel (`key0`) und die Reihenfolge. Sie sind der Grund für Faktor zwei gegenüber
+Z‑D (§33) — aber sie sind eine Entscheidung des Optimierers, und Annahme A10 führt ein Upgrade auf
+MariaDB 11 als offenes Risiko. Ein Test, der sie festschriebe, würde an dem Tag rot, an dem sich
+nichts Fachliches geändert hat; die Beobachtung steht in §33, nicht in der Zusicherung — dieselbe
+Überlegung wie bei der Reihenfolge in `DashboardPlanDbIT`. Der Kommentar steht im Test.
+
+---
+
+## 41. Die Oberfläche (E‑96)
+
+| | |
+|---|---|
+| **Der vierte Knopf** | `components/zeitraum-umschalter.tsx` bekommt ihn über die **freiwillige** Angabe `aufFrei`. Ohne sie sind es drei Knöpfe, und das Dashboard ruft ihn ohne — `tests/zeitraum-umschalter.test.tsx` hält beides gerendert fest, samt der Verdrahtung: „Frei" ruft `aufFrei` und nicht `aufAuswahl` |
+| **Die Datumsfelder** | `features/nachrichten/components/baumfenster-felder.tsx`, **neben** dem Umschalter. Zwei `datetime-local` mit `step=3600`; `validity.badInput` an `keyup` und `blur`, übernommen aus `filterleiste.tsx` und nicht neu gefunden |
+| **Die Codes** | `lib/rollupzeitraum.ts`: `FREI` als Code der Antwort (`Baumzeitraum`), **kein** viertes Paar in `ROLLUPZEITRAEUME`; dazu `Baumfensterzustand`, `baumfenstermodus`, `angezeigterBaumfenstermodus`, `mitPaar`, `mitFreiemBaumfenster`, `hervorgehobenerBaumzeitraum`, `baumfensterAlsParameter` — **nachgebaut aus `lib/filter.ts`, nicht importiert**; dort liegen die Zeitraumcodes der Liste, eine andere Menge |
+| **Die Beschriftungen** | `texte.zeitraum`: `FREI`, `von`, `bis`, `freiHinweis`, `unvollstaendig`, `beideNoetig`; `fehler["zeitfenster-zu-genau"]`. Beide Sprachen, `sprachdateien.test.ts` ohne neue Ausnahme |
+
+### Zustand und URL
+
+| | in der URL | Verlauf |
+|---|---|---|
+| `zeitraum` | nur die ausdrückliche Wahl (E‑n) | `replace` |
+| `von`, `bis` | **ja**, sobald sie stehen — auch einzeln, denn das Backend prüft | `replace` |
+| „frei gewählt, noch nichts eingetragen" | **nein** — im Komponentenzustand `freiGewaehlt` | — |
+
+**Die beiden Modi löschen einander in der Oberfläche**: `setzeZeitraum` schreibt `von`/`bis` auf
+`null`, `setzeFreiesFenster` schreibt `zeitraum` auf `null`. `zeitfenster-mehrdeutig` ist über die
+Bedienung nicht erreichbar; käme es doch, steht es **über** der Ansicht, weil es ein Befund wäre —
+`baumfensterFehler` in `prozessansicht.ts` führt es ausdrücklich nicht.
+
+**Die Abfrage ist der Schlüssel.** `baumabfrage(zustand)` liefert `?zeitraum=…`, `?von=…&bis=…`
+oder nichts, und `useProzessbaum` hängt daran; die leere Abfrage ist weiterhin ein eigener Schlüssel
+und nicht der des gewählten Paares.
+
+### Wo die Meldungen stehen — und was dabei stehen bleibt
+
+`zeitfenster-unvollstaendig`, `zeitfenster-ungueltig`, `zeitpunkt-ungueltig`, `zeitfenster-zu-genau`
+und `zeitfenster-zu-gross` stehen an den Datumsfeldern, in der Reihenfolge der Liste: halb getippt
+schlägt alles andere, dann die Antwort des Servers, dann der fehlende zweite Zeitpunkt. **Die Prüfung
+bleibt im Backend.**
+
+**Der letzte gelieferte Baum bleibt dabei stehen** (`letzterBaum` in `prozessansicht.tsx`): Wer
+zwischen „Von" und „Bis" tippt, bekommt `zeitfenster-unvollstaendig`; ihm dafür den Baum
+wegzunehmen hieße, die Ansicht zu leeren, weil er noch nicht fertig ist. Dieselbe Bauform wie
+`letzteSeite` in `useNachrichtenSeite` — ausdrücklich gehalten und nicht über `placeholderData`.
+Beim allerersten Aufruf über eine fehlerhafte Adresse gibt es keinen letzten Baum; dann steht nur
+der Hinweis an den Feldern (offener Punkt 141).
+
+**Was die Oberfläche nicht tut:** Sie rechnet kein Fenster aus, rundet nichts, zeigt keine Ebene
+und keine Korrektur. `fenster` aus der Antwort geht unverändert an die Übertragungsliste (E‑50),
+samt der dort benannten Ungenauigkeit.
+
+---
+
+## 42. Tests, Messung M152 und Regelbezug
+
+### Die Tests
+
+| Test | Was er hält |
+|---|---|
+| `BaumfensterTest` (32 Fälle) | die Grenzfälle aus §39, die Eigenschaften über 231 Fenster, die Schranke der Bauform, beide Umstellungstage, die drei Paare als ein Segment, das freie Fenster ohne Uhr; die sieben Fehlerfälle einzeln, die volle Stunde nach der Zonenumrechnung, `von = bis` als ein Eimer, `bis + 1 h` am Umstellungstag, die Zukunft als Nullen |
+| `ProzessbaumStatementsTest` (24) | **die drei Paare wörtlich** — die tragende Zusage —; der Bösfall wörtlich; keine Ebene ohne Segment; ein Segment ungeteilt; keine Funktion in keinem Zweig; die Kette einmal außen; Kopf und Fuß als `OR`; feste Reihenfolge; eine Gruppierung; genau zwei Statements, auch im freien Fenster; kein `Message` |
+| `ProzessbaumServiceTest` (30) | `FREI` und das Fenster in UTC in der Antwort, die durchgereichten Segmente, die Verdichtung wie bei einem Paar |
+| `ProzessbaumPlanDbIT` (10, `db`) | §40 |
+| `ProzessbaumGleichheitDbIT` (3, `db`) | frei gegen Paar je `(process_id, message_status)` am Repository und am Endpunkt (derselbe Rumpf bis auf den Code); der Bösfall aus M149 zerlegt gegen ungeteilt, vier Mandanten — **M151 als Test** |
+| `ProzessbaumIsolationDbIT` (15, `db`) | um den freien Modus erweitert: keine fremde Kennung im Rumpf, die vereinigte Kette am Repository, `?mandant=…` wirkungslos, derselbe Umfang, `400` mit Typ und die Zukunft mit Nullen |
+| `tests/prozessansicht.test.ts` (+8), `tests/zeitraum-umschalter.test.tsx` (2) | §41; `pnpm check` grün mit 934 Fällen in 35 Dateien |
+
+Keine Wanduhrzeit in einer Zusicherung (T1); kein Erwartungswert aus dem Bestand (T2) — die
+`DbIT`s vergleichen zwei Lesungen desselben Bestands und verlangen nur, dass sie nicht leer sind.
+
+### M152 — am gebauten Endpunkt, beste von fünf, in Millisekunden
+
+`MessungM152DbIT`, dieselbe Form wie M117: vier Mandanten, je Fall ein Aufwärmlauf und fünf Läufe,
+zwei Zahlen — **durch den Endpunkt** (HTTP‑Umlauf im Testclient samt Sitzung und Serialisierung)
+und **am Dienst** (`ProzessbaumService.baum` im selben Prozess: Zerlegung, beide Statements,
+Zusammensetzen). Die Zeilen stehen unverändert in
+`scripts/messung-prozessansicht-frei/ergebnis/m152-endpunkt.gefiltert.txt`.
+
+| Mandant | 48H (Paar) | 12M (Paar) | Jahr monatsbündig · 1 Segment | 30 Tage krumm · 3 | Bösfall · 5 |
+|---|---:|---:|---:|---:|---:|
+| `NEXANS` durch den Endpunkt | 65,872 | 125,584 | **120,554** | 71,480 | 111,784 |
+| `NEXANS` am Dienst | 31,447 | 98,411 | 96,309 | 51,682 | 90,723 |
+| `VOTG` durch den Endpunkt | 36,401 | 72,146 | 71,806 | 44,560 | 63,635 |
+| `VOTG` am Dienst | 18,613 | 53,220 | 53,038 | 26,642 | 46,775 |
+| `IBIS` durch den Endpunkt | 32,700 | 72,577 | 72,767 | 44,165 | 64,024 |
+| `IBIS` am Dienst | 14,426 | 55,741 | 55,065 | 26,477 | 47,488 |
+| `SUTTONS` durch den Endpunkt | 22,446 | 55,044 | 56,056 | 33,231 | 52,954 |
+| `SUTTONS` am Dienst | 9,222 | 41,751 | 41,741 | 18,527 | 37,348 |
+
+**Vorregistriert war:** Bleibt die teuerste Fassung beim größten Mandanten unter 150 ms durch den
+Endpunkt, trägt der Bau. **Sie bleibt darunter: 120,554 ms** (`NEXANS`, monatsbündiges Jahr) —
+der Bösfall mit fünf Segmenten liegt bei 111,784 ms, das Paar `12M` bei 125,584 ms. **Der Bau
+trägt.**
+
+Drei Beobachtungen, keine Zusicherungen:
+
+- **Das monatsbündige Jahr und `12M` sind derselbe Text mit anderen Werten** — und dieselbe
+  Nachrichtenzahl (`NEXANS` 2.308.005, die Summe aus M113‑Z), auf 3 ms dieselbe Zeit.
+- **Der Bösfall ist am Dienst 90,723 ms** gegen 71,055 ms in M149 für das SQL allein; die Differenz
+  ist Zerlegung, JDBC, das Gerüst (3,4 ms in M116) und das Zusammensetzen von 733 Blättern. Durch
+  den Endpunkt kommen rund 20 ms dazu, bei jedem Fall, gleich welcher Größe — HTTP, Sitzung und
+  155 KiB Rumpf.
+- **Die Gegenprobe der Paare ist keine Zahl, sondern ein Text.** M116 hat SQL‑Laufzeiten über
+  `SET profiling` gemessen; die Zahlen hier enthalten Java und HTTP und sind damit **nicht**
+  gegen M116 zu halten. Dass die drei Paare nicht teurer geworden sind, folgt daraus, dass ihr
+  Statementtext byteidentisch ist (`ProzessbaumStatementsTest`) — ein unveränderter Text kostet
+  auf demselben Bestand dasselbe.
+
+> **Belegvermerk (Regel L10).**
+> *Gemessen war:* zwanzig Fälle, vier Mandanten × fünf Fensterschnitte, warm, im Testclient auf
+> demselben Rechner wie der Server, Aufwärmlauf und beste von fünf; je Fall zusätzlich der Dienst im
+> selben Prozess.
+> *Behauptet wird:* Das freie Fenster kostet durch den gebauten Endpunkt beim größten Mandanten
+> höchstens 121 ms und liegt damit unter der vorregistrierten Schranke.
+> **Die Lücke:** Der Testclient ist nicht der Browser — M123 hat 60 ms für `48H` im Browser
+> gesehen, hier sind es 65,872 ms im Java‑Client; die Größenordnung stimmt, der Vergleich ist
+> keiner. Kein Fall ist kalt gemessen (§35), und die Sitzung schreibt auf der Testkopie bei jeder
+> Anfrage mit — ob das in den rund 20 ms zwischen Dienst und Endpunkt steckt, ist nicht getrennt
+> erhoben.
+
+### Regelbezug
+
+| Regel | Wo |
+|---|---|
+| **L1** | Ein Kalenderjahr als Maximum, kein Fenster ohne beide Grenzen; der Befund zu M149 (§38) |
+| **L7** | M152 an der gebauten Fassung; die Pläne in `ProzessbaumPlanDbIT` (**L15**) |
+| **L10** | Belegvermerke in §42 |
+| **M1, M3, M4** | kein Mandantenparameter; die Kette im Statement, einmal außen; `ProzessbaumIsolationDbIT` um den freien Modus erweitert |
+| **Q4** | keine Ebene, keine Korrektur, nichts Geratenes in der Oberfläche |
+| **T1, T2** | keine Laufzeit und kein Bestandswert in einer Zusicherung |
+| **Z1** | ein Uhrenschlag je Anfrage im Dienst; ein freies Fenster hängt an keiner Uhr; die Zone der Anwendungsuhr für die eine Umrechnung |
+| **§8 der Frontend-Grundlagen** | `von`/`bis` in der URL, sobald sie stehen; der Zwischenzustand nicht |
+
+---
+
+## 43. Die Entscheidungen dieser Runde, und die offenen Punkte
+
+| Nr. | Entscheidung | Datum |
+|---|---|---|
+| **E‑92** | Das freie Fenster wird **zerlegt**, Bauform **Z‑U** — gemessen (M147 bis M151), nicht gewählt; immer, auch monatsbündig (§39) | 07.09.2026 |
+| **E‑93** | Die **drei Paare bleiben unzerlegt**; ein Paar ergibt genau ein Segment, und sein Text bleibt byteidentisch (§39) | 07.09.2026 |
+| **E‑94** | **`bis` ist in der Anfrage einschließend**, `fenster.bis` in der Antwort ausschließend; die Stunde dazwischen rechnet das Backend (§38) | 07.09.2026 |
+| **E‑95** | Ein nicht stundengenaues Fenster wird **abgewiesen**, nicht gerundet — `zeitfenster-zu-genau`, geprüft nach der Zonenumrechnung (§38) | 07.09.2026 |
+| **E‑96** | Der vierte Knopf ist **freiwillig**, die Datumsfelder stehen **neben** dem Umschalter (§41) | 07.09.2026 |
+| **E‑97** | **Eigenschaft 4 wird ersetzt**, E‑42 bleibt (§40) | 07.09.2026 |
+| **E‑98** | **Kein Index auf der Tagesebene** in diesem Schritt: Z‑U macht ihn auf dem kritischen Pfad überflüssig — kein Fenster liest mehr als 60 Tageseimer —, und §9c von [`rollup.md`](rollup.md) hat gemessen, was ein Sekundärindex den nächtlichen Volllauf kostet | 07.09.2026 |
+
+### Offene Punkte
+
+| | |
+|---|---|
+| **113** *(fortgeschrieben)* | Die Ebenenzuordnung steht weiterhin zweimal — in `DashboardRepository` Paar → Tabelle, in `ProzessbaumRepository` seit heute `Rollupebene` → Tabelle. `common/Rollupebene` trägt nur den **Namen** der Ebene; die Tabellen sind nicht nach `common` gehoben, weil sie generiert sind. Das vollständige `switch` ohne `default` steht an beiden Stellen |
+| ~~**137**~~ | **Beantwortet am 07.09.2026 durch E‑92:** Z zerlegt immer; die Regel aus Fassung E steht nicht als Sonderfall. Ein monatsbündiges Fenster ergibt ohnehin ein Segment |
+| **138** | **bleibt offen** (E‑98). Die Frage stellt sich unter Z‑U auf dem kritischen Pfad nicht; sie stellt sich, wenn jemand die Tagesebene über lange Bereiche lesen will |
+| **139** | **Das Fenster aus M149 übersteigt das Kalenderjahr des Endpunkts um 13 Stunden** (§38). Die Grenze hängt am ausschließenden Ende (`bisAusschliessend.minusYears(1)`), wie der Auftrag sie nennt; am einschließenden `bis` gerechnet wäre ein Jahr plus die letzte Stunde erlaubt. Welche Lesart gilt, entscheidet der Auftraggeber; bis dahin misst M152 einen um einen Tag kürzeren Bösfall mit denselben fünf Segmenten |
+| **140** | **Keine Sichtprüfung im Browser** für den freien Modus. Die `datetime-local`‑Behandlung ist aus der Liste übernommen, `step=3600` ist im Browser nicht nachgefahren, und die Felder sind nur in `pnpm check` gerendert (Umschalter) beziehungsweise als reine Funktionen geprüft. Die Dev‑Zeile aus dem Auftrag gilt: Ein brauchbares Fenster endet auf oder vor `2025-12-30 03:00` |
+| **141** | **Beim allerersten Aufruf über eine fehlerhafte Adresse steht kein Baum**, nur der Hinweis an den Feldern — es gibt keinen letzten Baum, der stehen bleiben könnte. Ob dort ein Leerzustand hingehört oder der Baum der Vorgabe, ist nicht entschieden |
+
+---
+
+## 44. Was dieser Schritt nicht zeigt
+
+- **Keine Messung gegen die Produktion.** Alle Zahlen stammen von der Testkopie; die Schwelle des
+  Planwechsels aus §31 liegt dort anderswo, und was die Materialisierung der Ableitung auf einem
+  dichteren Bestand kostet, ist nicht gemessen.
+- **Alle Werte sind warm** (§35). Kein Fall ist kalt gemessen; der Kaltfaktor aus M44 bleibt eine
+  Übertragung.
+- **Die Bauform Z‑U ruht auf einer Entscheidung des Optimierers** — Materialisierung und
+  automatischer Schlüssel —, die Annahme A10 (MariaDB 11) gefährdet. Der Plantest schreibt sie
+  absichtlich nicht fest; wer das Upgrade fährt, misst M152 neu.
+- **Punkt 138 ist nicht beantwortet**, sondern absichtlich offen gelassen (E‑98).
+- **M152 ist im Java‑Testclient gemessen, nicht im Browser**, und die Paare sind darin nicht gegen
+  M116 vergleichbar; ihre Zusage ist der Text.
+- **Der Bösfall aus M149 ist durch den Endpunkt nicht gemessen** — er ist dort `zeitfenster-zu-gross`
+  (Punkt 139); gemessen ist ein um einen Tag kürzeres Fenster mit derselben Form.
+- **Nichts im Browser** (Punkt 140): weder der vierte Knopf noch die Felder noch die Meldungen an
+  ihnen sind am laufenden System gesehen worden.

@@ -41,8 +41,14 @@ import org.junit.jupiter.api.Test;
  *       aus.
  *   <li>Um die Schluesselspalte der Rollup-Ebene steht <b>keine Funktion</b> — sonst faellt der
  *       Bereichszugriff weg, und die Abfrage waere langsamer, ohne falsch zu sein.
- *   <li>Jedes Paar liest <b>seine</b> Ebene und keine andere.
+ *   <li>Jedes <b>Segment</b> liest seine Ebene und keine andere, und es steht keine Ebene im Text,
+ *       die kein Segment traegt — die Fassung vom 07.09.2026 (E-97); fuer die drei Paare sagt sie
+ *       dasselbe wie die alte: <i>Jedes Paar liest seine Ebene und keine andere.</i>
  * </ol>
+ *
+ * <p><b>Seit dem 07.09.2026 (Schritt 10c-4b) kommt eine fuenfte dazu, und sie steht ueber den
+ * anderen:</b> Die drei Paare rendern <b>Zeichen fuer Zeichen den Text von vor diesem Schritt</b>.
+ * Der Text ist vor dem Bau der Zerlegung gepinnt worden und hat den Bau ueberstanden.
  *
  * <p>Vorbild ist {@code DashboardStatementsTest}; die Bauform ist dieselbe.
  */
