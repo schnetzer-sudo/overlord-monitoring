@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Info, SquarePen } from "lucide-react";
+import { Info, SquarePen, UserPlus } from "lucide-react";
 
 import { KeinZugriff } from "@/components/kein-zugriff";
 import { Button } from "@/components/ui/button";
@@ -10,9 +10,10 @@ import { einsetzen } from "@/i18n";
 import { useTexte } from "@/i18n/provider";
 import { istKeinZugriff } from "@/lib/http";
 
-import { useNutzer, useVorgang } from "../hooks";
-import { darfOeffnen } from "../zeilen";
+import { useAnlegen, useNutzer, useVorgang } from "../hooks";
+import { MASKE, darfOeffnen, type Aufgeklappt } from "../zeilen";
 import { BenutzerTabelle } from "./benutzer-tabelle";
+import { KontoAnlegen } from "./konto-anlegen";
 import { ZeilenFormular } from "./zeilen-formular";
 
 /**
@@ -65,7 +66,7 @@ import { ZeilenFormular } from "./zeilen-formular";
 export function BenutzerAnsicht() {
   const texte = useTexte();
   const liste = useNutzer();
-  const [offen, setOffen] = useState<number | null>(null);
+  const [offen, setOffen] = useState<Aufgeklappt>(null);
 
   /*
    * Die Mutation liegt **hier** und nicht im Formular, obwohl nur das Formular
@@ -77,8 +78,19 @@ export function BenutzerAnsicht() {
    */
   const vorgang = useVorgang();
 
+  /*
+   * Das Anlegen hat eine **eigene** Mutation (E24, `hooks.ts`) — sie liegt aus
+   * demselben Grund hier wie die andere: Solange der Aufruf läuft, darf die
+   * Maske nicht zugeklappt werden, und das muss der Knopf wissen.
+   *
+   * Die wählbaren Mandanten holt die Maske dagegen selbst. Hier gelesen liefe
+   * beim Betreten der Seite eine Abfrage los, die niemand braucht, solange
+   * niemand aufklappt.
+   */
+  const anlegen = useAnlegen();
+
   const umschalten = useCallback(
-    (id: number) => setOffen((bisher) => (bisher === id ? null : id)),
+    (was: number | typeof MASKE) => setOffen((bisher) => (bisher === was ? null : was)),
     [],
   );
 
@@ -104,33 +116,76 @@ export function BenutzerAnsicht() {
           ) : liste.data.length === 0 ? (
             <Leer titel={texte.benutzer.leer.titel} hinweis={texte.benutzer.leer.hinweis} />
           ) : (
-            <BenutzerTabelle
-              zeilen={liste.data}
-              aktionenFuer={(zeile) => (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  aria-expanded={offen === zeile.id}
-                  disabled={!darfOeffnen(offen, zeile.id) || vorgang.isPending}
-                  onClick={() => umschalten(zeile.id)}
-                  title={
-                    darfOeffnen(offen, zeile.id)
-                      ? texte.benutzer.bearbeiten
-                      : texte.benutzer.bearbeitenGesperrt
-                  }
-                  className="min-h-bedienelement"
-                >
-                  <SquarePen aria-hidden="true" />
-                  <span className="sr-only">
-                    {einsetzen(texte.benutzer.bearbeitenFuer, { benutzer: zeile.username })}
-                  </span>
-                </Button>
-              )}
-              formularFuer={(zeile) =>
-                offen === zeile.id ? <ZeilenFormular zeile={zeile} vorgang={vorgang} /> : null
-              }
-            />
+            <>
+              {/*
+               * **Die Maske steht über der Liste und innerhalb der Kette** (E22)
+               * — unterhalb von „kein Zugriff", der nach wie vor alles
+               * Bedienbare mitnimmt, und im Datenzweig: Wer die Liste nicht
+               * lesen kann, soll nicht in sie hinein schreiben.
+               *
+               * Es bleibt bei **vier** Zuständen. Die Maske ist keiner, sondern
+               * ein Bedienelement in einem von ihnen.
+               */}
+              <div className="flex flex-col gap-3">
+                <div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    aria-expanded={offen === MASKE}
+                    disabled={!darfOeffnen(offen, MASKE) || anlegen.isPending}
+                    onClick={() => {
+                      // Beim Zuklappen geht die Meldung mit: Sie gehört zu dem
+                      // Vorgang, den sie meldet, und stünde beim nächsten
+                      // Aufklappen ohne Bezug da.
+                      if (offen === MASKE) {
+                        anlegen.reset();
+                      }
+                      umschalten(MASKE);
+                    }}
+                    title={
+                      darfOeffnen(offen, MASKE)
+                        ? offen === MASKE
+                          ? texte.benutzer.anlegen.schliessen
+                          : texte.benutzer.anlegen.oeffnen
+                        : texte.benutzer.anlegen.gesperrt
+                    }
+                    className="min-h-bedienelement"
+                  >
+                    <UserPlus aria-hidden="true" />
+                    {texte.benutzer.anlegen.oeffnen}
+                  </Button>
+                </div>
+                {offen === MASKE ? <KontoAnlegen anlegen={anlegen} /> : null}
+              </div>
+
+              <BenutzerTabelle
+                zeilen={liste.data}
+                aktionenFuer={(zeile) => (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    aria-expanded={offen === zeile.id}
+                    disabled={!darfOeffnen(offen, zeile.id) || vorgang.isPending}
+                    onClick={() => umschalten(zeile.id)}
+                    title={
+                      darfOeffnen(offen, zeile.id)
+                        ? texte.benutzer.bearbeiten
+                        : texte.benutzer.bearbeitenGesperrt
+                    }
+                    className="min-h-bedienelement"
+                  >
+                    <SquarePen aria-hidden="true" />
+                    <span className="sr-only">
+                      {einsetzen(texte.benutzer.bearbeitenFuer, { benutzer: zeile.username })}
+                    </span>
+                  </Button>
+                )}
+                formularFuer={(zeile) =>
+                  offen === zeile.id ? <ZeilenFormular zeile={zeile} vorgang={vorgang} /> : null
+                }
+              />
+            </>
           )}
         </>
       )}

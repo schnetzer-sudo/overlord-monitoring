@@ -2,14 +2,18 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { MANDANTEN_SCHLUESSEL, holeMandanten, type Mandant } from "@/lib/mandanten";
+
 import {
   BENUTZER_SCHLUESSEL,
   holeNutzer,
+  legeKontoAn,
   setzeAktiv,
   setzeMandanten,
   setzePasswort,
   setzeRolle,
   setzeSperre,
+  type Anlegedaten,
   type Nutzerzeile,
 } from "./api";
 import type { Vorgang } from "./selbstschutz";
@@ -89,6 +93,94 @@ export function useVorgang() {
       speicher.setQueryData<Nutzerzeile[]>(BENUTZER_SCHLUESSEL.liste, (alt) =>
         alt === undefined ? alt : mitAktualisierterZeile(alt, zeile),
       );
+    },
+  });
+}
+
+/**
+ * Wie lange die Mandantenliste als frisch gilt — fünfzehn Minuten.
+ *
+ * Dieselbe Zahl und derselbe Grund wie bei den Partnervorschlägen der
+ * Katalogpflege: Stammdaten, die sich während einer Pflegesitzung nicht ändern.
+ */
+const MANDANTEN_HALTBARKEIT = 15 * 60 * 1000;
+
+/**
+ * Die wählbaren Mandanten — **eine Abfrage für beide Verwender im Feature.**
+ *
+ * `GET /api/mandanten` steht seit Schritt 3 und wird aus `lib/mandanten.ts`
+ * wiederverwendet, nicht nachgebaut. Gelesen wird sie hier zweimal: von der
+ * Mengenpflege an der Zeile (E4) und seit 9c von der Anlegemaske. Beide
+ * brauchen dieselbe Antwort unter demselben Schlüssel — und damit auch dieselbe
+ * Haltbarkeit.
+ *
+ * ## Warum sie länger gehalten wird als die Voreinstellung
+ *
+ * **Der Grund ist gemessen und nicht vorgesorgt** (Sichtprüfung 26.08.2026):
+ * Nach jedem Speichern wechselt der `key` der Mandantenauswahl — so setzt sich
+ * ihr Entwurf zurück —, React hängt sie neu ein, und `useQuery` holt beim
+ * Einhängen nach, sobald die Antwort älter als `staleTime` ist. Mit den dreißig
+ * Sekunden aus `lib/query-client.ts` ging deshalb **nach jeder Mengenersetzung**
+ * ein zusätzliches `GET /api/mandanten` hinaus — auf einer Seite, deren ganzer
+ * Punkt ist, dass die Antwort den Zwischenspeicher setzt, statt nachzuholen.
+ *
+ * Es sind Stammdaten aus `GlassfishDB.Mandant`, zehn Zeilen, und sie ändern sich
+ * nicht, während jemand ein Konto pflegt — dieselbe Zahl und derselbe Grund wie
+ * bei den Partnervorschlägen der Katalogpflege (`features/katalog/hooks.ts`).
+ *
+ * *Seit 9c steht die Abfrage hier statt in `mandanten-auswahl.tsx`: Zwei
+ * Bausteine mit je einer eigenen Fassung derselben Haltbarkeit liefen
+ * auseinander, und zwar an der Stelle, an der es niemandem auffiele.*
+ */
+export function useMandanten() {
+  return useQuery<Mandant[]>({
+    queryKey: MANDANTEN_SCHLUESSEL,
+    queryFn: holeMandanten,
+    staleTime: MANDANTEN_HALTBARKEIT,
+    gcTime: MANDANTEN_HALTBARKEIT,
+  });
+}
+
+/**
+ * **Anlegen — eine eigene Mutation und nicht die der fünf** (9c).
+ *
+ * Sie sieht daneben aus wie eine sechste, und sie ist es an drei Stellen nicht:
+ *
+ * 1. **Eine andere Antwort.** `POST /api/admin/users` liefert vier Felder, die
+ *    Zeile hat neun. Sie taugt nicht als Zeile.
+ * 2. **Ein anderes Zwischenspeicherverhalten** (E24, siehe unten).
+ * 3. **Kein Selbstschutz und keine Vorwarnung.** Anlegen trifft nie das eigene
+ *    Konto und verwirft keine Sitzung; E19 hier mitzubenutzen wäre eine Regel
+ *    ohne Fall — und dieselbe Strecke für zwei Dinge, von denen eines sie nicht
+ *    braucht, ist der Weg, auf dem die Regel für das andere später verloren geht.
+ *
+ * ## Die Liste wird neu geholt, der Zwischenspeicher wird nicht gesetzt (E24)
+ *
+ * **Das ist die ausdrückliche Ausnahme vom Muster der Seite.** Die fünf
+ * schreibenden Vorgänge setzen die Zeile aus ihrer Antwort; hier ginge das nur,
+ * indem `active`, `mustChangePassword`, `locked`, `lastLogin` und `tenants` aus
+ * dem *dokumentierten Verhalten* ergänzt würden — also indem in den
+ * Zwischenspeicher geschrieben wird, was der Server nicht gesagt hat. Das wäre
+ * die Art Vermutung, die genau dann falsch ist, wenn sich das Backend einmal
+ * ändert, und sie stünde dann in der Liste, ohne dass jemand nachsieht.
+ *
+ * Die Ausnahme kostet **einen zweiten Aufruf über rund dreißig Konten** — 17,87
+ * ms (M82) — und ist damit bezahlt.
+ *
+ * `invalidateQueries` und nicht `refetchQueries`: Die Liste ist eingehängt und
+ * wird dadurch sofort nachgeholt; bis die Antwort da ist, steht die bisherige
+ * da. Das ist hier richtig — anders als bei den fünf gibt es keine Zeile, die
+ * währenddessen falsch aussähe.
+ *
+ * **Verworfen ist, den Vertrag zu ändern**, damit `POST` die Zeile liefert (E4).
+ */
+export function useAnlegen() {
+  const speicher = useQueryClient();
+
+  return useMutation({
+    mutationFn: (daten: Anlegedaten) => legeKontoAn(daten),
+    onSuccess: () => {
+      void speicher.invalidateQueries({ queryKey: BENUTZER_SCHLUESSEL.liste });
     },
   });
 }
