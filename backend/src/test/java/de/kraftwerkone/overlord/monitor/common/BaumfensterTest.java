@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import de.kraftwerkone.overlord.monitor.common.Baumfenster.Segment;
+import de.kraftwerkone.overlord.monitor.common.error.FachlicheAusnahme;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -425,6 +426,196 @@ class BaumfensterTest {
           .isEqualTo(2);
       assertThat(Duration.between(segmente.get(2).von(), segmente.get(2).bis()).toDays())
           .isEqualTo(2);
+    }
+  }
+
+  /**
+   * Die sieben Fehlerfaelle der Anfrage, <b>jeder einzeln</b>, und die eine Zusicherung, die ueber
+   * die Liste hinausgeht: Die Pruefung auf die volle Stunde laeuft auf dem in die Zone der
+   * Anwendungsuhr umgerechneten Wert, nicht auf dem UTC-Eingang.
+   */
+  @Nested
+  @DisplayName("Die Anfrage: zeitraum oder von/bis, und sieben Arten, es falsch zu machen")
+  class Anfrage {
+
+    private static final ZoneId BERLIN = ZoneId.of("Europe/Berlin");
+
+    /**
+     * Eine Zone mit halbstuendigem Versatz — dort sind UTC-Stunde und Wanduhrstunde verschieden.
+     */
+    private static final ZoneId KOLKATA = ZoneId.of("Asia/Kolkata");
+
+    private static void istAbgewiesen(String typ, Runnable aufruf) {
+      assertThatThrownBy(aufruf::run)
+          .isInstanceOfSatisfying(
+              FachlicheAusnahme.class,
+              ausnahme -> {
+                assertThat(ausnahme.status().value()).isEqualTo(400);
+                assertThat(ausnahme.problemTyp()).isEqualTo(typ);
+              });
+    }
+
+    @Test
+    @DisplayName("Ohne Angabe: null, und der Dienst waehlt die Vorgabe")
+    void ohne_angabe() {
+      assertThat(Baumfenster.ausAnfrage(null, null, null, BERLIN)).isNull();
+      assertThat(Baumfenster.ausAnfrage(" ", "", null, BERLIN)).isNull();
+    }
+
+    @Test
+    @DisplayName("Ein Paar: unveraendert ueber Rollupzeitraum.ausCode")
+    void ein_paar() {
+      Baumfenster fenster = Baumfenster.ausAnfrage("30t", null, null, BERLIN);
+      assertThat(fenster.istFrei()).isFalse();
+      assertThat(fenster.paar()).isEqualTo(Rollupzeitraum.TAGE_30);
+    }
+
+    @Test
+    @DisplayName("1. zeitraum-unbekannt — unveraendert")
+    void zeitraum_unbekannt() {
+      istAbgewiesen("zeitraum-unbekannt", () -> Baumfenster.ausAnfrage("7d", null, null, BERLIN));
+    }
+
+    @Test
+    @DisplayName("2. zeitfenster-mehrdeutig — zeitraum und von/bis, keine stille Vorrangregel")
+    void mehrdeutig() {
+      istAbgewiesen(
+          "zeitfenster-mehrdeutig",
+          () ->
+              Baumfenster.ausAnfrage(
+                  "48H", "2025-03-10T13:00:00Z", "2025-03-12T02:00:00Z", BERLIN));
+      // Auch ein halbes Fenster neben einem Paar ist mehrdeutig, nicht unvollstaendig.
+      istAbgewiesen(
+          "zeitfenster-mehrdeutig",
+          () -> Baumfenster.ausAnfrage("48H", "2025-03-10T13:00:00Z", null, BERLIN));
+    }
+
+    @Test
+    @DisplayName("3. zeitfenster-unvollstaendig — nur einer der beiden Zeitpunkte")
+    void unvollstaendig() {
+      istAbgewiesen(
+          "zeitfenster-unvollstaendig",
+          () -> Baumfenster.ausAnfrage(null, "2025-03-10T13:00:00Z", null, BERLIN));
+      istAbgewiesen(
+          "zeitfenster-unvollstaendig",
+          () -> Baumfenster.ausAnfrage(null, null, "2025-03-12T02:00:00Z", BERLIN));
+    }
+
+    @Test
+    @DisplayName("4. zeitpunkt-ungueltig — nicht als ISO-Zeitpunkt lesbar")
+    void zeitpunkt_ungueltig() {
+      istAbgewiesen(
+          "zeitpunkt-ungueltig",
+          () -> Baumfenster.ausAnfrage(null, "10.03.2025 14:00", "2025-03-12T02:00:00Z", BERLIN));
+      istAbgewiesen(
+          "zeitpunkt-ungueltig",
+          () -> Baumfenster.ausAnfrage(null, "2025-03-10T13:00:00Z", "2025-03-12T02:00", BERLIN));
+    }
+
+    @Test
+    @DisplayName("5. zeitfenster-ungueltig — von liegt hinter bis")
+    void ungueltig() {
+      istAbgewiesen(
+          "zeitfenster-ungueltig",
+          () ->
+              Baumfenster.ausAnfrage(null, "2025-03-12T02:00:00Z", "2025-03-10T13:00:00Z", BERLIN));
+    }
+
+    /**
+     * Gleich ist erlaubt und heisst <i>ein Stundeneimer</i>, weil {@code bis} einschliessend ist.
+     */
+    @Test
+    @DisplayName("von gleich bis ist ein Stundeneimer, kein Fehler")
+    void von_gleich_bis() {
+      Baumfenster fenster =
+          Baumfenster.ausAnfrage(null, "2025-03-10T13:00:00Z", "2025-03-10T13:00:00Z", BERLIN);
+
+      assertThat(fenster.fenster(t("2031-01-01T00:00")))
+          .isEqualTo(new Zeitfenster(t("2025-03-10T14:00"), t("2025-03-10T15:00")));
+    }
+
+    @Test
+    @DisplayName("6. zeitfenster-zu-gross — mehr als ein Kalenderjahr, gerechnet mit bis + 1 h")
+    void zu_gross() {
+      // Genau ein Jahr ist erlaubt: von 01.03. 00:00 bis einschliesslich 28.02. 23:00 des
+      // Folgejahres — das ausschliessende Ende ist der 01.03. 00:00.
+      Baumfenster genau =
+          Baumfenster.ausAnfrage(null, "2025-02-28T23:00:00Z", "2026-02-28T22:00:00Z", BERLIN);
+      assertThat(genau.fenster(t("2031-01-01T00:00")))
+          .isEqualTo(new Zeitfenster(t("2025-03-01T00:00"), t("2026-03-01T00:00")));
+
+      // Eine Stunde mehr — und es ist die Stunde, die bis einschliessend mitbringt — reisst.
+      istAbgewiesen(
+          "zeitfenster-zu-gross",
+          () ->
+              Baumfenster.ausAnfrage(null, "2025-02-28T23:00:00Z", "2026-02-28T23:00:00Z", BERLIN));
+    }
+
+    @Test
+    @DisplayName(
+        "7. zeitfenster-zu-genau — nicht auf einer vollen Stunde, abgewiesen statt gerundet")
+    void zu_genau() {
+      istAbgewiesen(
+          "zeitfenster-zu-genau",
+          () ->
+              Baumfenster.ausAnfrage(null, "2025-03-10T13:30:00Z", "2025-03-12T02:00:00Z", BERLIN));
+      istAbgewiesen(
+          "zeitfenster-zu-genau",
+          () ->
+              Baumfenster.ausAnfrage(null, "2025-03-10T13:00:00Z", "2025-03-12T02:00:01Z", BERLIN));
+    }
+
+    /**
+     * <b>Die Pruefung laeuft nach der Zonenumrechnung.</b> In Asia/Kolkata (+05:30) ist 08:30Z die
+     * volle Wanduhrstunde 14:00 — und 08:00Z ist 13:30 und damit zu genau. Auf dem UTC-Eingang
+     * geprueft waere es genau umgekehrt.
+     */
+    @Test
+    @DisplayName("Die volle Stunde gilt in der Zone der Anwendungsuhr, nicht in UTC")
+    void volle_stunde_nach_zonenumrechnung() {
+      Baumfenster fenster =
+          Baumfenster.ausAnfrage(null, "2025-03-10T08:30:00Z", "2025-03-11T08:30:00Z", KOLKATA);
+      assertThat(fenster.fenster(t("2031-01-01T00:00")))
+          .isEqualTo(new Zeitfenster(t("2025-03-10T14:00"), t("2025-03-11T15:00")));
+
+      istAbgewiesen(
+          "zeitfenster-zu-genau",
+          () ->
+              Baumfenster.ausAnfrage(
+                  null, "2025-03-10T08:00:00Z", "2025-03-11T08:00:00Z", KOLKATA));
+    }
+
+    /**
+     * {@code bis} ist einschliessend: Wer 23:00 eintraegt, bekommt den Eimer 23:00 bis 24:00 mit.
+     * Das ausschliessende Ende wird hier gerechnet, in Wanduhrzeit — am Umstellungstag ist die
+     * Stunde keine Stunde, und genau deshalb rechnet sie nicht der Browser.
+     */
+    @Test
+    @DisplayName("bis ist einschliessend: das Fenster endet eine Stunde spaeter, in Wanduhrzeit")
+    void bis_einschliessend() {
+      Baumfenster fenster =
+          Baumfenster.ausAnfrage(null, "2025-12-29T13:00:00Z", "2025-12-30T22:00:00Z", BERLIN);
+
+      assertThat(fenster.istFrei()).isTrue();
+      assertThat(fenster.code()).isEqualTo("FREI");
+      assertThat(fenster.fenster(t("2031-01-01T00:00")))
+          .isEqualTo(new Zeitfenster(t("2025-12-29T14:00"), t("2025-12-31T00:00")));
+
+      // Am Umstellungstag im Herbst: bis = 01:00 CEST (23:00Z am Vortag) — die naechste
+      // Wanduhrstunde ist 02:00, gleich, dass sie in dieser Nacht zweimal vergeht.
+      Baumfenster herbst =
+          Baumfenster.ausAnfrage(null, "2025-10-25T22:00:00Z", "2025-10-25T23:00:00Z", BERLIN);
+      assertThat(herbst.fenster(t("2031-01-01T00:00")))
+          .isEqualTo(new Zeitfenster(t("2025-10-26T00:00"), t("2025-10-26T02:00")));
+    }
+
+    /** Ein Fenster in der Zukunft wird nicht abgewiesen — es liefert Nullen. */
+    @Test
+    @DisplayName("Ein Fenster in der Zukunft ist kein Fehler")
+    void zukunft() {
+      Baumfenster fenster =
+          Baumfenster.ausAnfrage(null, "2099-01-01T00:00:00Z", "2099-01-02T00:00:00Z", BERLIN);
+      assertThat(fenster.segmente(t("2025-12-30T04:09:47"))).isNotEmpty();
     }
   }
 }

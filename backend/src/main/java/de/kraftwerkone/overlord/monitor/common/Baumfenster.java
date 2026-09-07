@@ -1,10 +1,13 @@
 package de.kraftwerkone.overlord.monitor.common;
 
+import de.kraftwerkone.overlord.monitor.common.error.FachlicheAusnahme;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.http.HttpStatus;
 
 /**
  * Das Fenster der Prozessansicht — <b>eines der drei Paare oder ein freies Fenster</b>, und in
@@ -82,6 +85,123 @@ public final class Baumfenster {
       throw new IllegalArgumentException("von muss vor bisAusschliessend liegen");
     }
     return new Baumfenster(null, von, bisAusschliessend);
+  }
+
+  /**
+   * Die Wahl des Aufrufers aus den drei Parametern der Anfrage — <b>{@code zeitraum} oder {@code
+   * von}/{@code bis}</b>, nie beides, und sieben Arten, es falsch zu machen.
+   *
+   * <p><b>Die Codes sind aus der Nachrichtenliste uebernommen und nicht neu erfunden</b> ({@code
+   * common/Zeitfenster}, {@code docs/nachrichtenliste.md} §2), bis auf {@code
+   * zeitfenster-zu-genau}. In dieser Reihenfolge geprueft:
+   *
+   * <ol>
+   *   <li>{@code zeitraum-unbekannt} — der Code ist keines der drei Paare ({@link
+   *       Rollupzeitraum#ausCode}, unveraendert)
+   *   <li>{@code zeitpunkt-ungueltig} — ein Zeitpunkt ist nicht als ISO-Zeitpunkt lesbar ({@link
+   *       Zeitpunkte#ausIso}, unveraendert)
+   *   <li>{@code zeitfenster-mehrdeutig} — {@code zeitraum} <b>und</b> {@code von}/{@code bis}.
+   *       <b>Keine stille Vorrangregel</b>, dieselbe Festlegung wie in der Liste: Wer beides
+   *       schickt, hat eine Vorstellung davon, welches gewinnt; raet das Backend, bekommt er ohne
+   *       Hinweis ein anderes Fenster als gedacht
+   *   <li>{@code zeitfenster-unvollstaendig} — nur einer der beiden Zeitpunkte
+   *   <li>{@code zeitfenster-zu-genau} — ein Zeitpunkt liegt <b>nicht auf einer vollen Stunde</b>.
+   *       <b>Abgewiesen, nicht gerundet:</b> Nach unten runden weitete das Fenster ({@code von})
+   *       beziehungsweise beschnitte es ({@code bis}). Beides verstoesst gegen die tragende Vorgabe
+   *       — alles kommt aus dem abgefragten Zeitraum, und alles aus ihm kommt vor. Die Oberflaeche
+   *       laesst den Zustand ueber {@code step=3600} gar nicht erst entstehen; die Pruefung faengt
+   *       die von Hand gebaute Adresse. <b>Geprueft wird der in die Zone der Anwendungsuhr
+   *       umgerechnete Wert</b>, nicht der UTC-Eingang: Bei einer Zone mit halbstuendigem Versatz
+   *       waeren das zwei verschiedene Aussagen
+   *   <li>{@code zeitfenster-ungueltig} — {@code von} liegt hinter {@code bis}. Gleich ist erlaubt
+   *       und heisst <i>ein Stundeneimer</i>, weil {@code bis} einschliessend ist
+   *   <li>{@code zeitfenster-zu-gross} — die Spanne uebersteigt ein <b>Kalenderjahr</b> ({@code
+   *       von.isBefore(bisAusschliessend.minusYears(1))}), nicht 365 Tage; sonst hinge die Grenze
+   *       am Schaltjahr
+   * </ol>
+   *
+   * <h2>{@code bis} ist in der Anfrage einschliessend, {@code fenster.bis} in der Antwort
+   * ausschliessend</h2>
+   *
+   * <p>In der Anfrage ist {@code bis} die <b>letzte enthaltene Stunde</b> — beidseitig geschlossen,
+   * genau wie {@code von}/{@code bis} der Nachrichtenliste. Wer {@code bis = 30.12. 23:00}
+   * eintraegt, bekommt den Eimer 23:00 bis 24:00 mit. Das Fenster, das gelesen wird, endet
+   * <b>ausschliessend</b> bei {@code bis + 1 Stunde}, und diese Stunde wird <b>hier</b> gerechnet,
+   * in der Zone der Anwendungsuhr — nicht im Browser, weil eine Stunde am Umstellungstag keine
+   * Stunde ist. Jede Seite haelt damit die Konvention ihrer Nachbarn: {@code von}/{@code bis} sind
+   * im Projekt beidseitig geschlossen, {@code fenster} ist im Baum seit 10c-1 ausschliessend.
+   *
+   * <p><b>Kein Fehler ueber die Zeit hinaus.</b> Ein Fenster in der Zukunft wird nicht abgewiesen —
+   * es liefert Nullen, und das ist eine richtige Antwort. Ein freies Fenster wird absolut
+   * eingegeben und gegen keine Uhr aufgeloest.
+   *
+   * @param zone die Zone der Anwendungsuhr — die eine Umrechnung zwischen UTC der API und der
+   *     Wanduhrzeit des Quellservers ({@link Zeitpunkte})
+   * @return {@code null}, wenn nichts angegeben ist — dann waehlt der Dienst die Vorgabe
+   * @throws FachlicheAusnahme {@code 400} in den sieben Faellen oben
+   */
+  public static Baumfenster ausAnfrage(String zeitraum, String von, String bis, ZoneId zone) {
+    Rollupzeitraum paar = Rollupzeitraum.ausCode(zeitraum);
+    LocalDateTime vonWanduhr = hatWert(von) ? Zeitpunkte.ausIso(von.trim(), zone, "von") : null;
+    LocalDateTime bisWanduhr = hatWert(bis) ? Zeitpunkte.ausIso(bis.trim(), zone, "bis") : null;
+    boolean absolut = vonWanduhr != null || bisWanduhr != null;
+
+    if (paar != null && absolut) {
+      throw new FachlicheAusnahme(
+          HttpStatus.BAD_REQUEST,
+          "zeitfenster-mehrdeutig",
+          "Zeitfenster mehrdeutig",
+          "Gib entweder einen Zeitraum oder die beiden Zeitpunkte an, nicht beides.",
+          "zeitraum und von/bis gleichzeitig gesetzt");
+    }
+    if (paar != null) {
+      return paar(paar);
+    }
+    if (!absolut) {
+      return null;
+    }
+    if (vonWanduhr == null || bisWanduhr == null) {
+      throw new FachlicheAusnahme(
+          HttpStatus.BAD_REQUEST,
+          "zeitfenster-unvollstaendig",
+          "Zeitfenster unvollstaendig",
+          "Ein freies Zeitfenster braucht beide Zeitpunkte: von und bis.",
+          "Nur eine der beiden Grenzen gesetzt");
+    }
+    if (!istVolleStunde(vonWanduhr) || !istVolleStunde(bisWanduhr)) {
+      throw new FachlicheAusnahme(
+          HttpStatus.BAD_REQUEST,
+          "zeitfenster-zu-genau",
+          "Zeitfenster zu genau",
+          "Beide Zeitpunkte muessen auf einer vollen Stunde liegen; die Kennzahlen werden"
+              + " stundenweise gefuehrt und nicht gerundet.",
+          "von oder bis liegt nicht auf einer vollen Stunde der Anwendungszone");
+    }
+    if (vonWanduhr.isAfter(bisWanduhr)) {
+      throw new FachlicheAusnahme(
+          HttpStatus.BAD_REQUEST,
+          "zeitfenster-ungueltig",
+          "Zeitfenster ungueltig",
+          "Der Zeitpunkt bis darf nicht vor von liegen.",
+          "von liegt hinter bis");
+    }
+    // bis ist einschliessend: Die letzte enthaltene Stunde endet eine Stunde spaeter, und die
+    // Stunde wird hier in Wanduhrzeit gerechnet — am Umstellungstag ist sie keine Stunde.
+    LocalDateTime bisAusschliessend = bisWanduhr.plusHours(1);
+    // Ein Jahr als Kalenderjahr, nicht als 365 Tage — sonst haengt die Grenze am Schaltjahr.
+    if (vonWanduhr.isBefore(bisAusschliessend.minusYears(1))) {
+      throw new FachlicheAusnahme(
+          HttpStatus.BAD_REQUEST,
+          "zeitfenster-zu-gross",
+          "Zeitfenster zu gross",
+          "Das Zeitfenster darf hoechstens ein Jahr umfassen.",
+          "Zeitfenster ueber ein Jahr angefragt");
+    }
+    return frei(vonWanduhr, bisAusschliessend);
+  }
+
+  private static boolean hatWert(String wert) {
+    return wert != null && !wert.isBlank();
   }
 
   /** Liegt der Zeitpunkt auf einer vollen Stunde — keine Minute, keine Sekunde, kein Bruchteil? */

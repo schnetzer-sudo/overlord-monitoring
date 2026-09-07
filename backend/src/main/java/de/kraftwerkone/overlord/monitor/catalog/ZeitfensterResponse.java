@@ -14,5 +14,10 @@ import java.time.Instant;
  * und keine Zeitpunkte — aufgeloest wird gegen die <b>Anwendungsuhr</b> (Regel Z1), und die ist im
  * Profil {@code dev} um den Rueckstand der Testkopie zurueckversetzt. Ohne diese beiden Felder
  * koennte die Oberflaeche nicht beschriften, welchen Zeitraum sie gerade zeigt.
+ *
+ * <p><b>Im freien Fenster bleibt {@code bis} ausschliessend</b> <i>(seit 07.09.2026)</i>, obwohl es
+ * in der Anfrage einschliessend war: {@code fenster.bis} ist {@code bis + 1 Stunde}, serverseitig
+ * in der Zone der Anwendungsuhr gerechnet. Die Uebertragungsliste bekommt dieses Fenster
+ * unveraendert (E-50), samt der dort benannten Ungenauigkeit.
  */
 public record ZeitfensterResponse(Instant von, Instant bis) {}

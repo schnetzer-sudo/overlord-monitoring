@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import de.kraftwerkone.overlord.monitor.common.Baumfenster;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.Pflegestatus;
 import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
@@ -374,7 +375,7 @@ class ProzessbaumServiceTest {
           List.of(gepflegt("p1", "A", "ALPHA", "EINGEHEND", WANDUHR.minusMonths(4))), List.of());
 
       for (Rollupzeitraum zeitraum : Rollupzeitraum.values()) {
-        ProzessbaumResponse antwort = service().baum(MANDANT, zeitraum);
+        ProzessbaumResponse antwort = service().baum(MANDANT, Baumfenster.paar(zeitraum));
         assertThat(
                 antwort
                     .partner()
@@ -533,7 +534,8 @@ class ProzessbaumServiceTest {
       bestandMit(List.of(), List.of());
 
       for (Rollupzeitraum zeitraum : Rollupzeitraum.values()) {
-        assertThat(service().baum(MANDANT, zeitraum).zeitraum()).isEqualTo(zeitraum.code());
+        assertThat(service().baum(MANDANT, Baumfenster.paar(zeitraum)).zeitraum())
+            .isEqualTo(zeitraum.code());
       }
     }
 
@@ -546,7 +548,8 @@ class ProzessbaumServiceTest {
     void fenster_in_utc() {
       bestandMit(List.of(), List.of());
 
-      ZeitfensterResponse fenster = service().baum(MANDANT, Rollupzeitraum.STUNDEN_48).fenster();
+      ZeitfensterResponse fenster =
+          service().baum(MANDANT, Baumfenster.paar(Rollupzeitraum.STUNDEN_48)).fenster();
 
       assertThat(fenster.von())
           .isEqualTo(LocalDateTime.parse("2025-12-28T06:00:00").atZone(ZONE).toInstant());
@@ -574,5 +577,72 @@ class ProzessbaumServiceTest {
 
   private ProzessknotenResponse erstesBlatt() {
     return antwort().partner().getFirst().richtungen().getFirst().prozesse().getFirst();
+  }
+
+  // ─── Das freie Fenster ────────────────────────────────────────────────────────
+
+  @Nested
+  @DisplayName("Das freie Fenster")
+  class FreiesFenster {
+
+    /**
+     * Die Antwort nennt {@code FREI} und die Grenzen des Fensters — {@code bis} ausschliessend, in
+     * UTC. Das Fenster ist absolut und haengt an keiner Uhr: Der Stichtag der Anwendungsuhr liegt
+     * hier Monate hinter dem Fenster, und die Antwort traegt trotzdem das Fenster.
+     */
+    @Test
+    @DisplayName("Die Antwort nennt FREI und das Fenster, bis ausschliessend, in UTC")
+    void frei_in_der_antwort() {
+      bestandMit(List.of(), List.of());
+      Baumfenster fenster =
+          Baumfenster.frei(
+              LocalDateTime.parse("2026-03-10T14:00"), LocalDateTime.parse("2026-03-12T03:00"));
+
+      ProzessbaumResponse antwort = service().baum(MANDANT, fenster);
+
+      assertThat(antwort.zeitraum()).isEqualTo("FREI");
+      // Winterzeit in Europe/Berlin: eine Stunde Versatz.
+      assertThat(antwort.fenster().von()).isEqualTo(Instant.parse("2026-03-10T13:00:00Z"));
+      assertThat(antwort.fenster().bis()).isEqualTo(Instant.parse("2026-03-12T02:00:00Z"));
+    }
+
+    /**
+     * Der Dienst reicht die <b>Zerlegung</b> durch und rechnet nichts nach — das Repository bekommt
+     * genau die Segmente, die {@code Baumfenster.zerlegung} liefert.
+     */
+    @Test
+    @DisplayName("Das Repository bekommt die zerlegten Segmente, nichts anderes")
+    void segmente_werden_durchgereicht() {
+      bestandMit(List.of(), List.of());
+      LocalDateTime von = LocalDateTime.parse("2025-03-10T14:00");
+      LocalDateTime bis = LocalDateTime.parse("2025-03-12T03:00");
+
+      service().baum(MANDANT, Baumfenster.frei(von, bis));
+
+      org.mockito.Mockito.verify(repository)
+          .kennzahlen(
+              org.mockito.ArgumentMatchers.eq(MANDANT),
+              org.mockito.ArgumentMatchers.eq(Baumfenster.zerlegung(von, bis)));
+    }
+
+    /** Die Kennzahlen eines freien Fensters werden wie die eines Paares verdichtet. */
+    @Test
+    @DisplayName("Die Kennzahlen werden je Prozess verdichtet, gleich woher die Segmente kommen")
+    void kennzahlen_wie_bei_einem_paar() {
+      bestandMit(
+          List.of(gepflegt("p1", "A", "ALPHA", "EINGEHEND", WANDUHR)),
+          List.of(zahl("p1", "DONE", 5), zahl("p1", "ERROR_X", 2)));
+
+      ProzessbaumResponse antwort =
+          service()
+              .baum(
+                  MANDANT,
+                  Baumfenster.frei(
+                      LocalDateTime.parse("2025-03-10T14:00"),
+                      LocalDateTime.parse("2025-03-12T03:00")));
+
+      assertThat(antwort.gesamt().nachrichten()).isEqualTo(7);
+      assertThat(antwort.gesamt().fehler()).isEqualTo(2);
+    }
   }
 }

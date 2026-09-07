@@ -1,10 +1,12 @@
 package de.kraftwerkone.overlord.monitor.catalog;
 
+import de.kraftwerkone.overlord.monitor.common.Baumfenster;
 import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
 import de.kraftwerkone.overlord.monitor.security.AngemeldeterNutzer;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import de.kraftwerkone.overlord.monitor.security.MandantService;
 import de.kraftwerkone.overlord.monitor.security.SitzungsVerwaltung;
+import java.time.Clock;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -28,12 +30,21 @@ import org.springframework.web.bind.annotation.RestController;
  * Feldern, hier ein Baum mit Kennzahlen. Ein zweiter Wurzelpfad behauptete eine zweite Ressource,
  * wo es eine zweite Sicht auf dieselbe gibt.
  *
- * <h2>Ein Parameter, und er ist freiwillig</h2>
+ * <h2>Zwei Modi, und beide sind freiwillig</h2>
  *
  * <p>{@code zeitraum} waehlt eines der drei Paare ({@link Rollupzeitraum}) und bestimmt damit, aus
  * welcher Rollup-Ebene die Kennzahlen kommen. Fehlt er, gilt {@code 48H} ({@code
  * ProzessbaumService.VORGABE}), und die Antwort <b>nennt das gewaehlte Paar</b> — sonst wuesste die
  * Oberflaeche nicht, was sie hervorheben und in die URL schreiben soll.
+ *
+ * <p><i>(seit 07.09.2026, Schritt 10c-4b.)</i> {@code von}/{@code bis} waehlen ein <b>freies
+ * Fenster</b>: ISO-Zeitpunkte in UTC, beide auf einer vollen Stunde, {@code bis}
+ * <b>einschliessend</b> als letzte enthaltene Stunde. Die beiden Modi schliessen einander aus; die
+ * sieben Fehlerfaelle und die Asymmetrie zwischen {@code bis} in der Anfrage und {@code
+ * fenster.bis} in der Antwort stehen in {@link Baumfenster#ausAnfrage}. Die Antwort nennt dann
+ * {@code "FREI"} als Zeitraum — <b>und verraet keine Ebene</b>: Das Fenster wird in Segmente ueber
+ * bis zu drei Rollup-Ebenen zerlegt, und was die Oberflaeche davon braucht, ist allein, welcher
+ * Knopf hervorgehoben ist.
  *
  * <p><b>Er beruehrt den Umfang des Baums nicht.</b> Alle Prozesse des Mandanten stehen darin,
  * unabhaengig vom Fenster — auch die, die nie etwas getragen haben. Der Zeitraum bestimmt
@@ -54,19 +65,36 @@ public class ProzessbaumController {
   private final MandantService mandantService;
   private final SitzungsVerwaltung sitzungsVerwaltung;
 
+  /**
+   * Die Anwendungsuhr (Regel Z1) — hier nur fuer ihre <b>Zone</b>: die eine Umrechnung zwischen den
+   * UTC-Zeitpunkten der Anfrage und der Wanduhrzeit des Quellservers ({@code common/Zeitpunkte}).
+   * Der Uhrenschlag selbst faellt im Dienst, genau einmal je Anfrage.
+   */
+  private final Clock anwendungsuhr;
+
   ProzessbaumController(
       ProzessbaumService prozessbaumService,
       MandantService mandantService,
-      SitzungsVerwaltung sitzungsVerwaltung) {
+      SitzungsVerwaltung sitzungsVerwaltung,
+      Clock anwendungsuhr) {
     this.prozessbaumService = prozessbaumService;
     this.mandantService = mandantService;
     this.sitzungsVerwaltung = sitzungsVerwaltung;
+    this.anwendungsuhr = anwendungsuhr;
   }
 
+  /**
+   * Erst der Mandant, dann die Pruefung der Parameter — ein Aufruf ohne aktiven Mandanten ist
+   * {@code 403}, gleich, was er sonst noch traegt.
+   */
   @GetMapping("/api/prozesse/baum")
-  public ProzessbaumResponse baum(@RequestParam(required = false) String zeitraum) {
+  public ProzessbaumResponse baum(
+      @RequestParam(required = false) String zeitraum,
+      @RequestParam(required = false) String von,
+      @RequestParam(required = false) String bis) {
     MandantContext mandant = mandantService.aktuellerKontext(erforderlicherNutzer());
-    return prozessbaumService.baum(mandant, Rollupzeitraum.ausCode(zeitraum));
+    return prozessbaumService.baum(
+        mandant, Baumfenster.ausAnfrage(zeitraum, von, bis, anwendungsuhr.getZone()));
   }
 
   private AngemeldeterNutzer erforderlicherNutzer() {

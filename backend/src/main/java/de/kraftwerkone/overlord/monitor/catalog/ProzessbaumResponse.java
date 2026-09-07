@@ -18,9 +18,12 @@ import java.util.List;
  * ueber bis zu 733 Prozesse — eine zweite und deutlich groessere Ausnahme, fuer eine Zahl, die in
  * der Uebertragungsliste ohnehin steht. Vollstaendig in {@code docs/process-view.md} §5.
  *
- * @param zeitraum das gewaehlte Paar als Code ({@code 48H}, {@code 30T}, {@code 12M}) — <b>immer
- *     gesetzt</b>, auch wenn der Aufrufer keinen genannt hat
- * @param fenster die gelesenen Grenzen, UTC, {@code bis} ausschliessend
+ * @param zeitraum das gewaehlte Paar als Code ({@code 48H}, {@code 30T}, {@code 12M}) oder {@code
+ *     FREI} fuer ein freies Fenster — <b>immer gesetzt</b>, auch wenn der Aufrufer keinen genannt
+ *     hat. {@code FREI} verraet keine Ebene: Die Oberflaeche braucht das Feld nur, um zu wissen,
+ *     welcher Knopf hervorgehoben ist
+ * @param fenster die gelesenen Grenzen, UTC, {@code bis} ausschliessend — auch im freien Fenster,
+ *     dessen {@code bis} in der Anfrage einschliessend war ({@code common/Baumfenster#ausAnfrage})
  * @param stilleSchwelleMonate ab wie vielen Monaten ohne Bewegung ein Prozess als {@link
  *     Prozesszustand#STILL} gilt. <b>Die Zahl steht in der Antwort und nicht nur im Code</b>: Die
  *     Oberflaeche muss „seit ueber drei Monaten" formulieren koennen, ohne die Drei selbst zu

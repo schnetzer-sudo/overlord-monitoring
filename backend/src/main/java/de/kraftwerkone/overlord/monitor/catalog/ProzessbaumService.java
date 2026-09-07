@@ -99,21 +99,26 @@ public class ProzessbaumService {
   /**
    * Der ganze Baum fuer den aktiven Mandanten.
    *
+   * <p><b>Ein Paar oder ein freies Fenster — der Weg ist derselbe.</b> Beides ist ein {@link
+   * Baumfenster}, beides liefert Segmente, und das Repository rendert fuer ein Segment den Text der
+   * Paare und fuer mehrere die Vereinigung. Der Dienst rechnet hier nichts nach, rundet nichts und
+   * kennt keine Ebene; er reicht die Segmente durch und nennt in der Antwort den Code des Fensters
+   * — {@code 48H}, {@code 30T}, {@code 12M} oder {@code FREI}.
+   *
    * @param mandant Regel M2 — erster Pflichtparameter, und er kommt aus der Sitzung (Regel M1)
-   * @param gewaehlt das Paar aus der URL, oder {@code null} fuer {@link #VORGABE}
+   * @param gewaehlt das Fenster aus der URL, oder {@code null} fuer {@link #VORGABE}
    */
-  public ProzessbaumResponse baum(MandantContext mandant, Rollupzeitraum gewaehlt) {
+  public ProzessbaumResponse baum(MandantContext mandant, Baumfenster gewaehlt) {
     LocalDateTime jetzt = LocalDateTime.now(anwendungsuhr);
-    Rollupzeitraum zeitraum = gewaehlt == null ? VORGABE : gewaehlt;
-    Zeitfenster fenster = zeitraum.fenster(jetzt);
+    Baumfenster baumfenster = gewaehlt == null ? Baumfenster.paar(VORGABE) : gewaehlt;
+    Zeitfenster fenster = baumfenster.fenster(jetzt);
 
     List<Prozessgeruestzeile> geruest = prozessbaumRepository.geruest(mandant);
     Map<String, Kennzahl> jeProzess =
-        kennzahlenJeProzess(
-            prozessbaumRepository.kennzahlen(mandant, Baumfenster.paar(zeitraum).segmente(jetzt)));
+        kennzahlenJeProzess(prozessbaumRepository.kennzahlen(mandant, baumfenster.segmente(jetzt)));
 
     return new ProzessbaumResponse(
-        zeitraum.code(),
+        baumfenster.code(),
         new ZeitfensterResponse(
             Zeitpunkte.nachUtc(fenster.von(), anwendungsuhr.getZone()),
             Zeitpunkte.nachUtc(fenster.bis(), anwendungsuhr.getZone())),
