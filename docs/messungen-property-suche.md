@@ -471,3 +471,258 @@ ist dieselbe, die bei `MessageStatusIDX` den 13,2-Sekunden-Fall aus L15 erzeugt 
 *Die 46.964.279 sind zugleich die Zahl, die bis zum 12.08.2026 als „gemessen" in der
 Projektbeschreibung stand und dort im Kasten zu §8 korrigiert ist. Sie ist aus der Dokumentation
 verschwunden und **im Optimizer geblieben**.*
+
+---
+
+## M156 — Deckung je Name
+
+**Sitzungen** `s4-vorprobe.sql`, `s5-m156-nexans.sql` (**abgebrochen, siehe unten**),
+`s6-m156-fassungB.sql`, `s7-m156-nexans.sql`.
+
+Für jeden Typ‑1‑Namen: Auf wie vielen Nachrichten ist er belegt? Absolut und in Prozent, über ein
+Fenster von **30 Tagen bis 2025‑12‑30**, je Mandant, **zusätzlich getrennt nach Stellung in der
+Kette**.
+
+> **Vorregistrierte Deutung und die Schwelle, vor dem Lauf gesetzt.** Ein Name unter **20 %**
+> Deckung über die **Wurzeln** ist als Suchfeld fragwürdig. **Die Schwelle siebt nicht automatisch
+> aus** — sie erzeugt einen Vermerk und eine Vorlage an den Auftraggeber. Begründung: M28‑2 misst
+> für taugliche BAM-Typen 83 bis 92,26 % über die Wurzeln und 0,72 % für den untauglichen Fall;
+> 20 % liegt deutlich unter dem einen und deutlich über dem anderen.
+
+**Das Fenster.** `MessageLastUpdate >= '2025-11-30 00:00:00'` bis `< '2025-12-30 00:00:00'`,
+halboffen, absolut, genau 30 Tage. **Es ist Ziffer für Ziffer das Fenster B aus M28‑1 und M28‑2** —
+214.330 Nachrichten über alle Mandanten, bei `NEXANS` 28.524 Wurzeln und 101.270 Kinder. Das war
+nicht geplant und ist der glücklichste Umstand dieser Runde: **Die 20‑%-Schwelle ist damit nicht
+nur der Zahl nach, sondern über dieselbe Grundmenge vergleichbar.**
+
+**Die Rollen sind wie in M28‑1 gerechnet** (`verkettung.md` §5): Wurzel heißt `Source` gesetzt, Kind
+heißt `SourceMessageID` belegt. Die beiden überlappen; sie teilen den Bestand nicht.
+
+> **`Source` und `Target` sind `bit(1)`, nicht `varchar`** — das ist beim Schreiben des Prädikats
+> aufgefallen. `Source <> ''` und `Source = 1` liefern auf `bit(1)` dasselbe (beide 28.524, in
+> M156‑0 gegengeprüft), weil der Leerstring im Zahlenkontext zu 0 wird. Verwendet ist `= 1`.
+
+### Die erste Fassung ist in die Zeitgrenze gelaufen — und das ist ein Ergebnis
+
+Gebaut war die Messung zuerst als **vier `EXISTS` je Nachricht**, ausgewertet über eine abgeleitete
+Tabelle. Der Plan sah gut aus:
+
+| id | table | type | key | rows | Extra |
+|---|---|---|---|---:|---|
+| 1 | `m` | `range` | `MessageLastUpdateProcessMessageIDX` | 476.586 | `Using where; Using index` |
+| 3–6 | `p` (4×) | `ref` | **`PRIMARY`**, `key_len` 548 | 1 | `Using where; Using index` |
+| 7 | `pr`, `pm` | `eq_ref` | `PRIMARY` | 1 | `Using where` |
+
+**Jeder einzelne Zugriff ist optimal, und die Abfrage ist trotzdem nach 60 Sekunden abgebrochen**
+(`ERROR 1969`, `max_statement_time` = 60). Der Grund steht nicht im Plan: 180.251 Nachrichten mal
+vier Unterabfragen plus die Mandantenkette sind über eine Million Indexzugriffe. **Das ist derselbe
+Befund wie „erst deckeln, dann beschriften" in [`bam-suche.md`](bam-suche.md) §4** — der `EXPLAIN`
+sagt nicht, *wie oft* eine Zeile angefasst wird.
+
+**Fassung B stellt dieselbe Frage billiger:** ein Join statt vier Unterabfragen, mit dem Namensfilter
+in der Join-Bedingung und `COUNT(DISTINCT …)` je Name.
+
+```sql
+SELECT p.MessagePropertyName,
+       COUNT(DISTINCT m.MessageID) AS belegt,
+       COUNT(DISTINCT CASE WHEN m.Source = 1 THEN m.MessageID END) AS belegtWurzel,
+       COUNT(DISTINCT CASE WHEN m.SourceMessageID IS NOT NULL AND m.SourceMessageID <> ''
+                           THEN m.MessageID END) AS belegtKind
+  FROM GlassfishDB.Message m
+  JOIN GlassfishDB.MessageProperty p
+    ON p.MessageID = m.MessageID
+   AND p.MessagePropertyName IN (…die vier Typ‑1‑Namen…)
+ WHERE m.MessageLastUpdate >= ? AND m.MessageLastUpdate < ?
+   AND EXISTS (SELECT 1 FROM GlassfishDB.Process pr
+                 JOIN GlassfishDB.ProjectMandant pm ON pm.ProjectID = pr.ProjectID
+                WHERE pr.ProcessID = m.ProcessID AND pm.MandantID = ?)
+ GROUP BY p.MessagePropertyName
+```
+
+**`EXPLAIN` (L15) — und die beiden Mandanten bekommen verschiedene Pläne:**
+
+| Mandant | führende Tabelle | Zugriff | dann |
+|---|---|---|---|
+| `SUTTONS` | **`pm`** (`ProjectMandant`) | `ref` über `ProjectMandant_Mandant_idx`, `Using index` | `pr` `ref`, `m` **`ref` über `ProejctIDIDX`** (197.804 rows), `p` `ref` über `PRIMARY` `Using index` |
+| `NEXANS` | **`m`** (`Message`) | **`range` über `MessageLastUpdateIDX`** | `pr`, `pm` je `eq_ref` über `PRIMARY`, `p` `ref` über `PRIMARY` `Using index` |
+
+**Beim kleinen Mandanten steigt der Optimierer über den Mandanten ein, beim großen über die Zeit.**
+Das ist dasselbe Kippen, das M147 bis M151 auf der Rollup-Stundenebene gefunden haben, und es
+passiert hier ohne Zutun. In beiden Fällen wird `MessageProperty` **ausschließlich über die
+`MessageID`** erreicht, als `ref` über den Primärschlüssel mit `Using index` — **Regel L4 ist in
+dieser Messung eingehalten.**
+
+**Laufzeit** (ein Lauf je Mandant, siehe Vermerk zur Laufzeitdisziplin unten): `SUTTONS` 2,7 s,
+`NEXANS` 15,0 s, jeweils die ganze Sitzung samt Verbindungsaufbau.
+
+### Ergebnis `NEXANS` — 180.251 Nachrichten, 28.524 Wurzeln, 101.270 Kinder
+
+| Name | belegt | Anteil | auf Wurzeln | **je Wurzel** | auf Kindern | je Kind |
+|---|---:|---:|---:|---:|---:|---:|
+| `Message.GUID` | 180.251 | 100,000 % | 28.524 | **100,000 %** | 101.270 | 100,000 % |
+| `Service.Type` | 180.251 | 100,000 % | 28.524 | **100,000 %** | 101.270 | 100,000 % |
+| `Converter.TransactionID` | 180.231 | 99,989 % | 28.524 | **100,000 %** | 101.256 | 99,986 % |
+| **`Message.ReceiverID`** | 46.986 | 26,067 % | 3.652 | **12,803 %** | 386 | 0,381 % |
+
+### Ergebnis `SUTTONS` — 21.516 Nachrichten, 639 Wurzeln, 1.247 Kinder
+
+| Name | belegt | Anteil | auf Wurzeln | **je Wurzel** | auf Kindern | je Kind |
+|---|---:|---:|---:|---:|---:|---:|
+| `Message.GUID` | 21.516 | 100,000 % | 639 | **100,000 %** | 1.247 | 100,000 % |
+| `Service.Type` | 21.516 | 100,000 % | 639 | **100,000 %** | 1.247 | 100,000 % |
+| `Converter.TransactionID` | 21.516 | 100,000 % | 639 | **100,000 %** | 1.247 | 100,000 % |
+| **`Message.ReceiverID`** | **0** | 0,000 % | 0 | **0,000 %** | 0 | 0,000 % |
+
+### Was die Schwelle sagt — und was sie nicht sagt
+
+**Die 20 % greifen bei genau einem Namen: `Message.ReceiverID` mit 12,803 % über die Wurzeln bei
+`NEXANS` und 0 % bei `SUTTONS`.** Das ist der Vermerk, den die Schwelle erzeugt, und er geht als
+**Vorlage an den Auftraggeber** — ausgesiebt wird nichts.
+
+**Zum Vergleich, dieselbe Grundmenge, M28‑2:** taugliche BAM-Typen 83,50 bis 92,26 % je Wurzel, der
+untaugliche Fall 0,72 %. `Message.ReceiverID` liegt mit 12,80 % **zwischen** beiden und näher am
+untauglichen Ende. **Die 0,381 % über die Kinder liegen unter dem untauglichen BAM-Fall.**
+
+> **Das befürchtete Risiko ist nicht eingetreten — und dafür ein anderes.** Die MVP-Zusage stand
+> unter dem Vorbehalt, die Deckung könne ausfallen wie bei M11 (auf 98,93 % der Zeilen leer). **Sie
+> fällt gegenteilig aus:** Drei von vier Namen sind auf **jeder** Nachricht belegt. Die Suche läuft
+> also nicht leer.
+>
+> **Aber 100 % Deckung ist keine gute Nachricht, sie ist bloß nicht die befürchtete.** Ein Name, der
+> überall steht, schränkt nichts ein; die gesamte Selektivität muss vom **Wert** kommen. Genau das
+> misst M157 — und dort kippt der Befund.
+
+### Der Befund, der E‑99 unmittelbar trifft
+
+**Bei `SUTTONS` sind drei der vier Namen auf 100 % der Nachrichten belegt — und keiner von ihnen ist
+für `SUTTONS` konfiguriert** (M154: alle vier Zeilen tragen `MandantID = 'NEXANS'`).
+
+| | `NEXANS` | `SUTTONS` |
+|---|---|---|
+| in `MessagePropertySearchListEntry` konfiguriert | 4 Namen | **0 Namen** |
+| in den Daten tatsächlich belegt | 4 | **3, davon drei zu 100 %** |
+
+**Die Konfigurationstabelle beschreibt die Daten nicht.** Ein `SUTTONS`-Nutzer könnte nach
+`Message.GUID` suchen und fände auf jeder seiner Nachrichten einen Wert — das Angebot nach E‑99
+zeigte ihm das Feld nicht. Ob die Tabelle eine Kuratierungslücke hat oder eine bewusste
+Freischaltung je Mandant abbildet, sagt diese Messung **nicht**. **Offener Punkt 144.**
+
+*Belegvermerk (L10): gemessen ist die Belegung über Fenster B (30 Tage bis 2025‑12‑30) auf der
+Testkopie, je Mandant und je Kettenstellung. Behauptet wird nicht, dass die Quoten über andere
+Fenster oder in der Produktion gleich ausfallen — und ausdrücklich nicht, dass ein Name, der bei
+`SUTTONS` belegt ist, dort auch angeboten werden soll.*
+
+---
+
+## M157 — Werteverteilung je Name
+
+**Sitzungen** `s8-m157-vorprobe.sql` (**abgebrochen**), `s9-m157a.sql`, `s10-m157-zaehlung.sql`,
+`s11-m157-verteilung.sql`, `s12-m157b-m160.sql`.
+
+> ⚠️ **Regel G1 greift hier scharf.** Dieser Abschnitt enthält **keinen einzigen
+> `MessagePropertyValue`** — weder ganz noch abgekürzt, weder als GUID noch als Beispiel.
+> Ausgegeben sind ausschließlich **Ränge und Zähler**. Die Prüfwerte sind im Statement über eine
+> deterministische Auswahl hergeleitet und haben das Skript nie berührt.
+
+> **Vorregistrierte Schwelle.** Ein Name, dessen häufigster Wert **234.159** Zeilen überschreitet,
+> ist ohne zusätzliche Behandlung nicht anbietbar — das ist der gemessene Höchstwert der BAM-Suche
+> (M33), also der schlimmste Fall, der dort mit Deckelung noch tragbar war.
+
+### Der Gesamtbestand ist nicht in einem Statement zählbar — und das ist der erste Befund
+
+Die Frage nach dem häufigsten Wert war für den **Gesamtbestand** gestellt, weil die Schwelle aus
+M33 von dort stammt. **Sie ist dort nicht zu beantworten.** Schon das Zählen der vier Namen in
+einem Statement bricht ab:
+
+| Fassung | Plan | Ausgang |
+|---|---|---|
+| vier Namen als `IN`-Liste | `range` über `MessagePropertyNameValueIDX`, `Using index`, **29.283.016 rows** | **Abbruch nach 120 s** (`ERROR 1969`) |
+| ein Name als `=` | `ref` über `MessagePropertyNameIDX`, `Using index` | läuft |
+
+**Je Name einzeln, über den Gesamtbestand, gezählt** (`ref`, `Using index`, ein Lauf je Name):
+
+| Name | Zeilen im Gesamtbestand | Laufzeit |
+|---|---:|---:|
+| `Service.Type` | **10.217.134** | **125,527 s** |
+| `Converter.TransactionID` | 4.522.624 | 42,212 s |
+| `Message.GUID` | **3.341.519** | 24,673 s |
+| `Message.ReceiverID` | 918.500 | 0,468 s *(im Puffer aus dem Vorlauf)* |
+
+> **`Message.GUID` trägt 3.341.519 Zeilen — das ist auf die Zeile genau die Zeilenzahl von
+> `Message`** (M0). Genau ein Eintrag je Nachricht, über den gesamten Bestand, ohne einen einzigen
+> Ausreißer nach oben oder unten. Das ist die sauberste Eigenschaft, die diese Runde gefunden hat.
+
+**Ein einziges `COUNT(*)` über einen Namen kostet bis zu 125 Sekunden.** Der Lese-Pool der Anwendung
+hat 10 Sekunden ([`datenzugriff.md`](datenzugriff.md) §1). **Damit ist jede Abfrage, die über den
+Namen allein einsteigt, im Anwendungscode unmöglich** — nicht langsam, sondern unmöglich. Das ist
+die gemessene Begründung für Regel L4, und sie ist deutlicher ausgefallen als der Regeltext
+vermuten lässt.
+
+### Die Verteilung, gemessen über das 30-Tage-Fenster
+
+**Abweichung, ausdrücklich gemeldet:** Weil der Gesamtbestand nicht messbar ist, steht die
+Verteilung über **Fenster B** (30 Tage bis 2025‑12‑30), dasselbe wie in M156. **Jede Zahl darin ist
+eine untere Schranke für den Gesamtbestand** — derselbe Wert trägt dort mindestens so viele Zeilen
+wie hier. Ein Unterschreiten der Schwelle im Fenster sagt über den Gesamtbestand **nichts**; ein
+Überschreiten entscheidet sie.
+
+**`NEXANS`**
+
+| Name | verschiedene Werte | **häufigster Wert (Zeilen)** | Zeilen gesamt | Werte mit genau 1 Zeile |
+|---|---:|---:|---:|---:|
+| `Message.GUID` | 180.251 | **1** | 180.251 | 180.251 (**100 %**) |
+| `Converter.TransactionID` | 238.242 | **2** | 239.533 | 236.951 (99,46 %) |
+| `Message.ReceiverID` | 355 | **5.176** | 46.986 | 36 |
+| **`Service.Type`** | **18** | **225.416** | 532.215 | **0** |
+
+**`SUTTONS`**
+
+| Name | verschiedene Werte | **häufigster Wert (Zeilen)** | Zeilen gesamt | Werte mit genau 1 Zeile |
+|---|---:|---:|---:|---:|
+| `Message.GUID` | 21.516 | **1** | 21.516 | 21.516 (**100 %**) |
+| `Converter.TransactionID` | 42.399 | **2** | 42.430 | 42.368 (99,86 %) |
+| `Message.ReceiverID` | **0** | — | — | — |
+| **`Service.Type`** | **6** | **42.430** | 104.355 | **0** |
+
+### Die Schwelle ist gerissen — und die 90 Tage entscheiden es eindeutig
+
+Mit 225.416 Zeilen liegt `Service.Type` bei `NEXANS` im 30-Tage-Fenster **3,7 % unter** der
+Schwelle 234.159. Weil das nur eine untere Schranke ist, ist dieselbe Messung über **90 Tage**
+nachgeholt:
+
+| `Service.Type`, `NEXANS` | verschiedene Werte | häufigster Wert (Zeilen) | Zeilen gesamt |
+|---|---:|---:|---:|
+| 30 Tage | 18 | 225.416 | 532.215 |
+| **90 Tage** | **18** | **708.893** | 1.658.919 |
+
+**708.893 gegen die Schwelle 234.159 — überschritten um Faktor 3,03**, und immer noch als untere
+Schranke für den Gesamtbestand mit seinen 10.217.134 Zeilen. **`Service.Type` ist ohne zusätzliche
+Behandlung nicht anbietbar.**
+
+> **Und die Zahl der Werte erklärt, warum das kein Randfall ist.** `Service.Type` hat über 90 Tage
+> **dieselben 18** verschiedenen Werte wie über 30 — die Menge wächst nicht, nur die Belegung. Das
+> ist kein Suchschlüssel, das ist eine **Kategorie**: ein Feld mit einer Handvoll Ausprägungen, das
+> jede Nachricht trägt. Wer ihn in ein Suchfeld schreibt, bekommt kein Ergebnis, sondern eine
+> Teilmenge des Bestands.
+
+**Die vier Namen zerfallen damit in drei Klassen:**
+
+| Klasse | Namen | Kennzeichen |
+|---|---|---|
+| **Schlüssel** | `Message.GUID`, `Converter.TransactionID` | 100 % Deckung, Wert praktisch eindeutig (häufigster Wert 1 bzw. 2 Zeilen) |
+| **Merkmal** | `Message.ReceiverID` | 12,80 % Deckung über die Wurzeln, 355 Werte, häufigster 5.176 Zeilen |
+| **Kategorie** | `Service.Type` | 100 % Deckung, **18** Werte, häufigster über 708.893 Zeilen |
+
+*Belegvermerk (L10): gemessen sind die Zeilenzahlen je Name über den Gesamtbestand und die
+Werteverteilung über 30 beziehungsweise 90 Tage. Behauptet wird **nicht**, dass 708.893 der
+Höchstwert des Gesamtbestands ist — er ist eine gemessene untere Schranke dafür. Der Gesamtbestand
+ist an dieser Stelle nicht messbar, und die Lücke bleibt offen.*
+
+### Vermerk zur Laufzeitdisziplin — eine gemeldete Abweichung
+
+Der Auftrag verlangt zu jeder Messung die **beste von fünf nach einem Aufwärmlauf**. Für M156 und
+M157 steht sie **nicht** da, sondern ein Einzelwert je Lauf. **Grund:** Diese beiden sind
+Erhebungen über den Bestand und keine Kandidaten für eine gebaute Abfrage; ihre Laufzeit ist kein
+Prüfkriterium, sondern nur ein Hinweis auf die Kosten. Sechs Läufe des 125-Sekunden-Statements
+hätten die geteilte Testkopie zwölf Minuten lang belegt, ohne eine Aussage zu tragen. **Die volle
+Disziplin steht dort, wo sie zählt: in M155, M158, M159 und M160.**
