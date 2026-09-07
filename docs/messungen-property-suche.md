@@ -205,3 +205,154 @@ gekostet.
 > 12.480 Zeilen", nicht der Wert. **Feldnamen sind Konfiguration und dürfen stehen.** Prozesse und
 > Partner werden maskiert, und die Maske entsteht **im Statement** über `ROW_NUMBER()`, nicht durch
 > Abschreiben.
+
+---
+
+## M153 — Was die Tabelle ist
+
+**Sitzung** `scripts/messung-property-suche/s1-m153.sql`. `SHOW CREATE TABLE`,
+`information_schema.COLUMNS`, `information_schema.STATISTICS`, Zeilenzahl per `COUNT(*)`.
+
+> **Vorregistrierte Deutung.** Drei Spalten — `MessagePropertyName`, `MandantID`,
+> `MessagePropertyType`. **Keine Beschreibungs- oder Sortierspalte.** Trifft sie nicht zu und es
+> existiert eine Klartextspalte, ist E‑105 („technische Namen unverändert anzeigen") auf falscher
+> Voraussetzung getroffen.
+
+**Die Deutung hat getroffen, Spalte für Spalte.**
+
+```sql
+CREATE TABLE `MessagePropertySearchListEntry` (
+  `MessagePropertyName` varchar(100) NOT NULL,
+  `MandantID` varchar(36) DEFAULT NULL,
+  `MessagePropertyType` int(11) DEFAULT NULL,
+  PRIMARY KEY (`MessagePropertyName`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+```
+
+| pos | Spalte | Typ | `NULL` | Schlüssel | Kollation |
+|---:|---|---|---|---|---|
+| 1 | `MessagePropertyName` | `varchar(100)` | nein | **PRI** | `utf8mb4_general_ci` |
+| 2 | `MandantID` | `varchar(36)` | ja | — | `utf8mb4_general_ci` |
+| 3 | `MessagePropertyType` | `int(11)` | ja | — | — |
+
+**Es gibt keine Beschreibungsspalte und keine Sortierspalte.** Damit steht **E‑105** auf der
+Voraussetzung, die für sie angenommen war: Diese Tabelle *kann* keinen Klartext liefern, weil sie
+keinen führt. Sie ist darin **ärmer als `MessageBAMMandant`**, das mit `MessageBAMTypeSortIndex`
+eine Ordnung und über `MessageBAMType.MessageBAMTypeDescription` eine Bezeichnung anbietet
+([`bam-suche.md`](bam-suche.md) §10). Die zweite Quelle des Angebots (E‑99) liefert also **Namen
+ohne Beschriftung und ohne Ordnung**, die erste beides.
+
+**Indizes: genau einer, der Primärschlüssel.**
+
+| Index | Spalte | eindeutig | Kardinalität | Typ |
+|---|---|---|---:|---|
+| `PRIMARY` | `MessagePropertyName` | ja | **7** | BTREE |
+
+> **Der Primärschlüssel steht auf dem Namen allein — und das ist der Befund dieser Messung, der
+> über E‑99 hinausreicht.** `MessageBAMMandant` trägt die `MandantID` **im** Schlüssel; derselbe
+> BAM-Typ kann dort für zehn Mandanten getrennt konfiguriert sein. Hier kann er das nicht: **Ein
+> Feldname existiert genau einmal**, und die `MandantID` daneben ist eine Eigenschaft der Zeile,
+> keine Achse der Konfiguration. Für zwei Mandanten denselben Namen mit verschiedenem Typ zu
+> hinterlegen, ist in dieser Tabelle **nicht darstellbar**. Was daraus folgt, misst M154.
+
+**Zeilenzahl: 12, gezählt.**
+
+| Quelle | Wert |
+|---|---:|
+| `COUNT(*)` — **verwendet** | **12** |
+| `information_schema.TABLE_ROWS` — **nicht verwendet** | 7 |
+| `PRIMARY`-Kardinalität in `STATISTICS` | 7 |
+
+**Die Schätzung liegt 41,7 % zu niedrig, und die Indexkardinalität liegt mit ihr falsch.** Das ist
+dieselbe Falle, die am 12.08.2026 die Zeilenzahlen von `MessageBAM` und `MessageProperty` in der
+Projektbeschreibung um 41,9 % und 60,9 % verfälscht hat (Kasten in §8). Sie ist hier folgenlos,
+weil zwölf Zeilen in jedem Plan billig sind — **aber sie ist derselbe Fehler und wird deshalb
+ausgewiesen**, nicht weggelassen.
+
+**Weitere Angaben:** `ENGINE=InnoDB`, `CREATE_TIME` **2026‑08‑14 17:14:34**, `DATA_LENGTH` 32.768
+Byte, `INDEX_LENGTH` 0.
+
+*Belegvermerk (L10): gemessen sind Aufbau, Indizes und die gezählte Zeilenzahl der **Testkopie**.
+Behauptet wird nichts über die Produktion — dort kann dieselbe Tabelle mehr Zeilen tragen. Der
+Aufbau ist davon unberührt, die Verteilung in M154 nicht.*
+
+---
+
+## M154 — Verteilung über Typ und Mandant
+
+**Sitzung** `scripts/messung-property-suche/s2-m154.sql`. Zeilen je `MessagePropertyType`, je
+`MandantID`, **einschließlich `NULL`**, über alle zehn Mandanten.
+
+> **Vorregistrierte Deutung.** `MessagePropertyType ∈ {0, 1}`. `MandantID IS NULL` bedeutet „gilt
+> für alle Mandanten". Ein dritter Typwert bricht die Lesart aus M155 — dann ist M155 nicht
+> auszuführen, sondern der Befund zu melden. `NULL` ist als eigene Zeile auszuweisen und **niemals**
+> wegzufiltern.
+
+**Der erste Teil hat getroffen: es gibt genau zwei Typwerte, 0 und 1.** M155 wird ausgeführt.
+
+| `MessagePropertyType` | Zeilen |
+|---:|---:|
+| 0 | **8** |
+| 1 | **4** |
+| *`NULL`* | **0** |
+
+| `MandantID` | Zeilen |
+|---|---:|
+| *`NULL`* | **8** |
+| `NEXANS` | **4** |
+
+**Die Kreuztabelle ist der eigentliche Befund, und sie ist vollständig entartet:**
+
+| Typ | Mandant | Zeilen |
+|---:|---|---:|
+| 0 | *`NULL`* | **8** |
+| 1 | `NEXANS` | **4** |
+
+> ⚠️ **Typ und Mandant fallen zusammen — die Messung kann die beiden Wirkungen nicht trennen.**
+> Es gibt **keine** Zeile mit Typ 0 und einem Mandanten, und **keine** mit Typ 1 und `NULL`. Die
+> vorregistrierte Lesart „`NULL` heißt: gilt für alle Mandanten" ist mit diesen Daten **verträglich,
+> aber nicht belegt**: „`NULL` heißt: keinem Mandanten zugeordnet" passt genauso gut, und die
+> Verteilung unterscheidet die beiden nicht. **Die Lesart bleibt damit eine Vermutung** (L10:
+> *gemessen war die Verteilung, behauptet wird eine Bedeutung*). Was sie stützt, misst M155 — aber
+> auch dort nur mittelbar.
+
+**Und dieser Befund trifft E‑99 unmittelbar.** Die vier Typ‑1‑Namen — also **alle**, die überhaupt
+in `MessageProperty` stehen können — sind ausschließlich für **`NEXANS`** konfiguriert:
+
+| Für einen Mandanten anbietbar | `NEXANS` | die übrigen neun |
+|---|---:|---:|
+| Typ‑0‑Namen (Spaltenprädikat) | 8 | 8 *unter der `NULL`-Lesart* |
+| **Typ‑1‑Namen (EAV-Zugriff)** | **4** | **0** |
+
+**Für neun von zehn Mandanten enthält die zweite Quelle des Angebots keine einzige echte
+Property.** Ob das eine Kuratierungslage der Testkopie ist oder in der Produktion ebenso steht,
+sagt diese Messung nicht — der Katalog der Testkopie ist nachweislich kuratiert und ändert sich.
+**Offener Punkt 142.**
+
+**Die zwölf Zeilen vollständig.** Feldnamen sind Konfiguration und dürfen stehen (G1); `MandantID`
+ist ein in [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §3.2 offen geführter Code.
+
+| Typ | `MessagePropertyName` | `MandantID` |
+|---:|---|---|
+| 0 | `Message.MessageID` | *`NULL`* |
+| 0 | `Message.MessageIDSource` | *`NULL`* |
+| 0 | `Message.MessageIDTarget` | *`NULL`* |
+| 0 | `Message.ProcessID` | *`NULL`* |
+| 0 | `Message.ProcessName` | *`NULL`* |
+| 0 | `Message.SOSID` | *`NULL`* |
+| 0 | `Message.SOSName` | *`NULL`* |
+| 0 | `Message.Status` | *`NULL`* |
+| **1** | `Converter.TransactionID` | `NEXANS` |
+| **1** | `Message.GUID` | `NEXANS` |
+| **1** | `Message.ReceiverID` | `NEXANS` |
+| **1** | `Service.Type` | `NEXANS` |
+
+**Zwei Gegenproben, beide sauber:**
+
+| Frage | Ergebnis |
+|---|---|
+| Kommt ein Name mehrfach vor? | 12 Zeilen, **12** verschiedene Namen — der Primärschlüssel hält, was M153 sagt |
+| Ist `NULL` echt oder ein leerer String? | `MandantID IS NULL` **8**, leerer String **0**, `MessagePropertyType IS NULL` **0** |
+
+*Belegvermerk (L10): gemessen ist die Verteilung auf der Testkopie am 07.09.2026. Behauptet wird
+nicht, dass sie in der Produktion so aussieht, und nicht, dass `NULL` „alle Mandanten" bedeutet.*
