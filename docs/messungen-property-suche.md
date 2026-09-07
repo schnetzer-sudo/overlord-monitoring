@@ -202,7 +202,8 @@ gekostet.
 > ⚠️ **Regel G1 greift in dieser Runde scharf, und sie greift genau an M157 und M160.** Diese Datei
 > enthält **keinen einzigen `MessagePropertyValue`** — auch nicht abgekürzt, auch keine GUID, auch
 > nicht als Beispiel. Ausgegeben werden ausschließlich **Ränge und Zähler**: „häufigster Wert:
-> 12.480 Zeilen", nicht der Wert. **Feldnamen sind Konfiguration und dürfen stehen.** Prozesse und
+> 12.480 Zeilen" — *die Zahl ist hier ein erfundenes Beispiel aus dem Auftragstext und
+> kein Messwert dieser Runde* —, nicht der Wert. **Feldnamen sind Konfiguration und dürfen stehen.** Prozesse und
 > Partner werden maskiert, und die Maske entsteht **im Statement** über `ROW_NUMBER()`, nicht durch
 > Abschreiben.
 
@@ -929,7 +930,7 @@ für `Service.Type` immer noch zu weit.
 ### Zwei Fälle, die in der Anwendung nicht existieren
 
 `Service.Type` bei `NEXANS` über 30 und über 90 Tage ist **sechsmal** an der Zehn-Sekunden-Grenze
-abgebrochen, jeder Lauf bei 10.004 bis 10.008 ms. **Das ist kein Messfehler und wird nicht durch
+abgebrochen, jeder Lauf zwischen **10.004,576 und 10.007,815 ms**. **Das ist kein Messfehler und wird nicht durch
 ein kleineres Fenster ersetzt.** Über 24 Stunden läuft derselbe Fall in 136,354 ms — die Grenze
 liegt also **zwischen einem Tag und dreißig**, und wo genau, ist in dieser Runde nicht erhoben.
 **Offener Punkt 145.**
@@ -967,7 +968,7 @@ ihnen haben eine **feste** Länge: `Message.GUID` immer 36 Zeichen (die Gestalt 
 
 ### Die Gegenprobe — der Ausdruck greift, er findet hier nur nichts
 
-Ein Prädikat, das über 999.000 Zeilen kein einziges Mal wahr wird, muss zeigen, dass es überhaupt
+Ein Prädikat, das über 998.985 Zeilen kein einziges Mal wahr wird, muss zeigen, dass es überhaupt
 wahr werden kann. Dieselbe Messung über **alle** Namen, 24 Stunden, `NEXANS`:
 
 | | |
@@ -1004,3 +1005,247 @@ nicht durch Nachprüfungen auf der Zeile erklärbar** — sie kommen allein aus 
 Fenster B sowie die Gegenprobe über alle 77 im 24-Stunden-Fenster vorkommenden Namen. Behauptet
 wird nicht, dass kein Wert dieser vier Namen irgendwo im Gesamtbestand länger als 50 Zeichen ist —
 gemessen ist das Fenster, nicht der Bestand.*
+
+---
+
+# Befunde
+
+**Die vorregistrierten Deutungen, unverändert dagegengehalten:**
+
+| Messung | Deutung | Ausgang |
+|---|---|---|
+| **M153** | Drei Spalten, keine Beschreibungs- oder Sortierspalte | **getroffen** |
+| **M154** | Typ ∈ {0, 1}; `NULL` heißt „alle Mandanten" | **erste Hälfte getroffen**, zweite **nicht belegbar** — Typ und Mandant fallen zusammen |
+| **M155** | Typ 1 kommt vor, Typ 0 nicht | **getroffen**, 12 von 12, kein Gegenfall |
+| **M156** | Unter 20 % Deckung über die Wurzeln ist fragwürdig | **greift bei einem Namen** (12,803 %) |
+| **M157** | Häufigster Wert über 234.159 Zeilen ist nicht anbietbar | **gerissen**, Faktor 3,03 |
+| **M158** | `ref` über `MessagePropertyNameValueIDX` | **in zwei von vier Namen getroffen** |
+| **M159** | Unter 500 ms im 30-Tage-Fenster | **in einem von drei Namen getroffen** |
+| **M160** | Überwiegend kurze Werte | **getroffen**, 0 von 998.985 Zeilen über 50 Zeichen (239.533 + 180.251 + 46.986 + 532.215) |
+
+## 1. Die Entscheidungen halten — bis auf eine, die neu vorgelegt gehört
+
+| Entscheidung | Stand nach dieser Runde |
+|---|---|
+| **E‑101** (Trennung Typ 0 / Typ 1) | **belegt.** M155 findet die Trennung in den Daten wieder, ohne Gegenfall |
+| **E‑105** (technische Namen unverändert) | **Voraussetzung bestätigt.** M153 zeigt: Es *gibt* keine Klartextspalte, die man zeigen könnte |
+| **E‑99** (zwei Quellen im Angebot) | **trägt technisch, wird aber ihrem Zweck nicht gerecht.** Für neun von zehn Mandanten enthält die zweite Quelle **null** Typ‑1‑Namen (M154), während drei davon bei `SUTTONS` auf **jeder** Nachricht belegt sind (M156) |
+| **E‑100** (Feldname ist Pflicht) | unberührt; diese Runde misst nichts dazu |
+| **E‑102** (Ausnahmekasten zu L4) | **die Begründung ist deutlich härter ausgefallen als erwartet** — siehe Befund 3 |
+| **E‑103**, **E‑104** (Absprung) | unberührt; diese Runde misst nichts dazu |
+| **MVP-Umfang** | **Das befürchtete Risiko ist nicht eingetreten, ein anderes dafür** — siehe Befund 2 |
+
+## 2. Das MVP-Risiko hat sich umgedreht
+
+Die MVP-Zusage stand unter dem Vorbehalt, die Deckung je Feldname könne ausfallen wie bei den
+BAM-Spalten (M11: auf 98,93 % der Zeilen leer). **Sie fällt gegenteilig aus:** drei von vier Namen
+auf **100 %** der Nachrichten, bei beiden gemessenen Mandanten.
+
+**Aber die vier Namen sind nicht vier Suchfelder, sondern drei verschiedene Dinge:**
+
+| Klasse | Name | Deckung (Wurzeln, `NEXANS`) | häufigster Wert | 30 Tage durch den ganzen Weg |
+|---|---|---:|---:|---:|
+| **Schlüssel** | `Message.GUID` | 100,000 % | **1 Zeile** | **0,942 ms** |
+| **Schlüssel** | `Converter.TransactionID` | 100,000 % | 2 Zeilen | *nicht gemessen* |
+| **Merkmal** | `Message.ReceiverID` | **12,803 %** | 5.176 Zeilen | 1.222,763 ms |
+| **Kategorie** | `Service.Type` | 100,000 % | **≥ 708.893 Zeilen** | **⛔ Abbruch bei 10 s** |
+
+**Von vier angebotenen Feldern ist eines uneingeschränkt tauglich, eines vermutlich tauglich, eines
+fragwürdig und eines unbrauchbar.** Die Zusage „Property-Suche im MVP" ist damit nicht widerlegt —
+`Message.GUID` allein trägt sie —, aber sie ist kleiner als das Angebot, das E‑99 beschreibt.
+
+## 3. Regel L4 ist härter begründet, als ihr Text vermuten lässt
+
+Der Regeltext sagt: nie filtern, gruppieren oder sortieren über den Wert. **Diese Runde beziffert,
+was passiert, wenn man es doch tut:**
+
+| Zugriff | Kosten | gegen die 10 s des Lese-Pools |
+|---|---:|---|
+| `COUNT(*)` über **einen Namen**, Gesamtbestand (`Service.Type`) | **125,527 s** | **12,6‑fach** |
+| Wertprädikat auf den häufigsten Wert, ohne Join (`Service.Type`) | **81,429 s** | **8,1‑fach** |
+| dasselbe mit erzwungenem Index *(Diagnose)* | 27,892 s | 2,8‑fach |
+| **derselbe Weg mit Zeitfenster und Deckelung, 30 Tage** | **⛔ Abbruch** | — |
+| **derselbe Weg mit eindeutigem Wert, 30 Tage** | **0,942 ms** | **0,009 %** der Grenze |
+
+**Zwischen dem besten und dem schlechtesten Fall derselben Bauform liegt mindestens Faktor 10.600** — und der
+Unterschied ist **nicht** der Name, nicht das Fenster und nicht der Plan, sondern **wie viele
+Zeilen der gesuchte Wert trägt**. Ein Ausnahmekasten nach E‑102 muss deshalb an dieser Größe
+hängen und nicht am Feldnamen.
+
+## 4. Der Optimizer rechnet mit einer Tabelle, die es nicht gibt
+
+| Größe | Optimizer | gemessen | Abweichung |
+|---|---:|---:|---|
+| Zeilen `MessageProperty` | 46.964.279 | **75.571.462** (M44) | **37,9 % zu niedrig** |
+| verschiedene `MessagePropertyName` | 18 | **101** an einem Tag (M17‑2) | **Faktor 5,6 zu selektiv** |
+
+**Beide Fehler zeigen in dieselbe Richtung: Ein Zugriff über den Namen sieht im Plan billiger aus,
+als er ist.** Die 46.964.279 sind zugleich die Zahl, die bis zum 12.08.2026 als „gemessen" in der
+Projektbeschreibung stand und dort im Kasten zu §8 korrigiert ist — **aus der Dokumentation
+verschwunden und im Optimizer geblieben.** Sie erscheint in M158 wörtlich als `rows` des
+Tabellenscans.
+
+## 5. Die Konfigurationstabelle ist ärmer als `MessageBAMMandant`, und in einem Punkt anders gebaut
+
+| | `MessageBAMMandant` | `MessagePropertySearchListEntry` |
+|---|---|---|
+| Mandant im Schlüssel | **ja** | **nein** — Primärschlüssel ist der Name allein |
+| Bezeichnung | über `MessageBAMType` | **keine** |
+| Sortierung | `MessageBAMTypeSortIndex` | **keine** |
+| Zeilen (Testkopie) | 131 über zwei Tabellen | **12** |
+
+**Ein Feldname existiert genau einmal.** Denselben Namen für zwei Mandanten verschieden zu
+konfigurieren ist in dieser Tabelle nicht darstellbar. Das Angebot aus dieser Quelle kommt
+**ohne Beschriftung und ohne Ordnung** — E‑105 ist damit weniger eine Wahl als eine Feststellung.
+
+## 6. Zwei Befunde, die in keine vorformulierte Zeile passten
+
+**Erstens: die 30-Tage-Fenster dieser Runde und der Vorrunde sind dasselbe Fenster.** Ohne Absicht
+trifft `2025-11-30` bis `2025-12-30` Ziffer für Ziffer das **Fenster B** aus M28‑1 und M28‑2 —
+214.330 Nachrichten, bei `NEXANS` 28.524 Wurzeln und 101.270 Kinder. Die 20‑%-Schwelle aus M28‑2
+ist dadurch nicht nur der Zahl nach, sondern **über dieselbe Grundmenge** vergleichbar. Das ist
+Glück und keine Leistung, aber es macht den Vergleich belastbar.
+
+**Zweitens: `Source` und `Target` in `Message` sind `bit(1)`, nicht `varchar`.** Das Prädikat
+`Source <> ''` — naheliegend, wenn man „ist gesetzt" aus `verkettung.md` §5 wörtlich nimmt —
+liefert auf `bit(1)` zufällig dasselbe wie `Source = 1`, weil der Leerstring im Zahlenkontext zu 0
+wird. **Gegengeprüft in M156‑0** (beide 28.524). Wer das Prädikat einmal auf eine `varchar`-Spalte
+überträgt, bekommt eine andere Bedeutung, ohne dass etwas bricht.
+
+---
+
+# Was diese Runde nicht zeigt
+
+1. **Nichts über die Produktion.** Alle Zahlen stammen von der Testkopie
+   (`192.168.11.148`, `@@global.read_only = 1`). Der Katalog der Testkopie ist nachweislich
+   kuratiert und ändert sich zwischen Läufen. **Es ist nicht hochgerechnet worden.**
+
+2. **Den häufigsten Wert über den Gesamtbestand.** Er ist nicht messbar — schon das Zählen eines
+   Namens kostet bis zu 125 Sekunden, die Gruppierung über die Werte ist um Größenordnungen
+   teurer. Alle Werteverteilungen sind **untere Schranken** aus einem Fenster.
+
+3. **Die Bedeutung von `MandantID IS NULL`.** Typ und Mandant fallen in den Daten vollständig
+   zusammen (8 × Typ 0 ohne Mandant, 4 × Typ 1 mit `NEXANS`). „Gilt für alle" und „keinem
+   zugeordnet" sind mit derselben Verteilung verträglich. **Das entscheidet nur, wer das
+   Altwerkzeug oder seinen Quelltext liest** — nicht diese Messung.
+
+4. **Ob ein Typ‑0‑Name die ihm zugeordnete Spalte meint.** Gemessen ist, dass die acht vermuteten
+   Spalten existieren. Fünf von acht Namen weichen von ihrem Spaltennamen ab. **Die Zuordnung ist
+   eine Vermutung und als solche gekennzeichnet.**
+
+5. **Die Kosten der Nachprüfung auf der Zeile.** Es gibt unter den vier Namen keinen Wert über 50
+   Zeichen, also keinen Vergleichsfall. **Die Lücke ist nicht mit einem Ersatzfall gefüllt worden.**
+
+6. **`Converter.TransactionID` durch den ganzen Weg.** M159 misst drei der vier Namen. Nach M157
+   ist er ein Schlüssel wie `Message.GUID` (häufigster Wert 2 Zeilen), aber **gemessen ist er
+   nicht**.
+
+7. **Wo zwischen einem Tag und dreißig die Grenze liegt.** `Service.Type` bei `NEXANS` läuft über
+   24 Stunden in 136 ms und bricht über 30 Tage ab. Der Punkt dazwischen ist nicht erhoben.
+
+8. **Nichts über die Oberfläche, den Endpunkt oder die Antwortform.** Diese Runde hat nichts
+   gebaut und nichts entschieden.
+
+9. **Nichts über die acht übrigen Mandanten.** Gemessen sind `NEXANS` und `SUTTONS` (Regel L7).
+   Die Verteilung in M154 läuft über alle zehn, die Deckung und die Laufzeiten nicht.
+
+---
+
+# Offene Punkte
+
+Fortlaufend in der Reihe des Projekts; höchste vorher vergebene Nummer ist **141**
+([`process-view.md`](process-view.md) §45).
+
+**142. Alle vier Typ‑1‑Namen sind ausschließlich für `NEXANS` konfiguriert.** Für die übrigen neun
+Mandanten enthält die zweite Quelle des Angebots (E‑99) **keine einzige** echte Property. Ob das
+eine Kuratierungslage der Testkopie ist oder in der Produktion ebenso steht, ist offen — und es
+entscheidet, ob E‑99 für neun von zehn Mandanten ein leeres Versprechen ist.
+
+**143. Die Typ‑0‑Namen sind keine ableitbaren Spaltennamen.** Nur drei von acht sind wörtlich; zwei
+stellen die Wortteile um, einer heißt anders, zwei wohnen trotz `Message.`-Präfix in `Process`
+beziehungsweise `SOS`. E‑101 braucht eine **Abbildung im Code**, und jeder künftige Typ‑0‑Eintrag
+fällt aus ihr heraus, bis jemand sie ergänzt. Was der Endpunkt mit einem unbekannten Typ‑0‑Namen
+tut, ist zu entscheiden.
+
+**144. Die Konfigurationstabelle beschreibt die Daten nicht.** Bei `SUTTONS` sind drei der vier
+Namen auf **100 %** der Nachrichten belegt, und keiner ist dort konfiguriert. Bildet die Tabelle
+eine bewusste Freischaltung ab oder eine Lücke? Vom Ergebnis hängt ab, ob das Angebot der
+Konfiguration folgt oder den Daten.
+
+**145. `Service.Type` bricht zwischen einem Tag und dreißig ab.** 136,354 ms über 24 Stunden,
+Abbruch an der Zehn-Sekunden-Grenze über 30 Tage. Wo die Grenze liegt, ist nicht erhoben — und
+davon hängt ab, ob ein Fenster als Schutz überhaupt taugt.
+
+**146. Ein künftiger Feldname mit langen Werten trägt die Kosten dieser Runde nicht.** Für die vier
+gemessenen Namen ist `MessagePropertyNameValueIDX` ein echter Zugriffspfad, weil kein Wert 50
+Zeichen überschreitet. **31,8 % aller `MessageProperty`-Zeilen tun das aber.** Für einen solchen
+Namen würde derselbe Index zum Vorfilter, und M158 und M159 wären für ihn nicht übertragbar.
+
+**147. Das Angebot aus dieser Quelle hat weder Beschriftung noch Ordnung.** `MessageBAMMandant`
+liefert `MessageBAMTypeDescription` und `MessageBAMTypeSortIndex`; hier gibt es beides nicht. In
+welcher Reihenfolge die Feldnamen erscheinen und ob die beiden Quellen in einer gemeinsamen Liste
+stehen können, ist offen.
+
+**148. `Service.Type` ist eine Kategorie und kein Suchschlüssel.** 18 Werte über 30 wie über 90
+Tage, auf jeder Nachricht belegt. Ihn als Suchfeld anzubieten heißt, dem Nutzer eine Abfrage
+anzubieten, die entweder abbricht oder einen großen Teil seines Bestands zurückgibt. Ob er aus dem
+Angebot fällt, ob eine Grenze an der Trefferzahl greift oder ob er als Filter statt als Suchfeld
+gehört, ist zu entscheiden — **nicht in dieser Runde.**
+
+**149. Die Statistik des Optimizers ist um 37,9 % veraltet.** Ob ein `ANALYZE TABLE` auf
+`MessageProperty` die Planwahl in M158 ändert, ist nicht geprüft — es wäre ein Schreibzugriff auf
+`GlassfishDB` und in dieser Runde ausgeschlossen. Der Punkt gehört dem Betrieb, nicht diesem
+Werkzeug, aber er erklärt einen Teil der gemessenen Kosten.
+
+---
+
+# Regelbezug
+
+| Regel | Stand | Begründung |
+|---|---|---|
+| **G1** — Geheimhaltung | **erfüllt** | Kein `MessagePropertyValue`, keine `MessageID`, keine Belegnummer, kein Partner- oder Hostname in dieser Datei. Prüfwerte sind im Statement über `QUOTE()` und `PREPARE` eingesetzt und haben kein Skript berührt; ausgegeben ist nur ihre Zeichenlänge. In M159 stehen **Längen statt Namen** für `ProcessName` und `ProjectName`. **Feldnamen sind Konfiguration und dürfen stehen** — sie stehen. Die Rohausgaben liegen unter `scripts/messung-property-suche/ergebnis/` und sind über `.gitignore` ausgeschlossen |
+| **Q4** — kein unbelegter Wert | **erfüllt** | Jede Zahl stammt aus einem Lauf dieser Runde oder ist mit ihrer Quelle benannt (M0, M14, M17‑2, M28‑2, M33, M44). Die drei nicht messbaren Größen stehen unter „Was diese Runde nicht zeigt" |
+| **L1** — Pflicht-Zeitfenster | **berührt, nicht verletzt** | Diese Runde baut keinen Endpunkt. Jedes Fenster ist absolut, endet am 2025‑12‑30 und ist je Messung genannt. M157 misst ausdrücklich **ohne** Fenster über den Gesamtbestand — als Erhebung, und das Ergebnis ist, dass es dort nicht geht |
+| **L4** — `MessageProperty` nur über `MessageID` | **eingehalten in M155 und M156, bewusst verletzt in M157 bis M160** | M155 und M156 erreichen die Tabelle ausschließlich über die `MessageID` (`ref` über `PRIMARY`, `Using index`). M157 bis M160 steigen über Name und Wert ein — **das ist der Gegenstand der Messung** und die Grundlage, auf der E‑102 seinen Ausnahmekasten bekommen soll. Die Kosten sind beziffert |
+| **L7** — mindestens zwei Mandanten, einer klein | **erfüllt** | `NEXANS` (180.251 Nachrichten im Fenster) und `SUTTONS` (21.516). M154 läuft über alle zehn |
+| **L10** — Belegvermerk | **erfüllt** | Jede Messung schließt mit *gemessen war X / behauptet wird Y*, und die Lücke ist benannt |
+| **L15** — `EXPLAIN` zu jedem Statement | **erfüllt** | Plan zu M155, M156 (beide Fassungen, beide Mandanten), M157 (beide Fassungen), M158 (acht Fälle plus zwei Diagnosen), M159 (Gestalt für alle 15 Fälle) |
+| **M1** — keine Mandanten-ID aus einer Anfrage | **nicht berührt** | Es gibt in dieser Runde keine Anfrage und keinen Endpunkt. Die `MandantID` steht als Messparameter im Skript; die Ausnahmeliste in [`mandantentrennung.md`](mandantentrennung.md) §3 bleibt bei zwei Einträgen und wächst hier nicht |
+| **T1** — keine Wanduhrzeit in Tests | **nicht berührt** | Diese Runde baut keine Tests |
+| **S1** — nur `SELECT` | **erfüllt** | Alle elf Sitzungen fahren ausschließlich `SELECT`, `SET`, `SHOW`, `EXPLAIN`, `PREPARE`/`EXECUTE`/`DEALLOCATE` mit `monitor_read`. **Kein Schreibzugriff auf `GlassfishDB`**, kein Zugriff auf `overlord_monitor`. `@@global.read_only` = **1** als erste Abfrage jeder Sitzung |
+
+## Was diese Runde entgegen §6 des Auftrags angefasst hat — beides gemeldet
+
+§6 verlangt: keine Änderung an bestehenden Dateien. **Zwei Dateien sind trotzdem geändert, und
+beide Male aus einer Vorschrift, die dem Auftrag vorgeht:**
+
+1. **`.gitignore`** — eine Zeile für `scripts/messung-property-suche/ergebnis/`. Ohne sie lägen
+   Rohausgaben mit `MessagePropertyValue` im Repository, und **G1 wiegt schwerer als §6**. Die
+   Konvention ist seit Schritt 8 dieselbe.
+2. **`docs/README.md`** — der Eintrag für diese neue Datei. [`CLAUDE.md`](../CLAUDE.md) führt ihn
+   unter „Dokumentationspflicht" als Bedingung dafür, dass ein Schritt überhaupt fertig ist; nach
+   §0 des Auftrags gilt bei Widerspruch die Datei.
+
+**[`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) ist nicht angefasst** — weder Abschnitt 9 noch
+der Regeltext L4 noch ein Ausnahmekasten. Das gehört in den Bauauftrag.
+
+## Die Sitzungen dieser Runde
+
+| Datei | Inhalt | Ausgang |
+|---|---|---|
+| `s0-rahmen.sql` | Rahmen, Serverangaben, Datenstand | — |
+| `s1-m153.sql` | M153 Aufbau der Tabelle | — |
+| `s2-m154.sql` | M154 Verteilung | — |
+| `s3-m155.sql`, `s3b-nachtrag.sql` | M155 Typ-Lesart, Laufzeit je Lauf, Optimizer-Statistik | — |
+| `s4-vorprobe.sql` | Fenstergröße, Rollen | — |
+| `s5-m156-nexans.sql` | M156 **Fassung A**, vier `EXISTS` | **Abbruch bei 60 s** |
+| `s6-m156-fassungB.sql`, `s7-m156-nexans.sql` | M156 Fassung B, beide Mandanten | — |
+| `s8-m157-vorprobe.sql` | M157 vier Namen als `IN`-Liste | **Abbruch bei 120 s** |
+| `s9-m157a.sql`, `s10-m157-zaehlung.sql` | M157 Zählung je Name einzeln | — |
+| `s11-m157-verteilung.sql`, `s12-m157b-m160.sql` | M157 Verteilung, 90-Tage-Schranke, M160 Längen | — |
+| `s13-m158.sql` | M158 acht Wertprädikate | — |
+| `s14-m159.sql` | M159 15 Fälle, Grenze 10 s, `--force` | **12 Abbrüche in 2 Fällen** |
+| `s15-m158d-m160g.sql` | M158 `FORCE INDEX`-Diagnose, M160 Gegenprobe | — |
+
+**Serverzeit Beginn `2026-09-07 16:11:14`.** Die Ergebnisdateien liegen unter
+`scripts/messung-property-suche/ergebnis/` und sind nicht eingecheckt (G1).
