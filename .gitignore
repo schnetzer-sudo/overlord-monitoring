@@ -129,3 +129,9 @@ scripts/mitschnitt-saaj-jakarta/*.bin
 # Kennzahlenabfrage gibt process_id aus, und das sind Partnernamen Dritter. (G1)
 scripts/messung-prozessansicht-frei/ergebnis/*.txt
 !scripts/messung-prozessansicht-frei/ergebnis/*.gefiltert.txt
+
+# --- Messrunde Property-Suche (M153-M160) ----------------------------------
+# Gleiche Trennung wie in allen Messrunden davor: die .sql-Sitzungen werden
+# eingecheckt, die Rohausgaben nicht. Sie tragen MessagePropertyValue und damit
+# Belegnummern und Partnernamen Dritter. (Regel G1)
+scripts/messung-property-suche/ergebnis/
