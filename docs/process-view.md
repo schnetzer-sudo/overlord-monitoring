@@ -3704,6 +3704,13 @@ Bedienung nicht erreichbar; käme es doch, steht es **über** der Ansicht, weil 
 oder nichts, und `useProzessbaum` hängt daran; die leere Abfrage ist weiterhin ein eigener Schlüssel
 und nicht der des gewählten Paares.
 
+**Eine von Hand gebaute Adresse mit beiden Modi wird als freies Fenster gelesen.** Stehen
+`zeitraum` und `von`/`bis` zugleich in der URL, schickt `baumfensterAlsParameter` nur `von`/`bis`
+— dieselbe Regel wie `zeitfensterAlsParameter` in `lib/filter.ts` für die Liste, und der Grund ist
+derselbe: Der Modus der URL ist „frei", sobald ein Zeitpunkt steht. `zeitfenster-mehrdeutig` ist
+damit auch über die Adresse nicht erreichbar; das Backend hält die Prüfung trotzdem, für jeden
+anderen Aufrufer. Gesehen in der Sichtprüfung (§45).
+
 ### Wo die Meldungen stehen — und was dabei stehen bleibt
 
 `zeitfenster-unvollstaendig`, `zeitfenster-ungueltig`, `zeitpunkt-ungueltig`, `zeitfenster-zu-genau`
@@ -3826,7 +3833,7 @@ Drei Beobachtungen, keine Zusicherungen:
 | ~~**137**~~ | **Beantwortet am 07.09.2026 durch E‑92:** Z zerlegt immer; die Regel aus Fassung E steht nicht als Sonderfall. Ein monatsbündiges Fenster ergibt ohnehin ein Segment |
 | **138** | **bleibt offen** (E‑98). Die Frage stellt sich unter Z‑U auf dem kritischen Pfad nicht; sie stellt sich, wenn jemand die Tagesebene über lange Bereiche lesen will |
 | **139** | **Das Fenster aus M149 übersteigt das Kalenderjahr des Endpunkts um 13 Stunden** (§38). Die Grenze hängt am ausschließenden Ende (`bisAusschliessend.minusYears(1)`), wie der Auftrag sie nennt; am einschließenden `bis` gerechnet wäre ein Jahr plus die letzte Stunde erlaubt. Welche Lesart gilt, entscheidet der Auftraggeber; bis dahin misst M152 einen um einen Tag kürzeren Bösfall mit denselben fünf Segmenten |
-| **140** | **Keine Sichtprüfung im Browser** für den freien Modus. Die `datetime-local`‑Behandlung ist aus der Liste übernommen, `step=3600` ist im Browser nicht nachgefahren, und die Felder sind nur in `pnpm check` gerendert (Umschalter) beziehungsweise als reine Funktionen geprüft. Die Dev‑Zeile aus dem Auftrag gilt: Ein brauchbares Fenster endet auf oder vor `2025-12-30 03:00` |
+| ~~**140**~~ | ~~**Keine Sichtprüfung im Browser** für den freien Modus.~~ **Nachgeholt am 07.09.2026, §45** — angemeldet, am laufenden System, mit `NEXANS` und `IBIS`: vier Knöpfe, die Felder mit `step=3600`, die halbe Eingabe am Feld, der stehende Baum, die Abfrage mit `von`/`bis`, die Liste mit dem Fenster der Antwort, das Dashboard mit drei Knöpfen, keine Konsolenmeldung. Was die Sichtprüfung **nicht** zeigen konnte, steht dort |
 | **141** | **Beim allerersten Aufruf über eine fehlerhafte Adresse steht kein Baum**, nur der Hinweis an den Feldern — es gibt keinen letzten Baum, der stehen bleiben könnte. Ob dort ein Leerzustand hingehört oder der Baum der Vorgabe, ist nicht entschieden |
 
 ---
@@ -3848,3 +3855,52 @@ Drei Beobachtungen, keine Zusicherungen:
   (Punkt 139); gemessen ist ein um einen Tag kürzeres Fenster mit derselben Form.
 - **Nichts im Browser** (Punkt 140): weder der vierte Knopf noch die Felder noch die Meldungen an
   ihnen sind am laufenden System gesehen worden.
+
+---
+
+## 45. Die Sichtprüfung am laufenden System (07.09.2026, nachgeholt)
+
+Angemeldet als `admin`, Chrome über die Erweiterung, Backend im Profil `dev` mit dem Stand von
+Commit `accfd6c`, Frontend `next dev`. Das Backend lief seit dem Morgen mit dem Code von vor diesem
+Schritt und ist neu gestartet worden — die JVM lädt nicht nach.
+
+### Was zu sehen war, in dieser Reihenfolge
+
+| Schritt | Beobachtet |
+|---|---|
+| `/prozesse`, `NEXANS` | vier Knöpfe: 48 Stunden (gedrückt), 30 Tage, 12 Monate, **Frei**; keine Felder |
+| Klick auf „Frei" | zwei `datetime-local` mit `step="3600"` neben dem Umschalter, Hinweis *Volle Stunden; „Bis" ist die letzte enthaltene Stunde.*; „Frei" gedrückt; **die Adresse bleibt `/prozesse`**, keine neue Abfrage, der Baum zeigt weiter die 48 Stunden (`ACOME` 20) |
+| „Von" halb getippt | `validity.badInput = true`, Hinweis *Bitte Datum und Uhrzeit vollständig eintragen.* — der Zustand, den das Feld nicht über seinen Wert mitteilt, kommt an |
+| „Von" vollständig (`30.12.2024 14:00`) | Adresse `?von=2024-12-30T13:00:00.000Z`; Abfrage `baum?von=…` → **400** (einmal wiederholt); Hinweis am Feld *Ein freies Zeitfenster braucht beide Zeitpunkte.* — die übersetzte Antwort des Servers —; **der Baum bleibt stehen** (`ACOME` 20, Kopfzeile unverändert); keine Meldung über der Ansicht |
+| „Bis" vollständig (`30.12.2025 02:00`) | Adresse mit `von` und `bis`; Abfrage `baum?von=2024-12-30T13:00:00.000Z&bis=2025-12-30T01:00:00.000Z` → **200**; `ACOME` 29.569; Hinweis zurück auf den Standardtext |
+| die Antwort dazu, per `fetch` | `zeitraum: "FREI"`, `fenster.von 2024-12-30T13:00:00Z`, `fenster.bis 2025-12-30T02:00:00Z` (ausschließend: 03:00 Wanduhrzeit), `gesamt.nachrichten` **2.309.634** — die Zahl aus M152 für denselben Bösfall, 155 Partner |
+| Prozess gewählt | Liste rechts mit `nachrichten?von=2024-12-30T13:00:00.000Z&bis=2025-12-30T02:00:00.000Z&prozess=…` — **das Fenster der Antwort**, E‑50; Kopf *Zeitraum 30.12.2024, 14:00 bis 30.12.2025, 03:00* |
+| Klick auf „30 Tage" | Adresse `?zeitraum=30T` **ohne** `von`/`bis`, Felder weg, „30 Tage" gedrückt, Abfrage `baum?zeitraum=30T` |
+| Adresse von Hand, `von=…13:30Z` | Abfrage → **400** `zeitfenster-zu-genau`; Felder zeigen `14:30`; „Frei" gedrückt |
+| Adresse von Hand, das Fenster aus M149 | Abfrage → **400** `zeitfenster-zu-gross` (Punkt 139) |
+| Adresse von Hand, `zeitraum=48H` **und** `von`/`bis` | die Oberfläche schickt nur `von`/`bis` → 200, „Frei" gedrückt — die Regel aus §41; kein `zeitfenster-mehrdeutig` |
+| tiefer Link `?von=…&bis=…&prozess=90300_SAP_KOMMUNIKATION` (`NEXANS`, krumme 30 Tage) | Baum offen bis zur Zeile *SAP Kommunikation 96.758*, Liste mit 50 Zeilen, erste `29.12.2025, 13:45:14` — im Fenster —, Kopf *Zeitraum 29.11.2025, 14:00 bis 29.12.2025, 14:00* |
+| `/` (Übersicht) | **drei** Knöpfe, keine Felder |
+| Konsole | keine Fehler, keine Ausnahme, über alle Schritte |
+
+### Was die Sichtprüfung nicht zeigen konnte, und woran es lag
+
+- **Die Meldung am Feld bei einer fehlerhaften Adresse am ersten Aufruf.** Bei `zeitfenster-zu-genau`
+  und `zeitfenster-zu-gross` über die Adresse blieb die Ansicht im Ladeskelett, obwohl das Backend
+  zweimal mit `400` geantwortet hatte. **Das ist die Umgebung, nicht der Bau:** Die unveränderte
+  Nachrichtenliste mit nur `von` (`/nachrichten?von=…`) bleibt in derselben Browsersteuerung genauso
+  im Skelett, ein `404` ohne Wiederholung (`/nachrichten/gibt-es-nicht`) erscheint sofort — der
+  Befund vom 14.08.2026: TanStack Query hält den wiederholten Versuch an (`fetchStatus: paused`).
+  Auf der bereits geladenen Seite, beim Tippen, ist derselbe Fehlertyp angekommen (Zeile 4 oben).
+  Punkt **141** bleibt offen.
+- **Die Tastatureingabe in ein `datetime-local`** ist über die Steuerung segmentweise; das
+  Jahresfeld nimmt sechs Ziffern und rückt nicht von selbst weiter. Das ist eine Eigenschaft der
+  Steuerung und sagt nichts über die Bedienung von Hand.
+- **Der aktive Mandant der Sitzung wechselte während der Prüfung** zwischen `NEXANS` und `IBIS` — die
+  Sitzung ist geteilt, ein anderer Tab hat gewechselt. Eine Liste, die zu einem Baum des einen
+  Mandanten mit der Sitzung des anderen geladen wird, ist leer (*Nichts im Zeitraum*); das ist kein
+  Befund dieses Schritts, sondern derselbe wie beim Mandantenwechsel überhaupt. Die Kette
+  Baum → Liste ist deshalb einmal **atomar** in einem Aufruf geprüft worden (Mandant vorher und
+  nachher `NEXANS`): 96.758 im Baum, 50 Zeilen und `hasMore` in der Liste.
+- **Nichts über `step=3600` als Bedienung:** Ob die Pfeiltasten im Feld stundenweise springen, ist
+  nicht nachgefahren; die von Hand gebaute krumme Stunde wird abgewiesen (Zeile 8).
