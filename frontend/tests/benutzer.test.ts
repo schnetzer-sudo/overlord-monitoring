@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { LEERER_ENTWURF, anfrageAus, type Entwurf } from "@/features/benutzer/anlegen";
 import type { Nutzerzeile } from "@/features/benutzer/api";
 import {
   PASSWORT_MINDESTLAENGE,
@@ -9,13 +10,14 @@ import {
   passwortBrauchbar,
   type Vorgang,
 } from "@/features/benutzer/selbstschutz";
-import { mitAktualisierterZeile } from "@/features/benutzer/zeilen";
+import { MASKE, darfOeffnen, mitAktualisierterZeile } from "@/features/benutzer/zeilen";
 import {
   istLetzteZuordnung,
   mengeGeaendert,
   umschalten,
   wahlmoeglichkeiten,
 } from "@/features/benutzer/zuordnung";
+import { einsetzen } from "@/i18n";
 import { de } from "@/i18n/de";
 import { en } from "@/i18n/en";
 import { fehleranzeige } from "@/lib/fehlertext";
@@ -152,6 +154,118 @@ describe("Das Einmalpasswort (E13)", () => {
   });
 });
 
+/**
+ * **Der Entwurf der Anlegemaske** (9c, E23/E25).
+ *
+ * Geprüft wird in beide Richtungen: Jede der vier Bedingungen einzeln
+ * weggenommen ergibt `null`, der vollständige Entwurf ergibt den Rumpf. Ein Test,
+ * der nur den Erfolgsfall zeigt, bestünde auch gegen ein `return rumpf` ohne
+ * jede Prüfung.
+ */
+describe("Der Entwurf der Anlegemaske (E23)", () => {
+  const VOLLSTAENDIG: Entwurf = {
+    username: "neuer.nutzer",
+    role: "MANDANT",
+    mandantId: "VOTG",
+    initialPassword: "zwoelfzeichen",
+  };
+
+  it("ergibt den Rumpf des Endpunkts — vier Felder, ein Mandant", () => {
+    expect(anfrageAus(VOLLSTAENDIG)).toEqual({
+      username: "neuer.nutzer",
+      role: "MANDANT",
+      mandantId: "VOTG",
+      initialPassword: "zwoelfzeichen",
+    });
+  });
+
+  it("lässt auch ADMIN zu — die Rolle darf vergeben werden", () => {
+    expect(anfrageAus({ ...VOLLSTAENDIG, role: "ADMIN" })?.role).toBe("ADMIN");
+  });
+
+  const fehlt: readonly (readonly [string, Partial<Entwurf>])[] = [
+    ["ohne Benutzernamen", { username: "" }],
+    ["mit einem Benutzernamen aus Leerzeichen", { username: "   " }],
+    ["ohne gewählte Rolle", { role: "" }],
+    ["mit einer unbekannten Rolle", { role: "BETREUER" }],
+    ["ohne gewählten Mandanten", { mandantId: "" }],
+    ["mit einem zu kurzen Passwort", { initialPassword: "elfzeichen!" }],
+  ];
+
+  for (const [lage, abweichung] of fehlt) {
+    it(`ist ${lage} nicht abschickbar`, () => {
+      expect(anfrageAus({ ...VOLLSTAENDIG, ...abweichung })).toBeNull();
+    });
+  }
+
+  /**
+   * **Die Länge am Rand**, und zwar an allen drei Stellen: Elf reicht nicht,
+   * zwölf reicht, dreizehn erst recht. Eine Grenze, die nur „zu kurz" und „lang
+   * genug" kennt, ginge auch mit `>` statt `>=` durch.
+   */
+  const raender = [
+    [11, false],
+    [PASSWORT_MINDESTLAENGE, true],
+    [13, true],
+  ] as const;
+
+  for (const [laenge, abschickbar] of raender) {
+    it(`nimmt ein Passwort mit ${laenge} Zeichen ${abschickbar ? "an" : "nicht an"}`, () => {
+      const entwurf = { ...VOLLSTAENDIG, initialPassword: "x".repeat(laenge) };
+      expect(anfrageAus(entwurf) !== null).toBe(abschickbar);
+    });
+  }
+
+  it("schickt den Benutzernamen so, wie er getippt wurde", () => {
+    // Geprüft wird gegen die getrimmte Fassung, gesendet wird der Wert selbst:
+    // Eine Eingabe stillschweigend zu verändern wäre die schlechtere Ehrlichkeit.
+    expect(anfrageAus({ ...VOLLSTAENDIG, username: " neuer.nutzer " })?.username).toBe(
+      " neuer.nutzer ",
+    );
+  });
+
+  /**
+   * **Der leere Entwurf ist der Zustand nach dem Erfolg** (E25) — und das
+   * Passwortfeld ist der Teil, auf den es dabei ankommt: Es steht danach an
+   * keiner Stelle mehr, auch nicht im Protokoll.
+   */
+  it("ist nach dem Zurücksetzen in jedem Feld leer — das Passwort zuerst", () => {
+    expect(LEERER_ENTWURF.initialPassword).toBe("");
+    expect(Object.values(LEERER_ENTWURF).every((wert) => wert === "")).toBe(true);
+    expect(anfrageAus(LEERER_ENTWURF)).toBeNull();
+  });
+});
+
+/**
+ * **Die Sperre gilt in beide Richtungen** (E22) — und es ist dieselbe Regel
+ * geblieben, nicht eine zweite daneben. Erweitert worden ist allein, was „offen"
+ * sein kann.
+ */
+describe("Ein Vorgang zur Zeit (E22)", () => {
+  it("lässt jede Zeile öffnen, solange nichts offen ist", () => {
+    expect(darfOeffnen(null, 7)).toBe(true);
+    expect(darfOeffnen(null, MASKE)).toBe(true);
+  });
+
+  it("lässt die offene Zeile zu und keine andere auf", () => {
+    expect(darfOeffnen(7, 7)).toBe(true);
+    expect(darfOeffnen(7, 8)).toBe(false);
+  });
+
+  it("sperrt die Maske, solange eine Zeile offen ist", () => {
+    expect(darfOeffnen(7, MASKE)).toBe(false);
+  });
+
+  it("sperrt jede Zeile, solange die Maske offen ist", () => {
+    expect(darfOeffnen(MASKE, 7)).toBe(false);
+    expect(darfOeffnen(MASKE, 8)).toBe(false);
+  });
+
+  it("lässt die offene Maske zu — das ist ihr Weg wieder zu", () => {
+    expect(darfOeffnen(MASKE, MASKE)).toBe(true);
+  });
+});
+
 describe("Die Mandantenmenge (E4, E10)", () => {
   const waehlbar = [
     { id: "VOTG", name: "VOTG Tanktainer GmbH" },
@@ -278,6 +392,12 @@ describe("Die Fehlerabbildung", () => {
     "passwort-unveraendert",
     "nicht-gefunden",
     "konto-administrativ-gesperrt",
+    // Seit 9c erreichbar: Die Maske ruft `POST /api/admin/users`, und beide
+    // Antworten kommen von dort. `benutzername-zu-lang` steht in keiner
+    // Auftragsvorgabe — er ist am Code abgelesen (`AdminUserService`) und wäre
+    // ohne Schlüssel ein deutscher Satz in einer englischen Oberfläche.
+    "benutzername-vergeben",
+    "benutzername-zu-lang",
   ] as const;
 
   for (const typ of TYPEN) {
@@ -358,4 +478,51 @@ describe("Kein Zugriff", () => {
     expect(istKeinZugriff(new Error("kaputt"))).toBe(false);
     expect(istKeinZugriff(undefined)).toBe(false);
   });
+});
+
+/**
+ * **Die Texte der Anlegemaske, in beiden Sprachen** (9c).
+ *
+ * Dass beide Sprachdateien denselben Schlüsselsatz tragen, prüft
+ * `tests/sprachdateien.test.ts` — und dass keiner leer ist, ebenfalls. Was dort
+ * **nicht** auffiele, ist eine Übersetzung, die eine Einsetzstelle verliert:
+ * `{laenge}` oder `{benutzer}` fehlt, der Satz bleibt lesbar, und die Zahl bzw.
+ * der Name steht einfach nicht mehr da. Genau das ist hier geprüft, samt der
+ * Gegenprobe, dass die Einsetzung wirklich etwas ersetzt.
+ */
+describe("Die Texte der Anlegemaske", () => {
+  for (const [sprache, sprachdatei] of [
+    ["de", de],
+    ["en", en],
+  ] as const) {
+    it(`nennt die Mindestlänge über eine Einsetzstelle (${sprache})`, () => {
+      const roh = sprachdatei.benutzer.anlegen.passwortHinweis;
+      expect(roh).toContain("{laenge}");
+      expect(einsetzen(roh, { laenge: String(PASSWORT_MINDESTLAENGE) })).toContain("12");
+    });
+
+    it(`nennt im Erfolgssatz Konto, Rolle und Mandant (${sprache})`, () => {
+      const roh = sprachdatei.benutzer.anlegen.erfolgText;
+      for (const stelle of ["{benutzer}", "{rolle}", "{mandant}"]) {
+        expect(roh, `${stelle} fehlt`).toContain(stelle);
+      }
+      const gesetzt = einsetzen(roh, {
+        benutzer: "neuer.nutzer",
+        rolle: sprachdatei.rolle.MANDANT,
+        mandant: "VOTG",
+      });
+      expect(gesetzt).not.toContain("{");
+      expect(gesetzt).toContain("neuer.nutzer");
+      expect(gesetzt).toContain("VOTG");
+    });
+
+    /**
+     * **Der Hinweis aus E23 sagt, wo weitere Mandanten hinzukommen** — und nicht
+     * nur, dass es hier einer ist. Ohne den zweiten Teil läse sich die Maske wie
+     * eine Grenze des Werkzeugs statt wie eine Reihenfolge.
+     */
+    it(`sagt, wo weitere Mandanten hinzukommen (${sprache})`, () => {
+      expect(sprachdatei.benutzer.anlegen.mandantenHinweis.length).toBeGreaterThan(40);
+    });
+  }
 });

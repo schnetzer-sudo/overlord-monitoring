@@ -1392,6 +1392,32 @@ export const de = {
       eigenesKonto:
         "Das ist dein eigenes Konto. Jede Änderung daran meldet dich ab, und du musst dich neu anmelden.",
     },
+    // Die Anlegemaske über der Liste (9c). Sie teilt sich die Sperre mit den
+    // Zeilenformularen — der gesperrte Zustand trägt deshalb denselben Satz wie
+    // dort, denn es ist derselbe Grund: ein bereits getipptes Einmalpasswort.
+    anlegen: {
+      oeffnen: "Konto anlegen",
+      schliessen: "Maske schließen",
+      gesperrt:
+        "Erst die offene Zeile schließen. Sonst gingen die dort begonnenen Eingaben verloren — auch ein bereits getipptes Passwort.",
+      titel: "Neues Konto",
+      // Beide Sätze stehen über den Feldern und nicht darunter: Es sind die
+      // Fragen, die sonst erst nach dem Tippen kämen.
+      passwortHinweis:
+        "Das Einmalpasswort tippst du selbst — mindestens {laenge} Zeichen. Das Konto muss es bei der ersten Anmeldung ändern.",
+      mandantenHinweis:
+        "Beim Anlegen genau ein Mandant. Weitere kommen danach an der Zeile des Kontos hinzu.",
+      benutzername: "Benutzername",
+      rolle: "Rolle",
+      mandant: "Mandant",
+      waehlen: "Bitte wählen",
+      passwort: "Einmalpasswort",
+      absenden: "Anlegen",
+      laeuft: "Wird angelegt …",
+      erfolgTitel: "Konto angelegt",
+      erfolgText:
+        "{benutzer} — {rolle}, Mandant {mandant}. Das Konto ist aktiv und muss sein Passwort bei der ersten Anmeldung ändern. Gib das Einmalpasswort auf einem Weg weiter, den du selbst wählst: Hier steht es nicht mehr.",
+    },
     mandanten: {
       titel: "Mandanten",
       letzteZuordnung:
@@ -1556,6 +1582,15 @@ export const de = {
     "rolle-ohne-mandant":
       "Dieses Konto hat keinen Mandanten. Ordne ihm zuerst mindestens einen zu, dann lässt es sich herabstufen.",
     "unbekannte-rolle": "Diese Rolle gibt es nicht. Wähle „EDI-Betreuung“ oder „Mandant“.",
+
+    // Anlegen über die Oberfläche (9c). Beide kommen aus `POST /api/admin/users`
+    // und standen dort seit Schritt 3 — übersetzt sind sie erst jetzt, weil es
+    // vorher keinen Bedienweg dorthin gab. Ohne Schlüssel fiele die Anzeige auf
+    // `detail` zurück: ein richtiger Satz, aber ein deutscher in einer
+    // englischen Oberfläche.
+    "benutzername-vergeben":
+      "Diesen Benutzernamen gibt es schon. Wähle einen anderen — ein bestehendes Konto wird nie überschrieben.",
+    "benutzername-zu-lang": "Der Benutzername darf höchstens 100 Zeichen haben.",
 
     // Technisch
     "technischer-fehler":

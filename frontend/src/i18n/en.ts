@@ -817,6 +817,27 @@ export const en: Texte = {
       eigenesKonto:
         "This is your own account. Any change to it signs you out, and you will have to sign in again.",
     },
+    anlegen: {
+      oeffnen: "Add account",
+      schliessen: "Close the form",
+      gesperrt:
+        "Close the open row first. Otherwise the entries started there would be lost — including a password already typed.",
+      titel: "New account",
+      passwortHinweis:
+        "You type the one-time password yourself — at least {laenge} characters. The account has to change it at the first sign-in.",
+      mandantenHinweis:
+        "Exactly one tenant when the account is created. Further ones are added afterwards on the account’s row.",
+      benutzername: "Username",
+      rolle: "Role",
+      mandant: "Tenant",
+      waehlen: "Please choose",
+      passwort: "One-time password",
+      absenden: "Create",
+      laeuft: "Creating …",
+      erfolgTitel: "Account created",
+      erfolgText:
+        "{benutzer} — {rolle}, tenant {mandant}. The account is active and has to change its password at the first sign-in. Pass the one-time password on by a route you choose yourself: it is not shown here again.",
+    },
     mandanten: {
       titel: "Tenants",
       letzteZuordnung:
@@ -950,6 +971,11 @@ export const en: Texte = {
     "rolle-ohne-mandant":
       "This account has no tenant. Assign at least one first, then it can be downgraded.",
     "unbekannte-rolle": "No such role. Choose “EDI support” or “Tenant”.",
+
+    // Creating accounts from the interface (step 9c).
+    "benutzername-vergeben":
+      "That username already exists. Choose a different one — an existing account is never overwritten.",
+    "benutzername-zu-lang": "A username may have at most 100 characters.",
 
     // Technical
     "technischer-fehler":

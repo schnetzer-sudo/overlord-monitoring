@@ -222,3 +222,62 @@ export function setzeMandanten(id: number, mandanten: readonly string[]): Promis
 export function setzePasswort(id: number, passwort: string): Promise<Nutzerzeile> {
   return sende<Nutzerzeile>(pfad(id, "password"), { initialPassword: passwort });
 }
+
+// ───────────────────────────────────────────────────────────────────────────
+// Der siebte Aufruf: anlegen (9c)
+// ───────────────────────────────────────────────────────────────────────────
+
+/**
+ * Der Rumpf von `POST /api/admin/users` — **vier Felder, seit Schritt 3
+ * unverändert** (E4).
+ *
+ * `mandantId` ist Pflicht (`@NotBlank` an `AdminUserController.AnlegenRequest`),
+ * und der Endpunkt nimmt **einen** Mandanten. Er ist damit die **zweite** der
+ * genau drei Ausnahmen von Regel M1 und seit Schritt 3 namentlich geführt
+ * (`docs/mandantentrennung.md` §3) — die Maske ruft sie auf und schafft keine
+ * vierte.
+ */
+export type Anlegedaten = {
+  username: string;
+  role: Rolle;
+  /** Die Kennung aus `GlassfishDB.Mandant`, etwa `VOTG`. */
+  mandantId: string;
+  /** Der Admin tippt es (E13). Es steht in keiner Antwort und in keinem Protokoll. */
+  initialPassword: string;
+};
+
+/**
+ * Die Antwort auf ein erfolgreiches Anlegen — **vier Felder und nicht neun.**
+ *
+ * Das ist der ganze Grund für E24: {@link Nutzerzeile} trägt neun, hier fehlen
+ * `tenants`, `locked`, `lockedUntil`, `active`, `mustChangePassword` und
+ * `lastLogin`. Die fünf aus dem dokumentierten Verhalten zu ergänzen und die
+ * Zeile damit selbst zu bauen hieße, in den Zwischenspeicher zu schreiben, was
+ * der Server nicht gesagt hat. Stattdessen wird die Liste neu geholt
+ * (`hooks.ts`, {@link useAnlegen}).
+ *
+ * **Niemals das Passwort** — auch nicht das eben vergebene.
+ */
+export type AngelegtesKonto = {
+  id: number;
+  username: string;
+  role: string;
+  mandantId: string;
+};
+
+/**
+ * Ein Konto anlegen. **Der Vertrag ist seit Schritt 3 unangetastet** (E4); mit
+ * 9c ist allein ein Bedienweg dazugekommen.
+ *
+ * Das angelegte Konto ist **aktiv** und trägt **Änderungszwang**: Das
+ * Einmalpasswort taugt genau für die erste Anmeldung. Ein vergebener
+ * Benutzername wird **nie überschrieben** — der Endpunkt antwortet mit `409
+ * benutzername-vergeben`.
+ *
+ * **Es gibt keinen Gegenvorgang.** Gelöscht wird nie (E8); ein versehentlich
+ * angelegtes Konto wird deaktiviert und bleibt stehen, damit seine
+ * Protokollzeilen lesbar bleiben.
+ */
+export function legeKontoAn(daten: Anlegedaten): Promise<AngelegtesKonto> {
+  return sende<AngelegtesKonto>("/admin/users", daten);
+}
