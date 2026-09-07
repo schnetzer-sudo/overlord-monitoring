@@ -94,6 +94,22 @@ public enum Rollupzeitraum {
   }
 
   /**
+   * Die Rollup-Ebene, die das Paar liest — als Name, nicht als Tabelle.
+   *
+   * <p><i>(seit 07.09.2026, Schritt 10c-4b.)</i> Ein {@link Baumfenster} traegt fuer ein Paar genau
+   * ein Segment auf dieser Ebene. Die Zuordnung Ebene → generierte Tabelle bleibt in den
+   * Repositories (offener Punkt 113); dieses vollstaendige {@code switch} ohne {@code default}
+   * macht wie dort ein viertes Paar zum Compilerfehler.
+   */
+  public Rollupebene ebene() {
+    return switch (this) {
+      case STUNDEN_48 -> Rollupebene.STUNDE;
+      case TAGE_30 -> Rollupebene.TAG;
+      case MONATE_12 -> Rollupebene.MONAT;
+    };
+  }
+
+  /**
    * Die Reihe, in der das Standardfenster gesucht wird: erst das engste, dann das naechstweitere.
    *
    * <p>Sie ist die Reihenfolge der Aufzaehlung und keine zweite Liste — eine zweite Liste liefe
