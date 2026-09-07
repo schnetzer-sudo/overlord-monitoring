@@ -121,7 +121,6 @@ export const en: Texte = {
     FREI: "Custom",
     von: "From",
     bis: "To",
-    freiHinweis: "Full hours; “To” is the last hour included.",
     unvollstaendig: "Please enter both date and time.",
     beideNoetig: "A custom time window still needs its second point in time.",
   },

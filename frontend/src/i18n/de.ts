@@ -195,9 +195,6 @@ export const de = {
     FREI: "Frei",
     von: "Von",
     bis: "Bis",
-    // Bewusst ohne Ebene und ohne Korrektur: Das Backend zerlegt das Fenster
-    // und rundet nichts; die Felder sagen nur, was sie erwarten.
-    freiHinweis: "Volle Stunden; „Bis“ ist die letzte enthaltene Stunde.",
     // Ein datetime-local liefert erst dann einen Wert, wenn Datum UND Uhrzeit
     // vollständig sind — erkannt an validity.badInput (`docs/nachrichtenliste.md` §8.2).
     unvollstaendig: "Bitte Datum und Uhrzeit vollständig eintragen.",

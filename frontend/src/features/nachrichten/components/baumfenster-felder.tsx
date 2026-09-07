@@ -15,12 +15,25 @@ const SCHRITT_SEKUNDEN = 3600;
 
 /**
  * Die beiden Datumsfelder des freien Zeitfensters der Prozessansicht — **neben**
- * dem Zeitraumumschalter, nicht darin (`docs/process-view.md` §37 ff.).
+ * dem Zeitraumumschalter, nicht darin (`docs/process-view.md` §41).
  *
  * **Warum daneben:** Der Umschalter ist geteilt mit dem Dashboard
  * (`components/zeitraum-umschalter.tsx`), und das Dashboard ruft ihn ohne
  * vierten Knopf. Stünden die Felder im Umschalter, trüge er Zustand, den nur
  * eine seiner beiden Verwendungen kennt.
+ *
+ * ## In einer Zeile, in derselben Höhe — nichts springt
+ *
+ * Die Komponente rendert **keinen eigenen Rahmen**, sondern Kinder der Zeile, in
+ * der auch der Umschalter steht: je Feld Beschriftung und Eingabe nebeneinander,
+ * beide in Bedienelementhöhe. Beim Klick auf „Frei" wird die Zeile damit breiter
+ * und nicht höher, und der Umschalter bleibt stehen. Eine Beschriftung *über*
+ * dem Feld und ein Hinweis *darunter* hatten die Zeile wachsen lassen und die
+ * Felder gegen die Knöpfe verschoben (Sichtprobe vom 07.09.2026).
+ *
+ * **Kein Hinweistext ohne Anlass.** Die Felder sagen nichts, solange es nichts
+ * zu sagen gibt; eine Meldung erscheint in derselben Zeile hinter den Feldern,
+ * und nur dann.
  *
  * ## Was die Felder **nicht** tun
  *
@@ -79,7 +92,7 @@ export function BaumfensterFelder({
   /*
    * Dieselbe Reihenfolge wie in der Nachrichtenliste: halb getippt schlägt
    * alles andere; dann die Antwort des Servers; dann der fehlende zweite
-   * Zeitpunkt.
+   * Zeitpunkt. Ohne Anlass gibt es keinen Text.
    */
   function hinweistext(): string | undefined {
     if (angefangen.von || angefangen.bis) {
@@ -95,58 +108,58 @@ export function BaumfensterFelder({
   }
 
   const hinweis = hinweistext();
+  const beschriebenDurch = hinweis === undefined ? undefined : hinweisId;
 
   return (
-    <div className="flex flex-col gap-0.5">
-      <div className="flex flex-wrap items-end gap-2">
-        <div className="flex flex-col gap-0.5">
-          <Label htmlFor={vonId} className="text-beiwerk">
-            {texte.zeitraum.von}
-          </Label>
-          {/* Wanduhrzeit ohne Zone; umgerechnet wird in der Anzeigezone — sonst
-              wäre das Fenster gegen die Daten verschoben, sobald jemand nicht in
-              der Zone des Servers sitzt. */}
-          <Input
-            id={vonId}
-            type="datetime-local"
-            step={SCHRITT_SEKUNDEN}
-            className="h-bedienelement w-auto"
-            aria-describedby={hinweisId}
-            value={wanduhrzeitFuerEingabe(von, zone)}
-            onKeyUp={(ereignis) => merkeEingabestand("von", ereignis.currentTarget)}
-            onBlur={(ereignis) => merkeEingabestand("von", ereignis.currentTarget)}
-            onChange={(ereignis) => {
-              merkeEingabestand("von", ereignis.currentTarget);
-              aufAenderung(zeitpunktAusWanduhrzeit(ereignis.target.value, zone), bis);
-            }}
-          />
-        </div>
-        <div className="flex flex-col gap-0.5">
-          <Label htmlFor={bisId} className="text-beiwerk">
-            {texte.zeitraum.bis}
-          </Label>
-          <Input
-            id={bisId}
-            type="datetime-local"
-            step={SCHRITT_SEKUNDEN}
-            className="h-bedienelement w-auto"
-            aria-describedby={hinweisId}
-            value={wanduhrzeitFuerEingabe(bis, zone)}
-            onKeyUp={(ereignis) => merkeEingabestand("bis", ereignis.currentTarget)}
-            onBlur={(ereignis) => merkeEingabestand("bis", ereignis.currentTarget)}
-            onChange={(ereignis) => {
-              merkeEingabestand("bis", ereignis.currentTarget);
-              aufAenderung(von, zeitpunktAusWanduhrzeit(ereignis.target.value, zone));
-            }}
-          />
-        </div>
+    <>
+      <div className="flex items-center gap-1.5">
+        <Label htmlFor={vonId} className="text-beiwerk">
+          {texte.zeitraum.von}
+        </Label>
+        {/* Wanduhrzeit ohne Zone; umgerechnet wird in der Anzeigezone — sonst
+            wäre das Fenster gegen die Daten verschoben, sobald jemand nicht in
+            der Zone des Servers sitzt. */}
+        <Input
+          id={vonId}
+          type="datetime-local"
+          step={SCHRITT_SEKUNDEN}
+          className="h-bedienelement w-auto"
+          aria-describedby={beschriebenDurch}
+          value={wanduhrzeitFuerEingabe(von, zone)}
+          onKeyUp={(ereignis) => merkeEingabestand("von", ereignis.currentTarget)}
+          onBlur={(ereignis) => merkeEingabestand("von", ereignis.currentTarget)}
+          onChange={(ereignis) => {
+            merkeEingabestand("von", ereignis.currentTarget);
+            aufAenderung(zeitpunktAusWanduhrzeit(ereignis.target.value, zone), bis);
+          }}
+        />
+      </div>
+      <div className="flex items-center gap-1.5">
+        <Label htmlFor={bisId} className="text-beiwerk">
+          {texte.zeitraum.bis}
+        </Label>
+        <Input
+          id={bisId}
+          type="datetime-local"
+          step={SCHRITT_SEKUNDEN}
+          className="h-bedienelement w-auto"
+          aria-describedby={beschriebenDurch}
+          value={wanduhrzeitFuerEingabe(bis, zone)}
+          onKeyUp={(ereignis) => merkeEingabestand("bis", ereignis.currentTarget)}
+          onBlur={(ereignis) => merkeEingabestand("bis", ereignis.currentTarget)}
+          onChange={(ereignis) => {
+            merkeEingabestand("bis", ereignis.currentTarget);
+            aufAenderung(von, zeitpunktAusWanduhrzeit(ereignis.target.value, zone));
+          }}
+        />
       </div>
       {/* Dieselbe ruhige Farbrolle wie am Suchfeld der Liste: Der Nutzer hat
-          nichts falsch gemacht, er ist nur noch nicht fertig. Ohne Hinweis steht
-          hier, was die Felder erwarten. */}
-      <p id={hinweisId} className="text-muted-foreground text-beiwerk max-w-prose">
-        {hinweis ?? texte.zeitraum.freiHinweis}
-      </p>
-    </div>
+          nichts falsch gemacht, er ist nur noch nicht fertig. */}
+      {hinweis === undefined ? null : (
+        <p id={hinweisId} className="text-muted-foreground text-beiwerk">
+          {hinweis}
+        </p>
+      )}
+    </>
   );
 }

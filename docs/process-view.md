@@ -3683,9 +3683,9 @@ nichts Fachliches geändert hat; die Beobachtung steht in §33, nicht in der Zus
 | | |
 |---|---|
 | **Der vierte Knopf** | `components/zeitraum-umschalter.tsx` bekommt ihn über die **freiwillige** Angabe `aufFrei`. Ohne sie sind es drei Knöpfe, und das Dashboard ruft ihn ohne — `tests/zeitraum-umschalter.test.tsx` hält beides gerendert fest, samt der Verdrahtung: „Frei" ruft `aufFrei` und nicht `aufAuswahl` |
-| **Die Datumsfelder** | `features/nachrichten/components/baumfenster-felder.tsx`, **neben** dem Umschalter. Zwei `datetime-local` mit `step=3600`; `validity.badInput` an `keyup` und `blur`, übernommen aus `filterleiste.tsx` und nicht neu gefunden |
+| **Die Datumsfelder** | `features/nachrichten/components/baumfenster-felder.tsx`, **neben** dem Umschalter, **in derselben Zeile und in derselben Höhe**: je Feld Beschriftung und Eingabe nebeneinander, kein Rahmen, kein Text darunter. Zwei `datetime-local` mit `step=3600`; `validity.badInput` an `keyup` und `blur`, übernommen aus `filterleiste.tsx` und nicht neu gefunden. **Kein Hinweistext ohne Anlass** — eine Meldung erscheint in derselben Zeile hinter den Feldern, und nur dann |
 | **Die Codes** | `lib/rollupzeitraum.ts`: `FREI` als Code der Antwort (`Baumzeitraum`), **kein** viertes Paar in `ROLLUPZEITRAEUME`; dazu `Baumfensterzustand`, `baumfenstermodus`, `angezeigterBaumfenstermodus`, `mitPaar`, `mitFreiemBaumfenster`, `hervorgehobenerBaumzeitraum`, `baumfensterAlsParameter` — **nachgebaut aus `lib/filter.ts`, nicht importiert**; dort liegen die Zeitraumcodes der Liste, eine andere Menge |
-| **Die Beschriftungen** | `texte.zeitraum`: `FREI`, `von`, `bis`, `freiHinweis`, `unvollstaendig`, `beideNoetig`; `fehler["zeitfenster-zu-genau"]`. Beide Sprachen, `sprachdateien.test.ts` ohne neue Ausnahme |
+| **Die Beschriftungen** | `texte.zeitraum`: `FREI`, `von`, `bis`, `unvollstaendig`, `beideNoetig`; `fehler["zeitfenster-zu-genau"]`. Beide Sprachen, `sprachdateien.test.ts` ohne neue Ausnahme |
 
 ### Zustand und URL
 
@@ -3904,3 +3904,19 @@ Schritt und ist neu gestartet worden — die JVM lädt nicht nach.
   nachher `NEXANS`): 96.758 im Baum, 50 Zeilen und `hasMore` in der Liste.
 - **Nichts über `step=3600` als Bedienung:** Ob die Pfeiltasten im Feld stundenweise springen, ist
   nicht nachgefahren; die von Hand gebaute krumme Stunde wird abgewiesen (Zeile 8).
+
+### Nachtrag vom selben Tag — die Zeile sprang, und sie springt nicht mehr
+
+Der Auftraggeber hat das Bild angesehen: Beim Klick auf „Frei" **sprangen die Felder nach oben** —
+Beschriftung über dem Feld und Hinweistext darunter machten den rechten Block höher als den
+Umschalter, und die Ausrichtung am unteren Rand schob die Felder über die Knöpfe. Dazu der
+Hinweistext *Volle Stunden; „Bis" ist die letzte enthaltene Stunde*, den niemand bestellt hatte.
+
+**Geändert:** Beschriftung und Feld stehen nebeneinander, alle drei — Umschalter, „Von", „Bis" —
+sind Kinder derselben Zeile in Bedienelementhöhe und auf die Mitte ausgerichtet; die Zeile wird
+beim Klick breiter, nicht höher. **Der Hinweistext ohne Anlass ist weg** (`freiHinweis` aus beiden
+Sprachdateien entfernt); eine Meldung erscheint in derselben Zeile hinter den Feldern, und nur,
+wenn es eine gibt. Nachgemessen am laufenden System: Der Umschalter steht vor und nach dem Klick
+bei **63 px** Oberkante und **30 px** Höhe, die Felder ebenfalls bei 63 px und 30 px; kein
+`aria-describedby`, solange nichts zu sagen ist. Die Zeilen 2 und 4 der Tabelle oben beschreiben
+den Stand vor dieser Änderung.

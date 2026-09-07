@@ -323,7 +323,7 @@ export function ProzessAnsicht() {
          * das mit dem Inhalt verschwindet, dem Nutzer genau dann fehlt, wenn er
          * etwas ausprobieren will. Im Ladezustand gesperrt.
          */}
-        <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <ZeitraumUmschalter
             gewaehlt={hervorgehobenerBaumzeitraum(zustand, freiGewaehlt, baum?.zeitraum)}
             aufAuswahl={(zeitraum) => {
@@ -339,7 +339,9 @@ export function ProzessAnsicht() {
             gesperrt={antwort.isPending}
           />
           {/* Die Felder stehen **neben** dem Umschalter, nicht darin — nur so
-              bleibt das Dashboard zeichengleich. */}
+              bleibt das Dashboard zeichengleich. Sie sind Kinder derselben
+              Zeile in derselben Höhe: Die Zeile wird breiter, nicht höher, und
+              der Umschalter springt nicht. */}
           {fenstermodus === "frei" ? (
             <BaumfensterFelder
               von={zustand.von}
