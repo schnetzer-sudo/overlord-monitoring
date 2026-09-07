@@ -121,3 +121,11 @@ scripts/mitschnitt-saaj-jakarta/mitschnitt/
 scripts/mitschnitt-saaj-jakarta/retrieve/
 scripts/mitschnitt-saaj-jakarta/abhaengigkeiten.txt
 scripts/mitschnitt-saaj-jakarta/*.bin
+
+# ─── Messrunde 10c-4a — freies Zeitfenster der Prozessansicht ────────────────
+# Gleiche Trennung wie bei scripts/messung-prozessansicht/: erzeuge.py und die
+# .sql-Sitzungen werden eingecheckt, dazu die GEFILTERTEN Protokolle (nur
+# Marken, EXPLAIN, Zaehler, Laufzeiten). Die Rohausgaben nicht: Die
+# Kennzahlenabfrage gibt process_id aus, und das sind Partnernamen Dritter. (G1)
+scripts/messung-prozessansicht-frei/ergebnis/*.txt
+!scripts/messung-prozessansicht-frei/ergebnis/*.gefiltert.txt
