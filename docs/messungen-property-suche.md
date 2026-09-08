@@ -2599,3 +2599,86 @@ anders kostet — bei Fassung B und C hängt der Preis nicht am Wert —, und ni
 Zeile eine Konstante des Servers sind: Sie sind der Unterschied zweier Läufe auf dieser Testkopie.*
 
 ---
+
+## M170 — Ist Fassung B stabil?
+
+**Keine eigene Sitzung.** `EXPLAIN` und `ANALYZE` jeder Kombination aus M168 und M169 stehen in
+`b2-m168.sql` und `b3-m169.sql`, je Fall vor den Laufzeitläufen; ausgewertet sind hier 18 Fälle für
+Fassung B und 18 für Fassung C. Die Frage ist nicht die Laufzeit, sondern: **Gibt es eine
+Kombination, in der der Optimizer trotz der Struktur `MessageProperty` anders als über den
+Primärschlüssel erreicht?**
+
+> **Vorregistrierte Deutung.** Fassung B ist über alle Kombinationen stabil. **Ein einziger Ausbruch
+> entscheidet die Runde gegen den erzwungenen Pfad.** Nach der Vorprobe erwartet: Ausbruch in jedem
+> 30- und 90‑Tage-Fall von B; für C per Konstruktion keiner.
+
+### Ergebnis — 14 von 18 Ausbrüchen bei Fassung B, 0 von 18 bei Fassung C
+
+| Fall | Fenster | Fassung B: führende Tabelle → Zugriff auf `mp` | Ausbruch | Fassung C: `mp` |
+|---|---|---|---|---|
+| `NEXANS` / `SNDPRN` | 24 h | `<derived3>` → `mp` `ref` `PRIMARY` (548) | — | `PRIMARY` (548) |
+| | 30 T | **`mp` `ref` `MessagePropertyValueIDX`** (198.614) → `<derived3>` `ref` `key0` | **ja** | `PRIMARY` (548) |
+| | 90 T | **`mp` `ref` `MessagePropertyValueIDX`** → `<derived3>` `key0`; `m` als `ALL` | **ja** | `PRIMARY` (548) |
+| `NEXANS` / `VFN` | 24 h | `<derived3>` → `mp` `ref` `PRIMARY` (548) | — | `PRIMARY` (548) |
+| | 30 T | `<derived3>` (409.756) → `mp` `ref` `PRIMARY` (548) | — | `PRIMARY` (548) |
+| | 90 T | **`mp` `ref` `MessagePropertyNameValueIDX`** (242.280) → `key0`; `m` als `ALL` | **ja** | `PRIMARY` (548) |
+| `NEXANS` / `DestinationFilename` | 24 h | `<derived3>` → `mp` `ref` `PRIMARY` (548) | — | `PRIMARY` (548) |
+| | 30 T | **`mp` `ref` `MessagePropertyNameValueIDX`** (98.396) → `key0` | **ja** | `PRIMARY` (548) |
+| | 90 T | **`mp` `ref` `MessagePropertyNameValueIDX`** → `key0`; `m` als `ALL` | **ja** | `PRIMARY` (548) |
+| `NEXANS` / `Message.GUID` | 24 h, 30 T, 90 T | **`mp` `ref` `MessagePropertyValueIDX`** (1) → `key0` | **ja, dreimal** | `PRIMARY` (548) |
+| `NEXANS` / `Converter.TransactionID` | 24 h, 30 T, 90 T | **`mp` `ref` `MessagePropertyNameValueIDX`** (17) → `key0` | **ja, dreimal** | `PRIMARY` (548) |
+| `SUTTONS` / `Message.GUID` | 24 h, 30 T, 90 T | **`mp` `ref` `MessagePropertyValueIDX`** (1) → `key0`; über 90 T `m` über `ProejctIDIDX` | **ja, dreimal** | `PRIMARY` (548) |
+
+**Die Deutung ist widerlegt, und zwar deutlich:** Fassung B hält den Pfad in **4 von 18** Fällen —
+den drei 24‑Stunden-Fällen der neuen Namen und `Message.VFN` über 30 Tage. In den übrigen 14 führt
+der Optimizer mit `MessageProperty` über einen Wertindex. **Ein einziger Ausbruch hätte die Runde
+gegen den erzwungenen Pfad entschieden; es sind vierzehn.** Die Struktur „erst materialisieren, dann
+anschließen" legt fest, *dass* materialisiert wird — nicht, in welcher Reihenfolge der Join läuft.
+`derived_with_keys=on` gibt der materialisierten Menge einen Schlüssel, und damit ist sie für den
+Optimizer eine Tabelle wie jede andere.
+
+**Fassung C hält in 18 von 18 Fällen** — `mp` steht ausschließlich als `DEPENDENT SUBQUERY` mit
+`ref` über `PRIMARY` (548) im Plan, unabhängig von Fenster, Mandant und Name. Das ist keine
+Optimizer-Entscheidung, sondern die Abwesenheit einer: Eine Skalar-Unterabfrage mit `LIMIT` kennt
+weder Semi-Join noch Materialisierung. Was das kostet, steht in M168 und M169: das 1,12- bis
+1,87‑Fache von B über 30 Tage, das 2,1‑Fache über 24 Stunden, und über 90 Tage denselben Abbruch.
+
+**Frei bleibt in beiden Fassungen der Zugriff auf `Message` selbst** — und der kippt ebenfalls: über
+24 Stunden und 30 Tage `range` über `MessageLastUpdateIDX`, über 90 Tage bei `NEXANS` ein Vollscan
+(`ALL`, 3.560.486 geschätzt) und bei `SUTTONS` die Mandantenkette über `ProejctIDIDX` (M169). Eine
+Struktur, die `MessageProperty` bindet, bindet nicht den Weg zur Fenstermenge.
+
+### Geschätzt gegen gelesen — die Schätzung liegt hier um Faktor 2 zu hoch, nicht um 37,9 % zu niedrig
+
+`rows` aus `EXPLAIN` gegen `r_rows` aus `ANALYZE` desselben Statements (ein Lauf je Fall):
+
+| Zugriff | geschätzt | gelesen | geschätzt / gelesen | Fälle |
+|---|---:|---:|---:|---|
+| `Message` `range` `MessageLastUpdateIDX`, 24 h | 11.812 | 6.249 | **1,89** | alle 24‑h-Fälle |
+| `Message` `range` `MessageLastUpdateIDX`, 30 T | 409.756 | 214.330 | **1,91** | alle 30‑T-Fälle |
+| `Message`, 90 T | `ALL` 3.560.486; Bereich 1.476.166 | Abbruch nach 3.383.893 `read_rnd_next` | — | `NEXANS` |
+| `mp` `ref` `MessagePropertyValueIDX`, `SNDPRN` | 198.614 | 102.284 | **1,94** | 30 T |
+| `mp` `ref` `MessagePropertyNameValueIDX`, `DestinationFilename` | 98.396 | 49.976 | **1,97** | 30 T |
+| `mp` `ref` `MessagePropertyNameValueIDX`, `VFN` | 242.280 | 124.715 (M165) | 1,94 | 90 T (Plan) |
+| `mp` `ref` `MessagePropertyValueIDX`, `Message.GUID` | 1 | 1,00 | 1,00 | alle |
+| `mp` `ref` `MessagePropertyNameValueIDX`, `Converter.TransactionID` | 17 | 17,00 | 1,00 | alle |
+| `<derived3>` `ref` `key0`, je `mp`-Zeile | 10 | 0,06 · 0,10 · 0,12 (häufige Werte), 1,00 (`GUID`) | **100** bis 10 | Ausbrüche |
+| `mp` `ref` `PRIMARY`, je materialisierter Nachricht | 1 | 0,01 bis 0,17 (neue Namen), 1,00 bis 1,33 (Schlüssel) | 6 bis 100 | gehaltene Fälle, C |
+| `Message` `ref` `ProejctIDIDX`, je Prozess (`SUTTONS`, 90 T) | 197.804 | 11.597,53 | **17,06** | M169 |
+
+**Die Bereichsschätzungen sind durchgehend um Faktor 1,9 bis 2,0 zu hoch** — Zeitbereich wie
+Wertbereich —, nicht um 37,9 % zu niedrig wie die Tabellenstatistik in M155. Das sind zwei
+verschiedene Statistiken: M155 hat die Zeilenzahl der Tabelle gemessen, hier zählt der Index-Dive
+des Bereichs; beide sind falsch, in entgegengesetzter Richtung. Die Schätzung für den Schlüssel der
+materialisierten Menge (10 Zeilen je Nachschlag) ist eine feste Annahme und liegt bei den häufigen
+Werten um Faktor 100 daneben. **Der Ausbruch hängt an einem Vergleich zweier Schätzungen, die
+beide falsch sind:** Bei 409.756 geschätzten Fensterzeilen bricht der Optimizer für 198.614 und
+98.396 geschätzte Wertzeilen aus und für 242.280 nicht — die Kippstelle liegt zwischen 198.614 und
+242.280, und keine der drei Zahlen stimmt.
+
+*Belegvermerk (L10): gemessen sind die Pläne von 36 Fällen und die gelesenen Zeilen je Tabelle aus
+einem `ANALYZE`-Lauf je Fall. Behauptet wird nicht, dass die Kippstelle in der Produktion an derselben
+Stelle liegt — sie hängt an Statistiken, die dort andere sind —, und nicht, dass Fassung C unter allen
+MariaDB-Versionen bindet: Sie bindet in 10.6.22 mit den Schaltern aus B0.*
+
+---
