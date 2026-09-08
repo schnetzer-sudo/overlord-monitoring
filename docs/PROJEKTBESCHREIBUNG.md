@@ -1265,6 +1265,51 @@ Prozent der Datenbank; dort entscheidet die Bytegröße.
    > ohne Fenster erreichbar, aber nur, wenn man sie schon hat. **Wer die alten Monate braucht,
    > braucht das Archivsystem aus [`rohdaten.md`](rohdaten.md) §12 — und das ist kein Bau dieses
    > Projekts.**
+
+   > ### ⚠️ Das Jahresmaximum ist für den größten Mandanten möglicherweise nicht baubar *(gekennzeichnet am 08.09.2026)*
+   >
+   > **Die Regel bleibt, wie sie ist — Maximum ein Jahr. Gekennzeichnet wird, dass dieses Maximum
+   > für den Zugriff über den Zeitbereich in `Message` gemessen nicht mehr trägt, sobald der
+   > Bereich groß genug ist.** Der Optimizer gibt `MessageLastUpdateIDX` zwischen 30 und 90 Tagen
+   > auf und liest `Message` als Vollscan — und das betrifft **jedes** Statement, das über den
+   > Zeitbereich in diese Tabelle einsteigt, nicht nur die Property-Suche, an der es aufgefallen
+   > ist.
+   >
+   > | Fenster (`NEXANS`, Ende 30.12.2025) | geschätzte Zeilen des Bereichs | Zugriff auf `Message` | Messung |
+   > |---|---:|---|---|
+   > | 30 Tage | 409.756 (gelesen 214.330) | `range` über `MessageLastUpdateIDX` | M168, M170 |
+   > | 90 Tage | **1.476.166** — 41 % der geschätzten Tabelle (gelesen 680.872) | **`ALL` über 3.560.486 Zeilen**, `Using filesort`; in den zehn Sekunden 3.383.893 Zeilen sequenziell gelesen, dann Abbruch | M168, M171 |
+   > | ein Jahr | 1.780.243 | `range` über `MessageLastUpdateIDX` — **in einem anders gebauten Statement**, der BAM-Präfixsuche | M50 |
+   >
+   > **Die Schwelle ist nicht erhoben, und sie ist nicht einmal eine Zahl.** Über 90 Tage kippt
+   > der Plan in allen zehn Messfällen der L4‑Pfad-Runde (M168: drei Namen in zwei Fassungen,
+   > M171: vier Formen); über ein Jahr hält M50 den Zeitindex in einem anderen Statement. Ob ein
+   > Statement kippt, hängt an der Kostenrechnung des Optimizers für **dieses** Statement — und
+   > die rechnet mit Bereichsschätzungen, die um Faktor 1,9 bis 2,2 zu hoch liegen (M170, M171).
+   > **Wo zwischen 30 und 90 Tagen die Grenze liegt, ist für kein Statement gemessen** — offener
+   > Punkt 159 in [`messungen-property-suche.md`](messungen-property-suche.md). Erzwungen —
+   > `STRAIGHT_JOIN`, `FORCE INDEX` — hält der Zeitindex über 90 Tage, und das Statement bricht
+   > trotzdem ab, weil hinter 621.284 bis 660.928 gelesenen Indexeinträgen die Nachschlagezugriffe
+   > nicht mehr durchkommen (M171).
+   >
+   > > **Belegvermerk** (Regel L10).
+   > > *Gemessen ist:* Plan und Laufzeit von zehn Statementformen über 90 Tage bei `NEXANS`, alle
+   > > mit Vollscan oder Abbruch; und der Plan eines anderen Statements über ein Jahr, mit
+   > > gehaltenem Zeitindex (M50).
+   > > *Behauptet wird:* dass das Jahresmaximum für den größten Mandanten **möglicherweise** nicht
+   > > baubar ist.
+   > > **Die Lücke:** „Möglicherweise" ist das Wort. Ob ein konkretes Statement über ein Jahr
+   > > antwortet, sagt nur seine eigene Messung — die BAM-Suche antwortet exakt über ein Jahr
+   > > (8.939,7 ms, M47) und bricht präfixweise ab (M50); für die Property-Suche steht die
+   > > Jahresmessung in [`property-suche.md`](property-suche.md).
+   >
+   > **Die Zahl wird nicht ersetzt.** Ein Jahr bleibt das Maximum, weil kein Statement gemessen
+   > ist, das ein kleineres rechtfertigt, und weil die Regel jeden Listen-Endpunkt bindet — nicht
+   > nur den, an dem der Befund entstand. Sie wird **gekennzeichnet**, dieselbe Bauform wie bei der
+   > Aufbewahrung oben: Wer einen Listen-Endpunkt baut, der über den Zeitbereich in `Message`
+   > einsteigt, misst ihn über ein Jahr gegen `NEXANS` und nicht nur über die Vorgabe (Regel L7)
+   > — und wer jenseits von 30 Tagen einen Vollscan im `EXPLAIN` sieht, hat diesen Befund gefunden
+   > und keinen neuen.
 2. **Keine Live-Aggregation über `Message`.** Dashboard-Kennzahlen kommen ausschließlich aus
    `message_rollup`. Ein stündlicher Job schreibt inkrementell fort.
    *Begründung korrigiert 27.07.2026:* Bei 3,3 Millionen Zeilen und 2,9 GB wäre eine
@@ -1352,6 +1397,58 @@ Prozent der Datenbank; dort entscheidet die Bytegröße.
    > Kennzahl live rechnen will, trägt sie hier ein, begründet sie und misst sie.
 3. **Keine `OFFSET`-Paginierung.** Cursor-basiert über `(MessageLastUpdate, MessageID)`.
 4. **`MessageProperty` nur über `MessageID`.** Nie filtern, gruppieren oder sortieren über den Wert.
+
+   > ### Die erste benannte Ausnahme dieser Regel: der Sucheinstieg über Name und Wert *(E‑102, Sparringsrunde vor dem 07.09.2026; bestätigt durch M168 bis M171 am 08.09.2026; eingetragen am 08.09.2026)*
+   >
+   > **Der Satz oben bleibt Zeichen für Zeichen stehen, und daneben steht diese Ausnahme.** Die
+   > Property-Suche ([`property-suche.md`](property-suche.md)) steigt in `MessageProperty` über
+   > **Name und Wert** ein — `MessagePropertyName = ? AND MessagePropertyValue = ?` — und nicht
+   > über die `MessageID`. **Das ist die Ausnahme, und sie ist die ganze Ausnahme:** Für jeden
+   > anderen Zugriff auf diese Tabelle — Detail, Rohdaten, Verkettung, jede Aggregation — gilt
+   > die Regel unverändert. Gefiltert wird ausschließlich mit `=`; gruppiert und sortiert wird
+   > über den Wert auch in der Suche nie.
+   >
+   > **Der Grund ist, dass der L4‑konforme Pfad die Suche nicht trägt — und das ist in vier
+   > Fassungen erzwungen und gemessen, nicht angenommen.** Über die Fenstermenge einsteigen und
+   > `MessageProperty` über den Primärschlüssel erreichen — genau das, was die Regel vorschreibt
+   > — ist strukturell (materialisierte Fenstermenge, bindende Unterabfrage je Zeile) und per
+   > Hinweis (`STRAIGHT_JOIN`, `FORCE INDEX (PRIMARY)`) erzwungen worden, gegen `NEXANS`, je Name
+   > mit dem häufigsten Wert seines 30‑Tage-Fensters
+   > ([`messungen-property-suche.md`](messungen-property-suche.md), L4‑Pfad-Runde):
+   >
+   > | Fenster | L4‑Pfad, erzwungen | freier Pfad über den Wertindex (Fassung A) |
+   > |---|---:|---:|
+   > | 24 Stunden | **96 bis 97 ms** (M168) | 91 bis 93 ms (M166) — dort wählt der Optimizer den L4‑Pfad von selbst |
+   > | 30 Tage | **3.186 bis 8.195 ms** (M171; Fassung B und C in M168 4.347 bis 8.129 ms) | **789 bis 1.862 ms** (M166) |
+   > | 90 Tage | **⛔ Abbruch an der 10‑s‑Grenze des Lese-Pools, in jeder Form** — M168: 42 von 42 Ausführungen, M171: 4 von 4 Formen | `Message.GUID` 0,946 ms, `Message.ReceiverID` 1.276 ms (M159); für die drei Namen des Nachtrags nicht gemessen |
+   >
+   > Über 30 Tage unterbietet **keine** erzwungene Form den Maßstab der ausgelieferten BAM-Suche
+   > (1.655,8 ms, M47), und keine unterbietet den freien Pfad. **Über 90 Tage ist die Ausnahme
+   > nicht die billigere, sondern die einzige antwortende Form** — dort gibt der Optimizer den
+   > Zeitindex auf `Message` auf und liest die Tabelle voll (Kennzeichnung an Leistungsregel 1).
+   >
+   > **Warum sie nicht durch ein Tagesfenster zu umgehen ist.** Über 24 Stunden hält die Regel —
+   > aber **als Wahl des Optimizers, nicht als Garantie**: Die materialisierte Fassung B bricht in
+   > **14 von 18** gemessenen Kombinationen aus dem L4‑Pfad aus und führt mit `MessageProperty`
+   > über einen Wertindex (M170), und die Tabellenstatistik, an der diese Wahl hängt, liegt um
+   > **37,9 %** daneben — 46.964.279 geschätzt gegen 75.571.462 gezählt (M155). Ein Tagesfenster
+   > machte die Suche außerdem für den Nutzer wertlos, der eine Nummer hat und kein Datum —
+   > dieselbe Lage wie bei der BAM-Suche ([`bam-suche.md`](bam-suche.md) §2).
+   >
+   > **Was sie kostet.** Die Regel ist nicht mehr absolut. Der Wertindex ist ein Präfixindex über
+   > 50 Zeichen; beim häufigsten Wert eines Namens liest die Suche über ihn bis zu 124.715
+   > Indexeinträge (`Message.VFN`, M165) und kostet über 30 Tage bis zu 1.862 ms (M166). Das ist
+   > der Preis, und er steht in [`property-suche.md`](property-suche.md) neben jedem Statement,
+   > das ihn zahlt.
+   >
+   > **Eine benannte Ausnahme ist etwas anderes als eine aufgeweichte Regel.** Sie ist einzeln
+   > begründet, einzeln gemessen und einzeln gezählt — genau wie die Ausnahmen von M1 und M2, die
+   > dieses Projekt in [`mandantentrennung.md`](mandantentrennung.md) namentlich führt, und wie
+   > die beiden Ausnahmen von Leistungsregel 2 darüber. **Taucht hier jemals eine zweite auf, ist
+   > das ein Signal und keine Kleinigkeit.** Wer `MessageProperty` ein zweites Mal anders als über
+   > die `MessageID` anfassen will, trägt es hier ein und begründet es — und misst es, denn der
+   > Vorbehalt aus M157 gilt: Schon das Zählen eines einzigen Namens über den Gesamtbestand kostet
+   > 125,527 s, das 12,6‑Fache der Poolgrenze.
 5. **BAM-Suche mit hartem Limit und Mindestlänge** des Suchbegriffs. BAM-Werte wie `050` kommen
    millionenfach vor.
 6. **Der Rollup-Job läuft gedrosselt.** Er teilt sich die Instanz mit der Produktion.
