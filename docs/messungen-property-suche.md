@@ -1316,6 +1316,18 @@ M161‑7 wiederholt die Gegenprobe der Typ-Lesart aus M155 für die drei neuen N
 `LIMIT 1`-Zugriff über `MessagePropertyNameIDX`. Ohne sie wäre offen, ob ein Name überhaupt in
 `MessageProperty` vorkommt, bevor M162 seine Deckung misst.
 
+### Vier Ergänzungen über den Wortlaut hinaus — gemeldet, jede mit ihrem Anlass
+
+| Sitzung | Ergänzung | Anlass |
+|---|---|---|
+| `n3b-m163-raenge-90t.sql` | M163: Rang 1 bis 5, Werte über der Deckelung (51), **90 Tage** | Die Kategoriefrage des Auftrags entscheidet sich daran, ob die Wertemenge mit dem Fenster wächst — M157‑3 hat genau so gemessen |
+| `n4-m164.sql`, M164‑4/‑5 | Breite des Präfix-Vorfilters: Werte je 50‑Zeichen-Präfix | Ohne sie wäre M167 nicht deutbar: Die Kosten der Nachprüfung hängen an der Mehrdeutigkeit des Präfixes, nicht an der Länge |
+| `n5b-m165-diagnose.sql` | M165: `FORCE INDEX` in beide Richtungen | Vom Auftrag als Diagnose zugelassen; ohne sie bliebe offen, ob die Wahl des Wertindex etwas kostet |
+| `n7-m167.sql`, M167‑1 und Handler-Zähler | Präfixbreite über den ganzen Bestand; gelesene Indexeinträge, ICP-Prüfungen, Zeilenzugriffe je Lauf, mit Eichung | „gelesene Zeilen laut `EXPLAIN`" ist eine Schätzung; die Zähler sind die Messung. Der Index kennt kein Fenster, deshalb der Bestand |
+
+Keine der vier ersetzt eine Messung des Auftrags; alle sechs vorgeschriebenen Statements sind in
+der vorgeschriebenen Form gelaufen.
+
 ## Nummernvergabe — Nachtrag
 
 Der Auftrag nennt M161 und verlangt, den Stand nicht zu übernehmen, sondern über den **Höchstwert**
@@ -1951,3 +1963,192 @@ Indexeinträge zu zählen, und ein solcher Fall existiert unter den konfiguriert
 Punkt 146 bleibt deshalb stehen.*
 
 ---
+
+# Befunde des Nachtrags
+
+## 1. Die Konfiguration ist gegen die Produktion belegt — und sie ist von Hand geändert
+
+Vierzehn Zeilen, acht Typ‑0 ohne Mandant (unverändert), sechs Typ‑1 mit `NEXANS`. `Service.Type`
+ist **entfernt**, nicht bloß nicht ergänzt; `Message.DestinationFilename`, `Message.SNDPRN` und
+`Message.VFN` sind neu und kommen alle drei in `MessageProperty` vor (M161). Die Abbildung der acht
+Typ‑0‑Namen im Code (Punkt 143) steht damit nach Aussage des Auftrags gegen die Produktion.
+**Der Handabgleich hat keine Grundlage außer sich selbst:** `UPDATE_TIME 2026-09-08 09:23:00` bei
+unverändertem `CREATE_TIME` — wird die Kopie neu befüllt, ist er fort (**Punkt 150**).
+
+## 2. Die drei neuen Namen sind Merkmale — keine Schlüssel und keine Kategorien
+
+**`SNDPRN` und `VFN` sitzen auf den Wurzeln** (96,263 und 98,436 %) und auf fast keinem Kind
+(0,239 und 0,454 %), mit 308 beziehungsweise 225 Werten, die beim Verdreifachen des Fensters nur um
+8 und 10 % wachsen; der häufigste Wert trägt 38,35 und 42,69 % aller Zeilen (M162, M163). Das ist
+nicht `Service.Type` (18 Werte, 100 % Deckung), es ist `Message.ReceiverID` mit doppeltem Gewicht
+an der Spitze. **Die vorregistrierte Lesart „`SNDPRN` ist eine Kategorie" hat nicht getroffen** —
+der wichtigste Befund des Nachtrags ist deshalb nicht der befürchtete, sondern der aus M166.
+
+**`DestinationFilename` ist kein eindeutiger Name.** 14,518 % über die Wurzeln (unter der Schwelle,
+Vermerk wie `ReceiverID`), ein offenes Vokabular (712 → 2.267 Werte von 30 auf 90 Tage), in dem 27
+Werte 80,35 % der Zeilen tragen. Wer einen der 577 Einzelnamen kennt, findet seine Nachricht; wer
+einen Dauernamen eingibt, bekommt eine Teilmenge des Bestands.
+
+**Bei `SUTTONS` kommt keiner der drei vor** — hier stimmen Daten und Konfiguration überein, anders
+als bei `Message.GUID` in M156.
+
+## 3. Der ganze Weg liegt bei zwei der drei im Bereich des Ausgelieferten — `VFN` darüber
+
+Gegen den Maßstab der gebauten BAM-Suche (1.655,8 ms, M47) über 30 Tage: `DestinationFilename`
+789,350 ms, `SNDPRN` 1.531,134 ms, **`VFN` 1.862,098 ms — 12,5 % darüber** (M166). Nichts bricht
+ab. `Converter.TransactionID` läuft in 1,195 ms wie `Message.GUID` — **Lücke 6 ist geschlossen.**
+Über 24 Stunden kosten alle drei 91 bis 93 ms, weil der Optimizer dort über die Zeit einsteigt und
+`MessageProperty` über den Primärschlüssel erreicht.
+
+## 4. Die Präfixgrenze ist für die sechs konfigurierten Namen kein Thema — und die Nachprüfung kostet nichts Messbares
+
+Acht von 10.524 Dateinamen (0,076 %) sind länger als 50 Zeichen, der längste hat 55; `SNDPRN` und
+`VFN` bleiben unter 26 (M164). Kein 50‑Zeichen-Präfix ist mehrdeutig — nicht im Fenster, und für
+den längsten Wert nicht im ganzen Bestand. Der Vergleich bei Trefferzahl 1 ergibt **null
+Unterschied in jedem Handler-Zähler** und 0,001 ms in der Laufzeit (M167). **Lücke 5 ist
+geschlossen.** Die Begründung des Ausnahmekastens zu L4 wird durch den Handabgleich nicht dünner.
+Punkt 146 bleibt als Warnung für künftige Namen stehen: Die Kosten der Nachprüfung sind die Kosten
+der Mehrdeutigkeit.
+
+## 5. Der Optimizer kippt an drei Stellen zwischen Zeit- und Werteinstieg — und L4 hängt daran
+
+Dasselbe Statement, verschiedene Pläne: M162 (`NEXANS`) steigt mit den drei selteneren Namen über
+`MessagePropertyNameIDX` in `MessageProperty` ein, wo M156 über die Zeit einstieg — 16,203 s, ein
+Plan, den L4 im Anwendungscode verbietet. M166 steigt über 24 Stunden über die Zeit ein (L4‑Pfad,
+91 ms) und über 30 Tage über den Wert (bis 1.862 ms). M165 wählt in zwei von sechs Fällen den reinen
+Wertindex — mit +0,6 und +1,3 % folgenlos. **Kein Statement dieses Nachtrags hat seinen Plan
+verdient; jeder hängt an der Schätzung.**
+
+## 6. Der Auftrag stand in einem Punkt gegen die Dateien
+
+`Message.DestinationFilename` steht in drei Projektdateien (M17, M56, Auftrag Schritt 8), nicht in
+keiner. Das Vorwissen daraus (Maximum 73 über alle Mandanten) widerspricht M164 nicht: Der
+`NEXANS`-Anteil des Fensters reicht bis 55; die längeren Werte gehören anderen Mandanten.
+
+---
+
+# Was dieser Nachtrag nicht zeigt
+
+1. **Nichts über die Produktion.** Geändert ist nur die Konfigurationstabelle der Testkopie, und
+   dass sie der Produktion gleicht, ist die Aussage des Auftrags — **nicht gemessen**. Der
+   Datenbestand ist der der Testkopie. Es ist nicht hochgerechnet worden.
+
+2. **Den häufigsten Wert der drei Namen über den Gesamtbestand.** M165 misst den häufigsten Wert
+   **des Fensters** über den Bestand (49.976, 102.284, 124.715 Zeilen) — untere Schranken für den
+   häufigsten des Bestands, nicht dieser selbst. Die Gruppierung über den Bestand ist nicht
+   messbar (M157).
+
+3. **Die Kosten einer mehrdeutigen Präfixgruppe.** M167 misst bei Trefferzahl 1 und eindeutigem
+   Präfix. Ein Wert, dessen 50‑Zeichen-Präfix mit fremden Werten zusammenfällt, existiert unter den
+   sechs konfigurierten Namen in Fenster B nicht; was er kostete, ist die Zahl der verworfenen
+   Indexeinträge — und die ist hier nirgends größer als null.
+
+4. **Die Bedeutung der Werte.** Dass `SNDPRN` und `VFN` auf den Wurzeln sitzen, ist eine gemessene
+   Verteilung in einem Fenster, keine Regel des Altsystems. Was ein `VFN` ist, sagt weiterhin nur
+   die gemessene Nachbarschaft zu `OFTPReader.VFN` aus M17 (4).
+
+5. **Wo zwischen einem Tag und dreißig der Plan kippt.** Über 24 Stunden Zeiteinstieg mit 91 ms,
+   über 30 Tage Werteinstieg mit bis zu 1.862 ms — der Punkt dazwischen ist nicht erhoben, wie bei
+   Punkt 145.
+
+6. **Nichts über die acht übrigen Mandanten** und nichts über die drei neuen Namen bei `SUTTONS`
+   jenseits der Feststellung, dass sie dort nicht vorkommen.
+
+7. **Nichts über Oberfläche, Endpunkt oder Antwortform.** Dieser Nachtrag hat nichts gebaut und
+   nichts entschieden.
+
+---
+
+# Offene Punkte
+
+Fortlaufend in der Reihe des Projekts; höchste vorher vergebene Nummer ist **149** (oben).
+
+**150. Die Konfigurationstabelle der Testkopie ist von Hand geändert worden.** `UPDATE_TIME
+2026-09-08 09:23:00`, `CREATE_TIME` unverändert. Wird die Kopie neu befüllt, ist die Änderung fort:
+Die drei neuen Namen verschwinden aus dem Angebot, `Service.Type` kehrt zurück — ohne dass jemand
+etwas getan hat, und ohne dass ein Test es bemerkte. Wer die Kopie befüllt, muss den Abgleich
+wiederholen oder die Tabelle aus der Produktion mitnehmen.
+
+**151. `Message.DestinationFilename` fehlt in [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md)
+§3.2 und in [`datenmodell.md`](datenmodell.md).** Beide führen zehn bekannte Namen; der elfte ist
+jetzt konfiguriert. Der Auftrag schließt die Änderung hier aus — sie gehört in den Bauauftrag.
+
+**152. `Message.VFN` reißt den Maßstab.** 1.862,098 ms über 30 Tage gegen 1.655,8 ms für den
+schlechtesten Fall der gebauten BAM-Suche. Ob der Name angeboten wird, ob er wie `ReceiverID`
+behandelt wird oder ob das Fenster für ihn enger ist, ist zu entscheiden — nicht in diesem
+Nachtrag.
+
+**153. `Message.DestinationFilename` liegt unter der 20‑%-Schwelle.** 14,518 % über die Wurzeln bei
+`NEXANS`, dazu ein offenes Vokabular mit 27 Dauernamen, die 80,35 % der Zeilen tragen. Die Schwelle
+siebt nicht aus; sie erzeugt diese Vorlage. Dieselbe Vorlage steht seit M156 für
+`Message.ReceiverID` (12,803 %).
+
+**154. Das Standardfenster der Property-Suche entscheidet über den Zugriffspfad.** Über 24 Stunden
+kostet jeder der drei Namen 91 bis 93 ms auf dem L4‑Pfad, über 30 Tage bis zu 1.862 ms über den
+Wertindex. Die BAM-Suche hat 30 Tage ([`bam-suche.md`](bam-suche.md) §2). Ob die Property-Suche
+dasselbe Fenster bekommt oder ein engeres, und ob das Fenster je Name verschieden sein darf, ist zu
+entscheiden.
+
+**155. `SNDPRN` und `VFN` finden nur Wurzeln.** 0,239 und 0,454 % der Kinder tragen den Namen. Eine
+Suche nach dem Sender liefert die eingegangene Nachricht, nicht die Kette dahinter. Ob das reicht,
+weil E‑103 den Absprung in den Prozessbaum anbietet, oder ob die Suche die Kette mitliefern soll,
+ist eine Entscheidung des Auftraggebers.
+
+---
+
+# Regelbezug — Nachtrag
+
+| Regel | Stand | Begründung |
+|---|---|---|
+| **G1** — Geheimhaltung | **erfüllt** | Kein `MessagePropertyValue` in dieser Datei — kein Dateiname, keine Senderkennung, keine Nummer, auch nicht abgekürzt. Prüfwerte über `QUOTE()` und `PREPARE` eingesetzt, ausgegeben nur als Länge; Ränge über `ROW_NUMBER()`; in M166 und M167 Längen statt Namen für `ProcessName` und `ProjectName`. Feldnamen sind Konfiguration und stehen. Rohausgaben unter `scripts/messung-property-suche/ergebnis/n*.txt`, vom bestehenden `.gitignore`-Eintrag ausgeschlossen |
+| **Q4** — kein unbelegter Wert | **erfüllt** | Jede Zahl stammt aus einem Lauf dieses Nachtrags oder ist mit ihrer Quelle benannt (M0, M14, M17, M28‑2, M33, M44, M47, M56, M155–M160). Abgeleitete Verhältnisse sind aus den Laufwerten gerechnet, nicht geschätzt |
+| **L1** — Pflicht-Zeitfenster | **berührt, nicht verletzt** | Kein Endpunkt gebaut. Fenster absolut, Ende 2025‑12‑30. M165 und M167‑1 laufen ausdrücklich ohne Fenster über den Bestand — als Erhebung nach L9, begründet (der Index kennt kein Fenster) und mit Kosten ausgewiesen (höchstens 869,385 ms) |
+| **L4** — `MessageProperty` nur über `MessageID` | **eingehalten in M163 und M166 (24 h); verletzt in M162 (`NEXANS`, Erhebung, 16,203 s ausgewiesen); bewusst verletzt in M165, M166 (30 T) und M167** | Die bewussten Verletzungen sind der Gegenstand der Messung und die Grundlage des Ausnahmekastens (E‑102). Die unbewusste in M162 ist der Befund 5: Der Optimizer hat dasselbe Statement anders geplant als in M156 |
+| **L7** — mindestens zwei Mandanten, einer klein | **erfüllt** | `NEXANS` und `SUTTONS` in M162, M163, M166. Dass `SUTTONS` die drei Namen nicht trägt, ist ein Ergebnis, kein Ausfall; in M166 ist `SUTTONS` über `Converter.TransactionID` vertreten |
+| **L9** — Durchlauf ohne Fenster | **erfüllt** | M165 und M167‑1: vorher begründet (Wertprädikat und Präfixbreite betreffen den ganzen Index), nachher ausgewiesen (0,444 bis 869,385 ms) |
+| **L10** — Belegvermerk | **erfüllt** | Jede Messung schließt mit *gemessen / behauptet*; die Lücken stehen unter „Was dieser Nachtrag nicht zeigt" |
+| **L15** — `EXPLAIN` zu jedem Statement | **erfüllt** | M161‑7, M162 (beide Mandanten), M163 (Form), M165 (sechs Fälle plus zwei Diagnosen), M166 (zehn Fälle), M167 (Präfixbereich, drei Wertprädikate, zwei ganze Wege) |
+| **M1** — keine Mandanten-ID aus einer Anfrage | **nicht berührt** | Keine Anfrage, kein Endpunkt; `MandantID` als Messparameter im Skript wie in jeder Runde davor |
+| **T1** — keine Wanduhrzeit in Tests | **nicht berührt** | Keine Tests gebaut. M167 zählt Zugriffe statt Zeit — die Disziplin aus T1, hier auf die Messung angewandt |
+| **S1** — nur `SELECT` | **erfüllt** | Alle zehn Sitzungen fahren ausschließlich `SELECT`, `SET`, `EXPLAIN`, `PREPARE`/`EXECUTE`/`DEALLOCATE` mit `monitor_read`; die Handler-Zähler kommen aus `information_schema.SESSION_STATUS` per `SELECT`, nicht aus `SHOW STATUS`. **Kein Schreibzugriff auf `GlassfishDB`**, kein Zugriff auf `overlord_monitor`. `@@global.read_only` = **1** als erste Abfrage jeder Sitzung |
+
+## Bestehende offene Punkte und Lücken, die dieser Nachtrag erledigt oder verschiebt
+
+| Punkt / Lücke | Vorher | **Jetzt** |
+|---|---|---|
+| **Punkt 142** — alle Typ‑1‑Namen nur `NEXANS` | offen: Kuratierungslage oder Produktion? | **erledigt in der Sache** — nach dem Handabgleich mit der Produktion tragen alle sechs Typ‑1‑Namen `NEXANS` (M161). *Vorbehalt: Die Übereinstimmung mit der Produktion ist die Aussage des Auftrags, nicht gemessen.* Die Folge bleibt: Für neun von zehn Mandanten ist die zweite Quelle des Angebots leer |
+| **Punkt 143** — Typ‑0‑Abbildung im Code | offen | **unverändert offen**, aber die acht Namen sind gegen die Produktion belegt: Die Abbildung hat eine feste Grundlage |
+| **Punkt 144** — Konfiguration beschreibt die Daten nicht | offen | **bleibt offen**, mit Gegenbefund: Für die drei neuen Namen stimmen Daten und Konfiguration überein (`SUTTONS` trägt keinen). Der Widerspruch aus M156 betrifft weiterhin `Message.GUID` und `Converter.TransactionID` |
+| **Punkt 145** — `Service.Type` bricht zwischen einem Tag und dreißig ab | offen | **verschoben: gegenstandslos, solange `Service.Type` nicht konfiguriert ist.** Dieselbe Frage stellt sich für die drei neuen Namen — dort ohne Abbruch (Lücke 5 dieses Nachtrags, Punkt 154) |
+| **Punkt 146** — künftiger Name mit langen Werten | offen | **bleibt offen, geschärft:** Die drei neuen Namen sind nicht betroffen (höchstens 0,076 % über 50 Zeichen, kein Präfix mehrdeutig). Was ein solcher Name kostete, ist jetzt benannt: verworfene Indexeinträge, nicht Zeilenlänge (M167) |
+| **Punkt 148** — `Service.Type` als Kategorie | offen | **verschoben: gegenstandslos, solange `Service.Type` nicht konfiguriert ist.** Die Klassenfrage bleibt für künftige Namen; keiner der drei neuen ist eine Kategorie |
+| **Lücke 5** — Kosten der Nachprüfung | nicht messbar | **geschlossen** (M167): null Unterschied bei Trefferzahl 1 und eindeutigem Präfix |
+| **Lücke 6** — `Converter.TransactionID` durch den ganzen Weg | nicht gemessen | **geschlossen** (M166): 1,195 ms bei `NEXANS`, 1,047 ms bei `SUTTONS` |
+| **Lücke 3** — Bedeutung von `MandantID IS NULL` | offen | unverändert; die Verteilung ist nach dem Abgleich dieselbe (8 × `NULL`, 6 × `NEXANS`) |
+
+## Was dieser Nachtrag entgegen §6 des Auftrags angefasst hat
+
+**Eine Datei:** [`docs/README.md`](README.md) — der Eintrag dieser Datei ist um den Nachtrag
+ergänzt; §6 gibt das ausdrücklich frei. **`.gitignore` ist nicht angefasst worden:** Der Eintrag
+der Hauptrunde deckt `scripts/messung-property-suche/ergebnis/` bereits ab, die Rohausgaben `n*.txt`
+liegen dort. [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) und
+[`datenmodell.md`](datenmodell.md) sind nicht angefasst — Punkt 151.
+
+## Die Sitzungen des Nachtrags
+
+| Datei | Inhalt | Grenze | Ausgang |
+|---|---|---:|---|
+| `n0-rahmen.sql` | Rahmen, Serverangaben, Datenstand | — | — |
+| `n1-m161.sql` | M161 Ist-Stand der Konfigurationstabelle, Existenzprobe der drei Namen | 60 s | — |
+| `n2-m162.sql` | M162 Deckung, Fassung B aus M156, beide Mandanten | 180 s | — |
+| `n3-m163.sql` | M163 Werteverteilung, Statement aus M157, beide Mandanten | 180 s | — |
+| `n3b-m163-raenge-90t.sql` | M163 Ränge, Werte über der Deckelung, 90 Tage | 180 s | — |
+| `n4-m164.sql` | M164 Längen, Median, Histogramm, Präfixbreite | 180 s | — |
+| `n5-m165.sql` | M165 sechs Wertprädikate | 10 s | — |
+| `n5b-m165-diagnose.sql` | M165 `FORCE INDEX` in beide Richtungen (Diagnose) | 10 s | — |
+| `n6-m166.sql` | M166 zehn Fälle, ganzer Weg, `--force` | 10 s | **kein Abbruch** |
+| `n7-m167.sql` | M167 Präfixbreite im Bestand, Handler-Zähler, Eichung, ganzer Weg | 10 s | — |
+
+**Serverzeit Beginn `2026-09-08 09:39:48`, Ende der letzten Sitzung 10:02:10 Ortszeit.** Die
+Ergebnisdateien liegen unter `scripts/messung-property-suche/ergebnis/n*.txt` und sind nicht
+eingecheckt (G1).
