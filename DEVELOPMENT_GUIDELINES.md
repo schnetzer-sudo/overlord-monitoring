@@ -821,6 +821,34 @@ Zu L7: Jede neue Abfrage wird vor dem Merge gegen die Testkopie gemessen — `EX
 Laufzeit. Das Ergebnis gehört in die Feature-Dokumentation unter `docs/`, nicht in eine
 Commit-Nachricht.
 
+**Die Wanduhr tritt neben das Profil** *(E‑107, 08.09.2026)*. Die Laufzeit wird seit dem
+08.09.2026 **doppelt** erhoben: aus `information_schema.PROFILING` **und** an der Wanduhr des
+Datenbankservers — `SELECT SYSDATE(6) INTO @t0; EXECUTE …; SELECT TIMESTAMPDIFF(MICROSECOND, @t0,
+SYSDATE(6))`. Weichen beide ab, gilt die Wanduhr; das Profil wird daneben ausgewiesen. Das Profil
+wird **nicht** ersetzt: Es zerlegt die Laufzeit in Phasen und trägt keinen Statementtext, und für
+die meisten Pläne stimmen beide überein.
+
+**Der Grund ist ein Messfehler um Faktor 800, der wie ein Durchbruch aussah.** Für Pläne mit
+`LATERAL DERIVED` (aus `split_materialized`) und `DEPENDENT SUBQUERY` unterschlägt das Profil fast
+die gesamte Laufzeit: In der Vorprobe der L4‑Pfad-Runde meldete es für eine `GROUP BY`-Form über
+30 Tage **5,965 ms**, die Wanduhr **4.753,554 ms** — und die Handler-Zähler desselben Laufs
+204.711 `read_key`, also die Arbeit, die das Profil dem Statement nicht zurechnet. Für die
+bindende Unterabfrage je Zeile (Fassung C) meldete es 1,491 bis 3,013 ms bei 205,118 bis
+8.128,770 ms an der Wanduhr ([`docs/messungen-property-suche.md`](docs/messungen-property-suche.md),
+Abweichung 1 der L4‑Pfad-Runde; offener Punkt 158 dort).
+
+**Die Zahlen aller Runden bis M167 stehen unverändert, und das gehört ausdrücklich dazu.** Keiner
+ihrer Pläne enthält eine der beiden Formen; wo beide Maße nebeneinander erhoben sind, stimmen sie
+überein (Fassung A über 30 Tage: 1.630,310 ms im Profil gegen 1.632,892 ms an der Wanduhr). Die
+Konvention ist eine Ergänzung nach vorn und keine Korrektur nach hinten.
+
+**Was daneben gehört.** Die Wanduhr enthält die Umlaufzeit zweier Client-Anweisungen — Eichung mit
+`SELECT 1`: **0,855 ms**; bei Werten im einstelligen Millisekundenbereich steht die Eichung neben
+der Zahl. Sobald ein `EXPLAIN` ein `LATERAL DERIVED` oder eine `DEPENDENT SUBQUERY` zeigt, gilt das
+Profil für dieses Statement als unbrauchbar. `ANALYZE <select>` in der Tabellenform liefert
+`r_rows` je Tabelle und ist als Plausibilitätsprobe billig — **nie `ANALYZE TABLE`**, das schriebe
+Statistiken (S1).
+
 ---
 
 ## 8. Frontend-Konventionen

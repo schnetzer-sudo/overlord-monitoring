@@ -246,6 +246,7 @@ Aggregation ungeeignet. (Regel L4)
 | `Message.InterchangeNumber` | |
 | `Message.CommitInterchangeNumber` | |
 | `Message.SourceMessageID` | |
+| `Message.DestinationFilename` | **Ergänzt 08.09.2026.** Als Suchfeld für `NEXANS` konfiguriert seit dem Handabgleich von `MessagePropertySearchListEntry` mit der Produktion (M161), gemessen in M162 bis M167 ([`messungen-property-suche.md`](messungen-property-suche.md), Nachtrag; offener Punkt 151 dort): 20.765 Zeilen in Fenster B, 3 bis 73 Zeichen (M56), 14,518 % Deckung über die Wurzeln bei `NEXANS` (M162). **Fachliche Bedeutung in keiner Projektdatei belegt.** Dieselbe Ergänzung in [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §3.2 |
 
 > **Korrigiert 20.08.2026, nachgetragen zur Korrektur vom 19.08.2026.** Die Zeile zu
 > `Message.Payload.GUID` lautete bis heute: „Format **`FILESTOREPROD09|<uuid>`** — **Grundlage des

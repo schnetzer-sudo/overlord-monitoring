@@ -240,7 +240,18 @@ Vielfaches dessen um, was `Message` insgesamt groß ist.
 Bekannte Namen: `Message.GUID`, `Message.SendingPartner`, `Message.SNDPRN`, `Message.VFN`,
 `Message.SOS`, `Message.SplitCount`, `Message.Payload.GUID` (Format `<Ablagenkennung>|<UUID>`,
 etwa `FILESTOREPROD09|d95499ff-...`), `Message.InterchangeNumber`,
-`Message.CommitInterchangeNumber`, `Message.SourceMessageID`.
+`Message.CommitInterchangeNumber`, `Message.SourceMessageID` — **und, ergänzt am 08.09.2026,
+`Message.DestinationFilename`.**
+
+> **Ergänzt 08.09.2026 — der elfte Name, und woher er kommt.** `Message.DestinationFilename` ist
+> seit dem Handabgleich der Konfigurationstabelle `MessagePropertySearchListEntry` mit der
+> Produktion am 08.09.2026 als Suchfeld für `NEXANS` konfiguriert (M161) und in M162 bis M167
+> gemessen ([`messungen-property-suche.md`](messungen-property-suche.md), Nachtrag; offener Punkt
+> 151 dort). Gemessen ist: In Fenster B trägt er **20.765** Zeilen auf 20.765 Nachrichten mit
+> 3 bis 73 Zeichen Länge (M56); bei `NEXANS` deckt er **14,518 %** der Wurzeln (M162), 27 Werte
+> tragen 80,35 % seiner Zeilen (M163). **Was der Name fachlich bedeutet, steht in keiner
+> Projektdatei** — er wird angeboten, weil er konfiguriert ist, und nicht, weil jemand ihn
+> versteht (E‑105). Dieselbe Ergänzung steht in [`datenmodell.md`](datenmodell.md) §3.
 
 > **Gekennzeichnet 19.08.2026 — `Message.Payload.GUID` ist nicht die eingegangene Datei.** Der Name
 > legt genau das nahe: `Message.` plus `Payload` liest sich wie „die Nutzdatei *der* Nachricht".
