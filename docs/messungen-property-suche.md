@@ -1467,3 +1467,162 @@ Testkopie und Produktion in dieser Tabelle übereinstimmen — das ist **nicht**
 Aussage des Auftrags über den Handabgleich; die Produktion ist nicht befragt worden.*
 
 ---
+
+## M162 — Deckung der drei neuen Namen
+
+**Sitzung** `n2-m162.sql`. Das Statement ist **Fassung B aus M156**, unverändert bis auf die
+Namensliste; neu ist nur, dass die Nenner (Nachrichten, Wurzeln, Kinder je Mandant) in derselben
+Sitzung erhoben und die Anteile im Statement gerechnet werden, statt sie abzuschreiben. Fenster B,
+je Mandant, getrennt nach Kettenstellung; Rollen wie in M28‑1 und M156 (`Source = 1` heißt Wurzel,
+`SourceMessageID` belegt heißt Kind, die beiden überlappen).
+
+> **Vorregistrierte Deutung.** Schwelle **20 % über die Wurzeln** (M28‑2). Hohe Quoten für `SNDPRN`
+> und `VFN`; für `DestinationFilename` keine Erwartung zur Deckung je Kettenstellung.
+
+**Die Nenner treffen M156 auf die Zeile:** `NEXANS` 180.251 Nachrichten, 28.524 Wurzeln, 101.270
+Kinder; `SUTTONS` 21.516, 639, 1.247.
+
+### Ergebnis `NEXANS`
+
+| Name | Zeilen | belegt | Anteil | auf Wurzeln | **je Wurzel** | auf Kindern | je Kind |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| **`Message.DestinationFilename`** | 10.524 | 10.524 | 5,839 % | 4.141 | **14,518 %** | 1.238 | 1,222 % |
+| `Message.SNDPRN` | 28.003 | 28.003 | 15,536 % | 27.458 | **96,263 %** | 242 | 0,239 % |
+| `Message.VFN` | 29.985 | 29.985 | 16,635 % | 28.078 | **98,436 %** | 460 | 0,454 % |
+
+### Ergebnis `SUTTONS` — **keine einzige Zeile**
+
+Keiner der drei Namen ist bei `SUTTONS` im Fenster belegt: Die Gruppierung liefert für alle drei
+keine Zeile, in 1,548 s. Alle Messungen ab hier laufen deshalb für die drei neuen Namen nur gegen
+`NEXANS`; `SUTTONS` bleibt in M166 über `Converter.TransactionID` vertreten.
+
+### Die Schwelle greift bei einem Namen — und die beiden anderen sitzen auf den Wurzeln
+
+**`Message.DestinationFilename` liegt mit 14,518 % über die Wurzeln unter der Schwelle** und
+bekommt denselben Vermerk wie `Message.ReceiverID` in M156 (12,803 %): zwischen dem untauglichen
+BAM-Fall (0,72 %) und den tauglichen (83,50 bis 92,26 %), näher am untauglichen Ende. Ausgesiebt wird
+nichts; die Vorlage geht an den Auftraggeber.
+
+**`SNDPRN` und `VFN` liegen mit 96,263 und 98,436 % über die Wurzeln über jedem tauglichen
+BAM-Typ aus M28‑2** — und auf den Kindern praktisch nie (0,239 und 0,454 %). Über alle Nachrichten
+sind es deshalb nur 15,536 und 16,635 %: **Die beiden Namen sind Eigenschaften der Wurzel**, nicht
+der Kette. Wer eine Kindnachricht über ihren Sender suchen will, findet sie über diese Namen nicht.
+Was die Werte fachlich bedeuten, ist hier nicht gemessen; M17 (4) hat für `Message.VFN` eine
+gemessene Nachbarschaft zu `OFTPReader.VFN` festgehalten (204 von 218 gleich), mehr nicht.
+
+**Drei Beobachtungen, die in keine vorformulierte Zeile passten:**
+
+1. **Genau eine Zeile je Nachricht**, bei allen drei Namen: `Zeilen` und `belegt` sind identisch
+   (10.524, 28.003, 29.985). Kein Name steht mehrfach auf derselben Nachricht.
+2. **Belegt ist mehr als Wurzeln plus Kinder.** Bei `DestinationFilename` sind 4.141 + 1.238 =
+   5.379 Nachrichten Wurzel oder Kind, belegt sind 10.524 — **mindestens 5.145** tragen den Namen,
+   ohne Wurzel oder Kind zu sein (bei `SNDPRN` mindestens 303, bei `VFN` mindestens 1.447). Weil
+   die Rollen überlappen, ist das eine untere Schranke. Die dritte Rolle ist in M28‑1 nicht
+   benannt und hier nicht untersucht.
+3. **Der Plan für `NEXANS` ist ein anderer als in M156 — und er verletzt L4.** M156 stieg für
+   `NEXANS` über `MessageLastUpdateIDX` in `Message` ein und erreichte `MessageProperty` über den
+   Primärschlüssel. Mit den drei neuen, selteneren Namen steigt der Optimizer **über
+   `MessagePropertyNameIDX` in `MessageProperty` ein** (`range`, 2.749.120 geschätzte Zeilen) und
+   holt `Message` als `eq_ref` nach:
+
+| Mandant | führende Tabelle | Zugriff | dann | Laufzeit |
+|---|---|---|---|---:|
+| `NEXANS` | **`p`** (`MessageProperty`) | **`range` über `MessagePropertyNameIDX`**, `Using where; Using index` | `m`, `pr`, `pm` je `eq_ref` über `PRIMARY` | **16,203 s** |
+| `SUTTONS` | `pm` (`ProjectMandant`) | `ref` über `ProjectMandant_Mandant_idx` | `pr` `ref`, `m` `ref` über `ProejctIDIDX` (197.804), `p` `ref` über `PRIMARY` (10) | 1,548 s |
+
+   Für eine Erhebung ist das nach L9 zulässig und mit 16,203 s ausgewiesen; die Nenner kosten
+   1,935 s (`NEXANS`) und 0,929 s (`SUTTONS`). **Für Anwendungscode wäre es der Fall, den L4
+   verbietet** — und die Planwahl hing an nichts anderem als daran, welche Namen in der `IN`-Liste
+   stehen. Dasselbe Statement, zwei Pläne, Faktor zehn in der Schätzung.
+
+*Belegvermerk (L10): gemessen ist die Belegung über Fenster B je Mandant und je Kettenstellung.
+Behauptet wird nicht, dass die Quoten in anderen Fenstern oder bei anderen Mandanten gleich
+ausfallen, und nicht, dass „sitzt auf der Wurzel" eine fachliche Regel des Altsystems ist — es ist
+die Verteilung in diesem Fenster.*
+
+---
+
+## M163 — Werteverteilung der drei neuen Namen
+
+**Sitzungen** `n3-m163.sql` (Statement aus M157, unverändert), `n3b-m163-raenge-90t.sql` (Ränge,
+Werte über der Deckelung, 90 Tage — Ergänzung, siehe unten). Fenster B, `NEXANS`; für `SUTTONS`
+liefert die Gruppierung erwartungsgemäß **null** Werte (je 1,1 s).
+
+> ⚠️ **G1:** Dieser Abschnitt enthält keinen Wert, nur Ränge und Zähler. Die Ränge entstehen im
+> Statement über `ROW_NUMBER()`.
+
+> **Vorregistrierte Deutung.** Dateinamen nahezu eindeutig, eine Senderkennung eine **Kategorie**
+> wie `Service.Type`; fällt `SNDPRN` dorthin, ist das der wichtigste Befund. Vorwissen zu `VFN`: 43
+> Werte auf 397 Zeilen an einem Tag (M17), also kein Schlüssel.
+
+**`EXPLAIN` (L15):** `<derived2>` als `ALL`, darunter `m` `range` über
+`MessageLastUpdateProcessMessageIDX` (476.586, `Using temporary; Using filesort`), `pr` und `pm`
+`eq_ref`, `p` **`ref` über `PRIMARY`** (`key_len` 548) — `MessageProperty` wird über die
+`MessageID` erreicht, **L4 ist in dieser Messung eingehalten**.
+
+### Die Verteilung über 30 Tage
+
+| Name | verschiedene Werte | **häufigster Wert (Zeilen)** | Zeilen gesamt | Werte mit genau 1 Zeile | Laufzeit |
+|---|---:|---:|---:|---:|---:|
+| `Message.DestinationFilename` | 712 | **2.866** | 10.524 | 577 | 2,411 s |
+| `Message.SNDPRN` | 308 | **10.739** | 28.003 | 18 | 2,678 s |
+| `Message.VFN` | 225 | **12.801** | 29.985 | 12 | 2,739 s |
+
+**Rang 1 bis 5 (Zeilen je Rang)** und **die Werte über der Deckelung** — mehr als 51 Zeilen, also
+mehr, als eine Suchantwort je zeigt:
+
+| Name | Rang 1 | 2 | 3 | 4 | 5 | Werte über 51 | Zeilen darin | Anteil | Werte 2–51 | Werte mit 1 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `Message.DestinationFilename` | 2.866 | 854 | 526 | 505 | 466 | **27** | 8.456 | **80,35 %** | 108 | 577 |
+| `Message.SNDPRN` | 10.739 | 4.689 | 2.866 | 2.426 | 536 | **33** | 25.172 | **89,89 %** | 257 | 18 |
+| `Message.VFN` | 12.801 | 2.994 | 2.866 | 1.995 | 925 | **42** | 27.818 | **92,77 %** | 171 | 12 |
+
+*Die Zahl 2.866 erscheint in allen drei Verteilungen. Ob es dieselben Nachrichten sind, ist nicht
+gemessen und wird nicht behauptet.*
+
+### Die 90 Tage — die Gegenprobe zur Kategoriefrage
+
+M157 hat `Service.Type` an einer Eigenschaft als Kategorie erkannt: **Die Menge der Werte wächst
+mit dem Fenster nicht** (18 über 30 wie über 90 Tage). Dieselbe Probe, 2025‑10‑01 bis 2025‑12‑30:
+
+| Name | Werte 30 T → 90 T | Faktor | Zeilen 30 T → 90 T | Faktor | häufigster 30 T → 90 T | Faktor | Laufzeit 90 T |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `Message.DestinationFilename` | 712 → **2.267** | **×3,18** | 10.524 → 39.497 | ×3,75 | 2.866 → 9.465 | ×3,30 | 6,907 s |
+| `Message.SNDPRN` | 308 → **334** | **×1,08** | 28.003 → 75.455 | ×2,69 | 10.739 → 17.843 | ×1,66 | 11,077 s |
+| `Message.VFN` | 225 → **247** | **×1,10** | 29.985 → 83.564 | ×2,79 | 12.801 → 23.547 | ×1,84 | 7,969 s |
+
+### Was das für die drei Klassen aus M157 heißt
+
+**Keiner der drei ist ein Schlüssel, und keiner ist eine Kategorie im Sinn von `Service.Type` — die
+Deutung hat in beiden Richtungen nicht getroffen.**
+
+- **`Message.DestinationFilename` ist kein eindeutiger Name.** 577 der 712 Werte kommen genau
+  einmal vor, aber das sind nur **5,48 %** der Zeilen; **27 Werte tragen 80,35 %**, der häufigste
+  allein 2.866 Zeilen (27,23 %). Die Wertemenge wächst mit dem Fenster mit (×3,18 bei ×3,75
+  Zeilen) — ein **offenes Vokabular mit wenigen Dauerwerten**. Für die Suche heißt das: Wer einen
+  der 577 Einzelnamen kennt, findet seine Nachricht; wer einen der 27 Dauernamen eingibt, bekommt
+  eine Teilmenge des Bestands.
+- **`Message.SNDPRN` und `Message.VFN` sind Merkmale mit fast geschlossenem Vokabular.** 308
+  beziehungsweise 225 Werte, die beim Verdreifachen des Fensters nur um 8 und 10 % wachsen; der
+  häufigste Wert trägt **38,35 und 42,69 %** aller Zeilen des Fensters. Das ist nicht die Gestalt
+  von `Service.Type` (18 Werte, 100 % Deckung, häufigster 708.893 über 90 Tage), es ist die
+  Gestalt von **`Message.ReceiverID`** (355 Werte, häufigster 5.176) — **mit doppeltem Gewicht an
+  der Spitze**: Faktor 2,07 (`SNDPRN`) und 2,47 (`VFN`) gegenüber dem häufigsten `ReceiverID`-Wert,
+  dessen ganzer Weg in M159 1.222,763 ms gekostet hat. M166 misst, was daraus wird.
+
+| Klasse | Namen (Hauptrunde) | **neu** |
+|---|---|---|
+| Schlüssel | `Message.GUID`, `Converter.TransactionID` | — |
+| Merkmal | `Message.ReceiverID` | **`Message.SNDPRN`, `Message.VFN`** (geschlossenes Vokabular, schwere Spitze), **`Message.DestinationFilename`** (offenes Vokabular, schwere Spitze) |
+| Kategorie | `Service.Type` *(nicht mehr konfiguriert, M161)* | — |
+
+**Die Schwelle 234.159 aus M33 reißt keiner der drei im Fenster** — der höchste Wert ist 23.547
+über 90 Tage, Faktor 9,9 darunter. Als untere Schranke für den Gesamtbestand sagt das wenig; M165
+liefert die Zahl über den ganzen Bestand für den jeweils häufigsten Wert des Fensters.
+
+*Belegvermerk (L10): gemessen ist die Werteverteilung über 30 und 90 Tage bei `NEXANS`. Behauptet
+wird nicht, dass der häufigste Wert über den Gesamtbestand der hier gefundene ist — M165 misst nur
+den häufigsten Wert **des Fensters** über den Bestand, nicht den häufigsten des Bestands. Die
+Klasseneinteilung ist eine Lesart der gemessenen Gestalt, keine fachliche Aussage über die Felder.*
+
+---
