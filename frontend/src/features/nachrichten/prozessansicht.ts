@@ -7,7 +7,7 @@ import {
   parseAsRollupzeitraum,
   type Rollupzeitraum,
 } from "@/lib/rollupzeitraum";
-import { NACHRICHT_PARAMETER } from "@/lib/routen";
+import { NACHRICHT_PARAMETER, ROUTEN } from "@/lib/routen";
 
 import type { Fenster } from "./api";
 import {
@@ -344,4 +344,109 @@ export function baumfensterFehler(fehler: unknown): ProblemFehler | undefined {
     (AM_BAUMFENSTER as readonly string[]).includes(fehler.typ)
     ? fehler
     : undefined;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Der Absprung aus dem Detailpanel in den Prozessbaum (E‑103, E‑104, E‑111 —
+   `docs/property-suche.md` §12)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+const STUNDE_MS = 60 * 60 * 1000;
+
+/**
+ * Wie weit ein Fenster des Baums höchstens zurückreicht — **365 Tage, gerechnet
+ * gegen das ausschließende Ende.** Der Endpunkt erlaubt ein Kalenderjahr
+ * (`von < bisAusschließend − 1 Jahr` ist `zeitfenster-zu-gross`,
+ * `docs/process-view.md` §38); 365 Tage liegen in jedem Jahr darunter, und
+ * ein hier gerechnetes Kalenderjahr träfe die Grenze am Schalttag um einen Tag
+ * daneben — dieselbe Überlegung wie bei `jahresfensterAb` in `suche.ts`.
+ */
+const BAUM_JAHR_TAGE = 365;
+
+/**
+ * **Das Fenster, das der Absprung an den Prozessbaum weiterreicht** — aus dem
+ * Fenster, aus dem man kommt, und **nie aus dem relativen Modus**.
+ *
+ * ## Warum absolut (E‑104)
+ *
+ * Die relativen Zeiträume von Liste und Baum fallen paarweise nicht zusammen
+ * (`24h`/`7d`/`30d` gegen `48H`/`30T`/`12M`); ein durchgereichtes `24h` ließe
+ * den Baum ein anderes Fenster wählen als das, aus dem man kommt. Aufgelöst auf
+ * zwei Zeitstempel ist die gefundene Nachricht im Zielfenster **per
+ * Konstruktion** enthalten — und genau das prüft diese Funktion nach, statt es
+ * anzunehmen.
+ *
+ * ## Warum gerundet wird (E‑111)
+ *
+ * Der Baum nimmt nur **stundengenaue** Zeitpunkte an und weist alles andere ab
+ * statt zu runden (`zeitfenster-zu-genau`, E‑95); `bis` ist dort die **letzte
+ * enthaltene Stunde** (E‑94). Das Fenster der Suche ist sekundengenau (`bis` ist
+ * die Anwendungsuhr). Gerundet wird deshalb **hier, und nach außen**: `von` auf
+ * die volle Stunde davor, `bis` auf die volle Stunde, in der es liegt — das
+ * kleinste Fenster, das der Baum annimmt und das das Herkunftsfenster ganz
+ * enthält. Es ist an jedem Ende **höchstens 59 Minuten 59 Sekunden weiter** als
+ * das Fenster, aus dem gesprungen wurde; die Nachricht bleibt enthalten.
+ *
+ * **Die Rundung setzt volle Stunden in UTC voraus** — die Anwendungszone
+ * (`Europe/Berlin`) hat einen ganzstündigen Versatz, dort fallen die Stundengrenzen
+ * mit denen in UTC zusammen. Bei einer Zone mit halbstündigem Versatz käme aus dem
+ * Baum `zeitfenster-zu-genau`: ein sichtbarer Fehler, kein falsches Fenster.
+ *
+ * ## Warum am Jahr gedeckelt wird
+ *
+ * Die Suche erlaubt genau ein Kalenderjahr, und „Auf ein Jahr erweitern" wählt
+ * 365 Tage — nach außen gerundet wären das 365 Tage und bis zu zwei Stunden, und
+ * der Baum wiese das als `zeitfenster-zu-gross` ab. `von` rückt deshalb nie
+ * weiter zurück als {@link BAUM_JAHR_TAGE} vor dem ausschließenden Ende; liegt
+ * die Nachricht danach außerhalb, gibt es **keinen Link** statt eines falschen.
+ *
+ * @param zeitpunkt der `zeitpunkt` der Nachricht aus dem Detail. Liegt er
+ *   außerhalb — etwa bei einem tiefen Link auf eine Nachricht außerhalb des
+ *   Suchfensters —, ist die Antwort `null`: Ein Link, der in einem anderen
+ *   Fenster landet als versprochen, ist schlechter als kein Link
+ * @returns das Baumfenster (`bis` als letzte enthaltene Stunde) oder `null`
+ */
+export function absprungfenster(
+  fenster: { von: Date; bis: Date },
+  zeitpunkt: Date,
+): { von: Date; bis: Date } | null {
+  const bisStunde = Math.floor(fenster.bis.getTime() / STUNDE_MS) * STUNDE_MS;
+  const vonStunde = Math.floor(fenster.von.getTime() / STUNDE_MS) * STUNDE_MS;
+  const jahresgrenze = bisStunde + STUNDE_MS - BAUM_JAHR_TAGE * 24 * STUNDE_MS;
+  const von = Math.max(vonStunde, jahresgrenze);
+  const t = zeitpunkt.getTime();
+  if (Number.isNaN(t) || Number.isNaN(von) || Number.isNaN(bisStunde)) {
+    return null;
+  }
+  if (t < von || t >= bisStunde + STUNDE_MS) {
+    return null;
+  }
+  return { von: new Date(von), bis: new Date(bisStunde) };
+}
+
+/**
+ * Das Ziel des Absprungs — **die bestehende Route, unverändert** (E‑103):
+ *
+ * ```
+ * /prozesse?von=…&bis=…&prozess=<ProcessID>&nachricht=<MessageID>
+ * ```
+ *
+ * Der aufgeklappte Partner steht nicht darin; er ergibt sich über
+ * `pfadZuProzess` aus dem gewählten Prozess (`docs/process-view.md` §15). Gebaut
+ * über {@link alsSuchparameter}, damit die Adresse dieselbe Gestalt hat wie die,
+ * die die Prozessansicht selbst schreibt — und derselbe Test sie liest.
+ */
+export function absprungZiel(
+  processId: string,
+  messageId: string,
+  fenster: { von: Date; bis: Date },
+): string {
+  const parameter = alsSuchparameter({
+    ...LEERE_PROZESSANSICHT,
+    von: fenster.von,
+    bis: fenster.bis,
+    prozess: processId,
+    nachricht: messageId,
+  });
+  return `${ROUTEN.prozesse}?${parameter.toString()}`;
 }

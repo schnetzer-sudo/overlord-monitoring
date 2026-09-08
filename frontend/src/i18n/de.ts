@@ -569,6 +569,9 @@ export const de = {
       // zeigen" ist etwas anderes als „diese Nachricht schließen".
       ansichtOhneListe: "Ohne Liste anzeigen",
       ansichtNebenListe: "Neben der Liste anzeigen",
+      // Der Absprung in den Prozessbaum (E-103), im Panel und nicht als
+      // Kontextmenü: Tastatur- und Berührungserreichbarkeit.
+      imProzessbaum: "Im Prozessbaum anzeigen",
       zeitpunkt: "Zuletzt geändert",
       start: "Beginn",
       // Die Gesamtdauer steht im Kopf neben Beginn und Zeitpunkt. Sie ist die

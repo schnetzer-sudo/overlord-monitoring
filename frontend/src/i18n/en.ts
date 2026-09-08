@@ -338,6 +338,7 @@ export const en: Texte = {
       zurueckZurListe: "Back to the list",
       ansichtOhneListe: "Show without list",
       ansichtNebenListe: "Show next to list",
+      imProzessbaum: "Show in process tree",
       zeitpunkt: "Last changed",
       start: "Started",
       gesamtdauer: "Total duration",

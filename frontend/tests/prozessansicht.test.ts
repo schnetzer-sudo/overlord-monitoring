@@ -6,6 +6,8 @@ import {
   AM_BAUMFENSTER,
   LEERE_PROZESSANSICHT,
   PROZESSANSICHT_PARAMETER,
+  absprungZiel,
+  absprungfenster,
   baumabfrage,
   baumfensterFehler,
   parseAsKennung,
@@ -304,5 +306,95 @@ describe("Das freie Zeitfenster", () => {
     const filter = listenfilter(zustand({ prozess: "p1", von: VON, bis: BIS }), FENSTER);
     expect(filter?.von?.getTime()).toBe(Date.parse(FENSTER.von));
     expect(filter?.bis?.getTime()).toBe(Date.parse(FENSTER.bis));
+  });
+});
+
+describe("Der Absprung aus dem Detailpanel in den Prozessbaum (E‑103, E‑104, E‑111)", () => {
+  const nachricht = new Date("2025-12-15T10:20:30.000Z");
+
+  /**
+   * **Nach außen auf volle Stunden gerundet**, weil der Baum nur stundengenaue
+   * Zeitpunkte annimmt und `bis` dort die letzte enthaltene Stunde ist
+   * (`docs/process-view.md` §38). Das Herkunftsfenster liegt ganz im Ergebnis,
+   * und das Ergebnis ist an jedem Ende höchstens 59:59 weiter.
+   */
+  it("rundet von nach unten und bis auf die Stunde, in der es liegt", () => {
+    const fenster = absprungfenster(
+      { von: new Date("2025-11-30T04:14:07.000Z"), bis: new Date("2025-12-30T04:14:07.000Z") },
+      nachricht,
+    );
+
+    expect(fenster).toEqual({
+      von: new Date("2025-11-30T04:00:00.000Z"),
+      bis: new Date("2025-12-30T04:00:00.000Z"),
+    });
+  });
+
+  it("lässt ein schon stundengenaues Fenster unverändert", () => {
+    const von = new Date("2025-11-30T00:00:00.000Z");
+    const bis = new Date("2025-12-30T00:00:00.000Z");
+    expect(absprungfenster({ von, bis }, nachricht)).toEqual({ von, bis });
+  });
+
+  /**
+   * **Die Nachricht ist im Zielfenster per Konstruktion enthalten — und das
+   * wird geprüft, nicht angenommen.** Eine Nachricht außerhalb (tiefer Link auf
+   * einen Beleg außerhalb des Suchfensters) bekommt keinen Link: Ein Link, der in
+   * einem anderen Fenster landet als versprochen, ist schlechter als keiner.
+   */
+  it("gibt keinen Link, wenn die Nachricht außerhalb des Fensters liegt", () => {
+    const fenster = {
+      von: new Date("2025-11-30T00:00:00.000Z"),
+      bis: new Date("2025-12-30T00:00:00.000Z"),
+    };
+
+    expect(absprungfenster(fenster, new Date("2025-11-29T23:59:59.000Z"))).toBeNull();
+    expect(absprungfenster(fenster, new Date("2025-12-30T01:00:00.000Z"))).toBeNull();
+    // Innerhalb der letzten enthaltenen Stunde: dabei.
+    expect(absprungfenster(fenster, new Date("2025-12-30T00:59:59.000Z"))).not.toBeNull();
+    expect(absprungfenster(fenster, new Date("nicht lesbar"))).toBeNull();
+  });
+
+  /**
+   * **Am Jahr gedeckelt.** „Auf ein Jahr erweitern" wählt 365 Tage; nach außen
+   * gerundet wären das mehr als der Baum annimmt (`zeitfenster-zu-gross`, gegen
+   * das ausschließende Ende gerechnet). `von` rückt deshalb auf 365 Tage vor dem
+   * ausschließenden Ende — und eine Nachricht in der dadurch verlorenen Stunde
+   * bekommt keinen Link.
+   */
+  it("deckelt ein Jahresfenster so, dass der Baum es annimmt", () => {
+    const bis = new Date("2025-12-30T04:14:00.000Z");
+    const jahr = { von: new Date(bis.getTime() - 365 * 24 * 60 * 60 * 1000), bis };
+
+    const fenster = absprungfenster(jahr, nachricht);
+
+    expect(fenster).not.toBeNull();
+    expect(fenster!.bis).toEqual(new Date("2025-12-30T04:00:00.000Z"));
+    // ausschließendes Ende 05:00 minus 365 Tage — nicht 04:00 des Vorjahres.
+    expect(fenster!.von).toEqual(new Date("2024-12-30T05:00:00.000Z"));
+    expect(absprungfenster(jahr, new Date("2024-12-30T04:30:00.000Z"))).toBeNull();
+  });
+
+  /**
+   * **Die bestehende Route, unverändert**: `von`/`bis` absolut, `prozess`,
+   * `nachricht` — nie ein relativer Zeitraum, kein aufgeklappter Partner. Dieselbe
+   * Gestalt, die die Prozessansicht selbst schreibt, und derselbe Parser liest sie.
+   */
+  it("baut die Adresse der Prozessansicht mit absolutem Fenster", () => {
+    const fenster = {
+      von: new Date("2025-11-30T04:00:00.000Z"),
+      bis: new Date("2025-12-30T04:00:00.000Z"),
+    };
+
+    const ziel = absprungZiel("p-1", "m-1", fenster);
+
+    expect(ziel).toBe(
+      "/prozesse?von=2025-11-30T04%3A00%3A00.000Z&bis=2025-12-30T04%3A00%3A00.000Z&prozess=p-1&nachricht=m-1",
+    );
+    const gelesen = ausSuchparametern(new URL(ziel, "http://localhost").searchParams);
+    expect(gelesen).toEqual(
+      zustand({ von: fenster.von, bis: fenster.bis, prozess: "p-1", nachricht: "m-1" }),
+    );
+    expect(gelesen.zeitraum).toBeNull();
   });
 });

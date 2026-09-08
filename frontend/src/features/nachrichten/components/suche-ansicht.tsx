@@ -294,6 +294,18 @@ export function SucheAnsicht() {
             // Trefferzeile — kein neuer Mechanismus, und die Ansicht bleibt
             // teilbar.
             aufOeffnen={setzeNachricht}
+            /*
+             * Der Absprung in den Prozessbaum (E-103) bekommt das Fenster **aus
+             * der Antwort** — das tatsächlich verwendete, gegen die
+             * Anwendungsuhr aufgelöst (Regel Z1). Solange keine da ist (Laden,
+             * Abbruch), gibt es keinen Link statt eines gegen die Browseruhr
+             * gerechneten.
+             */
+            prozessbaumFenster={
+              ergebnis === undefined
+                ? undefined
+                : { von: new Date(ergebnis.von), bis: new Date(ergebnis.bis) }
+            }
           />
         </div>
       )}

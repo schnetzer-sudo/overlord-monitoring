@@ -167,6 +167,19 @@ export function NachrichtenAnsicht() {
             // Zeile der Liste. Kein neuer Mechanismus, keine eigene Route — und
             // die Ansicht bleibt teilbar.
             aufOeffnen={steuerung.setzeNachricht}
+            /*
+             * Der Absprung in den Prozessbaum bekommt das Fenster **nur im
+             * freien Modus** (`von`/`bis` in der URL). Im relativen Modus kennt
+             * die Oberfläche das aufgelöste Fenster nicht — die Antwort der
+             * Liste nennt es nicht, und gegen die Browseruhr wird nicht
+             * gerechnet (Regel Z1). Dann gibt es keinen Link statt eines, der in
+             * einem anderen Fenster landet (`docs/property-suche.md` §12).
+             */
+            prozessbaumFenster={
+              filter.von !== null && filter.bis !== null
+                ? { von: filter.von, bis: filter.bis }
+                : undefined
+            }
             umschaltenZu="ohneListe"
             /*
              * Auf die eigene Route, mit derselben Abfragezeichenkette — nur ohne

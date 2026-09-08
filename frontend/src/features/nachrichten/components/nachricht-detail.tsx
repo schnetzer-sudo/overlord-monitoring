@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useId, useState, type ReactNode } from "react";
-import { Check, Copy, X } from "lucide-react";
+import Link from "next/link";
+import { Check, Copy, ListTree, X } from "lucide-react";
 
 import { useAnzeigezone } from "@/components/zeitzone";
 import { Fehler } from "@/components/zustand";
@@ -15,6 +16,7 @@ import type { Texte } from "@/i18n";
 import type { KuratierteEigenschaft, Nachrichtendetail } from "../api";
 import { bedeutungNichtVerifiziert, METADATEN_POSITION } from "../detail";
 import { useArtefakte, useNachrichtendetail } from "../hooks";
+import { absprungZiel, absprungfenster } from "../prozessansicht";
 import { zieleJeSchritt, zieleOhneZeile } from "../rohdaten";
 import { AnsichtUmschalter, type Umschaltziel } from "./ansicht-umschalter";
 import { Zielzeile } from "./artefakt-ziele";
@@ -69,6 +71,13 @@ import { Zeitleiste } from "./zeitleiste";
  *   Umschalter, der woanders endet als dort, wo er herkam, ist keiner. Fehlen sie,
  *   erscheint er nicht; alles Übrige bleibt unverändert.
  * @param aufUmschalten der Weg dorthin, wieder vom Einhängepunkt gestellt.
+ * @param prozessbaumFenster das Fenster, **aus dem gesprungen wird** — für den
+ *   Absprung „Im Prozessbaum anzeigen" (E‑103, `docs/property-suche.md` §12).
+ *   Der Einhängepunkt stellt es, wenn er ein **absolutes** kennt: die Belegsuche
+ *   aus ihrer Antwort, die Nachrichtenliste aus `von`/`bis` der URL. Fehlt es
+ *   — relativer Modus der Liste, eigene Route, Prozessansicht —, gibt es keinen
+ *   Link: Ein Link, der in einem anderen Fenster landet als versprochen, ist
+ *   schlechter als kein Link (E‑104).
  */
 export function NachrichtDetail({
   messageId,
@@ -77,6 +86,7 @@ export function NachrichtDetail({
   aufOeffnen,
   umschaltenZu,
   aufUmschalten,
+  prozessbaumFenster,
 }: {
   messageId: string;
   aufSchliessen: () => void;
@@ -84,6 +94,7 @@ export function NachrichtDetail({
   aufOeffnen: (messageId: string) => void;
   umschaltenZu?: Umschaltziel;
   aufUmschalten?: () => void;
+  prozessbaumFenster?: { von: Date; bis: Date };
 }) {
   const texte = useTexte();
   const anfrage = useNachrichtendetail(messageId);
@@ -160,7 +171,7 @@ export function NachrichtDetail({
         <DetailFehler fehler={anfrage.error} aufWiederholen={() => void anfrage.refetch()} />
       ) : anfrage.data ? (
         <>
-          <Kopf detail={anfrage.data} />
+          <Kopf detail={anfrage.data} prozessbaumFenster={prozessbaumFenster} />
           {/*
             Die Kette sitzt zwischen Kopf und Zeitleiste: Sie beantwortet „was
             hängt daran" und steht damit näher an der Nachricht selbst als der
@@ -342,10 +353,32 @@ function Ablauf({
  * dann nicht zu einem leeren Kasten mit Rahmen werden; er zeigt schlicht das,
  * was da ist.
  */
-function Kopf({ detail }: { detail: Nachrichtendetail }) {
+function Kopf({
+  detail,
+  prozessbaumFenster,
+}: {
+  detail: Nachrichtendetail;
+  prozessbaumFenster?: { von: Date; bis: Date };
+}) {
   const texte = useTexte();
   const sprache = useSprache();
   const zone = useAnzeigezone();
+
+  /*
+   * **Der Absprung in den Prozessbaum (E‑103) — ein Link und kein Bau.** Er
+   * führt auf die bestehende Route `/prozesse` mit dem Fenster, aus dem man
+   * kommt, **absolut** aufgelöst (E‑104), dem Prozess dieser Nachricht und der
+   * Nachricht selbst; der Baum klappt den Partner über `pfadZuProzess` selbst
+   * auf. Gerundet wird auf volle Stunden nach außen und am Jahr gedeckelt
+   * (`prozessansicht.ts` `absprungfenster`); liegt die Nachricht danach
+   * außerhalb, gibt es keinen Link. **Hier im Panel und nicht als Kontextmenü
+   * oder Spalte** — Tastatur- und Berührungserreichbarkeit, dieselbe Disziplin
+   * wie bei den Berührungsflächen des Baums.
+   */
+  const baumfenster =
+    prozessbaumFenster === undefined
+      ? null
+      : absprungfenster(prozessbaumFenster, new Date(detail.zeitpunkt));
 
   const zeit = (wert: string | null) => {
     if (wert === null) {
@@ -412,6 +445,20 @@ function Kopf({ detail }: { detail: Nachrichtendetail }) {
             </Feld>
           ))}
       </dl>
+
+      {baumfenster === null ? null : (
+        /* Ein echter Verweis: mit der mittleren Maustaste zu öffnen, zu
+           kopieren, per Tab erreichbar. Die Mindestfläche am Finger bringt
+           `min-h-beruehrung` mit — dieselbe Regel wie bei den Baumzeilen. */
+        <Link
+          href={absprungZiel(detail.processId, detail.messageId, baumfenster)}
+          className="text-beiwerk min-h-beruehrung focus-visible:ring-ring inline-flex w-fit items-center gap-1 rounded-sm underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+          data-absprung="prozessbaum"
+        >
+          <ListTree aria-hidden="true" className="size-4 shrink-0 opacity-70" />
+          {texte.nachrichten.detail.imProzessbaum}
+        </Link>
+      )}
 
       <Kennung messageId={detail.messageId} />
     </div>
