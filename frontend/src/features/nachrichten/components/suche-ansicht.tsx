@@ -149,20 +149,26 @@ export function SucheAnsicht() {
       : undefined;
 
   /*
-   * **Das Angebot hängt an vier Bedingungen, und sie stehen als reine Funktion
+   * **Das Angebot hängt an fünf Bedingungen, und sie stehen als reine Funktion
    * daneben** (`suche.ts` `zeigtPraefixAngebot`) — nicht als Kette von `&&` in
    * diesem Baum. Die vierte, „nicht abgebrochen", ist die, die am leichtesten
    * durchrutscht: Sie ergäbe sich heute schon aus der Reihenfolge der Zweige
-   * unten, aber das ist eine Eigenschaft des Markups und keine Zusage.
+   * unten, aber das ist eine Eigenschaft des Markups und keine Zusage. **Die
+   * fünfte ist derselbe Fall** — „mindestens ein BAM-Begriff": `modus` wirkt
+   * nur auf Belegnummern, und bei einer reinen Feldsuche verspräche der Knopf
+   * eine Wirkung, die es nicht gibt (`docs/property-suche.md` §11).
    *
    * **Gefragt wird der Modus der Antwort und nicht der der URL.** Sie fallen
    * auseinander, solange geladen wird — und angeboten wird nur, was
-   * nachweislich noch nicht gelaufen ist.
+   * nachweislich noch nicht gelaufen ist. Aus demselben Grund zählt die fünfte
+   * Bedingung die Belegnummern **der Antwort**: das Zitat der Frage, die leer
+   * ausgegangen ist.
    */
   const angebot = zeigtPraefixAngebot({
     modus: modusAusAntwort(ergebnis?.modus),
     treffer: ergebnis?.nachrichten.length ?? 0,
     begriffe: marken.length,
+    bamBegriffe: ergebnis?.begriffe.length ?? 0,
     abgebrochen: abgebrochen !== undefined,
   });
 

@@ -567,9 +567,16 @@ export function zeigtPraefixAngebot(lage: {
   modus: Suchmodus | undefined;
   treffer: number;
   begriffe: number;
+  bamBegriffe: number;
   abgebrochen: boolean;
 }): boolean {
-  return lage.modus === "exakt" && lage.treffer === 0 && lage.begriffe > 0 && !lage.abgebrochen;
+  return (
+    lage.modus === "exakt" &&
+    lage.treffer === 0 &&
+    lage.begriffe > 0 &&
+    !lage.abgebrochen &&
+    lage.bamBegriffe > 0
+  );
 }
 
 /**

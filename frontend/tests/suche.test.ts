@@ -244,6 +244,7 @@ describe("Das Angebot, über den Anfang der Nummer zu suchen", () => {
       modus: "exakt",
       treffer: 0,
       begriffe: 1,
+      bamBegriffe: 1,
       abgebrochen: false,
       ...teil,
     });
@@ -282,6 +283,21 @@ describe("Das Angebot, über den Anfang der Nummer zu suchen", () => {
    */
   it("erscheint nach einem Abbruch ausdrücklich nicht", () => {
     expect(lage({ abgebrochen: true })).toBe(false);
+  });
+
+  /**
+   * **Die fünfte Bedingung, seit Teil 2 der Property-Suche — derselbe Fall wie
+   * die vierte.** `modus` wirkt nur auf Belegnummern; Feldbegriffe werden immer
+   * exakt verglichen. Bei einer reinen Feldsuche verspräche der Knopf eine
+   * Wirkung, die es nicht gibt (`docs/property-suche.md` §11). Gezählt werden
+   * die Belegnummern **der Antwort**: das Zitat der Frage, die leer ausging.
+   */
+  it("erscheint bei einer reinen Feldsuche nicht — auch wenn Marken dastehen", () => {
+    expect(lage({ begriffe: 2, bamBegriffe: 0 })).toBe(false);
+  });
+
+  it("erscheint bei einer gemischten Suche, sobald eine Belegnummer dabei ist", () => {
+    expect(lage({ begriffe: 2, bamBegriffe: 1 })).toBe(true);
   });
 });
 
