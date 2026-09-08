@@ -2189,7 +2189,8 @@ Maß**; das Profil läuft als Gegenprobe mit und wird je Fall daneben ausgewiese
 enthält die Umlaufzeit zweier Client-Anweisungen: Eichung mit `SELECT 1` **0,855 ms** (B1b). Für
 alle Werte über 10 ms ist das ohne Belang; bei den Millisekundenfällen aus M169 steht die Eichung
 daneben. **Die Zahlen aus M159 und M166 bleiben vergleichbar** — keiner ihrer Pläne enthält ein
-`LATERAL DERIVED`.
+`LATERAL DERIVED`. **Nachtrag nach M168:** Dasselbe gilt für `DEPENDENT SUBQUERY` — für Fassung C
+meldet das Profil 1,491 bis 3,013 ms bei 205,118 bis 8.128,770 ms an der Wanduhr (B2).
 
 ### Abweichung 2 — Erhebungsgrenze 60 s für die Nenner
 
@@ -2431,5 +2432,98 @@ neu und hier zum ersten Mal formuliert.
 > nachträglich geschwärzt. `EXPLAIN` und `ANALYZE` laufen in der Tabellenform, deren Spalten keinen
 > Wert enthalten (`ref` zeigt `const`). Die Rohausgaben liegen unter
 > `scripts/messung-property-suche/ergebnis/b*.txt` und sind nicht eingecheckt.
+
+---
+
+## M168 — Was Fassung B kostet
+
+**Sitzung** `b2-m168.sql`. Die drei neuen Namen über 24 Stunden, 30 und 90 Tage, `NEXANS`, in
+**Fassung B** (materialisiert, §4) und daneben in **Fassung C** (bindend, Ergänzung 2). Prüfwert je
+Fall der häufigste Wert des 30‑Tage-Fensters (Bösfall wie M166; Längen 6, 6, 7). Je Fall `EXPLAIN`,
+`ANALYZE`, Aufwärmlauf mit Handler-Zählern, fünf Läufe mit Wanduhr; Grenze **10 s** wie im
+Lese-Pool, `--force`. Serverzeit 10:56:15 bis 11:09:07.
+
+> **Vorregistrierte Deutung.** Maßstab **1.655,8 ms** über 30 Tage; darunter ist der L4‑Pfad
+> tragfähig und E‑102 gegenstandslos. Über 24 Stunden nahe 91 bis 93 ms. Über 30 Tage offen, über
+> 90 Tage Abbruch möglich. Fassung C: über 30 Tage Sekunden, über 90 Tage Abbruch erwartet.
+
+### Ergebnis — Wanduhr, Bestwert der Läufe 2 bis 6, in Millisekunden
+
+| Name | Fenster | **A** (M166) | **B** | Pfad zu `MessageProperty` in B | **C** | Zeilen |
+|---|---|---:|---:|---|---:|---:|
+| `Message.SNDPRN` | 24 h | 90,886 | **97,297** | `PRIMARY` (548) — **L4‑Pfad** | 210,193 | 37 |
+| | 30 T | 1.531,134 | **6.997,268** | **`MessagePropertyValueIDX`** — Ausbruch | **7.816,110** | 51 |
+| | 90 T | — | **⛔ Abbruch** (10.017,326) | `MessagePropertyValueIDX`; `Message` als `ALL` | **⛔ Abbruch** (10.004,486) | — |
+| `Message.VFN` | 24 h | 93,149 | **96,451** | `PRIMARY` (548) — **L4‑Pfad** | 208,935 | 51 |
+| | 30 T | 1.862,098 | **4.346,772** | `PRIMARY` (548) — **L4‑Pfad, gehalten** | **8.128,770** | 51 |
+| | 90 T | — | **⛔ Abbruch** (10.017,931) | `MessagePropertyNameValueIDX`; `Message` als `ALL` | **⛔ Abbruch** (10.005,039) | — |
+| `Message.DestinationFilename` | 24 h | 91,253 | **96,055** | `PRIMARY` (548) — **L4‑Pfad** | 205,118 | 0 |
+| | 30 T | 789,350 | **5.853,161** | **`MessagePropertyNameValueIDX`** — Ausbruch | **7.850,902** | 51 |
+| | 90 T | — | **⛔ Abbruch** (10.019,469) | `MessagePropertyNameValueIDX`; `Message` als `ALL` | **⛔ Abbruch** (10.005,876) | — |
+
+Fassung C erreicht `MessageProperty` in allen neun Fällen als `DEPENDENT SUBQUERY` über `PRIMARY`
+(548) — per Konstruktion. Die Trefferzahlen sind die aus M166 (37, 51, 0 über 24 Stunden; 51 über
+30 Tage). Profil-Gegenprobe für B: 95,486 · 6.995,737 · 95,178 · 4.345,339 · 94,631 · 5.851,895 —
+innerhalb von 2 ms an der Wanduhr; für C meldet das Profil 1,491 bis 3,013 ms und ist damit für
+`DEPENDENT SUBQUERY` genauso wertlos wie für `LATERAL DERIVED` (Abweichung 1). Die Abbrüche: zwölf
+Läufe je Fassung (sechs Fälle × Aufwärmlauf und fünf Läufe, dazu sechs `ANALYZE`) — **alle 42
+Ausführungen über 90 Tage haben die Grenze gerissen**, keine unter 10.004 ms.
+
+### Die Schwelle ist in allen sechs 30‑Tage-Fällen gerissen
+
+| Fall, 30 Tage | B | gegen 1.655,8 ms | gegen A | C | gegen 1.655,8 ms | gegen A |
+|---|---:|---:|---:|---:|---:|---:|
+| `Message.SNDPRN` | 6.997,268 | **4,23×** | 4,57× | 7.816,110 | 4,72× | 5,10× |
+| `Message.VFN` | 4.346,772 | **2,63×** | 2,33× | 8.128,770 | 4,91× | 4,37× |
+| `Message.DestinationFilename` | 5.853,161 | **3,53×** | 7,42× | 7.850,902 | 4,74× | 9,95× |
+
+**Die Deutung hat über 24 Stunden getroffen und über 30 Tage nicht.** Über 24 Stunden kostet Fassung
+B 96 bis 97 ms — 4 bis 7 % über Fassung A, die dort denselben Pfad freiwillig geht; die
+Materialisierung von 5.043 Nachrichten ist ein Aufschlag von 3 bis 6 ms. Über 30 Tage liegt **keine**
+der sechs Zahlen unter dem Maßstab: Fassung B kostet das 2,6- bis 4,2‑Fache des schlechtesten
+BAM-Falls, Fassung C das 4,7- bis 4,9‑Fache. **Der erzwungene L4‑Pfad ist über 30 Tage nicht
+tragfähig, und E‑102 ist nicht gegenstandslos.** Über 90 Tage bricht jede Form ab.
+
+### Was den Preis macht — die Materialisierung, nicht der Primärschlüsselzugriff
+
+`Message.VFN` über 30 Tage ist der einzige Fall, in dem Fassung B den L4‑Pfad **hält**: `<derived3>`
+als `ALL` über 180.251 materialisierte Nachrichten, `mp` als `ref` über `PRIMARY` je Nachricht,
+4.346,772 ms. Derselbe Fenstermenge ohne Wertprädikat, mit einer einzigen `mp`-Zeile davor, kostet in
+M169 (`Message.GUID`, Fassung B, 30 Tage) **4.783,098 ms** — das Materialisieren allein ist also der
+Preis, und 180.251 Primärschlüsselzugriffe fallen daneben nicht ins Gewicht (die Handler-Zähler
+zeigen für `VFN` 279.369 `read_key`, 29.985 `read_next`, 240.382 `tmp_write`). 180.251 Zeilen zu
+146 Byte allein für die `MessageID` (`key_len`) sind 26,3 MB — mehr als die 16 MiB Speichergrenze; die
+Temp-Tabelle geht auf die Platte.
+
+**Fassung C zahlt darüber hinaus die Unterabfrage je Zeile:** 7.816 bis 8.129 ms über 30 Tage, das
+1,12- bis 1,87‑Fache von B, über 24 Stunden das 2,14- bis 2,17‑Fache. Aus M169 (C gegen B bei
+`Message.GUID`, 30 Tage) sind das **20,6 µs je materialisierter Zeile** — der Preis dafür, dass
+der Optimizer keine Wahl hat.
+
+**Die beiden Ausbrüche über 30 Tage kosten mehr als der gehaltene Pfad:** `SNDPRN` 6.997 ms und
+`DestinationFilename` 5.853 ms gegen 4.347 ms für `VFN`. Der Optimizer führt dort mit `MessageProperty`
+über den Wertindex (102.284 und 49.976 gelesene Indexeinträge), materialisiert die Fenstermenge
+trotzdem vollständig (233.358 und 225.485 `tmp_write`) und erreicht sie über ihren automatischen
+Schlüssel — er zahlt beides. Warum er bei `VFN` (242.280 geschätzte Wertzeilen) nicht ausbricht und
+bei `SNDPRN` (198.614) und `DestinationFilename` (98.396) doch, steht in M170.
+
+### Über 90 Tage gibt der Optimizer den Zeitindex auf — und dann ist nichts mehr zu retten
+
+In allen sechs 90‑Tage-Fällen liest der Plan `Message` als **`ALL`** mit `Using filesort` — 3.560.486
+geschätzte Zeilen, der ganze Bestand — statt als `range` über `MessageLastUpdateIDX`. Der
+Zeitbereich wird auf 1.476.166 Zeilen geschätzt (41 % der Tabelle), und ab dieser Breite hält der
+Optimizer den Vollscan für billiger als den Indexbereich. Innerhalb der 10 Sekunden liest er
+3.383.893 Zeilen sequenziell (`read_rnd_next`) und schreibt 296.068 bis 297.977 in die Temp-Tabelle;
+bei Fassung C ist die Materialisierung fertig (620.225 `tmp_write`), und die 572.648 Unterabfragen
+dahinter reißen die Grenze. **Das 90‑Tage-Fenster ist für jede materialisierte Form außer Reichweite
+— unabhängig davon, wie `MessageProperty` erreicht wird.** Fassung A über 90 Tage ist für die drei
+Namen nicht gemessen (M166 hatte zwei Fenster); M159 zeigt für `Message.ReceiverID` 1.276,108 ms
+über den Wertindex.
+
+*Belegvermerk (L10): gemessen sind 18 Fälle über einen Mandanten, drei Fenster, drei Namen und zwei
+Fassungen, jeder mit dem häufigsten Wert seines 30‑Tage-Fensters; die Abbrüche sind sechsmal je Fall
+wiederholt. Behauptet wird nicht, dass ein seltener Wert billiger wäre — in Fassung B und C hängt der
+Preis an der Fenstermenge, nicht am Wert (M169) —, und nicht, dass die Materialisierung in der
+Produktion mit anderen Temp-Tabellen-Grenzen gleich kostet.*
 
 ---
