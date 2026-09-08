@@ -2682,3 +2682,104 @@ Stelle liegt — sie hängt an Statistiken, die dort andere sind —, und nicht,
 MariaDB-Versionen bindet: Sie bindet in 10.6.22 mit den Schaltern aus B0.*
 
 ---
+
+## M171 — Struktur gegen Hinweis
+
+**Sitzung** `b5-m171.sql`. Die **teuerste vollendete** Kombination aus M168 ist `Message.SNDPRN` über
+30 Tage (Fassung B 6.997,268 ms); dazu dieselbe Kombination über **90 Tage** — die teuerste
+überhaupt, weil B und C dort abbrechen (Ergänzung 3). Vier Erzwingungsformen: **B** (strukturell,
+materialisiert), **C** (strukturell, bindend), **`STRAIGHT_JOIN`** (Fassung A mit `Message` zuerst in
+der `FROM`-Liste), **`FORCE INDEX (PRIMARY)`** auf `MessageProperty` (Fassung A, Reihenfolge
+unverändert). Beide Mandanten; `SUTTONS` über `Message.GUID`. Ablauf wie B2, Grenze 10 s, `--force`.
+Serverzeit 11:21:55 bis 11:32:09.
+
+> **Vorregistrierte Deutung.** Die strukturelle Fassung ist stabil, die Hinweisformen sind es nicht
+> notwendig — ein Hinweis kann verworfen werden, eine Materialisierung nicht. **Belegvermerk vorab:**
+> `STRAIGHT_JOIN` ist in diesem Projekt als Notbehelf eingestuft (Faktor 219 bis 1.094, M42/M47) und
+> wird zum Vergleich gemessen; fällt es günstig aus, ist das keine Empfehlung.
+
+### Ergebnis — Wanduhr, Bestwert der Läufe 2 bis 6, in Millisekunden
+
+| Fall | Form | Plan: Weg zur Fenstermenge → Zugriff auf `mp` | ms | gegen A |
+|---|---|---|---:|---:|
+| `NEXANS` / `SNDPRN`, **30 T** | B | `mp` `ref` `MessagePropertyValueIDX` → `<derived3>` `key0` — **Ausbruch** | 6.925,314 | 4,52× |
+| | C | `<derived3>` (`m` `range` Zeitindex) → `DEPENDENT SUBQUERY` `PRIMARY` (548) | 8.195,473 | 5,35× |
+| | `STRAIGHT_JOIN` | `m` `range` `MessageLastUpdateIDX` (409.756) → `mp` `ref` `PRIMARY` (548); `pm`/`pr` als `MATERIALIZED` Semi-Join | **3.186,012** | **2,08×** |
+| | `FORCE INDEX` | `m` `range` `MessageLastUpdateIDX` (409.756) → `mp` `ref` `PRIMARY` (548) | **3.336,127** | 2,18× |
+| `NEXANS` / `SNDPRN`, **90 T** | B | `mp` Wertindex → `key0`; `m` als `ALL` | ⛔ Abbruch (10.017,141) | — |
+| | C | `m` als `ALL` → `DEPENDENT SUBQUERY` `PRIMARY` | ⛔ Abbruch (10.004,757) | — |
+| | `STRAIGHT_JOIN` | `m` `range` `MessageLastUpdateIDX` (1.476.166) → `mp` `PRIMARY` | ⛔ Abbruch (10.001,841) | — |
+| | `FORCE INDEX` | `m` `range` `MessageLastUpdateIDX` (1.476.166) → `mp` `PRIMARY` | ⛔ Abbruch (10.002,082) | — |
+| `SUTTONS` / `GUID`, **30 T** | B | `mp` Wertindex (1) → `key0` — Ausbruch; `m` `range` Zeitindex | 2.012,841 | 2.234× |
+| | C | `<derived3>` (`m` `range` Zeitindex) → `DEPENDENT SUBQUERY` `PRIMARY` | 2.631,481 | 2.921× |
+| | `STRAIGHT_JOIN` | `m` `range` `MessageLastUpdateIDX` (409.756) → `mp` `PRIMARY` | 1.795,953 | 1.993× |
+| | `FORCE INDEX` | **`pm` → `pr` → `m` `ref` `ProejctIDIDX`** (Mandantenkette) → `mp` `PRIMARY` | **1.148,436** | 1.275× |
+| `SUTTONS` / `GUID`, **90 T** | B | `mp` Wertindex (1) → `key0` — Ausbruch; `m` über `ProejctIDIDX` | 1.553,993 | 1.731× |
+| | C | `<derived3>` (`m` über `ProejctIDIDX`) → `DEPENDENT SUBQUERY` `PRIMARY` | 3.416,862 | 3.805× |
+| | `STRAIGHT_JOIN` | `m` `range` `MessageLastUpdateIDX` (1.476.166 geschätzt, **680.872 gelesen**, 9,48 % bleiben) → `mp` `PRIMARY` | **5.520,575** | 6.148× |
+| | `FORCE INDEX` | `pm` → `pr` → `m` `ref` `ProejctIDIDX` → `mp` `PRIMARY` | **1.576,664** | 1.756× |
+
+Fassung A: 1.531,134 ms (`NEXANS`, M166), 0,901 und 0,898 ms (`SUTTONS`, M159). B und C wiederholen
+ihre Werte aus M168 und M169 auf 1 bis 5 % (6.925 gegen 6.997, 8.195 gegen 7.816; `SUTTONS` 2.013
+gegen 1.827, 1.554 gegen 1.557). Profil-Gegenprobe für die Hinweisformen: 3.184,362 · 3.334,563 ·
+1.794,076 · 1.147,322 · 5.519,422 · 1.575,420 — an der Wanduhr.
+
+### Die Deutung ist umgekehrt eingetreten: Die Hinweise halten, die Struktur nicht
+
+**`STRAIGHT_JOIN` und `FORCE INDEX (PRIMARY)` erreichen `MessageProperty` in 8 von 8 Fällen über
+`PRIMARY` (548); Fassung B in 0 von 4; Fassung C in 4 von 4.** Der Satz „ein Hinweis kann verworfen
+werden, eine Materialisierung nicht" beschreibt die falsche Größe: Verworfen wurde keine
+Materialisierung — verworfen wurde die *Reihenfolge*, in der die materialisierte Menge und
+`MessageProperty` zusammenkommen, und genau die legt `STRAIGHT_JOIN` fest, während `FORCE INDEX` den
+Index festlegt, über den `mp` erreicht wird. Beides greift an der Stelle, um die es L4 geht; die
+Materialisierung greift daneben.
+
+### Der billigste erzwungene Pfad ist der ohne Materialisierung — und liegt trotzdem über dem Maßstab
+
+Bei `NEXANS` über 30 Tage kosten die Hinweisformen **3.186 und 3.336 ms**: 214.330 Zeilen des
+Zeitbereichs über `MessageLastUpdateIDX` (243.083 `read_next`, 214.330 ICP-Versuche), je verbliebener
+Nachricht ein Primärschlüsselzugriff, **14.998 `tmp_write`** statt 230.992 bei B — keine
+Fenstermenge auf der Platte, 14,9 µs je Zeile des Zeitbereichs. Das ist der 24‑Stunden-Plan von
+Fassung A (M166), auf 30 Tage gestreckt. Er kostet **weniger als die Hälfte von B (2,17×) und C
+(2,57×)** — und immer noch das **1,92‑ bis 2,01‑Fache des Maßstabs** (1.655,8 ms) und das 2,08‑ bis
+2,18‑Fache von Fassung A über den Wertindex. **Kein erzwungener Pfad unterbietet über 30 Tage den
+freien** — mit oder ohne Materialisierung, mit oder ohne Hinweis.
+
+### Über 90 Tage bricht bei `NEXANS` jede der vier Formen ab
+
+Die Hinweisformen halten den Zeitindex (`range`, 1.476.166 geschätzt) und kommen damit weiter als B
+und C mit ihrem Vollscan: In den 10 Sekunden lesen sie 660.928 (`STRAIGHT_JOIN`) und 621.284
+(`FORCE INDEX`) Zeilen des Zeitbereichs — **97,1 % der 680.872 Zeilen**, die der Bereich über alle
+Mandanten hat (gelesen im `SUTTONS`-Lauf mit `STRAIGHT_JOIN`, `r_rows`) — und kommen mit den
+Primärschlüsselzugriffen dahinter (755.434 und 814.287 `read_key`) nicht mehr durch. Die Schätzung
+liegt auch hier um Faktor 2,17 zu hoch (1.476.166 gegen 680.872), wie in M170. **Für den großen
+Mandanten gibt es über 90 Tage keinen L4‑Pfad unter 10 Sekunden, gleich wie er erzwungen wird.**
+Fassung A über 90 Tage ist für `SNDPRN` nicht gemessen; für `Message.ReceiverID` kostet der Wertindex
+dort 1.276,108 ms (M159).
+
+### Beim kleinen Mandanten ist der Hinweis, der am meisten bindet, der schlechteste
+
+`STRAIGHT_JOIN` schreibt `Message` als erste Tabelle vor, und der Optimizer liest sie dann über den
+Zeitindex — für `SUTTONS` über 90 Tage **680.872 Indexeinträge, von denen 9,48 % bleiben** (64.553
+Nachrichten), 5.520,575 ms. `FORCE INDEX (PRIMARY)` bindet nur den Zugriff auf `mp` und lässt dem
+Optimizer den Weg zur Fenstermenge frei — er nimmt die Mandantenkette (`pm` → `pr` → `m` über
+`ProejctIDIDX`, der Plan aus M162 und M169) und braucht **1.148,436 ms über 30 Tage und 1.576,664 ms
+über 90 Tage**: das Beste, was ein erzwungener Pfad bei `SUTTONS` erreicht, und das 1.275‑ bis
+1.756‑Fache von Fassung A (0,901 und 0,898 ms). `STRAIGHT_JOIN` kostet über 90 Tage das
+**3,50‑Fache** davon. Das ist der Notbehelf-Charakter aus M42/M47 in anderer Gestalt: Der Hinweis
+bindet mehr, als L4 verlangt, und bindet damit für den kleinen Mandanten das Falsche.
+
+> **Diagnose, keine Bauempfehlung.** Dass `FORCE INDEX (PRIMARY)` in dieser Runde in 8 von 8 Fällen
+> gehalten hat und über 30 Tage die billigste erzwungene Form ist, macht es nicht zur Vorlage: Es
+> liegt bei `NEXANS` beim Doppelten des Maßstabs, bei `SUTTONS` beim 1.275‑Fachen des freien
+> Zugriffs, und über 90 Tage bricht es ab. `STRAIGHT_JOIN` bleibt, was M42 und M47 festgestellt
+> haben. Eine Empfehlung zu einer Hinweisform gehört in einen Bauauftrag mit dieser Vorgeschichte
+> daneben — hier steht keine.
+
+*Belegvermerk (L10): gemessen sind 16 Fälle über zwei Mandanten, zwei Fenster, einen Namen je
+Mandant und vier Formen. Behauptet wird nicht, dass `FORCE INDEX` unter allen Statistiken gehalten
+wird — es hat in 8 von 8 Fällen gehalten —, und nicht, dass 14,9 µs je Zeile des Zeitbereichs eine
+Konstante sind. Die 680.872 Zeilen des 90‑Tage-Bereichs sind aus einem `ANALYZE`-Lauf gelesen, nicht
+gezählt.*
+
+---
