@@ -2220,6 +2220,21 @@ materialisierter Plan auf diesem Pfad läuft. Fassung C ist eine Ergänzung übe
 keine Bauempfehlung; M168 bis M170 messen B und C nebeneinander, M171 vergleicht beide mit den
 Hinweisformen.
 
+### Ergänzung 3 — M171 misst zwei Fenster statt eines
+
+§6 nennt „die teuerste Kombination aus M168". Die teuersten sind die sechs 90‑Tage-Fälle — sämtlich
+Abbrüche, und ein Abbruch lässt sich nicht mit einem Abbruch vergleichen. Gemessen ist deshalb die
+teuerste **vollendete** Kombination (`Message.SNDPRN`, 30 Tage, Fassung B 6.997,268 ms) **und**
+dieselbe über 90 Tage, damit sichtbar wird, ob eine Hinweisform den Abbruch vermeidet.
+
+### Ergänzung 4 — `ANALYZE <select>` als Werkzeug für M170
+
+M170 verlangt die geschätzte gegen die gelesene Zeilenzahl. `ANALYZE <select>` in der Tabellenform
+führt das Statement einmal aus und gibt `rows` und `r_rows` je Tabelle — ein Lesezugriff, **nicht
+`ANALYZE TABLE`**, das Statistiken schriebe und in keiner Sitzung vorkommt. Daneben laufen die
+Handler-Zähler wie in M167. Die Tabellenform enthält keinen Wert (G1); die Probe in B1 hat das
+bestätigt.
+
 ### Widerspruch 1 — der Faktor 611 aus §1 des Auftrags ist in den Messdateien nicht belegt
 
 §1 nennt „611× Unterschied zwischen zwei Mandanten bei identischem Statement". Die Suche über
@@ -2783,3 +2798,191 @@ Konstante sind. Die 680.872 Zeilen des 90‑Tage-Bereichs sind aus einem `ANALYZ
 gezählt.*
 
 ---
+
+# Befunde der L4‑Pfad-Runde
+
+## 1. Regel L4 braucht für die Property-Suche eine Ausnahme — der erzwungene Pfad trägt sie nicht
+
+**Der Satz, auf den die Runde hinausläuft: Für den Sucheinstieg über Name und Wert braucht Regel L4
+eine Ausnahme; für alles andere gilt sie unverändert.** Über 24 Stunden hält der L4‑Pfad — 96 bis
+97 ms erzwungen (M168), 91 bis 93 ms freiwillig (M166). Über 30 Tage kostet er bei `NEXANS` in jeder
+erzwungenen Form zwischen **3.186 ms** (`STRAIGHT_JOIN`, M171) und **8.195 ms** (Fassung C, M171) —
+keine Form unterbietet den Maßstab von 1.655,8 ms, und keine unterbietet Fassung A über den
+Wertindex (789 bis 1.862 ms, M166). Über 90 Tage bricht bei `NEXANS` jede Form ab (M168, M171).
+**Ohne Ausnahme von L4 gibt es keine Property-Suche über 30 Tage; mit ihr kostet sie, was M166
+gemessen hat.** E‑102 ist damit nicht gegenstandslos. Was daraus folgt — der Ausnahmekasten bleibt,
+oder das Fenster der Suche wird auf einen Tag beschränkt —, ist nicht Sache dieser Runde
+(Punkt 156).
+
+## 2. Die Struktur bindet nicht — Fassung B bricht in 14 von 18 Fällen aus
+
+Eine materialisierte Nachrichtenmenge hindert den Optimizer nicht daran, mit `MessageProperty` über
+den Wertindex zu führen (M170): `derived_with_keys` gibt der Menge einen Schlüssel, und die
+Join-Reihenfolge bleibt seine Wahl — bei 409.756 geschätzten Fensterzeilen bricht er für 198.614 und
+98.396 geschätzte Wertzeilen aus und für 242.280 nicht. Die `GROUP BY`-Form der Vorprobe löst
+`split_materialized` sogar ganz auf (`LATERAL DERIVED`). **Die vorregistrierte Deutung „Fassung B ist
+stabil" ist widerlegt, und ein einziger Ausbruch hätte genügt.** Bindend ist nur die
+Skalar-Unterabfrage (Fassung C, 18 von 18) — und die Hinweise (M171, 8 von 8), die genau die Größe
+festlegen, um die es geht.
+
+## 3. Der Preis des L4‑Pfads ist die Fenstermenge, nicht der Wert
+
+Fassung B und C kosten, was das Fenster an Nachrichten hat: 5.043 Nachrichten 60 bis 228 ms,
+180.251 Nachrichten 4,3 bis 8,6 s, 572.648 Nachrichten Abbruch — unabhängig davon, ob der gesuchte
+Wert eine Zeile trägt oder 29.985. Für die Schlüsselnamen `Message.GUID` und
+`Converter.TransactionID` ist das der Faktor **54 bis 9.011** gegenüber Fassung A (M169); die
+Schwelle 10 ist in allen 18 Fällen gerissen. Die Materialisierung selbst ist der größte Posten
+(4,7 s für 180.251 Zeilen, auf der Platte), die Unterabfrage je Zeile kostet 20,6 µs, der
+Primärschlüsselzugriff je Nachricht fällt daneben nicht ins Gewicht; ohne Materialisierung (Hinweis)
+bleibt die Hälfte (M171).
+
+## 4. Über 90 Tage kippt der Zugriff auf `Message` selbst
+
+Ab einem Zeitbereich von 1.476.166 geschätzten Zeilen (41 % der Tabelle; gelesen sind es 680.872)
+gibt der Optimizer `MessageLastUpdateIDX` auf und liest `Message` als Vollscan (`NEXANS`) oder über
+die Mandantenkette (`SUTTONS`). Jede Form, die die Fenstermenge durchläuft, ist damit über 90 Tage
+für den großen Mandanten außer Reichweite; der Wertindex kennt kein Fenster (M159: 0,946 ms über
+90 Tage für `Message.GUID`). **Die Ausnahme von L4 ist über 90 Tage nicht nur billiger, sondern die
+einzige Form, die antwortet.**
+
+## 5. Der Hinweis, der am meisten bindet, ist für den kleinen Mandanten der schlechteste
+
+`STRAIGHT_JOIN` zwingt `SUTTONS` über 90 Tage durch 680.872 Indexeinträge für 64.553 Treffer
+(5.520,575 ms); `FORCE INDEX (PRIMARY)` bindet nur `mp` und lässt die Mandantenkette zu
+(1.576,664 ms, Faktor 3,50). Was M42 und M47 als Notbehelf eingestuft haben, zeigt hier seine
+Mechanik: Der Hinweis bindet mehr als L4 verlangt. Keine Empfehlung folgt daraus (M171, Kasten).
+
+## 6. Drei Befunde zum Werkzeug
+
+`information_schema.PROFILING` unterschlägt die Laufzeit von `LATERAL DERIVED` und `DEPENDENT
+SUBQUERY` fast vollständig (5,965 gegen 4.753,554 ms; 1,5 bis 3 gegen 205 bis 8.129 ms) — ab dieser
+Runde ist die Wanduhr das Maß (Abweichung 1). Die Bereichsschätzungen des Optimizers liegen für
+Zeit- wie Wertbereiche um Faktor 1,9 bis 2,2 zu **hoch**, die Tabellenstatistik aus M155 um 37,9 %
+zu **niedrig** — der Ausbruch hängt an einem Vergleich zweier falscher Zahlen (M170). Der Faktor 611
+aus §1 des Auftrags ist in keiner Messdatei belegt (Widerspruch 1).
+
+---
+
+# Was diese Runde nicht zeigt
+
+1. **Nichts über die Produktion.** Statistiken, Temp-Tabellen-Grenzen (16 MiB), Pufferpool und
+   Optimizer-Schalter sind die der Testkopie; die Kippstellen aus M170 hängen an Schätzungen, die
+   dort andere sind. Es ist nicht hochgerechnet worden.
+
+2. **Fassung A über 90 Tage für die drei neuen Namen.** M166 hatte zwei Fenster; §7 verbietet die
+   Wiederholung. Bekannt ist nur `Message.ReceiverID` mit 1.276,108 ms und `Message.GUID` mit
+   0,946 ms (M159). Der Vergleich „Abbruch gegen Wertindex" über 90 Tage steht deshalb für `SNDPRN`,
+   `VFN` und `DestinationFilename` nicht auf gemessenen Zahlen beider Seiten.
+
+3. **Wo zwischen 24 Stunden und 30 Tagen die Materialisierung den Maßstab reißt.** Gemessen sind
+   97 ms für 5.043 und 4,3 s für 180.251 Nachrichten; der Punkt dazwischen ist nicht erhoben — wie
+   bei Lücke 5 des Nachtrags, nur dass er für Fassung C keinen Pfad kippt, sondern nur den Preis.
+   Für Fassung B ist die Kippstelle des Ausbruchs auf 198.614 bis 242.280 geschätzte Wertzeilen bei
+   409.756 geschätzten Fensterzeilen eingegrenzt — ein Bereich, kein Punkt.
+
+4. **Wo zwischen 30 und 90 Tagen der Optimizer den Zeitindex aufgibt.** 409.756 geschätzte Zeilen
+   halten ihn, 1.476.166 nicht; dazwischen ist nichts gemessen (Punkt 159).
+
+5. **Andere Materialisierungsformen** als `GROUP BY` (Vorprobe) und `ORDER BY … LIMIT`. Keine CTE,
+   keine temporäre Tabelle — Letzteres wäre ein Schreibzugriff und ist nach S1 ausgeschlossen.
+
+6. **Optimizer-Schalter als Sitzungseinstellung** (`derived_with_keys=off`, `split_materialized=off`).
+   Das wäre ein Hinweis auf Konfigurationsebene, nicht im Statement, und lag außerhalb von §4.
+
+7. **Nichts über die acht übrigen Mandanten.** `SUTTONS` ist nur über `Message.GUID` vertreten, weil
+   die drei Namen dort nicht vorkommen (M162) — L7 in ihrer einzigen erfüllbaren Form.
+
+8. **Ob `FORCE INDEX` unter anderen Statistiken gehalten wird.** Gehalten hat es in 8 von 8 Fällen;
+   mehr sagt die Runde nicht.
+
+9. **Nichts über Oberfläche, Endpunkt oder Antwortform.** Diese Runde hat nichts gebaut und nichts
+   entschieden.
+
+---
+
+# Offene Punkte
+
+Fortlaufend in der Reihe des Projekts; höchste vorher vergebene Nummer ist **155** (Nachtrag).
+
+**156. Ausnahmekasten oder Tagesfenster — der L4‑Pfad trägt die Suche über 30 Tage nicht.** Über
+24 Stunden hält er (96 bis 97 ms erzwungen, 91 bis 93 ms frei), über 30 Tage kostet er 3,2 bis 8,2 s,
+über 90 Tage bricht er ab; der Wertindex kostet über 30 Tage 0,8 bis 1,9 s und über 90 Tage nicht
+messbar mehr (M159). Zu entscheiden ist, ob E‑102 den Ausnahmekasten bekommt (dann steht die
+Suche auf den Zahlen aus M166) oder ob die Property-Suche auf ein Tagesfenster beschränkt wird
+(dann hält L4 — aber als Wahl des Optimizers, nicht als Garantie, M170). Nimmt Punkt 152 und 154 auf.
+
+**157. Zwei Codepfade oder keiner.** Jede erzwungene Form kostet die Schlüsselnamen `Message.GUID`
+und `Converter.TransactionID` das 54- bis 9.011‑Fache (M169). Wird irgendeine Form erzwungen, brauchen
+diese Namen einen eigenen Pfad — gegen die Disziplin, dass eine Kennzahl an genau einer Stelle
+entsteht. Wird keine erzwungen, ist Punkt 157 gegenstandslos. Hängt an 156.
+
+**158. Das Profil ist als Laufzeitmaß für Pläne mit `LATERAL DERIVED` und `DEPENDENT SUBQUERY`
+unbrauchbar** (Abweichung 1). Alle Runden bis M167 messen über `information_schema.PROFILING`; ihre
+Pläne enthalten keine dieser Formen, ihre Zahlen stehen. Ob die Messkonvention in
+[`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) §7 „Messung" die Wanduhr neben dem
+Profil vorschreiben soll, ist zu entscheiden — diese Runde ändert die Datei nicht.
+
+**159. Zwischen 30 und 90 Tagen gibt der Optimizer den Zeitindex auf `Message` auf.** Bei 409.756
+geschätzten Zeilen des Bereichs `range` über `MessageLastUpdateIDX`, bei 1.476.166 ein Vollscan über
+3.560.486 Zeilen (M168, M171). Das betrifft jedes Statement, das über den Zeitbereich in `Message`
+einsteigt, nicht nur die Property-Suche; wo die Schwelle liegt, ist nicht erhoben. Regel L1 erlaubt
+ein Jahr.
+
+**160. Der Faktor 611 aus §1 des Auftrags hat keine Quelle in den Messdateien** (Widerspruch 1).
+Entweder benennt der Auftraggeber die Messung, oder der Satz wird aus künftigen Aufträgen
+gestrichen; belegt sind 219 bis 1.094 (`STRAIGHT_JOIN`, M42/M47) und 10,5 (M162).
+
+---
+
+# Regelbezug — L4‑Pfad-Runde
+
+| Regel | Stand | Begründung |
+|---|---|---|
+| **G1** — Geheimhaltung | **erfüllt** | Kein `MessagePropertyValue` in dieser Datei — kein Dateiname, keine Senderkennung, keine Nummer, keine GUID, auch nicht abgekürzt. Prüfwerte über `QUOTE()` und `PREPARE` eingesetzt, ausgegeben nur als Länge; `EXPLAIN` und `ANALYZE` in der Tabellenform, deren `ref`-Spalte `const` zeigt; Längen statt Namen für `ProcessName` und `ProjectName`. Rohausgaben unter `scripts/messung-property-suche/ergebnis/b*.txt`, vom bestehenden `.gitignore`-Eintrag ausgeschlossen |
+| **Q4** — kein unbelegter Wert | **erfüllt** | Jede Zahl stammt aus einem Lauf dieser Runde oder ist mit ihrer Quelle benannt (M14, M42, M47, M155, M156, M157, M159, M162, M165, M166). Verhältnisse sind aus den Laufwerten gerechnet; der eine Wert, den der Auftrag ohne Quelle nennt (611), ist **nicht** übernommen |
+| **L1** — Pflicht-Zeitfenster | **berührt, nicht verletzt** | Kein Endpunkt gebaut. Jedes Kandidaten-Statement trägt ein absolutes Fenster (24 h, 30 T, 90 T); die Nenner in B0‑1 ebenfalls. Kein Durchlauf ohne Fenster |
+| **L4** — `MessageProperty` nur über `MessageID` | **eingehalten in Fassung C (18 von 18), in den Hinweisformen (8 von 8) und in 4 von 18 Fällen von Fassung B; in den übrigen 14 Fällen von B vom Optimizer verlassen — das ist der Befund 2** | Keine Messung dieser Runde verletzt L4 absichtlich; Fassung A ist nicht wiederholt worden. Die Ausbrüche sind Planwahlen des Optimizers gegen die Struktur, gemeldet, nicht umgedeutet. **Befund 1: L4 braucht für den Sucheinstieg eine Ausnahme** — die Regel selbst ist nicht angefasst |
+| **L7** — mindestens zwei Mandanten, einer klein | **erfüllt** | `NEXANS` und `SUTTONS` in M169 und M171; M168 nur `NEXANS`, weil die drei Namen bei `SUTTONS` nicht vorkommen (M162) — der kleine Mandant ist über `Message.GUID` vertreten, die einzige erfüllbare Form |
+| **L9** — Durchlauf ohne Fenster | **nicht berührt** | Kein Statement ohne Zeitfenster |
+| **L10** — Belegvermerk | **erfüllt** | Jede Messung schließt mit *gemessen / behauptet*; die Lücken stehen unter „Was diese Runde nicht zeigt" |
+| **L15** — `EXPLAIN` zu jedem Statement | **erfüllt** | 4 Fälle in B1, 36 in B2/B3 (M170), 16 in B5 — je mit `ANALYZE` daneben. Die Nummer L15 steht, wie in den Runden davor, so im Auftrag; `DEVELOPMENT_GUIDELINES.md` führt L1 bis L10 |
+| **M1** — keine Mandanten-ID aus einer Anfrage | **nicht berührt** | Keine Anfrage, kein Endpunkt; `MandantID` als Messparameter im Skript |
+| **T1** — keine Wanduhrzeit in Tests | **nicht berührt** | Keine Tests gebaut. Die Runde misst Wanduhrzeit — als Messung, nicht als Zusicherung — und daneben Zugriffe (Handler-Zähler, `r_rows`), die Disziplin aus T1 |
+| **S1** — nur `SELECT` | **erfüllt** | Alle sechs Sitzungen fahren ausschließlich `SELECT`, `SET`, `EXPLAIN`, `ANALYZE <select>`, `PREPARE`/`EXECUTE`/`DEALLOCATE` mit `monitor_read`. **`ANALYZE <select>` führt das `SELECT` aus und liest; es ist nicht `ANALYZE TABLE`, das Statistiken schriebe und in keiner Sitzung vorkommt.** Handler-Zähler und Abfragecache-Stand aus `information_schema` per `SELECT`. **Kein Schreibzugriff auf `GlassfishDB`**, kein Zugriff auf `overlord_monitor`. `@@global.read_only` = **1** als erste Abfrage jeder Sitzung |
+
+## Bestehende offene Punkte und Lücken, die diese Runde erledigt oder verschiebt
+
+| Punkt / Lücke | Vorher | **Jetzt** |
+|---|---|---|
+| **Punkt 152** — `Message.VFN` reißt den Maßstab | 1.862,098 ms über 30 Tage, Fassung A | **bleibt offen, verschärft:** Mit Fassung B ist es eine andere Zahl — **4.346,772 ms** (2,63× Maßstab), mit Fassung C 8.128,770 ms. Der erzwungene Pfad macht `VFN` nicht billiger, sondern 2,3‑ bis 4,4‑mal teurer. Geht in Punkt 156 auf |
+| **Punkt 154** — das Standardfenster entscheidet den Zugriffspfad | offen | **verschoben in Punkt 156:** Mit Fassung C entscheidet das Fenster den Pfad nicht mehr, aber den Preis (60 ms → 8 s → Abbruch); mit Fassung B entscheidet es ihn weiterhin (Ausbruch ab 30 Tagen bei zwei von drei Namen). Ein Tagesfenster ist das einzige, in dem der L4‑Pfad unter dem Maßstab bleibt |
+| **Punkt 145** und **Lücke 5** des Nachtrags — wo zwischen einem Tag und dreißig der Plan kippt | nicht erhoben | **für Fassung C gegenstandslos** — dort kippt kein Pfad, per Konstruktion; **für Fassung B eingegrenzt, nicht geschlossen** (198.614 bis 242.280 geschätzte Wertzeilen, M170); **für Fassung A unverändert offen**. Der Preis zwischen 24 Stunden und 30 Tagen ist für keine Fassung erhoben (Lücke 3 dieser Runde) |
+| **Punkt 150** — Handabgleich der Konfigurationstabelle | offen | unverändert; die Konfiguration wurde nicht gelesen, die Namen kommen aus dem Auftrag |
+| **Punkt 151** — `DestinationFilename` fehlt in §3.2 | offen | unverändert; §7 schließt die Änderung aus |
+| **Punkte 153, 155** | offen | unverändert |
+
+## Was diese Runde entgegen §7 des Auftrags angefasst hat
+
+**Eine Datei:** [`docs/README.md`](README.md) — der Eintrag dieser Datei ist um den dritten Teil
+ergänzt; §7 gibt das ausdrücklich frei. **`.gitignore` ist nicht angefasst worden:** Der Eintrag der
+Hauptrunde deckt `scripts/messung-property-suche/ergebnis/` ab, die Rohausgaben `b*.txt` liegen dort.
+[`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) ist nicht angefasst, auch nicht Leistungsregel 4
+und nicht §3.2. Es ist keine neue Datei entstanden. Über den Wortlaut hinaus gemessen — jeweils oben
+gemeldet: die Vorprobe (Ergänzung 1), Fassung C (Ergänzung 2), das zweite Fenster in M171
+(Ergänzung 3), `ANALYZE <select>` als Werkzeug (Ergänzung 4).
+
+## Die Sitzungen der L4‑Pfad-Runde
+
+| Datei | Inhalt | Grenze | Ausgang |
+|---|---|---:|---|
+| `b0-rahmen.sql` | Rahmen, Optimizer-Schalter, Temp-Tabellen-Grenzen, Nenner je Mandant und Fenster | 60 s (Nenner) | — |
+| `b1-vorprobe.sql` | Vorprobe: zwei Materialisierungsformen, `NEXANS`/`SNDPRN`, 24 h und 30 T, erste `ANALYZE`-Probe | 10 s | — |
+| `b1b-vorprobe-nachpruefung.sql` | Nachprüfung: Wanduhr, Handler-Zähler, Abfragecache je Form, Fassung A als Eichung | 10 s | — |
+| `b2-m168.sql` | M168 neun Fälle × Fassung B und C, `NEXANS`, `--force` | 10 s | **42 Abbrüche** (alle 90‑T-Ausführungen) |
+| `b3-m169.sql` | M169 neun Fälle × Fassung B und C, beide Mandanten, `--force` | 10 s | **28 Abbrüche** (`NEXANS` 90 T); `SUTTONS` 90 T ohne Abbruch |
+| `b5-m171.sql` | M171 vier Formen × zwei Fenster × zwei Mandanten, `--force` | 10 s | **28 Abbrüche** (`NEXANS` 90 T, alle vier Formen) |
+
+M170 hat keine eigene Sitzung; seine Pläne stehen in B2 und B3. Die Nummer `b4` ist deshalb nicht
+vergeben. **Serverzeit Beginn `2026-09-08 10:43:56`, Ende der letzten Sitzung 11:32:09.** Die
+Ergebnisdateien liegen unter `scripts/messung-property-suche/ergebnis/b*.txt` und sind nicht
+eingecheckt (G1).
