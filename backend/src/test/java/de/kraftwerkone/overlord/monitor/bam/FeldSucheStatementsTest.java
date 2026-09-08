@@ -29,8 +29,16 @@ import org.junit.jupiter.api.Test;
  *
  * <p>Was hier steht, ist das, was beim naechsten Umbau am ehesten wieder entstuende: ein {@code
  * LIKE} auf {@code MessagePropertyValue}, ein Typ-0-Name, der doch ueber {@code MessageProperty}
- * laeuft, ein vergessenes {@code EXISTS}, ein {@code STRAIGHT_JOIN} „zur Sicherheit" — und die
- * Stammdaten-Joins neben statt ueber der Deckelung.
+ * laeuft, ein vergessenes {@code EXISTS}, ein {@code STRAIGHT_JOIN} „zur Sicherheit", die
+ * Stammdaten-Joins neben statt ueber der Deckelung — und seit dem 08.09.2026 (Teil 2) der Join auf
+ * {@code Process} fuer {@code Message.ProcessName}, der 4.592 ms kostete, wo die Kennung 3 ms
+ * kostet ({@code docs/property-suche.md} §10).
+ *
+ * <p><b>Die Attrappe beantwortet die Aufloesung des Prozessnamens</b>: Ein Statement, das {@code
+ * ProcessName} liest, bekommt die Kennungen aus {@link #prozessKennungen}; alles andere bekommt
+ * eine leere Antwort. Damit laesst sich beides pruefen — die Form des Kerns mit einer Kennung, und
+ * dass ohne Kennung <b>kein</b> Kern gerendert wird (Regel T1: gezaehlt werden Zugriffe, nicht
+ * Zeit).
  */
 class FeldSucheStatementsTest {
 
@@ -45,13 +53,27 @@ class FeldSucheStatementsTest {
   private final List<Ausgefuehrt> gerendert = new ArrayList<>();
   private BamSucheRepository repository;
 
+  /**
+   * Was die Aufloesung eines Prozessnamens liefert — je Test veraenderbar, Vorgabe eine Kennung.
+   */
+  private List<String> prozessKennungen = List.of("p-1");
+
   @BeforeEach
   void attrappeAufbauen() {
     gerendert.clear();
+    prozessKennungen = List.of("p-1");
     MockDataProvider attrappe =
         ausfuehrung -> {
           gerendert.add(new Ausgefuehrt(ausfuehrung.sql(), Arrays.asList(ausfuehrung.bindings())));
           DSLContext leer = DSL.using(SQLDialect.MARIADB);
+          if (ausfuehrung.sql().toLowerCase(Locale.ROOT).contains("`processname` = ?")) {
+            Field<String> processId = DSL.field("ProcessID", String.class);
+            Result<Record1<String>> ergebnis = leer.newResult(processId);
+            for (String kennung : prozessKennungen) {
+              ergebnis.add(leer.newRecord(processId).values(kennung));
+            }
+            return new MockResult[] {new MockResult(ergebnis.size(), ergebnis)};
+          }
           Field<Integer> platzhalter = DSL.field("platzhalter", Integer.class);
           Result<Record1<Integer>> ergebnis = leer.newResult(platzhalter);
           return new MockResult[] {new MockResult(0, ergebnis)};
@@ -175,7 +197,9 @@ class FeldSucheStatementsTest {
 
   /**
    * <b>Die acht Abbildungen, je auf ihre Spalte</b> — die Zuordnung aus M155, hier am gerenderten
-   * Text: wortgleich, umgestellt, umbenannt, andere Tabelle.
+   * Text: wortgleich, umgestellt, umbenannt, andere Tabelle. {@code ProcessName} steht seit dem
+   * 08.09.2026 als {@code ProcessID IN (…)} im Kern (E‑109); sein Vergleich gegen die Spalte {@code
+   * Process.ProcessName} findet im Statement davor statt.
    */
   @Test
   @DisplayName("Jedes der acht Typ-0-Felder rendert seine Zielspalte")
@@ -189,7 +213,7 @@ class FeldSucheStatementsTest {
             new Erwartung(
                 Typ0Feld.MESSAGE_ID_TARGET, "`glassfishdb`.`message`.`targetmessageid` = ?"),
             new Erwartung(Typ0Feld.PROCESS_ID, "`glassfishdb`.`message`.`processid` = ?"),
-            new Erwartung(Typ0Feld.PROCESS_NAME, "`feld_process`.`processname` = ?"),
+            new Erwartung(Typ0Feld.PROCESS_NAME, "`glassfishdb`.`message`.`processid` in (?)"),
             new Erwartung(Typ0Feld.SOS_ID, "`glassfishdb`.`message`.`sosid` = ?"),
             new Erwartung(Typ0Feld.SOS_NAME, "`feld_sos`.`sosname` = ?"),
             new Erwartung(Typ0Feld.STATUS, "`glassfishdb`.`message`.`messagestatus` = ?"));
@@ -204,40 +228,135 @@ class FeldSucheStatementsTest {
   }
 
   /**
-   * <b>Die zwei Namen in anderen Tabellen brauchen einen Join</b> — ueber {@code ProcessID}
-   * beziehungsweise {@code SOSID}, unter eigenem Alias, weil {@code Process} in derselben Abfrage
-   * schon zweimal steht.
+   * <b>{@code SOSName} braucht weiterhin einen Join</b> — ueber {@code SOSID}, unter eigenem Alias,
+   * weil {@code SOS} ueber der Deckelung schon fuer den Anzeigenamen steht. Derselbe Umbau wie bei
+   * {@code ProcessName} huelfe hier nicht: {@code Message} traegt keinen Index auf {@code SOSID}
+   * ({@code docs/property-suche.md} §6.4).
    */
   @Test
-  @DisplayName("ProcessName und SOSName joinen Process und SOS unter eigenem Alias")
-  void prozessname_und_sosname_joinen() {
-    repository.findeTreffer(
-        MANDANT,
-        List.of(),
-        List.of(spalte(Typ0Feld.PROCESS_NAME, "P"), spalte(Typ0Feld.SOS_NAME, "S")),
-        FENSTER);
+  @DisplayName("SOSName joint SOS unter eigenem Alias im Kern")
+  void sosname_joint_sos() {
+    repository.findeTreffer(MANDANT, List.of(), List.of(spalte(Typ0Feld.SOS_NAME, "S")), FENSTER);
 
     assertThat(klein())
-        .contains(
-            "join `glassfishdb`.`process` as `feld_process` on `feld_process`.`processid` ="
-                + " `glassfishdb`.`message`.`processid`")
         .contains(
             "join `glassfishdb`.`sos` as `feld_sos` on `feld_sos`.`sosid` ="
                 + " `glassfishdb`.`message`.`sosid`");
   }
 
-  /** Derselbe Name zweimal ergibt zwei Praedikate, aber nur einen Join. */
+  // ─── ProcessName ueber die Stammdaten (E-109, 08.09.2026) ─────────────────────
+
+  /**
+   * <b>Zwei Statements, und das erste liest nur {@code Process}.</b> Die Aufloesung vergleicht
+   * exakt ({@code =}, kein {@code LIKE}) und traegt den Mandantenfilter ueber {@code
+   * ProjectMandant}; der Kern danach filtert ueber {@code ProcessID IN (…)} mit der gefundenen
+   * Kennung — und {@code feld_process} kommt nirgends mehr vor.
+   */
   @Test
-  @DisplayName("Derselbe Join-Name zweimal: zwei Praedikate, ein Join")
-  void derselbe_name_zweimal_ein_join() {
+  @DisplayName("ProcessName wird vorab ueber Process aufgeloest, der Kern filtert ueber ProcessID")
+  void prozessname_ueber_die_stammdaten() {
+    repository.findeTreffer(
+        MANDANT, List.of(), List.of(spalte(Typ0Feld.PROCESS_NAME, "P")), FENSTER);
+
+    assertThat(gerendert).as("Aufloesung und Kern").hasSize(2);
+
+    String aufloesung = gerendert.getFirst().sql().toLowerCase(Locale.ROOT);
+    assertThat(aufloesung)
+        .as("Aufloesung: %s", gerendert.getFirst().sql())
+        .startsWith("select distinct `glassfishdb`.`process`.`processid`")
+        .contains("from `glassfishdb`.`process`")
+        .contains("join `glassfishdb`.`projectmandant`")
+        .contains("`glassfishdb`.`projectmandant`.`mandantid` = ?")
+        .contains("`glassfishdb`.`process`.`processname` = ?")
+        .doesNotContain("like")
+        .doesNotContain("`message`");
+    assertThat(gerendert.getFirst().werte()).containsExactly(MANDANT.mandantId(), "P");
+
+    assertThat(klein())
+        .as("Kern: %s", letztesSql())
+        .contains("`glassfishdb`.`message`.`processid` in (?)")
+        .doesNotContain("feld_process")
+        // Der Anzeigename ueber der Deckelung bleibt; ein Praedikat auf den Namen gibt es nicht
+        // mehr.
+        .doesNotContain("`processname` = ?");
+    assertThat(werte()).contains("p-1").doesNotContain("P");
+  }
+
+  /**
+   * <b>Trifft der Name keinen Prozess des Mandanten, wird {@code Message} nicht angefasst.</b>
+   * Genau ein Statement — die Aufloesung — und eine leere Antwort. Das ist die Zusage aus {@code
+   * docs/nachrichtenliste.md} §5, hier fuer die Property-Suche: <i>niemals gegen {@code
+   * Message}</i>.
+   */
+  @Test
+  @DisplayName("Ein unbekannter Prozessname stellt kein Statement gegen Message")
+  void unbekannter_prozessname_ohne_message() {
+    prozessKennungen = List.of();
+
+    List<BamTrefferZeile> treffer =
+        repository.findeTreffer(
+            MANDANT,
+            List.of(bam()),
+            List.of(spalte(Typ0Feld.PROCESS_NAME, "gibt-es-nicht")),
+            FENSTER);
+
+    assertThat(treffer).isEmpty();
+    assertThat(gerendert).as("nur die Aufloesung").hasSize(1);
+    assertThat(klein()).doesNotContain("`messagelastupdate`").doesNotContain("`messagebam`");
+  }
+
+  /** Mehrere Kennungen zu einem Namen: alle in der Liste — nichts wird gedeckelt. */
+  @Test
+  @DisplayName("Mehrere Prozesse mit demselben Namen stehen alle in der IN-Liste")
+  void mehrere_kennungen_in_der_liste() {
+    prozessKennungen = List.of("p-1", "p-2", "p-3");
+
+    repository.findeTreffer(
+        MANDANT, List.of(), List.of(spalte(Typ0Feld.PROCESS_NAME, "P")), FENSTER);
+
+    assertThat(klein()).contains("`glassfishdb`.`message`.`processid` in (?, ?, ?)");
+    assertThat(werte()).contains("p-1", "p-2", "p-3");
+  }
+
+  /**
+   * Derselbe Name zweimal: eine Aufloesung, zwei Praedikate — dieselbe Verundung wie vorher beim
+   * Join, nur ohne ihn. Zwei verschiedene Namen: zwei Aufloesungen.
+   */
+  @Test
+  @DisplayName("Derselbe Prozessname zweimal: eine Aufloesung, zwei Praedikate")
+  void derselbe_name_zweimal_eine_aufloesung() {
+    repository.findeTreffer(
+        MANDANT,
+        List.of(),
+        List.of(spalte(Typ0Feld.PROCESS_NAME, "P1"), spalte(Typ0Feld.PROCESS_NAME, "P1")),
+        FENSTER);
+    assertThat(gerendert).hasSize(2);
+    assertThat(klein().split("`glassfishdb`.`message`.`processid` in \\(\\?\\)", -1)).hasSize(3);
+
+    gerendert.clear();
     repository.findeTreffer(
         MANDANT,
         List.of(),
         List.of(spalte(Typ0Feld.PROCESS_NAME, "P1"), spalte(Typ0Feld.PROCESS_NAME, "P2")),
         FENSTER);
+    assertThat(gerendert).as("zwei Namen, zwei Aufloesungen, ein Kern").hasSize(3);
+  }
 
-    assertThat(klein().split("as `feld_process` on", -1)).hasSize(2);
-    assertThat(klein().split("`feld_process`.`processname` = \\?", -1)).hasSize(3);
+  /**
+   * Neben einem BAM-Begriff: Die Aufloesung laeuft zuerst, der Kern fuehrt weiter mit {@code b1}
+   * und traegt das Kennungspraedikat auf {@code Message}.
+   */
+  @Test
+  @DisplayName("Neben einer Belegnummer bleibt b1 die fuehrende Tabelle, ProcessID steht daneben")
+  void neben_belegnummer() {
+    repository.findeTreffer(
+        MANDANT, List.of(bam()), List.of(spalte(Typ0Feld.PROCESS_NAME, "P")), FENSTER);
+
+    assertThat(gerendert).hasSize(2);
+    assertThat(klein())
+        .contains("from `glassfishdb`.`messagebam` as `b1`")
+        .contains("`glassfishdb`.`message`.`processid` in (?)")
+        .doesNotContain("feld_process");
   }
 
   // ─── Was fuer alle Formen gilt ────────────────────────────────────────────────
@@ -250,6 +369,7 @@ class FeldSucheStatementsTest {
         List.of(
             List.of(eigenschaft("Message.GUID", "a")),
             List.of(spalte(Typ0Feld.STATUS, "FINISHED")),
+            List.of(spalte(Typ0Feld.PROCESS_NAME, "P")),
             List.of(eigenschaft("Message.GUID", "a"), spalte(Typ0Feld.PROCESS_NAME, "P")));
 
     for (List<Feldbedingung> form : formen) {

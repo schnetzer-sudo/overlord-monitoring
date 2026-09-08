@@ -54,7 +54,15 @@ public enum Typ0Feld {
   /** Wörtlich. {@code Message.ProcessID} {@code varchar(36)}. */
   PROCESS_ID("Message.ProcessID", "Message.ProcessID"),
 
-  /** Andere Tabelle. {@code Process.ProcessName} {@code varchar(255)}, über {@code ProcessID}. */
+  /**
+   * Andere Tabelle. {@code Process.ProcessName} {@code varchar(255)}, über {@code ProcessID}.
+   *
+   * <p><b>Seit dem 08.09.2026 nicht mehr als Join, sondern vorab aufgelöst</b> (E‑109): Das
+   * Repository sucht die Kennungen des Namens in {@code Process} und filtert {@code Message} dann
+   * über {@code ProcessID} — dieselbe Menge, 3 ms statt 4.592 ms über 30 Tage ({@code
+   * docs/property-suche.md} §10). Die Zielspalte bleibt, wie sie ist: Verglichen wird weiterhin
+   * gegen {@code Process.ProcessName}, nur an einer anderen Stelle des Ablaufs.
+   */
   PROCESS_NAME("Message.ProcessName", "Process.ProcessName"),
 
   /** Wörtlich. {@code Message.SOSID} {@code varchar(36)}. */

@@ -21,7 +21,9 @@ import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.sql.SQLTimeoutException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.Field;
@@ -98,6 +100,12 @@ import org.springframework.stereotype.Repository;
  * härtesten trifft: {@code SUTTONS} über 90 Tage durch 680.872 Indexeinträge für 64.553 Treffer,
  * Faktor 3,50 gegen die Form, die die Mandantenkette zulässt. Der Optimizer wählt selbst — und
  * wählt zwischen Zeit- und Werteinstieg je nach Fenster verschieden (M166).
+ *
+ * <p><b>Seit dem 08.09.2026, Teil 2: {@code Message.ProcessName} über die Stammdaten</b> (E‑109).
+ * Der Name wird <b>vor</b> dem Kern zu {@code ProcessID}s aufgelöst ({@link #prozessKennungen}) und
+ * im Kern als {@code ProcessID IN (…)} gesucht — die Form, die die Nachrichtenliste für ihren
+ * Freitext seit Schritt 4 verwendet. Der Join {@code feld_process} aus Teil 1 ist damit entfallen;
+ * die Rücknahme der Bauvorgabe steht datiert in {@code docs/property-suche.md} §10.
  */
 @Repository
 public class BamSucheRepository {
@@ -131,13 +139,15 @@ public class BamSucheRepository {
   private static final String FELD_ALIAS = "mp";
 
   /**
-   * Die Aliasse für die beiden Typ‑0‑Felder, die nicht auf {@code Message} liegen — {@code
-   * Message.ProcessName} wohnt in {@code Process}, {@code Message.SOSName} in {@code SOS} (M155).
-   * Eigene Aliasse, weil {@code Process} in derselben Abfrage bereits zweimal steht: für die
-   * Mandantenkette und, über der Deckelung, für den Anzeigenamen.
+   * Der Alias für das eine Typ‑0‑Feld, das nicht auf {@code Message} liegt und <b>im Kern</b>
+   * gejoint wird: {@code Message.SOSName} wohnt in {@code SOS} (M155). Ein eigener Alias, weil
+   * {@code SOS} über der Deckelung noch einmal für den Anzeigenamen steht.
+   *
+   * <p><b>{@code Message.ProcessName} hat seit dem 08.09.2026 keinen Alias mehr</b> — es wird nicht
+   * gejoint, sondern <b>vorab über die Stammdaten aufgelöst</b> ({@link #prozessKennungen}). Für
+   * {@code SOSName} hülfe derselbe Umbau nicht: {@code Message} trägt keinen Index auf {@code
+   * SOSID}, die Kennung liest das Fenster ebenso (docs/property-suche.md §6.4 und §10).
    */
-  private static final Process FELD_PROCESS = PROCESS.as("feld_process");
-
   private static final Sos FELD_SOS = SOS.as("feld_sos");
 
   /**
@@ -237,8 +247,6 @@ public class BamSucheRepository {
       List<Feldbedingung> feldbedingungen,
       Zeitfenster fenster) {
 
-    Table<?> kern = kern(mandant, bedingungen, feldbedingungen, fenster);
-
     Field<String> messageId = kernfeld(MESSAGE.MESSAGEID);
     Field<LocalDateTime> zeitpunkt = kernfeld(MESSAGE.MESSAGELASTUPDATE);
     Field<String> processId = kernfeld(MESSAGE.PROCESSID);
@@ -246,6 +254,15 @@ public class BamSucheRepository {
     Field<Short> sosActionId = kernfeld(MESSAGE.SOSACTIONID);
 
     try {
+      // Message.ProcessName: erst die Stammdaten, dann das Fenster (E-109). Trifft ein Name
+      // keinen Prozess des Mandanten, ist die Verundung leer — und Message wird nicht angefasst.
+      Map<String, List<String>> prozessKennungen = prozessKennungen(mandant, feldbedingungen);
+      if (prozessKennungen.values().stream().anyMatch(List::isEmpty)) {
+        return List.of();
+      }
+
+      Table<?> kern = kern(mandant, bedingungen, feldbedingungen, prozessKennungen, fenster);
+
       return glassfishDsl
           .select(
               messageId,
@@ -303,6 +320,7 @@ public class BamSucheRepository {
       MandantContext mandant,
       List<Suchbedingung> bedingungen,
       List<Feldbedingung> feldbedingungen,
+      Map<String, List<String>> prozessKennungen,
       Zeitfenster fenster) {
     if (bedingungen.isEmpty() && feldbedingungen.isEmpty()) {
       throw new IllegalArgumentException("Eine Suche ohne Bedingung gibt es nicht");
@@ -347,11 +365,8 @@ public class BamSucheRepository {
     } else {
       schritt = glassfishDsl.select(KERNFELDER).from(MESSAGE);
     }
-    // Die beiden Typ-0-Felder, die nicht auf Message liegen, brauchen je einen Join — einen je
-    // Tabelle, auch wenn derselbe Name zweimal genannt ist.
-    if (spalten.stream().anyMatch(f -> f.spalte() == Typ0Feld.PROCESS_NAME)) {
-      schritt = schritt.join(FELD_PROCESS).on(FELD_PROCESS.PROCESSID.eq(MESSAGE.PROCESSID));
-    }
+    // Das eine Typ-0-Feld, das im Kern eine andere Tabelle braucht: ein Join, auch wenn derselbe
+    // Name zweimal genannt ist. ProcessName ist hier seit dem 08.09.2026 nicht mehr dabei.
     if (spalten.stream().anyMatch(f -> f.spalte() == Typ0Feld.SOS_NAME)) {
       schritt = schritt.join(FELD_SOS).on(FELD_SOS.SOSID.eq(MESSAGE.SOSID));
     }
@@ -364,7 +379,7 @@ public class BamSucheRepository {
       wo.add(eigenschaftsbedingung(eigenschaftstabellen.get(i), eigenschaften.get(i)));
     }
     for (Feldbedingung spalte : spalten) {
-      wo.add(spaltenbedingung(spalte));
+      wo.add(spaltenbedingung(spalte, prozessKennungen));
     }
     wo.add(MESSAGE.MESSAGELASTUPDATE.ge(fenster.von()));
     wo.add(MESSAGE.MESSAGELASTUPDATE.le(fenster.bis()));
@@ -456,18 +471,75 @@ public class BamSucheRepository {
    * nicht gegen eine Einordnung — der Nutzer hat einen konkreten Wert getippt, und die Suche findet
    * genau ihn. Die Übersetzung Einordnung → Bedingung gehört der Nachrichtenliste.
    */
-  private static Condition spaltenbedingung(Feldbedingung bedingung) {
+  private static Condition spaltenbedingung(
+      Feldbedingung bedingung, Map<String, List<String>> prozessKennungen) {
     String wert = bedingung.wert();
     return switch (bedingung.spalte()) {
       case MESSAGE_ID -> MESSAGE.MESSAGEID.eq(wert);
       case MESSAGE_ID_SOURCE -> MESSAGE.SOURCEMESSAGEID.eq(wert);
       case MESSAGE_ID_TARGET -> MESSAGE.TARGETMESSAGEID.eq(wert);
       case PROCESS_ID -> MESSAGE.PROCESSID.eq(wert);
-      case PROCESS_NAME -> FELD_PROCESS.PROCESSNAME.eq(wert);
+      // Nicht der Name ueber einen Join, sondern die vorab aufgeloesten Kennungen (E-109). Bei
+      // genau einer Kennung macht MariaDB aus IN (?) ein = ?, und die Mandantenkette wird zur
+      // Konstante — das ist die 3-ms-Form aus docs/property-suche.md §6.4.
+      case PROCESS_NAME -> MESSAGE.PROCESSID.in(prozessKennungen.get(wert));
       case SOS_ID -> MESSAGE.SOSID.eq(wert);
       case SOS_NAME -> FELD_SOS.SOSNAME.eq(wert);
       case STATUS -> MESSAGE.MESSAGESTATUS.eq(wert);
     };
+  }
+
+  /**
+   * <b>{@code Message.ProcessName}, vorab über die Stammdaten aufgelöst</b> — je genanntem Namen
+   * die {@code ProcessID}s, die ihn beim aktiven Mandanten tragen (E‑109, 08.09.2026).
+   *
+   * <p><b>Warum nicht der Join.</b> Gemessen kostete {@code Message.ProcessName} über den Join
+   * {@code feld_process} <b>4.592 ms</b> über 30 Tage und brach über ein Jahr in allen sechs Läufen
+   * ab, während {@code Message.ProcessID} — <b>dieselbe Menge</b> — <b>3 ms</b> kostete ({@code
+   * docs/property-suche.md} §6.4). Der Unterschied ist allein, wo die Mandantenkette ausgewertet
+   * wird: Steht die Kennung als Konstante im Statement, wird {@code EXISTS (… WHERE ProcessID = ?)}
+   * zur Konstante und der Zeitindex nur bis zur Deckelung gelesen; kommt der Name über den Join,
+   * läuft die Kette je Zeile und das ganze Fenster geht in die temporäre Tabelle.
+   *
+   * <p><b>Dieselbe Form wie der Freitextfilter der Nachrichtenliste</b> ({@code
+   * NachrichtenRepository.loeseSucheAuf}, {@code docs/nachrichtenliste.md} §5: „niemals gegen
+   * {@code Message}"): {@code Process} trägt 1.503 Zeilen, die Auflösung kostet nichts Messbares.
+   * Anders als dort wird hier <b>exakt</b> verglichen ({@code =}, kein {@code LIKE}, keine
+   * Maskierung) — der Nutzer hat einen konkreten Namen gewählt, und die Suche findet genau ihn.
+   *
+   * <p><b>Der Mandantenfilter steht auch hier</b>, aus demselben Grund wie in der Liste: nicht als
+   * Sicherheitsgrenze (die trägt das Hauptstatement, Regel M3), sondern damit ein Prozessname eines
+   * fremden Mandanten gar nicht erst zu einer Kennung wird. {@code FeldSucheIsolationDbIT} prüft
+   * beides.
+   *
+   * <p><b>Keine Deckelung der Kennungsliste.</b> Sie ist durch die Tabelle begrenzt (1.503 Zeilen,
+   * davon ein Bruchteil je Mandant), und ein Name trägt in aller Regel genau eine Kennung; eine
+   * Deckelung änderte still die Treffermenge. Gemessen ist die Form mit einer Kennung (§10).
+   *
+   * @return je verschiedenem Prozessnamen unter den Feldbegriffen seine Kennungen — <b>leer</b>,
+   *     wenn kein Prozess des Mandanten so heißt. Dann ist die Verundung leer, und der Aufrufer
+   *     stellt kein Statement gegen {@code Message}
+   */
+  private Map<String, List<String>> prozessKennungen(
+      MandantContext mandant, List<Feldbedingung> feldbedingungen) {
+    Map<String, List<String>> kennungen = new LinkedHashMap<>();
+    for (Feldbedingung bedingung : feldbedingungen) {
+      if (bedingung.spalte() != Typ0Feld.PROCESS_NAME || kennungen.containsKey(bedingung.wert())) {
+        continue;
+      }
+      List<String> gefunden =
+          glassfishDsl
+              .selectDistinct(PROCESS.PROCESSID)
+              .from(PROCESS)
+              .join(PROJECTMANDANT)
+              .on(PROJECTMANDANT.PROJECTID.eq(PROCESS.PROJECTID))
+              .where(PROJECTMANDANT.MANDANTID.eq(mandant.mandantId()))
+              .and(PROCESS.PROCESSNAME.eq(bedingung.wert()))
+              .orderBy(PROCESS.PROCESSID)
+              .fetch(PROCESS.PROCESSID);
+      kennungen.put(bedingung.wert(), List.copyOf(gefunden));
+    }
+    return kennungen;
   }
 
   /**
