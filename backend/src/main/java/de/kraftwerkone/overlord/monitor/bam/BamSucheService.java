@@ -53,8 +53,14 @@ public class BamSucheService {
       bedingungen.add(new Suchbedingung(begriff.typ(), fassungen.gesucht(), filter.modus()));
     }
 
+    // Feldbegriffe: Spalte oder Zeile, entschieden ueber die Abbildung (E-101). Ohne Feldbegriffe
+    // geht der Aufruf den Weg von Teil 2b — dasselbe Statement, Zeichen fuer Zeichen.
+    List<Feldbedingung> feldbedingungen = feldbedingungen(filter.felder());
     List<BamTrefferZeile> gelesen =
-        bamSucheRepository.findeTreffer(mandant, bedingungen, filter.fenster());
+        feldbedingungen.isEmpty()
+            ? bamSucheRepository.findeTreffer(mandant, bedingungen, filter.fenster())
+            : bamSucheRepository.findeTreffer(
+                mandant, bedingungen, feldbedingungen, filter.fenster());
 
     // Die Abschneidung wird an der (n+1)-ten Zeile erkannt — und damit NACH dem Mandantenfilter,
     // weil der im Statement steht. Eine Zahl aus den Rohtreffern beschriebe fremden Bestand.
@@ -62,17 +68,48 @@ public class BamSucheService {
     List<BamTrefferZeile> zeilen =
         abgeschnitten ? gelesen.subList(0, BamSucheRepository.HOECHSTENS_TREFFER) : gelesen;
 
+    // Abfrage (b) nur, wenn ein BAM-Begriff getroffen haben kann. Bei einer Suche allein ueber
+    // Felder gibt es keinen BAM-Treffer zu beschriften — und ohne Bedingung liefe die Abfrage
+    // ueber ALLE Werte der gefundenen Nachrichten.
     Map<String, List<BamTrefferWertResponse>> trefferJeNachricht =
-        trefferJeNachricht(
-            bamSucheRepository.findeTrefferWerte(mandant, kennungen(zeilen), bedingungen));
+        bedingungen.isEmpty()
+            ? Map.of()
+            : trefferJeNachricht(
+                bamSucheRepository.findeTrefferWerte(mandant, kennungen(zeilen), bedingungen));
 
     return new BamSucheResponse(
         uebersetze(zeilen, trefferJeNachricht),
         begriffe(filter.begriffe(), varianten),
+        felder(feldbedingungen),
         Zeitpunkte.nachUtc(filter.fenster().von(), anwendungsuhr.getZone()),
         Zeitpunkte.nachUtc(filter.fenster().bis(), anwendungsuhr.getZone()),
         abgeschnitten,
         filter.modus());
+  }
+
+  /**
+   * Die Feldbegriffe, so wie das Statement sie sieht: <b>Spalte, wenn die Abbildung den Namen
+   * kennt, sonst Zeile</b> (E‑101). Ein Name, der weder abgebildet noch konfiguriert ist, geht den
+   * EAV-Weg und findet nichts — der Schutz dagegen ist strukturell (Pflichtfenster, Deckelung) und
+   * keine Namensliste.
+   */
+  private static List<Feldbedingung> feldbedingungen(List<Feldbegriff> felder) {
+    List<Feldbedingung> bedingungen = new ArrayList<>(felder.size());
+    for (Feldbegriff feld : felder) {
+      bedingungen.add(
+          new Feldbedingung(feld.name(), feld.wert(), Typ0Feld.fuer(feld.name()).orElse(null)));
+    }
+    return List.copyOf(bedingungen);
+  }
+
+  /** Das Zitat der Feldbegriffe — ohne Varianten, weil es für Feldwerte keine gibt. */
+  private static List<FeldBegriffResponse> felder(List<Feldbedingung> feldbedingungen) {
+    List<FeldBegriffResponse> antwort = new ArrayList<>(feldbedingungen.size());
+    for (Feldbedingung bedingung : feldbedingungen) {
+      antwort.add(
+          new FeldBegriffResponse(bedingung.name(), bedingung.wert(), bedingung.istSpalte()));
+    }
+    return List.copyOf(antwort);
   }
 
   private static List<String> kennungen(List<BamTrefferZeile> zeilen) {

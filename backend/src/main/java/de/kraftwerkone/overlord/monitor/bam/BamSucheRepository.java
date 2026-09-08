@@ -3,6 +3,7 @@ package de.kraftwerkone.overlord.monitor.bam;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.MESSAGE;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.MESSAGEBAM;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.MESSAGEBAMTYPE;
+import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.MESSAGEPROPERTY;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROCESS;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROJECT;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROJECTMANDANT;
@@ -13,7 +14,9 @@ import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.BAM_SOLLAENGE
 import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
 import de.kraftwerkone.overlord.monitor.common.error.FachlicheAusnahme;
 import de.kraftwerkone.overlord.monitor.jooq.glassfish.tables.Messagebam;
+import de.kraftwerkone.overlord.monitor.jooq.glassfish.tables.Messageproperty;
 import de.kraftwerkone.overlord.monitor.jooq.glassfish.tables.Process;
+import de.kraftwerkone.overlord.monitor.jooq.glassfish.tables.Sos;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.sql.SQLTimeoutException;
 import java.time.LocalDateTime;
@@ -72,6 +75,29 @@ import org.springframework.stereotype.Repository;
  * Fassung mit den Stammdaten-Joins neben {@code MessageBAM} das <b>Achtzehnfache</b>, weil die
  * Nachschlagevorgänge je Zeile liefen statt je Gruppe. Hier wäre der Unterschied größer, nicht
  * kleiner — der schlimmste gemessene Wert erzeugt <b>234.159</b> Kandidatenzeilen (M33).
+ *
+ * <h2>Seit dem 08.09.2026: die Property-Suche im selben Kern</h2>
+ *
+ * <p>Derselbe Kern trägt seither auch die <b>Feldbegriffe</b> ({@link Feldbedingung}) — eine
+ * Suchfläche, zwei Quellen (E‑99). Ein Feldbegriff, dessen Name eine <b>Spalte</b> benennt (Typ 0,
+ * {@link Typ0Feld}), wird zum Spaltenprädikat auf {@code Message}, {@code Process} oder {@code SOS}
+ * und fasst {@code MessageProperty} nicht an. Jeder andere wird zum <b>EAV-Zugriff</b>: ein Join
+ * auf {@code MessageProperty} je Begriff, {@code MessagePropertyName = ? AND MessagePropertyValue =
+ * ?} — die Fassung aus M166, <b>Einstieg über den Wertindex</b>, und damit die erste benannte
+ * Ausnahme von Leistungsregel 4 (E‑102, {@code PROJEKTBESCHREIBUNG.md} §8). Der L4‑konforme Pfad
+ * ist in vier Fassungen erzwungen gemessen worden und trägt die Suche nicht: über 30 Tage 3.186 bis
+ * 8.195 ms gegen 789 bis 1.862 ms über den Wertindex, über 90 Tage Abbruch in jeder Form (M168,
+ * M171).
+ *
+ * <p><b>Ohne Feldbegriffe ist das Statement Zeichen für Zeichen das von Teil 2b.</b> Die führende
+ * Tabelle bleibt {@code b1}, die Bedingungen stehen in derselben Reihenfolge, nichts kommt hinzu;
+ * {@code BamSucheStatementsTest} hält das gegen den eingefrorenen Text fest. Erst ein Feldbegriff
+ * fügt Joins und Prädikate an — <b>hinter</b> den BAM-Tabellen und <b>vor</b> dem Zeitfenster.
+ *
+ * <p><b>Kein {@code STRAIGHT_JOIN}, auch hier.</b> M171 zeigt, dass er den kleinen Mandanten am
+ * härtesten trifft: {@code SUTTONS} über 90 Tage durch 680.872 Indexeinträge für 64.553 Treffer,
+ * Faktor 3,50 gegen die Form, die die Mandantenkette zulässt. Der Optimizer wählt selbst — und
+ * wählt zwischen Zeit- und Werteinstieg je nach Fenster verschieden (M166).
  */
 @Repository
 public class BamSucheRepository {
@@ -100,6 +126,19 @@ public class BamSucheRepository {
    * dieser Datei {@code java.lang.Process}.
    */
   private static final Process MANDANTEN_PROCESS = PROCESS.as("mandanten_process");
+
+  /** Das Präfix der Aliasse für den EAV-Zugriff je Feldbegriff: {@code mp1}, {@code mp2}, … */
+  private static final String FELD_ALIAS = "mp";
+
+  /**
+   * Die Aliasse für die beiden Typ‑0‑Felder, die nicht auf {@code Message} liegen — {@code
+   * Message.ProcessName} wohnt in {@code Process}, {@code Message.SOSName} in {@code SOS} (M155).
+   * Eigene Aliasse, weil {@code Process} in derselben Abfrage bereits zweimal steht: für die
+   * Mandantenkette und, über der Deckelung, für den Anzeigenamen.
+   */
+  private static final Process FELD_PROCESS = PROCESS.as("feld_process");
+
+  private static final Sos FELD_SOS = SOS.as("feld_sos");
 
   /**
    * Die Spalten, die der Kern liefert — <b>ausschließlich aus {@code Message}</b>.
@@ -180,8 +219,25 @@ public class BamSucheRepository {
    */
   public List<BamTrefferZeile> findeTreffer(
       MandantContext mandant, List<Suchbedingung> bedingungen, Zeitfenster fenster) {
+    return findeTreffer(mandant, bedingungen, List.of(), fenster);
+  }
 
-    Table<?> kern = kern(mandant, bedingungen, fenster);
+  /**
+   * <b>Abfrage (a) mit Feldbegriffen</b> — die Property-Suche im selben Kern.
+   *
+   * <p>Beide Listen dürfen leer sein, aber nicht beide zugleich: Eine Suche ohne Bedingung läse das
+   * ganze Fenster, und die gibt es an diesem Endpunkt nicht. Ohne Feldbegriffe ist das Statement
+   * dasselbe wie in {@link #findeTreffer(MandantContext, List, Zeitfenster)} — Zeichen für Zeichen.
+   *
+   * @param feldbedingungen die Feldbegriffe, je als Spaltenprädikat oder EAV-Zugriff
+   */
+  public List<BamTrefferZeile> findeTreffer(
+      MandantContext mandant,
+      List<Suchbedingung> bedingungen,
+      List<Feldbedingung> feldbedingungen,
+      Zeitfenster fenster) {
+
+    Table<?> kern = kern(mandant, bedingungen, feldbedingungen, fenster);
 
     Field<String> messageId = kernfeld(MESSAGE.MESSAGEID);
     Field<LocalDateTime> zeitpunkt = kernfeld(MESSAGE.MESSAGELASTUPDATE);
@@ -244,24 +300,71 @@ public class BamSucheRepository {
    * das Limit — alles, was über die <b>Menge</b> entscheidet, und nichts, was sie nur beschriftet.
    */
   private Table<?> kern(
-      MandantContext mandant, List<Suchbedingung> bedingungen, Zeitfenster fenster) {
+      MandantContext mandant,
+      List<Suchbedingung> bedingungen,
+      List<Feldbedingung> feldbedingungen,
+      Zeitfenster fenster) {
+    if (bedingungen.isEmpty() && feldbedingungen.isEmpty()) {
+      throw new IllegalArgumentException("Eine Suche ohne Bedingung gibt es nicht");
+    }
 
     List<Messagebam> tabellen = new ArrayList<>(bedingungen.size());
     for (int i = 0; i < bedingungen.size(); i++) {
       tabellen.add(MESSAGEBAM.as(BEGRIFF_ALIAS + (i + 1)));
     }
-    Messagebam erste = tabellen.getFirst();
-
-    SelectJoinStep<Record> schritt = glassfishDsl.select(KERNFELDER).from(erste);
-    for (int i = 1; i < tabellen.size(); i++) {
-      Messagebam weitere = tabellen.get(i);
-      schritt = schritt.join(weitere).on(weitere.MESSAGEID.eq(erste.MESSAGEID));
+    List<Feldbedingung> eigenschaften =
+        feldbedingungen.stream().filter(f -> !f.istSpalte()).toList();
+    List<Feldbedingung> spalten =
+        feldbedingungen.stream().filter(Feldbedingung::istSpalte).toList();
+    List<Messageproperty> eigenschaftstabellen = new ArrayList<>(eigenschaften.size());
+    for (int i = 0; i < eigenschaften.size(); i++) {
+      eigenschaftstabellen.add(MESSAGEPROPERTY.as(FELD_ALIAS + (i + 1)));
     }
-    schritt = schritt.join(MESSAGE).on(MESSAGE.MESSAGEID.eq(erste.MESSAGEID));
+
+    // Die fuehrende Tabelle im Text: b1, sonst mp1, sonst Message. Fuer den Optimizer ist das
+    // folgenlos (kein STRAIGHT_JOIN); fuer den BAM-Pfad heisst es, dass sein Statement ohne
+    // Feldbegriffe Zeichen fuer Zeichen das von Teil 2b bleibt.
+    SelectJoinStep<Record> schritt;
+    if (!tabellen.isEmpty()) {
+      Messagebam erste = tabellen.getFirst();
+      schritt = glassfishDsl.select(KERNFELDER).from(erste);
+      for (int i = 1; i < tabellen.size(); i++) {
+        Messagebam weitere = tabellen.get(i);
+        schritt = schritt.join(weitere).on(weitere.MESSAGEID.eq(erste.MESSAGEID));
+      }
+      for (Messageproperty eigenschaft : eigenschaftstabellen) {
+        schritt = schritt.join(eigenschaft).on(eigenschaft.MESSAGEID.eq(erste.MESSAGEID));
+      }
+      schritt = schritt.join(MESSAGE).on(MESSAGE.MESSAGEID.eq(erste.MESSAGEID));
+    } else if (!eigenschaftstabellen.isEmpty()) {
+      Messageproperty erste = eigenschaftstabellen.getFirst();
+      schritt = glassfishDsl.select(KERNFELDER).from(erste);
+      for (int i = 1; i < eigenschaftstabellen.size(); i++) {
+        Messageproperty weitere = eigenschaftstabellen.get(i);
+        schritt = schritt.join(weitere).on(weitere.MESSAGEID.eq(erste.MESSAGEID));
+      }
+      schritt = schritt.join(MESSAGE).on(MESSAGE.MESSAGEID.eq(erste.MESSAGEID));
+    } else {
+      schritt = glassfishDsl.select(KERNFELDER).from(MESSAGE);
+    }
+    // Die beiden Typ-0-Felder, die nicht auf Message liegen, brauchen je einen Join — einen je
+    // Tabelle, auch wenn derselbe Name zweimal genannt ist.
+    if (spalten.stream().anyMatch(f -> f.spalte() == Typ0Feld.PROCESS_NAME)) {
+      schritt = schritt.join(FELD_PROCESS).on(FELD_PROCESS.PROCESSID.eq(MESSAGE.PROCESSID));
+    }
+    if (spalten.stream().anyMatch(f -> f.spalte() == Typ0Feld.SOS_NAME)) {
+      schritt = schritt.join(FELD_SOS).on(FELD_SOS.SOSID.eq(MESSAGE.SOSID));
+    }
 
     List<Condition> wo = new ArrayList<>();
     for (int i = 0; i < bedingungen.size(); i++) {
       wo.add(begriffsbedingung(tabellen.get(i), bedingungen.get(i)));
+    }
+    for (int i = 0; i < eigenschaften.size(); i++) {
+      wo.add(eigenschaftsbedingung(eigenschaftstabellen.get(i), eigenschaften.get(i)));
+    }
+    for (Feldbedingung spalte : spalten) {
+      wo.add(spaltenbedingung(spalte));
     }
     wo.add(MESSAGE.MESSAGELASTUPDATE.ge(fenster.von()));
     wo.add(MESSAGE.MESSAGELASTUPDATE.le(fenster.bis()));
@@ -322,6 +425,49 @@ public class BamSucheRepository {
       muster = muster.or(tabelle.MESSAGEBAMVALUE.like(eines, Suchbedingung.ESCAPE));
     }
     return muster;
+  }
+
+  /**
+   * <b>Der EAV-Zugriff eines Feldbegriffs: Name und Wert, beide {@code =}.</b> Das ist die Fassung
+   * aus M166 und die benannte Ausnahme von Leistungsregel 4 (E‑102): Der Einstieg läuft über den
+   * Wertindex — {@code MessagePropertyNameValueIDX} oder {@code MessagePropertyValueIDX}, das wählt
+   * der Optimizer (M165: in zwei von sechs Fällen den reinen Wertindex, folgenlos) —, ein
+   * Präfixindex über 50 Zeichen. Bei längeren Werten prüft MariaDB den Rest auf der Zeile nach; das
+   * kostet bei eindeutigem Präfix nichts Messbares (M167).
+   *
+   * <p><b>Kein {@code LIKE}, kein Muster, keine Maskierung</b> — weil kein Präfixmodus über {@code
+   * MessagePropertyValue} gebaut und keiner gemessen ist. {@code modus=praefix} wirkt
+   * ausschließlich auf die BAM-Begriffe; {@code BamSucheStatementsTest} hält fest, dass auf dieser
+   * Spalte nie ein {@code LIKE} steht.
+   */
+  private static Condition eigenschaftsbedingung(Messageproperty tabelle, Feldbedingung bedingung) {
+    return tabelle
+        .MESSAGEPROPERTYNAME
+        .eq(bedingung.name())
+        .and(tabelle.MESSAGEPROPERTYVALUE.eq(bedingung.wert()));
+  }
+
+  /**
+   * <b>Das Spaltenprädikat eines Typ‑0‑Felds</b> — {@code MessageProperty} wird für diese Namen
+   * nicht angefasst (E‑101). Die Zuordnung Name → Spalte ist die aus {@link Typ0Feld}, hier in
+   * jOOQ-Feldern, weil nur Repository-Klassen die generierten Tabellen sehen.
+   *
+   * <p>{@code Message.Status} vergleicht gegen den <b>Rohwert</b> von {@code MessageStatus} und
+   * nicht gegen eine Einordnung — der Nutzer hat einen konkreten Wert getippt, und die Suche findet
+   * genau ihn. Die Übersetzung Einordnung → Bedingung gehört der Nachrichtenliste.
+   */
+  private static Condition spaltenbedingung(Feldbedingung bedingung) {
+    String wert = bedingung.wert();
+    return switch (bedingung.spalte()) {
+      case MESSAGE_ID -> MESSAGE.MESSAGEID.eq(wert);
+      case MESSAGE_ID_SOURCE -> MESSAGE.SOURCEMESSAGEID.eq(wert);
+      case MESSAGE_ID_TARGET -> MESSAGE.TARGETMESSAGEID.eq(wert);
+      case PROCESS_ID -> MESSAGE.PROCESSID.eq(wert);
+      case PROCESS_NAME -> FELD_PROCESS.PROCESSNAME.eq(wert);
+      case SOS_ID -> MESSAGE.SOSID.eq(wert);
+      case SOS_NAME -> FELD_SOS.SOSNAME.eq(wert);
+      case STATUS -> MESSAGE.MESSAGESTATUS.eq(wert);
+    };
   }
 
   /**

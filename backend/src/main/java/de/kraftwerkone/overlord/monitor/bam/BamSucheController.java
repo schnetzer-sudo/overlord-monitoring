@@ -111,6 +111,14 @@ public class BamSucheController {
    *     Pflicht; ohne Typ lautet der Parameter {@code :4711815}. Mindestens einer, höchstens {@link
    *     BamSuchfilter#HOECHSTENS_BEGRIFFE}. <b>Ein Komma im Wert ist Teil des Werts</b> und kein
    *     Trennzeichen — siehe {@link #einParameterIstEinBegriff}
+   * @param feld <b>wiederholt</b>, je in der Form {@code <name>:<wert>} — die Property-Suche (seit
+   *     dem 08.09.2026, {@code docs/property-suche.md}). <b>Der Name ist Pflicht</b> (E‑100):
+   *     {@code feld=:4711} ist {@code 400}. <b>Ein eigener Parameter und nicht der bestehende</b>
+   *     (E‑106): Ein gemeinsamer müsste aus der Zeichenkette raten, ob {@code 9018} ein BAM-Typ
+   *     oder ein Feldname ist, und Raten ist nach Regel Q4 ausgeschlossen. Beide Parameter zusammen
+   *     tragen höchstens {@link BamSuchfilter#HOECHSTENS_BEGRIFFE} Begriffe; alle werden verundet.
+   *     Der Editor aus {@link #einParameterIstEinBegriff} gilt auch hier — ein Komma im Wert ist
+   *     Teil des Werts
    * @param von Beginn des Zeitfensters, ISO 8601 in UTC — nur zusammen mit {@code bis}
    * @param bis Ende des Zeitfensters. Fehlen beide, gilt {@link BamSuchfilter#FENSTER_VORGABE}; das
    *     tatsächlich verwendete Fenster steht in der Antwort
@@ -124,14 +132,16 @@ public class BamSucheController {
   @GetMapping("/api/bam/suche")
   public BamSucheResponse suche(
       @RequestParam(required = false) String[] begriff,
+      @RequestParam(required = false) String[] feld,
       @RequestParam(required = false) String von,
       @RequestParam(required = false) String bis,
       @RequestParam(required = false) String modus) {
 
     MandantContext mandant = mandantService.aktuellerKontext(erforderlicherNutzer());
     List<String> begriffe = begriff == null ? null : Arrays.asList(begriff);
+    List<String> felder = feld == null ? null : Arrays.asList(feld);
     return bamSucheService.suche(
-        mandant, BamSuchfilter.aus(begriffe, von, bis, modus, anwendungsuhr));
+        mandant, BamSuchfilter.aus(begriffe, felder, von, bis, modus, anwendungsuhr));
   }
 
   private AngemeldeterNutzer erforderlicherNutzer() {

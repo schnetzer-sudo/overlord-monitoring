@@ -17,11 +17,17 @@ import org.springframework.http.HttpStatus;
  * <p><b>Kein Feld für den Mandanten.</b> Er kommt ausschließlich aus der Sitzung (Regel M1); ein
  * Parameter dafür existiert nicht und darf nicht entstehen.
  *
- * @param begriffe mindestens einer, höchstens {@link #HOECHSTENS_BEGRIFFE}
- * @param fenster das Pflicht-Zeitfenster (Regel L1), Vorgabe {@link #FENSTER_VORGABE}
- * @param modus exakt oder über den Anfang des Werts, Vorgabe {@link Suchmodus#VORGABE}
+ * @param begriffe die BAM-Begriffe; zusammen mit {@code felder} mindestens einer, höchstens {@link
+ *     #HOECHSTENS_BEGRIFFE}
+ * @param felder die Feldbegriffe der Property-Suche (seit dem 08.09.2026, E‑106) — ein eigener
+ *     Parameter, damit nichts geraten werden muss (Regel Q4). Leer, wenn keiner genannt ist
+ * @param fenster das Pflicht-Zeitfenster (Regel L1), Vorgabe {@link #FENSTER_VORGABE} — <b>ein
+ *     Fenster für beide Begriffsarten</b> (E‑102: wie BAM, Vorgabe 30 Tage, Maximum ein Jahr)
+ * @param modus exakt oder über den Anfang des Werts, Vorgabe {@link Suchmodus#VORGABE}. <b>Er gilt
+ *     für die BAM-Begriffe</b>; Feldbegriffe werden immer exakt verglichen ({@link Feldbedingung})
  */
-public record BamSuchfilter(List<Suchbegriff> begriffe, Zeitfenster fenster, Suchmodus modus) {
+public record BamSuchfilter(
+    List<Suchbegriff> begriffe, List<Feldbegriff> felder, Zeitfenster fenster, Suchmodus modus) {
 
   /**
    * Wie viele Begriffe eine Suche höchstens trägt — <b>Schutzgeländer, keine fachliche Grenze</b>.
@@ -35,6 +41,12 @@ public record BamSuchfilter(List<Suchbegriff> begriffe, Zeitfenster fenster, Suc
    * <p><b>Und sie ist über fünf hinaus nicht gemessen.</b> M42 endet bei fünf Begriffen; acht ist
    * die Zahl, die das Geländer trägt, und sie steht dort nicht. Deshalb ein Geländer und keine
    * Zusage.
+   *
+   * <p><b>Seit dem 08.09.2026 zählt das Geländer BAM- und Feldbegriffe zusammen.</b> Ein
+   * Feldbegriff über eine Eigenschaft ist ein weiterer Join — auf {@code MessageProperty} statt auf
+   * {@code MessageBAM} —, und die Zahl der Join-Reihenfolgen wächst mit jedem Join, gleich welcher
+   * Tabelle. Gemessen ist für Feldbegriffe genau <b>einer</b> je Suche (M166); alles darüber trägt
+   * nur das Geländer.
    */
   public static final int HOECHSTENS_BEGRIFFE = 8;
 
@@ -84,6 +96,12 @@ public record BamSuchfilter(List<Suchbegriff> begriffe, Zeitfenster fenster, Suc
 
   public BamSuchfilter {
     begriffe = List.copyOf(begriffe);
+    felder = List.copyOf(felder);
+  }
+
+  /** Der Filter einer reinen BAM-Suche — der Pfad von Teil 2b, ohne Feldbegriffe. */
+  public BamSuchfilter(List<Suchbegriff> begriffe, Zeitfenster fenster, Suchmodus modus) {
+    this(begriffe, List.of(), fenster, modus);
   }
 
   /**
@@ -104,22 +122,47 @@ public record BamSuchfilter(List<Suchbegriff> begriffe, Zeitfenster fenster, Suc
    */
   public static BamSuchfilter aus(
       List<String> begriff, String von, String bis, String modus, Clock anwendungsuhr) {
+    return aus(begriff, null, von, bis, modus, anwendungsuhr);
+  }
+
+  /**
+   * Dasselbe mit den Feldbegriffen der Property-Suche.
+   *
+   * <p><b>Beide Listen zusammen</b> tragen die beiden Grenzen: mindestens ein Begriff — gleich
+   * welcher Art — und höchstens {@link #HOECHSTENS_BEGRIFFE}. Eine Suche allein über Felder ist
+   * zulässig; eine Suche ohne jeden Begriff ist {@code 400}, weil sie das ganze Fenster läse.
+   *
+   * @param feld die wiederholten {@code feld}-Parameter, je {@code <name>:<wert>}; {@code null}
+   *     oder leer, wenn keine Property-Suche gemeint ist — dann verhält sich der Endpunkt Zeichen
+   *     für Zeichen wie vor dem 08.09.2026
+   */
+  public static BamSuchfilter aus(
+      List<String> begriff,
+      List<String> feld,
+      String von,
+      String bis,
+      String modus,
+      Clock anwendungsuhr) {
 
     List<Suchbegriff> begriffe = begriffe(begriff);
-    if (begriffe.isEmpty()) {
+    List<Feldbegriff> felder = felder(feld);
+    if (begriffe.isEmpty() && felder.isEmpty()) {
       throw new FachlicheAusnahme(
           HttpStatus.BAD_REQUEST,
           "suchbegriff-fehlt",
           "Kein Suchbegriff",
-          "Gib mindestens eine Belegnummer an, in der Form typ:wert oder :wert.",
+          "Gib mindestens eine Belegnummer (typ:wert oder :wert) oder ein Feld (feldname:wert)"
+              + " an.",
           "Suche ohne einen einzigen brauchbaren Begriff");
     }
-    if (begriffe.size() > HOECHSTENS_BEGRIFFE) {
+    if (begriffe.size() + felder.size() > HOECHSTENS_BEGRIFFE) {
       throw new FachlicheAusnahme(
           HttpStatus.BAD_REQUEST,
           "zu-viele-suchbegriffe",
           "Zu viele Suchbegriffe",
-          "Es lassen sich höchstens " + HOECHSTENS_BEGRIFFE + " Belegnummern gleichzeitig suchen.",
+          "Es lassen sich höchstens "
+              + HOECHSTENS_BEGRIFFE
+              + " Begriffe gleichzeitig suchen — Belegnummern und Felder zusammen.",
           "Mehr als " + HOECHSTENS_BEGRIFFE + " Suchbegriffe angefragt");
     }
 
@@ -133,7 +176,28 @@ public record BamSuchfilter(List<Suchbegriff> begriffe, Zeitfenster fenster, Suc
             anwendungsuhr);
     pruefePraefixfenster(gewaehlt, fenster);
 
-    return new BamSuchfilter(begriffe, fenster, gewaehlt);
+    return new BamSuchfilter(begriffe, felder, fenster, gewaehlt);
+  }
+
+  /**
+   * Die Feldbegriffe in der Reihenfolge der Anfrage — dieselben Regeln wie bei {@link #begriffe}:
+   * Ein leerer Parameter fällt weg, ein Begriff mit Trenner und leerem Wert ebenfalls.
+   */
+  private static List<Feldbegriff> felder(List<String> roh) {
+    if (roh == null) {
+      return List.of();
+    }
+    List<Feldbegriff> felder = new ArrayList<>();
+    for (String eintrag : roh) {
+      if (eintrag == null || eintrag.isBlank()) {
+        continue;
+      }
+      Feldbegriff feld = Feldbegriff.ausParameter(eintrag);
+      if (feld != null) {
+        felder.add(feld);
+      }
+    }
+    return List.copyOf(felder);
   }
 
   /**

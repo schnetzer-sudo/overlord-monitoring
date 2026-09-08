@@ -65,7 +65,7 @@ class BamSucheKommabindungTest {
 
   /** Die Antwort trägt keine Zeitpunkte — dieser Test misst die Bindung und nicht die Ausgabe. */
   private static final BamSucheResponse LEER =
-      new BamSucheResponse(List.of(), List.of(), null, null, false, Suchmodus.EXAKT);
+      new BamSucheResponse(List.of(), List.of(), List.of(), null, null, false, Suchmodus.EXAKT);
 
   @Mock private BamSucheService bamSucheService;
   @Mock private MandantService mandantService;

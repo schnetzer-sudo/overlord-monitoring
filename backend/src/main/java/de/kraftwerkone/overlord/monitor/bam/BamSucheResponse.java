@@ -15,6 +15,10 @@ import java.util.List;
  * @param nachrichten die gefundenen Nachrichten, absteigend nach Zeitpunkt. <b>Immer vorhanden,
  *     leer statt fehlend</b>
  * @param begriffe die Begriffe mit ihren gesuchten Fassungen — <b>keine stille Korrektur</b>
+ * @param felder die Feldbegriffe der Property-Suche, wie sie verstanden wurden — je mit der Angabe,
+ *     ob als Spalte gesucht wurde. <b>Immer vorhanden, leer statt fehlend</b>; eine reine BAM-Suche
+ *     trägt hier eine leere Liste, und das ist die eine sichtbare Änderung an ihrer Antwort seit
+ *     dem 08.09.2026
  * @param von das tatsächlich verwendete Zeitfenster, Untergrenze. <b>Es steht in der Antwort und
  *     nicht nur in der Anfrage</b>, weil es nicht die Laufzeit verändert, sondern die
  *     <i>Antwort</i>: Beim schlimmsten gemessenen Wert findet ein Tagesfenster 279 von 234.159
@@ -32,6 +36,7 @@ import java.util.List;
 public record BamSucheResponse(
     List<BamTrefferResponse> nachrichten,
     List<BamBegriffResponse> begriffe,
+    List<FeldBegriffResponse> felder,
     Instant von,
     Instant bis,
     boolean abgeschnitten,
@@ -40,5 +45,6 @@ public record BamSucheResponse(
   public BamSucheResponse {
     nachrichten = List.copyOf(nachrichten);
     begriffe = List.copyOf(begriffe);
+    felder = List.copyOf(felder);
   }
 }
