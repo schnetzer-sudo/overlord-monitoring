@@ -852,6 +852,17 @@ sie ist die Antwort `200` mit **leerer Liste**, und die Oberfläche zeigt dann *
 Typwahl — kein Platzhalter, keine leere Liste. Dieselbe Regel wie bei der leeren Spalte in
 [`nachrichtenliste.md`](nachrichtenliste.md) §8.1.
 
+> ### ⚠️ Geändert am 08.09.2026 — Property-Suche, Teil 2
+>
+> **Der Endpunkt antwortet unverändert; der zweite Satz gilt für die Oberfläche nicht mehr.** Die
+> Auswahl neben dem Suchfeld liest seit Teil 2 der Property-Suche `GET /api/bam/suchfelder` und zeigt
+> **zwei Gruppen** — Belegarten und Felder. Sie erscheint, sobald **eine** der beiden Gruppen etwas
+> enthält, und die Feldgruppe ist für keinen Mandanten leer (die acht Typ‑0‑Einträge sind global).
+> Für `EDITIONLINGERI`, `SYSTEM` und `WOC` erscheint die Auswahl damit **doch**, nur ohne die Gruppe
+> „Belegarten"; eine leere Gruppe wird weggelassen, nicht als leere Überschrift gezeigt
+> ([`property-suche.md`](property-suche.md) §11.1). `GET /api/bam/typen` ruft die Oberfläche seit
+> Teil 2 nicht mehr; der Endpunkt bleibt bestehen (dort offener Punkt 5).
+
 **Kein `404`.** Der Aufrufer stellt eine Frage und benennt keine Ressource — dieselbe Lage wie bei
 der Suche selbst (§1).
 
@@ -992,6 +1003,10 @@ trägt zehn kuratierte Zeilen, aber nur **drei verschiedene** Sollängen, und au
 nach oben (M47). Die Auswahl erscheint **gar nicht**, wenn der Mandant keinen Typ konfiguriert hat
 (§10).
 
+> *Seit dem 08.09.2026 (Property-Suche, Teil 2) zeigt dieselbe Auswahl zwei Gruppen — Belegarten
+> und Felder — und erscheint, sobald eine davon etwas enthält* ([`property-suche.md`](property-suche.md)
+> §11.1, Korrekturkasten in §10 oben). Der typlose Eintrag bleibt und erreicht nie ein Feld.
+
 **Die gewählte Belegart und die begonnene Eingabe stehen nicht in der URL.** Sie beschreiben keinen
 Ausschnitt, sondern eine begonnene Eingabe — dieselbe Prüfung wie beim halb ausgefüllten freien
 Zeitfenster der Liste ([`frontend-grundlagen.md`](frontend-grundlagen.md) §8).
@@ -1032,6 +1047,12 @@ Marke wird kurz hervorgehoben, es entsteht keine zweite.
 **Der Schlüssel ist `(typ, wert)` und niemals der Wert allein** — bei 4,17 Prozent der Paare steht
 derselbe Wert unter mehreren Typen (M37). Er ist zugleich die Parameterform `<typ>:<wert>` und
 damit eindeutig: Der Typteil enthält nie einen Doppelpunkt, der erste ist also immer der Trenner.
+
+> *Seit dem 08.09.2026 (Property-Suche, Teil 2) stehen neben den BAM-Marken **Feld-Marken** mit dem
+> Schlüssel `(name, wert)`; der Markenschlüssel trägt die Art voran, das Geländer von acht zählt
+> beide Arten zusammen, und die Dublettenprüfung läuft über beide Arten hinweg*
+> ([`property-suche.md`](property-suche.md) §11.2). `components/marke.tsx` ist dabei unverändert
+> geblieben — es gibt weiterhin keine zweite Markengestalt.
 
 ### 11.3 Warum es für den doppelten Begriff eine eigene Naht gibt
 
@@ -1954,6 +1975,12 @@ Es erscheint genau dann, wenn **alle vier** zutreffen:
 > Eigenschaft des Markups und keine Zusage**, und bei der nächsten Umstellung wäre sie still weg.
 > Die vier Bedingungen stehen deshalb als **reine Funktion** (`zeigtPraefixAngebot`) und werden als
 > solche geprüft.
+
+> *Seit dem 08.09.2026 (Property-Suche, Teil 2) sind es **fünf**:* **mindestens ein BAM-Begriff in
+> der Antwort.** `modus` wirkt nur auf Belegnummern, Feldbegriffe werden immer exakt verglichen — bei
+> einer reinen Feldsuche verspräche der Knopf eine Wirkung, die es nicht gibt. Derselbe Fall wie die
+> vierte: in derselben Funktion geprüft, mit eigenem Test ([`property-suche.md`](property-suche.md)
+> §11.6).
 
 **Der Text nennt, was passiert, und nicht wie es heißt** — *„Soll nach Nummern gesucht werden, die
 damit anfangen?"* statt „Präfixsuche starten". Ein Fachwort im Knopf hilft dem Nutzer nicht, der

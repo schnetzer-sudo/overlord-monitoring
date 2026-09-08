@@ -16,6 +16,20 @@ Teil 3 (Oberfläche) gebaut wurde.
 > Statements in **§6** — darin der Jahresfall, der als einziger eine Entscheidung des Auftraggebers
 > auslösen konnte. **Was ausdrücklich nicht gebaut ist, steht in §9.**
 
+> ### 📌 Teil 2 — Korrektur, Oberfläche, Absprung, 08.09.2026
+>
+> **Drei Teile.** Erstens eine **Backend-Korrektur**: `Message.ProcessName` wird nicht mehr über
+> einen Join gesucht, sondern **vorab über die Stammdaten** zu Kennungen aufgelöst — die Form der
+> Nachrichtenliste, 3 ms statt 4.592 ms, Gleichheitsprobe bestanden; die Rücknahme der Bauvorgabe aus
+> Teil 1 steht als **datierter Korrekturblock in §10**. Zweitens die **Oberfläche** (§11): zwei
+> Gruppen im Suchfeld, Feld-Marken neben den BAM-Marken, ein Geländer für beide, `feld` in der URL,
+> die Trefferspalte, die bei reiner Feldsuche entfällt, und die fünfte Bedingung am Präfix-Angebot.
+> Drittens der **Absprung in den Prozessbaum** aus dem Detailpanel (§12, E‑103/E‑104). Tests in
+> §13, die Sichtprüfung in §14, Regelbezug und die offenen Punkte der Oberfläche in §15.
+>
+> **Die Abschnitte §1 bis §9 aus Teil 1 stehen unverändert**; wo Teil 2 sie berührt, steht ein
+> datierter Verweis daneben und keine stille Ersetzung.
+
 Sie beantwortet die Frage des typischen Nutzers in einer dritten Form: **Wer einen technischen
 Wert hat — eine Absender-Kennung, einen Dateinamen, eine Transaktionsnummer, eine Nachrichten- oder
 Prozesskennung —, findet die Nachrichten, auf denen er steht.** Nicht eine Belegnummer
@@ -63,7 +77,15 @@ als solcher).
 | **E‑106** *(neu)* | **Ein eigener Parameter `feld`, nicht der bestehende `begriff`.** Ein gemeinsamer Parameter müsste aus der Zeichenkette raten, ob `9018` ein BAM-Typ oder ein Feldname ist; Raten ist nach Abschnitt 4.4 der Projektbeschreibung und Regel Q4 ausgeschlossen. E‑99 ist eine Aussage über die **Fläche**, nicht über die Parameterform (§2.2) |
 | **E‑107** *(neu)* | **Die Wanduhr tritt neben das Profil** — Messkonvention in [`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) §7 (Punkt 158). Die Zahlen aller Runden bis M167 stehen unverändert |
 | **E‑108** *(neu)* | **Abschnitt 9 der Projektbeschreibung bleibt unangetastet.** Die Property-Suche wird vor der Inbetriebnahme gebaut und **nicht** unter „Enthalten" geführt — Entscheidung des Auftraggebers. Abschnitt 9 beschreibt damit nicht vollständig, was ausgeliefert wird (offener Punkt 4 in §9) |
-| ~~E‑97~~ | **Gegenstandslos, und der Grund ist korrigiert:** nicht weil die Suche in der Prozessansicht fehlt, sondern weil sie dort **hinausführt** — eine Marke wird nie *in* der Prozessansicht aktiv |
+| ~~E‑97~~ | **Gegenstandslos, und der Grund ist korrigiert:** nicht weil die Suche in der Prozessansicht fehlt, sondern weil sie dort **hinausführt** — eine Marke wird nie *in* der Prozessansicht aktiv. Das Feld steht in der Kopfzeile, die Suche navigiert auf ihre eigene Route. **Die Prozessansicht bekommt keine Filterleiste und keine Markenzeile** *(bestätigt in Teil 2)* |
+| **E‑109** *(Teil 2)* | **`Message.ProcessName` wird vorab über die Stammdaten aufgelöst** und dann als `ProcessID IN (…)` gesucht — die Form der Nachrichtenliste (§10). Entscheidung des Auftraggebers zu offenem Punkt 10; `SOSName`, `SOSID` und `Status` bleiben, wie sie sind |
+| **E‑110** *(Teil 2)* | **Bei einer Suche ohne Belegnummer entfällt die Spalte „Treffer"**, statt leer zu bleiben (§11.5). Entschieden an der Frage — dem Zitat der Antwort —, nicht an den Zellen |
+| **E‑111** *(Teil 2)* | **Der Absprung rundet das Fenster nach außen auf volle Stunden und deckelt es am Jahr**; liegt die Nachricht danach außerhalb, gibt es keinen Link (§12). Der Baum nimmt nur stundengenaue Fenster an (E‑95) — ein Link, der in einem anderen Fenster landet als versprochen, ist schlechter als kein Link |
+
+**Nummernvergabe in Teil 2:** E‑109 bis E‑111, ermittelt über den Höchstwert — höchste vorher
+vergebene Nummer **E‑108** (`perl -CSD` mit der Zeichenklasse aller vier Bindestriche über `docs/`
+und die Wurzeldateien, weil `\b` an U+2011 nicht greift), Gegenprobe an E‑105 (23 Treffer in fünf
+Dateien) und am bekannten Falschtreffer E‑780 (drei Treffer, alle in der Messdatei und hier).
 
 **Weiter entschieden, ohne E-Nummer:**
 
@@ -214,6 +236,11 @@ dem Auftrag:
 **Die Ableitung ergibt acht — genau die acht aus M155**, drei wörtlich, zwei umgestellt, einer
 umbenannt, zwei in anderen Tabellen. Keine Abweichung.
 
+> *Seit Teil 2 (08.09.2026):* Die Abbildung ist unverändert, aber **`Message.ProcessName` läuft
+> nicht mehr über einen Join im Kern**, sondern wird vorab über `Process` zu Kennungen aufgelöst
+> (E‑109, §10). Die Zielspalte bleibt `Process.ProcessName` — verglichen wird weiterhin gegen sie,
+> nur an einer anderen Stelle des Ablaufs.
+
 **Die Zuordnung ist eine Vermutung aus der Namensähnlichkeit, und sie steht so im Code.** M155 hat
 gemessen, dass jede der acht Spalten existiert und dass keiner der acht Namen in
 `MessageProperty` vorkommt — nicht, dass der Name die Spalte *meint*. Eine fachliche Bestätigung
@@ -310,6 +337,11 @@ Für die acht Namen aus §3 baut das Repository ein Prädikat auf der Spalte:
 `Message.SOSName` je einen Join unter eigenem Alias (`feld_process`, `feld_sos`), weil `Process` in
 derselben Abfrage bereits zweimal steht: für die Mandantenkette und, über der Deckelung, für den
 Anzeigenamen.
+
+> *Seit Teil 2 (08.09.2026) gilt der Satz nur noch für `Message.SOSName`.* `feld_process` gibt es
+> nicht mehr; `Message.ProcessName` wird vor dem Kern zu `ProcessID`s aufgelöst und im Kern als
+> `ProcessID IN (…)` gesucht — **§10**, E‑109. Der Absatz bleibt stehen, weil er den Stand von
+> Teil 1 beschreibt, gegen den §10 misst.
 
 **`Message.Status` vergleicht gegen den Rohwert** und nicht gegen eine Einordnung. Der Nutzer hat
 einen konkreten Wert getippt, und die Suche findet genau ihn; die Übersetzung Einordnung →
@@ -525,6 +557,12 @@ Kennung als Konstante.
 > suchte dann `ProcessID IN (…)`, wäre das die Form aus der vierten Zeile. Für `SOSName` hülfe das
 > nicht: `SOSID` selbst liest das ganze Fenster, weil `Message` keinen Index darauf trägt. **Das ist
 > gemessen, nicht gebaut** — gebaut ist der Join, wie beauftragt.
+>
+> *Nachtrag Teil 2 (08.09.2026):* **Jetzt ist es gebaut** — Entscheidung des Auftraggebers zu
+> Punkt 10, E‑109, gemessen in **§10**: 3,041 ms über 30 Tage und 3,058 ms über ein Jahr bei
+> `NEXANS`, Gleichheitsprobe gegen die Join-Form bestanden. Die Zeile `Message.ProcessName` in der
+> Tabelle oben beschreibt seither den **Stand von Teil 1**; `Status`, `SOSID` und `SOSName` stehen
+> unverändert.
 
 > **Belegvermerk** (Regel L10).
 > *Gemessen ist:* acht Felder über zwei Fenster bei `NEXANS`, je mit dem häufigsten Wert des
@@ -762,13 +800,570 @@ delegiert mit leerer Feldliste; ohne Feldbegriffe ruft der Service genau diese M
     in die temporäre Tabelle geht. **Entscheidung des Auftraggebers, nicht dieses Teils:** so lassen
     (der Abbruchpfad greift, über 30 Tage antworten alle acht), ein Deckel — mit der Kollision zweier
     Höchstfenster in einem Feld (E‑99) —, oder die Felder aus dem Angebot. Gebaut ist nichts.
+    *Entschieden am 08.09.2026 (Teil 2):* `Message.ProcessName` wird umgebaut (E‑109, §10), die
+    drei übrigen bleiben — für sie ist der Abbruch über ein Jahr der Regelfall und der Rat, den
+    Zeitraum zu verkleinern, die richtige Auskunft (§11.7).
 11. **`Message.ProcessName` vorab in Kennungen auflösen** — die Form der Nachrichtenliste
     ([`nachrichtenliste.md`](nachrichtenliste.md) §5) — machte aus 4.592 ms die 3 ms von
     `Message.ProcessID` (§6.4), weil die Mandantenkette dann zur Konstante wird. Gemessen an der
     Kennungsform, nicht gebaut; für `SOSName` hülfe es nicht. Hängt an Punkt 10.
+    *Erledigt am 08.09.2026 (Teil 2):* gebaut und gemessen, **§10**.
 12. **Ein Feldbegriff, den kein Treffer erfüllt, kostet den vollen Wertbereich** (§6.5: 1,35 s für
     eine leere Antwort bei `SNDPRN` und `Status`). Das ist der Preis der Verundung über den
     Wertindex und keine Fehlbedienung; ob die Oberfläche davor warnt, ist Teil 2.
 
 > **Die offenen Punkte der Oberfläche entstehen in Teil 2** und gehören dann neben die Ansicht, die
-> sie betreffen.
+> sie betreffen — sie stehen in **§15**.
+
+---
+
+## 10. Korrektur — `Message.ProcessName` über die Stammdaten (E‑109)
+
+> ### ⚠️ Korrekturblock vom 08.09.2026 — die Bauvorgabe aus Teil 1 wird zurückgenommen
+>
+> **Der Auftrag zu Teil 1 sagte:** *„Zwei von ihnen brauchen einen Join (`Process`, `SOS`)."* Für
+> `Process` war das die schlechtere Vorgabe, und sie wird hiermit **zurückgenommen** — nicht still
+> ersetzt. Gebaut war der Join, wie beauftragt (§4, `feld_process`), und §6.4 hat gemessen, was er
+> kostet: **4.592 ms** über 30 Tage und **Abbruch in sechs von sechs Läufen** über ein Jahr, während
+> `Message.ProcessID` — **dieselbe Menge** — **3 ms** kostet. Der Unterschied ist allein, wo die
+> Mandantenkette ausgewertet wird: Steht die Kennung als Konstante im Statement, wird
+> `EXISTS (… WHERE ProcessID = ?)` zur Konstante und der Zeitindex nur bis zur Deckelung gelesen;
+> kommt der Name über den Join, läuft die Kette je Zeile und das ganze Fenster geht in die
+> temporäre Tabelle.
+>
+> **Entscheidung des Auftraggebers zu offenem Punkt 10:** `Message.ProcessName` wird umgebaut
+> (E‑109); `Message.SOSName`, `Message.SOSID` und `Message.Status` bleiben, wie sie sind. Die
+> Zeilen zu `ProcessName` in §3, §4 und §6.4 beschreiben seither den Stand von Teil 1 und tragen je
+> einen datierten Verweis hierher.
+
+### Was gebaut ist
+
+**Dieselbe Form, die die Nachrichtenliste für ihren Freitext seit Schritt 4 verwendet**
+([`nachrichtenliste.md`](nachrichtenliste.md) §5, *„niemals gegen `Message`"*): Der Name wird
+**vor** dem Kern in den Stammdaten aufgelöst, der Kern filtert über die Kennung.
+
+```sql
+-- (1) die Auflösung: nur Process und ProjectMandant, exakt, mit Mandantenfilter
+select distinct `Process`.`ProcessID` from `Process`
+  join `ProjectMandant` on `ProjectMandant`.`ProjectID` = `Process`.`ProjectID`
+ where `ProjectMandant`.`MandantID` = ? and `Process`.`ProcessName` = ?
+ order by `Process`.`ProcessID`
+
+-- (2) der Kern, unverändert bis auf das Prädikat: statt feld_process.ProcessName = ?
+ where (`Message`.`ProcessID` in (?) and `Message`.`MessageLastUpdate` >= ? … and exists (… Mandantenkette …))
+```
+
+| | |
+|---|---|
+| **Exakt, kein `LIKE`** | Anders als der Freitext der Liste: Der Nutzer hat einen konkreten Namen gewählt, und die Suche findet genau ihn. Keine Maskierung nötig, weil kein Muster |
+| **Mandantenfilter auch in der Auflösung** | aus demselben Grund wie in der Liste — nicht als Sicherheitsgrenze (die trägt der Kern, Regel M3), sondern damit ein Prozessname eines fremden Mandanten gar nicht erst zu einer Kennung wird. `FeldSucheIsolationDbIT` (Fall 5) prüft beide Pfade |
+| **Trifft der Name nichts, wird `Message` nicht angefasst** | Die Verundung ist leer, die Antwort `200` mit leerer Liste — **ohne** ein Statement gegen `Message`, auch nicht neben einer Belegnummer. `FeldSucheStatementsTest` zählt die Statements (Regel T1: Zugriffe, nicht Zeit) |
+| **Derselbe Name zweimal** | eine Auflösung, zwei Prädikate — dieselbe Verundung wie vorher beim Join, nur ohne ihn. Zwei verschiedene Namen: zwei Auflösungen, zwei Prädikate, leer bei disjunkten Kennungen |
+| **Mehrere Kennungen zu einem Namen** | alle in der `IN`-Liste, **keine Deckelung**. Die Liste ist durch die Tabelle begrenzt (1.503 Zeilen in `Process`, davon ein Bruchteil je Mandant); eine Deckelung änderte still die Treffermenge |
+| **Bei genau einer Kennung** | macht MariaDB aus `IN (?)` ein `= ?`, und die Kette wird zur Konstante — die Form aus der vierten Zeile von §6.4. Gemessen ist genau dieser Fall (unten) |
+| **`feld_process` gibt es nicht mehr** | `feld_sos` bleibt, weil derselbe Umbau für `SOSName` nicht hülfe: `Message` trägt keinen Index auf `SOSID`, die Kennung liest das Fenster ebenso (§6.4). Einen Index anlegen dürfen wir nicht — `GlassfishDB` ist lesend (S1) |
+
+Der BAM-Pfad ist unberührt: `BamPfadGleichheitTest` rendert weiterhin Zeichen für Zeichen den
+Abzug vom 08.09.2026 vor der ersten Codeänderung (§8), alle fünf Fälle grün.
+
+### Gemessen (Regel L7) — `scripts/messung-property-suche/p5-prozessname.sql`
+
+Rahmen wie §6.1: Testkopie (`@@global.read_only` = 1), Benutzer `monitor_read`, Serverzeit
+`15:27:18` bis `15:27:25`, zwei Sitzungen nacheinander (`p5a-nexans.sql`, `p5b-suttons.sql` setzen
+`@mandant` und laden dasselbe Skript). **Die beiden Statements sind von jOOQ gerendert**
+(`MockConnection`, `STATIC_STATEMENT`) und Zeichen für Zeichen die des Codes; der Kern steht in der
+Hülle `SELECT COUNT(*), MAX(CHAR_LENGTH(ProcessName)) FROM (…)` wie in §6, die Zeitpunkte als
+Literale wie in `p3-typ0.sql`. Prüfwert je Sitzung: der **häufigste Prozessname des 30‑Tage-Fensters
+des Mandanten**, hergeleitet wie in §6.4 und nur als Länge ausgegeben (17 Zeichen bei `NEXANS`, 30
+bei `SUTTONS`); **beide Namen tragen beim Mandanten genau eine Kennung.** Fenster wie §6: 30 Tage
+ab `2025-11-30`, ein Jahr ab `2024-12-30`, Ende `2025-12-30 00:00:00` einschließlich. Wanduhr
+(`SYSDATE(6)`), Aufwärmlauf und fünf Läufe, gewertet der Bestwert der Läufe 2 bis 6, das Profil
+daneben; Eichung `SELECT 1`: 0,748 ms (`NEXANS`), 0,995 ms (`SUTTONS`).
+
+| Mandant | Statement | Wanduhr, beste von fünf | Profil | Zeilen | Plan |
+|---|---|---:|---:|---:|---|
+| `NEXANS` | (1) Auflösung | **2,836 ms** | 2,016 ms | 1 Kennung | `ProjectMandant` `ref` `ProjectMandant_Mandant_idx` (17) → `Process` `ref` `Process_ProjectFK` (5); `Using temporary; Using filesort` für `DISTINCT` und `ORDER BY` |
+| `NEXANS` | (2) Kern, 30 Tage | **3,041 ms** | 2,187 ms | 51 | `mandanten_process` **`const`**, `ProjectMandant` **`const`**, `Message` `range` `MessageLastUpdateIDX` (409.758 geschätzt), **kein `filesort`**; 1.634 `tmp_write` |
+| `NEXANS` | (2) Kern, **ein Jahr** | **3,058 ms** | 2,152 ms | 51 | wie 30 Tage, 1.780.243 geschätzt, 2.266 `tmp_write` |
+| `SUTTONS` | (1) Auflösung | **1,497 ms** | 0,661 ms | 1 Kennung | wie oben, `ProjectMandant` 1 Zeile |
+| `SUTTONS` | (2) Kern, 30 Tage | **24,844 ms** | 23,671 ms | 51 | Zeichen für Zeichen derselbe Plan wie bei `NEXANS` |
+| `SUTTONS` | (2) Kern, **ein Jahr** | **25,254 ms** | 23,976 ms | 51 | wie 30 Tage |
+
+**Das Fenster spielt keine Rolle mehr** — 3,041 gegen 3,058 ms, 24,8 gegen 25,3 ms —, weil der
+Zeitindex absteigend gelesen wird, bis 51 Zeilen des Prozesses beisammen sind, und die Kette als
+Konstante im Plan steht. **Gegen Teil 1:** 4.592,376 ms → 3,041 ms über 30 Tage (Faktor 1.510),
+Abbruch → 3,058 ms über ein Jahr. **Der kleine Mandant ist langsamer als der große**, und das ist
+kein Widerspruch: Sein häufigster Prozess trägt 2.932 Nachrichten im Fenster gegen 99.290 bei
+`NEXANS`; je seltener der Prozess, desto weiter läuft die absteigende Indexlese, bis 51 Treffer
+stehen. Die Handler-Zähler zeigen den Unterschied nicht — `read_key` 4, `read_next` 0,
+`read_rnd_next` 1.640, `tmp_write` 1.634 in beiden Sitzungen gleich —, weil die absteigende Lese
+über `read_prev` läuft und der nicht erhoben ist. Die Wanduhr trägt ihn.
+
+**Die Auflösung kostet 1,5 bis 2,8 ms und liest nur die Stammdaten** — 750 `read_next` bei `NEXANS`
+(17 Projekte, je bis zu fünf Prozesse), 18 bei `SUTTONS`. Zusammen mit dem Kern liegt die neue Form
+bei `NEXANS` unter 6 ms für beide Fenster.
+
+### Die Gleichheitsprobe — dieselbe Treffermenge, alt gegen neu
+
+Vorregistriert: Ein Unterschied ist ein Befund und kein Rundungsfehler; dann wird gemeldet und nicht
+weitergebaut. Verglichen über 30 Tage, je Mandant, **gedeckelt wie im Code** (die 51 Zeilen des
+Kerns) und **ungedeckelt über das ganze Fenster**, als Zahl und als reihenfolgeunabhängige
+Prüfsumme der Kennungen (`BIT_XOR(CRC32(MessageID))`):
+
+| Mandant | Form | gedeckelt: Zeilen / Prüfsumme | ungedeckelt: Zeilen / Prüfsumme |
+|---|---|---|---|
+| `NEXANS` | alt (Join `feld_process`) | 51 / 1016523881 | 99.290 / 2655921933 |
+| `NEXANS` | **neu** (`ProcessID IN`) | **51 / 1016523881** | **99.290 / 2655921933** |
+| `SUTTONS` | alt | 51 / 3586533450 | 2.932 / 177742654 |
+| `SUTTONS` | **neu** | **51 / 3586533450** | **2.932 / 177742654** |
+
+**Alle vier Paare gleich.** Die Probe ist ein Mengenvergleich und kein Laufzeitvergleich — ihre
+Statements wählen nur die Kennung und tragen keine Beschriftung; dass die alte Form dort 1.077 statt
+4.592 ms kostet, sagt nichts über §6.4 aus.
+
+> **Belegvermerk** (Regel L10).
+> *Gemessen ist:* die neue Form für den häufigsten Prozessnamen je Mandant über 30 Tage und ein
+> Jahr, bei `NEXANS` und `SUTTONS`, mit **genau einer Kennung je Name**; die Gleichheit der
+> Treffermenge über 30 Tage für dieselben zwei Namen.
+> *Behauptet wird:* dass `Message.ProcessName` seit Teil 2 die Form der Kennung kostet und dieselbe
+> Menge findet.
+> **Die Lücke:** Ein Name, der beim Mandanten **mehrere** Kennungen trägt, rendert `IN (?, ?)`,
+> und ob die Kette dann noch zur Konstante wird, ist nicht gemessen — die Verundung bleibt
+> richtig, der Plan könnte ein anderer sein (offener Punkt 13 in §15). Und die Gleichheit ist für
+> zwei Werte belegt, beide unter der Kollation der Spalte verglichen; ein Name in anderer
+> Schreibweise findet in beiden Formen dasselbe, weil beide gegen `Process.ProcessName` vergleichen
+> — das ist eine Aussage über die Form, keine gemessene.
+
+---
+
+## 11. Die Oberfläche
+
+Route `/suche`, Feld in der Kopfzeile, Feature `features/nachrichten` — **die gebaute Fläche aus
+[`bam-suche.md`](bam-suche.md) §11, erweitert, nicht ersetzt.** Was dort steht, gilt weiter; hier
+steht nur, was dazukommt oder sich ändert.
+
+```
+features/nachrichten/
+├─ api.ts                       + Suchfelder, SuchfeldBam, SuchfeldFeld, FeldBegriffTreffer,
+│                                 holeSuchfelder; BamSuchergebnis.felder — holeBamTypen entfällt
+├─ suche.ts                     + Feldbegriff, Suchmarke, ausFeldParameter, parseAsFelder,
+│                                 markenschluessel, markenAus, alsZustand, zeigtTrefferspalte,
+│                                 begriffeInAntwort; ergaenze über Marken; fünfte Bedingung
+├─ hooks.ts                     useSuchfelder statt useBamTypen; useSuchzustand liefert marken,
+│                                 felder, setzeMarken
+└─ components/
+   ├─ suchfeld.tsx              zwei Gruppen im Auswahlmenü, Platzhalter „Wert suchen" bei Feld
+   ├─ marken-leiste.tsx         Marken beider Arten, Schlüssel mit Art voran
+   ├─ treffer-tabelle.tsx       mitTrefferspalte
+   └─ suche-ansicht.tsx         Felder im Leerzustand, Abbruchtext mit Feld, Trefferspalte,
+                                 Absprungfenster aus der Antwort
+components/marke.tsx            unverändert — keine zweite Markengestalt
+```
+
+### 11.1 Das Angebot im Feld
+
+Die Auswahl neben dem Suchfeld liest `GET /api/bam/suchfelder` (§2.1) und zeigt **zwei Gruppen**
+in einem Menü: *Belegarten* aus `bam`, *Felder* aus `felder`, je mit Überschrift und Trennlinie.
+
+- **Feldnamen unverändert** (E‑105), in fester Laufweite: Wer `Message.SNDPRN` nicht versteht,
+  sieht `Message.SNDPRN`. Keine Beschriftung, keine Übersetzung, kein Erklärtext daneben. Übersetzt
+  sind allein die beiden Gruppenüberschriften und die Beschriftung des Schalters (*„Feld: …"*).
+- **Die Ordnung ist die des Endpunkts.** Die Belegarten in der Ordnung des Altsystems, die Felder
+  alphabetisch — die Tabelle hat keine Sortierspalte, und die Oberfläche sortiert nicht nach.
+- **Der typlose Eintrag bleibt und behält seinen Platz** — zuerst, außerhalb beider Gruppen, mit
+  der Beschriftung *„Alle Belegarten"*: Ein Wert ohne Auswahl sucht Belegnummern unter jeder
+  Belegart und **erreicht nie ein Feld** (E‑100). Ein Feld muss gewählt sein, bevor eine Feld-Marke
+  entsteht; deshalb kann die Oberfläche `feldname-fehlt` und `feldbegriff-ohne-trenner` nicht
+  erzeugen.
+- **Ist ein Feld gewählt, sagt der Platzhalter „Wert suchen"** statt „Belegnummer suchen" — die
+  zweite Beschriftung wäre dann eine falsche Auskunft. Das Label für Vorleseprogramme trägt den
+  Feldnamen.
+- **Nur, was das Angebot dieses Mandanten kennt, ist wirksam.** Die Auswahl liegt im
+  Komponentenzustand und überlebt einen Mandantenwechsel; zeigt sie danach auf einen Typ oder ein
+  Feld, das es hier nicht gibt, gilt „keine Auswahl" — sichtbar am Schalter und beim Abschicken.
+
+> **Eine bestehende Verhaltensregel ändert sich, und das ist zu benennen.** Bis Teil 2 erschien die
+> Auswahl **gar nicht**, wenn der Mandant keine Belegart konfiguriert hatte
+> ([`bam-suche.md`](bam-suche.md) §10). **Sie erscheint jetzt, sobald eine der beiden Gruppen etwas
+> enthält** — und die Feldgruppe ist für keinen Mandanten leer, weil die acht Typ‑0‑Einträge
+> global sind (M154). Für `EDITIONLINGERI`, `SYSTEM` und `WOC` erscheint sie damit doch, nur ohne
+> die Gruppe *Belegarten*; für neun Mandanten enthält die Feldgruppe ausschließlich Typ‑0‑Einträge.
+> **Eine leere Gruppe wird weggelassen**, nicht als leere Überschrift gezeigt. Der Korrekturkasten
+> steht in `bam-suche.md` §10 und §11.1.
+
+**`GET /api/bam/typen` ruft die Oberfläche nicht mehr.** Seine Antwort steckt Zeichen für Zeichen in
+der Gruppe `bam` des neuen Endpunkts; zwei Aufrufe auf jeder Seite für dieselbe Liste wären einer zu
+viel. Der Endpunkt bleibt bestehen (§9, Punkt 5 — der dort offene Ablösefall ist damit näher, nicht
+entschieden). Das Angebot wird wie bisher lange gehalten (15 Minuten) und beim Mandantenwechsel mit
+dem ganzen Zwischenspeicher geleert.
+
+**Der Leerzustand nennt die Felder des Mandanten** unter den Belegarten, mit demselben Satzbau und
+derselben Regel: nur, was nachweislich für diesen Mandanten gilt, und keine leere Liste. Der Satz
+dazu nennt die Weiche aus E‑100 — ohne gewähltes Feld wird nie ein Feld durchsucht.
+
+### 11.2 Die Marken
+
+`components/marke.tsx` ist unverändert — **es gibt keine zweite Markengestalt im Projekt.** Geändert
+ist, was eine Marke beschriftet und was ihr Schlüssel ist:
+
+| | Schlüssel | Beschriftung |
+|---|---|---|
+| BAM | `bam:` + `<typ>:<wert>` — die Parameterform, unverändert | wie bisher: Belegart, dahinter der Wert |
+| Feld | `feld:` + `<name>:<wert>` | der Name unverändert (gedämpft), dahinter der Wert in fester Laufweite |
+
+**Der Schlüssel trägt die Art voran**, und das ist kein Schmuck: `9012:4711` kann eine Belegart mit
+Wert oder ein Feldname mit Wert sein. Ohne die Art wären beide derselbe React-Schlüssel — eine
+Meldung in der Konsole und sichtbar nichts; `tests/suche-marken.test.tsx` rendert genau diesen Fall
+und besteht, weil kein `console.error` fällt.
+
+- **Das Geländer von acht zählt beide Arten zusammen.** Das Backend tut es auch (§2.2); ein
+  Frontend, das mehr zuließe, führte in ein `400`. Bei acht ist `+` gesperrt, mit der bekannten
+  Begründung über der Liste.
+- **Ein doppelter Begriff wird nicht abgelegt, und die Prüfung läuft über beide Arten hinweg:** Eine
+  BAM-Marke und eine Feld-Marke sind nie Dubletten voneinander, zwei Feld-Marken mit gleichem Namen
+  und Wert schon. Die vorhandene Marke hebt sich hervor, wie bisher.
+- **Geteilt wird am ersten Doppelpunkt**, wie beim BAM-Parameter. Alles dahinter ist Wert; ein
+  Feldname trägt keinen Doppelpunkt (Konfiguration mit vierzehn Zeilen, M161).
+- **Jede Änderung an den Marken setzt auf `exakt` zurück** — beim Hinzufügen wie beim Entfernen,
+  gleich welcher Art, aus dem Grund aus [`bam-suche.md`](bam-suche.md) §23.
+
+### 11.3 Route und URL-Zustand
+
+`feld` ist ein **wiederholbarer** Parameter neben `begriff`, in derselben Form wie am Endpunkt.
+Gelesen wird über dieselben Parser wie am Feld (`parseAsFelder` neben `parseAsBegriffe`), damit das
+Geländer greift, sobald es greifen muss; der Parser ist **strenger als das Backend, in dieselbe
+Richtung**: Was dort `feldname-fehlt` oder `feldbegriff-ohne-trenner` wäre, wird hier übergangen.
+
+**Die Marken über der Liste werden aus beiden Parametern rekonstruiert** — erst die Belegnummern,
+dann die Felder. Die URL trägt zwei getrennte Parameter, und die Reihenfolge *zwischen* den Arten
+steht in keinem von beiden; innerhalb einer Art bleibt sie, wie getippt. Das Backend verundet
+ohnehin und ordnet den Einstieg selbst (kein `STRAIGHT_JOIN`).
+
+**Die begonnene Eingabe und die gewählte Belegart oder das gewählte Feld stehen nicht in der URL** —
+dieselbe Prüfung wie heute für die Belegart ([`frontend-grundlagen.md`](frontend-grundlagen.md) §8):
+Sie beschreiben eine begonnene Eingabe, keinen Ausschnitt.
+
+**Ohne `feld` ist die Abfrage einer reinen BAM-Suche Zeichen für Zeichen die von Teil 3.**
+`tests/suche.test.ts` hält es fest; am Backend hält es `BamPfadGleichheitTest`.
+
+### 11.4 Über der Liste — und eine gemeldete Abweichung vom Auftrag
+
+> **Der Auftrag sagte in §3.4:** *„Die Marken kommen aus `begriffe` und `felder` der Antwort, nicht
+> aus der URL."* **Und in §3.3:** *„Die Marken über der Liste werden aus beiden Parametern
+> rekonstruiert."* Beides zugleich geht nicht, und die Datei entscheidet: [`bam-suche.md`](bam-suche.md)
+> §11 lässt Marken und Zeitfenster **in jedem Zustand** stehen, weil sie der Weg aus einem leeren
+> Ergebnis heraus sind — auch beim Abbruch, wo es keine Antwort gibt. Kämen die Marken aus der
+> Antwort, verschwänden sie genau dann, wenn der Nutzer eine entfernen muss.
+>
+> **Gebaut ist deshalb:** Die **Marken** kommen aus der URL (§3.3). Das **Zitat der Antwort** —
+> `begriffe` und `felder` — trägt alles, was über der Liste *über die gelaufene Suche* aussagt:
+> die Zahl der Begriffe für die Nulltreffer-Zeile, die Frage, ob eine Belegnummer dabei war
+> (Trefferspalte, fünfte Bedingung), und die Varianten. Gemeldet als Abweichung.
+
+**`felder` ist immer vorhanden, leer statt fehlend** (§2.2), und die Oberfläche prüft nicht auf
+Abwesenheit, sondern zählt (`begriffeInAntwort`): Die Nulltreffer-Zeile *„Mit diesem Begriff: 0.
+Ohne ihn: 12."* vergleicht die vorige Runde jetzt über beide Arten — eine Feld-Marke, die auf null
+führt, bekommt dieselbe Zeile wie eine Belegnummer.
+
+### 11.5 Die Trefferspalte bei reiner Feldsuche (E‑110)
+
+`nachrichten[].treffer` enthält **ausschließlich BAM-Treffer**. Bei einer Suche allein über Felder
+ist sie in jeder Zeile leer — richtig so: Ein Feldtreffer ist der eingegebene Wert selbst und steht
+als Marke über der Liste.
+
+**Entscheidung: Die Spalte entfällt**, sie bleibt nicht leer. Eine Überschrift *Treffer* über
+fünfzig leeren Zellen wäre keine Auskunft, sondern ein Rätsel; ohne sie bekommt der Ablauf ihre
+Breite, und Zeitpunkt, Status, Kette bleiben, wo sie sind. Bei einer **gemischten** Suche trägt jede
+Zeile einen BAM-Treffer — sie muss jede Belegnummer erfüllen —, und die Spalte sagt wie bisher,
+**worauf** die Nummer getroffen hat.
+
+**Entschieden wird an der Frage, nicht an den Zellen:** `zeigtTrefferspalte` liest, ob die Antwort
+eine Belegnummer zitiert (`begriffe.length > 0`), nicht, ob die Zellen leer sind. Ob Zellen leer
+sind, hängt an den Daten; ob eine Belegnummer gefragt war, an der Frage — und eine Tabelle, die je
+nach Daten ihre Gestalt wechselt, ist keine. Als reine Funktion, mit Test; dazu der gerenderte
+Baum, der die **Abwesenheit** von Überschrift und Zelle nachweist (§13).
+
+### 11.6 Der Präfix-Knopf bei reiner Feldsuche
+
+`modus` wirkt **nur auf Belegnummern**; Feldbegriffe werden immer exakt verglichen (§2.2, §4). Ein
+Knopf, der bei reiner Feldsuche erschiene, verspräche eine Wirkung, die es nicht gibt.
+
+`zeigtPraefixAngebot` hat deshalb eine **fünfte Bedingung: mindestens ein BAM-Begriff in der
+Antwort.** Sie steht in derselben reinen Funktion wie die vier aus [`bam-suche.md`](bam-suche.md)
+§23 und hat einen eigenen Test — derselbe Fall wie die vierte: Sie ergäbe sich auch aus der Gestalt
+der Marken, aber das wäre eine Eigenschaft des Markups und keine Zusage. Gezählt werden die
+Belegnummern **der Antwort**, weil das Angebot zu der Suche gehören muss, die tatsächlich leer
+ausgegangen ist.
+
+Bei einer **gemischten** Suche erscheint der Knopf weiterhin — und wirkt dann auf die Belegnummern,
+während die Feldbegriffe exakt bleiben. Das ist der Rückfall aus offenem Punkt 3 in §9; ob er die
+richtige Antwort ist, bleibt offen (§15).
+
+### 11.7 Abbruch, Fehlerfälle, Leerzustand
+
+- **Der Abbruchpfad** `400 suche-abgebrochen` greift auch für Feldbegriffe — und für
+  `Message.Status`, `Message.SOSID` und `Message.SOSName` über ein Jahr ist er **der Regelfall und
+  nicht die Ausnahme** (§6.4: 24 von 24 Abbrüchen). Der Satz über der Liste wählt deshalb bei
+  Feldbegriffen einen anderen Rat: *„Verkleinere den Zeitraum — bei Feldern wie Status oder
+  Ablaufname ist das über ein Jahr der Regelfall."* Eine zweite Belegnummer wäre dort eine Antwort
+  auf eine andere Frage. Entschieden am Zustand der URL, weil es beim Abbruch keine Antwort gibt;
+  **übersetzt wird weiterhin über den `type`**, welcher von zwei Sätzen erscheint, entscheidet die
+  Ansicht ([`bam-suche.md`](bam-suche.md) §11.7). Kein „Erneut versuchen", kein zweiter
+  Problemtyp.
+- **Zwei neue Problemtypen**, `feldname-fehlt` und `feldbegriff-ohne-trenner`, stehen im
+  Fehlerkatalog (`texte.fehler`) mit den Texten des Backends. **Die Oberfläche kann sie nicht
+  erzeugen** — ein Feld muss gewählt sein, bevor eine Feld-Marke entsteht, und der Parser übergeht
+  eine von Hand gebaute Adresse ohne Namen. Die Behandlung ist trotzdem da: Der allgemeine
+  Fehlerbaustein übersetzt über den `type`.
+- **Zwei erweiterte Texte:** `suchbegriff-fehlt` und `zu-viele-suchbegriffe` stehen mit den Texten
+  des Backends im Katalog und benennen beide Begriffsarten. Nicht neu formuliert.
+- **Der Leerzustand** nennt neben den Belegarten die Felder des Mandanten (§11.1); die übrige
+  Hilfe ist unverändert.
+
+---
+
+## 12. Der Absprung in den Prozessbaum (E‑103, E‑104, E‑111)
+
+**Wo:** im **Detailpanel** der Nachricht, unter der Beschreibungsliste des Kopfs — nicht als
+Kontextmenü, nicht als Spalte in der Liste. Grund: Tastatur- und Berührungserreichbarkeit, dieselbe
+Disziplin wie bei den Berührungsflächen des Baums; der Verweis trägt `min-h-beruehrung` und einen
+Fokusring. **Es ist ein echter Verweis** (`next/link`): mit der mittleren Maustaste zu öffnen, zu
+kopieren, per Tab erreichbar.
+
+**Wohin:** die bestehende Route, unverändert —
+
+```
+/prozesse?von=<ISO,UTC>&bis=<ISO,UTC>&prozess=<ProcessID>&nachricht=<MessageID>
+```
+
+Der aufgeklappte Partner steht **nicht** in der URL; er ergibt sich über `pfadZuProzess` aus dem
+gewählten Prozess ([`process-view.md`](process-view.md) §15). Gebaut über `alsSuchparameter` der
+Prozessansicht, damit die Adresse dieselbe Gestalt hat wie die, die sie selbst schreibt, und derselbe
+Parser sie liest. **Es ist ein Link und kein Bau** — an der Prozessansicht ist nichts geändert.
+
+### Die Prüfung, die vor dem Bau stand: nimmt die Prozessansicht ein freies `von`/`bis` an?
+
+**Ja, seit 10c‑4b** ([`process-view.md`](process-view.md) §37–§41) — mit zwei Bedingungen, die
+den Absprung prägen: **Ein Zeitpunkt muss auf einer vollen Stunde der Anwendungszone liegen**, sonst
+`zeitfenster-zu-genau` (E‑95, abgewiesen statt gerundet); und `bis` ist dort die **letzte enthaltene
+Stunde** (E‑94), die Jahresgrenze rechnet gegen das ausschließende Ende. Das Fenster der Suche ist
+dagegen sekundengenau — sein `bis` ist die Anwendungsuhr.
+
+### Das Zeitfenster (E‑104) — und die Rundung (E‑111)
+
+Der Absprung reicht **immer ein absolutes `von`/`bis`** weiter, nie den relativen Modus: Die
+relativen Zeiträume von Liste und Baum fallen paarweise nicht zusammen (`24h`/`7d`/`30d` gegen
+`48H`/`30T`/`12M`), und ein durchgereichtes `24h` ließe den Baum ein anderes Fenster wählen als das,
+aus dem man kommt.
+
+**Gerundet wird nach außen auf volle Stunden** (`prozessansicht.ts` `absprungfenster`): `von` auf
+die volle Stunde davor, `bis` auf die volle Stunde, in der es liegt. Das ist das kleinste Fenster,
+das der Baum annimmt und das das Herkunftsfenster ganz enthält; es ist an jedem Ende **höchstens
+59 Minuten 59 Sekunden weiter**. Die Rundung setzt volle Stunden in UTC voraus — die Anwendungszone
+`Europe/Berlin` hat einen ganzstündigen Versatz, dort fallen die Stundengrenzen mit denen in UTC
+zusammen; bei einer Zone mit halbstündigem Versatz käme aus dem Baum `zeitfenster-zu-genau`, ein
+sichtbarer Fehler und kein falsches Fenster.
+
+**Am Jahr gedeckelt.** Die Suche erlaubt ein Kalenderjahr, und „Auf ein Jahr erweitern" wählt 365
+Tage; nach außen gerundet wären das 365 Tage und bis zu zwei Stunden, und der Baum wiese das als
+`zeitfenster-zu-gross` ab. `von` rückt deshalb nie weiter zurück als 365 Tage vor dem ausschließenden
+Ende — dieselbe Zahl wie `jahresfensterAb` und aus demselben Grund (der Schalttag).
+
+**Die Nachricht ist im Zielfenster per Konstruktion enthalten — und das wird geprüft, nicht
+angenommen:** Liegt ihr `zeitpunkt` außerhalb des gerundeten und gedeckelten Fensters (ein tiefer
+Link auf einen Beleg außerhalb des Suchfensters; eine Nachricht in der durch den Deckel verlorenen
+Stunde), **gibt es keinen Link.** Ein Link, der in einem anderen Fenster landet als versprochen, ist
+schlechter als kein Link.
+
+> **Gemeldete Abweichung:** Das Zielfenster ist damit **nicht identisch** mit dem Herkunftsfenster,
+> sondern das kleinste stundengenaue Fenster, das es enthält. Die Sichtprüfung (§14, Punkt 10) misst
+> beides gegeneinander.
+
+### Woher das Fenster kommt — je Einhängepunkt
+
+| Einhängepunkt | Fenster | Link |
+|---|---|---|
+| **Trefferliste der Suche** | `von`/`bis` **aus der Antwort** — das tatsächlich verwendete, gegen die Anwendungsuhr aufgelöst (Regel Z1) | ja, sobald eine Antwort da ist; beim Laden und beim Abbruch nicht |
+| **Nachrichtenliste, freies Fenster** | `von`/`bis` aus der URL | ja |
+| **Nachrichtenliste, relativer Modus oder Vorgabe** | — | **nein** |
+| eigene Route `/nachrichten/<id>` | — | nein |
+| Prozessansicht | — | nein, man ist schon dort |
+
+> **Gemeldete Abweichung:** Der Auftrag sagt, der Absprung gelte von beiden Listen aus ohne
+> zweiten Bau. **Aus der Nachrichtenliste gilt er nur im freien Modus.** Im relativen Modus kennt
+> die Oberfläche das aufgelöste Fenster nicht: Die Antwort der Liste (`Seite<Nachricht>`) nennt es
+> nicht — anders als die des Baums (`fenster`, E‑50) und die der Suche —, und gegen die Browseruhr
+> wird nicht gerechnet (Regel Z1). Ein Link, der nur im Standardfall fehlt, ist besser als einer,
+> der dort in ein erfundenes Fenster führt. Was es bräuchte, ist eine Zeile in der Antwort der Liste
+> — ein Backend-Bau außerhalb dieses Auftrags (offener Punkt 14 in §15). Auf der eigenen Route
+> liest die Seite die Adresse nur im Ereignis (keine Suspense-Grenze für `useSearchParams`,
+> [`nachrichtendetail.md`](nachrichtendetail.md) §10), und ein Verweis braucht den Wert beim
+> Rendern.
+
+**E‑97 bleibt gegenstandslos, und der Grund ist korrigiert** (§1): nicht weil die Suche in der
+Prozessansicht fehlt, sondern weil sie dort **hinausführt** — das Feld steht in der Kopfzeile, die
+Suche navigiert auf ihre eigene Route, eine Marke wird nie *in* der Prozessansicht aktiv. **Die
+Prozessansicht bekommt keine Filterleiste und keine Markenzeile.**
+
+---
+
+## 13. Tests der Oberfläche
+
+| Datei | Was |
+|---|---|
+| `tests/suche.test.ts` | **ohne DOM** — die Parameterform von `feld` (Pflichtname, Teilung am ersten Doppelpunkt, Rundlauf `parseAsFelder`, übergangene Werte), `alsAbfrage` mit `feld` neben `begriff` und Zeichen für Zeichen unverändert ohne `feld`; die Marken aus beiden Parametern und zurück (`markenAus`, `alsZustand`); **der Markenschlüssel und die Dublettenprüfung über beide Arten** (gleiche Parameterform, verschiedene Art — keine Dublette); **das Geländer von acht, gemischt gezählt** (vier und vier, die neunte abgewiesen, gleich welcher Art); `zeigtPraefixAngebot` mit der **fünften Bedingung** als eigener Fall, dazu die Gegenprobe gemischt; `zeigtTrefferspalte`; `begriffeInAntwort` **mit leerem `felder`-Array** |
+| `tests/suche-marken.test.tsx` | **gerenderter Baum**, sechs Fälle (zwei mehr): dieselbe Parameterform als BAM- und als Feld-Marke **ohne doppelten React-Schlüssel**, und die **Abwesenheit** der Spalte „Treffer" ohne Belegnummer — weder Überschrift noch Zelle, die Kette rückt an die dritte Stelle. Die Zählung im Kopf von `frontend/vitest.config.mts` steht bei **79 in dreizehn Dateien** |
+| `tests/prozessansicht.test.ts` | **ohne DOM** — `absprungfenster`: Rundung nach außen, stundengenaues Fenster unverändert, Nachricht außerhalb → kein Link, unlesbarer Zeitpunkt → kein Link, **Jahresdeckel** gegen das ausschließende Ende samt der verlorenen Stunde; `absprungZiel`: die Adresse der Prozessansicht mit absolutem Fenster, von `ausSuchparametern` rund gelesen, `zeitraum` bleibt `null` |
+| `FeldSucheStatementsTest` | **ohne DB**, erweitert — `ProcessName` als zwei Statements: Auflösung nur auf `Process` mit Mandantenfilter und `=`, Kern mit `ProcessID IN (?)` und ohne `feld_process`; **kein Statement gegen `Message` bei unbekanntem Namen** (Zugriffe gezählt, T1); mehrere Kennungen in der Liste; derselbe Name zweimal — eine Auflösung; neben einer Belegnummer bleibt `b1` führend |
+| `BamPfadGleichheitTest` | **unverändert grün** — der BAM-Pfad rendert weiter den Abzug vom 08.09.2026 |
+| `FeldSucheDbIT`, `FeldSucheIsolationDbIT`, `BamSucheDbIT` | `@Tag("db")` — nach dem Umbau gelaufen: 6, 8 und 18 Fälle grün, darunter *„Ein fremder Prozess als Spaltenfeld findet nichts — auch über den Namen"* (jetzt über die Auflösung) |
+
+**Keine Wanduhrzeit als Prüfkriterium** (Regel T1) — kein Test dieses Teils misst eine Dauer; wo es
+um Laufzeit geht, zählt `FeldSucheStatementsTest` Statements.
+
+**Prüfläufe:** `pnpm check` (Lint, Typprüfung, Formatprüfung, 35 Dateien, 954 Tests) und
+`./mvnw verify -DexcludedGroups=db` (Spotless, ArchUnit, 802 Einheitstests) am 08.09.2026 grün.
+
+---
+
+---
+
+## 14. Sichtprüfung
+
+**Durchgeführt am 08.09.2026** am laufenden System (Backend `localhost:8080` mit dem Stand nach
+Commit 1, Oberfläche `localhost:3000`), **kopfloses Chrome 152 über das DevTools-Protokoll** bei
+1568 × 900 px — Eingaben wurden geklickt und getippt (`Input.dispatchMouseEvent`,
+`Input.insertText`, `Input.dispatchKeyEvent`), nicht gesetzt; von Hand gebaute Adressen sind die
+Punkte 4, 8 und 9, und dort *ist* die Adresse der geprüfte Vorgang.
+
+**Angemeldet war ein Wegwerfkonto** `it-sicht-teil2` (Rolle `ADMIN`, angelegt über
+`AppUserRepository.legeAn` wie in jedem `DbIT`, Passwort aus einer Umgebungsvariable), weil in
+`SPRING_SESSION` keine Sitzung stand und Passwörter des Auftraggebers nicht getippt werden. Der
+Mandant wurde über `POST /api/auth/mandant` gesetzt, das Sitzungs-Cookie per `Network.setCookie`
+gesetzt. **Nach der Prüfung sind Konto und Sitzungen gelöscht** (`app_user` mit Kaskade,
+`SPRING_SESSION`; Gegenprobe: null Zeilen mit dem Präfix). Geschrieben wurde ausschließlich in
+`overlord_monitor` (S1); `GlassfishDB` ist unberührt.
+
+**Die Prüfwerte stehen nach Regel G1 nicht in dieser Datei.** Ihre Gestalt: bei `NEXANS` ein Wert
+von `Message.SNDPRN` (6 Zeichen, 131 Nachrichten im Fenster), dazu ein Wert des Typs 9018
+(`Kundenmaterialnummer_K_SAP`, 8 Zeichen, 61 Nachrichten im Fenster), der auf 35 dieser Nachrichten
+mit dem `SNDPRN`-Wert zusammen steht — **hergeleitet innerhalb des Fensters, das die Antwort nennt**
+(siehe den ersten Befund unten). Das Fenster der Anwendungsuhr lief während der Prüfung von
+*30.11.2025, 07:14* bis *30.12.2025, 07:14* nach *07:20* weiter.
+
+| # | Zu prüfen | Erwartet | Befund |
+|---|---|---|---|
+| 1 | Angebot mit beiden Gruppen — als `NEXANS` und als Mandant ohne Belegart | zwei Gruppen mit Überschrift; bei `WOC` nur *Felder*, keine leere Überschrift | ✔ `NEXANS`: **55 Einträge** — *Alle Belegarten* (angehakt), Trennlinie, `# Belegarten` mit 40, Trennlinie, `# Felder` mit 14 in der Ordnung des Endpunkts (`Converter.TransactionID` … `Message.VFN`), Feldnamen in fester Laufweite. `WOC`: **9 Einträge**, **eine** Überschrift *Felder*, **eine** Trennlinie, die acht Typ‑0‑Namen; der Leerzustand nennt die Felder und **keine** Belegarten-Liste |
+| 2 | Eine Feld-Marke setzen, Treffer prüfen, Marke entfernen | Marke mit Name und Wert, `feld` in der URL, Treffer; nach dem Entfernen die leere URL und der Leerzustand | ✔ Schalter zeigt *„Feld: Message.SNDPRN"*, Platzhalter wechselt auf *„Wert suchen"*; nach Enter `?feld=Message.SNDPRN:<wert>`, eine Marke `Message.SNDPRN: <wert>`, *„Mehr als 50 Treffer — gezeigt werden die 50 neuesten im Zeitfenster …"*. Schließen-Knopf der Marke: URL leer, **null Marken**, *„Wonach suchst du?"* |
+| 3 | Feld- und BAM-Marke gemischt, UND sichtbar | zwei Marken, die Trefferzahl sinkt | ✔ Belegnummer allein *„Mehr als 50"*, dann Feld dazu: **35 Treffer**, zwei Marken (`<wert>` und `Message.SNDPRN: <wert>`), Trefferspalte zeigt `Kundenmaterialnummer_K_SAP`. Feld-Marke wieder entfernt: **eine** Marke, *„Mehr als 50"*, URL nur noch `begriff` |
+| 4 | Acht Marken beider Arten, `+` gesperrt, Begründung sichtbar | `disabled` und der Satz über der Liste | ✔ vier `begriff`, vier `feld` aus der Adresse: **8 Marken**, `+` `disabled`, im `title` **und** über der Liste *„Mehr als 8 Begriffe nimmt die Suche nicht an — ein Schutzgeländer, keine fachliche Grenze. …"*. Ein neunter Wert mit Enter: weiterhin 8 Marken, die Eingabe bleibt stehen |
+| 5 | Reine Feldsuche mit null Treffern | **kein** Präfix-Knopf | ✔ `Message.SNDPRN:gibt-es-nicht-xyz`: *„0 Treffer im Zeitfenster …"*, Leerzustand *„Keine Nachricht mit diesem Beleg"* mit Hinweis — **kein** Knopf *„Nach dem Anfang der Nummer suchen"*, keine Frage |
+| 6 | Gemischte Suche mit null Treffern | der Präfix-Knopf erscheint | ✔ Belegnummer (61 Treffer allein) plus das unmögliche Feld: 0 Treffer, **zwei** Marken, *„Soll nach Nummern gesucht werden, die damit anfangen?"* und der Knopf |
+| 7 | Reine Feldsuche mit Treffern — die Trefferspalte | entfällt, ohne kaputt auszusehen | ✔ Spalten **Zeitpunkt · Status · Kette · Ablauf**, 50 Zeilen; keine Überschrift *Treffer*, keine leere Zelle. In der gemischten Suche (Punkt 3) steht sie wieder an dritter Stelle |
+| 8 | `Message.Status` über ein Jahr bei `NEXANS` | Abbruch nach zehn Sekunden, Rat sichtbar | ✔ Adresse mit `von`/`bis` über 365 Tage: erst Skelett, nach zwölf Sekunden *„Die Suche hat zu lange gedauert und wurde abgebrochen. Verkleinere den Zeitraum — bei Feldern wie Status oder Ablaufname ist das über ein Jahr der Regelfall."* Marke steht, *Zeitfenster ändern* und *Vorgabe wiederherstellen* stehen, **kein** Präfix-Knopf, kein roter Fehlerbaustein |
+| 9 | Neu laden mit Marken in der URL | dieselbe Ansicht | ✔ die Adresse aus Punkt 3 geladen: dieselben zwei Marken in derselben Reihenfolge, dieselbe Trefferzeile |
+| 10 | Absprung aus dem Detailpanel | Baum aufgeklappt, Prozess gewählt, Nachricht markiert, Fenster wie das Herkunftsfenster | ✔ Zeile geöffnet, im Kopf unter der Beschreibungsliste *„Im Prozessbaum anzeigen"* mit `href=/prozesse?von=2025-11-30T06:00Z&bis=2025-12-30T06:00Z&prozess=…&nachricht=…` — das Suchfenster *07:14–07:14* Anzeigezeit auf volle Stunden gerundet. Klick: `/prozesse`, `role=tree` steht, **Partner (Ebene 1) und Richtung (Ebene 2) aufgeklappt**, der Prozess (Ebene 3) `aria-selected`, *Frei* gedrückt mit *Von 30.11.2025 07:00* und *Bis 30.12.2025 07:00*, Liste mit 50 Zeilen und **einer** `aria-current`-Zeile, Panel offen mit derselben Nachricht (29.12.2025, 08:04:12). Über der Liste *„Zeitraum 30.11.2025, 07:00 bis 30.12.2025, 08:00"* — **das kleinste stundengenaue Fenster um das Herkunftsfenster, nicht dasselbe** (E‑111, Abweichung 2 in §15) |
+| 11 | Am schmalen Fenster | Feld, Marken, Tabelle, Angebot, Panel bei 360 px | ✔ **gemessen über `Emulation.setDeviceMetricsOverride` bei 360 × 780 px**: `scrollWidth` = `innerWidth` = 360 (keine zweite Bildlaufleiste); das Suchfeld ist eine **eigene Zeile** der Kopfzeile (links 12 px, 336 px breit, Kopfzeile 131 px hoch); zwei Marken **untereinander** (y 189 und 227); Spalten **Zeitpunkt · Status · Treffer · Kette**, der Ablauf weg; die Tabelle (696 px) scrollt **in ihrer Hülle** (319 px), nicht die Seite. Das Angebot öffnet **im Bild** (Menü 320 px breit, rechter Rand 332) mit beiden Überschriften. Panel geöffnet: Liste ausgeblendet, der Absprung-Verweis da, **44 px hoch**, im Bild |
+
+**Konsole:** über den ganzen Durchgang ausschließlich der React-DevTools-Hinweis, je Seitenaufruf
+einmal. **Kein `error`, keine Schlüsselmeldung, keine Ausnahme.**
+
+### Was die Abnahme zusätzlich gezeigt hat
+
+**1. Ein Prüfwertpaar, das ohne Fenster gezogen war, sah eine Runde lang wie ein Fehler in der
+Verundung aus.** Der erste Belegwert (Typ 9018) stand per SQL auf einer Nachricht mit dem
+`SNDPRN`-Wert — aber die Abfrage hatte kein Zeitfenster. Im Fenster der Anwendung fand die
+Belegnummer allein 9 Nachrichten, das Feld allein 131, **beide zusammen 0** — und die
+Nulltreffer-Zeile sagte genau das: *„Mit diesem Begriff: 0. Ohne ihn: 9."* Die Gegenprobe per SQL
+im Fenster der Antwort: 9 / 131 / **0**; ohne Fenster 435 gemeinsame Nachrichten, die jüngste vom
+26.10.2025. **Kein Befund über den Code**, ein Befund über die Herleitung: Paare für die
+Sichtprüfung gehören in das Fenster gezogen, das die Antwort nennt. Punkt 3 ist mit einem Paar aus
+dem Fenster wiederholt worden (61 → 35).
+
+**2. Der Zeilenklick am schmalen Fenster traf ins Leere**, weil die Zeile 696 px breit in einem
+319 px breiten scrollenden Container liegt und der Klick auf die Zeilenmitte außerhalb des
+Sichtfelds landete. Mit dem Klick auf die **erste Zelle** öffnete das Panel. Eine Eigenschaft des
+Prüfwerkzeugs, nicht der Ansicht — am Finger trifft niemand die Mitte einer verdeckten Zeile.
+
+**3. Die Berührungsfläche der Marken-Schließknöpfe ist in der Emulation nicht messbar.** Sie maßen
+32 px; die 44 px aus `--dichte-bedienelement` hängen an `pointer: coarse`, und die Emulation setzt
+das nicht. Der Absprung-Verweis trägt seine 44 px unabhängig davon (`min-h-beruehrung`). Der Rest
+in der Tabelle *Offene Sichtprüfungen* in [`README.md`](README.md) ist damit auf diesen einen Punkt
+geschrumpft.
+
+### Drei Beobachtungen ohne Handlungsbedarf
+
+1. **Die Abschneidemeldung rät auch bei reiner Feldsuche zu einer „zweiten Belegnummer".** Sie ist
+   der Text aus Teil 3 und nicht Gegenstand dieses Auftrags („keine Änderung am BAM-Pfad außer den
+   zwei erweiterten Fehlertexten"); fachlich stimmt der Rat, eine Belegnummer verengt auch eine
+   Feldsuche. Steht als Punkt 20 in §15.
+2. **„Auf ein Jahr erweitern" fehlt beim Abbruchfall aus Punkt 8** — richtig so: Das Fenster war
+   schon ein Jahr, der Knopf erscheint nur unter 360 Tagen.
+3. **Der Baum blendet bei offenem Panel seine Spalte aus** (E‑57) — der Absprung landet damit in
+   der Ansicht *Liste plus Panel*, und der gewählte Prozess steht als Überschrift über der Liste.
+   Wer den Baum sehen will, schließt das Panel; die Auswahl bleibt.
+
+
+## 15. Regelbezug und offene Punkte der Oberfläche
+
+### Regelbezug (Teil 2)
+
+| Regel | Wie umgesetzt |
+|---|---|
+| **M1** | Kein Mandantenparameter — auch nicht am Absprung: `/prozesse` trägt Fenster, Prozess und Nachricht, der Mandant kommt weiter aus der Sitzung |
+| **M2** | Die Auflösung des Prozessnamens ist eine private Methode von `BamSucheRepository` mit `MandantContext` als erstem Parameter; `PaketstrukturTest` unverändert grün |
+| **M3** | Der Mandantenfilter steht in der Auflösung **und** im Kern (§10); `FeldSucheIsolationDbIT` Fall 5 prüft den Namen über den neuen Pfad |
+| **M4** | Kein neuer Endpunkt; die drei Isolationstests aus Teil 1 nach dem Umbau gelaufen (§13) |
+| **S1** | Ausschließlich `SELECT`. Ein Index auf `Message.SOSID` wäre der Weg für `SOSName` — und ist ausgeschlossen, weil `GlassfishDB` lesend ist (§10) |
+| **L1** | Fenster unverändert; der Absprung reicht ein absolutes weiter und rechnet keines gegen die Browseruhr |
+| **L7** | §10 mit `EXPLAIN`, Wanduhr und Profil, zwei Mandanten, zwei Fenster, Gleichheitsprobe |
+| **L10** | Belegvermerk in §10; die Lücke (mehrere Kennungen je Name) benannt |
+| **Q4** | Nichts geraten: Feldnamen unverändert (E‑105), keine Deutung von `spalte` in der Oberfläche, die Art der Marke steht im Schlüssel statt aus der Parameterform gelesen zu werden |
+| **T1** | Keine Wanduhrzeit in einer Zusicherung; `FeldSucheStatementsTest` zählt Statements |
+| **Z1** | Das Absprungfenster kommt aus der Antwort der Suche oder aus der URL, nie aus `Date.now()`; die Rundung rechnet auf dem gelieferten Zeitpunkt |
+
+### Gemeldete Abweichungen vom Auftrag
+
+1. **Die Marken kommen aus der URL, nicht aus der Antwort** (§11.4). Der Auftrag sagte in §3.4 das
+   eine und in §3.3 das andere; die Datei ([`bam-suche.md`](bam-suche.md) §11) entscheidet für die
+   URL, weil die Marken auch beim Abbruch stehen müssen. Das Zitat der Antwort trägt die Zeilen
+   darüber.
+2. **Das Zielfenster des Absprungs ist nicht identisch mit dem Herkunftsfenster**, sondern das
+   kleinste stundengenaue Fenster, das es enthält (§12, E‑111). Der Baum nimmt nichts anderes an.
+3. **Aus der Nachrichtenliste gibt es den Absprung nur im freien Modus** (§12). Die Antwort der
+   Liste nennt das aufgelöste Fenster nicht; im relativen Modus gäbe es keinen Link, der hält.
+4. **Commits 2 und 3 des Auftrags sind zusammengefasst**, weil ein Angebot mit Feldern ohne
+   Feld-Marken nicht baubar wäre — der Hauptzweig bleibt je Commit baubar (Richtlinie §10).
+5. **Der Leerzustand nennt zusätzlich die Felder des Mandanten** (§11.1). Nicht beauftragt, aber
+   dieselbe Regel wie für die Belegarten; ohne sie erklärte die Seite nicht mehr, was gesucht
+   werden kann.
+
+### Offene Punkte
+
+13. **Ein Prozessname mit mehreren Kennungen ist nicht gemessen** (§10). Beide gemessenen Namen
+    tragen beim Mandanten genau eine Kennung; bei mehreren rendert der Kern `IN (?, ?)`, und ob die
+    Mandantenkette dann noch zur Konstante wird, sagt erst ein `EXPLAIN` mit einem solchen Namen.
+    Die Verundung bleibt richtig, nur der Plan könnte ein anderer sein.
+14. **Die Antwort der Nachrichtenliste nennt ihr aufgelöstes Fenster nicht.** Deshalb gibt es den
+    Absprung aus der Liste nur im freien Modus (§12). Eine Zeile `von`/`bis` in `Seite<Nachricht>`
+    — wie `fenster` in der Antwort des Baums (E‑50) — machte ihn im Standardfall möglich. Ein
+    Backend-Bau außerhalb dieses Auftrags.
+15. **Der Präfix-Rückfall bei gemischter Suche** (§11.6, aus Punkt 3 in §9): Der Knopf erscheint,
+    wirkt auf die Belegnummern und lässt die Feldbegriffe exakt. Ob das die richtige Antwort ist,
+    ist weiterhin nicht entschieden; die Oberfläche sagt nicht, worauf der Modus wirkt.
+16. **Kein Hinweis auf die Deckung eines Feldes** — `Message.DestinationFilename` (14,5 %) und
+    `Message.ReceiverID` (12,8 %) werden kommentarlos angeboten. Entscheidung des Auftraggebers;
+    ein Nutzer, der dort nichts findet, erfährt nicht, dass die meisten Nachrichten den Namen gar
+    nicht tragen.
+17. **Die drei Felder, die über ein Jahr abbrechen, sind im Angebot nicht gekennzeichnet**
+    (`Status`, `SOSID`, `SOSName`). Der Abbruchtext rät zum Zeitraum, aber erst nach zehn Sekunden;
+    Punkt 10 in §9 bleibt für diese drei offen.
+18. **Die Auswahl im Suchfeld hat ein Menü mit bis zu 54 Einträgen** (40 Belegarten und 14 Felder
+    bei `NEXANS`), das in Gruppen scrollt. Ob ein Nutzer ein Feld darin findet, ohne die Gruppe zu
+    kennen, zeigt erst die Nutzung; ein Eingrenzungsfeld im Menü ist nicht gebaut.
+19. **Das schmale Fenster ist bei 360 px gemessen** (§14, Punkt 11); offen bleibt allein die
+    Berührungsfläche am Finger, die die Emulation nicht setzt — Tabelle *Offene Sichtprüfungen* in
+    [`README.md`](README.md).
+20. **Die Abschneidemeldung rät auch bei reiner Feldsuche zu einer „zweiten Belegnummer"** (§14,
+    Beobachtung 1). Der Text stammt aus Teil 3 und war nicht Gegenstand dieses Auftrags; ob er für
+    Feldsuchen einen eigenen Satz bekommt, ist offen.

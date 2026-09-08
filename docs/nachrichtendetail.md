@@ -1126,6 +1126,14 @@ Beschriftung. Für die beiden kuratierten Namen ist im Tagesfenster je genau ein
 träte je ein zweiter auf, wäre die Anzeige zweier Werte richtig und ihre stillschweigende Reduktion
 auf einen falsch.
 
+> **Seit dem 08.09.2026 steht unter der Beschreibungsliste der Absprung „Im Prozessbaum anzeigen"**
+> (E‑103, [`property-suche.md`](property-suche.md) §12) — ein Verweis auf `/prozesse` mit dem
+> Prozess und der Nachricht, und mit dem **absoluten** Fenster, aus dem man kommt (E‑104). Er
+> erscheint nur, wenn der Einhängepunkt ein absolutes Fenster kennt: die Belegsuche aus ihrer
+> Antwort, die Liste aus `von`/`bis` der URL. Im relativen Modus der Liste, auf der eigenen Route
+> und in der Prozessansicht gibt es ihn nicht. Im Panel und nicht als Kontextmenü, wegen Tastatur-
+> und Berührungserreichbarkeit.
+
 **Die `MessageID` kehrt hier zurück**, nachdem sie in Schritt 4 aus der Liste geflogen ist. Klein,
 in fester Laufweite, mit Kopierknopf. Sie ist Beiwerk nach dem Leitsatz — aber sie ist das, was
 jemand in eine E-Mail an die EDI-Betreuung schreibt, und ohne Kopierfunktion trägt eine

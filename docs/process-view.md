@@ -1002,6 +1002,12 @@ beim Ansichtsumschalter des Nachrichtendetails.
 | `nurMitVerkehr` | `replace` | siehe E‑48 |
 | `sortierung` | `replace` | die Übertragungsliste behält ihren Sortierumschalter, und der beschreibt den gezeigten Ausschnitt |
 
+> *Seit dem 08.09.2026 kommt eine Adresse dieser Form auch von außen:* Der Absprung aus dem
+> Detailpanel (E‑103, [`property-suche.md`](property-suche.md) §12) führt mit `von`/`bis`, `prozess`
+> und `nachricht` hierher — absolut, nie mit einem relativen Zeitraum (E‑104), auf volle Stunden
+> gerundet, weil dieser Endpunkt nichts anderes annimmt (E‑95). Der Partner klappt über
+> `pfadZuProzess` auf; an dieser Ansicht ist dafür nichts gebaut worden.
+
 **Was ausdrücklich *nicht* in der URL steht**, und beides ist die Prüfung aus
 [`frontend-grundlagen.md`](frontend-grundlagen.md) §8:
 
