@@ -542,12 +542,16 @@ export const en: Texte = {
     feld: {
       bezeichnung: "Search document number",
       platzhalter: "Search document number",
+      platzhalterFeld: "Search value",
       hinzufuegen: "Add term",
     },
 
     typwahl: {
       alle: "All document types",
       gewaehlt: "Document type: {belegart}",
+      gewaehltesFeld: "Field: {feld}",
+      gruppeBelegarten: "Document types",
+      gruppeFelder: "Fields",
     },
 
     marken: {
@@ -608,6 +612,8 @@ export const en: Texte = {
       titel: "What are you looking for?",
       was: "Type a document number into the field above — delivery note, order or transport number, batch, plant or material number. Enter starts the search.",
       belegarten: "These document types are set up for this tenant:",
+      felder:
+        "Plus these fields, by their technical name. Pick the field next to the search box — a value without a chosen field always searches for a document number:",
       hilfe:
         "The search also looks for leading zeros and a leading space — they are not on the printed document but they are in the data. Several terms are combined with AND.",
       belegartHilfe:
@@ -630,6 +636,8 @@ export const en: Texte = {
 
     abgebrochen:
       "The search took too long and was cancelled. Narrow the period or name a second document number.",
+    abgebrochenMitFeld:
+      "The search took too long and was cancelled. Narrow the period — for fields such as status or flow name that is the rule over a whole year.",
   },
 
   katalog: {
@@ -954,6 +962,15 @@ export const en: Texte = {
     "suche-fenster-zu-gross": "This time window is too large for a search.",
     "suche-abgebrochen":
       "The search took too long and was cancelled. Shorten the time range or narrow the search term.",
+
+    // Document search with field terms (docs/property-suche.md §2.2). Texts follow the backend.
+    "feldname-fehlt":
+      "The field name goes before the colon — without a field only document numbers are searched.",
+    "feldbegriff-ohne-trenner": "A field term has the form fieldname:value.",
+    "suchbegriff-fehlt":
+      "Give at least one document number (type:value or :value) or one field (fieldname:value).",
+    "zu-viele-suchbegriffe":
+      "At most 8 terms can be searched at once — document numbers and fields together.",
 
     "partner-zu-lang": "A partner name may hold at most 100 characters.",
     "richtung-unbekannt": "Pick “Inbound”, “Outbound” — or no direction at all.",

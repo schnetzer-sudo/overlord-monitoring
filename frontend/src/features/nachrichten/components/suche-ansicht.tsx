@@ -19,12 +19,13 @@ import {
 import { ProblemFehler, istPraefixfensterZuGross } from "@/lib/http";
 
 import type { BamSuchergebnis } from "../api";
-import { useBamSuche, useBamTypen, useEscapeSchliesst, useSuchzustand } from "../hooks";
+import { useBamSuche, useEscapeSchliesst, useSuchfelder, useSuchzustand } from "../hooks";
 import {
   HOECHSTENS_BEGRIFFE,
   PRAEFIX_FENSTER_TAGE,
   abweichendeVarianten,
   alsAbfrage,
+  begriffeInAntwort,
   fensterZurueck,
   jahresfensterAb,
   modusAusAntwort,
@@ -32,6 +33,7 @@ import {
   praefixfenster,
   spanneInTagen,
   zeigtPraefixAngebot,
+  zeigtTrefferspalte,
   type Suchmodus,
   type VorigeRunde,
 } from "../suche";
@@ -85,10 +87,10 @@ const ABGEBROCHEN = "suche-abgebrochen";
  */
 export function SucheAnsicht() {
   const texte = useTexte();
-  const { zustand, begriffe, modus, setzeBegriffe, setzeFenster, setzeModus, setzeNachricht } =
+  const { zustand, marken, felder, modus, setzeMarken, setzeFenster, setzeModus, setzeNachricht } =
     useSuchzustand();
   const abfrage = alsAbfrage(zustand);
-  const anfrage = useBamSuche(abfrage, begriffe.length > 0);
+  const anfrage = useBamSuche(abfrage, marken.length > 0);
   const ergebnis = anfrage.data;
 
   const gewaehlt = zustand.nachricht;
@@ -116,7 +118,9 @@ export function SucheAnsicht() {
 
   if (ergebnis !== undefined && stand.fuer !== abfrage) {
     const runde: VorigeRunde = {
-      begriffe: ergebnis.begriffe.length,
+      // Beide Arten, aus dem Zitat der Antwort — `felder` ist immer da, leer
+      // statt fehlend (`docs/property-suche.md` §2.2).
+      begriffe: begriffeInAntwort(ergebnis),
       treffer: ergebnis.nachrichten.length,
       abgeschnitten: ergebnis.abgeschnitten,
     };
@@ -158,7 +162,7 @@ export function SucheAnsicht() {
   const angebot = zeigtPraefixAngebot({
     modus: modusAusAntwort(ergebnis?.modus),
     treffer: ergebnis?.nachrichten.length ?? 0,
-    begriffe: begriffe.length,
+    begriffe: marken.length,
     abgebrochen: abgebrochen !== undefined,
   });
 
@@ -199,11 +203,15 @@ export function SucheAnsicht() {
       >
         <h1 className="text-ueberschrift font-semibold">{texte.suche.titel}</h1>
 
-        {begriffe.length === 0 ? (
+        {marken.length === 0 ? (
           <Leerzustand />
         ) : (
           <>
-            <MarkenLeiste begriffe={begriffe} aufBegriffe={setzeBegriffe} />
+            {/* Die Marken kommen aus der URL — beide Parameter, `begriff` und
+                `feld` —, damit sie in jedem Zustand stehen, auch beim Abbruch,
+                wo es keine Antwort gibt. Das Zitat der Antwort (`begriffe`,
+                `felder`) trägt die Zeilen darunter. */}
+            <MarkenLeiste marken={marken} aufMarken={setzeMarken} />
 
             {/* Marken und Zeitfenster bleiben in **jedem** Zustand stehen — sie
                 sind der Weg aus einem leeren Ergebnis heraus. Sie mit den Daten
@@ -217,7 +225,7 @@ export function SucheAnsicht() {
               bis={zustand.bis}
               aufFenster={setzeFenster}
               nulltrefferVorher={stand.hinweis}
-              voll={begriffe.length >= HOECHSTENS_BEGRIFFE}
+              voll={marken.length >= HOECHSTENS_BEGRIFFE}
             />
 
             {abgebrochen !== undefined ? (
@@ -228,9 +236,16 @@ export function SucheAnsicht() {
 
                  **Und hier steht ausdrücklich kein Angebot.** Wer gerade an der
                  Zeitgrenze gescheitert ist, bekommt keine teurere Suche
-                 angeboten (`docs/bam-suche.md` §23). */
+                 angeboten (`docs/bam-suche.md` §23).
+
+                 **Mit Feldbegriffen ein anderer Rat, und für drei Felder ist der
+                 Abbruch über ein Jahr der Regelfall** (`Message.Status`,
+                 `Message.SOSID`, `Message.SOSName`, `docs/property-suche.md`
+                 §6.4): Dort hilft der Zeitraum, eine zweite Belegnummer wäre
+                 eine Antwort auf eine andere Frage. Entschieden am Zustand der
+                 URL, weil es beim Abbruch keine Antwort gibt. */
               <p className="text-muted-foreground text-beiwerk max-w-prose" role="status">
-                {texte.suche.abgebrochen}
+                {felder.length > 0 ? texte.suche.abgebrochenMitFeld : texte.suche.abgebrochen}
               </p>
             ) : fensterZuGross !== undefined ? (
               <FensterZuGross fehler={fensterZuGross} bis={zustand.bis} aufFenster={setzeFenster} />
@@ -248,6 +263,11 @@ export function SucheAnsicht() {
                   zeilen={ergebnis?.nachrichten ?? []}
                   gewaehlt={gewaehlt}
                   aufAuswahl={setzeNachricht}
+                  // Entschieden an der Frage (dem Zitat der Antwort), nicht an
+                  // den Zellen — E-110, `suche.ts` `zeigtTrefferspalte`.
+                  mitTrefferspalte={zeigtTrefferspalte({
+                    bamBegriffe: ergebnis?.begriffe.length ?? 0,
+                  })}
                 />
               </div>
             )}
@@ -843,7 +863,9 @@ function Zeitfensterzeile({
  */
 function Leerzustand() {
   const texte = useTexte();
-  const typen = useBamTypen().data ?? [];
+  const angebot = useSuchfelder().data;
+  const typen = angebot?.bam ?? [];
+  const felder = angebot?.felder ?? [];
 
   return (
     <div className="border-border bg-card flex max-w-prose flex-col gap-3 rounded-lg border p-4">
@@ -857,6 +879,23 @@ function Leerzustand() {
             {typen.map((eintrag) => (
               <li key={eintrag.typ}>
                 <Marke>{eintrag.bezeichnung}</Marke>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Die Felder des Mandanten, mit technischem Namen (E-105) — dieselbe
+          Regel wie bei den Belegarten: nur, was nachweislich für diesen
+          Mandanten gilt, und keine leere Liste. Der Satz sagt dazu, dass ein
+          Wert ohne gewähltes Feld nie ein Feld erreicht (E-100). */}
+      {felder.length === 0 ? null : (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-muted-foreground text-beiwerk">{texte.suche.leer.felder}</p>
+          <ul className="flex flex-wrap gap-1.5">
+            {felder.map((eintrag) => (
+              <li key={eintrag.name}>
+                <Marke className="font-mono">{eintrag.name}</Marke>
               </li>
             ))}
           </ul>

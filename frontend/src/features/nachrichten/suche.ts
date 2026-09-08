@@ -8,11 +8,12 @@ import { NACHRICHTEN_PARAMETER } from "./filter";
 /**
  * Der Zustand der Belegsuche — **in der URL, nicht im Komponentenzustand.**
  *
- * In der URL stehen: `begriff` (wiederholt), das Zeitfenster als `von`/`bis` und
- * seit Teil 4 der `modus`. Mehr gibt es nicht: kein Zeitraum-Kürzel, kein Status-
- * und kein Prozessfilter, kein Cursor, keine Sortierung. Der Endpunkt kennt sie
- * nicht (`docs/bam-suche.md` §1), und ein Parameter, den niemand liest, ist kein
- * Zustand.
+ * In der URL stehen: `begriff` (wiederholt), seit Teil 2 der Property-Suche
+ * `feld` (wiederholt, `docs/property-suche.md` §11), das Zeitfenster als
+ * `von`/`bis` und seit Teil 4 der `modus`. Mehr gibt es nicht: kein
+ * Zeitraum-Kürzel, kein Status- und kein Prozessfilter, kein Cursor, keine
+ * Sortierung. Der Endpunkt kennt sie nicht (`docs/bam-suche.md` §1), und ein
+ * Parameter, den niemand liest, ist kein Zustand.
  *
  * **Der Modus gehört dorthin und nicht in `useState`.** Er beschreibt einen
  * anderen *Ausschnitt* — dieselbe Frage, präfixweise beantwortet, findet andere
@@ -28,10 +29,20 @@ import { NACHRICHTEN_PARAMETER } from "./filter";
  * aus, und der Endpunkt hat sie schon einmal umgangen: Der Doppelpunkt zwischen
  * Typ und Wert ist Pflicht und wird am **ersten** Vorkommen geteilt, womit die
  * Frage gegenstandslos wird statt geraten (`docs/bam-suche.md` §1). Ein
- * Listentrenner holte sie zurück.
+ * Listentrenner holte sie zurück. **Für `feld` gilt dasselbe**, mit demselben
+ * Trenner: Ein Feldname trägt keinen Doppelpunkt (Konfiguration mit vierzehn
+ * Zeilen, M161), ein Wert darf einen tragen.
  *
  * Umgesetzt über `createMultiParser`: Er liest mit `getAll` und schreibt mit
  * `append` — die URL trägt damit dieselbe Form, die der Endpunkt entgegennimmt.
+ *
+ * ## Zwei Begriffsarten, ein Feld, eine Markenleiste
+ *
+ * Die Oberfläche führt beide Arten in einem Feld zusammen (E‑99) und schickt
+ * sie getrennt (E‑106): `begriff` erreicht `MessageBAM`, `feld` eine Spalte oder
+ * eine Zeile in `MessageProperty` — und **ein Wert ohne gewähltes Feld erreicht
+ * nie ein Feld** (E‑100). Über der Liste stehen beide als {@link Suchmarke};
+ * das Geländer von acht zählt sie **zusammen**, weil das Backend es auch tut.
  *
  * ## Dieses Modul ist bewusst frei von React
  *
@@ -54,6 +65,30 @@ import { NACHRICHTEN_PARAMETER } from "./filter";
 export type Suchbegriff = { typ: number | null; wert: string };
 
 /**
+ * Ein Feldbegriff der Property-Suche: **der Feldname ist Pflicht** (E‑100).
+ *
+ * @property name `MessagePropertyName`, unverändert und technisch (E‑105) —
+ *   `Message.SNDPRN` bleibt `Message.SNDPRN`. Ob er eine Spalte oder eine Zeile
+ *   benennt, entscheidet das Backend über seine Abbildung; die Oberfläche
+ *   unterscheidet das nicht
+ * @property wert der Wert, wie getippt, an den Rändern beschnitten. **Nie
+ *   normalisiert und immer exakt verglichen** — der Präfixmodus wirkt nur auf
+ *   Belegnummern (`docs/property-suche.md` §2.2)
+ */
+export type Feldbegriff = { name: string; wert: string };
+
+/**
+ * Eine Marke über der Trefferliste — **eine von zwei Arten**, und die Art gehört
+ * zum Schlüssel.
+ *
+ * Eine BAM-Marke und eine Feld-Marke sind nie Dubletten voneinander, auch wenn
+ * ihre Parameterform gleich aussähe (`9012:4711` kann ein Typ mit Wert oder ein
+ * Feldname mit Wert sein); zwei Feld-Marken mit gleichem Namen und Wert sind es
+ * schon. Deshalb trägt der Schlüssel die Art voran ({@link markenschluessel}).
+ */
+export type Suchmarke = { art: "bam"; begriff: Suchbegriff } | { art: "feld"; feld: Feldbegriff };
+
+/**
  * Das Schutzgeländer aus `docs/bam-suche.md` §1 — **keine fachliche Grenze**.
  *
  * Begrenzt wird die Zahl der Join-Reihenfolgen, die der Optimierer durchprobiert;
@@ -62,6 +97,10 @@ export type Suchbegriff = { typ: number | null; wert: string };
  * ist Absicht: Das Backend weist den neunten Begriff ab, die Oberfläche lässt ihn
  * gar nicht erst entstehen und sagt warum. Wer die Zahl ändert, ändert beide —
  * ein Frontend, das mehr zuließe, führte den Nutzer in ein `400`.
+ *
+ * **Seit Teil 2 der Property-Suche zählt es beide Arten zusammen** — wie das
+ * Backend: Ein Feldbegriff über eine Eigenschaft ist ein weiterer Join, auf
+ * `MessageProperty` statt auf `MessageBAM` (`docs/property-suche.md` §2.2).
  */
 export const HOECHSTENS_BEGRIFFE = 8;
 
@@ -78,6 +117,9 @@ export const HOECHSTENS_BEGRIFFE = 8;
  * Voreinstellung änderte er damit die Antwort auch für den Nutzer, der nichts
  * falsch macht — deshalb hängt er am ausdrücklichen Zutun und am leeren Ergebnis
  * (`docs/bam-suche.md` §15).
+ *
+ * **Er wirkt nur auf Belegnummern.** Feldbegriffe werden immer exakt verglichen;
+ * deshalb bekommt {@link zeigtPraefixAngebot} seit Teil 2 eine fünfte Bedingung.
  */
 export const SUCHMODI = ["exakt", "praefix"] as const;
 
@@ -131,7 +173,7 @@ export function modusAusAntwort(gemeldet: BamAntwortmodus | undefined): Suchmodu
  */
 export const PRAEFIX_FENSTER_TAGE = 30;
 
-/** Der Trenner zwischen Typ und Wert. Pflicht, und am **ersten** Vorkommen geteilt. */
+/** Der Trenner zwischen Typ und Wert — und zwischen Feldname und Wert. Pflicht, am **ersten** Vorkommen geteilt. */
 const TRENNER = ":";
 
 /**
@@ -173,36 +215,83 @@ export function ausParameter(roh: string): Suchbegriff | null {
   return Number.isInteger(typ) && typ >= 0 ? { typ, wert } : null;
 }
 
-/** Zwei Begriffe sind derselbe, wenn **Typ und Wert** übereinstimmen. */
-export function istGleich(einer: Suchbegriff, anderer: Suchbegriff): boolean {
-  return alsParameter(einer) === alsParameter(anderer);
+/**
+ * Ein Feldbegriff als Parameterwert: `<name>:<wert>` — dieselbe Form wie am
+ * Endpunkt (`docs/property-suche.md` §2.2), geteilt am **ersten** Doppelpunkt.
+ */
+export function alsFeldParameter(feld: Feldbegriff): string {
+  return `${feld.name}${TRENNER}${feld.wert}`;
+}
+
+/**
+ * Die Gegenrichtung für `feld` — **strenger als das Backend, in dieselbe
+ * Richtung.** Dort sind ein fehlender Trenner und ein leerer Name je ein `400`
+ * mit eigenem Problemtyp (`feldbegriff-ohne-trenner`, `feldname-fehlt`); hier
+ * wird ein solcher Wert **übergangen**, damit die Oberfläche diese beiden Fehler
+ * nie selbst erzeugt. Sie entstehen nur aus einer von Hand gebauten URL — und
+ * dafür stehen die Texte im Fehlerkatalog (`texte.fehler`).
+ */
+export function ausFeldParameter(roh: string): Feldbegriff | null {
+  const trenner = roh.indexOf(TRENNER);
+  if (trenner < 0) {
+    return null;
+  }
+  const name = roh.slice(0, trenner).trim();
+  const wert = roh.slice(trenner + 1).trim();
+  if (name === "" || wert === "") {
+    return null;
+  }
+  return { name, wert };
+}
+
+/**
+ * Der Schlüssel einer Marke — **die Art voran, dann die Parameterform.**
+ *
+ * `bam:9012:4711` gegen `feld:Message.SNDPRN:4711`. Ohne die Art wären eine
+ * Belegart `9012` und ein (heute nicht existierendes, aber nicht ausgeschlossenes)
+ * Feld `9012` derselbe Schlüssel — und React meldete zwei Kinder mit demselben
+ * `key` nur in der Konsole.
+ */
+export function markenschluessel(marke: Suchmarke): string {
+  return marke.art === "bam"
+    ? `bam:${alsParameter(marke.begriff)}`
+    : `feld:${alsFeldParameter(marke.feld)}`;
+}
+
+/** Zwei Marken sind dieselbe, wenn **Art, Typ beziehungsweise Name und Wert** übereinstimmen. */
+export function istGleich(einer: Suchmarke, anderer: Suchmarke): boolean {
+  return markenschluessel(einer) === markenschluessel(anderer);
 }
 
 /**
  * Was beim Hinzufügen herauskommt — **und ob es überhaupt etwas Neues war.**
  *
- * @property begriffe die Liste danach; bei einem Doppelten unverändert
- * @property doppelt der Schlüssel der **vorhandenen** Marke, wenn der Begriff
+ * @property marken die Liste danach; bei einer Doppelten unverändert
+ * @property doppelt der Schlüssel der **vorhandenen** Marke, wenn die neue
  *   schon da war. Die Oberfläche hebt sie kurz hervor, statt eine zweite
  *   danebenzustellen — eine zweite Marke mit demselben Inhalt sähe aus, als hätte
  *   der Klick etwas anderes getan als er tat
- * @property voll die Grenze war erreicht, der Begriff ist nicht abgelegt
+ * @property voll die Grenze war erreicht, die Marke ist nicht abgelegt
  */
 export type Ergaenzung = {
-  begriffe: Suchbegriff[];
+  marken: Suchmarke[];
   doppelt: string | null;
   voll: boolean;
 };
 
-export function ergaenze(begriffe: Suchbegriff[], neuer: Suchbegriff): Ergaenzung {
-  const vorhanden = begriffe.find((begriff) => istGleich(begriff, neuer));
+/**
+ * Legt eine Marke ab — **die Dublettenprüfung läuft über beide Arten hinweg, das
+ * Geländer zählt beide zusammen.**
+ */
+export function ergaenze(marken: Suchmarke[], neue: Suchmarke): Ergaenzung {
+  const vorhanden = marken.find((marke) => istGleich(marke, neue));
   if (vorhanden !== undefined) {
-    return { begriffe, doppelt: alsParameter(vorhanden), voll: false };
+    return { marken, doppelt: markenschluessel(vorhanden), voll: false };
   }
-  if (begriffe.length >= HOECHSTENS_BEGRIFFE) {
-    return { begriffe, doppelt: null, voll: true };
+  if (marken.length >= HOECHSTENS_BEGRIFFE) {
+    return { marken, doppelt: null, voll: true };
   }
-  return { begriffe: [...begriffe, neuer], doppelt: null, voll: false };
+  return { marken: [...marken, neue], doppelt: null, voll: false };
 }
 
 /**
@@ -224,7 +313,19 @@ export const parseAsBegriffe = createMultiParser<Suchbegriff[]>({
   // inhaltsgleiche Listen wären für ihn verschieden.
   eq: (einer, anderer) =>
     einer.length === anderer.length &&
-    einer.every((begriff, stelle) => istGleich(begriff, anderer[stelle]!)),
+    einer.every((begriff, stelle) => alsParameter(begriff) === alsParameter(anderer[stelle]!)),
+});
+
+/** Die Feldbegriffe als **wiederholter** Parameter — dieselbe Bauform wie {@link parseAsBegriffe}. */
+export const parseAsFelder = createMultiParser<Feldbegriff[]>({
+  parse: (werte) => {
+    const felder = werte.map(ausFeldParameter).filter((feld): feld is Feldbegriff => feld !== null);
+    return felder.length === 0 ? null : felder;
+  },
+  serialize: (felder) => felder.map(alsFeldParameter),
+  eq: (einer, anderer) =>
+    einer.length === anderer.length &&
+    einer.every((feld, stelle) => alsFeldParameter(feld) === alsFeldParameter(anderer[stelle]!)),
 });
 
 /**
@@ -239,6 +340,12 @@ export const parseAsBegriffe = createMultiParser<Suchbegriff[]>({
  */
 export const SUCHE_PARAMETER = {
   begriff: parseAsBegriffe,
+  /**
+   * Die Feldbegriffe, seit Teil 2 der Property-Suche — **ein eigener Parameter
+   * neben `begriff`** (E‑106), wie am Endpunkt. Gelesen über denselben Parser
+   * wie dort, damit das Geländer greift, sobald es greifen muss.
+   */
+  feld: parseAsFelder,
   von: ZEITFENSTER_PARAMETER.von,
   bis: ZEITFENSTER_PARAMETER.bis,
   /**
@@ -266,6 +373,7 @@ export const SUCHE_PARAMETER = {
 
 export type Suchzustand = {
   begriff: Suchbegriff[] | null;
+  feld: Feldbegriff[] | null;
   von: Date | null;
   bis: Date | null;
   modus: Suchmodus | null;
@@ -277,6 +385,40 @@ export function begriffeAus(zustand: Suchzustand): Suchbegriff[] {
   return zustand.begriff ?? [];
 }
 
+/** Die Feldbegriffe, immer als Liste — dieselbe Regel. */
+export function felderAus(zustand: Suchzustand): Feldbegriff[] {
+  return zustand.feld ?? [];
+}
+
+/**
+ * Die Marken über der Liste, **aus beiden Parametern rekonstruiert** — erst die
+ * Belegnummern, dann die Felder.
+ *
+ * Die URL trägt zwei getrennte Parameter, und die Reihenfolge *zwischen* den
+ * Arten steht in keinem von beiden. Innerhalb einer Art bleibt sie, wie der
+ * Nutzer getippt hat; das Backend verundet ohnehin und ordnet den Einstieg
+ * selbst (kein `STRAIGHT_JOIN`).
+ */
+export function markenAus(zustand: Suchzustand): Suchmarke[] {
+  return [
+    ...begriffeAus(zustand).map((begriff): Suchmarke => ({ art: "bam", begriff })),
+    ...felderAus(zustand).map((feld): Suchmarke => ({ art: "feld", feld })),
+  ];
+}
+
+/**
+ * Die Gegenrichtung: Marken zurück in die beiden URL-Parameter. `null` statt
+ * einer leeren Liste, damit `nuqs` den Parameter entfernt.
+ */
+export function alsZustand(marken: Suchmarke[]): Pick<Suchzustand, "begriff" | "feld"> {
+  const begriff = marken.flatMap((marke) => (marke.art === "bam" ? [marke.begriff] : []));
+  const feld = marken.flatMap((marke) => (marke.art === "feld" ? [marke.feld] : []));
+  return {
+    begriff: begriff.length === 0 ? null : begriff,
+    feld: feld.length === 0 ? null : feld,
+  };
+}
+
 /** Der Modus, immer benannt — `null` in der URL heißt `exakt` und nicht „unbekannt". */
 export function modusAus(zustand: Suchzustand): Suchmodus {
   return zustand.modus ?? "exakt";
@@ -286,8 +428,9 @@ export function modusAus(zustand: Suchzustand): Suchmodus {
  * Der Zustand als Abfragezeichenkette für `/api/bam/suche`.
  *
  * **Ohne Begriff wird nicht gefragt.** Der Endpunkt gibt es ohne Suchbegriff
- * nicht — jeder Aufruf trägt mindestens einen —, und ein Aufruf ohne wäre ein
- * garantiertes `400`. Die Ansicht zeigt dann ihren Leerzustand.
+ * nicht — jeder Aufruf trägt mindestens einen, gleich welcher Art —, und ein
+ * Aufruf ohne wäre ein garantiertes `400`. Die Ansicht zeigt dann ihren
+ * Leerzustand.
  *
  * **`nachricht` steht hier nicht.** Die geöffnete Nachricht ist Zustand der
  * *Ansicht* und kein Parameter der Suche; träte sie in den Abfrageschlüssel des
@@ -299,12 +442,17 @@ export function modusAus(zustand: Suchzustand): Suchmodus {
  * ohne den Parameter Zeichen für Zeichen wie vor Teil 4 verhält, und
  * `BamSucheDbIT` vergleicht die beiden Rümpfe (`docs/bam-suche.md` §16). Diese
  * Zusage anzunehmen kostet nichts und hält den Abfrageschlüssel — und damit den
- * Zwischenspeicher — für den Normalfall unverändert.
+ * Zwischenspeicher — für den Normalfall unverändert. **Und ohne `feld` bleibt
+ * die Abfrage einer reinen BAM-Suche Zeichen für Zeichen die von Teil 3**
+ * (`BamPfadGleichheitTest` hält es am Backend fest).
  */
 export function alsAbfrage(zustand: Suchzustand): string {
   const parameter = new URLSearchParams();
   for (const begriff of begriffeAus(zustand)) {
     parameter.append("begriff", alsParameter(begriff));
+  }
+  for (const feld of felderAus(zustand)) {
+    parameter.append("feld", alsFeldParameter(feld));
   }
   for (const [name, wert] of zeitfensterAlsParameter({
     zeitraum: null,
@@ -395,7 +543,7 @@ export function praefixfenster(fenster: { von: Date; bis: Date }): { von: Date; 
 }
 
 /**
- * Ob der Rückfall auf die Präfixsuche angeboten wird — **die vier Bedingungen an
+ * Ob der Rückfall auf die Präfixsuche angeboten wird — **die fünf Bedingungen an
  * einer Stelle, und als reine Funktion statt als Bedingung in einer Komponente.**
  *
  * | Bedingung | Warum |
@@ -404,11 +552,16 @@ export function praefixfenster(fenster: { von: Date; bis: Date }): { von: Date; 
  * | **kein** Treffer | Nur im leeren Ergebnis fehlt die Kehrseite: Dort ist die heutige Antwort leer, und jeder Treffer ist rein zusätzlich. Bei Treffern fände ein vollständig eingetippter Wert als Präfix **23 Nachrichten statt einer** (M49‑3) |
  * | mindestens ein Begriff | Ohne Begriff läuft gar keine Suche, und es gibt nichts zu wiederholen |
  * | **nicht** abgebrochen | Wer gerade an der Zeitgrenze gescheitert ist, bekommt keine **teurere** Suche angeboten. Der Präfixmodus ist die teuerste Zugriffsform dieses Projekts (M50) |
+ * | **mindestens ein BAM-Begriff** *(seit Teil 2 der Property-Suche)* | `modus` wirkt **nur auf Belegnummern**; Feldbegriffe werden immer exakt verglichen (`docs/property-suche.md` §2.2). Bei einer reinen Feldsuche verspräche der Knopf eine Wirkung, die es nicht gibt |
  *
- * Die letzte Bedingung steht ausdrücklich hier und nicht nur in der Reihenfolge
- * der Zweige: Ein Abbruch rendert heute den Abbruchpfad und erreicht den
- * Leerzustand gar nicht — aber das ist eine Eigenschaft des Markups und keine
- * Zusage. Sie wäre bei der nächsten Umstellung still weg.
+ * Die vierte und die fünfte stehen ausdrücklich hier und nicht nur in der
+ * Reihenfolge der Zweige oder in der Gestalt der Marken: Beides sind
+ * Eigenschaften des Markups und keine Zusagen, und beide wären bei der nächsten
+ * Umstellung still weg.
+ *
+ * @param lage.begriffe die Zahl **aller** Marken, beide Arten
+ * @param lage.bamBegriffe die Zahl der Belegnummern **in der Antwort** — das
+ *   Zitat der Frage, die tatsächlich leer ausgegangen ist
  */
 export function zeigtPraefixAngebot(lage: {
   modus: Suchmodus | undefined;
@@ -417,6 +570,37 @@ export function zeigtPraefixAngebot(lage: {
   abgebrochen: boolean;
 }): boolean {
   return lage.modus === "exakt" && lage.treffer === 0 && lage.begriffe > 0 && !lage.abgebrochen;
+}
+
+/**
+ * Ob die Trefferliste die Spalte „Treffer" führt — **nur, wenn eine Belegnummer
+ * gesucht wurde** (E‑110).
+ *
+ * `nachrichten[].treffer` enthält ausschließlich BAM-Treffer; bei einer Suche
+ * allein über Felder ist die Liste in jeder Zeile leer, und das ist richtig so:
+ * Ein Feldtreffer ist der eingegebene Wert selbst und steht bereits als Marke
+ * über der Liste (`docs/property-suche.md` §2.2). **Die Spalte entfällt dann**,
+ * statt leer zu bleiben — eine Überschrift über fünfzig leeren Zellen wäre keine
+ * Auskunft, sondern ein Rätsel. Bei einer gemischten Suche trägt jede Zeile
+ * einen BAM-Treffer (sie muss jede Belegnummer erfüllen), und die Spalte sagt
+ * wie bisher, **worauf** die Nummer getroffen hat.
+ *
+ * Entschieden wird am Zitat der Antwort, nicht an den Zellen: Ob Zeilen leer
+ * sind, hängt an den Daten; ob eine Belegnummer gefragt war, an der Frage.
+ */
+export function zeigtTrefferspalte(lage: { bamBegriffe: number }): boolean {
+  return lage.bamBegriffe > 0;
+}
+
+/**
+ * Wie viele Begriffe **die Antwort** zitiert — beide Arten zusammen.
+ *
+ * `felder` ist **immer vorhanden, leer statt fehlend** (`docs/property-suche.md`
+ * §2.2); die Funktion prüft deshalb nicht auf Abwesenheit, sondern zählt. Sie ist
+ * die Zahl, mit der die Nulltreffer-Zeile die vorige Runde vergleicht.
+ */
+export function begriffeInAntwort(antwort: { begriffe: unknown[]; felder: unknown[] }): number {
+  return antwort.begriffe.length + antwort.felder.length;
 }
 
 /**

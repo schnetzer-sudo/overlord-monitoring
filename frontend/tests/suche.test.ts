@@ -7,21 +7,31 @@ import {
   PRAEFIX_FENSTER_TAGE,
   abweichendeVarianten,
   alsAbfrage,
+  alsFeldParameter,
   alsParameter,
+  alsZustand,
+  ausFeldParameter,
   ausParameter,
   begriffeAus,
+  begriffeInAntwort,
   ergaenze,
+  istGleich,
   jahresfensterAb,
+  markenAus,
+  markenschluessel,
   modusAus,
   modusAusAntwort,
   nulltrefferHinweis,
   parseAsBegriffe,
+  parseAsFelder,
   parseAsSuchmodus,
   praefixfenster,
   spanneInTagen,
   trefferTypen,
   zeigtPraefixAngebot,
+  zeigtTrefferspalte,
   type Suchbegriff,
+  type Suchmarke,
   type Suchzustand,
   type VorigeRunde,
 } from "@/features/nachrichten/suche";
@@ -37,6 +47,7 @@ import {
 
 const zustand = (teil: Partial<Suchzustand>): Suchzustand => ({
   begriff: null,
+  feld: null,
   von: null,
   bis: null,
   modus: null,
@@ -274,6 +285,29 @@ describe("Das Angebot, über den Anfang der Nummer zu suchen", () => {
   });
 });
 
+describe("Die Spalte „Treffer“ bei einer Suche ohne Belegnummer", () => {
+  /**
+   * **Sie entfällt, statt leer zu bleiben** (E‑110): `treffer` je Zeile enthält
+   * nur BAM-Treffer, und bei einer reinen Feldsuche ist sie in jeder Zeile leer
+   * — der Feldtreffer ist der getippte Wert selbst und steht als Marke über der
+   * Liste. Entschieden an der Frage, nicht an den Zellen.
+   */
+  it("entfällt ohne Belegnummer und steht mit einer", () => {
+    expect(zeigtTrefferspalte({ bamBegriffe: 0 })).toBe(false);
+    expect(zeigtTrefferspalte({ bamBegriffe: 1 })).toBe(true);
+  });
+
+  /**
+   * **`felder` ist immer vorhanden, leer statt fehlend** — die Antwort einer
+   * reinen BAM-Suche trägt ein leeres Array, und die Zählung bricht daran nicht.
+   */
+  it("zählt beide Begriffsarten der Antwort, auch bei leerem felder-Array", () => {
+    expect(begriffeInAntwort({ begriffe: [{}, {}], felder: [] })).toBe(2);
+    expect(begriffeInAntwort({ begriffe: [], felder: [{}] })).toBe(1);
+    expect(begriffeInAntwort({ begriffe: [{}], felder: [{}, {}] })).toBe(3);
+  });
+});
+
 describe("Das Fenster, über das der Präfixmodus läuft", () => {
   const bis = new Date("2025-12-30T04:14:00.000Z");
 
@@ -320,32 +354,156 @@ describe("Das Fenster, über das der Präfixmodus läuft", () => {
 
 const TAGE = (anzahl: number) => anzahl * 24 * 60 * 60 * 1000;
 
-describe("Ein Begriff kommt dazu", () => {
-  const acht: Suchbegriff[] = Array.from({ length: HOECHSTENS_BEGRIFFE }, (_, nummer) => ({
-    typ: null,
-    wert: String(nummer),
-  }));
+describe("Ein Feldbegriff und seine Parameterform", () => {
+  /**
+   * Dieselbe Regel wie beim BAM-Begriff, mit demselben Trenner: geteilt am
+   * **ersten** Doppelpunkt, alles dahinter ist Wert. Ein Feldname trägt keinen
+   * Doppelpunkt (Konfiguration, M161), ein Wert darf einen tragen.
+   */
+  it("teilt am ERSTEN Doppelpunkt — alles dahinter ist Wert", () => {
+    expect(ausFeldParameter("Message.GUID:ab:cd")).toEqual({ name: "Message.GUID", wert: "ab:cd" });
+    expect(alsFeldParameter({ name: "Message.GUID", wert: "ab:cd" })).toBe("Message.GUID:ab:cd");
+  });
 
-  it("legt einen neuen Begriff ab", () => {
-    const ergebnis = ergaenze([{ typ: null, wert: "1" }], { typ: 9012, wert: "2" });
+  /**
+   * **Der Feldname ist Pflicht** (E‑100). Was das Backend mit `feldname-fehlt`
+   * oder `feldbegriff-ohne-trenner` abwiese, kommt hier gar nicht erst durch —
+   * übergangen, nicht angezeigt, damit die Oberfläche die beiden Fehler nie
+   * selbst erzeugt.
+   */
+  it("verlangt Name, Trenner und Wert", () => {
+    expect(ausFeldParameter(":4711")).toBeNull();
+    expect(ausFeldParameter("Message.GUID:")).toBeNull();
+    expect(ausFeldParameter("Message.GUID")).toBeNull();
+    expect(ausFeldParameter(" : ")).toBeNull();
+    expect(ausFeldParameter(" Message.SNDPRN : 123 ")).toEqual({
+      name: "Message.SNDPRN",
+      wert: "123",
+    });
+  });
 
-    expect(ergebnis.begriffe).toHaveLength(2);
+  it("liest und schreibt die Felder als wiederholten Parameter", () => {
+    const roh = ["Message.SNDPRN:123", "Message.Status:FINISHED"];
+
+    const gelesen = parseAsFelder.parse(roh);
+    expect(gelesen).toEqual([
+      { name: "Message.SNDPRN", wert: "123" },
+      { name: "Message.Status", wert: "FINISHED" },
+    ]);
+    expect(parseAsFelder.serialize(gelesen!)).toEqual(roh);
+    expect(parseAsFelder.parse([":4711", "kaputt"])).toBeNull();
+    expect(parseAsFelder.parse(["kaputt", "Message.GUID:a"])).toEqual([
+      { name: "Message.GUID", wert: "a" },
+    ]);
+  });
+
+  it("schickt jeden Feldbegriff als eigenen Parameter feld, neben begriff", () => {
+    const abfrage = alsAbfrage(
+      zustand({
+        begriff: [{ typ: null, wert: "80337215" }],
+        feld: [{ name: "Message.SNDPRN", wert: "123" }],
+      }),
+    );
+
+    const parameter = new URLSearchParams(abfrage.slice(1));
+    expect(parameter.getAll("begriff")).toEqual([":80337215"]);
+    expect(parameter.getAll("feld")).toEqual(["Message.SNDPRN:123"]);
+  });
+
+  /** Ohne `feld` bleibt die Abfrage einer reinen BAM-Suche Zeichen für Zeichen die von Teil 3. */
+  it("lässt die Abfrage einer reinen Belegsuche unverändert", () => {
+    const begriff = [{ typ: 9012, wert: "4711815" }];
+    expect(alsAbfrage(zustand({ begriff }))).toBe("?begriff=9012%3A4711815");
+    expect(alsAbfrage(zustand({ begriff, feld: null }))).toBe(alsAbfrage(zustand({ begriff })));
+  });
+});
+
+describe("Die Marken über der Liste — aus beiden Parametern", () => {
+  const bam = (typ: number | null, wert: string): Suchmarke => ({
+    art: "bam",
+    begriff: { typ, wert },
+  });
+  const feld = (name: string, wert: string): Suchmarke => ({ art: "feld", feld: { name, wert } });
+
+  /**
+   * **Rekonstruiert aus `begriff` und `feld`** — erst die Belegnummern, dann die
+   * Felder; und die Gegenrichtung teilt wieder auf. Ein Neuladen ergibt dieselben
+   * Marken.
+   */
+  it("läuft URL → Marken → URL rund", () => {
+    const z = zustand({
+      begriff: [{ typ: 9012, wert: "1" }],
+      feld: [{ name: "Message.SNDPRN", wert: "2" }],
+    });
+
+    const marken = markenAus(z);
+    expect(marken).toEqual([bam(9012, "1"), feld("Message.SNDPRN", "2")]);
+    expect(alsZustand(marken)).toEqual({
+      begriff: [{ typ: 9012, wert: "1" }],
+      feld: [{ name: "Message.SNDPRN", wert: "2" }],
+    });
+    expect(alsZustand([])).toEqual({ begriff: null, feld: null });
+    expect(alsZustand([feld("Message.GUID", "a")])).toEqual({
+      begriff: null,
+      feld: [{ name: "Message.GUID", wert: "a" }],
+    });
+  });
+
+  /**
+   * **Der Schlüssel trägt die Art voran.** `9012:4711` kann eine Belegart mit
+   * Wert oder ein Feldname mit Wert sein — eine BAM-Marke und eine Feld-Marke
+   * sind nie Dubletten voneinander, zwei Feld-Marken mit gleichem Namen und Wert
+   * schon.
+   */
+  it("hält BAM- und Feld-Marke mit gleicher Parameterform auseinander", () => {
+    expect(markenschluessel(bam(9012, "4711"))).toBe("bam:9012:4711");
+    expect(markenschluessel(feld("9012", "4711"))).toBe("feld:9012:4711");
+    expect(istGleich(bam(9012, "4711"), feld("9012", "4711"))).toBe(false);
+    expect(istGleich(feld("Message.GUID", "a"), feld("Message.GUID", "a"))).toBe(true);
+    expect(istGleich(feld("Message.GUID", "a"), feld("Message.SNDPRN", "a"))).toBe(false);
+  });
+});
+
+describe("Eine Marke kommt dazu", () => {
+  const bam = (typ: number | null, wert: string): Suchmarke => ({
+    art: "bam",
+    begriff: { typ, wert },
+  });
+  const feld = (name: string, wert: string): Suchmarke => ({ art: "feld", feld: { name, wert } });
+  const acht: Suchmarke[] = Array.from({ length: HOECHSTENS_BEGRIFFE }, (_, nummer) =>
+    bam(null, String(nummer)),
+  );
+
+  it("legt eine neue Marke ab", () => {
+    const ergebnis = ergaenze([bam(null, "1")], bam(9012, "2"));
+
+    expect(ergebnis.marken).toHaveLength(2);
     expect(ergebnis.doppelt).toBeNull();
     expect(ergebnis.voll).toBe(false);
   });
 
   /**
-   * **Ein doppelter Begriff erzeugt keine zweite Marke.** Gleicher Typ *und*
+   * **Eine doppelte Marke erzeugt keine zweite.** Gleiche Art, gleicher Typ *und*
    * gleicher Wert — die vorhandene meldet sich stattdessen, und ihr Schlüssel
    * kommt zurück, damit die Ansicht weiß, welche.
    */
-  it("legt einen doppelten Begriff nicht ab und nennt die vorhandene Marke", () => {
-    const vorher: Suchbegriff[] = [{ typ: 9012, wert: "4711815" }];
+  it("legt eine doppelte Belegnummer nicht ab und nennt die vorhandene Marke", () => {
+    const vorher = [bam(9012, "4711815")];
 
-    const ergebnis = ergaenze(vorher, { typ: 9012, wert: "4711815" });
+    const ergebnis = ergaenze(vorher, bam(9012, "4711815"));
 
-    expect(ergebnis.begriffe).toBe(vorher);
-    expect(ergebnis.doppelt).toBe("9012:4711815");
+    expect(ergebnis.marken).toBe(vorher);
+    expect(ergebnis.doppelt).toBe("bam:9012:4711815");
+  });
+
+  /** Dieselbe Regel für Felder: Name **und** Wert gleich. */
+  it("legt einen doppelten Feldbegriff nicht ab — die Prüfung läuft über beide Arten", () => {
+    const vorher = [bam(null, "4711815"), feld("Message.SNDPRN", "123")];
+
+    expect(ergaenze(vorher, feld("Message.SNDPRN", "123")).doppelt).toBe("feld:Message.SNDPRN:123");
+    // Eine BAM-Marke und eine Feld-Marke sind nie Dubletten voneinander.
+    expect(ergaenze(vorher, feld("Message.SNDPRN", "4711815")).doppelt).toBeNull();
+    expect(ergaenze(vorher, bam(null, "123")).doppelt).toBeNull();
   });
 
   /**
@@ -354,10 +512,10 @@ describe("Ein Begriff kommt dazu", () => {
    * Vergleich über den Wert allein verschlucke hier den zweiten.
    */
   it("hält denselben Wert unter zwei Typen auseinander", () => {
-    const ergebnis = ergaenze([{ typ: 9006, wert: "0050" }], { typ: 9016, wert: "0050" });
+    const ergebnis = ergaenze([bam(9006, "0050")], bam(9016, "0050"));
 
     expect(ergebnis.doppelt).toBeNull();
-    expect(ergebnis.begriffe).toHaveLength(2);
+    expect(ergebnis.marken).toHaveLength(2);
   });
 
   /**
@@ -367,18 +525,36 @@ describe("Ein Begriff kommt dazu", () => {
    * sperrt sein `+`, statt den Nutzer in ein `400` laufen zu lassen.
    */
   it("sperrt den neunten Begriff und lässt die Liste unverändert", () => {
-    const ergebnis = ergaenze(acht, { typ: null, wert: "neun" });
+    const ergebnis = ergaenze(acht, bam(null, "neun"));
 
     expect(ergebnis.voll).toBe(true);
-    expect(ergebnis.begriffe).toBe(acht);
-    expect(ergebnis.begriffe).toHaveLength(HOECHSTENS_BEGRIFFE);
+    expect(ergebnis.marken).toBe(acht);
+    expect(ergebnis.marken).toHaveLength(HOECHSTENS_BEGRIFFE);
   });
 
-  it("nimmt den achten noch an", () => {
-    const ergebnis = ergaenze(acht.slice(0, HOECHSTENS_BEGRIFFE - 1), { typ: null, wert: "acht" });
+  /**
+   * **Gemischt gezählt.** Vier Belegnummern und vier Felder sind acht; die
+   * neunte Marke wird abgewiesen, gleich welcher Art — das Backend zählt beide
+   * Arten zusammen (`docs/property-suche.md` §2.2), und ein Frontend, das mehr
+   * zuließe, führte in ein `400`.
+   */
+  it("zählt das Geländer über beide Arten zusammen", () => {
+    const gemischt: Suchmarke[] = [
+      ...acht.slice(0, 4),
+      ...[0, 1, 2, 3].map((n) => feld("Message.GUID", String(n))),
+    ];
+    expect(gemischt).toHaveLength(HOECHSTENS_BEGRIFFE);
+
+    expect(ergaenze(gemischt, feld("Message.SNDPRN", "x")).voll).toBe(true);
+    expect(ergaenze(gemischt, bam(9012, "x")).voll).toBe(true);
+    expect(ergaenze(gemischt.slice(0, 7), feld("Message.SNDPRN", "x")).voll).toBe(false);
+  });
+
+  it("nimmt die achte noch an", () => {
+    const ergebnis = ergaenze(acht.slice(0, HOECHSTENS_BEGRIFFE - 1), bam(null, "acht"));
 
     expect(ergebnis.voll).toBe(false);
-    expect(ergebnis.begriffe).toHaveLength(HOECHSTENS_BEGRIFFE);
+    expect(ergebnis.marken).toHaveLength(HOECHSTENS_BEGRIFFE);
   });
 });
 

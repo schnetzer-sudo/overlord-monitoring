@@ -18,7 +18,6 @@ import {
   holeArtefakte,
   holeArtefaktinhalt,
   holeBamSuche,
-  holeBamTypen,
   holeBamWerte,
   holeEigenschaften,
   holeKette,
@@ -27,10 +26,10 @@ import {
   holeNachrichtendetail,
   holeProzessbaum,
   holeProzesse,
+  holeSuchfelder,
   type Artefaktanzeige,
   type Artefaktliste,
   type BamSuchergebnis,
-  type BamTyp,
   type BamWerte,
   type Eigenschaft,
   type Kette,
@@ -40,6 +39,7 @@ import {
   type Prozess,
   type Prozessbaum,
   type Seite,
+  type Suchfelder,
 } from "./api";
 import { PROZESSANSICHT_PARAMETER, type Prozessansichtzustand } from "./prozessansicht";
 import {
@@ -51,9 +51,12 @@ import {
 } from "./filter";
 import {
   SUCHE_PARAMETER,
+  alsZustand,
   begriffeAus,
+  felderAus,
+  markenAus,
   modusAus,
-  type Suchbegriff,
+  type Suchmarke,
   type Suchmodus,
   type Suchzustand,
 } from "./suche";
@@ -314,21 +317,24 @@ export function useBamWerte(messageId: string | null, aktiv: boolean) {
 const BAM_HALTBARKEIT = 15 * 60 * 1000;
 
 /**
- * Die Belegarten zur Auswahl neben dem Suchfeld.
+ * Das Angebot der Suchfläche — Belegarten **und** Felder zur Auswahl neben dem
+ * Suchfeld (`docs/property-suche.md` §2.1).
  *
  * **Länger gehalten als jede Liste** — reine Stammdaten des Mandanten, die sich
  * ohne Zutun des Altsystems nicht ändern. Beim Mandantenwechsel wird der gesamte
  * Zwischenspeicher geleert, nicht invalidiert (`lib/zwischenspeicher.ts`); eine
  * eigene Invalidierung braucht es deshalb nicht.
  *
- * **Sie lädt auf jeder Seite**, weil das Feld in der Kopfzeile steht — einmal je
- * Sitzung und Mandant. Der Aufruf liest zwei Stammdatentabellen mit zusammen 131
- * Zeilen und kostet gemessen 0,53 Millisekunden (M48).
+ * **Es lädt auf jeder Seite**, weil das Feld in der Kopfzeile steht — einmal je
+ * Sitzung und Mandant. Der Aufruf liest drei Konfigurationstabellen mit zusammen
+ * 145 Zeilen und kostet gemessen 1,1 bis 1,5 ms an der Wanduhr
+ * (`docs/property-suche.md` §6.2). Bis Teil 2 hieß dieser Hook `useBamTypen`
+ * und las über `/api/bam/typen` nur die eine Gruppe.
  */
-export function useBamTypen() {
-  return useQuery<BamTyp[]>({
-    queryKey: NACHRICHTEN_SCHLUESSEL.bamTypen,
-    queryFn: holeBamTypen,
+export function useSuchfelder() {
+  return useQuery<Suchfelder>({
+    queryKey: NACHRICHTEN_SCHLUESSEL.suchfelder,
+    queryFn: holeSuchfelder,
     staleTime: BAM_HALTBARKEIT,
     gcTime: BAM_HALTBARKEIT,
   });
@@ -349,20 +355,26 @@ export function useSuchzustand() {
   return {
     zustand: zustand as Suchzustand,
     begriffe: begriffeAus(zustand as Suchzustand),
+    felder: felderAus(zustand as Suchzustand),
+    /** Die Marken über der Liste — **aus beiden Parametern rekonstruiert** (`suche.ts` `markenAus`). */
+    marken: markenAus(zustand as Suchzustand),
     /** Der Modus **der URL** — nicht der der Antwort. Die beiden fallen auseinander, solange geladen wird. */
     modus: modusAus(zustand as Suchzustand),
     /**
-     * **Jede Änderung an den Begriffen setzt auf `exakt` zurück.**
+     * **Jede Änderung an den Marken setzt auf `exakt` zurück.**
      *
      * Wer eine Marke hinzufügt oder wegnimmt, stellt eine **neue Frage**, und die
      * wird zuerst genau beantwortet — sonst liefe die teuerste Zugriffsform
      * dieses Projekts (M50) unbemerkt weiter, obwohl der Anlass für sie, das
      * leere Ergebnis, gar nicht mehr gilt. **Das Zeitfenster bleibt dabei, wie es
      * ist**; es beschreibt den Ausschnitt und nicht die Frage.
+     *
+     * Geschrieben werden **beide** Parameter, `begriff` und `feld` — eine Marke
+     * weniger kann eine von beiden Arten sein, und `alsZustand` teilt die Liste
+     * wieder auf.
      */
-    setzeBegriffe: useCallback(
-      (begriffe: Suchbegriff[]) =>
-        void setzeZustand({ begriff: begriffe.length === 0 ? null : begriffe, modus: null }),
+    setzeMarken: useCallback(
+      (marken: Suchmarke[]) => void setzeZustand({ ...alsZustand(marken), modus: null }),
       [setzeZustand],
     ),
     /** `null`/`null` heißt „Vorgabe des Servers" — und nicht „30 Tage" (Regel L1). */

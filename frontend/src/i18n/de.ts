@@ -975,12 +975,21 @@ export const de = {
       // wird (siehe `nachrichten.suche.bezeichnung`).
       bezeichnung: "Belegnummer suchen",
       platzhalter: "Belegnummer suchen",
+      // Ist ein Feld gewählt, wäre „Belegnummer" eine falsche Auskunft: Der
+      // Wert erreicht dann eine Spalte oder eine Eigenschaft, nie MessageBAM.
+      platzhalterFeld: "Wert suchen",
       hinzufuegen: "Begriff hinzufügen",
     },
 
+    // Seit Teil 2 der Property-Suche zwei Gruppen in einem Menü (E-99). Die
+    // Feldnamen selbst bleiben technisch und unübersetzt (E-105); übersetzt
+    // sind nur die Gruppenüberschriften und die Beschriftung des Schalters.
     typwahl: {
       alle: "Alle Belegarten",
       gewaehlt: "Belegart: {belegart}",
+      gewaehltesFeld: "Feld: {feld}",
+      gruppeBelegarten: "Belegarten",
+      gruppeFelder: "Felder",
     },
 
     marken: {
@@ -1069,6 +1078,10 @@ export const de = {
       titel: "Wonach suchst du?",
       was: "Tippe eine Belegnummer in das Feld oben — Lieferschein-, Bestell- oder Transportnummer, Charge, Werk oder Materialnummer. Die Eingabetaste startet die Suche.",
       belegarten: "Für diesen Mandanten sind diese Belegarten hinterlegt:",
+      // Die Feldnamen stehen darunter unverändert (E-105). Der Satz nennt die
+      // Weiche aus E-100: Ohne gewähltes Feld wird nie ein Feld durchsucht.
+      felder:
+        "Dazu diese Felder, mit ihrem technischen Namen. Wähle das Feld neben dem Suchfeld — ein Wert ohne gewähltes Feld sucht immer eine Belegnummer:",
       hilfe:
         "Führende Nullen und ein führendes Leerzeichen sucht die Suche von selbst mit — sie stehen auf dem Beleg nicht, im Bestand aber sehr wohl. Mehrere Begriffe werden mit UND verknüpft.",
       // Der einzige Ort, an dem die Belegart erwähnt wird (docs/bam-suche.md
@@ -1116,6 +1129,11 @@ export const de = {
     // beiden Sätze erscheint, entscheidet die Ansicht und nicht der Fehlerkatalog.
     abgebrochen:
       "Die Suche hat zu lange gedauert und wurde abgebrochen. Verkleinere den Zeitraum oder nenne eine zweite Belegnummer.",
+    // Mit Feldbegriffen hilft der Zeitraum — für Status, Ablauf-Kennung und
+    // Ablaufname ist der Abbruch über ein Jahr der Regelfall (docs/property-suche.md
+    // §6.4). Eine zweite Belegnummer wäre dort eine Antwort auf eine andere Frage.
+    abgebrochenMitFeld:
+      "Die Suche hat zu lange gedauert und wurde abgebrochen. Verkleinere den Zeitraum — bei Feldern wie Status oder Ablaufname ist das über ein Jahr der Regelfall.",
   },
 
   /**
@@ -1565,6 +1583,18 @@ export const de = {
     // steht im Satz.
     "suche-abgebrochen":
       "Die Suche hat zu lange gedauert und wurde abgebrochen. Verkleinere den Zeitraum oder schärfe den Suchbegriff.",
+
+    // Belegsuche mit Feldbegriffen (docs/property-suche.md §2.2). Die Oberfläche
+    // erzeugt die ersten beiden nie selbst — ein Feld muss gewählt sein, bevor
+    // eine Feld-Marke entsteht —; sie stehen hier für die von Hand gebaute URL.
+    // Die Texte sind die des Backends, nicht neu formuliert.
+    "feldname-fehlt":
+      "Vor dem Doppelpunkt steht der Feldname — ohne Feld wird nur nach Belegnummern gesucht.",
+    "feldbegriff-ohne-trenner": "Ein Feldbegriff hat die Form feldname:wert.",
+    "suchbegriff-fehlt":
+      "Gib mindestens eine Belegnummer (typ:wert oder :wert) oder ein Feld (feldname:wert) an.",
+    "zu-viele-suchbegriffe":
+      "Es lassen sich höchstens 8 Begriffe gleichzeitig suchen — Belegnummern und Felder zusammen.",
 
     // Katalogpflege — beide kommen aus `PUT /api/katalog/prozesse/{processId}`.
     // Ein unbekannter Wert faellt dort ausdruecklich nicht stillschweigend auf

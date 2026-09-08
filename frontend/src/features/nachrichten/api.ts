@@ -538,6 +538,43 @@ export type BamTyp = {
 };
 
 /**
+ * **Das Angebot der Suchfläche aus beiden Quellen** — `GET /api/bam/suchfelder`
+ * (`docs/property-suche.md` §2.1), seit Teil 2 die eine Quelle der Auswahl
+ * neben dem Suchfeld.
+ *
+ * Zwei Gruppen, so wie das Backend sie liefert: `bam` ist **dieselbe Abfrage wie
+ * `GET /api/bam/typen`** (wiederverwendet, nicht nachgebaut), `felder` sind die
+ * für den Mandanten sichtbaren Feldnamen aus `MessagePropertySearchListEntry`,
+ * **alphabetisch nach dem Namen** — die einzige Ordnung, die ohne Kuratierung
+ * auskommt, weil die Tabelle keine Sortierspalte hat. **Die Oberfläche sortiert
+ * nicht nach.**
+ *
+ * Jeder Eintrag nennt seine Quelle selbst (`quelle`), obwohl die Antwort schon
+ * zwei Gruppen trägt: In einer gemischten Auswahl bleibt er damit eindeutig.
+ */
+export type SuchfeldBam = BamTyp & { quelle: "bam" };
+
+export type SuchfeldFeld = {
+  quelle: "feld";
+  /** `MessagePropertyName`, **unverändert** (E‑105). Wer `Message.SNDPRN` nicht versteht, sieht `Message.SNDPRN`. */
+  name: string;
+  /**
+   * `true`, wenn der Name eine **Spalte** benennt (Typ 0) und die Suche ein
+   * Spaltenprädikat baut; `false` für eine Zeile in `MessageProperty`. Die
+   * Oberfläche zeigt das nicht an — sie reicht den Namen durch, und der Vergleich
+   * ist in beiden Fällen exakt.
+   */
+  spalte: boolean;
+};
+
+export type Suchfelder = {
+  /** Immer vorhanden, leer für drei Mandanten (M40). */
+  bam: SuchfeldBam[];
+  /** Immer vorhanden; für neun Mandanten ausschließlich die globalen Typ‑0‑Einträge (M154). */
+  felder: SuchfeldFeld[];
+};
+
+/**
  * Worauf eine Nummer auf dieser Nachricht getroffen hat.
  *
  * **Das ist die eine Angabe, die der Nutzer nicht selbst getippt hat.** Den Wert
@@ -602,11 +639,37 @@ export type BamBegriffTreffer = {
  */
 export type BamAntwortmodus = "EXAKT" | "PRAEFIX";
 
+/**
+ * Ein Feldbegriff, so wie die Suche ihn verstanden hat — **das Zitat der
+ * Frage**, wie {@link BamBegriffTreffer} für die Belegnummern. Ohne Varianten,
+ * weil es für Feldwerte keine Normalisierung gibt.
+ */
+export type FeldBegriffTreffer = {
+  name: string;
+  wert: string;
+  /** Ob als Spalte gesucht wurde — dieselbe Angabe wie im Angebot. */
+  spalte: boolean;
+};
+
 /** Die Antwort der Belegsuche. */
 export type BamSuchergebnis = {
-  /** Die Treffer, absteigend nach Zeitpunkt — **immer vorhanden, leer statt fehlend**. */
+  /**
+   * Die Treffer, absteigend nach Zeitpunkt — **immer vorhanden, leer statt fehlend**.
+   *
+   * `treffer` je Zeile enthält **ausschließlich BAM-Treffer**. Bei einer Suche
+   * allein über Felder ist die Liste in jeder Zeile leer, und das ist richtig
+   * so: Ein Feldtreffer ist der eingegebene Wert selbst und steht als Marke über
+   * der Liste (`docs/property-suche.md` §2.2). Die Spalte „Treffer" entfällt dann
+   * (`suche.ts` `zeigtTrefferspalte`).
+   */
   nachrichten: BamTreffer[];
   begriffe: BamBegriffTreffer[];
+  /**
+   * Die Feldbegriffe, wie die Suche sie verstanden hat — **immer vorhanden, leer
+   * statt fehlend**, auch bei einer reinen BAM-Suche. Ein Frontend, das auf
+   * Abwesenheit prüft, bricht am ersten Tag; hier wird gezählt, nicht geprüft.
+   */
+  felder: FeldBegriffTreffer[];
   /**
    * Das **tatsächlich verwendete** Zeitfenster, ISO 8601 in UTC.
    *
@@ -814,8 +877,12 @@ export const NACHRICHTEN_SCHLUESSEL = {
   eigenschaften: (messageId: string) => ["nachrichten", "eigenschaften", messageId] as const,
   /** Die Belegdaten einer Nachricht — nur geladen, wenn der Block aufgeklappt wird. */
   bam: (messageId: string) => ["nachrichten", "bam", messageId] as const,
-  /** Die Belegarten zur Auswahl. Reine Stammdaten des Mandanten, entsprechend lange gehalten. */
-  bamTypen: ["nachrichten", "bam-typen"] as const,
+  /**
+   * Das Angebot der Suchfläche — Belegarten **und** Felder. Reine Stammdaten
+   * des Mandanten, entsprechend lange gehalten. Hieß bis Teil 2 der
+   * Property-Suche `bam-typen` und las nur die eine Gruppe.
+   */
+  suchfelder: ["nachrichten", "suchfelder"] as const,
   /**
    * Eine Belegsuche. Der Schlüssel trägt die ganze Abfrage — andere Begriffe und
    * ein anderes Zeitfenster sind andere Daten.
@@ -892,14 +959,21 @@ export function holeBamWerte(messageId: string): Promise<BamWerte> {
 }
 
 /**
- * Die Belegarten, die dieser Mandant zur Auswahl bekommt.
+ * Das Angebot der Suchfläche — die Belegarten **und** die Felder, die dieser
+ * Mandant zur Auswahl bekommt.
  *
  * **Ohne Parameter, und ohne Mandanten-ID** (Regel M1): Der Mandant kommt aus der
- * Sitzung. Eine leere Liste ist eine Antwort und kein Fehler — drei Mandanten
- * haben keinen konfigurierten Typ und suchen typlos.
+ * Sitzung. Eine leere Gruppe ist eine Antwort und kein Fehler — drei Mandanten
+ * haben keinen konfigurierten Typ und suchen typlos, neun sehen in der
+ * Feldgruppe nur die globalen Typ‑0‑Einträge.
+ *
+ * **`GET /api/bam/typen` ruft die Oberfläche seit Teil 2 nicht mehr.** Der
+ * Endpunkt bleibt bestehen (`docs/property-suche.md` §9, Punkt 5); seine
+ * Antwort steckt Zeichen für Zeichen in der Gruppe `bam` dieses Aufrufs, und
+ * zwei Aufrufe auf jeder Seite für dieselbe Liste wären einer zu viel.
  */
-export function holeBamTypen(): Promise<BamTyp[]> {
-  return hole<BamTyp[]>("/bam/typen");
+export function holeSuchfelder(): Promise<Suchfelder> {
+  return hole<Suchfelder>("/bam/suchfelder");
 }
 
 /**

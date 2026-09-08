@@ -61,16 +61,30 @@ import { StatusPlakette } from "./status-plakette";
  * *welcher Beleg ist das* und *bin ich fertig*? Der Ablaufname beantwortet
  * keines von beiden und steht im Detail vollständig da. **Kein neuer
  * Umbruchpunkt.**
+ *
+ * ## Bei einer reinen Feldsuche entfällt die Spalte „Treffer" (E‑110)
+ *
+ * `treffer` je Zeile enthält ausschließlich BAM-Treffer; wurde keine Belegnummer
+ * gesucht, ist sie in jeder Zeile leer — und das ist richtig so, der Feldtreffer
+ * ist der getippte Wert selbst und steht als Marke über der Liste. Eine
+ * Überschrift über fünfzig leeren Zellen wäre keine Auskunft, sondern ein
+ * Rätsel; die Spalte fällt deshalb ganz weg, und der Ablauf bekommt ihre Breite.
+ * **Entschieden wird das an der Frage und nicht an den Zellen**
+ * (`suche.ts` `zeigtTrefferspalte`), damit die Tabelle nicht je nach Daten
+ * ihre Gestalt wechselt.
  */
 export function TrefferTabelle({
   zeilen,
   gewaehlt,
   aufAuswahl,
+  mitTrefferspalte,
 }: {
   zeilen: BamTreffer[];
   /** Die geöffnete Nachricht — sie kommt aus der URL, nicht aus dieser Tabelle. */
   gewaehlt: string | null;
   aufAuswahl: (messageId: string) => void;
+  /** Ob eine Belegnummer gesucht wurde — nur dann gibt es etwas zu beschriften. */
+  mitTrefferspalte: boolean;
 }) {
   const texte = useTexte();
 
@@ -87,9 +101,11 @@ export function TrefferTabelle({
           {/* Breiter als die übrigen Zusatzspalten: Die längste gemessene
               Beschreibung hat 35 Zeichen, mit einem `+2` dahinter 38. Sie kürzt
               trotzdem — die Hauptinformation der Zeile weicht dafür nicht. */}
-          <TableHead className="h-8 w-[13rem] lg:w-[16rem]">
-            {texte.suche.spalten.treffer}
-          </TableHead>
+          {mitTrefferspalte ? (
+            <TableHead className="h-8 w-[13rem] lg:w-[16rem]">
+              {texte.suche.spalten.treffer}
+            </TableHead>
+          ) : null}
           <TableHead className="h-8 w-[8.5rem]">{texte.suche.spalten.kette}</TableHead>
           {/* Ohne Breitenangabe: Der Ablaufname bekommt, was übrig bleibt. */}
           <TableHead className="hidden h-8 md:table-cell">
@@ -135,9 +151,11 @@ export function TrefferTabelle({
                 schritt={zeile.schritt}
               />
             </TableCell>
-            <TableCell className="px-2 py-0 align-middle">
-              <TrefferZelle treffer={zeile.treffer} />
-            </TableCell>
+            {mitTrefferspalte ? (
+              <TableCell className="px-2 py-0 align-middle">
+                <TrefferZelle treffer={zeile.treffer} />
+              </TableCell>
+            ) : null}
             <TableCell className="px-2 py-0 align-middle">
               <KettenZelle rollen={zeile.rollen} />
             </TableCell>

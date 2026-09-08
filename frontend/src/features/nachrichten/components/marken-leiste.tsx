@@ -4,12 +4,13 @@ import { Marke } from "@/components/marke";
 import { useSuchsignal } from "@/components/suchsignal";
 import { useTexte } from "@/i18n/provider";
 
-import type { BamTyp } from "../api";
-import { useBamTypen } from "../hooks";
-import { alsParameter, type Suchbegriff } from "../suche";
+import type { SuchfeldBam } from "../api";
+import { useSuchfelder } from "../hooks";
+import { markenschluessel, type Suchbegriff, type Suchmarke } from "../suche";
 
 /**
- * Die Begriffe als **Marken**, mit `UND` verknüpft.
+ * Die Begriffe als **Marken**, mit `UND` verknüpft — seit Teil 2 der
+ * Property-Suche **beider Arten**: Belegnummern und Feldbegriffe.
  *
  * ## Warum die Marken hier stehen und nicht am Feld
  *
@@ -20,12 +21,22 @@ import { alsParameter, type Suchbegriff } from "../suche";
  *
  * ## Ein doppelter Begriff wird nicht abgelegt
  *
- * Gleicher Typ **und** gleicher Wert: Die vorhandene Marke hebt sich kurz hervor,
- * es entsteht keine zweite. **Der Schlüssel ist deshalb `(typ, wert)` und niemals
- * der Wert allein** — bei 4,17 Prozent der Paare steht derselbe Wert unter
- * mehreren Typen (M37). Zwei Marken mit demselben React-Schlüssel wären eine
- * Meldung in der Konsole und sonst nichts Sichtbares; genau dafür gibt es
+ * Gleiche Art, gleicher Typ beziehungsweise Name **und** gleicher Wert: Die
+ * vorhandene Marke hebt sich kurz hervor, es entsteht keine zweite. **Der
+ * Schlüssel ist deshalb die Art voran, dann `(typ, wert)` oder `(name, wert)`**
+ * (`suche.ts` `markenschluessel`) — bei 4,17 Prozent der Paare steht derselbe
+ * Wert unter mehreren Typen (M37), und eine BAM-Marke und eine Feld-Marke sind
+ * nie Dubletten voneinander. Zwei Marken mit demselben React-Schlüssel wären
+ * eine Meldung in der Konsole und sonst nichts Sichtbares; genau dafür gibt es
  * `tests/suche-marken.test.tsx`.
+ *
+ * ## Eine Gestalt, zwei Beschriftungen
+ *
+ * `components/marke.tsx` bleibt unverändert — es gibt keine zweite
+ * Markengestalt im Projekt. Eine BAM-Marke trägt die Belegart, falls eine
+ * gewählt war, und den Wert; eine Feld-Marke den **technischen Namen
+ * unverändert** (E‑105) und dahinter den Wert. Beide in derselben Anordnung:
+ * gedämpft, was der Nutzer gewählt hat; in fester Laufweite, was er getippt hat.
  *
  * ## Die Marke ist hier ein Bedienelement — die im Detail ist es nicht
  *
@@ -35,30 +46,37 @@ import { alsParameter, type Suchbegriff } from "../suche";
  * (`docs/bam-werte.md` §11).
  */
 export function MarkenLeiste({
-  begriffe,
-  aufBegriffe,
+  marken,
+  aufMarken,
 }: {
-  begriffe: Suchbegriff[];
-  aufBegriffe: (begriffe: Suchbegriff[]) => void;
+  marken: Suchmarke[];
+  aufMarken: (marken: Suchmarke[]) => void;
 }) {
   const texte = useTexte();
   const { doppelt } = useSuchsignal();
-  const typen = useBamTypen().data ?? [];
+  const belegarten = useSuchfelder().data?.bam ?? [];
 
   return (
     <ul aria-label={texte.suche.marken.bezeichnung} className="flex flex-wrap items-center gap-1.5">
-      {begriffe.map((begriff) => {
-        const schluessel = alsParameter(begriff);
+      {marken.map((marke) => {
+        const schluessel = markenschluessel(marke);
         return (
-          <li key={schluessel} data-begriff={schluessel}>
+          <li key={schluessel} data-marke={schluessel}>
             <Marke
               hervorgehoben={doppelt === schluessel}
               entfernenText={texte.suche.marken.entfernen}
               aufEntfernen={() =>
-                aufBegriffe(begriffe.filter((eintrag) => alsParameter(eintrag) !== schluessel))
+                aufMarken(marken.filter((eintrag) => markenschluessel(eintrag) !== schluessel))
               }
             >
-              <Begriffstext begriff={begriff} typen={typen} />
+              {marke.art === "bam" ? (
+                <Begriffstext begriff={marke.begriff} belegarten={belegarten} />
+              ) : (
+                <>
+                  <span className="text-muted-foreground">{marke.feld.name}: </span>
+                  <span className="font-mono">{marke.feld.wert}</span>
+                </>
+              )}
             </Marke>
           </li>
         );
@@ -68,7 +86,7 @@ export function MarkenLeiste({
 }
 
 /**
- * Was in einer Marke steht: die Belegart, wenn eine gewählt war, und der Wert.
+ * Was in einer BAM-Marke steht: die Belegart, wenn eine gewählt war, und der Wert.
  *
  * **Der Wert läuft in fester Laufweite** — er ist eine Nummer und keine Prosa,
  * und steht damit in derselben Schrift wie die Belegnummern im Detail und die
@@ -79,12 +97,18 @@ export function MarkenLeiste({
  * hat. Sichtbar unfertig statt lautlos weggelassen — dieselbe Regel wie bei
  * `Typbezeichnung` im Backend.
  */
-function Begriffstext({ begriff, typen }: { begriff: Suchbegriff; typen: BamTyp[] }) {
+function Begriffstext({
+  begriff,
+  belegarten,
+}: {
+  begriff: Suchbegriff;
+  belegarten: SuchfeldBam[];
+}) {
   if (begriff.typ === null) {
     return <span className="font-mono">{begriff.wert}</span>;
   }
   const bezeichnung =
-    typen.find((eintrag) => eintrag.typ === begriff.typ)?.bezeichnung ?? String(begriff.typ);
+    belegarten.find((eintrag) => eintrag.typ === begriff.typ)?.bezeichnung ?? String(begriff.typ);
   return (
     <>
       <span className="text-muted-foreground">{bezeichnung}: </span>

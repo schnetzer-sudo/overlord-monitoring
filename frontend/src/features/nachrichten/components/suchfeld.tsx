@@ -10,8 +10,10 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -20,15 +22,17 @@ import { einsetzen } from "@/i18n";
 import { useTexte } from "@/i18n/provider";
 import { ROUTEN } from "@/lib/routen";
 
-import type { BamTyp } from "../api";
-import { useBamTypen } from "../hooks";
+import type { Suchfelder } from "../api";
+import { useSuchfelder } from "../hooks";
 import {
   HOECHSTENS_BEGRIFFE,
   SUCHE_PARAMETER,
+  alsFeldParameter,
   alsParameter,
-  begriffeAus,
+  alsZustand,
   ergaenze,
-  type Suchbegriff,
+  markenAus,
+  type Suchmarke,
   type Suchzustand,
 } from "../suche";
 
@@ -46,12 +50,35 @@ import {
  * **Es gibt keinen Navigationseintrag dazu.** Das Feld steht auf jeder Seite; ein
  * Menüpunkt daneben wäre eine zweite Tür in denselben Raum.
  *
+ * ## Eine Fläche, zwei Quellen (E‑99)
+ *
+ * Seit Teil 2 der Property-Suche zeigt die Auswahl neben dem Feld **zwei
+ * Gruppen** aus `GET /api/bam/suchfelder`: die *Belegarten* des Mandanten und
+ * die *Felder* — technische Namen, unverändert (E‑105). Wer `Message.SNDPRN`
+ * nicht versteht, sieht `Message.SNDPRN`; es gibt keine Beschriftung, keine
+ * Übersetzung, keinen Erklärtext daneben. Die Ordnung innerhalb der Gruppen ist
+ * die des Endpunkts, hier wird nicht nachsortiert.
+ *
+ * **Der typlose Eintrag bleibt und behält seinen Platz:** Ein Wert ohne Auswahl
+ * sucht Belegnummern unter jedem Typ — und **er erreicht nie ein Feld** (E‑100).
+ * Ein Feld muss gewählt sein, bevor eine Feld-Marke entsteht; die beiden
+ * Problemtypen `feldname-fehlt` und `feldbegriff-ohne-trenner` kann diese
+ * Oberfläche deshalb nicht erzeugen.
+ *
+ * **Die Auswahl erscheint, sobald eine der beiden Gruppen etwas enthält.** Bis
+ * Teil 2 erschien sie gar nicht, wenn der Mandant keine Belegart konfiguriert
+ * hatte (`docs/bam-suche.md` §10) — für die Feldgruppe gilt das nicht, sie ist
+ * für keinen Mandanten leer (die acht Typ‑0‑Einträge sind global, M154). Eine
+ * leere Gruppe wird **weggelassen**, nicht als leere Überschrift gezeigt.
+ *
  * ## Gesucht wird auf Eingabe, nicht beim Tippen
  *
  * Keine Entprellung, kein Vorschlagsmenü, keine Suche je Zeichen. Der Zugriff
  * über den **Wert** ist der teuerste Pfad dieses Projekts: M35 misst für den
  * schlimmsten Wert 8,66 Sekunden beim Jahresfenster, auf einer *ruhenden*
- * Testkopie. Ein Feld, das bei jedem Zeichen sucht, feuert das mehrfach ab.
+ * Testkopie — und die Property-Suche liest über den Wertindex bis zu 5,4 s
+ * über ein Jahr (`docs/property-suche.md` §6.3). Ein Feld, das bei jedem
+ * Zeichen sucht, feuert das mehrfach ab.
  *
  * **Und kein Aufklappmenü unter dem Feld.** Eine Trefferzeile trägt Zeitpunkt,
  * Status, Ablauf, Treffertyp und Kettenhinweis — das ist eine Tabellenzeile und
@@ -65,15 +92,21 @@ import {
  * kein EDI-Spezialist ist. Deshalb heißt dieses hier „Belegnummer suchen" und
  * jenes „Prozess, Projekt oder Ablauf durchsuchen"; die Beschriftung des
  * Listenfilters ist in Teil 3 dafür angepasst worden
- * (`docs/nachrichtenliste.md` §8.2).
+ * (`docs/nachrichtenliste.md` §8.2). **Ist ein Feld gewählt, sagt der Platzhalter
+ * „Wert suchen"** — „Belegnummer" wäre dann eine falsche Auskunft.
  *
  * ## Woher es weiß, was schon gesucht wird
  *
  * Aus der URL, gelesen über dieselben Parser wie die Trefferansicht — **und
  * geschrieben über den Router**, nicht über sie. Der Unterschied ist der Grund:
  * Ein Filterzustand ändert die aktuelle Seite, dieses Feld führt auf eine
- * *andere* (`/suche`). Auf jeder anderen Seite ist die Liste der Begriffe leer,
+ * *andere* (`/suche`). Auf jeder anderen Seite ist die Liste der Marken leer,
  * und das Feld beginnt eine neue Suche.
+ *
+ * **Die gewählte Belegart oder das gewählte Feld und die begonnene Eingabe
+ * stehen nicht in der URL.** Sie beschreiben keinen Ausschnitt, sondern eine
+ * begonnene Eingabe — dieselbe Prüfung wie beim halb ausgefüllten freien
+ * Zeitfenster der Liste (`docs/frontend-grundlagen.md` §8).
  */
 export function Suchfeld() {
   const texte = useTexte();
@@ -83,7 +116,7 @@ export function Suchfeld() {
   const feldId = useId();
 
   const [eingabe, setEingabe] = useState("");
-  const [typ, setTyp] = useState<number | null>(null);
+  const [auswahl, setAuswahl] = useState<Auswahl>(null);
 
   /*
    * **Zwei Wege, und der Unterschied ist nicht Geschmack, sondern ein Fehler,
@@ -101,13 +134,15 @@ export function Suchfeld() {
    */
   const [zustand, setzeZustand] = useQueryStates(SUCHE_PARAMETER, { history: "replace" });
   const aufSuche = pfad === ROUTEN.suche;
-  const begriffe = aufSuche ? begriffeAus(zustand as Suchzustand) : [];
+  const marken = aufSuche ? markenAus(zustand as Suchzustand) : [];
 
-  const typenAnfrage = useBamTypen();
-  const typen = typenAnfrage.data ?? [];
-  const gewaehlt = typen.find((eintrag) => eintrag.typ === typ) ?? null;
+  const angebot = useSuchfelder().data ?? LEERES_ANGEBOT;
+  // Nur, was das Angebot dieses Mandanten kennt, ist wirksam: Nach einem
+  // Mandantenwechsel kann die Auswahl auf einen Typ oder ein Feld zeigen, das es
+  // hier nicht gibt — dann gilt „keine Auswahl", sichtbar und beim Abschicken.
+  const wirksam = imAngebot(auswahl, angebot);
 
-  const voll = begriffe.length >= HOECHSTENS_BEGRIFFE;
+  const voll = marken.length >= HOECHSTENS_BEGRIFFE;
   const leer = eingabe.trim() === "";
 
   function suche(ereignis: React.FormEvent) {
@@ -115,8 +150,14 @@ export function Suchfeld() {
     if (leer || voll) {
       return;
     }
-    const neuer: Suchbegriff = { typ, wert: eingabe.trim() };
-    const ergaenzung = ergaenze(begriffe, neuer);
+    const wert = eingabe.trim();
+    // Ein Feld muss gewählt sein, bevor eine Feld-Marke entsteht (E-100); ohne
+    // Auswahl ist es eine Belegnummer unter jedem Typ.
+    const neue: Suchmarke =
+      wirksam?.art === "feld"
+        ? { art: "feld", feld: { name: wirksam.name, wert } }
+        : { art: "bam", begriff: { typ: wirksam?.typ ?? null, wert } };
+    const ergaenzung = ergaenze(marken, neue);
 
     if (ergaenzung.doppelt !== null) {
       // Es entsteht keine zweite Marke — die vorhandene meldet sich stattdessen.
@@ -128,30 +169,34 @@ export function Suchfeld() {
 
     setEingabe("");
     if (aufSuche) {
-      // Ein Begriff mehr ist ein Filter und keine Station — `history: "replace"`
+      // Eine Marke mehr ist ein Filter und keine Station — `history: "replace"`
       // steht am Hook. Das Zeitfenster und die geöffnete Nachricht bleiben
       // unberührt.
       //
       // **Der Modus fällt dagegen auf `exakt` zurück, und zwar hier wie beim
-      // Entfernen einer Marke** (`hooks.ts` `setzeBegriffe`): Ein Begriff mehr
+      // Entfernen einer Marke** (`hooks.ts` `setzeMarken`): Eine Marke mehr
       // ist eine **neue Frage**, und die wird zuerst genau beantwortet. Der
       // Anlass für die Präfixsuche — das leere Ergebnis — gilt dann nicht mehr,
       // und sie ist die teuerste Zugriffsform dieses Projekts (M50).
-      void setzeZustand({ begriff: ergaenzung.begriffe, modus: null });
+      void setzeZustand({ ...alsZustand(ergaenzung.marken), modus: null });
     } else {
       // Von anderswo ist es eine Station: Dorthin will man mit Zurück zurück.
-      router.push(suchziel(ergaenzung.begriffe));
+      router.push(suchziel(ergaenzung.marken));
     }
   }
 
   return (
     <form onSubmit={suche} className="flex w-full min-w-0 items-center gap-1" role="search">
-      {typen.length > 0 ? <Typwahl typen={typen} gewaehlt={gewaehlt} aufWahl={setTyp} /> : null}
+      {angebot.bam.length > 0 || angebot.felder.length > 0 ? (
+        <Auswahlmenue angebot={angebot} gewaehlt={wirksam} aufWahl={setAuswahl} />
+      ) : null}
 
       {/* Die Beschriftung benennt, **worin** gesucht wird — sichtbar tut das der
           Platzhalter, für Vorleseprogramme dieses Label. */}
       <Label htmlFor={feldId} className="sr-only">
-        {texte.suche.feld.bezeichnung}
+        {wirksam?.art === "feld"
+          ? einsetzen(texte.suche.typwahl.gewaehltesFeld, { feld: wirksam.name })
+          : texte.suche.feld.bezeichnung}
       </Label>
       <Input
         id={feldId}
@@ -160,7 +205,9 @@ export function Suchfeld() {
         inputMode="text"
         value={eingabe}
         onChange={(ereignis) => setEingabe(ereignis.target.value)}
-        placeholder={texte.suche.feld.platzhalter}
+        placeholder={
+          wirksam?.art === "feld" ? texte.suche.feld.platzhalterFeld : texte.suche.feld.platzhalter
+        }
         className="h-bedienelement min-w-0 flex-1"
       />
       <Button
@@ -186,38 +233,88 @@ export function Suchfeld() {
 }
 
 /**
- * Die Belegart zum Begriff — **Verfeinerung, keine Pflicht.**
+ * Was neben dem Feld gewählt ist: eine Belegart, ein Feld — oder nichts.
  *
- * Die Vorgabe ist **kein** Typ, und das ist gemessen: M36 weist die Typangabe mit
+ * **Komponentenzustand und nicht URL**: Es ist eine begonnene Eingabe und kein
+ * Ausschnitt (`docs/frontend-grundlagen.md` §8). Abgelegt wird sie erst als Teil
+ * einer Marke.
+ */
+type Auswahl = { art: "bam"; typ: number } | { art: "feld"; name: string } | null;
+
+const LEERES_ANGEBOT: Suchfelder = { bam: [], felder: [] };
+
+/** Die Auswahl, sofern das Angebot dieses Mandanten sie kennt — sonst „keine". */
+function imAngebot(auswahl: Auswahl, angebot: Suchfelder): Auswahl {
+  if (auswahl === null) {
+    return null;
+  }
+  if (auswahl.art === "bam") {
+    return angebot.bam.some((eintrag) => eintrag.typ === auswahl.typ) ? auswahl : null;
+  }
+  return angebot.felder.some((eintrag) => eintrag.name === auswahl.name) ? auswahl : null;
+}
+
+/** Der Wert eines Eintrags im Auswahlmenü — die Art voran, damit `9012` als Typ und als Name nie zusammenfallen. */
+function auswahlwert(auswahl: Auswahl): string {
+  if (auswahl === null) {
+    return "";
+  }
+  return auswahl.art === "bam" ? `bam:${auswahl.typ}` : `feld:${auswahl.name}`;
+}
+
+function ausAuswahlwert(wert: string): Auswahl {
+  if (wert.startsWith("bam:")) {
+    return { art: "bam", typ: Number(wert.slice(4)) };
+  }
+  if (wert.startsWith("feld:")) {
+    return { art: "feld", name: wert.slice(5) };
+  }
+  return null;
+}
+
+/**
+ * Die Auswahl zum Begriff — **Belegart oder Feld, Verfeinerung oder Weiche.**
+ *
+ * Eine Belegart ist Verfeinerung und keine Pflicht: M36 weist die Typangabe mit
  * +1,5 bis +4 Prozent aus, also im Rauschen — sie beschleunigt nicht. Typlos
  * kostet auch kaum etwas: `NEXANS` trägt zwar zehn kuratierte Zeilen, aber nur
  * **drei verschiedene** Sollängen, und aufgefüllt wird nur nach oben (M47).
  *
- * **Ohne konfigurierte Typen erscheint die Auswahl gar nicht.** `EDITIONLINGERI`,
- * `SYSTEM` und `WOC` haben keinen (M40); dort gibt es keinen leeren Platzhalter
- * und keine leere Liste, sondern nichts — dieselbe Regel wie bei der leeren
- * Spalte in `docs/nachrichtenliste.md` §8.1.
+ * Ein Feld dagegen ist eine **Weiche**: Mit ihm sucht der Wert eine Spalte oder
+ * eine Eigenschaft und nie eine Belegnummer, ohne es nie ein Feld (E‑100).
+ * Beide stehen in einem Menü, weil es **eine** Suchfläche ist (E‑99) — als zwei
+ * Gruppen, damit niemand ein Feld für eine Belegart hält.
  *
  * **Die Beschriftungen bleiben ungekürzt.** M45 hat das Kürzen der Endungen
  * ausgeschlossen: Ohne sie fallen 62 Beschreibungen auf 57, und zwei
  * `Abladestelle`-Typen stünden untereinander mit identischer Überschrift. Im
  * Auswahlmenü ist Platz dafür; am Schalter kürzt der Name und steht vollständig
- * im `title`.
+ * im `title`. Für die Feldnamen gilt dasselbe: unverändert, technisch (E‑105).
  */
-function Typwahl({
-  typen,
+function Auswahlmenue({
+  angebot,
   gewaehlt,
   aufWahl,
 }: {
-  typen: BamTyp[];
-  gewaehlt: BamTyp | null;
-  aufWahl: (typ: number | null) => void;
+  angebot: Suchfelder;
+  gewaehlt: Auswahl;
+  aufWahl: (auswahl: Auswahl) => void;
 }) {
   const texte = useTexte();
+
+  const gewaehlteBelegart =
+    gewaehlt?.art === "bam"
+      ? (angebot.bam.find((eintrag) => eintrag.typ === gewaehlt.typ)?.bezeichnung ??
+        String(gewaehlt.typ))
+      : null;
+  const kurz =
+    gewaehlt === null ? null : gewaehlt.art === "bam" ? gewaehlteBelegart : gewaehlt.name;
   const beschriftung =
     gewaehlt === null
       ? texte.suche.typwahl.alle
-      : einsetzen(texte.suche.typwahl.gewaehlt, { belegart: gewaehlt.bezeichnung });
+      : gewaehlt.art === "bam"
+        ? einsetzen(texte.suche.typwahl.gewaehlt, { belegart: gewaehlteBelegart ?? "" })
+        : einsetzen(texte.suche.typwahl.gewaehltesFeld, { feld: gewaehlt.name });
 
   return (
     <DropdownMenu>
@@ -230,22 +327,50 @@ function Typwahl({
           aria-label={beschriftung}
         >
           <Tag aria-hidden="true" className="shrink-0 opacity-70" />
-          {gewaehlt === null ? null : (
-            <span className="text-beiwerk truncate">{gewaehlt.bezeichnung}</span>
-          )}
+          {kurz === null ? null : <span className="text-beiwerk truncate">{kurz}</span>}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="max-h-96 w-72 overflow-y-auto">
+      <DropdownMenuContent align="start" className="max-h-96 w-80 overflow-y-auto">
         <DropdownMenuRadioGroup
-          value={gewaehlt === null ? "" : String(gewaehlt.typ)}
-          onValueChange={(wert) => aufWahl(wert === "" ? null : Number(wert))}
+          value={auswahlwert(gewaehlt)}
+          onValueChange={(wert) => aufWahl(ausAuswahlwert(wert))}
         >
+          {/* Der typlose Eintrag zuerst und außerhalb beider Gruppen: Er ist die
+              Vorgabe, und seine Beschriftung sagt, was er tut — Belegnummern
+              unter jeder Belegart, nie ein Feld. */}
           <DropdownMenuRadioItem value="">{texte.suche.typwahl.alle}</DropdownMenuRadioItem>
-          {typen.map((eintrag) => (
-            <DropdownMenuRadioItem key={eintrag.typ} value={String(eintrag.typ)}>
-              {eintrag.bezeichnung}
-            </DropdownMenuRadioItem>
-          ))}
+
+          {/* Eine leere Gruppe wird weggelassen, nicht als leere Überschrift gezeigt. */}
+          {angebot.bam.length > 0 ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>{texte.suche.typwahl.gruppeBelegarten}</DropdownMenuLabel>
+              {angebot.bam.map((eintrag) => (
+                <DropdownMenuRadioItem
+                  key={`bam:${eintrag.typ}`}
+                  value={auswahlwert({ art: "bam", typ: eintrag.typ })}
+                >
+                  {eintrag.bezeichnung}
+                </DropdownMenuRadioItem>
+              ))}
+            </>
+          ) : null}
+
+          {angebot.felder.length > 0 ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>{texte.suche.typwahl.gruppeFelder}</DropdownMenuLabel>
+              {angebot.felder.map((eintrag) => (
+                <DropdownMenuRadioItem
+                  key={`feld:${eintrag.name}`}
+                  value={auswahlwert({ art: "feld", name: eintrag.name })}
+                  className="font-mono"
+                >
+                  {eintrag.name}
+                </DropdownMenuRadioItem>
+              ))}
+            </>
+          ) : null}
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -253,8 +378,8 @@ function Typwahl({
 }
 
 /**
- * Das Ziel einer **neuen** Suche: `/suche` mit den Begriffen als
- * **wiederholtem** Parameter — und mit sonst nichts.
+ * Das Ziel einer **neuen** Suche: `/suche` mit den Marken als **wiederholten**
+ * Parametern `begriff` und `feld` — und mit sonst nichts.
  *
  * **Kein Zeitfenster wird mitgenommen.** Wer auf `/nachrichten` ein freies
  * Fenster eingestellt hat und dann eine Belegnummer tippt, bekommt die Vorgabe
@@ -263,12 +388,16 @@ function Typwahl({
  * einer Belegnummer hat kein Datum (`docs/bam-suche.md` §2).
  *
  * Auf `/suche` selbst wird diese Funktion **nicht** gebraucht — dort ändert
- * `nuqs` genau einen Schlüssel und lässt den Rest stehen.
+ * `nuqs` genau die beiden Schlüssel und lässt den Rest stehen.
  */
-function suchziel(begriffe: Suchbegriff[]): string {
+function suchziel(marken: Suchmarke[]): string {
   const parameter = new URLSearchParams();
-  for (const begriff of begriffe) {
-    parameter.append("begriff", alsParameter(begriff));
+  const { begriff, feld } = alsZustand(marken);
+  for (const eintrag of begriff ?? []) {
+    parameter.append("begriff", alsParameter(eintrag));
+  }
+  for (const eintrag of feld ?? []) {
+    parameter.append("feld", alsFeldParameter(eintrag));
   }
   return `${ROUTEN.suche}?${parameter.toString()}`;
 }

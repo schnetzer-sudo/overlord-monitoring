@@ -2,28 +2,35 @@
 
 import { describe, expect, it } from "vitest";
 
-import { NACHRICHTEN_SCHLUESSEL, type BamTreffer, type BamTyp } from "@/features/nachrichten/api";
+import {
+  NACHRICHTEN_SCHLUESSEL,
+  type BamTreffer,
+  type Suchfelder,
+} from "@/features/nachrichten/api";
 import { MarkenLeiste } from "@/features/nachrichten/components/marken-leiste";
 import { TrefferTabelle } from "@/features/nachrichten/components/treffer-tabelle";
+import type { Suchmarke } from "@/features/nachrichten/suche";
 
 import { neuerZwischenspeicher, rendere } from "./hilfe/rendern";
 
 /**
- * **Die zwei Fälle der Belegsuche, für die ein gerenderter Baum die einzige
- * Prüfung ist.**
+ * **Die Fälle der Belegsuche, für die ein gerenderter Baum die einzige Prüfung
+ * ist.**
  *
  * Alles andere an dieser Ansicht ist Entscheidung und steht als reine Funktion in
  * `tests/suche.test.ts` (`docs/frontend-grundlagen.md` §9). Diese Datei ist die
- * begründete Ausnahme, und sie bleibt bei zwei Tests:
+ * begründete Ausnahme:
  *
  * | Test | Warum genau dieser |
  * |---|---|
  * | Derselbe Wert unter zwei Typen | Der Schlüssel der Marken ist `(typ, wert)`. Wäre er der Wert allein, meldete React einen **doppelten Schlüssel** — in der Konsole, und sichtbar falsch wäre nichts. M37 misst den Fall auf 4,17 % der Paare |
+ * | Dieselbe Parameterform als BAM- und als Feld-Marke *(Teil 2 der Property-Suche)* | Derselbe Grund, eine Ebene höher: Der Schlüssel trägt die **Art** voran. Ohne sie wären `9012:4711` als Belegart und als Feldname derselbe React-Schlüssel |
  * | Die Längenregel der Trefferspalte | Die Regel **ist** eine Klasse plus ein `title`; ohne Baum gibt es nichts, woran sie abzulesen wäre. M45 hat das Kürzen der Beschreibungen selbst ausgeschlossen — gekürzt wird die Zelle |
+ * | Keine Spalte „Treffer" ohne Belegnummer *(Teil 2)* | Eine Aussage über **Abwesenheit** im Baum (E‑110): Die Spalte entfällt, sie bleibt nicht leer — und die Zellen der Zeile rücken nach |
  *
- * Der erste hängt vollständig an `tests/setup/konsole.ts`: Er besteht genau dann,
- * wenn **kein `console.error`** fällt. Eine pauschale Unterdrückung wäre seine
- * Abschaffung.
+ * Die ersten beiden hängen vollständig an `tests/setup/konsole.ts`: Sie bestehen
+ * genau dann, wenn **kein `console.error`** fällt. Eine pauschale Unterdrückung
+ * wäre ihre Abschaffung.
  *
  * **Antwortrümpfe gestellt, kein Netz, keine Datenbank.**
  */
@@ -34,10 +41,13 @@ import { neuerZwischenspeicher, rendere } from "./hilfe/rendern";
  */
 const LAENGSTE = "Lieferantennummer beim Kunden_K_SAP";
 
-const TYPEN: BamTyp[] = [
-  { typ: 9006, bezeichnung: "Lieferschein-Nr._L_SAP", sortIndex: 6 },
-  { typ: 9016, bezeichnung: "Abladestelle_K_SAP", sortIndex: 16 },
-];
+const ANGEBOT: Suchfelder = {
+  bam: [
+    { quelle: "bam", typ: 9006, bezeichnung: "Lieferschein-Nr._L_SAP", sortIndex: 6 },
+    { quelle: "bam", typ: 9016, bezeichnung: "Abladestelle_K_SAP", sortIndex: 16 },
+  ],
+  felder: [{ quelle: "feld", name: "Message.SNDPRN", spalte: false }],
+};
 
 const TREFFERZEILE: BamTreffer = {
   messageId: "8f3a1c2e-0000-4000-8000-000000000001",
@@ -58,6 +68,11 @@ const TREFFERZEILE: BamTreffer = {
   ],
 };
 
+const bam = (typ: number | null, wert: string): Suchmarke => ({
+  art: "bam",
+  begriff: { typ, wert },
+});
+
 describe("Die Marken der Belegsuche", () => {
   /**
    * **Die Regression zum Schlüssel.** `(typ, wert)` ist eindeutig, der Wert
@@ -67,24 +82,18 @@ describe("Die Marken der Belegsuche", () => {
    */
   it("rendert denselben Wert unter zwei Typen ohne doppelten React-Schlüssel", async () => {
     const zwischenspeicher = neuerZwischenspeicher();
-    zwischenspeicher.setQueryData(NACHRICHTEN_SCHLUESSEL.bamTypen, TYPEN);
+    zwischenspeicher.setQueryData(NACHRICHTEN_SCHLUESSEL.suchfelder, ANGEBOT);
 
     const { behaelter, abbauen } = await rendere(
-      <MarkenLeiste
-        begriffe={[
-          { typ: 9006, wert: "0050" },
-          { typ: 9016, wert: "0050" },
-        ]}
-        aufBegriffe={() => {}}
-      />,
+      <MarkenLeiste marken={[bam(9006, "0050"), bam(9016, "0050")]} aufMarken={() => {}} />,
       zwischenspeicher,
     );
 
     try {
-      const marken = [...behaelter.querySelectorAll("li[data-begriff]")];
-      expect(marken.map((marke) => marke.getAttribute("data-begriff"))).toEqual([
-        "9006:0050",
-        "9016:0050",
+      const marken = [...behaelter.querySelectorAll("li[data-marke]")];
+      expect(marken.map((marke) => marke.getAttribute("data-marke"))).toEqual([
+        "bam:9006:0050",
+        "bam:9016:0050",
       ]);
       // Beide Marken zeigen denselben Wert — genau darum geht es.
       expect(marken.map((marke) => marke.textContent)).toEqual([
@@ -105,15 +114,15 @@ describe("Die Marken der Belegsuche", () => {
    */
   it("zeigt einen unbekannten Typ als Nummer", async () => {
     const zwischenspeicher = neuerZwischenspeicher();
-    zwischenspeicher.setQueryData(NACHRICHTEN_SCHLUESSEL.bamTypen, TYPEN);
+    zwischenspeicher.setQueryData(NACHRICHTEN_SCHLUESSEL.suchfelder, ANGEBOT);
 
     const { behaelter, abbauen } = await rendere(
-      <MarkenLeiste begriffe={[{ typ: 2000, wert: "0050" }]} aufBegriffe={() => {}} />,
+      <MarkenLeiste marken={[bam(2000, "0050")]} aufMarken={() => {}} />,
       zwischenspeicher,
     );
 
     try {
-      expect(behaelter.querySelector("li[data-begriff]")?.textContent).toBe("2000: 0050");
+      expect(behaelter.querySelector("li[data-marke]")?.textContent).toBe("2000: 0050");
     } finally {
       await abbauen();
     }
@@ -136,7 +145,12 @@ describe("Die Spalte „Treffer“ der Trefferliste", () => {
    */
   it("kürzt in der Zelle und trägt alle Typen im title", async () => {
     const { behaelter, abbauen } = await rendere(
-      <TrefferTabelle zeilen={[TREFFERZEILE]} gewaehlt={null} aufAuswahl={() => {}} />,
+      <TrefferTabelle
+        zeilen={[TREFFERZEILE]}
+        gewaehlt={null}
+        aufAuswahl={() => {}}
+        mitTrefferspalte={true}
+      />,
     );
 
     try {
@@ -163,7 +177,12 @@ describe("Die Spalte „Treffer“ der Trefferliste", () => {
    */
   it("nennt die Stellung in der Kette neben dem Endstatus", async () => {
     const { behaelter, abbauen } = await rendere(
-      <TrefferTabelle zeilen={[TREFFERZEILE]} gewaehlt={null} aufAuswahl={() => {}} />,
+      <TrefferTabelle
+        zeilen={[TREFFERZEILE]}
+        gewaehlt={null}
+        aufAuswahl={() => {}}
+        mitTrefferspalte={true}
+      />,
     );
 
     try {
