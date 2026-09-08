@@ -2152,3 +2152,284 @@ liegen dort. [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) und
 **Serverzeit Beginn `2026-09-08 09:39:48`, Ende der letzten Sitzung 10:02:10 Ortszeit.** Die
 Ergebnisdateien liegen unter `scripts/messung-property-suche/ergebnis/n*.txt` und sind nicht
 eingecheckt (G1).
+
+---
+
+# Dritter Teil vom 08.09.2026 — trägt der L4‑Pfad die Property-Suche? (M168 bis M171)
+
+Erhoben am **08.09.2026** gegen dieselbe Testkopie, unmittelbar nach dem Nachtrag. Auftrag:
+„Messauftrag — trägt der L4‑Pfad die Property-Suche? (M168 bis M171)". **Eine Frage, vier
+Messungen**, angehängt an diese Datei; keine E‑Nummer wird vergeben, Fassung A wird nicht
+wiederholt, sondern aus M159 und M166 zitiert.
+
+**Die Frage.** Befund 5 des Nachtrags: Kein Statement hat seinen Plan verdient, jeder hängt an der
+Schätzung. Über 24 Stunden steigt der Optimizer über die Zeit ein und erreicht `MessageProperty`
+über den Primärschlüssel — der Zugriffspfad, den Regel L4 vorschreibt, 91 bis 93 ms. Über 30 Tage
+kippt derselbe Optimizer auf den Wertindex (bis 1.862 ms), in M162 auf `MessagePropertyNameIDX`
+(16,203 s). **Bleibt die Suche auf dem L4‑Pfad, braucht sie keinen Ausnahmekasten, und E‑102 wäre
+gegenstandslos.** Diese Runde misst deshalb nicht, welches Fenster den guten Plan erzeugt, sondern
+**was er kostet, wenn man ihn erzwingt** — und ob er sich strukturell überhaupt erzwingen lässt.
+
+**Diese Runde baut nichts und entscheidet nichts.** Kein Endpunkt, keine Abbildung, kein Test,
+keine Migration. [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) ist nicht angefasst, auch nicht
+Leistungsregel 4 und nicht §3.2 (Punkt 151). Ob E‑102 fällt, entscheidet der Auftraggeber.
+
+## ⚠️ Gemeldete Abweichungen und Ergänzungen der L4‑Pfad-Runde
+
+### Abweichung 1 — die Laufzeit kommt in dieser Runde von der Wanduhr, nicht aus dem Profil
+
+Alle Runden bis M167 messen über `information_schema.PROFILING`. **Für Pläne mit `LATERAL DERIVED`
+unterschlägt das Profil fast die gesamte Laufzeit:** In der Vorprobe (B1b) meldet es für die
+GROUP‑BY‑Form über 30 Tage **5,965 ms**, die Wanduhr (`SYSDATE(6)` unmittelbar vor und nach
+`EXECUTE`) **4.753,554 ms** — und die Handler-Zähler desselben Laufs zeigen 204.711 `read_key`,
+113.023 `read_next` und 102.306 ICP-Versuche, also die Arbeit, die das Profil nicht ausweist. Für
+Pläne ohne `LATERAL DERIVED` stimmen beide überein (Fassung A: 1.630,310 im Profil gegen 1.632,892
+an der Wanduhr; Materialisierungsform: 7.097,019 gegen 7.098,071). **Ab B2 ist die Wanduhr das
+Maß**; das Profil läuft als Gegenprobe mit und wird je Fall daneben ausgewiesen. Die Wanduhr
+enthält die Umlaufzeit zweier Client-Anweisungen: Eichung mit `SELECT 1` **0,855 ms** (B1b). Für
+alle Werte über 10 ms ist das ohne Belang; bei den Millisekundenfällen aus M169 steht die Eichung
+daneben. **Die Zahlen aus M159 und M166 bleiben vergleichbar** — keiner ihrer Pläne enthält ein
+`LATERAL DERIVED`.
+
+### Abweichung 2 — Erhebungsgrenze 60 s für die Nenner
+
+§5 setzt `max_statement_time = 10` für die Runde. Die **sechs Nenner** (Nachrichten je Mandant und
+Fenster, B0‑1) sind mit **60 s** erhoben — eine Erhebung, kein Kandidat; ohne sie wäre die
+materialisierte Menge nicht zu beziffern. Kein Nenner hat 10 s gebraucht (die ganze Sitzung B0 lief
+in 5 s). Jedes Kandidaten-Statement läuft mit 10 s, wie der Auftrag es verlangt.
+
+### Ergänzung 1 — eine Vorprobe (B1, B1b) vor M168
+
+§4 beschreibt Fassung B als „materialisiert", nennt aber keine Form. In MariaDB 10.6 wird eine
+abgeleitete Tabelle nur dann nicht verschmolzen (`derived_merge=on`), wenn sie `GROUP BY`,
+`DISTINCT`, `LIMIT`, eine Aggregation oder ein `UNION` trägt. Die Vorprobe misst zwei Formen —
+`GROUP BY MessageID` und `ORDER BY … LIMIT 1000000000` — und wählt. **Das Ergebnis der Vorprobe
+ist bereits ein Befund** (unten): Über 30 Tage bricht der Optimizer bei **beiden** Formen aus der
+Struktur aus.
+
+### Ergänzung 2 — eine dritte Fassung, weil die zweite nicht bindet
+
+Weil die Vorprobe zeigt, dass eine materialisierte Nachrichtenmenge den Optimizer **nicht** daran
+hindert, mit `MessageProperty` über den Wertindex zu führen, kommt eine **Fassung C** hinzu, die
+den L4‑Pfad **per Konstruktion** bindet: `MessageProperty` steht ausschließlich in einer
+Unterabfrage je Zeile der materialisierten Menge (Auswahllisten-/Skalarform mit `LIMIT 1`), die
+der Optimizer nicht in einen Join umschreiben kann. **Ohne sie bliebe die Frage des Auftrags — was
+der L4‑Pfad kostet — über 30 und 90 Tage unbeantwortet**, weil dort kein freiwilliger und kein
+materialisierter Plan auf diesem Pfad läuft. Fassung C ist eine Ergänzung über den Wortlaut hinaus,
+keine Bauempfehlung; M168 bis M170 messen B und C nebeneinander, M171 vergleicht beide mit den
+Hinweisformen.
+
+### Widerspruch 1 — der Faktor 611 aus §1 des Auftrags ist in den Messdateien nicht belegt
+
+§1 nennt „611× Unterschied zwischen zwei Mandanten bei identischem Statement". Die Suche über
+`docs/` findet für `\b611\b` nur Datenwerte (Laufzeiten 0,611 ms, 129,611 ms, eine Zählung 1.611).
+**Belegt sind** Faktor **219 bis 1.094** für `STRAIGHT_JOIN` (M42 und M47, siehe `README.md` und
+`messungen-schritt7.md`) und Faktor **10,5** zwischen den Mandanten in M162 (16,203 s gegen
+1,548 s). Diese Runde stützt sich auf die belegten Zahlen; der Satz aus dem Auftrag wird nicht
+übernommen.
+
+## Nummernvergabe — L4‑Pfad-Runde
+
+| | |
+|---|---|
+| Prüfung Messungen | `grep -rhoE 'M[0-9]{1,3}' docs/ scripts/ *.md \| grep -oE '[0-9]+' \| sort -un \| tail -20` → 150 bis **167** lückenlos, dann 170 und 179. Beide einzeln angesehen: **M179** ist der bekannte Fließtext-Treffer („M153 bis M179: kein Treffer"), **M170** der `grep`-Ausdruck in der Nummernvergabe des Nachtrags (`\bM170\b`). Python-Gegenprobe mit Wortgrenzen: höchste vergebene **M167** |
+| Gegenprobe | `grep -rnoE '\bM167\b' docs/ scripts/ *.md` → **39 Treffer in fünf Dateien** (diese Datei, `README.md`, zwei Skripte, eine Rohausgabe). Der Ausdruck greift. `\bM1(6[89]\|7[0-9])\b`: nur die beiden Fließtext-Treffer oben |
+| Folge | **M168 bis M171 sind hier vergeben** — wie im Auftrag |
+| Prüfung Entscheidungen | `grep -rhoE 'E.[0-9]{1,3}' docs/ scripts/ *.md \| …` → Höchstwerte 202 bis 862, sämtlich Datenwerte `E_nnn` in Rohausgaben (wie im Nachtrag). Mit der Alternation `E(‑\|-)10[0-9]`: **E‑100 bis E‑105 vergeben** (E‑105 13‑mal, E‑102 6‑mal); höchste vergebene **E‑105** |
+| Folge | **Keine E‑Nummer vergeben**, wie der Auftrag es vorsieht |
+| Offene Punkte | `grep -rhoE 'Punkt \*?\*?1[0-9][0-9]' docs/*.md` → höchste 154; `grep -rhoE '^\*\*1[0-9][0-9]\.' docs/*.md` → 153, 154, **155** und der bekannte Falschtreffer 167 (Tausenderpunkt in `messungen-schritt7.md`). Höchste vergebene: **155**. **Fortlaufend ab 156** |
+
+## Rahmen — L4‑Pfad-Runde
+
+Sitzung `b0-rahmen.sql`: dieselben Abfragen in derselben Reihenfolge wie `n0-rahmen.sql`, dazu die
+Optimizer-Schalter und Temp-Tabellen-Grenzen, an denen eine Materialisierung hängt, und die Nenner.
+Alles, was hier nicht steht, gilt unverändert aus dem Rahmen der Hauptrunde.
+
+| | |
+|---|---|
+| Ziel | **Testkopie**, `10.6.22-MariaDB-0ubuntu0.22.04.1-log`, `SELECT @@global.read_only` → **`1`** als erste Abfrage jeder Sitzung |
+| Benutzer | `monitor_read@%`, ausschließlich `SELECT` |
+| Serverzeit Beginn | `2026-09-08 10:43:56` |
+| Client | `mysql.exe` **Ver 8.0.46**, `--ssl-mode=DISABLED`, `--default-character-set=utf8mb4`, `-t`, `--force`; Passwort über `MYSQL_PWD` |
+| `sql_mode`, `div_precision_increment`, `max_statement_time` (Vorgabe), `profiling_history_size` (Vorgabe), `innodb_buffer_pool_size` | **unverändert** gegenüber N0: `STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION`, 4, `0.000000`, 15, 26.843.545.600 Byte |
+| Datenstand | `Message.MessageLastUpdate` von `2024-10-01 02:00:28` bis `2026-07-08 17:21:10` — **unverändert** gegenüber M0, Hauptrunde und Nachtrag |
+| **Neu erhoben: Optimizer-Schalter** | `derived_merge=on`, `derived_with_keys=on`, **`split_materialized=on`**, `condition_pushdown_for_derived=on`, `semijoin=on`, `materialization=on`, `firstmatch=on`, `loosescan=on`, `mrr=off`, `rowid_filter=on` (vollständige Liste in `ergebnis/b0-rahmen.txt`) |
+| **Neu erhoben: Temp-Tabellen** | `tmp_table_size` = `max_heap_table_size` = `tmp_memory_table_size` = **16.777.216 Byte**; darüber geht eine Materialisierung auf die Platte (Aria) |
+| **Neu erhoben: Statistik** | `optimizer_use_condition_selectivity` = 4, `use_stat_tables` = `PREFERABLY_FOR_QUERIES` |
+| **Neu erhoben: Abfragecache** | `have_query_cache` = YES, **`query_cache_type` = OFF, `query_cache_size` = 0** — kein Lauf dieser Runde kann aus einem Cache kommen; `Qcache_hits` (global) hat sich in B1b um 0 verändert |
+| Grenzen | **10 s** für jeden Kandidaten (Lese-Pool); **60 s** für die sechs Nenner in B0‑1 — Abweichung 2 |
+| Fenster | **absolut, halboffen, Ende `2025-12-30 00:00:00`**: 24 Stunden ab `2025-12-29 00:00:00`; 30 Tage ab `2025-11-30 00:00:00` (= Fenster B); 90 Tage ab `2025-10-01 00:00:00` (wie M163‑6). Kein `NOW()` |
+| Mandanten (L7) | `NEXANS` und `SUTTONS`. **Bei `SUTTONS` kommt keiner der drei neuen Namen vor (M162); der kleine Mandant wird über `Message.GUID` gemessen** — das ist keine Umgehung von L7, sondern ihre einzige erfüllbare Form |
+| Prüfwert | je Fall der **häufigste Wert des 30‑Tage-Fensters desselben Mandanten** (Bösfall wie M159 und M166), deterministisch hergeleitet, über `QUOTE()` und `PREPARE` eingesetzt, ausgegeben nur als Länge (G1). Derselbe Wert für alle drei Fenster eines Falls |
+| Laufzeit | **Wanduhr**: `SELECT SYSDATE(6) INTO @t0; EXECUTE; SELECT TIMESTAMPDIFF(MICROSECOND, @t0, SYSDATE(6))` — Aufwärmlauf und fünf Läufe, gewertet der **Bestwert der Läufe 2 bis 6**; alle sechs ausgegeben, das Profil je Lauf daneben (Abweichung 1). Eichung leeres Statement 0,855 ms |
+| Gelesene Zeilen | `ANALYZE <select>` (Tabellenform, ein Lauf je Fall): `rows` ist die Schätzung, `r_rows` die gelesene Zahl je Tabelle. **Kein `ANALYZE TABLE`** — das schriebe Statistiken. Dazu je Fall die Handler-Zähler eines Laufs aus `information_schema.SESSION_STATUS` per `SELECT … INTO` (wie M167) |
+| `EXPLAIN` | zu jedem Statement (L15), in der Tabellenform — sie enthält keinen Wert |
+| Sitzungen | `scripts/messung-property-suche/b*.sql`, Rohausgaben unter `ergebnis/b*.txt` — vom bestehenden `.gitignore`-Eintrag der Hauptrunde ausgeschlossen (G1); **keine neue Ignorierregel nötig** |
+
+**Die Nenner (B0‑1) — die Menge, die Fassung B je Fall materialisiert:**
+
+| Mandant | 24 Stunden | 30 Tage | 90 Tage |
+|---|---:|---:|---:|
+| `NEXANS` | **5.043** | **180.251** | **572.648** |
+| `SUTTONS` | 685 | 21.516 | 64.553 |
+
+Die 30‑Tage-Werte treffen M156 auf die Zeile (180.251 und 21.516) — Gegenprobe, dass Fenster und
+Mandantenkette dieselben sind. Über alle Mandanten hat das 30‑Tage-Fenster 214.330 Nachrichten
+(M156; in B1 als `r_rows` des Zeitbereichs bestätigt), der letzte Tag 6.249 (B1, `r_rows`).
+
+## Verifizierte Ausgangslage — nicht neu erhoben
+
+Fassung A ist gemessen; sie wird zitiert. Alle Werte sind Bestwerte von fünf nach einem Aufwärmlauf,
+in Millisekunden, aus dem Profil (für diese Pläne gleichwertig mit der Wanduhr, Abweichung 1).
+
+| Fall, Fassung A | 24 Stunden | 30 Tage | 90 Tage | Plan 30 T | Herkunft |
+|---|---:|---:|---:|---|---|
+| `NEXANS` / `Message.DestinationFilename` | 91,253 | 789,350 | — | `mp` `ref` `MessagePropertyNameValueIDX` → `m` `eq_ref` | M166 |
+| `NEXANS` / `Message.SNDPRN` | 90,886 | 1.531,134 | — | `mp` `ref` `MessagePropertyValueIDX` → `m` `eq_ref` | M166 |
+| `NEXANS` / `Message.VFN` | 93,149 | 1.862,098 | — | `mp` `ref` `MessagePropertyNameValueIDX` → `m` `eq_ref` | M166 |
+| `NEXANS` / `Converter.TransactionID` | 1,114 | 1,195 | — | `mp` `ref` `MessagePropertyNameValueIDX` (17) → `m` `eq_ref` | M166 |
+| `NEXANS` / `Message.GUID` | 1,062 | 0,942 | 0,946 | reiner Wertindex (M158) | M159 |
+| `SUTTONS` / `Message.GUID` | 0,876 | 0,901 | 0,898 | wie oben | M159 |
+| `SUTTONS` / `Converter.TransactionID` | 1,011 | 1,047 | — | `mp` `ref` `MessagePropertyNameValueIDX` (9) | M166 |
+
+Über 24 Stunden steigen die drei neuen Namen in Fassung A über `MessageLastUpdateIDX` ein und
+erreichen `MessageProperty` über `PRIMARY` (`key_len` 548) — das ist der L4‑Pfad, freiwillig
+gewählt (M166). Fassung A über 90 Tage ist für die drei neuen Namen **nicht gemessen** (M166 hatte
+nur zwei Fenster); diese Runde holt das nicht nach — §7.
+
+| Gegenstand | Wert | Herkunft |
+|---|---|---|
+| Maßstab: schlechtester Fall der gebauten BAM-Suche, 30 Tage | **1.655,8 ms** | M47 |
+| Optimizer-Schätzung für `MessageProperty` | 37,9 % zu niedrig | M155, Nebenbefund |
+| Primärschlüssel `MessageProperty` | `(MessageID, MessagePropertyName, MessageActionID)`; `(MessageID, MessagePropertyName)` ist ein Präfix, `key_len` 548 | M14, M166 |
+| `MessageLastUpdateIDX` | faktisch `(MessageLastUpdate, MessageID)` | `datenmodell.md` |
+| Plan von M162 (`NEXANS`) | `range` über `MessagePropertyNameIDX`, 16,203 s — der Plan, den L4 verbietet | M162 |
+| `STRAIGHT_JOIN` in diesem Projekt | Notbehelf, Faktor 219 bis 1.094 Verlangsamung | M42, M47 |
+| Häufigster Wert des Fensters über den Bestand: `DestinationFilename`, `SNDPRN`, `VFN` | 49.976, 102.284, 124.715 Zeilen | M165 |
+
+## Die Fassungen dieser Runde
+
+**Fassung A — frei.** Das Statement aus M159/M166, unverändert (Wertprädikat und Join in einer
+abgeleiteten Tabelle, Mandantenkette per `EXISTS`, `GROUP BY MessageID`, `ORDER BY … LIMIT 51`, erst
+deckeln, dann beschriften; Längen statt Namen in der Ausgabe). **Nicht wiederholt.** Sie ist in
+M171 die Grundlage der beiden Hinweisformen.
+
+**Fassung B — strukturell, materialisiert (§4 des Auftrags).** Die Nachrichtenmenge wird zuerst
+aus `Message` über Zeitfenster und Mandantenkette in einer nicht verschmelzbaren abgeleiteten
+Tabelle aufgelöst; `MessageProperty` wird erst darauf über `MessageID` angeschlossen. Kein
+`STRAIGHT_JOIN`, kein `FORCE INDEX`. Form nach der Vorprobe: `ORDER BY … LIMIT 1000000000` als
+Materialisierungsauslöser (Begründung unten).
+
+```sql
+SELECT COUNT(*), MAX(CHAR_LENGTH(p2.ProcessName)), MAX(CHAR_LENGTH(prj.ProjectName))
+FROM (SELECT f.MessageID, f.MessageLastUpdate, f.MessageStatus, f.ProcessID
+        FROM (SELECT m.MessageID, m.MessageLastUpdate, m.MessageStatus, m.ProcessID
+                FROM GlassfishDB.Message m
+               WHERE m.MessageLastUpdate >= ? AND m.MessageLastUpdate < '2025-12-30 00:00:00'
+                 AND EXISTS (SELECT 1 FROM GlassfishDB.Process pr
+                               JOIN GlassfishDB.ProjectMandant pm ON pm.ProjectID = pr.ProjectID
+                              WHERE pr.ProcessID = m.ProcessID AND pm.MandantID = ?)
+               ORDER BY m.MessageLastUpdate DESC, m.MessageID DESC LIMIT 1000000000) AS f
+        JOIN GlassfishDB.MessageProperty mp
+          ON mp.MessageID = f.MessageID
+         AND mp.MessagePropertyName = ? AND mp.MessagePropertyValue = ?
+       GROUP BY f.MessageID
+       ORDER BY f.MessageLastUpdate DESC, f.MessageID DESC LIMIT 51) AS treffer
+LEFT JOIN GlassfishDB.Process p2 ON p2.ProcessID = treffer.ProcessID
+LEFT JOIN GlassfishDB.Project prj ON prj.ProjectID = p2.ProjectID
+```
+
+**Fassung C — strukturell, bindend (Ergänzung 2).** Dieselbe materialisierte Menge; `MessageProperty`
+steht nur in einer Skalar-Unterabfrage je Zeile, die der Optimizer weder in einen Join noch in
+einen Semi-Join umschreiben kann (Skalarform, `LIMIT 1`). Damit ist der Zugriffspfad
+`f` → `mp` über `PRIMARY` **per Konstruktion** festgelegt; frei bleibt nur, wie `Message` selbst
+gelesen wird.
+
+```sql
+SELECT COUNT(*), MAX(CHAR_LENGTH(p2.ProcessName)), MAX(CHAR_LENGTH(prj.ProjectName))
+FROM (SELECT f.MessageID, f.MessageLastUpdate, f.MessageStatus, f.ProcessID
+        FROM (… dieselbe materialisierte Menge wie in Fassung B …) AS f
+       WHERE 1 = (SELECT 1 FROM GlassfishDB.MessageProperty mp
+                   WHERE mp.MessageID = f.MessageID
+                     AND mp.MessagePropertyName = ? AND mp.MessagePropertyValue = ? LIMIT 1)
+       ORDER BY f.MessageLastUpdate DESC, f.MessageID DESC LIMIT 51) AS treffer
+LEFT JOIN GlassfishDB.Process p2 ON p2.ProcessID = treffer.ProcessID
+LEFT JOIN GlassfishDB.Project prj ON prj.ProjectID = p2.ProjectID
+```
+
+**Hinweisformen (nur M171, Diagnose).** `STRAIGHT_JOIN` auf Fassung A mit `Message` zuerst in der
+`FROM`-Liste; `FORCE INDEX (PRIMARY)` auf `MessageProperty` in Fassung A, `FROM`-Reihenfolge
+unverändert.
+
+### Vorprobe (B1, B1b) — die Materialisierung hält den Pfad nicht
+
+`NEXANS` / `Message.SNDPRN`, 24 Stunden und 30 Tage, zwei Materialisierungsformen: **BG** (`GROUP BY
+m.MessageID` in der inneren abgeleiteten Tabelle) und **BL** (`ORDER BY … LIMIT 1000000000`).
+Bestwert der Läufe 2 bis 6; über 30 Tage zusätzlich Wanduhr und Handler-Zähler eines Laufs (B1b),
+Fassung A als Eichung daneben.
+
+| Form, Fenster | Plan | Profil, ms | Wanduhr, ms | `read_key` | `read_next` | `tmp_write` |
+|---|---|---:|---:|---:|---:|---:|
+| BG, 24 h | `<derived3>` (`m` `range` `MessageLastUpdateIDX`, `Using temporary; Using filesort`) → **`mp` `ref` `PRIMARY` (548)** | 98,788 | — | — | — | — |
+| BL, 24 h | `<derived3>` (`m` `range` `MessageLastUpdateIDX`, kein `filesort`) → **`mp` `ref` `PRIMARY` (548)** | 97,068 | — | — | — | — |
+| **BG, 30 T** | **`mp` `ref` `MessagePropertyValueIDX` (198.614)** → `<derived3>` `ref` `key0`; die Materialisierung wird zum **`LATERAL DERIVED`** (`m` `eq_ref` `PRIMARY` je `mp`-Zeile) | **6,064 — falsch** | **4.753,554** | 204.711 | 113.023 | 22.236 |
+| **BL, 30 T** | **`mp` `ref` `MessagePropertyValueIDX` (198.614)** → `<derived3>` `ref` `key0` (10); `<derived3>` materialisiert die ganze Menge (`m` `range`, 409.756 geschätzt, 214.330 gelesen) | 6.989,338 | **7.098,071** | 201.403 | 113.023 | 232.299 |
+| A, 30 T (Eichung) | wie M166 | 1.630,310 | 1.632,892 | 102.427 | 102.284 | 13.467 |
+| leer (`SELECT 1`) | — | 0,211 | 0,855 | 0 | 0 | 239 |
+
+*Die Handler-Zähler enthalten die Kosten der Messung selbst (Zeile „leer": 247 `read_rnd_next`,
+239 `tmp_write` für die acht Statusabfragen); sie sind nicht herausgerechnet. `qcacheHitsGlobal`
+blieb in jedem Fall 0.*
+
+**Drei Ergebnisse der Vorprobe:**
+
+1. **Über 24 Stunden halten beide Formen den L4‑Pfad** — `mp` über `PRIMARY` mit `key_len` 548, wie
+   Fassung A dort freiwillig. Die Materialisierung kostet gegenüber M166 (90,886 ms) rund 6 bis 8 ms.
+2. **Über 30 Tage bricht der Optimizer bei beiden Formen aus.** Er führt mit `MessageProperty` über
+   `MessagePropertyValueIDX` und erreicht die materialisierte Menge über deren automatischen
+   Schlüssel (`derived_with_keys`). Bei BG geht er weiter: `split_materialized` löst die
+   Materialisierung ganz auf und macht daraus eine je `mp`-Zeile ausgeführte abgeleitete Tabelle
+   (`LATERAL DERIVED`) — das ist kein L4‑Pfad mehr, sondern Fassung A mit Umweg. **Die Struktur
+   „erst materialisieren, dann anschließen" legt die Join-Reihenfolge nicht fest.**
+3. **Beide Ausbrüche sind teurer als Fassung A:** 4.753,554 ms (BG, Faktor 2,9) und 7.098,071 ms
+   (BL, Faktor 4,3) gegen 1.632,892 ms. BL schreibt dafür 232.299 Zeilen in die Temp-Tabelle — die
+   ganze Menge, die es materialisieren soll, bei 16 MiB Speichergrenze auf der Platte.
+
+**Wahl für M168 bis M170: BL.** Sie ist die Form, die tut, was §4 beschreibt — sie materialisiert
+die Menge tatsächlich (232.299 `tmp_write` gegen 22.236 bei BG, deren Materialisierung der Optimizer
+über 30 Tage auflöst). Dass sie über 30 Tage teurer ist als BG, ist kein Grund, die Form zu nehmen,
+die die Frage nicht mehr stellt. BG wird nicht weiter gemessen; ihr `LATERAL DERIVED` bleibt als
+Befund und als Messfalle (Abweichung 1) festgehalten. **Fassung C** kommt hinzu, weil keine der
+beiden Formen über 30 Tage den Pfad hält — und damit die Kosten des Pfads dort sonst unbekannt
+blieben.
+
+*Belegvermerk (L10): gemessen ist ein Name, ein Mandant, zwei Fenster, zwei Formen. Behauptet wird
+nicht, dass BG in allen Fällen zum `LATERAL DERIVED` wird, und nicht, dass BL in allen Fällen
+ausbricht — das misst M170 für 18 Kombinationen.*
+
+## Die vorregistrierten Deutungen — vor dem ersten Lauf geschrieben
+
+Festgeschrieben vor M168 (Commit „docs: Rahmen der L4-Pfad-Runde, Nummernstand M168 ff."). Die
+Deutungen zu M168 bis M171 stehen wörtlich im Auftrag, der vor der Vorprobe entstand; die Vorprobe
+(B1, B1b) war beim Schreiben dieses Abschnitts bereits gelaufen und ist oben ausgewiesen — sie
+ändert die Deutungen nicht, sie ändert, was von ihnen zu erwarten ist. Die Deutung zu Fassung C ist
+neu und hier zum ersten Mal formuliert.
+
+| Messung | Gegenstand | Vorregistrierte Deutung und Schwelle |
+|---|---|---|
+| **M168** | Was Fassung B kostet — drei Namen, drei Fenster, `NEXANS` | Maßstab **1.655,8 ms** über 30 Tage (M47). **Bleibt Fassung B über 30 Tage darunter, ist der L4‑Pfad tragfähig und E‑102 gegenstandslos.** Über 24 Stunden Werte nahe **91 bis 93 ms** (M166, dort derselbe Pfad freiwillig). Über 30 Tage **offen** — 180.251 materialisierte Nachrichten, jede ein Primärschlüsselzugriff. Über 90 Tage ist ein **Abbruch möglich und ein gültiges Ergebnis** |
+| **M168, Fassung C** | dieselben neun Fälle, bindend | C hält den Pfad per Konstruktion. Über 24 Stunden im Bereich von B; über 30 Tage **Sekunden**, weil 180.251 Zugriffe anfallen — ob unter 10 s, ist offen; über 90 Tage (572.648 Zugriffe) wird ein **Abbruch erwartet** |
+| **M169** | Was das Erzwingen den schnellen Fall kostet — `Message.GUID`, `Converter.TransactionID` | Fassung A läuft in 0,942 und 1,195 ms (M159, M166). Fassung B materialisiert erst das ganze Fenster. **Schwelle Faktor 10.** Darüber ist eine **einheitliche** Fassung fraglich — und zwei Codepfade widersprächen der Disziplin, dass eine Kennzahl an genau einer Stelle entsteht; das wäre zu entscheiden, nicht stillschweigend zu lösen |
+| **M170** | Ist Fassung B stabil? `EXPLAIN` für jede Kombination aus M168 und M169 | Fassung B ist über alle Kombinationen stabil. **Ein einziger Ausbruch entscheidet die Runde gegen den erzwungenen Pfad** — dann taugt auch die strukturelle Fassung nicht als Garantie, und E‑102 bleibt. Melden, nicht umdeuten. Je Kombination die geschätzte gegen die gelesene Zeilenzahl; Bezugspunkt sind die 37,9 % aus M155. *Nach der Vorprobe erwartet: Ausbruch in jedem 30‑ und 90‑Tage-Fall von B; für C per Konstruktion keiner* |
+| **M171** | Struktur gegen Hinweis — teuerste Kombination aus M168, drei Erzwingungsformen, beide Mandanten | Die strukturelle Fassung ist stabil, die Hinweisformen sind es nicht notwendig — ein Hinweis kann verworfen werden, eine Materialisierung nicht. **Belegvermerk vorab:** `STRAIGHT_JOIN` ist in diesem Projekt als Notbehelf eingestuft (219 bis 1.094× Verlangsamung, M42/M47) und wird hier zum **Vergleich** gemessen. Fällt es günstig aus, ist das ein Messergebnis und **keine Empfehlung** |
+
+> ⚠️ **Regel G1 gilt wie im Nachtrag.** `Message.DestinationFilename` trägt Dateinamen,
+> `Message.SNDPRN` Senderkennungen, `Message.VFN` fachliche Nummern. **Kein einziger Wert kommt in
+> diese Datei** — nicht vollständig, nicht abgekürzt, nicht als Beispiel, nicht in einer
+> `EXPLAIN`-Ausgabe. Ausgegeben werden Zähler, Längen, Ränge, Laufzeiten und Planbestandteile; die
+> Prüfwerte werden im Statement hergeleitet und über `QUOTE()`/`PREPARE` eingesetzt, nie
+> nachträglich geschwärzt. `EXPLAIN` und `ANALYZE` laufen in der Tabellenform, deren Spalten keinen
+> Wert enthalten (`ref` zeigt `const`). Die Rohausgaben liegen unter
+> `scripts/messung-property-suche/ergebnis/b*.txt` und sind nicht eingecheckt.
+
+---
