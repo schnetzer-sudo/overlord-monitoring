@@ -72,6 +72,7 @@ const bam = (typ: number | null, wert: string): Suchmarke => ({
   art: "bam",
   begriff: { typ, wert },
 });
+const feld = (name: string, wert: string): Suchmarke => ({ art: "feld", feld: { name, wert } });
 
 describe("Die Marken der Belegsuche", () => {
   /**
@@ -123,6 +124,43 @@ describe("Die Marken der Belegsuche", () => {
 
     try {
       expect(behaelter.querySelector("li[data-marke]")?.textContent).toBe("2000: 0050");
+    } finally {
+      await abbauen();
+    }
+  });
+
+  /**
+   * **Dieselbe Parameterform, zwei Arten, zwei Schlüssel** (Teil 2 der
+   * Property-Suche). Eine Feld-Marke trägt den technischen Namen unverändert
+   * (E‑105) und dahinter den Wert — dieselbe Gestalt wie die BAM-Marke, keine
+   * zweite Markengestalt im Projekt.
+   */
+  it("rendert eine BAM- und eine Feld-Marke gleicher Parameterform ohne doppelten Schlüssel", async () => {
+    const zwischenspeicher = neuerZwischenspeicher();
+    zwischenspeicher.setQueryData(NACHRICHTEN_SCHLUESSEL.suchfelder, ANGEBOT);
+
+    const { behaelter, abbauen } = await rendere(
+      <MarkenLeiste
+        marken={[bam(9006, "4711"), feld("9006", "4711"), feld("Message.SNDPRN", "4711")]}
+        aufMarken={() => {}}
+      />,
+      zwischenspeicher,
+    );
+
+    try {
+      const marken = [...behaelter.querySelectorAll("li[data-marke]")];
+      expect(marken.map((marke) => marke.getAttribute("data-marke"))).toEqual([
+        "bam:9006:4711",
+        "feld:9006:4711",
+        "feld:Message.SNDPRN:4711",
+      ]);
+      expect(marken.map((marke) => marke.textContent)).toEqual([
+        "Lieferschein-Nr._L_SAP: 4711",
+        "9006: 4711",
+        "Message.SNDPRN: 4711",
+      ]);
+      // Jede Marke ist ein Bedienelement — der Knopf in der Marke, nicht die Marke.
+      expect(marken.every((marke) => marke.querySelector("button") !== null)).toBe(true);
     } finally {
       await abbauen();
     }
@@ -189,6 +227,36 @@ describe("Die Spalte „Treffer“ der Trefferliste", () => {
       const kette = [...behaelter.querySelectorAll("tbody td")][3];
       expect(kette?.textContent).toContain("Aufgeteilt");
       expect(kette?.querySelector("span")?.getAttribute("title")).toContain("aufgeteilt");
+    } finally {
+      await abbauen();
+    }
+  });
+
+  /**
+   * **Ohne Belegnummer gibt es die Spalte nicht** (E‑110) — weder die
+   * Überschrift noch die Zelle; die Kette rückt an die dritte Stelle. Eine
+   * Überschrift über leeren Zellen wäre keine der beiden Antworten aus dem
+   * Auftrag, und genau das prüft dieser Baum: Abwesenheit, nicht Leere.
+   */
+  it("führt ohne Belegnummer keine Spalte „Treffer“ — Überschrift und Zelle fehlen", async () => {
+    const ohneTreffer: BamTreffer = { ...TREFFERZEILE, treffer: [] };
+    const { behaelter, abbauen } = await rendere(
+      <TrefferTabelle
+        zeilen={[ohneTreffer]}
+        gewaehlt={null}
+        aufAuswahl={() => {}}
+        mitTrefferspalte={false}
+      />,
+    );
+
+    try {
+      const koepfe = [...behaelter.querySelectorAll("thead th")].map((th) => th.textContent);
+      expect(koepfe).not.toContain("Treffer");
+      expect(koepfe).toHaveLength(4);
+      const zellen = [...behaelter.querySelectorAll("tbody td")];
+      expect(zellen).toHaveLength(4);
+      // Zeitpunkt · Status · Kette · Ablauf — die Kette steht jetzt an dritter Stelle.
+      expect(zellen[2]?.textContent).toContain("Aufgeteilt");
     } finally {
       await abbauen();
     }
