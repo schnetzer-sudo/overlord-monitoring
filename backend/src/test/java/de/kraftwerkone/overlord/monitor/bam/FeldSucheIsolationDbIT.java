@@ -281,7 +281,11 @@ class FeldSucheIsolationDbIT extends SicherheitsTestbasis {
     assertThat(vergleichbar(fremdAberEcht, fremd.wert()))
         .as("jeder Unterschied ausser der Frage selbst waere eine Auskunft ueber fremden Bestand")
         .isEqualTo(vergleichbar(ohneVorbild, erfunden));
-    assertThat(fremdAberEcht.rumpf())
+    // Das Zitat bleibt ein Zitat: Der Wert steht im Rumpf, weil er die Frage ist — und sonst
+    // nirgends. Bei Message.GUID IST der Wert die Kennung der Nachricht (eine Zeile je Nachricht,
+    // M157); deshalb wird die Kennung im Rumpf OHNE das Zitat gesucht.
+    assertThat(fremdAberEcht.<List<String>>json("$.felder[*].wert")).containsExactly(fremd.wert());
+    assertThat(vergleichbar(fremdAberEcht, fremd.wert()))
         .doesNotContain(fremd.messageId())
         .doesNotContain(fremd.processId());
   }
@@ -297,7 +301,8 @@ class FeldSucheIsolationDbIT extends SicherheitsTestbasis {
 
     assertThat(antwort.status()).isEqualTo(200);
     assertThat(antwort.<List<String>>json("$.nachrichten[*].messageId")).isEmpty();
-    assertThat(antwort.rumpf())
+    assertThat(vergleichbar(antwort, vonNexans.wert()))
+        .as("ausser dem Zitat nichts aus dem fremden Bestand")
         .doesNotContain(vonNexans.messageId())
         .doesNotContain(vonNexans.processId());
     assertThat(vergleichbar(antwort, vonNexans.wert()))

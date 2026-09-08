@@ -339,6 +339,29 @@ schlechter Beweis für eine Trennung, die zwischen Firmen greifen soll.
 > vollständig in [`messungen-schritt9.md`](messungen-schritt9.md) unter **M93‑6**. Behoben an der
 > Ursache: Die Tests legen nur noch auf Prozessen **ohne** Katalogzeile an, mit reinem `INSERT`.
 
+> **Ergänzt 08.09.2026 (Property-Suche, Teil 1).** Zwei neue Endpunkte, zwei Kopien:
+> `SuchfelderIsolationDbIT` für `GET /api/bam/suchfelder` und `FeldSucheIsolationDbIT` für den
+> Parameter `feld` an `GET /api/bam/suche` ([`property-suche.md`](property-suche.md) §7). Beide
+> paaren **`NEXANS` gegen `SUTTONS`**, aus dem Grund von `BamTypenIsolationDbIT`. Zwei Dinge
+> kommen hinzu:
+>
+> 1. **Das Angebot hat globale und mandantengebundene Einträge**, und beides ist zu prüfen: Die
+>    globalen (`MandantID IS NULL`) müssen bei jedem Mandanten **erhalten** bleiben, die fremden
+>    gebundenen dürfen nicht erscheinen. Der Test verlangt vorab, dass es globale Einträge gibt und
+>    dass **mindestens ein** Mandant gebundene hat — nach dem Stand der Testkopie vom 08.09.2026
+>    sind alle sechs gebundenen `NEXANS` zugeordnet, die Richtung `SUTTONS` → `NEXANS` ist damit
+>    heute leer und wird scharf, sobald ein zweiter Mandant gebundene Einträge bekommt. **Das ist
+>    eine Grenze der Daten und keine des Tests**, und sie steht dort als solche.
+> 2. **Die Suche hat zwei Zugriffspfade** (E‑101), und der schärfere ist das Spaltenprädikat:
+>    `feld=Message.MessageID:<fremde Kennung>` ist ein Zugriff über den **Primärschlüssel** — stünde
+>    die Mandantenkette nicht im selben Statement, fände er die Zeile in einem Schritt. Der Test
+>    prüft ihn neben dem EAV-Zugriff, beide gegen eine erfundene Eingabe derselben Länge.
+>
+> **Ein Befund aus dem ersten Lauf gehört dazu:** Bei `Message.GUID` **ist** der gesuchte Wert die
+> Kennung der Nachricht (eine Zeile je Nachricht, M157). Ein Test, der die fremde Kennung im
+> Rumpf verbietet, wird an seinem eigenen Zitat rot — der Rumpf nennt den Suchbegriff, weil er die
+> Frage ist. Die Kennung wird deshalb im Rumpf **ohne das Zitat** gesucht, wie bei `instance`.
+
 Der Test prüft zu Beginn, dass beide in der Testkopie existieren und die erfundene ID nicht. Schlägt
 das fehl, hat sich die Testkopie geändert — nicht der Code.
 

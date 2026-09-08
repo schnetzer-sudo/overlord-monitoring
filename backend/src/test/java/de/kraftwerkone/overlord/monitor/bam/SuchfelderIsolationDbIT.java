@@ -164,7 +164,9 @@ class SuchfelderIsolationDbIT extends SicherheitsTestbasis {
     assertThat(gebundenAn(NEXANS).size() + gebundenAn(MANDANT_B).size())
         .as("ohne einen einzigen gebundenen Eintrag bewiese der Test nur, dass leer leer ist")
         .isPositive();
-    assertThat(gebundenAn(NEXANS)).doesNotContainAnyElementsOf(gebundenAn(MANDANT_B));
+    // noneMatch statt doesNotContainAnyElementsOf: Letzteres wirft bei einer LEEREN Menge, und die
+    // gebundenen Eintraege von SUTTONS sind nach dem Stand vom 08.09.2026 genau das — leer.
+    assertThat(gebundenAn(NEXANS)).noneMatch(gebundenAn(MANDANT_B)::contains);
     assertThat(bamKonfiguriertFuer(NEXANS))
         .isNotEmpty()
         .doesNotContainAnyElementsOf(bamKonfiguriertFuer(MANDANT_B));
@@ -213,12 +215,13 @@ class SuchfelderIsolationDbIT extends SicherheitsTestbasis {
     Antwort nexans = aufNexans.hole(SUCHFELDER);
     Antwort suttons = aufSuttons.hole(SUCHFELDER);
 
-    assertThat(feldnamen(nexans)).doesNotContainAnyElementsOf(fremdGebundenFuer(NEXANS));
-    assertThat(feldnamen(suttons)).doesNotContainAnyElementsOf(fremdGebundenFuer(MANDANT_B));
+    // noneMatch, weil eine der Mengen leer sein darf (siehe oben) — die Aussage bleibt dieselbe.
+    assertThat(feldnamen(nexans)).noneMatch(fremdGebundenFuer(NEXANS)::contains);
+    assertThat(feldnamen(suttons)).noneMatch(fremdGebundenFuer(MANDANT_B)::contains);
     assertThat(feldnamen(suttons))
         .as("die gebundenen Eintraege von NEXANS gehoeren nicht zu SUTTONS")
-        .doesNotContainAnyElementsOf(gebundenAn(NEXANS));
-    assertThat(feldnamen(nexans)).doesNotContainAnyElementsOf(gebundenAn(MANDANT_B));
+        .noneMatch(gebundenAn(NEXANS)::contains);
+    assertThat(feldnamen(nexans)).noneMatch(gebundenAn(MANDANT_B)::contains);
     assertThat(bamTypen(nexans)).doesNotContainAnyElementsOf(bamKonfiguriertFuer(MANDANT_B));
     assertThat(bamTypen(suttons)).doesNotContainAnyElementsOf(bamKonfiguriertFuer(NEXANS));
   }
@@ -249,7 +252,7 @@ class SuchfelderIsolationDbIT extends SicherheitsTestbasis {
     assertThat(bamTypen(beiSuttons)).isEqualTo(bamKonfiguriertFuer(MANDANT_B));
     assertThat(feldnamen(beiSuttons))
         .as("ein Angebot, das den Wechsel ueberlebt, waere das Angebot des falschen Mandanten")
-        .doesNotContainAnyElementsOf(gebundenAn(NEXANS));
+        .noneMatch(gebundenAn(NEXANS)::contains);
   }
 
   /** Der Rumpf nennt keinen Mandanten — er beschreibt Felder und nicht, fuer wen sie gelten. */
