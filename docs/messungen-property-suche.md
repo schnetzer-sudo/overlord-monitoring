@@ -1626,3 +1626,88 @@ den häufigsten Wert **des Fensters** über den Bestand, nicht den häufigsten d
 Klasseneinteilung ist eine Lesart der gemessenen Gestalt, keine fachliche Aussage über die Felder.*
 
 ---
+
+## M164 — Längenverteilung, insbesondere `Message.DestinationFilename`
+
+**Sitzung** `n4-m164.sql`. Für alle drei Namen Minimum, Maximum, Mittel, **Median**
+(`MEDIAN() OVER ()`), Anteil über 50 und über 100 Zeichen, `NULL`-Anteil; für
+`DestinationFilename` zusätzlich Längenklassen, das Histogramm je Länge und — als Zuarbeit für M167 —
+die **Breite des Präfix-Vorfilters**: Wie viele verschiedene Werte teilen sich denselben
+50‑Zeichen-Präfix? Fenster B, `NEXANS`; `SUTTONS` entfällt (keine Zeile, M162). Nur Längen und
+Zähler, kein Wert.
+
+> **Vorregistrierte Deutung.** `DestinationFilename` überschreitet die 50 Zeichen **in nennenswertem
+> Umfang**; `SNDPRN` und `VFN` nicht. Vorwissen: Maximum 73 über alle Mandanten (M56), `SNDPRN`
+> fest 6, `VFN` 4 bis 21 (M17).
+
+| Name | Zeilen | `NULL` | kürzeste | **längste** | Mittel | **Median** | **über 50** | Anteil | über 100 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| **`Message.DestinationFilename`** | 10.524 | 0 | 3 | **55** | 10,19 | **9** | **8** | **0,076 %** | 0 |
+| `Message.SNDPRN` | 28.003 | 0 | 6 | 8 | 6,01 | 6 | 0 | 0 % | 0 |
+| `Message.VFN` | 29.985 | 0 | 4 | 26 | 10,33 | 7 | 0 | 0 % | 0 |
+
+**Die Deutung hat für `SNDPRN` und `VFN` getroffen und für `DestinationFilename` nicht.** Acht
+Zeilen von 10.524 überschreiten die Präfixgrenze — **0,076 %**, nicht „nennenswert". Der längste
+Dateiname dieses Mandanten in diesem Fenster hat 55 Zeichen; die Hälfte aller Werte hat höchstens 9.
+
+**Das Vorwissen widerspricht dem nicht, es erklärt sich:** M56 hat das Maximum 73 über **alle**
+Mandanten gemessen (20.765 Zeilen in Fenster B), `NEXANS` trägt davon 10.524. Die längeren Werte
+gehören anderen Mandanten; welchen, ist nicht erhoben. `SNDPRN` ist nicht mehr fest sechsstellig
+(6 bis 8, Mittel 6,01), `VFN` reicht bis 26 statt 21 — beides Fensterwirkung, beides weit unter
+50.
+
+### Das Histogramm — 23 verschiedene Längen, 99,52 % bis 24 Zeichen
+
+| Länge | Zeilen | Werte | | Länge | Zeilen | Werte |
+|---:|---:|---:|---|---:|---:|---:|
+| 3 | 166 | 2 | | 15 | 589 | 338 |
+| 6 | 166 | 6 | | 16 | 14 | 3 |
+| 7 | **3.453** | 7 | | 17 | 162 | 9 |
+| 8 | 1.353 | 21 | | 18 | 378 | 14 |
+| 9 | 1.620 | 19 | | 19 | 26 | 3 |
+| 10 | 350 | 11 | | 21 | 176 | 8 |
+| 11 | 248 | 12 | | 22 | 38 | 38 |
+| 12 | 26 | 5 | | 23 | 8 | 1 |
+| 13 | 561 | 8 | | 24 | 1 | 1 |
+| 14 | 1.139 | 156 | | 48 | 12 | 12 |
+| | | | | 50 | 30 | 30 |
+| | | | | **54** | **4** | **4** |
+| | | | | **55** | **4** | **4** |
+
+Längen 25 bis 47, 49 und 51 bis 53 kommen nicht vor. **10.474 Zeilen (99,52 %) sind höchstens 24
+Zeichen lang.** Die sieben Werte mit sieben Zeichen tragen 3.453 Zeilen; die 338 Werte mit fünfzehn
+Zeichen tragen 589. Längenklassen: bis 50 Zeichen **10.516 Zeilen, 704 Werte**; 51 bis 60 Zeichen
+**8 Zeilen, 8 Werte**; darüber nichts.
+
+### Die Breite des Vorfilters — kein Präfix ist mehrdeutig
+
+| Menge | Präfixe (50 Zeichen) | Werte | Zeilen | Präfixe mit mehreren Werten | max. Werte je Präfix | max. Zeilen je Präfix |
+|---|---:|---:|---:|---:|---:|---:|
+| alle Zeilen des Namens | **712** | **712** | 10.524 | **0** | 1 | 2.866 |
+| nur Werte über 50 Zeichen | 8 | 8 | 8 | 0 | 1 | 1 |
+
+**712 Präfixe für 712 Werte:** In diesem Fenster gibt es keinen einzigen 50‑Zeichen-Präfix, hinter
+dem mehr als ein Wert steht — auch nicht hinter den acht langen. Der Index kann für einen Wert über
+50 Zeichen also mehr Zeilen zurückgeben, als exakt passen, **nur wenn der Präfix mit Werten
+außerhalb des Fensters** zusammenfällt; der Index kennt kein Fenster. Genau das misst M167 über die
+ganze Tabelle.
+
+**Und die acht langen Werte sind acht Einzelfälle:** jeder genau eine Zeile (M164‑5). Damit ist die
+Voraussetzung von M167 erfüllt — es gibt Vergleichsfälle —, aber nur bei Trefferzahl **1**.
+
+**Was daraus für den Ausnahmekasten zu L4 folgt.** Für alle sechs jetzt konfigurierten Typ‑1‑Namen
+ist `MessagePropertyNameValueIDX` in Fenster B bei `NEXANS` ein **echter Zugriffspfad**: Vier
+Namen haben keinen Wert über 50 Zeichen (M160), zwei weitere ebenfalls, und beim sechsten sind es
+acht von 10.524 Zeilen mit eindeutigem Präfix. Die Begründung aus M160 („der Präfix enthält den
+vollständigen Wert") wird durch den Handabgleich **nicht** dünner — und die Warnung aus Punkt 146
+gilt weiter: 31,8 % aller `MessageProperty`-Zeilen liegen über 50 Zeichen, nur eben nicht unter
+diesen Namen.
+
+**Laufzeiten** (Einzellauf, Erhebung): Längen 2,303 / 2,375 / 2,377 s, Längenklassen 1,491 s,
+Histogramm 2,425 s, Vorfilterbreite 2,479 s, nur lange Werte 2,262 s.
+
+*Belegvermerk (L10): gemessen sind Längen und Präfixbreite über Fenster B bei `NEXANS`. Behauptet
+wird nicht, dass kein `NEXANS`-Wert dieses Namens irgendwo im Bestand länger als 55 Zeichen ist,
+und nicht, dass die 73 aus M56 einem bestimmten Mandanten gehören.*
+
+---
