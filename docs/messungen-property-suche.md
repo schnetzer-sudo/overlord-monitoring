@@ -2527,3 +2527,75 @@ Preis an der Fenstermenge, nicht am Wert (M169) —, und nicht, dass die Materia
 Produktion mit anderen Temp-Tabellen-Grenzen gleich kostet.*
 
 ---
+
+## M169 — Was das Erzwingen den schnellen Fall kostet
+
+**Sitzung** `b3-m169.sql`. `Message.GUID` und `Converter.TransactionID` bei `NEXANS`, `Message.GUID`
+bei `SUTTONS`; drei Fenster, Fassung B und C. Prüfwert je Fall der häufigste Wert des 30‑Tage-Fensters
+(Längen 36, 6, 36; bei `Message.GUID` trägt er genau eine Zeile, bei `Converter.TransactionID` zwei —
+wie M157 und M166). Ablauf wie B2, Grenze 10 s, `--force`. Serverzeit 11:09:07 bis 11:19:29.
+
+> **Vorregistrierte Deutung.** Fassung A läuft in 0,942 und 1,195 ms. **Schwelle Faktor 10.** Darüber
+> ist eine einheitliche Fassung fraglich; zwei Codepfade widersprächen der Disziplin, dass eine
+> Kennzahl an genau einer Stelle entsteht — zu entscheiden, nicht stillschweigend zu lösen.
+
+### Ergebnis — Wanduhr, Bestwert der Läufe 2 bis 6, in Millisekunden
+
+| Fall | Fenster | **A** (M159/M166) | **B** | Faktor | **C** | Faktor | Zeilen |
+|---|---|---:|---:|---:|---:|---:|---:|
+| `NEXANS` / `Message.GUID` | 24 h | 1,062 | 60,713 | **57** | 228,390 | 215 | 0 |
+| | 30 T | 0,942 | 4.783,098 | **5.078** | 8.488,064 | 9.011 | 1 |
+| | 90 T | 0,946 | ⛔ Abbruch (10.018,161) | > 10.000 | ⛔ Abbruch (10.003,776) | > 10.000 | — |
+| `NEXANS` / `Converter.TransactionID` | 24 h | 1,114 | 60,307 | **54** | 224,097 | 201 | 0 |
+| | 30 T | 1,195 | 4.671,159 | **3.909** | 8.637,542 | 7.228 | 2 |
+| | 90 T | — | ⛔ Abbruch (10.017,172) | — | ⛔ Abbruch (10.004,594) | — | — |
+| `SUTTONS` / `Message.GUID` | 24 h | 0,876 | 53,837 | **61** | 76,780 | 88 | 0 |
+| | 30 T | 0,901 | 1.827,153 | **2.028** | 2.523,611 | 2.801 | 1 |
+| | 90 T | 0,898 | **1.556,927** — kein Abbruch | **1.734** | 3.353,548 | 3.734 | 1 |
+
+Die Eichung der Wanduhr (0,855 ms für ein leeres Statement) ist in den A‑Werten nicht enthalten
+(Profil) und in den B‑ und C‑Werten enthalten; beim kleinsten B‑Wert (53,837 ms) sind das 1,6 %,
+der Faktor 61 würde damit zu 60 — an der Aussage ändert es nichts.
+
+### Die Schwelle ist in allen 18 Fällen gerissen — der kleinste Faktor ist 54
+
+Über 24 Stunden kostet das Erzwingen den schnellen Fall das **54- bis 61‑Fache** (B) beziehungsweise
+das 88- bis 215‑Fache (C); über 30 Tage das **2.028- bis 5.078‑Fache** (B) und bis zum 9.011‑Fachen
+(C); über 90 Tage bricht `NEXANS` in beiden Fassungen ab, während Fassung A dort in 0,946 ms
+antwortet (M159). **Eine einheitliche erzwungene Fassung ist damit nicht fraglich, sondern
+ausgeschlossen:** Sie macht aus einem Schlüsselzugriff unter einer Millisekunde eine Abfrage von
+fünf Sekunden oder einen Abbruch. Was daraus folgt — zwei Codepfade, oder keiner davon erzwungen —,
+ist nach der Deutung eine Entscheidung und wird hier nicht getroffen (offener Punkt 157).
+
+### Der Preis ist die Fenstermenge, nicht der Wert
+
+In allen neun B‑Fällen **führt der Optimizer mit `MessageProperty`** über den Wertindex (eine Zeile
+bei `Message.GUID`, 17 bei `Converter.TransactionID`) und erreicht die materialisierte Menge über
+deren automatischen Schlüssel — der Ausbruch aus §4, hier in seiner harmlosesten Form. **Er spart
+dabei nichts:** Die abgeleitete Tabelle trägt ein `LIMIT`, in das der Optimizer die Join-Bedingung
+nicht hineinschieben darf, also materialisiert er die ganze Fenstermenge (222.570 `tmp_write` bei
+`NEXANS` über 30 Tage, 5.466 über 24 Stunden), um darin eine Nachricht nachzuschlagen. **Fassung B
+kostet den schnellen Fall genau das, was die Materialisierung kostet:** rund 60 ms für 5.043
+Nachrichten, 4,7 bis 4,8 s für 180.251, 1,8 s für 21.516 bei `SUTTONS`. Fassung C zahlt darauf die
+Unterabfrage je Zeile: (8.488,064 − 4.783,098) / 180.251 = **20,6 µs je materialisierter Zeile** —
+dieselbe Größe wie in M168.
+
+### `SUTTONS` über 90 Tage bricht nicht ab — weil der Optimizer die Materialisierung anders baut
+
+Für `NEXANS` liest der 90‑Tage-Plan `Message` als `ALL` (M168). Für `SUTTONS` steigt er über die
+**Mandantenkette** ein: `pm` → `pr` → `m` als `ref` über `ProejctIDIDX` je Prozess (197.804 geschätzte
+Zeilen je Prozess, gelesen 11.597,53), dann das Zeitfenster als Filter. Das ist der Plan aus M162
+(`SUTTONS`), und er ist über 90 Tage mit 1.556,927 ms **schneller als derselbe Mandant über 30 Tage**
+(1.827,153 ms über `MessageLastUpdateIDX` mit 214.330 gelesenen Zeilen des Zeitbereichs über alle
+Mandanten). Für den kleinen Mandanten ist die Kette der bessere Einstieg, weil sie seine 64.553 Nachrichten
+findet, statt den Zeitbereich zu durchmustern, den der Optimizer auf 1.476.166 Zeilen schätzt; für
+`NEXANS` gibt es diesen Ausweg nicht — 572.648 seiner Nachrichten liegen im Fenster. **Ein Fenster entscheidet den Plan der Materialisierung, und der Mandant auch**
+— dieselbe Kippstelle wie in M156 und M162, nur eine Ebene tiefer.
+
+*Belegvermerk (L10): gemessen sind 18 Fälle über zwei Mandanten, drei Fenster, zwei Namen und zwei
+Fassungen; die Faktoren sind gegen die Profilwerte aus M159 und M166 gerechnet, die für diese Pläne
+mit der Wanduhr übereinstimmen (Abweichung 1). Behauptet wird nicht, dass ein anderer Schlüsselwert
+anders kostet — bei Fassung B und C hängt der Preis nicht am Wert —, und nicht, dass die 20,6 µs je
+Zeile eine Konstante des Servers sind: Sie sind der Unterschied zweier Läufe auf dieser Testkopie.*
+
+---
