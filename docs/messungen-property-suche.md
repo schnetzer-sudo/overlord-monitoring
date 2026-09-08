@@ -1249,3 +1249,221 @@ der Regeltext L4 noch ein Ausnahmekasten. Das gehört in den Bauauftrag.
 
 **Serverzeit Beginn `2026-09-07 16:11:14`.** Die Ergebnisdateien liegen unter
 `scripts/messung-property-suche/ergebnis/` und sind nicht eingecheckt (G1).
+
+---
+
+# Nachtrag vom 08.09.2026 — die drei neuen Namen (M161 bis M167)
+
+Erhoben am **08.09.2026** gegen dieselbe Testkopie. Auftrag: „Nachtrag zur Messrunde Property-Suche —
+die drei neuen Namen", Stand 08.09.2026. **Ein Nachtrag, keine neue Runde:** Er hängt an dieser
+Datei, vergibt keine E‑Nummern und wiederholt keine Messung zu `Message.GUID`, `Message.ReceiverID`
+und `Service.Type` — deren Befunde stehen oben und werden nur zitiert.
+
+**Dieser Nachtrag baut nichts und entscheidet nichts.** Kein Endpunkt, keine Abbildung im Code, kein
+Test, keine Migration. [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) ist nicht angefasst, auch
+nicht §3.2, obwohl `Message.DestinationFilename` dort fehlt — das gehört in den Bauauftrag.
+
+**Anlass.** Die Konfigurationstabelle `MessagePropertySearchListEntry` der Testkopie ist am
+08.09.2026 **von Hand** auf den Stand der Produktion gebracht worden — nur diese eine Tabelle. Der
+Datenbestand ist unverändert (Datenstand von `Message` in N0 identisch mit M0); Anker, Zeitfenster
+und Entwicklungsuhr gelten wie bisher. Was in der Tabelle tatsächlich steht, stellt **M161** fest,
+bevor gemessen wird.
+
+## ⚠️ Gemeldete Abweichungen und Widersprüche des Nachtrags
+
+### Widerspruch 1 — `Message.DestinationFilename` steht in drei Projektdateien
+
+Der Auftrag führt den Namen (§2 und M162) als „steht in **keiner** Projektdatei" und leitet daraus
+ab, dass es für ihn keine Erwartung gibt. **Das trifft nicht zu:**
+
+| Datei | Stelle | Was dort steht |
+|---|---|---|
+| [`messungen-schritt5.md`](messungen-schritt5.md) | M17 (2), Namen in Fenster A | **480** Zeilen auf 480 Nachrichten, Längen **3 bis 73** Zeichen, Mittel 39; und in der Liste der 17 `Message.*`-Namen, „die in keiner Dokumentationsdatei stehen" |
+| [`messungen-schritt8.md`](messungen-schritt8.md) | M56, Ergebnis (a), Fenster A und B | Fenster B: **20.765** Zeilen auf 20.765 Nachrichten, kürzester **3**, längster **73** Zeichen, 166 rein numerisch |
+| [`messungen-schritt8-auftrag.md`](messungen-schritt8-auftrag.md) | „Der Befund, der die Schnittregel entscheidet" | als Beispiel eines Werts, der aus der EDI-Datei und damit **vom Partner** kommt |
+
+Nach §0 des Auftrags gilt die Datei. **Folge:** Für M164 gibt es Vorwissen — ein gemessenes Maximum
+von 73 Zeichen über Fenster B, also über der Präfixgrenze; der **Anteil** über 50 ist dort nicht
+erhoben und bleibt Gegenstand von M164. Für M162 bleibt es bei „keine Erwartung zur Deckung je
+Kettenstellung": M56 kennt 20.765 Zeilen gegen 214.330 Nachrichten in Fenster B über **alle**
+Mandanten (**9,688 %**), ohne Mandanten- und Rollentrennung. Was in keiner Datei steht, ist die
+**Bedeutung** des Namens — dabei bleibt es, und der Satz des Auftrags zu §3.2 bleibt richtig: Dort
+fehlt er.
+
+Dasselbe Vorwissen gibt es für die beiden anderen Namen, und es gehört vor die Messung, nicht
+dahinter: M17 (2) misst in Fenster A `Message.SNDPRN` mit 383 Zeilen auf 383 Nachrichten bei
+**fester Länge 6** und `Message.VFN` mit 397 Zeilen auf 397 Nachrichten, 4 bis 21 Zeichen — und
+**nur 43 verschiedenen Werten**. Die Deutung zu M163 unten nimmt das auf.
+
+### Abweichung 2 — Erhebungen unter 180 s, Kandidaten unter 10 s
+
+§4 des Auftrags setzt `max_statement_time = 10` für den ganzen Nachtrag. **M162 bis M164 laufen mit
+180 s**, wie s11 und s12 der Hauptrunde: Sie sind Erhebungen über den Bestand und keine Kandidaten
+für eine gebaute Abfrage — die Fassung B aus M156 hat für `NEXANS` allein 15 s gebraucht, und ein
+Abbruch bei 10 s lieferte keine Deckungszahl, sondern nur die Wiederholung eines bekannten Befunds.
+Das Fenster ist **nicht** verkleinert worden; das ist die Vorschrift, um die es §4 geht. **M165 bis
+M167 laufen mit 10 s**, der Grenze des Lese-Pools ([`datenzugriff.md`](datenzugriff.md) §1), und
+ein Abbruch ist dort das Ergebnis.
+
+### Abweichung 3 — Laufzeitdisziplin bei M162 bis M164
+
+Wie in der Hauptrunde (Vermerk unter M157): Für die drei Erhebungen steht **ein** Lauf je Statement,
+nicht die beste von fünf. Die volle Disziplin steht in M165, M166 und M167.
+
+### Abweichung 4 — M161 prüft eine Sache mehr, als der Auftrag nennt
+
+M161‑7 wiederholt die Gegenprobe der Typ-Lesart aus M155 für die drei neuen Namen — je ein
+`LIMIT 1`-Zugriff über `MessagePropertyNameIDX`. Ohne sie wäre offen, ob ein Name überhaupt in
+`MessageProperty` vorkommt, bevor M162 seine Deckung misst.
+
+## Nummernvergabe — Nachtrag
+
+Der Auftrag nennt M161 und verlangt, den Stand nicht zu übernehmen, sondern über den **Höchstwert**
+zu ermitteln — nicht über eine Bereichsprobe.
+
+| | |
+|---|---|
+| Prüfung Messungen | `grep -rhoE 'M[0-9]{1,3}' docs/ scripts/ *.md \| grep -oE '[0-9]+' \| sort -un \| tail -20` |
+| Ergebnis | 142 bis **160** lückenlos, dann **179**. M179 ist **keine Vergabe**, sondern Fließtext in dieser Datei („M153 bis M179: kein Treffer", Nummernvergabe der Hauptrunde) — genau der Fall, vor dem der Auftrag warnt. Höchste vergebene: **M160** |
+| Gegenprobe | `grep -rnoE '\bM160\b' docs/ scripts/ *.md` → **21 Treffer in sechs Dateien** (diese Datei, `README.md`, zwei Skripte, zwei Rohausgaben). Der Ausdruck greift. **`\bM16[1-9]\b` und `\bM170\b`: kein Treffer** |
+| Folge | **M161 bis M167 sind hier vergeben** — wie im Auftrag |
+| Prüfung Entscheidungen | `grep -rhoE 'E.[0-9]{1,3}' docs/ scripts/ *.md \| grep -oE '[0-9]+' \| sort -un \| tail -20` |
+| Ergebnis | Höchstwerte 143 bis 862 — fünf davon geöffnet (143, 427, 439, 500, 862): **sämtlich Datenwerte der Form `E_nnn`** in Rohausgaben unter `scripts/messung-schritt9/ergebnis/` und `scripts/messung-liste-verengung/ergebnis/`. Der Punkt im Ausdruck fängt den Unterstrich mit. Mit der Alternation aus der Hauptrunde, `E(‑\|-)[0-9]{1,3}`: höchste vergebene **E‑105**, dazu der bekannte Falschtreffer E‑780 |
+| Folge | **Keine E‑Nummer vergeben**, wie der Auftrag es vorsieht. Geprüft ist der Stand trotzdem, damit der nächste Auftrag ihn nicht ungeprüft weiterreicht |
+| Offene Punkte | `grep -rhoE 'Punkt \*?\*?1[0-9][0-9]' docs/*.md` → höchste 146; `grep -rhoE '^\*\*1[0-9][0-9]\.' docs/*.md` → 147, 148, 149 und **167**. Der Treffer 167 ist `**167.734 ist der Fall …` in `messungen-schritt7.md:4410`, eine Zahl mit Tausenderpunkt. Höchste vergebene: **149** (diese Datei). **Fortlaufend ab 150** |
+
+## Rahmen — Nachtrag
+
+Sitzung `n0-rahmen.sql`, gleiche Abfragen in gleicher Reihenfolge wie `s0-rahmen.sql`. Alles, was
+hier nicht steht, gilt unverändert aus dem Rahmen der Hauptrunde.
+
+| | |
+|---|---|
+| Ziel | **Testkopie**, `10.6.22-MariaDB-0ubuntu0.22.04.1-log`, `SELECT @@global.read_only` → **`1`** als erste Abfrage jeder Sitzung |
+| Benutzer | `monitor_read@%`, ausschließlich `SELECT` |
+| Serverzeit Beginn | `2026-09-08 09:39:48` |
+| Client | `mysql.exe` **Ver 8.0.46**, `--ssl-mode=DISABLED`, `--default-character-set=utf8mb4`, `-t`; Passwort über `MYSQL_PWD` |
+| `@@session.sql_mode`, `@@div_precision_increment`, `@@max_statement_time` (Vorgabe), `@@profiling_history_size` (Vorgabe), `innodb_buffer_pool_size` | **unverändert**: `STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION`, **4**, `0.000000`, **15**, 26.843.545.600 Byte |
+| Datenstand | `Message.MessageLastUpdate` von `2024-10-01 02:00:28` bis `2026-07-08 17:21:10` — **unverändert** gegenüber M0 und der Hauptrunde |
+| Grenzen | **180 s** für M162 bis M164 (Erhebung), **10 s** für M165 bis M167 (Kandidaten) — siehe Abweichung 2 |
+| Fenster | **Fenster B**, `2025-11-30 00:00:00` bis `2025-12-30 00:00:00`, halboffen; 24 Stunden in M166: `2025-12-29 00:00:00` bis `2025-12-30 00:00:00`. Kein `NOW()` |
+| Mandanten (L7) | `NEXANS` und `SUTTONS` |
+| Sitzungen | `scripts/messung-property-suche/n*.sql`, Rohausgaben unter `ergebnis/n*.txt` — vom bestehenden `.gitignore`-Eintrag der Hauptrunde bereits ausgeschlossen (G1); **keine neue Ignorierregel nötig** |
+
+## Verifizierte Ausgangslage — Nachtrag, nicht neu erhoben
+
+Aus §3 des Auftrags; die Werte stehen oben in dieser Datei und sind nicht wiederholt gemessen worden.
+
+| Gegenstand | Wert | Herkunft |
+|---|---|---|
+| `MessageProperty`, Zeilen | 75.571.462, gezählt | M44 |
+| Optimizer-Schätzung derselben Tabelle | 37,9 % zu niedrig | M155, Nebenbefund |
+| `MessagePropertyNameValueIDX` | `(MessagePropertyName, MessagePropertyValue(50))` | M14 |
+| `MessagePropertyValueIDX` | `(MessagePropertyValue(50))` | M14 |
+| Fenster B | 214.330 Nachrichten über alle Mandanten | M156 |
+| davon `NEXANS` | 180.251 Nachrichten, 28.524 Wurzeln, 101.270 Kinder | M156 |
+| davon `SUTTONS` | 21.516 Nachrichten, 639 Wurzeln, 1.247 Kinder | M156 |
+| `Message.GUID`, ganzer Weg, 30 Tage | 0,942 ms | M159 |
+| `Message.ReceiverID`, ganzer Weg, 30 Tage | 1.222,763 ms | M159 |
+| Zählung **eines** Namens über den Gesamtbestand | bis 125,527 s | M157 |
+
+### Der Vergleichsmaßstab ist die gebaute BAM-Suche, nicht das Dashboard
+
+**Für eine Suche gibt es kein 500‑ms‑Budget.** Die halbe Sekunde aus
+[`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §8 gehört dem Dashboard; M159 hat sie als
+Maßstab genommen, und das steht dort so. Maßstab dieses Nachtrags ist die Suche, die das Projekt
+bereits ausliefert — [`bam-suche.md`](bam-suche.md) §2 und §4, M47 in der gebauten Fassung:
+
+| | 30 Tage | ein Jahr |
+|---|---:|---:|
+| BAM-Suche, gebaut (M47) | 1,095 bis **1.655,8 ms** | 1,089 bis **8.939,7 ms** |
+| ohne Zeitfenster, nicht gebaut (M35) | 0,729 bis **10.752,8 ms** — Grenze gerissen | — |
+
+Ein neuer Name unter 1.655,8 ms über 30 Tage liegt damit im Bereich des Ausgelieferten. Das heißt
+nicht „gut", es heißt „nicht schlechter als das, was schon läuft".
+
+## Die vorregistrierten Deutungen des Nachtrags — vor dem ersten Lauf geschrieben
+
+Festgeschrieben vor M162 (Commit „docs: Nachtrag Property-Suche — Nummernstand und Ist-Stand der
+Konfiguration (M161)"); M161 war zu diesem Zeitpunkt bereits gelaufen und ist unten mit seiner
+Deutung dagegengehalten.
+
+| Messung | Gegenstand | Vorregistrierte Deutung |
+|---|---|---|
+| **M161** | Ist-Stand der Konfigurationstabelle | Acht Typ‑0 ohne Mandant, sechs Typ‑1 mit `NEXANS`, kein `Service.Type`. Weicht der Ist-Stand ab, wird der **Ist-Stand** gemessen, nicht die Erwartung |
+| **M162** | Deckung der drei neuen Namen | Schwelle unverändert **20 % über die Wurzeln** (M28‑2); sie siebt nicht aus, sie erzeugt einen Vermerk. Für `SNDPRN` und `VFN` **hohe Quoten** erwartet, weil beide in §3.2 als bekannte Namen geführt sind. Für `DestinationFilename` **keine Erwartung** zur Deckung je Kettenstellung — Vorwissen nur die 9,688 % über alle Mandanten aus M56, siehe Widerspruch 1 |
+| **M163** | Werteverteilung | Dateiname und Senderkennung verhalten sich verschieden: Dateinamen nahezu eindeutig, eine Senderkennung ist eine **Kategorie** wie `Service.Type`. **Fällt `SNDPRN` in die Kategorieklasse, ist das der wichtigste Befund des Nachtrags.** Vorwissen zu `VFN` aus M17 (2): 43 verschiedene Werte auf 397 Zeilen an einem Tag — er ist danach **kein** Schlüssel |
+| **M164** | Längenverteilung | `DestinationFilename` überschreitet 50 Zeichen **in nennenswertem Umfang**; `SNDPRN` und `VFN` nicht. Vorwissen: Maximum 73 (M56), `SNDPRN` fest 6, `VFN` 4 bis 21 (M17) |
+| **M165** | Plan des Wertprädikats | **Nicht** zwingend `MessagePropertyNameValueIDX`, sondern möglicherweise der reine Wertindex wie bei `Message.GUID` (M158, Befund 3: die Selektivität kommt vom Wert). `FORCE INDEX` nur als Diagnose |
+| **M166** | Der ganze Weg | Unter **1.655,8 ms** über 30 Tage. `Converter.TransactionID` verhält sich wie `Message.GUID`, einstellige Millisekunden |
+| **M167** | Kosten der Nachprüfung | Die Nachprüfung kostet, aber nicht die Größenordnung. Wird sie zum beherrschenden Anteil, ist `DestinationFilename` in derselben Lage wie `Service.Type`. Findet M164 keinen Wert über 50 Zeichen, bleibt die Lücke offen und wird **nicht** mit einem konstruierten Fall gefüllt |
+
+> ⚠️ **Regel G1 greift in diesem Nachtrag schärfer als in der Hauptrunde.** Die drei Namen tragen
+> fachliche Inhalte: ein Dateiname, die EDIFACT-Senderkennung, eine fachliche Nummer. **In diese
+> Datei kommt kein einziger dieser Werte** — nicht vollständig, nicht abgekürzt, nicht als Beispiel,
+> nicht in einer `EXPLAIN`-Ausgabe. Ausgegeben werden ausschließlich Zähler, Längen, Ränge und
+> Laufzeiten; wo eine Ausgabe Werte enthalten könnte, wird im Statement aggregiert oder über
+> `QUOTE()` und `PREPARE` eingesetzt, nie nachträglich geschwärzt. Die Rohausgaben liegen unter
+> `scripts/messung-property-suche/ergebnis/` und sind nicht eingecheckt.
+
+---
+
+## M161 — Ist-Stand der Konfigurationstabelle
+
+**Sitzung** `n1-m161.sql`. Vollständiger Abzug von `MessagePropertyName`, `MandantID`,
+`MessagePropertyType`, dazu `COUNT(*)`, die Kreuztabelle, der Verbleib von `Service.Type` und der
+Tabellenstatus. **Feldnamen sind Konfiguration und dürfen stehen.**
+
+> **Vorregistrierte Deutung.** Acht Typ‑0 ohne Mandant, sechs Typ‑1 mit `NEXANS`, kein
+> `Service.Type`.
+
+**Die Deutung hat getroffen, Zeile für Zeile.**
+
+| | gezählt |
+|---|---:|
+| Zeilen (`COUNT(*)`) | **14** |
+| verschiedene Namen | 14 |
+| Typ 0, `MandantID IS NULL` | **8** |
+| Typ 1, `MandantID = 'NEXANS'` | **6** |
+| `Service.Type` | **0 Zeilen — entfernt, nicht bloß nicht ergänzt** |
+| `MandantID = ''` / `MessagePropertyType IS NULL` | 0 / 0 |
+
+**Die vierzehn Zeilen:**
+
+| Typ | `MandantID` | `MessagePropertyName` | Stand |
+|---|---|---|---|
+| 0 | `NULL` | `Message.MessageID`, `Message.MessageIDSource`, `Message.MessageIDTarget`, `Message.ProcessID`, `Message.ProcessName`, `Message.SOSID`, `Message.SOSName`, `Message.Status` | **unverändert** — Zeile für Zeile identisch mit M154 (gegen `ergebnis/s2-m154.txt` verglichen: acht gegen acht, kein Unterschied) |
+| 1 | `NEXANS` | `Converter.TransactionID`, `Message.GUID`, `Message.ReceiverID` | unverändert aus M154 |
+| 1 | `NEXANS` | **`Message.DestinationFilename`, `Message.SNDPRN`, `Message.VFN`** | **neu** — Gegenstand dieses Nachtrags |
+| 1 | `NEXANS` | ~~`Service.Type`~~ | **entfernt** |
+
+**Der Handabgleich ist in den Metadaten sichtbar.** `information_schema.TABLES` zeigt
+`CREATE_TIME 2026-08-14 17:14:34` (unverändert gegenüber M153) und **`UPDATE_TIME 2026-09-08
+09:23:00`** — die Tabelle ist also nicht neu angelegt, sondern in der bestehenden geändert worden,
+16,8 Minuten vor Beginn dieses Nachtrags. `TABLE_ROWS` steht dabei auf **8** und nicht auf 14:
+Selbst bei einer Tabelle mit vierzehn Zeilen ist die Schätzung nach der Änderung veraltet — dieselbe
+Eigenschaft, die M155 an `MessageProperty` mit 37,9 % beziffert hat, hier folgenlos.
+
+**Alle drei neuen Namen kommen in `MessageProperty` vor** (M161‑7, Gegenprobe der Typ-Lesart in der
+Form von M155, je `LIMIT 1`):
+
+| id | table | type | key | key_len | rows | Extra |
+|---|---|---|---|---:|---:|---|
+| 1 | `MessageProperty` | `ref` | `MessagePropertyNameIDX` | 402 | 950.388 | `Using where; Using index` |
+
+`kommtVor` = 1 für `Message.DestinationFilename`, `Message.SNDPRN` und `Message.VFN`. **Die
+Typ-Lesart aus M155 hält damit auch für die drei neuen Zeilen** — sechs von sechs Typ‑1‑Namen
+kommen in `MessageProperty` vor, und die acht Typ‑0‑Namen sind unverändert die acht, die M155 dort
+nicht gefunden hat.
+
+**Was M161 für den Rest des Nachtrags festlegt.** Gemessen werden die **drei neuen** Namen,
+`Converter.TransactionID` nur in M166 (Lücke 6). `Service.Type` wird nicht mehr gemessen; seine
+Befunde (M157 bis M159, Punkt 148) bleiben stehen und beschreiben nun einen Namen, der **nicht mehr
+im Angebot** ist — was das für Punkt 148 heißt, steht am Ende des Nachtrags.
+
+*Belegvermerk (L10): gemessen ist der Inhalt der Konfigurationstabelle der Testkopie am 08.09.2026
+um 09:39 Serverzeit und das Vorkommen der drei Namen in `MessageProperty`. Behauptet wird, dass
+Testkopie und Produktion in dieser Tabelle übereinstimmen — das ist **nicht** gemessen, sondern die
+Aussage des Auftrags über den Handabgleich; die Produktion ist nicht befragt worden.*
+
+---
