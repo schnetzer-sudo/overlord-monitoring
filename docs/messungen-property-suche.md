@@ -1711,3 +1711,243 @@ wird nicht, dass kein `NEXANS`-Wert dieses Namens irgendwo im Bestand länger al
 und nicht, dass die 73 aus M56 einem bestimmten Mandanten gehören.*
 
 ---
+
+## M165 — Der Plan des Wertprädikats
+
+**Sitzungen** `n5-m165.sql`, Diagnose in `n5b-m165-diagnose.sql`. Form aus M158:
+`SELECT COUNT(*) FROM MessageProperty WHERE MessagePropertyName = ? AND MessagePropertyValue = ?` —
+ohne Join, ohne Fenster, also über den **ganzen Bestand**. Prüfwerte je Name der häufigste und der
+seltenste Wert aus Fenster B (`NEXANS`), über `QUOTE()` und `PREPARE` eingesetzt; ausgegeben ist
+nur ihre Länge. Grenze **10 s**, beste von fünf nach einem Aufwärmlauf.
+
+> **Vorregistrierte Deutung.** Nicht zwingend `MessagePropertyNameValueIDX`, sondern möglicherweise
+> der reine Wertindex wie bei `Message.GUID` (M158, Befund 3). `FORCE INDEX` nur als Diagnose.
+
+| Name | Prüfwert | Länge | `key` | `key_len` | `rows` (Schätzung) | **Treffer im Bestand** | **beste von fünf** | Aufwärmlauf |
+|---|---|---:|---|---:|---:|---:|---:|---:|
+| `Message.DestinationFilename` | häufigster | 7 | `MessagePropertyNameValueIDX` | 605 | 98.396 | **49.976** | **374,295 ms** | 749,493 |
+| `Message.DestinationFilename` | seltenster | 14 | **`MessagePropertyValueIDX`** | 203 | 1 | 1 | 0,444 ms | 0,504 |
+| `Message.SNDPRN` | häufigster | 6 | **`MessagePropertyValueIDX`** | 203 | 198.614 | **102.284** | **723,554 ms** | 1.951,660 |
+| `Message.SNDPRN` | seltenster | 6 | `MessagePropertyNameValueIDX` | 605 | 18 | 18 | 0,562 ms | 0,658 |
+| `Message.VFN` | häufigster | 6 | `MessagePropertyNameValueIDX` | 605 | 242.280 | **124.715** | **869,385 ms** | 1.786,239 |
+| `Message.VFN` | seltenster | 17 | `MessagePropertyNameValueIDX` | 605 | 15 | 15 | 0,539 ms | 0,715 |
+
+Alle sechs Pläne: `ref`, `Using index condition; Using where`. **Kein Abbruch**, kein
+Tabellenscan — der Fall `Service.Type` aus M158 (81,4 s ohne Index) tritt bei keinem der drei ein.
+
+### Die Deutung hat in zwei von sechs Fällen getroffen — und die Wahl ist folgenlos
+
+In zwei Fällen nimmt der Optimizer den **reinen Wertindex** (`DestinationFilename` seltenster,
+`SNDPRN` häufigster), in vier den Namensindex. Die Diagnose in beide Richtungen — **`FORCE INDEX`,
+ausdrücklich keine Bauempfehlung:**
+
+| Fall | freie Wahl (`rows`) | erzwungen (`rows`) | frei, beste von fünf | erzwungen, beste von fünf | Unterschied |
+|---|---|---|---:|---:|---:|
+| `SNDPRN`, häufigster | `MessagePropertyValueIDX` (198.614) | `MessagePropertyNameValueIDX` (214.774) | 723,554 ms | 727,900 ms | **+0,6 %** |
+| `VFN`, häufigster | `MessagePropertyNameValueIDX` (242.280) | `MessagePropertyValueIDX` (315.240) | 869,385 ms | 880,267 ms | **+1,3 %** |
+
+Wie bei `Message.GUID` in M158 (0,456 gegen 0,411 ms): Der Name trägt zur Selektivität nichts bei,
+**Befund 3 aus M158 hält auch für die drei neuen Namen.** Der Spread zwischen häufigstem und
+seltenstem Wert desselben Namens beträgt Faktor **843** (`DestinationFilename`), **1.287,5**
+(`SNDPRN`) und **1.613** (`VFN`) — M158 hatte 742 gefunden.
+
+### Was die häufigsten Werte des Fensters über den ganzen Bestand tragen
+
+| Name | Zeilen im Fenster (M163) | **Zeilen im Bestand** | Faktor | Anteil an der Schwelle 234.159 (M33) |
+|---|---:|---:|---:|---:|
+| `Message.DestinationFilename` | 2.866 | **49.976** | 17,44 | 21,3 % |
+| `Message.SNDPRN` | 10.739 | **102.284** | 9,52 | 43,7 % |
+| `Message.VFN` | 12.801 | **124.715** | 9,74 | 53,3 % |
+
+**Keiner reißt die Schwelle aus M33**, und jeder bleibt über den ganzen Bestand unter einer Sekunde.
+Der seltenste Wert des Fensters trägt im Bestand 1, 18 und 15 Zeilen. **Die Zahlen sind untere
+Schranken für den häufigsten Wert des Bestands** — gemessen ist der häufigste Wert des Fensters,
+nicht der des Bestands, und den kann diese Runde nicht ermitteln (M157).
+
+*Nebenbefund: Die `rows`-Schätzung liegt bei allen drei häufigsten Werten beim **1,94- bis
+1,97-Fachen** der gezählten Treffer (98.396 gegen 49.976, 198.614 gegen 102.284, 242.280 gegen
+124.715). Sie hat keine erkennbare Folge für die Planwahl; eine Ursache ist nicht gemessen.*
+
+*Belegvermerk (L10): gemessen sind Plan und Laufzeit des reinen Wertprädikats über den ganzen
+Bestand für sechs Prüfwerte aus Fenster B bei `NEXANS`. Behauptet wird nicht, dass ein anderer Wert
+dieselben Zeiten trägt — der gemessene Spread ist bis zu Faktor 1.613.*
+
+---
+
+## M166 — Der ganze Weg
+
+**Sitzung** `n6-m166.sql`. Statement aus **M159**, unverändert — Wertprädikat, Verdichtung auf
+`MessageID`, Join auf `Message`, Mandantenkette, Zeitfenster, in der Bauform aus
+[`bam-suche.md`](bam-suche.md) §4 (erst deckeln auf 51, dann beschriften; Längen statt Namen in der
+Ausgabe, G1). Gemessen für die drei neuen Namen **und für `Converter.TransactionID`** (Lücke 6),
+über **24 Stunden** und **30 Tage**. Prüfwert je Fall der häufigste Wert des 30‑Tage-Fensters
+desselben Mandanten — der Bösfall, wie in M159. `SUTTONS` nur für `Converter.TransactionID`: Die
+drei neuen Namen haben dort keine Zeile (M162). Grenze **10 s**, `--force`, beste von fünf nach
+einem Aufwärmlauf.
+
+> **Vorregistrierte Deutung.** Unter **1.655,8 ms** über 30 Tage — dem schlechtesten Fall der
+> ausgelieferten BAM-Suche (M47). `Converter.TransactionID` verhält sich wie `Message.GUID`, also im
+> einstelligen Millisekundenbereich.
+
+### Ergebnis — beste von fünf nach einem Aufwärmlauf, in Millisekunden
+
+**`NEXANS`**
+
+| Name | 24 Stunden | **30 Tage** | Zeilen 24 h / 30 T | Plan 24 h | Plan 30 T |
+|---|---:|---:|---:|---|---|
+| `Message.DestinationFilename` | 91,253 | **789,350** | 0 / 51 | `m` `range` `MessageLastUpdateIDX` (11.812) → `mp` `ref` **`PRIMARY`** | `mp` `ref` `MessagePropertyNameValueIDX` (98.396) → `m` `eq_ref` |
+| `Message.SNDPRN` | 90,886 | **1.531,134** | 37 / 51 | wie oben | `mp` `ref` **`MessagePropertyValueIDX`** (198.614) → `m` `eq_ref` |
+| `Message.VFN` | 93,149 | **1.862,098** | 51 / 51 | wie oben | `mp` `ref` `MessagePropertyNameValueIDX` (242.280) → `m` `eq_ref` |
+| `Converter.TransactionID` | 1,114 | **1,195** | 0 / 2 | `mp` `ref` `MessagePropertyNameValueIDX` (17) → `m` `eq_ref` | wie 24 h |
+
+**`SUTTONS`**
+
+| Name | 24 Stunden | **30 Tage** | Zeilen 24 h / 30 T | Plan |
+|---|---:|---:|---:|---|
+| `Converter.TransactionID` | 1,011 | **1,047** | 0 / 2 | `mp` `ref` `MessagePropertyNameValueIDX` (9) → `m` `eq_ref` |
+| die drei neuen Namen | *entfällt* | *entfällt* | keine Zeile im Bestand (M162) | — |
+
+Über der abgeleiteten Tabelle in allen Fällen dieselbe Gestalt wie in M159: `<derived2>` als `ALL`
+über höchstens 51 Zeilen, `p2` und `prj` je `eq_ref` über `PRIMARY`; innerhalb `pr` und `pm` je
+`eq_ref`. Die Beschriftung fasst nie mehr als 51 Zeilen an. Die Läufe mit **null** Zeilen
+(`DestinationFilename` 24 h, `Converter.TransactionID` 24 h) messen wie in M159 den Leerlauf: Der
+häufigste Wert des Monats liegt nicht im letzten Tag.
+
+### Zwei von drei unter dem Maßstab — `VFN` reißt ihn um 12,5 %
+
+| Fall, 30 Tage | ms | gegen 1.655,8 ms (BAM, gebaut) | gegen `Message.ReceiverID` 1.222,763 (M159) |
+|---|---:|---|---:|
+| `Message.DestinationFilename` | 789,350 | 0,48× — **darunter** | 0,65× |
+| `Message.SNDPRN` | 1.531,134 | 0,92× — **darunter**, 7,5 % Luft | 1,25× |
+| **`Message.VFN`** | **1.862,098** | **1,12× — darüber**, 12,5 % | 1,52× |
+| `Converter.TransactionID` | 1,195 / 1,047 | 0,001× | — |
+
+**Die Deutung hat für zwei der drei neuen Namen getroffen und für `VFN` nicht.** Nichts bricht ab —
+`VFN` liegt Faktor 5,4 unter der Zehn-Sekunden-Grenze —, aber `VFN` kostet über 30 Tage mehr als
+der schlechteste Fall der Suche, die das Projekt heute ausliefert. Der Mechanismus ist der aus M159:
+Das `ORDER BY MessageLastUpdate DESC` zwingt dazu, **alle** Kandidaten des Werts im Fenster zu
+finden (2.866, 10.739, 12.801), bevor die ersten 51 feststehen; `Using temporary; Using filesort`
+steht in jedem 30‑Tage-Plan. Die Kosten wachsen dabei **unterproportional** zur Trefferzahl:
+`SNDPRN` hat das 2,07‑Fache der Kandidaten von `ReceiverID` und kostet das 1,25‑Fache, `VFN` das
+2,47‑Fache und kostet das 1,52‑Fache.
+
+**`Converter.TransactionID` verhält sich wie `Message.GUID`** — 1,195 ms bei `NEXANS`, 1,047 ms
+bei `SUTTONS`, gegen 0,942 und 0,901 ms für `Message.GUID` in M159; Plan und Trefferzahl (2, der
+häufigste Wert aus M157) passen dazu. **Lücke 6 ist geschlossen: Er ist ein Schlüssel durch den
+ganzen Weg.**
+
+### Über 24 Stunden hält der Optimizer L4 von selbst ein — und der Wert kostet dort nichts
+
+Bei allen drei neuen Namen sieht der 24‑Stunden-Plan anders aus als der 30‑Tage-Plan: Er steigt
+**über `MessageLastUpdateIDX` in `Message`** ein (11.812 geschätzte Zeilen des Tages) und erreicht
+`MessageProperty` **über den Primärschlüssel** (`key_len` 548 = `MessageID` plus Name) — das ist
+der Zugriffspfad, den L4 vorschreibt. Die Folge: **91 bis 93 ms, unabhängig vom Namen und von der
+Trefferzahl** (0, 37 und 51 Zeilen). Über 30 Tage kippt derselbe Optimizer auf den Wertindex, und
+die Kosten hängen am Wert:
+
+| Name | 24 h | 30 T | Faktor |
+|---|---:|---:|---:|
+| `Message.DestinationFilename` | 91,253 | 789,350 | 8,7 |
+| `Message.SNDPRN` | 90,886 | 1.531,134 | 16,8 |
+| `Message.VFN` | 93,149 | 1.862,098 | 20,0 |
+
+**Die 24‑Stunden-Zahl ist der Preis des Zeitbereichs, nicht des Werts.** Es ist dasselbe Kippen wie
+in M156 (zwischen den Mandanten) und M162 (zwischen den Namenslisten): Der Optimizer wählt je nach
+Schätzung zwischen Zeit- und Werteinstieg, und **L4 wird eingehalten oder nicht, ohne dass am
+Statement etwas geändert wurde.** Wo zwischen einem Tag und dreißig der Plan kippt, ist — wie bei
+Punkt 145 — nicht erhoben.
+
+*Belegvermerk (L10): gemessen sind zehn Fälle über zwei Mandanten, zwei Fenster und vier Namen,
+jeder mit dem häufigsten Wert seines 30‑Tage-Fensters. Behauptet wird nicht, dass ein anderer Wert
+dieselben Zeiten trägt, und nicht, dass das 24‑Stunden-Verhalten in der Produktion mit anderen
+Statistiken gleich ausfällt — es ist ein Kippen der Planwahl, kein Ergebnis des Statements.*
+
+---
+
+## M167 — Was die Nachprüfung auf der Zeile kostet
+
+**Sitzung** `n7-m167.sql`. Die Messung, die M160 mangels Vergleichsfall nicht durchführen konnte.
+**Die Voraussetzung ist erfüllt:** M164 findet acht Werte von `Message.DestinationFilename` über 50
+Zeichen — jeder mit genau **einer** Zeile. Vergleichbare Trefferzahl heißt deshalb **1**. Drei
+Prüfwerte, deterministisch gewählt, ausgegeben nur als Länge:
+
+| Fall | Auswahl | Länge | Zeilen im Fenster |
+|---|---|---:|---:|
+| **L** | längster Wert über 50 Zeichen (bei Gleichstand der lexikografisch erste) | **55** | 1 |
+| **G** | Wert mit **genau 50** Zeichen — die Präfixgrenze — und derselben Zeilenzahl | 50 | 1 |
+| **K** | kurzer Wert (höchstens 10 Zeichen) mit derselben Zeilenzahl | 7 | 1 |
+
+> **Vorregistrierte Deutung.** Die Nachprüfung kostet, aber nicht die Größenordnung. Wird sie zum
+> beherrschenden Anteil, ist `DestinationFilename` in derselben Lage wie `Service.Type`.
+
+**Gemessen wird nicht nur die Zeit, sondern die Zahl der Zugriffe** — über die Handler-Zähler aus
+`information_schema.SESSION_STATUS` (per `SELECT … INTO`, S1‑konform) vor und nach **einem** Lauf:
+gelesene Indexeinträge (`Handler_read_key`, `Handler_read_next`), Prüfungen der Bedingung im Index
+(`Handler_icp_attempts`, `Handler_icp_match`) und Tabellenzugriffe (`Handler_read_rnd_next`).
+**Eichung in beide Richtungen:** Eine leere Abfrage (`SELECT 1`) liefert 0 / 0 / 0 / 0 / **10** —
+die Zehn sind die Kosten der Zählerabfrage selbst und in allen Zeilen unten abgezogen; der Fall K
+mit 36 Treffern liefert 36 / 36 / 36 (Zähler skalieren mit der Trefferzahl).
+
+### Erst die Breite des Indexbereichs — über die ganze Tabelle, denn der Index kennt kein Fenster
+
+M164 zeigt, dass in Fenster B kein Präfix mehrdeutig ist. Der Index reicht aber über den ganzen
+Bestand. Deshalb: Wie viele Zeilen des Namens teilen den 50‑Zeichen-Präfix von L — irgendwo in den
+75.571.462 Zeilen? Gemessen über `LIKE 'präfix%'`, mit maskiertem `%`, `_` und `\` (ein Dateiname
+trägt Unterstriche), Plan `range` über `MessagePropertyValueIDX`:
+
+| | Zeilen im Präfixbereich (Bestand) | davon exakt gleich |
+|---|---:|---:|
+| **L** (55 Zeichen) | **1** | 1 |
+| G (50 Zeichen, Gegenprobe der Maskierung) | 1 | 1 |
+
+**Der Präfix von L ist im ganzen Bestand eindeutig.** Der Index liefert für L keine einzige Zeile,
+die nicht auch exakt passt.
+
+### Das Wertprädikat — Zeit und Zugriffe
+
+| Fall | Länge | `key` | Treffer (Bestand) | `read_key` | `read_next` | ICP-Versuche | ICP-Treffer | Tabellenzugriffe | **beste von sechs** | schlechteste |
+|---|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| **L** | 55 | `MessagePropertyValueIDX` | 1 | 1 | 1 | 1 | 1 | 0 | **0,474 ms** | 0,502 |
+| **G** | 50 | `MessagePropertyValueIDX` | 1 | 1 | 1 | 1 | 1 | 0 | **0,473 ms** | 0,495 |
+| K | 7 | `MessagePropertyValueIDX` | 36 | 1 | 36 | 36 | 36 | 0 | 0,692 ms | 0,793 |
+
+Alle drei Pläne: `ref` über den reinen Wertindex, `key_len` 203, `Using index condition; Using
+where`. *Die sechs Läufe folgen auf zwei Vorläufe (den Eichlauf und den Zählerlauf), sind also alle
+warm; deshalb „beste von sechs" statt „beste von fünf nach einem".*
+
+**Der Unterschied zwischen L und G ist null.** Nicht klein — **null in jedem Zähler** und 0,001 ms
+in der Laufzeit. Für den Wert über der Präfixgrenze liest die Datenbank genau einen Indexeintrag,
+prüft die Bedingung genau einmal im Index, trifft genau einmal und greift genauso oft auf die Zeile
+zu wie für den Wert, der in den Präfix passt.
+
+### Der ganze Weg für L und G, 30 Tage, `NEXANS`
+
+| Fall | Zeilen | Plan | beste von sechs | schlechteste |
+|---|---:|---|---:|---:|
+| L | 1 | `mp` `ref` `MessagePropertyValueIDX` (1) → `m` `eq_ref` → `pr`, `pm` `eq_ref`; `<derived2>` `ALL` 2 | **0,902 ms** | 1,049 |
+| G | 1 | identisch | **0,905 ms** | 1,211 |
+
+*Hier ist der erste Lauf eingeschlossen — er war nicht der beste; die Spanne steht daneben.* Beide
+liegen bei `Message.GUID` aus M159 (0,942 ms).
+
+### Was das beantwortet — und was nicht
+
+**Lücke 5 ist geschlossen, mit einem Ergebnis, das kleiner ist als die Deutung:** Die Nachprüfung
+auf der Zeile kostet bei diesen Daten **nichts Messbares** — nicht „nicht die Größenordnung",
+sondern nichts. `DestinationFilename` ist **nicht** in der Lage von `Service.Type`.
+
+**Und der Grund steht in den Zählern, nicht in der Länge.** `Using where` steht in allen drei
+Plänen, bei 7 wie bei 55 Zeichen: Die Prüfung gegen die vollständige Spalte findet **immer** statt,
+weil der Präfixindex nie die ganze Spalte trägt. Was ein Wert über der Grenze zusätzlich kosten
+kann, sind **Zeilen, die den Präfix teilen und exakt nicht passen** — Indexeinträge, die gelesen
+und verworfen werden. Davon gibt es für L im ganzen Bestand null (M167‑1) und unter diesem Namen
+in Fenster B für keinen Wert (M164‑4). **Die Kosten der Nachprüfung sind die Kosten der
+Mehrdeutigkeit, und die ist hier nicht vorhanden.**
+
+*Belegvermerk (L10): gemessen ist der Vergleich bei Trefferzahl 1 und eindeutigem Präfix, für einen
+Namen und einen Mandanten. Behauptet wird nicht, dass ein Wert mit mehrdeutigem Präfix — etwa unter
+den 31,8 % langen Werten anderer Namen (M160) — dieselbe Null trägt; dort wären die verworfenen
+Indexeinträge zu zählen, und ein solcher Fall existiert unter den konfigurierten Namen nicht.
+Punkt 146 bleibt deshalb stehen.*
+
+---
