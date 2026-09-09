@@ -1004,8 +1004,10 @@ nach oben (M47). Die Auswahl erscheint **gar nicht**, wenn der Mandant keinen Ty
 (§10).
 
 > *Seit dem 08.09.2026 (Property-Suche, Teil 2) zeigt dieselbe Auswahl zwei Gruppen — Belegarten
-> und Felder — und erscheint, sobald eine davon etwas enthält* ([`property-suche.md`](property-suche.md)
-> §11.1, Korrekturkasten in §10 oben). Der typlose Eintrag bleibt und erreicht nie ein Feld.
+> und Felder, seit dem 09.09.2026 beschriftet mit „Technische Eigenschaften" (E‑113) und als zwei
+> Untermenüs statt einer flachen Liste (E‑112) — und erscheint, sobald eine davon etwas enthält*
+> ([`property-suche.md`](property-suche.md) §11.1 samt Korrekturblock vom 09.09.2026, Korrekturkasten
+> in §10 oben). Der typlose Eintrag bleibt, außerhalb beider Untermenüs, und erreicht nie ein Feld.
 
 **Die gewählte Belegart und die begonnene Eingabe stehen nicht in der URL.** Sie beschreiben keinen
 Ausschnitt, sondern eine begonnene Eingabe — dieselbe Prüfung wie beim halb ausgefüllten freien

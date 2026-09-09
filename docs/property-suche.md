@@ -991,6 +991,104 @@ in einem Menü: *Belegarten* aus `bam`, *Felder* aus `felder`, je mit Überschri
 > **Eine leere Gruppe wird weggelassen**, nicht als leere Überschrift gezeigt. Der Korrekturkasten
 > steht in `bam-suche.md` §10 und §11.1.
 
+> ### ⚠️ Korrektur 09.09.2026 — zwei Untermenüs, zweite Gruppe umbenannt (E‑112, E‑113)
+>
+> **Der Absatz oben und die Punkte darunter beschreiben die flache Liste und bleiben stehen.**
+> Zwei Dinge haben sich geändert.
+>
+> **1. Die beiden Gruppen sind Untermenüs (E‑112).** Der Anlass: Für `NEXANS` hatte das Menü
+> **55 Einträge** — *Alle Belegarten*, dann 40 Belegarten, dann 14 Einträge der zweiten Gruppe —,
+> und die zweite Gruppe stand unterhalb des Sichtbereichs; sie wurde nicht gefunden (Screenshot des
+> Auftraggebers; offener Punkt 18 in §15). Die oberste Ebene trägt jetzt **drei Einträge**:
+>
+> ```
+> Alle Belegarten            ✓
+> ──────────────────────────
+> Belegarten                 ▸   → Untermenü, alle Belegarten des Mandanten
+> Technische Eigenschaften   ▸   → Untermenü, alle Feldnamen des Mandanten
+> ```
+>
+> - **Der typlose Eintrag behält Beschriftung, Bedeutung und Platz** — zuerst, außerhalb beider
+>   Untermenüs, auch außerhalb des Untermenüs *Belegarten* (E‑100 unberührt; dazu offener Punkt 21
+>   in §15).
+> - **Genau eine Auswahl über alles hinweg**, wie bisher: Eine `RadioGroup` umschließt den typlosen
+>   Eintrag und beide Untermenüs; die Wahl im einen hebt die im anderen auf. Das Häkchen steht beim
+>   gewählten Eintrag im Untermenü.
+> - **Der Auslöser der Gruppe, in der die Auswahl liegt, trägt den gewählten Eintrag als
+>   gedämpften Zusatztext** hinter der Beschriftung — sichtbar, wo die Auswahl steckt, ohne das
+>   Untermenü zu öffnen. Er trägt **kein `aria-checked`**: Er ist ein `menuitem` mit
+>   `aria-haspopup` (Radix) und darf nicht zugleich Radioeintrag sein. Der Zusatztext ist Inhalt
+>   des Auslösers und damit Teil seines zugänglichen Namens; das Leerzeichen zwischen Beschriftung
+>   und Eintrag steht als Textknoten im Auslöser — im Flex-Layout ungezeichnet, den Abstand macht
+>   `gap` —, damit ein Vorleseprogramm zwei Wörter liest und nicht eines. Kein `aria-label`
+>   daneben, das dem Inhalt davonliefe.
+> - **Eine leere Gruppe bekommt keinen Auslöser**, nicht einen leeren: Für `WOC` steht unter dem
+>   typlosen Eintrag genau ein Untermenü. Die Untermenüs entstehen auch dann, wenn nur eine Gruppe
+>   gefüllt ist — das Bedienmuster hängt nicht an der Konfiguration des Mandanten.
+> - **Ordnung, Laufweite und Inhalte der Einträge sind unverändert:** Belegarten in der Ordnung
+>   des Endpunkts, Feldnamen alphabetisch und technisch unverändert in fester Laufweite (E‑105).
+>   Tastatur und Berührung kommen aus Radix — `ArrowRight`/`Enter` öffnen, `ArrowLeft` schließt,
+>   der Zeiger öffnet beim Überfahren —, nichts davon ist nachgebaut.
+> - **Die Untermenüs sind in der Höhe an den Bildschirm gebunden** und scrollen darin
+>   (`--radix-dropdown-menu-content-available-height` — dieselbe Variable, die der Generator am
+>   Hauptmenü setzt; Radix setzt sie am `SubContent` ebenso, nachgesehen in
+>   `@radix-ui/react-dropdown-menu` 2.1.22). Das Hauptmenü mit seinen drei Einträgen scrollt nicht
+>   mehr. Das Hauptmenü ist 20 rem breit — die Breite braucht der Zusatztext am Auslöser, nicht
+>   die Zahl der Einträge —, die Untermenüs **22 rem**: Bei 20 rem brachen zwei der 35 Zeichen
+>   langen Beschreibungen um (`Lieferantennummer beim Kunden_K_SAP`,
+>   `Übertragungsnummer Gutschrift_K_SAP`), bei 22 rem stehen alle 40 einzeilig (§14, Nachtrag).
+> - `components/ui/dropdown-menu.tsx` trug `DropdownMenuSub`, `DropdownMenuSubTrigger` und
+>   `DropdownMenuSubContent` bereits; **der Generator ist nicht gelaufen**, die Datei ist unberührt.
+>
+> **2. Die zweite Gruppe heißt „Technische Eigenschaften" (E‑113)**, die Beschriftung des
+> Schalters *„Eigenschaft: …"* statt *„Feld: …"*. Englisch wortgleich mit dem Block im
+> Nachrichtendetail — *Technical properties*, *Property: …* —, keine zweite Übersetzung erfunden.
+> Geändert sind ausschließlich Anzeigetexte in `i18n/de.ts` und `i18n/en.ts`: die Werte hinter den
+> **unveränderten** Schlüsseln `typwahl.gruppeFelder` und `typwahl.gewaehltesFeld` sowie der Satz
+> im Leerzustand, der die Eigenschaften des Mandanten nennt (`leer.felder`; er steht in der
+> Sprachdatei und nicht in `suche-ansicht.tsx`, weil keine Zeichenkette in einer Komponente steht).
+>
+> **Vorbehalt zur Beschriftung:** Sie behauptet eine **Art** und keinen Speicherort. Acht der
+> Einträge sind Typ‑0 und damit **Spalten**, keine `MessageProperty`-Zeilen (§3); sie erscheinen im
+> Eigenschaften-Block des Detailpanels **nie**. Wer `Message.Status` dort vergeblich sucht, findet
+> es hier unter derselben Überschrift.
+>
+> **Unverändert, ausdrücklich:** der URL-Parameter `feld`, das Antwortfeld `felder`,
+> `quelle: "feld"`, die Typen `SuchfeldFeld` und `FeldBegriffTreffer`, der Markenschlüssel `feld:`,
+> die Problemtypen `feldname-fehlt` und `feldbegriff-ohne-trenner`, der Platzhalter „Wert suchen",
+> die Marken, das Geländer von acht und die Trefferspalte. Kein Endpunkt, kein Backend berührt.
+>
+> **Die Fehler- und Abbruchtexte sagen weiter „Feld".** `feldname-fehlt`,
+> `feldbegriff-ohne-trenner`, `suchbegriff-fehlt`, der Text zur Obergrenze von acht und der
+> Abbruchrat `abgebrochenMitFeld` sprechen von Feldern und Feldnamen — sie erklären die
+> Parameterform `feldname:wert`, und die ist unverändert. Nicht beauftragt, deshalb nicht
+> geändert; offener Punkt 23 in §15.
+>
+> **Tests:** `tests/suchfeld-auswahl.test.tsx`, sechs Fälle im gerenderten Baum (§13). **Kein
+> vorhandener Test erwartete „Felder" oder „Feld: …"** — `tests/sprachdateien.test.ts` vergleicht
+> die Schlüsselsätze beider Sprachdateien, keine Werte; nachzuziehen war nichts.
+>
+> **Gemeldete Abweichungen vom Auftrag vom 09.09.2026:**
+>
+> 1. **Keine Testing Library.** Der Auftrag nannte „Vitest, Testing Library"; das Projekt rendert
+>    bewusst ohne sie (`frontend/vitest.config.mts`, Kopf), und eine neue Abhängigkeit ist eine
+>    Entscheidung, keine Nebenwirkung. Der Test nutzt die Hülle `tests/hilfe/rendern.tsx` und
+>    `querySelector`, wie die dreizehn Dateien davor.
+> 2. **`next/navigation` ist im Test ersetzt** (`vi.mock`) — der erste Modulersatz im Testbestand.
+>    `useRouter` wirft außerhalb des App-Routers; das Feld braucht ihn nur für den Weg von einer
+>    anderen Seite nach `/suche`, und den prüft der Test nicht. Ersetzt ist die Umgebung, nicht der
+>    Prüfling.
+> 3. **„§13 Punkt 1" des Auftrags ist in dieser Datei §14 Punkt 1** (die Sichtprüfung); §13 ist die
+>    Testtabelle. Der Vermerk zu den 55 Einträgen steht deshalb in §14.
+> 4. **Die E‑Nummern sind mit dem Eintrag gemeldet, nicht davor.** Höchstwert über `docs/` und die
+>    Wurzeldateien ist E‑111 (E‑780 ist der bekannte Falschtreffer aus der Messdatei); E‑112 und
+>    E‑113 sind in keiner Quelldatei vergeben. Der Lauf war unbeaufsichtigt; die Zuteilung steht
+>    zur Bestätigung.
+>
+> **Sichtprüfung:** Nachtrag in §14. Das schmale Fenster unter 768 px ist **offen** —
+> `resize_window` meldet Erfolg und ändert nichts; Tabelle *Offene Sichtprüfungen* in
+> [`README.md`](README.md), offener Punkt 22 in §15.
+
 **`GET /api/bam/typen` ruft die Oberfläche nicht mehr.** Seine Antwort steckt Zeichen für Zeichen in
 der Gruppe `bam` des neuen Endpunkts; zwei Aufrufe auf jeder Seite für dieselbe Liste wären einer zu
 viel. Der Endpunkt bleibt bestehen (§9, Punkt 5 — der dort offene Ablösefall ist damit näher, nicht
@@ -1223,6 +1321,7 @@ Prozessansicht bekommt keine Filterleiste und keine Markenzeile.**
 |---|---|
 | `tests/suche.test.ts` | **ohne DOM** — die Parameterform von `feld` (Pflichtname, Teilung am ersten Doppelpunkt, Rundlauf `parseAsFelder`, übergangene Werte), `alsAbfrage` mit `feld` neben `begriff` und Zeichen für Zeichen unverändert ohne `feld`; die Marken aus beiden Parametern und zurück (`markenAus`, `alsZustand`); **der Markenschlüssel und die Dublettenprüfung über beide Arten** (gleiche Parameterform, verschiedene Art — keine Dublette); **das Geländer von acht, gemischt gezählt** (vier und vier, die neunte abgewiesen, gleich welcher Art); `zeigtPraefixAngebot` mit der **fünften Bedingung** als eigener Fall, dazu die Gegenprobe gemischt; `zeigtTrefferspalte`; `begriffeInAntwort` **mit leerem `felder`-Array** |
 | `tests/suche-marken.test.tsx` | **gerenderter Baum**, sechs Fälle (zwei mehr): dieselbe Parameterform als BAM- und als Feld-Marke **ohne doppelten React-Schlüssel**, und die **Abwesenheit** der Spalte „Treffer" ohne Belegnummer — weder Überschrift noch Zelle, die Kette rückt an die dritte Stelle. Die Zählung im Kopf von `frontend/vitest.config.mts` steht bei **79 in dreizehn Dateien** |
+| `tests/suchfeld-auswahl.test.tsx` *(09.09.2026)* | **gerenderter Baum**, sechs Fälle zu den Untermenüs (E‑112): die oberste Ebene trägt **genau drei Einträge** — den typlosen als `menuitemradio` und zwei Auslöser als `menuitem` mit `aria-haspopup`, keine Überschrift mehr; ein geöffnetes Untermenü zeigt **seine** Einträge und die des anderen stehen **nirgends** im Dokument (beide Richtungen); für `WOC` **fehlt** der Auslöser der Belegarten vollständig — Abwesenheit, nicht Leere; eine Wahl im zweiten Untermenü **hebt die im ersten auf** (Schalter, Auslöser, typloser Eintrag und Häkchen); der Auslöser der Gruppe mit der Auswahl trägt den gewählten Eintrag **im zugänglichen Namen** (Textinhalt mit Leerzeichen, kein `aria-label`, kein `aria-labelledby`) und **kein `aria-checked`**; **gleichlautende Einträge in beiden Gruppen ohne `console.error`** (Belegart `9012` ohne Beschreibung neben Feldname `9012`, Beschreibung `Message.SNDPRN` neben dem gleichnamigen Feld), und die Wahl der einen hakt die andere nicht an. Geöffnet wird über `pointerdown` und `ArrowRight`, gefunden über `aria-controls` — Radix' eigene Wege, ohne Zeitgeber (T1). Die Zählung im Kopf von `frontend/vitest.config.mts` steht seither bei **85 in vierzehn Dateien** |
 | `tests/prozessansicht.test.ts` | **ohne DOM** — `absprungfenster`: Rundung nach außen, stundengenaues Fenster unverändert, Nachricht außerhalb → kein Link, unlesbarer Zeitpunkt → kein Link, **Jahresdeckel** gegen das ausschließende Ende samt der verlorenen Stunde; `absprungZiel`: die Adresse der Prozessansicht mit absolutem Fenster, von `ausSuchparametern` rund gelesen, `zeitraum` bleibt `null` |
 | `FeldSucheStatementsTest` | **ohne DB**, erweitert — `ProcessName` als zwei Statements: Auflösung nur auf `Process` mit Mandantenfilter und `=`, Kern mit `ProcessID IN (?)` und ohne `feld_process`; **kein Statement gegen `Message` bei unbekanntem Namen** (Zugriffe gezählt, T1); mehrere Kennungen in der Liste; derselbe Name zweimal — eine Auflösung; neben einer Belegnummer bleibt `b1` führend |
 | `BamPfadGleichheitTest` | **unverändert grün** — der BAM-Pfad rendert weiter den Abzug vom 08.09.2026 |
@@ -1233,6 +1332,11 @@ um Laufzeit geht, zählt `FeldSucheStatementsTest` Statements.
 
 **Prüfläufe:** `pnpm check` (Lint, Typprüfung, Formatprüfung, 35 Dateien, 954 Tests) und
 `./mvnw verify -DexcludedGroups=db` (Spotless, ArchUnit, 802 Einheitstests) am 08.09.2026 grün.
+
+**Prüflauf 09.09.2026** (Untermenüs, E‑112/E‑113): `pnpm check` (Lint, Typprüfung, Formatprüfung,
+**36 Dateien, 960 Tests**) grün. Das Backend ist von diesem Auftrag nicht berührt; `./mvnw verify`
+ist bewusst **nicht** gelaufen — er ersetzt `target/classes` unter der laufenden dev-Instanz des
+Auftraggebers, und es gibt keine Backend-Änderung, die er prüfen könnte.
 
 ---
 
@@ -1263,7 +1367,7 @@ mit dem `SNDPRN`-Wert zusammen steht — **hergeleitet innerhalb des Fensters, d
 
 | # | Zu prüfen | Erwartet | Befund |
 |---|---|---|---|
-| 1 | Angebot mit beiden Gruppen — als `NEXANS` und als Mandant ohne Belegart | zwei Gruppen mit Überschrift; bei `WOC` nur *Felder*, keine leere Überschrift | ✔ `NEXANS`: **55 Einträge** — *Alle Belegarten* (angehakt), Trennlinie, `# Belegarten` mit 40, Trennlinie, `# Felder` mit 14 in der Ordnung des Endpunkts (`Converter.TransactionID` … `Message.VFN`), Feldnamen in fester Laufweite. `WOC`: **9 Einträge**, **eine** Überschrift *Felder*, **eine** Trennlinie, die acht Typ‑0‑Namen; der Leerzustand nennt die Felder und **keine** Belegarten-Liste |
+| 1 | Angebot mit beiden Gruppen — als `NEXANS` und als Mandant ohne Belegart | zwei Gruppen mit Überschrift; bei `WOC` nur *Felder*, keine leere Überschrift | ✔ `NEXANS`: **55 Einträge** — *Alle Belegarten* (angehakt), Trennlinie, `# Belegarten` mit 40, Trennlinie, `# Felder` mit 14 in der Ordnung des Endpunkts (`Converter.TransactionID` … `Message.VFN`), Feldnamen in fester Laufweite. `WOC`: **9 Einträge**, **eine** Überschrift *Felder*, **eine** Trennlinie, die acht Typ‑0‑Namen; der Leerzustand nennt die Felder und **keine** Belegarten-Liste. **Vermerk 09.09.2026:** Die **55** beschreiben das flache Menü vor E‑112 und bleiben als Abnahme von Teil 2 stehen; seit den Untermenüs trägt die oberste Ebene **drei** Einträge (§11.1, Korrekturblock; Nachtrag unten) |
 | 2 | Eine Feld-Marke setzen, Treffer prüfen, Marke entfernen | Marke mit Name und Wert, `feld` in der URL, Treffer; nach dem Entfernen die leere URL und der Leerzustand | ✔ Schalter zeigt *„Feld: Message.SNDPRN"*, Platzhalter wechselt auf *„Wert suchen"*; nach Enter `?feld=Message.SNDPRN:<wert>`, eine Marke `Message.SNDPRN: <wert>`, *„Mehr als 50 Treffer — gezeigt werden die 50 neuesten im Zeitfenster …"*. Schließen-Knopf der Marke: URL leer, **null Marken**, *„Wonach suchst du?"* |
 | 3 | Feld- und BAM-Marke gemischt, UND sichtbar | zwei Marken, die Trefferzahl sinkt | ✔ Belegnummer allein *„Mehr als 50"*, dann Feld dazu: **35 Treffer**, zwei Marken (`<wert>` und `Message.SNDPRN: <wert>`), Trefferspalte zeigt `Kundenmaterialnummer_K_SAP`. Feld-Marke wieder entfernt: **eine** Marke, *„Mehr als 50"*, URL nur noch `begriff` |
 | 4 | Acht Marken beider Arten, `+` gesperrt, Begründung sichtbar | `disabled` und der Satz über der Liste | ✔ vier `begriff`, vier `feld` aus der Adresse: **8 Marken**, `+` `disabled`, im `title` **und** über der Liste *„Mehr als 8 Begriffe nimmt die Suche nicht an — ein Schutzgeländer, keine fachliche Grenze. …"*. Ein neunter Wert mit Enter: weiterhin 8 Marken, die Eingabe bleibt stehen |
@@ -1313,6 +1417,47 @@ geschrumpft.
    der Ansicht *Liste plus Panel*, und der gewählte Prozess steht als Überschrift über der Liste.
    Wer den Baum sehen will, schließt das Panel; die Auswahl bleibt.
 
+
+### Nachtrag 09.09.2026 — die Untermenüs (E‑112) und die neue Beschriftung (E‑113)
+
+**Durchgeführt am 09.09.2026** am laufenden System des Auftraggebers (Backend `localhost:8080`,
+Oberfläche `localhost:3000` mit `next dev`; beide liefen bereits, der Dev-Server hat den neuen Stand
+per Fast Refresh übernommen), **in der eingebauten Browserfläche von Claude Code** bei
+1280 × 720 px, DPR 1 — nicht im kopflosen Chrome wie am 08.09.2026. Angemeldet war das Wegwerfkonto
+`it-sicht-untermenue` (Rolle `ADMIN`, angelegt über `AppUserRepository.legeAn` wie in jedem `DbIT`,
+Passwort zufällig und nur in einer Datei im Scratchpad); Anmeldung und Mandantenwechsel per curl,
+das Sitzungs-Cookie über `document.cookie` auf `/anmeldung` gesetzt. **Nach der Prüfung sind
+Sitzungen und Konto gelöscht** (`SPRING_SESSION`, `app_user`; Gegenprobe: null Zeilen mit dem
+Präfix). Geschrieben wurde ausschließlich in `overlord_monitor` (S1); `GlassfishDB` ist unberührt.
+
+| # | Zu prüfen | Erwartet | Befund |
+|---|---|---|---|
+| 1 | Oberste Ebene bei `NEXANS` | drei Einträge, keine Überschrift | ✔ *Alle Belegarten* (angehakt), Trennlinie, *Belegarten ▸*, *Technische Eigenschaften ▸* — ein `menuitemradio` und zwei `menuitem` mit `aria-haspopup="menu"`, kein `dropdown-menu-label`; Hauptmenü 320 px breit, 101 px hoch |
+| 2 | Untermenü *Belegarten* | 40 Einträge in der Ordnung des Endpunkts, scrollend | ✔ öffnet beim Überfahren rechts neben dem Auslöser; 40 Einträge `Abladestelle_L_SAP` … `Empf_Ident_FORS`; Höhe an den Bildschirm gebunden (720 px bei 1.168 px Inhalt, `overflow-y: auto`), die Seite scrollt nicht. **Bei 20 rem brachen zwei Beschreibungen um** (`Lieferantennummer beim Kunden_K_SAP`, `Übertragungsnummer Gutschrift_K_SAP`, je 35 Zeichen) — daraufhin auf **22 rem** verbreitert und nachgemessen: alle 40 einzeilig, 28 px |
+| 3 | Belegart wählen | Menü schließt, der Schalter zeigt sie | ✔ `Lieferschein-Nr._L_SAP`, danach `Abrufnummer_L_SAP`: `aria-label` und `title` *„Belegart: …"*, `aria-expanded="false"`, Fokus zurück auf dem Schalter; der Platzhalter bleibt *„Belegnummer suchen"* |
+| 4 | Auslöser der Gruppe mit der Auswahl | gewählter Eintrag gedämpft dahinter, Häkchen im Untermenü | ✔ Text des Auslösers *„Belegarten Abrufnummer_L_SAP"*, der Zusatz in `text-muted-foreground` (`lab(65.2)` gegen `lab(96.52)` der Beschriftung), kein `aria-label`, kein `aria-checked`; im Untermenü genau `Abrufnummer_L_SAP` angehakt, *Alle Belegarten* nicht mehr |
+| 5 | Untermenü *Technische Eigenschaften* | 14 Namen, alphabetisch, feste Laufweite | ✔ über die Tastatur geöffnet: 14 Namen `Converter.TransactionID` … `Message.VFN`, alle `font-mono`, 400 px hoch neben dem Auslöser, nichts umgebrochen, Fokus auf dem ersten Eintrag |
+| 6 | Eigenschaft wählen — die Wahl im zweiten hebt die im ersten auf | *„Eigenschaft: …"*, *„Wert suchen"* | ✔ `Message.SNDPRN`: Schalter und Vorlese-Label *„Eigenschaft: Message.SNDPRN"*, Platzhalter *„Wert suchen"*; beim erneuten Öffnen trägt *Belegarten* keinen Zusatz mehr, *Technische Eigenschaften* trägt `Message.SNDPRN` in fester Laufweite, *Alle Belegarten* ist `aria-checked="false"`, im Untermenü *Belegarten* ist nichts angehakt |
+| 7 | Tastatur | Pfeile und Escape aus Radix | ✔ `ArrowDown` bewegt den Fokus über die drei Einträge, `ArrowRight` öffnet ein Untermenü und setzt den Fokus auf dessen ersten Eintrag, `ArrowLeft` schließt es und gibt den Fokus an den Auslöser zurück, `Escape` schließt alles, Fokus auf dem Schalter |
+| 8 | `WOC` — keine Belegart | zwei Einträge, kein leerer Auslöser | ✔ nach Mandantenwechsel per curl und Neuladen: *Alle Belegarten* (angehakt), **eine** Trennlinie, *Technische Eigenschaften ▸* — **kein** Auslöser *Belegarten*, keine Überschrift; das Untermenü trägt die acht Typ‑0‑Namen `Message.MessageID` … `Message.Status` in fester Laufweite, 352 px breit; der Leerzustand nennt die acht Eigenschaften mit dem neuen Satz und **keine** Belegarten-Liste |
+| 9 | Beschriftungen | deutsch wie beauftragt | ✔ *Technische Eigenschaften*, *Eigenschaft: …*, Leerzustand *„Dazu diese technischen Eigenschaften, mit ihrem Namen unverändert aus dem System. …"*. Die englische Fassung ist nur in `en.ts` geprüft, nicht am Bildschirm |
+| 10 | Konsole | kein `error` | ✔ über den ganzen Durchgang nur der React-DevTools-Hinweis und `[HMR] connected` |
+| 11 | Unter 768 px | — | **nicht geprüft** — Tabelle *Offene Sichtprüfungen* in [`README.md`](README.md), offener Punkt 22 in §15 |
+
+**Was die Browserfläche selbst gezeigt hat — kein Befund über den Bau.** Sobald das Fenster von
+Claude Code verdeckt war, zeichnete die Seite nicht mehr: `document.getAnimations()` blieb bei
+`currentTime 0`, Radix' Schließanimation endete nie, der geschlossene Inhalt stand mit
+`data-state="closed"` im DOM, Screenshots liefen in den Timeout, ein Klick über eine
+Elementreferenz wurde bei (0, 0) abgesetzt, und schnell hintereinander gesendete Tasten gingen
+verloren. Mit einem im Prüffenster eingespritzten `animation: none` für die beiden Menüinhalte
+verhielt sich alles wie in der Tabelle; gelesen wurde der Zustand über `aria-expanded` und
+`data-state`, nicht über das Vorhandensein eines Knotens. **Die Nachmessung der Breite in Punkt 2
+ist über per JavaScript gesendete Ereignisse entstanden** — `pointerdown` am Schalter, `keydown`
+`ArrowRight` am Auslöser —, weil zu dem Zeitpunkt keine echte Eingabe mehr ankam; alles davor ist
+geklickt und getippt. Ein zweites Verhalten, das kein Fehler ist: Der Sprung der synthetischen Maus
+von einem Auslöser zum nächsten öffnet das zweite Untermenü nicht, weil die Zielkoordinate in Radix'
+Grace-Bereich zum offenen Untermenü liegt — eine echte Maus erzeugt Zwischenpositionen, die
+Tastatur braucht keine.
 
 ## 15. Regelbezug und offene Punkte der Oberfläche
 
@@ -1371,9 +1516,27 @@ geschrumpft.
 18. **Die Auswahl im Suchfeld hat ein Menü mit bis zu 54 Einträgen** (40 Belegarten und 14 Felder
     bei `NEXANS`), das in Gruppen scrollt. Ob ein Nutzer ein Feld darin findet, ohne die Gruppe zu
     kennen, zeigt erst die Nutzung; ein Eingrenzungsfeld im Menü ist nicht gebaut.
+    ✔ **Erledigt am 09.09.2026 (E‑112):** Die Gruppen sind Untermenüs, die oberste Ebene trägt
+    drei Einträge (§11.1, Korrekturblock). Ein Eingrenzungsfeld ist weiterhin nicht gebaut und war
+    ausdrücklich nicht beauftragt.
 19. **Das schmale Fenster ist bei 360 px gemessen** (§14, Punkt 11); offen bleibt allein die
     Berührungsfläche am Finger, die die Emulation nicht setzt — Tabelle *Offene Sichtprüfungen* in
     [`README.md`](README.md).
 20. **Die Abschneidemeldung rät auch bei reiner Feldsuche zu einer „zweiten Belegnummer"** (§14,
     Beobachtung 1). Der Text stammt aus Teil 3 und war nicht Gegenstand dieses Auftrags; ob er für
     Feldsuchen einen eigenen Satz bekommt, ist offen.
+21. **„Alle Belegarten" steht außerhalb des Untermenüs „Belegarten" und liest sich wie dessen
+    erster Eintrag** (09.09.2026, §11.1 Korrekturblock). Bekannt und so beauftragt; aufgefallen ist
+    dabei ein Zweites: Der Eintrag ist zugleich der **einzige Weg zurück auf „keine Auswahl"** —
+    wer eine technische Eigenschaft gewählt hat und sie loswerden will, muss „Alle Belegarten"
+    wählen, und die Beschriftung sagt dann nichts von Eigenschaften. Eine Beschriftung, die beides
+    trägt („Ohne Auswahl — Belegnummer unter jeder Belegart"), oder ein Platz für den Eintrag, der
+    nicht wie ein Gruppenmitglied wirkt, ist Entscheidung des Auftraggebers.
+22. **Die Untermenüs unter 768 px sind ungesehen** (09.09.2026). Hauptmenü und Untermenü sind je
+    20 rem breit und öffnen nebeneinander; ob Radix am schmalen Fenster nach links klappt, ob die
+    40 Belegarten in der Höhe scrollen statt die Seite, und ob ein Untermenü am Finger ohne
+    Überfahren aufgeht — Tabelle *Offene Sichtprüfungen* in [`README.md`](README.md).
+23. **Die Fehler- und Abbruchtexte der Suche sagen weiter „Feld" und „Feldname"**, während die
+    Oberfläche seit E‑113 „Technische Eigenschaften" und „Eigenschaft: …" sagt (§11.1,
+    Korrekturblock). Sie erklären die unveränderte Parameterform `feldname:wert`; ob sie der neuen
+    Beschriftung folgen sollen, ist offen und war nicht beauftragt.
