@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useQueryStates } from "nuqs";
 import { Plus, Tag } from "lucide-react";
@@ -10,10 +10,12 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -21,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { einsetzen } from "@/i18n";
 import { useTexte } from "@/i18n/provider";
 import { ROUTEN } from "@/lib/routen";
+import { cn } from "@/lib/utils";
 
 import type { Suchfelder } from "../api";
 import { useSuchfelder } from "../hooks";
@@ -50,26 +53,33 @@ import {
  * **Es gibt keinen Navigationseintrag dazu.** Das Feld steht auf jeder Seite; ein
  * Menüpunkt daneben wäre eine zweite Tür in denselben Raum.
  *
- * ## Eine Fläche, zwei Quellen (E‑99)
+ * ## Eine Fläche, zwei Quellen (E‑99) — als zwei Untermenüs (E‑112)
  *
  * Seit Teil 2 der Property-Suche zeigt die Auswahl neben dem Feld **zwei
  * Gruppen** aus `GET /api/bam/suchfelder`: die *Belegarten* des Mandanten und
- * die *Felder* — technische Namen, unverändert (E‑105). Wer `Message.SNDPRN`
- * nicht versteht, sieht `Message.SNDPRN`; es gibt keine Beschriftung, keine
- * Übersetzung, keinen Erklärtext daneben. Die Ordnung innerhalb der Gruppen ist
- * die des Endpunkts, hier wird nicht nachsortiert.
+ * die *Technischen Eigenschaften* — technische Namen, unverändert (E‑105). Wer
+ * `Message.SNDPRN` nicht versteht, sieht `Message.SNDPRN`; es gibt keine
+ * Beschriftung, keine Übersetzung, keinen Erklärtext daneben. Die Ordnung
+ * innerhalb der Gruppen ist die des Endpunkts, hier wird nicht nachsortiert.
+ *
+ * **Seit dem 09.09.2026 ist jede Gruppe ein Untermenü.** Als flache Liste
+ * hatte das Menü für `NEXANS` 55 Einträge, und die zweite Gruppe stand
+ * unterhalb des Sichtbereichs — sie wurde nicht gefunden. Die oberste Ebene
+ * trägt jetzt drei Einträge: den typlosen und je einen Auslöser pro gefüllter
+ * Gruppe; die Einträge selbst stehen dahinter (`Auswahlmenue`).
  *
  * **Der typlose Eintrag bleibt und behält seinen Platz:** Ein Wert ohne Auswahl
  * sucht Belegnummern unter jedem Typ — und **er erreicht nie ein Feld** (E‑100).
  * Ein Feld muss gewählt sein, bevor eine Feld-Marke entsteht; die beiden
  * Problemtypen `feldname-fehlt` und `feldbegriff-ohne-trenner` kann diese
- * Oberfläche deshalb nicht erzeugen.
+ * Oberfläche deshalb nicht erzeugen. Er steht **außerhalb** beider Untermenüs,
+ * auch außerhalb des Untermenüs „Belegarten" — das ist bekannt und so gewollt.
  *
  * **Die Auswahl erscheint, sobald eine der beiden Gruppen etwas enthält.** Bis
  * Teil 2 erschien sie gar nicht, wenn der Mandant keine Belegart konfiguriert
  * hatte (`docs/bam-suche.md` §10) — für die Feldgruppe gilt das nicht, sie ist
  * für keinen Mandanten leer (die acht Typ‑0‑Einträge sind global, M154). Eine
- * leere Gruppe wird **weggelassen**, nicht als leere Überschrift gezeigt.
+ * leere Gruppe wird **weggelassen**: kein Untermenü, kein leerer Auslöser.
  *
  * ## Gesucht wird auf Eingabe, nicht beim Tippen
  *
@@ -92,8 +102,8 @@ import {
  * kein EDI-Spezialist ist. Deshalb heißt dieses hier „Belegnummer suchen" und
  * jenes „Prozess, Projekt oder Ablauf durchsuchen"; die Beschriftung des
  * Listenfilters ist in Teil 3 dafür angepasst worden
- * (`docs/nachrichtenliste.md` §8.2). **Ist ein Feld gewählt, sagt der Platzhalter
- * „Wert suchen"** — „Belegnummer" wäre dann eine falsche Auskunft.
+ * (`docs/nachrichtenliste.md` §8.2). **Ist eine Eigenschaft gewählt, sagt der
+ * Platzhalter „Wert suchen"** — „Belegnummer" wäre dann eine falsche Auskunft.
  *
  * ## Woher es weiß, was schon gesucht wird
  *
@@ -103,9 +113,9 @@ import {
  * *andere* (`/suche`). Auf jeder anderen Seite ist die Liste der Marken leer,
  * und das Feld beginnt eine neue Suche.
  *
- * **Die gewählte Belegart oder das gewählte Feld und die begonnene Eingabe
- * stehen nicht in der URL.** Sie beschreiben keinen Ausschnitt, sondern eine
- * begonnene Eingabe — dieselbe Prüfung wie beim halb ausgefüllten freien
+ * **Die gewählte Belegart oder die gewählte Eigenschaft und die begonnene
+ * Eingabe stehen nicht in der URL.** Sie beschreiben keinen Ausschnitt, sondern
+ * eine begonnene Eingabe — dieselbe Prüfung wie beim halb ausgefüllten freien
  * Zeitfenster der Liste (`docs/frontend-grundlagen.md` §8).
  */
 export function Suchfeld() {
@@ -273,23 +283,58 @@ function ausAuswahlwert(wert: string): Auswahl {
 }
 
 /**
- * Die Auswahl zum Begriff — **Belegart oder Feld, Verfeinerung oder Weiche.**
+ * Die Auswahl zum Begriff — **Belegart oder Eigenschaft, Verfeinerung oder
+ * Weiche.**
  *
  * Eine Belegart ist Verfeinerung und keine Pflicht: M36 weist die Typangabe mit
  * +1,5 bis +4 Prozent aus, also im Rauschen — sie beschleunigt nicht. Typlos
  * kostet auch kaum etwas: `NEXANS` trägt zwar zehn kuratierte Zeilen, aber nur
  * **drei verschiedene** Sollängen, und aufgefüllt wird nur nach oben (M47).
  *
- * Ein Feld dagegen ist eine **Weiche**: Mit ihm sucht der Wert eine Spalte oder
- * eine Eigenschaft und nie eine Belegnummer, ohne es nie ein Feld (E‑100).
- * Beide stehen in einem Menü, weil es **eine** Suchfläche ist (E‑99) — als zwei
- * Gruppen, damit niemand ein Feld für eine Belegart hält.
+ * Eine Eigenschaft dagegen ist eine **Weiche**: Mit ihr sucht der Wert eine
+ * Spalte oder eine Eigenschaft und nie eine Belegnummer, ohne sie nie eine
+ * (E‑100). Beide stehen in einem Menü, weil es **eine** Suchfläche ist (E‑99) —
+ * als zwei Gruppen, damit niemand eine Eigenschaft für eine Belegart hält.
+ *
+ * ## Zwei Untermenüs statt einer Liste (E‑112, 09.09.2026)
+ *
+ * ```
+ * Alle Belegarten            ✓
+ * ──────────────────────────
+ * Belegarten                 ▸   → alle Belegarten des Mandanten
+ * Technische Eigenschaften   ▸   → alle Feldnamen des Mandanten
+ * ```
+ *
+ * Die flache Liste mit Überschriften hatte für `NEXANS` 55 Einträge; die zweite
+ * Gruppe stand unter dem Sichtbereich und wurde nicht gefunden. Jetzt gilt:
+ *
+ * - **Genau eine Auswahl über alles hinweg**, wie bisher — eine `RadioGroup`
+ *   umschließt den typlosen Eintrag und beide Untermenüs; die Wahl im einen
+ *   hebt die im anderen auf, und das Häkchen steht beim gewählten Eintrag im
+ *   Untermenü.
+ * - **Der Auslöser der Gruppe, in der die Auswahl liegt, trägt den gewählten
+ *   Eintrag als gedämpften Zusatztext** hinter der Beschriftung — damit sichtbar
+ *   bleibt, wo die Auswahl steckt, ohne das Untermenü zu öffnen. Er trägt
+ *   **kein `aria-checked`**: Er ist ein `menuitem` mit `aria-haspopup` und darf
+ *   nicht zugleich Radioeintrag sein. Der Zusatztext ist Inhalt des Auslösers
+ *   und damit Teil seines zugänglichen Namens (`Untermenue`).
+ * - **Eine leere Gruppe bekommt keinen Auslöser**, nicht einen leeren; die
+ *   Untermenüs entstehen auch dann, wenn nur eine Gruppe gefüllt ist — das
+ *   Bedienmuster hängt nicht an der Konfiguration des Mandanten.
+ * - Ordnung, Laufweite und Inhalte der Einträge sind unverändert; Tastatur und
+ *   Berührung kommen aus Radix (`ArrowRight`/`Enter` öffnen, `ArrowLeft`
+ *   schließt, Zeiger öffnet beim Überfahren), nichts davon ist nachgebaut.
  *
  * **Die Beschriftungen bleiben ungekürzt.** M45 hat das Kürzen der Endungen
  * ausgeschlossen: Ohne sie fallen 62 Beschreibungen auf 57, und zwei
  * `Abladestelle`-Typen stünden untereinander mit identischer Überschrift. Im
- * Auswahlmenü ist Platz dafür; am Schalter kürzt der Name und steht vollständig
+ * Untermenü ist Platz dafür; am Schalter kürzt der Name und steht vollständig
  * im `title`. Für die Feldnamen gilt dasselbe: unverändert, technisch (E‑105).
+ *
+ * **„Technische Eigenschaften" ist die Beschriftung des Blocks im
+ * Nachrichtendetail** (E‑113) — sie benennt eine Art und keinen Speicherort:
+ * Acht der Einträge sind Spalten (Typ 0), keine `MessageProperty`-Zeilen, und
+ * erscheinen in jenem Block nie.
  */
 function Auswahlmenue({
   angebot,
@@ -307,8 +352,8 @@ function Auswahlmenue({
       ? (angebot.bam.find((eintrag) => eintrag.typ === gewaehlt.typ)?.bezeichnung ??
         String(gewaehlt.typ))
       : null;
-  const kurz =
-    gewaehlt === null ? null : gewaehlt.art === "bam" ? gewaehlteBelegart : gewaehlt.name;
+  const gewaehltesFeld = gewaehlt?.art === "feld" ? gewaehlt.name : null;
+  const kurz = gewaehlteBelegart ?? gewaehltesFeld;
   const beschriftung =
     gewaehlt === null
       ? texte.suche.typwahl.alle
@@ -330,21 +375,25 @@ function Auswahlmenue({
           {kurz === null ? null : <span className="text-beiwerk truncate">{kurz}</span>}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="max-h-96 w-80 overflow-y-auto">
+      {/* Drei Einträge auf dieser Ebene — die Breite braucht der Zusatztext am
+          Auslöser, nicht die Zahl der Einträge. */}
+      <DropdownMenuContent align="start" className="w-80">
         <DropdownMenuRadioGroup
           value={auswahlwert(gewaehlt)}
           onValueChange={(wert) => aufWahl(ausAuswahlwert(wert))}
         >
-          {/* Der typlose Eintrag zuerst und außerhalb beider Gruppen: Er ist die
-              Vorgabe, und seine Beschriftung sagt, was er tut — Belegnummern
+          {/* Der typlose Eintrag zuerst und außerhalb beider Untermenüs: Er ist
+              die Vorgabe, und seine Beschriftung sagt, was er tut — Belegnummern
               unter jeder Belegart, nie ein Feld. */}
           <DropdownMenuRadioItem value="">{texte.suche.typwahl.alle}</DropdownMenuRadioItem>
+          <DropdownMenuSeparator />
 
-          {/* Eine leere Gruppe wird weggelassen, nicht als leere Überschrift gezeigt. */}
+          {/* Eine leere Gruppe wird weggelassen — kein Untermenü, kein leerer Auslöser. */}
           {angebot.bam.length > 0 ? (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel>{texte.suche.typwahl.gruppeBelegarten}</DropdownMenuLabel>
+            <Untermenue
+              beschriftung={texte.suche.typwahl.gruppeBelegarten}
+              gewaehlt={gewaehlteBelegart}
+            >
               {angebot.bam.map((eintrag) => (
                 <DropdownMenuRadioItem
                   key={`bam:${eintrag.typ}`}
@@ -353,13 +402,15 @@ function Auswahlmenue({
                   {eintrag.bezeichnung}
                 </DropdownMenuRadioItem>
               ))}
-            </>
+            </Untermenue>
           ) : null}
 
           {angebot.felder.length > 0 ? (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel>{texte.suche.typwahl.gruppeFelder}</DropdownMenuLabel>
+            <Untermenue
+              beschriftung={texte.suche.typwahl.gruppeFelder}
+              gewaehlt={gewaehltesFeld}
+              festeLaufweite
+            >
               {angebot.felder.map((eintrag) => (
                 <DropdownMenuRadioItem
                   key={`feld:${eintrag.name}`}
@@ -369,11 +420,62 @@ function Auswahlmenue({
                   {eintrag.name}
                 </DropdownMenuRadioItem>
               ))}
-            </>
+            </Untermenue>
           ) : null}
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+/**
+ * Ein Untermenü der Auswahl: der Auslöser mit der Beschriftung der Gruppe und —
+ * liegt die Auswahl in dieser Gruppe — dem gewählten Eintrag als gedämpftem
+ * Zusatztext dahinter; dahinter die Einträge, in ihrer Höhe an den Bildschirm
+ * gebunden und darin scrollend (40 Belegarten bei `NEXANS`). **22 rem breit**, zwei
+ * mehr als das Hauptmenü: Bei 20 rem brachen zwei der 35 Zeichen langen
+ * Beschreibungen um, bei 22 rem stehen alle 40 einzeilig (Sichtprüfung
+ * 09.09.2026, `docs/property-suche.md` §14).
+ *
+ * **Das Leerzeichen zwischen den beiden Spannen ist Absicht.** Im Flex-Layout
+ * wird ein Textknoten aus reinem Leerraum nicht gezeichnet — den Abstand macht
+ * `gap` —, im Text des Auslösers steht er aber, und damit auch im zugänglichen
+ * Namen: Ein Vorleseprogramm liest „Belegarten Lieferschein-Nr._L_SAP" und
+ * nicht ein zusammengezogenes Wort. Kein `aria-label` daneben, das den Namen
+ * ein zweites Mal führte und dem Inhalt davonliefe.
+ */
+function Untermenue({
+  beschriftung,
+  gewaehlt,
+  festeLaufweite = false,
+  children,
+}: {
+  beschriftung: string;
+  /** Der gewählte Eintrag dieser Gruppe — `null`, wenn die Auswahl nicht hier liegt. */
+  gewaehlt: string | null;
+  /** Feldnamen sind technische Namen und stehen in fester Laufweite (E‑105). */
+  festeLaufweite?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger>
+        <span className="shrink-0">{beschriftung}</span>
+        {gewaehlt === null ? null : (
+          <>
+            {" "}
+            <span
+              className={cn("text-muted-foreground flex-1 truncate", festeLaufweite && "font-mono")}
+            >
+              {gewaehlt}
+            </span>
+          </>
+        )}
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent className="max-h-(--radix-dropdown-menu-content-available-height) w-88 overflow-y-auto">
+        {children}
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
   );
 }
 

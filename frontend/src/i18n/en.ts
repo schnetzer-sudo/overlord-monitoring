@@ -550,9 +550,9 @@ export const en: Texte = {
     typwahl: {
       alle: "All document types",
       gewaehlt: "Document type: {belegart}",
-      gewaehltesFeld: "Field: {feld}",
+      gewaehltesFeld: "Property: {feld}",
       gruppeBelegarten: "Document types",
-      gruppeFelder: "Fields",
+      gruppeFelder: "Technical properties",
     },
 
     marken: {
@@ -614,7 +614,7 @@ export const en: Texte = {
       was: "Type a document number into the field above — delivery note, order or transport number, batch, plant or material number. Enter starts the search.",
       belegarten: "These document types are set up for this tenant:",
       felder:
-        "Plus these fields, by their technical name. Pick the field next to the search box — a value without a chosen field always searches for a document number:",
+        "Plus these technical properties, by their unchanged system name. Pick the property next to the search box — a value without a chosen property always searches for a document number:",
       hilfe:
         "The search also looks for leading zeros and a leading space — they are not on the printed document but they are in the data. Several terms are combined with AND.",
       belegartHilfe:

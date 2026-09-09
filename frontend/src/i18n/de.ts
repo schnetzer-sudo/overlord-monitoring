@@ -984,15 +984,19 @@ export const de = {
       hinzufuegen: "Begriff hinzufügen",
     },
 
-    // Seit Teil 2 der Property-Suche zwei Gruppen in einem Menü (E-99). Die
-    // Feldnamen selbst bleiben technisch und unübersetzt (E-105); übersetzt
-    // sind nur die Gruppenüberschriften und die Beschriftung des Schalters.
+    // Seit Teil 2 der Property-Suche zwei Gruppen in einem Menü (E-99), seit
+    // dem 09.09.2026 als zwei Untermenüs (E-112). Die Feldnamen selbst bleiben
+    // technisch und unübersetzt (E-105); übersetzt sind nur die beiden
+    // Untermenü-Auslöser und die Beschriftung des Schalters. „Technische
+    // Eigenschaften" ist die Beschriftung des Blocks im Nachrichtendetail
+    // (E-113) — sie benennt eine Art und keinen Speicherort: Acht der Einträge
+    // sind Spalten (Typ 0) und erscheinen in jenem Block nie.
     typwahl: {
       alle: "Alle Belegarten",
       gewaehlt: "Belegart: {belegart}",
-      gewaehltesFeld: "Feld: {feld}",
+      gewaehltesFeld: "Eigenschaft: {feld}",
       gruppeBelegarten: "Belegarten",
-      gruppeFelder: "Felder",
+      gruppeFelder: "Technische Eigenschaften",
     },
 
     marken: {
@@ -1082,9 +1086,10 @@ export const de = {
       was: "Tippe eine Belegnummer in das Feld oben — Lieferschein-, Bestell- oder Transportnummer, Charge, Werk oder Materialnummer. Die Eingabetaste startet die Suche.",
       belegarten: "Für diesen Mandanten sind diese Belegarten hinterlegt:",
       // Die Feldnamen stehen darunter unverändert (E-105). Der Satz nennt die
-      // Weiche aus E-100: Ohne gewähltes Feld wird nie ein Feld durchsucht.
+      // Weiche aus E-100: Ohne gewählte Eigenschaft wird nie eine durchsucht.
+      // Seit dem 09.09.2026 heißt die Gruppe „Technische Eigenschaften" (E-113).
       felder:
-        "Dazu diese Felder, mit ihrem technischen Namen. Wähle das Feld neben dem Suchfeld — ein Wert ohne gewähltes Feld sucht immer eine Belegnummer:",
+        "Dazu diese technischen Eigenschaften, mit ihrem Namen unverändert aus dem System. Wähle die Eigenschaft neben dem Suchfeld — ein Wert ohne gewählte Eigenschaft sucht immer eine Belegnummer:",
       hilfe:
         "Führende Nullen und ein führendes Leerzeichen sucht die Suche von selbst mit — sie stehen auf dem Beleg nicht, im Bestand aber sehr wohl. Mehrere Begriffe werden mit UND verknüpft.",
       // Der einzige Ort, an dem die Belegart erwähnt wird (docs/bam-suche.md
