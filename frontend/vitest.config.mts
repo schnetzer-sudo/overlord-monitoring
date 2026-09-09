@@ -11,7 +11,7 @@ import { defineConfig } from "vitest/config";
  * außer Laufzeit und Abhängigkeiten.
  *
  * **Die Ausnahmen sind gezählt, nicht gewachsen** — Stand 09.09.2026 sind es
- * **sechsundachtzig in vierzehn Dateien**. Diese Zahl wird an genau dieser Stelle geführt;
+ * **zweiundneunzig in fünfzehn Dateien**. Diese Zahl wird an genau dieser Stelle geführt;
  * `tests/hilfe/rendern.tsx` und `docs/frontend-grundlagen.md` §9 verweisen
  * darauf, statt sie zu wiederholen (drei Orte für dieselbe Zahl sind zwei zu
  * viel):
@@ -32,6 +32,7 @@ import { defineConfig } from "vitest/config";
  * | `tests/konto-anlegen.test.tsx` *(07.09.2026)* | 6 | **Drei Klassen, und keine davon steht in einer reinen Funktion.** Die **Verdrahtung der Sperre in beide Richtungen** (E22): Die *Regel* ist `darfOeffnen`, um `MASKE` erweitert und in `tests/benutzer.test.ts` geprüft — belegt wird hier, dass jemand sie abfragt, und zwar je mit der Gegenprobe im selben Fall (vorher frei, danach gesperrt). Zweitens **was nach dem Erfolg passiert**: dass wirklich ein `GET /api/admin/users` **nach** dem `POST` hinausgeht und im Zwischenspeicher danach genau dessen Antwort steht (E24) — die naheliegende Abkürzung, die neun Felder der Zeile aus den vier der `POST`-Antwort zu ergänzen, bestünde jede Prüfung, die nur auf den Bildschirm sieht; dazu das **leere Passwortfeld** und die Meldung *in* der Maske (E25). Drittens der Ort einer Meldung: ein `409` steht **im Formular**, die Maske bleibt offen, und solange der Aufruf läuft, lässt sie sich nicht zuklappen — sonst wäre er nirgends zu sehen. **Fünf Mutanten gesetzt, fünf gefallen**, jeder in genau seinem Fall |
  *
  * | `tests/zeitraum-umschalter.test.tsx` *(07.09.2026)* | 2 | **Eine Aussage über Abwesenheit und eine über Verdrahtung.** Der vierte Knopf „Frei" ist **freiwillig** (`docs/process-view.md` §37 ff.): Ohne `aufFrei` sind es drei Knöpfe, mit ihr vier — die naheliegende Schreibweise (der Knopf immer da, nur ohne Wirkung) bestünde jede Prüfung an einer reinen Funktion, und das Dashboard ruft den Umschalter ohne. Dazu, dass ein Klick auf „Frei" `aufFrei` ruft und **nicht** `aufAuswahl` — sonst käme im Feature ein Code an, den die Liste der drei Paare nicht kennt; mit der Gegenprobe, dass ein Paar weiterhin die Auswahl ruft |
+ * | `tests/suchfeld-auswahl.test.tsx` *(09.09.2026)* | 6 | **Die Auswahl neben dem Suchfeld in zwei Untermenüs (E‑112).** Drei Aussagen über den Baum, die keine reine Funktion trägt: Die **oberste Ebene** trägt genau drei Einträge — den typlosen und je einen Untermenü-Auslöser — und keine Überschrift mehr; ein Untermenü zeigt beim Öffnen **seine** Einträge und die des anderen **nicht**; und für einen Mandanten ohne Belegart (`WOC`) **fehlt** der Auslöser der Belegarten vollständig — Abwesenheit, nicht Leere. Dazu die **Verdrahtung**: Eine Wahl im zweiten Untermenü hebt die im ersten auf, am Schalter, am Auslöser und am Häkchen; und der Auslöser der Gruppe mit der Auswahl trägt den gewählten Eintrag **im zugänglichen Namen, ohne `aria-checked`** — er ist `menuitem` mit `aria-haspopup`, kein Radioeintrag. Und die Regression zum Schlüssel: gleichlautende Einträge in beiden Gruppen **ohne `console.error`**. Geöffnet wird über `pointerdown` und `ArrowRight`, Radix' eigene Wege ohne Zeitgeber (T1); `next/navigation` ist ersetzt, weil `useRouter` außerhalb des App-Routers wirft |
  *
  * | `tests/in-sicht-bringen.test.tsx` *(09.09.2026)* | 7 | **Ein Haken, dessen ganze Wirkung ein Aufruf am DOM ist** (E‑114, `lib/in-sicht-bringen.ts`). Ohne Komponente ist er nicht aufrufbar, und ob `scrollIntoView` gerufen wird — beim ersten Rendern mit Schlüssel, bei jedem Wechsel, nicht ohne Wechsel, nicht ohne Schlüssel — steht nirgends sonst. Dazu die **Höhenregel** aus der Chrome-Vorprobe (`docs/process-view.md` M172): Für ein Ziel, das höher ist als sein Scrollbereich, zählt allein die Oberkante — `start` statt `nearest`, wenn sie oberhalb liegt, und **keine Bewegung**, wenn sie schon steht; `jsdom` rechnet kein Layout, die Maße werden gestellt. Und der Rückweg `useZuletztGeschlossen`: die Kennung genau nach dem Schließen und sonst `null` — ein Zustand, der beim Rendern angepasst wird und nur im Baum beobachtbar ist. **Was die Datei nicht zeigt, steht in ihrem Kopf:** ob etwas ins Bild kommt, sagt allein der Browser |
  *
@@ -40,7 +41,7 @@ import { defineConfig } from "vitest/config";
  * > 02.09.2026. Genau die Drift, gegen die die Regel „an einer Stelle geführt"
  * > gerichtet ist; sie greift nur, wenn die *eine* Stelle auch eine ist.
  *
- * Allen sechsundachtzig ist dasselbe gemeinsam: **Es gibt keinen anderen Ort, an dem sie
+ * Allen zweiundneunzig ist dasselbe gemeinsam: **Es gibt keinen anderen Ort, an dem sie
  * belegbar wären.** Das ist die Bedingung, nicht „es ließe sich so leichter
  * prüfen". Sie schalten ihre Umgebung selbst über `// @vitest-environment jsdom`
  * um — die Voreinstellung bleibt `node`, damit die übrigen Dateien nichts von
