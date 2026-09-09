@@ -10,8 +10,8 @@ import { defineConfig } from "vitest/config";
  * Das sind alles reine Funktionen. Ein gerenderter Baum brächte hier nichts
  * außer Laufzeit und Abhängigkeiten.
  *
- * **Die Ausnahmen sind gezählt, nicht gewachsen** — Stand 07.09.2026 sind es
- * **neunundsiebzig in dreizehn Dateien**. Diese Zahl wird an genau dieser Stelle geführt;
+ * **Die Ausnahmen sind gezählt, nicht gewachsen** — Stand 09.09.2026 sind es
+ * **sechsundachtzig in vierzehn Dateien**. Diese Zahl wird an genau dieser Stelle geführt;
  * `tests/hilfe/rendern.tsx` und `docs/frontend-grundlagen.md` §9 verweisen
  * darauf, statt sie zu wiederholen (drei Orte für dieselbe Zahl sind zwei zu
  * viel):
@@ -33,12 +33,14 @@ import { defineConfig } from "vitest/config";
  *
  * | `tests/zeitraum-umschalter.test.tsx` *(07.09.2026)* | 2 | **Eine Aussage über Abwesenheit und eine über Verdrahtung.** Der vierte Knopf „Frei" ist **freiwillig** (`docs/process-view.md` §37 ff.): Ohne `aufFrei` sind es drei Knöpfe, mit ihr vier — die naheliegende Schreibweise (der Knopf immer da, nur ohne Wirkung) bestünde jede Prüfung an einer reinen Funktion, und das Dashboard ruft den Umschalter ohne. Dazu, dass ein Klick auf „Frei" `aufFrei` ruft und **nicht** `aufAuswahl` — sonst käme im Feature ein Code an, den die Liste der drei Paare nicht kennt; mit der Gegenprobe, dass ein Paar weiterhin die Auswahl ruft |
  *
+ * | `tests/in-sicht-bringen.test.tsx` *(09.09.2026)* | 7 | **Ein Haken, dessen ganze Wirkung ein Aufruf am DOM ist** (E‑114, `lib/in-sicht-bringen.ts`). Ohne Komponente ist er nicht aufrufbar, und ob `scrollIntoView` gerufen wird — beim ersten Rendern mit Schlüssel, bei jedem Wechsel, nicht ohne Wechsel, nicht ohne Schlüssel — steht nirgends sonst. Dazu die **Höhenregel** aus der Chrome-Vorprobe (`docs/process-view.md` M172): Für ein Ziel, das höher ist als sein Scrollbereich, zählt allein die Oberkante — `start` statt `nearest`, wenn sie oberhalb liegt, und **keine Bewegung**, wenn sie schon steht; `jsdom` rechnet kein Layout, die Maße werden gestellt. Und der Rückweg `useZuletztGeschlossen`: die Kennung genau nach dem Schließen und sonst `null` — ein Zustand, der beim Rendern angepasst wird und nur im Baum beobachtbar ist. **Was die Datei nicht zeigt, steht in ihrem Kopf:** ob etwas ins Bild kommt, sagt allein der Browser |
+ *
  * > ⚠️ **Zwei Zahlen im selben Kopf gingen auseinander** — die Tabellensumme
  * > stand oben richtig, der Schlusssatz nannte „neunundvierzig". Berichtigt am
  * > 02.09.2026. Genau die Drift, gegen die die Regel „an einer Stelle geführt"
  * > gerichtet ist; sie greift nur, wenn die *eine* Stelle auch eine ist.
  *
- * Allen neunundsiebzig ist dasselbe gemeinsam: **Es gibt keinen anderen Ort, an dem sie
+ * Allen sechsundachtzig ist dasselbe gemeinsam: **Es gibt keinen anderen Ort, an dem sie
  * belegbar wären.** Das ist die Bedingung, nicht „es ließe sich so leichter
  * prüfen". Sie schalten ihre Umgebung selbst über `// @vitest-environment jsdom`
  * um — die Voreinstellung bleibt `node`, damit die übrigen Dateien nichts von
