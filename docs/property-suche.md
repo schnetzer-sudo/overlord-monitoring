@@ -1200,6 +1200,16 @@ schlechter als kein Link.
 > [`nachrichtendetail.md`](nachrichtendetail.md) §10), und ein Verweis braucht den Wert beim
 > Rendern.
 
+> **Ergänzt am 09.09.2026 (E‑114, [`process-view.md`](process-view.md) §46): der vierte Weg in
+> dieselbe Menge bekommt dieselbe Regel mit.** Die Feldsuche läuft über die Route `/suche` und
+> dieselbe Trefferliste wie die Belegsuche ([`bam-suche.md`](bam-suche.md) §11.4); wer dort eine
+> Zeile öffnet, bekommt das Panel seither im Bild, und nach dem Schließen die Zeile wieder. **Der
+> Absprung hier ist davon nicht betroffen und braucht nichts Eigenes:** Er ist eine Navigation auf
+> `/prozesse` mit `prozess` und `nachricht`, die Ansicht wird dort neu aufgebaut, und beide Haken
+> feuern beim ersten Rendern — der Baum springt dabei seit E‑114 in keinem Fall mehr zu seiner
+> Zeile, das Panel steht oben. Am Ziel-Link, an seinem Fenster und an seiner Rundung ändert sich
+> nichts.
+
 **E‑97 bleibt gegenstandslos, und der Grund ist korrigiert** (§1): nicht weil die Suche in der
 Prozessansicht fehlt, sondern weil sie dort **hinausführt** — das Feld steht in der Kopfzeile, die
 Suche navigiert auf ihre eigene Route, eine Marke wird nie *in* der Prozessansicht aktiv. **Die

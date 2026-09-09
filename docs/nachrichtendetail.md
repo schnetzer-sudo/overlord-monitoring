@@ -1710,6 +1710,22 @@ aber erst beim Klick.
 > 416 px Panelbreite, und die 10 rem sind für genau dieses Panel gemessen
 > ([`bam-werte.md`](bam-werte.md) §11a).
 
+> **Ergänzt am 09.09.2026 (E‑114): Alle vier Einhängepunkte bekommen dieselbe Regel mit — das
+> Panel kommt beim Öffnen ins Bild.**
+>
+> Panel und Liste sitzen im einen Scrollbereich (der Absatz darunter), und das hatte eine Folge, die
+> hier nicht stand: Wer in der Liste ans Ende scrollt und dort eine Zeile öffnet, bekam das Panel an
+> der Oberkante der Spalte — oberhalb des Sichtfensters. Seit E‑114 hängt an der Hülle des Panels
+> (`xl:w-[26rem] 2xl:w-[30rem]`) an jedem Einhängepunkt der Haken aus `lib/in-sicht-bringen.ts` mit
+> dem Schlüssel `nachricht`: Beim Öffnen und beim Wechsel der Nachricht — auch über ein Kettenglied,
+> das über `key={nachricht}` ein neues Panel in derselben Hülle baut — kommt die Oberkante des
+> Panels ins Bild, und wenn sie schon steht, bewegt sich nichts. **Beim Schließen kommt die Zeile,
+> zu der das Panel gehörte, auf demselben Weg zurück ins Bild** (die Tabellen reichen die geöffnete
+> Zeile dafür als freiwillige `gewaehlteZeile` heraus). Die Komponente selbst ist unverändert; die
+> Regel hängt außen an der Hülle, weil sie zum Scrollbereich gehört und nicht zum Panel
+> ([`frontend-grundlagen.md`](frontend-grundlagen.md) §7, vierte Bedingung;
+> [`process-view.md`](process-view.md) §46).
+
 Ab `xl` (1280 px) steht das Panel **neben** der Liste (26 rem, ab `2xl` 30 rem), darunter **an ihrer
 Stelle**: Am Handy gibt es kein „neben der Liste", dort füllt die Ansicht den Bildschirm, und das
 Zurück des Browsers schließt sie, weil der Zustand in der URL steht.

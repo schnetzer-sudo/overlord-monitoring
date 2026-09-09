@@ -655,6 +655,37 @@ Tabellenkopfzeile über einem scrollenden Bereich. Ein Rahmen, der das nicht her
 mitten in einer Listenansicht umgebaut — und zwar von jemandem, der eigentlich eine Liste bauen
 wollte.
 
+**4. Was neu erscheint, kommt ins Bild.** Nachgetragen am **09.09.2026** (E‑114,
+[`process-view.md`](process-view.md) §46) — die Überschrift darüber sagt weiterhin „drei", weil sie
+so zitiert wird; Bedingungen sind es seither vier. **Sie ist die Kehrseite des einen
+Scrollbereichs:** Baum, Liste und Panel sitzen in *demselben* `main`, und wer weiter unten klickt,
+bekommt das Ergebnis seiner Handlung oberhalb des Sichtfensters — der neue Inhalt beginnt oben im
+Scrollbereich, die Scrollposition steht aber unten. Bei `NEXANS` stand die Überschrift der rechten
+Spalte der Prozessansicht bis zu **6.143 px** über dem Sichtfenster ([`process-view.md`](process-view.md)
+M125), und ein Panel, das am Listenende geöffnet wird, stand ebenso darüber.
+
+> **Wird im einen Scrollbereich Inhalt neu eingeblendet oder ausgetauscht, kommt dessen Oberkante
+> ins Bild. Es gibt genau einen Scrollbereich, also genau eine Stelle, an der das geschieht.**
+
+Die Stelle ist `lib/in-sicht-bringen.ts`: ein Haken, der eine Referenz und einen Schlüssel nimmt und
+bei jedem Wechsel des Schlüssels das Element ins Bild holt — in einem `useLayoutEffect`, damit nichts
+einmal falsch gemalt wird, ohne `behavior: "smooth"`, weil der Sprung die Folge eines Klicks ist und
+keine Animation ([`visuelles-konzept.md`](visuelles-konzept.md) §7). Eingehängt an genau zwei Zielen
+je Ansicht: an der rechten Spalte der Prozessansicht (Schlüssel `prozess`) und am Panel (Schlüssel
+`nachricht`); dazu der Rückweg, der beim Schließen des Panels die zuvor gewählte Zeile wieder ins
+Bild holt. **Steht das Ziel schon im Bild, bewegt sich nichts** — das ist die Bedingung aus §7 des
+visuellen Konzepts, und sie ist nicht `block: "nearest"` allein: Für ein Ziel, das höher ist als der
+Scrollbereich, richtet `nearest` die *Unterkante* aus, gemessen in Chrome 152
+([`process-view.md`](process-view.md) M172). Die Regel entscheidet deshalb nach der Höhe, und der
+Grund steht im Kopf der Datei.
+
+**Was diese Bedingung nicht heilt, und das ist eine Entscheidung:** Der Prozessbaum springt seither
+**nicht** mehr zu seiner Auswahl. Baum und rechte Spalte können bei einer Auswahl weit unten nicht
+beide im Bild stehen; es gewinnt das Ergebnis der Handlung, und die geklickte Baumzeile kann aus dem
+Bild laufen ([`process-view.md`](process-view.md) §46). Die beiden anderen Wege — die rechte Spalte
+kleben zu lassen oder dem Baum einen eigenen Scrollbereich zu geben — sind dort verworfen und
+begründet; der zweite widerspräche der zweiten Bedingung hier ausdrücklich.
+
 **Die Seite selbst scrollt nie.** Nachgemessen gegen den fertigen Build, 1920 × 1080, mit 4000 px
 Inhalt im Inhaltsbereich:
 

@@ -1096,6 +1096,14 @@ die **Liste** (`lib/routen.ts`), nicht an die Suche. Ein Umschalter, dessen Rüc
 als dort, wo er herkam, ist keiner; seine beiden Angaben sind deshalb seit Teil 3 freiwillig
 ([`nachrichtendetail.md`](nachrichtendetail.md) §10.7).
 
+**Mit der Regel aus E‑114** *(09.09.2026)*: Der dritte Einhängepunkt bekommt sie wie die beiden
+anderen mit — die Hülle des Panels trägt den Haken aus `lib/in-sicht-bringen.ts` mit dem Schlüssel
+`nachricht`, und `TrefferTabelle` reicht die geöffnete Zeile als freiwillige `gewaehlteZeile`
+heraus, damit sie nach dem Schließen wieder ins Bild kommt. Wer in der Trefferliste weit unten
+klickt, bekommt das Panel seither im Bild statt oberhalb davon; am Statement, an der Antwort und an
+der Trefferliste selbst ändert das nichts ([`process-view.md`](process-view.md) §46,
+[`frontend-grundlagen.md`](frontend-grundlagen.md) §7, vierte Bedingung).
+
 ### 11.5 Die Trefferliste
 
 Dieselbe Zeilenform wie die Nachrichtenliste — Zeitpunkt, Status, Ablauf —, und **dieselben
