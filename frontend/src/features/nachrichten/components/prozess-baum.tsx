@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronRight, TriangleAlert } from "lucide-react";
 
 import { MARKE_GESTALT } from "@/components/marke";
@@ -61,12 +61,21 @@ import {
  * Rahmen darum**: `sr-only` ist `position: absolute`, und ein solches Element
  * ohne positionierten Vorfahren macht in einer langen Liste die ganze Seite
  * scrollbar.
+ *
+ * **Der Baum springt nicht zu seiner Auswahl** *(E‑114, 09.09.2026)*. Bis dahin
+ * holte er die gewählte Zeile mit `scrollIntoView` ins Bild, solange kein Panel
+ * offen stand — und schob damit die Liste daneben aus dem Bild (Punkt 118,
+ * M125): Baum und rechte Spalte können bei einer Auswahl weit unten nicht beide
+ * im Bild stehen, und es gewinnt das **Ergebnis** der Handlung, also die rechte
+ * Spalte (`lib/in-sicht-bringen.ts`). Der Baum steht weiterhin an der richtigen
+ * Stelle offen, die gewählte Zeile ist markiert und trägt den Tabstopp — sie
+ * wird nur nicht mehr angesprungen. Der Preis ist benannt: Die geklickte
+ * Baumzeile kann aus dem Bild laufen.
  */
 export function ProzessBaum({
   partner,
   stilleSchwelleMonate,
   gewaehlt,
-  springeZurAuswahl,
   istOffen,
   aufUmschalten,
   aufAuswahl,
@@ -76,16 +85,6 @@ export function ProzessBaum({
   /** Kommt aus der Antwort (E‑37). Der Baum rechnet keine Monate nach. */
   stilleSchwelleMonate: number;
   gewaehlt: string | null;
-  /**
-   * Ob die gewählte Zeile ins Bild geholt werden soll.
-   *
-   * **Falsch, solange das Panel offen steht.** Baum und Panel sitzen im *einen*
-   * Scrollbereich; ein Sprung an eine Zeile weit unten im Baum schöbe das Panel
-   * daneben nach oben aus dem Bild. Wer einen Link auf eine **Nachricht**
-   * öffnet, will zuerst den Beleg sehen — der Baum ist der Kontext, den er
-   * danach sucht.
-   */
-  springeZurAuswahl: boolean;
   istOffen: (schluessel: string) => boolean;
   aufUmschalten: (schluessel: string) => void;
   aufAuswahl: (processId: string) => void;
@@ -113,35 +112,17 @@ export function ProzessBaum({
         ? prozessSchluessel(gewaehlt)
         : (sichtbar[0] ?? null);
 
-  const knoten = useRef(new Map<string, HTMLDivElement>());
-
   /**
-   * **Ein tiefer Link zeigt die Stelle, nicht nur den offenen Ast.**
+   * Die gerenderten Zeilen je Schlüssel — für die Tastatur ({@link springe}).
    *
-   * Der Aufklappzustand ergibt sich aus dem gewählten Prozess; sichtbar ist er
-   * damit noch nicht — bei `NEXANS` ist der Baum mehrere Bildschirme hoch, und
-   * der Empfänger eines Links landete am Anfang. `block: "nearest"` scrollt
-   * **nur, wenn nötig**: Wer im Baum weiterklickt, sieht seine Zeile ohnehin,
-   * und ein Sprung bei jedem Klick wäre eine Bewegung, die niemand angefordert
-   * hat (`docs/visuelles-konzept.md` §7).
-   *
-   * **Und gar nicht, solange das Panel offen steht** ({@link springeZurAuswahl}):
-   * Beide Spalten sitzen im einen Scrollbereich, ein Sprung tief in den Baum
-   * schöbe das Panel daneben aus dem Bild.
-   *
-   * **Kein `focus()`.** Ein Fokussprung beim Öffnen nähme dem Nutzer die Stelle,
-   * an der er gerade war — dieselbe Überlegung, mit der das Nachrichtendetail
-   * `Escape` statt eines Fokussprungs bekommen hat.
+   * **Kein Effekt, der die Auswahl ins Bild holt, und kein `focus()`.** Bis zum
+   * 09.09.2026 stand hier ein `scrollIntoView` auf der gewählten Zeile; er ist
+   * mit E‑114 entfallen (siehe den Kopf dieser Datei). Ein Fokussprung beim
+   * Öffnen nähme dem Nutzer ohnehin die Stelle, an der er gerade war — dieselbe
+   * Überlegung, mit der das Nachrichtendetail `Escape` statt eines Fokussprungs
+   * bekommen hat.
    */
-  useEffect(() => {
-    if (gewaehlt === null || !springeZurAuswahl) {
-      return;
-    }
-    // `?.scrollIntoView?.(…)`: `jsdom` rechnet kein Layout und bringt die
-    // Methode nicht mit. Ein Aufruf ohne Absicherung wäre dort ein
-    // `TypeError` — und damit ein roter Test für etwas, das im Browser stimmt.
-    knoten.current.get(prozessSchluessel(gewaehlt))?.scrollIntoView?.({ block: "nearest" });
-  }, [gewaehlt, springeZurAuswahl]);
+  const knoten = useRef(new Map<string, HTMLDivElement>());
 
   const springe = useCallback((schluessel: string | undefined) => {
     if (schluessel === undefined) {

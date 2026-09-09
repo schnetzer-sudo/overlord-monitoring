@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Fehler, Laden, Leer } from "@/components/zustand";
 import { Button } from "@/components/ui/button";
 import { useTexte } from "@/i18n/provider";
+import { useInSicht, useZuletztGeschlossen } from "@/lib/in-sicht-bringen";
 import { ansichtOhneListe } from "@/lib/routen";
 
 import {
@@ -77,6 +78,27 @@ export function NachrichtenAnsicht() {
   const schliessePanel = useCallback(() => schliesse(null), [schliesse]);
   useEscapeSchliesst(gewaehlt !== null, schliessePanel);
 
+  /*
+   * **Was neu erscheint, kommt ins Bild** (E‑114, `lib/in-sicht-bringen.ts`):
+   * das Panel beim Öffnen und beim Wechsel der Nachricht — und auf dem Rückweg
+   * die Zeile, zu der es gehörte, denn unter `xl` stünde der Nutzer nach dem
+   * Schließen sonst am Listenanfang. Der Schlüssel des Rückwegs wechselt nur
+   * beim Schließen (`useZuletztGeschlossen`), damit er dem Panel beim Öffnen
+   * nicht in die Quere kommt.
+   */
+  const panel = useRef<HTMLDivElement>(null);
+  useInSicht(panel, gewaehlt);
+  const zuletztGewaehlteZeile = useRef<HTMLTableRowElement | null>(null);
+  const merkeZeile = useCallback((zeile: HTMLTableRowElement | null) => {
+    // Nur merken, nie vergessen: Beim Schließen verliert die Zeile ihre
+    // Auszeichnung und damit die Referenz — gebraucht wird sie genau dann.
+    if (zeile !== null) {
+      zuletztGewaehlteZeile.current = zeile;
+    }
+  }, []);
+  const geschlossen = useZuletztGeschlossen(gewaehlt);
+  useInSicht(zuletztGewaehlteZeile, geschlossen);
+
   return (
     /*
      * Ab `xl` steht das Panel **neben** der Liste, darunter an ihrer Stelle.
@@ -132,6 +154,7 @@ export function NachrichtenAnsicht() {
               aufSortierung={steuerung.setzeSortierung}
               gewaehlt={gewaehlt}
               aufAuswahl={steuerung.setzeNachricht}
+              gewaehlteZeile={merkeZeile}
             />
             <UngeklaertFusszeile zeilen={zeigeSeite?.items ?? []} />
           </div>
@@ -152,7 +175,7 @@ export function NachrichtenAnsicht() {
       </div>
 
       {gewaehlt === null ? null : (
-        <div className="min-w-0 xl:w-[26rem] xl:shrink-0 2xl:w-[30rem]">
+        <div ref={panel} className="min-w-0 xl:w-[26rem] xl:shrink-0 2xl:w-[30rem]">
           <NachrichtDetail
             // Ein Wechsel der Nachricht ist eine neue Ansicht und kein neuer
             // Zustand derselben: Der Kopierknopf und der Eigenschaftenblock

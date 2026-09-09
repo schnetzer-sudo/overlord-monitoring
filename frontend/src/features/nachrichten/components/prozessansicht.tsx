@@ -14,6 +14,7 @@ import { einsetzen } from "@/i18n";
 import { useSprache, useTexte } from "@/i18n/provider";
 import { useAnzeigezone } from "@/components/zeitzone";
 import { formatiereZahl, formatiereZeitpunkt } from "@/lib/format";
+import { useInSicht, useZuletztGeschlossen } from "@/lib/in-sicht-bringen";
 import { angezeigterBaumfenstermodus, hervorgehobenerBaumzeitraum } from "@/lib/rollupzeitraum";
 import { ROUTEN } from "@/lib/routen";
 import { cn } from "@/lib/utils";
@@ -90,13 +91,20 @@ import { ProzessBaum } from "./prozess-baum";
  * E‑53 für die Liste gewählt hatte. Der Aufklappzustand des Baums bleibt, und
  * beim Schließen geht keine zweite Abfrage hinaus.
  *
- * ## Ein Scrollbereich, wie überall
+ * ## Ein Scrollbereich, wie überall — und was neu erscheint, kommt ins Bild (E‑114)
  *
  * Beide Spalten sitzen im **einen** Scrollbereich des Anwendungsrahmens
  * (`docs/frontend-grundlagen.md` §7). Kein `overflow-y-auto`, kein `h-full`,
- * kein `h-dvh` — die bekannte Folge ist, dass ein weit aufgeklappter Baum die
- * Liste daneben nach oben aus dem Bild schiebt. Der Kopf der Baumspalte klebt
- * dafür (`sticky`), so wie die Tabellenkopfzeilen von Katalog und Benutzern.
+ * kein `h-dvh`. Die Folge war bis zum 09.09.2026, dass ein weit aufgeklappter
+ * Baum die Liste daneben nach oben aus dem Bild schob (Punkt 118, M125). Seit
+ * E‑114 gilt die Kehrseite des einen Scrollbereichs als Regel: **Wird rechts
+ * Inhalt neu eingeblendet oder ausgetauscht, kommt seine Oberkante ins Bild**
+ * (`lib/in-sicht-bringen.ts`) — die rechte Spalte mit dem Schlüssel `prozess`,
+ * das Panel mit dem Schlüssel `nachricht`, und auf dem Rückweg die Zeile, zu der
+ * das Panel gehörte. Der Baum springt dafür nicht mehr zu seiner Auswahl: Beides
+ * zugleich geht bei einer Auswahl weit unten nicht, und es gewinnt das Ergebnis
+ * der Handlung. Der Kopf der Baumspalte klebt weiterhin (`sticky`), so wie die
+ * Tabellenkopfzeilen von Katalog und Benutzern.
  */
 export function ProzessAnsicht() {
   const texte = useTexte();
@@ -304,6 +312,34 @@ export function ProzessAnsicht() {
     return () => cancelAnimationFrame(bild);
   }, [zustand.nachricht]);
 
+  /*
+   * **Was neu erscheint, kommt ins Bild** (E‑114, `lib/in-sicht-bringen.ts`) —
+   * an genau zwei Zielen: die rechte Spalte, sobald ein Prozess gewählt oder
+   * gewechselt wird, und das Panel, sobald eine Nachricht geöffnet oder
+   * gewechselt wird. Die Referenz der rechten Spalte hängt am **Inhalt** und
+   * nicht an der Hülle: Ohne gewählten Prozess steht dort der Leerzustand, und
+   * der ist kein Ergebnis, das ins Bild müsste.
+   *
+   * Dazu der Rückweg: Beim Schließen des Panels kommt die Zeile, zu der es
+   * gehörte, wieder ins Bild — unter `xl` stünde der Nutzer sonst am
+   * Listenanfang. Der Schlüssel dafür wechselt **nur beim Schließen**
+   * (`useZuletztGeschlossen`), damit der Rückweg dem Panel beim Öffnen nicht
+   * in die Quere kommt.
+   */
+  const rechterInhalt = useRef<HTMLDivElement>(null);
+  useInSicht(rechterInhalt, zustand.prozess);
+  useInSicht(panelBereich, zustand.nachricht);
+  const zuletztGewaehlteZeile = useRef<HTMLTableRowElement | null>(null);
+  const merkeZeile = useCallback((zeile: HTMLTableRowElement | null) => {
+    // Nur merken, nie vergessen: Beim Schließen verliert die Zeile ihre
+    // Auszeichnung und damit die Referenz — gebraucht wird sie genau dann.
+    if (zeile !== null) {
+      zuletztGewaehlteZeile.current = zeile;
+    }
+  }, []);
+  const geschlossen = useZuletztGeschlossen(zustand.nachricht);
+  useInSicht(zuletztGewaehlteZeile, geschlossen);
+
   const etwasGewaehlt = zustand.prozess !== null;
   const panelOffen = zustand.nachricht !== null;
 
@@ -384,7 +420,6 @@ export function ProzessAnsicht() {
               nurMitVerkehr={zustand.nurMitVerkehr}
               aufNurMitVerkehr={setzeNurMitVerkehr}
               gewaehlt={zustand.prozess}
-              springeZurAuswahl={zustand.nachricht === null}
               istOffen={istOffen}
               aufUmschalten={aufUmschalten}
               aufAuswahl={setzeProzess}
@@ -405,7 +440,7 @@ export function ProzessAnsicht() {
                 </Link>
               </Leer>
             ) : (
-              <div className="flex flex-col gap-3">
+              <div ref={rechterInhalt} className="flex flex-col gap-3">
                 <Kopf
                   prozess={gewaehlterProzess}
                   processId={zustand.prozess as string}
@@ -433,6 +468,7 @@ export function ProzessAnsicht() {
                       gewaehlteNachricht={zustand.nachricht}
                       aufNachricht={setzeNachricht}
                       aufSortierung={setzeSortierung}
+                      gewaehlteZeile={merkeZeile}
                     />
                   </div>
 
@@ -505,7 +541,6 @@ function Baumspalte({
   nurMitVerkehr,
   aufNurMitVerkehr,
   gewaehlt,
-  springeZurAuswahl,
   istOffen,
   aufUmschalten,
   aufAuswahl,
@@ -518,8 +553,6 @@ function Baumspalte({
   nurMitVerkehr: boolean;
   aufNurMitVerkehr: (wert: boolean) => void;
   gewaehlt: string | null;
-  /** Durchgereicht an den Baum — siehe dort. */
-  springeZurAuswahl: boolean;
   istOffen: (schluessel: string) => boolean;
   aufUmschalten: (schluessel: string) => void;
   aufAuswahl: (processId: string) => void;
@@ -629,7 +662,6 @@ function Baumspalte({
           partner={gefiltert}
           stilleSchwelleMonate={baum.stilleSchwelleMonate}
           gewaehlt={gewaehlt}
-          springeZurAuswahl={springeZurAuswahl}
           istOffen={istOffen}
           aufUmschalten={aufUmschalten}
           aufAuswahl={aufAuswahl}
@@ -779,11 +811,14 @@ function Uebertragungen({
   gewaehlteNachricht,
   aufNachricht,
   aufSortierung,
+  gewaehlteZeile,
 }: {
   filter: Nachrichtenfilter;
   gewaehlteNachricht: string | null;
   aufNachricht: (messageId: string | null) => void;
   aufSortierung: (sortierung: Sortierung) => void;
+  /** Durchgereicht an die Tabelle — der Rückweg nach dem Schließen (E‑114). */
+  gewaehlteZeile: (zeile: HTMLTableRowElement | null) => void;
 }) {
   const texte = useTexte();
   /*
@@ -831,6 +866,7 @@ function Uebertragungen({
           aufSortierung={aufSortierung}
           gewaehlt={gewaehlteNachricht}
           aufAuswahl={aufNachricht}
+          gewaehlteZeile={gewaehlteZeile}
         />
       </div>
       <Blaettern

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useId, useState } from "react";
+import { useCallback, useId, useRef, useState } from "react";
 
 import { Marke } from "@/components/marke";
 import { useAnzeigezone } from "@/components/zeitzone";
@@ -17,6 +17,7 @@ import {
   zeitpunktAusWanduhrzeit,
 } from "@/lib/format";
 import { ProblemFehler, istPraefixfensterZuGross } from "@/lib/http";
+import { useInSicht, useZuletztGeschlossen } from "@/lib/in-sicht-bringen";
 
 import type { BamSuchergebnis } from "../api";
 import { useBamSuche, useEscapeSchliesst, useSuchfelder, useSuchzustand } from "../hooks";
@@ -96,6 +97,22 @@ export function SucheAnsicht() {
   const gewaehlt = zustand.nachricht;
   const schliesse = useCallback(() => setzeNachricht(null), [setzeNachricht]);
   useEscapeSchliesst(gewaehlt !== null, schliesse);
+
+  /*
+   * **Was neu erscheint, kommt ins Bild** (E‑114, `lib/in-sicht-bringen.ts`) —
+   * dieselben zwei Ziele wie neben der Nachrichtenliste: das Panel beim Öffnen
+   * und beim Wechsel, die Trefferzeile auf dem Rückweg nach dem Schließen.
+   */
+  const panel = useRef<HTMLDivElement>(null);
+  useInSicht(panel, gewaehlt);
+  const zuletztGewaehlteZeile = useRef<HTMLTableRowElement | null>(null);
+  const merkeZeile = useCallback((zeile: HTMLTableRowElement | null) => {
+    if (zeile !== null) {
+      zuletztGewaehlteZeile.current = zeile;
+    }
+  }, []);
+  const geschlossen = useZuletztGeschlossen(gewaehlt);
+  useInSicht(zuletztGewaehlteZeile, geschlossen);
 
   /*
    * Die vorige Trefferzahl — für die Nulltreffer-Zeile.
@@ -269,6 +286,7 @@ export function SucheAnsicht() {
                   zeilen={ergebnis?.nachrichten ?? []}
                   gewaehlt={gewaehlt}
                   aufAuswahl={setzeNachricht}
+                  gewaehlteZeile={merkeZeile}
                   // Entschieden an der Frage (dem Zitat der Antwort), nicht an
                   // den Zellen — E-110, `suche.ts` `zeigtTrefferspalte`.
                   mitTrefferspalte={zeigtTrefferspalte({
@@ -282,7 +300,7 @@ export function SucheAnsicht() {
       </div>
 
       {gewaehlt === null ? null : (
-        <div className="min-w-0 xl:w-[26rem] xl:shrink-0 2xl:w-[30rem]">
+        <div ref={panel} className="min-w-0 xl:w-[26rem] xl:shrink-0 2xl:w-[30rem]">
           <NachrichtDetail
             // Ein Wechsel der Nachricht ist eine neue Ansicht und kein neuer
             // Zustand derselben: Der Kopierknopf und die Blöcke beginnen von vorn.

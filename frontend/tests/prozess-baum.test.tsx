@@ -76,13 +76,20 @@ const EINE_RICHTUNG = knoten("BOSCH", [gruppe("EINGEHEND", [blatt("p3", "BOSCH R
  */
 const OHNE_EBENE = knoten("VOTG", [gruppe(null, [blatt("p4", "Freier Prozess")])]);
 
+/**
+ * Bis zum 09.09.2026 stand hier `springeZurAuswahl`: Der Baum holte die gewählte
+ * Zeile per `scrollIntoView` ins Bild, solange kein Panel offen war. **Mit E‑114
+ * ist die Angabe entfallen** — der Baum springt nicht mehr, stattdessen kommt
+ * die rechte Spalte ins Bild (`lib/in-sicht-bringen.ts`, geprüft in
+ * `tests/in-sicht-bringen.test.tsx`). Die Fälle darunter sagen nichts über das
+ * Springen und stehen unverändert.
+ */
 async function baum(partner: Partnerknoten[], gewaehlt: string | null = null) {
   return rendere(
     <ProzessBaum
       partner={partner}
       stilleSchwelleMonate={3}
       gewaehlt={gewaehlt}
-      springeZurAuswahl
       istOffen={() => true}
       aufUmschalten={() => undefined}
       aufAuswahl={() => undefined}

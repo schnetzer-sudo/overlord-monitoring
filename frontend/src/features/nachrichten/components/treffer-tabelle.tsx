@@ -1,5 +1,7 @@
 "use client";
 
+import type { Ref } from "react";
+
 import {
   Table,
   TableBody,
@@ -78,6 +80,7 @@ export function TrefferTabelle({
   gewaehlt,
   aufAuswahl,
   mitTrefferspalte,
+  gewaehlteZeile,
 }: {
   zeilen: BamTreffer[];
   /** Die geöffnete Nachricht — sie kommt aus der URL, nicht aus dieser Tabelle. */
@@ -85,6 +88,12 @@ export function TrefferTabelle({
   aufAuswahl: (messageId: string) => void;
   /** Ob eine Belegnummer gesucht wurde — nur dann gibt es etwas zu beschriften. */
   mitTrefferspalte: boolean;
+  /**
+   * Bekommt die **geöffnete** Zeile gereicht — für den Rückweg nach dem
+   * Schließen des Panels (E‑114, `lib/in-sicht-bringen.ts`), wie in der
+   * Nachrichtentabelle. Freiwillig, und die Tabelle tut selbst nichts damit.
+   */
+  gewaehlteZeile?: Ref<HTMLTableRowElement>;
 }) {
   const texte = useTexte();
 
@@ -117,6 +126,7 @@ export function TrefferTabelle({
         {zeilen.map((zeile) => (
           <TableRow
             key={zeile.messageId}
+            ref={zeile.messageId === gewaehlt ? gewaehlteZeile : undefined}
             tabIndex={0}
             aria-label={texte.nachrichten.zeileOeffnen}
             aria-current={zeile.messageId === gewaehlt ? "true" : undefined}

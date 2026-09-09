@@ -1,5 +1,6 @@
 "use client";
 
+import type { Ref } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
 
 import { useAnzeigezone } from "@/components/zeitzone";
@@ -90,6 +91,7 @@ export function NachrichtenTabelle({
   aufSortierung,
   gewaehlt,
   aufAuswahl,
+  gewaehlteZeile,
 }: {
   zeilen: Nachricht[];
   sortierung: Sortierung;
@@ -97,6 +99,13 @@ export function NachrichtenTabelle({
   /** Die geöffnete Nachricht — sie kommt aus der URL, nicht aus dieser Tabelle. */
   gewaehlt: string | null;
   aufAuswahl: (messageId: string) => void;
+  /**
+   * Bekommt die **geöffnete** Zeile gereicht — für den Rückweg nach dem
+   * Schließen des Panels, der sie wieder ins Bild holt (E‑114,
+   * `lib/in-sicht-bringen.ts`). Freiwillig: Die Tabelle weiß nicht, wer sie
+   * hält, und tut selbst nichts damit.
+   */
+  gewaehlteZeile?: Ref<HTMLTableRowElement>;
 }) {
   const texte = useTexte();
 
@@ -126,6 +135,7 @@ export function NachrichtenTabelle({
         {zeilen.map((zeile) => (
           <TableRow
             key={zeile.messageId}
+            ref={zeile.messageId === gewaehlt ? gewaehlteZeile : undefined}
             tabIndex={0}
             aria-label={texte.nachrichten.zeileOeffnen}
             // Die geöffnete Zeile ist auch in der Liste erkennbar — sonst wäre
