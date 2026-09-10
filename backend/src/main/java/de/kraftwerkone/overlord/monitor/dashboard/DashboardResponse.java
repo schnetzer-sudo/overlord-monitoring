@@ -25,6 +25,9 @@ import java.util.List;
  *     juengstem Zeitpunkt, der juengste zuerst (E‑90)
  * @param stand Block 7 — der letzte abgeschlossene, fehlerfreie Rollup-Lauf. <b>{@code null}
  *     heisst: Es hat noch keinen gegeben</b>, und das ist etwas anderes als „lange her"
+ * @param plattform Block 8 — die Dienste und die Ablagen (Schritt 10d, E‑116). <b>Der einzige
+ *     Block, der fuer jeden Mandanten identisch ist</b>: Er sagt nichts ueber Belege, sondern ueber
+ *     die Anlage, auf der sie laufen
  */
 public record DashboardResponse(
     String zeitraum,
@@ -34,7 +37,8 @@ public record DashboardResponse(
     KachelnResponse kacheln,
     VerteilungResponse verteilung,
     List<AuffaelligerProzessResponse> zuletztAufgefallen,
-    StandResponse stand) {
+    StandResponse stand,
+    PlattformResponse plattform) {
 
   public DashboardResponse {
     verlauf = List.copyOf(verlauf);

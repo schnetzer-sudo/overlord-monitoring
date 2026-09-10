@@ -289,7 +289,10 @@ class DashboardIsolationDbIT extends SicherheitsTestbasis {
         .contains("\"wartend\"")
         .contains("\"verteilung\"")
         .contains("\"zuletztAufgefallen\"")
-        .contains("\"stand\"");
+        .contains("\"stand\"")
+        .contains("\"plattform\"")
+        .contains("\"dienste\"")
+        .contains("\"ablagen\"");
   }
 
   /** Entscheidung E-d: „Unquittiert" ist aus dem MVP genommen — kein Feld, kein Platzhalter. */
@@ -442,5 +445,99 @@ class DashboardIsolationDbIT extends SicherheitsTestbasis {
         .as("Ein Zugriff „einfach ueber alle Mandanten\" existiert nicht")
         .isEqualTo(403);
     assertThat(antwort.<String>json("$.type")).endsWith("/kein-mandant-gewaehlt");
+  }
+
+  // ─── Der plattformweite Block (Schritt 10d, E-116) ───────────────────────────
+
+  /**
+   * <b>Zwei Mandanten sehen hier genau dasselbe — und das ist die Zusicherung, nicht die
+   * Ausnahme.</b>
+   *
+   * <p>Der Block sagt nichts ueber Belege, sondern ueber die Anlage, auf der sie laufen: Kennungen
+   * von Diensten und Ablagen, kein Prozess, keine Nachricht, keine Zahl eines Mandanten. <b>Waere
+   * er je Mandant verschieden, waere genau das der Fehler</b> — dann haenge eine plattformweite
+   * Auskunft am Datenausschnitt.
+   *
+   * <p><b>Verglichen wird alles ausser dem Alter</b> (Regel T1): {@code alterSekunden} und das
+   * Alter des Pruefzeitpunkts laufen zwischen zwei HTTP-Aufrufen weiter, und eine Zusicherung
+   * darueber waere eine Zusicherung ueber Wanduhrzeit. Der {@code stand} selbst ist davon
+   * unberuehrt und wird mitgeprueft.
+   */
+  @Test
+  @DisplayName("Der Block plattform ist fuer NEXANS und SUTTONS identisch")
+  void plattform_ist_fuer_jeden_mandanten_gleich() throws Exception {
+    Antwort nexans = aufNexans.hole(pfad("48H"));
+    Antwort suttons = aufSuttons.hole(pfad("48H"));
+
+    assertThat(nexans.status()).isEqualTo(200);
+    assertThat(suttons.status()).isEqualTo(200);
+
+    assertThat(nexans.<List<String>>json("$.plattform.dienste[*].serviceId"))
+        .as("Ohne eine einzige Lampe bewiese dieser Vergleich nichts")
+        .isNotEmpty()
+        .isEqualTo(suttons.<List<String>>json("$.plattform.dienste[*].serviceId"));
+    assertThat(nexans.<List<String>>json("$.plattform.dienste[*].zustand"))
+        .isEqualTo(suttons.<List<String>>json("$.plattform.dienste[*].zustand"));
+    assertThat(nexans.<List<String>>json("$.plattform.dienste[*].rohwert"))
+        .isEqualTo(suttons.<List<String>>json("$.plattform.dienste[*].rohwert"));
+    assertThat(nexans.<List<String>>json("$.plattform.dienste[*].stand"))
+        .isEqualTo(suttons.<List<String>>json("$.plattform.dienste[*].stand"));
+    assertThat(nexans.<Object>json("$.plattform.ablagen.zustand"))
+        .isEqualTo(suttons.<Object>json("$.plattform.ablagen.zustand"));
+    assertThat(nexans.<List<String>>json("$.plattform.ablagen.ziele[*].serviceId"))
+        .isEqualTo(suttons.<List<String>>json("$.plattform.ablagen.ziele[*].serviceId"));
+  }
+
+  /**
+   * <b>Regel G1 am echten Antwortrumpf.</b> {@code PlattformAntwortTest} prueft dieselbe Zusage an
+   * den Typen; dieser Test prueft, was tatsaechlich hinausgeht.
+   *
+   * <p>Gesucht wird nicht der Wert selbst — er darf in keinem Test stehen —, sondern seine
+   * <b>Gestalt</b>: Alle elf Verbindungszeichenketten der Ablagen beginnen mit {@code http://}
+   * (M52, Befund 4). Taucht das im Rumpf auf, ist eine Adresse mitgekommen.
+   */
+  @Test
+  @DisplayName("Keine Verbindungszeichenkette und kein Betriebstext im Rumpf")
+  void keine_verbindung_im_rumpf() throws Exception {
+    String rumpf = aufNexans.hole(pfad("48H")).rumpf();
+
+    assertThat(rumpf)
+        .doesNotContain("http://")
+        .doesNotContain("https://")
+        .doesNotContain("serviceConnectString")
+        .doesNotContain("serviceName")
+        .doesNotContain("serviceDescription")
+        .doesNotContain("serviceLastStatusMessage");
+  }
+
+  /**
+   * Die Kachel steht da, auch wenn die Pruefung abgeschaltet ist — <b>mit benanntem Grund</b>.
+   *
+   * <p>Im Profil {@code dev} ist sie aus ({@code overlord.ablagenpruefung.aktiv: false}), und damit
+   * ist dieser Test der Nachweis fuer den Zustand, den der Betrieb im reinen Rollup-Prozess
+   * ebenfalls sieht. <b>Er nennt den Grund und nicht die Zahl der Ziele</b>: Welche Ablage
+   * eingetragen ist, ist eine Frage der Daten (Regel T2).
+   */
+  @Test
+  @DisplayName("Lokal ist die Ablagenpruefung aus, und die Kachel sagt genau das")
+  void ablagenkachel_ist_lokal_abgeschaltet() throws Exception {
+    Antwort antwort = aufNexans.hole(pfad("48H"));
+
+    assertThat(antwort.<String>json("$.plattform.ablagen.zustand")).isEqualTo("UNGEKLAERT");
+    assertThat(antwort.<String>json("$.plattform.ablagen.grund"))
+        .as("Ein ungeklaerter Zustand ohne Grund waere ein Achselzucken")
+        .isEqualTo("ABGESCHALTET");
+  }
+
+  /** Der Block nimmt keinen Parameter entgegen — auch keinen, der wie ein Dienst aussieht. */
+  @Test
+  @DisplayName("Ein erfundener Dienstparameter bleibt wirkungslos")
+  void kein_dienstparameter() throws Exception {
+    Antwort ohne = aufNexans.hole(pfad("48H"));
+    Antwort mit = aufNexans.hole(pfad("48H") + "&dienst=DIENST_ERFUNDEN&ablage=ABLAGE_ERFUNDEN");
+
+    assertThat(mit.status()).isEqualTo(200);
+    assertThat(mit.<List<String>>json("$.plattform.dienste[*].serviceId"))
+        .isEqualTo(ohne.<List<String>>json("$.plattform.dienste[*].serviceId"));
   }
 }

@@ -112,6 +112,28 @@ overlord:
     # und ausdruecklich NICHT ueber einen HTTP-Endpunkt.
     scheiben-pause: 1s
 
+  # Die Ablagenpruefung des Dashboards (Schritt 10d, Teil A). Sie fragt je Takt
+  # jede Ablage aus Service.ServiceDefaultFileStore mit einem RETRIEVE auf die
+  # Null-UUID und haelt das Ergebnis im Speicher; die Kachel liest es von dort.
+  #
+  # WARUM IM HINTERGRUND UND NICHT IN DER ANFRAGE: gemessen (M174, docs/dienste.md
+  # §4). Ein Abruf gegen eine erreichbare Ablage kostet rund 130 ms, einer gegen
+  # eine ABGESCHALTETE rund 2,7 s -- das Budget der Landingpage liegt bei 500 ms.
+  #
+  # FEHLT "aktiv", IST DIE PRUEFUNG AUS. Dann gibt es die Bean nicht, und die
+  # Kachel sagt "ungeklaert" mit dem Grund ABGESCHALTET -- nie stillschweigend
+  # gruen. Im Profil dev ist sie ausdruecklich aus (siehe unten), und im reinen
+  # Rollup-Prozess gehoert sie ebenfalls abgeschaltet: Ein Job, der nur
+  # aggregiert, braucht keine fremden Knoten anzufragen.
+  ablagenpruefung:
+    aktiv: true
+    # Abstand zwischen dem ENDE eines Durchgangs und dem Beginn des naechsten
+    # (fixedDelay, nicht fixedRate -- ein Durchgang ueberholt den naechsten nie).
+    # DER WERT IST GESETZT UND NICHT GEMESSEN (Regel Q4): Wie schnell ein Ausfall
+    # bemerkt werden muss, ist nicht erhoben. Gemessen ist nur, was ein Durchgang
+    # kostet. Die Kachel erklaert einen Stand nach ZWEI Takten fuer veraltet.
+    takt: 60s
+
   # Die Nachrichtenliste (Schritt 4, erweitert am 30.08.2026).
   nachrichtenliste:
     # Ob die Liste ihr Zeitfenster vorab ueber message_rollup verengt.
@@ -194,6 +216,13 @@ spring:
       on-profile: dev
 
 overlord:
+  ablagenpruefung:
+    # AUS im Profil dev, und zwar ausdruecklich. Ein lokaler Start soll nicht
+    # unaufgefordert im Minutentakt zwei Knoten der Produktion anfragen. Die
+    # Kachel zeigt dann den Grund ABGESCHALTET; wie man sie zum Ausprobieren
+    # einschaltet, steht in START-LOKAL.md.
+    aktiv: false
+
   rollup:
     # AUS, und zwar ausdruecklich -- nicht nur, weil das Profil "rollup" lokal
     # ohnehin nicht aktiv ist. Wer zum Ausprobieren "dev,rollup" startet, soll

@@ -1,6 +1,7 @@
 package de.kraftwerkone.overlord.monitor.dashboard;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
@@ -68,9 +69,23 @@ class DashboardServiceTest {
 
   @Mock private DashboardRepository repository;
 
+  @Mock private DienstLeseRepository dienstRepository;
+
+  /**
+   * Der Dienst <b>ohne</b> Ablagenpruefung — sie ist im Profil {@code dev} und in diesem Test aus.
+   *
+   * <p>Das leere {@link java.util.Optional} ist kein Vorbehalt gegen eine fehlende Bean, sondern
+   * der Zustand selbst: abgeschaltet. Die Kachel sagt das dann mit benanntem Grund, und genau das
+   * prueft {@link #ablagenkachel_ist_abgeschaltet}.
+   */
   private DashboardService service() {
     return new DashboardService(
-        repository, new MessageStatusClassifier(), Clock.fixed(JETZT, ZONE));
+        repository,
+        new MessageStatusClassifier(),
+        Clock.fixed(JETZT, ZONE),
+        dienstRepository,
+        new DienstStatusClassifier(),
+        java.util.Optional.empty());
   }
 
   /** Der Normalfall: Es gibt Verkehr, das erste Paar traegt, nichts stirbt. */
@@ -85,6 +100,7 @@ class DashboardServiceTest {
     when(repository.hatWartendeAblaeufe(any())).thenReturn(true);
     when(repository.zuletztAufgefallen(any(), any(), anyInt())).thenReturn(List.of());
     when(repository.letzterLauf()).thenReturn(java.util.Optional.empty());
+    when(dienstRepository.dienste()).thenReturn(List.of());
   }
 
   private DashboardResponse antwort() {
@@ -604,5 +620,109 @@ class DashboardServiceTest {
     assertThat(antwort().stand())
         .as("rollup_lauf traegt UTC und nicht die Wanduhrzeit des Quellservers")
         .isEqualTo(new StandResponse(Instant.parse("2026-08-31T02:15:30Z"), "VOLL"));
+  }
+
+  // ─── Block 8: der plattformweite Teil (Schritt 10d) ──────────────────────────
+
+  /**
+   * Drei erfundene Dienste: einer meldet sich, einer ist ueber der Zeit, einer traegt ein Wort, das
+   * niemand kennt. <b>Keine Kennung und keine Zahl aus dem Bestand</b> (Regeln G1, T2).
+   */
+  private void diensteSind() {
+    when(dienstRepository.dienste())
+        .thenReturn(
+            List.of(
+                new Dienstzeile("DIENST_ERFUNDEN_A", "HEARTBEAT", MELDET_SICH_SEIT),
+                new Dienstzeile("DIENST_ERFUNDEN_B", "ERROR_TIMEOUT", MELDET_SICH_SEIT),
+                new Dienstzeile("DIENST_ERFUNDEN_C", "WAS_AUCH_IMMER", null)));
+  }
+
+  /** 92 Sekunden vor dem Anker — eine erfundene Groesse wie jede andere in diesem Test. */
+  private static final LocalDateTime MELDET_SICH_SEIT = LocalDateTime.parse("2025-12-30T05:08:15");
+
+  @Test
+  @DisplayName("Jeder Dienst wird eingeordnet, der Rohwert steht daneben")
+  void dienste_werden_eingeordnet() {
+    bestandMit(List.of(), List.of());
+    diensteSind();
+
+    List<DienstResponse> dienste = antwort().plattform().dienste();
+
+    assertThat(dienste)
+        .extracting(DienstResponse::serviceId, DienstResponse::zustand, DienstResponse::rohwert)
+        .containsExactly(
+            tuple("DIENST_ERFUNDEN_A", Dienstzustand.MELDET_SICH, "HEARTBEAT"),
+            tuple("DIENST_ERFUNDEN_B", Dienstzustand.ZEITUEBERSCHRITTEN, "ERROR_TIMEOUT"),
+            tuple("DIENST_ERFUNDEN_C", Dienstzustand.UNGEKLAERT, "WAS_AUCH_IMMER"));
+  }
+
+  @Test
+  @DisplayName("Das Alter einer Lampe rechnet gegen die Anwendungsuhr (E-75)")
+  void alter_einer_lampe() {
+    bestandMit(List.of(), List.of());
+    diensteSind();
+
+    List<DienstResponse> dienste = antwort().plattform().dienste();
+
+    assertThat(dienste.getFirst().alterSekunden()).isEqualTo(92L);
+    assertThat(dienste.getFirst().stand()).isEqualTo(Instant.parse("2025-12-30T04:08:15Z"));
+  }
+
+  @Test
+  @DisplayName("Ohne ServiceLastUpdate gibt es keinen Stand und kein Alter")
+  void ohne_stand_kein_alter() {
+    bestandMit(List.of(), List.of());
+    diensteSind();
+
+    DienstResponse ohneStand = antwort().plattform().dienste().getLast();
+
+    assertThat(ohneStand.stand()).isNull();
+    assertThat(ohneStand.alterSekunden())
+        .as("Eine Null waere hier \u201eseit null Sekunden\u201c und damit eine Erfindung")
+        .isNull();
+  }
+
+  @Test
+  @DisplayName("Ein Stand nach jetzt hat kein Alter — lokal der Fall von MPSERVICEPROD01")
+  void stand_nach_jetzt() {
+    bestandMit(List.of(), List.of());
+    when(dienstRepository.dienste())
+        .thenReturn(
+            List.of(
+                new Dienstzeile(
+                    "DIENST_ERFUNDEN_A", "HEARTBEAT", LocalDateTime.parse("2026-07-13T15:01:44"))));
+
+    DienstResponse dienst = antwort().plattform().dienste().getFirst();
+
+    assertThat(dienst.stand()).as("Der Zeitpunkt selbst wird geliefert").isNotNull();
+    assertThat(dienst.alterSekunden())
+        .as("\u201emeldet sich seit minus drei Wochen\u201c ist schlechter als keine Angabe")
+        .isNull();
+  }
+
+  @Test
+  @DisplayName("Ist die Pruefung abgeschaltet, sagt die Kachel das mit Grund")
+  void ablagenkachel_ist_abgeschaltet() {
+    bestandMit(List.of(), List.of());
+
+    AblagenResponse ablagen = antwort().plattform().ablagen();
+
+    assertThat(ablagen.zustand()).isEqualTo(Ablagenzustand.UNGEKLAERT);
+    assertThat(ablagen.grund()).isEqualTo(Ablagengrund.ABGESCHALTET);
+    assertThat(ablagen.ziele()).isEmpty();
+    assertThat(ablagen.geprueftAm()).isNull();
+  }
+
+  @Test
+  @DisplayName("Der Block steht auch dann da, wenn es keinen Dienst mit Zeitgrenze gibt")
+  void plattform_steht_immer() {
+    bestandMit(List.of(), List.of());
+
+    assertThat(antwort().plattform()).isNotNull();
+    assertThat(antwort().plattform().dienste()).isEmpty();
+    assertThat(antwort().plattform().ablagen())
+        .as(
+            "Eine fehlende Kachel waere Abwesenheit, und die sieht aus wie \u201enichts zu melden\u201c")
+        .isNotNull();
   }
 }

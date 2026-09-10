@@ -90,6 +90,44 @@ class PaketstrukturTest {
   private static final String ROLLUP_PAKET = BASIS + ".rollup";
 
   /**
+   * <b>Die dritte benannte Ausnahme von Regel M2</b> (Schritt 10d Teil A, Entscheidung E‑123).
+   *
+   * <p><b>{@code Service} kennt keinen Mandanten.</b> Die Tabelle traegt die Dienste der Plattform
+   * — 20 Zeilen, davon elf Ablagen (M52) —, und keine ihrer Spalten verweist auf einen Mandanten,
+   * ein Projekt oder einen Prozess. Es gibt nichts zu filtern, und ein {@code MandantContext}, der
+   * entgegengenommen und im Statement nicht verwendet wird, waere ein <b>Schein-Kontext</b>: von
+   * aussen sieht er aus wie Mandantentrennung und leistet nichts. Genau das soll Regel M2
+   * verhindern.
+   *
+   * <p><b>Der Block, den diese Klasse liefert, ist fuer jeden Mandanten identisch</b>, und das ist
+   * keine Luecke, sondern sein Gegenstand: Er sagt nichts ueber Belege, sondern ueber die Anlage,
+   * auf der sie laufen. {@code DashboardIsolationDbIT} haelt die Gleichheit fest.
+   *
+   * <p><b>Namentlich und nicht als Paketfreibrief</b>, wie bei {@link #ROLLUP_AUSNAHME}: Eine
+   * zweite Klasse in {@code dashboard}, die {@code jooq.glassfish} ohne Mandanten anfasst, faellt
+   * <b>nicht</b> von selbst darunter. Zwei weitere Tests halten sie eng — {@link
+   * #dienst_ausnahme_ist_namentlich_und_eng} und {@link
+   * #dienst_liest_nur_service_und_schreibt_nicht}.
+   *
+   * <p>Vollstaendig gefuehrt in {@code docs/mandantentrennung.md} §4 und {@code docs/dienste.md}.
+   * <b>Taucht hier jemals eine vierte auf, ist das ein Signal und keine Kleinigkeit.</b>
+   */
+  private static final List<String> DIENST_AUSNAHME = List.of("DienstLeseRepository");
+
+  /** Das Paket, in dem {@link #DIENST_AUSNAHME} allein gilt. */
+  private static final String DIENST_PAKET = BASIS + ".dashboard";
+
+  /**
+   * Die einzigen Typen aus {@code jooq.glassfish}, die {@link #DIENST_AUSNAHME} anfassen darf.
+   *
+   * <p>{@code Tables} ist der Einstiegspunkt, {@code Service} die Tabelle, {@code ServiceRecord}
+   * ihr Satztyp. <b>Alles andere waere eine zweite Tabelle ohne Mandantenfilter</b> — und die
+   * Ausnahme gilt nur, weil <i>diese eine</i> Tabelle keinen Mandanten kennt.
+   */
+  private static final List<String> DIENST_ERLAUBTE_TYPEN =
+      List.of("Tables", "Service", "ServiceRecord");
+
+  /**
    * Die schreibenden Einstiegspunkte von {@code DSLContext}.
    *
    * <p>Sie stehen namentlich, weil ArchUnit nicht sehen kann, <b>welcher</b> {@code DSLContext} an
@@ -466,7 +504,7 @@ class PaketstrukturTest {
    * Regel M2, maschinell: Wer das Quellschema anfasst, bekommt den Mandanten als <b>ersten</b>
    * Parameter. Nicht als zweiten, nicht optional, nicht in einer Ueberladung daneben.
    *
-   * <p>Es gibt <b>zwei</b> zulaessige Abweichungen, und beide sind namentlich gefuehrt:
+   * <p>Es gibt <b>drei</b> zulaessige Abweichungen, und alle drei sind namentlich gefuehrt:
    *
    * <ol>
    *   <li>{@link OhneMandantenkontext} — fuer die Methoden, die den Kontext erst herstellen. Der
@@ -475,6 +513,9 @@ class PaketstrukturTest {
    *   <li>{@link #ROLLUP_AUSNAHME} — fuer die Klasse, die ueber alle Mandanten aggregiert. Der Test
    *       {@link #rollup_ausnahme_ist_namentlich_und_eng} haelt fest, dass sie eng bleibt und nicht
    *       ins Leere laeuft.
+   *   <li>{@link #DIENST_AUSNAHME} — fuer die eine Klasse, die {@code Service} liest. Die Tabelle
+   *       kennt keinen Mandanten; {@link #dienst_ausnahme_ist_namentlich_und_eng} und {@link
+   *       #dienst_liest_nur_service_und_schreibt_nicht} halten die Ausnahme eng.
    * </ol>
    */
   @Test
@@ -482,7 +523,7 @@ class PaketstrukturTest {
   void mandantcontext_ist_erster_parameter() {
     List<String> verstoesse = new ArrayList<>();
     for (JavaClass klasse : klassenMitGlassfishZugriff()) {
-      if (istRollupAusnahme(klasse)) {
+      if (istRollupAusnahme(klasse) || istDienstAusnahme(klasse)) {
         continue;
       }
       for (JavaMethod methode : klasse.getMethods()) {
@@ -503,8 +544,9 @@ class PaketstrukturTest {
             "Diese oeffentlichen Methoden fassen jooq.glassfish an, ohne MandantContext als ersten"
                 + " Parameter zu verlangen. Entweder fehlt der Parameter — oder die Methode stellt"
                 + " den Kontext erst her und braucht @OhneMandantenkontext mit Begruendung — oder"
-                + " sie aggregiert bewusst ueber alle Mandanten und gehoert namentlich in"
-                + " ROLLUP_AUSNAHME. Kein Schein-Kontext, keine dritte Umgehung.")
+                + " sie liest bewusst mandantenfreie Stammdaten und gehoert namentlich in"
+                + " ROLLUP_AUSNAHME oder DIENST_AUSNAHME. Kein Schein-Kontext, keine vierte"
+                + " Umgehung.")
         .isEmpty();
   }
 
@@ -604,6 +646,98 @@ class PaketstrukturTest {
   private static boolean istRollupAusnahme(JavaClass klasse) {
     return klasse.getPackageName().equals(ROLLUP_PAKET)
         && ROLLUP_AUSNAHME.contains(klasse.getSimpleName());
+  }
+
+  /** Dasselbe fuer die dritte Ausnahme: die eine Klasse, die {@code Service} liest. */
+  private static boolean istDienstAusnahme(JavaClass klasse) {
+    return klasse.getPackageName().equals(DIENST_PAKET)
+        && DIENST_AUSNAHME.contains(klasse.getSimpleName());
+  }
+
+  /**
+   * Die Dienst-Ausnahme, von beiden Seiten festgenagelt — wie die Rollup-Ausnahme: <b>nicht
+   * leer</b>, <b>nicht breiter</b> als die Liste, die sie benennt, und <b>ehrlich</b>.
+   */
+  @Test
+  @DisplayName("Die Dienst-Ausnahme von Regel M2 ist namentlich, eng und nicht leer")
+  void dienst_ausnahme_ist_namentlich_und_eng() {
+    List<String> ausgenommen =
+        klassenMitGlassfishZugriff().stream()
+            .filter(PaketstrukturTest::istDienstAusnahme)
+            .map(JavaClass::getSimpleName)
+            .toList();
+
+    assertThat(ausgenommen)
+        .as(
+            "Die Ausnahme nennt %s. Ist die Klasse verschwunden oder umbenannt, prueft die Ausnahme"
+                + " nichts mehr und gehoert aus PaketstrukturTest, docs/mandantentrennung.md §4 und"
+                + " docs/dienste.md entfernt — nicht stehengelassen.",
+            DIENST_AUSNAHME)
+        .containsExactlyInAnyOrderElementsOf(DIENST_AUSNAHME);
+
+    for (JavaClass klasse : klassenMitGlassfishZugriff()) {
+      if (!istDienstAusnahme(klasse)) {
+        continue;
+      }
+      for (JavaMethod methode : klasse.getMethods()) {
+        assertThat(methode.getRawParameterTypes())
+            .as(
+                "%s.%s nimmt einen MandantContext entgegen, obwohl die Klasse von Regel M2"
+                    + " ausgenommen ist. Entweder gilt die Regel — dann gehoert die Klasse aus der"
+                    + " Ausnahme —, oder sie gilt nicht, dann ist der Parameter ein Schein-Kontext.",
+                klasse.getSimpleName(), methode.getName())
+            .noneMatch(parameter -> parameter.isEquivalentTo(MandantContext.class));
+      }
+    }
+  }
+
+  /**
+   * <b>Die Ausnahme gilt fuer eine Tabelle und nicht fuer ein Paket.</b>
+   *
+   * <p>Sie beruht darauf, dass {@code Service} keinen Mandanten kennt. Faengt dieselbe Klasse an,
+   * {@code Message} oder {@code Process} zu lesen, ist die Begruendung weg — und die Regel gaelte
+   * wieder, ohne dass ein Test es merkte. Deshalb wird hier die <b>Menge der angefassten
+   * Quelltypen</b> geprueft und nicht nur der Klassenname.
+   *
+   * <p>Dazu die zweite Haelfte: <b>Sie schreibt nicht.</b> Dieselbe Bauform wie {@link
+   * #rollup_schreibt_nicht_auf_glassfish} — die drei Schichten des Schreibschutzes fangen den Fall
+   * zur Laufzeit, dieser Test faengt ihn vorher.
+   */
+  @Test
+  @DisplayName("Die Dienst-Ausnahme fasst ausschliesslich Service an und schreibt nicht")
+  void dienst_liest_nur_service_und_schreibt_nicht() {
+    List<JavaClass> geprueft =
+        klassenMitGlassfishZugriff().stream().filter(PaketstrukturTest::istDienstAusnahme).toList();
+
+    assertThat(geprueft).as("Ohne die ausgenommene Klasse prueft diese Regel nichts").isNotEmpty();
+
+    List<String> fremdeTypen = new ArrayList<>();
+    List<String> schreibzugriffe = new ArrayList<>();
+    for (JavaClass klasse : geprueft) {
+      klasse.getDirectDependenciesFromSelf().stream()
+          .map(abhaengigkeit -> abhaengigkeit.getTargetClass())
+          .filter(ziel -> ziel.getPackageName().startsWith(BASIS + ".jooq.glassfish"))
+          .map(JavaClass::getSimpleName)
+          .filter(name -> !DIENST_ERLAUBTE_TYPEN.contains(name))
+          .forEach(name -> fremdeTypen.add(klasse.getSimpleName() + " -> " + name));
+      klasse.getMethodCallsFromSelf().stream()
+          .filter(aufruf -> aufruf.getTargetOwner().isAssignableTo(DSLContext.class))
+          .filter(aufruf -> JOOQ_SCHREIBEND.contains(aufruf.getName()))
+          .forEach(
+              aufruf ->
+                  schreibzugriffe.add(
+                      klasse.getSimpleName() + " -> DSLContext." + aufruf.getName()));
+    }
+
+    assertThat(fremdeTypen)
+        .as(
+            "Die Ausnahme von Regel M2 beruht darauf, dass Service keinen Mandanten kennt. Wer hier"
+                + " eine zweite Quelltabelle anfasst, hebt die Begruendung auf — und braucht dann"
+                + " den MandantContext.")
+        .isEmpty();
+    assertThat(schreibzugriffe)
+        .as("Auf GlassfishDB wird nicht geschrieben — unter keinen Umstaenden (Regel S1)")
+        .isEmpty();
   }
 
   @Test

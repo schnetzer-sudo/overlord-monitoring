@@ -607,7 +607,7 @@ Fünf, alle vorsätzlich und alle hier statt in einer Fußnote.
 > | `RohdatenEigenschaften` | **bleibt in `payload`** | unverändert in Feldern und Schlüsseln; die Vorgabe für `maximalgroesse-bytes` kommt jetzt aus `Ablagegrenzen.VORGABE_MAXIMALGROESSE_BYTES` |
 >
 > **Der Grund ist ein zweiter Verbraucher und keine Umgestaltung.** Die Ablagenkachel des
-> Dashboards prüft die Erreichbarkeit über **denselben Abrufweg** ([`dienste.md`](dienste.md) §4).
+> Dashboards prüft die Erreichbarkeit über **denselben Abrufweg** ([`dienste.md`](dienste.md) §7).
 > Zwei Fachpakete dürfen einander nicht kennen — [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md)
 > §6: *„Fachpakete kennen einander nicht. Gemeinsames liegt in `common`, nicht in einem
 > Nachbarmodul."* Ein `import …payload.Ablagezugriff` in `dashboard` wäre genau der verbotene Fall,

@@ -17,6 +17,17 @@ Stand: 24.08.2026 · Ergänzt `PROJEKTBESCHREIBUNG.md`
 
 | 9 — Administration | **geschnitten in 9a und 9b** (20.08.2026); **9a Teil Backend gebaut und dokumentiert** (21.08.2026) — `V7__benutzerverwaltung.sql` (`download_allowed` fällt, `locked_by_admin` kommt), Sitzungsentzug in **Bauform A**, sechs Endpunkte unter `/api/admin/users`, sieben neue Ereignisarten, 48 Testfälle. [`benutzerverwaltung.md`](benutzerverwaltung.md) (Festlegung), [`benutzerverwaltung-backend.md`](benutzerverwaltung-backend.md) (Bau), Messungen **M81** und **M82** in [`messungen-schritt9.md`](messungen-schritt9.md). **Nicht als erledigt geführt:** die Oberfläche zu 9a fehlt. Dazu **9b Teil Backend gebaut und dokumentiert** (20.08.2026) — `V6__process_catalog.sql`, Heuristik, fünf Endpunkte unter `/api/katalog`, 64 Testfälle. [`prozess-katalog.md`](prozess-katalog.md) (Festlegung), [`prozess-katalog-backend.md`](prozess-katalog-backend.md) (Bau), Messung **M80** in [`messungen-schritt9.md`](messungen-schritt9.md). **Nicht als erledigt geführt:** die Oberfläche zu 9b fehlt, und eine Sichtprüfung im Browser ist ohne Oberfläche nicht möglich. *(Der Zusatz „9a ist unangetastet" ist am 21.08.2026 entfallen — 9a ist seither im Backend gebaut.)* **Nachtrag 24.08.2026: beide Oberflächen sind gebaut und dokumentiert** — 9b in [`prozess-katalog-frontend.md`](prozess-katalog-frontend.md), 9a in [`benutzerverwaltung-frontend.md`](benutzerverwaltung-frontend.md), dazu die Backend-Änderung zu E20 (`lockedUntil`). Damit ist **Schritt 9 vollständig gebaut**. **Als erledigt geführt wird er trotzdem nicht**, und zwar aus zwei Gründen, die beide in [`README.md`](README.md) unter „Offene Sichtprüfungen" stehen: Bei 9b fehlt das schmale Fenster. **Die Oberfläche zu 9a ist in zwei Runden geprüft** (24. und 26.08.2026, das zweite Mal mit einem eigens angelegten Wegwerfkonto): alle fünf Vorgänge ausgeführt, `lockedUntil` und „nie angemeldet" gesehen, `409 selbstschutz` am eigenen Konto, die klebende Kopfzeile über 44 Zeilen. **Offen bleiben dort zwei Dinge**: das schmale Fenster und der Zustand „kein Zugriff", der eine Anmeldung als `MANDANT` braucht. Der Maßstab bleibt der von Schritt 8 — gebaut und dokumentiert ist nicht erledigt, solange niemand hingesehen hat |
 
+| 10 — Durchstich: Rollup, Process View und Dashboard | **geteilt in 10a, 10b, 10c und 10d** (10d am 10.09.2026 hinzugekommen); die Teile und ihre Stände stehen in der Tabelle bei Schritt 10. **Erledigt ist keiner der vier geführt**, und zwar nach demselben Maßstab wie bei den Schritten 8 und 9: gebaut und dokumentiert ist nicht erledigt, solange niemand hingesehen hat. **10a** fertig am 26.08.2026 ([`rollup.md`](rollup.md)), **10b** fertig am 03.09.2026 in fünf Teilen ([`dashboard.md`](dashboard.md), [`dashboard-frontend.md`](dashboard-frontend.md)), **10c** gebaut in 10c‑1, 10c‑2 und 10c‑4b ([`process-view.md`](process-view.md); die Zeile *„offen"* in der Teilungstabelle ist seither überholt und dort nicht nachgezogen), **10d Teil A** fertig am 10.09.2026 ([`dienste.md`](dienste.md)) — **Teil B, die Oberfläche dazu, ist offen** |
+
+**Nachtrag 10.09.2026 zum Kopf.** Die Zeile zu **Schritt 10** ist ergänzt, und der Anlass ist
+derselbe wie 2026 schon zweimal: Die Tabelle führte die Schritte 1 bis 9 und **Schritt 10 gar
+nicht** — kein „offen", kein „erledigt", keine Zeile —, während darunter vier Teile davon gebaut
+sind. Das ist die Form, die am schwersten auffällt, und sie ist in der Korrektur vom 19.08.2026
+unten für Schritt 7 und 8 wörtlich beschrieben. **Die Zeile nennt die Stände der Teile und nicht
+einen für den ganzen Schritt**; der Stand je Teil steht in der Teilungstabelle bei Schritt 10 und in
+den Feature-Dateien. **Ausdrücklich nicht entschieden** ist hier, ob 10c als erledigt gilt — seine
+Teilungstabelle sagt weiterhin „offen", und das ist eine eigene Runde.
+
 **Nachtrag 20.08.2026 zum Kopf.** Die Zeile zu Schritt 9 ist ergänzt, weil dieselbe Stummheit
 drohte, die die Korrektur vom 19.08.2026 unten beschreibt: Schritt 9b ist zur Hälfte gebaut, und
 ohne Zeile stünde in dieser Tabelle nichts davon. Der Maßstab bleibt der von Schritt 8 — gebaut und
@@ -1037,6 +1048,28 @@ nicht; der Weg „neues Konto meldet sich an und ändert sein Passwort" gehört 
 > | **10a** | Rollup: `message_rollup`, `rollup_lauf`, Delta- und Volllauf, kein Endpunkt | **fertig am 26.08.2026** ([`rollup.md`](rollup.md)) |
 > | **10b** | Dashboard: Leseabfrage, Kacheln, Verlaufsdiagramm, Verteilungen | **fertig am 03.09.2026** — 10b‑1 bis 10b‑5, siehe darunter |
 > | **10c** | Process View, gruppiert nach kuratiertem Partner | offen |
+> | **10d** | **Dienste und Ablagen auf dem Dashboard** — geteilt in **Teil A** (Backend) und **Teil B** (Oberfläche) | **Teil A fertig am 10.09.2026** ([`dienste.md`](dienste.md)); **Teil B offen** |
+>
+> **10d ist am 10.09.2026 hinzugekommen, und es ist keine Nachbesserung an 10b.** Es ist der einzige
+> Teil des Durchstichs, der **nicht** am Bestand eines Mandanten hängt: ein plattformweiter Block mit
+> je einer Lampe für jeden Dienst mit `ServiceTimeout > 0` und **einer** Kachel für die Ablagen.
+> Damit ist in [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §9 die Zeile *„Service- und
+> Heartbeat-Überwachung — Betriebssicht, nicht Kundensicht"* aufgehoben und ein Teil von
+> **Ausbaustufe 3** (§10) vorgezogen; beide Stellen tragen einen datierten Korrekturblock.
+>
+> | Teil A, in drei Schritten | Inhalt |
+> |---|---|
+> | **Teil 1** | Der Abrufweg wandert nach `common` — `Ablagezugriff`, `SaajAblagezugriff`, `Abrufergebnis`, dazu `Abrufzustand` und `Ablagegrenzen`. **Verhaltensgleich**, die sechs Rohdaten-Testklassen inhaltlich unverändert grün |
+> | **Teil 2** | **M174**: Was eine Ablage auf die Null-UUID antwortet. Die Einordnung des Rohdatenabrufs trägt die Frage — und zwei Zeilen der Deutungstabelle sind gemeldet, nicht aufgelöst |
+> | **Teil 3** | Der Block `plattform` im Dashboard: `DienstLeseRepository`, `DienstStatusClassifier`, die zeitgesteuerte `Ablagenpruefung`, die Kachel. **M175** misst die beiden Statements |
+>
+> **Was Teil A hinterlässt:** zehn Entscheidungen (**E‑116** bis **E‑125**), zwei Messungen (**M174**,
+> **M175**), fünf offene Punkte (**163** bis **167**), die **dritte benannte Ausnahme von Regel M2**
+> — und **keine Migration**. Höchste Flyway-Version bleibt `V12`.
+>
+> **Teil B ist ausdrücklich nicht gebaut:** keine Oberfläche, keine Sprachschlüssel, keine
+> Farbzuordnung. Die Farbrollen sind bestehende und werden dort als **zweite Anwendung** in
+> [`visuelles-konzept.md`](visuelles-konzept.md) §3 dokumentiert (E‑121).
 >
 > **Und fünf Angaben des Abschnitts oben sind inhaltlich überholt.** Sie bleiben stehen; hier steht,
 > was gilt.
@@ -1157,7 +1190,8 @@ nicht; der Weg „neues Konto meldet sich an und ändert sein Passwort" gehört 
 **Abnahme:** Das Dashboard lädt in unter 500 Millisekunden. Die Zahlen stimmen stichprobenartig
 mit einer direkten Abfrage überein. Ein Klick auf eine Fehlerkachel führt in die gefilterte Liste.
 
-**Dokumentation:** `docs/rollup.md`, `docs/dashboard.md`, `docs/process-view.md`
+**Dokumentation:** `docs/rollup.md`, `docs/dashboard.md`, `docs/process-view.md` — *seit dem
+10.09.2026 dazu* `docs/dienste.md` *(10d Teil A)*
 
 ---
 

@@ -7,7 +7,6 @@ import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
 import de.kraftwerkone.overlord.monitor.common.Zeitpunkte;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.time.Clock;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -16,6 +15,7 @@ import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import org.springframework.stereotype.Service;
 
@@ -46,14 +46,32 @@ public class DashboardService {
   private final DashboardRepository dashboardRepository;
   private final MessageStatusClassifier statusClassifier;
   private final Clock anwendungsuhr;
+  private final DienstLeseRepository dienstLeseRepository;
+  private final DienstStatusClassifier dienstClassifier;
+
+  /**
+   * Die Ablagenpruefung — <b>und sie ist leer, wenn sie abgeschaltet ist</b>.
+   *
+   * <p>{@code overlord.ablagenpruefung.aktiv} entscheidet, ob es die Bean ueberhaupt gibt (dieselbe
+   * Bauform wie {@code rollup/RollupPlaner}). Ein {@link Optional} im Konstruktor ist damit kein
+   * Vorbehalt gegen eine vielleicht fehlende Abhaengigkeit, sondern der <b>Zustand selbst</b>: leer
+   * heisst abgeschaltet, und die Kachel sagt das mit benanntem Grund.
+   */
+  private final Optional<Ablagenpruefung> ablagenpruefung;
 
   DashboardService(
       DashboardRepository dashboardRepository,
       MessageStatusClassifier statusClassifier,
-      Clock anwendungsuhr) {
+      Clock anwendungsuhr,
+      DienstLeseRepository dienstLeseRepository,
+      DienstStatusClassifier dienstClassifier,
+      Optional<Ablagenpruefung> ablagenpruefung) {
     this.dashboardRepository = dashboardRepository;
     this.statusClassifier = statusClassifier;
     this.anwendungsuhr = anwendungsuhr;
+    this.dienstLeseRepository = dienstLeseRepository;
+    this.dienstClassifier = dienstClassifier;
+    this.ablagenpruefung = ablagenpruefung;
   }
 
   /**
@@ -132,7 +150,48 @@ public class DashboardService {
         kacheln,
         verteilung(verteilt, sicht),
         zuletztAufgefallen(aufgefallen),
-        stand());
+        stand(),
+        plattform(jetzt));
+  }
+
+  /**
+   * <b>Block 8 — der plattformweite Teil</b> (Schritt 10d, E‑116).
+   *
+   * <p>Er haengt an keinem Mandanten und kostet trotzdem nur <b>ein</b> Statement: die Lampen. Die
+   * Ablagenkachel kommt aus dem Speicher — <b>die Pruefung liegt ausserhalb der Anfrage</b>
+   * (E‑120), denn ein Abruf gegen eine abgeschaltete Ablage dauert allein rund 2,7 Sekunden (M174)
+   * und das Budget der Seite liegt bei 500 ms.
+   *
+   * <p><b>Er steht im selben Aufruf und wird nicht nachgeladen</b> — dieselbe Begruendung wie fuer
+   * die uebrigen sieben Bloecke.
+   */
+  private PlattformResponse plattform(LocalDateTime jetzt) {
+    List<DienstResponse> dienste =
+        dienstLeseRepository.dienste().stream()
+            .map(
+                zeile ->
+                    new DienstResponse(
+                        zeile.serviceId(),
+                        dienstClassifier.einordnung(zeile.rohwert()),
+                        zeile.rohwert(),
+                        zeile.stand() == null
+                            ? null
+                            : Zeitpunkte.nachUtc(zeile.stand(), anwendungsuhr.getZone()),
+                        Alter.sekunden(zeile.stand(), jetzt)))
+            .toList();
+
+    AblagenResponse ablagen =
+        ablagenpruefung
+            .map(
+                pruefung ->
+                    Ablagenkachel.aus(
+                        pruefung.letzterStand().orElse(null),
+                        pruefung.takt(),
+                        jetzt,
+                        anwendungsuhr.getZone()))
+            .orElseGet(Ablagenkachel::abgeschaltet);
+
+    return new PlattformResponse(dienste, ablagen);
   }
 
   /**
@@ -332,13 +391,15 @@ public class DashboardService {
         .orElseGet(OffeneKachelResponse::nichtErmittelbar);
   }
 
-  /** Der Abstand in ganzen Sekunden, {@code null} bei fehlendem Wert und bei negativem Abstand. */
+  /**
+   * Der Abstand in ganzen Sekunden, {@code null} bei fehlendem Wert und bei negativem Abstand.
+   *
+   * <p>Die Rechnung steht seit Schritt 10d in {@link Alter} — dieselbe Regel traegt jetzt auch das
+   * Alter der Dienstlampen und des Pruefzeitpunkts der Ablagenkachel. <b>Vier Stellen waeren vier
+   * Gelegenheiten, sie unterschiedlich zu machen.</b>
+   */
   private static Long alterSekunden(LocalDateTime aelteste, LocalDateTime jetzt) {
-    if (aelteste == null) {
-      return null;
-    }
-    long sekunden = Duration.between(aelteste, jetzt).toSeconds();
-    return sekunden < 0 ? null : sekunden;
+    return Alter.sekunden(aelteste, jetzt);
   }
 
   private KachelnResponse kacheln(

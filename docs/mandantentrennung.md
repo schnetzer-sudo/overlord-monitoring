@@ -160,11 +160,25 @@ Jeder Wechsel geht ins `audit_log` (`MANDANT_GEWECHSELT`), mit altem und neuem M
 4. **`rollup_schreibt_nicht_auf_glassfish`** *(seit 26.08.2026)* — die Trennung, auf der die zweite
    Ausnahme beruht, hält: Keine Klasse in `rollup`, die `jooq.glassfish` anfasst, ruft eine
    schreibende jOOQ-Methode auf.
+5. **`dienst_ausnahme_ist_namentlich_und_eng`** *(seit 10.09.2026, Schritt 10d Teil A)* — dasselbe
+   für die dritte Ausnahme: nicht leer, nicht breiter als ihre Liste, und ohne Schein-Kontext.
+6. **`dienst_liest_nur_service_und_schreibt_nicht`** *(seit 10.09.2026)* — die dritte Ausnahme gilt
+   für **eine Tabelle** und nicht für ein Paket: Geprüft wird die Menge der angefassten
+   `jooq.glassfish`-Typen und dass keine schreibende jOOQ-Methode gerufen wird.
 
 **Es gibt genau zwei Ausnahmen von Regel M2, und beide sind namentlich geführt.** Sie sind etwas
 anderes als die drei Endpunkt-Ausnahmen in §3: Dort geht es um Regel **M1** (kein Endpunkt nimmt
 eine Mandanten-ID entgegen), hier um Regel **M2** (jede Repository-Methode trägt den Mandanten).
 **Taucht hier jemals eine dritte auf, ist das ein Signal und keine Kleinigkeit.**
+
+> ### ⚠️ Sie ist am 10.09.2026 aufgetaucht — **es sind drei**
+>
+> **Der Absatz oben bleibt Zeichen für Zeichen stehen**, samt seinem Satz über die dritte. Er ist
+> eingetreten, und er ist als Signal behandelt worden: Die dritte Ausnahme ist im Sparring zu
+> Schritt 10d ausdrücklich entschieden worden (**E‑123** in [`dienste.md`](dienste.md)), nicht
+> nebenbei gebaut.
+>
+> **Der Satz gilt unverändert weiter — für eine vierte.**
 
 ### Die erste Ausnahme: `@OhneMandantenkontext`
 
@@ -208,6 +222,34 @@ Mandantentrennung entsteht in 10b beim Join — **unverändert im Statement, nic
 `RollupSchreibRepository` ausschließlich `monitorDsl`. Der Katalog hält beide in einer Klasse und
 darf das — hier ginge es nicht, denn dann fiele auch der Schreibpfad unter die Ausnahme. Punkt 4
 der Liste oben hält diese Trennung maschinell fest.
+
+### Die dritte Ausnahme: `DienstLeseRepository`
+
+*Gesetzt am 10.09.2026 mit Schritt 10d Teil A. Vollständig begründet in
+[`dienste.md`](dienste.md) §10.*
+
+| | |
+|---|---|
+| **Wer** | genau eine Klasse: `dashboard/DienstLeseRepository` |
+| **Was sie tut** | liest `GlassfishDB.Service` — `dienste()` (die Dienste mit `ServiceTimeout > 0`) und `pruefziele()` (die verschiedenen, nicht leeren Werte von `ServiceDefaultFileStore` samt aufgelöster Zeile) |
+| **Warum zulässig** | **`Service` kennt keinen Mandanten.** 20 Zeilen Stammdaten, davon elf Ablagen (M52); keine Spalte verweist auf einen Mandanten, ein Projekt oder einen Prozess. **Es gibt nichts zu filtern** |
+| **Warum kein Schein-Kontext** | Ein `MandantContext`, der entgegengenommen und im Statement nicht verwendet wird, sähe von außen wie Mandantentrennung aus und leistete nichts — genau das soll die Regel verhindern. Dieselbe Begründung wie bei der zweiten Ausnahme |
+| **Wie sie technisch steht** | als **namentliche Liste** in `PaketstrukturTest` (`DIENST_AUSNAHME`), nicht als Paketfilter. Eine zweite Klasse in `dashboard`, die `jooq.glassfish` ohne Mandanten anfasst, fällt **nicht** von selbst darunter |
+
+**Was die Ausnahme nicht aufweicht.** Der Block, den diese Klasse trägt, ist für **jeden Mandanten
+identisch** — und das ist nicht das Zugeständnis, sondern der Gegenstand: Er beschreibt die Anlage
+und keinen Datenausschnitt. `DashboardIsolationDbIT` weist deshalb die **Gleichheit** nach, nicht
+die Verschiedenheit; für die übrigen sieben Blöcke derselben Antwort gilt unverändert das Gegenteil.
+
+**Und was sie kostet: eine zweite maschinelle Grenze.** Die Begründung hängt an **einer Tabelle**,
+nicht am Paket. `dienst_liest_nur_service_und_schreibt_nicht` prüft deshalb die Menge der
+angefassten `jooq.glassfish`-Typen — `Tables`, `Service`, `ServiceRecord`. Fängt dieselbe Klasse an,
+`Message` oder `Process` zu lesen, ist die Begründung weg, und der Test wird rot, bevor jemand es
+bemerkt hätte.
+
+> **Zur Zählung.** Dies ist die **dritte** Ausnahme von Regel **M2**, nicht die dritte des Projekts:
+> §3 führt seit dem 20.08.2026 **drei** Endpunkt-Ausnahmen von Regel **M1**, und das ist eine andere
+> Regel. Dieselbe Verwechslung ist im Auftrag zu Schritt 10a schon einmal passiert.
 
 > **Zur Zählung, weil sie in Aufträgen bereits falsch zitiert worden ist.** Der Auftrag zu Schritt
 > 10a nennt diese Ausnahme „die dritte benannte Ausnahme des Projekts … wie die beiden
@@ -438,7 +480,7 @@ Sortierungsfehler.
 | Regel | Wo umgesetzt |
 |---|---|
 | **M1** Kein Endpunkt nimmt eine Mandanten-ID entgegen | §3, drei benannte Ausnahmen |
-| **M2** Mandant als erster Pflichtparameter | §4, ArchUnit — **zwei** benannte Ausnahmen: `@OhneMandantenkontext` und `RollupLeseRepository` |
+| **M2** Mandant als erster Pflichtparameter | §4, ArchUnit — **drei** benannte Ausnahmen: `@OhneMandantenkontext`, `RollupLeseRepository` und `DienstLeseRepository` *(seit 10.09.2026)* |
 | **M3** Filter im Statement, nicht nachgelagert | ab Schritt 4; hier über die zulässige Menge in `MandantService` |
 | **M4** Isolationstest je Endpunkt | §5 |
 | **M5** Trennung gilt auch quer | ab Schritt 4 (Verkettung, Suche, Download). **Beim Rollup anders:** `message_rollup` traegt keinen Mandanten (E-a), die Trennung entsteht erst in 10b im Join — [`rollup.md`](rollup.md) §11 |

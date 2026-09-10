@@ -72,9 +72,21 @@ Katalog etwa, weil er `ADMIN` verlangt.
   "zuletztAufgefallen": [ { "messageId": "…", "zeitpunkt": "…Z", "status": "ERROR_TIMEOUT",
                             "statusKind": "FEHLER", "kategorie": "FEHLER",
                             "processId": "…", "sosName": "…" } ],
-  "stand": { "beendetAm": "…Z", "art": "VOLL" }
+  "stand": { "beendetAm": "…Z", "art": "VOLL" },
+  "plattform": {                           // Block 8, seit 10d — fuer jeden Mandanten gleich
+    "dienste": [ { "serviceId": "…", "zustand": "ZEITUEBERSCHRITTEN",
+                   "rohwert": "ERROR_TIMEOUT", "stand": "…Z", "alterSekunden": 6 } ],
+    "ablagen": { "zustand": "ERREICHBAR", "grund": null,
+                 "ziele": [ { "serviceId": "…", "zustand": "ERREICHBAR" } ],
+                 "geprueftAm": "…Z", "alterSekunden": 0 }
+  }
 }
 ```
+
+> **Der Block `plattform` ist am 10.09.2026 hinzugekommen** (Schritt 10d Teil A, E‑116). Er trägt je
+> eine Lampe für jeden Dienst mit `ServiceTimeout > 0` und **eine** Kachel für die Ablagen;
+> vollständig in [`dienste.md`](dienste.md). `alterSekunden` rechnet dort wie überall gegen die
+> Anwendungsuhr und ist `null`, wenn der Zeitpunkt nach `jetzt` liegt (E‑75).
 
 ---
 
@@ -95,6 +107,27 @@ Katalog etwa, weil er `ADMIN` verlangt.
 | 5 | **Verteilung** — Partner oder Richtung | Rollup-Ebene × Mandantenkette × `process_catalog` | 1 |
 | 6 | **Zuletzt aufgefallen** | `Message`, nur noch die Fehlerbedingung (§7a) | 1 |
 | 7 | **Stand** — Zeitpunkt und Laufart | `rollup_lauf` | 1 |
+| 8 | **Plattform** — die Dienstlampen und die Ablagenkachel | `Service`; die Kachel aus dem Speicher | 1 |
+
+> ### ⚠️ Korrektur vom 10.09.2026 — es sind **neun** Blöcke und **acht** Statements
+>
+> **Die Überschrift oben bleibt Zeichen für Zeichen stehen** („Die Blöcke — acht, und weiterhin
+> sieben Statements"), damit ablesbar bleibt, wie die Seite bis Schritt 10c geschnitten war. Was gilt:
+> Mit Schritt 10d Teil A kommt **Block 8** hinzu — der plattformweite Teil
+> ([`dienste.md`](dienste.md)) —, und er kostet **ein** Statement. Neun Blöcke, wenn man 4a mitzählt
+> wie die Überschrift es tut; acht Statements.
+>
+> **Er ist der einzige Block, der für jeden Mandanten identisch ist.** Er sagt nichts über Belege,
+> sondern über die Anlage, auf der sie laufen — und das ist keine Lücke in der Mandantentrennung,
+> sondern sein Gegenstand. `DashboardIsolationDbIT` hält die **Gleichheit** fest, nicht die
+> Verschiedenheit.
+>
+> **Die Ablagenkachel kostet kein Statement der Seite**, und das ist der Punkt: Ihr Zustand stammt
+> aus einer echten Erreichbarkeitsprüfung, die **im Hintergrund** läuft (`fixedDelay`, Vorgabe 60 s).
+> Ein Abruf gegen eine abgeschaltete Ablage dauert allein rund **2,7 Sekunden** (M174) — beim Aufruf
+> gefragt, hinge die Landingpage an den Zeitgrenzen fremder Knoten statt an den eigenen.
+>
+> `DashboardStatementsTest` **benennt das achte Statement einzeln**, wie die sieben davor.
 
 ### Die Einordnung entsteht beim Lesen
 
@@ -518,6 +551,17 @@ wie jeder andere und darf durchschalten — er findet überall denselben Satz.
 
 Sieben je Seite, wenn `zeitraum` genannt ist; acht bis neun, wenn der Endpunkt selbst wählt (eine
 bis drei Belegungsproben). Alle laufen über **`glassfishDsl`**, den Lese-Pool.
+
+> **Berichtigt 10.09.2026: es sind acht je Seite.** Der Absatz oben bleibt stehen und war bis
+> Schritt 10c richtig; hinzugekommen ist das Statement der **Dienstlampen** über `Service` — ein
+> Vollzugriff über 20 Zeilen, gemessen mit **1,660 ms** (M175, [`dienste.md`](dienste.md) §11). Es
+> läuft ebenfalls über `glassfishDsl`, trägt aber als einziges **keinen Mandantenfilter**: `Service`
+> kennt keinen Mandanten, und ein Filter, der nichts filtert, sähe von außen wie Mandantentrennung
+> aus. Das ist die **dritte benannte Ausnahme von Regel M2**
+> ([`mandantentrennung.md`](mandantentrennung.md) §4).
+>
+> **Die Prüfziele** (`SELECT DISTINCT ServiceDefaultFileStore …`, 2,091 ms) sind **kein** Statement
+> der Seite: Sie werden im Takt der Ablagenprüfung gelesen und nicht in der Anfrage.
 
 **Der Lese-Kontext und nicht `monitorDsl`** — die Aufteilung ist *lesen gegen schreiben* und nicht
 *Quellschema gegen eigenes Schema*: Jede Abfrage hier joint `overlord_monitor.message_rollup*` gegen
@@ -1006,6 +1050,15 @@ Die Mandantenkette steht in **jedem** Plan als `eq_ref` über Primärschlüssel 
 | `DashboardZeitgrenzeTest` | Der Abbruch an der Zeitgrenze wird zu „nicht ermittelbar", **jeder andere Fehler nicht** — seit 10b‑4 an den Kacheln *Läuft* und *Wartend*, und mit der Gegenprobe, dass auch die **Erscheinungsbedingung** nichts abfängt |
 | `DashboardzeitraumTest` | Die Fenstergrenzen, gegen den Anker — Eimergrenzen, obere Grenze ausschließend, Kalendermonate statt 365 Tagen |
 | `MessungM108DbIT` | Die Messung. Kein Test |
+
+> **Ergänzt 10.09.2026 (Schritt 10d Teil A).** Zum Block `plattform` kommen fünf Tests hinzu, und
+> sie stehen in [`dienste.md`](dienste.md) §12: `DienstStatusClassifierTest`, `AblagenkachelTest`,
+> `AblagenpruefungTest`, `PlattformAntwortTest` und `DienstkatalogDbIT` (der Drift-Test über
+> `SELECT DISTINCT ServiceStatus`). **Vier bestehende Tests sind erweitert:**
+> `DashboardStatementsTest` benennt das achte Statement und die Gestalt beider neuen Abfragen,
+> `DashboardServiceTest` den Zusammenbau des Blocks, `DashboardIsolationDbIT` die **Gleichheit** des
+> Blocks für zwei Mandanten samt Regel G1 am Rumpf, und `PaketstrukturTest` die dritte benannte
+> Ausnahme von Regel M2.
 
 ### Die Verletzungsprobe
 

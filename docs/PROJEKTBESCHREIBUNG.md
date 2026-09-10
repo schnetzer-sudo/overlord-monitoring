@@ -392,6 +392,40 @@ Ablauf. `SOSName` ist bereits in Klartext gepflegt ("Lieferabruf von AMG (VDA)",
 IFTMIN BAYER") und wird als Anzeigename verwendet. Das Verhältnis Process zu SOS ist meist 1:1,
 gelegentlich 1:n (Varianten wie `_OUT`, `_MAIL`).
 
+**`Service`** — die Dienste und Ablagen der Plattform. **20 Zeilen** (M14, 07.08.2026; die Werte in
+M52, 14.08.2026).
+`ServiceID` varchar(36) PK · `ServiceTypeID` · `ServiceConnectString` · `ServiceName` ·
+`ServiceDescription` · `ServiceStatus` varchar(30) · `ServiceLastUpdate` timestamp ·
+`ServiceLastStatusMessage` · `ServiceTimeout` smallint · `ServiceDefaultFileStore` varchar(36)
+
+Wichtig:
+
+- **Die Tabelle kennt keinen Mandanten.** Keine Spalte verweist auf einen Mandanten, ein Projekt
+  oder einen Prozess. Darauf beruht die **dritte benannte Ausnahme von Regel M2**
+  ([`mandantentrennung.md`](mandantentrennung.md) §4).
+- **`ServiceID` ist ein lesbarer Code**, keine UUID — 20 von 20 (M52, Befund 1). Die Auflösung einer
+  Ablagenkennung aus einem Artefaktverweis ist damit ein **Primärschlüsselzugriff**.
+- **Elf der 20 Zeilen sind Filestores** (`ServiceTypeID = 1`, `FILESTOREPROD00` bis `10`), und der in
+  Abschnitt 7 als Beispiel geführte `FILESTOREPROD09` ist **einer von elf** (M52, Befund 2).
+- **`ServiceStatus` kennt drei Werte:** `HEARTBEAT`, `ERROR_TIMEOUT`, `SHUTDOWN`. Ein Drift-Test
+  bewacht die Menge (`DienstkatalogDbIT`), wie bei `MessageStatus`.
+- **`ServiceTimeout` ist bei allen elf Ablagen `0`**, bei den übrigen `600`. **Einheit und Takt
+  dieser Zeitüberwachung sind unbekannt** und werden nirgends umgerechnet (Regel Q4) —
+  [`dienste.md`](dienste.md), offener Punkt 164. Das Werkzeug zeigt nur, was der Wächter des
+  Altsystems eingetragen hat.
+- **`ServiceLastStatusMessage` trägt den letzten *gemeldeten* Text und nicht den Grund des
+  aktuellen Zustands:** Bei allen fünf Diensten mit `ERROR_TIMEOUT` steht dort weiterhin
+  „Heartbeat" (*gesehen am 10.09.2026, nicht erhoben*). Sie steht deshalb in keiner Antwort.
+- **`ServiceConnectString` enthält einen Hostnamen** und fällt unter Regel G1: keine Antwort, keine
+  Protokollzeile oberhalb von `DEBUG`, keine Dokumentationszeile.
+- **`ServiceDefaultFileStore` nennt die Ablage, gegen die die Erreichbarkeitsprüfung des Dashboards
+  läuft.** Auf der Testkopie ist dort genau **eine** Kennung eingetragen, während in jedem Fenster
+  **zwei** Ablagen gleichzeitig beschrieben werden (M53, Befund 1) — die Prüfung ist damit ein
+  Stichprobenwächter, [`dienste.md`](dienste.md), offener Punkt 166.
+
+*Neu eingetragen am 10.09.2026 (Schritt 10d Teil A).* Die Tabelle wird seit Schritt 8 gelesen — für
+die Auflösung der Ablage beim Rohdatenzugriff — und stand in diesem Abschnitt bis heute nicht.
+
 **`User`** — Alt-Benutzertabelle. `UserPassword` varchar(20) im **Klartext**. Wird nicht
 weiterverwendet, siehe Abschnitt 7.
 
@@ -835,7 +869,8 @@ eigenes Modul":
 ```
 de.kraftwerkone.overlord.monitor
 ├─ config/      DataSources, jOOQ, Security, Flyway
-├─ common/      Fehlerformat, Cursor-Paginierung, Filterabstraktion, TimeProvider
+├─ common/      Fehlerformat, Cursor-Paginierung, Filterabstraktion, TimeProvider,
+│               Statuseinordnung, Zeitfenster — und der Transport zur Ablage
 ├─ security/    MandantContext, Session, Anmeldesperre
 ├─ audit/
 ├─ message/     Liste, Detail, Verkettung
@@ -849,6 +884,23 @@ de.kraftwerkone.overlord.monitor
 ```
 
 Fachpakete kennen einander nicht. Gemeinsames liegt in `common`, nicht in einem Nachbarmodul.
+
+> **Präzisiert 10.09.2026 zur Beschreibung von `common`.** Hier stand wortgleich „Fehlerformat,
+> Cursor-Paginierung, Filterabstraktion, TimeProvider". Das war die Aufzählung aus Schritt 1 und ist
+> seither gewachsen — nicht durch Zuwachs an Zuständigkeit, sondern **jedes Mal durch einen zweiten
+> Verbraucher**. Das ist die Regel, nach der etwas dorthin gehört:
+>
+> | Was | Wann und warum |
+> |---|---|
+> | `MessageStatusClassifier` | Liste, Detail, Rollup und Dashboard brauchen dieselbe Einordnung |
+> | `Pflegestatus` | wanderte aus `catalog`, weil der Verteilungsblock `GEPFLEGT` braucht |
+> | `Ablagezugriff`, `SaajAblagezugriff`, `Abrufergebnis` | wanderten am **10.09.2026** aus `payload`, weil die Ablagenprüfung des Dashboards **denselben Abrufweg** nimmt ([`dienste.md`](dienste.md) §3, [`rohdaten-backend.md`](rohdaten-backend.md) §12) |
+>
+> **Was dabei nicht mitwandert, ist genauso wichtig.** `Artefaktzustand` ist in `payload` geblieben:
+> Zwei seiner fünf Zustände entstehen **nach** dem Abruf, der Transport sieht sie nie. `common`
+> bekam stattdessen eine **engere** Menge (`Abrufzustand`, drei Fälle), und die Abbildung steht in
+> `payload` — dort, wo die weitere Menge bekannt ist. **`common` kennt kein Fachpaket**, und
+> `PaketstrukturTest.common_haengt_an_keinem_anderen_anwendungspaket` prüft das.
 
 **Korrektur 19.08.2026 zur Beschreibung von `payload`.** Hier stand wortgleich
 `├─ payload/     Download-Proxy`. Das beschrieb weder die **Protokolle** noch die **Anzeige**, und ein
@@ -1598,6 +1650,22 @@ Clock, sondern immer die Systemuhr.
 **Nicht enthalten**
 
 - Service- und Heartbeat-Überwachung (`Service.ServiceStatus`) — Betriebssicht, nicht Kundensicht
+  > ### ⚠️ Diese Zeile ist am 10.09.2026 aufgehoben *(E‑116)*
+  >
+  > **Sie bleibt Zeichen für Zeichen stehen**, damit ablesbar bleibt, dass es eine Entscheidung war
+  > und keine Unterlassung. Was gilt: Das Dashboard trägt seit Schritt 10d Teil A einen
+  > **plattformweiten Block** — je eine Lampe für jeden Dienst mit `ServiceTimeout > 0` und **eine**
+  > Kachel für die Ablagen, für alle Rollen und für jeden Mandanten identisch
+  > ([`dienste.md`](dienste.md)).
+  >
+  > **Der Grund ist die Frage, die dieses Werkzeug beantworten soll.** Wer einen Beleg sucht und ihn
+  > nicht findet, hat zwei Erklärungen: „er ist nicht da" und „die Anlage steht". Ohne diesen Block
+  > ist die zweite nicht unterscheidbar — und dann sucht der Nutzer weiter. **Damit ist es eben doch
+  > Kundensicht**, und genau diese Einschätzung hat sich geändert.
+  >
+  > **Was nicht dazugekommen ist:** keine Alarmierung, keine eigene Frist, keine Lampe für Dienste
+  > ohne Zeitgrenze — und kein `ServiceName`, `ServiceDescription` oder
+  > `ServiceLastStatusMessage` in irgendeiner Antwort (E‑122).
 - **Aufbereitete** Anzeige der Rohdaten im Browser (EDIFACT/VDA/IDOC in Segmente zerlegt) — gebaut
   ist die **Rohtextanzeige**: die Datei als Text, unverändert, in Festbreitenschrift
 - Benachrichtigungen und Alarmierung
@@ -1677,6 +1745,15 @@ trägt dieselbe Angabe („die drei getrennten Problemkategorien") und ist dort 
    ist der Grund, die API von Anfang an kennzahlenorientiert statt tabellenorientiert zu schneiden.
 2. **Alarmierung** bei Fehlern und Überfälligkeit.
 3. **Service-Überwachung** für die interne Betreuung.
+   > ### ⚠️ Ein Teil davon ist am 10.09.2026 vorgezogen worden *(E‑116)*
+   >
+   > **Die Zeile bleibt stehen**, denn die Ausbaustufe ist damit nicht erledigt. Vorgezogen ist die
+   > **Anzeige**: der Zustand jedes Dienstes mit Zeitgrenze und die Erreichbarkeit der Ablagen, auf
+   > dem Dashboard, für alle Rollen ([`dienste.md`](dienste.md)).
+   >
+   > **Offen bleibt, was die Ausbaustufe eigentlich meint:** Alarmierung, Schwellen, eine Historie,
+   > eine Betriebssicht mit mehr als der `ServiceID`. Nichts davon ist gebaut, und die Prüfung
+   > schreibt weder eine Tabelle noch eine Zeile ins `audit_log`.
 4. **SOS-Baukasten** — Nutzer stellen sich Abläufe aus `SOSAction`-Bausteinen selbst zusammen.
    Achtung: Das macht aus dem Werkzeug ein Konfigurationssystem mit Schreibzugriff auf das
    Altschema. Ein solches Schreibmodul wird ein eigener, separat berechtigter Baustein — der

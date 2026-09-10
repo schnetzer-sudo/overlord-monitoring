@@ -1,6 +1,6 @@
 # Lokal starten — was anders ist als produktiv
 
-Stand: 18.08.2026
+Stand: 10.09.2026 *(zuletzt ergänzt um die Ablagenprüfung, §4)*
 
 Wie das Backend und das Frontend gestartet werden, steht in [`README.md`](../README.md) im
 Wurzelverzeichnis. **Diese Datei beschreibt nur das, was lokal anders aussieht als in Produktion** —
@@ -70,10 +70,50 @@ steht auch in `PROJEKTBESCHREIBUNG.md` §8 und in `messungen-schritt8.md` unter 
 
 ---
 
-## 4. Was lokal gar nicht angesprochen wird
+## 4. Die Ablagenprüfung ist lokal aus — und wie man sie einschaltet
+
+*Neu am 10.09.2026 (Schritt 10d Teil A).*
+
+Das Dashboard trägt seit Schritt 10d eine **Ablagenkachel**, deren Zustand aus einer echten
+Erreichbarkeitsprüfung stammt: je Takt ein `RETRIEVE` mit der Null-UUID gegen jede Ablage aus
+`Service.ServiceDefaultFileStore` ([`dienste.md`](dienste.md) §7).
+
+**Im Profil `dev` ist sie ausdrücklich aus.** Die Kachel zeigt dann `UNGEKLAERT` mit dem Grund
+`ABGESCHALTET` — **das ist kein Fehler**, sondern genau die Auskunft, die sie geben soll. Der Grund
+für die Abschaltung: Ein lokaler Start soll nicht unaufgefordert im Minutentakt einen **produktiven**
+Knoten anfragen.
+
+**Zum Ausprobieren einschalten:**
+
+```
+cd backend && ./mvnw spring-boot:run -Dspring-boot.run.arguments=--overlord.ablagenpruefung.aktiv=true
+```
+
+Danach steht in der Antwort von `GET /api/dashboard` unter `plattform.ablagen` der gemessene
+Zustand. **Lokal ist das `ERREICHBAR` mit dem Ziel `FILESTOREPROD10`** — gemessen am 10.09.2026
+(M174 und die Abnahme in [`dienste.md`](dienste.md) §13). Der erste Durchgang startet sofort; bis er
+fertig ist, sagt die Kachel `NOCH_KEIN_DURCHGANG`.
+
+**Was dabei wirklich passiert, und es ist kein Versehen:** Die Anwendung spricht dann im Minutentakt
+die produktive Ablage an. Der Abruf ist ein `RETRIEVE` und kann konstruktionsbedingt nichts ablegen
+(`messungen-schritt8.md`, QT1) — aber er geht an eine fremde Anlage, und deshalb ist er lokal aus und
+wird einzeln eingeschaltet.
+
+> **Die sieben Lampen daneben brauchen keinen Schalter.** Sie kommen aus `Service` und stehen lokal
+> auf fünfmal `ZEITUEBERSCHRITTEN` und zweimal `HERUNTERGEFAHREN`; **`MELDET_SICH` gibt es auf der
+> Testkopie nicht** — der grüne Pfad ist dort so wenig erreichbar wie `RUNNING`. Vier der sieben
+> tragen `alterSekunden: null`, weil ihr `ServiceLastUpdate` **nach** dem Anker der Anwendungsuhr
+> liegt. Auch das ist richtig und in [`dienste.md`](dienste.md) §13 ausgeschrieben.
+
+---
+
+## 5. Was lokal gar nicht angesprochen wird
 
 - **Kein Test spricht einen Filestore an.** Der Zugriff läuft über die Schnittstelle
-  `payload/Ablagezugriff`, und die wird in jedem Test ersetzt.
+  `common/Ablagezugriff` *(bis zum 10.09.2026: `payload/Ablagezugriff`)*, und die wird in jedem Test
+  ersetzt. **Die eine Ausnahme ist ausgewiesen und keine Ausnahme von dieser Regel:**
+  `MessungM174DbIT` ist eine **Messung** und kein Test — sie fragt die Ablagen einmal, um zu
+  belegen, dass die Prüfung überhaupt zwischen „erreichbar" und „aus" unterscheidet.
 - **Es wird nie in `GlassfishDB` geschrieben.** Der Lese-Pool trägt zusätzlich den
   `ReadOnlyExecuteListener` als dritte Schicht.
 - Die `db`-Tests laufen nur lokal (`./mvnw verify`); die CI schließt sie über

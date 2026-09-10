@@ -52,6 +52,13 @@ class DashboardStatementsTest {
 
   private DashboardRepository repository;
 
+  /**
+   * Die zweite Leseklasse der Seite — sie liest {@code Service} und <b>ohne {@code
+   * MandantContext}</b> (dritte benannte Ausnahme von Regel M2, E‑123). Sie haengt an derselben
+   * Attrappe, damit die Reihenfolge der Statements einer Seite in einer Liste steht.
+   */
+  private DienstLeseRepository dienstRepository;
+
   @BeforeEach
   void attrappeAufbauen() {
     gerendert.clear();
@@ -61,10 +68,9 @@ class DashboardStatementsTest {
           DSLContext leer = DSL.using(SQLDialect.MARIADB);
           return new MockResult[] {new MockResult(0, leer.newResult())};
         };
-    repository =
-        new DashboardRepository(
-            DSL.using(new MockConnection(attrappe), SQLDialect.MARIADB),
-            new MessageStatusClassifier());
+    DSLContext kontext = DSL.using(new MockConnection(attrappe), SQLDialect.MARIADB);
+    repository = new DashboardRepository(kontext, new MessageStatusClassifier());
+    dienstRepository = new DienstLeseRepository(kontext);
   }
 
   private String einziges() {
@@ -426,10 +432,15 @@ class DashboardStatementsTest {
    * <p>Das ist derselbe Befund wie in {@code docs/testfestigkeit.md}: ein gruener Test, der seine
    * Aussage nicht traegt. Gefunden hat ihn nicht das Nachdenken, sondern die Buchhaltung des
    * Auftrags.
+   *
+   * <p><b>Seit Schritt 10d sind es acht</b>: Der plattformweite Block kostet <b>ein</b> Statement —
+   * die Dienste mit Zeitgrenze. <b>Die Ablagenpruefung steht nicht darin und darf es nicht</b>: Sie
+   * laeuft im Hintergrund, liest ihre Ziele in ihrem eigenen Takt und wuerde die Seite sonst an die
+   * Zeitgrenzen fremder Knoten haengen ({@code docs/dienste.md} §7).
    */
   @Test
-  @DisplayName("Eine Landingpage mit genanntem Zeitraum setzt genau diese sieben Statements ab")
-  void die_sieben_statements_je_seite() {
+  @DisplayName("Eine Landingpage mit genanntem Zeitraum setzt genau diese acht Statements ab")
+  void die_acht_statements_je_seite() {
     Zeitfenster fenster = Rollupzeitraum.STUNDEN_48.fenster(JETZT);
     gerendert.clear();
 
@@ -440,12 +451,13 @@ class DashboardStatementsTest {
     repository.offeneNachrichten(MANDANT, MessageStatusKind.WARTEND);
     repository.zuletztAufgefallen(MANDANT, fenster, 10);
     repository.letzterLauf();
+    dienstRepository.dienste();
 
     List<String> knapp = gerendert.stream().map(sql -> sql.replaceAll("\s+", " ").trim()).toList();
 
     assertThat(knapp)
-        .as("Sieben Statements — und jedes einzeln benannt, damit ein Tausch auffaellt")
-        .hasSize(7);
+        .as("Acht Statements — und jedes einzeln benannt, damit ein Tausch auffaellt")
+        .hasSize(8);
     assertThat(knapp.get(0)).as("1 Verlauf").contains("from `overlord_monitor`.`message_rollup`");
     assertThat(knapp.get(1))
         .as("2 Verteilung")
@@ -467,6 +479,10 @@ class DashboardStatementsTest {
         .contains("`MessageStatus` like ? escape")
         .contains("group by `GlassfishDB`.`Message`.`ProcessID`");
     assertThat(knapp.get(6)).as("7 Stand").contains("from `overlord_monitor`.`rollup_lauf`");
+    assertThat(knapp.get(7))
+        .as("8 Die Dienste mit Zeitgrenze — der plattformweite Block (Schritt 10d)")
+        .contains("from `GlassfishDB`.`Service`")
+        .contains("`ServiceTimeout` > ?");
   }
 
   /**
@@ -488,9 +504,122 @@ class DashboardStatementsTest {
     repository.offeneNachrichten(MANDANT, MessageStatusKind.WARTEND);
     repository.zuletztAufgefallen(MANDANT, fenster, 10);
     repository.letzterLauf();
+    dienstRepository.dienste();
 
     assertThat(gerendert)
         .allSatisfy(
             sql -> assertThat(sql).doesNotContain("MessageTimeout").doesNotContain("date_add("));
+  }
+
+  // ─── Der plattformweite Block (Schritt 10d) ──────────────────────────────────
+
+  /**
+   * Die zwei Statements auf {@code Service} — <b>gerendert, weil sich hier zeigt, was gelesen wird
+   * und was nicht</b>.
+   *
+   * <p>Regel G1 haengt an dieser Stelle: Eine Spalte, die im {@code SELECT} nicht vorkommt, kann in
+   * keiner Antwort landen. {@code PlattformAntwortTest} prueft dieselbe Zusage von der anderen
+   * Seite — an den Typen.
+   */
+  @Nested
+  @DisplayName("Die Dienste und die Pruefziele")
+  class Plattform {
+
+    private String einzelnesStatementVon(Runnable aufruf) {
+      gerendert.clear();
+      aufruf.run();
+      return einziges();
+    }
+
+    @Test
+    @DisplayName("Die Lampen lesen drei Spalten, filtern auf ServiceTimeout > 0 und sortieren")
+    void dienste() {
+      String sql = einzelnesStatementVon(dienstRepository::dienste);
+
+      assertThat(sql)
+          .contains("select `GlassfishDB`.`Service`.`ServiceID`")
+          .contains("`GlassfishDB`.`Service`.`ServiceStatus`")
+          .contains("`GlassfishDB`.`Service`.`ServiceLastUpdate`")
+          .contains("from `GlassfishDB`.`Service`")
+          .contains("where `GlassfishDB`.`Service`.`ServiceTimeout` > ?")
+          .contains("order by `GlassfishDB`.`Service`.`ServiceID`");
+    }
+
+    @Test
+    @DisplayName("Und sie lesen keine der vier gesperrten Spalten (Regel G1, E-122)")
+    void dienste_lesen_nichts_gesperrtes() {
+      String sql = einzelnesStatementVon(dienstRepository::dienste);
+
+      assertThat(sql)
+          .as("Was nicht gelesen wird, kann nicht ausgeliefert werden")
+          .doesNotContain("ServiceConnectString")
+          .doesNotContain("ServiceName")
+          .doesNotContain("ServiceDescription")
+          .doesNotContain("ServiceLastStatusMessage");
+    }
+
+    @Test
+    @DisplayName("Die Pruefziele sind ein LEFT JOIN auf dieselbe Tabelle, distinct und sortiert")
+    void pruefziele() {
+      String sql = einzelnesStatementVon(dienstRepository::pruefziele);
+
+      assertThat(sql)
+          .startsWith("select distinct")
+          .contains("`GlassfishDB`.`Service`.`ServiceDefaultFileStore`")
+          .contains("left outer join `GlassfishDB`.`Service` as `ablagenziel`")
+          .contains("`ablagenziel`.`ServiceID` = `GlassfishDB`.`Service`.`ServiceDefaultFileStore`")
+          .contains("order by `GlassfishDB`.`Service`.`ServiceDefaultFileStore`");
+    }
+
+    @Test
+    @DisplayName("Ein LEFT JOIN und kein JOIN — sonst verschwaende ein nicht aufloesbares Ziel")
+    void pruefziele_lassen_nichts_verschwinden() {
+      // Ein inner join liesse die Kachel gruen bleiben, weil das unaufloesbare Ziel gar nicht erst
+      // geprueft wuerde. Die Zeile ist der ganze Unterschied zwischen "rot" und "unbemerkt".
+      String sql = einzelnesStatementVon(dienstRepository::pruefziele);
+
+      assertThat(sql).doesNotContain("inner join").doesNotContain("right outer join");
+    }
+
+    @Test
+    @DisplayName("NULL und Leerstring gelten beide als leer")
+    void pruefziele_lassen_leeres_weg() {
+      String sql = einzelnesStatementVon(dienstRepository::pruefziele);
+
+      assertThat(sql)
+          .contains("`GlassfishDB`.`Service`.`ServiceDefaultFileStore` is not null")
+          .contains("`GlassfishDB`.`Service`.`ServiceDefaultFileStore` <> ?");
+    }
+
+    @Test
+    @DisplayName("Beide Statements tragen keinen Mandantenfilter — es gaebe nichts zu filtern")
+    void kein_schein_filter() {
+      // Kein ProjectMandant, kein EXISTS, kein Parameter, der wie ein Mandant aussieht: Service
+      // kennt keinen. Ein Filter, der nichts filtert, saehe von aussen wie Mandantentrennung aus
+      // (E-123).
+      for (String sql :
+          List.of(
+              einzelnesStatementVon(dienstRepository::dienste),
+              einzelnesStatementVon(dienstRepository::pruefziele))) {
+        assertThat(sql)
+            .doesNotContain("ProjectMandant")
+            .doesNotContain("MandantID")
+            .doesNotContain("exists");
+      }
+    }
+
+    @Test
+    @DisplayName("Und keines von beiden liest Message, MessageProperty oder den Rollup")
+    void nur_service() {
+      for (String sql :
+          List.of(
+              einzelnesStatementVon(dienstRepository::dienste),
+              einzelnesStatementVon(dienstRepository::pruefziele))) {
+        assertThat(sql)
+            .doesNotContain("`Message`")
+            .doesNotContain("`MessageProperty`")
+            .doesNotContain("message_rollup");
+      }
+    }
   }
 }
