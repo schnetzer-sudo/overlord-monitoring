@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act } from "react";
+import { act, useEffect, useState } from "react";
 import { describe, expect, it } from "vitest";
 
 import type { Partnerknoten, Prozessknoten, Richtungsknoten } from "@/features/nachrichten/api";
@@ -10,7 +10,7 @@ import { partnerSchluessel, prozessSchluessel } from "@/features/nachrichten/pro
 import { rendere } from "./hilfe/rendern";
 
 /**
- * **Zehn Fälle, für die ein gerenderter Baum die einzige Prüfung ist.**
+ * **Zwölf Fälle, für die ein gerenderter Baum die einzige Prüfung ist.**
  *
  * Die Entscheidungen des Prozessbaums stehen in `tests/prozessbaum.test.ts` —
  * Schachtelung, Überspringen, Eingrenzung, Tastatur — und werden dort ohne DOM
@@ -30,6 +30,12 @@ import { rendere } from "./hilfe/rendern";
  * 4. **Der zugängliche Name kommt aus `aria-label`.** Er ersetzt bei über
  *    tausend Zeilen mehr als zweitausend `sr-only`-Spannen; dass er tatsächlich
  *    am Element steht und nicht im Text untergeht, zeigt nur der Baum.
+ *
+ * 5. **Der Sprung beim Einstieg** (E‑115, 10.09.2026): dass die gewählte Zeile
+ *    ins Bild kommt, ist eine Änderung am Scrollstand eines Kastens — ohne
+ *    gerenderte Zeilen gibt es kein Ziel, und `jsdom` rechnet kein Layout, also
+ *    werden die Maße gestellt. Mit der Gegenprobe: **bei offenem Panel bewegt
+ *    sich nichts.**
  *
  * **Alle Prüfwerte sind erfunden** (Regel T2).
  */
@@ -79,22 +85,110 @@ const OHNE_EBENE = knoten("VOTG", [gruppe(null, [blatt("p4", "Freier Prozess")])
 /**
  * Bis zum 09.09.2026 stand hier `springeZurAuswahl`: Der Baum holte die gewählte
  * Zeile per `scrollIntoView` ins Bild, solange kein Panel offen war. **Mit E‑114
- * ist die Angabe entfallen** — der Baum springt nicht mehr, stattdessen kommt
- * die rechte Spalte ins Bild (`lib/in-sicht-bringen.ts`, geprüft in
- * `tests/in-sicht-bringen.test.tsx`). Die Fälle darunter sagen nichts über das
- * Springen und stehen unverändert.
+ * ist die Angabe entfallen** — der Baum sprang nicht mehr, stattdessen kam die
+ * rechte Spalte ins Bild (`lib/in-sicht-bringen.ts`).
+ *
+ * > **Seit dem 10.09.2026 steht sie wieder da** (E‑115), mit engerer Bedeutung:
+ * > **nur beim Einstieg über eine Adresse.** Die rechte Spalte klebt seither,
+ * > der Sprung schiebt sie also nicht mehr aus dem Bild. Voreingestellt ist
+ * > `false` — die Fälle darunter sagen weiterhin nichts über das Springen und
+ * > stehen unverändert.
  */
-async function baum(partner: Partnerknoten[], gewaehlt: string | null = null) {
+async function baum(
+  partner: Partnerknoten[],
+  gewaehlt: string | null = null,
+  springeZurAuswahl = false,
+) {
   return rendere(
     <ProzessBaum
       partner={partner}
       stilleSchwelleMonate={3}
       gewaehlt={gewaehlt}
+      springeZurAuswahl={springeZurAuswahl}
       istOffen={() => true}
       aufUmschalten={() => undefined}
       aufAuswahl={() => undefined}
     />,
   );
+}
+
+/** Die Griffe von außen — gesetzt in einem Effekt, nicht beim Rendern. */
+const steuerung: {
+  setzeSprung: (wert: boolean) => void;
+  setzeGewaehlt: (wert: string | null) => void;
+} = { setzeSprung: () => undefined, setzeGewaehlt: () => undefined };
+
+/**
+ * Ein Baum, dessen zwei Angaben sich von außen umstellen lassen — **die Maße
+ * müssen vor dem Sprung stehen**, und beim ersten Rendern stehen sie noch nicht.
+ */
+function BaumHuelle({
+  partner,
+  gewaehlt: start,
+  springt: startSprung,
+}: {
+  partner: Partnerknoten[];
+  gewaehlt: string | null;
+  springt: boolean;
+}) {
+  const [gewaehlt, setGewaehlt] = useState(start);
+  const [springt, setSpringt] = useState(startSprung);
+  useEffect(() => {
+    steuerung.setzeSprung = setSpringt;
+    steuerung.setzeGewaehlt = setGewaehlt;
+  }, []);
+  return (
+    <ProzessBaum
+      partner={partner}
+      stilleSchwelleMonate={3}
+      gewaehlt={gewaehlt}
+      springeZurAuswahl={springt}
+      istOffen={() => true}
+      aufUmschalten={() => undefined}
+      aufAuswahl={() => undefined}
+    />
+  );
+}
+
+function rechteck(top: number, hoehe: number): DOMRect {
+  return {
+    top,
+    bottom: top + hoehe,
+    height: hoehe,
+    left: 0,
+    right: 0,
+    width: 0,
+    x: 0,
+    y: top,
+    toJSON: () => undefined,
+  } as DOMRect;
+}
+
+/**
+ * Stellt dem Behälter die Maße eines Scrollbereichs und legt einen echten
+ * Scrollstand darunter — `jsdom` gibt für `scrollTop` sonst immer 0 zurück und
+ * nimmt keinen Wert an. Dieselbe Hilfe wie in `tests/in-sicht-bringen.test.tsx`;
+ * hier steht sie noch einmal, weil sie zu **diesen** gestellten Maßen gehört.
+ */
+function stelleScrollbereich(el: HTMLElement, stand: number) {
+  let scrollstand = stand;
+  el.style.overflowY = "auto";
+  el.getBoundingClientRect = () => rechteck(0, 400);
+  Object.defineProperty(el, "scrollHeight", { value: 9000, configurable: true });
+  Object.defineProperty(el, "clientHeight", { value: 400, configurable: true });
+  Object.defineProperty(el, "scrollTop", {
+    configurable: true,
+    get: () => scrollstand,
+    set: (wert: number) => {
+      scrollstand = wert;
+    },
+  });
+  return () => scrollstand;
+}
+
+/** Die gewählte Zeile — sie trägt `aria-selected="true"`. */
+function gewaehlteZeile(behaelter: HTMLElement): HTMLElement {
+  return behaelter.querySelector('[aria-selected="true"]') as HTMLElement;
 }
 
 function zeilen(behaelter: HTMLElement): HTMLElement[] {
@@ -403,6 +497,48 @@ describe("Der Prozessbaum im Baum", () => {
       expect(
         zeilen(behaelter).filter((zeile) => zeile.getAttribute("aria-level") === "1"),
       ).toHaveLength(2);
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("holt die gewählte Zeile beim Einstieg über eine Adresse ins Bild", async () => {
+    // **E‑115.** Wer über einen tiefen Link oder den Absprung aus dem Panel
+    // kommt, hat den Baum nicht selbst gescrollt — die Zeile liegt bei `NEXANS`
+    // mehrere tausend Pixel unten, und ohne den Sprung landet er am Anfang.
+    // Seit die rechte Spalte klebt, schiebt der Sprung sie nicht mehr weg.
+    const { behaelter, abbauen } = await rendere(
+      <BaumHuelle partner={[MIT_EBENE, EINE_RICHTUNG]} gewaehlt="p3" springt={false} />,
+    );
+    try {
+      const stand = stelleScrollbereich(behaelter, 0);
+      gewaehlteZeile(behaelter).getBoundingClientRect = () => rechteck(3400, 34);
+      await act(async () => steuerung.setzeSprung(true));
+      // Unterkante 3.434 gegen ein Sichtfenster von 400 — der kürzere Weg sind
+      // 3.034 px, nicht der Sprung auf die Oberkante.
+      expect(stand()).toBe(3034);
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("bewegt nichts, solange kein Einstieg vorliegt — der Zustand bei offenem Panel", async () => {
+    // Die Gegenprobe, und sie ist der Kern der Meldung vom 10.09.2026: Bei
+    // offenem Panel gibt die Ansicht `springeZurAuswahl` **falsch** mit — dann
+    // bewegt auch ein Wechsel der Auswahl den Baum nicht.
+    const { behaelter, abbauen } = await rendere(
+      <BaumHuelle partner={[MIT_EBENE, EINE_RICHTUNG]} gewaehlt="p1" springt={false} />,
+    );
+    try {
+      const stand = stelleScrollbereich(behaelter, 5200);
+      // **Jede** Zeile liegt weit unterhalb des Sichtfensters — welche auch
+      // immer gewählt wird, ein Sprung wäre an der Zahl abzulesen.
+      for (const zeile of zeilen(behaelter)) {
+        zeile.getBoundingClientRect = () => rechteck(3400, 34);
+      }
+      await act(async () => steuerung.setzeGewaehlt("p3"));
+      await act(async () => steuerung.setzeGewaehlt("p2"));
+      expect(stand()).toBe(5200);
     } finally {
       await abbauen();
     }

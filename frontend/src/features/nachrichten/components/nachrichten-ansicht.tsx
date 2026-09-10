@@ -6,8 +6,10 @@ import { useRouter } from "next/navigation";
 import { Fehler, Laden, Leer } from "@/components/zustand";
 import { Button } from "@/components/ui/button";
 import { useTexte } from "@/i18n/provider";
-import { useInSicht, useZuletztGeschlossen } from "@/lib/in-sicht-bringen";
+import { useBeginntOben, useInSicht, useZuletztGeschlossen } from "@/lib/in-sicht-bringen";
+import { KLEBENDE_SPALTE_AB_XL } from "@/lib/klebende-spalte";
 import { ansichtOhneListe } from "@/lib/routen";
+import { cn } from "@/lib/utils";
 
 import {
   feldFehler,
@@ -85,9 +87,15 @@ export function NachrichtenAnsicht() {
    * Schließen sonst am Listenanfang. Der Schlüssel des Rückwegs wechselt nur
    * beim Schließen (`useZuletztGeschlossen`), damit er dem Panel beim Öffnen
    * nicht in die Quere kommt.
+   *
+   * **Ab `xl` klebt das Panel und scrollt für sich** (E‑115): Dann ist es von
+   * sich aus im Bild, `main` bewegt sich nicht — die Liste bleibt stehen —, und
+   * was bleibt, ist der eigene Scrollbereich des Panels, der beim Wechsel
+   * wieder oben beginnt. Darunter gilt E‑114 unverändert. Beides entscheidet
+   * `useBeginntOben` am berechneten Stil, nicht am Umbruchpunkt.
    */
   const panel = useRef<HTMLDivElement>(null);
-  useInSicht(panel, gewaehlt);
+  useBeginntOben(panel, gewaehlt);
   const zuletztGewaehlteZeile = useRef<HTMLTableRowElement | null>(null);
   const merkeZeile = useCallback((zeile: HTMLTableRowElement | null) => {
     // Nur merken, nie vergessen: Beim Schließen verliert die Zeile ihre
@@ -103,10 +111,16 @@ export function NachrichtenAnsicht() {
     /*
      * Ab `xl` steht das Panel **neben** der Liste, darunter an ihrer Stelle.
      *
-     * Beides sitzt im **einen** Scrollbereich des Anwendungsrahmens; es entsteht
-     * keine zweite Bildlaufleiste und nichts bemisst seine Höhe am Fenster
-     * (`frontend-grundlagen.md` §7). Ein Panel, das für sich scrollt, wäre der
-     * erste Verstoß gegen genau die Regeln, die dort gemessen worden sind.
+     * **Bis zum 10.09.2026 saß beides im einen Scrollbereich des Rahmens**, und
+     * der Satz hier lautete, ein Panel, das für sich scrollt, wäre der erste
+     * Verstoß gegen die Regeln aus `frontend-grundlagen.md` §7. Seit E‑115 ist
+     * es genau das, und zwar als **benannte Ausnahme**: Ab `xl` klebt die
+     * Panelhülle am oberen Rand des sichtbaren Bereichs von `main` und scrollt
+     * für sich (`lib/klebende-spalte.ts`). Der Grund ist die Kehrseite, die §7
+     * bis dahin nicht hatte: Solange das Panel in `main` sitzt, holt die vierte
+     * Bedingung es ins Bild, indem sie `main` bewegt — und damit die Liste, in
+     * der der Nutzer gerade seine Stelle hatte. Die Höhe bemisst sich weiterhin
+     * **nicht am Fenster**, sondern an `main`.
      */
     <div className="flex flex-col gap-4 xl:flex-row xl:items-start">
       <div
@@ -175,7 +189,10 @@ export function NachrichtenAnsicht() {
       </div>
 
       {gewaehlt === null ? null : (
-        <div ref={panel} className="min-w-0 xl:w-[26rem] xl:shrink-0 2xl:w-[30rem]">
+        <div
+          ref={panel}
+          className={cn("min-w-0 xl:w-[26rem] xl:shrink-0 2xl:w-[30rem]", KLEBENDE_SPALTE_AB_XL)}
+        >
           <NachrichtDetail
             // Ein Wechsel der Nachricht ist eine neue Ansicht und kein neuer
             // Zustand derselben: Der Kopierknopf und der Eigenschaftenblock

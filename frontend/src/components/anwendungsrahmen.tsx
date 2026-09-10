@@ -159,8 +159,20 @@ export function Anwendungsrahmen({ children }: { children: ReactNode }) {
                * Mit `relative` ist der Scrollbereich selbst der Bezug: Was in ihm liegt,
                * scrollt mit ihm und wird von ihm beschnitten. Begründung und Messung in
                * `docs/frontend-grundlagen.md` §7.
+               *
+               * **`container-type: size` — der Bezug für die Höhe der klebenden Spalte**
+               * (E‑115, 10.09.2026, `lib/klebende-spalte.ts`). Eine Spalte, die klebt,
+               * darf höchstens so hoch sein wie der sichtbare Bereich *dieses* Kastens;
+               * am Fenster gemessen wäre sie um Kopfzeile und Innenabstand zu hoch, und
+               * die Kopfzeile wächst mit der Dichtestufe. `100cqh` ist die Inhaltshöhe
+               * hier — aber **nur, solange diese Angabe steht**: Ohne einen
+               * Größencontainer fällt `cqh` still auf das kleine Sichtfenster zurück,
+               * also auf eine Höhe am Fenster, und damit auf genau das, was §7 verbietet.
+               *
+               * Die Angabe ist zulässig, weil `main` seine Größe nicht von seinem Inhalt
+               * bezieht: Breite und Höhe stehen aus dem Flexlayout des Rahmens fest.
                */}
-              <main className="relative min-h-0 min-w-0 flex-1 overflow-y-auto px-3 py-4 md:px-5">
+              <main className="[container-type:size] relative min-h-0 min-w-0 flex-1 overflow-y-auto px-3 py-4 md:px-5">
                 {children}
               </main>
             </div>

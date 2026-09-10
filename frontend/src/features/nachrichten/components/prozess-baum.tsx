@@ -7,6 +7,7 @@ import { MARKE_GESTALT } from "@/components/marke";
 import { useSprache, useTexte } from "@/i18n/provider";
 import { formatiereZahl } from "@/lib/format";
 import { statusVordergrund } from "@/lib/status-farbe";
+import { useInSicht } from "@/lib/in-sicht-bringen";
 import { cn } from "@/lib/utils";
 
 import type { Partnerknoten } from "../api";
@@ -71,11 +72,28 @@ import {
  * Stelle offen, die gewählte Zeile ist markiert und trägt den Tabstopp — sie
  * wird nur nicht mehr angesprungen. Der Preis ist benannt: Die geklickte
  * Baumzeile kann aus dem Bild laufen.
+ *
+ * > ### Nachgezogen am 10.09.2026 — **beim Einstieg springt er wieder** (E‑115)
+ * >
+ * > Der Absatz darüber beschreibt den Stand vom 09.09.2026 und bleibt wortgleich
+ * > stehen; **der Satz „Baum und rechte Spalte können nicht beide im Bild
+ * > stehen" gilt seit E‑115 nicht mehr.** Die rechte Spalte klebt, sie steht
+ * > also, was `main` auch tut (`lib/klebende-spalte.ts`) — der Grund, aus dem
+ * > der Sprung entfallen ist, ist damit weg.
+ * >
+ * > Zurück ist er **nur für den Einstieg über eine Adresse**: tiefer Link,
+ * > Absprung aus dem Detailpanel (E‑103). Wer im Baum **klickt**, sieht seine
+ * > Zeile ohnehin, und der Baum bleibt auf demselben Pixel stehen — das ist der
+ * > Kern der Meldung vom 10.09.2026. Was wann als Einstieg gilt, entscheidet
+ * > die Ansicht ({@link ProzessBaum.springeZurAuswahl}, `prozessansicht.tsx`);
+ * > hier steht nur die Ausführung, und sie hängt am selben Haken wie alles
+ * > andere, samt seiner Höhenregel.
  */
 export function ProzessBaum({
   partner,
   stilleSchwelleMonate,
   gewaehlt,
+  springeZurAuswahl,
   istOffen,
   aufUmschalten,
   aufAuswahl,
@@ -85,6 +103,16 @@ export function ProzessBaum({
   /** Kommt aus der Antwort (E‑37). Der Baum rechnet keine Monate nach. */
   stilleSchwelleMonate: number;
   gewaehlt: string | null;
+  /**
+   * Ob die gewählte Zeile ins Bild geholt werden soll (E‑115).
+   *
+   * **Wahr genau beim Einstieg über eine Adresse** — und dort erst, sobald der
+   * Baum sichtbar ist und Daten hat. Beim Klick im Baum ist sie **falsch**: Wer
+   * klickt, sieht seine Zeile, und der Baum soll stehen bleiben. Die Ansicht
+   * entscheidet das und verbraucht den Einstieg nach dem ersten Sprung
+   * (`prozessansicht.tsx`).
+   */
+  springeZurAuswahl: boolean;
   istOffen: (schluessel: string) => boolean;
   aufUmschalten: (schluessel: string) => void;
   aufAuswahl: (processId: string) => void;
@@ -123,6 +151,22 @@ export function ProzessBaum({
    * bekommen hat.
    */
   const knoten = useRef(new Map<string, HTMLDivElement>());
+
+  /**
+   * Die gewählte Zeile — das Ziel des Sprungs beim Einstieg (E‑115).
+   *
+   * Nachgeführt über dieselbe Rückrufreferenz, die die Karte füllt: Sie ist bei
+   * jedem Rendern eine neue Funktion und wird deshalb bei jedem Rendern neu
+   * gerufen, erst mit `null` und dann mit dem Element. Damit zeigt die Referenz
+   * nie auf eine Zeile, die inzwischen weggefiltert ist — ein losgelöstes
+   * Element hat lauter Nullen als Rechteck, und der Haken rechnete damit.
+   *
+   * **Kein `focus()`.** Ein Fokussprung beim Öffnen nähme dem Nutzer die Stelle,
+   * an der er gerade war — dieselbe Überlegung, mit der das Nachrichtendetail
+   * `Escape` statt eines Fokussprungs bekommen hat.
+   */
+  const gewaehlteZeile = useRef<HTMLDivElement | null>(null);
+  useInSicht(gewaehlteZeile, springeZurAuswahl ? gewaehlt : null);
 
   const springe = useCallback((schluessel: string | undefined) => {
     if (schluessel === undefined) {
@@ -189,10 +233,17 @@ export function ProzessBaum({
           gewaehlt={zeile.art === "PROZESS" && zeile.prozess.processId === gewaehlt}
           tabbar={zeile.schluessel === aktiv}
           merke={(element) => {
+            const istGewaehlt = zeile.art === "PROZESS" && zeile.prozess.processId === gewaehlt;
             if (element === null) {
               knoten.current.delete(zeile.schluessel);
-            } else {
-              knoten.current.set(zeile.schluessel, element);
+              if (istGewaehlt) {
+                gewaehlteZeile.current = null;
+              }
+              return;
+            }
+            knoten.current.set(zeile.schluessel, element);
+            if (istGewaehlt) {
+              gewaehlteZeile.current = element;
             }
           }}
           aufKlick={() =>

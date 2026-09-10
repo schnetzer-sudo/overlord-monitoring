@@ -17,7 +17,9 @@ import {
   zeitpunktAusWanduhrzeit,
 } from "@/lib/format";
 import { ProblemFehler, istPraefixfensterZuGross } from "@/lib/http";
-import { useInSicht, useZuletztGeschlossen } from "@/lib/in-sicht-bringen";
+import { useBeginntOben, useInSicht, useZuletztGeschlossen } from "@/lib/in-sicht-bringen";
+import { KLEBENDE_SPALTE_AB_XL } from "@/lib/klebende-spalte";
+import { cn } from "@/lib/utils";
 
 import type { BamSuchergebnis } from "../api";
 import { useBamSuche, useEscapeSchliesst, useSuchfelder, useSuchzustand } from "../hooks";
@@ -102,9 +104,13 @@ export function SucheAnsicht() {
    * **Was neu erscheint, kommt ins Bild** (E‑114, `lib/in-sicht-bringen.ts`) —
    * dieselben zwei Ziele wie neben der Nachrichtenliste: das Panel beim Öffnen
    * und beim Wechsel, die Trefferzeile auf dem Rückweg nach dem Schließen.
+   *
+   * **Und ab `xl` dieselbe klebende Spalte** (E‑115): Das Panel steht dann von
+   * sich aus im Bild, die Trefferliste bleibt stehen, und beim Wechsel beginnt
+   * allein der Scrollbereich des Panels wieder oben.
    */
   const panel = useRef<HTMLDivElement>(null);
-  useInSicht(panel, gewaehlt);
+  useBeginntOben(panel, gewaehlt);
   const zuletztGewaehlteZeile = useRef<HTMLTableRowElement | null>(null);
   const merkeZeile = useCallback((zeile: HTMLTableRowElement | null) => {
     if (zeile !== null) {
@@ -300,7 +306,10 @@ export function SucheAnsicht() {
       </div>
 
       {gewaehlt === null ? null : (
-        <div ref={panel} className="min-w-0 xl:w-[26rem] xl:shrink-0 2xl:w-[30rem]">
+        <div
+          ref={panel}
+          className={cn("min-w-0 xl:w-[26rem] xl:shrink-0 2xl:w-[30rem]", KLEBENDE_SPALTE_AB_XL)}
+        >
           <NachrichtDetail
             // Ein Wechsel der Nachricht ist eine neue Ansicht und kein neuer
             // Zustand derselben: Der Kopierknopf und die Blöcke beginnen von vorn.

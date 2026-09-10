@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, X } from "lucide-react";
 
@@ -14,7 +14,18 @@ import { einsetzen } from "@/i18n";
 import { useSprache, useTexte } from "@/i18n/provider";
 import { useAnzeigezone } from "@/components/zeitzone";
 import { formatiereZahl, formatiereZeitpunkt } from "@/lib/format";
-import { useInSicht, useZuletztGeschlossen } from "@/lib/in-sicht-bringen";
+import {
+  scrollbereichVon,
+  useBeginntOben,
+  useInSicht,
+  useZuletztGeschlossen,
+} from "@/lib/in-sicht-bringen";
+import {
+  IM_RAHMEN_SCROLLT_AB_MD,
+  IM_RAHMEN_SCROLLT_AB_XL,
+  KLEBENDER_RAHMEN_AB_MD,
+  KLEBENDER_RAHMEN_AB_XL,
+} from "@/lib/klebende-spalte";
 import { angezeigterBaumfenstermodus, hervorgehobenerBaumzeitraum } from "@/lib/rollupzeitraum";
 import { ROUTEN } from "@/lib/routen";
 import { cn } from "@/lib/utils";
@@ -307,7 +318,14 @@ export function ProzessAnsicht() {
       if (!gefallen && baumSpalte.current?.contains(aktiv) !== true) {
         return;
       }
-      panelBereich.current?.focus();
+      // `preventScroll`: Ohne die Angabe scrollt `focus()` **jeden**
+      // scrollenden Vorfahren, um das Ziel ins Bild zu holen — und damit
+      // `main`, in dem der Baum steht. Ab `xl` klebt das Panel und ist
+      // ohnehin im Bild (E‑115); darunter tritt es an die Stelle der Liste
+      // und steht dort am Anfang. In beiden Fällen gibt es nichts zu
+      // scrollen, und was `focus()` von sich aus täte, wäre eine Bewegung
+      // ohne Anlass.
+      panelBereich.current?.focus({ preventScroll: true });
     });
     return () => cancelAnimationFrame(bild);
   }, [zustand.nachricht]);
@@ -325,10 +343,18 @@ export function ProzessAnsicht() {
    * Listenanfang. Der Schlüssel dafür wechselt **nur beim Schließen**
    * (`useZuletztGeschlossen`), damit der Rückweg dem Panel beim Öffnen nicht
    * in die Quere kommt.
+   *
+   * **Seit E‑115 in dem Scrollbereich, in dem das Neue sitzt** — und es bewegt
+   * sich genau dieser eine. Ab `md` klebt die rechte Spalte als Rahmen, ab `xl`
+   * scrollen Liste und Panel darin jede für sich (`lib/klebende-spalte.ts`):
+   * Ein Wechsel des Prozesses setzt die Liste wieder an ihren Anfang, ein
+   * Wechsel der Nachricht das Panel, und `main` — mit ihm der Baum — bleibt
+   * stehen. Der Rückweg holt die Zeile in **ihrer** Liste ins Bild, nicht in
+   * `main`. Unterhalb der Umbruchpunkte gilt E‑114 unverändert.
    */
   const rechterInhalt = useRef<HTMLDivElement>(null);
-  useInSicht(rechterInhalt, zustand.prozess);
-  useInSicht(panelBereich, zustand.nachricht);
+  useBeginntOben(rechterInhalt, zustand.prozess);
+  useBeginntOben(panelBereich, zustand.nachricht);
   const zuletztGewaehlteZeile = useRef<HTMLTableRowElement | null>(null);
   const merkeZeile = useCallback((zeile: HTMLTableRowElement | null) => {
     // Nur merken, nie vergessen: Beim Schließen verliert die Zeile ihre
@@ -340,8 +366,82 @@ export function ProzessAnsicht() {
   const geschlossen = useZuletztGeschlossen(zustand.nachricht);
   useInSicht(zuletztGewaehlteZeile, geschlossen);
 
+  /*
+   * **Der Baum steht nach dem Schließen wieder da, wo er stand** (E‑115, B4).
+   *
+   * Bei offenem Panel weicht der Baum in jeder Breite (E‑57). Damit schrumpft
+   * `main` von 8.377 auf 1.077 px, und der Browser klemmt den Scrollstand auf
+   * das, was übrig ist. **M129 hat am 02.09.2026 gemessen, dass er beim
+   * Schließen von selbst zurückkam** (3.701 → 0 → 3.701) — mit der klebenden
+   * Spalte tut er das **nicht mehr**: In V2 (M173) blieb er bei 45 statt bei
+   * 6.422 zurückzukehren, und die gewählte Baumzeile stand danach 6.877 px
+   * unter der Kante statt bei 500. Die Vorprobe war für genau diesen Fall
+   * angelegt und ihre Deutung vorher festgelegt; deshalb steht das hier.
+   *
+   * **Gemerkt wird im Ereignis und nicht im Effekt:** Wenn ein Effekt läuft,
+   * ist der Baum schon ausgeblendet und der Stand bereits geklemmt. Gemerkt
+   * wird nur beim **Öffnen aus dem geschlossenen Zustand** — ein Kettenglied im
+   * Panel wechselt die Nachricht, ohne dass der Baum je wiederkam, und schriebe
+   * sonst den geklemmten Wert über den echten.
+   */
+  const baumStand = useRef<number | null>(null);
+  const oeffneNachricht = useCallback(
+    (messageId: string | null) => {
+      if (messageId !== null && zustand.nachricht === null) {
+        const bereich = scrollbereichVon(baumSpalte.current);
+        baumStand.current = bereich === null ? null : bereich.scrollTop;
+      }
+      setzeNachricht(messageId);
+    },
+    [setzeNachricht, zustand.nachricht],
+  );
+  useLayoutEffect(() => {
+    if (zustand.nachricht !== null || baumStand.current === null) {
+      return;
+    }
+    const bereich = scrollbereichVon(baumSpalte.current);
+    if (bereich !== null) {
+      bereich.scrollTop = baumStand.current;
+    }
+    baumStand.current = null;
+  }, [zustand.nachricht]);
+
   const etwasGewaehlt = zustand.prozess !== null;
   const panelOffen = zustand.nachricht !== null;
+
+  /*
+   * **Der Baum zeigt die Stelle — beim Einstieg über eine Adresse und sonst
+   * nie** (E‑115, `docs/process-view.md` §47).
+   *
+   * E‑114 hat den Sprung des Baums ganz gestrichen: Baum und rechte Spalte
+   * konnten bei einer Auswahl weit unten nicht beide im Bild stehen, und es
+   * gewann das Ergebnis der Handlung. **Die klebende Spalte nimmt diesen Grund
+   * weg** — sie steht, was `main` auch tut. Damit ist der Sprung wieder zu
+   * haben, aber nur da, wo er etwas zeigt, das der Nutzer nicht selbst
+   * angesteuert hat: bei einem tiefen Link und beim Absprung aus dem
+   * Detailpanel (E‑103).
+   *
+   * **Beim Klick springt er nicht**, und das ist die Bedingung, an der die
+   * Meldung vom 10.09.2026 hängt: Wer eine Zeile anklickt, sieht sie ohnehin,
+   * und der Baum soll auf demselben Pixel stehen bleiben. Deshalb entscheidet
+   * der Prozess aus der **Einstiegsadresse** und nicht der gewählte: Sobald der
+   * Nutzer einen anderen wählt, fallen die beiden auseinander und es springt
+   * nichts mehr.
+   *
+   * **Erst, wenn der Baum sichtbar ist und Daten hat:** Beim Laden steht keine
+   * Zeile im DOM, und bei offenem Panel weicht der Baum ganz (E‑57). Führt die
+   * Adresse beides mit sich (`?prozess=…&nachricht=…`), springt er deshalb erst
+   * beim Schließen — also genau dann, wenn er zu sehen ist. Dass der Haken
+   * dabei ein zweites Mal feuert, ist gewollt und folgenlos: Der Baum kommt mit
+   * seinem Scrollstand zurück, die Zeile steht im Bild, und dann bewegt die
+   * Höhenregel nichts (`lib/in-sicht-bringen.ts`).
+   *
+   * `useState` und kein Ref: Der Wert des ersten Renderns wird gebraucht, und
+   * ein Ref darf beim Rendern nicht gelesen werden (`react-hooks/refs`).
+   */
+  const [einstieg] = useState(zustand.prozess);
+  const baumSpringt =
+    einstieg !== null && einstieg === zustand.prozess && !panelOffen && baum !== undefined;
 
   return (
     <div className="flex flex-col gap-4">
@@ -420,13 +520,39 @@ export function ProzessAnsicht() {
               nurMitVerkehr={zustand.nurMitVerkehr}
               aufNurMitVerkehr={setzeNurMitVerkehr}
               gewaehlt={zustand.prozess}
+              springeZurAuswahl={baumSpringt}
               istOffen={istOffen}
               aufUmschalten={aufUmschalten}
               aufAuswahl={setzeProzess}
             />
           </div>
 
-          <div className={cn("min-w-0 flex-1", !etwasGewaehlt && "hidden md:block")}>
+          {/*
+           * **Die rechte Spalte klebt** (E‑115, `lib/klebende-spalte.ts`): Sie
+           * steht am oberen Rand des sichtbaren Bereichs von `main`, ist
+           * höchstens so hoch wie er, und was in ihr steht, scrollt für sich.
+           * Damit bewegt ein Klick im Baum den Baum nicht mehr — er steht in
+           * `main`, und `main` bleibt stehen.
+           *
+           * **Sie ist der Rahmen und nicht selbst der Scrollbereich.** Der
+           * Grund ist gemessen: Beim Öffnen einer Nachricht wechselt die
+           * Aufteilung, und klebte in beiden Zuständen ein anderes Element,
+           * wechselte auch das Element, das die Liste scrollt — ein Scrollstand
+           * springt aber nicht von einem Element auf ein anderes, die Liste
+           * stünde nach dem Klick wieder am Anfang. So ist sie in beiden
+           * Zuständen dieselbe.
+           *
+           * **`md` ohne Panel, `xl` mit Panel:** Zwischen den beiden Schwellen
+           * weichen bei offener Nachricht Baum *und* Liste (E‑57), es steht
+           * nichts nebeneinander, und dort gilt E‑114 unverändert.
+           */}
+          <div
+            className={cn(
+              "min-w-0 flex-1",
+              panelOffen ? KLEBENDER_RAHMEN_AB_XL : KLEBENDER_RAHMEN_AB_MD,
+              !etwasGewaehlt && "hidden md:block",
+            )}
+          >
             {filter === null ? (
               <Leer
                 titel={texte.prozesse.liste.leerTitel}
@@ -440,7 +566,7 @@ export function ProzessAnsicht() {
                 </Link>
               </Leer>
             ) : (
-              <div ref={rechterInhalt} className="flex flex-col gap-3">
+              <div ref={rechterInhalt} className="flex min-h-0 flex-col gap-3">
                 <Kopf
                   prozess={gewaehlterProzess}
                   processId={zustand.prozess as string}
@@ -461,12 +587,22 @@ export function ProzessAnsicht() {
                  * Seitenposition der Liste bleibt stehen, und beim Schließen
                  * geht keine zweite Abfrage hinaus.
                  */}
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-start">
-                  <div className={cn("min-w-0 flex-1", panelOffen && "hidden xl:block")}>
+                <div className="flex min-h-0 flex-col gap-4 xl:flex-row xl:items-stretch">
+                  {/* `xl:items-stretch` und nicht mehr `items-start`: Im
+                      klebenden Rahmen bekommen beide Spalten damit dessen Höhe
+                      und scrollen darin für sich. `items-start` ließe ihnen
+                      ihre Inhaltshöhe, und die sprengte den Rahmen. */}
+                  <div
+                    className={cn(
+                      "min-w-0 flex-1",
+                      IM_RAHMEN_SCROLLT_AB_MD,
+                      panelOffen && "hidden xl:block",
+                    )}
+                  >
                     <Uebertragungen
                       filter={filter}
                       gewaehlteNachricht={zustand.nachricht}
-                      aufNachricht={setzeNachricht}
+                      aufNachricht={oeffneNachricht}
                       aufSortierung={setzeSortierung}
                       gewaehlteZeile={merkeZeile}
                     />
@@ -493,7 +629,10 @@ export function ProzessAnsicht() {
                     <div
                       ref={panelBereich}
                       tabIndex={-1}
-                      className="min-w-0 focus-visible:outline-none xl:w-[26rem] xl:shrink-0 2xl:w-[30rem]"
+                      className={cn(
+                        "min-w-0 focus-visible:outline-none xl:w-[26rem] xl:shrink-0 2xl:w-[30rem]",
+                        IM_RAHMEN_SCROLLT_AB_XL,
+                      )}
                     >
                       <NachrichtDetail
                         // Ein Wechsel der Nachricht ist eine neue Ansicht und kein
@@ -541,6 +680,7 @@ function Baumspalte({
   nurMitVerkehr,
   aufNurMitVerkehr,
   gewaehlt,
+  springeZurAuswahl,
   istOffen,
   aufUmschalten,
   aufAuswahl,
@@ -553,6 +693,8 @@ function Baumspalte({
   nurMitVerkehr: boolean;
   aufNurMitVerkehr: (wert: boolean) => void;
   gewaehlt: string | null;
+  /** Durchgereicht an den Baum — der Sprung beim Einstieg (E‑115). */
+  springeZurAuswahl: boolean;
   istOffen: (schluessel: string) => boolean;
   aufUmschalten: (schluessel: string) => void;
   aufAuswahl: (processId: string) => void;
@@ -662,6 +804,7 @@ function Baumspalte({
           partner={gefiltert}
           stilleSchwelleMonate={baum.stilleSchwelleMonate}
           gewaehlt={gewaehlt}
+          springeZurAuswahl={springeZurAuswahl}
           istOffen={istOffen}
           aufUmschalten={aufUmschalten}
           aufAuswahl={aufAuswahl}
@@ -708,7 +851,10 @@ function Kopf({
   const zone = useAnzeigezone();
 
   return (
-    <div className="flex flex-col gap-1">
+    // `shrink-0`: Im klebenden Rahmen (E‑115) ist die Höhe gedeckelt, und ohne
+    // die Angabe gäbe der Kopf als Flex-Kind zuerst nach. Er nennt den Prozess —
+    // er ist das, was in einer gedeckelten Spalte am wenigsten weichen darf.
+    <div className="flex shrink-0 flex-col gap-1">
       <Button
         ref={zurueckKnopf}
         type="button"
