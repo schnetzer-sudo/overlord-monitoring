@@ -1,5 +1,7 @@
 package de.kraftwerkone.overlord.monitor.payload;
 
+import de.kraftwerkone.overlord.monitor.common.Abrufzustand;
+
 /**
  * Der Zustand eines Abrufs — die vier benannten Faelle aus {@code docs/rohdaten.md} §8, plus der
  * Regelfall.
@@ -43,5 +45,27 @@ public enum Artefaktzustand {
    * weg"</b> — und fuer den Betrieb die wichtigere Unterscheidung. Ein Rueckfall auf eine andere
    * Ablage gibt es nicht: 20 von 20 Kreuzabrufen scheitern, die Ablagen sind keine Spiegel (M68).
    */
-  ABLAGE_NICHT_ERREICHBAR
+  ABLAGE_NICHT_ERREICHBAR;
+
+  /**
+   * Der Zustand, den der <b>Transport</b> gemeldet hat, in dieser Menge.
+   *
+   * <p><b>Die Abbildung steht hier und nicht in {@code common}</b>: {@link Abrufzustand} kennt drei
+   * Faelle, diese Aufzaehlung fuenf — die beiden zusaetzlichen ({@link #BINAERDATEI}, {@link
+   * #KEIN_ANZEIGBARER_PROTOKOLLTEIL}) entstehen erst nach dem Abruf, bei der Binaerpruefung und
+   * beim Beschnitt. Wer die engere Menge in die weitere uebersetzt, ist der, der die weitere kennt;
+   * {@code common} kennt {@code payload} nicht.
+   *
+   * <p><b>{@link Abrufzustand#GELIEFERT} wird zu {@link #ANZEIGBAR}</b>, und das ist an dieser
+   * Stelle noch keine Zusage: Ob die gelieferten Bytes tatsaechlich anzeigbar sind, entscheidet
+   * erst {@code ArtefaktService}. Der Aufrufer benutzt diesen Zweig deshalb ausschliesslich fuer
+   * den Fehlschlag — bei Erfolg geht es mit den Bytes weiter und nicht mit dem Zustand.
+   */
+  public static Artefaktzustand aus(Abrufzustand zustand) {
+    return switch (zustand) {
+      case GELIEFERT -> ANZEIGBAR;
+      case DATEI_NICHT_VORHANDEN -> DATEI_NICHT_VORHANDEN;
+      case ABLAGE_NICHT_ERREICHBAR -> ABLAGE_NICHT_ERREICHBAR;
+    };
+  }
 }

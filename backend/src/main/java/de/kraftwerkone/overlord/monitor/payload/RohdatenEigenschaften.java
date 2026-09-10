@@ -1,11 +1,21 @@
 package de.kraftwerkone.overlord.monitor.payload;
 
+import de.kraftwerkone.overlord.monitor.common.Ablagegrenzen;
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * Die Grenzen des Rohdatenzugriffs. Alle vier Werte haben eine gemessene Bemessungsgrundlage und
  * keinen geratenen Rundwert.
+ *
+ * <p><b>Drei davon liest seit Schritt 10d auch {@link Ablagegrenzen}</b> — der Transport ist nach
+ * {@code common} gewandert, weil das Dashboard ihn ebenfalls braucht, und {@code common} darf
+ * {@code payload} nicht kennen. <b>Kein Schluessel ist dabei umbenannt worden</b>; beide
+ * Datensaetze lesen denselben Zweig {@code overlord.rohdaten.*}. Von diesem Datensatz werden hier
+ * noch {@link #maximalgroesseBytes()} (Obergrenze beim Entpacken) und {@link #anzeigeGrenzeBytes()}
+ * (Kappung der Anzeige) verbraucht; die beiden Zeitgrenzen stehen weiter darin, weil sie zu den
+ * vier Grenzen dieses Features gehoeren und die Datei die Stelle ist, an der sie vollstaendig
+ * dokumentiert sind.
  *
  * @param maximalgroesseBytes Die harte Obergrenze einer einzelnen Datei, in Bytes. Sie greift
  *     <b>waehrend</b> des Lesens und nicht davor: {@code FileReader.FileProperty.Size} deckt nur
@@ -30,10 +40,17 @@ public record RohdatenEigenschaften(
     Duration verbindungszeitgrenze,
     Duration lesezeitgrenze) {
 
-  /** Vorgaben fuer den Fall, dass nichts konfiguriert ist. */
+  /**
+   * Vorgaben fuer den Fall, dass nichts konfiguriert ist.
+   *
+   * <p><b>Die Obergrenze kommt aus {@link Ablagegrenzen#VORGABE_MAXIMALGROESSE_BYTES}</b> und nicht
+   * aus einem zweiten Literal: Es ist derselbe Schluessel und dieselbe Grenze, nur an zwei Stellen
+   * durchgesetzt — beim Lesen des Anhangs (Transport) und beim Entpacken des ZIP-Eintrags (hier).
+   * Zwei Literale liefen auseinander, ohne dass es jemandem auffiele.
+   */
   public RohdatenEigenschaften {
     if (maximalgroesseBytes <= 0) {
-      maximalgroesseBytes = 8L * 1024 * 1024;
+      maximalgroesseBytes = Ablagegrenzen.VORGABE_MAXIMALGROESSE_BYTES;
     }
     if (anzeigeGrenzeBytes <= 0) {
       anzeigeGrenzeBytes = 1024L * 1024;

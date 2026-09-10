@@ -12,6 +12,8 @@ import static org.mockito.Mockito.when;
 import de.kraftwerkone.overlord.monitor.audit.AuditEvent;
 import de.kraftwerkone.overlord.monitor.audit.AuditEventType;
 import de.kraftwerkone.overlord.monitor.audit.AuditLogWriter;
+import de.kraftwerkone.overlord.monitor.common.Ablagezugriff;
+import de.kraftwerkone.overlord.monitor.common.Abrufergebnis;
 import de.kraftwerkone.overlord.monitor.common.error.RessourceNichtGefundenException;
 import de.kraftwerkone.overlord.monitor.security.AngemeldeterNutzer;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;

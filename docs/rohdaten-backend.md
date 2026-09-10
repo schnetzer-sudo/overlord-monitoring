@@ -590,6 +590,53 @@ Fünf, alle vorsätzlich und alle hier statt in einer Fußnote.
 
 ## 12. Die Klassen
 
+> ### ⚠️ Korrektur vom 10.09.2026 — drei dieser Klassen liegen nicht mehr in `payload`
+>
+> **Die Tabelle unten bleibt Zeichen für Zeichen stehen**, damit ablesbar bleibt, wie Schritt 8
+> gebaut worden ist. Was gilt: `Ablagezugriff`, `SaajAblagezugriff` und `Abrufergebnis` liegen seit
+> Schritt 10d Teil A in **`common`** — zusammen mit zwei neuen Typen, die es vorher nicht gab.
+>
+> | Klasse | Wo sie jetzt liegt | Was sich geändert hat |
+> |---|---|---|
+> | `Ablagezugriff` | `common` | nur der Paketname |
+> | `SaajAblagezugriff` | `common` | Paketname; Zustandstyp; die Grenzen kommen aus `Ablagegrenzen` statt aus `RohdatenEigenschaften` |
+> | `Abrufergebnis` | `common` | Paketname; trägt `Abrufzustand` statt `Artefaktzustand` |
+> | **`Abrufzustand`** *(neu)* | `common` | die **drei** Fälle, die der Transport selbst unterscheiden kann: `GELIEFERT`, `DATEI_NICHT_VORHANDEN`, `ABLAGE_NICHT_ERREICHBAR` |
+> | **`Ablagegrenzen`** *(neu)* | `common` | die **drei** Grenzen, die der Transport braucht — Obergrenze, Verbindungs- und Lesezeitgrenze |
+> | `Artefaktzustand` | **bleibt in `payload`** | bekommt `aus(Abrufzustand)`: die Abbildung der engeren Menge in die weitere |
+> | `RohdatenEigenschaften` | **bleibt in `payload`** | unverändert in Feldern und Schlüsseln; die Vorgabe für `maximalgroesse-bytes` kommt jetzt aus `Ablagegrenzen.VORGABE_MAXIMALGROESSE_BYTES` |
+>
+> **Der Grund ist ein zweiter Verbraucher und keine Umgestaltung.** Die Ablagenkachel des
+> Dashboards prüft die Erreichbarkeit über **denselben Abrufweg** ([`dienste.md`](dienste.md) §4).
+> Zwei Fachpakete dürfen einander nicht kennen — [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md)
+> §6: *„Fachpakete kennen einander nicht. Gemeinsames liegt in `common`, nicht in einem
+> Nachbarmodul."* Ein `import …payload.Ablagezugriff` in `dashboard` wäre genau der verbotene Fall,
+> und `PaketstrukturTest.fachpakete_kennen_einander_nicht` hätte ihn gefangen.
+>
+> **Warum `Artefaktzustand` nicht mitgewandert ist.** Er kennt fünf Zustände, und zwei davon
+> entstehen **nach** dem Abruf: `BINAERDATEI` bei der Binärprüfung, `KEIN_ANZEIGBARER_PROTOKOLLTEIL`
+> beim Beschnitt. Der Transport sieht beide nie. `Abrufzustand` ist deshalb **nicht die halbe
+> Aufzählung, sondern die vollständige Antwortmenge einer anderen Frage** — und die Abbildung steht
+> in `payload`, weil dort die weitere Menge bekannt ist.
+>
+> **Warum zwei Datensätze denselben Zweig `overlord.rohdaten.*` lesen.** Weil **kein Schlüssel
+> umbenannt** wird (Vorgabe des Auftrags). Die Überschneidung ist `maximalgroesse-bytes` — ein Wert,
+> zwei Durchsetzungspunkte: der Transport bricht das **Lesen des Anhangs** daran ab, `payload` das
+> **Entpacken des ZIP-Eintrags**. Die Vorgabe steht deshalb an genau einer Stelle im Code.
+> `anzeige-grenze-bytes` ist bewusst **nicht** mitgewandert: Sie betrifft die Kappung der Anzeige und
+> nicht den Transport.
+>
+> **Verhaltensgleich, und das ist nachgewiesen.** Die sechs Testklassen dieses Abschnitts sind
+> inhaltlich unverändert grün (`ArtefaktServiceTest` 33, `ArtefaktbausteineTest` 24,
+> `ArtefaktIdTest` 20, `ProtokollbeschnittTest` 12, `ArtefaktStatementsTest` 10 Testfälle,
+> `RohdatenIsolationDbIT` 11 gegen die Testkopie — 110 zusammen, aus den Surefire- und
+> Failsafe-Berichten des Laufs vom 10.09.2026 und nicht abgezählt). Angepasst sind an ihnen **zwei Importzeilen** in
+> `ArtefaktServiceTest` und sonst nichts. Außerhalb der verschobenen Klassen besteht der ganze Diff
+> aus Importen, der Verdrahtung in `config/RohdatenConfig` und der einen Zeile in
+> `ArtefaktService`, die jetzt `Artefaktzustand.aus(abruf.zustand())` schreibt.
+>
+> **Der Paketname `payload` bleibt** — offener Punkt 2 unter §11, unverändert offen.
+
 | Klasse | Zweck |
 |---|---|
 | `ArtefaktController` | Die drei Endpunkte. Holt Mandant und Rolle aus der Sitzung |

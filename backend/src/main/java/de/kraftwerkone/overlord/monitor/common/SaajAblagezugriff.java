@@ -1,4 +1,4 @@
-package de.kraftwerkone.overlord.monitor.payload;
+package de.kraftwerkone.overlord.monitor.common;
 
 import jakarta.xml.soap.AttachmentPart;
 import jakarta.xml.soap.MessageFactory;
@@ -24,6 +24,16 @@ import org.springframework.stereotype.Component;
 
 /**
  * Der SOAP-{@code RETRIEVE} gegen eine Ablage, ueber SAAJ.
+ *
+ * <h2>Warum diese Klasse in {@code common} liegt</h2>
+ *
+ * <p>Bis Schritt 10d stand sie in {@code payload}, und dort war sie richtig: Es gab genau einen
+ * Verbraucher. Seither fragt die <b>Ablagenpruefung des Dashboards</b> denselben Weg — und zwei
+ * Fachpakete duerfen einander nicht kennen (Abschnitt 6 der Projektbeschreibung: „Fachpakete kennen
+ * einander nicht. Gemeinsames liegt in {@code common}, nicht in einem Nachbarmodul."). <b>Das
+ * Verhalten ist beim Umzug unveraendert geblieben</b>; getauscht sind der Paketname, der Typ des
+ * Ergebniszustands ({@link Abrufzustand} statt {@code payload/Artefaktzustand}) und die Herkunft
+ * der Grenzen ({@link Ablagegrenzen}).
  *
  * <h2>Warum SAAJ und nicht ein eigener Envelope</h2>
  *
@@ -80,12 +90,12 @@ public class SaajAblagezugriff implements Ablagezugriff {
   /** Die einzige Operation, die dieses Werkzeug sendet. */
   private static final String AKTION_RETRIEVE = "RETRIEVE";
 
-  private final RohdatenEigenschaften eigenschaften;
+  private final Ablagegrenzen grenzen;
   private final SOAPConnectionFactory verbindungsfabrik;
   private final MessageFactory nachrichtenfabrik;
 
-  SaajAblagezugriff(RohdatenEigenschaften eigenschaften) throws SOAPException {
-    this.eigenschaften = eigenschaften;
+  SaajAblagezugriff(Ablagegrenzen grenzen) throws SOAPException {
+    this.grenzen = grenzen;
     // Beide Fabriken sind threadsicher und teuer genug, um sie nicht je Abruf zu bauen.
     // Schlaegt das hier fehl, startet die Anwendung gar nicht erst — besser als ein Endpunkt,
     // der beim ersten Aufruf mit 500 antwortet.
@@ -109,8 +119,8 @@ public class SaajAblagezugriff implements Ablagezugriff {
     try {
       verbindungHandle = verbindungsfabrik.createConnection();
       // Die beiden Zeilen, die es im javax-Zweig nicht gibt.
-      verbindungHandle.setConnectTimeout(eigenschaften.verbindungszeitgrenzeMillis());
-      verbindungHandle.setReadTimeout(eigenschaften.lesezeitgrenzeMillis());
+      verbindungHandle.setConnectTimeout(grenzen.verbindungszeitgrenzeMillis());
+      verbindungHandle.setReadTimeout(grenzen.lesezeitgrenzeMillis());
 
       SOAPMessage antwort = verbindungHandle.call(anfrage(uuid), adresse);
       return auswerten(antwort);
@@ -170,8 +180,8 @@ public class SaajAblagezugriff implements Ablagezugriff {
   /**
    * Anhang lesen, oder den Zustand benennen.
    *
-   * <p><b>Kein Anhang heisst {@link Artefaktzustand#DATEI_NICHT_VORHANDEN}</b> — auch dann, wenn
-   * die Antwort eine leere {@code FileList} ist. Die Ablage hat geantwortet; sie hat nur nichts
+   * <p><b>Kein Anhang heisst {@link Abrufzustand#DATEI_NICHT_VORHANDEN}</b> — auch dann, wenn die
+   * Antwort eine leere {@code FileList} ist. Die Ablage hat geantwortet; sie hat nur nichts
    * geliefert. Das ist der Fall, den {@code docs/rohdaten.md} §8 „Datei nicht vorhanden" nennt und
    * den M68 und M66 (2) als {@code Error (Skipped)} im Rumpf gemessen haben — nicht im HTTP-Status.
    *
@@ -207,7 +217,7 @@ public class SaajAblagezugriff implements Ablagezugriff {
       // nicht": In beiden Faellen liegt die Ursache ausserhalb dessen, was der Nutzer aendern kann.
       log.warn(
           "Abruf abgebrochen: der Anhang ueberschreitet die Obergrenze von {} Byte.",
-          eigenschaften.maximalgroesseBytes());
+          grenzen.maximalgroesseBytes());
       return Abrufergebnis.nichtErreichbar();
     }
     return Abrufergebnis.geholt(gepackt);
@@ -217,13 +227,16 @@ public class SaajAblagezugriff implements Ablagezugriff {
    * Liest den Anhang <b>gedeckelt</b>.
    *
    * <p>Die Grenze greift waehrend des Lesens und nicht vorher. Eine Vorabpruefung ueber {@code
-   * FileReader.FileProperty.Size} gaebe es nur fuer rund 69,6 % der Artefakte (M17, M60) — und eine
-   * Grenze, die in einem Drittel der Faelle nicht greift, ist keine.
+   * FileReader.FileProperty.Size} gaebe es nur fuer rund 69,6 % der <b>Nachrichten</b> in Fenster A
+   * und 57,2 % in Fenster B (M56, Befund 1) — und eine Grenze, die in vier von zehn Faellen nicht
+   * greift, ist keine. <i>(Hier stand bis zum 10.09.2026 „69,6 % der Artefakte (M17, M60)";
+   * gemessen ist die Abdeckung der Nachrichten, {@code docs/rohdaten-backend.md} §3 berichtigt das
+   * seit dem 20.08.2026. Die Schlussfolgerung wird davon nur staerker.)</i>
    *
    * @return {@code null}, wenn die Obergrenze ueberschritten ist
    */
   private byte[] lies(AttachmentPart anhang) throws SOAPException, IOException {
-    long grenze = eigenschaften.maximalgroesseBytes();
+    long grenze = grenzen.maximalgroesseBytes();
     try (InputStream strom = anhang.getRawContent()) {
       ByteArrayOutputStream gesammelt = new ByteArrayOutputStream();
       byte[] puffer = new byte[8192];

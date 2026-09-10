@@ -1,4 +1,4 @@
-package de.kraftwerkone.overlord.monitor.payload;
+package de.kraftwerkone.overlord.monitor.common;
 
 /**
  * Was ein Abruf bei der Ablage ergeben hat: entweder die gepackten Bytes oder ein benannter
@@ -10,14 +10,14 @@ package de.kraftwerkone.overlord.monitor.payload;
  * Unterschied zwischen „Datei weg" und „Ablage aus" ginge dabei verloren. Genau diesen Unterschied
  * braucht der Betrieb.
  *
- * @param zustand {@link Artefaktzustand#ANZEIGBAR} nur zusammen mit {@link #zip()}
+ * @param zustand {@link Abrufzustand#GELIEFERT} nur zusammen mit {@link #zip()}
  * @param zip die Bytes der ZIP-Datei; {@code null} in jedem anderen Zustand
  */
-public record Abrufergebnis(Artefaktzustand zustand, byte[] zip) {
+public record Abrufergebnis(Abrufzustand zustand, byte[] zip) {
 
   /** Die Ablage hat geantwortet und einen Anhang geliefert. */
   public static Abrufergebnis geholt(byte[] zip) {
-    return new Abrufergebnis(Artefaktzustand.ANZEIGBAR, zip);
+    return new Abrufergebnis(Abrufzustand.GELIEFERT, zip);
   }
 
   /**
@@ -25,16 +25,16 @@ public record Abrufergebnis(Artefaktzustand zustand, byte[] zip) {
    * Normalfall fuer 63,2 % des Bestands.
    */
   public static Abrufergebnis nichtVorhanden() {
-    return new Abrufergebnis(Artefaktzustand.DATEI_NICHT_VORHANDEN, null);
+    return new Abrufergebnis(Abrufzustand.DATEI_NICHT_VORHANDEN, null);
   }
 
   /** Die Kennung loest nicht auf, oder der Knoten hat nicht geantwortet. */
   public static Abrufergebnis nichtErreichbar() {
-    return new Abrufergebnis(Artefaktzustand.ABLAGE_NICHT_ERREICHBAR, null);
+    return new Abrufergebnis(Abrufzustand.ABLAGE_NICHT_ERREICHBAR, null);
   }
 
   public boolean erfolgreich() {
-    return zustand == Artefaktzustand.ANZEIGBAR && zip != null;
+    return zustand == Abrufzustand.GELIEFERT && zip != null;
   }
 
   /**
