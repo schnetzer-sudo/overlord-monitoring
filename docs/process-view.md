@@ -1272,6 +1272,24 @@ Stelle, an der er gerade war.
 > hat" gilt unverändert — nur springt jetzt nicht mehr der Baum, sondern das, was der Klick
 > hervorgebracht hat, und auch das nur, wenn es nicht schon im Bild steht.
 
+> ### ⚠️ Korrektur vom 10.09.2026 — **beim Einstieg springt er wieder** (E‑115, §47)
+>
+> Die beiden Blöcke darüber bleiben stehen. **Was E‑115 zurücknimmt, ist der Satz „weder beim tiefen
+> Link noch beim Klick":** Beim **tiefen Link** springt der Baum wieder, beim **Klick** nicht.
+>
+> Der Grund für das Streichen war die Abwägung — Baum und rechte Spalte konnten nicht beide im Bild
+> stehen. Seit die rechte Spalte klebt, können sie es, und die Abwägung entfällt. Was bleibt, ist
+> der Satz aus dem ersten Absatz dieses Abschnitts, und er entscheidet allein: *Wer im Baum
+> weiterklickt, sieht seine Zeile ohnehin, und ein Sprung bei jedem Klick wäre eine Bewegung, die
+> niemand angefordert hat.* Deshalb ist der Schlüssel des Sprungs der Prozess aus der
+> **Einstiegsadresse** und nicht der gewählte: Sobald der Nutzer einen anderen wählt, fallen die
+> beiden auseinander, und es springt nichts mehr.
+>
+> **Auch der Kasten „gar kein Sprung, solange ein Panel offen ist" gilt weiter** — aus einem
+> einfacheren Grund als damals: Bei offenem Panel weicht der Baum ganz (E‑57), es gibt keine Zeile,
+> zu der zu springen wäre. Kommt er beim Schließen zurück, springt der Einstieg nach; steht die
+> Zeile dann schon im Bild, bewegt sich nichts.
+
 **Eine Modifiertaste gehört dem Browser.** Der Handler steigt bei `Alt`, `Strg`, `Meta` und
 `Umschalt` aus, **bevor** er die Voreinstellung unterdrückt. Sonst verschlucht der Baum `Alt+←` —
 ausgerechnet die Taste, für die `prozess` und `nachricht` mit `history: "push"` überhaupt erst
@@ -1848,6 +1866,20 @@ Baum wie vorgesehen, und damit verlässt die Liste das Bild (offener Punkt **118
 > auf demselben Weg gelöst: Die rechte Spalte kommt über `lib/in-sicht-bringen.ts` ins Bild, statt
 > dass der Baum sie hinausschiebt. **Warum das weiterhin kein Test findet, gilt unverändert** —
 > `jsdom` rechnet kein Layout; `tests/in-sicht-bringen.test.tsx` belegt den Aufruf, nicht das Bild.
+
+> ### ⚠️ Korrektur vom 10.09.2026 — **von den dreien sind jetzt alle drei zu haben** (E‑115, §47)
+>
+> Der Befund und beide Korrekturblöcke darüber bleiben stehen. **Der Satz „von den drei Dingen —
+> Baum, Panel, richtige Stelle — sind nur zwei zugleich zu haben" gilt nicht mehr.** Seit die rechte
+> Spalte klebt, steht das Panel im Bild, ohne dass `main` bewegt wird — und der Baum darf zu seiner
+> Zeile springen, ohne etwas hinauszuschieben. Genau der Fall dieses Befunds
+> (`?prozess=…&nachricht=…`) ist deshalb der, an dem man es sieht: Beim Schließen kommt der Baum
+> zurück **und zeigt die gewählte Zeile**, das Panel steht bis dahin für sich.
+>
+> **Und was ein Test weiterhin nicht findet, gilt unverändert.** `jsdom` rechnet kein Layout;
+> `tests/in-sicht-bringen.test.tsx` und `tests/prozess-baum.test.tsx` belegen seit E‑115 immerhin
+> **welcher Kasten sich um wie viel bewegt** — nicht, dass etwas klebt. Das entscheidet der Browser,
+> und dort ist es gemessen (M173).
 
 #### 2. Der Baum verschluckte `Alt+←` — das Zurück des Browsers
 
@@ -4040,6 +4072,20 @@ sie brauchen und sie zum Scrollbereich gehört, nicht zu einer Ansicht
 | **Der Konflikt, entschieden** | Baum und rechte Spalte können bei einer Auswahl weit unten nicht beide im Bild stehen. **Es gewinnt das Ergebnis der Handlung, die rechte Spalte.** `springeZurAuswahl` im Baum ist damit gegenstandslos und entfallen; der Baum steht weiterhin an der richtigen Stelle offen, die gewählte Zeile ist markiert und trägt den Tabstopp, sie wird nur nicht mehr angesprungen. **Das dreht §19, Befund 1 in seiner Wirkung um** und ist dort als datierter Korrekturblock festgehalten, ebenso an der Stelle in §17, die den Sprung begründet hat (der Auftrag nannte §15; nach dem Aufriss der Datei steht die Begründung in §17, *Startzustand: alles zugeklappt*) |
 | **Der Preis** | Die geklickte Baumzeile kann aus dem Bild laufen — bei `NEXANS` liegt sie nach dem Klick 6.862 px unter der Kante (M172) |
 
+> ### ⚠️ Korrektur vom 10.09.2026 — **der Konflikt ist keiner mehr** (E‑115, §47)
+>
+> Die Zeile „Der Konflikt, entschieden" und der Preis darunter beschreiben den Stand vom
+> 09.09.2026 und bleiben wortgleich stehen. **Die Abwägung, die sie trifft, ist entfallen:** Seit
+> die rechte Spalte klebt, können Baum und rechte Spalte **beide** im Bild stehen. Es ist nichts
+> mehr zu gewinnen und nichts zu verlieren.
+>
+> **Was daraus folgt, ist trotzdem nicht die alte Fassung:** `springeZurAuswahl` ist zurück, aber
+> mit engerer Bedeutung — **nur beim Einstieg über eine Adresse** (tiefer Link, Absprung nach
+> E‑103), nicht beim Klick. Der Grund dafür ist nicht mehr der Konflikt, sondern der Satz, der schon
+> in §17 stand und unverändert gilt: *Wer im Baum weiterklickt, sieht seine Zeile ohnehin, und ein
+> Sprung bei jedem Klick wäre eine Bewegung, die niemand angefordert hat.* Der Preis oben ist damit
+> ebenfalls entfallen — die geklickte Baumzeile bleibt stehen, wo sie war (M173).
+
 **Verworfene Alternativen, beide aus Punkt 118:**
 
 - **Die rechte Spalte kleben lassen** (`sticky`, wie der Baumkopf). Sie widerspräche §7 nicht —
@@ -4048,6 +4094,18 @@ sie brauchen und sie zum Scrollbereich gehört, nicht zu einer Ansicht
   unerreichbar.
 - **Ein eigener Scrollbereich für den Baum.** Er widerspricht §7 ausdrücklich und stand nicht zur
   Wahl.
+
+> ### ⚠️ Korrektur vom 10.09.2026 — **der erste ist gebaut** (E‑115, §47)
+>
+> Die Begründung darüber bleibt stehen und war richtig: `sticky` **allein** machte den unteren Teil
+> unerreichbar. **Was fehlte, war der zweite Halbsatz** — eine klebende Spalte mit *eigenem
+> Scrollbereich* hat diesen Nachteil nicht, und genau der ist seit E‑115 gebaut. Die Höhe bemisst
+> sich dabei an `main` und nicht am Fenster; die Ausnahme von §7, Bedingung 2 ist benannt und gilt
+> für drei Stellen.
+>
+> **Der zweite bleibt verworfen**, und der Satz stimmt weiterhin: Der Baum bekommt keinen eigenen
+> Scrollbereich. Er steht in `main` — nur schiebt er die rechte Spalte nicht mehr weg, weil die
+> klebt.
 
 ### ⚠️ Abweichung vom Auftrag: `block: "nearest"` allein trägt nicht — Vorprobe zu M172
 
@@ -4210,6 +4268,17 @@ Rechtecken, nicht mit Daten.
 |---|---|
 | **161** | **Blättern in der Prozessansicht: Die neue Seite beginnt dort, wo die alte begann — oberhalb des Sichtfensters** (M172: Tabelle bei −1.229 px vorher und nachher, `main.scrollTop` 1.342 unverändert). E‑114 deckt es nicht ab, weil kein Schlüssel wechselt; auf `/nachrichten` landet dieselbe Handlung durch das Ladeskelett am Seitenanfang (868 → 0), also durch eine Nebenwirkung und nicht durch eine Regel. Wer den Punkt aufmacht, entscheidet, ob der Seitenwechsel ein Schlüssel für denselben Haken wird (Cursor der Seite) — dann gälte es an beiden Orten gleich — oder ob das Verhalten der Nachrichtenliste die Vorgabe ist. **Kein Sonderweg gebaut**, wie der Auftrag es verlangt |
 
+> ### ⚠️ Nachgemessen am 10.09.2026 — **die Zahlen sind andere** (E‑115, §47)
+>
+> Der Punkt bleibt offen und ungebaut. **Was sich geändert hat, ist das Verhalten:** M173 misst die
+> Tabelle bei **−697 vor** und **+114 nach** dem Blättern, der Scrollstand der Liste fällt von 811
+> auf 0 — die neue Seite beginnt also **im Bild**. Der Grund ist derselbe wie auf `/nachrichten`
+> und weiterhin **keine Regel**, sondern das Ladeskelett: Es schrumpft den Inhalt, der Browser
+> klemmt den Stand. Neu ist nur, **wo** er klemmt — seit E‑115 in der Liste statt in `main`.
+> **Die Frage des Punktes steht unverändert:** ob der Seitenwechsel ein Schlüssel für denselben
+> Haken wird, oder ob das Verhalten der Nachrichtenliste die Vorgabe ist. Sie ist jetzt nur weniger
+> dringend.
+
 ### Regelbezug
 
 | Regel | Stand |
@@ -4230,3 +4299,517 @@ Rechtecken, nicht mit Daten.
 | 4. Panel geschlossen: die zuvor gewählte Zeile steht im Bild | ✔ | Zeile 50 bei 998/999 (untere Kante), unter `md` bei 923 |
 | 5. Das Dokument scrollt nicht, genau ein Scrollbereich | ✔ | 1.080 / 1.080; ein senkrecht scrollendes Element |
 | 6. Build grün, Tests grün, Konsole sauber | ✔ | `pnpm build` 09.09.2026, 963 Fälle; Konsole des Rahmens ohne Meldung der Anwendung |
+
+---
+
+## 47. E‑115 — Die Liste bleibt stehen
+
+### Der Anlass: E‑114 tut, was es soll, und nimmt dabei die Stelle mit
+
+Meldung vom **10.09.2026**, zwei Punkte:
+
+1. **Liste zu Panel.** Wer auf `/nachrichten`, `/suche` oder in der Prozessliste weit unten eine
+   Nachricht öffnet, landet oben: Das Panel steht im Bild, die geklickte Zeile nicht mehr. Wer
+   weiterklicken will, sucht seine Stelle jedes Mal neu.
+2. **Baum zu Liste.** Ein Klick auf einen Prozess weit unten im Baum wirft den Baum an seinen
+   Anfang zurück.
+
+**Beides tut E‑114 genau so, wie es gebaut ist** (§46): `/nachrichten` 868 → 15, `/suche`
+1.014 → 15, Prozessliste 1.298 → 113, Baum 6.422 → 60 (M172). Die Regel holt das Neue ins Bild,
+indem sie **`main` bewegt** — und in `main` stehen auch Liste und Baum. Der Fehler liegt nicht in
+der Regel, sondern in ihrem Bezug: Es gab nur einen Scrollbereich, also konnte sie nur ihn meinen.
+
+**Das Ziel, verbindlich:** Baum und Liste bleiben stehen, ein Klick bewegt sie nicht. Was neu
+erscheint — das Panel, in der Prozessansicht die rechte Spalte —, steht auf der Höhe, auf der man
+gerade ist, und läuft beim Scrollen mit.
+
+### Nummernvergabe (Teil 7)
+
+Dieselbe Suche wie in §46: Python mit Wortgrenzen über `docs/*.md`, dazu über die **zwei Zweige, die
+noch nicht in `main` sind** (`git branch --no-merged main`: `feat/suchfeld-untermenues` und
+`test/indexbestand-e37`). Die Zeichenklasse `[‑-]` fängt den geschützten Bindestrich U+2011.
+
+| | |
+|---|---|
+| **Entscheidung** | **E‑115.** Höchste in `main`: **E‑114** (91 verschiedene Nummern, `bam-suche.md` §11.4 der erste Treffer). `E‑780` ist der bekannte Falschtreffer aus einer Rohausgabe (`messungen-property-suche.md` §…, dort selbst als solcher geführt) — gelesen und ausgesondert. `feat/suchfeld-untermenues` trägt E‑112 und E‑113, beide stehen bereits in `main`s Dokumenten; `test/indexbestand-e37` ist ein Stand von vor E‑37 und trägt nichts darüber |
+| **Messung** | **M173.** Höchste in `main`: **M172** (164 verschiedene). **M179 ist Fließtext** — die Zeile *„M153 bis M179: kein Treffer"* in `messungen-property-suche.md`, eine Aussage **über** Nummern und keine Vergabe; einzeln gelesen. Kein Zweig vergibt eine Nummer über 172 |
+| **Offener Punkt** | **162.** `^\*\*1[5-7][0-9]\.` über `docs/` → 150 bis **160** in `messungen-property-suche.md`; **161** ist mit E‑114 vergeben (§46, Blättern in der Prozessansicht). Zwei Falschtreffer, beide gelesen: `**167.734**` in `messungen-schritt7.md` ist eine Zahl mit Tausenderpunkt, und `**169** offen` in `messungen-schritt9.md` ist eine Zeilenzahl aus dem Katalog |
+
+**Jeder Treffer ist gelesen und nicht gezählt.** Die drei erwarteten Nummern des Auftrags haben sich
+bestätigt.
+
+### Die Entscheidung
+
+> **Die Spalte, die neu erscheint, klebt am oberen Rand des sichtbaren Bereichs von `main` und
+> scrollt für sich. Sie ist höchstens so hoch wie dieser Bereich.**
+
+**Warum sie für sich scrollt.** E‑114 hat `sticky` erwogen und verworfen, weil Liste und Panel höher
+sind als der Scrollbereich (1.813 px Liste, bis 2.321 px Panel bei 1.032 px `main`, M172): Der untere
+Teil wäre unerreichbar gewesen. **Der eigene Scrollbereich nimmt genau diesen Grund weg** — und nur
+ihn. Die Begründung von damals war richtig; ihr fehlte der zweite Halbsatz (§46, Korrekturblock).
+
+**Verworfen: mitwanderndes Kleben per JavaScript.** Die Spalte scrollt mit `main`, bis ihre
+Unterkante sichtbar ist, und klebt erst dann. Das behielte den einen Scrollbereich, aber wer den
+unteren Teil des Panels liest, schöbe dabei Liste oder Baum um bis zu 1.300 px weg — genau das, was
+nicht passieren soll.
+
+**Der Preis ist eine benannte Ausnahme** von [`frontend-grundlagen.md`](frontend-grundlagen.md) §7,
+Bedingung 2 (genau ein Element mit `overflow-y-auto`, nichts bemisst seine Höhe am Fenster). Sie gilt
+für die klebende Spalte und für nichts sonst, und deren Höhe bemisst sich an `main`, nicht am
+Fenster.
+
+**Wo sie gilt: nur dort, wo zwei Spalten nebeneinander stehen, an den vorhandenen Umbruchpunkten.**
+
+| Ansicht | Zustand | klebende Spalte | ab |
+|---|---|---|---|
+| `/nachrichten`, `/suche` (Beleg- und Eigenschaftssuche) | Panel offen | Panelhülle `xl:w-[26rem] 2xl:w-[30rem]` | `xl` |
+| `/prozesse` | keine Nachricht offen | rechte Spalte (Leerzustand oder Kopf und Liste) | `md` |
+| `/prozesse` | Nachricht offen, der Baum weicht (E‑57) | Liste und Panelhülle im Rahmen, jede für sich | `xl` |
+
+Darunter bleibt alles, wie E‑114 es gebaut hat; die Werte für 700 px aus M172 sind dort der Maßstab.
+Zwischen `md` und `xl` steht bei offener Nachricht nichts nebeneinander (Baum und Liste weichen),
+auch dort gilt E‑114 unverändert.
+
+### Teil A — die Bestandsaufnahme, vor dem Bau
+
+Aus dem Code erhoben, je Einhängepunkt und Breitenzustand. **M172 ist der Vorher-Stand und ist nicht
+neu gemessen.**
+
+| Einhängepunkt | was nebeneinander steht | wird zur klebenden Spalte | Haken heute | Fokus durch die Anwendung |
+|---|---|---|---|---|
+| `/nachrichten` (`nachrichten-ansicht.tsx`) | ab `xl` Liste \| Panel, Zeile `flex-col gap-4 xl:flex-row xl:items-start` | die Panelhülle `min-w-0 xl:w-[26rem] xl:shrink-0 2xl:w-[30rem]` | `useInSicht(panel, gewaehlt)`, `useInSicht(zuletztGewaehlteZeile, geschlossen)` | keiner |
+| `/suche` (`suche-ansicht.tsx`, Beleg **und** Eigenschaft) | dieselbe Zeile, dieselbe Hülle | dieselbe Panelhülle | dieselben zwei Haken | keiner |
+| `/prozesse` (`prozessansicht.tsx`), ohne Panel | ab `md` Baum \| rechte Spalte, Zeile `flex-col gap-4 md:flex-row md:items-start` | die rechte Spalte `min-w-0 flex-1` | `useInSicht(rechterInhalt, prozess)` | `zurueckKnopf` **nur unter `md`** (§15, Punkt 119) |
+| `/prozesse`, mit Panel | ab `xl` Liste \| Panel in der **inneren** Zeile `flex-col gap-4 xl:flex-row xl:items-start`; der Baum weicht in jeder Breite (E‑57) | Liste `min-w-0 flex-1` und Panelhülle | `useInSicht(panelBereich, nachricht)`, Rückweg über die Zeile | **`panelBereich.focus()`** im `requestAnimationFrame`, wenn der Fokus im weichenden Baum lag (E‑57) |
+
+**Die drei Bedingungen zum Anhalten sind geprüft, und keine trat ein:**
+
+| Bedingung | Befund |
+|---|---|
+| „eine Panelhülle gleicht nicht Klasse für Klasse den anderen" | **gleich** in den Breitenklassen: `min-w-0 xl:w-[26rem] xl:shrink-0 2xl:w-[30rem]` an allen drei Stellen. Die Prozessansicht trägt eine Klasse **mehr** — `focus-visible:outline-none`, weil dieselbe Hülle den `tabIndex={-1}`-Fokus aus E‑57 auffängt. Das ist kein Breitenverhalten und stand der Sache nicht im Weg |
+| „Liste und Panel sind in der Prozessansicht keine Geschwister" | **sie sind es** — beide unmittelbare Kinder der inneren Zeile |
+| „die Liste wird beim Öffnen neu eingehängt" | **wird sie nicht** — sie bekommt `hidden xl:block`, also `display: none`; **das Element bleibt dasselbe**. Genau daran hängt die Entscheidung unten |
+
+#### ⚠️ Abweichung vom Auftrag: das Element, das die Liste scrollt, darf nicht wechseln
+
+Die Tabelle des Auftrags nennt für `/prozesse` **zwei verschiedene** klebende Spalten: ohne Panel die
+rechte Spalte (Kopf und Liste), mit Panel die Liste und die Panelhülle. Beides zusammen heißt: Beim
+Öffnen einer Nachricht wechselt das Element, **das die Liste scrollt** — vorher die rechte Spalte,
+nachher die Liste selbst.
+
+**Ein Scrollstand springt nicht von einem Element auf ein anderes.** Wer ans Listenende scrollt und
+Zeile 50 öffnet, bekäme die Liste danach wieder an ihrem Anfang — also genau das, was Abnahmepunkt 1
+und 2 für die Prozessliste ausschließen. Der Fall ist **vor dem Bau gemeldet** und entschieden
+worden; gebaut ist die erste der drei vorgelegten Fassungen:
+
+> **Die rechte Spalte klebt in beiden Zuständen und ist der *Rahmen*: höchstens so hoch wie der
+> sichtbare Bereich, klebend, aber selbst nicht scrollend. Darin scrollen Liste und — wenn offen —
+> Panel jede für sich.**
+
+Damit ist die Liste in beiden Zuständen **dasselbe scrollende Element**, und ihr Stand bleibt beim
+Öffnen von selbst stehen, ohne eine Zeile JavaScript. Die Wirkung der Auftragstabelle ist
+unverändert (die Liste und das Panel scrollen jede für sich, keine bewegt die andere); verschoben
+ist allein, **an welchem Element** das Kleben sitzt. Zwei Dinge kommen dabei heraus, die der Auftrag
+nicht verlangt und die niemandem wehtun: Der **Kopf des Prozesses** bleibt auch bei offenem Panel
+stehen, und die Aufteilung `md` / `xl` bleibt trotzdem die der Tabelle — der Rahmen klebt ohne Panel
+ab `md`, mit Panel ab `xl`.
+
+Die beiden anderen Fassungen — „genau nach Tabelle bauen und den Sprung der Liste hinnehmen" und
+„nach Tabelle bauen und den Scrollstand beim Umschalten per JavaScript übertragen" — sind mit
+vorgelegt und nicht gewählt worden.
+
+### Teil B — der Bau
+
+#### B1 Die klebende Spalte: eine Definition, `lib/klebende-spalte.ts`
+
+| Klasse | wofür |
+|---|---|
+| `sticky top-0` | klebt am oberen Rand des sichtbaren Bereichs von `main` |
+| `self-start` | **ein gestrecktes Flex-Kind ist so hoch wie seine Zeile** und hat keinen Weg zum Kleben. Die Zeilen tragen `items-start`; die Angabe steht trotzdem in der Definition, damit die Spalte für sich vollständig ist |
+| `max-h-[100cqh]` | höchstens so hoch wie der sichtbare Bereich — **an `main` bemessen, nie am Fenster** |
+| `overflow-y-auto` | darüber hinaus scrollt sie für sich |
+| `overscroll-contain` | gibt das Scrollen an ihrem Ende **nicht** an `main` weiter; sonst bewegte sich die Liste doch |
+
+Fünf ausgeschriebene Klassenketten, weil Tailwind den Quelltext durchsucht und ein zusammengesetzter
+Name nie im erzeugten CSS entstünde: die Spalte für sich (`xl`), der Rahmen (`md` und `xl`) und was
+in ihm scrollt (`md` und `xl`). **Die Definition ist trotzdem eine** — eine Datei, eine Begründung,
+eine Tabelle der drei Stellen. Die Breitenlogik bleibt bei Klassen; **keine Abfrage der Fensterbreite
+in JavaScript.**
+
+**`top-0` und nicht `-top-4`, gemessen statt gerechnet.** `main` trägt `py-4`. In einem
+Scrollbereich mit Innenabstand klebt `top: 0` an dessen **Inhaltskante**: In der Vorprobe zu V1
+(kopfloses Chrome 152, gestellter Aufbau, `main` 1.032 px, Innenabstand 16 px) stand die Spalte mit
+`top: 0` bei **16 px** — bei `scrollTop` 0, 400 und am Anschlag gleichermaßen —, mit `-top-4` bei
+**0 px**, und sie sprang beim Ankleben um 16 px hoch. Mit `max-h-[100cqh]` (= 1.000 px, die
+Inhaltshöhe) steht sie damit oben und unten je 16 px vom Rand. Die klebenden Tabellenköpfe von
+Katalog und Benutzerverwaltung nehmen `-top-4`, weil sie die **Außen**kante erreichen sollen; das ist
+kein Widerspruch, sondern derselbe Effekt mit anderem Ziel.
+
+#### B2 Die Regel aus E‑114, eine Ebene genauer
+
+> **Was neu erscheint, kommt ins Bild — in dem Scrollbereich, in dem es sitzt, und es bewegt sich
+> genau dieser eine.**
+
+In `lib/in-sicht-bringen.ts`, an zwei Haken:
+
+| Haken | was er tut | wo er hängt |
+|---|---|---|
+| `useBeginntOben(ref, schluessel)` | Sitzt das Ziel in einer klebenden Spalte, steht es dort von sich aus oben; zu tun bleibt **ihr eigener Scrollbereich**, und der beginnt oben. Sonst: E‑114 unverändert | Panel (Schlüssel `nachricht`) an allen vier Einhängepunkten, rechte Spalte (Schlüssel `prozess`) |
+| `useInSicht(ref, schluessel)` | holt die Oberkante ins Bild — **in genau einem Kasten**, dem nächsten scrollenden Vorfahren | Rückweg (Schlüssel = geschlossene Kennung), gewählte Baumzeile beim Einstieg |
+
+Entschieden wird **an berechnetem Stil und an Rechtecken**: ob auf dem Weg vom Ziel bis zum nächsten
+Scrollkasten etwas `position: sticky` trägt. Unterhalb der Umbruchpunkte tragen dieselben Hüllen
+dieselben Klassen und kleben trotzdem nicht — eine Abfrage der Fensterbreite wäre ein zweiter
+Umbruchpunkt neben dem der Ansicht.
+
+⚠️ **Die Falle, und sie hat zwei Hälften.** `scrollIntoView` bewegt **jeden** scrollenden Vorfahren,
+`focus()` ohne `preventScroll` ebenso. Beides hätte `main` verschoben, obwohl die Spalte im Bild
+steht.
+
+- **`scrollIntoView` steht nicht mehr in der Datei.** Die Bewegung wird gerechnet und an genau einem
+  Kasten ausgeführt (`kasten.scrollTop += …`). Die Höhenregel aus §46 gilt unverändert und ist in
+  derselben Form nachgebaut: Passt das Ziel in den Kasten, wirkt `nearest` (der kürzere der beiden
+  Wege, nichts, wenn es im Bild steht); ist es höher, zählt allein die Oberkante.
+- **`panelBereich.focus({ preventScroll: true })`** in der Prozessansicht (E‑57). Der Fokus geht
+  weiterhin an dieselbe Stelle; was entfällt, ist das Scrollen, das der Browser dabei von sich aus
+  täte. E‑57 ist inhaltlich unberührt.
+
+#### B3 Der Rückweg bleibt
+
+Beim Schließen kommt die Zeile, zu der das Panel gehörte, ins Bild, falls sie es nicht mehr ist —
+**in ihrem eigenen Scrollbereich**: `main` auf `/nachrichten` und `/suche`, die Liste in der
+Prozessansicht. Steht sie im Bild, bewegt sich nichts. Der Schlüssel wechselt weiterhin nur beim
+Schließen (`useZuletztGeschlossen`, §46).
+
+#### B4 Der Baum
+
+- **Klick auf einen Prozess:** Der Baum bewegt sich nicht.
+- **Schließen des Panels**, der Baum kehrt zurück (E‑57): Er steht danach wie vor dem Öffnen —
+  geprüft in V2, siehe unten.
+- **Einstieg über eine Adresse mit `prozess`** (tiefer Link, Absprung nach E‑103): Sobald der Baum
+  sichtbar ist — beim Laden oder nach dem Schließen —, steht die gewählte Baumzeile im Bild, über
+  denselben Haken und seine Höhenregel. **Das nimmt E‑114 an einer Stelle zurück** (§17, §19): Der
+  Baumsprung war entfallen, weil er die rechte Spalte aus dem Bild schob. Die klebende Spalte nimmt
+  diesen Grund weg.
+
+`springeZurAuswahl` ist damit zurück, **mit engerer Bedeutung**: Die Ansicht gibt es genau dann mit,
+wenn der Prozess aus der **Einstiegsadresse** noch der gewählte ist, der Baum sichtbar ist und Daten
+hat. Sobald der Nutzer einen anderen wählt, fallen die beiden auseinander und es springt nichts mehr
+— das ist der Kern von Punkt 1 oben. Der Wert des ersten Renderns steht in `useState` und nicht in
+einem Ref: **Ein Ref darf beim Rendern nicht gelesen werden** (`react-hooks/refs`), und `setState`
+im Effekt ist im Projekt verboten. Dass der Haken nach dem Schließen ein zweites Mal feuert, ist
+gewollt und folgenlos — der Baum kommt mit seinem Scrollstand zurück, die Zeile steht im Bild, und
+dann bewegt die Höhenregel nichts.
+
+### Teil C — Tests
+
+| Datei | Was sie hält |
+|---|---|
+| `tests/in-sicht-bringen.test.tsx` | **angepasst, nicht gelöscht: 7 → 11 Fälle.** Die sieben alten Fragen bleiben, aber sie werden **schärfer gestellt** — nicht mehr „wird `scrollIntoView` gerufen und womit", sondern **welcher Kasten sich um wie viel bewegt**. `jsdom` gibt `scrollTop` immer als 0 zurück und nimmt keinen Wert an; die Eigenschaft wird deshalb je Kasten daruntergelegt, die Rechtecke wie bisher gestellt. Neu: **Ziel in einer eigenen Spalte → nur deren Stand ändert sich, `main` nicht** (der Rückweg in der Prozessansicht); **klebende Spalte → ihr eigener Scrollbereich beginnt oben, `main` steht**; **klebender Rahmen → der Scrollbereich *darin* wird zurückgesetzt**; **nichts klebt → E‑114 unverändert** |
+| `tests/prozess-baum.test.tsx` | **angepasst, nicht gelöscht: 13 → 15 Fälle.** `springeZurAuswahl` ist zurück, voreingestellt `false`; die dreizehn Fälle darunter sagen weiterhin nichts über das Springen. Neu: der **Einstieg** holt die gewählte Zeile ins Bild (Unterkante 3.434 gegen 400 px Sichtfenster → 3.034 px, der kürzere Weg), und die **Gegenprobe** — ohne Einstieg bewegt auch ein Wechsel der Auswahl nichts, wobei *jede* Zeile weit unterhalb liegt, damit ein Sprung an der Zahl abzulesen wäre |
+| Eichung | **Drei Mutanten gesetzt, drei gefallen**, jeder in genau seinem Fall: „die klebende Spalte wird nicht erkannt" → die zwei `useBeginntOben`-Fälle; „der äußerste statt der nächste Kasten wird bewegt" → der Fall mit der eigenen Spalte; „der Baum springt unabhängig vom Einstieg" → **beide** neuen Baumfälle. Der dritte Mutant deckte dabei eine **blinde Gegenprobe** auf: In ihrer ersten Fassung hatte die neu gewählte Zeile kein gestelltes Rechteck, und ein Sprung wäre folgenlos geblieben |
+| Regel T1 | **eingehalten** — keine Wanduhr. `jsdom` rechnet kein Layout; **ob etwas klebt, entscheidet allein Teil D** |
+
+### Die zwei Vorproben, mit vorher festgelegter Deutung
+
+#### V1 — der Höhenbezug: `container-type: size` an `main`
+
+**Die Frage:** `100cqh` braucht einen Größencontainer. `container-type: size` bringt Eindämmung
+mit, und die kann an `position: fixed` und an der Stapelung rühren. *Deutung, vorher festgelegt:*
+jede Abweichung → Rückfall auf einen `ResizeObserver` an `main`, der dessen Inhaltshöhe als
+CSS-Variable schreibt.
+
+Gemessen am 10.09.2026, 1920 × 1080, `/nachrichten`, Dichte `m`, `main.scrollTop` 600 — die Klasse
+im laufenden Bild ab- und wieder angeschaltet:
+
+| | **mit** `container-type: size` | **ohne** |
+|---|---|---|
+| `main` — oben / links / Breite / Höhe | 48 / 195 / 1.725 / 1.032 | **identisch** |
+| `clientHeight` / `scrollHeight` / `scrollTop` | 1.032 / 1.900 / 600 | **identisch** |
+| `documentElement.scrollHeight` gegen `clientHeight` | 1.080 / 1.080 | **identisch** |
+| Elemente unter `main` mit berechnetem `position: fixed` | **0** | 0 |
+| senkrecht scrollende Elemente unter `main` | 1 | 1 |
+| Elemente mit `overflow-y: auto` unter `main` | 3 | 3 |
+| klebender Tabellenkopf **Katalog** (733 Zeilen), bei `scrollTop` 500 | `th` bei **0** gegen `main` | **identisch** |
+| klebender Kopf **Benutzerverwaltung** (6 Zeilen, `main` scrollt nicht) | 193 | **identisch** |
+| Menü im Inhaltsbereich (Statusauswahl der Filterleiste) | `position: fixed`, Elternteil **`body`**, 136..507, 4 px unter dem Auslöser, ganz im Fenster | **identisch** |
+| **`100cqh`, an `main` gemessen** | **1.002,13 px** | **1.080 px** |
+
+**Keine Abweichung — die Angabe bleibt, der `ResizeObserver` wird nicht gebraucht.** Die Menüs sind
+der Grund, warum die Eindämmung folgenlos ist: Radix hängt sie in den `body` und nicht unter `main`;
+was dort nicht steht, kann eine Eindämmung dort auch nicht treffen.
+
+**Die letzte Zeile ist die eigentliche:** `100cqh` ist **1.002,13** = 1.032 − 2 × 15 px Innenabstand,
+also die Inhaltshöhe von `main` — und **ohne** den Größencontainer sind es **1.080 px**, exakt
+`100svh`, also die Fensterhöhe. Der Rückfall ist still, und er führte genau in das, was §7 verbietet.
+Deshalb steht die Warnung im Kopf von `lib/klebende-spalte.ts` und am Rahmen selbst.
+
+> **Nebenbefund, gerechnet gegen gemessen:** Der Auftrag rechnet mit 16 px Innenabstand. Gemessen
+> sind **15**: `py-4` ist 1 rem, und die Grundschrift der Dichtestufe `m` ist 15 px. Alle Zahlen
+> unten stehen deshalb bei 15 und in der Stufe `l` bei 18.
+
+#### V2 — der Baum nach dem Schließen
+
+**Die Frage:** M129 hat am 02.09.2026 gemessen, dass der Scrollstand beim Schließen von selbst
+zurückkommt (3.701 → 0 → 3.701). Gilt das mit klebenden Spalten noch? *Deutung, vorher festgelegt:*
+gleich (± 1 px) → nichts bauen; sonst die Wiederherstellung aus B4.
+
+`/prozesse`, 1920, Baum tief gescrollt, Prozess gewählt, Nachricht geöffnet, `Escape`:
+
+| | `main.scrollTop` | gewählte Baumzeile gegen `main` |
+|---|---:|---:|
+| tief im Baum, Prozess gewählt | 6.422 | **500** |
+| Nachricht geöffnet (`main` 8.377 → 1.077) | 45 — geklemmt | verborgen |
+| `Escape`, **ohne Bau** | **45** | **6.877** |
+| `Escape`, **mit Bau** | **6.422** | **500** |
+
+**Abweichung — also gebaut.** Der Grund für den Unterschied zu M129 ist nicht gemessen; gemessen ist
+die Wirkung. *Behauptet wird* (Regel L10): Der Browser stellt einen geklemmten Stand nur unter
+Umständen wieder her, die sich mit der klebenden Spalte geändert haben. Die Wiederherstellung merkt
+sich den Stand **im Ereignis**, weil er in einem Effekt schon geklemmt wäre, und nur beim Öffnen aus
+dem geschlossenen Zustand — ein Kettenglied schriebe sonst den geklemmten Wert über den echten.
+
+### Teil D — M173: die Sichtprüfung am laufenden System
+
+**Der Messrahmen.** Derselbe wie M172: ein gleichherkunftiger `<iframe>` in einem angemeldeten
+Chrome 152, der die Fenstergröße exakt setzt (1920, 1440, 1280, **1024** und 700 px breit, 1.080 px
+hoch) und die Sitzung teilt. Der Nutzer hat sich selbst angemeldet. Klicks sind `element.click()`,
+`Escape` ein `keydown` am `body`; **vor jedem Klick scrollt der Rahmen das Ziel in die Mitte seines
+eigenen Scrollbereichs** — bei E‑115 ist das nicht mehr immer `main`. Gemessen wird nach der
+Antwort.
+
+**Der Bestand, unverändert gegenüber M172:** Baum bei `NEXANS` mit **229** Partnerknoten,
+`SONDERPROZESS` auf **Platz 192**, Prozess *SAP Kommunikation* mit 50 Zeilen; Trefferliste über
+`begriff=9000:1` im Präfixmodus, 50 Treffer. Dichte `m`, dazu `l` bei 1920.
+
+#### `NEXANS`, 1920 × 1080, Dichte `m` — `main` 1.032 px hoch, Inhaltshöhe 1.002
+
+**Die maßgebliche Zahl steht in der zweiten Spalte: die senkrechte Lage der geklickten Zeile gegen
+`main`, vorher → nachher.**
+
+| Vorgang | geklickte Zeile | `main.scrollTop` | klebende Spalte (oben..unten) | Scrollstand der Spalte |
+|---|---|---:|---|---|
+| **`/prozesse`** Baum: Prozess klicken (192/229) | **500 → 500** | 6.422 → **6.422** | Rahmen **15..1017** | Liste 0 |
+| **`/prozesse`** Liste: Zeile 50 klicken | **941 → 941** | 6.422 → 45 *(geklemmt, der Baum weicht)* | Rahmen 15..1017, Panel 68..1017 | Liste **811 → 811**, Panel 0 |
+| **`/prozesse`** Weiterklicken 49, dann 48 | 908 → 908, 874 → 874 | 45 → 45 | Panel 68..1017 | Liste **811**, Panel je **0** |
+| **`/prozesse`** Panel schließen, `Escape` | Baumzeile **500** | 45 → **6.422** *(wiederhergestellt, V2)* | Rahmen 15..1017 | Liste 811 |
+| **`/prozesse`** Blättern, nächste Seite | Tabelle **−697 → +114** | 0 → 0 | Rahmen 60..1062 | Liste **811 → 0** |
+| **`/prozesse`** tiefer Link `?prozess=` | Baumzeile **999..1032** *(im Bild)* | — → **5.923** | Rahmen 15..1017 | Liste 0 |
+| **`/prozesse`** tiefer Link mit `nachricht` | — | — → 0 | Rahmen 60..1062, Panel 113..1062 | Panel 0 |
+| … und danach `Escape` | Baumzeile **999..1032** | 0 → **5.923** | Rahmen 15..1017 | Liste 0 → **769** *(Rückweg)* |
+| **`/nachrichten`** Zeile 50 klicken | **937 → 937** | 868 → 868 | Panel **15..507** | 0 |
+| **`/nachrichten`** Weiterklicken 49, dann 48 | 903 → 903, 869 → 869 | 868 → 868 | Panel 15..462 | je **0** |
+| **`/nachrichten`** `Escape` | Zeile 50 **999..1033** | 0 → **806** | — | — |
+| **`/nachrichten`** Blättern, nächste Seite | Tabelle −747 → **+121** | 868 → **0** | — | — |
+| **`/suche`** Treffer 50 klicken | **982 → 983** *(+1)* | 1.014 → 1.034 | Panel **15..1017**, Inhalt 1.874 | 0 |
+| **`/suche`** Weiterklicken 49 | 983 → 983 | 1.034 → 1.034 | Panel 15..742 | 0 |
+| **`/suche`** Kette: Glied klicken | Zeile 1 −671 → −671 | 1.034 → 1.034 | Panel 15..562 | **900 → 0** |
+| **`/suche`** `Escape` **und** Schaltfläche | Zeile 50 **998..1032**, beide gleich | 0 → **998** | — | — |
+| Dashboard → Liste (Verweis unten) | `h1` bei **16** | 149 → **0** | — | — |
+
+**Die vier Zeilen, an denen der Auftrag hängt, sind die ersten drei und die neunte:** Die geklickte
+Zeile steht **auf demselben Pixel**, und der Scrollstand der Liste bleibt, wo er war. Auf `/suche`
+verschiebt der Umbruch der schmaleren Liste die Zeile um **einen Pixel** (982 → 983); sie steht
+vollständig im Bild. `main.scrollTop` wandert dort um 20 px, weil die Seite um 20 px wächst — die
+Scrollverankerung des Browsers hält dabei die Zeile fest, und genau deshalb steht sie in der
+maßgeblichen Spalte.
+
+#### Das hohe Panel — Abnahme 3 und 4, `/nachrichten`, 1920
+
+Mit aufgeklappten technischen Eigenschaften (25 Einträge) ist das Panel **1.427 px** hoch, gedeckelt
+auf **1.002**:
+
+| `main.scrollTop` | Panel gegen `main` | ganz im Bild? |
+|---|---|---|
+| 0 (Anfang) | 15..1017 | **ja** |
+| 434 (Mitte) | 15..1017 | **ja** |
+| 868 (Anschlag) | 14..1017 | **ja** |
+
+In sich bis zum Ende scrollbar: **425 von 425** — und `main.scrollTop` bleibt dabei auf 868, die
+Bewegung wird am Ende der Spalte **nicht** weitergereicht (`overscroll-behavior: contain`). Ein
+Kettenglied im Panel setzte den eigenen Stand von **900 auf 0** zurück, ohne `main` zu bewegen; das
+höchste gemessene Panel trug **2.939 px** Inhalt bei 1.937 px Scrollweg.
+
+#### Die übrigen Breiten, `NEXANS`, Dichte `m`
+
+| Vorgang | 1440 | 1280 | **1024** | 700 |
+|---|---|---|---|---|
+| `/prozesse` Baum: Prozess klicken | 500 → 500, `main` 6.422 → 6.422 | 500 → 500, 6.422 | 499 → 499, 6.441 | Baum weicht unter `md` — kein Ziel |
+| `/prozesse` Zeile 50 | 941 → 941, Liste 811 fest, Panel 68..1017 | 901 → 901, Liste 851 fest | Liste verborgen, Panel **113..604, statisch** | Liste verborgen, Panel **160..652, statisch** |
+| `/prozesse` `Escape` | `main` → 6.422, Baumzeile 500 | → 6.422, 500 | → 6.441, 499 | → 1.003, Zeile 50 842..876 |
+| `/nachrichten` Zeile 50 / `Escape` | 937 → 937, Panel klebt 15..507 / 999..1033 | 937 → **936** / 999..1033 | Panel **statisch** 15..507 / 998..1032 | Panel **statisch** 15..507 / 923..957 |
+| `/suche` Treffer 50 / `Escape` | 983 → 983, Panel klebt 15..1017 / 999..1032 | 983 → **982** / 999..1032 | Panel **statisch** 15..1889 / 999..1032 | Panel **statisch** 15..1889 / 923..957 |
+| senkrecht scrollende Elemente | `main` + Spalte | `main` + Spalte | ohne Panel `main` + Liste; **mit Panel keines** | ohne Panel `main`; **mit Panel keines** |
+
+**Bei 1024 und 700 gilt E‑114 unverändert** — die Panelhülle steht dort auf `position: static`, es
+klebt nichts, und die Zahlen liegen neben denen von M172 (700 px: `/suche` 1.130 → 0 und
+Zeile 923..957, in M172 dieselben 1.130 → 0 und 923). **1024 px ist in M172 nicht gemessen** und hier
+nachgeholt: Ohne Panel klebt der Rahmen ab `md` und die Liste scrollt für sich (905 px Weg); **mit**
+Panel klebt nichts, weil zwischen `md` und `xl` nichts nebeneinandersteht.
+
+#### Dichtestufe `l`, 1920 — die Höhe folgt `main` und nicht dem Fenster
+
+| | `m` | `l` |
+|---|---:|---:|
+| Kopfzeile | 48 | **57** |
+| `main` | 1.032 | **1.023** |
+| **`100cqh`** | **1.002,13** | **986,75** |
+
+`/nachrichten`: Zeile 50 **910 → 910**, `main` 1.256 → 1.301, Panel klebt bei **18..607** (der
+Innenabstand ist in `l` 18 px). `/prozesse`: Baumzeile **492 → 492**, `main` 7.811 → 7.811; Zeile 50
+**914 → 914**, Listenstand 1.189 unverändert; `Escape` → `main` **7.811**, Baumzeile **492**.
+
+#### `SUTTONS` — die Gegenprobe
+
+| Vorgang | 1920 | 700 |
+|---|---|---|
+| Baum: Prozess klicken (1 Partner, 17 Prozesse) | **826 → 826**, `main` 0 → 0 | 806, `main` 0 → 0, **nichts klebt** |
+| `/nachrichten` Zeile 50 | **928 → 928**, `main` 997 → 997, Panel klebt 16..528 | — |
+| `/nachrichten` `Escape` | Zeile 50 993..1029, `main` → 932 | — |
+
+**Wo nichts außerhalb des Bildes steht, bewegt sich nichts** — dieselbe Aussage wie in M172, jetzt
+auch für den Klick im Baum.
+
+#### Was in jeder Messung gleich war
+
+| | |
+|---|---|
+| `documentElement.scrollHeight` gegen `clientHeight` | **1.080 / 1.080** in jeder Ablesung — die Seite selbst scrollt nie (§7 unverletzt) |
+| senkrecht scrollende Elemente unter `main` | **`main` und die klebende Spalte, sonst keines.** Auf `/prozesse` `main` + Liste, auf `/nachrichten` und `/suche` `main` + Panelhülle (nur, wenn das Panel höher ist als der Deckel); bei 1024 und 700 mit offenem Panel **keines** |
+| Konsole des Rahmens | **keine Meldung der Anwendung** — 26 Einträge über die ganze Sitzung, alle `[Fast Refresh]` bzw. `[HMR]` des Entwicklungsservers |
+
+#### ⚠️ Zwei Befunde, die erst die Messung gebracht hat
+
+**1. Der `sr-only`-Befund von §7 kam zurück — und wurde vor der Abnahme behoben.**
+
+Die erste Messung an `/prozesse` mit offenem Panel zeigte `main.scrollHeight` = **1.859** statt der
+gerechneten 1.077 px, und das Panel stand bei **−714**. Die Ursache steht seit dem 06.08.2026 in
+[`frontend-grundlagen.md`](frontend-grundlagen.md) §7 als **dritte Bedingung**: *Jeder Scrollbereich
+ist zugleich Bezugspunkt — `relative`.* Die neuen Kästen hatten sie nicht. Damit hing die
+`sr-only`-Beschriftung **„Jetzt aktualisieren"** des Blätter-Blocks am nächstpositionierten Vorfahren
+*oberhalb* der Liste, wurde von ihr **nicht** beschnitten, und ihr Platz — 811 px tief in der
+gescrollten Liste — zählte zur Scrollfläche darüber. **Behoben durch `relative` an den beiden
+Kästen, die nicht kleben;** die klebende Spalte braucht es nicht, `position: sticky` ist bereits ein
+positionierter Wert. Danach: `main.scrollHeight` **1.077**, Panel bei **68..1017**.
+
+> **Der Befund gehört in diesen Abschnitt und nicht in eine Fußnote.** Er ist der Beleg dafür, wozu
+> die Sichtprüfung da ist: Kein Test hat ihn gefunden (`jsdom` rechnet kein Layout), der Build war
+> grün, und im Bild wäre er als „das Panel ist weg" aufgefallen — ohne jeden Hinweis auf eine
+> Beschriftung für Vorleseprogramme.
+
+**2. Die klebende Spalte hängt am oberen Anschlag unten über — offener Punkt 162.**
+
+Auf `/prozesse` beginnt die Zeile mit Baum und rechter Spalte **unterhalb** der Überschrift und des
+Zeitraum-Umschalters: 45 px in `m`, 54 px in `l`. Solange `main` ganz oben steht, ist die Spalte
+deshalb noch nicht angeklebt, sondern steht an ihrem natürlichen Platz — und ihre Höhe von
+`100cqh` reicht dann über die Unterkante hinaus:
+
+| `main.scrollTop` (Dichte `l`, 1920, `main` 1.023) | Rahmen | Panel | ganz im Bild? |
+|---:|---|---|---|
+| 0 | 72..1059 | 135..1059 | **nein** — 36 px hängen über |
+| 25 | 47..1034 | 110..1034 | **nein** — 11 px |
+| 54 (Anschlag) | 18..1005 | 81..1005 | **ja** |
+
+In `m` sind es 30 px bei `scrollTop` 0. **Auf `/nachrichten` und `/suche` tritt es nicht auf**, weil
+die Zeile dort unmittelbar am Inhaltsanfang beginnt (dort 15..1017 an allen drei Anschlägen).
+**Nichts wird dadurch unerreichbar** — der Inhalt der Spalte scrollt in ihr, und die 45 bzw. 54 px
+sind eine einzige kleine Bewegung. **Nicht gebaut**, wie der Auftrag es für Fälle außerhalb seines
+Umfangs verlangt: Eine Höhe, die vom Scrollstand abhängt, ist in CSS nicht auszudrücken und wäre
+wieder eine Rechnung in JavaScript.
+
+#### Belegvermerk (Regel L10)
+
+*Gemessen sind:* alle Zahlen oben, am gebauten Stand, in Chrome 152 über den Rahmen, `NEXANS` und
+`SUTTONS`, fünf Breiten, Dichtestufen `m` und `l`, hell, Deutsch, Profil `dev` mit der Anwendungsuhr
+auf dem 30.12.2025. *Behauptet wird:* dass die Spalte in den übrigen acht Mandanten und den beiden
+übrigen Dichtestufen dasselbe tut — sie rechnet mit Rechtecken, nicht mit Daten, und die Höhe hängt
+über `100cqh` an `main`, dessen Wert in `l` nachgemessen ist.
+
+*Nicht gemessen — vollständig:*
+
+- **Kein Zeigergerät.** Der Rahmen setzt Scrollstände und ruft `element.click()`; **Mausrad,
+  Touchpad und Bild-ab sind damit nicht geprüft** — und gerade an ihnen hängt
+  `overscroll-behavior: contain`, dessen Zweck es ist, eine vom Browser weitergereichte
+  Scrollbewegung zu unterbinden. Geführt als offene Sichtprüfung in [`README.md`](README.md).
+- **Die Bildlaufleiste der Spalte selbst ist nicht angesehen.** Sie entsteht erst mit E‑115 und
+  liegt mitten in der Ansicht.
+- **Kein Berührungsgerät, kein anderer Browser, keine Produktionsdatenbank, kein Vorleseprogramm,
+  kein Nutzer.**
+- **Der Vorher-Zustand ist nicht neu gemessen** — er steht in M172 vom 09.09.2026, und die Strecke
+  ist bewusst dieselbe, damit die Zahlen nebeneinanderstehen.
+- **Die Zeitwerte sind keine** — gemessen sind Lagen, keine Dauern (Regel T1).
+
+### Teil E — was wo dokumentiert ist
+
+| Datei | Änderung |
+|---|---|
+| [`frontend-grundlagen.md`](frontend-grundlagen.md) §7 | **Bedingung 2:** die benannte Ausnahme „die klebende Spalte" mit den drei Stellen und dem Satz, dass eine vierte ein Signal ist. **Bedingung 4:** „ins Bild" heißt jetzt „im eigenen Scrollbereich, es bewegt sich genau einer". Am Absatz „Was diese Bedingung nicht heilt" ein Block, dass E‑115 es heilt — und dass der **zweite** dort verworfene Weg verworfen bleibt |
+| diese Datei | dieser Abschnitt; datierte Blöcke in §46 an „Verworfene Alternativen" (erster Punkt) und an „Der Konflikt, entschieden", in §17 (*Startzustand*) und §19 (Befund 1) zum Baumsprung |
+| [`nachrichtendetail.md`](nachrichtendetail.md) §10.7 | Block am Absatz „Beides sitzt im *einen* Scrollbereich …": Ab `xl` scrollt das Panel für sich, als benannte Ausnahme — und warum der Satz, der das ausschloss, seinen Grund verloren hat |
+| [`bam-suche.md`](bam-suche.md) §11.4, [`property-suche.md`](property-suche.md) §12 | je ein Vermerk neben dem zu E‑114; bei der Property-Suche zusätzlich, dass der Absprung jetzt in einen Baum führt, der seine Zeile zeigt |
+| [`README.md`](README.md) | **neue offene Sichtprüfung** „klebende Spalte von Hand" — Mausrad, Touchpad, Bild-ab mit Fokus im Panel, dazu die Bildlaufleiste der Spalte. Sie ist der zehnte Posten und der erste mit einem **anderen** Grund als „das Fenster lässt sich nicht verkleinern": Hier ist das **Eingabegerät** das Hindernis |
+| `frontend/vitest.config.mts` | die Zählung der begründeten Ausnahmen — **und eine Berichtigung**, siehe unten |
+
+> **Die Zählung in `vitest.config.mts` ging zum zweiten Mal auseinander.** Die Tabelle summierte
+> sich auf 92, gezählt waren vor dieser Runde **105**: `dashboard-bloecke` stand mit 10 statt 20 und
+> `prozess-baum` mit 10 statt 13 — beide Dateien sind nach ihrem Eintrag gewachsen, ohne dass die
+> Zahl mitwuchs. **Der Auftrag verlangt, die Zählung nachzuziehen; nachgezogen ist sie jetzt gegen
+> den Lauf** (`vitest run --reporter=json`, Fälle je `.tsx`-Datei) und nicht durch Weiterzählen —
+> eine Zahl, die eine Begründung trägt, kommt aus dem Lauf (Regel L10). Stand: **111 in fünfzehn
+> Dateien**, Tabellensumme und Schlusssatz geprüft.
+
+### Status der Punkte
+
+| Punkt | Stand |
+|---|---|
+| **114** — Spaltenbreiten der Liste bei 1280 px | **unberührt**, ausdrücklich |
+| **116** — der Name `features/nachrichten` | **unberührt** |
+| **119** — Fokus-Rückweg unter `md` | **unberührt** — „Zurück zum Baum" trägt weiterhin `md:hidden`, und E‑115 fasst den Fokus nur insofern an, als `panelBereich.focus()` jetzt `preventScroll` mitbekommt (E‑57 bleibt inhaltlich, wie es war) |
+| **120** — „noch nie" im Baum nicht auffindbar | **unberührt** |
+| **121** — die verdeckte Liste aktualisiert weiter | **unberührt** |
+| **161** — Blättern in der Prozessansicht | **nicht gebaut, aber verändert.** M172: Tabelle bei −1.229 vorher *und* nachher. M173: **−697 → +114**, der Listenstand fällt von 811 auf 0. Der Grund ist derselbe wie auf `/nachrichten` — das Ladeskelett schrumpft den Inhalt, der Browser klemmt den Stand —, nur wirkt er jetzt in der **Liste** statt in `main`, weil dort der Scrollbereich sitzt. **Eine Nebenwirkung und keine Regel**; der Punkt bleibt offen, mit neuer Zahl |
+| **162** *(neu)* | **Die klebende Spalte hängt am oberen Anschlag unten über** — auf `/prozesse` 30 px in `m` und 36 px in `l` bei `main.scrollTop` 0, weil die Zeile dort 45 bzw. 54 px unter dem Inhaltsanfang beginnt und `100cqh` die volle Inhaltshöhe ist. Auf `/nachrichten` und `/suche` tritt es nicht auf. Nichts wird unerreichbar. Wer den Punkt aufmacht, entscheidet zwischen einer gerechneten Höhe (JavaScript, dieselbe Frage wie beim `ResizeObserver` aus V1) und einem Deckel, der den Abstand zur Zeile abzieht — dann stünde die Spalte unter `main` immer etwas zu kurz |
+
+### Regelbezug
+
+| Regel | Stand |
+|---|---|
+| [`frontend-grundlagen.md`](frontend-grundlagen.md) §7, **Bedingung 1** (`min-h-0` im Pfad) | **eingehalten** — und um drei Stellen erweitert: Ohne `min-h-0` an Kopfzeile, Inhalt und Zeile könnte im Rahmen nichts schrumpfen |
+| §7, **Bedingung 2** (genau ein `overflow-y-auto`, keine Höhe am Fenster) | **benannte Ausnahme**, drei Stellen, dort dokumentiert. Die zweite Hälfte gilt unverletzt: kein `vh`, `dvh`, `svh`, `h-screen`, keine Rechnung mit der Kopfzeilenhöhe — die Höhe kommt über `100cqh` aus `main` und ist in zwei Dichtestufen nachgemessen |
+| §7, **Bedingung 3** (jeder Scrollbereich ist `relative`) | **erst verletzt, dann eingehalten** — der Befund oben. Die klebenden Spalten sind über `position: sticky` selbst positioniert, die zwei Kästen im Rahmen tragen `relative` |
+| §7, **Bedingung 4** (was neu erscheint, kommt ins Bild) | **verschärft**: in dem Scrollbereich, in dem es sitzt, und es bewegt sich genau dieser eine |
+| [`visuelles-konzept.md`](visuelles-konzept.md) §7 — keine Bewegung ohne Anlass | **eingehalten**: kein `smooth`, keine Animation; der Baum springt nur beim Einstieg, und die Wiederherstellung nach dem Schließen stellt einen Zustand her, statt einen neuen zu erfinden |
+| keine Abfrage der Fensterbreite in JavaScript | **eingehalten** — die Breitenlogik steht in Klassen an den vorhandenen Umbruchpunkten; der Haken entscheidet an berechnetem Stil und an Rechtecken |
+| kein neuer Umbruchpunkt | **eingehalten** — `md` und `xl` sind die vorhandenen |
+| `react-hooks/set-state-in-effect` und `react-hooks/refs` | **eingehalten** — der Einstieg steht in `useState` (ein Ref darf beim Rendern nicht gelesen werden, und genau daran ist die erste Fassung im Lint gescheitert); der gemerkte Scrollstand ist ein Ref und wird nur in Ereignis und Effekt angefasst |
+| Abschnitt 4 der Richtlinie (M, S, L, Z, T) | **nicht berührt** — kein Backend, kein Statement, keine Migration; T1 im Test eingehalten, L10 an jeder Zahl |
+
+### Abnahme
+
+| | Stand | Beleg |
+|---|---|---|
+| 1. `NEXANS`, 1920: ans Ende gescrollt, Zeile 50 geöffnet — die Zeile auf demselben Pixel, das Panel vollständig im Bild, auf `/nachrichten`, `/suche` und in der Prozessliste | ✔ | 937 → 937 / 982 → **983** / 941 → 941; Panel 15..507, 15..1017, 68..1017. **Die Differenz auf `/suche` ist ein Pixel** und kommt aus dem Umbruch der schmaleren Liste; die Zeile steht vollständig im Bild |
+| 2. Weiterklicken 50, 49, 48 auf allen dreien: die Liste bewegt sich nicht, der Scrollbereich des Panels steht oben. Dasselbe beim Kettenglied | ✔ | Prozessliste: Listenstand **811** durch alle drei, Zeilen 941/908/874 unverändert. `/nachrichten`: `main` 868 durch alle drei. Kettenglied: Panelstand **900 → 0**, `main` unverändert |
+| 3. `main` am Anfang, in der Mitte, am Anschlag: das Panel vollständig im Bild, in `m` und in `l` | ✔ auf `/nachrichten` und `/suche`, **eingeschränkt** auf `/prozesse` | 15..1017 an allen drei Anschlägen (`m`), 18..607 in `l`. **Auf `/prozesse` hängt die Spalte am oberen Anschlag 30 px (`m`) bzw. 36 px (`l`) unter der Kante** — offener Punkt 162, Zahlen oben |
+| 4. Ein Panel, das höher ist als `main`, lässt sich in sich bis zum Ende scrollen | ✔ | 1.427 px Inhalt auf 1.002 gedeckelt, 425 von 425 gescrollt; das höchste gemessene Panel trug 2.939 px |
+| 5. `/prozesse`, Prozess an Platz 192: die Baumzeile auf demselben Pixel, die rechte Spalte vollständig im Bild; ein zweiter Prozess setzt die Spalte oben an | ✔ | Baumzeile **500 → 500**, `main` 6.422 → 6.422, Rahmen 15..1017; Listenstand nach dem Wechsel **0** |
+| 6. `/prozesse`, Nachricht geöffnet und geschlossen: die Baumzeile steht danach, wo sie stand | ✔ | 500 → 500, `main` 45 → **6.422** — **gebaut, nicht geerbt** (V2) |
+| 7. Tiefer Link mit `prozess` und Absprung nach E‑103: Baumzeile und rechte Spalte gleichzeitig im Bild | ✔ | Baumzeile **999..1032**, Rahmen **15..1017** — beides im sichtbaren Bereich (0..1032) |
+| 8. 1024 und 700 px: Verhalten wie unter E‑114 | ✔ | Panelhülle `position: static`, keine klebende Spalte, Zahlen neben M172 (700 px `/suche`: 1.130 → 0 und 923..957, in M172 dieselben) |
+| 9. `SUTTONS`: wo nichts außerhalb des Bildes steht, bewegt sich nichts | ✔ | Baumzeile 826 → 826 bei `main` 0 → 0; `/nachrichten` Zeile 928 → 928 bei `main` 997 → 997 |
+| 10. Das Dokument scrollt nie; senkrecht scrollen unter `main` nur `main` und die klebenden Spalten | ✔ | **1.080 / 1.080** in jeder Ablesung; die Liste der scrollenden Elemente enthielt nie etwas anderes als `main` und die Spalte aus der Tabelle |
+| 11. `pnpm build` grün, Konsole ohne Meldung der Anwendung | ✔ | `pnpm build` 10.09.2026: Lint, Typprüfung, Formatprüfung, **977 Fälle in 37 Dateien**, `next build`. Konsole: 26 Einträge, alle vom Entwicklungsserver |
+
+### Was diese Runde nicht getan hat
+
+- **Nichts an E‑57** (bei offenem Panel weicht der Baum), nichts an Panel- oder Spaltenbreiten
+  (Punkt 114), keine klebende Tabellenkopfzeile (Punkt 97), keine klebenden Köpfe *innerhalb* der
+  Spalten.
+- **Kein `smooth`, keine Animation, kein Übergang.** Kein Scrollstand in URL, `localStorage` oder
+  Cookie — der eine gemerkte Stand lebt in einem Ref und stirbt mit der Ansicht.
+- **Kein zweiter Scrollbereich außer der klebenden Spalte**, kein neuer Umbruchpunkt, keine Abfrage
+  der Fensterbreite, keine Container-Abfrage für die Aufteilung — Container-**Einheiten** allein für
+  die Höhe.
+- **`nachricht-detail.tsx`, `components/ui`, die eigene Route `/nachrichten/<id>` und der
+  Fokus-Rückweg unter `md` sind unberührt.** Am Backend, an Statements, an den Sprachdateien und an
+  Migrationen ist nichts geändert.

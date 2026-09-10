@@ -613,6 +613,30 @@ Bildlaufleiste und der Grund, warum sie hier zweimal steht.
 Fensterhöhe bemisst (kein zweites `h-dvh`, kein `min-h-screen`, kein `h-full` in einem bereits
 begrenzten Bereich).
 
+> ### ⚠️ Korrektur vom 10.09.2026 — die **benannte Ausnahme: „die klebende Spalte"** (E‑115)
+>
+> Der Satz darüber bleibt stehen und gilt für alles, was nicht in dieser Tabelle steht. **Genau drei
+> Stellen dürfen einen eigenen Scrollbereich haben**, und sie haben ihn aus einem gemessenen Grund
+> ([`process-view.md`](process-view.md) §47):
+>
+> | Ansicht | Zustand | klebende Spalte | ab |
+> |---|---|---|---|
+> | `/nachrichten`, `/suche` (Beleg- und Eigenschaftssuche) | Panel offen | Panelhülle `xl:w-[26rem] 2xl:w-[30rem]` | `xl` |
+> | `/prozesse` | keine Nachricht offen | rechte Spalte (Leerzustand oder Kopf und Liste) | `md` |
+> | `/prozesse` | Nachricht offen, der Baum weicht (E‑57) | Liste und Panelhülle im Rahmen, jede für sich | `xl` |
+>
+> **Die zweite Hälfte der Bedingung gilt unverändert und ist hier die schärfere:** Die Höhe dieser
+> Spalten bemisst sich an **`main`** und nie am Fenster — kein `vh`, `dvh`, `svh`, kein `h-screen`,
+> keine Rechnung mit der Kopfzeilenhöhe (die wächst mit der Dichtestufe). Der Rahmen erklärt `main`
+> dafür zum Größencontainer (`container-type: size`), und die Spalte nimmt `max-h-[100cqh]`. **Ohne
+> den Größencontainer fiele `cqh` still auf das kleine Sichtfenster zurück** — also auf eine Höhe am
+> Fenster, und damit auf genau das, was dieser Absatz verbietet. Die Definition steht an einer
+> Stelle, `lib/klebende-spalte.ts`.
+>
+> **Eine vierte Stelle ist ein Signal und keine Kleinigkeit.** Jede weitere klebende Spalte ist ein
+> weiterer Scrollbereich unter `main` — und die Zahl dieser Bereiche ist die Zahl, die dieser
+> Abschnitt seit dem 06.08.2026 führt und in jeder Messung nachzählt.
+
 **3. Jeder Scrollbereich ist zugleich Bezugspunkt — `relative`.** Nachgetragen am **06.08.2026**,
 nach einem Fehler, den die ersten beiden Bedingungen nicht abgedeckt haben und auch nicht abdecken
 konnten.
@@ -667,6 +691,25 @@ M125), und ein Panel, das am Listenende geöffnet wird, stand ebenso darüber.
 > **Wird im einen Scrollbereich Inhalt neu eingeblendet oder ausgetauscht, kommt dessen Oberkante
 > ins Bild. Es gibt genau einen Scrollbereich, also genau eine Stelle, an der das geschieht.**
 
+> ### ⚠️ Korrektur vom 10.09.2026 — „ins Bild" ist eine Ebene genauer geworden (E‑115)
+>
+> Der Satz oben bleibt stehen; **was sich geändert hat, ist das Wort „der eine".** Seit E‑115 gibt
+> es an drei benannten Stellen eine klebende Spalte mit eigenem Scrollbereich (Bedingung 2), und
+> damit lautet die Regel:
+>
+> > **Was neu erscheint, kommt ins Bild — in dem Scrollbereich, in dem es sitzt, und es bewegt sich
+> > genau dieser eine.**
+>
+> Der Unterschied ist nicht akademisch, er war die Meldung vom 10.09.2026: Die Fassung von E‑114
+> holt das Neue ins Bild, indem sie **`main` bewegt** — und in `main` stehen auch Baum und Liste.
+> Wer weit unten eine Zeile öffnete, fand das Panel im Bild und seine Stelle in der Liste nicht mehr
+> ([`process-view.md`](process-view.md) §47). In einer klebenden Spalte steht das Neue von sich aus
+> oben; zu tun bleibt allein **ihr** Scrollbereich, der wieder oben beginnt.
+>
+> ⚠️ Deshalb steht in `lib/in-sicht-bringen.ts` **kein `scrollIntoView` mehr**: Es bewegt *jeden*
+> scrollenden Vorfahren, und `focus()` ohne `preventScroll` ebenso. Die Bewegung wird seither
+> gerechnet und an genau einem Kasten ausgeführt.
+
 Die Stelle ist `lib/in-sicht-bringen.ts`: ein Haken, der eine Referenz und einen Schlüssel nimmt und
 bei jedem Wechsel des Schlüssels das Element ins Bild holt — in einem `useLayoutEffect`, damit nichts
 einmal falsch gemalt wird, ohne `behavior: "smooth"`, weil der Sprung die Folge eines Klicks ist und
@@ -685,6 +728,20 @@ beide im Bild stehen; es gewinnt das Ergebnis der Handlung, und die geklickte Ba
 Bild laufen ([`process-view.md`](process-view.md) §46). Die beiden anderen Wege — die rechte Spalte
 kleben zu lassen oder dem Baum einen eigenen Scrollbereich zu geben — sind dort verworfen und
 begründet; der zweite widerspräche der zweiten Bedingung hier ausdrücklich.
+
+> ### ⚠️ Korrektur vom 10.09.2026 — **E‑115 heilt es** (§47)
+>
+> Der Absatz darüber beschreibt den Stand vom 09.09.2026 und bleibt wortgleich stehen. **Der Satz
+> „Baum und rechte Spalte können nicht beide im Bild stehen" gilt nicht mehr:** Der erste der beiden
+> dort verworfenen Wege ist gebaut — die rechte Spalte klebt —, und der Grund, aus dem er verworfen
+> war (Liste und Panel sind höher als der Scrollbereich, ihr unterer Teil wäre unerreichbar), ist
+> mit dem eigenen Scrollbereich weg. Der **zweite** Weg bleibt verworfen und widerspricht Bedingung
+> 2 weiterhin: Der Baum bekommt keinen eigenen Scrollbereich, er steht in `main`.
+>
+> Damit ist auch der Baumsprung zurück — **aber nur beim Einstieg über eine Adresse** (tiefer Link,
+> Absprung aus dem Detailpanel): Wer im Baum *klickt*, sieht seine Zeile ohnehin, und der Baum soll
+> auf demselben Pixel stehen bleiben. Das ist keine Rücknahme der Wertung von E‑114, sondern ihr
+> Wegfall: Es ist nichts mehr abzuwägen, beide stehen im Bild.
 
 **Die Seite selbst scrollt nie.** Nachgemessen gegen den fertigen Build, 1920 × 1080, mit 4000 px
 Inhalt im Inhaltsbereich:
@@ -1549,7 +1606,8 @@ gerissen hat, ist eine Behauptung.
 | **`dashboard-bloecke.test.tsx`** *(01.09.2026)* | **gerenderter Baum**, zehn Fälle. Die Zählung steht in `vitest.config.mts`; dort auch, warum es genau diese vier Klassen sind |
 | `prozessbaum.test.ts` *(02.09.2026)* | die Entscheidungen des Prozessbaums ohne Ansicht: **E‑45 in beiden Richtungen** — bei zwei Richtungen bleibt die Ebene und die Blätter tragen keine Richtung, bei einer fällt sie weg, die Blätter rücken herauf und **tragen sie**; `null` als Richtung ist gesetzt und nicht abwesend; Position und Geschwisterzahl je Ebene und nicht über die flache Liste; der **Pfad zum gewählten Prozess** mit und ohne Richtungsebene und **leer** bei einer fremden Kennung; die **Eingrenzung** (Partnertreffer behält alle Kinder, Kindtreffer behält den Partner mit nur diesem Kind, kein leerer Ast, ein `null`-Name trifft nie, die Richtung wird nicht durchsucht) samt der **Invariante**, dass die nachgerechneten Summen ohne Eingrenzung mit den gelieferten zusammenfallen; die Beschriftung mit der **Schwelle aus der Antwort** (3 und 6 Monate ergeben verschiedene Texte); und das ganze **WAI‑ARIA-Muster der Tastatur**, einschließlich des Elternknotens über eine weggefallene Ebene hinweg |
 | `prozessansicht.test.ts` *(02.09.2026)* | der URL-Zustand der Prozessansicht: Rundlauf URL → Zustand → URL, leer ohne Auswahl, feste Reihenfolge, der Schalter nur in der URL, wenn er etwas weglässt, unbekannter Zeitraum und unbekannte Sortierung **übergangen**, leere Kennung ist keine Auswahl. Dazu der Filter der Übertragungsliste: **kein Filter ohne Prozess und keiner ohne Fenster**, das Fenster **aus der Antwort** (E‑50), und **die Abfrage ist mit und ohne geöffnetes Panel Zeichen für Zeichen dieselbe** — ohne Cursor, ohne Kennung |
-| **`prozess-baum.test.tsx`** *(02.09.2026)* | **gerenderter Baum**, acht Fälle. Die Zählung steht in `vitest.config.mts`; dort auch, warum es genau diese drei Klassen sind |
+| **`prozess-baum.test.tsx`** *(02.09.2026, erweitert 10.09.2026)* | **gerenderter Baum.** Die Zählung steht in `vitest.config.mts`; dort auch, warum es genau diese Klassen sind. **Seit E‑115** dazu der Sprung zur gewählten Zeile **beim Einstieg** über eine Adresse und die Gegenprobe, dass ohne Einstieg nichts sich bewegt ([`process-view.md`](process-view.md) §47) |
+| **`in-sicht-bringen.test.tsx`** *(09.09.2026, erweitert 10.09.2026)* | **gerenderter Baum.** Der Haken, dessen ganze Wirkung eine Änderung am DOM ist: **welcher Kasten sich um wie viel bewegt** — und welcher nicht. `jsdom` rechnet kein Layout, die Maße werden gestellt und der Scrollstand als eigene Eigenschaft daruntergelegt. E‑114 und E‑115, [`process-view.md`](process-view.md) §46 und §47 |
 
 > **Korrigiert 20.08.2026, nachgetragen zur Korrektur vom 19.08.2026.** Die Zeile zu
 > `rohdaten.test.ts` führte die Beschriftungsregel „**in allen fünf Lagen** (aufgelöster

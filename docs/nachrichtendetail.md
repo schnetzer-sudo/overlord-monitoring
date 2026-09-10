@@ -1735,6 +1735,27 @@ Bildlaufleiste, und nichts bemisst seine Höhe am Fenster — ein Panel, das fü
 erste Verstoß gegen genau die Regeln, die
 [`frontend-grundlagen.md`](frontend-grundlagen.md) §7 gemessen hat.
 
+> ### ⚠️ Korrektur vom 10.09.2026 — **ab `xl` scrollt es für sich** (E‑115)
+>
+> Der Absatz darüber beschreibt den Stand bis zum 10.09.2026 und bleibt wortgleich stehen. **Seit
+> E‑115 ist das Panel ab `xl` genau der Fall, den er ausschließt** — und zwar als *benannte
+> Ausnahme* von [`frontend-grundlagen.md`](frontend-grundlagen.md) §7, Bedingung 2, aufgezählt an
+> drei Stellen und an keiner vierten ([`process-view.md`](process-view.md) §47): Die Hülle
+> `xl:w-[26rem] 2xl:w-[30rem]` klebt am oberen Rand des sichtbaren Bereichs von `main`, ist
+> höchstens so hoch wie er und scrollt darüber hinaus für sich.
+>
+> **Der Grund ist der Satz, der hier gefehlt hat:** Solange das Panel in `main` sitzt, holt die
+> vierte Bedingung es ins Bild, indem sie `main` bewegt — und damit die **Liste**, in der der Nutzer
+> gerade seine Stelle hatte. Wer weit unten öffnete, sah das Panel und suchte seine Zeile neu. Mit
+> der klebenden Spalte bewegt sich `main` beim Öffnen nicht mehr; die Liste bleibt stehen, und beim
+> Wechsel der Nachricht beginnt allein der Scrollbereich des Panels wieder oben.
+>
+> **Die zweite Hälfte des Absatzes gilt unverändert:** Die Höhe bemisst sich **nicht am Fenster**,
+> sondern an `main` (`max-h-[100cqh]` in dessen Größencontainer). Eine zweite Bildlaufleiste am
+> *Dokument* entsteht weiterhin nicht — nachgezählt in M173. **An der Komponente ändert sich
+> nichts**, die Regel hängt außen an der Hülle. Unter `xl` tritt das Panel weiterhin an die Stelle
+> der Liste und sitzt in `main` wie zuvor.
+
 **Die Liste wird ausgeblendet, nicht ausgehängt** (`display: none`). Damit ist sie aus dem Bild und
 aus der Tastaturreihenfolge, ihr Zustand bleibt aber stehen: Wer das Panel schließt, findet dieselbe
 Seite wieder, ohne dass eine zweite Abfrage auf die Produktionsdatenbank geht. Der Preis ist, dass

@@ -1308,6 +1308,20 @@ schlechter als kein Link.
 > Zeile, das Panel steht oben. Am Ziel-Link, an seinem Fenster und an seiner Rundung ändert sich
 > nichts.
 
+> **Ergänzt am 10.09.2026 (E‑115, [`process-view.md`](process-view.md) §47): dieselbe Hülle klebt
+> jetzt ab `xl`, und der Absprung landet in einem Baum, der seine Zeile wieder zeigt.**
+>
+> In der Trefferliste bewegt ein Klick seither die Liste nicht mehr: Die Panelhülle ist eine der drei
+> benannten Ausnahmen von [`frontend-grundlagen.md`](frontend-grundlagen.md) §7, Bedingung 2 — sie
+> klebt am oberen Rand des sichtbaren Bereichs von `main` und scrollt für sich, statt dass `main`
+> bewegt wird.
+>
+> **Am Absprung selbst ändert sich weiterhin nichts** — er ist dieselbe Navigation mit `prozess` und
+> `nachricht`. Was sich am **Ziel** ändert: Der Satz oben, der Baum springe „in keinem Fall mehr zu
+> seiner Zeile", gilt für den Einstieg über eine Adresse nicht mehr. Genau dieser Weg ist ein
+> Einstieg, und seit die rechte Spalte klebt, schiebt der Sprung sie nicht mehr aus dem Bild: Wer
+> hier abspringt, sieht **beides** — die gewählte Baumzeile und das Panel daneben.
+
 **E‑97 bleibt gegenstandslos, und der Grund ist korrigiert** (§1): nicht weil die Suche in der
 Prozessansicht fehlt, sondern weil sie dort **hinausführt** — das Feld steht in der Kopfzeile, die
 Suche navigiert auf ihre eigene Route, eine Marke wird nie *in* der Prozessansicht aktiv. **Die

@@ -1106,6 +1106,16 @@ klickt, bekommt das Panel seither im Bild statt oberhalb davon; am Statement, an
 der Trefferliste selbst ändert das nichts ([`process-view.md`](process-view.md) §46,
 [`frontend-grundlagen.md`](frontend-grundlagen.md) §7, vierte Bedingung).
 
+**Und mit E‑115** *(10.09.2026)*: **Ab `xl` klebt dieselbe Hülle** und scrollt für sich
+([`process-view.md`](process-view.md) §47) — sie ist eine der drei benannten Ausnahmen von
+[`frontend-grundlagen.md`](frontend-grundlagen.md) §7, Bedingung 2. Der Unterschied für den Nutzer
+steht in der Trefferliste: Bis dahin holte die Regel das Panel ins Bild, indem sie `main` bewegte,
+und schob damit die **Trefferliste** weg; wer weiterklicken wollte, suchte seine Stelle jedes Mal
+neu. Seither bewegt ein Klick die Liste nicht, und beim Wechsel der Nachricht — auch über ein
+Kettenglied — beginnt allein der Scrollbereich des Panels wieder oben. **Am Statement, an der
+Antwort und an der Trefferliste ändert das erneut nichts**, und unter `xl` bleibt alles, wie E‑114
+es gebaut hat.
+
 ### 11.5 Die Trefferliste
 
 Dieselbe Zeilenform wie die Nachrichtenliste — Zeitpunkt, Status, Ablauf —, und **dieselben
