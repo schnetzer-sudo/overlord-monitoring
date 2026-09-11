@@ -1,8 +1,9 @@
 # Dashboard — die Oberfläche
 
-Stand: **04.09.2026 — der Verlauf ist eine Fläche (E‑83 bis E‑86, §5.2)** und die beiden
-Sammelrollen heißen anders (E‑82, §5.2) · zuvor 03.09.2026, Schritt 10b‑5 · zuvor 01.09.2026,
-Schritt 10b‑3b · **Frontend**
+Stand: **10.09.2026 — der Block *Plattform* (E‑126 bis E‑137, §5.8, Sichtprüfung §12)** · zuvor
+04.09.2026, der Verlauf ist eine Fläche (E‑83 bis E‑86, §5.2) und die beiden Sammelrollen heißen
+anders (E‑82, §5.2) · zuvor 03.09.2026, Schritt 10b‑5 · zuvor 01.09.2026, Schritt 10b‑3b ·
+**Frontend**
 
 Die Landingpage. Der Endpunkt und seine Begründung stehen in
 [`dashboard.md`](dashboard.md) — **die Datei ist der Vertrag**, hier steht, was die Oberfläche
@@ -88,6 +89,39 @@ Kacheln → Verlauf mit Fehlerstreifen → Zuletzt aufgefallen → Verteilung �
 wenn etwas nicht stimmt* — wer es öffnet, will zuerst wissen **ob**, dann **seit wann**, dann
 **welche**. Die Verteilung beantwortet keine dieser drei Fragen; sie ist Hintergrund und steht
 deshalb unten, am breiten Fenster neben den Zeilen statt über ihnen.
+
+> ### ⚠️ Korrektur vom 10.09.2026 — es sind **sechs** Blöcke, und der neue steht an zweiter Stelle
+>
+> **Die Zeile darüber bleibt Zeichen für Zeichen stehen**, damit ablesbar bleibt, wie die Seite bis
+> Schritt 10c geschnitten war. Was gilt:
+>
+> **Kacheln → Plattform → Verlauf mit Fehlerstreifen → Zuletzt aufgefallen → Verteilung → Stand.**
+>
+> **Der Grund ist Entscheidung E‑126, und sie folgt demselben Leitsatz.** Wer das Werkzeug öffnet,
+> will zuerst wissen **ob** — und *„ob"* hat zwei Hälften, seit es diesen Block gibt: *„ist der
+> Beleg nicht da"* und *„steht die Anlage"*. E‑116 hat den Block genau dafür gebaut; ohne ihn ist
+> die zweite Erklärung nicht unterscheidbar, und der Nutzer sucht weiter. **Die Frage „liegt es an
+> der Anlage" folgt deshalb direkt auf „ob" und muss ohne Scrollen erreichbar sein** — nicht am
+> Ende der Seite, wo sie erst findet, wer ohnehin schon aufgegeben hat.
+>
+> **Er steht *unter* den Kacheln und nicht darüber.** Die Kacheln sind die Auskunft über den
+> **Mandanten**, und die ist die häufigere Frage; dieser Block ist die Auskunft über die **Anlage**,
+> und die ist die seltenere. Der Leitsatz ordnet nach der Frage, mit der jemand herkommt.
+
+> ### ⚠️ Nachtrag desselben Tages — es sind wieder **fünf** Blöcke (**E‑138**)
+>
+> **Der Kasten darüber bleibt Zeichen für Zeichen stehen.** Er trägt die Begründung, aus der E‑138
+> lebt; geändert hat sich, wo sie eingelöst wird. Was gilt:
+>
+> **Kacheln (fünf, die letzte ist *Plattform*) → Verlauf mit Fehlerstreifen → Zuletzt aufgefallen →
+> Verteilung → Stand.**
+>
+> **Die Plattform ist kein eigener Block mehr, sondern die fünfte Kachel** (§5.4, §5.8). Die
+> Durchsicht hat gezeigt, was der eigene Kasten kostete: Er war so hoch wie der Verlauf und schob
+> alles Wichtige nach unten — *„ohne Scrollen erreichbar"* war damit für die Anlage erkauft und
+> gegen den Verlauf. Als Kachel steht die Auskunft weiterhin oben, kostet aber keine eigene Zeile.
+
+
 
 ---
 
@@ -228,7 +262,7 @@ allein über Farbe"* —, und §7a hat es für diese Rolle noch einmal ausdrück
 | **E‑t** | Ein **zweiter, schmaler Balkenstreifen** unter dem Verlauf, nur `FEHLER`, mit **eigener beschrifteter Skala** | 01.09.2026 |
 | **E‑u** | Die beiden Problemkategorien tragen **Fläche und Vordergrund, keine Kontur** — Kachel wie Plakette (§3). *Geschärft durch **E‑79**, 03.09.2026: Es ist nur noch eine* | 01.09.2026 |
 | **E‑v** | Die Balkenbreite ist **gedeckelt** (`maxBarSize={28}`), an beiden Diagrammen mit demselben Wert. Wo die Slotbreite darunter liegt, bewirkt der Deckel nichts (§5.2) | 01.09.2026 |
-| **E‑78** | Reihenfolge **Fehler · Läuft · Wartend · Nachrichten** — erst was zu tun ist, dann was in Arbeit ist, dann die Zählung. *Wartend* steht **vor** *Nachrichten*, damit sein Wegfall die Reihe von hinten zusammenzieht (§5.4) | 03.09.2026 |
+| **E‑78** | Reihenfolge **Fehler · Läuft · Wartend · Nachrichten** — erst was zu tun ist, dann was in Arbeit ist, dann die Zählung. *Wartend* steht **vor** *Nachrichten*, damit sein Wegfall die Reihe von hinten zusammenzieht (§5.4). ***Ergänzt am 10.09.2026 durch E‑138:*** Dahinter steht als **fünfte** die Kachel *Plattform*; fällt *Wartend* weg, rückt sie auf wie die übrigen | 03.09.2026 |
 | **E‑79** | **Fläche nur bei der einen Problemkachel.** Die Zustandskacheln tragen `--status-offen` im kleinen Träger — der Statusplakette der Liste. **Schärft E‑u** (§5.4) | 03.09.2026 |
 | **E‑80** | ***Läuft* erbt den Zeitraum, *Wartend* bringt seinen mit**, aus `aeltesteSekunden`; über einem Jahr greift die Notbremse. **Löst, was E‑m nur vermied** (§5.4) | 03.09.2026 |
 | **E‑81** | **Drei Zustände, drei Bilder.** Abwesenheit und „nicht ermittelbar" dürfen nie gleich aussehen (§5.4) | 03.09.2026 |
@@ -241,6 +275,19 @@ allein über Farbe"* —, und §7a hat es für diese Rolle noch einmal ausdrück
 | **E‑88** | **Die Fläche der Fehlerkachel wird gedämpft** — weniger Chroma, eine Spur kühler. **Nur die Fläche:** Zahl, Text, Balken, Plaketten und Fehlerart behalten `--status-fehler` Ziffer für Ziffer. Schließt nebenbei offenen Punkt 123 (§5.2, [`visuelles-konzept.md`](visuelles-konzept.md) §7a) | 04.09.2026 |
 | **E‑89** | **Die Deckung der beiden Farbverlaufsstopps steht als Token und ist je Block verschieden** (hell 0,35 / 0,03, dunkel 0,28 / 0,04). `fillOpacity` bleibt `1` — die Durchsicht gehört in die Stopps, wo sie ausdrücklich dasteht (§5.2) | 04.09.2026 |
 | **E‑90** | **„Zuletzt aufgefallen" trägt eine Zeile je Prozess** mit Anzahl und jüngstem Zeitpunkt, nicht mehr eine je Nachricht. Der Verweis führt in die **Liste**, gefiltert auf diesen Prozess (§5.6) | 04.09.2026 |
+| **E‑126** | ⚠️ **Am 10.09.2026 aufgehoben durch E‑138 — der *Ort*.** Es gibt keinen eigenen Block mehr; die Plattform ist die fünfte Kachel der Reihe. **Die Begründung bleibt und trägt jetzt E‑138:** Die Frage *„liegt es an der Anlage"* folgt auf *„ob"* und muss ohne Scrollen erreichbar sein (§2, E‑116) — der eigene Block erreichte das nur, indem er den **Verlauf** unter die Falz schob. *Der alte Wortlaut:* „Der Block *Plattform* steht direkt unter der Kachelreihe und vor dem Verlauf." | 10.09.2026 |
+| **E‑127** | **Keine Kachelfläche im Block, in keinem Zustand.** E‑79 bleibt: Gefüllt ist allein die Fehlerkachel — auch eine rote Lampe bekommt keine Fläche. Der Zustand steht in der **Plakette** (§5.8) | 10.09.2026 |
+| **E‑128** | **Zwei neue Zuordnungstabellen, beide in `lib/status-farbe.ts`** — `DIENST_ZUORDNUNG` und `ABLAGEN_ZUORDNUNG`, in der Fassung **ohne Kontur**. Damit wohnen dort vier Zuordnungen und weiterhin vier Rollen; keine neue Farbe, keine Zeile in `globals.css` (setzt **E‑121** um) | 10.09.2026 |
+| **E‑129** | **Eigene Wörter, nie die Beschriftung einer bündelnden Farbrolle.** „Erledigt" und „Ohne Ergebnis" gehören den Einordnungen von Nachrichten (**E‑82**); ein Dienst ist keines ihrer Mitglieder. Geteilt ist die Farbe, nicht das Wort | 10.09.2026 |
+| **E‑130** | ⚠️ **Am 10.09.2026 zur Hälfte aufgehoben durch E‑138 — das *sichtbare Wort* und der Zeitpunkt.** Eine Zeile trägt nur noch **Zeichen und `serviceId`**; Wort und Rohwert stehen in `title` und `sr-only` (Bauform E‑91). **Was bleibt:** dass der Rohwert nur bei `UNGEKLAERT` genannt wird — geliefert wird er immer (E‑118), und neben „Zeitüberschreitung" sagte `ERROR_TIMEOUT` dasselbe ein zweites Mal —, und die **Reihenfolge wie geliefert**, ohne Umsortierung. *Der alte Wortlaut:* „Die Lampe trägt Zeichen, Wort, `serviceId` und den Zeitpunkt." | 10.09.2026 |
+| **E‑131** | ⚠️ **Am 10.09.2026 aufgehoben durch E‑138 — die *Zeiten*.** In der Kachel steht **kein Zeitpunkt und kein Alter** mehr, weder an der Dienstzeile noch an den Ablagen. `stand`, `alterSekunden` und `geprueftAm` bleiben im Vertrag und werden von der Oberfläche **nicht mehr gelesen**; die vierte Kopie der Dauerbausteine ist damit gegenstandslos, und der offene Punkt dazu bleibt bei drei Stellen. *Der alte Wortlaut:* „Zeitpunkte absolut in der Anzeigezone, das Alter aus `alterSekunden` über `formatiereDauer` … Sichtbar heißt `stand` **zuletzt geändert**." | 10.09.2026 |
+| **E‑132** | **Die Ablagen nennen, was geprüft worden ist** — je Ziel eine Zeile mit seiner `serviceId` — und tragen **keine Überschrift, die für alle Ablagen spräche**. Sie sind ein Stichprobenwächter (offener Punkt 166). ⚠️ **Am 10.09.2026 zur Hälfte aufgehoben durch E‑138:** Der *Zustand* je Ziel steht nicht mehr sichtbar daneben, sondern im `title`; sichtbar bleibt die **Kennung**, und um sie ging es. **Neu dazu:** Wo gar kein Ziel geprüft wurde, steht die Zeile „Ablagen" — **fest** mit dem Zeichen für ungeklärt, nie mit einem grünen Häkchen | 10.09.2026 |
+| **E‑133** | **Eine Zielzeile trägt ihre Farbe nur, solange der Stand gilt** — bei `ERREICHBAR`, `NICHT_ERREICHBAR` und beim Grund `ZIEL_UNGEKLAERT`. Bei `STAND_VERALTET` steht sie gedämpft und ohne Rolle, mit ihrem letzten Wort und dem Prüfzeitpunkt. **Grün überlebt seinen Beleg auch in der Anzeige nicht** (E‑125 einen Schritt weiter) | 10.09.2026 |
+| **E‑134** | ⚠️ **Am 10.09.2026 zur Hälfte aufgehoben durch E‑138 — der *sichtbare Grund*.** Er steht jetzt in `title` und `sr-only` der Zeile „Ablagen". **Was bleibt, ist der Kern von E‑q:** kein Rot, keine `0`, keine Fehler-Kennung und keine Schaltfläche „Erneut versuchen" — für den Nutzer ist das eine Auskunft und kein technischer Fehler. *Der alte Wortlaut:* „Die Plakette bleibt, dazu gedämpfter Text mit Zeichen und ein **sichtbarer Satz** mit dem Grund." | 10.09.2026 |
+| **E‑135** | **Leere `dienste` zeigen einen sichtbaren Satz statt einer leeren Stelle**, und die Kachel steht daneben trotzdem. Abwesenheit ist der schwächste Kanal, den eine Auskunft haben kann — dieselbe Begründung wie bei E‑74 und E‑81 | 10.09.2026 |
+| **E‑136** | ⚠️ **Am 10.09.2026 zur Hälfte aufgehoben durch E‑138 — der *Überschriftensatz*.** Die Kachel trägt einen Kopf aus Zeichen und Wort „Plattform" wie *Nachrichten* und **keinen Satz darunter**: In einer Kachel dieser Größe nähme er die Fläche, die den Kennungen gehört. ⚠️ **Damit steht nirgends mehr sichtbar, dass die Kachel für jeden Mandanten gleich ist** — benannt als offener Punkt 170 (§9) und nicht nebenbei entschieden. **Was bleibt:** Die Kachel ist **nicht klickbar**, es gibt keine Dienstansicht. *Der alte Wortlaut:* „Überschrift **Plattform** mit einem sichtbaren Satz, dass der Block für jeden Mandanten gleich ist." | 10.09.2026 |
+| **E‑137** | **Kein Nachladen im Takt.** Kein `refetchInterval`, und `refetchOnWindowFocus` bleibt aus. Ein offener Tab zeigt den Stand seines Aufrufs — **gemessen** (§7.3) und als bekannte Grenze benannt (§6.5, offener Punkt 168) | 10.09.2026 |
+| **E‑138** | **Die Plattform ist die *fünfte Kachel* der Reihe, und je Zeile stehen nur Zeichen und `serviceId`.** Der eigene Block war so hoch wie der Verlauf und schob alles Wichtige nach unten; E‑126 erreichte „ohne Scrollen" auf Kosten des Verlaufs. **Die Bauform ist die von E‑91** — das Zeichen trägt die Vordergrundfarbe der Rolle, das Wort steht in `title` und `sr-only` —, und die **vier Zeichen unterscheiden sich in der Form**: offener Strich, Dreieck, Viereck, Kreis. **Hebt auf:** den Ort (E‑126), das sichtbare Wort (E‑130, E‑132), die Zeiten (E‑131), den sichtbaren Grund (E‑134), den Überschriftensatz (E‑136). **Bestätigt:** E‑79 und E‑127 — keine Fläche, in keinem Zustand (§5.4, §5.8) | 10.09.2026 |
 | **E‑91** | **Jede Zeile in „Zuletzt aufgefallen" trägt das Zeichen ihrer Kategorie**, das Wort nur im `title` und für Vorleser. **Nimmt die Hälfte von 10b‑5 zurück, die zu viel war:** Mit der Plakette ist auch die Auskunft *dass es Fehler sind* aus dem Bild verschwunden — *aufgefallen* ist keine Kategorie (§5.6) | 04.09.2026 |
 
 ---
@@ -1226,6 +1273,205 @@ ist, und das gilt auch dann, wenn die Auskunft „nichts" lautet.
 
 ---
 
+### 5.8 Der Block *Plattform* (10d Teil B, **E‑126** bis **E‑137**)
+
+*Neu am 10.09.2026. Die Überschrift „Die sieben Blöcke" darüber bleibt stehen — sie beschreibt den
+Schnitt bis Schritt 10c.*
+
+> ## ⚠️ Korrektur vom 10.09.2026 — aus dem Block ist die **fünfte Kachel** geworden (**E‑138**)
+>
+> **Alles unter diesem Kasten bleibt Zeichen für Zeichen stehen** und beschreibt den Stand von Teil
+> B, wie er am Vormittag desselben Tages gebaut worden ist. Was gilt, steht hier.
+>
+> ### Der Befund der Durchsicht
+>
+> **Der Block war viel zu groß und schob alles Wichtige nach unten.** Er stand als eigener Kasten
+> unter der Kachelreihe, trug je Dienst eine Plakette mit Wort, dazu Kennung, Zeitpunkt und Alter,
+> und war damit so hoch wie der Verlauf. **E‑126 wollte die Frage *„liegt es an der Anlage"* ohne
+> Scrollen erreichbar haben — erreicht hat der Block das, indem er den *Verlauf* unter die Falz
+> schob.** Die Auskunft über die Anlage ist die seltenere Frage; sie darf den Platz der häufigeren
+> nicht nehmen.
+>
+> ### Was gilt
+>
+> | | Teil B, Vormittag | seit E‑138 |
+> |---|---|---|
+> | **Ort** | eigener Kasten unter der Reihe (E‑126) | **fünfte Kachel** der Reihe: *Fehler · Läuft · Wartend · Nachrichten · Plattform* |
+> | **Kopf** | Überschrift und ein sichtbarer Satz (E‑136) | Zeichen und Wort „Plattform", wie bei *Nachrichten* — **kein Satz** |
+> | **je Dienst** | Plakette mit Zeichen und Wort, Kennung, „zuletzt geändert", Alter | **Zeichen und `serviceId`**, sonst nichts |
+> | **das Wort** | sichtbar in der Plakette (E‑130) | **`title` und `sr-only`** — bei `UNGEKLAERT` zusammen mit dem Rohwert |
+> | **die Ablagen** | Plakette, Einleitungssatz, Zielzeilen mit Wort, Prüfzeitpunkt | **je Ziel eine Zeile** aus Zeichen und `serviceId`; ohne Ziel die Zeile „Ablagen" |
+> | **der Grund** | sichtbarer Satz (E‑134) | **`title` und `sr-only`** der Zeile „Ablagen" |
+> | **Zeiten** | Zeitpunkt und Alter an jeder Zeile (E‑131) | **keine** — `stand`, `alterSekunden` und `geprueftAm` bleiben im Vertrag und werden nicht gelesen |
+> | **Fläche** | keine (E‑127) | **keine** — unverändert, und jetzt ohne Plakette auch ohne kleinen Träger |
+>
+> ### Die Bauform ist die von **E‑91** und nicht die der Plakette
+>
+> **Das Zeichen trägt die Vordergrundfarbe der Rolle, sonst nichts.** Es ist dieselbe Abwägung, die
+> „Zuletzt aufgefallen" schon trägt (§5.6): [`visuelles-konzept.md`](visuelles-konzept.md) §3
+> verlangt *„zusätzlich eine Beschriftung **oder** ein Zeichen"* — ein Zeichen kostet die Zeile
+> nichts an Breite, ein Wort kostete sie. **Und die Breite gehört hier der Kennung**, dem Einzigen,
+> was einen Dienst benennt (E‑122).
+>
+> **Geteilt ist die Farbe und nicht die Komponente:** `dienstVordergrund` und `ablagenVordergrund`
+> in `lib/status-farbe.ts`. Die beiden Fassungen mit Fläche (`dienstKlassenOhneKontur`,
+> `ablagenKlassenOhneKontur`) sind ersatzlos entfallen — damit ist **E‑79 wieder eindeutig:**
+> Gefüllt ist allein die Fehlerkachel, gemessen und nicht behauptet (§13, Aufnahme 6).
+>
+> ### Vier Formen, nicht vier Farben — und das war ein Befund
+>
+> ⚠️ **Auf der Aufnahme aus der Durchsicht waren das Zeichen für *heruntergefahren* und das der
+> abgeschalteten Ablage nicht auseinanderzuhalten** — `PowerOff` und `CircleOff`, zwei Kreise mit
+> einem Strich darin. Solange das Wort daneben stand, fiel das nicht ins Gewicht; ohne Wort trägt
+> das Zeichen die halbe Aussage **allein**, und dann muss es sich in der **Form** unterscheiden.
+>
+> | Zustand | Zeichen | Umriss | Rolle |
+> |---|---|---|---|
+> | `MELDET_SICH`, `ERREICHBAR` | Häkchen (`check`) | **offener Strich**, kein Rahmen | `--status-abgeschlossen` |
+> | `ZEITUEBERSCHRITTEN`, `NICHT_ERREICHBAR` | Warndreieck (`triangle-alert`) | **Dreieck** | `--status-fehler` |
+> | `HERUNTERGEFAHREN` | Ausschaltzeichen (`square-power`) | **Viereck** | `--status-offen` |
+> | `UNGEKLAERT` | Fragezeichen (`circle-question-mark`) | **Kreis** | `--status-ungeklaert` |
+>
+> **Genau eines ist rund, eines eckig, eines dreieckig, und das vierte hat gar keinen Rahmen.** Das
+> hält auch in Graustufen. **Das Häkchen ist bewusst das nackte und nicht `CircleCheck`**, das die
+> Statusplakette der Liste nimmt: Neben dem runden Fragezeichen sind zwei Kreise mit verschiedenem
+> Innenleben bei 14 px keine zwei Formen mehr.
+>
+> ### Die Ablagen: je Ziel eine Zeile, und sonst die Zeile „Ablagen"
+>
+> Drei der fünf Gründe liefern **kein** Ziel — abgeschaltet, noch kein Durchgang, keines eingetragen
+> ([`dienste.md`](dienste.md) §8). Ohne eigene Zeile verschwände die Ablagenprüfung dann **spurlos**
+> aus der Kachel, und Abwesenheit ist der schwächste Kanal, den eine Auskunft haben kann (E‑74,
+> E‑81, E‑135). Die Zeile sagt: *es gibt hier eine Prüfung, und sie weiß gerade nichts.*
+>
+> ⚠️ **Ihr Zeichen ist fest das ungeklärte und kommt nicht aus `ablagen.zustand`.** Eine Zeile mit
+> der Aufschrift „Ablagen" und einem grünen Häkchen läse sich als *alle Ablagen sind erreichbar* —
+> und genau diese Aussage schließt **E‑132** aus: Geprüft wird, was in `ServiceDefaultFileStore`
+> steht, und das ist eine Stichprobe (offener Punkt 166). Ein eigener Testfall hält das fest.
+>
+> **E‑133 gilt unverändert:** Bei `STAND_VERALTET` und `ABGESCHALTET` tragen die Zielzeilen **keine
+> Rolle**. Genommen wird ihnen nur die Farbe, nicht das Wort — das steht weiter im `title`, sonst
+> wäre der Zustand nur noch über Helligkeit ausgedrückt, und das schließt §3 aus.
+>
+> ### ⚠️ Die Höhe geht nur bei vier Kacheln auf — **gemessen, nicht geschätzt**
+>
+> Der Auftrag verlangte *„nicht höher als die höchste der übrigen"* und schlug dafür **zwei Spalten
+> innen** vor. **Der Vorschlag trägt — aber nur, wenn die Kachel breit genug ist.**
+>
+> | Lage | Kachel breit | Spalten innen | Plattform | höchste der übrigen |
+> |---|---:|---:|---:|---:|
+> | `SUTTONS`, 1920 px — **vier** Kacheln (kein *Wartend*) | 405 px | **zwei** | **126 px** | 128 px (*Läuft*) ✔ |
+> | `NEXANS`, 1920 px — **fünf** Kacheln | 322 px | eine | **198 px** | 154 px (*Wartend*) ✘ |
+> | `NEXANS`, 1534 px — fünf Kacheln | 245 px | eine | **198 px** | 154 px ✘ |
+>
+> **Warum es bei fünf Kacheln kippt, steht in den Kennungen.** Die breiteste ist
+> `HTTPSERVICEPROD00` mit **137 px** bei 13 px Schrift; mit Zeichen und Abstand braucht eine Zeile
+> **157 px**, zwei Spalten also **326 px**. Eine Kachel von 322 px Breite hat 290 px Inhalt — es
+> fehlen 36 px. Zwei Spalten erschiene die Reihe erst bei rund **2130 px Fensterbreite**.
+>
+> **Die Schrift ist trotzdem nicht verkleinert worden**, wie der Auftrag es ausschließt, und die
+> Kennungen werden nicht abgeschnitten: `HTTPSERVICEPROD00`, `MPSERVICEPROD00` und
+> `MPSERVICEPROD03` unterscheiden sich in den **letzten Zeichen**, und eine Kürzung nähme genau die.
+> Der Umbruch entscheidet deshalb die **Breite** und kein Haltepunkt des Fensters
+> (`repeat(auto-fit, minmax(10rem, 1fr))`): zwei Spalten, sobald beide eine vollständige Kennung
+> tragen, sonst eine.
+>
+> **Was bleibt, sind 44 px** — die Reihe ist bei fünf Kacheln so hoch wie die Plattform-Kachel statt
+> so hoch wie *Wartend*. Gegen den Zustand davor ist das ein ganzer Kasten weniger; gegen den
+> Auftrag ist es die eine Zusicherung, die nicht eingelöst ist. **Benannt und nicht nebenbei
+> entschieden — offener Punkt 171**, und am 10.09.2026 ausdrücklich zugunsten des jetzigen Standes
+> entschieden. Die vollständige Messung samt der Breite jeder einzelnen Kennung steht in **§13**.
+
+**Er ist der einzige Block der Seite, der nichts über den Mandanten sagt.** Er beschreibt die
+**Anlage**, über die dessen Belege laufen, und ist für jeden Mandanten identisch — das ist keine
+Lücke in der Mandantentrennung, sondern sein Gegenstand ([`dienste.md`](dienste.md)). Ein Satz unter
+der Überschrift sagt es sichtbar (**E‑136**); ohne ihn läse jemand die roten Lampen als Auskunft
+über *seinen* Bestand.
+
+**Er lädt nichts nach.** `plattform` kommt im selben Aufruf wie alles andere; das Feature bekommt
+den Block als Eigenschaft und stellt keine eigene Anfrage (§7.1 unverändert, §7.3 nachgemessen).
+
+#### Die Lampen (**E‑130**)
+
+| | |
+|---|---|
+| **Zeichen, Wort, `serviceId`, Zeitpunkt** | in dieser Folge, als `<ul>` ausgezeichnet. Das Zeichen ist `aria-hidden` und damit schmückend; **Wort und Kennung stehen als Text da** und tragen die Auskunft auch für ein Vorleseprogramm |
+| **Rot trägt das Warndreieck** | dieselbe Gestalt wie an der Fehlerkachel und in „Zuletzt aufgefallen". Die übrigen drei unterscheiden sich in der **Form**: Kreis mit Haken, Ausschalter, Kreis mit Fragezeichen — *nie allein über Farbe* ([`visuelles-konzept.md`](visuelles-konzept.md) §3), und hier doppelt erfüllt, denn jede Lampe trägt zusätzlich ihr Wort |
+| **Der Rohwert nur bei `UNGEKLAERT`** | geliefert wird er bei jeder Lampe (E‑118). Neben „Zeitüberschreitung" sagte `ERROR_TIMEOUT` dasselbe ein zweites Mal, in der Sprache der Anlage statt in der des Nutzers; neben „Ungeklärt" ist er die ganze Auskunft. Führt die Anlage gar keinen Wert, steht das als Satz da und nicht als leere Stelle (Regel Q4) |
+| **Reihenfolge wie geliefert** | nach `ServiceID`, nicht nach Zustand. Sortierte die Ansicht nach Zustand, spränge eine Lampe an eine andere Stelle, sobald sich ihr Zustand ändert — und genau dann sucht jemand sie an ihrem alten Platz |
+| **Leere Liste → ein Satz** (**E‑135**) | *„Kein Dienst des Altsystems trägt eine Zeitgrenze."* Eine leere Stelle sähe aus wie ein Fehler im Bau |
+
+#### Die Ablagenkachel (**E‑132**, **E‑133**, **E‑134**)
+
+**Sie trägt keine Überschrift, und das ist der Punkt.** „Ablagen" über einer Plakette „Erreichbar"
+läse sich als *alle Ablagen sind erreichbar* — und genau diese Aussage darf hier nicht stehen:
+Geprüft wird, was in `ServiceDefaultFileStore` eingetragen ist, und M53 hat gemessen, dass zu jedem
+Zeitpunkt **zwei** Ablagen gleichzeitig beschrieben werden, während die Spalte nur eine nennt
+(**offener Punkt 166**). Fiele die andere aus, bliebe die Kachel grün.
+
+**An der Stelle des Kopfes steht deshalb die Plakette** — dieselbe Bauform wie bei *Läuft* und
+*Wartend* (§5.4) —, und darunter steht namentlich, **was** geprüft worden ist: je Ziel `serviceId`
+und Zustand, sichtbar und ausgeschrieben.
+
+**Die Zielzeilen tragen ihre Farbe nur, solange der Stand gilt** (**E‑133**):
+
+| Kachel | Zielzeilen |
+|---|---|
+| `ERREICHBAR`, `NICHT_ERREICHBAR` | mit Rolle — sie *sind* die Auskunft der Kachel |
+| `UNGEKLAERT` · `ZIEL_UNGEKLAERT` | mit Rolle: der Durchgang ist frisch, nur eine Antwort ließ sich nicht einordnen |
+| `UNGEKLAERT` · `STAND_VERALTET` | **ohne Rolle**, gedämpft — mit ihrem letzten Wort und dem Prüfzeitpunkt daneben |
+| die übrigen Gründe | ohne Rolle; dort liefert das Backend ohnehin keine Zeile |
+
+> **Das ist E‑125 einen Schritt weiter gedacht.** Das Backend nimmt der *Kachel* ihre Aussage,
+> sobald der Stand älter ist als zwei Takte — stünde die Zielzeile darunter weiterhin grün, wäre
+> dieselbe Aussage über denselben Umweg wieder im Bild. **Genommen wird ihr nur die Farbe**, nicht
+> das Wort: Sie ist nicht mehr die Auskunft der Kachel, aber sie ist das, was zuletzt festgestellt
+> wurde, und der Prüfzeitpunkt daneben sagt, wie alt das ist.
+
+**`UNGEKLAERT` folgt E‑q** (**E‑134**): Die Plakette bleibt, an der Stelle der Auskunft steht
+gedämpfter Text mit Zeichen, und ein **sichtbarer Satz** nennt einen der fünf Gründe. Kein Rot,
+keine `0`, keine Fehler-Kennung — für den Nutzer ist das eine Auskunft und kein technischer Fehler.
+Und keine Schaltfläche „Erneut versuchen": Die Prüfung läuft im Hintergrund weiter, und der nächste
+Aufruf zeigt ihr Ergebnis.
+
+#### Farbe und Zeit
+
+**Vier Zuordnungen wohnen jetzt in `lib/status-farbe.ts`** (**E‑128**) — die beiden neuen in der
+Fassung **ohne Kontur**, weil in dieser Liste bis zu vier Rollen nebeneinander stehen und keine
+lauter sein darf als die andere (dieselbe Abwägung wie in §3). **Keine neue Farbe, kein neuer Token,
+keine Zeile in `globals.css`**; `tests/farbwerte.test.ts` bleibt ohne neue Ausnahme.
+
+**Die Wörter sind eigene** (**E‑129**). `--status-abgeschlossen` heißt im Verlauf „Erledigt" und
+`--status-offen` „Ohne Ergebnis" (E‑82) — beides Beschriftungen für **Einordnungen von
+Nachrichten**. Ein Dienst ist keines ihrer Mitglieder im Sinne von E‑82; „Erledigt" an einer
+Dienstlampe wäre kein zusammenfassendes Wort, sondern ein falsches.
+
+> ⚠️ ***Ungeklärt* heißt in beiden Mengen gleich, und das ist richtig.** Die erste Fassung des
+> Tests dazu verbot jede Übereinstimmung mit einer Rollenbeschriftung und wurde sofort rot.
+> `--status-ungeklaert` **bündelt nichts** — ihre Beschriftung ist der Name ihres einzigen
+> Mitglieds, und E‑82 hat dazu nichts zu sagen. Geprüft werden seither genau die beiden bündelnden
+> Rollen.
+
+**Zeitpunkte absolut in der Anzeigezone, nie relativ** (E‑o, **E‑131**). Das Alter kommt fertig
+gerechnet aus dem Backend — gegen dessen **Anwendungsuhr** — und wird mit `formatiereDauer` und den
+Bausteinen aus `dashboard.kacheln.dauer` formatiert. **Keine vierte Kopie der fünf Dauerbausteine**;
+der offene Punkt dazu bleibt bei drei Stellen. Fehlt das Alter, steht nur der Zeitpunkt da: Das
+Backend liefert `null`, wenn der Zeitpunkt **nach** der Anwendungsuhr liegt (E‑75) — auf der
+Testkopie der Normalfall.
+
+**Sichtbar heißt `stand` „zuletzt geändert" und nicht „Stand".** Die Seite hat einen Block, der
+*Stand* heißt, und der meint den Rollup-Lauf.
+
+#### Was hier bewusst nicht steht
+
+Keine Fläche (**E‑127**), kein Verweis, keine Detailansicht für Dienste, kein Gesamtzustand über
+alle Lampen — Einordnungen entstehen im Backend, und eine „schlechteste Lampe" im Frontend wäre
+eine neunte Einordnung ohne Statement. Kein `ServiceName`, keine Beschreibung, keine
+Statusmeldung: Vier Spalten von `Service` stehen in keiner Antwort und werden nicht einmal gelesen
+(E‑122).
+
+---
+
 ## 6. Die bekannten Grenzen
 
 > ### Es waren drei, seit dem 03.09.2026 sind es vier
@@ -1316,6 +1562,29 @@ belegt statt gefahren: „läuft seit X von Y" im Detail, die Notbremse über ei
 
 ---
 
+### 6.5 Ein offener Tab lädt nicht nach *(10.09.2026)*
+
+**Gemessen, nicht angenommen** (§7.3): Ein Tab, der 38 Sekunden im Hintergrund lag und wieder in den
+Vordergrund kommt, stellt **keine** zweite Anfrage. Die Seite zeigt den Stand ihres Aufrufs.
+
+**Das ist die Absicht und keine Panne.** `refetchOnWindowFocus` steht in `lib/query-client.ts`
+ausdrücklich auf `false`, mit der Begründung, die dort steht: *„Gelesen wird zur Laufzeit auf der
+Produktionsdatenbank. Jede Abfrage, die nicht gestellt werden muss, wird nicht gestellt."* Ein
+`refetchInterval` gibt es nicht (**E‑137**).
+
+> **Die Grenze betrifft alle Blöcke und nicht nur den neuen** — die Fehlerzahl, den Verlauf, den
+> Stand. Sie fällt beim Block *Plattform* nur besonders auf, weil er als einziger etwas beschreibt,
+> das sich **im Minutentakt** ändern kann: Die Ablagenprüfung läuft alle 60 Sekunden weiter, die
+> Anzeige davor nicht. Wer eine Lampe beobachten will, lädt neu.
+>
+> **Offener Punkt 168.** Wer ihn aufmacht, entscheidet nicht zwischen „an" und „aus", sondern
+> zwischen drei Dingen: ein Takt für die ganze Seite (jede Aktualisierung kostet acht Statements auf
+> der Produktionsdatenbank), ein Takt nur für diesen Block (er bräuchte dann einen eigenen
+> Endpunkt — und *„kein Block lädt nach"* aus §2 fiele) oder ein sichtbarer Hinweis, wie alt das
+> Bild ist. **Nichts davon ist in 10d gebaut worden**, und der Auftrag schließt es ausdrücklich aus.
+
+---
+
 ## 7. Was gemessen worden ist
 
 ### 7.1 Die Zahl der Anfragen
@@ -1335,6 +1604,27 @@ bekommt die vorherige Antwort aus dem Zwischenspeicher, ohne dass eine dritte An
 
 Und der zweite belegt E‑n von der anderen Seite: Die **Vorgabe** der Verteilung steht nicht in der
 Adresse, der **gewählte** Zeitraum schon.
+
+### 7.3 Der Block *Plattform* kostet keine Anfrage *(10.09.2026)*
+
+Am laufenden System gemessen, im angemeldeten Browser gegen die Testkopie, über die Netzwerkliste
+des Browsers:
+
+| Vorgang | Anfragen an `/api/dashboard` |
+|---|---:|
+| Aufruf der Landingpage | **1** |
+| 38 s in einem anderen Tab, dann zurück | **1** — unverändert |
+| Klick auf „30 Tage" | **2** (`?zeitraum=30T`) |
+
+**Die dritte Zeile ist die Eichung und nicht die Aussage.** Ein Zähler, der nach dem Tabwechsel
+schweigt, schweigt entweder, weil nichts passiert ist — oder weil er nichts mehr sieht. Die dritte
+Zeile zeigt, dass er noch sieht. Erst damit ist die zweite eine Messung.
+
+**Die 38 Sekunden sind gerechnet:** `staleTime` steht auf 30 Sekunden. Wer früher zurückkommt,
+bekäme auch mit eingeschaltetem `refetchOnWindowFocus` keine zweite Anfrage — die Probe hätte dann
+nichts gezeigt.
+
+§7.1 bleibt damit Ziffer für Ziffer gültig: **eine Anfrage je Seitenaufruf, eine je Sichtwechsel.**
 
 ### 7.2 Der Zuwachs des Bündels durch Recharts
 
@@ -1401,6 +1691,10 @@ ausgewiesen. Diese Ansicht fasst zwei davon nicht an und misst die dritte nach:
 | ~~**136**~~ | ~~**Der Rohstatus je Zeile ist mit der Plakette aus „Zuletzt aufgefallen" gefallen** (§5.6). Er stand nur im `title`, war also nie sichtbar; ihn jetzt sichtbar nachzuziehen wäre eine neue Gestaltungsentscheidung über den Block und keine Aufräumarbeit. **Benannt und nicht nebenbei entschieden**~~ — ✔ **gegenstandslos seit dem 04.09.2026 (E‑90)**, und zwar nicht erledigt: Der Block trägt eine Zeile je **Prozess**, und die hat keinen Rohstatus — sie kann zwanzig verschiedene enthalten. Er steht in der Liste, auf die der Verweis führt (§5.6) |
 | ~~**90**~~ | ~~Die Achsendichte ist am breiten Fenster angesehen und nicht am schmalsten.~~ ✔ **Erledigt am 01.09.2026, noch vor der ersten Abgabe.** Bei 360 px überlappten die Beschriftungen um 12 Pixel; die Konstante ist entfallen, die Dichte hängt jetzt an der Breite (§10.4). Der Punkt bleibt stehen, weil er die Messung trägt |
 | **92** | **Die gedrückte Schaltfläche des Umschalters ist mit 1,07 : 1 kaum zu sehen** (§10.5). Für ein Vorleseprogramm ist der Zustand sauber ausgezeichnet, für das Auge nicht. Es ist die Gestalt von `components/ui/toggle-group.tsx` — Generatorbereich — und die **Zeitfensterwahl der Nachrichtenliste** trägt sie seit Schritt 4 genauso. Eine Änderung ist eine Entscheidung über den gemeinsamen Baustein und gehört in einen eigenen Schritt |
+| **168** | **Ein offener Tab lädt nicht nach** (§6.5, gemessen in §7.3). Die Seite zeigt den Stand ihres Aufrufs; `refetchOnWindowFocus` steht mit Begründung auf `false`, ein `refetchInterval` gibt es nicht (E‑137). **Die Grenze betrifft alle Blöcke**, fällt beim Block *Plattform* aber besonders auf, weil er als einziger etwas beschreibt, das sich im Minutentakt ändern kann. Wer den Punkt aufmacht, entscheidet zwischen einem Takt für die ganze Seite, einem eigenen Endpunkt nur für diesen Block (dann fiele *„kein Block lädt nach"* aus §2) und einem sichtbaren Hinweis auf das Alter des Bildes |
+| **169** | **Im Leerzustand steht die Kachel *Plattform* nicht** (§5.8). E‑p sagt *„einen Satz und den bedienbaren Umschalter, sonst nichts"*, und diesen Satz zu ändern war nicht Gegenstand von 10d — **gemeldet und nicht still aufgelöst**. Gerade dort wäre sie allerdings am nützlichsten: Der Leerzustand ist der Augenblick, in dem jemand wissen will, ob es an der Anlage liegt, und E‑116 ist genau dafür gebaut. Wer den Punkt aufmacht, ändert E‑p |
+| **170** | **Es steht nirgends mehr sichtbar, dass die Kachel *Plattform* für jeden Mandanten gleich ist** *(10.09.2026, E‑138 hebt die Hälfte von E‑136 auf)*. Der Satz war der einzige Ort, an dem das stand; in einer Kachel dieser Größe nähme er die Fläche, die den Kennungen gehört. **Die Gefahr ist benannt und nicht abgetan:** Wer die roten Zeichen sieht, kann sie als Auskunft über *seinen* Bestand lesen — sie sind eine über die **Anlage**. Ein `title` ist kein Ersatz (bekannte Grenze 3, Berührungsgeräte). Wer den Punkt aufmacht, entscheidet zwischen einem Wort im Kopf, einer Zeile unter der Reihe und einem eigenen Ort für diese Auskunft |
+| **171** | **Bei fünf Kacheln geht die Höhe nicht auf** *(10.09.2026, gemessen in §5.8)*. Zwei Spalten innen tragen die Kachel auf **126 px** und damit unter die höchste der übrigen — sie entstehen aber erst ab rund **2130 px Fensterbreite**, weil `HTTPSERVICEPROD00` bei 13 px Schrift **137 px** breit ist. Darunter steht die Kachel einspaltig auf **198 px** gegen 154 px bei *Wartend*. **Verkleinert wird die Schrift nicht** (Vorgabe des Auftrags), und abgeschnitten werden die Kennungen nicht — sie unterscheiden sich in den letzten Zeichen. Wer den Punkt aufmacht, entscheidet zwischen einer Kachel über zwei Spalten der Reihe, kürzeren Kennungen aus dem Altsystem und dem Hinnehmen der 44 px |
 | **91** | **Der Verlauf ist ein Bild und trägt keine Tabelle daneben.** „Nie allein über Farbe" ist über Legende, Tooltip und die vier unterscheidbaren Rollen eingehalten; für ein Vorleseprogramm ist ein SVG voller `<path>` trotzdem kein Diagramm. Eine Textfassung der Zahlen wäre der nächste Schritt und ist hier nicht gebaut |
 
 ---
@@ -1628,3 +1922,208 @@ Aufnahmen; die acht übrigen im angemeldeten Browser über die Erweiterung.
 > **Die Probeseite braucht keine Anmeldung, aber ein Cookie.** `src/proxy.ts` prüft nur die
 > **Anwesenheit** von `OVERLORD_SESSION`, nicht seine Gültigkeit — ein erfundener Wert über
 > `Network.setCookie` genügt, und die Route spricht ohnehin nicht mit dem Backend.
+
+---
+
+## 12. Die Sichtprüfung zu 10d Teil B *(10.09.2026)*
+
+**Zwölf Aufnahmen, alle gefahren.** Sechs am laufenden System im angemeldeten Browser gegen die
+Testkopie im Profil `dev`, sechs auf einer temporären Route mit gestellten Antworten — grüne Lampen,
+zwei Ziele, ein veralteter Stand und leere `dienste` kommen auf der Testkopie nicht vor. Die Route
+lag außerhalb der Gruppe `(app)` (Verfahren aus §3), ist **entfernt** und steht in keinem Commit.
+
+> ### Zwei Dinge, die diesmal anders liefen als in §11
+>
+> **Das Backend musste nicht neu gestartet werden.** Der Befund aus §11 — ein Prozess mit einem
+> alten Kompilat liefert einen Block nicht, und die Oberfläche läuft in einen `TypeError` — ist
+> trotzdem der erste Griff gewesen: **nachgesehen statt angenommen.** Die laufende JVM war um
+> 15:31 Uhr gestartet, die Klasse `PlattformResponse` um 12:41 Uhr übersetzt; der Prozess kannte den
+> Block also. Der Vermerk bleibt in §11 stehen, weil er beim nächsten Mal wieder gilt.
+>
+> **Kein erfundenes Sitzungscookie.** §11 hält fest, dass `src/proxy.ts` nur die *Anwesenheit* von
+> `OVERLORD_SESSION` prüft und ein beliebiger Wert genügt. Das ist weiterhin wahr und ist hier
+> **nicht** benutzt worden: Die gestellten Lagen liefen in derselben angemeldeten Sitzung wie die
+> sechs live gefahrenen. Für das schmale Fenster brauchte es deshalb auch kein kopfloses Chrome —
+> siehe Aufnahme 11.
+
+### Was gefahren worden ist
+
+| # | Was | Wie | Ergebnis |
+|---|---|---|---|
+| **1** | Block unter den Kacheln, sieben Lampen, Kachel abgeschaltet | live, `NEXANS` | ✔ fünf rot mit Warndreieck, zwei neutral mit Ausschalter, kein `MELDET_SICH`; Kachel *Ungeklärt* mit gedämpftem Zeichen und dem Satz |
+| **2** | derselbe Block | live, `SUTTONS` | ✔ **Zeile für Zeile identisch mit 1** — dieselben sieben Kennungen, dieselben Zustände, dieselbe Kachel. Darüber drei Kacheln statt vier (E‑74), darunter ein anderer Verlauf |
+| **3** | Kachel mit eingeschalteter Prüfung | live, `--overlord.ablagenpruefung.aktiv=true` | ✔ **Erreichbar**, `FILESTOREPROD10` namentlich genannt und ebenfalls *Erreichbar*, „geprüft 30.12.2025, 04:12 · seit 8 s" — das Datum des Ankers, das Alter echt |
+| **4** | Zeitkette und fehlendes Alter | live | ✔ **`COMSERVICEPROD00` → 19.09.2025, 12:36** und `MPSERVICEPROD01` → 13.07.2026, 15:01 **ohne Alterszeile**. Siehe unten |
+| **5** | genau eine Fläche auf der Seite | live, `NEXANS` | ✔ **gemessen**, nicht angesehen. Siehe unten |
+| **6** | Zahl der Anfragen | live | ✔ **eine** an `/api/dashboard`, unverändert gegenüber §7.1; dazu die drei des Rahmens (`/auth/me`, `/mandanten`, `/bam/suchfelder`) wie in §10.3. Der Tabwechsel ist in §7.3 mitgemessen |
+| **7** | grüne Lampen und eine ungeklärte mit Rohwert | gestellt | ✔ *Meldet sich* (Kreis mit Haken) zweimal, *Heruntergefahren* neutral, *Ungeklärt* gedämpft — und **nur** an der ungeklärten steht „Statuswert: PAUSED". `HEARTBEAT` und `SHUTDOWN` stehen nirgends im Bild |
+| **8** | zwei Ziele, eines nicht erreichbar | gestellt | ✔ rote Plakette *Nicht erreichbar*, **beide** Ziele genannt — `FILESTOREPROD09` grün, `FILESTOREPROD10` rot —, keine Fläche |
+| **9** | `STAND_VERALTET` | gestellt | ✔ **beide Zielzeilen gedämpft und ohne Rolle**, mit ihrem letzten Wort, darunter „geprüft 30.12.2025, 02:55 · seit 14 min 35 s". Siehe unten |
+| **10** | leere `dienste` | gestellt | ✔ „Kein Dienst des Altsystems trägt eine Zeitgrenze." — und die Kachel steht daneben unverändert |
+| **11** | 390 px | gestellt, im Rahmen | ✔ **gemessen**: eine Spalte, kein waagerechtes Scrollen, kein überlaufendes Element. Siehe unten |
+| **12** | dunkler Modus | gestellt | ✔ alle vier Lagen in **beiden** Themen gefahren; Plaketten in beiden lesbar, in keiner eine Fläche |
+
+### 8 gegen 9 ist die Aufnahme, die E‑133 belegt
+
+**Dieselben zwei Ziele, derselbe letzte Befund — einmal in Farbe, einmal ohne.**
+
+| | Kachel | `FILESTOREPROD09` | `FILESTOREPROD10` |
+|---|---|---|---|
+| **8** | *Nicht erreichbar*, rot | *Erreichbar*, **grün** | *Nicht erreichbar*, **rot** |
+| **9** | *Ungeklärt*, gedämpft | *Erreichbar*, **grau** | *Nicht erreichbar*, **grau** |
+
+**Ohne diese Regel stünde in 9 eine grüne Zeile unter einer Kachel, die gerade sagt, dass sie nichts
+weiß.** Das Wort bleibt in beiden Fällen stehen; genommen wird der Zeile nur die Farbe — und die war
+ohnehin nie die ganze Aussage.
+
+### 5 ist gemessen und nicht angesehen
+
+Über alle acht Karten der Seite die aufgelöste Hintergrundfarbe abgefragt:
+
+| Karte | Fläche |
+|---|---|
+| **Fehler** | `lab(13.811 11.0516 5.32182)` — die einzige, die abweicht |
+| Läuft, Wartend, Nachrichten, **Plattform**, Verlauf, Zuletzt aufgefallen, Verteilung | `lab(8.36 …)`, also `--card` |
+
+**E‑79 hält, und E‑127 ist damit belegt:** Der neue Block trägt in keinem Zustand eine Fläche, auch
+nicht mit fünf roten Lampen darin. Dieselbe Abfrage über die zehn Plaketten zeigt die zweite Hälfte
+von **E‑121** und **E‑128**:
+
+- Die vier roten Dienstplaketten tragen **exakt dieselbe Fläche wie die Fehlerkachel** — dieselbe
+  Rolle, zweite Anwendung, kein zweites Rot.
+- *Heruntergefahren* trägt `lab(13 0 0)`, dieselbe Fläche wie die Plaketten *Läuft* und *Wartend*.
+- **Alle Plaketten des neuen Blocks haben `border-color: rgba(0, 0, 0, 0)`** — die Fassung ohne
+  Kontur, wie E‑128 sie verlangt. *Läuft* und *Wartend* daneben tragen weiterhin ihre Kontur
+  (`lab(24.6 0 0)`), unverändert.
+
+### 4 ist der Prüfstein für die Zeitkette, und er hält
+
+`COMSERVICEPROD00` steht in `Service.ServiceLastUpdate` auf `2025-09-19 12:36:08` — Wanduhrzeit der
+Quelle. **Im Bild steht `19.09.2025, 12:36`**, nicht 14:36. Damit rechnet Teil A über die Wanduhr um
+(`common/Zeitpunkte`) und die Anzeige rechnet in der Anzeigezone zurück; die Kette hält über beide
+Enden ([`frontend-grundlagen.md`](frontend-grundlagen.md) §4).
+
+**Und `MPSERVICEPROD01` trägt keine Alterszeile** — sein Zeitpunkt (13.07.2026) liegt weit nach dem
+Anker der Anwendungsuhr, das Backend liefert `alterSekunden: null` (E‑75), und die Zeile entfällt,
+statt „vor 0 s" zu behaupten (**E‑131**). Die drei übrigen Lampen mit Zeitpunkten wenige Sekunden
+nach dem Anker hatten zum Zeitpunkt der Aufnahme ein echtes Alter (*seit 15 min …*), weil die
+Anwendungsuhr seit dem Backendstart mitgelaufen war — genau der Fall, den die Dev-Zeile als „kurz
+nach dem Start ist ihr Alter `null`" beschreibt, eine Viertelstunde später.
+
+### 11 ist gemessen und nicht geschätzt
+
+Das schmale Fenster ist ein **`<iframe>` von 390 px in derselben angemeldeten Sitzung** und kein
+kopfloses Chrome. Das ist nicht bloß bequemer, sondern richtiger: Die Umbruchpunkte sind
+Medienabfragen und richten sich nach dem Ansichtsbereich des **Dokuments** — im Rahmen ist das der
+des Rahmens. Damit ist es ein echtes schmales Fenster und keine schmale Spalte.
+
+| | |
+|---|---|
+| `scrollWidth` gegen `clientWidth` | **388 = 388** — kein waagerechtes Scrollen |
+| `grid-template-columns` | **`324px`** — eine Spalte; `xl:grid-cols-[3fr_2fr]` greift nicht |
+| Elemente, die über ihren Kasten laufen | **keines** |
+
+> **Der Befund aus §10.6 gilt unverändert:** `resize_window` der Erweiterung meldet Erfolg und
+> ändert nichts. Der Rahmen umgeht ihn, statt ihn zu bearbeiten.
+
+### Was auf der Probeseite mitgeprüft worden ist
+
+**Die Zeitpunkte stehen dort in UTC** — `30.12.2025, 03:09` statt `04:09` — und das ist richtig: Die
+Probeseite liegt außerhalb des Anwendungsrahmens, `useAnzeigezone()` findet keine Selbstauskunft und
+fällt auf `ZEITZONE_RUECKFALL` zurück. **Nicht auf die Zone des Browsers**, sondern auf UTC, wie
+[`frontend-grundlagen.md`](frontend-grundlagen.md) §4 es verlangt. Die live gefahrenen Aufnahmen
+zeigen dieselben Daten eine Stunde später, in der Anzeigezone.
+
+---
+
+## 13. Die Sichtprüfung zur Nachbesserung von 10d Teil B *(10.09.2026, Abend)*
+
+**Sechs Aufnahmen, alle gefahren.** Vier am laufenden System im angemeldeten Browser gegen die
+Testkopie im Profil `dev`, zwei mit gestellter Antwort. **Keine temporäre Route diesmal** — die
+gestellten Lagen entstanden über ein vorgeschaltetes `window.fetch`, das den Block `plattform` in
+der echten Antwort ersetzt. Damit gibt es nichts anzulegen und nichts zu entfernen; der Befund aus
+§12 zu `.next/dev/types` kann gar nicht erst auftreten.
+
+### Was gefahren worden ist
+
+| # | Was | Wie | Ergebnis |
+|---|---|---|---|
+| **1** | `NEXANS`, 1920 px | live | ✔ **fünf Kacheln in einer Reihe**, `xl:grid-cols-5`, der Verlauf direkt darunter. ✘ **Die Höhe geht nicht auf** — siehe unten |
+| **2** | `SUTTONS` | live | ✔ **vier Kacheln** (kein *Wartend*, E‑81), `xl:grid-cols-4`, die Plattform rückt auf. **Zwei Spalten innen**, 126 px gegen 128 px bei *Läuft* — die Höhe geht auf |
+| **3** | Ablagenprüfung eingeschaltet | live, eigener Backend-Lauf mit `--overlord.ablagenpruefung.aktiv=true` | ✔ Zeile `FILESTOREPROD10` mit `check` in `text-status-abgeschlossen`; die Sammelzeile „Ablagen" verschwindet, weil ein Ziel geprüft ist |
+| **4** | alle vier Zustände, einer ungeklärt mit Rohwert | gestellt | ✔ vier Zeichen, **vier Umrisse**, vier Rollen; `title` nennt *„Ungeklärt — Statuswert: PAUSED"* und, ohne Wert, *„Ungeklärt — kein Statuswert eingetragen"* |
+| **5** | `STAND_VERALTET` mit zwei Zielen | gestellt | ✔ beide Zielzeilen auf `text-muted-foreground` **ohne** `text-status-`; die Dienstzeile darüber behält ihre Rolle |
+| **6** | 390 px, dunkler Modus | live, im `iframe`-Rahmen | ✔ nichts abgeschnitten, **kein waagerechter Überlauf**, **genau eine Fläche** |
+
+### 4 ist die Aufnahme, die den Befund der Durchsicht erledigt
+
+**Gemessen statt angesehen**, über `getComputedStyle` und den Klassennamen des `<svg>`:
+
+| Zustand | Zeichen | Farbe |
+|---|---|---|
+| `MELDET_SICH` | `lucide-check` | `lab(72.7256 -44.551 11.7431)` — grün |
+| `ZEITUEBERSCHRITTEN` | `lucide-triangle-alert` | `lab(63.5691 52.8643 33.3674)` — rot |
+| `HERUNTERGEFAHREN` | `lucide-square-power` | `lab(74.48 0 0)` — neutral |
+| `UNGEKLAERT` | `lucide-circle-question-mark` | `lab(55.92 0 0)` — gedämpft |
+
+**Die beiden neutralen Rollen sind farblich nur durch ihre Helligkeit getrennt** (74,48 gegen 55,92,
+beide ohne Buntanteil) — und genau deshalb ist der **Umriss** der tragende Kanal: Viereck gegen
+Kreis. Auf der Aufnahme der Durchsicht waren es zwei Kreise, und das war der Befund.
+
+### 6 ist gemessen und nicht angesehen
+
+Der Rahmen ist ein `iframe` von 390 px im angemeldeten Browser — Medienabfragen werten gegen die
+Rahmenbreite aus, und `resize_window` der Erweiterung wirkt weiterhin nicht (§10.6, §11).
+
+| Frage | Ergebnis |
+|---|---|
+| Rahmenbreite | **388 px** innen |
+| Kacheln je Reihe | **eine** — alle fünf 349 px breit |
+| Spalten in der Plattform-Kachel | **eine**, 317 px — reichlich |
+| abgeschnittene Kennung | **keine** (`scrollWidth ≤ clientWidth` an allen acht Zeilen) |
+| waagerechter Überlauf | **keiner** |
+| Kacheln mit eigener Fläche | **genau eine** — nur *Fehler* trägt `lab(13.811 11.0516 5.32182)`, die vier übrigen `lab(8.36 0 0)`, also `--card` |
+
+### ⚠️ 1 gegen 2 ist die Aufnahme, die den offenen Punkt 171 belegt
+
+**Der Vorschlag des Auftrags — zwei Spalten innen — trägt, aber nur ab einer bestimmten Breite.**
+
+| Lage | Kachel breit | Inhalt | Spalten innen | Plattform | höchste der übrigen |
+|---|---:|---:|---:|---:|---:|
+| `SUTTONS`, 1920 px, vier Kacheln | 405 px | 373 px | **zwei** à 181 px | **126 px** | 128 px ✔ |
+| `NEXANS`, 1920 px, fünf Kacheln | 322 px | 290 px | eine | **198 px** | 154 px ✘ |
+| `NEXANS`, 1534 px, fünf Kacheln | 245 px | 213 px | eine | **198 px** | 154 px ✘ |
+
+**Die Grenze steht in den Kennungen, und sie ist gemessen:**
+
+| Kennung | Textbreite bei 13 px |
+|---|---:|
+| `HTTPSERVICEPROD00` | **137 px** |
+| `COMSERVICEPROD00` | 136 px |
+| `COMSERVICEPROD01` | 132 px |
+| `MPSERVICEPROD00` / `02` | 125 px |
+| `MPSERVICEPROD03` | 124 px |
+| `MPSERVICEPROD01` | 121 px |
+
+Mit Zeichen (14 px) und Abstand (6 px) braucht eine Zeile **157 px**, zwei Spalten mit ihrem Abstand
+also **326 px**. Bei fünf Kacheln hat eine 290 px Inhalt — **es fehlen 36 px**, und zwei Spalten
+erschienen erst bei rund **2130 px Fensterbreite**.
+
+**Zwei Auswege sind verworfen worden, beide mit Grund:**
+
+| Ausweg | Warum nicht |
+|---|---|
+| **kleinere Schrift** | Der Auftrag schließt es aus: *„statt die Schrift unter die der übrigen Kacheln zu verkleinern"* |
+| **Kennung abschneiden** | `MPSERVICEPROD00`, `01`, `02` und `03` unterscheiden sich in den **letzten** Zeichen. Eine Kürzung nähme genau die, und `COMSERVICEPROD00` und `HTTPSERVICEPROD00` fielen zusammen |
+
+**Der Umbruch entscheidet deshalb die Breite und kein Haltepunkt des Fensters** —
+`repeat(auto-fit, minmax(10rem, 1fr))`: zwei Spalten, sobald beide eine vollständige Kennung tragen,
+sonst eine. **Was bleibt, sind 44 px**, und sie sind gemeldet statt still hingenommen: **offener
+Punkt 171**, entschieden am 10.09.2026 zugunsten des jetzigen Standes.
+
+### Was am Backend geschehen ist, und was nicht
+
+**Für Aufnahme 3 ist das Backend einmal mit `--overlord.ablagenpruefung.aktiv=true` gestartet und
+danach wieder ohne den Schalter.** Das ist der in [`dienste.md`](dienste.md) §14 beschriebene Weg;
+im Betrieb bleibt die Prüfung lokal aus. **Am Code des Backends hat sich nichts geändert** — kein
+Endpunkt, keine Migration, keine zusätzliche Anfrage.

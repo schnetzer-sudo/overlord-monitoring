@@ -21,7 +21,7 @@ import { VerlaufDiagramm } from "./verlauf-diagramm";
  * Navigationseintrag war seit Schritt 3 dafür vorgesehen (`lib/navigation.ts`)
  * und heißt jetzt „Übersicht".
  *
- * ## Ein Aufruf, sieben Blöcke
+ * ## Ein Aufruf, alle Blöcke
  *
  * Die Seite holt **eine** Antwort und baut alles daraus. Kein Block lädt nach,
  * auch die Verteilung beim Umschalten der Sicht nicht — das ist ein neuer Aufruf
@@ -29,11 +29,25 @@ import { VerlaufDiagramm } from "./verlauf-diagramm";
  *
  * ## Die Reihenfolge der Blöcke folgt dem Leitsatz
  *
- * Zuerst die Kacheln, dann das Bild, dann die einzelnen Zeilen, zuletzt der
- * Hintergrund. *Das Werkzeug wird geöffnet, wenn etwas nicht stimmt* — wer es
+ * Zuerst die Kacheln, dann das Bild, dann die einzelnen
+ * Zeilen, zuletzt der Hintergrund. *Das Werkzeug wird geöffnet, wenn etwas nicht stimmt* — wer es
  * öffnet, will zuerst wissen **ob**, dann **seit wann**, dann **welche**. Die
  * Verteilung beantwortet keine dieser drei Fragen; sie steht deshalb unten und
  * am breiten Fenster neben den Zeilen statt über ihnen.
+ *
+ * **Die Plattform steht seit dem 10.09.2026 *in* der Kachelreihe** und nicht
+ * mehr als eigener Block darunter (`docs/dashboard-frontend.md` §5.8): Sie
+ * beantwortet die zweite Hälfte von **ob** — *„die Anlage steht"* ist die
+ * andere Erklärung dafür, dass ein Beleg nicht auffindbar ist (E‑116) —, und
+ * als fünfte Kachel steht sie dafür weiterhin oben, ohne dem Verlauf seinen
+ * Platz zu nehmen.
+ *
+ * > ⚠️ **Im Leerzustand steht sie nicht**, und das ist eine bewusste
+ * > Zurückhaltung und keine Auslassung: E‑p sagt *„einen Satz und den
+ * > bedienbaren Umschalter, sonst nichts"*, und diesen Satz zu ändern war nicht
+ * > Gegenstand von 10d. Gerade dort wäre sie allerdings am nützlichsten — der
+ * > Leerzustand ist der Augenblick, in dem jemand wissen will, ob es an der
+ * > Anlage liegt. **Offener Punkt 169.**
  *
  * ## Die Zustände
  *
@@ -92,8 +106,16 @@ export function DashboardAnsicht() {
            * jemand angeklickt hat. Solange nichts gewählt ist, gibt es das
            * zweite gar nicht (E‑n).
            */}
+          {/*
+           * **Die Plattform ist seit dem 10.09.2026 die fünfte Kachel** und
+           * kein eigener Kasten mehr darunter. Die Frage „liegt es an der
+           * Anlage" gehört weiterhin zu **ob** (E‑116, E‑126) und steht
+           * weiterhin ohne Scrollen da — sie kostet dafür nur keine eigene
+           * Zeile mehr, und unter der Reihe folgt wieder direkt der Verlauf.
+           */}
           <Kacheln
             kacheln={antwort.data.kacheln}
+            plattform={antwort.data.plattform}
             fenster={antwort.data.fenster}
             zeitraum={antwort.data.zeitraum}
           />

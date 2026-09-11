@@ -1,6 +1,6 @@
 import { hole } from "@/lib/http";
 import type { Fenster, Rollupzeitraum } from "@/lib/rollupzeitraum";
-import type { Statusart } from "@/lib/status-farbe";
+import type { Ablagenzustand, Dienstzustand, Statusart } from "@/lib/status-farbe";
 
 /**
  * Die Landingpage — **ein Aufruf, eine Antwort** (`docs/dashboard.md` §1).
@@ -227,6 +227,123 @@ export type AuffaelligerProzess = {
  */
 export type Stand = { beendetAm: string | null; art: string | null };
 
+/**
+ * Eine **Dienstlampe** — ein Dienst des Altsystems mit `ServiceTimeout > 0`
+ * (`docs/dienste.md` §9).
+ *
+ * **Vier Spalten von `Service` stehen in keiner Antwort** (E‑122): kein
+ * `ServiceName`, keine `ServiceDescription`, keine `ServiceLastStatusMessage`
+ * und kein `ServiceConnectString`. Sie werden nicht einmal gelesen. Was den
+ * Dienst benennt, ist allein die `serviceId`.
+ */
+export type Dienstlampe = {
+  serviceId: string;
+  zustand: Dienstzustand;
+  /**
+   * Der exakte Wert aus `Service.ServiceStatus`, **immer mitgeliefert** und
+   * auch bei bekannten Werten (E‑118) — der Anker für `UNGEKLAERT` (Regel Q4).
+   *
+   * **`null` ist möglich:** Der Klassifizierer ordnet eine leere Spalte
+   * `UNGEKLAERT` zu, und dann gibt es keinen Rohwert zu zeigen.
+   */
+  rohwert: string | null;
+  /**
+   * `Service.ServiceLastUpdate` — Wanduhrzeit der Quelle, im Backend nach UTC
+   * gerechnet (`common/Zeitpunkte`). **Darf fehlen.**
+   */
+  stand: string | null;
+  /**
+   * Wie alt dieser Zeitpunkt ist, in ganzen Sekunden, gegen die
+   * **Anwendungsuhr** des Backends gerechnet (E‑75) — **niemals hier**: Im
+   * Profil `dev` steht sie Monate zurück.
+   *
+   * **`null`, wenn `stand` nach `jetzt` liegt.** Auf der Testkopie ist das der
+   * Normalfall und kein Fehler: `MPSERVICEPROD01` trägt den 13.07.2026, der
+   * Anker der Anwendungsuhr steht auf dem 30.12.2025.
+   */
+  alterSekunden: number | null;
+};
+
+/**
+ * Ein geprüftes Ziel der Ablagenkachel — **eine Ablage, die in
+ * `ServiceDefaultFileStore` eingetragen ist** (E‑119).
+ *
+ * > ⚠️ **Das ist eine Stichprobe und keine Zusicherung über alle benutzten
+ * > Ablagen.** M53 hat gemessen, dass zu jedem Zeitpunkt **zwei** Ablagen
+ * > gleichzeitig beschrieben werden; die Spalte nennt nur eine davon (M174
+ * > Befund 2, **offener Punkt 166**). Deshalb nennt die Kachel ihre Ziele
+ * > einzeln und sichtbar (**E‑132**), statt eine Überschrift zu tragen, die für
+ * > alle Ablagen spräche.
+ */
+export type Ablagenziel = { serviceId: string; zustand: Ablagenzustand };
+
+/**
+ * Warum die Ablagenkachel `UNGEKLAERT` steht — **einer von fünf benannten
+ * Gründen**, und bei `UNGEKLAERT` immer gesetzt (E‑125).
+ *
+ * Die Reihenfolge ist die ihrer Prüfung im Backend (`docs/dienste.md` §8) und
+ * damit zugleich ihre Rangfolge: Die Frage nach dem **Beleg** steht vor der
+ * Frage nach dem **Inhalt**. Ein Stand, der älter ist als zwei Takte, sagt
+ * nichts über die Ablagen — in *jede* Richtung, und deshalb bleibt eine Kachel
+ * weder auf ihrem letzten roten noch auf ihrem letzten grünen Stand stehen.
+ */
+export type Ablagengrund =
+  | "ABGESCHALTET"
+  | "NOCH_KEIN_DURCHGANG"
+  | "STAND_VERALTET"
+  | "KEIN_ZIEL_EINGETRAGEN"
+  | "ZIEL_UNGEKLAERT";
+
+/** Dieselben fünf als Liste zur Laufzeit — für die Vollständigkeit der Sätze. */
+export const ABLAGENGRUENDE: readonly Ablagengrund[] = [
+  "ABGESCHALTET",
+  "NOCH_KEIN_DURCHGANG",
+  "STAND_VERALTET",
+  "KEIN_ZIEL_EINGETRAGEN",
+  "ZIEL_UNGEKLAERT",
+];
+
+/**
+ * Die Ablagenkachel. **Sie steht immer in der Antwort**, auch abgeschaltet
+ * (E‑125) — eine fehlende Kachel wäre Abwesenheit, und Abwesenheit ist der
+ * schwächste Kanal, den ein Zustand haben kann. Dieselbe Begründung wie bei
+ * E‑74 und E‑81.
+ */
+export type Ablagen = {
+  zustand: Ablagenzustand;
+  /** Benannt bei `UNGEKLAERT`, sonst `null`. Ein „ungeklärt" ohne Grund wäre ein Achselzucken. */
+  grund: Ablagengrund | null;
+  /**
+   * Was tatsächlich geprüft worden ist. **Leer in vier Lagen:** abgeschaltet,
+   * ohne Durchgang, ohne eingetragenes Ziel — und bei einem veralteten Stand
+   * dann, wenn schon der letzte Durchgang keines fand.
+   */
+  ziele: Ablagenziel[];
+  /** Wann der letzte Durchgang war, UTC. `null`, solange es keinen gab. */
+  geprueftAm: string | null;
+  /**
+   * **Der Beleg der Kachel** — wer wissen will, ob das grüne Ergebnis noch
+   * etwas wert ist, liest hier nach, statt es zu glauben.
+   */
+  alterSekunden: number | null;
+};
+
+/**
+ * Der plattformweite Block — **für jeden Mandanten identisch** (E‑116).
+ *
+ * Er sagt nichts über die Belege eines Mandanten, sondern über die **Anlage**,
+ * auf der sie laufen, und das ist keine Lücke in der Mandantentrennung, sondern
+ * sein Gegenstand. `DashboardIsolationDbIT` hält im Backend die **Gleichheit**
+ * fest, nicht die Verschiedenheit.
+ *
+ * **Er kommt im selben Aufruf** und kostet ein Statement — die Lampen. Die
+ * Ablagenkachel kostet keines: Ihr Zustand stammt aus einer echten Prüfung, die
+ * **im Hintergrund** läuft (E‑120). Ein Abruf gegen eine abgeschaltete Ablage
+ * dauert allein rund 2,7 Sekunden (M174); beim Aufruf gefragt, hinge die
+ * Landingpage an den Zeitgrenzen fremder Knoten statt an den eigenen.
+ */
+export type Plattform = { dienste: Dienstlampe[]; ablagen: Ablagen };
+
 export type Dashboard = {
   /** Das **gewählte** Paar, immer gesetzt — auch im Leerzustand. */
   zeitraum: Rollupzeitraum;
@@ -242,6 +359,11 @@ export type Dashboard = {
   verteilung: Verteilung;
   zuletztAufgefallen: AuffaelligerProzess[];
   stand: Stand | null;
+  /**
+   * Der neunte Block, seit dem 10.09.2026 (Schritt 10d) — **der einzige, der
+   * nicht am Bestand eines Mandanten hängt**.
+   */
+  plattform: Plattform;
 };
 
 /**

@@ -380,6 +380,81 @@ export const de = {
       },
     },
 
+    /**
+     * Der Block **Plattform** — die Dienstlampen und die Ablagenkachel
+     * (Schritt 10d Teil B, `docs/dashboard-frontend.md`).
+     *
+     * ## Eigene Wörter, nie die Rollenbeschriftung (Entscheidung E‑129)
+     *
+     * `--status-abgeschlossen` heißt im Verlauf „Erledigt" und
+     * `--status-offen` „Ohne Ergebnis" (E‑82). **Das sind Beschriftungen für
+     * Einordnungen von Nachrichten**, und ein Dienst ist keines ihrer
+     * Mitglieder im Sinne von E‑82: „Erledigt" an einer Dienstlampe wäre kein
+     * zusammenfassendes Wort, sondern ein falsches. Geteilt ist die **Farbe**
+     * (`lib/status-farbe.ts`), nicht das Wort.
+     */
+    // Die fünfte Kachel. Sie ist am 10.09.2026 aus einem eigenen Block unter
+    // der Reihe geworden und trägt seither je Dienst nur noch ZEICHEN UND
+    // KENNUNG — die Bauform von E‑91. Was aus dem Bild gefallen ist, ist auch
+    // hier gefallen: der Satz unter der Überschrift, „zuletzt geändert", das
+    // Alter, der Prüfzeitpunkt, die Einleitung der Zielzeilen und der
+    // Gedankenstrich für „ohne Auskunft".
+    //
+    // **Die Wörter sind geblieben**, denn `title` und `sr-only` brauchen sie:
+    // Farbe allein ist nie die ganze Aussage (`docs/visuelles-konzept.md` §3).
+    plattform: {
+      titel: "Plattform",
+
+      // Die Einordnung der Dienste (E‑117, E‑118). Der Rohwert daneben steht
+      // nur an der ungeklärten Zeile (E‑130) — neben „Zeitüberschreitung" sagte
+      // `ERROR_TIMEOUT` dasselbe ein zweites Mal.
+      dienst: {
+        MELDET_SICH: "Meldet sich",
+        ZEITUEBERSCHRITTEN: "Zeitüberschreitung",
+        HERUNTERGEFAHREN: "Heruntergefahren",
+        UNGEKLAERT: "Ungeklärt",
+      },
+      // Entscheidung E‑135: ein sichtbarer Satz statt einer leeren Stelle. Eine
+      // leere Liste sähe aus wie ein Fehler im Bau; hier steht, was sie heißt.
+      dienstLeer: "Kein Dienst des Altsystems trägt eine Zeitgrenze.",
+      rohwert: "Statuswert: {wert}",
+      // Der Klassifizierer ordnet auch eine leere Spalte `UNGEKLAERT` zu. Dann
+      // gibt es keinen Rohwert zu zeigen — und „nicht zugeordnet heißt nicht
+      // zugeordnet" (Regel Q4), nicht „leer".
+      rohwertFehlt: "kein Statuswert eingetragen",
+
+      // Die Ablagen. Sie tragen KEINE Überschrift, die für alle Ablagen spräche
+      // (E‑132): Geprüft wird, was in `ServiceDefaultFileStore` steht, und das
+      // ist eine Stichprobe (offener Punkt 166). Deshalb steht je geprüftem
+      // Ziel eine eigene Zeile mit seiner Kennung.
+      ablage: {
+        ERREICHBAR: "Erreichbar",
+        NICHT_ERREICHBAR: "Nicht erreichbar",
+        UNGEKLAERT: "Ungeklärt",
+      },
+      // Die Sammelzeile, wenn gar kein Ziel geprüft worden ist — abgeschaltet,
+      // noch kein Durchgang, keines eingetragen. Ohne sie verschwände die
+      // Prüfung spurlos aus der Kachel; ihr Zeichen ist deshalb fest das
+      // ungeklärte, und der Grund steht im `title`.
+      ablagen: "Ablagen",
+      // Die fünf benannten Gründe (E‑125). Jeder ist ein ganzer Satz: Ein
+      // Schlagwort wie „veraltet" verlangte vom Leser, sich den Rest zu denken.
+      grund: {
+        ABGESCHALTET: "Die Prüfung der Ablagen ist abgeschaltet.",
+        NOCH_KEIN_DURCHGANG: "Die Ablagen sind noch nicht geprüft worden.",
+        STAND_VERALTET:
+          "Die letzte Prüfung liegt zu lange zurück. Gezeigt ist ihr letztes Ergebnis.",
+        KEIN_ZIEL_EINGETRAGEN: "Es ist keine Ablage zur Prüfung eingetragen.",
+        ZIEL_UNGEKLAERT: "Die Antwort einer Ablage lässt sich nicht einordnen.",
+      },
+
+      // Wort und Zusatz in EINEM Satz: `title` kennt keine zweite Zeile, und
+      // ein Vorleseprogramm liest zwei Geschwister ohnehin hintereinander.
+      // Gebraucht an der ungeklärten Dienstzeile (Wort und Rohwert) und an der
+      // Sammelzeile der Ablagen (Wort und Grund).
+      wortUndZusatz: "{wort} — {zusatz}",
+    },
+
     stand: {
       // Absolut und nicht relativ (Entscheidung E‑o): Die Antwort trägt kein
       // `jetzt`-Feld, und der Browser rechnet gegen die echte Uhr — im Profil

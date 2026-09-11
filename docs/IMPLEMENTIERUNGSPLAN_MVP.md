@@ -17,7 +17,7 @@ Stand: 24.08.2026 · Ergänzt `PROJEKTBESCHREIBUNG.md`
 
 | 9 — Administration | **geschnitten in 9a und 9b** (20.08.2026); **9a Teil Backend gebaut und dokumentiert** (21.08.2026) — `V7__benutzerverwaltung.sql` (`download_allowed` fällt, `locked_by_admin` kommt), Sitzungsentzug in **Bauform A**, sechs Endpunkte unter `/api/admin/users`, sieben neue Ereignisarten, 48 Testfälle. [`benutzerverwaltung.md`](benutzerverwaltung.md) (Festlegung), [`benutzerverwaltung-backend.md`](benutzerverwaltung-backend.md) (Bau), Messungen **M81** und **M82** in [`messungen-schritt9.md`](messungen-schritt9.md). **Nicht als erledigt geführt:** die Oberfläche zu 9a fehlt. Dazu **9b Teil Backend gebaut und dokumentiert** (20.08.2026) — `V6__process_catalog.sql`, Heuristik, fünf Endpunkte unter `/api/katalog`, 64 Testfälle. [`prozess-katalog.md`](prozess-katalog.md) (Festlegung), [`prozess-katalog-backend.md`](prozess-katalog-backend.md) (Bau), Messung **M80** in [`messungen-schritt9.md`](messungen-schritt9.md). **Nicht als erledigt geführt:** die Oberfläche zu 9b fehlt, und eine Sichtprüfung im Browser ist ohne Oberfläche nicht möglich. *(Der Zusatz „9a ist unangetastet" ist am 21.08.2026 entfallen — 9a ist seither im Backend gebaut.)* **Nachtrag 24.08.2026: beide Oberflächen sind gebaut und dokumentiert** — 9b in [`prozess-katalog-frontend.md`](prozess-katalog-frontend.md), 9a in [`benutzerverwaltung-frontend.md`](benutzerverwaltung-frontend.md), dazu die Backend-Änderung zu E20 (`lockedUntil`). Damit ist **Schritt 9 vollständig gebaut**. **Als erledigt geführt wird er trotzdem nicht**, und zwar aus zwei Gründen, die beide in [`README.md`](README.md) unter „Offene Sichtprüfungen" stehen: Bei 9b fehlt das schmale Fenster. **Die Oberfläche zu 9a ist in zwei Runden geprüft** (24. und 26.08.2026, das zweite Mal mit einem eigens angelegten Wegwerfkonto): alle fünf Vorgänge ausgeführt, `lockedUntil` und „nie angemeldet" gesehen, `409 selbstschutz` am eigenen Konto, die klebende Kopfzeile über 44 Zeilen. **Offen bleiben dort zwei Dinge**: das schmale Fenster und der Zustand „kein Zugriff", der eine Anmeldung als `MANDANT` braucht. Der Maßstab bleibt der von Schritt 8 — gebaut und dokumentiert ist nicht erledigt, solange niemand hingesehen hat |
 
-| 10 — Durchstich: Rollup, Process View und Dashboard | **geteilt in 10a, 10b, 10c und 10d** (10d am 10.09.2026 hinzugekommen); die Teile und ihre Stände stehen in der Tabelle bei Schritt 10. **Erledigt ist keiner der vier geführt**, und zwar nach demselben Maßstab wie bei den Schritten 8 und 9: gebaut und dokumentiert ist nicht erledigt, solange niemand hingesehen hat. **10a** fertig am 26.08.2026 ([`rollup.md`](rollup.md)), **10b** fertig am 03.09.2026 in fünf Teilen ([`dashboard.md`](dashboard.md), [`dashboard-frontend.md`](dashboard-frontend.md)), **10c** gebaut in 10c‑1, 10c‑2 und 10c‑4b ([`process-view.md`](process-view.md); die Zeile *„offen"* in der Teilungstabelle ist seither überholt und dort nicht nachgezogen), **10d Teil A** fertig am 10.09.2026 ([`dienste.md`](dienste.md)) — **Teil B, die Oberfläche dazu, ist offen** |
+| 10 — Durchstich: Rollup, Process View und Dashboard | **geteilt in 10a, 10b, 10c und 10d** (10d am 10.09.2026 hinzugekommen); die Teile und ihre Stände stehen in der Tabelle bei Schritt 10. **Erledigt ist keiner der vier geführt**, und zwar nach demselben Maßstab wie bei den Schritten 8 und 9: gebaut und dokumentiert ist nicht erledigt, solange niemand hingesehen hat. **10a** fertig am 26.08.2026 ([`rollup.md`](rollup.md)), **10b** fertig am 03.09.2026 in fünf Teilen ([`dashboard.md`](dashboard.md), [`dashboard-frontend.md`](dashboard-frontend.md)), **10c** gebaut in 10c‑1, 10c‑2 und 10c‑4b ([`process-view.md`](process-view.md); die Zeile *„offen"* in der Teilungstabelle ist seither überholt und dort nicht nachgezogen), **10d** fertig am 10.09.2026 in zwei Teilen — Teil A ([`dienste.md`](dienste.md)) und **Teil B, die Oberfläche** ([`dashboard-frontend.md`](dashboard-frontend.md) §5.8, Sichtprüfung §12) |
 
 **Nachtrag 10.09.2026 zum Kopf.** Die Zeile zu **Schritt 10** ist ergänzt, und der Anlass ist
 derselbe wie 2026 schon zweimal: Die Tabelle führte die Schritte 1 bis 9 und **Schritt 10 gar
@@ -1048,7 +1048,7 @@ nicht; der Weg „neues Konto meldet sich an und ändert sein Passwort" gehört 
 > | **10a** | Rollup: `message_rollup`, `rollup_lauf`, Delta- und Volllauf, kein Endpunkt | **fertig am 26.08.2026** ([`rollup.md`](rollup.md)) |
 > | **10b** | Dashboard: Leseabfrage, Kacheln, Verlaufsdiagramm, Verteilungen | **fertig am 03.09.2026** — 10b‑1 bis 10b‑5, siehe darunter |
 > | **10c** | Process View, gruppiert nach kuratiertem Partner | offen |
-> | **10d** | **Dienste und Ablagen auf dem Dashboard** — geteilt in **Teil A** (Backend) und **Teil B** (Oberfläche) | **Teil A fertig am 10.09.2026** ([`dienste.md`](dienste.md)); **Teil B offen** |
+> | **10d** | **Dienste und Ablagen auf dem Dashboard** — geteilt in **Teil A** (Backend) und **Teil B** (Oberfläche) | **Teil A fertig am 10.09.2026** ([`dienste.md`](dienste.md)); **Teil B gebaut am 10.09.2026** ([`dashboard-frontend.md`](dashboard-frontend.md) §5.8) — **erledigt erst, wenn Lukas die Aufnahmen gesehen hat** |
 >
 > **10d ist am 10.09.2026 hinzugekommen, und es ist keine Nachbesserung an 10b.** Es ist der einzige
 > Teil des Durchstichs, der **nicht** am Bestand eines Mandanten hängt: ein plattformweiter Block mit
@@ -1070,6 +1070,38 @@ nicht; der Weg „neues Konto meldet sich an und ändert sein Passwort" gehört 
 > **Teil B ist ausdrücklich nicht gebaut:** keine Oberfläche, keine Sprachschlüssel, keine
 > Farbzuordnung. Die Farbrollen sind bestehende und werden dort als **zweite Anwendung** in
 > [`visuelles-konzept.md`](visuelles-konzept.md) §3 dokumentiert (E‑121).
+>
+> #### ✅ **Teil B ist am 10.09.2026 gebaut** — und der Absatz darüber bleibt stehen
+>
+> Er beschreibt, was Teil A bewusst **nicht** getan hat, und das bleibt lesenswert. Was Teil B
+> hinterlässt ([`dashboard-frontend.md`](dashboard-frontend.md) §5.8 und §12):
+>
+> | | |
+> |---|---|
+> | **Entscheidungen** | **E‑126 bis E‑137** — Ort, keine Fläche, zwei neue Farbtabellen, eigene Wörter, die Lampe, die Zeiten, die genannten Ziele, die Farbe der Zielzeilen, `UNGEKLAERT` nach E‑q, der Satz bei leeren `dienste`, Überschrift samt Satz, kein Nachladen im Takt |
+> | **Offene Punkte** | **168** (ein offener Tab lädt nicht nach — betrifft alle Blöcke) und **169** (im Leerzustand steht der Block nicht) |
+> | **Code** | `features/dashboard/plattform.ts` (vier reine Funktionen), `components/plattform-block.tsx`, zwei Tabellen in `lib/status-farbe.ts`, die Typen in `api.ts`, `dashboard.plattform` in beiden Sprachdateien |
+> | **Tests** | **28** neue Fälle in `tests/dashboard.test.ts` (reine Funktionen, Vollständigkeit beider Zuordnungen) und **5** in `tests/plattform-block.test.tsx`; der Zähler in `vitest.config.mts` steht seither auf **116 in sechzehn Dateien**, aus dem Lauf gezählt |
+> | **Nicht angefasst** | **kein Backend, kein Endpunkt, keine Migration, keine Farbe.** Höchste Flyway-Version bleibt `V12`, `globals.css` unverändert, `tests/farbwerte.test.ts` ohne neue Ausnahme |
+>
+> **Der Prüfstein der Dev-Zeile hält:** `COMSERVICEPROD00` steht in der Datenbank auf
+> `2025-09-19 12:36:08` und im Bild auf **19.09.2025, 12:36** — die Zeitkette rechnet über die
+> Wanduhr um und nicht daran vorbei.
+>
+> #### ⚠️ Nachbesserung am Abend desselben Tages — die **kleine Kachel** (**E‑138**)
+>
+> **Die Tabelle darüber bleibt stehen und beschreibt den Stand vom Vormittag.** Die Durchsicht durch
+> Lukas hat den Block als **zu groß** befunden: Er stand als eigener Kasten unter der Kachelreihe,
+> war so hoch wie der Verlauf und schob alles Wichtige nach unten. Was gilt:
+>
+> | | |
+> |---|---|
+> | **Entscheidung** | **E‑138** — die Plattform ist die **fünfte Kachel** der Reihe, je Zeile nur **Zeichen und `serviceId`**, das Wort in `title` und `sr-only` (Bauform E‑91). Die vier Zeichen unterscheiden sich in der **Form**: offener Strich, Dreieck, Viereck, Kreis |
+> | **Aufgehoben** | der Ort (**E‑126**), das sichtbare Wort (**E‑130**, **E‑132** zur Hälfte), die Zeiten (**E‑131**), der sichtbare Grund (**E‑134**), der Überschriftensatz (**E‑136**). **Bestätigt:** E‑79 und E‑127 — keine Fläche |
+> | **Offene Punkte** | **170** (nirgends steht mehr sichtbar, dass die Kachel für jeden Mandanten gleich ist) und **171** (bei fünf Kacheln geht die Höhe nicht auf: 198 px gegen 154 px, zwei Spalten erst ab rund 2130 px Fensterbreite) |
+> | **Code** | `components/kachel.tsx` (Rahmen und Kopf, aus `kacheln.tsx` umgezogen), `components/plattform-block.tsx` und `plattform.ts` neu zugeschnitten, `dienstVordergrund` statt der beiden Plakettenfassungen in `lib/status-farbe.ts`, sechs Schlüssel weniger und zwei mehr unter `dashboard.plattform` |
+> | **Tests** | `tests/plattform-block.test.tsx` von 5 auf **10** Fälle; in `tests/dashboard.test.ts` sind die beiden Fälle zur Alterszeile durch **elf** zu den Zeichen, den beiden Auskunftstexten und der Sammelzeile ersetzt. Der Zähler in `vitest.config.mts` steht auf **121 in sechzehn Dateien**, aus dem Lauf gezählt |
+> | **Nicht angefasst** | **kein Backend, kein Endpunkt, keine zusätzliche Anfrage, keine Farbe.** `stand`, `alterSekunden` und `geprueftAm` bleiben im Vertrag und werden von der Oberfläche nicht mehr gelesen ([`dienste.md`](dienste.md) §9) |
 >
 > **Und fünf Angaben des Abschnitts oben sind inhaltlich überholt.** Sie bleiben stehen; hier steht,
 > was gilt.
@@ -1153,7 +1185,6 @@ nicht; der Weg „neues Konto meldet sich an und ändert sein Passwort" gehört 
 >
 > **Vier Entscheidungen (E‑78 bis E‑81), keine Messung.** Leistung war kein Thema: Die Landingpage
 > liegt bei 49,5–195,0 ms gegen ein Budget von 500 ms (M145).
-
 > **2. Nur die Stundenebene wird materialisiert** (Entscheidung **E‑b**). Tages- und Monatsansicht
 > werden zur Lesezeit aus der Stundentabelle hochaggregiert, es gibt keine zweite und dritte
 > Tabelle. **Gestützt von M87:** Die Verdichtung von der Stunden- auf die Tagesebene bringt nur

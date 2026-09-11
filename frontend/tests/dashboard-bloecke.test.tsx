@@ -56,6 +56,31 @@ const VERTEILUNG_VOLL: Verteilung = {
   ],
 };
 
+/**
+ * Die fünfte Kachel der Reihe seit dem 10.09.2026 (Schritt 10d Teil B). Sie
+ * gehört zum Vertrag und darf deshalb auch im gestellten Rumpf nicht fehlen;
+ * **geprüft wird sie hier nicht** — ihre Fälle stehen in
+ * `tests/plattform-block.test.tsx`.
+ */
+const PLATTFORM: Dashboard["plattform"] = {
+  dienste: [
+    {
+      serviceId: "MPSERVICEPROD03",
+      zustand: "ZEITUEBERSCHRITTEN",
+      rohwert: "ERROR_TIMEOUT",
+      stand: "2025-12-30T03:09:41Z",
+      alterSekunden: 6,
+    },
+  ],
+  ablagen: {
+    zustand: "UNGEKLAERT",
+    grund: "ABGESCHALTET",
+    ziele: [],
+    geprueftAm: null,
+    alterSekunden: null,
+  },
+};
+
 function antwort(ueberschreibung: Partial<Dashboard> = {}): Dashboard {
   return {
     zeitraum: "48H",
@@ -83,6 +108,10 @@ function antwort(ueberschreibung: Partial<Dashboard> = {}): Dashboard {
     verteilung: VERTEILUNG_VOLL,
     zuletztAufgefallen: [],
     stand: { beendetAm: "2025-12-30T04:10:00Z", art: "VOLL" },
+    // Der neunte Block seit Schritt 10d. Er gehört zum Vertrag und darf
+    // deshalb auch im Rumpf nicht fehlen; **geprüft wird er hier nicht** —
+    // seine eigenen Fälle stehen in `tests/plattform-block.test.tsx`.
+    plattform: PLATTFORM,
     ...ueberschreibung,
   };
 }
@@ -152,8 +181,16 @@ const FEHLERKACHEL = { anzahl: 50, arten: [] };
 const LAEUFT_LEER = { anzahl: 0, aeltesteSekunden: null, ermittelbar: true };
 const SECHS_TAGE = 6 * 24 * 3600;
 
+/**
+ * **Die Plattform ist seit dem 10.09.2026 die fünfte Kachel der Reihe** und
+ * gehört deshalb zu ihren Pflichtangaben. **Geprüft wird sie hier nicht** —
+ * ihre eigenen Fälle stehen in `tests/plattform-block.test.tsx`; hier steht sie
+ * nur, damit die Reihe vollständig ist.
+ */
 async function rendereKacheln(kacheln: Dashboard["kacheln"]) {
-  return rendere(<Kacheln kacheln={kacheln} fenster={FENSTER} zeitraum="48H" />);
+  return rendere(
+    <Kacheln kacheln={kacheln} plattform={PLATTFORM} fenster={FENSTER} zeitraum="48H" />,
+  );
 }
 
 function ziele(behaelter: HTMLElement): (string | null)[] {
@@ -332,6 +369,7 @@ describe("Die Reihenfolge der Kacheln", () => {
       TEXTE.einordnung.LAEUFT,
       TEXTE.einordnung.WARTEND,
       D_KACHELN.nachrichten,
+      TEXTE.dashboard.plattform.titel,
     ]
       .map((wort) => [wort, text.indexOf(wort)] as const)
       .filter(([, stelle]) => stelle >= 0)
@@ -339,7 +377,7 @@ describe("Die Reihenfolge der Kacheln", () => {
       .map(([wort]) => wort);
   }
 
-  it("steht bei vier Kacheln in der Reihenfolge des Leitsatzes", async () => {
+  it("steht bei fünf Kacheln in der Reihenfolge des Leitsatzes", async () => {
     const gerendert = await rendereKacheln({
       nachrichten: 9950,
       fehler: FEHLERKACHEL,
@@ -353,14 +391,15 @@ describe("Die Reihenfolge der Kacheln", () => {
         TEXTE.einordnung.LAEUFT,
         TEXTE.einordnung.WARTEND,
         D_KACHELN.nachrichten,
+        TEXTE.dashboard.plattform.titel,
       ]);
-      expect(gerendert.behaelter.querySelector("[class*='xl:grid-cols-4']")).not.toBeNull();
+      expect(gerendert.behaelter.querySelector("[class*='xl:grid-cols-5']")).not.toBeNull();
     } finally {
       await gerendert.abbauen();
     }
   });
 
-  it("zieht sich bei drei Kacheln zusammen, ohne eine Spalte leer zu lassen", async () => {
+  it("zieht sich bei vier Kacheln zusammen, ohne eine Spalte leer zu lassen", async () => {
     const gerendert = await rendereKacheln({
       nachrichten: 9950,
       fehler: FEHLERKACHEL,
@@ -372,9 +411,10 @@ describe("Die Reihenfolge der Kacheln", () => {
         D_KACHELN.fehler,
         TEXTE.einordnung.LAEUFT,
         D_KACHELN.nachrichten,
+        TEXTE.dashboard.plattform.titel,
       ]);
-      expect(gerendert.behaelter.querySelector("[class*='xl:grid-cols-3']")).not.toBeNull();
-      expect(gerendert.behaelter.querySelector("[class*='xl:grid-cols-4']")).toBeNull();
+      expect(gerendert.behaelter.querySelector("[class*='xl:grid-cols-4']")).not.toBeNull();
+      expect(gerendert.behaelter.querySelector("[class*='xl:grid-cols-5']")).toBeNull();
     } finally {
       await gerendert.abbauen();
     }

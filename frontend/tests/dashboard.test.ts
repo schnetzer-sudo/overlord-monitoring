@@ -18,8 +18,30 @@ import {
   rolleKommtVor,
   verlaufszeilen,
 } from "@/features/dashboard/verlauf";
+import {
+  ABLAGENGRUENDE,
+  type Ablagen,
+  type Ablagengrund,
+  type Dienstlampe,
+} from "@/features/dashboard/api";
+import {
+  ABLAGENZEICHEN,
+  DIENSTZEICHEN,
+  grundsatz,
+  lampenauskunft,
+  sammelzeilenauskunft,
+  traegtZielfarbe,
+  zeigtRohwert,
+} from "@/features/dashboard/plattform";
 import { fehlerZiel, laeuftZiel, wartendFenster, wartendZiel } from "@/features/dashboard/verweise";
-import { STATUSARTEN, statusrolle } from "@/lib/status-farbe";
+import {
+  ABLAGENZUSTAENDE,
+  DIENSTZUSTAENDE,
+  STATUSARTEN,
+  ablagenrolle,
+  dienstrolle,
+  statusrolle,
+} from "@/lib/status-farbe";
 
 /**
  * Die **Entscheidungen** des Dashboard-Frontends, geprüft ohne Ansicht
@@ -455,5 +477,282 @@ describe("Die Beschriftung der Verteilung", () => {
     expect(verteilungszeileText(wert("WERT", "QUERGEHEND", null), "RICHTUNG", TEXTE)).toBe(
       "QUERGEHEND",
     );
+  });
+});
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Der Block *Plattform* (Schritt 10d, Teil B)
+
+   Die vier Entscheidungen der Ansicht stehen als reine Funktionen in
+   `features/dashboard/plattform.ts`, die beiden Farbzuordnungen in
+   `lib/status-farbe.ts`. Was nur ein gerenderter Baum zeigt, steht in
+   `tests/plattform-block.test.tsx` — und zwar nur das.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/** Eine Lampe, wie die Testkopie sie liefert (`docs/dienste.md` §13). */
+const LAMPE: Dienstlampe = {
+  serviceId: "MPSERVICEPROD03",
+  zustand: "ZEITUEBERSCHRITTEN",
+  rohwert: "ERROR_TIMEOUT",
+  stand: "2025-12-30T03:09:41Z",
+  alterSekunden: 6,
+};
+
+/** Die Ablagen im Zustand der Dev-Zeile: abgeschaltet, ohne Ziel, ohne Stand. */
+const ABLAGEN: Ablagen = {
+  zustand: "UNGEKLAERT",
+  grund: "ABGESCHALTET",
+  ziele: [],
+  geprueftAm: null,
+  alterSekunden: null,
+};
+
+describe("Die beiden neuen Farbzuordnungen sind vollständig (E‑128)", () => {
+  /**
+   * **Jeder Zustand bekommt eine Rolle**, und zwar eine der vier bestehenden.
+   * Das ist die halbe Aussage von E‑121: zweite Anwendung derselben Rollen,
+   * keine neue Farbe. Die andere Hälfte — dass in `globals.css` keine Zeile
+   * hinzukommt — hält `tests/farbwerte.test.ts`.
+   */
+  it.each(DIENSTZUSTAENDE)("%s hat eine Rolle", (zustand) => {
+    expect(["abgeschlossen", "fehler", "offen", "ungeklaert"]).toContain(dienstrolle(zustand));
+  });
+
+  it.each(ABLAGENZUSTAENDE)("%s hat eine Rolle", (zustand) => {
+    expect(["abgeschlossen", "fehler", "offen", "ungeklaert"]).toContain(ablagenrolle(zustand));
+  });
+
+  /**
+   * **Rot ist selten, und hier ist es genau zweimal vergeben** — dem Dienst,
+   * der seine Zeitgrenze gerissen hat, und der Ablage, die nicht antwortet.
+   * Ein geordnet heruntergefahrener Dienst ist **kein** Befund und deshalb
+   * neutral (`docs/dienste.md` §6, `docs/visuelles-konzept.md` §3).
+   */
+  it("vergibt Rot nur an die beiden Zustände, die niemand wollte", () => {
+    expect(DIENSTZUSTAENDE.filter((z) => dienstrolle(z) === "fehler")).toEqual([
+      "ZEITUEBERSCHRITTEN",
+    ]);
+    expect(ABLAGENZUSTAENDE.filter((z) => ablagenrolle(z) === "fehler")).toEqual([
+      "NICHT_ERREICHBAR",
+    ]);
+  });
+
+  /** „Nicht zugeordnet heißt nicht zugeordnet" (Q4) — in beiden Aufzählungen. */
+  it("gibt ungeklärt die eigene, zurückhaltende Rolle", () => {
+    expect(dienstrolle("UNGEKLAERT")).toBe("ungeklaert");
+    expect(ablagenrolle("UNGEKLAERT")).toBe("ungeklaert");
+  });
+
+  /**
+   * **Die Wörter sind eigene und nicht die der bündelnden Farbrollen**
+   * (E‑129).
+   *
+   * Geprüft wird die Abgrenzung zu **E‑82** an ihrem schärfsten Fall:
+   * `MELDET_SICH` und `ERREICHBAR` tragen dieselbe Rolle wie *Erledigt*,
+   * `HERUNTERGEFAHREN` dieselbe wie *Ohne Ergebnis* — und alle drei heißen
+   * anders. Die beiden Beschriftungen gehören den **Einordnungen von
+   * Nachrichten**; ein Dienst ist keines ihrer Mitglieder, und „Erledigt" an
+   * einer Dienstlampe wäre kein zusammenfassendes Wort, sondern ein falsches.
+   *
+   * ⚠️ **Geprüft werden genau die beiden bündelnden Rollen und nicht alle
+   * vier.** *Ungeklärt* heißt in beiden Mengen gleich, und das ist richtig:
+   * `--status-ungeklaert` bündelt nichts — die Beschriftung ist der Name ihres
+   * einzigen Mitglieds, und E‑82 hat dazu nichts zu sagen. Die erste Fassung
+   * dieses Falls war hier zu scharf gestellt und wurde am 10.09.2026 auf die
+   * Aussage von E‑82 zurückgeführt.
+   */
+  it("beschriftet nie mit der Beschriftung einer bündelnden Farbrolle", () => {
+    const buendelnd = [
+      TEXTE.dashboard.verlauf.rollen.offen,
+      TEXTE.dashboard.verlauf.rollen.abgeschlossen,
+    ];
+
+    for (const zustand of DIENSTZUSTAENDE) {
+      expect(buendelnd).not.toContain(TEXTE.dashboard.plattform.dienst[zustand]);
+    }
+    for (const zustand of ABLAGENZUSTAENDE) {
+      expect(buendelnd).not.toContain(TEXTE.dashboard.plattform.ablage[zustand]);
+    }
+
+    // Die Gegenprobe: Es sind wirklich dieselben Rollen — die Wörter fallen
+    // auseinander, die Farbe nicht (E‑121).
+    expect(dienstrolle("MELDET_SICH")).toBe("abgeschlossen");
+    expect(dienstrolle("HERUNTERGEFAHREN")).toBe("offen");
+    expect(ablagenrolle("ERREICHBAR")).toBe("abgeschlossen");
+  });
+});
+
+describe("Der Rohwert steht nur an der ungeklärten Lampe (E‑130)", () => {
+  it("zeigt ihn bei ungeklärt", () => {
+    expect(zeigtRohwert("UNGEKLAERT")).toBe(true);
+  });
+
+  /**
+   * **Neben „Zeitüberschreitung" sagte `ERROR_TIMEOUT` dasselbe ein zweites
+   * Mal**, in der Sprache der Anlage statt in der des Nutzers. Geliefert wird
+   * er trotzdem bei jeder Lampe (E‑118) — das ist der Unterschied zwischen dem
+   * Vertrag und der Anzeige.
+   */
+  it.each(DIENSTZUSTAENDE.filter((z) => z !== "UNGEKLAERT"))(
+    "verschweigt ihn bei %s",
+    (zustand) => {
+      expect(zeigtRohwert(zustand)).toBe(false);
+    },
+  );
+});
+
+describe("Eine Zielzeile trägt ihre Farbe nur, solange der Stand gilt (E‑133)", () => {
+  it("färbt die Zeilen einer Kachel, die etwas festgestellt hat", () => {
+    expect(traegtZielfarbe("ERREICHBAR", null)).toBe(true);
+    expect(traegtZielfarbe("NICHT_ERREICHBAR", null)).toBe(true);
+  });
+
+  /**
+   * **`ZIEL_UNGEKLAERT` ist der eine ungeklärte Fall mit frischem Beleg:** Der
+   * Durchgang hat stattgefunden, nur eine Antwort ließ sich nicht einordnen.
+   */
+  it("färbt die Zeilen auch, wenn nur eine Antwort unklar war", () => {
+    expect(traegtZielfarbe("UNGEKLAERT", "ZIEL_UNGEKLAERT")).toBe(true);
+  });
+
+  /**
+   * **Grün überlebt seinen Beleg auch in der Anzeige nicht.** Das Backend nimmt
+   * der Kachel ihre Aussage, sobald der Stand älter ist als zwei Takte (E‑125);
+   * stünde die Zeile darunter weiterhin grün, wäre dieselbe Aussage über
+   * denselben Umweg wieder im Bild.
+   */
+  it.each(ABLAGENGRUENDE.filter((g) => g !== "ZIEL_UNGEKLAERT"))(
+    "nimmt ihnen die Farbe bei %s",
+    (grund: Ablagengrund) => {
+      expect(traegtZielfarbe("UNGEKLAERT", grund)).toBe(false);
+    },
+  );
+});
+
+describe("Jeder Grund hat seinen Satz (E‑134)", () => {
+  /** Fünf Gründe, fünf Sätze — und jeder ein ganzer, kein Schlagwort. */
+  it.each(ABLAGENGRUENDE)("%s nennt den Grund in einem Satz", (grund) => {
+    const satz = grundsatz(grund, TEXTE);
+    expect(satz).toBeTruthy();
+    expect(satz).toMatch(/\.$/);
+  });
+
+  /**
+   * **Ohne Grund kein Satz.** Bei `ERREICHBAR` und `NICHT_ERREICHBAR` liefert
+   * das Backend `grund: null`, und die Auskunft steht in der Plakette; ein
+   * zusätzlicher Satz wäre dieselbe Aussage ein zweites Mal.
+   */
+  it("schreibt nichts, wo es nichts zu erklären gibt", () => {
+    expect(grundsatz(null, TEXTE)).toBeNull();
+  });
+});
+
+describe("Vier Zeichen, vier Formen (10.09.2026)", () => {
+  /**
+   * **Die Kachel trägt kein Wort im Bild** — je Zeile steht nur Zeichen und
+   * Kennung (Bauform E‑91). Damit ist das Zeichen die halbe Aussage
+   * **allein**, und `docs/visuelles-konzept.md` §3 verlangt dann, dass es sich
+   * in der **Form** unterscheidet und nicht nur in der Farbe.
+   *
+   * ⚠️ **Der Anlass ist ein Befund der Durchsicht:** Auf der Aufnahme waren
+   * das Zeichen für „heruntergefahren" und das der abgeschalteten Ablage nicht
+   * auseinanderzuhalten — zwei Kreise mit einem Strich darin. Geprüft wird
+   * deshalb, dass die vier Verzeichniseinträge **vier verschiedene**
+   * Komponenten sind; welche Umrisse sie zeichnen, sagt erst die Aufnahme.
+   */
+  it("gibt jedem Dienstzustand ein eigenes Zeichen", () => {
+    const zeichen = DIENSTZUSTAENDE.map((zustand) => DIENSTZEICHEN[zustand]);
+    expect(new Set(zeichen).size).toBe(DIENSTZUSTAENDE.length);
+  });
+
+  it("gibt jedem Ablagenzustand ein eigenes Zeichen", () => {
+    const zeichen = ABLAGENZUSTAENDE.map((zustand) => ABLAGENZEICHEN[zustand]);
+    expect(new Set(zeichen).size).toBe(ABLAGENZUSTAENDE.length);
+  });
+
+  /**
+   * **Geteilt ist die Formensprache, nicht das Verzeichnis.** Es sind zwei
+   * Aufzählungen (E‑128) — aber „erreichbar" und „meldet sich" sind
+   * dieselbe Auskunft in derselben Kachel und tragen dasselbe Häkchen; ein
+   * zweites grünes Zeichen wäre ein zweites Vokabular.
+   */
+  it("nimmt für dieselbe Auskunft dasselbe Zeichen", () => {
+    expect(ABLAGENZEICHEN.ERREICHBAR).toBe(DIENSTZEICHEN.MELDET_SICH);
+    expect(ABLAGENZEICHEN.NICHT_ERREICHBAR).toBe(DIENSTZEICHEN.ZEITUEBERSCHRITTEN);
+    expect(ABLAGENZEICHEN.UNGEKLAERT).toBe(DIENSTZEICHEN.UNGEKLAERT);
+  });
+});
+
+describe("Was eine Dienstzeile sagt (E‑130 im `title`)", () => {
+  /**
+   * **Das Wort allein, solange es eine Auskunft ist.** Neben
+   * „Zeitüberschreitung" sagte `ERROR_TIMEOUT` dasselbe ein zweites Mal, in
+   * der Sprache der Anlage statt in der des Nutzers.
+   */
+  it("nennt bei einer eingeordneten Zeile nur das Wort", () => {
+    expect(lampenauskunft(LAMPE, TEXTE)).toBe(TEXTE.dashboard.plattform.dienst.ZEITUEBERSCHRITTEN);
+    expect(lampenauskunft(LAMPE, TEXTE)).not.toContain("ERROR_TIMEOUT");
+  });
+
+  /**
+   * **Bei „ungeklärt" ist der Rohwert die ganze Auskunft** (Regel Q4): Ohne
+   * ihn bliebe ein Achselzucken, und niemand könnte nachsehen, was im
+   * Altsystem tatsächlich steht. Beides steht in **einem** Satz — ein `title`
+   * kennt keine zweite Zeile.
+   */
+  it("nennt bei einer ungeklärten Zeile Wort und Rohwert", () => {
+    const satz = lampenauskunft({ ...LAMPE, zustand: "UNGEKLAERT", rohwert: "PAUSED" }, TEXTE);
+    expect(satz).toContain(TEXTE.dashboard.plattform.dienst.UNGEKLAERT);
+    expect(satz).toContain("PAUSED");
+  });
+
+  /**
+   * **Und wo keiner steht, wird keiner erfunden.** Der Klassifizierer ordnet
+   * auch eine leere Spalte `UNGEKLAERT` zu; dann steht dort ein Satz und keine
+   * leere Stelle — „nicht zugeordnet heißt nicht zugeordnet".
+   */
+  it("sagt es, wenn die Anlage gar keinen Wert führt", () => {
+    const satz = lampenauskunft({ ...LAMPE, zustand: "UNGEKLAERT", rohwert: null }, TEXTE);
+    expect(satz).toContain(TEXTE.dashboard.plattform.rohwertFehlt);
+  });
+});
+
+describe("Die Sammelzeile der Ablagen (10.09.2026)", () => {
+  /**
+   * **Wo kein Ziel geprüft wurde, steht trotzdem eine Zeile.** Drei der fünf
+   * Gründe liefern gar kein Ziel (`docs/dienste.md` §8); ohne diese Zeile
+   * verschwände die Ablagenprüfung **spurlos** aus der Kachel, und Abwesenheit
+   * ist der schwächste Kanal, den eine Auskunft haben kann (E‑74, E‑81,
+   * E‑135).
+   */
+  it.each(["ABGESCHALTET", "NOCH_KEIN_DURCHGANG", "KEIN_ZIEL_EINGETRAGEN"] as const)(
+    "nennt bei %s das Wort und den Grund",
+    (grund: Ablagengrund) => {
+      const satz = sammelzeilenauskunft({ ...ABLAGEN, grund }, TEXTE);
+      expect(satz).toContain(TEXTE.dashboard.plattform.ablage.UNGEKLAERT);
+      expect(satz).toContain(TEXTE.dashboard.plattform.grund[grund]);
+    },
+  );
+
+  /**
+   * **Sie steht fest auf `UNGEKLAERT` und nicht auf dem Zustand der Kachel.**
+   * Eine Zeile mit der Aufschrift „Ablagen" und einem grünen Häkchen sagte
+   * *alle Ablagen sind erreichbar* — und genau diese Aussage schließt
+   * **E‑132** aus: Geprüft wird eine Stichprobe aus
+   * `ServiceDefaultFileStore` (offener Punkt 166).
+   */
+  it("bleibt ungeklärt, auch wenn der Zustand etwas anderes behauptet", () => {
+    const satz = sammelzeilenauskunft({ ...ABLAGEN, zustand: "ERREICHBAR", grund: null }, TEXTE);
+    expect(satz).toBe(TEXTE.dashboard.plattform.ablage.UNGEKLAERT);
+    expect(satz).not.toContain(TEXTE.dashboard.plattform.ablage.ERREICHBAR);
+  });
+
+  /** **Und sie schweigt, sobald es Ziele gibt.** Dann nennt die Kachel sie einzeln. */
+  it("entfällt, sobald ein Ziel geprüft worden ist", () => {
+    const mitZiel: Ablagen = {
+      ...ABLAGEN,
+      ziele: [{ serviceId: "FILESTOREPROD10", zustand: "ERREICHBAR" }],
+    };
+    expect(sammelzeilenauskunft(mitZiel, TEXTE)).toBeNull();
   });
 });

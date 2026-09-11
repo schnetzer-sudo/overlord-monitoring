@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 import { einsetzen } from "@/i18n";
 import { useSprache, useTexte } from "@/i18n/provider";
 import { formatiereDauer, formatiereZahl } from "@/lib/format";
@@ -22,20 +21,28 @@ import { statusKlassen, statusKlassenOhneKontur } from "@/lib/status-farbe";
 import type { Statusart } from "@/lib/status-farbe";
 import { cn } from "@/lib/utils";
 
-import type { Fehlerart, Fenster, Kacheln as Kachelwerte, OffeneKachel } from "../api";
+import type { Fehlerart, Fenster, Kacheln as Kachelwerte, OffeneKachel, Plattform } from "../api";
 import { fehlerartText } from "../beschriftung";
 import { fehlerZiel, laeuftZiel, wartendZiel } from "../verweise";
+import { Kachel, Kopf } from "./kachel";
+import { PlattformKachel } from "./plattform-block";
 
 /**
- * Die Kacheln — **Fehler, Läuft, Wartend, Nachrichten, in dieser Reihenfolge**
- * (Entscheidung **E‑78**).
+ * Die Kacheln — **Fehler, Läuft, Wartend, Nachrichten, Plattform, in dieser
+ * Reihenfolge** (Entscheidung **E‑78**, seit dem 10.09.2026 um die fünfte
+ * ergänzt).
  *
  * Die Reihenfolge folgt dem Leitsatz: erst was zu tun ist, dann was in Arbeit
- * ist, dann die Zählung. **Und *Wartend* steht vor *Nachrichten*, damit sein
- * Wegfall die Reihe von hinten auf drei zusammenzieht**, statt eine Lücke in die
- * Mitte zu schlagen.
+ * ist, dann die Zählung, zuletzt die Anlage. **Und *Wartend* steht vor
+ * *Nachrichten*, damit sein Wegfall die Reihe von hinten auf vier
+ * zusammenzieht**, statt eine Lücke in die Mitte zu schlagen — die Plattform
+ * rückt dabei auf wie die übrigen.
  *
- * ## Es sind drei oder vier, und der Unterschied ist eine Auskunft (E‑81)
+ * **Die fünfte Kachel ist am 10.09.2026 aus einem eigenen Block geworden**, der
+ * unter der Reihe stand und alles Wichtige nach unten schob
+ * (`plattform-block.tsx`, `docs/dashboard-frontend.md` §5.8).
+ *
+ * ## Es sind vier oder fünf, und der Unterschied ist eine Auskunft (E‑81)
  *
  * | Zustand | Antwort | Anzeige |
  * |---|---|---|
@@ -53,7 +60,9 @@ import { fehlerZiel, laeuftZiel, wartendZiel } from "../verweise";
  * ## Genau eine Kachel trägt eine Fläche (Entscheidung **E‑79**)
  *
  * **E‑u war für zwei Problemkacheln geschrieben; seit E‑71 gibt es eine** —
- * *Fehler*. *Läuft*, *Wartend* und *Nachrichten* tragen keine Fläche. Das ist
+ * *Fehler*. *Läuft*, *Wartend*, *Nachrichten* und *Plattform* tragen keine
+ * Fläche — die fünfte ausdrücklich auch nicht in ihren roten Zeilen (E‑127,
+ * E‑79 bleibt eindeutig). Das ist
  * keine Aufweichung von E‑u, sondern seine Schärfung: „gefüllt heißt, hier ist
  * etwas zu tun" wird eindeutig, weil es nur noch einen Fall gibt. Trügen die
  * beiden Zustandskacheln ebenfalls Fläche, wäre die Unterscheidung wieder
@@ -76,6 +85,7 @@ import { fehlerZiel, laeuftZiel, wartendZiel } from "../verweise";
  * | **Läuft** | `status=LAEUFT` | **erbt** — eine laufende Nachricht ist höchstens so alt wie die Wächterfrist |
  * | **Wartend** | `status=WARTEND` | **bringt seinen mit**, aus `aeltesteSekunden` (`verweise.ts`) |
  * | **Nachrichten** | — | nicht klickbar |
+ * | **Plattform** | — | nicht klickbar — es gibt keine Dienstansicht |
  *
  * **Verlinkt ist ein Bereich der Kachel und nicht die ganze.** In der
  * Fehlerkachel steht darunter die Schaltfläche für die Aufschlüsselung, und ein
@@ -83,10 +93,12 @@ import { fehlerZiel, laeuftZiel, wartendZiel } from "../verweise";
  */
 export function Kacheln({
   kacheln,
+  plattform,
   fenster,
   zeitraum,
 }: {
   kacheln: Kachelwerte;
+  plattform: Plattform;
   fenster: Fenster;
   zeitraum: Rollupzeitraum;
 }) {
@@ -98,15 +110,20 @@ export function Kacheln({
       {/*
        * **Die Umbruchregel ist erweitert und nicht ersetzt.** `sm:grid-cols-2`
        * bleibt; nur die Spaltenzahl am breiten Fenster folgt der Zahl der
-       * Kacheln — sonst ließe die Reihe bei drei Kacheln eine leere vierte
+       * Kacheln — sonst ließe die Reihe bei vier Kacheln eine leere fünfte
        * Spalte stehen, und eine Lücke sähe aus wie eine fehlende Zahl.
        * Zusammengesetzte Klassennamen entstehen dabei nicht: Tailwind sucht den
        * Quelltext ab, und beide Formen stehen vollständig da.
+       *
+       * **Seit dem 10.09.2026 sind es fünf und nicht vier** (E‑78, ergänzt):
+       * Die Plattform ist die letzte Kachel der Reihe. Fällt *Wartend* weg
+       * (E‑81), rückt sie mit auf — genau dafür steht *Wartend* vor
+       * *Nachrichten* und nicht dahinter.
        */}
       <div
         className={cn(
           "grid gap-3 sm:grid-cols-2",
-          wartend === undefined ? "xl:grid-cols-3" : "xl:grid-cols-4",
+          wartend === undefined ? "xl:grid-cols-4" : "xl:grid-cols-5",
         )}
       >
         <FehlerKachel fehler={kacheln.fehler} fenster={fenster} />
@@ -126,6 +143,21 @@ export function Kacheln({
           />
         )}
         <NachrichtenKachel anzahl={kacheln.nachrichten} />
+
+        {/*
+         * **Die Auskunft über die Anlage steht am Ende der Reihe** und nicht
+         * mehr in einem eigenen Kasten darunter. Sie beantwortet die zweite
+         * Hälfte von *„ob"* — *„liegt es an der Anlage"* (E‑116) — und muss
+         * dafür ohne Scrollen erreichbar sein; ein eigener Kasten erreichte
+         * das nur, indem er den Verlauf unter die Falz schob.
+         *
+         * **Sie steht hinter *Nachrichten* und nicht davor.** Die vier Kacheln
+         * davor sind die Auskunft über den **Mandanten**, und die ist die
+         * häufigere Frage; diese ist die über die **Anlage** und die
+         * seltenere. Der Leitsatz ordnet nach der Frage, mit der jemand
+         * herkommt.
+         */}
+        <PlattformKachel plattform={plattform} />
       </div>
 
       {/*
@@ -135,24 +167,6 @@ export function Kacheln({
       <p className="text-muted-foreground text-beiwerk">
         {texte.dashboard.kacheln.nachrichtenHinweis}
       </p>
-    </div>
-  );
-}
-
-/** Der gemeinsame Rahmen. Die Farbe kommt als Klassenkette von außen. */
-function Kachel({ klassen, children }: { klassen?: string; children: React.ReactNode }) {
-  return (
-    <Card size="sm" className={cn("gap-2 px-4", klassen)}>
-      {children}
-    </Card>
-  );
-}
-
-function Kopf({ zeichen: Zeichen, titel }: { zeichen: typeof AlertTriangle; titel: string }) {
-  return (
-    <div className="flex items-center gap-1.5">
-      <Zeichen aria-hidden="true" className="size-4 shrink-0" />
-      <span className="text-basis font-medium">{titel}</span>
     </div>
   );
 }

@@ -80,6 +80,44 @@ der jeder Nutzer ankommt, und sie umzudeuten kostet mehr, als jede Gestaltung ge
 > `tests/farbwerte.test.ts` — ihn umzubenennen wäre eine Änderung an drei Stellen, die keine Frage
 > beantwortet. **Wer die beiden wieder angleichen will, liest zuerst diesen Kasten.**
 
+> ### Dieselben vier Rollen, zum zweiten Mal angewendet — E‑121 *(10.09.2026)*
+>
+> **Der Block *Plattform* auf dem Dashboard färbt Dienste und Ablagen über genau diese vier
+> Rollen** ([`dienste.md`](dienste.md), [`dashboard-frontend.md`](dashboard-frontend.md) §5.8).
+> **Keine neue Farbe, kein neuer Token, keine Zeile in `globals.css`** — die Umsetzung sind zwei
+> weitere Tabellen in `lib/status-farbe.ts` (§8), und das ist die ganze Änderung.
+>
+> | Zustand | Rolle | Warum |
+> |---|---|---|
+> | `MELDET_SICH`, `ERREICHBAR` | `--status-abgeschlossen` | Der Zustand, den der Nutzer sucht: nichts zu tun |
+> | `ZEITUEBERSCHRITTEN`, `NICHT_ERREICHBAR` | `--status-fehler` | Rot bleibt selten und bezeichnet, was niemand wollte |
+> | `HERUNTERGEFAHREN` | `--status-offen` | **Kein Befund.** Ein geordnet heruntergefahrener Dienst ist abgeschaltet worden, und das war eine Entscheidung — *kein Ergebnis, kein Problem* |
+> | `UNGEKLAERT` | `--status-ungeklaert` | Regel Q4, und der Rohwert steht sichtbar daneben |
+>
+> ⚠️ **Die Rollen teilen sich die Farbe, nicht das Wort** — und hier zieht der Kasten darüber eine
+> Grenze, die man leicht übersieht. **E‑82 gilt für *bündelnde* Rollen:** „Erledigt" und „Ohne
+> Ergebnis" sind Beschriftungen für **Einordnungen von Nachrichten**, die eine Rolle
+> zusammenfasst. Ein Dienst ist keines ihrer Mitglieder; „Erledigt" an einer Dienstlampe wäre kein
+> zusammenfassendes Wort, sondern ein **falsches**. Die Wörter der Lampen stehen deshalb unter
+> `texte.dashboard.plattform` und heißen *Meldet sich*, *Zeitüberschreitung*, *Heruntergefahren*,
+> *Erreichbar*, *Nicht erreichbar* (Entscheidung **E‑129**).
+>
+> **Ausgerechnet *Ungeklärt* heißt in beiden Mengen gleich, und auch das folgt aus E‑82:**
+> `--status-ungeklaert` bündelt **nichts** — ihre Beschriftung ist der Name ihres einzigen
+> Mitglieds. Ein Test, der jede Übereinstimmung mit einer Rollenbeschriftung verbot, ist an genau
+> dieser Stelle rot geworden und auf die Aussage von E‑82 zurückgeführt worden
+> ([`dashboard-frontend.md`](dashboard-frontend.md) §5.8).
+>
+> ⚠️ **Nachtrag vom 10.09.2026 (E‑138): Dienste und Ablagen tragen ein *Zeichen* und keine
+> Plakette** — in der Bauform von **E‑91**, derselben, die „Zuletzt aufgefallen" seit dem
+> 04.09.2026 nimmt: Das Zeichen trägt die **Vordergrundfarbe** der Rolle, das Wort steht in `title`
+> und `sr-only`. Aus dem Block ist die fünfte Kachel der Kachelreihe geworden, und dort gehört die
+> Breite der Kennung. **Die vier Rollen dieser Tabelle bleiben Zeichen für Zeichen dieselben**;
+> geändert hat sich allein ihr Träger. **Und weil ohne Wort das Zeichen die halbe Aussage *allein*
+> trägt, unterscheiden sich die vier jetzt in der Form und nicht nur in der Farbe** — offener
+> Strich, Dreieck, Viereck, Kreis (siehe den Abschnitt darunter,
+> [`dashboard-frontend.md`](dashboard-frontend.md) §5.8).
+
 Jede Rolle hat drei Werte: Vordergrund, `-flaeche` und `-kontur`. Damit lässt sich ein Status als
 Text, als Plakette oder als Zeilenmarkierung zeigen, ohne dass irgendwo ein vierter Wert erfunden
 wird.
@@ -1016,6 +1054,8 @@ nichts.
 | Anderes Orange für „überfällig" *(die Rolle hat seit dem 03.09.2026 keinen Verbraucher, §7a)* | `globals.css`, drei Werte `--ueberfaellig*` je Block | sechs Zeilen, **nachrechnen** — `scripts/farbwerte/rechne.mjs` prüft die vier Bedingungen und berichtet die Abstände (§7a). *Der Ordner hieß bis zum 03.09.2026 `farbrolle-ueberfaellig`; seit er den ganzen Bestand rechnet, trägt er den allgemeinen Namen.* Zusätzlich hält seither `tests/farbkontrast.test.ts` die Kontraste **beider** Blöcke |
 | Status bekommt eine andere Rolle | `src/lib/status-farbe.ts`, Tabelle `ZUORDNUNG` | eine Zeile |
 | Eine Problemkategorie bekommt eine andere Rolle | `src/lib/status-farbe.ts`, Tabelle `PROBLEM_ZUORDNUNG` | eine Zeile |
+| Ein **Dienstzustand** bekommt eine andere Rolle *(seit 10.09.2026, E‑128)* | `src/lib/status-farbe.ts`, Tabelle `DIENST_ZUORDNUNG` | eine Zeile |
+| Ein **Ablagenzustand** bekommt eine andere Rolle *(seit 10.09.2026, E‑128)* | `src/lib/status-farbe.ts`, Tabelle `ABLAGEN_ZUORDNUNG` | eine Zeile |
 | Andere Stufenwerte des Dichteumschalters | `globals.css`, die vier `html[data-dichte="…"]` | vier Zeilen, **nachmessen** — `tests/dichte.test.ts` rechnet die Mindestfläche nach, aber ob die Nachrichtenliste, der Belegdaten-Block und der Recharts-Baum die neue Stufe tragen, sagt kein Test ([`dichte-umschalter.md`](dichte-umschalter.md) §5) |
 | Dichtere oder luftigere Navigation | `globals.css`, `--dichte-navzeile` | eine Zeile |
 | Dichtere oder luftigere Listen | `globals.css`, `--dichte-zeile` | eine Zeile |

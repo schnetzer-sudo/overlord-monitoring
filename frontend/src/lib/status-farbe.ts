@@ -1,11 +1,19 @@
 /**
  * **Die eine Stelle**, an der eine fachliche Aussage auf eine Farbrolle trifft.
  *
- * Zwei Zuordnungen wohnen hier, und beide bewusst in **derselben** Datei:
- * `ZUORDNUNG` (Statusart → Rolle) und `PROBLEM_ZUORDNUNG` (Problemkategorie →
- * Rolle). Zwei Dateien mit Farbzuordnung weichten genau die Regel auf, um
- * derentwillen es diese Datei gibt — „Zuordnung an genau einer Stelle"
- * (`docs/visuelles-konzept.md` §2).
+ * **Vier Zuordnungen wohnen hier**, und alle vier bewusst in **derselben**
+ * Datei: `ZUORDNUNG` (Statusart → Rolle), `PROBLEM_ZUORDNUNG`
+ * (Problemkategorie → Rolle) und seit dem 10.09.2026 `DIENST_ZUORDNUNG` sowie
+ * `ABLAGEN_ZUORDNUNG` (E‑128, Schritt 10d Teil B). Eine zweite Datei mit einer
+ * Farbzuordnung weichte genau die Regel auf, um derentwillen es diese Datei
+ * gibt — „Zuordnung an genau einer Stelle" (`docs/visuelles-konzept.md` §2).
+ *
+ * **Vier Schlüsselmengen und weiterhin vier Rollen.** Keine der beiden neuen
+ * Tabellen bringt eine Farbe mit; sie wenden die bestehenden ein zweites Mal an
+ * (E‑121). Was sie *nicht* teilen, ist das Wort: Die Beschriftungen der Rollen
+ * gehören den Einordnungen von Nachrichten (E‑82), ein Dienst ist keines ihrer
+ * Mitglieder, und seine Wörter stehen unter `texte.dashboard.plattform`
+ * (E‑129).
  *
  * Nirgends sonst steht, dass „abgeschlossen" grün ist. Wer die Zuordnung ändern
  * will, ändert sie hier; wer den Farbwert ändern will, ändert ihn in
@@ -101,6 +109,48 @@ export type Problemkategorie = "UEBERFAELLIG";
  */
 export type Problemrolle = "ueberfaellig";
 
+/**
+ * Wie ein **Dienst des Altsystems** dasteht — die Einordnung aus
+ * `dashboard/Dienstzustand` im Backend, gebildet allein vom
+ * `DienstStatusClassifier` (`docs/dienste.md` §6).
+ *
+ * **Sie steht hier und nicht in `features/dashboard/api.ts`**, aus demselben
+ * Grund wie {@link Statusart}: Der Schlüssel einer Farbzuordnung wohnt bei der
+ * Zuordnung. Das Feature liest den Typ von hier.
+ */
+export type Dienstzustand =
+  "MELDET_SICH" | "ZEITUEBERSCHRITTEN" | "HERUNTERGEFAHREN" | "UNGEKLAERT";
+
+/**
+ * Dieselben vier als **Liste zur Laufzeit**, in der Reihenfolge der Aufzählung
+ * im Backend — für die Vollständigkeitsprüfung von {@link DIENST_ZUORDNUNG} und
+ * der Wörter in beiden Sprachdateien.
+ *
+ * Wie bei {@link STATUSARTEN}: Der Typ bleibt die Vereinigung darüber, damit die
+ * Reihenfolge eine Anzeigeentscheidung bleibt und keine Typinformation wird.
+ */
+export const DIENSTZUSTAENDE: readonly Dienstzustand[] = [
+  "MELDET_SICH",
+  "ZEITUEBERSCHRITTEN",
+  "HERUNTERGEFAHREN",
+  "UNGEKLAERT",
+];
+
+/**
+ * Wie eine **Ablage** dasteht — aus `dashboard/Ablagenzustand`. Derselbe Typ
+ * trägt den Zustand der ganzen Kachel **und** den einer einzelnen Zielzeile;
+ * im Backend ist es dieselbe Aufzählung (`AblagenResponse.zustand`,
+ * `AblagenzielResponse.zustand`).
+ */
+export type Ablagenzustand = "ERREICHBAR" | "NICHT_ERREICHBAR" | "UNGEKLAERT";
+
+/** Dieselben drei als Liste zur Laufzeit. Siehe {@link DIENSTZUSTAENDE}. */
+export const ABLAGENZUSTAENDE: readonly Ablagenzustand[] = [
+  "ERREICHBAR",
+  "NICHT_ERREICHBAR",
+  "UNGEKLAERT",
+];
+
 const ZUORDNUNG: Record<Statusart, Statusrolle> = {
   // Rot — und nur hier.
   FEHLER: "fehler",
@@ -139,6 +189,68 @@ const PROBLEM_ZUORDNUNG: Record<Problemkategorie, Problemrolle> = {
   // `scripts/farbwerte/rechne.mjs` (bis zum 03.09.2026
   // `scripts/farbrolle-ueberfaellig/`).
   UEBERFAELLIG: "ueberfaellig",
+};
+
+/**
+ * Die **dritte** Zuordnung: Dienstzustand → Farbrolle (Entscheidung **E‑121**
+ * aus Teil A, umgesetzt am 10.09.2026 als **E‑128**: zwei neue Tabellen, und
+ * beide in *dieser* Datei — `docs/visuelles-konzept.md` §2 duldet keine zweite
+ * Stelle mit einer Farbzuordnung).
+ *
+ * **Es sind die bestehenden vier Rollen, zum zweiten Mal angewendet** — keine
+ * neue Farbe, kein neuer Token, keine Zeile in `app/globals.css`. Genau das ist
+ * der Inhalt von E‑121: Ein Dienst, der sich nicht mehr meldet, ist dasselbe
+ * *Rot* wie eine Nachricht im Fehler; es gibt kein zweites Vokabular
+ * (`docs/visuelles-konzept.md` §3).
+ *
+ * > ⚠️ **Die Rollen teilen sich die Farbe, nicht das Wort** (Entscheidung
+ * > **E‑129**). `--status-abgeschlossen` heißt in der Nachrichtenliste
+ * > „Erledigt" und `--status-offen` „Ohne Ergebnis" (E‑82) — beides sind
+ * > Beschriftungen für **Einordnungen von Nachrichten**. Ein Dienst ist keines
+ * > ihrer Mitglieder im Sinne von E‑82; „Erledigt" an einer Dienstlampe wäre
+ * > kein zusammenfassendes Wort, sondern ein falsches. Die Wörter stehen
+ * > deshalb unter `texte.dashboard.plattform` und nirgends sonst.
+ *
+ * **Warum `HERUNTERGEFAHREN` neutral ist und nicht rot:** Ein geordnet
+ * heruntergefahrener Dienst ist kein Befund — er ist abgeschaltet worden, und
+ * das war eine Entscheidung. Rot ist selten und bleibt dem vorbehalten, was
+ * niemand wollte (`docs/dienste.md` §6). `--status-offen` sagt genau das, was
+ * sein Kommentar oben sagt: *kein Ergebnis, kein Problem.*
+ */
+const DIENST_ZUORDNUNG: Record<Dienstzustand, Statusrolle> = {
+  MELDET_SICH: "abgeschlossen",
+  // Rot, und es ist dasselbe Rot: Der Wächter des Altsystems hat zugeschlagen.
+  ZEITUEBERSCHRITTEN: "fehler",
+  HERUNTERGEFAHREN: "offen",
+  // Der Rohwert steht in der Antwort daneben und wird an genau dieser Zeile
+  // auch genannt (E‑130) — seit dem 10.09.2026 im `title` und für Vorleser,
+  // weil die Kachel klein ist. Ohne ihn wäre „ungeklärt" ein Achselzucken.
+  UNGEKLAERT: "ungeklaert",
+};
+
+/**
+ * Die **vierte** Zuordnung: Ablagenzustand → Farbrolle (ebenfalls E‑121).
+ *
+ * Sie steht neben {@link DIENST_ZUORDNUNG} und nicht darin, obwohl beide heute
+ * in dieselben Rollen zeigen: Es sind **zwei Aufzählungen**, und dass
+ * `UNGEKLAERT` in beiden vorkommt, macht sie nicht zu einer. Genau daran ist
+ * E‑82 entstanden — ein Name aus der einen Menge, der in die
+ * Beschriftungsposition der anderen rutscht.
+ *
+ * **Ein Ziel ohne eigene Rolle gibt es hier nicht.** Ob eine Zielzeile ihre
+ * Farbe überhaupt tragen darf, entscheidet nicht der Zustand des Ziels, sondern
+ * ob der Stand der Kachel noch gilt — das ist eine Frage der Ansicht und steht
+ * als reine Funktion in `features/dashboard/plattform.ts` (E‑133).
+ *
+ * **Genommen wird nur die Farbe, nie das Wort.** Auch eine gedämpfte Zielzeile
+ * trägt ihr Zeichen und ihre Auskunft im `title` — sonst wäre der Zustand nur
+ * noch über Helligkeit ausgedrückt, und genau das schließt
+ * `docs/visuelles-konzept.md` §3 aus.
+ */
+const ABLAGEN_ZUORDNUNG: Record<Ablagenzustand, Statusrolle> = {
+  ERREICHBAR: "abgeschlossen",
+  NICHT_ERREICHBAR: "fehler",
+  UNGEKLAERT: "ungeklaert",
 };
 
 /**
@@ -287,4 +399,39 @@ export function problemKlassen(kategorie: Problemkategorie): string {
 /** Siehe {@link ohneKontur} — für zwei Rollen nebeneinander. */
 export function problemKlassenOhneKontur(kategorie: Problemkategorie): string {
   return ohneKontur(problemrolle(kategorie));
+}
+
+export function dienstrolle(zustand: Dienstzustand): Statusrolle {
+  return DIENST_ZUORDNUNG[zustand];
+}
+
+/**
+ * Nur der **Vordergrund** einer Dienstzeile (siehe {@link VORDERGRUND}).
+ *
+ * > ### ⚠️ Am 10.09.2026 an die Stelle von `dienstKlassenOhneKontur` getreten
+ * >
+ * > Die Kachel *Plattform* trug bis dahin je Dienst eine **Plakette** mit
+ * > Fläche und Wort; seit sie die fünfte Kachel der Reihe ist, trägt sie je
+ * > Dienst nur noch **Zeichen und Kennung** — die Bauform von E‑91, dieselbe
+ * > wie in „Zuletzt aufgefallen". Die Fassung mit Fläche wird damit nirgends
+ * > mehr gebraucht, und **E‑79 ist wieder eindeutig:** Gefüllt ist allein die
+ * > Fehlerkachel.
+ *
+ * **Farbe allein genügt nicht**, und das ist keine Frage dieser Datei: Wer
+ * diese Klassen nimmt, stellt ein Zeichen oder eine Beschriftung daneben
+ * (`docs/visuelles-konzept.md` §3). In der Plattform-Kachel tut das ein
+ * Zeichen, dessen **Form** sich je Zustand unterscheidet, und das Wort steht im
+ * `title` (`features/dashboard/plattform.ts`).
+ */
+export function dienstVordergrund(zustand: Dienstzustand): string {
+  return VORDERGRUND[dienstrolle(zustand)];
+}
+
+export function ablagenrolle(zustand: Ablagenzustand): Statusrolle {
+  return ABLAGEN_ZUORDNUNG[zustand];
+}
+
+/** Siehe {@link dienstVordergrund} — dieselbe Lage, andere Aufzählung. */
+export function ablagenVordergrund(zustand: Ablagenzustand): string {
+  return VORDERGRUND[ablagenrolle(zustand)];
 }

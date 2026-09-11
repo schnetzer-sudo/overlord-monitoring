@@ -1,6 +1,12 @@
 # Dienste und Ablagen auf dem Dashboard
 
-Stand: 10.09.2026 · Schritt 10d, Teil A · ergänzt [`dashboard.md`](dashboard.md)
+Stand: 10.09.2026 · Schritt 10d, **Teil A und Teil B** · ergänzt [`dashboard.md`](dashboard.md)
+
+> **Teil B ist gebaut** — die Oberfläche zu diesem Block steht in
+> [`dashboard-frontend.md`](dashboard-frontend.md) §5.8, die zwölf Aufnahmen ihrer Sichtprüfung in
+> §12 derselben Datei. Sie bringt **E‑126 bis E‑137** und zwei offene Punkte (**168**, **169**).
+> **Keine Backend-Änderung**: kein Feld, kein Statement, keine Migration — was hier steht, gilt
+> unverändert.
 
 **Zweck in zwei Sätzen.** Das Dashboard zeigt neben den mandantenbezogenen Kacheln einen
 **plattformweiten Block**: je eine Lampe für jeden Dienst des Altsystems, der eine Zeitgrenze trägt,
@@ -492,9 +498,45 @@ Mandanten identisch.
 | `ablagen.grund` | benannt bei `UNGEKLAERT`, sonst `null`. Ein „ungeklärt" ohne Grund wäre ein Achselzucken |
 | `ablagen.alterSekunden` | **der Beleg der Kachel** — wer wissen will, ob das grüne Ergebnis noch etwas wert ist, liest hier nach statt es zu glauben |
 
+> ### ⚠️ Nachtrag vom 10.09.2026 — drei Felder werden von der Oberfläche **nicht mehr gelesen**
+>
+> **Die Tabelle darüber beschreibt den Stand von Teil B und bleibt Zeichen für Zeichen stehen: Am
+> Vertrag ändert sich nichts.** `dienste[].stand`, `dienste[].alterSekunden`, `ablagen.geprueftAm`
+> und `ablagen.alterSekunden` werden weiterhin geliefert, weiterhin gegen die **Anwendungsuhr**
+> gerechnet (E‑75) und weiterhin durch Tests gedeckt.
+>
+> **Gelesen werden sie seit E‑138 nicht mehr.** Die Durchsicht am selben Tag hat den Block
+> *Plattform* auf die **fünfte Kachel** der Kachelreihe zusammengezogen; darin steht je Dienst nur
+> noch **Zeichen und `serviceId`**, und jeder Zeitpunkt und jedes Alter ist aus dem Bild gefallen
+> ([`dashboard-frontend.md`](dashboard-frontend.md) §5.8).
+>
+> **Herausgenommen worden sind sie trotzdem nicht**, und das ist eine Entscheidung und kein Rest:
+>
+> | | |
+> |---|---|
+> | **`alterSekunden` ist der Beleg** | Die Zeile darüber sagt, warum es das Feld gibt — *wer wissen will, ob das grüne Ergebnis noch etwas wert ist, liest hier nach.* Dass die Anzeige heute nicht nachliest, macht die Frage nicht falsch; sie macht sie nur unbeantwortet (offener Punkt 168) |
+> | **Ein Feld zu streichen ist teurer als es zu lassen** | Es hinge an Antwortklasse, Statement, Test und Vertrag. Der Nutzen wäre ein paar Bytes je Aufruf |
+> | **Die Prüfung selbst braucht es** | `Ablagenkachel` entscheidet über das Alter, ob sie überhaupt etwas sagen darf (E‑125). Das Feld ist die **sichtbare Fassung derselben Zahl**, die die Kachel intern schon benutzt |
+
 **Damit hat das Dashboard acht Blöcke und acht Statements.** Das achte sind die Lampen;
 `DashboardStatementsTest` benennt es einzeln. **Die Ablagenprüfung steht nicht darin und darf es
 nicht** — sie liegt außerhalb der Anfrage.
+
+> ### ⚠️ Korrektur vom 10.09.2026 — „acht Blöcke" zählt 4a nicht mit
+>
+> **Der Satz darüber bleibt Zeichen für Zeichen stehen**, weil er in der Zählung *seiner eigenen
+> Tabelle* richtig ist: [`dashboard.md`](dashboard.md) §2 führt neun Zeilen, aber acht Nummern —
+> die Kachel *Wartend* steht dort als **4a** und nicht als 5.
+>
+> | | |
+> |---|---|
+> | **Blöcke** | **neun**, wenn man 4a mitzählt; **acht** Nummern, wenn man der Nummerierung folgt |
+> | **Statements** | **acht** — und diese Zahl ist unstrittig, weil `DashboardStatementsTest` jedes einzeln benennt |
+>
+> **Beide Dateien sagen dasselbe und zählen verschieden.** Der Korrekturblock in
+> [`dashboard.md`](dashboard.md) §2 nennt beide Zahlen nebeneinander; hier steht nur, warum sie
+> nicht widersprüchlich sind. **Wer eine der beiden Stellen ändert, ändert beide** — oder er ändert
+> keine.
 
 ---
 
@@ -652,3 +694,5 @@ Anlage, und deshalb ist er lokal **aus** und wird einzeln eingeschaltet.
 | **165** | **Die Antwortverarbeitung des `jakarta`-Zweigs bleibt ungemessen** ([`rohdaten-backend.md`](rohdaten-backend.md) §11, Punkt 3). M174 misst nur den Fall ohne Datei |
 | **166** | **`ServiceDefaultFileStore` nennt nur eine der beiden gleichzeitig beschriebenen Ablagen** (M174 Befund 2 gegen M53 Befund 1). Die Kachel ist damit ein Stichprobenwächter. Welcher Mechanismus die Spalte setzt, ist unbekannt |
 | **167** | **Ein Abruf gegen eine abgeschaltete Ablage endet nach rund 2,7 s**, reproduzierbar auf 2 ms genau (M174 Befund 3). Die Ursache ist nicht gemessen |
+| **168** | **Ein offener Tab lädt nicht nach** — die Anzeige zeigt den Stand ihres Aufrufs, während die Ablagenprüfung im Minutentakt weiterläuft. Gemessen und begründet in [`dashboard-frontend.md`](dashboard-frontend.md) §6.5 und §7.3; die Grenze betrifft **alle** Blöcke der Seite |
+| **169** | **Im Leerzustand des Dashboards steht dieser Block nicht** (E‑p). Gerade dort wäre er am nützlichsten — der Leerzustand ist der Augenblick, in dem jemand wissen will, ob es an der Anlage liegt. Gemeldet, nicht aufgelöst ([`dashboard-frontend.md`](dashboard-frontend.md) §5.8) |

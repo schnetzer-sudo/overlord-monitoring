@@ -211,6 +211,39 @@ export const en: Texte = {
       },
     },
 
+    // Entscheidung E‑129, siehe `de.ts`: eigene Wörter, nie die Beschriftung
+    // einer Farbrolle. „Done" und „No outcome" gehören den Einordnungen von
+    // Nachrichten (E‑82); ein Dienst ist keines ihrer Mitglieder.
+    plattform: {
+      titel: "Platform",
+
+      dienst: {
+        MELDET_SICH: "Reporting in",
+        ZEITUEBERSCHRITTEN: "Timed out",
+        HERUNTERGEFAHREN: "Shut down",
+        UNGEKLAERT: "Unclear",
+      },
+      dienstLeer: "No service of the legacy system carries a time limit.",
+      rohwert: "Status value: {wert}",
+      rohwertFehlt: "no status value recorded",
+
+      ablage: {
+        ERREICHBAR: "Reachable",
+        NICHT_ERREICHBAR: "Not reachable",
+        UNGEKLAERT: "Unclear",
+      },
+      ablagen: "File stores",
+      grund: {
+        ABGESCHALTET: "The file store check is switched off.",
+        NOCH_KEIN_DURCHGANG: "The file stores have not been checked yet.",
+        STAND_VERALTET: "The last check is too long ago. What is shown is its last result.",
+        KEIN_ZIEL_EINGETRAGEN: "No file store is recorded for checking.",
+        ZIEL_UNGEKLAERT: "The answer of one file store cannot be classified.",
+      },
+
+      wortUndZusatz: "{wort} — {zusatz}",
+    },
+
     stand: {
       satz: "Figures as of {zeitpunkt}",
       artVOLL: "full run",
