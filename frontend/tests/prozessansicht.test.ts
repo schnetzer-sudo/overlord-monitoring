@@ -10,6 +10,7 @@ import {
   absprungfenster,
   baumabfrage,
   baumfensterFehler,
+  hervorgehobeneGliederung,
   parseAsKennung,
   alsSuchparameter,
   ausSuchparametern,
@@ -396,5 +397,48 @@ describe("Der Absprung aus dem Detailpanel in den Prozessbaum (E‑103, E‑104,
       zustand({ von: fenster.von, bis: fenster.bis, prozess: "p-1", nachricht: "m-1" }),
     );
     expect(gelesen.zeitraum).toBeNull();
+    // Und ohne Gliederung (E‑143): Wer aus dem Detail springt, landet in der
+    // Vorgabe seines eigenen Kontos.
+    expect(ziel).not.toContain("gliederung");
+  });
+});
+
+describe("Die Gliederung in der URL (E‑143)", () => {
+  it("steht nur darin, wenn sie gewählt ist — und läuft dann rund", () => {
+    expect(urlVon(zustand())).not.toContain("gliederung");
+
+    const gewaehlt = zustand({ zeitraum: "30T", gliederung: "PROJEKT" });
+    const url = urlVon(gewaehlt);
+    expect(url).toContain("gliederung=PROJEKT");
+    expect(ausSuchparametern(new URLSearchParams(url))).toEqual(gewaehlt);
+  });
+
+  it("übergeht eine unbekannte Gliederung, statt sie weiterzureichen", () => {
+    // Am Endpunkt wäre sie `400 gliederung-unbekannt`; aus der URL gelesen gilt
+    // sie als nicht gewählt, und der Server setzt die Vorgabe ein.
+    expect(ausSuchparametern(new URLSearchParams("gliederung=SOS")).gliederung).toBeNull();
+    expect(PROZESSANSICHT_PARAMETER.gliederung.parse("SOS")).toBeNull();
+    expect(PROZESSANSICHT_PARAMETER.gliederung.parse("PARTNER")).toBe("PARTNER");
+  });
+
+  it("geht in die Abfrage des Baums, wenn gewählt, und sonst nicht", () => {
+    // Ohne Parameter ist es ein eigener Schlüssel — der der Vorgabe des Kontos.
+    expect(baumabfrage(zustand())).toBe("");
+    expect(baumabfrage(zustand({ gliederung: "PARTNER" }))).toBe("?gliederung=PARTNER");
+    expect(baumabfrage(zustand({ zeitraum: "12M", gliederung: "PROJEKT" }))).toBe(
+      "?zeitraum=12M&gliederung=PROJEKT",
+    );
+  });
+
+  it("lässt die Liste rechts unberührt — beide Gliederungen enden im selben Blatt", () => {
+    const ohne = listenfilter(zustand({ prozess: "p-1" }), FENSTER);
+    const mit = listenfilter(zustand({ prozess: "p-1", gliederung: "PROJEKT" }), FENSTER);
+    expect(mit).toEqual(ohne);
+  });
+
+  it("hebt hervor, was gilt: die gewählte, sonst die der Antwort, sonst keine", () => {
+    expect(hervorgehobeneGliederung(zustand({ gliederung: "PARTNER" }), "PROJEKT")).toBe("PARTNER");
+    expect(hervorgehobeneGliederung(zustand(), "PROJEKT")).toBe("PROJEKT");
+    expect(hervorgehobeneGliederung(zustand(), undefined)).toBeNull();
   });
 });

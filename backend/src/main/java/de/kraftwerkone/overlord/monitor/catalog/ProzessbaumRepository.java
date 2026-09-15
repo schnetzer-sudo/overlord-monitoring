@@ -1,6 +1,7 @@
 package de.kraftwerkone.overlord.monitor.catalog;
 
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROCESS;
+import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROJECT;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROJECTMANDANT;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLUP;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLUP_MONAT;
@@ -146,6 +147,26 @@ public class ProzessbaumRepository {
    * <p><b>Es entsteht deshalb keine neue Migration</b> — der Index ist da, und er ist an {@code
    * information_schema.STATISTICS} nachgesehen und nicht aus der Dokumentation uebernommen (M109).
    *
+   * <h2>{@code Project} als {@code LEFT JOIN} <i>(seit 15.09.2026)</i></h2>
+   *
+   * <p>Die Gliederung {@code PROJEKT} gruppiert ueber {@code Project.ProjectDescription}, und die
+   * steht nur in {@code Project}. <b>Die Mandantenkette ueberspringt diese Tabelle</b> — sie laeuft
+   * {@code Process -> ProjectMandant} —, der Join ist also dazugekommen und stand nicht schon da.
+   * Erreicht wird sie ueber {@code PRIMARY} mit {@code eq_ref} ({@code ProzessbaumPlanDbIT}). <b>Es
+   * bleibt ein Statement fuer beide Gliederungen</b>: Beide brauchen dieselben Zeilen, gegliedert
+   * wird im Dienst.
+   *
+   * <p><b>{@code LEFT} und nicht {@code INNER}</b>, dieselbe Wahl wie in {@code
+   * docs/prozessauswahl.md} §4: Die Sichtbarkeit haengt an der Mandantenkette und nicht an einer
+   * Beschreibung. Ein innerer Join verloere einen Prozess, dessen Projektzeile fehlt, lautlos — und
+   * Baum und Prozessauswahl deckten sich nicht mehr.
+   *
+   * <p><b>Was die Spalte kostet, ist nicht gemessen</b> (offener Punkt 179). {@code
+   * ProjectDescription} ist {@code TEXT}. Die Sortierung nach {@code ProcessName} laeuft ueber eine
+   * Temptabelle, und mit einer {@code TEXT}-Spalte darin legt MariaDB sie auf der Platte an: In
+   * einer Stichprobe vom 15.09.2026 stieg {@code Created_tmp_disk_tables} je Aufruf um eins, ohne
+   * die Spalte um null. Eine Laufzeit dazu ist ausdruecklich nicht erhoben.
+   *
    * <h2>{@code process_catalog} als {@code LEFT JOIN}</h2>
    *
    * <p>{@code SUTTONS} und {@code WOC} haben <b>keine einzige</b> Katalogzeile (M110). Ein innerer
@@ -168,6 +189,7 @@ public class ProzessbaumRepository {
         .select(
             PROCESS.PROCESSID,
             PROCESS.PROCESSNAME,
+            PROJECT.PROJECTDESCRIPTION,
             PROCESS_CATALOG.PARTNER,
             PROCESS_CATALOG.RICHTUNG,
             PROCESS_CATALOG.PFLEGESTATUS,
@@ -175,6 +197,8 @@ public class ProzessbaumRepository {
         .from(PROCESS)
         .join(PROJECTMANDANT)
         .on(PROJECTMANDANT.PROJECTID.eq(PROCESS.PROJECTID))
+        .leftJoin(PROJECT)
+        .on(PROJECT.PROJECTID.eq(PROCESS.PROJECTID))
         .leftJoin(PROCESS_CATALOG)
         .on(PROCESS_CATALOG.PROCESS_ID.eq(PROCESS.PROCESSID))
         .where(PROJECTMANDANT.MANDANTID.eq(mandant.mandantId()))
@@ -187,7 +211,8 @@ public class ProzessbaumRepository {
                     satz.value3(),
                     satz.value4(),
                     satz.value5(),
-                    satz.value6()));
+                    satz.value6(),
+                    satz.value7()));
   }
 
   /**

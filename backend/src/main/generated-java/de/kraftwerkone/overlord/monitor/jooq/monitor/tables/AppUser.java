@@ -95,6 +95,11 @@ public class AppUser extends TableImpl<AppUserRecord> {
     public final TableField<AppUserRecord, Boolean> LOCKED_BY_ADMIN = createField(DSL.name("locked_by_admin"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("0"), SQLDataType.BOOLEAN)), this, "");
 
     /**
+     * The column <code>overlord_monitor.app_user.tree_layout</code>.
+     */
+    public final TableField<AppUserRecord, String> TREE_LAYOUT = createField(DSL.name("tree_layout"), SQLDataType.VARCHAR(20).nullable(false).defaultValue(DSL.field(DSL.raw("'PARTNER'"), SQLDataType.VARCHAR)), this, "");
+
+    /**
      * The column <code>overlord_monitor.app_user.failed_attempts</code>.
      */
     public final TableField<AppUserRecord, Integer> FAILED_ATTEMPTS = createField(DSL.name("failed_attempts"), SQLDataType.INTEGER.nullable(false).defaultValue(DSL.field(DSL.raw("0"), SQLDataType.INTEGER)), this, "");

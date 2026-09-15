@@ -113,6 +113,31 @@ public class BenutzerverwaltungController {
         admin(), id, anfrage.initialPassword(), request.getRemoteAddr());
   }
 
+  /**
+   * Die Vorgabe der Baumgliederung — {@code PARTNER} oder {@code PROJEKT} <i>(seit 15.09.2026)</i>.
+   *
+   * <p><b>Englisch wie die Nachbarn</b> ({@code locked}, {@code role}, {@code tenants}): Unter
+   * {@code /api/admin/users} stehen englische Unterpfade und Rumpffelder ({@code
+   * docs/benutzerverwaltung.md} §5). Die Werte bleiben deutsch, wie bei {@code role}.
+   */
+  public record BaumgliederungRequest(
+      @NotBlank(message = "Baumgliederung fehlt") String treeLayout) {}
+
+  /**
+   * Womit der Prozessbaum dieses Kontos beginnt. <b>Keine Berechtigung</b> — und deshalb der eine
+   * schreibende Vorgang dieser Seite, der keine Sitzung verwirft ({@code
+   * docs/benutzerverwaltung.md} E26). Die Rollengrenze gilt trotzdem: {@code /api/admin/**}
+   * verlangt {@code ADMIN}, auch auf das eigene Konto.
+   */
+  @PutMapping("/{id}/tree-layout")
+  public NutzerzeileResponse baumgliederung(
+      @PathVariable long id,
+      @Valid @RequestBody BaumgliederungRequest anfrage,
+      HttpServletRequest request) {
+    return benutzerverwaltung.setzeBaumgliederung(
+        admin(), id, anfrage.treeLayout(), request.getRemoteAddr());
+  }
+
   private AngemeldeterNutzer admin() {
     return sitzungsVerwaltung
         .aktuellerNutzer()

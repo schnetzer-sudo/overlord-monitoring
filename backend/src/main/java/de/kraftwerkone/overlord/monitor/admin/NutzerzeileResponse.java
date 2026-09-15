@@ -32,6 +32,10 @@ import java.util.List;
  *     Der Wert kommt aus {@code audit_log} und nicht aus einer Spalte an {@code app_user}; bei
  *     ueber zwanzig externen Nutzern ist „hat der sich ueberhaupt je angemeldet" die haeufigste
  *     Supportfrage, und das Protokoll hat die Antwort bereits
+ * @param treeLayout die Vorgabe der Baumgliederung, {@code PARTNER} oder {@code PROJEKT} — womit
+ *     der Prozessbaum dieses Kontos beginnt, wenn die URL keine Gliederung nennt <i>(seit
+ *     15.09.2026, das zehnte Feld)</i>. <b>Keine Berechtigung.</b> Gesetzt ueber {@code PUT
+ *     /api/admin/users/{id}/tree-layout}; als Zeichenkette wie {@code role}
  */
 public record NutzerzeileResponse(
     long id,
@@ -42,7 +46,8 @@ public record NutzerzeileResponse(
     Instant lockedUntil,
     boolean active,
     boolean mustChangePassword,
-    Instant lastLogin) {
+    Instant lastLogin,
+    String treeLayout) {
 
   /**
    * Baut die Antwortzeile.
@@ -112,7 +117,8 @@ public record NutzerzeileResponse(
         nochLaufendeZeitsperre(zeile.gesperrtBisUtc(), jetztUtc),
         zeile.aktiv(),
         zeile.passwortwechselErforderlich(),
-        alsUtc(zeile.letzteAnmeldungUtc()));
+        alsUtc(zeile.letzteAnmeldungUtc()),
+        zeile.baumgliederung().name());
   }
 
   /**

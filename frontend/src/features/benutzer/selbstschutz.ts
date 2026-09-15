@@ -1,3 +1,5 @@
+import type { Baumgliederung } from "@/lib/baumgliederung";
+
 import type { Rolle } from "./api";
 
 /**
@@ -13,18 +15,22 @@ import type { Rolle } from "./api";
  * Ein schreibender Vorgang auf **eine** Zeile — und zugleich der Rumpf, den er
  * schickt.
  *
- * **Ein Typ und nicht fünf**, weil genau das die Reihenfolge trägt, um die es
+ * **Ein Typ und nicht sechs**, weil genau das die Reihenfolge trägt, um die es
  * hier geht: Erst steht fest, *was* getan werden soll, dann wird geprüft, ob es
- * eine Vorwarnung braucht, dann läuft es. Fünf getrennte Aufrufwege hätten fünf
- * Stellen, an denen die Prüfung vergessen werden kann — und E19 wäre dann eine
+ * eine Vorwarnung braucht, dann läuft es. Getrennte Aufrufwege hätten je eine
+ * Stelle, an der die Prüfung vergessen werden kann — und E19 wäre dann eine
  * Aufzählung statt einer Regel.
+ *
+ * *Seit dem 15.09.2026 sechs Vorgänge: `baumgliederung` ist dazugekommen, und er
+ * ist der eine, der keine Sitzung verwirft (E26).*
  */
 export type Vorgang =
   | { art: "sperre"; gesperrt: boolean }
   | { art: "aktiv"; aktiv: boolean }
   | { art: "rolle"; rolle: Rolle }
   | { art: "mandanten"; mandanten: readonly string[] }
-  | { art: "passwort"; passwort: string };
+  | { art: "passwort"; passwort: string }
+  | { art: "baumgliederung"; gliederung: Baumgliederung };
 
 /**
  * Ob eine Zeile das Konto des Angemeldeten ist — **verglichen über den
@@ -83,6 +89,7 @@ export function istEigenesKonto(username: string, angemeldet: string | undefined
  * | `rolle` | auf `ADMIN` | läuft durch |
  * | `mandanten` | — | läuft durch, **kein Selbstschutz** |
  * | `passwort` | — | läuft durch, **kein Selbstschutz** (ausdrücklich: für das eigene Passwort gibt es `POST /api/auth/password`, und wer hier tippt, kennt das eben getippte) |
+ * | `baumgliederung` | — | läuft durch, **kein Selbstschutz** — sie entwertet nichts *(seit 15.09.2026)* |
  *
  * > **Zwei Anmerkungen, die am Bestand hängen und nicht an dieser Datei.**
  * >
@@ -115,21 +122,38 @@ export function amEigenenKontoZulaessig(vorgang: Vorgang): boolean {
       return vorgang.rolle !== "MANDANT";
     case "mandanten":
     case "passwort":
+    case "baumgliederung":
       return true;
   }
 }
 
 /**
+ * Ob dieser Vorgang **alle Sitzungen des Kontos verwirft** — E5 für die fünf
+ * Verwaltungsvorgänge, E26 für die Ausnahme.
+ *
+ * **Die Baumgliederung verwirft keine** *(seit 15.09.2026,
+ * `docs/benutzerverwaltung.md` E26)*. Sie ist keine Berechtigung, und sie wirkt
+ * ohnehin sofort: Der Baum liest die Vorgabe bei jedem Aufruf ohne Parameter
+ * neu. Am eigenen Konto meldet sie deshalb niemanden ab — und braucht weder die
+ * Vorwarnung noch den Weg auf die Anmeldung danach.
+ */
+export function verwirftSitzungen(vorgang: Vorgang): boolean {
+  return vorgang.art !== "baumgliederung";
+}
+
+/**
  * **Braucht dieser Vorgang die Vorwarnung aus E19?**
  *
- * Genau dann, wenn er das eigene Konto trifft **und** dort durchläuft.
+ * Genau dann, wenn er das eigene Konto trifft, dort durchläuft **und** dabei die
+ * Sitzungen verwirft.
  *
- * Der Grund ist E5, und die Regel hat keine Fallunterscheidung: **Jeder** der
- * fünf schreibenden Vorgänge verwirft *alle* Sitzungen des betroffenen Kontos —
- * auch die des Handelnden. Trifft es das eigene Konto, meldet der Admin sich mit
- * dem Klick selbst ab und landet **wortlos** auf der Anmeldung: Bei `401` wird
- * umgeleitet und nicht gemeldet (`docs/frontend-grundlagen.md` §5). Ohne
- * Vorwarnung sähe das aus wie ein Absturz.
+ * Der Grund ist E5: Die fünf Verwaltungsvorgänge verwerfen *alle* Sitzungen des
+ * betroffenen Kontos — auch die des Handelnden. Trifft es das eigene Konto,
+ * meldet der Admin sich mit dem Klick selbst ab und landet **wortlos** auf der
+ * Anmeldung: Bei `401` wird umgeleitet und nicht gemeldet
+ * (`docs/frontend-grundlagen.md` §5). Ohne Vorwarnung sähe das aus wie ein
+ * Absturz. **Die Baumgliederung meldet niemanden ab** ({@link verwirftSitzungen}),
+ * und eine Warnung, die eine Abmeldung verspricht, die nicht kommt, wäre falsch.
  *
  * **Für die verbotenen Richtungen gibt es bewusst keine Warnung**, sondern die
  * Übersetzung des Problemtyps aus der Antwort. Eine Warnung dort verspräche,
@@ -140,7 +164,11 @@ export function brauchtVorwarnung(
   username: string,
   angemeldet: string | undefined,
 ): boolean {
-  return istEigenesKonto(username, angemeldet) && amEigenenKontoZulaessig(vorgang);
+  return (
+    istEigenesKonto(username, angemeldet) &&
+    amEigenenKontoZulaessig(vorgang) &&
+    verwirftSitzungen(vorgang)
+  );
 }
 
 /** Die Mindestlänge eines Einmalpassworts (E13) — dieselbe Zahl wie im Backend. */

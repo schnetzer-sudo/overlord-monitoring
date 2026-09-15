@@ -3,6 +3,7 @@ package de.kraftwerkone.overlord.monitor.catalog;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.kraftwerkone.overlord.monitor.common.Baumfenster;
+import de.kraftwerkone.overlord.monitor.common.Baumgliederung;
 import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import de.kraftwerkone.overlord.monitor.security.Rolle;
@@ -10,7 +11,10 @@ import de.kraftwerkone.overlord.monitor.security.SicherheitsTestbasis;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,21 +29,25 @@ import org.springframework.beans.factory.annotation.Autowired;
  * <p>{@code MandantenIsolationDbIT} und {@code NachrichtenIsolationDbIT} stellen einer fremden,
  * echten Kennung eine erfundene gegenueber und verlangen ununterscheidbare Antworten. Das setzt
  * einen Endpunkt voraus, der eine Kennung <i>entgegennimmt</i> — dieser nimmt <b>keine</b>
- * entgegen; sein einziger Parameter ist der Zeitraum. Es gibt damit keine Eingabe, ueber die sich
- * Existenz erfragen liesse, und die Gegenprobe verschiebt sich auf die <b>Ausgabe</b>: Der Rumpf
- * darf keine einzige fremde Kennung, keinen fremden Namen und keinen fremden Partnernamen
+ * entgegen; seine Parameter sind Zeitraum und Gliederung. Es gibt damit keine Eingabe, ueber die
+ * sich Existenz erfragen liesse, und die Gegenprobe verschiebt sich auf die <b>Ausgabe</b>: Der
+ * Rumpf darf keine einzige fremde Kennung, keinen fremden Namen und keinen fremden Partnernamen
  * enthalten. Dieselbe Bauform wie in {@code ProzesseIsolationDbIT}.
  *
  * <h2>Was hier ueber die Prozessauswahl hinaus zu pruefen ist</h2>
  *
- * <p>Der Baum traegt <b>mehr als die Auswahl</b>: kuratierte <b>Partnernamen</b> und
- * <b>Kennzahlen</b>. Beides sind eigene Leckwege.
+ * <p>Der Baum traegt <b>mehr als die Auswahl</b>: kuratierte <b>Partnernamen</b>, seit dem
+ * 15.09.2026 <b>Projektbeschreibungen</b>, und <b>Kennzahlen</b>. Das sind eigene Leckwege.
  *
  * <ul>
  *   <li><b>Partnernamen sind mandantengebunden</b> ({@code docs/prozess-katalog.md} E3): {@code
  *       BAYER} bei {@code VOTG} und bei {@code SUTTONS} sind zwei Werte, dieselbe Firma, zwei
  *       EDI-Beziehungen. Wer die Partnerliste eines fremden Mandanten liest, liest dessen
  *       Geschaeftsbeziehungen.
+ *   <li><b>Projektbeschreibungen</b> stehen nur an Gruppen, und eine Gruppe entsteht im Dienst
+ *       ausschliesslich aus den Zeilen des Geruests. Eine fremde Beschreibung erreicht den Rumpf
+ *       also nur ueber einen fremden Prozess — und genau der wird fuer beide Gliederungen geprueft,
+ *       dazu, dass keine Gruppe ohne Blatt entsteht.
  *   <li><b>Die Kennzahlen kommen aus einer zweiten Abfrage mit einer zweiten Mandantenkette.</b>
  *       Sie ist ueber den Antwortrumpf <b>nicht</b> pruefbar — und das ist ein Befund und keine
  *       Nebensache, siehe den Kasten unten. Geprueft wird sie deshalb <b>am Repository</b>: {@link
@@ -70,6 +78,13 @@ import org.springframework.beans.factory.annotation.Autowired;
  * Rumpf ansieht, waere mit einer nachgelagerten Pruefung zufrieden — also mit genau dem, was M3
  * verbietet. Deshalb greift die eine Zusicherung eine Ebene tiefer.
  *
+ * <h2>Seit dem 15.09.2026: die Antwort ist rekursiv</h2>
+ *
+ * <p>Die Blaetter werden deshalb nicht mehr ueber einen festen Pfad gelesen ({@code
+ * $.partner[*].richtungen[*].prozesse[*]}), sondern rekursiv ueber {@code kinder} gesammelt — in
+ * beiden Gliederungen mit derselben Hilfe. Ein fester Pfad fuer jede Gliederung waere eine zweite
+ * Stelle, an der der Test die Form der Antwort kennen muesste.
+ *
  * <h2>Regel T2: keine Zahl aus dem Pflegestand</h2>
  *
  * <p>Der Test nennt <b>keinen</b> Erwartungswert aus dem Bestand. Er vergleicht ausschliesslich
@@ -95,6 +110,7 @@ class ProzessbaumIsolationDbIT extends SicherheitsTestbasis {
   private static final String NUTZER_B = PRAEFIX + "baum-suttons";
   private static final String NUTZER_C = PRAEFIX + "baum-votg";
   private static final String NUTZER_ADMIN = PRAEFIX + "baum-admin";
+  private static final String NUTZER_VORGABE = PRAEFIX + "baum-vorgabe";
   private static final String PASSWORT = "einLangesPasswort1";
 
   private Sitzung aufNexans;
@@ -126,18 +142,46 @@ class ProzessbaumIsolationDbIT extends SicherheitsTestbasis {
     aufVotg = anmelden(NUTZER_C, PASSWORT);
   }
 
-  /** Alle Blattkennungen des Baums, ueber alle Partner und Richtungen. */
+  private static String inGliederung(Baumgliederung gliederung) {
+    return PFAD + "?gliederung=" + gliederung.name();
+  }
+
+  /** Alle Blaetter des Baums, gleich in welcher Gliederung — rekursiv ueber {@code kinder}. */
+  private static List<Map<String, Object>> blaetter(Antwort antwort) {
+    List<Map<String, Object>> gefunden = new ArrayList<>();
+    sammle(antwort.json("$.knoten"), gefunden);
+    return gefunden;
+  }
+
+  @SuppressWarnings("unchecked")
+  private static void sammle(List<?> knoten, List<Map<String, Object>> gefunden) {
+    for (Object eintrag : knoten) {
+      Map<String, Object> einzeln = (Map<String, Object>) eintrag;
+      if (einzeln.containsKey("processId")) {
+        gefunden.add(einzeln);
+      } else {
+        sammle((List<?>) einzeln.get("kinder"), gefunden);
+      }
+    }
+  }
+
+  /** Alle Blattkennungen des Baums, ueber alle Ebenen. */
   private static List<String> kennungen(Antwort antwort) {
-    return antwort.json("$.partner[*].richtungen[*].prozesse[*].processId");
+    return blaetter(antwort).stream().map(blatt -> (String) blatt.get("processId")).toList();
   }
 
+  /** Die Prozessnamen — ein fehlender Name ist keine Kennung und wird uebergangen. */
   private static List<String> namen(Antwort antwort) {
-    return antwort.json("$.partner[*].richtungen[*].prozesse[*].processName");
+    return blaetter(antwort).stream()
+        .map(blatt -> (String) blatt.get("name"))
+        .filter(Objects::nonNull)
+        .toList();
   }
 
-  /** Die kuratierten Partnernamen. Ohne Katalogzeilen ist die Liste leer — das ist kein Fehler. */
-  private static List<String> partnernamen(Antwort antwort) {
-    return antwort.json("$.partner[*].partner");
+  /** Die Namen der obersten Ebene — in der Partnergliederung die kuratierten Partnernamen. */
+  private static List<String> obersteNamen(Antwort antwort) {
+    List<String> namen = antwort.json("$.knoten[*].name");
+    return namen.stream().filter(Objects::nonNull).toList();
   }
 
   /** Die Voraussetzung, ohne die alles Folgende wertlos waere: Beide Mandanten haben Prozesse. */
@@ -191,10 +235,9 @@ class ProzessbaumIsolationDbIT extends SicherheitsTestbasis {
   @Test
   @DisplayName("Kein kuratierter Partnername eines fremden Mandanten steht im Rumpf")
   void keine_fremden_partnernamen() throws Exception {
-    List<String> fremdePartner =
-        partnernamen(aufVotg.hole(PFAD)).stream().filter(name -> name != null).toList();
+    List<String> fremdePartner = obersteNamen(aufVotg.hole(inGliederung(Baumgliederung.PARTNER)));
 
-    Antwort vonNexans = aufNexans.hole(PFAD);
+    Antwort vonNexans = aufNexans.hole(inGliederung(Baumgliederung.PARTNER));
 
     for (String fremd : fremdePartner) {
       assertThat(vonNexans.rumpf())
@@ -258,8 +301,10 @@ class ProzessbaumIsolationDbIT extends SicherheitsTestbasis {
   void summen_bleiben_unter_dem_eigenen_bestand() throws Exception {
     Antwort vonNexans = aufNexans.hole(PFAD);
 
-    List<Integer> jeBlatt = vonNexans.json("$.partner[*].richtungen[*].prozesse[*].nachrichten");
-    long ausBlaettern = jeBlatt.stream().mapToLong(Integer::longValue).sum();
+    long ausBlaettern =
+        blaetter(vonNexans).stream()
+            .mapToLong(blatt -> ((Number) blatt.get("nachrichten")).longValue())
+            .sum();
     long gesamt = ((Number) vonNexans.json("$.gesamt.nachrichten")).longValue();
 
     assertThat(gesamt)
@@ -271,15 +316,25 @@ class ProzessbaumIsolationDbIT extends SicherheitsTestbasis {
    * Die Trennung gilt auch quer (Regel M5): Der Baum und die Prozessauswahl beschreiben dieselbe
    * Menge. Waere der Baum weiter gefasst, zeigte er Prozesse, die der Listenfilter nicht annimmt;
    * waere er enger, fehlten dem Nutzer Prozesse, die er sehen darf.
+   *
+   * <p><b>Seit dem 15.09.2026 fuer beide Gliederungen.</b> Gleiche Blattmenge bei gleichem
+   * Mandanten ist zugleich der Nachweis, dass keine Gliederung einen Prozess verliert — auch nicht
+   * ueber den neuen Join auf {@code Project}. Und die Kopfzahl ist in beiden Gliederungen dieselbe.
    */
   @Test
-  @DisplayName("Der Baum und die Prozessauswahl beschreiben dieselbe Menge")
+  @DisplayName(
+      "Der Baum und die Prozessauswahl beschreiben dieselbe Menge — in beiden Gliederungen")
   void baum_und_auswahl_decken_sich() throws Exception {
     List<String> ausDerAuswahl = aufNexans.hole("/api/prozesse").json("$[*].processId");
 
-    List<String> ausDemBaum = kennungen(aufNexans.hole(PFAD));
+    Antwort partnerbaum = aufNexans.hole(inGliederung(Baumgliederung.PARTNER));
+    Antwort projektbaum = aufNexans.hole(inGliederung(Baumgliederung.PROJEKT));
 
-    assertThat(ausDemBaum).containsExactlyInAnyOrderElementsOf(ausDerAuswahl);
+    assertThat(kennungen(partnerbaum)).containsExactlyInAnyOrderElementsOf(ausDerAuswahl);
+    assertThat(kennungen(projektbaum)).containsExactlyInAnyOrderElementsOf(ausDerAuswahl);
+    assertThat(kennungen(projektbaum)).hasSameSizeAs(kennungen(partnerbaum));
+    assertThat(projektbaum.<Map<String, Object>>json("$.gesamt"))
+        .isEqualTo(partnerbaum.<Map<String, Object>>json("$.gesamt"));
   }
 
   /**
@@ -338,6 +393,107 @@ class ProzessbaumIsolationDbIT extends SicherheitsTestbasis {
     assertThat(kennungen(alsAdminAufNexans))
         .containsExactlyElementsOf(eigeneKennungen)
         .doesNotContainAnyElementsOf(fremdeKennungen);
+  }
+
+  // ─── Die zweite Gliederung (15.09.2026) ───────────────────────────────────────
+
+  /**
+   * Regel M4, fuer die Gliederung {@code PROJEKT}: Sie oeffnet keinen zweiten Weg zu fremden Daten.
+   * Dieselbe Gegenprobe wie in der Partnergliederung — kein fremder Prozess, kein fremder Name im
+   * Rumpf.
+   */
+  @Test
+  @DisplayName("Im Projektbaum sieht der Nutzer auf NEXANS keinen einzigen Prozess von SUTTONS")
+  void projektbaum_keine_fremde_kennung_und_kein_fremder_name() throws Exception {
+    Antwort vonSuttons = aufSuttons.hole(inGliederung(Baumgliederung.PROJEKT));
+    List<String> fremdeKennungen = kennungen(vonSuttons);
+    List<String> fremdeNamen = namen(vonSuttons);
+
+    Antwort vonNexans = aufNexans.hole(inGliederung(Baumgliederung.PROJEKT));
+
+    assertThat(vonNexans.<String>json("$.gliederung")).isEqualTo("PROJEKT");
+    assertThat(kennungen(vonNexans)).isNotEmpty().doesNotContainAnyElementsOf(fremdeKennungen);
+    for (String fremd : fremdeKennungen) {
+      assertThat(vonNexans.rumpf()).doesNotContain(fremd);
+    }
+    for (String fremd : fremdeNamen) {
+      assertThat(vonNexans.rumpf()).doesNotContain(fremd);
+    }
+  }
+
+  /**
+   * <b>Eine Projektbeschreibung erreicht den Rumpf nur mit einem eigenen Prozess.</b> Gruppen
+   * entstehen im Dienst ausschliesslich aus den Zeilen des mandantengefilterten Geruests — eine
+   * Gruppe ohne Blatt waere der einzige Weg, auf dem eine Beschreibung ohne eigenen Prozess im
+   * Rumpf stuende. Die Kennungen darunter prueft {@link
+   * #projektbaum_keine_fremde_kennung_und_kein_fremder_name()}.
+   *
+   * <p><b>Warum kein Vergleich der Beschreibungstexte zweier Mandanten:</b> Beschreibungen sind
+   * freie Texte wie „Eingehende Nachrichten von Kunden" und koennen bei zwei Mandanten gleich
+   * lauten, ohne dass etwas leckt. Ein Textvergleich schluege dann fehl, obwohl die Trennung haelt
+   * — und haenge an Pflegedaten (Regel T2).
+   */
+  @Test
+  @DisplayName("Im Projektbaum traegt jede Gruppe mindestens einen eigenen Prozess")
+  void projektgruppen_tragen_nur_eigene_prozesse() throws Exception {
+    Antwort vonNexans = aufNexans.hole(inGliederung(Baumgliederung.PROJEKT));
+    List<String> eigene = aufNexans.hole("/api/prozesse").json("$[*].processId");
+
+    List<Map<String, Object>> gruppen = vonNexans.json("$.knoten");
+    assertThat(gruppen).isNotEmpty();
+    for (Map<String, Object> gruppe : gruppen) {
+      List<?> kinder = (List<?>) gruppe.get("kinder");
+      assertThat(kinder).as("Gruppe %s", gruppe.get("name")).isNotEmpty();
+      List<String> darunter = new ArrayList<>();
+      for (Object kind : kinder) {
+        darunter.add((String) ((Map<?, ?>) kind).get("processId"));
+      }
+      assertThat(eigene).as("Gruppe %s", gruppe.get("name")).containsAll(darunter);
+    }
+  }
+
+  /**
+   * <b>Die Vorgabe kommt aus dem eigenen Konto</b> — und sie ist keine Berechtigung: Ein
+   * MANDANT-Nutzer mit Vorgabe {@code PROJEKT} bekommt ohne Parameter den Projektbaum und darf
+   * trotzdem auf den Partnerbaum umschalten. Die Antwort nennt jeweils die aktive Gliederung.
+   *
+   * <p>Kein Isolationsfall im engeren Sinn, aber derselbe Endpunkt, und er hat keinen zweiten
+   * {@code DbIT}. Die Vorgabe wird am Repository gesetzt und nicht ueber den Pflegeendpunkt: Dessen
+   * Faelle stehen in {@code BenutzerverwaltungDbIT}.
+   */
+  @Test
+  @DisplayName(
+      "Ohne Parameter gilt die Vorgabe des Kontos, mit Parameter die Wahl — ohne Rollengrenze")
+  void vorgabe_aus_dem_konto_und_freier_wechsel() throws Exception {
+    long id = legeNutzerAn(NUTZER_VORGABE, PASSWORT, Rolle.MANDANT, MANDANT_NEXANS);
+    appUserRepository.setzeBaumgliederung(
+        id, Baumgliederung.PROJEKT, LocalDateTime.now(anwendungsuhr));
+    Sitzung mitVorgabe = anmelden(NUTZER_VORGABE, PASSWORT);
+
+    Antwort ohneParameter = mitVorgabe.hole(PFAD);
+    assertThat(ohneParameter.status()).isEqualTo(200);
+    assertThat(ohneParameter.<String>json("$.gliederung")).isEqualTo("PROJEKT");
+    assertThat(ohneParameter.<List<String>>json("$.ebenen")).containsExactly("PROJEKT", "PROZESS");
+
+    Antwort umgeschaltet = mitVorgabe.hole(inGliederung(Baumgliederung.PARTNER));
+    assertThat(umgeschaltet.status()).isEqualTo(200);
+    assertThat(umgeschaltet.<String>json("$.gliederung")).isEqualTo("PARTNER");
+    assertThat(umgeschaltet.<List<String>>json("$.ebenen"))
+        .containsExactly("PARTNER", "RICHTUNG", "PROZESS");
+
+    // Die Vorgabe eines anderen Kontos gilt fuer dieses nicht: Der Nutzer auf NEXANS ohne
+    // gesetzte Vorgabe bekommt weiterhin den Partnerbaum.
+    assertThat(aufNexans.hole(PFAD).<String>json("$.gliederung")).isEqualTo("PARTNER");
+  }
+
+  /** Ein unbekannter Wert faellt nicht still auf die Vorgabe zurueck. */
+  @Test
+  @DisplayName("Eine unbekannte Gliederung ist 400 gliederung-unbekannt")
+  void unbekannte_gliederung() throws Exception {
+    Antwort antwort = aufNexans.hole(PFAD + "?gliederung=SOS");
+
+    assertThat(antwort.status()).isEqualTo(400);
+    assertThat(antwort.<String>json("$.type")).endsWith("/gliederung-unbekannt");
   }
 
   // ─── Das freie Zeitfenster (10c-4b) ───────────────────────────────────────────

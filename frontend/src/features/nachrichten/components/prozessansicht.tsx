@@ -30,7 +30,9 @@ import { angezeigterBaumfenstermodus, hervorgehobenerBaumzeitraum } from "@/lib/
 import { ROUTEN } from "@/lib/routen";
 import { cn } from "@/lib/utils";
 
-import type { Fenster, Partnerknoten, Prozessbaum, Prozessknoten } from "../api";
+import type { Baumgliederung } from "@/lib/baumgliederung";
+
+import type { Baumknoten, Fenster, Prozessbaum, Prozessknoten } from "../api";
 import type { Nachrichtenfilter, Sortierung } from "../filter";
 import {
   useEscapeSchliesst,
@@ -38,19 +40,25 @@ import {
   useProzessansichtzustand,
   useProzessbaum,
 } from "../hooks";
-import { baumabfrage, baumfensterFehler, listenfilter } from "../prozessansicht";
+import {
+  baumabfrage,
+  baumfensterFehler,
+  hervorgehobeneGliederung,
+  listenfilter,
+} from "../prozessansicht";
 import {
   eingegrenzterBaum,
+  knotentext,
   ohnePfad,
-  partnertext,
-  partnerVon,
   pfadZuProzess,
   prozessAus,
-  richtungstext,
   sichtbareProzesse,
+  zuordnungVon,
+  type Zuordnungsglied,
 } from "../prozessbaum";
 import { BaumfensterFelder } from "./baumfenster-felder";
 import { Blaettern } from "./blaettern";
+import { GliederungUmschalter } from "./gliederung-umschalter";
 import { NachrichtDetail } from "./nachricht-detail";
 import { NachrichtenTabelle } from "./nachrichten-tabelle";
 import { ProzessBaum } from "./prozess-baum";
@@ -127,6 +135,7 @@ export function ProzessAnsicht() {
     setzeNachricht,
     setzeNurMitVerkehr,
     setzeSortierung,
+    setzeGliederung,
   } = useProzessansichtzustand();
   const antwort = useProzessbaum(baumabfrage(zustand));
 
@@ -169,8 +178,8 @@ export function ProzessAnsicht() {
    */
   const [umgeschaltet, setUmgeschaltet] = useState<ReadonlyMap<string, boolean>>(() => new Map());
   const pfad = useMemo(
-    () => pfadZuProzess(baum?.partner ?? [], zustand.prozess),
-    [baum?.partner, zustand.prozess],
+    () => pfadZuProzess(baum?.knoten ?? [], baum?.ebenen ?? [], zustand.prozess),
+    [baum?.knoten, baum?.ebenen, zustand.prozess],
   );
   const imPfad = useMemo(() => new Set(pfad), [pfad]);
 
@@ -211,13 +220,14 @@ export function ProzessAnsicht() {
   );
 
   const gefiltert = useMemo(
-    () => eingegrenzterBaum(baum?.partner ?? [], eingrenzung, zustand.nurMitVerkehr),
-    [baum?.partner, eingrenzung, zustand.nurMitVerkehr],
+    () =>
+      eingegrenzterBaum(baum?.knoten ?? [], baum?.ebenen ?? [], eingrenzung, zustand.nurMitVerkehr),
+    [baum?.knoten, baum?.ebenen, eingrenzung, zustand.nurMitVerkehr],
   );
 
   const filter = listenfilter(zustand, baum?.fenster);
   const gewaehlterProzess = prozessAus(baum, zustand.prozess);
-  const zuordnung = partnerVon(baum, zustand.prozess);
+  const zuordnung = zuordnungVon(baum, zustand.prozess);
 
   const schliesse = useCallback(() => setzeNachricht(null), [setzeNachricht]);
   useEscapeSchliesst(zustand.nachricht !== null, schliesse);
@@ -514,6 +524,8 @@ export function ProzessAnsicht() {
           >
             <Baumspalte
               baum={baum}
+              gliederung={hervorgehobeneGliederung(zustand, baum.gliederung)}
+              aufGliederung={setzeGliederung}
               gefiltert={gefiltert}
               eingrenzung={eingrenzung}
               aufEingrenzung={setEingrenzung}
@@ -674,6 +686,8 @@ export function ProzessAnsicht() {
  */
 function Baumspalte({
   baum,
+  gliederung,
+  aufGliederung,
   gefiltert,
   eingrenzung,
   aufEingrenzung,
@@ -686,8 +700,11 @@ function Baumspalte({
   aufAuswahl,
 }: {
   baum: Prozessbaum;
+  /** Die Gliederung, die der Umschalter hervorhebt — gewählt oder aus der Antwort (E‑143). */
+  gliederung: Baumgliederung | null;
+  aufGliederung: (gliederung: Baumgliederung) => void;
   /** Die **eingegrenzten** Knoten — die Ansicht filtert, die Spalte zeichnet. */
-  gefiltert: readonly Partnerknoten[];
+  gefiltert: readonly Baumknoten[];
   eingrenzung: string;
   aufEingrenzung: (wert: string) => void;
   nurMitVerkehr: boolean;
@@ -705,20 +722,26 @@ function Baumspalte({
 
   const sichtbar = sichtbareProzesse(gefiltert);
   const eingeschraenkt = eingrenzung.trim() !== "" || nurMitVerkehr;
+  // Das Feld nennt, worüber es sucht — im Projektbaum gibt es keinen Partner.
+  // Maßgeblich ist die Gliederung der **Antwort**, denn die steht im Bild.
+  const eingrenzungstext =
+    baum.gliederung === "PROJEKT"
+      ? texte.prozesse.baum.eingrenzungProjekt
+      : texte.prozesse.baum.eingrenzung;
 
   return (
     <div className="flex flex-col gap-2">
       <div className="bg-background sticky -top-4 z-10 flex flex-col gap-2 pt-1 pb-2">
         <div className="flex items-center gap-1">
           <Label htmlFor="baum-eingrenzung" className="sr-only">
-            {texte.prozesse.baum.eingrenzung}
+            {eingrenzungstext}
           </Label>
           <Input
             id="baum-eingrenzung"
             type="search"
             value={eingrenzung}
             onChange={(ereignis) => aufEingrenzung(ereignis.target.value)}
-            placeholder={texte.prozesse.baum.eingrenzung}
+            placeholder={eingrenzungstext}
             /*
              * **Örtlich und nicht serverseitig.** Die Antwort liegt vollständig
              * vor (E‑33); ein Serverparameter brächte genau die Fallstricke mit,
@@ -742,31 +765,42 @@ function Baumspalte({
           )}
         </div>
 
-        <div className="flex items-center gap-2">
-          <Switch
-            id="nur-mit-verkehr"
-            checked={nurMitVerkehr}
-            onCheckedChange={aufNurMitVerkehr}
-            aria-describedby="nur-mit-verkehr-hinweis"
-          />
-          {/*
-           * **Die Beschriftung trägt die Berührungsfläche, nicht der Schalter.**
-           * Gemessen bei `pointer: coarse`: Der Baustein aus dem Generator ist
-           * `h-[18.4px]` hoch und kommt mit seiner `::after`-Vergrößerung auf 32
-           * bis 36 px — unter den 44 px, die `docs/visuelles-konzept.md` §5
-           * „nirgends unterschritten" nennt. Am Generatorbereich wird nichts
-           * geändert (`components/ui` ist seiner).
-           *
-           * Die Beschriftung schaltet über `htmlFor` denselben Schalter. Mit
-           * `min-h-beruehrung` ist damit ein Ziel von voller Zeilenhöhe da, und
-           * die Regel hält an der Stelle, an der ein Finger sie braucht.
-           */}
-          <Label
-            htmlFor="nur-mit-verkehr"
-            className="min-h-beruehrung flex cursor-pointer items-center font-normal"
-          >
-            {texte.prozesse.baum.nurMitVerkehr}
-          </Label>
+        {/*
+         * **Zwei Schalter in einer Zeile** (15.09.2026): „Nur mit Daten" und
+         * die Gliederung. Sie teilen sich die Zeile, damit der klebende Kopf
+         * nicht höher wird; bei 208 px Spaltenbreite bricht der zweite um.
+         * **E‑146 gilt weiter:** Die Gliederung steht in der Baumspalte und
+         * nicht neben dem Zeitraum — der gilt für beide Spalten, sie nur für
+         * den Baum, und unter `md` verschwindet sie mit der Spalte.
+         */}
+        <div className="flex flex-wrap items-center gap-x-4">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="nur-mit-verkehr"
+              checked={nurMitVerkehr}
+              onCheckedChange={aufNurMitVerkehr}
+              aria-describedby="nur-mit-verkehr-hinweis"
+            />
+            {/*
+             * **Die Beschriftung trägt die Berührungsfläche, nicht der Schalter.**
+             * Gemessen bei `pointer: coarse`: Der Baustein aus dem Generator ist
+             * `h-[18.4px]` hoch und kommt mit seiner `::after`-Vergrößerung auf 32
+             * bis 36 px — unter den 44 px, die `docs/visuelles-konzept.md` §5
+             * „nirgends unterschritten" nennt. Am Generatorbereich wird nichts
+             * geändert (`components/ui` ist seiner).
+             *
+             * Die Beschriftung schaltet über `htmlFor` denselben Schalter. Mit
+             * `min-h-beruehrung` ist damit ein Ziel von voller Zeilenhöhe da, und
+             * die Regel hält an der Stelle, an der ein Finger sie braucht.
+             */}
+            <Label
+              htmlFor="nur-mit-verkehr"
+              className="min-h-beruehrung flex cursor-pointer items-center font-normal"
+            >
+              {texte.prozesse.baum.nurMitVerkehr}
+            </Label>
+          </div>
+          <GliederungUmschalter gewaehlt={gliederung} aufAuswahl={aufGliederung} />
         </div>
         <p id="nur-mit-verkehr-hinweis" className="sr-only">
           {texte.prozesse.baum.nurMitVerkehrHinweis}
@@ -801,7 +835,8 @@ function Baumspalte({
         <p className="text-muted-foreground px-1 py-2">{texte.prozesse.baum.keineTreffer}</p>
       ) : (
         <ProzessBaum
-          partner={gefiltert}
+          knoten={gefiltert}
+          ebenen={baum.ebenen}
           stilleSchwelleMonate={baum.stilleSchwelleMonate}
           gewaehlt={gewaehlt}
           springeZurAuswahl={springeZurAuswahl}
@@ -841,7 +876,12 @@ function Kopf({
    */
   prozess: Prozessknoten | undefined;
   processId: string;
-  zuordnung: { partner: string | null; richtung: string | null } | undefined;
+  /**
+   * Die Gruppen über dem Prozess, von außen nach innen — im Partnerbaum
+   * Partner und Richtung, im Projektbaum das Projekt (E‑140). `undefined`
+   * heißt wie beim Prozess **nicht gefunden**.
+   */
+  zuordnung: readonly Zuordnungsglied[] | undefined;
   fenster: Fenster;
   zurueckKnopf: React.RefObject<HTMLButtonElement | null>;
   aufZurueck: () => void;
@@ -878,20 +918,14 @@ function Kopf({
         {prozess === undefined ? (
           <span className="font-mono break-all">{processId}</span>
         ) : (
-          (prozess.processName ?? texte.prozesse.ohneNamen)
+          (prozess.name ?? texte.prozesse.ohneNamen)
         )}
       </h2>
 
       <p className="text-muted-foreground text-beiwerk break-words">
-        {zuordnung === undefined ? (
-          texte.prozesse.liste.nichtGefunden
-        ) : (
-          <>
-            {partnertext(zuordnung.partner, texte)}
-            {" · "}
-            {richtungstext(zuordnung.richtung, texte)}
-          </>
-        )}
+        {zuordnung === undefined
+          ? texte.prozesse.liste.nichtGefunden
+          : zuordnung.map((glied) => knotentext(glied.ebene, glied.name, texte)).join(" · ")}
         {" · "}
         {/*
          * **Der Zeitraum steht da, und zwar als Zeitpunkte.** Die Liste

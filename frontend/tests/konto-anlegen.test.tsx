@@ -62,6 +62,7 @@ function zeile(werte: Partial<Nutzerzeile> = {}): Nutzerzeile {
     active: true,
     mustChangePassword: false,
     lastLogin: null,
+    treeLayout: "PARTNER",
     ...werte,
   };
 }

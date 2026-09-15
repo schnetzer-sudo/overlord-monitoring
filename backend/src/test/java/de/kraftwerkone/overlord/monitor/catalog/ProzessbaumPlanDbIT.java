@@ -240,6 +240,29 @@ class ProzessbaumPlanDbIT {
     }
   }
 
+  /**
+   * <b>Das Projekt haengt am Primaerschluessel</b> <i>(seit 15.09.2026)</i> — eine Zeile je
+   * Prozess. Die Gliederung {@code PROJEKT} braucht {@code ProjectDescription}, und die steht nur
+   * in {@code Project}; die Mandantenkette ueberspringt die Tabelle, der Join ist also
+   * dazugekommen.
+   *
+   * <p><b>Was dieser Test nicht sieht, und das ist benannt:</b> Die Beschreibung ist {@code TEXT}
+   * und legt die Temptabelle der Sortierung auf die Platte. Der Zugriffspfad bleibt dabei derselbe
+   * — genau deshalb faende ein Plantest den Unterschied nie (offener Punkt 179, {@code
+   * docs/process-view.md} §48).
+   */
+  @Test
+  @DisplayName("Das Projekt wird ueber seinen Primaerschluessel erreicht")
+  void projekt_ueber_primaerschluessel() {
+    for (String mandant : MANDANTEN) {
+      List<Plan> plan = plan(geruestSql(mandant));
+      Plan projekt = zeileFuer(plan, "Project", "Geruest/" + mandant);
+
+      assertThat(projekt.zugriff()).as("Geruest/%s", mandant).isEqualTo("eq_ref");
+      assertThat(projekt.index()).as("Geruest/%s", mandant).isEqualTo("PRIMARY");
+    }
+  }
+
   // ─── Die Kennzahlen ───────────────────────────────────────────────────────────
 
   /**

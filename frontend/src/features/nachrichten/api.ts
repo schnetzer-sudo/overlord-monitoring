@@ -1,4 +1,5 @@
 import { hole } from "@/lib/http";
+import type { Baumgliederung } from "@/lib/baumgliederung";
 import type { Baumzeitraum, Fenster } from "@/lib/rollupzeitraum";
 
 /**
@@ -120,10 +121,19 @@ export type { Fenster };
  */
 export type Prozesszustand = "BEWEGT" | "STILL" | "NIE";
 
+/**
+ * Ein Blatt — **in beiden Gliederungen dasselbe**, und beide übergeben dieselbe
+ * `processId` an dieselbe Übertragungsliste.
+ *
+ * *Seit dem 15.09.2026 (E‑140) trägt es die Felder jedes Knotens, `schluessel`
+ * und `name`; `processName` heißt seither `name`.*
+ */
 export type Prozessknoten = {
+  /** Die `ProcessID` — derselbe Schlüssel wie an jedem Knoten, über den ganzen Baum eindeutig. */
+  schluessel: string;
+  /** Der Klarname aus `Process.ProcessName`. Darf `null` sein (Regel Q4). */
+  name: string | null;
   processId: string;
-  /** Darf `null` sein — „nicht zugeordnet heißt nicht zugeordnet" (Regel Q4). */
-  processName: string | null;
   /** Im gewählten Zeitraum. **Null ist eine Aussage und kein fehlender Wert.** */
   nachrichten: number;
   /** Im gewählten Zeitraum, über `MessageStatusClassifier` eingeordnet. */
@@ -134,29 +144,37 @@ export type Prozessknoten = {
 };
 
 /**
- * Eine Richtungsgruppe unter einem Partner.
+ * Eine Gruppe — ein Partner, eine Richtung oder ein Projekt. **Welche davon, sagt
+ * die Tiefe** und nicht der Knoten: Die n-te Ebene heißt `Prozessbaum.ebenen[n]`.
  *
- * `richtung` ist `EINGEHEND`, `AUSGEHEND`, ein gepflegter aber unbekannter Wert
- * — oder **`null`: „nicht ermittelt"**. Die Antwort unterscheidet dabei bewusst
- * nicht zwischen „gepflegt und leer" und „offen" (Entscheidung E‑40); dass die
- * Unterscheidung gebraucht würde, ist nicht gemessen.
+ * `name === null` trägt je Ebene eine eigene Bedeutung: bei `PARTNER` „nicht
+ * zugeordnet“ (steht am Ende, E‑39), bei `RICHTUNG` „nicht ermittelt“ (E‑40; die
+ * Antwort unterscheidet dabei nicht zwischen „gepflegt und leer“ und „offen“).
+ * Bei `PROJEKT` entsteht kein solcher Knoten — jeder Prozess hat genau ein Projekt.
  */
-export type Richtungsknoten = {
-  richtung: string | null;
+export type Gruppenknoten = {
+  /** Der hochgestellte Gruppenschlüssel (E‑41), `null` für die eine Gruppe ohne Wert. */
+  schluessel: string | null;
+  /** Der Rohwert in der zuerst angetroffenen Schreibweise. */
+  name: string | null;
   anzahlProzesse: number;
   nachrichten: number;
   fehler: number;
-  prozesse: Prozessknoten[];
+  kinder: Baumknoten[];
 };
 
-/** `partner === null` heißt „nicht zugeordnet" und steht **am Ende** (E‑39). */
-export type Partnerknoten = {
-  partner: string | null;
-  anzahlProzesse: number;
-  nachrichten: number;
-  fehler: number;
-  richtungen: Richtungsknoten[];
-};
+/**
+ * Ein Knoten der rekursiven Form (E‑140). **Keine Typangabe im JSON**: Eine
+ * Gruppe trägt `kinder`, ein Prozess `processId` (`prozessbaum.ts` `istGruppe`).
+ */
+export type Baumknoten = Gruppenknoten | Prozessknoten;
+
+/**
+ * Die Ebenennamen, wie die Antwort sie nennt — von außen nach innen, die letzte
+ * ist immer `PROZESS`. Damit muss die Oberfläche die Tiefe nicht aus der
+ * Gliederung ableiten.
+ */
+export type Baumebene = "PARTNER" | "RICHTUNG" | "PROJEKT" | "PROZESS";
 
 /** Die Kopfzahlen über den ganzen Baum. Die drei Zustände sind disjunkt und vollständig. */
 export type Baumsumme = {
@@ -175,6 +193,12 @@ export type Prozessbaum = {
    * Oberfläche braucht das Feld nur, um zu wissen, welcher Knopf hervorgehoben ist.
    */
   zeitraum: Baumzeitraum;
+  /**
+   * Die **aktive** Gliederung, immer gesetzt — auch wenn die URL keine nennt:
+   * dann die Vorgabe des Kontos (E‑143). Die Oberfläche liest sie von hier und
+   * schreibt sie nicht zurück.
+   */
+  gliederung: Baumgliederung;
   fenster: Fenster;
   /**
    * Ab wie vielen Monaten ohne Bewegung ein Prozess als `STILL` gilt.
@@ -186,7 +210,10 @@ export type Prozessbaum = {
    */
   stilleSchwelleMonate: number;
   gesamt: Baumsumme;
-  partner: Partnerknoten[];
+  /** Die Ebenennamen, von außen nach innen; die letzte ist immer `PROZESS` (E‑140). */
+  ebenen: Baumebene[];
+  /** Die oberste Ebene, sortiert — rekursiv über `kinder` bis zu den Prozessen. */
+  knoten: Baumknoten[];
 };
 
 /*

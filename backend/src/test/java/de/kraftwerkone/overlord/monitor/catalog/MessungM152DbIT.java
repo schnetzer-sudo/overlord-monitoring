@@ -3,6 +3,7 @@ package de.kraftwerkone.overlord.monitor.catalog;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.kraftwerkone.overlord.monitor.common.Baumfenster;
+import de.kraftwerkone.overlord.monitor.common.Baumgliederung;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import de.kraftwerkone.overlord.monitor.security.Rolle;
 import de.kraftwerkone.overlord.monitor.security.SicherheitsTestbasis;
@@ -122,16 +123,16 @@ class MessungM152DbIT extends SicherheitsTestbasis {
         }
 
         // Dasselbe am Dienst — ohne HTTP, ohne Sitzung, ohne Jackson.
-        prozessbaumService.baum(kontext, fenster);
+        prozessbaumService.baum(kontext, fenster, Baumgliederung.PARTNER);
         double[] dienst = new double[LAEUFE];
         for (int i = 0; i < LAEUFE; i++) {
           long start = System.nanoTime();
-          prozessbaumService.baum(kontext, fenster);
+          prozessbaumService.baum(kontext, fenster, Baumgliederung.PARTNER);
           dienst[i] = (System.nanoTime() - start) / 1_000_000.0;
         }
 
         // Zugesichert: in sich stimmig, wie in M117.
-        List<String> blaetter = letzte.json("$.partner[*].richtungen[*].prozesse[*].processId");
+        List<String> blaetter = letzte.json("$..processId");
         int anzahlProzesse = ((Number) letzte.json("$.gesamt.anzahlProzesse")).intValue();
         long nachrichten = ((Number) letzte.json("$.gesamt.nachrichten")).longValue();
         assertThat(blaetter)

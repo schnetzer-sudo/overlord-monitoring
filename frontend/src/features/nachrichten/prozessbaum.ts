@@ -1,6 +1,6 @@
 import { einsetzen, type Texte } from "@/i18n";
 
-import type { Partnerknoten, Prozessbaum, Prozessknoten, Richtungsknoten } from "./api";
+import type { Baumebene, Baumknoten, Gruppenknoten, Prozessbaum, Prozessknoten } from "./api";
 
 /**
  * Der Baum als **Zeilen** — die Entscheidungen der Prozessansicht, ohne React.
@@ -8,14 +8,31 @@ import type { Partnerknoten, Prozessbaum, Prozessknoten, Richtungsknoten } from 
  * Hier steht, was die Ansicht aus der Antwort macht: welche Ebene erscheint,
  * welche übersprungen wird, was eine Eingrenzung übrig lässt und in welcher
  * Reihenfolge die sichtbaren Zeilen stehen. **Die Reihenfolge selbst kommt aus
- * der Antwort** (`docs/process-view.md` E‑39) und wird hier nirgends geändert —
- * Partner alphabetisch, „nicht zugeordnet" am Ende, Richtungen in der
- * Reihenfolge der Aufzählung, Blätter nach `ProcessName`.
+ * der Antwort** (`docs/process-view.md` E‑39, E‑142) und wird hier nirgends
+ * geändert.
+ *
+ * ## Ein Renderpfad für beide Gliederungen *(seit 15.09.2026, E‑140)*
+ *
+ * Die Antwort ist rekursiv: `knoten` an der Wurzel, `kinder` an jeder Gruppe,
+ * und die Ebenennamen stehen als `ebenen` daneben. Jede Funktion hier läuft über
+ * diese Form und über nichts anderes — **es gibt keinen zweiten Pfad für den
+ * Projektbaum**. Zwei Pfade liefen beim nächsten Feld auseinander, und der
+ * Unterschied fiele erst im Bild auf.
  *
  * **Frei von React**, wie `filter.ts` und aus demselben Grund: Das sind
  * Entscheidungen, und Entscheidungen werden geprüft, Markup nicht
  * (`docs/frontend-grundlagen.md` §9).
  */
+
+/** Eine Gruppe trägt `kinder`, ein Prozess `processId` — mehr braucht die Unterscheidung nicht. */
+export function istGruppe(knoten: Baumknoten): knoten is Gruppenknoten {
+  return "kinder" in knoten;
+}
+
+/** Der Name der Ebene in dieser Tiefe; jenseits der Liste stehen Prozesse. */
+function ebeneBei(ebenen: readonly Baumebene[], tiefe: number): Baumebene {
+  return ebenen[tiefe] ?? "PROZESS";
+}
 
 /**
  * ## E‑58 — Die Ebene fällt nur weg, wo es **nichts zu schreiben** gibt
@@ -41,11 +58,15 @@ import type { Partnerknoten, Prozessbaum, Prozessknoten, Richtungsknoten } from 
  * einziger Prozess eine kuratierte Richtung trägt (M110). Offener Punkt 108
  * bleibt damit geschlossen.
  *
- * **Der Preis ist gezählt** (M130, §29): Bei `NEXANS` bekommen 19 Partner ihre
- * Ebene zurück, bei `IBIS` 19; einer bei `NEXANS` behält sie nicht
- * (`SONDERPROZESS`, elf Prozesse ohne kuratierte Richtung). Der Baum ist damit
- * **innerhalb dessen, was er zeigt, gleichförmig**: Wo eine Richtung steht,
- * steht sie als Ebene — nirgends als Vorsatz.
+ * ## E‑145 — Die Regel gilt für die Richtungsebene und für keine andere *(15.09.2026)*
+ *
+ * Seit es die Projektgliederung gibt, stünde die Verallgemeinerung nahe: „eine
+ * Ebene mit nur einem Knoten überspringen". **Sie ist nicht gebaut.** E‑45 ist für
+ * die Richtung entschieden — einen Knoten, der nichts hinschreibt —, und für die
+ * Projektebene ist sie weder entschieden noch gewünscht: Ein Mandant mit einem
+ * einzigen Projekt (`SUTTONS`, `WOC`) sieht es als Zeile. Deshalb fragt die
+ * Funktion ausdrücklich nach der **Ebene der Kinder** und nicht nach ihrer Zahl
+ * allein.
  *
  * ## E‑46 — Das Überspringen geschieht in der Oberfläche, nicht im Endpunkt
  *
@@ -53,33 +74,43 @@ import type { Partnerknoten, Prozessbaum, Prozessknoten, Richtungsknoten } from 
  * weiter, was der Katalog weiß. Die Darstellung entscheidet, ob sie dafür eine
  * Ebene aufmacht — dieselbe Trennung wie überall: das Backend stellt fest, die
  * Oberfläche beschriftet.
+ *
+ * @param kinderebene der Name der Ebene, auf der die Kinder von `gruppe` stehen
  */
-export function richtungsebeneFaelltWeg(partner: Partnerknoten): boolean {
-  if (partner.richtungen.length > 1) {
+export function ebeneFaelltWeg(gruppe: Gruppenknoten, kinderebene: Baumebene): boolean {
+  if (kinderebene !== "RICHTUNG" || gruppe.kinder.length > 1) {
     return false;
   }
-  const einzige = partner.richtungen[0];
+  const einzige = gruppe.kinder[0];
   // Ein gepflegter, aber unbekannter vierter Katalogwert ist **bekannt** und
   // bekommt seine Ebene: Er steht dort, wie er im Katalog steht (Regel Q4).
-  return einzige === undefined || einzige.richtung === null;
+  return einzige === undefined || (istGruppe(einzige) && einzige.name === null);
 }
 
 /**
- * Der Schlüssel eines Partnerknotens.
+ * Der Schlüssel einer Gruppe — **aus dem Pfad der Werte und nicht aus dem
+ * Index**: Der Zustand „dieser Knoten ist aufgeklappt" muss eine Eingrenzung
+ * überleben, und die verschiebt jeden Index.
  *
- * **Aus dem Wert und nicht aus dem Index**: Der Zustand „dieser Partner ist
- * aufgeklappt" muss eine Eingrenzung überleben, und die verschiebt jeden Index.
+ * **Der Ebenenname steht darin**, und das ist seit dem 15.09.2026 mehr als
+ * Lesbarkeit: Beide Gliederungen teilen sich den Aufklappzustand der Ansicht,
+ * und ein Partner und ein Projekt mit demselben Wert bekämen sonst denselben
+ * Schlüssel.
  *
- * `\u0000` steht für „nicht zugeordnet". Ein Steuerzeichen und kein leerer
- * String, damit ein Partner, der tatsächlich `""` hieße, nicht denselben
- * Schlüssel bekäme.
+ * `\u0000` steht für die Gruppe ohne Wert. Ein Steuerzeichen und kein leerer
+ * String, damit ein Wert, der tatsächlich `""` hieße, nicht denselben Schlüssel
+ * bekäme.
+ *
+ * @param eltern der Schlüssel der Gruppe darüber, `null` an der Wurzel
+ * @param schluessel der Gruppenschlüssel aus der Antwort (hochgestellt, E‑41)
  */
-export function partnerSchluessel(partner: string | null): string {
-  return `partner:${partner ?? "\u0000"}`;
-}
-
-export function richtungsSchluessel(partner: string | null, richtung: string | null): string {
-  return `${partnerSchluessel(partner)}/richtung:${richtung ?? "\u0000"}`;
+export function gruppenSchluessel(
+  eltern: string | null,
+  ebene: Baumebene,
+  schluessel: string | null,
+): string {
+  const eigener = `${ebene.toLowerCase()}:${schluessel ?? "\u0000"}`;
+  return eltern === null ? eigener : `${eltern}/${eigener}`;
 }
 
 /** Die `ProcessID` ist über den ganzen Baum eindeutig — mehr braucht es nicht. */
@@ -88,36 +119,67 @@ export function prozessSchluessel(processId: string): string {
 }
 
 /**
- * Die Knoten, die offen stehen müssen, damit ein Prozess sichtbar ist.
+ * Die Gruppen, die offen stehen müssen, damit ein Prozess sichtbar ist.
  *
- * **Der aufgeklappte Partner ergibt sich aus dem gewählten Prozess und steht
+ * **Der aufgeklappte Knoten ergibt sich aus dem gewählten Prozess und steht
  * nicht eigens in der URL.** Ein tiefer Link auf `?prozess=…` zeigt den Baum
  * damit an der richtigen Stelle geöffnet, ohne dass die Adresse einen zweiten
- * Zustand tragen müsste, der mit dem ersten auseinanderlaufen könnte.
+ * Zustand tragen müsste, der mit dem ersten auseinanderlaufen könnte — und das
+ * in beiden Gliederungen, weil beide dieselben Blätter tragen.
  *
  * Leer, solange der Prozess in diesem Baum nicht vorkommt — etwa bei einem Link
  * aus einem anderen Mandanten. Die Ansicht behauptet dann nichts.
  */
 export function pfadZuProzess(
-  partner: readonly Partnerknoten[],
+  knoten: readonly Baumknoten[],
+  ebenen: readonly Baumebene[],
   processId: string | null,
 ): string[] {
   if (processId === null) {
     return [];
   }
-  for (const knoten of partner) {
-    for (const richtung of knoten.richtungen) {
-      if (!richtung.prozesse.some((prozess) => prozess.processId === processId)) {
-        continue;
+  return suchePfad(knoten, ebenen, 0, null, processId) ?? [];
+}
+
+function suchePfad(
+  knoten: readonly Baumknoten[],
+  ebenen: readonly Baumebene[],
+  tiefe: number,
+  eltern: string | null,
+  processId: string,
+): string[] | null {
+  for (const einzeln of knoten) {
+    if (!istGruppe(einzeln)) {
+      if (einzeln.processId === processId) {
+        return [];
       }
-      const pfad = [partnerSchluessel(knoten.partner)];
-      if (!richtungsebeneFaelltWeg(knoten)) {
-        pfad.push(richtungsSchluessel(knoten.partner, richtung.richtung));
+      continue;
+    }
+    const schluessel = gruppenSchluessel(eltern, ebeneBei(ebenen, tiefe), einzeln.schluessel);
+    const kinderebene = ebeneBei(ebenen, tiefe + 1);
+    if (ebeneFaelltWeg(einzeln, kinderebene)) {
+      const einzige = einzeln.kinder[0];
+      if (einzige !== undefined && istGruppe(einzige)) {
+        const darunter = suchePfad(
+          einzige.kinder,
+          ebenen,
+          tiefe + 2,
+          gruppenSchluessel(schluessel, kinderebene, einzige.schluessel),
+          processId,
+        );
+        // Die übersprungene Gruppe hat keine Zeile und steht deshalb nicht im Pfad.
+        if (darunter !== null) {
+          return [schluessel, ...darunter];
+        }
       }
-      return pfad;
+      continue;
+    }
+    const darunter = suchePfad(einzeln.kinder, ebenen, tiefe + 1, schluessel, processId);
+    if (darunter !== null) {
+      return [schluessel, ...darunter];
     }
   }
-  return [];
+  return null;
 }
 
 /** Die drei Zustände aus `docs/process-view.md` §4 — nie im Frontend gerechnet. */
@@ -126,7 +188,7 @@ export type Prozesszustand = Prozessknoten["zustand"];
 type Zeilenrumpf = {
   /** Stabil über Eingrenzungen hinweg; zugleich der React-Schlüssel. */
   readonly schluessel: string;
-  /** `aria-level`, 1‑basiert. Bei übersprungener Richtungsebene ist ein Blatt Ebene 2. */
+  /** `aria-level`, 1‑basiert. Bei übersprungener Richtungsebene steht ein Blatt eine Ebene höher. */
   readonly ebene: number;
   /** `aria-posinset`, 1‑basiert. */
   readonly position: number;
@@ -138,14 +200,10 @@ type Zeilenrumpf = {
 
 export type Baumzeile =
   | (Zeilenrumpf & {
-      readonly art: "PARTNER";
-      readonly partner: string | null;
-      readonly anzahlProzesse: number;
-      readonly offen: boolean;
-    })
-  | (Zeilenrumpf & {
-      readonly art: "RICHTUNG";
-      readonly richtung: string | null;
+      readonly art: "GRUPPE";
+      /** Welche Ebene die Gruppe ist — sie entscheidet über Beschriftung und vorgelesenen Namen. */
+      readonly ebenenname: Baumebene;
+      readonly name: string | null;
       readonly anzahlProzesse: number;
       readonly offen: boolean;
     })
@@ -155,7 +213,8 @@ export type Baumzeile =
     });
 
 /**
- * Die sichtbaren Zeilen des Baums, von oben nach unten.
+ * Die sichtbaren Zeilen des Baums, von oben nach unten — **für zwei wie für drei
+ * Ebenen dieselbe Funktion**.
  *
  * **Flach und nicht geschachtelt.** Die Tastaturbedienung des WAI‑ARIA-Musters
  * bewegt sich über die *sichtbaren* Knoten — auf einer flachen Liste ist das
@@ -169,85 +228,87 @@ export type Baumzeile =
  *   aufzählen ließe.
  */
 export function baumzeilen(
-  partner: readonly Partnerknoten[],
+  knoten: readonly Baumknoten[],
+  ebenen: readonly Baumebene[],
   istOffen: (schluessel: string) => boolean,
 ): Baumzeile[] {
   const zeilen: Baumzeile[] = [];
+  fuegeZeilenAn(zeilen, knoten, ebenen, 0, 1, null, istOffen);
+  return zeilen;
+}
 
-  partner.forEach((knoten, index) => {
-    const schluessel = partnerSchluessel(knoten.partner);
+function fuegeZeilenAn(
+  zeilen: Baumzeile[],
+  knoten: readonly Baumknoten[],
+  ebenen: readonly Baumebene[],
+  tiefe: number,
+  ariaEbene: number,
+  eltern: string | null,
+  istOffen: (schluessel: string) => boolean,
+): void {
+  knoten.forEach((einzeln, index) => {
+    if (!istGruppe(einzeln)) {
+      zeilen.push({
+        art: "PROZESS",
+        schluessel: prozessSchluessel(einzeln.processId),
+        ebene: ariaEbene,
+        position: index + 1,
+        geschwister: knoten.length,
+        nachrichten: einzeln.nachrichten,
+        fehler: einzeln.fehler,
+        prozess: einzeln,
+      });
+      return;
+    }
+
+    const ebenenname = ebeneBei(ebenen, tiefe);
+    const schluessel = gruppenSchluessel(eltern, ebenenname, einzeln.schluessel);
     const offen = istOffen(schluessel);
-    const ohneEbene = richtungsebeneFaelltWeg(knoten);
-    const einzige = knoten.richtungen[0];
 
     zeilen.push({
-      art: "PARTNER",
+      art: "GRUPPE",
+      ebenenname,
       schluessel,
-      ebene: 1,
+      ebene: ariaEbene,
       position: index + 1,
-      geschwister: partner.length,
+      geschwister: knoten.length,
       offen,
-      partner: knoten.partner,
-      anzahlProzesse: knoten.anzahlProzesse,
-      nachrichten: knoten.nachrichten,
-      fehler: knoten.fehler,
+      name: einzeln.name,
+      anzahlProzesse: einzeln.anzahlProzesse,
+      nachrichten: einzeln.nachrichten,
+      fehler: einzeln.fehler,
     });
 
     if (!offen) {
       return;
     }
 
-    if (ohneEbene) {
+    const kinderebene = ebeneBei(ebenen, tiefe + 1);
+    if (ebeneFaelltWeg(einzeln, kinderebene)) {
       /*
-       * Die Blätter rücken eine Ebene herauf. **Sie tragen die Richtung nicht**
-       * (E‑58): Weggefallen ist die Ebene nur dort, wo die Richtung `null` ist,
-       * und dafür gibt es kein Wort. Vor dem 03.09.2026 stand hier ein Zeichen
-       * und danach ein Vorsatz vor dem Namen; beides ist entfallen.
+       * Die Kinder der einzigen Richtung rücken eine Ebene herauf. **Sie tragen
+       * die Richtung nicht** (E‑58): Weggefallen ist die Ebene nur dort, wo die
+       * Richtung `null` ist, und dafür gibt es kein Wort. Vor dem 03.09.2026
+       * stand hier ein Zeichen und danach ein Vorsatz vor dem Namen; beides ist
+       * entfallen.
        */
-      blattzeilen(einzige, 2).forEach((zeile) => zeilen.push(zeile));
+      const einzige = einzeln.kinder[0];
+      if (einzige !== undefined && istGruppe(einzige)) {
+        fuegeZeilenAn(
+          zeilen,
+          einzige.kinder,
+          ebenen,
+          tiefe + 2,
+          ariaEbene + 1,
+          gruppenSchluessel(schluessel, kinderebene, einzige.schluessel),
+          istOffen,
+        );
+      }
       return;
     }
 
-    knoten.richtungen.forEach((richtung, richtungsindex) => {
-      const richtungsschluessel = richtungsSchluessel(knoten.partner, richtung.richtung);
-      const richtungOffen = istOffen(richtungsschluessel);
-
-      zeilen.push({
-        art: "RICHTUNG",
-        schluessel: richtungsschluessel,
-        ebene: 2,
-        position: richtungsindex + 1,
-        geschwister: knoten.richtungen.length,
-        offen: richtungOffen,
-        richtung: richtung.richtung,
-        anzahlProzesse: richtung.anzahlProzesse,
-        nachrichten: richtung.nachrichten,
-        fehler: richtung.fehler,
-      });
-
-      if (richtungOffen) {
-        blattzeilen(richtung, 3).forEach((zeile) => zeilen.push(zeile));
-      }
-    });
+    fuegeZeilenAn(zeilen, einzeln.kinder, ebenen, tiefe + 1, ariaEbene + 1, schluessel, istOffen);
   });
-
-  return zeilen;
-}
-
-function blattzeilen(richtung: Richtungsknoten | undefined, ebene: number): Baumzeile[] {
-  if (richtung === undefined) {
-    return [];
-  }
-  return richtung.prozesse.map((prozess, index) => ({
-    art: "PROZESS" as const,
-    schluessel: prozessSchluessel(prozess.processId),
-    ebene,
-    position: index + 1,
-    geschwister: richtung.prozesse.length,
-    nachrichten: prozess.nachrichten,
-    fehler: prozess.fehler,
-    prozess,
-  }));
 }
 
 /**
@@ -258,15 +319,17 @@ function blattzeilen(richtung: Richtungsknoten | undefined, ebene: number): Baum
  * (`docs/prozessauswahl.md` §9). Bei 733 Blättern ist eine Eingrenzung im
  * Speicher nicht messbar teuer.
  *
- * **Sie filtert Partner *und* Prozessnamen, und ein Partner bleibt stehen,
- * dessen Kind trifft.** Trifft der **Partner** selbst, bleiben alle seine
- * Prozesse stehen — wer nach einem Partner sucht, will dessen Prozesse sehen und
- * nicht die Teilmenge, deren Namen zufällig denselben Text tragen.
+ * **Sie filtert Gruppen *und* Prozessnamen, und eine Gruppe bleibt stehen,
+ * deren Kind trifft.** Trifft die **Gruppe** selbst, bleiben **alle** ihre
+ * Prozesse stehen — wer nach einem Partner oder einem Projekt sucht, will dessen
+ * Prozesse sehen und nicht die Teilmenge, deren Namen zufällig denselben Text
+ * tragen.
  *
  * **Sie greift nicht auf die Richtung zu** und nicht auf die Wörter „nicht
  * zugeordnet" oder „nicht ermittelt": Beides sind Texte der *Oberfläche* und
  * stünden in zwei Sprachen verschieden da. Gefiltert wird über die Werte, die
- * die Antwort trägt (Regel Q4).
+ * die Antwort trägt (Regel Q4) — seit dem 15.09.2026 auch über die
+ * Projektbeschreibung, denn die ist ein solcher Wert.
  *
  * @param nurMitVerkehr blendet Blätter ohne Nachricht **im gewählten Zeitraum**
  *   aus. Bei `VOTG` sind 89,7 % der Prozesse „nie" (M111) — ohne diesen
@@ -275,30 +338,38 @@ function blattzeilen(richtung: Richtungsknoten | undefined, ebene: number): Baum
  *   *weil* er nichts trägt (`docs/prozessauswahl.md` §3).
  */
 export function eingegrenzterBaum(
-  partner: readonly Partnerknoten[],
+  knoten: readonly Baumknoten[],
+  ebenen: readonly Baumebene[],
   begriff: string,
   nurMitVerkehr: boolean,
-): Partnerknoten[] {
-  const gesucht = begriff.trim().toLocaleLowerCase();
+): Baumknoten[] {
+  return grenzeEin(knoten, ebenen, 0, begriff.trim().toLocaleLowerCase(), nurMitVerkehr, false);
+}
 
-  const gefiltert: Partnerknoten[] = [];
-  for (const knoten of partner) {
-    const partnerTrifft = enthaelt(knoten.partner, gesucht);
-
-    const richtungen: Richtungsknoten[] = [];
-    for (const richtung of knoten.richtungen) {
-      const prozesse = richtung.prozesse.filter(
-        (prozess) =>
-          (partnerTrifft || enthaelt(prozess.processName, gesucht)) &&
-          (!nurMitVerkehr || prozess.nachrichten > 0),
-      );
-      if (prozesse.length > 0) {
-        richtungen.push({ ...richtung, prozesse, ...summe(prozesse) });
+function grenzeEin(
+  knoten: readonly Baumknoten[],
+  ebenen: readonly Baumebene[],
+  tiefe: number,
+  gesucht: string,
+  nurMitVerkehr: boolean,
+  vorfahrTrifft: boolean,
+): Baumknoten[] {
+  const gefiltert: Baumknoten[] = [];
+  for (const einzeln of knoten) {
+    if (!istGruppe(einzeln)) {
+      if (
+        (vorfahrTrifft || enthaelt(einzeln.name, gesucht)) &&
+        (!nurMitVerkehr || einzeln.nachrichten > 0)
+      ) {
+        gefiltert.push(einzeln);
       }
+      continue;
     }
-
-    if (richtungen.length > 0) {
-      gefiltert.push({ ...knoten, richtungen, ...summeDerGruppen(richtungen) });
+    const trifft =
+      vorfahrTrifft || (ebeneBei(ebenen, tiefe) !== "RICHTUNG" && enthaelt(einzeln.name, gesucht));
+    const kinder = grenzeEin(einzeln.kinder, ebenen, tiefe + 1, gesucht, nurMitVerkehr, trifft);
+    if (kinder.length > 0) {
+      gefiltert.push({ ...einzeln, kinder, ...summe(kinder) });
     }
   }
   return gefiltert;
@@ -306,7 +377,7 @@ export function eingegrenzterBaum(
 
 /**
  * **Die Zahlen eines eingegrenzten Knotens sind die Summe seiner sichtbaren
- * Blätter** — und nicht die Zahl, die die Antwort für den ganzen Knoten nennt.
+ * Kinder** — und nicht die Zahl, die die Antwort für den ganzen Knoten nennt.
  *
  * Sonst stünde über zwei Zeilen „12 Prozesse". Die Rechnung ist **exakt und
  * keine Näherung**: Alle drei Kennzahlen sind über die Blätter additiv, und der
@@ -314,27 +385,15 @@ export function eingegrenzterBaum(
  * deshalb mit den gelieferten Werten zusammen — `tests/prozessbaum.test.ts`
  * hält genau das fest.
  */
-function summe(prozesse: readonly Prozessknoten[]): {
+function summe(kinder: readonly Baumknoten[]): {
   anzahlProzesse: number;
   nachrichten: number;
   fehler: number;
 } {
   return {
-    anzahlProzesse: prozesse.length,
-    nachrichten: prozesse.reduce((wert, prozess) => wert + prozess.nachrichten, 0),
-    fehler: prozesse.reduce((wert, prozess) => wert + prozess.fehler, 0),
-  };
-}
-
-function summeDerGruppen(richtungen: readonly Richtungsknoten[]): {
-  anzahlProzesse: number;
-  nachrichten: number;
-  fehler: number;
-} {
-  return {
-    anzahlProzesse: richtungen.reduce((wert, gruppe) => wert + gruppe.anzahlProzesse, 0),
-    nachrichten: richtungen.reduce((wert, gruppe) => wert + gruppe.nachrichten, 0),
-    fehler: richtungen.reduce((wert, gruppe) => wert + gruppe.fehler, 0),
+    anzahlProzesse: sichtbareProzesse(kinder),
+    nachrichten: kinder.reduce((wert, kind) => wert + kind.nachrichten, 0),
+    fehler: kinder.reduce((wert, kind) => wert + kind.fehler, 0),
   };
 }
 
@@ -345,9 +404,12 @@ function enthaelt(wert: string | null, gesucht: string): boolean {
   return wert !== null && wert.toLocaleLowerCase().includes(gesucht);
 }
 
-/** Wie viele Prozesse nach der Eingrenzung übrig sind — die Zahl neben dem Feld. */
-export function sichtbareProzesse(partner: readonly Partnerknoten[]): number {
-  return partner.reduce((wert, knoten) => wert + knoten.anzahlProzesse, 0);
+/** Wie viele Prozesse unter diesen Knoten hängen — die Zahl neben dem Feld. */
+export function sichtbareProzesse(knoten: readonly Baumknoten[]): number {
+  return knoten.reduce(
+    (wert, einzeln) => wert + (istGruppe(einzeln) ? einzeln.anzahlProzesse : 1),
+    0,
+  );
 }
 
 /**
@@ -368,35 +430,65 @@ export function prozessAus(
   if (baum === undefined || processId === null) {
     return undefined;
   }
-  for (const knoten of baum.partner) {
-    for (const richtung of knoten.richtungen) {
-      const treffer = richtung.prozesse.find((prozess) => prozess.processId === processId);
-      if (treffer !== undefined) {
-        return treffer;
+  return findeBlatt(baum.knoten, processId);
+}
+
+function findeBlatt(knoten: readonly Baumknoten[], processId: string): Prozessknoten | undefined {
+  for (const einzeln of knoten) {
+    if (!istGruppe(einzeln)) {
+      if (einzeln.processId === processId) {
+        return einzeln;
       }
+      continue;
+    }
+    const treffer = findeBlatt(einzeln.kinder, processId);
+    if (treffer !== undefined) {
+      return treffer;
     }
   }
   return undefined;
 }
 
+/** Eine Gruppe über einem Prozess — ihre Ebene und ihr Name. */
+export type Zuordnungsglied = { readonly ebene: Baumebene; readonly name: string | null };
+
 /**
- * Der Partner eines Prozesses — für die Überschrift der rechten Spalte.
+ * Die Gruppen über einem Prozess, von außen nach innen — für die Überschrift der
+ * rechten Spalte. Im Partnerbaum Partner und Richtung, im Projektbaum das
+ * Projekt.
  *
- * `undefined` heißt „nicht gefunden", `null` heißt „nicht zugeordnet". Die
- * beiden fallen ausdrücklich nicht zusammen (Regel Q4).
+ * **Auch eine übersprungene Richtung steht darin** („nicht ermittelt"): In der
+ * Überschrift gibt es keine Einrückung, die sie ersetzen könnte.
+ *
+ * `undefined` heißt „nicht gefunden", ein Glied mit `name: null` heißt „ohne
+ * Wert". Die beiden fallen ausdrücklich nicht zusammen (Regel Q4).
  */
-export function partnerVon(
+export function zuordnungVon(
   baum: Prozessbaum | undefined,
   processId: string | null,
-): { partner: string | null; richtung: string | null } | undefined {
+): readonly Zuordnungsglied[] | undefined {
   if (baum === undefined || processId === null) {
     return undefined;
   }
-  for (const knoten of baum.partner) {
-    for (const richtung of knoten.richtungen) {
-      if (richtung.prozesse.some((prozess) => prozess.processId === processId)) {
-        return { partner: knoten.partner, richtung: richtung.richtung };
+  return sucheZuordnung(baum.knoten, baum.ebenen, 0, processId);
+}
+
+function sucheZuordnung(
+  knoten: readonly Baumknoten[],
+  ebenen: readonly Baumebene[],
+  tiefe: number,
+  processId: string,
+): Zuordnungsglied[] | undefined {
+  for (const einzeln of knoten) {
+    if (!istGruppe(einzeln)) {
+      if (einzeln.processId === processId) {
+        return [];
       }
+      continue;
+    }
+    const darunter = sucheZuordnung(einzeln.kinder, ebenen, tiefe + 1, processId);
+    if (darunter !== undefined) {
+      return [{ ebene: ebeneBei(ebenen, tiefe), name: einzeln.name }, ...darunter];
     }
   }
   return undefined;
@@ -429,6 +521,48 @@ export function richtungstext(richtung: string | null, texte: Texte): string {
 /** `null` heißt „nicht zugeordnet" und nie „leer" (Regel Q4). */
 export function partnertext(partner: string | null, texte: Texte): string {
   return partner ?? texte.prozesse.nichtZugeordnet;
+}
+
+/**
+ * Der Anzeigetext eines Knotens — **je Ebene eine Regel, für beide
+ * Gliederungen eine Funktion**.
+ *
+ * | Ebene | ohne Wert |
+ * |---|---|
+ * | `PARTNER` | „nicht zugeordnet“ |
+ * | `RICHTUNG` | „nicht ermittelt“, bekannte Werte übersetzt |
+ * | `PROJEKT` | „Projekt ohne Beschreibung“ |
+ * | `PROZESS` | „Prozess ohne Namen“ |
+ *
+ * **Die Zeile für `PROJEKT` ist keine Rückfallregel** (E‑144). Der Knoten bleibt
+ * mit seinem Wert, wo er ist; ohne Beschreibung bekäme er nur keine leere
+ * Beschriftung. Am Bestand kommt der Fall nicht vor.
+ */
+export function knotentext(ebene: Baumebene, name: string | null, texte: Texte): string {
+  switch (ebene) {
+    case "PARTNER":
+      return partnertext(name, texte);
+    case "RICHTUNG":
+      return richtungstext(name, texte);
+    case "PROJEKT":
+      return name ?? texte.prozesse.ohneBeschreibung;
+    case "PROZESS":
+      return name ?? texte.prozesse.ohneNamen;
+  }
+}
+
+/** Die Ebene als Wort — nur im vorgelesenen Namen einer Zeile, auf dem Bildschirm sagt es die Einrückung. */
+export function ebenenbezeichnung(ebene: Baumebene, texte: Texte): string {
+  switch (ebene) {
+    case "PARTNER":
+      return texte.prozesse.baum.ebenePartner;
+    case "RICHTUNG":
+      return texte.prozesse.baum.ebeneRichtung;
+    case "PROJEKT":
+      return texte.prozesse.baum.ebeneProjekt;
+    case "PROZESS":
+      return texte.prozesse.baum.ebeneProzess;
+  }
 }
 
 /**
@@ -494,13 +628,11 @@ export function zeilenbeschriftung(
 ): string {
   const teile: string[] = [];
 
-  if (zeile.art === "PARTNER") {
-    teile.push(partnertext(zeile.partner, texte), texte.prozesse.baum.ebenePartner);
+  if (zeile.art === "GRUPPE") {
     teile.push(
-      einsetzen(texte.prozesse.baum.anzahlProzesse, { anzahl: zahl(zeile.anzahlProzesse) }),
+      knotentext(zeile.ebenenname, zeile.name, texte),
+      ebenenbezeichnung(zeile.ebenenname, texte),
     );
-  } else if (zeile.art === "RICHTUNG") {
-    teile.push(richtungstext(zeile.richtung, texte), texte.prozesse.baum.ebeneRichtung);
     teile.push(
       einsetzen(texte.prozesse.baum.anzahlProzesse, { anzahl: zahl(zeile.anzahlProzesse) }),
     );
@@ -513,10 +645,7 @@ export function zeilenbeschriftung(
      * genau die Blätter, die sichtbar nichts trugen; sichtbare und vorgelesene
      * Fassung liefen damit auseinander.
      */
-    teile.push(
-      zeile.prozess.processName ?? texte.prozesse.ohneNamen,
-      texte.prozesse.baum.ebeneProzess,
-    );
+    teile.push(knotentext("PROZESS", zeile.prozess.name, texte), texte.prozesse.baum.ebeneProzess);
   }
 
   teile.push(einsetzen(texte.prozesse.baum.anzahlNachrichten, { anzahl: zahl(zeile.nachrichten) }));
@@ -578,8 +707,8 @@ export type Baumbefehl =
  * 2. **Links klappt zu — oder geht zum Elternknoten.** Auf einem Blatt und auf
  *    einem zugeklappten Knoten ist das der Weg nach oben. Auf einer flachen
  *    Liste ist der Elternknoten die nächste Zeile darüber mit **kleinerer**
- *    Ebene; das trägt auch dann, wenn die Richtungsebene weggefallen ist (E‑45)
- *    und ein Blatt auf Ebene 2 steht.
+ *    Ebene; das trägt auch dann, wenn die Richtungsebene weggefallen ist (E‑45),
+ *    und für zwei Ebenen genauso wie für drei.
  *
  * @returns `null`, wenn die Taste an dieser Stelle nichts bewirkt — am Anfang,
  *   am Ende, auf einem Blatt mit Pfeil rechts. Die Voreinstellung des Browsers
@@ -594,7 +723,6 @@ export function tastenbefehl(
   if (zeile === undefined) {
     return null;
   }
-  const gruppe = zeile.art !== "PROZESS";
   const fokus = (ziel: number): Baumbefehl | null =>
     zeilen[ziel] === undefined ? null : { art: "FOKUS", schluessel: zeilen[ziel].schluessel };
 
@@ -608,12 +736,12 @@ export function tastenbefehl(
     case "End":
       return fokus(zeilen.length - 1);
     case "ArrowRight":
-      if (!gruppe) {
+      if (zeile.art !== "GRUPPE") {
         return null;
       }
       return zeile.offen ? fokus(index + 1) : { art: "UMSCHALTEN", schluessel: zeile.schluessel };
     case "ArrowLeft": {
-      if (gruppe && zeile.offen) {
+      if (zeile.art === "GRUPPE" && zeile.offen) {
         return { art: "UMSCHALTEN", schluessel: zeile.schluessel };
       }
       for (let lauf = index - 1; lauf >= 0; lauf -= 1) {

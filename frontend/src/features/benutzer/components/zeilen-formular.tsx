@@ -17,11 +17,14 @@ import { ROUTEN } from "@/lib/routen";
 
 import { ROLLEN, istRolle, type Nutzerzeile, type Rolle } from "../api";
 import type { useVorgang } from "../hooks";
+import { BAUMGLIEDERUNGEN, istBaumgliederung, type Baumgliederung } from "@/lib/baumgliederung";
+
 import {
   PASSWORT_MINDESTLAENGE,
   brauchtVorwarnung,
   istEigenesKonto,
   passwortBrauchbar,
+  verwirftSitzungen,
   type Vorgang,
 } from "../selbstschutz";
 import { MandantenAuswahl } from "./mandanten-auswahl";
@@ -97,6 +100,7 @@ export function ZeilenFormular({
   const sperreId = useId();
   const aktivId = useId();
   const rolleId = useId();
+  const baumgliederungId = useId();
   const passwortId = useId();
 
   const [passwort, setPasswort] = useState("");
@@ -140,7 +144,12 @@ export function ZeilenFormular({
            * Speicher weg, den ein Router-Wechsel stehen ließe
            * (`lib/zwischenspeicher.ts`).
            */
-          if (eigenes) {
+          /*
+           * **Nur, wenn der Vorgang die Sitzungen verworfen hat** — die
+           * Baumgliederung tut das nicht (E26), und nach ihr bleibt der Admin
+           * angemeldet und auf dieser Seite.
+           */
+          if (eigenes && verwirftSitzungen(neu)) {
             nachAbmeldung(speicher, () => window.location.replace(ROUTEN.anmeldung));
           }
         },
@@ -234,6 +243,46 @@ export function ZeilenFormular({
             </p>
           )}
           {meldung("rolle")}
+        </Abschnitt>
+
+        <Abschnitt>
+          <Label htmlFor={baumgliederungId}>{texte.benutzer.formular.baumgliederung}</Label>
+          {/*
+           * **Dieselbe Bauform wie die Rolle** — ein natives Auswahlfeld, das
+           * beim Umlegen losläuft. Zwei Werte, und beide Beschriftungen nennen
+           * die Ebenen, damit „Partner“ hier nicht wie ein Filter aussieht.
+           *
+           * **Ohne Vorwarnung und ohne Abmeldung**, auch am eigenen Konto: Die
+           * Vorgabe verwirft keine Sitzung (E26). Der Hinweis darunter sagt,
+           * dass sie keine Berechtigung ist — das ist die Frage, die sonst
+           * zuerst käme.
+           */}
+          <select
+            id={baumgliederungId}
+            value={istBaumgliederung(zeile.treeLayout) ? zeile.treeLayout : ""}
+            disabled={gesperrt}
+            onChange={(ereignis) =>
+              starte({
+                art: "baumgliederung",
+                gliederung: ereignis.target.value as Baumgliederung,
+              })
+            }
+            className="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-feld w-full min-w-0 rounded-lg border bg-transparent px-2.5 py-1 outline-none focus-visible:ring-3"
+          >
+            {/* Ein unbekannter Wert bekommt einen eigenen Eintrag, wie bei der Rolle. */}
+            {istBaumgliederung(zeile.treeLayout) ? null : (
+              <option value="">{zeile.treeLayout}</option>
+            )}
+            {BAUMGLIEDERUNGEN.map((gliederung) => (
+              <option key={gliederung} value={gliederung}>
+                {texte.benutzer.formular.baumgliederungWerte[gliederung]}
+              </option>
+            ))}
+          </select>
+          <p className="text-muted-foreground text-beiwerk max-w-prose">
+            {texte.benutzer.formular.baumgliederungHinweis}
+          </p>
+          {meldung("baumgliederung")}
         </Abschnitt>
       </div>
 

@@ -72,6 +72,7 @@ function zeile(werte: Partial<Nutzerzeile> = {}): Nutzerzeile {
     active: true,
     mustChangePassword: false,
     lastLogin: null,
+    treeLayout: "PARTNER",
     ...werte,
   };
 }
@@ -306,6 +307,43 @@ describe("Die Vorwarnung (E19)", () => {
       expect(schreibrufe()).toHaveLength(1);
       expect(schreibrufe()[0].pfad).toContain("/api/admin/users/7/password");
       // Ein fremdes Konto meldet niemanden ab — die Gegenprobe zur Zeile darüber.
+      expect(navigationen).toEqual([]);
+    } finally {
+      await abbauen();
+    }
+  });
+
+  /**
+   * **Die Baumgliederung am eigenen Konto: kein Dialog und keine Abmeldung**
+   * (E26, 15.09.2026). Dieselbe Hülle wie der Fall mit dem Passwort, und genau
+   * das ist die Gegenprobe: Dort kommt am eigenen Konto erst der Dialog und
+   * danach der Weg auf die Anmeldung. Hier läuft der Aufruf sofort — mit dem
+   * englischen Pfad und Feld der Nachbarn —, und die Seite bleibt stehen.
+   */
+  it("läuft bei der Baumgliederung am eigenen Konto ohne Dialog und ohne Abmeldung", async () => {
+    const { behaelter, abbauen } = await formular({ username: "Lukas" }, "lukas");
+
+    try {
+      const auswahl = [...behaelter.querySelectorAll("select")].find((feld) =>
+        [...feld.options].some((option) => option.value === "PROJEKT"),
+      );
+      expect(auswahl).toBeDefined();
+      await act(async () => {
+        // React hört auf den nativen Setter, nicht auf `value =`.
+        Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value")?.set?.call(
+          auswahl,
+          "PROJEKT",
+        );
+        auswahl?.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+
+      // Nicht über den Titel geprüft: Der ruhige Satz über dem Formular beginnt
+      // am eigenen Konto mit denselben Worten. Kein Dialog heißt kein Knopf,
+      // der ihn bestätigen könnte.
+      expect(knopfMit(document.body, B.vorwarnung.bestaetigen)).toBeUndefined();
+      expect(schreibrufe()).toHaveLength(1);
+      expect(schreibrufe()[0].pfad).toContain("/api/admin/users/7/tree-layout");
+      expect(schreibrufe()[0].koerper).toEqual({ treeLayout: "PROJEKT" });
       expect(navigationen).toEqual([]);
     } finally {
       await abbauen();

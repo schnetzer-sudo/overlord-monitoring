@@ -53,12 +53,14 @@ class MessungM117DbIT extends SicherheitsTestbasis {
     for (String mandant : MANDANTEN) {
       String nutzer = PRAEFIX + "m117-" + mandant.toLowerCase(java.util.Locale.ROOT);
       legeNutzerAn(nutzer, PASSWORT, Rolle.MANDANT, mandant);
-      Antwort antwort = anmelden(nutzer, PASSWORT).hole(PFAD);
+      // Seit dem 15.09.2026 ausdruecklich die Partnergliederung: Die Messung zaehlt Partner und
+      // Richtungsgruppen, und die Antwort ist seither rekursiv (knoten, kinder, kinder).
+      Antwort antwort = anmelden(nutzer, PASSWORT).hole(PFAD + "?gliederung=PARTNER");
       assertThat(antwort.status()).as("Mandant %s", mandant).isEqualTo(200);
 
-      List<String> partner = antwort.json("$.partner[*].partner");
-      List<String> richtungen = antwort.json("$.partner[*].richtungen[*].richtung");
-      List<String> blaetter = antwort.json("$.partner[*].richtungen[*].prozesse[*].processId");
+      List<String> partner = antwort.json("$.knoten[*].name");
+      List<String> richtungen = antwort.json("$.knoten[*].kinder[*].name");
+      List<String> blaetter = antwort.json("$.knoten[*].kinder[*].kinder[*].processId");
       int anzahlProzesse = ((Number) antwort.json("$.gesamt.anzahlProzesse")).intValue();
       int bewegt = ((Number) antwort.json("$.gesamt.bewegt")).intValue();
       int still = ((Number) antwort.json("$.gesamt.still")).intValue();

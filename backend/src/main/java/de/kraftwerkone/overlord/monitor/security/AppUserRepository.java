@@ -5,6 +5,7 @@ import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.APP_USER_MAND
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.AUDIT_LOG;
 
 import de.kraftwerkone.overlord.monitor.audit.AuditEventType;
+import de.kraftwerkone.overlord.monitor.common.Baumgliederung;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -201,6 +202,9 @@ public class AppUserRepository {
             // (docs/benutzerverwaltung.md E20, docs/benutzerverwaltung-backend.md §4). Sie kostet
             // nichts: dieselbe Zeile, dieselbe Tabelle, kein zusaetzlicher Join.
             APP_USER.LOCKED_UNTIL,
+            // Seit dem 15.09.2026 (V13): die Vorgabe der Baumgliederung. Dieselbe Zeile, dieselbe
+            // Tabelle, kein zusaetzlicher Join — dieselbe Ueberlegung wie bei LOCKED_UNTIL.
+            APP_USER.TREE_LAYOUT,
             anmeldungZeitpunkt)
         .from(APP_USER)
         .leftJoin(anmeldung)
@@ -218,7 +222,8 @@ public class AppUserRepository {
                     satz.get(APP_USER.LOCKED_UNTIL),
                     Boolean.TRUE.equals(satz.get(APP_USER.ENABLED)),
                     Boolean.TRUE.equals(satz.get(APP_USER.MUST_CHANGE_PASSWORD)),
-                    satz.get(anmeldungZeitpunkt)));
+                    satz.get(anmeldungZeitpunkt),
+                    Baumgliederung.ausDatenbank(satz.get(APP_USER.TREE_LAYOUT))));
   }
 
   /**
@@ -342,6 +347,45 @@ public class AppUserRepository {
     monitorDsl
         .update(APP_USER)
         .set(APP_USER.ROLE, rolle.name())
+        .set(APP_USER.UPDATED_AT, jetztUtc)
+        .where(APP_USER.ID.eq(id))
+        .execute();
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Die Vorgabe der Baumgliederung (15.09.2026, V13)
+  // ───────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Womit der Prozessbaum dieses Kontos beginnt, wenn die URL keine Gliederung nennt.
+   *
+   * <p><b>Eine Zeile ueber den Primaerschluessel</b>, und sie laeuft nur, wenn {@code ?gliederung=}
+   * fehlt. Bewusst nicht in der Sitzung abgelegt: Dann wirkte eine Aenderung durch einen ADMIN erst
+   * nach einer Neuanmeldung — oder sie muesste, wie die fuenf Verwaltungsvorgaenge aus E5, alle
+   * Sitzungen verwerfen. Beides waere fuer eine Vorgabe, die keine Berechtigung ist, der falsche
+   * Preis ({@code docs/benutzerverwaltung.md} E26).
+   *
+   * @throws IllegalStateException wenn es das Konto nicht gibt — eine Sitzung ohne Kontozeile kann
+   *     nicht entstehen, geloescht wird nie (E8)
+   */
+  public Baumgliederung baumgliederungVon(long id) {
+    String wert =
+        monitorDsl
+            .select(APP_USER.TREE_LAYOUT)
+            .from(APP_USER)
+            .where(APP_USER.ID.eq(id))
+            .fetchOne(APP_USER.TREE_LAYOUT);
+    if (wert == null) {
+      throw new IllegalStateException("Konto ohne Zeile in app_user: " + id);
+    }
+    return Baumgliederung.ausDatenbank(wert);
+  }
+
+  /** Setzt die Vorgabe. Ein einzelnes {@code UPDATE} und damit von selbst atomar. */
+  public void setzeBaumgliederung(long id, Baumgliederung gliederung, LocalDateTime jetztUtc) {
+    monitorDsl
+        .update(APP_USER)
+        .set(APP_USER.TREE_LAYOUT, gliederung.name())
         .set(APP_USER.UPDATED_AT, jetztUtc)
         .where(APP_USER.ID.eq(id))
         .execute();

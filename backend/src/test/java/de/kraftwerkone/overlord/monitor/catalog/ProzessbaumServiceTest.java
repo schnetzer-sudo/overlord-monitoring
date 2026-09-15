@@ -1,10 +1,12 @@
 package de.kraftwerkone.overlord.monitor.catalog;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import de.kraftwerkone.overlord.monitor.common.Baumfenster;
+import de.kraftwerkone.overlord.monitor.common.Baumgliederung;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.Pflegestatus;
 import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
@@ -13,6 +15,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -29,7 +32,7 @@ import org.mockito.quality.Strictness;
  * <p>Die Statements prueft {@code ProzessbaumStatementsTest}, die Plaene {@code
  * ProzessbaumPlanDbIT}, die Trennung {@code ProzessbaumIsolationDbIT}. <b>Hier steht, was zwischen
  * Rohzeile und Antwort passiert:</b> die Schachtelung, die drei Zustaende, die Stilleschwelle, die
- * Summen und die Reihenfolge.
+ * Summen und die Reihenfolge — seit dem 15.09.2026 fuer beide Gliederungen.
  *
  * <p><b>Alle Pruefwerte sind erfunden</b> (Regel G1) — der Test haengt an keiner Zahl aus dem
  * Bestand und an keinem Pflegestand (Regel T2). Er baut sich jede Zeile selbst.
@@ -50,6 +53,11 @@ class ProzessbaumServiceTest {
 
   private static final LocalDateTime WANDUHR = LocalDateTime.parse("2025-12-30T05:09:47");
 
+  /**
+   * Eine erfundene Projektbeschreibung fuer die Faelle, in denen das Projekt nichts entscheidet.
+   */
+  private static final String EIN_PROJEKT = "Ein erfundenes Projekt";
+
   @Mock private ProzessbaumRepository repository;
 
   private ProzessbaumService service() {
@@ -62,19 +70,69 @@ class ProzessbaumServiceTest {
     when(repository.kennzahlen(any(), any())).thenReturn(zahlen);
   }
 
+  /** Der Partnerbaum ohne Fenster — die Gliederung, die alle Faelle vor dem 15.09.2026 meinen. */
   private ProzessbaumResponse antwort() {
-    return service().baum(MANDANT, null);
+    return service().baum(MANDANT, null, Baumgliederung.PARTNER);
+  }
+
+  private ProzessbaumResponse projektbaum() {
+    return service().baum(MANDANT, null, Baumgliederung.PROJEKT);
   }
 
   /** Eine gepflegte Zeile mit Partner und Richtung. */
   private static Prozessgeruestzeile gepflegt(
       String id, String name, String partner, String richtung, LocalDateTime letzteBewegung) {
     return new Prozessgeruestzeile(
-        id, name, partner, richtung, Pflegestatus.GEPFLEGT.name(), letzteBewegung);
+        id, name, EIN_PROJEKT, partner, richtung, Pflegestatus.GEPFLEGT.name(), letzteBewegung);
+  }
+
+  /** Eine Zeile in einem Projekt — ohne Katalogzeile, denn die Projektgliederung braucht keine. */
+  private static Prozessgeruestzeile imProjekt(String id, String name, String beschreibung) {
+    return new Prozessgeruestzeile(id, name, beschreibung, null, null, null, WANDUHR);
   }
 
   private static Prozesskennzahlzeile zahl(String id, String status, long anzahl) {
     return new Prozesskennzahlzeile(id, status, anzahl);
+  }
+
+  // ─── Die rekursive Form lesen ─────────────────────────────────────────────────
+
+  private static List<GruppenknotenResponse> gruppen(List<BaumknotenResponse> knoten) {
+    assertThat(knoten).allSatisfy(k -> assertThat(k).isInstanceOf(GruppenknotenResponse.class));
+    return knoten.stream().map(GruppenknotenResponse.class::cast).toList();
+  }
+
+  private static List<ProzessknotenResponse> blaetter(List<BaumknotenResponse> knoten) {
+    assertThat(knoten).allSatisfy(k -> assertThat(k).isInstanceOf(ProzessknotenResponse.class));
+    return knoten.stream().map(ProzessknotenResponse.class::cast).toList();
+  }
+
+  private List<GruppenknotenResponse> partner() {
+    return gruppen(antwort().knoten());
+  }
+
+  private static List<GruppenknotenResponse> richtungen(GruppenknotenResponse partner) {
+    return gruppen(partner.kinder());
+  }
+
+  private static List<ProzessknotenResponse> prozesse(GruppenknotenResponse gruppe) {
+    return blaetter(gruppe.kinder());
+  }
+
+  private ProzessknotenResponse erstesBlatt() {
+    return prozesse(richtungen(partner().getFirst()).getFirst()).getFirst();
+  }
+
+  /** Alle Blattkennungen, rekursiv — gleich in welcher Gliederung. */
+  private static List<String> kennungen(List<BaumknotenResponse> knoten) {
+    List<String> gefunden = new ArrayList<>();
+    for (BaumknotenResponse einzeln : knoten) {
+      switch (einzeln) {
+        case GruppenknotenResponse gruppe -> gefunden.addAll(kennungen(gruppe.kinder()));
+        case ProzessknotenResponse blatt -> gefunden.add(blatt.processId());
+      }
+    }
+    return gefunden;
   }
 
   // ─── Die Schachtelung ─────────────────────────────────────────────────────────
@@ -92,12 +150,12 @@ class ProzessbaumServiceTest {
               gepflegt("p2", "B", "ALPHA", "EINGEHEND", WANDUHR)),
           List.of());
 
-      List<PartnerknotenResponse> partner = antwort().partner();
+      List<GruppenknotenResponse> partner = partner();
 
       assertThat(partner).hasSize(1);
-      assertThat(partner.getFirst().richtungen()).hasSize(1);
-      assertThat(partner.getFirst().richtungen().getFirst().richtung()).isEqualTo("EINGEHEND");
-      assertThat(partner.getFirst().richtungen().getFirst().prozesse()).hasSize(2);
+      assertThat(richtungen(partner.getFirst())).hasSize(1);
+      assertThat(richtungen(partner.getFirst()).getFirst().name()).isEqualTo("EINGEHEND");
+      assertThat(prozesse(richtungen(partner.getFirst()).getFirst())).hasSize(2);
     }
 
     /**
@@ -113,11 +171,12 @@ class ProzessbaumServiceTest {
               gepflegt("p2", "B", null, "EINGEHEND", WANDUHR)),
           List.of());
 
-      List<PartnerknotenResponse> partner = antwort().partner();
+      List<GruppenknotenResponse> partner = partner();
 
       assertThat(partner).hasSize(2);
-      assertThat(partner.getFirst().partner()).isEqualTo("ALPHA");
-      assertThat(partner.getLast().partner()).isNull();
+      assertThat(partner.getFirst().name()).isEqualTo("ALPHA");
+      assertThat(partner.getLast().name()).isNull();
+      assertThat(partner.getLast().schluessel()).isNull();
       assertThat(partner.getLast().anzahlProzesse()).isEqualTo(1);
     }
 
@@ -134,12 +193,12 @@ class ProzessbaumServiceTest {
               gepflegt("p2", "B", "ALPHA", null, WANDUHR)),
           List.of());
 
-      List<PartnerknotenResponse> partner = antwort().partner();
+      List<GruppenknotenResponse> partner = partner();
 
       assertThat(partner).hasSize(1);
-      assertThat(partner.getFirst().richtungen()).hasSize(2);
-      assertThat(partner.getFirst().richtungen().getFirst().richtung()).isEqualTo("EINGEHEND");
-      assertThat(partner.getFirst().richtungen().getLast().richtung()).isNull();
+      assertThat(richtungen(partner.getFirst())).hasSize(2);
+      assertThat(richtungen(partner.getFirst()).getFirst().name()).isEqualTo("EINGEHEND");
+      assertThat(richtungen(partner.getFirst()).getLast().name()).isNull();
     }
 
     /**
@@ -153,14 +212,20 @@ class ProzessbaumServiceTest {
       bestandMit(
           List.of(
               new Prozessgeruestzeile(
-                  "p1", "A", "VORSCHLAG", "EINGEHEND", Pflegestatus.OFFEN.name(), WANDUHR)),
+                  "p1",
+                  "A",
+                  EIN_PROJEKT,
+                  "VORSCHLAG",
+                  "EINGEHEND",
+                  Pflegestatus.OFFEN.name(),
+                  WANDUHR)),
           List.of());
 
-      List<PartnerknotenResponse> partner = antwort().partner();
+      List<GruppenknotenResponse> partner = partner();
 
       assertThat(partner).hasSize(1);
-      assertThat(partner.getFirst().partner()).isNull();
-      assertThat(partner.getFirst().richtungen().getFirst().richtung()).isNull();
+      assertThat(partner.getFirst().name()).isNull();
+      assertThat(richtungen(partner.getFirst()).getFirst().name()).isNull();
     }
 
     /** „Gepflegt und leer" faellt fachlich mit „nicht zugeordnet" zusammen (E4). */
@@ -169,7 +234,7 @@ class ProzessbaumServiceTest {
     void gepflegt_und_leer() {
       bestandMit(List.of(gepflegt("p1", "A", "", "", WANDUHR)), List.of());
 
-      assertThat(antwort().partner().getFirst().partner()).isNull();
+      assertThat(partner().getFirst().name()).isNull();
     }
 
     /**
@@ -191,13 +256,14 @@ class ProzessbaumServiceTest {
               gepflegt("p2", "B", "Audi", "EINGEHEND", WANDUHR)),
           List.of(zahl("p1", "FINISHED", 7), zahl("p2", "FINISHED", 5)));
 
-      List<PartnerknotenResponse> partner = antwort().partner();
+      List<GruppenknotenResponse> partner = partner();
 
       assertThat(partner).hasSize(1);
       assertThat(partner.getFirst().anzahlProzesse()).isEqualTo(2);
       assertThat(partner.getFirst().nachrichten()).isEqualTo(12);
       // Angezeigt wird die zuerst angetroffene Schreibweise — der Katalog wird nicht umgeschrieben.
-      assertThat(partner.getFirst().partner()).isEqualTo("AUDI");
+      assertThat(partner.getFirst().name()).isEqualTo("AUDI");
+      assertThat(partner.getFirst().schluessel()).isEqualTo("AUDI");
     }
 
     /** Dasselbe eine Ebene tiefer: Die Richtung gruppiert nach derselben Gleichheit. */
@@ -210,11 +276,11 @@ class ProzessbaumServiceTest {
               gepflegt("p2", "B", "ALPHA", "eingehend", WANDUHR)),
           List.of());
 
-      List<RichtungsknotenResponse> richtungen = antwort().partner().getFirst().richtungen();
+      List<GruppenknotenResponse> richtungen = richtungen(partner().getFirst());
 
       assertThat(richtungen).hasSize(1);
       assertThat(richtungen.getFirst().anzahlProzesse()).isEqualTo(2);
-      assertThat(richtungen.getFirst().richtung()).isEqualTo("EINGEHEND");
+      assertThat(richtungen.getFirst().name()).isEqualTo("EINGEHEND");
     }
 
     /** Ohne Katalogzeile — {@code SUTTONS} und {@code WOC} sind genau dieser Fall. */
@@ -222,15 +288,12 @@ class ProzessbaumServiceTest {
     @DisplayName("Ohne Katalogzeile faellt alles in die eine Gruppe")
     void ohne_katalogzeile() {
       bestandMit(
-          List.of(
-              new Prozessgeruestzeile("p1", "A", null, null, null, WANDUHR),
-              new Prozessgeruestzeile("p2", "B", null, null, null, WANDUHR)),
-          List.of());
+          List.of(imProjekt("p1", "A", EIN_PROJEKT), imProjekt("p2", "B", EIN_PROJEKT)), List.of());
 
-      List<PartnerknotenResponse> partner = antwort().partner();
+      List<GruppenknotenResponse> partner = partner();
 
       assertThat(partner).hasSize(1);
-      assertThat(partner.getFirst().partner()).isNull();
+      assertThat(partner.getFirst().name()).isNull();
       assertThat(partner.getFirst().anzahlProzesse()).isEqualTo(2);
     }
   }
@@ -251,8 +314,8 @@ class ProzessbaumServiceTest {
               gepflegt("p3", "C", "ALPHA", "EINGEHEND", WANDUHR)),
           List.of());
 
-      assertThat(antwort().partner())
-          .extracting(PartnerknotenResponse::partner)
+      assertThat(partner())
+          .extracting(GruppenknotenResponse::name)
           .containsExactly("ALPHA", "ZULU", null);
     }
 
@@ -271,8 +334,8 @@ class ProzessbaumServiceTest {
               gepflegt("p3", "C", "ALPHA", "EINGEHEND", WANDUHR)),
           List.of());
 
-      assertThat(antwort().partner().getFirst().richtungen())
-          .extracting(RichtungsknotenResponse::richtung)
+      assertThat(richtungen(partner().getFirst()))
+          .extracting(GruppenknotenResponse::name)
           .containsExactly("EINGEHEND", "AUSGEHEND", null);
     }
 
@@ -291,8 +354,8 @@ class ProzessbaumServiceTest {
               gepflegt("p3", "C", "ALPHA", "EINGEHEND", WANDUHR)),
           List.of());
 
-      assertThat(antwort().partner().getFirst().richtungen())
-          .extracting(RichtungsknotenResponse::richtung)
+      assertThat(richtungen(partner().getFirst()))
+          .extracting(GruppenknotenResponse::name)
           .containsExactly("EINGEHEND", "QUERGEHEND", null);
     }
 
@@ -309,9 +372,242 @@ class ProzessbaumServiceTest {
               gepflegt("p3", "ccc", "ALPHA", "EINGEHEND", WANDUHR)),
           List.of());
 
-      assertThat(antwort().partner().getFirst().richtungen().getFirst().prozesse())
-          .extracting(ProzessknotenResponse::processName)
+      assertThat(prozesse(richtungen(partner().getFirst()).getFirst()))
+          .extracting(ProzessknotenResponse::name)
           .containsExactly("aaa", "bbb", "ccc");
+    }
+  }
+
+  // ─── Die zweite Gliederung ────────────────────────────────────────────────────
+
+  /**
+   * <b>Projekt → Prozess</b> (E-139 bis E-144, 15.09.2026). Dieselbe Schleife wie der Partnerbaum,
+   * eine Ebene weniger — und kein Katalog.
+   */
+  @Nested
+  @DisplayName("Projekt → Prozess")
+  class Projektgliederung {
+
+    @Test
+    @DisplayName("Zwei Ebenen: Projekt und darunter die Prozesse, und die Antwort nennt beide")
+    void zwei_ebenen() {
+      bestandMit(
+          List.of(imProjekt("p1", "A", "Eingang"), imProjekt("p2", "B", "Ausgang")), List.of());
+
+      ProzessbaumResponse antwort = projektbaum();
+
+      assertThat(antwort.gliederung()).isEqualTo(Baumgliederung.PROJEKT);
+      assertThat(antwort.ebenen()).containsExactly(Baumebene.PROJEKT, Baumebene.PROZESS);
+      List<GruppenknotenResponse> projekte = gruppen(antwort.knoten());
+      assertThat(projekte).hasSize(2);
+      for (GruppenknotenResponse projekt : projekte) {
+        assertThat(blaetter(projekt.kinder())).hasSize(1);
+      }
+    }
+
+    @Test
+    @DisplayName("Jede Gruppe traegt die Summe ihrer Blaetter, die Kopfzahl die des ganzen Baums")
+    void summen() {
+      bestandMit(
+          List.of(
+              imProjekt("p1", "A", "Eingang"),
+              imProjekt("p2", "B", "Eingang"),
+              imProjekt("p3", "C", "Ausgang")),
+          List.of(
+              zahl("p1", "FINISHED", 10),
+              zahl("p1", "ERROR_TIMEOUT", 1),
+              zahl("p2", "FINISHED", 20),
+              zahl("p3", "ERROR_TIMEOUT", 2)));
+
+      ProzessbaumResponse antwort = projektbaum();
+      List<GruppenknotenResponse> projekte = gruppen(antwort.knoten());
+      GruppenknotenResponse eingang = projekte.getLast();
+
+      assertThat(eingang.name()).isEqualTo("Eingang");
+      assertThat(eingang.anzahlProzesse()).isEqualTo(2);
+      assertThat(eingang.nachrichten()).isEqualTo(31);
+      assertThat(eingang.fehler()).isEqualTo(1);
+      assertThat(projekte.getFirst().nachrichten()).isEqualTo(2);
+      assertThat(projekte.getFirst().fehler()).isEqualTo(2);
+
+      assertThat(antwort.gesamt().nachrichten()).isEqualTo(33);
+      assertThat(antwort.gesamt().fehler()).isEqualTo(3);
+      assertThat(antwort.gesamt().anzahlProzesse()).isEqualTo(3);
+    }
+
+    /**
+     * <b>Alphabetisch nach dem hochgestellten Schluessel</b> (E-142) — ein kleingeschriebener
+     * Anfang steht nicht hinter allen grossgeschriebenen. Die Blaetter behalten die Reihenfolge der
+     * Abfrage, wie im Partnerbaum.
+     */
+    @Test
+    @DisplayName("Projekte alphabetisch, die Blaetter in der Reihenfolge der Abfrage")
+    void reihenfolge() {
+      bestandMit(
+          List.of(
+              imProjekt("p1", "aaa", "Zulu"),
+              imProjekt("p2", "bbb", "alpha"),
+              imProjekt("p3", "ccc", "Beta"),
+              imProjekt("p4", "ddd", "alpha")),
+          List.of());
+
+      List<GruppenknotenResponse> projekte = gruppen(projektbaum().knoten());
+
+      assertThat(projekte)
+          .extracting(GruppenknotenResponse::name)
+          .containsExactly("alpha", "Beta", "Zulu");
+      assertThat(blaetter(projekte.getFirst().kinder()))
+          .extracting(ProzessknotenResponse::name)
+          .containsExactly("bbb", "ddd");
+    }
+
+    /**
+     * <b>E-41 gilt auch hier</b> (E-141): {@code ProjectDescription} traegt {@code
+     * utf8mb4_general_ci}, zwei Schreibweisen sind fuer die Datenbank ein Wert. Angezeigt wird die
+     * zuerst angetroffene.
+     */
+    @Test
+    @DisplayName("Zwei Schreibweisen derselben Beschreibung sind ein Knoten")
+    void schreibweisen_fallen_zusammen() {
+      bestandMit(
+          List.of(
+              imProjekt("p1", "A", "Eingehend von Kunden"),
+              imProjekt("p2", "B", "EINGEHEND VON KUNDEN")),
+          List.of(zahl("p1", "FINISHED", 4), zahl("p2", "FINISHED", 6)));
+
+      List<GruppenknotenResponse> projekte = gruppen(projektbaum().knoten());
+
+      assertThat(projekte).hasSize(1);
+      assertThat(projekte.getFirst().name()).isEqualTo("Eingehend von Kunden");
+      assertThat(projekte.getFirst().schluessel()).isEqualTo("EINGEHEND VON KUNDEN");
+      assertThat(projekte.getFirst().anzahlProzesse()).isEqualTo(2);
+      assertThat(projekte.getFirst().nachrichten()).isEqualTo(10);
+    }
+
+    /**
+     * <b>Gruppiert wird ueber den Text und nicht ueber {@code ProjectID}</b> (E-141). Die
+     * Geruestzeile traegt die Kennung des Projekts gar nicht — zwei Prozesse aus zwei Projekten mit
+     * derselben Beschreibung sind hier zwei Zeilen mit demselben Text, und sie werden ein Knoten.
+     * Nach Kennung gruppiert stuende dieselbe Beschriftung zweimal untereinander.
+     */
+    @Test
+    @DisplayName("Mehrere Projekte mit derselben Beschreibung sind ein Knoten")
+    void mehrere_projekte_ein_knoten() {
+      bestandMit(
+          List.of(
+              imProjekt("aus-projekt-1", "A", "Rechnungen"),
+              imProjekt("aus-projekt-2", "B", "Rechnungen"),
+              imProjekt("aus-projekt-3", "C", "Lieferscheine")),
+          List.of());
+
+      List<GruppenknotenResponse> projekte = gruppen(projektbaum().knoten());
+
+      assertThat(projekte)
+          .extracting(GruppenknotenResponse::name)
+          .containsExactly("Lieferscheine", "Rechnungen");
+      assertThat(blaetter(projekte.getLast().kinder()))
+          .extracting(ProzessknotenResponse::processId)
+          .containsExactly("aus-projekt-1", "aus-projekt-2");
+    }
+
+    /**
+     * <b>Die Projektgliederung haengt nicht am Katalog</b> — das ist ihr ganzer Anlass. Ein Prozess
+     * ohne Katalogzeile, einer mit offenem Vorschlag und einer mit gepflegtem Partner stehen alle
+     * unter ihrem Projekt; ein Knoten „nicht zugeordnet" entsteht nicht.
+     */
+    @Test
+    @DisplayName("Kein Katalog noetig und kein Knoten „nicht zugeordnet\"")
+    void unabhaengig_vom_katalog() {
+      bestandMit(
+          List.of(
+              imProjekt("p1", "A", "Eingang"),
+              new Prozessgeruestzeile(
+                  "p2", "B", "Eingang", "VORSCHLAG", null, Pflegestatus.OFFEN.name(), WANDUHR),
+              new Prozessgeruestzeile(
+                  "p3",
+                  "C",
+                  "Eingang",
+                  "ALPHA",
+                  "EINGEHEND",
+                  Pflegestatus.GEPFLEGT.name(),
+                  WANDUHR)),
+          List.of());
+
+      List<GruppenknotenResponse> projekte = gruppen(projektbaum().knoten());
+
+      assertThat(projekte).hasSize(1);
+      assertThat(projekte.getFirst().name()).isEqualTo("Eingang");
+      assertThat(projekte.getFirst().anzahlProzesse()).isEqualTo(3);
+    }
+
+    /**
+     * <b>Keine Gliederung verliert einen Prozess</b>, und die Kopfzahl ist in beiden dieselbe —
+     * dieselben Zeilen, anders geschachtelt.
+     */
+    @Test
+    @DisplayName("Beide Gliederungen tragen dieselben Blaetter und dieselbe Kopfzahl")
+    void beide_gliederungen_dieselben_blaetter() {
+      bestandMit(
+          List.of(
+              gepflegt("p1", "A", "ALPHA", "EINGEHEND", WANDUHR),
+              gepflegt("p2", "B", null, null, WANDUHR),
+              imProjekt("p3", "C", "Anderes"),
+              imProjekt("p4", "D", "Anderes")),
+          List.of(zahl("p1", "FINISHED", 3), zahl("p4", "ERROR_X", 1)));
+
+      ProzessbaumResponse partnerbaum = antwort();
+      ProzessbaumResponse projektbaum = projektbaum();
+
+      assertThat(kennungen(projektbaum.knoten()))
+          .containsExactlyInAnyOrderElementsOf(kennungen(partnerbaum.knoten()))
+          .hasSize(4);
+      assertThat(projektbaum.gesamt()).isEqualTo(partnerbaum.gesamt());
+    }
+
+    @Test
+    @DisplayName("Ohne Gliederung gibt es keinen Baum — der Dienst setzt keine Vorgabe ein")
+    void ohne_gliederung_kein_baum() {
+      bestandMit(List.of(), List.of());
+
+      assertThatThrownBy(() -> service().baum(MANDANT, null, null))
+          .isInstanceOf(NullPointerException.class);
+    }
+  }
+
+  // ─── Die Antwortform ──────────────────────────────────────────────────────────
+
+  @Nested
+  @DisplayName("Die Antwortform (E-140)")
+  class Antwortform {
+
+    @Test
+    @DisplayName("Der Partnerbaum nennt drei Ebenen und seine Gliederung")
+    void partnerbaum_nennt_seine_ebenen() {
+      bestandMit(List.of(gepflegt("p1", "A", "ALPHA", "EINGEHEND", WANDUHR)), List.of());
+
+      ProzessbaumResponse antwort = antwort();
+
+      assertThat(antwort.gliederung()).isEqualTo(Baumgliederung.PARTNER);
+      assertThat(antwort.ebenen())
+          .containsExactly(Baumebene.PARTNER, Baumebene.RICHTUNG, Baumebene.PROZESS);
+    }
+
+    /**
+     * Ein Blatt traegt denselben Schluessel wie jeder Knoten — die {@code ProcessID} —, und seinen
+     * Klarnamen als {@code name}, nicht die Kennung.
+     */
+    @Test
+    @DisplayName("Ein Blatt traegt die ProcessID als Schluessel und den ProcessName als Namen")
+    void blatt_schluessel_und_name() {
+      bestandMit(
+          List.of(gepflegt("40000_ERFUNDEN", "Erfunden (VDA)", "ALPHA", "EINGEHEND", WANDUHR)),
+          List.of());
+
+      ProzessknotenResponse blatt = erstesBlatt();
+
+      assertThat(blatt.schluessel()).isEqualTo("40000_ERFUNDEN");
+      assertThat(blatt.processId()).isEqualTo("40000_ERFUNDEN");
+      assertThat(blatt.name()).isEqualTo("Erfunden (VDA)");
     }
   }
 
@@ -375,16 +671,10 @@ class ProzessbaumServiceTest {
           List.of(gepflegt("p1", "A", "ALPHA", "EINGEHEND", WANDUHR.minusMonths(4))), List.of());
 
       for (Rollupzeitraum zeitraum : Rollupzeitraum.values()) {
-        ProzessbaumResponse antwort = service().baum(MANDANT, Baumfenster.paar(zeitraum));
-        assertThat(
-                antwort
-                    .partner()
-                    .getFirst()
-                    .richtungen()
-                    .getFirst()
-                    .prozesse()
-                    .getFirst()
-                    .zustand())
+        ProzessbaumResponse antwort =
+            service().baum(MANDANT, Baumfenster.paar(zeitraum), Baumgliederung.PARTNER);
+        GruppenknotenResponse partner = gruppen(antwort.knoten()).getFirst();
+        assertThat(prozesse(richtungen(partner).getFirst()).getFirst().zustand())
             .as("Paar %s", zeitraum.code())
             .isEqualTo(Prozesszustand.STILL);
       }
@@ -485,14 +775,14 @@ class ProzessbaumServiceTest {
               zahl("p3", "ERROR_TIMEOUT", 2)));
 
       ProzessbaumResponse antwort = antwort();
-      PartnerknotenResponse alpha = antwort.partner().getFirst();
+      GruppenknotenResponse alpha = gruppen(antwort.knoten()).getFirst();
 
-      assertThat(alpha.partner()).isEqualTo("ALPHA");
+      assertThat(alpha.name()).isEqualTo("ALPHA");
       assertThat(alpha.anzahlProzesse()).isEqualTo(2);
       assertThat(alpha.nachrichten()).isEqualTo(31);
       assertThat(alpha.fehler()).isEqualTo(1);
-      assertThat(alpha.richtungen().getFirst().nachrichten()).isEqualTo(11);
-      assertThat(alpha.richtungen().getLast().nachrichten()).isEqualTo(20);
+      assertThat(richtungen(alpha).getFirst().nachrichten()).isEqualTo(11);
+      assertThat(richtungen(alpha).getLast().nachrichten()).isEqualTo(20);
 
       assertThat(antwort.gesamt().nachrichten()).isEqualTo(38);
       assertThat(antwort.gesamt().fehler()).isEqualTo(3);
@@ -534,7 +824,10 @@ class ProzessbaumServiceTest {
       bestandMit(List.of(), List.of());
 
       for (Rollupzeitraum zeitraum : Rollupzeitraum.values()) {
-        assertThat(service().baum(MANDANT, Baumfenster.paar(zeitraum)).zeitraum())
+        assertThat(
+                service()
+                    .baum(MANDANT, Baumfenster.paar(zeitraum), Baumgliederung.PARTNER)
+                    .zeitraum())
             .isEqualTo(zeitraum.code());
       }
     }
@@ -549,7 +842,9 @@ class ProzessbaumServiceTest {
       bestandMit(List.of(), List.of());
 
       ZeitfensterResponse fenster =
-          service().baum(MANDANT, Baumfenster.paar(Rollupzeitraum.STUNDEN_48)).fenster();
+          service()
+              .baum(MANDANT, Baumfenster.paar(Rollupzeitraum.STUNDEN_48), Baumgliederung.PARTNER)
+              .fenster();
 
       assertThat(fenster.von())
           .isEqualTo(LocalDateTime.parse("2025-12-28T06:00:00").atZone(ZONE).toInstant());
@@ -559,24 +854,20 @@ class ProzessbaumServiceTest {
 
     /**
      * <b>Ein Mandant ohne Prozesse ist ein leerer Baum und kein Fehler.</b> Die Antwort ist
-     * vollstaendig, alle Zaehler stehen auf null.
+     * vollstaendig, alle Zaehler stehen auf null — in beiden Gliederungen.
      */
     @Test
     @DisplayName("Ein Mandant ohne Prozesse bekommt einen leeren Baum")
     void leerer_baum() {
       bestandMit(List.of(), List.of());
 
-      ProzessbaumResponse antwort = antwort();
-
-      assertThat(antwort.partner()).isEmpty();
-      assertThat(antwort.gesamt().anzahlProzesse()).isZero();
-      assertThat(antwort.gesamt().nachrichten()).isZero();
-      assertThat(antwort.fenster()).isNotNull();
+      for (ProzessbaumResponse antwort : List.of(antwort(), projektbaum())) {
+        assertThat(antwort.knoten()).isEmpty();
+        assertThat(antwort.gesamt().anzahlProzesse()).isZero();
+        assertThat(antwort.gesamt().nachrichten()).isZero();
+        assertThat(antwort.fenster()).isNotNull();
+      }
     }
-  }
-
-  private ProzessknotenResponse erstesBlatt() {
-    return antwort().partner().getFirst().richtungen().getFirst().prozesse().getFirst();
   }
 
   // ─── Das freie Fenster ────────────────────────────────────────────────────────
@@ -598,7 +889,7 @@ class ProzessbaumServiceTest {
           Baumfenster.frei(
               LocalDateTime.parse("2026-03-10T14:00"), LocalDateTime.parse("2026-03-12T03:00"));
 
-      ProzessbaumResponse antwort = service().baum(MANDANT, fenster);
+      ProzessbaumResponse antwort = service().baum(MANDANT, fenster, Baumgliederung.PARTNER);
 
       assertThat(antwort.zeitraum()).isEqualTo("FREI");
       // Winterzeit in Europe/Berlin: eine Stunde Versatz.
@@ -617,7 +908,7 @@ class ProzessbaumServiceTest {
       LocalDateTime von = LocalDateTime.parse("2025-03-10T14:00");
       LocalDateTime bis = LocalDateTime.parse("2025-03-12T03:00");
 
-      service().baum(MANDANT, Baumfenster.frei(von, bis));
+      service().baum(MANDANT, Baumfenster.frei(von, bis), Baumgliederung.PARTNER);
 
       org.mockito.Mockito.verify(repository)
           .kennzahlen(
@@ -639,7 +930,8 @@ class ProzessbaumServiceTest {
                   MANDANT,
                   Baumfenster.frei(
                       LocalDateTime.parse("2025-03-10T14:00"),
-                      LocalDateTime.parse("2025-03-12T03:00")));
+                      LocalDateTime.parse("2025-03-12T03:00")),
+                  Baumgliederung.PARTNER);
 
       assertThat(antwort.gesamt().nachrichten()).isEqualTo(7);
       assertThat(antwort.gesamt().fehler()).isEqualTo(2);

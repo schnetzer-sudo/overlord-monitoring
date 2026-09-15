@@ -523,6 +523,12 @@ export const en: Texte = {
   prozesse: {
     nichtZugeordnet: "not assigned",
     ohneNamen: "Process without a name",
+    ohneBeschreibung: "Project without a description",
+
+    gliederung: {
+      schalter: "By project",
+      hinweis: "Groups the tree by project instead of by partner.",
+    },
 
     richtung: {
       EINGEHEND: "Inbound",
@@ -533,13 +539,14 @@ export const en: Texte = {
     baum: {
       bezeichnung: "Process tree",
       eingrenzung: "Narrow down by partner or process",
+      eingrenzungProjekt: "Narrow down by project or process",
       eingrenzungLeeren: "Clear the filter",
       keineTreffer: "No partner and no process matches that.",
       leerTitel: "No process",
       leerHinweis:
         "The source holds no process for this tenant. Without a process there is no transfer " +
         "either — that is not a setting of this view.",
-      nurMitVerkehr: "Only with traffic in the period",
+      nurMitVerkehr: "Only with traffic",
       nurMitVerkehrHinweis:
         "Hides processes that carried nothing during the selected period. Leave it off when you " +
         "want to find out why nothing arrives.",
@@ -548,6 +555,7 @@ export const en: Texte = {
       ebenePartner: "Partner",
       ebeneRichtung: "Direction",
       ebeneProzess: "Process",
+      ebeneProjekt: "Project",
       anzahlProzesse: "Processes: {anzahl}",
       anzahlNachrichten: "Messages: {anzahl}",
       anzahlFehler: "Errors: {anzahl}",
@@ -862,7 +870,14 @@ export const en: Texte = {
       passwortHinweis:
         "At least {laenge} characters, and it must differ from the current one. The account has to change it at the next sign-in. Pass it on by a route you choose yourself — it is not shown here again.",
       eigenesKonto:
-        "This is your own account. Any change to it signs you out, and you will have to sign in again.",
+        "This is your own account. Any change to it — except the tree layout — signs you out, and you will have to sign in again.",
+      baumgliederung: "Process tree starts with",
+      baumgliederungWerte: {
+        PARTNER: "Partner, direction, process",
+        PROJEKT: "Project, process",
+      },
+      baumgliederungHinweis:
+        "This is how the account's process tree is grouped when it is first opened. The user can switch it at any time — it is a default, not a permission, and changing it signs nobody out.",
     },
     anlegen: {
       oeffnen: "Add account",
@@ -904,6 +919,7 @@ export const en: Texte = {
         rolle: "Change role",
         mandanten: "Change tenants",
         passwort: "Set password",
+        baumgliederung: "Change tree layout",
       },
       bestaetigen: "Run and sign me out",
       laeuft: "Running …",
@@ -1010,6 +1026,7 @@ export const en: Texte = {
     "richtung-unbekannt": "Pick “Inbound”, “Outbound” — or no direction at all.",
     "feld-unbekannt": "Pick exactly one of the fields partner or direction.",
     "modus-unbekannt": "There is no such mode.",
+    "gliederung-unbekannt": "There is no such grouping. Choose partner or project.",
     "limit-ungueltig": "This page size is not allowed.",
     "cursor-ungueltig": "The page position is no longer valid. Start again on page one.",
     "altes-passwort-falsch": "The current password is not correct.",

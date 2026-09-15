@@ -8,6 +8,7 @@ import {
   brauchtVorwarnung,
   istEigenesKonto,
   passwortBrauchbar,
+  verwirftSitzungen,
   type Vorgang,
 } from "@/features/benutzer/selbstschutz";
 import { MASKE, darfOeffnen, mitAktualisierterZeile } from "@/features/benutzer/zeilen";
@@ -47,6 +48,7 @@ function zeile(werte: Partial<Nutzerzeile> = {}): Nutzerzeile {
     active: true,
     mustChangePassword: false,
     lastLogin: null,
+    treeLayout: "PARTNER",
     ...werte,
   };
 }
@@ -95,6 +97,7 @@ describe("Was am eigenen Konto durchläuft", () => {
     [{ art: "rolle", rolle: "ADMIN" }, true],
     [{ art: "mandanten", mandanten: ["VOTG"] }, true],
     [{ art: "passwort", passwort: "geheimgeheim" }, true],
+    [{ art: "baumgliederung", gliederung: "PROJEKT" }, true],
   ];
 
   for (const [vorgang, erwartet] of faelle) {
@@ -134,6 +137,18 @@ describe("Die Vorwarnung", () => {
 
   it("erscheint nicht, solange die Selbstauskunft noch lädt", () => {
     expect(brauchtVorwarnung(passwort, "lukas", undefined)).toBe(false);
+  });
+
+  /**
+   * **Die Baumgliederung meldet niemanden ab** (E26) — eine Warnung, die eine
+   * Abmeldung verspricht, wäre am eigenen Konto eine falsche Auskunft. Die
+   * Gegenprobe steht darüber: Das Passwort am eigenen Konto braucht sie.
+   */
+  it("erscheint nicht für die Baumgliederung, auch am eigenen Konto", () => {
+    const gliederung: Vorgang = { art: "baumgliederung", gliederung: "PROJEKT" };
+    expect(verwirftSitzungen(gliederung)).toBe(false);
+    expect(verwirftSitzungen(passwort)).toBe(true);
+    expect(brauchtVorwarnung(gliederung, "lukas", ANGEMELDET)).toBe(false);
   });
 });
 

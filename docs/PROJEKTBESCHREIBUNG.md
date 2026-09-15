@@ -342,6 +342,26 @@ Suchfelder übernommen, nicht neu erfunden.
 
 **`Process` / `Project` / `Mandant` / `ProjectMandant`** — die Hierarchie. Reine Stammdaten.
 
+*Ergänzt 15.09.2026:* Hier standen die vier Tabellen seit Anfang an **ohne eine einzige Spalte**.
+Diese Liste war nie erhoben, und eine Annahme hat daran gehangen: Ein Auftrag vom 15.09.2026 ging
+davon aus, `Project` stehe wegen der Mandantenkette ohnehin im Gerüst der Prozessansicht — die Kette
+läuft aber `Process → ProjectMandant` und überspringt `Project`. **Gegen `information_schema.COLUMNS`
+erhoben am 15.09.2026** und nicht übernommen, für die zwei Tabellen, die der Prozessbaum liest:
+
+`Process` — PK `ProcessID` varchar(36) NOT NULL · `ProcessName` varchar(255) · `ProcessDescription`
+text · `ProjectID` varchar(36), `NULL`-fähig
+
+`Project` — PK `ProjectID` varchar(36) NOT NULL · `ProjectName` varchar(255) · `ProjectDescription`
+text
+
+Alle Textspalten tragen `utf8mb4_general_ci`, alle außer den Primärschlüsseln sind `NULL`-fähig. Zwei
+Folgen stehen in [`process-view.md`](process-view.md) §48: `ProjectDescription` ist ein **freier
+Text** in dieser Sortierung und gruppiert deshalb nach E‑41; und als `TEXT` legt sie eine
+Temptabelle, in der sie steht, auf die Platte (offener Punkt 179). Wie leicht die Spalten ohne Liste
+verwechselt werden, zeigt ein Beispiel aus derselben Datei: Die `ProcessID` `40000_AMG_LAB_VDA` trägt
+den `ProcessName` `AMG LAB (VDA)`, und `process-view.md` §1 führte den ersten Wert als den zweiten.
+`Mandant` und `ProjectMandant` sind hier nicht nacherhoben.
+
 Die zehn Mandanten, erhoben am 28.07.2026. Die `MandantID` ist ein lesbarer Code, keine UUID:
 
 | ID | Name | |

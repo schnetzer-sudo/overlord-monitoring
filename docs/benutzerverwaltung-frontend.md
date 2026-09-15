@@ -53,6 +53,7 @@ am Vertrag ist `lockedUntil` (§4, [`benutzerverwaltung-backend.md`](benutzerver
 | `PUT` | `/api/admin/users/{id}/role` | `{"role": "MANDANT"}` | das Auswahlfeld |
 | `PUT` | `/api/admin/users/{id}/tenants` | `{"tenants": ["VOTG","SUTTONS"]}` | die Mehrfachauswahl — **dritte M1-Ausnahme** (E4) |
 | `POST` | `/api/admin/users/{id}/password` | `{"initialPassword": "…"}` | das Passwortfeld |
+| `PUT` | `/api/admin/users/{id}/tree-layout` | `{"treeLayout": "PROJEKT"}` | das Auswahlfeld „Prozessbaum beginnt mit" — *seit 15.09.2026*, **ohne Sitzungsentzug** (§17) |
 
 Dazu **ein siebter, der nicht dieser Seite gehört**: `GET /api/mandanten` liefert die wählbaren
 Mandanten für die Mehrfachauswahl. Er steht seit Schritt 3 und wird hier **wiederverwendet**, nicht
@@ -794,3 +795,54 @@ ADMIN, und **Passwörter tippt Claude Code nicht.** Ein über die Maske angelegt
 ein echter Schreibvorgang, der stehen bleibt — es gibt kein Löschen (E8). Der Weg „neues Konto
 meldet sich an und ändert sein Passwort" gehört ohnehin von Hand gegangen und steht in der
 Checkliste.
+
+---
+
+## 17. Die Baumgliederung (15.09.2026)
+
+Entscheidung: [`benutzerverwaltung.md`](benutzerverwaltung.md) §7c (E26) · Backend:
+[`benutzerverwaltung-backend.md`](benutzerverwaltung-backend.md) §4a · der Baum, der die Vorgabe
+liest: [`process-view.md`](process-view.md) §48.
+
+| | |
+|---|---|
+| **Endpunkt** | `PUT /api/admin/users/{id}/tree-layout`, `{"treeLayout": "PROJEKT"}` — der sechste schreibende der Seite. Die Tabelle in §3 gilt weiter und bekommt diese Zeile dazu |
+| **Zeile** | `Nutzerzeile.treeLayout`, als Zeichenkette wie `role`; die Antwort setzt die Zeile im Zwischenspeicher wie bei den fünf anderen (§3) |
+| **Bedienung** | ein **natives Auswahlfeld** im Zeilenformular, neben der Rolle — dieselbe Bauform und derselbe Grund (§5): Es läuft beim Umlegen los. Die Werte nennen die Ebenen („Partner, Richtung, Prozess" / „Projekt, Prozess"), damit „Partner" in einem Auswahlfeld nicht wie ein Filter aussieht; darunter steht, dass es eine Vorgabe und keine Berechtigung ist |
+| **Tabelle** | **keine zehnte Spalte.** Welche Spalte steht, entscheidet die Frage der Seite (§4) — *warum kommt jemand nicht herein* —, und die Baumgliederung beantwortet sie nicht. Sie steht im Formular, wo sie geändert wird |
+| **Fehlermeldung** | am auslösenden Abschnitt wie überall (§5). `gliederung-unbekannt` ist in beiden Sprachen übersetzt; über das Auswahlfeld ist er nicht erreichbar |
+
+### Kein Dialog und keine Abmeldung am eigenen Konto
+
+`Vorgang` hat die Art `baumgliederung` bekommen, und sie läuft durch dieselbe eine Stelle wie die
+fünf anderen (E19 bleibt eine Regel). **Die Regel hat eine dritte Bedingung bekommen:**
+
+> `brauchtVorwarnung` = eigenes Konto **und** am eigenen Konto zulässig **und** `verwirftSitzungen`
+
+`verwirftSitzungen` ist für die Baumgliederung `false` und für die fünf anderen `true`. Nach einem
+erfolgreichen Vorgang am eigenen Konto führt die Oberfläche deshalb nur dann auf die Anmeldung, wenn
+er Sitzungen verworfen hat — nach der Baumgliederung bleibt der Admin auf der Seite.
+
+Die Tabelle aus §5 („Welche Vorgänge am eigenen Konto überhaupt durchlaufen") gilt unverändert und
+bekommt eine Zeile:
+
+| Vorgang | Richtung | am eigenen Konto |
+|---|---|---|
+| `tree-layout` | — | läuft durch → **keine** Vorwarnung, **keine** Abmeldung (E26) |
+
+**Der ruhige Satz am eigenen Konto** hieß „Jede Änderung daran meldet dich ab, und du musst dich neu
+anmelden." Er hat die Einschränkung *außer an der Baumgliederung* bekommen — sonst verspräche er
+etwas, das nicht passiert. Der Vorwarntext trägt einen Eintrag `vorgaenge.baumgliederung`, der nie
+erscheint: Die Vorwarnung schlägt ihren Text je Vorgangsart nach, und der Typ verlangt ihn.
+
+### Tests
+
+`tests/benutzer.test.ts` (rein): die Baumgliederung in der Tabelle „Was am eigenen Konto
+durchläuft", und dass sie **keine** Vorwarnung braucht, samt Gegenprobe am Passwort.
+
+`tests/benutzer-tabelle.test.tsx` (gerenderter Baum, **ein Fall mehr, jetzt elf**): Das
+Auswahlfeld am eigenen Konto schickt `PUT …/7/tree-layout` mit `{"treeLayout": "PROJEKT"}` —
+**ohne** Dialog und **ohne** Navigation. Das ist eine Aussage über Verdrahtung und Abwesenheit
+zugleich: Die Regel ist eine reine Funktion, dass sie abgefragt und die Abmeldung *nicht* ausgelöst
+wird, zeigt nur der Baum; die Gegenprobe steht im selben Block am Passwort („erscheint beim eigenen
+Konto …").

@@ -94,5 +94,16 @@ public enum AuditEventType {
   /** USER_TENANTS_CHANGED — mit alter und neuer Menge im Detail (dritte M1-Ausnahme). */
   MANDANTEN_GEAENDERT,
   /** USER_PASSWORD_RESET — durch den Admin. <b>Niemals mit dem Passwort im Detail.</b> */
-  PASSWORT_ZURUECKGESETZT
+  PASSWORT_ZURUECKGESETZT,
+
+  /**
+   * USER_TREE_LAYOUT_CHANGED — die Vorgabe der Baumgliederung eines Kontos, mit altem und neuem
+   * Wert im Detail (15.09.2026).
+   *
+   * <p><b>Eine eigene Art und nicht {@code NUTZER_GEAENDERT}</b>, aus demselben Grund wie die fuenf
+   * darueber: ein Endpunkt, ein Vorgang, eine Ereignisart. <b>Anders als bei ihnen wird dabei keine
+   * Sitzung verworfen</b> ({@code docs/benutzerverwaltung.md} E26) — die Vorgabe ist keine
+   * Berechtigung, und der Baum liest sie bei jedem Aufruf neu.
+   */
+  BAUMGLIEDERUNG_GEAENDERT
 }

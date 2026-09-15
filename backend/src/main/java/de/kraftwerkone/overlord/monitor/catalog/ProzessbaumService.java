@@ -1,6 +1,7 @@
 package de.kraftwerkone.overlord.monitor.catalog;
 
 import de.kraftwerkone.overlord.monitor.common.Baumfenster;
+import de.kraftwerkone.overlord.monitor.common.Baumgliederung;
 import de.kraftwerkone.overlord.monitor.common.Katalogzuordnung;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
@@ -18,6 +19,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
 import org.springframework.stereotype.Service;
 
 /**
@@ -31,6 +34,15 @@ import org.springframework.stereotype.Service;
  * dieselben Rollupzeilen oder ein {@code ROLLUP}, dessen Zwischenzeilen der Aufrufer erst wieder
  * auseinandersortieren muesste. Hier stehen die Zeilen ohnehin schon im Speicher — die Schachtelung
  * kostet einen Durchlauf ueber hoechstens 733 Zeilen.
+ *
+ * <h2>Zwei Gliederungen, ein Aufbau <i>(seit 15.09.2026)</i></h2>
+ *
+ * <p>Neben Partner → Richtung → Prozess gibt es {@link Baumgliederung#PROJEKT}: Projektbeschreibung
+ * → Prozess (E-139). <b>Beide lesen dieselben zwei Statements</b> — das Geruest traegt die Spalten
+ * beider Gliederungen —, und beide entstehen in derselben Schleife ({@link #knoten}) aus einer
+ * Liste von {@link Gruppierung Ebenen}. Ein zweiter Aufbau fuer den Projektbaum waere eine zweite
+ * Stelle fuer Summen, Reihenfolge und Schreibweisen, und die liefe beim naechsten Feld auseinander.
+ * Gliedern ist damit der einzige Unterschied, und er steht in {@link #gruppierungen}.
  *
  * <h2>Ein Uhrenschlag je Anfrage</h2>
  *
@@ -83,6 +95,84 @@ public class ProzessbaumService {
    */
   static final Rollupzeitraum VORGABE = Rollupzeitraum.STUNDEN_48;
 
+  /**
+   * <b>Alphabetisch nach dem hochgestellten Schluessel, {@code null} ans Ende</b> — die Ordnung
+   * jeder Gruppenebene ausser der Richtung.
+   *
+   * <p>Fuer den Partner ist das E-39, fuer das Projekt E-142. <b>Die Reihenfolge des Altwerkzeugs
+   * wird dabei bewusst nicht nachgebildet</b>: Dort folgt die Prozessebene innerhalb eines Partners
+   * offenbar der Kennung. Ein Baum ist zum Finden da, und gefunden wird ueber den Namen.
+   *
+   * <p><b>Ueber den Schluessel und nicht ueber den Rohwert:</b> Sonst stuende eine
+   * kleingeschriebene Schreibweise hinter allen grossgeschriebenen, weil Kleinbuchstaben in der
+   * natuerlichen Ordnung hinter den Grossbuchstaben liegen.
+   */
+  private static final Comparator<String> ALPHABETISCH =
+      Comparator.nullsLast(Comparator.naturalOrder());
+
+  /**
+   * Partner. <b>Gruppiert wird ueber {@link Katalogzuordnung#gruppenschluessel(String, String)}</b>
+   * und nicht ueber den Rohwert. Daran haengen <b>zwei</b> Entscheidungen, und beide sind mehr als
+   * eine Feinheit:
+   *
+   * <ol>
+   *   <li><b>Entscheidung E-i:</b> Ein <i>Regelvorschlag</i> der Heuristik steht mit {@code
+   *       pflegestatus = OFFEN} in derselben Spalte wie eine kuratierte Zuordnung. Gruppierte der
+   *       Baum darueber, stuenden Prozesse unter einem Partner, den niemand bestaetigt hat — und
+   *       der Nutzer saehe der Gruppe nicht an, dass sie geraten ist (Regel Q4).
+   *   <li><b>Die Gleichheit kommt von der Spalte und nicht von Java</b> (M117): {@code
+   *       utf8mb4_general_ci} macht zwei Schreibweisen zu <i>einem</i> Wert. Ohne den
+   *       hochgestellten Schluessel zeigte der Baum bei {@code NEXANS} einen Partner zweimal, mit
+   *       geteilten Zahlen — und widerspraeche damit der Verteilung des Dashboards, die in SQL
+   *       gruppiert.
+   * </ol>
+   *
+   * <p><b>Angezeigt wird trotzdem der Rohwert</b>, nicht der hochgestellte Schluessel: Der Katalog
+   * ist die Wahrheit, und was dort steht, wird nicht umgeschrieben (Regel Q4).
+   */
+  private static final Gruppierung NACH_PARTNER =
+      new Gruppierung(
+          Baumebene.PARTNER,
+          zeile -> Katalogzuordnung.gruppenschluessel(zeile.pflegestatus(), zeile.partner()),
+          zeile -> Katalogzuordnung.schluessel(zeile.pflegestatus(), zeile.partner()),
+          ALPHABETISCH);
+
+  /**
+   * Richtung. <b>Nur die Richtungen, die vorkommen</b> — kein leerer Ast. Die Reihenfolge ist die
+   * der Aufzaehlung {@link Richtung} und danach „nicht ermittelt"; sie ist damit ueber alle Partner
+   * dieselbe, und eine Oberflaeche, die Symbole nach Position vergibt, bekaeme sonst unter jedem
+   * Partner eine andere.
+   */
+  private static final Gruppierung NACH_RICHTUNG =
+      new Gruppierung(
+          Baumebene.RICHTUNG,
+          zeile -> Katalogzuordnung.gruppenschluessel(zeile.pflegestatus(), zeile.richtung()),
+          zeile -> Katalogzuordnung.schluessel(zeile.pflegestatus(), zeile.richtung()),
+          Comparator.<String>comparingInt(ProzessbaumService::richtungsrang)
+              .thenComparing(ALPHABETISCH));
+
+  /**
+   * Projekt (E-139). <b>Gruppiert wird ueber den Text {@code ProjectDescription} und nicht ueber
+   * {@code ProjectID}</b> (E-141): Mehrere Projekte mit derselben Beschreibung sind fuer den Nutzer
+   * ein Knoten; nach Kennung gruppiert stuende dieselbe Beschriftung mehrmals untereinander.
+   *
+   * <p><b>Damit ist der Schluessel wieder ein freier Text in {@code utf8mb4_general_ci}, und E-41
+   * gilt unveraendert</b>: hochgestellt ueber {@link #hochgestellt}, angezeigt in der zuerst
+   * angetroffenen Schreibweise ueber {@link #merkeAnzeige} — derselbe Weg wie beim Partner, nicht
+   * ein zweiter.
+   *
+   * <p><b>Kein Knoten „nicht zugeordnet" und keine Rueckfallregel</b> (E-144). Jeder Prozess hat
+   * aus dem Schema heraus genau ein Projekt. Eine leere Beschreibung gibt es nach Auskunft des
+   * Auftraggebers nicht; kaeme sie doch, stuende sie als eigener Knoten mit ihrem Rohwert da — sie
+   * wird weder umbenannt noch auf einen anderen Wert gezogen.
+   */
+  private static final Gruppierung NACH_PROJEKT =
+      new Gruppierung(
+          Baumebene.PROJEKT,
+          zeile -> hochgestellt(zeile.projectDescription()),
+          Prozessgeruestzeile::projectDescription,
+          ALPHABETISCH);
+
   private final ProzessbaumRepository prozessbaumRepository;
   private final MessageStatusClassifier statusClassifier;
   private final Clock anwendungsuhr;
@@ -97,7 +187,7 @@ public class ProzessbaumService {
   }
 
   /**
-   * Der ganze Baum fuer den aktiven Mandanten.
+   * Der ganze Baum fuer den aktiven Mandanten, in der verlangten Gliederung.
    *
    * <p><b>Ein Paar oder ein freies Fenster — der Weg ist derselbe.</b> Beides ist ein {@link
    * Baumfenster}, beides liefert Segmente, und das Repository rendert fuer ein Segment den Text der
@@ -105,10 +195,18 @@ public class ProzessbaumService {
    * kennt keine Ebene; er reicht die Segmente durch und nennt in der Antwort den Code des Fensters
    * — {@code 48H}, {@code 30T}, {@code 12M} oder {@code FREI}.
    *
+   * <p><b>Die Gliederung aendert keinen Zugriff</b> <i>(seit 15.09.2026)</i>: dieselben zwei
+   * Statements, dieselben Zeilen, dieselbe Kopfzahl. Sie entscheidet allein, wie die Zeilen hier
+   * geschachtelt werden — und damit auch, dass beide Baeume dieselben Blaetter tragen.
+   *
    * @param mandant Regel M2 — erster Pflichtparameter, und er kommt aus der Sitzung (Regel M1)
    * @param gewaehlt das Fenster aus der URL, oder {@code null} fuer {@link #VORGABE}
+   * @param gliederung die aktive Gliederung — <b>nie {@code null}</b>. Fehlt sie in der URL, setzt
+   *     der Controller die Vorgabe des angemeldeten Kontos ein; der Dienst kennt kein Konto (E-143)
    */
-  public ProzessbaumResponse baum(MandantContext mandant, Baumfenster gewaehlt) {
+  public ProzessbaumResponse baum(
+      MandantContext mandant, Baumfenster gewaehlt, Baumgliederung gliederung) {
+    Objects.requireNonNull(gliederung, "Ohne Gliederung gibt es keinen Baum");
     LocalDateTime jetzt = LocalDateTime.now(anwendungsuhr);
     Baumfenster baumfenster = gewaehlt == null ? Baumfenster.paar(VORGABE) : gewaehlt;
     Zeitfenster fenster = baumfenster.fenster(jetzt);
@@ -116,15 +214,18 @@ public class ProzessbaumService {
     List<Prozessgeruestzeile> geruest = prozessbaumRepository.geruest(mandant);
     Map<String, Kennzahl> jeProzess =
         kennzahlenJeProzess(prozessbaumRepository.kennzahlen(mandant, baumfenster.segmente(jetzt)));
+    List<Gruppierung> gruppierungen = gruppierungen(gliederung);
 
     return new ProzessbaumResponse(
         baumfenster.code(),
+        gliederung,
         new ZeitfensterResponse(
             Zeitpunkte.nachUtc(fenster.von(), anwendungsuhr.getZone()),
             Zeitpunkte.nachUtc(fenster.bis(), anwendungsuhr.getZone())),
         (int) STILLE_SCHWELLE.toTotalMonths(),
         gesamt(geruest, jeProzess, jetzt),
-        partnerknoten(geruest, jeProzess, jetzt));
+        ebenen(gruppierungen),
+        knoten(geruest, gruppierungen, jeProzess, jetzt));
   }
 
   /**
@@ -147,78 +248,111 @@ public class ProzessbaumService {
   }
 
   /**
-   * Die oberste Ebene, aufgebaut in zwei Schritten: erst schachteln, dann sortieren.
+   * Eine Ebene der Gliederung: <b>wonach eine Zeile gruppiert wird, wie die Gruppe heisst und in
+   * welcher Reihenfolge die Gruppen stehen</b>.
    *
-   * <p><b>Gruppiert wird ueber {@link Katalogzuordnung#gruppenschluessel(String, String)}</b> und
-   * nicht ueber den Rohwert. Daran haengen <b>zwei</b> Entscheidungen, und beide sind mehr als eine
-   * Feinheit:
-   *
-   * <ol>
-   *   <li><b>Entscheidung E-i:</b> Ein <i>Regelvorschlag</i> der Heuristik steht mit {@code
-   *       pflegestatus = OFFEN} in derselben Spalte wie eine kuratierte Zuordnung. Gruppierte der
-   *       Baum darueber, stuenden Prozesse unter einem Partner, den niemand bestaetigt hat — und
-   *       der Nutzer saehe der Gruppe nicht an, dass sie geraten ist (Regel Q4).
-   *   <li><b>Die Gleichheit kommt von der Spalte und nicht von Java</b> (M117): {@code
-   *       utf8mb4_general_ci} macht zwei Schreibweisen zu <i>einem</i> Wert. Ohne den
-   *       hochgestellten Schluessel zeigte der Baum bei {@code NEXANS} einen Partner zweimal, mit
-   *       geteilten Zahlen — und widerspraeche damit der Verteilung des Dashboards, die in SQL
-   *       gruppiert.
-   * </ol>
-   *
-   * <p><b>Angezeigt wird trotzdem der Rohwert</b>, nicht der hochgestellte Schluessel: Der Katalog
-   * ist die Wahrheit, und was dort steht, wird nicht umgeschrieben (Regel Q4).
-   *
-   * <p><b>Sortiert wird alphabetisch und nicht nach Volumen.</b> Ein Baum ist zum <i>Finden</i> da:
-   * Wer wissen will, ob von einem bestimmten Partner etwas kam, sucht dessen Namen. Die Rangfolge
-   * nach Volumen beantwortet eine andere Frage, und die beantwortet der Verteilungsblock des
-   * Dashboards. Bei {@code NEXANS} stehen 154 Partner nebeneinander — in einer Volumenordnung waere
-   * der gesuchte nirgends.
+   * @param ebene der Name, wie er in {@code ebenen} der Antwort steht
+   * @param schluessel der Gruppenschluessel — hochgestellt, damit Java so gruppiert, wie die Spalte
+   *     vergleicht (E-41); {@code null} fuer die eine Gruppe ohne Wert
+   * @param anzeige der Rohwert, der als {@code name} angezeigt wird
+   * @param reihenfolge die Ordnung der Gruppenschluessel; sie muss {@code null} vertragen
    */
-  private List<PartnerknotenResponse> partnerknoten(
-      List<Prozessgeruestzeile> geruest, Map<String, Kennzahl> jeProzess, LocalDateTime jetzt) {
-    // Zwei Ebenen Schachtelung, Einfuegereihenfolge erhalten: Die Blaetter kommen bereits nach
-    // ProcessName sortiert aus der Abfrage und behalten diese Reihenfolge.
-    //
-    // Geschachtelt wird ueber den GRUPPENSCHLUESSEL und angezeigt wird der ROHWERT. Die beiden
-    // fallen auseinander, sobald derselbe Partner im Katalog in zwei Schreibweisen steht — genau
-    // der Fall, den M117 bei NEXANS gefunden hat. Fuer die Datenbank ist das ein Wert
-    // (utf8mb4_general_ci), fuer String.equals waeren es zwei, und der Baum zeigte den Partner
-    // zweimal mit geteilten Zahlen.
-    Map<String, Map<String, List<ProzessknotenResponse>>> geschachtelt = new LinkedHashMap<>();
-    Map<String, String> anzeige = new HashMap<>();
-    for (Prozessgeruestzeile zeile : geruest) {
-      String partner = Katalogzuordnung.gruppenschluessel(zeile.pflegestatus(), zeile.partner());
-      String richtung = Katalogzuordnung.gruppenschluessel(zeile.pflegestatus(), zeile.richtung());
-      merkeAnzeige(
-          anzeige, partner, Katalogzuordnung.schluessel(zeile.pflegestatus(), zeile.partner()));
-      merkeAnzeige(
-          anzeige, richtung, Katalogzuordnung.schluessel(zeile.pflegestatus(), zeile.richtung()));
-      geschachtelt
-          .computeIfAbsent(partner, schluessel -> new LinkedHashMap<>())
-          .computeIfAbsent(richtung, schluessel -> new ArrayList<>())
-          .add(blatt(zeile, jeProzess, jetzt));
+  private record Gruppierung(
+      Baumebene ebene,
+      Function<Prozessgeruestzeile, String> schluessel,
+      Function<Prozessgeruestzeile, String> anzeige,
+      Comparator<String> reihenfolge) {}
+
+  /**
+   * Die Gruppenebenen einer Gliederung, von aussen nach innen. Unter der letzten stehen die
+   * Blaetter.
+   *
+   * <p><b>Vollstaendiges {@code switch} ohne {@code default}</b>: Eine dritte Gliederung ist ein
+   * Compilerfehler und keine stille Voreinstellung.
+   */
+  private static List<Gruppierung> gruppierungen(Baumgliederung gliederung) {
+    return switch (gliederung) {
+      case PARTNER -> List.of(NACH_PARTNER, NACH_RICHTUNG);
+      case PROJEKT -> List.of(NACH_PROJEKT);
+    };
+  }
+
+  /** Die Ebenennamen der Antwort — die Gruppenebenen und darunter immer {@code PROZESS}. */
+  private static List<Baumebene> ebenen(List<Gruppierung> gruppierungen) {
+    List<Baumebene> ebenen = new ArrayList<>(gruppierungen.size() + 1);
+    for (Gruppierung gruppierung : gruppierungen) {
+      ebenen.add(gruppierung.ebene());
+    }
+    ebenen.add(Baumebene.PROZESS);
+    return List.copyOf(ebenen);
+  }
+
+  /**
+   * Eine Ebene des Baums, aufgebaut in zwei Schritten: erst schachteln, dann sortieren — <b>fuer
+   * jede Ebene jeder Gliederung dieselbe Schleife</b>.
+   *
+   * <p>Geschachtelt wird ueber den <b>Gruppenschluessel</b>, angezeigt wird der <b>Rohwert</b>. Die
+   * beiden fallen auseinander, sobald derselbe Wert in zwei Schreibweisen steht — genau der Fall,
+   * den M117 bei {@code NEXANS} gefunden hat. Fuer die Datenbank ist das ein Wert ({@code
+   * utf8mb4_general_ci}), fuer {@code String.equals} waeren es zwei.
+   *
+   * <p><b>Die Summen entstehen von den Blaettern nach oben</b>, auf jeder Ebene aus ihren Kindern.
+   * Der Aufrufer soll nichts zusammenrechnen muessen (Richtlinie §5.1).
+   *
+   * <p><b>Die Blaetter behalten die Reihenfolge der Abfrage</b> — dort steht {@code ORDER BY
+   * ProcessName}, in beiden Gliederungen. Die Einfuegereihenfolge der Schachtelung erhaelt sie.
+   */
+  private List<BaumknotenResponse> knoten(
+      List<Prozessgeruestzeile> zeilen,
+      List<Gruppierung> gruppierungen,
+      Map<String, Kennzahl> jeProzess,
+      LocalDateTime jetzt) {
+    if (gruppierungen.isEmpty()) {
+      List<BaumknotenResponse> blaetter = new ArrayList<>(zeilen.size());
+      for (Prozessgeruestzeile zeile : zeilen) {
+        blaetter.add(blatt(zeile, jeProzess, jetzt));
+      }
+      return List.copyOf(blaetter);
     }
 
-    List<PartnerknotenResponse> knoten = new ArrayList<>(geschachtelt.size());
-    for (Map.Entry<String, Map<String, List<ProzessknotenResponse>>> eintrag :
-        geschachtelt.entrySet()) {
-      List<RichtungsknotenResponse> richtungen = richtungsknoten(eintrag.getValue(), anzeige);
-      knoten.add(
-          new PartnerknotenResponse(
-              anzeige.get(eintrag.getKey()),
-              richtungen.stream().mapToInt(RichtungsknotenResponse::anzahlProzesse).sum(),
-              richtungen.stream().mapToLong(RichtungsknotenResponse::nachrichten).sum(),
-              richtungen.stream().mapToLong(RichtungsknotenResponse::fehler).sum(),
-              richtungen));
+    Gruppierung ebene = gruppierungen.getFirst();
+    List<Gruppierung> darunter = gruppierungen.subList(1, gruppierungen.size());
+
+    Map<String, List<Prozessgeruestzeile>> geschachtelt = new LinkedHashMap<>();
+    Map<String, String> anzeige = new HashMap<>();
+    for (Prozessgeruestzeile zeile : zeilen) {
+      String schluessel = ebene.schluessel().apply(zeile);
+      merkeAnzeige(anzeige, schluessel, ebene.anzeige().apply(zeile));
+      geschachtelt.computeIfAbsent(schluessel, unbenutzt -> new ArrayList<>()).add(zeile);
     }
-    // Sortiert wird ueber den hochgestellten Schluessel und nicht ueber den Rohwert: Sonst stuende
-    // eine kleingeschriebene Schreibweise hinter allen grossgeschriebenen, weil Kleinbuchstaben in
-    // der natuerlichen Ordnung hinter den Grossbuchstaben liegen.
-    knoten.sort(
-        Comparator.comparing(
-            knoten2 -> schluesselVon(knoten2.partner()),
-            Comparator.nullsLast(Comparator.naturalOrder())));
-    return List.copyOf(knoten);
+
+    List<GruppenknotenResponse> gruppen = new ArrayList<>(geschachtelt.size());
+    for (Map.Entry<String, List<Prozessgeruestzeile>> eintrag : geschachtelt.entrySet()) {
+      List<BaumknotenResponse> kinder = knoten(eintrag.getValue(), darunter, jeProzess, jetzt);
+      gruppen.add(
+          new GruppenknotenResponse(
+              eintrag.getKey(),
+              anzeige.get(eintrag.getKey()),
+              anzahlProzesse(kinder),
+              kinder.stream().mapToLong(BaumknotenResponse::nachrichten).sum(),
+              kinder.stream().mapToLong(BaumknotenResponse::fehler).sum(),
+              kinder));
+    }
+    gruppen.sort(Comparator.comparing(GruppenknotenResponse::schluessel, ebene.reihenfolge()));
+    return List.<BaumknotenResponse>copyOf(gruppen);
+  }
+
+  /** Wie viele Blaetter unter diesen Kindern haengen — eine Gruppe zaehlt ihre, ein Blatt sich. */
+  private static int anzahlProzesse(List<BaumknotenResponse> kinder) {
+    int anzahl = 0;
+    for (BaumknotenResponse kind : kinder) {
+      anzahl +=
+          switch (kind) {
+            case GruppenknotenResponse gruppe -> gruppe.anzahlProzesse();
+            case ProzessknotenResponse blatt -> 1;
+          };
+    }
+    return anzahl;
   }
 
   /**
@@ -238,38 +372,16 @@ public class ProzessbaumService {
     }
   }
 
-  private static String schluesselVon(String anzeigewert) {
-    return anzeigewert == null ? null : anzeigewert.toUpperCase(Locale.ROOT);
-  }
-
   /**
-   * Die mittlere Ebene. <b>Nur die Richtungen, die vorkommen</b> — kein leerer Ast.
+   * Ein freier Text als Gruppenschluessel — <b>dieselbe Gleichheit wie {@link
+   * Katalogzuordnung#gruppenschluessel(String, String)}</b>, fuer eine Spalte ohne Pflegestatus.
    *
-   * <p>Die Reihenfolge ist die der Aufzaehlung {@link Richtung} und danach „nicht ermittelt". Sie
-   * ist damit ueber alle Partner dieselbe; eine Oberflaeche, die Symbole nach Position vergibt,
-   * bekaeme sonst unter jedem Partner eine andere.
+   * <p>{@link Locale#ROOT}, damit die Umwandlung nicht an der Systemsprache haengt. Die Naeherung
+   * an {@code utf8mb4_general_ci} ist dieselbe und hat dieselbe Grenze (Akzente, offener Punkt
+   * 105).
    */
-  private static List<RichtungsknotenResponse> richtungsknoten(
-      Map<String, List<ProzessknotenResponse>> jeRichtung, Map<String, String> anzeige) {
-    List<RichtungsknotenResponse> knoten = new ArrayList<>(jeRichtung.size());
-    for (Map.Entry<String, List<ProzessknotenResponse>> eintrag : jeRichtung.entrySet()) {
-      List<ProzessknotenResponse> blaetter = List.copyOf(eintrag.getValue());
-      knoten.add(
-          new RichtungsknotenResponse(
-              anzeige.get(eintrag.getKey()),
-              blaetter.size(),
-              blaetter.stream().mapToLong(ProzessknotenResponse::nachrichten).sum(),
-              blaetter.stream().mapToLong(ProzessknotenResponse::fehler).sum(),
-              blaetter));
-    }
-    knoten.sort(
-        Comparator.comparingInt(
-                (RichtungsknotenResponse knoten2) ->
-                    richtungsrang(schluesselVon(knoten2.richtung())))
-            .thenComparing(
-                knoten2 -> schluesselVon(knoten2.richtung()),
-                Comparator.nullsLast(Comparator.naturalOrder())));
-    return List.copyOf(knoten);
+  private static String hochgestellt(String rohwert) {
+    return rohwert == null ? null : rohwert.toUpperCase(Locale.ROOT);
   }
 
   /**
@@ -302,6 +414,7 @@ public class ProzessbaumService {
     return new ProzessknotenResponse(
         zeile.processId(),
         zeile.processName(),
+        zeile.processId(),
         kennzahl.nachrichten(),
         kennzahl.fehler(),
         Zeitpunkte.nachUtc(zeile.letzteBewegung(), anwendungsuhr.getZone()),

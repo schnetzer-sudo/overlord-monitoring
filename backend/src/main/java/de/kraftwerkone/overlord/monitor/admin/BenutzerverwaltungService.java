@@ -3,6 +3,7 @@ package de.kraftwerkone.overlord.monitor.admin;
 import de.kraftwerkone.overlord.monitor.audit.AuditEvent;
 import de.kraftwerkone.overlord.monitor.audit.AuditEventType;
 import de.kraftwerkone.overlord.monitor.audit.AuditLogWriter;
+import de.kraftwerkone.overlord.monitor.common.Baumgliederung;
 import de.kraftwerkone.overlord.monitor.common.error.FachlicheAusnahme;
 import de.kraftwerkone.overlord.monitor.common.error.RessourceNichtGefundenException;
 import de.kraftwerkone.overlord.monitor.security.AngemeldeterNutzer;
@@ -37,6 +38,13 @@ import org.springframework.stereotype.Service;
  * beim naechsten Anmelden, und die Zusage, mit der dieses Projekt JWT abgelehnt hat, waere nicht
  * eingeloest. Die Zahl verworfener Sitzungen steht im Detail des ausloesenden Ereignisses und
  * bekommt keine eigene Art (E15).
+ *
+ * <p><b>Seit dem 15.09.2026 gibt es einen sechsten schreibenden Vorgang, und er verwirft keine
+ * Sitzung</b> ({@link #setzeBaumgliederung}, {@code docs/benutzerverwaltung.md} E26). Die Vorgabe
+ * der Baumgliederung ist keine Berechtigung und wirkt ohnehin sofort. Die fuenf oben bleiben, wie
+ * sie sind; der Satz „eine Regel, keine Fallunterscheidung" gilt fuer sie unveraendert, weil E5
+ * seinen Grund in der Wirkung eines Verwaltungsakts auf den Zugang hat — und genau die hat die
+ * Baumgliederung nicht.
  *
  * <p><b>Die Rollengrenze steht in {@code config/SecurityConfig}</b> ({@code /api/admin/**} verlangt
  * {@code ADMIN}) und nicht als Annotation hier — dieselbe Entscheidung wie bei {@link
@@ -238,6 +246,50 @@ public class BenutzerverwaltungService {
         admin, ziel, AuditEventType.PASSWORT_ZURUECKGESETZT, "Passwort gesetzt, Wechselzwang", ip);
   }
 
+  /**
+   * Die Vorgabe der Baumgliederung eines Kontos — <b>der sechste schreibende Vorgang, und der erste
+   * ohne Sitzungsentzug</b> ({@code docs/benutzerverwaltung.md} E26, seit 15.09.2026).
+   *
+   * <p><b>Warum E5 hier nicht greift.</b> E5 verwirft alle Sitzungen, damit ein Verwaltungsakt
+   * <i>sofort</i> wirkt — eine Sperre, die erst beim naechsten Anmelden greift, waere keine. Die
+   * Baumgliederung ist keine Berechtigung, und sie wirkt ohnehin sofort: Der Baum liest die Vorgabe
+   * bei jedem Aufruf ohne {@code ?gliederung=} neu aus {@code app_user}. Ein Entzug meldete den
+   * Nutzer ab, weil jemand die Anordnung seines Baums geaendert hat, ohne dass dadurch irgendetwas
+   * frueher gaelte.
+   *
+   * <p><b>Kein Selbstschutz:</b> Die Vorgabe entwertet nichts. Am eigenen Konto laeuft sie durch,
+   * und die Oberflaeche braucht dafuer keine Vorwarnung (E19), denn abgemeldet wird niemand.
+   *
+   * <p><b>Ein Endpunkt, ein Vorgang, eine Ereignisart</b> gilt weiter: {@code
+   * BAUMGLIEDERUNG_GEAENDERT}, mit altem und neuem Wert. Dass keine Sitzung verworfen wurde, steht
+   * im Detail — wer das Protokoll liest, soll den Unterschied zu den fuenf anderen nicht
+   * nachschlagen muessen.
+   *
+   * @throws FachlicheAusnahme {@code 400 gliederung-unbekannt} fuer einen Wert ausserhalb der
+   *     Whitelist; {@code 404} fuer eine unbekannte Konto-ID, wie bei den fuenf anderen
+   */
+  public NutzerzeileResponse setzeBaumgliederung(
+      AngemeldeterNutzer admin, long id, String gliederungText, String ip) {
+    KontoZeile ziel = konto(id);
+    Baumgliederung neu = Baumgliederung.ausText(gliederungText);
+    if (neu == null) {
+      // Der Rumpf ist @NotBlank; ueber HTTP kommt ohne Wert niemand hier an.
+      throw new IllegalArgumentException("Baumgliederung fehlt");
+    }
+    appUserRepository.setzeBaumgliederung(id, neu, jetztUtc());
+    protokolliere(
+        admin,
+        ziel,
+        AuditEventType.BAUMGLIEDERUNG_GEAENDERT,
+        "Baumgliederung "
+            + ziel.baumgliederung().name()
+            + " -> "
+            + neu.name()
+            + "; keine Sitzung verworfen",
+        ip);
+    return NutzerzeileResponse.fuer(konto(id), jetztUtc());
+  }
+
   // ───────────────────────────────────────────────────────────────────────────
   // Gemeinsames
   // ───────────────────────────────────────────────────────────────────────────
@@ -276,6 +328,17 @@ public class BenutzerverwaltungService {
   private NutzerzeileResponse abschluss(
       AngemeldeterNutzer admin, KontoZeile ziel, AuditEventType typ, String was, String ip) {
     int verworfen = sitzungsentzug.verwirfAlle(ziel.username());
+    protokolliere(admin, ziel, typ, was + "; Sitzungen verworfen: " + verworfen, ip);
+    return NutzerzeileResponse.fuer(konto(ziel.id()), jetztUtc());
+  }
+
+  /**
+   * Die Protokollzeile eines Verwaltungsvorgangs — fuer die fuenf mit Sitzungsentzug ({@link
+   * #abschluss}) und fuer die Baumgliederung ohne ({@link #setzeBaumgliederung}). <i>(Seit dem
+   * 15.09.2026 eine eigene Methode; bis dahin stand der Aufruf nur in {@code abschluss}.)</i>
+   */
+  private void protokolliere(
+      AngemeldeterNutzer admin, KontoZeile ziel, AuditEventType typ, String was, String ip) {
     auditLogWriter.schreibe(
         new AuditEvent(
             typ,
@@ -285,8 +348,7 @@ public class BenutzerverwaltungService {
             "app_user",
             String.valueOf(ziel.id()),
             ip,
-            ziel.username() + ": " + was + "; Sitzungen verworfen: " + verworfen));
-    return NutzerzeileResponse.fuer(konto(ziel.id()), jetztUtc());
+            ziel.username() + ": " + was));
   }
 
   /**

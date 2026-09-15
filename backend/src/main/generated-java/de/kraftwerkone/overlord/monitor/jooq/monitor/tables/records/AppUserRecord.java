@@ -119,73 +119,87 @@ public class AppUserRecord extends UpdatableRecordImpl<AppUserRecord> {
     }
 
     /**
+     * Setter for <code>overlord_monitor.app_user.tree_layout</code>.
+     */
+    public void setTreeLayout(String value) {
+        set(7, value);
+    }
+
+    /**
+     * Getter for <code>overlord_monitor.app_user.tree_layout</code>.
+     */
+    public String getTreeLayout() {
+        return (String) get(7);
+    }
+
+    /**
      * Setter for <code>overlord_monitor.app_user.failed_attempts</code>.
      */
     public void setFailedAttempts(Integer value) {
-        set(7, value);
+        set(8, value);
     }
 
     /**
      * Getter for <code>overlord_monitor.app_user.failed_attempts</code>.
      */
     public Integer getFailedAttempts() {
-        return (Integer) get(7);
+        return (Integer) get(8);
     }
 
     /**
      * Setter for <code>overlord_monitor.app_user.locked_until</code>.
      */
     public void setLockedUntil(LocalDateTime value) {
-        set(8, value);
+        set(9, value);
     }
 
     /**
      * Getter for <code>overlord_monitor.app_user.locked_until</code>.
      */
     public LocalDateTime getLockedUntil() {
-        return (LocalDateTime) get(8);
+        return (LocalDateTime) get(9);
     }
 
     /**
      * Setter for <code>overlord_monitor.app_user.last_login_at</code>.
      */
     public void setLastLoginAt(LocalDateTime value) {
-        set(9, value);
+        set(10, value);
     }
 
     /**
      * Getter for <code>overlord_monitor.app_user.last_login_at</code>.
      */
     public LocalDateTime getLastLoginAt() {
-        return (LocalDateTime) get(9);
+        return (LocalDateTime) get(10);
     }
 
     /**
      * Setter for <code>overlord_monitor.app_user.created_at</code>.
      */
     public void setCreatedAt(LocalDateTime value) {
-        set(10, value);
+        set(11, value);
     }
 
     /**
      * Getter for <code>overlord_monitor.app_user.created_at</code>.
      */
     public LocalDateTime getCreatedAt() {
-        return (LocalDateTime) get(10);
+        return (LocalDateTime) get(11);
     }
 
     /**
      * Setter for <code>overlord_monitor.app_user.updated_at</code>.
      */
     public void setUpdatedAt(LocalDateTime value) {
-        set(11, value);
+        set(12, value);
     }
 
     /**
      * Getter for <code>overlord_monitor.app_user.updated_at</code>.
      */
     public LocalDateTime getUpdatedAt() {
-        return (LocalDateTime) get(11);
+        return (LocalDateTime) get(12);
     }
 
     // -------------------------------------------------------------------------
@@ -211,7 +225,7 @@ public class AppUserRecord extends UpdatableRecordImpl<AppUserRecord> {
     /**
      * Create a detached, initialised AppUserRecord
      */
-    public AppUserRecord(Long id, String username, String passwordHash, String role, Boolean enabled, Boolean mustChangePassword, Boolean lockedByAdmin, Integer failedAttempts, LocalDateTime lockedUntil, LocalDateTime lastLoginAt, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public AppUserRecord(Long id, String username, String passwordHash, String role, Boolean enabled, Boolean mustChangePassword, Boolean lockedByAdmin, String treeLayout, Integer failedAttempts, LocalDateTime lockedUntil, LocalDateTime lastLoginAt, LocalDateTime createdAt, LocalDateTime updatedAt) {
         super(AppUser.APP_USER);
 
         setId(id);
@@ -221,6 +235,7 @@ public class AppUserRecord extends UpdatableRecordImpl<AppUserRecord> {
         setEnabled(enabled);
         setMustChangePassword(mustChangePassword);
         setLockedByAdmin(lockedByAdmin);
+        setTreeLayout(treeLayout);
         setFailedAttempts(failedAttempts);
         setLockedUntil(lockedUntil);
         setLastLoginAt(lastLoginAt);

@@ -126,6 +126,7 @@ class ProzessbaumStatementsTest {
           .isEqualTo(
               "select `GlassfishDB`.`Process`.`ProcessID`,"
                   + " `GlassfishDB`.`Process`.`ProcessName`,"
+                  + " `GlassfishDB`.`Project`.`ProjectDescription`,"
                   + " `overlord_monitor`.`process_catalog`.`partner`,"
                   + " `overlord_monitor`.`process_catalog`.`richtung`,"
                   + " `overlord_monitor`.`process_catalog`.`pflegestatus`, (select"
@@ -136,6 +137,8 @@ class ProzessbaumStatementsTest {
                   + " `overlord_monitor`.`message_rollup`.`stunde` desc fetch next ? rows only)"
                   + " from `GlassfishDB`.`Process` join `GlassfishDB`.`ProjectMandant` on"
                   + " `GlassfishDB`.`ProjectMandant`.`ProjectID` ="
+                  + " `GlassfishDB`.`Process`.`ProjectID` left outer join"
+                  + " `GlassfishDB`.`Project` on `GlassfishDB`.`Project`.`ProjectID` ="
                   + " `GlassfishDB`.`Process`.`ProjectID` left outer join"
                   + " `overlord_monitor`.`process_catalog` on"
                   + " `overlord_monitor`.`process_catalog`.`process_id` ="
@@ -185,6 +188,30 @@ class ProzessbaumStatementsTest {
     @DisplayName("Der Katalog haengt als LEFT JOIN dran")
     void katalog_als_left_join() {
       assertThat(geruest()).contains("left outer join `overlord_monitor`.`process_catalog`");
+    }
+
+    /**
+     * <b>Das Projekt haengt als {@code LEFT JOIN} dran</b> <i>(seit 15.09.2026)</i>, und genau eine
+     * Spalte kommt daraus in die Projektion: {@code ProjectDescription}, der Schluessel der
+     * Gliederung {@code PROJEKT}. {@code LEFT} wie in {@code docs/prozessauswahl.md} §4 — die
+     * Sichtbarkeit haengt an der Mandantenkette und nicht an einer Beschreibung.
+     *
+     * <p><b>Ein Geruest fuer beide Gliederungen</b>: Die Kette bleibt der eine Join auf {@code
+     * ProjectMandant}, und aus {@code Project} wird nichts gelesen ausser der Beschreibung.
+     */
+    @Test
+    @DisplayName("Das Projekt haengt als LEFT JOIN dran und liefert genau die Beschreibung")
+    void projekt_als_left_join() {
+      String text = geruest();
+      assertThat(text)
+          .contains(
+              "left outer join `GlassfishDB`.`Project` on `GlassfishDB`.`Project`.`ProjectID` ="
+                  + " `GlassfishDB`.`Process`.`ProjectID`")
+          .contains("`GlassfishDB`.`Project`.`ProjectDescription`")
+          .doesNotContain("`GlassfishDB`.`Project`.`ProjectName`");
+      assertThat(text.split("join `GlassfishDB`.`ProjectMandant`", -1))
+          .as("Die Mandantenkette steht genau einmal im Geruest")
+          .hasSize(2);
     }
 
     /** Ein Aufruf, ein Statement. Der Baum laedt nichts nach. */

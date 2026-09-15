@@ -961,6 +961,26 @@ export const de = {
     ohneNamen: "Prozess ohne Namen",
 
     /**
+     * Ein Projekt **ohne Beschreibung** (Projektgliederung, 15.09.2026). Am
+     * Bestand kommt der Fall bei keinem der zehn Mandanten vor; beschriftet ist
+     * er trotzdem, weil `ProjectDescription` im Schema leer sein darf und eine
+     * leere Zeile nichts sagte. **Keine Rückfallregel** (E‑144): Der Knoten
+     * bleibt, wo er ist, und bekommt nur ein Wort.
+     */
+    ohneBeschreibung: "Projekt ohne Beschreibung",
+
+    /**
+     * Der Schalter der Gliederung (E‑139): aus Partner, an Projekt. Seit dem
+     * 15.09.2026 ein Schalter neben „Nur mit Daten" statt zweier Knöpfe über
+     * der Spalte (E‑146 fortgeschrieben). Das Wort nennt, was **an** heißt; der
+     * Hinweis steht nur für Vorleseprogramme und sagt, was aus heißt.
+     */
+    gliederung: {
+      schalter: "Nach Projekt",
+      hinweis: "Gliedert den Baum nach Projekt statt nach Partner.",
+    },
+
+    /**
      * Die Richtung. **`nichtErmittelt` ist ein eigenes Wort und keine leere
      * Stelle** — bei `VOTG` trägt keine einzige der 390 Katalogzeilen eine
      * Richtung, und eine Ansicht, die dort nichts hinschriebe, behauptete, es
@@ -978,6 +998,9 @@ export const de = {
     baum: {
       bezeichnung: "Prozessbaum",
       eingrenzung: "Partner oder Prozess eingrenzen",
+      // Dasselbe Feld im Projektbaum: Dort wird über die Projektbeschreibung
+      // gesucht und nicht über einen Partner, den es in der Gliederung nicht gibt.
+      eingrenzungProjekt: "Projekt oder Prozess eingrenzen",
       eingrenzungLeeren: "Eingrenzung aufheben",
       keineTreffer: "Kein Partner und kein Prozess passt dazu.",
       leerTitel: "Kein Prozess",
@@ -986,7 +1009,11 @@ export const de = {
         "Übertragung — das ist keine Einstellung dieser Ansicht.",
       // Vorgabe aus (Entscheidung E‑48). Mit Vorgabe *an* wäre genau der Prozess
       // unauffindbar, den jemand sucht, weil er nichts trägt.
-      nurMitVerkehr: "Nur mit Verkehr im Zeitraum",
+      // Seit dem 15.09.2026 „Nur mit Daten" statt „Nur mit Verkehr im Zeitraum":
+      // kürzer, weil sich der Schalter die Zeile mit der Gliederung teilt, und
+      // „Daten" auf Wunsch des Auftraggebers — die englische Fassung bleibt. Dass
+      // es um den gewählten Zeitraum geht, sagt der vorgelesene Hinweis weiterhin.
+      nurMitVerkehr: "Nur mit Daten",
       nurMitVerkehrHinweis:
         "Blendet Prozesse aus, über die im gewählten Zeitraum nichts gelaufen ist. Wer wissen " +
         "will, warum nichts ankommt, lässt den Schalter aus.",
@@ -999,6 +1026,7 @@ export const de = {
       ebenePartner: "Partner",
       ebeneRichtung: "Richtung",
       ebeneProzess: "Prozess",
+      ebeneProjekt: "Projekt",
       // „Prozesse: 12" statt „12 Prozesse": Diese Anwendung kennt keine
       // Pluralregeln, und „1 Prozesse" wäre der Preis dafür.
       anzahlProzesse: "Prozesse: {anzahl}",
@@ -1500,7 +1528,18 @@ export const de = {
       passwortHinweis:
         "Mindestens {laenge} Zeichen, und es darf nicht dem bisherigen entsprechen. Das Konto muss es beim nächsten Anmelden selbst ändern. Gib es dem Nutzer auf einem Weg, den du selbst wählst — hier steht es danach nirgends mehr.",
       eigenesKonto:
-        "Das ist dein eigenes Konto. Jede Änderung daran meldet dich ab, und du musst dich neu anmelden.",
+        "Das ist dein eigenes Konto. Jede Änderung daran — außer an der Baumgliederung — meldet dich ab, und du musst dich neu anmelden.",
+      // Die Vorgabe der Baumgliederung (15.09.2026). Die Werte nennen die
+      // Ebenen, damit „Partner“ in einem Auswahlfeld nicht wie ein Filter
+      // aussieht; der Hinweis beantwortet die Frage, die zuerst käme: Ist das
+      // eine Berechtigung? Nein — und die Änderung meldet niemanden ab (E26).
+      baumgliederung: "Prozessbaum beginnt mit",
+      baumgliederungWerte: {
+        PARTNER: "Partner, Richtung, Prozess",
+        PROJEKT: "Projekt, Prozess",
+      },
+      baumgliederungHinweis:
+        "So ist der Prozessbaum dieses Kontos beim ersten Aufruf gegliedert. Umschalten kann der Nutzer jederzeit selbst — das ist eine Vorgabe und keine Berechtigung, und die Änderung meldet niemanden ab.",
     },
     // Die Anlegemaske über der Liste (9c). Sie teilt sich die Sperre mit den
     // Zeilenformularen — der gesperrte Zustand trägt deshalb denselben Satz wie
@@ -1547,6 +1586,10 @@ export const de = {
         rolle: "Rolle ändern",
         mandanten: "Mandanten ändern",
         passwort: "Passwort setzen",
+        // Erscheint nie: Die Baumgliederung meldet niemanden ab und braucht
+        // deshalb keine Vorwarnung (E26). Der Schlüssel steht hier, weil die
+        // Vorwarnung ihren Text je Vorgangsart nachschlägt.
+        baumgliederung: "Baumgliederung ändern",
       },
       bestaetigen: "Ausführen und abmelden",
       laeuft: "Wird ausgeführt …",
@@ -1686,6 +1729,10 @@ export const de = {
     "richtung-unbekannt": "Wähle „Eingehend“, „Ausgehend“ — oder gar keine Richtung.",
     "feld-unbekannt": "Wähle genau eines der Felder Partner oder Richtung.",
     "modus-unbekannt": "Diesen Modus gibt es nicht.",
+    // Prozessbaum und Benutzerverwaltung (15.09.2026). Über die Bedienung nicht
+    // erreichbar — der Umschalter kennt nur die zwei Werte —; er steht hier für
+    // die von Hand gebaute Adresse, und er fällt nicht still auf die Vorgabe.
+    "gliederung-unbekannt": "Diese Gliederung gibt es nicht. Wähle Partner oder Projekt.",
     "limit-ungueltig": "Diese Seitengröße ist nicht zulässig.",
     "cursor-ungueltig": "Die Seitenposition ist nicht mehr gültig. Beginne wieder auf Seite eins.",
     "altes-passwort-falsch": "Das bisherige Passwort stimmt nicht.",

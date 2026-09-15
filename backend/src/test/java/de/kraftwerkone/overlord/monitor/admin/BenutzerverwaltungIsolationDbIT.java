@@ -148,4 +148,27 @@ class BenutzerverwaltungIsolationDbIT extends SicherheitsTestbasis {
         .as("Das bisherige Passwort gilt unveraendert weiter")
         .isEqualTo(200);
   }
+
+  /**
+   * <i>(seit 15.09.2026.)</i> <b>Die Vorgabe ist keine Berechtigung — ihre Pflege ist trotzdem
+   * eine.</b> Umschalten darf jeder am Baum, ueber die URL; die Vorgabe eines Kontos setzt nur ein
+   * ADMIN. Ein MANDANT-Nutzer bekommt {@code 403}, auch auf das eigene Konto, und die Antwort ist
+   * von der auf ein erfundenes Konto nicht zu unterscheiden.
+   */
+  @Test
+  @DisplayName("PUT .../tree-layout ist verschlossen — auch auf das eigene Konto")
+  void baumgliederung_ist_verschlossen() throws Exception {
+    Antwort eigenes =
+        alsKunde.aendere(
+            "/api/admin/users/" + eigeneId + "/tree-layout", "{\"treeLayout\":\"PROJEKT\"}");
+    Antwort erfunden =
+        alsKunde.aendere(
+            "/api/admin/users/" + ERFUNDENE_ID + "/tree-layout", "{\"treeLayout\":\"PROJEKT\"}");
+
+    verschlossen(eigenes);
+    assertThat(vergleichbar(eigenes)).isEqualTo(vergleichbar(erfunden));
+    assertThat(appUserRepository.findeKonto(eigeneId).orElseThrow().baumgliederung().name())
+        .as("Ein abgelehnter Aufruf aendert die Vorgabe nicht")
+        .isEqualTo("PARTNER");
+  }
 }

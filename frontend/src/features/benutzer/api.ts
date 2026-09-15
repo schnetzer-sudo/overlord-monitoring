@@ -1,3 +1,4 @@
+import type { Baumgliederung } from "@/lib/baumgliederung";
 import { aendere, hole, sende } from "@/lib/http";
 
 /**
@@ -108,6 +109,14 @@ export type Nutzerzeile = {
    * sieht aus wie eine fehlende Angabe.
    */
   lastLogin: string | null;
+  /**
+   * Womit der Prozessbaum dieses Kontos beginnt, wenn die URL keine Gliederung
+   * nennt — `PARTNER` oder `PROJEKT` *(seit 15.09.2026, das zehnte Feld)*.
+   *
+   * **Keine Berechtigung**: Der Nutzer darf jederzeit selbst umschalten. Als
+   * Zeichenkette gelesen wie `role` — ein unbekannter Wert bleibt lesbar.
+   */
+  treeLayout: string;
 };
 
 export const BENUTZER_SCHLUESSEL = {
@@ -221,6 +230,23 @@ export function setzeMandanten(id: number, mandanten: readonly string[]): Promis
  */
 export function setzePasswort(id: number, passwort: string): Promise<Nutzerzeile> {
   return sende<Nutzerzeile>(pfad(id, "password"), { initialPassword: passwort });
+}
+
+/**
+ * Die Vorgabe der Baumgliederung — **der sechste Vorgang, und der eine ohne
+ * Sitzungsentzug** (`docs/benutzerverwaltung.md` E26, seit 15.09.2026).
+ *
+ * **Keine Berechtigung**: Sie sagt, womit der Prozessbaum des Kontos beginnt,
+ * wenn die URL keine Gliederung nennt; umschalten darf der Nutzer selbst. Sie
+ * verwirft keine Sitzung, und am eigenen Konto braucht sie deshalb keine
+ * Vorwarnung (`selbstschutz.ts`, `verwirftSitzungen`).
+ *
+ * **Englisch wie die Nachbarn** — Pfad `tree-layout`, Feld `treeLayout`
+ * (`docs/benutzerverwaltung.md` §5); die Werte bleiben `PARTNER` und `PROJEKT`,
+ * wie `role` deutsche Werte trägt.
+ */
+export function setzeBaumgliederung(id: number, gliederung: Baumgliederung): Promise<Nutzerzeile> {
+  return aendere<Nutzerzeile>(pfad(id, "tree-layout"), { treeLayout: gliederung });
 }
 
 // ───────────────────────────────────────────────────────────────────────────

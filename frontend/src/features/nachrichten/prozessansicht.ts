@@ -1,5 +1,10 @@
 import { createParser, parseAsBoolean, parseAsIsoDateTime } from "nuqs";
 
+import {
+  istBaumgliederung,
+  parseAsBaumgliederung,
+  type Baumgliederung,
+} from "@/lib/baumgliederung";
 import { ProblemFehler } from "@/lib/http";
 import {
   baumfensterAlsParameter,
@@ -22,7 +27,7 @@ import {
  * Der URL-Zustand der **Prozessansicht** — `/prozesse`.
  *
  * ```
- * /prozesse?zeitraum=30T&prozess=<ProcessID>&nachricht=<MessageID>&nurMitVerkehr=true
+ * /prozesse?zeitraum=30T&gliederung=PROJEKT&prozess=<ProcessID>&nachricht=<MessageID>&nurMitVerkehr=true
  * /prozesse?von=<ISO,UTC>&bis=<ISO,UTC>&prozess=<ProcessID>
  * ```
  *
@@ -32,13 +37,18 @@ import {
  * (`lib/rollupzeitraum.ts`, {@link mitPaar} / {@link mitFreiemBaumfenster});
  * „frei gewählt, noch nichts eingetragen" steht **nicht** in der URL.
  *
+ * **Seit dem 15.09.2026 steht die Gliederung darin — aber erst, wenn jemand
+ * umschaltet** (E‑143). Ohne Parameter setzt der Server die Vorgabe des Kontos
+ * ein und nennt sie in der Antwort; ein geteilter Link ohne Parameter zeigt beim
+ * Empfänger dessen eigene Vorgabe.
+ *
  * **Frei von React**, wie `filter.ts` und `suche.ts`: Die Umrechnung Zustand →
  * URL und Zustand → Anfrage ist eine reine Funktion und wird als solche geprüft
  * (`tests/prozessansicht.test.ts`).
  *
  * ## Was hier **nicht** steht, und warum
  *
- * **Der aufgeklappte Partner.** Er ergibt sich aus dem gewählten Prozess
+ * **Der aufgeklappte Knoten.** Er ergibt sich aus dem gewählten Prozess
  * (`prozessbaum.ts` {@link pfadZuProzess}). Zwei Zustände für dieselbe Sache
  * liefen auseinander, und ein Link mit `prozess=…` und einem widersprechenden
  * Aufklappzustand wäre nicht mehr zu deuten.
@@ -121,6 +131,13 @@ export const PROZESSANSICHT_PARAMETER = {
    */
   von: parseAsIsoDateTime,
   bis: parseAsIsoDateTime,
+  /**
+   * Die Gliederung des Baums — **ohne `withDefault`** (E‑143). Die Vorgabe ist je
+   * Konto verschieden und steht auf dem Server; eine hier wäre für jeden Nutzer
+   * dieselbe. `replace` wie jeder Filter: Umschalten ist keine Station, zu der
+   * man zurückgeht.
+   */
+  gliederung: parseAsBaumgliederung,
   prozess: parseAsKennung.withOptions({ history: "push" }),
   [NACHRICHT_PARAMETER]: parseAsKennung.withOptions({ history: "push" }),
   nurMitVerkehr: parseAsBoolean.withDefault(NUR_MIT_VERKEHR_VORGABE),
@@ -145,6 +162,12 @@ export type Prozessansichtzustand = {
   /** Das freie Fenster. Steht eines von beiden, ist `zeitraum` `null` — und umgekehrt. */
   von: Date | null;
   bis: Date | null;
+  /**
+   * Die **gewählte** Gliederung — `null` heißt „nicht gewählt", nicht
+   * `PARTNER`. Welche dann gilt, entscheidet die Vorgabe des Kontos, und die
+   * Antwort nennt sie (E‑143).
+   */
+  gliederung: Baumgliederung | null;
   /** Die gewählte `ProcessID`. `null` heißt: rechts steht der Leerzustand. */
   prozess: string | null;
   /** Die geöffnete Nachricht. `null` heißt: rechts steht die Übertragungsliste. */
@@ -158,6 +181,7 @@ export const LEERE_PROZESSANSICHT: Prozessansichtzustand = {
   zeitraum: null,
   von: null,
   bis: null,
+  gliederung: null,
   prozess: null,
   nachricht: null,
   nurMitVerkehr: NUR_MIT_VERKEHR_VORGABE,
@@ -182,6 +206,9 @@ export function alsSuchparameter(zustand: Prozessansichtzustand): URLSearchParam
   }
   if (zustand.bis !== null) {
     parameter.set("bis", zustand.bis.toISOString());
+  }
+  if (zustand.gliederung !== null) {
+    parameter.set("gliederung", zustand.gliederung);
   }
   if (zustand.nurMitVerkehr) {
     parameter.set("nurMitVerkehr", "true");
@@ -210,6 +237,7 @@ export function ausSuchparametern(suchparameter: URLSearchParams): Prozessansich
   const zeitraum = suchparameter.get("zeitraum");
   const von = suchparameter.get("von");
   const bis = suchparameter.get("bis");
+  const gliederung = suchparameter.get("gliederung");
   const prozess = suchparameter.get("prozess");
   const nachricht = suchparameter.get(NACHRICHT_PARAMETER);
   const nurMitVerkehr = suchparameter.get("nurMitVerkehr");
@@ -228,11 +256,25 @@ export function ausSuchparametern(suchparameter: URLSearchParams): Prozessansich
     zeitraum: istRollupzeitraum(zeitraum) ? zeitraum : null,
     von: zeitpunkt(von),
     bis: zeitpunkt(bis),
+    gliederung: istBaumgliederung(gliederung) ? gliederung : null,
     prozess: kennung(prozess),
     nachricht: kennung(nachricht),
     nurMitVerkehr: nurMitVerkehr === null ? NUR_MIT_VERKEHR_VORGABE : nurMitVerkehr === "true",
     sortierung: istSortierung(sortierung) ? sortierung : null,
   };
+}
+
+/**
+ * Welche Gliederung der Umschalter hervorhebt — **was gilt, nicht was in der URL
+ * steht**: die gewählte, sonst die, die die Antwort nennt. Fehlt auch die
+ * Antwort, ist keine gedrückt — eine vorgemerkte wäre eine Vermutung, die beim
+ * Eintreffen springt. Dieselbe Regel wie `hervorgehobenesPaar` für den Zeitraum.
+ */
+export function hervorgehobeneGliederung(
+  zustand: Prozessansichtzustand,
+  ausDerAntwort: Baumgliederung | undefined,
+): Baumgliederung | null {
+  return zustand.gliederung ?? ausDerAntwort ?? null;
 }
 
 /**
@@ -251,6 +293,9 @@ export function ausSuchparametern(suchparameter: URLSearchParams): Prozessansich
  * Fenster zeigen Baum und Liste denselben Ausschnitt; mit einem eigenen
  * Zeitraum stünden links und rechts zwei verschiedene Zahlen, und keine wäre
  * falsch.
+ *
+ * **Die Gliederung geht nicht ein** *(15.09.2026)*: Beide Gliederungen enden im
+ * selben Blatt und übergeben dieselbe `processId` an dieselbe Liste.
  *
  * **Gerechnet wird hier nichts.** Das Fenster kommt aus der Antwort, die es
  * gegen die *Anwendungsuhr* aufgelöst hat (Regel Z1) — im Browser gerechnet
@@ -304,12 +349,17 @@ export function listenfilter(
 
 /**
  * Die Abfrage des Baum-Endpunkts aus dem Zustand — `?zeitraum=…`, `?von=…&bis=…`
- * oder nichts. **Sie ist der Abfrageschlüssel**: Ein anderes Fenster ist eine
- * andere Antwort, und das Fenster ohne Parameter ist ein eigener Schlüssel und
- * nicht der des vom Endpunkt gewählten Paares (`docs/dashboard-frontend.md` §2).
+ * oder nichts, dazu `gliederung`, wenn gewählt. **Sie ist der
+ * Abfrageschlüssel**: Ein anderes Fenster oder eine andere Gliederung ist eine
+ * andere Antwort, und die Abfrage ohne Parameter ist ein eigener Schlüssel und
+ * nicht der des vom Endpunkt gewählten Paares oder der Vorgabe des Kontos
+ * (`docs/dashboard-frontend.md` §2).
  */
 export function baumabfrage(zustand: Prozessansichtzustand): string {
   const parameter = new URLSearchParams(baumfensterAlsParameter(zustand));
+  if (zustand.gliederung !== null) {
+    parameter.set("gliederung", zustand.gliederung);
+  }
   const text = parameter.toString();
   return text === "" ? "" : `?${text}`;
 }
@@ -431,10 +481,13 @@ export function absprungfenster(
  * /prozesse?von=…&bis=…&prozess=<ProcessID>&nachricht=<MessageID>
  * ```
  *
- * Der aufgeklappte Partner steht nicht darin; er ergibt sich über
+ * Der aufgeklappte Knoten steht nicht darin; er ergibt sich über
  * `pfadZuProzess` aus dem gewählten Prozess (`docs/process-view.md` §15). Gebaut
  * über {@link alsSuchparameter}, damit die Adresse dieselbe Gestalt hat wie die,
  * die die Prozessansicht selbst schreibt — und derselbe Test sie liest.
+ *
+ * **Ohne Gliederung** *(15.09.2026)*: Wer aus dem Detail springt, landet in der
+ * Vorgabe seines Kontos — der Prozess steht in beiden Gliederungen.
  */
 export function absprungZiel(
   processId: string,

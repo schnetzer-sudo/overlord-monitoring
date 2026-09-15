@@ -23,6 +23,7 @@ offener Punkt 1 in §9 geschlossen.
 | Geändert | `POST /api/auth/password` verwirft jetzt die *übrigen* Sitzungen (E6) |
 | Geändert | `GET /api/auth/me` verliert das Feld `downloadAllowed` — **Vertragsbruch aus Schritt 3**, datiert vermerkt |
 | Nachgetragen *(24.08.2026)* | `lockedUntil` in der Kontenzeile — **eine umgekehrte Entscheidung** (E20), begründet im Korrekturkasten in §4 |
+| Nachgetragen *(15.09.2026)* | Die Vorgabe der Baumgliederung: `V13__tree_layout.sql`, `PUT /api/admin/users/{id}/tree-layout`, Ereignisart `BAUMGLIEDERUNG_GEAENDERT`, das zehnte Feld `treeLayout` — **der erste schreibende Vorgang ohne Sitzungsentzug** ([`benutzerverwaltung.md`](benutzerverwaltung.md) E26), §4a |
 
 Neue Klassen: `admin/BenutzerverwaltungController`, `admin/BenutzerverwaltungService`,
 `admin/NutzerzeileResponse`, `security/KontoZeile`, `security/Sitzungsentzug`.
@@ -364,6 +365,47 @@ diesen Endpunkt auf sein eigenes Konto anwendet, wirft sich zwar aus allen Sitzu
 sich aber nicht aus — er kennt das eben getippte Passwort.
 
 **In keiner Protokollzeile steht jemals ein Passwort**, auch nicht gehasht, auch nicht abgekürzt.
+
+---
+
+## 4a. Die Vorgabe der Baumgliederung *(15.09.2026)*
+
+Fachlich entschieden in [`benutzerverwaltung.md`](benutzerverwaltung.md) §7c (E26); der Baum, der
+die Vorgabe liest, steht in [`process-view.md`](process-view.md) §48.
+
+| | |
+|---|---|
+| Migration | `V13__tree_layout.sql` — `app_user.tree_layout VARCHAR(20) NOT NULL DEFAULT 'PARTNER'`, **Zeichensatz und Sortierung an der Spalte** und nicht von der Tabelle geerbt; `VARCHAR` und kein `ENUM`, dieselbe Bauform wie `process_catalog.richtung` |
+| Endpunkt | `PUT /api/admin/users/{id}/tree-layout`, Rumpf `{"treeLayout": "PROJEKT"}` (`BaumgliederungRequest`, `@NotBlank`) |
+| Ereignisart | `BAUMGLIEDERUNG_GEAENDERT`, Detail „`<name>: Baumgliederung PARTNER -> PROJEKT; keine Sitzung verworfen`" |
+| Dienst | `BenutzerverwaltungService.setzeBaumgliederung` — **ruft `abschluss` nicht**, sondern das daraus gelöste `protokolliere`: kein `Sitzungsentzug`, kein `pruefeEntwertung` (E26). `abschluss` ruft seither selbst `protokolliere`; die fünf Vorgänge schreiben Zeichen für Zeichen dasselbe Detail wie vorher |
+| Repository | `AppUserRepository.setzeBaumgliederung` (ein `UPDATE`, von selbst atomar) und `baumgliederungVon` (eine Zeile über den Primärschlüssel; gelesen vom Baum-Endpunkt, wenn `?gliederung=` fehlt) |
+| Zeile | zehntes Feld `treeLayout` in `NutzerzeileResponse`, `baumgliederung` in `KontoZeile`, mitgelesen in `AppUserRepository.konten` — dieselbe Zeile, dieselbe Tabelle, kein Join |
+| Typ | `common/Baumgliederung` — in `common`, weil `catalog` und `admin` ihn brauchen und Fachpakete einander nicht kennen |
+
+**Die Zeile aus §4 bekommt damit ein zehntes Feld**, und das Beispiel dort gilt weiter bis auf den
+Zusatz `"treeLayout": "PARTNER"` am Ende. Der Wert ist eine Zeichenkette wie `role`; gelesen wird
+er streng über `Baumgliederung.ausDatenbank` — ein Wert außerhalb der Whitelist ist ein Datenfehler
+und keine Eingabe.
+
+**Statuscodes, fortgeschrieben aus §4:**
+
+| Fall | Status | Problemtyp |
+|---|---|---|
+| unbekannte Konto-ID | `404` | `nicht-gefunden` |
+| Wert außerhalb von `PARTNER`/`PROJEKT` | `400` | **`gliederung-unbekannt`** (neu; dieselbe Bauform wie `modus-unbekannt`) |
+| leerer Rumpf | `400` | `eingabe-ungueltig` |
+| MANDANT-Nutzer, auch auf das eigene Konto | `403` | `zugriff-verweigert` (`SecurityConfig`, `/api/admin/**`) |
+
+**Kein `409`**: Es gibt keinen Zustand, der die Vorgabe verböte — auch nicht am eigenen Konto.
+
+**Tests:** `BenutzerverwaltungServiceTest` (drei Fälle: geschrieben und protokolliert ohne
+Sitzungsentzug; am eigenen Konto ohne Selbstschutz; unbekannter Wert schreibt nichts),
+`BenutzerverwaltungDbIT` (drei: gesetzt, wirkt im Baum ohne Neuanmeldung, der Nutzer bleibt
+angemeldet; am eigenen Konto keine Abmeldung; `400` für unbekannt und leer),
+`BenutzerverwaltungIsolationDbIT` (einer: `403` auf das eigene Konto, ununterscheidbar von einem
+erfundenen, Wert unverändert), `NutzerzeileResponseTest` (einer) und `common/BaumgliederungTest`
+(vier).
 
 ---
 

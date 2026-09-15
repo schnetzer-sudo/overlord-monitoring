@@ -1,5 +1,6 @@
 package de.kraftwerkone.overlord.monitor.security;
 
+import de.kraftwerkone.overlord.monitor.common.Baumgliederung;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -30,6 +31,9 @@ import java.util.List;
  * @param letzteAnmeldungUtc {@code null}, wenn sich das Konto noch <b>nie</b> angemeldet hat — bei
  *     ueber zwanzig externen Nutzern die haeufigste Supportfrage (E17). Der Wert kommt aus {@code
  *     audit_log}, nicht aus einer Spalte an {@code app_user}.
+ * @param baumgliederung {@code app_user.tree_layout} — womit der Prozessbaum dieses Kontos beginnt,
+ *     wenn die URL keine Gliederung nennt <i>(seit 15.09.2026, {@code V13})</i>. <b>Keine
+ *     Berechtigung</b>: Der Nutzer darf jederzeit umschalten.
  */
 public record KontoZeile(
     long id,
@@ -40,7 +44,8 @@ public record KontoZeile(
     LocalDateTime gesperrtBisUtc,
     boolean aktiv,
     boolean passwortwechselErforderlich,
-    LocalDateTime letzteAnmeldungUtc) {
+    LocalDateTime letzteAnmeldungUtc,
+    Baumgliederung baumgliederung) {
 
   public KontoZeile {
     mandanten = List.copyOf(mandanten);

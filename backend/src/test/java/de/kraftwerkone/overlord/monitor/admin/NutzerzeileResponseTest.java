@@ -2,6 +2,7 @@ package de.kraftwerkone.overlord.monitor.admin;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import de.kraftwerkone.overlord.monitor.common.Baumgliederung;
 import de.kraftwerkone.overlord.monitor.security.KontoZeile;
 import de.kraftwerkone.overlord.monitor.security.Rolle;
 import java.time.LocalDateTime;
@@ -37,7 +38,19 @@ class NutzerzeileResponseTest {
         gesperrtBisUtc,
         true,
         false,
-        null);
+        null,
+        Baumgliederung.PROJEKT);
+  }
+
+  /**
+   * <b>Das zehnte Feld</b> <i>(15.09.2026)</i>: die Vorgabe der Baumgliederung, als Zeichenkette
+   * wie {@code role}. Durchgereicht und nicht gegen eine Uhr geprueft — sie ist keine Zeitaussage.
+   */
+  @Test
+  @DisplayName("Die Vorgabe der Baumgliederung steht als zehntes Feld in der Zeile")
+  void baumgliederung_steht_drin() {
+    assertThat(NutzerzeileResponse.fuer(konto(false, null), JETZT).treeLayout())
+        .isEqualTo("PROJEKT");
   }
 
   @Test

@@ -11,6 +11,7 @@ import {
   type Zeitfensterzustand,
   type Zeitraum,
 } from "@/lib/filter";
+import type { Baumgliederung } from "@/lib/baumgliederung";
 import type { Rollupzeitraum } from "@/lib/rollupzeitraum";
 
 import {
@@ -838,6 +839,22 @@ export function useProzessansichtzustand() {
      */
     setzeSortierung: useCallback(
       (sortierung: Sortierung) => void setzeZustand({ sortierung }),
+      [setzeZustand],
+    ),
+    /**
+     * Die Gliederung des Baums (E‑143).
+     *
+     * **Geschrieben wird erst beim Umschalten** — dann aber immer, auch auf den
+     * Wert, den die Antwort ohnehin nannte: Ein Klick ist eine Absicht, und erst
+     * er nimmt die Wahl in den Link mit. Ohne Klick steht nichts in der URL, und
+     * ein geteilter Link zeigt beim Empfänger dessen eigene Vorgabe.
+     *
+     * **Prozess, Fenster und geöffnete Nachricht bleiben stehen**: Beide
+     * Gliederungen tragen dieselben Blätter, ein gewählter Prozess steht in der
+     * anderen genauso.
+     */
+    setzeGliederung: useCallback(
+      (gliederung: Baumgliederung) => void setzeZustand({ gliederung }),
       [setzeZustand],
     ),
   };

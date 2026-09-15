@@ -5,12 +5,15 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import de.kraftwerkone.overlord.monitor.audit.AuditEventType;
 import de.kraftwerkone.overlord.monitor.audit.AuditLogWriter;
+import de.kraftwerkone.overlord.monitor.common.Baumgliederung;
 import de.kraftwerkone.overlord.monitor.common.error.FachlicheAusnahme;
 import de.kraftwerkone.overlord.monitor.security.AngemeldeterNutzer;
 import de.kraftwerkone.overlord.monitor.security.AppUserRepository;
@@ -43,6 +46,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
  * Integrationstest die erste Stufe (das eigene Konto) sowie alles uebrige. Die Bedingung selbst —
  * <i>aktiv und nicht administrativ gesperrt</i> — steht als eine Zeile in {@code
  * AppUserRepository.existiertAndererNutzbarerAdmin}.
+ *
+ * <p><b>Seit dem 15.09.2026 steht hier auch die Baumgliederung</b> (E26), und aus einem verwandten
+ * Grund: Ihre tragende Aussage ist ein <i>ausbleibender</i> Aufruf — kein Sitzungsentzug, kein
+ * Selbstschutz. Am gestellten Repository ist das eine Zeile; an der Testkopie waere es eine
+ * Behauptung ueber Sitzungen, die nebenher niemand anlegt.
  */
 class BenutzerverwaltungServiceTest {
 
@@ -54,27 +62,42 @@ class BenutzerverwaltungServiceTest {
       new AngemeldeterNutzer(1L, "it-handelnder", Rolle.ADMIN, false);
 
   private AppUserRepository appUserRepository;
+  private AuditLogWriter auditLogWriter;
   private Sitzungsentzug sitzungsentzug;
   private BenutzerverwaltungService service;
 
   @BeforeEach
   void aufsetzen() {
     appUserRepository = mock(AppUserRepository.class);
+    auditLogWriter = mock(AuditLogWriter.class);
     sitzungsentzug = mock(Sitzungsentzug.class);
     service =
         new BenutzerverwaltungService(
             appUserRepository,
             mock(MandantRepository.class),
             mock(PasswordEncoder.class),
-            mock(AuditLogWriter.class),
+            auditLogWriter,
             sitzungsentzug,
             Clock.fixed(JETZT.toInstant(ZoneOffset.UTC), ZoneOffset.UTC));
   }
 
+  private static KontoZeile konto(long id, String username, boolean adminGesperrt) {
+    return new KontoZeile(
+        id,
+        username,
+        Rolle.ADMIN,
+        List.of("VOTG"),
+        adminGesperrt,
+        null,
+        true,
+        false,
+        null,
+        Baumgliederung.PARTNER);
+  }
+
   /** Das Ziel: ein nutzbarer Administrator mit Mandant, also ohne Nebenbedingung aus E11. */
   private KontoZeile zielIstNutzbarerAdmin() {
-    KontoZeile ziel =
-        new KontoZeile(2L, "it-ziel", Rolle.ADMIN, List.of("VOTG"), false, null, true, false, null);
+    KontoZeile ziel = konto(2L, "it-ziel", false);
     when(appUserRepository.findeKonto(2L)).thenReturn(Optional.of(ziel));
     return ziel;
   }
@@ -175,9 +198,7 @@ class BenutzerverwaltungServiceTest {
   @Test
   @DisplayName("Faellt beides zusammen, meldet der letzte Administrator — nicht der Selbstschutz")
   void letzter_admin_geht_dem_selbstschutz_vor() {
-    KontoZeile selbst =
-        new KontoZeile(
-            1L, "it-handelnder", Rolle.ADMIN, List.of("VOTG"), false, null, true, false, null);
+    KontoZeile selbst = konto(1L, "it-handelnder", false);
     when(appUserRepository.findeKonto(1L)).thenReturn(Optional.of(selbst));
     when(appUserRepository.existiertAndererNutzbarerAdmin(1L)).thenReturn(false);
 
@@ -194,9 +215,7 @@ class BenutzerverwaltungServiceTest {
   @Test
   @DisplayName("Ohne den letzten Administrator greift auf dem eigenen Konto der Selbstschutz")
   void selbstschutz_greift_wenn_es_noch_einen_admin_gibt() {
-    KontoZeile selbst =
-        new KontoZeile(
-            1L, "it-handelnder", Rolle.ADMIN, List.of("VOTG"), false, null, true, false, null);
+    KontoZeile selbst = konto(1L, "it-handelnder", false);
     when(appUserRepository.findeKonto(1L)).thenReturn(Optional.of(selbst));
     when(appUserRepository.existiertAndererNutzbarerAdmin(1L)).thenReturn(true);
 
@@ -212,15 +231,72 @@ class BenutzerverwaltungServiceTest {
   @DisplayName(
       "Ein bereits gesperrtes Ziel ist kein nutzbarer ADMIN und faellt nicht unter die Regel")
   void gesperrtes_ziel_faellt_nicht_unter_die_regel() {
-    when(appUserRepository.findeKonto(2L))
-        .thenReturn(
-            Optional.of(
-                new KontoZeile(
-                    2L, "it-ziel", Rolle.ADMIN, List.of("VOTG"), true, null, true, false, null)));
+    when(appUserRepository.findeKonto(2L)).thenReturn(Optional.of(konto(2L, "it-ziel", true)));
 
     service.setzeAktiv(HANDELNDER, 2L, false, IP);
 
     verify(appUserRepository).setzeAktiv(2L, false, JETZT);
     verify(appUserRepository, never()).existiertAndererNutzbarerAdmin(anyLong());
+  }
+
+  // ─── Die Baumgliederung (15.09.2026, E26) ──────────────────────────────────────
+
+  /**
+   * <b>Der sechste schreibende Vorgang verwirft keine Sitzung</b> (E26). Geschrieben und
+   * protokolliert wird trotzdem, mit eigener Ereignisart und altem wie neuem Wert — ein Endpunkt,
+   * ein Vorgang, eine Ereignisart gilt weiter.
+   */
+  @Test
+  @DisplayName("Die Baumgliederung wird geschrieben und protokolliert, ohne Sitzungsentzug")
+  void baumgliederung_ohne_sitzungsentzug() {
+    zielIstNutzbarerAdmin();
+
+    service.setzeBaumgliederung(HANDELNDER, 2L, "PROJEKT", IP);
+
+    verify(appUserRepository).setzeBaumgliederung(2L, Baumgliederung.PROJEKT, JETZT);
+    verify(auditLogWriter)
+        .schreibe(
+            argThat(
+                ereignis ->
+                    ereignis.typ() == AuditEventType.BAUMGLIEDERUNG_GEAENDERT
+                        && ereignis.detail().contains("PARTNER -> PROJEKT")
+                        && ereignis.detail().contains("keine Sitzung verworfen")));
+    verify(sitzungsentzug, never()).verwirfAlle(any());
+  }
+
+  /**
+   * <b>Am eigenen Konto: kein Selbstschutz.</b> Die Vorgabe entwertet nichts — der Dienst fragt
+   * deshalb nicht einmal nach dem letzten Administrator, und abgemeldet wird niemand.
+   */
+  @Test
+  @DisplayName("Auch am eigenen Konto laeuft sie durch — ohne Selbstschutz, ohne Abmeldung")
+  void baumgliederung_am_eigenen_konto() {
+    when(appUserRepository.findeKonto(1L))
+        .thenReturn(Optional.of(konto(1L, "it-handelnder", false)));
+
+    service.setzeBaumgliederung(HANDELNDER, 1L, "projekt", IP);
+
+    verify(appUserRepository).setzeBaumgliederung(1L, Baumgliederung.PROJEKT, JETZT);
+    verify(appUserRepository, never()).existiertAndererNutzbarerAdmin(anyLong());
+    verify(sitzungsentzug, never()).verwirfAlle(any());
+  }
+
+  /**
+   * Ein unbekannter Wert ist {@code 400} — und nicht still die Vorgabe. Geschrieben wird nichts.
+   */
+  @Test
+  @DisplayName("Ein unbekannter Wert ist 400 und schreibt nichts")
+  void unbekannte_baumgliederung() {
+    zielIstNutzbarerAdmin();
+
+    assertThatThrownBy(() -> service.setzeBaumgliederung(HANDELNDER, 2L, "SOS", IP))
+        .isInstanceOf(FachlicheAusnahme.class)
+        .satisfies(
+            ausnahme ->
+                assertThat(((FachlicheAusnahme) ausnahme).titel())
+                    .isEqualTo("Gliederung unbekannt"));
+
+    verify(appUserRepository, never()).setzeBaumgliederung(anyLong(), any(), any());
+    verify(auditLogWriter, never()).schreibe(any());
   }
 }

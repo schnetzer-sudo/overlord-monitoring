@@ -380,4 +380,72 @@ class BenutzerverwaltungDbIT extends SicherheitsTestbasis {
     assertThat(alsAdmin.aendere("/api/admin/users/999888777/lock", "{\"locked\":true}").status())
         .isEqualTo(404);
   }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Die Baumgliederung (15.09.2026, E26)
+  // ───────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Die Vorgabe laesst sich setzen und steht in der Zeile — und <b>der Nutzer bleibt angemeldet</b>
+   * (E26). Sein Baum traegt sie danach ohne Neuanmeldung, weil der Endpunkt die Vorgabe bei jedem
+   * Aufruf ohne {@code ?gliederung=} liest.
+   */
+  @Test
+  @DisplayName("Die Baumgliederung wird gesetzt, wirkt sofort und meldet niemanden ab")
+  void baumgliederung_setzen_wirkt_ohne_abmeldung() throws Exception {
+    Sitzung alsKunde = anmelden(KUNDE, PASSWORT);
+    assertThat(alsKunde.hole("/api/prozesse/baum").<String>json("$.gliederung"))
+        .as("Ein neues Konto beginnt mit der Vorgabe aus V13")
+        .isEqualTo("PARTNER");
+
+    Antwort antwort =
+        alsAdmin.aendere(
+            "/api/admin/users/" + kundeId + "/tree-layout", "{\"treeLayout\":\"PROJEKT\"}");
+
+    assertThat(antwort.status()).isEqualTo(200);
+    assertThat(antwort.<String>json("$.treeLayout")).isEqualTo("PROJEKT");
+    assertThat(zeile(alsAdmin.hole("/api/admin/users"), KUNDE).get("treeLayout"))
+        .isEqualTo("PROJEKT");
+
+    Antwort baum = alsKunde.hole("/api/prozesse/baum");
+    assertThat(baum.status()).as("Die Sitzung des Nutzers lebt noch").isEqualTo(200);
+    assertThat(baum.<String>json("$.gliederung")).isEqualTo("PROJEKT");
+    assertThat(baum.<List<String>>json("$.ebenen")).containsExactly("PROJEKT", "PROZESS");
+  }
+
+  /**
+   * Die Vorgabe entwertet nichts: <b>kein Selbstschutz</b> und <b>keine Abmeldung</b> am eigenen
+   * Konto — anders als bei den fuenf Vorgaengen davor, die dort eine Vorwarnung brauchen (E19).
+   */
+  @Test
+  @DisplayName("Am eigenen Konto: kein Selbstschutz und keine Abmeldung")
+  void baumgliederung_am_eigenen_konto() throws Exception {
+    Antwort antwort =
+        alsAdmin.aendere(
+            "/api/admin/users/" + adminId + "/tree-layout", "{\"treeLayout\":\"PROJEKT\"}");
+
+    assertThat(antwort.status()).isEqualTo(200);
+    assertThat(alsAdmin.hole("/api/auth/me").status())
+        .as("Der Admin bleibt angemeldet")
+        .isEqualTo(200);
+  }
+
+  /**
+   * Ein unbekannter Wert faellt nicht still auf die Vorgabe, ein leerer Rumpf nicht still auf
+   * nichts.
+   */
+  @Test
+  @DisplayName("Ein unbekannter Wert und ein leerer Rumpf sind 400 und aendern nichts")
+  void unbekannte_oder_fehlende_baumgliederung() throws Exception {
+    Antwort unbekannt =
+        alsAdmin.aendere(
+            "/api/admin/users/" + kundeId + "/tree-layout", "{\"treeLayout\":\"SOS\"}");
+    Antwort leer = alsAdmin.aendere("/api/admin/users/" + kundeId + "/tree-layout", "{}");
+
+    assertThat(unbekannt.status()).isEqualTo(400);
+    assertThat(unbekannt.<String>json("$.type")).endsWith("/gliederung-unbekannt");
+    assertThat(leer.status()).isEqualTo(400);
+    assertThat(appUserRepository.findeKonto(kundeId).orElseThrow().baumgliederung().name())
+        .isEqualTo("PARTNER");
+  }
 }

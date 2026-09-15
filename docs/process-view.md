@@ -7,6 +7,7 @@ Entstanden in zwei Schritten am selben Tag, dem 02.09.2026:
 | **10c‑1** | „Schritt 10c‑1: Prozessansicht, Backend", Stand 01.09.2026 | §1 bis §14 |
 | **10c‑2** | „Schritt 10c‑2: Prozessansicht, Oberfläche", Stand 02.09.2026 | §15 bis §20 |
 | **10c‑4b** | „Prozessansicht — freies Zeitfenster, Bau", Stand 07.09.2026 | §37 bis §44 (auf §30 bis §36, der Messrunde 10c‑4a) |
+| **Projektgliederung** | „Zweite Gliederung des Prozessbaums (Projekt statt Partner)", Stand 15.09.2026 | §48 |
 
 **Der erste Teil war ausdrücklich ohne Oberfläche**, und der Grund steht in §9: Wie groß der Baum je
 Mandant tatsächlich ist, entscheidet über Vorklappen, Ladeverhalten und Virtualisierung. Der zweite
@@ -113,6 +114,17 @@ ist zugesichert und nicht behauptet (`ProzessbaumIsolationDbIT.baum_und_auswahl_
 }
 ```
 
+> ### ⚠️ Korrektur vom 15.09.2026 — das Beispiel nennt eine Kennung als Namen, und die Form ist abgelöst (§48)
+>
+> **`"processName": "40000_AMG_LAB_VDA"` ist eine `ProcessID` und kein Name.** Der Prozess mit
+> dieser Kennung heißt in `Process.ProcessName` **`AMG LAB (VDA)`** (nachgesehen am 15.09.2026 in
+> der Testkopie). Das Beispiel darüber bleibt stehen, wie es war; derselbe Fehler stand im Javadoc
+> von `ProzessknotenResponse` und ist dort ebenso berichtigt.
+>
+> **Die Form selbst gilt seit dem 15.09.2026 nicht mehr.** An die Stelle von `partner` →
+> `richtungen` → `prozesse` sind `knoten` → `kinder` getreten, dazu `gliederung` und `ebenen`
+> (E‑140); das Blattfeld `processName` heißt seither `name`. Die neue Antwort steht in §48.
+
 **Die Feldnamen sind deutsch, die Quellsystembegriffe bleiben, wie sie sind.** Richtlinie §5.2
 schreibt „JSON-Felder camelCase, **englisch**"; das Dashboard hat sich schon anders entschieden
 (`zeitraum`, `fenster`, `kacheln`, `verteilung`, `zuletztAufgefallen`), und die Prozessauswahl führt
@@ -150,6 +162,15 @@ Mehr gibt es nicht — es gibt genau einen Parameter, der falsch sein kann.
 > `zeitfenster-zu-gross` (mehr als ein Kalenderjahr, gerechnet mit dem ausschließenden Ende). Alle
 > `400`. **Die Codes sind aus der Nachrichtenliste übernommen**, bis auf den einen neuen. Ein
 > Fenster in der Zukunft ist kein Fehler — es liefert Nullen.
+
+> ### Ergänzt am 15.09.2026 — der Parameter `gliederung` (E‑143, §48)
+>
+> `GET /api/prozesse/baum` nimmt dazu `gliederung=PARTNER|PROJEKT`, frei neben beiden
+> Fenstermodi. Fehlt er, setzt der Server die Vorgabe des Kontos ein und nennt sie in der Antwort.
+> Ein Wert außerhalb der beiden ist **`400 gliederung-unbekannt`** und wird **nach** den
+> Fensterfällen geprüft: Ein Aufruf mit falschem Fenster und falscher Gliederung bekommt den
+> Fensterfehler. Der Satz „es gibt genau einen Parameter, der falsch sein kann" ist damit zum
+> zweiten Mal überholt.
 
 ---
 
@@ -243,6 +264,14 @@ Die Blätter behalten die Reihenfolge der Abfrage: `ORDER BY ProcessName`.
 >
 > **Dass ein Partner in zwei Schreibweisen im Katalog steht, ist eine Kuratierungsfrage und kein
 > Codefehler.** Sie ist offener Punkt **106**.
+
+> ### Ergänzt am 15.09.2026 — eine zweite Gliederung daneben (E‑139, §48)
+>
+> Die Gliederung dieses Abschnitts heißt seither **`PARTNER`** und gilt unverändert, samt E‑39 und
+> E‑41. Daneben steht **`PROJEKT`**: `Project.ProjectDescription` über den Prozessen, **zwei
+> Ebenen**, auf jeder alphabetisch (E‑142). Gruppiert wird dort über den **Text** und nicht über
+> `ProjectID` (E‑141) — mit demselben Schlüssel wie hier: hochgestellt, angezeigt in der zuerst
+> angetroffenen Schreibweise. Einen Knoten „nicht zugeordnet" gibt es im Projektbaum nicht (E‑144).
 
 ---
 
@@ -471,6 +500,15 @@ Katalogzeile (M110); ein innerer Join verlöre ihre 17 bzw. 4 Prozesse stillschw
 ausgerechnet die, die vollständig unter „nicht zugeordnet" erscheinen müssten.
 
 **Die Kennzahlenabfrage hat kein `ORDER BY`.** Sortiert wird der Baum, und das passiert im Dienst.
+
+> ### Ergänzt am 15.09.2026 — `Project` im Gerüst (§48)
+>
+> Das Gerüst liest seither `Project.ProjectDescription` für die Projektgliederung, über einen
+> **`LEFT JOIN` auf `Project`** nach dessen Primärschlüssel. Die Mandantenkette bleibt
+> `Process → ProjectMandant`; der neue Join filtert nichts und vervielfacht nichts. **Ein Gerüst für
+> beide Gliederungen** — die vier Eigenschaften, E‑42 und das Kennzahlenstatement sind unverändert.
+> **Neu ist eine Kostenfrage:** `ProjectDescription` ist `TEXT`, und die Temptabelle der Sortierung
+> liegt seither auf der Platte. Nicht gemessen — offener Punkt **179**.
 
 ---
 
@@ -815,6 +853,14 @@ Dazu: beide Richtungen, `ADMIN` ohne Mandant bekommt `403` und nach dem Wechsel 
 (Regel M5), und **über alle drei Zeiträume steht derselbe Baum** — der Zeitraum ändert die Zahlen,
 nie den Umfang.
 
+> ### Ergänzt am 15.09.2026 — beide Gliederungen (§48)
+>
+> `baum_und_auswahl_decken_sich` läuft seither **für beide Gliederungen** und sichert dazu zu, dass
+> beide gleich viele Blätter und dieselbe Kopfzeile (`gesamt`) tragen. Vier Fälle sind neu: der
+> Projektbaum ohne fremde Kennung und ohne fremden Namen, Projektgruppen nur mit eigenen Prozessen,
+> die Vorgabe aus dem Konto samt freiem Wechsel und `gliederung-unbekannt`. Die übrigen Tests der
+> Runde stehen in §48.
+
 ---
 
 ## 12. Regelbezug
@@ -1036,6 +1082,14 @@ genau wie `langeSuche` und `ueberfaellig` in `filter.ts`.
 Baum dort fast vollständig gedämpft. **Mit Vorgabe *an* wäre dagegen genau der Prozess unauffindbar,
 den jemand sucht, *weil* er nichts trägt** — und das ist der Fall, für den es diese Ansicht gibt
 ([`prozessauswahl.md`](prozessauswahl.md) §3).
+
+> ### Ergänzt am 15.09.2026 — die Gliederung (E‑143, §48)
+>
+> | | URL? | Warum |
+> |---|---|---|
+> | **Die Gliederung** | **ja, sobald jemand umschaltet** | Sie ändert die **Form** des Baums. Ohne Parameter gilt die Vorgabe des Kontos, und die setzt der Server ein — die Oberfläche schreibt deshalb keinen Standardwert in die Adresse, sondern liest die aktive Gliederung aus der Antwort. Ein Link ohne Parameter zeigt beim Empfänger dessen Vorgabe; wer umgeschaltet hat, gibt seine Wahl mit |
+>
+> `replace` wie die übrigen Filter; der Parser hat keine Vorgabe (`lib/baumgliederung.ts`).
 
 ---
 
@@ -1627,6 +1681,15 @@ beim Einfachen.**
 > ihr Gegenstand, ist keine Messung. **Die Lücke ist am 02.09.2026 geschlossen worden** (§21, M123):
 > 98 ms zwischen der fertigen Antwort und dem Baum im DOM bei `NEXANS`, und die Werte steigen dort
 > mit der Zeilenzahl, wie sie es sollen.
+
+> ### Ergänzt am 15.09.2026 — E‑45 bleibt bei der Richtung (E‑145, §48)
+>
+> Seit der Baum zwei Gliederungen hat, fragt die Regel nach der **Ebene der Kinder**: Eine Gruppe
+> verliert ihre Zwischenebene nur, wenn darunter die Ebene `RICHTUNG` steht und E‑58 greift
+> (`ebeneFaelltWeg`). Ein Projekt mit einem einzigen Prozess bleibt eine Gruppe mit einer Zeile
+> darunter — die Verallgemeinerung auf „eine Ebene mit einem Knoten" ist bewusst nicht gebaut.
+> Geprüft in `tests/prozessbaum.test.ts` („E‑145 — das Überspringen bleibt auf die Richtungsebene
+> beschränkt").
 
 ---
 
@@ -4813,3 +4876,377 @@ auf dem 30.12.2025. *Behauptet wird:* dass die Spalte in den übrigen acht Manda
 - **`nachricht-detail.tsx`, `components/ui`, die eigene Route `/nachrichten/<id>` und der
   Fokus-Rückweg unter `md` sind unberührt.** Am Backend, an Statements, an den Sprachdateien und an
   Migrationen ist nichts geändert.
+
+---
+
+## 48. Die zweite Gliederung: Projekt statt Partner (15.09.2026)
+
+### Der Anlass
+
+`NEXANS` steigt im Altwerkzeug über die Projektstruktur ein. Der Partnerbaum bleibt der bessere
+Einstieg, er hängt aber vollständig am kuratierten Katalog: `SUTTONS` und `WOC` haben keine einzige
+Katalogzeile, bei `NEXANS` tragen 216 von 733 Prozessen keinen Partner (M110). **Die
+Projektgliederung braucht keine Kuratierung** und trägt für jeden Mandanten sofort.
+
+**Was gebaut ist, in einem Satz:** Der Baum hat eine zweite Gliederung `PROJEKT` neben `PARTNER`,
+beide liefern dieselbe rekursive Antwort und enden im selben Blatt, das dieselbe Übertragungsliste
+lädt; welche beim ersten Aufruf gilt, setzt ein ADMIN je Konto, und umschalten darf jeder.
+
+### Nummernvergabe (Teil 8)
+
+Gesucht mit Node über `docs/**/*.md` und `*.md`, Wortgrenzen, die Zeichenklasse `[‑-]` mit dem
+geschützten Bindestrich U+2011; dazu `git grep` über die zwei Zweige, die noch nicht in `main` sind
+(`feat/suchfeld-untermenues`, `test/indexbestand-e37`).
+
+| | |
+|---|---|
+| **Entscheidungen** | **E‑139 bis E‑146.** Höchste vergebene: **E‑138** ([`dashboard-frontend.md`](dashboard-frontend.md)); **E‑780** ist der bekannte Falschtreffer aus der Messdatei der Property-Suche ([`property-suche.md`](property-suche.md)). Keiner der beiden Zweige trägt eine Nummer von E‑139 bis E‑146 (derselbe Ausdruck findet in `main` E‑138 — geeicht, nicht nur leer). Die Buchstabenreihe ist nicht angefasst. Dazu **E26** im Dateikreis von [`benutzerverwaltung.md`](benutzerverwaltung.md) (dort höchste E25) |
+| **Messungen** | **keine.** Die Runde misst nichts (Auftrag, am 15.09.2026 bestätigt); die Stichprobe unten trägt deshalb keine M‑Nummer |
+| **Offene Punkte** | **179.** Höchster im Arbeitsbaum: **178** ([`messungen-sichtprobe-schmal.md`](messungen-sichtprobe-schmal.md), dort 172 bis 178 — die Datei ist am selben Tag entstanden und noch nicht in `main`; in `main` ist es **171**). Der Treffer „179" in [`messungen-property-suche.md`](messungen-property-suche.md) ist die Zahl M179 im Fließtext und kein Punkt |
+| **Migration** | **V13.** Höchste im Verzeichnis V12; keiner der beiden Zweige trägt eine V13 |
+
+### Drei Abweichungen vom Auftrag — gemeldet und entschieden, bevor gebaut wurde
+
+| # | Der Auftrag nahm an | Am Code | Entschieden am 15.09.2026 |
+|---|---|---|---|
+| 1 | *„`Project` steht wegen der Mandantenkette bereits im Join"*, und die Änderung berühre deshalb keinen Zugriffspfad | **Tut es nicht.** Die Kette läuft `Process → ProjectMandant` und überspringt `Project` (§6, `ProzessbaumRepository.geruest`). Es braucht einen **neuen** `LEFT JOIN`, und `ProjectDescription` ist `TEXT` — damit legt MariaDB die Temptabelle der Sortierung **auf die Platte** (Stichprobe unten) | **Join ohne Messung**, wie beauftragt. Der Unterschied steht als offener Punkt **179**; der Plantest sichert den Zugriff zu, nicht die Kosten |
+| 2 | `PUT /api/admin/users/{id}/baum-gliederung`, Rumpf `{"gliederung": …}` | [`benutzerverwaltung.md`](benutzerverwaltung.md) §5 schreibt englische Unterpfade unter `/api/admin/users` vor, und derselbe Widerspruch ist am 21.08.2026 an `{id}/tenants` schon einmal so entschieden worden | **Englisch wie die Nachbarn:** `tree-layout`, `treeLayout`, Spalte `app_user.tree_layout` ([`benutzerverwaltung.md`](benutzerverwaltung.md) §7c) |
+| 3 | *(offen)* ob die Pflege der Vorgabe wie die fünf Verwaltungsvorgänge alle Sitzungen verwirft (E5) | E5 ist dort eine Regel ohne Fallunterscheidung — und die Vorwarnung am eigenen Konto hängt daran | **Kein Sitzungsentzug** ([`benutzerverwaltung.md`](benutzerverwaltung.md) **E26**) |
+
+### Befunde am Bestand, die den Bau nicht ändern
+
+> ### ⚠️ Belegvermerk (Regel L10)
+>
+> *Gemessen war,* am 15.09.2026 mit dem Lesebenutzer gegen die Testkopie: `information_schema.COLUMNS`
+> für `Process` und `Project`; je Mandant (`GROUP BY MandantID`, alle zehn) die Zahl der Prozesse,
+> der Projekte und der Beschreibungen — unter der Spaltensortierung und binär — sowie der leeren
+> Beschreibungen und Namen und der Prozesse ohne Projektzeile; der Klarname zu einer `ProcessID`;
+> `EXPLAIN` des Gerüsts vor und nach dem Join für `NEXANS` — **handgeschrieben und gleichbedeutend**
+> zum gerenderten Text, nicht aus dem Code gefallen —; und `Created_tmp_tables` /
+> `Created_tmp_disk_tables` aus `SESSION_STATUS` vor und nach je einem Aufruf beider Fassungen,
+> ebenfalls für `NEXANS`. Den Zugriff auf `Project` bei vier Mandanten sichert
+> `ProzessbaumPlanDbIT.projekt_ueber_primaerschluessel` zu, und der liest den gerenderten Text.
+> *Behauptet wird nicht:* eine Laufzeit. Es ist keine erhoben worden.
+
+| Befund | Zahl | Folge |
+|---|---|---|
+| **Die Begründung für E‑141 trägt bei `NEXANS` am Bestand nicht.** Der Auftrag nennt *„17 Projekten stehen vier Beschreibungen gegenüber"* | `NEXANS`: **17** Projekte, **17** verschiedene Beschreibungen, unter der Spaltensortierung wie binär. Die einzige Kollision über alle zehn Mandanten: **`ZAST`, 4 Projekte, 3 Beschreibungen** | **Keine.** E‑141 ist eine Festlegung über die Gleichheit der Beschriftung und gilt unabhängig davon, wie oft der Fall heute eintritt. Die Zahl „vier" steht hier nicht als Beleg, sondern als Befund |
+| Keine leere Beschreibung, kein leerer Prozessname, kein Prozess ohne Projektzeile | **0** über alle zehn Mandanten | stützt E‑144 — ohne sie zu begründen: E‑144 beruht auf der Auskunft des Auftraggebers |
+| Das Antwortbeispiel in §1 | `ProcessID` `40000_AMG_LAB_VDA` → `ProcessName` **`AMG LAB (VDA)`** | Korrektur als datierter Block in §1. **Dasselbe falsche Beispiel stand im Javadoc von `ProzessknotenResponse`** und ist dort mit altem Wortlaut berichtigt |
+| Der Plan des Gerüsts, vor und nach dem Join | bei `NEXANS` dieselbe Form bis auf die neue Zeile: `Project` **`eq_ref` über `PRIMARY`** | der Zugriff ist für vier Mandanten abgesichert (`ProzessbaumPlanDbIT.projekt_ueber_primaerschluessel`) |
+| **Die Temptabelle wandert auf die Platte** | `Created_tmp_disk_tables` je Aufruf: **alt +0, neu +1** (`NEXANS`) | offener Punkt **179** |
+| `process_catalog` führt seine Aufzählungen als `VARCHAR` mit Whitelist im Code und **nicht** als `ENUM` (`V6`) | — | `V13` ist genau so gebaut; „wie die Aufzählungsspalten" heißt hier `VARCHAR(20)` |
+| `Process.ProcessName` wird im Gerüst projiziert | am Code bestätigt | — |
+| [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §3.2 führte `Process` und `Project` ohne Spalten | — | datierter Block dort. **[`datenmodell.md`](datenmodell.md) §3 hat dieselbe Überschrift ohne Spalten** und ist nicht nachgezogen — nicht Teil des Auftrags |
+
+### Der Endpunkt
+
+```
+GET /api/prozesse/baum?zeitraum={48H|30T|12M}&gliederung={PARTNER|PROJEKT}
+GET /api/prozesse/baum?von=<ISO,UTC>&bis=<ISO,UTC>&gliederung={PARTNER|PROJEKT}
+```
+
+**Kein zweiter Wurzelpfad und kein zweiter Endpunkt** — E‑32 gilt: zwei Anordnungen derselben Menge.
+
+| `gliederung` | Wirkung |
+|---|---|
+| fehlt oder leer | der **Server** setzt die Vorgabe des angemeldeten Kontos ein (`app_user.tree_layout`, eine Zeile über den Primärschlüssel) |
+| `PARTNER`, `PROJEKT` (Groß- und Kleinschreibung egal) | diese Gliederung |
+| jeder andere Wert | **`400 gliederung-unbekannt`** — kein stiller Rückfall auf die Vorgabe; dieselbe Bauform wie `modus-unbekannt` |
+
+**Reihenfolge der Prüfung:** erst der Mandant (`403`), dann das Fenster (die sieben Fälle aus §38),
+dann die Gliederung. **Keine Rollengrenze** und kein Eintrag in `SecurityConfig`: Die Gliederung ist
+eine Vorgabe und keine Berechtigung. **M1 bleibt unberührt** — der Endpunkt nimmt keine
+Mandanten-ID, es entsteht keine vierte Ausnahme.
+
+**Die Vorgabe zu lesen ist eine Abfrage im eigenen Schema**, und nur, wenn der Parameter fehlt.
+E‑42 („zwei Statements je Aufruf") meint die zwei Lesevorgänge auf dem Rollup und `GlassfishDB` und
+gilt unverändert; die Zeile aus `app_user` steht daneben, wie die Sitzungsprüfung auch.
+
+### Die Antwort (E‑140)
+
+```jsonc
+{
+  "zeitraum": "48H",
+  "gliederung": "PROJEKT",                  // die aktive, immer gesetzt — auch ohne Parameter
+  "fenster": { "von": "…Z", "bis": "…Z" },
+  "stilleSchwelleMonate": 3,
+  "gesamt": { "anzahlProzesse": 733, "bewegt": 488, "still": 28, "nie": 217,
+              "nachrichten": 9950, "fehler": 50 },
+  "ebenen": ["PROJEKT", "PROZESS"],         // PARTNER: ["PARTNER", "RICHTUNG", "PROZESS"]
+  "knoten": [
+    { "schluessel": "…", "name": "…",       // hochgestellt / erste Schreibweise (E‑141)
+      "anzahlProzesse": 12, "nachrichten": 8608, "fehler": 2,
+      "kinder": [
+        { "schluessel": "40000_AMG_LAB_VDA", "name": "AMG LAB (VDA)", "processId": "40000_AMG_LAB_VDA",
+          "nachrichten": 812, "fehler": 0, "letzteBewegung": "…Z", "zustand": "BEWEGT" }
+      ] }
+  ]
+}
+```
+
+| Feld | Festlegung |
+|---|---|
+| `knoten`, `kinder` | **eine rekursive Form für beide Gliederungen.** An die Stelle von `partner` → `richtungen` → `prozesse` sind `knoten` → `kinder` → `kinder` getreten |
+| `ebenen` | die Ebenennamen **von außen nach innen**; die letzte ist immer `PROZESS`. Die Oberfläche leitet die Tiefe nicht aus der Gliederung ab |
+| `schluessel` | an einer Gruppe der **hochgestellte Gruppenschlüssel** (E‑41), `null` für die eine Gruppe ohne Wert; an einem Blatt die `ProcessID` |
+| `name` | der Rohwert in der zuerst angetroffenen Schreibweise; **darf `null` sein** und trägt dann wie bisher „nicht zugeordnet" (Partner) oder „nicht ermittelt" (Richtung) samt Sortierung ans Ende |
+| Blatt | `processId`, `nachrichten`, `fehler`, `letzteBewegung`, `zustand` — **`processName` heißt seither `name`** |
+| **keine Typangabe** | eine Gruppe trägt `kinder`, ein Blatt `processId`. Serialisiert wird der Laufzeittyp (`BaumknotenResponse`, versiegelt: `GruppenknotenResponse` und `ProzessknotenResponse`) |
+
+`zeitraum`, `fenster`, `gesamt` und `stilleSchwelleMonate` sind unverändert. **Das ist ein
+Vertragsbruch an der Form**, und er ist gewollt: Ein zweiter Renderpfad für die alte Form wäre die
+Doppelung, die der Auftrag ausschließt. `PartnerknotenResponse` und `RichtungsknotenResponse` sind
+entfallen.
+
+### Das Gerüst
+
+```sql
+select Process.ProcessID, Process.ProcessName, Project.ProjectDescription,        -- ← neu
+       process_catalog.partner, process_catalog.richtung, process_catalog.pflegestatus,
+       (select stunde from message_rollup where process_id = Process.ProcessID
+        order by stunde desc fetch next ? rows only)
+from Process
+join ProjectMandant on ProjectMandant.ProjectID = Process.ProjectID
+left outer join Project on Project.ProjectID = Process.ProjectID                  -- ← neu
+left outer join process_catalog on process_catalog.process_id = Process.ProcessID
+where ProjectMandant.MandantID = ?
+order by Process.ProcessName asc
+```
+
+*(Gekürzt; wörtlich in `ProzessbaumStatementsTest.woertlich`.)* **Ein Gerüst für beide
+Gliederungen** — beide brauchen dieselben Zeilen, gegliedert wird im Dienst. **`LEFT` und nicht
+`INNER`**, dieselbe Wahl wie in [`prozessauswahl.md`](prozessauswahl.md) §4: Die Sichtbarkeit hängt
+an der Mandantenkette und nicht an einer Beschreibung, und `baum_und_auswahl_decken_sich` fände
+einen verlorenen Prozess.
+
+**Die vier Eigenschaften aus §6 gelten unverändert**, E‑42 ebenso. **Das Kennzahlenstatement ist
+unverändert** — Zeichen für Zeichen: Die geschachtelte Klasse `Kennzahlen` in
+`ProzessbaumStatementsTest` ist nicht angefasst, der Diff der Datei liegt ganz in `Geruest`.
+**Kein Statement fasst `Message` an** (`keine_live_aggregation`, `kein_plan_enthaelt_message`).
+
+### Der Dienst
+
+- **Eine Schleife für jede Ebene jeder Gliederung** (`ProzessbaumService.knoten`). Eine Gliederung
+  ist eine Liste von Ebenen, und jede Ebene sagt nur drei Dinge: wonach gruppiert wird, wie die
+  Gruppe heißt und wie die Gruppen sortiert sind. `PARTNER` ist `[Partner, Richtung]`, `PROJEKT` ist
+  `[Projekt]`; darunter stehen die Blätter.
+- **Gruppiert wird über den Text `ProjectDescription`, nicht über `ProjectID`** (E‑141) — und damit
+  gilt E‑41: hochgestellt mit `Locale.ROOT`, angezeigt in der zuerst angetroffenen Schreibweise.
+  **Derselbe Weg** (`merkeAnzeige`, die hochstellende Hilfe des Dienstes), nicht ein zweiter.
+- **Alphabetisch auf jeder Ebene**, `null` ans Ende; die Richtung behält ihren Rang (E‑39). Die
+  Blätter behalten `ORDER BY ProcessName` aus dem Gerüst.
+- **Kein Knoten „nicht zugeordnet" im Projektbaum** — er entsteht nicht, weil er nicht vorkommt; es
+  gibt dafür keinen Sonderzweig und keine Rückfallregel (E‑144).
+- **Die Summen entstehen von den Blättern nach oben**; `letzteBewegung` und `zustand` bleiben am
+  Blatt und fensterunabhängig (E‑35). Die Kopfzahl ist in beiden Gliederungen dieselbe.
+
+### Die Vorgabe je Konto
+
+`V13__tree_layout.sql`: `app_user.tree_layout VARCHAR(20) … NOT NULL DEFAULT 'PARTNER'`, Zeichensatz
+und Sortierung **an der Spalte**. Gepflegt über `PUT /api/admin/users/{id}/tree-layout`
+([`benutzerverwaltung.md`](benutzerverwaltung.md) §7c, **E26**: ohne Sitzungsentzug). **Gelesen wird
+sie bei jedem Aufruf ohne Parameter**, nicht aus der Sitzung — nur so wirkt eine Änderung sofort, ohne
+dass jemand abgemeldet werden müsste. `GET /api/auth/me` ist unverändert.
+
+### Die Oberfläche
+
+| | |
+|---|---|
+| **URL** | `gliederung` als nuqs-Parameter ohne Vorgabe (`lib/baumgliederung.ts`, `replace`). **Fehlt er, wird nichts geschrieben**; die aktive Gliederung kommt aus der **Antwort**. Ein geteilter Link ohne Parameter zeigt beim Empfänger dessen Vorgabe; erst wer umschaltet, nimmt die Wahl mit. Prozess, Fenster und geöffnete Nachricht bleiben beim Umschalten stehen |
+| **Abfrageschlüssel** | `baumabfrage` hängt `gliederung` an, wenn gewählt — die Abfrage ohne Parameter bleibt ein eigener Schlüssel, der der Vorgabe |
+| **Umschalter** | `features/nachrichten/components/gliederung-umschalter.tsx`, **über der Baumspalte** im klebenden Kopf, über Eingrenzung und Schalter (E‑146). Dieselbe Bauform wie der Zeitraumumschalter (`ToggleGroup`, `outline`, `min-h-bedienelement`), über die Spaltenbreite gezogen; **zwei Wörter**, „Partner" und „Projekt". Hervorgehoben ist, was gilt (`hervorgehobeneGliederung`) |
+| **Ein Renderpfad** | `prozessbaum.ts` und `prozess-baum.tsx` laufen nur noch über `knoten` und `ebenen`; `baumzeilen`, `pfadZuProzess`, `eingegrenzterBaum`, `zuordnungVon`, `tastenbefehl` gelten für zwei wie für drei Ebenen. Die Schlüssel des Aufklappzustands tragen den Ebenennamen, damit sich ein Partner und ein Projekt gleichen Namens nicht treffen |
+| **E‑45 bleibt bei der Richtung** (E‑145) | `ebeneFaelltWeg` fragt nach der **Ebene der Kinder**. Ein einziges Projekt mit einem einzigen Prozess bleibt eine Zeile |
+| **Eingrenzung** | durchsucht Gruppen und Prozessnamen, **nie die Richtung** — und damit auch die Projektbeschreibung, denn die ist ein Wert der Antwort. Der Platzhalter nennt, worüber gesucht wird („Projekt oder Prozess eingrenzen") |
+| **Kopf der rechten Spalte** | nennt die Gruppen über dem Prozess: im Partnerbaum Partner · Richtung, im Projektbaum das Projekt |
+| **Texte** | `prozesse.gliederung`, `prozesse.ohneBeschreibung`, `prozesse.baum.ebeneProjekt`, `prozesse.baum.eingrenzungProjekt`, `fehler["gliederung-unbekannt"]`, dazu die Texte der Benutzerverwaltung — in `de.ts` und `en.ts`, keiner in einer Komponente |
+| **Benutzerverwaltung** | ein Auswahlfeld im Zeilenformular, Zeile aus der Antwort gesetzt, **ohne Vorwarnung und ohne Abmeldung** ([`benutzerverwaltung-frontend.md`](benutzerverwaltung-frontend.md) §17) |
+
+> **„Projekt ohne Beschreibung" ist eine Beschriftung und keine Rückfallregel.** Kommt der Fall vor —
+> am Bestand bei keinem Mandanten —, bleibt der Knoten mit seinem Wert, wo er ist, und bekommt statt
+> einer leeren Zeile ein Wort (Regel Q4, dieselbe Bauform wie „Prozess ohne Namen"). **Das ist über
+> den Wortlaut des Auftrags hinaus gebaut und hiermit gemeldet.**
+
+### Die Entscheidungen
+
+| | |
+|---|---|
+| **E‑139** | Zweite Gliederung `PROJEKT`: `ProjectDescription` über `ProcessName`, **genau zwei Ebenen** |
+| **E‑140** | Eine verallgemeinerte, rekursive Antwortform für beide Gliederungen; die Ebenennamen stehen als `ebenen` in der Antwort |
+| **E‑141** | Gruppiert wird über den **Text** `ProjectDescription` und nicht über `ProjectID`; damit gilt E‑41 auch hier. *(Befund: Die Kollision tritt am Bestand heute nur bei `ZAST` auf, nicht bei `NEXANS` — siehe oben)* |
+| **E‑142** | **Alphabetisch auf jeder Ebene.** Die Reihenfolge des Altwerkzeugs wird **bewusst nicht nachgebildet**: Dort folgt die Prozessebene innerhalb eines Partners offenbar der Kennung. Die Abweichung ist gewollt und keine Nachlässigkeit — wer hier einen Sortierfehler sucht, findet diese Zeile |
+| **E‑143** | Die Vorgabe je Konto setzt ein ADMIN; **wechseln darf jeder**; die aktive Gliederung steht in der URL, sobald jemand umschaltet; fehlt sie, setzt der **Server** die Vorgabe ein und spiegelt sie in der Antwort zurück. **Ausdrücklich keine Berechtigung** |
+| **E‑144** | **Keine Rückfallregel** für eine leere `ProjectDescription` oder einen leeren `ProcessName`. Beruht auf der **Auskunft des Auftraggebers**, dass es sie nicht gibt, und nicht auf einer Messung *(die Stichprobe vom 15.09.2026 fand keine, belegt die Regel aber nicht)* |
+| **E‑145** | **E‑45 bleibt auf die Richtungsebene beschränkt** und wird nicht auf „eine Ebene mit einem Knoten" verallgemeinert |
+| **E‑146** | Der Gliederungsumschalter steht **über der Baumspalte** und nicht in der geteilten Zeile des Zeitraumumschalters: Der Zeitraum gilt für beide Spalten (E‑50), die Gliederung nur für den Baum; und unter `md` steht, sobald ein Prozess gewählt ist, die Liste allein — ein Umschalter in der geteilten Zeile steuerte dort etwas, das nicht zu sehen ist |
+
+### Tests
+
+**Backend**, gefahren am 15.09.2026: der Unit-Lauf ohne Datenbankgruppe (878 grün), danach gezielt
+`verify` mit den berührten Unit-Tests (88) und vier DbITs (56 Fälle) — alle grün.
+
+| Datei | Neu oder geändert |
+|---|---|
+| `common/BaumgliederungTest` *(neu)* | vier: ohne Angabe heißt nicht angegeben (und nicht `PARTNER`); beide Werte ohne Rücksicht auf Schreibweise und Rand; ein unbekannter ist `400 gliederung-unbekannt`; aus der Datenbank streng |
+| `ProzessbaumServiceTest` | neu geschrieben gegen die rekursive Form; geschachtelt `Projektgliederung` mit acht Fällen — zwei Ebenen, Summen, Reihenfolge, Schreibweisen fallen zusammen (E‑41), mehrere Projekte derselben Beschreibung sind ein Knoten (E‑141), unabhängig vom Katalog, beide Gliederungen tragen dieselben Blätter, ohne Gliederung kein Baum |
+| `ProzessbaumStatementsTest` | `Geruest.woertlich` mit Spalte und Join; neu `projekt_als_left_join` |
+| `ProzessbaumPlanDbIT` | neu `projekt_ueber_primaerschluessel`: `Project` mit `eq_ref` über `PRIMARY`, vier Mandanten |
+| `ProzessbaumIsolationDbIT` | `baum_und_auswahl_decken_sich` für beide Gliederungen; neu `projektbaum_keine_fremde_kennung_und_kein_fremder_name`, `projektgruppen_tragen_nur_eigene_prozesse`, `vorgabe_aus_dem_konto_und_freier_wechsel`, `unbekannte_gliederung` |
+| `MessungM117DbIT`, `MessungM152DbIT` | nur die Pfade auf die neue Form (`?gliederung=PARTNER`, `knoten`/`kinder`); gemessen wird dort nichts Neues |
+| `BenutzerverwaltungServiceTest`, `BenutzerverwaltungDbIT`, `BenutzerverwaltungIsolationDbIT`, `NutzerzeileResponseTest` | [`benutzerverwaltung-backend.md`](benutzerverwaltung-backend.md) §4a |
+
+**Frontend**, `pnpm check` am 15.09.2026:
+
+| Datei | Neu oder geändert |
+|---|---|
+| `tests/prozessbaum.test.ts` | neu geschrieben gegen `knoten` und `ebenen`; der Projektbaum steht als zweite Vorlage neben dem Partnerbaum in Zeilen, Pfad, Eingrenzung, gewähltem Prozess, Beschriftung und Tastatur; neu der Block „E‑145 — das Überspringen bleibt auf die Richtungsebene beschränkt" |
+| `tests/prozess-baum.test.tsx` | neu geschrieben; neu „zeichnet den Projektbaum über denselben Pfad — zwei Ebenen, ein Projekt bleibt eine Zeile" (jetzt 16 Fälle) |
+| `tests/gliederung-umschalter.test.tsx` *(neu)* | zwei: hervorgehoben ist, was gilt, und ohne Angabe kein Knopf; ein Klick meldet den Code, der gedrückte Knopf nichts |
+| `tests/prozessansicht.test.ts` | neu der Block „Die Gliederung in der URL (E‑143)" mit fünf Fällen; dazu, dass der Absprung aus dem Detail keine Gliederung mitbringt |
+| `tests/benutzer.test.ts`, `tests/benutzer-tabelle.test.tsx`, `tests/konto-anlegen.test.tsx` | [`benutzerverwaltung-frontend.md`](benutzerverwaltung-frontend.md) §17; in `konto-anlegen` nur die Vorlage um `treeLayout` ergänzt |
+
+Die Zählung der gerenderten Tests steht an ihrem einen Ort, in `vitest.config.mts`.
+
+### Regelbezug
+
+| Regel | Umsetzung |
+|---|---|
+| **M1** kein Endpunkt nimmt eine Mandanten-ID | `gliederung` ist kein Mandant, der Pflegeendpunkt nimmt eine Konto-ID; die Ausnahmenliste bleibt bei drei |
+| **M2** Mandant als erster Pflichtparameter | `ProzessbaumRepository.geruest(MandantContext)` unverändert; `AppUserRepository` liest nur `overlord_monitor` |
+| **M4** Isolationstest je Endpunkt | `ProzessbaumIsolationDbIT` für beide Gliederungen; für den neuen Endpunkt `BenutzerverwaltungIsolationDbIT.baumgliederung_ist_verschlossen` |
+| **M5** Trennung gilt auch quer | Baum und Prozessauswahl decken in **beiden** Gliederungen dieselbe Menge |
+| Kein Schreibzugriff auf `GlassfishDB` | `V13` ändert `overlord_monitor.app_user`; aus `GlassfishDB` wird nur gelesen |
+| **L2** keine Live-Aggregation über `Message` | kein Statement fasst `Message` an; `keine_live_aggregation` und `kein_plan_enthaelt_message` grün |
+| **L7** jede Abfrage gemessen | **für den Join nicht erfüllt** — bewusst so entschieden, offener Punkt 179 |
+| **L10** Belegvermerk je Befundsatz | der ⚠️-Kasten über den Befunden |
+| **L15** Pläne festgehalten | `ProzessbaumPlanDbIT.projekt_ueber_primaerschluessel` als Wächter |
+| **Q4** nicht zugeordnet heißt nicht zugeordnet | `name` darf `null` sein und bleibt es; die Beschriftung steht in den Sprachdateien |
+| **T1** kein Test behauptet Wanduhrzeit | der Plantest prüft Zugriffsart und Index |
+| **T2** kein Test hängt an veränderlichen Daten | die Diensttests bauen jede Zeile selbst; die Isolationstests vergleichen Antworten miteinander und mit der Prozessauswahl |
+| **Z1** kein direkter `now()`-Aufruf | der Pflegevorgang nimmt `updated_at` wie die fünf anderen aus der `systemClock`; der Isolationstest setzt die Vorgabe über das Repository mit der Anwendungsuhr, die er ohnehin trägt — `updated_at` prüft er nicht |
+
+### Offener Punkt
+
+| | |
+|---|---|
+| **179** | **`ProjectDescription` legt die Temptabelle des Gerüsts auf die Platte, und was das kostet, ist nicht gemessen.** Die Spalte ist `TEXT`; die Sortierung nach `ProcessName` läuft über eine Temptabelle, und MariaDB 10.6 hält eine mit `TEXT`-Spalte nicht im Speicher. Stichprobe vom 15.09.2026: `Created_tmp_disk_tables` je Aufruf alt +0, neu +1, bei `NEXANS`. **Bewusst nicht gemessen**, am selben Tag so entschieden; Leistungsregel 7 ist damit für diese eine Änderung nicht erfüllt, und das steht hier statt verschwiegen. Wer den Punkt aufmacht, misst das Gerüst alt gegen neu über die vier Mandanten aus M116 (beste von fünf, dazu die Zähler) und hält eine Abhilfe daneben, die **keine Kürzung** ist — etwa die Beschreibung erst im Dienst an die Zeilen zu hängen, was allerdings E‑42 berührt |
+
+### Was nicht gebaut ist
+
+- **Keine SOS-Ebene**, kein `sos_id` im Rollup, keine Änderung an den drei Rolluptabellen, kein
+  Rückwärtslauf.
+- **Kein `Message` in irgendeinem Statement** — keine zweite Ausnahme von Leistungsregel 2.
+- **Keine zweite Übertragungsliste.** Beide Gliederungen übergeben dieselbe `processId` an dieselbe
+  Liste, mit dem Fenster aus der Baumantwort (E‑50) und demselben Panelverhalten (E‑53, E‑57).
+- **Keine Änderung an `GET /api/auth/me`**, am Kennzahlenstatement, an `Rollupzeitraum`.
+- **Keine Rollengrenze am Baum**, keine Sperre des Wechselns, **kein Nachbau der alten Sortierung**,
+  keine Nummernpräfixe in der Anzeige.
+- **Keine Aussiebung von `SYSTEM` und `WOC`** (E‑f).
+- **Keine Messrunde** — und damit keine Zahl zu Punkt 179.
+- **Keine zehnte Spalte** in der Kontentabelle, nur das Feld in der Antwort und das Auswahlfeld.
+
+### Abnahme (15.09.2026)
+
+> ### ⚠️ Belegvermerk (Regel L10)
+>
+> *Gesehen war,* am laufenden System mit diesem Stand — das Backend neu gestartet, die Oberfläche als
+> `next dev` auf einem zweiten Port —, angemeldet als **ADMIN** mit aktivem Mandanten `NEXANS` im
+> Zeitraum `48H`. Gelesen aus dem DOM und über `fetch` im angemeldeten Browser; die
+> Bildschirmaufnahme lief bei verdecktem Fenster in die Zeitgrenze.
+> *Nicht gegangen:* die Pflege der Vorgabe über die Oberfläche und die Anmeldung als MANDANT. Das
+> erste ist ein Schreibvorgang an einem Konto der geteilten Testkopie, das zweite eine Anmeldung, die
+> nur der Nutzer vornimmt. Beides belegen die DbITs, nicht der Browser.
+
+| Abnahmepunkt | Ergebnis |
+|---|---|
+| ADMIN setzt `PROJEKT` an einem MANDANT-Konto, der Nutzer sieht den Projektbaum | **im Browser nicht gegangen.** `BenutzerverwaltungDbIT.baumgliederung_setzen_wirkt_ohne_abmeldung`: gesetzt über den Endpunkt, danach liefert der Baum des angemeldeten Kunden `gliederung = PROJEKT` und `ebenen = [PROJEKT, PROZESS]`, und seine Sitzung lebt |
+| Projektbaum mit Zahlen ungleich null | ✓ **17** Projekte, **12** davon mit Verkehr im Fenster — etwa „aeA - Ausgehende Nachrichten an Lieferanten" mit 39 Prozessen und 345 Nachrichten. Die Kopfzeile ist in beiden Gliederungen dieselbe: 733 Prozesse, 488 bewegt, 28 still, 217 nie, 9.950 Nachrichten, 50 Fehler |
+| Umschalten auf `PARTNER`: URL trägt den Parameter, der Baum wechselt die Form, das Fenster bleibt | ✓ Einstieg **ohne** Parameter mit der Vorgabe des Admin-Kontos (`PARTNER`, 229 oberste Zeilen); nach „Projekt" `?gliederung=PROJEKT` und 17 Zeilen; zurück auf „Partner" `?gliederung=PARTNER` und 229 Zeilen. `prozess` bleibt, kein Fensterparameter kommt dazu, und der Kopf nennt vorher wie nachher 28.12.2025, 05:00 bis 30.12.2025, 05:00 |
+| Ein Blatt lädt in beiden Gliederungen dieselbe Liste | ✓ `APTIV_MX_790871_LAB` (126 Nachrichten) im Projektbaum gewählt: 50 Zeilen. Nach dem Umschalten ist dieselbe Zeile gewählt, und die Liste zeigt dieselben 50 Zeilen mit derselben ersten Zeile. Der Kopf nennt die Gruppen der aktiven Gliederung: „aeA - Ausgehende Nachrichten an Lieferanten" beziehungsweise „nicht zugeordnet · Ausgehend" |
+| MANDANT bekommt `403` am Pflegeendpunkt | **im Browser nicht gegangen.** `BenutzerverwaltungIsolationDbIT.baumgliederung_ist_verschlossen`: `403` auf das eigene Konto wie auf ein erfundenes, der Wert bleibt unverändert |
+| Unbekannte Gliederung | ✓ `?gliederung=SOS` → `400 …/gliederung-unbekannt` |
+
+**Ein Befund aus der Abnahme, und er folgt aus E‑140:** Auf dem ersten Port lief noch ein
+`next start` mit einem Build vom Vormittag. Gegen das neue Backend zeigte er **keinen Fehler,
+sondern einen leeren Baum** mit dem Satz „Kein Partner und kein Prozess passt dazu." — die alte
+Oberfläche liest `partner`, und das Feld gibt es nicht mehr. Die Form ist nicht rückwärtsverträglich;
+**Backend und Oberfläche gehen nur gemeinsam aus**, sonst sieht ein Nutzer einen leeren Bestand und
+keinen Hinweis darauf, dass etwas nicht passt.
+
+### Nachgebessert am 15.09.2026 — ein Schalter statt zweier Knöpfe (E‑146 fortgeschrieben)
+
+Auf Wunsch des Auftraggebers, nach der Abnahme am selben Tag. **Die Tabelle „Die Oberfläche" oben
+bleibt stehen, wie sie war;** für die Gliederung gilt seither:
+
+| | |
+|---|---|
+| **Bauform** | ein `Switch` „Nach Projekt" — **aus heißt Partner, an heißt Projekt** — statt der `ToggleGroup` „Partner \| Projekt" |
+| **Ort** | in der Zeile von „Nur mit Verkehr", rechts daneben; die eigene Zeile über der Eingrenzung ist entfallen. Ist die Spalte zu schmal, bricht der zweite Schalter darunter um (`flex-wrap`) |
+| **E‑146** | gilt weiter, bis auf „zuoberst": Die Gliederung steht in der Baumspalte und nicht neben dem Zeitraum |
+| **Beschriftung** | „Nur mit Verkehr im Zeitraum" heißt jetzt **„Nur mit Verkehr"** (en: „Only with traffic"), damit beide Schalter in eine Zeile passen. Dass es um den gewählten Zeitraum geht, sagt der vorgelesene Hinweis weiterhin |
+| **Texte** | `prozesse.gliederung.schalter` und `prozesse.gliederung.hinweis` statt `bezeichnung`, `PARTNER` und `PROJEKT` |
+| **Berührungsfläche** | wie beim Nachbarn: Die Beschriftung trägt `min-h-beruehrung` und schaltet über `htmlFor` mit |
+| **URL und Vorgabe** | unverändert (E‑143): An ist, was gilt — gewählt oder aus der Antwort —, und ohne Umschalten steht kein Parameter in der Adresse |
+| **Test** | `tests/gliederung-umschalter.test.tsx` auf den Schalter umgebaut, weiterhin zwei Fälle: der Zustand an `aria-checked`, und dass Umschalten den anderen Code meldet, auch über die Beschriftung. `pnpm check` grün, 1051 Tests in 39 Dateien |
+
+**Die Grenze der Bauform ist benannt:** Ein Schalter kennt aus und an. „Aus" nennt die
+Partnergliederung nicht beim Namen, und die Bauform trägt nur, solange es genau zwei Gliederungen
+gibt; eine dritte bräuchte wieder eine Auswahl.
+
+> ### ⚠️ Belegvermerk (Regel L10)
+>
+> *Gesehen war,* am 15.09.2026 im angemeldeten Browser (ADMIN, `NEXANS`): bei 1.920 px
+> Fensterbreite beide Schalter nebeneinander in der 416 px breiten Spalte, die Zeile 44 px hoch. Ein
+> Klick auf die **Beschriftung** „Nach Projekt" setzt `?gliederung=PROJEKT`, den Schalter auf an,
+> 17 Projekte und den Platzhalter „Projekt oder Prozess eingrenzen"; ein Klick auf den **Schalter**
+> selbst setzt `?gliederung=PARTNER`, 229 Zeilen und „Partner oder Prozess eingrenzen". Bei 941 px
+> Fensterbreite steht „Nach Projekt" sichtbar unter „Nur mit Verkehr" (Bildschirmaufnahme). Die
+> 208 px der 768‑px-Stufe sind **nicht** als Fensterbreite gefahren, sondern als Spaltenbreite im
+> DOM gesetzt: zweiter Schalter umgebrochen, Zeile 88 px hoch, kein Überlauf.
+> *Behauptet wird nicht:* das Bild unter `pointer: coarse`.
+
+### Am selben Tag ersetzt — die kompakte Auswahl in der Schalterzeile (E‑146 fortgeschrieben)
+
+Als Alternative zum Schalter vorgeschlagen und auf Wunsch des Auftraggebers **zur Ansicht gebaut;
+seine Entscheidung zwischen Schalter und Auswahl steht aus.** Die Fassung mit dem Schalter ist im
+Abschnitt darüber beschrieben und ließe sich daraus zurückbauen.
+
+| | |
+|---|---|
+| **Bauform** | `ToggleGroup` „Partner \| Projekt", `variant="outline"`, `size="sm"`, die Knöpfe mit `min-h-bedienelement` — dieselbe Regel wie beim Zeitraumumschalter: 32 px am Zeigergerät, am Berührungsgerät die Mindestfläche |
+| **Ort** | rechts in der Zeile von „Nur mit Verkehr" (`justify-between`); bricht die Zeile um, steht die Auswahl links darunter |
+| **Warum statt des Schalters** | Beide Gliederungen stehen **mit Namen** im Bild — das „aus" des Schalters nannte die Partnergliederung nicht. Und die Bauform trüge eine dritte Gliederung, ohne umgebaut zu werden |
+| **Texte** | wieder `prozesse.gliederung.bezeichnung`, `PARTNER` und `PROJEKT`; „Nur mit Verkehr" bleibt ohne „im Zeitraum" |
+| **Test** | `tests/gliederung-umschalter.test.tsx` wieder auf die Auswahl: hervorgehoben ist, was gilt, und ohne Angabe kein Knopf; ein Klick meldet den Code, der gedrückte nichts. `pnpm check` grün, 1051 Tests in 39 Dateien |
+
+> ### ⚠️ Belegvermerk (Regel L10)
+>
+> *Gemessen war,* am 15.09.2026 im angemeldeten Browser **aus dem DOM** — das Fenster war dabei
+> verdeckt und 380 × 110 px klein, eine Bildschirmaufnahme der Zeile gab es in dem Moment nicht: Bei
+> 416 px Spaltenbreite steht die Auswahl **neben** dem Schalter und bündig am rechten Rand, 32 px
+> hoch, die Zeile 44 px, „Partner" 67 px und „Projekt" 65 px breit. Bei 208 px, als Spaltenbreite im
+> DOM gesetzt, ist sie **umgebrochen** und steht links, die Zeile 76 px hoch, kein Überlauf.
+> *Behauptet wird nicht:* das Bild unter `pointer: coarse` und bei einer echten Fensterbreite von
+> 768 px.
+
+### Am selben Tag zurückgebaut — wieder der Schalter
+
+Auf Wunsch des Auftraggebers steht **wieder der Schalter „Nach Projekt"** aus dem vorletzten
+Abschnitt im Code, Zeichen für Zeichen die Fassung von vorher: Komponente, Test, die Zeile in
+`prozessansicht.tsx`, die Texte und die Zählzeile in `vitest.config.mts`. **Die Entscheidung
+zwischen Schalter und kompakter Auswahl steht weiter aus;** beide sind hier beschrieben, und die
+Auswahl ließe sich aus dem Abschnitt darüber wieder herstellen.
+
+### Entschieden am 15.09.2026 — der Schalter bleibt, und er heißt „Nur mit Daten"
+
+- **Der Auftraggeber hat sich für den Schalter „Nach Projekt" entschieden;** die kompakte Auswahl
+  ist verworfen. Es gilt der Abschnitt „Nachgebessert am 15.09.2026 — ein Schalter statt zweier
+  Knöpfe", und E‑146 in dessen Fassung.
+- **Der Nachbarschalter heißt auf Deutsch „Nur mit Daten"** statt „Nur mit Verkehr" — ebenfalls
+  auf Wunsch des Auftraggebers. **Die englische Fassung bleibt „Only with traffic".** Geändert ist
+  nur das Wort im Bild: Der Schlüssel `prozesse.baum.nurMitVerkehr`, der URL-Parameter
+  `nurMitVerkehr`, E‑48 und der vorgelesene Hinweis („… im gewählten Zeitraum nichts gelaufen …")
+  bleiben, wie sie sind.
+- Die Tabellen und Belegvermerke darüber nennen den Schalter mit dem Wortlaut ihres Tages und
+  bleiben so stehen.

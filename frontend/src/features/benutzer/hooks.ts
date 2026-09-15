@@ -9,6 +9,7 @@ import {
   holeNutzer,
   legeKontoAn,
   setzeAktiv,
+  setzeBaumgliederung,
   setzeMandanten,
   setzePasswort,
   setzeRolle,
@@ -87,6 +88,8 @@ export function useVorgang() {
           return setzeMandanten(id, vorgang.mandanten);
         case "passwort":
           return setzePasswort(id, vorgang.passwort);
+        case "baumgliederung":
+          return setzeBaumgliederung(id, vorgang.gliederung);
       }
     },
     onSuccess: (zeile) => {

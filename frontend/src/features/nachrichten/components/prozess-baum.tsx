@@ -10,13 +10,12 @@ import { statusVordergrund } from "@/lib/status-farbe";
 import { useInSicht } from "@/lib/in-sicht-bringen";
 import { cn } from "@/lib/utils";
 
-import type { Partnerknoten } from "../api";
+import type { Baumebene, Baumknoten } from "../api";
 import {
   BAUMTASTEN,
   baumzeilen,
-  partnertext,
+  knotentext,
   prozessSchluessel,
-  richtungstext,
   tastenbefehl,
   zeilenbeschriftung,
   zustandstext,
@@ -25,6 +24,14 @@ import {
 
 /**
  * Der Prozessbaum — `role="tree"` nach dem WAI‑ARIA-Muster.
+ *
+ * ## Ein Renderpfad für beide Gliederungen *(seit 15.09.2026, E‑140)*
+ *
+ * Der Baum bekommt die rekursive Form der Antwort (`knoten`) und ihre
+ * Ebenennamen (`ebenen`) und weiß sonst nichts über die Gliederung. Partner →
+ * Richtung → Prozess und Projekt → Prozess laufen durch dieselben Zeilen
+ * ({@link baumzeilen}), dieselbe Tastatur und dieselbe Beschriftung — **ein
+ * zweiter Pfad für zwei Ebenen liefe beim nächsten Feld auseinander.**
  *
  * ## Warum kein Accordion-Baustein
  *
@@ -90,7 +97,8 @@ import {
  * > andere, samt seiner Höhenregel.
  */
 export function ProzessBaum({
-  partner,
+  knoten,
+  ebenen,
   stilleSchwelleMonate,
   gewaehlt,
   springeZurAuswahl,
@@ -98,8 +106,10 @@ export function ProzessBaum({
   aufUmschalten,
   aufAuswahl,
 }: {
-  /** Die **eingegrenzten** Partnerknoten — die Ansicht filtert, der Baum zeichnet. */
-  partner: readonly Partnerknoten[];
+  /** Die **eingegrenzten** Knoten der obersten Ebene — die Ansicht filtert, der Baum zeichnet. */
+  knoten: readonly Baumknoten[];
+  /** Die Ebenennamen aus der Antwort, von außen nach innen. */
+  ebenen: readonly Baumebene[];
   /** Kommt aus der Antwort (E‑37). Der Baum rechnet keine Monate nach. */
   stilleSchwelleMonate: number;
   gewaehlt: string | null;
@@ -121,7 +131,7 @@ export function ProzessBaum({
   const sprache = useSprache();
   const zahl = useCallback((wert: number) => formatiereZahl(wert, sprache), [sprache]);
 
-  const zeilen = useMemo(() => baumzeilen(partner, istOffen), [partner, istOffen]);
+  const zeilen = useMemo(() => baumzeilen(knoten, ebenen, istOffen), [knoten, ebenen, istOffen]);
 
   /**
    * Welche Zeile den Tabstopp trägt.
@@ -150,7 +160,7 @@ export function ProzessBaum({
    * Überlegung, mit der das Nachrichtendetail `Escape` statt eines Fokussprungs
    * bekommen hat.
    */
-  const knoten = useRef(new Map<string, HTMLDivElement>());
+  const knotenJeSchluessel = useRef(new Map<string, HTMLDivElement>());
 
   /**
    * Die gewählte Zeile — das Ziel des Sprungs beim Einstieg (E‑115).
@@ -173,7 +183,7 @@ export function ProzessBaum({
       return;
     }
     setFokus(schluessel);
-    knoten.current.get(schluessel)?.focus();
+    knotenJeSchluessel.current.get(schluessel)?.focus();
   }, []);
 
   /**
@@ -235,13 +245,13 @@ export function ProzessBaum({
           merke={(element) => {
             const istGewaehlt = zeile.art === "PROZESS" && zeile.prozess.processId === gewaehlt;
             if (element === null) {
-              knoten.current.delete(zeile.schluessel);
+              knotenJeSchluessel.current.delete(zeile.schluessel);
               if (istGewaehlt) {
                 gewaehlteZeile.current = null;
               }
               return;
             }
-            knoten.current.set(zeile.schluessel, element);
+            knotenJeSchluessel.current.set(zeile.schluessel, element);
             if (istGewaehlt) {
               gewaehlteZeile.current = element;
             }
@@ -268,7 +278,8 @@ export function ProzessBaum({
  *
  * **Ebene 2 kommt zweimal vor, und das ist E‑45**: als Richtungsknoten *und* als
  * Blatt eines Partners, dessen Richtungsebene weggefallen ist. Beide stehen
- * gleich weit eingerückt, weil beide gleich tief hängen.
+ * gleich weit eingerückt, weil beide gleich tief hängen. **Im Projektbaum** ist
+ * Ebene 2 immer ein Blatt — dieselbe Einrückung, keine eigene Regel.
  */
 const EINRUECKUNG: Record<number, string> = {
   1: "ps-0",
@@ -317,7 +328,7 @@ function BaumZeile({
        * Gruppen.** Auswählbar ist allein ein Prozess — eine Gruppe trägt
        * deshalb `false` und nie `true`. Das ist keine Nachgiebigkeit gegenüber
        * der Lint-Regel, sondern die Aussage selbst: Der Baum kennt genau eine
-       * Auswahl, und sie liegt nie auf einem Partner.
+       * Auswahl, und sie liegt nie auf einer Gruppe.
        */
       aria-selected={gewaehlt}
       {...(zeile.art === "PROZESS" ? {} : { "aria-expanded": zeile.offen })}
@@ -372,13 +383,19 @@ function BaumZeile({
          * `… Lieferschein (VDA)` neben `… Lieferschein (EDIFACT)` der Regelfall
          * (`docs/prozessauswahl.md` §7a). Die feste Zeilenhöhe gilt der Tabelle
          * rechts und nicht dem Baum.
+         *
+         * **Die oberste Ebene ist halbfett** — in beiden Gliederungen, ob Partner
+         * oder Projekt. Sie ist die Ebene, über die gesucht wird.
          */}
-        <span className={cn("block break-words", zeile.art === "PARTNER" && "font-medium")}>
-          {zeile.art === "PARTNER"
-            ? partnertext(zeile.partner, texte)
-            : zeile.art === "RICHTUNG"
-              ? richtungstext(zeile.richtung, texte)
-              : (zeile.prozess.processName ?? texte.prozesse.ohneNamen)}
+        <span
+          className={cn(
+            "block break-words",
+            zeile.art === "GRUPPE" && zeile.ebene === 1 && "font-medium",
+          )}
+        >
+          {zeile.art === "GRUPPE"
+            ? knotentext(zeile.ebenenname, zeile.name, texte)
+            : knotentext("PROZESS", zeile.prozess.name, texte)}
         </span>
 
         {zusatz === null ? null : (
@@ -408,7 +425,7 @@ function BaumZeile({
  *
  * | Zeile | Zeichen |
  * |---|---|
- * | Gruppe (Partner, Richtung) | das Aufklappzeichen |
+ * | Gruppe (Partner, Richtung, Projekt) | das Aufklappzeichen |
  * | Blatt | ein Platzhalter der Zeichenbreite, damit der Name auf einer Höhe mit
  *   der Gruppe darüber beginnt |
  *
@@ -420,11 +437,11 @@ function BaumZeile({
  * Sachverhalt, den die Ebene daneben als Zeile führt.
  *
  * **Seit E‑58 trägt die Ebene sie überall, wo sie bekannt ist**
- * ({@link richtungsebeneFaelltWeg}); weg fällt die Ebene nur noch dort, wo die
- * Richtung `null` ist — und dort gäbe es nichts zu schreiben.
+ * (`ebeneFaelltWeg`); weg fällt die Ebene nur noch dort, wo die Richtung `null`
+ * ist — und dort gäbe es nichts zu schreiben.
  */
 function Zeichen({ zeile }: { zeile: Baumzeile }) {
-  if (zeile.art !== "PROZESS") {
+  if (zeile.art === "GRUPPE") {
     const Symbol = zeile.offen ? ChevronDown : ChevronRight;
     return <Symbol aria-hidden="true" className="mt-1.5 size-3.5 shrink-0 opacity-70" />;
   }

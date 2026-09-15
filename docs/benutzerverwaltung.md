@@ -7,6 +7,8 @@ Baut auf [`authentifizierung.md`](authentifizierung.md) (Schritt 3) und
 **Entscheidungen E1 bis E21.** E19 bis E21 sind am 21.08.2026 dazugekommen und betreffen die
 Oberfläche (§7a).
 
+> *Fortgeschrieben:* **E22 bis E25** stehen in §7b, **E26** (15.09.2026) in §7c.
+
 > ⚠️ **Am 24.08.2026 gebaut, alle drei.** Hier stand: *„gebaut sind sie **nicht** — sie gehören in
 > den 9a-Frontend-Auftrag, und **E20** verlangt zusätzlich eine Backend-Änderung."* Beides ist
 > geschehen: die Backend-Änderung zu E20 in
@@ -154,6 +156,7 @@ existiert es.
 | `PUT /api/admin/users/{id}/role` | `ROLLE_GEAENDERT` |
 | `PUT /api/admin/users/{id}/tenants` | `MANDANTEN_GEAENDERT` ← **dritte M1-Ausnahme** |
 | `POST /api/admin/users/{id}/password` | `PASSWORT_ZURUECKGESETZT` |
+| `PUT /api/admin/users/{id}/tree-layout` *(seit 15.09.2026)* | `BAUMGLIEDERUNG_GEAENDERT` ← **ohne Sitzungsentzug** (E26, §7c) |
 
 Sperre und Deaktivierung sind je **ein** Endpunkt mit Zustand, nicht zwei. Jeder der fünf
 schreibenden Vorgänge verwirft alle Sitzungen des Kontos (E5).
@@ -321,6 +324,67 @@ anlegt, legt oft ein zweites an.
 > auf einen zu langen mit **`benutzername-zu-lang`** (Grenze 100 Zeichen, aus
 > `SPRING_SESSION.PRINCIPAL_NAME` und nicht aus `app_user.username`). Beide bestehen seit Schritt 3;
 > übersetzt sind sie erst mit 9c, weil es vorher keinen Bedienweg dorthin gab.
+
+---
+
+## 7c. Die Vorgabe der Baumgliederung (E26, 15.09.2026)
+
+**Gebaut am 15.09.2026** mit der zweiten Gliederung des Prozessbaums
+([`process-view.md`](process-view.md) §48). Ein ADMIN setzt je Konto, womit der Prozessbaum beginnt,
+wenn die Adresse keine Gliederung nennt — `PARTNER` (Partner, Richtung, Prozess) oder `PROJEKT`
+(Projekt, Prozess). **Umschalten darf jeder**, am Baum selbst; es gibt keine Rollengrenze am Baum
+und keine Möglichkeit, das Wechseln zu sperren.
+
+| Endpunkt | Rumpf | Ereignisart |
+|---|---|---|
+| `PUT /api/admin/users/{id}/tree-layout` | `{"treeLayout": "PROJEKT"}` | `BAUMGLIEDERUNG_GEAENDERT` |
+
+**Ein eigener Endpunkt, ein Vorgang, eine Ereignisart** — §5 gilt unverändert, es gibt kein
+gemeinsames `PATCH`. Das Detail der Protokollzeile nennt alten und neuen Wert. Die Rollengrenze ist
+die bestehende: `/api/admin/**` verlangt `ADMIN`, und ein `MANDANT`-Nutzer bekommt `403`, auch auf
+sein eigenes Konto (`BenutzerverwaltungIsolationDbIT`). Ein unbekannter Wert ist `400
+gliederung-unbekannt`, ein leerer Rumpf `400 eingabe-ungueltig`.
+
+> ### ⚠️ Abweichung vom Auftrag, gemeldet und entschieden, bevor gebaut wurde
+>
+> Der Auftrag schrieb `PUT /api/admin/users/{id}/baum-gliederung` mit `{"gliederung": …}` vor. Das
+> widerspricht §5 dieser Datei — *„deutsche Unterpfade darunter wären schlechter als beide reinen
+> Varianten"* — und genau derselbe Widerspruch ist am 21.08.2026 an `{id}/tenants` schon einmal
+> entschieden worden ([`mandantentrennung.md`](mandantentrennung.md) §3). **Am 15.09.2026 vom
+> Auftraggeber entschieden: englisch wie die Nachbarn** — Pfad `tree-layout`, Rumpffeld und
+> Zeilenfeld `treeLayout`, Spalte `app_user.tree_layout`. Die **Werte** bleiben deutsch, wie
+> `role: "MANDANT"`. Der Parameter am Baum-Endpunkt bleibt `?gliederung=`: Er gehört zu einem
+> Fachpfad, und dessen Nachbarn (`zeitraum`, `von`, `bis`) sind deutsch.
+
+**E26 — Die Baumgliederung verwirft keine Sitzung.** Sie ist der sechste schreibende Vorgang dieser
+Seite und der erste, für den E5 nicht gilt. **E5 hat seinen Grund in der Wirkung eines
+Verwaltungsakts auf den Zugang**: Eine Sperre, die erst beim nächsten Anmelden greift, wäre keine,
+und dieselbe Überlegung trägt Rolle, Mandanten, Aktivzustand und Passwort. Die Baumgliederung
+berührt keinen Zugang — sie ist ausdrücklich **keine Berechtigung** —, und sie wirkt ohnehin sofort:
+Der Baum liest die Vorgabe bei jedem Aufruf ohne Parameter neu aus `app_user`, statt sie in der
+Sitzung zu halten. Ein Entzug meldete den Nutzer ab, weil ein ADMIN die Anordnung seines Baums
+geändert hat, ohne dass dadurch irgendetwas früher gälte.
+
+Daraus folgt dreierlei, und alles davon ist gebaut:
+
+- **Kein Selbstschutz** (E12): Die Vorgabe entwertet nichts, am eigenen Konto läuft sie durch.
+- **Keine Vorwarnung** (E19): Die Warnung verspricht eine Abmeldung, und die kommt nicht. Die
+  Oberfläche fragt dafür eine eigene Regel ab (`verwirftSitzungen` in
+  `features/benutzer/selbstschutz.ts`).
+- **Der Satz „Jede Änderung daran meldet dich ab"** am eigenen Konto hat eine Einschränkung
+  bekommen: *außer an der Baumgliederung*.
+
+Das Protokoll hält den Unterschied fest: Das Detail endet auf *„keine Sitzung verworfen"*, wo die
+fünf anderen die Zahl verworfener Sitzungen nennen (E15).
+
+**Keine vierte Ausnahme von M1.** Der Endpunkt nimmt keine Mandanten-ID entgegen; die Liste in
+[`mandantentrennung.md`](mandantentrennung.md) §3 bleibt bei drei.
+
+**Die Zeile trägt ein zehntes Feld**, `treeLayout`, als Zeichenkette wie `role`. `GET /api/auth/me`
+bleibt unverändert — die Vorgabe wird im Baum eingesetzt und dort zurückgespiegelt und muss nicht
+in die Selbstauskunft. **In der Tabelle der Oberfläche steht dafür keine Spalte**, nur ein
+Auswahlfeld im Zeilenformular ([`benutzerverwaltung-frontend.md`](benutzerverwaltung-frontend.md)
+§17).
 
 ---
 

@@ -3,14 +3,19 @@
 import { act, useEffect, useState } from "react";
 import { describe, expect, it } from "vitest";
 
-import type { Partnerknoten, Prozessknoten, Richtungsknoten } from "@/features/nachrichten/api";
+import type {
+  Baumebene,
+  Baumknoten,
+  Gruppenknoten,
+  Prozessknoten,
+} from "@/features/nachrichten/api";
 import { ProzessBaum } from "@/features/nachrichten/components/prozess-baum";
-import { partnerSchluessel, prozessSchluessel } from "@/features/nachrichten/prozessbaum";
+import { gruppenSchluessel, prozessSchluessel } from "@/features/nachrichten/prozessbaum";
 
 import { rendere } from "./hilfe/rendern";
 
 /**
- * **Zwölf Fälle, für die ein gerenderter Baum die einzige Prüfung ist.**
+ * **Sechzehn Fälle, für die ein gerenderter Baum die einzige Prüfung ist.**
  *
  * Die Entscheidungen des Prozessbaums stehen in `tests/prozessbaum.test.ts` —
  * Schachtelung, Überspringen, Eingrenzung, Tastatur — und werden dort ohne DOM
@@ -37,13 +42,22 @@ import { rendere } from "./hilfe/rendern";
  *    werden die Maße gestellt. Mit der Gegenprobe: **bei offenem Panel bewegt
  *    sich nichts.**
  *
+ * 6. **Derselbe Renderpfad für zwei Ebenen** (E‑140, 15.09.2026): Der
+ *    Projektbaum geht durch dieselbe Komponente und bekommt dieselbe ARIA-Form —
+ *    und ein einziges Projekt bleibt eine Zeile, weil das Überspringen auf die
+ *    Richtung beschränkt ist (E‑145).
+ *
  * **Alle Prüfwerte sind erfunden** (Regel T2).
  */
 
+const PARTNER_EBENEN: Baumebene[] = ["PARTNER", "RICHTUNG", "PROZESS"];
+const PROJEKT_EBENEN: Baumebene[] = ["PROJEKT", "PROZESS"];
+
 function blatt(processId: string, name: string): Prozessknoten {
   return {
+    schluessel: processId,
+    name,
     processId,
-    processName: name,
     nachrichten: 3,
     fehler: 0,
     letzteBewegung: "2025-12-29T22:00:00Z",
@@ -51,21 +65,21 @@ function blatt(processId: string, name: string): Prozessknoten {
   };
 }
 
-function gruppe(richtung: string | null, prozesse: Prozessknoten[]): Richtungsknoten {
-  return { richtung, anzahlProzesse: prozesse.length, nachrichten: 3, fehler: 0, prozesse };
-}
-
-function knoten(partner: string | null, richtungen: Richtungsknoten[]): Partnerknoten {
+function gruppe(name: string | null, kinder: Baumknoten[]): Gruppenknoten {
   return {
-    partner,
-    anzahlProzesse: richtungen.reduce((wert, g) => wert + g.anzahlProzesse, 0),
+    schluessel: name === null ? null : name.toUpperCase(),
+    name,
+    anzahlProzesse: kinder.reduce(
+      (wert, kind) => wert + ("kinder" in kind ? kind.anzahlProzesse : 1),
+      0,
+    ),
     nachrichten: 3,
     fehler: 0,
-    richtungen,
+    kinder,
   };
 }
 
-const MIT_EBENE = knoten("ACME", [
+const MIT_EBENE = gruppe("ACME", [
   gruppe("EINGEHEND", [blatt("p1", "ACME Bestellung")]),
   gruppe("AUSGEHEND", [blatt("p2", "ACME Lieferschein")]),
 ]);
@@ -74,13 +88,13 @@ const MIT_EBENE = knoten("ACME", [
  * Ein Partner mit **einer, bekannten** Richtung — die Ebene steht trotzdem
  * (E‑58). Der Fall aus dem Bild des Auftraggebers: `ADIENT` mit einem Prozess.
  */
-const EINE_RICHTUNG = knoten("BOSCH", [gruppe("EINGEHEND", [blatt("p3", "BOSCH Rechnung")])]);
+const EINE_RICHTUNG = gruppe("BOSCH", [gruppe("EINGEHEND", [blatt("p3", "BOSCH Rechnung")])]);
 
 /**
  * Ein Partner ohne kuratierte Richtung — bei `VOTG` alle 133 (M123). **Nur hier
  * fällt die Ebene weg**, und die Blätter bekommen keinen Ersatz.
  */
-const OHNE_EBENE = knoten("VOTG", [gruppe(null, [blatt("p4", "Freier Prozess")])]);
+const OHNE_EBENE = gruppe("VOTG", [gruppe(null, [blatt("p4", "Freier Prozess")])]);
 
 /**
  * Bis zum 09.09.2026 stand hier `springeZurAuswahl`: Der Baum holte die gewählte
@@ -95,13 +109,15 @@ const OHNE_EBENE = knoten("VOTG", [gruppe(null, [blatt("p4", "Freier Prozess")])
  * > stehen unverändert.
  */
 async function baum(
-  partner: Partnerknoten[],
+  knoten: Baumknoten[],
   gewaehlt: string | null = null,
   springeZurAuswahl = false,
+  ebenen: Baumebene[] = PARTNER_EBENEN,
 ) {
   return rendere(
     <ProzessBaum
-      partner={partner}
+      knoten={knoten}
+      ebenen={ebenen}
       stilleSchwelleMonate={3}
       gewaehlt={gewaehlt}
       springeZurAuswahl={springeZurAuswahl}
@@ -123,11 +139,11 @@ const steuerung: {
  * müssen vor dem Sprung stehen**, und beim ersten Rendern stehen sie noch nicht.
  */
 function BaumHuelle({
-  partner,
+  knoten,
   gewaehlt: start,
   springt: startSprung,
 }: {
-  partner: Partnerknoten[];
+  knoten: Baumknoten[];
   gewaehlt: string | null;
   springt: boolean;
 }) {
@@ -139,7 +155,8 @@ function BaumHuelle({
   }, []);
   return (
     <ProzessBaum
-      partner={partner}
+      knoten={knoten}
+      ebenen={PARTNER_EBENEN}
       stilleSchwelleMonate={3}
       gewaehlt={gewaehlt}
       springeZurAuswahl={springt}
@@ -296,6 +313,28 @@ describe("Der Prozessbaum im Baum", () => {
     }
   });
 
+  it("zeichnet den Projektbaum über denselben Pfad — zwei Ebenen, ein Projekt bleibt eine Zeile", async () => {
+    // **E‑140**: kein zweiter Renderpfad. **E‑145**: Ein einziges Projekt mit
+    // einem einzigen Prozess wird nicht übersprungen — `SUTTONS` und `WOC`
+    // haben je genau ein Projekt, und es steht als Zeile da.
+    const einziges = gruppe("Eingang von Kunden", [blatt("p5", "Einziger Prozess")]);
+    const { behaelter, abbauen } = await baum([einziges], null, false, PROJEKT_EBENEN);
+
+    try {
+      const alle = zeilen(behaelter);
+
+      expect(alle.map((zeile) => zeile.getAttribute("aria-level"))).toEqual(["1", "2"]);
+      expect(alle.filter((zeile) => zeile.hasAttribute("aria-expanded"))).toHaveLength(1);
+      expect(alle[0].textContent).toContain("Eingang von Kunden");
+      expect(alle[0].getAttribute("aria-label")).toContain("Projekt");
+      expect(alle[0].getAttribute("aria-label")).not.toContain("Partner");
+      // Dieselbe Einrückung wie ein Blatt auf Ebene 2 im Partnerbaum.
+      expect(alle[1].className.split(/\s+/)).toContain("ps-5");
+    } finally {
+      await abbauen();
+    }
+  });
+
   it("beschriftet jede Zeile über `aria-label` statt über verborgene Spannen", async () => {
     const { behaelter, abbauen } = await baum([MIT_EBENE]);
 
@@ -399,7 +438,7 @@ describe("Der Prozessbaum im Baum", () => {
     //
     // `text-muted-foreground` steht im Baum an anderen Stellen (Zahlenblock);
     // geprüft wird deshalb die **Zeile selbst**.
-    const nie = knoten("ACME", [
+    const nie = gruppe("ACME", [
       gruppe(null, [{ ...blatt("p5", "Nie benutzt"), zustand: "NIE", letzteBewegung: null }]),
     ]);
     const { behaelter, abbauen } = await baum([nie]);
@@ -486,7 +525,9 @@ describe("Der Prozessbaum im Baum", () => {
     // Die Gegenprobe zur reinen Funktion: Dass der Baum wirklich diese Schlüssel
     // verwendet, sieht man erst an den gerenderten Zeilen — und daran hängt, ob
     // ein aufgeklappter Partner eine Eingrenzung überlebt.
-    expect(partnerSchluessel("ACME")).not.toBe(partnerSchluessel("BOSCH"));
+    expect(gruppenSchluessel(null, "PARTNER", "ACME")).not.toBe(
+      gruppenSchluessel(null, "PARTNER", "BOSCH"),
+    );
     expect(prozessSchluessel("p1")).not.toBe(prozessSchluessel("p2"));
 
     const { behaelter, abbauen } = await baum([MIT_EBENE, OHNE_EBENE]);
@@ -508,7 +549,7 @@ describe("Der Prozessbaum im Baum", () => {
     // mehrere tausend Pixel unten, und ohne den Sprung landet er am Anfang.
     // Seit die rechte Spalte klebt, schiebt der Sprung sie nicht mehr weg.
     const { behaelter, abbauen } = await rendere(
-      <BaumHuelle partner={[MIT_EBENE, EINE_RICHTUNG]} gewaehlt="p3" springt={false} />,
+      <BaumHuelle knoten={[MIT_EBENE, EINE_RICHTUNG]} gewaehlt="p3" springt={false} />,
     );
     try {
       const stand = stelleScrollbereich(behaelter, 0);
@@ -527,7 +568,7 @@ describe("Der Prozessbaum im Baum", () => {
     // offenem Panel gibt die Ansicht `springeZurAuswahl` **falsch** mit — dann
     // bewegt auch ein Wechsel der Auswahl den Baum nicht.
     const { behaelter, abbauen } = await rendere(
-      <BaumHuelle partner={[MIT_EBENE, EINE_RICHTUNG]} gewaehlt="p1" springt={false} />,
+      <BaumHuelle knoten={[MIT_EBENE, EINE_RICHTUNG]} gewaehlt="p1" springt={false} />,
     );
     try {
       const stand = stelleScrollbereich(behaelter, 5200);
