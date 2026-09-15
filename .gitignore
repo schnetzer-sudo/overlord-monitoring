@@ -143,3 +143,10 @@ scripts/messung-property-suche/ergebnis/
 # naechsten Lesen nicht mehr erkennbar, welche der beiden Listen gilt. Der
 # Erzeuger selbst und sein Statement sind eingecheckt.
 backend/src/test/resources/indizes-sollliste.kandidat
+
+# ─── Sichtprobe am schmalen Fenster ──────────────────────────────────────────
+# Das Skript wird eingecheckt — es ist der Beleg dafuer, wie gemessen wurde,
+# und die Erhebung ist nach Teil 2 zu wiederholen. Die Rohausgaben und die
+# Bildschirmfotos nicht: Sie zeigen Listen und Belegwerte der Testkopie und
+# damit Partnernamen und Belegnummern Dritter. (Regel G1)
+scripts/sichtprobe-schmal/ergebnis/
