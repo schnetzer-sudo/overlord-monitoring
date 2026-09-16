@@ -526,31 +526,36 @@ export function ProzessAnsicht() {
          * das mit dem Inhalt verschwindet, dem Nutzer genau dann fehlt, wenn er
          * etwas ausprobieren will. Im Ladezustand gesperrt.
          */}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          {/* „Neu laden" unmittelbar rechts neben dem letzten Zeitraum-Knopf
-              (E‑173, korrigiert E‑163), in einer eigenen Gruppe mit dem
-              Umschalter: Der Abstand ist derselbe wie auf der Übersicht, und
-              bricht die Zeile um, gehen beide zusammen. Die freien Felder und
-              ihr Hinweis folgen **hinter** dem Knopf: Er bleibt neben „Frei"
-              und rückt mit dem Umschalter nach links, wenn sie erscheinen
-              (M183). Kein Schalter — nur die Nachrichtenliste trägt einen. */}
-          <div className="flex flex-wrap items-center gap-2">
-            <ZeitraumUmschalter
-              gewaehlt={hervorgehobenerBaumzeitraum(zustand, freiGewaehlt, baum?.zeitraum)}
-              aufAuswahl={(zeitraum) => {
-                setFreiGewaehlt(false);
-                setzeZeitraum(zeitraum);
-              }}
-              aufFrei={() => {
-                // Der freie Modus beginnt leer: Ein vorbelegtes Fenster wäre ein
-                // zweiter Standardwert. Sichtbar wird die Wahl über `freiGewaehlt`.
-                setFreiGewaehlt(true);
-                setzeFreiesFenster(null, null);
-              }}
-              gesperrt={antwort.isPending}
-            />
-            <NeuLaden name={texte.neuLaden.prozesse} laedt={holt} aufNeuLaden={neuLaden} />
-          </div>
+        {/* „Neu laden" steht **ganz rechts** — ohne freies Fenster unmittelbar
+            neben „Frei" (E‑173, korrigiert E‑163), im freien Modus hinter den
+            Datumsfeldern und ihrem Hinweis (E‑175, korrigiert die Wahl aus
+            E‑173). Kein Schalter — nur die Nachrichtenliste trägt einen.
+
+            **Eine Reihe, zweimal `ml-auto`** (M184). Umschalter, Felder und
+            Knopf sind Kinder **derselben** Reihe: In einer eigenen Gruppe
+            konnten die Felder bei 1024 px umbrechen, und der Knopf stand
+            allein in einer dritten Zeile. Das `ml-auto` am Knopf schiebt ihn
+            in der letzten Zeile an den Rand; das an der Reihe hält sie rechts,
+            wenn sie nicht neben die Überschrift passt — `justify-between`
+            legte sie sonst nach links (1280 px, Dichte `l`: 65 px vor dem
+            Rand). Der Abstand ist überall `gap-2`, wie auf der Übersicht und
+            zwischen den Datumsfeldern der Nachrichtenliste; bis E‑175 standen
+            die Felder 0,75 rem auseinander. */}
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <ZeitraumUmschalter
+            gewaehlt={hervorgehobenerBaumzeitraum(zustand, freiGewaehlt, baum?.zeitraum)}
+            aufAuswahl={(zeitraum) => {
+              setFreiGewaehlt(false);
+              setzeZeitraum(zeitraum);
+            }}
+            aufFrei={() => {
+              // Der freie Modus beginnt leer: Ein vorbelegtes Fenster wäre ein
+              // zweiter Standardwert. Sichtbar wird die Wahl über `freiGewaehlt`.
+              setFreiGewaehlt(true);
+              setzeFreiesFenster(null, null);
+            }}
+            gesperrt={antwort.isPending}
+          />
           {/* Die Felder stehen **neben** dem Umschalter, nicht darin — nur so
               bleibt das Dashboard zeichengleich. Sie sind Kinder derselben
               Zeile in derselben Höhe: Die Zeile wird breiter, nicht höher, und
@@ -563,6 +568,9 @@ export function ProzessAnsicht() {
               fehler={fehlerAnDenFeldern}
             />
           ) : null}
+          <div className="ml-auto">
+            <NeuLaden name={texte.neuLaden.prozesse} laedt={holt} aufNeuLaden={neuLaden} />
+          </div>
         </div>
       </div>
 

@@ -97,18 +97,24 @@ export function DashboardAnsicht() {
          * Block fällt in den Ladezustand, und der Verlauf bewegt sich nicht —
          * warum nicht, steht in `verlauf-diagramm.tsx`. **Nur manuell** (E‑164):
          * `refetchInterval` gibt es hier weiterhin nicht (E‑137).
+         *
+         * **Zweimal `ml-auto`**, wie in der Prozessansicht (E‑175): Der Knopf
+         * bleibt ganz rechts, auch wenn die Reihe unter die Überschrift
+         * umbricht oder selbst umbricht.
          */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center gap-2">
           <ZeitraumUmschalter
             gewaehlt={zeitraum}
             aufAuswahl={setzeZeitraum}
             gesperrt={antwort.isPending}
           />
-          <NeuLaden
-            name={texte.neuLaden.uebersicht}
-            laedt={antwort.isFetching}
-            aufNeuLaden={() => void antwort.refetch({ cancelRefetch: false })}
-          />
+          <div className="ml-auto">
+            <NeuLaden
+              name={texte.neuLaden.uebersicht}
+              laedt={antwort.isFetching}
+              aufNeuLaden={() => void antwort.refetch({ cancelRefetch: false })}
+            />
+          </div>
         </div>
       </div>
 

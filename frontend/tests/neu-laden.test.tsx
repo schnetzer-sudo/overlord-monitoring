@@ -27,7 +27,7 @@ import { rendere } from "./hilfe/rendern";
  * | Fall | Warum ein Baum |
  * |---|---|
  * | der Baustein | Ohne `automatik` **kein Schalter** (Abwesenheit); der Knopf zeigt **nur das Symbol** (E‑174); die drei Lagen über `aria-pressed` und das Symbol, und ein Klick beim Laden ruft nichts |
- * | die Stelle | Übersicht und Prozessansicht: der Knopf ist der **nächste Knopf nach dem letzten Zeitraum-Knopf**; Nachrichten: Schalter und Knopf sind die **letzten beiden** der Filterleiste (E‑173). Den Rand selbst rechnet jsdom nicht — gemessen in M183 |
+ * | die Stelle | Übersicht und Prozessansicht: der Knopf ist der **nächste Knopf nach dem letzten Zeitraum-Knopf**; Nachrichten: Schalter und Knopf sind die **letzten beiden** der Filterleiste (E‑173); Prozessansicht im freien Modus: der Knopf ist das **letzte Bedienelement des Kopfes**, hinter den Datumsfeldern (E‑175). Den Rand selbst rechnet jsdom nicht — gemessen in M183 und M184 |
  * | Übersicht | ein Klick, **genau eine** weitere Anfrage an dieselbe Adresse — auch im Leerzustand, wo der Knopf stehen bleibt (E‑p) |
  * | Nachrichten | auf Seite zwei: **eine** Anfrage für Seite eins ohne Cursor; bei offenem Panel **keine** an einen Detail- oder Dateiendpunkt (E‑169) |
  * | Nachrichten mit gestellter Uhr | Schalter an und 60 Sekunden: eine Anfrage; Seite zwei: keine; Schalter aus: keine |
@@ -637,12 +637,29 @@ describe("Neu laden in der Prozessansicht", () => {
     }
   });
 
-  it("steht unmittelbar rechts neben dem letzten Zeitraum-Knopf", async () => {
+  /**
+   * **E‑173 und E‑175:** Ohne freies Fenster steht der Knopf unmittelbar hinter
+   * „Frei"; im freien Modus hinter den beiden Datumsfeldern — in beiden Lagen
+   * als **letztes Bedienelement des Kopfes**. Die Eichung sind die Felder
+   * selbst: Ohne sie wäre der zweite Teil dieselbe Aussage wie der erste.
+   */
+  it("steht rechts neben dem letzten Zeitraum-Knopf und im freien Modus hinter den Datumsfeldern", async () => {
     const gerendert = await rendereProzesse();
     try {
       const { behaelter } = gerendert;
+      const knopf = mitName(behaelter, N.prozesse);
       const letzter = letzterKnopfIn(behaelter, TEXTE.zeitraum.bezeichnung);
-      expect(knopfNach(behaelter, letzter)).toBe(mitName(behaelter, N.prozesse));
+      expect(knopfNach(behaelter, letzter)).toBe(knopf);
+
+      const kopf = behaelter.querySelector("h1")?.parentElement;
+      expect(kopf, "Kopf der Ansicht").toBeDefined();
+      const bedienelemente = () => [...(kopf as Element).querySelectorAll("button, input")];
+      expect(bedienelemente().at(-1), "ohne freies Fenster").toBe(knopf);
+
+      await klicke(letzter);
+      const felder = (kopf as Element).querySelectorAll('input[type="datetime-local"]');
+      expect(felder, "Eichung: die Datumsfelder stehen").toHaveLength(2);
+      expect(bedienelemente().at(-1), "im freien Modus").toBe(knopf);
     } finally {
       await gerendert.abbauen();
     }

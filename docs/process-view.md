@@ -1765,6 +1765,14 @@ beides genau wie in der Nachrichtenliste.
 > folgen Datumsfelder und Hinweis **hinter** dem Knopf; er rückt dann mit dem Umschalter nach links
 > (M183‑3). Klick, Anfragen und was stehen bleibt, sind unverändert.
 
+> ### ⚠️ Korrektur vom 16.09.2026, dritte Runde — auch im freien Modus ganz rechts (E‑175, [`neu-laden.md`](neu-laden.md))
+>
+> **Der Block darüber gilt bis auf den freien Modus:** Dort steht „Neu laden" jetzt **hinter** den
+> Datumsfeldern und ihrem Hinweis, ganz rechts, und rückt beim Klick auf „Frei" nicht. Umschalter,
+> Felder und Knopf sind Kinder einer Reihe; die Felder stehen dadurch **0,5 statt 0,75 rem**
+> auseinander. Bricht „Bis" um, steht der Knopf in dessen Zeile am rechten Rand; passt die Reihe
+> nicht neben die Überschrift, steht sie darunter rechts (M184).
+
 **Vor der Wahl eines Prozesses steht rechts ein Leerzustand** und nicht die ganze Liste des
 Mandanten. Dafür gibt es die Nachrichtenliste, und dorthin führt ein Verweis. **Solange kein Prozess
 gewählt ist, läuft keine Abfrage** — die Liste ist eine eigene Komponente, damit das nicht von einem

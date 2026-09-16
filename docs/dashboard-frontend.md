@@ -329,6 +329,7 @@ allein über Farbe"* —, und §7a hat es für diese Rolle noch einmal ausdrück
 | **E‑161** | ***Geführt in [`dashboard.md`](dashboard.md) §9b, hier der Verweis.*** **Die Antwort trägt beide Sichten der Verteilung, der Wechsel geschieht allein im Browser.** Der Abfrageschlüssel trägt nur den Zeitraum, `verteilung` steht in der URL und in keiner Anfrage, die Vorgabe `PARTNER` liegt im Frontend. **Präzisiert E‑n** (die Vorgabe steht weiterhin nicht in der URL, sie ist nur nicht mehr die des Endpunkts), **bestätigt E‑p** (Leerzustand unverändert) und **E‑85/E‑86** (ein Sichtwechsel ist kein Aufbau, also keine Bewegung) (§2, §5.1, §5.5, §7.1) | 16.09.2026 |
 | **E‑163** bis **E‑172** | ***Geführt in [`neu-laden.md`](neu-laden.md), hier der Verweis.*** **„Neu laden" steht links neben dem Zeitraumumschalter** (E‑163), nur manuell — die Übersicht bekommt keine automatische Aktualisierung (E‑164). **Ergänzt E‑p** (im Leerzustand steht auch „Neu laden", §5.7), **leitet aus E‑85 ab** (Neuladen ist kein Aufbau, E‑170 — gebaut über `aufbauAktiv`, §5.2) und **bestätigt E‑86** (ein Zeitraumwechsel baut weiterhin auf) (§5.1, §5.2, §5.7, §7.1) | 16.09.2026 |
 | **E‑173**, **E‑174** | ***Geführt in [`neu-laden.md`](neu-laden.md), hier der Verweis.*** **Korrigieren E‑163 und E‑166 am selben Tag:** „Neu laden" steht **rechts** neben dem letzten Zeitraum-Knopf („12 Monate") und zeigt **nur das Symbol**. Am Umschalter und an E‑p, E‑85 und E‑86 ändert sich nichts (§5.1) | 16.09.2026 |
+| **E‑175** | ***Geführt in [`neu-laden.md`](neu-laden.md), hier der Verweis.*** Die Reihe aus Umschalter und „Neu laden" bleibt **rechts**, auch wenn sie unter die Überschrift umbricht (`ml-auto`, gemessen bei 360 und 400 px); der Anlass ist der freie Modus der Prozessansicht (§5.1) | 16.09.2026 |
 | **E‑91** | **Jede Zeile in „Zuletzt aufgefallen" trägt das Zeichen ihrer Kategorie**, das Wort nur im `title` und für Vorleser. **Nimmt die Hälfte von 10b‑5 zurück, die zu viel war:** Mit der Plakette ist auch die Auskunft *dass es Fehler sind* aus dem Bild verschwunden — *aufgefallen* ist keine Kategorie (§5.6) | 04.09.2026 |
 
 ---
@@ -435,6 +436,10 @@ die Angabe sind es weiterhin drei Knöpfe; an dieser Stelle ändert sich nichts,
 > neben „12 Monate", 0,5 rem entfernt, und seine rechte Kante liegt auf der des Kopfes. Er zeigt nur
 > die Pfeile und ist quadratisch, so hoch wie ein Zeitraum-Knopf (M183). Name, Tooltip, Anfrage und
 > Ladeanzeige sind unverändert.
+>
+> **Dritte Runde (E‑175):** Die Reihe aus Umschalter und Knopf trägt `ml-auto` und steht damit auch
+> dann rechts, wenn sie unter die Überschrift umbricht — gemessen bei 360 und 400 px (M184‑2). Bis
+> dahin stand sie in diesem Fall links.
 
 ### 5.2 Der Verlauf: vier Reihen, nicht acht (E‑l) — **seit dem 04.09.2026 eine Fläche (E‑83)**
 
