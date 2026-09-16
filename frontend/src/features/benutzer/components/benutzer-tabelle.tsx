@@ -5,6 +5,7 @@ import { Fragment } from "react";
 import { useTexte } from "@/i18n/provider";
 
 import type { Nutzerzeile } from "../api";
+import { BENUTZER_SICHTBAR } from "../spalten";
 import { BenutzerZeile } from "./benutzer-zeile";
 
 /**
@@ -42,11 +43,29 @@ import { BenutzerZeile } from "./benutzer-zeile";
  * **Zeitsperre** und **Aktiv** —, dazu der Benutzername und der Zugang zum
  * Formular.
  *
- * | Spalte | ab |
+ * | Spalte | ab **Breite dieser Hülle** (E‑147) |
  * |---|---|
  * | Benutzer, Sperre, Zeitsperre, Aktiv, Bearbeiten | immer |
- * | Rolle, Mandanten | `md` |
- * | Passwortwechsel, letzte Anmeldung | `lg` |
+ * | Rolle, Mandanten | 591 px |
+ * | Passwortwechsel, letzte Anmeldung | 831 px |
+ *
+ * Die Reihenfolge ist dieselbe wie vorher an `md` und `lg`; die Schwellen sind
+ * jetzt die Summen der gemessenen Mindestbreiten (M177, `../spalten.ts`), und
+ * jede feste Spalte trägt genau ihre. Vorher fiel bei 768 px Fensterbreite die
+ * Spalte ohne Breite — die Mandanten — auf 0 px (Punkt 174). **Unter der
+ * Grundmenge (406 px) läuft die Tabelle über**, wie sie es vorher unter `md` tat
+ * (entschieden am 15.09.2026). Herleitung und Zahlen: `docs/spaltenwahl.md`.
+ *
+ * ## Der Überschuss gehört allen Spalten — keine hortet ihn (E‑149)
+ *
+ * **Diese Tabelle hat keine freie Spalte.** Jede trägt ihre Mindestbreite, und
+ * was darüber hinaus im Kasten ist, teilt `table-layout: fixed` anteilig auf die
+ * sichtbaren Spalten auf. Bis zum 16.09.2026 war die Mandantenspalte die freie:
+ * Bei 1.408 px Hülle bekam sie 673 px für eine Reihe kurzer Marken, während der
+ * Benutzername und die Rolle daneben auf 81 und 89 px umbrachen — die drei
+ * linken Spalten klebten zusammen, rechts davon stand eine Lücke. Eine freie
+ * Spalte lohnt sich dort, wo ihr Inhalt den Platz nutzt: beim gekürzten
+ * Ablaufnamen der Nachrichtenliste ja, bei Marken nein.
  *
  * **Nichts wird dadurch unerreichbar.** Alles Bedienbare steht im Formular unter
  * der Zeile und nicht in den Zellen — genau aus diesem Grund
@@ -75,62 +94,74 @@ export function BenutzerTabelle({
   const texte = useTexte();
 
   return (
-    <table className="text-basis [&_td]:border-border w-full table-fixed border-separate border-spacing-0 [&_td]:border-b">
-      <caption className="sr-only">{texte.benutzer.tabelle}</caption>
-      <thead>
-        <tr>
-          <th scope="col" className={`${KOPFZELLE} w-[8rem] md:w-[11rem]`}>
-            {texte.benutzer.spalten.benutzer}
-          </th>
-          <th scope="col" className={`${KOPFZELLE} hidden w-[9rem] md:table-cell`}>
-            {texte.benutzer.spalten.rolle}
-          </th>
-          <th scope="col" className={`${KOPFZELLE} hidden md:table-cell`}>
-            {texte.benutzer.spalten.mandanten}
-          </th>
-          <th scope="col" className={`${KOPFZELLE} w-[6rem] md:w-[7.5rem]`}>
-            {texte.benutzer.spalten.sperre}
-          </th>
-          <th scope="col" className={`${KOPFZELLE} w-[7rem] md:w-[11rem]`}>
-            {texte.benutzer.spalten.zeitsperre}
-          </th>
-          <th scope="col" className={`${KOPFZELLE} w-[6rem] md:w-[7.5rem]`}>
-            {texte.benutzer.spalten.aktiv}
-          </th>
-          <th scope="col" className={`${KOPFZELLE} hidden w-[9rem] lg:table-cell`}>
-            {texte.benutzer.spalten.passwort}
-          </th>
-          <th scope="col" className={`${KOPFZELLE} hidden w-[11rem] lg:table-cell`}>
-            {texte.benutzer.spalten.letzteAnmeldung}
-          </th>
-          <th scope="col" className={`${KOPFZELLE} w-[3.5rem] text-right`}>
-            <span className="sr-only">{texte.benutzer.spalten.aktionen}</span>
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {zeilen.map((zeile) => {
-          const formular = formularFuer?.(zeile) ?? null;
-          return (
-            /*
-             * Der Schlüssel ist die Konto-`id` und nicht der Benutzername: Er ist
-             * in der Datenbank zwar eindeutig, aber ohne Rücksicht auf Groß- und
-             * Kleinschreibung — und was React vergleicht, ist die Zeichenkette.
-             * Die `id` ist der Schlüssel, den das Backend selbst benutzt.
-             */
-            <Fragment key={zeile.id}>
-              <tr className={formular === null ? "hover:bg-muted/50" : "bg-muted/50"}>
-                <BenutzerZeile zeile={zeile} aktionen={aktionenFuer?.(zeile)} />
-              </tr>
-              {formular === null ? null : (
-                <tr className="bg-muted/50">
-                  <td colSpan={9}>{formular}</td>
+    // Der Container ist die eigene Hülle, benannt — nicht `main`, das selbst ein
+    // Größencontainer ist (`lib/klebende-spalte.ts`). Die klebende Kopfzeile
+    // klebt weiterhin an `main`: `container-type` macht die Hülle nicht zum
+    // Scrollbereich.
+    <div className="@container/benutzertabelle">
+      <table className="text-basis [&_td]:border-border w-full table-fixed border-separate border-spacing-0 [&_td]:border-b">
+        <caption className="sr-only">{texte.benutzer.tabelle}</caption>
+        <thead>
+          <tr>
+            {/* **Jede** Spalte trägt ihre gemessene Mindestbreite (M177) — auch
+              die Mandanten, seit E‑149. Den Überschuss teilt `table-layout: fixed`
+              anteilig auf die sichtbaren Spalten auf. */}
+            <th scope="col" className={`${KOPFZELLE} w-[5.0625rem]`}>
+              {texte.benutzer.spalten.benutzer}
+            </th>
+            <th scope="col" className={`${KOPFZELLE} ${BENUTZER_SICHTBAR.rolle} w-[5.5625rem]`}>
+              {texte.benutzer.spalten.rolle}
+            </th>
+            <th scope="col" className={`${KOPFZELLE} ${BENUTZER_SICHTBAR.mandanten} w-[6rem]`}>
+              {texte.benutzer.spalten.mandanten}
+            </th>
+            <th scope="col" className={`${KOPFZELLE} w-[4.625rem]`}>
+              {texte.benutzer.spalten.sperre}
+            </th>
+            <th scope="col" className={`${KOPFZELLE} w-[6.625rem]`}>
+              {texte.benutzer.spalten.zeitsperre}
+            </th>
+            <th scope="col" className={`${KOPFZELLE} w-[6.0625rem]`}>
+              {texte.benutzer.spalten.aktiv}
+            </th>
+            <th scope="col" className={`${KOPFZELLE} ${BENUTZER_SICHTBAR.passwort} w-[5.9375rem]`}>
+              {texte.benutzer.spalten.passwort}
+            </th>
+            <th
+              scope="col"
+              className={`${KOPFZELLE} ${BENUTZER_SICHTBAR.letzteAnmeldung} w-[9.0625rem]`}
+            >
+              {texte.benutzer.spalten.letzteAnmeldung}
+            </th>
+            <th scope="col" className={`${KOPFZELLE} w-[3rem] text-right`}>
+              <span className="sr-only">{texte.benutzer.spalten.aktionen}</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {zeilen.map((zeile) => {
+            const formular = formularFuer?.(zeile) ?? null;
+            return (
+              /*
+               * Der Schlüssel ist die Konto-`id` und nicht der Benutzername: Er ist
+               * in der Datenbank zwar eindeutig, aber ohne Rücksicht auf Groß- und
+               * Kleinschreibung — und was React vergleicht, ist die Zeichenkette.
+               * Die `id` ist der Schlüssel, den das Backend selbst benutzt.
+               */
+              <Fragment key={zeile.id}>
+                <tr className={formular === null ? "hover:bg-muted/50" : "bg-muted/50"}>
+                  <BenutzerZeile zeile={zeile} aktionen={aktionenFuer?.(zeile)} />
                 </tr>
-              )}
-            </Fragment>
-          );
-        })}
-      </tbody>
-    </table>
+                {formular === null ? null : (
+                  <tr className="bg-muted/50">
+                    <td colSpan={9}>{formular}</td>
+                  </tr>
+                )}
+              </Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }

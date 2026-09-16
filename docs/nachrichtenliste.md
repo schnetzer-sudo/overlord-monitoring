@@ -1881,6 +1881,37 @@ spürbar mehr Zeilen ins Fenster.
 > Punkt 114 aufmacht, hat also zwei Dinge zu entscheiden: die Breiten **und** ob eine Spalte ohne
 > Platz ihre Beschriftung überhaupt noch zeichnen soll.
 
+> ### ⚠️ Korrektur vom 15.09.2026 — „Auf der eigenen Route ist das kein Fall" ist gemessen falsch
+>
+> **Der alte Wortlaut steht im Kasten darüber und bleibt stehen:** *„Auf der eigenen Route ist das
+> kein Fall — dort hat die Liste die volle Inhaltsbreite."*
+>
+> **Gemessen am 15.09.2026 auf `/nachrichten` selbst**, ohne Baum und ohne Panel
+> ([`messungen-sichtprobe-schmal.md`](messungen-sichtprobe-schmal.md) §4.3, M176): Die Ablaufspalte hat
+> bei **360 px 0 px**, bei 390 px 12 px, bei 430 px 52 px — und bei **768 px wieder 0 px**, weil dort
+> die Navigationsspalte erscheint (`main` 560 px, Kasten 518 px) und im selben Moment das Projekt mit
+> 288 px zurückkommt; „Ablauf" steht dann über „Projekt". Die volle Inhaltsbreite reicht unter 430 px
+> und bei `md` nicht. Der Satz galt für die Breiten, an denen die Liste entworfen wurde.
+>
+> **Teil 2 hat die Nachrichtenliste nicht umgebaut — das ist der Befund, den der Auftrag in 3.4
+> vorsieht** ([`spaltenwahl.md`](spaltenwahl.md) §6, M177). Gemessen ist die Mindestbreite je Spalte am
+> längsten tatsächlichen Inhalt, beide Mandanten, beide Sprachen: Zeitpunkt **187 px** (englisch,
+> `12/30/2025, 04:02:04 AM`; deutsch 154 px), Status **155 px** (die breiteste der acht Einordnungen),
+> Ablauf **304 px** (300 Zeilen), Projekt **286 px**. Im schmalsten Kasten (334 px) bleiben dem Ablauf
+> neben Zeitpunkt und Status **−8 px**, deutsch 25 px. Gezeichnet wird deshalb weiterhin, was vorher
+> gezeichnet wurde — **keine** neue 0-px-Spalte, **keine** Kartendarstellung. Welche Spalte hier
+> weicht oder schmaler wird, ist eine Entscheidung; sie steht als Punkt **114** offen.
+>
+> **Die offene Zahl aus M176 ist nachgesehen** (§4.3 dort: `scrollWidth` des Tabellenkastens 591 bei
+> `NEXANS`, 647 bei `VOTG`, bei 360 bis 430 px). Sie kommt von den **50 `sr-only`-Spannen der
+> Ablaufzelle** (dritte Spalte): Sie stehen hinter dem Text der gekürzten Spanne, hängen als
+> `position: absolute` am Tabellenkasten — `relative` aus `components/ui/table.tsx` — und werden vom
+> `overflow: hidden` der gekürzten Spanne deshalb nicht beschnitten. Ihr rechter Rand liegt dort, wo
+> der ungekürzte Ablaufname endete: bei `NEXANS` bei 591 px, bei 360 **und** bei 430 px. Daher hängt
+> die Zahl an den Daten. *Gemessen* ist das an `NEXANS` (Spalte und Positionierungsvorfahr je Spanne);
+> `VOTG` ist nicht wiederholt. **Nicht behoben** — die Zahl hängt an der Breite der Ablaufspalte und
+> gehört zu Punkt 114.
+
 #### Der aktuelle Schritt steht in der Statuszelle — bei offenen Nachrichten
 
 Bei `WARTEND` und `LAEUFT` steht **neben** der Statusplakette der Schritt, auf dem die Nachricht
@@ -2007,10 +2038,33 @@ macht ([`visuelles-konzept.md`](visuelles-konzept.md) §3).
 > „bedienbar". In einem Eingabefeld und bei einem offenen Auswahlfeld bleibt `Escape`, was es ist —
 > sonst täte die Taste zweierlei.
 
-**Am schmalen Fenster** fällt zuerst und einzig **Projekt** weg (unter `md`). Übrig bleiben
-Zeitpunkt, Status und Ablauf. Der aktive Mandant bleibt bei jeder Breite in der Kopfzeile sichtbar
-— das entscheidet der Anwendungsrahmen (bestehende Regel aus
-[`visuelles-konzept.md`](visuelles-konzept.md) §6).
+**Am schmalen Kasten** fällt zuerst und einzig **Projekt** weg. Übrig bleiben Zeitpunkt, Status und
+Ablauf. Der aktive Mandant bleibt bei jeder Breite in der Kopfzeile sichtbar — das entscheidet der
+Anwendungsrahmen (bestehende Regel aus [`visuelles-konzept.md`](visuelles-konzept.md) §6).
+
+> ### ⚠️ Korrektur vom 16.09.2026 — es war das Fenster, und es ist jetzt der Kasten (E‑148)
+>
+> **Der Satz lautete bis zum 16.09.2026 wörtlich:**
+>
+> > **Am schmalen Fenster** fällt zuerst und einzig **Projekt** weg (unter `md`). Übrig bleiben
+> > Zeitpunkt, Status und Ablauf.
+>
+> **Beides daran war falsch.** Erstens die Größe: Maßgeblich ist die Breite des **Tabellenkastens**,
+> nicht die des Fensters — bei 768 px Fensterbreite erscheint die Navigationsspalte, `main` misst
+> 560 px, und genau dort kam das Projekt *zurück*. Zweitens die Reihenfolge: „unter `md`" hieß, dass
+> das Projekt **oberhalb** von `md` immer dasteht, auch wenn dem Ablauf null Pixel bleiben.
+>
+> **Seit dem 16.09.2026 gilt** ([`spaltenwahl.md`](spaltenwahl.md) §5.4): Die Tabelle liegt in ihrer
+> eigenen, benannten Hülle (`@container/nachrichtenliste`), und **das Projekt kommt erst, wenn alle
+> vier Spalten ihre gemessene Mindestbreite tragen** — ab **932 px** Kastenbreite (187 + 155 + 304 +
+> 286). Darunter stehen die drei, mit denen sich ein Beleg wiederfinden lässt. **Unter 646 px** gilt
+> die heutige Bauform: Zeitpunkt und Status behalten ihre Breite, der Ablauf bekommt den Rest und
+> kürzt.
+>
+> **Die Statusspalte ist dabei ab `lg` nicht mehr breiter** (vorher `w-[10.5rem] lg:w-[17rem]`, jetzt
+> durchgehend 155 px = die Plakette). Der Zusatz „Schritt: …" kürzt seitdem bei jeder Breite und
+> steht vollständig im `title` — die Folge der Regel „eine feste Spalte trägt ihre Mindestbreite",
+> und dieselbe Änderung wie in der Trefferliste.
 
 ### 8.2 Filter und URL
 

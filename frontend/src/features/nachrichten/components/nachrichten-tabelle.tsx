@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 
 import type { Nachricht } from "../api";
 import type { Sortierung } from "../filter";
+import { NACHRICHTEN_SICHTBAR } from "../spalten";
 import { StatusPlakette } from "./status-plakette";
 
 /**
@@ -78,11 +79,24 @@ import { StatusPlakette } from "./status-plakette";
  * da: Wer später eine Verkettung in eine Zelle setzt (Schritt 6), soll sie nicht
  * erst finden müssen.
  *
- * ## Am schmalen Fenster
+ * ## Die Spaltenmenge folgt der Hülle (E‑147, E‑148)
  *
- * Zuerst und einzig fällt **Projekt** weg (unter `md`). Übrig bleiben Zeitpunkt,
- * Status und Ablauf — die drei, mit denen sich ein Beleg wiederfinden lässt. Der
- * aktive Mandant bleibt bei jeder Breite in der Kopfzeile sichtbar; das
+ * **Das Projekt kommt, wenn alle vier Spalten ihre gemessene Mindestbreite
+ * tragen** — ab 932 px Containerbreite (`spalten.ts`, `docs/spaltenwahl.md`
+ * §5.4). Darunter stehen die drei, mit denen sich ein Beleg wiederfinden lässt:
+ * Zeitpunkt, Status, Ablauf.
+ *
+ * Bis zum 16.09.2026 hing das Projekt an `md`. Bei 768 px Fensterbreite kam es
+ * mit 288 px zurück, während dem Ablauf 12 px blieben — „Ablauf" stand über
+ * „Projekt" gedruckt (Punkt 114, M176 §4.3). **Eine Spalte ist da oder nicht
+ * da**, nie 0 px breit.
+ *
+ * **Unter 646 px gilt die heutige Bauform:** Zeitpunkt und Status behalten ihre
+ * Breite, der Ablauf bekommt den Rest und kürzt — mit vollem `title`, wie bei
+ * jeder Breite. Das ist die schmale Spalte neben dem Baum (294 px) und das
+ * Fenster unter 430 px.
+ *
+ * Der aktive Mandant bleibt bei jeder Breite in der Kopfzeile sichtbar; das
  * entscheidet der Anwendungsrahmen, nicht diese Tabelle.
  */
 export function NachrichtenTabelle({
@@ -110,89 +124,101 @@ export function NachrichtenTabelle({
   const texte = useTexte();
 
   return (
-    // `table-fixed` ist die Voraussetzung der festen Zeilenhöhe: Nur mit festen
-    // Spaltenbreiten hat eine Zelle eine Breite, auf die sich kürzen lässt.
-    <Table className="text-basis table-fixed">
-      <TableHeader>
-        <TableRow className="hover:bg-transparent">
-          <TableHead className="h-8 w-[11.5rem]">
-            <SortierUmschalter sortierung={sortierung} aufSortierung={aufSortierung} />
-          </TableHead>
-          {/* Breiter ab `lg`, damit der aktuelle Schritt neben dem Status noch
-              lesbar ist. Darunter bleibt es bei der Breite der Plakette — der
-              Zusatz kürzt dann und steht vollständig im Tooltip. */}
-          <TableHead className="h-8 w-[10.5rem] lg:w-[17rem]">
-            {texte.nachrichten.spalten.status}
-          </TableHead>
-          {/* Ohne Breitenangabe: Der Ablaufname bekommt, was übrig bleibt. */}
-          <TableHead className="h-8">{texte.nachrichten.spalten.ablauf}</TableHead>
-          <TableHead className="hidden h-8 w-[18rem] md:table-cell">
-            {texte.nachrichten.spalten.projekt}
-          </TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {zeilen.map((zeile) => (
-          <TableRow
-            key={zeile.messageId}
-            ref={zeile.messageId === gewaehlt ? gewaehlteZeile : undefined}
-            tabIndex={0}
-            aria-label={texte.nachrichten.zeileOeffnen}
-            // Die geöffnete Zeile ist auch in der Liste erkennbar — sonst wäre
-            // nicht zu sehen, wozu das Panel daneben gehört.
-            aria-current={zeile.messageId === gewaehlt ? "true" : undefined}
-            onClick={(ereignis) => {
-              // Ein Klick auf einen Verweis oder eine Schaltfläche *in* der
-              // Zeile öffnet das Panel nicht mit.
-              if ((ereignis.target as HTMLElement).closest("a, button, input, label")) {
-                return;
-              }
-              aufAuswahl(zeile.messageId);
-            }}
-            onKeyDown={(ereignis) => {
-              if (ereignis.target !== ereignis.currentTarget) {
-                return;
-              }
-              if (ereignis.key === "Enter" || ereignis.key === " ") {
-                // Sonst blättert die Leertaste die Ansicht weiter, während sie
-                // öffnet.
-                ereignis.preventDefault();
-                aufAuswahl(zeile.messageId);
-              }
-            }}
-            className={cn(
-              "h-zeile focus-visible:ring-ring cursor-pointer focus-visible:ring-2 focus-visible:-outline-offset-2 focus-visible:outline-none",
-              // Die blasse Akzenttönung, dieselbe wie am aktiven
-              // Navigationseintrag: Sie sagt etwas über die **Anwendung** —
-              // welche Zeile gerade offen ist —, nicht über die Daten. Eine
-              // Statusfarbe wäre hier eine Aussage, die die Zeile nicht macht
-              // (`visuelles-konzept.md` §3).
-              zeile.messageId === gewaehlt ? "bg-accent hover:bg-accent" : "hover:bg-muted",
-            )}
-          >
-            <TableCell className="px-2 py-0 align-middle">
-              <ZeitpunktZelle wert={zeile.zeitpunkt} />
-            </TableCell>
-            <TableCell className="px-2 py-0 align-middle">
-              <StatusPlakette
-                statusKind={zeile.statusKind}
-                rohwert={zeile.status}
-                bedeutungNichtVerifiziert={zeile.bedeutungNichtVerifiziert}
-                schritt={zeile.schritt}
-              />
-            </TableCell>
-            <TableCell className="px-2 py-0 align-middle">
-              <AblaufZelle sosName={zeile.sosName} processName={zeile.processName} />
-            </TableCell>
-            <TableCell className="text-muted-foreground hidden px-2 py-0 align-middle md:table-cell">
-              <span className="block truncate" title={zeile.projectName ?? undefined}>
-                <Name wert={zeile.projectName} />
-              </span>
-            </TableCell>
+    // Der Container ist die eigene Hülle — nicht `main` und nicht der Wrapper in
+    // `components/ui/table.tsx`: Die Spaltenmenge folgt dem Platz, den diese
+    // Tabelle hat, auch in der schmalen Spalte neben dem Baum (E‑147, E‑148).
+    // Benannt, damit eine Tabelle in einem anderen Container nie dessen Breite
+    // abfragt.
+    <div className="@container/nachrichtenliste">
+      {/* `table-fixed` ist die Voraussetzung der festen Zeilenhöhe: Nur mit festen
+          Spaltenbreiten hat eine Zelle eine Breite, auf die sich kürzen lässt. */}
+      <Table className="text-basis table-fixed">
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            {/* Jede feste Spalte trägt ihre gemessene Mindestbreite (M177):
+                Zeitpunkt 187 px, Status 155 px — die Plakette, der Zusatz
+                „Schritt: …" daneben kürzt —, Projekt 286 px. */}
+            <TableHead className="h-8 w-[11.6875rem]">
+              <SortierUmschalter sortierung={sortierung} aufSortierung={aufSortierung} />
+            </TableHead>
+            <TableHead className="h-8 w-[9.6875rem]">{texte.nachrichten.spalten.status}</TableHead>
+            {/* Ohne Breitenangabe: Der Ablaufname bekommt, was übrig bleibt — und
+                bis zur Schwelle des Projekts alles, was über die beiden festen
+                Spalten hinausgeht. */}
+            <TableHead className="h-8">{texte.nachrichten.spalten.ablauf}</TableHead>
+            <TableHead className={cn("h-8 w-[17.875rem]", NACHRICHTEN_SICHTBAR.projekt)}>
+              {texte.nachrichten.spalten.projekt}
+            </TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {zeilen.map((zeile) => (
+            <TableRow
+              key={zeile.messageId}
+              ref={zeile.messageId === gewaehlt ? gewaehlteZeile : undefined}
+              tabIndex={0}
+              aria-label={texte.nachrichten.zeileOeffnen}
+              // Die geöffnete Zeile ist auch in der Liste erkennbar — sonst wäre
+              // nicht zu sehen, wozu das Panel daneben gehört.
+              aria-current={zeile.messageId === gewaehlt ? "true" : undefined}
+              onClick={(ereignis) => {
+                // Ein Klick auf einen Verweis oder eine Schaltfläche *in* der
+                // Zeile öffnet das Panel nicht mit.
+                if ((ereignis.target as HTMLElement).closest("a, button, input, label")) {
+                  return;
+                }
+                aufAuswahl(zeile.messageId);
+              }}
+              onKeyDown={(ereignis) => {
+                if (ereignis.target !== ereignis.currentTarget) {
+                  return;
+                }
+                if (ereignis.key === "Enter" || ereignis.key === " ") {
+                  // Sonst blättert die Leertaste die Ansicht weiter, während sie
+                  // öffnet.
+                  ereignis.preventDefault();
+                  aufAuswahl(zeile.messageId);
+                }
+              }}
+              className={cn(
+                "h-zeile focus-visible:ring-ring cursor-pointer focus-visible:ring-2 focus-visible:-outline-offset-2 focus-visible:outline-none",
+                // Die blasse Akzenttönung, dieselbe wie am aktiven
+                // Navigationseintrag: Sie sagt etwas über die **Anwendung** —
+                // welche Zeile gerade offen ist —, nicht über die Daten. Eine
+                // Statusfarbe wäre hier eine Aussage, die die Zeile nicht macht
+                // (`visuelles-konzept.md` §3).
+                zeile.messageId === gewaehlt ? "bg-accent hover:bg-accent" : "hover:bg-muted",
+              )}
+            >
+              <TableCell className="px-2 py-0 align-middle">
+                <ZeitpunktZelle wert={zeile.zeitpunkt} />
+              </TableCell>
+              <TableCell className="px-2 py-0 align-middle">
+                <StatusPlakette
+                  statusKind={zeile.statusKind}
+                  rohwert={zeile.status}
+                  bedeutungNichtVerifiziert={zeile.bedeutungNichtVerifiziert}
+                  schritt={zeile.schritt}
+                />
+              </TableCell>
+              <TableCell className="px-2 py-0 align-middle">
+                <AblaufZelle sosName={zeile.sosName} processName={zeile.processName} />
+              </TableCell>
+              <TableCell
+                className={cn(
+                  "text-muted-foreground px-2 py-0 align-middle",
+                  NACHRICHTEN_SICHTBAR.projekt,
+                )}
+              >
+                <span className="block truncate" title={zeile.projectName ?? undefined}>
+                  <Name wert={zeile.projectName} />
+                </span>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 

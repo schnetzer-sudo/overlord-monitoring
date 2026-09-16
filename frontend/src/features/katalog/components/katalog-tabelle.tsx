@@ -8,6 +8,7 @@ import { useTexte } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 
 import type { Katalogzeile } from "../api";
+import { KATALOG_SICHTBAR } from "../spalten";
 import { darfOeffnen } from "../zuordnung";
 import { KatalogZeile } from "./katalog-zeile";
 import { ZeilenFormular } from "./zeilen-formular";
@@ -39,6 +40,20 @@ import { ZeilenFormular } from "./zeilen-formular";
  * weil `main` `relative` ist und sie deshalb an ihm hängt und nicht am
  * Ursprungsblock der Seite.
  *
+ * ## Die Spaltenmenge folgt dem Container, nicht dem Fenster (E‑147)
+ *
+ * Prozess, Partner und Pflege stehen immer; Richtung und Nachrichten kommen ab
+ * 739 px **Breite dieser Hülle** dazu, das Projekt ab 902 px. Jede Schwelle ist
+ * die Summe der gemessenen Mindestbreiten der Spalten, die ab dort sichtbar sind
+ * (M177, `../spalten.ts`); jede feste Spalte trägt ab 538 px genau ihre
+ * Mindestbreite, der Partner den Rest. Vorher hingen Sichtbarkeit und Breite an
+ * `md` und `lg`, und bei 768 px fiel der Partner auf 0 px und brach
+ * buchstabenweise um (Punkt 175).
+ *
+ * **Unter 538 px gilt die dreispaltige Bauform**, die der Katalog bei 360 px
+ * schon hatte: Prozess 9 rem, Pflege 6 rem, Partner der Rest — umbrechend, nie
+ * 0 px. Herleitung und Zahlen: `docs/spaltenwahl.md`.
+ *
  * ## Die Reihenfolge kommt vom Backend
  *
  * `ProjectID`, dann `ProcessID` (E6) — beides Schlüssel und damit stabil. **Hier
@@ -58,8 +73,8 @@ import { ZeilenFormular } from "./zeilen-formular";
  * Nicht ihre Zellen werden zu Eingabefeldern, sondern **unter** ihr klappt ein
  * Formular über die volle Breite auf. Die Begründung steht bei
  * {@link ZeilenFormular}; hier zählt die Folge für die Tabelle: Der bisherige
- * Stand der Zeile bleibt beim Tippen sichtbar, und die drei unter `md`
- * ausgeblendeten Spalten nehmen der Bearbeitung nichts weg.
+ * Stand der Zeile bleibt beim Tippen sichtbar, und die drei zuschaltbaren
+ * Spalten nehmen der Bearbeitung nichts weg, wenn sie fehlen.
  */
 /**
  * Die Kopfzelle — und die eine Zahl darin ist gemessen und nicht gewählt.
@@ -96,74 +111,85 @@ export function KatalogTabelle({
   const texte = useTexte();
 
   return (
-    <table className="text-basis [&_td]:border-border w-full table-fixed border-separate border-spacing-0 [&_td]:border-b">
-      <caption className="sr-only">{texte.katalog.tabelle}</caption>
-      <thead>
-        <tr>
-          <th
-            scope="col"
-            className={`${KOPFZELLE} w-[9rem] sm:w-[12rem] md:w-[16rem] lg:w-[20rem]`}
-          >
-            {texte.katalog.spalten.prozess}
-          </th>
-          <th scope="col" className={`${KOPFZELLE} hidden w-[14rem] lg:table-cell`}>
-            {texte.katalog.spalten.projekt}
-          </th>
-          <th scope="col" className={KOPFZELLE}>
-            {texte.katalog.spalten.partner}
-          </th>
-          <th scope="col" className={`${KOPFZELLE} hidden w-[8rem] md:table-cell`}>
-            {texte.katalog.spalten.richtung}
-          </th>
-          <th scope="col" className={`${KOPFZELLE} hidden w-[11rem] md:table-cell`}>
-            {texte.katalog.spalten.bestand}
-          </th>
-          <th scope="col" className={`${KOPFZELLE} w-[6rem] md:w-[8.5rem]`}>
-            {texte.katalog.spalten.pflege}
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {zeilen.map((zeile) => {
-          const offen = offeneZeile === zeile.processId;
-          return (
-            <Fragment key={zeile.processId}>
-              <tr className={cn(offen ? "bg-muted/50" : "hover:bg-muted/50")}>
-                <KatalogZeile
-                  zeile={zeile}
-                  aktionen={
-                    offen ? null : (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        disabled={!darfOeffnen(offeneZeile, zeile.processId)}
-                        onClick={() => aufOeffnen(zeile.processId)}
-                        title={texte.katalog.bearbeiten.oeffnen}
-                        className="min-h-bedienelement"
-                      >
-                        <SquarePen aria-hidden="true" />
-                        <span className="sr-only">{texte.katalog.bearbeiten.oeffnen}</span>
-                      </Button>
-                    )
-                  }
-                />
-              </tr>
-              {offen ? (
-                <tr className="bg-muted/50">
-                  <td colSpan={6}>
-                    <ZeilenFormular
-                      zeile={zeile}
-                      aufSchliessen={aufSchliessen}
-                      vorschlaege={vorschlaege}
-                    />
-                  </td>
+    // Der Container ist die eigene Hülle, benannt — nicht `main`, das selbst ein
+    // Größencontainer ist (`lib/klebende-spalte.ts`). Die klebende Kopfzeile
+    // klebt weiterhin an `main`: `container-type` macht die Hülle nicht zum
+    // Scrollbereich.
+    <div className="@container/katalog">
+      <table className="text-basis [&_td]:border-border w-full table-fixed border-separate border-spacing-0 [&_td]:border-b">
+        <caption className="sr-only">{texte.katalog.tabelle}</caption>
+        <thead>
+          <tr>
+            {/* Unter der Grundmenge (538 px) die Bauform von 360 px, ab ihr die
+              Mindestbreite: 317 px, der längste Prozessname ohne Notumbruch. */}
+            <th
+              scope="col"
+              className={`${KOPFZELLE} w-[9rem] @min-[33.625rem]/katalog:w-[19.8125rem]`}
+            >
+              {texte.katalog.spalten.prozess}
+            </th>
+            <th scope="col" className={`${KOPFZELLE} ${KATALOG_SICHTBAR.projekt} w-[10.1875rem]`}>
+              {texte.katalog.spalten.projekt}
+            </th>
+            <th scope="col" className={KOPFZELLE}>
+              {texte.katalog.spalten.partner}
+            </th>
+            <th scope="col" className={`${KOPFZELLE} ${KATALOG_SICHTBAR.richtung} w-[5.9375rem]`}>
+              {texte.katalog.spalten.richtung}
+            </th>
+            <th scope="col" className={`${KOPFZELLE} ${KATALOG_SICHTBAR.bestand} w-[6.625rem]`}>
+              {texte.katalog.spalten.bestand}
+            </th>
+            <th
+              scope="col"
+              className={`${KOPFZELLE} w-[6rem] @min-[33.625rem]/katalog:w-[4.75rem]`}
+            >
+              {texte.katalog.spalten.pflege}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {zeilen.map((zeile) => {
+            const offen = offeneZeile === zeile.processId;
+            return (
+              <Fragment key={zeile.processId}>
+                <tr className={cn(offen ? "bg-muted/50" : "hover:bg-muted/50")}>
+                  <KatalogZeile
+                    zeile={zeile}
+                    aktionen={
+                      offen ? null : (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          disabled={!darfOeffnen(offeneZeile, zeile.processId)}
+                          onClick={() => aufOeffnen(zeile.processId)}
+                          title={texte.katalog.bearbeiten.oeffnen}
+                          className="min-h-bedienelement"
+                        >
+                          <SquarePen aria-hidden="true" />
+                          <span className="sr-only">{texte.katalog.bearbeiten.oeffnen}</span>
+                        </Button>
+                      )
+                    }
+                  />
                 </tr>
-              ) : null}
-            </Fragment>
-          );
-        })}
-      </tbody>
-    </table>
+                {offen ? (
+                  <tr className="bg-muted/50">
+                    <td colSpan={6}>
+                      <ZeilenFormular
+                        zeile={zeile}
+                        aufSchliessen={aufSchliessen}
+                        vorschlaege={vorschlaege}
+                      />
+                    </td>
+                  </tr>
+                ) : null}
+              </Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }

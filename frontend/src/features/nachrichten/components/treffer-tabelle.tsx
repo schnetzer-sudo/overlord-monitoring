@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 
 import type { BamTreffer, BamTrefferWert, Kettenrolle } from "../api";
 import { trefferTypen } from "../suche";
+import { TREFFER_SICHTBAR } from "../treffer-spalten";
 import { AblaufZelle, ZeitpunktZelle } from "./nachrichten-tabelle";
 import { StatusPlakette } from "./status-plakette";
 
@@ -55,14 +56,21 @@ import { StatusPlakette } from "./status-plakette";
  * Prozent der Wurzeln ohnehin auf Eins. Wer wissen will, was daran hängt, öffnet
  * die Nachricht.
  *
- * ## Am schmalen Fenster fällt der Ablauf weg
+ * ## Der Ablauf kommt, wenn die Hülle ihn trägt (E‑147)
  *
- * Unter dem vorhandenen Umbruchpunkt des Projekts (768 px) bleiben Zeitpunkt,
- * Status, Treffer und Kette. Das ist eine andere Wahl als in der Liste, die dort
- * das **Projekt** weglässt — und sie folgt derselben Frage: Was beantwortet
- * *welcher Beleg ist das* und *bin ich fertig*? Der Ablaufname beantwortet
- * keines von beiden und steht im Detail vollständig da. **Kein neuer
- * Umbruchpunkt.**
+ * Zeitpunkt, Status, Treffer und Kette stehen bei jeder Breite; der Ablauf kommt
+ * dazu, sobald **die Hülle dieser Tabelle** — nicht das Fenster — die
+ * Mindestbreiten aller fünf trägt: ab 1.000 px, ohne die Spalte „Treffer" ab
+ * 720 px. Welche Spalte weicht, ist dieselbe Wahl wie vorher und folgt derselben
+ * Frage: Was beantwortet *welcher Beleg ist das* und *bin ich fertig*? Der
+ * Ablaufname beantwortet keines von beiden und steht im Detail vollständig da.
+ *
+ * **Jede feste Spalte trägt ihre gemessene Mindestbreite** (M177,
+ * `../treffer-spalten.ts`). Vorher kam der Ablauf an der Fensterschwelle `md` mit
+ * 0 px dazu und zeichnete seine Beschriftung trotzdem (Punkt 173). Unter der
+ * Grundmenge — 696 px, ohne „Treffer" 416 px — scrollt die Tabelle in ihrer
+ * Hülle, wie sie es vorher unter 768 px tat (`property-suche.md` §14, Punkt 11).
+ * Herleitung und Zahlen: `docs/spaltenwahl.md`.
  *
  * ## Bei einer reinen Feldsuche entfällt die Spalte „Treffer" (E‑110)
  *
@@ -97,85 +105,95 @@ export function TrefferTabelle({
 }) {
   const texte = useTexte();
 
+  // Die Schwelle des Ablaufs hängt an der Spalte „Treffer": Ohne sie trägt die
+  // Hülle ihn früher.
+  const ablauf = mitTrefferspalte
+    ? TREFFER_SICHTBAR.ablaufMitTreffer
+    : TREFFER_SICHTBAR.ablaufOhneTreffer;
+
   return (
-    // `table-fixed` ist die Voraussetzung der festen Zeilenhöhe: Nur mit festen
-    // Spaltenbreiten hat eine Zelle eine Breite, auf die sich kürzen lässt.
-    <Table className="text-basis table-fixed">
-      <TableHeader>
-        <TableRow className="hover:bg-transparent">
-          <TableHead className="h-8 w-[11.5rem]">{texte.nachrichten.spalten.zeitpunkt}</TableHead>
-          <TableHead className="h-8 w-[10.5rem] lg:w-[15rem]">
-            {texte.nachrichten.spalten.status}
-          </TableHead>
-          {/* Breiter als die übrigen Zusatzspalten: Die längste gemessene
-              Beschreibung hat 35 Zeichen, mit einem `+2` dahinter 38. Sie kürzt
-              trotzdem — die Hauptinformation der Zeile weicht dafür nicht. */}
-          {mitTrefferspalte ? (
-            <TableHead className="h-8 w-[13rem] lg:w-[16rem]">
-              {texte.suche.spalten.treffer}
+    // Der Container ist die eigene Hülle — nicht `main` und nicht der Wrapper in
+    // `components/ui/table.tsx`: Die Spaltenmenge folgt dem Platz, den diese
+    // Tabelle hat, auch neben dem Panel (E‑147). Benannt, damit eine Tabelle in
+    // einem anderen Container nie dessen Breite abfragt.
+    <div className="@container/trefferliste">
+      {/* `table-fixed` ist die Voraussetzung der festen Zeilenhöhe: Nur mit festen
+          Spaltenbreiten hat eine Zelle eine Breite, auf die sich kürzen lässt. */}
+      <Table className="text-basis table-fixed">
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            {/* Jede feste Spalte trägt ihre gemessene Mindestbreite (M177): Zeitpunkt
+              187 px, Status 155 px — die Plakette, der Zusatz daneben kürzt —,
+              Treffer 280 px — die längste Belegart-Bezeichnung, mit `+2` kürzt
+              sie weiterhin —, Kette 74 px. */}
+            <TableHead className="h-8 w-[11.6875rem]">
+              {texte.nachrichten.spalten.zeitpunkt}
             </TableHead>
-          ) : null}
-          <TableHead className="h-8 w-[8.5rem]">{texte.suche.spalten.kette}</TableHead>
-          {/* Ohne Breitenangabe: Der Ablaufname bekommt, was übrig bleibt. */}
-          <TableHead className="hidden h-8 md:table-cell">
-            {texte.nachrichten.spalten.ablauf}
-          </TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {zeilen.map((zeile) => (
-          <TableRow
-            key={zeile.messageId}
-            ref={zeile.messageId === gewaehlt ? gewaehlteZeile : undefined}
-            tabIndex={0}
-            aria-label={texte.nachrichten.zeileOeffnen}
-            aria-current={zeile.messageId === gewaehlt ? "true" : undefined}
-            onClick={(ereignis) => {
-              if ((ereignis.target as HTMLElement).closest("a, button, input, label")) {
-                return;
-              }
-              aufAuswahl(zeile.messageId);
-            }}
-            onKeyDown={(ereignis) => {
-              if (ereignis.target !== ereignis.currentTarget) {
-                return;
-              }
-              if (ereignis.key === "Enter" || ereignis.key === " ") {
-                ereignis.preventDefault();
-                aufAuswahl(zeile.messageId);
-              }
-            }}
-            className={cn(
-              "h-zeile focus-visible:ring-ring cursor-pointer focus-visible:ring-2 focus-visible:-outline-offset-2 focus-visible:outline-none",
-              zeile.messageId === gewaehlt ? "bg-accent hover:bg-accent" : "hover:bg-muted",
-            )}
-          >
-            <TableCell className="px-2 py-0 align-middle">
-              <ZeitpunktZelle wert={zeile.zeitpunkt} />
-            </TableCell>
-            <TableCell className="px-2 py-0 align-middle">
-              <StatusPlakette
-                statusKind={zeile.statusKind}
-                rohwert={zeile.status}
-                bedeutungNichtVerifiziert={zeile.bedeutungNichtVerifiziert}
-                schritt={zeile.schritt}
-              />
-            </TableCell>
+            <TableHead className="h-8 w-[9.6875rem]">{texte.nachrichten.spalten.status}</TableHead>
             {mitTrefferspalte ? (
-              <TableCell className="px-2 py-0 align-middle">
-                <TrefferZelle treffer={zeile.treffer} />
-              </TableCell>
+              <TableHead className="h-8 w-[17.5rem]">{texte.suche.spalten.treffer}</TableHead>
             ) : null}
-            <TableCell className="px-2 py-0 align-middle">
-              <KettenZelle rollen={zeile.rollen} />
-            </TableCell>
-            <TableCell className="hidden px-2 py-0 align-middle md:table-cell">
-              <AblaufZelle sosName={zeile.sosName} processName={zeile.processName} />
-            </TableCell>
+            <TableHead className="h-8 w-[4.625rem]">{texte.suche.spalten.kette}</TableHead>
+            {/* Ohne Breitenangabe: Der Ablaufname bekommt, was übrig bleibt — an
+              seiner Schwelle genau seine Mindestbreite. */}
+            <TableHead className={cn("h-8", ablauf)}>{texte.nachrichten.spalten.ablauf}</TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {zeilen.map((zeile) => (
+            <TableRow
+              key={zeile.messageId}
+              ref={zeile.messageId === gewaehlt ? gewaehlteZeile : undefined}
+              tabIndex={0}
+              aria-label={texte.nachrichten.zeileOeffnen}
+              aria-current={zeile.messageId === gewaehlt ? "true" : undefined}
+              onClick={(ereignis) => {
+                if ((ereignis.target as HTMLElement).closest("a, button, input, label")) {
+                  return;
+                }
+                aufAuswahl(zeile.messageId);
+              }}
+              onKeyDown={(ereignis) => {
+                if (ereignis.target !== ereignis.currentTarget) {
+                  return;
+                }
+                if (ereignis.key === "Enter" || ereignis.key === " ") {
+                  ereignis.preventDefault();
+                  aufAuswahl(zeile.messageId);
+                }
+              }}
+              className={cn(
+                "h-zeile focus-visible:ring-ring cursor-pointer focus-visible:ring-2 focus-visible:-outline-offset-2 focus-visible:outline-none",
+                zeile.messageId === gewaehlt ? "bg-accent hover:bg-accent" : "hover:bg-muted",
+              )}
+            >
+              <TableCell className="px-2 py-0 align-middle">
+                <ZeitpunktZelle wert={zeile.zeitpunkt} />
+              </TableCell>
+              <TableCell className="px-2 py-0 align-middle">
+                <StatusPlakette
+                  statusKind={zeile.statusKind}
+                  rohwert={zeile.status}
+                  bedeutungNichtVerifiziert={zeile.bedeutungNichtVerifiziert}
+                  schritt={zeile.schritt}
+                />
+              </TableCell>
+              {mitTrefferspalte ? (
+                <TableCell className="px-2 py-0 align-middle">
+                  <TrefferZelle treffer={zeile.treffer} />
+                </TableCell>
+              ) : null}
+              <TableCell className="px-2 py-0 align-middle">
+                <KettenZelle rollen={zeile.rollen} />
+              </TableCell>
+              <TableCell className={cn("px-2 py-0 align-middle", ablauf)}>
+                <AblaufZelle sosName={zeile.sosName} processName={zeile.processName} />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 

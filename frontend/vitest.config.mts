@@ -10,8 +10,8 @@ import { defineConfig } from "vitest/config";
  * Das sind alles reine Funktionen. Ein gerenderter Baum brächte hier nichts
  * außer Laufzeit und Abhängigkeiten.
  *
- * **Die Ausnahmen sind gezählt, nicht gewachsen** — Stand 15.09.2026 sind es
- * **einhundertfünfundzwanzig in siebzehn Dateien**. Diese Zahl wird an genau dieser Stelle geführt;
+ * **Die Ausnahmen sind gezählt, nicht gewachsen** — Stand 16.09.2026 sind es
+ * **einhundertfünfunddreißig in neunzehn Dateien**. Diese Zahl wird an genau dieser Stelle geführt;
  * `tests/hilfe/rendern.tsx` und `docs/frontend-grundlagen.md` §9 verweisen
  * darauf, statt sie zu wiederholen (drei Orte für dieselbe Zahl sind zwei zu
  * viel):
@@ -37,6 +37,23 @@ import { defineConfig } from "vitest/config";
  * | `tests/suchfeld-auswahl.test.tsx` *(09.09.2026)* | 6 | **Die Auswahl neben dem Suchfeld in zwei Untermenüs (E‑112).** Drei Aussagen über den Baum, die keine reine Funktion trägt: Die **oberste Ebene** trägt genau drei Einträge — den typlosen und je einen Untermenü-Auslöser — und keine Überschrift mehr; ein Untermenü zeigt beim Öffnen **seine** Einträge und die des anderen **nicht**; und für einen Mandanten ohne Belegart (`WOC`) **fehlt** der Auslöser der Belegarten vollständig — Abwesenheit, nicht Leere. Dazu die **Verdrahtung**: Eine Wahl im zweiten Untermenü hebt die im ersten auf, am Schalter, am Auslöser und am Häkchen; und der Auslöser der Gruppe mit der Auswahl trägt den gewählten Eintrag **im zugänglichen Namen, ohne `aria-checked`** — er ist `menuitem` mit `aria-haspopup`, kein Radioeintrag. Und die Regression zum Schlüssel: gleichlautende Einträge in beiden Gruppen **ohne `console.error`**. Geöffnet wird über `pointerdown` und `ArrowRight`, Radix' eigene Wege ohne Zeitgeber (T1); `next/navigation` ist ersetzt, weil `useRouter` außerhalb des App-Routers wirft |
  *
  * | `tests/in-sicht-bringen.test.tsx` *(09.09.2026, erweitert 10.09.2026)* | 11 | **Ein Haken, dessen ganze Wirkung ein Aufruf am DOM ist** (E‑114, `lib/in-sicht-bringen.ts`). Ohne Komponente ist er nicht aufrufbar, und ob `scrollIntoView` gerufen wird — beim ersten Rendern mit Schlüssel, bei jedem Wechsel, nicht ohne Wechsel, nicht ohne Schlüssel — steht nirgends sonst. Dazu die **Höhenregel** aus der Chrome-Vorprobe (`docs/process-view.md` M172): Für ein Ziel, das höher ist als sein Scrollbereich, zählt allein die Oberkante — `start` statt `nearest`, wenn sie oberhalb liegt, und **keine Bewegung**, wenn sie schon steht; `jsdom` rechnet kein Layout, die Maße werden gestellt. Und der Rückweg `useZuletztGeschlossen`: die Kennung genau nach dem Schließen und sonst `null` — ein Zustand, der beim Rendern angepasst wird und nur im Baum beobachtbar ist. **Was die Datei nicht zeigt, steht in ihrem Kopf:** ob etwas ins Bild kommt, sagt allein der Browser. **Seit E‑115 vier mehr, und sie stellen eine schärfere Frage:** nicht *ob* gerufen wird, sondern **welcher Kasten sich bewegt und um wie viel** — `scrollIntoView` ist aus dem Haken verschwunden, weil es jeden scrollenden Vorfahren bewegt. Ein Ziel in einer eigenen Spalte bewegt nur diese und nicht `main`; eine klebende Spalte beginnt in ihrem eigenen Scrollbereich wieder oben; ein klebender Rahmen setzt den Scrollbereich **darin** zurück; und ohne etwas Klebendes gilt E‑114 unverändert |
+ *
+ * | `tests/rollen-auswahl.test.tsx` *(15.09.2026)* | 4 | **Die Rollenauswahl ist eine Liste der Anwendung und kein natives Feld mehr** (Punkt 180, `docs/benutzerverwaltung-frontend.md` §18). Eine Aussage über **Abwesenheit** — kein `<select>` im Baum, und genau das war der Anlass: Die Liste eines nativen Felds zeichnet der Browser, und keine Prüfung des Projekts erreicht ihre Farbe. Dazu drei über **Verdrahtung**, die erst im Zusammenspiel von Ereignis und Zustand entstehen: Eine gesperrte Rolle steht da und lässt sich weder per Klick noch per Taste wählen; derselbe Wert noch einmal gewählt meldet **nichts** — im Zeilenformular wäre jede Meldung ein `PUT`, und jedes `PUT` verwirft alle Sitzungen des Kontos (E5); `↓` am geschlossenen Feld **öffnet** nur. **Drei Mutanten gesetzt, drei gefallen**, jeder in genau einem Fall |
+ * | `tests/spaltenwahl.test.tsx` *(15.09.2026, an zwei Meldungen des 16.09.2026 erweitert)* | 6 | **Die Regel ist selbst eine Klasse** (E‑147, `docs/spaltenwahl.md`): Ab welcher Containerbreite eine Spalte dasteht, entscheidet `@min-[…]/<name>:table-cell` an `th` **und** `td` — wörtlich, weil Tailwind nur findet, was im Quelltext steht. **Seit dem 16.09.2026 einer mehr:** die **Nachrichtenliste** (E‑148) — sie hing als einzige noch am Fenster, und an ihr hängt zusätzlich die Bauform unter der Grundmenge (der Ablauf bekommt den Rest, das Projekt kommt nicht). Je Tabelle (Nachrichtenliste, Trefferliste mit und ohne Spalte „Treffer", Benutzertabelle, Katalog): Die Zahl in der Klasse ist auf den Pixel die Summe der Mindestbreiten; an den gemessenen Containerbreiten und an jeder Schwellenkante liegt keine sichtbare Spalte unter ihrer Mindestbreite; `td` trägt dieselbe Sichtbarkeit wie `th`; keine Zelle trägt eine Fensterschwelle. Die Breiten sind nach `table-layout: fixed` **gerechnet** — `jsdom` rechnet kein Layout, der Beleg im Browser ist M177. **Seit der zweiten Meldung des 16.09.2026 einer mehr** (E‑149): Die Benutzertabelle hat **keine freie Spalte** mehr, und der Fall hält an der Breite der Meldung fest, dass **ein** Faktor für alle Spalten gilt — die Mandanten hatten dort 673 von 1.408 px gehortet, während Benutzername und Rolle auf ihrer Mindestbreite umbrachen |
+ *
+ * > ⚠️ **Fortgeschrieben am 15.09.2026 (Spaltenwahl und Rollenauswahl), aus dem Lauf gezählt**
+ * > (`vitest run --reporter=json`, Fälle je `.tsx`-Datei): **133 in neunzehn Dateien.** Acht
+ * > sind neu, vier je neue Datei; der Lauf über alle 41 Dateien trägt 1.068 Fälle.
+ *
+ * > ⚠️ **Fortgeschrieben am 16.09.2026 (die Nachrichtenliste, E‑148), wieder aus dem Lauf gezählt**
+ * > (`vitest run --reporter=json`, Fälle je `.tsx`-Datei): **134 in neunzehn Dateien**, keine neue
+ * > Datei; der Lauf über alle 41 Dateien trägt **1.072** Fälle. Die vier Fälle mehr im Gesamtlauf
+ * > gegenüber dem 15.09.2026 sind einer hier und drei reine in `tests/spaltenwahl.test.ts`-Nachbarn
+ * > desselben Tages — gezählt, nicht gerechnet.
+ *
+ * > ⚠️ **Noch einmal fortgeschrieben am 16.09.2026 (die Aufteilung der Spalten, E‑149)**, wieder aus
+ * > dem Lauf: **135 in neunzehn Dateien**, keine neue Datei; der Lauf über alle 41 Dateien trägt
+ * > **1.073** Fälle. Der eine Fall mehr steht in `tests/spaltenwahl.test.tsx`.
  *
  * > ⚠️ **Zwei Zahlen im selben Kopf gingen auseinander** — die Tabellensumme
  * > stand oben richtig, der Schlusssatz nannte „neunundvierzig". Berichtigt am
@@ -68,7 +85,7 @@ import { defineConfig } from "vitest/config";
  * > darunter noch einhundertsechzehn; die Tabellensumme stimmte mit dem Kopf.
  * > Berichtigt ist der Satz.
  *
- * Allen einhundertfünfundzwanzig ist dasselbe gemeinsam: **Es gibt keinen anderen Ort, an dem sie
+ * Allen einhundertvierunddreißig ist dasselbe gemeinsam: **Es gibt keinen anderen Ort, an dem sie
  * belegbar wären.** Das ist die Bedingung, nicht „es ließe sich so leichter
  * prüfen". Sie schalten ihre Umgebung selbst über `// @vitest-environment jsdom`
  * um — die Voreinstellung bleibt `node`, damit die übrigen Dateien nichts von

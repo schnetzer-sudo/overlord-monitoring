@@ -8,6 +8,7 @@ import { formatiereZeitpunkt } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 import type { Katalogzeile } from "../api";
+import { KATALOG_SICHTBAR } from "../spalten";
 import { istAuffangprozess } from "../filter";
 
 /**
@@ -71,7 +72,7 @@ export function KatalogZeile({
         ) : null}
       </td>
 
-      <td className="text-muted-foreground hidden px-2 py-1.5 align-top lg:table-cell">
+      <td className={cn("text-muted-foreground px-2 py-1.5 align-top", KATALOG_SICHTBAR.projekt)}>
         <span className="block font-mono break-all">{zeile.projectId}</span>
         <span className="text-beiwerk block break-words">
           {zeile.projectName ?? texte.katalog.ohneNamen}
@@ -82,7 +83,7 @@ export function KatalogZeile({
         <PartnerAnzeige zeile={zeile} />
       </td>
 
-      <td className="hidden px-2 py-1.5 align-top md:table-cell">
+      <td className={cn("px-2 py-1.5 align-top", KATALOG_SICHTBAR.richtung)}>
         {zeile.richtung === null ? (
           <span className="text-muted-foreground">{texte.katalog.nichtZugeordnet}</span>
         ) : (
@@ -90,7 +91,7 @@ export function KatalogZeile({
         )}
       </td>
 
-      <td className="hidden px-2 py-1.5 align-top md:table-cell">
+      <td className={cn("px-2 py-1.5 align-top", KATALOG_SICHTBAR.bestand)}>
         <BestandAnzeige zeile={zeile} sprache={sprache} zone={zone} />
       </td>
 

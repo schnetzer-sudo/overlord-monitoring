@@ -635,6 +635,28 @@ Die **Dichte** hängt an dieser Grenze ausdrücklich **nicht**. Sie folgt dem Ze
 schmales Fenster am Rechner bleibt dicht. Was unter 768 px umbricht, ist die Anordnung, nicht die
 Größe der Bedienflächen.
 
+**Die Spaltenmenge einer Tabelle hängt am Platz ihres Containers und nicht an dieser Grenze**
+*(15.09.2026, E‑147, [`spaltenwahl.md`](spaltenwahl.md))*. Bei 768 px erscheint die Navigationsspalte,
+und `main` ist dort 560 px breit — eine Spalte, die an der Fenstergrenze dazukam, bekam keinen Platz
+und zeichnete ihre Beschriftung trotzdem (M176). Eine Tabelle fragt deshalb die Breite ihrer eigenen,
+benannten Hülle ab (`@container/<name>`), und eine Spalte kommt dazu, sobald die **Summe der
+gemessenen Mindestbreiten** aller dann sichtbaren Spalten hineinpasst. Eine Spalte ist da oder nicht
+da; eine Breite von 0 px gibt es nicht.
+
+**Das ist kein neuer Umbruchpunkt.** 768 px bleiben die Grenze des *Rahmens* — Schublade, Kopfzeile,
+Suchfeld. Eine Container-Schwelle ist eine Summe je Tabelle; sie steht in deren Feature-Datei und
+nicht hier. Umgesetzt für Trefferliste, Benutzertabelle und Prozess-Katalog; die **Nachrichtenliste**
+folgt noch dem Fenster, weil ihre Mindestbreiten im schmalsten Kasten nicht aufgehen (Punkt 114,
+[`spaltenwahl.md`](spaltenwahl.md) §6).
+
+> **Seit dem 16.09.2026 folgt auch die Nachrichtenliste ihrer Hülle** *(E‑148,
+> [`spaltenwahl.md`](spaltenwahl.md) §5.4)*. Der letzte Satz oben ist damit überholt: Der Auftraggeber
+> hat den Klumpen erneut gemeldet, und die Entscheidung, die dort offen stand, ist gefallen. **Das
+> Projekt kommt erst, wenn alle vier Spalten ihre Mindestbreite tragen** (932 px); darunter stehen
+> Zeitpunkt, Status und Ablauf, und **unter 646 px gilt die heutige Bauform** — der Ablauf bekommt den
+> Rest und kürzt. Alle vier Tabellen hängen damit am Container, und keine hat mehr eine Spalte ohne
+> Platz.
+
 ---
 
 ## 7. Was bewusst fehlt

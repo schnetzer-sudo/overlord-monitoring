@@ -8,6 +8,7 @@ import { formatiereZeitpunkt } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 import { istRolle, type Nutzerzeile } from "../api";
+import { BENUTZER_SICHTBAR } from "../spalten";
 
 /**
  * Eine Zeile der Kontenliste in ihrer **Anzeigeform** — die Zellen, nicht die
@@ -75,11 +76,11 @@ export function BenutzerZeile({
        * dritter, wäre eine stille Zuordnung auf „Mandant" die schlechteste
        * denkbare Auskunft an einer Berechtigungsanzeige.
        */}
-      <td className={cn(zelle, "hidden md:table-cell")}>
+      <td className={cn(zelle, BENUTZER_SICHTBAR.rolle)}>
         {istRolle(zeile.role) ? texte.rolle[zeile.role] : zeile.role}
       </td>
 
-      <td className={cn(zelle, "hidden md:table-cell")}>
+      <td className={cn(zelle, BENUTZER_SICHTBAR.mandanten)}>
         {zeile.tenants.length === 0 ? (
           <span className="text-muted-foreground">{texte.benutzer.ohneMandanten}</span>
         ) : (
@@ -124,7 +125,7 @@ export function BenutzerZeile({
         </span>
       </td>
 
-      <td className={cn(zelle, "hidden lg:table-cell")}>
+      <td className={cn(zelle, BENUTZER_SICHTBAR.passwort)}>
         <span className={cn(!zeile.mustChangePassword && "text-muted-foreground")}>
           {zeile.mustChangePassword
             ? texte.benutzer.passwort.wechselNoetig
@@ -132,7 +133,7 @@ export function BenutzerZeile({
         </span>
       </td>
 
-      <td className={cn(zelle, "hidden lg:table-cell")}>
+      <td className={cn(zelle, BENUTZER_SICHTBAR.letzteAnmeldung)}>
         {zeile.lastLogin === null ? (
           <span className="text-muted-foreground">{texte.benutzer.anmeldung.nie}</span>
         ) : (

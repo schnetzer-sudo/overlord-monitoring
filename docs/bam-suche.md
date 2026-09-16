@@ -1161,6 +1161,38 @@ eine andere Wahl als in der Liste, die dort das *Projekt* weglässt, und sie fol
 Was beantwortet *welcher Beleg ist das* und *bin ich fertig*? Der Ablaufname beantwortet keines von
 beiden und steht im Detail vollständig da.
 
+> ### Geändert am 15.09.2026 — der Ablauf folgt der Hülle, nicht dem Fenster (E‑147)
+>
+> Der Absatz darüber nennt den Stand bis zum 15.09.2026. **Welche Spalte weicht, ist dieselbe Wahl;
+> wann, entscheidet seitdem die Breite der Hülle der Trefferliste** und nicht `md`
+> ([`spaltenwahl.md`](spaltenwahl.md) §5.1). *(Seit dem 16.09.2026 gilt das auch für den Verweis im
+> Absatz darüber: Die Liste hängt ihr Projekt ebenfalls nicht mehr an `md`, sondern an 932 px
+> Kastenbreite — „dem Umbruchpunkt des Projekts" gibt es nicht mehr, E‑148,
+> [`spaltenwahl.md`](spaltenwahl.md) §5.4.)* Vorher kam der Ablauf bei 768 px Fensterbreite mit 0 px dazu
+> und zeichnete seine Beschriftung trotzdem (Punkt 173). Jede feste Spalte trägt ihre gemessene
+> Mindestbreite (M177):
+>
+> | Spalte | Mindestbreite | vorher |
+> |---|---:|---|
+> | Zeitpunkt | 187 px | 184 px |
+> | Status | 155 px | 168 px, ab `lg` 240 px |
+> | Treffer | 280 px | 208 px, ab `lg` 256 px |
+> | Kette | 74 px | 136 px |
+> | Ablauf *(frei)* | 304 px | der Rest |
+>
+> | Stufe | Schwelle der Hülle |
+> |---|---:|
+> | Zeitpunkt · Status · Treffer · Kette | 696 px — darunter läuft die Tabelle in ihrer Hülle über, wie vorher |
+> | + Ablauf | **1.000 px** |
+> | ohne „Treffer" (reine Feldsuche, E‑110): Zeitpunkt · Status · Kette | 416 px |
+> | + Ablauf | **720 px** |
+>
+> **Die Längenregel darüber gilt weiter, mit anderen Zahlen:** Die Spalte „Treffer" ist nicht mehr 13 rem
+> und ab `lg` 16 rem breit, sondern **17,5 rem** — die längste Belegart-Bezeichnung passt ganz hinein, mit
+> `+N` dahinter kürzt die Zelle weiterhin. Und der Status ist ab `lg` **nicht mehr breiter**; der Zusatz
+> „Schritt: …" kürzt bei jeder Breite (Antwort des Auftraggebers vom 15.09.2026,
+> [`spaltenwahl.md`](spaltenwahl.md) §2).
+
 ### 11.6 Was über der Liste steht
 
 **Die Trefferzahl samt Zeitfenster**, und bei Abschneidung **beides zusammen**: dass abgeschnitten
@@ -1252,6 +1284,11 @@ die 48 rem = 768 px des Projekts.
 > `innerWidth` nicht ([`frontend-grundlagen.md`](frontend-grundlagen.md) §8). Nachgesehen ist das
 > **Regelwerk**; die drei Posten — Feld, Marken, Trefferliste — stehen in der Tabelle *Offene
 > Sichtprüfungen* in [`README.md`](README.md).
+
+> *Nachgetragen am 15.09.2026:* Die Trefferliste ist inzwischen bei 360, 390, 430, 744 und 768 px
+> **gemessen** — vor dem Umbau in M176 ([`messungen-sichtprobe-schmal.md`](messungen-sichtprobe-schmal.md)
+> §4.7), danach in M177 ([`spaltenwahl.md`](spaltenwahl.md) §7). Das Suchfeld als eigene Zeile hat sich
+> dabei nicht bewegt.
 
 ### 11.10 Tests
 

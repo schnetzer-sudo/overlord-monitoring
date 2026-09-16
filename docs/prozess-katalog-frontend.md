@@ -130,6 +130,35 @@ Zeilen bei `NEXANS`; L12 misst dafür 8,0 ms in der Datenbank.
 | Nachrichten | die drei Zustände aus E14, darunter das Alter der Erhebung | `md` |
 | Pflege | offen / gepflegt und die Schaltfläche „Bearbeiten" | immer |
 
+> ### Geändert am 15.09.2026 — „sichtbar ab" hängt an der Hülle, nicht mehr an `md` und `lg` (E‑147)
+>
+> Die Tabelle darüber nennt den Stand bis zum 15.09.2026. **Reihenfolge und Grundmenge sind
+> unverändert**; eine Spalte kommt seitdem dazu, sobald **die Hülle der Tabelle** die gemessenen
+> Mindestbreiten aller dann sichtbaren Spalten trägt ([`spaltenwahl.md`](spaltenwahl.md) §5.3, M177).
+> Vorher fiel bei 768 px Fensterbreite der Partner auf 0 px und brach buchstabenweise um (Punkt 175).
+>
+> | Spalte | Mindestbreite | gemessen an | vorher |
+> |---|---:|---|---|
+> | Prozess | 317 px | dem längsten unteilbaren Stück eines Prozessnamens; die Kennung bricht mit `break-all` | 144 / 192 / 256 / 320 px |
+> | Projekt | 163 px | dem längsten Wort eines Projektnamens | 224 px ab `lg` |
+> | Partner *(frei)* | 145 px | dem längsten Wort eines Partnernamens | der Rest |
+> | Richtung | 95 px | dem längsten Wort der Richtungstexte | 128 px ab `md` |
+> | Nachrichten | 106 px | dem Zeitpunkt hinter „geprüft am" | 176 px ab `md` |
+> | Pflege | 76 px | der Kopfbeschriftung | 96 px, ab `md` 136 px |
+>
+> | Stufe | Schwelle der Hülle |
+> |---|---:|
+> | **Bauform:** Prozess 9 rem · Partner · Pflege 6 rem | unter 538 px |
+> | Prozess · Partner · Pflege in ihrer Mindestbreite | **538 px** |
+> | + Richtung · Nachrichten | **739 px** |
+> | + Projekt | **902 px** |
+>
+> **Der Katalog kürzt nicht, er bricht um** — daran ändert sich nichts. Unter 538 px gilt die
+> dreispaltige Bauform, die er bei 360 px schon hatte (Antwort des Auftraggebers vom 15.09.2026); der
+> Partner bekommt dort den Rest und nie 0 px. **Die klebende Kopfzeile hält unter der Container-Hülle:**
+> nachgemessen am Produktionsbau bei `main.scrollTop` 900, Kopfzeile und `main` beide bei y = 51, das
+> Dokument scrollt nicht.
+
 **Die Reihenfolge kommt vom Backend** — `ProjectID`, dann `ProcessID` (E6) — und wird im Browser
 **nicht** umsortiert. Eine Spaltensortierung wäre eine neue Entscheidung und keine Ausbaustufe: Ohne
 Paginierung und ohne eindeutigen Zweitschlüssel hat eine Liste, die nach einem nicht eindeutigen Feld
@@ -880,6 +909,11 @@ Server-Verwender von `Button` im ganzen Projekt. Ausgeschrieben in §2, das Netz
    Darstellung. Zu sehen sind hier drei Dinge: ob die Tabelle bei 360 px mit drei Spalten trägt, ob
    das Zeilenformular dort gestapelt lesbar bleibt, und ob die Vorschlagsliste des Partnerfeldes
    nicht aus dem Bild läuft. Bei 1920 × 889 ist das Regelwerk nachgemessen und geht auf (§3).
+   **Nachgetragen am 15.09.2026:** Die **Tabelle** ist bei 360 px gemessen (M176,
+   [`messungen-sichtprobe-schmal.md`](messungen-sichtprobe-schmal.md) §4.9) — sie trägt dreispaltig, mit
+   drei- bis fünfzeiligen Zeilen; bei 768 px fiel der Partner auf 0 px. Seit E‑147 folgen die Spalten der
+   Hülle ([`spaltenwahl.md`](spaltenwahl.md) §5.3). **Weiterhin ungesehen** sind das Zeilenformular
+   gestapelt bei 360 px und die Vorschlagsliste des Partnerfeldes.
 5. **Die Dauereinheiten stehen zweimal** (§11, Punkt 8). Sie gehören auf die oberste Ebene der
    Sprachdateien.
 6. **Ein entfernter Partner bleibt bis zum nächsten Holen in der Auswahl** (§5). In Kauf genommen;
