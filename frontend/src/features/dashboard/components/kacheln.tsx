@@ -105,68 +105,58 @@ export function Kacheln({
   const texte = useTexte();
   const wartend = kacheln.wartend;
 
+  /*
+   * **Die Umbruchregel ist erweitert und nicht ersetzt.** `sm:grid-cols-2`
+   * bleibt; nur die Spaltenzahl am breiten Fenster folgt der Zahl der
+   * Kacheln — sonst ließe die Reihe bei vier Kacheln eine leere fünfte
+   * Spalte stehen, und eine Lücke sähe aus wie eine fehlende Zahl.
+   * Zusammengesetzte Klassennamen entstehen dabei nicht: Tailwind sucht den
+   * Quelltext ab, und beide Formen stehen vollständig da.
+   *
+   * **Seit dem 10.09.2026 sind es fünf und nicht vier** (E‑78, ergänzt):
+   * Die Plattform ist die letzte Kachel der Reihe. Fällt *Wartend* weg
+   * (E‑81), rückt sie mit auf — genau dafür steht *Wartend* vor
+   * *Nachrichten* und nicht dahinter.
+   */
   return (
-    <div className="flex flex-col gap-2">
-      {/*
-       * **Die Umbruchregel ist erweitert und nicht ersetzt.** `sm:grid-cols-2`
-       * bleibt; nur die Spaltenzahl am breiten Fenster folgt der Zahl der
-       * Kacheln — sonst ließe die Reihe bei vier Kacheln eine leere fünfte
-       * Spalte stehen, und eine Lücke sähe aus wie eine fehlende Zahl.
-       * Zusammengesetzte Klassennamen entstehen dabei nicht: Tailwind sucht den
-       * Quelltext ab, und beide Formen stehen vollständig da.
-       *
-       * **Seit dem 10.09.2026 sind es fünf und nicht vier** (E‑78, ergänzt):
-       * Die Plattform ist die letzte Kachel der Reihe. Fällt *Wartend* weg
-       * (E‑81), rückt sie mit auf — genau dafür steht *Wartend* vor
-       * *Nachrichten* und nicht dahinter.
-       */}
-      <div
-        className={cn(
-          "grid gap-3 sm:grid-cols-2",
-          wartend === undefined ? "xl:grid-cols-4" : "xl:grid-cols-5",
-        )}
-      >
-        <FehlerKachel fehler={kacheln.fehler} fenster={fenster} />
+    <div
+      className={cn(
+        "grid gap-3 sm:grid-cols-2",
+        wartend === undefined ? "xl:grid-cols-4" : "xl:grid-cols-5",
+      )}
+    >
+      <FehlerKachel fehler={kacheln.fehler} fenster={fenster} />
+      <ZustandKachel
+        art="LAEUFT"
+        kachel={kacheln.laeuft}
+        ziel={laeuftZiel(fenster)}
+        verweisText={texte.dashboard.kacheln.laeuftVerweis}
+      />
+      {wartend === undefined ? null : (
         <ZustandKachel
-          art="LAEUFT"
-          kachel={kacheln.laeuft}
-          ziel={laeuftZiel(fenster)}
-          verweisText={texte.dashboard.kacheln.laeuftVerweis}
+          art="WARTEND"
+          kachel={wartend}
+          ziel={wartendZiel(fenster, zeitraum, wartend.aeltesteSekunden)}
+          verweisText={texte.dashboard.kacheln.wartendVerweis}
+          ohneVerweisText={texte.dashboard.kacheln.wartendOhneVerweis}
         />
-        {wartend === undefined ? null : (
-          <ZustandKachel
-            art="WARTEND"
-            kachel={wartend}
-            ziel={wartendZiel(fenster, zeitraum, wartend.aeltesteSekunden)}
-            verweisText={texte.dashboard.kacheln.wartendVerweis}
-            ohneVerweisText={texte.dashboard.kacheln.wartendOhneVerweis}
-          />
-        )}
-        <NachrichtenKachel anzahl={kacheln.nachrichten} />
-
-        {/*
-         * **Die Auskunft über die Anlage steht am Ende der Reihe** und nicht
-         * mehr in einem eigenen Kasten darunter. Sie beantwortet die zweite
-         * Hälfte von *„ob"* — *„liegt es an der Anlage"* (E‑116) — und muss
-         * dafür ohne Scrollen erreichbar sein; ein eigener Kasten erreichte
-         * das nur, indem er den Verlauf unter die Falz schob.
-         *
-         * **Sie steht hinter *Nachrichten* und nicht davor.** Die vier Kacheln
-         * davor sind die Auskunft über den **Mandanten**, und die ist die
-         * häufigere Frage; diese ist die über die **Anlage** und die
-         * seltenere. Der Leitsatz ordnet nach der Frage, mit der jemand
-         * herkommt.
-         */}
-        <PlattformKachel plattform={plattform} />
-      </div>
+      )}
+      <NachrichtenKachel anzahl={kacheln.nachrichten} />
 
       {/*
-       * Sichtbar und nicht in einem `title`: Auf einem Berührungsgerät gibt es
-       * kein Überfahren, und dort erführe es niemand (bekannte Grenze 3).
+       * **Die Auskunft über die Anlage steht am Ende der Reihe** und nicht
+       * mehr in einem eigenen Kasten darunter. Sie beantwortet die zweite
+       * Hälfte von *„ob"* — *„liegt es an der Anlage"* (E‑116) — und muss
+       * dafür ohne Scrollen erreichbar sein; ein eigener Kasten erreichte
+       * das nur, indem er den Verlauf unter die Falz schob.
+       *
+       * **Sie steht hinter *Nachrichten* und nicht davor.** Die vier Kacheln
+       * davor sind die Auskunft über den **Mandanten**, und die ist die
+       * häufigere Frage; diese ist die über die **Anlage** und die
+       * seltenere. Der Leitsatz ordnet nach der Frage, mit der jemand
+       * herkommt.
        */}
-      <p className="text-muted-foreground text-beiwerk">
-        {texte.dashboard.kacheln.nachrichtenHinweis}
-      </p>
+      <PlattformKachel plattform={plattform} />
     </div>
   );
 }
@@ -349,19 +339,6 @@ function ZustandKachel({
           {ziel === null && ohneVerweisText !== undefined ? (
             <p className="text-beiwerk opacity-75">{ohneVerweisText}</p>
           ) : null}
-
-          {/*
-           * **Ohne diesen Satz widersprechen sich zwei Zahlen auf derselben
-           * Seite sichtbar**, sobald 48 Stunden gewählt sind — der Normalfall:
-           * Diese Kachel zählt den ganzen Bestand (Regel L9), alles andere auf
-           * der Seite den gewählten Zeitraum.
-           *
-           * **Er steht in der Kachel und nicht als geteilte Zeile darunter.**
-           * Eine geteilte Zeile müsste beide Kacheln benennen — und nennte damit
-           * bei einem Mandanten ohne suspendierende Abläufe eine, die es auf
-           * seiner Seite gar nicht gibt.
-           */}
-          <p className="text-beiwerk opacity-75">{texte.dashboard.kacheln.bestandHinweis}</p>
         </>
       ) : (
         <NichtErmittelbar />

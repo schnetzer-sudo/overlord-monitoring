@@ -917,15 +917,30 @@ Zeilen, auf die sie führt.**
   ein eigenes Wort hier wäre dieselbe Sache zum zweiten Mal benannt.
 - **Zweite Zeile: „ältester seit 7 Tagen".** Sie **entfällt bei `anzahl = 0`** — kein „—", kein
   „keine". Ohne Zeile gibt es kein Alter, und die Null steht für sich.
-- **Beide Kacheln sagen, dass sie den Bestand zählen und nicht den Zeitraum.** Ohne diesen Satz
-  widersprechen sich zwei Zahlen auf derselben Seite sichtbar, sobald 48 Stunden gewählt sind — der
-  Normalfall.
+- **Beide Kacheln zählen den Bestand und nicht den Zeitraum** (Regel L9) — als einzige Zahlen
+  dieser Seite.
 
-> **Der Satz steht *in* der Kachel und nicht als geteilte Zeile darunter**, obwohl die Bauform
-> daneben (bekannte Grenze 3, unter der Reihe) genau das täte. Der Grund ist E‑81: Eine geteilte
-> Zeile müsste **beide Kacheln benennen** — und nennte damit bei einem Mandanten ohne suspendierende
-> Abläufe eine Kachel, die es auf seiner Seite gar nicht gibt. Die Bauform ist dieselbe geblieben:
-> ein **sichtbarer** Satz und kein `title`, weil es auf einem Berührungsgerät kein Überfahren gibt.
+> ### ⚠️ Die drei Hinweiszeilen sind am 16.09.2026 entfernt worden
+>
+> **Auf Wunsch des Auftraggebers**, und es sind drei an einem Tag: der Satz *in* den Kacheln
+> *Läuft* und *Wartend*, der Satz unter der Kachelreihe und der Satz unter der Verteilung (§5.5).
+>
+> | Wortlaut, der entfallen ist | wo er stand |
+> |---|---|
+> | „Gezählt wird der gesamte Bestand, nicht der gewählte Zeitraum." | in **jeder** der beiden Kacheln *Läuft* und *Wartend* |
+> | „Gezählt wird Bewegung: Eine Nachricht erscheint in dem Zeitraum, in dem sie zuletzt verändert wurde — nicht in dem, in dem sie eingegangen ist." | als eigene Zeile **unter** der Kachelreihe |
+>
+> **Die Begründungen der Bauform bleiben hier stehen**, weil sie sagen, was mit den Sätzen fehlt.
+> Der Bestandssatz stand *in* der Kachel und nicht als geteilte Zeile darunter (**E‑81**): Eine
+> geteilte Zeile müsste **beide Kacheln benennen** — und nennte damit bei einem Mandanten ohne
+> suspendierende Abläufe eine Kachel, die es auf seiner Seite gar nicht gibt. Beide waren
+> **sichtbare** Sätze und kein `title`, weil es auf einem Berührungsgerät kein Überfahren gibt.
+>
+> **Was ohne sie offen bleibt, ist benannt und nicht abgetan:** Sobald 48 Stunden gewählt sind — der
+> Normalfall — nennen *Läuft* und *Wartend* eine Zahl über den **Bestand**, während alles andere auf
+> der Seite den **Zeitraum** zählt; auf der Seite steht seither nichts mehr, was diesen Widerspruch
+> auflöst. Dasselbe gilt für bekannte Grenze 3: Die Kachel *Nachrichten* zählt weiterhin
+> **Bewegung** ([`dashboard.md`](dashboard.md) §2), sagt es aber nicht mehr.
 
 - **Zeitspannen formatiert der vorhandene Formatierer** — `formatiereDauer`, derselbe wie für
   `wartetSeitSekunden` im Detail. Ein zweiter wäre eine zweite Wahrheit über dieselbe Größe.
@@ -1117,9 +1132,15 @@ Partner dieses Namens (M98, Befund 21). Der Test benutzt diese Gestalt als Prüf
 **Der Bezugswert der Balken ist der größte Wert des Blocks und nicht die Summe.** Gefragt ist der
 Vergleich der Zeilen untereinander — und „Übrige" wäre in einer Anteilsrechnung doppelt enthalten.
 
-**Keine Zeile ist klickbar**, und das steht als Satz da, damit niemand danach sucht: Die Liste kennt
-keinen Partnerfilter, und der Umweg über Prozess-IDs ist in
-[`nachrichtenliste.md`](nachrichtenliste.md) §5a mit **7.459 ms** gemessen.
+**Keine Zeile ist klickbar:** Die Liste kennt keinen Partnerfilter, und der Umweg über Prozess-IDs
+ist in [`nachrichtenliste.md`](nachrichtenliste.md) §5a mit **7.459 ms** gemessen.
+
+> ### ⚠️ Der Satz dazu ist am 16.09.2026 entfernt worden
+>
+> **Auf Wunsch des Auftraggebers**, zusammen mit den beiden Hinweiszeilen der Kacheln (§5.4). *Der
+> alte Wortlaut:* „Die Nachrichtenliste kennt keinen Partnerfilter — diese Zeilen klicken nicht."
+> Er stand unter dem Block, damit niemand nach einem Verweis sucht, den es nicht gibt. **Die Zeilen
+> sind unverändert nicht klickbar**; angekündigt wird es nur nicht mehr.
 
 **Der Balken trägt keine Statusfarbe.** Eine Verteilung sagt nichts über *gut oder schlecht*; eine
 Farbe dort wäre eine Aussage, die es nicht gibt.

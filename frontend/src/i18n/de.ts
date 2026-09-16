@@ -255,12 +255,6 @@ export const de = {
 
     kacheln: {
       nachrichten: "Nachrichten",
-      // Bekannte Grenze 3 aus `docs/dashboard.md` §2: Der Rollup gruppiert nach
-      // MessageLastUpdate. Ein Batchlauf, der alte Nachrichten anfasst, hebt den
-      // Balken der Nachtstunde, ohne dass eine neue eingegangen wäre.
-      nachrichtenHinweis:
-        "Gezählt wird Bewegung: Eine Nachricht erscheint in dem Zeitraum, in dem sie zuletzt " +
-        "verändert wurde — nicht in dem, in dem sie eingegangen ist.",
       fehler: "Fehler",
       fehlerVerweis: "Diese Nachrichten in der Liste öffnen",
       artenAufklappen: "Nach Art aufschlüsseln",
@@ -282,14 +276,6 @@ export const de = {
         "Die älteste dieser Nachrichten liegt länger als ein Jahr zurück. Die Nachrichtenliste " +
         "zeigt höchstens ein Jahr — ein Verweis führte deshalb auf eine kleinere Zahl als hier " +
         "steht.",
-      // Ohne diesen Satz widersprechen sich zwei Zahlen auf derselben Seite
-      // sichtbar, sobald 48 Stunden gewählt sind — der Normalfall.
-      //
-      // **Er steht IN der Kachel und nicht als geteilte Zeile darunter.** Eine
-      // geteilte Zeile müsste die beiden Kacheln benennen — und nennte damit bei
-      // einem Mandanten ohne suspendierende Abläufe eine Kachel, die es auf
-      // seiner Seite gar nicht gibt.
-      bestandHinweis: "Gezählt wird der gesamte Bestand, nicht der gewählte Zeitraum.",
       // Entscheidung E‑q. Bewusst kein Rot und keine Fehler-Kennung: Für den
       // Nutzer ist das eine Auskunft und kein technischer Fehler. Sie gilt seit
       // dem 03.09.2026 für `laeuft` und `wartend` — und je Kachel einzeln: Die
@@ -344,8 +330,6 @@ export const de = {
       nichtZugeordnet: "nicht zugeordnet",
       nichtZugeordnetHinweis:
         "Prozesse ohne gepflegten Eintrag im Katalog. Null heißt: Es ist alles zugeordnet.",
-      keineVerweise:
-        "Die Nachrichtenliste kennt keinen Partnerfilter — diese Zeilen klicken nicht.",
     },
 
     aufgefallen: {

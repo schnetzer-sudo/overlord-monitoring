@@ -541,7 +541,7 @@ describe("Der Leerzustand", () => {
       const text = gerendert.behaelter.textContent ?? "";
 
       expect(text).not.toContain(D.verteilung.nichtZugeordnet);
-      expect(text).not.toContain(D.kacheln.nachrichtenHinweis);
+      expect(text).not.toContain(D.kacheln.nachrichten);
       expect(text).not.toContain(D.verlauf.titel);
       // Keine Kachel mit Nullen, also auch keine Zahl aus der Antwort.
       expect(text).not.toContain("9.950");

@@ -154,9 +154,6 @@ export const en: Texte = {
 
     kacheln: {
       nachrichten: "Messages",
-      nachrichtenHinweis:
-        "What is counted is movement: a message appears in the period in which it last changed — " +
-        "not in the one in which it arrived.",
       fehler: "Errors",
       fehlerVerweis: "Open these messages in the list",
       artenAufklappen: "Break down by kind",
@@ -167,7 +164,6 @@ export const en: Texte = {
       wartendOhneVerweis:
         "The oldest of these messages goes back more than a year. The message list shows at most " +
         "one year — a link would therefore lead to a smaller number than the one shown here.",
-      bestandHinweis: "What is counted is the entire stock, not the selected period.",
       nichtErmittelbar: "—",
       nichtErmittelbarHinweis:
         "This number is counted afresh on every request, and the count hit the database time " +
@@ -197,7 +193,6 @@ export const en: Texte = {
       nichtZugeordnet: "not assigned",
       nichtZugeordnetHinweis:
         "Processes without a curated catalogue entry. Zero means everything is assigned.",
-      keineVerweise: "The message list has no partner filter — these rows do not link anywhere.",
     },
 
     aufgefallen: {

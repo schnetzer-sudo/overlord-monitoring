@@ -45,8 +45,11 @@ import { SICHT_REIHE } from "../filter";
  * Die Nachrichtenliste kennt **keinen Partnerfilter**, und der Umweg über die
  * Prozess-IDs eines Partners ist in
  * [`nachrichtenliste.md`](../../../../docs/nachrichtenliste.md) §5a mit
- * **7.459 ms** gemessen. Ein Verweis, der sieben Sekunden kostet, ist keiner —
- * und ein Verweis, den es nicht gibt, wird angekündigt, damit niemand ihn sucht.
+ * **7.459 ms** gemessen. Ein Verweis, der sieben Sekunden kostet, ist keiner.
+ *
+ * **Angekündigt wird das seit dem 16.09.2026 nicht mehr.** Der Satz „diese
+ * Zeilen klicken nicht" ist auf Wunsch des Auftraggebers entfallen
+ * (`docs/dashboard-frontend.md` §5.5); an den Zeilen selbst ändert das nichts.
  *
  * ## Der Umschalter lädt nicht nach
  *
@@ -115,10 +118,6 @@ export function VerteilungBlock({
           />
         ))}
       </ul>
-
-      <p className="text-muted-foreground text-beiwerk">
-        {texte.dashboard.verteilung.keineVerweise}
-      </p>
     </div>
   );
 }
