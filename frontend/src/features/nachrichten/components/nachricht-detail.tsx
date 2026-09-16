@@ -427,10 +427,21 @@ function Kopf({
             </span>
           )}
         </Feld>
-        <Feld beschriftung={texte.nachrichten.detail.projekt}>
+        {/*
+          Der Vollwert gehört an die Zeile, die kürzt, und nicht nur an den Wert
+          darin: Gemessen trug der gekürzte Kasten sonst keinen `title`
+          (Punkt 176, `messungen-sichtprobe-schmal.md` §4.4).
+        */}
+        <Feld
+          beschriftung={texte.nachrichten.detail.projekt}
+          hinweis={detail.projectName || undefined}
+        >
           <Zuordnung wert={detail.projectName} />
         </Feld>
-        <Feld beschriftung={texte.nachrichten.detail.prozess}>
+        <Feld
+          beschriftung={texte.nachrichten.detail.prozess}
+          hinweis={detail.processName || undefined}
+        >
           <Zuordnung wert={detail.processName} />
         </Feld>
         {detail.kuratierteEigenschaften

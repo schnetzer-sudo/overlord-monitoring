@@ -82,7 +82,15 @@ export function Kopfzeile({
           </Sheet>
         ) : null}
 
-        <span className="text-ueberschrift order-2 min-w-0 flex-1 truncate font-semibold">
+        {/*
+         * Bei `md` gekürzt, wenn Suchfeld, Mandant, Sprache und Nutzermenü die
+         * Zeile füllen — und dann mit dem Vollwert im `title`, wie jeder gekürzte
+         * Wert (Punkt 177). Keine eigene Gestalt dafür, kein Kürzel, kein Umbruch.
+         */}
+        <span
+          className="text-ueberschrift order-2 min-w-0 flex-1 truncate font-semibold"
+          title={texte.anwendung.name}
+        >
           {texte.anwendung.name}
         </span>
 
