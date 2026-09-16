@@ -16,11 +16,21 @@ import { DASHBOARD_PARAMETER, mitSicht, type Dashboardzustand } from "./filter";
  * verstellt, ist keine Station, zu der man zurückgeht — und drei Klicks durch
  * die Zeiträume machten den Zurück-Knopf sonst zu einem Zeitraum-Knopf.
  *
+ * **`shallow: true` steht ausdrücklich da**, obwohl es die Voreinstellung von
+ * `nuqs` ist (16.09.2026). Ein Sichtwechsel schreibt die URL und darf dabei
+ * keinen Server-Roundtrip auslösen — die Antwort mit beiden Sichten liegt schon
+ * im Zwischenspeicher (E‑161). Mit `shallow: false` ließe der App-Router die
+ * Seite beim Server neu rendern; die Zeile sagt, dass das hier eine Anforderung
+ * ist und kein Zufall der Voreinstellung.
+ *
  * Die Parser stehen in `filter.ts` und sind frei von React; hier steht nur die
  * Bindung.
  */
 export function useDashboardzustand() {
-  const [zustand, setzeZustand] = useQueryStates(DASHBOARD_PARAMETER, { history: "replace" });
+  const [zustand, setzeZustand] = useQueryStates(DASHBOARD_PARAMETER, {
+    history: "replace",
+    shallow: true,
+  });
 
   return {
     zustand: zustand as Dashboardzustand,
@@ -48,13 +58,16 @@ export function useDashboardzustand() {
 }
 
 /**
- * Die ganze Landingpage in **einem** Aufruf.
+ * Die ganze Landingpage in **einem** Aufruf — **mit beiden Sichten der
+ * Verteilung**.
  *
- * **Kein Block lädt nach**, auch die Verteilung nicht: Ein Sichtwechsel ändert
- * den Abfrageschlüssel, und damit ist es ein neuer Aufruf derselben Adresse mit
- * anderem Parameter — kein Teilnachladen. Wer zurückschaltet, bekommt die
- * vorherige Antwort aus dem Zwischenspeicher, ohne dass eine zweite Anfrage
- * hinausgeht.
+ * **Der Schlüssel trägt nur den Zeitraum** (seit dem 16.09.2026, E‑161). Ein
+ * Sichtwechsel ändert die URL, aber nicht den Schlüssel: Die Abfrage behält ihre
+ * Daten, steht nie auf `isPending`, und kein Block fällt in den Ladezustand. Bis
+ * dahin trug der Schlüssel auch die Sicht — der Wechsel war ein neuer Schlüssel
+ * ohne Daten, und die Ansicht ersetzte deshalb **jeden** Block durch den
+ * Ladezustand und baute ihn nach der Antwort neu auf, samt der Aufbaubewegung
+ * des Verlaufs (`docs/dashboard-frontend.md` §2).
  *
  * **Der Schlüssel trägt genau das, was in der Anfrage steht** — `null` und
  * nicht das vom Endpunkt gewählte Paar. Schriebe die Ansicht das gewählte Paar
@@ -67,7 +80,7 @@ export function useDashboardzustand() {
  */
 export function useDashboard(zustand: Dashboardzustand) {
   return useQuery<Dashboard>({
-    queryKey: DASHBOARD_SCHLUESSEL.landingpage(zustand.zeitraum, zustand.verteilung),
-    queryFn: () => holeDashboard(zustand.zeitraum, zustand.verteilung),
+    queryKey: DASHBOARD_SCHLUESSEL.landingpage(zustand.zeitraum),
+    queryFn: () => holeDashboard(zustand.zeitraum),
   });
 }

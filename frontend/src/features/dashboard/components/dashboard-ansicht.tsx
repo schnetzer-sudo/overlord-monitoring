@@ -5,7 +5,7 @@ import { ZeitraumUmschalter } from "@/components/zeitraum-umschalter";
 import { Fehler, Laden, Leer } from "@/components/zustand";
 import { useTexte } from "@/i18n/provider";
 
-import { hervorgehobenerZeitraum } from "../filter";
+import { hervorgehobeneSicht, hervorgehobenerZeitraum } from "../filter";
 import { useDashboard, useDashboardzustand } from "../hooks";
 import { AufgefallenBlock } from "./aufgefallen-block";
 import { Kacheln } from "./kacheln";
@@ -24,8 +24,11 @@ import { VerlaufDiagramm } from "./verlauf-diagramm";
  * ## Ein Aufruf, alle Blöcke
  *
  * Die Seite holt **eine** Antwort und baut alles daraus. Kein Block lädt nach,
- * auch die Verteilung beim Umschalten der Sicht nicht — das ist ein neuer Aufruf
- * derselben Adresse mit anderem Parameter (`hooks.ts`).
+ * auch die Verteilung beim Umschalten der Sicht nicht — **und seit dem 16.09.2026
+ * stellt der Wechsel gar keine Anfrage mehr** (E‑161): Die Antwort trägt beide
+ * Sichten, die URL sagt, welche zu sehen ist, und der Abfrageschlüssel bleibt
+ * derselbe (`hooks.ts`). Bis dahin war der Wechsel ein neuer Schlüssel ohne
+ * Daten, und diese Ansicht fiel dadurch als Ganzes in den Ladezustand.
  *
  * ## Die Reihenfolge der Blöcke folgt dem Leitsatz
  *
@@ -141,10 +144,17 @@ export function DashboardAnsicht() {
               />
             </Card>
             <Card size="sm" className="px-4">
+              {/*
+               * **Die Sicht kommt aus der URL und nicht aus der Antwort** — die
+               * Antwort trägt beide (E‑161). Der Umschalter ist deshalb auch
+               * nicht mehr gesperrt, solange eine Anfrage läuft: Bis zum
+               * 16.09.2026 stand hier `gesperrt={antwort.isFetching}`, weil ein
+               * Klick eine zweite Anfrage gestartet hätte. Er startet keine mehr.
+               */}
               <VerteilungBlock
                 verteilung={antwort.data.verteilung}
+                sicht={hervorgehobeneSicht(zustand)}
                 aufSicht={setzeSicht}
-                gesperrt={antwort.isFetching}
               />
             </Card>
           </div>

@@ -51,23 +51,30 @@ import { SICHT_REIHE } from "../filter";
  * Zeilen klicken nicht" ist auf Wunsch des Auftraggebers entfallen
  * (`docs/dashboard-frontend.md` §5.5); an den Zeilen selbst ändert das nichts.
  *
- * ## Der Umschalter lädt nicht nach
+ * ## Der Umschalter fragt nichts an *(seit dem 16.09.2026, E‑161)*
  *
- * Ein Sichtwechsel ist ein neuer Aufruf **derselben Adresse mit anderem
- * Parameter**; die Antwort trägt beide Sichten nie zugleich. Wer zurückschaltet,
- * bekommt die vorherige Antwort aus dem Zwischenspeicher.
+ * **Die Antwort trägt beide Sichten**, und `sicht` sagt, welche zu sehen ist —
+ * aus der URL, sonst `PARTNER` (`filter.ts`, `hervorgehobeneSicht`). Ein
+ * Wechsel zeigt die andere Hälfte dessen, was schon da ist: keine Anfrage, kein
+ * Ladezustand, kein Neuaufbau eines anderen Blocks.
+ *
+ * *Bis zu diesem Tag stand hier: „Ein Sichtwechsel ist ein neuer Aufruf
+ * derselben Adresse mit anderem Parameter; die Antwort trägt beide Sichten nie
+ * zugleich." Genau dieser Aufruf ließ die ganze Seite neu laden, und die
+ * Schaltflächen trugen deshalb `gesperrt`, solange er lief. Beides ist
+ * entfallen.*
  */
 export function VerteilungBlock({
   verteilung,
+  sicht,
   aufSicht,
-  gesperrt = false,
 }: {
   verteilung: Verteilung;
+  sicht: Verteilungssicht;
   aufSicht: (sicht: Verteilungssicht) => void;
-  gesperrt?: boolean;
 }) {
   const texte = useTexte();
-  const zeilen = verteilung.zeilen;
+  const zeilen = sicht === "RICHTUNG" ? verteilung.richtung.zeilen : verteilung.partner.zeilen;
   // Der Bezugswert der Balken ist der **größte** Wert des Blocks und nicht die
   // Summe: Gefragt ist der Vergleich der Zeilen untereinander, nicht ihr Anteil
   // am Ganzen — und „Übrige" wäre in einer Anteilsrechnung doppelt enthalten.
@@ -77,7 +84,7 @@ export function VerteilungBlock({
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <h2 className="text-basis font-semibold">
-          {verteilung.sicht === "RICHTUNG"
+          {sicht === "RICHTUNG"
             ? texte.dashboard.verteilung.titelRichtung
             : texte.dashboard.verteilung.titelPartner}
         </h2>
@@ -85,7 +92,7 @@ export function VerteilungBlock({
           type="single"
           variant="outline"
           aria-label={texte.dashboard.verteilung.bezeichnung}
-          value={verteilung.sicht}
+          value={sicht}
           onValueChange={(wert) => {
             if (wert === "") {
               return;
@@ -93,14 +100,9 @@ export function VerteilungBlock({
             aufSicht(wert as Verteilungssicht);
           }}
         >
-          {SICHT_REIHE.map((sicht) => (
-            <ToggleGroupItem
-              key={sicht}
-              value={sicht}
-              disabled={gesperrt}
-              className="min-h-bedienelement px-2.5"
-            >
-              {sicht === "RICHTUNG"
+          {SICHT_REIHE.map((knopf) => (
+            <ToggleGroupItem key={knopf} value={knopf} className="min-h-bedienelement px-2.5">
+              {knopf === "RICHTUNG"
                 ? texte.dashboard.verteilung.richtung
                 : texte.dashboard.verteilung.partner}
             </ToggleGroupItem>
@@ -113,7 +115,7 @@ export function VerteilungBlock({
           <Zeile
             key={`${zeile.art}:${zeile.wert ?? ""}`}
             zeile={zeile}
-            sicht={verteilung.sicht}
+            sicht={sicht}
             groesster={groesster}
           />
         ))}

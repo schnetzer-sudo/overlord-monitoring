@@ -1,6 +1,8 @@
 # Dashboard — die Oberfläche
 
-Stand: **10.09.2026 — der Block *Plattform* (E‑126 bis E‑137, §5.8, Sichtprüfung §12)** · zuvor
+Stand: **16.09.2026 — der Sichtwechsel der Verteilung fragt nichts mehr an (E‑161 in
+[`dashboard.md`](dashboard.md), §2, §5.1, §5.5, §7.1, §10.3)** · zuvor 10.09.2026, der Block
+*Plattform* (E‑126 bis E‑137, §5.8, Sichtprüfung §12) · zuvor
 04.09.2026, der Verlauf ist eine Fläche (E‑83 bis E‑86, §5.2) und die beiden Sammelrollen heißen
 anders (E‑82, §5.2) · zuvor 03.09.2026, Schritt 10b‑5 · zuvor 01.09.2026, Schritt 10b‑3b ·
 **Frontend**
@@ -80,6 +82,41 @@ Schriebe die Ansicht das vom Endpunkt gewählte Paar zurück, entstünde beim er
 zweiter Schlüssel und damit **eine zweite Anfrage für dieselbe Antwort** — und der Aufruf ohne
 Parameter, der den Endpunkt eine Belegungsprobe extra kostet, wäre nach einer Sekunde ohnehin
 verschwunden.
+
+> ### ⚠️ Korrektur vom 16.09.2026 — ein Sichtwechsel ist **kein** Aufruf mehr (E‑161)
+>
+> **Die drei Absätze darüber bleiben Zeichen für Zeichen stehen.** Der Satz *„Ein Sichtwechsel ist
+> ein neuer Aufruf derselben Adresse mit anderem Parameter"* war richtig gebaut und genau die
+> Ursache der Meldung vom 16.09.2026: Beim Umschalten lud sichtbar **das ganze Dashboard** neu.
+>
+> **Warum, nachgesehen am Code** ([`dashboard.md`](dashboard.md) §9b): nicht wegen eines `key` und
+> nicht wegen eines Server-Roundtrips — `nuqs` schrieb die URL flach (`shallow: true`). Sondern weil
+> die Sicht **im Abfrageschlüssel** stand. Der neue Schlüssel hatte keine Daten, `useQuery` stand auf
+> `isPending`, und `DashboardAnsicht` ersetzte jeden Block durch den Ladezustand; nach der Antwort
+> wurde alles neu eingehängt, der Verlauf samt Aufbaubewegung (E‑85).
+>
+> **Was gilt:** Die Antwort trägt **beide** Sichten, und der Schlüssel trägt nur noch den Zeitraum:
+>
+> ```ts
+> landingpage: (zeitraum) => ["dashboard", "landingpage", zeitraum]
+> ```
+>
+> **Die Sicht steht in der URL und in keiner Anfrage** — dieselbe Bauform wie `nachricht` in der
+> Nachrichtenliste ([`nachrichtendetail.md`](nachrichtendetail.md) §10.2) und die dritte Regel aus
+> [`frontend-grundlagen.md`](frontend-grundlagen.md) §8: *Was in der URL steht, beschreibt die Ansicht;
+> was in der Abfrage steht, die Frage an das Backend.* Ein Wechsel zeigt die andere Hälfte der
+> vorhandenen Antwort: **keine Anfrage, kein Ladezustand in irgendeinem Block, kein Neuaufbau, keine
+> Bewegung an Verlauf und Fehlerstreifen** — der `key` aus E‑86 hängt am Zeitraumpaar, und die
+> Daten des Verlaufs sind dieselben Objekte wie vor dem Klick. Am laufenden System nachgesehen in
+> §14, samt einer einzelnen `d`-Setzung ohne Zwischenstellung, die in einer von zwei Sitzungen
+> auftrat und dort benannt ist.
+>
+> **„Kein Block lädt nach" gilt weiter, und jetzt ohne Ausnahme.** Der Zeitraum bleibt ein
+> Anfrageparameter; ein Klick dort ist weiterhin ein neuer Aufruf (§7.1).
+>
+> **`shallow: true` steht seither ausdrücklich am `useQueryStates`**, obwohl es die Voreinstellung von
+> `nuqs` ist: Ein Sichtwechsel darf keinen Server-Roundtrip auslösen, und die Zeile sagt, dass das eine
+> Anforderung ist und kein Zufall der Voreinstellung.
 
 ### Die Reihenfolge der Blöcke
 
@@ -289,6 +326,7 @@ allein über Farbe"* —, und §7a hat es für diese Rolle noch einmal ausdrück
 | **E‑137** | **Kein Nachladen im Takt.** Kein `refetchInterval`, und `refetchOnWindowFocus` bleibt aus. Ein offener Tab zeigt den Stand seines Aufrufs — **gemessen** (§7.3) und als bekannte Grenze benannt (§6.5, offener Punkt 168) | 10.09.2026 |
 | **E‑138** | **Die Plattform ist die *fünfte Kachel* der Reihe, und je Zeile stehen nur Zeichen und `serviceId`.** Der eigene Block war so hoch wie der Verlauf und schob alles Wichtige nach unten; E‑126 erreichte „ohne Scrollen" auf Kosten des Verlaufs. **Die Bauform ist die von E‑91** — das Zeichen trägt die Vordergrundfarbe der Rolle, das Wort steht in `title` und `sr-only` —, und die **vier Zeichen unterscheiden sich in der Form**: offener Strich, Dreieck, Viereck, Kreis. **Hebt auf:** den Ort (E‑126), das sichtbare Wort (E‑130, E‑132), die Zeiten (E‑131), den sichtbaren Grund (E‑134), den Überschriftensatz (E‑136). **Bestätigt:** E‑79 und E‑127 — keine Fläche, in keinem Zustand (§5.4, §5.8) | 10.09.2026 |
 | **E‑160** | **Heruntergefahrene Dienste stehen nicht in der Kachel *Plattform*, und am breiten Fenster hat jede ihrer Spalten höchstens drei Zeilen** — was darüber hinausgeht, beginnt eine neue Spalte. Die Kachel wächst in die Breite; die Reihe gibt ihr dafür eine Spalte nach Inhalt. Sind **alle** Dienste heruntergefahren, steht ein eigener Satz da und nicht der aus E‑135. **Auf Wunsch des Auftraggebers.** **Erledigt:** offenen Punkt 171. **Bestätigt:** die Reihenfolge nach `ServiceID` (E‑130) und das ungekürzte `serviceId` (§5.8) | 16.09.2026 |
+| **E‑161** | ***Geführt in [`dashboard.md`](dashboard.md) §9b, hier der Verweis.*** **Die Antwort trägt beide Sichten der Verteilung, der Wechsel geschieht allein im Browser.** Der Abfrageschlüssel trägt nur den Zeitraum, `verteilung` steht in der URL und in keiner Anfrage, die Vorgabe `PARTNER` liegt im Frontend. **Präzisiert E‑n** (die Vorgabe steht weiterhin nicht in der URL, sie ist nur nicht mehr die des Endpunkts), **bestätigt E‑p** (Leerzustand unverändert) und **E‑85/E‑86** (ein Sichtwechsel ist kein Aufbau, also keine Bewegung) (§2, §5.1, §5.5, §7.1) | 16.09.2026 |
 | **E‑91** | **Jede Zeile in „Zuletzt aufgefallen" trägt das Zeichen ihrer Kategorie**, das Wort nur im `title` und für Vorleser. **Nimmt die Hälfte von 10b‑5 zurück, die zu viel war:** Mit der Plakette ist auch die Auskunft *dass es Fehler sind* aus dem Bild verschwunden — *aufgefallen* ist keine Kategorie (§5.6) | 04.09.2026 |
 
 ---
@@ -338,6 +376,38 @@ die Belegungsprobe weniger — aber nur, wenn der Parameter eine Absicht ausdrü
 
 `verteilung=PARTNER` ist die Vorgabe des Endpunkts und steht aus demselben Grund nicht in der URL;
 `RICHTUNG` schon. **Das ist eine Ableitung aus E‑n, keine neue Entscheidung.**
+
+> ### ⚠️ Korrektur vom 16.09.2026 — die Vorgabe der Sicht liegt im Frontend (E‑161)
+>
+> **Der Absatz darüber bleibt stehen**; sein Ergebnis gilt, seine Begründung hat sich verschoben.
+> Der Endpunkt kennt `verteilung` nicht mehr und liefert beide Sichten. **`PARTNER` ist damit nicht
+> mehr die Vorgabe des Endpunkts, sondern die der Anzeige** — `VERTEILUNG_VORGABE` in
+> `features/dashboard/api.ts` ist ihre **einzige** Quelle (bis dahin *„nur zur Erinnerung, nicht als
+> zweite Quelle"*).
+>
+> | | |
+> |---|---|
+> | Ohne Klick | kein `verteilung` in der URL, hervorgehoben und gezeigt ist **Partner** |
+> | Klick „Richtung" | `?verteilung=RICHTUNG` in der URL, **keine Anfrage** |
+> | Klick „Partner" | der Parameter verschwindet wieder (`mitSicht` macht aus der Vorgabe `null`), **keine Anfrage** |
+> | Seite mit `?verteilung=RICHTUNG` geladen | **eine** Anfrage an `/api/dashboard` ohne den Parameter, gezeigt ist **Richtung** |
+>
+> **Hervorgehoben ist die Sicht aus der URL, sonst `PARTNER`** — und seit diesem Tag ist das auch die
+> gezeigte Hälfte: `hervorgehobeneSicht(zustand)` entscheidet beides. Bis dahin las der Block die
+> Sicht aus der Antwort.
+>
+> **Die `clearOnDefault`-Falle, hier in ihrer Umkehrung** ([`nachrichtendetail.md`](nachrichtendetail.md)
+> §10.2, [`frontend-grundlagen.md`](frontend-grundlagen.md) §8). Der Parser hat weiterhin **kein
+> `withDefault`**: Der Zustand soll „nicht gewählt" (`null`) von einer Wahl unterscheiden, und die
+> Vorgabe wirkt erst in `hervorgehobeneSicht`. Käme je ein `withDefault("PARTNER")` dazu, hielte die
+> Voreinstellung von `nuqs` 2.9.2 — `clearOnDefault: true`, in den Typdeklarationen nachgesehen —
+> `PARTNER` aus der URL, wie E‑n es verlangt; ein `clearOnDefault: false` aus Gewohnheit schriebe es
+> hinein. Die Falle aus §10.2 dort ist also hier nicht „vergessenes `false`", sondern „gewohnheitsmäßig
+> gesetztes `false`".
+>
+> **Der Umschalter der Verteilung ist nicht mehr gesperrt, solange eine Anfrage läuft.** Bis dahin
+> trug er `gesperrt={antwort.isFetching}`, weil ein Klick eine zweite Anfrage gestartet hätte; er
+> startet keine mehr.
 
 `hervorgehobenerZeitraum(zustand, ausDerAntwort)` hält den Unterschied als reine Funktion fest: Die
 Wahl schlägt die Antwort, und ohne beides ist **keine** Schaltfläche gedrückt — eine vorgemerkte
@@ -1152,6 +1222,12 @@ ist in [`nachrichtenliste.md`](nachrichtenliste.md) §5a mit **7.459 ms** gemess
 **Der Balken trägt keine Statusfarbe.** Eine Verteilung sagt nichts über *gut oder schlecht*; eine
 Farbe dort wäre eine Aussage, die es nicht gibt.
 
+> **Seit dem 16.09.2026 (E‑161) liegen beide Sichten in der Antwort** —
+> `verteilung.partner.zeilen` und `verteilung.richtung.zeilen` —, und der Block bekommt die Sicht als
+> eigene Angabe aus der URL. Er zeigt die passende Hälfte **und rechnet auch dabei nichts**: Er wählt
+> eine Liste, er sortiert und summiert sie nicht. Beschriftungen, Restzeilen und Gestaltung sind
+> unverändert.
+
 ### 5.6 Zuletzt aufgefallen (Teil E)
 
 > ### ⚠️ Umbau vom 04.09.2026 — **eine Zeile je Prozess** (**E‑90**)
@@ -1719,6 +1795,36 @@ bekommt die vorherige Antwort aus dem Zwischenspeicher, ohne dass eine dritte An
 Und der zweite belegt E‑n von der anderen Seite: Die **Vorgabe** der Verteilung steht nicht in der
 Adresse, der **gewählte** Zeitraum schon.
 
+> ### ⚠️ Korrektur vom 16.09.2026 — eine Anfrage je Seitenaufruf, **keine** je Sichtwechsel (E‑161)
+>
+> **Tabelle und Absätze darüber bleiben stehen.** Die dritte Zeile war genau der Aufruf, der die
+> ganze Seite neu laden ließ ([`dashboard.md`](dashboard.md) §9b). Was `tests/dashboard-bloecke.test.tsx`
+> seither mitschreibt:
+>
+> | Vorgang | Anfragen |
+> |---|---|
+> | Laden ohne Wahl | `["/api/dashboard"]` |
+> | Laden mit `?zeitraum=30T` | `["/api/dashboard?zeitraum=30T"]` |
+> | Laden mit `?verteilung=RICHTUNG` | `["/api/dashboard"]` — und gezeigt ist die Richtungssicht |
+> | Klick „Richtung", dann „Partner" | **keine weitere** |
+> | Klick „30 Tage" | `["/api/dashboard?zeitraum=30T"]` |
+>
+> **Die vierte Zeile trägt die Aussage, die fünfte ist ihre Eichung** — ein Zähler, der nach dem
+> Sichtwechsel schweigt, schweigt entweder, weil nichts passiert ist, oder weil er nichts mehr sieht.
+>
+> **Dazu eine Aussage über Abwesenheit:** Nach „Richtung" und nach „Partner" wird **kein
+> Ladezustand** eingehängt (`aria-busy`, gesetzt von `components/zustand.tsx` an jedem `Laden`).
+> Gezählt wird das über einen `MutationObserver` und nicht durch Nachsehen im Baum — **und das ist
+> an der Gegenprobe gemessen**: Mit der Sicht zurück im Abfrageschlüssel kommt die gestellte Antwort
+> innerhalb des `act` an, das den Klick umschließt, und der Ladezustand ist schon wieder fort, bevor
+> ein Nachsehen ihn fände. Zwei Fassungen mit `querySelectorAll` (am Ende, und nach jedem Zug) blieben
+> in dieser Gegenprobe grün und fielen erst an der Anfragenzahl; die Fassung mit dem Beobachter fällt
+> für sich: *„Ladezustand nach Richtung: expected 1 to be +0"*. Die Gegenprobe ist zurückgenommen und
+> in keinem Commit.
+>
+> **§7.3 gilt damit nur noch halb:** *„eine Anfrage je Seitenaufruf"* ja, *„eine je Sichtwechsel"*
+> nicht mehr.
+
 ### 7.3 Der Block *Plattform* kostet keine Anfrage *(10.09.2026)*
 
 Am laufenden System gemessen, im angemeldeten Browser gegen die Testkopie, über die Netzwerkliste
@@ -1868,6 +1974,25 @@ eine schon gesehene Kombination kostet **keine** Anfrage.
 
 Kein einziger Aufruf ging an einen anderen Endpunkt. Die drei Anfragen des Rahmens
 (`/api/auth/me`, `/api/mandanten`, `/api/bam/typen`) gehören ihm und nicht dieser Ansicht.
+
+> ### ⚠️ Korrektur vom 16.09.2026 — dieselben sechs Klicks, zwei Anfragen (E‑161)
+>
+> **Die Tabelle darüber bleibt stehen**; sie ist die Abnahme vom 01.09.2026. Seit E‑161 geht die
+> Sicht in keine Anfrage mehr, und dieselbe Klickfolge ergibt am laufenden System — **nachgefahren
+> am 16.09.2026 mit `NEXANS`, §14**:
+>
+> | Schritt | URL danach | Anfrage |
+> |---|---|---|
+> | Laden | *(leer)* | `GET /api/dashboard` |
+> | Klick „Richtung" | `?verteilung=RICHTUNG` | **keine** — die Richtungssicht steht in der Antwort |
+> | Klick „Partner" | *(leer)* | **keine** |
+> | Klick „30 Tage" | `?zeitraum=30T` | `…?zeitraum=30T` |
+> | Klick „Richtung" | `?zeitraum=30T&verteilung=RICHTUNG` | **keine** |
+> | Klick „48 Stunden" | `?zeitraum=48H&verteilung=RICHTUNG` | `…?zeitraum=48H` — **ohne** `verteilung` |
+>
+> **Die URL-Spalte ist unverändert**, und das ist E‑n: Die Sicht bleibt in der Adresse, weil sie den
+> gezeigten Ausschnitt beschreibt. Aus der Anfragespalte ist sie verschwunden, weil sie keine Frage an
+> das Backend mehr ist.
 
 ### 10.4 ⚠️ Zwei Befunde aus der Sichtprüfung — beide behoben
 
@@ -2241,3 +2366,79 @@ Punkt 171**, entschieden am 10.09.2026 zugunsten des jetzigen Standes.
 danach wieder ohne den Schalter.** Das ist der in [`dienste.md`](dienste.md) §14 beschriebene Weg;
 im Betrieb bleibt die Prüfung lokal aus. **Am Code des Backends hat sich nichts geändert** — kein
 Endpunkt, keine Migration, keine zusätzliche Anfrage.
+
+---
+
+## 14. Die Sichtprüfung zu E‑161 *(16.09.2026)*
+
+Am laufenden System: Backend frisch aus diesem Stand gestartet (Profil `dev`, Anker
+`2025-12-30 04:09:47`), Frontend `next dev`, im Chrome der Erweiterung, **angemeldet vom
+Auftraggeber** als `ADMIN`; den Mandantenwechsel hat die Oberfläche gemacht. Mitgeschrieben wurde
+im Seitenkontext: die Einträge von `performance.getEntriesByType('resource')` auf `/api/dashboard`,
+dazu die Netzwerkliste der Erweiterung als zweite, unabhängige Quelle, und über einen
+`MutationObserver` jedes eingehängte `aria-busy`-Element, jedes neu eingehängte Diagramm
+(`svg.recharts-surface`) und jede Änderung an `d`, `width`, `height`, `x`, `y`, `transform`, `style`
+und `opacity` innerhalb eines Diagramms.
+
+### Was gefahren worden ist
+
+| # | Mandant | Vorgang | neue Anfragen an `/api/dashboard` | Ladezustand eingehängt | Diagramm neu eingehängt | Geometrie im Diagramm | gezeigt |
+|---|---|---|---|---:|---:|---|---|
+| 1 | `NEXANS` | Klick „Richtung" | **keine** | **0** | **0** | `path.d` × 2 *(nur `d` mitgeschrieben)* | *Nach Richtung*: Eingehend 876, Ausgehend 466, nicht zugeordnet 8.608 |
+| 2 | `NEXANS` | Klick „Partner" | **keine** | **0** | **0** | `path.d` × 2 *(nur `d`)* | *Nach Partner*, zwölf Zeilen |
+| 3 | `NEXANS` | Klick „30 Tage" — **Eichung** | `?zeitraum=30T` | 1 | ja | — | die Mitschrift sieht, wenn etwas geschieht |
+| 4 | `NEXANS` | Partner und Richtung bei 30 Tagen | **keine** | **0** | **0** | je `path.d` × 2 | beide Sichten |
+| 5 | `NEXANS` | Klick „48 Stunden" — **Eichung** | `?zeitraum=48H` | 1 | ja | `rect.width` × 46, `rect.x` × 2, `rect.height` × 1 | die Aufbaubewegung (E‑85) |
+| 6 | `SUTTONS` | Klick „Richtung", dann „Partner" | **keine** | **0** | **0** | **keine** | beide Male nur „nicht zugeordnet 1.337" |
+| 7 | `NEXANS` | Seite mit `?verteilung=RICHTUNG` geladen | `/api/dashboard` — **ohne** den Parameter | — | — | — | *Nach Richtung*, „Richtung" gedrückt (`aria-checked="true"`), Kachel *Nachrichten* 9.950 |
+| 8 | `SUTTONS` | dasselbe | `/api/dashboard` | — | — | — | *Nach Richtung*, „Richtung" gedrückt |
+| 9 | `EDITIONLINGERI` | Laden | `/api/dashboard` | — | — | — | **Leerzustand unverändert** (E‑p): Satz, Zeitraumumschalter bedienbar, Standzeile — keine Verteilung, keine Kachel |
+| 10 | `NEXANS` | **zweite Sitzung** (neuer Tab, erneuter Mandantenwechsel): sechsmal „Richtung"/„Partner" im Wechsel, in zwei Durchgängen | *nicht mitgeschrieben* | *nicht mitgeschrieben* | *nicht mitgeschrieben* | **kein** `path.d` *(nur `d` mitgeschrieben)* | Überschrift wechselt jedes Mal |
+
+**Die Klickfolge aus §10.3, frisch geladen:** Laden → `/api/dashboard`; „Richtung" → keine; „Partner"
+→ keine; „30 Tage" → `?zeitraum=30T`; „Richtung" → keine; „48 Stunden" → `?zeitraum=48H`. Die URL
+nach jedem Schritt Zeichen für Zeichen wie in der Tabelle der Korrektur zu §10.3 (leer ·
+`verteilung=RICHTUNG` · leer · `zeitraum=30T` · `zeitraum=30T&verteilung=RICHTUNG` ·
+`zeitraum=48H&verteilung=RICHTUNG`). Die Netzwerkliste der Erweiterung zeigt für denselben Zeitraum
+dieselben drei Aufrufe, und **keiner trägt `verteilung`**. Die Korrektur in §10.3 ist damit
+nachgefahren und nicht mehr nur abgeleitet.
+
+### 3 und 5 sind die Eichung, und ohne sie wären 1, 2, 4 und 6 keine Messung
+
+Ein Beobachter, der nach dem Sichtwechsel nichts meldet, meldet nichts, weil nichts geschehen ist —
+oder weil er nichts sieht. **Beim Zeitraumwechsel sieht er alles**: die Anfrage, den Ladezustand,
+neu eingehängte Diagramme und die Aufbaubewegung als 46 Breitenänderungen am Clip-Rechteck. Beim
+Sichtwechsel davon **nichts**.
+
+> **Nachgesehen und nicht übergangen: die zwei `d`-Setzungen bei `NEXANS` in der ersten Sitzung.**
+> Nach jedem Sichtwechsel (Zeilen 1, 2 und 4) setzte Recharts das `d` der Fläche und der Kontur des
+> Verlaufs **genau einmal**, rund 760 ms nach dem Klick. Alter und neuer Wert hatten dieselbe Länge
+> (4.037 bzw. 2.296 Zeichen), dasselbe Ende, und **die erste Abweichung** lag bei Zeichen 81:
+> `119.004` gegen `119.003`, also 0,001 px an einem Kontrollpunkt. Keine Zwischenstellung — es war
+> eine Setzung und keine Folge —, keine neue Breite (das Diagramm blieb 1.625 px breit), kein neues
+> Element. **Ob weitere Zahlen im Pfad abwichen, ist nicht erhoben**; verglichen war nur bis zur
+> ersten Abweichung. In der **zweiten Sitzung** (Zeile 10) trat die Setzung bei vier Wechseln **gar
+> nicht** auf, bei `SUTTONS` (Zeile 6) ebenfalls nicht.
+>
+> **Gezählt über alle Durchgänge:** 13 Sichtwechsel mit Beobachter. In **5** (alle bei `NEXANS`,
+> erste Sitzung, Zeilen 1, 2 und 4 sowie ein Wechsel für den Vergleich der Pfade) je eine Setzung an
+> Fläche und Kontur, in **8** keine (2 bei `SUTTONS`, 6 in der zweiten Sitzung). **Alle
+> Geometrie-Attribute**, das Clip-Rechteck eingeschlossen, sind nur in **4** Wechseln mitgeschrieben
+> (Zeilen 4 und 6) — dort keine einzige Breitenänderung. Auf neu eingehängte Diagramme geprüft sind
+> **6** Wechsel (Zeilen 1, 2, 4, 6) — keines.
+>
+> *Behauptet wird:* Der Sichtwechsel bewegt Verlauf und Fehlerstreifen nicht. *Gemessen ist:* in
+> keinem beobachteten Wechsel eine Folge von Geometrieänderungen; kein neu eingehängtes Diagramm in
+> den sechs daraufhin geprüften; keine Breitenänderung am Clip-Rechteck in den vier daraufhin
+> geprüften — die Aufbaubewegung zeigt sich beim Zeitraumwechsel als 46 solche Änderungen. **Die Lücke:** warum Recharts den Pfad in der ersten Sitzung neu
+> setzte und in der zweiten nicht, und wie groß die Abweichung über den ganzen Pfad war, ist nicht
+> gemessen. Ein `memo` um den Verlauf ist **nicht gebaut** — es gibt nichts Sichtbares zu beheben,
+> und der Anlass ist nicht aufgeklärt.
+
+### Was nicht gezeigt ist
+
+- **Ein Tab im Hintergrund.** Der Tab war sichtbar (`document.visibilityState` = `visible`); in einem
+  verdeckten Tab laufen Zeitgeber und Animationen anders.
+- **Die übrigen sieben Mandanten** und die Produktion.
+- **Das schmale Fenster.** Gefahren ist die Breite des Chrome-Fensters (`clientWidth` des
+  Dokuments 1.920 px).

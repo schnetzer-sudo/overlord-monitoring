@@ -221,6 +221,11 @@ public class DashboardRepository {
    * Fenster —, die Fensterbreite schon: Der Bereichszugriff liest dieselben Rollupzeilen wie der
    * Verlauf.
    *
+   * <p><b>Seit dem 16.09.2026 laeuft es je Landingpage zweimal</b>, einmal je Sicht — die Antwort
+   * traegt beide ({@code DashboardService.landingpage}). Die Gestalt ist dabei <b>dieselbe
+   * geblieben</b>; ein zusammengelegtes Statement ueber beide Katalogspalten gibt es nicht, und
+   * {@code DashboardStatementsTest} haelt beides fest.
+   *
    * <p><b>{@code LEFT JOIN} und nicht {@code JOIN}.</b> {@code WOC} hat keine einzige Katalogzeile;
    * ein innerer Join verloere seine vier Prozesse stillschweigend — und damit ausgerechnet die
    * Zeilen, die als „nicht zugeordnet" erscheinen muessten.

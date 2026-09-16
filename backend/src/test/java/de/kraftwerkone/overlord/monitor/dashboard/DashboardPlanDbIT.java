@@ -189,6 +189,97 @@ class DashboardPlanDbIT {
   }
 
   /**
+   * <b>Die Richtungsform, einzeln festgehalten</b> (16.09.2026).
+   *
+   * <p>Seit diesem Tag laeuft das Verteilungsstatement je Landingpage <b>zweimal</b>, einmal je
+   * Sicht ({@code docs/dashboard.md} §4). Der Test darueber prueft beide Sichten nur auf „kein
+   * voller Durchlauf, Katalog als {@code eq_ref}" und nur fuer {@code NEXANS}; hier stehen
+   * <b>Treibertabelle und Index</b> der Richtungsform, fuer beide gemessenen Mandanten und alle
+   * drei Paare.
+   *
+   * <h2>Die Treibertabelle steht als Menge fest und nicht je Mandant — und das ist Absicht</h2>
+   *
+   * <p>Welche Tabelle den Einstieg macht, haengt am Mandanten: bei {@code NEXANS} die Rollup-Ebene
+   * ({@code range} ueber {@code PRIMARY}), bei {@code SUTTONS} {@code ProjectMandant} ({@code ref}
+   * ueber {@code ProjectMandant_Mandant_idx}). <b>Beide Plaene sind richtig</b>, und §8 legt fest,
+   * dass dieser Test die Reihenfolge nicht je Mandant festschreibt. Festgeschrieben ist deshalb:
+   *
+   * <ol>
+   *   <li>Der Einstieg ist <b>einer dieser beiden</b>, jeweils ueber genau diesen Index — ein
+   *       dritter Einstieg, etwa ueber den Katalog oder ueber {@code Process}, faellt.
+   *   <li>Die Rollup-Ebene wird ueber ihren <b>Primaerschluessel</b> als {@code range} gelesen, der
+   *       Katalog haengt als {@code eq_ref} ueber seinen an.
+   *   <li><b>Die Richtungsform faehrt Zeile fuer Zeile den Plan der Partnerform</b> — Tabelle,
+   *       Zugriffsart, Index. Die andere Katalogspalte darf keinen Zugriffspfad aendern, auch nicht
+   *       den Einstieg. Beide {@code EXPLAIN} laufen auf derselben Statistik; der Vergleich haengt
+   *       an keiner Zeilenschaetzung.
+   * </ol>
+   */
+  @Test
+  @DisplayName(
+      "Die Richtungsform: Einstieg und Index festgehalten, und es ist der Plan der Partnerform")
+  void richtungsform_treiber_und_index() {
+    for (String mandantId : MANDANTEN) {
+      MandantContext mandant = new MandantContext(mandantId);
+      for (Rollupzeitraum zeitraum : Rollupzeitraum.reihe()) {
+        String marke = mandantId + "/" + zeitraum.code();
+        String ebene = ebenentabelle(zeitraum);
+        List<Plan> richtung = verteilungsplan(mandant, zeitraum, Verteilungssicht.RICHTUNG);
+        List<Plan> partner = verteilungsplan(mandant, zeitraum, Verteilungssicht.PARTNER);
+
+        Plan einstieg = richtung.getFirst();
+        assertThat(List.of(einstieg.tabelle(), einstieg.zugriff(), einstieg.index()))
+            .as(
+                "Der Einstieg der Richtungsform ist die Rollup-Ebene ueber PRIMARY oder"
+                    + " ProjectMandant ueber ProjectMandant_Mandant_idx — nichts Drittes (%s)",
+                marke)
+            .isIn(
+                List.of(ebene, "range", "PRIMARY"),
+                List.of("ProjectMandant", "ref", "ProjectMandant_Mandant_idx"));
+
+        Plan rollup = zeileFuer(richtung, ebene, marke);
+        assertThat(List.of(rollup.zugriff(), rollup.index()))
+            .as(
+                "Die Rollup-Ebene wird ueber ihren Primaerschluessel als Bereich gelesen (%s)",
+                marke)
+            .containsExactly("range", "PRIMARY");
+        Plan katalog = zeileFuer(richtung, "process_catalog", marke);
+        assertThat(List.of(katalog.zugriff(), katalog.index()))
+            .as("Der Katalog haengt ueber seinen Primaerschluessel an und treibt nicht (%s)", marke)
+            .containsExactly("eq_ref", "PRIMARY");
+
+        assertThat(zugriffspfade(richtung))
+            .as(
+                "Die Richtungsform faehrt denselben Plan wie die Partnerform, Zeile fuer Zeile (%s)",
+                marke)
+            .isEqualTo(zugriffspfade(partner));
+      }
+    }
+  }
+
+  private List<Plan> verteilungsplan(
+      MandantContext mandant, Rollupzeitraum zeitraum, Verteilungssicht sicht) {
+    gerendert.clear();
+    attrappe.verteilung(mandant, zeitraum, zeitraum.fenster(ANKER), sicht);
+    return plan(einziges());
+  }
+
+  private static String ebenentabelle(Rollupzeitraum zeitraum) {
+    return switch (zeitraum) {
+      case STUNDEN_48 -> "message_rollup";
+      case TAGE_30 -> "message_rollup_tag";
+      case MONATE_12 -> "message_rollup_monat";
+    };
+  }
+
+  /** Tabelle, Zugriffsart und Index je Planzeile — ohne Zeilenschaetzung und ohne {@code Extra}. */
+  private static List<List<String>> zugriffspfade(List<Plan> plan) {
+    return plan.stream()
+        .map(zeile -> List.of(zeile.tabelle(), zeile.zugriff(), zeile.index()))
+        .toList();
+  }
+
+  /**
    * <b>Die beiden benannten Ausnahmen von L2, und sie sind billig, weil der Statusindex sie
    * traegt.</b> Ein einzelner Rohwert von 3,34 Millionen Zeilen — das ist der ganze Unterschied
    * zwischen wenigen Millisekunden und einer Live-Aggregation, die man nicht bauen darf.

@@ -30,7 +30,7 @@ import { rendere } from "./hilfe/rendern";
  * | die Reihenfolge und der Umbruch | **vier Kacheln, und bei drei keine Lücke.** Eine Reihenfolge ist ohne Baum nicht zu treffen, und die Spaltenzahl steht in der Klassenkette des Gitters |
  * | die beiden Restzeilen | „Übrige" **fehlt**, wenn der Endpunkt sie nicht liefert; „nicht zugeordnet" **steht da**, auch bei null. Dazu die **Reihenfolge**: Beide bleiben unten, auch wenn „Übrige" der größte Balken ist. Ein Sortiervergleich ist kein Vorhandensein |
  * | der Leerzustand | **Satz und Umschalter, sonst nichts** — samt der Gegenprobe, dass die Nullzeile der Verteilung dort *nicht* steht |
- * | ein Aufruf | Genau **eine** Anfrage an `/api/dashboard`, und ein Sichtwechsel lädt **nicht nach**, sondern ruft neu. Beides sind Aussagen über die Zahl der Anfragen |
+ * | ein Aufruf | Genau **eine** Anfrage an `/api/dashboard`, und ein Sichtwechsel stellt **keine** — seit dem 16.09.2026 trägt die Antwort beide Sichten (E‑161). Dazu, dass nach dem Wechsel **kein Block im Ladezustand** steht. Beides sind Aussagen über Abwesenheit |
  *
  * **Antwortrümpfe gestellt, kein Netz, keine Datenbank.**
  */
@@ -44,17 +44,41 @@ const Z = TEXTE.zeitraum;
 
 const FENSTER = { von: "2025-12-28T05:00:00Z", bis: "2025-12-30T05:00:00Z" };
 
+/**
+ * **Beide Sichten, und absichtlich verschieden** (seit dem 16.09.2026, E‑161).
+ * Nur so zeigt ein Sichtwechsel im Baum etwas anderes — und nur so ist
+ * nachweisbar, dass die andere Hälfte **derselben** Antwort zu sehen ist.
+ */
 const VERTEILUNG_VOLL: Verteilung = {
-  sicht: "PARTNER",
-  zeilen: [
-    { art: "WERT", wert: "BMW", anzahl: 120, enthaltene: null },
-    { art: "WERT", wert: "ARCHROMA", anzahl: 40, enthaltene: null },
-    // **Die größte Zeile des Blocks**, und sie steht trotzdem unten. Genau die
-    // Gestalt aus M98, Befund 21: Bei `IBIS` trägt „Übrige (40)" 27,92 %.
-    { art: "UEBRIGE", wert: null, anzahl: 900, enthaltene: 40 },
-    { art: "NICHT_ZUGEORDNET", wert: null, anzahl: 0, enthaltene: null },
-  ],
+  partner: {
+    zeilen: [
+      { art: "WERT", wert: "BMW", anzahl: 120, enthaltene: null },
+      { art: "WERT", wert: "ARCHROMA", anzahl: 40, enthaltene: null },
+      // **Die größte Zeile des Blocks**, und sie steht trotzdem unten. Genau die
+      // Gestalt aus M98, Befund 21: Bei `IBIS` trägt „Übrige (40)" 27,92 %.
+      { art: "UEBRIGE", wert: null, anzahl: 900, enthaltene: 40 },
+      { art: "NICHT_ZUGEORDNET", wert: null, anzahl: 0, enthaltene: null },
+    ],
+  },
+  richtung: {
+    zeilen: [
+      { art: "WERT", wert: "EINGEHEND", anzahl: 700, enthaltene: null },
+      { art: "WERT", wert: "AUSGEHEND", anzahl: 360, enthaltene: null },
+      { art: "NICHT_ZUGEORDNET", wert: null, anzahl: 0, enthaltene: null },
+    ],
+  },
 };
+
+/**
+ * Eine Verteilung, deren **Partnersicht** geprüft wird. Die Richtungssicht steht
+ * nur da, weil sie zum Vertrag gehört.
+ */
+function nurPartner(zeilen: Verteilung["partner"]["zeilen"]): Verteilung {
+  return {
+    partner: { zeilen },
+    richtung: { zeilen: [{ art: "NICHT_ZUGEORDNET", wert: null, anzahl: 0, enthaltene: null }] },
+  };
+}
 
 /**
  * Die fünfte Kachel der Reihe seit dem 10.09.2026 (Schritt 10d Teil B). Sie
@@ -436,7 +460,9 @@ describe("Die Reihenfolge der Kacheln", () => {
  */
 describe("Die Restzeilen der Verteilung", () => {
   async function rendereVerteilung(verteilung: Verteilung) {
-    return rendere(<VerteilungBlock verteilung={verteilung} aufSicht={() => undefined} />);
+    return rendere(
+      <VerteilungBlock verteilung={verteilung} sicht="PARTNER" aufSicht={() => undefined} />,
+    );
   }
 
   /**
@@ -466,13 +492,12 @@ describe("Die Restzeilen der Verteilung", () => {
    * es sie nicht, und eine Null wäre dort reines Rangartefakt.
    */
   it("lässt Übrige weg, wenn der Endpunkt sie nicht liefert", async () => {
-    const gerendert = await rendereVerteilung({
-      sicht: "PARTNER",
-      zeilen: [
+    const gerendert = await rendereVerteilung(
+      nurPartner([
         { art: "WERT", wert: "BMW", anzahl: 120, enthaltene: null },
         { art: "NICHT_ZUGEORDNET", wert: null, anzahl: 7, enthaltene: null },
-      ],
-    });
+      ]),
+    );
 
     try {
       const zeilen = [...gerendert.behaelter.querySelectorAll("li")].map(
@@ -493,10 +518,9 @@ describe("Die Restzeilen der Verteilung", () => {
    * gepflegt* nicht mehr von *diese Ansicht zeigt das nicht* zu unterscheiden.
    */
   it("zeigt nicht zugeordnet auch bei null", async () => {
-    const gerendert = await rendereVerteilung({
-      sicht: "PARTNER",
-      zeilen: [{ art: "NICHT_ZUGEORDNET", wert: null, anzahl: 0, enthaltene: null }],
-    });
+    const gerendert = await rendereVerteilung(
+      nurPartner([{ art: "NICHT_ZUGEORDNET", wert: null, anzahl: 0, enthaltene: null }]),
+    );
 
     try {
       const zeilen = [...gerendert.behaelter.querySelectorAll("li")];
@@ -563,10 +587,84 @@ describe("Der Leerzustand", () => {
 });
 
 /**
- * **Ein Aufruf, eine Antwort.** Kein Block lädt nach — auch die Verteilung beim
- * Umschalten der Sicht nicht.
+ * **Ein Aufruf, eine Antwort.** Kein Block lädt nach — und seit dem 16.09.2026
+ * stellt der Umschalter der Verteilung **gar keine** Anfrage mehr (E‑161).
+ *
+ * | Vorgang | Anfragen |
+ * |---|---|
+ * | Laden ohne Wahl | `["/api/dashboard"]` |
+ * | Laden mit `?zeitraum=30T` | `["/api/dashboard?zeitraum=30T"]` |
+ * | Laden mit `?verteilung=RICHTUNG` | `["/api/dashboard"]` — die Sicht geht nicht an den Endpunkt |
+ * | Klick „Richtung", dann „Partner" | **keine weitere** |
+ * | Klick „30 Tage" | `["/api/dashboard?zeitraum=30T"]` — die Eichung: Der Zähler sieht noch |
+ *
+ * *Bis zu diesem Tag stand hier der Fall „ruft beim Sichtwechsel dieselbe
+ * Adresse mit anderem Parameter" mit `["/api/dashboard",
+ * "/api/dashboard?verteilung=RICHTUNG"]` — genau der Aufruf, der die ganze Seite
+ * neu laden ließ.*
  */
 describe("Die Zahl der Anfragen", () => {
+  function knopf(behaelter: HTMLElement, text: string): HTMLButtonElement {
+    const treffer = [...behaelter.querySelectorAll("button")].find(
+      (element) => element.textContent === text,
+    );
+    expect(treffer, `Schaltfläche ${text}`).toBeDefined();
+    return treffer as HTMLButtonElement;
+  }
+
+  /**
+   * Wie viele Stellen im Ladezustand stehen. `components/zustand.tsx` setzt
+   * `aria-busy` an jedem `Laden` — und bis zum 16.09.2026 stand nach einem
+   * Sichtwechsel genau einer davon an der Stelle der ganzen Seite.
+   */
+  function imLadezustand(behaelter: HTMLElement): number {
+    return behaelter.querySelectorAll("[aria-busy='true']").length;
+  }
+
+  /**
+   * Ein Klick, danach einige Züge der Warteschlange — gezählt, nicht gewartet
+   * (T1). **Zurück kommt, wie oft seit dem Klick ein Ladezustand in den Baum
+   * eingehängt worden ist** — auch einer, der sofort wieder verschwand.
+   *
+   * ⚠️ **Nachsehen genügt nicht, und das ist an der Gegenprobe gemessen.** Mit
+   * der Sicht im Abfrageschlüssel — dem Bau bis zum 16.09.2026 — kommt die
+   * gestellte Antwort noch innerhalb des `act` an, das den Klick umschließt: Der
+   * Ladezustand wird eingehängt und wieder ausgehängt, bevor irgendein Zug ihn
+   * sehen könnte. Eine Zusicherung über `querySelectorAll` blieb dabei zweimal
+   * grün — nach dem letzten Zug und nach jedem einzelnen. Ein
+   * `MutationObserver` schreibt jedes Einhängen mit, wie kurz es auch dauert.
+   */
+  async function klicke(behaelter: HTMLElement, element: HTMLElement): Promise<number> {
+    let eingehaengt = 0;
+    const zaehle = (aenderungen: MutationRecord[]) => {
+      for (const aenderung of aenderungen) {
+        for (const knoten of aenderung.addedNodes) {
+          if (knoten instanceof Element) {
+            eingehaengt +=
+              (knoten.matches("[aria-busy='true']") ? 1 : 0) +
+              knoten.querySelectorAll("[aria-busy='true']").length;
+          }
+        }
+      }
+    };
+    const beobachter = new MutationObserver(zaehle);
+    beobachter.observe(behaelter, { childList: true, subtree: true });
+    try {
+      await act(async () => {
+        element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      });
+      for (let zug = 0; zug < 5; zug++) {
+        await act(async () => {
+          await new Promise((fertig) => setTimeout(fertig, 0));
+        });
+      }
+      zaehle(beobachter.takeRecords());
+    } finally {
+      beobachter.disconnect();
+    }
+    return eingehaengt + imLadezustand(behaelter);
+  }
+
   it("stellt beim Laden genau eine Anfrage, und die geht an /api/dashboard", async () => {
     stelleAntwort(antwort());
     const gerendert = await rendereAnsicht();
@@ -584,7 +682,7 @@ describe("Die Zahl der Anfragen", () => {
    * wählt selbst, und das kostet ihn die Belegungsprobe. Mit Wahl steht sie
    * darin, und der Aufruf ist der billigere.
    */
-  it("schickt den gewählten Zeitraum mit und die Vorgabe der Verteilung nicht", async () => {
+  it("schickt den gewählten Zeitraum mit", async () => {
     stelleAntwort(antwort({ zeitraum: "30T" }));
     const gerendert = await rendereAnsicht("?zeitraum=30T");
 
@@ -596,29 +694,84 @@ describe("Die Zahl der Anfragen", () => {
   });
 
   /**
-   * **Ein Sichtwechsel lädt nicht nach, sondern ruft neu.** Es ist dieselbe
-   * Adresse mit anderem Parameter und kein zweiter Endpunkt: Nach dem Klick
-   * stehen genau zwei Anfragen da, beide an `/api/dashboard`, und die zweite
-   * trägt `verteilung=RICHTUNG`.
+   * **`verteilung` steht in der URL und in keiner Anfrage** — dieselbe Bauform
+   * wie `nachricht` in der Nachrichtenliste. Und die so geladene Seite zeigt die
+   * Richtungssicht: Überschrift und Zeilen kommen aus der Richtungshälfte der
+   * Antwort.
    */
-  it("ruft beim Sichtwechsel dieselbe Adresse mit anderem Parameter", async () => {
+  it("schickt ?verteilung=RICHTUNG nicht mit und zeigt trotzdem die Richtung", async () => {
+    stelleAntwort(antwort());
+    const gerendert = await rendereAnsicht("?verteilung=RICHTUNG");
+
+    try {
+      expect(anfragen).toEqual(["/api/dashboard"]);
+      const text = gerendert.behaelter.textContent ?? "";
+      expect(text).toContain(D.verteilung.titelRichtung);
+      expect(text).toContain(D.verteilung.EINGEHEND);
+      expect(text).not.toContain("BMW");
+    } finally {
+      await gerendert.abbauen();
+    }
+  });
+
+  /**
+   * **Der Kern von E‑161, und er ist eine Aussage über Abwesenheit.** Nach dem
+   * Wechsel geht keine Anfrage hinaus, und **kein Block** steht im Ladezustand —
+   * weder nach „Richtung" noch nach dem Rückweg. Zu sehen ist jeweils die andere
+   * Hälfte derselben Antwort, und die Kacheln stehen durchgehend.
+   */
+  it("wechselt auf Richtung und zurück ohne Anfrage und ohne Ladezustand", async () => {
     stelleAntwort(antwort());
     const gerendert = await rendereAnsicht();
 
     try {
-      const richtung = [...gerendert.behaelter.querySelectorAll("button")].find(
-        (knopf) => knopf.textContent === D.verteilung.richtung,
-      );
-      expect(richtung).toBeDefined();
+      expect(anfragen).toEqual(["/api/dashboard"]);
 
-      await act(async () => {
-        richtung?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-      });
-      // Der Zustandswechsel läuft über `nuqs`; die Anfrage folgt im nächsten Zug.
+      const nachRichtung = await klicke(
+        gerendert.behaelter,
+        knopf(gerendert.behaelter, D.verteilung.richtung),
+      );
+
+      expect(nachRichtung, "Ladezustand nach Richtung").toBe(0);
+      let text = gerendert.behaelter.textContent ?? "";
+      expect(text).toContain(D.kacheln.nachrichten);
+      expect(text).toContain(D.verteilung.titelRichtung);
+      expect(text).toContain(D.verteilung.EINGEHEND);
+      expect(text).not.toContain("BMW");
+
+      const nachPartner = await klicke(
+        gerendert.behaelter,
+        knopf(gerendert.behaelter, D.verteilung.partner),
+      );
+
+      expect(nachPartner, "Ladezustand nach Partner").toBe(0);
+      text = gerendert.behaelter.textContent ?? "";
+      expect(text).toContain(D.kacheln.nachrichten);
+      expect(text).toContain(D.verteilung.titelPartner);
+      expect(text).toContain("BMW");
+
+      expect(anfragen, "Keine Anfrage nach dem ersten Laden").toEqual(["/api/dashboard"]);
+    } finally {
+      await gerendert.abbauen();
+    }
+  });
+
+  /**
+   * **Die Eichung zum Fall darüber.** Ein Zähler, der nach dem Sichtwechsel
+   * schweigt, schweigt entweder, weil nichts passiert ist — oder weil er nichts
+   * mehr sieht. Der Zeitraum ist weiterhin ein Anfrageparameter, und nach dem
+   * Klick steht genau seine Anfrage da.
+   */
+  it("fragt beim Klick auf 30 Tage genau einmal an, mit dem Zeitraum", async () => {
+    stelleAntwort(antwort());
+    const gerendert = await rendereAnsicht();
+
+    try {
+      const vorher = anfragen.length;
+      await klicke(gerendert.behaelter, knopf(gerendert.behaelter, Z["30T"]));
       await warteAufAntwort(gerendert.behaelter);
 
-      expect(anfragen).toEqual(["/api/dashboard", "/api/dashboard?verteilung=RICHTUNG"]);
-      expect(anfragen.every((adresse) => adresse.startsWith("/api/dashboard"))).toBe(true);
+      expect(anfragen.slice(vorher)).toEqual(["/api/dashboard?zeitraum=30T"]);
     } finally {
       await gerendert.abbauen();
     }

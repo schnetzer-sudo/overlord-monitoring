@@ -36,9 +36,22 @@ import {
  * ausdrückliche Entscheidung dagegen.
  *
  * **`verteilung=PARTNER` steht aus demselben Grund nicht in der URL**, obwohl es
- * eine ausdrückliche Wahl sein kann: Es ist die Vorgabe des Endpunkts, und die
- * Adresse mit und ohne den Parameter zeigt dasselbe. `RICHTUNG` schon. Das ist
- * eine **Ableitung aus E‑n und keine neue Entscheidung.**
+ * eine ausdrückliche Wahl sein kann: Es ist die Vorgabe, und die Adresse mit und
+ * ohne den Parameter zeigt dasselbe. `RICHTUNG` schon. Das ist eine **Ableitung
+ * aus E‑n und keine neue Entscheidung.**
+ *
+ * > ⚠️ **Seit dem 16.09.2026 ist `verteilung` ein URL-Parameter und kein
+ * > Anfrageparameter mehr** (E‑161). Er beschreibt, welche Hälfte der Antwort zu
+ * > sehen ist, und geht nicht an den Endpunkt — dieselbe Bauform wie `nachricht`
+ * > in der Nachrichtenliste (`docs/nachrichtendetail.md` §10.2,
+ * > `docs/frontend-grundlagen.md` §8, „Die dritte Regel"). **Die Vorgabe
+ * > `PARTNER` liegt damit allein hier** (`VERTEILUNG_VORGABE`). Sie kommt
+ * > trotzdem **nicht** als `withDefault` an den Parser: Der Zustand soll weiter
+ * > „nicht gewählt" (`null`) von „gewählt" unterscheiden, und die Vorgabe wirkt
+ * > erst in `hervorgehobeneSicht`. Wer das je umbaut, beachtet die
+ * > `clearOnDefault`-Falle in ihrer Umkehrung: `nuqs` 2 steht auf
+ * > `clearOnDefault: true` und hielte `PARTNER` damit aus der URL, wie E‑n es
+ * > verlangt — ein `clearOnDefault: false` aus Gewohnheit schriebe es hinein.
  *
  * **Dieses Modul ist bewusst frei von React** — die Umrechnung Zustand → URL und
  * Zustand → Adresse ist eine reine Funktion und wird als solche geprüft.
@@ -89,13 +102,15 @@ export function hervorgehobenerZeitraum(
 }
 
 /**
- * Welche Sicht der Verteilungsblock zeigt.
+ * Welche Sicht der Verteilungsblock zeigt — **und welche Schaltfläche gedrückt
+ * ist**: die aus der URL, sonst `PARTNER`.
  *
- * Anders als beim Zeitraum genügt hier die Vorgabe: Sie ist im Vertrag
- * festgeschrieben (`PARTNER`) und hängt nicht am Mandanten. Die Antwort nennt
- * die Sicht trotzdem mit, und der Block liest sie von dort — diese Funktion
- * beantwortet allein, welche Schaltfläche gedrückt aussieht, bevor eine Antwort
- * da ist.
+ * Anders als beim Zeitraum genügt hier die Vorgabe: Sie hängt nicht am
+ * Mandanten, und seit dem 16.09.2026 liegt sie im Frontend (E‑161). **Die
+ * Antwort nennt keine Sicht mehr** — sie trägt beide, und diese Funktion
+ * entscheidet allein, welche Hälfte zu sehen ist. Bis dahin las der Block die
+ * Sicht aus der Antwort, und diese Funktion beantwortete nur, welche
+ * Schaltfläche gedrückt aussah, bevor eine Antwort da war.
  */
 export function hervorgehobeneSicht(zustand: Dashboardzustand): Verteilungssicht {
   return zustand.verteilung ?? VERTEILUNG_VORGABE;

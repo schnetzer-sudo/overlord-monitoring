@@ -11,9 +11,11 @@ import type { Ablagenzustand, Dienstzustand, Statusart } from "@/lib/status-farb
  * **Kein Block lädt nach.** Das ist keine Bequemlichkeit, sondern das
  * Leistungsbudget: Sieben Abfragen auf einer Verbindung kosten weniger als sechs
  * Anfragen mit je einer Sitzungsprüfung — und auf der Testkopie schreibt jede
- * Anfrage zusätzlich die Sitzung fort. Auch der Umschalter der Verteilung lädt
- * nichts nach: Ein Sichtwechsel ist **dieselbe Adresse mit anderem Parameter**
- * und damit ein neuer Aufruf, kein Teilnachladen.
+ * Anfrage zusätzlich die Sitzung fort. **Der Umschalter der Verteilung stellt seit
+ * dem 16.09.2026 gar keine Anfrage mehr** (E‑161, `docs/dashboard.md` §4): Die
+ * Antwort trägt beide Sichten, und ein Wechsel zeigt die andere Hälfte dessen,
+ * was schon da ist. Bis dahin war er dieselbe Adresse mit anderem Parameter —
+ * und damit ein neuer Aufruf der ganzen Seite.
  *
  * **Dieses Feature importiert nicht aus `features/nachrichten`** und nicht aus
  * `features/sitzung` (`docs/frontend-grundlagen.md` §8). Was beide brauchen,
@@ -43,15 +45,23 @@ import type { Ablagenzustand, Dienstzustand, Statusart } from "@/lib/status-farb
  */
 
 /**
- * Die zwei Sichten des Verteilungsblocks. **`PARTNER` ist die Vorgabe des
- * Endpunkts** und steht deshalb nicht in der URL (Ableitung aus Entscheidung
- * E‑n); `RICHTUNG` schon.
+ * Die zwei Sichten des Verteilungsblocks. **`PARTNER` ist die Vorgabe** und
+ * steht deshalb nicht in der URL (Ableitung aus Entscheidung E‑n); `RICHTUNG`
+ * schon.
  */
 export const VERTEILUNGSSICHTEN = ["PARTNER", "RICHTUNG"] as const;
 
 export type Verteilungssicht = (typeof VERTEILUNGSSICHTEN)[number];
 
-/** Die Vorgabe des Backends — hier nur zur Erinnerung, nicht als zweite Quelle. */
+/**
+ * Die Sicht, die gilt, solange keine gewählt ist.
+ *
+ * ⚠️ **Seit dem 16.09.2026 ist das die einzige Quelle dieser Vorgabe.** Bis dahin
+ * stand hier *„Die Vorgabe des Backends — hier nur zur Erinnerung, nicht als
+ * zweite Quelle"*. Der Endpunkt kennt den Parameter `verteilung` nicht mehr und
+ * liefert beide Sichten (E‑161); welche davon zuerst zu sehen ist, ist eine Frage
+ * der Anzeige und wird deshalb hier entschieden.
+ */
 export const VERTEILUNG_VORGABE: Verteilungssicht = "PARTNER";
 
 export function istVerteilungssicht(wert: string | null | undefined): wert is Verteilungssicht {
@@ -181,7 +191,21 @@ export type Verteilungszeile = {
   enthaltene: number | null;
 };
 
-export type Verteilung = { sicht: Verteilungssicht; zeilen: Verteilungszeile[] };
+/**
+ * Die Zeilen **einer** Sicht: Rang 1 bis 10, dann „Übrige" (nur mit Rang 11),
+ * dann immer „nicht zugeordnet" — fertig sortiert vom Endpunkt.
+ */
+export type Verteilungszeilen = { zeilen: Verteilungszeile[] };
+
+/**
+ * Der Verteilungsblock — **beide Sichten in einer Antwort** (E‑161).
+ *
+ * Bis zum 16.09.2026 stand hier `{ sicht, zeilen }` mit genau der Sicht, die
+ * angefragt worden war. **Die Sicht ist jetzt der Schlüssel und kein Feld
+ * mehr**; welche gezeigt wird, sagt die URL (`filter.ts`,
+ * `hervorgehobeneSicht`), nicht die Antwort.
+ */
+export type Verteilung = { partner: Verteilungszeilen; richtung: Verteilungszeilen };
 
 /**
  * Warum eine Nachricht in „Zuletzt aufgefallen" steht.
@@ -367,13 +391,21 @@ export type Dashboard = {
 };
 
 /**
- * Der Abfrageschlüssel.
+ * Der Abfrageschlüssel — **nur der Zeitraum** (seit dem 16.09.2026).
  *
- * **Beide Parameter gehören hinein**, denn beide sind Anfrageparameter: Eine
- * andere Sicht ist eine andere Antwort. Der Mandant steht aus demselben Grund
- * **nicht** darin, aus dem er in keinem anderen Schlüssel steht — beim Wechsel
- * wird der gesamte Zwischenspeicher geleert und nicht invalidiert
- * (`lib/zwischenspeicher.ts`).
+ * **Er trägt genau das, was in der Anfrage steht**, und seit E‑161 steht dort nur
+ * noch `zeitraum`. Bis dahin gehörte auch die Sicht hinein, weil eine andere
+ * Sicht eine andere Antwort war — und genau das baute beim Wechsel die ganze
+ * Seite neu auf: Der neue Schlüssel hatte keine Daten, die Abfrage stand auf
+ * `isPending`, und `DashboardAnsicht` ersetzte jeden Block durch den
+ * Ladezustand (`docs/dashboard-frontend.md` §2). **Die Sicht steht deshalb
+ * ausdrücklich nicht darin**: Sie beschreibt einen Ausschnitt der Antwort und
+ * keine Frage an das Backend (`docs/frontend-grundlagen.md` §8, „Die dritte
+ * Regel").
+ *
+ * Der Mandant steht aus demselben Grund **nicht** darin, aus dem er in keinem
+ * anderen Schlüssel steht — beim Wechsel wird der gesamte Zwischenspeicher
+ * geleert und nicht invalidiert (`lib/zwischenspeicher.ts`).
  *
  * `zeitraum` ist `null`, solange der Nutzer nicht geklickt hat. Das ist ein
  * **eigener** Schlüssel und nicht der des vom Endpunkt gewählten Paares: Der
@@ -381,29 +413,23 @@ export type Dashboard = {
  * Endpunkt zusätzlich die Belegungsprobe.
  */
 export const DASHBOARD_SCHLUESSEL = {
-  landingpage: (zeitraum: Rollupzeitraum | null, sicht: Verteilungssicht | null) =>
-    ["dashboard", "landingpage", zeitraum, sicht] as const,
+  landingpage: (zeitraum: Rollupzeitraum | null) => ["dashboard", "landingpage", zeitraum] as const,
 };
 
 /**
- * Holt die ganze Landingpage.
+ * Holt die ganze Landingpage — **mit beiden Sichten der Verteilung**.
  *
  * **Was nicht gewählt ist, wird nicht geschickt.** Ohne `zeitraum` wählt der
- * Endpunkt selbst; ein mitgeschicktes `verteilung=PARTNER` wäre die Vorgabe ein
- * zweites Mal. Dass ein Aufruf **mit** `zeitraum` den Endpunkt *weniger* kostet
+ * Endpunkt selbst. Eine Sicht wird nie geschickt: Den Parameter `verteilung`
+ * gibt es seit dem 16.09.2026 nicht mehr, und ein mitgeschickter Wert wäre
+ * wirkungslos. Dass ein Aufruf **mit** `zeitraum` den Endpunkt *weniger* kostet
  * als einer ohne, ist ein Nebeneffekt in die richtige Richtung — aber kein Grund,
  * einen Parameter zu setzen, den der Nutzer nicht ausgedrückt hat.
  */
-export function holeDashboard(
-  zeitraum: Rollupzeitraum | null,
-  sicht: Verteilungssicht | null,
-): Promise<Dashboard> {
+export function holeDashboard(zeitraum: Rollupzeitraum | null): Promise<Dashboard> {
   const parameter = new URLSearchParams();
   if (zeitraum !== null) {
     parameter.set("zeitraum", zeitraum);
-  }
-  if (sicht !== null) {
-    parameter.set("verteilung", sicht);
   }
   const abfrage = parameter.toString();
   return hole<Dashboard>(`/dashboard${abfrage === "" ? "" : `?${abfrage}`}`);

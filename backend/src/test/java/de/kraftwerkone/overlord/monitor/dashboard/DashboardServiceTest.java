@@ -104,7 +104,7 @@ class DashboardServiceTest {
   }
 
   private DashboardResponse antwort() {
-    return service().landingpage(MANDANT, null, Verteilungssicht.PARTNER);
+    return service().landingpage(MANDANT, null);
   }
 
   private static Verteilungssumme partner(String name, long anzahl) {
@@ -246,7 +246,7 @@ class DashboardServiceTest {
     void uebrige_bei_rang_elf() {
       bestandMit(List.of(), partnerReihe(12));
 
-      List<VerteilungszeileResponse> zeilen = antwort().verteilung().zeilen();
+      List<VerteilungszeileResponse> zeilen = antwort().verteilung().partner().zeilen();
 
       assertThat(zeilen).hasSize(12);
       assertThat(zeilen.subList(0, 10)).allMatch(zeile -> zeile.art() == Verteilungszeilenart.WERT);
@@ -261,7 +261,7 @@ class DashboardServiceTest {
     void keine_uebrige_ohne_rang_elf() {
       bestandMit(List.of(), partnerReihe(10));
 
-      List<VerteilungszeileResponse> zeilen = antwort().verteilung().zeilen();
+      List<VerteilungszeileResponse> zeilen = antwort().verteilung().partner().zeilen();
 
       assertThat(zeilen)
           .as("Zehn Werte und die eine Restzeile, die immer da ist")
@@ -279,7 +279,7 @@ class DashboardServiceTest {
     void nicht_zugeordnet_auch_bei_null() {
       bestandMit(List.of(), partnerReihe(3));
 
-      assertThat(antwort().verteilung().zeilen().getLast())
+      assertThat(antwort().verteilung().partner().zeilen().getLast())
           .isEqualTo(VerteilungszeileResponse.nichtZugeordnet(0));
     }
 
@@ -298,7 +298,7 @@ class DashboardServiceTest {
       summen.add(new Verteilungssumme(null, 10_000));
       bestandMit(List.of(), summen);
 
-      List<VerteilungszeileResponse> zeilen = antwort().verteilung().zeilen();
+      List<VerteilungszeileResponse> zeilen = antwort().verteilung().partner().zeilen();
 
       assertThat(zeilen.get(10))
           .as("Rang 11 ist die kleinste Zeile und steht trotzdem vor den Restzeilen")
@@ -315,7 +315,7 @@ class DashboardServiceTest {
       summen.add(new Verteilungssumme(null, 10_000));
       bestandMit(List.of(), summen);
 
-      List<VerteilungszeileResponse> zeilen = antwort().verteilung().zeilen();
+      List<VerteilungszeileResponse> zeilen = antwort().verteilung().partner().zeilen();
 
       assertThat(zeilen.get(10))
           .as("Rang 11 gehoert einem benannten Partner, nicht dem Eimer ohne Namen")
@@ -323,14 +323,114 @@ class DashboardServiceTest {
       assertThat(zeilen.getLast()).isEqualTo(VerteilungszeileResponse.nichtZugeordnet(10_000));
     }
 
+    // Hier stand bis zum 16.09.2026 „Die Sicht steht in der Antwort, auch wenn der Parameter
+    // fehlte". Den Parameter gibt es nicht mehr, und das Feld `sicht` auch nicht: Die Antwort
+    // traegt beide Sichten, und welche welche ist, sagt der Schluessel. An seine Stelle tritt die
+    // Klasse `BeideSichten` darunter.
+  }
+
+  // ─── Beide Sichten ────────────────────────────────────────────────────────────
+
+  /**
+   * <b>Die Antwort traegt beide Sichten</b> (seit dem 16.09.2026, {@code docs/dashboard.md} §4).
+   *
+   * <p>Die Faelle darueber pruefen die Regeln an der Partnersicht. <b>Hier steht, dass sie je Sicht
+   * getrennt gelten</b>: Jede Sicht bekommt ihre eigenen Summen, ihre eigene Restzeile „Übrige" nur
+   * bei eigenem Rang 11 und ihr eigenes „nicht zugeordnet" — und nichts wandert von einer in die
+   * andere. Die beiden gestellten Reihen sind deshalb absichtlich verschieden gebaut.
+   */
+  @Nested
+  @DisplayName("Beide Sichten in einer Antwort")
+  class BeideSichten {
+
+    private List<Verteilungssumme> reihe(String praefix, int wieViele, long start) {
+      List<Verteilungssumme> summen = new ArrayList<>();
+      for (int i = 1; i <= wieViele; i++) {
+        summen.add(partner(praefix + i, start - i));
+      }
+      return summen;
+    }
+
+    /**
+     * Zwoelf Partner ohne unzugeordnete Zeile, aber nur zwei Richtungen und eine unzugeordnete
+     * Summe. <b>Die Partnersicht braucht „Übrige", die Richtungssicht darf keine haben</b> — ein
+     * Zusammenbau, der die Restzeilen einmal fuer beide rechnet, faellt an genau dieser Gestalt.
+     */
     @Test
-    @DisplayName("Die Sicht steht in der Antwort, auch wenn der Parameter fehlte")
-    void sicht_steht_in_der_antwort() {
+    @DisplayName("Jede Sicht hat ihre eigenen Zeilen und ihre eigenen Restzeilen")
+    void restzeilen_je_sicht() {
+      bestandMit(List.of(), List.of());
+      when(repository.verteilung(any(), any(), any(), eq(Verteilungssicht.PARTNER)))
+          .thenReturn(reihe("P", 12, 1000));
+      List<Verteilungssumme> richtungen = new ArrayList<>(reihe("R", 2, 500));
+      richtungen.add(new Verteilungssumme(null, 77));
+      when(repository.verteilung(any(), any(), any(), eq(Verteilungssicht.RICHTUNG)))
+          .thenReturn(richtungen);
+
+      VerteilungResponse verteilung = antwort().verteilung();
+
+      List<VerteilungszeileResponse> partner = verteilung.partner().zeilen();
+      assertThat(partner).hasSize(12);
+      assertThat(partner.subList(0, 10))
+          .allMatch(zeile -> zeile.art() == Verteilungszeilenart.WERT)
+          .allMatch(zeile -> zeile.wert().startsWith("P"));
+      assertThat(partner.get(10))
+          .as("Die Partnersicht hat einen Rang 11 und 12 und fasst beide zusammen")
+          .isEqualTo(VerteilungszeileResponse.uebrige(2, 989 + 988));
+      assertThat(partner.getLast())
+          .as("Nicht zugeordnet steht auch hier, und zwar mit der eigenen Null")
+          .isEqualTo(VerteilungszeileResponse.nichtZugeordnet(0));
+
+      assertThat(verteilung.richtung().zeilen())
+          .as("Die Richtungssicht hat keinen Rang 11 — also keine „Übrige“, und nichts von Partner")
+          .containsExactly(
+              VerteilungszeileResponse.wert("R1", 499),
+              VerteilungszeileResponse.wert("R2", 498),
+              VerteilungszeileResponse.nichtZugeordnet(77));
+    }
+
+    /**
+     * <b>Je Sicht genau ein Statement, und beide in jeder Antwort</b> — auch bei ausdruecklich
+     * genanntem Zeitraum und auch ohne ihn. Ein Service, der nur die Partnersicht liest und die
+     * Richtung daraus ableitet oder weglaesst, faellt hier.
+     */
+    @Test
+    @DisplayName("Das Verteilungsstatement laeuft je Sicht genau einmal")
+    void je_sicht_ein_statement() {
       bestandMit(List.of(), List.of());
 
+      service().landingpage(MANDANT, Rollupzeitraum.TAGE_30);
+
+      verify(repository, org.mockito.Mockito.times(1))
+          .verteilung(
+              eq(MANDANT),
+              eq(Rollupzeitraum.TAGE_30),
+              any(Zeitfenster.class),
+              eq(Verteilungssicht.PARTNER));
+      verify(repository, org.mockito.Mockito.times(1))
+          .verteilung(
+              eq(MANDANT),
+              eq(Rollupzeitraum.TAGE_30),
+              any(Zeitfenster.class),
+              eq(Verteilungssicht.RICHTUNG));
+      verify(repository, org.mockito.Mockito.times(2)).verteilung(any(), any(), any(), any());
+    }
+
+    /**
+     * <b>Das Feld {@code sicht} ist entfallen, und kein anderes hat seinen Platz genommen.</b> Die
+     * Sicht ist der Schluessel; ein Feld daneben saehe aus, als sei eine gewaehlt worden.
+     */
+    @Test
+    @DisplayName("Der Block hat genau die Felder partner und richtung, und keine Sicht")
+    void felder_des_blocks() {
       assertThat(
-              service().landingpage(MANDANT, null, Verteilungssicht.RICHTUNG).verteilung().sicht())
-          .isEqualTo(Verteilungssicht.RICHTUNG);
+              Arrays.stream(VerteilungResponse.class.getRecordComponents())
+                  .map(RecordComponent::getName))
+          .containsExactly("partner", "richtung");
+      assertThat(
+              Arrays.stream(VerteilungszeilenResponse.class.getRecordComponents())
+                  .map(RecordComponent::getName))
+          .containsExactly("zeilen");
     }
   }
 
@@ -386,7 +486,8 @@ class DashboardServiceTest {
       assertThat(antwort.kacheln().nachrichten())
           .as("Die uebrigen Bloecke kommen aus message_rollup und sind unberuehrt")
           .isEqualTo(42);
-      assertThat(antwort.verteilung().zeilen()).isNotEmpty();
+      assertThat(antwort.verteilung().partner().zeilen()).isNotEmpty();
+      assertThat(antwort.verteilung().richtung().zeilen()).isNotEmpty();
       assertThat(antwort.verlauf()).isNotEmpty();
     }
 
@@ -540,8 +641,7 @@ class DashboardServiceTest {
     void ausdruecklich_genannt() {
       bestandMit(List.of(), List.of());
 
-      DashboardResponse antwort =
-          service().landingpage(MANDANT, Rollupzeitraum.MONATE_12, Verteilungssicht.PARTNER);
+      DashboardResponse antwort = service().landingpage(MANDANT, Rollupzeitraum.MONATE_12);
 
       assertThat(antwort.zeitraum()).isEqualTo("12M");
       verify(repository, org.mockito.Mockito.never()).belegung(any(), any(), any());
@@ -563,8 +663,11 @@ class DashboardServiceTest {
       assertThat(antwort.leer()).isTrue();
       assertThat(antwort.zeitraum()).isNotNull();
       assertThat(antwort.fenster()).isNotNull();
-      assertThat(antwort.verteilung().zeilen())
+      assertThat(antwort.verteilung().partner().zeilen())
           .as("Auch im Leerzustand sagt der Katalog etwas: alles nicht zugeordnet, naemlich null")
+          .containsExactly(VerteilungszeileResponse.nichtZugeordnet(0));
+      assertThat(antwort.verteilung().richtung().zeilen())
+          .as("Und in der Richtungssicht dasselbe")
           .containsExactly(VerteilungszeileResponse.nichtZugeordnet(0));
     }
 

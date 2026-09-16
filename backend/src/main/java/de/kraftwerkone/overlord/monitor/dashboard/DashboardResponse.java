@@ -16,7 +16,9 @@ import java.util.List;
  * @param fenster die tatsaechlich gelesenen Grenzen, in UTC
  * @param verlauf Block 1 — je Eimer die Aufschluesselung nach Einordnung
  * @param kacheln Bloecke 2 und 3 — Nachrichten und Fehler
- * @param verteilung Block 5 — Partner oder Richtung, Top 10 und zwei Restzeilen
+ * @param verteilung Block 5 — <b>Partner und Richtung</b>, je Sicht Top 10 und zwei Restzeilen. Bis
+ *     zum 16.09.2026 stand hier <i>„Partner oder Richtung"</i>; seither traegt die Antwort beide,
+ *     und die Oberflaeche wechselt ohne Anfrage
  * @param leer <b>der Leerzustand</b> (D.6). Er unterscheidet <b>nicht</b> zwischen „im Zeitraum ist
  *     nichts passiert" und „dieser Mandant hat ueberhaupt keine Daten" — der Satz, den die
  *     Oberflaeche dann zeigt, ist in beiden Faellen wahr. Die bekannte Folge: Ein stiller Sonntag

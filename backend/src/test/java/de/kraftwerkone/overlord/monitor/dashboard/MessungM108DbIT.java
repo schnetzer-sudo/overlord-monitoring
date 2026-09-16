@@ -267,24 +267,14 @@ class MessungM108DbIT {
 
       // ── Die ganze Landingpage, so wie der Endpunkt sie baut ──────────────────
       for (Rollupzeitraum zeitraum : Rollupzeitraum.reihe()) {
-        long beste =
-            besteVonFuenf(
-                () ->
-                    service
-                        .landingpage(mandant, zeitraum, Verteilungssicht.PARTNER)
-                        .verlauf()
-                        .size());
+        long beste = besteVonFuenf(() -> service.landingpage(mandant, zeitraum).verlauf().size());
         melde("landingpage.ms." + mandantId + "." + zeitraum.code(), ms(beste));
         gesamtJeMandant.merge(mandantId, beste, Math::max);
       }
 
-      long ohneAngabe =
-          besteVonFuenf(
-              () -> service.landingpage(mandant, null, Verteilungssicht.PARTNER).verlauf().size());
+      long ohneAngabe = besteVonFuenf(() -> service.landingpage(mandant, null).verlauf().size());
       melde("landingpage.ms." + mandantId + ".standardfenster", ms(ohneAngabe));
-      melde(
-          "landingpage.zeitraum." + mandantId,
-          service.landingpage(mandant, null, Verteilungssicht.PARTNER).zeitraum());
+      melde("landingpage.zeitraum." + mandantId, service.landingpage(mandant, null).zeitraum());
     }
 
     gesamtJeMandant.forEach(

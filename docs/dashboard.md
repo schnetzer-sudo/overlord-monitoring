@@ -7,6 +7,11 @@ Stand: 03.09.2026 · Schritt 10b‑4 · **Backend, keine Oberfläche**
 > Abschnitte sind vom 31.08.2026 (Schritt 10b‑2 Teil D) und unverändert, soweit kein
 > Korrekturblock daneben steht.
 
+> **Was der 16.09.2026 geändert hat (E‑161, §9b):** Die Antwort trägt die Verteilung **in beiden
+> Sichten**, der Parameter `verteilung` ist entfallen, und das Verteilungsstatement läuft je Seite
+> zweimal — unverändert in seiner Gestalt. Gemessen als **M178** (§8). Korrekturblöcke dazu stehen
+> in §1, §2, §4, §7 und §9; der alte Wortlaut bleibt überall stehen.
+
 Der eine Endpunkt, aus dem die Landingpage entsteht. Er liest die drei Rollup-Ebenen aus
 [`rollup.md`](rollup.md), ordnet die Rohwerte über `MessageStatusClassifier` ein
 ([`message-status.md`](message-status.md)) und hängt den Prozess-Katalog an
@@ -48,6 +53,31 @@ Katalog etwa, weil er `ADMIN` verlangt.
 > Sitzung fort. Zwei Tests halten es fest: einer auf der Antwort (alle Blöcke sind da), einer auf
 > den Statements (es sind genau sieben).
 
+> ### ⚠️ Korrektur vom 16.09.2026 — `verteilung` ist kein Parameter mehr (E‑161)
+>
+> **Die Adresszeile, die Parametertabelle und der Kasten darüber bleiben Zeichen für Zeichen
+> stehen**, damit ablesbar bleibt, wie der Vertrag bis dahin geschnitten war. Was gilt:
+>
+> ```
+> GET /api/dashboard?zeitraum={48H|30T|12M}
+> ```
+>
+> | Parameter | Werte | Vorgabe |
+> |---|---|---|
+> | `zeitraum` | `48H`, `30T`, `12M` | **keine** — unverändert (§3) |
+>
+> **Ein mitgeschicktes `verteilung` ist wirkungslos, wie `?mandant=`** — auch ein unbekannter Wert.
+> Bis zu diesem Tag ergab der ein `400` mit dem Problemtyp `verteilung-unbekannt`; beides ist
+> entfallen, denn es gibt nichts mehr zu wählen. `DashboardIsolationDbIT.verteilung_ist_wirkungslos`
+> hält das fest (§9).
+>
+> **„Ein Aufruf, eine Antwort" bleibt bestehen, und zwar wörtlich.** Die Antwort trägt beide Sichten
+> der Verteilung, und der Umschalter wechselt im Browser, ohne eine Anfrage zu stellen
+> ([`dashboard-frontend.md`](dashboard-frontend.md) §2). Bis dahin war ein Sichtwechsel ein neuer
+> Aufruf der **ganzen** Seite — und die Oberfläche baute dabei jeden Block neu auf, nicht nur die
+> Verteilung. **Die Zahl im Kasten stimmt nicht mehr:** Es sind seit 10d acht Statements (§7) und seit
+> diesem Tag **neun**; `DashboardStatementsTest` benennt sie einzeln.
+
 ### Die Antwort
 
 ```jsonc
@@ -87,6 +117,34 @@ Katalog etwa, weil er `ADMIN` verlangt.
 > eine Lampe für jeden Dienst mit `ServiceTimeout > 0` und **eine** Kachel für die Ablagen;
 > vollständig in [`dienste.md`](dienste.md). `alterSekunden` rechnet dort wie überall gegen die
 > Anwendungsuhr und ist `null`, wenn der Zeitpunkt nach `jetzt` liegt (E‑75).
+
+> ### ⚠️ Korrektur vom 16.09.2026 — der Block `verteilung` trägt beide Sichten (E‑161)
+>
+> **Der Rumpf oben bleibt stehen.** An der Stelle von `"verteilung": { "sicht": …, "zeilen": … }`
+> steht jetzt:
+>
+> ```jsonc
+> "verteilung": {
+>   "partner":  { "zeilen": [ { "art": "WERT", "wert": "…", "anzahl": 8608, "enthaltene": null },
+>                             { "art": "UEBRIGE", "wert": null, "anzahl": 31, "enthaltene": 14 },
+>                             { "art": "NICHT_ZUGEORDNET", "wert": null, "anzahl": 490,
+>                               "enthaltene": null } ] },
+>   "richtung": { "zeilen": [ { "art": "WERT", "wert": "EINGEHEND", "anzahl": 5120, "enthaltene": null },
+>                             { "art": "WERT", "wert": "AUSGEHEND", "anzahl": 3997, "enthaltene": null },
+>                             { "art": "NICHT_ZUGEORDNET", "wert": null, "anzahl": 12,
+>                               "enthaltene": null } ] }
+> }
+> ```
+>
+> **Das ist die Form aus dem Auftrag, ohne Abweichung.** Die Sicht ist der **Schlüssel** und kein
+> Feld mehr: `sicht` sagte, welche Sicht geliefert worden war, und seit beide geliefert werden, gibt
+> es darauf keine Antwort. Je Sicht gelten Zeilenarten, Top‑10‑Grenze, beide Restzeilen unten und
+> E‑i **unverändert** (§4). *Die Zahlen im Beispiel sind erfunden, wie oben — aber so gewählt, dass
+> beide Sichten zusammen dieselbe Summe zählen (9.129). Das ist keine Zufälligkeit des Beispiels,
+> sondern die Eigenschaft, an der `DashboardIsolationDbIT` die Trennung je Sicht nachweist (§9).*
+>
+> Im Code: `VerteilungResponse(partner, richtung)`, je Sicht ein `VerteilungszeilenResponse(zeilen)`.
+> Der Typ, der bis dahin `VerteilungResponse(sicht, zeilen)` hieß, ist darin aufgegangen.
 
 ---
 
@@ -128,6 +186,25 @@ Katalog etwa, weil er `ADMIN` verlangt.
 > gefragt, hinge die Landingpage an den Zeitgrenzen fremder Knoten statt an den eigenen.
 >
 > `DashboardStatementsTest` **benennt das achte Statement einzeln**, wie die sieben davor.
+
+> ### ⚠️ Korrektur vom 16.09.2026 — Block 5 kostet **zwei** Statements, es sind **neun** (E‑161)
+>
+> **Tabelle und Kasten darüber bleiben stehen.** Was sich ändert, ist genau eine Zeile:
+>
+> | # | Block | Quelle | Statements |
+> |---|---|---|---:|
+> | 5 | **Verteilung** — Partner **und** Richtung, beide in jeder Antwort | Rollup-Ebene × Mandantenkette × `process_catalog`, **je Sicht einmal** | **2** |
+>
+> **Die Zahl der Blöcke bleibt**; die Verteilung ist weiterhin ein Block mit einem Umschalter. Die
+> Zahl der Statements steigt von acht auf **neun**, wenn `zeitraum` genannt ist.
+>
+> **Zwei Statements derselben Gestalt und kein zusammengelegtes.** Ein Statement mit beiden
+> `CASE`-Ausdrücken im `GROUP BY` läse den Bereich nur einmal, wäre aber eine **andere Abfrage** als
+> die gemessene — eine Zeile je vorkommender Kombination aus Partner und Richtung, die Summen je Sicht
+> erst in Java — und bräuchte eigene Messung und Entscheidung. Der Auftrag schließt sie aus;
+> `DashboardStatementsTest.kein_zusammengelegtes_verteilungsstatement` hält fest, dass keine Abfrage
+> der Seite beide Katalogspalten zugleich liest. Das neunte Statement steht dort an dritter Stelle
+> und ist einzeln benannt (§9).
 
 ### Die Einordnung entsteht beim Lesen
 
@@ -305,6 +382,28 @@ fällt nie in „Übrige". Die Ränge 1…k gehören damit lückenlos den benann
 Top 10 trägt bei `NEXANS` 76,4 %, bei `VOTG` 76,5 %, bei `IBIS` 72,1 %. Sie steht als Konstante im
 Code und nicht in der Konfiguration — ein Schalter dafür wäre eine Gestaltungsentscheidung, die
 niemand getroffen hat.
+
+> ### ⚠️ Korrektur vom 16.09.2026 — beide Sichten in jeder Antwort (E‑161)
+>
+> **Der erste Satz dieses Kapitels bleibt stehen und bleibt wahr:** ein Block, zwei Sichten über
+> **dasselbe Statement**, nur mit einer anderen Katalogspalte. Geändert hat sich, **wie oft** es
+> läuft: nicht mehr einmal für die angefragte Sicht, sondern **je Antwort zweimal**, einmal je Sicht.
+> Der Umschalter wählt seither keine Antwort mehr, sondern die Hälfte einer Antwort, die schon da
+> ist.
+>
+> **Alles darüber gilt je Sicht unverändert**, und das ist ausdrücklich so gebaut und getestet —
+> nicht einmal für beide gerechnet:
+>
+> | Regel | je Sicht | belegt in |
+> |---|---|---|
+> | Zeilenarten `WERT` · `UEBRIGE` · `NICHT_ZUGEORDNET` | ja | `DashboardServiceTest.BeideSichten` |
+> | Top‑10‑Grenze, „Übrige" nur bei eigenem Rang 11 | ja — die Partnersicht kann „Übrige" tragen und die Richtungssicht nicht, in derselben Antwort | ebenda, `restzeilen_je_sicht` |
+> | „nicht zugeordnet" immer, auch bei null; beide Restzeilen unten | ja | ebenda und die Restzeilen-Fälle |
+> | E‑i als ein Ausdruck, `pflegestatus`-Riegel auch in der Richtung | ja — das Statement ist Zeichen für Zeichen dasselbe, bis auf die Spalte | `DashboardStatementsTest.die_neun_statements_je_seite` |
+> | `CASE` ohne Alias, `LEFT JOIN`, Mandantenkette als `EXISTS` | ja | ebenda |
+>
+> **Warum beide und nicht die gewählte:** Entscheidung **E‑161** (§9b). **Was es kostet:** der
+> Bereichszugriff auf die Rollup-Ebene ein zweites Mal — gemessen als M178 (§8).
 
 ---
 
@@ -562,6 +661,13 @@ bis drei Belegungsproben). Alle laufen über **`glassfishDsl`**, den Lese-Pool.
 >
 > **Die Prüfziele** (`SELECT DISTINCT ServiceDefaultFileStore …`, 2,091 ms) sind **kein** Statement
 > der Seite: Sie werden im Takt der Ablagenprüfung gelesen und nicht in der Anfrage.
+
+> **Berichtigt 16.09.2026: es sind neun je Seite** (E‑161). Hinzugekommen ist das
+> Verteilungsstatement **in der Richtungsform** — dasselbe Statement wie die Partnerform, nur mit
+> `process_catalog.richtung` im Ausdruck. Mit genanntem `zeitraum` neun, ohne ihn zehn bis zwölf.
+> Es läuft über `glassfishDsl` und trägt die Mandantenkette als `EXISTS` wie jedes andere. **Sein
+> Plan ist Zeile für Zeile der Plan der Partnerform** (M178, §8), und `DashboardPlanDbIT` hält das
+> fest.
 
 **Der Lese-Kontext und nicht `monitorDsl`** — die Aufteilung ist *lesen gegen schreiben* und nicht
 *Quellschema gegen eigenes Schema*: Jede Abfrage hier joint `overlord_monitor.message_rollup*` gegen
@@ -999,9 +1105,125 @@ dessen Grund liegt am *Schema* ([`nachrichtenliste.md`](nachrichtenliste.md) §5
 > | **Messung** | **M178.** Dieselbe Suche nach `M\d{2,4}`: höchste **M177** ([`spaltenwahl.md`](spaltenwahl.md)). **M178** steht nur in *„`M176` bis `M178` … kein Treffer"* ([`messungen-sichtprobe-schmal.md`](messungen-sichtprobe-schmal.md) §3) und im Zitat dieser Zeile in [`spaltenwahl.md`](spaltenwahl.md), **M179** nur als Fließtext in [`messungen-property-suche.md`](messungen-property-suche.md) — alle gelesen, keine Vergabe. Beide Zweige: kein M178, kein M18x; ihre Treffer auf `18x` sind Tabellenwerte |
 > | **Offener Punkt** | **182**, falls einer entsteht. `\*\*18[1-9]\*\*` und `Punkt 18[1-9]`: höchster vergebener **181** ([`spaltenwahl.md`](spaltenwahl.md)); die übrigen Treffer auf 181 bis 188 sind Tabellenwerte (`messungen-schritt10b.md` „Partner 8 \| 181", `messungen-schritt8.md` 182, 184, 185, `messungen-sichtprobe-schmal.md` Breiten 184) — gelesen, keine Punkte |
 >
-> #### Ergebnis
+> #### Ergebnis — zwei Läufe, 16.09.2026, 12:04 und 12:05
 >
-> *Folgt nach dem Lauf.*
+> `MessungM178DbIT` ist **zweimal** gelaufen, nacheinander und ohne anderen Lauf gegen die
+> Testkopie dazwischen. Der Auftrag verlangt einen; der zweite ist nachgefahren worden, weil die
+> teuerste Lage im ersten Lauf mit 297,6 ms knapp unter der vorregistrierten Marke von 300 ms lag
+> und M145 Spannen aus mehreren Durchgängen nennt. **Beide Läufe stehen hier, keiner ist
+> ausgewählt.** Rohausgaben: `scripts/messung-m178-beide-sichten/ergebnis/`.
+>
+> ##### 1. Die Richtungsform gegen die Partnerform derselben Sitzung — sie kostet dasselbe
+>
+> Beste von fünf, Lauf 1 / Lauf 2, in ms:
+>
+> | Lage | **Richtungsform** | Partnerform | Bezug M108 (Verteilung) |
+> |---|---:|---:|---:|
+> | `NEXANS` 48 h | **12,685 / 12,700** | 12,380 / 13,324 | 9,920 |
+> | `NEXANS` 30 Tage | **70,195 / 70,781** | 71,722 / 71,205 | 62,570 |
+> | `NEXANS` 12 Monate | **95,738 / 98,727** | 97,744 / 98,401 | 88,519 |
+> | `NEXANS` ohne `zeitraum` (gewählt: 48 h) | **11,836 / 11,991** | 11,828 / 12,166 | 9,920 |
+> | `SUTTONS` 48 h | **10,077 / 9,968** | 10,224 / 10,139 | 21,676 |
+> | `SUTTONS` 30 Tage | **51,391 / 51,742** | 51,136 / 52,162 | 32,031 |
+> | `SUTTONS` 12 Monate | **66,519 / 66,444** | 67,004 / 66,862 | 40,223 (M145: 67,253) |
+> | `SUTTONS` ohne `zeitraum` (gewählt: 48 h) | **10,029 / 9,945** | 9,946 / 10,064 | 21,676 |
+>
+> **Die Richtungsform weicht von der Partnerform desselben Laufs höchstens um 2,0 ms ab** (`NEXANS`
+> 12 Monate, Lauf 1) und relativ höchstens um **4,7 %** (`NEXANS` 48 h, Lauf 2: 0,6 ms). In 11 der
+> 16 Paare ist sie die billigere, in 5 die teurere — eine Richtung hat die Abweichung nicht. Zum
+> Maßstab: Die Partnerform allein schwankt zwischen ihren zwei Läufen bei `NEXANS` 48 h um 0,9 ms
+> (7,6 %). Das ist die vorregistrierte Erwartung, und sie **trifft zu**.
+>
+> **Gegen M108 trifft die Größenordnung nicht zu, und zwar in beide Richtungen:** Bei `NEXANS`
+> kostet die Verteilung heute **8 bis 34 % mehr** als am 31.08.2026, bei `SUTTONS` über 48 Stunden
+> **knapp die Hälfte**, über 30 Tage und 12 Monate **60 bis 67 % mehr** — bei zwölf Monaten auf 1 ms
+> der Wert von M145 (67,3 ms, offener Punkt 134). **Beide Formen tun das gleichermaßen**; die
+> Abweichung gehört der Verteilung und nicht der Richtungsspalte.
+>
+> > **Belegvermerk** (Regel L10).
+> > *Gemessen ist:* Richtungs- und Partnerform einzeln, je zwei Mandanten × vier Lagen, zwei Läufe,
+> > je ein Aufwärmlauf und die beste von fünf, warm, am Anker, über `DashboardRepository` — also mit
+> > jOOQ-Rendering, Verbindung und Zeilenabbildung. Dazu die gelesenen Mengen: Beide Formen liefern je
+> > Lage **dieselbe Summe** (`NEXANS` 9.950 / 176.050 / 2.308.005, `SUTTONS` 1.337 / 20.964 /
+> > 196.536), und sie ist die Zahl der Kachel *Nachrichten* derselben Lage.
+> > *Behauptet wird:* Das neue Statement kostet, was das bestehende kostet.
+> > **Die Lücke:** Warum die Verteilung gegenüber M108 in beide Richtungen gewandert ist, ist
+> > **nicht gemessen** — Bestand, Katalogstand und Instanzzustand sind in dieser Runde nicht erhoben.
+> > Es wird keine Ursache behauptet; Punkt 134 bleibt, was er ist.
+>
+> ##### 2. Die ganze Landingpage — das Tor hält, die Rechnung nicht
+>
+> | Lage | erwartet (vorregistriert) | **gemessen, Lauf 1 / Lauf 2** | im Band? |
+> |---|---:|---:|---|
+> | `NEXANS` 48 h | 59,4–67,6 ms | **69,900 / 65,388 ms** | Lauf 2 ja, Lauf 1 **2,3 ms darüber** |
+> | `NEXANS` 30 Tage | 212,0–212,4 ms | **223,273 / 225,532 ms** | **nein — 10,9 bis 13,1 ms darüber** |
+> | `NEXANS` 12 Monate | 282,7–283,5 ms, **unter 300 ms** | **297,554 / 294,210 ms** | Band **nein — 10,7 bis 14,1 ms darüber**; die Marke von 300 ms **ja**, mit 2,4 bzw. 5,8 ms Abstand |
+> | `NEXANS` ohne `zeitraum` | 69,1–69,8 ms | **72,632 / 70,906 ms** | **nein — 1,1 bis 2,8 ms darüber** |
+> | `SUTTONS` 48 h | 71,2–75,1 ms | **61,792 / 58,668 ms** | **nein — 9,4 bis 12,5 ms darunter** |
+> | `SUTTONS` 30 Tage | 148,0–151,5 ms | **167,460 / 166,314 ms** | **nein — 14,8 bis 16,0 ms darüber** |
+> | `SUTTONS` 12 Monate | 179,9–184,8 (M108) bzw. 207,0–211,9 ms (M145) | **209,429 / 206,685 ms** | gegen M108 **nein**; gegen M145 Lauf 1 ja, Lauf 2 **0,3 ms darunter** |
+> | `SUTTONS` ohne `zeitraum` | 76,8–81,6 ms | **66,050 / 65,880 ms** | **nein — 10,8 bis 10,9 ms darunter** |
+>
+> **Das Tor: gehalten.** Die teuerste Lage ist `NEXANS` über zwölf Monate mit **297,6 ms**; keine
+> Lage kommt in die Nähe von 500 ms.
+>
+> **Die vorregistrierte Rechnung trifft in keiner Lage mit beiden Läufen zu**, in zwei Lagen mit
+> einem von zwei, in sechs mit keinem. Von diesen sechs liegen **vier darüber und zwei darunter** —
+> die Abweichungen gehen in beide Richtungen. Das steht so da und wird nicht umgedeutet.
+>
+> **Was die Tabelle unter 1 dazu zeigt, und es ist die vorregistrierte Leseregel:** *Die Seite
+> weicht ab, das neue Statement nicht.* Die Rechnung setzte die Verteilungskosten von M108 ein, und
+> genau diese Kosten sind heute andere — bei `SUTTONS` über 48 Stunden halb so hoch, und genau dort
+> liegt die Seite unter dem Band; bei `SUTTONS` über 30 Tage 60 % höher, und dort liegt sie darüber.
+>
+> Nachgerechnet mit den Verteilungskosten **derselben Sitzung** statt denen von M108:
+>
+> | Lage | Seite heute − Seite M145 (gerechnet) | Richtungsform heute (gemessen) |
+> |---|---:|---:|
+> | `NEXANS` 48 h | 7,7 bis 20,4 ms | 12,7 ms |
+> | `NEXANS` 30 Tage | 73,5 bis 76,1 ms | 70,2 bis 70,8 ms |
+> | `NEXANS` 12 Monate | 99,2 bis 103,4 ms | 95,7 bis 98,7 ms |
+> | `NEXANS` ohne `zeitraum` | 11,0 bis 13,4 ms | 11,8 bis 12,0 ms |
+> | `SUTTONS` 48 h | 5,3 bis 12,3 ms | 10,0 bis 10,1 ms |
+> | `SUTTONS` 30 Tage | 46,8 bis 51,5 ms | 51,4 bis 51,7 ms |
+> | `SUTTONS` 12 Monate | 62,1 bis 69,7 ms | 66,4 bis 66,5 ms |
+> | `SUTTONS` ohne `zeitraum` | 6,0 bis 11,0 ms | 9,9 bis 10,0 ms |
+>
+> In fünf Lagen liegt die Richtungsform innerhalb der Spanne, bei `SUTTONS` 30 Tage reicht sie bis
+> 0,3 ms über deren oberes Ende. **Bei `NEXANS` liegt sie darunter** — über 30 Tage um 2,7 bis
+> 5,9 ms, über zwölf Monate um 0,5 bis 7,7 ms: Dort ist die Seite um etwas mehr gewachsen als um das
+> eine Statement.
+>
+> > **Belegvermerk** (Regel L10).
+> > *Gemessen ist:* die ganze Landingpage über `DashboardService.landingpage`, je zwei Mandanten × vier
+> > Lagen, zwei Läufe, warm, gegen die Testkopie am 16.09.2026; und — in derselben Sitzung — die
+> > Richtungsform einzeln.
+> > *Behauptet wird:* Die Seite ist um ungefähr die Kosten eines Verteilungsstatements teurer
+> > geworden.
+> > **Die Lücke, und sie ist die ganze Aussage der zweiten Tabelle:** Die Seite **vor** diesem Schritt
+> > ist in dieser Sitzung **nicht gemessen** — ihr Code existiert nicht mehr. Die Differenz rechnet
+> > eine Messung vom 16.09.2026 gegen eine vom 03.09.2026, und zwischen beiden liegen dreizehn Tage
+> > und die in Tabelle 1 sichtbare Wanderung der Verteilungskosten. **Die Nachrechnung ist
+> > verträglich mit der Behauptung und belegt sie nicht.** Die bis zu 5,9 bzw. 7,7 ms über dem einen
+> > Statement bei `NEXANS` 30 Tage und 12 Monate sind nicht aufgeklärt; ob sie aus diesem Schritt
+> > stammen oder aus derselben Wanderung, ist nicht gemessen.
+> > **Nicht gemessen außerdem:** Kaltwerte (`FLUSH TABLES` steht `monitor_read` nicht zu), die acht
+> > übrigen Mandanten, die Produktion.
+>
+> ##### 3. Die Pläne der Richtungsform (Regel L7)
+>
+> Über das gerenderte Statement mit Literalen, am Anker:
+>
+> | Mandant | Einstieg | Rollup-Ebene | Katalog | Mandantenkette |
+> |---|---|---|---|---|
+> | `NEXANS` | die Rollup-Ebene, **`range` über `PRIMARY`** (`key_len` 5 / 3 / 3, `rows` 929 / 14.214 / 6.051), `Using temporary; Using filesort` | — (ist der Einstieg) | `eq_ref` über `PRIMARY` | `dashboard_process` `eq_ref` über `PRIMARY`, `ProjectMandant` `eq_ref` über `PRIMARY` |
+> | `SUTTONS` | **`ProjectMandant`, `ref` über `ProjectMandant_Mandant_idx`**, `Using temporary; Using filesort` | `range` über `PRIMARY`, `Using join buffer (flat, BNL join)` | `eq_ref` über `PRIMARY` | `dashboard_process` `eq_ref` über `PRIMARY` |
+>
+> **Zeile für Zeile der Plan der Partnerform** — Tabelle, Zugriffsart und Index sind in allen sechs
+> Kombinationen gleich; erhoben am 16.09.2026 vor dem Bau des Plantests und seither von
+> `DashboardPlanDbIT.richtungsform_treiber_und_index` festgehalten. **Keine Tabelle wird voll
+> gelesen.** Welche Tabelle den Einstieg macht, hängt wie seit M108 am Mandanten; der Test schreibt
+> deshalb die **zwei** zulässigen Einstiege fest und nicht einen je Mandanten (§9).
 
 ### Die ursprüngliche Messung im Wortlaut — M108 *(31.08.2026)*
 
@@ -1170,6 +1392,70 @@ sondern genau den Zustand, den Regel M4 verbietet.
 
 Der Arbeitsbaum ist danach wiederhergestellt worden; die Änderung ist in keinem Commit.
 
+> ### ⚠️ Fortschreibung vom 16.09.2026 — die Tests zu beiden Sichten (E‑161)
+>
+> **Tabelle und Probe darüber bleiben stehen.** Geändert und hinzugekommen:
+>
+> | Test | Was sich ändert |
+> |---|---|
+> | `DashboardStatementsTest` | **Neun Statements, einzeln benannt** — das neue steht an dritter Stelle als *„Verteilung, Richtungssicht"* und ist Zeichen für Zeichen die Partnersicht mit der anderen Spalte (`die_neun_statements_je_seite`, bis dahin `die_acht_statements_je_seite`). **Der Test stellt die Seite nicht mehr von Hand nach**, sondern ruft `DashboardService.landingpage` über die jOOQ-Attrappe: Die acht Repository-Aufrufe in der Reihenfolge des Service bewiesen die Gestalt der Statements, aber nicht, dass die Seite sie absetzt — ein Service ohne das zweite Verteilungsstatement hätte ihn bestehen lassen. Dazu `kein_zusammengelegtes_verteilungsstatement`: genau zwei Statements hängen den Katalog an, und keines liest `partner` und `richtung` zugleich |
+> | `DashboardIsolationDbIT` | **Regel M4 für das Richtungsstatement, einzeln:** `richtungssicht_ist_getrennt` — die Zeilen der Richtungssicht zählen zusammen genau die Kachel *Nachrichten* derselben Antwort, je `VOTG` und `SUTTONS` und je Paar. Die Kachel kommt aus einem **anderen** Statement (dem Verlauf); fällt der Filter nur im Richtungsstatement, zählt die Sicht den ganzen Bestand des Fensters. Pflegeunabhängig (T2): Die Gleichheit hängt an keinem Katalogstand, weil der Katalog über seinen Primärschlüssel als `LEFT JOIN` anhängt. Dasselbe als `partnersicht_ist_getrennt` — **als eigener Test**, damit eine Probe, die nur einen Filter aushängt, genau einen fällt. **Entfallen:** `richtungssicht_traegt_nichts_fremdes` (Aufruf mit `?verteilung=RICHTUNG`, Suche nach fremden Prozesskennungen) — den Parameter gibt es nicht mehr, und der Test trug seine Aussage auch vorher nicht: Der Block zeigt Richtungen und keine Prozesskennungen. **Ersetzt:** *„Eine unbekannte Verteilungssicht ist 400"* durch `verteilung_ist_wirkungslos` — `RICHTUNG`, `PARTNER` und `BELEGART` ergeben `200` und denselben Block. Verglichen wird der Block und nicht der Rumpf, weil der Rumpf mit der Anwendungsuhr weiterläuft (Punkt 182). **Erweitert:** Leerzustand und „alle Blöcke in einer Antwort" prüfen beide Sichten |
+> | `DashboardPlanDbIT` | `richtungsform_treiber_und_index` — **ohne Zeitmessung**, je `NEXANS` und `SUTTONS` und je Paar: Der Einstieg ist die Rollup-Ebene über `PRIMARY` **oder** `ProjectMandant` über `ProjectMandant_Mandant_idx` und nichts Drittes; die Ebene wird als `range` über `PRIMARY` gelesen, der Katalog hängt als `eq_ref` über `PRIMARY` an; und der Plan ist **Zeile für Zeile** (Tabelle, Zugriffsart, Index) der Plan der Partnerform. *Abweichung vom Wortlaut des Auftrags, und sie ist gewollt:* Die Treibertabelle steht als **Menge der zwei gemessenen Einstiege** fest und nicht je Mandant — §8 legt fest, dass dieser Test die Reihenfolge nicht je Mandant festschreibt, weil sie an der Statistik hängt |
+> | `DashboardServiceTest` | Klasse `BeideSichten`, ohne Datenbank: jede Sicht bekommt ihre eigenen Zeilen und ihre eigenen Restzeilen — die Partnersicht mit „Übrige (2)", die Richtungssicht in **derselben** Antwort ohne, jede mit ihrem eigenen „nicht zugeordnet" (`restzeilen_je_sicht`); das Verteilungsstatement läuft je Sicht **genau einmal** (`je_sicht_ein_statement`); der Block hat genau die Felder `partner` und `richtung` und kein `sicht` (`felder_des_blocks`). **Entfallen:** *„Die Sicht steht in der Antwort, auch wenn der Parameter fehlte"* — es gibt weder den Parameter noch das Feld |
+> | `MessungM178DbIT` | Die Messung. Kein Test (§8) |
+> | `MessungM108DbIT` | **Nur an die neue Signatur angepasst** (`landingpage(mandant, zeitraum)`). Wer M108 nachfährt, misst seither die Seite **mit beiden Sichten** — die Zahlen oben in §8 sind die vom 31.08.2026 und bleiben es |
+>
+> **Die Gegenproben, gefahren und zurückgenommen, in keinem Commit:** Ein Service, der zweimal die
+> Partnerform schickt, fällt `restzeilen_je_sicht`, `je_sicht_ein_statement` und
+> `die_neun_statements_je_seite` (*„[3 Verteilung, Richtungssicht — seit dem 16.09.2026]"*).
+>
+> #### Die Verletzungsprobe vom 16.09.2026 — nur im Richtungsstatement
+>
+> In `DashboardRepository.verteilung` wurde für `Verteilungssicht.RICHTUNG` die Mandantenkette durch
+> eine ersetzt, in der `PROJECTMANDANT.MANDANTID.eq(mandant.mandantId())` zu `isNotNull()` wird —
+> dieselbe Verletzung wie am 31.08.2026, aber **nur in diesem einen Statement**. Die Partnerform und
+> alle übrigen Statements blieben unberührt. Die Datei wurde vorher gesichert und danach aus der
+> Sicherung zurückgeschrieben (Prüfsumme gleich), nicht über `git checkout`.
+>
+> `DashboardIsolationDbIT`, 24 Fälle, **3 rot**:
+>
+> ```
+> [ERROR] DashboardIsolationDbIT.richtungssicht_ist_getrennt
+> [Die Sicht richtung zaehlt 12004 Nachrichten, die Kachel 399 — ohne Mandantenfilter im
+>  Verteilungsstatement saehe die Sicht den ganzen Bestand (48H)]
+> expected: 399L
+>  but was: 12004L
+>
+> [ERROR] DashboardIsolationDbIT.leerzustand
+> [Und in der Richtungssicht dasselbe]
+> Expecting actual:
+>   ["WERT", "WERT", "NICHT_ZUGEORDNET"]
+> to contain exactly (and in same order):
+>   ["NICHT_ZUGEORDNET"]
+>
+> [ERROR] DashboardIsolationDbIT.keine_mandanten_id
+> [Ein unbekannter Parameter aendert nichts — der Mandant kommt aus der Sitzung]
+> ```
+>
+> **12.004 ist wieder die Zahl des ganzen Bestands im 48‑Stunden‑Fenster** (M95, Paar P1) — dieselbe
+> wie in der Probe vom 31.08.2026, jetzt aber nur in der Richtungssicht, während die Kachel daneben
+> die 399 von `VOTG` behält. **`partnersicht_ist_getrennt` blieb grün**, und das ist der Beleg dafür,
+> dass die beiden Tests je ein Statement tragen und nicht beide dasselbe. Der Leerzustand fällt als
+> Beifang: `EDITIONLINGERI` hat keine einzige Nachricht und bekam zwei fremde Richtungen.
+>
+> > ⚠️ **Der dritte rote Fall stammt nicht aus der Probe.** `keine_mandanten_id` vergleicht zwei
+> > **ganze** Rümpfe, und darin steht `plattform.dienste[*].alterSekunden` — gerechnet gegen die
+> > Anwendungsuhr, die im Profil `dev` weiterläuft. Die beiden Aufrufe lagen über einer
+> > Sekundengrenze; der Unterschied der Rümpfe war **ausschließlich** dort (`8782456` gegen
+> > `8782457` und fünf weitere Lampen um je eine Sekunde), der Verteilungsblock war in beiden gleich
+> > verletzt. Im grünen Lauf davor bestand der Test. **Er hängt seit Schritt 10d an der Wanduhr** —
+> > nicht als Zusicherung über eine Dauer, aber mit derselben Folge, die Regel T1 verhindern soll.
+> > **Nicht repariert, sondern als offener Punkt 182 eingetragen** (§11): Die Regel T1 gilt
+> > rückwirkend, und ein Verstoß wird benannt und nicht nebenbei mitgeändert. `verteilung_ist_wirkungslos`
+> > vergleicht aus genau diesem Grund nur den Block.
+>
+> Der Arbeitsbaum ist danach wiederhergestellt worden; die Änderung ist in keinem Commit.
+
 ---
 
 ## 9a. Die Entscheidungen aus Schritt 10b‑4 *(03.09.2026)*
@@ -1205,6 +1491,45 @@ nicht E‑56 wie im Auftrag angenommen.
 
 ---
 
+## 9b. Entscheidung E‑161 — beide Sichten in einer Antwort *(16.09.2026)*
+
+| Kennung | Entscheidung | Datum |
+|---|---|---|
+| **E‑161** | **`GET /api/dashboard` liefert die Verteilung in beiden Sichten, und der Wechsel zwischen Partner und Richtung geschieht allein im Browser.** Der Parameter `verteilung` entfällt aus dem Vertrag; ein mitgeschickter Wert ist wirkungslos wie `?mandant=`. Das Verteilungsstatement läuft je Sicht einmal, **in unveränderter Gestalt**; ein zusammengelegtes Statement über beide Katalogspalten gibt es nicht. „Ein Aufruf, eine Antwort" (§1) bleibt bestehen. Die Vorgabe `PARTNER` liegt seither im Frontend | 16.09.2026 |
+
+**Der Anlass, gemeldet am 16.09.2026:** Beim Wechsel der Sicht lud sichtbar das **ganze** Dashboard
+neu, nicht nur der Verteilungsblock. **Entschieden am selben Tag** durch den Auftraggeber.
+
+**Der Mechanismus, nachgesehen am Code und nicht aus der Meldung übernommen** (Regel V1). Er lag
+nicht an einem `key`, und nicht an einem Server-Roundtrip:
+
+| Verdacht | Befund |
+|---|---|
+| ein `key`, der den Baum neu aufbaut | **nein.** Der einzige `key` in der Nähe steht am Container des Verlaufs und trägt das **Zeitraumpaar** (E‑86); ein Sichtwechsel ändert ihn nicht |
+| eine nicht flache URL-Aktualisierung (`shallow: false`) | **nein.** Mitgeschrieben über `onUrlUpdate` des Test-Adapters: `{"history":"replace","scroll":false,"shallow":true}` — kein Server-Rendering |
+| **ein Abfrageschlüssel ohne Daten** | **ja.** Der Schlüssel war `["dashboard", "landingpage", zeitraum, sicht]`. Ein Klick auf „Richtung" machte daraus einen **neuen** Schlüssel, für den der Zwischenspeicher nichts hatte; `useQuery` stand auf `isPending`, und `DashboardAnsicht` ersetzte **die ganze Seite** durch `<Laden zeilen={6}>`. Nach der Antwort wurde jeder Block neu eingehängt — der Verlauf samt seiner Aufbaubewegung (E‑85) |
+
+Belegt am 16.09.2026 mit einem Wegwerf-Test gegen den unveränderten Code (danach gelöscht, in keinem
+Commit): vor dem Klick **0** Elemente mit `aria-busy`, Kacheln im Baum; nach dem Klick **1**, Kacheln
+und Verteilung **fort**; Anfragen `["/api/dashboard", "/api/dashboard?verteilung=RICHTUNG"]`. Der
+Rückweg auf eine schon gesehene Sicht kostete keine Anfrage — das hat die Abnahme vom 01.09.2026
+gemessen ([`dashboard-frontend.md`](dashboard-frontend.md) §10.3); ob er einen Ladezustand zeigte,
+ist nicht erhoben.
+
+**Nicht gebaut und nicht gemessen:** `placeholderData: keepPreviousData` am alten Schlüssel. Es hätte
+den Ladezustand verdeckt, aber weiter **eine Anfrage je Wechsel** gestellt. Entschieden war die
+Antwort mit beiden Sichten; die Alternative steht hier nur, damit niemand sie für übersehen hält.
+
+**Was es kostet:** das Verteilungsstatement ein zweites Mal je Seite — gemessen als M178 (§8). Das
+Tor von 500 ms hält in jeder Lage; die teuerste liegt bei 297,6 ms.
+
+**Am laufenden System nachgesehen** am 16.09.2026 mit `NEXANS`, `SUTTONS` und `EDITIONLINGERI`:
+Sichtwechsel hin und zurück ohne Anfrage, ohne Ladezustand und ohne neu eingehängtes Diagramm, die
+Seite mit `?verteilung=RICHTUNG` direkt geladen zeigt die Richtungssicht, der Leerzustand ist
+unverändert ([`dashboard-frontend.md`](dashboard-frontend.md) §14).
+
+---
+
 ## 10. Regelbezug
 
 | Regel | Stand |
@@ -1224,6 +1549,18 @@ nicht E‑56 wie im Auftrag angenommen.
 | **T2** Kein Test hängt an veränderlichen Daten | **erfüllt** — der Isolationstest bezieht sich auf die Prozessliste und nicht auf den Pflegestand |
 | **Z1** Kein `now()` | **erfüllt** — ein Uhrenschlag je Anfrage, aus der Anwendungsuhr |
 
+> ### Regelbezug zu E‑161 *(16.09.2026)* — im Wortlaut von [`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md)
+>
+> | Regel | Wortlaut | Stand |
+> |---|---|---|
+> | **M1** | *„Kein Endpunkt nimmt eine Mandanten-ID entgegen. Nicht als Pfadsegment, nicht als Query-Parameter, nicht im Body, nicht im Header. Der Mandant wird ausschließlich aus der Session gelesen."* | **erfüllt** — der Endpunkt hat einen Parameter **weniger**; `?mandant=` bleibt wirkungslos, und `?verteilung=` ist es jetzt auch (`verteilung_ist_wirkungslos`) |
+> | **M2** | *„Jede Repository-Methode bekommt den Mandanten als ersten Pflichtparameter. Es gibt keine Überladung ohne ihn."* | **erfüllt** — `DashboardRepository.verteilung(MandantContext, …)` ist unverändert und wird zweimal gerufen; keine neue Methode. `PaketstrukturTest` grün |
+> | **M4** | *„Pro Endpunkt existiert ein automatisierter Isolationstest, der mit Mandant A abfragt und nachweist, dass Daten von Mandant B unerreichbar sind."* | **erfüllt, je Statement einzeln** — `richtungssicht_ist_getrennt` und `partnersicht_ist_getrennt`; die Verletzungsprobe nur im Richtungsstatement fällt genau den ersten (§9) |
+> | **L7** | *„Jede neue Abfrage wird vor dem Merge gegen die Testkopie gemessen (`EXPLAIN` plus Laufzeit). Kein Statement geht ungeprüft in Produktion."* | **erfüllt** — M178 (§8): `EXPLAIN` über das gerenderte Statement und Laufzeit, je `NEXANS` und `SUTTONS`, vier Lagen, zwei Läufe; Tor gehalten |
+> | **L10** | *„Jeder Befundsatz trägt zwei Zeilen: was gemessen wurde und was behauptet wird."* | **erfüllt** — beide Befunde in M178 tragen ihren Vermerk; der zweite benennt, dass die Nachrechnung gegen M145 die Behauptung **nicht** belegt |
+> | **T1** | *„Wo eine Laufzeiteigenschaft geprüft werden soll, wird die Ursache geprüft und nicht die Uhr: die Zahl der Datenbankzugriffe, der `EXPLAIN`-Plan, der Treiberindex, der abgesetzte Statement-Text. Eine Dauer darf gemessen und ausgegeben werden; in eine Zusicherung gehört sie nicht."* | **erfüllt für diesen Schritt** — Plan und Statement-Text statt Zeit, und im Frontend Züge der Warteschlange statt Wartezeit. ⚠️ **Ein Altbefund ist dabei aufgefallen:** `keine_mandanten_id` hängt über `alterSekunden` an der Anwendungsuhr — offener Punkt **182**, nicht repariert |
+> | **V1** | *Nicht in `DEVELOPMENT_GUIDELINES.md` geführt.* Der Auftrag nennt die Regel mit der Kurzfassung *„Was ein Dokument über den Code sagt, wird am Code nachgesehen und nicht übernommen"* und verweist für den Wortlaut auf die Richtlinien; dort steht sie nicht — gesucht nach `V1` und nach dem Wortlaut, nur Verweise in [`dashboard-frontend.md`](dashboard-frontend.md) §6 und oben in §9a. | **angewandt** — der Mechanismus des Neuladens ist am Code und in einem Wegwerf-Test belegt (§9b), die Voreinstellungen von `nuqs` 2.9.2 (`shallow: true`, `clearOnDefault: true`) in den Typdeklarationen nachgesehen, die Pläne vor dem Plantest erhoben. **Die fehlende Fundstelle ist gemeldet und nicht still ergänzt** |
+
 ---
 
 ## 11. Offene Punkte
@@ -1237,7 +1574,8 @@ nicht E‑56 wie im Auftrag angenommen.
 | **86** | **Der Leerzustand ist nicht unterscheidbar** (§6, bekannte Grenze 2). Gewollt, und hier nur benannt, damit es nicht als Fehler gemeldet wird |
 | **87** | **Die Kachel *Nachrichten* zählt Aktivität und nicht Nachrichten** (§2, bekannte Grenze 3). Ebenfalls gewollt und ebenfalls nur benannt |
 | **130** | **„Hängt hier etwas zu lange?" ist seit E‑71 unbeantwortet.** *Läuft* und *Wartend* zählen einen Zustand und liefern das Alter der ältesten Zeile — **ohne Schwelle**. Eine Schwelle steht nirgends in den Daten; `MessageTimeout` ist es nachweislich nicht (§5). Sie zu erfinden verbietet Regel Q4 — es ist wörtlich die Lage, in der *Unquittiert* mit E‑d gestorben ist. **Als offener Punkt eingetragen und nicht gebaut** |
-| **134** | **Der Verteilungsblock ist bei `SUTTONS` um 27 ms teurer geworden, ohne dass eine Zeile daran geändert wurde** (§8). Bestand, Rollup und Katalogstand sind nachweislich unverändert. **Die Ursache ist nicht gemessen**; plausibel ist der Zustand der Instanz, belegt ist er nicht. Wer M145 nachmisst, sieht, ob es bleibt |
+| **134** | **Der Verteilungsblock ist bei `SUTTONS` um 27 ms teurer geworden, ohne dass eine Zeile daran geändert wurde** (§8). Bestand, Rollup und Katalogstand sind nachweislich unverändert. **Die Ursache ist nicht gemessen**; plausibel ist der Zustand der Instanz, belegt ist er nicht. Wer M145 nachmisst, sieht, ob es bleibt. ***Nachtrag 16.09.2026 (M178):*** *Es bleibt — die Partnerform kostet bei `SUTTONS` über zwölf Monate 66,9 bis 67,0 ms, die Richtungsform 66,4 bis 66,5 ms. Dafür ist die Verteilung bei `SUTTONS` über 48 Stunden auf knapp die Hälfte von M108 gefallen und über 30 Tage um 60 % gestiegen (§8). Die Ursache ist weiterhin nicht gemessen, und dieser Schritt behandelt den Punkt ausdrücklich nicht* |
+| **182** | **`DashboardIsolationDbIT.keine_mandanten_id` hängt an der Wanduhr.** Der Test vergleicht zwei **ganze** Antwortrümpfe, und seit Schritt 10d steht darin `plattform.dienste[*].alterSekunden`, gerechnet gegen die im Profil `dev` weiterlaufende Anwendungsuhr. Liegen die zwei Aufrufe über einer Sekundengrenze, fällt er — beobachtet am 16.09.2026 in der Verletzungsprobe (§9), mit sechs Lampen um je eine Sekunde als **einzigem** Unterschied; im grünen Lauf davor bestand er. Keine Zusicherung über eine Dauer, aber dieselbe Folge, gegen die Regel T1 steht: ein Test, der zufällig rot wird. **Nicht repariert** — der naheliegende Eingriff wäre, den Block `plattform` aus dem Vergleich zu nehmen oder nur die mandantenabhängigen Blöcke zu vergleichen, wie `verteilung_ist_wirkungslos` es tut. Das ist eine eigene Änderung an einem bestehenden Test und gehört entschieden, nicht nebenbei gemacht |
 | **135** | **Die Isolation der Kachel *Läuft* ist lokal nicht nachweisbar.** `RUNNING` kommt auf der Testkopie null Mal vor; jeder Mandant sieht `0`, mit und ohne Mandantenfilter. Der Nachweis ruht auf dem **gerenderten Statement** (`DashboardStatementsTest`) und nicht auf Daten. **Gegen die Produktion nachzuholen** |
 
 ### Und was hier geschlossen wird

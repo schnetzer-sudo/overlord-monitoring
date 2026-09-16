@@ -196,9 +196,11 @@ describe("Der URL-Zustand", () => {
   });
 
   /**
-   * **`PARTNER` ist die Vorgabe des Endpunkts und steht deshalb nicht in der
-   * URL** — dieselbe Regel wie beim Zeitraum, nur eine Ebene tiefer. Das ist
-   * eine Ableitung aus E‑n und keine neue Entscheidung.
+   * **`PARTNER` ist die Vorgabe und steht deshalb nicht in der URL** —
+   * dieselbe Regel wie beim Zeitraum, nur eine Ebene tiefer. Das ist eine
+   * Ableitung aus E‑n und keine neue Entscheidung. *Bis zum 16.09.2026 hieß es
+   * hier „die Vorgabe des Endpunkts"; seit E‑161 kennt der Endpunkt den
+   * Parameter nicht mehr, und die Vorgabe liegt allein im Frontend.*
    */
   it("schreibt RICHTUNG in die URL und PARTNER nicht", () => {
     expect(alsSuchparameter({ zeitraum: null, verteilung: "RICHTUNG" }).get("verteilung")).toBe(

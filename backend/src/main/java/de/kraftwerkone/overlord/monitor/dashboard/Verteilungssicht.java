@@ -1,9 +1,5 @@
 package de.kraftwerkone.overlord.monitor.dashboard;
 
-import de.kraftwerkone.overlord.monitor.common.error.FachlicheAusnahme;
-import java.util.Arrays;
-import org.springframework.http.HttpStatus;
-
 /**
  * Wonach der Verteilungsblock gruppiert — <b>ein Block, zwei Sichten</b>.
  *
@@ -15,37 +11,21 @@ import org.springframework.http.HttpStatus;
  * <p><b>Beide bekommen den {@code pflegestatus}-Riegel</b> (Entscheidung E-i). Bei der Richtung ist
  * er heute folgenlos — nach der Kuratierung tragen alle Zeilen mit Richtung {@code GEPFLEGT} —,
  * aber die Regel ist E-i und nicht der Zufall dieses Katalogstands.
+ *
+ * <h2>⚠️ Kein Anfrageparameter mehr (16.09.2026)</h2>
+ *
+ * <p>Bis zum 16.09.2026 kam die Sicht als {@code ?verteilung=} in die Anfrage, mit der Vorgabe
+ * {@code PARTNER} und einem {@code 400} fuer einen unbekannten Wert. <b>Seither traegt jede Antwort
+ * beide Sichten</b>, und der Umschalter wechselt allein im Browser ({@code docs/dashboard.md} §4).
+ * Der Parameter ist damit wirkungslos wie {@code ?mandant=}; die Vorgabe {@code PARTNER} ist eine
+ * Frage der Anzeige und steht im Frontend. Diese Aufzaehlung waehlt nur noch die Katalogspalte des
+ * Statements.
  */
 public enum Verteilungssicht {
 
-  /** Nach kuratiertem Partner ({@code process_catalog.partner}). Die Vorgabe. */
+  /** Nach kuratiertem Partner ({@code process_catalog.partner}). */
   PARTNER,
 
   /** Nach kuratierter Richtung ({@code process_catalog.richtung}). */
-  RICHTUNG;
-
-  /** Die Sicht, die ohne Parameter gilt. */
-  public static final Verteilungssicht VORGABE = PARTNER;
-
-  /**
-   * Der Wert aus der URL. {@code null} oder leer bedeutet {@link #VORGABE}.
-   *
-   * @throws FachlicheAusnahme {@code 400}, wenn der Wert keiner Sicht entspricht
-   */
-  public static Verteilungssicht ausCode(String code) {
-    if (code == null || code.isBlank()) {
-      return VORGABE;
-    }
-    return Arrays.stream(values())
-        .filter(sicht -> sicht.name().equalsIgnoreCase(code.trim()))
-        .findFirst()
-        .orElseThrow(
-            () ->
-                new FachlicheAusnahme(
-                    HttpStatus.BAD_REQUEST,
-                    "verteilung-unbekannt",
-                    "Verteilung unbekannt",
-                    "Erlaubt sind PARTNER und RICHTUNG.",
-                    "Unbekannte Verteilungssicht: " + code));
-  }
+  RICHTUNG
 }

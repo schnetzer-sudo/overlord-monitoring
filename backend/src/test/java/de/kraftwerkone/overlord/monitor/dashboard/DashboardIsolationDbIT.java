@@ -6,6 +6,7 @@ import de.kraftwerkone.overlord.monitor.security.Rolle;
 import de.kraftwerkone.overlord.monitor.security.SicherheitsTestbasis;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -174,12 +175,67 @@ class DashboardIsolationDbIT extends SicherheitsTestbasis {
         .isPositive();
   }
 
-  @Test
-  @DisplayName("Auch die Richtungssicht traegt nichts Fremdes")
-  void richtungssicht_traegt_nichts_fremdes() throws Exception {
-    List<String> vonSuttons = prozesseVon(aufSuttons);
+  // Hier stand bis zum 16.09.2026 „Auch die Richtungssicht traegt nichts Fremdes": ein Aufruf mit
+  // `?verteilung=RICHTUNG` und die Suche nach fremden Prozesskennungen im Rumpf. Den Parameter gibt
+  // es nicht mehr — und der Test trug seine Aussage auch vorher nicht: Der Verteilungsblock zeigt
+  // Partner und Richtungen, keine Prozesskennungen, also blieb er bei ausgehaengtem Filter gruen.
+  // Dieselbe Falle wie in docs/dashboard.md §9. An seine Stelle treten die beiden Summentests
+  // darunter, je Sicht einer; `keine_fremden_prozesse` prueft den ganzen Rumpf ohnehin weiter mit.
 
-    ohneFremdeProzesse(aufVotg.hole("/api/dashboard?zeitraum=12M&verteilung=RICHTUNG"), vonSuttons);
+  /**
+   * <b>Regel M4 fuer das Richtungsstatement, einzeln</b> (seit dem 16.09.2026).
+   *
+   * <h2>Warum eine Summe und keine Kennung</h2>
+   *
+   * <p>Der Block traegt Richtungen, und eine Richtung gehoert keinem Mandanten — sie ist kein
+   * Beweis fuer irgendetwas. <b>Die Summe schon:</b> Die Zeilen einer Sicht zaehlen zusammen —
+   * benannte Werte, „Übrige" und „nicht zugeordnet" — genau die Nachrichten des Fensters, denn der
+   * Katalog haengt als {@code LEFT JOIN} ueber seinen Primaerschluessel an und vervielfacht nichts.
+   * Diese Zahl steht in derselben Antwort noch einmal, als Kachel <i>Nachrichten</i>, und die kommt
+   * aus einem <b>anderen</b> Statement (dem Verlauf).
+   *
+   * <p><b>Faellt der Mandantenfilter nur im Richtungsstatement, zaehlt die Sicht den ganzen Bestand
+   * des Fensters, die Kachel weiter nur den eigenen</b> — und die beiden Zahlen gehen auseinander.
+   * Das ist pflegeunabhaengig (Regel T2): Die Gleichheit haengt an keinem Katalogstand und an
+   * keiner Zahl der Testkopie. Fallen beide Filter zugleich, bliebe sie bestehen; den Fall faengt
+   * {@code summen_sind_verschieden}.
+   */
+  @Test
+  @DisplayName("Richtungssicht: ihre Zeilen zaehlen genau die Nachrichten des eigenen Mandanten")
+  void richtungssicht_ist_getrennt() throws Exception {
+    sichtZaehltDieEigenenNachrichten("richtung");
+  }
+
+  /**
+   * Dasselbe fuer die Partnersicht. <b>Es steht als eigener Test da</b>, damit eine
+   * Verletzungsprobe, die den Filter nur in <i>einem</i> der beiden Statements aushaengt, genau
+   * einen der beiden faellt — und die Meldung sagt, welchen.
+   */
+  @Test
+  @DisplayName("Partnersicht: ihre Zeilen zaehlen genau die Nachrichten des eigenen Mandanten")
+  void partnersicht_ist_getrennt() throws Exception {
+    sichtZaehltDieEigenenNachrichten("partner");
+  }
+
+  private void sichtZaehltDieEigenenNachrichten(String sicht)
+      throws IOException, InterruptedException {
+    for (Sitzung sitzung : List.of(aufVotg, aufSuttons)) {
+      for (String zeitraum : List.of("48H", "30T", "12M")) {
+        Antwort antwort = sitzung.hole(pfad(zeitraum));
+        assertThat(antwort.status()).isEqualTo(200);
+
+        long kachel = ((Number) antwort.<Object>json("$.kacheln.nachrichten")).longValue();
+        List<Number> zeilen = antwort.json("$.verteilung." + sicht + ".zeilen[*].anzahl");
+        long summe = zeilen.stream().mapToLong(Number::longValue).sum();
+
+        assertThat(summe)
+            .as(
+                "Die Sicht %s zaehlt %s Nachrichten, die Kachel %s — ohne Mandantenfilter im"
+                    + " Verteilungsstatement saehe die Sicht den ganzen Bestand (%s)",
+                sicht, summe, kachel, zeitraum)
+            .isEqualTo(kachel);
+      }
+    }
   }
 
   /**
@@ -252,8 +308,11 @@ class DashboardIsolationDbIT extends SicherheitsTestbasis {
         .isEqualTo("48H");
     assertThat(antwort.<List<Object>>json("$.verlauf")).isEmpty();
     assertThat(((Number) antwort.<Object>json("$.kacheln.nachrichten")).longValue()).isZero();
-    assertThat(antwort.<List<String>>json("$.verteilung.zeilen[*].art"))
+    assertThat(antwort.<List<String>>json("$.verteilung.partner.zeilen[*].art"))
         .as("Auch hier sagt der Katalog etwas: alles nicht zugeordnet, naemlich null")
+        .containsExactly("NICHT_ZUGEORDNET");
+    assertThat(antwort.<List<String>>json("$.verteilung.richtung.zeilen[*].art"))
+        .as("Und in der Richtungssicht dasselbe")
         .containsExactly("NICHT_ZUGEORDNET");
   }
 
@@ -293,6 +352,10 @@ class DashboardIsolationDbIT extends SicherheitsTestbasis {
         .contains("\"plattform\"")
         .contains("\"dienste\"")
         .contains("\"ablagen\"");
+    assertThat(antwort.hatFeld("$.verteilung.partner.zeilen"))
+        .as("Seit dem 16.09.2026 stehen beide Sichten in derselben Antwort — Partner …")
+        .isTrue();
+    assertThat(antwort.hatFeld("$.verteilung.richtung.zeilen")).as("… und Richtung").isTrue();
   }
 
   /** Entscheidung E-d: „Unquittiert" ist aus dem MVP genommen — kein Feld, kein Platzhalter. */
@@ -422,13 +485,32 @@ class DashboardIsolationDbIT extends SicherheitsTestbasis {
     assertThat(antwort.<String>json("$.detail")).contains("48H");
   }
 
+  /**
+   * <b>{@code verteilung} ist kein Parameter mehr</b> (16.09.2026) — ein mitgeschickter Wert ist
+   * wirkungslos wie {@code ?mandant=}, und das gilt auch fuer einen unbekannten.
+   *
+   * <p>Bis zu diesem Tag stand hier „Eine unbekannte Verteilungssicht ist 400" mit dem Problemtyp
+   * {@code verteilung-unbekannt}. Beides ist entfallen: Die Antwort traegt beide Sichten, und es
+   * gibt nichts mehr zu waehlen.
+   *
+   * <p><b>Verglichen wird der Verteilungsblock und nicht der ganze Rumpf.</b> Im Rumpf steht auch
+   * das Alter der Dienstlampen, und das laeuft zwischen zwei Aufrufen mit der Anwendungsuhr weiter
+   * — eine Gleichheit darueber waere eine Zusicherung ueber Wanduhrzeit (Regel T1).
+   */
   @Test
-  @DisplayName("Eine unbekannte Verteilungssicht ist 400")
-  void unbekannte_verteilung() throws Exception {
-    Antwort antwort = aufVotg.hole("/api/dashboard?verteilung=BELEGART");
+  @DisplayName("Ein mitgeschicktes verteilung ist wirkungslos — auch ein unbekanntes")
+  void verteilung_ist_wirkungslos() throws Exception {
+    Antwort ohne = aufVotg.hole(pfad("30T"));
+    Map<String, Object> ohneBlock = ohne.json("$.verteilung");
 
-    assertThat(antwort.status()).isEqualTo(400);
-    assertThat(antwort.<String>json("$.type")).endsWith("/verteilung-unbekannt");
+    for (String wert : List.of("RICHTUNG", "PARTNER", "BELEGART")) {
+      Antwort mit = aufVotg.hole(pfad("30T") + "&verteilung=" + wert);
+
+      assertThat(mit.status()).as("verteilung=%s ist kein Fehler", wert).isEqualTo(200);
+      assertThat(mit.<Map<String, Object>>json("$.verteilung"))
+          .as("verteilung=%s aendert am Block nichts", wert)
+          .isEqualTo(ohneBlock);
+    }
   }
 
   /** Ohne aktiven Mandanten gibt es keinen Zugriff — auch nicht fuer ADMIN (Regeln M1/M2). */

@@ -20,15 +20,16 @@ import org.springframework.web.bind.annotation.RestController;
  * Ausnahme</b> — die drei, die es gibt, stehen in {@code docs/mandantentrennung.md} §3 und
  * definieren allesamt eine Berechtigung, statt einen Datenausschnitt abzufragen.
  *
- * <h2>Zwei Parameter, und beide sind freiwillig</h2>
+ * <h2>Ein Parameter, und er ist freiwillig</h2>
  *
  * <p>{@code zeitraum} waehlt eines der drei Paare ({@link Rollupzeitraum}). Fehlt er, waehlt der
  * Endpunkt selbst und <b>nennt das gewaehlte Paar in der Antwort</b> — sonst wuesste die
  * Oberflaeche nicht, was sie hervorheben und in die URL schreiben soll.
  *
- * <p>{@code verteilung} stellt den Umschalter des Verteilungsblocks ({@link Verteilungssicht}),
- * Vorgabe {@code PARTNER}. <b>Er aendert an keinem anderen Block etwas</b> und kostet keinen
- * zusaetzlichen Lesevorgang: Es ist dasselbe Statement mit einer anderen Katalogspalte im Ausdruck.
+ * <p><b>{@code verteilung} gibt es seit dem 16.09.2026 nicht mehr.</b> Die Antwort traegt beide
+ * Sichten des Verteilungsblocks ({@link VerteilungResponse}), und der Umschalter wechselt im
+ * Browser, ohne eine Anfrage zu stellen ({@code docs/dashboard.md} §4). Ein mitgeschickter Wert ist
+ * wirkungslos wie {@code ?mandant=} — auch ein unbekannter, der bis dahin {@code 400} ergab.
  *
  * <h2>Kein Rolleneintrag in {@code SecurityConfig}, und das ist richtig</h2>
  *
@@ -54,12 +55,9 @@ public class DashboardController {
   }
 
   @GetMapping("/api/dashboard")
-  public DashboardResponse landingpage(
-      @RequestParam(required = false) String zeitraum,
-      @RequestParam(required = false) String verteilung) {
+  public DashboardResponse landingpage(@RequestParam(required = false) String zeitraum) {
     MandantContext mandant = mandantService.aktuellerKontext(erforderlicherNutzer());
-    return dashboardService.landingpage(
-        mandant, Rollupzeitraum.ausCode(zeitraum), Verteilungssicht.ausCode(verteilung));
+    return dashboardService.landingpage(mandant, Rollupzeitraum.ausCode(zeitraum));
   }
 
   private AngemeldeterNutzer erforderlicherNutzer() {

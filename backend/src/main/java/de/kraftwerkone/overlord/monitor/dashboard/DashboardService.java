@@ -119,19 +119,30 @@ public class DashboardService {
   /**
    * Die ganze Landingpage fuer den aktiven Mandanten.
    *
+   * <h2>Die Verteilung kommt in beiden Sichten — zwei Statements derselben Gestalt</h2>
+   *
+   * <p>Seit dem 16.09.2026 laeuft das Verteilungsstatement <b>je Sicht einmal</b>, und zwar
+   * unveraendert: {@code CASE} als ein Ausdruck ohne Alias, {@code LEFT JOIN} auf den Katalog,
+   * Mandantenkette als {@code EXISTS}. <b>Zusammengelegt ueber beide Katalogspalten wird bewusst
+   * nicht</b> — ein Statement mit zwei {@code CASE}-Ausdruecken im {@code GROUP BY} lieferte eine
+   * Zeile je vorkommender Kombination aus Partner und Richtung, die Summen je Sicht entstuenden
+   * erst in Java, und es waere eine neue Abfrage mit eigener Messung statt der gemessenen. Der
+   * Preis ist ein zweiter Bereichszugriff auf dieselbe Rollup-Ebene; die Vorregistrierung und das
+   * Ergebnis stehen in {@code docs/dashboard.md} §8.
+   *
    * @param mandant Regel M2 — erster Pflichtparameter, und er kommt aus der Sitzung (Regel M1)
    * @param gewaehlt das Paar aus der URL, oder {@code null}
-   * @param sicht wonach der Verteilungsblock gruppiert
    */
-  public DashboardResponse landingpage(
-      MandantContext mandant, Rollupzeitraum gewaehlt, Verteilungssicht sicht) {
+  public DashboardResponse landingpage(MandantContext mandant, Rollupzeitraum gewaehlt) {
     LocalDateTime jetzt = LocalDateTime.now(anwendungsuhr);
     Rollupzeitraum zeitraum = gewaehlt == null ? standardfenster(mandant, jetzt) : gewaehlt;
     Zeitfenster fenster = zeitraum.fenster(jetzt);
 
     List<Rollupsumme> summen = dashboardRepository.verlauf(mandant, zeitraum, fenster);
-    List<Verteilungssumme> verteilt =
-        dashboardRepository.verteilung(mandant, zeitraum, fenster, sicht);
+    List<Verteilungssumme> nachPartner =
+        dashboardRepository.verteilung(mandant, zeitraum, fenster, Verteilungssicht.PARTNER);
+    List<Verteilungssumme> nachRichtung =
+        dashboardRepository.verteilung(mandant, zeitraum, fenster, Verteilungssicht.RICHTUNG);
     OffeneKachelResponse laeuft = offeneKachel(mandant, MessageStatusKind.LAEUFT, jetzt);
     // Die Erscheinungsbedingung wird bei JEDEM Aufruf mitgelesen und nicht bedingt: Sonst haenge
     // die Zahl der Statements am Mandanten, und DashboardStatementsTest waere nicht mehr
@@ -148,7 +159,7 @@ public class DashboardService {
         kacheln.nachrichten() == 0,
         verlauf(summen),
         kacheln,
-        verteilung(verteilt, sicht),
+        new VerteilungResponse(verteilung(nachPartner), verteilung(nachRichtung)),
         zuletztAufgefallen(aufgefallen),
         stand(),
         plattform(jetzt));
@@ -243,7 +254,8 @@ public class DashboardService {
   }
 
   /**
-   * Block 5: Top 10, dann die beiden Restzeilen — <b>und die stehen immer unten</b>.
+   * Block 5, <b>eine Sicht</b>: Top 10, dann die beiden Restzeilen — <b>und die stehen immer
+   * unten</b>. Gerufen wird sie je Sicht einmal, mit denselben Regeln fuer beide.
    *
    * <p>Die Abfrage liefert die benannten Werte bereits absteigend und „nicht zugeordnet" am Ende.
    * <b>Sortiert wird hier trotzdem noch einmal</b>, und zwar mit dem Wert als zweitem Schluessel:
@@ -255,7 +267,7 @@ public class DashboardService {
    * Katalog, und ohne sie waere <i>vollstaendig gepflegt</i> nicht von <i>diese Ansicht zeigt das
    * nicht</i> zu unterscheiden.
    */
-  private VerteilungResponse verteilung(List<Verteilungssumme> summen, Verteilungssicht sicht) {
+  private VerteilungszeilenResponse verteilung(List<Verteilungssumme> summen) {
     long nichtZugeordnet = 0;
     List<Verteilungssumme> benannt = new ArrayList<>();
     for (Verteilungssumme summe : summen) {
@@ -281,7 +293,7 @@ public class DashboardService {
               rest.size(), rest.stream().mapToLong(Verteilungssumme::anzahl).sum()));
     }
     zeilen.add(VerteilungszeileResponse.nichtZugeordnet(nichtZugeordnet));
-    return new VerteilungResponse(sicht, zeilen);
+    return new VerteilungszeilenResponse(zeilen);
   }
 
   /**

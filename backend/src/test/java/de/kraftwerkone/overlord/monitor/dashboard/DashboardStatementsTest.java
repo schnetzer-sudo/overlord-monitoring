@@ -5,11 +5,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
 import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
-import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
+import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.jooq.DSLContext;
 import org.jooq.SQLDialect;
 import org.jooq.impl.DSL;
@@ -437,52 +439,105 @@ class DashboardStatementsTest {
    * die Dienste mit Zeitgrenze. <b>Die Ablagenpruefung steht nicht darin und darf es nicht</b>: Sie
    * laeuft im Hintergrund, liest ihre Ziele in ihrem eigenen Takt und wuerde die Seite sonst an die
    * Zeitgrenzen fremder Knoten haengen ({@code docs/dienste.md} §7).
+   *
+   * <h2>Seit dem 16.09.2026 sind es neun — und die Seite wird nicht mehr nachgestellt</h2>
+   *
+   * <p>Die Antwort traegt beide Sichten der Verteilung, und das Verteilungsstatement laeuft <b>je
+   * Sicht einmal</b> ({@code docs/dashboard.md} §4). Das neunte steht an dritter Stelle und ist
+   * hier einzeln benannt.
+   *
+   * <p><b>Bis zu diesem Tag stellte der Test die Seite von Hand nach</b>: acht Aufrufe am
+   * Repository in der Reihenfolge, in der der Service sie macht. Das bewies die Gestalt der
+   * Statements, aber nicht, dass die Seite sie absetzt — ein Service, der das zweite
+   * Verteilungsstatement gar nicht schickte, haette ihn bestehen lassen. <b>Er ruft deshalb jetzt
+   * {@link DashboardService#landingpage} selbst</b>, ueber dieselbe Attrappe; das Repository
+   * vertraegt deren leere Ergebnisse ausdruecklich (siehe {@code offeneNachrichten} und {@code
+   * hatWartendeAblaeufe}).
    */
   @Test
-  @DisplayName("Eine Landingpage mit genanntem Zeitraum setzt genau diese acht Statements ab")
-  void die_acht_statements_je_seite() {
-    Zeitfenster fenster = Rollupzeitraum.STUNDEN_48.fenster(JETZT);
-    gerendert.clear();
-
-    repository.verlauf(MANDANT, Rollupzeitraum.STUNDEN_48, fenster);
-    repository.verteilung(MANDANT, Rollupzeitraum.STUNDEN_48, fenster, Verteilungssicht.PARTNER);
-    repository.offeneNachrichten(MANDANT, MessageStatusKind.LAEUFT);
-    repository.hatWartendeAblaeufe(MANDANT);
-    repository.offeneNachrichten(MANDANT, MessageStatusKind.WARTEND);
-    repository.zuletztAufgefallen(MANDANT, fenster, 10);
-    repository.letzterLauf();
-    dienstRepository.dienste();
-
-    List<String> knapp = gerendert.stream().map(sql -> sql.replaceAll("\s+", " ").trim()).toList();
+  @DisplayName("Eine Landingpage mit genanntem Zeitraum setzt genau diese neun Statements ab")
+  void die_neun_statements_je_seite() {
+    List<String> knapp = statementsEinerSeite();
 
     assertThat(knapp)
-        .as("Acht Statements — und jedes einzeln benannt, damit ein Tausch auffaellt")
-        .hasSize(8);
+        .as("Neun Statements — und jedes einzeln benannt, damit ein Tausch auffaellt")
+        .hasSize(9);
     assertThat(knapp.get(0)).as("1 Verlauf").contains("from `overlord_monitor`.`message_rollup`");
     assertThat(knapp.get(1))
-        .as("2 Verteilung")
-        .contains("left outer join `overlord_monitor`.`process_catalog`");
+        .as("2 Verteilung, Partnersicht")
+        .contains("left outer join `overlord_monitor`.`process_catalog`")
+        .contains("`overlord_monitor`.`process_catalog`.`partner`")
+        .doesNotContain("`overlord_monitor`.`process_catalog`.`richtung`");
     assertThat(knapp.get(2))
-        .as("3 Kachel Laeuft")
+        .as("3 Verteilung, Richtungssicht — seit dem 16.09.2026")
+        .contains("left outer join `overlord_monitor`.`process_catalog`")
+        .contains("`overlord_monitor`.`process_catalog`.`richtung`")
+        .doesNotContain("`overlord_monitor`.`process_catalog`.`partner`");
+    assertThat(knapp.get(2).replace("`richtung`", "`partner`"))
+        .as("Die Richtungssicht ist die Partnersicht mit der anderen Spalte, Zeichen fuer Zeichen")
+        .isEqualTo(knapp.get(1));
+    assertThat(knapp.get(3))
+        .as("4 Kachel Laeuft")
         .startsWith("select count(*), min(")
         .contains("`MessageStatus` = ?");
-    assertThat(knapp.get(3))
-        .as("4 Erscheinungsbedingung der Kachel Wartend")
+    assertThat(knapp.get(4))
+        .as("5 Erscheinungsbedingung der Kachel Wartend")
         .startsWith("select exists (")
         .contains("`GlassfishDB`.`SOSAction`");
-    assertThat(knapp.get(4))
-        .as("5 Kachel Wartend")
+    assertThat(knapp.get(5))
+        .as("6 Kachel Wartend")
         .startsWith("select count(*), min(")
         .contains("`MessageStatus` = ?");
-    assertThat(knapp.get(5))
-        .as("6 Zuletzt aufgefallen — eine Haelfte, nicht zwei, und je Prozess gruppiert")
+    assertThat(knapp.get(6))
+        .as("7 Zuletzt aufgefallen — eine Haelfte, nicht zwei, und je Prozess gruppiert")
         .contains("`MessageStatus` like ? escape")
         .contains("group by `GlassfishDB`.`Message`.`ProcessID`");
-    assertThat(knapp.get(6)).as("7 Stand").contains("from `overlord_monitor`.`rollup_lauf`");
-    assertThat(knapp.get(7))
-        .as("8 Die Dienste mit Zeitgrenze — der plattformweite Block (Schritt 10d)")
+    assertThat(knapp.get(7)).as("8 Stand").contains("from `overlord_monitor`.`rollup_lauf`");
+    assertThat(knapp.get(8))
+        .as("9 Die Dienste mit Zeitgrenze — der plattformweite Block (Schritt 10d)")
         .contains("from `GlassfishDB`.`Service`")
         .contains("`ServiceTimeout` > ?");
+  }
+
+  /**
+   * <b>Kein zusammengelegtes Statement ueber beide Katalogspalten</b> (16.09.2026).
+   *
+   * <p>Die naheliegende Verdichtung — ein Bereichszugriff statt zwei, gruppiert nach beiden {@code
+   * CASE}-Ausdruecken — waere eine <b>andere</b> Abfrage als die gemessene, und sie ist nicht
+   * gebaut. Faellt dieser Test, ist sie entstanden: dann gehoert sie gemessen und entschieden,
+   * nicht nebenbei eingefuehrt.
+   */
+  @Test
+  @DisplayName("Keine Abfrage der Seite liest Partner und Richtung zugleich")
+  void kein_zusammengelegtes_verteilungsstatement() {
+    List<String> knapp = statementsEinerSeite();
+
+    assertThat(knapp)
+        .as("Genau zwei Statements haengen den Katalog an — eines je Sicht")
+        .filteredOn(sql -> sql.contains("`overlord_monitor`.`process_catalog`"))
+        .hasSize(2)
+        .noneMatch(
+            sql ->
+                sql.contains("`overlord_monitor`.`process_catalog`.`partner`")
+                    && sql.contains("`overlord_monitor`.`process_catalog`.`richtung`"));
+  }
+
+  /**
+   * Die Statements einer Landingpage mit genanntem Zeitraum, <b>so wie der Service sie absetzt</b>
+   * — ueber die Attrappe, ohne Datenbank, ohne Ablagenpruefung.
+   */
+  private List<String> statementsEinerSeite() {
+    DashboardService service =
+        new DashboardService(
+            repository,
+            new MessageStatusClassifier(),
+            Clock.fixed(JETZT.toInstant(ZoneOffset.UTC), ZoneOffset.UTC),
+            dienstRepository,
+            new DienstStatusClassifier(),
+            Optional.empty());
+    gerendert.clear();
+    service.landingpage(MANDANT, Rollupzeitraum.STUNDEN_48);
+    return gerendert.stream().map(sql -> sql.replaceAll("\\s+", " ").trim()).toList();
   }
 
   /**
@@ -494,19 +549,8 @@ class DashboardStatementsTest {
   @Test
   @DisplayName("Kein Statement der Landingpage rechnet noch mit MessageTimeout")
   void keine_frist_mehr_in_der_ganzen_seite() {
-    Zeitfenster fenster = Rollupzeitraum.STUNDEN_48.fenster(JETZT);
-    gerendert.clear();
-
-    repository.verlauf(MANDANT, Rollupzeitraum.STUNDEN_48, fenster);
-    repository.verteilung(MANDANT, Rollupzeitraum.STUNDEN_48, fenster, Verteilungssicht.PARTNER);
-    repository.offeneNachrichten(MANDANT, MessageStatusKind.LAEUFT);
-    repository.hatWartendeAblaeufe(MANDANT);
-    repository.offeneNachrichten(MANDANT, MessageStatusKind.WARTEND);
-    repository.zuletztAufgefallen(MANDANT, fenster, 10);
-    repository.letzterLauf();
-    dienstRepository.dienste();
-
-    assertThat(gerendert)
+    assertThat(statementsEinerSeite())
+        .hasSize(9)
         .allSatisfy(
             sql -> assertThat(sql).doesNotContain("MessageTimeout").doesNotContain("date_add("));
   }

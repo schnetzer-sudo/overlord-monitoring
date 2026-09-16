@@ -1,29 +1,26 @@
 package de.kraftwerkone.overlord.monitor.dashboard;
 
-import java.util.List;
-
 /**
- * Der Verteilungsblock (Block 5) — <b>Top 10 und zwei Restzeilen</b>.
+ * Der Verteilungsblock (Block 5) — <b>beide Sichten in einer Antwort</b>.
  *
- * <h2>Die Reihenfolge ist Teil der Aussage</h2>
+ * <h2>Warum beide und nicht die gewaehlte</h2>
  *
- * <p>Zuerst die benannten Werte, absteigend nach Anzahl. <b>Danach, immer unten, die beiden
- * Restzeilen</b> — unabhaengig von ihrer Groesse. Bei {@code IBIS} waere „Übrige (40)" mit 27,92 %
- * sonst der groesste Balken des Blocks und stuende auf Rang 1, als gaebe es einen Partner dieses
- * Namens (M98, Befund 21).
+ * <p>Bis zum 16.09.2026 trug die Antwort genau eine Sicht, gewaehlt ueber {@code ?verteilung=}. Ein
+ * Wechsel war damit ein neuer Aufruf der <b>ganzen</b> Landingpage — und weil die Oberflaeche fuer
+ * den neuen Abfrageschluessel keine Daten hatte, baute sie jeden Block neu auf, nicht nur diesen.
+ * <b>Jetzt steht beides hier</b>, und der Umschalter zeigt die andere Haelfte einer Antwort, die
+ * schon da ist ({@code docs/dashboard.md} §4). „Ein Aufruf, eine Antwort" bleibt bestehen; die
+ * Antwort ist nur vollstaendiger geworden.
  *
- * <p><b>„Nicht zugeordnet" ist keine Rangposition</b> und faellt nie in „Übrige". Deshalb sortiert
- * schon die Abfrage {@code ORDER BY (schluessel IS NULL), summe DESC}: Die Raenge 1…k gehoeren
- * lueckenlos den benannten Werten.
+ * <p><b>Die Sicht steht nicht mehr als Feld darin</b>, sondern ist der Schluessel: {@code partner}
+ * und {@code richtung}. Das Feld {@code sicht} sagte, welche Sicht geliefert worden war — seit
+ * beide geliefert werden, gibt es darauf keine Antwort mehr.
  *
- * @param sicht wonach gruppiert wurde — sie steht in der Antwort, damit die Oberflaeche den
- *     Umschalter richtig stellt, auch wenn der Parameter fehlte
- * @param zeilen Top 10, dann {@code UEBRIGE} (falls es einen Rang 11 gibt), dann immer {@code
- *     NICHT_ZUGEORDNET}
+ * <p>Je Sicht gelten die Regeln unveraendert: Top 10, dann {@code UEBRIGE} (falls es einen Rang 11
+ * gibt), dann immer {@code NICHT_ZUGEORDNET} — siehe {@link VerteilungszeilenResponse}.
+ *
+ * @param partner die Zeilen nach kuratiertem Partner
+ * @param richtung die Zeilen nach kuratierter Richtung
  */
-public record VerteilungResponse(Verteilungssicht sicht, List<VerteilungszeileResponse> zeilen) {
-
-  public VerteilungResponse {
-    zeilen = List.copyOf(zeilen);
-  }
-}
+public record VerteilungResponse(
+    VerteilungszeilenResponse partner, VerteilungszeilenResponse richtung) {}
