@@ -324,17 +324,23 @@ describe("Die Vorwarnung (E19)", () => {
     const { behaelter, abbauen } = await formular({ username: "Lukas" }, "lukas");
 
     try {
-      const auswahl = [...behaelter.querySelectorAll("select")].find((feld) =>
-        [...feld.options].some((option) => option.value === "PROJEKT"),
+      // Seit dem 16.09.2026 ist auch die Baumgliederung eine Liste der Anwendung
+      // und kein natives Feld mehr (Punkt 180): aufklappen, Zeile anklicken. Die
+      // Zeilen hängen im Portal am `document` und nicht am Behälter.
+      const beschriftung = [...behaelter.querySelectorAll("label")].find(
+        (label) => (label.textContent ?? "").trim() === B.formular.baumgliederung,
       );
-      expect(auswahl).toBeDefined();
+      const auswahl = behaelter.querySelector<HTMLElement>(
+        `#${CSS.escape(beschriftung?.getAttribute("for") ?? "")}`,
+      );
+      expect(auswahl, `Das Feld „${B.formular.baumgliederung}" fehlt`).not.toBeNull();
       await act(async () => {
-        // React hört auf den nativen Setter, nicht auf `value =`.
-        Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value")?.set?.call(
-          auswahl,
-          "PROJEKT",
-        );
-        auswahl?.dispatchEvent(new Event("change", { bubbles: true }));
+        auswahl?.click();
+      });
+      const zeile = document.querySelector<HTMLElement>('[role="option"][data-wert="PROJEKT"]');
+      expect(zeile, "Die Zeile „Projekt, Prozess“ fehlt").not.toBeNull();
+      await act(async () => {
+        zeile?.click();
       });
 
       // Nicht über den Titel geprüft: Der ruhige Satz über dem Formular beginnt

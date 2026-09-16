@@ -98,6 +98,42 @@ mandantenübergreifend gilt.
 | Letzte Anmeldung | `lastLogin` | `lg` |
 | Bearbeiten | — | immer |
 
+> ### Geändert am 15.09.2026 — „sichtbar ab" hängt an der Hülle, nicht mehr an `md` und `lg` (E‑147)
+>
+> Die Tabelle darüber nennt den Stand bis zum 15.09.2026. **Welche Spalte weicht und welche nie, ist
+> unverändert**; eine Spalte kommt seitdem dazu, sobald **die Hülle der Tabelle** die gemessenen
+> Mindestbreiten aller dann sichtbaren Spalten trägt ([`spaltenwahl.md`](spaltenwahl.md) §5.2, M177).
+> Vorher fiel bei 768 px Fensterbreite die Spalte ohne Breite — die Mandanten — auf 0 px (Punkt 174).
+>
+> | Spalte | Mindestbreite | vorher |
+> |---|---:|---|
+> | Benutzer | 81 px | 128 px, ab `md` 176 px |
+> | Rolle | 89 px | 144 px ab `md` |
+> | Mandanten | 96 px | der Rest |
+> | Sperre | 74 px | 96 px, ab `md` 120 px |
+> | Zeitsperre | 106 px | 112 px, ab `md` 176 px |
+> | Konto | 97 px | 96 px, ab `md` 120 px |
+> | Passwort | 95 px | 144 px ab `lg` |
+> | Letzte Anmeldung | 145 px | 176 px ab `lg` |
+> | Bearbeiten | 48 px | 56 px |
+>
+> | Stufe | Schwelle der Hülle |
+> |---|---:|
+> | Benutzer · Sperre · Zeitsperre · Konto · Bearbeiten | **406 px** — darunter läuft die Tabelle über (Antwort des Auftraggebers vom 15.09.2026) |
+> | + Rolle · Mandanten | **591 px** |
+> | + Passwort · Letzte Anmeldung | **831 px** |
+>
+> **Die festen Texte zählen mit, auch wenn die Testkopie sie nicht zeigt:** „deaktiviert", „Wechsel
+> erforderlich" und ein Zeitpunkt hinter „bis" standen in keiner der sechs Zeilen und tragen die Breite
+> ihrer Spalte.
+>
+> **Berichtigt am 16.09.2026 (E‑149):** Die Mandantenspalte war bis dahin die **freie** — sie trug
+> keine Breite und bekam den ganzen Rest, bei 1.408 px Hülle 673 px für eine Reihe kurzer Marken,
+> während Benutzername und Rolle daneben auf 81 und 89 px umbrachen. Seither trägt **jede** Spalte
+> ihre Mindestbreite, und `table-layout: fixed` teilt den Überschuss anteilig auf; die drei Schwellen
+> sind unberührt ([`spaltenwahl.md`](spaltenwahl.md) §5.5). **Die klebende Kopfzeile hält unter der Container-Hülle:** nachgemessen am
+> Produktionsbau, Kopfzeile und `main` beide bei y = 51, das Dokument scrollt nicht.
+
 **Die drei fett gesetzten sind die Antwort auf „warum kommt der nicht hinein".** Sie bleiben bei
 jeder Breite stehen — zusammen mit dem **Benutzernamen**, ohne den keine Zeile zuzuordnen ist, und
 dem **Bearbeiten-Knopf**, ohne den die Seite nichts mehr könnte. Alles Übrige weicht. Das ist die Regel aus
@@ -695,6 +731,12 @@ Ein Knopf über der Liste klappt sie auf. Darin, in dieser Reihenfolge:
 | Einmalpasswort | Passwortfeld, `autocomplete="new-password"` |
 | Knopf | gesperrt, solange der Entwurf unvollständig ist oder ein Aufruf läuft |
 
+> ⚠️ **Korrektur vom 15.09.2026 — die Zeile „Rolle" ist unwahr geworden.** Dort stand und steht
+> *„natives Auswahlfeld, **beide** Werte wählbar — auch `ADMIN`"*. Seit dem Umbau aus §18 ist die Rolle
+> **kein natives Auswahlfeld mehr**, sondern eine Liste der Anwendung (`rollen-auswahl.tsx`). Beide
+> Werte bleiben wählbar, auch `ADMIN`, und „Bitte wählen" bleibt eine wählbare Zeile wie vorher die
+> leere Option. **Der Mandant darunter ist weiterhin ein natives Auswahlfeld** (Punkt 180).
+
 **Die Fehlermeldung steht im Formular**, nicht über der Liste — dieselbe Regel wie an der Zeile
 (§5): Ein `409 benutzername-vergeben` sagt etwas über genau diese Eingabe. **Und solange der Aufruf
 läuft, lässt sich die Maske nicht zuklappen**, sonst wäre ein `409` nirgends zu sehen.
@@ -812,6 +854,17 @@ liest: [`process-view.md`](process-view.md) §48.
 | **Tabelle** | **keine zehnte Spalte.** Welche Spalte steht, entscheidet die Frage der Seite (§4) — *warum kommt jemand nicht herein* —, und die Baumgliederung beantwortet sie nicht. Sie steht im Formular, wo sie geändert wird |
 | **Fehlermeldung** | am auslösenden Abschnitt wie überall (§5). `gliederung-unbekannt` ist in beiden Sprachen übersetzt; über das Auswahlfeld ist er nicht erreichbar |
 
+> ⚠️ **Nachtrag vom 15.09.2026:** Die Zeile „Bedienung" nennt die Baumgliederung ein natives
+> Auswahlfeld in *„dieselbe[r] Bauform"* wie die Rolle. **Die Rolle hat diese Bauform seit §18 nicht
+> mehr**; die Baumgliederung ist weiterhin ein natives Auswahlfeld und steht als Befund bei Punkt 180.
+>
+> ✔ **Erledigt am 16.09.2026:** Der Auftraggeber hat dasselbe Bild für dieses Feld gemeldet — im
+> Dunkelmodus eine helle Liste über dunklem Feld. **Die Baumgliederung trägt jetzt die Liste der
+> Anwendung**, dieselbe wie die Rolle (§18.1). Die Zeile „Bedienung" stimmt damit wieder, nur heißt
+> „dieselbe Bauform" seitdem `components/auswahl-feld.tsx` und nicht `<select>`. **Am Verhalten
+> ändert sich nichts:** Sie läuft weiter beim Umlegen los, ohne Vorwarnung und ohne Abmeldung (E26),
+> und schickt dasselbe `PUT …/tree-layout`.
+
 ### Kein Dialog und keine Abmeldung am eigenen Konto
 
 `Vorgang` hat die Art `baumgliederung` bekommen, und sie läuft durch dieselbe eine Stelle wie die
@@ -846,3 +899,200 @@ Auswahlfeld am eigenen Konto schickt `PUT …/7/tree-layout` mit `{"treeLayout":
 zugleich: Die Regel ist eine reine Funktion, dass sie abgefragt und die Abmeldung *nicht* ausgelöst
 wird, zeigt nur der Baum; die Gegenprobe steht im selben Block am Passwort („erscheint beim eigenen
 Konto …").
+
+---
+
+## 18. Die Rollenauswahl — eine Liste, die der Anwendung gehört *(15.09.2026, offener Punkt 180)*
+
+Auftrag „Spaltenwahl nach dem Platz, Teil 2 (Bau)", 3.6. Dazu gehören
+[`spaltenwahl.md`](spaltenwahl.md) (dieselbe Runde), der Nachtrag in [`dunkelmodus.md`](dunkelmodus.md)
+§19 und die Zeilenhöhe aus [`prozessauswahl.md`](prozessauswahl.md) §7a.
+
+### Der Befund, und wie er kam
+
+**Gemeldet vom Auftraggeber am 15.09.2026, mit drei Bildern aus Chrome und Firefox:** Die aufgeklappte
+Rollenauswahl folgt im Dunkelmodus nicht dem Farbblock — in Chrome ist die Liste hell bei dunklem
+Feld, in Firefox dunkel, aber in einem anderen Grau als die Anwendung. Die Bilder liegen nicht im
+Repository.
+
+**Die Ursache ist die Bauform.** §16 führte die Rolle als natives Auswahlfeld, und die Liste eines
+nativen `<select>` zeichnet der Browser. Ihre Farbe steht in keiner Zeile von `globals.css`.
+
+**Die drei Werte, vor dem Umbau ausgelesen** — Chrome 152, der Stand vor dem Umbau (`next dev`),
+`/administration/benutzer` mit offener Maske „Konto anlegen"; der Zustand über das Attribut
+`data-thema` am Wurzelelement umgestellt und danach zurückgesetzt, das Cookie des Nutzers unberührt:
+
+| `data-thema` | `:root` | `<form>` | `<select>` |
+|---|---|---|---|
+| `hell` | `light` | `light` | `light` |
+| `dunkel` | `dark` | `dark` | `dark` |
+| `system` (Betriebssystem dunkel) | `dark` | `dark` | `dark` |
+
+**`color-scheme` steht damit in allen drei Zuständen richtig und erklärt nicht, warum Chrome die Liste
+hell zeichnet.** Die Ursache ist offen und wird nicht geraten (Regel Q4). Der Hintergrund des Felds
+selbst war `rgba(0, 0, 0, 0)`; ob Chrome daraus die Farbe der Liste ableitet, ist nicht gemessen.
+
+### Was gebaut ist
+
+`features/benutzer/components/rollen-auswahl.tsx` — **die Bauform der Filter und der
+Prozessauswahl**: `Popover` aus `components/ui`, darin eine Liste von Zeilen. Beide Rollenfelder
+tragen sie, das Zeilenformular (§5) und die Maske „Konto anlegen" (§16). Es ist dasselbe Feld an zwei
+Stellen; zwei Bauformen dafür wären die Drift, gegen die der Umbau gerichtet ist.
+
+| | |
+|---|---|
+| **Fläche, Schrift** | `--popover`, `--popover-foreground` — aus dem Baustein |
+| **Zeile** | überfahren und fokussiert `--muted`, gewählt `--accent`, wie in der Prozessauswahl |
+| **Zeilenhöhe** | `--dichte-bedienzeile`, das Token der Prozessauswahl — **keine** neue |
+| **Geschlossenes Feld** | dieselben Klassen wie vorher das native Feld |
+| **Neues Token, neuer Farbwert** | **keines** |
+| **Wählbar** | beide Rollen, auch `ADMIN`; in der Maske dazu „Bitte wählen" wie vorher die leere Option |
+| **Gesperrte Rolle** | steht da und ist nicht wählbar (E11 im Zeilenformular), `aria-disabled` |
+| **Unbekannter Rollenwert** | steht im Feld, wie er ist (Q4) |
+| **Beschriftung** | `<Label htmlFor>` zeigt auf das Feld; ein `<button>` ist beschriftbar wie ein `<select>` |
+| **Formularanbindung** | unverändert: Die Maske setzt `entwurf.role`, das Zeilenformular ruft `starte({ art: "rolle", … })`; der Wert geht wie bisher an `POST /api/admin/users` beziehungsweise `PUT …/role` |
+| **Wahl desselben Werts** | meldet nichts — wie das native `change` |
+
+### Die Tastatur — eine Abweichung, und sie ist gewollt
+
+| Taste | am geschlossenen Feld | in der Liste |
+|---|---|---|
+| `Enter`, `Leertaste` | öffnet | wählt und schließt |
+| `↓`, `↑` | öffnet | nächste, vorige wählbare Zeile |
+| `Pos1`, `Ende` | — | erste, letzte wählbare Zeile |
+| `Escape` | — | schließt ohne Wahl, der Fokus kehrt ans Feld zurück |
+
+**Der Auftrag verlangt die Tastaturbedienung unverändert.** An einer Stelle ist sie es nicht: In Chrome
+unter Windows ändert `↓` am *geschlossenen* nativen Feld sofort den Wert; hier öffnet es die Liste. Im
+Zeilenformular läuft eine Rollenänderung beim Umlegen los, und **jedes `PUT` verwirft alle Sitzungen
+des Kontos** (E5). Eine Pfeiltaste, die nebenbei abmeldet, ist kein Verhalten, das zu erhalten wäre.
+**Gemeldet, nicht still aufgelöst.**
+
+### Nachgesehen in Chromium — gemessen, nicht angesehen
+
+Am Produktionsbau (`next start` auf `:3001`), `/administration/benutzer`, Maske offen, Liste
+aufgeklappt, alle drei Zustände über `data-thema`; die aufgelösten Werte an der Liste gegen ein
+Hilfselement mit `background: var(--…)` gehalten:
+
+| Zustand | `color-scheme` | Fläche = `--popover` | Schrift = `--popover-foreground` | gewählte Zeile = `--accent` | Zeilen |
+|---|---|---|---|---|---|
+| `hell` | `light` | ja — `lab(100 0 0)` | ja | ja | 36 / 36 / 36 px |
+| `dunkel` | `dark` | ja — `lab(8.36 0 0)` | ja | ja | 36 / 36 / 36 px |
+| `system` (dunkel) | `dark` | ja — `lab(8.36 0 0)` | ja | ja | 36 / 36 / 36 px |
+
+`--dichte-bedienzeile` löst dort zu 36 px auf (Dichte `m`, Zeigergerät). In der aufgeklappten Maske
+steht genau **ein** natives `<select>` — der Mandant.
+
+> ⚠️ **Ein Werkzeugbefund, kein Anwendungsbefund.** Der erste Lauf meldete bei `hell` eine dunkle Fläche
+> und 34,2 px hohe Zeilen. Der Tab war verdeckt. *Gemessen* ist: Mit eingespritztem
+> `transition: none; animation: none` (nur im Messrahmen) und `offsetHeight` statt
+> `getBoundingClientRect` stimmen alle drei Zustände, `hell` auch ein zweites Mal nach `system`.
+> *Naheliegend, aber nicht einzeln belegt* ist die Ursache: Im verdeckten Tab laufen Übergänge und
+> Animationen nicht weiter; `PopoverContent` trägt `duration-100` und `zoom-in-95`, und 36 × 0,95 =
+> 34,2. Wer das festnageln will, liest `getAnimations()` an der Liste im verdeckten Tab.
+
+### ⚠️ Nicht in Firefox angesehen
+
+Der Auftrag verlangt Chromium **und** Firefox. **Firefox 155 ist installiert, aber ohne Sitzung**, und
+angemeldet wird nur durch den Auftraggeber. Die Liste ist jetzt ein DOM-Element, das die Tokens trägt;
+dass Firefox dieselben Tokens anders auflöst, ist nicht zu erwarten — **und nicht gemessen**.
+Nachzuholen von Hand: aufklappen in `hell`, `dunkel` und `system`.
+
+### ⚠️ „Fällt unter `tests/farbkontrast.test.ts`" — nur zur Hälfte
+
+Die Liste bringt keinen neuen Farbwert und kein neues Token, und `tests/farbkontrast.test.ts` ist
+unverändert: **83 Fälle**, aus dem Lauf gezählt (`vitest run --reporter=json`, 15.09.2026). Der
+Auftrag und [`dunkelmodus.md`](dunkelmodus.md) §18.1 nennen 69 — das ist der Stand von Schritt 11b;
+diese Runde hat an der Zahl nichts geändert. **Er prüft aber keine der Paarungen, die die Liste benutzt:** Seine
+Untergründe sind `--card`, `--background` und die Statusflächen; `--popover`,
+`--popover-foreground`, `--muted` und `--accent` kommen als geprüftes Paar nicht vor. **Abgelesen,
+nicht gerechnet:** `--popover` ist in beiden Blöcken wertgleich mit `--card` — `oklch(1 0 0)` hell,
+`oklch(0.21 0 0)` dunkel (`globals.css`). Die Liste ist damit **prüfbar** geworden, **geprüft** ist
+sie nicht. Ein Fall dafür wäre eine Änderung am Kontrasttest und steht bei Punkt 180 offen.
+
+### 18.1 Nachgezogen am 16.09.2026 — die Baumgliederung, und der Baustein zieht um
+
+**Gemeldet vom Auftraggeber am 16.09.2026, mit einem Bild:** Im Zeilenformular steht die Rolle jetzt
+richtig, das Feld daneben — „Prozessbaum beginnt mit" (§17) — nicht. Es ist derselbe Befund und
+dieselbe Ursache: ein natives `<select>`, dessen aufgeklappte Liste der Browser zeichnet. Er stand
+seit dem Vortag mit Fundstelle in der Tabelle unten.
+
+| | |
+|---|---|
+| **Was gebaut ist** | Die Baumgliederung trägt dieselbe Liste wie die Rolle. Kein neuer Farbwert, kein neues Token, keine neue Zeilenhöhe |
+| **Wohin der Baustein gezogen ist** | `components/auswahl-feld.tsx`. Die Bauform lag in `features/benutzer/components/rollen-auswahl.tsx`; mit der zweiten Stelle gehört sie in `components/` — **ein Feature importiert nicht aus einem Nachbarfeature** ([`frontend-grundlagen.md`](frontend-grundlagen.md) §8), und der nächste Umbau (Mandant, Massenzuordnung) liegt außerhalb dieses Features |
+| **Was von `rollen-auswahl.tsx` bleibt** | die drei Dinge, die *der Rolle* gehören: der unbekannte Rollenwert, die gesperrte Rolle (E11) und die leere Zeile der Maske. Der Rest steht im Baustein |
+| **Unbekannter Wert** | steht im Feld, wie er ist (Q4) — vorher trug das native Feld dafür eine eigene leere Option, jetzt erledigt es der Baustein, indem er keinen Eintrag findet |
+| **Verhalten** | unverändert: Umlegen läuft los, **ohne** Vorwarnung und **ohne** Abmeldung (E26), `PUT …/tree-layout` mit demselben Rumpf |
+| **Tastatur** | dieselbe Abweichung wie bei der Rolle: `↓` am geschlossenen Feld **öffnet**, statt den Wert zu ändern — hier wiegt sie schwächer (die Gliederung verwirft keine Sitzung) und ist trotzdem gleich, weil zwei Felder nebeneinander nicht verschieden reagieren sollen |
+
+#### Am laufenden System nachgemessen *(16.09.2026)*
+
+Im Chrome des Auftraggebers, angemeldet, Zustand **`dunkel`** — der Zustand der Meldung —,
+`/administration/benutzer` mit offenem Zeilenformular, die Liste aufgeklappt. Gelesen sind die
+aufgelösten Farben an der Liste gegen ein Hilfselement mit `background: var(--…)`; Übergänge und
+Animationen waren für die Messung abgeschaltet und danach wieder an (die Lehre aus §18):
+
+| | gemessen | Token | trifft |
+|---|---|---|---|
+| Fläche | `lab(8.36 0 0)` | `--popover` | **ja** |
+| Schrift | `lab(96.52 0 0)` | `--popover-foreground` | **ja** |
+| gewählte Zeile | `lab(16.89 -5.55 23.25)` | `--accent` | **ja** |
+| Zeilenhöhe | 36 / 36 px | `--dichte-bedienzeile` | **ja** |
+
+**Im geöffneten Zeilenformular steht kein `<select>` mehr** (gezählt: 0), und das Feld ist ein
+`<button aria-haspopup="listbox">` mit „Partner, Richtung, Prozess". Geschlossen wurde die Liste über
+`Escape`; **kein Wert ist geändert worden**, es ist kein Schreibaufruf hinausgegangen.
+
+> ⚠️ **Was daran nicht gemessen ist:** `hell` und `system` (die Meldung galt `dunkel`, und die drei
+> Zustände sind für denselben Baustein am 15.09.2026 gemessen), der **Entwicklungsbau** statt eines
+> Produktionsbaus, und **Firefox** — der Blick dorthin steht für beide Felder weiterhin aus.
+
+### Die übrigen nativen Formularelemente — Befund mit Fundstelle, nicht umgebaut
+
+Gesucht per `grep` über `frontend/src` nach `<select`, `type="date"`, `type="datetime-local"`,
+`type="time"`, `type="month"`, `type="week"`, `type="file"`, `type="color"`, `type="range"` und
+`<datalist`, Stand nach dem Umbau:
+
+| Element | Datei · Zeile | Was es ist |
+|---|---|---|
+| `<select>` | `features/benutzer/components/konto-anlegen.tsx:186` | Mandant der Maske „Konto anlegen" (§16) |
+| ~~`<select>`~~ | ~~`zeilen-formular.tsx:253`~~ | Baumgliederung — **am 16.09.2026 umgebaut** (§18.1) |
+| `<select>` | `features/katalog/components/massenzuordnung.tsx:171` | Projekt der Massenzuordnung ([`prozess-katalog-frontend.md`](prozess-katalog-frontend.md) §7) |
+| `datetime-local` ×2 | `features/nachrichten/components/filterleiste.tsx:242`, `:263` | freies Zeitfenster der Nachrichtenliste |
+| `datetime-local` ×2 | `features/nachrichten/components/suche-ansicht.tsx:822`, `:840` | Zeitfenster der Belegsuche |
+| `datetime-local` ×2 | `features/nachrichten/components/baumfenster-felder.tsx:124`, `:143` | freies Fenster der Prozessansicht |
+
+**`type="date"` und `type="file"` kommen nicht vor.** Die aufgeklappten Wählflächen der sechs
+`datetime-local` — Kalender und Uhr — zeichnet der Browser wie die Liste eines `<select>`.
+
+### Die Dateien
+
+```
+frontend/src/
+├─ components/auswahl-feld.tsx        NEU am 16.09. — Popover mit Liste, Tastatur, gesperrte Zeile
+└─ features/benutzer/components/
+   ├─ rollen-auswahl.tsx              NEU am 15.09.; seit dem 16.09. nur noch das, was der Rolle gehört
+   ├─ zeilen-formular.tsx             Rolle und Baumgliederung über die Liste der Anwendung
+   └─ konto-anlegen.tsx               die Rolle über RollenAuswahl; der Mandant bleibt nativ
+frontend/tests/
+├─ rollen-auswahl.test.tsx   NEU — gerenderter Baum, vier Fälle (sie prüfen jetzt den Baustein mit)
+├─ benutzer-tabelle.test.tsx der Fall zur Baumgliederung bedient die Liste statt des `<select>`
+└─ konto-anlegen.test.tsx    die Hilfe `waehle` bedient die Liste: aufklappen, Zeile anklicken
+```
+
+### Tests
+
+`tests/rollen-auswahl.test.tsx` (gerenderter Baum, **vier Fälle**): kein `<select>` mehr, beide Rollen
+wählbar, auch `ADMIN`; eine gesperrte Rolle ist weder per Klick noch per `Enter` wählbar, mit
+Gegenprobe ohne Sperre; derselbe Wert noch einmal gewählt meldet nichts; `↓` am geschlossenen Feld
+öffnet, ohne den Wert zu ändern, der Fokus steht auf dem gespeicherten Wert, `↓` und `Enter` wählen.
+**Drei Mutanten gesetzt, drei gefallen**, jeder in genau einem Fall — der Riegel gegen die Wahl
+desselben Werts entfernt, die Sperre am Klick übergangen, `↓` am Feld setzt den Wert —, die Datei
+danach byte-gleich. `tests/konto-anlegen.test.tsx` läuft unverändert mit sechs Fällen.
+
+### Punkt 180
+
+| | |
+|---|---|
+| **180** | **Native Formularelemente zeichnen ihre aufgeklappte Fläche selbst, und keine Prüfung des Projekts erreicht sie.** Gemeldet am 15.09.2026 vom Auftraggeber: die Rollenauswahl im Dunkelmodus, drei Bilder aus Chrome und Firefox. `color-scheme` stand in allen drei Zuständen richtig — an `:root`, am Formular und am Feld `light`/`light`/`light` bei `hell`, `dark`/`dark`/`dark` bei `dunkel` und bei `system` —; **warum Chrome die Liste hell zeichnet, ist offen.** **Umgebaut:** die Rollenauswahl an beiden Stellen (§18) und, nach erneuter Meldung am 16.09.2026, die **Baumgliederung** (§18.1); die Bauform steht seitdem als gemeinsamer Baustein in `components/auswahl-feld.tsx`. **Offen:** zwei `<select>` und sechs `datetime-local` (Tabelle oben); der Blick in **Firefox**; und dass `tests/farbkontrast.test.ts` die Paarungen mit `--popover`, `--muted` und `--accent` nicht prüft |

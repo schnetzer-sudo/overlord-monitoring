@@ -9,10 +9,10 @@ import { Fehler, Laden } from "@/components/zustand";
 import { einsetzen } from "@/i18n";
 import { useTexte } from "@/i18n/provider";
 
-import { ROLLEN } from "../api";
 import { LEERER_ENTWURF, anfrageAus, type Entwurf } from "../anlegen";
 import { useMandanten, type useAnlegen } from "../hooks";
 import { PASSWORT_MINDESTLAENGE } from "../selbstschutz";
+import { RollenAuswahl } from "./rollen-auswahl";
 
 /**
  * **Ein Konto anlegen — über die Oberfläche statt über den Endpunkt** (9c).
@@ -156,30 +156,27 @@ export function KontoAnlegen({
         <Feld>
           <Label htmlFor={rolleId}>{T.rolle}</Label>
           {/*
-           * Native Auswahlfelder, dieselbe Wahl und dieselbe Begründung wie im
-           * Zeilenformular: Der Bestand kennt keinen `Select`-Baustein, und ein
-           * natives Feld bedient sich am Finger und mit der Tastatur besser als
-           * jeder Nachbau.
+           * Die Rolle in der Liste der Anwendung (`rollen-auswahl.tsx`) und nicht
+           * mehr nativ — Punkt 180. Beide Rollen sind wählbar, auch `ADMIN`, und
+           * „Bitte wählen" bleibt eine wählbare Zeile wie vorher die leere Option.
            */}
-          <select
+          <RollenAuswahl
             id={rolleId}
-            value={entwurf.role}
-            disabled={laeuft}
-            onChange={(ereignis) => setze("role", ereignis.target.value)}
-            className={AUSWAHL}
-          >
-            <option value="">{T.waehlen}</option>
-            {ROLLEN.map((rolle) => (
-              <option key={rolle} value={rolle}>
-                {texte.rolle[rolle]}
-              </option>
-            ))}
-          </select>
+            beschriftung={T.rolle}
+            wert={entwurf.role}
+            gesperrt={laeuft}
+            leer={T.waehlen}
+            aufWahl={(rolle) => setze("role", rolle)}
+          />
         </Feld>
 
         <Feld>
           <Label htmlFor={mandantId}>{T.mandant}</Label>
           {/*
+           * **Weiterhin ein natives Auswahlfeld.** Umgebaut ist am 15.09.2026 nur
+           * die Rolle; die aufgeklappte Liste dieses Felds hat denselben Befund und
+           * steht mit Fundstelle bei Punkt 180.
+           *
            * **Einfachauswahl**, weil der Endpunkt einen Mandanten nimmt (E23) —
            * und aus derselben Quelle wie die Mengenpflege an der Zeile, ohne
            * Nachfilterung: `SYSTEM` und `WOC` stehen mit drin. Eine zweite

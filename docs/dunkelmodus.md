@@ -1457,6 +1457,30 @@ Hier vermerkt, damit der nächste Lauf nicht darauf hereinfällt:
 > **Nicht angesehen ist:** die **Rohdatenansicht** und die **Benutzerverwaltung** (Punkt 125), das
 > Berührungsgerät, ein Vorleseprogramm, jede andere Fenstergröße und jeder andere Mandant.
 
+> ### ⚠️ Nachtrag vom 15.09.2026 — die aufgeklappte Liste eines nativen Auswahlfelds hat diese Sichtprobe nicht erfasst
+>
+> §19.1 führt unter „Kein Befund" das **Auswahlfeld**. Die **aufgeklappte** Liste eines nativen
+> `<select>` zeichnet der Browser selbst: Ihre Farbe steht in keiner Zeile von `globals.css`, und
+> `getComputedStyle` — das Werkzeug dieses Belegvermerks — erreicht sie nicht. Die Benutzerverwaltung
+> war zudem ausdrücklich nicht angesehen (Punkt 125). **Am 15.09.2026 hat der Auftraggeber gemeldet**,
+> dass die aufgeklappte Rollenauswahl dort im Dunkelmodus dem Farbblock nicht folgt: in Chrome hell bei
+> dunklem Feld, in Firefox dunkel, aber in einem anderen Grau als die Anwendung.
+>
+> **§12.4 und §17.1 bleiben wahr.** `color-scheme` ist am selben Tag an der Seite ausgelesen worden, am
+> Wurzelelement, am Formular und am Feld selbst: `light` / `light` / `light` bei `hell`, `dark` /
+> `dark` / `dark` bei `dunkel` und bei `system` (Betriebssystem dunkel). Warum Chrome die Liste trotzdem
+> hell zeichnet, ist damit **offen und nicht geraten**. Umgebaut ist die Rollenauswahl; die übrigen
+> nativen Felder stehen mit Fundstelle bei offenem Punkt **180**
+> ([`benutzerverwaltung-frontend.md`](benutzerverwaltung-frontend.md) §18).
+>
+> **Fortgeschrieben am 16.09.2026:** Der Auftraggeber hat dasselbe für das zweite Feld des
+> Zeilenformulars gemeldet — „Prozessbaum beginnt mit". **Auch es trägt jetzt die Liste der
+> Anwendung**, und die Bauform steht als gemeinsamer Baustein in `components/auswahl-feld.tsx`
+> ([`benutzerverwaltung-frontend.md`](benutzerverwaltung-frontend.md) §18.1). Das ist der Beleg für den
+> Satz oben: **Ein Befund, den diese Sichtprobe nicht erfassen kann, kommt so oft wieder, wie es
+> native Felder gibt.** Offen bleiben die zwei übrigen `<select>` und die sechs `datetime-local` —
+> deren Kalender- und Uhrflächen zeichnet der Browser genauso.
+
 ---
 
 ## 20. Die Entscheidungen dieser Runde

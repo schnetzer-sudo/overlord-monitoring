@@ -15,9 +15,10 @@ import { useTexte } from "@/i18n/provider";
 import { nachAbmeldung } from "@/lib/zwischenspeicher";
 import { ROUTEN } from "@/lib/routen";
 
-import { ROLLEN, istRolle, type Nutzerzeile, type Rolle } from "../api";
+import type { Nutzerzeile } from "../api";
 import type { useVorgang } from "../hooks";
-import { BAUMGLIEDERUNGEN, istBaumgliederung, type Baumgliederung } from "@/lib/baumgliederung";
+import { AuswahlFeld, type Auswahleintrag } from "@/components/auswahl-feld";
+import { BAUMGLIEDERUNGEN, type Baumgliederung } from "@/lib/baumgliederung";
 
 import {
   PASSWORT_MINDESTLAENGE,
@@ -28,6 +29,7 @@ import {
   type Vorgang,
 } from "../selbstschutz";
 import { MandantenAuswahl } from "./mandanten-auswahl";
+import { RollenAuswahl } from "./rollen-auswahl";
 import { Vorwarnung } from "./vorwarnung";
 
 /**
@@ -209,34 +211,26 @@ export function ZeilenFormular({
         <Abschnitt>
           <Label htmlFor={rolleId}>{texte.benutzer.formular.rolle}</Label>
           {/*
-           * Ein natives Auswahlfeld — dieselbe Wahl und dieselbe Begründung wie
-           * bei der Projektauswahl der Massenzuordnung: Der Bestand kennt keinen
-           * `Select`-Baustein, die Menge hat zwei Einträge, und ein natives Feld
-           * bedient sich am Finger und mit der Tastatur besser als jeder Nachbau.
+           * **Eine Liste, die der Anwendung gehört** (`rollen-auswahl.tsx`). Bis zum
+           * 15.09.2026 stand hier ein natives Auswahlfeld, und dessen aufgeklappte
+           * Liste zeichnete der Browser — im Dunkelmodus in keiner Farbe der
+           * Anwendung (Punkt 180). Die beiden Regeln von vorher gelten weiter: Ein
+           * unbekannter Rollenwert steht im Feld, wie er ist, statt still auf einen
+           * der beiden bekannten zu fallen; und „Mandant" steht da, ist aber nicht
+           * wählbar, solange das Konto keinen trägt (E11).
            */}
-          <select
+          <RollenAuswahl
             id={rolleId}
-            value={istRolle(zeile.role) ? zeile.role : ""}
-            disabled={gesperrt}
-            onChange={(ereignis) => starte({ art: "rolle", rolle: ereignis.target.value as Rolle })}
-            className="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-feld w-full min-w-0 rounded-lg border bg-transparent px-2.5 py-1 outline-none focus-visible:ring-3"
-          >
-            {/*
-             * Ein unbekannter Rollenwert bekommt einen eigenen Eintrag, statt
-             * still auf einen der beiden bekannten zu fallen. Sonst zeigte das
-             * Feld eine Rolle an, die das Konto nicht hat.
-             */}
-            {istRolle(zeile.role) ? null : <option value="">{zeile.role}</option>}
-            {ROLLEN.map((rolle) => (
-              <option
-                key={rolle}
-                value={rolle}
-                disabled={rolle === "MANDANT" && !herabstufungMoeglich}
-              >
-                {texte.rolle[rolle]}
-              </option>
-            ))}
-          </select>
+            beschriftung={texte.benutzer.formular.rolle}
+            wert={zeile.role}
+            gesperrt={gesperrt}
+            nichtWaehlbar={herabstufungMoeglich ? [] : ["MANDANT"]}
+            aufWahl={(rolle) => {
+              if (rolle !== "") {
+                starte({ art: "rolle", rolle });
+              }
+            }}
+          />
           {herabstufungMoeglich ? null : (
             <p className="text-muted-foreground text-beiwerk max-w-prose">
               {texte.benutzer.formular.rolleOhneMandant}
@@ -248,37 +242,34 @@ export function ZeilenFormular({
         <Abschnitt>
           <Label htmlFor={baumgliederungId}>{texte.benutzer.formular.baumgliederung}</Label>
           {/*
-           * **Dieselbe Bauform wie die Rolle** — ein natives Auswahlfeld, das
-           * beim Umlegen losläuft. Zwei Werte, und beide Beschriftungen nennen
-           * die Ebenen, damit „Partner“ hier nicht wie ein Filter aussieht.
+           * **Dieselbe Bauform wie die Rolle** — die Liste der Anwendung
+           * (`components/auswahl-feld.tsx`), die beim Umlegen losläuft. Bis zum
+           * 16.09.2026 stand hier ein natives Auswahlfeld; seine aufgeklappte
+           * Liste zeichnete der Browser und folgte im Dunkelmodus keiner Farbe
+           * der Anwendung — gemeldet vom Auftraggeber, derselbe Befund wie bei
+           * der Rolle (Punkt 180).
+           *
+           * Zwei Werte, und beide Beschriftungen nennen die Ebenen, damit
+           * „Partner“ hier nicht wie ein Filter aussieht.
            *
            * **Ohne Vorwarnung und ohne Abmeldung**, auch am eigenen Konto: Die
            * Vorgabe verwirft keine Sitzung (E26). Der Hinweis darunter sagt,
            * dass sie keine Berechtigung ist — das ist die Frage, die sonst
            * zuerst käme.
            */}
-          <select
+          <AuswahlFeld
             id={baumgliederungId}
-            value={istBaumgliederung(zeile.treeLayout) ? zeile.treeLayout : ""}
-            disabled={gesperrt}
-            onChange={(ereignis) =>
-              starte({
-                art: "baumgliederung",
-                gliederung: ereignis.target.value as Baumgliederung,
-              })
+            beschriftung={texte.benutzer.formular.baumgliederung}
+            wert={zeile.treeLayout}
+            gesperrt={gesperrt}
+            eintraege={
+              BAUMGLIEDERUNGEN.map((gliederung) => ({
+                wert: gliederung,
+                text: texte.benutzer.formular.baumgliederungWerte[gliederung],
+              })) satisfies Auswahleintrag<Baumgliederung>[]
             }
-            className="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-feld w-full min-w-0 rounded-lg border bg-transparent px-2.5 py-1 outline-none focus-visible:ring-3"
-          >
-            {/* Ein unbekannter Wert bekommt einen eigenen Eintrag, wie bei der Rolle. */}
-            {istBaumgliederung(zeile.treeLayout) ? null : (
-              <option value="">{zeile.treeLayout}</option>
-            )}
-            {BAUMGLIEDERUNGEN.map((gliederung) => (
-              <option key={gliederung} value={gliederung}>
-                {texte.benutzer.formular.baumgliederungWerte[gliederung]}
-              </option>
-            ))}
-          </select>
+            aufWahl={(gliederung) => starte({ art: "baumgliederung", gliederung })}
+          />
           <p className="text-muted-foreground text-beiwerk max-w-prose">
             {texte.benutzer.formular.baumgliederungHinweis}
           </p>

@@ -204,10 +204,29 @@ async function waehle(behaelter: HTMLElement, kennzeichnung: string, wert: strin
   const beschriftung = [...behaelter.querySelectorAll("label")].find(
     (label) => (label.textContent ?? "").trim() === kennzeichnung,
   );
-  const auswahl = behaelter.querySelector<HTMLSelectElement>(
+  const feld = behaelter.querySelector<HTMLElement>(
     `#${CSS.escape(beschriftung?.getAttribute("for") ?? "")}`,
   );
-  expect(auswahl, `Auswahl „${kennzeichnung}" fehlt`).not.toBeNull();
+  expect(feld, `Auswahl „${kennzeichnung}" fehlt`).not.toBeNull();
+
+  // Die Rolle ist seit Punkt 180 eine Liste der Anwendung: aufklappen, Zeile
+  // anklicken. Die Zeilen hängen im Portal und damit am `document`, nicht am
+  // Behälter.
+  if (feld instanceof HTMLButtonElement) {
+    await act(async () => {
+      feld.click();
+    });
+    const zeile = document.querySelector<HTMLElement>(
+      `[role="option"][data-wert="${CSS.escape(wert)}"]`,
+    );
+    expect(zeile, `Zeile „${wert}" in „${kennzeichnung}" fehlt`).not.toBeNull();
+    await act(async () => {
+      zeile?.click();
+    });
+    return;
+  }
+
+  const auswahl = feld as HTMLSelectElement | null;
   await act(async () => {
     const setzer = Object.getOwnPropertyDescriptor(
       window.HTMLSelectElement.prototype,
