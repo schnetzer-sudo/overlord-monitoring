@@ -10,8 +10,11 @@ import type { Plattform } from "../api";
 import {
   ABLAGENZEICHEN,
   DIENSTZEICHEN,
+  ZEILEN_JE_SPALTE,
+  dienstLeersatz,
   lampenauskunft,
   sammelzeilenauskunft,
+  sichtbareDienste,
   traegtZielfarbe,
 } from "../plattform";
 import { Kachel, Kopf } from "./kachel";
@@ -58,15 +61,25 @@ import { Kachel, Kopf } from "./kachel";
  * Beschriftung **oder** ein Zeichen"* — und die vier Zeichen unterscheiden sich
  * in der **Form**: offener Strich, Dreieck, Viereck, Kreis (`../plattform.ts`).
  *
- * ## Zwei Spalten, damit die Kachel nicht höher wird als ihre Nachbarn
+ * ## Höchstens drei Zeilen je Spalte, damit die Kachel nicht höher wird als ihre Nachbarn
  *
- * Sieben Dienste und eine Ablagenzeile untereinander wären acht Zeilen und
- * damit höher als jede andere Kachel der Reihe. **Der Umbruch entscheidet die
- * Breite und nicht ein Haltepunkt des Fensters:** `auto-fit` legt zwei Spalten
- * an, sobald beide vollständige Kennungen tragen können, und sonst eine. Eine
- * feste Zweispaltigkeit schnitte bei schmaler Kachel `HTTPSERVICEPROD00` auf
- * `HTTPSERVICEPR…` zusammen — und die Ziffern am Ende sind genau das, was die
- * sieben Kennungen unterscheidet.
+ * > ### ⚠️ Nachbesserung vom 16.09.2026 (E‑160)
+ * >
+ * > **Heruntergefahrene Dienste stehen nicht mehr in der Kachel**
+ * > (`sichtbareDienste`), und am breiten Fenster hat jede Spalte höchstens
+ * > `ZEILEN_JE_SPALTE` Zeilen — **was darüber hinausgeht, beginnt eine neue
+ * > Spalte.** Die Kachel wächst damit in die Breite und nicht in die Höhe; die
+ * > Reihe gibt ihr dafür eine Spalte nach Inhalt (`kacheln.tsx`). Das erledigt
+ * > offenen Punkt 171: Bis dahin stand die Kachel bei fünf Kacheln einspaltig
+ * > auf 198 px, und jede andere Kachel der Reihe trug den Leerraum.
+ *
+ * **Unterhalb von `xl` bleibt der Umbruch nach Breite** (`auto-fit`): zwei
+ * Spalten, sobald beide vollständige Kennungen tragen können, sonst eine. Dort
+ * steht die Kachel bei fünf Kacheln allein in ihrer Zeile, und eine feste
+ * Zeilenzahl erzwänge Spalten, die in eine halbe Fensterbreite nicht passen.
+ * **Gekürzt wird in keiner Lage:** Eine schmale Kachel schnitte
+ * `HTTPSERVICEPROD00` auf `HTTPSERVICEPR…` zusammen — und die Ziffern am Ende
+ * sind genau das, was die Kennungen unterscheidet.
  *
  * **Kleiner gesetzt wird nichts.** Die Schrift ist `text-beiwerk` wie in den
  * übrigen Kacheln; eine eigene, kleinere Größe wäre eine Ausnahme im
@@ -80,6 +93,7 @@ import { Kachel, Kopf } from "./kachel";
  */
 export function PlattformKachel({ plattform }: { plattform: Plattform }) {
   const texte = useTexte();
+  const leersatz = dienstLeersatz(plattform.dienste, texte);
 
   return (
     <Kachel>
@@ -91,10 +105,14 @@ export function PlattformKachel({ plattform }: { plattform: Plattform }) {
        * wie bei E‑81: Abwesenheit ist der schwächste Kanal, den eine Auskunft
        * haben kann. **Die Ablagenzeilen stehen darunter trotzdem**; die Kachel
        * zieht sich nicht auf die halbe Auskunft zusammen.
+       *
+       * **Die Breite ist am breiten Fenster gedeckelt**, weil die Reihe dort
+       * der Kachel eine Spalte nach Inhalt gibt: Ohne Deckel zöge der Satz sie
+       * auf seine volle Länge in einer Zeile auseinander.
        */}
-      {plattform.dienste.length === 0 ? (
-        <p className="text-muted-foreground text-beiwerk">{texte.dashboard.plattform.dienstLeer}</p>
-      ) : null}
+      {leersatz === null ? null : (
+        <p className="text-muted-foreground text-beiwerk xl:max-w-48">{leersatz}</p>
+      )}
 
       <Zeilen plattform={plattform} />
     </Kachel>
@@ -115,6 +133,13 @@ export function PlattformKachel({ plattform }: { plattform: Plattform }) {
  * `ServiceID` sortiert und ausdrücklich nicht nach Zustand. Sortierte die
  * Ansicht nach Zustand, spränge eine Zeile an eine andere Stelle, sobald sich
  * ihr Zustand ändert — und genau dann sucht jemand sie an ihrem alten Platz.
+ *
+ * **Am breiten Fenster läuft die Liste spaltenweise** (E‑160): höchstens
+ * `ZEILEN_JE_SPALTE` Zeilen, dann die nächste Spalte, jede so breit wie ihre
+ * längste Kennung. Gelesen wird damit von oben nach unten und dann nach rechts
+ * — die Reihenfolge der Antwort bleibt auch über den Spaltenwechsel erhalten.
+ * Die Zahl steht als Eigenschaft am Element und nicht als zweite Ziffer in
+ * einer Klasse, damit es genau eine Stelle gibt, die sie ändert.
  */
 function Zeilen({ plattform }: { plattform: Plattform }) {
   const texte = useTexte();
@@ -124,8 +149,11 @@ function Zeilen({ plattform }: { plattform: Plattform }) {
   const sammelzeile = sammelzeilenauskunft(ablagen, texte);
 
   return (
-    <ul className="text-beiwerk grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-x-3">
-      {plattform.dienste.map((dienst) => (
+    <ul
+      style={{ "--zeilen-je-spalte": ZEILEN_JE_SPALTE } as React.CSSProperties}
+      className="text-beiwerk grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-x-3 xl:auto-cols-max xl:grid-flow-col xl:grid-cols-none xl:grid-rows-[repeat(var(--zeilen-je-spalte),auto)]"
+    >
+      {sichtbareDienste(plattform.dienste).map((dienst) => (
         <Zeile
           key={`dienst:${dienst.serviceId}`}
           zeichen={DIENSTZEICHEN[dienst.zustand]}

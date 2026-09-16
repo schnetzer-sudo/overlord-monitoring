@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { texteFuer } from "@/i18n";
 import type { Ablagen, Dienstlampe, Plattform } from "@/features/dashboard/api";
 import { PlattformKachel } from "@/features/dashboard/components/plattform-block";
+import { ZEILEN_JE_SPALTE } from "@/features/dashboard/plattform";
 
 import { rendere } from "./hilfe/rendern";
 
@@ -25,6 +26,8 @@ import { rendere } from "./hilfe/rendern";
  * | **die Farbe der Zielzeilen** | `traegtZielfarbe` ist eine reine Funktion; dass die Zeile die Rolle danach wirklich **trägt oder eben nicht**, ist eine Klasse am Element. `mitFarbe ? … : …` bestünde jede Prüfung an der Funktion |
  * | **leere `dienste`** | Wo nichts stünde, steht ein **Satz** (E‑135) — und die Ablagenzeile bleibt daneben stehen. Die naheliegende Schreibweise `dienste.map(…)` bestünde jede Prüfung an einer reinen Funktion |
  * | **was aus dem Bild gefallen ist** | Zeitpunkt, Alter, Grundsatz und Überschriftensatz stehen **nicht mehr** im Baum. Das ist eine Aussage über Abwesenheit und nirgends sonst prüfbar |
+ * | **heruntergefahrene Dienste** *(16.09.2026)* | `sichtbareDienste` ist eine reine Funktion; dass die Kachel sie **anwendet**, zeigt nur der Baum (E‑160) |
+ * | **der Spaltenfluss** *(16.09.2026)* | Die Zeilenzahl kommt als Eigenschaft am Element an. Die Höhe selbst rechnet jsdom nicht; sie ist im Browser gemessen |
  *
  * **Antwortrümpfe gestellt, kein Netz, keine Datenbank.** Die Kachel bekommt
  * ihre Daten als Eigenschaft und lädt nichts nach.
@@ -250,7 +253,97 @@ describe("Leere `dienste` zeigen einen Satz und keine leere Stelle (E‑135)", (
     const { behaelter, abbauen } = await rendere(<PlattformKachel plattform={plattform()} />);
     try {
       expect(behaelter.textContent).not.toContain(P.dienstLeer);
+      expect(behaelter.textContent).not.toContain(P.alleHeruntergefahren);
       expect(zeilen(behaelter)).toHaveLength(2);
+    } finally {
+      await abbauen();
+    }
+  });
+});
+
+describe("Heruntergefahrene Dienste stehen nicht in der Kachel (E‑160)", () => {
+  /**
+   * **Die Regel ist `sichtbareDienste` und in `tests/dashboard.test.ts`
+   * geprüft**; belegt wird hier, dass die Kachel sie anwendet —
+   * `plattform.dienste.map(…)` ohne Filter bestünde jede Prüfung an der
+   * Funktion.
+   */
+  it("lässt die heruntergefahrene Zeile weg und behält die Reihenfolge", async () => {
+    const { behaelter, abbauen } = await rendere(
+      <PlattformKachel
+        plattform={plattform({
+          dienste: [
+            lampe({
+              serviceId: "COMSERVICEPROD00",
+              zustand: "HERUNTERGEFAHREN",
+              rohwert: "SHUTDOWN",
+            }),
+            lampe({ serviceId: "COMSERVICEPROD01" }),
+            lampe({
+              serviceId: "MPSERVICEPROD02",
+              zustand: "HERUNTERGEFAHREN",
+              rohwert: "SHUTDOWN",
+            }),
+            lampe({ serviceId: "MPSERVICEPROD03" }),
+          ],
+        })}
+      />,
+    );
+    try {
+      expect(behaelter.textContent).not.toContain("COMSERVICEPROD00");
+      expect(behaelter.textContent).not.toContain("MPSERVICEPROD02");
+      expect(behaelter.textContent).not.toContain(P.dienst.HERUNTERGEFAHREN);
+
+      const alle = zeilen(behaelter);
+      expect(alle).toHaveLength(3);
+      expect(alle.slice(0, 2).map((zeile) => zeile.textContent)).toEqual([
+        `${P.dienst.ZEITUEBERSCHRITTEN}COMSERVICEPROD01`,
+        `${P.dienst.ZEITUEBERSCHRITTEN}MPSERVICEPROD03`,
+      ]);
+      expect(alle[2].textContent).toContain(P.ablagen);
+    } finally {
+      await abbauen();
+    }
+  });
+
+  /**
+   * **Sind alle heruntergefahren, steht ein eigener Satz da** — nicht der aus
+   * E‑135, denn der sagte „trägt keine Zeitgrenze", und das wäre falsch. Die
+   * Ablagen stehen darunter trotzdem.
+   */
+  it("sagt es, wenn alle Dienste heruntergefahren sind", async () => {
+    const { behaelter, abbauen } = await rendere(
+      <PlattformKachel
+        plattform={plattform({
+          dienste: [lampe({ zustand: "HERUNTERGEFAHREN", rohwert: "SHUTDOWN" })],
+        })}
+      />,
+    );
+    try {
+      expect(behaelter.textContent).toContain(P.alleHeruntergefahren);
+      expect(behaelter.textContent).not.toContain(P.dienstLeer);
+      expect(zeilen(behaelter)).toHaveLength(1);
+      expect(zeilen(behaelter)[0].textContent).toContain(P.ablagen);
+    } finally {
+      await abbauen();
+    }
+  });
+});
+
+describe("Am breiten Fenster läuft die Liste spaltenweise (E‑160)", () => {
+  /**
+   * **Was jsdom belegen kann, ist die Verdrahtung und nicht die Höhe** — es
+   * rechnet kein Layout. Geprüft wird, dass die Zeilenzahl aus
+   * `ZEILEN_JE_SPALTE` am Element ankommt und die Klasse sie liest; die Höhe
+   * ist im Browser gemessen (`docs/dashboard-frontend.md` §5.8).
+   */
+  it("gibt der Liste die Zeilenzahl und den Spaltenfluss", async () => {
+    const { behaelter, abbauen } = await rendere(<PlattformKachel plattform={plattform()} />);
+    try {
+      const liste = behaelter.querySelector("ul")!;
+      expect(liste.style.getPropertyValue("--zeilen-je-spalte")).toBe(String(ZEILEN_JE_SPALTE));
+      expect(liste.className).toContain("xl:grid-flow-col");
+      expect(liste.className).toContain("xl:grid-rows-[repeat(var(--zeilen-je-spalte),auto)]");
     } finally {
       await abbauen();
     }

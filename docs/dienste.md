@@ -7,6 +7,10 @@ Stand: 10.09.2026 · Schritt 10d, **Teil A und Teil B** · ergänzt [`dashboard.
 > §12 derselben Datei. Sie bringt **E‑126 bis E‑137** und zwei offene Punkte (**168**, **169**).
 > **Keine Backend-Änderung**: kein Feld, kein Statement, keine Migration — was hier steht, gilt
 > unverändert.
+>
+> **Seit dem 16.09.2026 zeigt die Kachel heruntergefahrene Dienste nicht mehr an** (**E‑160**,
+> [`dashboard-frontend.md`](dashboard-frontend.md) §5.8). Gefiltert wird in der Ansicht; die Antwort
+> liefert `SHUTDOWN`-Lampen weiterhin, und alles in dieser Datei gilt unverändert.
 
 **Zweck in zwei Sätzen.** Das Dashboard zeigt neben den mandantenbezogenen Kacheln einen
 **plattformweiten Block**: je eine Lampe für jeden Dienst des Altsystems, der eine Zeitgrenze trägt,

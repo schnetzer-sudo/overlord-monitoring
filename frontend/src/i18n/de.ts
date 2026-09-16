@@ -401,6 +401,9 @@ export const de = {
       // Entscheidung E‑135: ein sichtbarer Satz statt einer leeren Stelle. Eine
       // leere Liste sähe aus wie ein Fehler im Bau; hier steht, was sie heißt.
       dienstLeer: "Kein Dienst des Altsystems trägt eine Zeitgrenze.",
+      // E‑160: Heruntergefahrene Dienste stehen nicht in der Kachel. Sind es
+      // alle, wäre „trägt keine Zeitgrenze" falsch — es gibt sie, sie sind aus.
+      alleHeruntergefahren: "Alle Dienste mit Zeitgrenze sind heruntergefahren.",
       rohwert: "Statuswert: {wert}",
       // Der Klassifizierer ordnet auch eine leere Spalte `UNGEKLAERT` zu. Dann
       // gibt es keinen Rohwert zu zeigen — und „nicht zugeordnet heißt nicht

@@ -219,6 +219,7 @@ export const en: Texte = {
         UNGEKLAERT: "Unclear",
       },
       dienstLeer: "No service of the legacy system carries a time limit.",
+      alleHeruntergefahren: "All services with a time limit are shut down.",
       rohwert: "Status value: {wert}",
       rohwertFehlt: "no status value recorded",
 

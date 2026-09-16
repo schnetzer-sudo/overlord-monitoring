@@ -27,9 +27,11 @@ import {
 import {
   ABLAGENZEICHEN,
   DIENSTZEICHEN,
+  dienstLeersatz,
   grundsatz,
   lampenauskunft,
   sammelzeilenauskunft,
+  sichtbareDienste,
   traegtZielfarbe,
   zeigtRohwert,
 } from "@/features/dashboard/plattform";
@@ -754,5 +756,49 @@ describe("Die Sammelzeile der Ablagen (10.09.2026)", () => {
       ziele: [{ serviceId: "FILESTOREPROD10", zustand: "ERREICHBAR" }],
     };
     expect(sammelzeilenauskunft(mitZiel, TEXTE)).toBeNull();
+  });
+});
+
+describe("Heruntergefahrene Dienste stehen nicht in der Kachel (E‑160)", () => {
+  const AUS: Dienstlampe = { ...LAMPE, zustand: "HERUNTERGEFAHREN", rohwert: "SHUTDOWN" };
+
+  /**
+   * **Genau `HERUNTERGEFAHREN` fällt heraus, und nur das.** Eine ungeklärte
+   * Lampe bleibt stehen — sie ist die eine, an der der Rohwert die ganze
+   * Auskunft ist (E‑130), und sie auszublenden verschwiege einen unbekannten
+   * Wert aus dem Altsystem.
+   */
+  it("nimmt genau die heruntergefahrenen heraus", () => {
+    const dienste: Dienstlampe[] = [
+      { ...AUS, serviceId: "COMSERVICEPROD00" },
+      { ...LAMPE, serviceId: "COMSERVICEPROD01" },
+      { ...LAMPE, serviceId: "HTTPSERVICEPROD00", zustand: "MELDET_SICH", rohwert: "HEARTBEAT" },
+      { ...AUS, serviceId: "MPSERVICEPROD02" },
+      { ...LAMPE, serviceId: "MPSERVICEPROD03", zustand: "UNGEKLAERT", rohwert: "PAUSED" },
+    ];
+
+    // **In der Reihenfolge der Antwort** (E‑130): herausgenommen, nicht umsortiert.
+    expect(sichtbareDienste(dienste).map((dienst) => dienst.serviceId)).toEqual([
+      "COMSERVICEPROD01",
+      "HTTPSERVICEPROD00",
+      "MPSERVICEPROD03",
+    ]);
+  });
+
+  /**
+   * **Zwei Leeren, zwei Sätze.** Ohne Dienste trägt keiner eine Zeitgrenze
+   * (E‑135); sind alle heruntergefahren, gibt es sie — und derselbe Satz wäre
+   * eine falsche Auskunft.
+   */
+  it("unterscheidet keinen Dienst von lauter heruntergefahrenen", () => {
+    expect(dienstLeersatz([], TEXTE)).toBe(TEXTE.dashboard.plattform.dienstLeer);
+    expect(dienstLeersatz([AUS, { ...AUS, serviceId: "MPSERVICEPROD02" }], TEXTE)).toBe(
+      TEXTE.dashboard.plattform.alleHeruntergefahren,
+    );
+  });
+
+  /** Die Gegenprobe: Steht eine Zeile, steht kein Satz. */
+  it("schweigt, sobald ein Dienst sichtbar ist", () => {
+    expect(dienstLeersatz([AUS, LAMPE], TEXTE)).toBeNull();
   });
 });

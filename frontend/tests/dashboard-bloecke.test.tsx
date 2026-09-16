@@ -361,6 +361,14 @@ describe("Die drei Zustände der Kachel Wartend", () => {
  * fehlende Zahl.
  */
 describe("Die Reihenfolge der Kacheln", () => {
+  /**
+   * **Die letzte Spalte ist so breit wie die Plattform** (E‑160), die übrigen
+   * teilen sich den Rest. Die Plattform wächst ab drei Zeilen in die Breite,
+   * und ein gleicher Anteil gäbe ihr die dafür nötige Breite nicht.
+   */
+  const FUENF_SPALTEN = "xl:grid-cols-[repeat(4,minmax(0,1fr))_auto]";
+  const VIER_SPALTEN = "xl:grid-cols-[repeat(3,minmax(0,1fr))_auto]";
+
   /** Die Kachelköpfe in der Reihenfolge, in der sie im Baum stehen. */
   function reihenfolge(behaelter: HTMLElement): string[] {
     const text = behaelter.textContent ?? "";
@@ -393,7 +401,7 @@ describe("Die Reihenfolge der Kacheln", () => {
         D_KACHELN.nachrichten,
         TEXTE.dashboard.plattform.titel,
       ]);
-      expect(gerendert.behaelter.querySelector("[class*='xl:grid-cols-5']")).not.toBeNull();
+      expect(gerendert.behaelter.querySelector(`[class*='${FUENF_SPALTEN}']`)).not.toBeNull();
     } finally {
       await gerendert.abbauen();
     }
@@ -413,8 +421,8 @@ describe("Die Reihenfolge der Kacheln", () => {
         D_KACHELN.nachrichten,
         TEXTE.dashboard.plattform.titel,
       ]);
-      expect(gerendert.behaelter.querySelector("[class*='xl:grid-cols-4']")).not.toBeNull();
-      expect(gerendert.behaelter.querySelector("[class*='xl:grid-cols-5']")).toBeNull();
+      expect(gerendert.behaelter.querySelector(`[class*='${VIER_SPALTEN}']`)).not.toBeNull();
+      expect(gerendert.behaelter.querySelector(`[class*='${FUENF_SPALTEN}']`)).toBeNull();
     } finally {
       await gerendert.abbauen();
     }

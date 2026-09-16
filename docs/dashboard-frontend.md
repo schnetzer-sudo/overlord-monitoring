@@ -288,6 +288,7 @@ allein über Farbe"* —, und §7a hat es für diese Rolle noch einmal ausdrück
 | **E‑136** | ⚠️ **Am 10.09.2026 zur Hälfte aufgehoben durch E‑138 — der *Überschriftensatz*.** Die Kachel trägt einen Kopf aus Zeichen und Wort „Plattform" wie *Nachrichten* und **keinen Satz darunter**: In einer Kachel dieser Größe nähme er die Fläche, die den Kennungen gehört. ⚠️ **Damit steht nirgends mehr sichtbar, dass die Kachel für jeden Mandanten gleich ist** — benannt als offener Punkt 170 (§9) und nicht nebenbei entschieden. **Was bleibt:** Die Kachel ist **nicht klickbar**, es gibt keine Dienstansicht. *Der alte Wortlaut:* „Überschrift **Plattform** mit einem sichtbaren Satz, dass der Block für jeden Mandanten gleich ist." | 10.09.2026 |
 | **E‑137** | **Kein Nachladen im Takt.** Kein `refetchInterval`, und `refetchOnWindowFocus` bleibt aus. Ein offener Tab zeigt den Stand seines Aufrufs — **gemessen** (§7.3) und als bekannte Grenze benannt (§6.5, offener Punkt 168) | 10.09.2026 |
 | **E‑138** | **Die Plattform ist die *fünfte Kachel* der Reihe, und je Zeile stehen nur Zeichen und `serviceId`.** Der eigene Block war so hoch wie der Verlauf und schob alles Wichtige nach unten; E‑126 erreichte „ohne Scrollen" auf Kosten des Verlaufs. **Die Bauform ist die von E‑91** — das Zeichen trägt die Vordergrundfarbe der Rolle, das Wort steht in `title` und `sr-only` —, und die **vier Zeichen unterscheiden sich in der Form**: offener Strich, Dreieck, Viereck, Kreis. **Hebt auf:** den Ort (E‑126), das sichtbare Wort (E‑130, E‑132), die Zeiten (E‑131), den sichtbaren Grund (E‑134), den Überschriftensatz (E‑136). **Bestätigt:** E‑79 und E‑127 — keine Fläche, in keinem Zustand (§5.4, §5.8) | 10.09.2026 |
+| **E‑160** | **Heruntergefahrene Dienste stehen nicht in der Kachel *Plattform*, und am breiten Fenster hat jede ihrer Spalten höchstens drei Zeilen** — was darüber hinausgeht, beginnt eine neue Spalte. Die Kachel wächst in die Breite; die Reihe gibt ihr dafür eine Spalte nach Inhalt. Sind **alle** Dienste heruntergefahren, steht ein eigener Satz da und nicht der aus E‑135. **Auf Wunsch des Auftraggebers.** **Erledigt:** offenen Punkt 171. **Bestätigt:** die Reihenfolge nach `ServiceID` (E‑130) und das ungekürzte `serviceId` (§5.8) | 16.09.2026 |
 | **E‑91** | **Jede Zeile in „Zuletzt aufgefallen" trägt das Zeichen ihrer Kategorie**, das Wort nur im `title` und für Vorleser. **Nimmt die Hälfte von 10b‑5 zurück, die zu viel war:** Mit der Plakette ist auch die Auskunft *dass es Fehler sind* aus dem Bild verschwunden — *aufgefallen* ist keine Kategorie (§5.6) | 04.09.2026 |
 
 ---
@@ -1031,6 +1032,12 @@ tun kann.
 Spalte stehen, und eine Lücke sähe aus wie eine fehlende Zahl. Zusammengesetzte Klassennamen
 entstehen dafür nicht: Tailwind sucht den Quelltext ab, und beide Formen stehen vollständig da.
 
+> **Seit dem 16.09.2026 ist die letzte Spalte so breit wie ihr Inhalt** (**E‑160**):
+> `xl:grid-cols-[repeat(4,minmax(0,1fr))_auto]` bei fünf Kacheln,
+> `xl:grid-cols-[repeat(3,minmax(0,1fr))_auto]` bei vier. Die Plattform wächst ab drei Zeilen in
+> eine weitere Spalte statt in die Höhe (§5.8), und die Breite dafür gibt ein gleicher Anteil nicht
+> her. Die übrigen Kacheln teilen sich den Rest zu gleichen Teilen.
+
 #### „Nicht ermittelbar" (E‑q)
 
 | | |
@@ -1299,6 +1306,92 @@ ist, und das gilt auch dann, wenn die Auskunft „nichts" lautet.
 *Neu am 10.09.2026. Die Überschrift „Die sieben Blöcke" darüber bleibt stehen — sie beschreibt den
 Schnitt bis Schritt 10c.*
 
+> ## ⚠️ Nachbesserung vom 16.09.2026 — höchstens drei Zeilen je Spalte, ohne heruntergefahrene Dienste (**E‑160**)
+>
+> **Der Kasten darunter (E‑138) gilt weiter**, bis auf die Höhe, die er in seinem letzten Abschnitt
+> offen gelassen hat. Was sich geändert hat, steht hier.
+>
+> ### Der Befund
+>
+> **Auf der Aufnahme des Auftraggebers stand die Kachel *Plattform* einspaltig mit acht Zeilen**,
+> sieben Dienste und die Zeile „Ablagen". Die übrigen vier Kacheln der Reihe wurden auf ihre Höhe
+> gestreckt und trugen darunter den Leerraum. Das ist offener Punkt 171, und seit am selben Tag die
+> Hinweissätze aus *Läuft* und *Wartend* gefallen sind (§5.4), ist der Abstand größer geworden: Die
+> Nachbarn sind nur noch 110 px hoch.
+>
+> ### Was gilt
+>
+> | | bis 16.09.2026 | seit E‑160 |
+> |---|---|---|
+> | **heruntergefahrene Dienste** (`SHUTDOWN`) | eine Zeile mit dem Ausschaltzeichen | **keine Zeile** |
+> | **Zeilen je Spalte, am breiten Fenster** | so viele, wie es Einträge gibt (`auto-fit` nach Breite) | **höchstens drei**, darüber eine neue Spalte |
+> | **Breite der Kachel, am breiten Fenster** | ein Fünftel der Reihe | **so breit wie ihr Inhalt** (§5.4) |
+> | **unterhalb von `xl`** | `auto-fit` nach Breite | **unverändert** |
+> | **alle Dienste heruntergefahren** | — | Satz *„Alle Dienste mit Zeitgrenze sind heruntergefahren."* |
+> | **keine Dienste geliefert** | Satz aus E‑135 | **unverändert** |
+>
+> **Heruntergefahren ist kein Fehler** (`Dienstzustand.HERUNTERGEFAHREN`: *„geordnet
+> heruntergefahren"*). Die Zeile beantwortete keine Frage, mit der jemand auf die Kachel schaut, und
+> nahm den Platz der Zeilen, die es tun. **Gefiltert wird in der Ansicht** (`sichtbareDienste` in
+> `features/dashboard/plattform.ts`), nicht im Backend: Die Antwort beschreibt weiterhin die Anlage
+> ([`dienste.md`](dienste.md) §9), und was davon auf eine kleine Kachel passt, entscheidet die
+> Ansicht. **Die Reihenfolge der Antwort bleibt** (E‑130), auch über den Spaltenwechsel hinweg:
+> gelesen wird von oben nach unten und dann nach rechts. Eine *ungeklärte* Lampe bleibt stehen —
+> an ihr ist der Rohwert die ganze Auskunft.
+>
+> **Zwei Leeren, zwei Sätze** (`dienstLeersatz`): Liefert das Backend keinen Dienst, trägt keiner eine
+> Zeitgrenze (E‑135). Sind alle geliefert, aber heruntergefahren, wäre derselbe Satz eine falsche
+> Auskunft — und eine leere Stelle wäre Abwesenheit. Am breiten Fenster ist der Satz auf `max-w-48`
+> gedeckelt, sonst zöge er die Kachel über die Spalte nach Inhalt auf seine volle Länge auseinander.
+>
+> ### Warum drei Zeilen und nicht fünf
+>
+> Der Auftraggeber schlug *„maximal x (bspw. 5) Zeilen pro Spalte"* vor; gewählt ist die Zahl, bei der
+> die Höhe aufgeht. **Eine Zeile ist 18 px hoch** (`--schrift-beiwerk-hoehe`), Innenabstand, Kopf und
+> Abstand darunter sind zusammen **54 px**:
+>
+> | Zeilen | Plattform | gegen die Nachbarn (110 px) |
+> |---:|---:|---|
+> | 3 | **108 px** | geht auf |
+> | 4 | 126 px | 16 px Leerraum in jeder anderen Kachel |
+> | 5 | 144 px | 34 px Leerraum in jeder anderen Kachel |
+> | 8 (bis 16.09.2026) | 198 px | 88 px — der Befund; dieselbe Zahl wie in der Messung unten |
+>
+> Die Zahl steht an **einer** Stelle, `ZEILEN_JE_SPALTE`, und kommt als Eigenschaft
+> `--zeilen-je-spalte` am `<ul>` an; die Klasse liest sie über `repeat(var(--zeilen-je-spalte), auto)`.
+>
+> ### Gemessen, nicht angesehen
+>
+> **Gerendert ist die gebaute Komponente** — `Kacheln` über `renderToStaticMarkup` in einem
+> Wegwerf-Test, mit den Werten der Aufnahme (Fehler 50 mit Aufschlüsselung, Läuft 0, Wartend 538 seit
+> 6 d 18 h, Nachrichten 9.942, sieben Dienste, davon zwei heruntergefahren, Ablagenprüfung
+> abgeschaltet). Das Markup stand in einem `iframe` der Fensterbreite auf `/anmeldung`, also mit dem
+> echten Stylesheet und dem echten Haltepunkt `xl`, in einem Kasten der Inhaltsbreite neben der
+> Navigation (**Fensterbreite − 249 px**: Navspalte 208, Rand 1, Innenabstand 40). **Nicht gemessen
+> ist die angemeldete Seite** — der Chrome der Erweiterung war nicht angemeldet
+> (`/api/auth/me` → `401`). Höhen natürlich, also mit `align-items: start` an der Reihe, und die
+> Reihe selbst gestreckt:
+>
+> | Fenster | Lage | Reihe | Fehler / Läuft / Wartend / Nachrichten / Plattform | Breiten | Spalten innen |
+> |---:|---|---:|---|---|---:|
+> | 1510 px | Aufnahme | **110** | 110 / 84 / 110 / 84 / **108** | 217 ×4 / 345 | 2 |
+> | 1920 px | Aufnahme | **110** | 110 / 84 / 110 / 84 / **108** | 319 ×4 / 345 | 2 |
+> | 1280 px | Aufnahme | 128 | **128** / 84 / 110 / 84 / 108 | 159 ×4 / 345 | 2 |
+> | 1280 px | Aufnahme, **ohne *Wartend*** | **110** | 110 / 84 / 84 / **108** | 217 ×3 / 345 | 2 |
+> | 1510 px | **alle sieben Dienste an** | 128 | **128** / 84 / 110 / 84 / 108 | 178 ×4 / 503 | 3 |
+> | 1280 px | **alle sieben Dienste an** | 128 | **128** / 84 / **128** / 84 / 108 | 120 ×4 / 503 | 3 |
+>
+> **In keiner Lage ist eine Kennung gekürzt** (`scrollWidth > clientWidth` an keiner Zeile).
+>
+> ⚠️ **Die drei Zeilen mit 128 px sind keine Plattform-Höhe, sondern ein Umbruch in den Nachbarn.**
+> Nimmt die Plattform 345 px oder 503 px, bleibt den übrigen Kacheln weniger — bei 159 px Breite
+> bricht *„Nach Art aufschlüsseln"* in der Fehlerkachel auf zwei Zeilen um, bei 120 px wächst
+> auch *Wartend* um eine Zeile. Die Plattform steht dann mit 20 px Leerraum da. **Das betrifft
+> Fenster knapp über 1280 px und die Lage, in der alle sieben Dienste laufen**; bei der Aufnahme und
+> einem Fenster ab 1510 px geht die Höhe auf. Vier Zeilen je Spalte hätten die zweite Lage auf zwei
+> Spalten gehalten — um den Preis von 16 px Leerraum im Normalfall. **Benannt und nicht nebenbei
+> entschieden:** gewählt ist der Normalfall.
+>
 > ## ⚠️ Korrektur vom 10.09.2026 — aus dem Block ist die **fünfte Kachel** geworden (**E‑138**)
 >
 > **Alles unter diesem Kasten bleibt Zeichen für Zeichen stehen** und beschreibt den Stand von Teil
@@ -1715,7 +1808,7 @@ ausgewiesen. Diese Ansicht fasst zwei davon nicht an und misst die dritte nach:
 | **168** | **Ein offener Tab lädt nicht nach** (§6.5, gemessen in §7.3). Die Seite zeigt den Stand ihres Aufrufs; `refetchOnWindowFocus` steht mit Begründung auf `false`, ein `refetchInterval` gibt es nicht (E‑137). **Die Grenze betrifft alle Blöcke**, fällt beim Block *Plattform* aber besonders auf, weil er als einziger etwas beschreibt, das sich im Minutentakt ändern kann. Wer den Punkt aufmacht, entscheidet zwischen einem Takt für die ganze Seite, einem eigenen Endpunkt nur für diesen Block (dann fiele *„kein Block lädt nach"* aus §2) und einem sichtbaren Hinweis auf das Alter des Bildes |
 | **169** | **Im Leerzustand steht die Kachel *Plattform* nicht** (§5.8). E‑p sagt *„einen Satz und den bedienbaren Umschalter, sonst nichts"*, und diesen Satz zu ändern war nicht Gegenstand von 10d — **gemeldet und nicht still aufgelöst**. Gerade dort wäre sie allerdings am nützlichsten: Der Leerzustand ist der Augenblick, in dem jemand wissen will, ob es an der Anlage liegt, und E‑116 ist genau dafür gebaut. Wer den Punkt aufmacht, ändert E‑p |
 | **170** | **Es steht nirgends mehr sichtbar, dass die Kachel *Plattform* für jeden Mandanten gleich ist** *(10.09.2026, E‑138 hebt die Hälfte von E‑136 auf)*. Der Satz war der einzige Ort, an dem das stand; in einer Kachel dieser Größe nähme er die Fläche, die den Kennungen gehört. **Die Gefahr ist benannt und nicht abgetan:** Wer die roten Zeichen sieht, kann sie als Auskunft über *seinen* Bestand lesen — sie sind eine über die **Anlage**. Ein `title` ist kein Ersatz (bekannte Grenze 3, Berührungsgeräte). Wer den Punkt aufmacht, entscheidet zwischen einem Wort im Kopf, einer Zeile unter der Reihe und einem eigenen Ort für diese Auskunft |
-| **171** | **Bei fünf Kacheln geht die Höhe nicht auf** *(10.09.2026, gemessen in §5.8)*. Zwei Spalten innen tragen die Kachel auf **126 px** und damit unter die höchste der übrigen — sie entstehen aber erst ab rund **2130 px Fensterbreite**, weil `HTTPSERVICEPROD00` bei 13 px Schrift **137 px** breit ist. Darunter steht die Kachel einspaltig auf **198 px** gegen 154 px bei *Wartend*. **Verkleinert wird die Schrift nicht** (Vorgabe des Auftrags), und abgeschnitten werden die Kennungen nicht — sie unterscheiden sich in den letzten Zeichen. Wer den Punkt aufmacht, entscheidet zwischen einer Kachel über zwei Spalten der Reihe, kürzeren Kennungen aus dem Altsystem und dem Hinnehmen der 44 px |
+| ~~**171**~~ | ✔ **Erledigt am 16.09.2026 durch E‑160** (§5.8): höchstens drei Zeilen je Spalte, heruntergefahrene Dienste ausgeblendet, die Kachel wächst in die Breite. Bei 1510 und 1920 px Fensterbreite steht die Reihe auf **110 px**, die Plattform auf **108 px**. *Der ursprüngliche Punkt:* **Bei fünf Kacheln geht die Höhe nicht auf** *(10.09.2026, gemessen in §5.8)*. Zwei Spalten innen tragen die Kachel auf **126 px** und damit unter die höchste der übrigen — sie entstehen aber erst ab rund **2130 px Fensterbreite**, weil `HTTPSERVICEPROD00` bei 13 px Schrift **137 px** breit ist. Darunter steht die Kachel einspaltig auf **198 px** gegen 154 px bei *Wartend*. **Verkleinert wird die Schrift nicht** (Vorgabe des Auftrags), und abgeschnitten werden die Kennungen nicht — sie unterscheiden sich in den letzten Zeichen. Wer den Punkt aufmacht, entscheidet zwischen einer Kachel über zwei Spalten der Reihe, kürzeren Kennungen aus dem Altsystem und dem Hinnehmen der 44 px |
 | **91** | **Der Verlauf ist ein Bild und trägt keine Tabelle daneben.** „Nie allein über Farbe" ist über Legende, Tooltip und die vier unterscheidbaren Rollen eingehalten; für ein Vorleseprogramm ist ein SVG voller `<path>` trotzdem kein Diagramm. Eine Textfassung der Zahlen wäre der nächste Schritt und ist hier nicht gebaut |
 
 ---

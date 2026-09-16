@@ -76,6 +76,60 @@ export const ABLAGENZEICHEN: Record<Ablagenzustand, LucideIcon> = {
 };
 
 /**
+ * **Höchstens so viele Zeilen je Spalte**, am breiten Fenster — darüber beginnt
+ * eine neue Spalte (Entscheidung **E‑160**, 16.09.2026).
+ *
+ * **Drei, weil drei Zeilen so hoch sind wie die Nachbarn.** Eine Zeile ist
+ * 18 px hoch (`--schrift-beiwerk-hoehe`), Innenabstand, Kopf und Abstand
+ * darunter sind zusammen 54 px: Drei Zeilen ergeben **108 px**, *Fehler* und
+ * *Wartend* stehen bei rund 110 px (`docs/dashboard-frontend.md` §5.8). Fünf
+ * Zeilen ergäben 144 px — und damit wieder Leerraum in jeder anderen Kachel
+ * der Reihe.
+ *
+ * **Die Kachel wächst in die Breite und nicht in die Höhe.** Die Reihe gibt
+ * ihr dafür eine Spalte nach Inhalt (`kacheln.tsx`), und die Kennungen werden
+ * weiterhin nicht gekürzt: Sie unterscheiden sich in den letzten Zeichen.
+ */
+export const ZEILEN_JE_SPALTE = 3;
+
+/**
+ * Die Dienste, die die Kachel zeigt — **alle außer den heruntergefahrenen**
+ * (Entscheidung **E‑160**).
+ *
+ * `SHUTDOWN` ist ein geordnetes Herunterfahren und kein Fehler
+ * (`Dienstzustand.HERUNTERGEFAHREN`). Die Zeile beantwortet damit keine Frage,
+ * mit der jemand auf die Kachel schaut — *„liegt es an der Anlage"* —, und
+ * nahm den Platz der Zeilen, die es tun.
+ *
+ * **Gefiltert wird hier und nicht im Backend.** Die Antwort bleibt der Zustand
+ * der Anlage (`docs/dienste.md` §9); was davon auf eine kleine Kachel passt,
+ * ist eine Entscheidung der Ansicht. **Die Reihenfolge der Antwort bleibt**
+ * (E‑130) — `filter` nimmt heraus und sortiert nicht um.
+ */
+export function sichtbareDienste(dienste: readonly Dienstlampe[]): Dienstlampe[] {
+  return dienste.filter((dienst) => dienst.zustand !== "HERUNTERGEFAHREN");
+}
+
+/**
+ * Der Satz, der an die Stelle der Dienstzeilen tritt — oder `null`, solange
+ * mindestens eine steht.
+ *
+ * **Zwei Sätze, weil es zwei verschiedene Leeren sind.** Liefert das Backend
+ * keinen Dienst, trägt keiner eine Zeitgrenze (E‑135). Liefert es welche, die
+ * aber alle heruntergefahren sind, wäre derselbe Satz eine falsche Auskunft —
+ * und eine leere Stelle wäre Abwesenheit, der schwächste Kanal, den eine
+ * Auskunft haben kann (E‑74, E‑81).
+ */
+export function dienstLeersatz(dienste: readonly Dienstlampe[], texte: Texte): string | null {
+  if (dienste.length === 0) {
+    return texte.dashboard.plattform.dienstLeer;
+  }
+  return sichtbareDienste(dienste).length === 0
+    ? texte.dashboard.plattform.alleHeruntergefahren
+    : null;
+}
+
+/**
  * **Der Rohwert steht nur an einer ungeklärten Lampe** (Entscheidung **E‑130**,
  * in der Hälfte, die den Umbau überlebt hat).
  *

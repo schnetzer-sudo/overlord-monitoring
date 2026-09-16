@@ -117,12 +117,20 @@ export function Kacheln({
    * Die Plattform ist die letzte Kachel der Reihe. Fällt *Wartend* weg
    * (E‑81), rückt sie mit auf — genau dafür steht *Wartend* vor
    * *Nachrichten* und nicht dahinter.
+   *
+   * **Seit dem 16.09.2026 ist ihre Spalte so breit wie ihr Inhalt** (E‑160):
+   * Die Plattform wächst ab drei Zeilen in eine weitere Spalte statt in die
+   * Höhe (`plattform-block.tsx`), und dafür braucht sie Breite, die ein
+   * gleicher Anteil nicht hergibt. Die übrigen Kacheln teilen sich den Rest zu
+   * gleichen Teilen.
    */
   return (
     <div
       className={cn(
         "grid gap-3 sm:grid-cols-2",
-        wartend === undefined ? "xl:grid-cols-4" : "xl:grid-cols-5",
+        wartend === undefined
+          ? "xl:grid-cols-[repeat(3,minmax(0,1fr))_auto]"
+          : "xl:grid-cols-[repeat(4,minmax(0,1fr))_auto]",
       )}
     >
       <FehlerKachel fehler={kacheln.fehler} fenster={fenster} />
