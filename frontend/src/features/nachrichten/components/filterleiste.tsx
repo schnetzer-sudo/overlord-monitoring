@@ -50,14 +50,12 @@ type Steuerung = {
  * Aktualisierung (er betrifft die Arbeitsweise des Betrachters, nicht den
  * gezeigten Ausschnitt).
  *
- * **Vor dem Zeitfenster steht seit dem 16.09.2026 „Neu laden" samt Schalter**
- * (`vorDemZeitfenster`, E‑163) — an derselben Stelle wie auf Übersicht und
- * Prozessansicht, unmittelbar links neben den Zeitraum-Schaltflächen. Beide
- * stehen **in einer gemeinsamen Gruppe**: Bricht die Leiste um, wandern sie
- * zusammen in die nächste Zeile, und „Neu laden" steht nie am Ende einer Zeile
- * und das Zeitfenster am Anfang der nächsten. Der Hinweis unter den Vorwahlen
- * bleibt in der Spalte des Zeitfensters und damit unter ihnen. Die Leiste
- * selbst weiß nicht, was darin steht — Liste und Schalter gehören der Ansicht.
+ * **Am rechten Rand stehen „Neu laden" und der Schalter** (`amRechtenRand`,
+ * E‑173). Am 16.09.2026 standen sie zuerst vor dem Zeitfenster (E‑163); noch am
+ * selben Tag hat der Auftraggeber sie an den Rand verlegt. `ml-auto` schiebt sie
+ * dorthin — auch dann, wenn die Leiste umbricht und sie allein in einer Zeile
+ * stehen. Die Leiste selbst weiß nicht, was darin steht — Liste und Schalter
+ * gehören der Ansicht.
  *
  * **Der Ausblende-Chip ist am 11.08.2026 entfallen**, samt der Abfrage, die über
  * sein Erscheinen entschied. Er kündigte an, dass ein Teil der Liste fehlt — und
@@ -70,12 +68,12 @@ export function Filterleiste({
   suchfehler,
   zeitfensterfehler,
   aufLangeSuche,
-  vorDemZeitfenster,
+  amRechtenRand,
 }: {
   filter: Nachrichtenfilter;
   steuerung: Steuerung;
-  /** Steht unmittelbar links neben den Zeitraum-Schaltflächen — „Neu laden". */
-  vorDemZeitfenster?: ReactNode;
+  /** Steht am rechten Rand der Leiste — Schalter und „Neu laden". */
+  amRechtenRand?: ReactNode;
   /** Ein `suchbegriff-zu-unscharf` gehört an das Suchfeld, nicht über die Ansicht. */
   suchfehler?: ProblemFehler;
   /** Ein halb ausgefülltes freies Fenster gehört an die beiden Datumsfelder. */
@@ -85,10 +83,7 @@ export function Filterleiste({
 }) {
   return (
     <div className="flex flex-wrap items-start gap-2">
-      <div className="flex flex-wrap items-start gap-2">
-        {vorDemZeitfenster}
-        <Zeitfensterwahl filter={filter} steuerung={steuerung} fehler={zeitfensterfehler} />
-      </div>
+      <Zeitfensterwahl filter={filter} steuerung={steuerung} fehler={zeitfensterfehler} />
       <StatusFilter gewaehlt={filter.status ?? []} aufAuswahl={steuerung.setzeStatus} />
       <ProzessFilter gewaehlt={filter.prozess ?? []} aufAuswahl={steuerung.setzeProzesse} />
       <Suchfeld
@@ -98,6 +93,7 @@ export function Filterleiste({
         langeSuche={filter.langeSuche && sucheTraegt(filter.suche)}
         aufLangeSuche={aufLangeSuche}
       />
+      {amRechtenRand === undefined ? null : <div className="ml-auto">{amRechtenRand}</div>}
     </div>
   );
 }

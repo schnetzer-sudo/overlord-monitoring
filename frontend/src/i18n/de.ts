@@ -207,12 +207,12 @@ export const de = {
    * `zeitraum`: Der Baustein liegt in `components/` und liest keinen Textblock
    * eines Features.
    *
-   * **Sichtbar sind nur `knopf` und `automatik.knopf`** (E‑166). Die übrigen
-   * Texte sind zugänglicher Name und Tooltip — und sie sagen, was die Ansicht
-   * beim Neuladen tut, denn das ist nicht überall dasselbe (E‑168).
+   * **Sichtbar ist nur `automatik.knopf`** (E‑174, korrigiert E‑166): Der Knopf
+   * zeigt allein das Symbol, sein sichtbares „Neu laden" ist entfallen. Die
+   * übrigen Texte sind zugänglicher Name und Tooltip — und sie sagen, was die
+   * Ansicht beim Neuladen tut, denn das ist nicht überall dasselbe (E‑168).
    */
   neuLaden: {
-    knopf: "Neu laden",
     uebersicht: "Übersicht neu laden",
     nachrichten: "Nachrichten neu laden, ab Seite eins",
     prozesse: "Prozessbaum und Übertragungen neu laden",

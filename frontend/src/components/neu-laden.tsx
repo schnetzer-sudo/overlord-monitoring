@@ -25,10 +25,14 @@ export type Automatikzustand = "aus" | "an" | "pausiert";
  *
  * Drei Ansichten tragen ihn — Übersicht, Nachrichten, Prozesse —, und ein
  * Feature importiert nicht aus einem Nachbarfeature
- * (`docs/frontend-grundlagen.md` §8). Er steht überall **unmittelbar links neben
- * den Zeitraum-Schaltflächen** (E‑163) und hat deshalb deren Höhe und
- * Innenabstand: `min-h-bedienelement px-2.5`, dieselben Klassen wie ein Knopf
- * des Zeitraumumschalters.
+ * (`docs/frontend-grundlagen.md` §8). Er hat die Höhe der
+ * Zeitraum-Schaltflächen: `min-h-bedienelement`, dieselbe Klasse wie ein Knopf
+ * des Zeitraumumschalters, und ist ebenso breit wie hoch.
+ *
+ * **Wo er steht, entscheidet die Ansicht** (E‑173, korrigiert E‑163): Auf
+ * Übersicht und Prozessansicht unmittelbar **rechts** neben dem letzten
+ * Zeitraum-Knopf, in den Nachrichten zusammen mit dem Schalter am **rechten
+ * Rand** der Filterleiste.
  *
  * ## Der Schalter ist freiwillig
  *
@@ -36,12 +40,13 @@ export type Automatikzustand = "aus" | "an" | "pausiert";
  * erscheint kein Schalter.** Nur die Nachrichtenliste gibt die Angabe mit
  * (E‑164); Übersicht und Prozessansicht laden ausschließlich von Hand.
  *
- * ## Sichtbar ist ein Symbol und ein kurzes Wort
+ * ## Sichtbar ist beim Knopf nur das Symbol, beim Schalter „Auto"
  *
- * „Neu laden" und „Auto" (E‑166). **Der vollständige Name steht als
- * zugänglicher Name und als Tooltip** — beim Knopf sagt er, was die Ansicht
- * dabei tut (in der Liste: zurück auf Seite eins), beim Schalter nennt der
- * Tooltip die Lage samt Grund.
+ * Die Pfeile im Kreis sagen „neu laden" ohne Wort (E‑174, korrigiert E‑166);
+ * „Auto" bleibt, weil eine Uhr allein nicht sagt, was sie schaltet. **Der
+ * vollständige Name steht als zugänglicher Name und als Tooltip** — beim Knopf
+ * sagt er, was die Ansicht dabei tut (in der Liste: zurück auf Seite eins),
+ * beim Schalter nennt der Tooltip die Lage samt Grund.
  *
  * ## Keine Lage hängt an der Farbe, und nichts bewegt sich
  *
@@ -99,10 +104,13 @@ export function NeuLaden({
         </Toggle>
       )}
 
+      {/* `size="icon"` macht ihn quadratisch; `min-w` hält das auch am
+          Berührungsgerät, wo `min-h-bedienelement` auf 44 px springt. */}
       <Button
         type="button"
         variant="outline"
-        className="min-h-bedienelement px-2.5"
+        size="icon"
+        className="min-h-bedienelement min-w-bedienelement"
         aria-label={name}
         aria-busy={laedt}
         title={name}
@@ -116,7 +124,6 @@ export function NeuLaden({
         }}
       >
         {laedt ? <Hourglass aria-hidden="true" /> : <RefreshCw aria-hidden="true" />}
-        {t.knopf}
       </Button>
     </div>
   );

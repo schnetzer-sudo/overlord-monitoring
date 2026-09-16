@@ -26,7 +26,8 @@ import { rendere } from "./hilfe/rendern";
  *
  * | Fall | Warum ein Baum |
  * |---|---|
- * | der Baustein | Ohne `automatik` **kein Schalter** (Abwesenheit); die drei Lagen über `aria-pressed` und das Symbol, und ein Klick beim Laden ruft nichts |
+ * | der Baustein | Ohne `automatik` **kein Schalter** (Abwesenheit); der Knopf zeigt **nur das Symbol** (E‑174); die drei Lagen über `aria-pressed` und das Symbol, und ein Klick beim Laden ruft nichts |
+ * | die Stelle | Übersicht und Prozessansicht: der Knopf ist der **nächste Knopf nach dem letzten Zeitraum-Knopf**; Nachrichten: Schalter und Knopf sind die **letzten beiden** der Filterleiste (E‑173). Den Rand selbst rechnet jsdom nicht — gemessen in M183 |
  * | Übersicht | ein Klick, **genau eine** weitere Anfrage an dieselbe Adresse — auch im Leerzustand, wo der Knopf stehen bleibt (E‑p) |
  * | Nachrichten | auf Seite zwei: **eine** Anfrage für Seite eins ohne Cursor; bei offenem Panel **keine** an einen Detail- oder Dateiendpunkt (E‑169) |
  * | Nachrichten mit gestellter Uhr | Schalter an und 60 Sekunden: eine Anfrage; Seite zwei: keine; Schalter aus: keine |
@@ -130,6 +131,24 @@ function knopfMitText(behaelter: HTMLElement, text: string): HTMLButtonElement {
   );
   expect(treffer, `Schaltfläche ${text}`).toBeDefined();
   return treffer as HTMLButtonElement;
+}
+
+/**
+ * **„Rechts daneben" heißt hier: der nächste Knopf im Dokument.** Die Zeilen
+ * sind nicht umgekehrt (`flex-row`), also folgt die Reihenfolge auf dem
+ * Bildschirm der im Baum. Wo in der Zeile das liegt, rechnet jsdom nicht aus.
+ */
+function knopfNach(behaelter: HTMLElement, knopf: Element): HTMLButtonElement | undefined {
+  const knoepfe = [...behaelter.querySelectorAll("button")];
+  return knoepfe[knoepfe.indexOf(knopf as HTMLButtonElement) + 1];
+}
+
+function letzterKnopfIn(behaelter: HTMLElement, umschalter: string): HTMLButtonElement {
+  const gruppe = behaelter.querySelector(`[data-slot="toggle-group"][aria-label="${umschalter}"]`);
+  expect(gruppe, `Umschalter ${umschalter}`).not.toBeNull();
+  const knoepfe = [...(gruppe as Element).querySelectorAll("button")];
+  expect(knoepfe.length, `Knöpfe im Umschalter ${umschalter}`).toBeGreaterThan(1);
+  return knoepfe[knoepfe.length - 1];
 }
 
 /** Die Anfragen seit einem Stand — der Kern jeder Zusicherung hier. */
@@ -270,7 +289,7 @@ function nachrichtenNetz(pfad: string, parameter: URLSearchParams): unknown {
 /* ─── der Baustein ───────────────────────────────────────────────────────── */
 
 describe("Der Baustein", () => {
-  it("zeigt ohne automatik keinen Schalter, und der Knopf trägt den vollständigen Namen", async () => {
+  it("zeigt ohne automatik keinen Schalter, und der Knopf trägt nur das Symbol und den vollständigen Namen", async () => {
     const gerendert = await rendere(
       <NeuLaden name={N.uebersicht} laedt={false} aufNeuLaden={() => {}} />,
     );
@@ -280,7 +299,10 @@ describe("Der Baustein", () => {
       expect(behaelter.querySelector("[aria-pressed]")).toBeNull();
       const knopf = mitName(behaelter, N.uebersicht);
       expect(knopf.getAttribute("title")).toBe(N.uebersicht);
-      expect(knopf.textContent).toBe(N.knopf);
+      // Kein sichtbares Wort (E‑174): der Name steht nur am Knopf, gezeigt wird
+      // allein das Symbol.
+      expect(knopf.textContent).toBe("");
+      expect(knopf.querySelectorAll('svg[aria-hidden="true"]')).toHaveLength(1);
     } finally {
       await gerendert.abbauen();
     }
@@ -346,6 +368,23 @@ describe("Neu laden auf der Übersicht", () => {
     }
   });
 
+  it("steht unmittelbar rechts neben dem letzten Zeitraum-Knopf", async () => {
+    stelleNetz((pfad) => (pfad === "/api/dashboard" ? dashboard() : undefined));
+    const gerendert = await rendere(
+      <NuqsTestingAdapter searchParams="?zeitraum=30T" hasMemory>
+        <DashboardAnsicht />
+      </NuqsTestingAdapter>,
+    );
+    try {
+      await zuege();
+      const { behaelter } = gerendert;
+      const letzter = letzterKnopfIn(behaelter, TEXTE.zeitraum.bezeichnung);
+      expect(knopfNach(behaelter, letzter)).toBe(mitName(behaelter, N.uebersicht));
+    } finally {
+      await gerendert.abbauen();
+    }
+  });
+
   /**
    * **E‑p, ergänzt am 16.09.2026:** Im Leerzustand stehen der Satz, der
    * Umschalter — und „Neu laden", bedienbar. Die Eichung ist der Satz selbst:
@@ -392,6 +431,39 @@ describe("Neu laden in den Nachrichten", () => {
     await klicke(knopfMitText(behaelter, TEXTE.nachrichten.blaettern.vor));
     expect(seit(stand), "Blättern auf Seite zwei").toEqual(["/api/nachrichten?cursor=cursor-2"]);
   }
+
+  /**
+   * **E‑173:** Schalter und Knopf stehen hinter allen Filtern, der Knopf außen.
+   * Die Filterleiste ist der kleinste Kasten, der Zeitfenster und Knopf
+   * umschließt — gesucht über den Baum und nicht über eine Klasse.
+   */
+  it("stellt Schalter und Knopf als letzte in die Filterleiste, den Knopf außen", async () => {
+    const gerendert = await rendereListe();
+    try {
+      const { behaelter } = gerendert;
+      const knopf = mitName(behaelter, N.nachrichten);
+      const zeitfenster = behaelter.querySelector(
+        `[data-slot="toggle-group"][aria-label="${TEXTE.nachrichten.zeitfenster.bezeichnung}"]`,
+      );
+      expect(zeitfenster, "Eichung: das Zeitfenster steht").not.toBeNull();
+
+      let leiste: Element | null = knopf.parentElement;
+      while (leiste !== null && !leiste.contains(zeitfenster)) {
+        leiste = leiste.parentElement;
+      }
+      expect(leiste, "Filterleiste").not.toBeNull();
+      expect(
+        leiste?.querySelector('input[type="search"]'),
+        "Eichung: die Suche steht darin",
+      ).not.toBeNull();
+
+      const knoepfe = [...(leiste as Element).querySelectorAll("button")];
+      expect(knoepfe.at(-1)).toBe(knopf);
+      expect(knoepfe.at(-2)).toBe(mitName(behaelter, N.automatik.name));
+    } finally {
+      await gerendert.abbauen();
+    }
+  });
 
   it("führt von Seite zwei mit einer Anfrage ohne Cursor zurück auf Seite eins", async () => {
     const gerendert = await rendereListe();
@@ -560,6 +632,17 @@ describe("Neu laden in der Prozessansicht", () => {
       }
       await zuege();
       expect(seit(stand)).toEqual([]);
+    } finally {
+      await gerendert.abbauen();
+    }
+  });
+
+  it("steht unmittelbar rechts neben dem letzten Zeitraum-Knopf", async () => {
+    const gerendert = await rendereProzesse();
+    try {
+      const { behaelter } = gerendert;
+      const letzter = letzterKnopfIn(behaelter, TEXTE.zeitraum.bezeichnung);
+      expect(knopfNach(behaelter, letzter)).toBe(mitName(behaelter, N.prozesse));
     } finally {
       await gerendert.abbauen();
     }

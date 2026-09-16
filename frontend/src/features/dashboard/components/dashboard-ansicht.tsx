@@ -85,9 +85,10 @@ export function DashboardAnsicht() {
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <h1 className="text-ueberschrift font-semibold">{texte.dashboard.titel}</h1>
         {/*
-         * **„Neu laden" unmittelbar links neben dem Umschalter** (E‑163), und
-         * wie er **außerhalb der Zustandskette**: Der Knopf bleibt in allen vier
-         * Zuständen stehen, auch im Leerzustand (E‑p, ergänzt am 16.09.2026) —
+         * **„Neu laden" unmittelbar rechts neben dem letzten Zeitraum-Knopf**
+         * (E‑173, korrigiert E‑163), als Symbol ohne Wort (E‑174), und wie der
+         * Umschalter **außerhalb der Zustandskette**: Der Knopf bleibt in allen
+         * vier Zuständen stehen, auch im Leerzustand (E‑p, ergänzt am 16.09.2026) —
          * dort ist er neben dem Zeitraum der zweite Weg herauszufinden, ob es
          * noch immer nichts gibt.
          *
@@ -98,15 +99,15 @@ export function DashboardAnsicht() {
          * `refetchInterval` gibt es hier weiterhin nicht (E‑137).
          */}
         <div className="flex flex-wrap items-center gap-2">
-          <NeuLaden
-            name={texte.neuLaden.uebersicht}
-            laedt={antwort.isFetching}
-            aufNeuLaden={() => void antwort.refetch({ cancelRefetch: false })}
-          />
           <ZeitraumUmschalter
             gewaehlt={zeitraum}
             aufAuswahl={setzeZeitraum}
             gesperrt={antwort.isPending}
+          />
+          <NeuLaden
+            name={texte.neuLaden.uebersicht}
+            laedt={antwort.isFetching}
+            aufNeuLaden={() => void antwort.refetch({ cancelRefetch: false })}
           />
         </div>
       </div>

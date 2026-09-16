@@ -1758,6 +1758,13 @@ beides genau wie in der Nachrichtenliste.
 > beide stehen jetzt auf demselben Stand —, und für diese Ansicht Punkt **121**: Ohne Intervall fragt
 > die verdeckte Liste unter `xl` nichts mehr ab. Für die Nachrichtenliste bleibt er offen (§13).
 
+> ### ⚠️ Korrektur vom 16.09.2026, zweite Runde — „Neu laden" rechts neben „Frei" (E‑173, E‑174, [`neu-laden.md`](neu-laden.md))
+>
+> **Der Block darüber gilt bis auf den Ort:** „Neu laden" steht unmittelbar **rechts** neben dem
+> letzten Zeitraum-Knopf „Frei" und damit rechts außen im Kopf, als Symbol ohne Wort. Im freien Modus
+> folgen Datumsfelder und Hinweis **hinter** dem Knopf; er rückt dann mit dem Umschalter nach links
+> (M183‑3). Klick, Anfragen und was stehen bleibt, sind unverändert.
+
 **Vor der Wahl eines Prozesses steht rechts ein Leerzustand** und nicht die ganze Liste des
 Mandanten. Dafür gibt es die Nachrichtenliste, und dorthin führt ein Verweis. **Solange kein Prozess
 gewählt ist, läuft keine Abfrage** — die Liste ist eine eigene Komponente, damit das nicht von einem

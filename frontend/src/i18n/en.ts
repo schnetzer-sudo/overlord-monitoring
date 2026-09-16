@@ -126,7 +126,6 @@ export const en: Texte = {
   },
 
   neuLaden: {
-    knopf: "Reload",
     uebersicht: "Reload overview",
     nachrichten: "Reload messages, from page one",
     prozesse: "Reload process tree and transfers",

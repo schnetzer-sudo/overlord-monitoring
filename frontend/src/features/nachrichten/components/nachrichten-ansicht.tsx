@@ -152,12 +152,11 @@ export function NachrichtenAnsicht() {
           suchfehler={amSuchfeld}
           zeitfensterfehler={amZeitfenster}
           aufLangeSuche={() => steuerung.setzeLangeSuche(true)}
-          vorDemZeitfenster={
+          amRechtenRand={
             /*
-             * **Schalter, „Neu laden", Zeitraum** — in dieser Reihenfolge, damit
-             * „Neu laden" auf allen drei Seiten an derselben Stelle steht
-             * (E‑163). Der Schalter steht **nur hier** (E‑164) und zeigt selbst,
-             * wenn er pausiert (E‑171).
+             * **Schalter und „Neu laden" am rechten Rand der Filterleiste**
+             * (E‑173, korrigiert E‑163), der Knopf außen. Der Schalter steht
+             * **nur hier** (E‑164) und zeigt selbst, wenn er pausiert (E‑171).
              *
              * ⚠️ **Unter `xl` bei offenem Panel ist er nicht zu sehen:** Die
              * ganze linke Spalte weicht dem Panel (`hidden xl:flex` oben), und

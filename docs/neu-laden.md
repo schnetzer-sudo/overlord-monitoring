@@ -3,7 +3,9 @@
 *16.09.2026.* Entscheidungen **E‑163** bis **E‑172**, Messungen **M181** (Sitzung) und **M182**
 (Sichtprüfung am laufenden System), neue offene Punkte **184** und **185**. Fortgeschrieben: Punkt
 **121** ([`process-view.md`](process-view.md) §13) und Punkt **168**
-([`dashboard-frontend.md`](dashboard-frontend.md) §9).
+([`dashboard-frontend.md`](dashboard-frontend.md) §9). **Am selben Tag korrigiert:** Entscheidungen
+**E‑173** (Ort) und **E‑174** (Knopf ohne Wort), Messung **M183** — Korrekturblock unmittelbar unter
+dem Ertrag.
 
 **Die Frage dieser Datei:** Wie holt sich jemand, der einen Beleg sucht, den neuesten Stand — auf der
 Übersicht, in der Nachrichtenliste und in der Prozessansicht —, ohne dass die Ansicht dabei springt,
@@ -20,6 +22,28 @@ ihm die Stelle nimmt oder auf der Produktionsdatenbank mehr fragt als nötig?
 > war **nicht** von selbst so und ist gebaut (E‑170). **Zwei Befunde:** Unter `xl` bei offenem
 > Panel sind Schalter und Knopf in den Nachrichten nicht zu sehen (Punkt 121 bleibt dort offen), und
 > **ein automatischer Abruf verlängert die Sitzung** (M181, Punkt 184).
+
+> ### ⚠️ Korrektur vom 16.09.2026, zweite Runde — der Knopf steht rechts, in den Nachrichten am Rand, und ohne Wort (E‑173, E‑174)
+>
+> **Der Ertrag darüber bleibt stehen; zwei seiner Angaben gelten nicht mehr.** Nach der ersten
+> Abnahme hat der Auftraggeber am selben Tag entschieden:
+>
+> | | bis zur Korrektur | seither |
+> |---|---|---|
+> | **Übersicht, Prozessansicht** | „Neu laden" unmittelbar **links** neben den Zeitraum-Schaltflächen (E‑163) | unmittelbar **rechts** neben dem letzten Zeitraum-Knopf — „12 Monate" bzw. „Frei" — und damit rechts außen im Kopf (E‑173) |
+> | **Nachrichten** | Schalter, Knopf, Zeitraum — eine Gruppe vor dem Zeitfenster (E‑163) | Schalter und Knopf **am rechten Rand der Filterleiste**, der Knopf außen, bündig mit der Tabelle (E‑173) |
+> | **Beschriftung des Knopfes** | Pfeile und „Neu laden" (E‑166) | **nur die Pfeile**; „Auto" am Schalter bleibt (E‑174) |
+>
+> **Was gleich bleibt:** die Höhe eines Zeitraum-Knopfes, Name und Tooltip je Ansicht, Sanduhr und
+> `aria-busy` beim Laden, das Verhalten aus §3 und die Anfragen aus M182‑3. Der Knopf ist jetzt
+> **quadratisch**: `size="icon"` samt `min-w-bedienelement`, damit er auch am Berührungsgerät
+> quadratisch bleibt.
+>
+> **Gemessen in M183** (§6), 24 von 24 Lagen. **Zwei Folgen, die man sieht:** Bei 1280 px ohne
+> Panel stehen Schalter und Knopf in den Nachrichten **in einer zweiten Zeile** der Filterleiste,
+> rechts (bei `xs` im Bild: allein darin); bei 1920 px in der Zeile des Zeitfensters. Und im freien Modus der
+> Prozessansicht erscheinen die Datumsfelder **rechts** vom Knopf — er bleibt neben „Frei" und rückt
+> mit dem Umschalter nach links (M183‑3). **Punkt 185 wiegt dadurch schwerer** (§9).
 
 **Kein Endpunkt, keine Datenquelle, keine Migration.** Alles hier ruft Endpunkte, die es gibt, mit
 denselben Parametern wie vorher: `/api/dashboard`, `/api/nachrichten`, `/api/prozesse/baum`.
@@ -39,6 +63,7 @@ Treffer im oberen Bereich gelesen; die Suche ist unmittelbar vor dem Commit wied
 |---|---|
 | **Entscheidung** | **E‑163 bis E‑172.** Höchste in `main` **E‑160**, auf der Basis **E‑161** ([`dashboard.md`](dashboard.md) §9b). **E‑162** steht nur im unversionierten Arbeitsbaum der anderen Sitzung ([`nachrichtenliste.md`](nachrichtenliste.md) §8.1 dort) — gelesen, vergeben, deshalb nicht genommen. **E‑151 bis E‑158** kommen nirgends vor; E‑150 und E‑159 sind Suchbereiche in der Vergabetabelle von [`spaltenwahl.md`](spaltenwahl.md), keine Vergaben. **E‑780** ist der bekannte Falschtreffer |
 | **Messung** | **M181, M182.** Höchste auf der Basis **M178**; **M179** ist Fließtext ([`messungen-sichtprobe-schmal.md`](messungen-sichtprobe-schmal.md) §3); **M180** steht im Arbeitsbaum der anderen Sitzung |
+| **Zweite Runde, am selben Tag** | **E‑173, E‑174, M183.** Dieselbe Suche wiederholt auf `main`, `feat/neu-laden`, `fix/nachrichtenliste-spaltenbreiten` (Commit und unversionierter Arbeitsbaum), `feat/suchfeld-untermenues`, `test/indexbestand-e37` (Commit und Arbeitsbaum) und `fix/dashboard-verteilung-beide-sichten`: höchste Entscheidung **E‑172**, höchste Messung **M182**, beide nur auf diesem Zweig; **E‑162** und **M180** weiterhin nur im Arbeitsbaum der anderen Sitzung. Kein neuer offener Punkt |
 | **Offener Punkt** | **184, 185.** **182** ist vergeben ([`dashboard.md`](dashboard.md) §11, die Wanduhrabhängigkeit von `DashboardIsolationDbIT.keine_mandanten_id`), **183** im Arbeitsbaum der anderen Sitzung ([`spaltenwahl.md`](spaltenwahl.md) §11 dort). Die Treffer **185** bis **188** in `spaltenwahl.md` sind Tabellenwerte, gelesen |
 
 ---
@@ -80,6 +105,11 @@ Nachrichten führt er zurück auf Seite eins, in der Prozessansicht holt er zwei
 das sagt, ist die Auskunft, die der Nutzer vor dem Klick braucht — sichtbar bleibt überall dasselbe
 kurze Wort.
 
+> ⚠️ **Korrektur vom 16.09.2026, zweite Runde (E‑174).** Zeile *Sichtbar* der Tabelle: Der Knopf
+> zeigt **nur die Pfeile**, kein Wort. Zeile *Maße*: `size="icon"` mit `min-h-bedienelement
+> min-w-bedienelement` — quadratisch und so hoch wie ein Zeitraum-Knopf (M183‑1). Und der letzte Satz
+> darüber heißt seither: **sichtbar bleibt überall dasselbe Symbol.** Am Schalter ändert sich nichts.
+
 ---
 
 ## 3. Verhalten je Ansicht
@@ -90,6 +120,11 @@ kurze Wort.
 | **Klick** | **eine** Anfrage an `/api/dashboard` mit denselben Parametern | **eine** Anfrage für Seite eins, ohne Cursor | Baum mit denselben Parametern, **danach** die Liste ab Seite eins, wenn ein Prozess gewählt ist |
 | **Was stehen bleibt** | alle Blöcke, bis die Antwort da ist; kein Ladezustand, keine Bewegung (E‑170) | die angezeigte Seite, bis Seite eins da ist; das Panel und alles darin (E‑169) | Aufklappzustand, gewählter Prozess, geöffnete Nachricht, Scrollstände (M182) |
 | **Automatisch** | nein (E‑137 unverändert) | Schalter, Vorgabe aus, 60 s, nur Seite eins, nur bei sichtbarem Tab | **nein, nicht mehr** (E‑164) |
+
+> ⚠️ **Korrektur vom 16.09.2026, zweite Runde (E‑173), Zeile *Ort*:** Übersicht und Prozessansicht —
+> Kopf, unmittelbar **rechts** neben dem letzten Zeitraum-Knopf. Nachrichten — **am rechten Rand der
+> Filterleiste**, Schalter vor Knopf, als letzte Elemente der Leiste (`amRechtenRand`, `ml-auto`).
+> In der Prozessansicht folgen im freien Modus Datumsfelder und Hinweis **hinter** dem Knopf.
 
 ### Übersicht
 
@@ -147,16 +182,18 @@ nicht mehr automatisch** — `useNachrichtenSeite(filter, false)`.
 
 | | Entscheidung | Herkunft |
 |---|---|---|
-| **E‑163** | **„Neu laden" steht auf allen drei Seiten unmittelbar links neben den Zeitraum-Schaltflächen**, in deren Höhe und Innenabstand | Auftraggeber, Entscheidung 1 vom 16.09.2026 |
+| **E‑163** | ⚠️ ***Am selben Tag korrigiert durch E‑173.*** **„Neu laden" steht auf allen drei Seiten unmittelbar links neben den Zeitraum-Schaltflächen**, in deren Höhe und Innenabstand | Auftraggeber, Entscheidung 1 vom 16.09.2026 |
 | **E‑164** | **Automatische Aktualisierung nur in den Nachrichten.** Übersicht und Prozessansicht laden nur von Hand; die Prozessansicht verliert ihre bisherige Aktualisierung | Auftraggeber, Entscheidung 2 |
 | **E‑165** | **Keine Intervallwahl.** Es gelten weiter die Regeln aus [`nachrichtenliste.md`](nachrichtenliste.md) §8.3 | Auftraggeber, Entscheidung 3 |
-| **E‑166** | **Symbol und kurzes Wort** — „Neu laden", „Auto"; der vollständige Name als zugänglicher Name und Tooltip, in beiden Sprachdateien | Auftraggeber, Entscheidung 4 |
+| **E‑166** | ⚠️ ***Für den Knopf am selben Tag korrigiert durch E‑174.*** **Symbol und kurzes Wort** — „Neu laden", „Auto"; der vollständige Name als zugänglicher Name und Tooltip, in beiden Sprachdateien | Auftraggeber, Entscheidung 4 |
 | **E‑167** | **Vom Lobster-Vorbild bleibt nur „Neu laden".** Keine Plus- und Minus-Schaltflächen, keine Sekundenanzeige, **kein Orange** (Schaltflächen tragen den Akzent, Orange ist `--ueberfaellig`), **kein drehendes Symbol** | Auftraggeber, Entscheidung 5 |
 | **E‑168** | **„Neu laden" führt in einer Liste auf Seite eins** und setzt den Blätterstapel zurück. Die vorhandene Seite bleibt stehen, bis Seite eins da ist | Festlegung 6 des Auftrags, **bestätigt und präzisiert** (§7) |
 | **E‑169** | **„Neu laden" holt nur die Hauptdaten der Ansicht**, nie das offene Panel und nichts darin | Festlegung 7, **bestätigt** |
 | **E‑170** | **„Neu laden" auf der Übersicht ist kein Aufbau** im Sinne von E‑85: keine Bewegung, kein Morphing. Gebaut über `aufbauAktiv` | Festlegung 8, **bestätigt mit Befund** (§7) |
 | **E‑171** | **Die Standanzeige bleibt im Blätterblock.** Der Schalter wandert nach oben, und der Hinweis, dass er pausiert, wandert mit — **in den Schalter**: Symbol, `title`, zugängliche Beschreibung | Festlegung 9, **bestätigt** |
 | **E‑172** | **Der Knopf „Jetzt aktualisieren" im Blätterblock entfällt**, in Nachrichtenliste und Prozessansicht | Antwort des Auftraggebers vom 16.09.2026 auf die Rückfrage — der Auftrag nannte den Knopf nicht |
+| **E‑173** | **„Neu laden" steht rechts.** Auf Übersicht und Prozessansicht unmittelbar rechts neben dem letzten Zeitraum-Knopf, in den Nachrichten Schalter und Knopf am rechten Rand der Filterleiste, der Knopf außen. **Korrigiert E‑163.** Im freien Modus der Prozessansicht bleibt der Knopf neben „Frei", die Datumsfelder folgen dahinter — das war nicht vorgegeben und ist bei der Umsetzung gewählt (§10) | Auftraggeber, 16.09.2026, nach der ersten Abnahme |
+| **E‑174** | **Der Knopf zeigt kein Wort, nur das Symbol**; „Auto" am Schalter bleibt. Name und Tooltip je Ansicht unverändert. **Korrigiert E‑166 für den Knopf** | ebenda |
 
 ---
 
@@ -165,10 +202,12 @@ nicht mehr automatisch** — `useNachrichtenSeite(filter, false)`.
 | Datei | Fälle | Was |
 |---|---:|---|
 | `tests/aktualisierung.test.ts` | 11 | **rein.** Das Intervall über alle acht Lagen von Schalter, Seite und Sichtbarkeit; 60 s ohne Wahl; aus/an/pausiert; `abfrageNachNeuLaden` ohne Cursor, mit allen Filtern, ohne `nachricht`; `stapelNachNeuLaden` setzt nur zurück, wenn niemand inzwischen blätterte; `aufbauAktiv` für erstes Bild, Neuladen und Zeitraumwechsel |
-| `tests/neu-laden.test.tsx` | 12 | **gerendert**, zugesichert werden Anfragen und nie Zeiten (T1). Baustein ohne Schalter; drei Lagen über `aria-pressed` und drei Symbole, Klick beim Laden ruft nichts. Übersicht: genau eine weitere Anfrage, auch im Leerzustand. Nachrichten: Seite zwei → eine Anfrage ohne Cursor; bei offenem Panel keine an Detail- oder Dateiendpunkte. Gestellte Uhr: aus → nichts; an → nach 60 s eine; Seite zwei → pausiert und nichts, nach „Neu laden" wieder eine. Prozessansicht: zwei Minuten nichts; Klick → Baum, Liste; neues Fenster → keine Listenanfrage mit dem alten |
+| `tests/neu-laden.test.tsx` | 15 | **gerendert**, zugesichert werden Anfragen und nie Zeiten (T1). Baustein ohne Schalter; drei Lagen über `aria-pressed` und drei Symbole, Klick beim Laden ruft nichts. Übersicht: genau eine weitere Anfrage, auch im Leerzustand. Nachrichten: Seite zwei → eine Anfrage ohne Cursor; bei offenem Panel keine an Detail- oder Dateiendpunkte. Gestellte Uhr: aus → nichts; an → nach 60 s eine; Seite zwei → pausiert und nichts, nach „Neu laden" wieder eine. Prozessansicht: zwei Minuten nichts; Klick → Baum, Liste; neues Fenster → keine Listenanfrage mit dem alten. **Seit E‑173 drei mehr** (bis dahin 12): Übersicht und Prozessansicht — der Knopf ist der nächste Knopf nach dem letzten Zeitraum-Knopf; Nachrichten — Schalter und Knopf sind die letzten beiden Knöpfe der Filterleiste, die Leiste über den Baum gesucht. Am Baustein zusätzlich **kein sichtbares Wort** und genau ein Symbol (E‑174) |
 
 Der Zählkopf in `frontend/vitest.config.mts` ist fortgeschrieben: **152 gerenderte Fälle in zwanzig
-Dateien, 1.107 im ganzen Lauf** — dort auch, dass der Kopf davor um eins zu hoch stand.
+Dateien, 1.107 im ganzen Lauf** — dort auch, dass der Kopf davor um eins zu hoch stand. **Fortgeschrieben
+nach E‑173: 155 in zwanzig Dateien, 1.110 im ganzen Lauf**; je Datei verglichen, geändert hat sich
+allein `tests/neu-laden.test.tsx`.
 
 ### Die Verletzungsproben — ausgeführt, zurückgenommen, in keinem Commit
 
@@ -181,13 +220,16 @@ Zurückgespielt jeweils aus einer Sicherungskopie und mit `cmp` gegen sie vergli
 | **(a′)** dieselbe Bedingung in der reinen Funktion | `lage.an && lage.sichtbar` | **rot**, zwei Fälle: *„an=true aufSeiteEins=false sichtbar=true: expected 60000 to be false"* und derselbe gerenderte Fall wie in (a) |
 | **(b)** das Panel beim Neuladen mitholen | `invalidateQueries` auf `NACHRICHTEN_SCHLUESSEL.detail(gewaehlt)` im Klick | **rot**, genau ein Fall: *„fragt bei offenem Panel keinen Detail- oder Dateiendpunkt an"* — `expected [ '/api/nachrichten', …(1) ] to deeply equal [ '/api/nachrichten' ]`, zusätzlich empfangen `"/api/nachrichten/8f3a1c2e-0000-4000-8000-000000000001"` |
 | Eichung Prozessansicht | `useNachrichtenSeite(filter, true)` | **rot**: *„aktualisiert ohne Klick nichts, auch nicht nach zwei Minuten"*, empfangen zweimal die Listenanfrage |
+| **(c)** die Stelle von E‑163 zurück | Knopf vor den Umschalter (Übersicht, Prozessansicht), Schalter und Knopf vor das Zeitfenster, das Wort „Neu laden" zurück in den Knopf | **rot**, vier Fälle: *„steht unmittelbar rechts neben dem letzten Zeitraum-Knopf"* (Übersicht und Prozessansicht) und *„stellt Schalter und Knopf als letzte in die Filterleiste, den Knopf außen"* je `expected <button …> to be <button data-slot="button" …>`; am Baustein `expected 'Neu laden' to be ''`. Die übrigen elf Fälle blieben grün |
 | Eichung Reihenfolge | Liste immer neu laden, ohne Fenstervergleich | **rot**: *„fragt die Liste nicht mit dem alten Fenster an …"*, zusätzlich empfangen die Listenanfrage mit `05:00`-Fenster |
 
 > **Belegvermerk (L10).** *Gemessen war:* fünf Läufe, je mit genau einem Eingriff, und die
 > Meldungen oben wörtlich aus der Ausgabe. *Behauptet wird:* Die beiden verlangten Proben (a) und (b)
 > werden rot, und zwar am jeweils gemeinten Fall. — **Nicht behauptet** ist, dass jede denkbare
 > Verletzung rot wird: Ein `invalidateQueries` auf den ganzen Präfix `["nachrichten"]` ist nicht
-> gefahren.
+> gefahren. **Zu (c):** *gemessen war* **ein** Lauf mit allen vier Eingriffen zugleich, zurückgespielt
+> aus Sicherungskopien und mit `cmp` verglichen. Jeder rote Fall gehört zu genau einem Eingriff; dass
+> jeder Eingriff **allein** seinen Fall rot macht, ist daraus geschlossen und nicht einzeln gefahren.
 
 ---
 
@@ -306,6 +348,51 @@ Klick **true** mit der Beschreibung „Automatische Aktualisierung: an. …"; Ro
 > Ausschnitten **angesehen**; die Anfragen **auf dem Server** sind nicht gezählt, nur die aus dem
 > Browser; neue Zeilen erscheinen lokal nicht, weil die Testkopie keine bekommt.
 
+### M183 — die Stelle nach E‑173 und E‑174
+
+**Rahmen:** wie M182, dasselbe Chrome, vom Nutzer neu angemeldet; Mandant `NEXANS` über
+`POST /api/auth/mandant` gewählt. Maße über `getBoundingClientRect`, Bildausschnitte über
+`Page.captureScreenshot`. **Nur Maße, keine Zeiten.** M182‑1 bleibt als Messung des damaligen Stands
+stehen; seine Aussage zur Lage gilt seit E‑173 nicht mehr.
+
+**M183‑1 — 24 Lagen** (drei Seiten × 1280 und 1920 px × `xs` und `l` × hell und dunkel). In **allen
+24** ist der Knopf **quadratisch** und so hoch wie der erste Zeitraum-Knopf — **28 × 28 px** bei `xs`,
+**36 × 36 px** bei `l` —, sein sichtbarer Text ist leer, und er trägt genau ein Symbol. Hintergrund
+hell `lab(98.26 0 0)`, dunkel `oklab(… / 0.048)`.
+
+| Seite | gemessen in allen acht Lagen der Seite |
+|---|---|
+| **Übersicht** | Der Knopf ist der **nächste Knopf nach „12 Monate"**, Abstand **0,5 rem** (7 bzw. 9 px), Oberkante gleich; rechte Kante **auf der rechten Kante des Kopfes** (Abstand 0) |
+| **Prozessansicht** | ebenso, nach **„Frei"** |
+| **Nachrichten** | Rechte Kante des Knopfes = rechte Kante der Filterleiste = rechte Kante der Tabelle (Abstand je **0**); „Auto" **0,5 rem** davor, gleich hoch, gleiche Oberkante. **Bei 1280 px** stehen beide in der **zweiten Zeile** der Leiste (Leiste 82,25 px hoch bei `xs`, 105,75 px bei `l` — je zwei Zeilen; bei `xs` im Bild angesehen: Zeitfenster, Status, Prozess und Suche in der ersten, Schalter und Knopf allein in der zweiten), **bei 1920 px** in der Zeile des Zeitfensters (47,25 bzw. 60,75 px) |
+
+**M183‑2 — Nachrichten mit offenem Panel** (Dichte `m`, hell):
+
+| Breite | Schalter und Knopf |
+|---:|---|
+| 1024 | **nicht sichtbar** (`checkVisibility()` falsch) — wie M182‑2 |
+| 1279 | **nicht sichtbar** |
+| 1280 | sichtbar, rechte Kante auf der Leiste (Abstand 0), 102 px unter der Oberkante des Zeitfensters — im Bild die **dritte** Zeile der Leiste |
+| 1920 | sichtbar, Abstand 0, 62 px unter dem Zeitfenster — die zweite Zeile, aus dem Versatz geschlossen und nicht im Bild angesehen |
+
+**M183‑3 — freier Modus der Prozessansicht** (1920 px, `m`): linke Kante des Knopfes vor dem Klick auf
+„Frei" bei **1.853 px**, danach bei **1.401,13 px**; beide Datumsfelder stehen **rechts** davon. Der
+Knopf bleibt neben „Frei" und rückt mit dem Umschalter nach links; die rechte Kante des Kopfes gehört
+dann den Feldern. Bei 1280 px im Bild angesehen.
+
+**M183‑4 — Berührungsgerät** (`Emulation.setTouchEmulationEnabled`, `matchMedia('(pointer:
+coarse)')` wahr; Übersicht, 1280 px): Knopf **44 × 44 px**, Zeitraum-Knopf 44 px hoch.
+
+> **Belegvermerk (L10) zu M183.** *Gemessen war:* Maße aus `getBoundingClientRect` in 24 Lagen, an
+> vier Breiten mit offenem Panel, vor und nach „Frei" und unter `pointer: coarse`; sichtbarer Text und
+> Zahl der Symbole des Knopfes; die Reihenfolge der Knöpfe im Dokument. *Behauptet wird:* Auf
+> Übersicht und Prozessansicht steht der Knopf unmittelbar rechts neben dem letzten Zeitraum-Knopf
+> und rechts außen im Kopf, in den Nachrichten mit dem Schalter am rechten Rand der Leiste; er zeigt
+> kein Wort und ist quadratisch. — **Angesehen, nicht gemessen:** fünf Bildausschnitte (Übersicht,
+> Nachrichten mit und ohne Panel, Prozessansicht mit und ohne freien Modus). **Nicht erneut
+> gemessen:** Anfragen je Klick und automatische Aktualisierung — am Verhalten ist nichts geändert,
+> und die Tests darüber sind unverändert grün.
+
 ---
 
 ## 7. Die Festlegungen 6 bis 9 des Auftrags
@@ -338,7 +425,7 @@ Klick **true** mit der Beschreibung „Automatische Aktualisierung: an. …"; Ro
 | **121** | *Fortgeschrieben, Stand in [`process-view.md`](process-view.md) §13.* **Für `/prozesse` erledigt** — ohne automatische Aktualisierung fragt die verdeckte Liste nichts ab (E‑164). **Für `/nachrichten` offen:** Der Schalter ist in den Kopf der Ansicht gewandert, aber unter `xl` bei offenem Panel weicht die ganze linke Spalte samt Kopf, und dort sind Schalter und Knopf nicht zu sehen (M182‑2). Ist der Schalter an, aktualisiert die verdeckte Liste weiter — am Code abgelesen (`useSichtbar` fragt nur die Registerkarte), nicht gemessen. Der zweite Ausweg aus dem Punkt — die Sichtbarkeit über einen `IntersectionObserver` — ist ausdrücklich nicht gebaut |
 | **168** | *Fortgeschrieben, Stand in [`dashboard-frontend.md`](dashboard-frontend.md) §9.* Die Übersicht hat jetzt **einen sichtbaren Weg** zum neuen Stand; ein Takt ist weiterhin nicht gebaut und nach E‑164 auch nicht vorgesehen |
 | **184** | **Ein automatischer Abruf verlängert die Sitzung** (M181). Ein sichtbarer Tab auf Seite eins mit eingeschaltetem Schalter läuft nie ab; die Regel „30 Minuten ohne Aktivität" ([`authentifizierung.md`](authentifizierung.md) §5) gilt für ihn nicht. **Nichts dagegen gebaut.** Wer den Punkt aufmacht, entscheidet, ob ein automatischer Abruf als Aktivität zählen soll — und damit über eine Unterscheidung, die heute weder Frontend noch Backend trifft |
-| **185** | **Der Knopf trägt Namen und gleichlautende Beschreibung** (M182‑7): Chromium stellt das `title` neben das `aria-label`. Ob ein Vorleseprogramm den Satz zweimal ansagt, ist **nicht geprüft**. Dazu: Der Tooltip ist ein `title` — wie überall im Projekt — und erscheint deshalb nur unter der Maus, nicht beim Fokus mit der Tastatur |
+| **185** | **Der Knopf trägt Namen und gleichlautende Beschreibung** (M182‑7): Chromium stellt das `title` neben das `aria-label`. Ob ein Vorleseprogramm den Satz zweimal ansagt, ist **nicht geprüft**. Dazu: Der Tooltip ist ein `title` — wie überall im Projekt — und erscheint deshalb nur unter der Maus, nicht beim Fokus mit der Tastatur. **Fortgeschrieben am selben Tag (E‑174):** Ohne Wort ist der Tooltip die **einzige sichtbare Beschriftung** des Knopfes. Wer mit der Tastatur arbeitet und nichts vorlesen lässt, sieht beim Fokus nur die Pfeile |
 
 ---
 
@@ -363,6 +450,12 @@ Klick **true** mit der Beschreibung „Automatische Aktualisierung: an. …"; Ro
 9. **Die Sichtprüfung lief nicht kopflos**, sondern in einem eigenen Chrome mit Debug-Port, in dem
    sich der Nutzer angemeldet hat; der Netzwerk-Tab ist über dieselbe Quelle ausgelesen und nicht von
    Hand angesehen.
+10. **E‑173 im freien Modus der Prozessansicht.** Die Vorgabe *„ganz nach rechts neben den letzten
+    Zeitraum-Knopf"* trifft zwei Stellen, sobald Datumsfelder erscheinen. Gewählt ist **neben
+    „Frei"**: Die Felder bringen ihren Hinweis als eigenes Element der Zeile mit, und der stünde sonst
+    zwischen Feldern und Knopf. Der Knopf steht damit im freien Modus nicht rechts außen (M183‑3).
+11. **Verletzungsprobe (c)** lief als **ein** Lauf mit vier Eingriffen zugleich, nicht vier Läufe
+    (§5).
 
 ---
 
@@ -379,7 +472,8 @@ nicht verlegt.
 
 - **Kein Vorleseprogramm** — nur der Barrierefreiheitsbaum von Chromium (M182‑7).
 - **Das schmale Fenster** unter 1024 px und das **Berührungsgerät** (`pointer: coarse`): Die Maße
-  hängen an `min-h-bedienelement` wie beim Zeitraumumschalter; angesehen ist es nicht.
+  hängen an `min-h-bedienelement` wie beim Zeitraumumschalter; angesehen ist es nicht. *Seit M183‑4:*
+  am Berührungsgerät gemessen, 44 × 44 px auf der Übersicht; das schmale Fenster weiterhin nicht.
 - **Die englischen Texte** im Browser — sie sind nur über `tests/sprachdateien.test.ts` belegt.
 - **Der Tooltip** selbst: Ein `title` lässt sich synthetisch nicht einblenden.
 - **Neue Zeilen** nach dem Neuladen — die Testkopie bekommt keine; die Wirkung ist über Anfragen und

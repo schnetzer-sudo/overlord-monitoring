@@ -1774,7 +1774,7 @@ features/nachrichten/
 ├─ aktualisierung.ts               wann die Liste fragt, wohin Neu laden führt — rein
 └─ components/
    ├─ nachrichten-ansicht.tsx      der Zusammenbau, "use client"
-   ├─ filterleiste.tsx             Neu laden samt Schalter, Zeitfenster, Status, Prozess, Suche
+   ├─ filterleiste.tsx             Zeitfenster, Status, Prozess, Suche; am Rand Schalter und Neu laden
    ├─ prozess-filter.tsx           Mehrfachauswahl aus /api/prozesse
    ├─ nachrichten-tabelle.tsx      Spalten, Zeitpunkt, BAM-Zellen
    ├─ status-plakette.tsx          Status — nie allein über Farbe
@@ -1785,7 +1785,8 @@ features/nachrichten/
 Aktualisierung und „Neu laden" stehen seither in der Filterleiste, gerendert von
 `components/neu-laden.tsx` — **außerhalb** des Features, weil Übersicht und Prozessansicht denselben
 Knopf tragen. `aktualisierung.ts` hält die Regeln als reine Funktionen; `blaettern.tsx` trägt nur
-noch Seiten und Stand.
+noch Seiten und Stand. *Am selben Tag korrigiert* (E‑173): Schalter und Knopf stehen nicht mehr vor
+dem Zeitfenster, sondern **am rechten Rand** der Leiste.
 
 Seit Schritt 5 liegen im selben Feature die Bausteine der Detailansicht (`detail.ts`,
 `nachricht-detail.tsx`, `nachricht-seite.tsx`, `zeitleiste.tsx`, `eigenschaften-block.tsx`).
@@ -2331,6 +2332,15 @@ schlimmer als einer, der aus ist.
 > die verdeckte Liste weiter — am Code abgelesen, nicht gemessen. Offener Punkt **121** bleibt für diese Ansicht offen
 > ([`process-view.md`](process-view.md) §13). Und ein automatischer Abruf **verlängert die Sitzung**
 > (M181, Punkt **184**).
+
+> ### ⚠️ Korrektur vom 16.09.2026, zweite Runde — Schalter und Knopf am rechten Rand (E‑173, E‑174, [`neu-laden.md`](neu-laden.md))
+>
+> **Der Block darüber bleibt stehen; für den Ort gelten seine Zeilen *Ort des Schalters* und
+> *Manuell* nicht mehr.** Schalter und „Neu laden" stehen **am rechten Rand der Filterleiste**, hinter
+> Status, Prozess und Suche, der Knopf außen und bündig mit der Tabelle (E‑173). Der Knopf zeigt
+> **nur die Pfeile**, „Auto" bleibt (E‑174). Bei 1280 px ohne Panel stehen beide in einer zweiten
+> Zeile der Leiste, bei 1920 px in der ersten (M183). Regeln, Anfragen und der Befund unter
+> `xl` sind unverändert.
 
 **Beim Mandantenwechsel** wird der Zwischenspeicher geleert, nicht invalidiert (bestehende Regel).
 Der **Prozessfilter wird dabei mit zurückgesetzt**: `ProcessID`s sind mandantengebunden, und ein
