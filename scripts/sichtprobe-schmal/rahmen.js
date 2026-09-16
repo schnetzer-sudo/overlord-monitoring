@@ -24,8 +24,20 @@
  *   __sp.voll("nachrichtenliste", 360)             → das vollständige Messobjekt
  */
 window.__sp = (() => {
-  const S = { f: null, voll: {}, kompakt: {} };
-  const schlafen = (ms) => new Promise((ok) => setTimeout(ok, ms));
+  const S = { f: null, voll: {}, kompakt: {}, bedarf: {} };
+  // Im verdeckten Tab drosselt Chrome verkettete `setTimeout` nach wenigen Minuten auf etwa einen
+  // Aufruf je Minute, und jede Ruheschleife hängt dann (gesehen am 15.09.2026, M177). Dort wird über
+  // `MessageChannel` gewartet: nicht gedrosselt, kostet aber während des Wartens einen Kern.
+  const kanal = new MessageChannel();
+  const schlafen = (ms) =>
+    document.hidden
+      ? new Promise((ok) => {
+          const ende = performance.now() + ms;
+          const tick = () => (performance.now() >= ende ? ok() : kanal.port2.postMessage(0));
+          kanal.port1.onmessage = tick;
+          tick();
+        })
+      : new Promise((ok) => setTimeout(ok, ms));
 
   function rahmen(w, h) {
     if (!S.f) {
@@ -207,12 +219,57 @@ window.__sp = (() => {
     return `${kennung} ${lade.url} ruhe ${lade.ruhe.erreicht ? lade.ruhe.dauerMs + "ms" : "NEIN"} gesendet ${s}\n` + kurz(kennung);
   }
 
+  /**
+   * Teil 2: der Spaltenbedarf je Tabelle (`spaltenbedarf.js`, muss mit
+   * eingesetzt sein). Gemessen an einer breiten Fläche, damit Ruhe und
+   * Schriften sicher stehen; die Sonde misst ausgeblendete Spalten ohnehin mit.
+   * Das Ergebnis geht an den Empfänger, zurück kommt eine Zeile je Spalte.
+   */
+  async function bedarf(kennung, etiketten, w = 1600, h = 1000) {
+    rahmen(w, h);
+    await schlafen(1500);
+    await win().document.fonts.ready;
+    await ruhe(4000);
+    const m = spaltenbedarfMessen(doc(), win(), etiketten);
+    S.bedarf[kennung] = m;
+    const r = await fetch("http://localhost:3999/" + encodeURIComponent(kennung), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ kennung, zeit: new Date().toISOString(), bedarf: m }),
+    });
+    return r.status + " " + kurzBedarf(kennung);
+  }
+
+  function kurzBedarf(kennung) {
+    const m = S.bedarf[kennung];
+    return m.tabellen
+      .map((t) =>
+        (t.name ?? "?") + " n" + t.zeilen + ": " +
+        (t.spalten ?? [])
+          .map((s) => `${s.schluessel.split(".").pop()} k${Math.round(s.kopf.bedarfMax)} e${Math.round(s.zellen.einzeilig.max ?? 0)} u${Math.round(s.zellen.unteilbar.max ?? 0)}${s.zellen.plakette.max ? " p" + Math.round(s.zellen.plakette.max) : ""}${s.rechnung ? " r" + Math.round(s.rechnung.max) : ""}`)
+          .join(" | "),
+      )
+      .join("\n");
+  }
+
+  /**
+   * Die Sprache für den Rahmen umstellen — über das Cookie der Anwendung
+   * (`overlord_sprache`, kein `HttpOnly`), danach lädt `laden` die Route neu.
+   * Es ist das Cookie des Nutzers: Nach dem Lauf wird der vorige Wert
+   * zurückgesetzt (`sprache(vorher)`).
+   */
+  function sprache(wert) {
+    const vorher = (document.cookie.match(/(?:^|; )overlord_sprache=([^;]*)/) || [])[1] ?? null;
+    document.cookie = `overlord_sprache=${wert}; path=/; max-age=31536000; samesite=lax`;
+    return vorher;
+  }
+
   function schliessen() {
     S.f?.remove();
     S.f = null;
   }
 
-  return { S, laden, messen, ruhe, zeileOeffnen, api, voll, senden, kurz, route, schliessen, doc, win };
+  return { S, laden, messen, ruhe, zeileOeffnen, api, voll, senden, kurz, route, bedarf, kurzBedarf, sprache, schliessen, doc, win };
 })();
 window.__BREITEN = [[360, 740], [390, 844], [430, 932], [744, 1133], [768, 1024]];
 window.__daten = window.__daten ?? {};
