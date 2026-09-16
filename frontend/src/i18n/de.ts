@@ -202,6 +202,31 @@ export const de = {
   },
 
   /**
+   * „Neu laden" und der Schalter der automatischen Aktualisierung
+   * (`components/neu-laden.tsx`, `docs/neu-laden.md`). Auf oberster Ebene wie
+   * `zeitraum`: Der Baustein liegt in `components/` und liest keinen Textblock
+   * eines Features.
+   *
+   * **Sichtbar sind nur `knopf` und `automatik.knopf`** (E‑166). Die übrigen
+   * Texte sind zugänglicher Name und Tooltip — und sie sagen, was die Ansicht
+   * beim Neuladen tut, denn das ist nicht überall dasselbe (E‑168).
+   */
+  neuLaden: {
+    knopf: "Neu laden",
+    uebersicht: "Übersicht neu laden",
+    nachrichten: "Nachrichten neu laden, ab Seite eins",
+    prozesse: "Prozessbaum und Übertragungen neu laden",
+    automatik: {
+      knopf: "Auto",
+      name: "Automatische Aktualisierung",
+      aus: "Automatische Aktualisierung: aus. Eingeschaltet lädt sie Seite eins jede Minute neu, solange der Tab sichtbar ist.",
+      an: "Automatische Aktualisierung: an. Seite eins wird jede Minute neu geladen, solange der Tab sichtbar ist.",
+      pausiert:
+        "Automatische Aktualisierung: pausiert, weil nicht Seite eins zu sehen ist. „Neu laden“ führt zurück auf Seite eins.",
+    },
+  },
+
+  /**
    * Die Landingpage (`docs/dashboard-frontend.md`).
    *
    * **Sie hat den Block `startseite` abgelöst.** Dort standen bis zum 01.09.2026
@@ -600,11 +625,8 @@ export const de = {
     },
 
     aktualisierung: {
-      schalter: "Automatisch aktualisieren",
-      jetztAktualisieren: "Jetzt aktualisieren",
       stand: "Stand {zeit}",
       standUnbekannt: "Noch nicht geladen",
-      pausiertGeblaettert: "Pausiert, solange geblättert wird.",
       laeuft: "Wird aktualisiert …",
     },
 

@@ -882,6 +882,12 @@ export type Artefaktanzeige = {
 export const NACHRICHTEN_SCHLUESSEL = {
   /** Der Filter gehört in den Schlüssel: Andere Filter sind andere Daten. */
   liste: (abfrage: string) => ["nachrichten", "liste", abfrage] as const,
+  /**
+   * **Der Präfix aller Listenseiten** — nur zum Zählen laufender Abrufe
+   * (`useIsFetching`), nie zum Invalidieren: „Neu laden" holt gezielt Seite eins
+   * und keine Seite eines anderen Filters (`docs/neu-laden.md`).
+   */
+  alleListen: ["nachrichten", "liste"] as const,
   prozesse: ["nachrichten", "prozesse"] as const,
   /**
    * Der Prozessbaum. **Das Fenster gehört in den Schlüssel**, denn es ist der

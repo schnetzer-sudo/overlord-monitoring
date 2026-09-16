@@ -294,3 +294,27 @@ export function achsenaufloesung(zeitraum: Rollupzeitraum): Zeitaufloesung {
 export function achsenbreite(laengste: number): number {
   return Math.max(48, Math.ceil((laengste + 1) * 6.2) + 10);
 }
+
+/**
+ * **Baut der Verlauf auf, oder steht er?** (E‑170, `docs/neu-laden.md`)
+ *
+ * E‑85 erlaubt Bewegung **beim Aufbau** von Verlauf und Fehlerstreifen, sonst
+ * keine. Ein Aufbau ist das erste Bild eines Zeitraums (E‑86: ein Wechsel baut
+ * neu auf). **„Neu laden" ist keiner** — derselbe Zeitraum, eine neuere Antwort.
+ *
+ * Das war nicht von selbst so, und das ist am Quelltext nachgesehen (Recharts
+ * 3.10.1, `animation/AnimatedItems.js`): Jeder neue Satz Stützstellen bekommt
+ * eine neue Animationskennung, und Recharts interpoliert **vom vorigen Stand zum
+ * neuen**. Mit geänderten Zahlen hieße das 600 ms Morphing bei jedem Neuladen —
+ * genau die Bewegung, die E‑86 für den Zeitraumwechsel ausschließt.
+ *
+ * Zurück kommt der Wert für `isAnimationActive`: `"auto"`, solange für diesen
+ * Zeitraum noch kein Aufbau zu Ende gelaufen ist — `"auto"` behält Recharts'
+ * eigenen Ausschalter für `prefers-reduced-motion` —, danach `false`.
+ */
+export function aufbauAktiv(
+  aufgebautFuer: Rollupzeitraum | null,
+  zeitraum: Rollupzeitraum,
+): "auto" | false {
+  return aufgebautFuer === zeitraum ? false : "auto";
+}

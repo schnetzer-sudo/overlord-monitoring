@@ -125,6 +125,21 @@ export const en: Texte = {
     beideNoetig: "A custom time window still needs its second point in time.",
   },
 
+  neuLaden: {
+    knopf: "Reload",
+    uebersicht: "Reload overview",
+    nachrichten: "Reload messages, from page one",
+    prozesse: "Reload process tree and transfers",
+    automatik: {
+      knopf: "Auto",
+      name: "Automatic refresh",
+      aus: "Automatic refresh: off. When on, it reloads page one every minute while the tab is visible.",
+      an: "Automatic refresh: on. Page one reloads every minute while the tab is visible.",
+      pausiert:
+        "Automatic refresh: paused because page one is not shown. “Reload” returns to page one.",
+    },
+  },
+
   dashboard: {
     titel: "Overview",
     leerTitel: "Nothing in this period",
@@ -344,11 +359,8 @@ export const en: Texte = {
     },
 
     aktualisierung: {
-      schalter: "Refresh automatically",
-      jetztAktualisieren: "Refresh now",
       stand: "As of {zeit}",
       standUnbekannt: "Not loaded yet",
-      pausiertGeblaettert: "Paused while paging.",
       laeuft: "Refreshing …",
     },
 

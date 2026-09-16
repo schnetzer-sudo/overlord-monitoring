@@ -1,5 +1,6 @@
 "use client";
 
+import { NeuLaden } from "@/components/neu-laden";
 import { Card } from "@/components/ui/card";
 import { ZeitraumUmschalter } from "@/components/zeitraum-umschalter";
 import { Fehler, Laden, Leer } from "@/components/zustand";
@@ -83,11 +84,31 @@ export function DashboardAnsicht() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <h1 className="text-ueberschrift font-semibold">{texte.dashboard.titel}</h1>
-        <ZeitraumUmschalter
-          gewaehlt={zeitraum}
-          aufAuswahl={setzeZeitraum}
-          gesperrt={antwort.isPending}
-        />
+        {/*
+         * **„Neu laden" unmittelbar links neben dem Umschalter** (E‑163), und
+         * wie er **außerhalb der Zustandskette**: Der Knopf bleibt in allen vier
+         * Zuständen stehen, auch im Leerzustand (E‑p, ergänzt am 16.09.2026) —
+         * dort ist er neben dem Zeitraum der zweite Weg herauszufinden, ob es
+         * noch immer nichts gibt.
+         *
+         * **Kein Aufbau** (E‑170): Der Schlüssel bleibt derselbe, die Antwort
+         * bleibt stehen, bis die neue da ist (`refetch` hält die Daten), kein
+         * Block fällt in den Ladezustand, und der Verlauf bewegt sich nicht —
+         * warum nicht, steht in `verlauf-diagramm.tsx`. **Nur manuell** (E‑164):
+         * `refetchInterval` gibt es hier weiterhin nicht (E‑137).
+         */}
+        <div className="flex flex-wrap items-center gap-2">
+          <NeuLaden
+            name={texte.neuLaden.uebersicht}
+            laedt={antwort.isFetching}
+            aufNeuLaden={() => void antwort.refetch({ cancelRefetch: false })}
+          />
+          <ZeitraumUmschalter
+            gewaehlt={zeitraum}
+            aufAuswahl={setzeZeitraum}
+            gesperrt={antwort.isPending}
+          />
+        </div>
       </div>
 
       {antwort.isPending ? (

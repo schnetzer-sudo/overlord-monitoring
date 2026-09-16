@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { NeuLaden } from "@/components/neu-laden";
 import { Fehler, Laden, Leer } from "@/components/zustand";
 import { Button } from "@/components/ui/button";
 import { useTexte } from "@/i18n/provider";
@@ -19,6 +20,7 @@ import {
   zeitfensterHalb,
   type Nachrichtenfilter,
 } from "../filter";
+import { automatikzustand } from "../aktualisierung";
 import { useEscapeSchliesst, useNachrichtenSeite, useNachrichtenfilter } from "../hooks";
 import { Blaettern } from "./blaettern";
 import { Filterleiste } from "./filterleiste";
@@ -150,6 +152,29 @@ export function NachrichtenAnsicht() {
           suchfehler={amSuchfeld}
           zeitfensterfehler={amZeitfenster}
           aufLangeSuche={() => steuerung.setzeLangeSuche(true)}
+          vorDemZeitfenster={
+            /*
+             * **Schalter, „Neu laden", Zeitraum** — in dieser Reihenfolge, damit
+             * „Neu laden" auf allen drei Seiten an derselben Stelle steht
+             * (E‑163). Der Schalter steht **nur hier** (E‑164) und zeigt selbst,
+             * wenn er pausiert (E‑171).
+             *
+             * ⚠️ **Unter `xl` bei offenem Panel ist er nicht zu sehen:** Die
+             * ganze linke Spalte weicht dem Panel (`hidden xl:flex` oben), und
+             * die Liste aktualisiert dort weiter, wenn der Schalter an ist.
+             * Das ist offener Punkt 121 aus `docs/process-view.md`, für diese
+             * Ansicht weiterhin offen (`docs/neu-laden.md`).
+             */
+            <NeuLaden
+              name={texte.neuLaden.nachrichten}
+              laedt={liste.holt}
+              aufNeuLaden={liste.neuLaden}
+              automatik={{
+                zustand: automatikzustand(aktualisierungAn, liste.aufSeiteEins),
+                aufUmschalten: setAktualisierungAn,
+              }}
+            />
+          }
         />
 
         {ansichtsfehler ? (
@@ -179,12 +204,8 @@ export function NachrichtenAnsicht() {
           kannVor={liste.kannVor}
           aufZurueck={liste.zurueck}
           aufVor={liste.vor}
-          aufSeiteEins={liste.aufSeiteEins}
           standVon={liste.standVon}
           laeuft={liste.laeuft}
-          aktualisierungAn={aktualisierungAn}
-          aufAktualisierung={setAktualisierungAn}
-          aufAktualisieren={liste.aktualisiere}
         />
       </div>
 

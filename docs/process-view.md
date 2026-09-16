@@ -921,7 +921,7 @@ nie den Umfang.
 | | |
 |---|---|
 | **120** | **Die Zahl „noch nie" aus der Kopfzeile ist im Baum nicht mehr einzeln auffindbar** (E‑56, §17). Der Baum zeigt den Zustand nicht mehr an der Zeile; wer wissen will, **welche** der 217 Prozesse bei `NEXANS` nie etwas getragen haben, hat dafür den Schalter „Nur mit Verkehr im Zeitraum" — er blendet genau die Gegenmenge aus, und was stehenbleibt, ist die Menge „nie" plus die stillen. **Dass das ausreicht, ist eine Auslegung und keine Messung**: Es ist ein Weg über zwei Schritte statt einer Angabe in der Zeile, und ein Nutzer ist dazu nicht befragt worden. Wer den Punkt aufmacht, entscheidet zwischen „Zeile trägt es wieder" (dann samt Dämpfung, §3) und „die Kopfzeile bekommt einen Filter je Zustand" |
-| **121** | **Unter `xl` aktualisiert die verdeckte Liste weiter, und ihr Schalter steckt im verdeckten Bereich** (§18, entfallene Sonderregel). Ab `xl` steht die Liste seit E‑57 neben dem Panel und ist bedienbar; darunter weicht sie, und dann läuft ihr Intervall für eine Liste, die niemand sieht — abschalten kann der Nutzer sie nicht. **Das ist nicht neu und nicht auf diese Ansicht beschränkt:** Die Nachrichtenliste trägt denselben Fall seit Schritt 5, mit derselben Ursache und ohne Gegenmittel. Zwei Auswege, und beide sind Entscheidungen über die **geteilte** Liste: den Aktualisierungsschalter aus dem Blätterblock in den Kopf der Ansicht heben (dann ist er immer erreichbar), oder die Sichtbarkeit an einen `IntersectionObserver` hängen (dann ist es kein zweiter Umbruchpunkt, sondern eine Messung). **Die Vorgabe ist aus** — der Fall tritt nur ein, wenn ein Nutzer die Aktualisierung selbst eingeschaltet hat |
+| **121** | **Unter `xl` aktualisiert die verdeckte Liste weiter, und ihr Schalter steckt im verdeckten Bereich** (§18, entfallene Sonderregel). Ab `xl` steht die Liste seit E‑57 neben dem Panel und ist bedienbar; darunter weicht sie, und dann läuft ihr Intervall für eine Liste, die niemand sieht — abschalten kann der Nutzer sie nicht. **Das ist nicht neu und nicht auf diese Ansicht beschränkt:** Die Nachrichtenliste trägt denselben Fall seit Schritt 5, mit derselben Ursache und ohne Gegenmittel. Zwei Auswege, und beide sind Entscheidungen über die **geteilte** Liste: den Aktualisierungsschalter aus dem Blätterblock in den Kopf der Ansicht heben (dann ist er immer erreichbar), oder die Sichtbarkeit an einen `IntersectionObserver` hängen (dann ist es kein zweiter Umbruchpunkt, sondern eine Messung). **Die Vorgabe ist aus** — der Fall tritt nur ein, wenn ein Nutzer die Aktualisierung selbst eingeschaltet hat. **Fortgeschrieben am 16.09.2026** ([`neu-laden.md`](neu-laden.md), E‑163 bis E‑172): Der erste Ausweg ist gegangen — der Schalter steht im Kopf der Nachrichtenliste —, und die Prozessansicht hat gar keine automatische Aktualisierung mehr (E‑164). ✔ **Für `/prozesse` damit erledigt.** ⚠️ **Für `/nachrichten` offen, und zwar mit Zahl:** Unter `xl` weicht dem Panel nicht nur die Liste, sondern die **ganze linke Spalte samt Kopf** — bei 1024 und 1279 px mit offenem Panel sind Schalter und „Neu laden" nicht zu sehen, ab 1280 px schon (M182). Ist der Schalter an, fragt die verdeckte Liste dort weiter, und abschalten lässt er sich erst nach dem Schließen des Panels — **am Code abgelesen, nicht gemessen**. Kein Sonderweg gebaut; der zweite Ausweg, der `IntersectionObserver`, bleibt ungegangen |
 
 ---
 
@@ -1735,6 +1735,28 @@ beides genau wie in der Nachrichtenliste.
 > großzügig. Ihn hier allein zu behandeln hieße wieder, dieselbe Liste an zwei Orten verschieden zu
 > bauen; ihn über die Fensterbreite zu behandeln hieße, einen zweiten Umbruchpunkt in JavaScript zu
 > führen. Geführt als offener Punkt **121**.
+
+> ### ⚠️ Korrektur vom 16.09.2026 — **keine automatische Aktualisierung mehr, „Neu laden" im Kopf** (E‑163 bis E‑172, [`neu-laden.md`](neu-laden.md))
+>
+> **Der Absatz „Was bleibt, bleibt aus demselben Grund" und beide Kästen darüber bleiben stehen.**
+> Sie begründen, warum die Liste hier dieselbe Aktualisierung trug wie in der Nachrichtenliste —
+> und genau diese Gleichheit ist aufgegeben: **Die automatische Aktualisierung gibt es nur noch in
+> der Nachrichtenliste** (E‑164). Die Übertragungsliste ruft `useNachrichtenSeite` mit `false`,
+> und im Blätterblock stehen nur noch Stand und Pfeile; auch der Knopf „Jetzt aktualisieren" ist
+> entfallen (E‑172).
+>
+> **Was an ihre Stelle tritt: „Neu laden" im Kopf der Ansicht**, unmittelbar links neben dem
+> Zeitraumumschalter und ohne Schalter (E‑163). Ein Klick holt **erst den Baum** mit denselben
+> Parametern und **danach die Liste ab Seite eins**, wenn ein Prozess gewählt ist. Nacheinander,
+> weil das Fenster der Liste aus der Antwort des Baums kommt (E‑50): Rückt es, beginnt die Liste von
+> selbst mit dem neuen Fenster, und eine Anfrage mit dem alten entfällt. Aufklappzustand, gewählter
+> Prozess, geöffnete Nachricht und Scrollstände bleiben; das Panel wird nicht neu geholt (E‑169).
+> Am laufenden System: genau zwei Anfragen, Adresse und aufgeklappte Knoten unverändert, 125 s ohne
+> Klick **keine** Anfrage (M182).
+>
+> **Damit erledigt sich zweierlei:** der Satz, dass der Baum daneben seine Zahlen nicht mitzieht —
+> beide stehen jetzt auf demselben Stand —, und für diese Ansicht Punkt **121**: Ohne Intervall fragt
+> die verdeckte Liste unter `xl` nichts mehr ab. Für die Nachrichtenliste bleibt er offen (§13).
 
 **Vor der Wahl eines Prozesses steht rechts ein Leerzustand** und nicht die ganze Liste des
 Mandanten. Dafür gibt es die Nachrichtenliste, und dorthin führt ein Verweis. **Solange kein Prozess

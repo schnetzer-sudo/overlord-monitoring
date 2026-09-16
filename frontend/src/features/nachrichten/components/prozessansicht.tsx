@@ -1,9 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Ref,
+} from "react";
 import Link from "next/link";
+import { useIsFetching } from "@tanstack/react-query";
 import { ArrowLeft, X } from "lucide-react";
 
+import { NeuLaden } from "@/components/neu-laden";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,7 +43,13 @@ import { cn } from "@/lib/utils";
 
 import type { Baumgliederung } from "@/lib/baumgliederung";
 
-import type { Baumknoten, Fenster, Prozessbaum, Prozessknoten } from "../api";
+import {
+  NACHRICHTEN_SCHLUESSEL,
+  type Baumknoten,
+  type Fenster,
+  type Prozessbaum,
+  type Prozessknoten,
+} from "../api";
 import type { Nachrichtenfilter, Sortierung } from "../filter";
 import {
   useEscapeSchliesst,
@@ -226,6 +243,46 @@ export function ProzessAnsicht() {
   );
 
   const filter = listenfilter(zustand, baum?.fenster);
+
+  /*
+   * **„Neu laden": erst der Baum, dann die Liste ab Seite eins** (E‑168, E‑169).
+   *
+   * Gefragt wird mit denselben Parametern — der Schlüssel bleibt, `refetch`
+   * hält Baum und Liste stehen, bis die neuen Antworten da sind. Aufklappzustand,
+   * gewählter Prozess und geöffnete Nachricht stehen im Zustand und in der URL
+   * und werden nicht angefasst; `lib/in-sicht-bringen.ts` hängt an `prozess` und
+   * `nachricht` und springt deshalb nicht. Das Panel wird nicht neu geholt.
+   *
+   * **Nacheinander und nicht zugleich, und das kostet eine Abfrage weniger:**
+   * Das Fenster der Liste kommt aus der Antwort des Baums (E‑50). Hat es sich
+   * geändert — ein relativer Zeitraum ist über eine volle Stunde gerückt —,
+   * ändert sich damit der Filter der Liste, und sie beginnt **von selbst** auf
+   * Seite eins mit dem neuen Fenster. Gleichzeitig abgeschickt, ginge vorher
+   * noch eine Abfrage mit dem alten Fenster hinaus, deren Antwort niemand mehr
+   * zeigt. Ist das Fenster gleich geblieben, holt die Liste Seite eins selbst.
+   *
+   * **Keine automatische Aktualisierung in dieser Ansicht** (E‑164).
+   */
+  const liste = useRef<Listensteuerung>(null);
+  const listeHolt = useIsFetching({ queryKey: NACHRICHTEN_SCHLUESSEL.alleListen }) > 0;
+  const holt = antwort.isFetching || listeHolt;
+  const neuLaden = () => {
+    if (holt) {
+      return;
+    }
+    const fensterVorher = baum?.fenster;
+    void antwort.refetch({ cancelRefetch: false }).then((ergebnis) => {
+      const fensterNachher = ergebnis.data?.fenster;
+      if (
+        !ergebnis.isError &&
+        fensterVorher?.von === fensterNachher?.von &&
+        fensterVorher?.bis === fensterNachher?.bis
+      ) {
+        liste.current?.neuLaden();
+      }
+    });
+  };
+
   const gewaehlterProzess = prozessAus(baum, zustand.prozess);
   const zuordnung = zuordnungVon(baum, zustand.prozess);
 
@@ -470,20 +527,27 @@ export function ProzessAnsicht() {
          * etwas ausprobieren will. Im Ladezustand gesperrt.
          */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <ZeitraumUmschalter
-            gewaehlt={hervorgehobenerBaumzeitraum(zustand, freiGewaehlt, baum?.zeitraum)}
-            aufAuswahl={(zeitraum) => {
-              setFreiGewaehlt(false);
-              setzeZeitraum(zeitraum);
-            }}
-            aufFrei={() => {
-              // Der freie Modus beginnt leer: Ein vorbelegtes Fenster wäre ein
-              // zweiter Standardwert. Sichtbar wird die Wahl über `freiGewaehlt`.
-              setFreiGewaehlt(true);
-              setzeFreiesFenster(null, null);
-            }}
-            gesperrt={antwort.isPending}
-          />
+          {/* „Neu laden" unmittelbar links neben dem Umschalter (E‑163), in
+              einer eigenen Gruppe mit ihm: Der Abstand ist derselbe wie auf
+              Übersicht und Nachrichten, und bricht die Zeile um, gehen beide
+              zusammen. Kein Schalter — nur die Nachrichtenliste trägt einen. */}
+          <div className="flex flex-wrap items-center gap-2">
+            <NeuLaden name={texte.neuLaden.prozesse} laedt={holt} aufNeuLaden={neuLaden} />
+            <ZeitraumUmschalter
+              gewaehlt={hervorgehobenerBaumzeitraum(zustand, freiGewaehlt, baum?.zeitraum)}
+              aufAuswahl={(zeitraum) => {
+                setFreiGewaehlt(false);
+                setzeZeitraum(zeitraum);
+              }}
+              aufFrei={() => {
+                // Der freie Modus beginnt leer: Ein vorbelegtes Fenster wäre ein
+                // zweiter Standardwert. Sichtbar wird die Wahl über `freiGewaehlt`.
+                setFreiGewaehlt(true);
+                setzeFreiesFenster(null, null);
+              }}
+              gesperrt={antwort.isPending}
+            />
+          </div>
           {/* Die Felder stehen **neben** dem Umschalter, nicht darin — nur so
               bleibt das Dashboard zeichengleich. Sie sind Kinder derselben
               Zeile in derselben Höhe: Die Zeile wird breiter, nicht höher, und
@@ -612,6 +676,7 @@ export function ProzessAnsicht() {
                     )}
                   >
                     <Uebertragungen
+                      ref={liste}
                       filter={filter}
                       gewaehlteNachricht={zustand.nachricht}
                       aufNachricht={oeffneNachricht}
@@ -958,6 +1023,17 @@ function Kopf({
  * Baum daneben seine Zahlen nicht mitzieht, ist die bekannte Folge und steht in
  * `docs/process-view.md` §18.
  *
+ * ## ⚠️ Seit dem 16.09.2026 aktualisiert diese Liste nicht mehr von selbst (E‑164)
+ *
+ * **Der Absatz darüber ist überholt und bleibt als Begründung stehen, wogegen
+ * entschieden wurde.** Der Schalter ist aus dem Blätterblock in den Kopf der
+ * Nachrichtenliste gewandert, und nur dort gibt es ihn noch. Diese Ansicht lädt
+ * ausschließlich von Hand, über „Neu laden" im Kopf — und dann **Baum und Liste
+ * zusammen**. Damit ist auch der Satz über den Baum, der seine Zahlen nicht
+ * mitzieht, erledigt: Beide stehen auf demselben Stand. Der Haken wird mit
+ * `false` gerufen; die Liste reicht ihr `neuLaden` über `ref` an die Ansicht
+ * ({@link Listensteuerung}).
+ *
  * ## Die Sonderregel für die verdeckte Liste ist mit E‑57 entfallen *(02.09.2026)*
  *
  * **Was hier stand und warum:** Unter E‑53 wich die *Liste*, sobald das Panel
@@ -983,16 +1059,23 @@ function Kopf({
  * JavaScript zu führen. Geführt als offener Punkt **121**
  * (`docs/process-view.md` §13).
  *
+ * *Für diese Ansicht erledigt am 16.09.2026:* Ohne automatische Aktualisierung
+ * fragt die verdeckte Liste nichts mehr ab (E‑164). In der Nachrichtenliste
+ * bleibt der Punkt offen (`docs/neu-laden.md`).
+ *
  * **Eigene Komponente, damit ohne gewählten Prozess keine Abfrage entsteht.**
  * Hooks laufen nicht bedingt; also läuft die Komponente bedingt.
  */
 function Uebertragungen({
+  ref,
   filter,
   gewaehlteNachricht,
   aufNachricht,
   aufSortierung,
   gewaehlteZeile,
 }: {
+  /** Über ihn ruft der Kopf der Ansicht „Neu laden" für die Liste. */
+  ref: Ref<Listensteuerung>;
   filter: Nachrichtenfilter;
   gewaehlteNachricht: string | null;
   aufNachricht: (messageId: string | null) => void;
@@ -1001,14 +1084,10 @@ function Uebertragungen({
   gewaehlteZeile: (zeile: HTMLTableRowElement | null) => void;
 }) {
   const texte = useTexte();
-  /*
-   * **Nicht in der URL** — der Schalter betrifft die Arbeitsweise des
-   * Betrachters, nicht den gezeigten Ausschnitt (`docs/nachrichtenliste.md`
-   * §8.2). Dieselbe Festlegung wie in der Nachrichtenliste, und derselbe
-   * Komponentenzustand.
-   */
-  const [aktualisierungAn, setAktualisierungAn] = useState(false);
-  const liste = useNachrichtenSeite(filter, aktualisierungAn);
+  // Keine automatische Aktualisierung (E‑164) — nur „Neu laden" im Kopf.
+  const liste = useNachrichtenSeite(filter, false);
+  const { neuLaden } = liste;
+  useImperativeHandle(ref, () => ({ neuLaden }), [neuLaden]);
 
   if (liste.fehler !== null && liste.fehler !== undefined) {
     return <Fehler fehler={liste.fehler} aufWiederholen={liste.aktualisiere} />;
@@ -1054,13 +1133,12 @@ function Uebertragungen({
         kannVor={liste.kannVor}
         aufZurueck={liste.zurueck}
         aufVor={liste.vor}
-        aufSeiteEins={liste.aufSeiteEins}
         standVon={liste.standVon}
         laeuft={liste.laeuft}
-        aktualisierungAn={aktualisierungAn}
-        aufAktualisierung={setAktualisierungAn}
-        aufAktualisieren={liste.aktualisiere}
       />
     </div>
   );
 }
+
+/** Was die Übertragungsliste dem Kopf der Ansicht anbietet. */
+type Listensteuerung = { neuLaden: () => void };

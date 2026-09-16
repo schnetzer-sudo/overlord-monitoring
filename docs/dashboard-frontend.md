@@ -327,6 +327,7 @@ allein über Farbe"* —, und §7a hat es für diese Rolle noch einmal ausdrück
 | **E‑138** | **Die Plattform ist die *fünfte Kachel* der Reihe, und je Zeile stehen nur Zeichen und `serviceId`.** Der eigene Block war so hoch wie der Verlauf und schob alles Wichtige nach unten; E‑126 erreichte „ohne Scrollen" auf Kosten des Verlaufs. **Die Bauform ist die von E‑91** — das Zeichen trägt die Vordergrundfarbe der Rolle, das Wort steht in `title` und `sr-only` —, und die **vier Zeichen unterscheiden sich in der Form**: offener Strich, Dreieck, Viereck, Kreis. **Hebt auf:** den Ort (E‑126), das sichtbare Wort (E‑130, E‑132), die Zeiten (E‑131), den sichtbaren Grund (E‑134), den Überschriftensatz (E‑136). **Bestätigt:** E‑79 und E‑127 — keine Fläche, in keinem Zustand (§5.4, §5.8) | 10.09.2026 |
 | **E‑160** | **Heruntergefahrene Dienste stehen nicht in der Kachel *Plattform*, und am breiten Fenster hat jede ihrer Spalten höchstens drei Zeilen** — was darüber hinausgeht, beginnt eine neue Spalte. Die Kachel wächst in die Breite; die Reihe gibt ihr dafür eine Spalte nach Inhalt. Sind **alle** Dienste heruntergefahren, steht ein eigener Satz da und nicht der aus E‑135. **Auf Wunsch des Auftraggebers.** **Erledigt:** offenen Punkt 171. **Bestätigt:** die Reihenfolge nach `ServiceID` (E‑130) und das ungekürzte `serviceId` (§5.8) | 16.09.2026 |
 | **E‑161** | ***Geführt in [`dashboard.md`](dashboard.md) §9b, hier der Verweis.*** **Die Antwort trägt beide Sichten der Verteilung, der Wechsel geschieht allein im Browser.** Der Abfrageschlüssel trägt nur den Zeitraum, `verteilung` steht in der URL und in keiner Anfrage, die Vorgabe `PARTNER` liegt im Frontend. **Präzisiert E‑n** (die Vorgabe steht weiterhin nicht in der URL, sie ist nur nicht mehr die des Endpunkts), **bestätigt E‑p** (Leerzustand unverändert) und **E‑85/E‑86** (ein Sichtwechsel ist kein Aufbau, also keine Bewegung) (§2, §5.1, §5.5, §7.1) | 16.09.2026 |
+| **E‑163** bis **E‑172** | ***Geführt in [`neu-laden.md`](neu-laden.md), hier der Verweis.*** **„Neu laden" steht links neben dem Zeitraumumschalter** (E‑163), nur manuell — die Übersicht bekommt keine automatische Aktualisierung (E‑164). **Ergänzt E‑p** (im Leerzustand steht auch „Neu laden", §5.7), **leitet aus E‑85 ab** (Neuladen ist kein Aufbau, E‑170 — gebaut über `aufbauAktiv`, §5.2) und **bestätigt E‑86** (ein Zeitraumwechsel baut weiterhin auf) (§5.1, §5.2, §5.7, §7.1) | 16.09.2026 |
 | **E‑91** | **Jede Zeile in „Zuletzt aufgefallen" trägt das Zeichen ihrer Kategorie**, das Wort nur im `title` und für Vorleser. **Nimmt die Hälfte von 10b‑5 zurück, die zu viel war:** Mit der Plakette ist auch die Auskunft *dass es Fehler sind* aus dem Bild verschwunden — *aufgefallen* ist keine Kategorie (§5.6) | 04.09.2026 |
 
 ---
@@ -417,6 +418,16 @@ wäre eine Vermutung, die beim Eintreffen der Antwort springt.
 (`aufFrei`, [`process-view.md`](process-view.md) §41, E‑96) — und das Dashboard ruft ihn ohne. Ohne
 die Angabe sind es weiterhin drei Knöpfe; an dieser Stelle ändert sich nichts, was ein Nutzer sähe.
 
+> ### Seit dem 16.09.2026 steht links neben dem Umschalter „Neu laden" (E‑163, [`neu-laden.md`](neu-laden.md))
+>
+> **Am Umschalter selbst ändert sich nichts.** Davor steht der Baustein `components/neu-laden.tsx`,
+> in derselben Höhe und mit 0,5 rem Abstand (gemessen in M182), **ohne** den Schalter der
+> automatischen Aktualisierung — den gibt es nur in der Nachrichtenliste (E‑164). Ein Klick stellt
+> **dieselbe Anfrage** noch einmal: derselbe Schlüssel, `refetch` mit `cancelRefetch: false`, die
+> Antwort bleibt stehen, bis die neue da ist. **Er ändert nichts an der URL** und damit nichts an
+> E‑n. Solange eine Anfrage läuft, zeigt er eine Sanduhr und `aria-busy`, und ein Klick ruft
+> nichts.
+
 ### 5.2 Der Verlauf: vier Reihen, nicht acht (E‑l) — **seit dem 04.09.2026 eine Fläche (E‑83)**
 
 > ### ⚠️ Umbau vom 04.09.2026 — der Verlauf ist **eine Fläche** (**E‑83** bis **E‑86**)
@@ -494,6 +505,25 @@ die Angabe sind es weiterhin drei Knöpfe; an dieser Stelle ändert sich nichts,
 > eine Kurve da, die es in keinem der beiden Zeiträume gibt. Umgesetzt über einen `key` am
 > Container, der das Zeitraumpaar trägt; er steht an **beiden** Containern, sonst liefen die
 > Aufbauten auseinander.
+>
+> > ### ⚠️ Korrektur vom 16.09.2026 — **Neuladen ist kein Aufbau**, und das war nicht von selbst so (E‑170)
+> >
+> > **E‑85 und E‑86 bleiben wortgleich stehen**; abgeleitet wird aus E‑85, was sie nicht sagte: „Neu
+> > laden" bringt denselben Zeitraum mit neueren Zahlen, und das ist **kein** Aufbau — keine
+> > Bewegung, kein Morphing.
+> >
+> > **Nachgesehen am Quelltext und nicht angenommen:** Recharts 3.10.1 gibt jedem neuen Satz
+> > Stützstellen eine neue Animationskennung und interpoliert vom vorigen Stand zum neuen
+> > (`animation/AnimatedItems.js`). Der `key` aus E‑86 hängt am Zeitraumpaar und ändert sich beim
+> > Neuladen nicht — mit geänderten Zahlen hätten Fläche und Balken also 600 ms gemorpht.
+> >
+> > **Gebaut:** `aufbauAktiv(aufgebautFuer, zeitraum)` in `features/dashboard/verlauf.ts` liefert
+> > `"auto"`, bis der Aufbau des Zeitraums zu Ende gelaufen ist, danach `false`; gemerkt wird der
+> > Zeitraum in `onAnimationEnd`, nie in einem Effekt. Ein Zeitraumwechsel trifft einen anderen Wert
+> > und baut weiterhin auf; `"auto"` behält den Ausschalter für `prefers-reduced-motion`.
+> > **Belegt im Browser mit gestellter Antwort** ([`neu-laden.md`](neu-laden.md) §6, M182‑5): Neu
+> > laden **2** Stände der Fläche und **2** der Balken über 442 Bilder; ohne die Sperre **47** und
+> > **46**; der Zeitraumwechsel als Eichung **47** Balkenstände.
 >
 > #### Was am laufenden System gemessen worden ist *(NEXANS, Profil `dev`, Anker `2025-12-30 04:09:47`)*
 >
@@ -1375,6 +1405,16 @@ Diagramm, **auch nicht die Zeile „nicht zugeordnet"**. Sie sagt etwas über de
 Mandanten ohne Nachrichten sagt sie nichts. Der Stand bleibt stehen — er sagt, wie alt die Auskunft
 ist, und das gilt auch dann, wenn die Auskunft „nichts" lautet.
 
+> ### ⚠️ Korrektur vom 16.09.2026 — **E‑p ergänzt: auch „Neu laden" bleibt bedienbar** (E‑163, [`neu-laden.md`](neu-laden.md))
+>
+> **Der Absatz darüber bleibt stehen.** Im Leerzustand stehen jetzt **der Satz, der
+> Zeitraumumschalter und „Neu laden"** — sonst weiterhin nichts. Der Knopf steht wie der Umschalter
+> **außerhalb der Zustandskette** und damit in allen vier Zuständen: im Laden mit Sanduhr und ohne
+> Wirkung, im Fehler, im Leerzustand und bei Daten. Im Leerzustand ist er neben dem Zeitraum der
+> zweite Weg herauszufinden, ob es noch immer nichts gibt. Geprüft in `tests/neu-laden.test.tsx`
+> (*„steht im Leerzustand und lädt dort neu"*). **Punkt 169 ist davon nicht berührt** — die Kachel
+> *Plattform* steht im Leerzustand weiterhin nicht.
+
 ---
 
 ### 5.8 Der Block *Plattform* (10d Teil B, **E‑126** bis **E‑137**)
@@ -1825,6 +1865,18 @@ Adresse, der **gewählte** Zeitraum schon.
 > **§7.3 gilt damit nur noch halb:** *„eine Anfrage je Seitenaufruf"* ja, *„eine je Sichtwechsel"*
 > nicht mehr.
 
+> ### Fortgeschrieben am 16.09.2026 — „Neu laden" (E‑163, [`neu-laden.md`](neu-laden.md))
+>
+> **Beide Tabellen darüber bleiben stehen**; dazu kommen zwei Zeilen aus `tests/neu-laden.test.tsx`:
+>
+> | Vorgang | Anfragen |
+> |---|---|
+> | Klick „Neu laden" bei `?zeitraum=30T` | **genau eine weitere:** `["/api/dashboard?zeitraum=30T"]` |
+> | Klick „Neu laden" im Leerzustand, ohne Wahl | **genau eine weitere:** `["/api/dashboard"]` |
+>
+> **Am laufenden System dasselbe** (M182‑3): nach genau einem Klick bei `?zeitraum=30T` genau
+> `/api/dashboard?zeitraum=30T`, mitgeschrieben über die Quelle des Netzwerk-Tabs.
+
 ### 7.3 Der Block *Plattform* kostet keine Anfrage *(10.09.2026)*
 
 Am laufenden System gemessen, im angemeldeten Browser gegen die Testkopie, über die Netzwerkliste
@@ -1911,7 +1963,7 @@ ausgewiesen. Diese Ansicht fasst zwei davon nicht an und misst die dritte nach:
 | ~~**136**~~ | ~~**Der Rohstatus je Zeile ist mit der Plakette aus „Zuletzt aufgefallen" gefallen** (§5.6). Er stand nur im `title`, war also nie sichtbar; ihn jetzt sichtbar nachzuziehen wäre eine neue Gestaltungsentscheidung über den Block und keine Aufräumarbeit. **Benannt und nicht nebenbei entschieden**~~ — ✔ **gegenstandslos seit dem 04.09.2026 (E‑90)**, und zwar nicht erledigt: Der Block trägt eine Zeile je **Prozess**, und die hat keinen Rohstatus — sie kann zwanzig verschiedene enthalten. Er steht in der Liste, auf die der Verweis führt (§5.6) |
 | ~~**90**~~ | ~~Die Achsendichte ist am breiten Fenster angesehen und nicht am schmalsten.~~ ✔ **Erledigt am 01.09.2026, noch vor der ersten Abgabe.** Bei 360 px überlappten die Beschriftungen um 12 Pixel; die Konstante ist entfallen, die Dichte hängt jetzt an der Breite (§10.4). Der Punkt bleibt stehen, weil er die Messung trägt |
 | **92** | **Die gedrückte Schaltfläche des Umschalters ist mit 1,07 : 1 kaum zu sehen** (§10.5). Für ein Vorleseprogramm ist der Zustand sauber ausgezeichnet, für das Auge nicht. Es ist die Gestalt von `components/ui/toggle-group.tsx` — Generatorbereich — und die **Zeitfensterwahl der Nachrichtenliste** trägt sie seit Schritt 4 genauso. Eine Änderung ist eine Entscheidung über den gemeinsamen Baustein und gehört in einen eigenen Schritt |
-| **168** | **Ein offener Tab lädt nicht nach** (§6.5, gemessen in §7.3). Die Seite zeigt den Stand ihres Aufrufs; `refetchOnWindowFocus` steht mit Begründung auf `false`, ein `refetchInterval` gibt es nicht (E‑137). **Die Grenze betrifft alle Blöcke**, fällt beim Block *Plattform* aber besonders auf, weil er als einziger etwas beschreibt, das sich im Minutentakt ändern kann. Wer den Punkt aufmacht, entscheidet zwischen einem Takt für die ganze Seite, einem eigenen Endpunkt nur für diesen Block (dann fiele *„kein Block lädt nach"* aus §2) und einem sichtbaren Hinweis auf das Alter des Bildes |
+| **168** | **Ein offener Tab lädt nicht nach** (§6.5, gemessen in §7.3). Die Seite zeigt den Stand ihres Aufrufs; `refetchOnWindowFocus` steht mit Begründung auf `false`, ein `refetchInterval` gibt es nicht (E‑137). **Die Grenze betrifft alle Blöcke**, fällt beim Block *Plattform* aber besonders auf, weil er als einziger etwas beschreibt, das sich im Minutentakt ändern kann. Wer den Punkt aufmacht, entscheidet zwischen einem Takt für die ganze Seite, einem eigenen Endpunkt nur für diesen Block (dann fiele *„kein Block lädt nach"* aus §2) und einem sichtbaren Hinweis auf das Alter des Bildes. **Fortgeschrieben am 16.09.2026** ([`neu-laden.md`](neu-laden.md)): Es gibt jetzt **einen sichtbaren Weg** zum neuen Stand — „Neu laden" im Kopf (E‑163). **Ein Takt ist weiterhin nicht gebaut** und nach E‑164 auf dieser Seite auch nicht vorgesehen; von den drei Wegen oben ist damit keiner gegangen, der Punkt bleibt offen |
 | **169** | **Im Leerzustand steht die Kachel *Plattform* nicht** (§5.8). E‑p sagt *„einen Satz und den bedienbaren Umschalter, sonst nichts"*, und diesen Satz zu ändern war nicht Gegenstand von 10d — **gemeldet und nicht still aufgelöst**. Gerade dort wäre sie allerdings am nützlichsten: Der Leerzustand ist der Augenblick, in dem jemand wissen will, ob es an der Anlage liegt, und E‑116 ist genau dafür gebaut. Wer den Punkt aufmacht, ändert E‑p |
 | **170** | **Es steht nirgends mehr sichtbar, dass die Kachel *Plattform* für jeden Mandanten gleich ist** *(10.09.2026, E‑138 hebt die Hälfte von E‑136 auf)*. Der Satz war der einzige Ort, an dem das stand; in einer Kachel dieser Größe nähme er die Fläche, die den Kennungen gehört. **Die Gefahr ist benannt und nicht abgetan:** Wer die roten Zeichen sieht, kann sie als Auskunft über *seinen* Bestand lesen — sie sind eine über die **Anlage**. Ein `title` ist kein Ersatz (bekannte Grenze 3, Berührungsgeräte). Wer den Punkt aufmacht, entscheidet zwischen einem Wort im Kopf, einer Zeile unter der Reihe und einem eigenen Ort für diese Auskunft |
 | ~~**171**~~ | ✔ **Erledigt am 16.09.2026 durch E‑160** (§5.8): höchstens drei Zeilen je Spalte, heruntergefahrene Dienste ausgeblendet, die Kachel wächst in die Breite. Bei 1510 und 1920 px Fensterbreite steht die Reihe auf **110 px**, die Plattform auf **108 px**. *Der ursprüngliche Punkt:* **Bei fünf Kacheln geht die Höhe nicht auf** *(10.09.2026, gemessen in §5.8)*. Zwei Spalten innen tragen die Kachel auf **126 px** und damit unter die höchste der übrigen — sie entstehen aber erst ab rund **2130 px Fensterbreite**, weil `HTTPSERVICEPROD00` bei 13 px Schrift **137 px** breit ist. Darunter steht die Kachel einspaltig auf **198 px** gegen 154 px bei *Wartend*. **Verkleinert wird die Schrift nicht** (Vorgabe des Auftrags), und abgeschnitten werden die Kennungen nicht — sie unterscheiden sich in den letzten Zeichen. Wer den Punkt aufmacht, entscheidet zwischen einer Kachel über zwei Spalten der Reihe, kürzeren Kennungen aus dem Altsystem und dem Hinnehmen der 44 px |

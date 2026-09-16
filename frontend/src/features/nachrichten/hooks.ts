@@ -1,6 +1,12 @@
 "use client";
 
-import { useInfiniteQuery, useQuery, type InfiniteData } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useIsFetching,
+  useQuery,
+  useQueryClient,
+  type InfiniteData,
+} from "@tanstack/react-query";
 import { useQueryStates } from "nuqs";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
@@ -42,6 +48,11 @@ import {
   type Seite,
   type Suchfelder,
 } from "./api";
+import {
+  abfrageNachNeuLaden,
+  aktualisierungsintervall,
+  stapelNachNeuLaden,
+} from "./aktualisierung";
 import { PROZESSANSICHT_PARAMETER, type Prozessansichtzustand } from "./prozessansicht";
 import {
   NACHRICHTEN_PARAMETER,
@@ -587,9 +598,6 @@ export function useKettenAbwaerts(
   });
 }
 
-/** Intervall der automatischen Aktualisierung. */
-export const AKTUALISIERUNG_INTERVALL_MS = 60_000;
-
 /**
  * Ob der Tab gerade sichtbar ist.
  *
@@ -630,13 +638,22 @@ export type Listenzustand = {
   laedt: boolean;
   /** Es läuft eine Abfrage, aber es stehen schon Zeilen — kein Skelett, nur ein Hinweis. */
   laeuft: boolean;
+  /**
+   * **Irgendein Abruf dieser Liste läuft** — der erste Aufbau, eine Seite beim
+   * Blättern oder Seite eins im Hintergrund nach „Neu laden". Daran hängt die
+   * Sanduhr am Knopf; ein Klick in dieser Lage stellt keine zweite Anfrage.
+   */
+  holt: boolean;
   fehler: unknown;
   aufSeiteEins: boolean;
   kannVor: boolean;
   kannZurueck: boolean;
   vor: () => void;
   zurueck: () => void;
+  /** Die fehlgeschlagene Abfrage noch einmal — der Weg aus dem Fehlerzustand. */
   aktualisiere: () => void;
+  /** Zurück auf Seite eins desselben Filters, frisch geholt (E‑168). */
+  neuLaden: () => void;
 };
 
 /**
@@ -661,6 +678,26 @@ export type Listenzustand = {
  *   des Fensters und die Antwort ist `400`.
  * - **Nur bei sichtbarem Tab.**
  *
+ * Die drei Bedingungen stehen als reine Funktion in `aktualisierung.ts`
+ * ({@link aktualisierungsintervall}). **Seit dem 16.09.2026 gibt nur noch die
+ * Nachrichtenliste den Schalter mit** (E‑164); die Übertragungsliste der
+ * Prozessansicht ruft diesen Haken mit `false`.
+ *
+ * ## „Neu laden" führt auf Seite eins (E‑168)
+ *
+ * Auf Seite eins holt `neuLaden` dieselbe Abfrage neu; die Zeilen bleiben
+ * stehen, bis die Antwort da ist. **Auf einer späteren Seite wird zuerst Seite
+ * eins geholt und erst danach gewechselt** — über den Zwischenspeicher, mit
+ * `staleTime: 0`, damit eine gehaltene ältere Seite eins nicht als Antwort
+ * durchgeht. So bleibt die vorhandene Seite stehen, bis die neue da ist, und
+ * der Nutzer sieht nie ein Skelett und nie eine veraltete Seite eins, die
+ * gleich darauf springt. Beim Einhängen ist die Antwort frisch, also geht keine
+ * zweite Anfrage hinaus.
+ *
+ * **Nur die Liste.** Das Panel, die Kette, die Belegdaten und die Dateien
+ * hängen an eigenen Schlüsseln und werden hier nicht angefasst (E‑169) — jede
+ * Anzeige eines Artefakts schreibt einen Eintrag ins `audit_log`.
+ *
  * @param aktualisierungAn Schalterzustand. Bewusst ein Parameter und nicht in
  *   diesem Hook gehalten: Er gehört der Oberfläche, nicht der Abfrage — und er
  *   steht nicht in der URL, weil er die Arbeitsweise des Betrachters betrifft und
@@ -672,6 +709,7 @@ export function useNachrichtenSeite(
 ): Listenzustand {
   const [stapel, setStapel] = useState<string[]>([]);
   const sichtbar = useSichtbar();
+  const zwischenspeicher = useQueryClient();
 
   const grundabfrage = alsAbfrage(filter);
 
@@ -704,8 +742,7 @@ export function useNachrichtenSeite(
   const anfrage = useQuery<Seite<Nachricht>>({
     queryKey: NACHRICHTEN_SCHLUESSEL.liste(abfrage),
     queryFn: () => holeNachrichten(abfrage),
-    refetchInterval:
-      aktualisierungAn && aufSeiteEins && sichtbar ? AKTUALISIERUNG_INTERVALL_MS : false,
+    refetchInterval: aktualisierungsintervall({ an: aktualisierungAn, aufSeiteEins, sichtbar }),
     // Zweite Sicherung gegen den offengelassenen Browser: Auch wenn oben etwas
     // durchrutschte, läuft im Hintergrund kein Intervall.
     refetchIntervalInBackground: false,
@@ -731,12 +768,42 @@ export function useNachrichtenSeite(
 
   const nachladen = anfrage.refetch;
 
+  const ersteSeite = abfrageNachNeuLaden(filter);
+  const holtErsteSeite =
+    useIsFetching({ queryKey: NACHRICHTEN_SCHLUESSEL.liste(ersteSeite), exact: true }) > 0;
+  const holt = anfrage.isFetching || holtErsteSeite;
+
+  const neuLaden = useCallback(() => {
+    if (holt) {
+      return;
+    }
+    if (aufSeiteEins) {
+      // `cancelRefetch: false`: Läuft doch schon eine Abfrage (etwa das
+      // Intervall), hängt sich der Klick an sie an, statt sie abzubrechen und
+      // eine zweite zu stellen.
+      void nachladen({ cancelRefetch: false });
+      return;
+    }
+    const beimKlick = aktuellerStapel;
+    void zwischenspeicher
+      .fetchQuery({
+        queryKey: NACHRICHTEN_SCHLUESSEL.liste(ersteSeite),
+        queryFn: () => holeNachrichten(ersteSeite),
+        staleTime: 0,
+      })
+      // Ein Fehler steht danach im Zwischenspeicher und erscheint mit Seite
+      // eins als Fehlerzustand samt „Wiederholen" — gewechselt wird trotzdem.
+      .catch(() => undefined)
+      .then(() => setStapel((jetzt) => stapelNachNeuLaden(beimKlick, jetzt)));
+  }, [holt, aufSeiteEins, nachladen, aktuellerStapel, zwischenspeicher, ersteSeite]);
+
   return {
     seite,
     letzteSeite: seite ?? letzteSeite,
     standVon: anfrage.dataUpdatedAt,
     laedt: anfrage.isPending,
-    laeuft: anfrage.isFetching && !anfrage.isPending,
+    laeuft: (anfrage.isFetching && !anfrage.isPending) || holtErsteSeite,
+    holt,
     fehler: anfrage.error,
     aufSeiteEins,
     kannVor: seite?.hasMore === true && seite.nextCursor !== null,
@@ -749,6 +816,7 @@ export function useNachrichtenSeite(
     }, [seite?.nextCursor]),
     zurueck: useCallback(() => setStapel((bisher) => bisher.slice(0, -1)), []),
     aktualisiere: useCallback(() => void nachladen(), [nachladen]),
+    neuLaden,
   };
 }
 

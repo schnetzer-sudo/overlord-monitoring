@@ -1770,15 +1770,22 @@ Entsteht in Schritt 4, Aufgaben 13 bis 15. Route `/nachrichten` im Anwendungsrah
 features/nachrichten/
 ├─ api.ts                          Typen und die Aufrufe
 ├─ filter.ts                       Filterzustand, rein — ohne React
-├─ hooks.ts                        URL-Bindung, Blättern, Aktualisierung
+├─ hooks.ts                        URL-Bindung, Blättern, Aktualisierung, Neu laden
+├─ aktualisierung.ts               wann die Liste fragt, wohin Neu laden führt — rein
 └─ components/
    ├─ nachrichten-ansicht.tsx      der Zusammenbau, "use client"
-   ├─ filterleiste.tsx             Zeitfenster, Status, Prozess, Suche
+   ├─ filterleiste.tsx             Neu laden samt Schalter, Zeitfenster, Status, Prozess, Suche
    ├─ prozess-filter.tsx           Mehrfachauswahl aus /api/prozesse
    ├─ nachrichten-tabelle.tsx      Spalten, Zeitpunkt, BAM-Zellen
    ├─ status-plakette.tsx          Status — nie allein über Farbe
-   └─ blaettern.tsx                Seiten, Stand, automatische Aktualisierung
+   └─ blaettern.tsx                Seiten und Stand
 ```
+
+*Fortgeschrieben am 16.09.2026* ([`neu-laden.md`](neu-laden.md)): Der Schalter der automatischen
+Aktualisierung und „Neu laden" stehen seither in der Filterleiste, gerendert von
+`components/neu-laden.tsx` — **außerhalb** des Features, weil Übersicht und Prozessansicht denselben
+Knopf tragen. `aktualisierung.ts` hält die Regeln als reine Funktionen; `blaettern.tsx` trägt nur
+noch Seiten und Stand.
 
 Seit Schritt 5 liegen im selben Feature die Bausteine der Detailansicht (`detail.ts`,
 `nachricht-detail.tsx`, `nachricht-seite.tsx`, `zeitleiste.tsx`, `eigenschaften-block.tsx`).
@@ -2299,6 +2306,31 @@ Eintrag in beiden Sprachdateien.
 
 Dass sie beim Blättern pausiert, steht daneben — ein Schalter, der an ist und nichts tut, ist
 schlimmer als einer, der aus ist.
+
+> ### ⚠️ Korrektur vom 16.09.2026 — der Schalter steht im Kopf, und „Neu laden" führt auf Seite eins (E‑163 bis E‑172, [`neu-laden.md`](neu-laden.md))
+>
+> **Tabelle und Satz darüber bleiben stehen; die Regeln gelten Zeile für Zeile weiter** — Vorgabe
+> aus, 60 Sekunden, nur Seite eins, nur bei sichtbarem Tab, Stand immer sichtbar (E‑165). Geändert hat
+> sich, **wo** der Schalter steht und **wie** er das Pausieren zeigt, und neu ist „Neu laden":
+>
+> | | bis zum 16.09.2026 | seither |
+> |---|---|---|
+> | **Ort des Schalters** | im Blätterblock unter der Liste | in der Filterleiste, **vor** „Neu laden" und den Zeitraum-Schaltflächen (E‑163) — sichtbar „Auto" mit Uhr, der volle Name „Automatische Aktualisierung" als zugänglicher Name (E‑166) |
+> | **Pausiert** | Text daneben: *„Pausiert, solange geblättert wird."* | **am Schalter selbst**: Pause-Symbol statt Uhr, `aria-pressed` bleibt `true`, der Grund steht im Tooltip und in der zugänglichen Beschreibung (E‑171) |
+> | **Stand** | im Blätterblock | **unverändert** im Blätterblock (E‑171) |
+> | **Manuell** | Symbolknopf „Jetzt aktualisieren" im Blätterblock — er holte die **aktuelle** Seite, auch Seite sieben | **„Neu laden"** in der Filterleiste: zurück auf **Seite eins** desselben Filters, ohne Cursor (E‑168); die angezeigte Seite bleibt stehen, bis Seite eins da ist. Der alte Knopf ist entfallen (E‑172) |
+> | **Panel** | — | wird beim Neuladen **nicht** mitgeholt, nichts darin (E‑169) |
+>
+> **Warum Seite eins:** Bei der Vorgabesortierung über `MessageLastUpdate` wandert eine geänderte
+> Nachricht nach oben, die Seiten dahinter verschieben sich; und der Cursor eines relativen Fensters
+> kann inzwischen aus dem Fenster gefallen sein (`cursor-ungueltig`). **Danach läuft die
+> Aktualisierung wieder** — gemessen am laufenden System, eine Anfrage 60,1 s nach dem Klick (M182).
+>
+> ⚠️ **Unter `xl` bei offenem Panel sind Schalter und Knopf nicht zu sehen** — die ganze linke
+> Spalte weicht dem Panel, gemessen bei 1024 und 1279 px (M182). Ist der Schalter an, aktualisiert
+> die verdeckte Liste weiter — am Code abgelesen, nicht gemessen. Offener Punkt **121** bleibt für diese Ansicht offen
+> ([`process-view.md`](process-view.md) §13). Und ein automatischer Abruf **verlängert die Sitzung**
+> (M181, Punkt **184**).
 
 **Beim Mandantenwechsel** wird der Zwischenspeicher geleert, nicht invalidiert (bestehende Regel).
 Der **Prozessfilter wird dabei mit zurückgesetzt**: `ProcessID`s sind mandantengebunden, und ein

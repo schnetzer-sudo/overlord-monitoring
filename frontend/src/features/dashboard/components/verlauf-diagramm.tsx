@@ -11,6 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { useCallback, useState } from "react";
 
 import { useAnzeigezone } from "@/components/zeitzone";
 import { useSprache, useTexte } from "@/i18n/provider";
@@ -25,6 +26,7 @@ import {
   VERLAUFSKONTUR,
   achsenaufloesung,
   achsenbreite,
+  aufbauAktiv,
   einordnungenDerRolle,
   rolleKommtVor,
   verlaufszeilen,
@@ -201,6 +203,17 @@ export function VerlaufDiagramm({
   const sprache = useSprache();
   const zone = useAnzeigezone();
 
+  /*
+   * **Aufbau einmal je Zeitraum, danach steht das Bild** (E‑170, `aufbauAktiv`).
+   * Gemerkt wird der Zeitraum, dessen Aufbau zu Ende gelaufen ist — gesetzt im
+   * Ereignis `onAnimationEnd`, nie in einem Effekt. „Neu laden" bringt denselben
+   * Zeitraum mit neueren Zahlen, und die stehen dann ohne Morphing da; ein
+   * Zeitraumwechsel trifft einen anderen Wert und baut weiterhin auf (E‑86).
+   */
+  const [aufgebautFuer, setAufgebautFuer] = useState<Rollupzeitraum | null>(null);
+  const aufbau = aufbauAktiv(aufgebautFuer, zeitraum);
+  const aufbauFertig = useCallback(() => setAufgebautFuer(zeitraum), [zeitraum]);
+
   const zeilen = verlaufszeilen(punkte);
   const aufloesung = achsenaufloesung(zeitraum);
   const sichtbareRollen = STAPELREIHENFOLGE.filter((rolle) => rolleKommtVor(zeilen, rolle));
@@ -355,6 +368,11 @@ export function VerlaufDiagramm({
            * bei `prefers-reduced-motion: reduce` und keiner beim
            * Serverrendern (`util/usePrefersReducedMotion.js`). Ein eigener
            * Schalter wäre ein zweiter Weg zu derselben Entscheidung.
+           *
+           * *Seit dem 16.09.2026 steht es doch da (E‑170) — aber nicht als
+           * zweiter Weg zu derselben Entscheidung:* `aufbau` ist `'auto'`, bis
+           * der erste Aufbau des Zeitraums gelaufen ist, und erst danach
+           * `false`. Der Ausschalter für `reduce` bleibt Recharts' eigener.
            */}
           <Area
             type="monotone"
@@ -366,6 +384,8 @@ export function VerlaufDiagramm({
             strokeWidth={2}
             dot={false}
             activeDot={false}
+            isAnimationActive={aufbau}
+            onAnimationEnd={aufbauFertig}
             animationBegin={AUFBAUBEGINN}
             animationDuration={AUFBAUDAUER}
           />
@@ -462,6 +482,8 @@ export function VerlaufDiagramm({
             fill={rollenfuellung("fehler")}
             maxBarSize={MAX_BALKENBREITE}
             activeBar={false}
+            isAnimationActive={aufbau}
+            onAnimationEnd={aufbauFertig}
             animationBegin={AUFBAUBEGINN}
             animationDuration={AUFBAUDAUER}
           />
