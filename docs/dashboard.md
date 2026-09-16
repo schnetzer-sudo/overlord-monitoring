@@ -937,6 +937,72 @@ dessen Grund liegt am *Schema* ([`nachrichtenliste.md`](nachrichtenliste.md) §5
 >
 > Skripte, Auswerter und Rohausgaben: `scripts/messung-schritt10c-verdichtung/`.
 
+> ### M178 *(16.09.2026)* — beide Sichten in einer Antwort (E‑161)
+>
+> **Anlass:** Seit E‑161 trägt die Antwort die Verteilung in **beiden** Sichten, und das
+> Verteilungsstatement läuft je Landingpage **zweimal** — einmal je Sicht, in unveränderter Gestalt
+> (§4). Regel L7 verlangt die Messung des neuen Statements, und die ganze Seite wird teurer.
+>
+> #### Vorregistriert — eingetragen und eingecheckt vor dem ersten Lauf
+>
+> **Was gemessen wird.** `MessungM178DbIT`, dieselbe Bauform wie M108 und M146: das, was der Code
+> schickt, gegen die Testkopie im Profil `dev` am Anker `2025-12-30 04:09:47`; ein Aufwärmlauf, dann
+> die beste von fünf; `EXPLAIN` über das gerenderte Statement mit Literalen; alle Läufe
+> **nacheinander**, keiner parallel zu einem anderen Lauf gegen die Testkopie. Zeiten stehen nur
+> hier und in keiner Zusicherung (Regel T1). Gemessen werden je `NEXANS` und `SUTTONS`:
+>
+> 1. **die Richtungsform einzeln**, je 48 Stunden, 30 Tage, 12 Monate und ohne `zeitraum` — ohne
+>    `zeitraum` ist sie das Statement des Paares, das der Endpunkt wählt;
+> 2. **die ganze Landingpage** in denselben vier Lagen;
+> 3. *zusätzlich zum Auftrag:* **die Partnerform einzeln** in derselben Sitzung. Sie ist der
+>    Vergleich, der ohne Tagesdrift auskommt — M108 ist vom 31.08.2026, M145 vom 03.09.2026, und
+>    offener Punkt 134 zeigt, dass die Instanz zwischen zwei Tagen 27 ms verschieben kann.
+>
+> **Die Erwartung.** *Die Landingpage wird je Lage ungefähr um die Kosten eines
+> Verteilungsstatements teurer.* Die Richtungsform fährt Zeile für Zeile denselben Plan wie die
+> Partnerform (`DashboardPlanDbIT`), sie sollte also kosten, was die Partnerform kostet. Bezug sind
+> die Verteilungskosten aus M108 — `NEXANS` **9,9 / 62,6 / 88,5 ms**, `SUTTONS` **21,7 / 32,0 /
+> 40,2 ms** — und für `SUTTONS` bei zwölf Monaten seit M145 **67,3 ms** (offener Punkt 134). Die
+> Seite selbst gegen M145 gerechnet, **gerechnet und nicht gemessen**:
+>
+> | Lage | M145, ganze Seite | + ein Verteilungsstatement | **erwartet** |
+> |---|---:|---:|---:|
+> | `NEXANS` 48 h | 49,5–57,7 ms | 9,9 ms | **59,4–67,6 ms** |
+> | `NEXANS` 30 Tage | 149,4–149,8 ms | 62,6 ms | **212,0–212,4 ms** |
+> | `NEXANS` 12 Monate | 194,2–195,0 ms | 88,5 ms | **282,7–283,5 ms** — jedenfalls **unter 300 ms** |
+> | `NEXANS` ohne `zeitraum` (48 h) | 59,2–59,9 ms | 9,9 ms | **69,1–69,8 ms** |
+> | `SUTTONS` 48 h | 49,5–53,4 ms | 21,7 ms | **71,2–75,1 ms** |
+> | `SUTTONS` 30 Tage | 116,0–119,5 ms | 32,0 ms | **148,0–151,5 ms** |
+> | `SUTTONS` 12 Monate | 139,7–144,6 ms | 40,2 ms (M108) bzw. 67,3 ms (M145) | **179,9–184,8** bzw. **207,0–211,9 ms** |
+> | `SUTTONS` ohne `zeitraum` (48 h) | 55,1–59,9 ms | 21,7 ms | **76,8–81,6 ms** |
+>
+> **Das Tor:** jede Lage **unter 500 ms**. Liegt eine darüber, wird angehalten und berichtet und
+> **nicht** umgebaut.
+>
+> **Wie gelesen wird, festgelegt vor dem Lauf.** Drei Vergleiche, und sie tragen Verschiedenes:
+>
+> | Vergleich | trägt | trägt nicht |
+> |---|---|---|
+> | Richtungsform gegen Partnerform, **dieselbe Sitzung** | ob das neue Statement kostet, was das alte kostet — die eigentliche Aussage über diesen Bau | die Seite |
+> | Richtungsform gegen M108/M145 | ob die Größenordnung hält | eine Ursache für Abweichungen: Zwischen den Messungen liegen Tage und Punkt 134 |
+> | Seite gegen die Rechnung oben | ob die Vorregistrierung zutrifft | **ob die Differenz aus diesem Schritt stammt** — die alte Seite ist in dieser Sitzung nicht gemessen, weil es ihren Code nicht mehr gibt |
+>
+> **Abweichungen werden benannt und nicht umgedeutet.** Weicht die Seite von der Rechnung ab, die
+> Richtungsform aber nicht von der Partnerform derselben Sitzung, steht das so da: *die Seite weicht
+> ab, das neue Statement nicht* — und eine Ursache wird nur behauptet, wenn sie gemessen ist.
+>
+> #### Nummernvergabe — nach dem Verfahren aus [`process-view.md`](process-view.md) §46
+>
+> | | |
+> |---|---|
+> | **Entscheidung** | **E‑161.** Python-Suche mit Wortgrenzen über `docs/*.md`, `DEVELOPMENT_GUIDELINES.md` und `CLAUDE.md`, Strich als `-` oder U+2011: höchste **E‑160** ([`dashboard-frontend.md`](dashboard-frontend.md), 16.09.2026, sechs Treffer, alle gelesen). **E‑150** und **E‑159** stehen nur in der Vergabetabelle von [`spaltenwahl.md`](spaltenwahl.md) als Suchbereiche („E‑147 bis E‑159", „E‑148, E‑149 und E‑150 null") — gelesen, keine Vergabe. **E‑780** ist der bekannte Falschtreffer. Die nicht gemergten Zweige `feat/suchfeld-untermenues` und `test/indexbestand-e37` tragen kein E‑16x; die Suche ist auf beiden geeicht (E‑112 bzw. ein E‑Treffer in `messungen-schritt8.md` gefunden) |
+> | **Messung** | **M178.** Dieselbe Suche nach `M\d{2,4}`: höchste **M177** ([`spaltenwahl.md`](spaltenwahl.md)). **M178** steht nur in *„`M176` bis `M178` … kein Treffer"* ([`messungen-sichtprobe-schmal.md`](messungen-sichtprobe-schmal.md) §3) und im Zitat dieser Zeile in [`spaltenwahl.md`](spaltenwahl.md), **M179** nur als Fließtext in [`messungen-property-suche.md`](messungen-property-suche.md) — alle gelesen, keine Vergabe. Beide Zweige: kein M178, kein M18x; ihre Treffer auf `18x` sind Tabellenwerte |
+> | **Offener Punkt** | **182**, falls einer entsteht. `\*\*18[1-9]\*\*` und `Punkt 18[1-9]`: höchster vergebener **181** ([`spaltenwahl.md`](spaltenwahl.md)); die übrigen Treffer auf 181 bis 188 sind Tabellenwerte (`messungen-schritt10b.md` „Partner 8 \| 181", `messungen-schritt8.md` 182, 184, 185, `messungen-sichtprobe-schmal.md` Breiten 184) — gelesen, keine Punkte |
+>
+> #### Ergebnis
+>
+> *Folgt nach dem Lauf.*
+
 ### Die ursprüngliche Messung im Wortlaut — M108 *(31.08.2026)*
 
 Gemessen mit `MessungM108DbIT`: **das, was der Code schickt**, gegen die Testkopie, im Profil `dev`
