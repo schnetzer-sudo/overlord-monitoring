@@ -1,5 +1,6 @@
 package de.kraftwerkone.overlord.monitor.message;
 
+import de.kraftwerkone.overlord.monitor.common.Wasserstand;
 import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.time.Duration;
@@ -77,10 +78,22 @@ public class Fensterverengung {
   private static final List<Duration> STUFEN = List.of(Duration.ofHours(1), Duration.ofHours(24));
 
   private final VerengungRepository repository;
+
+  /**
+   * Bis wohin der Rollup Bescheid weiss — seit dem 17.09.2026 aus {@code common}, weil der
+   * Live-Rest denselben Wert liest ({@code docs/live-rest.md}). Verhaltensgleich: dasselbe
+   * Statement, derselbe Lese-Kontext; ein leerer Wert heisst weiterhin „noch nie gerechnet".
+   */
+  private final Wasserstand wasserstand;
+
   private final NachrichtenlisteEigenschaften eigenschaften;
 
-  Fensterverengung(VerengungRepository repository, NachrichtenlisteEigenschaften eigenschaften) {
+  Fensterverengung(
+      VerengungRepository repository,
+      Wasserstand wasserstand,
+      NachrichtenlisteEigenschaften eigenschaften) {
     this.repository = repository;
+    this.wasserstand = wasserstand;
     this.eigenschaften = eigenschaften;
   }
 
@@ -194,13 +207,13 @@ public class Fensterverengung {
   // ── Die Rechnung ─────────────────────────────────────────────────────────
 
   private Ergebnis frageDenRollup(MandantContext mandant, Nachrichtenabfrage abfrage) {
-    LocalDateTime wasserstand = repository.wasserstand();
-    if (wasserstand == null) {
+    LocalDateTime stand = wasserstand.wasserstand().orElse(null);
+    if (stand == null) {
       // Noch nie gerechnet -- der Rollup weiss ueber keine einzige Stunde etwas.
       return new Ergebnis(abfrage, Verengungsgrund.KEINE_UNTERGRENZE);
     }
 
-    Verengungsgrenzen grenzen = Verengungsgrenzen.aus(abfrage, wasserstand);
+    Verengungsgrenzen grenzen = Verengungsgrenzen.aus(abfrage, stand);
     if (grenzen == null) {
       // Keine einzige Stunde, die vollstaendig im Fenster liegt und zugleich gerechnet ist.
       return new Ergebnis(abfrage, Verengungsgrund.KEINE_UNTERGRENZE);

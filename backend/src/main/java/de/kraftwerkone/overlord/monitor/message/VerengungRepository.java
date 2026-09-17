@@ -3,7 +3,6 @@ package de.kraftwerkone.overlord.monitor.message;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROCESS;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROJECTMANDANT;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLUP;
-import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.ROLLUP_LAUF;
 
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.jooq.glassfish.tables.Process;
@@ -22,7 +21,11 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
 
 /**
- * Die beiden Abfragen, mit denen die Fensterverengung den Rollup befragt.
+ * Die Abfrage, mit der die Fensterverengung den Rollup befragt.
+ *
+ * <p><i>(seit 17.09.2026.)</i> Bis dahin standen hier zwei: Die Wasserstandsabfrage ist nach {@code
+ * common/WasserstandRepository} gewandert, verhaltensgleich, weil der Live-Rest sie als zweiter
+ * Verbraucher braucht und Fachpakete einander nicht kennen ({@code docs/live-rest.md}).
  *
  * <p>Getrennt von {@link Fensterverengung}, weil <b>nur Repository-Klassen {@code jooq.glassfish}
  * anfassen duerfen</b> ({@code PaketstrukturTest.jooq_glassfish_nur_in_repository_klassen}): Am
@@ -50,37 +53,6 @@ public class VerengungRepository {
       MessageStatusClassifier statusClassifier) {
     this.glassfishDsl = glassfishDsl;
     this.statusClassifier = statusClassifier;
-  }
-
-  /**
-   * Bis wohin der Rollup Bescheid weiss — {@code null}, wenn er noch nie gerechnet hat.
-   *
-   * <p>Gezaehlt wird nur, was <b>abgeschlossen</b> ({@code beendet_am IS NOT NULL}) und
-   * <b>fehlerfrei</b> ({@code fehler IS NULL}) ist. Ein abgebrochener oder laufender Lauf hat
-   * keinen Wasserstand erarbeitet, und ein abgeschlossener mit Fehler ist nicht verlaesslich —
-   * beide duerfen nicht behaupten, ihr Fenster sei gerechnet. Genau dafuer traegt {@code
-   * rollup_lauf} den Index {@code (beendet_am, fenster_bis)}.
-   *
-   * <h2>Warum sie paketprivat ist und keinen {@code MandantContext} nimmt</h2>
-   *
-   * <p>Weil sie keine Mandantendimension <b>hat</b>. Sie liest {@code rollup_lauf} — das Protokoll
-   * des Rollup-Laufs in {@code overlord_monitor} —, und dort steht kein Mandant, keine Nachricht
-   * und kein Prozess, sondern wann welches Zeitfenster gerechnet worden ist. Ein {@code
-   * MandantContext}, den sie ignorierte, waere genau der Schein-Kontext, den {@code
-   * PaketstrukturTest.mandantcontext_ist_erster_parameter} ausdruecklich verbietet;
-   * {@code @OhneMandantenkontext} wiederum ist auf {@code MandantRepository} beschraenkt und gilt
-   * Methoden, die den Kontext erst <i>herstellen</i> — das tut diese nicht.
-   *
-   * <p>Also bleibt sie aus der oeffentlichen Flaeche heraus. Sie hat genau einen Aufrufer, {@link
-   * Fensterverengung}, und der liegt in diesem Paket.
-   */
-  LocalDateTime wasserstand() {
-    return glassfishDsl
-        .select(DSL.max(ROLLUP_LAUF.FENSTER_BIS))
-        .from(ROLLUP_LAUF)
-        .where(ROLLUP_LAUF.BEENDET_AM.isNotNull())
-        .and(ROLLUP_LAUF.FEHLER.isNull())
-        .fetchOne(0, LocalDateTime.class);
   }
 
   /**

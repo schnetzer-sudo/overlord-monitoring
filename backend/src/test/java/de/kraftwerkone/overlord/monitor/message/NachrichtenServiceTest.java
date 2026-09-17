@@ -99,7 +99,7 @@ class NachrichtenServiceTest {
    * {@code FensterverengungGrenzenTest} und {@code FensterverengungDbIT}.
    */
   private static Fensterverengung verengungAus() {
-    return new Fensterverengung(null, new NachrichtenlisteEigenschaften(false));
+    return new Fensterverengung(null, null, new NachrichtenlisteEigenschaften(false));
   }
 
   /** Die Zone der Anwendungsuhr ist die eine Stelle, an der die Wanduhrzeit nach UTC kommt. */

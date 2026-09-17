@@ -1357,6 +1357,17 @@ ihnen bringt. Der Auftraggeber hat am 27.08.2026 entschieden, den Index `(proces
 Schalter `overlord.nachrichtenliste.verengung`. **Nicht gebaut ist** eine Behandlung von `ZAST` —
 Punkt 70 zeigt, dass die 275 ms strukturell nicht durch eine Verengung zu heilen sind.
 
+> ### Korrektur vom 17.09.2026 — die Wasserstandsabfrage liegt in `common`
+>
+> **Der Absatz darüber bleibt stehen.** `VerengungRepository` trug bis heute zwei Abfragen: die
+> Vorabfrage der Stufen und `wasserstand()`, `MAX(fenster_bis)` über die abgeschlossenen, fehlerfreien
+> Läufe. Die zweite ist nach **`common/WasserstandRepository`** gewandert — verhaltensgleich, dasselbe
+> Statement über denselben Lese-Kontext, als Schnittstelle `common/Wasserstand` mit einem `Optional`
+> statt `null` —, weil der **Live-Rest** ([`live-rest.md`](live-rest.md) §4) denselben Wert liest und
+> Fachpakete einander nicht kennen. `Fensterverengung` bekommt ihn als dritten Konstruktorparameter;
+> die Rechnung in §5d ist unverändert, und `FensterverengungDbIT` ist mit 25 Fällen unverändert grün.
+> Der Rollup-Job liest den Wasserstand weiterhin an eigener Stelle (offener Punkt 187 dort).
+
 ### Der Befund, der den Bau prägt
 
 > **Eine Verengung, die nicht jeden Filter der Quellabfrage mitträgt, verliert stillschweigend

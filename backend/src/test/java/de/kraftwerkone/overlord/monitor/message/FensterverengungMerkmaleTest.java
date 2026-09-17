@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 
 import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
 import de.kraftwerkone.overlord.monitor.common.Seitenposition;
+import de.kraftwerkone.overlord.monitor.common.Wasserstand;
 import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.lang.reflect.RecordComponent;
@@ -72,8 +73,12 @@ class FensterverengungMerkmaleTest {
    */
   @Mock private VerengungRepository repository;
 
+  /** Der Wasserstand aus {@code common} — hier eine Attrappe, die „noch nie gerechnet" liefert. */
+  @Mock private Wasserstand wasserstand;
+
   private Fensterverengung verengung(boolean schalter) {
-    return new Fensterverengung(repository, new NachrichtenlisteEigenschaften(schalter));
+    return new Fensterverengung(
+        repository, wasserstand, new NachrichtenlisteEigenschaften(schalter));
   }
 
   private static Nachrichtenabfrage abfrage(

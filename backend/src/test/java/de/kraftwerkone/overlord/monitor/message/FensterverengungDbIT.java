@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
 import de.kraftwerkone.overlord.monitor.common.Seitenposition;
+import de.kraftwerkone.overlord.monitor.common.WasserstandRepository;
 import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.time.LocalDateTime;
@@ -63,14 +64,17 @@ class FensterverengungDbIT {
   };
 
   @Autowired private VerengungRepository verengungRepository;
+  @Autowired private WasserstandRepository wasserstandRepository;
   @Autowired private NachrichtenRepository nachrichtenRepository;
 
   private Fensterverengung an() {
-    return new Fensterverengung(verengungRepository, new NachrichtenlisteEigenschaften(true));
+    return new Fensterverengung(
+        verengungRepository, wasserstandRepository, new NachrichtenlisteEigenschaften(true));
   }
 
   private Fensterverengung aus() {
-    return new Fensterverengung(verengungRepository, new NachrichtenlisteEigenschaften(false));
+    return new Fensterverengung(
+        verengungRepository, wasserstandRepository, new NachrichtenlisteEigenschaften(false));
   }
 
   private static Nachrichtenabfrage abfrage(int tage) {

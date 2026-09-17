@@ -1258,6 +1258,19 @@ Alle Zahlen der Prüfung stehen in
 beiden Läufe in §9c, die Bewertung und die Abschlussmessung in
 [`nachrichtenliste.md`](nachrichtenliste.md) §5c und §5d.
 
+> ### Ergänzt am 17.09.2026 — der Wasserstand hat eine gemeinsame Lesestelle, und er bekommt einen dritten Verbraucher
+>
+> Die Zeile *„`rollup_lauf` anders schreiben (etwa `fenster_bis` einschließend)"* in der Tabelle oben
+> trifft seither **zwei** Leser über **eine** Stelle: `common/WasserstandRepository` liest
+> `MAX(fenster_bis)` über die abgeschlossenen, fehlerfreien Läufe für die Fensterverengung **und**
+> für den **Live-Rest** ([`live-rest.md`](live-rest.md)). Der Live-Rest leitet daraus **G** =
+> `fenster_bis − 1 h` ab — den Eimer, in dem der Lauf lief und der nur bis zum Laufzeitpunkt
+> gerechnet ist. **Die Bedeutung von `fenster_bis` trägt damit auch den Live-Rest; wer sie ändert,
+> bricht ihn.** Der Job selbst liest den Wasserstand weiterhin über `RollupSchreibRepository`
+> (offener Punkt 187 in `live-rest.md`). Die Live-Lesung aus `message_rollup` und `Message` ist am
+> 17.09.2026 **angehalten** worden (§7 dort); bis sie gebaut ist, hat diese Tabelle keinen vierten
+> Leser.
+
 Drei Dinge aus dieser Prüfung gehören hierher, weil sie den Rollup betreffen und sonst untergehen:
 
 1. **Der Rollup ist für `MessageLastUpdate` nachweislich lückenlos.** `SUM(anzahl)` über die
