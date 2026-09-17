@@ -3,9 +3,9 @@ package de.kraftwerkone.overlord.monitor.catalog;
 import de.kraftwerkone.overlord.monitor.common.Baumfenster;
 import de.kraftwerkone.overlord.monitor.common.Baumgliederung;
 import de.kraftwerkone.overlord.monitor.common.Katalogzuordnung;
-import de.kraftwerkone.overlord.monitor.common.LiveRestEntscheidung;
 import de.kraftwerkone.overlord.monitor.common.LiveRestErgebnis;
 import de.kraftwerkone.overlord.monitor.common.LiveRestKorrektur;
+import de.kraftwerkone.overlord.monitor.common.LiveRestResponse;
 import de.kraftwerkone.overlord.monitor.common.LiveRestService;
 import de.kraftwerkone.overlord.monitor.common.LiveRestZeile;
 import de.kraftwerkone.overlord.monitor.common.MandantContext;
@@ -247,7 +247,7 @@ public class ProzessbaumService {
             Zeitpunkte.nachUtc(fenster.von(), anwendungsuhr.getZone()),
             Zeitpunkte.nachUtc(fenster.bis(), anwendungsuhr.getZone())),
         (int) STILLE_SCHWELLE.toTotalMonths(),
-        liveRest(liveRest.entscheidung()),
+        LiveRestResponse.aus(liveRest.entscheidung(), anwendungsuhr.getZone()),
         gesamt(geruest, jeProzess, juengsteLive, jetzt),
         ebenen(gruppierungen),
         knoten(geruest, gruppierungen, jeProzess, juengsteLive, jetzt));
@@ -290,13 +290,6 @@ public class ProzessbaumService {
   private Kennzahl kennzahl(String messageStatus, long anzahl) {
     boolean fehler = statusClassifier.einordnung(messageStatus) == MessageStatusKind.FEHLER;
     return new Kennzahl(anzahl, fehler ? anzahl : 0);
-  }
-
-  /** Der Block {@code liveRest} der Antwort; G in UTC, nur wenn ausgesetzt mit Lauf. */
-  private LiveRestResponse liveRest(LiveRestEntscheidung entscheidung) {
-    return new LiveRestResponse(
-        entscheidung.zustand(),
-        Zeitpunkte.nachUtc(entscheidung.vollstaendigBis(), anwendungsuhr.getZone()));
   }
 
   /**

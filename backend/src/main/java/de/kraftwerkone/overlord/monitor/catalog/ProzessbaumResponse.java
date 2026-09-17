@@ -1,6 +1,7 @@
 package de.kraftwerkone.overlord.monitor.catalog;
 
 import de.kraftwerkone.overlord.monitor.common.Baumgliederung;
+import de.kraftwerkone.overlord.monitor.common.LiveRestResponse;
 import java.util.List;
 
 /**
