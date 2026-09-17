@@ -186,6 +186,23 @@ export type Baumsumme = {
   fehler: number;
 };
 
+/**
+ * Die drei Zustände des **Live-Rests** (`docs/live-rest.md`): ob der Verkehr
+ * seit dem letzten Rollup-Lauf in den Zahlen des Baums steckt. Nur bei
+ * `AUSGESETZT` sagt die Oberfläche etwas — die Zahlen sind dann unvollständig.
+ */
+export type LiveRestZustand = "ANGEWANDT" | "NICHT_NOETIG" | "AUSGESETZT";
+
+export type LiveRest = {
+  zustand: LiveRestZustand;
+  /**
+   * **G**, in UTC — nur bei `AUSGESETZT` mit vorhandenem Lauf, sonst `null`: Bis
+   * hierhin sind die Zahlen vollständig, ab hier fehlt Verkehr. Angezeigt absolut in
+   * der Anzeigezone, wie der Stand der Übersicht.
+   */
+  vollstaendigBis: string | null;
+};
+
 export type Prozessbaum = {
   /**
    * Das **gewählte** Paar, immer gesetzt — auch wenn der Aufrufer keins genannt
@@ -209,6 +226,8 @@ export type Prozessbaum = {
    * und driftete.
    */
   stilleSchwelleMonate: number;
+  /** Seit dem 17.09.2026: der Live-Rest der laufenden Stunde (`docs/live-rest.md`). */
+  liveRest: LiveRest;
   gesamt: Baumsumme;
   /** Die Ebenennamen, von außen nach innen; die letzte ist immer `PROZESS` (E‑140). */
   ebenen: Baumebene[];

@@ -11,7 +11,7 @@ import { defineConfig } from "vitest/config";
  * außer Laufzeit und Abhängigkeiten.
  *
  * **Die Ausnahmen sind gezählt, nicht gewachsen** — Stand 17.09.2026 sind es
- * **einhunderteinundsechzig in zwanzig Dateien**. Diese Zahl wird an genau dieser Stelle geführt;
+ * **einhundertsechsundsechzig in einundzwanzig Dateien**. Diese Zahl wird an genau dieser Stelle geführt;
  * `tests/hilfe/rendern.tsx` und `docs/frontend-grundlagen.md` §9 verweisen
  * darauf, statt sie zu wiederholen (drei Orte für dieselbe Zahl sind zwei zu
  * viel):
@@ -76,6 +76,14 @@ import { defineConfig } from "vitest/config";
  * > Quelldatei, und es sind neue Quelldateien dazugekommen. Gezählt je Datei gegen `01a6db2`,
  * > nicht gerechnet.
  *
+ * | `tests/live-rest.test.tsx` *(17.09.2026)* | 5 | **Der Hinweis zum Live-Rest — Aussagen über Anwesenheit und Abwesenheit im Baum** (`docs/live-rest.md` §10). Bei `AUSGESETZT` steht bei den Kopfzahlen ein Satz, mit Zeitangabe (über denselben Weg formatiert wie die Ansicht) oder ohne; bei `ANGEWANDT` und `NICHT_NOETIG` steht **keiner** — die naheliegende Schreibweise (immer ein Kasten, nur mit anderem Text) bestünde jede Prüfung an der Beschriftung, und der Baum ist die Eichung dafür, dass die Ansicht steht. Dazu, dass der Kasten nicht die Fehlerfarbe trägt: kein Rot ist eine Klasse am Element |
+ *
+ * > ⚠️ **Fortgeschrieben am 17.09.2026 (der Live-Rest, E‑187)**, aus dem Lauf
+ * > (`vitest run --reporter=json`, Fälle je Datei): **166 in einundzwanzig Dateien**, eine neue —
+ * > `tests/live-rest.test.tsx` mit 5. Der Lauf über alle **44** Dateien trägt **1.123** Fälle. Je
+ * > Datei gegen den Lauf des Commits `15ba346` verglichen: allein die neue Datei; keine neue
+ * > Quelldatei, also nichts aus `farbwerte` und `serverbausteine`.
+ *
  * > ⚠️ **Fortgeschrieben am 17.09.2026 (Kodierung je Datei und EBCDIC-Muster, E‑176 und E‑177)**,
  * > aus dem Lauf (`vitest run --reporter=json`, Fälle je Datei): **161 in zwanzig Dateien**, keine
  * > neue. Der Lauf über alle 43 Dateien trägt **1.118** Fälle. Je Datei gegen den Lauf des Commits
@@ -119,7 +127,7 @@ import { defineConfig } from "vitest/config";
  * > darunter noch einhundertsechzehn; die Tabellensumme stimmte mit dem Kopf.
  * > Berichtigt ist der Satz.
  *
- * Allen einhundertvierunddreißig ist dasselbe gemeinsam: **Es gibt keinen anderen Ort, an dem sie
+ * Allen einhundertsechsundsechzig ist dasselbe gemeinsam: **Es gibt keinen anderen Ort, an dem sie
  * belegbar wären.** Das ist die Bedingung, nicht „es ließe sich so leichter
  * prüfen". Sie schalten ihre Umgebung selbst über `// @vitest-environment jsdom`
  * um — die Voreinstellung bleibt `node`, damit die übrigen Dateien nichts von

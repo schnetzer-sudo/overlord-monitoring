@@ -196,6 +196,13 @@ beide ändern sich nicht. Wechselt die Liste dabei von einer späteren Seite auf
 dasselbe wie beim Blättern (Punkt **161**), ohne Sonderweg. **Die Übertragungsliste aktualisiert
 nicht mehr automatisch** — `useNachrichtenSeite(filter, false)`.
 
+> **Bestätigt am 17.09.2026 (Live-Rest, Punkt 189 in [`live-rest.md`](live-rest.md)).** Der Auftrag zum
+> Live-Rest wollte den Baum *im Takt der Übertragungsliste* nachladen, solange deren automatische
+> Aktualisierung eingeschaltet ist — ein Takt, den es hier seit E‑164 nicht mehr gibt. Der
+> Auftraggeber hat entschieden: **E‑164 gilt**, kein Nachladen in der Prozessansicht (E‑186 dort).
+> Baum und Liste laden weiter nur von Hand, dann beide zusammen; der Block `liveRest` der Antwort
+> kommt dabei mit.
+
 ---
 
 ## 4. Die Entscheidungen

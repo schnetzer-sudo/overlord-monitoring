@@ -115,6 +115,7 @@ const BAUM: Prozessbaum = {
   gliederung: "PARTNER",
   fenster: FENSTER,
   stilleSchwelleMonate: SCHWELLE,
+  liveRest: { zustand: "NICHT_NOETIG", vollstaendigBis: null },
   gesamt: GESAMT,
   ebenen: PARTNER_EBENEN,
   knoten: [MIT_EBENE, OHNE_EBENE, OHNE_PARTNER],
