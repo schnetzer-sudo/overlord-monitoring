@@ -1,12 +1,12 @@
 package de.kraftwerkone.overlord.monitor.message;
 
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
 import de.kraftwerkone.overlord.monitor.common.Seite;
 import de.kraftwerkone.overlord.monitor.common.Seitenposition;
 import de.kraftwerkone.overlord.monitor.common.Zeitpunkte;
 import de.kraftwerkone.overlord.monitor.common.error.FachlicheAusnahme;
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;

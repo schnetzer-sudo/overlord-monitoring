@@ -9,9 +9,9 @@ import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.MESSAGE_ROLLU
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.PROCESS_CATALOG;
 
 import de.kraftwerkone.overlord.monitor.common.Baumfenster.Segment;
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.Rollupebene;
 import de.kraftwerkone.overlord.monitor.jooq.glassfish.tables.Process;
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;

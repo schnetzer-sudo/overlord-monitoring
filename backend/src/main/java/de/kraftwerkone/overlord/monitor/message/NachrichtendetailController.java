@@ -1,7 +1,7 @@
 package de.kraftwerkone.overlord.monitor.message;
 
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.security.AngemeldeterNutzer;
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import de.kraftwerkone.overlord.monitor.security.MandantService;
 import de.kraftwerkone.overlord.monitor.security.SitzungsVerwaltung;
 import java.util.List;

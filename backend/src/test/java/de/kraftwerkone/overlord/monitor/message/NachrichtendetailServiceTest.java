@@ -7,9 +7,9 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import de.kraftwerkone.overlord.monitor.common.Kettenrolle;
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.error.RessourceNichtGefundenException;
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;

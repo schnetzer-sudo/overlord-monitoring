@@ -7,8 +7,8 @@ import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.MESSAGEBAMT
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROCESS;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROJECTMANDANT;
 
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.jooq.glassfish.tables.Process;
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.util.List;
 import org.jooq.Condition;
 import org.jooq.DSLContext;

@@ -8,11 +8,11 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
 import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
 import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.lang.reflect.RecordComponent;
 import java.time.Clock;
 import java.time.Instant;

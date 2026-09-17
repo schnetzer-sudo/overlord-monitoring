@@ -16,7 +16,7 @@ import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchRule;
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.security.OhneMandantenkontext;
 import java.time.Instant;
 import java.time.LocalDate;

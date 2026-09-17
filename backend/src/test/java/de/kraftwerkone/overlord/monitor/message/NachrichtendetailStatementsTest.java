@@ -2,7 +2,7 @@ package de.kraftwerkone.overlord.monitor.message;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;

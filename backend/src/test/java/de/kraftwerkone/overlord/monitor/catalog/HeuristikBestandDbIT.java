@@ -3,7 +3,7 @@ package de.kraftwerkone.overlord.monitor.catalog;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.kraftwerkone.overlord.monitor.catalog.ProzessKatalogRepository.Bestandszeile;
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.security.MandantRepository;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

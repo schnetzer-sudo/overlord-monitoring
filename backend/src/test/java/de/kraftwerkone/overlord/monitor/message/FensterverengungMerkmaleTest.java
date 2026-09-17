@@ -4,11 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 import static org.mockito.Mockito.verifyNoInteractions;
 
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
 import de.kraftwerkone.overlord.monitor.common.Seitenposition;
 import de.kraftwerkone.overlord.monitor.common.Wasserstand;
 import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.lang.reflect.RecordComponent;
 import java.time.LocalDateTime;
 import java.util.HashMap;

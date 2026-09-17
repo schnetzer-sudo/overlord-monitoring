@@ -2,10 +2,10 @@ package de.kraftwerkone.overlord.monitor.bam;
 
 import de.kraftwerkone.overlord.monitor.common.Kettenrolle;
 import de.kraftwerkone.overlord.monitor.common.Kettenrollen;
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
 import de.kraftwerkone.overlord.monitor.common.Zeitpunkte;
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

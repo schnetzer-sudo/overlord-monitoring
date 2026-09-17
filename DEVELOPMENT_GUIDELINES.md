@@ -249,6 +249,12 @@ Codepfad ohne Mandantenfilter und die Signaturen sind rollenunabhängig. `Pakets
 Regel maschinell (ab Schritt 3): Jede öffentliche Methode einer Klasse, die Typen aus
 `jooq.glassfish` verwendet, hat `MandantContext` als ersten Parameter.
 
+> **Verschoben am 17.09.2026:** Der Typ heißt weiter `MandantContext`, liegt aber in **`common`** und
+> nicht mehr in `security` — der Satz darüber bleibt stehen, wie er war. Grund und Entscheidung stehen
+> in [`docs/live-rest.md`](docs/live-rest.md) §7 (Punkt 186): Ein Baustein in `common` liest `Message`
+> mandantengefiltert, und `common` darf nicht an `security` hängen. Regel M2 und die ArchUnit-Prüfung
+> sind unverändert; `PaketstrukturTest` importiert den Typ nur von der neuen Stelle.
+
 Die **einzige** Ausnahme sind die Methoden, die den Kontext erst *herstellen* — sie lesen die Menge
 der zulässigen Mandanten, bevor feststeht, welcher aktiv ist. Sie tragen `@OhneMandantenkontext` mit
 Pflichtbegründung, stehen ausschließlich im `MandantRepository` und liefern niemals fachliche Daten.

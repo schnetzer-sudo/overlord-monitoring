@@ -1,8 +1,8 @@
 package de.kraftwerkone.overlord.monitor.dashboard;
 
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
 import de.kraftwerkone.overlord.monitor.security.AngemeldeterNutzer;
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import de.kraftwerkone.overlord.monitor.security.MandantService;
 import de.kraftwerkone.overlord.monitor.security.SitzungsVerwaltung;
 import org.springframework.web.bind.annotation.GetMapping;

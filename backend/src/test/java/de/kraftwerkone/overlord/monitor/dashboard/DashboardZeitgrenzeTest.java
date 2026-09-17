@@ -3,11 +3,11 @@ package de.kraftwerkone.overlord.monitor.dashboard;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
 import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
 import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.sql.SQLException;
 import java.sql.SQLTimeoutException;
 import java.time.LocalDateTime;

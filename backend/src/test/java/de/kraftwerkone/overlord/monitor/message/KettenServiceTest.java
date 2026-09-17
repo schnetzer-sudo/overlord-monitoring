@@ -11,12 +11,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import de.kraftwerkone.overlord.monitor.common.Kettenrolle;
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.Seite;
 import de.kraftwerkone.overlord.monitor.common.Seitenposition;
 import de.kraftwerkone.overlord.monitor.common.error.FachlicheAusnahme;
 import de.kraftwerkone.overlord.monitor.common.error.RessourceNichtGefundenException;
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneId;

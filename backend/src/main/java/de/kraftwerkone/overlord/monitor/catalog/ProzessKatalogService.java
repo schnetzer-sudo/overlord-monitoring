@@ -8,11 +8,11 @@ import de.kraftwerkone.overlord.monitor.catalog.ProzessKatalogRepository.Bestand
 import de.kraftwerkone.overlord.monitor.catalog.ProzessKatalogRepository.Projektzeile;
 import de.kraftwerkone.overlord.monitor.catalog.ProzessKatalogRepository.UebernehmbareZeile;
 import de.kraftwerkone.overlord.monitor.catalog.ProzessKatalogRepository.Vorschlagszeile;
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.Pflegestatus;
 import de.kraftwerkone.overlord.monitor.common.error.FachlicheAusnahme;
 import de.kraftwerkone.overlord.monitor.common.error.RessourceNichtGefundenException;
 import de.kraftwerkone.overlord.monitor.security.AngemeldeterNutzer;
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;

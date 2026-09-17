@@ -1,11 +1,11 @@
 package de.kraftwerkone.overlord.monitor.message;
 
 import de.kraftwerkone.overlord.monitor.common.Kettenrollen;
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
 import de.kraftwerkone.overlord.monitor.common.Zeitpunkte;
 import de.kraftwerkone.overlord.monitor.common.error.RessourceNichtGefundenException;
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;

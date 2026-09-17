@@ -4,7 +4,7 @@ import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROCESS;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROJECT;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROJECTMANDANT;
 
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import java.util.List;
 import org.jooq.DSLContext;
 import org.springframework.beans.factory.annotation.Qualifier;

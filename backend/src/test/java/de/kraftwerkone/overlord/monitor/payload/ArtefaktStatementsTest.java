@@ -3,7 +3,7 @@ package de.kraftwerkone.overlord.monitor.payload;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.MESSAGEPROPERTY;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;

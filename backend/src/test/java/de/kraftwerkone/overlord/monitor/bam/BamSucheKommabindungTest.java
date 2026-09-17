@@ -8,8 +8,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.security.AngemeldeterNutzer;
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import de.kraftwerkone.overlord.monitor.security.MandantService;
 import de.kraftwerkone.overlord.monitor.security.Rolle;
 import de.kraftwerkone.overlord.monitor.security.SitzungsVerwaltung;

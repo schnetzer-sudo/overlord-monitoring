@@ -12,12 +12,12 @@ import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.PROCESS_CATAL
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.ROLLUP_LAUF;
 
 import de.kraftwerkone.overlord.monitor.common.Katalogzuordnung;
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
 import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
 import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
 import de.kraftwerkone.overlord.monitor.jooq.glassfish.tables.Process;
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.math.BigDecimal;
 import java.sql.SQLTimeoutException;
 import java.time.LocalDate;

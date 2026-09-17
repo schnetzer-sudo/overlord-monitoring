@@ -23,8 +23,8 @@ import org.springframework.stereotype.Repository;
  *
  * <p>{@code docs/mandantentrennung.md} §4 verlangt, dass <b>jede</b> oeffentliche Methode einer
  * Klasse, die {@code jooq.glassfish} anfasst, den {@link
- * de.kraftwerkone.overlord.monitor.security.MandantContext} als ersten Pflichtparameter traegt
- * (Regel M2), und {@code PaketstrukturTest} setzt das maschinell durch.
+ * de.kraftwerkone.overlord.monitor.common.MandantContext} als ersten Pflichtparameter traegt (Regel
+ * M2), und {@code PaketstrukturTest} setzt das maschinell durch.
  *
  * <p><b>Der Rollup-Job hat keinen Mandanten.</b> Er liest bewusst ueber alle Mandanten, weil {@code
  * message_rollup} nach Entscheidung E-a keinen Mandanten kennt — der wird erst beim Lesen in 10b

@@ -905,6 +905,14 @@ de.kraftwerkone.overlord.monitor
 
 Fachpakete kennen einander nicht. Gemeinsames liegt in `common`, nicht in einem Nachbarmodul.
 
+> **Verschoben am 17.09.2026 — `MandantContext` liegt in `common`.** Die Zeile `security/ MandantContext,
+> Session, Anmeldesperre` oben bleibt stehen, wie sie war; der Typ selbst liegt seither in `common`.
+> Der Grund: Der Live-Rest ([`live-rest.md`](live-rest.md) §7) liest `Message` mandantengefiltert
+> aus einem Baustein in `common` heraus, und `common` darf an keinem anderen Anwendungspaket hängen —
+> auch nicht an `security`. Der Typ ist ein Record ohne Abhängigkeiten; alles, was ihn **herstellt**
+> (`MandantContextProvider`, `MandantService`, `@OhneMandantenkontext`), bleibt in `security`. Entschieden
+> vom Auftraggeber am 17.09.2026 (Punkt 186), Weg 1 von dreien.
+
 > **Präzisiert 10.09.2026 zur Beschreibung von `common`.** Hier stand wortgleich „Fehlerformat,
 > Cursor-Paginierung, Filterabstraktion, TimeProvider". Das war die Aufzählung aus Schritt 1 und ist
 > seither gewachsen — nicht durch Zuwachs an Zuständigkeit, sondern **jedes Mal durch einen zweiten

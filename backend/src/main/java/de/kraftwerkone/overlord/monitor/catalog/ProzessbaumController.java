@@ -2,10 +2,10 @@ package de.kraftwerkone.overlord.monitor.catalog;
 
 import de.kraftwerkone.overlord.monitor.common.Baumfenster;
 import de.kraftwerkone.overlord.monitor.common.Baumgliederung;
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
 import de.kraftwerkone.overlord.monitor.security.AngemeldeterNutzer;
 import de.kraftwerkone.overlord.monitor.security.AppUserRepository;
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import de.kraftwerkone.overlord.monitor.security.MandantService;
 import de.kraftwerkone.overlord.monitor.security.SitzungsVerwaltung;
 import java.time.Clock;

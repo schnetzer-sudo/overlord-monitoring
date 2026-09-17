@@ -7,10 +7,10 @@ import static org.mockito.Mockito.when;
 
 import de.kraftwerkone.overlord.monitor.common.Baumfenster;
 import de.kraftwerkone.overlord.monitor.common.Baumgliederung;
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.Pflegestatus;
 import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;

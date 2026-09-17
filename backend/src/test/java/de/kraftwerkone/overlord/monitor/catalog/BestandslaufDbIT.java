@@ -3,7 +3,7 @@ package de.kraftwerkone.overlord.monitor.catalog;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.kraftwerkone.overlord.monitor.catalog.ProzessKatalogRepository.Bestandsflag;
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.security.MandantRepository;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;

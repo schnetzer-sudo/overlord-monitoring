@@ -1,8 +1,8 @@
 package de.kraftwerkone.overlord.monitor.message;
 
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.Wasserstand;
 import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.LinkedHashSet;

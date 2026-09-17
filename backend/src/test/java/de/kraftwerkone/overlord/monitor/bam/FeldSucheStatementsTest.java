@@ -3,8 +3,8 @@ package de.kraftwerkone.overlord.monitor.bam;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;

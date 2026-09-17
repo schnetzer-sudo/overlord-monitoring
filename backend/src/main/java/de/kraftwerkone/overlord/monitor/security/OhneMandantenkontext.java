@@ -1,5 +1,6 @@
 package de.kraftwerkone.overlord.monitor.security;
 
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

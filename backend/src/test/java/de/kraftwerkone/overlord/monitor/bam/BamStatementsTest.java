@@ -2,7 +2,7 @@ package de.kraftwerkone.overlord.monitor.bam;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;

@@ -1,6 +1,6 @@
 package de.kraftwerkone.overlord.monitor.bam;
 
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;

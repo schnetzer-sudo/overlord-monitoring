@@ -1,11 +1,11 @@
 package de.kraftwerkone.overlord.monitor.dashboard;
 
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
 import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
 import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
 import de.kraftwerkone.overlord.monitor.common.Zeitpunkte;
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;

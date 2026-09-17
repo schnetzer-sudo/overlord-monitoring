@@ -16,6 +16,13 @@ Anmeldung, Sperre und Sitzung stehen in [`authentifizierung.md`](authentifizieru
 public record MandantContext(String mandantId) { … }
 ```
 
+> **Verschoben am 17.09.2026 — von `security` nach `common`.** Der Rest dieses Abschnitts bleibt
+> stehen; `MandantContextProvider`, `MandantService` und `@OhneMandantenkontext` liegen weiter in
+> `security`. Der Record selbst hängt an nichts und liegt jetzt im Fundament, weil der Live-Rest
+> ([`live-rest.md`](live-rest.md) §7) aus `common` heraus mandantengefiltert liest und `common` an
+> keinem anderen Anwendungspaket hängen darf (`PaketstrukturTest`). Entschieden vom Auftraggeber
+> am 17.09.2026 (Punkt 186), Weg 1 von dreien; 77 Dateien ändern eine Importzeile.
+
 **Genau eine Mandanten-ID, für jede Rolle.** Auch ADMIN arbeitet in genau einem Mandantenkontext und
 wechselt ihn, statt alle gleichzeitig zu sehen.
 

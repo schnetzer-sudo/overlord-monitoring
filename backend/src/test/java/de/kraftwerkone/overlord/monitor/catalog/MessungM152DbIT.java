@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import de.kraftwerkone.overlord.monitor.common.Baumfenster;
 import de.kraftwerkone.overlord.monitor.common.Baumgliederung;
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.security.Rolle;
 import de.kraftwerkone.overlord.monitor.security.SicherheitsTestbasis;
 import java.io.IOException;

@@ -4,9 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import de.kraftwerkone.overlord.monitor.common.Baumfenster;
 import de.kraftwerkone.overlord.monitor.common.Baumfenster.Segment;
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.Rollupebene;
 import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;

@@ -7,11 +7,11 @@ import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROJECTMAND
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.SOS;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.SOSACTION;
 
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.Seitenposition;
 import de.kraftwerkone.overlord.monitor.common.error.FachlicheAusnahme;
 import de.kraftwerkone.overlord.monitor.jooq.glassfish.tables.Process;
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.sql.SQLTimeoutException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;

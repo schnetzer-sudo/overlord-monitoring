@@ -1,7 +1,7 @@
 package de.kraftwerkone.overlord.monitor.bam;
 
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.error.RessourceNichtGefundenException;
-import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
