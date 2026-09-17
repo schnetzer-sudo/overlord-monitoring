@@ -1231,13 +1231,27 @@ nicht; der Weg „neues Konto meldet sich an und ändert sein Passwort" gehört 
 > und wird durch Top‑10 nicht berührt** — „nicht zugeordnet" ist keine Rangposition und fällt nie
 > in den „Rest". Bei `SUTTONS` und `VOTG` ist es heute die **einzige** Zeile der Verteilung, 100 %.
 
+> ### **10e** — der Live-Rest der laufenden Stunde *(begonnen am 17.09.2026, Teil A angehalten)*
+>
+> **Der Anlass:** Der Baum liest die Rollup-Ebene seines Fensters samt angebrochenem Eimer, die
+> Übertragungsliste dasselbe Fenster live aus `Message` (E‑50) — kurz vor dem nächsten Delta-Lauf
+> fehlt im Baum bis zu eine Stunde Verkehr. Entschieden am 16.09.2026: **Live-Rest statt kürzerem
+> Takt**, ein Baustein für Baum und Dashboard.
+>
+> | Teil | Inhalt | Stand |
+> |---|---|---|
+> | **Teil A** | der Baustein in `common` und der Prozessbaum | **angehalten am 17.09.2026** ([`live-rest.md`](live-rest.md)): Entscheidung, Verrechnung, Wasserstand und Stundenbildung sind in `common` gebaut und grün; die mandantengefilterte Live-Lesung lässt `PaketstrukturTest` in `common` nicht zu (`common` kennt `security` nicht, dort liegt der `MandantContext`). Drei Wege in §7 dort, Empfehlung: `MandantContext` nach `common` |
+> | **Teil B** | das Dashboard ruft denselben Baustein | offen, nach Teil A |
+>
+> **Bezeichnung `10e` per `grep` frei** (17.09.2026, `docs/` und beide nicht gemergten Zweige).
+
 **Abgrenzung:** Keine frei konfigurierbaren Dashboards, keine Alarmierung.
 
 **Abnahme:** Das Dashboard lädt in unter 500 Millisekunden. Die Zahlen stimmen stichprobenartig
 mit einer direkten Abfrage überein. Ein Klick auf eine Fehlerkachel führt in die gefilterte Liste.
 
 **Dokumentation:** `docs/rollup.md`, `docs/dashboard.md`, `docs/process-view.md` — *seit dem
-10.09.2026 dazu* `docs/dienste.md` *(10d Teil A)*
+10.09.2026 dazu* `docs/dienste.md` *(10d Teil A)*, *seit dem 17.09.2026* `docs/live-rest.md` *(10e)*
 
 ---
 
