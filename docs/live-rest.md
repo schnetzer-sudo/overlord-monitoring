@@ -44,6 +44,13 @@ geschützten Bindestrich U+2011; dazu `git grep` über die zwei Zweige, die nich
 | **Offene Punkte** | **186 bis 192.** Höchster: **185** ([`neu-laden.md`](neu-laden.md)). Der Treffer `**256**` in [`messungen-schritt10.md`](messungen-schritt10.md) ist eine Zahl in einer Tabellenzelle (Zeile 867) und kein Punkt — gelesen, nicht gezählt |
 | **Schritt** | **10e** — `grep -rn "10e" docs/` und über beide Zweige: kein Treffer vor diesem Tag |
 
+> **Teil B, am selben Tag, wieder per `rg` über `docs/`, `DEVELOPMENT_GUIDELINES.md`, `backend/src`,
+> `frontend/src` und `frontend/tests`:** Entscheidungen **E‑189 bis E‑192** (höchste vergebene E‑188,
+> aus Teil A); Messung **M186** (höchste M185); offene Punkte **193 bis 195** (höchster 192; die Treffer
+> `**194**` und `**195**` in [`messungen-schritt4.md`](messungen-schritt4.md),
+> [`messungen-schritt7.md`](messungen-schritt7.md) und [`nachrichtendetail.md`](nachrichtendetail.md)
+> sind Zahlen in Tabellenzellen, gelesen und nicht gezählt).
+
 ---
 
 ## 1. Zweck
@@ -56,6 +63,9 @@ und links und rechts stehen zwei Zahlen für denselben Ausschnitt.
 
 Entschieden vom Auftraggeber am 16.09.2026: **Live-Rest statt kürzerem Takt**; **ein** Baustein für
 Prozessbaum und Dashboard; der Prozessbaum zuerst (Teil A), das Dashboard danach (Teil B).
+
+> **Beide Teile sind am 17.09.2026 gebaut:** Teil A (§3 bis §10), Teil B am selben Tag (§9b, §8b, §10).
+> Baum und Übersicht zählen die laufende Stunde seither gleich.
 
 ---
 
@@ -564,6 +574,78 @@ zählen die laufende Stunde gleich.
 > **Zugesichert wird im Läufer nur** `200`, `ANGEWANDT` und dass Kachel und beide Sichten dieselbe
 > Zahl tragen — Zeiten gehen nach `System.out` und in keine Zusicherung (Regel T1).
 
+#### Ergebnis — ein Lauf, 17.09.2026, beste von fünf, in Millisekunden
+
+Die Zeilen stehen unverändert in `scripts/messung-live-rest/ergebnis/m186-endpunkt.txt`. **Endpunkt**
+ist die Seite durch `GET /api/dashboard?zeitraum=…`, **Dienst** dieselbe Seite am
+`DashboardService`, **Bezug** die Seite am Dienst mit deckendem Wasserstand (`NICHT_NOETIG`), der
+**Zuschlag** Dienst minus Bezug. *Nachrichten* ist die Kachel — an der gestellten Stunde, nicht am
+Anker von M178.
+
+| Mandant · Fall | Paar | Endpunkt | Dienst | Bezug | **Zuschlag** | Nachrichten |
+|---|---|---:|---:|---:|---:|---:|
+| `NEXANS` typisch | `48H` | 95,004 | 70,908 | 65,348 | **5,559** | 16.464 |
+| | `30T` | 279,303 | 260,392 | 255,285 | **5,107** | 192.397 |
+| | `12M` | 311,392 | 297,637 | 293,715 | **3,922** | 2.282.520 |
+| `NEXANS` dicht | `48H` | 375,760 | 359,192 | 88,613 | **270,578** | 33.148 |
+| | `30T` | **388,631** | 373,106 | 102,582 | **270,524** | 79.033 |
+| | `12M` | 359,099 | 349,437 | 72,977 | **276,460** | 222.049 |
+| `VOTG` typisch | `48H` | 96,007 | 77,235 | 71,545 | 5,689 | 656 |
+| | `30T` | 217,416 | 201,417 | 194,059 | 7,358 | 9.894 |
+| | `12M` | 192,876 | 178,582 | 169,682 | 8,900 | 93.564 |
+| `VOTG` dicht | `48H` | 123,191 | 107,562 | 81,034 | 26,529 | 870 |
+| | `30T` | 248,983 | 232,113 | 210,161 | 21,952 | 9.916 |
+| | `12M` | 213,410 | 195,276 | 173,794 | 21,482 | 93.564 |
+| `IBIS` typisch | `48H` | 102,903 | 87,913 | 80,538 | 7,375 | 437 |
+| | `30T` | 241,299 | 225,769 | 219,732 | 6,038 | 4.833 |
+| | `12M` | 233,081 | 218,319 | 211,872 | 6,447 | 56.340 |
+| `IBIS` dicht | `48H` | 106,099 | 94,504 | 73,332 | 21,172 | 801 |
+| | `30T` | 241,939 | 227,118 | 207,867 | 19,251 | 6.304 |
+| | `12M` | 103,184 | 89,986 | 69,726 | 20,261 | 12.376 |
+| `SUTTONS` typisch | `48H` | 84,218 | 70,001 | 58,148 | 11,853 | 1.360 |
+| | `30T` | 218,300 | 201,708 | 188,390 | 13,318 | 21.005 |
+| | `12M` | 189,047 | 175,218 | 162,773 | 12,445 | 67.686 |
+| `SUTTONS` dicht | `48H` | 137,091 | 122,270 | 99,612 | 22,658 | 1.410 |
+| | `30T` | 230,033 | 219,435 | 195,982 | 23,453 | 20.978 |
+| | `12M` | 200,641 | 187,307 | 161,503 | 25,804 | 67.686 |
+
+**Das Tor: bestanden.** Die teuerste Lage ist `NEXANS` im dichtesten Bereich über 30 Tage mit
+**388,631 ms** durch den Endpunkt; alle 24 Lagen liegen unter 500 ms, in beiden Messstunden.
+
+**Die vorregistrierte Rechnung traf für den dichtesten Bereich nicht zu — und der Grund steht in der
+Spalte *Bezug*.** Erwartet waren für `NEXANS` dicht ≈ 320 / 480 / **555** ms, gemessen 375,8 / 388,6 /
+**359,1** ms. Die Rechnung hatte die Seite vom Anker `2025-12-30` (M178: 294 bis 298 ms über zwölf
+Monate) mit dem Zuschlag einer Stunde aus dem **Oktober 2024** addiert. An *dieser* Stunde kostet die
+Seite ohne Live-Rest aber nur 73 bis 103 ms — das Zwölfmonatsfenster bis Oktober 2024 trägt 222.049
+Nachrichten, das bis Dezember 2025 rund 2,28 Millionen. **Der Zuschlag selbst ist, was M185
+vorhergesagt hat:** 270,5 bis 276,5 ms in allen drei Paaren, also Statement B (265,7 ms in M185) plus
+A plus die Nachlesung — er hängt am Live-Bereich und nicht am Paar. Für die typische Stunde lag die
+Rechnung zu hoch: 4 bis 13 ms statt 12 bis 20, weil M185 gegen M152 auch einen größeren Rumpf
+mitgezählt hatte. **Die Größenordnung der Seite stimmt, wo der Vergleich fair ist:** `NEXANS` typisch
+über zwölf Monate (Fenster bis November 2025) kostet als Bezug 293,7 ms — M178 hatte 294 bis 298.
+
+Drei Beobachtungen, keine Zusicherungen:
+
+- **Der Zuschlag ist in allen 24 Lagen ein Stück des Live-Bereichs und kein Stück der Seite:** Für
+  denselben Fall unterscheidet er sich zwischen `48H`, `30T` und `12M` um höchstens 6 ms — die
+  Nachlesung über den Primärschlüssel und die Verrechnung in Java fallen nicht ins Gewicht, die zwei
+  Live-Lesungen tragen alles.
+- **Kein Fall reißt das Tor, aber `NEXANS` dicht hat es auf 111 ms Abstand** — bei einer Seite, die an
+  dieser Stunde ohne Live-Rest 73 bis 103 ms kostet. An einer dichten Stunde am *heutigen* Bestandsende
+  (Bezug rund 295 ms über zwölf Monate) läge dieselbe Rechnung bei etwa 570 ms; eine solche Stunde
+  gibt es auf der Testkopie nicht (§8, die dichteste liegt im Oktober 2024). **Das ist Punkt 193.**
+- **Bei den drei kleineren Mandanten kostet der Live-Rest 4 bis 26 ms**, und die Seiten liegen mit
+  84 bis 249 ms dort, wo M178 sie hatte.
+
+> **Belegvermerk (Regel L10).** *Gemessen ist:* 24 Lagen (acht Fälle × drei Paare) durch den
+> Endpunkt, am Dienst und als Bezug, warm, ein Aufwärmlauf und beste von fünf, Testclient auf
+> demselben Rechner wie der Server, Testkopie, ein Lauf am 17.09.2026. *Behauptet wird:* Die
+> Landingpage mit Live-Rest bleibt auf der Testkopie in jeder gemessenen Lage unter 500 ms, und der
+> Live-Rest kostet je Lage 4 bis 26 ms in der typischen Stunde und rund 270 ms im dichtesten
+> Vierstundenbereich des größten Mandanten. **Die Lücke:** ein Lauf, nicht zwei; die dichteste Stunde
+> der Produktion ist unbekannt; die Kombination *dichte Stunde am Bestandsende* ist nicht messbar,
+> weil es sie auf der Testkopie nicht gibt (Punkt 193); kein Fall ist kalt gemessen.
+
 ---
 
 ## 10. Die Oberfläche (E‑186, E‑187)
@@ -585,6 +667,23 @@ zählen die laufende Stunde gleich.
   nur von Hand über „Neu laden", dann beide zusammen. Die E‑50‑Folge beim Stundenwechsel — die
   Liste beginnt oben neu, wenn der Baum ein neues Fenster bringt — gilt damit nur beim Neuladen von
   Hand und ist in `tests/neu-laden.test.tsx` festgehalten.
+
+> ### ⚠️ Ergänzt am 17.09.2026 — ein Baustein für beide Ansichten (E‑192, Teil B)
+>
+> **Die Liste oben bleibt stehen; zwei ihrer Orte sind gewandert.** Der Hinweis ist seither
+> `components/live-rest-hinweis.tsx`, der Typ `lib/live-rest.ts`, die Texte `texte.liveRest` — nicht
+> mehr `features/nachrichten/api.ts` und `prozesse.baum.liveRest`. Der Grund: Die Übersicht liest
+> denselben Block, ein Feature importiert nicht aus einem Nachbarfeature
+> ([`frontend-grundlagen.md`](frontend-grundlagen.md) §8), und zwei Stellen, die denselben Satz aus
+> derselben Antwort bilden, driften. Was der Baustein sagt und wann er nichts sagt, hat sich nicht
+> geändert.
+>
+> **In der Übersicht steht er über den Kacheln** — Entscheidung des Auftraggebers vom 17.09.2026, nicht
+> an der Stand-Zeile: Dort stehen die Zahlen, die bei `AUSGESETZT` unvollständig sind. **Auch im
+> Leerzustand**, denn „nichts im Zeitraum" kann heißen, dass die Aggregation seit Stunden nicht läuft
+> ([`dashboard-frontend.md`](dashboard-frontend.md) §2). Bei `ANGEWANDT` und `NICHT_NOETIG` steht
+> nichts, und der Baustein rendert dann auch nichts — `tests/live-rest.test.tsx` hält es für beide
+> Ansichten fest.
 
 ---
 
@@ -620,6 +719,31 @@ erscheint lokal nicht. Belegt ist der Bau über Tests mit gesetzter Uhr und gese
 | `FensterverengungDbIT` (25, `db`), `RollupStatementsTest` (6), `PaketstrukturTest` (19) | unverändert grün — der Wasserstand aus `common`, die Stundenbildung aus `common`, `MandantContext` in `common` |
 | `tests/live-rest.test.tsx` (5, gerendert) | der Hinweis bei `AUSGESETZT` mit Lauf (trägt die Zeitangabe, über denselben Weg formatiert) und ohne Lauf (nur der Satz); **kein** Hinweis bei `ANGEWANDT` und `NICHT_NOETIG` (Abwesenheit im Baum, mit dem Baum als Eichung); der Kasten trägt nicht die Fehlerfarbe. `pnpm check` grün mit **1.123 Fällen in 44 Dateien**; die gerenderten sind **166 in 21 Dateien** (Kopf von `vitest.config.mts`, aus dem Lauf gezählt) |
 
+**Teil B, 17.09.2026** — hinzugekommen und erweitert:
+
+| Test | Was er hält |
+|---|---|
+| `DashboardServiceTest` (**13 neu** unter „Der Live-Rest") | Stunden-, Tages- und Monatseimer; nur Zeilen im Fenster (von einschließend, bis ausschließend); kein negativer Endwert, und ein Eimer, der auf null fällt, verschwindet — die Seite wird leer; nur Live-Verkehr ohne Rollupzeile; Block 5 je Schlüssel über die Nachlesung, ein Prozess ohne Zeile als *nicht zugeordnet*, Kachel und Sichten gleich; keine Nachlesung ohne Korrekturzeilen im Fenster; die Verteilung klemmt auf null; zwei Schreibweisen bleiben eine Zeile; der Block in drei Zuständen mit G in UTC; ein Uhrenschlag für Fenster und Live-Rest; die Belegungsprobe ohne Korrektur. Der Baustein ist eine Attrappe; ohne Stellung „ausgesetzt, kein Lauf" |
+| `DashboardStatementsTest` (**zehn** statt neun; **4 neu** unter `LiveRest`) | die zehn Statements einer Seite ohne Lauf einzeln benannt, das zehnte der Wasserstand; `NICHT_NOETIG` zehn; `ANGEWANDT` ohne Korrekturzeile zwölf (A und B an elfter und zwölfter Stelle, keine Nachlesung); mit Korrekturzeile dreizehn, die zwölf davor unverändert, die Nachlesung **wörtlich**; ihre Gestalt (kein `GROUP BY`, `IN` über den Schlüssel, die Kette, beide `CASE`). **Geändert:** *genau neun* ist gefallen; `kein_zusammengelegtes_verteilungsstatement` verlangt seither, dass keine **gruppierende** Abfrage beide Katalogspalten liest, über beide Seiten; `keine_frist_mehr_in_der_ganzen_seite` läuft über die vollste Seite (dreizehn) |
+| `DashboardPlanDbIT` (**1 neu**, `db`) | die Nachlesung steigt über `PRIMARY` ein, keine Tabelle voll — für `NEXANS` und `SUTTONS`, mit drei Kennungen aus dem Bestand als Eingabe (kein Wert daraus in einer Zusicherung) |
+| `DashboardIsolationDbIT` (**2 neu**, `db`) | der Block `liveRest` steht in der Antwort mit einem der drei Zustände; **die Nachlesung am Repository**: eine selbst angelegte Katalogzeile auf einem `SUTTONS`-Prozess ohne Zeile (reines `INSERT`, Testpräfix, `@AfterEach`), Eichung für `SUTTONS`, leer für `VOTG` |
+| `DashboardLiveRestDbIT` (**neu**, 1, `db`) | **die Summenprobe je Paar:** Uhr am Anker, W = `03:00`, G = `02:00`; erst die Vorprobe (Rollup allein minus Live-Bereich gleich `Message` minus Live-Bereich), dann durch den Dienst: Kachel *Nachrichten* gleich `COUNT(*)` aus `Message` im Fenster, der Verlauf und beide Sichten gleich der Kachel, `ANGEWANDT`. **Ausgegeben, nicht behauptet** (T2): `NEXANS` 9.950 / 176.050 / 2.308.005 in `48H`/`30T`/`12M`, `SUTTONS` 1.337 / 20.964 / 196.536; der Live-Bereich trägt bei beiden auf beiden Seiten dieselben Zahlen (392 und 63) — **die Korrektur hebt sich auf der Testkopie auf**, weil der Rollup vollständig ist; die Probe belegt den Weg und die Gleichheit, die Arithmetik belegen die Diensttests (Punkt 194) |
+| `MessungM186DbIT` (1, `db`) | §8b; zugesichert nur `200`, `ANGEWANDT` und Kachel gleich beiden Sichten |
+| `tests/live-rest.test.tsx` (**9**, davon **4 neu** „in der Übersicht") | über den Kacheln bei `AUSGESETZT` mit Lauf (Kasten vor der ersten Kachel im Dokument, Zeitangabe über denselben Weg); ohne Lauf **im Leerzustand**, ohne Kacheln; nichts bei `ANGEWANDT` und `NICHT_NOETIG`, mit den Kacheln als Eichung. `pnpm check` grün mit **1.130 Fällen in 44 Dateien**; die gerenderten sind **170 in 21 Dateien** (aus dem Lauf gezählt) |
+| `PaketstrukturTest` (19), `ProzessbaumServiceTest`, `ProzessbaumStatementsTest` | unverändert grün — `LiveRestResponse` aus `common` (E‑189) |
+
+**`keine_mandanten_id` ist in einem von zwei Läufen gefallen** — sechs Lampen um je eine Sekunde, der
+Block `liveRest` in beiden Rümpfen identisch; der zweite Lauf war grün (26 von 26): Punkt 182 in
+[`dashboard.md`](dashboard.md) §11, unverändert und nicht nebenbei repariert.
+
+**Die Verletzungsprobe der Nachlesung** ist am Repository gebaut und nicht am Endpunkt, aus demselben
+Grund wie in Teil A: Der Dienst reicht nur mandantengefilterte Kennungen herein, und durch den
+Endpunkt zeigte sich ein fehlender Riegel nie. Gefahren am 17.09.2026: die Mandantenkette aus
+`katalogzuordnung` entfernt → `nachlesung_liefert_keine_fremde_zeile:737` **rot** („Die Nachlesung fuer
+VOTG darf die Zeile des Prozesses … von SUTTONS nicht liefern — Expecting empty but was:
+[Katalogzuordnungszeile[…]]"); aus einer Sicherungskopie zurückgespielt und mit `cmp` verglichen, in
+keinem Commit.
+
 **Die Verletzungsprobe — ausgeführt, nicht angenommen.** Gefahren am 17.09.2026 je Kette einzeln
 (ein Riegel macht den Test sonst blind), jeweils aus einer Sicherungskopie zurückgespielt und mit
 `cmp` verglichen:
@@ -639,13 +763,13 @@ Keine Wanduhrzeit in einer Zusicherung (T1); kein Erwartungswert aus dem Bestand
 
 | Regel | Stand |
 |---|---|
-| **L2** Keine Live-Aggregation über `Message` | **dritte benannte Ausnahme**, eingetragen und begründet in [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §8, Regel 2: Die Zahl hängt am **Takt des Laufs**, nicht an einer Frist und nicht an einem flüchtigen Status; der Bereich ist auf vier Eimer begrenzt; gemessen in M185; Verbraucher: Prozessbaum jetzt, Dashboard mit Teil B |
-| **L7** Jede neue Abfrage gemessen | **erfüllt** — M185, `EXPLAIN` je Statement (§8), `ProzessbaumPlanDbIT` (**L15**) |
+| **L2** Keine Live-Aggregation über `Message` | **dritte benannte Ausnahme**, eingetragen und begründet in [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §8, Regel 2: Die Zahl hängt am **Takt des Laufs**, nicht an einer Frist und nicht an einem flüchtigen Status; der Bereich ist auf vier Eimer begrenzt; gemessen in M185; Verbraucher: Prozessbaum jetzt, Dashboard mit Teil B. *Teil B:* **dieselbe Ausnahme, kein vierter Fall** — das Dashboard ruft dieselben zwei Lesungen; die Nachlesung liest `process_catalog` über den Primärschlüssel und aggregiert nichts |
+| **L7** Jede neue Abfrage gemessen | **erfüllt** — M185, `EXPLAIN` je Statement (§8), `ProzessbaumPlanDbIT` (**L15**); *Teil B:* M186 (§8b), die Nachlesung in `DashboardPlanDbIT` |
 | **L10** Belegvermerk | **erfüllt** — zwei Vermerke in §8 |
 | **M1** Kein Mandantenparameter | **erfüllt** — kein neuer Endpunkt, kein neuer Parameter |
 | **M2** `MandantContext` erster Pflichtparameter | **erfüllt** — beide Live-Lesungen; `WasserstandRepository` öffentlich ohne Kontext, weil ohne `jooq.glassfish`; der Typ liegt seit heute in `common` (§7) |
 | **M3** Filter im Statement | **erfüllt** — die Kette als `EXISTS` in A und B, Verletzungsprobe je Kette rot |
-| **M4** Isolationstest je Endpunkt | **erfüllt** — `ProzessbaumIsolationDbIT` um die Live-Lesungen erweitert, am Repository |
+| **M4** Isolationstest je Endpunkt | **erfüllt** — `ProzessbaumIsolationDbIT` um die Live-Lesungen erweitert, am Repository; *Teil B:* `DashboardIsolationDbIT` um die Nachlesung erweitert, am Repository, Verletzungsprobe rot |
 | **S1** Kein Schreibzugriff auf `GlassfishDB` | **erfüllt** — Lese-Kontext; die Tests schreiben auch nicht in `rollup_lauf` |
 | **T1, T2** | **erfüllt** — keine Wanduhrzeit und kein Bestandswert in einer Zusicherung |
 | **Z1** Kein `now()` | **erfüllt** — `jetzt` ist ein Parameter; M185 stellt die Uhr über `@TestBean` |
@@ -667,6 +791,11 @@ Keine Wanduhrzeit in einer Zusicherung (T1); kein Erwartungswert aus dem Bestand
 | **E‑186** | Kein Nachladen im Takt der Liste — E‑164 gilt | Auftraggeber, 17.09.2026 (Punkt 189) |
 | **E‑187** | Der Hinweis als `Alert` ohne Variante bei den Kopfzahlen, zwei Sätze, die Zeit absolut in der Anzeigezone | Bau |
 | **E‑188** | Die Verrechnung im Dienst: Schnitt mit dem Fenster, Klemme bei null je Zahl, letzte Bewegung als Maximum, ein Uhrenschlag | Bau |
+| **E‑189** | `LiveRestResponse` wandert von `catalog` nach `common`, mit der Fabrik `aus(entscheidung, zone)` — ein Block für beide Verbraucher | Bau (Teil B) |
+| **E‑190** | Das Dashboard ordnet die Korrektur seinen Eimern zu wie der Rollup seine Ebenen bildet (Stunde, `DATE(stunde)`, Monatserster); Klemme je (Eimer, Rohstatus); Leerzustand nach der Kachel; Belegungsprobe ohne Korrektur; ein Uhrenschlag | Bau (Teil B) |
+| **E‑191** | Block 5 trägt die Korrektur je Schlüssel über eine Katalog-Nachlesung — derselbe `CASE` wie das Verteilungsstatement, `IN` über den Primärschlüssel, Kette als `EXISTS`, kein `GROUP BY`, nur bei Korrekturzeilen; Vergleich ohne Groß- und Kleinschreibung | Auftraggeber, 17.09.2026 (per Auswahl); Ausgestaltung Bau |
+| **E‑192** | Der Hinweis steht in der Übersicht über den Kacheln, auch im Leerzustand, als gemeinsamer Baustein beider Ansichten (`components/live-rest-hinweis.tsx`, `lib/live-rest.ts`, `texte.liveRest`) | Auftraggeber, 17.09.2026 (Ort); Baustein Bau |
+| *Tor M186* | 500 ms je Lage durch den Endpunkt in beiden Messstunden; darüber anhalten und berichten | Auftraggeber, 17.09.2026 |
 
 ---
 
@@ -679,15 +808,21 @@ Keine Wanduhrzeit in einer Zusicherung (T1); kein Erwartungswert aus dem Bestand
 | ~~**188**~~ | ~~Was passiert, wenn die Live-Lesung ausfällt~~ **Entschieden am 17.09.2026:** `AUSGESETZT` mit G, Hinweis, `WARN` (E‑185) |
 | ~~**189**~~ | ~~Nachladen im Takt der Übertragungsliste~~ **Entschieden am 17.09.2026:** nicht gebaut, E‑164 gilt (E‑186) |
 | **190** | **Der Preis des dichtesten Bereichs beim größten Mandanten ist an der Testkopie belegt, an der Produktion nicht.** 18.715 Nachrichten in vier Eimern kosten 265,7 ms im Statement B und 337,0 ms durch den Endpunkt — unter 500 ms, aber das 2,7‑Fache der typischen Stunde. Ob die Produktion dichtere Stunden hat, ist nicht erhoben; die Obergrenze von drei Stunden ist die Stellschraube, und sie ist eine Konstante mit Begründung, kein Schlüssel |
-| **191** | **Bis Teil B zählen Baum und Dashboard die laufende Stunde verschieden:** Der Baum trägt den Live-Rest, das Dashboard liest weiter allein den Rollup. Für dasselbe Fenster können beide Ansichten bis zum nächsten Delta-Lauf zwei Zahlen zeigen. Kasten in [`dashboard.md`](dashboard.md) §2; Teil B schließt ihn |
+| ~~**191**~~ | ~~Bis Teil B zählen Baum und Dashboard die laufende Stunde verschieden~~ **Erledigt am 17.09.2026 mit Teil B** (§9b): Beide rufen denselben Baustein, die Kachel *Nachrichten* ist je Paar `COUNT(*)` aus `Message` (`DashboardLiveRestDbIT`) |
 | **192** | **Die Wasserstandsabfrage hat keinen Rückfall.** Fällt sie aus (das eigene Schema), scheitert die Antwort des Baums mit `500`; die Fensterverengung fängt denselben Fall ab und läuft unverengt weiter. Bewusst so gebaut (E‑185: ein Vorfall, kein fehlender Rest) — ob der Baum hier derselben Haltung folgen soll wie die Liste, ist eine eigene Entscheidung |
+| **193** | **Die Kombination *dichte Stunde am Bestandsende* ist auf der Testkopie nicht messbar.** M186 misst den dichtesten Vierstundenbereich (Oktober 2024) an einer Seite, die dort ohne Live-Rest 73 bis 103 ms kostet; der Zuschlag von rund 270 ms hängt am Live-Bereich und nicht am Paar. An einer ebenso dichten Stunde am heutigen Bestandsende läge dieselbe Rechnung bei etwa 570 ms — **gerechnet, nicht gemessen**, und über 500 ms. Ob die Produktion eine solche Stunde hat, ist unbekannt (Punkt 190); die Stellschraube bleibt die Obergrenze aus E‑181 |
+| **194** | **Die Summenprobe des Dashboards belegt den Weg, nicht die Arithmetik.** Auf der Testkopie ist der Rollup vollständig; im Live-Bereich tragen Rollup und `Message` dieselben Zahlen, die Korrektur hebt sich auf, und die Nachlesung läuft im DbIT nie. Die Verrechnung selbst tragen die dreizehn Diensttests mit erfundenen Zeilen. Eine Probe mit echter Differenz bräuchte einen Bestand, in dem `Message` nach dem letzten Lauf gewachsen ist — auf der Testkopie gibt es ihn nicht, und ein Test darf ihn nicht herstellen (Regel S1) |
+| **195** | **Die Zahl der Statements einer Seite hängt am Bestand:** zwölf oder dreizehn bei `ANGEWANDT`, je nachdem, ob im Fenster etwas zu verrechnen ist. `DashboardStatementsTest` benennt beide Lagen; die Vorschrift „deterministisch je Mandant" aus §5 von [`dashboard.md`](dashboard.md) (die Erscheinungsbedingung wird deshalb immer gelesen) ist damit für die Nachlesung bewusst nicht gehalten — ein Statement, das nach nichts fragt, wäre der Preis. Benannt, nicht als Fehler geführt |
 
 ---
 
 ## 16. Was nicht gebaut ist
 
-Nichts am Dashboard (`DashboardRepository.letzterLauf()` bleibt; Teil B ruft den Baustein); kein
-kürzerer Takt, keine Änderung an `overlord.rollup.*`, an `rollup_lauf` oder am Rollup-Job — im Paket
+*Teil A:* Nichts am Dashboard (`DashboardRepository.letzterLauf()` bleibt; Teil B ruft den Baustein) —
+*mit Teil B eingelöst; was am Dashboard weiterhin nicht gebaut ist: keine Korrektur der
+Belegungsprobe, kein zweiter Wasserstand für den Block* Stand*, kein Nachladen im Takt, kein
+Hinweis bei `ANGEWANDT` oder `NICHT_NOETIG`, keine zweite Messstunde am Bestandsende (Punkt 193)*;
+kein kürzerer Takt, keine Änderung an `overlord.rollup.*`, an `rollup_lauf` oder am Rollup-Job — im Paket
 `rollup` ändert sich allein die Herkunft der Stundenbildung; keine Änderung an den
 Kennzahlen-Statements, am Gerüst oder an E‑34; kein Live-Rest in Nachrichtenliste, BAM-Suche oder
 Property-Suche; keine Korrektur älterer Eimer — was mehr als 15 Minuten nachträglich geschrieben

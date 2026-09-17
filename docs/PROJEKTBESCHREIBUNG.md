@@ -1532,8 +1532,8 @@ Prozent der Datenbank; dort entscheidet die Bytegröße.
 
    > ### Die dritte benannte Ausnahme: der Live-Rest der laufenden Stunde *(17.09.2026, [`live-rest.md`](live-rest.md))*
    >
-   > **Der Satz oben ist eingelöst: eingetragen, begründet, gemessen.** Der Prozessbaum — und mit
-   > Teil B das Dashboard — zählt den Verkehr **seit dem letzten Rollup-Lauf** live aus `Message`:
+   > **Der Satz oben ist eingelöst: eingetragen, begründet, gemessen.** Der Prozessbaum — und seit
+   > Teil B am selben Tag das Dashboard — zählt den Verkehr **seit dem letzten Rollup-Lauf** live aus `Message`:
    > je Stundeneimer, Prozess und Rohstatus, mit Mandantenkette, über höchstens vier Eimer, und
    > zieht davon ab, was `message_rollup` über denselben Bereich schon weiß.
    >
@@ -1562,6 +1562,16 @@ Prozent der Datenbank; dort entscheidet die Bytegröße.
    >
    > **Die Zählung steht damit bei drei, und der Satz gilt weiter — für eine vierte.** Zwei Verbraucher:
    > der Prozessbaum seit dem 17.09.2026, das Dashboard mit Teil B.
+   >
+   > **Teil B ist am selben Tag gebaut** ([`live-rest.md`](live-rest.md) §9b): Das Dashboard ruft
+   > denselben Baustein und ordnet die Korrektur seinen Eimern zu — Stunde, Tag oder Kalendermonat wie
+   > der Rollup selbst; Block 5 bekommt sie je Schlüssel über eine Katalog-Nachlesung (ein kleines
+   > Statement über den Primärschlüssel, **keine** weitere Aggregation über `Message`). Die Ausnahme
+   > bleibt damit **eine**: ein Baustein, zwei Verbraucher, dieselben zwei Live-Lesungen. Gemessen als
+   > **M186** (§8b dort), Tor: das Seitenbudget von 500 ms je Lage in beiden Messstunden — **bestanden**,
+   > die teuerste Lage ist `NEXANS` im dichtesten Bereich über 30 Tage mit **388,6 ms**; der Live-Rest
+   > kostet die Seite 4 bis 26 ms in der typischen Stunde und rund 270 ms im dichtesten Bereich des
+   > größten Mandanten, unabhängig vom Paar.
 3. **Keine `OFFSET`-Paginierung.** Cursor-basiert über `(MessageLastUpdate, MessageID)`.
 4. **`MessageProperty` nur über `MessageID`.** Nie filtern, gruppieren oder sortieren über den Wert.
 

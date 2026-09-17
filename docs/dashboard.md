@@ -146,6 +146,22 @@ Katalog etwa, weil er `ADMIN` verlangt.
 > Im Code: `VerteilungResponse(partner, richtung)`, je Sicht ein `VerteilungszeilenResponse(zeilen)`.
 > Der Typ, der bis dahin `VerteilungResponse(sicht, zeilen)` hieß, ist darin aufgegangen.
 
+> ### ⚠️ Ergänzt am 17.09.2026 — der Block `liveRest` (Live-Rest, Teil B)
+>
+> **Der Rumpf oben bleibt stehen.** Zwischen `stand` und `plattform` steht seither:
+>
+> ```jsonc
+> "liveRest": { "zustand": "ANGEWANDT", "vollstaendigBis": null }
+> ```
+>
+> `zustand` ist einer von `ANGEWANDT`, `NICHT_NOETIG`, `AUSGESETZT`; `vollstaendigBis` ist **G** in
+> UTC und nur bei `AUSGESETZT` mit vorhandenem Lauf gesetzt. **Derselbe Block wie im Prozessbaum**
+> (`common/LiveRestResponse`, E‑189), und er sagt für diese Seite: Verlauf, Kacheln *Nachrichten* und
+> *Fehler* und beide Sichten der Verteilung tragen den Verkehr seit dem letzten Rollup-Lauf — oder,
+> bei `AUSGESETZT`, sie tun es nicht, und die Oberfläche sagt es über den Kacheln. Vollständig in
+> [`live-rest.md`](live-rest.md) §9b. `DashboardIsolationDbIT.der_block_live_rest_steht_in_der_antwort`
+> hält den Block fest; kein neuer Parameter, kein neuer Endpunkt.
+
 ---
 
 ## 2. Die Blöcke — acht, und weiterhin sieben Statements
@@ -263,6 +279,21 @@ ganzer.
 > das, was seit dem Lauf passiert ist. Das ist offener Punkt **191** in `live-rest.md`; **Teil B**
 > ruft denselben Baustein (`common/LiveRestService`) und ordnet die Korrektur den Eimern des
 > Verlaufs zu. Der Block *Stand* (`letzterLauf()`) bleibt, wo er ist.
+
+> ### ✔ Am selben Tag eingelöst — Teil B *(17.09.2026, E‑190, E‑191)*
+>
+> **Der Kasten darüber bleibt stehen; sein Zustand hat wenige Stunden gedauert.** Seit Teil B ruft
+> `DashboardService.landingpage` denselben Baustein mit demselben Uhrenschlag und ordnet die
+> Korrektur seinen Eimern zu: `48H` die Stunde, `30T` `DATE(stunde)`, `12M` der Monatserste — die
+> Zuordnung, mit der der Rollup seine abgeleiteten Ebenen bildet ([`rollup.md`](rollup.md) §5).
+> Verlauf und beide Rollup-Kacheln rechnen mit den verrechneten Zeilen **wie bisher**; Block 5
+> bekommt die Korrektur je Schlüssel über eine **Katalog-Nachlesung** (ein Statement mehr, nur bei
+> `ANGEWANDT` mit Korrekturzeilen; §7). **Baum und Übersicht zählen die laufende Stunde seither
+> gleich**, und Kachel und beide Sichten zählen dieselbe Zahl — `DashboardLiveRestDbIT` hält es je
+> Paar gegen `COUNT(*)` aus `Message` fest. Punkt 191 ist geschlossen. **Die Belegungsprobe des
+> Standardfensters bleibt ohne Korrektur** — sie entscheidet über das Paar, bevor der Live-Rest
+> gelesen ist; der Block *Stand* bleibt, wo er ist. Vollständig in [`live-rest.md`](live-rest.md)
+> §9b, gemessen als **M186** (dort §8b).
 
 ### Die Kachel *Nachrichten* zählt Aktivität und nicht Nachrichten
 
@@ -679,6 +710,21 @@ bis drei Belegungsproben). Alle laufen über **`glassfishDsl`**, den Lese-Pool.
 > Plan ist Zeile für Zeile der Plan der Partnerform** (M178, §8), und `DashboardPlanDbIT` hält das
 > fest.
 
+> **Berichtigt 17.09.2026: es sind zehn — und bei angewandtem Live-Rest zwölf oder dreizehn** (Teil B,
+> [`live-rest.md`](live-rest.md) §9b). Das zehnte ist der **Wasserstand** (`common/WasserstandRepository`,
+> `MAX(fenster_bis)` über `rollup_lauf`) — die Seite fragt ihn bei jedem Aufruf. Bei `ANGEWANDT`
+> kommen die zwei Live-Lesungen des Bausteins dazu (die Rollupzeilen des Live-Bereichs, die Zählung
+> aus `Message` mit der Stundenbildung des Jobs; beide mit Mandantenkette, gemessen in M185), und
+> **nur wenn im Fenster etwas zu verrechnen ist**, die **Katalog-Nachlesung** für die Prozesse der
+> Korrekturzeilen: derselbe `CASE` wie im Verteilungsstatement, `IN` über den Primärschlüssel, die
+> Kette als `EXISTS`, **kein `GROUP BY`** — es ist nicht das zusammengelegte Verteilungsstatement, das
+> `kein_zusammengelegtes_verteilungsstatement` ausschließt; der Test ist entsprechend verfeinert
+> (keine **gruppierende** Abfrage liest beide Spalten) und läuft über beide Seiten. Mit genanntem
+> `zeitraum` also zehn bis dreizehn, ohne ihn elf bis sechzehn. Alle laufen über `glassfishDsl`;
+> `DashboardStatementsTest.LiveRest` benennt sie einzeln, die Nachlesung wörtlich. **Der Block
+> *Stand* liest `rollup_lauf` weiterhin selbst** — es sind seither zwei Statements auf dieser
+> Tabelle je Seite (Punkt 187 in `live-rest.md`: so lassen).
+
 **Der Lese-Kontext und nicht `monitorDsl`** — die Aufteilung ist *lesen gegen schreiben* und nicht
 *Quellschema gegen eigenes Schema*: Jede Abfrage hier joint `overlord_monitor.message_rollup*` gegen
 `GlassfishDB.Process` und braucht dafür **eine einzige Verbindung**.
@@ -906,6 +952,10 @@ dessen Grund liegt am *Schema* ([`nachrichtenliste.md`](nachrichtenliste.md) §5
 ---
 
 ## 8. Die Messung — M108 *(31.08.2026)*, überholt durch M145 *(03.09.2026)*
+
+> **Ergänzt 17.09.2026 — M186, die Seite mit Live-Rest** (Teil B). Vorregistrierung, Tor und Ergebnis
+> stehen in [`live-rest.md`](live-rest.md) §9b; das Tor ist das Seitenbudget dieses Kapitels (500 ms
+> je Lage), auf Entscheidung des Auftraggebers auch für den dichtesten Vierstundenbereich.
 
 > ### ⚠️ M108 ist für drei Zeilen überholt und für den Rest gültig
 >
@@ -1357,6 +1407,22 @@ Die Mandantenkette steht in **jedem** Plan als `eq_ref` über Primärschlüssel 
 > `DashboardServiceTest` den Zusammenbau des Blocks, `DashboardIsolationDbIT` die **Gleichheit** des
 > Blocks für zwei Mandanten samt Regel G1 am Rumpf, und `PaketstrukturTest` die dritte benannte
 > Ausnahme von Regel M2.
+
+> **Ergänzt 17.09.2026 (Live-Rest, Teil B).** Ein Test kommt hinzu und vier sind erweitert, alle in
+> [`live-rest.md`](live-rest.md) §12 aufgeführt: **`DashboardLiveRestDbIT`** (die Summenprobe je
+> Paar — Kachel, Verlauf und beide Sichten gleich `COUNT(*)` aus `Message`, Uhr und Wasserstand
+> gestellt); `DashboardServiceTest` mit dreizehn Fällen unter „Der Live-Rest" (Stunden-, Tages- und
+> Monatseimer, nur im Fenster, Klemme, nur Live-Verkehr, Verteilung je Schlüssel samt Schreibweisen,
+> keine Nachlesung ohne Zeilen, der Block in drei Zuständen, ein Uhrenschlag, die Belegungsprobe ohne
+> Korrektur); `DashboardStatementsTest` benennt **zehn** Statements je Seite und unter `LiveRest`
+> die zwölf und dreizehn — **die Zusicherung „genau neun" ist bewusst gefallen**, ebenso läuft
+> `keine_frist_mehr_in_der_ganzen_seite` jetzt über die vollste Seite mit dreizehn;
+> `DashboardPlanDbIT` prüft die Nachlesung (`PRIMARY`, nichts voll); `DashboardIsolationDbIT` den
+> Block in der Antwort und die Nachlesung **am Repository** mit selbst angelegter Katalogzeile.
+> **`keine_mandanten_id` ist am 17.09.2026 in einem von zwei Läufen über eine Sekundengrenze gefallen**
+> — sechs Lampen um je eine Sekunde, sonst nichts, mit dem Block `liveRest` in beiden Rümpfen
+> identisch; der zweite Lauf war grün (26 von 26): Punkt **182**, unverändert offen und nicht nebenbei
+> repariert.
 
 ### Die Verletzungsprobe
 

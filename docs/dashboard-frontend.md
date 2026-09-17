@@ -118,6 +118,30 @@ verschwunden.
 > `nuqs` ist: Ein Sichtwechsel darf keinen Server-Roundtrip auslösen, und die Zeile sagt, dass das eine
 > Anforderung ist und kein Zufall der Voreinstellung.
 
+> ### ⚠️ Ergänzt am 17.09.2026 — der Hinweis zum Live-Rest über den Kacheln (E‑192)
+>
+> Die Antwort trägt seit Teil B des Live-Rests den Block `liveRest` ([`dashboard.md`](dashboard.md)
+> §1, [`live-rest.md`](live-rest.md) §9b). **Bei `AUSGESETZT` steht über den Kacheln ein Satz** —
+> mit Zeitangabe **G** absolut in der Anzeigezone, wenn es einen Lauf gab, ohne, wenn nicht; bei
+> `ANGEWANDT` und `NICHT_NOETIG` steht **nichts**. Entschieden vom Auftraggeber am 17.09.2026: über
+> den Kacheln, weil dort die Zahlen stehen, die dann unvollständig sind — nicht an der Stand-Zeile.
+>
+> **Ein Baustein für beide Ansichten:** `components/live-rest-hinweis.tsx`, gerufen von der
+> Prozessansicht (bei ihren Kopfzahlen, seit Teil A) und von `DashboardAnsicht`. Der Typ liegt in
+> `lib/live-rest.ts`, die Texte unter `texte.liveRest` — dieselbe Bewegung wie beim Zeitraumumschalter
+> (§5.1): Ein Feature importiert nicht aus einem Nachbarfeature, und zwei Stellen, die denselben Satz
+> aus derselben Antwort bilden, driften. Die Bauform ist die des Katalog-Hinweises: `Alert` ohne
+> Variante, kein Rot, kein neues Farbtoken.
+>
+> **Auch im Leerzustand** — E‑p ist damit ein zweites Mal ergänzt (nach „Neu laden", §5.7): Satz,
+> Umschalter, „Neu laden", Stand **und dieser Hinweis, wenn es ihn gibt**. „Nichts im Zeitraum" kann
+> heißen, dass die Aggregation seit Stunden nicht läuft, und genau dann gehört der Satz hierher.
+> Punkt 169 (die Kachel *Plattform* im Leerzustand) ist davon nicht berührt.
+>
+> **Kein Nachladen** — E‑164 gilt unverändert; der Hinweis wechselt erst mit der nächsten Antwort.
+> Geprüft in `tests/live-rest.test.tsx` („Der Hinweis zum Live-Rest in der Übersicht", vier Fälle:
+> mit Lauf über den Kacheln, ohne Lauf im Leerzustand, bei `ANGEWANDT` und `NICHT_NOETIG` nichts).
+
 ### Die Reihenfolge der Blöcke
 
 Kacheln → Verlauf mit Fehlerstreifen → Zuletzt aufgefallen → Verteilung → Stand.
@@ -354,6 +378,10 @@ Drei Schaltflächen: 48 Stunden, 30 Tage, 12 Monate. Dazu der Umschalter der Ver
 > | die Komponente | `components/zeitraum-umschalter.tsx` |
 > | die drei Codes samt Parser und der Regel „hervorgehoben ist, was gilt" | `lib/rollupzeitraum.ts` |
 > | die Beschriftungen | `texte.zeitraum` statt `texte.dashboard.zeitraum` |
+>
+> *Dieselbe Bewegung am 17.09.2026 für den Live-Rest (E‑192):* der Hinweis in
+> `components/live-rest-hinweis.tsx`, der Typ in `lib/live-rest.ts`, die Texte unter `texte.liveRest`
+> statt `texte.prozesse.baum.liveRest` — beide Ansichten rufen denselben Baustein (§2).
 >
 > **`Dashboardzeitraum` heißt seither `Rollupzeitraum`** — dem Backend nach, das dieselbe Bewegung am
 > selben Tag gemacht hat (E‑44 dort). Eine Hülle unter dem alten Namen ist bewusst nicht

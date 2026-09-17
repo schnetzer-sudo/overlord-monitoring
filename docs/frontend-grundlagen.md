@@ -805,6 +805,11 @@ importiert werden. Kommt in Schritt 10 eine eigene Prozessansicht, wandert der g
 > | der Zeitraumumschalter | `features/dashboard/components/` | **`components/zeitraum-umschalter.tsx`** |
 > | seine Beschriftungen | `texte.dashboard.zeitraum` | **`texte.zeitraum`** |
 >
+> **Ein zweites Mal fällig am 17.09.2026, und wieder gehalten** (Live-Rest, Teil B, E‑192): Der Hinweis
+> zum Live-Rest und sein Typ sind aus `features/nachrichten` gewandert — nach
+> **`components/live-rest-hinweis.tsx`**, **`lib/live-rest.ts`** und **`texte.liveRest`** —, weil die
+> Übersicht denselben Block liest ([`live-rest.md`](live-rest.md) §10).
+>
 > Die Umbenennung `Dashboardzeitraum` → `Rollupzeitraum` folgt dem Backend, das dieselbe Bewegung am
 > selben Tag gemacht hat ([`process-view.md`](process-view.md) E‑44). **Zwei Namen für dieselbe
 > Menge sind der Anfang zweier Mengen** — deshalb steht in `features/dashboard` keine Hülle, die den
