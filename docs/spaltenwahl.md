@@ -309,6 +309,32 @@ in der Trefferliste (§1, Abweichung 10). Der Zusatz „Schritt: …" kürzt jet
 steht vollständig im `title`. **Damit sind Liste und Trefferliste wieder Spalte für Spalte gleich
 breit**, was die Zusage des Endpunkts verlangt ([`bam-suche.md`](bam-suche.md) §1).
 
+> ### ⚠️ Korrektur vom 16.09.2026, zweite Meldung — Schwelle 1.167 px, und ab ihr nimmt das Projekt den Rest (E‑162)
+>
+> **Der Abschnitt bleibt wortgleich stehen**, die Zahlen darin sind überholt
+> ([`nachrichtenliste.md`](nachrichtenliste.md) §8.1, Kasten unter „Umgesetzt über `table-fixed`",
+> M180). Gemeldet hat es der Auftraggeber mit einem Bild aus der Produktion, Dichte `xs`: Die Plakette
+> „Zusammengeführt" war gekürzt, neben „Wartend" stand nur „Schritt…", und zwischen Ablauf und
+> Projekt lagen rund 700 px leer. Die Ursache war der Ablauf als freie Spalte bei jeder Breite.
+>
+> | | bis heute (dieser Abschnitt) | seit E‑162 |
+> |---|---|---|
+> | Status | 155 px | 156 px (9,75 rem), **ab der Schwelle 286 px** (17,875 rem) |
+> | Ablauf | frei | frei unter der Schwelle, **ab ihr 408 px** (25,5 rem) |
+> | Projekt | 286 px ab 932 px | **frei** ab 1.167 px (`@min-[72.9375rem]/nachrichtenliste`) |
+> | Grundmenge | 646 px | 751 px |
+>
+> **Zwei Mindestbreiten aus M177 waren zu klein.** Die Plakette braucht bei `xs` 9,692 rem, weil
+> ihr 1‑px-Rahmen nicht mit der Schrift skaliert; gemessen hatte M177 nur `m` (§3, „Dichte"). Und der
+> breiteste der **1.403** Ablaufnamen misst 407,56 px, M177 hatte in 300 Zeilen höchstens 304 px
+> gesehen. **Die Mechanik hat sich nicht geändert** — eigene Hülle, eine Schwelle, `display: none`.
+> Neu ist in `lib/spaltenwahl.ts` der **Umbau an einer Stufe**: Ab ihrer Schwelle tragen Spalten, die
+> schon dastehen, eine andere Breite, und die freie Spalte wechselt. **Kein neuer Umbruchpunkt:**
+> Die eine Schwelle der Liste ist verschoben, nicht ergänzt.
+>
+> **„Spalte für Spalte gleich breit" gilt damit nicht mehr.** Die Trefferliste behält 155 px Status
+> und 304 px Ablauf, weil sie nach dem Auftrag nicht umgebaut wird. Offen als Punkt **183** (§11).
+
 ---
 
 ### 5.5 Der Überschuss — wohin er geht, wenn die freie Spalte ihn nicht braucht *(16.09.2026, E‑149)*
@@ -647,12 +673,13 @@ Meldung desselben Tages (E‑149): 1.073 Fälle**, gerenderte **135 in neunzehn*
 
 | Punkt | Stand |
 |---|---|
-| **114** | ~~offen~~ **geschlossen am 16.09.2026** (E‑148) — die Nachrichtenliste ist gebaut (§5.4, §6 Nachtrag) |
+| **114** | ~~offen~~ **geschlossen am 16.09.2026** (E‑148) — die Nachrichtenliste ist gebaut (§5.4, §6 Nachtrag). **Nachtrag, zweite Meldung desselben Tages (E‑162):** Die Schwelle des Projekts liegt jetzt bei 1.167 px; der Punkt bleibt geschlossen (§5.4, Korrektur) |
 | **181** | **neu** — die 591 / 647 px Scrollbreite des Tabellenkastens: die `sr-only`-Spannen der Ablaufzelle, absolut positioniert am Kasten aus `components/ui/table.tsx` und vom `overflow: hidden` der gekürzten Spanne nicht beschnitten (§6). Sie hängt **nicht** an der Spaltenbreite und ist deshalb aus 114 herausgelöst. **Was ihm fehlt:** die Entscheidung, ob die Spanne einen eigenen Positionierungsvorfahren bekommt oder der Text anders angeboten wird — beides berührt `components/ui/table.tsx` oder jede Zelle |
 | **173**, **174**, **175** | **geschlossen**, mit der Zahl in [`messungen-sichtprobe-schmal.md`](messungen-sichtprobe-schmal.md) §5 und §7 hier |
 | **176**, **177** | **geschlossen**, ebenda |
 | **178** | **offen** — nicht Teil dieser Runde. **Was ihm fehlt:** eine Messung mit `pointer: coarse` an einem **echten** Gerät; die Emulation setzt das Merkmal über `setEmulatedMedia` nicht, und der Rahmen im Chrome der Erweiterung kann es gar nicht (M176, Abweichung 3) |
 | **180** | **neu** — native Formularelemente ([`benutzerverwaltung-frontend.md`](benutzerverwaltung-frontend.md) §18) |
+| **183** | **neu am 16.09.2026** (E‑162, [`nachrichtenliste.md`](nachrichtenliste.md) §8.1) — **die Trefferliste trägt noch die Breiten aus M177.** Ihre Statusspalte ist `w-[9.6875rem]`. Mit derselben Plakette kürzt „Zusammengeführt" dort bei `xs` gerechnet um 0,063 px — *gerechnet, nicht gemessen*, eingesetzt ist die Probe nur in der Nachrichtenliste. Ihr Ablauf rechnet mit 304 px Mindestbreite, der breiteste Ablaufname misst 408 px (M180). Damit sind Liste und Trefferliste nicht mehr Spalte für Spalte gleich breit (§5.4, Korrektur). **Was ihm fehlt:** ein Auftrag für die Trefferliste. Die Zahlen aus M180 gelten für dieselben Zellen (§3, Regel 4), die Schwellen `@min-[62.5rem]` und `@min-[45rem]` wären neu herzuleiten |
 
 ### Die Nummernvergabe — belegt per `grep`, jede Fundstelle gelesen
 

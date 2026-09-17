@@ -16,6 +16,7 @@ import { TREFFERLISTE, TREFFERLISTE_OHNE_TREFFER } from "@/features/nachrichten/
 import { texteFuer } from "@/i18n";
 import {
   PX_JE_REM,
+  freieSpalte,
   grundmengeInPixeln,
   mindestbreiteVon,
   schwelleInPixeln,
@@ -182,6 +183,8 @@ function pruefeTabelle(
 ) {
   const spalten = spaltenAus(behaelter, wahl.container, beschriftungen);
 
+  const freiBei = (breite: number) => freieSpalte(wahl, breite);
+
   // 1. Hergeleitet, nicht gewählt.
   // Ohne freie Spalte trägt **jede** eine Breite: Eine Spalte ohne Klasse bekäme
   // sonst wieder den ganzen Überschuss (E‑149) — das war der Befund vom
@@ -200,20 +203,49 @@ function pruefeTabelle(
       stufe === null ? null : schwelleInPixeln(wahl, stufe),
     );
     const mindest = mindestbreiteVon(wahl, spalte.schluessel);
-    if (spalte.schluessel === wahl.frei) {
+    const ab = stufe === null ? grundmengeInPixeln(wahl) : schwelleInPixeln(wahl, stufe);
+    if (spalte.schluessel === freiBei(ab)) {
+      // Frei, wo sie erscheint: keine Breite bis dorthin. Eine spätere Breite
+      // gibt ihr nur ein Umbau, und den prüft der Block darunter.
       expect(
-        spalte.breiten,
+        spalte.breiten.filter((b) => b.ab <= ab),
         `${wahl.container}/${spalte.schluessel}: die freie Spalte trägt keine Breite`,
       ).toEqual([]);
-    } else {
-      // Sobald sie dasteht — ab der Grundmenge oder ab ihrer Stufe —, trägt jede
-      // feste Spalte genau ihre Mindestbreite (Entscheidung vom 15.09.2026).
-      const ab = stufe === null ? grundmengeInPixeln(wahl) : schwelleInPixeln(wahl, stufe);
       expect(
-        layout(spalten, wahl.frei, ab).breiten.get(spalte.schluessel),
-        `${wahl.container}/${spalte.schluessel}: Breite ab ${ab} px`,
-      ).toBe(mindest);
+        spalte.breiten.every((b) =>
+          (wahl.umbau ?? []).some((u) => schwelleInPixeln(wahl, u.stufe) === b.ab),
+        ),
+        `${wahl.container}/${spalte.schluessel}: eine Breite der freien Spalte ohne Umbau`,
+      ).toBe(true);
     }
+    // Sobald sie dasteht — ab der Grundmenge oder ab ihrer Stufe —, trägt jede
+    // Spalte genau ihre Mindestbreite (Entscheidung vom 15.09.2026); die freie
+    // an dieser Kante, weil der Rest dort null ist.
+    expect(
+      layout(spalten, freiBei(ab), ab).breiten.get(spalte.schluessel),
+      `${wahl.container}/${spalte.schluessel}: Breite ab ${ab} px`,
+    ).toBe(mindest);
+  }
+
+  // 1a. Der Umbau an einer Stufe (E‑162): Die Klasse trägt genau die Breite und
+  // genau die Schwelle aus der Rechnung, und die neue freie Spalte trägt keine.
+  for (const umbau of wahl.umbau ?? []) {
+    const schwelle = schwelleInPixeln(wahl, umbau.stufe);
+    for (const [schluessel, px] of Object.entries(umbau.breiten)) {
+      const spalte = spalten.find((s) => s.schluessel === schluessel);
+      expect(
+        spalte?.breiten,
+        `${wahl.container}/${schluessel}: Breite ${px} px ab ${schwelle} px als Klasse`,
+      ).toContainEqual({ ab: schwelle, px });
+      expect(
+        layout(spalten, freiBei(schwelle), schwelle).breiten.get(schluessel),
+        `${wahl.container}/${schluessel} bei ${schwelle} px`,
+      ).toBe(px);
+    }
+    expect(
+      spalten.find((s) => s.schluessel === umbau.frei)?.breiten,
+      `${wahl.container}/${umbau.frei}: die freie Spalte ab ${schwelle} px trägt keine Breite`,
+    ).toEqual([]);
   }
 
   // 3. und 4. — dieselbe Sichtbarkeit an jeder Zelle, und keine Fensterschwelle.
@@ -241,7 +273,7 @@ function pruefeTabelle(
 
   // 2. An den gemessenen Breiten und an jeder Kante.
   for (const breite of breitenFuer(wahl, gemessen)) {
-    const ergebnis = layout(spalten, wahl.frei, breite);
+    const ergebnis = layout(spalten, freiBei(breite), breite);
     const erwartet = sichtbareSpalten(wahl, breite).map((s) => s.schluessel);
     expect(
       [...ergebnis.sichtbar].sort(),
@@ -288,8 +320,12 @@ const LISTEN_BESCHRIFTUNG = {
  * M176 §4.3 — die Hülle der Liste bei 360, 390, 430, 744 und 768 px, dazu die
  * **schmale Spalte neben dem Baum** (294 px, §4.6): Dort steht dieselbe Tabelle,
  * und dort ist der Befund aus Punkt 114 entstanden.
+ *
+ * Dazu die Hüllen aus M180 (`docs/nachrichtenliste.md` §8.1): `/nachrichten` bei
+ * 1024, 1280 und 1920 px Fenster (759, 1.015, 1.655), die Prozessansicht bei
+ * 1280 px (568) und bei 1920 px neben dem Baum (1.208) und neben dem Panel (1.144).
  */
-const LISTE_GEMESSEN = [294, 334, 364, 404, 718, 518];
+const LISTE_GEMESSEN = [294, 334, 364, 404, 718, 518, 568, 759, 1015, 1144, 1208, 1655];
 
 describe("Die Nachrichtenliste an den gemessenen Containerbreiten", () => {
   it("Schwelle hergeleitet, keine Spalte unter ihrer Mindestbreite, darunter kürzt der Ablauf", async () => {
@@ -318,7 +354,9 @@ describe("Die Nachrichtenliste an den gemessenen Containerbreiten", () => {
             "status",
             "zeitpunkt",
           ]);
-          const fest = mindestbreiteVon(NACHRICHTENLISTE, "zeitpunkt") + 155;
+          const fest =
+            mindestbreiteVon(NACHRICHTENLISTE, "zeitpunkt") +
+            mindestbreiteVon(NACHRICHTENLISTE, "status");
           expect(ergebnis.breiten.get("ablauf"), `nachrichtenliste bei ${breite} px: Ablauf`).toBe(
             Math.max(0, breite - fest),
           );

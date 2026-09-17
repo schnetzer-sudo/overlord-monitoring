@@ -96,6 +96,21 @@ import { StatusPlakette } from "./status-plakette";
  * jeder Breite. Das ist die schmale Spalte neben dem Baum (294 px) und das
  * Fenster unter 430 px.
  *
+ * ## Ab der Schwelle nimmt das Projekt den Rest (E‑162, 16.09.2026)
+ *
+ * **Die Zahlen oben sind überholt** (932 → 1.167 px, 646 → 751 px), der Mechanismus
+ * nicht. Am breiten Fenster bekam der Ablauf als freie Spalte die ganze Überbreite
+ * — bei 1920 px 1.027 px für Namen bis 231 px, dazwischen 780 px leer —, und der
+ * Schritt neben der Plakette war in 50 von 50 wartenden Zeilen auf „Schritt…"
+ * gekürzt. **Ab 1.167 px Containerbreite** kommen deshalb drei Dinge zugleich:
+ * das Projekt, eine Statusspalte, in der „Wartend" samt „Schritt: Send Message to
+ * Pool" steht (17,875 rem), und ein Ablauf mit fester Breite an seinem längsten
+ * Namen (25,5 rem, alle 1.403 Ablaufnamen der Testkopie, M180). **Das Projekt ist
+ * dort die freie Spalte**: Es beginnt direkt hinter dem Ablauf, und der Leerraum
+ * steht am Zeilenende. Darunter gilt, was oben steht — Projekt weg, der Ablauf
+ * bekommt den Rest, die Statusspalte ist die Plakette (9,75 rem, damit
+ * „Zusammengeführt" auch bei Dichte `xs` nicht kürzt).
+ *
  * Der aktive Mandant bleibt bei jeder Breite in der Kopfzeile sichtbar; das
  * entscheidet der Anwendungsrahmen, nicht diese Tabelle.
  */
@@ -135,18 +150,26 @@ export function NachrichtenTabelle({
       <Table className="text-basis table-fixed">
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            {/* Jede feste Spalte trägt ihre gemessene Mindestbreite (M177):
-                Zeitpunkt 187 px, Status 155 px — die Plakette, der Zusatz
-                „Schritt: …" daneben kürzt —, Projekt 286 px. */}
+            {/* Jede feste Spalte trägt ihre gemessene Mindestbreite (M177, M180):
+                Zeitpunkt 187 px, Status 156 px — die Plakette, der Zusatz
+                „Schritt: …" daneben kürzt. Ab der Schwelle des Projekts
+                (1.167 px, E‑162) trägt der Status 286 px — Plakette und Schritt —
+                und der Ablauf 408 px, sein längster Name. */}
             <TableHead className="h-8 w-[11.6875rem]">
               <SortierUmschalter sortierung={sortierung} aufSortierung={aufSortierung} />
             </TableHead>
-            <TableHead className="h-8 w-[9.6875rem]">{texte.nachrichten.spalten.status}</TableHead>
-            {/* Ohne Breitenangabe: Der Ablaufname bekommt, was übrig bleibt — und
-                bis zur Schwelle des Projekts alles, was über die beiden festen
-                Spalten hinausgeht. */}
-            <TableHead className="h-8">{texte.nachrichten.spalten.ablauf}</TableHead>
-            <TableHead className={cn("h-8 w-[17.875rem]", NACHRICHTEN_SICHTBAR.projekt)}>
+            <TableHead className="h-8 w-[9.75rem] @min-[72.9375rem]/nachrichtenliste:w-[17.875rem]">
+              {texte.nachrichten.spalten.status}
+            </TableHead>
+            {/* Unter der Schwelle ohne Breitenangabe: Der Ablaufname bekommt, was
+                über Zeitpunkt und Status hinausgeht. Ab ihr eine feste Breite —
+                die Überbreite gehört dann dem Projekt. */}
+            <TableHead className="h-8 @min-[72.9375rem]/nachrichtenliste:w-[25.5rem]">
+              {texte.nachrichten.spalten.ablauf}
+            </TableHead>
+            {/* Ohne Breitenangabe: Ab seiner Schwelle ist das Projekt die freie
+                Spalte am Zeilenende und bekommt dort genau seine 286 px. */}
+            <TableHead className={cn("h-8", NACHRICHTEN_SICHTBAR.projekt)}>
               {texte.nachrichten.spalten.projekt}
             </TableHead>
           </TableRow>

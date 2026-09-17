@@ -12,8 +12,10 @@
  * ## Was hier steht und was nicht
  *
  * Hier steht nur die **Rechnung**: Eine Schwelle ist die Summe der
- * Mindestbreiten aller Spalten, die ab dort sichtbar sind, plus Rinne. Sie ist
- * keine Zahl, die gut aussieht, sondern eine Summe von Messungen.
+ * Mindestbreiten aller Spalten, die ab dort sichtbar sind, plus Rinne — oder,
+ * wo ein {@link Umbau} einer Spalte ab dieser Stufe eine feste Breite gibt, die
+ * Summe mit dieser Breite (E‑162). Sie ist keine Zahl, die gut aussieht,
+ * sondern eine Summe von Messungen.
  *
  * **Die Klassen stehen nicht hier**, sondern als wörtliche Zeichenketten an den
  * Zellen: Tailwind findet eine Klasse nur, wenn sie im Quelltext steht, und eine
@@ -62,9 +64,52 @@ export type Spaltenwahl = {
    * zeigt mit jedem Pixel mehr, eine Reihe kurzer Marken nicht.
    */
   frei?: string;
+  /**
+   * Was sich an einer Stufe für Spalten ändert, die **schon dastehen** — sofern
+   * die Tabelle so etwas hat (E‑162, `docs/nachrichtenliste.md` §8.1). Ohne
+   * Eintrag trägt jede feste Spalte bei jeder Breite ihre Mindestbreite.
+   */
+  umbau?: readonly Umbau[];
   /** Was zwischen Containerkante und Spaltensumme liegt, in Pixeln. */
   rinne: number;
 };
+
+/**
+ * **Ein Umbau an einer Stufe** (E‑162): Ab ihrer Schwelle tragen Spalten, die
+ * schon dastehen, eine andere feste Breite, und die freie Spalte wechselt.
+ *
+ * Der Fall, für den es ihn gibt, ist die Nachrichtenliste: Sobald das Projekt
+ * dazukommt, wird die Statusspalte breit genug für den Schritt neben der
+ * Plakette, der Ablauf bekommt eine feste Breite an seinem längsten Namen, und
+ * **das Projekt** nimmt die Überbreite auf — am Zeilenende statt mitten in der
+ * Zeile.
+ */
+export type Umbau = {
+  /** Die Stufe, ab deren Schwelle der Umbau gilt. */
+  stufe: number;
+  /**
+   * Feste Breiten in ganzen Pixeln, die ab dort gelten — auch für die Spalte,
+   * die bis dahin frei war. Sie gehen in die Schwelle ein wie Mindestbreiten.
+   */
+  breiten: Readonly<Record<string, number>>;
+  /** Die freie Spalte ab dort. Sie trägt keine Breite und an der Schwelle genau ihre Mindestbreite. */
+  frei: string;
+};
+
+/**
+ * Die Breite, mit der eine Spalte in die Schwelle einer Stufe eingeht: die aus
+ * dem letzten Umbau bis zu dieser Stufe, sonst ihre Mindestbreite.
+ */
+function breiteAufStufe(wahl: Spaltenwahl, spalte: Spalte, stufe: number): number {
+  let breite = spalte.mindestbreite;
+  for (const umbau of wahl.umbau ?? []) {
+    const px = umbau.breiten[spalte.schluessel];
+    if (umbau.stufe <= stufe && px !== undefined) {
+      breite = px;
+    }
+  }
+  return breite;
+}
 
 const summe = (spalten: readonly Spalte[]) =>
   spalten.reduce((gesamt, spalte) => gesamt + spalte.mindestbreite, 0);
@@ -75,16 +120,27 @@ export function grundmengeInPixeln(wahl: Spaltenwahl): number {
 }
 
 /**
- * Die Schwelle einer Stufe in Pixeln: **die Summe der Mindestbreiten aller
- * Spalten, die ab dort sichtbar sind, plus Rinne.**
+ * Die Schwelle einer Stufe in Pixeln: **die Summe der Breiten aller Spalten, die
+ * ab dort sichtbar sind, plus Rinne** — jede mit ihrer Mindestbreite oder mit der
+ * Breite, die ein Umbau bis zu dieser Stufe ihr gibt.
  */
 export function schwelleInPixeln(wahl: Spaltenwahl, stufe: number): number {
   if (!Number.isInteger(stufe) || stufe < 0 || stufe >= wahl.stufen.length) {
     throw new RangeError(`Stufe ${stufe} gibt es nicht (${wahl.stufen.length} Stufen)`);
   }
-  return (
-    grundmengeInPixeln(wahl) + wahl.stufen.slice(0, stufe + 1).reduce((g, s) => g + summe(s), 0)
-  );
+  const sichtbar = [...wahl.grundmenge, ...wahl.stufen.slice(0, stufe + 1).flat()];
+  return sichtbar.reduce((g, s) => g + breiteAufStufe(wahl, s, stufe), 0) + wahl.rinne;
+}
+
+/** Die freie Spalte bei einer Containerbreite (Pixel) — `undefined` heißt: keine. */
+export function freieSpalte(wahl: Spaltenwahl, breite: number): string | undefined {
+  let frei = wahl.frei;
+  for (const umbau of wahl.umbau ?? []) {
+    if (breite >= schwelleInPixeln(wahl, umbau.stufe)) {
+      frei = umbau.frei;
+    }
+  }
+  return frei;
 }
 
 /** Die Stufe, in der eine Spalte dazukommt — `null` für die Grundmenge. */

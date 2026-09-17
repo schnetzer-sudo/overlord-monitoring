@@ -1857,6 +1857,149 @@ hat, auf die sich kürzen lässt. Die Höhe ist `--dichte-zeile`
 und der Innenabstand der Zellen ebenfalls — zusammen mit den zwei entfallenen Spalten passen
 spürbar mehr Zeilen ins Fenster.
 
+> ### ⚠️ Korrektur vom 16.09.2026 — ab der Schwelle bekommt das Projekt den Rest, nicht der Ablauf (E‑162, M180)
+>
+> **Der Satz oben bleibt stehen:** *„Umgesetzt über `table-fixed` mit festen Breiten für Zeitpunkt,
+> Status und Projekt; „Ablauf" bekommt den Rest."* Er galt bis heute bei jeder Breite, seit E‑148
+> mit einer Container-Schwelle von 932 px für das Projekt ([`spaltenwahl.md`](spaltenwahl.md) §5.4).
+>
+> **Der Anlass** ist ein Bild aus der Produktion vom 16.09.2026, der Zeilenhöhe von 31,5 px nach in
+> Dichte `xs` (abgelesen, nicht gemessen). Die Statusspalte war
+> schmaler als die Plakette, „Zusammengeführt" war gekürzt, neben „Wartend" stand nur „Schritt…". Und
+> zwischen dem Ende der Ablaufnamen und dem Projekt lagen rund 700 px leer. **Reservierte Spalten
+> waren das nicht.** Die Tabelle hat genau vier `th`, kein `col` und keine leere Zelle, und rechts
+> vom Projekt steht nichts. Der Ablauf war die einzige Spalte ohne Breite und bekam deshalb die
+> ganze Überbreite.
+>
+> **E‑162 — die Entscheidung:** *Sobald das Projekt dasteht, ist es die freie Spalte.* Der Ablauf
+> bekommt dann eine feste Breite an seinem längsten Namen, die Statusspalte eine Breite, in der
+> Plakette und Schritt stehen, und der Leerraum rückt an das Zeilenende. **Unterhalb der Schwelle
+> bleibt alles, wie es war.** Das Projekt fehlt, der Ablauf bekommt den Rest, und der Schritt kürzt.
+> Projekt und Schritt weichen **an derselben Schwelle**, der Ablauf erst unter der Grundmenge. Eine
+> zweite Schwelle nur für den Schritt hätte einen neuen Umbruchpunkt gekostet, und den schließt der
+> Auftrag aus (Antwort des Auftraggebers vom 16.09.2026).
+>
+> | Spalte | bis 16.09.2026 (E‑148) | unter 1.167 px Hülle | ab 1.167 px Hülle (`@min-[72.9375rem]/nachrichtenliste`) |
+> |---|---|---|---|
+> | Zeitpunkt | 11,6875 rem (187 px) | unverändert | unverändert |
+> | Status | 9,6875 rem (155 px) | **9,75 rem** (156 px) | **17,875 rem** (286 px) |
+> | Ablauf | Rest | Rest | **25,5 rem** (408 px) |
+> | Projekt | 17,875 rem, ab 932 px | nicht da | **Rest**, an der Schwelle genau 286 px |
+>
+> Die Schwelle ist wie jede andere hergeleitet: 187 + 286 + 408 + 286 = **1.167 px**. Die Grundmenge,
+> ab der Zeitpunkt, Status und Ablauf ihre Mindestbreite tragen, liegt jetzt bei 187 + 156 + 408 =
+> **751 px** (vorher 646); Zeitpunkt und Status allein brauchen 343 px (vorher 342). `lib/spaltenwahl.ts`
+> rechnet dafür mit einem **Umbau an der Stufe**: Ab ihrer Schwelle tragen Spalten, die schon
+> dastehen, eine andere Breite, und die freie Spalte wechselt. `tests/spaltenwahl.test.tsx` hält
+> Klasse gegen Rechnung, auf den Pixel. Sechs Mutanten sind gefallen, die Dateien waren danach
+> byte-gleich.
+>
+> #### M180 — woher die drei Breiten kommen
+>
+> Gemessen am 16.09.2026 an der gebauten Tabelle, kopfloses Chrome 152 mit `/anmeldung` als Träger
+> des echten Stylesheets. Gemessen wurde die Zelle in natürlicher Breite samt Innenabstand, **in
+> allen vier Dichtestufen**, deutsch und englisch. M177 hatte nur `m` gemessen.
+>
+> | Inhalt | `xs` | `s` | `m` | `l` | größter Wert in rem | gewählt |
+> |---|---:|---:|---:|---:|---:|---:|
+> | „Zusammengeführt" als Plakette, die breiteste der 16 Beschriftungen | 135,69 px | 145,23 px | 154,78 px | 173,88 px | 9,6920 | **9,75 rem** |
+> | „Wartend" und „Schritt: Send Message to Pool" | 249,41 px | 267,05 px | 284,81 px | 320,09 px | 17,8147 | **17,875 rem** |
+> | breitester Ablaufname, 53 Zeichen, aus **allen 1.403** verschiedenen `SOSName` der Testkopie | 356,61 px | 381,95 px | 407,56 px | 458,50 px | 25,4727 | **25,5 rem** |
+>
+> **Warum „Zusammengeführt" bei `xs` gekürzt war:** Der Rahmen der Plakette ist 1 px breit und
+> wächst nicht mit der Wurzelschrift mit. Bei `m` passten 154,78 px in 155 px, bei `xs` passten
+> 135,69 px nicht in 135,625 px — **0,063 px** zu wenig, eingesetzt im Browser gemessen. **Der
+> längste Ablaufname nach Zeichen ist nicht der breiteste.** Der mit 55 Zeichen (L14) misst 377,06
+> px. Von den 1.403 Namen sind 141 breiter als die 304 px aus M177, Median 234,88 px, 90. Perzentil
+> 304,48 px.
+>
+> #### Die Abnahme — vorher gegen nachher
+>
+> Chrome 152 mit Debug-Port, angemeldet durch den Auftraggeber. Die Breite ist über
+> `Emulation.setDeviceMetricsOverride` gestellt, die Dichte über das Cookie `overlord_dichte`, der
+> Zeitraum 7 Tage. „gekürzt" zählt Zellen, deren Textbreite (`Range`) die Breite ihrer Spanne
+> übersteigt, getrennt nach Plakette · Schritt · Ablauf · Projekt. Bei „Wartend" steht die Zahl der
+> Zeilen mit Schritt dahinter. Die Prozessansicht zeigt den Prozess mit den meisten Nachrichten im
+> Zeitraum 12 Monate, erste Seite, 50 Zeilen.
+>
+> | Fall | Hülle = Tabelle | Querlauf | Spalten vorher (Z · S · A · P) | Spalten nachher | gekürzt vorher | gekürzt nachher | leer hinter dem längsten Ablauf |
+> |---|---:|---|---|---|---|---|---|
+> | `/nachrichten` `NEXANS` 1024 `m` | 759 | nein → nein | 187 · 155 · 417 · – | 187 · 156 · 416 · – | 0 · – · 0 · – | 0 · – · 0 · – | 170 → 169 |
+> | `/nachrichten` `NEXANS` 1280 `m` | 1.015 | nein → nein | 187 · 155 · 387 · 286 | 187 · 156 · 672 · – | 0 · – · 0 · 0 | 0 · – · 0 · – | 140 → 425 |
+> | `/nachrichten` `NEXANS` 1920 `m` | 1.655 | nein → nein | 187 · 155 · **1.027** · 286 | 187 · 286 · **408** · 774 | 0 · – · 0 · 0 | 0 · – · 0 · 0 | **780 → 161** |
+> | `/nachrichten` `NEXANS` 1920 `xs` | 1.686 | nein → nein | 164 · 136 · 1.137 · 250 | 164 · 250 · 357 · 915 | 0 · – · 0 · 0 | 0 · – · 0 · 0 | 920 → 141 |
+> | `/nachrichten` `NEXANS` „Wartend" 1920 `m` | 1.655 | nein → nein | 187 · 155 · 1.027 · 286 | 187 · 286 · 408 · 774 | 0 · **50/50** · 0 · 0 | 0 · **0/50** · 0 · 0 | 817 → 198 |
+> | `/nachrichten` `NEXANS` „Wartend" 1920 `xs` | 1.686 | nein → nein | 164 · 136 · 1.137 · 250 | 164 · 250 · 357 · 915 | 0 · **50/50** · 0 · 0 | 0 · **0/50** · 0 · 0 | 953 → 173 |
+> | `/nachrichten` `NEXANS` „Wartend" 1280 `m` | 1.015 | nein → nein | 187 · 155 · 387 · 286 | 187 · 156 · 672 · – | 0 · 50/50 · 0 · 0 | 0 · 50/50 · 0 · – | 177 → 462 |
+> | `/nachrichten` `SUTTONS` 1920 `m` | 1.655 | nein → nein | 187 · 155 · 1.027 · 286 | 187 · 286 · 408 · 774 | 0 · – · 0 · 0 | 0 · – · 0 · 0 | 801 → 182 |
+> | Prozessansicht `NEXANS` 1280 `m`, neben dem Baum | 568 | nein → nein | 187 · 155 · 226 · – | 187 · 156 · 225 · – | 0 · – · 0 · – | 0 · – · 0 · – | 20 → 19 |
+> | Prozessansicht `NEXANS` 1920 `m`, neben dem Baum | 1.208 | nein → nein | 187 · 155 · 580 · 286 | 187 · 286 · 408 · 327 | 0 · – · 0 · 0 | 0 · – · 0 · 0 | 374 → 202 |
+> | Prozessansicht `NEXANS` 1920 `m`, neben dem Panel | 1.144 | nein → nein | 187 · 155 · 516 · 286 | 187 · 156 · 801 · – | 0 · – · 0 · 0 | 0 · – · 0 · – | 310 → 595 |
+>
+> **Wo das Projekt steht, beginnt es auf den Pixel an der rechten Kante des Ablaufs**, in allen
+> Fällen mit Projekt. Bei 1920 px liegt der Leerraum jetzt **hinter dem längsten Projektnamen**
+> (774 − 270 px bei `NEXANS`), und hinter dem Ablauf bleiben 161 px. So weit liegt der längste
+> Ablaufname dieser Seite (231 px) unter dem breitesten der Testkopie. **„Schritt: Send Message to
+> Pool" steht ungekürzt da**, bei `m` in 179,06 px, bei `xs` in 156,63 px.
+>
+> **Einsetzprobe, nur im Browser.** Jede der 16 Beschriftungen der festen Statuszuordnung wurde
+> nacheinander in die erste Plakette geschrieben, in acht Zuständen: `xs` und `m` je bei 1024, 1280
+> und 1920 px, `s` und `l` bei 1920 px. **Vorher** war „Zusammengeführt" bei `xs` an allen drei
+> Breiten gekürzt, um 0,063 px. **Nachher** ist in keinem der acht Zustände eine Beschriftung gekürzt. Ein Schritt mit
+> 61 Zeichen (M13) kürzt einzeilig, und die Zeile bleibt 36 px (`m`) bzw. 31,5 px (`xs`) hoch.
+>
+> **Die Schwelle im Browser**, gestellt über die Inline-Breite der Hülle, Filter „Wartend":
+>
+> | Hülle | Zeitpunkt | Status | Ablauf | Projekt (`th` und `td`) | Schritt gekürzt |
+> |---:|---:|---:|---:|---|---|
+> | 750 px | 187 | 156 | 407 | `display: none` | ja |
+> | **751 px** *(Grundmenge)* | 187 | 156 | **408** | `display: none` | ja |
+> | 1.166 px | 187 | 156 | 823 | `display: none` | ja |
+> | **1.167 px** *(Schwelle)* | 187 | **286** | **408** | **286** | nein |
+>
+> Bei `xs` kippt dieselbe Tabelle zwischen 1.020,69 und 1.021,125 px, also bei 72,9375 × 14 px. **Keine
+> Kopfbeschriftung ragt über ihre Zelle hinaus.** Die einzige Ausnahme ist die unveränderte Bauform
+> unter 343 px: Dort ist der Ablauf 0 px breit, und „Ablauf" steht 51,2 px über die Kante. Neben ihm
+> steht dort kein Projekt, der Klumpen aus M126 entsteht also nicht wieder.
+>
+> **Was es kostet, und es steht hier:**
+>
+> - Bei **1280 px** auf `/nachrichten` (Hülle 1.015 px) fehlt das Projekt jetzt. Vorher stand es dort
+>   mit 286 px, und der Ablauf hatte 387 px.
+> - Bei **1920 px in der Prozessansicht neben dem Panel** (1.144 px) fehlt das Projekt ebenfalls.
+> - Zwischen 751 und 1.166 px Hülle kürzt der Schritt weiter auf „Schritt…", wie im Bild aus der
+>   Produktion.
+> - Die Mindestbreite der Liste wächst: vier Spalten ab 1.167 statt 932 px, drei Spalten in voller
+>   Breite ab 751 statt 646 px, Zeitpunkt und Status allein 343 statt 342 px. Darunter bleibt es bei
+>   der Bauform, und der Kasten meldet bei 343 px trotzdem Querlauf; das sind die `sr-only`-Spannen
+>   aus Punkt 181, nicht die Spaltenbreite.
+> - In der Prozessansicht bei 1280 px verliert der Ablauf 1 px (226 → 225). Gekürzt sind dort vorher
+>   wie nachher null Zellen.
+>
+> > **Belegvermerk** *(Regel L10)*. *Gemessen:* alle Zahlen der drei Messtabellen oben — Chrome 152,
+> > Entwicklungsbau auf `:3000`, Backend im Profil `dev`, Mandanten `NEXANS` und `SUTTONS`, je 50
+> > Zeilen; die Breiten der Inhalte an 1.403 Ablaufnamen und 16 Beschriftungen in vier Dichtestufen.
+> > *Gerechnet, nicht gemessen:* dass die Trefferliste mit derselben Klasse `w-[9.6875rem]` bei `xs`
+> > „Zusammengeführt" ebenso kürzt (Punkt **183**, [`spaltenwahl.md`](spaltenwahl.md) §11).
+> > *Behauptet wird nicht:* dass die Produktion keinen breiteren Ablauf- oder Projektnamen kennt; ein
+> > breiterer Ablaufname kürzt ab der Schwelle mit vollem `title`, wie jede Zelle. *Nicht gemessen:*
+> > die englische Sprache in der Abnahme (nur in M180), Firefox, `pointer: coarse`. **Abweichung vom
+> > Auftrag:** Das Chrome war nicht kopflos — anmelden kann sich nur der Auftraggeber, und ein
+> > kopfloses Chrome ließe sich nur über eine übernommene Sitzung anmelden. Und `scrollWidth >
+> > clientWidth` allein hätte die gekürzte Plakette nicht gefunden: Es rundet auf ganze Pixel, und
+> > 0,063 px verschwinden darin. Gezählt ist deshalb über die Textbreite; beide Zählungen stimmen
+> > für alle übrigen Zellen überein.
+>
+> **Nummernvergabe.** Python-Suche mit Wortgrenzen über `docs/*.md` auf `main`,
+> `fix/dashboard-verteilung-beide-sichten`, `feat/suchfeld-untermenues` und `test/indexbestand-e37`.
+> Der Strich wird als `-` oder U+2011 erkannt, jeder Treffer an der Spitze ist gelesen. Höchste
+> **E‑161** (offener Dashboard-Zweig, [`dashboard.md`](dashboard.md)). **E‑780** ist der bekannte
+> Falschtreffer, dazu kommt sein Zitat in [`dienste.md`](dienste.md). Höchste vergebene Messung ist
+> **M178** (vorregistriert auf demselben Zweig). **M179** steht nur als Fließtext in
+> [`messungen-property-suche.md`](messungen-property-suche.md) („M153 bis M179: kein Treffer") und
+> ist deshalb übersprungen. Als Eichung haben E‑161 und M178 angeschlagen. Der Punkt **182** ist auf
+> demselben Zweig vergeben, **183** ist frei.
+
 > ### ⚠️ Was „Ablauf bekommt den Rest" heißt, wenn kein Rest da ist — gemessen am 02.09.2026
 >
 > Aufgefallen beim Bau der Prozessansicht, die diese Tabelle in einer **schmalen Spalte neben einem
@@ -1930,6 +2073,22 @@ auf zwei Zeilen auszulegen kostete **jede** Zeile ein Drittel Höhe — für ein
 Testkopie 538 von 3,3 Millionen Zeilen tragen. Das widerspräche dem, wofür die Liste gerade
 kompakter geworden ist. Der Zusatz steht deshalb einzeilig daneben, gekürzt, mit dem Vollwert im
 Tooltip; die Statusspalte ist ab `lg` breiter, damit er dort lesbar bleibt.
+
+> ### ⚠️ Korrektur vom 16.09.2026 — breiter ab der Schwelle des Projekts, nicht ab `lg` (E‑162)
+>
+> **Der Halbsatz oben bleibt stehen:** *„die Statusspalte ist ab `lg` breiter, damit er dort lesbar
+> bleibt."* Seit E‑148 stimmte er nicht mehr: Die Spalte war bei jeder Breite 155 px schmal, und der
+> Schritt kürzte auf „Schritt…" (Kasten unter „Am schmalen Kasten"). Aber auch der alte Stand trug
+> ihn nur halb: 17 rem sind 272 px, „Wartend" samt „Schritt: Send Message to Pool" braucht bei `m`
+> 284,81 px (M180).
+>
+> **Seit dem 16.09.2026 gilt:** Die Statusspalte ist **ab 1.167 px Hülle** 17,875 rem breit, an
+> derselben Schwelle, an der das Projekt kommt. Dort steht der Schritt der Testkopie ungekürzt:
+> bei `m` und `xs` im Browser gemessen, bei `s` und `l` aus den Breiten in M180 gerechnet. Darunter
+> ist sie 9,75 rem breit, so breit wie die breiteste Plakette bei jeder Dichte, und der Schritt
+> kürzt mit vollem `title`. Längere Schrittnamen (bis 61 Zeichen, M13)
+> kürzen auch ab der Schwelle, einzeilig. Zahlen und Begründung stehen im Kasten unter „Umgesetzt
+> über `table-fixed`" oben.
 
 **Er trägt keine eigene Farbrolle.** Er ist Beiwerk im Sinne des Leitsatzes und steht in der
 gedämpften Textfarbe. Eine eigene Farbe wäre eine Statusaussage, die er nicht macht
@@ -2073,6 +2232,17 @@ Anwendungsrahmen (bestehende Regel aus [`visuelles-konzept.md`](visuelles-konzep
 > durchgehend 155 px = die Plakette). Der Zusatz „Schritt: …" kürzt seitdem bei jeder Breite und
 > steht vollständig im `title` — die Folge der Regel „eine feste Spalte trägt ihre Mindestbreite",
 > und dieselbe Änderung wie in der Trefferliste.
+
+> ### ⚠️ Korrektur vom 16.09.2026, zweite Meldung — die Zahlen dieses Kastens sind überholt (E‑162)
+>
+> **Der Kasten darüber bleibt wortgleich stehen**, der Mechanismus gilt weiter: eigene Hülle,
+> Projekt erst mit Platz für alle vier Spalten, darunter die heutige Bauform. **Überholt sind die
+> Zahlen:** Das Projekt kommt ab **1.167 px** statt 932 px, die Grundmenge liegt bei **751 px**
+> statt 646 px. Die Statusspalte ist **nicht mehr durchgehend 155 px**, sondern 156 px unter der
+> Schwelle und 286 px ab ihr. Ab der Schwelle nimmt **das Projekt** den Rest und nicht mehr der
+> Ablauf. Und „dieselbe Änderung wie in der Trefferliste" gilt nicht mehr, denn die Trefferliste ist
+> nicht umgebaut (Punkt **183**, [`spaltenwahl.md`](spaltenwahl.md) §11). Alles Weitere steht im
+> Kasten unter „Umgesetzt über `table-fixed`".
 
 ### 8.2 Filter und URL
 
