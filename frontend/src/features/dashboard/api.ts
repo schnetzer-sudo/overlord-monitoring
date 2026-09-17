@@ -1,4 +1,5 @@
 import { hole } from "@/lib/http";
+import type { LiveRest } from "@/lib/live-rest";
 import type { Fenster, Rollupzeitraum } from "@/lib/rollupzeitraum";
 import type { Ablagenzustand, Dienstzustand, Statusart } from "@/lib/status-farbe";
 
@@ -383,6 +384,13 @@ export type Dashboard = {
   verteilung: Verteilung;
   zuletztAufgefallen: AuffaelligerProzess[];
   stand: Stand | null;
+  /**
+   * Seit dem 17.09.2026 (Live-Rest, Teil B): ob der Verkehr seit dem letzten
+   * Rollup-Lauf in Verlauf, Kacheln und Verteilung steckt (`docs/live-rest.md`
+   * §9b). Derselbe Block wie im Prozessbaum; bei `AUSGESETZT` steht der Hinweis
+   * über den Kacheln (`components/live-rest-hinweis.tsx`).
+   */
+  liveRest: LiveRest;
   /**
    * Der neunte Block, seit dem 10.09.2026 (Schritt 10d) — **der einzige, der
    * nicht am Bestand eines Mandanten hängt**.

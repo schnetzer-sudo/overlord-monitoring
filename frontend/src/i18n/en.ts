@@ -139,6 +139,13 @@ export const en: Texte = {
     },
   },
 
+  liveRest: {
+    ausgesetztMitLauf:
+      "The hourly aggregation has not completed successfully for a while. " +
+      "The figures are complete up to {vollstaendigBis}.",
+    ausgesetztOhneLauf: "The hourly aggregation has not run yet. The figures are incomplete.",
+  },
+
   dashboard: {
     titel: "Overview",
     leerTitel: "Nothing in this period",
@@ -574,12 +581,6 @@ export const en: Texte = {
       anzahlNachrichten: "Messages: {anzahl}",
       anzahlFehler: "Errors: {anzahl}",
       still: "nothing for over {monate} months",
-      liveRest: {
-        ausgesetztMitLauf:
-          "The hourly aggregation has not completed successfully for a while. " +
-          "The figures are complete up to {vollstaendigBis}.",
-        ausgesetztOhneLauf: "The hourly aggregation has not run yet. The figures are incomplete.",
-      },
     },
 
     liste: {

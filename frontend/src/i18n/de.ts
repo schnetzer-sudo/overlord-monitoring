@@ -227,6 +227,22 @@ export const de = {
   },
 
   /**
+   * Der Hinweis bei `liveRest.zustand === "AUSGESETZT"` (`docs/live-rest.md`),
+   * bei den Zahlen des Baums **und über den Kacheln der Übersicht** — ein
+   * Baustein für beide (`components/live-rest-hinweis.tsx`, E‑192), deshalb auf
+   * oberster Ebene wie `zeitraum` und `neuLaden`. Mit Lauf trägt er die Zeitangabe
+   * **G**, absolut in der Anzeigezone; ohne Lauf sagt er nur, dass die Zahlen
+   * unvollständig sind. Bei `ANGEWANDT` und `NICHT_NOETIG` steht nichts.
+   */
+  liveRest: {
+    ausgesetztMitLauf:
+      "Die stündliche Aggregation ist seit längerem nicht erfolgreich gelaufen. " +
+      "Vollständig sind die Zahlen bis {vollstaendigBis}.",
+    ausgesetztOhneLauf:
+      "Die stündliche Aggregation ist noch nicht gelaufen. Die Zahlen sind unvollständig.",
+  },
+
+  /**
    * Die Landingpage (`docs/dashboard-frontend.md`).
    *
    * **Sie hat den Block `startseite` abgelöst.** Dort standen bis zum 01.09.2026
@@ -1068,19 +1084,6 @@ export const de = {
       // dafür weder ein Wort noch eine Dämpfung. Die Zahl bleibt — sie steht in
       // `verteilung` und im Schalter darunter.
       still: "seit über {monate} Monaten nichts",
-      /**
-       * Der Hinweis bei `liveRest.zustand === "AUSGESETZT"` (`docs/live-rest.md`),
-       * bei den Zahlen des Baums. Mit Lauf trägt er die Zeitangabe **G**, absolut
-       * in der Anzeigezone; ohne Lauf sagt er nur, dass die Zahlen unvollständig
-       * sind. Bei `ANGEWANDT` und `NICHT_NOETIG` steht nichts.
-       */
-      liveRest: {
-        ausgesetztMitLauf:
-          "Die stündliche Aggregation ist seit längerem nicht erfolgreich gelaufen. " +
-          "Vollständig sind die Zahlen bis {vollstaendigBis}.",
-        ausgesetztOhneLauf:
-          "Die stündliche Aggregation ist noch nicht gelaufen. Die Zahlen sind unvollständig.",
-      },
     },
 
     liste: {

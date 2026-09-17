@@ -185,6 +185,7 @@ function dashboard(): Dashboard {
     },
     zuletztAufgefallen: [],
     stand: { beendetAm: "2025-12-30T04:10:00Z", art: "VOLL" },
+    liveRest: { zustand: "NICHT_NOETIG", vollstaendigBis: null },
     plattform: {
       dienste: [],
       ablagen: {

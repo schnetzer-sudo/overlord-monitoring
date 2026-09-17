@@ -11,7 +11,7 @@ import { defineConfig } from "vitest/config";
  * außer Laufzeit und Abhängigkeiten.
  *
  * **Die Ausnahmen sind gezählt, nicht gewachsen** — Stand 17.09.2026 sind es
- * **einhundertsechsundsechzig in einundzwanzig Dateien**. Diese Zahl wird an genau dieser Stelle geführt;
+ * **einhundertsiebzig in einundzwanzig Dateien**. Diese Zahl wird an genau dieser Stelle geführt;
  * `tests/hilfe/rendern.tsx` und `docs/frontend-grundlagen.md` §9 verweisen
  * darauf, statt sie zu wiederholen (drei Orte für dieselbe Zahl sind zwei zu
  * viel):
@@ -76,13 +76,19 @@ import { defineConfig } from "vitest/config";
  * > Quelldatei, und es sind neue Quelldateien dazugekommen. Gezählt je Datei gegen `01a6db2`,
  * > nicht gerechnet.
  *
- * | `tests/live-rest.test.tsx` *(17.09.2026)* | 5 | **Der Hinweis zum Live-Rest — Aussagen über Anwesenheit und Abwesenheit im Baum** (`docs/live-rest.md` §10). Bei `AUSGESETZT` steht bei den Kopfzahlen ein Satz, mit Zeitangabe (über denselben Weg formatiert wie die Ansicht) oder ohne; bei `ANGEWANDT` und `NICHT_NOETIG` steht **keiner** — die naheliegende Schreibweise (immer ein Kasten, nur mit anderem Text) bestünde jede Prüfung an der Beschriftung, und der Baum ist die Eichung dafür, dass die Ansicht steht. Dazu, dass der Kasten nicht die Fehlerfarbe trägt: kein Rot ist eine Klasse am Element |
+ * | `tests/live-rest.test.tsx` *(17.09.2026, am selben Tag um die Übersicht erweitert)* | 9 | **Der Hinweis zum Live-Rest — Aussagen über Anwesenheit und Abwesenheit im Baum und in der Übersicht** (`docs/live-rest.md` §10). **Seit Teil B vier mehr:** derselbe Baustein über den Kacheln der Übersicht (E‑192) — der Kasten steht **vor der ersten Kachel im Dokument** (Reihenfolge, keine Beschriftung), er steht **auch im Leerzustand** ohne Kacheln, und bei `ANGEWANDT` und `NICHT_NOETIG` steht er nicht, mit den Kacheln als Eichung. Bei `AUSGESETZT` steht bei den Kopfzahlen ein Satz, mit Zeitangabe (über denselben Weg formatiert wie die Ansicht) oder ohne; bei `ANGEWANDT` und `NICHT_NOETIG` steht **keiner** — die naheliegende Schreibweise (immer ein Kasten, nur mit anderem Text) bestünde jede Prüfung an der Beschriftung, und der Baum ist die Eichung dafür, dass die Ansicht steht. Dazu, dass der Kasten nicht die Fehlerfarbe trägt: kein Rot ist eine Klasse am Element |
  *
  * > ⚠️ **Fortgeschrieben am 17.09.2026 (der Live-Rest, E‑187)**, aus dem Lauf
  * > (`vitest run --reporter=json`, Fälle je Datei): **166 in einundzwanzig Dateien**, eine neue —
  * > `tests/live-rest.test.tsx` mit 5. Der Lauf über alle **44** Dateien trägt **1.123** Fälle. Je
  * > Datei gegen den Lauf des Commits `15ba346` verglichen: allein die neue Datei; keine neue
  * > Quelldatei, also nichts aus `farbwerte` und `serverbausteine`.
+ *
+ * > ⚠️ **Noch einmal fortgeschrieben am 17.09.2026 (der Live-Rest in der Übersicht, E‑192)**, aus
+ * > dem Lauf: **170 in einundzwanzig Dateien**, keine neue Datei — `tests/live-rest.test.tsx` von 5
+ * > auf 9. Der Lauf über alle 44 Dateien trägt **1.130** Fälle: vier hier, und drei aus `farbwerte`
+ * > und `serverbausteine`, weil zwei Quelldateien dazugekommen sind (`lib/live-rest.ts`,
+ * > `components/live-rest-hinweis.tsx`) — gezählt, nicht gerechnet.
  *
  * > ⚠️ **Fortgeschrieben am 17.09.2026 (Kodierung je Datei und EBCDIC-Muster, E‑176 und E‑177)**,
  * > aus dem Lauf (`vitest run --reporter=json`, Fälle je Datei): **161 in zwanzig Dateien**, keine
@@ -127,7 +133,7 @@ import { defineConfig } from "vitest/config";
  * > darunter noch einhundertsechzehn; die Tabellensumme stimmte mit dem Kopf.
  * > Berichtigt ist der Satz.
  *
- * Allen einhundertsechsundsechzig ist dasselbe gemeinsam: **Es gibt keinen anderen Ort, an dem sie
+ * Allen einhundertsiebzig ist dasselbe gemeinsam: **Es gibt keinen anderen Ort, an dem sie
  * belegbar wären.** Das ist die Bedingung, nicht „es ließe sich so leichter
  * prüfen". Sie schalten ihre Umgebung selbst über `// @vitest-environment jsdom`
  * um — die Voreinstellung bleibt `node`, damit die übrigen Dateien nichts von

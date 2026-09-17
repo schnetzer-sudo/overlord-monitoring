@@ -1,5 +1,6 @@
 "use client";
 
+import { LiveRestHinweis } from "@/components/live-rest-hinweis";
 import { NeuLaden } from "@/components/neu-laden";
 import { Card } from "@/components/ui/card";
 import { ZeitraumUmschalter } from "@/components/zeitraum-umschalter";
@@ -124,11 +125,26 @@ export function DashboardAnsicht() {
         <Fehler fehler={antwort.error} aufWiederholen={() => void antwort.refetch()} />
       ) : antwort.data.leer ? (
         <>
+          {/*
+           * **Auch im Leerzustand** (E‑192): „nichts im Zeitraum" kann heißen, dass
+           * die Aggregation seit Stunden nicht läuft — genau dann gehört der Satz
+           * hierher. E‑p bleibt: Satz, Umschalter, „Neu laden", der Stand — und
+           * dieser Hinweis, wenn es ihn gibt.
+           */}
+          <LiveRestHinweis liveRest={antwort.data.liveRest} />
           <Leer titel={texte.dashboard.leerTitel} hinweis={texte.dashboard.leerHinweis} />
           <StandZeile stand={antwort.data.stand} />
         </>
       ) : (
         <>
+          {/*
+           * **Der Hinweis zum Live-Rest steht über den Kacheln** (E‑192,
+           * Entscheidung des Auftraggebers vom 17.09.2026): dort stehen die Zahlen,
+           * die bei `AUSGESETZT` unvollständig sind. Bei `ANGEWANDT` und
+           * `NICHT_NOETIG` rendert der Baustein nichts — derselbe Baustein wie in
+           * der Prozessansicht (`components/live-rest-hinweis.tsx`).
+           */}
+          <LiveRestHinweis liveRest={antwort.data.liveRest} />
           {/*
            * **`zeitraum` kommt aus der Antwort und nicht aus dem Zustand.** Die
            * Kachel *Wartend* rechnet daraus die Eimerbreite, mit der ihr eigenes

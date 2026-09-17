@@ -12,10 +12,10 @@ import {
 } from "react";
 import Link from "next/link";
 import { useIsFetching } from "@tanstack/react-query";
-import { ArrowLeft, Info, X } from "lucide-react";
+import { ArrowLeft, X } from "lucide-react";
 
+import { LiveRestHinweis } from "@/components/live-rest-hinweis";
 import { NeuLaden } from "@/components/neu-laden";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -795,7 +795,6 @@ function Baumspalte({
 }) {
   const texte = useTexte();
   const sprache = useSprache();
-  const zone = useAnzeigezone();
   const zahl = (wert: number) => formatiereZahl(wert, sprache);
 
   const sichtbar = sichtbareProzesse(gefiltert);
@@ -912,32 +911,11 @@ function Baumspalte({
          * **Der Hinweis bei den Zahlen** (`docs/live-rest.md`): Steht der Live-Rest auf
          * `AUSGESETZT`, fehlt in den Zahlen des Baums der Verkehr seit dem letzten
          * Rollup-Lauf — und das gehört dorthin, wo die Zahlen stehen, nicht in eine
-         * Fehlermeldung. Die Bauform ist die des Katalog-Hinweises
-         * (`katalog-kennzahlen.tsx`): `Alert` ohne Variante, also ohne Rot, ohne
-         * neues Farbtoken und ohne neues Dichtemaß. Bei `ANGEWANDT` und
-         * `NICHT_NOETIG` steht hier nichts — ein Hinweis, der immer da ist, wird
-         * nicht mehr gelesen.
-         *
-         * Mit Lauf trägt der Satz **G** absolut in der Anzeigezone, wie der Stand der
-         * Übersicht (`docs/dashboard-frontend.md` §5.7); ohne Lauf gibt es nichts
-         * zu beziffern.
+         * Fehlermeldung. **Seit Teil B ist der Satz ein gemeinsamer Baustein** mit
+         * der Übersicht (`components/live-rest-hinweis.tsx`, E‑192); was er sagt und
+         * wann er nichts sagt, steht dort.
          */}
-        {baum.liveRest.zustand === "AUSGESETZT" ? (
-          <Alert>
-            <Info aria-hidden="true" />
-            <AlertDescription>
-              {baum.liveRest.vollstaendigBis === null
-                ? texte.prozesse.baum.liveRest.ausgesetztOhneLauf
-                : einsetzen(texte.prozesse.baum.liveRest.ausgesetztMitLauf, {
-                    vollstaendigBis: formatiereZeitpunkt(
-                      baum.liveRest.vollstaendigBis,
-                      sprache,
-                      zone,
-                    ),
-                  })}
-            </AlertDescription>
-          </Alert>
-        ) : null}
+        <LiveRestHinweis liveRest={baum.liveRest} />
       </div>
 
       {gefiltert.length === 0 ? (
