@@ -776,6 +776,16 @@ kostet hier nichts. Ein Test hält das gerenderte Statement Zeichen für Zeichen
 
 **Kein `STRAIGHT_JOIN`, in keiner Fassung** (M42: Faktor 219 bis 1094).
 
+> ### Korrektur vom 17.09.2026 — die Stundenbildung liegt in `common`
+>
+> **Die Abfrage darüber ist unverändert, Zeichen für Zeichen** — `RollupStatementsTest` hält sie
+> weiter wörtlich fest und ist grün. Was sich geändert hat, ist die **Herkunft** des Ausdrucks
+> `DATE_FORMAT(MessageLastUpdate, '%Y-%m-%d %H:00:00')`: Er stand als private Konstante in
+> `RollupLeseRepository` und liegt seit dem Live-Rest ([`live-rest.md`](live-rest.md) §5) als
+> `common/Stundeneimer.ausdruck(Field)` dort, wo ein zweiter Verbraucher ihn rufen kann, ohne aus
+> `rollup` zu importieren und ohne ihn nachzubauen. `RollupLeseRepository` ruft ihn; im Paket
+> `rollup` ändern sich ein Import und die zwei Aufrufstellen der bisherigen Konstanten, sonst nichts.
+
 **`EXPLAIN` gegen die Testkopie, 26.08.2026** — Zeichen für Zeichen der Plan aus M88:
 
 ```

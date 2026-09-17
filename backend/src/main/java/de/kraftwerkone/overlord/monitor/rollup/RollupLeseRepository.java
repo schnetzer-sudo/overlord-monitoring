@@ -2,14 +2,13 @@ package de.kraftwerkone.overlord.monitor.rollup;
 
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.MESSAGE;
 
+import de.kraftwerkone.overlord.monitor.common.Stundeneimer;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import org.jooq.DSLContext;
 import org.jooq.Field;
 import org.jooq.impl.DSL;
-import org.jooq.impl.SQLDataType;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
 
@@ -45,23 +44,15 @@ import org.springframework.stereotype.Repository;
 public class RollupLeseRepository {
 
   /**
-   * Der Stundeneimer, <b>woertlich die Fassung aus M88</b>. Sie ist mit {@code EXPLAIN} und
-   * Laufzeit belegt (Regel L7) und wird uebernommen, nicht nachgebaut.
-   *
-   * <p><b>Warum ein {@code VARCHAR} und kein {@code DATETIME}:</b> {@code DATE_FORMAT} liefert eine
-   * Zeichenkette. Ein {@code CAST(... AS DATETIME)} darum herum waere lesbarer, aber es waere eine
-   * Abweichung von dem, was gemessen ist — und der Gewinn waere null, weil die Umwandlung in Java
-   * eine Zeile kostet ({@link #STUNDENFORMAT}).
+   * Der Stundeneimer, <b>woertlich die Fassung aus M88</b> — seit dem 17.09.2026 aus {@link
+   * Stundeneimer} in {@code common}, weil der Live-Rest dieselbe Stundenbildung braucht und ein
+   * Fachpaket nicht aus {@code rollup} importiert ({@code docs/live-rest.md}). Der gerenderte Text
+   * ist derselbe wie vorher; {@code RollupStatementsTest} haelt ihn Zeichen fuer Zeichen fest. Die
+   * Begruendung fuer {@code VARCHAR} statt {@code DATETIME} steht dort.
    *
    * <p><b>Kein {@code STRAIGHT_JOIN}, in keiner Fassung</b> (M42: Faktor 219 bis 1094).
    */
-  private static final Field<String> STUNDE =
-      DSL.field(
-          "date_format({0}, '%Y-%m-%d %H:00:00')", SQLDataType.VARCHAR, MESSAGE.MESSAGELASTUPDATE);
-
-  /** Das Format, das {@link #STUNDE} liefert. */
-  private static final DateTimeFormatter STUNDENFORMAT =
-      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+  private static final Field<String> STUNDE = Stundeneimer.ausdruck(MESSAGE.MESSAGELASTUPDATE);
 
   private final DSLContext glassfishDsl;
 
@@ -145,10 +136,7 @@ public class RollupLeseRepository {
         .fetch(
             satz ->
                 new RollupZeile(
-                    LocalDateTime.parse(satz.value1(), STUNDENFORMAT),
-                    satz.value2(),
-                    satz.value3(),
-                    satz.value4()));
+                    Stundeneimer.lies(satz.value1()), satz.value2(), satz.value3(), satz.value4()));
   }
 
   /**
