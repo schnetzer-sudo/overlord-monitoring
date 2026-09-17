@@ -254,6 +254,16 @@ genau gegen die Anwendungsuhr auf. Für eine Liste ist das richtig; für ein Dia
 Der erste und der letzte Balken wären angebrochen und würden trotzdem so hoch gezeichnet wie ein
 ganzer.
 
+> ### ⚠️ Seit dem 17.09.2026 zählen Baum und Dashboard die laufende Stunde verschieden — bis Teil B
+>
+> Der Prozessbaum rechnet seit dem Live-Rest ([`live-rest.md`](live-rest.md)) den Verkehr seit dem
+> letzten Delta-Lauf dazu: minus die Rollupzeilen des Live-Bereichs, plus die Zählung aus `Message`.
+> **Dieses Dashboard liest weiter allein den Rollup.** Für dasselbe Fenster können Baum und
+> Übersicht deshalb bis zum nächsten Delta-Lauf zwei Zahlen zeigen — im angebrochenen Eimer, um
+> das, was seit dem Lauf passiert ist. Das ist offener Punkt **191** in `live-rest.md`; **Teil B**
+> ruft denselben Baustein (`common/LiveRestService`) und ordnet die Korrektur den Eimern des
+> Verlaufs zu. Der Block *Stand* (`letzterLauf()`) bleibt, wo er ist.
+
 ### Die Kachel *Nachrichten* zählt Aktivität und nicht Nachrichten
 
 > ### ⚠️ Bekannte Grenze 3

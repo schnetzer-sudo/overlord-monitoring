@@ -4,15 +4,26 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import de.kraftwerkone.overlord.monitor.common.Baumfenster;
 import de.kraftwerkone.overlord.monitor.common.Baumfenster.Segment;
+import de.kraftwerkone.overlord.monitor.common.Baumgliederung;
+import de.kraftwerkone.overlord.monitor.common.LiveRestRepository;
+import de.kraftwerkone.overlord.monitor.common.LiveRestService;
 import de.kraftwerkone.overlord.monitor.common.MandantContext;
+import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.Rollupebene;
 import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
+import de.kraftwerkone.overlord.monitor.common.WasserstandRepository;
+import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import org.jooq.DSLContext;
+import org.jooq.Field;
+import org.jooq.Record1;
+import org.jooq.Result;
 import org.jooq.SQLDialect;
 import org.jooq.impl.DSL;
+import org.jooq.impl.SQLDataType;
 import org.jooq.tools.jdbc.MockConnection;
 import org.jooq.tools.jdbc.MockDataProvider;
 import org.jooq.tools.jdbc.MockResult;
@@ -50,6 +61,12 @@ import org.junit.jupiter.api.Test;
  * anderen:</b> Die drei Paare rendern <b>Zeichen fuer Zeichen den Text von vor diesem Schritt</b>.
  * Der Text ist vor dem Bau der Zerlegung gepinnt worden und hat den Bau ueberstanden.
  *
+ * <p><b>Seit dem 17.09.2026 (Live-Rest) ist die Zusicherung „genau zwei Statements je Aufruf und
+ * kein {@code Message}" bewusst gefallen.</b> Ein Aufruf setzt bei angewandtem Live-Rest fuenf
+ * Statements ab, und das fuenfte liest {@code Message} — einzeln benannt in {@link EinAufruf}, wie
+ * in {@code DashboardStatementsTest}. Die zwei Statements des Rollup-Teils (E-42) sind unveraendert
+ * und weiter woertlich gepinnt.
+ *
  * <p>Vorbild ist {@code DashboardStatementsTest}; die Bauform ist dieselbe.
  */
 class ProzessbaumStatementsTest {
@@ -61,17 +78,39 @@ class ProzessbaumStatementsTest {
 
   private ProzessbaumRepository repository;
 
+  /**
+   * Der Kontext der Attrappe — auch fuer die Klassen des Live-Rests (E-42 ist um sie erweitert).
+   */
+  private DSLContext kontext;
+
+  /**
+   * Was die Attrappe auf die Wasserstandsabfrage antwortet — {@code null} heisst „nie gerechnet".
+   * Alle anderen Statements bekommen ein leeres Ergebnis.
+   */
+  private LocalDateTime wasserstand;
+
+  private static final ZoneId ZONE = ZoneId.of("Europe/Berlin");
+
   @BeforeEach
   void attrappeAufbauen() {
     gerendert.clear();
+    wasserstand = null;
     MockDataProvider attrappe =
         ausfuehrung -> {
           gerendert.add(ausfuehrung.sql());
           DSLContext leer = DSL.using(SQLDialect.MARIADB);
+          if (ausfuehrung.sql().contains("`rollup_lauf`") && wasserstand != null) {
+            Field<LocalDateTime> max = DSL.field("max", SQLDataType.LOCALDATETIME);
+            Result<Record1<LocalDateTime>> ergebnis = leer.newResult(max);
+            Record1<LocalDateTime> satz = leer.newRecord(max);
+            satz.value1(wasserstand);
+            ergebnis.add(satz);
+            return new MockResult[] {new MockResult(1, ergebnis)};
+          }
           return new MockResult[] {new MockResult(0, leer.newResult())};
         };
-    repository =
-        new ProzessbaumRepository(DSL.using(new MockConnection(attrappe), SQLDialect.MARIADB));
+    kontext = DSL.using(new MockConnection(attrappe), SQLDialect.MARIADB);
+    repository = new ProzessbaumRepository(kontext);
   }
 
   private String einziges() {
@@ -555,53 +594,194 @@ class ProzessbaumStatementsTest {
     }
   }
 
-  // ─── Der Umfang ───────────────────────────────────────────────────────────────
+  // ─── Die Statements eines Aufrufs ─────────────────────────────────────────────
 
   /**
-   * <b>Zwei Statements je Aufruf, und mehr werden es nicht.</b> Das Dashboard haelt dieselbe Zusage
-   * mit sieben; hier sind es zwei, weil es weder eine Belegungsprobe noch eine Live-Abfrage gibt.
-   * Faellt dieser Test, hat jemand eine dritte Abfrage eingebaut — etwa eine Ueberfaelligkeit je
-   * Prozess, und genau die ist ausgeschlossen ({@code docs/process-view.md} §5).
+   * <b>Die Zusicherung „genau zwei Statements je Aufruf und kein {@code Message}" ist am 17.09.2026
+   * bewusst gefallen</b> ({@code docs/live-rest.md}). An ihre Stelle treten <b>einzeln benannte
+   * Statements</b>, wie in {@code DashboardStatementsTest}: Der Dienst wird gerufen, und jedes
+   * Statement, das er absetzt, steht hier mit Namen. {@code Message} steht ausschliesslich im
+   * Live-Teil — mit Zeitbereich ab G und Mandantenkette.
+   *
+   * <p>Die Attrappe antwortet auf die Wasserstandsabfrage mit dem Wert in {@link #wasserstand};
+   * daran haengt, welcher der drei Zustaende eintritt und wie viele Statements folgen.
    */
-  @Test
-  @DisplayName("Ein Aufruf des Baums kostet genau zwei Statements")
-  void genau_zwei_statements() {
-    gerendert.clear();
-    repository.geruest(MANDANT);
-    repository.kennzahlen(MANDANT, Baumfenster.paar(Rollupzeitraum.STUNDEN_48).segmente(JETZT));
-    assertThat(gerendert).hasSize(2);
-  }
+  @Nested
+  @DisplayName("Die Statements eines Aufrufs, einzeln benannt")
+  class EinAufruf {
 
-  /**
-   * <b>E-42 faellt mit dem freien Zeitfenster nicht.</b> Auch fuenf Segmente ueber drei Ebenen sind
-   * <b>eine</b> Kennzahlenabfrage (Bauform Z-U, M149) — nicht drei (Z-D, M150). Faellt dieser Test,
-   * hat jemand die Vereinigung in Einzelstatements zerlegt, und die Summierung liefe in Java.
-   */
-  @Test
-  @DisplayName("Auch ein freies Fenster kostet genau zwei Statements")
-  void genau_zwei_statements_im_freien_fenster() {
-    gerendert.clear();
-    repository.geruest(MANDANT);
-    repository.kennzahlen(MANDANT, boesfall());
-    assertThat(gerendert).hasSize(2);
-  }
-
-  /**
-   * <b>Keine Abfrage der Prozessansicht fasst {@code Message} an.</b> Regel L2: Kennzahlen kommen
-   * aus dem Rollup. Die eine benannte Ausnahme des Projekts ist die Ueberfaelligkeitskachel des
-   * Dashboards, und sie ist ausdruecklich nicht hierher uebernommen worden.
-   */
-  @Test
-  @DisplayName("Keine Live-Aggregation ueber Message (Regel L2)")
-  void keine_live_aggregation() {
-    gerendert.clear();
-    repository.geruest(MANDANT);
-    for (Rollupzeitraum zeitraum : Rollupzeitraum.values()) {
-      repository.kennzahlen(MANDANT, Baumfenster.paar(zeitraum).segmente(JETZT));
+    private List<String> statementsEinesAufrufs(Baumfenster fenster) {
+      ProzessbaumService dienst =
+          new ProzessbaumService(
+              repository,
+              new MessageStatusClassifier(),
+              Clock.fixed(JETZT.atZone(ZONE).toInstant(), ZONE),
+              new LiveRestService(
+                  new LiveRestRepository(kontext), new WasserstandRepository(kontext)));
+      gerendert.clear();
+      dienst.baum(MANDANT, fenster, Baumgliederung.PARTNER);
+      return gerendert.stream().map(sql -> sql.replaceAll("\\s+", " ").trim()).toList();
     }
-    repository.kennzahlen(MANDANT, boesfall());
-    assertThat(gerendert)
-        .isNotEmpty()
-        .allSatisfy(sql -> assertThat(sql).doesNotContain("`GlassfishDB`.`Message`"));
+
+    private static final String KETTE_AUF_ROLLUP =
+        "exists (select 1 as `one` from `GlassfishDB`.`Process` as `live_process` join"
+            + " `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` ="
+            + " `live_process`.`ProjectID` where (`live_process`.`ProcessID` ="
+            + " `overlord_monitor`.`message_rollup`.`process_id` and"
+            + " `GlassfishDB`.`ProjectMandant`.`MandantID` = ?))";
+
+    private static final String KETTE_AUF_MESSAGE =
+        "exists (select 1 as `one` from `GlassfishDB`.`Process` as `live_process` join"
+            + " `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` ="
+            + " `live_process`.`ProjectID` where (`live_process`.`ProcessID` ="
+            + " `GlassfishDB`.`Message`.`ProcessID` and"
+            + " `GlassfishDB`.`ProjectMandant`.`MandantID` = ?))";
+
+    /** Angewandt: G ist die Stichtagsstunde. Fuenf Statements, jedes mit Namen. */
+    @Test
+    @DisplayName(
+        "Angewandt: Geruest, Kennzahlen, Wasserstand, Rollup im Live-Bereich, Message im Live-Bereich")
+    void angewandt_fuenf_statements() {
+      wasserstand = JETZT.truncatedTo(java.time.temporal.ChronoUnit.HOURS).plusHours(1);
+
+      List<String> knapp = statementsEinesAufrufs(Baumfenster.paar(Rollupzeitraum.STUNDEN_48));
+
+      assertThat(knapp).as("Fuenf Statements — und jedes einzeln benannt").hasSize(5);
+      assertThat(knapp.get(0))
+          .as("1 Geruest")
+          .startsWith("select `GlassfishDB`.`Process`.`ProcessID`")
+          .contains("join `GlassfishDB`.`ProjectMandant` on");
+      assertThat(knapp.get(1))
+          .as("2 Kennzahlen")
+          .startsWith("select `overlord_monitor`.`message_rollup`.`process_id`")
+          .contains("sum(`overlord_monitor`.`message_rollup`.`anzahl`)")
+          .contains("`baum_process`");
+      assertThat(knapp.get(2))
+          .as("3 Wasserstand")
+          .isEqualTo(
+              "select max(`overlord_monitor`.`rollup_lauf`.`fenster_bis`) from"
+                  + " `overlord_monitor`.`rollup_lauf` where"
+                  + " (`overlord_monitor`.`rollup_lauf`.`beendet_am` is not null and"
+                  + " `overlord_monitor`.`rollup_lauf`.`fehler` is null)");
+      assertThat(knapp.get(3))
+          .as("4 Rollup im Live-Bereich — ab G, ohne Summe, mit Kette")
+          .startsWith("select `overlord_monitor`.`message_rollup`.`stunde`")
+          .contains("`overlord_monitor`.`message_rollup`.`stunde` >= ?")
+          .contains(KETTE_AUF_ROLLUP)
+          .doesNotContain("sum(")
+          .doesNotContain("group by");
+      assertThat(knapp.get(4))
+          .as("5 Message im Live-Bereich — ab G, gruppiert wie der Rollup, mit Kette")
+          .contains("from `GlassfishDB`.`Message` where")
+          .contains("`GlassfishDB`.`Message`.`MessageLastUpdate` >= ?")
+          .contains("`GlassfishDB`.`Message`.`MessageLastUpdate` < ?")
+          .contains(KETTE_AUF_MESSAGE)
+          .contains("group by date_format(");
+    }
+
+    /**
+     * <b>{@code Message} steht ausschliesslich im Live-Teil.</b> Regel L2 mit ihrer dritten
+     * benannten Ausnahme: genau ein Statement je Aufruf liest die Quelle, und es ist das, das den
+     * Bereich ab G traegt.
+     */
+    @Test
+    @DisplayName("Message steht in genau einem Statement, mit Zeitbereich ab G und Mandantenkette")
+    void message_nur_im_live_teil() {
+      wasserstand = JETZT.truncatedTo(java.time.temporal.ChronoUnit.HOURS).plusHours(1);
+
+      List<String> knapp = statementsEinesAufrufs(Baumfenster.paar(Rollupzeitraum.STUNDEN_48));
+      List<String> mitMessage =
+          knapp.stream().filter(sql -> sql.contains("`GlassfishDB`.`Message`")).toList();
+
+      assertThat(mitMessage).hasSize(1);
+      assertThat(mitMessage.getFirst())
+          .isSameAs(knapp.getLast())
+          .contains("`GlassfishDB`.`Message`.`MessageLastUpdate` >= ?")
+          .contains(KETTE_AUF_MESSAGE)
+          .doesNotContain("join `GlassfishDB`.`Message`");
+    }
+
+    /** Ohne Lauf: ausgesetzt — drei Statements, keines liest die Quelle. */
+    @Test
+    @DisplayName("Ausgesetzt ohne Lauf: drei Statements, kein Message")
+    void ausgesetzt_ohne_lauf_drei_statements() {
+      wasserstand = null;
+
+      List<String> knapp = statementsEinesAufrufs(Baumfenster.paar(Rollupzeitraum.STUNDEN_48));
+
+      assertThat(knapp).hasSize(3);
+      assertThat(knapp.get(2))
+          .as("3 Wasserstand")
+          .contains("from `overlord_monitor`.`rollup_lauf`");
+      assertThat(knapp)
+          .allSatisfy(sql -> assertThat(sql).doesNotContain("`GlassfishDB`.`Message`"));
+    }
+
+    /** Der Rollup reicht ueber die Uhr hinaus: nicht noetig — dieselben drei. */
+    @Test
+    @DisplayName("Nicht noetig: drei Statements, kein Message")
+    void nicht_noetig_drei_statements() {
+      wasserstand = JETZT.plusDays(2);
+
+      List<String> knapp = statementsEinesAufrufs(Baumfenster.paar(Rollupzeitraum.STUNDEN_48));
+
+      assertThat(knapp).hasSize(3);
+      assertThat(knapp)
+          .allSatisfy(sql -> assertThat(sql).doesNotContain("`GlassfishDB`.`Message`"));
+    }
+
+    /**
+     * Auch das freie Fenster kostet bei angewandtem Live-Rest fuenf — E-42 bleibt bei zwei fuer den
+     * Rollup-Teil.
+     */
+    @Test
+    @DisplayName("Das freie Fenster setzt dieselben fuenf Statements ab")
+    void freies_fenster_fuenf_statements() {
+      wasserstand = JETZT.truncatedTo(java.time.temporal.ChronoUnit.HOURS).plusHours(1);
+
+      List<String> knapp =
+          statementsEinesAufrufs(Baumfenster.frei(t("2024-12-29T14:00"), t("2025-12-30T03:00")));
+
+      assertThat(knapp).hasSize(5);
+      assertThat(knapp.get(1)).as("2 Kennzahlen, vereinigt").contains("union all");
+      assertThat(knapp.get(4))
+          .as("5 Message im Live-Bereich")
+          .contains("from `GlassfishDB`.`Message` where");
+    }
+
+    /**
+     * Die beiden Live-Statements <b>woertlich</b> — das ist die Fassung, die M185 misst (Regel L7),
+     * und die Fassung, deren Plan {@code ProzessbaumPlanDbIT} festhaelt.
+     */
+    @Test
+    @DisplayName("Die beiden Live-Statements, woertlich")
+    void live_teil_woertlich() {
+      wasserstand = JETZT.truncatedTo(java.time.temporal.ChronoUnit.HOURS).plusHours(1);
+
+      List<String> knapp = statementsEinesAufrufs(Baumfenster.paar(Rollupzeitraum.STUNDEN_48));
+
+      assertThat(knapp.get(3))
+          .isEqualTo(
+              "select `overlord_monitor`.`message_rollup`.`stunde`,"
+                  + " `overlord_monitor`.`message_rollup`.`process_id`,"
+                  + " `overlord_monitor`.`message_rollup`.`message_status`,"
+                  + " `overlord_monitor`.`message_rollup`.`anzahl` from"
+                  + " `overlord_monitor`.`message_rollup` where"
+                  + " (`overlord_monitor`.`message_rollup`.`stunde` >= ? and"
+                  + " `overlord_monitor`.`message_rollup`.`stunde` < ? and "
+                  + KETTE_AUF_ROLLUP
+                  + ")");
+      assertThat(knapp.get(4))
+          .isEqualTo(
+              "select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d"
+                  + " %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`,"
+                  + " `GlassfishDB`.`Message`.`MessageStatus`, count(*) from"
+                  + " `GlassfishDB`.`Message` where (`GlassfishDB`.`Message`.`MessageLastUpdate`"
+                  + " >= ? and `GlassfishDB`.`Message`.`MessageLastUpdate` < ? and "
+                  + KETTE_AUF_MESSAGE
+                  + ") group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`,"
+                  + " '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`,"
+                  + " `GlassfishDB`.`Message`.`MessageStatus`");
+    }
   }
 }

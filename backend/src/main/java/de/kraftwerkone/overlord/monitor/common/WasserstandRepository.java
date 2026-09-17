@@ -42,7 +42,7 @@ public class WasserstandRepository implements Wasserstand {
 
   private final DSLContext glassfishDsl;
 
-  WasserstandRepository(@Qualifier("glassfishDsl") DSLContext glassfishDsl) {
+  public WasserstandRepository(@Qualifier("glassfishDsl") DSLContext glassfishDsl) {
     this.glassfishDsl = glassfishDsl;
   }
 

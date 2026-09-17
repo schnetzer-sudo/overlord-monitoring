@@ -1277,9 +1277,13 @@ beiden Läufe in §9c, die Bewertung und die Abschlussmessung in
 > `fenster_bis − 1 h` ab — den Eimer, in dem der Lauf lief und der nur bis zum Laufzeitpunkt
 > gerechnet ist. **Die Bedeutung von `fenster_bis` trägt damit auch den Live-Rest; wer sie ändert,
 > bricht ihn.** Der Job selbst liest den Wasserstand weiterhin über `RollupSchreibRepository`
-> (offener Punkt 187 in `live-rest.md`). Die Live-Lesung aus `message_rollup` und `Message` ist am
-> 17.09.2026 **angehalten** worden (§7 dort); bis sie gebaut ist, hat diese Tabelle keinen vierten
-> Leser.
+> (offener Punkt 187 in `live-rest.md`). **Und seit demselben Tag hat `message_rollup` einen vierten
+> Leser:** Der Live-Rest liest die Stundeneimer des Live-Bereichs (`common/LiveRestRepository.ausDemRollup`,
+> `range` über `PRIMARY`, Mandantenkette als `EXISTS`) und zieht sie von den Kennzahlen des Baums ab,
+> bevor er die Zählung aus `Message` dazurechnet. **Er liest nur die Stundenebene** — die Tages- und
+> Monatsebene entstehen aus genau diesen Eimern (§5), deshalb stimmt die Korrektur für jede Ebene.
+> Der Live-Rest war am Vormittag des 17.09.2026 vor dieser Lesung angehalten (Regelkonflikt um den
+> `MandantContext`) und ist am selben Tag mit Weg 1 gebaut worden (`live-rest.md` §7).
 
 Drei Dinge aus dieser Prüfung gehören hierher, weil sie den Rollup betreffen und sonst untergehen:
 

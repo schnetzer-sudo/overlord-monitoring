@@ -1,0 +1,456 @@
+| === 00 read_only (erste Abfrage der Sitzung) === |
+| read_only | serverzeit          | version                              | grenze_vorher |
++-----------+---------------------+--------------------------------------+---------------+
+| === 00a Eichung: die Umlaufzeit der Wanduhr um ein leeres Statement === |
+| fall         | ms1   | ms2   | ms3   |
++--------------+-------+-------+-------+
+| M185-EICHUNG | 0.870 | 0.893 | 0.708 |
++--------------+-------+-------+-------+
+| === NEXANS typisch: Live-Bereich 2025-11-09 15:00:00 bis 2025-11-09 17:00:00 === |
+| === M185-NEXANS-typisch-A · Plan (Regel L15) ===  |
++---------------------------------------------------+
++------+-------------+----------------+--------+------------------------------------+---------+---------+--------------------------------------------+------+--------------------------+
+| id   | select_type | table          | type   | possible_keys                      | key     | key_len | ref                                        | rows | Extra                    |
++------+-------------+----------------+--------+------------------------------------+---------+---------+--------------------------------------------+------+--------------------------+
+|    1 | PRIMARY     | message_rollup | range  | PRIMARY,message_rollup_prozess_idx | PRIMARY | 5       | NULL                                       | 25   | Using where              |
+|    1 | PRIMARY     | live_process   | eq_ref | PRIMARY,Process_ProjectFK          | PRIMARY | 146     | overlord_monitor.message_rollup.process_id | 1    | Using where              |
+|    1 | PRIMARY     | ProjectMandant | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY | 292     | GlassfishDB.live_process.ProjectID,const   | 1    | Using where; Using index |
++------+-------------+----------------+--------+------------------------------------+---------+---------+--------------------------------------------+------+--------------------------+
++-----------------------------------------------+
+| marke                                         |
++-----------------------------------------------+
+| === M185-NEXANS-typisch-A · sechs Laeufe ===  |
+| fall                  | laeufe | profil_aufwaermlauf | profil_beste_von_fuenf | profil_alle_fuenf             | wand_aufwaermlauf | wand_beste_von_fuenf | wand_alle_fuenf               |
++-----------------------+--------+---------------------+------------------------+-------------------------------+-------------------+----------------------+-------------------------------+
+| M185-NEXANS-typisch-A |      6 |               0.900 |                  0.737 | 0.790,0.756,0.737,0.830,0.745 |             1.834 |                1.403 | 1.403/1.619/1.430/1.627/1.577 |
++-----------------------+--------+---------------------+------------------------+-------------------------------+-------------------+----------------------+-------------------------------+
+| === M185-NEXANS-typisch-B · Plan (Regel L15) ===  |
++---------------------------------------------------+
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+------------------------------------------+------+---------------------------------------------------------------------+
+| id   | select_type | table          | type   | possible_keys                                                                          | key                  | key_len | ref                                      | rows | Extra                                                               |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+------------------------------------------+------+---------------------------------------------------------------------+
+|    1 | PRIMARY     | Message        | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageLastUpdateProcessMessageIDX | MessageLastUpdateIDX | 5       | NULL                                     | 236  | Using index condition; Using where; Using temporary; Using filesort |
+|    1 | PRIMARY     | live_process   | eq_ref | PRIMARY,Process_ProjectFK                                                              | PRIMARY              | 146     | GlassfishDB.Message.ProcessID            | 1    | Using where                                                         |
+|    1 | PRIMARY     | ProjectMandant | eq_ref | PRIMARY,ProjectMandant_Mandant_idx                                                     | PRIMARY              | 292     | GlassfishDB.live_process.ProjectID,const | 1    | Using where; Using index                                            |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+------------------------------------------+------+---------------------------------------------------------------------+
++-----------------------------------------------+
+| marke                                         |
++-----------------------------------------------+
+| === M185-NEXANS-typisch-B · sechs Laeufe ===  |
+| fall                  | laeufe | profil_aufwaermlauf | profil_beste_von_fuenf | profil_alle_fuenf             | wand_aufwaermlauf | wand_beste_von_fuenf | wand_alle_fuenf               |
++-----------------------+--------+---------------------+------------------------+-------------------------------+-------------------+----------------------+-------------------------------+
+| M185-NEXANS-typisch-B |      6 |               4.232 |                  3.213 | 3.326,3.276,3.313,3.277,3.213 |             5.180 |                3.920 | 4.139/4.143/4.201/4.037/3.920 |
++-----------------------+--------+---------------------+------------------------+-------------------------------+-------------------+----------------------+-------------------------------+
+| === M185-NEXANS-typisch-C · Plan (Regel L15) ===  |
++---------------------------------------------------+
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+--------------------------------------------+------+---------------------------------------------------------------------+
+| id   | select_type | table          | type   | possible_keys                                                                          | key                  | key_len | ref                                        | rows | Extra                                                               |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+--------------------------------------------+------+---------------------------------------------------------------------+
+|    1 | PRIMARY     | <derived2>     | ALL    | NULL                                                                                   | NULL                 | NULL    | NULL                                       | 261  | Using temporary; Using filesort                                     |
+|    2 | DERIVED     | message_rollup | range  | PRIMARY,message_rollup_prozess_idx                                                     | PRIMARY              | 5       | NULL                                       | 25   | Using where                                                         |
+|    2 | DERIVED     | live_process   | eq_ref | PRIMARY,Process_ProjectFK                                                              | PRIMARY              | 146     | overlord_monitor.message_rollup.process_id | 1    | Using where                                                         |
+|    2 | DERIVED     | ProjectMandant | eq_ref | PRIMARY,ProjectMandant_Mandant_idx                                                     | PRIMARY              | 292     | GlassfishDB.live_process.ProjectID,const   | 1    | Using where; Using index                                            |
+|    4 | UNION       | Message        | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageLastUpdateProcessMessageIDX | MessageLastUpdateIDX | 5       | NULL                                       | 236  | Using index condition; Using where; Using temporary; Using filesort |
+|    4 | UNION       | live_process   | eq_ref | PRIMARY,Process_ProjectFK                                                              | PRIMARY              | 146     | GlassfishDB.Message.ProcessID              | 1    | Using where                                                         |
+|    4 | UNION       | ProjectMandant | eq_ref | PRIMARY,ProjectMandant_Mandant_idx                                                     | PRIMARY              | 292     | GlassfishDB.live_process.ProjectID,const   | 1    | Using where; Using index                                            |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+--------------------------------------------+------+---------------------------------------------------------------------+
++-----------------------------------------------+
+| marke                                         |
++-----------------------------------------------+
+| === M185-NEXANS-typisch-C · sechs Laeufe ===  |
+| fall                  | laeufe | profil_aufwaermlauf | profil_beste_von_fuenf | profil_alle_fuenf             | wand_aufwaermlauf | wand_beste_von_fuenf | wand_alle_fuenf               |
++-----------------------+--------+---------------------+------------------------+-------------------------------+-------------------+----------------------+-------------------------------+
+| M185-NEXANS-typisch-C |      6 |               4.049 |                  4.060 | 4.151,4.426,4.100,4.062,4.060 |             4.977 |                4.878 | 5.163/5.309/5.008/4.878/4.979 |
++-----------------------+--------+---------------------+------------------------+-------------------------------+-------------------+----------------------+-------------------------------+
+| === NEXANS dicht: Live-Bereich 2024-10-09 18:00:00 bis 2024-10-09 22:00:00 === |
+| === M185-NEXANS-dicht-A · Plan (Regel L15) ===  |
++-------------------------------------------------+
++------+-------------+----------------+--------+------------------------------------+---------+---------+--------------------------------------------+------+--------------------------+
+| id   | select_type | table          | type   | possible_keys                      | key     | key_len | ref                                        | rows | Extra                    |
++------+-------------+----------------+--------+------------------------------------+---------+---------+--------------------------------------------+------+--------------------------+
+|    1 | PRIMARY     | message_rollup | range  | PRIMARY,message_rollup_prozess_idx | PRIMARY | 5       | NULL                                       | 71   | Using where              |
+|    1 | PRIMARY     | live_process   | eq_ref | PRIMARY,Process_ProjectFK          | PRIMARY | 146     | overlord_monitor.message_rollup.process_id | 1    | Using where              |
+|    1 | PRIMARY     | ProjectMandant | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY | 292     | GlassfishDB.live_process.ProjectID,const   | 1    | Using where; Using index |
++------+-------------+----------------+--------+------------------------------------+---------+---------+--------------------------------------------+------+--------------------------+
++---------------------------------------------+
+| marke                                       |
++---------------------------------------------+
+| === M185-NEXANS-dicht-A · sechs Laeufe ===  |
+| fall                | laeufe | profil_aufwaermlauf | profil_beste_von_fuenf | profil_alle_fuenf             | wand_aufwaermlauf | wand_beste_von_fuenf | wand_alle_fuenf               |
++---------------------+--------+---------------------+------------------------+-------------------------------+-------------------+----------------------+-------------------------------+
+| M185-NEXANS-dicht-A |      6 |               1.138 |                  1.076 | 1.129,1.076,1.092,1.124,1.093 |             2.225 |                1.795 | 1.995/1.795/1.819/1.836/1.826 |
++---------------------+--------+---------------------+------------------------+-------------------------------+-------------------+----------------------+-------------------------------+
+| === M185-NEXANS-dicht-B · Plan (Regel L15) ===  |
++-------------------------------------------------+
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+------------------------------------------+-------+---------------------------------------------------------------------+
+| id   | select_type | table          | type   | possible_keys                                                                          | key                  | key_len | ref                                      | rows  | Extra                                                               |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+------------------------------------------+-------+---------------------------------------------------------------------+
+|    1 | PRIMARY     | Message        | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageLastUpdateProcessMessageIDX | MessageLastUpdateIDX | 5       | NULL                                     | 37412 | Using index condition; Using where; Using temporary; Using filesort |
+|    1 | PRIMARY     | live_process   | eq_ref | PRIMARY,Process_ProjectFK                                                              | PRIMARY              | 146     | GlassfishDB.Message.ProcessID            | 1     | Using where                                                         |
+|    1 | PRIMARY     | ProjectMandant | eq_ref | PRIMARY,ProjectMandant_Mandant_idx                                                     | PRIMARY              | 292     | GlassfishDB.live_process.ProjectID,const | 1     | Using where; Using index                                            |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+------------------------------------------+-------+---------------------------------------------------------------------+
++---------------------------------------------+
+| marke                                       |
++---------------------------------------------+
+| === M185-NEXANS-dicht-B · sechs Laeufe ===  |
+| fall                | laeufe | profil_aufwaermlauf | profil_beste_von_fuenf | profil_alle_fuenf                       | wand_aufwaermlauf | wand_beste_von_fuenf | wand_alle_fuenf                         |
++---------------------+--------+---------------------+------------------------+-----------------------------------------+-------------------+----------------------+-----------------------------------------+
+| M185-NEXANS-dicht-B |      6 |             278.275 |                265.684 | 267.168,266.284,269.910,266.587,265.684 |           279.550 |              266.955 | 268.355/268.016/271.161/268.069/266.955 |
++---------------------+--------+---------------------+------------------------+-----------------------------------------+-------------------+----------------------+-----------------------------------------+
+| === M185-NEXANS-dicht-C · Plan (Regel L15) ===  |
++-------------------------------------------------+
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+--------------------------------------------+-------+---------------------------------------------------------------------+
+| id   | select_type | table          | type   | possible_keys                                                                          | key                  | key_len | ref                                        | rows  | Extra                                                               |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+--------------------------------------------+-------+---------------------------------------------------------------------+
+|    1 | PRIMARY     | <derived2>     | ALL    | NULL                                                                                   | NULL                 | NULL    | NULL                                       | 37483 | Using temporary; Using filesort                                     |
+|    2 | DERIVED     | message_rollup | range  | PRIMARY,message_rollup_prozess_idx                                                     | PRIMARY              | 5       | NULL                                       | 71    | Using where                                                         |
+|    2 | DERIVED     | live_process   | eq_ref | PRIMARY,Process_ProjectFK                                                              | PRIMARY              | 146     | overlord_monitor.message_rollup.process_id | 1     | Using where                                                         |
+|    2 | DERIVED     | ProjectMandant | eq_ref | PRIMARY,ProjectMandant_Mandant_idx                                                     | PRIMARY              | 292     | GlassfishDB.live_process.ProjectID,const   | 1     | Using where; Using index                                            |
+|    4 | UNION       | Message        | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageLastUpdateProcessMessageIDX | MessageLastUpdateIDX | 5       | NULL                                       | 37412 | Using index condition; Using where; Using temporary; Using filesort |
+|    4 | UNION       | live_process   | eq_ref | PRIMARY,Process_ProjectFK                                                              | PRIMARY              | 146     | GlassfishDB.Message.ProcessID              | 1     | Using where                                                         |
+|    4 | UNION       | ProjectMandant | eq_ref | PRIMARY,ProjectMandant_Mandant_idx                                                     | PRIMARY              | 292     | GlassfishDB.live_process.ProjectID,const   | 1     | Using where; Using index                                            |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+--------------------------------------------+-------+---------------------------------------------------------------------+
++---------------------------------------------+
+| marke                                       |
++---------------------------------------------+
+| === M185-NEXANS-dicht-C · sechs Laeufe ===  |
+| fall                | laeufe | profil_aufwaermlauf | profil_beste_von_fuenf | profil_alle_fuenf                       | wand_aufwaermlauf | wand_beste_von_fuenf | wand_alle_fuenf                         |
++---------------------+--------+---------------------+------------------------+-----------------------------------------+-------------------+----------------------+-----------------------------------------+
+| M185-NEXANS-dicht-C |      6 |             266.732 |                261.470 | 273.749,269.384,273.845,261.470,281.309 |           267.985 |              262.873 | 274.792/270.451/275.238/262.873/283.329 |
++---------------------+--------+---------------------+------------------------+-----------------------------------------+-------------------+----------------------+-----------------------------------------+
+| === VOTG typisch: Live-Bereich 2025-06-22 01:00:00 bis 2025-06-22 03:00:00 === |
+| === M185-VOTG-typisch-A · Plan (Regel L15) ===  |
++-------------------------------------------------+
++------+-------------+----------------+--------+------------------------------------+---------+---------+--------------------------------------------+------+--------------------------+
+| id   | select_type | table          | type   | possible_keys                      | key     | key_len | ref                                        | rows | Extra                    |
++------+-------------+----------------+--------+------------------------------------+---------+---------+--------------------------------------------+------+--------------------------+
+|    1 | PRIMARY     | message_rollup | range  | PRIMARY,message_rollup_prozess_idx | PRIMARY | 5       | NULL                                       | 37   | Using where              |
+|    1 | PRIMARY     | live_process   | eq_ref | PRIMARY,Process_ProjectFK          | PRIMARY | 146     | overlord_monitor.message_rollup.process_id | 1    | Using where              |
+|    1 | PRIMARY     | ProjectMandant | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY | 292     | GlassfishDB.live_process.ProjectID,const   | 1    | Using where; Using index |
++------+-------------+----------------+--------+------------------------------------+---------+---------+--------------------------------------------+------+--------------------------+
++---------------------------------------------+
+| marke                                       |
++---------------------------------------------+
+| === M185-VOTG-typisch-A · sechs Laeufe ===  |
+| fall                | laeufe | profil_aufwaermlauf | profil_beste_von_fuenf | profil_alle_fuenf             | wand_aufwaermlauf | wand_beste_von_fuenf | wand_alle_fuenf               |
++---------------------+--------+---------------------+------------------------+-------------------------------+-------------------+----------------------+-------------------------------+
+| M185-VOTG-typisch-A |      6 |               0.927 |                  0.870 | 0.878,0.890,0.870,0.874,0.915 |             1.992 |                1.736 | 1.975/1.894/1.938/1.823/1.736 |
++---------------------+--------+---------------------+------------------------+-------------------------------+-------------------+----------------------+-------------------------------+
+| === M185-VOTG-typisch-B · Plan (Regel L15) ===  |
++-------------------------------------------------+
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+------------------------------------------+------+---------------------------------------------------------------------+
+| id   | select_type | table          | type   | possible_keys                                                                          | key                  | key_len | ref                                      | rows | Extra                                                               |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+------------------------------------------+------+---------------------------------------------------------------------+
+|    1 | PRIMARY     | Message        | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageLastUpdateProcessMessageIDX | MessageLastUpdateIDX | 5       | NULL                                     | 599  | Using index condition; Using where; Using temporary; Using filesort |
+|    1 | PRIMARY     | live_process   | eq_ref | PRIMARY,Process_ProjectFK                                                              | PRIMARY              | 146     | GlassfishDB.Message.ProcessID            | 1    | Using where                                                         |
+|    1 | PRIMARY     | ProjectMandant | eq_ref | PRIMARY,ProjectMandant_Mandant_idx                                                     | PRIMARY              | 292     | GlassfishDB.live_process.ProjectID,const | 1    | Using where; Using index                                            |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+------------------------------------------+------+---------------------------------------------------------------------+
++---------------------------------------------+
+| marke                                       |
++---------------------------------------------+
+| === M185-VOTG-typisch-B · sechs Laeufe ===  |
+| fall                | laeufe | profil_aufwaermlauf | profil_beste_von_fuenf | profil_alle_fuenf             | wand_aufwaermlauf | wand_beste_von_fuenf | wand_alle_fuenf               |
++---------------------+--------+---------------------+------------------------+-------------------------------+-------------------+----------------------+-------------------------------+
+| M185-VOTG-typisch-B |      6 |               6.398 |                  4.730 | 5.002,5.094,4.977,4.775,4.730 |             7.685 |                5.700 | 6.150/6.038/6.052/5.700/5.715 |
++---------------------+--------+---------------------+------------------------+-------------------------------+-------------------+----------------------+-------------------------------+
+| === M185-VOTG-typisch-C · Plan (Regel L15) ===  |
++-------------------------------------------------+
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+--------------------------------------------+------+---------------------------------------------------------------------+
+| id   | select_type | table          | type   | possible_keys                                                                          | key                  | key_len | ref                                        | rows | Extra                                                               |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+--------------------------------------------+------+---------------------------------------------------------------------+
+|    1 | PRIMARY     | <derived2>     | ALL    | NULL                                                                                   | NULL                 | NULL    | NULL                                       | 636  | Using temporary; Using filesort                                     |
+|    2 | DERIVED     | message_rollup | range  | PRIMARY,message_rollup_prozess_idx                                                     | PRIMARY              | 5       | NULL                                       | 37   | Using where                                                         |
+|    2 | DERIVED     | live_process   | eq_ref | PRIMARY,Process_ProjectFK                                                              | PRIMARY              | 146     | overlord_monitor.message_rollup.process_id | 1    | Using where                                                         |
+|    2 | DERIVED     | ProjectMandant | eq_ref | PRIMARY,ProjectMandant_Mandant_idx                                                     | PRIMARY              | 292     | GlassfishDB.live_process.ProjectID,const   | 1    | Using where; Using index                                            |
+|    4 | UNION       | Message        | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageLastUpdateProcessMessageIDX | MessageLastUpdateIDX | 5       | NULL                                       | 599  | Using index condition; Using where; Using temporary; Using filesort |
+|    4 | UNION       | live_process   | eq_ref | PRIMARY,Process_ProjectFK                                                              | PRIMARY              | 146     | GlassfishDB.Message.ProcessID              | 1    | Using where                                                         |
+|    4 | UNION       | ProjectMandant | eq_ref | PRIMARY,ProjectMandant_Mandant_idx                                                     | PRIMARY              | 292     | GlassfishDB.live_process.ProjectID,const   | 1    | Using where; Using index                                            |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+--------------------------------------------+------+---------------------------------------------------------------------+
++---------------------------------------------+
+| marke                                       |
++---------------------------------------------+
+| === M185-VOTG-typisch-C · sechs Laeufe ===  |
+| fall                | laeufe | profil_aufwaermlauf | profil_beste_von_fuenf | profil_alle_fuenf             | wand_aufwaermlauf | wand_beste_von_fuenf | wand_alle_fuenf               |
++---------------------+--------+---------------------+------------------------+-------------------------------+-------------------+----------------------+-------------------------------+
+| M185-VOTG-typisch-C |      6 |               6.074 |                  5.829 | 6.582,5.905,5.829,5.915,6.008 |             6.999 |                6.854 | 7.736/7.101/6.911/6.854/7.086 |
++---------------------+--------+---------------------+------------------------+-------------------------------+-------------------+----------------------+-------------------------------+
+| === VOTG dicht: Live-Bereich 2025-06-26 07:00:00 bis 2025-06-26 11:00:00 === |
+| === M185-VOTG-dicht-A · Plan (Regel L15) ===  |
++-----------------------------------------------+
++------+-------------+----------------+--------+------------------------------------+---------+---------+--------------------------------------------+------+--------------------------+
+| id   | select_type | table          | type   | possible_keys                      | key     | key_len | ref                                        | rows | Extra                    |
++------+-------------+----------------+--------+------------------------------------+---------+---------+--------------------------------------------+------+--------------------------+
+|    1 | PRIMARY     | message_rollup | range  | PRIMARY,message_rollup_prozess_idx | PRIMARY | 5       | NULL                                       | 286  | Using where              |
+|    1 | PRIMARY     | live_process   | eq_ref | PRIMARY,Process_ProjectFK          | PRIMARY | 146     | overlord_monitor.message_rollup.process_id | 1    | Using where              |
+|    1 | PRIMARY     | ProjectMandant | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY | 292     | GlassfishDB.live_process.ProjectID,const   | 1    | Using where; Using index |
++------+-------------+----------------+--------+------------------------------------+---------+---------+--------------------------------------------+------+--------------------------+
++-------------------------------------------+
+| marke                                     |
++-------------------------------------------+
+| === M185-VOTG-dicht-A · sechs Laeufe ===  |
+| fall              | laeufe | profil_aufwaermlauf | profil_beste_von_fuenf | profil_alle_fuenf             | wand_aufwaermlauf | wand_beste_von_fuenf | wand_alle_fuenf               |
++-------------------+--------+---------------------+------------------------+-------------------------------+-------------------+----------------------+-------------------------------+
+| M185-VOTG-dicht-A |      6 |               2.246 |                  2.120 | 2.148,2.127,2.161,2.208,2.120 |             3.562 |                3.079 | 3.300/3.079/3.247/3.468/3.093 |
++-------------------+--------+---------------------+------------------------+-------------------------------+-------------------+----------------------+-------------------------------+
+| === M185-VOTG-dicht-B · Plan (Regel L15) ===  |
++-----------------------------------------------+
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+------------------------------------+---------+------------------------------------------+------+--------------------------------------------------------+
+| id   | select_type | table          | type   | possible_keys                                                                          | key                                | key_len | ref                                      | rows | Extra                                                  |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+------------------------------------+---------+------------------------------------------+------+--------------------------------------------------------+
+|    1 | PRIMARY     | Message        | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageLastUpdateProcessMessageIDX | MessageLastUpdateProcessMessageIDX | 5       | NULL                                     | 1937 | Using index condition; Using temporary; Using filesort |
+|    1 | PRIMARY     | live_process   | eq_ref | PRIMARY,Process_ProjectFK                                                              | PRIMARY                            | 146     | GlassfishDB.Message.ProcessID            | 1    | Using where                                            |
+|    1 | PRIMARY     | ProjectMandant | eq_ref | PRIMARY,ProjectMandant_Mandant_idx                                                     | PRIMARY                            | 292     | GlassfishDB.live_process.ProjectID,const | 1    | Using where; Using index                               |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+------------------------------------+---------+------------------------------------------+------+--------------------------------------------------------+
++-------------------------------------------+
+| marke                                     |
++-------------------------------------------+
+| === M185-VOTG-dicht-B · sechs Laeufe ===  |
+| fall              | laeufe | profil_aufwaermlauf | profil_beste_von_fuenf | profil_alle_fuenf                  | wand_aufwaermlauf | wand_beste_von_fuenf | wand_alle_fuenf                    |
++-------------------+--------+---------------------+------------------------+------------------------------------+-------------------+----------------------+------------------------------------+
+| M185-VOTG-dicht-B |      6 |              20.407 |                 19.277 | 19.826,20.265,19.277,19.771,19.685 |            21.794 |               20.825 | 21.213/21.798/20.825/21.220/21.217 |
++-------------------+--------+---------------------+------------------------+------------------------------------+-------------------+----------------------+------------------------------------+
+| === M185-VOTG-dicht-C · Plan (Regel L15) ===  |
++-----------------------------------------------+
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+------------------------------------+---------+--------------------------------------------+------+--------------------------------------------------------+
+| id   | select_type | table          | type   | possible_keys                                                                          | key                                | key_len | ref                                        | rows | Extra                                                  |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+------------------------------------+---------+--------------------------------------------+------+--------------------------------------------------------+
+|    1 | PRIMARY     | <derived2>     | ALL    | NULL                                                                                   | NULL                               | NULL    | NULL                                       | 2222 | Using temporary; Using filesort                        |
+|    2 | DERIVED     | message_rollup | range  | PRIMARY,message_rollup_prozess_idx                                                     | PRIMARY                            | 5       | NULL                                       | 286  | Using where                                            |
+|    2 | DERIVED     | live_process   | eq_ref | PRIMARY,Process_ProjectFK                                                              | PRIMARY                            | 146     | overlord_monitor.message_rollup.process_id | 1    | Using where                                            |
+|    2 | DERIVED     | ProjectMandant | eq_ref | PRIMARY,ProjectMandant_Mandant_idx                                                     | PRIMARY                            | 292     | GlassfishDB.live_process.ProjectID,const   | 1    | Using where; Using index                               |
+|    4 | UNION       | Message        | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageLastUpdateProcessMessageIDX | MessageLastUpdateProcessMessageIDX | 5       | NULL                                       | 1937 | Using index condition; Using temporary; Using filesort |
+|    4 | UNION       | live_process   | eq_ref | PRIMARY,Process_ProjectFK                                                              | PRIMARY                            | 146     | GlassfishDB.Message.ProcessID              | 1    | Using where                                            |
+|    4 | UNION       | ProjectMandant | eq_ref | PRIMARY,ProjectMandant_Mandant_idx                                                     | PRIMARY                            | 292     | GlassfishDB.live_process.ProjectID,const   | 1    | Using where; Using index                               |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+------------------------------------+---------+--------------------------------------------+------+--------------------------------------------------------+
++-------------------------------------------+
+| marke                                     |
++-------------------------------------------+
+| === M185-VOTG-dicht-C · sechs Laeufe ===  |
+| fall              | laeufe | profil_aufwaermlauf | profil_beste_von_fuenf | profil_alle_fuenf                  | wand_aufwaermlauf | wand_beste_von_fuenf | wand_alle_fuenf                    |
++-------------------+--------+---------------------+------------------------+------------------------------------+-------------------+----------------------+------------------------------------+
+| M185-VOTG-dicht-C |      6 |              23.605 |                 22.479 | 23.126,23.776,22.479,22.968,23.277 |            24.909 |               24.014 | 24.371/25.068/24.014/24.301/24.511 |
++-------------------+--------+---------------------+------------------------+------------------------------------+-------------------+----------------------+------------------------------------+
+| === IBIS typisch: Live-Bereich 2025-08-13 14:00:00 bis 2025-08-13 16:00:00 === |
+| === M185-IBIS-typisch-A · Plan (Regel L15) ===  |
++-------------------------------------------------+
++------+-------------+----------------+--------+------------------------------------+---------+---------+--------------------------------------------+------+--------------------------+
+| id   | select_type | table          | type   | possible_keys                      | key     | key_len | ref                                        | rows | Extra                    |
++------+-------------+----------------+--------+------------------------------------+---------+---------+--------------------------------------------+------+--------------------------+
+|    1 | PRIMARY     | message_rollup | range  | PRIMARY,message_rollup_prozess_idx | PRIMARY | 5       | NULL                                       | 121  | Using where              |
+|    1 | PRIMARY     | live_process   | eq_ref | PRIMARY,Process_ProjectFK          | PRIMARY | 146     | overlord_monitor.message_rollup.process_id | 1    | Using where              |
+|    1 | PRIMARY     | ProjectMandant | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY | 292     | GlassfishDB.live_process.ProjectID,const   | 1    | Using where; Using index |
++------+-------------+----------------+--------+------------------------------------+---------+---------+--------------------------------------------+------+--------------------------+
++---------------------------------------------+
+| marke                                       |
++---------------------------------------------+
+| === M185-IBIS-typisch-A · sechs Laeufe ===  |
+| fall                | laeufe | profil_aufwaermlauf | profil_beste_von_fuenf | profil_alle_fuenf             | wand_aufwaermlauf | wand_beste_von_fuenf | wand_alle_fuenf               |
++---------------------+--------+---------------------+------------------------+-------------------------------+-------------------+----------------------+-------------------------------+
+| M185-IBIS-typisch-A |      6 |               1.318 |                  1.223 | 1.229,1.238,1.257,1.223,1.253 |             2.145 |                1.946 | 2.144/2.157/2.010/2.125/1.946 |
++---------------------+--------+---------------------+------------------------+-------------------------------+-------------------+----------------------+-------------------------------+
+| === M185-IBIS-typisch-B · Plan (Regel L15) ===  |
++-------------------------------------------------+
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+------------------------------------------+------+---------------------------------------------------------------------+
+| id   | select_type | table          | type   | possible_keys                                                                          | key                  | key_len | ref                                      | rows | Extra                                                               |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+------------------------------------------+------+---------------------------------------------------------------------+
+|    1 | PRIMARY     | Message        | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageLastUpdateProcessMessageIDX | MessageLastUpdateIDX | 5       | NULL                                     | 425  | Using index condition; Using where; Using temporary; Using filesort |
+|    1 | PRIMARY     | live_process   | eq_ref | PRIMARY,Process_ProjectFK                                                              | PRIMARY              | 146     | GlassfishDB.Message.ProcessID            | 1    | Using where                                                         |
+|    1 | PRIMARY     | ProjectMandant | eq_ref | PRIMARY,ProjectMandant_Mandant_idx                                                     | PRIMARY              | 292     | GlassfishDB.live_process.ProjectID,const | 1    | Using where; Using index                                            |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+------------------------------------------+------+---------------------------------------------------------------------+
++---------------------------------------------+
+| marke                                       |
++---------------------------------------------+
+| === M185-IBIS-typisch-B · sechs Laeufe ===  |
+| fall                | laeufe | profil_aufwaermlauf | profil_beste_von_fuenf | profil_alle_fuenf             | wand_aufwaermlauf | wand_beste_von_fuenf | wand_alle_fuenf               |
++---------------------+--------+---------------------+------------------------+-------------------------------+-------------------+----------------------+-------------------------------+
+| M185-IBIS-typisch-B |      6 |               5.487 |                  4.257 | 4.386,4.378,4.272,4.257,4.373 |             6.420 |                5.088 | 5.301/5.295/5.209/5.088/5.226 |
++---------------------+--------+---------------------+------------------------+-------------------------------+-------------------+----------------------+-------------------------------+
+| === M185-IBIS-typisch-C · Plan (Regel L15) ===  |
++-------------------------------------------------+
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+--------------------------------------------+------+---------------------------------------------------------------------+
+| id   | select_type | table          | type   | possible_keys                                                                          | key                  | key_len | ref                                        | rows | Extra                                                               |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+--------------------------------------------+------+---------------------------------------------------------------------+
+|    1 | PRIMARY     | <derived2>     | ALL    | NULL                                                                                   | NULL                 | NULL    | NULL                                       | 545  | Using temporary; Using filesort                                     |
+|    2 | DERIVED     | message_rollup | range  | PRIMARY,message_rollup_prozess_idx                                                     | PRIMARY              | 5       | NULL                                       | 121  | Using where                                                         |
+|    2 | DERIVED     | live_process   | eq_ref | PRIMARY,Process_ProjectFK                                                              | PRIMARY              | 146     | overlord_monitor.message_rollup.process_id | 1    | Using where                                                         |
+|    2 | DERIVED     | ProjectMandant | eq_ref | PRIMARY,ProjectMandant_Mandant_idx                                                     | PRIMARY              | 292     | GlassfishDB.live_process.ProjectID,const   | 1    | Using where; Using index                                            |
+|    4 | UNION       | Message        | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageLastUpdateProcessMessageIDX | MessageLastUpdateIDX | 5       | NULL                                       | 425  | Using index condition; Using where; Using temporary; Using filesort |
+|    4 | UNION       | live_process   | eq_ref | PRIMARY,Process_ProjectFK                                                              | PRIMARY              | 146     | GlassfishDB.Message.ProcessID              | 1    | Using where                                                         |
+|    4 | UNION       | ProjectMandant | eq_ref | PRIMARY,ProjectMandant_Mandant_idx                                                     | PRIMARY              | 292     | GlassfishDB.live_process.ProjectID,const   | 1    | Using where; Using index                                            |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+--------------------------------------------+------+---------------------------------------------------------------------+
++---------------------------------------------+
+| marke                                       |
++---------------------------------------------+
+| === M185-IBIS-typisch-C · sechs Laeufe ===  |
+| fall                | laeufe | profil_aufwaermlauf | profil_beste_von_fuenf | profil_alle_fuenf             | wand_aufwaermlauf | wand_beste_von_fuenf | wand_alle_fuenf               |
++---------------------+--------+---------------------+------------------------+-------------------------------+-------------------+----------------------+-------------------------------+
+| M185-IBIS-typisch-C |      6 |               6.198 |                  5.700 | 5.904,5.771,5.763,5.732,5.700 |             7.262 |                6.576 | 6.800/6.616/6.831/6.812/6.576 |
++---------------------+--------+---------------------+------------------------+-------------------------------+-------------------+----------------------+-------------------------------+
+| === IBIS dicht: Live-Bereich 2024-11-29 10:00:00 bis 2024-11-29 14:00:00 === |
+| === M185-IBIS-dicht-A · Plan (Regel L15) ===  |
++-----------------------------------------------+
++------+-------------+----------------+--------+------------------------------------+---------+---------+--------------------------------------------+------+--------------------------+
+| id   | select_type | table          | type   | possible_keys                      | key     | key_len | ref                                        | rows | Extra                    |
++------+-------------+----------------+--------+------------------------------------+---------+---------+--------------------------------------------+------+--------------------------+
+|    1 | PRIMARY     | message_rollup | range  | PRIMARY,message_rollup_prozess_idx | PRIMARY | 5       | NULL                                       | 186  | Using where              |
+|    1 | PRIMARY     | live_process   | eq_ref | PRIMARY,Process_ProjectFK          | PRIMARY | 146     | overlord_monitor.message_rollup.process_id | 1    | Using where              |
+|    1 | PRIMARY     | ProjectMandant | eq_ref | PRIMARY,ProjectMandant_Mandant_idx | PRIMARY | 292     | GlassfishDB.live_process.ProjectID,const   | 1    | Using where; Using index |
++------+-------------+----------------+--------+------------------------------------+---------+---------+--------------------------------------------+------+--------------------------+
++-------------------------------------------+
+| marke                                     |
++-------------------------------------------+
+| === M185-IBIS-dicht-A · sechs Laeufe ===  |
+| fall              | laeufe | profil_aufwaermlauf | profil_beste_von_fuenf | profil_alle_fuenf             | wand_aufwaermlauf | wand_beste_von_fuenf | wand_alle_fuenf               |
++-------------------+--------+---------------------+------------------------+-------------------------------+-------------------+----------------------+-------------------------------+
+| M185-IBIS-dicht-A |      6 |               1.755 |                  1.718 | 1.773,1.754,1.733,1.718,1.732 |             2.842 |                2.757 | 2.803/2.790/2.971/2.757/2.783 |
++-------------------+--------+---------------------+------------------------+-------------------------------+-------------------+----------------------+-------------------------------+
+| === M185-IBIS-dicht-B · Plan (Regel L15) ===  |
++-----------------------------------------------+
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+------------------------------------------+------+---------------------------------------------------------------------+
+| id   | select_type | table          | type   | possible_keys                                                                          | key                  | key_len | ref                                      | rows | Extra                                                               |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+------------------------------------------+------+---------------------------------------------------------------------+
+|    1 | PRIMARY     | Message        | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageLastUpdateProcessMessageIDX | MessageLastUpdateIDX | 5       | NULL                                     | 1505 | Using index condition; Using where; Using temporary; Using filesort |
+|    1 | PRIMARY     | live_process   | eq_ref | PRIMARY,Process_ProjectFK                                                              | PRIMARY              | 146     | GlassfishDB.Message.ProcessID            | 1    | Using where                                                         |
+|    1 | PRIMARY     | ProjectMandant | eq_ref | PRIMARY,ProjectMandant_Mandant_idx                                                     | PRIMARY              | 292     | GlassfishDB.live_process.ProjectID,const | 1    | Using where; Using index                                            |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+------------------------------------------+------+---------------------------------------------------------------------+
++-------------------------------------------+
+| marke                                     |
++-------------------------------------------+
+| === M185-IBIS-dicht-B · sechs Laeufe ===  |
+| fall              | laeufe | profil_aufwaermlauf | profil_beste_von_fuenf | profil_alle_fuenf                  | wand_aufwaermlauf | wand_beste_von_fuenf | wand_alle_fuenf                    |
++-------------------+--------+---------------------+------------------------+------------------------------------+-------------------+----------------------+------------------------------------+
+| M185-IBIS-dicht-B |      6 |              18.190 |                 17.314 | 17.314,18.169,19.197,18.396,20.840 |            19.635 |               18.687 | 18.687/19.490/20.498/19.834/21.325 |
++-------------------+--------+---------------------+------------------------+------------------------------------+-------------------+----------------------+------------------------------------+
+| === M185-IBIS-dicht-C · Plan (Regel L15) ===  |
++-----------------------------------------------+
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+--------------------------------------------+------+---------------------------------------------------------------------+
+| id   | select_type | table          | type   | possible_keys                                                                          | key                  | key_len | ref                                        | rows | Extra                                                               |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+--------------------------------------------+------+---------------------------------------------------------------------+
+|    1 | PRIMARY     | <derived2>     | ALL    | NULL                                                                                   | NULL                 | NULL    | NULL                                       | 1691 | Using temporary; Using filesort                                     |
+|    2 | DERIVED     | message_rollup | range  | PRIMARY,message_rollup_prozess_idx                                                     | PRIMARY              | 5       | NULL                                       | 186  | Using where                                                         |
+|    2 | DERIVED     | live_process   | eq_ref | PRIMARY,Process_ProjectFK                                                              | PRIMARY              | 146     | overlord_monitor.message_rollup.process_id | 1    | Using where                                                         |
+|    2 | DERIVED     | ProjectMandant | eq_ref | PRIMARY,ProjectMandant_Mandant_idx                                                     | PRIMARY              | 292     | GlassfishDB.live_process.ProjectID,const   | 1    | Using where; Using index                                            |
+|    4 | UNION       | Message        | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageLastUpdateProcessMessageIDX | MessageLastUpdateIDX | 5       | NULL                                       | 1505 | Using index condition; Using where; Using temporary; Using filesort |
+|    4 | UNION       | live_process   | eq_ref | PRIMARY,Process_ProjectFK                                                              | PRIMARY              | 146     | GlassfishDB.Message.ProcessID              | 1    | Using where                                                         |
+|    4 | UNION       | ProjectMandant | eq_ref | PRIMARY,ProjectMandant_Mandant_idx                                                     | PRIMARY              | 292     | GlassfishDB.live_process.ProjectID,const   | 1    | Using where; Using index                                            |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------+---------+--------------------------------------------+------+---------------------------------------------------------------------+
++-------------------------------------------+
+| marke                                     |
++-------------------------------------------+
+| === M185-IBIS-dicht-C · sechs Laeufe ===  |
+| fall              | laeufe | profil_aufwaermlauf | profil_beste_von_fuenf | profil_alle_fuenf                  | wand_aufwaermlauf | wand_beste_von_fuenf | wand_alle_fuenf                    |
++-------------------+--------+---------------------+------------------------+------------------------------------+-------------------+----------------------+------------------------------------+
+| M185-IBIS-dicht-C |      6 |              20.844 |                 19.343 | 20.897,20.515,20.830,19.681,19.343 |            22.085 |               20.652 | 22.184/21.800/22.366/21.100/20.652 |
++-------------------+--------+---------------------+------------------------+------------------------------------+-------------------+----------------------+------------------------------------+
+| === SUTTONS typisch: Live-Bereich 2025-06-09 19:00:00 bis 2025-06-09 21:00:00 === |
+| === M185-SUTTONS-typisch-A · Plan (Regel L15) ===  |
++----------------------------------------------------+
++------+-------------+----------------+--------+------------------------------------+----------------------------+---------+--------------------------------------------+------+-------------------------------------------------+
+| id   | select_type | table          | type   | possible_keys                      | key                        | key_len | ref                                        | rows | Extra                                           |
++------+-------------+----------------+--------+------------------------------------+----------------------------+---------+--------------------------------------------+------+-------------------------------------------------+
+|    1 | PRIMARY     | ProjectMandant | ref    | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146     | const                                      | 1    | Using where; Using index                        |
+|    1 | PRIMARY     | message_rollup | range  | PRIMARY,message_rollup_prozess_idx | PRIMARY                    | 5       | NULL                                       | 43   | Using where; Using join buffer (flat, BNL join) |
+|    1 | PRIMARY     | live_process   | eq_ref | PRIMARY,Process_ProjectFK          | PRIMARY                    | 146     | overlord_monitor.message_rollup.process_id | 1    | Using where                                     |
++------+-------------+----------------+--------+------------------------------------+----------------------------+---------+--------------------------------------------+------+-------------------------------------------------+
++------------------------------------------------+
+| marke                                          |
++------------------------------------------------+
+| === M185-SUTTONS-typisch-A · sechs Laeufe ===  |
+| fall                   | laeufe | profil_aufwaermlauf | profil_beste_von_fuenf | profil_alle_fuenf             | wand_aufwaermlauf | wand_beste_von_fuenf | wand_alle_fuenf               |
++------------------------+--------+---------------------+------------------------+-------------------------------+-------------------+----------------------+-------------------------------+
+| M185-SUTTONS-typisch-A |      6 |               1.181 |                  0.859 | 0.888,0.893,0.903,0.922,0.859 |             1.856 |                1.586 | 1.647/1.586/1.676/1.630/1.629 |
++------------------------+--------+---------------------+------------------------+-------------------------------+-------------------+----------------------+-------------------------------+
+| === M185-SUTTONS-typisch-B · Plan (Regel L15) ===  |
++----------------------------------------------------+
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------------+---------+-------------------------------+------+------------------------------------------------------------------------+
+| id   | select_type | table          | type   | possible_keys                                                                          | key                        | key_len | ref                           | rows | Extra                                                                  |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------------+---------+-------------------------------+------+------------------------------------------------------------------------+
+|    1 | PRIMARY     | ProjectMandant | ref    | PRIMARY,ProjectMandant_Mandant_idx                                                     | ProjectMandant_Mandant_idx | 146     | const                         | 1    | Using where; Using index; Using temporary; Using filesort              |
+|    1 | PRIMARY     | Message        | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageLastUpdateProcessMessageIDX | MessageLastUpdateIDX       | 5       | NULL                          | 1238 | Using index condition; Using where; Using join buffer (flat, BNL join) |
+|    1 | PRIMARY     | live_process   | eq_ref | PRIMARY,Process_ProjectFK                                                              | PRIMARY                    | 146     | GlassfishDB.Message.ProcessID | 1    | Using where                                                            |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------------+---------+-------------------------------+------+------------------------------------------------------------------------+
++------------------------------------------------+
+| marke                                          |
++------------------------------------------------+
+| === M185-SUTTONS-typisch-B · sechs Laeufe ===  |
+| fall                   | laeufe | profil_aufwaermlauf | profil_beste_von_fuenf | profil_alle_fuenf                  | wand_aufwaermlauf | wand_beste_von_fuenf | wand_alle_fuenf                    |
++------------------------+--------+---------------------+------------------------+------------------------------------+-------------------+----------------------+------------------------------------+
+| M185-SUTTONS-typisch-B |      6 |              12.313 |                 10.847 | 12.224,11.991,11.910,12.056,10.847 |            13.592 |               12.110 | 13.336/13.279/13.091/13.531/12.110 |
++------------------------+--------+---------------------+------------------------+------------------------------------+-------------------+----------------------+------------------------------------+
+| === M185-SUTTONS-typisch-C · Plan (Regel L15) ===  |
++----------------------------------------------------+
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------------+---------+--------------------------------------------+------+------------------------------------------------------------------------+
+| id   | select_type | table          | type   | possible_keys                                                                          | key                        | key_len | ref                                        | rows | Extra                                                                  |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------------+---------+--------------------------------------------+------+------------------------------------------------------------------------+
+|    1 | PRIMARY     | <derived2>     | ALL    | NULL                                                                                   | NULL                       | NULL    | NULL                                       | 1280 | Using temporary; Using filesort                                        |
+|    2 | DERIVED     | ProjectMandant | ref    | PRIMARY,ProjectMandant_Mandant_idx                                                     | ProjectMandant_Mandant_idx | 146     | const                                      | 1    | Using where; Using index                                               |
+|    2 | DERIVED     | message_rollup | range  | PRIMARY,message_rollup_prozess_idx                                                     | PRIMARY                    | 5       | NULL                                       | 43   | Using where; Using join buffer (flat, BNL join)                        |
+|    2 | DERIVED     | live_process   | eq_ref | PRIMARY,Process_ProjectFK                                                              | PRIMARY                    | 146     | overlord_monitor.message_rollup.process_id | 1    | Using where                                                            |
+|    4 | UNION       | ProjectMandant | ref    | PRIMARY,ProjectMandant_Mandant_idx                                                     | ProjectMandant_Mandant_idx | 146     | const                                      | 1    | Using where; Using index; Using temporary; Using filesort              |
+|    4 | UNION       | Message        | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageLastUpdateProcessMessageIDX | MessageLastUpdateIDX       | 5       | NULL                                       | 1238 | Using index condition; Using where; Using join buffer (flat, BNL join) |
+|    4 | UNION       | live_process   | eq_ref | PRIMARY,Process_ProjectFK                                                              | PRIMARY                    | 146     | GlassfishDB.Message.ProcessID              | 1    | Using where                                                            |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------------+---------+--------------------------------------------+------+------------------------------------------------------------------------+
++------------------------------------------------+
+| marke                                          |
++------------------------------------------------+
+| === M185-SUTTONS-typisch-C · sechs Laeufe ===  |
+| fall                   | laeufe | profil_aufwaermlauf | profil_beste_von_fuenf | profil_alle_fuenf                  | wand_aufwaermlauf | wand_beste_von_fuenf | wand_alle_fuenf                    |
++------------------------+--------+---------------------+------------------------+------------------------------------+-------------------+----------------------+------------------------------------+
+| M185-SUTTONS-typisch-C |      6 |              12.009 |                 11.113 | 11.113,11.648,11.400,11.534,11.553 |            13.173 |               12.411 | 12.411/12.901/12.776/13.314/12.907 |
++------------------------+--------+---------------------+------------------------+------------------------------------+-------------------+----------------------+------------------------------------+
+| === SUTTONS dicht: Live-Bereich 2025-06-12 07:00:00 bis 2025-06-12 11:00:00 === |
+| === M185-SUTTONS-dicht-A · Plan (Regel L15) ===  |
++--------------------------------------------------+
++------+-------------+----------------+--------+------------------------------------+----------------------------+---------+--------------------------------------------+------+-------------------------------------------------+
+| id   | select_type | table          | type   | possible_keys                      | key                        | key_len | ref                                        | rows | Extra                                           |
++------+-------------+----------------+--------+------------------------------------+----------------------------+---------+--------------------------------------------+------+-------------------------------------------------+
+|    1 | PRIMARY     | ProjectMandant | ref    | PRIMARY,ProjectMandant_Mandant_idx | ProjectMandant_Mandant_idx | 146     | const                                      | 1    | Using where; Using index                        |
+|    1 | PRIMARY     | message_rollup | range  | PRIMARY,message_rollup_prozess_idx | PRIMARY                    | 5       | NULL                                       | 323  | Using where; Using join buffer (flat, BNL join) |
+|    1 | PRIMARY     | live_process   | eq_ref | PRIMARY,Process_ProjectFK          | PRIMARY                    | 146     | overlord_monitor.message_rollup.process_id | 1    | Using where                                     |
++------+-------------+----------------+--------+------------------------------------+----------------------------+---------+--------------------------------------------+------+-------------------------------------------------+
++----------------------------------------------+
+| marke                                        |
++----------------------------------------------+
+| === M185-SUTTONS-dicht-A · sechs Laeufe ===  |
+| fall                 | laeufe | profil_aufwaermlauf | profil_beste_von_fuenf | profil_alle_fuenf             | wand_aufwaermlauf | wand_beste_von_fuenf | wand_alle_fuenf               |
++----------------------+--------+---------------------+------------------------+-------------------------------+-------------------+----------------------+-------------------------------+
+| M185-SUTTONS-dicht-A |      6 |               2.228 |                  2.073 | 2.141,2.120,2.128,2.073,2.085 |             3.543 |                3.036 | 3.187/3.247/3.036/3.326/3.192 |
++----------------------+--------+---------------------+------------------------+-------------------------------+-------------------+----------------------+-------------------------------+
+| === M185-SUTTONS-dicht-B · Plan (Regel L15) ===  |
++--------------------------------------------------+
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------------+---------+-------------------------------+------+------------------------------------------------------------------------+
+| id   | select_type | table          | type   | possible_keys                                                                          | key                        | key_len | ref                           | rows | Extra                                                                  |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------------+---------+-------------------------------+------+------------------------------------------------------------------------+
+|    1 | PRIMARY     | ProjectMandant | ref    | PRIMARY,ProjectMandant_Mandant_idx                                                     | ProjectMandant_Mandant_idx | 146     | const                         | 1    | Using where; Using index; Using temporary; Using filesort              |
+|    1 | PRIMARY     | Message        | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageLastUpdateProcessMessageIDX | MessageLastUpdateIDX       | 5       | NULL                          | 1756 | Using index condition; Using where; Using join buffer (flat, BNL join) |
+|    1 | PRIMARY     | live_process   | eq_ref | PRIMARY,Process_ProjectFK                                                              | PRIMARY                    | 146     | GlassfishDB.Message.ProcessID | 1    | Using where                                                            |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------------+---------+-------------------------------+------+------------------------------------------------------------------------+
++----------------------------------------------+
+| marke                                        |
++----------------------------------------------+
+| === M185-SUTTONS-dicht-B · sechs Laeufe ===  |
+| fall                 | laeufe | profil_aufwaermlauf | profil_beste_von_fuenf | profil_alle_fuenf                  | wand_aufwaermlauf | wand_beste_von_fuenf | wand_alle_fuenf                    |
++----------------------+--------+---------------------+------------------------+------------------------------------+-------------------+----------------------+------------------------------------+
+| M185-SUTTONS-dicht-B |      6 |              22.752 |                 20.574 | 21.704,20.574,20.751,21.485,21.631 |            24.419 |               22.002 | 23.366/22.041/22.002/22.792/23.116 |
++----------------------+--------+---------------------+------------------------+------------------------------------+-------------------+----------------------+------------------------------------+
+| === M185-SUTTONS-dicht-C · Plan (Regel L15) ===  |
++--------------------------------------------------+
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------------+---------+--------------------------------------------+------+------------------------------------------------------------------------+
+| id   | select_type | table          | type   | possible_keys                                                                          | key                        | key_len | ref                                        | rows | Extra                                                                  |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------------+---------+--------------------------------------------+------+------------------------------------------------------------------------+
+|    1 | PRIMARY     | <derived2>     | ALL    | NULL                                                                                   | NULL                       | NULL    | NULL                                       | 2078 | Using temporary; Using filesort                                        |
+|    2 | DERIVED     | ProjectMandant | ref    | PRIMARY,ProjectMandant_Mandant_idx                                                     | ProjectMandant_Mandant_idx | 146     | const                                      | 1    | Using where; Using index                                               |
+|    2 | DERIVED     | message_rollup | range  | PRIMARY,message_rollup_prozess_idx                                                     | PRIMARY                    | 5       | NULL                                       | 323  | Using where; Using join buffer (flat, BNL join)                        |
+|    2 | DERIVED     | live_process   | eq_ref | PRIMARY,Process_ProjectFK                                                              | PRIMARY                    | 146     | overlord_monitor.message_rollup.process_id | 1    | Using where                                                            |
+|    4 | UNION       | ProjectMandant | ref    | PRIMARY,ProjectMandant_Mandant_idx                                                     | ProjectMandant_Mandant_idx | 146     | const                                      | 1    | Using where; Using index; Using temporary; Using filesort              |
+|    4 | UNION       | Message        | range  | ProejctIDIDX,Message_ProcessFK,MessageLastUpdateIDX,MessageLastUpdateProcessMessageIDX | MessageLastUpdateIDX       | 5       | NULL                                       | 1756 | Using index condition; Using where; Using join buffer (flat, BNL join) |
+|    4 | UNION       | live_process   | eq_ref | PRIMARY,Process_ProjectFK                                                              | PRIMARY                    | 146     | GlassfishDB.Message.ProcessID              | 1    | Using where                                                            |
++------+-------------+----------------+--------+----------------------------------------------------------------------------------------+----------------------------+---------+--------------------------------------------+------+------------------------------------------------------------------------+
++----------------------------------------------+
+| marke                                        |
++----------------------------------------------+
+| === M185-SUTTONS-dicht-C · sechs Laeufe ===  |
+| fall                 | laeufe | profil_aufwaermlauf | profil_beste_von_fuenf | profil_alle_fuenf                  | wand_aufwaermlauf | wand_beste_von_fuenf | wand_alle_fuenf                    |
++----------------------+--------+---------------------+------------------------+------------------------------------+-------------------+----------------------+------------------------------------+
+| M185-SUTTONS-dicht-C |      6 |              25.460 |                 24.471 | 24.807,25.268,24.585,27.499,24.471 |            26.662 |               25.929 | 26.155/26.633/25.929/29.039/26.076 |
++----------------------+--------+---------------------+------------------------+------------------------------------+-------------------+----------------------+------------------------------------+

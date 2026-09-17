@@ -7,6 +7,12 @@ import static org.mockito.Mockito.when;
 
 import de.kraftwerkone.overlord.monitor.common.Baumfenster;
 import de.kraftwerkone.overlord.monitor.common.Baumgliederung;
+import de.kraftwerkone.overlord.monitor.common.LiveRestEntscheidung;
+import de.kraftwerkone.overlord.monitor.common.LiveRestErgebnis;
+import de.kraftwerkone.overlord.monitor.common.LiveRestKorrektur;
+import de.kraftwerkone.overlord.monitor.common.LiveRestService;
+import de.kraftwerkone.overlord.monitor.common.LiveRestZeile;
+import de.kraftwerkone.overlord.monitor.common.LiveRestZustand;
 import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.Pflegestatus;
@@ -17,6 +23,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -60,9 +67,18 @@ class ProzessbaumServiceTest {
 
   @Mock private ProzessbaumRepository repository;
 
+  /**
+   * Der Live-Rest als Attrappe. <b>Ohne Stellung liefert er „ausgesetzt, kein Lauf"</b> — die
+   * Faelle von vor dem 17.09.2026 sehen damit dieselben Zahlen wie damals; was die Verrechnung tut,
+   * steht in {@link LiveRestVerrechnung}.
+   */
+  @Mock private LiveRestService liveRest;
+
   private ProzessbaumService service() {
+    when(liveRest.ermittle(any(), any()))
+        .thenReturn(LiveRestErgebnis.ohneKorrektur(LiveRestEntscheidung.ausgesetztOhneLauf()));
     return new ProzessbaumService(
-        repository, new MessageStatusClassifier(), Clock.fixed(JETZT, ZONE));
+        repository, new MessageStatusClassifier(), Clock.fixed(JETZT, ZONE), liveRest);
   }
 
   private void bestandMit(List<Prozessgeruestzeile> geruest, List<Prozesskennzahlzeile> zahlen) {
@@ -935,6 +951,262 @@ class ProzessbaumServiceTest {
 
       assertThat(antwort.gesamt().nachrichten()).isEqualTo(7);
       assertThat(antwort.gesamt().fehler()).isEqualTo(2);
+    }
+  }
+
+  // ─── Der Live-Rest ────────────────────────────────────────────────────────────
+
+  /**
+   * <b>Die Verrechnung des Live-Rests</b> ({@code docs/live-rest.md}) — die Korrektur kommt als
+   * gestelltes Ergebnis herein, geprueft wird, was der Dienst daraus macht: nur die Stunden im
+   * Fenster, die Einordnung ueber den Klassifizierer, kein negativer Endwert, die letzte Bewegung
+   * als Maximum, der Block in der Antwort. Alle Zeitpunkte und Zahlen erfunden (T2).
+   */
+  @Nested
+  @DisplayName("Der Live-Rest")
+  class LiveRestVerrechnung {
+
+    /** G: der Eimer des Laufs, in Wanduhrzeit — die Stunde vor der Stichtagsstunde. */
+    private static final LocalDateTime G = LocalDateTime.parse("2025-12-30T04:00:00");
+
+    private static final LocalDateTime NAECHSTE = G.plusHours(1);
+
+    private LiveRestZeile zeile(LocalDateTime stunde, String prozess, String status, long anzahl) {
+      return new LiveRestZeile(stunde, prozess, status, anzahl);
+    }
+
+    /** Ein angewandter Live-Rest ueber [G, G + 2 h) mit den gegebenen Korrekturzeilen. */
+    private void liveRestMit(List<LiveRestZeile> korrektur, Map<String, LocalDateTime> juengste) {
+      when(liveRest.ermittle(any(), any()))
+          .thenReturn(
+              new LiveRestErgebnis(
+                  LiveRestEntscheidung.angewandt(G, G.plusHours(2)),
+                  new LiveRestKorrektur(korrektur, juengste)));
+    }
+
+    private ProzessbaumService dienst() {
+      ProzessbaumService dienst = service();
+      // service() stellt die Attrappe auf „ausgesetzt"; die Faelle hier stellen sie danach um.
+      return dienst;
+    }
+
+    /**
+     * Der Fall, fuer den es die Korrektur gibt: Der Lauf sah die Nachricht als {@code RUNNING},
+     * seither ist sie {@code ERROR_TIMEOUT}. Die Nachrichtenzahl bleibt, die Fehlerzahl steigt.
+     */
+    @Test
+    @DisplayName(
+        "Ein Statuswechsel innerhalb von G laesst die Nachrichtenzahl gleich und hebt die Fehlerzahl")
+    void statuswechsel_innerhalb_von_g() {
+      ProzessbaumService dienst = dienst();
+      bestandMit(
+          List.of(gepflegt("p1", "A", "ALPHA", "EINGEHEND", WANDUHR)),
+          List.of(zahl("p1", "FINISHED", 9), zahl("p1", "RUNNING", 1)));
+      liveRestMit(
+          List.of(zeile(G, "p1", "RUNNING", -1), zeile(G, "p1", "ERROR_TIMEOUT", 1)),
+          Map.of("p1", G));
+
+      ProzessbaumResponse antwort = dienst.baum(MANDANT, null, Baumgliederung.PARTNER);
+      ProzessknotenResponse blatt =
+          prozesse(richtungen(gruppen(antwort.knoten()).getFirst()).getFirst()).getFirst();
+
+      assertThat(blatt.nachrichten()).isEqualTo(10);
+      assertThat(blatt.fehler()).isEqualTo(1);
+      assertThat(antwort.gesamt().nachrichten()).isEqualTo(10);
+      assertThat(antwort.gesamt().fehler()).isEqualTo(1);
+      assertThat(antwort.liveRest().zustand()).isEqualTo(LiveRestZustand.ANGEWANDT);
+      assertThat(antwort.liveRest().vollstaendigBis()).isNull();
+    }
+
+    /**
+     * Nur die Stunden, die im Fenster liegen: Das 48-Stunden-Fenster am Stichtag reicht bis 06:00
+     * ausschliessend; eine Zeile bei 06:00 gehoert nicht dazu, eine bei 05:00 schon.
+     */
+    @Test
+    @DisplayName("Verrechnet wird nur, was im Fenster liegt")
+    void nur_innerhalb_des_fensters() {
+      ProzessbaumService dienst = dienst();
+      bestandMit(
+          List.of(gepflegt("p1", "A", "ALPHA", "EINGEHEND", WANDUHR)),
+          List.of(zahl("p1", "FINISHED", 5)));
+      liveRestMit(
+          List.of(
+              zeile(NAECHSTE, "p1", "FINISHED", 3),
+              zeile(LocalDateTime.parse("2025-12-30T06:00:00"), "p1", "FINISHED", 100)),
+          Map.of());
+
+      ProzessbaumResponse antwort = dienst.baum(MANDANT, null, Baumgliederung.PARTNER);
+
+      assertThat(antwort.gesamt().nachrichten()).isEqualTo(8);
+    }
+
+    /** Minus und plus kommen aus zwei Lesungen; laeuft der Bestand dazwischen weg, bleibt null. */
+    @Test
+    @DisplayName("Kein negativer Endwert")
+    void kein_negativer_endwert() {
+      ProzessbaumService dienst = dienst();
+      bestandMit(
+          List.of(gepflegt("p1", "A", "ALPHA", "EINGEHEND", WANDUHR)),
+          List.of(zahl("p1", "ERROR_TIMEOUT", 2)));
+      liveRestMit(List.of(zeile(G, "p1", "ERROR_TIMEOUT", -5)), Map.of());
+
+      ProzessbaumResponse antwort = dienst.baum(MANDANT, null, Baumgliederung.PARTNER);
+      ProzessknotenResponse blatt =
+          prozesse(richtungen(gruppen(antwort.knoten()).getFirst()).getFirst()).getFirst();
+
+      assertThat(blatt.nachrichten()).isZero();
+      assertThat(blatt.fehler()).isZero();
+      assertThat(antwort.gesamt().nachrichten()).isZero();
+    }
+
+    /**
+     * Ein Prozess, den der Rollup noch nie gesehen hat und der in der laufenden Stunde Verkehr
+     * traegt: Er steht mit seinen Live-Zahlen da, seine letzte Bewegung ist die Live-Stunde, und er
+     * ist {@code BEWEGT} — nie „nie".
+     */
+    @Test
+    @DisplayName("Nur Live-Verkehr, keine Rollupzeile: Zahlen, letzte Bewegung und BEWEGT")
+    void nur_live_verkehr() {
+      ProzessbaumService dienst = dienst();
+      bestandMit(List.of(gepflegt("p1", "A", "ALPHA", "EINGEHEND", null)), List.of());
+      liveRestMit(
+          List.of(zeile(NAECHSTE, "p1", "FINISHED", 3), zeile(NAECHSTE, "p1", "ERROR_X", 1)),
+          Map.of("p1", NAECHSTE));
+
+      ProzessbaumResponse antwort = dienst.baum(MANDANT, null, Baumgliederung.PARTNER);
+      ProzessknotenResponse blatt =
+          prozesse(richtungen(gruppen(antwort.knoten()).getFirst()).getFirst()).getFirst();
+
+      assertThat(blatt.nachrichten()).isEqualTo(4);
+      assertThat(blatt.fehler()).isEqualTo(1);
+      assertThat(blatt.zustand()).isEqualTo(Prozesszustand.BEWEGT);
+      assertThat(blatt.letzteBewegung()).isEqualTo(NAECHSTE.atZone(ZONE).toInstant());
+      assertThat(antwort.gesamt().bewegt()).isEqualTo(1);
+      assertThat(antwort.gesamt().nie()).isZero();
+    }
+
+    /** Das Maximum aus E-34 und der juengsten Live-Stunde — in beide Richtungen. */
+    @Test
+    @DisplayName("Die letzte Bewegung ist das Maximum aus Rollup und Live-Stunde")
+    void letzte_bewegung_ist_das_maximum() {
+      ProzessbaumService dienst = dienst();
+      bestandMit(
+          List.of(
+              gepflegt("p1", "A", "ALPHA", "EINGEHEND", G.minusHours(5)),
+              gepflegt("p2", "B", "ALPHA", "EINGEHEND", NAECHSTE)),
+          List.of());
+      liveRestMit(List.of(), Map.of("p1", NAECHSTE, "p2", G));
+
+      ProzessbaumResponse antwort = dienst.baum(MANDANT, null, Baumgliederung.PARTNER);
+      List<ProzessknotenResponse> blaetter =
+          prozesse(richtungen(gruppen(antwort.knoten()).getFirst()).getFirst());
+
+      assertThat(blaetter.get(0).letzteBewegung()).isEqualTo(NAECHSTE.atZone(ZONE).toInstant());
+      assertThat(blaetter.get(1).letzteBewegung()).isEqualTo(NAECHSTE.atZone(ZONE).toInstant());
+    }
+
+    /**
+     * Ein stiller Prozess mit Verkehr in der laufenden Stunde ist nicht mehr still — unabhaengig
+     * vom gewaehlten Fenster (E-35).
+     */
+    @Test
+    @DisplayName(
+        "Verkehr in der laufenden Stunde macht einen stillen Prozess bewegt, in jedem Fenster")
+    void still_wird_bewegt() {
+      ProzessbaumService dienst = dienst();
+      bestandMit(
+          List.of(gepflegt("p1", "A", "ALPHA", "EINGEHEND", WANDUHR.minusMonths(4))), List.of());
+      liveRestMit(List.of(zeile(G, "p1", "FINISHED", 1)), Map.of("p1", G));
+
+      for (Rollupzeitraum zeitraum : Rollupzeitraum.values()) {
+        ProzessbaumResponse antwort =
+            dienst.baum(MANDANT, Baumfenster.paar(zeitraum), Baumgliederung.PARTNER);
+        assertThat(
+                prozesse(richtungen(gruppen(antwort.knoten()).getFirst()).getFirst())
+                    .getFirst()
+                    .zustand())
+            .as("Paar %s", zeitraum.code())
+            .isEqualTo(Prozesszustand.BEWEGT);
+        assertThat(antwort.gesamt().still()).as("Paar %s", zeitraum.code()).isZero();
+      }
+    }
+
+    /**
+     * Das freie Fenster in drei Lagen zu G: ganz davor (keine Korrektur, aber die letzte Bewegung),
+     * ueber G hinweg (nur die Stunden ab G) und ab G (alles).
+     */
+    @Test
+    @DisplayName("Freies Fenster vor G, ueber G hinweg und ab G")
+    void freies_fenster_in_drei_lagen() {
+      ProzessbaumService dienst = dienst();
+      bestandMit(
+          List.of(gepflegt("p1", "A", "ALPHA", "EINGEHEND", G.minusMonths(4))),
+          List.of(zahl("p1", "FINISHED", 10)));
+      liveRestMit(
+          List.of(zeile(G, "p1", "FINISHED", 2), zeile(NAECHSTE, "p1", "FINISHED", 3)),
+          Map.of("p1", NAECHSTE));
+
+      ProzessbaumResponse vorG =
+          dienst.baum(
+              MANDANT, Baumfenster.frei(G.minusDays(2), G.minusDays(1)), Baumgliederung.PARTNER);
+      ProzessbaumResponse ueberG =
+          dienst.baum(MANDANT, Baumfenster.frei(G.minusHours(3), NAECHSTE), Baumgliederung.PARTNER);
+      ProzessbaumResponse abG =
+          dienst.baum(MANDANT, Baumfenster.frei(G, G.plusHours(2)), Baumgliederung.PARTNER);
+
+      assertThat(vorG.gesamt().nachrichten()).as("vor G: keine Korrektur").isEqualTo(10);
+      assertThat(ueberG.gesamt().nachrichten()).as("ueber G hinweg: nur der Eimer G").isEqualTo(12);
+      assertThat(abG.gesamt().nachrichten()).as("ab G: beide Eimer").isEqualTo(15);
+      for (ProzessbaumResponse antwort : List.of(vorG, ueberG, abG)) {
+        ProzessknotenResponse blatt =
+            prozesse(richtungen(gruppen(antwort.knoten()).getFirst()).getFirst()).getFirst();
+        assertThat(blatt.zustand())
+            .as("letzte Bewegung aus dem Live-Teil")
+            .isEqualTo(Prozesszustand.BEWEGT);
+        assertThat(blatt.letzteBewegung()).isEqualTo(NAECHSTE.atZone(ZONE).toInstant());
+      }
+    }
+
+    /** Der Block in der Antwort, in allen drei Zustaenden; G in UTC. */
+    @Test
+    @DisplayName("Der Block liveRest nennt den Zustand und G nur bei ausgesetzt mit Lauf")
+    void block_in_der_antwort() {
+      ProzessbaumService dienst = dienst();
+      bestandMit(List.of(), List.of());
+
+      when(liveRest.ermittle(any(), any()))
+          .thenReturn(LiveRestErgebnis.ohneKorrektur(LiveRestEntscheidung.ausgesetztAb(G)));
+      ProzessbaumResponse ausgesetzt = dienst.baum(MANDANT, null, Baumgliederung.PARTNER);
+      assertThat(ausgesetzt.liveRest().zustand()).isEqualTo(LiveRestZustand.AUSGESETZT);
+      // Winterzeit in Europe/Berlin: 04:00 Wanduhr ist 03:00Z.
+      assertThat(ausgesetzt.liveRest().vollstaendigBis())
+          .isEqualTo(Instant.parse("2025-12-30T03:00:00Z"));
+
+      when(liveRest.ermittle(any(), any()))
+          .thenReturn(LiveRestErgebnis.ohneKorrektur(LiveRestEntscheidung.ausgesetztOhneLauf()));
+      ProzessbaumResponse ohneLauf = dienst.baum(MANDANT, null, Baumgliederung.PARTNER);
+      assertThat(ohneLauf.liveRest().zustand()).isEqualTo(LiveRestZustand.AUSGESETZT);
+      assertThat(ohneLauf.liveRest().vollstaendigBis()).isNull();
+
+      when(liveRest.ermittle(any(), any()))
+          .thenReturn(LiveRestErgebnis.ohneKorrektur(LiveRestEntscheidung.nichtNoetig()));
+      ProzessbaumResponse nichtNoetig = dienst.baum(MANDANT, null, Baumgliederung.PARTNER);
+      assertThat(nichtNoetig.liveRest().zustand()).isEqualTo(LiveRestZustand.NICHT_NOETIG);
+      assertThat(nichtNoetig.liveRest().vollstaendigBis()).isNull();
+    }
+
+    /** Ein Uhrenschlag je Anfrage: Der Live-Rest bekommt dasselbe jetzt wie das Fenster. */
+    @Test
+    @DisplayName("Der Live-Rest bekommt denselben Stichtag wie das Fenster")
+    void derselbe_stichtag() {
+      ProzessbaumService dienst = dienst();
+      bestandMit(List.of(), List.of());
+
+      dienst.baum(MANDANT, null, Baumgliederung.PARTNER);
+
+      org.mockito.Mockito.verify(liveRest)
+          .ermittle(
+              org.mockito.ArgumentMatchers.eq(MANDANT), org.mockito.ArgumentMatchers.eq(WANDUHR));
     }
   }
 }

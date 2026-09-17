@@ -3,6 +3,11 @@ package de.kraftwerkone.overlord.monitor.catalog;
 import de.kraftwerkone.overlord.monitor.common.Baumfenster;
 import de.kraftwerkone.overlord.monitor.common.Baumgliederung;
 import de.kraftwerkone.overlord.monitor.common.Katalogzuordnung;
+import de.kraftwerkone.overlord.monitor.common.LiveRestEntscheidung;
+import de.kraftwerkone.overlord.monitor.common.LiveRestErgebnis;
+import de.kraftwerkone.overlord.monitor.common.LiveRestKorrektur;
+import de.kraftwerkone.overlord.monitor.common.LiveRestService;
+import de.kraftwerkone.overlord.monitor.common.LiveRestZeile;
 import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
@@ -50,6 +55,17 @@ import org.springframework.stereotype.Service;
  * herumgereicht — an das Zeitfenster <b>und</b> an die Stilleschwelle. Zwei Schlaege waeren zwei
  * Stichtage, und ein Prozess koennte im selben Aufruf im Fenster liegen und trotzdem gegen einen
  * anderen Stichtag als still gelten.
+ *
+ * <h2>Der Live-Rest wird verrechnet <i>(seit 17.09.2026)</i></h2>
+ *
+ * <p>Die Kennzahlen kommen aus dem Rollup, und der Rollup rechnet den angebrochenen Eimer nur
+ * einmal pro Stunde. Der <b>Live-Rest</b> ({@link LiveRestService}, {@code docs/live-rest.md})
+ * liefert je {@code (stunde, process_id, message_status)} eine vorzeichenbehaftete Korrektur fuer
+ * den Bereich seit dem letzten Lauf; hier werden davon nur die Stunden verrechnet, die <b>im
+ * Fenster</b> liegen, und die Rohwerte wie alle anderen ueber den Klassifizierer eingeordnet. Kein
+ * Endwert wird negativ. Die <b>letzte Bewegung</b> ist das Maximum aus dem Wert nach E-34 und der
+ * juengsten Live-Stunde des Prozesses — unabhaengig vom Fenster (E-35): Ein Prozess mit Verkehr in
+ * der laufenden Stunde steht nie als still oder nie da.
  *
  * <h2>Die Einordnung wird gerufen, nicht nachgebaut</h2>
  *
@@ -176,14 +192,17 @@ public class ProzessbaumService {
   private final ProzessbaumRepository prozessbaumRepository;
   private final MessageStatusClassifier statusClassifier;
   private final Clock anwendungsuhr;
+  private final LiveRestService liveRestService;
 
   ProzessbaumService(
       ProzessbaumRepository prozessbaumRepository,
       MessageStatusClassifier statusClassifier,
-      Clock anwendungsuhr) {
+      Clock anwendungsuhr,
+      LiveRestService liveRestService) {
     this.prozessbaumRepository = prozessbaumRepository;
     this.statusClassifier = statusClassifier;
     this.anwendungsuhr = anwendungsuhr;
+    this.liveRestService = liveRestService;
   }
 
   /**
@@ -212,8 +231,13 @@ public class ProzessbaumService {
     Zeitfenster fenster = baumfenster.fenster(jetzt);
 
     List<Prozessgeruestzeile> geruest = prozessbaumRepository.geruest(mandant);
+    List<Prozesskennzahlzeile> kennzahlen =
+        prozessbaumRepository.kennzahlen(mandant, baumfenster.segmente(jetzt));
+    // Derselbe Uhrenschlag wie fuer das Fenster: Der Live-Bereich endet in derselben Stunde.
+    LiveRestErgebnis liveRest = liveRestService.ermittle(mandant, jetzt);
     Map<String, Kennzahl> jeProzess =
-        kennzahlenJeProzess(prozessbaumRepository.kennzahlen(mandant, baumfenster.segmente(jetzt)));
+        kennzahlenJeProzess(kennzahlen, liveRest.korrektur(), fenster);
+    Map<String, LocalDateTime> juengsteLive = liveRest.korrektur().juengsteStundeJeProzess();
     List<Gruppierung> gruppierungen = gruppierungen(gliederung);
 
     return new ProzessbaumResponse(
@@ -223,28 +247,71 @@ public class ProzessbaumService {
             Zeitpunkte.nachUtc(fenster.von(), anwendungsuhr.getZone()),
             Zeitpunkte.nachUtc(fenster.bis(), anwendungsuhr.getZone())),
         (int) STILLE_SCHWELLE.toTotalMonths(),
-        gesamt(geruest, jeProzess, jetzt),
+        liveRest(liveRest.entscheidung()),
+        gesamt(geruest, jeProzess, juengsteLive, jetzt),
         ebenen(gruppierungen),
-        knoten(geruest, gruppierungen, jeProzess, jetzt));
+        knoten(geruest, gruppierungen, jeProzess, juengsteLive, jetzt));
   }
 
   /**
-   * Verdichtet die Zeilen der Kennzahlenabfrage auf eine Zahl je Prozess.
+   * Verdichtet die Zeilen der Kennzahlenabfrage auf eine Zahl je Prozess — und verrechnet den
+   * Live-Rest, soweit er im Fenster liegt.
    *
    * <p>Aus <i>Prozess und Rohstatus</i> wird hier <i>Prozess</i>: Was Fehler ist, entscheidet der
-   * Klassifizierer am Rohwert — <b>ein Lesevorgang, zwei Zahlen</b>.
+   * Klassifizierer am Rohwert — <b>ein Lesevorgang, zwei Zahlen</b>. Die Korrekturzeilen gehen mit
+   * ihrem Vorzeichen denselben Weg; ein Statuswechsel innerhalb eines Eimers laesst so die
+   * Nachrichtenzahl gleich und aendert die Fehlerzahl.
+   *
+   * <p><b>Nur die Stunden, die im Fenster liegen</b> — {@code von} einschliessend, {@code bis}
+   * ausschliessend, wie die Eimer des Rollups. Ein Fenster, das vor G endet, bekommt damit keine
+   * Korrektur; die letzte Bewegung bekommt sie trotzdem ({@link #letzteBewegung}).
+   *
+   * <p><b>Kein negativer Endwert.</b> Minus und plus kommen aus zwei Lesungen desselben Bestands
+   * und heben sich auf; laeuft der Bestand zwischen beiden weg, wird auf null geklemmt statt eine
+   * negative Zahl anzuzeigen.
    */
-  private Map<String, Kennzahl> kennzahlenJeProzess(List<Prozesskennzahlzeile> zeilen) {
+  private Map<String, Kennzahl> kennzahlenJeProzess(
+      List<Prozesskennzahlzeile> zeilen, LiveRestKorrektur korrektur, Zeitfenster fenster) {
     Map<String, Kennzahl> jeProzess = new HashMap<>();
     for (Prozesskennzahlzeile zeile : zeilen) {
-      boolean fehler =
-          statusClassifier.einordnung(zeile.messageStatus()) == MessageStatusKind.FEHLER;
       jeProzess.merge(
-          zeile.processId(),
-          new Kennzahl(zeile.anzahl(), fehler ? zeile.anzahl() : 0),
-          Kennzahl::plus);
+          zeile.processId(), kennzahl(zeile.messageStatus(), zeile.anzahl()), Kennzahl::plus);
     }
+    for (LiveRestZeile zeile : korrektur.zeilen()) {
+      if (!zeile.stunde().isBefore(fenster.von()) && zeile.stunde().isBefore(fenster.bis())) {
+        jeProzess.merge(
+            zeile.processId(), kennzahl(zeile.messageStatus(), zeile.anzahl()), Kennzahl::plus);
+      }
+    }
+    jeProzess.replaceAll((prozess, kennzahl) -> kennzahl.geklemmt());
     return jeProzess;
+  }
+
+  private Kennzahl kennzahl(String messageStatus, long anzahl) {
+    boolean fehler = statusClassifier.einordnung(messageStatus) == MessageStatusKind.FEHLER;
+    return new Kennzahl(anzahl, fehler ? anzahl : 0);
+  }
+
+  /** Der Block {@code liveRest} der Antwort; G in UTC, nur wenn ausgesetzt mit Lauf. */
+  private LiveRestResponse liveRest(LiveRestEntscheidung entscheidung) {
+    return new LiveRestResponse(
+        entscheidung.zustand(),
+        Zeitpunkte.nachUtc(entscheidung.vollstaendigBis(), anwendungsuhr.getZone()));
+  }
+
+  /**
+   * <b>Die letzte Bewegung: das Maximum aus dem Wert nach E-34 und der juengsten Live-Stunde</b> —
+   * unabhaengig vom gewaehlten Fenster (E-35). Der Rollup kennt die laufende Stunde nur bis zum
+   * Laufzeitpunkt; was die Quelle seither zaehlt, ist die juengere Bewegung.
+   */
+  private static LocalDateTime letzteBewegung(
+      Prozessgeruestzeile zeile, Map<String, LocalDateTime> juengsteLive) {
+    LocalDateTime ausDemRollup = zeile.letzteBewegung();
+    LocalDateTime live = juengsteLive.get(zeile.processId());
+    if (live == null) {
+      return ausDemRollup;
+    }
+    return ausDemRollup == null || live.isAfter(ausDemRollup) ? live : ausDemRollup;
   }
 
   /**
@@ -306,11 +373,12 @@ public class ProzessbaumService {
       List<Prozessgeruestzeile> zeilen,
       List<Gruppierung> gruppierungen,
       Map<String, Kennzahl> jeProzess,
+      Map<String, LocalDateTime> juengsteLive,
       LocalDateTime jetzt) {
     if (gruppierungen.isEmpty()) {
       List<BaumknotenResponse> blaetter = new ArrayList<>(zeilen.size());
       for (Prozessgeruestzeile zeile : zeilen) {
-        blaetter.add(blatt(zeile, jeProzess, jetzt));
+        blaetter.add(blatt(zeile, jeProzess, juengsteLive, jetzt));
       }
       return List.copyOf(blaetter);
     }
@@ -328,7 +396,8 @@ public class ProzessbaumService {
 
     List<GruppenknotenResponse> gruppen = new ArrayList<>(geschachtelt.size());
     for (Map.Entry<String, List<Prozessgeruestzeile>> eintrag : geschachtelt.entrySet()) {
-      List<BaumknotenResponse> kinder = knoten(eintrag.getValue(), darunter, jeProzess, jetzt);
+      List<BaumknotenResponse> kinder =
+          knoten(eintrag.getValue(), darunter, jeProzess, juengsteLive, jetzt);
       gruppen.add(
           new GruppenknotenResponse(
               eintrag.getKey(),
@@ -409,16 +478,20 @@ public class ProzessbaumService {
   }
 
   private ProzessknotenResponse blatt(
-      Prozessgeruestzeile zeile, Map<String, Kennzahl> jeProzess, LocalDateTime jetzt) {
+      Prozessgeruestzeile zeile,
+      Map<String, Kennzahl> jeProzess,
+      Map<String, LocalDateTime> juengsteLive,
+      LocalDateTime jetzt) {
     Kennzahl kennzahl = jeProzess.getOrDefault(zeile.processId(), Kennzahl.LEER);
+    LocalDateTime letzteBewegung = letzteBewegung(zeile, juengsteLive);
     return new ProzessknotenResponse(
         zeile.processId(),
         zeile.processName(),
         zeile.processId(),
         kennzahl.nachrichten(),
         kennzahl.fehler(),
-        Zeitpunkte.nachUtc(zeile.letzteBewegung(), anwendungsuhr.getZone()),
-        zustand(zeile.letzteBewegung(), jetzt));
+        Zeitpunkte.nachUtc(letzteBewegung, anwendungsuhr.getZone()),
+        zustand(letzteBewegung, jetzt));
   }
 
   /**
@@ -443,14 +516,17 @@ public class ProzessbaumService {
   }
 
   private BaumsummeResponse gesamt(
-      List<Prozessgeruestzeile> geruest, Map<String, Kennzahl> jeProzess, LocalDateTime jetzt) {
+      List<Prozessgeruestzeile> geruest,
+      Map<String, Kennzahl> jeProzess,
+      Map<String, LocalDateTime> juengsteLive,
+      LocalDateTime jetzt) {
     int bewegt = 0;
     int still = 0;
     int nie = 0;
     long nachrichten = 0;
     long fehler = 0;
     for (Prozessgeruestzeile zeile : geruest) {
-      switch (zustand(zeile.letzteBewegung(), jetzt)) {
+      switch (zustand(letzteBewegung(zeile, juengsteLive), jetzt)) {
         case BEWEGT -> bewegt++;
         case STILL -> still++;
         case NIE -> nie++;
@@ -471,6 +547,11 @@ public class ProzessbaumService {
 
     Kennzahl plus(Kennzahl weitere) {
       return new Kennzahl(nachrichten + weitere.nachrichten, fehler + weitere.fehler);
+    }
+
+    /** Kein negativer Endwert — beide Zahlen einzeln auf null geklemmt. */
+    Kennzahl geklemmt() {
+      return new Kennzahl(Math.max(0, nachrichten), Math.max(0, fehler));
     }
   }
 }

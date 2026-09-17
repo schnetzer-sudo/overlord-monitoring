@@ -1,0 +1,28 @@
+# M185 — der Live-Rest am gebauten Endpunkt (17.09.2026)
+#
+# Erzeugt von MessungM185DbIT (backend/src/test/java/.../catalog/MessungM185DbIT.java),
+# Profil dev, Anwendungsuhr und Wasserstand je Fall gesetzt (TestBean), Testkopie 192.168.11.148.
+# Je Fall: Aufwaermlauf, dann fuenf Laeufe; "best" ist die beste von fuenf, "laeufe" alle fuenf.
+# endpunkt = HTTP-Umlauf durch den gebauten Endpunkt (Sitzung, Dienst, Jackson) im Testclient;
+# dienst   = ProzessbaumService.baum im selben Prozess (Geruest, Kennzahlen, Wasserstand, die zwei
+#            Live-Lesungen, Verrechnung, Zusammensetzen).
+# g = der Eimer des letzten Laufs; live_eimer = Eimer im Live-Bereich; rollupzeilen/quellzeilen =
+# Zeilen der beiden Live-Lesungen (nicht gemessen, nur gezaehlt).
+# Die Zeilen unten sind unveraendert aus der Testausgabe uebernommen, nicht abgetippt.
+M185 | mandant | art     | paar | g                | live_eimer | rollupzeilen | quellzeilen | endpunkt_best_ms | endpunkt_laeufe_ms | dienst_best_ms | dienst_laeufe_ms | rumpf_bytes | nachrichten
+M185 | NEXANS  | typisch | 48H  | 2025-11-09T15:00 |          2 |            3 |           3 |           83.862 | 97.4/90.7/85.6/132.5/83.9 |         45.249 | 45.7/46.4/46.9/46.6/45.2 |      203309 | 16464
+M185 | NEXANS  | typisch | 12M  | 2025-11-09T15:00 |          2 |            3 |           3 |          141.574 | 152.1/144.2/141.8/141.6/148.2 |        109.857 | 116.2/112.5/111.4/109.9/111.2 |      205183 | 2282520
+M185 | NEXANS  | dicht   | 48H  | 2024-10-09T18:00 |          4 |           37 |          37 |          336.990 | 342.1/344.8/342.8/337.0/343.9 |        312.571 | 313.5/312.6/315.4/318.1/335.6 |      203528 | 33148
+M185 | NEXANS  | dicht   | 12M  | 2024-10-09T18:00 |          4 |           37 |          37 |          324.843 | 335.4/332.2/338.0/333.3/324.8 |        296.689 | 302.8/314.9/301.1/296.7/301.1 |      204247 | 222049
+M185 | VOTG    | typisch | 48H  | 2025-06-22T01:00 |          2 |           12 |          12 |           55.039 | 58.6/58.4/55.7/55.0/57.3 |         32.532 | 33.2/33.4/34.3/33.1/32.5 |      102916 | 656
+M185 | VOTG    | typisch | 12M  | 2025-06-22T01:00 |          2 |           12 |          12 |           76.743 | 78.2/77.5/78.1/76.7/82.3 |         54.498 | 54.5/55.3/55.3/54.7/55.3 |      103023 | 93564
+M185 | VOTG    | dicht   | 48H  | 2025-06-26T07:00 |          4 |           42 |          42 |           69.799 | 69.8/70.2/98.4/70.9/71.2 |         50.134 | 53.1/51.1/50.1/52.5/51.4 |      102925 | 870
+M185 | VOTG    | dicht   | 12M  | 2025-06-26T07:00 |          4 |           42 |          42 |           88.319 | 91.4/91.1/88.7/88.3/89.1 |         69.892 | 71.6/72.5/73.1/71.7/69.9 |      103023 | 93564
+M185 | IBIS    | typisch | 48H  | 2025-08-13T14:00 |          2 |           12 |          12 |           50.084 | 53.3/52.8/50.1/52.7/51.5 |         30.057 | 31.7/30.1/30.8/30.4/30.2 |       61140 | 435
+M185 | IBIS    | typisch | 12M  | 2025-08-13T14:00 |          2 |           12 |          12 |           81.604 | 83.8/81.6/84.9/85.7/85.4 |         62.408 | 63.1/66.5/62.4/64.2/62.8 |       61547 | 56036
+M185 | IBIS    | dicht   | 48H  | 2024-11-29T10:00 |          4 |           61 |          61 |           61.397 | 62.6/62.6/63.2/61.4/64.9 |         41.869 | 44.5/43.3/43.2/42.5/41.9 |       61161 | 799
+M185 | IBIS    | dicht   | 12M  | 2024-11-29T10:00 |          4 |           61 |          61 |           61.136 | 79.0/70.6/61.1/70.1/66.6 |         38.916 | 41.3/38.9/42.5/41.7/39.9 |       61352 | 12311
+M185 | SUTTONS | typisch | 48H  | 2025-06-09T19:00 |          2 |           14 |          14 |           42.156 | 42.4/43.0/43.8/44.4/42.2 |         24.931 | 26.2/24.9/25.6/25.4/24.9 |        3982 | 1360
+M185 | SUTTONS | typisch | 12M  | 2025-06-09T19:00 |          2 |           14 |          14 |           62.830 | 62.8/64.4/64.3/64.3/64.4 |         46.435 | 48.0/46.4/47.3/47.1/47.8 |        4016 | 67686
+M185 | SUTTONS | dicht   | 48H  | 2025-06-12T07:00 |          4 |           51 |          51 |           69.116 | 69.9/69.6/71.7/69.1/70.2 |         53.114 | 53.1/53.7/54.2/54.3/54.5 |        3986 | 1410
+M185 | SUTTONS | dicht   | 12M  | 2025-06-12T07:00 |          4 |           51 |          51 |           75.473 | 77.6/75.5/76.8/75.6/77.3 |         59.590 | 61.6/61.3/59.7/61.0/59.6 |        4016 | 67686

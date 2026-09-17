@@ -55,20 +55,20 @@ public record LiveRestEntscheidung(
   }
 
   /** Ohne Lauf: ausgesetzt, ohne Zeitangabe. */
-  static LiveRestEntscheidung ausgesetztOhneLauf() {
+  public static LiveRestEntscheidung ausgesetztOhneLauf() {
     return new LiveRestEntscheidung(LiveRestZustand.AUSGESETZT, null, null, null);
   }
 
   /** Mit Lauf, aber zu lange her: ausgesetzt, vollstaendig bis {@code g}. */
-  static LiveRestEntscheidung ausgesetztAb(LocalDateTime g) {
+  public static LiveRestEntscheidung ausgesetztAb(LocalDateTime g) {
     return new LiveRestEntscheidung(LiveRestZustand.AUSGESETZT, g, null, null);
   }
 
-  static LiveRestEntscheidung nichtNoetig() {
+  public static LiveRestEntscheidung nichtNoetig() {
     return new LiveRestEntscheidung(LiveRestZustand.NICHT_NOETIG, null, null, null);
   }
 
-  static LiveRestEntscheidung angewandt(LocalDateTime g, LocalDateTime liveBis) {
+  public static LiveRestEntscheidung angewandt(LocalDateTime g, LocalDateTime liveBis) {
     return new LiveRestEntscheidung(LiveRestZustand.ANGEWANDT, null, g, liveBis);
   }
 

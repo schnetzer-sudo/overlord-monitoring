@@ -1529,6 +1529,39 @@ Prozent der Datenbank; dort entscheidet die Bytegröße.
    >
    > **Die Zählung bleibt damit bei zwei, und der Satz oben gilt unverändert:** Wer eine dritte
    > Kennzahl live rechnen will, trägt sie hier ein, begründet sie und misst sie.
+
+   > ### Die dritte benannte Ausnahme: der Live-Rest der laufenden Stunde *(17.09.2026, [`live-rest.md`](live-rest.md))*
+   >
+   > **Der Satz oben ist eingelöst: eingetragen, begründet, gemessen.** Der Prozessbaum — und mit
+   > Teil B das Dashboard — zählt den Verkehr **seit dem letzten Rollup-Lauf** live aus `Message`:
+   > je Stundeneimer, Prozess und Rohstatus, mit Mandantenkette, über höchstens vier Eimer, und
+   > zieht davon ab, was `message_rollup` über denselben Bereich schon weiß.
+   >
+   > **Der Grund ist wieder ein anderer, und das ist der Punkt.** Bei *Überfällig* hing die Zahl an
+   > einer **Frist**, bei *Läuft* und *Wartend* an einem **flüchtigen Status**. Hier hängt sie am
+   > **Takt des Laufs**: Der Delta-Lauf rechnet den angebrochenen Eimer einmal pro Stunde, die
+   > Übertragungsliste daneben liest dasselbe Fenster live — und kurz vor dem nächsten Lauf
+   > fehlt im Baum bis zu eine Stunde Verkehr. Das ist kein Genauigkeitsproblem des Rollups, sondern
+   > die Lücke zwischen zwei Läufen; ein kürzerer Takt verkleinerte sie nur (entschieden am
+   > 16.09.2026: Live-Rest statt kürzerem Takt).
+   >
+   > **Gemessen — M185, 17.09.2026** ([`live-rest.md`](live-rest.md) §8), am gebauten Endpunkt, ein
+   > Aufwärmlauf und dann die beste von fünf, Uhr und Wasserstand gesetzt:
+   >
+   > | Fall | `NEXANS` | `VOTG` | `IBIS` | `SUTTONS` |
+   > |---|---:|---:|---:|---:|
+   > | typische Stunde, `48H` / `12M` | 83,9 / **141,6 ms** | 55,0 / 76,7 ms | 50,1 / 81,6 ms | 42,2 / 62,8 ms |
+   > | dichtester Vierstundenbereich, `48H` / `12M` | **337,0** / 324,8 ms | 69,8 / 88,3 ms | 61,4 / 61,1 ms | 69,1 / 75,5 ms |
+   >
+   > Das Statement über `Message` steigt über den Zeitindex ein (`range` über `MessageLastUpdateIDX`,
+   > wie der Rollup-Job in M88) und liest keine Tabelle voll; im dichtesten Bereich des größten
+   > Mandanten kostet es allein 265,7 ms für 18.715 Nachrichten. **Vorregistriert waren 150 ms für die
+   > typische Stunde und 500 ms für den dichtesten Bereich; beide halten.** Der Bereich ist auf
+   > höchstens vier Stundeneimer begrenzt (drei Stunden zwischen dem Eimer des Laufs und jetzt,
+   > darüber wird ausgesetzt und die Oberfläche sagt es); die Grenze ist eine Konstante mit Begründung.
+   >
+   > **Die Zählung steht damit bei drei, und der Satz gilt weiter — für eine vierte.** Zwei Verbraucher:
+   > der Prozessbaum seit dem 17.09.2026, das Dashboard mit Teil B.
 3. **Keine `OFFSET`-Paginierung.** Cursor-basiert über `(MessageLastUpdate, MessageID)`.
 4. **`MessageProperty` nur über `MessageID`.** Nie filtern, gruppieren oder sortieren über den Wert.
 

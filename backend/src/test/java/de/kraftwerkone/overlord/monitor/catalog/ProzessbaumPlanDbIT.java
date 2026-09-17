@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import de.kraftwerkone.overlord.monitor.common.Baumfenster;
 import de.kraftwerkone.overlord.monitor.common.Baumfenster.Segment;
+import de.kraftwerkone.overlord.monitor.common.LiveRestRepository;
 import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
 import java.time.LocalDateTime;
@@ -21,6 +22,7 @@ import org.jooq.tools.jdbc.MockDataProvider;
 import org.jooq.tools.jdbc.MockResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,6 +82,17 @@ class ProzessbaumPlanDbIT {
   private final List<String> gerendert = new ArrayList<>();
   private ProzessbaumRepository attrappe;
 
+  /** Die Klasse des Live-Rests an derselben Attrappe — ihre zwei Statements haben eigene Plaene. */
+  private LiveRestRepository liveAttrappe;
+
+  /**
+   * Der Live-Bereich fuer die Plaene: drei Eimer bis zum Anker, im dichten Bestand — G = 02:00,
+   * Ende 05:00. Derselbe Bereich wie in der Summenprobe ({@code ProzessbaumLiveRestDbIT}).
+   */
+  private static final LocalDateTime LIVE_VON = LocalDateTime.parse("2025-12-30T02:00");
+
+  private static final LocalDateTime LIVE_BIS = LocalDateTime.parse("2025-12-30T05:00");
+
   /** Eine Zeile aus {@code EXPLAIN} — nur die Spalten, die eine Aussage tragen. */
   private record Plan(String tabelle, String zugriff, String index, String extra) {}
 
@@ -92,12 +105,27 @@ class ProzessbaumPlanDbIT {
           DSLContext leer = DSL.using(SQLDialect.MARIADB);
           return new MockResult[] {new MockResult(0, leer.newResult())};
         };
-    attrappe =
-        new ProzessbaumRepository(
-            DSL.using(
-                new MockConnection(mock),
-                SQLDialect.MARIADB,
-                new Settings().withStatementType(StatementType.STATIC_STATEMENT)));
+    DSLContext kontext =
+        DSL.using(
+            new MockConnection(mock),
+            SQLDialect.MARIADB,
+            new Settings().withStatementType(StatementType.STATIC_STATEMENT));
+    attrappe = new ProzessbaumRepository(kontext);
+    liveAttrappe = new LiveRestRepository(kontext);
+  }
+
+  private String liveQuelleSql(String mandant) {
+    gerendert.clear();
+    liveAttrappe.ausDerQuelle(new MandantContext(mandant), LIVE_VON, LIVE_BIS);
+    assertThat(gerendert).hasSize(1);
+    return gerendert.getFirst();
+  }
+
+  private String liveRollupSql(String mandant) {
+    gerendert.clear();
+    liveAttrappe.ausDemRollup(new MandantContext(mandant), LIVE_VON, LIVE_BIS);
+    assertThat(gerendert).hasSize(1);
+    return gerendert.getFirst();
   }
 
   private String geruestSql(String mandant) {
@@ -309,12 +337,14 @@ class ProzessbaumPlanDbIT {
   }
 
   /**
-   * <b>Regel L2, im Plan.</b> Keine Abfrage dieser Ansicht fasst {@code Message} an — die eine
-   * benannte Ausnahme des Projekts ist die Ueberfaelligkeitskachel des Dashboards, und sie ist
-   * ausdruecklich nicht hierher uebernommen worden ({@code docs/process-view.md} §5).
+   * <b>Regel L2, im Plan.</b> Geruest und Kennzahlen fassen {@code Message} nicht an. <b>Seit dem
+   * 17.09.2026 liest der Live-Teil die Quelle</b> — als dritte benannte Ausnahme von Regel L2
+   * ({@code docs/live-rest.md}); sein Plan steht in {@link LiveTeil}, und nirgends sonst darf
+   * {@code Message} auftauchen.
    */
   @Test
-  @DisplayName("Kein Plan dieser Ansicht enthaelt Message")
+  @DisplayName(
+      "Weder Geruest noch Kennzahlen enthalten Message — allein der Live-Teil liest die Quelle")
   void kein_plan_enthaelt_message() {
     for (String mandant : MANDANTEN) {
       assertThat(plan(geruestSql(mandant)))
@@ -402,6 +432,75 @@ class ProzessbaumPlanDbIT {
         assertThat(plan)
             .as("%s: Regel L2", marke)
             .noneMatch(zeile -> zeile.tabelle().equalsIgnoreCase("Message"));
+      }
+    }
+  }
+
+  // ─── Der Live-Teil (17.09.2026) ───────────────────────────────────────────────
+
+  /**
+   * <b>Der Live-Teil steigt ueber einen Index auf {@code MessageLastUpdate} ein und liest keine
+   * Tabelle voll</b> — die Zusicherung aus dem Auftrag, im Plan.
+   *
+   * <p>Was hier absichtlich nicht festgeschrieben wird: welcher der beiden Zeitindizes ({@code
+   * MessageLastUpdateIDX} oder {@code MessageLastUpdateProcessMessageIDX}) — das entscheidet die
+   * Bereichsschaetzung ({@code docs/rollup.md} §7, M92) —, und die Reihenfolge der Tabellen.
+   */
+  @Nested
+  @DisplayName("Der Live-Teil")
+  class LiveTeil {
+
+    private static final List<String> ZEITINDIZES =
+        List.of("MessageLastUpdateIDX", "MessageLastUpdateProcessMessageIDX");
+
+    @Test
+    @DisplayName("Die Zaehlung aus Message steigt ueber einen Index auf MessageLastUpdate ein")
+    void quelle_ueber_den_zeitindex() {
+      for (String mandant : MANDANTEN) {
+        String marke = "Live/Quelle/" + mandant;
+        List<Plan> plan = plan(liveQuelleSql(mandant));
+        Plan message = zeileFuer(plan, "Message", marke);
+
+        assertThat(message.zugriff()).as("%s: Zugriffsart auf Message", marke).isEqualTo("range");
+        assertThat(message.index()).as("%s: Treiberindex auf Message", marke).isIn(ZEITINDIZES);
+        assertThat(plan)
+            .as("%s: keine Tabelle wird voll gelesen", marke)
+            .noneMatch(zeile -> zeile.zugriff().equalsIgnoreCase("ALL"));
+      }
+    }
+
+    @Test
+    @DisplayName("Die Rollupzeilen des Live-Bereichs kommen ueber einen Index, nie als Durchlauf")
+    void rollup_ueber_einen_index() {
+      for (String mandant : MANDANTEN) {
+        String marke = "Live/Rollup/" + mandant;
+        List<Plan> plan = plan(liveRollupSql(mandant));
+        Plan rollup = zeileFuer(plan, "message_rollup", marke);
+
+        assertThat(rollup.index())
+            .as("%s: Treiberindex auf message_rollup", marke)
+            .isIn("PRIMARY", PROZESSINDEX);
+        assertThat(rollup.zugriff()).as("%s: Zugriffsart", marke).isIn("range", "ref");
+        assertThat(plan)
+            .as("%s: keine Tabelle wird voll gelesen", marke)
+            .noneMatch(zeile -> zeile.zugriff().equalsIgnoreCase("ALL"));
+      }
+    }
+
+    @Test
+    @DisplayName("Die Mandantenkette des Live-Teils laeuft nie als Durchlauf")
+    void kette_nie_als_durchlauf() {
+      for (String mandant : MANDANTEN) {
+        for (String sql : List.of(liveQuelleSql(mandant), liveRollupSql(mandant))) {
+          String marke = "Live/" + mandant;
+          List<Plan> plan = plan(sql);
+          assertThat(zeileFuer(plan, "live_process", marke).zugriff())
+              .as("%s: Process in der Kette", marke)
+              .isIn("eq_ref", "ref", "const");
+          assertThat(zeileFuer(plan, "ProjectMandant", marke).zugriff())
+              .as("%s: ProjectMandant in der Kette", marke)
+              .isIn("eq_ref", "ref", "const");
+        }
       }
     }
   }

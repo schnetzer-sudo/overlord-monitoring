@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import de.kraftwerkone.overlord.monitor.common.Baumfenster;
 import de.kraftwerkone.overlord.monitor.common.Baumgliederung;
+import de.kraftwerkone.overlord.monitor.common.LiveRestRepository;
+import de.kraftwerkone.overlord.monitor.common.LiveRestZeile;
 import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
 import de.kraftwerkone.overlord.monitor.security.Rolle;
@@ -123,6 +125,13 @@ class ProzessbaumIsolationDbIT extends SicherheitsTestbasis {
    * erreichbar.
    */
   @Autowired private ProzessbaumRepository prozessbaumRepository;
+
+  /**
+   * Die dritte Mandantenkette <i>(seit 17.09.2026)</i>: Der Live-Rest liest {@code message_rollup}
+   * und {@code Message} im Live-Bereich, und beides erreicht den Rumpf nur ueber die Blaetter des
+   * Geruests — derselbe Befund wie bei den Kennzahlen, deshalb dieselbe Pruefung am Repository.
+   */
+  @Autowired private LiveRestRepository liveRestRepository;
 
   /** Die Anwendungsuhr (Regel Z1) — im Profil {@code dev} die zurueckversetzte. */
   @Autowired private Clock anwendungsuhr;
@@ -285,6 +294,57 @@ class ProzessbaumIsolationDbIT extends SicherheitsTestbasis {
         .as("Ohne eigene Zeilen bewiese die Probe nichts")
         .isNotEmpty()
         .doesNotContainAnyElementsOf(fremdeProzesse);
+  }
+
+  /**
+   * <b>Die dritte Mandantenkette, dort geprueft, wo sie steht</b> <i>(17.09.2026)</i>: Die beiden
+   * Lesungen des Live-Rests — die Rollupzeilen des Live-Bereichs und die Zaehlung aus {@code
+   * Message} — tragen je eine eigene Kette, und beide sind ueber den Rumpf aus demselben Grund
+   * nicht pruefbar wie die Kennzahlen: Der Dienst haengt sie ueber die {@code ProcessID} an die
+   * Blaetter des mandantengefilterten Geruests, eine fremde Zeile faellt lautlos heraus.
+   *
+   * <p>Der Bereich liegt im dichten Bestand vor dem Anker; beide Mandanten tragen dort Verkehr.
+   * <b>Regel T2:</b> keine Zahl, nur „nicht leer" und „keine fremde Kennung".
+   */
+  @Test
+  @DisplayName("Die beiden Live-Lesungen liefern keine Zeile eines fremden Mandanten")
+  void die_live_lesung_liefert_keine_fremde_zeile() {
+    List<String> fremdeProzesse =
+        prozessbaumRepository.geruest(new MandantContext(MANDANT_SUTTONS)).stream()
+            .map(Prozessgeruestzeile::processId)
+            .toList();
+    LocalDateTime von = LocalDateTime.parse("2025-12-29T20:00");
+    LocalDateTime bis = LocalDateTime.parse("2025-12-30T05:00");
+
+    List<String> ausDemRollup =
+        liveRestRepository.ausDemRollup(new MandantContext(MANDANT_NEXANS), von, bis).stream()
+            .map(LiveRestZeile::processId)
+            .toList();
+    List<String> ausDerQuelle =
+        liveRestRepository.ausDerQuelle(new MandantContext(MANDANT_NEXANS), von, bis).stream()
+            .map(LiveRestZeile::processId)
+            .toList();
+
+    assertThat(fremdeProzesse).as("Ohne fremde Prozesse bewiese die Probe nichts").isNotEmpty();
+    assertThat(ausDemRollup)
+        .as("Rollup im Live-Bereich: ohne eigene Zeilen bewiese die Probe nichts")
+        .isNotEmpty()
+        .doesNotContainAnyElementsOf(fremdeProzesse);
+    assertThat(ausDerQuelle)
+        .as("Message im Live-Bereich: ohne eigene Zeilen bewiese die Probe nichts")
+        .isNotEmpty()
+        .doesNotContainAnyElementsOf(fremdeProzesse);
+  }
+
+  /** Der Block steht in jeder Antwort, mit einem der drei Zustaende — kein vierter, kein Fehlen. */
+  @Test
+  @DisplayName("Der Block liveRest steht in der Antwort")
+  void der_block_live_rest_steht_in_der_antwort() throws Exception {
+    Antwort antwort = aufNexans.hole(PFAD);
+
+    assertThat(antwort.<String>json("$.liveRest.zustand"))
+        .isIn("ANGEWANDT", "NICHT_NOETIG", "AUSGESETZT");
+    assertThat(antwort.hatFeld("$.liveRest")).isTrue();
   }
 
   /**

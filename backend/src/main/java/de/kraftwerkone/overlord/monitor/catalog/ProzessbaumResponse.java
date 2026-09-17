@@ -40,6 +40,10 @@ import java.util.List;
  *     Prozesszustand#STILL} gilt. <b>Die Zahl steht in der Antwort und nicht nur im Code</b>: Die
  *     Oberflaeche muss „seit ueber drei Monaten" formulieren koennen, ohne die Drei selbst zu
  *     kennen — sonst stuende dieselbe fachliche Festlegung an zwei Orten und driftete
+ * @param liveRest ob der Verkehr seit dem letzten Rollup-Lauf in den Zahlen steckt <i>(seit
+ *     17.09.2026, {@code docs/live-rest.md})</i>: {@code ANGEWANDT}, {@code NICHT_NOETIG} oder
+ *     {@code AUSGESETZT} — nur im letzten Fall sagt die Oberflaeche etwas, und {@code
+ *     vollstaendigBis} traegt dann G, wenn es einen Lauf gab
  * @param gesamt die Kopfzahlen ueber den ganzen Baum — in beiden Gliederungen dieselben
  * @param ebenen die Namen der Ebenen, von aussen nach innen; die letzte ist immer {@code PROZESS}
  * @param knoten die oberste Ebene, sortiert
@@ -49,6 +53,7 @@ public record ProzessbaumResponse(
     Baumgliederung gliederung,
     ZeitfensterResponse fenster,
     int stilleSchwelleMonate,
+    LiveRestResponse liveRest,
     BaumsummeResponse gesamt,
     List<Baumebene> ebenen,
     List<BaumknotenResponse> knoten) {}

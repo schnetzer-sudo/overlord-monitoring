@@ -1231,7 +1231,7 @@ nicht; der Weg „neues Konto meldet sich an und ändert sein Passwort" gehört 
 > und wird durch Top‑10 nicht berührt** — „nicht zugeordnet" ist keine Rangposition und fällt nie
 > in den „Rest". Bei `SUTTONS` und `VOTG` ist es heute die **einzige** Zeile der Verteilung, 100 %.
 
-> ### **10e** — der Live-Rest der laufenden Stunde *(begonnen am 17.09.2026, Teil A angehalten)*
+> ### **10e** — der Live-Rest der laufenden Stunde *(Teil A gebaut am 17.09.2026)*
 >
 > **Der Anlass:** Der Baum liest die Rollup-Ebene seines Fensters samt angebrochenem Eimer, die
 > Übertragungsliste dasselbe Fenster live aus `Message` (E‑50) — kurz vor dem nächsten Delta-Lauf
@@ -1240,7 +1240,7 @@ nicht; der Weg „neues Konto meldet sich an und ändert sein Passwort" gehört 
 >
 > | Teil | Inhalt | Stand |
 > |---|---|---|
-> | **Teil A** | der Baustein in `common` und der Prozessbaum | **angehalten am 17.09.2026** ([`live-rest.md`](live-rest.md)): Entscheidung, Verrechnung, Wasserstand und Stundenbildung sind in `common` gebaut und grün; die mandantengefilterte Live-Lesung lässt `PaketstrukturTest` in `common` nicht zu (`common` kennt `security` nicht, dort liegt der `MandantContext`). Drei Wege in §7 dort, Empfehlung: `MandantContext` nach `common` |
+> | **Teil A** | der Baustein in `common` und der Prozessbaum | **gebaut am 17.09.2026** ([`live-rest.md`](live-rest.md)). Am Vormittag vor der mandantengefilterten Live-Lesung angehalten — `common` kannte `security` nicht, dort lag der `MandantContext` —, am selben Tag mit **Weg 1** entschieden (`MandantContext` nach `common`, E‑183) und fertig gebaut: Baustein, Prozessbaum, Tests, **M185** (beide Schranken halten: 141,6 ms typisch, 337,0 ms dicht) und der Hinweis in der Oberfläche. **Erledigt erst, wenn Lukas die Aufnahmen gesehen hat** — lokal ist der Zustand `NICHT_NOETIG`, der Hinweis erscheint dort nicht |
 > | **Teil B** | das Dashboard ruft denselben Baustein | offen, nach Teil A |
 >
 > **Bezeichnung `10e` per `grep` frei** (17.09.2026, `docs/` und beide nicht gemergten Zweige).

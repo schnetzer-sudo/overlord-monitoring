@@ -8,6 +8,7 @@ Entstanden in zwei Schritten am selben Tag, dem 02.09.2026:
 | **10c‑2** | „Schritt 10c‑2: Prozessansicht, Oberfläche", Stand 02.09.2026 | §15 bis §20 |
 | **10c‑4b** | „Prozessansicht — freies Zeitfenster, Bau", Stand 07.09.2026 | §37 bis §44 (auf §30 bis §36, der Messrunde 10c‑4a) |
 | **Projektgliederung** | „Zweite Gliederung des Prozessbaums (Projekt statt Partner)", Stand 15.09.2026 | §48 |
+| **Live-Rest, Teil A** | „Live-Rest der laufenden Stunde, Teil A (Baustein und Prozessbaum)", Stand 17.09.2026 | §49 (der Baustein selbst in [`live-rest.md`](live-rest.md)) |
 
 **Der erste Teil war ausdrücklich ohne Oberfläche**, und der Grund steht in §9: Wie groß der Baum je
 Mandant tatsächlich ist, entscheidet über Vorklappen, Ladeverhalten und Virtualisierung. Der zweite
@@ -297,6 +298,17 @@ warum nichts ankommt ([`prozessauswahl.md`](prozessauswahl.md) §3).
 **Die Summen stehen auf jeder Ebene.** Der Aufrufer soll nichts zusammenrechnen müssen (Richtlinie
 §5.1).
 
+> ### Korrektur vom 17.09.2026 — die Quelle der Kennzahlen hat einen Live-Rest ([`live-rest.md`](live-rest.md))
+>
+> **Die Tabelle oben bleibt stehen; was gilt:** *Nachrichten* und *Fehler* kommen weiter aus der
+> Rollup-Ebene des Paares — **plus dem Live-Rest** der laufenden Stunde, wenn der Baustein ihn
+> anwendet: Für den Bereich seit dem letzten Rollup-Lauf (höchstens vier Eimer) werden die
+> Rollupzeilen abgezogen und die Zählung aus `Message` dazugerechnet, je `(stunde, process_id,
+> message_status)`, davon nur die Stunden im Fenster. Was Fehler ist, entscheidet weiter der
+> Klassifizierer beim Lesen; kein Endwert wird negativ. Bei `NICHT_NOETIG` und `AUSGESETZT` ist es
+> die Tabelle oben, unverändert. **Der Grund:** Kurz vor dem nächsten Delta-Lauf fehlte im Baum bis
+> zu eine Stunde Verkehr, den die Übertragungsliste daneben schon zeigte (E‑50).
+
 ### E‑34 — „Letzte Bewegung" als `ORDER BY … LIMIT 1` und nicht als `MAX()`
 
 Beide fragen denselben Wert. **Sie kosten nicht dasselbe**, und der Unterschied ist gemessen:
@@ -360,6 +372,15 @@ werden kann.
 
 **Die drei Zähler sind disjunkt und vollständig**: Ihre Summe ist `anzahlProzesse`. Zwei Tests halten
 das fest, einer ohne Datenbank und einer am Endpunkt.
+
+> ### Korrektur vom 17.09.2026 — die letzte Bewegung ist das Maximum aus E‑34 und der jüngsten Live-Stunde
+>
+> **E‑35 gilt unverändert: ein Wert, fensterunabhängig.** Der Wert ist seither das **Maximum** aus dem
+> jüngsten Rollupeimer (E‑34) und der jüngsten Stunde, in der die Quelle seit dem letzten Lauf
+> Verkehr zählt ([`live-rest.md`](live-rest.md) §9) — unabhängig vom gewählten Fenster, auch bei
+> einem Fenster, das vor dem Eimer des Laufs endet. Zustand und die drei Zähler folgen daraus: Ein
+> Prozess mit Verkehr in der laufenden Stunde steht nie als „still" oder „nie" da. Der Rollup
+> allein hätte ihn bis zum nächsten Delta-Lauf so gezeigt.
 
 ### E‑37 — Die Schwelle steht als benannter Wert und in der Antwort
 
@@ -509,6 +530,17 @@ ausgerechnet die, die vollständig unter „nicht zugeordnet" erscheinen müsste
 > beide Gliederungen** — die vier Eigenschaften, E‑42 und das Kennzahlenstatement sind unverändert.
 > **Neu ist eine Kostenfrage:** `ProjectDescription` ist `TEXT`, und die Temptabelle der Sortierung
 > liegt seither auf der Platte. Nicht gemessen — offener Punkt **179**.
+
+> ### Korrektur vom 17.09.2026 — ein Aufruf setzt fünf Statements ab, und E‑42 bleibt für den Rollup-Teil
+>
+> **Der Abschnitt darüber bleibt stehen.** Seit dem Live-Rest ([`live-rest.md`](live-rest.md) §6, §9)
+> setzt ein Aufruf des Baums bei angewandtem Live-Rest **fünf** Statements ab — Gerüst, Kennzahlen,
+> **Wasserstand**, **die Rollupzeilen des Live-Bereichs** und **die Zählung aus `Message`** über
+> denselben Bereich —, sonst **drei**. Die beiden Live-Statements tragen die Mandantenkette je als
+> `EXISTS` (dieselbe Begründung wie bei den Kennzahlen: es wird gezählt, `ProjectMandant` ist n:m),
+> und um `MessageLastUpdate` steht keine Funktion. **E‑42 fällt nicht:** Die zwei Statements des
+> Rollup-Teils sind unverändert und weiter wörtlich gepinnt; zwei Statements statt einer
+> `UNION ALL`-Fassung sind für den Live-Teil am Plan entschieden (E‑184 dort).
 
 ---
 
@@ -861,6 +893,20 @@ nie den Umfang.
 > die Vorgabe aus dem Konto samt freiem Wechsel und `gliederung-unbekannt`. Die übrigen Tests der
 > Runde stehen in §48.
 
+> ### Korrektur vom 17.09.2026 — geänderte Zusicherungen, einzeln begründet ([`live-rest.md`](live-rest.md) §12)
+>
+> | Zusicherung | Stand | Warum |
+> |---|---|---|
+> | `ProzessbaumStatementsTest`: *genau zwei Statements je Aufruf* | **gefallen, bewusst** | Ein Aufruf setzt bei angewandtem Live-Rest fünf ab. An ihre Stelle treten **einzeln benannte** Statements wie in `DashboardStatementsTest` — der Dienst wird gerufen, jedes Statement steht mit Namen (`EinAufruf`, 6 Fälle) |
+> | *genau zwei Statements auch im freien Fenster* | **gefallen** | dieselbe Zählung; das freie Fenster setzt bei angewandtem Live-Rest ebenfalls fünf ab, und das ist ein eigener Fall |
+> | *kein `Message` in irgendeinem Statement* | **ersetzt** | `Message` steht in **genau einem** Statement je Aufruf, dem fünften, mit Zeitbereich ab G und Mandantenkette — die dritte benannte Ausnahme von Regel L2 |
+> | `ProzessbaumPlanDbIT`: *kein Plan dieser Ansicht enthält `Message`* | **eingeengt** | gilt weiter für Gerüst und Kennzahlen und ist so umbenannt; der Live-Teil hat eigene Zusicherungen: Einstieg über einen Index auf `MessageLastUpdate`, keine Tabelle voll (3 Fälle) |
+> | `ProzessbaumIsolationDbIT` | **erweitert**, nichts geändert | die beiden Live-Lesungen am Repository (dritte Mandantenkette, Verletzungsprobe je Kette rot) und der Block `liveRest` in der Antwort (2 Fälle) |
+> | `ProzessbaumServiceTest` | **erweitert**, nichts geändert | 9 Fälle unter „Der Live-Rest"; die 40 von vorher sehen über eine Attrappe „ausgesetzt, kein Lauf" dieselben Zahlen wie bisher |
+>
+> Die Verletzungsprobe vom 02.09.2026 in der Tabelle darüber gilt unverändert; die dritte Kette ist
+> am 17.09.2026 auf dieselbe Weise geprüft worden.
+
 ---
 
 ## 12. Regelbezug
@@ -922,6 +968,13 @@ nie den Umfang.
 |---|---|
 | **120** | **Die Zahl „noch nie" aus der Kopfzeile ist im Baum nicht mehr einzeln auffindbar** (E‑56, §17). Der Baum zeigt den Zustand nicht mehr an der Zeile; wer wissen will, **welche** der 217 Prozesse bei `NEXANS` nie etwas getragen haben, hat dafür den Schalter „Nur mit Verkehr im Zeitraum" — er blendet genau die Gegenmenge aus, und was stehenbleibt, ist die Menge „nie" plus die stillen. **Dass das ausreicht, ist eine Auslegung und keine Messung**: Es ist ein Weg über zwei Schritte statt einer Angabe in der Zeile, und ein Nutzer ist dazu nicht befragt worden. Wer den Punkt aufmacht, entscheidet zwischen „Zeile trägt es wieder" (dann samt Dämpfung, §3) und „die Kopfzeile bekommt einen Filter je Zustand" |
 | **121** | **Unter `xl` aktualisiert die verdeckte Liste weiter, und ihr Schalter steckt im verdeckten Bereich** (§18, entfallene Sonderregel). Ab `xl` steht die Liste seit E‑57 neben dem Panel und ist bedienbar; darunter weicht sie, und dann läuft ihr Intervall für eine Liste, die niemand sieht — abschalten kann der Nutzer sie nicht. **Das ist nicht neu und nicht auf diese Ansicht beschränkt:** Die Nachrichtenliste trägt denselben Fall seit Schritt 5, mit derselben Ursache und ohne Gegenmittel. Zwei Auswege, und beide sind Entscheidungen über die **geteilte** Liste: den Aktualisierungsschalter aus dem Blätterblock in den Kopf der Ansicht heben (dann ist er immer erreichbar), oder die Sichtbarkeit an einen `IntersectionObserver` hängen (dann ist es kein zweiter Umbruchpunkt, sondern eine Messung). **Die Vorgabe ist aus** — der Fall tritt nur ein, wenn ein Nutzer die Aktualisierung selbst eingeschaltet hat. **Fortgeschrieben am 16.09.2026** ([`neu-laden.md`](neu-laden.md), E‑163 bis E‑172): Der erste Ausweg ist gegangen — der Schalter steht im Kopf der Nachrichtenliste —, und die Prozessansicht hat gar keine automatische Aktualisierung mehr (E‑164). ✔ **Für `/prozesse` damit erledigt.** ⚠️ **Für `/nachrichten` offen, und zwar mit Zahl:** Unter `xl` weicht dem Panel nicht nur die Liste, sondern die **ganze linke Spalte samt Kopf** — bei 1024 und 1279 px mit offenem Panel sind Schalter und „Neu laden" nicht zu sehen, ab 1280 px schon (M182). Ist der Schalter an, fragt die verdeckte Liste dort weiter, und abschalten lässt er sich erst nach dem Schließen des Panels — **am Code abgelesen, nicht gemessen**. Kein Sonderweg gebaut; der zweite Ausweg, der `IntersectionObserver`, bleibt ungegangen |
+
+### Aus dem Live-Rest (17.09.2026)
+
+| | |
+|---|---|
+| **190** bis **192** | geführt in [`live-rest.md`](live-rest.md) §15: der Preis des dichtesten Bereichs beim größten Mandanten (an der Testkopie belegt, an der Produktion nicht); Baum und Dashboard zählen die laufende Stunde bis Teil B verschieden; die Wasserstandsabfrage ohne Rückfall |
+| **113**, fortgeschrieben | Die Ebenenzuordnung steht weiter zweimal; der Live-Rest liest **nur die Stundenebene** und braucht keine dritte Stelle |
 
 ---
 
@@ -5287,3 +5340,41 @@ Auswahl ließe sich aus dem Abschnitt darüber wieder herstellen.
   bleiben, wie sie sind.
 - Die Tabellen und Belegvermerke darüber nennen den Schalter mit dem Wortlaut ihres Tages und
   bleiben so stehen.
+
+---
+
+## 49. Der Live-Rest der laufenden Stunde (17.09.2026)
+
+**Der Baustein selbst steht in [`live-rest.md`](live-rest.md)** — Entscheidung, Lesungen,
+Verrechnung, Messung M185, Tests, Regelbezug und die Nummernvergabe (**E‑179** bis **E‑188**, offene
+Punkte **186** bis **192**). Hier steht, was der Baum daraus macht.
+
+### Der Anlass
+
+Der Baum las die Rollup-Ebene seines Fensters samt angebrochenem Eimer; der Delta-Lauf rechnet
+diesen Eimer einmal pro Stunde; die Übertragungsliste daneben liest dasselbe Fenster live (E‑50).
+**Kurz vor dem nächsten Lauf fehlte links bis zu eine Stunde Verkehr, den rechts jeder sah.**
+Entschieden am 16.09.2026: Live-Rest statt kürzerem Takt.
+
+### Was sich am Baum geändert hat
+
+| | |
+|---|---|
+| **Kennzahlen** | Rollup-Ebene des Paares **plus** Live-Rest: für den Bereich seit dem letzten Lauf minus Rollupzeilen, plus Zählung aus `Message`, nur die Stunden im Fenster, Einordnung beim Lesen, kein negativer Endwert (E‑188 dort). Das freie Fenster bekommt dieselbe Verrechnung |
+| **Letzte Bewegung** | das Maximum aus E‑34 und der jüngsten Live-Stunde, fensterunabhängig (E‑35) — Kasten in §4 |
+| **Antwort** | der Block `liveRest: { zustand, vollstaendigBis }` — nach der gelebten Konvention der Nachbarn benannt (§1); `vollstaendigBis` trägt G in UTC nur bei `AUSGESETZT` mit Lauf. Kein neuer Endpunkt, kein neuer Parameter |
+| **Statements** | fünf bei `ANGEWANDT`, drei sonst — Kasten in §6; E‑42 bleibt für den Rollup-Teil |
+| **Oberfläche** | bei `AUSGESETZT` ein Hinweis bei den Kopfzahlen der Baumspalte, in der Bauform des Katalog-Hinweises: kein Rot, kein neues Token; sonst nichts. **Kein Nachladen im Takt** — E‑164 gilt (E‑186 dort, Punkt 189) |
+
+### Die Messung
+
+M185 durch den Endpunkt, Uhr und Wasserstand gesetzt: typische Stunde höchstens **141,6 ms**
+(`NEXANS`, `12M`; Schranke 150), dichtester Vierstundenbereich höchstens **337,0 ms** (`NEXANS`,
+`48H`; Schranke 500). Beide Schranken halten; Zahlen, Pläne und Belegvermerke in
+[`live-rest.md`](live-rest.md) §8.
+
+### Die Dev-Zeile
+
+Lokal steht der Wasserstand auf `2026-08-27 15:00` (ein Volllauf gegen die Systemuhr), die
+Anwendungsuhr Ende Dezember 2025: **`NICHT_NOETIG`**, der Hinweis erscheint lokal nicht. Belegt
+über Tests mit gesetzter Uhr und gesetztem Wasserstand ([`live-rest.md`](live-rest.md) §11, §12).
