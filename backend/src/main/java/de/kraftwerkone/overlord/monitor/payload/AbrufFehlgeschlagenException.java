@@ -9,16 +9,16 @@ import org.springframework.http.HttpStatus;
  *
  * <h2>Warum nur der Download und nicht die Anzeige</h2>
  *
- * <p>Die Anzeige antwortet in allen vier Zustaenden mit {@code 200} und dem benannten Zustand —
- * genau so will es {@code docs/rohdaten.md} §8: „Keiner davon ist ein leeres Feld." Ein {@code 404}
- * fuer ein Protokoll ohne Marken waere fuer den Nutzer nicht von „die Nachricht gibt es nicht" zu
+ * <p>Die Anzeige antwortet in allen Zustaenden mit {@code 200} und dem benannten Zustand — genau so
+ * will es {@code docs/rohdaten.md} §8: „Keiner davon ist ein leeres Feld." Ein {@code 404} fuer ein
+ * Protokoll ohne Marken waere fuer den Nutzer nicht von „die Nachricht gibt es nicht" zu
  * unterscheiden, und das ist etwas voellig anderes.
  *
  * <p>Der Download hat diese Moeglichkeit nicht. Eine Datei mit null Byte auszuliefern waere formal
  * der Gleichlauf mit der Anzeige, praktisch aber eine irrefuehrende Antwort: Der Nutzer bekaeme
  * eine Datei, die nach einem Fehler seines Rechners aussieht. Deshalb ein Fehlerrumpf nach RFC 9457
- * — mit eigenem Problemtyp je Zustand, damit die Oberflaeche dieselben vier Texte verwenden kann
- * wie bei der Anzeige.
+ * — mit eigenem Problemtyp je Zustand, damit die Oberflaeche dieselben Texte verwenden kann wie bei
+ * der Anzeige.
  *
  * <h2>Die drei Statuscodes</h2>
  *
@@ -28,6 +28,13 @@ import org.springframework.http.HttpStatus;
  *   <tr><td>{@link Artefaktzustand#KEIN_ANZEIGBARER_PROTOKOLLTEIL}</td><td>{@code 409}</td>
  *       <td>Die Datei ist da, sie hat nur keinen Teil, den dieser Aufrufer bekommt. Kein Fehler
  *       irgendeiner Seite, sondern eine Regel</td></tr>
+ *   <tr><td>{@link Artefaktzustand#BINAERDATEI}, {@link Artefaktzustand#EBCDIC_DATEI}</td>
+ *       <td>{@code 409}</td>
+ *       <td><b>Nur als Protokoll fuer {@code MANDANT}.</b> Eine Datei ohne Text hat keinen
+ *       Innenbereich zwischen Marken; fuer diesen Aufrufer gibt es nichts, und die Bytes verlassen
+ *       das Backend nicht — das ist die Ausnahme, die Entscheidung 9 traegt. Als Nutzdatei oder
+ *       fuer {@code ADMIN} kommen beide Zustaende hier nie an, dort liefert der Download die
+ *       Datei</td></tr>
  *   <tr><td>{@link Artefaktzustand#DATEI_NICHT_VORHANDEN}</td><td>{@code 404}</td>
  *       <td>Die Ablage hat geantwortet und nichts geliefert. Die Datei gibt es nicht</td></tr>
  *   <tr><td>{@link Artefaktzustand#ABLAGE_NICHT_ERREICHBAR}</td><td>{@code 502}</td>
@@ -54,7 +61,7 @@ public class AbrufFehlgeschlagenException extends FachlicheAusnahme {
 
   private static HttpStatus status(Artefaktzustand zustand) {
     return switch (zustand) {
-      case KEIN_ANZEIGBARER_PROTOKOLLTEIL, BINAERDATEI -> HttpStatus.CONFLICT;
+      case KEIN_ANZEIGBARER_PROTOKOLLTEIL, BINAERDATEI, EBCDIC_DATEI -> HttpStatus.CONFLICT;
       case DATEI_NICHT_VORHANDEN -> HttpStatus.NOT_FOUND;
       case ABLAGE_NICHT_ERREICHBAR -> HttpStatus.BAD_GATEWAY;
       // ANZEIGBAR liefert immer Bytes und landet hier nie. Der Zweig existiert, weil ein
@@ -68,6 +75,7 @@ public class AbrufFehlgeschlagenException extends FachlicheAusnahme {
     return switch (zustand) {
       case KEIN_ANZEIGBARER_PROTOKOLLTEIL -> "kein-anzeigbarer-protokollteil";
       case BINAERDATEI -> "binaeres-protokoll";
+      case EBCDIC_DATEI -> "ebcdic-protokoll";
       case DATEI_NICHT_VORHANDEN -> "datei-nicht-vorhanden";
       case ABLAGE_NICHT_ERREICHBAR -> "ablage-nicht-erreichbar";
       case ANZEIGBAR -> throw new IllegalArgumentException("Zustand mit Inhalt: " + zustand);
@@ -78,6 +86,7 @@ public class AbrufFehlgeschlagenException extends FachlicheAusnahme {
     return switch (zustand) {
       case KEIN_ANZEIGBARER_PROTOKOLLTEIL -> "Kein anzeigbarer Protokollteil";
       case BINAERDATEI -> "Protokoll nicht lesbar";
+      case EBCDIC_DATEI -> "Protokoll nicht lesbar";
       case DATEI_NICHT_VORHANDEN -> "Datei nicht vorhanden";
       case ABLAGE_NICHT_ERREICHBAR -> "Ablage nicht erreichbar";
       case ANZEIGBAR -> throw new IllegalArgumentException("Zustand mit Inhalt: " + zustand);
@@ -95,6 +104,9 @@ public class AbrufFehlgeschlagenException extends FachlicheAusnahme {
       case BINAERDATEI ->
           "Dieses Protokoll ist keine Textdatei und laesst sich deshalb nicht auf den fuer dich"
               + " freigegebenen Abschnitt eingrenzen.";
+      case EBCDIC_DATEI ->
+          "Dieses Protokoll traegt das Bytemuster des Grossrechner-Zeichensatzes EBCDIC und"
+              + " laesst sich deshalb nicht auf den fuer dich freigegebenen Abschnitt eingrenzen.";
       case DATEI_NICHT_VORHANDEN ->
           "Zu diesem Eintrag liegt keine Datei mehr vor. Ihre Aufbewahrungsfrist ist"
               + " moeglicherweise abgelaufen.";

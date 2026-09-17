@@ -839,7 +839,18 @@ export const de = {
         // Artefakt hat 609.995 Byte (M60); eine gerundete Angabe verlöre genau
         // die Genauigkeit, mit der jemand zwei Fassungen vergleicht.
         groesse: "{bytes} Bytes",
-        kodierung: "Kodierung {name}",
+        // Die Kodierung, je Datei vom Backend festgestellt (17.09.2026). Nur,
+        // was an den Bytes feststeht, heißt „Kodierung": ASCII (kein Byte über
+        // 0x7F) und UTF-8 (streng gültig dekodiert). ISO-8859-1 ist der
+        // Rückfall für alles andere — angenommen, nicht festgestellt, und M61
+        // belegt nur „kein gültiges UTF-8" — deshalb „gelesen als". Ein Wert,
+        // den es hier nicht gibt, erscheint roh (Regel Q4, rohdaten.ts).
+        // Bis zum 17.09.2026 stand hier fest „Kodierung {name}".
+        kodierung: {
+          ASCII: "Kodierung ASCII",
+          UTF_8: "Kodierung UTF-8",
+          ISO_8859_1: "gelesen als ISO-8859-1",
+        },
         herunterladen: "Herunterladen",
         // Der Inhalt selbst — als beschriftetes Feld für Vorleseprogramme.
         inhalt: "Dateiinhalt",
@@ -853,7 +864,7 @@ export const de = {
         // Altsystem verwirft den Rest stillschweigend (docs/rohdaten.md §4).
         vermerkMehrereEintraege: "Das Archiv enthielt {anzahl} Einträge. Angezeigt wird der erste.",
 
-        // Die vier benannten Zustände aus docs/rohdaten.md §8. KEINER davon ist
+        // Die fünf benannten Zustände aus docs/rohdaten.md §8. KEINER davon ist
         // ein leeres Feld — genau das macht das Altsystem, und genau das ist der
         // Unterschied. „Datei nicht vorhanden" und „Ablage nicht erreichbar"
         // verschmelzen ausdrücklich NICHT zu „Fehler beim Laden": Für den
@@ -861,6 +872,14 @@ export const de = {
         binaerTitel: "Binärdatei",
         binaerText:
           "Diese Datei besteht nicht aus lesbarem Text und wird deshalb nicht angezeigt. Sie ist {bytes} Bytes groß.",
+        // Der fünfte, seit dem 17.09.2026: Die Bytes tragen das Muster des
+        // Großrechner-Zeichensatzes EBCDIC. Der Text behauptet nicht, dass es
+        // sicher EBCDIC ist — das Backend dekodiert nicht und rät keine
+        // Codepage (Regel Q4). Bis dahin erschien eine solche Datei in
+        // Großschrift als Zeichenmüll, in Kleinschrift als Binärdatei.
+        ebcdicTitel: "Datei im EBCDIC-Muster",
+        ebcdicText:
+          "Diese Datei trägt das Bytemuster des Großrechner-Zeichensatzes EBCDIC und wird deshalb nicht als Text angezeigt. Sie ist {bytes} Bytes groß.",
         // Der häufigste der vier: FTPSender trägt in 28 von 30 Fällen keine
         // Marken und hängt an rund 69 Prozent der Nachrichten, HTTPSender in 30
         // von 30 (M63). Für MANDANT ist das der Normalfall — der Text muss das

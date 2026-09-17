@@ -1,6 +1,7 @@
 # Rohdaten und Protokolle — die Oberfläche
 
-Stand: 18.08.2026, **korrigiert am 19.08.2026 nach M73** (§2, §3, §9, §11) · Schritt 8 des MVP,
+Stand: 18.08.2026, **korrigiert am 19.08.2026 nach M73** (§2, §3, §9, §11), **Kodierung je Datei
+und EBCDIC-Muster am 17.09.2026** (§4, §5, §6, §9, §11, §12; E‑176, E‑177) · Schritt 8 des MVP,
 Teil Frontend
 Vorgabe: [`rohdaten.md`](rohdaten.md). Bei Widersprüchen gilt jene Datei; alle Abweichungen sind
 hier unter §10 benannt und begründet.
@@ -390,6 +391,26 @@ Ausfall.
 Protokollen und 9 von 16 Nutzdateien **kein** gültiges UTF-8 sind (M61) — sie wird nicht zur Laufzeit
 erraten, und genau deshalb darf sie dastehen. Zwei Angaben erscheinen bedingt:
 
+> **Korrigiert 17.09.2026 zum Absatz darüber (E‑176).** „Die Kodierung ist `ISO-8859-1`, weil …
+> kein gültiges UTF-8 sind" war ein Fehlschluss: M61 belegt nur „kein gültiges UTF-8", und das
+> trifft auf EBCDIC, Windows-1252 und DOS-Codepages ebenso zu — und **7 von 16** Nutzdateien
+> *sind* gültiges UTF-8 und wurden mit der festen Zeichenkette falsch beschriftet und falsch
+> angezeigt. Seither kommt der Wert **aus der Antwort**, je Datei vom Backend festgestellt
+> ([`rohdaten-backend.md`](rohdaten-backend.md) §6), und `kodierungsangabe` in `rohdaten.ts`
+> beschriftet ihn — **nur mit dem, was an den Bytes feststeht** (Regel Q4):
+>
+> | Wert | in der Herkunftszeile | warum so |
+> |---|---|---|
+> | `ASCII` | *Kodierung ASCII* | kein Byte über `0x7F` — steht fest |
+> | `UTF_8` | *Kodierung UTF-8* | streng gültig dekodiert — steht fest |
+> | `ISO_8859_1` | *gelesen als ISO-8859-1* | der Rückfall; angenommen, nicht festgestellt — deshalb nicht „Kodierung" |
+> | unbekannt | der rohe Wert | ein Schlüssel, den diese Oberfläche nicht kennt, wird nicht gedeutet und nicht unterschlagen |
+>
+> Die Zeile im Aufbau oben liest sich damit je nach Datei `… · 12.480 Bytes · Kodierung UTF-8`
+> oder `… · gelesen als ISO-8859-1`. Die Bedingung „nur bei `ANZEIGBAR`" gilt weiter, und
+> zusätzlich: Ein Wert, der außerhalb von `ANZEIGBAR` käme, wird dort nicht gezeigt — das Backend
+> liefert `null`, und die Ansicht verlässt sich nicht allein darauf (Test in §9).
+
 | Angabe | erscheint | warum nicht immer |
 |---|---|---|
 | Größe | wenn `groesseBytes > 0` | In den Zuständen ohne Inhalt liefert das Backend `0`, und „0 Bytes" wäre eine Aussage über eine Datei, die gar nicht abgerufen werden konnte |
@@ -464,6 +485,22 @@ macht das Altsystem, und genau das ist der Unterschied.
 | **Kein anzeigbarer Protokollteil** | `ScrollText` | *Dieses Protokoll enthält keinen Abschnitt, der dir gezeigt wird. Bei vielen Schritten ist das der Normalfall und bedeutet nicht, dass etwas fehlgeschlagen ist.* | nein |
 | **Datei nicht vorhanden** | `FileX` | *Die Dateiablage hat geantwortet und zu diesem Eintrag keine Datei geliefert. Möglicherweise ist ihre Aufbewahrungsfrist abgelaufen.* | nein |
 | **Ablage nicht erreichbar** | `CloudOff` | *Die Dateiablage antwortet gerade nicht. Die Datei kann es weiterhin geben — versuche es in einigen Minuten erneut.* | **ja** |
+
+> **Ergänzt 17.09.2026 — der fünfte Zustand (E‑177).** Die Überschrift und die Tabelle bleiben
+> stehen; dazu kommt:
+>
+> | Zustand | Zeichen | Was der Nutzer liest | Zweiter Versuch |
+> |---|---|---|---|
+> | **Datei im EBCDIC-Muster** | `Server` | *Diese Datei trägt das Bytemuster des Großrechner-Zeichensatzes EBCDIC und wird deshalb nicht als Text angezeigt. Sie ist {bytes} Bytes groß.* | nein |
+>
+> Dieselbe ruhige Gestalt wie die vier anderen — gestrichelte Kontur, gedämpfter Ton, kein Rot,
+> keine Schaltfläche. **Der Text behauptet nicht, dass es sicher EBCDIC ist**: Er spricht vom
+> Muster, weil das Backend nicht dekodiert und keine Codepage rät (Regel Q4). Das Zeichen `Server`
+> steht für den Großrechner; `Binary` bleibt der Binärdatei. Der Zustand verhält sich in
+> `downloadMoeglich` wie `BINAERDATEI` (§6): Download bei der Nutzdatei und für `ADMIN`, keiner
+> beim beschnittenen Protokoll. Bis dahin erschien eine solche Datei in Großschrift als Text mit
+> Zeichenmüll und in Kleinschrift als Binärdatei ohne Namen — beides aus der Regel abgeleitet,
+> nicht gemessen ([`rohdaten.md`](rohdaten.md) §8).
 
 ### Die beiden letzten verschmelzen nicht — und der Unterschied wird nicht über Farbe getragen
 
@@ -545,6 +582,7 @@ Zustand der Anzeige:
 | `ANZEIGBAR` | **ja** | es gibt Bytes — auch beim beschnittenen Protokoll, und dann denselben Ausschnitt |
 | `BINAERDATEI`, nicht beschnitten | **ja** | Nutzdatei oder `ADMIN`; beide bekommen die Datei ohnehin vollständig, die Anzeige kann Bytes nur nicht als Text darstellen |
 | `BINAERDATEI`, beschnitten | nein | binäres Protokoll für `MANDANT` — der Endpunkt antwortet `409` |
+| `EBCDIC_DATEI` *(seit 17.09.2026)* | wie `BINAERDATEI` | dieselben beiden Zeilen, derselbe Grund: kein Text, aber Bytes — und kein Innenbereich für `MANDANT` |
 | `KEIN_ANZEIGBARER_PROTOKOLLTEIL` | nein | `409` |
 | `DATEI_NICHT_VORHANDEN` | nein | `404` |
 | `ABLAGE_NICHT_ERREICHBAR` | nein | `502` |
@@ -659,8 +697,8 @@ zusammen **46** Fällen.
 
 | Datei | Art | Deckt ab |
 |---|---|---|
-| `tests/rohdaten.test.ts` | reine Funktionen, 29 Fälle | Beschriftungsregel in allen **vier** Lagen, **einschließlich Familie allein auf Schritt `0`** · **`Message.Payload.GUID` erzeugt kein Ziel** (M73) · die **Ziele** je Schritt: Art vor dem Namen — an jedem Ziel, auch an den beiden der Eingangszeile —, Ausschnitt in Name und `title`, Einteilung ohne Umsortieren, leere Einteilung ohne Liste, der Rest ohne Zeile in beide Richtungen · Gleichlauf über alle fünf Zustände samt der Ausnahme „binäres Protokoll" · Reihenfolge und Nachschlagen der Artefakte · die drei Vermerke · zweiter Versuch nur bei nicht erreichbarer Ablage · die vier Zustandstexte paarweise verschieden, in **beiden** Sprachen · kein Pfad trägt GUID oder Ablagenkennung |
-| `tests/artefakt-ansicht.test.tsx` | gerenderter Baum, 9 Fälle | **der Textknoten** · die **vier Zustände**, je einer · der Ausschnitt-Vermerk in beide Richtungen · der Download-Knopf · die Beschriftung ohne Nachladen |
+| `tests/rohdaten.test.ts` | reine Funktionen, 29 Fälle *(31 seit 17.09.2026, Kasten unten)* | Beschriftungsregel in allen **vier** Lagen, **einschließlich Familie allein auf Schritt `0`** · **`Message.Payload.GUID` erzeugt kein Ziel** (M73) · die **Ziele** je Schritt: Art vor dem Namen — an jedem Ziel, auch an den beiden der Eingangszeile —, Ausschnitt in Name und `title`, Einteilung ohne Umsortieren, leere Einteilung ohne Liste, der Rest ohne Zeile in beide Richtungen · Gleichlauf über alle fünf Zustände samt der Ausnahme „binäres Protokoll" · Reihenfolge und Nachschlagen der Artefakte · die drei Vermerke · zweiter Versuch nur bei nicht erreichbarer Ablage · die vier Zustandstexte paarweise verschieden, in **beiden** Sprachen · kein Pfad trägt GUID oder Ablagenkennung |
+| `tests/artefakt-ansicht.test.tsx` | gerenderter Baum, 9 Fälle *(15 seit 17.09.2026, Kasten unten)* | **der Textknoten** · die **vier Zustände**, je einer · der Ausschnitt-Vermerk in beide Richtungen · der Download-Knopf · die Beschriftung ohne Nachladen |
 | `tests/zeitleiste-ziele.test.tsx` | gerenderter Baum, 8 Fälle | die **drei Lagen je Schritt** (beide Arten, nur eine, keine) · die **Eingangszeile** über der Leiste mit **zwei** Zielen, mit Familie statt Nummer und ohne dass die Leiste eine vierte Zeile bekäme · die **Belastungsprobe aus M55**: fünfzehn Artefakte, fünfzehn eigene Ziele, ohne doppelten React-Schlüssel · das **Anspringen** der Eigenschaftengruppe · die Gegenprobe: ohne Eigenschaften kein Schalter am Schrittnamen |
 
 > **Korrigiert 19.08.2026 zu den beiden Zeilen darüber.** Die erste führte die Beschriftungsregel
@@ -673,6 +711,23 @@ zusammen **46** Fällen.
 > weg*) und zwei hinzugekommen (*erzeugt für `Message.Payload.GUID` kein Ziel*, *trägt die Art auch
 > an den beiden Zielen der Eingangszeile*). Dass die Summe gleich bleibt, ist Zufall und keine
 > Absicht; sie steht hier, weil sie nachgezählt ist.
+
+> **Ergänzt 17.09.2026 (E‑176, E‑177), aus dem Lauf gezählt** (`vitest run --reporter=json`,
+> Fälle je Datei): `pnpm test` läuft mit **43 Dateien, 1.118 Fällen**, alle grün; **acht** mehr
+> als am Stand `033c783`, und alle acht stehen in diesem Feature — keine neue Quelldatei, also
+> nichts aus `farbwerte` und `serverbausteine`.
+>
+> | Datei | Fälle | Was dazugekommen ist |
+> |---|---|---|
+> | `tests/rohdaten.test.ts` | **31** (+2) | die **fünf** Zustandstexte paarweise verschieden in beiden Sprachen, dazu dass der EBCDIC-Text vom *Muster* spricht; `EBCDIC_DATEI` im Gleichlauf in beiden Richtungen und ohne zweiten Versuch — in bestehenden Fällen; **neu:** die drei Kodierungswerte verschieden beschriftet in beiden Sprachen, der Rückfall ohne das Wort „Kodierung"/„Encoding"; ein unbekannter Wert erscheint roh, auch `toString` und die leere Zeichenkette |
+> | `tests/artefakt-ansicht.test.tsx` | **15** (+6) | `EBCDIC_DATEI` als fünfter Fall der Zustandstabelle (eigener Text, kein Inhaltsfeld, kein Knopf); der Download-Knopf beim EBCDIC-Protokoll **nicht** im Baum und bei der EBCDIC-Nutzdatei doch — im bestehenden Fall; **neu:** die Herkunftszeile je Kodierung, viermal (`ASCII`, `UTF_8`, `ISO_8859_1`, ein unbekannter Wert roh), genau eine Angabe zur Kodierung; und **kein Kodierungswert außerhalb von `ANZEIGBAR`**, gestellt mit einem Wert, der laut Vertrag `null` sein müsste, über alle fünf inhaltslosen Zustände |
+>
+> Die gerenderten Fälle sind damit **161 in zwanzig Dateien**; geführt im Kopf von
+> `frontend/vitest.config.mts`, nicht hier. Beide neuen gerenderten Klassen sind Aussagen über
+> **Anwesenheit und Abwesenheit im Baum** — ob die Beschriftung in der Zeile steht und ob sie in
+> den anderen Zuständen fehlt —, die Beschriftung selbst ist eine reine Funktion. Der `anzeige`-
+> Baustein beider Dateien trug `kodierung: "ISO-8859-1"` und trägt jetzt `"ASCII"`; der erfundene
+> Inhalt darin ist reines ASCII, und kein Fall hat den alten Wert je abgefragt.
 
 > **`tests/dateien-block.test.tsx` ist entfernt worden, nicht auskommentiert.** Der Block, den sie
 > prüfte, existiert nicht mehr; ihre beiden Fälle sind in `tests/zeitleiste-ziele.test.tsx`
@@ -763,7 +818,7 @@ Einschränkung — §5 legt die *Beschriftung* fest, und die steht im zugänglic
 |---|---|
 | 1 | **Die Sichtprüfung im Browser steht aus** — an beiden Einhängepunkten und für die Ansicht. Sie braucht eine Anmeldung und einen Mandantenzugang; dazu eine Nachricht aus dem Fenster **2025-07-24 bis 2025-12-30**, dem einzigen, in dem Datenbankkopie und Filestore-Kopie sich decken ([`START-LOKAL.md`](START-LOKAL.md) §1, [`rohdaten.md`](rohdaten.md) §13 Punkt 5). Zu sehen wären: die Zeilen der Zeitleiste mit ihren Zielen bei fünfzehn Artefakten — **ob Name, Dauer und Balken im Panel von 26 rem daneben noch tragen, ist gerechnet und nicht gesehen** —, die Ansicht mit einer großen Datei, und der Umbruch am **schmalen Fenster**; die Browsersteuerung kann das Fenster nicht verkleinern, also ist es von Hand zu prüfen |
 | 2 | **Keine Zeilennummern.** Sie erzwingen ein Element je Zeile und damit bei 610 KB Zehntausende Knoten (M60). Wer sie will, braucht vorher eine Bauform, die ohne die Zerlegung auskommt — etwa ein gezeichneter Rand statt echter Elemente |
-| 3 | **Kein Umschalter auf UTF-8.** [`rohdaten.md`](rohdaten.md) §7 lässt ihn zu, verlangt ihn nicht; das Backend hat ihn nicht gebaut ([`rohdaten-backend.md`](rohdaten-backend.md) §11, Punkt 7). Ohne ein Feld in der Antwort gibt es hier nichts umzuschalten |
+| 3 | **Kein Umschalter auf UTF-8.** [`rohdaten.md`](rohdaten.md) §7 lässt ihn zu, verlangt ihn nicht; das Backend hat ihn nicht gebaut ([`rohdaten-backend.md`](rohdaten-backend.md) §11, Punkt 7). Ohne ein Feld in der Antwort gibt es hier nichts umzuschalten. **Korrigiert 17.09.2026 (E‑176):** Das Feld gab es — als feste Zeichenkette —, und seither trägt es den je Datei festgestellten Wert. Gültiges UTF-8 wird als UTF-8 gelesen; für diesen Fall ist der Umschalter gegenstandslos. **Er bleibt ungebaut** (Abgrenzung des Auftrags) und wäre nur noch für den Rückfall `ISO_8859_1` von Belang, hinter dem Windows-1252 oder CP850 stecken kann |
 | 4 | **Ein fehlgeschlagener Download zeigt den RFC-9457-Rumpf des Backends statt einer übersetzten Meldung.** Der Download ist eine Navigation auf den Endpunkt — anders geht es nicht, ohne eine Blob-URL zu bauen, und die ist ausgeschlossen. Der Fall setzt voraus, dass sich der Zustand **zwischen** Anzeige und Klick ändert (etwa die Ablage fällt aus); die Oberfläche bietet den Knopf sonst gar nicht erst an. **Zu entscheiden, wenn es jemanden trifft** |
 | 5 | **Kein Sheet über der Detailansicht** — ausdrücklich eine spätere Zugabe (Entscheidung 7) und nicht Teil dieses Baus |
 | 6 | ~~**Der Block ordnet nach `MessageActionID`, die Zeitleiste nach `MessageActionStart`.**~~ **Erledigt am 18.08.2026.** Der Block ist entfallen; Ziele und Eigenschaftengruppen folgen beide der Zeitleiste. Es gibt nur noch **eine** Ordnung, und damit nichts mehr, was auseinanderfallen könnte |
@@ -787,17 +842,17 @@ Einschränkung — §5 legt die *Beschriftung* fest, und die steht im zugänglic
 
 | Datei | Zweck |
 |---|---|
-| `features/nachrichten/rohdaten.ts` | **Die Entscheidungen als reine Funktionen** — Beschriftung, Ziele je Schritt, Gleichlauf, Vermerke, Pfade |
-| `features/nachrichten/api.ts` | Typen und Aufrufe der drei Endpunkte, dazu die beiden Abfrageschlüssel |
+| `features/nachrichten/rohdaten.ts` | **Die Entscheidungen als reine Funktionen** — Beschriftung, Ziele je Schritt, Gleichlauf, Vermerke, Pfade. *Seit 17.09.2026:* `kodierungsangabe` — die Beschriftung der Kodierung, unbekannter Wert roh; `downloadMoeglich` kennt `EBCDIC_DATEI` |
+| `features/nachrichten/api.ts` | Typen und Aufrufe der drei Endpunkte, dazu die beiden Abfrageschlüssel. *Seit 17.09.2026:* `Artefaktzustand` mit `EBCDIC_DATEI`, Typ `Kodierung`, `Artefaktanzeige.kodierung` als `Kodierung \| (string & {}) \| null` — offen für einen Wert, den die Oberfläche noch nicht kennt |
 | `features/nachrichten/hooks.ts` | `useArtefakte` (mit dem Detail) und `useArtefaktinhalt` (erst beim Öffnen) |
 | `features/nachrichten/components/artefakt-ziele.tsx` | Die Ziele: ein Zeichen je Artefakt, dazu die gestrichelte Zeile für Eingang und Rest |
 | `features/nachrichten/components/zeitleiste.tsx` | *(Schritt 5)* je Zeile die Ziele ihres Schritts, der Name als Weg zu den Eigenschaften |
 | `features/nachrichten/components/eigenschaften-block.tsx` | *(Schritt 5)* das Sprungziel: `id` je Gruppe, Aufklappen und Fokus |
 | `features/nachrichten/components/nachricht-detail.tsx` | hängt Eingangszeile, Leiste, Rest und Eigenschaften zusammen und hält das Sprungziel |
-| `features/nachrichten/components/artefakt-ansicht.tsx` | Die Ansicht: Herkunftszeile, Download, Vermerke, Inhalt oder benannter Zustand |
+| `features/nachrichten/components/artefakt-ansicht.tsx` | Die Ansicht: Herkunftszeile, Download, Vermerke, Inhalt oder benannter Zustand. *Seit 17.09.2026:* der Kodierungswert aus der Antwort statt der festen Zeichenkette, der fünfte Zustand mit dem Zeichen `Server` |
 | `app/(app)/nachrichten/[messageId]/dateien/[artefaktId]/page.tsx` | Die Route. Server-Komponente, prüft nichts |
 | `lib/routen.ts` | `artefaktAnsicht` und `nachrichtAnsicht` — die beiden neuen Ziele |
-| `i18n/de.ts`, `i18n/en.ts` | Der Abschnitt `nachrichten.detail.dateien`. **Keine Zeichenkette steht in einer Komponente** |
+| `i18n/de.ts`, `i18n/en.ts` | Der Abschnitt `nachrichten.detail.dateien`. **Keine Zeichenkette steht in einer Komponente.** *Seit 17.09.2026:* `kodierung` ist ein Objekt mit `ASCII`, `UTF_8`, `ISO_8859_1` statt einer Zeichenkette mit Platzhalter; dazu `ebcdicTitel` und `ebcdicText` |
 
 **Entfallen ist** `features/nachrichten/components/dateien-block.tsx` samt
 `tests/dateien-block.test.tsx` — **entfernt, nicht auskommentiert.**

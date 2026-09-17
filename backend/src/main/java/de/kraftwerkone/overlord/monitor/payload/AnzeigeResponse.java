@@ -11,10 +11,10 @@ package de.kraftwerkone.overlord.monitor.payload;
  * @param artefaktId die Kennung, wie sie im Pfad steht
  * @param name {@code MessagePropertyName}, unveraendert
  * @param art {@link Artefaktart#NUTZDATEN} oder {@link Artefaktart#PROTOKOLL}
- * @param zustand einer der fuenf Zustaende. Bei allem ausser {@link Artefaktzustand#ANZEIGBAR} ist
+ * @param zustand einer der sechs Zustaende. Bei allem ausser {@link Artefaktzustand#ANZEIGBAR} ist
  *     {@link #text()} leer — und die Oberflaeche zeigt <b>keinen leeren Kasten</b>, sondern den
  *     benannten Text zu diesem Zustand
- * @param text der Inhalt, nach {@code ISO-8859-1} dekodiert. Leer, wenn {@code zustand} nicht
+ * @param text der Inhalt, dekodiert mit {@link #kodierung()}. Leer, wenn {@code zustand} nicht
  *     {@link Artefaktzustand#ANZEIGBAR} ist
  * @param groesseBytes die Groesse der <b>vollstaendigen</b> entpackten Datei in Bytes — nicht die
  *     des angezeigten Ausschnitts. Nur so ist ablesbar, wie viel fehlt
@@ -22,9 +22,13 @@ package de.kraftwerkone.overlord.monitor.payload;
  *     von 609.995 Byte (M60) eine Schutzmassnahme, kein Regelfall
  * @param beschnitten ob der Markenbeschnitt gegriffen hat. Wahr nur bei Protokollen und nur fuer
  *     {@code MANDANT}
- * @param kodierung die verwendete Kodierung. Fest {@code ISO-8859-1} — gemessen, nicht geraten: 8
- *     von 8 Protokollen und 9 von 16 Nutzdateien sind <b>kein</b> gueltiges UTF-8 (M61), und das
- *     Altsystem dekodiert an derselben Stelle hart mit {@code ISO-8859-1} (Q4)
+ * @param kodierung womit der Text gelesen wurde — <b>je Datei festgestellt</b>, seit dem
+ *     17.09.2026. {@link Kodierung#ASCII} und {@link Kodierung#UTF_8} stehen an den Bytes fest;
+ *     {@link Kodierung#ISO_8859_1} ist der Rueckfall und wird von der Oberflaeche als <i>gelesen
+ *     als</i> beschriftet, nicht als <i>Kodierung</i>. {@code null} bei allem ausser {@link
+ *     Artefaktzustand#ANZEIGBAR}. Bis dahin stand hier fest {@code "ISO-8859-1"} — gemessen war
+ *     nur, dass 8 von 8 Protokollen und 9 von 16 Nutzdateien <b>kein</b> gueltiges UTF-8 sind
+ *     (M61); die uebrigen 7 Nutzdateien wurden damit falsch angezeigt
  * @param zipEintraege wie viele Eintraege das Archiv trug. In 693 geholten Dateien immer {@code 1};
  *     alles darueber ist ein bisher nie beobachteter Fall und wird <b>vermerkt</b> statt
  *     stillschweigend verworfen wie im Altsystem ({@code :801}–{@code :802})
@@ -38,5 +42,5 @@ public record AnzeigeResponse(
     long groesseBytes,
     boolean gekuerzt,
     boolean beschnitten,
-    String kodierung,
+    Kodierung kodierung,
     int zipEintraege) {}

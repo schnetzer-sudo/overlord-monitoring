@@ -26,9 +26,10 @@ import { neuerZwischenspeicher, rendere } from "./hilfe/rendern";
  * | Test | Warum genau dieser |
  * |---|---|
  * | Der Inhalt ist ein Textknoten | Ob aus `<b>fett</b>` ein Element wird oder Text, entscheidet React beim Rendern und keine Funktion. Zugleich der Beleg für die Bauvorgabe aus M60: **ein** Kind, kein Element je Zeile |
- * | Die vier Zustände | „Keiner davon ist ein leeres Feld" ist eine Aussage über **Anwesenheit** von Text und **Abwesenheit** des Inhaltsfelds |
+ * | Die fünf Zustände | „Keiner davon ist ein leeres Feld" ist eine Aussage über **Anwesenheit** von Text und **Abwesenheit** des Inhaltsfelds. **Seit dem 17.09.2026 fünf:** das EBCDIC-Muster |
  * | Der Ausschnitt-Vermerk | dass er **fehlt**, wenn er nicht greift, ist ohne Baum nicht zu treffen |
  * | Der Download-Knopf | dieselbe Art Aussage — und die tragende von Entscheidung 9: Ein Knopf, der etwas anderes verspricht als die Anzeige, **darf nicht im Baum stehen** |
+ * | Die Herkunftszeile | *(17.09.2026)* die Beschriftung je Kodierung ist eine reine Funktion (`tests/rohdaten.test.ts`); **ob sie in der Zeile steht und außerhalb von `ANZEIGBAR` fehlt**, ist eine Aussage über Anwesenheit und Abwesenheit im Baum |
  *
  * ## Kein Testdatensatz enthält echten Dateiinhalt
  *
@@ -142,7 +143,10 @@ function anzeige(teile: Partial<Artefaktanzeige> = {}): Artefaktanzeige {
     groesseBytes: 43,
     gekuerzt: false,
     beschnitten: false,
-    kodierung: "ISO-8859-1",
+    // Bis zum 17.09.2026 stand hier die feste Zeichenkette "ISO-8859-1". Der
+    // erfundene Inhalt darüber ist reines ASCII, und genau das stellt das
+    // Backend seither fest.
+    kodierung: "ASCII",
     zipEintraege: 1,
     ...teile,
   };
@@ -229,11 +233,13 @@ describe("Der Dateiinhalt", () => {
 });
 
 /**
- * **Die vier Zustände aus `docs/rohdaten.md` §8 — je einer.**
+ * **Die fünf Zustände aus `docs/rohdaten.md` §8 — je einer.**
  *
  * Geprüft wird für jeden dasselbe: Er trägt seinen **eigenen** Text, er ist
  * **kein leeres Feld**, und er zeigt **kein Inhaltsfeld**. Das ist der
- * Unterschied zum Altsystem, das bei allen vier dieselbe leere Fläche zeigt.
+ * Unterschied zum Altsystem, das bei allen dieselbe leere Fläche zeigt.
+ * **Seit dem 17.09.2026 fünf:** Das EBCDIC-Muster bekommt dieselbe ruhige
+ * Gestalt wie die vier anderen — und keinen zweiten Versuch.
  */
 const ZUSTAENDE: readonly {
   zustand: Artefaktzustand;
@@ -247,6 +253,13 @@ const ZUSTAENDE: readonly {
     // gar keinen Text, nur die Größe.
     gestellt: { zustand: "BINAERDATEI", text: "", groesseBytes: 4711 },
     titel: DATEIEN.binaerTitel,
+    mitZweitemVersuch: false,
+  },
+  {
+    zustand: "EBCDIC_DATEI",
+    // Wie beim Binärfall: kein Inhalt, nur die Größe — und keine Kodierung.
+    gestellt: { zustand: "EBCDIC_DATEI", text: "", groesseBytes: 2048, kodierung: null },
+    titel: DATEIEN.ebcdicTitel,
     mitZweitemVersuch: false,
   },
   {
@@ -275,7 +288,7 @@ const ZUSTAENDE: readonly {
   },
 ];
 
-describe("Die vier benannten Zustände", () => {
+describe("Die fünf benannten Zustände", () => {
   it.each(ZUSTAENDE)(
     "$zustand trägt einen eigenen Text und kein leeres Feld",
     async ({ zustand, gestellt, titel, mitZweitemVersuch }) => {
@@ -393,6 +406,99 @@ describe("Der Download-Knopf", () => {
       expect(binaereNutzdatei.behaelter.querySelector('a[href*="/download"]')).not.toBeNull();
     } finally {
       await binaereNutzdatei.abbauen();
+    }
+
+    // Dasselbe Paar für das EBCDIC-Muster (17.09.2026): Die Nutzdatei bleibt
+    // herunterladbar, das Protokoll für `MANDANT` nicht — der Endpunkt
+    // antwortet dort `409`, und die Bytes verlassen das Backend nicht.
+    const ebcdicProtokoll = await rendereAnsicht(
+      anzeige({ zustand: "EBCDIC_DATEI", art: "PROTOKOLL", text: "", beschnitten: true }),
+    );
+    try {
+      expect(ebcdicProtokoll.behaelter.querySelector('a[href*="/download"]')).toBeNull();
+    } finally {
+      await ebcdicProtokoll.abbauen();
+    }
+
+    const ebcdicNutzdatei = await rendereAnsicht(
+      anzeige({ zustand: "EBCDIC_DATEI", text: "", groesseBytes: 2048, kodierung: null }),
+    );
+    try {
+      expect(ebcdicNutzdatei.behaelter.querySelector('a[href*="/download"]')).not.toBeNull();
+    } finally {
+      await ebcdicNutzdatei.abbauen();
+    }
+  });
+});
+
+describe("Die Herkunftszeile", () => {
+  /**
+   * **Der Wert aus der Antwort, nicht eine feste Zeichenkette** (17.09.2026).
+   * Bis dahin stand dort für jede Datei „Kodierung ISO-8859-1"; seither stellt
+   * das Backend die Kodierung je Datei fest, und die Zeile sagt nur, was an den
+   * Bytes feststeht — für den Rückfall „gelesen als" statt „Kodierung", und für
+   * einen Wert, den diese Oberfläche nicht kennt, den rohen Schlüssel.
+   */
+  it.each([
+    { kodierung: "ASCII", angabe: DATEIEN.kodierung.ASCII },
+    { kodierung: "UTF_8", angabe: DATEIEN.kodierung.UTF_8 },
+    { kodierung: "ISO_8859_1", angabe: DATEIEN.kodierung.ISO_8859_1 },
+    { kodierung: "X_UNBEKANNT", angabe: "X_UNBEKANNT" },
+  ])("nennt bei $kodierung „$angabe“", async ({ kodierung, angabe }) => {
+    const { behaelter, abbauen } = await rendereAnsicht(anzeige({ kodierung }));
+
+    try {
+      const zeile = behaelter.querySelector("ul[data-ziffern]");
+      expect(zeile).not.toBeNull();
+      const angaben = [...(zeile?.querySelectorAll("li") ?? [])].map((li) => li.textContent);
+      expect(angaben).toContain(angabe);
+      // Genau eine Angabe zur Kodierung — nicht die alte feste daneben.
+      expect(angaben.filter((a) => a === angabe)).toHaveLength(1);
+      // Und nirgends die alte feste Zeichenkette: Auch der Rueckfall heisst nicht "Kodierung ISO".
+      expect(zeile?.textContent).not.toContain("Kodierung ISO");
+    } finally {
+      await abbauen();
+    }
+  });
+
+  /**
+   * **Außerhalb von `ANZEIGBAR` steht kein Kodierungswert** — auch dann nicht,
+   * wenn die Antwort einen trüge. Die Kodierung beschreibt, wie *dieser* Text
+   * entstanden ist; ohne Text gibt es nichts zu beschreiben. Gestellt wird
+   * deshalb bewusst ein Wert, der laut Vertrag `null` sein müsste.
+   */
+  it("zeigt außerhalb von ANZEIGBAR keinen Kodierungswert", async () => {
+    for (const zustand of [
+      "BINAERDATEI",
+      "EBCDIC_DATEI",
+      "KEIN_ANZEIGBARER_PROTOKOLLTEIL",
+      "DATEI_NICHT_VORHANDEN",
+      "ABLAGE_NICHT_ERREICHBAR",
+    ] as const) {
+      const { behaelter, abbauen } = await rendereAnsicht(
+        anzeige({ zustand, text: "", groesseBytes: 4711, kodierung: "UTF_8" }),
+      );
+      try {
+        const zeile = behaelter.querySelector("ul[data-ziffern]");
+        expect(zeile, zustand).not.toBeNull();
+        expect(zeile?.textContent, zustand).not.toContain(DATEIEN.kodierung.UTF_8);
+        expect(zeile?.textContent, zustand).not.toContain("UTF_8");
+      } finally {
+        await abbauen();
+      }
+    }
+
+    // Und bei `null`, dem Vertragsfall, erst recht nicht.
+    const { behaelter, abbauen } = await rendereAnsicht(
+      anzeige({ zustand: "BINAERDATEI", text: "", groesseBytes: 4711, kodierung: null }),
+    );
+    try {
+      const angaben = [...(behaelter.querySelectorAll("ul[data-ziffern] li") ?? [])].map(
+        (li) => li.textContent,
+      );
+      expect(angaben).toEqual(["Converter.Payload.GUID", DATEIEN.art.NUTZDATEN, "4.711 Bytes"]);
+    } finally {
+      await abbauen();
     }
   });
 });

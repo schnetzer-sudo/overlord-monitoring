@@ -1,7 +1,8 @@
 # Rohdaten und Protokolle — das Backend
 
-Stand: 18.08.2026, **korrigiert am 19.08.2026 nach M73** (§1, §2, §7, §11) · Schritt 8 des MVP,
-Teil Backend
+Stand: 18.08.2026, **korrigiert am 19.08.2026 nach M73** (§1, §2, §7, §11), **Kodierung je Datei
+und EBCDIC-Muster am 17.09.2026** (§3, §6, §7, §8, §11, §12; E‑176 bis E‑178) · Schritt 8 des
+MVP, Teil Backend
 Vorgabe: [`rohdaten.md`](rohdaten.md). Bei Widersprüchen gilt jene Datei; alle Abweichungen sind
 hier unter §10 benannt und begründet.
 Messungen: [`messungen-schritt8.md`](messungen-schritt8.md) M52–M72 und **M73**.
@@ -92,6 +93,18 @@ dieselbe Antwort wie eine unbekannte Kennung.
 6. **Binärprüfung, dann Kodierung `ISO-8859-1`, dann gegebenenfalls Beschnitt** — in dieser
    Reihenfolge. Umgekehrt liefe der Beschnitt auf einem Text aus Binärbytes und suchte Marken in
    Zeichenmüll.
+
+> **Korrigiert 17.09.2026 zu Punkt 6 (E‑176, E‑177, E‑178).** Er lautete: „Binärprüfung, dann
+> Kodierung `ISO-8859-1`, dann gegebenenfalls Beschnitt — in dieser Reihenfolge." Seither:
+> **Einstufung, dann gegebenenfalls Beschnitt, dann Kappung auf einer Zeichengrenze.** Die
+> Einstufung (`Inhaltseinstufung`, §6) läuft über die **ungekappten** Bytes und liefert den Text
+> **samt Kodierung** oder einen der beiden Zustände ohne Text: Nullbyte → Binärdatei; kein Byte
+> über `0x7F` → `ASCII`; streng gültiges UTF-8 → `UTF_8`, ein BOM fällt aus dem Text; mindestens
+> 90 % der Bytes im invarianten EBCDIC-Vorrat → `EBCDIC_DATEI`; sonst `ISO_8859_1`; und für die
+> drei Textfälle unter 95 % druckbare Zeichen → Binärdatei. Der Zweck der alten Reihenfolge bleibt
+> — kein Beschnitt auf Binärbytes —, nur ist die Dekodierung keine feste mehr und fällt deshalb
+> **innerhalb** der Einstufung statt danach. Vorgabe: [`rohdaten.md`](rohdaten.md) §3, der Kasten
+> zu Entscheidung 4.
 
 ### Regel L4 im Einzelnen
 
@@ -235,6 +248,59 @@ damit **nie** ein Protokoll (M63: 30 von 30 bzw. 28 von 30 ohne Marken). `FTPSen
 | `DATEI_NICHT_VORHANDEN` | Ablage antwortet, liefert nichts (M68, M66 (2)) | benannt | `404` |
 | `ABLAGE_NICHT_ERREICHBAR` | Kennung löst nicht auf, Knoten antwortet nicht, Anhang unlesbar oder zu groß | benannt | `502` |
 
+> ### ⚠️ Ergänzt 17.09.2026 — der sechste Zustand und die Einstufung je Datei (E‑176, E‑177, E‑178)
+>
+> **Die Tabelle darüber bleibt stehen; eine Zeile kommt dazu, und die Auslöser-Zeile der
+> Binärdatei ist zu eng geworden.**
+>
+> | Zustand | Auslöser | Anzeige | Download |
+> |---|---|---|---|
+> | `EBCDIC_DATEI` | kein Nullbyte, kein ASCII, kein gültiges UTF-8 — und mindestens **90 %** der Bytes im invarianten EBCDIC-Vorrat (gesetzt, nicht gemessen) | benannt, kein Text | **Datei** — außer bei einem Protokoll für `MANDANT`, dann `409` mit Problemtyp `ebcdic-protokoll` |
+>
+> **Die Einstufung liegt an genau einer Stelle**, `Inhaltseinstufung.stufeEin(bytes)`, und sie
+> ersetzt `Binaerpruefung`. Anzeige und Download rufen sie über denselben Weg (`hole`); keiner
+> baut sie nach. Sie liefert entweder einen Text **samt** der Kodierung, mit der er gelesen wurde
+> (`ASCII`, `UTF_8`, `ISO_8859_1` — `Kodierung`), oder einen der beiden Zustände ohne Text. Die
+> Reihenfolge, in Kurzform: Nullbyte → Binärdatei · alle Bytes bis `0x7F` → `ASCII` · streng
+> gültiges UTF-8 (Decoder mit `REPORT`, BOM fällt aus dem Text) → `UTF_8` · EBCDIC-Muster →
+> `EBCDIC_DATEI` · sonst `ISO_8859_1` · für die drei Textfälle unter 95 % druckbare Zeichen →
+> Binärdatei. Vollständig mit Begründung je Stufe in der Klassenbeschreibung und in
+> [`rohdaten.md`](rohdaten.md) §3.
+>
+> **Warum ASCII vor UTF-8 und beide vor EBCDIC.** ASCII ist zugleich gültiges UTF-8 und gültiges
+> ISO-8859-1 und trifft zu einem Teil auch den EBCDIC-Vorrat (`a`, `k` bis `o`, `z`, `K` bis `N`,
+> `P`, CR und ein paar Satzzeichen liegen darin). Die 162 von 206 reinen ASCII-Dateien (M61,
+> Befund 3) entscheiden nichts und müssen deshalb zuerst herausfallen. Danach ist UTF-8 die
+> strengere Prüfung — eine gültige Dekodierung ist ein Befund an den Bytes —, das EBCDIC-Muster
+> nur eine Quote.
+>
+> **Die Ausnahme aus dem Kasten unten gilt unverändert auch für `EBCDIC_DATEI`.** Ein Protokoll
+> ohne Text hat keinen Innenbereich; die Einstufung läuft im beschnittenen Zweig, und für
+> `MANDANT` verlassen die Bytes das Backend nicht. **Verletzungsprobe** in §12.
+>
+> **Der Absatz „Die Binärprüfung läuft auf den Bytes" unten ist an einer Stelle überholt.** Das
+> Nullbyte, die ASCII-Frage, die UTF-8-Gültigkeit und das EBCDIC-Muster werden weiterhin auf
+> den Bytes entschieden — nur der **Anteil druckbarer Zeichen** zählt seither über die
+> **dekodierten Zeichen**, mit derselben Zeichenklasse. Für ASCII und ISO-8859-1 ist das
+> zeichengleich mit der alten Zählung; bei UTF-8 zählen Folgebytes nicht mehr einzeln als
+> Steuerzeichen (`U+0100` ist `C4 80`, und `0x80` zählte als Steuerzeichen — eine Datei aus
+> hundert davon lag bei 50 % und war eine Binärdatei). Die Schwelle von 95 % ist unverändert.
+>
+> **E‑178 — die ganze Datei, nicht ein Präfix.** `Binaerpruefung` prüfte die ersten 64 KiB
+> (`PRUEFLAENGE`). Die Einstufung läuft über **alle** Bytes: Der UTF-8-Decoder muss die Datei
+> ohnehin ganz lesen, um den Text zu liefern, und eine an der Präfixgrenze zerschnittene Folge
+> sähe fälschlich ungültig aus. Bei höchstens 8 MiB je Datei (`Ablagegrenzen`) und einem
+> gemessenen Maximum von 609.995 Byte ist ein linearer Durchlauf billig genug — **gemessen ist das
+> nicht** ([`rohdaten.md`](rohdaten.md) §13, Punkt 13). Sichtbar wird der Unterschied bei einer
+> Datei über 64 KiB, deren unlesbarer Teil erst danach beginnt: Sie war Text und ist jetzt
+> Binärdatei (`InhaltseinstufungTest.ganze_datei`).
+>
+> **Bekannte Grenze der Reihenfolge, hingenommen:** EBCDIC-Bytes, die zufällig streng gültiges
+> UTF-8 ergeben — Großbuchstabe `0xC2` bis `0xC9` und Kleinbuchstabe `0x81` bis `0x89` sind
+> Führungs- und Folgebyte —, werden als UTF-8 gelesen; die entstehenden C1-Steuerzeichen zählen
+> nicht als druckbar, und die Datei endet als Binärdatei, nicht als Zeichenmüll. Gemessen ist der
+> Fall nicht.
+
 > **Die eine Ausnahme bei `BINAERDATEI` ist der Grund, warum die Binärprüfung im beschnittenen
 > Zweig steht und nicht davor.** Stünde sie davor — wie zunächst gebaut —, bekäme ein
 > Mandantennutzer die **vollständige, unmaskierte Protokolldatei**, sobald sie als binär eingestuft
@@ -374,6 +440,21 @@ Mandantennutzer die vollständige Protokolldatei bekommt.
 | `ADMIN`, Protokoll | vollständig, unmaskiert | Bytes des ZIP-Eintrags, unverändert |
 | beide, Nutzdaten | vollständig | Bytes des ZIP-Eintrags, unverändert |
 
+> **Ergänzt 17.09.2026 (E‑176).** Die erste Zeile heißt seither genauer: die beschnittene,
+> maskierte Fassung, **mit derselben Kodierung zurückkodiert, mit der gelesen wurde**
+> (`Kodierung.kodiere`). Bis dahin geschah das implizit mit `ISO-8859-1` — für ein UTF-8-Protokoll
+> hätte die Anzeige die Umlaute richtig gezeigt und der Download sie kaputt geliefert. Die beiden
+> anderen Zeilen sind unverändert: Der Download von Nutzdaten und für `ADMIN` bleibt byteweise,
+> **auch mit BOM**; der BOM fällt allein aus dem angezeigten Text. Belegt in
+> `ArtefaktServiceTest.rueckkodierung_utf_8` und `rueckkodierung_iso_8859_1`.
+>
+> **`AnzeigeResponse.kodierung` gab es schon** — als feste Zeichenkette `"ISO-8859-1"` für jede
+> Datei, auch in den fünf Zuständen ohne Text. Der Auftrag vom 17.09.2026 ging von einem
+> fehlenden Feld aus; tatsächlich war es ein Feld mit einem festen Wert. Seither trägt es den
+> Schlüssel `ASCII`, `UTF_8` oder `ISO_8859_1` und ist bei allem außer `ANZEIGBAR` `null`. Der
+> Typ ist damit von `String` auf die Aufzählung `Kodierung` gewechselt; wer den Wert liest,
+> vergleicht gegen den Schlüssel und nicht gegen den Namen einer Kodierung.
+
 **Zwei Stellen, an denen sich Anzeige und Download unterscheiden dürfen — und warum das kein
 Widerspruch ist:**
 
@@ -385,6 +466,15 @@ Widerspruch ist:**
    richtet sich gegen einen Pfad, auf dem `MANDANT` *mehr* bekommt als in der Anzeige — hier
    bekommen beide Rollen dasselbe, und die Anzeige kann Bytes nur nicht als Text darstellen.
 
+> **Ergänzt 17.09.2026.** Zu 1: Die Grenze zählt Bytes der jeweiligen Kodierung, und gekappt wird
+> **auf einer Zeichengrenze** (`Kodierung.gekappt`): Bei UTF-8 geht der Schnitt bis zum Beginn
+> der angeschnittenen Folge zurück, damit kein Ersatzzeichen entsteht, das in der Datei nie stand —
+> dieselbe Regel wie bei der Kappung eines Eigenschaftswerts
+> ([`nachrichtendetail.md`](nachrichtendetail.md)). Bei ASCII und ISO-8859-1 ist der Byte-Schnitt
+> der Zeichenschnitt, und dort wird ausdrücklich **nicht** zurückgegangen: `0x80` bis `0xBF` sind
+> in ISO-8859-1 eigene Zeichen. Die Einstufung läuft **vor** der Kappung über die ungekappten
+> Bytes. Zu 2: dasselbe gilt für `EBCDIC_DATEI`.
+
 ---
 
 ## 8. Protokollierung
@@ -394,7 +484,7 @@ Drei Ereignisarten in `audit_log`, geschrieben über den **Schreib-Kontext** auf
 
 | `event_type` | wann | `detail` |
 |---|---|---|
-| `ROHDATEN_ANGESEHEN` | Anzeige mit Inhalt oder mit Zustand *kein anzeigbarer Protokollteil* / *Binärdatei* | `Fassung: beschnitten` oder `Fassung: vollstaendig` |
+| `ROHDATEN_ANGESEHEN` | Anzeige mit Inhalt oder mit Zustand *kein anzeigbarer Protokollteil* / *Binärdatei* / *EBCDIC-Muster* (seit 17.09.2026, `EBCDIC_DATEI` wie `BINAERDATEI`) | `Fassung: beschnitten` oder `Fassung: vollstaendig` |
 | `ROHDATEN_DOWNLOAD` | Download geliefert | dasselbe |
 | `ROHDATEN_ABRUF_FEHLGESCHLAGEN` | Ablage nicht erreichbar, Datei nicht vorhanden, oder Download ohne Inhalt | `Zustand: <einer der fünf>` |
 
@@ -580,7 +670,7 @@ Fünf, alle vorsätzlich und alle hier statt in einer Fußnote.
 | 4 | **Die Zeitgrenze ist gesetzt, aber nicht erprobt.** Dass `setReadTimeout` durchgereicht wird, ist aus dem Bytecode gelesen; dass sie auf der Leitung greift, bräuchte einen Knoten, der annimmt und dann schweigt |
 | 5 | **Mehr als ein ZIP-Eintrag** ist nie vorgekommen (0 von 693). Der Fall wird behandelt, vermerkt und protokolliert — ob alle Einträge angeboten werden, ist offen (`rohdaten.md` §13, Punkt 6) |
 | 6 | **Die Schwelle der Binärerkennung (95 % druckbare Zeichen) ist gesetzt, nicht gemessen.** Gemessen ist, dass die Textdateien bei 100 % liegen und die Binärdateien Nullbytes tragen (M61, M71) — zwischen 100 % und 95 % liegt im gemessenen Bestand nichts. Ob es in Produktion etwas dazwischen gibt, ist unbekannt |
-| 7 | **Ein Umschalter auf UTF-8 ist nicht gebaut.** `rohdaten.md` §7 lässt ihn zu („zulässig"), verlangt ihn nicht. Die Voreinstellung `ISO-8859-1` ist gemessen |
+| 7 | **Ein Umschalter auf UTF-8 ist nicht gebaut.** `rohdaten.md` §7 lässt ihn zu („zulässig"), verlangt ihn nicht. Die Voreinstellung `ISO-8859-1` ist gemessen. **Korrigiert 17.09.2026 (E‑176):** Der letzte Satz war zu groß — M61 belegt „kein gültiges UTF-8", nicht `ISO-8859-1`. Seither wird die Kodierung je Datei festgestellt; gültiges UTF-8 wird als UTF-8 gelesen, und dafür braucht es keinen Umschalter mehr. `ISO-8859-1` ist der **Rückfall** für alles andere, und die Oberfläche nennt ihn „gelesen als". **Der Umschalter bleibt ungebaut** (Abgrenzung des Auftrags); offen ist er nur noch für den Rückfall — Windows-1252 und CP850 werden nicht unterschieden ([`rohdaten.md`](rohdaten.md) §3, Kasten zu Entscheidung 4) |
 | 8 | **`app_user.download_allowed` wird nicht geprüft — und das ist ein Widerspruch zwischen zwei Vorgaben.** Die Migration `V2__app_user.sql:29–32` legt das Flag an mit dem Kommentar „**Fuer Schritt 8 vorbereitet** […], damit ein spaeterer Entzug keine Migration erfordert (Regel R6)"; `AngemeldeterNutzer.downloadAllowed` trägt es bis in die Sitzung und `GET /api/auth/me` gibt es aus (`authentifizierung.md`). `rohdaten.md` §3 Entscheidung 2 sagt dagegen: „Alle Rollen sehen **alle Dateien** der Nachrichten, die sie ohnehin erreichen. **Keine zweite Berechtigungsstufe**." **Gebaut ist nach `rohdaten.md`**, weil das die verbindliche Vorgabe dieses Features ist — eine Prüfung einzubauen hieße, genau die zweite Stufe zu errichten, die Entscheidung 2 ausschließt. Damit ist das Flag derzeit ein totes Feld. **Zu entscheiden: fällt Entscheidung 2, oder fällt das Flag?** — **Geschlossen 20.08.2026: Spalte entfernt.** Es fällt das Flag. **Vollzogen am 21.08.2026 mit `V7__benutzerverwaltung.sql`** (Schritt 9a, dort E18): `app_user.download_allowed` ist entfernt, `AppUserZeile.downloadErlaubt`, `AngemeldeterNutzer.downloadAllowed` und die Ausgabe in `GET /api/auth/me` sind mit ihr entfallen ([`authentifizierung.md`](authentifizierung.md) §1, [`benutzerverwaltung-backend.md`](benutzerverwaltung-backend.md) §2.1). Geprüft war vorher, dass das Frontend das Feld nirgends *liest* — es stand dort nur als Typzeile. `rohdaten.md` §3 Entscheidung 2 ist damit **bestätigt, nicht korrigiert**. Die drei Endpunkte aus Schritt 8 bleiben unangetastet — sie haben das Flag nie geprüft, und genau das war richtig |
 | 9 | **Der Anlassfall der Regel „Muster statt Familie" ist entfallen, ein anderer bleibt möglich** *(neu am 19.08.2026, = offener Punkt 31 in [`messungen-schritt8.md`](messungen-schritt8.md))*. Ausführlich im Korrekturkasten in §7 samt Belegvermerk. **Nicht gemessen, nicht geändert, nicht entschieden** — der Umbau der Dateinamenssuche ist eine eigene Runde |
 | 10 | **`Downloaddateiname` hat einen Tag lang eine falsch benannte Datei ausgeliefert** *(vermerkt 19.08.2026)*. Für `0-Message.Payload.GUID` fand die Suche `FileReader`/`FTPReader.FileProperty.OriginalFilename` auf Schritt `0` — den Namen der eingegangenen Datei — während der Inhalt nach M73 der des höchsten Nutzdatenschritts war. **Behoben** durch den Wegfall des Artefakts; hier vermerkt, weil ein Befund nicht mit der Zeile mitverschwinden soll, die ihn getragen hat |
@@ -653,7 +743,7 @@ Fünf, alle vorsätzlich und alle hier statt in einer Fußnote.
 | `SaajAblagezugriff` | SOAP-`RETRIEVE` über den `jakarta`-Zweig von SAAJ, mit Zeitgrenzen |
 | `Abrufergebnis` | Gepackte Bytes oder ein benannter Zustand. Nie eine Ausnahme nach außen |
 | `Zipentnahme` | Erster Eintrag, gedeckelt gelesen, Zahl der Einträge im Ergebnis |
-| `Binaerpruefung` | Nullbyte oder Anteil druckbarer Zeichen — auf den Bytes, vor der Dekodierung |
+| `Binaerpruefung` | Nullbyte oder Anteil druckbarer Zeichen — auf den Bytes, vor der Dekodierung. **Entfallen am 17.09.2026**, aufgegangen in `Inhaltseinstufung` — Kasten unter dieser Tabelle |
 | `Protokollbeschnitt` | Erste Start- bis nächste Endmarke, fünf Fälle |
 | `Pfadmaskierung` | Zwei Serverpfad-Präfixe zu `/IS/`, nur im beschnittenen Zweig |
 | `Downloaddateiname` | Originalname wo vorhanden, sonst konstruiert; bereinigt |
@@ -675,3 +765,38 @@ Fünf, alle vorsätzlich und alle hier statt in einer Fußnote.
 
 **Kein Test spricht einen Filestore an.** Jede Protokolldatei in den Tests ist **frei erfunden** —
 kein echter Partner, kein echter Knoten, kein echter Pfad, keine echte Kennung.
+
+> ### ⚠️ Ergänzt 17.09.2026 — Kodierung je Datei und EBCDIC-Muster (E‑176 bis E‑178)
+>
+> **Beide Tabellen darüber bleiben stehen.** Was sich geändert hat:
+>
+> | Klasse | Was |
+> |---|---|
+> | **`Inhaltseinstufung`** *(neu)* | **Die eine Stelle, die einstuft.** Nullbyte, ASCII, streng gültiges UTF-8 (BOM fällt aus dem Text), EBCDIC-Muster, sonst ISO-8859-1, dann der Anteil druckbarer Zeichen über die dekodierten Zeichen — in dieser Reihenfolge, über alle Bytes. Liefert `Ergebnis(zustand, kodierung, text)`. Trägt die beiden Schwellen als benannte Konstanten mit Begründung: `SCHWELLE_DRUCKBAR_PROZENT = 95` (unverändert) und `SCHWELLE_EBCDIC_PROZENT = 90` (gesetzt, nicht gemessen) |
+> | **`Kodierung`** *(neu)* | `ASCII`, `UTF_8`, `ISO_8859_1` mit ihrem `Charset`. Kodiert den beschnittenen Text für den Download zurück (`kodiere`) und kappt die Anzeige auf einer Zeichengrenze (`gekappt`, `ueberschreitet`) |
+> | `Binaerpruefung` | **entfallen.** Ihre Zeichenklasse und die Schwelle von 95 % leben in `Inhaltseinstufung` weiter; ihr 64-KiB-Präfix nicht (E‑178). Die Entscheidung, sie aufgehen zu lassen statt zu erweitern: Ihr Name sagte „auf den Bytes, vor der Dekodierung", und genau das stimmt für den Anteil druckbarer Zeichen nicht mehr; ein `istBinaer(bytes)` neben der Einstufung wäre eine zweite Stelle gewesen |
+> | `Artefaktzustand` | sechs Werte statt fünf: **`EBCDIC_DATEI`** |
+> | `Artefaktinhalt`, `AnzeigeResponse` | Feld `kodierung` als `Kodierung`, `null` bei allem außer `ANZEIGBAR`. In `AnzeigeResponse` war es vorher ein `String` mit dem festen Wert `"ISO-8859-1"` |
+> | `ArtefaktService` | ruft die Einstufung; der Fall ohne Text steht weiter **im** beschnittenen Zweig; der beschnittene Download ist mit `Kodierung.kodiere` zurückkodiert; `gekuerzt`/`kuerzungGreift` sind durch `Kodierung.gekappt`/`ueberschreitet` ersetzt. Die Konstanten `KODIERUNG` und `KODIERUNG_NAME` sind entfallen |
+> | `AbrufFehlgeschlagenException` | `EBCDIC_DATEI` → `409`, Problemtyp `ebcdic-protokoll` |
+>
+> | Test | Deckt ab |
+> |---|---|
+> | **`InhaltseinstufungTest`** *(neu, 29 Fälle)* | jede Stufe der Reihenfolge einzeln; die Grenzen **genau 90 %** und 89 %, **genau 95 %** und 94 %; EBCDIC in Großschrift, in gemischter Schreibung (bisher Binärdatei) und mit den drei EBCDIC-Zeilenenden; eine EBCDIC-Datei mit Nullbytes bleibt Binärdatei; UTF-8 mit ß, Ä, Ö, Ü, € und mit BOM, ein BOM allein, überlanges und abgeschnittenes UTF-8; Folgebytes zählen nicht mehr als Steuerzeichen; die ganze Datei statt eines Präfixes; **sechs Gegenproben**, die nicht EBCDIC sind — deutscher Text in ISO-8859-1, Windows-1252 mit €, CP850 mit Umlauten, UTF-8, EDIFACT in ASCII, gleichverteilte Zufallsbytes (Saat 4711, Anteil im Vorrat zwischen 25 % und 42 %); Rückkodierung und Kappung auf Zeichengrenze für alle drei Kodierungen samt Surrogatpaar. Die EBCDIC-Bytes entstehen aus **erfundenem** Text über die JDK-Codepage `IBM037`, die DOS-Bytes über `IBM850` |
+> | `ArtefaktServiceTest` *(44 Fälle, vorher 33)* | neu: UTF-8 und ASCII als Kodierung, BOM nicht im Text und doch im Download, EBCDIC-Nutzdatei benannt und byteweise herunterladbar, **EBCDIC-Protokoll für `MANDANT` → `409` und keine Bytes**, für `ADMIN` die Datei, Rückkodierung des beschnittenen Downloads für UTF-8 und ISO-8859-1, Kodierung `null` außerhalb von `ANZEIGBAR`, Kappung auf Zeichengrenze, Protokollierung des EBCDIC-Falls. **Ein Prüfwert geändert:** `kodierung()` erwartete die Zeichenkette `"ISO-8859-1"`, jetzt `Kodierung.ISO_8859_1` — dieselben drei Bytes, derselbe Text, nur der Schlüssel statt des Namens; der Fall heißt jetzt `kodierung_rueckfall_iso_8859_1` |
+> | `ArtefaktbausteineTest` *(25 Fälle)* | die fünf Regressionsfälle der Binärprüfung mit **unveränderten Bytes und Erwartungen**, nur der Aufruf geht über die Einstufung |
+>
+> **Die Verletzungsprobe — ausgeführt, nicht angenommen** (Vorbild
+> [`process-view.md`](process-view.md) §11). Gefahren am 17.09.2026: Im beschnittenen Zweig gab
+> der Fall ohne Text die rohen Bytes zurück, wie der unbeschnittene Zweig es tut — also genau die
+> Ausnahme ausgehängt, die Entscheidung 9 trägt. Ergebnis: **2 von 44 Fällen rot**,
+> `binaeres_protokoll_umgeht_den_beschnitt_nicht` und
+> `ebcdic_protokoll_umgeht_den_beschnitt_nicht`, beide mit „Expecting code to raise a throwable"
+> am Download. Die Änderung ist von Hand zurückgenommen (dieselbe Ersetzung umgekehrt, kein
+> `git checkout`), der Lauf danach wieder 44 von 44 grün, in keinem Commit.
+>
+> **Die Zahlen** stammen aus den Surefire-Berichten des Laufs vom 17.09.2026 über das Paket
+> (`-Dtest=…payload.*Test`, 141 Fälle: 44 · 29 · 25 · 20 · 13 · 10) und aus
+> `./mvnw verify -DexcludedGroups=db` (921 Fälle, grün). Der volle Lauf mit den DbIT ist **nicht**
+> gefahren; `RohdatenIsolationDbIT` ist unberührt — kein Endpunkt, kein Statement, kein
+> Mandantenfilter hat sich geändert.

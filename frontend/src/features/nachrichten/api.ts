@@ -751,7 +751,7 @@ export type Eigenschaft = {
 export type Artefaktart = "NUTZDATEN" | "PROTOKOLL";
 
 /**
- * Der Zustand eines Abrufs — die vier benannten Fälle aus `docs/rohdaten.md` §8
+ * Der Zustand eines Abrufs — die fünf benannten Fälle aus `docs/rohdaten.md` §8
  * plus der Regelfall.
  *
  * **Keiner davon ist ein leeres Feld.** Jeder bekommt in der Oberfläche einen
@@ -759,16 +759,36 @@ export type Artefaktart = "NUTZDATEN" | "PROTOKOLL";
  * Trennung ist der Punkt: „Datei weg" und „Ablage aus" sehen für den Nutzer
  * gleich aus und sind für den Betrieb völlig verschiedene Lagen.
  *
- * **Die Anzeige antwortet in allen fünf Fällen mit `200`.** Ein Fehlerstatus
+ * **Die Anzeige antwortet in allen sechs Fällen mit `200`.** Ein Fehlerstatus
  * wäre falsch — „Protokoll ohne Marken" ist bei `FTPSender` der Normalfall
  * (M63), und der hängt an rund 69 % der Nachrichten.
+ *
+ * **`EBCDIC_DATEI` ist seit dem 17.09.2026 der fünfte inhaltslose Fall:** Die
+ * Bytes tragen das Muster des Großrechner-Zeichensatzes EBCDIC (mindestens
+ * 90 % im invarianten Vorrat, `docs/rohdaten-backend.md` §6). Das Backend
+ * dekodiert nicht und behauptet nicht, dass es sicher EBCDIC ist; die
+ * Oberfläche verhält sich wie bei `BINAERDATEI`.
  */
 export type Artefaktzustand =
   | "ANZEIGBAR"
   | "BINAERDATEI"
+  | "EBCDIC_DATEI"
   | "KEIN_ANZEIGBARER_PROTOKOLLTEIL"
   | "DATEI_NICHT_VORHANDEN"
   | "ABLAGE_NICHT_ERREICHBAR";
+
+/**
+ * Womit das Backend den Text gelesen hat — **je Datei festgestellt, nicht fest**
+ * (`docs/rohdaten-backend.md` §6, seit dem 17.09.2026).
+ *
+ * `ASCII` und `UTF_8` stehen an den Bytes fest. `ISO_8859_1` ist der Rückfall
+ * für alles, was weder das eine noch das andere ist — nicht festgestellt, nur
+ * angenommen; die Herkunftszeile sagt deshalb *gelesen als* und nicht
+ * *Kodierung* (Regel Q4). Der Typ hält die drei bekannten Werte fest; ein
+ * unbekannter Wert kommt trotzdem an und erscheint roh (`kodierungsangabe`
+ * in `rohdaten.ts`).
+ */
+export type Kodierung = "ASCII" | "UTF_8" | "ISO_8859_1";
 
 /**
  * Ein Artefakt in der Liste.
@@ -858,7 +878,7 @@ export type Artefaktanzeige = {
   name: string;
   art: Artefaktart;
   zustand: Artefaktzustand;
-  /** Der Inhalt, nach `ISO-8859-1` dekodiert. Leer, wenn `zustand` nicht `ANZEIGBAR` ist. */
+  /** Der Inhalt, dekodiert mit `kodierung`. Leer, wenn `zustand` nicht `ANZEIGBAR` ist. */
   text: string;
   /**
    * Die Größe der **vollständigen** entpackten Datei — nicht die des gezeigten
@@ -869,8 +889,17 @@ export type Artefaktanzeige = {
   gekuerzt: boolean;
   /** Ob der Markenbeschnitt gegriffen hat. Wahr nur bei Protokollen und nur für `MANDANT`. */
   beschnitten: boolean;
-  /** Fest `ISO-8859-1` — gemessen, nicht geraten (M61). */
-  kodierung: string;
+  /**
+   * Womit der Text gelesen wurde — je Datei, seit dem 17.09.2026. `null` bei
+   * allem außer `ANZEIGBAR`: Sie beschreibt, wie *dieser* Text entstanden ist.
+   * Bis dahin stand hier fest `"ISO-8859-1"`; gemessen war nur, dass 8 von 8
+   * Protokollen und 9 von 16 Nutzdateien **kein** gültiges UTF-8 sind (M61) —
+   * die übrigen 7 Nutzdateien wurden damit falsch angezeigt.
+   *
+   * Weiter als `Kodierung` getippt, damit ein Wert, den diese Oberfläche noch
+   * nicht kennt, ankommt und roh erscheint statt zu verschwinden (Regel Q4).
+   */
+  kodierung: Kodierung | (string & {}) | null;
   /**
    * Wie viele Einträge das Archiv trug. In 693 geholten Dateien immer `1`; alles
    * darüber ist ein nie beobachteter Fall und wird **vermerkt** statt

@@ -10,6 +10,7 @@ import {
   FileX,
   Info,
   ScrollText,
+  Server,
   type LucideIcon,
 } from "lucide-react";
 
@@ -31,6 +32,7 @@ import {
   downloadPfad,
   erneutVersuchenSinnvoll,
   findeArtefakt,
+  kodierungsangabe,
 } from "../rohdaten";
 
 /**
@@ -152,15 +154,20 @@ export function ArtefaktAnsicht({
  * nichts, und wer eine leere Anzeige sieht, weiß nicht, ob er ein Protokoll ohne
  * freigegebenen Abschnitt vor sich hat oder eine Binärdatei oder einen Ausfall.
  *
- * **Nichts steht hier, was nicht gemessen wäre.** Die Kodierung ist
- * `ISO-8859-1`, weil 8 von 8 Protokollen und 9 von 16 Nutzdateien **kein**
- * gültiges UTF-8 sind (M61) — sie wird nicht zur Laufzeit erraten, und deshalb
- * darf sie dastehen.
+ * **Nichts steht hier, was nicht an den Bytes feststeht.** Die Kodierung kommt
+ * seit dem 17.09.2026 aus der Antwort, je Datei festgestellt, und wird über
+ * `kodierungsangabe` beschriftet: *Kodierung ASCII* und *Kodierung UTF-8*
+ * stehen an den Bytes fest, *gelesen als ISO-8859-1* ist der Rückfall und heißt
+ * deshalb nicht *Kodierung*. Bis dahin stand hier fest „Kodierung ISO-8859-1",
+ * begründet mit M61 — das belegt aber nur „kein gültiges UTF-8", und 7 von 16
+ * Nutzdateien *sind* gültiges UTF-8 und wurden falsch angezeigt.
  *
  * **Die Größe erscheint nur, wenn es eine gibt.** In den Zuständen ohne Inhalt
  * liefert das Backend `0`, und „0 Bytes" wäre eine Aussage über eine Datei, die
  * gar nicht abgerufen werden konnte. Die Kodierung erscheint nur bei tatsächlich
- * angezeigtem Text: Sie beschreibt, wie *dieser* Text entstanden ist.
+ * angezeigtem Text: Sie beschreibt, wie *dieser* Text entstanden ist — in den
+ * anderen Zuständen liefert das Backend `null`, und ein Wert, der trotzdem käme,
+ * wird dort nicht gezeigt.
  */
 function Herkunftszeile({ anzeige }: { anzeige: Artefaktanzeige | undefined }) {
   const texte = useTexte();
@@ -177,8 +184,8 @@ function Herkunftszeile({ anzeige }: { anzeige: Artefaktanzeige | undefined }) {
     anzeige.groesseBytes > 0
       ? einsetzen(bausteine.groesse, { bytes: formatiereZahl(anzeige.groesseBytes, sprache) })
       : null,
-    anzeige.zustand === "ANZEIGBAR"
-      ? einsetzen(bausteine.kodierung, { name: anzeige.kodierung })
+    anzeige.zustand === "ANZEIGBAR" && anzeige.kodierung !== null
+      ? kodierungsangabe(anzeige.kodierung, texte)
       : null,
   ].filter((angabe): angabe is string => angabe !== null);
 
@@ -327,6 +334,22 @@ function Inhalt({
           symbol={Binary}
           titel={bausteine.binaerTitel}
           text={einsetzen(bausteine.binaerText, {
+            bytes: formatiereZahl(anzeige.groesseBytes, sprache),
+          })}
+          kennung={anzeige.zustand}
+          aufWiederholen={wiederholen}
+        />
+      );
+
+    case "EBCDIC_DATEI":
+      // Der fünfte inhaltslose Zustand (17.09.2026): dieselbe ruhige Gestalt
+      // wie die anderen vier, kein Rot, kein zweiter Versuch. Das Zeichen steht
+      // für den Großrechner; der Text behauptet nicht, dass es sicher EBCDIC ist.
+      return (
+        <Zustandsfeld
+          symbol={Server}
+          titel={bausteine.ebcdicTitel}
+          text={einsetzen(bausteine.ebcdicText, {
             bytes: formatiereZahl(anzeige.groesseBytes, sprache),
           })}
           kennung={anzeige.zustand}
@@ -488,7 +511,7 @@ function InhaltSkelett() {
 /**
  * Der Fehlerzustand des Abrufs.
  *
- * **Nicht zu verwechseln mit den vier Zuständen aus §8** — die kommen mit `200`
+ * **Nicht zu verwechseln mit den fünf Zuständen aus §8** — die kommen mit `200`
  * und stehen im Inhalt. Hier landet, was schon vor dem Abruf schiefging: eine
  * unbekannte Nachricht, eine fremde, eine unbrauchbare Kennung. Alle drei
  * beantwortet das Backend absichtlich gleich, und der Text sagt deshalb nichts

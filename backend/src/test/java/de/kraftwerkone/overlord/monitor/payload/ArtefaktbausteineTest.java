@@ -15,6 +15,11 @@ import org.junit.jupiter.api.Test;
  * Die kleinen Bausteine des Rohdatenzugriffs: Namensmuster, Verweisform, Binaererkennung,
  * ZIP-Entnahme, Dateiname.
  *
+ * <p>Die Binaererkennung heisst seit dem 17.09.2026 {@link Inhaltseinstufung}; die fuenf Faelle
+ * unten sind die <b>unveraenderten Regressionsfaelle</b> der alten {@code Binaerpruefung} —
+ * dieselben Bytes, dieselben Erwartungen, nur der Aufruf ist ein anderer. Alles Neue (Kodierung je
+ * Datei, EBCDIC-Muster, Grenzen) steht in {@code InhaltseinstufungTest}.
+ *
  * <p>Alle ohne Datenbank und ohne Filestore. Die Bytes hier sind erfunden.
  */
 class ArtefaktbausteineTest {
@@ -134,15 +139,19 @@ class ArtefaktbausteineTest {
   }
 
   @Nested
-  @DisplayName("Binaerpruefung")
+  @DisplayName("Inhaltseinstufung — die Regressionsfaelle der Binaerpruefung")
   class Binaer {
+
+    private static boolean istBinaer(byte[] daten) {
+      return Inhaltseinstufung.stufeEin(daten).zustand() == Artefaktzustand.BINAERDATEI;
+    }
 
     @Test
     @DisplayName("Ein Nullbyte genuegt")
     void nullbyte() {
       byte[] daten = "Text mit\0Nullbyte".getBytes(StandardCharsets.ISO_8859_1);
 
-      assertThat(Binaerpruefung.istBinaer(daten)).isTrue();
+      assertThat(istBinaer(daten)).isTrue();
     }
 
     @Test
@@ -151,7 +160,7 @@ class ArtefaktbausteineTest {
       byte[] daten =
           "2025-12-29 10:00:00 ERFUNDEN-Zeile\nnoch eine\n".getBytes(StandardCharsets.ISO_8859_1);
 
-      assertThat(Binaerpruefung.istBinaer(daten)).isFalse();
+      assertThat(istBinaer(daten)).isFalse();
     }
 
     @Test
@@ -161,7 +170,7 @@ class ArtefaktbausteineTest {
     void umlaute() {
       byte[] daten = "Erfundene Grüße aus Köln\n".getBytes(StandardCharsets.ISO_8859_1);
 
-      assertThat(Binaerpruefung.istBinaer(daten)).isFalse();
+      assertThat(istBinaer(daten)).isFalse();
     }
 
     @Test
@@ -173,14 +182,14 @@ class ArtefaktbausteineTest {
         daten[i] = (byte) (0x01 + (i % 8));
       }
 
-      assertThat(Binaerpruefung.istBinaer(daten)).isTrue();
+      assertThat(istBinaer(daten)).isTrue();
     }
 
     @Test
     @DisplayName("Eine leere Datei ist keine Binaerdatei — das kleinste Artefakt hat 2 Byte (M60)")
     void leer() {
-      assertThat(Binaerpruefung.istBinaer(new byte[0])).isFalse();
-      assertThat(Binaerpruefung.istBinaer(null)).isFalse();
+      assertThat(istBinaer(new byte[0])).isFalse();
+      assertThat(istBinaer(null)).isFalse();
     }
   }
 

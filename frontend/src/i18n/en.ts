@@ -465,7 +465,11 @@ export const en: Texte = {
           PROTOKOLL: "Log",
         },
         groesse: "{bytes} bytes",
-        kodierung: "Encoding {name}",
+        kodierung: {
+          ASCII: "Encoding ASCII",
+          UTF_8: "Encoding UTF-8",
+          ISO_8859_1: "read as ISO-8859-1",
+        },
         herunterladen: "Download",
         inhalt: "File content",
 
@@ -477,6 +481,9 @@ export const en: Texte = {
         binaerTitel: "Binary file",
         binaerText:
           "This file does not consist of readable text and is therefore not displayed. Its size is {bytes} bytes.",
+        ebcdicTitel: "File in EBCDIC pattern",
+        ebcdicText:
+          "This file carries the byte pattern of the mainframe character set EBCDIC and is therefore not displayed as text. Its size is {bytes} bytes.",
         keinProtokollteilTitel: "No displayable log section",
         keinProtokollteilText:
           "This log contains no section that is shown to you. For many steps that is the normal case and does not mean that anything failed.",

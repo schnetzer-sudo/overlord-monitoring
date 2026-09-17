@@ -9,8 +9,6 @@ import de.kraftwerkone.overlord.monitor.common.error.RessourceNichtGefundenExcep
 import de.kraftwerkone.overlord.monitor.security.AngemeldeterNutzer;
 import de.kraftwerkone.overlord.monitor.security.MandantContext;
 import de.kraftwerkone.overlord.monitor.security.Rolle;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -33,7 +31,9 @@ import org.springframework.stereotype.Service;
  *       ServiceConnectString} (Q1).
  *   <li>Anhang lesen, ZIP entpacken, ersten Eintrag verwenden. Mehr als einer wird <b>vermerkt und
  *       protokolliert</b>, nicht stillschweigend verworfen.
- *   <li>Binaerpruefung, dann Kodierung {@code ISO-8859-1}, dann gegebenenfalls Beschnitt.
+ *   <li>Einstufung — Nullbyte, ASCII, UTF-8, EBCDIC-Muster, sonst ISO-8859-1, dann der Anteil
+ *       druckbarer Zeichen ({@link Inhaltseinstufung}) —, dann gegebenenfalls Beschnitt, dann
+ *       Kappung auf einer Zeichengrenze.
  * </ol>
  *
  * <h2>Die Rolle kommt aus der Sitzung</h2>
@@ -47,27 +47,23 @@ import org.springframework.stereotype.Service;
  * <h2>Gleichlauf</h2>
  *
  * <p>Anzeige und Download gehen durch <b>dieselbe</b> Aufbereitung ({@link #hole}). Fuer {@code
- * MANDANT} bei Protokollen ist das die beschnittene und maskierte Fassung — auf beiden Wegen. Es
- * gibt keinen Pfad, auf dem ein Mandantennutzer die vollstaendige Protokolldatei bekommt.
+ * MANDANT} bei Protokollen ist das die beschnittene und maskierte Fassung — auf beiden Wegen, und
+ * der Download ist mit derselben Kodierung zurueckkodiert, mit der gelesen wurde. Es gibt keinen
+ * Pfad, auf dem ein Mandantennutzer die vollstaendige Protokolldatei bekommt.
+ *
+ * <h2>Die Kodierung ist je Datei festgestellt, nicht fest</h2>
+ *
+ * <p>Bis zum 17.09.2026 stand hier {@code KODIERUNG = ISO_8859_1} mit der Begruendung „gemessen,
+ * nicht geraten". Gemessen war nur, dass 8 von 8 Protokollen und 9 von 16 entscheidbaren
+ * Nutzdateien <b>kein</b> gueltiges UTF-8 sind (M61) — die uebrigen 7 Nutzdateien <i>sind</i> es,
+ * und die wurden mit der festen Dekodierung falsch angezeigt. Was heute je Datei feststeht, sagt
+ * {@link Inhaltseinstufung}; was die Bytes nicht hergeben, wird weiterhin nicht erraten ({@link
+ * Kodierung}).
  */
 @Service
 public class ArtefaktService {
 
   private static final Logger log = LoggerFactory.getLogger(ArtefaktService.class);
-
-  /**
-   * Die Kodierung, mit der Artefakte dekodiert werden.
-   *
-   * <p><b>Gemessen, nicht geraten:</b> 8 von 8 Protokollen und 9 von 16 Nutzdateien sind
-   * <b>kein</b> gueltiges UTF-8 (M61). Das Altsystem dekodiert an derselben Stelle hart mit {@code
-   * ISO-8859-1} ({@code JsonServlet.java:812}–{@code :813}, Q4). Sie wird nicht zur Laufzeit
-   * erraten: Ein Erkennungsversuch fiele bei reinem ASCII — und das ist die Mehrheit — willkuerlich
-   * aus, weil ASCII zugleich gueltiges UTF-8 <b>und</b> gueltiges {@code ISO-8859-1} ist (M71,
-   * Befund 3).
-   */
-  static final Charset KODIERUNG = StandardCharsets.ISO_8859_1;
-
-  static final String KODIERUNG_NAME = "ISO-8859-1";
 
   private static final String ZIEL_TYP = "rohdaten-artefakt";
 
@@ -174,7 +170,7 @@ public class ArtefaktService {
         inhalt.groesseBytes(),
         inhalt.gekuerzt(),
         inhalt.beschnitten(),
-        KODIERUNG_NAME,
+        inhalt.kodierung(),
         inhalt.zipEintraege());
   }
 
@@ -254,8 +250,9 @@ public class ArtefaktService {
    * Abrufen und aufbereiten — die eine Fassung fuer Anzeige und Download.
    *
    * <p>Die Reihenfolge ist die aus {@code docs/rohdaten.md} §4 und nicht verhandelbar:
-   * <b>Binaerpruefung, dann Kodierung, dann Beschnitt.</b> Umgekehrt liefe der Beschnitt auf einem
-   * Text, der aus Binaerbytes entstanden ist, und suchte Marken in Zeichenmuell.
+   * <b>Einstufung, dann Beschnitt, dann Kappung.</b> Die Einstufung laeuft ueber die ungekappten
+   * Bytes und liefert den Text samt Kodierung; erst darauf laeuft der Beschnitt. Umgekehrt liefe er
+   * auf einem Text, der aus Binaerbytes entstanden ist, und suchte Marken in Zeichenmuell.
    */
   private Artefaktinhalt hole(
       MandantContext mandant, Rolle rolle, String messageId, Artefaktzeile zeile) {
@@ -304,66 +301,87 @@ public class ArtefaktService {
 
     byte[] daten = entpackt.daten();
     long groesse = daten.length;
-    boolean binaer = Binaerpruefung.istBinaer(daten);
+    // Die eine Stelle, die einstuft — ueber die ungekappten Bytes. Anzeige und Download rufen
+    // sie ueber diesen Weg; keiner baut sie nach.
+    Inhaltseinstufung.Ergebnis einstufung = Inhaltseinstufung.stufeEin(daten);
 
     if (!beschneiden) {
-      if (binaer) {
-        // Nicht anzeigen, aber benennen — und herunterladen lassen. Hier ist das unbedenklich:
-        // Dieser Zweig laeuft nur fuer Nutzdaten oder fuer ADMIN, und beide bekommen die Datei
-        // ohnehin vollstaendig.
+      if (!einstufung.istText()) {
+        // Binaerdatei oder EBCDIC-Muster: nicht anzeigen, aber benennen — und herunterladen
+        // lassen. Hier ist das unbedenklich: Dieser Zweig laeuft nur fuer Nutzdaten oder fuer
+        // ADMIN, und beide bekommen die Datei ohnehin vollstaendig.
         return new Artefaktinhalt(
-            Artefaktzustand.BINAERDATEI, daten, "", groesse, false, false, entpackt.eintraege());
+            einstufung.zustand(), daten, "", null, groesse, false, false, entpackt.eintraege());
       }
-      String text = new String(daten, KODIERUNG);
       // Vollstaendig. Der Download liefert die Bytes des ZIP-Eintrags unveraendert — nicht den
-      // zurueckkodierten Text: Was aus der Ablage kam, soll auch ankommen.
-      return new Artefaktinhalt(
-          Artefaktzustand.ANZEIGBAR,
-          daten,
-          gekuerzt(text),
-          groesse,
-          kuerzungGreift(text),
-          false,
-          entpackt.eintraege());
+      // zurueckkodierten Text und auch mit BOM: Was aus der Ablage kam, soll auch ankommen.
+      return anzeigbar(einstufung, daten, groesse, false, entpackt.eintraege());
     }
 
     // ─── Ab hier ausschliesslich: MANDANT, Protokoll ──────────────────────────────
     //
-    // An dieser Stelle darf KEIN Zweig die rohen Bytes zurueckgeben. Der Binaerfall ist genau
+    // An dieser Stelle darf KEIN Zweig die rohen Bytes zurueckgeben. Der Fall ohne Text ist genau
     // deshalb hierher gewandert und steht nicht mehr davor: Stuende er vorn, bekaeme ein
-    // Mandantennutzer die vollstaendige, unmaskierte Protokolldatei, sobald sie als binaer
-    // eingestuft wird — und die Einstufung haengt am Inhalt, den das Protokoll teilweise aus der
-    // EDI-Datei des Partners echot. Ein einziges Nullbyte in einem echoten Wert genuegte.
+    // Mandantennutzer die vollstaendige, unmaskierte Protokolldatei, sobald sie als Binaerdatei
+    // oder als EBCDIC-Muster eingestuft wird — und die Einstufung haengt am Inhalt, den das
+    // Protokoll teilweise aus der EDI-Datei des Partners echot. Ein einziges Nullbyte in einem
+    // echoten Wert genuegte.
     //
     // Dass 0 % der gemessenen Protokolle binaer sind (M61, 8 von 8), ist eine Beobachtung an acht
     // Dateien und keine Zusage. Entscheidung 9 sagt „es gibt keinen Pfad" — dann darf es auch
     // keinen geben, der nur selten begangen wird.
-    if (binaer) {
-      // Eine binaere Datei hat keinen Innenbereich zwischen Marken. Es gibt also nichts, was
+    if (!einstufung.istText()) {
+      // Eine Datei ohne Text hat keinen Innenbereich zwischen Marken. Es gibt also nichts, was
       // dieser Aufrufer bekommen koennte — benannt, aber ohne Bytes.
       log.warn(
-          "Protokoll {} auf Schritt {} ist binaer und damit fuer MANDANT nicht beschneidbar."
+          "Protokoll {} auf Schritt {} ist {} und damit fuer MANDANT nicht beschneidbar."
               + " In 8 von 8 gemessenen Protokollen ist dieser Fall nicht vorgekommen (M61).",
           zeile.name(),
-          zeile.schritt());
-      return Artefaktinhalt.ohneInhalt(Artefaktzustand.BINAERDATEI, true);
+          zeile.schritt(),
+          einstufung.zustand());
+      return Artefaktinhalt.ohneInhalt(einstufung.zustand(), true);
     }
 
-    String text = new String(daten, KODIERUNG);
-    Protokollbeschnitt.Ergebnis beschnitten = Protokollbeschnitt.beschneide(text);
+    Protokollbeschnitt.Ergebnis beschnitten = Protokollbeschnitt.beschneide(einstufung.text());
     if (beschnitten.zustand() != Artefaktzustand.ANZEIGBAR) {
       return Artefaktinhalt.ohneInhalt(beschnitten.zustand(), true);
     }
-    // Der Download bekommt genau denselben Ausschnitt, nur zurueckkodiert. Das ist der Gleichlauf:
-    // es gibt keinen Pfad, auf dem MANDANT die vollstaendige Protokolldatei bekommt.
-    return new Artefaktinhalt(
-        Artefaktzustand.ANZEIGBAR,
-        beschnitten.text().getBytes(KODIERUNG),
-        gekuerzt(beschnitten.text()),
+    // Der Download bekommt genau denselben Ausschnitt, nur zurueckkodiert — mit derselben
+    // Kodierung, mit der gelesen wurde. Das ist der Gleichlauf: es gibt keinen Pfad, auf dem
+    // MANDANT die vollstaendige Protokolldatei bekommt.
+    Kodierung kodierung = einstufung.kodierung();
+    return anzeigbar(
+        new Inhaltseinstufung.Ergebnis(Artefaktzustand.ANZEIGBAR, kodierung, beschnitten.text()),
+        kodierung.kodiere(beschnitten.text()),
         groesse,
-        kuerzungGreift(beschnitten.text()),
         true,
         entpackt.eintraege());
+  }
+
+  /** Ein anzeigbarer Inhalt: der Text gekappt auf einer Zeichengrenze, die Bytes ungekappt. */
+  private Artefaktinhalt anzeigbar(
+      Inhaltseinstufung.Ergebnis einstufung,
+      byte[] bytes,
+      long groesse,
+      boolean beschnitten,
+      int zipEintraege) {
+    Kodierung kodierung = einstufung.kodierung();
+    String text = einstufung.text();
+    long grenze = eigenschaften.anzeigeGrenzeBytes();
+    // Gerechnet wird in Bytes der Kodierung, nicht in Zeichen — die Grenze soll die Antwort
+    // begrenzen, und die traegt Bytes. Gekappt wird auf einer Zeichengrenze (Kodierung#gekappt):
+    // Ein Byte-Schnitt mitten in einer UTF-8-Folge erzeugte ein Ersatzzeichen, das in der Datei
+    // nie stand. Die Kappung schuetzt den Browser, nicht die Vertraulichkeit; der Download
+    // bleibt vollstaendig.
+    return new Artefaktinhalt(
+        Artefaktzustand.ANZEIGBAR,
+        bytes,
+        kodierung.gekappt(text, grenze),
+        kodierung,
+        groesse,
+        kodierung.ueberschreitet(text, grenze),
+        beschnitten,
+        zipEintraege);
   }
 
   /**
@@ -373,23 +391,6 @@ public class ArtefaktService {
    */
   private static boolean beschnittGreift(Artefaktart art, Rolle rolle) {
     return art == Artefaktart.PROTOKOLL && rolle == Rolle.MANDANT;
-  }
-
-  /**
-   * Kappt die <b>Anzeige</b> an der Laengengrenze.
-   *
-   * <p>Gerechnet wird in Bytes der Zielkodierung, nicht in Zeichen — die Grenze soll die Antwort
-   * begrenzen, und die traegt Bytes. Da {@code ISO-8859-1} jedes Zeichen auf genau ein Byte
-   * abbildet, sind die beiden Zahlen hier ohnehin gleich; die Rechnung steht trotzdem so da, damit
-   * ein Wechsel der Kodierung sie nicht still verschiebt.
-   */
-  private String gekuerzt(String text) {
-    long grenze = eigenschaften.anzeigeGrenzeBytes();
-    return text.length() > grenze ? text.substring(0, (int) grenze) : text;
-  }
-
-  private boolean kuerzungGreift(String text) {
-    return text.length() > eigenschaften.anzeigeGrenzeBytes();
   }
 
   /**

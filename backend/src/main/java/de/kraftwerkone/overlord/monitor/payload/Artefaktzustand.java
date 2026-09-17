@@ -3,8 +3,8 @@ package de.kraftwerkone.overlord.monitor.payload;
 import de.kraftwerkone.overlord.monitor.common.Abrufzustand;
 
 /**
- * Der Zustand eines Abrufs — die vier benannten Faelle aus {@code docs/rohdaten.md} §8, plus der
- * Regelfall.
+ * Der Zustand eines Abrufs — die fuenf benannten Faelle aus {@code docs/rohdaten.md} §8, plus der
+ * Regelfall. Bis zum 17.09.2026 waren es vier; {@link #EBCDIC_DATEI} ist der fuenfte.
  *
  * <p><b>Keiner davon ist ein leeres Feld.</b> Jeder bekommt in der Oberflaeche einen eigenen Text;
  * das Backend liefert den Schluessel und deutet ihn nicht. Die Trennung ist der Punkt: „Datei weg"
@@ -23,6 +23,17 @@ public enum Artefaktzustand {
    * moeglich.
    */
   BINAERDATEI,
+
+  /**
+   * Die Bytes tragen das Muster des Grossrechner-Zeichensatzes EBCDIC: mindestens 90 % liegen im
+   * invarianten Vorrat, der in IBM 037, 273, 500 und 1141 gleich ist ({@code Inhaltseinstufung}).
+   * <b>Kein Text</b> — dekodiert wird nicht, und ob es sicher EBCDIC ist, behauptet niemand. Bis
+   * zum 17.09.2026 erschien eine solche Datei in Grossschrift als Text, aus „VDA 4905" wurde
+   * „åÄÁ@ôùðõ". Verhaelt sich in Anzeige, Download und Protokollierung wie {@link #BINAERDATEI}:
+   * benannt, nicht angezeigt, herunterladbar — ausser als Protokoll fuer {@code MANDANT}. Ob der
+   * Fall im Bestand vorkommt, ist nicht gemessen.
+   */
+  EBCDIC_DATEI,
 
   /**
    * Der Beschnitt greift, aber es gibt kein vollstaendiges Markenpaar. Betrifft die haeufigste
@@ -51,10 +62,10 @@ public enum Artefaktzustand {
    * Der Zustand, den der <b>Transport</b> gemeldet hat, in dieser Menge.
    *
    * <p><b>Die Abbildung steht hier und nicht in {@code common}</b>: {@link Abrufzustand} kennt drei
-   * Faelle, diese Aufzaehlung fuenf — die beiden zusaetzlichen ({@link #BINAERDATEI}, {@link
-   * #KEIN_ANZEIGBARER_PROTOKOLLTEIL}) entstehen erst nach dem Abruf, bei der Binaerpruefung und
-   * beim Beschnitt. Wer die engere Menge in die weitere uebersetzt, ist der, der die weitere kennt;
-   * {@code common} kennt {@code payload} nicht.
+   * Faelle, diese Aufzaehlung sechs — die drei zusaetzlichen ({@link #BINAERDATEI}, {@link
+   * #EBCDIC_DATEI}, {@link #KEIN_ANZEIGBARER_PROTOKOLLTEIL}) entstehen erst nach dem Abruf, bei der
+   * Einstufung und beim Beschnitt. Wer die engere Menge in die weitere uebersetzt, ist der, der die
+   * weitere kennt; {@code common} kennt {@code payload} nicht.
    *
    * <p><b>{@link Abrufzustand#GELIEFERT} wird zu {@link #ANZEIGBAR}</b>, und das ist an dieser
    * Stelle noch keine Zusage: Ob die gelieferten Bytes tatsaechlich anzeigbar sind, entscheidet

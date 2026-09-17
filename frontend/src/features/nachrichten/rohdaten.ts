@@ -6,6 +6,7 @@ import type {
   Artefaktart,
   Artefaktliste,
   Artefaktzustand,
+  Kodierung,
   Schritt,
 } from "./api";
 import { METADATEN_POSITION } from "./detail";
@@ -25,6 +26,8 @@ import { METADATEN_POSITION } from "./detail";
  *    `docs/rohdaten.md` §3, Entscheidung 9.
  * 4. **Welche Vermerke die Anzeige trägt** — Ausschnitt, Kappung, mehrere
  *    Archiveinträge.
+ * 5. **Wie die Kodierung beschriftet wird** — nur, was an den Bytes feststeht
+ *    (17.09.2026).
  */
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -331,8 +334,8 @@ export function downloadPfad(messageId: string, artefaktId: string): string {
  * | Zustand | Download | warum |
  * |---|---|---|
  * | `ANZEIGBAR` | **ja** | es gibt Bytes |
- * | `BINAERDATEI`, nicht beschnitten | **ja** | Nutzdatei oder `ADMIN` — beide bekommen die Datei ohnehin vollständig; die Anzeige kann Bytes nur nicht als Text darstellen |
- * | `BINAERDATEI`, beschnitten | nein | eine binäre Datei hat keinen Innenbereich zwischen Marken; der Endpunkt antwortet `409` |
+ * | `BINAERDATEI` oder `EBCDIC_DATEI`, nicht beschnitten | **ja** | Nutzdatei oder `ADMIN` — beide bekommen die Datei ohnehin vollständig; die Anzeige kann Bytes nur nicht als Text darstellen |
+ * | `BINAERDATEI` oder `EBCDIC_DATEI`, beschnitten | nein | eine Datei ohne Text hat keinen Innenbereich zwischen Marken; der Endpunkt antwortet `409` |
  * | `KEIN_ANZEIGBARER_PROTOKOLLTEIL` | nein | `409` |
  * | `DATEI_NICHT_VORHANDEN` | nein | `404` |
  * | `ABLAGE_NICHT_ERREICHBAR` | nein | `502` |
@@ -354,7 +357,10 @@ export function downloadMoeglich(anzeige: {
   if (anzeige.zustand === "ANZEIGBAR") {
     return true;
   }
-  return anzeige.zustand === "BINAERDATEI" && !anzeige.beschnitten;
+  return (
+    (anzeige.zustand === "BINAERDATEI" || anzeige.zustand === "EBCDIC_DATEI") &&
+    !anzeige.beschnitten
+  );
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -414,8 +420,40 @@ export function anzeigevermerke(anzeige: Artefaktanzeige): Anzeigevermerk[] {
  * Die Unterscheidung wird deshalb **nicht über Farbe** getragen, sondern über
  * das Angebot: Nur der eine Zustand bekommt eine Schaltfläche. Rot hat in diesem
  * Farbsystem genau eine Bedeutung — `MessageStatus` ist fehlgeschlagen
- * (`docs/visuelles-konzept.md` §3) —, und keiner dieser vier Zustände ist das.
+ * (`docs/visuelles-konzept.md` §3) —, und keiner dieser fünf Zustände ist das.
  */
 export function erneutVersuchenSinnvoll(zustand: Artefaktzustand): boolean {
   return zustand === "ABLAGE_NICHT_ERREICHBAR";
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   4. Die Kodierung in der Herkunftszeile (17.09.2026)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * **Die Beschriftung der Kodierung — nur, was an den Bytes feststeht** (Regel Q4).
+ *
+ * Bis zum 17.09.2026 stand in der Herkunftszeile fest „Kodierung ISO-8859-1",
+ * begründet mit M61. M61 belegt aber nur, dass 8 von 8 Protokollen und 9 von 16
+ * Nutzdateien **kein** gültiges UTF-8 sind — und das trifft auf EBCDIC,
+ * Windows-1252 und DOS-Codepages genauso zu. Seither stellt das Backend die
+ * Kodierung je Datei fest, und die Zeile sagt je Wert etwas anderes:
+ *
+ * | Wert | Beschriftung | warum |
+ * |---|---|---|
+ * | `ASCII` | *Kodierung ASCII* | steht an den Bytes fest: keines über `0x7F` |
+ * | `UTF_8` | *Kodierung UTF-8* | steht an den Bytes fest: streng gültig dekodiert |
+ * | `ISO_8859_1` | *gelesen als ISO-8859-1* | der Rückfall — angenommen, nicht festgestellt |
+ * | sonst | der rohe Wert | ein Schlüssel, den diese Oberfläche nicht kennt, wird nicht gedeutet |
+ *
+ * **Der unbekannte Wert erscheint roh und verschwindet nicht.** Ein Feld, das
+ * das Backend liefert und die Oberfläche unterschlägt, wäre eine stille
+ * Falschauskunft — dieselbe Regel wie bei einem unbekannten Prozesszustand.
+ */
+export function kodierungsangabe(kodierung: Kodierung | (string & {}), texte: Texte): string {
+  const beschriftungen: Record<Kodierung, string> = texte.nachrichten.detail.dateien.kodierung;
+  if (Object.hasOwn(beschriftungen, kodierung)) {
+    return beschriftungen[kodierung as Kodierung];
+  }
+  return kodierung;
 }

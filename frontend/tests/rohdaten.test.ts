@@ -11,6 +11,7 @@ import {
   downloadPfad,
   erneutVersuchenSinnvoll,
   findeArtefakt,
+  kodierungsangabe,
   zieleJeSchritt,
   zieleOhneZeile,
 } from "@/features/nachrichten/rohdaten";
@@ -29,6 +30,8 @@ import { artefaktAnsicht, nachrichtAnsicht } from "@/lib/routen";
  *    Endpunkt auch etwas liefert (`docs/rohdaten.md` §3, Entscheidung 9).
  * 3. **Die Vermerke.** Wo Ausschnitt oder Kappung gegriffen haben, muss es
  *    dastehen — und wo nicht, darf nichts dastehen.
+ * 4. **Die Kodierung** (17.09.2026). Die Herkunftszeile sagt nur, was an den
+ *    Bytes feststeht — und für den Rückfall „gelesen als" statt „Kodierung".
  *
  * **Kein Testdatensatz enthält echten Dateiinhalt**, keinen echten Partner,
  * keinen echten Knoten, keine echte Kennung. Alles hier ist erfunden.
@@ -71,7 +74,10 @@ function anzeige(teile: Partial<Artefaktanzeige> = {}): Artefaktanzeige {
     groesseBytes: 11,
     gekuerzt: false,
     beschnitten: false,
-    kodierung: "ISO-8859-1",
+    // Bis zum 17.09.2026 stand hier die feste Zeichenkette "ISO-8859-1". Der
+    // erfundene Inhalt darüber ist reines ASCII, und genau das stellt das
+    // Backend seither fest.
+    kodierung: "ASCII",
     zipEintraege: 1,
     ...teile,
   };
@@ -427,21 +433,26 @@ describe("Der Gleichlauf von Anzeige und Download", () => {
    * liefert — alles andere wäre ein Knopf, der etwas anderes verspricht als die
    * Anzeige.
    */
-  it("bietet den Download genau in den beiden lieferbaren Lagen an", () => {
+  it("bietet den Download genau in den drei lieferbaren Lagen an", () => {
     expect(downloadMoeglich(anzeige({ zustand: "ANZEIGBAR" }))).toBe(true);
     // Nutzdatei oder ADMIN: Beide bekommen die Datei ohnehin vollständig; die
     // Anzeige kann Bytes nur nicht als Text darstellen.
     expect(downloadMoeglich(anzeige({ zustand: "BINAERDATEI", beschnitten: false }))).toBe(true);
+    // Dasselbe für das EBCDIC-Muster (17.09.2026): kein Text, aber Bytes.
+    expect(downloadMoeglich(anzeige({ zustand: "EBCDIC_DATEI", beschnitten: false }))).toBe(true);
   });
 
   /**
    * **Das binäre Protokoll für `MANDANT` ist die Ausnahme, die Entscheidung 9
    * trägt.** Eine binäre Datei hat keinen Innenbereich zwischen Marken — es gibt
    * für diesen Aufrufer nichts, und der Endpunkt antwortet `409`. Ein Knopf
-   * daneben führte genau in diese Antwort.
+   * daneben führte genau in diese Antwort. **Seit dem 17.09.2026 gilt dieselbe
+   * Ausnahme für das EBCDIC-Muster** — eine Datei ohne Text ist eine Datei ohne
+   * Innenbereich.
    */
-  it("bietet ihn beim binären Protokoll für Mandanten nicht an", () => {
+  it("bietet ihn beim binären und beim EBCDIC-Protokoll für Mandanten nicht an", () => {
     expect(downloadMoeglich(anzeige({ zustand: "BINAERDATEI", beschnitten: true }))).toBe(false);
+    expect(downloadMoeglich(anzeige({ zustand: "EBCDIC_DATEI", beschnitten: true }))).toBe(false);
   });
 
   it("bietet ihn in keinem der drei inhaltslosen Zustände an", () => {
@@ -498,24 +509,31 @@ describe("Die Vermerke über der Anzeige", () => {
 
 describe("Datei weg gegen Ablage aus", () => {
   /**
-   * **Die vier Zustandstexte sind paarweise verschieden — in beiden Sprachen.**
+   * **Die fünf Zustandstexte sind paarweise verschieden — in beiden Sprachen.**
    *
    * Ohne diese Zusicherung wäre die Trennung aus `docs/rohdaten.md` §8 eine
-   * Behauptung: Vier Zustände mit demselben Satz wären dasselbe „Fehler beim
-   * Laden", nur viermal hingeschrieben. Besonders die letzten beiden dürfen
-   * nicht verschmelzen — für den Betrieb ist genau ihre Unterscheidung die
-   * wichtigere.
+   * Behauptung: Fünf Zustände mit demselben Satz wären dasselbe „Fehler beim
+   * Laden", nur fünfmal hingeschrieben. Besonders „nicht vorhanden" und „nicht
+   * erreichbar" dürfen nicht verschmelzen — für den Betrieb ist genau ihre
+   * Unterscheidung die wichtigere. **Der fünfte ist seit dem 17.09.2026 das
+   * EBCDIC-Muster**; er darf nicht mit der Binärdatei zusammenfallen, sonst
+   * hätte der neue Zustand keinen eigenen Namen.
    */
   it("sagt in keinen zwei Zuständen dasselbe", () => {
     for (const sprache of ["de", "en"] as const) {
       const bausteine = texteFuer(sprache).nachrichten.detail.dateien;
       const saetze = [
         bausteine.binaerText,
+        bausteine.ebcdicText,
         bausteine.keinProtokollteilText,
         bausteine.nichtVorhandenText,
         bausteine.ablageText,
       ];
-      expect(new Set(saetze).size, sprache).toBe(4);
+      expect(new Set(saetze).size, sprache).toBe(5);
+      // Und der EBCDIC-Text behauptet nicht, dass es sicher EBCDIC ist: Er
+      // spricht vom Muster, nicht von der Datei als solcher (Regel Q4).
+      expect(bausteine.ebcdicText.toLowerCase(), sprache).toContain("ebcdic");
+      expect(bausteine.ebcdicText.toLowerCase(), sprache).toMatch(/muster|pattern/);
     }
   });
 
@@ -529,7 +547,49 @@ describe("Datei weg gegen Ablage aus", () => {
     expect(erneutVersuchenSinnvoll("DATEI_NICHT_VORHANDEN")).toBe(false);
     expect(erneutVersuchenSinnvoll("KEIN_ANZEIGBARER_PROTOKOLLTEIL")).toBe(false);
     expect(erneutVersuchenSinnvoll("BINAERDATEI")).toBe(false);
+    // Ein zweiter Abruf liefert dieselben Bytes im selben Muster (17.09.2026).
+    expect(erneutVersuchenSinnvoll("EBCDIC_DATEI")).toBe(false);
     expect(erneutVersuchenSinnvoll("ANZEIGBAR")).toBe(false);
+  });
+});
+
+describe("Die Kodierung in der Herkunftszeile", () => {
+  /**
+   * **Nur, was an den Bytes feststeht, heißt „Kodierung"** (Regel Q4,
+   * 17.09.2026). `ASCII` und `UTF_8` stellt das Backend fest; `ISO_8859_1` ist
+   * der Rückfall für alles, was kein gültiges UTF-8 ist — und M61 belegt genau
+   * das und nicht mehr. Der Rückfall heißt deshalb „gelesen als".
+   */
+  it("beschriftet die drei Werte verschieden, in beiden Sprachen", () => {
+    expect(kodierungsangabe("ASCII", TEXTE)).toBe("Kodierung ASCII");
+    expect(kodierungsangabe("UTF_8", TEXTE)).toBe("Kodierung UTF-8");
+    expect(kodierungsangabe("ISO_8859_1", TEXTE)).toBe("gelesen als ISO-8859-1");
+
+    for (const sprache of ["de", "en"] as const) {
+      const texte = texteFuer(sprache);
+      const angaben = [
+        kodierungsangabe("ASCII", texte),
+        kodierungsangabe("UTF_8", texte),
+        kodierungsangabe("ISO_8859_1", texte),
+      ];
+      expect(new Set(angaben).size, sprache).toBe(3);
+      // Der Rückfall trägt nicht das Wort, das die beiden festgestellten tragen.
+      expect(angaben[2], sprache).not.toMatch(/^(Kodierung|Encoding)/);
+      expect(angaben[0], sprache).toMatch(/^(Kodierung|Encoding)/);
+      expect(angaben[1], sprache).toMatch(/^(Kodierung|Encoding)/);
+    }
+  });
+
+  /**
+   * **Ein unbekannter Wert erscheint roh** — und verschwindet nicht. Das
+   * Backend könnte einen vierten Wert liefern, bevor diese Oberfläche ihn kennt;
+   * ihn zu unterschlagen wäre eine stille Falschauskunft. Ebenso wenig darf ein
+   * Name aus dem Prototyp der Beschriftungstabelle als bekannt gelten.
+   */
+  it("zeigt einen unbekannten Wert roh und deutet ihn nicht", () => {
+    expect(kodierungsangabe("UTF_16", TEXTE)).toBe("UTF_16");
+    expect(kodierungsangabe("toString", TEXTE)).toBe("toString");
+    expect(kodierungsangabe("", TEXTE)).toBe("");
   });
 });
 

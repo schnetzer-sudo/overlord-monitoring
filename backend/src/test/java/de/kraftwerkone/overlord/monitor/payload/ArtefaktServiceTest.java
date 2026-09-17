@@ -21,6 +21,7 @@ import de.kraftwerkone.overlord.monitor.security.Rolle;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -75,6 +76,19 @@ class ArtefaktServiceTest {
 
   private static final String PROTOKOLL_OHNE_MARKEN =
       "2025-12-29 10:00:00 ERFUNDEN-Verbindung aufgebaut\n";
+
+  /** Dasselbe erfundene Protokoll mit Umlauten im Innenbereich — fuer die Rueckkodierung. */
+  private static final String PROTOKOLL_MIT_UMLAUTEN =
+      String.join(
+          "\n",
+          "aussen: /opt/txp/users/ERFUNDENESKONTO/aussen.dat",
+          "***StartOfLog***",
+          "innen: Grüße aus Köln, Größe 12",
+          "***EndOfLog***",
+          "danach: nicht mehr sichtbar");
+
+  /** Die JDK-Codepage, mit der die EBCDIC-Bytes der Tests aus erfundenem Text entstehen. */
+  private static final Charset EBCDIC = Charset.forName("IBM037");
 
   @Mock private ArtefaktRepository repository;
   @Mock private AuditLogWriter auditLogWriter;
@@ -404,6 +418,100 @@ class ArtefaktServiceTest {
           .isEqualTo(binaeresProtokoll);
     }
 
+    /**
+     * Dieselbe Ausnahme fuer den fuenften Zustand: Ein Protokoll im EBCDIC-Muster hat keinen
+     * Innenbereich, den {@code MANDANT} bekommen koennte — und die Bytes verlassen das Backend
+     * nicht. <b>Verletzungsprobe:</b> Liefert der beschnittene Zweig bei einem Inhalt ohne Text die
+     * rohen Bytes (wie der unbeschnittene), wird dieser Test rot — ausgefuehrt am 17.09.2026,
+     * {@code docs/rohdaten-backend.md} §12.
+     */
+    @Test
+    @DisplayName("Ein EBCDIC-Protokoll oeffnet MANDANT keinen Weg an dem Beschnitt vorbei")
+    void ebcdic_protokoll_umgeht_den_beschnitt_nicht() {
+      artefakte(protokoll((short) 1));
+      byte[] ebcdicProtokoll = "ERFUNDENES PROTOKOLL 4711 OHNE JEDE MARKE".getBytes(EBCDIC);
+      ablage.liefert(Abrufergebnis.geholt(alsZip(ebcdicProtokoll)));
+
+      AnzeigeResponse anzeige =
+          service.anzeige(
+              MANDANT, MANDANT_NUTZER, MESSAGE_ID, "1-FileReader.Log.GUID", "127.0.0.1");
+
+      assertThat(anzeige.zustand()).isEqualTo(Artefaktzustand.EBCDIC_DATEI);
+      assertThat(anzeige.text()).isEmpty();
+      assertThat(anzeige.kodierung()).isNull();
+      assertThat(anzeige.beschnitten()).isTrue();
+
+      assertThatThrownBy(
+              () ->
+                  service.download(
+                      MANDANT, MANDANT_NUTZER, MESSAGE_ID, "1-FileReader.Log.GUID", "127.0.0.1"))
+          .as("Bekaeme MANDANT hier Bytes, waere es die vollstaendige Protokolldatei")
+          .isInstanceOf(AbrufFehlgeschlagenException.class)
+          .hasMessageContaining("EBCDIC_DATEI");
+    }
+
+    @Test
+    @DisplayName("ADMIN bekommt dasselbe EBCDIC-Protokoll dagegen als Datei")
+    void ebcdic_protokoll_fuer_admin() {
+      artefakte(protokoll((short) 1));
+      byte[] ebcdicProtokoll = "ERFUNDENES PROTOKOLL 4711 OHNE JEDE MARKE".getBytes(EBCDIC);
+      ablage.liefert(Abrufergebnis.geholt(alsZip(ebcdicProtokoll)));
+
+      AnzeigeResponse anzeige =
+          service.anzeige(MANDANT, ADMIN_NUTZER, MESSAGE_ID, "1-FileReader.Log.GUID", "127.0.0.1");
+      ArtefaktService.Download download =
+          service.download(MANDANT, ADMIN_NUTZER, MESSAGE_ID, "1-FileReader.Log.GUID", "127.0.0.1");
+
+      assertThat(anzeige.zustand()).isEqualTo(Artefaktzustand.EBCDIC_DATEI);
+      assertThat(download.bytes()).isEqualTo(ebcdicProtokoll);
+    }
+
+    /**
+     * <b>Gleichlauf heisst auch: dieselbe Kodierung zurueck.</b> Der beschnittene Download ist der
+     * Text der Anzeige, zurueckkodiert — bis zum 17.09.2026 fest nach {@code ISO-8859-1}, seither
+     * mit der Kodierung, mit der gelesen wurde. Ein UTF-8-Protokoll kaeme sonst als Datei mit
+     * kaputten Umlauten an, waehrend die Anzeige sie richtig zeigt.
+     */
+    @Test
+    @DisplayName("Der beschnittene Download ist mit UTF-8 zurueckkodiert, wenn UTF-8 gelesen wurde")
+    void rueckkodierung_utf_8() {
+      artefakte(protokoll((short) 1));
+      ablage.liefert(
+          Abrufergebnis.geholt(alsZip(PROTOKOLL_MIT_UMLAUTEN.getBytes(StandardCharsets.UTF_8))));
+
+      AnzeigeResponse anzeige =
+          service.anzeige(
+              MANDANT, MANDANT_NUTZER, MESSAGE_ID, "1-FileReader.Log.GUID", "127.0.0.1");
+      ArtefaktService.Download download =
+          service.download(
+              MANDANT, MANDANT_NUTZER, MESSAGE_ID, "1-FileReader.Log.GUID", "127.0.0.1");
+
+      assertThat(anzeige.kodierung()).isEqualTo(Kodierung.UTF_8);
+      assertThat(anzeige.text()).isEqualTo("innen: Grüße aus Köln, Größe 12");
+      assertThat(download.bytes()).isEqualTo(anzeige.text().getBytes(StandardCharsets.UTF_8));
+      assertThat(download.bytes())
+          .as("Nach ISO-8859-1 zurueckkodiert waeren es andere Bytes")
+          .isNotEqualTo(anzeige.text().getBytes(StandardCharsets.ISO_8859_1));
+    }
+
+    @Test
+    @DisplayName("… und mit ISO-8859-1, wenn ISO-8859-1 gelesen wurde")
+    void rueckkodierung_iso_8859_1() {
+      artefakte(protokoll((short) 1));
+      ablage.liefert(PROTOKOLL_MIT_UMLAUTEN);
+
+      AnzeigeResponse anzeige =
+          service.anzeige(
+              MANDANT, MANDANT_NUTZER, MESSAGE_ID, "1-FileReader.Log.GUID", "127.0.0.1");
+      ArtefaktService.Download download =
+          service.download(
+              MANDANT, MANDANT_NUTZER, MESSAGE_ID, "1-FileReader.Log.GUID", "127.0.0.1");
+
+      assertThat(anzeige.kodierung()).isEqualTo(Kodierung.ISO_8859_1);
+      assertThat(anzeige.text()).isEqualTo("innen: Grüße aus Köln, Größe 12");
+      assertThat(download.bytes()).isEqualTo(anzeige.text().getBytes(StandardCharsets.ISO_8859_1));
+    }
+
     @Test
     @DisplayName("Eine binaere Nutzdatei bleibt fuer beide Rollen herunterladbar")
     void binaere_nutzdatei_bleibt_ladbar() {
@@ -443,8 +551,63 @@ class ArtefaktServiceTest {
   // ─── Die Zustaende ────────────────────────────────────────────────────────────
 
   @Nested
-  @DisplayName("Die vier Zustaende")
+  @DisplayName("Die fuenf Zustaende")
   class Zustaende {
+
+    @Test
+    @DisplayName("EBCDIC-Muster: benannt, nicht angezeigt — aber herunterladbar, byteweise")
+    void ebcdic() {
+      artefakte(nutzdatei((short) 1));
+      byte[] ebcdic = "VDA 4905 ERFUNDENE LIEFERUNG 0815".getBytes(EBCDIC);
+      ablage.liefert(Abrufergebnis.geholt(alsZip(ebcdic)));
+
+      AnzeigeResponse anzeige =
+          service.anzeige(
+              MANDANT, MANDANT_NUTZER, MESSAGE_ID, "1-FileReader.Payload.GUID", "127.0.0.1");
+
+      assertThat(anzeige.zustand()).isEqualTo(Artefaktzustand.EBCDIC_DATEI);
+      assertThat(anzeige.text()).as("Kein Zeichenmuell wie bis zum 17.09.2026").isEmpty();
+      assertThat(anzeige.kodierung()).isNull();
+      assertThat(anzeige.groesseBytes()).isEqualTo(ebcdic.length);
+
+      ArtefaktService.Download download =
+          service.download(
+              MANDANT, MANDANT_NUTZER, MESSAGE_ID, "1-FileReader.Payload.GUID", "127.0.0.1");
+      assertThat(download.bytes()).isEqualTo(ebcdic);
+    }
+
+    @Test
+    @DisplayName("Die Kodierung steht nur bei ANZEIGBAR — sonst null")
+    void kodierung_nur_bei_anzeigbar() {
+      artefakte(nutzdatei((short) 1), protokoll((short) 1));
+
+      ablage.liefert(Abrufergebnis.geholt(alsZip(new byte[] {0x41, 0x00, 0x42})));
+      assertThat(
+              service
+                  .anzeige(
+                      MANDANT, MANDANT_NUTZER, MESSAGE_ID, "1-FileReader.Payload.GUID", "127.0.0.1")
+                  .kodierung())
+          .as("Binaerdatei")
+          .isNull();
+
+      ablage.liefert(Abrufergebnis.nichtVorhanden());
+      assertThat(
+              service
+                  .anzeige(
+                      MANDANT, MANDANT_NUTZER, MESSAGE_ID, "1-FileReader.Payload.GUID", "127.0.0.1")
+                  .kodierung())
+          .as("Datei nicht vorhanden")
+          .isNull();
+
+      ablage.liefert(PROTOKOLL_OHNE_MARKEN);
+      assertThat(
+              service
+                  .anzeige(
+                      MANDANT, MANDANT_NUTZER, MESSAGE_ID, "1-FileReader.Log.GUID", "127.0.0.1")
+                  .kodierung())
+          .as("Kein anzeigbarer Protokollteil")
+          .isNull();
+    }
 
     @Test
     @DisplayName("Binaerdatei: benannt, nicht angezeigt — aber herunterladbar")
@@ -533,9 +696,15 @@ class ArtefaktServiceTest {
           .containsExactly(VERBINDUNG);
     }
 
+    /**
+     * Bis zum 17.09.2026 hiess der Fall „Dekodiert wird mit ISO-8859-1, nicht mit UTF-8" und
+     * erwartete die feste Zeichenkette {@code "ISO-8859-1"}. Die drei Bytes sind dieselben, die
+     * Erwartung an den Text auch; nur ist {@code ISO-8859-1} jetzt der <b>Rueckfall</b> fuer das,
+     * was kein gueltiges UTF-8 ist — und das Feld traegt den Schluessel statt des Namens.
+     */
     @Test
-    @DisplayName("Dekodiert wird mit ISO-8859-1, nicht mit UTF-8")
-    void kodierung() {
+    @DisplayName("Was kein gueltiges UTF-8 ist, wird als ISO-8859-1 gelesen")
+    void kodierung_rueckfall_iso_8859_1() {
       artefakte(nutzdatei((short) 1));
       byte[] umlaut = new byte[] {(byte) 0xC4, (byte) 0xD6, (byte) 0xDC}; // AeOeUe in ISO-8859-1
       ablage.liefert(Abrufergebnis.geholt(alsZip(umlaut)));
@@ -544,10 +713,79 @@ class ArtefaktServiceTest {
           service.anzeige(
               MANDANT, MANDANT_NUTZER, MESSAGE_ID, "1-FileReader.Payload.GUID", "127.0.0.1");
 
-      assertThat(anzeige.kodierung()).isEqualTo("ISO-8859-1");
+      assertThat(anzeige.kodierung()).isEqualTo(Kodierung.ISO_8859_1);
       assertThat(anzeige.text())
           .as("Als UTF-8 gelesen waeren diese drei Bytes ungueltig (M61)")
           .isEqualTo("ÄÖÜ");
+    }
+
+    @Test
+    @DisplayName("Kein Byte ueber 0x7F: ASCII — die Mehrheit, und sie entscheidet nichts")
+    void kodierung_ascii() {
+      artefakte(nutzdatei((short) 1));
+      ablage.liefert("Erfundener Inhalt");
+
+      AnzeigeResponse anzeige =
+          service.anzeige(
+              MANDANT, MANDANT_NUTZER, MESSAGE_ID, "1-FileReader.Payload.GUID", "127.0.0.1");
+
+      assertThat(anzeige.kodierung()).isEqualTo(Kodierung.ASCII);
+      assertThat(anzeige.text()).isEqualTo("Erfundener Inhalt");
+    }
+
+    /**
+     * Der Fall, den M61 belegt und die feste Dekodierung falsch anzeigte: 7 von 16 entscheidbaren
+     * Nutzdateien sind gueltiges UTF-8 mit Bytes ueber {@code 0x7F}. Aus „fuer" wurde „fÃ¼r".
+     */
+    @Test
+    @DisplayName("Gueltiges UTF-8 mit ß, Ä, Ö, Ü und € wird als UTF-8 gelesen")
+    void kodierung_utf_8() {
+      artefakte(nutzdatei((short) 1));
+      String text = "Erfundene Grüße: ß Ä Ö Ü € 12,50\n";
+      byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
+      ablage.liefert(Abrufergebnis.geholt(alsZip(bytes)));
+
+      AnzeigeResponse anzeige =
+          service.anzeige(
+              MANDANT, MANDANT_NUTZER, MESSAGE_ID, "1-FileReader.Payload.GUID", "127.0.0.1");
+      ArtefaktService.Download download =
+          service.download(
+              MANDANT, MANDANT_NUTZER, MESSAGE_ID, "1-FileReader.Payload.GUID", "127.0.0.1");
+
+      assertThat(anzeige.zustand()).isEqualTo(Artefaktzustand.ANZEIGBAR);
+      assertThat(anzeige.kodierung()).isEqualTo(Kodierung.UTF_8);
+      assertThat(anzeige.text()).isEqualTo(text);
+      assertThat(anzeige.groesseBytes()).isEqualTo(bytes.length);
+      assertThat(download.bytes())
+          .as("Der Download von Nutzdaten bleibt byteweise")
+          .isEqualTo(bytes);
+    }
+
+    @Test
+    @DisplayName("Ein UTF-8-BOM steht nicht im Text, bleibt aber im Download")
+    void utf_8_bom() {
+      artefakte(nutzdatei((short) 1));
+      byte[] inhalt = "Erfundene Grüße\n".getBytes(StandardCharsets.UTF_8);
+      byte[] bytes = new byte[inhalt.length + 3];
+      bytes[0] = (byte) 0xEF;
+      bytes[1] = (byte) 0xBB;
+      bytes[2] = (byte) 0xBF;
+      System.arraycopy(inhalt, 0, bytes, 3, inhalt.length);
+      ablage.liefert(Abrufergebnis.geholt(alsZip(bytes)));
+
+      AnzeigeResponse anzeige =
+          service.anzeige(
+              MANDANT, MANDANT_NUTZER, MESSAGE_ID, "1-FileReader.Payload.GUID", "127.0.0.1");
+      ArtefaktService.Download download =
+          service.download(
+              MANDANT, MANDANT_NUTZER, MESSAGE_ID, "1-FileReader.Payload.GUID", "127.0.0.1");
+
+      assertThat(anzeige.kodierung()).isEqualTo(Kodierung.UTF_8);
+      assertThat(anzeige.text()).isEqualTo("Erfundene Grüße\n");
+      assertThat(anzeige.groesseBytes())
+          .as("Die Groesse zaehlt den BOM mit")
+          .isEqualTo(bytes.length);
+      assertThat(download.bytes()).isEqualTo(bytes);
     }
 
     @Test
@@ -599,6 +837,40 @@ class ArtefaktServiceTest {
       assertThat(download.bytes())
           .as("Die Kappung schuetzt den Browser, nicht die Vertraulichkeit")
           .hasSize(50);
+    }
+
+    /**
+     * Die Anzeigegrenze zaehlt Bytes, und ein Byte-Schnitt mitten in einer UTF-8-Folge erzeugte ein
+     * Ersatzzeichen, das in der Datei nie stand — dieselbe Regel wie bei der Kappung eines
+     * Eigenschaftswerts ({@code docs/nachrichtendetail.md}).
+     */
+    @Test
+    @DisplayName("Gekappt wird auf einer Zeichengrenze, nicht mitten in einer UTF-8-Folge")
+    void kappung_auf_zeichengrenze() {
+      ArtefaktService klein =
+          new ArtefaktService(
+              repository,
+              ablage,
+              auditLogWriter,
+              new RohdatenEigenschaften(1024, 5, Duration.ofSeconds(5), Duration.ofSeconds(15)));
+      artefakte(nutzdatei((short) 1));
+      byte[] bytes = "ääää".getBytes(StandardCharsets.UTF_8); // acht Bytes
+      ablage.liefert(Abrufergebnis.geholt(alsZip(bytes)));
+
+      AnzeigeResponse anzeige =
+          klein.anzeige(
+              MANDANT, MANDANT_NUTZER, MESSAGE_ID, "1-FileReader.Payload.GUID", "127.0.0.1");
+      ArtefaktService.Download download =
+          klein.download(
+              MANDANT, MANDANT_NUTZER, MESSAGE_ID, "1-FileReader.Payload.GUID", "127.0.0.1");
+
+      assertThat(anzeige.gekuerzt()).isTrue();
+      assertThat(anzeige.text())
+          .as("Fuenf Bytes fielen mitten in das dritte „ä“ — es faellt ganz weg, kein U+FFFD")
+          .isEqualTo("ää")
+          .doesNotContain("\uFFFD");
+      assertThat(anzeige.groesseBytes()).isEqualTo(8);
+      assertThat(download.bytes()).isEqualTo(bytes);
     }
 
     @Test
@@ -721,6 +993,19 @@ class ArtefaktServiceTest {
       service.anzeige(MANDANT, ADMIN_NUTZER, MESSAGE_ID, "1-FileReader.Log.GUID", "1.2.3.4");
 
       assertThat(letztesEreignis().detail()).isEqualTo("Fassung: vollstaendig");
+    }
+
+    @Test
+    @DisplayName("Angesehen — auch im EBCDIC-Muster, mit der Fassung")
+    void angesehen_ebcdic() {
+      artefakte(nutzdatei((short) 1));
+      ablage.liefert(Abrufergebnis.geholt(alsZip("ERFUNDEN 4711".getBytes(EBCDIC))));
+
+      service.anzeige(MANDANT, MANDANT_NUTZER, MESSAGE_ID, "1-FileReader.Payload.GUID", "1.2.3.4");
+
+      AuditEvent ereignis = letztesEreignis();
+      assertThat(ereignis.typ()).isEqualTo(AuditEventType.ROHDATEN_ANGESEHEN);
+      assertThat(ereignis.detail()).isEqualTo("Fassung: vollstaendig");
     }
 
     @Test

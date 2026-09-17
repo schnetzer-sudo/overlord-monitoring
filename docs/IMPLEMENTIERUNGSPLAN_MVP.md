@@ -622,6 +622,18 @@ Regelfall, nicht der Download** ([`rohdaten.md`](rohdaten.md) §1).
   WSDL, ohne Authentifizierung) und liefert die Datei als **ZIP-Anhang**. Das Backend liest,
   entpackt den ersten Eintrag, prüft auf Binärinhalt, dekodiert `ISO-8859-1` und beschneidet
   gegebenenfalls — **in dieser Reihenfolge**
+
+  > **Korrigiert 17.09.2026 (E‑176 bis E‑178).** „prüft auf Binärinhalt, dekodiert `ISO-8859-1`
+  > und beschneidet gegebenenfalls — in dieser Reihenfolge" gilt so nicht mehr. Das Backend
+  > **stuft ein** — Nullbyte → Binärdatei; alle Bytes bis `0x7F` → `ASCII`; streng gültiges UTF-8
+  > → `UTF-8`, ein BOM fällt aus dem Text; mindestens 90 % der Bytes im invarianten EBCDIC-Vorrat
+  > → `EBCDIC_DATEI`; sonst **gelesen als** `ISO-8859-1`; für die drei Textfälle unter 95 %
+  > druckbare Zeichen → Binärdatei —, beschneidet dann gegebenenfalls und kappt zuletzt auf
+  > einer Zeichengrenze. Die Kodierung wird damit je Datei festgestellt und steht in der Antwort
+  > (`kodierung`), nicht mehr fest; M61 belegte nur „kein gültiges UTF-8", und 7 von 16
+  > Nutzdateien *sind* gültiges UTF-8. EBCDIC wird erkannt und benannt, nicht dekodiert.
+  > Vorgabe und Begründung: [`rohdaten.md`](rohdaten.md) §3, Kasten zu Entscheidung 4;
+  > Bauform: [`rohdaten-backend.md`](rohdaten-backend.md) §6
 - Die Kennung eines Artefakts ist `<MessageActionID>-<MessagePropertyName>` und trägt **niemals die
   GUID und niemals die Ablagenkennung**. Kein Endpunkt nimmt eine Mandanten-ID (Regel M1), eine
   Rolle oder einen Verweis entgegen; erst Mandantenprüfung im Statement, dann Abruf
@@ -635,8 +647,9 @@ Regelfall, nicht der Download** ([`rohdaten.md`](rohdaten.md) §1).
   `MANDANT` sieht, bekommt er auch als Datei
 - Die **Anzeige liefert JSON**, niemals einen Bytestrom mit ratbarem Typ. Der **Download** liefert
   `Content-Disposition: attachment` und `Content-Type: application/octet-stream`, **niemals inline**
-- **Fünf benannte Zustände** — der Regelfall und die vier inhaltslosen. Die Anzeige antwortet in
-  allen fünf mit `200`; ein Fehlerstatus wäre dort falsch, weil „Protokoll ohne Marken" bei
+- **Fünf benannte Zustände** — der Regelfall und die vier inhaltslosen *(seit 17.09.2026 sechs:
+  der fünfte inhaltslose ist das EBCDIC-Muster, E‑177, mit demselben Verhalten wie die
+  Binärdatei)*. Die Anzeige antwortet in allen fünf mit `200`; ein Fehlerstatus wäre dort falsch, weil „Protokoll ohne Marken" bei
   `FTPSender` der Normalfall ist und sich nicht von „Nachricht gibt es nicht" ununterscheidbar
   anfühlen darf. Der Download kann das nicht und antwortet je Zustand mit `409`, `404` oder `502`
 - **Drei Ereignisarten** im `audit_log` statt einer — angesehen, heruntergeladen, Abruf
@@ -656,7 +669,9 @@ Regelfall, nicht der Download** ([`rohdaten.md`](rohdaten.md) §1).
 - **Eigene Route** `/nachrichten/{messageId}/dateien/{artefaktId}`, verlinkbar, mit eigenem
   Bildlauf. Rohtext in Festbreitenschrift, als **Textknoten** gerendert und **niemals als HTML**
 - **Vier benannte Zustände**, keiner ein leeres Feld: Binärdatei · kein anzeigbarer Protokollteil ·
-  Datei nicht vorhanden · Ablage nicht erreichbar
+  Datei nicht vorhanden · Ablage nicht erreichbar *(seit 17.09.2026 fünf: dazu die Datei im
+  EBCDIC-Muster, E‑177; und die Herkunftszeile nennt die Kodierung aus der Antwort — „Kodierung
+  ASCII", „Kodierung UTF-8", „gelesen als ISO-8859-1" —, E‑176)*
 - Der **Download-Knopf steht in der Ansicht und nirgends sonst** — die Oberfläche bietet keinen
   Knopf an, der etwas anderes verspricht als die Anzeige
 - Am schmalen Fenster **Umbruch statt waagerechtem Bildlauf**

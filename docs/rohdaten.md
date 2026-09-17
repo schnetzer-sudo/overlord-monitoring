@@ -1,7 +1,8 @@
 # Rohdaten und Protokolle
 
-Stand: 17.08.2026, **Entscheidung 6 korrigiert am 18.08.2026 und am 19.08.2026** (§3, §5) ·
-Schritt 8 des MVP
+Stand: 17.08.2026, **Entscheidung 6 korrigiert am 18.08.2026 und am 19.08.2026** (§3, §5),
+**Entscheidung 4 korrigiert am 17.09.2026 — Kodierung je Datei, EBCDIC benannt** (§3, §4, §7,
+§8, §13; E‑176 bis E‑178) · Schritt 8 des MVP
 Grundlage: `messungen-schritt8.md` (M52–M71 und **M73**, Abschnitt Q),
 `messungen-schritt8-auftrag.md` Fassung 3
 
@@ -112,13 +113,16 @@ Alles in diesem Abschnitt ist belegt. Fundstellen in `messungen-schritt8.md`.
 | 1 | **Anzeige ist Regelfall**, Rohtext, nicht aufbereitet | 14.08.2026 |
 | 2 | Alle Rollen sehen **alle Dateien** der Nachrichten, die sie ohnehin erreichen. Keine zweite Berechtigungsstufe. **Bestätigt 20.08.2026** — Kasten unter dieser Tabelle | 14.08.2026, bestätigt 20.08.2026 |
 | 3 | Bei Protokollen sieht `MANDANT` nur den Bereich zwischen den Marken. `ADMIN` sieht vollständig. **Über die Rolle, nicht über ein Flag** | 14.08.2026 |
-| 4 | Kodierung **`ISO-8859-1`**, belegt durch M61 und deckungsgleich mit Q4 | 17.08.2026 |
+| 4 | Kodierung **`ISO-8859-1`**, belegt durch M61 und deckungsgleich mit Q4. **Korrigiert am 17.09.2026** — Kasten unter dieser Tabelle | 17.08.2026, korrigiert 17.09.2026 |
 | 5 | Markenregel wie in §6, einschließlich **keine Startmarke → nichts** | 17.08.2026 |
 | 6 | **E1 = Artefakte an der Zeitleiste**, Schritt `0` einzeln darüber. **Korrigiert am 18.08.2026 und am 19.08.2026**, beide alten Fassungen in den Kästen unter dieser Tabelle | 17.08.2026, korrigiert 18.08. und 19.08.2026 |
 | 7 | **E2 = eigene Route.** Ein Sheet über der Detailansicht ist eine spätere Zugabe, kein MVP-Bestandteil | 17.08.2026 |
 | 8 | **E3 = Binärdateien werden erkannt und benannt**, nicht angezeigt | 17.08.2026 |
 | 9 | **E4 = Download liefert, was die Anzeige liefert.** Für `MANDANT` bei Protokollen also die beschnittene Fassung | 17.08.2026 |
 | 10 | „Keine Datei vorhanden" ist ein **Fehlerzustand**, kein Regelfall — produktiv decken sich Datenbank und Filestore (Auskunft 17.08.2026) | 17.08.2026 |
+| 11 | **E‑176 = Kodierung je Datei.** `ASCII` und `UTF-8` werden an den Bytes **festgestellt**, `ISO-8859-1` bleibt der **Rückfall**; die Herkunftszeile nennt nur, was feststeht. Ersetzt Entscheidung 4 — Kasten unter dieser Tabelle | 17.09.2026 |
+| 12 | **E‑177 = EBCDIC-Muster wird erkannt und benannt, nicht dekodiert.** Fünfter inhaltsloser Zustand `EBCDIC_DATEI`, Schwelle **90 % gesetzt, nicht gemessen**; verhält sich wie die Binärdatei, samt der Ausnahme für das Protokoll | 17.09.2026 |
+| 13 | **E‑178 = Die Einstufung läuft über alle Bytes**, nicht über ein 64-KiB-Präfix — der UTF-8-Decoder liest die Datei ohnehin ganz | 17.09.2026 |
 
 > **Entscheidung 2 ist am 20.08.2026 bestätigt, nicht korrigiert.** Am selben Tag war
 > zwischenzeitlich entschieden, das Flag `app_user.download_allowed` in die Oberfläche zu holen und
@@ -126,6 +130,59 @@ Alles in diesem Abschnitt ist belegt. Fundstellen in `messungen-schritt8.md`.
 > Migration in Schritt 9a (E20). **E2 gilt unverändert.** Der offene Punkt 8 in
 > [`rohdaten-backend.md`](rohdaten-backend.md) §11 ist damit geschlossen — mit „Spalte entfernt",
 > nicht mit „geprüft". Die drei Endpunkte aus Schritt 8 bleiben unangetastet.
+
+### Entscheidung 4 ist am 17.09.2026 korrigiert worden (E‑176, E‑177, E‑178)
+
+> **Die alte Fassung, wortgleich wie sie seit dem 17.08.2026 hier stand:**
+>
+> > 4 · Kodierung **`ISO-8859-1`**, belegt durch M61 und deckungsgleich mit Q4
+
+**Was M61 belegt — und was nicht.** M61 belegt, dass **8 von 8** Protokollen und **9 von 16**
+entscheidbaren Nutzdateien **kein gültiges UTF-8** sind. Es belegt nicht, dass sie `ISO-8859-1`
+sind: „kein gültiges UTF-8" trifft auf EBCDIC, Windows-1252 und DOS-Codepages genauso zu. Und es
+belegt in derselben Tabelle, dass **7 von 16** Nutzdateien gültiges UTF-8 **mit** Bytes über
+`0x7F` sind — die wurden mit der festen Dekodierung falsch angezeigt, aus „für" wurde „fÃ¼r", und
+es sah nicht kaputt aus. Das Wort „belegt" in der Entscheidung war zu groß.
+
+**Die neue Fassung (E‑176):** Die Kodierung wird **je Datei festgestellt**, in dieser Reihenfolge
+und an genau einer Stelle ([`rohdaten-backend.md`](rohdaten-backend.md) §6):
+
+| Stufe | Befund an den Bytes | Ergebnis |
+|---|---|---|
+| 1 | ein Nullbyte | Binärdatei, wie bisher |
+| 2 | kein Byte über `0x7F` | Kodierung **`ASCII`** — steht fest |
+| 3 | streng gültiges UTF-8 | Kodierung **`UTF-8`** — steht fest; ein BOM fällt aus dem angezeigten Text |
+| 4 | mindestens 90 % der Bytes im invarianten EBCDIC-Vorrat | **`EBCDIC_DATEI`**, kein Text (E‑177) |
+| 5 | alles andere | **gelesen als `ISO-8859-1`** — der Rückfall, wie bisher und wie im Altsystem (Q4) |
+| 6 | unter 95 % druckbare Zeichen im Text aus 2, 3 oder 5 | Binärdatei, Schwelle unverändert |
+
+**Die Beschriftung sagt nur, was feststeht** (Regel Q4): „Kodierung ASCII", „Kodierung UTF-8" —
+und für den Rückfall **„gelesen als ISO-8859-1"**, weil dort nichts festgestellt, sondern
+angenommen ist. Windows-1252, CP850 und andere Einbyte-Codepages werden **nicht** unterschieden;
+sie landen im Rückfall, wie bisher.
+
+**E‑177 — das EBCDIC-Muster.** EBCDIC-Text liegt großteils auf Bytes, die die Binärprüfung als
+druckbar zählt (`0x40`, ab `0xA0`). Eine Datei in Großschrift erschien deshalb als Text — aus
+„VDA 4905" wurde „åÄÁ@ôùðõ" —, eine in Kleinschrift als Binärdatei ohne Namen. Beides ist aus
+der Regel abgeleitet, nicht gemessen. Erkannt wird über den invarianten Vorrat, der in IBM 037,
+273, 500 und 1141 gleich liegt; **dekodiert wird nicht**, und die Oberfläche behauptet nicht, dass
+es sicher EBCDIC ist. Der Zustand verhält sich wie die Binärdatei: Anzeige `200` ohne Text,
+Download liefert die Datei — außer bei einem Protokoll für `MANDANT`, dann `409` und nie die Bytes.
+
+**E‑178 — über alle Bytes.** `Binaerpruefung` sah die ersten 64 KiB an. Die Einstufung läuft
+über die ganze Datei: Der UTF-8-Decoder liest sie ohnehin, und eine an der Präfixgrenze
+zerschnittene Folge sähe fälschlich ungültig aus. Bei höchstens 8 MiB je Datei kostet das nichts
+Messbares — **gemessen ist es nicht** (§13).
+
+> **Belegvermerk (L10).** *Gemessen ist:* M61, Stichprobe von 206 Dateien — binär gegen Text,
+> UTF-8-Gültigkeit, BOM, Zeilenenden. *Nicht gemessen ist:* ob EBCDIC im Bestand vorkommt, und
+> wie viele Dateien nach der neuen Reihenfolge welchen Wert bekommen. *Ausdrücklich nicht
+> behauptet:* dass `NXS_FILE_CONVERT|E2A|UNWRAP` „EBCDIC nach ASCII" bedeutet — das ist eine
+> Deutung des Namens (§13). **Diese Runde erhebt keine Zahl**; M61 bleibt unverändert.
+
+**Was unberührt bleibt:** die Schwelle von 95 %, die Marken, der Beschnitt, die Pfadmaskierung,
+der Download von Nutzdaten (byteweise, auch mit BOM). Kein Umschalter für den Nutzer, keine
+Auswertung des UNB-Zeichensatzes.
 
 ### Entscheidung 6 ist am 18.08.2026 korrigiert worden
 
@@ -223,6 +280,14 @@ Ablauf je Abruf:
    vorgekommen (0 von 693) — tritt er auf, wird das **protokolliert und angezeigt**, nicht
    stillschweigend verworfen wie im Altsystem.
 7. Binärprüfung, dann Kodierung, dann gegebenenfalls Beschnitt.
+
+> **Korrigiert 17.09.2026 zu Punkt 7 (E‑176).** Er lautete: „Binärprüfung, dann Kodierung, dann
+> gegebenenfalls Beschnitt." Seither: **Einstufung** — Nullbyte, ASCII, streng gültiges UTF-8,
+> EBCDIC-Muster, sonst ISO-8859-1, dann der Anteil druckbarer Zeichen über die **dekodierten**
+> Zeichen —, dann gegebenenfalls Beschnitt, dann Kappung **auf einer Zeichengrenze**. Der Zweck
+> der alten Reihenfolge bleibt: kein Beschnitt auf Binärbytes, keine Markensuche in Zeichenmüll.
+> Die Stufen stehen im Kasten zu Entscheidung 4 (§3) und in
+> [`rohdaten-backend.md`](rohdaten-backend.md) §6.
 
 **Grenzen:** harte Größenobergrenze deutlich über dem gemessenen Maximum von 610 KB, Zeitgrenze für
 den SOAP-Aufruf, und die Größenprüfung greift **während** des Lesens — `FileReader.FileProperty.Size`
@@ -342,9 +407,24 @@ dort keinen leeren Kasten, sondern einen benannten Hinweis (§8).
 - Kappung mit sichtbarem Hinweis, wenn sie greift. Bei einem Maximum von 610 KB ist sie eine
   Schutzmaßnahme, kein Regelfall.
 
+> **Korrigiert 17.09.2026 zum dritten Punkt (E‑176).** Er lautete: „Kodierung `ISO-8859-1`. Ein
+> Umschalter auf UTF-8 ist zulässig, aber die Voreinstellung ist gemessen und wird nicht zur
+> Laufzeit erraten." Zwei Dinge daran gelten nicht mehr. **Es gibt keine Voreinstellung**: Die
+> Kodierung wird je Datei festgestellt. **Und feststellen ist nicht erraten**: Dass kein Byte über
+> `0x7F` liegt oder dass die Bytes streng gültiges UTF-8 sind, ist an den Bytes ablesbar und
+> keine Vermutung. Was die Bytes nicht hergeben, wird weiterhin nicht erraten — für alles andere
+> bleibt `ISO-8859-1` der Rückfall, und die Herkunftszeile nennt ihn **„gelesen als"**, nicht
+> „Kodierung". **Ein Umschalter bleibt ungebaut** (Abgrenzung des Auftrags vom 17.09.2026); für
+> gültiges UTF-8 braucht es ihn nicht mehr. **Die Kappung** greift seither auf einer
+> Zeichengrenze, damit keine UTF-8-Folge zerschnitten wird — dieselbe Regel wie bei den
+> Eigenschaftswerten ([`nachrichtendetail.md`](nachrichtendetail.md)).
+
 ---
 
 ## 8. Die vier Zustände
+
+> **Seit dem 17.09.2026 sind es fünf (E‑177).** Die Überschrift und die Tabelle bleiben stehen;
+> die fünfte Zeile steht im Kasten unter der Tabelle.
 
 Jeder bekommt einen eigenen, benannten Text. **Keiner davon ist ein leeres Feld.**
 
@@ -354,6 +434,15 @@ Jeder bekommt einen eigenen, benannten Text. **Keiner davon ist ein leeres Feld.
 | **Kein anzeigbarer Protokollteil** | Beschnitt greift, aber kein vollständiges Markenpaar (M63: zwei Familien durchgängig) | Betrifft die häufigste Familie; darf nicht wie ein Ausfall wirken |
 | **Datei nicht vorhanden** | Abruf liefert nichts, Ablage antwortet aber | Produktiv ein Fehlerzustand; **in der Entwicklung der Normalfall** (§12) |
 | **Ablage nicht erreichbar** | Kennung löst nicht auf oder Knoten antwortet nicht | Etwas anderes als „Datei weg" — und für den Betrieb die wichtigere Unterscheidung |
+
+> **Ergänzt 17.09.2026 — die fünfte Zeile (E‑177):**
+>
+> | Zustand | Auslöser | Warum eigen |
+> |---|---|---|
+> | **Datei im EBCDIC-Muster** | kein Nullbyte, kein ASCII, kein gültiges UTF-8 — und mindestens **90 %** der Bytes im invarianten EBCDIC-Vorrat (gesetzt, nicht gemessen) | Bis dahin erschien eine solche Datei in Großschrift als **Text mit Zeichenmüll** („åÄÁ@ôùðõ" statt „VDA 4905") und in Kleinschrift als Binärdatei ohne Namen. Der Text der Oberfläche spricht vom **Muster** und behauptet nicht, dass es sicher EBCDIC ist. Kein Rot, kein zweiter Versuch; Download wie bei der Binärdatei, samt der Ausnahme für das Protokoll |
+>
+> **Die Reihenfolge entscheidet:** Eine EBCDIC-Datei mit Nullbytes bleibt **Binärdatei** — das
+> Nullbyte wird zuerst geprüft (§13).
 
 ---
 
@@ -425,3 +514,7 @@ Gegenstand dieser Datei.
 | 7 | **Dass das Paar des Lesedienstes den *Eingang* der Nachricht bezeichnet, ist eine Sichtprüfung** *(neu am 19.08.2026)*. Gemessen ist, **welche** Namen auf `MessageActionID = 0` liegen (M57) — nicht, was die Dateien dahinter sind. Der Auftraggeber hat die beiden Artefakte am 19.08.2026 an **einer** Nachricht geöffnet und die Zuordnung bestätigt; darauf beruht die Beschriftung *Eingang* (§5). **Belegvermerk nach Regel L10**, ausführlich in [`rohdaten-frontend.md`](rohdaten-frontend.md) §3. **Zu entscheiden: messen oder als Sichtbefund führen** |
 | 8 | **M73 ist in zwei Fenstern gemessen, nicht im Bestand** *(neu am 19.08.2026, = offener Punkt 32 in [`messungen-schritt8.md`](messungen-schritt8.md))*. 220.579 Nachrichten sind rund **6,6 %** der 3.341.519 des Gesamtbestands; Fenster C (`2024-10-01`) ist nicht gefahren. Ob `Message.Payload.GUID` am alten Ende ebenso zeigt, kostet eine einzige Sitzung |
 | 9 | **Der Downloaddateiname hängt an derselben Annahme** *(neu am 19.08.2026, = offener Punkt 31 in [`messungen-schritt8.md`](messungen-schritt8.md))*. Der Anlassfall der Regel „Muster statt Familie" ist mit dem Artefakt entfallen; die Regel bleibt und ist **nicht** umgebaut worden. Ob ein anderer Fall bleibt, in dem Muster- und Familiensuche auseinandergehen, ist **benannt und nicht gemessen** — [`rohdaten-backend.md`](rohdaten-backend.md) §7 |
+| 10 | **Die Schwelle von 90 % für das EBCDIC-Muster ist gesetzt, nicht gemessen** *(neu am 17.09.2026, projektweit Punkt 186)*. Begründet aus dem Vorrat selbst: Text auf ASCII-Basis liegt überwiegend außerhalb der 85 Byte-Werte, gleichverteilte Binärdaten treffen ihn bei rund einem Drittel (`InhaltseinstufungTest`, Zufallsbytes mit Saat 4711). Ob eine echte EBCDIC-Datei mit vielen Tabulatoren, `$`, `#` oder Umlauten — die alle außerhalb des invarianten Vorrats liegen — die Schwelle reißt, ist nicht gemessen. Dazu eine bekannte Grenze der Reihenfolge: EBCDIC-Bytes, die zufällig gültiges UTF-8 ergeben, werden als UTF-8 gelesen und enden über die Druckbarkeit als Binärdatei, nicht als Zeichenmüll ([`rohdaten-backend.md`](rohdaten-backend.md) §6) |
+| 11 | **Ob EBCDIC im Bestand vorkommt, ist nicht gemessen** *(neu am 17.09.2026, projektweit Punkt 187)*. M61 hat die Frage nicht gestellt. Der einzige Hinweis ist der Bausteinname `NXS_FILE_CONVERT\|E2A\|UNWRAP` ([`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §3.2) — und dass `E2A` „EBCDIC nach ASCII" bedeutet, ist **eine Deutung des Namens**, die nirgends als Tatsache steht. Auflösbar durch eine Messung derselben Art wie M61 über die neue Einstufung; sie würde zugleich sagen, wie viele Dateien welchen Kodierungswert bekommen |
+| 12 | **Eine EBCDIC-Datei mit Nullbytes bleibt `BINAERDATEI`** *(neu am 17.09.2026, projektweit Punkt 188)*. Das Nullbyte wird zuerst geprüft, das Muster danach nicht mehr gesucht — sie erscheint dann unter dem Namen der Binärdatei und nicht unter dem des Musters. Hingenommen, weil das Nullbyte in keiner gemessenen Textdatei vorkommt (M61) und die alte Reihenfolge damit unverändert bleibt; belegt in `InhaltseinstufungTest` |
+| 13 | **Die Einstufung über alle Bytes ist nicht gemessen** *(neu am 17.09.2026, projektweit Punkt 189, zu E‑178)*. Der 64-KiB-Präfix von `Binaerpruefung` ist entfallen; die Kosten eines Durchlaufs über bis zu 8 MiB samt strengem UTF-8-Decoder sind mit „billig genug" begründet und nicht mit einer Zahl. Bei einem gemessenen Maximum von 609.995 Byte (M60) ist die Sorge klein, eine Messung nach L7 steht trotzdem aus |
