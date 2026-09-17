@@ -1,5 +1,7 @@
 package de.kraftwerkone.overlord.monitor.dashboard;
 
+import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROCESS;
+import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROJECTMANDANT;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.kraftwerkone.overlord.monitor.common.MandantContext;
@@ -401,5 +403,50 @@ class DashboardPlanDbIT {
     attrappe.letzterLauf();
 
     assertThat(zeileFuer(plan(einziges()), "rollup_lauf", "stand").zugriff()).isNotEqualTo("ALL");
+  }
+
+  // ─── Der Live-Rest (Teil B, 17.09.2026) ──────────────────────────────────────
+
+  /**
+   * <b>Die Katalog-Nachlesung faehrt ueber den Primaerschluessel</b> (E-191). Sie bekommt die
+   * Prozesskennungen der Korrekturzeilen und liest je Kennung eine Zeile — ein {@code IN} ueber
+   * {@code PRIMARY}, die Kette wie ueberall. Keine Tabelle wird voll gelesen.
+   *
+   * <p>Die Kennungen kommen aus dem Bestand, damit der {@code EXPLAIN} einen Plan zeigt und nicht
+   * „Impossible WHERE"; <b>welche</b> es sind, spielt fuer den Plan keine Rolle (Regel T2: kein
+   * Wert daraus in einer Zusicherung). Die zwei Live-Lesungen des Bausteins selbst sind in {@code
+   * ProzessbaumPlanDbIT} geprueft — es sind dieselben Statements.
+   */
+  @Test
+  @DisplayName("Die Katalog-Nachlesung des Live-Rests faehrt ueber PRIMARY und liest nichts voll")
+  void nachlesung_faehrt_ueber_den_primaerschluessel() {
+    for (String mandantId : MANDANTEN) {
+      List<String> prozesse =
+          glassfishDsl
+              .select(PROCESS.PROCESSID)
+              .from(PROCESS)
+              .join(PROJECTMANDANT)
+              .on(PROJECTMANDANT.PROJECTID.eq(PROCESS.PROJECTID))
+              .where(PROJECTMANDANT.MANDANTID.eq(mandantId))
+              .orderBy(PROCESS.PROCESSID)
+              .limit(3)
+              .fetch(PROCESS.PROCESSID);
+      assertThat(prozesse)
+          .as("Ohne Prozess gibt es keinen Plan zu pruefen (%s)", mandantId)
+          .isNotEmpty();
+
+      gerendert.clear();
+      attrappe.katalogzuordnung(new MandantContext(mandantId), prozesse);
+      List<Plan> plan = plan(einziges());
+
+      Plan katalog = zeileFuer(plan, "process_catalog", mandantId);
+      assertThat(katalog.index())
+          .as("Die Nachlesung steigt ueber den Primaerschluessel ein (%s)", mandantId)
+          .isEqualTo("PRIMARY");
+      assertThat(katalog.zugriff()).isNotEqualTo("ALL");
+      assertThat(plan)
+          .as("Keine Tabelle der Nachlesung wird voll gelesen (%s)", mandantId)
+          .noneMatch(zeile -> "ALL".equals(zeile.zugriff()));
+    }
   }
 }

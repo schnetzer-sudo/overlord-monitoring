@@ -1,15 +1,28 @@
 package de.kraftwerkone.overlord.monitor.dashboard;
 
+import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROCESS;
+import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROJECTMANDANT;
+import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.PROCESS_CATALOG;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import de.kraftwerkone.overlord.monitor.common.LiveRestZustand;
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
+import de.kraftwerkone.overlord.monitor.common.Pflegestatus;
 import de.kraftwerkone.overlord.monitor.security.Rolle;
 import de.kraftwerkone.overlord.monitor.security.SicherheitsTestbasis;
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import org.jooq.DSLContext;
+import org.jooq.impl.DSL;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 /**
  * <b>Der Pflicht-Isolationstest des Dashboards</b> (Regel M4). Ohne ihn wird nicht gemergt.
@@ -60,6 +73,23 @@ class DashboardIsolationDbIT extends SicherheitsTestbasis {
   private Sitzung aufSuttons;
   private Sitzung aufNexans;
   private Sitzung aufLeer;
+
+  /** Fuer die Nachlesung am Repository (Teil B) — der Dienst verwirft fremde Zeilen lautlos. */
+  @Autowired private DashboardRepository dashboardRepository;
+
+  @Autowired
+  @Qualifier("glassfishDsl") private DSLContext glassfishDsl;
+
+  /** Die Katalogzeile, die sich {@link #nachlesung_liefert_keine_fremde_zeile} selbst anlegt. */
+  private static final String KATALOG_VON = PRAEFIX + "dash-live";
+
+  @AfterEach
+  void raeumeEigeneKatalogzeileWeg() {
+    monitorDsl
+        .deleteFrom(PROCESS_CATALOG)
+        .where(PROCESS_CATALOG.GEAENDERT_VON.eq(KATALOG_VON))
+        .execute();
+  }
 
   @BeforeEach
   void nutzerAnlegenUndAnmelden() throws IOException, InterruptedException {
@@ -621,5 +651,89 @@ class DashboardIsolationDbIT extends SicherheitsTestbasis {
     assertThat(mit.status()).isEqualTo(200);
     assertThat(mit.<List<String>>json("$.plattform.dienste[*].serviceId"))
         .isEqualTo(ohne.<List<String>>json("$.plattform.dienste[*].serviceId"));
+  }
+
+  // ─── Der Live-Rest (Teil B, 17.09.2026) ──────────────────────────────────────
+
+  /** Der Block steht in der Antwort — mit einem der drei Zustaende, wie im Prozessbaum. */
+  @Test
+  @DisplayName("Der Block liveRest steht in der Antwort, mit einem der drei Zustaende")
+  void der_block_live_rest_steht_in_der_antwort() throws Exception {
+    Antwort antwort = aufNexans.hole(pfad("48H"));
+
+    assertThat(antwort.hatFeld("$.liveRest.zustand")).isTrue();
+    assertThat(LiveRestZustand.valueOf(antwort.<String>json("$.liveRest.zustand")))
+        .isIn((Object[]) LiveRestZustand.values());
+    assertThat(antwort.rumpf()).contains("\"vollstaendigBis\"");
+  }
+
+  /**
+   * <b>Die vierte Mandantenkette dieser Seite, am Repository</b> (E-191, Regel M4). Der Dienst
+   * reicht der Nachlesung nur Kennungen aus einer mandantengefilterten Lesung — ein Leck zeigte
+   * sich durch den Endpunkt deshalb nie. Hier bekommt sie eine <b>fremde</b> Kennung direkt.
+   *
+   * <p><b>Der Test legt sich seine Katalogzeile selbst an</b> (Regel T2, {@code
+   * docs/testfestigkeit.md}): auf einem Prozess von {@code SUTTONS} <b>ohne</b> Zeile, mit reinem
+   * {@code INSERT} und dem Testpraefix in {@code geaendert_von}; {@code @AfterEach} loescht genau
+   * diese Zeile. Gibt es keinen freien Prozess mehr, faellt der Test mit dem Satz, warum — dann ist
+   * es der Bestand und nicht der Code.
+   *
+   * <p><b>Die Eichung zuerst:</b> Fuer den eigenen Mandanten liefert die Nachlesung die Zeile. Ohne
+   * sie bewiese die leere Antwort fuer {@code VOTG} nur, dass leer leer ist.
+   */
+  @Test
+  @DisplayName("Die Katalog-Nachlesung liefert fuer eine fremde Kennung nichts — am Repository")
+  void nachlesung_liefert_keine_fremde_zeile() {
+    Optional<String> frei =
+        glassfishDsl
+            .select(PROCESS.PROCESSID)
+            .from(PROCESS)
+            .join(PROJECTMANDANT)
+            .on(PROJECTMANDANT.PROJECTID.eq(PROCESS.PROJECTID))
+            .where(PROJECTMANDANT.MANDANTID.eq(MANDANT_B))
+            .andNotExists(
+                DSL.selectOne()
+                    .from(PROCESS_CATALOG)
+                    .where(PROCESS_CATALOG.PROCESS_ID.eq(PROCESS.PROCESSID)))
+            .orderBy(PROCESS.PROCESSID)
+            .limit(1)
+            .fetchOptional(PROCESS.PROCESSID);
+    assertThat(frei)
+        .as(
+            "%s hat keinen Prozess ohne Katalogzeile mehr — der Test kann sich keine anlegen"
+                + " (docs/testfestigkeit.md, Punkt T-3); das ist der Bestand, nicht der Code",
+            MANDANT_B)
+        .isPresent();
+    String prozess = frei.get();
+    monitorDsl
+        .insertInto(PROCESS_CATALOG)
+        .set(PROCESS_CATALOG.PROCESS_ID, prozess)
+        .set(PROCESS_CATALOG.PARTNER, "ERFUNDENERPARTNER")
+        .set(PROCESS_CATALOG.RICHTUNG, "EINGEHEND")
+        .set(PROCESS_CATALOG.PFLEGESTATUS, Pflegestatus.GEPFLEGT.name())
+        .set(PROCESS_CATALOG.VORSCHLAG_HERKUNFT, "KEINE")
+        .set(PROCESS_CATALOG.GEAENDERT_AM, LocalDateTime.parse("2026-09-17T12:00:00"))
+        .set(PROCESS_CATALOG.GEAENDERT_VON, KATALOG_VON)
+        .execute();
+
+    List<Katalogzuordnungszeile> eigene =
+        dashboardRepository.katalogzuordnung(new MandantContext(MANDANT_B), List.of(prozess));
+    assertThat(eigene)
+        .as("Eichung: fuer den eigenen Mandanten liefert die Nachlesung die angelegte Zeile")
+        .extracting(
+            Katalogzuordnungszeile::processId,
+            Katalogzuordnungszeile::partner,
+            Katalogzuordnungszeile::richtung)
+        .containsExactly(
+            org.assertj.core.groups.Tuple.tuple(prozess, "ERFUNDENERPARTNER", "EINGEHEND"));
+
+    List<Katalogzuordnungszeile> fremde =
+        dashboardRepository.katalogzuordnung(new MandantContext(MANDANT_A), List.of(prozess));
+    assertThat(fremde)
+        .as(
+            "Die Nachlesung fuer %s darf die Zeile des Prozesses %s von %s nicht liefern — ohne"
+                + " Mandantenkette im Statement taete sie es",
+            MANDANT_A, prozess, MANDANT_B)
+        .isEmpty();
   }
 }

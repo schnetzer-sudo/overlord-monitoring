@@ -1,5 +1,8 @@
 package de.kraftwerkone.overlord.monitor.dashboard;
 
+import de.kraftwerkone.overlord.monitor.common.LiveRestErgebnis;
+import de.kraftwerkone.overlord.monitor.common.LiveRestResponse;
+import de.kraftwerkone.overlord.monitor.common.LiveRestService;
 import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
@@ -38,7 +41,20 @@ import org.springframework.stereotype.Service;
  *
  * <p>{@code jetzt} kommt genau einmal aus der <b>Anwendungsuhr</b> (Regel Z1) und wird danach
  * herumgereicht. Zwei Schlaege innerhalb derselben Anfrage waeren zwei Stichtage — und bei einem
- * Aufruf, der eine Eimergrenze streift, zwei verschiedene Fenster.
+ * Aufruf, der eine Eimergrenze streift, zwei verschiedene Fenster. <b>Auch der Live-Rest bekommt
+ * diesen Schlag</b> — sein Live-Bereich endet an derselben Stundengrenze wie das Fenster.
+ *
+ * <h2>Der Live-Rest der laufenden Stunde (Teil B, E-190, E-191)</h2>
+ *
+ * <p>Seit dem 17.09.2026 ruft die Seite denselben Baustein wie der Prozessbaum ({@code
+ * common/LiveRestService}, {@code docs/live-rest.md}) und ordnet die Korrektur ihren eigenen Eimern
+ * zu ({@link Liveverrechnung}): Verlauf und beide Rollup-Kacheln rechnen mit den korrigierten
+ * Zeilen, Block 5 mit der Korrektur je Schluessel — dafuer liest das Repository den Katalog fuer
+ * die betroffenen Prozesse nach, <b>nur wenn es Korrekturzeilen gibt</b>. Die <b>Belegungsprobe</b>
+ * des Standardfensters bleibt ohne Korrektur: Sie entscheidet ueber das Paar, bevor der Live-Rest
+ * gelesen ist, und ein Paar, das ohne den angebrochenen Eimer nicht traegt, traegt mit ihm nicht
+ * besser. <i>Laeuft</i>, <i>Wartend</i> und <i>Zuletzt aufgefallen</i> lesen ohnehin live. Der
+ * Block <i>Stand</i> bleibt, was er war.
  */
 @Service
 public class DashboardService {
@@ -59,19 +75,24 @@ public class DashboardService {
    */
   private final Optional<Ablagenpruefung> ablagenpruefung;
 
+  /** Der Baustein aus {@code common} — derselbe, den der Prozessbaum ruft (E-179 bis E-185). */
+  private final LiveRestService liveRestService;
+
   DashboardService(
       DashboardRepository dashboardRepository,
       MessageStatusClassifier statusClassifier,
       Clock anwendungsuhr,
       DienstLeseRepository dienstLeseRepository,
       DienstStatusClassifier dienstClassifier,
-      Optional<Ablagenpruefung> ablagenpruefung) {
+      Optional<Ablagenpruefung> ablagenpruefung,
+      LiveRestService liveRestService) {
     this.dashboardRepository = dashboardRepository;
     this.statusClassifier = statusClassifier;
     this.anwendungsuhr = anwendungsuhr;
     this.dienstLeseRepository = dienstLeseRepository;
     this.dienstClassifier = dienstClassifier;
     this.ablagenpruefung = ablagenpruefung;
+    this.liveRestService = liveRestService;
   }
 
   /**
@@ -138,7 +159,7 @@ public class DashboardService {
     Rollupzeitraum zeitraum = gewaehlt == null ? standardfenster(mandant, jetzt) : gewaehlt;
     Zeitfenster fenster = zeitraum.fenster(jetzt);
 
-    List<Rollupsumme> summen = dashboardRepository.verlauf(mandant, zeitraum, fenster);
+    List<Rollupsumme> ausDemRollup = dashboardRepository.verlauf(mandant, zeitraum, fenster);
     List<Verteilungssumme> nachPartner =
         dashboardRepository.verteilung(mandant, zeitraum, fenster, Verteilungssicht.PARTNER);
     List<Verteilungssumme> nachRichtung =
@@ -151,6 +172,24 @@ public class DashboardService {
     OffeneKachelResponse wartend = offeneKachel(mandant, MessageStatusKind.WARTEND, jetzt);
     List<AuffaelligerProzess> aufgefallen =
         dashboardRepository.zuletztAufgefallen(mandant, fenster, AUFFAELLIG_HOECHSTENS);
+    StandResponse stand = stand();
+    PlattformResponse plattform = plattform(jetzt);
+
+    // Der Live-Rest kommt nach den neun Statements der Seite und vor dem Zusammensetzen: erst der
+    // Wasserstand, dann bei ANGEWANDT die zwei Live-Lesungen — und die Katalog-Nachlesung nur,
+    // wenn im Fenster etwas zu verrechnen ist. DashboardStatementsTest benennt alle einzeln.
+    LiveRestErgebnis liveRest = liveRestService.ermittle(mandant, jetzt);
+    Liveverrechnung verrechnung = Liveverrechnung.im(zeitraum, fenster, liveRest.korrektur());
+    List<Rollupsumme> summen = verrechnung.verlauf(ausDemRollup);
+    Map<String, String> partnerJeProzess = new LinkedHashMap<>();
+    Map<String, String> richtungJeProzess = new LinkedHashMap<>();
+    if (!verrechnung.leer()) {
+      for (Katalogzuordnungszeile zeile :
+          dashboardRepository.katalogzuordnung(mandant, verrechnung.betroffeneProzesse())) {
+        partnerJeProzess.put(zeile.processId(), zeile.partner());
+        richtungJeProzess.put(zeile.processId(), zeile.richtung());
+      }
+    }
 
     KachelnResponse kacheln = kacheln(summen, laeuft, zeigeWartend ? wartend : null);
     return new DashboardResponse(
@@ -159,10 +198,13 @@ public class DashboardService {
         kacheln.nachrichten() == 0,
         verlauf(summen),
         kacheln,
-        new VerteilungResponse(verteilung(nachPartner), verteilung(nachRichtung)),
+        new VerteilungResponse(
+            verteilung(verrechnung.verteilung(nachPartner, partnerJeProzess)),
+            verteilung(verrechnung.verteilung(nachRichtung, richtungJeProzess))),
         zuletztAufgefallen(aufgefallen),
-        stand(),
-        plattform(jetzt));
+        stand,
+        LiveRestResponse.aus(liveRest.entscheidung(), anwendungsuhr.getZone()),
+        plattform);
   }
 
   /**

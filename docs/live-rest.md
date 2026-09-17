@@ -438,6 +438,134 @@ Kästen dazu stehen in [`process-view.md`](process-view.md) §3, §4, §6, §11 
 
 ---
 
+## 9b. Das Dashboard — Teil B (E‑190, E‑191) *(17.09.2026)*
+
+**Der Auftrag aus Teil A, eingelöst:** Das Dashboard ruft **denselben Baustein** — `DashboardService.landingpage`
+ruft `LiveRestService.ermittle(mandant, jetzt)` mit dem `jetzt`, aus dem es sein Fenster bildet
+(ein Uhrenschlag je Anfrage) — und ordnet die Korrektur seinen eigenen Eimern zu. Drei
+Entscheidungen des Auftraggebers vom 17.09.2026 (per Auswahl, wie die Punkte 186 bis 189):
+
+| Frage | Entschieden |
+|---|---|
+| Trägt Block 5 (Verteilung) die Korrektur ebenfalls? | **Ja, über eine Katalog-Nachlesung** (E‑191) |
+| Wo steht der Hinweis bei `AUSGESETZT`? | **Über den Kacheln**, als gemeinsamer Baustein beider Ansichten (E‑192) |
+| Welches Tor gilt für M186? | **500 ms je Lage durch den Endpunkt, in beiden Messstunden** — das Seitenbudget aus M108/M145; liegt eine Lage darüber: anhalten und berichten, nicht nachjustieren |
+
+### Die Zuordnung zu den Eimern — `dashboard/Liveverrechnung` (E‑190)
+
+- **Verlauf, Kachel *Nachrichten*, Kachel *Fehler*:** Die Korrekturzeilen, deren **Stunde** im Fenster
+  liegt (`von` einschließend, `bis` ausschließend), werden auf den Eimer des Paares gehoben — `48H`:
+  die Stunde selbst; `30T`: `DATE(stunde)`; `12M`: der Monatserste — und den Rollupzeilen
+  desselben Eimers und Rohstatus zugerechnet. **Das ist die Zuordnung des Rollups**: Die Tagesebene
+  entsteht aus der Stundenebene, die Monatsebene aus der Tagesebene, beide in derselben Transaktion
+  ([`rollup.md`](rollup.md) §5); was der nächste Delta-Lauf in diese Eimer schreibt, ist genau die
+  Summe der Stunden. Danach rechnen Verlauf und Kacheln mit den verrechneten Zeilen **wie bisher** —
+  Einordnung und Fehlerart bildet weiterhin `MessageStatusClassifier` beim Lesen; kein Block rechnet
+  den Live-Rest selbst nach.
+- **Klemme je (Eimer, Rohstatus) auf null**, und was auf null fällt, verschwindet: Ein Eimer ohne
+  Zeile ist im Verlauf keiner. Anders als im Baum (Klemme je Prozess und Kennzahl) liegt die Klemme
+  hier vor der Einordnung — das Dashboard kennt in Block 1 keinen Prozess.
+- **Der Leerzustand** folgt der Kachel *Nachrichten* nach der Korrektur: Ein Mandant, dessen einziger
+  Verkehr in der laufenden Stunde liegt, ist nicht leer.
+- **Die Belegungsprobe des Standardfensters bleibt ohne Korrektur.** Sie entscheidet über das Paar,
+  bevor der Live-Rest gelesen ist, und ein Paar, das ohne den angebrochenen Eimer nicht trägt, trägt
+  mit ihm nicht besser. *Läuft*, *Wartend* und *Zuletzt aufgefallen* lesen ohnehin live; der Block
+  *Stand* (`letzterLauf()`) bleibt, was er war (Punkt 187).
+- **Antwort:** der Block `liveRest` zwischen `stand` und `plattform`, dasselbe Record wie im Baum —
+  es liegt seit Teil B in `common` (E‑189, `LiveRestResponse.aus(entscheidung, zone)`), weil
+  Fachpakete einander nicht kennen.
+
+### Block 5 über die Katalog-Nachlesung (E‑191)
+
+Die Verteilung gruppiert in der Datenbank je Schlüssel einer Sicht; die Korrekturzeilen tragen
+Prozesskennungen. Damit Block 5 die Korrektur denselben Zeilen zuordnet wie das Verteilungsstatement
+die Rollupzeilen, liest `DashboardRepository.katalogzuordnung(mandant, prozesse)` **für die Prozesse
+der Korrekturzeilen** den Katalog nach — je Prozess der Schlüssel je Sicht, **mit demselben
+`CASE`-Ausdruck** (E‑i, `common/Katalogzuordnung`) wie im Verteilungsstatement, das `IN` über den
+Primärschlüssel, die Mandantenkette als `EXISTS`, **kein `GROUP BY`**:
+
+```sql
+SELECT process_id,
+       CASE WHEN <E-i über partner>  THEN partner  END,
+       CASE WHEN <E-i über richtung> THEN richtung END
+FROM overlord_monitor.process_catalog
+WHERE process_id IN (?, …)
+  AND EXISTS ( … Mandantenkette … )
+```
+
+- **Es läuft nur, wenn es Korrekturzeilen im Fenster gibt.** Bei `ANGEWANDT` ohne Zeilen fragte es
+  nach nichts. Die Zahl der Statements einer Seite ist damit **zehn** (die neun von vorher und der
+  Wasserstand, bei `NICHT_NOETIG` und `AUSGESETZT`), **zwölf** (`ANGEWANDT` ohne Korrekturzeilen)
+  oder **dreizehn** — `DashboardStatementsTest.LiveRest` benennt alle einzeln.
+- **Ein Prozess ohne Katalogzeile fehlt im Ergebnis** und gilt als *nicht zugeordnet* — dieselbe
+  Auskunft wie der `LEFT JOIN` im Verteilungsstatement. Die Summe je Schlüssel entsteht im Dienst,
+  **ohne Groß- und Kleinschreibung** verglichen: Das Verteilungsstatement gruppiert unter
+  `utf8mb4_general_ci`, die Nachlesung liefert die Schreibweise der einzelnen Zeile, und eine
+  Gruppe darf nicht zerfallen, weil eine Katalogzeile anders geschrieben ist als die Gruppe, die
+  sie vertritt. Klemme auf null je Schlüssel; *nicht zugeordnet* steht weiter immer, auch mit null.
+- **Das ist nicht das zusammengelegte Verteilungsstatement**, das
+  `DashboardStatementsTest.kein_zusammengelegtes_verteilungsstatement` seit E‑161 ausschließt: Jenes
+  gruppierte nach beiden `CASE`-Ausdrücken; dieses gruppiert nicht. Der Test ist entsprechend
+  verfeinert — **keine gruppierende** Abfrage der Seite liest beide Katalogspalten — und läuft
+  seither über beide Seiten, mit und ohne Korrekturzeile.
+- **Die vierte Mandantenkette der Seite**, und ihre Isolation ist **am Repository** belegt
+  (`DashboardIsolationDbIT.nachlesung_liefert_keine_fremde_zeile`): Der Dienst reicht nur Kennungen
+  aus einer mandantengefilterten Lesung herein, ein Leck zeigte sich durch den Endpunkt deshalb nie.
+  Der Test legt sich seine Katalogzeile selbst an (ein `SUTTONS`-Prozess ohne Zeile, reines `INSERT`,
+  Testpräfix, `@AfterEach`) und fragt sie als `VOTG` ab.
+
+**Kachel und beide Sichten zählen damit dieselbe Zahl, auch in der laufenden Stunde** —
+`DashboardIsolationDbIT.sichtZaehltDieEigenenNachrichten` verlangt das seit E‑161, und ohne E‑191
+wäre der Test bei `ANGEWANDT` rot gewesen. Punkt **191** ist damit geschlossen: Baum und Dashboard
+zählen die laufende Stunde gleich.
+
+### Die Messung — M186 (Regel L7)
+
+> #### Vorregistriert — eingetragen und eingecheckt vor dem ersten Lauf
+>
+> **Was gemessen wird.** `MessungM186DbIT`, die Bauform von M185: Uhr und Wasserstand über
+> `@TestBean` gestellt, kein Schreibzugriff auf `rollup_lauf`; je Fall ein Aufwärmlauf, dann die
+> beste von fünf. **Dieselben acht Fälle wie M185** (§8: vier Mandanten × typische Stunde mit zwei
+> Live-Eimern / dichtester Vierstundenbereich), und je Fall **die drei Paare** der Landingpage:
+>
+> 1. **durch den Endpunkt** (`GET /api/dashboard?zeitraum=…`, HTTP-Umlauf im Testclient samt
+>    Sitzung und Serialisierung) — die Zahl, an der das Tor gemessen wird;
+> 2. **am Dienst** (`DashboardService.landingpage` im selben Prozess);
+> 3. **der Bezug in derselben Sitzung:** dieselbe Seite am Dienst mit einem Wasserstand, der die
+>    Stunde deckt (`NICHT_NOETIG`) — die Seite ohne die zwei bis drei Statements des Live-Rests. Die
+>    Differenz zu 2 ist der **Zuschlag** des Live-Rests, ohne Tagesdrift gegen M178.
+>
+> **Die Erwartung, gerechnet und nicht gemessen** — M178 (Seite, 16.09.2026) plus der Zuschlag aus
+> M185 (Dienst gegen M152; der dichteste Bereich bei `NEXANS` ist im Wesentlichen Statement B mit
+> 265,7 ms), für `NEXANS` und `SUTTONS`, die M178 gemessen hat:
+>
+> | Lage | M178, Seite | + Zuschlag (M185) | **erwartet, Endpunkt** |
+> |---|---:|---:|---:|
+> | `NEXANS` typisch, `48H` / `30T` / `12M` | 65–70 / 223–226 / 294–298 ms | 16–20 ms | **≈ 85 / 245 / 315 ms** |
+> | `NEXANS` dicht, `48H` / `30T` / `12M` | dito | 250–270 ms | **≈ 320 / 480 / 555 ms** |
+> | `SUTTONS` typisch, `48H` / `30T` / `12M` | 59–62 / 166–167 / 207–209 ms | 12–18 ms | **≈ 75 / 180 / 225 ms** |
+> | `SUTTONS` dicht, `48H` / `30T` / `12M` | dito | 25–30 ms | **≈ 90 / 195 / 240 ms** |
+>
+> Für `VOTG` und `IBIS` gibt es keine M178-Zahl; erwartet werden Seiten in der Größenordnung von
+> `SUTTONS` plus ein Zuschlag von 20 bis 45 ms (M185). **Die Rechnung sagt voraus, dass `NEXANS`
+> im dichtesten Bereich über zwölf Monate das Tor reißt** — die Seite trägt dort schon ohne
+> Live-Rest 294 bis 298 ms, und das eine Statement B kostet 265,7 ms. Genau das soll die Messung
+> zeigen oder widerlegen; die Rechnung ist keine Ausrede.
+>
+> **Das Tor (Entscheidung des Auftraggebers, 17.09.2026):** jede Lage **unter 500 ms durch den
+> Endpunkt, in beiden Messstunden**. Liegt eine darüber, wird **angehalten und berichtet** — die
+> Obergrenze von drei Stunden (E‑181), das Paar oder der Bereich werden nicht nebenbei
+> nachjustiert.
+>
+> **Wie gelesen wird, festgelegt vor dem Lauf:** Der Zuschlag (2 minus 3) trägt die Aussage über
+> diesen Bau; der Endpunkt trägt das Tor; die Rechnung oben trägt nur, ob die Größenordnung hält.
+> Abweichungen werden benannt und nicht umgedeutet.
+>
+> **Zugesichert wird im Läufer nur** `200`, `ANGEWANDT` und dass Kachel und beide Sichten dieselbe
+> Zahl tragen — Zeiten gehen nach `System.out` und in keine Zusicherung (Regel T1).
+
+---
+
 ## 10. Die Oberfläche (E‑186, E‑187)
 
 - **Typ:** `Prozessbaum.liveRest` in `features/nachrichten/api.ts`.

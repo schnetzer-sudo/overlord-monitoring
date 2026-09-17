@@ -2,19 +2,28 @@ package de.kraftwerkone.overlord.monitor.dashboard;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import de.kraftwerkone.overlord.monitor.common.LiveRestRepository;
+import de.kraftwerkone.overlord.monitor.common.LiveRestService;
 import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
 import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
+import de.kraftwerkone.overlord.monitor.common.WasserstandRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.jooq.DSLContext;
+import org.jooq.Field;
+import org.jooq.Record1;
+import org.jooq.Record4;
+import org.jooq.Result;
 import org.jooq.SQLDialect;
 import org.jooq.impl.DSL;
+import org.jooq.impl.SQLDataType;
 import org.jooq.tools.jdbc.MockConnection;
 import org.jooq.tools.jdbc.MockDataProvider;
 import org.jooq.tools.jdbc.MockResult;
@@ -43,6 +52,11 @@ import org.junit.jupiter.api.Test;
  *       Bereichszugriff weg, und die Abfrage waere langsamer, ohne falsch zu sein.
  * </ol>
  *
+ * <p><b>Seit dem 17.09.2026 (Live-Rest, Teil B) setzt eine Seite bis zu dreizehn Statements ab</b>
+ * — die neun von vorher, den Wasserstand, bei {@code ANGEWANDT} die zwei Live-Lesungen des
+ * Bausteins und, nur wenn im Fenster etwas zu verrechnen ist, die Katalog-Nachlesung. Sie stehen
+ * einzeln benannt in {@link LiveRest}; die Attrappe stellt den Wasserstand und eine Live-Zeile.
+ *
  * <p>Vorbild ist {@code RollupStatementsTest}; die Bauform ist dieselbe.
  */
 class DashboardStatementsTest {
@@ -61,18 +75,64 @@ class DashboardStatementsTest {
    */
   private DienstLeseRepository dienstRepository;
 
+  /**
+   * Der Baustein aus {@code common} an derselben Attrappe — seine Statements gehoeren zur Seite.
+   */
+  private LiveRestService liveRestService;
+
+  /**
+   * Was die Attrappe auf die Wasserstandsabfrage antwortet — {@code null} heisst „nie gerechnet",
+   * und dann bleibt es bei zehn Statements.
+   */
+  private LocalDateTime wasserstand;
+
+  /**
+   * Ob die Attrappe auf die Live-Lesung aus {@code Message} <b>eine</b> Zeile liefert. Nur dann
+   * gibt es etwas zu verrechnen, und nur dann laeuft die Katalog-Nachlesung (E-191).
+   */
+  private boolean liveZeile;
+
   @BeforeEach
   void attrappeAufbauen() {
     gerendert.clear();
+    wasserstand = null;
+    liveZeile = false;
     MockDataProvider attrappe =
         ausfuehrung -> {
           gerendert.add(ausfuehrung.sql());
           DSLContext leer = DSL.using(SQLDialect.MARIADB);
+          if (ausfuehrung.sql().contains("max(`overlord_monitor`.`rollup_lauf`")
+              && wasserstand != null) {
+            Field<LocalDateTime> max = DSL.field("max", SQLDataType.LOCALDATETIME);
+            Result<Record1<LocalDateTime>> ergebnis = leer.newResult(max);
+            Record1<LocalDateTime> satz = leer.newRecord(max);
+            satz.value1(wasserstand);
+            ergebnis.add(satz);
+            return new MockResult[] {new MockResult(1, ergebnis)};
+          }
+          if (ausfuehrung.sql().contains("date_format(") && liveZeile) {
+            Field<String> stunde = DSL.field("stunde", SQLDataType.VARCHAR);
+            Field<String> prozess = DSL.field("ProcessID", SQLDataType.VARCHAR);
+            Field<String> status = DSL.field("MessageStatus", SQLDataType.VARCHAR);
+            Field<Integer> anzahl = DSL.field("count", SQLDataType.INTEGER);
+            Result<Record4<String, String, String, Integer>> ergebnis =
+                leer.newResult(stunde, prozess, status, anzahl);
+            Record4<String, String, String, Integer> satz =
+                leer.newRecord(stunde, prozess, status, anzahl);
+            satz.value1("2025-12-30 04:00:00");
+            satz.value2("ERFUNDENER-PROZESS");
+            satz.value3("FINISHED");
+            satz.value4(1);
+            ergebnis.add(satz);
+            return new MockResult[] {new MockResult(1, ergebnis)};
+          }
           return new MockResult[] {new MockResult(0, leer.newResult())};
         };
     DSLContext kontext = DSL.using(new MockConnection(attrappe), SQLDialect.MARIADB);
     repository = new DashboardRepository(kontext, new MessageStatusClassifier());
     dienstRepository = new DienstLeseRepository(kontext);
+    liveRestService =
+        new LiveRestService(new LiveRestRepository(kontext), new WasserstandRepository(kontext));
   }
 
   private String einziges() {
@@ -453,15 +513,23 @@ class DashboardStatementsTest {
    * {@link DashboardService#landingpage} selbst</b>, ueber dieselbe Attrappe; das Repository
    * vertraegt deren leere Ergebnisse ausdruecklich (siehe {@code offeneNachrichten} und {@code
    * hatWartendeAblaeufe}).
+   *
+   * <h2>Seit dem 17.09.2026 sind es zehn — und bei angewandtem Live-Rest zwoelf oder dreizehn</h2>
+   *
+   * <p>Das zehnte ist der Wasserstand ({@code common/WasserstandRepository}); die Seite fragt ihn
+   * bei jedem Aufruf. Ohne Lauf bleibt es dabei. Was bei {@code ANGEWANDT} dazukommt, steht in
+   * {@link LiveRest} — einzeln benannt, nicht gezaehlt.
    */
   @Test
-  @DisplayName("Eine Landingpage mit genanntem Zeitraum setzt genau diese neun Statements ab")
-  void die_neun_statements_je_seite() {
+  @DisplayName(
+      "Eine Landingpage mit genanntem Zeitraum setzt genau diese zehn Statements ab — neun und den"
+          + " Wasserstand")
+  void die_zehn_statements_je_seite() {
     List<String> knapp = statementsEinerSeite();
 
     assertThat(knapp)
-        .as("Neun Statements — und jedes einzeln benannt, damit ein Tausch auffaellt")
-        .hasSize(9);
+        .as("Zehn Statements — und jedes einzeln benannt, damit ein Tausch auffaellt")
+        .hasSize(10);
     assertThat(knapp.get(0)).as("1 Verlauf").contains("from `overlord_monitor`.`message_rollup`");
     assertThat(knapp.get(1))
         .as("2 Verteilung, Partnersicht")
@@ -497,6 +565,14 @@ class DashboardStatementsTest {
         .as("9 Die Dienste mit Zeitgrenze — der plattformweite Block (Schritt 10d)")
         .contains("from `GlassfishDB`.`Service`")
         .contains("`ServiceTimeout` > ?");
+    assertThat(knapp.get(9))
+        .as("10 Der Wasserstand des Live-Rests (Teil B, 17.09.2026) — ohne Lauf bleibt es dabei")
+        .startsWith("select max(`overlord_monitor`.`rollup_lauf`.`fenster_bis`)")
+        .contains("`beendet_am` is not null")
+        .contains("`fehler` is null");
+    assertThat(knapp)
+        .as("Ohne Lauf liest keine Seite Message ausser den Kacheln und Zuletzt aufgefallen")
+        .noneMatch(sql -> sql.contains("date_format("));
   }
 
   /**
@@ -508,18 +584,19 @@ class DashboardStatementsTest {
    * nicht nebenbei eingefuehrt.
    */
   @Test
-  @DisplayName("Keine Abfrage der Seite liest Partner und Richtung zugleich")
+  @DisplayName("Keine gruppierende Abfrage der Seite liest Partner und Richtung zugleich")
   void kein_zusammengelegtes_verteilungsstatement() {
-    List<String> knapp = statementsEinerSeite();
-
-    assertThat(knapp)
-        .as("Genau zwei Statements haengen den Katalog an — eines je Sicht")
-        .filteredOn(sql -> sql.contains("`overlord_monitor`.`process_catalog`"))
-        .hasSize(2)
-        .noneMatch(
-            sql ->
-                sql.contains("`overlord_monitor`.`process_catalog`.`partner`")
-                    && sql.contains("`overlord_monitor`.`process_catalog`.`richtung`"));
+    for (List<String> knapp : List.of(statementsEinerSeite(), statementsMitKorrekturzeile())) {
+      assertThat(knapp)
+          .as("Genau zwei Statements gruppieren ueber den Katalog — eines je Sicht")
+          .filteredOn(sql -> sql.contains("`overlord_monitor`.`process_catalog`"))
+          .filteredOn(sql -> sql.contains("group by"))
+          .hasSize(2)
+          .noneMatch(
+              sql ->
+                  sql.contains("`overlord_monitor`.`process_catalog`.`partner`")
+                      && sql.contains("`overlord_monitor`.`process_catalog`.`richtung`"));
+    }
   }
 
   /**
@@ -534,10 +611,18 @@ class DashboardStatementsTest {
             Clock.fixed(JETZT.toInstant(ZoneOffset.UTC), ZoneOffset.UTC),
             dienstRepository,
             new DienstStatusClassifier(),
-            Optional.empty());
+            Optional.empty(),
+            liveRestService);
     gerendert.clear();
     service.landingpage(MANDANT, Rollupzeitraum.STUNDEN_48);
     return gerendert.stream().map(sql -> sql.replaceAll("\\s+", " ").trim()).toList();
+  }
+
+  /** Die vollste Seite: Live-Rest angewandt, eine Live-Zeile, also auch die Nachlesung. */
+  private List<String> statementsMitKorrekturzeile() {
+    wasserstand = JETZT.truncatedTo(ChronoUnit.HOURS).plusHours(1);
+    liveZeile = true;
+    return statementsEinerSeite();
   }
 
   /**
@@ -549,10 +634,121 @@ class DashboardStatementsTest {
   @Test
   @DisplayName("Kein Statement der Landingpage rechnet noch mit MessageTimeout")
   void keine_frist_mehr_in_der_ganzen_seite() {
-    assertThat(statementsEinerSeite())
-        .hasSize(9)
+    assertThat(statementsMitKorrekturzeile())
+        .as("Die vollste Seite: dreizehn Statements, keines mit einer Frist")
+        .hasSize(13)
         .allSatisfy(
             sql -> assertThat(sql).doesNotContain("MessageTimeout").doesNotContain("date_add("));
+  }
+
+  // ─── Der Live-Rest der laufenden Stunde (Teil B, 17.09.2026) ────────────────
+
+  /**
+   * <b>Was bei angewandtem Live-Rest dazukommt — einzeln benannt.</b> Der Wasserstand steht bei
+   * jeder Seite; die Attrappe stellt ihn ({@link #wasserstand}) und liefert auf Wunsch eine
+   * Live-Zeile ({@link #liveZeile}). Die Gestalt der zwei Live-Lesungen ist in {@code
+   * ProzessbaumStatementsTest.EinAufruf} woertlich gepinnt; hier zaehlt, <b>dass die Seite sie
+   * absetzt</b>, in dieser Reihenfolge, und was die Nachlesung dazu liest.
+   */
+  @Nested
+  @DisplayName("Der Live-Rest: Wasserstand, zwei Live-Lesungen, die Nachlesung")
+  class LiveRest {
+
+    @Test
+    @DisplayName("Nicht noetig (der Lauf deckt die Stunde): zehn Statements, kein Message-Eimer")
+    void nicht_noetig_zehn() {
+      wasserstand = JETZT.plusDays(2);
+
+      List<String> knapp = statementsEinerSeite();
+
+      assertThat(knapp).hasSize(10);
+      assertThat(knapp).noneMatch(sql -> sql.contains("date_format("));
+    }
+
+    @Test
+    @DisplayName("Angewandt ohne Korrekturzeile: zwoelf — und keine Nachlesung")
+    void angewandt_ohne_korrekturzeile_zwoelf() {
+      wasserstand = JETZT.truncatedTo(ChronoUnit.HOURS).plusHours(1);
+
+      List<String> knapp = statementsEinerSeite();
+
+      assertThat(knapp).hasSize(12);
+      assertThat(knapp.get(10))
+          .as("11 Die Rollupzeilen des Live-Bereichs (A)")
+          .startsWith("select `overlord_monitor`.`message_rollup`.`stunde`")
+          .contains("`overlord_monitor`.`message_rollup`.`stunde` >= ?")
+          .contains("`live_process`");
+      assertThat(knapp.get(11))
+          .as("12 Die Zaehlung aus Message mit der Stundenbildung des Jobs (B)")
+          .startsWith("select date_format(")
+          .contains("from `GlassfishDB`.`Message`")
+          .contains("`live_process`");
+      assertThat(knapp)
+          .as("Ohne Korrekturzeile keine Nachlesung — sie fragte nach nichts")
+          .noneMatch(sql -> sql.contains("`process_catalog`.`process_id` in ("));
+    }
+
+    @Test
+    @DisplayName("Angewandt mit Korrekturzeile: dreizehn — die Nachlesung ist das letzte")
+    void angewandt_mit_korrekturzeile_dreizehn() {
+      List<String> knapp = statementsMitKorrekturzeile();
+
+      assertThat(knapp).hasSize(13);
+      assertThat(knapp.subList(0, 12))
+          .as("Die zwoelf davor sind dieselben wie ohne Korrekturzeile")
+          .containsExactlyElementsOf(statementsOhneKorrekturzeileAberAngewandt());
+      assertThat(knapp.get(12))
+          .as("13 Die Katalog-Nachlesung fuer die Prozesse der Korrekturzeilen (E-191)")
+          .isEqualTo(NACHLESUNG);
+    }
+
+    private List<String> statementsOhneKorrekturzeileAberAngewandt() {
+      liveZeile = false;
+      wasserstand = JETZT.truncatedTo(ChronoUnit.HOURS).plusHours(1);
+      return statementsEinerSeite();
+    }
+
+    /**
+     * Die Nachlesung — <b>woertlich</b>: E-i als derselbe {@code CASE} wie im Verteilungsstatement,
+     * je Sicht einer, Primaerschluessel im {@code IN}, die Mandantenkette als {@code EXISTS}, und
+     * <b>kein {@code GROUP BY}</b>. Genau das unterscheidet sie vom zusammengelegten
+     * Verteilungsstatement, das {@link #kein_zusammengelegtes_verteilungsstatement} ausschliesst.
+     */
+    private static final String NACHLESUNG =
+        "select `overlord_monitor`.`process_catalog`.`process_id`, case when"
+            + " (`overlord_monitor`.`process_catalog`.`process_id` is not null and"
+            + " `overlord_monitor`.`process_catalog`.`pflegestatus` = ? and"
+            + " `overlord_monitor`.`process_catalog`.`partner` is not null and"
+            + " `overlord_monitor`.`process_catalog`.`partner` <> ?) then"
+            + " `overlord_monitor`.`process_catalog`.`partner` end, case when"
+            + " (`overlord_monitor`.`process_catalog`.`process_id` is not null and"
+            + " `overlord_monitor`.`process_catalog`.`pflegestatus` = ? and"
+            + " `overlord_monitor`.`process_catalog`.`richtung` is not null and"
+            + " `overlord_monitor`.`process_catalog`.`richtung` <> ?) then"
+            + " `overlord_monitor`.`process_catalog`.`richtung` end from"
+            + " `overlord_monitor`.`process_catalog` where"
+            + " (`overlord_monitor`.`process_catalog`.`process_id` in (?) and exists (select 1 as"
+            + " `one` from `GlassfishDB`.`Process` as `dashboard_process` join"
+            + " `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` ="
+            + " `dashboard_process`.`ProjectID` where (`dashboard_process`.`ProcessID` ="
+            + " `overlord_monitor`.`process_catalog`.`process_id` and"
+            + " `GlassfishDB`.`ProjectMandant`.`MandantID` = ?)))";
+
+    @Test
+    @DisplayName(
+        "Die Nachlesung gruppiert nicht, filtert ueber den Schluessel und traegt die Kette")
+    void nachlesung_gestalt() {
+      String nachlesung = statementsMitKorrekturzeile().get(12);
+
+      assertThat(nachlesung)
+          .doesNotContain("group by")
+          .doesNotContain("join `overlord_monitor`")
+          .contains("`overlord_monitor`.`process_catalog`.`process_id` in (?)")
+          .contains("exists (select 1 as `one` from `GlassfishDB`.`Process` as `dashboard_process`")
+          .contains("`overlord_monitor`.`process_catalog`.`pflegestatus` = ?")
+          .contains("then `overlord_monitor`.`process_catalog`.`partner` end")
+          .contains("then `overlord_monitor`.`process_catalog`.`richtung` end");
+    }
   }
 
   // ─── Der plattformweite Block (Schritt 10d) ──────────────────────────────────

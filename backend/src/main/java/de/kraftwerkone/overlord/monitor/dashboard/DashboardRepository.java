@@ -22,8 +22,10 @@ import java.math.BigDecimal;
 import java.sql.SQLTimeoutException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.TreeSet;
 import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.Field;
@@ -263,6 +265,58 @@ public class DashboardRepository {
         .groupBy(schluessel)
         .orderBy(DSL.field(schluessel.isNull()), summe.desc())
         .fetch(satz -> new Verteilungssumme(satz.value1(), satz.value2().longValue()));
+  }
+
+  /**
+   * <b>Die Katalog-Nachlesung fuer den Live-Rest</b> (E-191, {@code docs/live-rest.md} §9b): zu den
+   * Prozessen der Korrekturzeilen der Schluessel je Sicht — damit Block 5 die Korrektur denselben
+   * Zeilen zuordnet, denen das Verteilungsstatement die Rollupzeilen zuordnet.
+   *
+   * <pre>
+   * SELECT process_id,
+   *        CASE WHEN &lt;E-i ueber partner&gt;  THEN partner  END,
+   *        CASE WHEN &lt;E-i ueber richtung&gt; THEN richtung END
+   * FROM overlord_monitor.process_catalog
+   * WHERE process_id IN (?, ?, …)
+   *   AND EXISTS ( … Mandantenkette … );
+   * </pre>
+   *
+   * <p><b>Derselbe {@code CASE}-Ausdruck wie im Verteilungsstatement</b>, je Sicht einer — E-i
+   * steht damit weiterhin an einer Stelle ({@code Katalogzuordnung}) und wird hier gerufen, nicht
+   * nachgebaut. Anders als dort steht <b>kein {@code GROUP BY}</b>: Gelesen wird je Prozess, die
+   * Summe je Schluessel entsteht im Dienst. Und anders als dort liest <b>ein</b> Statement beide
+   * Spalten — das ist nicht das zusammengelegte Verteilungsstatement, das {@code
+   * DashboardStatementsTest} ausschliesst (das gruppierte nach beiden Ausdruecken), sondern eine
+   * Schluesselsuche ueber den Primaerschluessel.
+   *
+   * <p><b>Die Mandantenkette steht auch hier</b>, obwohl die Kennungen aus einer
+   * mandantengefilterten Lesung stammen: Regel M3 verlangt den Mandanten im Statement und nicht
+   * dahinter, und ein Aufrufer, der fremde Kennungen hereinreicht, bekommt fuer sie nichts — {@code
+   * DashboardIsolationDbIT} haelt das am Repository fest.
+   *
+   * <p><b>Ein Prozess ohne Katalogzeile fehlt im Ergebnis</b> — dieselbe Auskunft wie der {@code
+   * LEFT JOIN} im Verteilungsstatement, nur anders geschrieben; der Dienst ordnet ihn <i>nicht
+   * zugeordnet</i> zu. Die Kennungen werden sortiert gebunden, damit das Statement fuer dieselbe
+   * Menge dieselbe Gestalt hat.
+   *
+   * <p>Laeuft nur, wenn der Live-Rest {@code ANGEWANDT} ist <b>und</b> Korrekturzeilen hat — das
+   * entscheidet der Dienst, nicht diese Methode; eine leere Menge waere ein Statement, das nichts
+   * fragt.
+   *
+   * @param mandant Regel M2
+   * @param prozesse die Prozesskennungen der Korrekturzeilen, nicht leer
+   */
+  public List<Katalogzuordnungszeile> katalogzuordnung(
+      MandantContext mandant, Collection<String> prozesse) {
+    Field<String> partner = DSL.when(zugeordnet(PROCESS_CATALOG.PARTNER), PROCESS_CATALOG.PARTNER);
+    Field<String> richtung =
+        DSL.when(zugeordnet(PROCESS_CATALOG.RICHTUNG), PROCESS_CATALOG.RICHTUNG);
+    return glassfishDsl
+        .select(PROCESS_CATALOG.PROCESS_ID, partner, richtung)
+        .from(PROCESS_CATALOG)
+        .where(PROCESS_CATALOG.PROCESS_ID.in(new TreeSet<>(prozesse)))
+        .and(mandantenkette(mandant, PROCESS_CATALOG.PROCESS_ID))
+        .fetch(satz -> new Katalogzuordnungszeile(satz.value1(), satz.value2(), satz.value3()));
   }
 
   /**

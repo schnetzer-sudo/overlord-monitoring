@@ -5,9 +5,17 @@ import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import de.kraftwerkone.overlord.monitor.common.LiveRestEntscheidung;
+import de.kraftwerkone.overlord.monitor.common.LiveRestErgebnis;
+import de.kraftwerkone.overlord.monitor.common.LiveRestKorrektur;
+import de.kraftwerkone.overlord.monitor.common.LiveRestResponse;
+import de.kraftwerkone.overlord.monitor.common.LiveRestService;
+import de.kraftwerkone.overlord.monitor.common.LiveRestZeile;
+import de.kraftwerkone.overlord.monitor.common.LiveRestZustand;
 import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
@@ -21,6 +29,9 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -72,6 +83,19 @@ class DashboardServiceTest {
   @Mock private DienstLeseRepository dienstRepository;
 
   /**
+   * Der Baustein aus {@code common} als Attrappe. <b>Ohne Stellung sagt er „ausgesetzt, kein
+   * Lauf“</b> — dann gibt es keine Korrektur, und die Faelle von vor Teil B sehen dieselben Zahlen
+   * wie vorher. Die Faelle unter „Der Live-Rest“ stellen ihn um.
+   */
+  @Mock private LiveRestService liveRest;
+
+  @BeforeEach
+  void liveRestOhneLauf() {
+    when(liveRest.ermittle(any(), any()))
+        .thenReturn(LiveRestErgebnis.ohneKorrektur(LiveRestEntscheidung.ausgesetztOhneLauf()));
+  }
+
+  /**
    * Der Dienst <b>ohne</b> Ablagenpruefung — sie ist im Profil {@code dev} und in diesem Test aus.
    *
    * <p>Das leere {@link java.util.Optional} ist kein Vorbehalt gegen eine fehlende Bean, sondern
@@ -85,7 +109,8 @@ class DashboardServiceTest {
         Clock.fixed(JETZT, ZONE),
         dienstRepository,
         new DienstStatusClassifier(),
-        java.util.Optional.empty());
+        java.util.Optional.empty(),
+        liveRest);
   }
 
   /** Der Normalfall: Es gibt Verkehr, das erste Paar traegt, nichts stirbt. */
@@ -827,5 +852,276 @@ class DashboardServiceTest {
         .as(
             "Eine fehlende Kachel waere Abwesenheit, und die sieht aus wie \u201enichts zu melden\u201c")
         .isNotNull();
+  }
+
+  // ─── Der Live-Rest der laufenden Stunde (Teil B, E-190, E-191) ───────────────
+
+  /**
+   * <b>Die Korrektur des Bausteins in den Eimern des Dashboards.</b> Die Zeilen des Bausteins sind
+   * erfunden und schon verrechnet (vorzeichenbehaftet je Stunde, Prozess und Rohstatus); gestellt
+   * wird nur, was der Dienst daraus macht. <b>Kein Wert aus dem Bestand</b> (Regel T2), keine
+   * Wanduhr (Regel T1, die Uhr steht).
+   *
+   * <p>Das Fenster am gestellten {@code jetzt} (05:09:47 in Europe/Berlin): {@code 48H} liest
+   * {@code 2025-12-28 06:00} bis {@code 2025-12-30 06:00}, ausschliessend.
+   */
+  @Nested
+  @DisplayName("Der Live-Rest — die Korrektur in den Eimern des Dashboards")
+  class LiveRest {
+
+    private static final LocalDateTime G = LocalDateTime.parse("2025-12-30T03:00:00");
+    private static final LocalDateTime LIVE_BIS = LocalDateTime.parse("2025-12-30T06:00:00");
+
+    private void angewandt(LiveRestZeile... zeilen) {
+      when(liveRest.ermittle(any(), any()))
+          .thenReturn(
+              new LiveRestErgebnis(
+                  LiveRestEntscheidung.angewandt(G, LIVE_BIS),
+                  new LiveRestKorrektur(List.of(zeilen), Map.of())));
+    }
+
+    private static LiveRestZeile zeile(String stunde, String prozess, String status, long anzahl) {
+      return new LiveRestZeile(LocalDateTime.parse(stunde), prozess, status, anzahl);
+    }
+
+    private DashboardResponse antwortFuer(Rollupzeitraum zeitraum) {
+      return service().landingpage(MANDANT, zeitraum);
+    }
+
+    @Test
+    @DisplayName("48H: die Korrektur landet im Stundeneimer, nach Einordnung und Fehlerart")
+    void stundeneimer() {
+      bestandMit(List.of(new Rollupsumme(EIMER, "FINISHED", 10)), List.of());
+      angewandt(
+          zeile("2025-12-30T03:00", "P-1", "FINISHED", 2),
+          zeile("2025-12-30T03:00", "P-1", "ERROR_TIMEOUT", 1));
+
+      DashboardResponse antwort = antwortFuer(Rollupzeitraum.STUNDEN_48);
+
+      assertThat(antwort.verlauf()).hasSize(1);
+      assertThat(antwort.verlauf().getFirst().eimer())
+          .isEqualTo(Instant.parse("2025-12-30T02:00:00Z"));
+      assertThat(antwort.verlauf().getFirst().gesamt()).isEqualTo(13);
+      assertThat(antwort.verlauf().getFirst().einordnungen())
+          .extracting(EinordnungszahlResponse::einordnung, EinordnungszahlResponse::anzahl)
+          .containsExactlyInAnyOrder(
+              tuple(MessageStatusKind.ABGESCHLOSSEN, 12L), tuple(MessageStatusKind.FEHLER, 1L));
+      assertThat(antwort.kacheln().nachrichten()).isEqualTo(13);
+      assertThat(antwort.kacheln().fehler().anzahl()).isEqualTo(1);
+      assertThat(antwort.kacheln().fehler().arten())
+          .extracting(FehlerartResponse::rohwert, FehlerartResponse::art, FehlerartResponse::anzahl)
+          .containsExactly(tuple("ERROR_TIMEOUT", "TIMEOUT", 1L));
+      assertThat(antwort.leer()).isFalse();
+    }
+
+    @Test
+    @DisplayName("30T: zwei Stunden desselben Tages landen im Tageseimer")
+    void tageseimer() {
+      LocalDateTime tag = LocalDateTime.parse("2025-12-30T00:00:00");
+      bestandMit(List.of(new Rollupsumme(tag, "FINISHED", 10)), List.of());
+      angewandt(
+          zeile("2025-12-30T03:00", "P-1", "FINISHED", 2),
+          zeile("2025-12-30T04:00", "P-1", "FINISHED", 3));
+
+      DashboardResponse antwort = antwortFuer(Rollupzeitraum.TAGE_30);
+
+      assertThat(antwort.verlauf()).hasSize(1);
+      assertThat(antwort.verlauf().getFirst().eimer())
+          .as("Der Tageseimer, wie der Rollup ihn bildet: DATE(stunde)")
+          .isEqualTo(Instant.parse("2025-12-29T23:00:00Z"));
+      assertThat(antwort.verlauf().getFirst().gesamt()).isEqualTo(15);
+      assertThat(antwort.kacheln().nachrichten()).isEqualTo(15);
+    }
+
+    @Test
+    @DisplayName("12M: die Stunde landet im Eimer des Monatsersten")
+    void monatseimer() {
+      LocalDateTime monat = LocalDateTime.parse("2025-12-01T00:00:00");
+      bestandMit(List.of(new Rollupsumme(monat, "FINISHED", 10)), List.of());
+      angewandt(zeile("2025-12-30T04:00", "P-1", "FINISHED", 5));
+
+      DashboardResponse antwort = antwortFuer(Rollupzeitraum.MONATE_12);
+
+      assertThat(antwort.verlauf()).hasSize(1);
+      assertThat(antwort.verlauf().getFirst().eimer())
+          .isEqualTo(Instant.parse("2025-11-30T23:00:00Z"));
+      assertThat(antwort.verlauf().getFirst().gesamt()).isEqualTo(15);
+    }
+
+    @Test
+    @DisplayName("Nur Zeilen im Fenster zaehlen — von einschliessend, bis ausschliessend")
+    void nur_im_fenster() {
+      bestandMit(List.of(new Rollupsumme(EIMER, "FINISHED", 10)), List.of());
+      angewandt(
+          zeile("2025-12-28T05:00", "P-1", "FINISHED", 7),
+          zeile("2025-12-28T06:00", "P-1", "FINISHED", 1),
+          zeile("2025-12-30T06:00", "P-1", "FINISHED", 7));
+
+      DashboardResponse antwort = antwortFuer(Rollupzeitraum.STUNDEN_48);
+
+      assertThat(antwort.kacheln().nachrichten())
+          .as("Die Stunde vor dem Fenster und die Stunde an seiner oberen Grenze zaehlen nicht")
+          .isEqualTo(11);
+      assertThat(antwort.verlauf()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("Kein negativer Endwert: was auf null faellt, verschwindet — auch der Eimer")
+    void kein_negativer_endwert() {
+      bestandMit(List.of(new Rollupsumme(EIMER, "FINISHED", 3)), List.of());
+      angewandt(zeile("2025-12-30T03:00", "P-1", "FINISHED", -5));
+
+      DashboardResponse antwort = antwortFuer(Rollupzeitraum.STUNDEN_48);
+
+      assertThat(antwort.kacheln().nachrichten()).isZero();
+      assertThat(antwort.verlauf()).isEmpty();
+      assertThat(antwort.leer()).as("Ohne eine einzige Zahl ist die Seite leer").isTrue();
+    }
+
+    @Test
+    @DisplayName(
+        "Nur Live-Verkehr, keine Rollupzeile: der Eimer entsteht, die Seite ist nicht leer")
+    void nur_live_verkehr() {
+      bestandMit(List.of(), List.of());
+      angewandt(zeile("2025-12-30T05:00", "P-1", "FINISHED", 4));
+
+      DashboardResponse antwort = antwortFuer(Rollupzeitraum.STUNDEN_48);
+
+      assertThat(antwort.leer()).isFalse();
+      assertThat(antwort.verlauf()).hasSize(1);
+      assertThat(antwort.verlauf().getFirst().eimer())
+          .isEqualTo(Instant.parse("2025-12-30T04:00:00Z"));
+      assertThat(antwort.kacheln().nachrichten()).isEqualTo(4);
+    }
+
+    @Test
+    @DisplayName("Block 5 bekommt die Korrektur je Schluessel — ueber die Katalog-Nachlesung")
+    void verteilung_je_schluessel() {
+      bestandMit(
+          List.of(new Rollupsumme(EIMER, "FINISHED", 105)),
+          List.of(partner("BMW", 100), new Verteilungssumme(null, 5)));
+      when(repository.verteilung(any(), any(), any(), eq(Verteilungssicht.RICHTUNG)))
+          .thenReturn(
+              List.of(new Verteilungssumme("EINGEHEND", 100), new Verteilungssumme(null, 5)));
+      angewandt(
+          zeile("2025-12-30T03:00", "P-1", "FINISHED", 3),
+          zeile("2025-12-30T04:00", "P-2", "FINISHED", 2));
+      when(repository.katalogzuordnung(any(), any()))
+          .thenReturn(List.of(new Katalogzuordnungszeile("P-1", "BMW", "EINGEHEND")));
+
+      DashboardResponse antwort = antwortFuer(Rollupzeitraum.STUNDEN_48);
+
+      verify(repository).katalogzuordnung(eq(MANDANT), eq(Set.of("P-1", "P-2")));
+      assertThat(antwort.verteilung().partner().zeilen())
+          .extracting(VerteilungszeileResponse::wert, VerteilungszeileResponse::anzahl)
+          .as("P-2 hat keine Katalogzeile und zaehlt als nicht zugeordnet")
+          .containsExactly(tuple("BMW", 103L), tuple(null, 7L));
+      assertThat(antwort.verteilung().richtung().zeilen())
+          .extracting(VerteilungszeileResponse::wert, VerteilungszeileResponse::anzahl)
+          .containsExactly(tuple("EINGEHEND", 103L), tuple(null, 7L));
+      assertThat(antwort.kacheln().nachrichten())
+          .as("Kachel und beide Sichten zaehlen dieselbe Zahl")
+          .isEqualTo(110);
+    }
+
+    @Test
+    @DisplayName("Ohne Korrekturzeilen im Fenster laeuft keine Nachlesung")
+    void keine_nachlesung_ohne_korrekturzeilen() {
+      bestandMit(List.of(new Rollupsumme(EIMER, "FINISHED", 10)), List.of());
+      angewandt();
+      antwortFuer(Rollupzeitraum.STUNDEN_48);
+
+      angewandt(zeile("2025-12-28T05:00", "P-1", "FINISHED", 7));
+      antwortFuer(Rollupzeitraum.STUNDEN_48);
+
+      verify(repository, never()).katalogzuordnung(any(), any());
+    }
+
+    @Test
+    @DisplayName("Auch die Verteilung klemmt auf null: ein Wert, der auf null faellt, verschwindet")
+    void verteilung_klemmt_auf_null() {
+      bestandMit(List.of(new Rollupsumme(EIMER, "FINISHED", 5)), List.of(partner("BMW", 5)));
+      angewandt(zeile("2025-12-30T03:00", "P-1", "FINISHED", -8));
+      when(repository.katalogzuordnung(any(), any()))
+          .thenReturn(List.of(new Katalogzuordnungszeile("P-1", "BMW", null)));
+
+      DashboardResponse antwort = antwortFuer(Rollupzeitraum.STUNDEN_48);
+
+      assertThat(antwort.verteilung().partner().zeilen())
+          .extracting(VerteilungszeileResponse::art, VerteilungszeileResponse::anzahl)
+          .as("Kein BMW mehr, aber nicht zugeordnet steht immer — auch mit null")
+          .containsExactly(tuple(Verteilungszeilenart.NICHT_ZUGEORDNET, 0L));
+    }
+
+    /**
+     * Die Datenbank gruppiert unter {@code utf8mb4_general_ci}; zwei Schreibweisen sind dort eine
+     * Gruppe. Die Nachlesung liefert die Schreibweise der Katalogzeile — und die darf keine zweite
+     * Zeile eroeffnen.
+     */
+    @Test
+    @DisplayName("Zwei Schreibweisen desselben Schluessels bleiben eine Zeile")
+    void schreibweisen_fallen_zusammen() {
+      bestandMit(List.of(new Rollupsumme(EIMER, "FINISHED", 10)), List.of(partner("BMW", 10)));
+      angewandt(zeile("2025-12-30T03:00", "P-1", "FINISHED", 2));
+      when(repository.katalogzuordnung(any(), any()))
+          .thenReturn(List.of(new Katalogzuordnungszeile("P-1", "Bmw", null)));
+
+      DashboardResponse antwort = antwortFuer(Rollupzeitraum.STUNDEN_48);
+
+      assertThat(antwort.verteilung().partner().zeilen())
+          .extracting(VerteilungszeileResponse::wert, VerteilungszeileResponse::anzahl)
+          .containsExactly(tuple("BMW", 12L), tuple(null, 0L));
+    }
+
+    @Test
+    @DisplayName("Der Block liveRest steht in allen drei Zustaenden, G in UTC")
+    void block_in_drei_zustaenden() {
+      bestandMit(List.of(), List.of());
+
+      angewandt();
+      assertThat(antwortFuer(Rollupzeitraum.STUNDEN_48).liveRest())
+          .isEqualTo(new LiveRestResponse(LiveRestZustand.ANGEWANDT, null));
+
+      when(liveRest.ermittle(any(), any()))
+          .thenReturn(LiveRestErgebnis.ohneKorrektur(LiveRestEntscheidung.nichtNoetig()));
+      assertThat(antwortFuer(Rollupzeitraum.STUNDEN_48).liveRest())
+          .isEqualTo(new LiveRestResponse(LiveRestZustand.NICHT_NOETIG, null));
+
+      when(liveRest.ermittle(any(), any()))
+          .thenReturn(
+              LiveRestErgebnis.ohneKorrektur(
+                  LiveRestEntscheidung.ausgesetztAb(LocalDateTime.parse("2025-12-30T02:00"))));
+      assertThat(antwortFuer(Rollupzeitraum.STUNDEN_48).liveRest())
+          .as("G ist Wanduhrzeit der Quelle und wird nach UTC gerechnet")
+          .isEqualTo(
+              new LiveRestResponse(
+                  LiveRestZustand.AUSGESETZT, Instant.parse("2025-12-30T01:00:00Z")));
+    }
+
+    @Test
+    @DisplayName("Fenster und Live-Rest bekommen denselben Uhrenschlag")
+    void derselbe_stichtag() {
+      bestandMit(List.of(), List.of());
+
+      antwortFuer(Rollupzeitraum.STUNDEN_48);
+
+      verify(liveRest).ermittle(eq(MANDANT), eq(LocalDateTime.now(Clock.fixed(JETZT, ZONE))));
+    }
+
+    @Test
+    @DisplayName("Die Belegungsprobe bleibt ohne Korrektur — sie entscheidet vor dem Live-Rest")
+    void belegungsprobe_ohne_korrektur() {
+      bestandMit(List.of(), List.of());
+      when(repository.belegung(any(), any(), any())).thenReturn(new Belegung(0, 0));
+      angewandt(zeile("2025-12-30T05:00", "P-1", "FINISHED", 4));
+
+      DashboardResponse antwort = antwort();
+
+      assertThat(antwort.zeitraum()).as("Kein Paar traegt: das erste der Reihe").isEqualTo("48H");
+      assertThat(antwort.leer())
+          .as("… und trotzdem ist die Seite mit dem Live-Verkehr nicht leer")
+          .isFalse();
+      verify(repository).belegung(any(), eq(Rollupzeitraum.MONATE_12), any());
+    }
   }
 }

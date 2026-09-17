@@ -1,5 +1,6 @@
 package de.kraftwerkone.overlord.monitor.dashboard;
 
+import de.kraftwerkone.overlord.monitor.common.LiveRestResponse;
 import java.util.List;
 
 /**
@@ -27,6 +28,9 @@ import java.util.List;
  *     juengstem Zeitpunkt, der juengste zuerst (E‑90)
  * @param stand Block 7 — der letzte abgeschlossene, fehlerfreie Rollup-Lauf. <b>{@code null}
  *     heisst: Es hat noch keinen gegeben</b>, und das ist etwas anderes als „lange her"
+ * @param liveRest ob der Verkehr seit dem letzten Rollup-Lauf in Verlauf, Kacheln und Verteilung
+ *     steckt (Teil B des Live-Rests, 17.09.2026, {@code docs/live-rest.md} §9b) — derselbe Block
+ *     wie im Prozessbaum, und bei {@code AUSGESETZT} sagt die Oberflaeche es ueber den Kacheln
  * @param plattform Block 8 — die Dienste und die Ablagen (Schritt 10d, E‑116). <b>Der einzige
  *     Block, der fuer jeden Mandanten identisch ist</b>: Er sagt nichts ueber Belege, sondern ueber
  *     die Anlage, auf der sie laufen
@@ -40,6 +44,7 @@ public record DashboardResponse(
     VerteilungResponse verteilung,
     List<AuffaelligerProzessResponse> zuletztAufgefallen,
     StandResponse stand,
+    LiveRestResponse liveRest,
     PlattformResponse plattform) {
 
   public DashboardResponse {
