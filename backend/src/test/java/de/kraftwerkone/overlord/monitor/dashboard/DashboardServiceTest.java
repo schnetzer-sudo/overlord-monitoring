@@ -9,6 +9,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveErgebnis;
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveResponse;
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveService;
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveZeile;
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveZustand;
 import de.kraftwerkone.overlord.monitor.common.LiveRestEntscheidung;
 import de.kraftwerkone.overlord.monitor.common.LiveRestErgebnis;
 import de.kraftwerkone.overlord.monitor.common.LiveRestKorrektur;
@@ -89,10 +94,18 @@ class DashboardServiceTest {
    */
   @Mock private LiveRestService liveRest;
 
+  /**
+   * Die Fehlerlesung aus {@code common} als Attrappe (E-208). <b>Ohne Stellung ist sie
+   * ausgesetzt</b> — dann bleiben die Fehler beim Rollup, und die Faelle von vor dem 18.09.2026
+   * sehen dieselben Zahlen wie vorher. Die Faelle unter „Fehler live" stellen sie um.
+   */
+  @Mock private FehlerLiveService fehlerLive;
+
   @BeforeEach
   void liveRestOhneLauf() {
     when(liveRest.ermittle(any(), any()))
         .thenReturn(LiveRestErgebnis.ohneKorrektur(LiveRestEntscheidung.ausgesetztOhneLauf()));
+    when(fehlerLive.ermittle(any(), any(), any())).thenReturn(FehlerLiveErgebnis.ausgesetzt());
   }
 
   /**
@@ -103,14 +116,20 @@ class DashboardServiceTest {
    * prueft {@link #ablagenkachel_ist_abgeschaltet}.
    */
   private DashboardService service() {
+    return service(JETZT);
+  }
+
+  /** Derselbe Dienst an einem anderen Stichtag — fuer den Fall aus der Produktion (Fehler live). */
+  private DashboardService service(Instant jetzt) {
     return new DashboardService(
         repository,
         new MessageStatusClassifier(),
-        Clock.fixed(JETZT, ZONE),
+        Clock.fixed(jetzt, ZONE),
         dienstRepository,
         new DienstStatusClassifier(),
         java.util.Optional.empty(),
-        liveRest);
+        liveRest,
+        fehlerLive);
   }
 
   /** Der Normalfall: Es gibt Verkehr, das erste Paar traegt, nichts stirbt. */
@@ -1122,6 +1141,334 @@ class DashboardServiceTest {
           .as("… und trotzdem ist die Seite mit dem Live-Verkehr nicht leer")
           .isFalse();
       verify(repository).belegung(any(), eq(Rollupzeitraum.MONATE_12), any());
+    }
+  }
+
+  // ─── Fehler live (E-208, 18.09.2026) ─────────────────────────────────────────
+
+  /**
+   * <b>Die Fehler aus der Live-Lesung</b> ({@code docs/fehler-live.md} §5). Die Lesung ist eine
+   * Attrappe mit erfundenen Zeilen, die Uhr steht (Regeln T1, T2). Die Faelle hier stellen sie auf
+   * „angewandt" oder lassen sie ausdruecklich „ausgesetzt".
+   *
+   * <p>Das Fenster am gestellten {@code jetzt} (05:09:47 in Europe/Berlin): {@code 48H} liest
+   * {@code 2025-12-28 06:00} bis {@code 2025-12-30 06:00}, {@code 30T} den Dezember bis zum 30.,
+   * {@code 12M} das Jahr 2025.
+   */
+  @Nested
+  @DisplayName("Fehler live — die Fehler aus der Lesung, ersetzt nach dem Live-Rest")
+  class FehlerLive {
+
+    private void angewandt(FehlerLiveZeile... zeilen) {
+      when(fehlerLive.ermittle(any(), any(), any()))
+          .thenReturn(FehlerLiveErgebnis.angewandt(List.of(zeilen)));
+    }
+
+    private static FehlerLiveZeile fehler(
+        String stunde, String prozess, String status, long anzahl) {
+      return new FehlerLiveZeile(LocalDateTime.parse(stunde), prozess, status, anzahl);
+    }
+
+    private static LiveRestZeile korrektur(
+        String stunde, String prozess, String status, long anzahl) {
+      return new LiveRestZeile(LocalDateTime.parse(stunde), prozess, status, anzahl);
+    }
+
+    /** Der Verteilungsblock ohne die Fehler des Rollups — nur bei angewandter Lesung gerufen. */
+    private void verteilungOhneFehler(List<Verteilungssumme> zeilen) {
+      when(repository.verteilungOhneFehler(any(), any(), any(), any())).thenReturn(zeilen);
+    }
+
+    private static long summe(List<VerteilungszeileResponse> zeilen) {
+      return zeilen.stream().mapToLong(VerteilungszeileResponse::anzahl).sum();
+    }
+
+    /**
+     * <b>Der Fall aus der Produktion, gemeldet am 18.09.2026.</b> Eine Nachricht stand um 09:00 auf
+     * {@code ERROR_TIMEOUT}; nach der Nachverarbeitung steht sie auf {@code RUNNING} und ist in die
+     * laufende Stunde gewandert. Der Rollup haelt den Fehler im Eimer 09:00 bis zum Volllauf, der
+     * Live-Rest kennt die Nachricht in der Stunde 14:00, und die Lesung findet keinen Fehler mehr.
+     *
+     * <p><b>Vorher und nachher, mit denselben Zeilen:</b> Ausgesetzt zaehlt die Seite die Nachricht
+     * zweimal und einmal als Fehler — das ist die Meldung. Angewandt zaehlt sie sie einmal, und
+     * nicht als Fehler.
+     */
+    @Test
+    @DisplayName("Der Fall aus der Produktion: nachverarbeitet, kein Fehler mehr, einmal gezaehlt")
+    void der_fall_aus_der_produktion() {
+      // 14:30 in Europe/Berlin; 48H liest 2025-12-28 15:00 bis 2025-12-30 15:00, G ist 13:00.
+      Instant umHalbDrei = Instant.parse("2025-12-30T13:30:00Z");
+      LocalDateTime neunUhr = LocalDateTime.parse("2025-12-30T09:00:00");
+      bestandMit(List.of(new Rollupsumme(neunUhr, "ERROR_TIMEOUT", 1)), List.of());
+      when(liveRest.ermittle(any(), any()))
+          .thenReturn(
+              new LiveRestErgebnis(
+                  LiveRestEntscheidung.angewandt(
+                      LocalDateTime.parse("2025-12-30T13:00"),
+                      LocalDateTime.parse("2025-12-30T15:00")),
+                  new LiveRestKorrektur(
+                      List.of(korrektur("2025-12-30T14:00", "P-1", "RUNNING", 1)), Map.of())));
+
+      DashboardResponse vorher =
+          service(umHalbDrei).landingpage(MANDANT, Rollupzeitraum.STUNDEN_48);
+
+      assertThat(vorher.kacheln().fehler().anzahl())
+          .as("Ausgesetzt: der alte Eimer behaelt den Fehler — die Meldung aus der Produktion")
+          .isEqualTo(1);
+      assertThat(vorher.kacheln().nachrichten())
+          .as("… und die Nachricht zaehlt doppelt")
+          .isEqualTo(2);
+
+      angewandt();
+      verteilungOhneFehler(List.of());
+      DashboardResponse nachher =
+          service(umHalbDrei).landingpage(MANDANT, Rollupzeitraum.STUNDEN_48);
+
+      assertThat(nachher.kacheln().fehler().anzahl()).isZero();
+      assertThat(nachher.kacheln().fehler().arten()).isEmpty();
+      assertThat(nachher.kacheln().nachrichten()).isEqualTo(1);
+      assertThat(nachher.verlauf())
+          .as(
+              "Im Eimer 09:00 steht kein Fehleranteil mehr — und ohne Zeile gibt es den Eimer nicht")
+          .extracting(VerlaufspunktResponse::eimer)
+          .containsExactly(Instant.parse("2025-12-30T13:00:00Z"));
+      assertThat(nachher.verlauf().getFirst().einordnungen())
+          .containsExactly(new EinordnungszahlResponse(MessageStatusKind.LAEUFT, 1));
+      assertThat(summe(nachher.verteilung().partner().zeilen()))
+          .as("Kachel und Sicht zaehlen dieselbe Nachricht")
+          .isEqualTo(1);
+      assertThat(nachher.fehlerLive())
+          .isEqualTo(new FehlerLiveResponse(FehlerLiveZustand.ANGEWANDT));
+    }
+
+    /**
+     * Ein Fehler in der laufenden Stunde: Der Live-Rest rechnet ihn dazu, und die Lesung kennt ihn
+     * auch. <b>Er zaehlt einmal</b> — der Ersatz nimmt die Fehlerzeile des Live-Rests heraus.
+     */
+    @Test
+    @DisplayName("Ein Fehler im Live-Bereich zaehlt einmal, obwohl Live-Rest und Lesung ihn kennen")
+    void fehler_im_live_bereich_zaehlt_einmal() {
+      bestandMit(List.of(new Rollupsumme(EIMER, "FINISHED", 10)), List.of());
+      when(liveRest.ermittle(any(), any()))
+          .thenReturn(
+              new LiveRestErgebnis(
+                  LiveRestEntscheidung.angewandt(
+                      LocalDateTime.parse("2025-12-30T03:00"),
+                      LocalDateTime.parse("2025-12-30T06:00")),
+                  new LiveRestKorrektur(
+                      List.of(korrektur("2025-12-30T04:00", "P-1", "ERROR_TIMEOUT", 1)),
+                      Map.of())));
+      angewandt(fehler("2025-12-30T04:00", "P-1", "ERROR_TIMEOUT", 1));
+      verteilungOhneFehler(List.of(partner("BMW", 10)));
+
+      DashboardResponse antwort = service().landingpage(MANDANT, Rollupzeitraum.STUNDEN_48);
+
+      assertThat(antwort.kacheln().fehler().anzahl()).isEqualTo(1);
+      assertThat(antwort.kacheln().nachrichten()).isEqualTo(11);
+      assertThat(summe(antwort.verteilung().partner().zeilen()))
+          .as("Auch Block 5 zaehlt ihn einmal: die Fehlerzeile der Korrektur geht nicht hinein")
+          .isEqualTo(11);
+    }
+
+    @Test
+    @DisplayName("Hebung je Paar: 48H die Stunde, 30T der Tag, 12M der Monatserste")
+    void hebung_je_paar() {
+      bestandMit(List.of(new Rollupsumme(EIMER, "FINISHED", 10)), List.of());
+      verteilungOhneFehler(List.of());
+      angewandt(fehler("2025-12-30T03:00", "P-1", "ERROR_DUPLICATE", 2));
+      DashboardResponse stunde = service().landingpage(MANDANT, Rollupzeitraum.STUNDEN_48);
+      assertThat(stunde.verlauf()).hasSize(1);
+      assertThat(stunde.verlauf().getFirst().eimer())
+          .isEqualTo(Instant.parse("2025-12-30T02:00:00Z"));
+      assertThat(stunde.verlauf().getFirst().einordnungen())
+          .as("In der Reihenfolge der Aufzaehlung, wie in jedem Eimer")
+          .containsExactly(
+              new EinordnungszahlResponse(MessageStatusKind.FEHLER, 2),
+              new EinordnungszahlResponse(MessageStatusKind.ABGESCHLOSSEN, 10));
+
+      LocalDateTime tag = LocalDateTime.parse("2025-12-29T00:00:00");
+      bestandMit(List.of(new Rollupsumme(tag, "FINISHED", 10)), List.of());
+      angewandt(
+          fehler("2025-12-29T03:00", "P-1", "ERROR_DUPLICATE", 2),
+          fehler("2025-12-29T17:00", "P-2", "ERROR_DUPLICATE", 1));
+      DashboardResponse tage = service().landingpage(MANDANT, Rollupzeitraum.TAGE_30);
+      assertThat(tage.verlauf()).as("Zwei Stunden desselben Tages, ein Tageseimer").hasSize(1);
+      assertThat(tage.verlauf().getFirst().eimer())
+          .as("Der Tageseimer, wie der Rollup ihn bildet: DATE(stunde)")
+          .isEqualTo(Instant.parse("2025-12-28T23:00:00Z"));
+      assertThat(tage.kacheln().fehler().anzahl()).isEqualTo(3);
+
+      LocalDateTime monat = LocalDateTime.parse("2025-12-01T00:00:00");
+      bestandMit(List.of(new Rollupsumme(monat, "FINISHED", 10)), List.of());
+      angewandt(fehler("2025-12-10T08:00", "P-1", "COMMIT_REJECTED", 1));
+      DashboardResponse monate = service().landingpage(MANDANT, Rollupzeitraum.MONATE_12);
+      assertThat(monate.verlauf()).hasSize(1);
+      assertThat(monate.verlauf().getFirst().eimer())
+          .as("Der Eimer des Monatsersten")
+          .isEqualTo(Instant.parse("2025-11-30T23:00:00Z"));
+      assertThat(monate.verlauf().getFirst().gesamt()).isEqualTo(11);
+    }
+
+    @Test
+    @DisplayName("Kachel Fehler und Fehlerarten kommen aus der Lesung, nicht aus dem Rollup")
+    void kachel_und_fehlerarten_aus_der_lesung() {
+      bestandMit(
+          List.of(
+              new Rollupsumme(EIMER, "FINISHED", 10), new Rollupsumme(EIMER, "ERROR_TIMEOUT", 5)),
+          List.of());
+      verteilungOhneFehler(List.of());
+      angewandt(
+          fehler("2025-12-30T03:00", "P-1", "ERROR_DUPLICATE", 2),
+          fehler("2025-12-30T03:00", "P-2", "COMMIT_REJECTED", 1));
+
+      DashboardResponse antwort = antwort();
+
+      assertThat(antwort.kacheln().fehler().anzahl()).isEqualTo(3);
+      assertThat(antwort.kacheln().fehler().arten())
+          .extracting(FehlerartResponse::rohwert, FehlerartResponse::art, FehlerartResponse::anzahl)
+          .as("Das ERROR_TIMEOUT des Rollups ist ersetzt — es steht nirgends mehr")
+          .containsExactly(
+              tuple("ERROR_DUPLICATE", "DUPLICATE", 2L),
+              tuple("COMMIT_REJECTED", MessageStatusClassifier.ABGELEHNT_VOM_PARTNER, 1L));
+      assertThat(antwort.kacheln().nachrichten()).isEqualTo(13);
+    }
+
+    /**
+     * <b>Block 5 bei angewandter Lesung:</b> Die Statements lesen den Rollup ohne Fehler, die
+     * Fehlerzeilen der Lesung gehen ueber die Nachlesung dem Schluessel zu — ein Prozess ohne
+     * Katalogzeile als <i>nicht zugeordnet</i>. Kachel und beide Sichten zaehlen dieselbe Zahl.
+     */
+    @Test
+    @DisplayName("Angewandt: Block 5 ohne die Fehler des Rollups, die Lesung ueber die Nachlesung")
+    void block5_angewandt() {
+      bestandMit(
+          List.of(
+              new Rollupsumme(EIMER, "FINISHED", 10), new Rollupsumme(EIMER, "ERROR_TIMEOUT", 5)),
+          List.of());
+      when(repository.verteilungOhneFehler(any(), any(), any(), eq(Verteilungssicht.PARTNER)))
+          .thenReturn(List.of(partner("BMW", 8), new Verteilungssumme(null, 2)));
+      when(repository.verteilungOhneFehler(any(), any(), any(), eq(Verteilungssicht.RICHTUNG)))
+          .thenReturn(List.of(new Verteilungssumme("EINGEHEND", 8), new Verteilungssumme(null, 2)));
+      angewandt(
+          fehler("2025-12-30T03:00", "P-1", "ERROR_DUPLICATE", 2),
+          fehler("2025-12-30T03:00", "P-9", "COMMIT_REJECTED", 1));
+      when(repository.katalogzuordnung(any(), any()))
+          .thenReturn(List.of(new Katalogzuordnungszeile("P-1", "BMW", "EINGEHEND")));
+
+      DashboardResponse antwort = antwortFuer(Rollupzeitraum.STUNDEN_48);
+
+      verify(repository, org.mockito.Mockito.times(2))
+          .verteilungOhneFehler(any(), any(), any(), any());
+      verify(repository, never()).verteilung(any(), any(), any(), any());
+      verify(repository).katalogzuordnung(eq(MANDANT), eq(Set.of("P-1", "P-9")));
+      assertThat(antwort.verteilung().partner().zeilen())
+          .extracting(VerteilungszeileResponse::wert, VerteilungszeileResponse::anzahl)
+          .as("P-9 hat keine Katalogzeile und zaehlt als nicht zugeordnet")
+          .containsExactly(tuple("BMW", 10L), tuple(null, 3L));
+      assertThat(antwort.verteilung().richtung().zeilen())
+          .extracting(VerteilungszeileResponse::wert, VerteilungszeileResponse::anzahl)
+          .containsExactly(tuple("EINGEHEND", 10L), tuple(null, 3L));
+      assertThat(antwort.kacheln().nachrichten())
+          .as("Kachel und beide Sichten zaehlen dieselbe Zahl")
+          .isEqualTo(13);
+    }
+
+    /**
+     * <b>Block 5 bei ausgesetzter Lesung:</b> beide Statements im heutigen Wortlaut, keine
+     * Nachlesung — Kachel und Sichten nehmen die Fehler beide aus dem Rollup und zaehlen gleich.
+     */
+    @Test
+    @DisplayName("Ausgesetzt: Block 5 im heutigen Wortlaut, ohne Nachlesung, und er zaehlt gleich")
+    void block5_ausgesetzt() {
+      bestandMit(
+          List.of(
+              new Rollupsumme(EIMER, "FINISHED", 10), new Rollupsumme(EIMER, "ERROR_TIMEOUT", 5)),
+          List.of(partner("BMW", 12), new Verteilungssumme(null, 3)));
+
+      DashboardResponse antwort = antwortFuer(Rollupzeitraum.STUNDEN_48);
+
+      verify(repository, org.mockito.Mockito.times(2)).verteilung(any(), any(), any(), any());
+      verify(repository, never()).verteilungOhneFehler(any(), any(), any(), any());
+      verify(repository, never()).katalogzuordnung(any(), any());
+      assertThat(summe(antwort.verteilung().partner().zeilen())).isEqualTo(15);
+      assertThat(antwort.kacheln().nachrichten()).isEqualTo(15);
+    }
+
+    @Test
+    @DisplayName(
+        "Der Leerzustand folgt der Kachel Nachrichten nach dem Ersatz — in beide Richtungen")
+    void leerzustand_nach_dem_ersatz() {
+      bestandMit(List.of(new Rollupsumme(EIMER, "ERROR_TIMEOUT", 1)), List.of());
+      verteilungOhneFehler(List.of());
+      angewandt();
+
+      DashboardResponse nurDerAlteFehler = antwortFuer(Rollupzeitraum.STUNDEN_48);
+
+      assertThat(nurDerAlteFehler.leer())
+          .as("Der einzige Eintrag war ein Fehler, den es nicht mehr gibt: die Seite ist leer")
+          .isTrue();
+      assertThat(nurDerAlteFehler.verlauf()).isEmpty();
+
+      bestandMit(List.of(), List.of());
+      angewandt(fehler("2025-12-30T03:00", "P-1", "ERROR_TIMEOUT", 1));
+
+      DashboardResponse nurDieLesung = antwortFuer(Rollupzeitraum.STUNDEN_48);
+
+      assertThat(nurDieLesung.leer())
+          .as("Ein Fehler, den der Rollup noch nicht kennt, macht die Seite nicht leer")
+          .isFalse();
+      assertThat(nurDieLesung.kacheln().fehler().anzahl()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Ausgesetzt ergibt die Zahlen von vorher — samt Block fehlerLive")
+    void ausgesetzt_ergibt_die_zahlen_von_vorher() {
+      bestandMit(
+          List.of(
+              new Rollupsumme(EIMER, "FINISHED", 10), new Rollupsumme(EIMER, "ERROR_TIMEOUT", 5)),
+          List.of(partner("BMW", 15)));
+      when(fehlerLive.ermittle(any(), any(), any())).thenReturn(FehlerLiveErgebnis.ausgesetzt());
+
+      DashboardResponse antwort = antwortFuer(Rollupzeitraum.STUNDEN_48);
+
+      assertThat(antwort.kacheln().nachrichten()).isEqualTo(15);
+      assertThat(antwort.kacheln().fehler().anzahl()).isEqualTo(5);
+      assertThat(antwort.kacheln().fehler().arten())
+          .extracting(FehlerartResponse::rohwert)
+          .containsExactly("ERROR_TIMEOUT");
+      assertThat(antwort.verlauf().getFirst().einordnungen())
+          .containsExactly(
+              new EinordnungszahlResponse(MessageStatusKind.FEHLER, 5),
+              new EinordnungszahlResponse(MessageStatusKind.ABGESCHLOSSEN, 10));
+      assertThat(antwort.fehlerLive())
+          .isEqualTo(new FehlerLiveResponse(FehlerLiveZustand.AUSGESETZT));
+
+      angewandt();
+      verteilungOhneFehler(List.of(partner("BMW", 10)));
+      assertThat(antwortFuer(Rollupzeitraum.STUNDEN_48).fehlerLive())
+          .isEqualTo(new FehlerLiveResponse(FehlerLiveZustand.ANGEWANDT));
+    }
+
+    /**
+     * <b>Ein Uhrenschlag:</b> Die Lesung bekommt genau das Fenster, das die Seite aus ihrem einen
+     * {@code jetzt} bildet — und der Live-Rest dasselbe {@code jetzt}.
+     */
+    @Test
+    @DisplayName("Fenster, Live-Rest und Fehlerlesung bekommen denselben Uhrenschlag")
+    void ein_uhrenschlag() {
+      bestandMit(List.of(), List.of());
+
+      antwortFuer(Rollupzeitraum.STUNDEN_48);
+
+      LocalDateTime jetzt = LocalDateTime.now(Clock.fixed(JETZT, ZONE));
+      Zeitfenster fenster = Rollupzeitraum.STUNDEN_48.fenster(jetzt);
+      verify(fehlerLive).ermittle(eq(MANDANT), eq(fenster.von()), eq(fenster.bis()));
+      verify(liveRest).ermittle(eq(MANDANT), eq(jetzt));
+      verify(repository).verlauf(eq(MANDANT), eq(Rollupzeitraum.STUNDEN_48), eq(fenster));
+    }
+
+    private DashboardResponse antwortFuer(Rollupzeitraum zeitraum) {
+      return service().landingpage(MANDANT, zeitraum);
     }
   }
 }

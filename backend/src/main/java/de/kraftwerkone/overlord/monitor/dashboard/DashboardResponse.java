@@ -1,5 +1,6 @@
 package de.kraftwerkone.overlord.monitor.dashboard;
 
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveResponse;
 import de.kraftwerkone.overlord.monitor.common.LiveRestResponse;
 import java.util.List;
 
@@ -31,6 +32,9 @@ import java.util.List;
  * @param liveRest ob der Verkehr seit dem letzten Rollup-Lauf in Verlauf, Kacheln und Verteilung
  *     steckt (Teil B des Live-Rests, 17.09.2026, {@code docs/live-rest.md} §9b) — derselbe Block
  *     wie im Prozessbaum, und bei {@code AUSGESETZT} sagt die Oberflaeche es ueber den Kacheln
+ * @param fehlerLive ob die Fehler in Verlauf, Kacheln und Verteilung aus der Live-Lesung kommen
+ *     (Fehler live, 18.09.2026, {@code docs/fehler-live.md}) — bei {@code AUSGESETZT} stammen sie
+ *     aus der stuendlichen Aggregation, und die Oberflaeche sagt es ueber den Kacheln
  * @param plattform Block 8 — die Dienste und die Ablagen (Schritt 10d, E‑116). <b>Der einzige
  *     Block, der fuer jeden Mandanten identisch ist</b>: Er sagt nichts ueber Belege, sondern ueber
  *     die Anlage, auf der sie laufen
@@ -45,6 +49,7 @@ public record DashboardResponse(
     List<AuffaelligerProzessResponse> zuletztAufgefallen,
     StandResponse stand,
     LiveRestResponse liveRest,
+    FehlerLiveResponse fehlerLive,
     PlattformResponse plattform) {
 
   public DashboardResponse {

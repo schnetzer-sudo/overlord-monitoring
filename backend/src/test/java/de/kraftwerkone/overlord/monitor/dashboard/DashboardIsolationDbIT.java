@@ -5,6 +5,9 @@ import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROJECTMAND
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.PROCESS_CATALOG;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveRepository;
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveZeile;
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveZustand;
 import de.kraftwerkone.overlord.monitor.common.LiveRestZustand;
 import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.Pflegestatus;
@@ -76,6 +79,9 @@ class DashboardIsolationDbIT extends SicherheitsTestbasis {
 
   /** Fuer die Nachlesung am Repository (Teil B) — der Dienst verwirft fremde Zeilen lautlos. */
   @Autowired private DashboardRepository dashboardRepository;
+
+  /** Fuer die Fehlerlesung am Repository (Fehler live, E-208) — aus demselben Grund. */
+  @Autowired private FehlerLiveRepository fehlerLiveRepository;
 
   @Autowired
   @Qualifier("glassfishDsl") private DSLContext glassfishDsl;
@@ -735,5 +741,58 @@ class DashboardIsolationDbIT extends SicherheitsTestbasis {
                 + " Mandantenkette im Statement taete sie es",
             MANDANT_A, prozess, MANDANT_B)
         .isEmpty();
+  }
+
+  // ─── Fehler live (18.09.2026, E-208) ─────────────────────────────────────────
+
+  /** Der Block steht in der Antwort — mit einem der zwei Zustaende, kein dritter, kein Fehlen. */
+  @Test
+  @DisplayName("Der Block fehlerLive steht in der Antwort, mit einem der zwei Zustaende")
+  void der_block_fehler_live_steht_in_der_antwort() throws Exception {
+    Antwort antwort = aufNexans.hole(pfad("48H"));
+
+    assertThat(antwort.hatFeld("$.fehlerLive.zustand")).isTrue();
+    assertThat(FehlerLiveZustand.valueOf(antwort.<String>json("$.fehlerLive.zustand")))
+        .isIn((Object[]) FehlerLiveZustand.values());
+  }
+
+  /**
+   * <b>Die fuenfte Mandantenkette dieser Seite, am Repository</b> (Regel M4). Durch den Endpunkt
+   * zeigte sich ein Leck der Fehlerlesung nur als Zahl — und eine Zahl, die fremde Fehler
+   * mitzaehlt, sieht aus wie eine richtige. Hier bekommt die Lesung das Fenster {@code 12M} am
+   * Anker direkt.
+   *
+   * <p><b>Beide Richtungen, wie bei Block 6:</b> Keine Prozesskennung von {@code SUTTONS} steht in
+   * der Lesung fuer {@code VOTG}, und jede Kennung der Lesung steht in der Prozessliste von {@code
+   * VOTG} — die zweite faellt auch dann, wenn das Leck von einem dritten Mandanten kommt.
+   *
+   * <p><b>Die Eichung zuerst:</b> {@code VOTG} hat Fehler in diesem Fenster; ohne eigene Zeilen
+   * bewiese die leere Schnittmenge nur, dass leer leer ist.
+   */
+  @Test
+  @DisplayName("Die Fehlerlesung liefert fuer VOTG keine fremde Zeile — am Repository")
+  void die_fehlerlesung_liefert_keine_fremde_zeile() throws Exception {
+    List<String> fremdeProzesse = prozesseVon(aufSuttons);
+    List<String> eigeneProzesse = prozesseVon(aufVotg);
+    LocalDateTime von = LocalDateTime.parse("2025-01-01T00:00");
+    LocalDateTime bis = LocalDateTime.parse("2026-01-01T00:00");
+
+    List<String> gelesen =
+        fehlerLiveRepository.ausDerQuelle(new MandantContext(MANDANT_A), von, bis).stream()
+            .map(FehlerLiveZeile::processId)
+            .toList();
+
+    assertThat(gelesen)
+        .as("Eichung: %s hat Fehler im Fenster — ohne sie bewiese die Probe nichts", MANDANT_A)
+        .isNotEmpty();
+    assertThat(gelesen)
+        .as(
+            "Die Fehlerlesung fuer %s darf keinen Prozess von %s liefern — ohne Mandantenkette im"
+                + " Statement taete sie es",
+            MANDANT_A, MANDANT_B)
+        .doesNotContainAnyElementsOf(fremdeProzesse);
+    assertThat(eigeneProzesse)
+        .as("Jede Prozesskennung der Fehlerlesung gehoert %s", MANDANT_A)
+        .containsAll(gelesen);
   }
 }

@@ -1,5 +1,9 @@
 package de.kraftwerkone.overlord.monitor.dashboard;
 
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveErgebnis;
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveErsatz;
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveResponse;
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveService;
 import de.kraftwerkone.overlord.monitor.common.LiveRestErgebnis;
 import de.kraftwerkone.overlord.monitor.common.LiveRestResponse;
 import de.kraftwerkone.overlord.monitor.common.LiveRestService;
@@ -55,6 +59,20 @@ import org.springframework.stereotype.Service;
  * gelesen ist, und ein Paar, das ohne den angebrochenen Eimer nicht traegt, traegt mit ihm nicht
  * besser. <i>Laeuft</i>, <i>Wartend</i> und <i>Zuletzt aufgefallen</i> lesen ohnehin live. Der
  * Block <i>Stand</i> bleibt, was er war.
+ *
+ * <h2>Die Fehler kommen live (E-208, {@code docs/fehler-live.md})</h2>
+ *
+ * <p>Seit dem 18.09.2026 kommt die Einordnung {@code FEHLER} nicht mehr aus dem Rollup, sondern aus
+ * einer Live-Lesung ueber {@code Message} ({@code common/FehlerLiveService}) — ein Fehlerstatus ist
+ * durch Nachverarbeitung nicht endgueltig, und der Delta-Lauf entfernt einen Abgang aus einem alten
+ * Eimer nicht. <b>Nach der Verrechnung des Live-Rests</b> fallen die Fehlerzeilen aus den Zeilen
+ * der Bloecke 1 bis 3, und die Zeilen der Lesung kommen, auf den Eimer des Paares gehoben, hinzu
+ * ({@code common/FehlerLiveErsatz}); Kachel <i>Fehler</i> und Fehlerarten entstehen danach wie
+ * bisher. <b>Die Lesung laeuft vor Block 5</b>, denn dessen zwei Statements haengen an ihrem
+ * Zustand: angewandt ohne die Fehler des Rollups, und die Fehlerzeilen gehen wie die
+ * Korrekturzeilen ueber die Katalog-Nachlesung; ausgesetzt im heutigen Wortlaut. Alle anderen
+ * Einordnungen, <i>Laeuft</i>, <i>Wartend</i>, Block 6, <i>Stand</i>, <i>Plattform</i> und die
+ * Belegungsprobe bleiben, was sie waren.
  */
 @Service
 public class DashboardService {
@@ -78,6 +96,9 @@ public class DashboardService {
   /** Der Baustein aus {@code common} — derselbe, den der Prozessbaum ruft (E-179 bis E-185). */
   private final LiveRestService liveRestService;
 
+  /** Die Fehler live, aus {@code common} (E-208) — mit Teil B ruft ihn auch der Prozessbaum. */
+  private final FehlerLiveService fehlerLiveService;
+
   DashboardService(
       DashboardRepository dashboardRepository,
       MessageStatusClassifier statusClassifier,
@@ -85,7 +106,8 @@ public class DashboardService {
       DienstLeseRepository dienstLeseRepository,
       DienstStatusClassifier dienstClassifier,
       Optional<Ablagenpruefung> ablagenpruefung,
-      LiveRestService liveRestService) {
+      LiveRestService liveRestService,
+      FehlerLiveService fehlerLiveService) {
     this.dashboardRepository = dashboardRepository;
     this.statusClassifier = statusClassifier;
     this.anwendungsuhr = anwendungsuhr;
@@ -93,6 +115,7 @@ public class DashboardService {
     this.dienstClassifier = dienstClassifier;
     this.ablagenpruefung = ablagenpruefung;
     this.liveRestService = liveRestService;
+    this.fehlerLiveService = fehlerLiveService;
   }
 
   /**
@@ -160,10 +183,14 @@ public class DashboardService {
     Zeitfenster fenster = zeitraum.fenster(jetzt);
 
     List<Rollupsumme> ausDemRollup = dashboardRepository.verlauf(mandant, zeitraum, fenster);
+    // Fehler live liest VOR Block 5: Dessen zwei Statements haengen am Zustand der Lesung (E-208)
+    // — dasselbe Fenster aus demselben Uhrenschlag wie Rollup und Live-Rest.
+    FehlerLiveErgebnis fehlerLive =
+        fehlerLiveService.ermittle(mandant, fenster.von(), fenster.bis());
     List<Verteilungssumme> nachPartner =
-        dashboardRepository.verteilung(mandant, zeitraum, fenster, Verteilungssicht.PARTNER);
+        verteilungssummen(mandant, zeitraum, fenster, Verteilungssicht.PARTNER, fehlerLive);
     List<Verteilungssumme> nachRichtung =
-        dashboardRepository.verteilung(mandant, zeitraum, fenster, Verteilungssicht.RICHTUNG);
+        verteilungssummen(mandant, zeitraum, fenster, Verteilungssicht.RICHTUNG, fehlerLive);
     OffeneKachelResponse laeuft = offeneKachel(mandant, MessageStatusKind.LAEUFT, jetzt);
     // Die Erscheinungsbedingung wird bei JEDEM Aufruf mitgelesen und nicht bedingt: Sonst haenge
     // die Zahl der Statements am Mandanten, und DashboardStatementsTest waere nicht mehr
@@ -175,17 +202,28 @@ public class DashboardService {
     StandResponse stand = stand();
     PlattformResponse plattform = plattform(jetzt);
 
-    // Der Live-Rest kommt nach den neun Statements der Seite und vor dem Zusammensetzen: erst der
+    // Der Live-Rest kommt nach den Statements der Seite und vor dem Zusammensetzen: erst der
     // Wasserstand, dann bei ANGEWANDT die zwei Live-Lesungen — und die Katalog-Nachlesung nur,
-    // wenn im Fenster etwas zu verrechnen ist. DashboardStatementsTest benennt alle einzeln.
+    // wenn Block 5 etwas zuzurechnen hat. DashboardStatementsTest benennt alle einzeln.
     LiveRestErgebnis liveRest = liveRestService.ermittle(mandant, jetzt);
     Liveverrechnung verrechnung = Liveverrechnung.im(zeitraum, fenster, liveRest.korrektur());
-    List<Rollupsumme> summen = verrechnung.verlauf(ausDemRollup);
+    // Der Ersatz NACH der Verrechnung des Live-Rests (E-190, E-208): Die Fehlerzeilen fallen
+    // heraus, die der Lesung kommen auf dem Eimer des Paares hinzu. Ausgesetzt bleibt alles.
+    List<Rollupsumme> summen =
+        FehlerLiveErsatz.ersetze(
+            fehlerLive.zustand(),
+            verrechnung.verlauf(ausDemRollup),
+            Liveverrechnung.gehoben(zeitraum, fenster, fehlerLive.zeilen()),
+            Rollupsumme::messageStatus,
+            statusClassifier);
+    Liveverrechnung zuBlock5 =
+        Liveverrechnung.fuerDieVerteilung(
+            zeitraum, fenster, liveRest.korrektur(), fehlerLive, statusClassifier);
     Map<String, String> partnerJeProzess = new LinkedHashMap<>();
     Map<String, String> richtungJeProzess = new LinkedHashMap<>();
-    if (!verrechnung.leer()) {
+    if (!zuBlock5.leer()) {
       for (Katalogzuordnungszeile zeile :
-          dashboardRepository.katalogzuordnung(mandant, verrechnung.betroffeneProzesse())) {
+          dashboardRepository.katalogzuordnung(mandant, zuBlock5.betroffeneProzesse())) {
         partnerJeProzess.put(zeile.processId(), zeile.partner());
         richtungJeProzess.put(zeile.processId(), zeile.richtung());
       }
@@ -199,12 +237,29 @@ public class DashboardService {
         verlauf(summen),
         kacheln,
         new VerteilungResponse(
-            verteilung(verrechnung.verteilung(nachPartner, partnerJeProzess)),
-            verteilung(verrechnung.verteilung(nachRichtung, richtungJeProzess))),
+            verteilung(zuBlock5.verteilung(nachPartner, partnerJeProzess)),
+            verteilung(zuBlock5.verteilung(nachRichtung, richtungJeProzess))),
         zuletztAufgefallen(aufgefallen),
         stand,
         LiveRestResponse.aus(liveRest.entscheidung(), anwendungsuhr.getZone()),
+        FehlerLiveResponse.aus(fehlerLive),
         plattform);
+  }
+
+  /**
+   * Block 5, eine Sicht, <b>als Statement</b>: bei angewandtem Fehler live ohne die Fehler des
+   * Rollups — die kommen aus der Lesung ueber die Nachlesung —, sonst im heutigen Wortlaut. So
+   * zaehlen Kachel und Sichten in beiden Zustaenden dieselbe Zahl.
+   */
+  private List<Verteilungssumme> verteilungssummen(
+      MandantContext mandant,
+      Rollupzeitraum zeitraum,
+      Zeitfenster fenster,
+      Verteilungssicht sicht,
+      FehlerLiveErgebnis fehlerLive) {
+    return fehlerLive.angewandt()
+        ? dashboardRepository.verteilungOhneFehler(mandant, zeitraum, fenster, sicht)
+        : dashboardRepository.verteilung(mandant, zeitraum, fenster, sicht);
   }
 
   /**

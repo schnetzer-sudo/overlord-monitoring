@@ -2,6 +2,8 @@ package de.kraftwerkone.overlord.monitor.dashboard;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveRepository;
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveService;
 import de.kraftwerkone.overlord.monitor.common.LiveRestRepository;
 import de.kraftwerkone.overlord.monitor.common.LiveRestService;
 import de.kraftwerkone.overlord.monitor.common.MandantContext;
@@ -9,6 +11,7 @@ import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
 import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
 import de.kraftwerkone.overlord.monitor.common.WasserstandRepository;
+import java.sql.SQLException;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -57,6 +60,12 @@ import org.junit.jupiter.api.Test;
  * Bausteins und, nur wenn im Fenster etwas zu verrechnen ist, die Katalog-Nachlesung. Sie stehen
  * einzeln benannt in {@link LiveRest}; die Attrappe stellt den Wasserstand und eine Live-Zeile.
  *
+ * <p><b>Seit dem 18.09.2026 (Fehler live, E-208) sind es elf bis vierzehn</b> — die Fehlerlesung
+ * steht an zweiter Stelle, vor Block 5, und je nach ihrem Zustand laufen die zwei
+ * Verteilungsstatements ohne die Fehler des Rollups oder im heutigen Wortlaut. Jede Lage steht mit
+ * ihren Statements einzeln benannt in {@link FehlerLive}; die Attrappe liefert auf Wunsch eine
+ * Fehlerzeile oder laesst die Lesung ausfallen.
+ *
  * <p>Vorbild ist {@code RollupStatementsTest}; die Bauform ist dieselbe.
  */
 class DashboardStatementsTest {
@@ -80,6 +89,12 @@ class DashboardStatementsTest {
    */
   private LiveRestService liveRestService;
 
+  /** Die Fehlerlesung aus {@code common} an derselben Attrappe (E-208). */
+  private FehlerLiveService fehlerLiveService;
+
+  /** Dieselbe Lesung ohne den Dienst — fuer ihren Text allein. */
+  private FehlerLiveRepository fehlerLiveRepository;
+
   /**
    * Was die Attrappe auf die Wasserstandsabfrage antwortet — {@code null} heisst „nie gerechnet",
    * und dann bleibt es bei zehn Statements.
@@ -92,11 +107,29 @@ class DashboardStatementsTest {
    */
   private boolean liveZeile;
 
+  /** Der Rohwert dieser Live-Zeile — eine Korrektur, die ein Fehler ist, geht nicht in Block 5. */
+  private String liveStatus;
+
+  /**
+   * Ob die Attrappe auf die Fehlerlesung <b>eine</b> Zeile liefert ({@code ERROR_TIMEOUT} eines
+   * eigenen Prozesses). Dann bekommt Block 5 etwas zuzurechnen, und die Nachlesung laeuft.
+   */
+  private boolean fehlerZeile;
+
+  /**
+   * Ob die Fehlerlesung ausfaellt — die Attrappe wirft, der Baustein setzt aus (E-185 sinngemaess),
+   * und die Verteilung laeuft im heutigen Wortlaut.
+   */
+  private boolean fehlerLiveFaellt;
+
   @BeforeEach
   void attrappeAufbauen() {
     gerendert.clear();
     wasserstand = null;
     liveZeile = false;
+    liveStatus = "FINISHED";
+    fehlerZeile = false;
+    fehlerLiveFaellt = false;
     MockDataProvider attrappe =
         ausfuehrung -> {
           gerendert.add(ausfuehrung.sql());
@@ -110,21 +143,16 @@ class DashboardStatementsTest {
             ergebnis.add(satz);
             return new MockResult[] {new MockResult(1, ergebnis)};
           }
-          if (ausfuehrung.sql().contains("date_format(") && liveZeile) {
-            Field<String> stunde = DSL.field("stunde", SQLDataType.VARCHAR);
-            Field<String> prozess = DSL.field("ProcessID", SQLDataType.VARCHAR);
-            Field<String> status = DSL.field("MessageStatus", SQLDataType.VARCHAR);
-            Field<Integer> anzahl = DSL.field("count", SQLDataType.INTEGER);
-            Result<Record4<String, String, String, Integer>> ergebnis =
-                leer.newResult(stunde, prozess, status, anzahl);
-            Record4<String, String, String, Integer> satz =
-                leer.newRecord(stunde, prozess, status, anzahl);
-            satz.value1("2025-12-30 04:00:00");
-            satz.value2("ERFUNDENER-PROZESS");
-            satz.value3("FINISHED");
-            satz.value4(1);
-            ergebnis.add(satz);
-            return new MockResult[] {new MockResult(1, ergebnis)};
+          if (ausfuehrung.sql().contains("`fehler_process`") && fehlerLiveFaellt) {
+            throw new SQLException("Query execution was interrupted", "70100", 1969);
+          }
+          if (ausfuehrung.sql().contains("`fehler_process`") && fehlerZeile) {
+            return new MockResult[] {zeile(leer, "ERFUNDENER-FEHLERPROZESS", "ERROR_TIMEOUT")};
+          }
+          if (ausfuehrung.sql().contains("date_format(")
+              && ausfuehrung.sql().contains("`live_process`")
+              && liveZeile) {
+            return new MockResult[] {zeile(leer, "ERFUNDENER-PROZESS", liveStatus)};
           }
           return new MockResult[] {new MockResult(0, leer.newResult())};
         };
@@ -133,6 +161,25 @@ class DashboardStatementsTest {
     dienstRepository = new DienstLeseRepository(kontext);
     liveRestService =
         new LiveRestService(new LiveRestRepository(kontext), new WasserstandRepository(kontext));
+    fehlerLiveRepository = new FehlerLiveRepository(kontext, new MessageStatusClassifier());
+    fehlerLiveService = new FehlerLiveService(fehlerLiveRepository);
+  }
+
+  /** Eine Zeile der Stundenbildung — dieselbe Gestalt fuer Live-Rest B und die Fehlerlesung. */
+  private static MockResult zeile(DSLContext leer, String prozessId, String rohwert) {
+    Field<String> stunde = DSL.field("stunde", SQLDataType.VARCHAR);
+    Field<String> prozess = DSL.field("ProcessID", SQLDataType.VARCHAR);
+    Field<String> status = DSL.field("MessageStatus", SQLDataType.VARCHAR);
+    Field<Integer> anzahl = DSL.field("count", SQLDataType.INTEGER);
+    Result<Record4<String, String, String, Integer>> ergebnis =
+        leer.newResult(stunde, prozess, status, anzahl);
+    Record4<String, String, String, Integer> satz = leer.newRecord(stunde, prozess, status, anzahl);
+    satz.value1("2025-12-30 04:00:00");
+    satz.value2(prozessId);
+    satz.value3(rohwert);
+    satz.value4(1);
+    ergebnis.add(satz);
+    return new MockResult(1, ergebnis);
   }
 
   private String einziges() {
@@ -149,6 +196,12 @@ class DashboardStatementsTest {
   private String verteilung(Rollupzeitraum zeitraum, Verteilungssicht sicht) {
     gerendert.clear();
     repository.verteilung(MANDANT, zeitraum, zeitraum.fenster(JETZT), sicht);
+    return einziges();
+  }
+
+  private String verteilungOhneFehler(Rollupzeitraum zeitraum, Verteilungssicht sicht) {
+    gerendert.clear();
+    repository.verteilungOhneFehler(MANDANT, zeitraum, zeitraum.fenster(JETZT), sicht);
     return einziges();
   }
 
@@ -519,60 +572,75 @@ class DashboardStatementsTest {
    * <p>Das zehnte ist der Wasserstand ({@code common/WasserstandRepository}); die Seite fragt ihn
    * bei jedem Aufruf. Ohne Lauf bleibt es dabei. Was bei {@code ANGEWANDT} dazukommt, steht in
    * {@link LiveRest} — einzeln benannt, nicht gezaehlt.
+   *
+   * <h2>Seit dem 18.09.2026 sind es elf (Fehler live, E-208)</h2>
+   *
+   * <p>Die Fehlerlesung steht an <b>zweiter</b> Stelle — vor Block 5, dessen zwei Statements an
+   * ihrem Zustand haengen; alle folgenden ruecken um eins. Die Attrappe liefert keine Fehlerzeile,
+   * die Lesung ist angewandt, und die Verteilung laeuft deshalb ohne die Fehler des Rollups. <b>Die
+   * Zusicherung „ohne Lauf liest keine Seite {@code date_format(}" ist gefallen</b>: Die
+   * Fehlerlesung bildet ihre Eimer wie der Rollup-Job. Sie heisst jetzt: Ohne Lauf ist die
+   * Fehlerlesung das <i>einzige</i> Statement mit Stundenbildung. Die uebrigen Lagen stehen in
+   * {@link FehlerLive}.
    */
   @Test
   @DisplayName(
-      "Eine Landingpage mit genanntem Zeitraum setzt genau diese zehn Statements ab — neun und den"
-          + " Wasserstand")
-  void die_zehn_statements_je_seite() {
+      "Eine Landingpage mit genanntem Zeitraum setzt genau diese elf Statements ab — neun, die"
+          + " Fehlerlesung und den Wasserstand")
+  void die_elf_statements_je_seite() {
     List<String> knapp = statementsEinerSeite();
 
     assertThat(knapp)
-        .as("Zehn Statements — und jedes einzeln benannt, damit ein Tausch auffaellt")
-        .hasSize(10);
+        .as("Elf Statements — und jedes einzeln benannt, damit ein Tausch auffaellt")
+        .hasSize(11);
     assertThat(knapp.get(0)).as("1 Verlauf").contains("from `overlord_monitor`.`message_rollup`");
     assertThat(knapp.get(1))
-        .as("2 Verteilung, Partnersicht")
+        .as("2 Die Fehlerlesung — seit dem 18.09.2026, vor Block 5 (E-208)")
+        .isEqualTo(FEHLERLESUNG);
+    assertThat(knapp.get(2))
+        .as("3 Verteilung, Partnersicht — ohne die Fehler des Rollups, die Lesung ist angewandt")
         .contains("left outer join `overlord_monitor`.`process_catalog`")
         .contains("`overlord_monitor`.`process_catalog`.`partner`")
-        .doesNotContain("`overlord_monitor`.`process_catalog`.`richtung`");
-    assertThat(knapp.get(2))
-        .as("3 Verteilung, Richtungssicht — seit dem 16.09.2026")
+        .doesNotContain("`overlord_monitor`.`process_catalog`.`richtung`")
+        .contains(" and not (`overlord_monitor`.`message_rollup`.`message_status` like ?");
+    assertThat(knapp.get(3))
+        .as("4 Verteilung, Richtungssicht — seit dem 16.09.2026")
         .contains("left outer join `overlord_monitor`.`process_catalog`")
         .contains("`overlord_monitor`.`process_catalog`.`richtung`")
         .doesNotContain("`overlord_monitor`.`process_catalog`.`partner`");
-    assertThat(knapp.get(2).replace("`richtung`", "`partner`"))
+    assertThat(knapp.get(3).replace("`richtung`", "`partner`"))
         .as("Die Richtungssicht ist die Partnersicht mit der anderen Spalte, Zeichen fuer Zeichen")
-        .isEqualTo(knapp.get(1));
-    assertThat(knapp.get(3))
-        .as("4 Kachel Laeuft")
+        .isEqualTo(knapp.get(2));
+    assertThat(knapp.get(4))
+        .as("5 Kachel Laeuft")
         .startsWith("select count(*), min(")
         .contains("`MessageStatus` = ?");
-    assertThat(knapp.get(4))
-        .as("5 Erscheinungsbedingung der Kachel Wartend")
+    assertThat(knapp.get(5))
+        .as("6 Erscheinungsbedingung der Kachel Wartend")
         .startsWith("select exists (")
         .contains("`GlassfishDB`.`SOSAction`");
-    assertThat(knapp.get(5))
-        .as("6 Kachel Wartend")
+    assertThat(knapp.get(6))
+        .as("7 Kachel Wartend")
         .startsWith("select count(*), min(")
         .contains("`MessageStatus` = ?");
-    assertThat(knapp.get(6))
-        .as("7 Zuletzt aufgefallen — eine Haelfte, nicht zwei, und je Prozess gruppiert")
+    assertThat(knapp.get(7))
+        .as("8 Zuletzt aufgefallen — eine Haelfte, nicht zwei, und je Prozess gruppiert")
         .contains("`MessageStatus` like ? escape")
         .contains("group by `GlassfishDB`.`Message`.`ProcessID`");
-    assertThat(knapp.get(7)).as("8 Stand").contains("from `overlord_monitor`.`rollup_lauf`");
-    assertThat(knapp.get(8))
-        .as("9 Die Dienste mit Zeitgrenze — der plattformweite Block (Schritt 10d)")
+    assertThat(knapp.get(8)).as("9 Stand").contains("from `overlord_monitor`.`rollup_lauf`");
+    assertThat(knapp.get(9))
+        .as("10 Die Dienste mit Zeitgrenze — der plattformweite Block (Schritt 10d)")
         .contains("from `GlassfishDB`.`Service`")
         .contains("`ServiceTimeout` > ?");
-    assertThat(knapp.get(9))
-        .as("10 Der Wasserstand des Live-Rests (Teil B, 17.09.2026) — ohne Lauf bleibt es dabei")
+    assertThat(knapp.get(10))
+        .as("11 Der Wasserstand des Live-Rests (Teil B, 17.09.2026) — ohne Lauf bleibt es dabei")
         .startsWith("select max(`overlord_monitor`.`rollup_lauf`.`fenster_bis`)")
         .contains("`beendet_am` is not null")
         .contains("`fehler` is null");
     assertThat(knapp)
-        .as("Ohne Lauf liest keine Seite Message ausser den Kacheln und Zuletzt aufgefallen")
-        .noneMatch(sql -> sql.contains("date_format("));
+        .as("Ohne Lauf bildet nur die Fehlerlesung Stundeneimer aus Message — der Live-Rest nicht")
+        .filteredOn(sql -> sql.contains("date_format("))
+        .containsExactly(FEHLERLESUNG);
   }
 
   /**
@@ -586,7 +654,12 @@ class DashboardStatementsTest {
   @Test
   @DisplayName("Keine gruppierende Abfrage der Seite liest Partner und Richtung zugleich")
   void kein_zusammengelegtes_verteilungsstatement() {
-    for (List<String> knapp : List.of(statementsEinerSeite(), statementsMitKorrekturzeile())) {
+    for (List<String> knapp :
+        List.of(
+            statementsEinerSeite(),
+            statementsMitKorrekturzeile(),
+            statementsMitFehlerzeile(),
+            statementsAusgesetzt())) {
       assertThat(knapp)
           .as("Genau zwei Statements gruppieren ueber den Katalog — eines je Sicht")
           .filteredOn(sql -> sql.contains("`overlord_monitor`.`process_catalog`"))
@@ -612,7 +685,8 @@ class DashboardStatementsTest {
             dienstRepository,
             new DienstStatusClassifier(),
             Optional.empty(),
-            liveRestService);
+            liveRestService,
+            fehlerLiveService);
     gerendert.clear();
     service.landingpage(MANDANT, Rollupzeitraum.STUNDEN_48);
     return gerendert.stream().map(sql -> sql.replaceAll("\\s+", " ").trim()).toList();
@@ -622,6 +696,18 @@ class DashboardStatementsTest {
   private List<String> statementsMitKorrekturzeile() {
     wasserstand = JETZT.truncatedTo(ChronoUnit.HOURS).plusHours(1);
     liveZeile = true;
+    return statementsEinerSeite();
+  }
+
+  /** Die Fehlerlesung liefert eine Zeile — Block 5 rechnet sie ueber die Nachlesung zu. */
+  private List<String> statementsMitFehlerzeile() {
+    fehlerZeile = true;
+    return statementsEinerSeite();
+  }
+
+  /** Die Fehlerlesung faellt aus — die Seite laeuft im heutigen Wortlaut. */
+  private List<String> statementsAusgesetzt() {
+    fehlerLiveFaellt = true;
     return statementsEinerSeite();
   }
 
@@ -635,8 +721,8 @@ class DashboardStatementsTest {
   @DisplayName("Kein Statement der Landingpage rechnet noch mit MessageTimeout")
   void keine_frist_mehr_in_der_ganzen_seite() {
     assertThat(statementsMitKorrekturzeile())
-        .as("Die vollste Seite: dreizehn Statements, keines mit einer Frist")
-        .hasSize(13)
+        .as("Die vollste Seite: vierzehn Statements, keines mit einer Frist")
+        .hasSize(14)
         .allSatisfy(
             sql -> assertThat(sql).doesNotContain("MessageTimeout").doesNotContain("date_add("));
   }
@@ -655,31 +741,33 @@ class DashboardStatementsTest {
   class LiveRest {
 
     @Test
-    @DisplayName("Nicht noetig (der Lauf deckt die Stunde): zehn Statements, kein Message-Eimer")
-    void nicht_noetig_zehn() {
+    @DisplayName("Nicht noetig (der Lauf deckt die Stunde): elf Statements, kein Live-Rest-Eimer")
+    void nicht_noetig_elf() {
       wasserstand = JETZT.plusDays(2);
 
       List<String> knapp = statementsEinerSeite();
 
-      assertThat(knapp).hasSize(10);
-      assertThat(knapp).noneMatch(sql -> sql.contains("date_format("));
+      assertThat(knapp).hasSize(11);
+      assertThat(knapp)
+          .as("Keine Live-Lesung — die Fehlerlesung bildet ihre Eimer selbst und zaehlt hier nicht")
+          .noneMatch(sql -> sql.contains("`live_process`"));
     }
 
     @Test
-    @DisplayName("Angewandt ohne Korrekturzeile: zwoelf — und keine Nachlesung")
-    void angewandt_ohne_korrekturzeile_zwoelf() {
+    @DisplayName("Angewandt ohne Korrekturzeile: dreizehn — und keine Nachlesung")
+    void angewandt_ohne_korrekturzeile_dreizehn() {
       wasserstand = JETZT.truncatedTo(ChronoUnit.HOURS).plusHours(1);
 
       List<String> knapp = statementsEinerSeite();
 
-      assertThat(knapp).hasSize(12);
-      assertThat(knapp.get(10))
-          .as("11 Die Rollupzeilen des Live-Bereichs (A)")
+      assertThat(knapp).hasSize(13);
+      assertThat(knapp.get(11))
+          .as("12 Die Rollupzeilen des Live-Bereichs (A)")
           .startsWith("select `overlord_monitor`.`message_rollup`.`stunde`")
           .contains("`overlord_monitor`.`message_rollup`.`stunde` >= ?")
           .contains("`live_process`");
-      assertThat(knapp.get(11))
-          .as("12 Die Zaehlung aus Message mit der Stundenbildung des Jobs (B)")
+      assertThat(knapp.get(12))
+          .as("13 Die Zaehlung aus Message mit der Stundenbildung des Jobs (B)")
           .startsWith("select date_format(")
           .contains("from `GlassfishDB`.`Message`")
           .contains("`live_process`");
@@ -689,16 +777,16 @@ class DashboardStatementsTest {
     }
 
     @Test
-    @DisplayName("Angewandt mit Korrekturzeile: dreizehn — die Nachlesung ist das letzte")
-    void angewandt_mit_korrekturzeile_dreizehn() {
+    @DisplayName("Angewandt mit Korrekturzeile: vierzehn — die Nachlesung ist das letzte")
+    void angewandt_mit_korrekturzeile_vierzehn() {
       List<String> knapp = statementsMitKorrekturzeile();
 
-      assertThat(knapp).hasSize(13);
-      assertThat(knapp.subList(0, 12))
-          .as("Die zwoelf davor sind dieselben wie ohne Korrekturzeile")
+      assertThat(knapp).hasSize(14);
+      assertThat(knapp.subList(0, 13))
+          .as("Die dreizehn davor sind dieselben wie ohne Korrekturzeile")
           .containsExactlyElementsOf(statementsOhneKorrekturzeileAberAngewandt());
-      assertThat(knapp.get(12))
-          .as("13 Die Katalog-Nachlesung fuer die Prozesse der Korrekturzeilen (E-191)")
+      assertThat(knapp.get(13))
+          .as("14 Die Katalog-Nachlesung fuer die Prozesse der Korrekturzeilen (E-191)")
           .isEqualTo(NACHLESUNG);
     }
 
@@ -738,7 +826,7 @@ class DashboardStatementsTest {
     @DisplayName(
         "Die Nachlesung gruppiert nicht, filtert ueber den Schluessel und traegt die Kette")
     void nachlesung_gestalt() {
-      String nachlesung = statementsMitKorrekturzeile().get(12);
+      String nachlesung = statementsMitKorrekturzeile().get(13);
 
       assertThat(nachlesung)
           .doesNotContain("group by")
@@ -748,6 +836,361 @@ class DashboardStatementsTest {
           .contains("`overlord_monitor`.`process_catalog`.`pflegestatus` = ?")
           .contains("then `overlord_monitor`.`process_catalog`.`partner` end")
           .contains("then `overlord_monitor`.`process_catalog`.`richtung` end");
+    }
+  }
+
+  // ─── Fehler live (18.09.2026, E-208) ─────────────────────────────────────────
+
+  /**
+   * <b>Die Fehlerlesung, woertlich</b> — {@code common/FehlerLiveRepository}: die Fehlerbedingung
+   * aus {@code MessageStatusClassifier}, der Zeitbereich ohne Funktion um {@code
+   * MessageLastUpdate}, die Kette als {@code EXISTS}, das {@code GROUP BY} ueber den vollen
+   * Ausdruck (Befund 11), kein Indexhinweis, keine Sortierung. Genau dieser Text ist in M188
+   * gemessen ({@code docs/fehler-live.md} §8).
+   */
+  static final String FEHLERLESUNG =
+      "select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'),"
+          + " `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`,"
+          + " count(*) from `GlassfishDB`.`Message` where"
+          + " ((`GlassfishDB`.`Message`.`MessageStatus` like ? escape '\\\\' or"
+          + " `GlassfishDB`.`Message`.`MessageStatus` = ?) and"
+          + " `GlassfishDB`.`Message`.`MessageLastUpdate` >= ? and"
+          + " `GlassfishDB`.`Message`.`MessageLastUpdate` < ? and exists (select 1 as `one` from"
+          + " `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on"
+          + " `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where"
+          + " (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and"
+          + " `GlassfishDB`.`ProjectMandant`.`MandantID` = ?))) group by"
+          + " date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'),"
+          + " `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`";
+
+  /** Die Verteilung, Partnersicht, 48 Stunden — woertlich, im heutigen Wortlaut (M178). */
+  static final String VERTEILUNG_48H_PARTNER =
+      "select case when (`overlord_monitor`.`process_catalog`.`process_id` is not null and"
+          + " `overlord_monitor`.`process_catalog`.`pflegestatus` = ? and"
+          + " `overlord_monitor`.`process_catalog`.`partner` is not null and"
+          + " `overlord_monitor`.`process_catalog`.`partner` <> ?) then"
+          + " `overlord_monitor`.`process_catalog`.`partner` end,"
+          + " sum(`overlord_monitor`.`message_rollup`.`anzahl`) from"
+          + " `overlord_monitor`.`message_rollup` left outer join"
+          + " `overlord_monitor`.`process_catalog` on"
+          + " `overlord_monitor`.`process_catalog`.`process_id` ="
+          + " `overlord_monitor`.`message_rollup`.`process_id` where"
+          + " (`overlord_monitor`.`message_rollup`.`stunde` >= ? and"
+          + " `overlord_monitor`.`message_rollup`.`stunde` < ? and exists (select 1 as `one` from"
+          + " `GlassfishDB`.`Process` as `dashboard_process` join `GlassfishDB`.`ProjectMandant` on"
+          + " `GlassfishDB`.`ProjectMandant`.`ProjectID` = `dashboard_process`.`ProjectID` where"
+          + " (`dashboard_process`.`ProcessID` = `overlord_monitor`.`message_rollup`.`process_id`"
+          + " and `GlassfishDB`.`ProjectMandant`.`MandantID` = ?))) group by case when"
+          + " (`overlord_monitor`.`process_catalog`.`process_id` is not null and"
+          + " `overlord_monitor`.`process_catalog`.`pflegestatus` = ? and"
+          + " `overlord_monitor`.`process_catalog`.`partner` is not null and"
+          + " `overlord_monitor`.`process_catalog`.`partner` <> ?) then"
+          + " `overlord_monitor`.`process_catalog`.`partner` end order by (case when"
+          + " (`overlord_monitor`.`process_catalog`.`process_id` is not null and"
+          + " `overlord_monitor`.`process_catalog`.`pflegestatus` = ? and"
+          + " `overlord_monitor`.`process_catalog`.`partner` is not null and"
+          + " `overlord_monitor`.`process_catalog`.`partner` <> ?) then"
+          + " `overlord_monitor`.`process_catalog`.`partner` end is null),"
+          + " sum(`overlord_monitor`.`message_rollup`.`anzahl`) desc";
+
+  /**
+   * Dieselbe, <b>ohne die Fehler des Rollups</b> — woertlich: genau eine Bedingung mehr, hinter der
+   * Mandantenkette, {@code NOT} ueber der Fehlerbedingung auf {@code message_status}.
+   */
+  static final String VERTEILUNG_OHNE_FEHLER_48H_PARTNER =
+      "select case when (`overlord_monitor`.`process_catalog`.`process_id` is not null and"
+          + " `overlord_monitor`.`process_catalog`.`pflegestatus` = ? and"
+          + " `overlord_monitor`.`process_catalog`.`partner` is not null and"
+          + " `overlord_monitor`.`process_catalog`.`partner` <> ?) then"
+          + " `overlord_monitor`.`process_catalog`.`partner` end,"
+          + " sum(`overlord_monitor`.`message_rollup`.`anzahl`) from"
+          + " `overlord_monitor`.`message_rollup` left outer join"
+          + " `overlord_monitor`.`process_catalog` on"
+          + " `overlord_monitor`.`process_catalog`.`process_id` ="
+          + " `overlord_monitor`.`message_rollup`.`process_id` where"
+          + " (`overlord_monitor`.`message_rollup`.`stunde` >= ? and"
+          + " `overlord_monitor`.`message_rollup`.`stunde` < ? and exists (select 1 as `one` from"
+          + " `GlassfishDB`.`Process` as `dashboard_process` join `GlassfishDB`.`ProjectMandant` on"
+          + " `GlassfishDB`.`ProjectMandant`.`ProjectID` = `dashboard_process`.`ProjectID` where"
+          + " (`dashboard_process`.`ProcessID` = `overlord_monitor`.`message_rollup`.`process_id`"
+          + " and `GlassfishDB`.`ProjectMandant`.`MandantID` = ?)) and not"
+          + " (`overlord_monitor`.`message_rollup`.`message_status` like ? escape '\\\\' or"
+          + " `overlord_monitor`.`message_rollup`.`message_status` = ?)) group by case when"
+          + " (`overlord_monitor`.`process_catalog`.`process_id` is not null and"
+          + " `overlord_monitor`.`process_catalog`.`pflegestatus` = ? and"
+          + " `overlord_monitor`.`process_catalog`.`partner` is not null and"
+          + " `overlord_monitor`.`process_catalog`.`partner` <> ?) then"
+          + " `overlord_monitor`.`process_catalog`.`partner` end order by (case when"
+          + " (`overlord_monitor`.`process_catalog`.`process_id` is not null and"
+          + " `overlord_monitor`.`process_catalog`.`pflegestatus` = ? and"
+          + " `overlord_monitor`.`process_catalog`.`partner` is not null and"
+          + " `overlord_monitor`.`process_catalog`.`partner` <> ?) then"
+          + " `overlord_monitor`.`process_catalog`.`partner` end is null),"
+          + " sum(`overlord_monitor`.`message_rollup`.`anzahl`) desc";
+
+  /**
+   * <b>Fehler live — die Lesung, beide Fassungen der Verteilung und jede Lage mit ihren Statements
+   * einzeln benannt</b> ({@code docs/fehler-live.md} §5, §9).
+   *
+   * <p>Jede Lage steht als Folge von <b>Namen</b> da, nicht als Zahl: Ein Statement, das die Seite
+   * nicht mehr absetzt, oder eines an der falschen Stelle faellt auf, auch wenn die Zahl zufaellig
+   * gleich bleibt ({@code docs/testfestigkeit.md}).
+   */
+  @Nested
+  @DisplayName("Fehler live: die Lesung, beide Fassungen der Verteilung, jede Lage benannt")
+  class FehlerLive {
+
+    /** Die Seite bei angewandter Lesung — die Verteilung ohne die Fehler des Rollups. */
+    private static final List<String> SEITE_ANGEWANDT =
+        List.of(
+            "Verlauf",
+            "Fehlerlesung",
+            "Verteilung Partner ohne Fehler",
+            "Verteilung Richtung ohne Fehler",
+            "Offene Kachel",
+            "Erscheinungsbedingung",
+            "Offene Kachel",
+            "Zuletzt aufgefallen",
+            "Stand",
+            "Dienste",
+            "Wasserstand");
+
+    /** Die Seite bei ausgefallener Lesung — die Verteilung im heutigen Wortlaut. */
+    private static final List<String> SEITE_AUSGESETZT =
+        List.of(
+            "Verlauf",
+            "Fehlerlesung",
+            "Verteilung Partner",
+            "Verteilung Richtung",
+            "Offene Kachel",
+            "Erscheinungsbedingung",
+            "Offene Kachel",
+            "Zuletzt aufgefallen",
+            "Stand",
+            "Dienste",
+            "Wasserstand");
+
+    /** Das Statement bei seinem Gegenstand genannt — jedes Merkmal an genau einer Stelle. */
+    private static String name(String sql) {
+      if (sql.contains("`fehler_process`")) {
+        return "Fehlerlesung";
+      }
+      if (sql.contains("`live_process`")) {
+        return sql.startsWith("select date_format(") ? "Live-Rest B" : "Live-Rest A";
+      }
+      if (sql.contains("`overlord_monitor`.`process_catalog`.`process_id` in (")) {
+        return "Nachlesung";
+      }
+      if (sql.contains("left outer join `overlord_monitor`.`process_catalog`")) {
+        String sicht =
+            sql.contains("`overlord_monitor`.`process_catalog`.`richtung`")
+                ? "Richtung"
+                : "Partner";
+        return "Verteilung " + sicht + (sql.contains(" and not (") ? " ohne Fehler" : "");
+      }
+      if (sql.startsWith("select max(`overlord_monitor`.`rollup_lauf`.`fenster_bis`)")) {
+        return "Wasserstand";
+      }
+      if (sql.contains("from `overlord_monitor`.`rollup_lauf`")) {
+        return "Stand";
+      }
+      if (sql.contains("from `GlassfishDB`.`Service`")) {
+        return "Dienste";
+      }
+      if (sql.startsWith("select exists (")) {
+        return "Erscheinungsbedingung";
+      }
+      if (sql.startsWith("select count(*), min(")) {
+        return "Offene Kachel";
+      }
+      if (sql.contains("group by `GlassfishDB`.`Message`.`ProcessID`")) {
+        return "Zuletzt aufgefallen";
+      }
+      if (sql.contains("from `overlord_monitor`.`message_rollup`")) {
+        return "Verlauf";
+      }
+      return "UNBEKANNT: " + sql;
+    }
+
+    private static List<String> namen(List<String> statements) {
+      return statements.stream().map(FehlerLive::name).toList();
+    }
+
+    private static List<String> mit(List<String> seite, String... dazu) {
+      List<String> alle = new ArrayList<>(seite);
+      alle.addAll(List.of(dazu));
+      return alle;
+    }
+
+    private String nachlesungIn(List<String> statements) {
+      return statements.stream()
+          .filter(sql -> "Nachlesung".equals(name(sql)))
+          .findFirst()
+          .orElseThrow();
+    }
+
+    @Test
+    @DisplayName(
+        "Die Lesung, woertlich — und dieselbe fuer jedes Paar, nur die Bindewerte wechseln")
+    void die_lesung_woertlich() {
+      for (Rollupzeitraum paar : Rollupzeitraum.reihe()) {
+        gerendert.clear();
+        fehlerLiveRepository.ausDerQuelle(
+            MANDANT, paar.fenster(JETZT).von(), paar.fenster(JETZT).bis());
+        assertThat(einziges()).as("%s", paar.code()).isEqualTo(FEHLERLESUNG);
+      }
+    }
+
+    @Test
+    @DisplayName(
+        "Die Lesung: keine Funktion um den Zeitstempel, voller Ausdruck im GROUP BY, Kette als"
+            + " EXISTS, kein Indexhinweis, keine Sortierung, keine Deckelung")
+    void die_lesung_gestalt() {
+      assertThat(FEHLERLESUNG)
+          .as(
+              "Der Zeitbereich ist ein Indexbereich — keine Funktion um die Spalte in der Bedingung")
+          .contains("`GlassfishDB`.`Message`.`MessageLastUpdate` >= ?")
+          .contains("`GlassfishDB`.`Message`.`MessageLastUpdate` < ?")
+          .as(
+              "Die Fehlerbedingung aus MessageStatusClassifier: LIKE mit ESCAPE und COMMIT_REJECTED")
+          .contains("`GlassfishDB`.`Message`.`MessageStatus` like ? escape")
+          .contains("or `GlassfishDB`.`Message`.`MessageStatus` = ?")
+          .as("Befund 11: der volle Ausdruck im GROUP BY, kein Alias")
+          .contains(
+              "group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`,"
+                  + " '%Y-%m-%d %H:00:00')")
+          .doesNotContain(" as `stunde`")
+          .as("Die Kette als EXISTS, kein Join gegen ProjectMandant auf der aeusseren Ebene")
+          .contains("exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process`")
+          .doesNotContain("from `GlassfishDB`.`Message` join")
+          .as("Kein Indexhinweis — die Wahl des Statusindex belegt der Plan, nicht der Text")
+          .doesNotContain("index (")
+          .doesNotContain(" order by ")
+          .doesNotContain(" limit ")
+          .doesNotContain("rows only");
+    }
+
+    @Test
+    @DisplayName(
+        "Beide Fassungen der Verteilung, woertlich — die ohne Fehler hat genau eine Bedingung mehr")
+    void verteilung_beide_fassungen_woertlich() {
+      assertThat(verteilung(Rollupzeitraum.STUNDEN_48, Verteilungssicht.PARTNER))
+          .as("Die heutige Fassung, Zeichen fuer Zeichen die gemessene (M178)")
+          .isEqualTo(VERTEILUNG_48H_PARTNER);
+      assertThat(verteilungOhneFehler(Rollupzeitraum.STUNDEN_48, Verteilungssicht.PARTNER))
+          .isEqualTo(VERTEILUNG_OHNE_FEHLER_48H_PARTNER);
+
+      for (Rollupzeitraum paar : Rollupzeitraum.reihe()) {
+        String tabelle =
+            switch (paar) {
+              case STUNDEN_48 -> "`overlord_monitor`.`message_rollup`";
+              case TAGE_30 -> "`overlord_monitor`.`message_rollup_tag`";
+              case MONATE_12 -> "`overlord_monitor`.`message_rollup_monat`";
+            };
+        for (Verteilungssicht sicht : Verteilungssicht.values()) {
+          String heute = verteilung(paar, sicht);
+          String ohneFehler = verteilungOhneFehler(paar, sicht);
+          assertThat(heute).as("%s/%s", paar.code(), sicht).containsOnlyOnce("))) group by");
+          assertThat(ohneFehler)
+              .as("%s/%s: dieselbe Abfrage mit NOT fehlerBedingung hinter der Kette", paar, sicht)
+              .isEqualTo(
+                  heute.replace(
+                      "))) group by",
+                      ")) and not ("
+                          + tabelle
+                          + ".`message_status` like ? escape '\\\\' or "
+                          + tabelle
+                          + ".`message_status` = ?)) group by"));
+        }
+      }
+    }
+
+    @Test
+    @DisplayName(
+        "Angewandt, kein Fehler im Fenster: elf — die Verteilung ohne Fehler, keine Nachlesung")
+    void angewandt_ohne_fehlerzeile() {
+      assertThat(namen(statementsEinerSeite())).containsExactlyElementsOf(SEITE_ANGEWANDT);
+    }
+
+    @Test
+    @DisplayName("Angewandt mit Fehlerzeile: zwoelf — die Nachlesung fuer den Prozess des Fehlers")
+    void angewandt_mit_fehlerzeile() {
+      List<String> knapp = statementsMitFehlerzeile();
+
+      assertThat(namen(knapp)).containsExactlyElementsOf(mit(SEITE_ANGEWANDT, "Nachlesung"));
+      assertThat(knapp.getLast())
+          .as("Die Nachlesung ist dieselbe wie fuer den Live-Rest (E-191), mit einer Kennung")
+          .isEqualTo(LiveRest.NACHLESUNG);
+    }
+
+    @Test
+    @DisplayName("Ausgesetzt: elf — die Verteilung im heutigen Wortlaut, Zeichen fuer Zeichen")
+    void ausgesetzt_im_heutigen_wortlaut() {
+      List<String> knapp = statementsAusgesetzt();
+
+      assertThat(namen(knapp)).containsExactlyElementsOf(SEITE_AUSGESETZT);
+      String partner = verteilung(Rollupzeitraum.STUNDEN_48, Verteilungssicht.PARTNER);
+      String richtung = verteilung(Rollupzeitraum.STUNDEN_48, Verteilungssicht.RICHTUNG);
+      assertThat(knapp.get(2)).isEqualTo(partner).isEqualTo(VERTEILUNG_48H_PARTNER);
+      assertThat(knapp.get(3)).isEqualTo(richtung);
+    }
+
+    @Test
+    @DisplayName("Ausgesetzt, Live-Rest mit Korrekturzeile: vierzehn — wie vor dem 18.09.2026")
+    void ausgesetzt_mit_korrekturzeile() {
+      fehlerLiveFaellt = true;
+
+      assertThat(namen(statementsMitKorrekturzeile()))
+          .containsExactlyElementsOf(
+              mit(SEITE_AUSGESETZT, "Live-Rest A", "Live-Rest B", "Nachlesung"));
+    }
+
+    @Test
+    @DisplayName("Angewandt, Live-Rest ohne Korrekturzeile: dreizehn — keine Nachlesung")
+    void angewandt_live_rest_ohne_korrekturzeile() {
+      wasserstand = JETZT.truncatedTo(ChronoUnit.HOURS).plusHours(1);
+
+      assertThat(namen(statementsEinerSeite()))
+          .containsExactlyElementsOf(mit(SEITE_ANGEWANDT, "Live-Rest A", "Live-Rest B"));
+    }
+
+    @Test
+    @DisplayName("Angewandt, Live-Rest mit Korrekturzeile: vierzehn — eine Nachlesung")
+    void angewandt_mit_korrekturzeile() {
+      assertThat(namen(statementsMitKorrekturzeile()))
+          .containsExactlyElementsOf(
+              mit(SEITE_ANGEWANDT, "Live-Rest A", "Live-Rest B", "Nachlesung"));
+    }
+
+    @Test
+    @DisplayName(
+        "Angewandt mit Fehlerzeile und Korrekturzeile: vierzehn — eine Nachlesung fuer beide")
+    void angewandt_mit_fehlerzeile_und_korrekturzeile() {
+      fehlerZeile = true;
+
+      List<String> knapp = statementsMitKorrekturzeile();
+
+      assertThat(namen(knapp))
+          .containsExactlyElementsOf(
+              mit(SEITE_ANGEWANDT, "Live-Rest A", "Live-Rest B", "Nachlesung"));
+      assertThat(nachlesungIn(knapp))
+          .as("Beide Prozesse in einer Nachlesung — die Korrektur und der Fehler")
+          .contains("`overlord_monitor`.`process_catalog`.`process_id` in (?, ?)");
+    }
+
+    /**
+     * <b>Die Korrekturzeile ist ein Fehler, und die Lesung ist angewandt:</b> Block 5 hat nichts
+     * zuzurechnen — die Korrektur darf keinen Fehler nachtragen, den die Verteilung aus der Lesung
+     * bekommt —, und die Nachlesung fragte nach nichts. Sie laeuft nicht.
+     */
+    @Test
+    @DisplayName(
+        "Angewandt, Korrekturzeile ist ein Fehler: dreizehn — Block 5 hat nichts zuzurechnen")
+    void angewandt_korrekturzeile_ist_ein_fehler() {
+      liveStatus = "ERROR_TIMEOUT";
+
+      assertThat(namen(statementsMitKorrekturzeile()))
+          .containsExactlyElementsOf(mit(SEITE_ANGEWANDT, "Live-Rest A", "Live-Rest B"));
     }
   }
 

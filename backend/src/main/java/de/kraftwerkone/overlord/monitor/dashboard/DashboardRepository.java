@@ -249,6 +249,52 @@ public class DashboardRepository {
       Rollupzeitraum zeitraum,
       Zeitfenster fenster,
       Verteilungssicht sicht) {
+    return verteilung(mandant, zeitraum, fenster, sicht, DSL.noCondition());
+  }
+
+  /**
+   * <b>Block 5 bei angewandtem Fehler live</b> (E-208, {@code docs/fehler-live.md} §5): dasselbe
+   * Statement wie {@link #verteilung}, mit <b>einer</b> Bedingung mehr — {@code NOT
+   * fehlerBedingung(message_status)}. Die Fehler des Fensters kommen dann nicht aus dem Rollup,
+   * sondern aus der Live-Lesung, und der Dienst ordnet sie den Schluesseln ueber die
+   * Katalog-Nachlesung zu (E-191), wie die Korrekturzeilen des Live-Rests.
+   *
+   * <p><b>Die Bedingung ist gerufen, nicht nachgebaut</b> — {@code
+   * MessageStatusClassifier.fehlerBedingung} ueber der Rohwertspalte der Ebene, dieselbe wie in der
+   * Lesung und in Block 6. Sie ist ein Filter auf der gelesenen Zeile und kein Zugriffspfad: {@code
+   * message_status} steht im Primaerschluessel hinter Eimer und Prozess, ein {@code NOT (… LIKE …
+   * OR … = …)} ergibt dort keinen Bereich. Der Plan bleibt der von {@link #verteilung} (M188,
+   * {@code DashboardPlanDbIT}). {@code message_status} ist {@code NOT NULL} (V9, V10, V12); das
+   * {@code NOT} verliert deshalb keine Zeile an einem {@code NULL}.
+   *
+   * <p><b>Ist die Lesung ausgesetzt, laeuft {@link #verteilung}</b> im heutigen Wortlaut — Kachel
+   * und Sichten zaehlen dann wieder gleich, weil beide die Fehler aus dem Rollup nehmen.
+   */
+  public List<Verteilungssumme> verteilungOhneFehler(
+      MandantContext mandant,
+      Rollupzeitraum zeitraum,
+      Zeitfenster fenster,
+      Verteilungssicht sicht) {
+    Ebene ebene = ebene(zeitraum, fenster);
+    return verteilung(
+        mandant,
+        zeitraum,
+        fenster,
+        sicht,
+        DSL.not(statusClassifier.fehlerBedingung(ebene.status())));
+  }
+
+  /**
+   * Die eine Gestalt beider Formen. {@code zusatz} ist {@link DSL#noCondition()} fuer die Form ohne
+   * Zusatzbedingung — jOOQ rendert dann kein Zeichen mehr, und das Statement bleibt Zeichen fuer
+   * Zeichen das gemessene ({@code DashboardStatementsTest}).
+   */
+  private List<Verteilungssumme> verteilung(
+      MandantContext mandant,
+      Rollupzeitraum zeitraum,
+      Zeitfenster fenster,
+      Verteilungssicht sicht,
+      Condition zusatz) {
     Ebene ebene = ebene(zeitraum, fenster);
     Field<String> katalogwert =
         sicht == Verteilungssicht.PARTNER ? PROCESS_CATALOG.PARTNER : PROCESS_CATALOG.RICHTUNG;
@@ -262,6 +308,7 @@ public class DashboardRepository {
         .on(PROCESS_CATALOG.PROCESS_ID.eq(ebene.prozess()))
         .where(ebene.bereich())
         .and(mandantenkette(mandant, ebene.prozess()))
+        .and(zusatz)
         .groupBy(schluessel)
         .orderBy(DSL.field(schluessel.isNull()), summe.desc())
         .fetch(satz -> new Verteilungssumme(satz.value1(), satz.value2().longValue()));
@@ -626,6 +673,7 @@ public class DashboardRepository {
       Table<?> tabelle,
       Field<?> eimer,
       Field<String> prozess,
+      Field<String> status,
       Field<Integer> anzahl,
       Condition bereich) {}
 
@@ -636,6 +684,7 @@ public class DashboardRepository {
               MESSAGE_ROLLUP,
               MESSAGE_ROLLUP.STUNDE,
               MESSAGE_ROLLUP.PROCESS_ID,
+              MESSAGE_ROLLUP.MESSAGE_STATUS,
               MESSAGE_ROLLUP.ANZAHL,
               MESSAGE_ROLLUP.STUNDE.ge(fenster.von()).and(MESSAGE_ROLLUP.STUNDE.lt(fenster.bis())));
       case TAGE_30 ->
@@ -643,6 +692,7 @@ public class DashboardRepository {
               MESSAGE_ROLLUP_TAG,
               MESSAGE_ROLLUP_TAG.TAG,
               MESSAGE_ROLLUP_TAG.PROCESS_ID,
+              MESSAGE_ROLLUP_TAG.MESSAGE_STATUS,
               MESSAGE_ROLLUP_TAG.ANZAHL,
               MESSAGE_ROLLUP_TAG
                   .TAG
@@ -653,6 +703,7 @@ public class DashboardRepository {
               MESSAGE_ROLLUP_MONAT,
               MESSAGE_ROLLUP_MONAT.MONAT,
               MESSAGE_ROLLUP_MONAT.PROCESS_ID,
+              MESSAGE_ROLLUP_MONAT.MESSAGE_STATUS,
               MESSAGE_ROLLUP_MONAT.ANZAHL,
               MESSAGE_ROLLUP_MONAT
                   .MONAT

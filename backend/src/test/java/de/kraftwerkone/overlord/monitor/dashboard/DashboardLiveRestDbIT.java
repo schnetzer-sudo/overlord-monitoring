@@ -5,6 +5,8 @@ import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROCESS;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROJECTMANDANT;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveRepository;
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveService;
 import de.kraftwerkone.overlord.monitor.common.LiveRestRepository;
 import de.kraftwerkone.overlord.monitor.common.LiveRestService;
 import de.kraftwerkone.overlord.monitor.common.LiveRestZustand;
@@ -45,6 +47,10 @@ import org.springframework.test.context.ActiveProfiles;
  *
  * <p><b>Keine Zahl aus dem Bestand in einer Zusicherung</b> (Regel T2): verglichen werden zwei
  * Lesungen desselben Bestands; die Zahlen selbst werden ausgegeben.
+ *
+ * <p><i>Seit dem 18.09.2026 (Fehler live, {@code docs/fehler-live.md}):</i> Der Dienst laeuft mit
+ * der Fehlerlesung. Die Probe gilt damit fuer die Seite, deren Fehler ersetzt und deren Sichten
+ * ohne die Fehler des Rollups gelesen sind — an keiner Zusicherung hat sich etwas geaendert.
  */
 @SpringBootTest
 @ActiveProfiles("dev")
@@ -57,6 +63,7 @@ class DashboardLiveRestDbIT {
 
   @Autowired private DashboardRepository dashboardRepository;
   @Autowired private LiveRestRepository liveRestRepository;
+  @Autowired private FehlerLiveRepository fehlerLiveRepository;
   @Autowired private MessageStatusClassifier statusClassifier;
   @Autowired private DienstLeseRepository dienstLeseRepository;
   @Autowired private DienstStatusClassifier dienstClassifier;
@@ -73,7 +80,8 @@ class DashboardLiveRestDbIT {
         dienstLeseRepository,
         dienstClassifier,
         Optional.empty(),
-        new LiveRestService(liveRestRepository, () -> wasserstand));
+        new LiveRestService(liveRestRepository, () -> wasserstand),
+        new FehlerLiveService(fehlerLiveRepository));
   }
 
   private long ausDerQuelle(String mandant, Zeitfenster fenster) {

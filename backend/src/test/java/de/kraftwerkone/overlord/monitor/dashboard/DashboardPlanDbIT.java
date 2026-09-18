@@ -4,6 +4,7 @@ import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROCESS;
 import static de.kraftwerkone.overlord.monitor.jooq.glassfish.Tables.PROJECTMANDANT;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveRepository;
 import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
@@ -78,6 +79,9 @@ class DashboardPlanDbIT {
   private final List<String> gerendert = new ArrayList<>();
   private DashboardRepository attrappe;
 
+  /** Die Fehlerlesung an derselben Attrappe (Fehler live, E-208). */
+  private FehlerLiveRepository fehlerLesung;
+
   /** Eine Zeile aus {@code EXPLAIN} — nur die Spalten, die eine Aussage tragen. */
   private record Plan(String tabelle, String zugriff, String index, String extra) {}
 
@@ -90,13 +94,13 @@ class DashboardPlanDbIT {
           DSLContext leer = DSL.using(SQLDialect.MARIADB);
           return new MockResult[] {new MockResult(0, leer.newResult())};
         };
-    attrappe =
-        new DashboardRepository(
-            DSL.using(
-                new MockConnection(mock),
-                SQLDialect.MARIADB,
-                new Settings().withStatementType(StatementType.STATIC_STATEMENT)),
-            new MessageStatusClassifier());
+    DSLContext kontext =
+        DSL.using(
+            new MockConnection(mock),
+            SQLDialect.MARIADB,
+            new Settings().withStatementType(StatementType.STATIC_STATEMENT));
+    attrappe = new DashboardRepository(kontext, new MessageStatusClassifier());
+    fehlerLesung = new FehlerLiveRepository(kontext, new MessageStatusClassifier());
   }
 
   private List<Plan> plan(String sql) {
@@ -447,6 +451,79 @@ class DashboardPlanDbIT {
       assertThat(plan)
           .as("Keine Tabelle der Nachlesung wird voll gelesen (%s)", mandantId)
           .noneMatch(zeile -> "ALL".equals(zeile.zugriff()));
+    }
+  }
+
+  // ─── Fehler live (18.09.2026, E-208) ─────────────────────────────────────────
+
+  /**
+   * <b>Die Fehlerlesung faehrt ueber den Statusindex</b> (M188, Tor 1). Sie traegt keinen
+   * Indexhinweis; dass der Optimierer trotzdem nicht ueber den Zeitbereich einsteigt, belegt der
+   * Plan und nicht der Text. <b>Der teure Fall ist wieder der gute:</b> Ueber zwoelf Monate hiesse
+   * der Zeitindex 2,7 Millionen Zeilen statt der Fehlerzeilen des Bestands — deshalb alle drei
+   * Paare.
+   *
+   * <p><b>Geprueft ist die Gegenprobe gleich mit:</b> In keiner Planzeile steht ein Zeitindex —
+   * weder {@code MessageLastUpdateIDX} noch {@code MessageLastUpdateProcessMessageIDX}, auch nicht
+   * als Rowid-Filter ({@code MessageStatusIDX|MessageLastUpdateIDX}).
+   */
+  @Test
+  @DisplayName(
+      "Die Fehlerlesung steigt ueber MessageStatusIDX ein, und kein Zeitindex steht im Plan")
+  void fehlerlesung_faehrt_ueber_den_statusindex() {
+    for (String mandantId : MANDANTEN) {
+      for (Rollupzeitraum zeitraum : Rollupzeitraum.reihe()) {
+        gerendert.clear();
+        fehlerLesung.ausDerQuelle(
+            new MandantContext(mandantId),
+            zeitraum.fenster(ANKER).von(),
+            zeitraum.fenster(ANKER).bis());
+        List<Plan> plan = plan(einziges());
+        String marke = mandantId + "/" + zeitraum.code();
+
+        assertThat(zeileFuer(plan, "Message", marke).index())
+            .as("Die Lesung steigt ueber den Statusindex ein (%s)", marke)
+            .isEqualTo("MessageStatusIDX");
+        assertThat(plan)
+            .as("Kein Zeitindex in keiner Planzeile, auch nicht als Rowid-Filter (%s)", marke)
+            .noneMatch(zeile -> zeile.index().contains("MessageLastUpdate"));
+        assertThat(plan)
+            .as("Keine Tabelle der Lesung wird voll gelesen (%s)", marke)
+            .noneMatch(zeile -> "ALL".equals(zeile.zugriff()));
+      }
+    }
+  }
+
+  /**
+   * <b>Die Verteilung ohne Fehler faehrt den Plan der Verteilung</b> (M188, Tor 2) — Zeile fuer
+   * Zeile: Tabelle, Zugriffsart, Index. Die Bedingung auf {@code message_status} ist ein Filter auf
+   * der gelesenen Zeile und darf keinen Zugriffspfad aendern, auch nicht den Einstieg. Beide {@code
+   * EXPLAIN} laufen auf derselben Statistik.
+   */
+  @Test
+  @DisplayName("Die Verteilung ohne Fehler faehrt Zeile fuer Zeile den Plan der Verteilung")
+  void verteilung_ohne_fehler_faehrt_den_plan_der_verteilung() {
+    for (String mandantId : MANDANTEN) {
+      MandantContext mandant = new MandantContext(mandantId);
+      for (Rollupzeitraum zeitraum : Rollupzeitraum.reihe()) {
+        for (Verteilungssicht sicht : Verteilungssicht.values()) {
+          String marke = mandantId + "/" + zeitraum.code() + "/" + sicht;
+          List<Plan> heute = verteilungsplan(mandant, zeitraum, sicht);
+
+          gerendert.clear();
+          attrappe.verteilungOhneFehler(mandant, zeitraum, zeitraum.fenster(ANKER), sicht);
+          List<Plan> ohneFehler = plan(einziges());
+
+          assertThat(zugriffspfade(ohneFehler))
+              .as(
+                  "Die Form ohne Fehler faehrt den Plan der Verteilung, Zeile fuer Zeile (%s)",
+                  marke)
+              .isEqualTo(zugriffspfade(heute));
+          assertThat(ohneFehler)
+              .as("Keine Tabelle wird voll gelesen (%s)", marke)
+              .noneMatch(zeile -> "ALL".equals(zeile.zugriff()));
+        }
+      }
     }
   }
 }

@@ -150,3 +150,11 @@ backend/src/test/resources/indizes-sollliste.kandidat
 # Bildschirmfotos nicht: Sie zeigen Listen und Belegwerte der Testkopie und
 # damit Partnernamen und Belegnummern Dritter. (Regel G1)
 scripts/sichtprobe-schmal/ergebnis/
+
+# ─── Messrunde M188 — Fehler live ────────────────────────────────────────────
+# Gleiche Trennung wie bei scripts/messung-prozessansicht-frei/: erzeuge.py,
+# filtere.py und die .sql-Sitzungen werden eingecheckt, dazu die GEFILTERTEN
+# Protokolle und die Laufzeilen der Laeufer (ohne Kennungen). Die Rohausgaben
+# der Sitzungen nicht: Die Lesung gibt ProcessID aus, und das sind
+# Partnernamen Dritter. (G1)
+scripts/messung-fehler-live/ergebnis/s[0-9].txt

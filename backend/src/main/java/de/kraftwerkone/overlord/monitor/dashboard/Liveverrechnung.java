@@ -1,7 +1,11 @@
 package de.kraftwerkone.overlord.monitor.dashboard;
 
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveErgebnis;
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveZeile;
 import de.kraftwerkone.overlord.monitor.common.LiveRestKorrektur;
 import de.kraftwerkone.overlord.monitor.common.LiveRestZeile;
+import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
+import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
 import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
 import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
 import java.time.LocalDateTime;
@@ -52,6 +56,14 @@ import java.util.TreeSet;
  * Katalogzeile. Verglichen wird deshalb <b>ohne Gross- und Kleinschreibung</b>, und die Zeile
  * behaelt die Schreibweise, die zuerst da war — sonst zerfiele eine Gruppe in zwei, sobald eine
  * Katalogzeile anders geschrieben ist als die Gruppe, die sie vertritt.
+ *
+ * <h2>Seit dem 18.09.2026 auch die Fehler live (E-208, {@code docs/fehler-live.md} §5)</h2>
+ *
+ * <p>Die Fehlerzeilen der Live-Lesung kommen auf demselben Weg in die Eimer: {@link #gehoben} hebt
+ * sie fuer die Bloecke 1 bis 3 auf den Eimer des Paares, und {@link #fuerDieVerteilung} gibt Block
+ * 5 die Zeilen, die er ueber die Katalog-Nachlesung zurechnet — die Korrekturzeilen des Live-Rests
+ * <b>ohne</b> Fehlerzeilen und die Fehlerzeilen der Lesung. Der Ersatz selbst ist {@code
+ * common/FehlerLiveErsatz}; hier wird nur zugeordnet.
  */
 final class Liveverrechnung {
 
@@ -75,7 +87,7 @@ final class Liveverrechnung {
     List<Rollupsumme> zeilen = new ArrayList<>();
     Map<String, Long> jeProzess = new HashMap<>();
     for (LiveRestZeile zeile : korrektur.zeilen()) {
-      if (zeile.stunde().isBefore(fenster.von()) || !zeile.stunde().isBefore(fenster.bis())) {
+      if (!imFenster(fenster, zeile.stunde())) {
         continue;
       }
       zeilen.add(
@@ -83,6 +95,84 @@ final class Liveverrechnung {
       jeProzess.merge(zeile.processId(), zeile.anzahl(), Long::sum);
     }
     return zeilen.isEmpty() ? KEINE : new Liveverrechnung(zeilen, jeProzess);
+  }
+
+  /**
+   * <b>Was Block 5 ueber die Nachlesung zugerechnet bekommt</b> (E-191, und seit dem 18.09.2026
+   * E-208).
+   *
+   * <ul>
+   *   <li><b>Fehler live ausgesetzt:</b> die Korrektur des Live-Rests wie bisher ({@link #im}) —
+   *       die Verteilung liest dann die Fehler aus dem Rollup, und die Korrektur traegt ihre
+   *       Fehlerzeilen mit.
+   *   <li><b>Fehler live angewandt:</b> die Korrekturzeilen im Fenster <b>ohne</b> die, die {@code
+   *       MessageStatusClassifier} als Fehler einordnet — die Verteilung liest dann keine Fehler
+   *       aus dem Rollup, und die Korrektur darf keine nachtragen —, und dazu die Fehlerzeilen der
+   *       Lesung. Beide gehen denselben Weg: je Prozess summiert, ueber die Nachlesung dem
+   *       Schluessel zugeordnet.
+   * </ul>
+   *
+   * <p><b>Leer heisst: keine Nachlesung.</b> Sie laeuft, sobald es im Fenster eine Korrekturzeile
+   * fuer Block 5 oder eine Fehlerzeile gibt — und fragt sonst nach nichts.
+   */
+  static Liveverrechnung fuerDieVerteilung(
+      Rollupzeitraum zeitraum,
+      Zeitfenster fenster,
+      LiveRestKorrektur korrektur,
+      FehlerLiveErgebnis fehlerLive,
+      MessageStatusClassifier klassifizierer) {
+    if (!fehlerLive.angewandt()) {
+      return im(zeitraum, fenster, korrektur);
+    }
+    List<Rollupsumme> zeilen = new ArrayList<>();
+    Map<String, Long> jeProzess = new HashMap<>();
+    for (LiveRestZeile zeile : korrektur.zeilen()) {
+      if (!imFenster(fenster, zeile.stunde())
+          || klassifizierer.einordnung(zeile.messageStatus()) == MessageStatusKind.FEHLER) {
+        continue;
+      }
+      zeilen.add(
+          new Rollupsumme(eimer(zeitraum, zeile.stunde()), zeile.messageStatus(), zeile.anzahl()));
+      jeProzess.merge(zeile.processId(), zeile.anzahl(), Long::sum);
+    }
+    for (FehlerLiveZeile zeile : fehlerLive.zeilen()) {
+      if (!imFenster(fenster, zeile.stunde())) {
+        continue;
+      }
+      zeilen.add(
+          new Rollupsumme(eimer(zeitraum, zeile.stunde()), zeile.messageStatus(), zeile.anzahl()));
+      jeProzess.merge(zeile.processId(), zeile.anzahl(), Long::sum);
+    }
+    return zeilen.isEmpty() ? KEINE : new Liveverrechnung(zeilen, jeProzess);
+  }
+
+  /**
+   * <b>Bloecke 1 bis 3 bei Fehler live:</b> die Fehlerzeilen der Lesung, auf den Eimer des Paares
+   * gehoben und je (Eimer, Rohstatus) summiert — dieselbe Gestalt wie eine Zeile der Rollup-Ebene,
+   * damit {@code common/FehlerLiveErsatz} sie gegen die Fehlerzeilen des Rollups tauschen kann.
+   * Sortiert wie die Abfrage.
+   */
+  static List<Rollupsumme> gehoben(
+      Rollupzeitraum zeitraum, Zeitfenster fenster, List<FehlerLiveZeile> fehlerzeilen) {
+    Map<LocalDateTime, Map<String, Long>> summe = new TreeMap<>();
+    for (FehlerLiveZeile zeile : fehlerzeilen) {
+      if (imFenster(fenster, zeile.stunde())) {
+        summe
+            .computeIfAbsent(eimer(zeitraum, zeile.stunde()), eimer -> new TreeMap<>())
+            .merge(zeile.messageStatus(), zeile.anzahl(), Long::sum);
+      }
+    }
+    List<Rollupsumme> gehoben = new ArrayList<>();
+    summe.forEach(
+        (eimer, jeStatus) ->
+            jeStatus.forEach(
+                (status, anzahl) -> gehoben.add(new Rollupsumme(eimer, status, anzahl))));
+    return gehoben;
+  }
+
+  /** {@code von} einschliessend, {@code bis} ausschliessend — wie die Eimer. */
+  private static boolean imFenster(Zeitfenster fenster, LocalDateTime stunde) {
+    return !stunde.isBefore(fenster.von()) && stunde.isBefore(fenster.bis());
   }
 
   /** Der Eimer des Paares, in den eine Stunde faellt — so, wie der Rollup ihn bildet. */
