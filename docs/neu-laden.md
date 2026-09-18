@@ -192,6 +192,29 @@ schlimmer: Die Lage steht im Symbol, die Fläche ist die halbe Aussage
 > > gemessen:* wie die Fläche im Browser aussieht, in beiden Blöcken, und ob das Überfahren dort
 > > greift — `jsdom` rechnet kein CSS; dafür gibt es die Sichtprüfung beim Auftraggeber.
 >
+> **Die Sichtprüfung am laufenden System** *(18.09.2026, nachgeholt; im Debug-Chrome über CDP,
+> angemeldet durch den Auftraggeber, `next dev` dieses Zweigs auf eigenem Port, NEXANS)*. Verglichen
+> wurden die berechneten Farben am Schalter mit denselben Tokens, aufgelöst im selben Dokument; das
+> Thema per `data-thema` im Prüftab umgestellt, Überfahren und Fokus per `CSS.forcePseudoState`, vor
+> jedem Ablesen 600 ms Wartezeit wegen des Generator-Übergangs:
+>
+> | Lage, hell und dunkel | Fläche | Symbol und „Auto“ | Kontur | Überfahren |
+> |---|---|---|---|---|
+> | aus | durchsichtig | Vordergrund | `--input` | `--muted`, wie bisher |
+> | an (Uhr) | `--akzent` | `--akzent-vordergrund` | `--akzent-schrift` | `--akzent` zu 80 % — **gleich** `--primary` zu 80 %, der gefüllten Schaltfläche; Schrift unverändert |
+> | pausiert (Pause) | `--akzent` | `--akzent-vordergrund` | `--akzent-schrift` | ebenso |
+>
+> In allen Lagen und beiden Blöcken: Fokus mit Kontur `--ring` und einem 3-px-Ring aus `--ring` zu
+> 50 %; `aria-pressed` und `data-state` wie in der Tabelle oben. Der gedrückte Zeitraum-Knopf
+> („24 Stunden") trägt in beiden Blöcken weiter genau `--muted` — Punkt 92 bleibt für ihn offen.
+> Dunkel liegt `--akzent-schrift` auf der aufgehellten Stufe, Fläche und Schrift sind in beiden
+> Blöcken dieselben Werte. Die Bilder zeigen dasselbe: eine gelbgrüne Fläche mit dunkler Uhr und
+> dunklem Wort, olivfarbene Kontur hell, gelbgrüne dunkel.
+>
+> > **Belegvermerk (L10).** *Gemessen war:* die berechneten Werte am Element gegen die im Dokument
+> > aufgelösten Tokens, je Lage, Zustand und Block. *Nicht gemessen:* der Übergang selbst (nur
+> > abgewartet) und ein echtes Überfahren mit der Maus — der Zustand ist erzwungen.
+>
 > *Nummer:* höchste vergebene **E‑216** (auf dem nicht gemergten `feat/nachrichtenliste-summe`),
 > **E‑215** auf `fix/anmeldung-fokus`; gesucht nach dem Verfahren aus §1.
 
