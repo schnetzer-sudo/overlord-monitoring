@@ -1,3 +1,4 @@
+import type { FehlerLive } from "@/lib/fehler-live";
 import { hole } from "@/lib/http";
 import type { LiveRest } from "@/lib/live-rest";
 import type { Fenster, Rollupzeitraum } from "@/lib/rollupzeitraum";
@@ -391,6 +392,13 @@ export type Dashboard = {
    * über den Kacheln (`components/live-rest-hinweis.tsx`).
    */
   liveRest: LiveRest;
+  /**
+   * Seit dem 18.09.2026 (Fehler live, `docs/fehler-live.md`): ob die Fehler in
+   * Verlauf, Kacheln und Verteilung aus der Live-Lesung kommen. Bei `AUSGESETZT`
+   * stammen sie aus der stündlichen Aggregation, und der Hinweis steht über den
+   * Kacheln (`components/fehler-live-hinweis.tsx`), unter dem zum Live-Rest.
+   */
+  fehlerLive: FehlerLive;
   /**
    * Der neunte Block, seit dem 10.09.2026 (Schritt 10d) — **der einzige, der
    * nicht am Bestand eines Mandanten hängt**.

@@ -146,6 +146,12 @@ export const en: Texte = {
     ausgesetztOhneLauf: "The hourly aggregation has not run yet. The figures are incomplete.",
   },
 
+  fehlerLive: {
+    ausgesetzt:
+      "The error figures could not be determined live and come from the hourly aggregation. " +
+      "Reprocessed messages may still count as errors there.",
+  },
+
   dashboard: {
     titel: "Overview",
     leerTitel: "Nothing in this period",

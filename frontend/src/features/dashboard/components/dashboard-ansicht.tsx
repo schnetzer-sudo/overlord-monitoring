@@ -1,5 +1,6 @@
 "use client";
 
+import { FehlerLiveHinweis } from "@/components/fehler-live-hinweis";
 import { LiveRestHinweis } from "@/components/live-rest-hinweis";
 import { NeuLaden } from "@/components/neu-laden";
 import { Card } from "@/components/ui/card";
@@ -129,9 +130,11 @@ export function DashboardAnsicht() {
            * **Auch im Leerzustand** (E‑192): „nichts im Zeitraum" kann heißen, dass
            * die Aggregation seit Stunden nicht läuft — genau dann gehört der Satz
            * hierher. E‑p bleibt: Satz, Umschalter, „Neu laden", der Stand — und
-           * dieser Hinweis, wenn es ihn gibt.
+           * dieser Hinweis, wenn es ihn gibt. Seit dem 18.09.2026 ebenso der zu
+           * Fehler live, darunter: Auch „keine Fehler" kann aus dem Rollup stammen.
            */}
           <LiveRestHinweis liveRest={antwort.data.liveRest} />
+          <FehlerLiveHinweis fehlerLive={antwort.data.fehlerLive} />
           <Leer titel={texte.dashboard.leerTitel} hinweis={texte.dashboard.leerHinweis} />
           <StandZeile stand={antwort.data.stand} />
         </>
@@ -143,8 +146,13 @@ export function DashboardAnsicht() {
            * die bei `AUSGESETZT` unvollständig sind. Bei `ANGEWANDT` und
            * `NICHT_NOETIG` rendert der Baustein nichts — derselbe Baustein wie in
            * der Prozessansicht (`components/live-rest-hinweis.tsx`).
+           *
+           * **Darunter der Hinweis zu Fehler live** (`docs/fehler-live.md` §6), in
+           * derselben Bauform: bei `AUSGESETZT` kommen die Fehler aus der
+           * stündlichen Aggregation. Stehen beide, steht der zum Live-Rest zuerst.
            */}
           <LiveRestHinweis liveRest={antwort.data.liveRest} />
+          <FehlerLiveHinweis fehlerLive={antwort.data.fehlerLive} />
           {/*
            * **`zeitraum` kommt aus der Antwort und nicht aus dem Zustand.** Die
            * Kachel *Wartend* rechnet daraus die Eimerbreite, mit der ihr eigenes

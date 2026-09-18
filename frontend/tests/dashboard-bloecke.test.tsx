@@ -133,6 +133,7 @@ function antwort(ueberschreibung: Partial<Dashboard> = {}): Dashboard {
     zuletztAufgefallen: [],
     stand: { beendetAm: "2025-12-30T04:10:00Z", art: "VOLL" },
     liveRest: { zustand: "NICHT_NOETIG", vollstaendigBis: null },
+    fehlerLive: { zustand: "ANGEWANDT" },
     // Der neunte Block seit Schritt 10d. Er gehört zum Vertrag und darf
     // deshalb auch im Rumpf nicht fehlen; **geprüft wird er hier nicht** —
     // seine eigenen Fälle stehen in `tests/plattform-block.test.tsx`.

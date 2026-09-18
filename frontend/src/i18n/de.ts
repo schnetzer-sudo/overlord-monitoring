@@ -243,6 +243,18 @@ export const de = {
   },
 
   /**
+   * Der Hinweis bei `fehlerLive.zustand === "AUSGESETZT"` (`docs/fehler-live.md`
+   * §6), über den Kacheln der Übersicht und in der Bauform des Hinweises zum
+   * Live-Rest — deshalb daneben auf oberster Ebene. Mit Teil B trägt ihn auch der
+   * Prozessbaum. Bei `ANGEWANDT` steht nichts.
+   */
+  fehlerLive: {
+    ausgesetzt:
+      "Die Fehlerzahlen konnten nicht live ermittelt werden und stammen aus der stündlichen " +
+      "Aggregation. Nachverarbeitete Nachrichten können darin noch als Fehler zählen.",
+  },
+
+  /**
    * Die Landingpage (`docs/dashboard-frontend.md`).
    *
    * **Sie hat den Block `startseite` abgelöst.** Dort standen bis zum 01.09.2026

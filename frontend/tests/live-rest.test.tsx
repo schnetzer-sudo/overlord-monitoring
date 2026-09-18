@@ -224,6 +224,7 @@ function dashboard(liveRest: LiveRest, leer = false): Dashboard {
     zuletztAufgefallen: [],
     stand: { beendetAm: "2025-12-30T13:05:00Z", art: "DELTA" },
     liveRest,
+    fehlerLive: { zustand: "ANGEWANDT" },
     plattform: {
       dienste: [],
       ablagen: {
