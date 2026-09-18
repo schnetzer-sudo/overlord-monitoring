@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import de.kraftwerkone.overlord.monitor.common.Baumfenster;
 import de.kraftwerkone.overlord.monitor.common.Baumfenster.Segment;
 import de.kraftwerkone.overlord.monitor.common.Baumgliederung;
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveRepository;
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveService;
 import de.kraftwerkone.overlord.monitor.common.LiveRestRepository;
 import de.kraftwerkone.overlord.monitor.common.LiveRestService;
 import de.kraftwerkone.overlord.monitor.common.MandantContext;
@@ -66,6 +68,12 @@ import org.junit.jupiter.api.Test;
  * Statements ab, und das fuenfte liest {@code Message} — einzeln benannt in {@link EinAufruf}, wie
  * in {@code DashboardStatementsTest}. Die zwei Statements des Rollup-Teils (E-42) sind unveraendert
  * und weiter woertlich gepinnt.
+ *
+ * <p><b>Seit dem 18.09.2026 (Fehler live, Teil B) kommt ein Statement dazu, und zwar als
+ * letztes:</b> die Fehlerlesung aus {@code common}, sechs Statements bei angewandtem Live-Rest,
+ * sonst vier — {@code Message} steht damit in zwei Statements eines angewandten Aufrufs und in
+ * einem sonst. Der Text der Lesung ist derselbe wie in der Uebersicht und bleibt dort gepinnt
+ * ({@code DashboardStatementsTest}); hier wird er gegen das gerenderte Repository gehalten.
  *
  * <p>Vorbild ist {@code DashboardStatementsTest}; die Bauform ist dieselbe.
  */
@@ -605,6 +613,10 @@ class ProzessbaumStatementsTest {
    *
    * <p>Die Attrappe antwortet auf die Wasserstandsabfrage mit dem Wert in {@link #wasserstand};
    * daran haengt, welcher der drei Zustaende eintritt und wie viele Statements folgen.
+   *
+   * <p><b>Seit dem 18.09.2026 steht jede Lage auch als Folge von Namen da</b> ({@link #namen}), wie
+   * in {@code DashboardStatementsTest.FehlerLive}: Die Fehlerlesung ist das letzte Statement jedes
+   * Aufrufs — sechs bei angewandtem Live-Rest, sonst vier.
    */
   @Nested
   @DisplayName("Die Statements eines Aufrufs, einzeln benannt")
@@ -617,10 +629,44 @@ class ProzessbaumStatementsTest {
               new MessageStatusClassifier(),
               Clock.fixed(JETZT.atZone(ZONE).toInstant(), ZONE),
               new LiveRestService(
-                  new LiveRestRepository(kontext), new WasserstandRepository(kontext)));
+                  new LiveRestRepository(kontext), new WasserstandRepository(kontext)),
+              new FehlerLiveService(
+                  new FehlerLiveRepository(kontext, new MessageStatusClassifier())));
       gerendert.clear();
       dienst.baum(MANDANT, fenster, Baumgliederung.PARTNER);
       return gerendert.stream().map(sql -> sql.replaceAll("\\s+", " ").trim()).toList();
+    }
+
+    /** Das Statement bei seinem Gegenstand genannt — jedes Merkmal an genau einer Stelle. */
+    private static String name(String sql) {
+      if (sql.contains("`fehler_process`")) {
+        return "Fehlerlesung";
+      }
+      if (sql.contains("`live_process`")) {
+        return sql.startsWith("select date_format(") ? "Live-Rest B" : "Live-Rest A";
+      }
+      if (sql.startsWith("select max(`overlord_monitor`.`rollup_lauf`.`fenster_bis`)")) {
+        return "Wasserstand";
+      }
+      if (sql.contains("`baum_process`")) {
+        return "Kennzahlen";
+      }
+      if (sql.startsWith("select `GlassfishDB`.`Process`.`ProcessID`")) {
+        return "Geruest";
+      }
+      return "UNBEKANNT: " + sql;
+    }
+
+    private static List<String> namen(List<String> statements) {
+      return statements.stream().map(EinAufruf::name).toList();
+    }
+
+    /** Die Lesung, wie das Repository aus {@code common} sie fuer dieses Fenster rendert. */
+    private String lesungAusCommon(Baumfenster fenster) {
+      gerendert.clear();
+      new FehlerLiveRepository(kontext, new MessageStatusClassifier())
+          .ausDerQuelle(MANDANT, fenster.fenster(JETZT).von(), fenster.fenster(JETZT).bis());
+      return einziges();
     }
 
     private static final String KETTE_AUF_ROLLUP =
@@ -637,16 +683,23 @@ class ProzessbaumStatementsTest {
             + " `GlassfishDB`.`Message`.`ProcessID` and"
             + " `GlassfishDB`.`ProjectMandant`.`MandantID` = ?))";
 
-    /** Angewandt: G ist die Stichtagsstunde. Fuenf Statements, jedes mit Namen. */
+    /**
+     * Angewandt: G ist die Stichtagsstunde. Sechs Statements, jedes mit Namen — das sechste ist
+     * seit dem 18.09.2026 die Fehlerlesung.
+     */
     @Test
     @DisplayName(
-        "Angewandt: Geruest, Kennzahlen, Wasserstand, Rollup im Live-Bereich, Message im Live-Bereich")
-    void angewandt_fuenf_statements() {
+        "Angewandt: Geruest, Kennzahlen, Wasserstand, Rollup und Message im Live-Bereich,"
+            + " Fehlerlesung")
+    void angewandt_sechs_statements() {
       wasserstand = JETZT.truncatedTo(java.time.temporal.ChronoUnit.HOURS).plusHours(1);
 
       List<String> knapp = statementsEinesAufrufs(Baumfenster.paar(Rollupzeitraum.STUNDEN_48));
 
-      assertThat(knapp).as("Fuenf Statements — und jedes einzeln benannt").hasSize(5);
+      assertThat(namen(knapp))
+          .as("Sechs Statements — und jedes einzeln benannt")
+          .containsExactly(
+              "Geruest", "Kennzahlen", "Wasserstand", "Live-Rest A", "Live-Rest B", "Fehlerlesung");
       assertThat(knapp.get(0))
           .as("1 Geruest")
           .startsWith("select `GlassfishDB`.`Process`.`ProcessID`")
@@ -677,76 +730,122 @@ class ProzessbaumStatementsTest {
           .contains("`GlassfishDB`.`Message`.`MessageLastUpdate` < ?")
           .contains(KETTE_AUF_MESSAGE)
           .contains("group by date_format(");
+      assertThat(knapp.get(5))
+          .as("6 Fehlerlesung — ueber das Fenster der Antwort, mit eigener Kette, zuletzt")
+          .isEqualTo(lesungAusCommon(Baumfenster.paar(Rollupzeitraum.STUNDEN_48)));
     }
 
     /**
-     * <b>{@code Message} steht ausschliesslich im Live-Teil.</b> Regel L2 mit ihrer dritten
-     * benannten Ausnahme: genau ein Statement je Aufruf liest die Quelle, und es ist das, das den
-     * Bereich ab G traegt.
+     * <b>{@code Message} steht im Live-Teil und in der Fehlerlesung</b> — seit dem 18.09.2026 in
+     * zwei Statements eines angewandten Aufrufs. Regel L2 mit ihrer dritten benannten Ausnahme (der
+     * Bereich ab G) und ihrer vierten (die Einordnung {@code FEHLER} im Fenster); keines der beiden
+     * joint {@code Message}, beide tragen ihre Kette als {@code EXISTS}.
      */
     @Test
-    @DisplayName("Message steht in genau einem Statement, mit Zeitbereich ab G und Mandantenkette")
-    void message_nur_im_live_teil() {
+    @DisplayName(
+        "Message steht in genau zwei Statements: im Live-Bereich ab G und in der Fehlerlesung")
+    void message_im_live_teil_und_in_der_lesung() {
       wasserstand = JETZT.truncatedTo(java.time.temporal.ChronoUnit.HOURS).plusHours(1);
 
       List<String> knapp = statementsEinesAufrufs(Baumfenster.paar(Rollupzeitraum.STUNDEN_48));
       List<String> mitMessage =
           knapp.stream().filter(sql -> sql.contains("`GlassfishDB`.`Message`")).toList();
 
-      assertThat(mitMessage).hasSize(1);
+      assertThat(namen(mitMessage)).containsExactly("Live-Rest B", "Fehlerlesung");
       assertThat(mitMessage.getFirst())
-          .isSameAs(knapp.getLast())
+          .isSameAs(knapp.get(4))
           .contains("`GlassfishDB`.`Message`.`MessageLastUpdate` >= ?")
           .contains(KETTE_AUF_MESSAGE)
           .doesNotContain("join `GlassfishDB`.`Message`");
+      assertThat(mitMessage.getLast())
+          .isSameAs(knapp.getLast())
+          .contains("`GlassfishDB`.`Message`.`MessageLastUpdate` >= ?")
+          .contains("exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process`")
+          .doesNotContain("join `GlassfishDB`.`Message`");
     }
 
-    /** Ohne Lauf: ausgesetzt — drei Statements, keines liest die Quelle. */
+    /**
+     * Ohne Lauf: ausgesetzt — vier Statements; die Quelle liest allein die Fehlerlesung, zuletzt.
+     */
     @Test
-    @DisplayName("Ausgesetzt ohne Lauf: drei Statements, kein Message")
-    void ausgesetzt_ohne_lauf_drei_statements() {
+    @DisplayName("Ausgesetzt ohne Lauf: vier Statements, Message nur in der Fehlerlesung")
+    void ausgesetzt_ohne_lauf_vier_statements() {
       wasserstand = null;
 
       List<String> knapp = statementsEinesAufrufs(Baumfenster.paar(Rollupzeitraum.STUNDEN_48));
 
-      assertThat(knapp).hasSize(3);
+      assertThat(namen(knapp))
+          .containsExactly("Geruest", "Kennzahlen", "Wasserstand", "Fehlerlesung");
       assertThat(knapp.get(2))
           .as("3 Wasserstand")
           .contains("from `overlord_monitor`.`rollup_lauf`");
-      assertThat(knapp)
+      assertThat(knapp.subList(0, 3))
           .allSatisfy(sql -> assertThat(sql).doesNotContain("`GlassfishDB`.`Message`"));
     }
 
-    /** Der Rollup reicht ueber die Uhr hinaus: nicht noetig — dieselben drei. */
+    /** Der Rollup reicht ueber die Uhr hinaus: nicht noetig — dieselben vier. */
     @Test
-    @DisplayName("Nicht noetig: drei Statements, kein Message")
-    void nicht_noetig_drei_statements() {
+    @DisplayName("Nicht noetig: vier Statements, Message nur in der Fehlerlesung")
+    void nicht_noetig_vier_statements() {
       wasserstand = JETZT.plusDays(2);
 
       List<String> knapp = statementsEinesAufrufs(Baumfenster.paar(Rollupzeitraum.STUNDEN_48));
 
-      assertThat(knapp).hasSize(3);
-      assertThat(knapp)
+      assertThat(namen(knapp))
+          .containsExactly("Geruest", "Kennzahlen", "Wasserstand", "Fehlerlesung");
+      assertThat(knapp.subList(0, 3))
           .allSatisfy(sql -> assertThat(sql).doesNotContain("`GlassfishDB`.`Message`"));
     }
 
     /**
-     * Auch das freie Fenster kostet bei angewandtem Live-Rest fuenf — E-42 bleibt bei zwei fuer den
-     * Rollup-Teil.
+     * Auch das freie Fenster kostet bei angewandtem Live-Rest sechs — E-42 bleibt bei zwei fuer den
+     * Rollup-Teil, und die Lesung liest das freie Fenster.
      */
     @Test
-    @DisplayName("Das freie Fenster setzt dieselben fuenf Statements ab")
-    void freies_fenster_fuenf_statements() {
+    @DisplayName("Das freie Fenster setzt dieselben sechs Statements ab")
+    void freies_fenster_sechs_statements() {
       wasserstand = JETZT.truncatedTo(java.time.temporal.ChronoUnit.HOURS).plusHours(1);
+      Baumfenster frei = Baumfenster.frei(t("2024-12-29T14:00"), t("2025-12-30T03:00"));
 
-      List<String> knapp =
-          statementsEinesAufrufs(Baumfenster.frei(t("2024-12-29T14:00"), t("2025-12-30T03:00")));
+      List<String> knapp = statementsEinesAufrufs(frei);
 
-      assertThat(knapp).hasSize(5);
+      assertThat(namen(knapp))
+          .containsExactly(
+              "Geruest", "Kennzahlen", "Wasserstand", "Live-Rest A", "Live-Rest B", "Fehlerlesung");
       assertThat(knapp.get(1)).as("2 Kennzahlen, vereinigt").contains("union all");
       assertThat(knapp.get(4))
           .as("5 Message im Live-Bereich")
           .contains("from `GlassfishDB`.`Message` where");
+      assertThat(knapp.get(5)).as("6 Fehlerlesung").isEqualTo(lesungAusCommon(frei));
+    }
+
+    /**
+     * <b>Die Lesung ist derselbe Text wie in der Uebersicht</b> — dasselbe Repository aus {@code
+     * common}, fuer jedes Paar und das freie Fenster; gepinnt bleibt der Text dort ({@code
+     * DashboardStatementsTest.FehlerLive.die_lesung_woertlich}), hier wird er gegen das Repository
+     * gehalten, damit der Baum keine eigene Fassung bekommt.
+     */
+    @Test
+    @DisplayName("Die Fehlerlesung ist der Text der Uebersicht, in jedem Modus")
+    void die_lesung_ist_der_text_der_uebersicht() {
+      wasserstand = null;
+      List<Baumfenster> modi =
+          List.of(
+              Baumfenster.paar(Rollupzeitraum.STUNDEN_48),
+              Baumfenster.paar(Rollupzeitraum.TAGE_30),
+              Baumfenster.paar(Rollupzeitraum.MONATE_12),
+              Baumfenster.frei(t("2024-12-29T14:00"), t("2025-12-30T03:00")));
+
+      for (Baumfenster modus : modi) {
+        List<String> knapp = statementsEinesAufrufs(modus);
+        assertThat(knapp.getLast()).as(modus.code()).isEqualTo(lesungAusCommon(modus));
+        assertThat(knapp.getLast())
+            .as("%s: keine Sortierung, keine Deckelung, kein Indexhinweis", modus.code())
+            .doesNotContain(" order by ")
+            .doesNotContain(" limit ")
+            .doesNotContain("rows only")
+            .doesNotContain("index (");
+      }
     }
 
     /**

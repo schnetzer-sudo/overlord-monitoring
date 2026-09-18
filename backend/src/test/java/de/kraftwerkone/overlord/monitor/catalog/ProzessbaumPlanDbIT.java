@@ -4,9 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import de.kraftwerkone.overlord.monitor.common.Baumfenster;
 import de.kraftwerkone.overlord.monitor.common.Baumfenster.Segment;
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveRepository;
 import de.kraftwerkone.overlord.monitor.common.LiveRestRepository;
 import de.kraftwerkone.overlord.monitor.common.MandantContext;
+import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
+import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -85,6 +88,9 @@ class ProzessbaumPlanDbIT {
   /** Die Klasse des Live-Rests an derselben Attrappe — ihre zwei Statements haben eigene Plaene. */
   private LiveRestRepository liveAttrappe;
 
+  /** Die Fehlerlesung aus {@code common} an derselben Attrappe (seit 18.09.2026). */
+  private FehlerLiveRepository fehlerAttrappe;
+
   /**
    * Der Live-Bereich fuer die Plaene: drei Eimer bis zum Anker, im dichten Bestand — G = 02:00,
    * Ende 05:00. Derselbe Bereich wie in der Summenprobe ({@code ProzessbaumLiveRestDbIT}).
@@ -112,6 +118,14 @@ class ProzessbaumPlanDbIT {
             new Settings().withStatementType(StatementType.STATIC_STATEMENT));
     attrappe = new ProzessbaumRepository(kontext);
     liveAttrappe = new LiveRestRepository(kontext);
+    fehlerAttrappe = new FehlerLiveRepository(kontext, new MessageStatusClassifier());
+  }
+
+  private String fehlerlesungSql(String mandant, Zeitfenster fenster) {
+    gerendert.clear();
+    fehlerAttrappe.ausDerQuelle(new MandantContext(mandant), fenster.von(), fenster.bis());
+    assertThat(gerendert).hasSize(1);
+    return gerendert.getFirst();
   }
 
   private String liveQuelleSql(String mandant) {
@@ -500,6 +514,59 @@ class ProzessbaumPlanDbIT {
           assertThat(zeileFuer(plan, "ProjectMandant", marke).zugriff())
               .as("%s: ProjectMandant in der Kette", marke)
               .isIn("eq_ref", "ref", "const");
+        }
+      }
+    }
+  }
+
+  // ─── Die Fehlerlesung (Fehler live, Teil B, 18.09.2026) ───────────────────────
+
+  /**
+   * <b>Die Fehlerlesung im freien Fenster steigt ueber {@code MessageStatusIDX} ein</b>, und in
+   * keiner Planzeile steht ein Zeitindex — auch nicht als Rowid-Filter ({@code docs/fehler-live.md}
+   * §5b, M189 Tor 1). Fuer die drei Paare haelt es {@code DashboardPlanDbIT} fest: Der Baum ruft
+   * dieselbe Lesung, und die Paare bilden dieselben Fenster.
+   *
+   * <p>Die Fenster sind die freien aus M152 und das Jahresfenster mit den meisten Fehlern aus M189,
+   * Tor 1 — als <b>Eingabe</b>, nicht als Erwartung (Regel T2). Die Zusicherung ist eine
+   * Eigenschaft des Plans und haengt an keiner Zahl des Bestands.
+   */
+  @Nested
+  @DisplayName("Die Fehlerlesung im freien Fenster")
+  class Fehlerlesung {
+
+    private static final List<Zeitfenster> FENSTER =
+        List.of(
+            // der Boesfall aus M152
+            new Zeitfenster(
+                LocalDateTime.parse("2024-12-30T14:00"), LocalDateTime.parse("2025-12-30T03:00")),
+            // krumme 30 Tage aus M152
+            new Zeitfenster(
+                LocalDateTime.parse("2025-11-29T14:00"), LocalDateTime.parse("2025-12-29T14:00")),
+            // das monatsbuendige Jahr aus M152
+            new Zeitfenster(
+                LocalDateTime.parse("2025-01-01T00:00"), LocalDateTime.parse("2026-01-01T00:00")),
+            // das Jahresfenster mit den meisten NEXANS-Fehlern, M189 Tor 1
+            new Zeitfenster(
+                LocalDateTime.parse("2024-10-04T11:00"), LocalDateTime.parse("2025-10-04T11:00")));
+
+    @Test
+    @DisplayName("Die Lesung steigt ueber MessageStatusIDX ein, kein Zeitindex in einer Planzeile")
+    void ueber_den_statusindex() {
+      for (String mandant : MANDANTEN) {
+        for (Zeitfenster fenster : FENSTER) {
+          String marke = "Fehlerlesung/" + mandant + "/" + fenster.von() + "/" + fenster.bis();
+          List<Plan> plan = plan(fehlerlesungSql(mandant, fenster));
+
+          assertThat(zeileFuer(plan, "Message", marke).index())
+              .as("%s: die Lesung steigt ueber den Statusindex ein", marke)
+              .isEqualTo("MessageStatusIDX");
+          assertThat(plan)
+              .as("%s: kein Zeitindex in keiner Planzeile, auch nicht als Rowid-Filter", marke)
+              .noneMatch(zeile -> zeile.index().contains("MessageLastUpdate"));
+          assertThat(plan)
+              .as("%s: keine Tabelle der Lesung wird voll gelesen", marke)
+              .noneMatch(zeile -> "ALL".equalsIgnoreCase(zeile.zugriff()));
         }
       }
     }

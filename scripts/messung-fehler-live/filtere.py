@@ -16,7 +16,7 @@ from pathlib import Path
 
 # Tabellen, deren Kopf so beginnt, gehen vollstaendig durch; alle anderen nicht.
 DURCHLASS = ("| id ", "| fall ", "| read_only ", "| mandant ", "| rollup_gesamt ", "| rohwert ",
-             "| marke ")
+             "| marke ", "| von ")  # "| von ": die Zaehlung von M189 (Stunden und Zahlen, keine Kennungen)
 
 
 def main(pfad: str) -> None:

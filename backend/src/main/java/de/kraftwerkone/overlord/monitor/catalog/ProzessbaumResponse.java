@@ -1,6 +1,7 @@
 package de.kraftwerkone.overlord.monitor.catalog;
 
 import de.kraftwerkone.overlord.monitor.common.Baumgliederung;
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveResponse;
 import de.kraftwerkone.overlord.monitor.common.LiveRestResponse;
 import java.util.List;
 
@@ -45,6 +46,10 @@ import java.util.List;
  *     17.09.2026, {@code docs/live-rest.md})</i>: {@code ANGEWANDT}, {@code NICHT_NOETIG} oder
  *     {@code AUSGESETZT} — nur im letzten Fall sagt die Oberflaeche etwas, und {@code
  *     vollstaendigBis} traegt dann G, wenn es einen Lauf gab
+ * @param fehlerLive ob die <i>Fehler</i> aus der Live-Lesung kommen <i>(seit 18.09.2026, {@code
+ *     docs/fehler-live.md} §5b)</i>: {@code ANGEWANDT} oder {@code AUSGESETZT} — derselbe Block wie
+ *     in der Uebersicht, in allen Modi und beiden Gliederungen; nur bei {@code AUSGESETZT} sagt die
+ *     Oberflaeche etwas
  * @param gesamt die Kopfzahlen ueber den ganzen Baum — in beiden Gliederungen dieselben
  * @param ebenen die Namen der Ebenen, von aussen nach innen; die letzte ist immer {@code PROZESS}
  * @param knoten die oberste Ebene, sortiert
@@ -55,6 +60,7 @@ public record ProzessbaumResponse(
     ZeitfensterResponse fenster,
     int stilleSchwelleMonate,
     LiveRestResponse liveRest,
+    FehlerLiveResponse fehlerLive,
     BaumsummeResponse gesamt,
     List<Baumebene> ebenen,
     List<BaumknotenResponse> knoten) {}

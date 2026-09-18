@@ -348,6 +348,34 @@ class ProzessbaumIsolationDbIT extends SicherheitsTestbasis {
   }
 
   /**
+   * Der Block {@code fehlerLive} steht in jeder Antwort, mit einem der zwei Zustaende — in beiden
+   * Gliederungen und im freien Fenster <i>(seit 18.09.2026, {@code docs/fehler-live.md} §5b)</i>.
+   *
+   * <p><b>Eine neue Mandantenkette entsteht nicht:</b> Der Baum ruft dieselbe Lesung wie die
+   * Uebersicht, und deren Isolation ist am Repository belegt ({@code
+   * DashboardIsolationDbIT.die_fehlerlesung_liefert_keine_fremde_zeile}, Verletzungsprobe rot).
+   * Durch den Endpunkt zeigte sich ein Leck der Lesung ohnehin nicht — die Zeilen erreichen den
+   * Rumpf nur ueber die Blaetter des Geruests.
+   */
+  @Test
+  @DisplayName("Der Block fehlerLive steht in der Antwort — beide Gliederungen, freies Fenster")
+  void der_block_fehler_live_steht_in_der_antwort() throws Exception {
+    for (String abfrage :
+        List.of(
+            inGliederung(Baumgliederung.PARTNER),
+            inGliederung(Baumgliederung.PROJEKT),
+            PFAD + FREI)) {
+      Antwort antwort = aufNexans.hole(abfrage);
+
+      assertThat(antwort.status()).as(abfrage).isEqualTo(200);
+      assertThat(antwort.hatFeld("$.fehlerLive")).as(abfrage).isTrue();
+      assertThat(antwort.<String>json("$.fehlerLive.zustand"))
+          .as(abfrage)
+          .isIn("ANGEWANDT", "AUSGESETZT");
+    }
+  }
+
+  /**
    * Die Kopfzahl ist genau die Summe der Blaetter — sie enthaelt nichts, was nicht an einem eigenen
    * Blatt haengt.
    *

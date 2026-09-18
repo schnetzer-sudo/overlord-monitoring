@@ -13,7 +13,8 @@ import java.util.function.Function;
  *       MessageStatusClassifier#einordnung(String)} als {@link MessageStatusKind#FEHLER} einordnet
  *       — auch ein unbekanntes {@code ERROR_} und {@code COMMIT_REJECTED}.
  *   <li>Die Zeilen der Live-Lesung kommen hinzu, <b>ueber denselben Schluessel</b>: Der Verbraucher
- *       hebt sie vorher auf die Gestalt seiner Grundzeilen (die Uebersicht auf ihre Eimer).
+ *       hebt sie vorher auf die Gestalt seiner Grundzeilen (die Uebersicht auf ihre Eimer, der
+ *       Prozessbaum auf Prozess und Rohstatus).
  * </ol>
  *
  * <p><b>Die Einordnung entsteht beim Lesen</b> (E-g): Die Zeilen tragen Rohwerte; welche Fehler

@@ -7,9 +7,9 @@ import java.util.List;
  * Fehlerzeilen des Fensters ({@code docs/fehler-live.md} §4).
  *
  * <p>So geschnitten wie {@link LiveRestErgebnis}: Die Uebersicht hebt die Zeilen auf ihre Eimer,
- * der Prozessbaum (Teil B) wird sie je Prozess summieren. Beide ersetzen damit ihre Fehlerzeilen
- * ueber {@link FehlerLiveErsatz} und ordnen die Rohwerte ueber {@code MessageStatusClassifier} ein,
- * nicht hier.
+ * der Prozessbaum (Teil B) summiert sie je Prozess und Rohstatus ueber das Fenster. Beide ersetzen
+ * damit ihre Fehlerzeilen ueber {@link FehlerLiveErsatz} und ordnen die Rohwerte ueber {@code
+ * MessageStatusClassifier} ein, nicht hier.
  *
  * @param zustand angewandt oder ausgesetzt
  * @param zeilen die Fehlerzeilen des Fensters; leer bei {@code AUSGESETZT} — und bei {@code

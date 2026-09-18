@@ -2,6 +2,11 @@ package de.kraftwerkone.overlord.monitor.catalog;
 
 import de.kraftwerkone.overlord.monitor.common.Baumfenster;
 import de.kraftwerkone.overlord.monitor.common.Baumgliederung;
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveErgebnis;
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveErsatz;
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveResponse;
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveService;
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveZeile;
 import de.kraftwerkone.overlord.monitor.common.Katalogzuordnung;
 import de.kraftwerkone.overlord.monitor.common.LiveRestErgebnis;
 import de.kraftwerkone.overlord.monitor.common.LiveRestKorrektur;
@@ -66,6 +71,18 @@ import org.springframework.stereotype.Service;
  * Endwert wird negativ. Die <b>letzte Bewegung</b> ist das Maximum aus dem Wert nach E-34 und der
  * juengsten Live-Stunde des Prozesses — unabhaengig vom Fenster (E-35): Ein Prozess mit Verkehr in
  * der laufenden Stunde steht nie als still oder nie da.
+ *
+ * <h2>Die Fehler kommen live <i>(seit 18.09.2026, E-208, E-213)</i></h2>
+ *
+ * <p>Ein Fehlerstatus ist durch Nachverarbeitung nicht endgueltig, und der Delta-Lauf entfernt
+ * einen Abgang aus einem alten Eimer nicht. Der Baum ruft deshalb <b>denselben Baustein wie die
+ * Uebersicht</b> ({@link FehlerLiveService}, {@code docs/fehler-live.md} §5b): Nachdem der
+ * Live-Rest verrechnet ist, fallen die Zeilen je Prozess und Rohstatus heraus, die der
+ * Klassifizierer als {@code FEHLER} einordnet, und die Zeilen der Lesung kommen hinzu ({@link
+ * FehlerLiveErsatz}). <i>Nachrichten</i> und <i>Fehler</i> entstehen danach wie bisher, die Klemme
+ * bleibt, wo sie war. Die Lesung ist das <b>letzte</b> Statement eines Aufrufs; faellt sie aus,
+ * rechnet der Baum wie vorher und sagt es im Block {@code fehlerLive}. Letzte Bewegung und Zustand
+ * beruehrt sie nicht.
  *
  * <h2>Die Einordnung wird gerufen, nicht nachgebaut</h2>
  *
@@ -193,16 +210,19 @@ public class ProzessbaumService {
   private final MessageStatusClassifier statusClassifier;
   private final Clock anwendungsuhr;
   private final LiveRestService liveRestService;
+  private final FehlerLiveService fehlerLiveService;
 
   ProzessbaumService(
       ProzessbaumRepository prozessbaumRepository,
       MessageStatusClassifier statusClassifier,
       Clock anwendungsuhr,
-      LiveRestService liveRestService) {
+      LiveRestService liveRestService,
+      FehlerLiveService fehlerLiveService) {
     this.prozessbaumRepository = prozessbaumRepository;
     this.statusClassifier = statusClassifier;
     this.anwendungsuhr = anwendungsuhr;
     this.liveRestService = liveRestService;
+    this.fehlerLiveService = fehlerLiveService;
   }
 
   /**
@@ -217,6 +237,11 @@ public class ProzessbaumService {
    * <p><b>Die Gliederung aendert keinen Zugriff</b> <i>(seit 15.09.2026)</i>: dieselben zwei
    * Statements, dieselben Zeilen, dieselbe Kopfzahl. Sie entscheidet allein, wie die Zeilen hier
    * geschachtelt werden — und damit auch, dass beide Baeume dieselben Blaetter tragen.
+   *
+   * <p><b>Die Reihenfolge der Statements</b> <i>(seit 18.09.2026)</i>: Geruest, Kennzahlen,
+   * Wasserstand, bei angewandtem Live-Rest dessen zwei Lesungen — und <b>zuletzt die
+   * Fehlerlesung</b> ueber das Fenster der Antwort. So bleiben die Stellen der Statements davor,
+   * wie sie waren; anders als in der Uebersicht haengt hier kein Statement am Zustand der Lesung.
    *
    * @param mandant Regel M2 — erster Pflichtparameter, und er kommt aus der Sitzung (Regel M1)
    * @param gewaehlt das Fenster aus der URL, oder {@code null} fuer {@link #VORGABE}
@@ -235,8 +260,12 @@ public class ProzessbaumService {
         prozessbaumRepository.kennzahlen(mandant, baumfenster.segmente(jetzt));
     // Derselbe Uhrenschlag wie fuer das Fenster: Der Live-Bereich endet in derselben Stunde.
     LiveRestErgebnis liveRest = liveRestService.ermittle(mandant, jetzt);
+    // Die Fehlerlesung als letztes Statement, ueber das Fenster der Antwort aus demselben
+    // Uhrenschlag — bei FREI mit dem ausschliessenden Ende (E-213).
+    FehlerLiveErgebnis fehlerLive =
+        fehlerLiveService.ermittle(mandant, fenster.von(), fenster.bis());
     Map<String, Kennzahl> jeProzess =
-        kennzahlenJeProzess(kennzahlen, liveRest.korrektur(), fenster);
+        kennzahlenJeProzess(kennzahlen, liveRest.korrektur(), fehlerLive, fenster);
     Map<String, LocalDateTime> juengsteLive = liveRest.korrektur().juengsteStundeJeProzess();
     List<Gruppierung> gruppierungen = gruppierungen(gliederung);
 
@@ -248,6 +277,7 @@ public class ProzessbaumService {
             Zeitpunkte.nachUtc(fenster.bis(), anwendungsuhr.getZone())),
         (int) STILLE_SCHWELLE.toTotalMonths(),
         LiveRestResponse.aus(liveRest.entscheidung(), anwendungsuhr.getZone()),
+        FehlerLiveResponse.aus(fehlerLive),
         gesamt(geruest, jeProzess, juengsteLive, jetzt),
         ebenen(gruppierungen),
         knoten(geruest, gruppierungen, jeProzess, juengsteLive, jetzt));
@@ -269,23 +299,86 @@ public class ProzessbaumService {
    * <p><b>Kein negativer Endwert.</b> Minus und plus kommen aus zwei Lesungen desselben Bestands
    * und heben sich auf; laeuft der Bestand zwischen beiden weg, wird auf null geklemmt statt eine
    * negative Zahl anzuzeigen.
+   *
+   * <p><b>Fehler live</b> <i>(seit 18.09.2026, E-213)</i> sitzt zwischen beidem: <b>nach</b> der
+   * Verrechnung des Live-Rests — die Korrektur traegt ihre eigenen Fehlerzeilen, und ein Fehler der
+   * laufenden Stunde zaehlte sonst zweimal (E-210) — und <b>vor</b> der Bildung der zwei Zahlen,
+   * denn nur die Zeilen tragen den Rohstatus. Dafuer stehen die Zeilen hier zuerst je <i>(Prozess,
+   * Rohstatus)</i> ueber das Fenster summiert; die Zeilen der Lesung werden auf dieselbe Gestalt
+   * gehoben. Ausgesetzt bleibt alles, wie es war. Die Klemme bleibt, wo sie war: je Prozess, nach
+   * dem Ersatz.
    */
   private Map<String, Kennzahl> kennzahlenJeProzess(
-      List<Prozesskennzahlzeile> zeilen, LiveRestKorrektur korrektur, Zeitfenster fenster) {
-    Map<String, Kennzahl> jeProzess = new HashMap<>();
+      List<Prozesskennzahlzeile> zeilen,
+      LiveRestKorrektur korrektur,
+      FehlerLiveErgebnis fehlerLive,
+      Zeitfenster fenster) {
+    Map<Prozessstatus, Long> jeProzessUndStatus = new LinkedHashMap<>();
     for (Prozesskennzahlzeile zeile : zeilen) {
-      jeProzess.merge(
-          zeile.processId(), kennzahl(zeile.messageStatus(), zeile.anzahl()), Kennzahl::plus);
+      jeProzessUndStatus.merge(
+          new Prozessstatus(zeile.processId(), zeile.messageStatus()), zeile.anzahl(), Long::sum);
     }
     for (LiveRestZeile zeile : korrektur.zeilen()) {
-      if (!zeile.stunde().isBefore(fenster.von()) && zeile.stunde().isBefore(fenster.bis())) {
-        jeProzess.merge(
-            zeile.processId(), kennzahl(zeile.messageStatus(), zeile.anzahl()), Kennzahl::plus);
+      if (imFenster(zeile.stunde(), fenster)) {
+        jeProzessUndStatus.merge(
+            new Prozessstatus(zeile.processId(), zeile.messageStatus()), zeile.anzahl(), Long::sum);
       }
+    }
+    List<Prozesskennzahlzeile> ersetzt =
+        FehlerLiveErsatz.ersetze(
+            fehlerLive.zustand(),
+            zeilen(jeProzessUndStatus),
+            gehoben(fehlerLive.zeilen(), fenster),
+            Prozesskennzahlzeile::messageStatus,
+            statusClassifier);
+
+    Map<String, Kennzahl> jeProzess = new HashMap<>();
+    for (Prozesskennzahlzeile zeile : ersetzt) {
+      jeProzess.merge(
+          zeile.processId(), kennzahl(zeile.messageStatus(), zeile.anzahl()), Kennzahl::plus);
     }
     jeProzess.replaceAll((prozess, kennzahl) -> kennzahl.geklemmt());
     return jeProzess;
   }
+
+  /**
+   * <b>Die Zeilen der Fehlerlesung in der Gestalt der Kennzahlzeilen</b>: je <i>(Prozess,
+   * Rohstatus)</i> ueber die Stunden des Fensters summiert — {@code von} einschliessend, {@code
+   * bis} ausschliessend, wie die Eimer und wie in der Uebersicht. Die Lesung liest ohnehin nur das
+   * Fenster; die Pruefung haelt die Haltung an einer Stelle mit der Korrektur des Live-Rests.
+   */
+  private static List<Prozesskennzahlzeile> gehoben(
+      List<FehlerLiveZeile> fehlerzeilen, Zeitfenster fenster) {
+    Map<Prozessstatus, Long> summe = new LinkedHashMap<>();
+    for (FehlerLiveZeile zeile : fehlerzeilen) {
+      if (imFenster(zeile.stunde(), fenster)) {
+        summe.merge(
+            new Prozessstatus(zeile.processId(), zeile.messageStatus()), zeile.anzahl(), Long::sum);
+      }
+    }
+    return zeilen(summe);
+  }
+
+  private static List<Prozesskennzahlzeile> zeilen(Map<Prozessstatus, Long> jeProzessUndStatus) {
+    List<Prozesskennzahlzeile> zeilen = new ArrayList<>(jeProzessUndStatus.size());
+    jeProzessUndStatus.forEach(
+        (schluessel, anzahl) ->
+            zeilen.add(
+                new Prozesskennzahlzeile(
+                    schluessel.processId(), schluessel.messageStatus(), anzahl)));
+    return zeilen;
+  }
+
+  /** {@code von} einschliessend, {@code bis} ausschliessend — wie die Eimer des Rollups. */
+  private static boolean imFenster(LocalDateTime stunde, Zeitfenster fenster) {
+    return !stunde.isBefore(fenster.von()) && stunde.isBefore(fenster.bis());
+  }
+
+  /**
+   * Der Schluessel, ueber den der Ersatz tauscht: Prozess und <b>Rohstatus</b>, nicht die
+   * Einordnung (E-g).
+   */
+  private record Prozessstatus(String processId, String messageStatus) {}
 
   private Kennzahl kennzahl(String messageStatus, long anzahl) {
     boolean fehler = statusClassifier.einordnung(messageStatus) == MessageStatusKind.FEHLER;

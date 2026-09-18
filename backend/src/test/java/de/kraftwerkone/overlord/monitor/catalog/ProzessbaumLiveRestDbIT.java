@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import de.kraftwerkone.overlord.monitor.common.Baumfenster;
 import de.kraftwerkone.overlord.monitor.common.Baumgliederung;
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveService;
 import de.kraftwerkone.overlord.monitor.common.LiveRestRepository;
 import de.kraftwerkone.overlord.monitor.common.LiveRestService;
 import de.kraftwerkone.overlord.monitor.common.LiveRestZeile;
@@ -73,6 +74,9 @@ class ProzessbaumLiveRestDbIT {
   @Autowired private ProzessbaumRepository prozessbaumRepository;
   @Autowired private LiveRestRepository liveRestRepository;
   @Autowired private MessageStatusClassifier statusClassifier;
+
+  /** Fehler live, wie im Betrieb (seit 18.09.2026) — die Summenprobe gilt mit der Lesung. */
+  @Autowired private FehlerLiveService fehlerLiveService;
 
   @Autowired
   @Qualifier("glassfishDsl") private DSLContext glassfishDsl;
@@ -212,7 +216,8 @@ class ProzessbaumLiveRestDbIT {
             prozessbaumRepository,
             statusClassifier,
             uhr,
-            new LiveRestService(liveRestRepository, () -> Optional.of(WASSERSTAND)));
+            new LiveRestService(liveRestRepository, () -> Optional.of(WASSERSTAND)),
+            fehlerLiveService);
     Zeitfenster fenster = Rollupzeitraum.STUNDEN_48.fenster(ANKER);
 
     for (String mandant : MANDANTEN) {

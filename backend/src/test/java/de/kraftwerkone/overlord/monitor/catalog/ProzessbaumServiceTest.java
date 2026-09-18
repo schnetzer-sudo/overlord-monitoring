@@ -2,11 +2,20 @@ package de.kraftwerkone.overlord.monitor.catalog;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import de.kraftwerkone.overlord.monitor.common.Baumfenster;
 import de.kraftwerkone.overlord.monitor.common.Baumgliederung;
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveErgebnis;
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveResponse;
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveService;
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveZeile;
+import de.kraftwerkone.overlord.monitor.common.FehlerLiveZustand;
 import de.kraftwerkone.overlord.monitor.common.LiveRestEntscheidung;
 import de.kraftwerkone.overlord.monitor.common.LiveRestErgebnis;
 import de.kraftwerkone.overlord.monitor.common.LiveRestKorrektur;
@@ -17,6 +26,7 @@ import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
 import de.kraftwerkone.overlord.monitor.common.Pflegestatus;
 import de.kraftwerkone.overlord.monitor.common.Rollupzeitraum;
+import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -74,11 +84,19 @@ class ProzessbaumServiceTest {
    */
   @Mock private LiveRestService liveRest;
 
+  /**
+   * Fehler live als Attrappe. <b>Ohne Stellung liefert sie „ausgesetzt"</b> — die Faelle von vor
+   * dem 18.09.2026 sehen damit dieselben Zahlen wie damals; was der Ersatz tut, steht in {@link
+   * FehlerLiveImBaum}.
+   */
+  @Mock private FehlerLiveService fehlerLive;
+
   private ProzessbaumService service() {
     when(liveRest.ermittle(any(), any()))
         .thenReturn(LiveRestErgebnis.ohneKorrektur(LiveRestEntscheidung.ausgesetztOhneLauf()));
+    when(fehlerLive.ermittle(any(), any(), any())).thenReturn(FehlerLiveErgebnis.ausgesetzt());
     return new ProzessbaumService(
-        repository, new MessageStatusClassifier(), Clock.fixed(JETZT, ZONE), liveRest);
+        repository, new MessageStatusClassifier(), Clock.fixed(JETZT, ZONE), liveRest, fehlerLive);
   }
 
   private void bestandMit(List<Prozessgeruestzeile> geruest, List<Prozesskennzahlzeile> zahlen) {
@@ -1207,6 +1225,389 @@ class ProzessbaumServiceTest {
       org.mockito.Mockito.verify(liveRest)
           .ermittle(
               org.mockito.ArgumentMatchers.eq(MANDANT), org.mockito.ArgumentMatchers.eq(WANDUHR));
+    }
+  }
+
+  // ─── Fehler live (Teil B, 18.09.2026) ─────────────────────────────────────────
+
+  /**
+   * <b>Die Fehler aus der Live-Lesung</b> ({@code docs/fehler-live.md} §5b): Nach der Verrechnung
+   * des Live-Rests fallen die Zeilen je Prozess und Rohstatus heraus, die der Klassifizierer als
+   * {@code FEHLER} einordnet, und die Zeilen der Lesung kommen hinzu — vor der Bildung der zwei
+   * Zahlen und vor der Klemme. Lesung und Live-Rest sind Attrappen mit erfundenen Zeilen, die Uhr
+   * steht (Regeln T1, T2); die Faelle hier stellen die Lesung auf „angewandt" oder lassen sie
+   * ausdruecklich „ausgesetzt".
+   *
+   * <p>Das Fenster am gestellten {@code jetzt} (05:09:47 in Europe/Berlin): {@code 48H} liest
+   * {@code 2025-12-28 06:00} bis {@code 2025-12-30 06:00}; G ist {@code 04:00}, der Live-Bereich
+   * reicht bis {@code 06:00}.
+   */
+  @Nested
+  @DisplayName("Fehler live — die Fehler aus der Lesung, ersetzt nach dem Live-Rest")
+  class FehlerLiveImBaum {
+
+    /** G: der Eimer des Laufs, in Wanduhrzeit — die Stunde vor der Stichtagsstunde. */
+    private static final LocalDateTime G = LocalDateTime.parse("2025-12-30T04:00:00");
+
+    private static final LocalDateTime NAECHSTE = G.plusHours(1);
+
+    /** Ein alter Eimer im 48-Stunden-Fenster, vor G — kein Delta-Lauf erreicht ihn mehr. */
+    private static final LocalDateTime ALTER_EIMER = LocalDateTime.parse("2025-12-29T09:00:00");
+
+    private void angewandt(FehlerLiveZeile... zeilen) {
+      when(fehlerLive.ermittle(any(), any(), any()))
+          .thenReturn(FehlerLiveErgebnis.angewandt(List.of(zeilen)));
+    }
+
+    private static FehlerLiveZeile fehler(
+        LocalDateTime stunde, String prozess, String status, long anzahl) {
+      return new FehlerLiveZeile(stunde, prozess, status, anzahl);
+    }
+
+    private static LiveRestZeile korrektur(
+        LocalDateTime stunde, String prozess, String status, long anzahl) {
+      return new LiveRestZeile(stunde, prozess, status, anzahl);
+    }
+
+    /** Ein angewandter Live-Rest ueber [G, G + 2 h) mit den gegebenen Korrekturzeilen. */
+    private void liveRestMit(List<LiveRestZeile> korrektur, Map<String, LocalDateTime> juengste) {
+      when(liveRest.ermittle(any(), any()))
+          .thenReturn(
+              new LiveRestErgebnis(
+                  LiveRestEntscheidung.angewandt(G, G.plusHours(2)),
+                  new LiveRestKorrektur(korrektur, juengste)));
+    }
+
+    private static List<ProzessknotenResponse> alleBlaetter(List<BaumknotenResponse> knoten) {
+      List<ProzessknotenResponse> gefunden = new ArrayList<>();
+      for (BaumknotenResponse einzeln : knoten) {
+        switch (einzeln) {
+          case GruppenknotenResponse gruppe -> gefunden.addAll(alleBlaetter(gruppe.kinder()));
+          case ProzessknotenResponse blatt -> gefunden.add(blatt);
+        }
+      }
+      return gefunden;
+    }
+
+    /** Das Blatt eines Prozesses, gleich in welcher Gliederung. */
+    private static ProzessknotenResponse blatt(ProzessbaumResponse antwort, String processId) {
+      return alleBlaetter(antwort.knoten()).stream()
+          .filter(blatt -> blatt.processId().equals(processId))
+          .findFirst()
+          .orElseThrow();
+    }
+
+    /**
+     * <b>Der Fall aus der Produktion, je Prozess</b> (gemeldet am 18.09.2026, Punkt 209): Eine
+     * Nachricht stand in einem alten Eimer auf {@code ERROR_TIMEOUT}; nach der Nachverarbeitung
+     * steht sie auf {@code RUNNING} in der laufenden Stunde. Der Rollup haelt den Fehler bis zum
+     * Volllauf, der Live-Rest kennt die Nachricht in der laufenden Stunde, und die Lesung findet
+     * keinen Fehler mehr.
+     *
+     * <p><b>Vorher und nachher mit denselben Zeilen:</b> Ausgesetzt zaehlt der Baum die Nachricht
+     * zweimal und einmal als Fehler — das ist der Befund. Angewandt zaehlt er sie einmal und nicht
+     * als Fehler, wie die Uebersicht.
+     */
+    @Test
+    @DisplayName("Der Fall aus der Produktion: nachverarbeitet, kein Fehler mehr, einmal gezaehlt")
+    void der_fall_aus_der_produktion() {
+      ProzessbaumService dienst = service();
+      bestandMit(
+          List.of(gepflegt("p1", "A", "ALPHA", "EINGEHEND", WANDUHR)),
+          List.of(zahl("p1", "ERROR_TIMEOUT", 1)));
+      liveRestMit(List.of(korrektur(NAECHSTE, "p1", "RUNNING", 1)), Map.of("p1", NAECHSTE));
+
+      ProzessbaumResponse vorher = dienst.baum(MANDANT, null, Baumgliederung.PARTNER);
+
+      assertThat(blatt(vorher, "p1").fehler())
+          .as("Ausgesetzt: der alte Eimer behaelt den Fehler — der Befund aus der Produktion")
+          .isEqualTo(1);
+      assertThat(blatt(vorher, "p1").nachrichten())
+          .as("… und die Nachricht zaehlt doppelt")
+          .isEqualTo(2);
+      assertThat(vorher.fehlerLive())
+          .isEqualTo(new FehlerLiveResponse(FehlerLiveZustand.AUSGESETZT));
+
+      angewandt();
+      ProzessbaumResponse nachher = dienst.baum(MANDANT, null, Baumgliederung.PARTNER);
+
+      assertThat(blatt(nachher, "p1").fehler()).isZero();
+      assertThat(blatt(nachher, "p1").nachrichten()).isEqualTo(1);
+      assertThat(nachher.gesamt().fehler()).isZero();
+      assertThat(nachher.gesamt().nachrichten()).isEqualTo(1);
+      assertThat(nachher.fehlerLive())
+          .isEqualTo(new FehlerLiveResponse(FehlerLiveZustand.ANGEWANDT));
+    }
+
+    /**
+     * Ein Fehler in der laufenden Stunde: Der Live-Rest rechnet ihn dazu, und die Lesung kennt ihn
+     * auch. <b>Er zaehlt einmal</b> — der Ersatz steht nach der Verrechnung und nimmt die
+     * Fehlerzeile der Korrektur heraus. Stuende er davor, kaeme sie hinterher wieder hinein.
+     */
+    @Test
+    @DisplayName("Ein Fehler im Live-Bereich zaehlt einmal, obwohl Live-Rest und Lesung ihn kennen")
+    void fehler_im_live_bereich_zaehlt_einmal() {
+      ProzessbaumService dienst = service();
+      bestandMit(
+          List.of(gepflegt("p1", "A", "ALPHA", "EINGEHEND", WANDUHR)),
+          List.of(zahl("p1", "FINISHED", 10)));
+      liveRestMit(List.of(korrektur(G, "p1", "ERROR_TIMEOUT", 1)), Map.of("p1", G));
+      angewandt(fehler(G, "p1", "ERROR_TIMEOUT", 1));
+
+      ProzessbaumResponse antwort = dienst.baum(MANDANT, null, Baumgliederung.PARTNER);
+
+      assertThat(blatt(antwort, "p1").fehler()).isEqualTo(1);
+      assertThat(blatt(antwort, "p1").nachrichten()).isEqualTo(11);
+      assertThat(antwort.gesamt().fehler()).isEqualTo(1);
+      assertThat(antwort.gesamt().nachrichten()).isEqualTo(11);
+    }
+
+    /**
+     * Die Summen jeder Ebene entstehen nach dem Ersatz — in beiden Gliederungen dieselbe Kopfzahl,
+     * und jede Gruppe traegt die Summe ihrer Blaetter.
+     */
+    @Test
+    @DisplayName("Die Summen je Knoten und in gesamt, in beiden Gliederungen")
+    void summen_in_beiden_gliederungen() {
+      ProzessbaumService dienst = service();
+      String gepflegt = Pflegestatus.GEPFLEGT.name();
+      bestandMit(
+          List.of(
+              new Prozessgeruestzeile(
+                  "p1", "A", "Projekt X", "ALPHA", "EINGEHEND", gepflegt, WANDUHR),
+              new Prozessgeruestzeile(
+                  "p2", "B", "Projekt Y", "ALPHA", "AUSGEHEND", gepflegt, WANDUHR),
+              new Prozessgeruestzeile(
+                  "p3", "C", "Projekt X", "BETA", "EINGEHEND", gepflegt, WANDUHR)),
+          List.of(
+              zahl("p1", "FINISHED", 10),
+              zahl("p1", "ERROR_TIMEOUT", 3),
+              zahl("p2", "FINISHED", 20),
+              zahl("p3", "FINISHED", 5),
+              zahl("p3", "ERROR_DUPLICATE", 2)));
+      angewandt(
+          fehler(ALTER_EIMER, "p1", "ERROR_TIMEOUT", 1),
+          fehler(ALTER_EIMER, "p2", "COMMIT_REJECTED", 2),
+          fehler(ALTER_EIMER, "p3", "ERROR_DUPLICATE", 2));
+
+      ProzessbaumResponse partnerbaum = dienst.baum(MANDANT, null, Baumgliederung.PARTNER);
+      ProzessbaumResponse projektbaum = dienst.baum(MANDANT, null, Baumgliederung.PROJEKT);
+
+      List<GruppenknotenResponse> partner = gruppen(partnerbaum.knoten());
+      assertThat(partner)
+          .extracting(
+              GruppenknotenResponse::name,
+              GruppenknotenResponse::nachrichten,
+              GruppenknotenResponse::fehler)
+          .containsExactly(tuple("ALPHA", 33L, 3L), tuple("BETA", 7L, 2L));
+      assertThat(richtungen(partner.getFirst()))
+          .extracting(GruppenknotenResponse::nachrichten, GruppenknotenResponse::fehler)
+          .as("Eingehend p1, ausgehend p2")
+          .containsExactly(tuple(11L, 1L), tuple(22L, 2L));
+      assertThat(gruppen(projektbaum.knoten()))
+          .extracting(
+              GruppenknotenResponse::name,
+              GruppenknotenResponse::nachrichten,
+              GruppenknotenResponse::fehler)
+          .containsExactly(tuple("Projekt X", 18L, 3L), tuple("Projekt Y", 22L, 2L));
+      for (ProzessbaumResponse antwort : List.of(partnerbaum, projektbaum)) {
+        assertThat(antwort.gesamt().nachrichten()).isEqualTo(40);
+        assertThat(antwort.gesamt().fehler()).isEqualTo(5);
+      }
+    }
+
+    /**
+     * Das freie Fenster in drei Lagen zu G. Vor G gibt es keine Korrektur, <b>aber die Lesung</b> —
+     * der Abgang aus einem alten Eimer steht gerade dort; ueber G hinweg und ab G beides. Die
+     * Lesung bekommt jedes Mal das Fenster der Antwort, {@code bis} ausschliessend.
+     */
+    @Test
+    @DisplayName(
+        "Freies Fenster vor G, ueber G hinweg und ab G — vor G kein Live-Rest, aber die Lesung")
+    void lesung_im_freien_fenster_in_drei_lagen() {
+      ProzessbaumService dienst = service();
+      bestandMit(
+          List.of(gepflegt("p1", "A", "ALPHA", "EINGEHEND", WANDUHR)),
+          List.of(zahl("p1", "FINISHED", 10), zahl("p1", "ERROR_TIMEOUT", 2)));
+      liveRestMit(
+          List.of(korrektur(G, "p1", "FINISHED", 2), korrektur(NAECHSTE, "p1", "RUNNING", 1)),
+          Map.of("p1", NAECHSTE));
+      angewandt(
+          fehler(G.minusHours(30), "p1", "ERROR_TIMEOUT", 1), fehler(NAECHSTE, "p1", "ERROR_X", 1));
+
+      ProzessbaumResponse vorG =
+          dienst.baum(
+              MANDANT, Baumfenster.frei(G.minusDays(2), G.minusDays(1)), Baumgliederung.PARTNER);
+      ProzessbaumResponse ueberG =
+          dienst.baum(MANDANT, Baumfenster.frei(G.minusHours(3), NAECHSTE), Baumgliederung.PARTNER);
+      ProzessbaumResponse abG =
+          dienst.baum(MANDANT, Baumfenster.frei(G, G.plusHours(2)), Baumgliederung.PARTNER);
+
+      assertThat(vorG.gesamt())
+          .extracting(BaumsummeResponse::nachrichten, BaumsummeResponse::fehler)
+          .as("vor G: keine Korrektur, aber die Lesung — ein Fehler statt der zwei des Rollups")
+          .containsExactly(11L, 1L);
+      assertThat(ueberG.gesamt())
+          .extracting(BaumsummeResponse::nachrichten, BaumsummeResponse::fehler)
+          .as("ueber G hinweg: der Eimer G aus dem Live-Rest, im Fenster kein Fehler der Lesung")
+          .containsExactly(12L, 0L);
+      assertThat(abG.gesamt())
+          .extracting(BaumsummeResponse::nachrichten, BaumsummeResponse::fehler)
+          .as("ab G: beide Eimer, dazu der Fehler der laufenden Stunde")
+          .containsExactly(14L, 1L);
+      verify(fehlerLive).ermittle(eq(MANDANT), eq(G.minusDays(2)), eq(G.minusDays(1)));
+      verify(fehlerLive).ermittle(eq(MANDANT), eq(G.minusHours(3)), eq(NAECHSTE));
+      verify(fehlerLive).ermittle(eq(MANDANT), eq(G), eq(G.plusHours(2)));
+    }
+
+    /**
+     * <b>Die Lesung aendert nur Zahlen.</b> Letzte Bewegung und Zustand kommen weiter aus E-34 und
+     * dem Live-Rest (E-35) — auch ein Prozess, fuer den die Lesung Fehler liefert, bleibt still
+     * oder „nie", wenn Rollup und Live-Rest es sagen.
+     */
+    @Test
+    @DisplayName("Letzte Bewegung und Zustand bleiben durch die Lesung unveraendert")
+    void letzte_bewegung_und_zustand_unveraendert() {
+      ProzessbaumService dienst = service();
+      bestandMit(
+          List.of(
+              gepflegt("p1", "A", "ALPHA", "EINGEHEND", WANDUHR.minusMonths(4)),
+              gepflegt("p2", "B", "ALPHA", "EINGEHEND", null),
+              gepflegt("p3", "C", "ALPHA", "EINGEHEND", ALTER_EIMER)),
+          List.of(zahl("p3", "ERROR_TIMEOUT", 2)));
+
+      ProzessbaumResponse vorher = dienst.baum(MANDANT, null, Baumgliederung.PARTNER);
+      angewandt(
+          fehler(ALTER_EIMER, "p1", "ERROR_TIMEOUT", 1),
+          fehler(ALTER_EIMER, "p2", "COMMIT_REJECTED", 1),
+          fehler(NAECHSTE, "p3", "ERROR_X", 1));
+      ProzessbaumResponse nachher = dienst.baum(MANDANT, null, Baumgliederung.PARTNER);
+
+      assertThat(nachher.gesamt().fehler())
+          .as("Eichung: die Lesung ist angewandt und aendert die Zahlen")
+          .isEqualTo(3);
+      assertThat(vorher.gesamt().fehler()).isEqualTo(2);
+      for (String prozess : List.of("p1", "p2", "p3")) {
+        assertThat(blatt(nachher, prozess).letzteBewegung())
+            .as(prozess)
+            .isEqualTo(blatt(vorher, prozess).letzteBewegung());
+        assertThat(blatt(nachher, prozess).zustand())
+            .as(prozess)
+            .isEqualTo(blatt(vorher, prozess).zustand());
+      }
+      assertThat(blatt(nachher, "p1").zustand()).isEqualTo(Prozesszustand.STILL);
+      assertThat(blatt(nachher, "p2").zustand()).isEqualTo(Prozesszustand.NIE);
+      assertThat(blatt(nachher, "p3").zustand()).isEqualTo(Prozesszustand.BEWEGT);
+      assertThat(nachher.gesamt())
+          .extracting(BaumsummeResponse::bewegt, BaumsummeResponse::still, BaumsummeResponse::nie)
+          .containsExactly(1, 1, 1);
+    }
+
+    /**
+     * <b>Die Klemme bleibt, wo sie war: je Prozess, je Zahl einzeln, nach dem Ersatz.</b> Bei
+     * {@code p1} laeuft {@code RUNNING} mit der Korrektur auf minus zwei, und die Lesung bringt
+     * einen Fehler: <i>Nachrichten</i> minus eins wird null, <i>Fehler</i> bleibt eins — geklemmt
+     * je Zeile stuende dort eine Nachricht. Bei {@code p2} traegt die Korrektur eine negative
+     * Fehlerzeile; sie faellt mit dem Ersatz heraus, und es zaehlt der Fehler der Lesung.
+     */
+    @Test
+    @DisplayName("Die Klemme: eine negative Korrektur neben Fehlern der Lesung, je Prozess")
+    void die_klemme() {
+      ProzessbaumService dienst = service();
+      bestandMit(
+          List.of(
+              gepflegt("p1", "A", "ALPHA", "EINGEHEND", WANDUHR),
+              gepflegt("p2", "B", "ALPHA", "EINGEHEND", WANDUHR)),
+          List.of(zahl("p1", "RUNNING", 1), zahl("p2", "ERROR_TIMEOUT", 2)));
+      liveRestMit(
+          List.of(korrektur(G, "p1", "RUNNING", -3), korrektur(G, "p2", "ERROR_TIMEOUT", -5)),
+          Map.of());
+      angewandt(fehler(G, "p1", "ERROR_TIMEOUT", 1), fehler(G, "p2", "ERROR_TIMEOUT", 1));
+
+      ProzessbaumResponse antwort = dienst.baum(MANDANT, null, Baumgliederung.PARTNER);
+
+      assertThat(blatt(antwort, "p1").nachrichten())
+          .as("geklemmt je Prozess nach dem Ersatz, nicht je Zeile")
+          .isZero();
+      assertThat(blatt(antwort, "p1").fehler()).as("je Zahl einzeln geklemmt").isEqualTo(1);
+      assertThat(blatt(antwort, "p2").nachrichten()).isEqualTo(1);
+      assertThat(blatt(antwort, "p2").fehler()).isEqualTo(1);
+      assertThat(antwort.gesamt().nachrichten()).isEqualTo(1);
+      assertThat(antwort.gesamt().fehler()).isEqualTo(2);
+    }
+
+    /**
+     * <b>Faellt die Lesung aus, rechnet der Baum wie vorher</b> — die Fehler aus Rollup und
+     * Live-Rest —, und der Block sagt es. Der Block steht in allen Modi und beiden Gliederungen.
+     */
+    @Test
+    @DisplayName(
+        "Ausgesetzt ergibt die Zahlen von vorher — samt Block, in allen Modi und Gliederungen")
+    void ausgesetzt_ergibt_die_zahlen_von_vorher() {
+      ProzessbaumService dienst = service();
+      bestandMit(
+          List.of(gepflegt("p1", "A", "ALPHA", "EINGEHEND", WANDUHR)),
+          List.of(zahl("p1", "FINISHED", 10), zahl("p1", "ERROR_TIMEOUT", 5)));
+      List<Baumfenster> modi =
+          List.of(
+              Baumfenster.paar(Rollupzeitraum.STUNDEN_48),
+              Baumfenster.paar(Rollupzeitraum.TAGE_30),
+              Baumfenster.paar(Rollupzeitraum.MONATE_12),
+              Baumfenster.frei(G.minusDays(3), G));
+
+      for (Baumfenster modus : modi) {
+        for (Baumgliederung gliederung : Baumgliederung.values()) {
+          ProzessbaumResponse antwort = dienst.baum(MANDANT, modus, gliederung);
+          String lage = modus.code() + "/" + gliederung;
+          assertThat(antwort.fehlerLive())
+              .as(lage)
+              .isEqualTo(new FehlerLiveResponse(FehlerLiveZustand.AUSGESETZT));
+          assertThat(antwort.gesamt().nachrichten()).as(lage).isEqualTo(15);
+          assertThat(antwort.gesamt().fehler()).as(lage).isEqualTo(5);
+        }
+      }
+
+      angewandt(fehler(ALTER_EIMER, "p1", "ERROR_TIMEOUT", 3));
+      for (Baumfenster modus : modi) {
+        for (Baumgliederung gliederung : Baumgliederung.values()) {
+          ProzessbaumResponse antwort = dienst.baum(MANDANT, modus, gliederung);
+          String lage = modus.code() + "/" + gliederung;
+          assertThat(antwort.fehlerLive())
+              .as(lage)
+              .isEqualTo(new FehlerLiveResponse(FehlerLiveZustand.ANGEWANDT));
+          assertThat(antwort.gesamt().nachrichten()).as(lage).isEqualTo(13);
+          assertThat(antwort.gesamt().fehler()).as(lage).isEqualTo(3);
+        }
+      }
+    }
+
+    /**
+     * <b>Ein Uhrenschlag:</b> Die Lesung bekommt genau das Fenster, das der Baum aus seinem einen
+     * {@code jetzt} bildet, und der Live-Rest dasselbe {@code jetzt}. Bei {@code FREI} ist {@code
+     * bis} das ausschliessende Ende der Antwort — die angefragte letzte Stunde plus eine Stunde.
+     */
+    @Test
+    @DisplayName("Fenster, Live-Rest und Lesung bekommen denselben Uhrenschlag")
+    void ein_uhrenschlag() {
+      ProzessbaumService dienst = service();
+      bestandMit(List.of(), List.of());
+
+      for (Rollupzeitraum paar : Rollupzeitraum.values()) {
+        dienst.baum(MANDANT, Baumfenster.paar(paar), Baumgliederung.PARTNER);
+        Zeitfenster fenster = paar.fenster(WANDUHR);
+        verify(fehlerLive).ermittle(eq(MANDANT), eq(fenster.von()), eq(fenster.bis()));
+      }
+      verify(liveRest, times(Rollupzeitraum.values().length)).ermittle(eq(MANDANT), eq(WANDUHR));
+
+      // Winterzeit in Europe/Berlin: 08:00Z ist 09:00, die letzte Stunde 10:00Z ist 11:00.
+      Baumfenster frei =
+          Baumfenster.ausAnfrage(null, "2025-12-29T08:00:00Z", "2025-12-29T10:00:00Z", ZONE);
+      dienst.baum(MANDANT, frei, Baumgliederung.PARTNER);
+      verify(fehlerLive)
+          .ermittle(
+              eq(MANDANT),
+              eq(LocalDateTime.parse("2025-12-29T09:00")),
+              eq(LocalDateTime.parse("2025-12-29T12:00")));
     }
   }
 }
