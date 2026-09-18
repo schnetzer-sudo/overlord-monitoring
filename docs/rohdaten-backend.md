@@ -466,6 +466,16 @@ Widerspruch ist:**
    richtet sich gegen einen Pfad, auf dem `MANDANT` *mehr* bekommt als in der Anzeige — hier
    bekommen beide Rollen dasselbe, und die Anzeige kann Bytes nur nicht als Text darstellen.
 
+> **Ergänzt 17.09.2026 — es sind seither drei Stellen, und die dritte liegt nicht hier.** Die
+> Darstellungswahl der Dateiansicht (E‑201, [`dateiansicht-darstellung.md`](dateiansicht-darstellung.md)) fügt
+> im Browser Zeilenumbrüche und Einrückung ein; der Download liefert weiterhin die Bytes, die diese
+> Seite beschreibt. Das Backend ist davon unberührt — kein Endpunkt, kein Feld, kein Ereignis —,
+> und der Gleichlauf oben gilt unverändert: Der Unterschied liegt in Leerraum, den das Frontend
+> einfügt, nicht in Bytes, die das Backend hergibt. **Hex** rechnet die Zeichencodes des
+> Anzeigetexts zurück und ist deshalb nur dort verlustfrei, wo der Text außer der Dekodierung
+> unverändert ist: bei `ASCII` und `ISO_8859_1`. Bei `UTF_8` entfernt `Inhaltseinstufung` eine
+> führende BOM — Hex ist dort nicht verfügbar (E‑204, offener Punkt 199).
+
 > **Ergänzt 17.09.2026.** Zu 1: Die Grenze zählt Bytes der jeweiligen Kodierung, und gekappt wird
 > **auf einer Zeichengrenze** (`Kodierung.gekappt`): Bei UTF-8 geht der Schnitt bis zum Beginn
 > der angeschnittenen Folge zurück, damit kein Ersatzzeichen entsteht, das in der Datei nie stand —

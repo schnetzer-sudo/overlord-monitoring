@@ -431,6 +431,17 @@ vergleicht. Dieselbe Entscheidung wie beim `gekapptHinweis` der technischen Eige
 - **Festbreitenschrift, keine Umformatierung, keine Syntaxhervorhebung.** Die vier abgeschalteten
   Formatumwandlungen des Altsystems bleiben abgeschaltet (`PROJEKTBESCHREIBUNG.md` §9).
 
+> **Korrigiert 17.09.2026 zum dritten Punkt (E‑193 bis E‑205).** „Keine Umformatierung" gilt nicht
+> mehr; „keine Syntaxhervorhebung" gilt weiter. Die Ansicht trägt seither eine Auswahl
+> **Darstellung** — Original, EDIFACT, ANSI X12, VDA, IDoc, XML, JSON, Hex —, die Zeilenumbrüche
+> und Einrückung einfügt, ausschließlich außerhalb von Daten, als reine Funktionen in
+> `features/nachrichten/darstellung/` ([`dateiansicht-darstellung.md`](dateiansicht-darstellung.md)). Beim
+> Öffnen steht immer das Original, das erkannte Format ist nur vorgemerkt. **Der erste Punkt
+> bleibt unverändert wahr**: ein Textknoten in einem `<pre>`, in jeder der acht Darstellungen —
+> `tests/artefakt-ansicht.test.tsx` weist es seither in allen acht nach, dazu an einem
+> wohlgeformten XML mit `<script>`, das tatsächlich formatiert wird. Der zweite Punkt auch: kein
+> Element je Zeile.
+
 `tests/artefakt-ansicht.test.tsx` stellt einen erfundenen Inhalt, der **gültiges HTML ist**, und
 weist nach: kein einziges Element im Feld, genau *ein* Kind, und das ist ein Textknoten. Damit sind
 die Sicherheitsregel und die Bauvorgabe aus M60 in einem Test belegt.
@@ -572,6 +583,19 @@ gerenderten Baum, dass der Ausschnitt-Vermerk **fehlt**, wenn er nicht greift.
 - **Kein Download-Knopf in der Liste.** Ob sich ein Artefakt herunterladen lässt, weiß erst der
   Abruf.
 
+> **Ergänzt 17.09.2026 — die dritte benannte Stelle, an der Anzeige und Download auseinandergehen
+> dürfen (E‑201).** [`rohdaten-backend.md`](rohdaten-backend.md) §7 nennt zwei: die Kappung und die
+> Binärdatei. Seit der Darstellungswahl gibt es eine dritte, und sie liegt allein im Frontend: Ist
+> eine Darstellung außer Original angewandt, zeigt die Ansicht den formatierten Text, **der
+> Download liefert die Originaldatei** — denselben Verweis, denselben Knopf, keinen zweiten. Ein
+> Vermerk sagt es, solange eine Darstellung angezeigt ist ([`dateiansicht-darstellung.md`](dateiansicht-darstellung.md)
+> §4). Entscheidung 9 ist davon nicht berührt: Der Unterschied liegt in Leerraum, den das Frontend
+> einfügt, nicht in Bytes, die das Backend hergibt.
+>
+> *Präzisiert am 18.09.2026 (E‑206):* Der Vermerk steht, solange das Angezeigte **vom Original
+> abweicht** — nicht schon, weil eine Darstellung gewählt ist. Ändert sie nichts, etwa bei schon
+> umbrochenem EDIFACT, steht kein Vermerk: Dann liefert der Download genau, was da steht.
+
 ### Die Oberfläche bietet keinen Knopf an, der etwas anderes verspricht als die Anzeige
 
 Das ist Entscheidung 9 in der Oberfläche. `downloadMoeglich` in `rohdaten.ts` entscheidet es aus dem
@@ -657,7 +681,7 @@ Fließtext*; die Sätze der Zustandsfelder tragen sie deshalb einzeln (`max-w-pr
 | | |
 |---|---|
 | Datenholen | TanStack Query. Der Inhalt **erst beim Öffnen der Ansicht**, nicht mit der Liste |
-| Zustand in der URL | Die Ansicht ist **Pfad, nicht Abfrage**. Der Aufklappzustand des Blocks steht nirgends — er ist keine Ansicht, die jemand teilt |
+| Zustand in der URL | Die Ansicht ist **Pfad, nicht Abfrage**. Der Aufklappzustand des Blocks steht nirgends — er ist keine Ansicht, die jemand teilt. **Korrigiert 17.09.2026 (E‑202):** Einen Abfrageparameter gibt es seither doch — `darstellung`, die gewählte Darstellung, über nuqs; der Standard `original` steht nie in der Adresse (bewusst ohne `clearOnDefault: false`, weil das Original nichts weglässt). Verweise **in** die Ansicht tragen ihn weiterhin nicht ([`dateiansicht-darstellung.md`](dateiansicht-darstellung.md) §4) |
 | BFF | Next.js reicht durch und trifft **keine** Berechtigungsentscheidung |
 | Bildlaufleisten | **eine je Seite**, siehe §7 |
 | Fehlerformat | RFC 9457 über `lib/http.ts`, übersetzt über den `type` — wie seit Schritt 3 |
@@ -850,6 +874,7 @@ Einschränkung — §5 legt die *Beschriftung* fest, und die steht im zugänglic
 | `features/nachrichten/components/eigenschaften-block.tsx` | *(Schritt 5)* das Sprungziel: `id` je Gruppe, Aufklappen und Fokus |
 | `features/nachrichten/components/nachricht-detail.tsx` | hängt Eingangszeile, Leiste, Rest und Eigenschaften zusammen und hält das Sprungziel |
 | `features/nachrichten/components/artefakt-ansicht.tsx` | Die Ansicht: Herkunftszeile, Download, Vermerke, Inhalt oder benannter Zustand. *Seit 17.09.2026:* der Kodierungswert aus der Antwort statt der festen Zeichenkette, der fünfte Zustand mit dem Zeichen `Server` |
+| `features/nachrichten/darstellung/` *(17.09.2026)* | **Die Darstellungswahl** — dreizehn Dateien mit reinen Funktionen: je Darstellung Erkennung und Formatierung, die Anwendung, die Vermerke, der Parser für `darstellung`. `artefakt-ansicht.tsx` ist dafür in Hülle (`ArtefaktAnsicht`, an der Adresse) und Ansicht (`Dateiansicht`, mit Darstellung und Setter als Props) geteilt; `hooks.ts` trägt `useDarstellung`. Vollständig in [`dateiansicht-darstellung.md`](dateiansicht-darstellung.md) |
 | `app/(app)/nachrichten/[messageId]/dateien/[artefaktId]/page.tsx` | Die Route. Server-Komponente, prüft nichts |
 | `lib/routen.ts` | `artefaktAnsicht` und `nachrichtAnsicht` — die beiden neuen Ziele |
 | `i18n/de.ts`, `i18n/en.ts` | Der Abschnitt `nachrichten.detail.dateien`. **Keine Zeichenkette steht in einer Komponente.** *Seit 17.09.2026:* `kodierung` ist ein Objekt mit `ASCII`, `UTF_8`, `ISO_8859_1` statt einer Zeichenkette mit Platzhalter; dazu `ebcdicTitel` und `ebcdicText` |

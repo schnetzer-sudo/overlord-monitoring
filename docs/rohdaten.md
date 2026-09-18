@@ -28,6 +28,15 @@ Implementierungsplan, der ausschließlich Download vorsah.
 > Auswahl — Edifact, VDA, XML, ANSI —, alle vier sind `disabled: true`, der Umformatierungscode
 > existiert. Jemand hat sie gebaut und abgeschaltet. Warum, ist offen (§13).
 
+> **Korrigiert 17.09.2026 zum Kasten darüber (E‑193 bis E‑205).** „Das bleibt ausgeschlossen" gilt
+> seither nur für die Zerlegung in Segmente **mit Beschreibung**. Die Dateiansicht trägt eine
+> Auswahl **Darstellung** — Original, EDIFACT, ANSI X12, VDA, IDoc, XML, JSON, Hex —, die die
+> **Struktur** sichtbar macht: Zeilenumbrüche und Einrückung, ausschließlich außerhalb von Daten,
+> als reine Funktionen im Frontend ([`dateiansicht-darstellung.md`](dateiansicht-darstellung.md)). Die
+> Rohtextanzeige bleibt der Regelfall: Beim Öffnen steht immer das Original. Entschieden vom
+> Auftraggeber am 17.09.2026; §9 der Projektbeschreibung trägt dieselbe Korrektur. Warum das
+> Altwerkzeug seine vier Formate abgeschaltet hat, ist weiterhin offen (§13, Punkt 3).
+
 ---
 
 ## 2. Was gemessen ist
@@ -419,6 +428,14 @@ dort keinen leeren Kasten, sondern einen benannten Hinweis (§8).
 > Zeichengrenze, damit keine UTF-8-Folge zerschnitten wird — dieselbe Regel wie bei den
 > Eigenschaftswerten ([`nachrichtendetail.md`](nachrichtendetail.md)).
 
+> **Korrigiert 17.09.2026 zum ersten Punkt (E‑193 bis E‑205).** Er lautete: „Festbreitenschrift,
+> keine Umformatierung, keine Syntaxhervorhebung." Die Festbreitenschrift bleibt, **die
+> Syntaxhervorhebung bleibt ausgeschlossen** — die Umformatierung gibt es seither als Auswahl
+> „Darstellung": Zeilenumbrüche und Einrückung, ausschließlich außerhalb von Daten, tokenbasiert
+> und nie über einen Parser, der neu schreibt ([`dateiansicht-darstellung.md`](dateiansicht-darstellung.md)).
+> Jedes andere Zeichen bleibt, wie und wo es ist; das Ergebnis ist weiterhin genau ein Textknoten
+> im `<pre>`. Beim Öffnen steht immer das Original.
+
 ---
 
 ## 8. Die vier Zustände
@@ -507,7 +524,7 @@ Gegenstand dieser Datei.
 |---|---|
 | 1 | **Die SOAP-Abhängigkeit.** M71 hat mit `javax.xml.soap-api:1.4.0` und `saaj-impl:1.5.3` funktioniert — einem Zweig, der in einem Spring-Boot-4-Projekt (Jakarta EE 11) ein Fremdkörper ist. Die `jakarta`-Variante wäre stimmiger, aber ihr Verhalten auf der Leitung ist ungeprüft. **Auflösbar durch eine Messung:** Lauf gegen den lokalen Lauscher aus M70, Vergleich der Bytes |
 | 2 | **Ein handgebauter Envelope ist unbelegt.** M59 (2) scheiterte; welcher der zwölf Unterschiede aus M70 den Ausschlag gab, ist nicht gemessen. Der BOM ist der plausible Kandidat, mehr nicht |
-| 3 | **Warum sind die vier Formate im Altsystem abgeschaltet?** Der Umformatierungscode existiert. Die Antwort betrifft §9 der Projektbeschreibung |
+| 3 | **Warum sind die vier Formate im Altsystem abgeschaltet?** Der Umformatierungscode existiert. Die Antwort betrifft §9 der Projektbeschreibung. **Ergänzt 17.09.2026:** Die Formate sind jetzt hier gebaut — Edifact, VDA, XML, ANSI und dazu IDoc, JSON, Hex, als reine Funktionen im Frontend ([`dateiansicht-darstellung.md`](dateiansicht-darstellung.md)). **Der Grund der Abschaltung bleibt offen**; der Auftrag vom 17.09.2026 nennt ihn nicht (dort Punkt 202) |
 | 4 | **V4 bleibt unbeantwortet.** Die Aufbewahrungsfrist im Filestore ist nicht gemessen — die zuständigen Ablagen sind aus. Die 18 Monate sind Auskunft, keine Messung |
 | 5 | **Die Abnahme braucht eine Nachricht aus 2025-07-24 bis 2025-12-30.** Das ist das einzige Fenster, in dem Datenbankkopie und Filestore-Kopie sich decken |
 | 6 | **Mehr als ein ZIP-Eintrag** ist nie vorgekommen (0 von 693). Der Fall wird trotzdem behandelt — falls er auftritt, ist zu entscheiden, ob alle Einträge angeboten werden |

@@ -713,6 +713,15 @@ ausgeschlossen (`PROJEKTBESCHREIBUNG.md` §9). Gebaut wird die **Rohtextanzeige*
 der Detailansicht (Entscheidung 7). Keine Zeilennummern, kein Umschalter auf UTF-8, keine
 Syntaxhervorhebung. Kein Rückfall zwischen den Ablagen.
 
+> **Korrigiert 17.09.2026 zum Absatz darüber (E‑193 bis E‑205).** „Keine aufbereitete Anzeige"
+> gilt seither nur noch für die Zerlegung in Segmente **mit Beschreibung**. Als Nachtrag zu
+> Schritt 8 trägt die Dateiansicht eine Auswahl **Darstellung** — Original, EDIFACT, ANSI X12, VDA,
+> IDoc, XML, JSON, Hex —, die die Struktur sichtbar macht (Zeilenumbrüche, Einrückung), als reine
+> Funktionen im Frontend und ohne Backend ([`dateiansicht-darstellung.md`](dateiansicht-darstellung.md)). Was
+> weiter gilt: Rohtext beim Öffnen, keine Zeilennummern, kein Umschalter auf UTF-8, **keine
+> Syntaxhervorhebung**, kein Rückfall zwischen den Ablagen. `PROJEKTBESCHREIBUNG.md` §7 und §9
+> tragen dieselbe Korrektur.
+
 **Abnahme:** Eine Nutzdatei und ein Protokoll sind **angesehen** und **heruntergeladen**. Bei einem
 Protokoll sieht `MANDANT` nur den maskierten Innenbereich, `ADMIN` die vollständige Datei, und der
 Download liefert jeweils dasselbe wie die Anzeige. Die vier inhaltslosen Fälle tragen jeder einen

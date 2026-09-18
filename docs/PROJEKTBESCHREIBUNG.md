@@ -1088,6 +1088,14 @@ unverändert, in Festbreitenschrift, als Textknoten gerendert und niemals als HT
 **aufbereitete** Anzeige — EDIFACT, VDA und IDOC in Segmente zerlegt — bleibt ausgeschlossen
 (Abschnitt 9).
 
+> **Korrigiert 17.09.2026 zum letzten Satz darüber (E‑193 bis E‑205).** Er bleibt wörtlich stehen
+> und gilt seither nur noch zur Hälfte: Ausgeschlossen bleibt die Zerlegung in Segmente **mit
+> Beschreibung**; die **strukturelle** Formatierung — Zeilenumbrüche und Einrückung, ausschließlich
+> außerhalb von Daten — gibt es seit diesem Tag als Auswahl „Darstellung" in der Dateiansicht, als
+> reine Funktionen im Browser ([`dateiansicht-darstellung.md`](dateiansicht-darstellung.md)). Der Textknoten
+> bleibt: kein HTML, kein Element je Zeile — auch für den formatierten Text. Vollständig in
+> Abschnitt 9.
+
 **Jeder Abruf läuft immer über das Backend, niemals als direkter Link in den Browser.**
 Der Filestore kennt unsere Nutzer nicht und kann die Mandantenprüfung nicht leisten. Ein
 durchgereichter Link wäre ein unkontrollierter, per Copy-Paste teilbarer Zugang. Kein Endpunkt nimmt
@@ -1739,6 +1747,21 @@ Clock, sondern immer die Systemuhr.
   > `ServiceLastStatusMessage` in irgendeiner Antwort (E‑122).
 - **Aufbereitete** Anzeige der Rohdaten im Browser (EDIFACT/VDA/IDOC in Segmente zerlegt) — gebaut
   ist die **Rohtextanzeige**: die Datei als Text, unverändert, in Festbreitenschrift
+  > ### ⚠️ Diese Zeile ist am 17.09.2026 zum Teil aufgehoben *(E‑193 bis E‑205)*
+  >
+  > **Sie bleibt Zeichen für Zeichen stehen**, damit ablesbar bleibt, dass es eine Entscheidung
+  > war und keine Unterlassung. Was gilt: Die Dateiansicht trägt seit dem 17.09.2026 eine Auswahl
+  > **Darstellung** — Original, EDIFACT, ANSI X12, VDA, IDoc, XML, JSON, Hex — und macht damit die
+  > **Struktur** sichtbar: Zeilenumbrüche und Einrückung, ausschließlich außerhalb von Daten, als
+  > reine Funktionen im Browser, ohne Backend, ohne Endpunkt, ohne Audit-Ereignis
+  > ([`dateiansicht-darstellung.md`](dateiansicht-darstellung.md)). Beim Öffnen steht immer das Original; ein
+  > erkanntes Format ist nur vorgemerkt.
+  >
+  > **Was weiter ausgeschlossen bleibt:** die Zerlegung in Segmente **mit Beschreibung** — Segment-,
+  > Element- und Feldbeschreibungen, ein Verzeichnis der Formate, Syntaxhervorhebung, Farbe im
+  > Inhalt. Die Klammer dieser Zeile („in Segmente zerlegt") bleibt damit in ihrem Kern richtig;
+  > gefallen ist allein der Ausschluss der **strukturellen** Formatierung. Entschieden vom
+  > Auftraggeber am 17.09.2026.
 - Benachrichtigungen und Alarmierung
 - Chatbot
 
