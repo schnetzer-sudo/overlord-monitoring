@@ -24,6 +24,13 @@ import { useAnmelden } from "../hooks";
  * Nach der Anmeldung geht es an den ursprünglich angefragten Ort zurück — aber
  * nur, wenn der geprüft ist (`sicheresZiel`); sonst wäre die Anmeldeseite eine
  * offene Weiterleitung.
+ *
+ * **Wer die Seite öffnet, kann sofort tippen** (E‑215,
+ * `docs/frontend-grundlagen.md` §3): Der Fokus steht im Feld „Benutzername“,
+ * gesetzt über `autoFocus` und über nichts sonst. Beim direkten Aufruf steht das
+ * Attribut im serverseitig gerenderten HTML, und der Browser setzt den Fokus;
+ * nach der Umleitung aus einer geschützten Route setzt ihn React beim
+ * Einhängen. Kein Effekt mit `focus()`, kein Zeitgeber.
  */
 export function AnmeldeFormular() {
   const texte = useTexte();
@@ -62,6 +69,7 @@ export function AnmeldeFormular() {
           name="username"
           autoComplete="username"
           autoCapitalize="none"
+          autoFocus
           spellCheck={false}
           required
           className="min-h-feld"
