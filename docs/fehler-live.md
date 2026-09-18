@@ -53,6 +53,24 @@ Treffer), M187 (9) und Punkt `**208**` (3); auf `feat/suchfeld-untermenues` M150
 | **Offene Punkte** | **ab 209.** Höchster: **208** ([`dateiansicht-darstellung.md`](dateiansicht-darstellung.md)). Die Treffer auf `**209**` bis `**219**` sind Zahlen in Tabellenzellen und im Fließtext der Messdateien (`messungen-schritt7.md` **216**, **219**; `messungen-schritt9.md` **217**; `messungen-schritt10.md` **216**; `messungen-schritt10b.md` **212**; die Zeile zu `messungen-schritt7.md` in [`README.md`](README.md)) — gelesen, keine Punkte. *Der Auftrag erwartete Punkt 196 — vergeben an dieselbe Runde (196 bis 208)* |
 | **Schritt** | **10f.** Kein Treffer auf `\b10f\b` oder `10‑f` in keiner Quelle; die Darstellungswahl ist ein Nachtrag zu Schritt 8 und kein eigener Schritt |
 
+> **Teil B, 18.09.2026, vor der ersten Vergabe** — dieselben Quellen mit `git grep -n -E` auf
+> `HEAD` (`docs/*.md`, `DEVELOPMENT_GUIDELINES.md`, `backend/src`, `frontend/src`, `frontend/tests`,
+> dazu `scripts/`), über die zwei Zweige, die nicht in `main` sind (`feat/suchfeld-untermenues`,
+> `test/indexbestand-e37`), und mit `grep -rnE` über die Arbeitsbäume `overlord-monitoring-e37` und
+> `overlord-monitoring-neu-laden`. Der Strich über `E.{0,3}<Zahl>\b`. **Geeicht** auf `HEAD`: E‑212
+> (7 Zeilen, alle mit U+2011), die ASCII-Form an E‑208 im Java-Code (20 Zeilen `E-208`, 38 mit dem
+> Muster), M188 (33 Zeilen), `**215**` (3); auf `feat/suchfeld-untermenues` M150 (12), auf
+> `test/indexbestand-e37` M44 (69), in den Arbeitsbäumen M44 (89 und 114). Jeder Treffer gelesen.
+>
+> | | |
+> |---|---|
+> | **Entscheidungen** | **ab E‑213.** Höchste vergebene: **E‑212** (Teil A). Kein Treffer auf `E.{0,3}2(1[3-9]\|2[0-9])\b` — weder auf `HEAD` noch in den Zweigen, den Arbeitsbäumen oder `scripts/`. Die bekannten Falschtreffer (E‑780; die Zeile *„Der Bereich M86–M99 ist frei"* in [`messungen-schritt10.md`](messungen-schritt10.md)) trifft dieses Muster nicht |
+> | **Messung** | **M189.** Höchste: **M188** (Teil A). Kein Treffer auf `\bM(189\|19[0-9])\b`, auch nicht in `scripts/` |
+> | **Offene Punkte** | **ab 216.** Höchster: **215** (Teil A). Die Treffer auf `**216**` bis `**229**` sind Zahlen in Tabellenzellen und im Fließtext, keine Punkte: [`messungen-schritt7.md`](messungen-schritt7.md) **219** (2), **216** (3); [`messungen-schritt9.md`](messungen-schritt9.md) **226** (3), **217** (2), **224** (2), **222**; [`messungen-schritt10.md`](messungen-schritt10.md) **216**; [`bam-suche.md`](bam-suche.md) **219**; [`process-view.md`](process-view.md) **229** (2); [`prozess-katalog-backend.md`](prozess-katalog-backend.md) **224**; zwei Zeilen in [`README.md`](README.md) (**226**, **216**) und die Nummernvergabe oben |
+> | **Schritt** | **10f** — Teil B ist kein eigener Schritt |
+>
+> *Der Auftrag erwartete „ab E‑213, M189, Punkt 216" — zutreffend.*
+
 ---
 
 ## 1. Anlass
@@ -285,6 +303,175 @@ grün.
   live. Bis heute konnte die Kachel dort eine nachverarbeitete Nachricht mitzählen, die die Liste
   nicht mehr zeigte; bei angewandter Lesung nicht mehr. Die eine Grenze bleibt, wie sie war: `bis`
   ist im Dashboard ausschließend, in der Liste nicht (§6.3 dort).
+
+---
+
+## 5b. Der Prozessbaum — Teil B *(18.09.2026)*
+
+*Auftrag „Fehler live, Teil B (Prozessbaum)", Stand 18.09.2026, Zweig `feat/fehler-live` — Teil A
+liegt noch nicht in `main`. Schritt 10f.* Der Baum ruft denselben Baustein wie die Übersicht: **die
+Einordnung `FEHLER` aus der Live-Lesung, alle anderen aus Rollup und Live-Rest** (E‑208, unverändert).
+Das ist ein zweiter Verbraucher derselben vierten Ausnahme von L2 und **kein fünfter Fall**.
+
+**Eingecheckt ist zuerst nur die Vorregistrierung der Messung M189, vor dem ersten Lauf.** Der Bau,
+die Ergebnisse und die Tests folgen in diesem Abschnitt.
+
+### Die Messung — M189 (Regeln L7, L15)
+
+> #### Vorregistriert — eingetragen und eingecheckt vor dem ersten Lauf
+>
+> **Rahmen, für alle vier Tore.** Gegen die Testkopie, Profil `dev`. **Sequenziell, nie parallel** —
+> kein zweiter Lauf gegen die Testkopie zur selben Zeit. Je Lage **ein Aufwärmlauf, dann die beste
+> von fünf**.
+>
+> - **In SQL (Tor 1):** `information_schema.PROFILING` **und** die Wanduhr des Servers (`SYSDATE(6)`
+>   vor und nach dem Statement, E‑107), Eichung um `SELECT 1`; `EXPLAIN` (Regel L15); die
+>   Handler-Zähler aus `information_schema.SESSION_STATUS` für einen Lauf (gelesene Indexsätze,
+>   gemessen statt geschätzt), ebenfalls um `SELECT 1` geeicht. **Der Text der Lesung ist aus dem Code
+>   gerendert** (`StatementType.STATIC_STATEMENT`, Wegwerf-Programm gegen eine jOOQ-Attrappe, am
+>   18.09.2026 vor dieser Vorregistrierung) und zeichengleich mit dem Text von M188; eingesetzt sind
+>   nur Fenster und Mandant. Die Sitzungen erzeugt `scripts/messung-fehler-live/erzeuge_m189.py`.
+> - **Am Endpunkt (Tore 2 bis 4):** `MessungM189DbIT`, die Bauform von M185 und M188. Je Lage **durch
+>   den Endpunkt** (`GET /api/prozesse/baum?…&gliederung=PARTNER`, HTTP-Umlauf im Testclient samt
+>   Sitzung und Serialisierung), **am Dienst** (`ProzessbaumService.baum`, Gliederung `PARTNER`) und
+>   als **Bezug in derselben Sitzung**: derselbe Baum am Dienst mit ausgesetzter Lesung — dieselben
+>   Bausteine, dieselbe Uhr, derselbe Live-Rest, nur `FehlerLiveService` liefert `AUSGESETZT`, ohne
+>   zu lesen. Das ist der Baum, wie er vor Teil B war. **Zuschlag** = Dienst minus Bezug. Uhr und
+>   Wasserstand über `@TestBean` gestellt wie in M185; kein Schreibzugriff auf `GlassfishDB` oder
+>   `rollup_lauf` (S1, T2). Zeiten nach `System.out` und in keine Zusicherung (T1). Ausgegeben wird
+>   je Lage auch die Zahl der Fehler im Fenster (die Kopfzahl `gesamt.fehler`).
+>
+> #### Tor 1 — die Lesung in SQL, das freie Fenster mit den meisten Fehlern (vor dem Einbau)
+>
+> **Die Lage wird per Zählung bestimmt, nach einer vorab festgelegten Regel:** unter allen freien
+> Fenstern von **genau einem Kalenderjahr** `[von, von + 1 Jahr)` — der größten Breite, die
+> `Baumfenster.ausAnfrage` zulässt —, deren `von` eine volle Stunde ist, in der `NEXANS` mindestens
+> einen Fehler trägt, das Fenster **mit den meisten Fehlern** (Fehlerbedingung, Mandantenkette,
+> `MessageLastUpdate` im Fenster); bei Gleichstand das früheste. *Warum die Fehlerstunden als Anfang
+> genügen:* Beginnt ein Fenster in einer Stunde ohne Fehler, trägt das Fenster ab seiner ersten
+> Fehlerstunde mindestens ebenso viele. Die Zählung ist die erste Abfrage der Sitzung und steht im
+> Protokoll; sie gibt Stunden und Zahlen aus, keine Kennungen (G1).
+>
+> **Erwartet:**
+>
+> | | |
+> |---|---|
+> | **Plan** | `Message` über **`MessageStatusIDX`** (`range`), die Kette per Primärschlüssel — wie in allen zwölf Lagen von M188 |
+> | **Gelesen** | **3.412** Indexsätze (`read_next`) — die Fehlerzeilen des ganzen Bestands, dieselbe Zahl wie in M188, unabhängig vom Fenster |
+> | **Laufzeit** | **Sie wächst mit den Fehlern im Fenster** (M188: 711 statt 50 Fehler kosten rund 10 ms mehr; die Lage mit 2.163 Fehlern ist dort nicht einzeln gemessen). *Gerechnet, nicht gemessen, nur für die Größenordnung:* die Gerade durch die zwei `NEXANS`-Lagen von M188 (Profil 21,6 ms bei 50, 31,5 ms bei 711 Fehlern), also rund 1,5 ms je 100 Fehler — `21,6 + 0,015 × (N − 50)` ms bei N Fehlern im Fenster. Das Fenster trägt mindestens 2.163 Fehler (das Zwölfmonatsfenster bis `2024-11-01` aus M188 ist ein Jahresfenster) und höchstens 3.301 (alle von `NEXANS`): nach der Geraden **53 bis 70 ms** |
+>
+> **Grenze:** In **keiner** Planzeile ein Zeitindex als `key` — weder `MessageLastUpdateIDX` noch
+> `MessageLastUpdateProcessMessageIDX`, auch nicht als Rowid-Filter. **Höchstens 100 ms** — in Profil
+> und Wanduhr.
+>
+> *Zusätzlich zum Auftrag, in derselben Sitzung:* dieselbe Lesung für **jedes Fenster der Tore 2 bis
+> 4** (die Tabellen unten; das `SUTTONS`-Fenster `2024-07-01` bis `2025-07-01` steht in Tor 2 und
+> Tor 3 und wird einmal gemessen) — `EXPLAIN`, Handler-Zähler, beste von fünf. Erwartet: derselbe
+> Plan, dieselbe Zahl gelesener Indexsätze (3.412 bei `NEXANS`, 3.413 bei `SUTTONS`, wie in M188).
+> Grenze dieselbe: kein Zeitindex, 100 ms.
+>
+> #### Tor 2 — der Baum durch den Endpunkt, typische Stunde aus M185
+>
+> **Lagen:** die typische Stunde aus M185 ([`live-rest.md`](live-rest.md) §8), `jetzt` = G + 1 h 30,
+> Wasserstand G + 1 h → Live-Rest `ANGEWANDT` über zwei Eimer; je `48H` und `12M`. Die Fenster aus
+> `Rollupzeitraum.fenster(jetzt)`, vom Code ausgegeben und nicht von Hand gerechnet (Wanduhrzeit der
+> Quelle, `bis` ausschließend):
+>
+> | Mandant | G | `jetzt` | Live-Bereich | `48H` | `12M` |
+> |---|---|---|---|---|---|
+> | `NEXANS` | `2025-11-09 15:00` | `16:30` | `15:00`–`17:00` | `2025-11-07 17:00` bis `2025-11-09 17:00` | `2024-12-01` bis `2025-12-01` |
+> | `SUTTONS` | `2025-06-09 19:00` | `20:30` | `19:00`–`21:00` | `2025-06-07 21:00` bis `2025-06-09 21:00` | `2024-07-01` bis `2025-07-01` |
+>
+> **Erwartet (Auftrag):** der Bezug plus **20 bis 35 ms** — die Lesung (M188 am Code: 21,5 bis 34,5 ms);
+> bei `NEXANS` `12M` durch den Endpunkt **rund 176 ms** (141,6 aus M185 plus 34,5 aus M188). Für alle
+> vier Lagen gerechnet, M185 durch den Endpunkt plus 20 bis 35 ms:
+>
+> | Lage | M185, Endpunkt | **erwartet, Endpunkt** |
+> |---|---:|---:|
+> | `NEXANS` `48H` | 83,862 | **103,9–118,9 ms** |
+> | `NEXANS` `12M` | 141,574 | **161,6–176,6 ms** |
+> | `SUTTONS` `48H` | 42,156 | **62,2–77,2 ms** |
+> | `SUTTONS` `12M` | 62,830 | **82,8–97,8 ms** |
+>
+> **Grenze: höchstens 200 ms je Lage** durch den Endpunkt. *Festgelegt vom Auftraggeber in diesem
+> Auftrag:* Die Schranke der typischen Stunde war **150 ms** (M152, M185); mit der Lesung wird sie
+> nach Rechnung überschritten (141,6 + 34,5 = 176,1 ms). Die neue Schranke ist die alte plus die
+> teuerste Lesung aus M188 (34,5 ms am Code), aufgerundet.
+>
+> #### Tor 3 — dasselbe, dichtester Vierstundenbereich aus M185
+>
+> **Lagen:** der dichteste Vierstundenbereich aus M185, `jetzt` = G + 3 h, Wasserstand G + 1 h →
+> `ANGEWANDT` über vier Eimer; je `48H` und `12M`:
+>
+> | Mandant | G | `jetzt` | Live-Bereich | `48H` | `12M` |
+> |---|---|---|---|---|---|
+> | `NEXANS` | `2024-10-09 18:00` | `21:00` | `18:00`–`22:00` | `2024-10-07 22:00` bis `2024-10-09 22:00` | `2023-11-01` bis `2024-11-01` |
+> | `SUTTONS` | `2025-06-12 07:00` | `10:00` | `07:00`–`11:00` | `2025-06-10 11:00` bis `2025-06-12 11:00` | `2024-07-01` bis `2025-07-01` |
+>
+> **Erwartet (Auftrag):** der Bezug plus **20 bis 35 ms**. Gerechnet, M185 plus 20 bis 35 ms:
+>
+> | Lage | M185, Endpunkt | **erwartet, Endpunkt** |
+> |---|---:|---:|
+> | `NEXANS` `48H` | 336,990 | **357,0–372,0 ms** |
+> | `NEXANS` `12M` | 324,843 | **344,8–359,8 ms** |
+> | `SUTTONS` `48H` | 69,116 | **89,1–104,1 ms** |
+> | `SUTTONS` `12M` | 75,473 | **95,5–110,5 ms** |
+>
+> **Ein Vorbehalt, aus denselben Zahlen gerechnet:** `NEXANS` `12M` liest hier das Fenster bis
+> `2024-11-01` mit **2.163 Fehlern** (M188, Zusatzlage von Tor 3). Nach der Geraden aus Tor 1 kostet
+> die Lesung dort rund 53 ms in SQL; der Zuschlag der Übersicht lag an dieser Lage bei 45,9 bis
+> 47,3 ms. **Dort wird der Zuschlag vermutlich über dem Band liegen** — rund 45 bis 55 ms. Das Band
+> bleibt die vorregistrierte Erwartung; die Rechnung steht daneben und ist keine Ausrede.
+>
+> **Grenze:** höchstens **500 ms** je Lage durch den Endpunkt.
+>
+> #### Tor 4 — der Baum durch den Endpunkt, `FREI`
+>
+> **Lagen:** `NEXANS` und `SUTTONS`, je die zwei freien Fenster aus M152 ([`process-view.md`](process-view.md)
+> §42), in der Anfrage in UTC wie dort:
+>
+> | Fenster | Wanduhrzeit, `bis` ausschließend | Segmente | Anfrage |
+> |---|---|---|---|
+> | **Jahr monatsbündig** | `2025-01-01 00:00` bis `2026-01-01 00:00` | eines, Monat | `von=2024-12-31T23:00:00Z&bis=2025-12-31T22:00:00Z` |
+> | **Bösfall** | `2024-12-30 14:00` bis `2025-12-30 03:00` | fünf, über alle drei Ebenen | `von=2024-12-30T13:00:00Z&bis=2025-12-30T01:00:00Z` |
+>
+> **Uhr und Wasserstand, festgelegt vor dem Lauf:** der Anker `2025-12-30 04:09:47`, Wasserstand
+> `2025-12-30 04:00` → G = `03:00`, Live-Rest `ANGEWANDT` über zwei Eimer wie in der typischen
+> Stunde. Die Uhr am Anker hält die Fenster von M152 gültig (alle enden auf oder vor ihm); das Jahr
+> enthält den Live-Bereich, der Bösfall endet genau an G — dort laufen die Live-Lesungen und
+> verrechnen nichts.
+>
+> **Erwartet (Auftrag):** der Bezug plus **20 bis 35 ms**. Gerechnet, durch den Endpunkt: M152 plus rund
+> 16 bis 20 ms für Wasserstand und Live-Rest (M185 gegen M152, typische Stunde von `NEXANS`) plus 20
+> bis 35 ms:
+>
+> | Lage | M152, Endpunkt | **erwartet, Endpunkt** |
+> |---|---:|---:|
+> | `NEXANS` Jahr | 120,554 | **156,6–175,6 ms** |
+> | `NEXANS` Bösfall | 111,784 | **147,8–166,8 ms** |
+> | `SUTTONS` Jahr | 56,056 | **92,1–111,1 ms** |
+> | `SUTTONS` Bösfall | 52,954 | **89,0–108,0 ms** |
+>
+> **Grenze: höchstens 200 ms je Lage** durch den Endpunkt.
+>
+> #### Wie gelesen wird — festgelegt vor dem Lauf
+>
+> - **Liegt eine Lage über ihrer Grenze, oder steigt die Lesung über einen Zeitindex ein: anhalten
+>   und berichten, nicht nachjustieren.** Ein Indexhinweis wäre eine Entscheidung und keine Korrektur.
+> - Der **Zuschlag** trägt die Aussage über den Bau; der **Endpunkt** trägt die Tore 2 bis 4; die
+>   **Rechnungen** tragen nur die Größenordnung. Abweichungen werden benannt und nicht umgedeutet;
+>   sie stehen neben diesem Kasten, nicht in ihm.
+> - **Zugesichert wird im Läufer nur**, dass jede Antwort `200` ist, dass `fehlerLive` und `liveRest`
+>   `ANGEWANDT` sind, dass der Bezug `AUSGESETZT` trägt und dass Endpunkt und Dienst dieselbe
+>   Kopfzahl tragen und jedes Blatt einmal steht — sonst mäße er die Laufzeit eines falschen Baums.
+>
+> #### Die Dev-Zeile — die Eichung, kein Tor
+>
+> Auf der Testkopie ist ein Abgang nicht herstellbar. **Keine Zahl des Baums darf sich ändern**, Feld
+> für Feld bis auf `fehlerLive` — für `NEXANS`, `SUTTONS` und `VOTG` in den drei Paaren und einem
+> freien Fenster, geprüft in `ProzessbaumFehlerLiveDbIT` und nicht im Läufer. Die Kopfzahl *Fehler*
+> ist je Paar die Kachel der Übersicht: `NEXANS` **50 / 55 / 711**, `SUTTONS` **0 / 5 / 103**, `VOTG`
+> **0 / 0 / 8** (M188). Weicht eine Zahl ab: zuerst den Wasserstand prüfen, dann melden.
 
 ---
 
