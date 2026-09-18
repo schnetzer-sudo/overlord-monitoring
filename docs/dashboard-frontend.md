@@ -164,6 +164,10 @@ verschwunden.
 > Rollup und Live-Rest (Punkt 209 in [`fehler-live.md`](fehler-live.md)); der Baustein liegt in
 > `components/`, damit Teil B ihn ruft, ohne aus einem Nachbarfeature zu importieren.
 >
+> *Eingelöst am selben Tag mit Teil B* ([`fehler-live.md`](fehler-live.md) §5b, E‑214): Der
+> Prozessbaum ruft den Baustein im klebenden Kopf der Baumspalte, unter dem Hinweis zum Live-Rest;
+> Punkt 209 ist geschlossen.
+>
 > Geprüft in `tests/fehler-live.test.tsx` („Der Hinweis zu Fehler live in der Übersicht", sechs
 > Fälle: bei `AUSGESETZT` über den Kacheln und im Leerzustand, bei `ANGEWANDT` nichts, auch im
 > Leerzustand nicht, keine Fehlerfarbe am Kasten, unter dem Hinweis zum Live-Rest, wenn beide

@@ -1614,6 +1614,16 @@ Prozent der Datenbank; dort entscheidet die Bytegröße.
    > **Die Zählung steht damit bei vier, und der Satz gilt weiter — für eine fünfte.** Was die Ausnahme
    > *nicht* abdeckt, ist benannt: Ein Abgang aus einem anderen Status bleibt bis zum Volllauf in
    > seinem alten Eimer stehen (Punkt 210 in [`fehler-live.md`](fehler-live.md)).
+   >
+   > **Teil B ist am selben Tag gebaut** ([`fehler-live.md`](fehler-live.md) §5b, E‑213): Der
+   > **Prozessbaum** ruft denselben Baustein — dieselbe Lesung, derselbe Ersatz nach der Verrechnung des
+   > Live-Rests — und zählt Fehler seither wie die Übersicht. **Die Ausnahme bleibt damit eine:** ein
+   > Baustein, zwei Verbraucher, wie beim Live-Rest — **kein fünfter Fall**. Gemessen als **M189**,
+   > vorregistriert: die Lesung im Jahresfenster mit den meisten Fehlern der Testkopie (3.204) über
+   > `MessageStatusIDX`, 69,8 ms; der Baum durch den Endpunkt höchstens **167,2 ms** in der typischen
+   > Stunde und im freien Fenster — Grenze 200 ms, vom Auftraggeber im Auftrag festgelegt, weil die
+   > Lesung die bisherige Schranke von 150 ms nach Rechnung überschreitet — und höchstens **349,3 ms** im
+   > dichtesten Bereich (Grenze 500). **Die Zählung bleibt bei vier.**
 3. **Keine `OFFSET`-Paginierung.** Cursor-basiert über `(MessageLastUpdate, MessageID)`.
 4. **`MessageProperty` nur über `MessageID`.** Nie filtern, gruppieren oder sortieren über den Wert.
 

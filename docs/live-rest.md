@@ -842,3 +842,5 @@ neue benannte Mandantenausnahme; kein Nachladen im Takt (E‑186); keine Messung
 > ([`fehler-live.md`](fehler-live.md), E‑208) — nach der Verrechnung des Live-Rests, sodass ein
 > Fehler in der laufenden Stunde, den beide kennen, einmal zählt. Für alle anderen Status bleibt es
 > die Grenze (Punkt 210 dort); der Prozessbaum folgt mit Teil B (Punkt 209).
+> *Am selben Tag eingelöst:* Der Prozessbaum liest seine Fehler seither ebenso live, nach der
+> Verrechnung des Live-Rests ([`fehler-live.md`](fehler-live.md) §5b, E‑213; Punkt 209 geschlossen).

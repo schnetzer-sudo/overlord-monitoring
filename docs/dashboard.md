@@ -861,6 +861,22 @@ und war falsch gebaut — und der Plan sagt warum:
 | `SUTTONS`, 12 Monate, ganze Seite | **2.585,7 ms** | **127,0 ms** |
 | `VOTG`, 12 Monate | **`500`** — Abbruch an `max_statement_time` | läuft |
 
+> ### ⚠️ Berichtigt am 18.09.2026 — die Zeile „gelesene Zeilen" mischt drei Arten von Zahlen
+>
+> **Die Tabelle darüber bleibt stehen.** Am Messprotokoll nachgesehen
+> ([`fehler-live.md`](fehler-live.md) §8 und §5b), und berichtigt ist nur, was dort belegt ist:
+>
+> | Zahl | Was sie ist | Belegt in |
+> |---|---|---|
+> | **6.257** (Fehler) | **die Schätzung des `EXPLAIN`** (`rows`) für den Statusbereich — **keine gelesene Menge**. Gelesen werden **3.412 Indexsätze** (`Handler_read_next`, gemessen in M188 und M189), die Fehlerzeilen des ganzen Bestands, in jedem Fenster dieselben | M188 Tor 1 (zwölf Lagen), M189 Tor 1 (zwölf Fenster) |
+> | **539** (überfällig) | ebenfalls die Schätzung des `EXPLAIN` — die Hälfte ist seit E‑71 entfallen und nicht nachgemessen | §8, Die Pläne (`rows = 539`) |
+> | **209.408** (30 Tage), **2.705.843** (12 Monate) | **gezählt**: `COUNT(*)` der Zeilen von `Message` im Fenster über den ganzen Bestand, alle Mandanten — die Zeilen, die ein Bereich über den Zeitindex überstreicht. Keine Schätzung des `EXPLAIN`; dass die Fassung mit `OR` genau sie gelesen hat, folgt aus dem Plan und ist nicht mit Handler-Zählern gemessen | [`messungen-schritt10.md`](messungen-schritt10.md) (Monatsscheibe 2025‑12, Jahresscheibe 2025), [`messungen-schritt10b.md`](messungen-schritt10b.md) (P2, P3) |
+> | **23.126** (48 h) | **in keinem Protokoll des Repositorys belegt** — gesucht in `docs/` und `scripts/` samt der nicht eingecheckten Rohausgaben. Ob Schätzung oder Zählung, ist nicht nachzuvollziehen; die Zahl bleibt stehen und ist nicht berichtigt | — |
+>
+> **Der Befund des Abschnitts ändert sich dadurch nicht:** Der Zeitindex überstreicht das Fenster,
+> der Statusindex die Fehlerzeilen des Bestands — gemessen 3.412 Indexsätze statt der geschätzten
+> 6.257.
+
 Der Abbruch im Wortlaut, aus dem Messlauf vom 31.08.2026:
 
 ```
@@ -949,6 +965,11 @@ durchsuchen, bevor sie „nichts" sagen darf — **gerade der gute Fall ist der 
 > Hinweis, `IGNORE INDEX FOR ORDER BY`, volles `IGNORE INDEX`, `FORCE INDEX (MessageStatusIDX)` —
 > **alle vier steigen über `MessageStatusIDX` ein**, alle vier lesen dieselben 6.257 Zeilen, alle
 > vier liegen bei 20 ms.
+>
+> > *Berichtigt am 18.09.2026:* **6.257 ist die Schätzung des `EXPLAIN`** und keine gelesene Menge.
+> > Gelesen werden **3.412 Indexsätze** — gemessen mit den Handler-Zählern in M188 und M189
+> > ([`fehler-live.md`](fehler-live.md) §8, §5b), die Fehlerzeilen des ganzen Bestands. „Dieselben
+> > Zeilen" trifft zu, nur ist die Zahl eine andere; der Satz darüber bleibt stehen.
 >
 > **Der Hinweis bleibt trotzdem — als Riegel und nicht als Wirkung.** Er kostet gemessen nichts,
 > `DashboardPlanDbIT` hält fest, dass der Zeitindex in keiner Planzeile steht, und die Wette auf die
