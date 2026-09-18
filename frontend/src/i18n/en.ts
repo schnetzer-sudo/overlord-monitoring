@@ -480,6 +480,25 @@ export const en: Texte = {
         herunterladen: "Download",
         inhalt: "File content",
 
+        darstellung: {
+          beschriftung: "View",
+          erkannt: "{name} (detected)",
+          eintraege: {
+            original: "Original",
+            edifact: "EDIFACT",
+            x12: "ANSI X12",
+            vda: "VDA",
+            idoc: "IDoc",
+            xml: "XML",
+            json: "JSON",
+            hex: "Hex",
+          },
+          vermerkDownloadOriginal: "The download delivers the original file, not this view.",
+          vermerkPasstNicht:
+            "This file cannot be shown as {darstellung}. You are seeing the original.",
+          vermerkHexGekappt: "The hex view ends after {bytes} bytes.",
+        },
+
         vermerkAusschnitt:
           "You are seeing the released extract of this log. The download contains the same extract.",
         vermerkGekappt: "The view ends at the length limit. The download is not truncated.",

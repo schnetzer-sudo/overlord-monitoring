@@ -10,7 +10,8 @@ import {
   type Artefaktzustand,
   type Nachrichtendetail,
 } from "@/features/nachrichten/api";
-import { ArtefaktAnsicht } from "@/features/nachrichten/components/artefakt-ansicht";
+import { Dateiansicht } from "@/features/nachrichten/components/artefakt-ansicht";
+import { DARSTELLUNGEN, type Darstellung } from "@/features/nachrichten/darstellung";
 
 import { neuerZwischenspeicher, rendere } from "./hilfe/rendern";
 
@@ -170,8 +171,19 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/** Rendert die Ansicht mit gestellten Antwortrümpfen für alle drei Abfragen. */
-async function rendereAnsicht(gestellt: Artefaktanzeige, artefaktId = ARTEFAKT_ID) {
+/**
+ * Rendert die Ansicht mit gestellten Antwortrümpfen für alle drei Abfragen.
+ *
+ * Gerendert wird `Dateiansicht`, die Ansicht **unter** der Adresshülle: Sie
+ * bekommt Darstellung und Setter als Props, und der Test kommt ohne `nuqs`
+ * aus (`docs/dateiansicht-darstellung.md` §4). Ohne Angabe steht das
+ * Original — wie beim Öffnen.
+ */
+async function rendereAnsicht(
+  gestellt: Artefaktanzeige,
+  artefaktId = ARTEFAKT_ID,
+  darstellung: Darstellung = "original",
+) {
   const zwischenspeicher = neuerZwischenspeicher();
   zwischenspeicher.setQueryData(NACHRICHTEN_SCHLUESSEL.detail(MESSAGE_ID), detail());
   zwischenspeicher.setQueryData(NACHRICHTEN_SCHLUESSEL.dateien(MESSAGE_ID), liste());
@@ -181,7 +193,12 @@ async function rendereAnsicht(gestellt: Artefaktanzeige, artefaktId = ARTEFAKT_I
   );
 
   return rendere(
-    <ArtefaktAnsicht messageId={MESSAGE_ID} artefaktId={artefaktId} />,
+    <Dateiansicht
+      messageId={MESSAGE_ID}
+      artefaktId={artefaktId}
+      darstellung={darstellung}
+      aufDarstellung={() => undefined}
+    />,
     zwischenspeicher,
   );
 }
@@ -517,6 +534,166 @@ describe("Die Ansicht insgesamt", () => {
       expect(anfragen).toEqual([]);
     } finally {
       await abbauen();
+    }
+  });
+});
+
+/**
+ * **Die Darstellungswahl** *(17.09.2026, `docs/dateiansicht-darstellung.md` §7,
+ * Teil B)* — nur die Sätze, die keine reine Funktion trägt. Die Regeln je
+ * Darstellung stehen in `tests/darstellung.test.ts`.
+ *
+ * | Test | Warum genau dieser |
+ * |---|---|
+ * | Ein Textknoten in jeder Darstellung | ob aus dem formatierten Text ein Element wird, entscheidet React beim Rendern — in allen acht Lagen |
+ * | Wohlgeformtes XML mit `<script>` und `<svg onload>` | der einzige Fall, in dem ein Inhalt mit Markup **tatsächlich formatiert** wird — und trotzdem Text bleibt |
+ * | Keine Auswahl bei Protokoll und in den fünf Zuständen | eine Aussage über **Abwesenheit** im Baum |
+ * | Der Download-Vermerk | Anwesenheit bei einer Darstellung, Abwesenheit beim Original |
+ */
+const EDIFACT_ERFUNDEN =
+  "UNB+UNOC:3+ERFUNDEN+ERFUNDEN+250101:1200+1'UNH+1+ORDERS:D:96A:UN'UNT+2+1'UNZ+1+1'";
+
+/** Wohlgeformt, und genau die Gestalt, gegen die die Textknoten-Regel gerichtet ist. */
+const XML_MIT_SKRIPT =
+  '<?xml version="1.0"?><beleg><script>fensterAuf()</script>' +
+  '<svg onload="fensterAuf()"/><img src="x" onerror="fensterAuf()"/></beleg>';
+
+describe("Die Darstellungswahl", () => {
+  it("landet in jeder der acht Darstellungen als ein Textknoten und nie als Markup", async () => {
+    for (const darstellung of DARSTELLUNGEN) {
+      const { behaelter, abbauen } = await rendereAnsicht(
+        anzeige({ text: INHALT_ALS_HTML }),
+        ARTEFAKT_ID,
+        darstellung,
+      );
+      try {
+        const feld = behaelter.querySelector("[data-inhalt]");
+        expect(feld, darstellung).not.toBeNull();
+        expect(feld?.querySelectorAll("*"), darstellung).toHaveLength(0);
+        expect(behaelter.querySelector("script"), darstellung).toBeNull();
+        expect(behaelter.querySelector("img"), darstellung).toBeNull();
+        expect(feld?.childNodes, darstellung).toHaveLength(1);
+        expect(feld?.childNodes[0]?.nodeType, darstellung).toBe(3);
+
+        // Der erfundene Inhalt ist keines der sechs Formate: Dort steht das
+        // Original mit dem Vermerk. Original und Hex tragen ihn nicht.
+        const passtNicht = behaelter.querySelector('[data-vermerk="PASST_NICHT"]');
+        if (darstellung === "original" || darstellung === "hex") {
+          expect(passtNicht, darstellung).toBeNull();
+        } else {
+          expect(passtNicht, darstellung).not.toBeNull();
+          expect(passtNicht?.textContent, darstellung).toContain(
+            DATEIEN.darstellung.eintraege[darstellung],
+          );
+          expect(feld?.textContent, darstellung).toBe(INHALT_ALS_HTML);
+        }
+        if (darstellung === "hex") {
+          expect(
+            feld?.textContent?.startsWith("00000000  3c 73 63 72 69 70 74 3e"),
+            darstellung,
+          ).toBe(true);
+        }
+      } finally {
+        await abbauen();
+      }
+    }
+  });
+
+  it("formatiert ein wohlgeformtes XML mit <script> und <svg onload> als XML — und als Text", async () => {
+    const { behaelter, abbauen } = await rendereAnsicht(
+      anzeige({ text: XML_MIT_SKRIPT }),
+      ARTEFAKT_ID,
+      "xml",
+    );
+    try {
+      const feld = behaelter.querySelector("[data-inhalt]");
+      expect(feld?.querySelectorAll("*")).toHaveLength(0);
+      expect(behaelter.querySelector("script")).toBeNull();
+      expect(behaelter.querySelector("img")).toBeNull();
+      expect(feld?.childNodes).toHaveLength(1);
+      expect(feld?.childNodes[0]?.nodeType).toBe(3);
+      // Tatsächlich als XML formatiert: eingerückt, ein Token je Zeile.
+      expect(feld?.textContent).toBe(
+        '<?xml version="1.0"?>\n<beleg>\n  <script>fensterAuf()</script>\n' +
+          '  <svg onload="fensterAuf()"/>\n  <img src="x" onerror="fensterAuf()"/>\n</beleg>',
+      );
+      expect(behaelter.querySelector('[data-vermerk="PASST_NICHT"]')).toBeNull();
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("steht nur bei Nutzdaten im Zustand ANZEIGBAR — nicht beim Protokoll, nicht in den fünf Zuständen", async () => {
+    const mit = await rendereAnsicht(anzeige({ text: EDIFACT_ERFUNDEN }));
+    try {
+      expect(mit.behaelter.querySelector("[data-darstellung-auswahl]")).not.toBeNull();
+      expect(mit.behaelter.textContent).toContain(DATEIEN.darstellung.beschriftung);
+    } finally {
+      await mit.abbauen();
+    }
+
+    // Das Protokoll: keine Auswahl — und der Parameter ist wirkungslos, auch
+    // wenn er in der Adresse steht. Der Text bleibt, wie er ist, ohne Vermerk.
+    const protokoll = await rendereAnsicht(
+      anzeige({ art: "PROTOKOLL", text: EDIFACT_ERFUNDEN }),
+      ARTEFAKT_ID,
+      "edifact",
+    );
+    try {
+      expect(protokoll.behaelter.querySelector("[data-darstellung-auswahl]")).toBeNull();
+      expect(protokoll.behaelter.querySelector("[data-inhalt]")?.textContent).toBe(
+        EDIFACT_ERFUNDEN,
+      );
+      expect(protokoll.behaelter.querySelector("[data-vermerk]")).toBeNull();
+    } finally {
+      await protokoll.abbauen();
+    }
+
+    for (const { gestellt, zustand } of ZUSTAENDE) {
+      const ohne = await rendereAnsicht(anzeige(gestellt), ARTEFAKT_ID, "edifact");
+      try {
+        expect(ohne.behaelter.querySelector("[data-darstellung-auswahl]"), zustand).toBeNull();
+        // Die Vermerke der Anzeige (etwa der Ausschnitt) stehen weiter; die
+        // drei der Darstellung nicht.
+        for (const vermerk of ["PASST_NICHT", "HEX_GEKAPPT", "DOWNLOAD_ORIGINAL"]) {
+          expect(ohne.behaelter.querySelector(`[data-vermerk="${vermerk}"]`), zustand).toBeNull();
+        }
+      } finally {
+        await ohne.abbauen();
+      }
+    }
+  });
+
+  it("nennt den Download bei einer Darstellung und nicht beim Original", async () => {
+    const formatiert = await rendereAnsicht(
+      anzeige({ text: EDIFACT_ERFUNDEN }),
+      ARTEFAKT_ID,
+      "edifact",
+    );
+    try {
+      const vermerk = formatiert.behaelter.querySelector('[data-vermerk="DOWNLOAD_ORIGINAL"]');
+      expect(vermerk?.textContent).toContain(DATEIEN.darstellung.vermerkDownloadOriginal);
+      // Der Inhalt ist formatiert — und der Download-Verweis derselbe wie zuvor:
+      // kein zweiter Knopf, kein Parameter, das Original.
+      expect(formatiert.behaelter.querySelector("[data-inhalt]")?.textContent).toBe(
+        EDIFACT_ERFUNDEN.split("'").slice(0, -1).join("'\n") + "'",
+      );
+      expect(formatiert.behaelter.querySelector('a[href*="/download"]')?.getAttribute("href")).toBe(
+        `/api/nachrichten/${MESSAGE_ID}/dateien/${ARTEFAKT_ID}/download`,
+      );
+      expect(formatiert.behaelter.querySelectorAll('a[href*="/download"]')).toHaveLength(1);
+    } finally {
+      await formatiert.abbauen();
+    }
+
+    const original = await rendereAnsicht(anzeige({ text: EDIFACT_ERFUNDEN }));
+    try {
+      expect(original.behaelter.querySelector('[data-vermerk="DOWNLOAD_ORIGINAL"]')).toBeNull();
+      expect(original.behaelter.textContent).not.toContain(
+        DATEIEN.darstellung.vermerkDownloadOriginal,
+      );
+    } finally {
+      await original.abbauen();
     }
   });
 });

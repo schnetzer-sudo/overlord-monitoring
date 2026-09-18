@@ -20,6 +20,8 @@ import {
 import type { Baumgliederung } from "@/lib/baumgliederung";
 import type { Rollupzeitraum } from "@/lib/rollupzeitraum";
 
+import type { Darstellung } from "./darstellung";
+import { DARSTELLUNG_PARAMETER } from "./darstellung/parameter";
 import {
   NACHRICHTEN_SCHLUESSEL,
   holeArtefakte,
@@ -946,4 +948,33 @@ export function useProzessbaum(abfrage: string) {
     queryKey: NACHRICHTEN_SCHLUESSEL.baum(abfrage),
     queryFn: () => holeProzessbaum(abfrage),
   });
+}
+
+/**
+ * Die Darstellung der Dateiansicht, gebunden an die Adresse — der Parameter
+ * `darstellung` (E‑202, `docs/dateiansicht-darstellung.md` §4).
+ *
+ * **`history: "replace"`** wie bei jeder Filterleiste: Eine Darstellung, die
+ * man umstellt, ist keine Station, zu der man zurückgeht; der Zurück-Knopf
+ * führt an die Nachricht, nicht durch acht Darstellungen. **`shallow: true`**
+ * steht ausdrücklich da: Der Wechsel rechnet im Browser und darf keinen
+ * Server-Roundtrip auslösen — der Inhalt liegt im Zwischenspeicher.
+ *
+ * Der Parser steht in `darstellung/parameter.ts` und ist frei von React; hier
+ * steht nur die Bindung. Die Ansicht selbst bekommt Wert und Setter als Props,
+ * damit ihre rendernden Tests ohne `nuqs` auskommen.
+ */
+export function useDarstellung() {
+  const [zustand, setzeZustand] = useQueryStates(DARSTELLUNG_PARAMETER, {
+    history: "replace",
+    shallow: true,
+  });
+
+  return {
+    darstellung: zustand.darstellung,
+    setzeDarstellung: useCallback(
+      (darstellung: Darstellung) => void setzeZustand({ darstellung }),
+      [setzeZustand],
+    ),
+  };
 }

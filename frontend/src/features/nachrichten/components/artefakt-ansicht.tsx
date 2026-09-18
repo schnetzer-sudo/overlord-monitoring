@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useMemo } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -14,8 +14,10 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { AuswahlFeld, type Auswahleintrag } from "@/components/auswahl-feld";
 import { Fehler } from "@/components/zustand";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { einsetzen } from "@/i18n";
 import { useSprache, useTexte } from "@/i18n/provider";
@@ -24,7 +26,19 @@ import { ProblemFehler } from "@/lib/http";
 import { nachrichtAnsicht } from "@/lib/routen";
 
 import type { Artefaktanzeige } from "../api";
-import { useArtefakte, useArtefaktinhalt, useNachrichtendetail } from "../hooks";
+import {
+  DARSTELLUNGEN,
+  HEX_GRENZE_BYTES,
+  darstellungWaehlbar,
+  darstellungsvermerke,
+  erkenneFormat,
+  stelleDar,
+  type Darstellung,
+  type Darstellungsergebnis,
+  type Darstellungsvermerk,
+  type Format,
+} from "../darstellung";
+import { useArtefakte, useArtefaktinhalt, useDarstellung, useNachrichtendetail } from "../hooks";
 import {
   anzeigevermerke,
   artefaktBeschriftung,
@@ -33,6 +47,7 @@ import {
   erneutVersuchenSinnvoll,
   findeArtefakt,
   kodierungsangabe,
+  type Anzeigevermerk,
 } from "../rohdaten";
 
 /**
@@ -49,7 +64,7 @@ import {
  * enthalten; der Inhalt kommt vom Partner und ist von außen befüllbar. Ein
  * `{text}` in JSX ist genau das Richtige — React erzeugt daraus einen Textknoten
  * und nichts sonst. `tests/artefakt-ansicht.test.tsx` hält es mit einem Inhalt
- * fest, der gültiges HTML ist.
+ * fest, der gültiges HTML ist — **in jeder der acht Darstellungen**.
  *
  * ## Ein Textknoten, kein Element je Zeile
  *
@@ -60,11 +75,22 @@ import {
  * Daraus folgt unmittelbar: **keine Zeilennummern im MVP.** Sie erzwingen die
  * Zerlegung. Als offener Punkt notiert, nicht heimlich eingebaut.
  *
- * ## Keine Aufbereitung
+ * ## Die Darstellung: Struktur sichtbar machen, sonst nichts *(17.09.2026)*
  *
- * Festbreitenschrift, keine Umformatierung, keine Syntaxhervorhebung. Die vier
- * abgeschalteten Formatumwandlungen des Altsystems bleiben abgeschaltet
- * (`PROJEKTBESCHREIBUNG.md` §9).
+ * Bis zum 17.09.2026 stand hier „keine Aufbereitung": Die vier abgeschalteten
+ * Formatumwandlungen des Altsystems blieben abgeschaltet. Seither gibt es die
+ * Auswahl **Darstellung** — Original, EDIFACT, ANSI X12, VDA, IDoc, XML, JSON,
+ * Hex (`docs/dateiansicht-darstellung.md`, E‑193 bis E‑205). Formatieren heißt
+ * Zeilenumbrüche und Einrückung, ausschließlich außerhalb von Daten (E‑197);
+ * keine Syntaxhervorhebung, keine Farbe im Inhalt, keine Segment- oder
+ * Feldbeschreibungen. Die Regeln sind reine Funktionen in `../darstellung`;
+ * hier stehen die Auswahl, die drei zusätzlichen Vermerke und der `useMemo`,
+ * der einmal je Text und Darstellung rechnet. Das Ergebnis bleibt **genau ein
+ * Textknoten** im `<pre>`.
+ *
+ * Beim Öffnen steht immer das Original; ein erkanntes Format ist in der
+ * Auswahl nur **vorgemerkt** (E‑195). Der Download bleibt die Originaldatei
+ * (E‑201).
  *
  * ## Drei Abfragen, und jede hat ihren Grund
  *
@@ -89,8 +115,35 @@ export function ArtefaktAnsicht({
   messageId: string;
   artefaktId: string;
 }) {
+  // Die dünne Hülle um die Adresse: `nuqs` liest und schreibt `darstellung`,
+  // die Ansicht darunter kennt nur Wert und Setter — so rendern ihre Tests
+  // ohne Adapter.
+  const { darstellung, setzeDarstellung } = useDarstellung();
+  return (
+    <Dateiansicht
+      messageId={messageId}
+      artefaktId={artefaktId}
+      darstellung={darstellung}
+      aufDarstellung={setzeDarstellung}
+    />
+  );
+}
+
+/** Die Ansicht selbst — Darstellung und Setter kommen von außen. */
+export function Dateiansicht({
+  messageId,
+  artefaktId,
+  darstellung,
+  aufDarstellung,
+}: {
+  messageId: string;
+  artefaktId: string;
+  darstellung: Darstellung;
+  aufDarstellung: (darstellung: Darstellung) => void;
+}) {
   const texte = useTexte();
   const titelId = useId();
+  const auswahlId = useId();
   const bausteine = texte.nachrichten.detail.dateien;
 
   const inhalt = useArtefaktinhalt(messageId, artefaktId);
@@ -100,6 +153,18 @@ export function ArtefaktAnsicht({
   const artefakt = findeArtefakt(liste.data, artefaktId);
   const beschriftung =
     artefakt === null ? null : artefaktBeschriftung(artefakt, detail.data?.schritte ?? [], texte);
+
+  // Nur Nutzdaten im Zustand ANZEIGBAR bekommen eine Auswahl (E‑194); überall
+  // sonst ist der Parameter wirkungslos, und gerechnet wird nichts.
+  const waehlbar = inhalt.data !== undefined && darstellungWaehlbar(inhalt.data);
+  const text = inhalt.data?.text ?? "";
+  const kodierung = inhalt.data?.kodierung ?? null;
+  const wirksam: Darstellung = waehlbar ? darstellung : "original";
+
+  // Einmal je Text — die Erkennung — und einmal je Text und Darstellung — das
+  // Ergebnis. Beides reine Funktionen; hier steht nur, wann sie laufen.
+  const erkannt = useMemo(() => (waehlbar ? erkenneFormat(text) : null), [waehlbar, text]);
+  const ergebnis = useMemo(() => stelleDar(text, wirksam, kodierung), [text, wirksam, kodierung]);
 
   return (
     <section aria-labelledby={titelId} className="flex flex-col gap-4">
@@ -127,8 +192,23 @@ export function ArtefaktAnsicht({
             <Herkunftszeile anzeige={inhalt.data} />
           </div>
 
-          {inhalt.data !== undefined && downloadMoeglich(inhalt.data) ? (
-            <DownloadKnopf messageId={messageId} artefaktId={artefaktId} />
+          {/* Rechts, was man mit der Datei tut: sie in einer Darstellung lesen
+              oder sie herunterladen. Beides handelt von derselben Datei, und
+              der Vermerk darunter sagt, wo die beiden auseinandergehen. */}
+          {inhalt.data !== undefined && (waehlbar || downloadMoeglich(inhalt.data)) ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {waehlbar ? (
+                <DarstellungAuswahl
+                  id={auswahlId}
+                  wert={wirksam}
+                  erkannt={erkannt}
+                  aufWahl={aufDarstellung}
+                />
+              ) : null}
+              {downloadMoeglich(inhalt.data) ? (
+                <DownloadKnopf messageId={messageId} artefaktId={artefaktId} />
+              ) : null}
+            </div>
           ) : null}
         </div>
 
@@ -138,12 +218,71 @@ export function ArtefaktAnsicht({
           <InhaltFehler fehler={inhalt.error} aufWiederholen={() => void inhalt.refetch()} />
         ) : inhalt.data === undefined ? null : (
           <>
-            <Vermerke anzeige={inhalt.data} />
-            <Inhalt anzeige={inhalt.data} aufWiederholen={() => void inhalt.refetch()} />
+            <Vermerke anzeige={inhalt.data} darstellung={wirksam} ergebnis={ergebnis} />
+            <Inhalt
+              anzeige={inhalt.data}
+              text={ergebnis.text}
+              aufWiederholen={() => void inhalt.refetch()}
+            />
           </>
         )}
       </div>
     </section>
+  );
+}
+
+/**
+ * **Die Auswahl „Darstellung"** — ein beschriftetes Feld, kein Reiter und kein
+ * Knopfband: Acht Einträge nebeneinander nähmen der Datei die Breite, und
+ * gewählt wird selten und bewusst.
+ *
+ * **Die Bauform ist `AuswahlFeld`** aus `components/`, der Ersatz der
+ * Anwendung für das native Auswahlfeld (Punkt 180) — dieselbe wie bei der
+ * Rolle und der Baumgliederung. Ein zweiter Baustein für dieselbe Aufgabe wäre
+ * genau die Drift, gegen die der Umbau gerichtet war (E‑205).
+ *
+ * **Das erkannte Format trägt den Zusatz „(erkannt)" im Eintrag selbst** —
+ * nichts springt, nichts wird von selbst angewandt (E‑195). Wer die Liste
+ * öffnet, sieht den Vorschlag an seiner Stelle; wer sie nicht öffnet, sieht
+ * das Original und den Hinweis nicht. Hex trägt den Zusatz nie.
+ */
+function DarstellungAuswahl({
+  id,
+  wert,
+  erkannt,
+  aufWahl,
+}: {
+  id: string;
+  wert: Darstellung;
+  erkannt: Format | null;
+  aufWahl: (darstellung: Darstellung) => void;
+}) {
+  const texte = useTexte();
+  const bausteine = texte.nachrichten.detail.dateien.darstellung;
+
+  const eintraege: Auswahleintrag<Darstellung>[] = DARSTELLUNGEN.map((darstellung) => ({
+    wert: darstellung,
+    text:
+      darstellung === erkannt
+        ? einsetzen(bausteine.erkannt, { name: bausteine.eintraege[darstellung] })
+        : bausteine.eintraege[darstellung],
+  }));
+
+  return (
+    <div className="flex items-center gap-2" data-darstellung-auswahl>
+      <Label htmlFor={id} className="text-muted-foreground text-beiwerk shrink-0">
+        {bausteine.beschriftung}
+      </Label>
+      <div className="w-44">
+        <AuswahlFeld
+          id={id}
+          beschriftung={bausteine.beschriftung}
+          wert={wert}
+          eintraege={eintraege}
+          aufWahl={aufWahl}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -221,6 +360,10 @@ function Herkunftszeile({ anzeige }: { anzeige: Artefaktanzeige | undefined }) {
  * `FileReader.FileProperty.OriginalFilename`, wo es ihn gibt (69,6 %, M17), und
  * bereinigt ihn von Steuerzeichen, Pfadangaben und Unicode-Formatzeichen. Ein
  * zweiter Name hier liefe dem ersten hinterher, und der Browser zöge ihn vor.
+ *
+ * **Er liefert immer die Originaldatei**, welche Darstellung auch gewählt ist
+ * (E‑201). Einen formatierten Download gibt es nicht — und keinen zweiten
+ * Knopf.
  */
 function DownloadKnopf({ messageId, artefaktId }: { messageId: string; artefaktId: string }) {
   const texte = useTexte();
@@ -237,28 +380,50 @@ function DownloadKnopf({ messageId, artefaktId }: { messageId: string; artefaktI
 
 /**
  * Die Vermerke über der Anzeige — **jeder sagt, dass hier nicht die ganze Datei
- * steht.**
+ * steht, oder dass der Download etwas anderes liefert.**
  *
  * Sie stehen zwischen Kopf und Inhalt, weil sie gelesen sein müssen, bevor
  * jemand den Text deutet. Keine Farbe: Es ist keiner ein Fehler, und Rot hat in
  * diesem Farbsystem genau eine Bedeutung (`docs/visuelles-konzept.md` §3).
+ *
+ * Zuerst die drei Vermerke der Anzeige (Ausschnitt, Kappung, Archiv) — sie
+ * handeln von der Datei —, dann die drei der Darstellung (passt nicht, Hex
+ * gekappt, Download liefert das Original) — sie handeln von der Wahl.
  */
-function Vermerke({ anzeige }: { anzeige: Artefaktanzeige }) {
+function Vermerke({
+  anzeige,
+  darstellung,
+  ergebnis,
+}: {
+  anzeige: Artefaktanzeige;
+  darstellung: Darstellung;
+  ergebnis: Darstellungsergebnis;
+}) {
   const texte = useTexte();
   const sprache = useSprache();
   const bausteine = texte.nachrichten.detail.dateien;
 
-  const vermerke = anzeigevermerke(anzeige);
+  const vermerke: (Anzeigevermerk | Darstellungsvermerk)[] = [
+    ...anzeigevermerke(anzeige),
+    ...darstellungsvermerke(darstellung, ergebnis),
+  ];
   if (vermerke.length === 0) {
     return null;
   }
 
-  const text = {
+  const text: Record<Anzeigevermerk | Darstellungsvermerk, string> = {
     AUSSCHNITT: bausteine.vermerkAusschnitt,
     GEKAPPT: bausteine.vermerkGekappt,
     MEHRERE_EINTRAEGE: einsetzen(bausteine.vermerkMehrereEintraege, {
       anzahl: formatiereZahl(anzeige.zipEintraege, sprache),
     }),
+    PASST_NICHT: einsetzen(bausteine.darstellung.vermerkPasstNicht, {
+      darstellung: bausteine.darstellung.eintraege[darstellung],
+    }),
+    HEX_GEKAPPT: einsetzen(bausteine.darstellung.vermerkHexGekappt, {
+      bytes: formatiereZahl(HEX_GRENZE_BYTES, sprache),
+    }),
+    DOWNLOAD_ORIGINAL: bausteine.darstellung.vermerkDownloadOriginal,
   };
 
   return (
@@ -291,12 +456,17 @@ function Vermerke({ anzeige }: { anzeige: Artefaktanzeige }) {
  * zu erreichen. Sichtbar wird der Unterschied nicht über Farbe, sondern über das
  * Angebot — nur der zweite Zustand bekommt „Erneut versuchen"
  * (`erneutVersuchenSinnvoll`).
+ *
+ * `text` ist der Text in der gewählten Darstellung — bei allem außer
+ * Nutzdaten mit Inhalt der Text der Antwort selbst.
  */
 function Inhalt({
   anzeige,
+  text,
   aufWiederholen,
 }: {
   anzeige: Artefaktanzeige;
+  text: string;
   aufWiederholen: () => void;
 }) {
   const texte = useTexte();
@@ -325,7 +495,7 @@ function Inhalt({
           aufWiederholen={wiederholen}
         />
       ) : (
-        <Textfeld text={anzeige.text} />
+        <Textfeld text={text} />
       );
 
     case "BINAERDATEI":
@@ -410,6 +580,11 @@ function Inhalt({
  * ohnehin keine Zeilennummern gibt (sie erzwängen ein Element je Zeile), geht
  * dabei keine Angabe verloren, auf die sich jemand beziehen könnte.
  *
+ * Seit der Darstellungswahl gilt das auch für den formatierten Text: Ein
+ * EDIFACT-Segment, das länger ist als die Fläche breit, bricht um wie zuvor —
+ * `pre-wrap` bleibt, und die Darstellung fügt nur Zeilenumbrüche hinzu, wo sie
+ * die Struktur zeigen.
+ *
  * ## Eine Bildlaufleiste je Seite
  *
  * Der einzige senkrechte Scrollbereich bleibt der Inhaltsbereich des Rahmens
@@ -436,7 +611,8 @@ function Textfeld({ text }: { text: string }) {
       >
         {/* Ein einziges Kind, und es ist ein Textknoten. Kein
             `dangerouslySetInnerHTML`, kein Element je Zeile, keine Zerlegung.
-            Beides zugleich: die Sicherheitsregel und die Bauvorgabe aus M60. */}
+            Beides zugleich: die Sicherheitsregel und die Bauvorgabe aus M60 —
+            in jeder Darstellung. */}
         {text}
       </pre>
     </section>

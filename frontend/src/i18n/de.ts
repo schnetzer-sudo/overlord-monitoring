@@ -871,6 +871,35 @@ export const de = {
         // Der Inhalt selbst — als beschriftetes Feld für Vorleseprogramme.
         inhalt: "Dateiinhalt",
 
+        // ── Die Darstellungswahl (17.09.2026, docs/dateiansicht-darstellung.md) ──
+        // Acht Einträge in dieser Reihenfolge (E‑193). Beim Öffnen steht immer
+        // das Original; das erkannte Format trägt den Zusatz und wird nicht von
+        // selbst angewandt (E‑195). Formatieren heißt Struktur sichtbar machen —
+        // Zeilenumbrüche und Einrückung —, nicht Inhalte erklären.
+        darstellung: {
+          beschriftung: "Darstellung",
+          erkannt: "{name} (erkannt)",
+          eintraege: {
+            original: "Original",
+            edifact: "EDIFACT",
+            x12: "ANSI X12",
+            vda: "VDA",
+            idoc: "IDoc",
+            xml: "XML",
+            json: "JSON",
+            hex: "Hex",
+          },
+          // Die dritte benannte Stelle, an der Anzeige und Download
+          // auseinandergehen dürfen (E‑201), neben Kappung und Binärdatei.
+          vermerkDownloadOriginal:
+            "Der Download liefert die Originaldatei, nicht diese Darstellung.",
+          // Nie ein halb formatiertes Ergebnis: Passt die Datei nicht, steht
+          // das Original (E‑200).
+          vermerkPasstNicht:
+            "Diese Datei lässt sich nicht als {darstellung} darstellen. Du siehst das Original.",
+          vermerkHexGekappt: "Die Hex-Darstellung endet nach {bytes} Bytes.",
+        },
+
         // Die Vermerke. Jeder sagt, dass hier nicht die ganze Datei steht — und
         // jeder sagt es aus einem anderen Grund.
         vermerkAusschnitt:
