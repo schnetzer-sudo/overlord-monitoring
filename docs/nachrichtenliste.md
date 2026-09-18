@@ -2530,6 +2530,37 @@ träge einen Zeitpunkt, der im neuen Fenster nichts zu suchen hat (`cursor-ungue
 > > schmaler Breite umbricht — `jsdom` rechnet kein Layout; dafür gibt es die Sichtprüfung beim
 > > Auftraggeber.
 >
+> **Die Sichtprüfung am laufenden System** *(18.09.2026, nachgeholt; im Debug-Chrome über CDP,
+> angemeldet durch den Auftraggeber, `next dev` dieses Zweigs auf eigenem Port, Profil `dev`)*:
+>
+> | Lage | gesehen |
+> |---|---|
+> | NEXANS, 24 Stunden | Seite eins „Σ mehr als 50", zwei „mehr als 100", drei „mehr als 150", Zurück wieder „mehr als 100"; `title` mit dem Hinweis bei jedem „mehr als" |
+> | „Neu laden" von Seite zwei; Wechsel auf 7 Tage von Seite zwei | beide Male zurück auf Seite eins und „mehr als 50" |
+> | genau, eine Seite: NEXANS 24 h, Status Fehler | „Σ 50", kein `title`, „Nächste Seite" gesperrt |
+> | genau, sieben Seiten: NEXANS 24 h, Status Aufgeteilt | „mehr als 50" bis „mehr als 300", auf der letzten „Σ 350" — **über die API gegengezählt: 350 Zeilen in sieben Seiten** |
+> | Leer: NEXANS 24 h, Status Läuft | kein Σ, der Stand steht |
+> | Laden (die nächste Seite im Tab zurückgehalten) | Skelett, kein Σ; danach „mehr als 100" |
+> | Fehler (Neu laden, im Tab gestellt: `500`) | Fehlerzustand, kein Σ |
+> | Rückmeldung am Feld (Seite zwei, 30 Tage, im Tab gestellt: `suche-abgebrochen`) | die Liste bleibt mit ihren 50 Zeilen stehen, der Σ mit ihr: „mehr als 100" |
+> | Vorlesebaum | das Symbol ignoriert, dann „Treffer:" und „mehr als 50" als Text; kein `aria-live` darüber |
+> | Schriftrolle | Σ und Stand in derselben berechneten Farbe und Größe (12,19 px im Profil des Prüf-Chrome), `tabular-nums` |
+> | 1920 px | Σ linksbündig mit der Tabelle, Stand daneben, die Pfeile rechtsbündig mit ihr |
+> | 390 px / 320 px | eine Zeile / die Pfeile brechen in die zweite Zeile um und bleiben bedienbar; kein waagerechtes Scrollen |
+> | Englisch | „Σ more than 50", vorgelesen „Matches: more than 50" |
+> | Prozessansicht, `90300_SAP_KOMMUNIKATION`, 48 h | „Σ mehr als 50" unter der Übertragungsliste |
+>
+> **Zwei Nebenbefunde.** Das erste Bild bei 390 px zeigte einen runden „N"-Knopf über dem Wort
+> „mehr" — die schwebende Entwickleranzeige von `next dev`, ausgeblendet ist nichts überdeckt; kein
+> Befund an der Anwendung. Und SUTTONS zeigt den genauen Fall an diesem Tag **nicht**: auch im
+> 24-Stunden-Fenster „mehr als 50". Die genauen Fälle stammen deshalb aus Statusfiltern bei NEXANS.
+>
+> > **Belegvermerk (L10).** *Gemessen war:* jede Zeile der Tabelle aus der Seite (Text, `title`,
+> > Zustand, Maße per `getBoundingClientRect`), der Vorlesebaum über `Accessibility`, die 350 über
+> > die API; Laden, Fehler und Rückmeldung am Feld mit einem gestellten `fetch` **nur im Prüftab**.
+> > *Nicht gemessen:* ein Vorleseprogramm selbst, und die automatische Aktualisierung über sechzig
+> > Sekunden.
+>
 > *Nummer:* höchste vergebene **E‑215** (auf dem nicht gemergten `fix/anmeldung-fokus`), gesucht
 > nach dem Verfahren aus [`neu-laden.md`](neu-laden.md) §1; `E‑780` ist der bekannte Falschtreffer.
 
