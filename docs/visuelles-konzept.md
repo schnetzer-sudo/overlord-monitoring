@@ -211,6 +211,11 @@ ist die Schaltfläche über ihre Beschriftung (9,13 : 1); wer die Lücke schlie�
 gefüllten Flächen zusätzlich eine Kontur in `--akzent-schrift` — das ist die einzige bekannte
 Grenze der Farbe und bewusst nicht heimlich umgangen worden.
 
+*Seit dem 18.09.2026 (E‑217, [`neu-laden.md`](neu-laden.md) §2):* Der **eingeschaltete Schalter
+„Auto“** — an wie pausiert — trägt die Akzentfläche, mit `--akzent-vordergrund` für Symbol und Wort
+und genau dieser Kontur in `--akzent-schrift`; der **gedrückte Zeitraum-Knopf nicht**, er bleibt bei
+`bg-muted` (offener Punkt 92, [`dashboard-frontend.md`](dashboard-frontend.md) §9).
+
 Der Akzent trägt Schaltflächen, den Fokusring und die aktive Navigationszeile — also alles, was die
 Anwendung über sich selbst sagt, und nichts, was sie über die Daten sagt.
 
