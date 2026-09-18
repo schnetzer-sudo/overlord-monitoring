@@ -273,7 +273,9 @@ function DarstellungAuswahl({
       <Label htmlFor={id} className="text-muted-foreground text-beiwerk shrink-0">
         {bausteine.beschriftung}
       </Label>
-      <div className="w-44">
+      {/* `w-48`, nicht `w-44`: „ANSI X12 (detected)" fehlten dort in allen vier
+          Dichten 3 px, und der längste Eintrag endete auf „(detecte…" (E‑207). */}
+      <div className="w-48">
         <AuswahlFeld
           id={id}
           beschriftung={bausteine.beschriftung}
@@ -388,7 +390,10 @@ function DownloadKnopf({ messageId, artefaktId }: { messageId: string; artefaktI
  *
  * Zuerst die drei Vermerke der Anzeige (Ausschnitt, Kappung, Archiv) — sie
  * handeln von der Datei —, dann die drei der Darstellung (passt nicht, Hex
- * gekappt, Download liefert das Original) — sie handeln von der Wahl.
+ * gekappt, Download liefert das Original) — sie handeln von der Wahl. Der
+ * Download-Vermerk hängt am Ergebnis, nicht an der Wahl: Er steht nur, wo das
+ * Angezeigte vom Original abweicht (E‑206); `darstellung` braucht es hier
+ * allein für den Namen in „passt nicht".
  */
 function Vermerke({
   anzeige,
@@ -405,7 +410,7 @@ function Vermerke({
 
   const vermerke: (Anzeigevermerk | Darstellungsvermerk)[] = [
     ...anzeigevermerke(anzeige),
-    ...darstellungsvermerke(darstellung, ergebnis),
+    ...darstellungsvermerke(ergebnis),
   ];
   if (vermerke.length === 0) {
     return null;

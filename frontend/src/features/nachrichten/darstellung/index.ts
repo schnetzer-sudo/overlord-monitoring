@@ -44,12 +44,27 @@ export type Darstellungsergebnis = {
   passtNicht: boolean;
   /** Die Hex-Darstellung endet an `HEX_GRENZE_BYTES` (E‑203). */
   hexGekappt: boolean;
+  /**
+   * `text` ist nicht zeichengleich mit dem Original — nur dann liefert der
+   * Download etwas anderes als das, was angezeigt ist (E‑206). Falsch beim
+   * Original, bei „passt nicht" und bei einer Darstellung, die nichts ändert,
+   * etwa EDIFACT, das schon ein Segment je Zeile trägt.
+   */
+  weichtAb: boolean;
 };
 
 const ORIGINAL = (text: string): Darstellungsergebnis => ({
   text,
   passtNicht: false,
   hexGekappt: false,
+  weichtAb: false,
+});
+
+const PASST_NICHT = (text: string): Darstellungsergebnis => ({
+  text,
+  passtNicht: true,
+  hexGekappt: false,
+  weichtAb: false,
 });
 
 /**
@@ -58,7 +73,9 @@ const ORIGINAL = (text: string): Darstellungsergebnis => ({
  * **Passt die Datei nicht zur Wahl — auch bei gekappter Anzeige —, kommt das
  * Original mit `passtNicht`, nie ein halb formatiertes Ergebnis** (E‑200).
  * `kodierung` braucht allein Hex: Nur bei ASCII und ISO-8859-1 sind die
- * Zeichencodes die Bytes (E‑204).
+ * Zeichencodes die Bytes (E‑204). `weichtAb` ist der Vergleich mit dem
+ * Original — hier einmal gerechnet, im `useMemo` der Ansicht, statt bei jedem
+ * Rendern der Vermerke (E‑206).
  */
 export function stelleDar(
   text: string,
@@ -71,13 +88,13 @@ export function stelleDar(
   if (darstellung === "hex") {
     const hex = formatiereHex(text, kodierung);
     return hex === null
-      ? { text, passtNicht: true, hexGekappt: false }
-      : { text: hex.text, passtNicht: false, hexGekappt: hex.gekappt };
+      ? PASST_NICHT(text)
+      : { text: hex.text, passtNicht: false, hexGekappt: hex.gekappt, weichtAb: hex.text !== text };
   }
   const formatiert = FORMATIERER[darstellung](text);
   return formatiert === null
-    ? { text, passtNicht: true, hexGekappt: false }
-    : { text: formatiert, passtNicht: false, hexGekappt: false };
+    ? PASST_NICHT(text)
+    : { text: formatiert, passtNicht: false, hexGekappt: false, weichtAb: formatiert !== text };
 }
 
 /**
@@ -89,7 +106,7 @@ export function stelleDar(
  * |---|---|---|
  * | `PASST_NICHT` | die Datei passt nicht zur gewählten Darstellung; angezeigt ist das Original | nein |
  * | `HEX_GEKAPPT` | die Hex-Darstellung endet an der Grenze | nein |
- * | `DOWNLOAD_ORIGINAL` | eine Darstellung außer Original ist angewandt | **ja** — er liefert die Originaldatei, nicht die Darstellung (E‑201) |
+ * | `DOWNLOAD_ORIGINAL` | das Angezeigte weicht vom Original ab (E‑206) | **ja** — er liefert die Originaldatei, nicht die Darstellung (E‑201) |
  */
 export type Darstellungsvermerk = "PASST_NICHT" | "HEX_GEKAPPT" | "DOWNLOAD_ORIGINAL";
 
@@ -97,15 +114,15 @@ export type Darstellungsvermerk = "PASST_NICHT" | "HEX_GEKAPPT" | "DOWNLOAD_ORIG
  * Die Vermerke zu einem Ergebnis, in Anzeigereihenfolge: zuerst, was gezeigt
  * wird, zuletzt, was der Download liefert.
  *
- * **Der Download-Vermerk steht nur, wo eine Darstellung tatsächlich angewandt
- * ist.** Passt sie nicht, steht das Original — und das ist auch die Datei, die
- * der Download liefert; ein Vermerk, der dort vor einem Unterschied warnte,
- * behauptete einen, den es nicht gibt.
+ * **Der Download-Vermerk steht nur, wo das Angezeigte vom Original abweicht**
+ * (E‑206, 18.09.2026). Beim Original, bei „passt nicht" und bei einer
+ * Darstellung, die nichts ändert, liefert der Download genau das, was da
+ * steht; ein Vermerk, der dort vor einem Unterschied warnte, behauptete einen,
+ * den es nicht gibt. Bis zum 18.09.2026 hing er an der Wahl („eine Darstellung
+ * außer Original, die passt") und stand deshalb auch bei zeichengleichem
+ * Ergebnis (Sichtprüfung M187, `docs/dateiansicht-darstellung.md` §11).
  */
-export function darstellungsvermerke(
-  darstellung: Darstellung,
-  ergebnis: Darstellungsergebnis,
-): Darstellungsvermerk[] {
+export function darstellungsvermerke(ergebnis: Darstellungsergebnis): Darstellungsvermerk[] {
   const vermerke: Darstellungsvermerk[] = [];
   if (ergebnis.passtNicht) {
     vermerke.push("PASST_NICHT");
@@ -113,7 +130,7 @@ export function darstellungsvermerke(
   if (ergebnis.hexGekappt) {
     vermerke.push("HEX_GEKAPPT");
   }
-  if (darstellung !== "original" && !ergebnis.passtNicht) {
+  if (ergebnis.weichtAb) {
     vermerke.push("DOWNLOAD_ORIGINAL");
   }
   return vermerke;

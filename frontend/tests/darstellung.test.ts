@@ -677,7 +677,7 @@ describe("Hex", () => {
     const mehr = stelleDar(genau + "y", "hex", "ASCII");
     expect(mehr.hexGekappt).toBe(true);
     expect(mehr.text).toBe(ohne.text);
-    expect(darstellungsvermerke("hex", mehr)).toEqual(["HEX_GEKAPPT", "DOWNLOAD_ORIGINAL"]);
+    expect(darstellungsvermerke(mehr)).toEqual(["HEX_GEKAPPT", "DOWNLOAD_ORIGINAL"]);
   });
 
   it("zeigt bei einem Zeichencode über 0xFF das Original mit Vermerk und erfindet kein Byte", () => {
@@ -685,7 +685,7 @@ describe("Hex", () => {
     const ergebnis = stelleDar(text, "hex", "ISO_8859_1");
     expect(ergebnis.passtNicht).toBe(true);
     expect(ergebnis.text).toBe(text);
-    expect(darstellungsvermerke("hex", ergebnis)).toEqual(["PASST_NICHT"]);
+    expect(darstellungsvermerke(ergebnis)).toEqual(["PASST_NICHT"]);
   });
 
   it("ist nur bei ASCII und ISO-8859-1 eine Darstellung der Bytes (E‑204)", () => {
@@ -755,24 +755,36 @@ describe("Die Kreuzprobe", () => {
 
 describe("Die Vermerke der Darstellung", () => {
   it("stehen beim Original nie", () => {
-    expect(
-      darstellungsvermerke("original", stelleDar(EDIFACT_EINZEILIG, "original", "ASCII")),
-    ).toEqual([]);
+    expect(darstellungsvermerke(stelleDar(EDIFACT_EINZEILIG, "original", "ASCII"))).toEqual([]);
   });
 
-  it("nennen den Download, sobald eine Darstellung angewandt ist", () => {
-    expect(darstellungsvermerke("edifact", darstellung(EDIFACT_EINZEILIG, "edifact"))).toEqual([
+  it("nennen den Download, sobald das Angezeigte vom Original abweicht", () => {
+    expect(darstellungsvermerke(darstellung(EDIFACT_EINZEILIG, "edifact"))).toEqual([
       "DOWNLOAD_ORIGINAL",
     ]);
-    expect(darstellungsvermerke("hex", stelleDar("ABC", "hex", "ASCII"))).toEqual([
-      "DOWNLOAD_ORIGINAL",
-    ]);
+    expect(darstellungsvermerke(stelleDar("ABC", "hex", "ASCII"))).toEqual(["DOWNLOAD_ORIGINAL"]);
   });
 
   it("nennen bei „passt nicht“ nur das — angezeigt ist das Original, und das liefert auch der Download", () => {
-    expect(darstellungsvermerke("json", darstellung(EDIFACT_EINZEILIG, "json"))).toEqual([
-      "PASST_NICHT",
-    ]);
+    expect(darstellungsvermerke(darstellung(EDIFACT_EINZEILIG, "json"))).toEqual(["PASST_NICHT"]);
+  });
+
+  // E‑206, aus der Sichtprüfung M187: Eine Darstellung, die nichts ändert,
+  // zeigt das Original — und der Download liefert genau das, was da steht.
+  it.each([
+    ["edifact", "Zeilenumbruch als Segmentende", EDIFACT_ZEILENENDE_ALS_SEGMENTENDE],
+    ["edifact", "schon ein Segment je Zeile", EDIFACT_EINZEILIG_FORMATIERT],
+    ["x12", "schon ein Segment je Zeile", X12_TILDE_MIT_ZEILEN],
+    ["vda", "mit Zeilen", VDA_MIT_ZEILEN],
+    ["vda", "mit CRLF", VDA_MIT_ZEILEN_CRLF],
+    ["xml", "schon formatiert", XML_FORMATIERT],
+    ["json", "schon formatiert", JSON_FORMATIERT],
+  ] as const)("nennen den Download nicht, wenn %s nichts ändert (%s)", (format, _, text) => {
+    const ergebnis = darstellung(text, format);
+    expect(ergebnis.passtNicht).toBe(false);
+    expect(ergebnis.text).toBe(text);
+    expect(ergebnis.weichtAb).toBe(false);
+    expect(darstellungsvermerke(ergebnis)).toEqual([]);
   });
 });
 
