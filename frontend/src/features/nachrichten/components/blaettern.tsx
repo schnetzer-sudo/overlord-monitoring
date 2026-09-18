@@ -1,12 +1,14 @@
 "use client";
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sigma } from "lucide-react";
 
 import { useAnzeigezone } from "@/components/zeitzone";
 import { Button } from "@/components/ui/button";
 import { einsetzen } from "@/i18n";
 import { useSprache, useTexte } from "@/i18n/provider";
-import { formatiereZeitpunktGenau } from "@/lib/format";
+import { formatiereZahl, formatiereZeitpunktGenau } from "@/lib/format";
+
+import type { Treffer } from "../aktualisierung";
 
 /**
  * Blättern und der Stand der Liste.
@@ -34,6 +36,20 @@ import { formatiereZeitpunktGenau } from "@/lib/format";
  * sieben, und damit genau den Cursor, den „Neu laden" vermeidet (E‑168). Zwei
  * Knöpfe, die dasselbe versprechen und Verschiedenes tun, wären schlechter als
  * einer.
+ *
+ * ## Der Σ — bis hier gezählt *(18.09.2026, E‑216)*
+ *
+ * **Am linken Rand steht seither, wie viele Zeilen bis zur angezeigten Seite
+ * angekommen sind.** Das ist keine Gesamtzahl, und der Satz oben bleibt wahr:
+ * „Sonst nichts" gilt dem Blättern, und Seitenzahlen gibt es weiterhin nicht.
+ * Solange weitere Seiten folgen, heißt die Zahl „mehr als"; genau ist sie erst
+ * auf der letzten. Gerechnet wird sie nicht hier, sondern in `aktualisierung.ts`
+ * (`trefferBisHier`) — dieser Block zeigt nur an.
+ *
+ * Das Zeichen ist ein Symbol und für Vorleseprogramme verborgen; vorgelesen wird
+ * „Treffer:" samt Zahl. **Kein `aria-live`:** Die automatische Aktualisierung
+ * rechnet die Zahl alle sechzig Sekunden neu, und jede Änderung vorzulesen hieße,
+ * dem Nutzer ins Wort zu fallen. Der Stand daneben behält seines.
  */
 export function Blaettern({
   kannZurueck,
@@ -42,6 +58,7 @@ export function Blaettern({
   aufVor,
   standVon,
   laeuft,
+  treffer,
 }: {
   kannZurueck: boolean;
   kannVor: boolean;
@@ -50,10 +67,18 @@ export function Blaettern({
   /** Zeitstempel der letzten erfolgreichen Antwort, `0` solange es keine gibt. */
   standVon: number;
   laeuft: boolean;
+  /**
+   * **Die Treffer bis hier** (Σ, E‑216). **Nur im Datenzustand**; ohne Angabe
+   * steht kein Σ. Welcher Zustand gilt, weiß die Ansicht und nicht dieser Block —
+   * deshalb ist die Angabe Pflicht, und jeder Verwender entscheidet sie
+   * ausdrücklich.
+   */
+  treffer: Treffer | undefined;
 }) {
   const texte = useTexte();
   const sprache = useSprache();
   const zone = useAnzeigezone();
+  const t = texte.nachrichten.blaettern;
 
   const stand =
     standVon === 0
@@ -64,7 +89,19 @@ export function Blaettern({
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-      <div className="text-muted-foreground text-beiwerk flex items-center gap-2">
+      <div className="text-muted-foreground text-beiwerk flex flex-wrap items-center gap-x-4 gap-y-1">
+        {treffer === undefined ? null : (
+          <span
+            className="inline-flex items-center gap-1 tabular-nums"
+            title={treffer.genau ? undefined : t.trefferMehrAlsHinweis}
+          >
+            <Sigma aria-hidden="true" className="size-3.5 shrink-0" />
+            <span className="sr-only">{t.treffer}</span>{" "}
+            {treffer.genau
+              ? formatiereZahl(treffer.anzahl, sprache)
+              : einsetzen(t.trefferMehrAls, { zahl: formatiereZahl(treffer.anzahl, sprache) })}
+          </span>
+        )}
         <span aria-live="polite">{laeuft ? texte.nachrichten.aktualisierung.laeuft : stand}</span>
       </div>
 

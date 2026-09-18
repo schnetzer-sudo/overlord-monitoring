@@ -650,6 +650,12 @@ export const de = {
       vor: "Nächste Seite",
       seiteEins: "Seite 1",
       weitereSeite: "weitere Seite",
+      // Der Σ unter der Liste (E‑216): keine Gesamtzahl, sondern die bis zur
+      // angezeigten Seite gelieferten Zeilen. Das Zeichen selbst ist ein Symbol
+      // und kein Text; vorgelesen wird „Treffer:" davor.
+      treffer: "Treffer:",
+      trefferMehrAls: "mehr als {zahl}",
+      trefferMehrAlsHinweis: "Die genaue Zahl steht fest, sobald die letzte Seite erreicht ist.",
     },
 
     aktualisierung: {

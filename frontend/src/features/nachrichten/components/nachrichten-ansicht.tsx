@@ -73,6 +73,16 @@ export function NachrichtenAnsicht() {
   const ruhigeRueckmeldung = anEinemFeld !== undefined || zeitfensterHalb(filter);
   const zeigeSeite = liste.seite ?? (ruhigeRueckmeldung ? liste.letzteSeite : undefined);
 
+  /*
+   * **Der Σ gehört zur gezeigten Seite** (E‑216) — derselbe Rückgriff wie bei
+   * ihr, und er erscheint **nur im Datenzustand**: Die Bedingung ist genau der
+   * letzte Zweig unten, in dem die Tabelle steht. Der Blätterblock selbst steht
+   * in allen vier Zuständen, weil der Stand immer sichtbar ist; den Σ trägt er
+   * nicht beim ersten Laden, nicht im Leer- und nicht im Fehlerzustand.
+   */
+  const zeigeTreffer = liste.treffer ?? (ruhigeRueckmeldung ? liste.letzteTreffer : undefined);
+  const zeigtDaten = !ansichtsfehler && (zeigeSeite?.items.length ?? 0) > 0;
+
   const gewaehlt = filter.nachricht;
   const schliesse = steuerung.setzeNachricht;
 
@@ -205,6 +215,7 @@ export function NachrichtenAnsicht() {
           aufVor={liste.vor}
           standVon={liste.standVon}
           laeuft={liste.laeuft}
+          treffer={zeigtDaten ? zeigeTreffer : undefined}
         />
       </div>
 

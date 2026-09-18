@@ -11,7 +11,7 @@ import { defineConfig } from "vitest/config";
  * außer Laufzeit und Abhängigkeiten.
  *
  * **Die Ausnahmen sind gezählt, nicht gewachsen** — Stand 18.09.2026 sind es
- * **einhundertvierundachtzig in zweiundzwanzig Dateien**. Diese Zahl wird an genau dieser Stelle geführt;
+ * **einhundertfünfundneunzig in dreiundzwanzig Dateien**. Diese Zahl wird an genau dieser Stelle geführt;
  * `tests/hilfe/rendern.tsx` und `docs/frontend-grundlagen.md` §9 verweisen
  * darauf, statt sie zu wiederholen (drei Orte für dieselbe Zahl sind zwei zu
  * viel):
@@ -78,6 +78,7 @@ import { defineConfig } from "vitest/config";
  *
  * | `tests/live-rest.test.tsx` *(17.09.2026, am selben Tag um die Übersicht erweitert)* | 9 | **Der Hinweis zum Live-Rest — Aussagen über Anwesenheit und Abwesenheit im Baum und in der Übersicht** (`docs/live-rest.md` §10). **Seit Teil B vier mehr:** derselbe Baustein über den Kacheln der Übersicht (E‑192) — der Kasten steht **vor der ersten Kachel im Dokument** (Reihenfolge, keine Beschriftung), er steht **auch im Leerzustand** ohne Kacheln, und bei `ANGEWANDT` und `NICHT_NOETIG` steht er nicht, mit den Kacheln als Eichung. Bei `AUSGESETZT` steht bei den Kopfzahlen ein Satz, mit Zeitangabe (über denselben Weg formatiert wie die Ansicht) oder ohne; bei `ANGEWANDT` und `NICHT_NOETIG` steht **keiner** — die naheliegende Schreibweise (immer ein Kasten, nur mit anderem Text) bestünde jede Prüfung an der Beschriftung, und der Baum ist die Eichung dafür, dass die Ansicht steht. Dazu, dass der Kasten nicht die Fehlerfarbe trägt: kein Rot ist eine Klasse am Element |
  * | `tests/fehler-live.test.tsx` *(18.09.2026, am selben Tag um den Prozessbaum erweitert)* | 10 | **Der Hinweis zu Fehler live — Aussagen über Anwesenheit, Abwesenheit und Reihenfolge in der Übersicht** (`docs/fehler-live.md` §6). **Seit Teil B vier mehr, im Prozessbaum** (§5b, E‑214): Bei `AUSGESETZT` steht der Kasten **im klebenden Kopf der Baumspalte** (dem Behälter des Eingrenzungsfelds), **nach dem Absatz der Kopfzahlen und vor dem Baum** im Dokument; stehen beide Hinweise, steht der zum Live-Rest zuerst; bei `ANGEWANDT` steht keiner, mit dem Baum als Eichung; kein Rot. Gegenproben ausgeführt: Hinweis ausgehängt → drei Fälle rot, vor den Live-Rest-Hinweis gesetzt → einer, aus dem Kopf genommen → einer. Bei `AUSGESETZT` steht der Kasten **vor der ersten Kachel im Dokument** und **auch im Leerzustand** ohne Kacheln; bei `ANGEWANDT` steht er nicht, weder bei Kacheln (die Eichung) noch im Leerzustand — die naheliegende Schreibweise (immer ein Kasten, nur mit anderem Text) bestünde jede Prüfung an der Beschriftung. Dazu: kein Rot ist eine Klasse am Element, und stehen beide Hinweise, steht der zum Live-Rest **zuerst** — eine Reihenfolge im Dokument, die keine reine Funktion trägt |
+ * | `tests/blaettern.test.tsx` *(18.09.2026)* | 11 | **Der Σ unter der Liste — Aussagen über Elemente, über Abwesenheit und über Verdrahtung** (`docs/nachrichtenliste.md` §8.3, E‑216). Die Rechnung ist eine reine Funktion in `tests/aktualisierung.test.ts`; hier steht, was keine Funktion trägt. **Der Block:** das Zeichen `aria-hidden`, „Treffer:" nur für Vorleseprogramme, der Hinweis im `title` nur bei „mehr als", **kein** `aria-live` um den Σ, die Zahl über `lib/format.ts`; ohne Angabe **kein** Σ, Stand und Pfeile als Eichung. **Die Zustände:** Der Blätterblock steht in der Nachrichtenliste in allen vier, der Σ nur im Datenzustand — Abwesenheit im Leer-, Fehler- und Ladezustand, Fehler und Laden so gestellt, dass eine Seite im Zwischenspeicher liegt. **Die Verdrahtung:** Vor, Zurück, Filterwechsel, „Neu laden" mit zurückgehaltener Antwort (E‑168), die Rückmeldung am Feld, bei der die Zahl mit der Liste stehen bleibt, und die Übertragungsliste der Prozessansicht. **Siebzehn Gegenproben**, je ein Eingriff, zurückgespielt und mit `cmp` verglichen: sechzehn rot am gemeinten Fall, eine erklärt grün — Lucide setzt `aria-hidden` von sich aus, wer es im JSX weglässt, ändert nichts; rot wird es erst mit `aria-hidden="false"` oder einem Namen am Zeichen. Die Leerprobe ohne Eingriff blieb in beiden Läufen grün |
  *
  * > ⚠️ **Fortgeschrieben am 17.09.2026 (der Live-Rest, E‑187)**, aus dem Lauf
  * > (`vitest run --reporter=json`, Fälle je Datei): **166 in einundzwanzig Dateien**, eine neue —
@@ -114,6 +115,13 @@ import { defineConfig } from "vitest/config";
  * > rendernde Datei — `tests/fehler-live.test.tsx` von 6 auf 10. Der Lauf über alle **46** Dateien
  * > trägt **1.250** Fälle: genau die vier hier, keine neue Quelldatei, also nichts aus `farbwerte`
  * > und `serverbausteine` — gegen die 1.246 des Kastens darüber gezählt, nicht gerechnet.
+ *
+ * > ⚠️ **Fortgeschrieben am 18.09.2026 (der Σ unter der Nachrichtenliste, E‑216)**, aus dem Lauf
+ * > (`vitest run --reporter=json`, Fälle je Datei): **195 in dreiundzwanzig Dateien**, eine neue —
+ * > `tests/blaettern.test.tsx` mit 11. Der Lauf über alle **47** Dateien trägt **1.267** Fälle. Je
+ * > Datei gegen den Lauf des Commits `c360c4d` verglichen, der **1.250** in 46 Dateien zählt: die elf
+ * > hier und sechs im reinen `tests/aktualisierung.test.ts` (von 11 auf 17); keine neue Quelldatei,
+ * > also nichts aus `farbwerte` und `serverbausteine` — gezählt, nicht gerechnet.
  *
  * > ⚠️ **Fortgeschrieben am 17.09.2026 (Kodierung je Datei und EBCDIC-Muster, E‑176 und E‑177)**,
  * > aus dem Lauf (`vitest run --reporter=json`, Fälle je Datei): **161 in zwanzig Dateien**, keine
@@ -158,7 +166,7 @@ import { defineConfig } from "vitest/config";
  * > darunter noch einhundertsechzehn; die Tabellensumme stimmte mit dem Kopf.
  * > Berichtigt ist der Satz.
  *
- * Allen einhundertvierundachtzig ist dasselbe gemeinsam: **Es gibt keinen anderen Ort, an dem sie
+ * Allen einhundertfünfundneunzig ist dasselbe gemeinsam: **Es gibt keinen anderen Ort, an dem sie
  * belegbar wären.** Das ist die Bedingung, nicht „es ließe sich so leichter
  * prüfen". Sie schalten ihre Umgebung selbst über `// @vitest-environment jsdom`
  * um — die Voreinstellung bleibt `node`, damit die übrigen Dateien nichts von
