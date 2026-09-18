@@ -1799,6 +1799,11 @@ Knopf tragen. `aktualisierung.ts` hält die Regeln als reine Funktionen; `blaett
 noch Seiten und Stand. *Am selben Tag korrigiert* (E‑173): Schalter und Knopf stehen nicht mehr vor
 dem Zeitfenster, sondern **am rechten Rand** der Leiste.
 
+*Fortgeschrieben am 18.09.2026* (E‑216, §8.3): `blaettern.tsx` trägt seither neben Seiten und Stand
+den **Σ** — die bis zur angezeigten Seite gelieferten Zeilen, am linken Rand. Gerechnet wird er
+nicht dort, sondern rein in `aktualisierung.ts`, das damit auch den Blätterstapel führt
+(`blaettere`, `trefferBisHier`); `blaettern.tsx` zeigt nur an.
+
 Seit Schritt 5 liegen im selben Feature die Bausteine der Detailansicht (`detail.ts`,
 `nachricht-detail.tsx`, `nachricht-seite.tsx`, `zeitleiste.tsx`, `eigenschaften-block.tsx`).
 Beschrieben sind sie in [`nachrichtendetail.md`](nachrichtendetail.md) §10 — sie beantworten eine
@@ -2453,6 +2458,80 @@ Sortierschlüssel (§4).
 zweiten Cursor vom Server. **Keine Seitenzahlen:** Es gibt keine Gesamtzahl (Regel L2), und eine
 erfundene wäre schlimmer als keine. Ein geänderter Filter setzt den Stapel zurück; der alte Cursor
 träge einen Zeitpunkt, der im neuen Fenster nichts zu suchen hat (`cursor-ungueltig`).
+
+> ### Der Σ unter der Liste — bis hier gezählt *(18.09.2026, E‑216)*
+>
+> **Der Absatz darüber bleibt stehen und bleibt wahr:** Es gibt keine Seitenzahlen und keine
+> Gesamtzahl, Regel L2 und „Kein `total`" (§1) sind unberührt — kein `COUNT`, kein neuer Parameter.
+> Neu ist ein **Σ am linken Rand des Blätterblocks**, bündig mit der Tabelle: die Zahl der Zeilen,
+> die **bis zur angezeigten Seite tatsächlich geliefert** worden sind. Das ist keine Gesamtzahl,
+> sondern „bis hier gezählt", und genau ist die Zahl erst auf der letzten Seite:
+>
+> | Antwort der angezeigten Seite | sichtbar | vorgelesen |
+> |---|---|---|
+> | `hasMore: false` | Σ 117 | „Treffer: 117“ |
+> | `hasMore: true` | Σ mehr als 50 | „Treffer: mehr als 50“ — dazu im `title`: „Die genaue Zahl steht fest, sobald die letzte Seite erreicht ist.“ |
+>
+> - **Gezählt, nicht gerechnet.** Jeder Eintrag des Blätterstapels trägt neben dem Cursor die
+>   Zeilen der Seiten davor (`items.length` je Seite). Seitentiefe mal Seitengröße wäre eine zweite
+>   Aussage über die Seitengröße, und die gehört dem Backend: Das Frontend schickt kein `limit` und
+>   kennt keins. *Am Code abgelesen:* Heute trägt jede Seite vor der letzten genau `limit` Zeilen —
+>   `Seite.aus` schneidet bei `hasMore` auf `limit`, die Übersetzung der Zeilen ist eins zu eins, die
+>   Vorgabe ist 50. Die Summe hängt an dieser Garantie nicht.
+> - **Zurück** zeigt die Zahl bis zu jener Seite. **Filterwechsel** und **„Neu laden"** setzen sie
+>   mit dem Stapel zurück; die **automatische Aktualisierung** fragt nur Seite eins und rechnet die
+>   Zahl dort neu. Während „Neu laden" auf einer späteren Seite bleibt die alte Zahl stehen, bis
+>   Seite eins da ist — genau wie die Seite selbst (E‑168).
+> - **Nur im Datenzustand.** Der Blätterblock steht in allen vier Zuständen, weil der Stand immer
+>   sichtbar ist; der Σ steht nicht beim ersten Laden, nicht im Leer- und nicht im Fehlerzustand,
+>   auch dann nicht, wenn eine ältere Seite im Zwischenspeicher liegt.
+> - **Bei einer Rückmeldung am Feld bleibt er mit der Liste stehen.** Dort zeigt die Ansicht die
+>   zuletzt gelieferte Seite weiter (`letzteSeite`, §8.2); ihr Σ reist mit (`letzteTreffer`), denn
+>   nach dem Zurücksetzen des Stapels gehörten die Zeilen davor zum alten Filter und ließen sich
+>   nicht mehr rechnen. *Diese Lage nennt der Auftrag nicht; entschieden nach seinem eigenen
+>   Grundsatz „genau wie die Seite selbst".*
+> - **Zugänglich:** Das Zeichen ist ein Symbol (Lucide `Sigma`) und `aria-hidden`, „Treffer:" steht
+>   nur für Vorleseprogramme. **Kein `aria-live`** — sonst läse ein Vorleseprogramm alle sechzig
+>   Sekunden die neue Zahl vor. Die Zahl über `lib/format.ts`, `tabular-nums`, Schriftrolle wie der
+>   Stand. Bei schmaler Breite brechen Σ und Stand um, die Pfeile bleiben bedienbar.
+> - **Gerechnet in `aktualisierung.ts`**, rein und ohne React: `blaettere` für jeden Schritt durch
+>   die Liste, `trefferBisHier` für die Zahl. `blaettern.tsx` zeigt nur an. Die Übertragungsliste
+>   der Prozessansicht trägt den Σ mit ([`process-view.md`](process-view.md) §18) — dieselbe Liste
+>   wird nicht an zwei Orten verschieden gebaut.
+>
+> **Tests:** sechs reine Fälle in `tests/aktualisierung.test.ts` (eine Seite ohne weitere, Seite
+> eins mit weiteren, die letzte Seite nach zweimal Blättern, Zurück, Filterwechsel, und „gezählt,
+> was ankam" mit einer kürzeren Seite vor der letzten), elf gerenderte in `tests/blaettern.test.tsx`.
+>
+> **Verletzungsproben** — je ein Eingriff, zurückgespielt aus einer Sicherungskopie und mit `cmp`
+> verglichen, in keinem Commit; dazu eine Leerprobe ohne Eingriff, grün:
+>
+> | Probe | Eingriff | rot |
+> |---|---|---|
+> | 1 | Σ ohne die Zeilen davor | 8 Fälle, etwa *„Seite zwei, die letzte: expected '2' to be '5'"* |
+> | 2 | `genau` ohne Blick auf `hasMore` | 8, etwa *„Seite eins: expected '3' to be 'mehr als 3'"* |
+> | 3 | Zurück nimmt keinen Eintrag weg | 2 (rein und gerendert) |
+> | 4 | Filterwechsel behält den Stapel | 2; gerendert geht die Anfrage mit `cursor` ins neue Fenster |
+> | 5 | Vor zählt die angezeigte Seite nicht mit | 8 |
+> | 6 | Vor ohne Cursor baut einen neuen Stapel | 1 (rein) |
+> | 7 | Ansicht ohne Wächter für den Datenzustand | 2: Leer- und Fehlerzustand |
+> | 8 | Ansicht nimmt immer den zuletzt gezählten Σ | 3: Leer-, Fehler- und Ladezustand |
+> | 9 | Rückmeldung am Feld ohne Rückgriff | 1 |
+> | 10 | Prozessansicht reicht keinen Σ durch | 1 |
+> | 11 | Σ in einem `aria-live`-Bereich | 2 |
+> | 12 | `title` auch bei genauer Zahl | 2 |
+> | 13 | `aria-hidden` am Zeichen weggelassen | **keiner** — Lucide setzt `aria-hidden="true"` von sich aus, solange das Symbol keinen Namen trägt; das DOM ändert sich nicht |
+> | 13a, 13b | `aria-hidden="false"`; ein Name am Zeichen statt `aria-hidden` | je 1 |
+> | 14 | „Treffer:" nicht vorgelesen | 9 |
+> | 15 | „Neu laden" wechselt sofort auf Seite eins | 1: *„solange Seite eins aussteht: expected 'mehr als 3' to be '5'"* — **kein bestehender Fall fing das**, weil keiner eine Antwort zurückhält |
+>
+> > **Belegvermerk (L10).** *Gemessen war:* die Testläufe und die Proben, die Meldungen oben
+> > wörtlich aus der Ausgabe. *Nicht gemessen:* wie der Σ im Browser aussieht und wie der Block bei
+> > schmaler Breite umbricht — `jsdom` rechnet kein Layout; dafür gibt es die Sichtprüfung beim
+> > Auftraggeber.
+>
+> *Nummer:* höchste vergebene **E‑215** (auf dem nicht gemergten `fix/anmeldung-fokus`), gesucht
+> nach dem Verfahren aus [`neu-laden.md`](neu-laden.md) §1; `E‑780` ist der bekannte Falschtreffer.
 
 **Vier Zustände** nach `components/zustand.tsx`. Die **Filterleiste bleibt in jedem** stehen — sie
 ist der Weg aus dem leeren Zustand heraus; sie mit den Daten zu verstecken hieße, dem Nutzer genau
