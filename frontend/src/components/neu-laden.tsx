@@ -5,6 +5,7 @@ import { CirclePause, Hourglass, RefreshCw, Timer, TimerOff } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { useTexte } from "@/i18n/provider";
+import { cn } from "@/lib/utils";
 
 /**
  * Die drei Lagen des Schalters für die automatische Aktualisierung.
@@ -16,6 +17,36 @@ import { useTexte } from "@/i18n/provider";
  * (`features/nachrichten/aktualisierung.ts`).
  */
 export type Automatikzustand = "aus" | "an" | "pausiert";
+
+/**
+ * **Eingeschaltet trägt der Schalter die Akzentfläche** (E‑217,
+ * `docs/neu-laden.md` §2) — an wie pausiert, denn pausiert ist eingeschaltet;
+ * die Pause zeigt das Symbol.
+ *
+ * **Beide Selektoren, weil der Generator beide setzt.** `components/ui/toggle.tsx`
+ * zeichnet den gedrückten Zustand zweimal aus, mit `aria-pressed:bg-muted` und
+ * `data-[state=on]:bg-muted`, und Radix setzt beide Attribute
+ * (`aria-pressed="true"`, `data-state="on"`). Überschrieben wird deshalb die
+ * Fläche unter beiden; `cn` im Generator wirft die gleichnamigen `bg-muted`
+ * hinaus. Schrift und Kontur hängen an `aria-pressed` allein, der Generator
+ * setzt dort nichts.
+ *
+ * Fläche und Schrift sind die der gefüllten Schaltfläche (`Button`, Variante
+ * `default`), die Kontur ist die aus `docs/visuelles-konzept.md` §3, *„Was diese
+ * Farbe nicht kann“*. **Überfahren wie dort** (`/80`) und mit gleicher Schrift —
+ * die beiden `hover`-Klassen sind spezifischer als `hover:bg-muted` und
+ * `hover:text-foreground` des Generators und gewinnen unabhängig von der
+ * Reihenfolge im Stylesheet. Der Fokusring bleibt der des Generators
+ * (`--ring`, also `--akzent-schrift`). Keine neue Farbrolle, kein neuer Wert.
+ *
+ * `bg-akzent` ist **nicht** shadcns `bg-accent`: jenes ist in diesem Projekt die
+ * blasse `--akzent-flaeche`.
+ */
+const EINGESCHALTET = [
+  "aria-pressed:bg-akzent data-[state=on]:bg-akzent",
+  "aria-pressed:text-akzent-vordergrund aria-pressed:border-akzent-schrift",
+  "aria-pressed:hover:bg-akzent/80 aria-pressed:hover:text-akzent-vordergrund",
+].join(" ");
 
 /**
  * **„Neu laden" — und auf Wunsch der Schalter der automatischen Aktualisierung
@@ -61,6 +92,12 @@ export type Automatikzustand = "aus" | "an" | "pausiert";
  *   des gedrückten Zustands ist die des Zeitraumumschalters und keine neue
  *   Farbrolle; sie ist die halbe Aussage, nie die ganze
  *   (`docs/visuelles-konzept.md` §3).
+ *
+ *   *Korrigiert am 18.09.2026 (E‑217):* Eingeschaltet trägt der Schalter
+ *   **nicht mehr** die Fläche des Zeitraumumschalters (`bg-muted`, 1,07 : 1,
+ *   Punkt 92), sondern die Akzentfläche der gefüllten Schaltfläche — siehe
+ *   {@link EINGESCHALTET}. Weiterhin keine neue Farbrolle, und die Fläche bleibt
+ *   die halbe Aussage: Die Lage steht im Symbol.
  */
 export function NeuLaden({
   name,
@@ -87,7 +124,7 @@ export function NeuLaden({
       {automatik === undefined ? null : (
         <Toggle
           variant="outline"
-          className="min-h-bedienelement px-2.5"
+          className={cn("min-h-bedienelement px-2.5", EINGESCHALTET)}
           pressed={automatik.zustand !== "aus"}
           onPressedChange={automatik.aufUmschalten}
           aria-label={t.automatik.name}
