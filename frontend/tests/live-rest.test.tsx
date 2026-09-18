@@ -51,6 +51,7 @@ function prozessbaum(liveRest: LiveRest): Prozessbaum {
     fenster: { von: "2025-12-28T14:00:00Z", bis: "2025-12-30T14:00:00Z" },
     stilleSchwelleMonate: 3,
     liveRest,
+    fehlerLive: { zustand: "ANGEWANDT" },
     gesamt: { anzahlProzesse: 1, bewegt: 1, still: 0, nie: 0, nachrichten: 2, fehler: 0 },
     ebenen: ["PARTNER", "PROZESS"],
     knoten: [

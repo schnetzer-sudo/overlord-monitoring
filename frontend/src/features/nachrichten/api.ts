@@ -1,3 +1,4 @@
+import type { FehlerLive } from "@/lib/fehler-live";
 import type { LiveRest } from "@/lib/live-rest";
 import { hole } from "@/lib/http";
 import type { Baumgliederung } from "@/lib/baumgliederung";
@@ -216,6 +217,12 @@ export type Prozessbaum = {
    * Block liest.
    */
   liveRest: LiveRest;
+  /**
+   * Seit dem 18.09.2026: ob die Fehlerzahlen aus der Live-Lesung kommen
+   * (`docs/fehler-live.md` §5b) — derselbe Block wie in der Übersicht, der Typ
+   * in `lib/fehler-live.ts`.
+   */
+  fehlerLive: FehlerLive;
   gesamt: Baumsumme;
   /** Die Ebenennamen, von außen nach innen; die letzte ist immer `PROZESS` (E‑140). */
   ebenen: Baumebene[];

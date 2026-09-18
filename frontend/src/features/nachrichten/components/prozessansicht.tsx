@@ -14,6 +14,7 @@ import Link from "next/link";
 import { useIsFetching } from "@tanstack/react-query";
 import { ArrowLeft, X } from "lucide-react";
 
+import { FehlerLiveHinweis } from "@/components/fehler-live-hinweis";
 import { LiveRestHinweis } from "@/components/live-rest-hinweis";
 import { NeuLaden } from "@/components/neu-laden";
 import { Button } from "@/components/ui/button";
@@ -916,6 +917,13 @@ function Baumspalte({
          * wann er nichts sagt, steht dort.
          */}
         <LiveRestHinweis liveRest={baum.liveRest} />
+        {/*
+         * **Der Hinweis zu Fehler live** (`docs/fehler-live.md` §5b, E‑214): derselbe
+         * Baustein wie in der Übersicht, am Ort des Hinweises zum Live-Rest und unter
+         * ihm. Nur bei `AUSGESETZT` steht etwas — dann kommen die Fehler des Baums aus
+         * der stündlichen Aggregation.
+         */}
+        <FehlerLiveHinweis fehlerLive={baum.fehlerLive} />
       </div>
 
       {gefiltert.length === 0 ? (

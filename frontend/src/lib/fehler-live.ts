@@ -5,8 +5,8 @@
  * als Fehler zählen kann.
  *
  * **Hier und nicht in einem Feature**, gebaut wie `lib/live-rest.ts`: Die
- * Übersicht liest den Block seit dem 18.09.2026, der Prozessbaum mit Teil B, und
- * ein Feature importiert nicht aus einem Nachbarfeature
+ * Übersicht liest den Block seit dem 18.09.2026, der Prozessbaum seit Teil B am
+ * selben Tag, und ein Feature importiert nicht aus einem Nachbarfeature
  * (`docs/frontend-grundlagen.md` §8). Der Hinweis dazu steht in
  * `components/fehler-live-hinweis.tsx`.
  *

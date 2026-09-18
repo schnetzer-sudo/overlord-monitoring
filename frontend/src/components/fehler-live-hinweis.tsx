@@ -11,6 +11,8 @@ import type { FehlerLive } from "@/lib/fehler-live";
  * der Hinweis zum Live-Rest (`components/live-rest-hinweis.tsx`, E‑192): über
  * den Kacheln, auch im Leerzustand; `Alert` ohne Variante, `Info`-Zeichen, kein
  * Rot, kein neues Farbtoken. Stehen beide, steht der Hinweis zum Live-Rest zuerst.
+ * Seit Teil B (§5b dort, E‑214) steht er auch im Prozessbaum — im klebenden Kopf
+ * der Baumspalte, unter den Kopfzahlen und unter dem Hinweis zum Live-Rest.
  *
  * **Nur bei `AUSGESETZT` steht etwas**: Dann kommen die Fehler aus der
  * stündlichen Aggregation, und eine nachverarbeitete Nachricht kann darin noch

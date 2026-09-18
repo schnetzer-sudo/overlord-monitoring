@@ -253,6 +253,7 @@ function prozessbaum(): Prozessbaum {
     fenster: FENSTER,
     stilleSchwelleMonate: 3,
     liveRest: { zustand: "NICHT_NOETIG", vollstaendigBis: null },
+    fehlerLive: { zustand: "ANGEWANDT" },
     gesamt: { anzahlProzesse: 1, bewegt: 1, still: 0, nie: 0, nachrichten: 2, fehler: 0 },
     ebenen: ["PARTNER", "PROZESS"],
     knoten: [
