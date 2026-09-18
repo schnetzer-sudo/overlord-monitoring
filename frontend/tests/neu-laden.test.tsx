@@ -26,7 +26,7 @@ import { rendere } from "./hilfe/rendern";
  *
  * | Fall | Warum ein Baum |
  * |---|---|
- * | der Baustein | Ohne `automatik` **kein Schalter** (Abwesenheit); der Knopf zeigt **nur das Symbol** (E‑174); die drei Lagen über `aria-pressed` und das Symbol, und ein Klick beim Laden ruft nichts |
+ * | der Baustein | Ohne `automatik` **kein Schalter** (Abwesenheit); der Knopf zeigt **nur das Symbol** (E‑174); die drei Lagen über `aria-pressed` und das Symbol, und ein Klick beim Laden ruft nichts. *Seit dem 18.09.2026 (E‑217):* Eingeschaltet — an wie pausiert — greifen die Akzentklassen, aus nicht, und die gedrückte Fläche des Generators ist unter beiden Selektoren verdrängt — eine Regel, die selbst eine Klasse ist |
  * | die Stelle | Übersicht und Prozessansicht: der Knopf ist der **nächste Knopf nach dem letzten Zeitraum-Knopf**; Nachrichten: Schalter und Knopf sind die **letzten beiden** der Filterleiste (E‑173); Prozessansicht im freien Modus: der Knopf ist das **letzte Bedienelement des Kopfes**, hinter den Datumsfeldern (E‑175). Den Rand selbst rechnet jsdom nicht — gemessen in M183 und M184 |
  * | Übersicht | ein Klick, **genau eine** weitere Anfrage an dieselbe Adresse — auch im Leerzustand, wo der Knopf stehen bleibt (E‑p) |
  * | Nachrichten | auf Seite zwei: **eine** Anfrage für Seite eins ohne Cursor; bei offenem Panel **keine** an einen Detail- oder Dateiendpunkt (E‑169) |
@@ -346,6 +346,58 @@ describe("Der Baustein", () => {
     // Zustands allein wäre die Farbe, die nicht allein sprechen darf.
     expect(new Set(symbole).size).toBe(3);
     expect(aufrufe, "Klick beim Laden").toEqual([]);
+  });
+
+  /**
+   * **Die Akzentklassen und die Bedingung, unter der sie greifen** (E‑217).
+   * Tailwind macht aus `aria-pressed:` die Bedingung `[aria-pressed="true"]` und
+   * aus `data-[state=on]:` die Bedingung `[data-state="on"]` — nachgesehen im
+   * ausgelieferten Stylesheet (`docs/neu-laden.md` §2). `jsdom` rechnet kein
+   * CSS; ob eine Klasse greift, entscheidet hier `matches` mit genau dieser
+   * Bedingung.
+   */
+  const AKZENT = [
+    ["aria-pressed:bg-akzent", '[aria-pressed="true"]'],
+    ["data-[state=on]:bg-akzent", '[data-state="on"]'],
+    ["aria-pressed:text-akzent-vordergrund", '[aria-pressed="true"]'],
+    ["aria-pressed:border-akzent-schrift", '[aria-pressed="true"]'],
+  ] as const;
+
+  it("trägt eingeschaltet die Akzentfläche, an wie pausiert, und aus nicht (E‑217)", async () => {
+    for (const lage of ["aus", "an", "pausiert"] as const) {
+      const gerendert = await rendere(
+        <NeuLaden
+          name={N.nachrichten}
+          laedt={false}
+          aufNeuLaden={() => {}}
+          automatik={{ zustand: lage, aufUmschalten: () => {} }}
+        />,
+      );
+      try {
+        const schalter = mitName(gerendert.behaelter, N.automatik.name);
+        const greifend = AKZENT.filter(
+          ([klasse, bedingung]) =>
+            schalter.classList.contains(klasse) && schalter.matches(bedingung),
+        ).map(([klasse]) => klasse);
+        expect(greifend, lage).toEqual(lage === "aus" ? [] : AKZENT.map(([klasse]) => klasse));
+        // Und keine Akzentklasse ohne Bedingung — sie griffe auch bei aus.
+        const bedingungslos = [...schalter.classList].filter(
+          (klasse) => !klasse.includes(":") && klasse.includes("akzent"),
+        );
+        expect(bedingungslos, lage).toEqual([]);
+        // Pausiert ist eingeschaltet: dieselben Attribute wie an, die Pause steht im Symbol.
+        expect(schalter.getAttribute("data-state"), lage).toBe(lage === "aus" ? "off" : "on");
+
+        // Die gedrückte Fläche des Generators ist verdrängt, unter beiden Selektoren —
+        // blieben `data-[state=on]:bg-muted`, gewänne es im Stylesheet (es steht dort später).
+        expect(schalter.classList.contains("aria-pressed:bg-muted"), lage).toBe(false);
+        expect(schalter.classList.contains("data-[state=on]:bg-muted"), lage).toBe(false);
+        // Überfahren wie die gefüllte Schaltfläche; `:hover` kennt jsdom nicht, geprüft wird die Klasse.
+        expect(schalter.classList.contains("aria-pressed:hover:bg-akzent/80"), lage).toBe(true);
+      } finally {
+        await gerendert.abbauen();
+      }
+    }
   });
 });
 

@@ -117,6 +117,107 @@ ist offener Punkt **92** ([`dashboard-frontend.md`](dashboard-frontend.md) §9) 
 schlimmer: Die Lage steht im Symbol, die Fläche ist die halbe Aussage
 ([`visuelles-konzept.md`](visuelles-konzept.md) §3).
 
+> ⚠️ **Korrektur vom 18.09.2026 (E‑217) — der eingeschaltete Schalter „Auto“ trägt die
+> Akzentfläche.** Der Absatz darüber bleibt stehen. **Sein erster Satz gilt weiter:** keine neue
+> Farbrolle, kein Orange (E‑167), keine Bewegung. **Der zweite gilt für den Schalter nicht mehr:**
+> Eingeschaltet trägt er nicht `bg-muted` wie ein gedrückter Zeitraum-Knopf, sondern die Fläche
+> der gefüllten Schaltfläche. Zeile *Farbe* der Tabelle, Spalte *Schalter „Auto“*, seither:
+> Generatorbaustein `Toggle`, Variante `outline`, eingeschaltet mit
+>
+> | Lage | `aria-pressed` | Fläche | Symbol und „Auto“ | Kontur |
+> |---|---|---|---|---|
+> | aus | `false` | unverändert | unverändert | unverändert |
+> | an | `true` | `--akzent` | `--akzent-vordergrund` | `--akzent-schrift` |
+> | pausiert | `true` | `--akzent` | `--akzent-vordergrund` | `--akzent-schrift` |
+>
+> - **Pausiert ist eingeschaltet.** Die Fläche sagt „an“, die Pause zeigt weiterhin das Symbol.
+> - **Nur per `className` in `components/neu-laden.tsx`**, `components/ui/` ist unberührt. Der
+>   Generator zeichnet den gedrückten Zustand **zweimal** aus, mit `aria-pressed:bg-muted` und
+>   `data-[state=on]:bg-muted`, und Radix setzt beide Attribute (`aria-pressed="true"`,
+>   `data-state="on"`, an wie pausiert). Überschrieben wird die Fläche deshalb unter **beiden**
+>   Selektoren; `cn` im Generator verdrängt die gleichnamigen `bg-muted`. Schrift und Kontur hängen
+>   an `aria-pressed` allein, dort setzt der Generator nichts.
+> - **Warum beide — nachgesehen im ausgelieferten Stylesheet, nicht angenommen:** Tailwind stellt
+>   die `data-*`-Varianten hinter die `aria-*`-Varianten. `data-[state=on]:bg-muted` steht bei
+>   gleicher Spezifität (0,2,0) später als `aria-pressed:bg-akzent`; wer nur `aria-pressed:`
+>   überschriebe, behielte am Element die graue Fläche. Probe 1 unten ist genau das, Probe 2 dasselbe
+>   mit falschem Wert im Selektor; Probe 9 ist der Stand davor, ganz ohne Überschreibung.
+> - **Klassen:** `aria-pressed:bg-akzent`, `data-[state=on]:bg-akzent`,
+>   `aria-pressed:text-akzent-vordergrund`, `aria-pressed:border-akzent-schrift`,
+>   `aria-pressed:hover:bg-akzent/80`, `aria-pressed:hover:text-akzent-vordergrund`. `bg-akzent` ist
+>   `--akzent` (#b9c022, [`frontend-grundlagen.md`](frontend-grundlagen.md) §8b), **nicht** shadcns
+>   `bg-accent` — jenes ist in diesem Projekt die blasse `--akzent-flaeche`.
+> - **Überfahren wie die gefüllte Schaltfläche** (`Button`, Variante `default`, `hover:bg-primary/80`
+>   mit `--primary` = `--akzent`), nie wie „aus“: Die beiden `hover`-Regeln des Schalters stehen bei
+>   (0,3,0), `hover:bg-muted` und `hover:text-foreground` des Generators bei (0,2,0) — sie gewinnen
+>   unabhängig von der Reihenfolge. Die Kontur (0,2,0) schlägt `border-input` (0,1,0). Der
+>   **Fokusring** bleibt der des Generators, `--ring` = `--akzent-schrift`, und liegt außen.
+> - **Kein neuer Wert.** Die Paarungen sind gerechnet ([`dunkelmodus.md`](dunkelmodus.md) §3.3):
+>   `--akzent-vordergrund` auf `--akzent` 9,13 : 1 in beiden Blöcken, `--akzent-schrift` auf
+>   `--card` 5,40 hell und 10,72 dunkel. `tests/farbkontrast.test.ts` führt Paarungen **je Token**,
+>   nicht je Verwendung; beide sind dort in beiden Blöcken schon zugesichert — einzutragen war nichts.
+> - **Kein Übergang hinzugefügt.** Der Generator bringt `transition-all` mit, und zwar an jeder
+>   Schaltfläche und jedem Umschalter des Projekts; im Stylesheet 150 ms
+>   (`--default-transition-duration: .15s`). Die Fläche blendet deshalb ein. Das steht quer zu
+>   [`visuelles-konzept.md`](visuelles-konzept.md) §7 („Kein Übergang beim Überfahren“) — projektweit
+>   und seit dem Generator, nicht erst hier. *Entschieden vom Auftraggeber am 18.09.2026:* hier
+>   nichts abschalten, als Befund führen.
+> - **Der Zeitraumumschalter bleibt, wie er ist.** Für ihn ist Punkt **92** unverändert offen
+>   ([`dashboard-frontend.md`](dashboard-frontend.md) §9).
+>
+> **Test:** `tests/neu-laden.test.tsx`, *„trägt eingeschaltet die Akzentfläche, an wie pausiert, und
+> aus nicht (E‑217)“* — der gerenderte Schalter in allen drei Lagen. Ob eine Klasse greift,
+> entscheidet dort `matches` mit der Bedingung, die Tailwind aus der Variante macht. Dazu: keine
+> Akzentklasse ohne Bedingung, keine der beiden grauen Flächen am Element, die `hover`-Klasse da.
+>
+> **Verletzungsproben** — je ein Eingriff in `components/neu-laden.tsx`, zurückgespielt aus einer
+> Sicherungskopie und mit `cmp` verglichen, in keinem Commit; eine Leerprobe ohne Eingriff blieb
+> grün:
+>
+> | Probe | Eingriff | rot |
+> |---|---|---|
+> | 1 | Fläche nur unter `aria-pressed:` | der neue Fall, schon bei *aus*: `data-[state=on]:bg-muted` bleibt am Element |
+> | 2 | `data-[state=active]:` statt `data-[state=on]:` | derselbe, aus demselben Grund |
+> | 3 | zusätzlich `bg-akzent` ohne Bedingung | der neue Fall: *„aus: expected [ 'bg-akzent' ] to deeply equal []“* |
+> | 4 | ohne `aria-pressed:hover:bg-akzent/80` | der neue Fall |
+> | 5 | shadcns `bg-accent` statt `bg-akzent` | der neue Fall, bei *an* |
+> | 6 | ohne Kontur | der neue Fall, bei *an* |
+> | 7 | ohne Schrift auf der Fläche | der neue Fall, bei *an* |
+> | 8 | pausiert nicht eingeschaltet (`pressed` nur bei *an*) | drei Fälle: der neue, *„unterscheidet aus, an und pausiert …“* und *„pausiert auf Seite zwei, zeigt es am Schalter …“* |
+> | 9 | der alte Stand, ohne die Klassen | der neue Fall, schon bei *aus* |
+>
+> > **Belegvermerk (L10).** *Gemessen war:* der Testlauf und die Proben, die Meldungen wörtlich aus
+> > der Ausgabe, und das Stylesheet, das `next dev` für diesen Stand ausliefert — Reihenfolge und
+> > Selektoren der Regeln abgelesen, abgerufen über die Anmeldeseite ohne Anmeldung. *Nicht
+> > gemessen:* wie die Fläche im Browser aussieht, in beiden Blöcken, und ob das Überfahren dort
+> > greift — `jsdom` rechnet kein CSS; dafür gibt es die Sichtprüfung beim Auftraggeber.
+>
+> **Die Sichtprüfung am laufenden System** *(18.09.2026, nachgeholt; im Debug-Chrome über CDP,
+> angemeldet durch den Auftraggeber, `next dev` dieses Zweigs auf eigenem Port, NEXANS)*. Verglichen
+> wurden die berechneten Farben am Schalter mit denselben Tokens, aufgelöst im selben Dokument; das
+> Thema per `data-thema` im Prüftab umgestellt, Überfahren und Fokus per `CSS.forcePseudoState`, vor
+> jedem Ablesen 600 ms Wartezeit wegen des Generator-Übergangs:
+>
+> | Lage, hell und dunkel | Fläche | Symbol und „Auto“ | Kontur | Überfahren |
+> |---|---|---|---|---|
+> | aus | durchsichtig | Vordergrund | `--input` | `--muted`, wie bisher |
+> | an (Uhr) | `--akzent` | `--akzent-vordergrund` | `--akzent-schrift` | `--akzent` zu 80 % — **gleich** `--primary` zu 80 %, der gefüllten Schaltfläche; Schrift unverändert |
+> | pausiert (Pause) | `--akzent` | `--akzent-vordergrund` | `--akzent-schrift` | ebenso |
+>
+> In allen Lagen und beiden Blöcken: Fokus mit Kontur `--ring` und einem 3-px-Ring aus `--ring` zu
+> 50 %; `aria-pressed` und `data-state` wie in der Tabelle oben. Der gedrückte Zeitraum-Knopf
+> („24 Stunden") trägt in beiden Blöcken weiter genau `--muted` — Punkt 92 bleibt für ihn offen.
+> Dunkel liegt `--akzent-schrift` auf der aufgehellten Stufe, Fläche und Schrift sind in beiden
+> Blöcken dieselben Werte. Die Bilder zeigen dasselbe: eine gelbgrüne Fläche mit dunkler Uhr und
+> dunklem Wort, olivfarbene Kontur hell, gelbgrüne dunkel.
+>
+> > **Belegvermerk (L10).** *Gemessen war:* die berechneten Werte am Element gegen die im Dokument
+> > aufgelösten Tokens, je Lage, Zustand und Block. *Nicht gemessen:* der Übergang selbst (nur
+> > abgewartet) und ein echtes Überfahren mit der Maus — der Zustand ist erzwungen.
+>
+> *Nummer:* höchste vergebene **E‑216** (auf dem nicht gemergten `feat/nachrichtenliste-summe`),
+> **E‑215** auf `fix/anmeldung-fokus`; gesucht nach dem Verfahren aus §1.
+
 **Warum der Knopf je Ansicht einen anderen Namen trägt.** Er tut nicht überall dasselbe: In den
 Nachrichten führt er zurück auf Seite eins, in der Prozessansicht holt er zwei Dinge. Ein Name, der
 das sagt, ist die Auskunft, die der Nutzer vor dem Klick braucht — sichtbar bleibt überall dasselbe

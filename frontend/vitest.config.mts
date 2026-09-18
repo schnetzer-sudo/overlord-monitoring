@@ -11,7 +11,7 @@ import { defineConfig } from "vitest/config";
  * außer Laufzeit und Abhängigkeiten.
  *
  * **Die Ausnahmen sind gezählt, nicht gewachsen** — Stand 18.09.2026 sind es
- * **einhundertsechsundneunzig in vierundzwanzig Dateien**. Diese Zahl wird an genau dieser Stelle geführt;
+ * **einhundertsiebenundneunzig in vierundzwanzig Dateien**. Diese Zahl wird an genau dieser Stelle geführt;
  * `tests/hilfe/rendern.tsx` und `docs/frontend-grundlagen.md` §9 verweisen
  * darauf, statt sie zu wiederholen (drei Orte für dieselbe Zahl sind zwei zu
  * viel):
@@ -40,7 +40,7 @@ import { defineConfig } from "vitest/config";
  *
  * | `tests/rollen-auswahl.test.tsx` *(15.09.2026)* | 4 | **Die Rollenauswahl ist eine Liste der Anwendung und kein natives Feld mehr** (Punkt 180, `docs/benutzerverwaltung-frontend.md` §18). Eine Aussage über **Abwesenheit** — kein `<select>` im Baum, und genau das war der Anlass: Die Liste eines nativen Felds zeichnet der Browser, und keine Prüfung des Projekts erreicht ihre Farbe. Dazu drei über **Verdrahtung**, die erst im Zusammenspiel von Ereignis und Zustand entstehen: Eine gesperrte Rolle steht da und lässt sich weder per Klick noch per Taste wählen; derselbe Wert noch einmal gewählt meldet **nichts** — im Zeilenformular wäre jede Meldung ein `PUT`, und jedes `PUT` verwirft alle Sitzungen des Kontos (E5); `↓` am geschlossenen Feld **öffnet** nur. **Drei Mutanten gesetzt, drei gefallen**, jeder in genau einem Fall |
  * | `tests/spaltenwahl.test.tsx` *(15.09.2026, an zwei Meldungen des 16.09.2026 erweitert)* | 6 | **Die Regel ist selbst eine Klasse** (E‑147, `docs/spaltenwahl.md`): Ab welcher Containerbreite eine Spalte dasteht, entscheidet `@min-[…]/<name>:table-cell` an `th` **und** `td` — wörtlich, weil Tailwind nur findet, was im Quelltext steht. **Seit dem 16.09.2026 einer mehr:** die **Nachrichtenliste** (E‑148) — sie hing als einzige noch am Fenster, und an ihr hängt zusätzlich die Bauform unter der Grundmenge (der Ablauf bekommt den Rest, das Projekt kommt nicht). Je Tabelle (Nachrichtenliste, Trefferliste mit und ohne Spalte „Treffer", Benutzertabelle, Katalog): Die Zahl in der Klasse ist auf den Pixel die Summe der Mindestbreiten; an den gemessenen Containerbreiten und an jeder Schwellenkante liegt keine sichtbare Spalte unter ihrer Mindestbreite; `td` trägt dieselbe Sichtbarkeit wie `th`; keine Zelle trägt eine Fensterschwelle. Die Breiten sind nach `table-layout: fixed` **gerechnet** — `jsdom` rechnet kein Layout, der Beleg im Browser ist M177. **Seit der zweiten Meldung des 16.09.2026 einer mehr** (E‑149): Die Benutzertabelle hat **keine freie Spalte** mehr, und der Fall hält an der Breite der Meldung fest, dass **ein** Faktor für alle Spalten gilt — die Mandanten hatten dort 673 von 1.408 px gehortet, während Benutzername und Rolle auf ihrer Mindestbreite umbrachen |
- * | `tests/neu-laden.test.tsx` *(16.09.2026, am selben Tag erweitert)* | 15 | **„Neu laden" und die automatische Aktualisierung — fast durchweg Aussagen über Anfragen, die hinausgehen oder nicht** (`docs/neu-laden.md`). Der Baustein: ohne `automatik` **kein Schalter** (Abwesenheit), die drei Lagen über `aria-pressed` und drei verschiedene Symbole, und ein Klick beim Laden ruft nichts. Übersicht: ein Klick, **genau eine** weitere Anfrage an dieselbe Adresse, auch im **Leerzustand** (E‑p ergänzt). Nachrichten: von Seite zwei **eine** Anfrage ohne Cursor; bei offenem Panel **keine** an einen Detail- oder Dateiendpunkt (E‑169), mit dem Panel als Eichung. Mit gestellter Uhr: aus — nichts; an — nach 60 s eine; Seite zwei — pausiert und nichts, nach „Neu laden" wieder eine. Prozessansicht: zwei Minuten ohne Klick nichts (E‑164); ein Klick: Baum, dann Liste ab Seite eins; bringt der Baum ein neues Fenster, **keine** Listenanfrage mit dem alten. **Verletzungsproben:** „nur Seite eins" ausgehängt und „Panel mitholen" eingebaut — beide rot, zurückgenommen, in keinem Commit. **Seit E‑173 drei mehr, Aussagen über Reihenfolge im Baum:** Auf Übersicht und Prozessansicht ist der Knopf der **nächste Knopf nach dem letzten Zeitraum-Knopf**, in den Nachrichten sind Schalter und Knopf die **letzten beiden** der Filterleiste — die Leiste über den Baum gesucht, nicht über eine Klasse. Den Rand selbst rechnet jsdom nicht (M183). **Seit E‑175** prüft der Fall der Prozessansicht zusätzlich den freien Modus — keine Fallzahl mehr |
+ * | `tests/neu-laden.test.tsx` *(16.09.2026, am selben Tag erweitert; 18.09.2026)* | 16 | **„Neu laden" und die automatische Aktualisierung — fast durchweg Aussagen über Anfragen, die hinausgehen oder nicht** (`docs/neu-laden.md`). Der Baustein: ohne `automatik` **kein Schalter** (Abwesenheit), die drei Lagen über `aria-pressed` und drei verschiedene Symbole, und ein Klick beim Laden ruft nichts. Übersicht: ein Klick, **genau eine** weitere Anfrage an dieselbe Adresse, auch im **Leerzustand** (E‑p ergänzt). Nachrichten: von Seite zwei **eine** Anfrage ohne Cursor; bei offenem Panel **keine** an einen Detail- oder Dateiendpunkt (E‑169), mit dem Panel als Eichung. Mit gestellter Uhr: aus — nichts; an — nach 60 s eine; Seite zwei — pausiert und nichts, nach „Neu laden" wieder eine. Prozessansicht: zwei Minuten ohne Klick nichts (E‑164); ein Klick: Baum, dann Liste ab Seite eins; bringt der Baum ein neues Fenster, **keine** Listenanfrage mit dem alten. **Verletzungsproben:** „nur Seite eins" ausgehängt und „Panel mitholen" eingebaut — beide rot, zurückgenommen, in keinem Commit. **Seit E‑173 drei mehr, Aussagen über Reihenfolge im Baum:** Auf Übersicht und Prozessansicht ist der Knopf der **nächste Knopf nach dem letzten Zeitraum-Knopf**, in den Nachrichten sind Schalter und Knopf die **letzten beiden** der Filterleiste — die Leiste über den Baum gesucht, nicht über eine Klasse. Den Rand selbst rechnet jsdom nicht (M183). **Seit E‑175** prüft der Fall der Prozessansicht zusätzlich den freien Modus — keine Fallzahl mehr. **Seit E‑217 einer mehr, eine Regel, die selbst eine Klasse ist:** Eingeschaltet — an wie pausiert — greifen am Schalter die Akzentklassen, aus nicht; keine Akzentklasse steht ohne Bedingung; die gedrückte Fläche des Generators ist unter `aria-pressed` **und** `data-[state=on]` verdrängt. Ob eine Klasse greift, entscheidet `matches` mit der Bedingung, die Tailwind aus der Variante macht (im ausgelieferten Stylesheet nachgesehen). Neun Gegenproben, alle rot, die Leerprobe grün |
  *
  * > ⚠️ **Fortgeschrieben am 15.09.2026 (Spaltenwahl und Rollenauswahl), aus dem Lauf gezählt**
  * > (`vitest run --reporter=json`, Fälle je `.tsx`-Datei): **133 in neunzehn Dateien.** Acht
@@ -138,6 +138,21 @@ import { defineConfig } from "vitest/config";
  * > `tests/anmelde-formular.test.tsx` neu mit 1, `tests/blaettern.test.tsx` neu mit 11,
  * > `tests/aktualisierung.test.ts` von 11 auf 17 — gezählt, nicht gerechnet.
  *
+ * > ⚠️ **Fortgeschrieben am 18.09.2026 (der Schalter „Auto“ in der Akzentfarbe, E‑217)**, aus dem
+ * > Lauf (`vitest run --reporter=json`, Fälle je Datei): **185 in zweiundzwanzig Dateien**, keine
+ * > neue — `tests/neu-laden.test.tsx` von 15 auf 16. Der Lauf über alle **46** Dateien trägt
+ * > **1.251** Fälle. Je Datei gegen den Lauf des Commits `c360c4d` verglichen: allein der eine Fall;
+ * > keine neue Quelldatei, also nichts aus `farbwerte` und `serverbausteine` — gezählt, nicht
+ * > gerechnet.
+ *
+ * > ⚠️ **Zusammengeführt am 18.09.2026, alle drei (Sammelzweig `chore/abnahme-fokus-summe-auto`:
+ * > E‑215 bis E‑217)**, aus dem Lauf (`vitest run --reporter=json`, Fälle je Datei): **197 in
+ * > vierundzwanzig Dateien**. Die Kästen darüber gelten je für ihren eigenen Stand. Der Lauf über
+ * > alle **48** Dateien trägt **1.269** Fälle; je Datei gegen den Lauf von `c360c4d` verglichen:
+ * > `tests/anmelde-formular.test.tsx` neu mit 1, `tests/blaettern.test.tsx` neu mit 11,
+ * > `tests/aktualisierung.test.ts` von 11 auf 17, `tests/neu-laden.test.tsx` von 15 auf 16 —
+ * > gezählt, nicht gerechnet.
+ *
  * > ⚠️ **Fortgeschrieben am 17.09.2026 (Kodierung je Datei und EBCDIC-Muster, E‑176 und E‑177)**,
  * > aus dem Lauf (`vitest run --reporter=json`, Fälle je Datei): **161 in zwanzig Dateien**, keine
  * > neue. Der Lauf über alle 43 Dateien trägt **1.118** Fälle. Je Datei gegen den Lauf des Commits
@@ -181,7 +196,7 @@ import { defineConfig } from "vitest/config";
  * > darunter noch einhundertsechzehn; die Tabellensumme stimmte mit dem Kopf.
  * > Berichtigt ist der Satz.
  *
- * Allen einhundertsechsundneunzig ist dasselbe gemeinsam: **Es gibt keinen anderen Ort, an dem sie
+ * Allen einhundertsiebenundneunzig ist dasselbe gemeinsam: **Es gibt keinen anderen Ort, an dem sie
  * belegbar wären.** Das ist die Bedingung, nicht „es ließe sich so leichter
  * prüfen". Sie schalten ihre Umgebung selbst über `// @vitest-environment jsdom`
  * um — die Voreinstellung bleibt `node`, damit die übrigen Dateien nichts von
