@@ -368,6 +368,9 @@ export const en: Texte = {
       vor: "Next page",
       seiteEins: "Page 1",
       weitereSeite: "more page",
+      treffer: "Matches:",
+      trefferMehrAls: "more than {zahl}",
+      trefferMehrAlsHinweis: "The exact number is known once the last page is reached.",
     },
 
     aktualisierung: {

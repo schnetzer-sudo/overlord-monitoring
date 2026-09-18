@@ -7,7 +7,12 @@ import { alsAbfrage, type Nachrichtenfilter } from "./filter";
  * ohne React** (`docs/neu-laden.md`, `docs/nachrichtenliste.md` §8.3).
  *
  * Die Regeln stehen hier und nicht als Bedingung in einem Haken, damit sie als
- * Funktionen geprüft werden können (`tests/neu-laden.test.ts`).
+ * Funktionen geprüft werden können (`tests/aktualisierung.test.ts`; bis zum
+ * 18.09.2026 stand hier `tests/neu-laden.test.ts`, eine Datei, die es nie gab).
+ *
+ * *Seit dem 18.09.2026 (E‑216)* auch der Blätterstapel selbst und der Σ unter
+ * der Liste: was ein Schritt durch die Liste aus dem Stapel macht, und wie viele
+ * Zeilen bis zur angezeigten Seite angekommen sind.
  */
 
 /** Das Intervall der automatischen Aktualisierung. Keine Wahl (E‑165). */
@@ -76,6 +81,76 @@ export function abfrageNachNeuLaden(filter: Nachrichtenfilter): string {
  * überginge sie. Verglichen wird deshalb der **Stapel selbst**, nicht seine
  * Länge: Jedes Blättern und jede Filteränderung setzt einen neuen.
  */
-export function stapelNachNeuLaden(beimKlick: string[], jetzt: string[]): string[] {
+export function stapelNachNeuLaden<T>(beimKlick: T[], jetzt: T[]): T[] {
   return jetzt === beimKlick ? [] : jetzt;
+}
+
+/**
+ * **Ein Eintrag des Blätterstapels** (E‑216): der Cursor der Seite, auf die
+ * „Vor" geführt hat, und wie viele Zeilen die Seiten **davor** zusammen
+ * geliefert haben.
+ *
+ * **Die Zahl reist mit dem Cursor**, statt aus Seitentiefe mal Seitengröße
+ * gerechnet zu werden. Die Seitengröße gehört dem Backend; das Frontend schickt
+ * keine und kennt keine (`api.ts`). Dass heute jede Seite vor der letzten genau
+ * so viele Zeilen trägt, wie die Seitengröße sagt, ist im Backend garantiert
+ * (`Seite.aus`) und nicht hier — gezählt wird, was ankam.
+ */
+export type Stapeleintrag = { cursor: string; davor: number };
+
+/**
+ * **Die Treffer bis hier — der Σ unter der Liste** (E‑216,
+ * `docs/nachrichtenliste.md` §8.3).
+ *
+ * **Keine Gesamtzahl** (Regel L2, `docs/nachrichtenliste.md` §1): `anzahl` sind
+ * die tatsächlich gelieferten Zeilen von Seite eins bis einschließlich der
+ * angezeigten. **Genau** ist sie erst, wenn es keine weitere Seite gibt; bis
+ * dahin steht sie als „mehr als".
+ */
+export type Treffer = { anzahl: number; genau: boolean };
+
+/** Was eine Seite zum Blättern und Zählen beiträgt — die Felder aus `Seite`. */
+type Seitenumfang = { items: readonly unknown[]; nextCursor: string | null; hasMore: boolean };
+
+function bisHier(stapel: Stapeleintrag[], seite: Pick<Seitenumfang, "items">): number {
+  return (stapel.at(-1)?.davor ?? 0) + seite.items.length;
+}
+
+/** Der Σ zur angezeigten Seite: die Zeilen davor aus dem Stapel, dazu ihre eigenen. */
+export function trefferBisHier(
+  stapel: Stapeleintrag[],
+  seite: Pick<Seitenumfang, "items" | "hasMore">,
+): Treffer {
+  return { anzahl: bisHier(stapel, seite), genau: !seite.hasMore };
+}
+
+/**
+ * **Ein Schritt durch die Liste** — und wie der Stapel danach aussieht.
+ *
+ * - **Vor** legt den Cursor der nächsten Seite ab, zusammen mit den Zeilen bis
+ *   einschließlich der angezeigten. Ohne nächsten Cursor bleibt der Stapel
+ *   derselbe.
+ * - **Zurück** nimmt den obersten Eintrag weg; der Σ zeigt danach wieder die
+ *   Zahl bis zu jener Seite.
+ * - **Ein neuer Filter** beginnt auf Seite eins, mit leerem Stapel: Der Cursor
+ *   der alten Abfrage trägt einen Zeitpunkt, der im neuen Fenster nichts zu
+ *   suchen hat (`cursor-ungueltig`), und die gezählten Zeilen gehörten zu einer
+ *   anderen Liste.
+ */
+export type Blaetterschritt =
+  | { art: "vor"; seite: Pick<Seitenumfang, "items" | "nextCursor"> }
+  | { art: "zurueck" }
+  | { art: "neuerFilter" };
+
+export function blaettere(stapel: Stapeleintrag[], schritt: Blaetterschritt): Stapeleintrag[] {
+  switch (schritt.art) {
+    case "vor":
+      return schritt.seite.nextCursor === null
+        ? stapel
+        : [...stapel, { cursor: schritt.seite.nextCursor, davor: bisHier(stapel, schritt.seite) }];
+    case "zurueck":
+      return stapel.slice(0, -1);
+    case "neuerFilter":
+      return [];
+  }
 }

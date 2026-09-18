@@ -1165,6 +1165,9 @@ function Uebertragungen({
         aufVor={liste.vor}
         standVon={liste.standVon}
         laeuft={liste.laeuft}
+        // Hier nur im Datenzustand erreicht (die drei übrigen kehren oben früher
+        // zurück), also der Σ der Seite selbst, wie in der Nachrichtenliste (E‑216).
+        treffer={liste.treffer}
       />
     </div>
   );

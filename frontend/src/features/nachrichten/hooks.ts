@@ -53,7 +53,11 @@ import {
 import {
   abfrageNachNeuLaden,
   aktualisierungsintervall,
+  blaettere,
   stapelNachNeuLaden,
+  trefferBisHier,
+  type Stapeleintrag,
+  type Treffer,
 } from "./aktualisierung";
 import { PROZESSANSICHT_PARAMETER, type Prozessansichtzustand } from "./prozessansicht";
 import {
@@ -634,6 +638,19 @@ export type Listenzustand = {
    * Daten ankamen.
    */
   letzteSeite: Seite<Nachricht> | undefined;
+  /**
+   * **Die Treffer bis hier** (Σ, E‑216): die gelieferten Zeilen von Seite eins
+   * bis einschließlich `seite`, und ob das alle sind. `undefined`, solange
+   * `seite` fehlt. Gerechnet in `aktualisierung.ts` ({@link trefferBisHier}).
+   */
+  treffer: Treffer | undefined;
+  /**
+   * Derselbe Σ zu `letzteSeite`. **Bleibt die Liste bei einer Rückmeldung am
+   * Feld stehen, bleibt ihr Σ mit ihr stehen** — nach dem Zurücksetzen des
+   * Stapels ließe er sich nicht mehr rechnen, denn die Zeilen davor gehörten zum
+   * alten Filter.
+   */
+  letzteTreffer: Treffer | undefined;
   /** Ab wann die Zeilen stehen — sichtbar, auch bei manueller Bedienung. */
   standVon: number;
   /** Erster Aufbau: noch keine Zeilen da. Der Zustand „Laden". */
@@ -670,6 +687,12 @@ export type Listenzustand = {
  *
  * **Keine Seitenzahlen.** Es gibt keine Gesamtzahl (Regel L2 verbietet den
  * `COUNT`), und eine erfundene wäre schlimmer als keine.
+ *
+ * *Seit dem 18.09.2026 (E‑216)* trägt jeder Stapeleintrag neben dem Cursor die
+ * Zeilen der Seiten davor. Daraus entsteht der Σ unter der Liste — keine
+ * Gesamtzahl, sondern „bis hier gezählt", genau erst auf der letzten Seite
+ * ({@link trefferBisHier}). Jeder Schritt durch die Liste läuft über
+ * {@link blaettere}.
  *
  * ## Die automatische Aktualisierung ist eng gefasst
  *
@@ -709,7 +732,7 @@ export function useNachrichtenSeite(
   filter: Nachrichtenfilter,
   aktualisierungAn: boolean,
 ): Listenzustand {
-  const [stapel, setStapel] = useState<string[]>([]);
+  const [stapel, setStapel] = useState<Stapeleintrag[]>([]);
   const sichtbar = useSichtbar();
   const zwischenspeicher = useQueryClient();
 
@@ -734,11 +757,11 @@ export function useNachrichtenSeite(
   let aktuellerStapel = stapel;
   if (vorherigeAbfrage !== grundabfrage) {
     setVorherigeAbfrage(grundabfrage);
-    setStapel([]);
-    aktuellerStapel = [];
+    aktuellerStapel = blaettere(stapel, { art: "neuerFilter" });
+    setStapel(aktuellerStapel);
   }
 
-  const abfrage = alsAbfrage(filter, aktuellerStapel.at(-1) ?? null);
+  const abfrage = alsAbfrage(filter, aktuellerStapel.at(-1)?.cursor ?? null);
   const aufSeiteEins = aktuellerStapel.length === 0;
 
   const anfrage = useQuery<Seite<Nachricht>>({
@@ -751,6 +774,7 @@ export function useNachrichtenSeite(
   });
 
   const seite = anfrage.data;
+  const treffer = seite === undefined ? undefined : trefferBisHier(aktuellerStapel, seite);
 
   /*
    * Kein `placeholderData`: Das hielte die alte Seite bei *jedem* Filterwechsel
@@ -762,10 +786,15 @@ export function useNachrichtenSeite(
    * Muster wie beim Zurücksetzen des Seitenstapels weiter oben: React verwirft
    * den begonnenen Durchlauf und rendert sofort neu, der Zwischenstand erscheint
    * nie auf dem Bildschirm.
+   *
+   * Der Σ reist mit (E‑216): Er gehört zu der Seite, die stehen bleibt, und
+   * nach dem Zurücksetzen des Stapels ließe er sich nicht mehr rechnen.
    */
   const [letzteSeite, setLetzteSeite] = useState<Seite<Nachricht> | undefined>(undefined);
+  const [letzteTreffer, setLetzteTreffer] = useState<Treffer | undefined>(undefined);
   if (seite !== undefined && seite !== letzteSeite) {
     setLetzteSeite(seite);
+    setLetzteTreffer(treffer);
   }
 
   const nachladen = anfrage.refetch;
@@ -802,6 +831,8 @@ export function useNachrichtenSeite(
   return {
     seite,
     letzteSeite: seite ?? letzteSeite,
+    treffer,
+    letzteTreffer: treffer ?? letzteTreffer,
     standVon: anfrage.dataUpdatedAt,
     laedt: anfrage.isPending,
     laeuft: (anfrage.isFetching && !anfrage.isPending) || holtErsteSeite,
@@ -811,12 +842,11 @@ export function useNachrichtenSeite(
     kannVor: seite?.hasMore === true && seite.nextCursor !== null,
     kannZurueck: !aufSeiteEins,
     vor: useCallback(() => {
-      const naechster = seite?.nextCursor;
-      if (naechster) {
-        setStapel((bisher) => [...bisher, naechster]);
+      if (seite !== undefined) {
+        setStapel((bisher) => blaettere(bisher, { art: "vor", seite }));
       }
-    }, [seite?.nextCursor]),
-    zurueck: useCallback(() => setStapel((bisher) => bisher.slice(0, -1)), []),
+    }, [seite]),
+    zurueck: useCallback(() => setStapel((bisher) => blaettere(bisher, { art: "zurueck" })), []),
     aktualisiere: useCallback(() => void nachladen(), [nachladen]),
     neuLaden,
   };

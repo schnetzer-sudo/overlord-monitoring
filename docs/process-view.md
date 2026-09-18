@@ -1802,6 +1802,12 @@ Rechts steht **die Nachrichtenliste** — dieselbe Tabelle (`NachrichtenTabelle`
 (`Blaettern`), derselbe Prozessfilter des Endpunkts ([`nachrichtenliste.md`](nachrichtenliste.md)
 §1). **An beiden Bausteinen ist nichts geändert worden.**
 
+> *Fortgeschrieben am 18.09.2026 (E‑216):* Der Blätterblock trägt seither den **Σ** — die Zahl der
+> bis zur angezeigten Seite gelieferten Zeilen, „mehr als", solange weitere Seiten folgen
+> ([`nachrichtenliste.md`](nachrichtenliste.md) §8.3) —, und die Übertragungsliste trägt ihn mit,
+> weil dieselbe Liste nicht an zwei Orten verschieden gebaut wird; eine Zeile an der Aufrufstelle
+> (`treffer={liste.treffer}`), sonst nichts.
+
 Was fehlt, fehlt mit Grund: **keine Filterleiste.** Zeitraum und Prozess sind hier gesetzt, und ein
 zweiter Zeitraumschalter neben dem im Kopf wäre ein zweiter Standardwert.
 

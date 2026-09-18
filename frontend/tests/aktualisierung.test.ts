@@ -5,7 +5,10 @@ import {
   abfrageNachNeuLaden,
   aktualisierungsintervall,
   automatikzustand,
+  blaettere,
   stapelNachNeuLaden,
+  trefferBisHier,
+  type Stapeleintrag,
 } from "@/features/nachrichten/aktualisierung";
 import { aufbauAktiv } from "@/features/dashboard/verlauf";
 import { alsAbfrage, type Nachrichtenfilter } from "@/features/nachrichten/filter";
@@ -14,6 +17,10 @@ import { alsAbfrage, type Nachrichtenfilter } from "@/features/nachrichten/filte
  * **Wann die Liste von selbst fragt, und wohin „Neu laden" führt** — als reine
  * Funktionen (`docs/neu-laden.md`). Dass die Ansichten sie auch abfragen, steht
  * in `tests/neu-laden.test.tsx`.
+ *
+ * *Seit dem 18.09.2026 (E‑216)* auch der Blätterstapel und der Σ unter der
+ * Liste (`docs/nachrichtenliste.md` §8.3). Wie er aussieht und dass die
+ * Ansichten ihn abfragen, steht in `tests/blaettern.test.tsx`.
  */
 
 const LEER: Nachrichtenfilter = {
@@ -115,5 +122,60 @@ describe("Der Aufbau des Verlaufs (E‑170)", () => {
 
   it("baut nach einem Zeitraumwechsel wieder auf (E‑86)", () => {
     expect(aufbauAktiv("48H", "30T")).toBe("auto");
+  });
+});
+
+describe("Der Blätterstapel und der Σ (E‑216)", () => {
+  /** Eine Seite mit so vielen Zeilen — und, wenn es weitergeht, dem Cursor dorthin. */
+  function seite(zeilen: number, weiter: string | null = null) {
+    return {
+      items: Array.from({ length: zeilen }, (_, zeile) => zeile),
+      nextCursor: weiter,
+      hasMore: weiter !== null,
+    };
+  }
+
+  /** Zweimal „Vor" von Seite eins aus, je über eine volle Seite: der Stapel auf Seite drei. */
+  function aufSeiteDrei(): Stapeleintrag[] {
+    const zwei = blaettere([], { art: "vor", seite: seite(50, "cursor-2") });
+    return blaettere(zwei, { art: "vor", seite: seite(50, "cursor-3") });
+  }
+
+  it("zählt eine Seite ohne weitere genau, und Vor ändert dort nichts", () => {
+    expect(trefferBisHier([], seite(17))).toEqual({ anzahl: 17, genau: true });
+    const leer: Stapeleintrag[] = [];
+    expect(blaettere(leer, { art: "vor", seite: seite(17) })).toBe(leer);
+  });
+
+  it("zählt Seite eins mit weiteren als Untergrenze", () => {
+    expect(trefferBisHier([], seite(50, "cursor-2"))).toEqual({ anzahl: 50, genau: false });
+  });
+
+  it("summiert bis zur letzten Seite nach zweimal Blättern", () => {
+    const stapel = aufSeiteDrei();
+    expect(stapel.map((eintrag) => eintrag.cursor)).toEqual(["cursor-2", "cursor-3"]);
+    expect(trefferBisHier(stapel, seite(17))).toEqual({ anzahl: 117, genau: true });
+  });
+
+  it("zeigt nach Zurück die Zahl bis zu jener Seite", () => {
+    const zwei = blaettere(aufSeiteDrei(), { art: "zurueck" });
+    expect(trefferBisHier(zwei, seite(50, "cursor-3"))).toEqual({ anzahl: 100, genau: false });
+    const eins = blaettere(zwei, { art: "zurueck" });
+    expect(eins).toEqual([]);
+    expect(trefferBisHier(eins, seite(50, "cursor-2"))).toEqual({ anzahl: 50, genau: false });
+  });
+
+  it("beginnt nach einem Filterwechsel wieder bei der ersten Seite", () => {
+    const neu = blaettere(aufSeiteDrei(), { art: "neuerFilter" });
+    expect(neu).toEqual([]);
+    expect(trefferBisHier(neu, seite(7))).toEqual({ anzahl: 7, genau: true });
+  });
+
+  it("zählt, was ankam, und nicht Seitentiefe mal Seitengröße", () => {
+    // Eine kürzere Seite vor der letzten schließt das Backend heute aus
+    // (`Seite.aus`); gestellt ist sie hier, weil die Summe daran nicht hängen darf.
+    const zwei = blaettere([], { art: "vor", seite: seite(50, "cursor-2") });
+    const drei = blaettere(zwei, { art: "vor", seite: seite(48, "cursor-3") });
+    expect(trefferBisHier(drei, seite(17))).toEqual({ anzahl: 115, genau: true });
   });
 });
