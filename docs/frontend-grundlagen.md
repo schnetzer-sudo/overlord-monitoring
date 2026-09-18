@@ -261,6 +261,36 @@ auf das Passwortfeld verschoben → rot,
 Verfahren aus [`neu-laden.md`](neu-laden.md) §1 auf `main`, `feat/suchfeld-untermenues`,
 `test/indexbestand-e37` und in den Arbeitsbäumen; `E‑780` ist der bekannte Falschtreffer.
 
+> ⚠️ **Korrektur vom 18.09.2026, nach der Sichtprüfung am laufenden System — auch die Umleitung
+> lädt die Seite neu.** Die Tabelle oben bleibt stehen; **ihre zweite Zeile stimmt nicht.** Es gibt
+> keinen Weg auf die Anmeldeseite, auf dem React das Formular clientseitig einhängt und den Fokus
+> setzt. Jeder Weg ist eine vollständige Seitenladung:
+>
+> | Weg | wie er auf `/anmeldung` führt | wer den Fokus setzt |
+> |---|---|---|
+> | direkter Aufruf | Seitenladung | der Browser, aus `autofocus` im HTML |
+> | geschützte Route ohne Sitzungscookie | `proxy.ts` leitet serverseitig um | ebenso |
+> | abgelaufene Sitzung (`401`) | `window.location.replace` in `lib/query-client.ts` — bewusst hart, siehe dort | ebenso |
+> | Abmelden | `window.location.replace` in `features/sitzung/hooks.ts` | ebenso *(am Code abgelesen)* |
+>
+> Beim `401` ruft der Anwendungsrahmen zusätzlich `router.replace` — gemessen hat die harte
+> Navigation gewonnen, eine clientseitige Einhängung der Anmeldeseite kam nicht vor. **Der Test
+> prüft damit keinen der Wege**, sondern dass React den Fokus setzt, **sobald** das Formular
+> clientseitig einhängt; die Wege selbst belegt allein der Browser.
+>
+> **Die Sichtprüfung** *(18.09.2026, im Debug-Chrome über CDP, eigener Browserkontext, `next dev`
+> dieses Zweigs auf eigenem Port)*: In allen drei gefahrenen Fällen — direkter Aufruf, `/nachrichten`
+> ohne Cookie, `/nachrichten` mit einem ungültigen Sitzungscookie — steht nach dem Laden
+> `document.activeElement` auf `#benutzername`, bei sichtbarer Seite und fokussiertem Fenster. Die
+> Navigationen dabei, mitgeschrieben: jeweils ein **Dokument**wechsel auf
+> `/anmeldung?weiter=%2Fnachrichten`, im dritten Fall nach dem Dokument `/nachrichten`.
+> **Gegenprobe** mit demselben Skript am Stand ohne `autoFocus`: in allen drei Fällen `BODY`, das
+> Attribut fehlt. Die Abmeldung ist nicht gefahren — sie hätte die Sitzung des Auftraggebers beendet.
+>
+> > **Belegvermerk (L10).** *Gemessen war:* die drei Fälle samt Gegenprobe, `activeElement`,
+> > `visibilityState` und `hasFocus()` aus der Seite, die Navigationen über CDP. *Nicht gemessen:*
+> > der Abmeldeweg und ein Klick, der vor dem Hydrieren woanders hinsetzt.
+
 ---
 
 ## 4. Sprachen

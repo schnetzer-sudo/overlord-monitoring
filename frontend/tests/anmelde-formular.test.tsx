@@ -13,11 +13,14 @@ import { rendere } from "./hilfe/rendern";
  * ist ein Zustand des Dokuments (`document.activeElement`), und gesetzt wird er
  * von React beim Einhängen, nicht von einer Funktion dieses Projekts.
  *
- * **Geprüft ist der clientseitige Weg** — die Umleitung aus einer geschützten
- * Route, bei der React das Formular einhängt und den Fokus setzt. Beim direkten
- * Aufruf wertet der Browser das serverseitig gerenderte Attribut `autofocus`
- * aus; dafür müsste eine Seite laden, und das kann `jsdom` nicht. Diesen Weg
- * prüft die Sichtprüfung im Browser.
+ * **Geprüft ist, dass React den Fokus setzt, sobald das Formular clientseitig
+ * einhängt.** Die Wege auf die Anmeldeseite prüft der Test nicht: Jeder lädt die
+ * Seite neu (`proxy.ts`, `window.location.replace` nach `401` und nach dem
+ * Abmelden), und dort wertet der Browser das serverseitig gerenderte Attribut
+ * `autofocus` aus — dafür müsste eine Seite laden, und das kann `jsdom` nicht.
+ * Belegt sind sie in der Sichtprüfung vom 18.09.2026
+ * (`docs/frontend-grundlagen.md` §3). *Bis dahin stand hier, die Umleitung aus
+ * einer geschützten Route sei der clientseitige Weg.*
  *
  * **Ohne `toHaveFocus()`:** Das Projekt rendert ohne Testing Library
  * (`vitest.config.mts`). Verglichen wird deshalb `document.activeElement` mit
