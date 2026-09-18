@@ -24,6 +24,18 @@ import { useAnmelden } from "../hooks";
  * Nach der Anmeldung geht es an den ursprünglich angefragten Ort zurück — aber
  * nur, wenn der geprüft ist (`sicheresZiel`); sonst wäre die Anmeldeseite eine
  * offene Weiterleitung.
+ *
+ * **Wer die Seite öffnet, kann sofort tippen** (E‑215,
+ * `docs/frontend-grundlagen.md` §3): Der Fokus steht im Feld „Benutzername“,
+ * gesetzt über `autoFocus` und über nichts sonst. Das Attribut steht im
+ * serverseitig gerenderten HTML, und der Browser setzt den Fokus — auf **jedem**
+ * Weg hierher, denn jeder lädt die Seite neu: der direkte Aufruf, die Umleitung
+ * aus `proxy.ts`, das `window.location.replace` nach `401` und nach dem Abmelden.
+ * Hängt das Formular doch einmal clientseitig ein, setzt React den Fokus.
+ * Kein Effekt mit `focus()`, kein Zeitgeber.
+ *
+ * *Berichtigt am 18.09.2026 nach der Sichtprüfung:* Bis dahin stand hier, nach der
+ * Umleitung aus einer geschützten Route setze React den Fokus beim Einhängen.
  */
 export function AnmeldeFormular() {
   const texte = useTexte();
@@ -62,6 +74,7 @@ export function AnmeldeFormular() {
           name="username"
           autoComplete="username"
           autoCapitalize="none"
+          autoFocus
           spellCheck={false}
           required
           className="min-h-feld"
