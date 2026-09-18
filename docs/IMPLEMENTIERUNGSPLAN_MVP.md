@@ -1254,13 +1254,33 @@ nicht; der Weg „neues Konto meldet sich an und ändert sein Passwort" gehört 
 >
 > **Bezeichnung `10e` per `grep` frei** (17.09.2026, `docs/` und beide nicht gemergten Zweige).
 
+> ### **10f** — Fehler live *(Teil A gebaut am 18.09.2026)*
+>
+> **Der Anlass:** Gemeldet aus der Produktion am 18.09.2026 — eine Nachricht auf `ERROR_TIMEOUT` wurde
+> nachverarbeitet und stand danach auf `RUNNING`; Fehlerkachel und Verlauf zählten sie bis zum
+> Volllauf um 03:00 weiter als Fehler. Ein Statuswechsel bucht die Nachricht in die aktuelle Stunde
+> um, der Delta-Lauf schreibt nur die vorige und die laufende Stunde neu: ein **Abgang aus einem
+> alten Eimer**, den kein Nachlauffenster erreicht. Entschieden am 18.09.2026 per Auswahl: **Weg B,
+> Fehler live** — die Übersicht liest die Einordnung `FEHLER` aus einer Live-Lesung über `Message`;
+> verworfen der Abgleich im Delta-Lauf (A), ein Nachlauf von 48 Stunden (C) und eine reine
+> Dokumentation (D). Die vierte benannte Ausnahme von Regel L2.
+>
+> | Teil | Inhalt | Stand |
+> |---|---|---|
+> | **Teil A** | der Baustein in `common` und die Übersicht | **gebaut am 18.09.2026** ([`fehler-live.md`](fehler-live.md)). Vorregistrierung vor dem ersten Lauf (E‑208); die Lesung, der Dienst mit dem Ausfall nach E‑185, der Ersatz als reine Funktion und der Block `fehlerLive` (E‑209); die Übersicht ersetzt ihre Fehler nach der Verrechnung des Live-Rests, Block 5 liest den Rollup ohne Fehler und die Fehler über die Katalog-Nachlesung (E‑210, E‑211); der Hinweis bei `AUSGESETZT` über den Kacheln, unter dem zum Live-Rest (E‑212). **M188:** alle drei Tore halten — die Lesung über `MessageStatusIDX` in allen zwölf Lagen, 20,1 bis 31,5 ms; die Verteilung ohne Fehler im Plan von M178, höchstens das 1,062-Fache; die Seite höchstens 418,4 ms. Auf der Testkopie ist der Ersatz eine Identität, keine Zahl der Übersicht hat sich geändert. **Erledigt erst, wenn Lukas die Aufnahmen gesehen hat** — lokal ist die Lesung angewandt, der Hinweis erscheint dort nicht |
+> | **Teil B** | der Prozessbaum ruft denselben Baustein | **offen**, ein eigener Auftrag. Bis dahin zählen Baum und Übersicht Fehler verschieden (Punkt 209) |
+>
+> **Bezeichnung `10f` per `grep` frei** (18.09.2026, `docs/`, `DEVELOPMENT_GUIDELINES.md`,
+> `backend/src`, `frontend/src`, `frontend/tests` und beide nicht gemergten Zweige).
+
 **Abgrenzung:** Keine frei konfigurierbaren Dashboards, keine Alarmierung.
 
 **Abnahme:** Das Dashboard lädt in unter 500 Millisekunden. Die Zahlen stimmen stichprobenartig
 mit einer direkten Abfrage überein. Ein Klick auf eine Fehlerkachel führt in die gefilterte Liste.
 
 **Dokumentation:** `docs/rollup.md`, `docs/dashboard.md`, `docs/process-view.md` — *seit dem
-10.09.2026 dazu* `docs/dienste.md` *(10d Teil A)*, *seit dem 17.09.2026* `docs/live-rest.md` *(10e)*
+10.09.2026 dazu* `docs/dienste.md` *(10d Teil A)*, *seit dem 17.09.2026* `docs/live-rest.md` *(10e)*,
+*seit dem 18.09.2026* `docs/fehler-live.md` *(10f)*
 
 ---
 

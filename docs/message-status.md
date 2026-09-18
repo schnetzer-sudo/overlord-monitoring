@@ -155,6 +155,23 @@ Das Feld wird als Parameter übergeben, damit dieser gemeinsame Baustein nicht a
 > einer Zeile wurden zwei mit demselben Wert. `MessageStatusClassifierTest` hält beides fest — dass
 > beide Endstatus sind und dass keiner von beiden je überfällig wird.
 
+> ### ⚠️ Ergänzt am 18.09.2026 — ein Fehlerstatus ist fachlich nicht endgültig
+>
+> **Die Tabelle bleibt stehen, und `istEndstatus` bleibt unberührt.** Eine Nachverarbeitung setzt
+> eine Nachricht im Fehler auf `RUNNING` — ein Fehlerstatus ist damit **fachlich nicht endgültig**.
+> `istEndstatus` beantwortet weiter allein die Frage der Überfälligkeitsrechnung (Kasten darüber),
+> und sie urteilt über einen Status, nicht über die Geschichte einer Nachricht: Steht die Nachricht
+> nach der Nachverarbeitung auf `RUNNING`, ist sie eine Zeile in `LAEUFT` wie jede andere.
+>
+> **Herkunft:** Auftraggeber, 18.09.2026, **nicht gemessen** — auf der Testkopie kommt `RUNNING`
+> null Mal vor, eine Nachverarbeitung ist dort nicht zu sehen.
+>
+> **Was daraus folgt, steht in [`fehler-live.md`](fehler-live.md):** Der Statuswechsel bucht die
+> Nachricht in die Stunde der Nachverarbeitung um, und ihr alter Rollup-Eimer behält den Fehler bis
+> zum Volllauf (hergeleitet, nicht an der Produktion gemessen). Die Übersicht liest die Einordnung
+> `FEHLER` deshalb seit dem 18.09.2026 live (E‑208, die vierte benannte Ausnahme von Regel L2). Die
+> Fehlerbedingung oben ist dieselbe geblieben — die Lesung ruft sie und baut sie nicht nach.
+
 **Warum `AUFGETEILT` und `ZUSAMMENGEFUEHRT` fertig sind.** Eine gemergte oder gesplittete Nachricht wird nicht wieder
 angefasst — sie ist als *Zeile* fertig, auch wenn der fachliche Vorgang über die Verkettung
 weiterläuft. Messung M6 stützt das: `SPLITTED` und `MERGED` verteilen sich über fünfzehn Monate in

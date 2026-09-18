@@ -309,6 +309,18 @@ warum nichts ankommt ([`prozessauswahl.md`](prozessauswahl.md) §3).
 > die Tabelle oben, unverändert. **Der Grund:** Kurz vor dem nächsten Delta-Lauf fehlte im Baum bis
 > zu eine Stunde Verkehr, den die Übertragungsliste daneben schon zeigte (E‑50).
 
+> ### ⚠️ Ergänzt am 18.09.2026 — die Fehler des Baums bleiben bis Teil B bei Rollup und Live-Rest
+>
+> **Der Kasten darüber gilt unverändert.** Die Übersicht liest die Einordnung `FEHLER` seit dem
+> 18.09.2026 live aus `Message` ([`fehler-live.md`](fehler-live.md), E‑208) — der Baum noch nicht:
+> Er nimmt seine *Fehler* weiter aus der Rollup-Ebene samt Live-Rest. **Bis Teil B zählen Baum und
+> Übersicht Fehler deshalb verschieden:** Wird eine Nachricht aus einem Fehler heraus
+> nachverarbeitet und liegt ihr alter Eimer im Zeitraum, zählt der Baum sie bis zum Volllauf um
+> 03:00 weiter als Fehler — und in *Nachrichten* zweimal —, die Übersicht einmal und nicht als
+> Fehler. Auf der Testkopie ist das nicht zu sehen; dort ist der Ersatz eine Identität. Geführt als
+> offener Punkt **209** in [`fehler-live.md`](fehler-live.md), wie Punkt 191 beim Live-Rest: Teil B
+> ruft denselben Baustein.
+
 ### E‑34 — „Letzte Bewegung" als `ORDER BY … LIMIT 1` und nicht als `MAX()`
 
 Beide fragen denselben Wert. **Sie kosten nicht dasselbe**, und der Unterschied ist gemessen:

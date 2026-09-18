@@ -847,6 +847,23 @@ noch **nie** gesehen — auf der Testkopie kommt er null Mal vor.
 > trägt, hängt daran, dass `Message` je Zeile genau einen Status führt; das ist in §3.2 der
 > [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) erhoben.
 
+> ### ⚠️ Ergänzt am 18.09.2026 — zwischen zwei Volllaufen nicht einmal das
+>
+> **Der Abschnitt bleibt stehen.** *„Eine Projektion des Jetzt"* ist der Rollup nur unmittelbar nach
+> dem Volllauf. **Eimer vor G tragen zwischen zwei Volllaufen den Stand ihrer letzten Berechnung**:
+> Der Delta-Lauf rechnet nur die vorige und die laufende Stunde neu (§3, §5). Wechselt eine
+> Nachricht ihren Status, nachdem ihr Eimer gerechnet ist, steht sie bis 03:00 **zweimal** da — im
+> alten Eimer mit dem alten Status, im Eimer ihrer letzten Änderung mit dem neuen.
+>
+> **Gemeldet aus der Produktion am 18.09.2026:** ein `ERROR_TIMEOUT`, nach der Nachverarbeitung
+> `RUNNING`; die Übersicht zählte ihn bis zum Volllauf weiter als Fehler. **Die Folge für die
+> Einordnung `FEHLER`** ist gebaut: Die Übersicht liest sie seither live
+> ([`fehler-live.md`](fehler-live.md), E‑208). **Für jeden anderen Status bleibt es die benannte
+> Grenze** (Punkt 210 dort, bekannte Grenze 3 in [`dashboard.md`](dashboard.md) §2 berichtigt).
+>
+> **Herkunft:** fachliche Auskunft und Meldung des Auftraggebers vom 18.09.2026, **nicht gemessen** —
+> auf der Testkopie ist kein Abgang herstellbar (`RUNNING` null Mal, der Bestand eingefroren).
+
 ### Der früheste Zeitstempel
 
 ```sql
@@ -1825,6 +1842,31 @@ nachgelagert.
     > **Und es macht den offenen Punkt dringlicher, nicht kleiner:** Bisher stand hier ein
     > *unsichtbarer* Verursacher (`MatchInterchange`, Takt ungedeckt). Jetzt stehen **zwei**, und der
     > zweite hat eine bekannte Größenordnung.
+
+    > ### ⚠️ Ergänzt am 18.09.2026 — zwei Mechanismen, und nur einer gehört hierher
+    >
+    > **Der Punkt bleibt stehen.** Unter „Wanderung" liefen bisher zwei verschiedene Dinge, und der
+    > Fall aus der Produktion vom 18.09.2026 hat sie getrennt:
+    >
+    > | | Nachschreiben | Abgang |
+    > |---|---|---|
+    > | **Was geschieht** | `MessageLastUpdate` wird nachträglich geschrieben, auf der Testkopie um höchstens vier Sekunden (M86) — die Zeile fällt in einen Eimer, den der Lauf schon gerechnet hat | eine Nachricht wechselt ihren Status, **nachdem** ihr Eimer gerechnet ist, und wird in die Stunde der Änderung umgebucht — etwa ein `ERROR_TIMEOUT`, der nach der Nachverarbeitung `RUNNING` steht |
+    > | **Was es im Rollup anrichtet** | der Eimer fehlt ihr bis zum nächsten Lauf | der **alte** Eimer behält sie bis zum Volllauf, sofern der Delta-Lauf ihn nicht mehr neu rechnet; sie steht zweimal da |
+    > | **Was es fängt** | das Nachlauffenster von 15 Minuten (M86) — und dieser Punkt fragt, ob es genügt | ein Rückgriff nur dann, wenn der Abgang eine **bekannte Höchstweite** hat; die Nachverarbeitung hat keine: Der alte Eimer liegt so weit zurück, wie die Nachricht alt ist |
+    > | **Was dagegen gebaut ist** | nichts über die 15 Minuten hinaus | für die Einordnung `FEHLER` die Live-Lesung der Übersicht ([`fehler-live.md`](fehler-live.md), E‑208); für alle anderen Status nichts (Punkt 210 dort) |
+    >
+    > **Der Wächter aus dem Kasten darüber ist nach dieser Trennung ein Abgang, aber einer mit
+    > Höchstweite** — `RUNNING` wird zu `ERROR_TIMEOUT`, spätestens nach `MessageTimeout` zuzüglich
+    > eines Takts. Ihn fängt grundsätzlich ein größerer Rückgriff; das ist das Argument jenes Kastens,
+    > und es bleibt, wie es steht. *Hergeleitet aus den beiden Kästen, nicht gemessen.*
+    >
+    > **Die Nachverarbeitung aus der Meldung fängt kein Rückgriff**, denn nichts begrenzt, wie lange
+    > eine Nachricht im Fehler steht, bevor jemand sie nachverarbeitet. Ein Nachlauf von 48 Stunden —
+    > Weg C, vom Auftraggeber verworfen ([`fehler-live.md`](fehler-live.md) §3) — fing nur, was jünger
+    > ist als 48 Stunden.
+    > **Dieser Punkt bleibt der des Nachschreibens**; der Abgang steht als Grenze in
+    > [`dashboard.md`](dashboard.md) §2 (bekannte Grenze 3, berichtigt) und in
+    > [`fehler-live.md`](fehler-live.md).
 50. **Zwei ungemessene Vorgaben, beide in `application.yml` markiert.** (a) Die Uhrzeit des
     Nachtlaufs (`03:00`) — die Verteilung von `MessageLastUpdate` über die Tagesstunde ist nicht
     erhoben. (b) Die Drosselung (`1s` je Scheibengrenze) — wie viel Last die Produktionsinstanz

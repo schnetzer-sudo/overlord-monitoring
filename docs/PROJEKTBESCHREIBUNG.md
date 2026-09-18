@@ -1580,6 +1580,40 @@ Prozent der Datenbank; dort entscheidet die Bytegröße.
    > die teuerste Lage ist `NEXANS` im dichtesten Bereich über 30 Tage mit **388,6 ms**; der Live-Rest
    > kostet die Seite 4 bis 26 ms in der typischen Stunde und rund 270 ms im dichtesten Bereich des
    > größten Mandanten, unabhängig vom Paar.
+
+   > ### Die vierte benannte Ausnahme: Fehler live *(18.09.2026, E‑208, [`fehler-live.md`](fehler-live.md))*
+   >
+   > **Eingetragen, begründet, gemessen — wie der Satz darüber es für jede weitere verlangt.** Die
+   > Übersicht liest die Einordnung `FEHLER` nicht mehr aus `message_rollup`, sondern live aus
+   > `Message`: je Stundeneimer, Prozess und Rohstatus die Nachrichten des Fensters, die **jetzt** die
+   > Fehlerbedingung erfüllen, mit Mandantenkette. Alle anderen Einordnungen kommen weiter aus Rollup
+   > und Live-Rest.
+   >
+   > **Der Grund ist ein vierter, und wieder ein anderer.** Nicht eine Frist, nicht ein flüchtiger
+   > Status, nicht der Takt des Laufs: **Ein Fehlerstatus ist durch Nachverarbeitung nicht
+   > endgültig.** Eine Nachverarbeitung setzt die Nachricht auf `RUNNING`, und der Statuswechsel bucht
+   > sie in die aktuelle Stunde um ([`message-status.md`](message-status.md)). Der Delta-Lauf schreibt
+   > nur die vorige und die laufende Stunde neu, **einen Abgang aus einem alten Eimer entfernt er
+   > nicht** — bis zum Volllauf um 03:00 zählte die Fehlerkachel die Nachricht weiter als Fehler.
+   > Gemeldet vom Auftraggeber am 18.09.2026 aus der Produktion; die Ursache ist hergeleitet und nicht
+   > an der Produktion gemessen. Entschieden per Auswahl aus vier Wegen: Fehler live (B); verworfen
+   > der Abgleich im Delta-Lauf (A), ein Nachlauf von 48 Stunden (C) und eine reine Dokumentation (D).
+   >
+   > **Gemessen — M188, 18.09.2026** ([`fehler-live.md`](fehler-live.md) §8), ein Aufwärmlauf und die
+   > beste von fünf, vorregistriert:
+   >
+   > | | Ergebnis | Tor |
+   > |---|---|---|
+   > | die Lesung, vier Mandanten × drei Paare | Einstieg über `MessageStatusIDX` in allen zwölf Lagen, 3.412 gelesene Indexsätze, **20,1 bis 31,5 ms** in SQL, höchstens 34,5 ms am Code | kein Zeitindex, höchstens 100 ms — **gehalten** |
+   > | die Verteilung ohne die Fehler des Rollups | derselbe Plan wie M178, höchstens das 1,062-Fache | höchstens das 1,2-Fache — **gehalten** |
+   > | die Seite durch den Endpunkt | höchstens **418,4 ms** | 500 ms — **gehalten** |
+   >
+   > **Sie skaliert mit der Zahl der Fehlerzeilen im Bestand**, nicht mit der Breite des Fensters —
+   > derselbe Zugriff wie Block 6 (M108, M146) —, und zusätzlich ein wenig mit den Fehlern im Fenster.
+   >
+   > **Die Zählung steht damit bei vier, und der Satz gilt weiter — für eine fünfte.** Was die Ausnahme
+   > *nicht* abdeckt, ist benannt: Ein Abgang aus einem anderen Status bleibt bis zum Volllauf in
+   > seinem alten Eimer stehen (Punkt 210 in [`fehler-live.md`](fehler-live.md)).
 3. **Keine `OFFSET`-Paginierung.** Cursor-basiert über `(MessageLastUpdate, MessageID)`.
 4. **`MessageProperty` nur über `MessageID`.** Nie filtern, gruppieren oder sortieren über den Wert.
 

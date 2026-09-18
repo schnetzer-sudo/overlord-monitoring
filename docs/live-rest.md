@@ -828,3 +828,17 @@ Kennzahlen-Statements, am Gerüst oder an E‑34; kein Live-Rest in Nachrichtenl
 Property-Suche; keine Korrektur älterer Eimer — was mehr als 15 Minuten nachträglich geschrieben
 wird, fängt weiter der Nachtlauf; keine Konfiguration für die Obergrenze; kein neuer Endpunkt, keine
 neue benannte Mandantenausnahme; kein Nachladen im Takt (E‑186); keine Messung über Teil 3 hinaus.
+
+> ### ⚠️ Ergänzt am 18.09.2026 — „keine Korrektur älterer Eimer" gilt auch für den Abgang
+>
+> **Der Absatz darüber bleibt stehen.** Er nennt, was mehr als 15 Minuten *nachträglich geschrieben*
+> wird. Es gibt ein Zweites, das der Live-Rest ebenso wenig korrigiert: den **Abgang** aus einem
+> alten Eimer. Wechselt eine Nachricht vor G ihren Status — etwa ein Fehler, der nachverarbeitet wird
+> und dann `RUNNING` steht —, bucht sie in die aktuelle Stunde um. Der Live-Rest zählt sie dort
+> richtig dazu; **der alte Eimer vor G behält sie bis zum Volllauf**, und liegen beide Eimer im
+> Zeitraum, zählt die Seite sie zweimal.
+> Gemeldet aus der Produktion am 18.09.2026 ([`rollup.md`](rollup.md) §13, Punkt 49, jetzt in zwei
+> Mechanismen getrennt). **Für die Einordnung `FEHLER` liest die Übersicht seither live**
+> ([`fehler-live.md`](fehler-live.md), E‑208) — nach der Verrechnung des Live-Rests, sodass ein
+> Fehler in der laufenden Stunde, den beide kennen, einmal zählt. Für alle anderen Status bleibt es
+> die Grenze (Punkt 210 dort); der Prozessbaum folgt mit Teil B (Punkt 209).

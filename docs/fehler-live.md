@@ -2,11 +2,36 @@
 
 *18.09.2026.* Auftrag „Fehler live, Teil A (Baustein und Übersicht)", Stand 18.09.2026, Zweig
 `feat/fehler-live`. Schritt **10f** im [Implementierungsplan](IMPLEMENTIERUNGSPLAN_MVP.md).
-Entscheidungen ab **E‑208**, Messung **M188**, offene Punkte ab **209**.
+Entscheidungen **E‑208** bis **E‑212**, Messung **M188**, offene Punkte **209** bis **215**.
 
 **Die Frage dieser Datei:** Wie hört die Übersicht auf, eine Nachricht als Fehler zu zählen, die
 nach einer Nachverarbeitung keiner mehr ist — ohne den Rollup anzufassen und ohne dass Kachel,
 Verlauf und Verteilung auseinanderlaufen?
+
+> ### Der Ertrag in einem Absatz
+>
+> Die Übersicht liest die Einordnung `FEHLER` seit heute aus einer **Live-Lesung über `Message`**
+> (`common/FehlerLiveRepository`): je Stunde, Prozess und Rohstatus die Nachrichten des Fensters, die
+> **jetzt** die Fehlerbedingung erfüllen. **Nach der Verrechnung des Live-Rests** fallen die
+> Fehlerzeilen aus Rollup und Korrektur heraus, und die der Lesung kommen auf dem Eimer des Paares
+> hinzu (`common/FehlerLiveErsatz`, eine reine Funktion). Block 5 liest dann den Rollup **ohne**
+> Fehler, und die Fehlerzeilen gehen wie die Korrekturzeilen über die Katalog-Nachlesung. Der Fall aus
+> der Produktion — ein nachverarbeiteter `ERROR_TIMEOUT`, der bis zum Volllauf als Fehler zählte — ist
+> im Bau behoben; die Diensttests stellen ihn nach (ausgesetzt Fehler 1 und Nachrichten 2, angewandt 0
+> und 1), an der Produktion ist er nicht nachgemessen. **Alle drei Tore halten** (M188): Die Lesung
+> steigt in allen zwölf Lagen über `MessageStatusIDX` ein, liest 3.412 bis 3.413 Indexsätze und kostet
+> 20,1 bis 31,5 ms in SQL; die Verteilung ohne Fehler fährt Zeile für Zeile den Plan aus M178 und
+> kostet höchstens das 1,062-Fache davon; die Seite liegt durch den Endpunkt bei höchstens 418,4 ms.
+> Auf der Testkopie ist der Ersatz eine Identität — keine Zahl der Übersicht hat sich geändert. Fällt
+> die Lesung aus, rechnet die Seite wie vorher und sagt es über den Kacheln.
+>
+> **Drei Dinge waren nicht selbstverständlich:** Die Erwartung „20 bis 26 ms, unabhängig von Fenster und
+> Mandant" trifft für die gelesene Menge zu, nicht ganz für die Zeit — mit 711 Fehlern im Fenster
+> kostet die Lesung bei denselben Indexsätzen rund 10 ms mehr. Der Zuschlag der Seite ist die Lesung
+> **plus** ein kleiner, aber systematischer Preis der Bedingung in beiden Verteilungsstatements (bis
+> 3,7 ms je Statement), den die Vorregistrierung mit null angesetzt hatte. Und eine Nachricht, die aus
+> einem **anderen** Status heraus ihren Status wechselt, zählt zwischen zwei Volllaufen weiter
+> doppelt — das ist jetzt benannt (bekannte Grenze 3 berichtigt, Punkt 210) und bewusst nicht gebaut.
 
 ---
 
@@ -63,6 +88,16 @@ Das ist die **vierte benannte Ausnahme** von Regel L2 ([`PROJEKTBESCHREIBUNG.md`
 §8, Regel 2) — nach den Kacheln *Läuft* und *Wartend* (E‑72, E‑73) und dem Live-Rest der laufenden
 Stunde ([`live-rest.md`](live-rest.md)).
 
+**Die Begründung, dort eingetragen:** Ein Fehlerstatus ist durch Nachverarbeitung nicht endgültig —
+eine Nachverarbeitung setzt `RUNNING` ([`message-status.md`](message-status.md)) —, und der
+Delta-Lauf entfernt einen Abgang aus einem alten Eimer nicht. Anders als bei den drei Ausnahmen davor
+hängt die Zahl weder an einer Frist noch an einem flüchtigen Status noch am Takt des Laufs, sondern
+daran, dass **ein Endstatus zurückgenommen werden kann**.
+
+**Der Umfang:** die Übersicht, und dort allein die Einordnung `FEHLER` — in Verlauf, Kachel *Fehler*
+samt Fehlerarten und in beiden Sichten der Verteilung. Der Prozessbaum ist Teil B, ein eigener
+Auftrag (Punkt 209).
+
 ---
 
 ## 3. Die Entscheidung des Auftraggebers — Weg B (E‑208)
@@ -79,21 +114,236 @@ Protokoll, auch die verworfenen; beschrieben ist jeder nur so weit, wie der Auft
 
 ---
 
-## 4. Der Baustein in `common`
+## 4. Der Baustein in `common` (E‑209)
 
-*(folgt mit dem Bau, A2)*
+Gebaut wie der Live-Rest ([`live-rest.md`](live-rest.md) §6): eine Lesung, ein Dienst, eine reine
+Funktion und ein Antwortblock — **in `common`**, weil mit Teil B der Prozessbaum denselben Baustein
+ruft und Fachpakete einander nicht kennen.
 
-## 5. Die Übersicht
+| Klasse | Was sie ist |
+|---|---|
+| `FehlerLiveRepository` | **die Lesung** — `ausDerQuelle(MandantContext, von, bis)`, über `glassfishDsl` |
+| `FehlerLiveService` | **der Dienst** — `ermittle(mandant, von, bis)`, mit dem Ausfall nach E‑185 |
+| `FehlerLiveErsatz` | **die reine Funktion** — der Ersatz, ohne Datenbank |
+| `FehlerLiveErgebnis`, `FehlerLiveZeile`, `FehlerLiveZustand` | Zustand und Zeilen; nur `ANGEWANDT` trägt Zeilen, ein Widerspruch fällt im Konstruktor |
+| `FehlerLiveResponse` | **der Block `fehlerLive { zustand }`** der Antwort |
 
-*(folgt mit dem Bau, A4)*
+### Die Lesung
 
-## 6. Die Oberfläche
+Der Text, den `DashboardStatementsTest.FehlerLive.die_lesung_woertlich` Zeichen für Zeichen pinnt —
+hier gekürzt um die Qualifizierung:
 
-*(folgt mit dem Bau, A5)*
+```sql
+SELECT date_format(MessageLastUpdate, '%Y-%m-%d %H:00:00'), ProcessID, MessageStatus, count(*)
+FROM GlassfishDB.Message
+WHERE (MessageStatus LIKE ? ESCAPE '\' OR MessageStatus = ?)       -- fehlerBedingung, gerufen
+  AND MessageLastUpdate >= ? AND MessageLastUpdate < ?
+  AND EXISTS (SELECT 1 FROM GlassfishDB.Process AS fehler_process
+              JOIN GlassfishDB.ProjectMandant ON ProjectMandant.ProjectID = fehler_process.ProjectID
+              WHERE fehler_process.ProcessID = Message.ProcessID AND ProjectMandant.MandantID = ?)
+GROUP BY date_format(MessageLastUpdate, '%Y-%m-%d %H:00:00'), ProcessID, MessageStatus
+```
+
+| Regel des Auftrags | Wie gehalten | Belegt in |
+|---|---|---|
+| Fehlerbedingung und Stundenbildung gerufen, nicht nachgebaut | `MessageStatusClassifier.fehlerBedingung(MESSAGE.MESSAGESTATUS)` und `Stundeneimer.ausdruck(MESSAGE.MESSAGELASTUPDATE)` | `die_lesung_woertlich` |
+| Keine Funktion um `MessageLastUpdate` in der Bedingung | halboffener Bereich auf der Spalte | `die_lesung_gestalt` |
+| `GROUP BY` über den vollen Ausdruck (Befund 11) | derselbe `Field` in `SELECT` und `GROUP BY`, kein Alias | `die_lesung_gestalt` |
+| Mandantenkette als `EXISTS`, nie als Join | eigene Kette mit eigenem Alias `fehler_process`, dieselbe Form wie in `LiveRestRepository` | `die_lesung_gestalt`, Verletzungsprobe (§9) |
+| Kein Indexhinweis | keiner — dass trotzdem `MessageStatusIDX` den Einstieg macht, belegt der Plan | `DashboardPlanDbIT.fehlerlesung_faehrt_ueber_den_statusindex`, M188 Tor 1 |
+
+**Ohne Sortierung und ohne Deckelung:** Die Verbraucher summieren in ihre eigenen Eimer. Genau das
+unterscheidet die Lesung von Block 6, dessen `ORDER BY … LIMIT 10` den Zeitindex verlockend machte
+und deshalb den einzigen Indexhinweis des Projekts trägt ([`dashboard.md`](dashboard.md) §7a).
+
+### Der Dienst — der Ausfall wie beim Live-Rest
+
+**Dieselbe Ausnahmebehandlung wie `LiveRestService`, nicht weiter und nicht enger:** Jede
+`DataAccessException` ergibt `AUSGESETZT` und ein `WARN` im Protokoll — die Zeitgrenze des
+Lese-Pools ebenso wie ein Syntaxfehler, denn der Live-Rest unterscheidet dort nicht. Was keine
+`DataAccessException` ist, läuft durch. Der Verbraucher rechnet dann wie vor diesem Schritt.
+
+> **Das ist nicht der enge Fang der Kacheln *Läuft* und *Wartend***, der nur die Zeitgrenze
+> abfängt ([`dashboard.md`](dashboard.md) §5). Dort fehlt bei einem Abbruch eine Zahl, und sie heißt
+> „nicht ermittelbar"; hier fehlt keine — die Fehler kommen dann aus dem Rollup, wie bis gestern, und
+> die Oberfläche sagt es. Der Auftrag verlangt ausdrücklich die Haltung von E‑185.
+
+### Der Ersatz — die reine Funktion
+
+`FehlerLiveErsatz.ersetze(zustand, grundzeilen, liveZeilen, rohstatus, klassifizierer)`:
+
+1. Aus den Grundzeilen fallen **alle**, die `MessageStatusClassifier.einordnung` als `FEHLER`
+   einordnet — auch ein unbekanntes `ERROR_…`, eine andere Schreibweise und `COMMIT_REJECTED`.
+2. Die Zeilen der Lesung kommen hinzu, **über denselben Schlüssel**: Der Verbraucher hebt sie
+   vorher auf die Gestalt seiner Grundzeilen.
+
+Bei `AUSGESETZT` bleiben die Grundzeilen, wie sie sind; eine Live-Zeile in diesem Zustand wäre ein
+Widerspruch und fällt laut. **Die Einordnung entsteht beim Lesen** (E‑g): Die Zeilen tragen
+Rohwerte, und welche Fehlerart sie tragen, sagt danach derselbe Klassifizierer wie immer.
+
+**Warum ersetzen und nicht verrechnen:** Der Live-Rest verrechnet, weil der Rollup vor G stimmt. Bei
+den Fehlern stimmt er auch vor G nicht. Die Fehlerzeilen des Rollups abzuziehen und die der Quelle
+dazuzuzählen ergäbe je Schlüssel genau die Zeilen der Quelle — ersetzen ist dieselbe Rechnung ohne den
+Umweg.
+
+### Der Block `fehlerLive`
+
+```jsonc
+"fehlerLive": { "zustand": "ANGEWANDT" }   // oder "AUSGESETZT"
+```
+
+**Benannt nach der gelebten Konvention** — `liveRest` / `LiveRestZustand` / `LiveRestResponse`
+wird `fehlerLive` / `FehlerLiveZustand` / `FehlerLiveResponse`; keine Abweichung. **Ohne
+Zeitangabe**, anders als `liveRest.vollstaendigBis`: Ein Abgang kann jeden Eimer vor dem letzten
+Volllauf treffen, und es gibt keinen Zeitpunkt, bis zu dem die Fehlerzahlen des Rollups stimmen.
+
+> **Eine Eigenschaft, auf der der Ersatz ruht:** SQL und Java müssen sich einig sein, was ein Fehler
+> ist. Die Lesung wählt in SQL aus, der Ersatz entfernt in Java. Für jeden bekannten Rohwert, jede
+> Groß- und Kleinschreibung und jedes `ERROR_…` sind sie es — dafür stellt der Klassifizierer den
+> Rohwert hoch ([`message-status.md`](message-status.md)). Nicht für Rohwerte, die nur die Sortierung
+> der Spalte gleichmacht: `'COMMIT_REJECTED '` mit Leerzeichen am Ende ist unter `PAD SPACE` gleich
+> `'COMMIT_REJECTED'`, für Java nicht. Auf der Testkopie kommt kein solcher Wert vor; der Test gegen
+> neue Statuswerte fiele bei seinem ersten Auftreten. Offener Punkt **213**.
+
+---
+
+## 5. Die Übersicht (E‑210, E‑211)
+
+### Die Reihenfolge der Statements
+
+**Die Lesung läuft an zweiter Stelle** — nach dem Verlauf und **vor Block 5**, weil dessen zwei
+Statements an ihrem Zustand hängen (E‑210). Alle folgenden rücken um eins; der Live-Rest und die
+Nachlesung bleiben am Ende. `DashboardStatementsTest.FehlerLive` benennt jede Lage einzeln:
+
+| Lage | Statements | Folge |
+|---|---:|---|
+| Lesung angewandt, kein Fehler im Fenster, Live-Rest ohne Lauf | **11** | Verlauf · **Fehlerlesung** · Verteilung Partner **ohne Fehler** · Richtung **ohne Fehler** · Läuft · Erscheinungsbedingung · Wartend · Zuletzt aufgefallen · Stand · Dienste · Wasserstand |
+| … mit Fehler im Fenster | **12** | dieselben elf · **Nachlesung** |
+| Lesung ausgesetzt | **11** | dieselben elf, die zwei Verteilungsstatements **im heutigen Wortlaut** |
+| ausgesetzt, Live-Rest angewandt mit Korrekturzeile | **14** | dieselben elf · Live-Rest A · B · Nachlesung — wie vor diesem Schritt, plus die ausgefallene Lesung |
+| angewandt, Live-Rest angewandt ohne Korrekturzeile | **13** | die elf · A · B |
+| angewandt, Live-Rest mit Korrekturzeile — mit oder ohne Fehler im Fenster | **14** | die elf · A · B · **eine** Nachlesung für alle Prozesse |
+| angewandt, die einzige Korrekturzeile ist ein Fehler | **13** | die elf · A · B — Block 5 hat nichts zuzurechnen |
+
+Mit genanntem `zeitraum` also elf bis vierzehn, ohne ihn zwölf bis siebzehn (eine bis drei
+Belegungsproben davor, [`dashboard.md`](dashboard.md) §3).
+
+### Blöcke 1 bis 3 — der Ersatz nach dem Live-Rest
+
+Die Zeilen des Verlaufs entstehen wie seit E‑190: Rollupzeilen plus die Korrektur des Live-Rests, je
+(Eimer, Rohstatus) auf null geklemmt. **Danach** der Ersatz: Die Fehlerzeilen fallen heraus, und die
+Zeilen der Lesung kommen hinzu — **auf den Eimer des Paares gehoben** wie in E‑190 (`48H` die Stunde,
+`30T` `DATE(stunde)`, `12M` der Monatserste) und je (Eimer, Rohstatus) summiert
+(`Liveverrechnung.gehoben`). Verlauf, Kachel *Nachrichten*, Kachel *Fehler* und die Fehlerarten
+entstehen daraus **wie bisher**.
+
+**Warum nach dem Live-Rest und nicht davor:** Die Korrektur trägt ihre eigenen Fehlerzeilen (ein
+Fehler in der laufenden Stunde steht dort mit Plus). Stünde der Ersatz davor, kämen sie hinterher
+wieder hinein, und derselbe Fehler zählte zweimal — `DashboardServiceTest.fehler_im_live_bereich_zaehlt_einmal`.
+
+### Block 5 — ohne die Fehler des Rollups, die Lesung über die Nachlesung
+
+| Zustand der Lesung | Die zwei Verteilungsstatements | Was Block 5 über die Nachlesung zugerechnet bekommt |
+|---|---|---|
+| **angewandt** | `verteilungOhneFehler` — dieselbe Gestalt mit **einer** Bedingung mehr hinter der Mandantenkette: `and not (message_status like ? escape '\' or message_status = ?)` | die Korrekturzeilen des Live-Rests **ohne** Fehlerzeilen, und die Fehlerzeilen der Lesung — beide je Prozess summiert, dem Schlüssel über die Katalog-Nachlesung zugeordnet (E‑191) |
+| **ausgesetzt** | `verteilung` — **Zeichen für Zeichen der heutige Wortlaut** | die Korrektur des Live-Rests wie bisher |
+
+**Die heutige Form ist unverändert, und das ist belegt, nicht angenommen:** Beide Formen teilen eine
+Methode, und die Zusatzbedingung ist für die heutige `DSL.noCondition()`, die jOOQ nicht rendert.
+Der gerenderte Text aller zwölf Fassungen (drei Paare × zwei Sichten, mit Platzhaltern und mit
+Literalen) ist vor und nach dem Umbau mit `cmp` verglichen worden: gleich. Seither pinnt
+`DashboardStatementsTest` beide Fassungen wörtlich.
+
+**So zählen Kachel und Sichten in beiden Zuständen gleich:** angewandt nehmen beide die Fehler aus
+der Lesung, ausgesetzt beide aus dem Rollup. `DashboardIsolationDbIT.sichtZaehltDieEigenenNachrichten`
+läuft auf der Testkopie seither über die Nachlesung (`SUTTONS` hat Fehler in `30T` und `12M`) und ist
+grün.
+
+> **Eine Auslegung, gemeldet (E‑211).** Der Auftrag sagt: *„Die Nachlesung läuft, sobald es
+> Korrekturzeilen oder Live-Fehlerzeilen im Fenster gibt."* Gebaut ist: sobald es im Fenster
+> **Zeilen für Block 5** gibt — Korrekturzeilen ohne Fehler oder Fehlerzeilen der Lesung. Der
+> Unterschied ist eine Lage: Die einzigen Korrekturzeilen sind Fehler, und die Lesung ist angewandt.
+> Dann hat Block 5 nichts zuzurechnen, und die Nachlesung fragte nach Prozessen, deren Zeilen sie
+> gleich wieder verwirft. Sie läuft dann nicht (`angewandt_korrekturzeile_ist_ein_fehler`). Bei
+> ausgesetzter Lesung ist der Wortlaut des Auftrags genau erfüllt.
+
+### Übergreifend
+
+- **Ein Uhrenschlag:** Die Lesung bekommt das Fenster, das die Seite aus ihrem einen `jetzt` bildet;
+  der Live-Rest bekommt dasselbe `jetzt` (`DashboardServiceTest.ein_uhrenschlag`).
+- **Der Leerzustand folgt der Kachel *Nachrichten* nach dem Ersatz** — in beide Richtungen: War der
+  einzige Eintrag ein Fehler, den es nicht mehr gibt, ist die Seite leer; ein Fehler, den der Rollup
+  noch nicht kennt, macht sie nicht leer.
+- **Bei `liveRest = AUSGESETZT` zählt die Lesung trotzdem bis `bis`.** So gelassen und hier benannt:
+  **Die Fehler sind dann vollständiger als der übrige Verkehr.** Ein Fehler der letzten Stunden steht
+  in der Kachel *Fehler*, während die Kachel *Nachrichten* ihn nur über die Fehlerzeile kennt — die
+  übrigen Nachrichten derselben Stunden fehlen, und der Hinweis zum Live-Rest sagt das.
+- **Unverändert:** *Läuft*, *Wartend* samt Erscheinungsbedingung, Block 6 *Zuletzt aufgefallen* mit
+  seinem Indexhinweis, *Stand*, *Plattform* und die Belegungsprobe des Standardfensters.
+- **Kachel und Liste lesen jetzt dieselbe Menge:** Der Verweis der Fehlerkachel führt in die Liste
+  mit `status=FEHLER` ([`dashboard-frontend.md`](dashboard-frontend.md) §5.4), und die Liste liest
+  live. Bis heute konnte die Kachel dort eine nachverarbeitete Nachricht mitzählen, die die Liste
+  nicht mehr zeigte; bei angewandter Lesung nicht mehr. Die eine Grenze bleibt, wie sie war: `bis`
+  ist im Dashboard ausschließend, in der Liste nicht (§6.3 dort).
+
+---
+
+## 6. Die Oberfläche (E‑212)
+
+Bei `fehlerLive.zustand = AUSGESETZT` steht über den Kacheln ein Satz:
+
+> *Die Fehlerzahlen konnten nicht live ermittelt werden und stammen aus der stündlichen Aggregation.
+> Nachverarbeitete Nachrichten können darin noch als Fehler zählen.*
+
+— der Textvorschlag des Auftrags, unverändert; englisch *„The error figures could not be determined
+live and come from the hourly aggregation. Reprocessed messages may still count as errors there."*
+
+- **Bauform und Ort des Hinweises zum Live-Rest** (E‑192): `Alert` ohne Variante, `Info`-Zeichen,
+  kein Rot, kein neues Farbtoken; über den Kacheln, **auch im Leerzustand**.
+- **Ein eigener Baustein:** `components/fehler-live-hinweis.tsx`, der Typ in `lib/fehler-live.ts`,
+  die Texte unter `texte.fehlerLive` in `i18n/de.ts` und `en.ts` — dieselbe Bewegung wie beim
+  Live-Rest, damit der Prozessbaum ihn mit Teil B ruft, ohne aus einem Nachbarfeature zu importieren.
+- **Stehen beide Hinweise, stehen sie untereinander, der zum Live-Rest zuerst.**
+- **Bei `ANGEWANDT` steht nichts** — ein Hinweis, der immer da ist, wird nicht mehr gelesen.
+- **Kein Nachladen** (E‑137, E‑164); der Hinweis wechselt mit der nächsten Antwort.
+- `components/ui` ist nicht angefasst; der shadcn-Skill war nicht nötig, weil `Alert` eingebunden
+  bleibt wie beim Live-Rest.
+
+**Lokal erscheint der Hinweis nicht:** Die Lesung ist auf der Testkopie angewandt. Eine
+Sichtprüfung mit gestellter Antwort steht aus (§13).
+
+---
 
 ## 7. Die Dev-Zeile
 
-*(folgt mit der Messung)*
+Lesend geprüft am 18.09.2026 (M188, Sitzung 0), nichts verändert:
+
+| | |
+|---|---|
+| **Rollup gegen Quelle** | `SUM(anzahl)` über `message_rollup` = `COUNT(*)` über `Message` = **3.341.519** — der Rollup deckt den ganzen Bestand |
+| **Fehlerzeilen im ganzen Bestand** | **3.412**: `ERROR_DUPLICATE` 3.248, `COMMIT_REJECTED` 111, `ERROR_TIMEOUT` 53. Je Mandant `NEXANS` 3.301, `SUTTONS` 103, `VOTG` 8, alle übrigen sieben null. *M146 nannte für `NEXANS` 3.300 — der Unterschied von eins ist nicht nachgegangen und berührt hier nichts* |
+| **Live-Rest lokal** | `NICHT_NOETIG` — W steht seit dem Lauf vom 27.08.2026 hinter der Anwendungsuhr ([`live-rest.md`](live-rest.md) §11) |
+| **Fehler live lokal** | `ANGEWANDT` |
+
+**Die Eichung hält: Keine Zahl der Übersicht hat sich geändert.**
+`DashboardFehlerLiveDbIT.die_dev_zeile_ist_eine_identitaet` vergleicht die Seite bei angewandter
+Lesung mit derselben Seite bei ausgesetzter — also der von vor diesem Schritt — Feld für Feld, bis
+auf den Block `fehlerLive`: gleich, für `NEXANS`, `SUTTONS` und `VOTG` in allen drei Paaren. Die
+Vorprobe davor — die Fehler des Rollups treffen `Message` im Fenster — hielt in allen neun Lagen, der
+Wasserstand musste nicht nachgesehen werden. Die Kachel *Fehler* zählt, was M146 für Block 6 zählte:
+
+| | `48H` | `30T` | `12M` |
+|---|---:|---:|---:|
+| `NEXANS` | 50 | 55 | 711 |
+| `SUTTONS` | 0 | 5 | 103 |
+| `VOTG` | 0 | 0 | 8 |
+
+— je Paar gleich `COUNT(*)` aus `Message` mit Fehlerbedingung, Fenster und Kette, und gleich der
+Summe über „Zuletzt aufgefallen" (höchstens drei betroffene Prozesse). **Ausgegeben, nicht
+behauptet** (Regel T2): Zugesichert sind die Gleichheiten, nicht die Zahlen.
+
+**Ein Abgang ist hier nicht herstellbar** — `RUNNING` kommt null Mal vor, und Tests schreiben nicht
+(S1, T2). Den Fall aus der Produktion tragen die Diensttests mit erfundenen Zeilen (§9).
 
 ---
 
@@ -220,24 +470,376 @@ Protokoll, auch die verworfenen; beschrieben ist jeder nur so weit, wie der Auft
 >   angewandt ist (in der Zusatzlage auch der Live-Rest) und dass Kachel *Nachrichten* und beide
 >   Sichten dieselbe Zahl tragen — sonst mäße er die Laufzeit einer falschen Seite.
 
+### Ergebnis — 18.09.2026, gegen die Vorregistrierung
+
+**Alle drei Tore halten.** Die Erwartungen treffen nicht überall zu; jede Abweichung steht bei ihrem
+Tor, keine ist umgedeutet. Sequenziell gefahren, kein Lauf parallel zu einem anderen gegen die
+Testkopie: Sitzung 0 (Zählung), Sitzung 1 (Tor 1 in SQL), Tor 1 am Code, dann erst der Einbau,
+danach Sitzung 2 (Tor 2 in SQL), Tor 2 am Repository und Tor 3 in einem Lauf, Tor 3 ein zweites Mal.
+
+**Wo die Zahlen stehen:** `scripts/messung-fehler-live/` — `erzeuge.py` und die drei Sitzungen
+(`s0-zaehlung.sql`, `s1-tor1-lesung.sql`, `s2-tor2-verteilung.sql`), die gefilterten Protokolle
+`ergebnis/s1.gefiltert.txt` und `s2.gefiltert.txt` (Marken, Pläne, Zähler, Laufzeiten) und die
+Laufzeilen der Läufer `ergebnis/m188-*.txt`. **Die Rohausgaben der Sitzungen sind nicht eingecheckt**
+(G1): Die Lesung gibt `ProcessID` aus. Geeicht: dieselbe Suche nach Kennungsmustern findet in den
+Rohausgaben 770 und 154 Treffer, in den eingecheckten Dateien keinen. Sitzungen ab 10:14 Serverzeit,
+MariaDB 10.6.22, `read_only = 1`. Eichung der Wanduhr um `SELECT 1`: 0,806 bis 0,897 ms; die
+Handler-Zähler um `SELECT 1`: 9 `read_rnd_next`, sonst null.
+
+#### Sitzung 0 — der vierte Mandant, nach der Regel
+
+| Mandant ohne eine einzige Fehlerzeile | Nachrichten im ganzen Bestand |
+|---|---:|
+| **`IBIS`** | **75.746** |
+| `IBISGUS` | 29.339 |
+| `ZAST` | 5.036 |
+| `WOC` | 2.529 |
+| `SYSTEM` | 151 |
+| `NXHBE` | 9 |
+| `EDITIONLINGERI` | 0 |
+
+Nach der Regel ist es **`IBIS`**. Die Nachrichten stammen aus `message_rollup`, dessen Deckung in
+derselben Sitzung geprüft ist (3.341.519 gegen `COUNT(*)` 3.341.519).
+
+#### Tor 1 — die Lesung: gehalten
+
+In Millisekunden, beste von fünf; *Profil* und *Wanduhr* aus Sitzung 1, *am Code* aus
+`MessungM188DbIT.tor1_die_lesung`, vor dem Einbau:
+
+| Mandant | Paar | Fehler im Fenster | Zeilen der Lesung | Indexsätze gelesen (`read_next`) | Profil | Wanduhr | am Code |
+|---|---|---:|---:|---:|---:|---:|---:|
+| `NEXANS` | `48H` | 50 | 2 | 3.412 | 21,611 | 22,489 | 23,370 |
+| `NEXANS` | `30T` | 55 | 6 | 3.412 | 22,059 | 23,014 | 23,756 |
+| `NEXANS` | `12M` | 711 | 35 | 3.412 | **31,512** | 32,669 | **34,536** |
+| `SUTTONS` | `48H` | 0 | 0 | 3.413 | 21,238 | 22,275 | 23,505 |
+| `SUTTONS` | `30T` | 5 | 5 | 3.413 | 21,137 | 22,264 | 22,895 |
+| `SUTTONS` | `12M` | 103 | 61 | 3.413 | 24,864 | 26,603 | 26,506 |
+| `VOTG` | `48H` | 0 | 0 | 3.412 | 20,500 | 21,722 | 21,517 |
+| `VOTG` | `30T` | 0 | 0 | 3.412 | 20,163 | 20,995 | 22,192 |
+| `VOTG` | `12M` | 8 | 1 | 3.412 | 21,444 | 22,482 | 24,018 |
+| `IBIS` | `48H` | 0 | 0 | 3.412 | 20,116 | 21,276 | 22,491 |
+| `IBIS` | `30T` | 0 | 0 | 3.412 | 21,145 | 22,427 | 22,118 |
+| `IBIS` | `12M` | 0 | 0 | 3.412 | 22,527 | 23,434 | 23,838 |
+
+**Die Pläne:** In allen zwölf Lagen liest `Message` über **`MessageStatusIDX`** (`range`,
+`key_len` 123), mit **6.257** geschätzten Zeilen — dieselbe Zahl wie Block 6 in M146. Neunmal
+treibt `Message`, und die Kette hängt per `eq_ref` über `PRIMARY` an; bei `SUTTONS` (drei Lagen)
+beginnt der Plan bei `ProjectMandant` über `ProjectMandant_Mandant_idx` und liest `Message` mit
+Join-Puffer — die Beobachtung aus M146. **`MessageLastUpdateIDX` steht in `possible_keys` und in
+keiner Planzeile als `key`**, `MessageLastUpdateProcessMessageIDX` ebenso wenig, und kein Plan zeigt
+einen Rowid-Filter. `NEXANS` `48H`, gekürzt um `possible_keys`:
+
+```
+| id | select_type | table          | type   | key              | key_len | ref                                        | rows | Extra
+|  1 | PRIMARY     | Message        | range  | MessageStatusIDX | 123     | NULL                                       | 6257 | Using index condition; Using where; Using temporary; Using filesort
+|  1 | PRIMARY     | fehler_process | eq_ref | PRIMARY          | 146     | GlassfishDB.Message.ProcessID              | 1    | Using where
+|  1 | PRIMARY     | ProjectMandant | eq_ref | PRIMARY          | 292     | GlassfishDB.fehler_process.ProjectID,const | 1    | Using where; Using index
+```
+
+| Vorregistriert | Gemessen | trifft zu? |
+|---|---|---|
+| Einstieg über `MessageStatusIDX` | in allen zwölf Lagen | **ja** |
+| dieselben 6.257 Zeilen wie Block 6 (M146) | 6.257 geschätzt in allen zwölf; **gelesen** sind 3.412 bis 3.413 Indexsätze — die Fehlerzeilen des ganzen Bestands, in jeder Lage dieselben | **ja** |
+| unabhängig von Fenster und Mandant | **die gelesene Menge ja, die Zeit nicht ganz** | teilweise |
+| 20 bis 26 ms (M145, M146) | in SQL 20,1 bis 24,9 ms in elf Lagen, **31,5 ms** bei `NEXANS` `12M`; am Code 21,5 bis 26,5 ms in elf Lagen, **34,5 ms** bei `NEXANS` `12M` | **nein, in einer Lage** |
+| **Grenze:** kein Zeitindex, höchstens 100 ms | kein Zeitindex, höchstens 34,5 ms | **gehalten** |
+
+**Die Abweichung, benannt:** Die eine Lage über dem Band ist die mit den meisten Fehlern im Fenster —
+711 in 35 Gruppen, gegen 0 bis 103 sonst. Gelesen wird dort nicht mehr (dieselben 3.412 Indexsätze),
+aber die Zähler der temporären Tabelle steigen (`read_rnd` 35 gegen 2, `read_rnd_next` 45 gegen 12
+bei `NEXANS` `48H`). **Wohin die rund 10 ms gehen, ist nicht gemessen**; plausibel ist die
+Gruppierung der Zeilen, die alle Bedingungen erfüllen. Die Aussage „unabhängig vom Fenster" gilt
+damit für den Zugriff und nicht für die Laufzeit: **Die Lesung wächst mit der Zahl der Fehler im
+Fenster** — offener Punkt 212.
+
+> **Belegvermerk (Regel L10).** *Gemessen ist:* zwölf Lagen, je `EXPLAIN`, ein Lauf zwischen den
+> Handler-Zählern, ein Aufwärmlauf und die beste von fünf in Profil und Wanduhr; dasselbe am Code im
+> Testclient. Warm, gegen die Testkopie, am Anker. *Behauptet wird:* Die Lesung steigt über den
+> Statusindex ein, liest die Fehlerzeilen des Bestands und kostet auf der Testkopie höchstens 34,5 ms.
+> **Die Lücke:** 3.412 Fehlerzeilen sind der Bestand der Testkopie, nicht der Produktion; wie viele es
+> dort sind und wie viele davon in einem Fenster liegen, ist nicht erhoben. Kein Fall ist kalt gemessen.
+
+#### Tor 2 — die Verteilung ohne Fehler: gehalten
+
+Am Repository, wie M178 gemessen hat (jOOQ-Rendering, Verbindung, Zeilenabbildung; beste von fünf),
+in derselben Sitzung die heutige Form daneben; rechts dieselben Statements in SQL (Profil, beste von
+fünf). In Millisekunden:
+
+| Mandant | Paar | Sicht | heute | **ohne Fehler** | Unterschied | Grenze (1,2 × M178) | im Tor | SQL heute | SQL ohne Fehler |
+|---|---|---|---:|---:|---:|---:|---|---:|---:|
+| `NEXANS` | `48H` | richtung | 10,429 | **10,473** | +0,044 | 15,222 | ja | 9,651 | 9,858 |
+| `NEXANS` | `48H` | partner | 10,604 | **10,790** | +0,186 | 14,856 | ja | 9,627 | 9,952 |
+| `NEXANS` | `30T` | richtung | 68,329 | **71,519** | +3,190 | 84,234 | ja | 68,107 | 69,997 |
+| `NEXANS` | `30T` | partner | 69,011 | **71,282** | +2,271 | 85,446 | ja | 68,463 | 70,511 |
+| `NEXANS` | `12M` | richtung | 94,625 | **98,287** | +3,662 | 114,886 | ja | 95,090 | 97,372 |
+| `NEXANS` | `12M` | partner | 95,307 | **98,992** | +3,685 | 117,293 | ja | 93,876 | 97,015 |
+| `SUTTONS` | `48H` | richtung | 9,725 | **10,258** | +0,533 | 11,962 | ja | 9,326 | 9,517 |
+| `SUTTONS` | `48H` | partner | 9,814 | **10,185** | +0,371 | 12,167 | ja | 9,187 | 9,567 |
+| `SUTTONS` | `30T` | richtung | 50,682 | **53,612** | +2,930 | 61,669 | ja | 50,153 | 52,455 |
+| `SUTTONS` | `30T` | partner | 50,999 | **53,706** | +2,707 | 61,363 | ja | 50,767 | 52,884 |
+| `SUTTONS` | `12M` | richtung | 67,007 | **70,578** | +3,571 | 79,733 | ja | 65,696 | 68,993 |
+| `SUTTONS` | `12M` | partner | 66,589 | **70,256** | +3,667 | 80,234 | ja | 66,402 | 69,848 |
+
+**Das Tor hält mit Abstand:** Die Form ohne Fehler kostet das 0,826- bis 1,062-Fache von M178, die
+Grenze war das 1,2-Fache. Die Summen stimmen mit der Kachel: heute minus die Fehler des Fensters
+(`NEXANS` 9.950 − 50 = 9.900, 176.050 − 55 = 175.995, 2.308.005 − 711 = 2.307.294; `SUTTONS`
+1.337, 20.964 − 5 = 20.959, 196.536 − 103 = 196.433).
+
+**Der Plan ist der aus M178, Zeile für Zeile** — in allen zwölf Lagen dieselbe Folge aus Tabelle,
+Zugriffsart und Index, dieselben `rows` und dieselbe `Extra`-Spalte wie die heutige Form: bei
+`NEXANS` die Rollup-Ebene `range` über `PRIMARY` als Einstieg, bei `SUTTONS` `ProjectMandant` über
+`ProjectMandant_Mandant_idx`, der Katalog `eq_ref` über `PRIMARY`. Gelesen wird derselbe Bereich
+(`read_next` gleich: `NEXANS` 929 / 6.843 / 9.649, `SUTTONS` 930 / 6.844 / 9.650); `read_key` ist
+bei der Form ohne Fehler um 2 bis 25 kleiner — die Fehlerzeilen fallen vor dem Katalog-Nachschlag weg.
+
+**Die Abweichung, benannt: „im Rauschen" trifft in der Größe zu, nicht in der Richtung.** Die Form
+ohne Fehler ist in **allen zwölf** Lagen die teurere — am Repository um 0,04 bis 3,69 ms (0,4 bis
+5,8 %), in SQL um 0,19 bis 3,45 ms. Das Rauschen zwischen zwei Läufen lag in M178 bei bis zu 7,6 %,
+aber es hatte keine Richtung. **Hier hat der Unterschied eine:** Die Bedingung wird je gelesener
+Rollupzeile geprüft, und über zwölf Monate sind das bei `NEXANS` 9.649 Zeilen. Klein, gemessen, und
+in Tor 3 als zweiter Summand des Zuschlags wiederzufinden.
+
+> **Belegvermerk (Regel L10).** *Gemessen ist:* zwölf Lagen × zwei Fassungen, am Repository und in
+> SQL, warm, in derselben Sitzung nebeneinander; `EXPLAIN` und Handler-Zähler je Fassung. *Behauptet
+> wird:* Die Bedingung ändert keinen Zugriffspfad und kostet auf der Testkopie höchstens 3,7 ms je
+> Statement. **Die Lücke:** ein Lauf; der Vergleich mit M178 überbrückt zwei Tage, und Punkt 134 in
+> [`dashboard.md`](dashboard.md) zeigt, dass die Instanz zwischen zwei Tagen Dutzende Millisekunden
+> verschieben kann — getragen wird die Aussage vom Vergleich derselben Sitzung.
+
+#### Tor 3 — die Seite durch den Endpunkt: gehalten
+
+Beste von fünf nach einem Aufwärmlauf, in Millisekunden, **zwei Läufe** (L1, L2) nacheinander; keiner
+ist ausgewählt. **Endpunkt** ist `GET /api/dashboard?zeitraum=…` im Testclient samt Sitzung und
+Serialisierung, **Dienst** `DashboardService.landingpage`, **Bezug** dieselbe Seite am Dienst mit
+ausgesetzter Lesung — die Seite von vor diesem Schritt —, **Zuschlag** Dienst minus Bezug. Uhr und
+Wasserstand gestellt (`@TestBean`); am Anker `NICHT_NOETIG`, in der Zusatzlage `ANGEWANDT`.
+
+| Mandant · Lage | Paar | erwartet, Endpunkt | **Endpunkt** L1 / L2 | im Band | Dienst L1 / L2 | Bezug L1 / L2 | Zuschlag L1 / L2 | Nachrichten | Fehler |
+|---|---|---:|---:|---|---:|---:|---:|---:|---:|
+| `NEXANS` Anker | `48H` | 98,7–127,1 | **123,809 / 121,669** | ja / ja | 90,126 / 94,555 | 75,306 / 71,291 | 14,820 / 23,264 | 9.950 | 50 |
+| `NEXANS` Anker | `30T` | 256,6–282,7 | **272,035 / 276,005** | ja / ja | 251,939 / 251,221 | 223,576 / 222,173 | 28,363 / 29,048 | 176.050 | 55 |
+| `NEXANS` Anker | `12M` | 327,5–354,8 | **357,364 / 356,035** | darüber / darüber | 335,645 / 333,238 | 294,095 / 295,432 | 41,550 / 37,806 | 2.308.005 | 711 |
+| `SUTTONS` Anker | `48H` | 92,0–119,0 | **99,363 / 95,649** | ja / ja | 84,007 / 78,009 | 57,815 / 57,402 | 26,191 / 20,607 | 1.337 | 0 |
+| `SUTTONS` Anker | `30T` | 199,6–224,7 | **215,549 / 206,069** | ja / ja | 196,002 / 189,359 | 165,528 / 162,217 | 30,474 / 27,142 | 20.964 | 5 |
+| `SUTTONS` Anker | `12M` | 240,0–266,6 | **265,311 / 254,620** | ja / ja | 245,427 / 236,855 | 205,749 / 205,386 | 39,678 / 31,469 | 196.536 | 103 |
+| `NEXANS` dicht *(zusätzlich)* | `48H` | 399,1–408,0 | **414,530 / 398,984** | darüber / darunter | 385,223 / 376,186 | 370,276 / 350,556 | 14,947 / 25,629 | 33.148 | 15 |
+| `NEXANS` dicht *(zusätzlich)* | `30T` | 411,9–420,8 | **418,374 / 403,609** | ja / darunter | 405,504 / 384,466 | 380,718 / 359,621 | 24,786 / 24,846 | 79.033 | 41 |
+| `NEXANS` dicht *(zusätzlich)* | `12M` | 382,4–391,3 | **403,343 / 384,746** | darüber / ja | 388,725 / 373,282 | 341,403 / 327,359 | 47,323 / 45,923 | 222.049 | 2.163 |
+
+**Das Tor: gehalten.** Die teuerste Lage ist `NEXANS` im dichtesten Vierstundenbereich über 30 Tage
+mit **418,374 ms** (L1); alle achtzehn Messungen liegen unter 500 ms. In jeder Lage stimmen Kachel und
+beide Sichten, und Fehler live ist angewandt.
+
+**Die Rechnung der Seite trifft in zwölf von achtzehn Messungen,** am Anker in zehn von zwölf:
+`NEXANS` `12M` liegt in beiden Läufen knapp darüber (+2,6 und +1,2 ms). In der Zusatzlage liegen zwei
+Messungen darüber, zwei darunter und zwei im Band — die Bezüge dort streuen zwischen den Läufen um
+bis zu 21 ms, mehr als doppelt so weit, wie die Bänder breit sind.
+
+**Der Zuschlag trifft nicht zu: 14,8 bis 47,3 ms statt 23 bis 32.** Die Vorregistrierung hatte ihn
+als *die Lesung, bei Fehlern im Fenster die Nachlesung* gerechnet und die Verteilung ohne Fehler mit
+null angesetzt. Tor 2 hat gezeigt, dass sie das nicht ist. Nachgerechnet mit den Zahlen **derselben
+Runde** — die Lesung am Code aus Tor 1, der Preis der Bedingung aus Tor 2 für beide Sichten:
+
+| Lage (Anker) | Lesung (Tor 1, am Code) | + Preis der Bedingung, beide Sichten (Tor 2) | = gerechnet | Zuschlag gemessen, L1 / L2 |
+|---|---:|---:|---:|---:|
+| `NEXANS` `48H` | 23,370 | 0,230 | 23,600 | 14,820 / 23,264 |
+| `NEXANS` `30T` | 23,756 | 5,461 | 29,217 | 28,363 / 29,048 |
+| `NEXANS` `12M` | 34,536 | 7,347 | 41,883 | 41,550 / 37,806 |
+| `SUTTONS` `48H` | 23,505 | 0,904 | 24,409 | 26,191 / 20,607 |
+| `SUTTONS` `30T` | 22,895 | 5,637 | 28,532 | 30,474 / 27,142 |
+| `SUTTONS` `12M` | 26,506 | 7,238 | 33,744 | 39,678 / 31,469 |
+
+**Die Zerlegung trägt:** In neun von zwölf Werten liegt der gemessene Zuschlag höchstens 4 ms neben
+der Rechnung. Die drei übrigen — `NEXANS` `48H` L1 (14,8), `NEXANS` `12M` L2 (37,8), `SUTTONS`
+`12M` L1 (39,7) — liegen 4,1 bis 8,8 ms daneben, und zwar in beide Richtungen. Der Ausreißer nach
+unten ist die **erste** Lage des ersten Laufs: Ihr Bezug fiel über die fünf Läufe noch von 88,3 auf
+75,3 ms, im zweiten Lauf lag er bei 71,3. Dass sie noch nicht eingeschwungen war, ist plausibel und
+nicht gemessen. Der Rest des Zuschlags — Nachlesung und Ersatz in Java — verschwindet in dieser
+Streuung. In der Zusatzlage wächst der Zuschlag über zwölf Monate auf 45,9 bis 47,3 ms: Dort liegen
+2.163 Fehler im Fenster, und nach Tor 1 wächst die Lesung mit ihnen — an dieser Lage selbst ist sie
+nicht einzeln gemessen.
+
+> **Belegvermerk (Regel L10).** *Gemessen ist:* neun Lagen durch den Endpunkt, am Dienst und als
+> Bezug, zwei Läufe, warm, Testclient auf demselben Rechner wie der Server. *Behauptet wird:* Die
+> Übersicht mit Fehler live bleibt auf der Testkopie in jeder Lage unter 500 ms, und Fehler live
+> kostet die Seite die Lesung plus zweimal den Preis der Bedingung — gemessen 14,8 bis 47,3 ms. **Die Lücke:** Der
+> Wasserstand ist gestellt, die Wasserstandsabfrage (rund 1 ms) fehlt deshalb in dieser Messung wie in
+> M186; die Kombination *viele Fehler und dichter Verkehr am Bestandsende* gibt es auf der Testkopie
+> nicht (Punkt 193 in [`live-rest.md`](live-rest.md) gilt weiter); kein Fall ist kalt gemessen.
+
+#### Die Dev-Zeile — gehalten
+
+Keine Zahl der Übersicht hat sich geändert (§7).
+
 ---
 
 ## 9. Tests
 
-*(folgt)*
+Keine Wanduhrzeit in einer Zusicherung (T1), kein Bestandswert als Erwartung (T2).
+
+### Ohne Datenbank
+
+| Test | Was er hält |
+|---|---|
+| `common/FehlerLiveTest` (**14**, neu) | **Der Ersatz (7):** der Fall aus der Produktion (Rollup `09:00 ERROR_TIMEOUT 1`, keine Live-Zeile in 09:00, `14:00 RUNNING 1` → Fehler 0, Nachrichten 1, kein Fehleranteil um 09:00); ein erneuter Fehler nach der Nachverarbeitung zählt einmal; ein Fehler im Live-Bereich zählt einmal, obwohl Live-Rest und Lesung ihn kennen; ein unbekanntes `ERROR_`, eine kleine Schreibweise und `COMMIT_REJECTED` sind `FEHLER`; leere Live-Zeilen entfernen alle Fehler und nur die Fehler; `AUSGESETZT` lässt die Grundzeilen unverändert; `AUSGESETZT` mit Zeilen fällt laut. **Werte (3):** nur `ANGEWANDT` trägt Zeilen; eine Zeile braucht Stunde, Prozess und mindestens eine Nachricht; der Block trägt nur den Zustand. **Der Ausfall (4):** an der Zeitgrenze (`SQLTimeoutException`, 1969) `AUSGESETZT` **mit genau einem `WARN`** im Protokoll (Logback-Anhang, ohne Uhr); ein Syntaxfehler setzt ebenfalls aus — wie beim Live-Rest; was keine `DataAccessException` ist, läuft durch; ohne Ausfall `ANGEWANDT` mit den Zeilen |
+| `DashboardServiceTest` (59, **9 neu** unter „Fehler live") | der Fall aus der Produktion **vorher und nachher** mit denselben Zeilen (ausgesetzt: Fehler 1, Nachrichten 2 — die Meldung; angewandt: 0 und 1, der Eimer 09:00 verschwindet, Kachel und Sicht zählen 1); ein Fehler im Live-Bereich zählt einmal, auch in Block 5; die Hebung je Paar (Stunde, `DATE(stunde)`, Monatserster); Kachel und Fehlerarten aus der Lesung (das `ERROR_TIMEOUT` des Rollups steht nirgends mehr); Block 5 angewandt über die Nachlesung mit einem Prozess ohne Katalogzeile, und ausgesetzt im heutigen Wortlaut ohne Nachlesung — Kachel und Sichten gleich; der Leerzustand nach dem Ersatz in beide Richtungen; ausgesetzt ergibt die Zahlen von vorher samt Block; ein Uhrenschlag für Fenster, Live-Rest und Lesung. Die Lesung ist eine Attrappe; **ohne Stellung ausgesetzt**, damit die 50 Fälle von vorher dieselben Zahlen sehen |
+| `DashboardStatementsTest` (43, **11 neu** unter `FehlerLive`) | die Lesung **wörtlich**, für jedes Paar derselbe Text; ihre Gestalt (Bereich ohne Funktion, voller Ausdruck im `GROUP BY`, Kette als `EXISTS`, kein Indexhinweis, keine Sortierung, keine Deckelung); **beide Fassungen der Verteilung wörtlich** und für alle sechs Kombinationen aus Paar und Sicht: die ohne Fehler ist die heutige mit genau der einen Bedingung hinter der Kette; **acht Lagen, jede mit ihren Statements einzeln benannt** — als Folge von Namen, nicht als Zahl (§5); ausgesetzt sind die zwei Verteilungsstatements Zeichen für Zeichen die heutigen |
+
+### Mit Datenbank (`@Tag("db")`)
+
+| Test | Was er hält |
+|---|---|
+| `DashboardFehlerLiveDbIT` (**3**, neu) | je Paar für `NEXANS`, `SUTTONS`, `VOTG`: **Kachel *Fehler* = `COUNT(*)` aus `Message`** mit Fehlerbedingung, Fenster und Kette, die Fehlerarten ebenso; **Kachel *Fehler* = Summe über „Zuletzt aufgefallen"**, solange höchstens zehn Prozesse betroffen sind (gezählt mit `COUNT(DISTINCT ProcessID)`); **die Dev-Zeile als Identität** — angewandt gleich ausgesetzt, Feld für Feld bis auf `fehlerLive`, nach einer Vorprobe gegen `Message` |
+| `DashboardPlanDbIT` (11, **2 neu**) | die Lesung über **`MessageStatusIDX`**, in keiner Planzeile ein Zeitindex — auch nicht als Rowid-Filter —, keine Tabelle voll, für `NEXANS` und `SUTTONS` in allen drei Paaren; **die Verteilung ohne Fehler fährt Zeile für Zeile den Plan der Verteilung**, je Mandant, Paar und Sicht |
+| `DashboardIsolationDbIT` (28, **2 neu**) | der Block `fehlerLive` steht in der Antwort mit einem der zwei Zustände; **die Lesung am Repository**: für `VOTG` über `12M` keine Prozesskennung von `SUTTONS`, und jede Kennung der Lesung in der Prozessliste von `VOTG` — mit der Eichung, dass `VOTG` dort Fehler hat. `sichtZaehltDieEigenenNachrichten` (Partner- und Richtungssicht) **grün** und läuft seither über die Nachlesung |
+| `DashboardLiveRestDbIT` (1) | **grün**, unverändert in seinen Zusicherungen; der Dienst läuft seither mit der Lesung |
+| `MessungM188DbIT` (3) | §8; zugesichert nur `200`, die Zustände und Kachel gleich beiden Sichten |
+
+`PaketstrukturTest` (19) ist **unverändert grün**: `FehlerLiveRepository` endet auf `Repository`,
+seine öffentliche Methode nimmt `MandantContext` zuerst, `common` hängt an nichts. Die drei
+namentlichen Ausnahmen von M2 sind weiter drei. **Einheitstests des Backends: 1.004, grün**
+(`./mvnw verify -DexcludedGroups=db`).
+
+### Oberfläche
+
+| Test | Was er hält |
+|---|---|
+| `tests/fehler-live.test.tsx` (**6**, gerendert, neu) | bei `AUSGESETZT` **vor der ersten Kachel** im Dokument und **auch im Leerzustand** ohne Kacheln; bei `ANGEWANDT` nichts, mit Kacheln und im Leerzustand; der Kasten trägt nicht die Fehlerfarbe; **stehen beide Hinweise, steht der zum Live-Rest zuerst** |
+
+`pnpm check` grün mit **1.246 Fällen in 46 Dateien**; die gerenderten sind **180 in 22 Dateien** —
+aus dem Lauf gezählt und je Datei gegen den Basisstand `2e3f094` (1.236 in 45) verglichen: die sechs
+hier, +3 in `farbwerte` und +1 in `serverbausteine` für die zwei neuen Quelldateien. Der Kopf von
+`vitest.config.mts` ist fortgeschrieben.
+
+### Geänderte gepinnte Zusicherungen — einzeln
+
+Ausschließlich Statementtexte und Statementzählungen, wie der Auftrag sie zulässt:
+
+| Test | vorher | nachher | warum |
+|---|---|---|---|
+| `DashboardStatementsTest.die_zehn_statements_je_seite` | zehn Statements, Indizes 0 bis 9 | **`die_elf_statements_je_seite`**: elf; an Stelle 2 die Lesung (wörtlich), alle folgenden um eins verschoben; die Verteilung an 3 und 4 in der Form ohne Fehler | die Lesung läuft vor Block 5 |
+| dasselbe, letzte Zusicherung | *„Ohne Lauf liest keine Seite Message außer den Kacheln und Zuletzt aufgefallen"*: kein Statement mit `date_format(` | das einzige Statement mit `date_format(` ist die Lesung | die Lesung bildet ihre Eimer wie der Rollup-Job |
+| `…keine_frist_mehr_in_der_ganzen_seite` | die vollste Seite: dreizehn | vierzehn | eine Lesung mehr |
+| `LiveRest.nicht_noetig_zehn` | zehn, kein `date_format(` | **`nicht_noetig_elf`**: elf, kein `live_process` | wie oben |
+| `LiveRest.angewandt_ohne_korrekturzeile_zwoelf` | zwölf, A und B an 10 und 11 | **`…_dreizehn`**: dreizehn, A und B an 11 und 12 | eins verschoben |
+| `LiveRest.angewandt_mit_korrekturzeile_dreizehn` | dreizehn, `subList(0, 12)`, Nachlesung an 12 | **`…_vierzehn`**: vierzehn, `subList(0, 13)`, Nachlesung an 13 | eins verschoben |
+| `LiveRest.nachlesung_gestalt` | Nachlesung an Stelle 12 | an Stelle 13 | eins verschoben |
+
+**Am Prüfaufbau geändert, an keiner Zusicherung:** Die Attrappe von `DashboardStatementsTest`
+liefert die Live-Zeile nur noch für Statement B des Live-Rests (`live_process`) und nicht für jedes
+Statement mit `date_format(` — sonst hätte die Lesung dieselbe Zeile bekommen; dazu zwei Schalter
+für eine Fehlerzeile und einen Ausfall. `kein_zusammengelegtes_verteilungsstatement` läuft über vier
+Seiten statt zwei. Die drei Tests, die `DashboardService` von Hand bauen, bekommen den neuen
+Konstruktorparameter; `DashboardServiceTest` stellt die Lesung vorab auf ausgesetzt. In drei
+Frontend-Tests trägt der erfundene Rumpf das neue Feld `fehlerLive`.
+
+### Die Verletzungsprobe — ausgeführt, nicht angenommen
+
+Gefahren am 18.09.2026: die Mandantenkette aus `FehlerLiveRepository.ausDerQuelle` entfernt →
+`DashboardIsolationDbIT.die_fehlerlesung_liefert_keine_fremde_zeile:793` **rot** (*„Die
+Fehlerlesung für VOTG darf keinen Prozess von SUTTONS liefern — ohne Mandantenkette im Statement
+täte sie es"*). Aus einer Sicherungskopie zurückgespielt, mit `cmp` verglichen, in keinem Commit.
+**Warum am Repository:** Durch den Endpunkt zeigte sich ein Leck der Lesung nur als Zahl, und die
+Nachlesung hat ihre eigene Kette — sie ordnete fremde Prozesse *nicht zugeordnet* zu, Kachel und
+Sichten zählten die fremden Fehler also beide und blieben gleich. Hergeleitet, nicht mit
+ausgehängter Kette durch den Endpunkt gefahren; derselbe Grund wie beim Live-Rest
+([`live-rest.md`](live-rest.md) §12).
+
+**Zwei Gegenproben an den Diensttests**, ebenso zurückgespielt: der Ersatz ausgehängt → fünf der
+neun Fälle rot (`der_fall_aus_der_produktion`, `hebung_je_paar`,
+`kachel_und_fehlerarten_aus_der_lesung`, `leerzustand_nach_dem_ersatz`, `block5_angewandt`); Block 5
+immer im heutigen Wortlaut → neun Fälle rot: `block5_angewandt` und `fehler_im_live_bereich_zaehlt_einmal`,
+sechs Lagen in `DashboardStatementsTest` und `die_elf_statements_je_seite`.
+
+> ⚠️ **`DashboardIsolationDbIT.keine_mandanten_id` ist in beiden Läufen dieses Tages gefallen**, 27
+> von 28 grün. Der Vergleich der zwei Rümpfe als JSON zeigt in beiden Läufen **ausschließlich**
+> `plattform.dienste[*].alterSekunden`, sechs Lampen um je eine Sekunde; der Block `fehlerLive` ist
+> in beiden Rümpfen `ANGEWANDT`. Das ist Punkt **182** in [`dashboard.md`](dashboard.md) §11 — der
+> Test vergleicht ganze Rümpfe über eine Sekundengrenze. **Nicht nebenbei repariert.** Die drei
+> Aufrufe des Tests dauern auf der Testkopie zusammen 2,6 bis 4,2 Sekunden; dass er je grün wird,
+> hängt damit am Zufall.
+
+---
 
 ## 10. Regelbezug
 
-*(folgt)*
+| Regel | Stand |
+|---|---|
+| **L2** Keine Live-Aggregation über `Message` | **vierte benannte Ausnahme**, eingetragen und begründet in [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §8, Regel 2: Ein Fehlerstatus ist durch Nachverarbeitung nicht endgültig, und der Delta-Lauf entfernt Abgänge aus alten Eimern nicht. Gemessen in M188 |
+| **L7**, **L15** | **erfüllt** — M188 mit `EXPLAIN` je Statement in beiden Sitzungen; `DashboardPlanDbIT` hält Einstieg und Zeitindex fest |
+| **L9** | **erfüllt** — die Lesung hat ein Fenster, das der Seite |
+| **L10** | **erfüllt** — drei Belegvermerke in §8 |
+| **M1** | **erfüllt** — kein neuer Endpunkt, kein neuer Parameter, keine neue Mandantenausnahme |
+| **M2** | **erfüllt** — `ausDerQuelle(MandantContext, …)`; `PaketstrukturTest` unverändert grün |
+| **M3** | **erfüllt** — die Kette als `EXISTS` im Statement; Verletzungsprobe rot |
+| **M4** | **erfüllt** — Isolation der Lesung am Repository, die Sichten weiter durch den Endpunkt |
+| **S1** | **erfüllt** — Lese-Kontext; die Tests schreiben nicht in `GlassfishDB` und nicht in `rollup_lauf` (nur ihre `it-`-Konten in `overlord_monitor`) |
+| **T1**, **T2** | **erfüllt** — keine Zeit und kein Bestandswert in einer Zusicherung; der Läufer gibt aus |
+| **Z1** | **erfüllt** — ein Uhrenschlag; die Lesung bekommt das Fenster |
+| **Q4**, E‑g | **erfüllt** — die Einordnung entsteht beim Lesen über den einen Klassifizierer; kein zweites `switch` |
+| **Befund 11** | **erfüllt** — `GROUP BY` über den vollen Ausdruck |
+| **§6 der Projektbeschreibung** | **erfüllt** — der Baustein liegt in `common`; das Dashboard ruft ihn, der Prozessbaum mit Teil B |
+
+---
 
 ## 11. Die Entscheidungen dieser Runde
 
-*(folgt)*
+| | | Wer |
+|---|---|---|
+| **E‑208** | **Weg B, Fehler live:** Die Übersicht liest die Einordnung `FEHLER` aus einer Live-Lesung über `Message`; alle anderen Einordnungen aus Rollup und Live-Rest. **Verworfen:** A (Abgleich im Delta-Lauf), C (Nachlauf auf 48 Stunden), D (nur Doku) | Auftraggeber, 18.09.2026, per Auswahl |
+| **E‑209** | Der Baustein in `common`: Lesung ohne Indexhinweis und ohne Sortierung, Kette mit eigenem Alias; Dienst mit dem Ausfall nach E‑185; der Ersatz als reine Funktion über einen Rohwert je Zeile; Block `fehlerLive` nur mit Zustand, ohne Zeitangabe | Auftrag; Ausgestaltung Bau |
+| **E‑210** | Die Lesung an zweiter Stelle der Seite, vor Block 5; der Ersatz nach der Verrechnung des Live-Rests, die Zeilen auf den Eimer des Paares gehoben und je (Eimer, Rohstatus) summiert | Auftrag (vor Block 5, nach E‑190); Ort Bau |
+| **E‑211** | Block 5: die Form ohne Fehler als zweite Methode derselben Gestalt, die heutige Zeichen für Zeichen; Korrekturzeilen ohne Fehler und Fehlerzeilen über die Nachlesung — **die Nachlesung nur, wenn Block 5 etwas zuzurechnen hat** (Auslegung, §5) | Auftrag; Auslegung Bau, gemeldet |
+| **E‑212** | Der Hinweis bei `AUSGESETZT` über den Kacheln, unter dem zum Live-Rest, auch im Leerzustand; eigener Baustein, Typ, Texte; der Text des Auftrags | Auftrag; Baustein Bau |
+| *Tore M188* | 100 ms je Lage für die Lesung ohne Zeitindex; das 1,2-Fache von M178 und derselbe Plan für die Verteilung; 500 ms je Lage für die Seite | Auftraggeber, im Auftrag |
+
+---
 
 ## 12. Offene Punkte
 
-*(folgt)*
+| | |
+|---|---|
+| **209** | **Prozessbaum und Übersicht zählen Fehler verschieden — bis Teil B.** Der Baum nimmt seine Fehler weiter aus Rollup und Live-Rest; eine nachverarbeitete Nachricht zählt dort bis zum Volllauf als Fehler, in der Übersicht nicht mehr. Wie Punkt 191 beim Live-Rest: Teil B ruft denselben Baustein |
+| **210** | **Abgänge aus anderen Status bleiben bis zum Volllauf stehen — benannte Grenze.** Wechselt eine Nachricht aus `RUNNING`, `SUSPENDED`, `FINISHED` oder einem anderen Status heraus ihren Status, nachdem der Delta-Lauf ihren Eimer zum letzten Mal gerechnet hat, steht sie im alten Eimer weiter und im neuen dazu: Liegen beide im Zeitraum, zählt die Kachel *Nachrichten* sie bis 03:00 **doppelt**. Die bekannte Grenze 3 in [`dashboard.md`](dashboard.md) §2 ist entsprechend berichtigt. Für Fehler ist das seit heute behoben, für alles andere bewusst nicht gebaut |
+| **211** | **Block 6 und die Lesung lesen dieselbe Menge zweimal** — derselbe Statusbereich, einmal je Prozess gedeckelt, einmal je Stunde. Eine Zusammenlegung ist nicht gebaut (Auftrag); sie sparte eine der beiden Lesungen — gerechnet, nicht gemessen, rund 20 ms je Seite (M146, Tor 1) —, kostete aber die Deckelung von Block 6 oder die Gruppierung der Lesung und bräuchte eine eigene Messung |
+| **212** | **An der Produktion ist nichts gemessen.** Weder der Mechanismus — hergeleitet aus dem Bau und aus einer Meldung — noch die Kosten: Die Lesung liest alle Fehlerzeilen des Bestands (auf der Testkopie 3.412) und wächst zusätzlich mit den Fehlern im Fenster (711 kosten rund 10 ms mehr als 50). Wie viele es in der Produktion sind, ist nicht erhoben. Die Grenze von 100 ms je Lage gilt der Testkopie |
+| **213** | **SQL und Java müssen sich einig sein, was ein Fehler ist** (§4). Für Rohwerte, die nur die Sortierung der Spalte gleichmacht — `'COMMIT_REJECTED '` mit Leerzeichen am Ende unter `PAD SPACE` —, sind sie es nicht; die Nachricht zählte dann in der Kachel *Nachrichten* doppelt und nicht als Fehler. Auf der Testkopie kommt kein solcher Wert vor; der Test gegen neue Statuswerte fiele bei seinem ersten Auftreten. Eine eigene Entscheidung, falls es ihn je gibt |
+| **214** | **Der Ausfall des Live-Rests (E‑185) hat keinen eigenen Test seines `catch`-Zweigs.** Beim Bau „wie beim Live-Rest" gesucht und nicht gefunden: kein Test lässt eine Live-Lesung scheitern. Fehler live hat einen (`FehlerLiveTest.Ausfall`); für den Live-Rest ist er nicht nachgerüstet — außerhalb dieses Auftrags |
+| **215** | **Eine Rohausgabe mit Prozesskennungen ist eingecheckt:** `scripts/messung-live-rest/ergebnis/s1.txt` (M185) trägt rund 200 Zeilen mit Kennungen, die Partnernamen Dritter enthalten — gegen die Trennung, die `.gitignore` für alle anderen Messrunden vorsieht (G1). Nicht angefasst; eine Entfernung stünde weiter in der Historie |
+
+**Punkt 182** in [`dashboard.md`](dashboard.md) §11 bleibt offen und hat einen Nachtrag (§9 oben).
+
+---
 
 ## 13. Was nicht gebaut ist
 
-*(folgt)*
+**Kein Prozessbaum** — das ist Teil B (Punkt 209). **Nichts am Rollup:** weder am Rollup-Job noch an
+den Rolluptabellen, an `rollup_lauf`, an `NACHLAUF_MINUTEN` oder am Zeitplan. **Kein Abgleich für
+andere Status** (Punkt 210). **Block 6 unverändert**, samt Indexhinweis, und nicht mit der Lesung
+zusammengelegt (Punkt 211). **Keine Änderung** an Nachrichtenliste, Fensterverengung, BAM-Suche und
+Property-Suche. **Kein neuer Endpunkt, kein neuer Parameter, keine neue Mandantenausnahme.** Kein
+Nachladen im Takt (E‑137, E‑164), keine Migration, kein Index, **kein Indexhinweis**. **Keine
+Regeländerung im `MessageStatusClassifier`**; `istEndstatus` bleibt. Keine Zeitangabe im Block
+`fehlerLive`. Keine Sichtprüfung im Browser — der Hinweis erscheint lokal nicht.
+
+---
+
+## 14. Abweichungen vom Auftrag, einzeln
+
+1. **Die Nummern:** E‑208 statt „ab E‑193", M188 statt M187, Punkt 209 statt 196 — die erwarteten
+   waren am 17. und 18.09.2026 an die Darstellungswahl der Dateiansicht vergeben (Nummernvergabe oben).
+2. **Die Bedingung der Nachlesung** ist ausgelegt als „Zeilen für Block 5" (§5, E‑211). Der
+   Unterschied zum Wortlaut ist die eine Lage, in der die einzigen Korrekturzeilen Fehler sind.
+3. **Tor 1 strenger als verlangt:** Geprüft ist auch der zweite Zeitindex und der Rowid-Filter, nicht
+   nur `MessageLastUpdateIDX` — vorregistriert.
+4. **Tor 3 mit einer Lage mehr** — der dichteste Bereich aus M186 mit angewandtem Live-Rest —,
+   vorregistriert; und **zweimal gefahren**, weil der Zuschlag im ersten Lauf außerhalb der Erwartung
+   lag. Beide Läufe stehen da.
+5. **Tor 3 mit gestelltem Wasserstand** wie M186 — die Wasserstandsabfrage (rund 1 ms) fehlt in der
+   gemessenen Seite.
+6. **„Ausfall: geprüft wie beim Live-Rest"** — der Live-Rest hat dafür keinen eigenen Test (Punkt
+   214). Geprüft ist der Dienst selbst: Zeitgrenze und Syntaxfehler setzen aus, mit `WARN`; alles
+   andere läuft durch.
+7. **Über die Doku-Liste des Auftrags hinaus** stehen datierte Kästen in [`dashboard.md`](dashboard.md)
+   §5 („nicht ermittelbar" — der Rückfall des Live-Rests seit E‑185 stand dort nie, der von Fehler
+   live kommt hinzu) und in [`process-view.md`](process-view.md) §3 (die Fehler des Baums bis Teil B).

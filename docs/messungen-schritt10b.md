@@ -1082,6 +1082,30 @@ gegen 12.004; es gibt keinen Befund über 10a.
 > Bestand ist die Folge der Delta-Läufe zeilengleich mit dem Volllauf."** Der Satz „im Betrieb
 > springt nichts" ist damit **nicht** belegt.
 
+> ### ⚠️ Ergänzt am 18.09.2026 — der Fall ist in der Produktion eingetreten
+>
+> **Der Abschnitt bleibt stehen, und seine Vorsicht war berechtigt.** Das Phänomen aus dem Kasten
+> darüber — eine Nachricht ändert ihren Status, *nachdem* ihr Eimer gerollt wurde — ist am
+> 18.09.2026 aus der Produktion gemeldet worden: Eine Nachricht stand auf `ERROR_TIMEOUT`, wurde
+> nachverarbeitet und stand danach auf `RUNNING`; Fehlerkachel und Verlauf zählten sie bis zum
+> Volllauf weiter als Fehler. Der Statuswechsel bucht sie in die Stunde der Änderung um, ihr alter
+> Eimer liegt außerhalb dessen, was der Delta-Lauf neu rechnet, und behält den Fehler — ein
+> **Abgang aus einem alten Eimer**, in [`rollup.md`](rollup.md) §13, Punkt 49 seither vom
+> Nachschreiben getrennt.
+>
+> **Der Satz „im Betrieb springt nichts" ist damit nicht mehr nur unbelegt, sondern für diesen Fall
+> widerlegt** — durch eine Meldung des Auftraggebers, **nicht durch eine Messung**. Wie groß der
+> Sprung um 03:00 in der Produktion ist, sagt die Meldung nicht. Die Zweige der Vorregistrierung
+> (unter 5 %, 5 bis 15 %, über 15 %) sind damit **nicht** neu entschieden; eine Überzählung in der
+> Produktion ist nicht erhoben (Punkt 212 in [`fehler-live.md`](fehler-live.md)). Auf der Testkopie
+> bleibt der Fall nicht herstellbar.
+>
+> **Was seither gebaut ist:** Die Übersicht liest die Einordnung `FEHLER` live
+> ([`fehler-live.md`](fehler-live.md), E‑208) — den Fall aus der Meldung zählt sie einmal und nicht
+> mehr als Fehler. Wechselt eine Nachricht aus einem anderen Status heraus, zählt die Kachel
+> *Nachrichten* sie bis zum Volllauf weiter doppelt, wenn beide Eimer im Zeitraum liegen (Punkt 210
+> dort).
+
 ## Die Wiederherstellung, nachgewiesen (Sitzung 8b)
 
 **Der Volllauf aus Schritt 5 hat den Bereich bereits korrekt neu gerechnet**; die Wiederherstellung

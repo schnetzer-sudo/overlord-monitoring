@@ -142,6 +142,34 @@ verschwunden.
 > Geprüft in `tests/live-rest.test.tsx` („Der Hinweis zum Live-Rest in der Übersicht", vier Fälle:
 > mit Lauf über den Kacheln, ohne Lauf im Leerzustand, bei `ANGEWANDT` und `NICHT_NOETIG` nichts).
 
+> ### ⚠️ Ergänzt am 18.09.2026 — der Hinweis zu den Fehlerzahlen, unter dem zum Live-Rest (E‑212)
+>
+> Die Antwort trägt seit Fehler live, Teil A, den Block `fehlerLive { zustand }`
+> ([`dashboard.md`](dashboard.md) §1, [`fehler-live.md`](fehler-live.md) §4). **Bei `AUSGESETZT`
+> steht über den Kacheln ein Satz** — *„Die Fehlerzahlen konnten nicht live ermittelt werden und
+> stammen aus der stündlichen Aggregation. Nachverarbeitete Nachrichten können darin noch als Fehler
+> zählen."* —, bei `ANGEWANDT` steht **nichts**. Eine Zeitangabe trägt er nicht; der Block hat keine.
+>
+> **Die Bauform des Kastens darüber, Stück für Stück:** ein eigener Baustein
+> `components/fehler-live-hinweis.tsx`, der Typ in `lib/fehler-live.ts`, die Texte unter
+> `texte.fehlerLive`; `Alert` ohne Variante mit dem `Info`-Zeichen, kein Rot, kein neues Farbtoken;
+> **auch im Leerzustand**; kein Nachladen (E‑164). E‑p ist damit ein drittes Mal ergänzt: Im
+> Leerzustand stehen beide Hinweise, wenn es sie gibt.
+>
+> **Stehen beide, stehen sie untereinander, der zum Live-Rest zuerst** — zwei Kästen und kein
+> zusammengelegter Satz: Die beiden Zustände sind unabhängig, und die Lesung zählt auch bei
+> ausgesetztem Live-Rest bis `bis` ([`fehler-live.md`](fehler-live.md) §5).
+>
+> **Bisher ruft ihn nur die Übersicht.** Der Prozessbaum zählt seine Fehler bis Teil B weiter aus
+> Rollup und Live-Rest (Punkt 209 in [`fehler-live.md`](fehler-live.md)); der Baustein liegt in
+> `components/`, damit Teil B ihn ruft, ohne aus einem Nachbarfeature zu importieren.
+>
+> Geprüft in `tests/fehler-live.test.tsx` („Der Hinweis zu Fehler live in der Übersicht", sechs
+> Fälle: bei `AUSGESETZT` über den Kacheln und im Leerzustand, bei `ANGEWANDT` nichts, auch im
+> Leerzustand nicht, keine Fehlerfarbe am Kasten, unter dem Hinweis zum Live-Rest, wenn beide
+> stehen). **Lokal erscheint er nicht** — die Lesung ist auf der Testkopie angewandt; eine
+> Sichtprüfung mit gestellter Antwort steht aus.
+
 ### Die Reihenfolge der Blöcke
 
 Kacheln → Verlauf mit Fehlerstreifen → Zuletzt aufgefallen → Verteilung → Stand.
@@ -1813,6 +1841,26 @@ Zeichen für Zeichen durchgereicht werden.
 > **Nicht umgangen, und zwar bewusst.** Eine Sekunde abzuziehen machte die Adresse zu einem anderen
 > Fenster als dem der Kachel — genau der Fehler, den C.1 und C.2 ausschließen. Der Unterschied ist
 > auf einen einzigen Zeitpunkt begrenzt, das Umgehen wäre systematisch.
+
+> ### ⚠️ Ergänzt am 18.09.2026 — Kachel und Liste lesen seither dieselbe Menge
+>
+> **Der Kasten darüber bleibt stehen, und seine Grenze auch.** Neu ist, was vor ihr lag: Bis zum
+> 18.09.2026 kam die Zahl der Kachel *Fehler* aus dem Rollup, die Liste hinter dem Verweis
+> (`status=FEHLER`, E‑80) las live aus `Message`. Zwischen einem Abgang und dem Volllauf konnte die
+> Kachel deshalb eine nachverarbeitete Nachricht mitzählen, die die Liste nicht mehr zeigte —
+> gemeldet aus der Produktion am 18.09.2026 ([`fehler-live.md`](fehler-live.md) §1).
+>
+> **Seit Fehler live liest die Kachel dieselbe Menge wie die Liste:** die Nachrichten des Fensters,
+> die jetzt die Fehlerbedingung erfüllen — über denselben Ausdruck
+> (`MessageStatusClassifier.fehlerBedingung`, in der Liste über `bedingung(FEHLER, …)`) und dieselbe
+> Mandantenkette als `EXISTS`, jede zum Zeitpunkt ihrer eigenen Anfrage. Es bleibt die eine Grenze
+> aus dem Kasten darüber: `bis` ist im Dashboard ausschließend, in der Liste nicht.
+>
+> **Bei `fehlerLive = AUSGESETZT` gilt der alte Stand** — die Kachel zählt aus Rollup und
+> Live-Rest, und der Hinweis über den Kacheln (§2) sagt, dass nachverarbeitete Nachrichten darin
+> noch als Fehler zählen können. Nachgezählt hält `DashboardFehlerLiveDbIT` die Kachel *Fehler* je
+> Paar gegen `COUNT(*)` aus `Message`: 50, 55 und 711 bei `NEXANS`, dieselben Zahlen wie die Liste
+> in §10.2.
 
 ### 6.4 *Läuft* zeigt lokal immer `0` — und das ist keine Aussage über den Bau
 

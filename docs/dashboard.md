@@ -12,6 +12,12 @@ Stand: 03.09.2026 · Schritt 10b‑4 · **Backend, keine Oberfläche**
 > zweimal — unverändert in seiner Gestalt. Gemessen als **M178** (§8). Korrekturblöcke dazu stehen
 > in §1, §2, §4, §7 und §9; der alte Wortlaut bleibt überall stehen.
 
+> **Was der 18.09.2026 geändert hat (Fehler live, E‑208 bis E‑212, [`fehler-live.md`](fehler-live.md)):**
+> Die Einordnung `FEHLER` kommt nicht mehr aus dem Rollup, sondern aus einer Live-Lesung über
+> `Message` — die vierte benannte Ausnahme von L2. Eine nachverarbeitete Nachricht zählte bis dahin
+> bis zum Volllauf als Fehler. Gemessen als **M188**. Datierte Kästen dazu in §1, §2 (samt
+> **Berichtigung der bekannten Grenze 3**), §4, §5, §7, §7a, §9 und §11.
+
 Der eine Endpunkt, aus dem die Landingpage entsteht. Er liest die drei Rollup-Ebenen aus
 [`rollup.md`](rollup.md), ordnet die Rohwerte über `MessageStatusClassifier` ein
 ([`message-status.md`](message-status.md)) und hängt den Prozess-Katalog an
@@ -162,6 +168,21 @@ Katalog etwa, weil er `ADMIN` verlangt.
 > [`live-rest.md`](live-rest.md) §9b. `DashboardIsolationDbIT.der_block_live_rest_steht_in_der_antwort`
 > hält den Block fest; kein neuer Parameter, kein neuer Endpunkt.
 
+> ### ⚠️ Ergänzt am 18.09.2026 — der Block `fehlerLive` (Fehler live, E‑209)
+>
+> **Der Rumpf oben bleibt stehen.** Hinter `liveRest` und vor `plattform` steht seither:
+>
+> ```jsonc
+> "fehlerLive": { "zustand": "ANGEWANDT" }
+> ```
+>
+> `zustand` ist `ANGEWANDT` oder `AUSGESETZT`, **ohne Zeitangabe**. Angewandt heißt: Verlauf, Kachel
+> *Fehler* samt Fehlerarten und beide Sichten der Verteilung tragen die Fehler, die **jetzt** in
+> `Message` stehen. Ausgesetzt — die Lesung ist ausgefallen — tragen sie die Fehler aus dem Rollup,
+> und die Oberfläche sagt es über den Kacheln. Vollständig in [`fehler-live.md`](fehler-live.md);
+> `DashboardIsolationDbIT.der_block_fehler_live_steht_in_der_antwort` hält den Block fest. Kein
+> neuer Parameter, kein neuer Endpunkt.
+
 ---
 
 ## 2. Die Blöcke — acht, und weiterhin sieben Statements
@@ -221,6 +242,24 @@ Katalog etwa, weil er `ADMIN` verlangt.
 > `DashboardStatementsTest.kein_zusammengelegtes_verteilungsstatement` hält fest, dass keine Abfrage
 > der Seite beide Katalogspalten zugleich liest. Das neunte Statement steht dort an dritter Stelle
 > und ist einzeln benannt (§9).
+
+> ### ⚠️ Korrektur vom 18.09.2026 — Block 3 liest die Fehler live (E‑208, E‑210)
+>
+> **Tabelle und Kästen darüber bleiben stehen.** Was sich ändert:
+>
+> | # | Block | Quelle | Statements |
+> |---|---|---|---:|
+> | 1 | **Verlauf** | Rollup-Ebene × Mandantenkette, plus Live-Rest — **die Einordnung `FEHLER` aus der Lesung** | 1 |
+> | 3 | **Kachel Fehler** samt Arten | **die Lesung** über `Message` (`common/FehlerLiveRepository`), Fehlerbedingung × Fenster × Mandantenkette | **1** |
+> | 5 | **Verteilung** | bei angewandter Lesung **ohne die Fehler des Rollups**, die Fehlerzeilen über die Katalog-Nachlesung | 2 |
+>
+> **Die Lesung ist das zweite Statement der Seite**, vor Block 5 — dessen zwei Statements hängen an
+> ihrem Zustand. Mit genanntem `zeitraum` sind es seither **elf bis vierzehn** (§7).
+> *„Derselbe Lesevorgang wie 1"* gilt für Block 3 nur noch, wenn die Lesung ausfällt.
+>
+> **Die Einordnung entsteht weiter beim Lesen, und die Fehlerarten kommen weiter aus dem Rohwert**
+> (die beiden Abschnitte darunter): Die Zeilen der Lesung tragen Rohwerte, und dieselbe
+> `MessageStatusClassifier.einordnung` entscheidet, welche Zeilen des Rollups herausfallen.
 
 ### Die Einordnung entsteht beim Lesen
 
@@ -310,6 +349,28 @@ ganzer.
 > `MessageCreated` — eine vierte Ebene, ein zweiter Lauf und eine zweite Wahrheit, zwischen denen
 > die Oberfläche wählen müsste. Der Rollup zählt, was sich bewegt hat; das ist für ein Monitoring
 > die brauchbarere Größe.
+
+> ### ⚠️ Berichtigt am 18.09.2026 — zwischen zwei Volllaufen wird doppelt gezählt
+>
+> **Der Kasten darüber bleibt stehen. Sein Satz *„doppelt gezählt wird also nichts"* gilt erst nach
+> dem Volllauf.** Dazwischen gilt er nicht: Wechselt eine Nachricht ihren Status, nachdem ihr alter
+> Eimer gerechnet ist, bucht der Delta-Lauf sie in den Eimer ihrer neuen letzten Änderung — und den
+> alten schreibt er nicht neu. Er rechnet nur die vorige und die laufende Stunde ([`rollup.md`](rollup.md)
+> §3, §5), der Live-Rest korrigiert nur ab G ([`live-rest.md`](live-rest.md) §2). **Bis 03:00 steht
+> die Nachricht in beiden Eimern.** Das ist ein *Abgang* aus einem alten Eimer und kein
+> Nachschreiben; kein Nachlauffenster erreicht ihn ([`rollup.md`](rollup.md) §13, Punkt 49).
+>
+> **Gemeldet vom Auftraggeber am 18.09.2026 aus der Produktion:** ein `ERROR_TIMEOUT`, nach der
+> Nachverarbeitung `RUNNING` — die Fehlerkachel und der Verlauf zählten ihn weiter als Fehler.
+>
+> | Abgang aus … | Stand seit dem 18.09.2026 |
+> |---|---|
+> | einem **Fehler** | **behoben** — die Übersicht liest die Einordnung `FEHLER` live ([`fehler-live.md`](fehler-live.md), E‑208). Die Kachel *Fehler* zählt die Nachricht nicht mehr |
+> | **jedem anderen Status** (`RUNNING`, `SUSPENDED`, `FINISHED`, …) | **benannte Grenze, nicht gebaut** — liegen alter und neuer Eimer im Zeitraum, zählt die Kachel *Nachrichten* die Nachricht bis 03:00 doppelt, und der Verlauf zeigt sie im alten Eimer mit ihrem alten Status (Punkt 210 in [`fehler-live.md`](fehler-live.md)) |
+>
+> **Ein Fehler, der nur wandert — im Fehler bleibt, aber in einen neuen Eimer gebucht wird —, zählt
+> nicht doppelt:** Der Ersatz nimmt alle Fehlerzeilen des Rollups heraus, auch die im alten Eimer,
+> und setzt die der Lesung ein. Die Nachricht steht einmal da, dort, wo sie jetzt steht.
 
 ---
 
@@ -445,6 +506,21 @@ niemand getroffen hat.
 >
 > **Warum beide und nicht die gewählte:** Entscheidung **E‑161** (§9b). **Was es kostet:** der
 > Bereichszugriff auf die Rollup-Ebene ein zweites Mal — gemessen als M178 (§8).
+
+> ### ⚠️ Ergänzt am 18.09.2026 — die Verteilung ohne die Fehler des Rollups (E‑211)
+>
+> **Alles darüber gilt, und das Statement ist Zeichen für Zeichen dasselbe** — solange die
+> Fehlerlesung ausfällt. Ist sie angewandt, läuft je Sicht `verteilungOhneFehler`: dieselbe Gestalt
+> mit **einer** Bedingung mehr hinter der Mandantenkette, `NOT fehlerBedingung(message_status)`. Die
+> Fehler des Fensters kommen dann aus der Lesung und gehen wie die Korrekturzeilen des Live-Rests
+> über die Katalog-Nachlesung (E‑191) den Schlüsseln zu; die Korrekturzeilen gehen **ohne** ihre
+> Fehlerzeilen hinein. So zählen Kachel und Sichten in beiden Zuständen dieselbe Zahl.
+>
+> **Der Plan ist Zeile für Zeile der von M178** — `message_status` steht im Primärschlüssel hinter
+> Eimer und Prozess, ein `NOT (… LIKE … OR … = …)` ergibt keinen Bereich. Gemessen: 0,04 bis 3,69 ms
+> teurer als die heutige Form derselben Sitzung, höchstens das 1,062-Fache von M178 (M188, Tor 2 in
+> [`fehler-live.md`](fehler-live.md) §8). `DashboardPlanDbIT` hält den Plan fest,
+> `DashboardStatementsTest` beide Fassungen wörtlich.
 
 ---
 
@@ -612,6 +688,21 @@ eigenen Tabelle. **Stirbt die Live-Abfrage, darf nicht die ganze Seite sterben.*
 `DashboardZeitgrenzeTest` stellt beide Fälle her — den Abbruch an der Zeitgrenze und den
 Syntaxfehler — und prüft, dass nur der erste geschluckt wird.
 
+> ### ⚠️ Ergänzt am 18.09.2026 — zwei Rückfälle, die kein „nicht ermittelbar" sind
+>
+> **Die Tabelle darüber bleibt stehen, und ihr Satz *„Genau diese zwei Kacheln"* ist seit dem
+> 17.09.2026 nicht mehr die ganze Wahrheit.** Zwei weitere Lesungen dieser Seite fangen ihren Ausfall
+> ab — und zwar **jede `DataAccessException`**, nicht nur die Zeitgrenze:
+>
+> | Lesung | Fängt ab | Was dann in der Antwort steht | seit |
+> |---|---|---|---|
+> | der **Live-Rest** (`common/LiveRestService`) | jede `DataAccessException` der zwei Live-Lesungen | die Zahlen aus dem Rollup, `liveRest.zustand = AUSGESETZT`, ein Hinweis über den Kacheln | 17.09.2026, E‑185 — **hier bis heute nicht eingetragen** |
+> | **Fehler live** (`common/FehlerLiveService`) | dasselbe, für die Fehlerlesung — „nicht weiter und nicht enger" als der Live-Rest | die Fehler aus dem Rollup, `fehlerLive.zustand = AUSGESETZT`, ein Hinweis über den Kacheln | 18.09.2026, E‑209 |
+>
+> **Beide sind kein allgemeiner Teilerfolg-Mechanismus im Sinne der Tabelle:** Es fehlt keine Zahl
+> und kein Block. Die Seite rechnet wie vor dem jeweiligen Schritt und sagt, dass sie es tut.
+> „Nicht ermittelbar" bleibt den zwei Kacheln vorbehalten, deren Zahl ohne ihre Lesung nicht existiert.
+
 ### Was diese beiden Kacheln **nicht** beantworten
 
 **„Hängt hier etwas zu lange?"** Das war die Frage von *Überfällig*, und sie ist mit E‑71
@@ -724,6 +815,15 @@ bis drei Belegungsproben). Alle laufen über **`glassfishDsl`**, den Lese-Pool.
 > `DashboardStatementsTest.LiveRest` benennt sie einzeln, die Nachlesung wörtlich. **Der Block
 > *Stand* liest `rollup_lauf` weiterhin selbst** — es sind seither zwei Statements auf dieser
 > Tabelle je Seite (Punkt 187 in `live-rest.md`: so lassen).
+
+> **Berichtigt 18.09.2026: es sind elf bis vierzehn** (Fehler live, [`fehler-live.md`](fehler-live.md)
+> §5). Das neue ist die **Fehlerlesung** an zweiter Stelle, vor den zwei Verteilungsstatements; alle
+> folgenden rücken um eins. Bei angewandter Lesung laufen die zwei Verteilungsstatements in der Form
+> ohne Fehler, die Nachlesung läuft, sobald Block 5 Korrekturzeilen ohne Fehler oder Fehlerzeilen
+> zuzurechnen hat. Mit genanntem `zeitraum` also elf bis vierzehn, ohne ihn zwölf bis siebzehn.
+> `DashboardStatementsTest.FehlerLive` benennt jede Lage als Folge von Namen, die Lesung und beide
+> Verteilungsfassungen wörtlich. **Die Lesung trägt keinen Indexhinweis** — sie steigt trotzdem über
+> `MessageStatusIDX` ein (M188), und `DashboardPlanDbIT` hält das fest.
 
 **Der Lese-Kontext und nicht `monitorDsl`** — die Aufteilung ist *lesen gegen schreiben* und nicht
 *Quellschema gegen eigenes Schema*: Jede Abfrage hier joint `overlord_monitor.message_rollup*` gegen
@@ -871,6 +971,17 @@ durchsuchen, bevor sie „nichts" sagen darf — **gerade der gute Fall ist der 
 > zurück; eine Zeile, die einen ganzen Prozess zusammenfasst, hat keinen — sie kann zwanzig
 > verschiedene enthalten. Der Rohstatus steht in der Liste, einen Klick entfernt und dort
 > vollständig.
+
+> ### Ergänzt am 18.09.2026 — Block 6 bleibt, und die Kachel zählt jetzt dieselbe Menge
+>
+> **Block 6 ist unverändert** — Statement, Indexhinweis, Deckelung. Neu liest die Fehlerlesung
+> ([`fehler-live.md`](fehler-live.md)) **dieselbe Menge**: denselben Statusbereich, dasselbe Fenster,
+> dieselbe Kette, nur je Stunde statt je Prozess und ohne Deckelung. **Deshalb ist die Kachel *Fehler*
+> jetzt die Summe über diesen Block, solange höchstens zehn Prozesse betroffen sind** —
+> `DashboardFehlerLiveDbIT.kachel_fehler_ist_zuletzt_aufgefallen` hält es fest. Bis dahin konnten
+> beide zwischen zwei Volllaufen auseinanderlaufen: der Block live, die Kachel aus dem Rollup — genau
+> der Fall aus der Produktion. **Die Menge wird damit zweimal gelesen**; eine Zusammenlegung ist nicht
+> gebaut (Punkt 211 dort).
 
 ### Zwei Änderungen, und die erste allein genügte nicht
 
@@ -1424,6 +1535,19 @@ Die Mandantenkette steht in **jedem** Plan als `eq_ref` über Primärschlüssel 
 > identisch; der zweite Lauf war grün (26 von 26): Punkt **182**, unverändert offen und nicht nebenbei
 > repariert.
 
+> **Ergänzt 18.09.2026 (Fehler live).** Ein Test kommt hinzu, vier sind erweitert, alle in
+> [`fehler-live.md`](fehler-live.md) §9 aufgeführt: **`DashboardFehlerLiveDbIT`** (Kachel *Fehler* =
+> `COUNT(*)` aus `Message` je Paar, = Summe über „Zuletzt aufgefallen" bis zehn Prozesse, die
+> Dev-Zeile als Identität); `DashboardServiceTest` mit neun Fällen unter „Fehler live", darunter der
+> Fall aus der Produktion vorher und nachher; `DashboardStatementsTest` mit elf, jede Lage benannt, die
+> Lesung und beide Verteilungsfassungen wörtlich — **geändert:** *zehn* sind *elf*, alle Indizes nach
+> der ersten Stelle um eins verschoben, und *„keine Seite ohne Lauf enthält `date_format(`"* heißt
+> *„nur die Fehlerlesung"*, jede Änderung dort einzeln begründet; `DashboardPlanDbIT` (Lesung über
+> `MessageStatusIDX`, kein Zeitindex; Verteilung ohne Fehler auf dem Plan der Verteilung);
+> `DashboardIsolationDbIT` (Block in der Antwort, die Lesung am Repository, Verletzungsprobe rot).
+> **`keine_mandanten_id` ist am 18.09.2026 in beiden Läufen gefallen** — beide Male ausschließlich
+> `alterSekunden`, sechs Lampen um je eine Sekunde: Punkt **182**.
+
 ### Die Verletzungsprobe
 
 Ausprobiert am 31.08.2026 und **zurückgenommen**: In `DashboardRepository.mandantenkette` wurde
@@ -1651,7 +1775,7 @@ unverändert ([`dashboard-frontend.md`](dashboard-frontend.md) §14).
 | **87** | **Die Kachel *Nachrichten* zählt Aktivität und nicht Nachrichten** (§2, bekannte Grenze 3). Ebenfalls gewollt und ebenfalls nur benannt |
 | **130** | **„Hängt hier etwas zu lange?" ist seit E‑71 unbeantwortet.** *Läuft* und *Wartend* zählen einen Zustand und liefern das Alter der ältesten Zeile — **ohne Schwelle**. Eine Schwelle steht nirgends in den Daten; `MessageTimeout` ist es nachweislich nicht (§5). Sie zu erfinden verbietet Regel Q4 — es ist wörtlich die Lage, in der *Unquittiert* mit E‑d gestorben ist. **Als offener Punkt eingetragen und nicht gebaut** |
 | **134** | **Der Verteilungsblock ist bei `SUTTONS` um 27 ms teurer geworden, ohne dass eine Zeile daran geändert wurde** (§8). Bestand, Rollup und Katalogstand sind nachweislich unverändert. **Die Ursache ist nicht gemessen**; plausibel ist der Zustand der Instanz, belegt ist er nicht. Wer M145 nachmisst, sieht, ob es bleibt. ***Nachtrag 16.09.2026 (M178):*** *Es bleibt — die Partnerform kostet bei `SUTTONS` über zwölf Monate 66,9 bis 67,0 ms, die Richtungsform 66,4 bis 66,5 ms. Dafür ist die Verteilung bei `SUTTONS` über 48 Stunden auf knapp die Hälfte von M108 gefallen und über 30 Tage um 60 % gestiegen (§8). Die Ursache ist weiterhin nicht gemessen, und dieser Schritt behandelt den Punkt ausdrücklich nicht* |
-| **182** | **`DashboardIsolationDbIT.keine_mandanten_id` hängt an der Wanduhr.** Der Test vergleicht zwei **ganze** Antwortrümpfe, und seit Schritt 10d steht darin `plattform.dienste[*].alterSekunden`, gerechnet gegen die im Profil `dev` weiterlaufende Anwendungsuhr. Liegen die zwei Aufrufe über einer Sekundengrenze, fällt er — beobachtet am 16.09.2026 in der Verletzungsprobe (§9), mit sechs Lampen um je eine Sekunde als **einzigem** Unterschied; im grünen Lauf davor bestand er. Keine Zusicherung über eine Dauer, aber dieselbe Folge, gegen die Regel T1 steht: ein Test, der zufällig rot wird. **Nicht repariert** — der naheliegende Eingriff wäre, den Block `plattform` aus dem Vergleich zu nehmen oder nur die mandantenabhängigen Blöcke zu vergleichen, wie `verteilung_ist_wirkungslos` es tut. Das ist eine eigene Änderung an einem bestehenden Test und gehört entschieden, nicht nebenbei gemacht |
+| **182** | **`DashboardIsolationDbIT.keine_mandanten_id` hängt an der Wanduhr.** Der Test vergleicht zwei **ganze** Antwortrümpfe, und seit Schritt 10d steht darin `plattform.dienste[*].alterSekunden`, gerechnet gegen die im Profil `dev` weiterlaufende Anwendungsuhr. Liegen die zwei Aufrufe über einer Sekundengrenze, fällt er — beobachtet am 16.09.2026 in der Verletzungsprobe (§9), mit sechs Lampen um je eine Sekunde als **einzigem** Unterschied; im grünen Lauf davor bestand er. Keine Zusicherung über eine Dauer, aber dieselbe Folge, gegen die Regel T1 steht: ein Test, der zufällig rot wird. **Nicht repariert** — der naheliegende Eingriff wäre, den Block `plattform` aus dem Vergleich zu nehmen oder nur die mandantenabhängigen Blöcke zu vergleichen, wie `verteilung_ist_wirkungslos` es tut. Das ist eine eigene Änderung an einem bestehenden Test und gehört entschieden, nicht nebenbei gemacht. ***Nachtrag 18.09.2026 (Fehler live):*** *in beiden Läufen des Tages gefallen, beide Male ausschließlich `alterSekunden` — die drei Aufrufe des Tests dauerten zusammen 2,6 und 4,2 Sekunden; dass er grün wird, ist inzwischen der Zufall und nicht die Regel* |
 | **135** | **Die Isolation der Kachel *Läuft* ist lokal nicht nachweisbar.** `RUNNING` kommt auf der Testkopie null Mal vor; jeder Mandant sieht `0`, mit und ohne Mandantenfilter. Der Nachweis ruht auf dem **gerenderten Statement** (`DashboardStatementsTest`) und nicht auf Daten. **Gegen die Produktion nachzuholen** |
 
 ### Und was hier geschlossen wird
