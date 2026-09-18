@@ -227,6 +227,40 @@ eine fremde Seite — mit dem Vertrauen, das der Nutzer gerade dieser Anwendung 
 Schrägstrich, kein Protokoll, kein Backslash, nicht die Anmeldeseite selbst. Alles andere wird zur
 Startseite. Geprüft in `tests/routen.test.ts`.
 
+### Der Fokus beim Laden *(18.09.2026, E‑215)*
+
+**Wer `/anmeldung` öffnet, kann sofort tippen:** Der Fokus steht im Feld „Benutzername“. Gesetzt
+wird er über `autoFocus` an diesem Feld (`features/sitzung/components/anmelde-formular.tsx`) und über
+nichts sonst — kein Effekt mit `focus()`, kein Zeitgeber. Das eine Attribut trägt auf beiden Wegen,
+auf denen jemand auf die Seite kommt:
+
+| Weg | wer den Fokus setzt |
+|---|---|
+| **direkter Aufruf** | der Browser. Die Seite wird serverseitig gerendert — dynamisch, weil sie die Sprache aus dem Cookie liest —, und `autofocus` steht im HTML |
+| **Umleitung aus einer geschützten Route** | React, beim Einhängen des Formulars im Client |
+
+**Nur hier.** `/passwort` und `/mandantenauswahl` bekommen keinen Autofokus; nach einem Fehlversuch
+wandert der Fokus nicht, und das Passwort bleibt stehen.
+
+**Geprüft ist der zweite Weg**, in `tests/anmelde-formular.test.tsx`: Nach dem Einhängen ist das
+Feld, das die Beschriftung „Benutzername“ benennt, das `document.activeElement`. `toHaveFocus()`
+gibt es hier nicht, weil das Projekt ohne Testing Library rendert (`vitest.config.mts`); verglichen
+wird deshalb `document.activeElement` mit dem Feld. **Verletzungsproben**, zurückgespielt aus einer
+Sicherungskopie und mit `cmp` verglichen, in keinem Commit: `autoFocus` entfernt → rot,
+`expected <body><div>…(1)</div></body> to be <input data-slot="input" …(8)></input>`; `autoFocus`
+auf das Passwortfeld verschoben → rot,
+`expected <input data-slot="input" …(7)></input> to be <input data-slot="input" …(8)></input>`.
+
+> **Belegvermerk (L10).** *Gemessen war:* der Testlauf samt beiden Proben, und das serverseitig
+> gerenderte HTML von `/anmeldung` am laufenden `next dev`, abgerufen ohne Anmeldung — es trägt
+> `autofocus=""` am Feld `benutzername`. *Nicht gemessen:* dass der Browser den Fokus beim direkten
+> Aufruf tatsächlich dorthin setzt. Das zeigt nur eine geladene Seite, und dafür gibt es die
+> Sichtprüfung beim Auftraggeber.
+
+*Nummer:* höchste vergebene **E‑214** ([`fehler-live.md`](fehler-live.md)), gesucht nach dem
+Verfahren aus [`neu-laden.md`](neu-laden.md) §1 auf `main`, `feat/suchfeld-untermenues`,
+`test/indexbestand-e37` und in den Arbeitsbäumen; `E‑780` ist der bekannte Falschtreffer.
+
 ---
 
 ## 4. Sprachen
