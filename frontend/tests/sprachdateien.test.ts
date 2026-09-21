@@ -15,6 +15,31 @@ function pfade(wert: unknown, praefix = ""): string[] {
   );
 }
 
+/**
+ * Kein Text, den ein Nutzer sieht oder vorgelesen bekommt, verweist auf das
+ * Altsystem (E‑230, `docs/frontend-grundlagen.md` §4).
+ *
+ * „Altsystem" ist der interne Begriff aus `docs/`. Für den Nutzer ist die
+ * Plattform, deren Nachrichten er verfolgt, nicht alt, und das Wort sagt ihm
+ * nichts. Anders als `VERRAETERISCH` unten gilt diese Liste für **jeden**
+ * Schlüssel beider Sprachen — Texte mit Parametern eingeschlossen, denn `flach`
+ * liefert sie wie jeden anderen.
+ *
+ * Kleingeschrieben, weil der Text vor dem Vergleich kleingeschrieben wird. Die
+ * Wendungen hinter `legacy` meinen dasselbe, ohne das Wort zu tragen.
+ */
+const HERKUNFTSANGABE = [
+  "altsystem",
+  "alt-system",
+  "legacy",
+  "old system",
+  "alte oberfläche",
+  "bisheriges system",
+  "quellsystem",
+  "previous system",
+  "source system",
+];
+
 describe("Sprachdateien", () => {
   it("haben denselben Schlüsselsatz — kein fehlender, kein überzähliger", () => {
     const deutsch = pfade(de).sort();
@@ -29,6 +54,17 @@ describe("Sprachdateien", () => {
     for (const sprachdatei of [de, en]) {
       const leere = Object.entries(flach(sprachdatei)).filter(([, text]) => text.trim() === "");
       expect(leere).toEqual([]);
+    }
+  });
+
+  it("verweisen in keinem Text auf das Altsystem (E‑230)", () => {
+    for (const sprachdatei of [de, en]) {
+      const treffer = Object.entries(flach(sprachdatei)).flatMap(([schluessel, text]) =>
+        HERKUNFTSANGABE.filter((wort) => text.toLowerCase().includes(wort)).map(
+          (wort) => `${schluessel} enthält "${wort}"`,
+        ),
+      );
+      expect(treffer).toEqual([]);
     }
   });
 });

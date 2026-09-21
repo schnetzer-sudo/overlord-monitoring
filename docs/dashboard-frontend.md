@@ -1702,7 +1702,7 @@ den Block als Eigenschaft und stellt keine eigene Anfrage (§7.1 unverändert, �
 | **Rot trägt das Warndreieck** | dieselbe Gestalt wie an der Fehlerkachel und in „Zuletzt aufgefallen". Die übrigen drei unterscheiden sich in der **Form**: Kreis mit Haken, Ausschalter, Kreis mit Fragezeichen — *nie allein über Farbe* ([`visuelles-konzept.md`](visuelles-konzept.md) §3), und hier doppelt erfüllt, denn jede Lampe trägt zusätzlich ihr Wort |
 | **Der Rohwert nur bei `UNGEKLAERT`** | geliefert wird er bei jeder Lampe (E‑118). Neben „Zeitüberschreitung" sagte `ERROR_TIMEOUT` dasselbe ein zweites Mal, in der Sprache der Anlage statt in der des Nutzers; neben „Ungeklärt" ist er die ganze Auskunft. Führt die Anlage gar keinen Wert, steht das als Satz da und nicht als leere Stelle (Regel Q4) |
 | **Reihenfolge wie geliefert** | nach `ServiceID`, nicht nach Zustand. Sortierte die Ansicht nach Zustand, spränge eine Lampe an eine andere Stelle, sobald sich ihr Zustand ändert — und genau dann sucht jemand sie an ihrem alten Platz |
-| **Leere Liste → ein Satz** (**E‑135**) | *„Kein Dienst des Altsystems trägt eine Zeitgrenze."* Eine leere Stelle sähe aus wie ein Fehler im Bau |
+| **Leere Liste → ein Satz** (**E‑135**) | *„Kein Dienst des Altsystems trägt eine Zeitgrenze."* Eine leere Stelle sähe aus wie ein Fehler im Bau. ***Geändert am 21.09.2026 (E‑230):*** der Satz lautet jetzt *„Kein Dienst trägt eine Zeitgrenze."* — kein Nutzertext verweist auf das Altsystem ([`frontend-grundlagen.md`](frontend-grundlagen.md) §4) |
 
 #### Die Ablagenkachel (**E‑132**, **E‑133**, **E‑134**)
 
