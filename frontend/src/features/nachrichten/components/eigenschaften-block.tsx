@@ -14,12 +14,12 @@ import { gruppiereEigenschaften, schrittHinweis, type EigenschaftenGruppe } from
 import { useEigenschaften } from "../hooks";
 
 /**
- * Die technischen Eigenschaften — **eingeklappt, erst beim Aufklappen geladen
- * und nach ausgeführtem Schritt gruppiert.**
+ * Die technischen Eigenschaften — **eingeklappt und nach ausgeführtem Schritt
+ * gruppiert.** Geladen werden sie seit dem 21.09.2026 **mit dem Detail**
+ * (`docs/nachrichtendetail.md` §10.16, E‑220); bis dahin erst beim Aufklappen.
  *
- * Beschriftet wird der Block mit der Anzahl **aus dem Kopf**, also ohne ihn zu
- * laden. Genau dafür trägt der Detail-Endpunkt `eigenschaftenAnzahl`; lüde die
- * Oberfläche zum Beschriften, hätte der zweite Endpunkt keinen Zweck.
+ * Beschriftet wird der Block mit der Anzahl **aus dem Kopf**. Bei
+ * `eigenschaftenAnzahl === 0` sperrt sie zugleich die Anfrage.
  *
  * **Der Ladezustand liegt im Block, nicht im ganzen Panel.** Wer die
  * Eigenschaften aufklappt, will die Zeitleiste nicht verlieren.
@@ -74,7 +74,10 @@ export function EigenschaftenBlock({
   const texte = useTexte();
   const bereichId = useId();
   const [offen, setOffen] = useState(false);
-  const anfrage = useEigenschaften(messageId, offen);
+  // **Geholt wird mit dem Detail, nicht erst beim Aufklappen** (21.09.2026,
+  // `docs/nachrichtendetail.md` §10.16, E‑220). Bei `anzahl === 0` weiterhin gar
+  // nicht.
+  const anfrage = useEigenschaften(messageId, anzahl > 0);
   const daten = anfrage.data;
 
   // **Aufgeklappt wird beim Rendern, nicht in einem Effekt.** Ein Sprung ist

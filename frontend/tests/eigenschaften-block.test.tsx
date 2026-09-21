@@ -23,7 +23,7 @@ import { neuerZwischenspeicher, rendere } from "./hilfe/rendern";
  * |---|---|
  * | Derselbe Name in zwei Gruppen | Der Schlüssel der Liste ist `${position}:${name}`. Wäre er der Name allein, meldete React einen **doppelten Schlüssel** — in der Konsole, und sichtbar falsch wäre nichts. 31 der 101 gemessenen Namen kommen auf mehr als einem Schritt vor (M17 3) |
  * | `eigenschaftenAnzahl === 0` | **Kein Schalter im Baum und keine Anfrage.** Beides ist eine Aussage über Abwesenheit, und die ist ohne Baum nicht zu treffen |
- * | eingeklappt mit Werten | Die Gegenprobe: Ohne sie bewiese der vorige Test nur, dass ein Block ohne Inhalt nicht lädt — nicht, dass der Block **wartet**, bis jemand aufklappt |
+ * | eingeklappt mit Werten | Die Gegenprobe: Ohne sie bewiese der vorige Test nur, dass ein Block ohne Inhalt nicht lädt. Seit dem 21.09.2026 geht **genau eine** Anfrage mit dem Detail hinaus und beim Aufklappen keine |
  * | aufgeklappt ohne `schritte` | Der Rückfall aus Regel 5 der Einteilung ist eine Zeichenkette der Sprachdatei und entsteht erst im Baum. Er tritt ein, solange das Detail noch nicht da ist |
  *
  * Der erste hängt vollständig an `tests/setup/konsole.ts`: Er besteht genau
@@ -88,7 +88,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/** Klickt den Schalter des Blocks — aufklappen heißt hier zugleich laden. */
+/** Klickt den Schalter des Blocks. */
 async function klappeAuf(behaelter: HTMLElement): Promise<void> {
   const schalter = behaelter.querySelector("button");
   expect(schalter).not.toBeNull();
@@ -189,11 +189,13 @@ describe("Der Eigenschaftenblock", () => {
   });
 
   /**
-   * Die Gegenprobe: Mit Eigenschaften gibt es den Schalter — und **auch dann
-   * noch keine Anfrage**, solange niemand aufklappt. Ohne diesen Test bewiese
-   * der vorige nur, dass ein Block ohne Inhalt nichts lädt.
+   * Die Gegenprobe: Mit Eigenschaften gibt es den Schalter — und **genau eine
+   * Anfrage, die mit dem Detail hinausgeht** (21.09.2026,
+   * `docs/nachrichtendetail.md` §10.16, E‑220). Bis dahin lud der Block erst beim
+   * Aufklappen; seit die Eigenschaften an der Zeitleiste hängen, müssen sie vor
+   * dem ersten Klick da sein. **Das Aufklappen selbst holt nichts mehr.**
    */
-  it("zeigt eingeklappt nur die Überschrift mit der Zahl — ohne zu laden", async () => {
+  it("zeigt eingeklappt die Überschrift mit der Zahl — eine Anfrage mit dem Detail, keine beim Aufklappen", async () => {
     const { behaelter, abbauen } = await rendere(
       <EigenschaftenBlock messageId={MESSAGE_ID} anzahl={22} schritte={SCHRITTE} />,
     );
@@ -204,7 +206,11 @@ describe("Der Eigenschaftenblock", () => {
       );
       expect(behaelter.querySelector("button")?.getAttribute("aria-expanded")).toBe("false");
       expect(behaelter.querySelectorAll("section")).toHaveLength(0);
-      expect(anfragen).toEqual([]);
+      expect(anfragen).toHaveLength(1);
+      expect(anfragen[0]).toContain(`/nachrichten/${MESSAGE_ID}/eigenschaften`);
+
+      await klappeAuf(behaelter);
+      expect(anfragen).toHaveLength(1);
     } finally {
       await abbauen();
     }

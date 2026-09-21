@@ -172,34 +172,6 @@ export function NachrichtDetail({
       ) : anfrage.data ? (
         <>
           <Kopf detail={anfrage.data} prozessbaumFenster={prozessbaumFenster} />
-          {/*
-            Die Kette sitzt zwischen Kopf und Zeitleiste: Sie beantwortet „was
-            hängt daran" und steht damit näher an der Nachricht selbst als der
-            Ablauf ihrer Schritte. `key` baut sie beim Blättern zwischen
-            Nachrichten neu auf — sonst überlebte der Nachladezustand einer
-            Kette die Nachricht, zu der er gehört.
-
-            Der Schlüssel trägt einen Namen davor, weil er sich sonst mit dem
-            des Eigenschaftenblocks deckte: Zwei Geschwister mit demselben
-            `key` sind für React derselbe Platz im Baum. Aufgefallen in der
-            Sichtprüfung am 11.08.2026 als Konsolenmeldung.
-          */}
-          <KettenBlock
-            key={`kette-${anfrage.data.messageId}`}
-            detail={anfrage.data}
-            aufOeffnen={aufOeffnen}
-          />
-          {/*
-            Die Belegdaten sitzen zwischen Kettenblock und Zeitleiste: Sie
-            beantworten „welcher Beleg ist das", die Zeitleiste „was ist damit
-            passiert". Nach dem Leitsatz kommt die erste Frage zuerst — der
-            typische Nutzer sucht einen Beleg.
-
-            `key` mit eigenem Präfix, wie bei den Nachbarn: Drei Geschwister mit
-            demselben Schlüssel wären für React derselbe Platz im Baum. Der
-            Befund dazu stammt vom 11.08.2026 (`verkettung.md` §8.12), und
-            `tests/detail-baum.test.tsx` hält ihn fest.
-          */}
           <BamBlock
             key={`bam-${anfrage.data.messageId}`}
             messageId={anfrage.data.messageId}
@@ -219,6 +191,25 @@ export function NachrichtDetail({
               }))
             }
           />
+          {/*
+            **Die Kette steht seit dem 21.09.2026 unter der ganzen Zeitleiste**
+            samt ihren Zusatzzeilen (Vorgabe des Auftraggebers,
+            `docs/nachrichtendetail.md` §10.16): erst *was ist das*, *welcher
+            Beleg*, das Technische der Nachricht und *was ist passiert* — danach
+            *was hängt daran*. `key` baut sie beim Blättern zwischen Nachrichten
+            neu auf — sonst überlebte der Nachladezustand einer Kette die
+            Nachricht, zu der er gehört.
+
+            Der Schlüssel trägt einen Namen davor, weil er sich sonst mit dem
+            des Eigenschaftenblocks deckte: Zwei Geschwister mit demselben
+            `key` sind für React derselbe Platz im Baum. Aufgefallen in der
+            Sichtprüfung am 11.08.2026 als Konsolenmeldung.
+          */}
+          <KettenBlock
+            key={`kette-${anfrage.data.messageId}`}
+            detail={anfrage.data}
+            aufOeffnen={aufOeffnen}
+          />
         </>
       ) : null}
     </section>
@@ -234,10 +225,10 @@ export function NachrichtDetail({
  *
  * | | |
  * |---|---|
+ * | **Technische Eigenschaften** | seit dem 21.09.2026 **über** der Leiste (§10.16), nach Schritt gruppiert und aus der Leiste anspringbar |
  * | **Eingang** | alles auf Schritt `0` — seit dem 19.08.2026 das Paar des Lesedienstes, Datei und Protokoll (M73). Schritt `0` hängt an keinem Ablaufschritt und steht deshalb **über** der Leiste |
  * | **Zeitleiste** | je Schritt Name, Balken, Dauer — und die Artefakte, die auf ihm liegen |
  * | **Ohne Schritt in der Zeitleiste** | der Rest. Gemessen leer (M57, Befund 1), gebaut, damit kein Artefakt lautlos verschwindet |
- * | **Technische Eigenschaften** | das Technischste zuletzt, nach Schritt gruppiert und aus der Leiste anspringbar |
  *
  * ## Warum die Dateien keinen eigenen Block mehr haben
  *
@@ -275,6 +266,28 @@ function Ablauf({
 
   return (
     <>
+      {/*
+        **Die technischen Eigenschaften stehen seit dem 21.09.2026 über der
+        Zeitleiste** und nicht mehr darunter (`docs/nachrichtendetail.md`
+        §10.16): Kopf → Belegdaten → Technische Eigenschaften → Zeitleiste →
+        Kette.
+      */}
+      <EigenschaftenBlock
+        // Beim Blättern zwischen Nachrichten beginnt der Block wieder
+        // eingeklappt. `key` mit eigenem Präfix, wie bei den Nachbarn:
+        // Geschwister mit demselben Schlüssel wären für React derselbe Platz im
+        // Baum (`verkettung.md` §8.12).
+        key={`eigenschaften-${detail.messageId}`}
+        messageId={detail.messageId}
+        anzahl={detail.eigenschaftenAnzahl}
+        // Nur zum Beschriften der Gruppen (17.08.2026). Es ist dieselbe Liste,
+        // aus der die Zeitleiste darunter entsteht — genau deshalb stehen die
+        // Gruppen in derselben Reihenfolge und tragen wortgleich dieselben
+        // Namen.
+        schritte={detail.schritte}
+        sprung={sprung}
+      />
+
       {/*
         **Eingang, Leiste und Rest stehen bündig aufeinander, ohne Abstand.**
         Sie tragen dieselbe senkrechte Kontur links — die Schiene der Zeitleiste
@@ -324,22 +337,6 @@ function Ablauf({
           aufWiederholen={() => void artefakte.refetch()}
         />
       ) : null}
-
-      <EigenschaftenBlock
-        // Beim Blättern zwischen Nachrichten beginnt der Block wieder
-        // eingeklappt — und lädt damit auch nichts nach. `key` mit eigenem
-        // Präfix, wie bei den Nachbarn: Geschwister mit demselben Schlüssel
-        // wären für React derselbe Platz im Baum (`verkettung.md` §8.12).
-        key={`eigenschaften-${detail.messageId}`}
-        messageId={detail.messageId}
-        anzahl={detail.eigenschaftenAnzahl}
-        // Nur zum Beschriften der Gruppen (17.08.2026). Es ist dieselbe Liste,
-        // aus der die Zeitleiste darüber entsteht — genau deshalb stehen die
-        // Gruppen in derselben Reihenfolge und tragen wortgleich dieselben
-        // Namen.
-        schritte={detail.schritte}
-        sprung={sprung}
-      />
     </>
   );
 }

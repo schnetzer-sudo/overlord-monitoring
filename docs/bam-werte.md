@@ -611,6 +611,12 @@ sind die Hauptinformation dieser Ansicht und nicht Beiwerk.**
 
 An Kettenblock, Zeitleiste und Eigenschaftenblock ändert sich **nichts** außer der Einfügestelle.
 
+> **Abgelöst am 21.09.2026 (E‑218, [`nachrichtendetail.md`](nachrichtendetail.md) §10.16): Der Block
+> steht seither direkt unter dem Kopf.** Die Reihenfolge im Panel ist Kopf → Belegdaten → Technische
+> Eigenschaften → Zeitleiste → Kette; der Kettenblock ist ans Ende gewandert. *„Zwischen Kettenblock
+> und Zeitleiste"* beschreibt in dieser Datei den Stand bis dahin — die Begründung (die erste Frage
+> zuerst) gilt unverändert. Die Protokolle in §14 bleiben, wie sie geschrieben wurden.
+
 ### Er erscheint gar nicht, wenn es nichts zu zeigen gibt
 
 Ist `bamAnzahl` null, gibt es **keinen Rahmen, keinen Schalter und keine Anfrage**. Bei **80,6

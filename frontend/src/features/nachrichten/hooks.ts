@@ -276,19 +276,28 @@ export function useNachrichtendetail(messageId: string | null) {
 }
 
 /**
- * Die technischen Eigenschaften — **erst beim Aufklappen.**
+ * Die technischen Eigenschaften — **seit dem 21.09.2026 mit dem Detail** und
+ * nicht mehr erst beim Aufklappen (`docs/nachrichtendetail.md` §10.16, E‑220).
  *
- * Der Kopf trägt die Anzahl, der Block ist damit beschriftbar, ohne ihn zu
- * laden. Genau dafür gibt es den zweiten Endpunkt; ihn mitzuladen nähme ihm
- * seinen Zweck.
+ * Sie hängen an der Zeitleiste, und die steht immer da: Nur mit der Antwort ist
+ * vor dem ersten Klick bekannt, welche Zeile Inhalt hat, ob es eine
+ * Eingangszeile gibt und welche Zahl der Block trägt. Dieselbe Begründung wie
+ * bei den Artefaktzielen (`docs/rohdaten-frontend.md` §3). Der Preis ist eine
+ * Anfrage je Detail über ein gemessenes Statement — 1,1 bis 1,2 ms
+ * (`docs/nachrichtendetail.md` §8).
+ *
+ * **Bei `eigenschaftenAnzahl === 0` geht weiterhin keine Anfrage hinaus.** Dafür
+ * trägt der Kopf die Zahl: Sie sperrt die Anfrage, wo es nichts zu holen gibt.
+ *
+ * **Mehrere Aufrufer, eine Anfrage.** Block und Zeitleiste rufen diesen Haken
+ * beide; der Abfrageschlüssel ist derselbe, und TanStack Query holt einmal.
  *
  * Länger gehalten als die Liste: Die Eigenschaften einer abgeschlossenen
  * Nachricht ändern sich nicht mehr, und wer zwischen zwei Nachrichten hin und
  * her springt, soll nicht zweimal dieselbe Antwort holen.
  *
- * @param aktiv der Schalter des Blocks. Bewusst ein Parameter: Der Zustand
- *   gehört der Komponente, nicht der Abfrage — und **nicht der URL**, denn er
- *   ist keine Ansicht, die jemand teilt.
+ * @param aktiv ob es überhaupt etwas zu holen gibt — der Kopf ist da und
+ *   `eigenschaftenAnzahl > 0`. **Nicht mehr der Schalter des Blocks.**
  */
 export function useEigenschaften(messageId: string | null, aktiv: boolean) {
   return useQuery<Eigenschaft[]>({

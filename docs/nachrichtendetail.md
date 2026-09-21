@@ -109,6 +109,13 @@ leer, gibt es keinen Kettenblock und **keine zweite Anfrage**.
 Ohne sie könnte die Oberfläche den eingeklappten Block nicht beschriften, ohne ihn zu laden — womit
 der zweite Endpunkt seinen Zweck verlöre.
 
+> **Eingeschränkt am 21.09.2026 (E‑220, §10.16).** Die Oberfläche holt die Eigenschaften seither
+> **mit dem Detail** und nicht mehr erst beim Aufklappen — sie hängen an der Zeitleiste, und die
+> steht immer da. **`eigenschaftenAnzahl` hält seither keine Anfrage mehr bis zum Aufklappen zurück;
+> sie sperrt sie nur noch bei `0`.** Das Feld bleibt, der Endpunkt bleibt, am Backend ist nichts geändert.
+> Der zweite Endpunkt behält seinen Zweck aus dem anderen Grund, der schon immer galt: Der Kopf
+> bleibt klein, und die Eigenschaften sind eine eigene Abfrage mit eigener Haltbarkeit.
+
 **`bamAnzahl` steht aus demselben Grund im Kopf** *(neu am 12.08.2026, Schritt 7 Teil 1)* — die Zahl
 der Belegnummern auf dieser Nachricht, **immer vorhanden, `0` statt fehlend**. Sie beschriftet den
 eingeklappten BAM-Block (§10.4b) und entscheidet, ob er überhaupt entsteht.
@@ -1024,6 +1031,10 @@ lib/format.ts                                + formatiereDauer
 lib/routen.ts                                + die beiden Zielrouten des Umschalters (11.08.2026)
 ```
 
+> **Fortgeschrieben am 21.09.2026 (§10.16).** Zwei Zeilen des Baums stimmen so nicht mehr, der
+> Wortlaut bleibt stehen: `eigenschaften-block.tsx` lädt **nicht** mehr erst beim Aufklappen (E‑220),
+> und `kette-block.tsx` sitzt **unter** der Zeitleiste statt zwischen Kopf und Zeitleiste (E‑218).
+
 ### 10.1 Zwei Einhängepunkte, eine Komponente
 
 | Weg | Verhalten |
@@ -1381,6 +1392,12 @@ Schrittzeilen.
 
 ### 10.4a Der Kettenblock — zwischen Kopf und Zeitleiste
 
+> **Abgelöst am 21.09.2026 (E‑218, §10.16): Der Kettenblock steht seither unter der ganzen
+> Zeitleiste** samt ihren Zusatzzeilen, als letzter Block des Panels. Das ist eine Vorgabe des
+> Auftraggebers und keine neue Abwägung; die Begründung „näher an der Nachricht selbst" unten ist
+> damit für die **Lage** überholt. Alles Übrige dieses Abschnitts gilt weiter: die Bedingung, keine
+> Anfrage ohne Rollen, und dass der Block die Zeitleiste nicht anfasst.
+
 *Neu am 11.08.2026 (Schritt 6, Teil 2b).* Er beantwortet die dritte Frage des Werkzeugs — **was
 hängt an dieser Nachricht** — und steht deshalb **zwischen Kopf und Zeitleiste**: näher an der
 Nachricht selbst als der Ablauf ihrer Schritte.
@@ -1404,6 +1421,11 @@ Beleg passiert ist*, und nach dem Leitsatz kommt die erste Frage zuerst.
 Die Reihenfolge im Panel ist damit: **Kopf → Kette → Belegdaten → Zeitleiste → Eigenschaften.** Von
 oben nach unten: *was ist das*, *was hängt daran*, *welcher Beleg ist das*, *was ist passiert*, und
 zuletzt das Technische.
+
+> **Abgelöst am 21.09.2026 (E‑218, §10.16).** Die Reihenfolge im Panel ist seither: **Kopf →
+> Belegdaten → Technische Eigenschaften → Zeitleiste → Kette.** Der BAM-Block steht damit direkt
+> unter dem Kopf und nicht mehr „zwischen Kettenblock und Zeitleiste"; seine Begründung — die erste
+> Frage zuerst — gilt unverändert und trägt die neue Lage ebenso.
 
 **Ist `bamAnzahl` null, gibt es ihn nicht** — kein Rahmen, kein Schalter, **keine Anfrage auf
 `/bam`**. Bei 80,6 Prozent der Nachrichten ist das der Fall, bei Merge-Eingängen bei allen (M41).
@@ -1444,6 +1466,11 @@ Endpunkt keinen Zweck.
 Erst beim Aufklappen wird `GET /api/nachrichten/{id}/eigenschaften` gerufen (`enabled` an der
 Abfrage). **Der Ladezustand liegt im Block, nicht im ganzen Panel** — wer die Eigenschaften
 aufklappt, will die Zeitleiste nicht verlieren.
+
+> **Abgelöst am 21.09.2026 (E‑220, §10.16): Geladen wird mit dem Detail**, sobald der Kopf da ist
+> und `eigenschaftenAnzahl > 0` gilt — nicht mehr beim Aufklappen. Bei `0` geht weiterhin keine
+> Anfrage hinaus. Der Ladezustand bleibt im Block. Der Block steht seither **über** der Zeitleiste
+> (E‑218).
 
 Name und Wert als Rohwerte in fester Laufweite, feste Zeilenhöhe, gekürzt mit Vollwert im `title`.
 **Ein gekappter Wert trägt ein sichtbares Kennzeichen** samt seiner ursprünglichen Länge in Bytes
@@ -1886,6 +1913,11 @@ Gegenrichtung ist billiger: Wer maximiert, hängt die Liste aus und fragt sie ni
 | `tests/eigenschaften-block.test.tsx` *(17.08.2026)* | **gerenderter Baum, begründete Ausnahme:** derselbe Name in **drei** Gruppen **ohne `console.error`** (der Schlüssel ist `${position}:${name}`); bei `anzahl === 0` **kein Schalter und keine Anfrage**; eingeklappt mit Werten die Überschrift mit der Zahl und **immer noch keine Anfrage**; ohne gelieferte `schritte` trägt jede Gruppe den Rückfall *Schritt N* |
 | `tests/zeitleiste-ziele.test.tsx` *(18.08.2026)* | **gerenderter Baum, begründete Ausnahme:** die Ergänzungen aus §10.4 und §10.5 — welche Zeile welches Ziel trägt (beide Arten, nur eine, keine); dass die Artefakte des **Metadaten-Schritts** über der Leiste erreichbar bleiben, **ohne dass die Leiste eine vierte Zeile bekäme**; die Belastungsprobe aus M55 mit fünfzehn eigenen Zielen ohne doppelten React-Schlüssel; das **Anspringen** der Eigenschaftengruppe samt der drei Fälle bei kaltem Zwischenspeicher; und dass ohne Eigenschaften **kein Schalter** am Schrittnamen steht. Vollständig in [`rohdaten-frontend.md`](rohdaten-frontend.md) §3 und §3a |
 
+> **Fortgeschrieben am 21.09.2026 (§10.16, Teil 1).** `tests/eigenschaften-block.test.tsx`: Der Fall
+> *„eingeklappt mit Werten … und immer noch keine Anfrage"* ist ersetzt. Seit E‑220 geht **genau eine**
+> Anfrage auf `/eigenschaften` mit dem Einhängen hinaus und **beim Aufklappen keine**; bei
+> `anzahl === 0` weiterhin kein Schalter und keine Anfrage.
+
 Kein gerenderter Baum, mit den Ausnahmen aus `tests/detail-baum.test.tsx` und
 `tests/ansicht-umschalter.test.tsx`: Geprüft werden die **Entscheidungen**, nicht das Markup
 ([`frontend-grundlagen.md`](frontend-grundlagen.md) §9).
@@ -2218,6 +2250,39 @@ aus der Regel — gesehen worden ist es nicht.**
 läuft ins Leere — der Knopf bekommt den Fokusring, aber die Hydration ist noch nicht durch, und der
 Ereignisbehandler hängt noch nicht. Der zweite Klick wirkte sofort. Das gehört hierher, damit es beim
 nächsten Mal nicht als Fehler des Umschalters gelesen wird.
+
+### 10.16 Eigenschaften an die Zeitleiste, Kette nach unten (21.09.2026)
+
+**Anlass ist eine Vorgabe des Auftraggebers**, abgenommen an einem Entwurf; maßgeblich ist die
+Beschreibung im Auftrag und nicht der Entwurf. Reiner Frontend-Umbau in `features/nachrichten`:
+**kein Feld, kein Statement, kein Endpunkt** — Kopf und `KuratierteEigenschaften` bleiben. Weil keine
+Abfrage entsteht, war keine Messung fällig (Regel L7).
+
+> *Nummern:* höchste vergebene Entscheidung **E‑217** ([`neu-laden.md`](neu-laden.md)), höchster
+> offener Punkt **216** ([`fehler-live.md`](fehler-live.md)). Gesucht am 21.09.2026 über `docs/` auf
+> `main` und auf allen lokalen und entfernten Zweigen, über alle vier Schreibweisen des Strichs
+> (U+2011, U+2010, `-`, U+2013), die Treffer ab 205 einzeln gelesen; **E‑780** ist der bekannte
+> Falschtreffer. Der Auftrag nannte als Stand *„höchste E‑212, offene Punkte bis 215"* — das war ein
+> Hinweis und traf nicht mehr zu (E‑213 bis E‑217 und Punkt 216 sind seither vergeben). Vergeben
+> sind hier **E‑218 bis E‑228** und der offene Punkt **217**.
+
+#### Teil 1 — die Reihenfolge und der Zeitpunkt des Ladens
+
+| # | Entscheidung |
+|---|---|
+| **E‑218** | **Die Reihenfolge im Panel ist Kopf → Belegdaten → Technische Eigenschaften → Zeitleiste → Kette** (bisher Kopf → Kette → Belegdaten → Zeitleiste → Eigenschaften, §10.4b). Die Kette steht unter der **ganzen** Zeitleiste samt Eingangs- und Restzeile. Belegdaten und Kette erscheinen wie bisher nur bedingt |
+| **E‑220** | **Die Eigenschaften kommen mit dem Detail**, nicht mehr beim Aufklappen: `useEigenschaften` ist aktiv, sobald der Kopf da ist und `eigenschaftenAnzahl > 0` gilt; bei `0` weiterhin keine Anfrage |
+
+**Warum E‑220.** Die Eigenschaften hängen an der Zeitleiste, und die steht immer da — dieselbe
+Begründung wie bei den Artefaktzielen ([`rohdaten-frontend.md`](rohdaten-frontend.md) §3, „Nicht mehr
+eingeklappt"). Nur mit der Antwort ist **vor dem ersten Klick** bekannt, welche Zeile Inhalt hat, ob
+es eine Eingangszeile gibt und welche Zahl der Block trägt. **Der Preis ist eine Anfrage je Detail**
+über ein gemessenes Statement: Der Eigenschaften-Aufruf kostet 1,1 bis 1,2 ms (§8). Es ist dieselbe
+Abfrage wie bisher, nur früher gestellt.
+
+**Mehrere Aufrufer, eine Anfrage.** Block und Zeitleiste rufen denselben Haken mit demselben
+Abfrageschlüssel; TanStack Query holt einmal. Der Test dazu steht in
+`tests/eigenschaften-block.test.tsx`.
 
 ---
 

@@ -525,6 +525,11 @@ Code.
 Entsteht am 11.08.2026. Die Kette bekommt **einen Block im Detailpanel**, zwischen Kopf und
 Zeitleiste — keine eigene Route, keine eigene Ansicht.
 
+> **Abgelöst am 21.09.2026 (E‑218, [`nachrichtendetail.md`](nachrichtendetail.md) §10.16): Der Block
+> steht seither unter der ganzen Zeitleiste**, als letzter des Panels — Kopf → Belegdaten →
+> Technische Eigenschaften → Zeitleiste → Kette. Vorgabe des Auftraggebers. Der Dateibaum darunter
+> führt an zwei Stellen noch „zwischen Kopf und Zeitleiste"; gemeint ist seither die neue Lage.
+
 ```
 features/nachrichten/
 ├─ api.ts                      + Kettentypen und die zwei Aufrufe
