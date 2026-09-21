@@ -1031,6 +1031,7 @@ zurückgesetzt beim Nachrichtenwechsel über `key` am Aufrufer — derselbe Weg 
 **Die Bewegung** ist die aus [`nachrichtendetail.md`](nachrichtendetail.md) §10.16 (E‑228): Höhe in
 220 ms, der Inhalt blendet ein, der Pfeil dreht; bei `prefers-reduced-motion: reduce` steht alles
 sofort. **Beim Nachladen bewegt sich weiterhin nichts** (§8.8) — der offene Inhalt wächst einfach.
+*(Seit E‑229 vom selben Tag: 300 ms statt 220, auf wie zu.)*
 Zugeklappt ist der Inhalt eingehängt und `inert`; weil die Glieder Schaltflächen sind, hält der
 Inhalt ringsum 0,25 rem frei, damit ihr Fokusring an der Schnittkante der Höhenbewegung nicht
 abgeschnitten wird.

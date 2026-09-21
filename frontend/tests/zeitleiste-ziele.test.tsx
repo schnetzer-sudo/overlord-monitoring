@@ -535,7 +535,8 @@ describe("Die Ziele an der Zeitleiste", () => {
       expect(spur?.querySelector("[inert]")).not.toBeNull();
       for (const klasse of [
         "transition-[grid-template-rows]",
-        "duration-[220ms]",
+        // 300 ms seit E‑229, auf wie zu — bis dahin 220.
+        "duration-[300ms]",
         "ease-[cubic-bezier(0.2,0,0,1)]",
         "motion-reduce:transition-none",
       ]) {
@@ -543,9 +544,9 @@ describe("Die Ziele an der Zeitleiste", () => {
       }
       expect(blende?.classList.contains("motion-reduce:transition-none")).toBe(true);
 
-      // Linie und Name wechseln die Farbe in denselben 220 ms.
+      // Linie und Name wechseln die Farbe in denselben 300 ms.
       for (const element of [zeile, schalter?.querySelector("span")]) {
-        expect(element?.classList.contains("duration-[220ms]")).toBe(true);
+        expect(element?.classList.contains("duration-[300ms]")).toBe(true);
         expect(element?.classList.contains("motion-reduce:transition-none")).toBe(true);
       }
       expect(zeile.classList.contains("transition-[border-color]")).toBe(true);

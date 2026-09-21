@@ -37,7 +37,7 @@ import { cn } from "@/lib/utils";
  *
  * | Was | Wert |
  * |---|---|
- * | Höhe | `grid-template-rows` von `0fr` auf `1fr`, 220 ms, `cubic-bezier(0.2, 0, 0, 1)`, zu wie auf |
+ * | Höhe | `grid-template-rows` von `0fr` auf `1fr`, 300 ms, `cubic-bezier(0.2, 0, 0, 1)`, zu wie auf |
  * | Inhalt beim Öffnen | blendet über 150 ms nach 55 ms Verzögerung ein und rückt 4 px nach unten |
  * | Inhalt beim Schließen | blendet über 110 ms ohne Verzögerung aus |
  *
@@ -69,9 +69,15 @@ function useAufklappen(): Zustand {
   return zustand;
 }
 
-/** Die Dauer der Höhenbewegung — dieselbe für Pfeil, Linie und Name. */
+/**
+ * Die Dauer der Höhenbewegung — dieselbe für Pfeil, Linie und Name, auf wie zu.
+ *
+ * **300 ms** *(E‑229, 21.09.2026 — bis dahin 220 ms)*. Vorgabe des
+ * Auftraggebers, in beide Richtungen. Das Ein- und Ausblenden des Inhalts
+ * (150 ms nach 55 ms, 110 ms) ist davon unberührt.
+ */
 export const AUFKLAPP_UEBERGANG =
-  "duration-[220ms] ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none";
+  "duration-[300ms] ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none";
 
 /**
  * Der Rahmen um Schalter und Inhalt. **Der Zustand gehört dem Aufrufer** — er
