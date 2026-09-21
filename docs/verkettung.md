@@ -525,6 +525,11 @@ Code.
 Entsteht am 11.08.2026. Die Kette bekommt **einen Block im Detailpanel**, zwischen Kopf und
 Zeitleiste — keine eigene Route, keine eigene Ansicht.
 
+> **Abgelöst am 21.09.2026 (E‑218, [`nachrichtendetail.md`](nachrichtendetail.md) §10.16): Der Block
+> steht seither unter der ganzen Zeitleiste**, als letzter des Panels — Kopf → Belegdaten →
+> Technische Eigenschaften → Zeitleiste → Kette. Vorgabe des Auftraggebers. Der Dateibaum darunter
+> führt an zwei Stellen noch „zwischen Kopf und Zeitleiste"; gemeint ist seither die neue Lage.
+
 ```
 features/nachrichten/
 ├─ api.ts                      + Kettentypen und die zwei Aufrufe
@@ -553,6 +558,11 @@ dieselbe Regel wie der Ketten-Service; ein zweiter Nachbau wäre die Drift, gege
 `common` liegt.
 
 ### 8.2 Der Block erscheint bedingt — und darf deshalb offen stehen
+
+> **Eingeschränkt am 21.09.2026 (E‑227, §8.15): *„darf deshalb offen stehen"* gilt nur noch bei einem
+> Glied.** Der **Block** bleibt dauerhaft sichtbar — Überschriften, Zahl und Abbruchsätze stehen immer
+> da —, aber ein Abschnitt mit mehr als einem Glied beginnt zu. Die Bedingung dieses Abschnitts
+> (leere `rollen` → kein Block, keine Anfrage) gilt unverändert.
 
 **Ist `rollen` leer, gibt es den Block nicht.** Keine Überschrift, kein leerer Kasten, kein
 Platzhalter — und **keine Anfrage auf `/kette`**. Dieselbe Regel, die im Panel schon für die
@@ -749,6 +759,10 @@ holt die nächste Seite über `…/kette/abwaerts?cursor=…` und hängt sie an,
 Verteilen sich die Abwärtsglieder auf beide Abschnitte (§8.4), steht die Schaltfläche darunter für
 sich — sie ließe sich sonst keinem zuordnen.
 
+> **Genauer seit dem 21.09.2026 (E‑227, §8.15): Die Schaltfläche gehört zum Inhalt ihres
+> Abschnitts** und ist mit ihm zugeklappt. Steht sie im Sonderfall für sich, erscheint sie, sobald
+> einer der beiden Abschnitte offen ist.
+
 > **Warum nicht in die Liste springen.** Naheliegend wäre ein Filter `?wurzel=…` an der
 > Nachrichtenliste. Das bricht **Regel L1**: Die Liste verlangt ein Pflicht-Zeitfenster, und die
 > Kinder einer drei Monate alten Wurzel lägen außerhalb jedes vernünftigen Fensters. Entweder man
@@ -794,6 +808,10 @@ Fehlertext des Panels — keine eigene Formulierung, und vor allem kein Wort üb
 
 **Keine Animation**, auch nicht beim Nachladen ([`visuelles-konzept.md`](visuelles-konzept.md) §7).
 
+> **Eingeschränkt am 21.09.2026 (E‑228, [`nachrichtendetail.md`](nachrichtendetail.md) §10.16): Der
+> Satz gilt weiter für das Nachladen, nicht mehr für das Aufklappen.** Das Auf- und Zuklappen eines
+> Abschnitts bewegt sich wie alles im Nachrichtendetail — die dritte benannte Ausnahme dort in §7.
+
 ### 8.9 Farbe
 
 **Der Block trägt keine eigene Farbe.** Die Statusplakette je Glied nutzt die bestehenden
@@ -823,6 +841,12 @@ Eigenschaft der bestehenden `StatusPlakette` und keine zweite Komponente.
 Kein gerenderter Baum: Geprüft werden die **Entscheidungen**, nicht das Markup
 ([`frontend-grundlagen.md`](frontend-grundlagen.md) §9). **Seit dem 11.08.2026 gilt das mit drei
 benannten Ausnahmen** (§8.14); die Regel selbst ist unverändert.
+
+> **Fortgeschrieben am 21.09.2026 (§8.15).** `tests/kette.test.ts` prüft zusätzlich, **wann ein
+> Abschnitt aufklappbar ist** — genau bei mehr als einem Glied. `tests/detail-baum.test.tsx` bleibt
+> bei drei Fällen: Der Fall zu `tiefeErreicht` prüft den Satz zusätzlich **bei zugeklappten
+> Abschnitten** (sichtbar, in keinem `inert`-Inhalt, unter beiden) samt der für sich stehenden
+> Nachladen-Schaltfläche, und der Doppelschlüssel-Fall die **Reihenfolge der Blöcke** im Panel.
 
 ### 8.11 Sichtprüfung im Browser (11.08.2026)
 
@@ -961,6 +985,61 @@ M31‑1 gezählt hat. Das ist der Teil der Regel, der beim Umbauen als Erstes ve
 damit ein Test sie greifen kann. Die Hülle ist ein Query-Client mit gestellten Antwortrümpfen und
 der Sprachprovider (`tests/hilfe/rendern.tsx`); die Anzeigezone braucht keinen, weil sie ohne
 Kontext auf UTC zurückfällt.
+
+### 8.15 Die Abschnitte klappen auf (21.09.2026)
+
+*Teil 3 des Umbaus aus [`nachrichtendetail.md`](nachrichtendetail.md) §10.16; dort stehen Anlass,
+Nummernprüfung und die übrigen Entscheidungen.* Vorgabe des Auftraggebers: „Kommt von" und „Wurde
+zu" stehen unter der Zeitleiste, in der bisherigen Reihenfolge, und sind aufklappbar, sobald ein
+Abschnitt mehr als ein Glied trägt.
+
+| # | Entscheidung |
+|---|---|
+| **E‑227** | **Ein Abschnitt mit mehr als einem Glied ist aufklappbar, anfangs zu, mit Pfeil in der Bauform der Belegdaten.** Ein Abschnitt mit genau einem Glied steht **ohne Schalter offen** und hält die Einrückung des Pfeils frei, damit die Überschriften fluchten. Block, Bedingung (§8.2), `kette.ts`, Überschriften samt Zahlregel (§8.4), Navigation (§8.6) und Nachladen (§8.7) bleiben |
+
+**Die Regel des Panels: Blöcke klappen mit Pfeil, Zeitleistenzeilen mit der Linie.** Ein
+Kettenabschnitt ist ein Block — Überschrift, darunter eine Liste —, also trägt er den Pfeil wie
+Belegdaten und Technische Eigenschaften, dieselbe Schaltfläche, derselbe Baustein
+(`components/aufklappen.tsx`).
+
+**Entschieden wird in `kette.ts`** (`abschnittAufklappbar`), nicht in der Komponente: genau bei mehr
+als einem **gezeigten** Glied. Die erste Seite trägt bis zu fünfzig (§8.7) — ein Abschnitt mit einem
+gezeigten Glied hat auch nur eines.
+
+**Warum ein Glied offen bleibt.** Hinter einem Klick verborgen wäre es dieselbe eine Zeile, nur
+später — und die Kette ist die Antwort auf „wo ist mein Lieferschein" (§8.2). Ab zwei beginnt der
+Abschnitt zu: Bei 3.048 Teilen schöbe er sonst alles darunter aus dem Bild, und seit dem 21.09.2026
+steht die Kette **unter** der Zeitleiste, wo sie niemandem mehr etwas wegnimmt. **Die Zahl in der
+Überschrift (§8.4) sagt auch zugeklappt, was dahinter liegt.**
+
+**Die Überschrift ohne Schalter fluchtet.** Sie hält links 1,25 rem frei — 0,875 rem Pfeil und 0,375
+rem Abstand — und ist so hoch wie die Schaltfläche (`--dichte-bedienelement`). Gemessen in der
+Sichtprüfung: derselbe Textanfang auf den Pixel.
+
+**Die beiden Abbruchsätze bleiben außerhalb der Abschnitte und immer sichtbar** (§8.5) — auch wenn
+beide Abschnitte zu sind. Sie sagen etwas über die Kette und nicht über einen Abschnitt; in einem
+zugeklappten Inhalt bräche die Kette wieder stillschweigend ab.
+
+**Die Nachladen-Schaltfläche gehört zum Inhalt ihres Abschnitts** (§8.7): Unter einem zugeklappten
+lüde sie Zeilen nach, die niemand sieht. Steht sie im Sonderfall verteilter Abwärtsglieder für sich,
+erscheint sie, **sobald einer der beiden Abschnitte offen ist** — ein Abschnitt mit genau einem Glied
+zählt dabei als offen. Deshalb liegt der Aufklappzustand im Block und nicht im Abschnitt.
+
+**Der Zustand:** je Abschnitt unabhängig, anfangs zu, nicht in URL, Cookie oder Storage;
+zurückgesetzt beim Nachrichtenwechsel über `key` am Aufrufer — derselbe Weg wie beim Nachladezustand.
+
+**Die Bewegung** ist die aus [`nachrichtendetail.md`](nachrichtendetail.md) §10.16 (E‑228): Höhe in
+220 ms, der Inhalt blendet ein, der Pfeil dreht; bei `prefers-reduced-motion: reduce` steht alles
+sofort. **Beim Nachladen bewegt sich weiterhin nichts** (§8.8) — der offene Inhalt wächst einfach.
+Zugeklappt ist der Inhalt eingehängt und `inert`; weil die Glieder Schaltflächen sind, hält der
+Inhalt ringsum 0,25 rem frei, damit ihr Fokusring an der Schnittkante der Höhenbewegung nicht
+abgeschnitten wird.
+
+**Tests:** `tests/kette.test.ts` — aufklappbar genau bei mehr als einem Glied (eines, zwei, und der
+Aufstieg ohne Zahl). `tests/detail-baum.test.tsx` — im vorhandenen Fall zu `tiefeErreicht`, kein
+vierter Baum: beide Abschnitte zu, die Glieder eingehängt und `inert`, **der Abbruchsatz trotzdem
+sichtbar, in keinem zugeklappten Inhalt und unter beiden**; dazu die für sich stehende
+Nachladen-Schaltfläche, die erst mit dem ersten offenen Abschnitt erscheint.
 
 ---
 

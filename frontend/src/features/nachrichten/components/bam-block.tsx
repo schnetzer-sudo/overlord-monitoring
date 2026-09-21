@@ -13,12 +13,16 @@ import { cn } from "@/lib/utils";
 
 import type { BamGruppe } from "../api";
 import { useBamWerte } from "../hooks";
+import { AUFKLAPP_UEBERGANG, AufklappInhalt, AufklappSchalter, Aufklappen } from "./aufklappen";
 
 /**
  * **Welcher Beleg ist das** — die Belegnummern der Nachricht, nach Art
  * gruppiert.
  *
- * ## Er sitzt zwischen Kettenblock und Zeitleiste
+ * ## Er sitzt direkt unter dem Kopf, vor der Zeitleiste
+ *
+ * *(Bis zum 21.09.2026 zwischen Kettenblock und Zeitleiste; die Kette steht
+ * seither am Ende des Panels — E‑218, `docs/nachrichtendetail.md` §10.16.)*
  *
  * Er beantwortet *welcher Beleg ist das*, die Zeitleiste beantwortet *was ist
  * damit passiert*. Nach dem Leitsatz kommt die erste Frage zuerst: Der typische
@@ -58,7 +62,6 @@ import { useBamWerte } from "../hooks";
 export function BamBlock({ messageId, anzahl }: { messageId: string; anzahl: number }) {
   const texte = useTexte();
   const sprache = useSprache();
-  const bereichId = useId();
   const [offen, setOffen] = useState(false);
   const anfrage = useBamWerte(messageId, offen);
 
@@ -75,46 +78,49 @@ export function BamBlock({ messageId, anzahl }: { messageId: string; anzahl: num
   });
 
   return (
-    <div className="flex flex-col gap-2">
-      <button
-        type="button"
-        onClick={() => setOffen((bisher) => !bisher)}
-        aria-expanded={offen}
-        aria-controls={bereichId}
+    // Seit dem 21.09.2026 auf dem gemeinsamen Aufklappbaustein (E‑228,
+    // `aufklappen.tsx`): Der Block bewegt sich beim Auf- und Zuklappen wie alles
+    // im Detail — die dritte benannte Ausnahme von `visuelles-konzept.md` §7.
+    // Geändert sind allein Lage und Bewegung; geladen wird weiterhin erst beim
+    // Aufklappen.
+    <Aufklappen offen={offen} aufWechsel={setOffen} className="flex flex-col">
+      <AufklappSchalter
         title={
           offen ? texte.nachrichten.detail.bam.zuklappen : texte.nachrichten.detail.bam.aufklappen
         }
         className="hover:bg-muted focus-visible:ring-ring min-h-bedienelement text-beiwerk -mx-1 flex w-fit max-w-full items-center gap-1.5 rounded-md px-1 text-left font-medium focus-visible:ring-2 focus-visible:outline-none"
       >
-        {/* Eine Drehung, keine Bewegung: Das visuelle Konzept lässt außer
-            Schublade und Menü keine Animation zu. */}
         <ChevronRight
           aria-hidden="true"
-          className={cn("size-3.5 shrink-0 opacity-70", offen && "rotate-90")}
+          className={cn(
+            "size-3.5 shrink-0 opacity-70 transition-[rotate]",
+            AUFKLAPP_UEBERGANG,
+            offen && "rotate-90",
+          )}
         />
         {beschriftung}
-      </button>
+      </AufklappSchalter>
 
-      {offen ? (
-        <div id={bereichId} className="flex flex-col gap-2">
-          {anfrage.isPending ? (
-            <Laden zeilen={3} />
-          ) : anfrage.error ? (
-            <Fehler fehler={anfrage.error} aufWiederholen={() => void anfrage.refetch()} />
-          ) : (anfrage.data?.gruppen.length ?? 0) === 0 ? (
-            <p className="text-muted-foreground text-beiwerk">
-              {texte.nachrichten.detail.bam.leer}
-            </p>
-          ) : (
-            anfrage.data?.gruppen.map((gruppe) => (
-              // Der Typ ist der Schlüssel — innerhalb einer Nachricht kommt er
-              // genau einmal vor, weil die Zählung darüber gruppiert.
-              <Gruppe key={gruppe.typ} gruppe={gruppe} />
-            ))
-          )}
-        </div>
-      ) : null}
-    </div>
+      {/* `pt-2` im Inhalt statt `gap-2` am Rahmen: Zugeklappt nimmt der Inhalt
+          keine Höhe ein, und ein Abstand am Rahmen bliebe stehen. */}
+      <AufklappInhalt className="flex flex-col gap-2 pt-2">
+        {/* Bevor jemand aufklappt, läuft keine Anfrage — und dann steht hier
+            auch kein Ladezustand, den niemand sieht. */}
+        {!offen && anfrage.data === undefined && !anfrage.error ? null : anfrage.isPending ? (
+          <Laden zeilen={3} />
+        ) : anfrage.error ? (
+          <Fehler fehler={anfrage.error} aufWiederholen={() => void anfrage.refetch()} />
+        ) : (anfrage.data?.gruppen.length ?? 0) === 0 ? (
+          <p className="text-muted-foreground text-beiwerk">{texte.nachrichten.detail.bam.leer}</p>
+        ) : (
+          anfrage.data?.gruppen.map((gruppe) => (
+            // Der Typ ist der Schlüssel — innerhalb einer Nachricht kommt er
+            // genau einmal vor, weil die Zählung darüber gruppiert.
+            <Gruppe key={gruppe.typ} gruppe={gruppe} />
+          ))
+        )}
+      </AufklappInhalt>
+    </Aufklappen>
   );
 }
 

@@ -441,18 +441,19 @@ export const en: Texte = {
 
       eigenschaften: {
         titel: "Technical properties ({anzahl})",
+        titelOhneZahl: "Technical properties",
         keine: "No technical properties",
+        // The message HAS properties, just none named `Message.` on step 0 —
+        // so the sentence must not claim there are none.
+        keineAllgemeinen:
+          "No general details about the message — its technical properties are listed with their steps in the timeline.",
+        anZeile: "technical properties",
         aufklappen: "Show technical properties",
         zuklappen: "Hide technical properties",
         name: "Name",
         wert: "Value",
         gekappt: "shortened",
         gekapptHinweis: "Shortened — {bytes} bytes in the original.",
-        leer: "No property is recorded for this message.",
-        gruppe: "{name} ({anzahl})",
-        // Says *where* the values hang — on the message rather than on a step —
-        // and claims nothing about what they are.
-        gruppeNachricht: "Message",
         gruppeSchritt: "Step {nummer}",
       },
 
@@ -468,7 +469,6 @@ export const en: Texte = {
 
         ziel: "{art} · {name}",
         zielAusschnitt: "{ziel} — {marke}",
-        zuEigenschaften: "Show technical properties for {name}",
 
         ausschnittMarke: "Extract",
         ausschnittAnkuendigung:
@@ -562,6 +562,8 @@ export const en: Texte = {
       stufe: "Level {stufe}",
       gliedOeffnen: "Open {ablauf}",
       weitereLaden: "Load more",
+      aufklappen: "Show links",
+      zuklappen: "Hide links",
       laedtWeitere: "Loading …",
       geladen: "{anzahl} links loaded",
       tiefeErreicht: "The chain is longer than shown here.",

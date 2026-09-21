@@ -611,6 +611,12 @@ sind die Hauptinformation dieser Ansicht und nicht Beiwerk.**
 
 An Kettenblock, Zeitleiste und Eigenschaftenblock ändert sich **nichts** außer der Einfügestelle.
 
+> **Abgelöst am 21.09.2026 (E‑218, [`nachrichtendetail.md`](nachrichtendetail.md) §10.16): Der Block
+> steht seither direkt unter dem Kopf.** Die Reihenfolge im Panel ist Kopf → Belegdaten → Technische
+> Eigenschaften → Zeitleiste → Kette; der Kettenblock ist ans Ende gewandert. *„Zwischen Kettenblock
+> und Zeitleiste"* beschreibt in dieser Datei den Stand bis dahin — die Begründung (die erste Frage
+> zuerst) gilt unverändert. Die Protokolle in §14 bleiben, wie sie geschrieben wurden.
+
 ### Er erscheint gar nicht, wenn es nichts zu zeigen gibt
 
 Ist `bamAnzahl` null, gibt es **keinen Rahmen, keinen Schalter und keine Anfrage**. Bei **80,6
@@ -637,6 +643,15 @@ Wiederholen), Leer (ein Satz), Daten.
 **Der Zustand gehört nicht in die URL** — er ist keine Ansicht, die jemand teilt. Beim Blättern
 zwischen Nachrichten beginnt der Block wieder eingeklappt; umgesetzt über `key={…}` und damit über
 den Baum, nicht über einen Effekt.
+
+> **Ergänzt am 21.09.2026 (E‑228, [`nachrichtendetail.md`](nachrichtendetail.md) §10.16): Das Auf- und
+> Zuklappen bewegt sich**, wie alles im Nachrichtendetail — Höhe in 220 ms, der Pfeil dreht, mit
+> `prefers-reduced-motion: reduce` steht alles sofort. Der Block steht dafür auf dem gemeinsamen
+> Aufklappbaustein (`components/aufklappen.tsx`); sein Inhalt bleibt eingehängt und ist zugeklappt
+> `inert`. **Sonst ist am Block nichts geändert:** Er lädt weiterhin erst beim Aufklappen, die Zahl
+> kommt weiterhin aus `bamAnzahl`, und vor dem ersten Aufklappen steht kein Ladezustand im Baum.
+> *„Dieselbe Bauform wie der Eigenschaften-Block"* gilt für Schalter, Pfeil und Bewegung — nicht mehr
+> für den Zeitpunkt des Ladens und die Herkunft der Zahl (E‑220, E‑224 dort).
 
 ### Aufgeklappt — Beschriftung links, Werte rechts
 

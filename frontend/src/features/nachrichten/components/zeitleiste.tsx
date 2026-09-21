@@ -6,12 +6,20 @@ import { useAnzeigezone } from "@/components/zeitzone";
 import { einsetzen } from "@/i18n";
 import { useSprache, useTexte } from "@/i18n/provider";
 import { formatiereDauer, formatiereZeitpunktGenau } from "@/lib/format";
-import { cn } from "@/lib/utils";
 
-import type { Nachrichtendetail, Schritt } from "../api";
-import { schrittHinweis, wartezeile, zeitleiste, type Zeitleistenzeile } from "../detail";
+import type { Eigenschaft, Nachrichtendetail, Schritt } from "../api";
+import {
+  schrittAufklappbar,
+  schrittHinweis,
+  wartezeile,
+  zeitleiste,
+  type Eigenschaftenverteilung,
+  type Zeitleistenzeile,
+} from "../detail";
 import type { Artefaktziel } from "../rohdaten";
 import { Ziele } from "./artefakt-ziele";
+import { AufklappZeile } from "./aufklapp-zeile";
+import { EigenschaftenListe } from "./eigenschaft-zeile";
 
 /**
  * Die Zeitleiste — der Kern der Detailansicht.
@@ -31,12 +39,10 @@ import { Ziele } from "./artefakt-ziele";
  *
  * ## Was am 18.08.2026 dazugekommen ist — und was nicht
  *
- * Zwei Dinge, beide **an** der Zeile und keines *in* der Rechnung:
- *
- * 1. **Die Ziele.** Je Schritt hängen die Artefakte daran, die auf ihm liegen —
- *    in aller Regel zwei, Datei und Protokoll. Wo nichts liegt, hängt nichts.
- * 2. **Der Weg zu den technischen Eigenschaften.** Der Name wird zur
- *    Schaltfläche und führt an die Gruppe desselben Schritts im Block darunter.
+ * **Die Ziele**, **an** der Zeile und nicht *in* der Rechnung: Je Schritt hängen
+ * die Artefakte daran, die auf ihm liegen — in aller Regel zwei, Datei und
+ * Protokoll. Wo nichts liegt, hängt nichts. (Der zweite Zusatz jenes Tages, der
+ * Sprung in den Eigenschaftenblock, ist am 21.09.2026 entfallen — siehe unten.)
  *
  * **An der Zeitleiste selbst ändert das nichts:** keine andere Sortierung, keine
  * zweite Datenquelle für die Zeilen, keine neue Zeile. `zeitleiste(detail)`
@@ -49,19 +55,28 @@ import { Ziele } from "./artefakt-ziele";
  *   `zieleJeSchritt`. Fehlt die Liste — sie lädt noch oder ihre Abfrage ist
  *   fehlgeschlagen —, ist die Abbildung leer und keine Zeile trägt ein Ziel.
  *   Die Leiste hängt nicht daran.
- * @param aufSchritt der Weg zur Eigenschaftengruppe dieses Schritts. **Ohne ihn
- *   bleibt der Name ein Text** und keine Schaltfläche: Der Aufrufer reicht ihn
- *   nur durch, wenn es unter der Leiste überhaupt einen Block gibt
- *   (`eigenschaftenAnzahl > 0`).
+ * @param eigenschaften die Einteilung aus `../detail.ts`
+ *   `verteileEigenschaften`. **`undefined`, solange die Eigenschaften laden oder
+ *   wenn ihre Abfrage gescheitert ist — dann ist keine Zeile aufklappbar**, und
+ *   die Leiste steht trotzdem (E‑221, E‑224).
+ *
+ * ## Was am 21.09.2026 dazugekommen ist — und was entfallen
+ *
+ * **Die Eigenschaften stehen unter ihrem Schritt**, und die Zeile lässt sich
+ * dafür aufklappen (`aufklapp-zeile.tsx`). Der Weg vom 18.08.2026 — ein Klick
+ * auf den Namen springt in die Gruppe des Eigenschaftenblocks — **ist samt
+ * Sprungziel, Fokus-Effekt und Gruppenkennungen entfallen** (E‑225): Es gibt die
+ * Gruppen nicht mehr, in die er führte. **Das Bild der eingeklappten Leiste
+ * bleibt, wie es war.**
  */
 export function Zeitleiste({
   detail,
   ziele,
-  aufSchritt,
+  eigenschaften,
 }: {
   detail: Nachrichtendetail;
   ziele?: Map<number, Artefaktziel[]>;
-  aufSchritt?: (position: number) => void;
+  eigenschaften?: Eigenschaftenverteilung;
 }) {
   const zeilen = zeitleiste(detail);
   const warten = wartezeile(detail);
@@ -84,7 +99,7 @@ export function Zeitleiste({
             zeile={zeile}
             messageId={detail.messageId}
             ziele={ziele}
-            aufSchritt={aufSchritt}
+            eigenschaften={eigenschaften}
           />
         ))}
       </ol>
@@ -148,12 +163,12 @@ function Zeile({
   zeile,
   messageId,
   ziele,
-  aufSchritt,
+  eigenschaften,
 }: {
   zeile: Zeitleistenzeile;
   messageId: string;
   ziele?: Map<number, Artefaktziel[]>;
-  aufSchritt?: (position: number) => void;
+  eigenschaften?: Eigenschaftenverteilung;
 }) {
   if (zeile.art === "erwartet") {
     return <ErwarteteZeile name={zeile.name} bereitsGelaufen={zeile.bereitsGelaufen} />;
@@ -167,7 +182,13 @@ function Zeile({
       // Artefaktliste lädt, ist die Abbildung leer, und ein Schritt ohne
       // Artefakte kommt darin gar nicht vor.
       ziele={ziele?.get(zeile.schritt.position) ?? []}
-      aufSchritt={aufSchritt}
+      // Aufklappbar ist nur, was Inhalt hat — und solange die Eigenschaften
+      // laden, nichts (E‑221). Entschieden in `../detail.ts`.
+      eigenschaften={
+        schrittAufklappbar(eigenschaften, zeile.schritt.position)
+          ? (eigenschaften?.jeSchritt.get(zeile.schritt.position) ?? [])
+          : []
+      }
     />
   );
 }
@@ -188,28 +209,29 @@ function Zeile({
  * Schritt verschieden benennen, wären genau der Fehler, den jene Gruppierung
  * beseitigen soll.
  *
- * ## Der Name führt seit dem 18.08.2026 an die Eigenschaften dieses Schritts
+ * ## Seit dem 21.09.2026 stehen die Eigenschaften des Schritts unter ihm
  *
- * Die Gruppierung des Eigenschaftenblocks besteht seit dem 17.08.2026; es fehlte
- * nur der Weg dorthin. **Kein neuer Block, keine Duplizierung** — ein Klick auf
- * den Schritt klappt den Block auf und setzt den Fokus auf seine Gruppe.
+ * Eine Zeile mit Eigenschaften ist eine Schaltfläche über die ganze Breite; ein
+ * Klick klappt sie auf, und die Linie links läuft in `--akzent-schrift` durch
+ * den Inhalt weiter. **Eine Zeile ohne Eigenschaft bleibt Text** — gemessen
+ * möglich, `MessageActionID = 502` steht in `MessageAction` und fehlt in
+ * `MessageProperty` (M17 3). Bauform und Begründung in `aufklapp-zeile.tsx`.
  *
- * Das schließt zugleich den offenen Punkt, dass zwei Bausteine dieselbe Sache
- * nach verschiedenen Spalten ordneten: Es gibt jetzt **eine** Ordnung, und das
- * ist die dieser Leiste.
+ * Der Weg vom 18.08.2026 — der Name als Schaltfläche, die in die Gruppe des
+ * Eigenschaftenblocks sprang — ist damit entfallen (E‑225).
  */
 function SchrittZeile({
   schritt,
   anteil,
   messageId,
   ziele,
-  aufSchritt,
+  eigenschaften,
 }: {
   schritt: Schritt;
   anteil: number | null;
   messageId: string;
   ziele: Artefaktziel[];
-  aufSchritt?: (position: number) => void;
+  eigenschaften: readonly Eigenschaft[];
 }) {
   const texte = useTexte();
   const dauer =
@@ -217,55 +239,9 @@ function SchrittZeile({
       ? texte.nachrichten.detail.ohneDauer
       : formatiereDauer(schritt.dauerSekunden, texte.nachrichten.detail.dauer);
 
-  const hinweis = schrittHinweis(schritt, texte);
-
-  return (
-    <li
-      className={cn(
-        "h-zeile flex items-center gap-2 border-l-2 pl-2",
-        // Der laufende Schritt trägt die Farbrolle „offen" — dieselbe, die die
-        // Statusplakette für „wartend, laufend" hat. Der Akzent der Anwendung
-        // wäre hier falsch: Er sagt etwas über die Anwendung, nie über die
-        // Daten (`visuelles-konzept.md` §3).
-        schritt.laeuftAuf ? "border-status-offen-kontur" : "border-border",
-      )}
-    >
-      {/* Ohne Namen keine Schaltfläche: Ein Bedienelement ohne sichtbare
-          Beschriftung wäre für jeden, der es nicht ohnehin kennt, eine leere
-          Fläche — und sein zugänglicher Name hieße „Technische Eigenschaften zu
-          … anzeigen" mit einer Lücke darin. */}
-      {aufSchritt === undefined || schritt.name === "" ? (
-        <span className="min-w-0 flex-1 truncate" title={hinweis}>
-          {schritt.name}
-        </span>
-      ) : (
-        // Der sichtbare Name steht im zugänglichen Namen (WCAG 2.5.3): Wer
-        // „Datei gelesen" sagt, muss die Schaltfläche damit erreichen. Der
-        // Tooltip bleibt die Herkunft — er beantwortet eine andere Frage.
-        <button
-          type="button"
-          onClick={() => aufSchritt(schritt.position)}
-          title={hinweis}
-          aria-label={einsetzen(texte.nachrichten.detail.dateien.zuEigenschaften, {
-            name: schritt.name,
-          })}
-          // `self-stretch`: **Die Schaltfläche ist so hoch wie ihre Zeile.**
-          // Ohne sie wäre ihre Trefferfläche die Zeilenhöhe der Schrift und
-          // damit ein schmales Band in der Mitte einer 2.25-rem-Zeile — am
-          // Finger nicht zu treffen, und der Rest der Zeile täte nichts. Die
-          // Zeile selbst bleibt `h-zeile`; gedehnt wird nur dieses Kind.
-          className="hover:bg-muted focus-visible:ring-ring -mx-1 flex min-w-0 flex-1 items-center self-stretch rounded-md px-1 text-left focus-visible:ring-2 focus-visible:outline-none"
-        >
-          {/* Das Kürzen gehört auf dieses `span` und nicht auf die
-              Schaltfläche: Auf einem Flex-Behälter greift `text-overflow`
-              nicht, der Name bräche dann ab statt mit Auslassungspunkten zu
-              enden. */}
-          <span className="min-w-0 truncate">{schritt.name}</span>
-        </button>
-      )}
-
-      <Ziele messageId={messageId} ziele={ziele} />
-
+  // Der rechte Teil der Zeile: Balken oder „läuft gerade", dahinter die Dauer.
+  const rechts = (
+    <>
       {schritt.laeuftAuf ? (
         // Nie allein über Farbe: Zeichen **und** Text.
         <span className="text-status-offen text-beiwerk flex shrink-0 items-center gap-1">
@@ -279,7 +255,53 @@ function SchrittZeile({
       <span className="text-muted-foreground text-beiwerk w-20 shrink-0 text-right" data-ziffern>
         {schritt.laeuftAuf && schritt.dauerSekunden === null ? "" : dauer}
       </span>
-    </li>
+    </>
+  );
+
+  return (
+    <AufklappZeile
+      als="li"
+      // Der laufende Schritt trägt die Farbrolle „offen" — dieselbe, die die
+      // Statusplakette für „wartend, laufend" hat. Sie geht der Akzentlinie der
+      // offenen Zeile vor: Der Akzent sagt etwas über die Anwendung, nie über
+      // die Daten (`visuelles-konzept.md` §3).
+      kontur={schritt.laeuftAuf ? "border-status-offen-kontur" : undefined}
+      zeilenklasse="h-zeile"
+      // Ein Schritt ohne Namen bleibt namenlos, solange er nur Zeile ist. **Trägt
+      // er Eigenschaften, bekommt er den Rückfall *Schritt N*:** Eine
+      // Schaltfläche ohne sichtbare Beschriftung wäre eine leere Fläche, und die
+      // Eigenschaften dahinter fielen sonst lautlos aus der Oberfläche. Kein
+      // erfundener Name — derselbe Rückfall wie bei den Artefaktzielen.
+      name={
+        schritt.name === "" && eigenschaften.length > 0
+          ? einsetzen(texte.nachrichten.detail.eigenschaften.gruppeSchritt, {
+              nummer: schritt.position,
+            })
+          : schritt.name
+      }
+      hinweis={schrittHinweis(schritt, texte)}
+      zieleAnzahl={ziele.length}
+      zieleKnoten={<Ziele messageId={messageId} ziele={ziele} className="pointer-events-auto" />}
+      rechts={rechts}
+      // Unsichtbar und für Vorleseprogramme nicht vorhanden: Er hält in der
+      // Ebene der Ziele genau die Breite frei, die der rechte Teil darunter
+      // einnimmt — auch bei „läuft gerade", das keine feste Breite hat.
+      rechtsSpiegel={
+        <>
+          {schritt.laeuftAuf ? (
+            <span aria-hidden="true" className="text-beiwerk invisible flex shrink-0 gap-1">
+              <span className="size-3.5" />
+              {texte.nachrichten.detail.laeuftGerade}
+            </span>
+          ) : (
+            <span className="w-20 shrink-0 sm:w-28" />
+          )}
+          <span className="w-20 shrink-0" />
+        </>
+      }
+    >
+      {eigenschaften.length === 0 ? null : <EigenschaftenListe eintraege={eigenschaften} />}
+    </AufklappZeile>
   );
 }
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Kette, Kettenglied } from "@/features/nachrichten/api";
 import {
+  abschnittAufklappbar,
   abschnittFuer,
   abwaertsAbschnitt,
   gezeigteAbwaertsglieder,
@@ -273,5 +274,39 @@ describe("Ob es einen Block gibt", () => {
   it("bejaht sie auch, wenn nur ein Abbruch zu melden ist", () => {
     expect(hatInhalt(kette({ tiefeErreicht: true }))).toBe(true);
     expect(hatInhalt(kette({ zyklusErkannt: true }))).toBe(true);
+  });
+});
+
+/**
+ * **Aufklappbar genau bei mehr als einem Glied** *(21.09.2026, E‑227,
+ * `docs/verkettung.md` §8.15)*.
+ *
+ * Ein einzelnes Glied steht ohne Schalter offen — hinter einem Klick verborgen
+ * wäre es dieselbe eine Zeile, nur später. Ab zwei beginnt der Abschnitt zu.
+ * Gezählt werden die **gezeigten** Glieder, nicht `gesamt`.
+ */
+describe("Ob ein Abschnitt aufklappbar ist", () => {
+  const abschnitt = (glieder: Kettenglied[], gesamt: number | null = null) => ({
+    art: "wurdeZu" as const,
+    glieder,
+    gesamt,
+  });
+
+  it("lässt genau ein Glied ohne Schalter offen stehen", () => {
+    expect(abschnittAufklappbar(abschnitt([TEIL], 1))).toBe(false);
+  });
+
+  it("macht den Abschnitt ab zwei Gliedern aufklappbar", () => {
+    expect(abschnittAufklappbar(abschnitt([TEIL, glied({ messageId: "teil-2" })], 2))).toBe(true);
+  });
+
+  it("zählt die gezeigten Glieder — auch dort, wo die Überschrift keine Zahl nennt", () => {
+    // Der Aufstieg trägt keine Zahl (§8.4); zwei Stufen sind trotzdem zwei Glieder.
+    expect(
+      abschnittAufklappbar(
+        abschnitt([WURZEL, glied({ messageId: "urwurzel", ebene: -2, beziehung: "AUFTEILUNG" })]),
+      ),
+    ).toBe(true);
+    expect(abschnittAufklappbar(abschnitt([WURZEL]))).toBe(false);
   });
 });

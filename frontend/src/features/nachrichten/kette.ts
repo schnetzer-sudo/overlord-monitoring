@@ -90,6 +90,22 @@ export function abschnittFuer(glied: Kettenglied): Abschnittsart {
  * Merge-Ergebnis (M30‑4). Verteilen sich die Glieder, ließe sich die Summe
  * keiner der beiden Überschriften zuordnen, ohne sie zu erfinden.
  */
+/**
+ * Ob ein Abschnitt aufklappbar ist — **genau bei mehr als einem Glied**
+ * *(21.09.2026, E‑227, `docs/verkettung.md` §8.15)*.
+ *
+ * Ein einzelnes Glied steht ohne Schalter offen: Hinter einem Klick verborgen
+ * wäre es dieselbe eine Zeile, nur später — und die Kette ist die Antwort auf
+ * „wo ist mein Lieferschein" (§8.2). Ab zwei Gliedern beginnt der Abschnitt zu;
+ * bei 3.048 Teilen schöbe er sonst alles darunter aus dem Bild.
+ *
+ * Gezählt werden die **gezeigten** Glieder. Die erste Seite trägt bis zu fünfzig
+ * (§8.7) — ein Abschnitt mit einem gezeigten Glied hat auch nur eines.
+ */
+export function abschnittAufklappbar(abschnitt: Kettenabschnitt): boolean {
+  return abschnitt.glieder.length > 1;
+}
+
 export function abwaertsAbschnitt(abwaerts: readonly Kettenglied[]): Abschnittsart | null {
   const arten = new Set(abwaerts.map(abschnittFuer));
   return arten.size === 1 ? [...arten][0] : null;

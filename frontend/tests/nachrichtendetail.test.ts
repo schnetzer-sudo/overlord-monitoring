@@ -5,10 +5,13 @@ import {
   BALKEN_MINDESTANTEIL,
   balkenanteil,
   bedeutungNichtVerifiziert,
-  gruppiereEigenschaften,
   laengsteDauer,
+  schrittAufklappbar,
+  verteileEigenschaften,
   wartezeile,
   zeitleiste,
+  zusatzzeile,
+  type Eigenschaftenverteilung,
 } from "@/features/nachrichten/detail";
 
 /**
@@ -406,16 +409,18 @@ describe("Bedeutung nicht verifiziert", () => {
 });
 
 /**
- * **Die Gruppierung der technischen Eigenschaften** *(17.08.2026)*.
+ * **Wohin jede technische Eigenschaft gehört** *(21.09.2026, E‑219,
+ * `docs/nachrichtendetail.md` §10.16)*.
  *
- * Sie ist eine Entscheidung und keine Darstellung, und deshalb steht sie als
- * reine Funktion neben der Komponente. Der Anlass: Flach untereinander steht
- * `Converter.Log.GUID` zweimal und `Service.Type` dreimal und sieht aus wie eine
- * Dublette — tatsächlich sind es Einträge verschiedener Prozessschritte. 31 der
- * 101 gemessenen Namen kommen auf mehr als einem Schritt vor (M17 3).
+ * `verteileEigenschaften` ersetzt `gruppiereEigenschaften` vom 17.08.2026 und
+ * mit ihr deren zehn Fälle. Die Eigenschaften stehen nicht mehr gruppiert in
+ * einem Block, sondern **unter ihrem Schritt in der Zeitleiste**; im Block
+ * bleiben allein die allgemeinen Angaben zur Nachricht. Eingeteilt wird an genau
+ * dieser einen Stelle, und deshalb steht die Einteilung als reine Funktion neben
+ * der Komponente.
  *
- * Geprüft wird hier vor allem, was die Funktion **nicht** tut: umsortieren,
- * zusammenfassen, Namen erfinden oder leere Gruppen erzeugen.
+ * Geprüft wird vor allem, was die Funktion **nicht** tut: umsortieren,
+ * zusammenfassen, etwas fallen lassen oder einen Namen großzügig lesen.
  */
 function eigenschaft(
   werte: Partial<Eigenschaft> & { name: string; position: number },
@@ -428,195 +433,288 @@ function eigenschaft(
   };
 }
 
-describe("Die Gruppierung der Eigenschaften", () => {
+/** Die Namen eines Teils, in seiner Reihenfolge. */
+function namen(eintraege: readonly Eigenschaft[]): string[] {
+  return eintraege.map((eintrag) => eintrag.name);
+}
+
+/** Wie viele Eigenschaften die vier Teile zusammen tragen. */
+function summe(verteilung: Eigenschaftenverteilung): number {
+  return (
+    verteilung.allgemein.length +
+    verteilung.eingang.length +
+    [...verteilung.jeSchritt.values()].reduce((bisher, teil) => bisher + teil.length, 0) +
+    verteilung.ohneZeile.reduce((bisher, teil) => bisher + teil.eintraege.length, 0)
+  );
+}
+
+describe("Die Einteilung der Eigenschaften", () => {
   /**
-   * **`position === 0` ist die Nachricht selbst und steht vorn** — auch dann,
-   * wenn sie in der Antwort nicht zuerst kommt. Das Backend sortiert nach Name
-   * und erst dann nach Schritt; die Reihenfolge der Positionen ist damit
-   * beliebig.
+   * **Die vier Teile an einer Nachricht**, wie sie gemessen aussieht: die
+   * `Message.*`-Familie und die des Lesedienstes auf Schritt `0`, dazu zwei
+   * ausgeführte Schritte — und eine Position, zu der es keine Zeile gibt.
    */
-  it("stellt die Gruppe 0 nach vorn, auch wenn sie in der Eingabe nicht zuerst steht", () => {
-    const gruppen = gruppiereEigenschaften(
+  it("teilt in allgemein, Eingang, je Schritt und ohne Zeile", () => {
+    const verteilung = verteileEigenschaften(
       [
-        eigenschaft({ name: "Converter.Log.GUID", position: 2 }),
+        eigenschaft({ name: "Converter.Type", position: 1 }),
         eigenschaft({ name: "Message.GUID", position: 0 }),
-      ],
-      [schritt({ position: 2, name: "Datei konvertiert" })],
-    );
-
-    expect(gruppen.map((gruppe) => gruppe.position)).toEqual([0, 2]);
-    // Die Nachricht selbst steht in `schritte[]` nicht drin — der
-    // Metadaten-Schritt ist kein Prozessschritt. Ihre Beschriftung ist deshalb
-    // `null`, und den Namen setzt die Komponente über `istNachricht`.
-    expect(gruppen[0]).toMatchObject({ istNachricht: true, beschriftung: null });
-    expect(gruppen[1]).toMatchObject({ istNachricht: false, beschriftung: "Datei konvertiert" });
-  });
-
-  /**
-   * **Die Gruppenreihenfolge folgt `schritte[]` und nicht der Zahl.**
-   *
-   * Die Ordnung der Schritte (`MessageActionStart`, bei Gleichstand
-   * `MessageActionID`) steht an genau einer Stelle: im `ORDER BY` von
-   * `findeAktionen`. Eine zweite Sortierung hier wäre die Drift, gegen die diese
-   * Regel gerichtet ist — und die Gruppen stünden in einer anderen Reihenfolge
-   * als die Zeilen der Zeitleiste darüber.
-   */
-  it("folgt der Reihenfolge der Schritte und sortiert nicht numerisch nach", () => {
-    const gruppen = gruppiereEigenschaften(
-      [
-        eigenschaft({ name: "A", position: 1 }),
-        eigenschaft({ name: "B", position: 2 }),
-        eigenschaft({ name: "C", position: 3 }),
-        eigenschaft({ name: "D", position: 0 }),
-      ],
-      [schritt({ position: 3 }), schritt({ position: 1 }), schritt({ position: 2 })],
-    );
-
-    expect(gruppen.map((gruppe) => gruppe.position)).toEqual([0, 3, 1, 2]);
-  });
-
-  /**
-   * **Ein Schritt ohne Eigenschaften bekommt keine leere Überschrift.** Der Fall
-   * ist gemessen: `MessageActionID = 502` existiert in `MessageAction`, kommt in
-   * `MessageProperty` aber nicht vor (M17 3).
-   */
-  it("erzeugt für einen Schritt ohne Eigenschaften keine Gruppe", () => {
-    const gruppen = gruppiereEigenschaften(
-      [eigenschaft({ name: "Service.Type", position: 1 })],
-      [schritt({ position: 1 }), schritt({ position: 502 })],
-    );
-
-    expect(gruppen.map((gruppe) => gruppe.position)).toEqual([1]);
-  });
-
-  /**
-   * **Eine Position ohne gelieferten Schritt bekommt keinen erfundenen Namen**
-   * und landet am Ende. Mehrere davon stehen untereinander aufsteigend — die
-   * Zahl ist dort das einzige, was es an Ordnung gibt.
-   */
-  it("hängt Positionen ohne Schritt ohne Beschriftung hinten an, aufsteigend", () => {
-    const gruppen = gruppiereEigenschaften(
-      [
-        eigenschaft({ name: "A", position: 500 }),
-        eigenschaft({ name: "B", position: 4 }),
-        eigenschaft({ name: "C", position: 1 }),
-      ],
-      [schritt({ position: 1 })],
-    );
-
-    expect(gruppen.map((gruppe) => gruppe.position)).toEqual([1, 4, 500]);
-    expect(gruppen.slice(1).map((gruppe) => gruppe.beschriftung)).toEqual([null, null]);
-    expect(gruppen.slice(1).map((gruppe) => gruppe.namensherkunft)).toEqual([null, null]);
-  });
-
-  /**
-   * **Fehlt `position === 0`, entsteht keine leere Gruppe „Nachricht".** Sie ist
-   * eine Gruppe wie jede andere und existiert nur, wenn etwas darin steht.
-   */
-  it("erfindet keine Gruppe 0, wenn keine Eigenschaft an ihr hängt", () => {
-    const gruppen = gruppiereEigenschaften(
-      [eigenschaft({ name: "Service.Type", position: 1 })],
-      [schritt({ position: 1 })],
-    );
-
-    expect(gruppen.some((gruppe) => gruppe.istNachricht)).toBe(false);
-  });
-
-  /**
-   * **Der Punkt der ganzen Übung.** Derselbe Name auf zwei Schritten ist keine
-   * Dublette, sondern zwei Einträge — `Converter.Payload.GUID` steht mit 7.862
-   * Zeilen auf 6.149 Nachrichten (M17 3). Zusammengefasst würde einer davon
-   * verschwinden.
-   */
-  it("behält denselben Namen in zwei Gruppen zweimal", () => {
-    const gruppen = gruppiereEigenschaften(
-      [
-        eigenschaft({ name: "Service.Type", position: 1, wert: "FileReader" }),
-        eigenschaft({ name: "Service.Type", position: 2, wert: "Converter" }),
+        eigenschaft({ name: "OFTPReader.VirtualFilename", position: 0 }),
+        eigenschaft({ name: "Service.Type", position: 2 }),
+        eigenschaft({ name: "Service.Type", position: 9 }),
       ],
       [schritt({ position: 1 }), schritt({ position: 2 })],
     );
 
-    expect(gruppen.map((gruppe) => gruppe.eintraege.map((eintrag) => eintrag.wert))).toEqual([
-      ["FileReader"],
-      ["Converter"],
-    ]);
+    expect(namen(verteilung.allgemein)).toEqual(["Message.GUID"]);
+    expect(namen(verteilung.eingang)).toEqual(["OFTPReader.VirtualFilename"]);
+    expect([...verteilung.jeSchritt.keys()]).toEqual([1, 2]);
+    expect(namen(verteilung.jeSchritt.get(1) ?? [])).toEqual(["Converter.Type"]);
+    expect(namen(verteilung.jeSchritt.get(2) ?? [])).toEqual(["Service.Type"]);
+    expect(verteilung.ohneZeile.map((teil) => teil.position)).toEqual([9]);
   });
 
   /**
-   * **Innerhalb einer Gruppe bleibt die Reihenfolge der Antwort.** Die
-   * Oberfläche zeigt heute alphabetisch, weil das Statement so sortiert
-   * (`MessagePropertyName`, dann `MessageActionID`) — das ist eine Beobachtung
-   * und keine Zusage dieser Funktion. Die Eingabe steht hier deshalb absichtlich
-   * nicht alphabetisch.
+   * **Das Präfix ist `Message.` — exakt, mit Punkt und in dieser Schreibung.**
+   * `Message` ohne Punkt, `MessageX.…` und `message.…` gehören nicht zu den
+   * allgemeinen Angaben. **Sie fallen dadurch nicht heraus:** Sie stehen
+   * sichtbar im Eingang, und ein anders geschriebener Name bleibt damit
+   * auffindbar statt stillschweigend einsortiert.
    */
-  it("sortiert innerhalb einer Gruppe nicht um", () => {
-    const gruppen = gruppiereEigenschaften(
+  it("nimmt in allgemein nur, was exakt mit `Message.` beginnt", () => {
+    const verteilung = verteileEigenschaften(
       [
-        eigenschaft({ name: "Zeta", position: 1 }),
-        eigenschaft({ name: "Alpha", position: 1 }),
-        eigenschaft({ name: "Mitte", position: 1 }),
-      ],
-      [schritt({ position: 1 })],
-    );
-
-    expect(gruppen[0]?.eintraege.map((eintrag) => eintrag.name)).toEqual([
-      "Zeta",
-      "Alpha",
-      "Mitte",
-    ]);
-  });
-
-  /**
-   * **Die Invariante:** Kein Eintrag geht verloren, keiner wird zusammengefasst.
-   * Die Summe der Gruppengrößen ist die Länge der Eingabe — auch dann, wenn
-   * Positionen ohne Schritt und Schritte ohne Positionen gemischt auftreten.
-   */
-  it("verliert keinen Eintrag — die Summe der Gruppengrößen ist die Eingabelänge", () => {
-    const eingabe = [
-      eigenschaft({ name: "Message.GUID", position: 0 }),
-      eigenschaft({ name: "Message.SOS", position: 0 }),
-      eigenschaft({ name: "Service.Type", position: 1 }),
-      eigenschaft({ name: "Service.Type", position: 2 }),
-      eigenschaft({ name: "Converter.Log.GUID", position: 2 }),
-      eigenschaft({ name: "Fremd", position: 500 }),
-    ];
-
-    const gruppen = gruppiereEigenschaften(eingabe, [
-      schritt({ position: 2 }),
-      schritt({ position: 1 }),
-      schritt({ position: 502 }),
-    ]);
-
-    expect(gruppen.reduce((summe, gruppe) => summe + gruppe.eintraege.length, 0)).toBe(
-      eingabe.length,
-    );
-    expect(gruppen.map((gruppe) => gruppe.position)).toEqual([0, 2, 1, 500]);
-  });
-
-  /**
-   * **Gekappte Werte werden unverändert durchgereicht.** Das Kennzeichen und die
-   * ursprüngliche Länge hängen am Eintrag; die Gruppierung ordnet an und fasst
-   * nicht an.
-   */
-  it("reicht gekappt und originalLaengeBytes unverändert durch", () => {
-    const gruppen = gruppiereEigenschaften(
-      [
-        eigenschaft({
-          name: "Message.IDOCNr",
-          position: 0,
-          gekappt: true,
-          originalLaengeBytes: 2124,
-        }),
+        eigenschaft({ name: "Message", position: 0 }),
+        eigenschaft({ name: "Message.SendingPartner", position: 0 }),
+        eigenschaft({ name: "MessageX.Irgendwas", position: 0 }),
+        eigenschaft({ name: "message.klein", position: 0 }),
+        eigenschaft({ name: "MESSAGE.GROSS", position: 0 }),
       ],
       [],
     );
 
-    expect(gruppen[0]?.eintraege[0]).toMatchObject({ gekappt: true, originalLaengeBytes: 2124 });
+    expect(namen(verteilung.allgemein)).toEqual(["Message.SendingPartner"]);
+    expect(namen(verteilung.eingang)).toEqual([
+      "Message",
+      "MessageX.Irgendwas",
+      "message.klein",
+      "MESSAGE.GROSS",
+    ]);
   });
 
-  /** Leere Eingabe heißt leere Liste — und nicht eine Gruppe „Nachricht" ohne Inhalt. */
-  it("ergibt bei leerer Eingabe eine leere Liste", () => {
-    expect(gruppiereEigenschaften([], [schritt({ position: 1 })])).toEqual([]);
+  /**
+   * **Die Regel hängt an beiden Bedingungen, nicht am Namen allein.** Gemessen
+   * steht die `Message.*`-Familie ausnahmslos auf Schritt `0` (M17 3) — das ist
+   * eine Messung und keine Zusage des Schemas. Stünde eines Tages ein
+   * `Message.*` an einem Schritt, gehört es dorthin und nicht in den Block.
+   */
+  it("lässt ein `Message.*` auf einer Position ungleich 0 an seinem Schritt", () => {
+    const verteilung = verteileEigenschaften(
+      [eigenschaft({ name: "Message.SplitCount", position: 2 })],
+      [schritt({ position: 2 })],
+    );
+
+    expect(verteilung.allgemein).toEqual([]);
+    expect(namen(verteilung.jeSchritt.get(2) ?? [])).toEqual(["Message.SplitCount"]);
+  });
+
+  /**
+   * **Position `0` geht immer in die ersten beiden Teile** — auch wenn
+   * `schritte[]` eines Tages eine Zeile mit Position `0` führte. Die Leiste
+   * bekommt für den Metadaten-Schritt keine Zeile, und seine Eigenschaften
+   * hätten sonst zwei mögliche Orte.
+   */
+  it("gibt Position 0 nie an einen Schritt, auch wenn `schritte[]` sie führt", () => {
+    const verteilung = verteileEigenschaften(
+      [
+        eigenschaft({ name: "Message.GUID", position: 0 }),
+        eigenschaft({ name: "Service.Type", position: 0 }),
+      ],
+      [schritt({ position: 0 }), schritt({ position: 1 })],
+    );
+
+    expect(verteilung.jeSchritt.size).toBe(0);
+    expect(namen(verteilung.allgemein)).toEqual(["Message.GUID"]);
+    expect(namen(verteilung.eingang)).toEqual(["Service.Type"]);
+  });
+
+  /**
+   * **Die Invariante: Die Summe der vier Teile ist die Länge der Eingabe.** An
+   * einer Eingabe, die jeden Teil füllt und jede Falle enthält — denselben
+   * Namen mehrfach, eine Position ohne Zeile, ein klein geschriebenes
+   * `message.`.
+   */
+  it("verliert und erfindet nichts: die Summe der Teile ist die Länge der Eingabe", () => {
+    const eingabe = [
+      eigenschaft({ name: "Converter.Log.GUID", position: 1 }),
+      eigenschaft({ name: "Converter.Log.GUID", position: 2 }),
+      eigenschaft({ name: "Message.GUID", position: 0 }),
+      eigenschaft({ name: "Service.Type", position: 0 }),
+      eigenschaft({ name: "Service.Type", position: 1 }),
+      eigenschaft({ name: "Service.Type", position: 2 }),
+      eigenschaft({ name: "Service.Type", position: 7 }),
+      eigenschaft({ name: "message.klein", position: 0 }),
+    ];
+
+    const verteilung = verteileEigenschaften(eingabe, [
+      schritt({ position: 1 }),
+      schritt({ position: 2 }),
+    ]);
+
+    expect(summe(verteilung)).toBe(eingabe.length);
+  });
+
+  /**
+   * **In jedem Teil bleibt die Reihenfolge der Antwort** — kein
+   * Ersatzsortierer. Sie ist die des Backends (`MessagePropertyName`, dann
+   * `MessageActionID`) und keine Zusage dieser Funktion; hier steht sie
+   * absichtlich *nicht* alphabetisch, damit ein Sortierlauf auffiele.
+   */
+  it("sortiert in keinem Teil um", () => {
+    const verteilung = verteileEigenschaften(
+      [
+        eigenschaft({ name: "Message.Z", position: 0 }),
+        eigenschaft({ name: "Reader.Z", position: 0 }),
+        eigenschaft({ name: "Schritt.Z", position: 1 }),
+        eigenschaft({ name: "Rest.Z", position: 8 }),
+        eigenschaft({ name: "Message.A", position: 0 }),
+        eigenschaft({ name: "Reader.A", position: 0 }),
+        eigenschaft({ name: "Schritt.A", position: 1 }),
+        eigenschaft({ name: "Rest.A", position: 8 }),
+      ],
+      [schritt({ position: 1 })],
+    );
+
+    expect(namen(verteilung.allgemein)).toEqual(["Message.Z", "Message.A"]);
+    expect(namen(verteilung.eingang)).toEqual(["Reader.Z", "Reader.A"]);
+    expect(namen(verteilung.jeSchritt.get(1) ?? [])).toEqual(["Schritt.Z", "Schritt.A"]);
+    expect(namen(verteilung.ohneZeile[0]?.eintraege ?? [])).toEqual(["Rest.Z", "Rest.A"]);
+  });
+
+  /**
+   * **Die Schrittfolge kommt aus `schritte[]` und nicht aus der Zahl.** Die
+   * Ordnung der Schritte steht an genau einer Stelle, im `ORDER BY` von
+   * `findeAktionen`; eine zweite Sortierung hier wäre die Drift, gegen die
+   * diese Regel gerichtet ist.
+   */
+  it("folgt in `jeSchritt` der Reihenfolge von `schritte[]` und nicht der Zahl", () => {
+    const verteilung = verteileEigenschaften(
+      [
+        eigenschaft({ name: "Service.Type", position: 1 }),
+        eigenschaft({ name: "Service.Type", position: 2 }),
+        eigenschaft({ name: "Service.Type", position: 3 }),
+      ],
+      [schritt({ position: 3 }), schritt({ position: 1 }), schritt({ position: 2 })],
+    );
+
+    expect([...verteilung.jeSchritt.keys()]).toEqual([3, 1, 2]);
+  });
+
+  /** Ohne Zeile ist die Zahl das einzige, was es an Ordnung gibt. */
+  it("ordnet `ohneZeile` aufsteigend nach der Position", () => {
+    const verteilung = verteileEigenschaften(
+      [
+        eigenschaft({ name: "Service.Type", position: 12 }),
+        eigenschaft({ name: "Service.Type", position: 4 }),
+        eigenschaft({ name: "Service.Type", position: 7 }),
+      ],
+      [],
+    );
+
+    expect(verteilung.ohneZeile.map((teil) => teil.position)).toEqual([4, 7, 12]);
+  });
+
+  /**
+   * **Derselbe Name in mehreren Teilen bleibt mehrfach stehen** — genau das ist
+   * der Punkt: 31 der 101 gemessenen Namen kommen auf mehr als einem Schritt vor
+   * (M17 3), und es sind verschiedene Einträge mit verschiedenen Werten.
+   */
+  it("fasst denselben Namen in mehreren Teilen nicht zusammen", () => {
+    const verteilung = verteileEigenschaften(
+      [
+        eigenschaft({ name: "Service.Type", position: 0, wert: "ScheduleBean" }),
+        eigenschaft({ name: "Service.Type", position: 1, wert: "FileReader" }),
+        eigenschaft({ name: "Service.Type", position: 5, wert: "Converter" }),
+      ],
+      [schritt({ position: 1 })],
+    );
+
+    expect(verteilung.eingang.map((eintrag) => eintrag.wert)).toEqual(["ScheduleBean"]);
+    expect((verteilung.jeSchritt.get(1) ?? []).map((eintrag) => eintrag.wert)).toEqual([
+      "FileReader",
+    ]);
+    expect(verteilung.ohneZeile[0]?.eintraege.map((eintrag) => eintrag.wert)).toEqual([
+      "Converter",
+    ]);
+  });
+
+  /** Ein gekappter Wert bleibt gekappt — mit seiner ursprünglichen Länge. */
+  it("reicht `gekappt` und `originalLaengeBytes` unverändert durch", () => {
+    const gekappt = eigenschaft({
+      name: "Converter.Payload",
+      position: 1,
+      gekappt: true,
+      originalLaengeBytes: 48211,
+    });
+
+    const verteilung = verteileEigenschaften([gekappt], [schritt({ position: 1 })]);
+
+    expect(verteilung.jeSchritt.get(1)).toEqual([gekappt]);
+  });
+
+  it("liefert für eine leere Eingabe vier leere Teile", () => {
+    const verteilung = verteileEigenschaften([], [schritt({ position: 1 })]);
+
+    expect(verteilung.allgemein).toEqual([]);
+    expect(verteilung.eingang).toEqual([]);
+    expect(verteilung.jeSchritt.size).toBe(0);
+    expect(verteilung.ohneZeile).toEqual([]);
+  });
+});
+
+/**
+ * **Aufklappbar ist nur, was Inhalt hat** *(E‑221)* — und solange die
+ * Eigenschaften laden, nichts. Eine Schaltfläche, die einen leeren Bereich
+ * öffnet, ist schlimmer als keine.
+ */
+describe("Was an der Zeitleiste aufklappbar ist", () => {
+  const verteilung = verteileEigenschaften(
+    [
+      eigenschaft({ name: "Service.Type", position: 1 }),
+      eigenschaft({ name: "Service.Type", position: 9 }),
+    ],
+    // Schritt 502 ist der gemessene Fall: Er steht in `MessageAction` und fehlt
+    // in `MessageProperty` (M17 3).
+    [schritt({ position: 1 }), schritt({ position: 502 })],
+  );
+
+  it("macht einen Schritt mit Eigenschaften aufklappbar und einen ohne nicht", () => {
+    expect(schrittAufklappbar(verteilung, 1)).toBe(true);
+    expect(schrittAufklappbar(verteilung, 502)).toBe(false);
+  });
+
+  it("macht einen Schritt nicht aufklappbar, dessen Eigenschaften ohne Zeile geführt werden", () => {
+    // Position 9 hat Eigenschaften, aber keine Zeile — sie stehen im Rest.
+    expect(schrittAufklappbar(verteilung, 9)).toBe(false);
+  });
+
+  it("macht nichts aufklappbar, solange die Eigenschaften laden oder ihre Abfrage gescheitert ist", () => {
+    expect(schrittAufklappbar(undefined, 1)).toBe(false);
+  });
+
+  /**
+   * **Eingang und Rest: Es gibt die Zeile, wenn dort ein Artefakt oder eine
+   * Eigenschaft liegt; aufklappbar ist sie nur mit Eigenschaften** (E‑222,
+   * E‑223). Bis zum 21.09.2026 hing ihre Existenz allein an den Artefakten.
+   */
+  it("entscheidet über Eingangs- und Restzeile aus Zielen und Eigenschaften", () => {
+    // nur Ziele — der Lesedienst ohne weitere Eigenschaft auf Schritt 0
+    expect(zusatzzeile(2, 0)).toEqual({ vorhanden: true, aufklappbar: false });
+    // nur Eigenschaften — kein Lesedienst, aber etwas liegt dort
+    expect(zusatzzeile(0, 3)).toEqual({ vorhanden: true, aufklappbar: true });
+    // beides
+    expect(zusatzzeile(2, 7)).toEqual({ vorhanden: true, aufklappbar: true });
+    // nichts — wo nichts liegt, hängt nichts
+    expect(zusatzzeile(0, 0)).toEqual({ vorhanden: false, aufklappbar: false });
   });
 });

@@ -109,6 +109,15 @@ leer, gibt es keinen Kettenblock und **keine zweite Anfrage**.
 Ohne sie könnte die Oberfläche den eingeklappten Block nicht beschriften, ohne ihn zu laden — womit
 der zweite Endpunkt seinen Zweck verlöre.
 
+> **Eingeschränkt am 21.09.2026 (E‑220, §10.16).** Die Oberfläche holt die Eigenschaften seither
+> **mit dem Detail** und nicht mehr erst beim Aufklappen — sie hängen an der Zeitleiste, und die
+> steht immer da. **`eigenschaftenAnzahl` hält seither keine Anfrage mehr bis zum Aufklappen zurück
+> und beschriftet den Block nicht mehr** (seine Zahl ist die Zeilenzahl der allgemeinen Angaben,
+> E‑224); **sie sperrt die Anfrage nur noch bei `0`.** Das Feld bleibt, der Endpunkt bleibt, am
+> Backend ist nichts geändert.
+> Der zweite Endpunkt behält seinen Zweck aus dem anderen Grund, der schon immer galt: Der Kopf
+> bleibt klein, und die Eigenschaften sind eine eigene Abfrage mit eigener Haltbarkeit.
+
 **`bamAnzahl` steht aus demselben Grund im Kopf** *(neu am 12.08.2026, Schritt 7 Teil 1)* — die Zahl
 der Belegnummern auf dieser Nachricht, **immer vorhanden, `0` statt fehlend**. Sie beschriftet den
 eingeklappten BAM-Block (§10.4b) und entscheidet, ob er überhaupt entsteht.
@@ -1024,6 +1033,15 @@ lib/format.ts                                + formatiereDauer
 lib/routen.ts                                + die beiden Zielrouten des Umschalters (11.08.2026)
 ```
 
+> **Fortgeschrieben am 21.09.2026 (§10.16).** Zwei Zeilen des Baums stimmen so nicht mehr, der
+> Wortlaut bleibt stehen: `eigenschaften-block.tsx` lädt **nicht** mehr erst beim Aufklappen (E‑220),
+> und `kette-block.tsx` sitzt **unter** der Zeitleiste statt zwischen Kopf und Zeitleiste (E‑218).
+> **Drei Dateien sind dazugekommen:** `components/aufklappen.tsx` (der eine Aufklappbaustein samt
+> Bewegung, E‑228), `components/aufklapp-zeile.tsx` (die aufklappbare Zeile der Zeitleiste) und
+> `components/eigenschaft-zeile.tsx` (die eine Zeilendarstellung einer Eigenschaft); dazu
+> `components/ui/collapsible.tsx` aus dem Generator. `detail.ts` führt zusätzlich die Einteilung der
+> Eigenschaften (`verteileEigenschaften`, E‑219).
+
 ### 10.1 Zwei Einhängepunkte, eine Komponente
 
 | Weg | Verhalten |
@@ -1344,6 +1362,13 @@ der dieselben Schrittnamen ein zweites Mal führte. Vollständig begründet in
 | **Die Ziele** | je Schritt bis zu zwei kleine Zeichen — Datei und Protokoll —, jedes ein Verweis auf `/nachrichten/{id}/dateien/{artefaktId}`. Wo nichts liegt, hängt nichts. Sichtbar ist allein das Zeichen; der Name steht im `sr-only`-Text, der Rohname im `title` |
 | **Der Name als Weg zu den Eigenschaften** | er wird zur Schaltfläche und führt in die Gruppe desselben Schritts (§10.5). **Nur wo es Eigenschaften gibt** — bei `eigenschaftenAnzahl === 0` bleibt er Text |
 
+> **Abgelöst am 21.09.2026 (E‑225, §10.16): Die zweite Zeile der Tabelle gilt nicht mehr.** Der Name
+> führt nicht mehr in eine Gruppe des Eigenschaftenblocks — die Gruppen gibt es nicht mehr. **Die
+> ganze Zeile ist die Schaltfläche, und sie klappt die Eigenschaften dieses Schritts unter sich auf.**
+> Geblieben ist die Bedingung in schärferer Form: Schaltfläche ist nur die Zeile, die selbst
+> Eigenschaften trägt (E‑221), nicht mehr jede, sobald die Nachricht welche hat. Die erste Zeile der
+> Tabelle — die Ziele — gilt unverändert.
+
 **Die Leiste führt Schritt `0` weiterhin nicht.** Das ist der Punkt, an dem eine Ergänzung zur
 Änderung geworden wäre: `schritte[]` bleibt die einzige Quelle der Zeilen, und der Metadaten-Schritt
 kommt dort nicht vor (§4). Was auf ihm liegt — das Paar des Lesedienstes, Datei und Protokoll (M57)
@@ -1351,6 +1376,10 @@ kommt dort nicht vor (§4). Was auf ihm liegt — das Paar des Lesedienstes, Dat
 Gestrichelt wie die erwartete Zeile: Was gestrichelt ist, ist kein ausgeführter Schritt. **Liegt
 dort nichts, gibt es die Zeile nicht** — dasselbe „wo nichts liegt, hängt nichts" wie an den
 Schrittzeilen.
+
+> **Erweitert am 21.09.2026 (E‑222, §10.16).** *„Liegt dort nichts"* meint seither Artefakte **und**
+> Eigenschaften: Die Zeile gibt es, wenn auf Schritt `0` ein Artefakt oder eine Eigenschaft liegt,
+> die nicht mit `Message.` beginnt — und mit solchen Eigenschaften ist sie aufklappbar.
 
 > **Korrigiert 20.08.2026, nachgetragen zur Korrektur vom 19.08.2026.** Hier stand bis heute: „Die
 > Artefakte, die auf ihm liegen — **die eingegangene Datei und das Paar des Lesedienstes** (M57) —,
@@ -1381,6 +1410,12 @@ Schrittzeilen.
 
 ### 10.4a Der Kettenblock — zwischen Kopf und Zeitleiste
 
+> **Abgelöst am 21.09.2026 (E‑218, §10.16): Der Kettenblock steht seither unter der ganzen
+> Zeitleiste** samt ihren Zusatzzeilen, als letzter Block des Panels. Das ist eine Vorgabe des
+> Auftraggebers und keine neue Abwägung; die Begründung „näher an der Nachricht selbst" unten ist
+> damit für die **Lage** überholt. Alles Übrige dieses Abschnitts gilt weiter: die Bedingung, keine
+> Anfrage ohne Rollen, und dass der Block die Zeitleiste nicht anfasst.
+
 *Neu am 11.08.2026 (Schritt 6, Teil 2b).* Er beantwortet die dritte Frage des Werkzeugs — **was
 hängt an dieser Nachricht** — und steht deshalb **zwischen Kopf und Zeitleiste**: näher an der
 Nachricht selbst als der Ablauf ihrer Schritte.
@@ -1404,6 +1439,11 @@ Beleg passiert ist*, und nach dem Leitsatz kommt die erste Frage zuerst.
 Die Reihenfolge im Panel ist damit: **Kopf → Kette → Belegdaten → Zeitleiste → Eigenschaften.** Von
 oben nach unten: *was ist das*, *was hängt daran*, *welcher Beleg ist das*, *was ist passiert*, und
 zuletzt das Technische.
+
+> **Abgelöst am 21.09.2026 (E‑218, §10.16).** Die Reihenfolge im Panel ist seither: **Kopf →
+> Belegdaten → Technische Eigenschaften → Zeitleiste → Kette.** Der BAM-Block steht damit direkt
+> unter dem Kopf und nicht mehr „zwischen Kettenblock und Zeitleiste"; seine Begründung — die erste
+> Frage zuerst — gilt unverändert und trägt die neue Lage ebenso.
 
 **Ist `bamAnzahl` null, gibt es ihn nicht** — kein Rahmen, kein Schalter, **keine Anfrage auf
 `/bam`**. Bei 80,6 Prozent der Nachrichten ist das der Fall, bei Merge-Eingängen bei allen (M41).
@@ -1444,6 +1484,11 @@ Endpunkt keinen Zweck.
 Erst beim Aufklappen wird `GET /api/nachrichten/{id}/eigenschaften` gerufen (`enabled` an der
 Abfrage). **Der Ladezustand liegt im Block, nicht im ganzen Panel** — wer die Eigenschaften
 aufklappt, will die Zeitleiste nicht verlieren.
+
+> **Abgelöst am 21.09.2026 (E‑220, §10.16): Geladen wird mit dem Detail**, sobald der Kopf da ist
+> und `eigenschaftenAnzahl > 0` gilt — nicht mehr beim Aufklappen. Bei `0` geht weiterhin keine
+> Anfrage hinaus. Der Ladezustand bleibt im Block. Der Block steht seither **über** der Zeitleiste
+> (E‑218).
 
 Name und Wert als Rohwerte in fester Laufweite, feste Zeilenhöhe, gekürzt mit Vollwert im `title`.
 **Ein gekappter Wert trägt ein sichtbares Kennzeichen** samt seiner ursprünglichen Länge in Bytes
@@ -1508,6 +1553,17 @@ und beide Male steht `MessageActionID` dahinter (§1, §4). **Geprüft und nicht
 | E4 | **Gruppenkopf = Schrittname + Anzahl**, etwa `Datei konvertiert (7)`. Tooltip wie in der Zeitleiste |
 | E5 | **Innerhalb einer Gruppe bleibt die Reihenfolge der Antwort** — die Gruppierung ist stabil und ordnet nicht um |
 
+> **Abgelöst am 21.09.2026 (§10.16): E2 bis E4 gelten nicht mehr, E1 und E5 gelten weiter.** Es gibt
+> keine Gruppe „Nachricht" (E2), keine flache Folge von Gruppen im Block (E3) und keine Gruppenköpfe
+> mit Anzahl (E4) mehr: Die Eigenschaften stehen unter ihrem Schritt in der Zeitleiste, im Block
+> bleiben die allgemeinen Angaben (E‑219, E‑224). **E1** — eingeteilt wird im Frontend aus den beiden
+> vorhandenen Antworten — und **E5** — innerhalb eines Teils bleibt die Reihenfolge der Antwort —
+> tragen die neue Einteilung unverändert.
+>
+> **Der Einwand gegen „Allgemeine Angaben" im nächsten Absatz ist durch die Regel erledigt:** Was
+> nicht mit `Message.` beginnt, steht nicht mehr dort, sondern im Eingang. Die Beschriftung des
+> Blocks bleibt trotzdem *Technische Eigenschaften*.
+
 **Die Beschriftung „Nachricht" sagt, *wo* die Werte hängen — an der Nachricht statt an einem Schritt
 — und behauptet nichts über ihren Inhalt.** „Metadaten der Nachricht" oder „Allgemeine Angaben"
 wären ausdrücklich falsch: Dass dort *ausschließlich* die `Message.*`-Familie steht, ist **nicht**
@@ -1547,7 +1603,16 @@ aus Schritt 6 zurück — sichtbar falsch wäre nichts.
 gedämpften Ton wie die Beschriftung im BAM-Block. **Kein eigener Scrollbereich** — es bleibt beim
 einen senkrechten Scroller ([`frontend-grundlagen.md`](frontend-grundlagen.md) §7).
 
+> **Eingeschränkt am 21.09.2026 (E‑228, §10.16): *„keine Animation, kein Übergang"* gilt im
+> Nachrichtendetail nur noch außerhalb des Auf- und Zuklappens.** Das ist die dritte benannte
+> Ausnahme von [`visuelles-konzept.md`](visuelles-konzept.md) §7. Kein Übergang beim Überfahren,
+> keiner beim ersten Aufbau, keiner beim Nachladen — und kein eigener Scrollbereich, unverändert.
+
 ##### Nachtrag vom 18.08.2026 — die Gruppen sind aus der Zeitleiste anspringbar
+
+> **Abgelöst am 21.09.2026 (E‑225, §10.16).** Der Sprung ist samt Sprungziel, Fokus-Effekt und
+> Gruppenkennungen entfallen: Es gibt die Gruppen nicht mehr, in die er führte. Ein Klick auf die
+> Zeile klappt die Eigenschaften des Schritts **an Ort und Stelle** auf.
 
 **Kein Satz des Abschnitts darüber ist falsch geworden**, und die Gruppierung selbst ist nicht
 angefasst: dieselbe Einteilung über `position`, dieselbe Reihenfolge, dieselben Köpfe mit demselben
@@ -1886,6 +1951,12 @@ Gegenrichtung ist billiger: Wer maximiert, hängt die Liste aus und fragt sie ni
 | `tests/eigenschaften-block.test.tsx` *(17.08.2026)* | **gerenderter Baum, begründete Ausnahme:** derselbe Name in **drei** Gruppen **ohne `console.error`** (der Schlüssel ist `${position}:${name}`); bei `anzahl === 0` **kein Schalter und keine Anfrage**; eingeklappt mit Werten die Überschrift mit der Zahl und **immer noch keine Anfrage**; ohne gelieferte `schritte` trägt jede Gruppe den Rückfall *Schritt N* |
 | `tests/zeitleiste-ziele.test.tsx` *(18.08.2026)* | **gerenderter Baum, begründete Ausnahme:** die Ergänzungen aus §10.4 und §10.5 — welche Zeile welches Ziel trägt (beide Arten, nur eine, keine); dass die Artefakte des **Metadaten-Schritts** über der Leiste erreichbar bleiben, **ohne dass die Leiste eine vierte Zeile bekäme**; die Belastungsprobe aus M55 mit fünfzehn eigenen Zielen ohne doppelten React-Schlüssel; das **Anspringen** der Eigenschaftengruppe samt der drei Fälle bei kaltem Zwischenspeicher; und dass ohne Eigenschaften **kein Schalter** am Schrittnamen steht. Vollständig in [`rohdaten-frontend.md`](rohdaten-frontend.md) §3 und §3a |
 
+> **Fortgeschrieben am 21.09.2026 (§10.16).** Drei Zeilen der Tabelle beschreiben den Stand bis
+> dahin: die zehn Fälle zu `gruppiereEigenschaften`, die vier Fälle von
+> `tests/eigenschaften-block.test.tsx` und das **Anspringen** in `tests/zeitleiste-ziele.test.tsx`.
+> Was an ihre Stelle getreten ist, steht in §10.16 unter „Tests" — dort, wo auch die Entscheidungen
+> stehen, die sie belegen.
+
 Kein gerenderter Baum, mit den Ausnahmen aus `tests/detail-baum.test.tsx` und
 `tests/ansicht-umschalter.test.tsx`: Geprüft werden die **Entscheidungen**, nicht das Markup
 ([`frontend-grundlagen.md`](frontend-grundlagen.md) §9).
@@ -2219,6 +2290,224 @@ läuft ins Leere — der Knopf bekommt den Fokusring, aber die Hydration ist noc
 Ereignisbehandler hängt noch nicht. Der zweite Klick wirkte sofort. Das gehört hierher, damit es beim
 nächsten Mal nicht als Fehler des Umschalters gelesen wird.
 
+### 10.16 Eigenschaften an die Zeitleiste, Kette nach unten (21.09.2026)
+
+**Anlass ist eine Vorgabe des Auftraggebers**, abgenommen an einem Entwurf; maßgeblich ist die
+Beschreibung im Auftrag und nicht der Entwurf. Reiner Frontend-Umbau in `features/nachrichten`:
+**kein Feld, kein Statement, kein Endpunkt** — Kopf und `KuratierteEigenschaften` bleiben. Weil keine
+Abfrage entsteht, war keine Messung fällig (Regel L7).
+
+> *Nummern:* höchste vergebene Entscheidung **E‑217** ([`neu-laden.md`](neu-laden.md)), höchster
+> offener Punkt **216** ([`fehler-live.md`](fehler-live.md)). Gesucht am 21.09.2026 über `docs/` auf
+> `main` und auf allen lokalen und entfernten Zweigen, über alle vier Schreibweisen des Strichs
+> (U+2011, U+2010, `-`, U+2013), die Treffer ab 205 einzeln gelesen; **E‑780** ist der bekannte
+> Falschtreffer. Der Auftrag nannte als Stand *„höchste E‑212, offene Punkte bis 215"* — das war ein
+> Hinweis und traf nicht mehr zu (E‑213 bis E‑217 und Punkt 216 sind seither vergeben). Vergeben
+> sind hier **E‑218 bis E‑228** und der offene Punkt **217**.
+
+#### Teil 1 — die Reihenfolge und der Zeitpunkt des Ladens
+
+| # | Entscheidung |
+|---|---|
+| **E‑218** | **Die Reihenfolge im Panel ist Kopf → Belegdaten → Technische Eigenschaften → Zeitleiste → Kette** (bisher Kopf → Kette → Belegdaten → Zeitleiste → Eigenschaften, §10.4b). Die Kette steht unter der **ganzen** Zeitleiste samt Eingangs- und Restzeile. Belegdaten und Kette erscheinen wie bisher nur bedingt |
+| **E‑220** | **Die Eigenschaften kommen mit dem Detail**, nicht mehr beim Aufklappen: `useEigenschaften` ist aktiv, sobald der Kopf da ist und `eigenschaftenAnzahl > 0` gilt; bei `0` weiterhin keine Anfrage |
+
+**Warum E‑220.** Die Eigenschaften hängen an der Zeitleiste, und die steht immer da — dieselbe
+Begründung wie bei den Artefaktzielen ([`rohdaten-frontend.md`](rohdaten-frontend.md) §3, „Nicht mehr
+eingeklappt"). Nur mit der Antwort ist **vor dem ersten Klick** bekannt, welche Zeile Inhalt hat, ob
+es eine Eingangszeile gibt und welche Zahl der Block trägt. **Der Preis ist eine Anfrage je Detail**
+über ein gemessenes Statement: Der Eigenschaften-Aufruf kostet 1,1 bis 1,2 ms (§8). Es ist dieselbe
+Abfrage wie bisher, nur früher gestellt.
+
+**Eine Abfrage, ein Aufrufer.** Der Haken steht im Ablauf (`nachricht-detail.tsx`), weil Block und
+Zeitleiste dieselbe Antwort brauchen; eingeteilt wird sie dort einmal und an beide weitergereicht.
+Dass **genau eine** Anfrage mit dem Detail hinausgeht und beim Aufklappen keine, hält
+`tests/eigenschaften-block.test.tsx` fest.
+
+#### Teil 2 — die Eigenschaften stehen unter ihrem Schritt
+
+| # | Entscheidung |
+|---|---|
+| **E‑219** | **Eingeteilt wird an genau einer Stelle:** `verteileEigenschaften(eigenschaften, schritte)` in `detail.ts` ersetzt `gruppiereEigenschaften` und liefert vier disjunkte Teile — `allgemein` (`position === 0` **und** `name.startsWith("Message.")`, exakt mit Punkt und Schreibung), `eingang` (die übrigen mit `position === 0`), `jeSchritt` (Position mit Zeile in `schritte[]`, in **deren** Reihenfolge), `ohneZeile` (Position ungleich `0` ohne Zeile, aufsteigend). Position `0` geht immer in die ersten beiden. **Invariante: Die Summe der Teile ist die Länge der Eingabe.** In jedem Teil bleibt die Reihenfolge der Antwort, kein Ersatzsortierer. Ein anders geschriebenes `message.…` fällt nicht heraus, es steht sichtbar im Eingang |
+| **E‑221** | **Aufklappbar ist nur, was Inhalt hat.** Eine Schrittzeile ohne Eigenschaft bleibt Text (gemessen möglich, `MessageActionID = 502`, M17 3). Solange die Eigenschaften laden, ist nichts aufklappbar; beim Wechsel zur Schaltfläche ändert die Zeile weder Höhe noch Breite |
+| **E‑222** | **Die Eingangszeile gibt es, wenn auf Schritt `0` ein Artefakt *oder* ein Eintrag aus `eingang` liegt**; aufklappbar ist sie nur mit `eingang`. Sie bleibt gestrichelt, beschriftet *Eingang*, ohne Balken und Dauer, die Ziele unverändert. Erscheint sie erst mit den Eigenschaften, rutscht die Leiste einmal nach unten — hingenommen, nicht mit einem Platzhalter kaschiert |
+| **E‑223** | **`ohneZeile` steht in der vorhandenen gestrichelten Zeile *Ohne Schritt in der Zeitleiste***, die dafür aufklappbar wird; im Inhalt je Position eine Unterzeile mit dem Rückfall *Schritt N*. Die Zeile gibt es, wenn dort Ziele oder Eigenschaften liegen. Gemessen kommt das nicht vor (M57, Befund 1); gebaut ist es, damit nichts lautlos herausfällt |
+| **E‑224** | ***Technische Eigenschaften*: Die Bauform bleibt** (eingeklappt, Pfeil, Ladezustand im Block, `key={messageId}`, Beschriftung). **Der Inhalt ist `allgemein`, flach, ohne Gruppenköpfe.** Die Zahl in der Überschrift ist die Zeilenzahl von `allgemein` und erscheint mit den Daten — vorher ohne Zahl, keine erfundene Null. Bei `eigenschaftenAnzahl === 0` wie bisher eine Zeile Text; bei leerem `allgemein` trotz Eigenschaften ein eigener Satz, der nicht behauptet, es gäbe keine. Scheitert die Abfrage: der gewöhnliche Baustein aus `components/zustand.tsx` **an Stelle des Schalters**, sichtbar ohne Aufklappen; die Zeitleiste bleibt, ist dann aber nicht aufklappbar |
+| **E‑225** | **Die Sprungmechanik vom 18.08.2026 entfällt** samt ihren Tests: Sprungziel mit laufender Nummer, Fokus-Effekt, Gruppen-`id`s mit `tabIndex={-1}`, das Zurücksetzen beim Nachrichtenwechsel und die nicht mehr benutzten Zeichenketten beider Sprachdateien (`gruppe`, `gruppeNachricht`, `leer`, `zuEigenschaften`) |
+| **E‑226** | **Der Zustand:** je Zeile unabhängig, mehrere gleichzeitig offen, anfangs alle zu. Nicht in URL, Cookie oder Storage; zurückgesetzt beim Nachrichtenwechsel **über den Baum** (`key`), nicht über einen Effekt |
+| **E‑228** | **Alles, was im Nachrichtendetail auf- und zuklappt, bewegt sich gleich** — die dritte benannte Ausnahme von [`visuelles-konzept.md`](visuelles-konzept.md) §7. Werte und Grenzen unten |
+
+**E‑227 — die Kettenabschnitte klappen auf, sobald sie mehr als ein Glied tragen** — steht mit
+Begründung, Sonderfall der Nachladen-Schaltfläche und Tests in [`verkettung.md`](verkettung.md)
+§8.15 (Teil 3). Das Zurücksetzen über den Baum (E‑226) gilt auch dort.
+
+**Warum das Präfix die alte Beschriftungsfrage erledigt.** §10.5 verwarf am 17.08.2026 „Allgemeine
+Angaben" als Namen der Gruppe zu `position === 0`, weil dort nachweislich nicht nur die
+`Message.*`-Familie steht (gesichtet: sieben `OFTPReader.*` und ein `Service.Type`). **Genau diese
+Einträge stehen jetzt nicht mehr dort**, sondern im Eingang — im Block bleibt, was mit `Message.`
+beginnt, und das sind per Regel die Angaben zur Nachricht. Die Beschriftung *Technische
+Eigenschaften* bleibt trotzdem; umbenannt wird nichts.
+
+##### Die Gestaltung der Zeitleiste
+
+**Eingeklappt unverändert:** Zeilenhöhe `--dichte-zeile`, Spalten, Balken samt Normierung, Ziele,
+Kürzung, Tooltip mit der Herkunft. **Kein Pfeil, keine Zahl, keine Marke** an Eingang, Schritt- oder
+Restzeile — die Regel des Panels: *Blöcke klappen mit Pfeil, Zeitleistenzeilen mit der Linie.* Neu
+ist allein die Anfassbarkeit aufklappbarer Zeilen: Zeigehand, Hover-Fläche und Fokusring wie an der
+Kettenzeile; die Hover-Fläche lässt die Linie frei.
+
+```text
+┆ Eingang                                    📄 📜
+┃ Datei konvertiert          📄 📜   ▃▃▃▃▃▃▃▃    1,2 s
+┃   Converter.Log.GUID       <Wert>
+┃   Converter.Payload.GUID   <Wert>
+┃   Service.Type             <Wert>
+│ Datei versendet                📜   ▃▃▃          0,4 s
+```
+
+`┃` ist dieselbe Linie wie `│`, nur in `--akzent-schrift`.
+
+| | |
+|---|---|
+| **Die Linie** | ist der linke Rand (`border-l-2`) des **ganzen Eintrags** — Zeile samt Inhalt. Sie läuft damit mit demselben Mittel hindurch, mit dem sie schon gezeichnet wurde: gleiche Breite, gleiche Art (durchgezogen am Schritt, gestrichelt an Eingang und Rest), **keine Lücke** bis zur nächsten Zeile. Sie hat keine eigene Animation; sie hängt am Inhalt und wächst mit seiner Höhe |
+| **Der Akzent** | Der offene Abschnitt zeichnet seine Linie in `--akzent-schrift`, der Name der offenen Zeile ebenso. **Anwendungszustand** wie die Akzenttönung der geöffneten Listenzeile, **keine Statusaussage**; den Zustand tragen zusätzlich der sichtbare Inhalt und `aria-expanded` ([`visuelles-konzept.md`](visuelles-konzept.md) §3). Strichbreite und Schriftstärke bleiben, sonst verschöbe sich die Zeile. **Die Statuskontur des laufenden Schritts (`--status-offen`) geht dem Akzent vor** — sie sagt etwas über die Daten |
+| **Der Inhalt** | beginnt auf der Flucht des Schrittnamens, mit etwas Luft oben und unten **innerhalb** des Linienabschnitts. Eigene Anordnung über die volle Breite (`min-w-0`, Kürzung); er beeinflusst die Spalten der Leiste nicht. Die Zeilendarstellung — Rohname und Wert in fester Laufweite, feste Zeilenhöhe, gekürzt mit Vollwert im `title`, Kappungskennzeichen mit ursprünglicher Länge — ist aus `eigenschaften-block.tsx` nach `eigenschaft-zeile.tsx` **herausgelöst** und wird an allen vier Stellen benutzt, nicht nachgebaut. Schlüssel bleibt `${position}:${name}` und steht in der Liste, nicht beim Aufrufer |
+| **Kein Bildlauf** | beim Aufklappen: Die Oberkante ist durch den Klick schon im Bild |
+
+**Die Bauform der aufklappbaren Zeile** (`aufklapp-zeile.tsx`). Die Schaltfläche (`button`,
+`aria-expanded`, `aria-controls`) spannt die ganze Zeile. Die Ziele liegen als **Geschwister** in
+einer zweiten, deckungsgleichen Ebene darüber, und in der Schaltfläche hält ein Platzhalter ihre
+Stelle frei — je Zeile so breit wie die Ziele (je Ziel 2 rem, dazwischen 0,125 rem). Die obere Ebene
+lässt Zeigerereignisse durch und nimmt sie nur an den Zielen an. **So schaltet ein Klick auf die
+Zeile, ein Klick auf ein Ziel nicht, ohne verschachtelte Bedienelemente.** Beide Ebenen tragen
+dieselbe Anordnung; bei der laufenden Zeile, deren rechter Teil keine feste Breite hat, steht er in
+der oberen Ebene unsichtbar noch einmal. Ohne Inhalt ist die Zeile ein `div` mit denselben Klassen.
+
+**Der zugängliche Name beginnt mit dem sichtbaren Schrittnamen** (WCAG 2.5.3): Er entsteht aus dem
+Inhalt der Schaltfläche — Name, dahinter nur für Vorleseprogramme *„, technische Eigenschaften"*,
+dann die Dauer. Kein `aria-label`: Es nähme der Schaltfläche die Dauer. Der Zustand liegt allein in
+`aria-expanded`, der `title` bleibt die Herkunft (`schrittHinweis`). `Escape` schließt weiterhin das
+Panel.
+
+##### Der Aufklappbaustein und die Bewegung (E‑228)
+
+**Es gab bis zum 21.09.2026 keinen gemeinsamen Baustein.** Belegdaten und Eigenschaftenblock trugen
+je einen eigenen `useState` samt Schaltfläche und hängten ihren Inhalt ein und aus. Jetzt steht alles
+auf `features/nachrichten/components/aufklappen.tsx`, und der auf `components/ui/collapsible.tsx` —
+**über den shadcn-Generator hinzugefügt** (`radix-ui` ist bereits Abhängigkeit, es kommt keine neue
+dazu), nicht von Hand geändert.
+
+| Was | Wert |
+|---|---|
+| Höhe | von 0 auf den Inhalt über `grid-template-rows` von `0fr` auf `1fr`, **220 ms**, `cubic-bezier(0.2, 0, 0, 1)`, zu wie auf |
+| Inhalt beim Öffnen | blendet über **150 ms** nach **55 ms** Verzögerung ein und rückt dabei **4 px** nach unten |
+| Inhalt beim Schließen | blendet über **110 ms** ohne Verzögerung aus |
+| Pfeil, Linie, Name | drehen beziehungsweise wechseln die Farbe in je **220 ms** |
+
+Nur CSS, keine neue Abhängigkeit, keine Keyframes. **Der Inhalt bleibt eingehängt** — sonst gäbe es
+keine Höhe, die sich bewegen könnte — und ist zugeklappt **`inert`**: weder mit der Tastatur noch für
+ein Vorleseprogramm erreichbar. Bei `prefers-reduced-motion: reduce` steht alles sofort
+(`motion-reduce:transition-none`); **der Ausschalter ist Teil der Ausnahme.**
+
+**Was sich nicht bewegt:** nichts beim ersten Aufbau und nichts beim Nachrichtenwechsel — ein
+Übergang läuft beim Einhängen nicht, und der Wechsel baut den Baum über `key` neu auf. Kein Übergang
+beim Überfahren: Die Farbübergänge hängen an Linie (`border-color`) und Name (`color`), die
+Hover-Fläche an der Schaltfläche, und die trägt keinen. Keiner beim Nachladen der Kette: Wächst der
+offene Inhalt, bleibt die Spur bei `1fr`.
+
+**Zwei Dinge setzt der Baustein selbst, weil Radix sie an den ausgehängten Inhalt bindet:**
+`aria-controls` steht immer an der Schaltfläche (Radix setzt es nur im offenen Zustand), und
+`inert` am zugeklappten Inhalt. **Und der Übergang hängt nicht am Radix-Knoten:** Radix misst ihn bei
+jedem Wechsel und setzt dafür `transition-duration: 0s` an ihn — ein Übergang dort spränge. Die
+Rasterspur liegt eine Ebene darüber, das Einblenden eine darunter.
+
+##### Abweichungen vom Auftrag — benannt, nicht still aufgelöst
+
+| | |
+|---|---|
+| **Ein Schritt ohne Namen, aber mit Eigenschaften** | bekommt als sichtbare Beschriftung den Rückfall *Schritt N*. Der Auftrag schweigt dazu; die Alternativen wären eine Schaltfläche ohne sichtbare Beschriftung oder Eigenschaften, die lautlos aus der Oberfläche fallen — das zweite bräche die Invariante auf dem Bildschirm. Kein erfundener Name, derselbe Rückfall wie bei den Artefaktzielen. Ohne Eigenschaften bleibt die Zeile namenlos wie bisher. **Nicht gesehen**, nur im Baum belegt |
+| **Die Zeile reicht rechts 0,25 rem über die Leiste hinaus** | in den Innenabstand des Panels. So behält die Dauer ihre Stelle, und die Hover-Fläche endet nicht bündig an ihrer letzten Ziffer. Der waagerechte Überlauf des Panels ist 0 (Sichtprüfung) |
+| **`leer` ist mit entfallen** | *„Zu dieser Nachricht ist keine Eigenschaft hinterlegt."* stand für eine leere Antwort trotz `eigenschaftenAnzahl > 0`. Die Lage fällt jetzt unter den Satz zu leerem `allgemein`; `NachrichtendetailDbIT` hält fest, dass die Zahl im Kopf mit der Liste übereinstimmt |
+
+##### Tests
+
+| Datei | Was |
+|---|---|
+| `tests/nachrichtendetail.test.ts` | **ersetzt die zehn Gruppierungsfälle** durch fünfzehn: die vier Teile; `Message` ohne Punkt, `MessageX.…`, `message.…` und `MESSAGE.…` landen nicht in `allgemein`; `Message.*` auf Position ungleich `0` landet am Schritt; Position `0` geht nie an einen Schritt; **die Invariante**; die Reihenfolge der Antwort je Teil; die Schrittfolge nach `schritte[]` und nicht nach Zahl (`[3, 1, 2]`); `ohneZeile` aufsteigend; derselbe Name in mehreren Teilen bleibt mehrfach; `gekappt` und `originalLaengeBytes` bleiben; leere Eingabe. Dazu die Aufklappbarkeit von Schritt, Eingang und Rest — auch „nichts, solange es lädt" — und die Existenz der Zusatzzeile (nur Ziele, nur Eigenschaften, beides, nichts) |
+| `tests/eigenschaften-block.test.tsx` | **gerenderter Baum, jetzt das ganze Detail**, sechs Fälle: die Zahl aus `allgemein` samt Regression zum Schlüssel; bei `0` kein Schalter und keine Anfrage; **genau eine** Anfrage mit dem Detail, beim Aufklappen keine, vorher die Überschrift ohne Zahl; der Fehlerbaustein ohne Aufklappen sichtbar; der eigene Satz bei leerem `allgemein`; zugeklappt `inert`, Bewegung mit `motion-reduce`-Fassung — über Klassen und Attribute belegt, wie beim Ansichtsumschalter |
+| `tests/zeitleiste-ziele.test.tsx` | acht Fälle, **die vier Sprungfälle und ihre Gegenprobe sind entfallen**. Neu: Klick auf die Zeile schaltet genau einmal, Klick auf ein Ziel nicht, `aria-expanded` und `aria-controls`, zwei Zeilen gleichzeitig offen; Schritt ohne Eigenschaften ist kein `button`, und ohne Eigenschaften keine Anfrage; zugeklappt `inert`, jede Bewegung mit Ausschalter, kein Übergang an der Schaltfläche; Eingangszeile mit Eigenschaften ohne Ziele und umgekehrt, keine bei nur `Message.*`, weiterhin keine eigene Zeile für Schritt `0`; der Rest mit Eigenschaften samt *Schritt N*. Die Belastungsprobe mit fünfzehn Zielen bleibt |
+| `tests/detail-baum.test.tsx` | **im vorhandenen Doppelschlüssel-Fall, kein vierter Baum:** die Reihenfolge der fünf Teile im Dokument |
+| `tests/sprachdateien.test.ts` | unverändert grün — beide Sprachen tragen denselben Schlüsselsatz |
+
+##### Aufgabe 0 — wo der Code vom Gelesenen abwich
+
+Vor der ersten Codeänderung festgehalten, am Stand von `main` (`0d618cb`):
+
+| Befund | Folge |
+|---|---|
+| **Es gab keinen gemeinsamen Aufklappbaustein.** Der Auftrag spricht von „demselben Aufklappbaustein wie die Blöcke"; Belegdaten und Eigenschaftenblock trugen je einen eigenen `useState` samt Schaltfläche, und in `components/ui` lag kein `collapsible.tsx` | Der Baustein ist entstanden (`aufklappen.tsx` auf `ui/collapsible.tsx` aus dem Generator), und beide Blöcke stehen jetzt darauf |
+| **Die seitliche Linie ist kein eigenes Element**, sondern der linke Rand (`border-l-2`) jeder Zeile — `border-dashed` an Eingang, Rest und erwarteter Zeile | „Mit demselben Mittel hindurch" heißt deshalb: Der Rand gehört dem ganzen Eintrag, Zeile samt Inhalt |
+| **Die Schaltfläche vom 18.08.2026 lag nur auf dem Namen** (`flex-1`), nicht auf der Zeile | Die neue spannt die ganze Zeile, die Ziele liegen darüber |
+| `tw-animate-css` ist eingebunden (`globals.css`), eigene Keyframes gibt es nicht | Nicht gebraucht: Die Bewegung ist ein Übergang über `grid-template-rows` |
+| **Der Ablauf trug keinen `key`**, nur seine Blöcke | Er trägt jetzt `ablauf-<id>`, sonst überlebte der Zustand der Zeilen den Nachrichtenwechsel (E‑226) |
+| **Der Stand der Nummern im Auftrag war überholt** (höchste E‑212, Punkte bis 215) | Vergeben ab E‑218 und Punkt 217, Prüfung oben |
+| **`frontend-design` ist ein Plugin-Skill und kein Projektskill**, und sein Inhalt stand beim Auftrag nicht im Kontext | Beide Skills waren unter den verfügbaren gelistet und sind vor der Gestaltung geladen worden |
+
+##### Sichtprüfung im Browser (21.09.2026)
+
+Gegen die laufende Anwendung im Profil `dev` (Anwendungsuhr 30.12.2025), Rolle ADMIN, **geklickt,
+nicht zugewiesen**: Zeiger- und Tastaturereignisse über das Chrome-DevTools-Protokoll
+(`Input.dispatchMouseEvent`, `Input.dispatchKeyEvent`) in einem sichtbaren Chrome, in dem sich der
+Auftraggeber selbst angemeldet hat. Vollständig im Panel der Liste, Dichte `m`, hell, 1.600 px breit,
+mit `NEXANS` und `SUTTONS`. Die Nachrichten sind nach ihrer **Gestalt** gewählt; ihre `MessageID`
+steht wie in §8 bewusst nicht hier.
+
+| Gestalt | Mandant | Was sie ist |
+|---|---|---|
+| **A** | `NEXANS` | Lesedienst auf Schritt `0` (OFTP), drei Schritte, 24 Eigenschaften, Belegdaten |
+| **B** | `NEXANS` | **ohne** Lesedienst, zwei Schritte, 14 Eigenschaften |
+| **C** | `NEXANS` | Split-Wurzel mit **169** Teilen, drei Schritte, 29 Eigenschaften |
+| **D** | `NEXANS` | Split-Kind mit einer Wurzel |
+| **E** | `NEXANS` | Merge-Ergebnis mit **125** Eingängen (über einen Merge-Eingang aus dem 7-Tage-Fenster gefunden) |
+| **F** | `SUTTONS` | vier Schritte, 25 Eigenschaften, ohne Lesedienst — im Standardfenster, es musste nicht vergrößert werden |
+
+| # | Geprüft | Ergebnis |
+|---|---|---|
+| 1 | Eingeklappte Zeitleiste gegen die Vorher-Aufnahmen (A, B, C) | **Pixelvergleich** des Rahmens aus Eingang, Leiste und Rest, gerechnet auf einem Canvas: A **4** von 67.104 Pixeln abweichend, B **6** von 33.552, C **0** von 67.104 — größte Abweichung je **eine** Helligkeitsstufe, Kantenglättung am Balken. Bei B steht die Leiste eine Zeile tiefer als vorher: Dort ist die Eingangszeile dazugekommen (Punkt 4) |
+| 2 | Aufgeklappter Schritt (A, F) | Abstand zur nächsten Zeile **0 px**; Linie `2px solid` in derselben Farbe wie `--akzent-schrift`, der Name ebenso, Schriftstärke unverändert 400; Textanfang von Name und erster Inhaltszeile beide bei **x = 1.108**; Lage und Breite von Zielen, Balken und Dauer **aller** Zeilen vor und nach dem Aufklappen zeichengleich; waagerechter Überlauf von Panel, Scrollbereich und Dokument **0** |
+| 3 | Zwei Zeilen gleichzeitig offen; Nachrichtenwechsel | beide `aria-expanded="true"`; nach dem Wechsel auf eine andere Nachricht **0** offene Schalter, nach „Zurück" zur ersten ebenfalls **0** |
+| 4 | Eingang mit Lesedienst (A) | aufklappbar, zwei Ziele, sieben Einträge — sechs `OFTPReader.*` und `Service.Type` —, **kein `Message.*`** |
+| 4 | Eingang ohne Lesedienst (B, F) | **Die Zeile gibt es, ohne Ziele, aufklappbar, mit genau einem Eintrag: `Service.Type`.** Sichtbefund an B und F, keine Messung — offener Punkt 217. **Die Leiste rutscht dabei einmal nach unten:** bei B um eine Zeile (36 px), rund 90 ms nach ihrem ersten Bild, sobald die Eigenschaften da sind. Hingenommen (E‑222). Bei A kommt es nicht vor |
+| 5 | Summe der Zeilen gegen `eigenschaftenAnzahl` | A: 9 im Block + 15 an der Leiste = **24**; B: 6 + 8 = **14**; F: 7 + 18 = **25** — jeweils die Zahl aus dem Kopf. Der Blockkopf trägt 9, 6 und 7 |
+| 6 | Netz | beim Öffnen **genau eine** Anfrage auf `/eigenschaften`, beim Aufklappen von Schritt, Eingang und Block **keine** |
+| 7 | Tastatur | `Tab` erreicht Eingang und jede aufklappbare Zeile, danach jeweils ihre Ziele; **kein Halt in einem zugeklappten Inhalt**; `Enter` öffnet, `Leertaste` schließt, der Fokus bleibt auf der Zeile; `Escape` schließt das Panel (`nachricht` verschwindet aus der Adresse) |
+| 8 | Kette (C, D, E) | C: *Wurde zu — 169 Teile*, zu (32 px hoch, fünfzig Glieder eingehängt und `inert`), offen, *Weitere laden* → **eine** Anfrage, hundert Glieder. E: *Kommt von — 125 Eingänge*, dasselbe. D: *Kommt von* **ohne Schalter**, offen; Textanfang der Überschrift bei **x = 1.133**, auf den Pixel wie beim Blockkopf mit Pfeil, beide 32 px hoch. Die Kette steht in allen drei unter der ganzen Leiste |
+| 9 | Konsole | **keine Meldung**, in keinem Lauf |
+| 10 | Bewegung | Höhe des Eintrags je Bild mitgeschrieben: von 36 auf 190 px über **18 Zwischenwerte, monoton**, Endwert nach **248 ms** (F: 245 ms), danach kein weiterer Wert — am Ende springt nichts. Die Linie ist der Rand desselben Elements und kann nicht hinter ihm zurückbleiben. Mit emulierter Vorgabe `prefers-reduced-motion: reduce`: genau **zwei** Werte, 36 und 190, Inhalt sofort deckend, **derselbe Endzustand**. Beim Nachladen der Kette genau **ein** Höhensprung (1.888 → 3.688 px), keine Bewegung. **Die Bewegung selbst sieht der Auftraggeber an**; Standbilder davon gibt es nicht |
+
+**Stichproben**, jeweils mit einem aufgeklappten Schritt an Gestalt A: eigene Route (1.152 px breit),
+Belegsuche, Panel der Prozessansicht; im Panel der Liste dunkel, `xs` (Zeile 31,5 px, Panel 420 px)
+und `l` (40,5 px, 540 px). **Überall Abstand 0, Überlauf 0, Konsole leer.** Dazu, nicht verlangt: die
+eigene Route bei **390 px** Fensterbreite über `Emulation.setDeviceMetricsOverride`, Eingang und ein
+Schritt offen — Überlauf 0.
+
+**Aufnahmen** — je Gestalt vorher und nachher (A, B, C), ein aufgeklappter Schritt, der aufgeklappte
+Eingang, die Kette zu und offen, einmal dunkel. **Sie liegen nicht im Repository:** Sie zeigen
+Kennungen und Partnernamen der Testkopie, und das Repository führt keine Bilder.
+
+**Nicht zu sehen war** — und steht deshalb in [`README.md`](README.md) unter „Offene
+Sichtprüfungen":
+
+| | |
+|---|---|
+| **Die Restzeile mit Eigenschaften** (E‑223) | kommt gemessen nicht vor (M57, Befund 1). Belegt in `tests/zeitleiste-ziele.test.tsx` |
+| **Die Abbruchsätze bei zugeklappten Abschnitten** | `tiefeErreicht` und `zyklusErkannt` sprechen in der Testkopie nie an (M30‑2, M30‑3). Belegt in `tests/detail-baum.test.tsx` |
+| **Die für sich stehende Nachladen-Schaltfläche** | braucht eine Zeile, die zugleich Split-Wurzel und Merge-Ergebnis ist und mehr als fünfzig Abwärtsglieder trägt (25 Zeilen über Fenster B, M30‑4). Nicht gesucht; belegt im selben Test |
+| **Ein Schritt ohne Namen mit Eigenschaften** | der Rückfall *Schritt N* an der Zeile. An keiner der sechs Gestalten |
+| **Ein laufender Schritt, aufgeklappt** | `LAEUFT_AUF` ist in der Testkopie unbeobachtbar (§10.12); dass die Statuskontur dem Akzent vorgeht, ist nur am Code belegt |
+| **Die gescheiterte Abfrage der Eigenschaften** | am laufenden System nicht herbeigeführt. Belegt in `tests/eigenschaften-block.test.tsx` |
+| **Die Bewegung mit dem Auge** | gemessen, nicht angesehen. **Erledigt ist die Runde erst, wenn der Auftraggeber sie gesehen hat** |
+
 ---
 
 ## 11. Die bewussten Nicht-Entscheidungen
@@ -2427,3 +2716,17 @@ aufgelöst — das ist Schritt 8.
   10.08.2026** (§10.11): Die Taste wirkt auf beiden Einhängepunkten und tut dort dasselbe wie der
   Schließen-Knopf. Die Regel samt ihren zwei Ausnahmen liegt in **einem** Hook, nicht in zwei
   `useEffect`.
+- **217 — Die Beschriftung *Eingang* deckt seit dem 21.09.2026 auch Eigenschaften** (E‑222, §10.16).
+  Unter ihr stehen jetzt alle Eigenschaften von Schritt `0`, die nicht mit `Message.` beginnen.
+
+  > **Belegvermerk** (Regel L10).
+  > *Gemessen ist:* welche **Artefaktnamen** auf `MessageActionID = 0` liegen — die neun
+  > Lesedienst-Familien (M57) —, und dass dort 71 verschiedene Eigenschaftsnamen stehen, ohne sie
+  > aufzuschlüsseln (M17 3).
+  > *Behauptet wird:* dass *Eingang* trifft, was unter der Zeile steht.
+  > **Die Lücke:** Welche **Eigenschaften** auf Schritt `0` liegen, ist nicht gemessen. Bei
+  > Nachrichten mit Lesedienst sind es gesichtet dessen eigene (`OFTPReader.*`, `Service.Type`) —
+  > das deckt die Beschriftung. **Liegen dort bei Nachrichten ohne Lesedienst andere, sagt die
+  > Beschriftung mehr, als belegt ist.** Der Sichtbefund an **einer** solchen Nachricht steht im
+  > Protokoll von §10.16; er ist keine Messung. Zu klären mit einer Erhebung der Namen auf
+  > `MessageActionID = 0` nach Lesedienst ja/nein — ohne sie wird die Zeile nicht umbenannt.
