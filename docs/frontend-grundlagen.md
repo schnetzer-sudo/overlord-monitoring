@@ -320,6 +320,45 @@ Zwei Sicherungen gegen Abweichung:
 `de.ts` trägt bewusst **kein** `as const`: Sonst wären die Werte Literaltypen und jede englische
 Übersetzung wäre „nicht zuweisbar an `'Anmeldung'`".
 
+### Kein Nutzertext verweist auf das Altsystem *(21.09.2026, E‑230)*
+
+**Kein Text, den ein Nutzer sieht oder vorgelesen bekommt, verweist auf das Altsystem — in keiner
+der beiden Sprachen.** Der Bezug fällt ersatzlos; es tritt kein anderer Name an seine Stelle, also
+auch nicht „Overlord", „Plattform", „Anlage" oder „Quellsystem". Der Rohwert selbst bleibt überall
+sichtbar ([`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §4.1); es fällt nur die
+Herkunftsangabe.
+
+*Grund:* „Altsystem" ist der interne Begriff dieser Dokumentation. Für den Nutzer ist die
+Plattform, deren Nachrichten er verfolgt, nicht alt, und das Wort sagt ihm nichts (Leitsatz,
+[`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §1). Es war aus `docs/` in die Sprachdateien
+gewandert. In `docs/`, in Kommentaren und in Bezeichnern bleibt es Fachbegriff.
+
+Geändert am 21.09.2026, je Schlüssel in beiden Sprachen:
+
+| Schlüssel | bisher | jetzt |
+|---|---|---|
+| `nachrichten.rohwert` | „Statuswert des Altsystems" · “Status value of the legacy system” | „Statuswert" · “Status value” |
+| `nachrichten.ungeklaertFusszeile` | „… zeigt den Statuswert des Altsystems unverändert: …" · “… shows the legacy system's status value unchanged: …” | „… zeigt den Statuswert unverändert: …" · “… shows the status value unchanged: …” |
+| `dashboard.plattform.dienstLeer` | „Kein Dienst des Altsystems trägt eine Zeitgrenze." · “No service of the legacy system carries a time limit.” | „Kein Dienst trägt eine Zeitgrenze." · “No service carries a time limit.” |
+
+*Wächter:* `tests/sprachdateien.test.ts` führt eine zweite Wortliste, `HERKUNFTSANGABE` —
+`altsystem`, `alt-system`, `legacy`, `old system` und die Wendungen, die dasselbe meinen (`alte
+oberfläche`, `bisheriges system`, `quellsystem`, `previous system`, `source system`). Anders als die
+404-Wortliste (§2, §6) prüft sie **jeden** Schlüssel beider Sprachen, ohne Rücksicht auf Groß- und
+Kleinschreibung, Texte mit Parametern eingeschlossen — über dasselbe `flach`, mit dem die
+Leer-Prüfung sie erreicht. *Gegenprobe:* Das Wort in `nachrichten.schrittZusatz` gesetzt, einem
+Text mit Parameter, erst deutsch (`altsystem`), dann englisch (`legacy`) — der Test war jeweils
+rot und nannte Schlüssel und Wort; danach waren beide Sprachdateien byte-gleich mit dem Stand
+davor (SHA‑256).
+
+Das Backend trägt das Wort in keiner Zeichenkette, die in eine Antwort gelangt — gesucht in
+`src/main` samt Ressourcen, jeder Treffer ist Kommentar oder Javadoc. Das zählt, weil `detail` im
+Frontend Rückfallebene und damit sichtbar ist (§6). Einen Wächter gibt es dort nicht.
+
+*Nummer:* höchste vergebene **E‑229** ([`nachrichtendetail.md`](nachrichtendetail.md)), gesucht
+mit Strich als `-` oder U+2011 über alle Zweige und in den Arbeitsbäumen, jeder Treffer an der
+Spitze gelesen; `E‑780` ist der bekannte Falschtreffer.
+
 ### Kein Sprachpräfix in der URL
 
 Die Sprache ist eine Eigenschaft des **Nutzers**, nicht der Ansicht. Ein geteilter Link erscheint
@@ -1647,7 +1686,7 @@ gerissen hat, ist eine Behauptung.
 | Datei | Was |
 |---|---|
 | `ablauf.test.ts` | Änderungszwang vor Mandantenauswahl vor Startseite |
-| `sprachdateien.test.ts` | gleicher Schlüsselsatz; 404-Wortwahl; Rückfall auf `detail` |
+| `sprachdateien.test.ts` | gleicher Schlüsselsatz; kein leerer Text; **kein Verweis auf das Altsystem in irgendeinem Text beider Sprachen** *(21.09.2026, E‑230, §4)*; 404-Wortwahl; Rückfall auf `detail` |
 | `farbwerte.test.ts` *(gehärtet 01.09.2026)* | kein fester Farbwert in einer eigenen Komponente. **Von 22 Mutanten überlebten neun die erste Fassung, heute vier** ([`testfestigkeit.md`](testfestigkeit.md) §10). Der Suchpfad umfasst seither `.css`, `.scss`, `.js`, `.svg`, `.json` und die Orte **neben** `src`, aus denen Next.js lädt; die Muster kennen kodierte Hex-Werte (`%23`, `&#35;`), `color()`, benannte und System-Farben, auch im zusammengesetzten Wert und im Tailwind-Beliebigwert. Die Ausnahme des Generatorbereichs trägt ihren **Schrägstrich** — ohne ihn fiel auch `components/uikarte.tsx` aus der Prüfung |
 | **`serverbausteine.test.ts`** *(24.08.2026)* | **Blockierungstest, aus einem Befund am laufenden System.** Er berechnet aus den Dateien, welche Bausteine in `components/ui` `radix-ui` auswerten und trotzdem kein `"use client"` tragen — heute genau `button.tsx` —, und weist nach, dass **keine Server-Komponente** einen davon importiert. Der Anlass steht in §8: `/administration` warf beim Aufrufen *„createContext only works in Client Components"*, und **kein bestehender Prüfschritt konnte das finden** (`pnpm check` rendert keine Seite, `jsdom` kennt die Grenze nicht, `next build` prerendert die dynamische Route nicht). Die Liste ist berechnet und nicht geschrieben, weil `components/ui` Generatorbereich ist; ein eigener Fall hält fest, dass sie nicht leer laufen darf. **Seit dem 01.09.2026 ist er keine Textsuche mehr, sondern ein Importgraph** ([`testfestigkeit.md`](testfestigkeit.md) §10): Von 20 Mutanten überlebten neun die erste Fassung — sie fand **eine** Schreibweise **eines** Weges. Geprüft wird jetzt die **Erreichbarkeit** über die aufgelöste Importkette, die an jedem `"use client"` endet; die unsichere Menge wird über den ganzen Baum berechnet. Heute überlebt einer, und der braucht eine Auswertung statt einer Suche (T‑8) |
 | `zwischenspeicher.test.ts` | geleert **vor** dem Weitergehen, bei Wechsel und Abmeldung; das Ziel nach dem Mandantenwechsel trägt keine Filter |

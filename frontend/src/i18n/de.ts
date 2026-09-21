@@ -453,7 +453,7 @@ export const de = {
       },
       // Entscheidung E‑135: ein sichtbarer Satz statt einer leeren Stelle. Eine
       // leere Liste sähe aus wie ein Fehler im Bau; hier steht, was sie heißt.
-      dienstLeer: "Kein Dienst des Altsystems trägt eine Zeitgrenze.",
+      dienstLeer: "Kein Dienst trägt eine Zeitgrenze.",
       // E‑160: Heruntergefahrene Dienste stehen nicht in der Kachel. Sind es
       // alle, wäre „trägt keine Zeitgrenze" falsch — es gibt sie, sie sind aus.
       alleHeruntergefahren: "Alle Dienste mit Zeitgrenze sind heruntergefahren.",
@@ -553,7 +553,7 @@ export const de = {
     // Oberfläche und steht deshalb hier.
     nichtZugeordnet: "nicht zugeordnet",
     ohneWert: "—",
-    rohwert: "Statuswert des Altsystems",
+    rohwert: "Statuswert",
     // Der Schritt neben der Statusplakette. Er kommt aus SOSAction und ist
     // Klartext (Messung M13) — die Sprache ist die des Quellsystems und wird
     // nicht eingedeutscht.
@@ -574,7 +574,7 @@ export const de = {
     // Touchgerät gibt es keinen Hover, und dort erfuhr der Nutzer nie, was das
     // Fragezeichen bedeutet.
     ungeklaertFusszeile:
-      "Eine Plakette mit Fragezeichen zeigt den Statuswert des Altsystems unverändert: Seine " +
+      "Eine Plakette mit Fragezeichen zeigt den Statuswert unverändert: Seine " +
       "fachliche Bedeutung ist nicht belegt, und es wird nichts geraten.",
     zeitRelativ: "Abstand zu jetzt",
     sortierungUmschalten: "Nach Zeitpunkt sortieren",

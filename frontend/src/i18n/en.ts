@@ -245,7 +245,7 @@ export const en: Texte = {
         HERUNTERGEFAHREN: "Shut down",
         UNGEKLAERT: "Unclear",
       },
-      dienstLeer: "No service of the legacy system carries a time limit.",
+      dienstLeer: "No service carries a time limit.",
       alleHeruntergefahren: "All services with a time limit are shut down.",
       rohwert: "Status value: {wert}",
       rohwertFehlt: "no status value recorded",
@@ -306,12 +306,12 @@ export const en: Texte = {
     prozessName: "Process",
     nichtZugeordnet: "not assigned",
     ohneWert: "—",
-    rohwert: "Status value of the legacy system",
+    rohwert: "Status value",
     schrittZusatz: "Step: {schritt}",
     zeileOeffnen: "Show details of this message",
     bedeutungNichtVerifiziert: "Meaning not verified",
     ungeklaertFusszeile:
-      "A badge with a question mark shows the legacy system's status value unchanged: its " +
+      "A badge with a question mark shows the status value unchanged: its " +
       "business meaning is not documented, and nothing is guessed.",
     zeitRelativ: "Time from now",
     sortierungUmschalten: "Sort by time",
