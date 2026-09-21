@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { act } from "react";
 import { describe, expect, it } from "vitest";
 
 import { texteFuer } from "@/i18n";
@@ -166,6 +167,59 @@ describe("Der Abbruch der Kette wird gesagt, nicht verschwiegen", () => {
       expect(behaelter.textContent).not.toContain(KETTE.zyklusErkannt);
     } finally {
       await abbauen();
+    }
+
+    // **Und derselbe Satz bei zugeklappten Abschnitten** (21.09.2026, E‑227,
+    // `docs/verkettung.md` §8.15). Ein Abschnitt mit mehr als einem Glied
+    // beginnt zu — der Abbruchsatz darf dabei nicht mit verschwinden: Er steht
+    // **außerhalb** der Abschnitte, also in keinem zugeklappten Inhalt, und
+    // weiterhin unter beiden. Von Hand nicht zu sehen, aus demselben Grund wie
+    // oben. Die Gestalt verteilt zugleich die Abwärtsglieder auf beide
+    // Abschnitte — der Sonderfall, in dem die Nachladen-Schaltfläche für sich
+    // steht (§8.7).
+    const zugeklappt = await rendereKette(
+      kette({
+        aufwaerts: [ERGEBNIS, DESSEN_WURZEL],
+        abwaerts: [
+          glied({ messageId: "teil", ebene: 1, beziehung: "AUFTEILUNG" }),
+          glied({ messageId: "eingang", ebene: 1, beziehung: "ZUSAMMENFUEHRUNG" }),
+        ],
+        abwaertsGesamt: 120,
+        abwaertsCursor: "erfunden",
+        weitereVorhanden: true,
+        tiefeErreicht: true,
+      }),
+    );
+
+    try {
+      const schalter = [...zugeklappt.behaelter.querySelectorAll("section h3 button")];
+      expect(schalter.map((knopf) => knopf.getAttribute("aria-expanded"))).toEqual([
+        "false",
+        "false",
+      ]);
+      // Die Glieder sind eingehängt, aber nicht erreichbar.
+      expect(zugeklappt.behaelter.querySelectorAll("section [inert] li")).toHaveLength(4);
+
+      stehtUnterBeidenAbschnitten(zugeklappt.behaelter, KETTE.tiefeErreicht);
+      expect(hinweis(zugeklappt.behaelter, KETTE.tiefeErreicht).closest("[inert]")).toBeNull();
+
+      // Die für sich stehende Nachladen-Schaltfläche erscheint erst, sobald
+      // einer der beiden Abschnitte offen ist.
+      const nachladen = () =>
+        [...zugeklappt.behaelter.querySelectorAll("button")].filter(
+          (knopf) => knopf.textContent === KETTE.weitereLaden,
+        );
+      expect(nachladen()).toHaveLength(0);
+
+      await act(async () => {
+        schalter[1].dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      });
+      expect(schalter[1].getAttribute("aria-expanded")).toBe("true");
+      expect(schalter[0].getAttribute("aria-expanded")).toBe("false");
+      expect(nachladen()).toHaveLength(1);
+      expect(nachladen()[0].closest("section")).toBeNull();
+    } finally {
+      await zugeklappt.abbauen();
     }
   });
 

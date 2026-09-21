@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState, type ReactNode } from "react";
+import { ChevronRight } from "lucide-react";
 
 import { useAnzeigezone } from "@/components/zeitzone";
 import { Fehler } from "@/components/zustand";
@@ -13,18 +14,22 @@ import { cn } from "@/lib/utils";
 
 import type { Kettenglied, Nachrichtendetail } from "../api";
 import {
+  abschnittAufklappbar,
   abwaertsAbschnitt,
   gezeigteAbwaertsglieder,
   hatInhalt,
   kettenabschnitte,
   nachladenMoeglich,
+  type Abschnittsart,
   type Kettenabschnitt,
 } from "../kette";
 import { useKette, useKettenAbwaerts } from "../hooks";
+import { AUFKLAPP_UEBERGANG, AufklappInhalt, AufklappSchalter, Aufklappen } from "./aufklappen";
 import { StatusPlakette } from "./status-plakette";
 
 /**
- * **Was hängt an dieser Nachricht** — die Kette, zwischen Kopf und Zeitleiste.
+ * **Was hängt an dieser Nachricht** — die Kette, seit dem 21.09.2026 unter der
+ * ganzen Zeitleiste (E‑218; bis dahin zwischen Kopf und Zeitleiste).
  *
  * ## Ohne Kette gibt es keinen Block
  *
@@ -39,6 +44,13 @@ import { StatusPlakette } from "./status-plakette";
  * Inhalt behauptet, es gäbe dort etwas zu sehen.**
  *
  * ## Und deshalb darf er dauerhaft sichtbar sein
+ *
+ * > **Eingeschränkt am 21.09.2026 (E‑227, `docs/verkettung.md` §8.15).** Der
+ * > **Block** bleibt dauerhaft sichtbar — Überschriften, Zahl und Abbruchsätze
+ * > stehen immer da. **Ein Abschnitt mit mehr als einem Glied beginnt aber zu**,
+ * > mit Pfeil in der Bauform der Belegdaten; ein Abschnitt mit genau einem Glied
+ * > steht ohne Schalter offen. *„Darf offen stehen"* gilt nur noch bei einem
+ * > Glied.
  *
  * Der Kettenblock ist **nicht eingeklappt**. Sein Hauptnachteil wäre gewesen,
  * dass er bei der Mehrheit der Nachrichten Platz ohne Inhalt kostet — und genau
@@ -89,6 +101,15 @@ export function KettenBlock({
    * Aufrufer den Block über `key={messageId}` neu aufbaut.
    */
   const [nachgeladen, setNachgeladen] = useState(false);
+
+  /**
+   * Welche Abschnitte offen sind. **Hier und nicht im Abschnitt**, weil die
+   * Nachladen-Schaltfläche im Sonderfall verteilter Abwärtsglieder für sich
+   * steht und erscheint, sobald **einer** der beiden offen ist (§8.15). Anfangs
+   * alle zu; nicht in URL, Cookie oder Storage; zurückgesetzt beim
+   * Nachrichtenwechsel über `key` am Aufrufer, wie der Nachladezustand.
+   */
+  const [offene, setOffene] = useState<ReadonlySet<Abschnittsart>>(new Set());
 
   /**
    * **Das Blättern setzt hinter der Seite an, die schon dasteht.**
@@ -150,6 +171,13 @@ export function KettenBlock({
     />
   ) : null;
 
+  // Ein Abschnitt mit genau einem Glied steht ohne Schalter offen — und zählt
+  // deshalb als offen.
+  const sichtbar = abschnitte.filter((abschnitt) => abschnitt.glieder.length > 0);
+  const einerOffen = sichtbar.some(
+    (abschnitt) => !abschnittAufklappbar(abschnitt) || offene.has(abschnitt.art),
+  );
+
   return (
     <div className="flex flex-col gap-3">
       {abschnitte.map((abschnitt) =>
@@ -158,6 +186,18 @@ export function KettenBlock({
             key={abschnitt.art}
             abschnitt={abschnitt}
             aufOeffnen={aufOeffnen}
+            offen={offene.has(abschnitt.art)}
+            aufWechsel={(offen) =>
+              setOffene((bisher) => {
+                const neu = new Set(bisher);
+                if (offen) {
+                  neu.add(abschnitt.art);
+                } else {
+                  neu.delete(abschnitt.art);
+                }
+                return neu;
+              })
+            }
             // Der Knopf steht unter dem Abschnitt, in dem die Abwärtsglieder
             // stehen. Verteilen sie sich auf beide — eine Zeile kann zugleich
             // Split-Wurzel und Merge-Ergebnis sein (M30‑4) —, ließe er sich
@@ -177,7 +217,11 @@ export function KettenBlock({
       {kette.data.tiefeErreicht ? <Hinweis text={texte.nachrichten.kette.tiefeErreicht} /> : null}
       {kette.data.zyklusErkannt ? <Hinweis text={texte.nachrichten.kette.zyklusErkannt} /> : null}
 
-      {nachladenIn === null ? nachladen : null}
+      {/* Der Sonderfall verteilter Abwärtsglieder (§8.7): Die Schaltfläche lässt
+          sich keinem Abschnitt zuordnen und steht für sich — **sobald einer der
+          beiden offen ist.** Unter zwei zugeklappten Abschnitten lüde sie Zeilen
+          nach, die niemand sieht. */}
+      {nachladenIn === null && einerOffen ? nachladen : null}
 
       {seiten.error ? (
         <Fehler fehler={seiten.error} aufWiederholen={() => void fetchNextPage()} />
@@ -207,10 +251,14 @@ function Abschnitt({
   abschnitt,
   aufOeffnen,
   nachladen,
+  offen,
+  aufWechsel,
 }: {
   abschnitt: Kettenabschnitt;
   aufOeffnen: (messageId: string) => void;
   nachladen: ReactNode;
+  offen: boolean;
+  aufWechsel: (offen: boolean) => void;
 }) {
   const texte = useTexte();
   const sprache = useSprache();
@@ -224,18 +272,68 @@ function Abschnitt({
         ? wortschatz.titelEins
         : einsetzen(wortschatz.titelZahl, { anzahl: formatiereZahl(abschnitt.gesamt, sprache) });
 
+  const glieder = (
+    <ul className="flex flex-col">
+      {abschnitt.glieder.map((glied) => (
+        <GliedZeile key={glied.messageId} glied={glied} aufOeffnen={aufOeffnen} />
+      ))}
+    </ul>
+  );
+
+  // **Genau ein Glied: ohne Schalter, offen** (E‑227). Die Überschrift hält die
+  // Einrückung des Pfeils frei — 0,875 rem Pfeil und 0,375 rem Abstand —, damit
+  // sie mit der eines aufklappbaren Abschnitts fluchtet, und ist so hoch wie
+  // dessen Schaltfläche.
+  if (!abschnittAufklappbar(abschnitt)) {
+    return (
+      <section aria-labelledby={titelId} className="flex flex-col gap-1">
+        <h3
+          id={titelId}
+          className="text-muted-foreground text-beiwerk min-h-bedienelement flex items-center pl-5 font-medium"
+        >
+          {ueberschrift}
+        </h3>
+        {glieder}
+        {nachladen}
+      </section>
+    );
+  }
+
   return (
-    <section aria-labelledby={titelId} className="flex flex-col gap-1">
-      <h3 id={titelId} className="text-muted-foreground text-beiwerk font-medium">
-        {ueberschrift}
-      </h3>
-      <ul className="flex flex-col">
-        {abschnitt.glieder.map((glied) => (
-          <GliedZeile key={glied.messageId} glied={glied} aufOeffnen={aufOeffnen} />
-        ))}
-      </ul>
-      {nachladen}
-    </section>
+    // **Mehr als ein Glied: aufklappbar, anfangs zu, mit Pfeil in der Bauform
+    // der Belegdaten** (E‑227). Die Regel des Panels: Blöcke klappen mit Pfeil,
+    // Zeitleistenzeilen mit der Linie. Die Bewegung kommt aus `aufklappen.tsx`
+    // (E‑228) — beim Nachladen bewegt sich nichts, der offene Inhalt wächst
+    // einfach (§8.8).
+    <Aufklappen asChild offen={offen} aufWechsel={aufWechsel}>
+      <section aria-labelledby={titelId} className="flex flex-col">
+        <h3 id={titelId} className="text-muted-foreground text-beiwerk font-medium">
+          <AufklappSchalter
+            title={offen ? texte.nachrichten.kette.zuklappen : texte.nachrichten.kette.aufklappen}
+            className="hover:bg-muted focus-visible:ring-ring min-h-bedienelement -mx-1 flex w-fit max-w-full items-center gap-1.5 rounded-md px-1 text-left font-medium focus-visible:ring-2 focus-visible:outline-none"
+          >
+            <ChevronRight
+              aria-hidden="true"
+              className={cn(
+                "size-3.5 shrink-0 opacity-70 transition-[rotate]",
+                AUFKLAPP_UEBERGANG,
+                offen && "rotate-90",
+              )}
+            />
+            {ueberschrift}
+          </AufklappSchalter>
+        </h3>
+        {/* Die Nachladen-Schaltfläche gehört zum Inhalt ihres Abschnitts: Unter
+            einem zugeklappten lüde sie Zeilen nach, die niemand sieht.
+            `randFuerFokus`: Die Glieder sind Schaltflächen, und ihr Fokusring
+            darf an der Schnittkante der Höhenbewegung nicht abgeschnitten
+            werden; die 0,25 rem oben sind der Abstand zur Überschrift. */}
+        <AufklappInhalt randFuerFokus className="flex flex-col gap-1">
+          {glieder}
+          {nachladen}
+        </AufklappInhalt>
+      </section>
+    </Aufklappen>
   );
 }
 

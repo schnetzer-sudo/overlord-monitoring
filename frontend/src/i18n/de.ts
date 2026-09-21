@@ -1017,6 +1017,11 @@ export const de = {
       stufe: "Stufe {stufe}",
       gliedOeffnen: "{ablauf} öffnen",
       weitereLaden: "Weitere laden",
+      // Der `title` am Schalter eines Abschnitts mit mehr als einem Glied
+      // (21.09.2026, docs/verkettung.md §8.15). Der Zustand selbst liegt in
+      // aria-expanded; die Überschrift bleibt der zugängliche Name.
+      aufklappen: "Glieder anzeigen",
+      zuklappen: "Glieder ausblenden",
       laedtWeitere: "Wird geladen …",
       geladen: "{anzahl} Glieder geladen",
       // Eine Kette, die stillschweigend abbricht, ist schlimmer als eine, die

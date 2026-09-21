@@ -2337,7 +2337,9 @@ Dass **genau eine** Anfrage mit dem Detail hinausgeht und beim Aufklappen keine,
 | **E‑226** | **Der Zustand:** je Zeile unabhängig, mehrere gleichzeitig offen, anfangs alle zu. Nicht in URL, Cookie oder Storage; zurückgesetzt beim Nachrichtenwechsel **über den Baum** (`key`), nicht über einen Effekt |
 | **E‑228** | **Alles, was im Nachrichtendetail auf- und zuklappt, bewegt sich gleich** — die dritte benannte Ausnahme von [`visuelles-konzept.md`](visuelles-konzept.md) §7. Werte und Grenzen unten |
 
-E‑227 (die Kettenabschnitte) steht in [`verkettung.md`](verkettung.md) §8.15.
+**E‑227 — die Kettenabschnitte klappen auf, sobald sie mehr als ein Glied tragen** — steht mit
+Begründung, Sonderfall der Nachladen-Schaltfläche und Tests in [`verkettung.md`](verkettung.md)
+§8.15 (Teil 3). Das Zurücksetzen über den Baum (E‑226) gilt auch dort.
 
 **Warum das Präfix die alte Beschriftungsfrage erledigt.** §10.5 verwarf am 17.08.2026 „Allgemeine
 Angaben" als Namen der Gruppe zu `position === 0`, weil dort nachweislich nicht nur die

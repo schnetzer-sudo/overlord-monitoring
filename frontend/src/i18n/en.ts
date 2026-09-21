@@ -562,6 +562,8 @@ export const en: Texte = {
       stufe: "Level {stufe}",
       gliedOeffnen: "Open {ablauf}",
       weitereLaden: "Load more",
+      aufklappen: "Show links",
+      zuklappen: "Hide links",
       laedtWeitere: "Loading …",
       geladen: "{anzahl} links loaded",
       tiefeErreicht: "The chain is longer than shown here.",

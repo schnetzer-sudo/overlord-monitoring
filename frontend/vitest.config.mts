@@ -165,6 +165,11 @@ import { defineConfig } from "vitest/config";
  * > ist Generatorbereich und zählt nicht). Im Vergleichsbaum zählt `main` **1.268** statt der
  * > 1.269 von oben: Dort fehlen die erzeugten Dateien im Wurzelverzeichnis (`next-env.d.ts`,
  * > `tsconfig.tsbuildinfo`), von denen `farbwerte` eine mitprüft — gezählt, nicht gerechnet.
+ * >
+ * > **Teil 3 (E‑227, die Kettenabschnitte), am selben Tag:** weiterhin **199 in vierundzwanzig
+ * > Dateien** — `tests/detail-baum.test.tsx` bleibt bei 3, der Fall zu `tiefeErreicht` prüft den
+ * > Satz zusätzlich bei zugeklappten Abschnitten. Der Lauf über alle 48 Dateien trägt **1.282**
+ * > Fälle: die drei mehr stehen im reinen `tests/kette.test.ts` (von 16 auf 19).
  *
  * > ⚠️ **Fortgeschrieben am 17.09.2026 (Kodierung je Datei und EBCDIC-Muster, E‑176 und E‑177)**,
  * > aus dem Lauf (`vitest run --reporter=json`, Fälle je Datei): **161 in zwanzig Dateien**, keine
