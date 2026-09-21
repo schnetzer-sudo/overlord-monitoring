@@ -752,6 +752,10 @@ folgt noch dem Fenster, weil ihre Mindestbreiten im schmalsten Kasten nicht aufg
   > | Inhalt | blendet beim Öffnen über **150 ms** nach **55 ms** ein und rückt **4 px** nach unten; beim Schließen über **110 ms** ohne Verzögerung aus |
   > | Pfeil, Linie, Name | je **220 ms** |
   >
+  > > **Geändert am 21.09.2026 (E‑229), Vorgabe des Auftraggebers:** Höhe, Pfeil, Linie und Name
+  > > laufen in **300 ms** statt 220, auf wie zu. Das Ein- und Ausblenden des Inhalts ist
+  > > unverändert.
+  >
   > **Der Ausschalter ist Teil der Ausnahme und nicht ihr Nachtrag:** Mit
   > `prefers-reduced-motion: reduce` steht alles **sofort** (`motion-reduce:transition-none` an jedem
   > bewegten Element).

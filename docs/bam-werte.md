@@ -645,7 +645,8 @@ zwischen Nachrichten beginnt der Block wieder eingeklappt; umgesetzt über `key=
 den Baum, nicht über einen Effekt.
 
 > **Ergänzt am 21.09.2026 (E‑228, [`nachrichtendetail.md`](nachrichtendetail.md) §10.16): Das Auf- und
-> Zuklappen bewegt sich**, wie alles im Nachrichtendetail — Höhe in 220 ms, der Pfeil dreht, mit
+> Zuklappen bewegt sich**, wie alles im Nachrichtendetail — Höhe in 220 ms (seit E‑229 vom
+> selben Tag in 300 ms), der Pfeil dreht, mit
 > `prefers-reduced-motion: reduce` steht alles sofort. Der Block steht dafür auf dem gemeinsamen
 > Aufklappbaustein (`components/aufklappen.tsx`); sein Inhalt bleibt eingehängt und ist zugeklappt
 > `inert`. **Sonst ist am Block nichts geändert:** Er lädt weiterhin erst beim Aufklappen, die Zahl

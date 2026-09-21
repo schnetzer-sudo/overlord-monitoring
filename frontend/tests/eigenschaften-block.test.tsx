@@ -364,7 +364,8 @@ describe("Der Block Technische Eigenschaften", () => {
         "grid-rows-[0fr]",
         "data-[state=open]:grid-rows-[1fr]",
         "transition-[grid-template-rows]",
-        "duration-[220ms]",
+        // 300 ms seit E‑229, auf wie zu — bis dahin 220.
+        "duration-[300ms]",
         "ease-[cubic-bezier(0.2,0,0,1)]",
         "motion-reduce:transition-none",
       ]) {

@@ -2404,6 +2404,25 @@ dazu), nicht von Hand geändert.
 | Inhalt beim Schließen | blendet über **110 ms** ohne Verzögerung aus |
 | Pfeil, Linie, Name | drehen beziehungsweise wechseln die Farbe in je **220 ms** |
 
+> **Geändert am 21.09.2026 (E‑229): Das Auf- und das Zuklappen dauern 300 ms statt 220.** Vorgabe
+> des Auftraggebers vom selben Tag, nach dem Zusammenführen — die Bewegung ist der eine Punkt, den
+> die Sichtprüfung unten ausdrücklich ihm überließ. Die Tabelle darüber nennt den abgenommenen
+> Entwurf; seither gilt:
+>
+> | Was | Wert |
+> |---|---|
+> | Höhe | **300 ms**, zu wie auf |
+> | Pfeil, Linie, Name | je **300 ms** |
+> | Inhalt | unverändert: blendet über 150 ms nach 55 ms ein und rückt 4 px, blendet über 110 ms aus |
+>
+> **Pfeil, Linie und Name gehen mit der Höhe**, damit sie nicht vor ihr fertig sind; Kurve und
+> Ausschalter (`prefers-reduced-motion`) sind unverändert. Eine Stelle im Code, `AUFKLAPP_UEBERGANG`
+> in `aufklappen.tsx`; belegt über die Klasse in `tests/eigenschaften-block.test.tsx` und
+> `tests/zeitleiste-ziele.test.tsx`. **Am laufenden System nachgemessen ist die neue Dauer nicht:**
+> Die 248 ms in Punkt 10 des Protokolls gelten für den Stand mit 220 ms.
+>
+> *Nummer:* E‑229, gesucht wie oben über alle Zweige; höchste vergebene war E‑228 aus diesem Abschnitt.
+
 Nur CSS, keine neue Abhängigkeit, keine Keyframes. **Der Inhalt bleibt eingehängt** — sonst gäbe es
 keine Höhe, die sich bewegen könnte — und ist zugeklappt **`inert`**: weder mit der Tastatur noch für
 ein Vorleseprogramm erreichbar. Bei `prefers-reduced-motion: reduce` steht alles sofort
