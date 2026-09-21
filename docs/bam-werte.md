@@ -644,6 +644,15 @@ Wiederholen), Leer (ein Satz), Daten.
 zwischen Nachrichten beginnt der Block wieder eingeklappt; umgesetzt über `key={…}` und damit über
 den Baum, nicht über einen Effekt.
 
+> **Ergänzt am 21.09.2026 (E‑228, [`nachrichtendetail.md`](nachrichtendetail.md) §10.16): Das Auf- und
+> Zuklappen bewegt sich**, wie alles im Nachrichtendetail — Höhe in 220 ms, der Pfeil dreht, mit
+> `prefers-reduced-motion: reduce` steht alles sofort. Der Block steht dafür auf dem gemeinsamen
+> Aufklappbaustein (`components/aufklappen.tsx`); sein Inhalt bleibt eingehängt und ist zugeklappt
+> `inert`. **Sonst ist am Block nichts geändert:** Er lädt weiterhin erst beim Aufklappen, die Zahl
+> kommt weiterhin aus `bamAnzahl`, und vor dem ersten Aufklappen steht kein Ladezustand im Baum.
+> *„Dieselbe Bauform wie der Eigenschaften-Block"* gilt für Schalter, Pfeil und Bewegung — nicht mehr
+> für den Zeitpunkt des Ladens und die Herkunft der Zahl (E‑220, E‑224 dort).
+
 ### Aufgeklappt — Beschriftung links, Werte rechts
 
 *Umgestellt am 13.08.2026 in der Nacharbeit zu Teil 1. Die erste Fassung setzte jeden Wert in eine

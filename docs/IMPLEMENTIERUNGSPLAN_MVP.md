@@ -389,6 +389,18 @@ einer hängenden Nachricht ist ohne Fachwissen erkennbar, wo sie steht.
 ~~`docs/prozessschritte-uebersetzung.md`~~ entfällt mit der Zuordnungstabelle, die sie beschrieben
 hätte; der Vermerk dazu steht in [`docs/README.md`](README.md).
 
+### Nacharbeit — Eigenschaften an die Zeitleiste, Kette nach unten (21.09.2026)
+
+Vorgabe des Auftraggebers, reiner Frontend-Umbau ohne Backend-Diff (E‑218 bis E‑228, offener Punkt
+217): Die Reihenfolge im Panel ist **Kopf → Belegdaten → Technische Eigenschaften → Zeitleiste →
+Kette**; die technischen Eigenschaften stehen **unter ihrem Schritt** in der Zeitleiste, deren Zeilen
+sich dafür aufklappen lassen, und im Block bleiben die allgemeinen Angaben zur Nachricht; die
+Kettenabschnitte klappen auf, sobald sie mehr als ein Glied tragen; das Auf- und Zuklappen bewegt
+sich — die dritte benannte Ausnahme von [`visuelles-konzept.md`](visuelles-konzept.md) §7. *„Technische
+Eigenschaften eingeklappt im Hintergrund"* oben gilt damit nur noch für die allgemeinen Angaben.
+Vollständig in [`nachrichtendetail.md`](nachrichtendetail.md) §10.16 und
+[`verkettung.md`](verkettung.md) §8.15.
+
 ---
 
 ## Schritt 6 — Durchstich: Verkettung

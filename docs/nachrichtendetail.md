@@ -2439,6 +2439,75 @@ Rasterspur liegt eine Ebene darüber, das Einblenden eine darunter.
 | `tests/detail-baum.test.tsx` | **im vorhandenen Doppelschlüssel-Fall, kein vierter Baum:** die Reihenfolge der fünf Teile im Dokument |
 | `tests/sprachdateien.test.ts` | unverändert grün — beide Sprachen tragen denselben Schlüsselsatz |
 
+##### Aufgabe 0 — wo der Code vom Gelesenen abwich
+
+Vor der ersten Codeänderung festgehalten, am Stand von `main` (`0d618cb`):
+
+| Befund | Folge |
+|---|---|
+| **Es gab keinen gemeinsamen Aufklappbaustein.** Der Auftrag spricht von „demselben Aufklappbaustein wie die Blöcke"; Belegdaten und Eigenschaftenblock trugen je einen eigenen `useState` samt Schaltfläche, und in `components/ui` lag kein `collapsible.tsx` | Der Baustein ist entstanden (`aufklappen.tsx` auf `ui/collapsible.tsx` aus dem Generator), und beide Blöcke stehen jetzt darauf |
+| **Die seitliche Linie ist kein eigenes Element**, sondern der linke Rand (`border-l-2`) jeder Zeile — `border-dashed` an Eingang, Rest und erwarteter Zeile | „Mit demselben Mittel hindurch" heißt deshalb: Der Rand gehört dem ganzen Eintrag, Zeile samt Inhalt |
+| **Die Schaltfläche vom 18.08.2026 lag nur auf dem Namen** (`flex-1`), nicht auf der Zeile | Die neue spannt die ganze Zeile, die Ziele liegen darüber |
+| `tw-animate-css` ist eingebunden (`globals.css`), eigene Keyframes gibt es nicht | Nicht gebraucht: Die Bewegung ist ein Übergang über `grid-template-rows` |
+| **Der Ablauf trug keinen `key`**, nur seine Blöcke | Er trägt jetzt `ablauf-<id>`, sonst überlebte der Zustand der Zeilen den Nachrichtenwechsel (E‑226) |
+| **Der Stand der Nummern im Auftrag war überholt** (höchste E‑212, Punkte bis 215) | Vergeben ab E‑218 und Punkt 217, Prüfung oben |
+| **`frontend-design` ist ein Plugin-Skill und kein Projektskill**, und sein Inhalt stand beim Auftrag nicht im Kontext | Beide Skills waren unter den verfügbaren gelistet und sind vor der Gestaltung geladen worden |
+
+##### Sichtprüfung im Browser (21.09.2026)
+
+Gegen die laufende Anwendung im Profil `dev` (Anwendungsuhr 30.12.2025), Rolle ADMIN, **geklickt,
+nicht zugewiesen**: Zeiger- und Tastaturereignisse über das Chrome-DevTools-Protokoll
+(`Input.dispatchMouseEvent`, `Input.dispatchKeyEvent`) in einem sichtbaren Chrome, in dem sich der
+Auftraggeber selbst angemeldet hat. Vollständig im Panel der Liste, Dichte `m`, hell, 1.600 px breit,
+mit `NEXANS` und `SUTTONS`. Die Nachrichten sind nach ihrer **Gestalt** gewählt; ihre `MessageID`
+steht wie in §8 bewusst nicht hier.
+
+| Gestalt | Mandant | Was sie ist |
+|---|---|---|
+| **A** | `NEXANS` | Lesedienst auf Schritt `0` (OFTP), drei Schritte, 24 Eigenschaften, Belegdaten |
+| **B** | `NEXANS` | **ohne** Lesedienst, zwei Schritte, 14 Eigenschaften |
+| **C** | `NEXANS` | Split-Wurzel mit **169** Teilen, drei Schritte, 29 Eigenschaften |
+| **D** | `NEXANS` | Split-Kind mit einer Wurzel |
+| **E** | `NEXANS` | Merge-Ergebnis mit **125** Eingängen (über einen Merge-Eingang aus dem 7-Tage-Fenster gefunden) |
+| **F** | `SUTTONS` | vier Schritte, 25 Eigenschaften, ohne Lesedienst — im Standardfenster, es musste nicht vergrößert werden |
+
+| # | Geprüft | Ergebnis |
+|---|---|---|
+| 1 | Eingeklappte Zeitleiste gegen die Vorher-Aufnahmen (A, B, C) | **Pixelvergleich** des Rahmens aus Eingang, Leiste und Rest, gerechnet auf einem Canvas: A **4** von 67.104 Pixeln abweichend, B **6** von 33.552, C **0** von 67.104 — größte Abweichung je **eine** Helligkeitsstufe, Kantenglättung am Balken. Bei B steht die Leiste eine Zeile tiefer als vorher: Dort ist die Eingangszeile dazugekommen (Punkt 4) |
+| 2 | Aufgeklappter Schritt (A, F) | Abstand zur nächsten Zeile **0 px**; Linie `2px solid` in derselben Farbe wie `--akzent-schrift`, der Name ebenso, Schriftstärke unverändert 400; Textanfang von Name und erster Inhaltszeile beide bei **x = 1.108**; Lage und Breite von Zielen, Balken und Dauer **aller** Zeilen vor und nach dem Aufklappen zeichengleich; waagerechter Überlauf von Panel, Scrollbereich und Dokument **0** |
+| 3 | Zwei Zeilen gleichzeitig offen; Nachrichtenwechsel | beide `aria-expanded="true"`; nach dem Wechsel auf eine andere Nachricht **0** offene Schalter, nach „Zurück" zur ersten ebenfalls **0** |
+| 4 | Eingang mit Lesedienst (A) | aufklappbar, zwei Ziele, sieben Einträge — sechs `OFTPReader.*` und `Service.Type` —, **kein `Message.*`** |
+| 4 | Eingang ohne Lesedienst (B, F) | **Die Zeile gibt es, ohne Ziele, aufklappbar, mit genau einem Eintrag: `Service.Type`.** Sichtbefund an B und F, keine Messung — offener Punkt 217. **Die Leiste rutscht dabei einmal nach unten:** bei B um eine Zeile (36 px), rund 90 ms nach ihrem ersten Bild, sobald die Eigenschaften da sind. Hingenommen (E‑222). Bei A kommt es nicht vor |
+| 5 | Summe der Zeilen gegen `eigenschaftenAnzahl` | A: 9 im Block + 15 an der Leiste = **24**; B: 6 + 8 = **14**; F: 7 + 18 = **25** — jeweils die Zahl aus dem Kopf. Der Blockkopf trägt 9, 6 und 7 |
+| 6 | Netz | beim Öffnen **genau eine** Anfrage auf `/eigenschaften`, beim Aufklappen von Schritt, Eingang und Block **keine** |
+| 7 | Tastatur | `Tab` erreicht Eingang und jede aufklappbare Zeile, danach jeweils ihre Ziele; **kein Halt in einem zugeklappten Inhalt**; `Enter` öffnet, `Leertaste` schließt, der Fokus bleibt auf der Zeile; `Escape` schließt das Panel (`nachricht` verschwindet aus der Adresse) |
+| 8 | Kette (C, D, E) | C: *Wurde zu — 169 Teile*, zu (32 px hoch, fünfzig Glieder eingehängt und `inert`), offen, *Weitere laden* → **eine** Anfrage, hundert Glieder. E: *Kommt von — 125 Eingänge*, dasselbe. D: *Kommt von* **ohne Schalter**, offen; Textanfang der Überschrift bei **x = 1.133**, auf den Pixel wie beim Blockkopf mit Pfeil, beide 32 px hoch. Die Kette steht in allen drei unter der ganzen Leiste |
+| 9 | Konsole | **keine Meldung**, in keinem Lauf |
+| 10 | Bewegung | Höhe des Eintrags je Bild mitgeschrieben: von 36 auf 190 px über **18 Zwischenwerte, monoton**, Endwert nach **248 ms** (F: 245 ms), danach kein weiterer Wert — am Ende springt nichts. Die Linie ist der Rand desselben Elements und kann nicht hinter ihm zurückbleiben. Mit emulierter Vorgabe `prefers-reduced-motion: reduce`: genau **zwei** Werte, 36 und 190, Inhalt sofort deckend, **derselbe Endzustand**. Beim Nachladen der Kette genau **ein** Höhensprung (1.888 → 3.688 px), keine Bewegung. **Die Bewegung selbst sieht der Auftraggeber an**; Standbilder davon gibt es nicht |
+
+**Stichproben**, jeweils mit einem aufgeklappten Schritt an Gestalt A: eigene Route (1.152 px breit),
+Belegsuche, Panel der Prozessansicht; im Panel der Liste dunkel, `xs` (Zeile 31,5 px, Panel 420 px)
+und `l` (40,5 px, 540 px). **Überall Abstand 0, Überlauf 0, Konsole leer.** Dazu, nicht verlangt: die
+eigene Route bei **390 px** Fensterbreite über `Emulation.setDeviceMetricsOverride`, Eingang und ein
+Schritt offen — Überlauf 0.
+
+**Aufnahmen** — je Gestalt vorher und nachher (A, B, C), ein aufgeklappter Schritt, der aufgeklappte
+Eingang, die Kette zu und offen, einmal dunkel. **Sie liegen nicht im Repository:** Sie zeigen
+Kennungen und Partnernamen der Testkopie, und das Repository führt keine Bilder.
+
+**Nicht zu sehen war** — und steht deshalb in [`README.md`](README.md) unter „Offene
+Sichtprüfungen":
+
+| | |
+|---|---|
+| **Die Restzeile mit Eigenschaften** (E‑223) | kommt gemessen nicht vor (M57, Befund 1). Belegt in `tests/zeitleiste-ziele.test.tsx` |
+| **Die Abbruchsätze bei zugeklappten Abschnitten** | `tiefeErreicht` und `zyklusErkannt` sprechen in der Testkopie nie an (M30‑2, M30‑3). Belegt in `tests/detail-baum.test.tsx` |
+| **Die für sich stehende Nachladen-Schaltfläche** | braucht eine Zeile, die zugleich Split-Wurzel und Merge-Ergebnis ist und mehr als fünfzig Abwärtsglieder trägt (25 Zeilen über Fenster B, M30‑4). Nicht gesucht; belegt im selben Test |
+| **Ein Schritt ohne Namen mit Eigenschaften** | der Rückfall *Schritt N* an der Zeile. An keiner der sechs Gestalten |
+| **Ein laufender Schritt, aufgeklappt** | `LAEUFT_AUF` ist in der Testkopie unbeobachtbar (§10.12); dass die Statuskontur dem Akzent vorgeht, ist nur am Code belegt |
+| **Die gescheiterte Abfrage der Eigenschaften** | am laufenden System nicht herbeigeführt. Belegt in `tests/eigenschaften-block.test.tsx` |
+| **Die Bewegung mit dem Auge** | gemessen, nicht angesehen. **Erledigt ist die Runde erst, wenn der Auftraggeber sie gesehen hat** |
+
 ---
 
 ## 11. Die bewussten Nicht-Entscheidungen
