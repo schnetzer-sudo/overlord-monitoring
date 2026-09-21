@@ -172,6 +172,24 @@ bekannt ist. Dieselbe Bauform wie beim Eigenschaftenblock.
 ▸ Technische Eigenschaften (23)
 ```
 
+> **Fortgeschrieben am 21.09.2026 ([`nachrichtendetail.md`](nachrichtendetail.md) §10.16).** Die
+> Skizze zeigt den Stand bis dahin. Zwei Dinge daran sind anders: **Der Block *Technische
+> Eigenschaften* steht über der Leiste** und trägt nur noch die allgemeinen Angaben zur Nachricht
+> (E‑218, E‑224) — und **jede Zeile mit Eigenschaften lässt sich aufklappen**, der Inhalt steht unter
+> ihr, die Linie läuft in `--akzent-schrift` hindurch:
+>
+> ```text
+> ┆ Eingang                                    📄 📜
+> ┃ Datei konvertiert          📄 📜   ▃▃▃▃▃▃▃▃    1,2 s
+> ┃   Converter.Log.GUID       <Wert>
+> ┃   Service.Type             <Wert>
+> │ Datei versendet                📜   ▃▃▃          0,4 s
+> ```
+>
+> **Die Ziele selbst sind unverändert** — dieselben Zeichen, dieselben Verweise, dieselbe Stelle in
+> der Zeile. Sie liegen seither als Geschwister **über** der Schaltfläche der Zeile und nicht in ihr:
+> Ein Klick auf ein Ziel öffnet die Datei, ein Klick daneben klappt die Zeile auf.
+
 > **Korrigiert 19.08.2026 — zwei Zeichen in der Eingangszeile statt dreier.** Hier stand bis heute
 > „`┆ Eingang     📄 📄 📜`". **Genau dieser Anblick war der Anlass von M73:** Der Auftraggeber hat
 > die drei Ziele geöffnet und zugeordnet, und das dritte war die Ausgangsdatei, die die Leiste am
@@ -199,6 +217,13 @@ Vokabular wie die erwartete Zeile am Ende der Leiste: Was gestrichelt ist, ist k
 Schritt. Kein Balken, keine Dauer. **Liegt auf Schritt `0` nichts, gibt es die Zeile nicht** —
 dasselbe „wo nichts liegt, hängt nichts" wie an den Schrittzeilen, und seit dem 19.08.2026 kommt
 dieser Fall vor (Kasten unten).
+
+> **Erweitert am 21.09.2026 (E‑222, [`nachrichtendetail.md`](nachrichtendetail.md) §10.16): Die
+> Existenzregel der Zeile kennt seither zwei Gründe.** Es gibt sie, wenn auf Schritt `0` ein Artefakt
+> **oder** eine Eigenschaft liegt, die nicht mit `Message.` beginnt; aufklappbar ist sie nur mit
+> solchen Eigenschaften. Gestrichelt, *Eingang*, ohne Balken und Dauer, die Ziele unverändert — das
+> bleibt. **Bei Nachrichten ohne Lesedienst kann die Zeile damit wieder erscheinen**, wenn dort
+> Eigenschaften liegen; ob die Beschriftung sie deckt, ist offener Punkt 217 dort.
 
 Beschriftet wird sie mit **Eingang**, und das bleibt sie. Die Artefakte des Lesedienstes heißen
 darin nach **ihrer Familie allein** — `SAPReader`, nicht `Schritt 0 · SAPReader` (§2).
@@ -295,6 +320,12 @@ Beschriftungsregel ihren Rückfall `Schritt <n> · <Familie>` weiter (§2).
 
 Solange sie leer ist, steht in der Oberfläche nichts davon.
 
+> **Erweitert am 21.09.2026 (E‑223, [`nachrichtendetail.md`](nachrichtendetail.md) §10.16).** Die
+> Zeile nimmt seither auch **Eigenschaften** auf, deren Position in der Zeitleiste keine Zeile hat,
+> und wird dafür aufklappbar; im Inhalt steht je Position eine Unterzeile mit dem Rückfall *Schritt
+> N*. Aus demselben Grund gebaut wie für die Artefakte: damit nichts lautlos herausfällt. **Gesehen
+> ist auch das nicht** — belegt in `tests/zeitleiste-ziele.test.tsx`.
+
 ### Nicht mehr eingeklappt — die Liste kommt mit dem Detail
 
 Der Schalter gehörte dem Block, und den gibt es nicht mehr. Die Ziele hängen an der Zeitleiste, und
@@ -315,6 +346,15 @@ gibt es gemessen nicht (M55).
 ---
 
 ## 3a. Der Weg zu den technischen Eigenschaften
+
+> **Abgelöst am 21.09.2026 (E‑225, [`nachrichtendetail.md`](nachrichtendetail.md) §10.16): Den Sprung
+> gibt es nicht mehr.** Die Eigenschaften eines Schritts stehen unter seiner Zeile, und die klappt an
+> Ort und Stelle auf — es gibt keine Gruppe im Block mehr, in die zu springen wäre. Entfallen sind
+> das Sprungziel mit laufender Nummer, der Fokus-Effekt, die Gruppen-`id`s mit `tabIndex={-1}`, das
+> Zurücksetzen beim Nachrichtenwechsel und die Zeichenkette `zuEigenschaften`. **Zwei Sätze dieses
+> Abschnitts gelten in neuer Gestalt weiter:** Der zugängliche Name der Zeile beginnt mit dem
+> sichtbaren Schrittnamen (WCAG 2.5.3), und der `title` bleibt die Herkunft. Der Abschnitt bleibt als
+> Beschreibung des Stands vom 18.08.2026 stehen.
 
 **Ein Klick auf einen Schritt in der Zeitleiste führt zur zugehörigen Gruppe im
 Eigenschaftenblock.** Kein neuer Block, keine Duplizierung — die Gruppierung nach Schritt besteht

@@ -1682,6 +1682,19 @@ gerissen hat, ist eine Behauptung.
 | `aktualisierung.test.ts` *(16.09.2026)* | die Regeln von „Neu laden" und der automatischen Aktualisierung ohne Ansicht: das **Intervall** über alle acht Lagen von Schalter, Seite eins und sichtbarem Tab, sechzig Sekunden ohne Wahl; was der **Schalter zeigt** (aus, an, pausiert); **wohin „Neu laden" führt** — Seite eins desselben Filters, kein Cursor, keine geöffnete Nachricht; der **Blätterstapel** wird nur zurückgesetzt, wenn seit dem Klick niemand geblättert hat; und `aufbauAktiv` für das erste Bild, das Neuladen und den Zeitraumwechsel ([`neu-laden.md`](neu-laden.md) §5) |
 | **`neu-laden.test.tsx`** *(16.09.2026, am selben Tag erweitert)* | **gerenderter Baum.** Die Zählung steht in `vitest.config.mts`. Fast durchweg Aussagen über **Anfragen, die hinausgehen oder nicht**: der Baustein ohne Schalter, wenn `automatik` fehlt; die Übersicht mit genau einer weiteren Anfrage, auch im Leerzustand; die Nachrichten von Seite zwei mit einer Anfrage ohne Cursor und bei offenem Panel **keiner** an Detail- oder Dateiendpunkte; mit gestellter Uhr aus, an und pausiert; die Prozessansicht ohne Anfrage über zwei Minuten und mit Baum, dann Liste beim Klick — und **keiner** Listenanfrage mit dem alten Fenster, wenn der Baum ein neues bringt. Zwei Verletzungsproben samt Meldungen in [`neu-laden.md`](neu-laden.md) §5. **Seit E‑173 auch die Stelle:** der Knopf als nächster Knopf nach dem letzten Zeitraum-Knopf (Übersicht, Prozessansicht), Schalter und Knopf als letzte der Filterleiste (Nachrichten), und am Baustein **kein sichtbares Wort** (E‑174); **seit E‑175** in der Prozessansicht auch im freien Modus als letztes Bedienelement des Kopfes, hinter beiden Datumsfeldern |
 
+> **Fortgeschrieben am 21.09.2026 (Eigenschaften an die Zeitleiste,
+> [`nachrichtendetail.md`](nachrichtendetail.md) §10.16).** Drei Zeilen der Tabelle beschreiben den
+> Stand bis dahin und bleiben stehen; seither gilt:
+>
+> | Datei | Was |
+> |---|---|
+> | `nachrichtendetail.test.ts` | zusätzlich die **Einteilung der Eigenschaften** (`verteileEigenschaften`: vier disjunkte Teile, das exakte Präfix `Message.`, die Invariante, keine Umsortierung) samt Aufklappbarkeit von Schritt, Eingang und Rest — an der Stelle der zehn Gruppierungsfälle vom 17.08.2026 |
+> | **`zeitleiste-ziele.test.tsx`** | **gerenderter Baum**, weiterhin acht Fälle. **Das Anspringen und die drei Fälle um den kalten Zwischenspeicher sind entfallen**, samt der Gegenprobe; neu sind der Klick auf die Zeile (schaltet genau einmal) gegen den Klick auf ein Ziel (schaltet nicht), der Schritt ohne Eigenschaften als Nicht-Schaltfläche, `inert` und die Bewegung mit Ausschalter, die Eingangszeile in ihren Lagen und der Rest mit Eigenschaften |
+> | **`eigenschaften-block.test.tsx`** | **gerenderter Baum — jetzt das ganze Detail**, sechs Fälle: die Zahl aus `allgemein`, bei `0` kein Schalter und keine Anfrage, **eine** Anfrage mit dem Detail und beim Aufklappen keine, der Fehlerbaustein ohne Aufklappen, der Satz bei leerem `allgemein`, `inert` und die Bewegung mit Ausschalter |
+> | **`detail-baum.test.tsx`** | weiterhin drei Fälle; der Doppelschlüssel-Fall prüft zusätzlich die **Reihenfolge der Blöcke** im Dokument |
+>
+> Die Gesamtzahl steht weiterhin **ausschließlich** im Kopf von `frontend/vitest.config.mts`.
+
 > **Korrigiert 20.08.2026, nachgetragen zur Korrektur vom 19.08.2026.** Die Zeile zu
 > `rohdaten.test.ts` führte die Beschriftungsregel „**in allen fünf Lagen** (aufgelöster
 > Schrittname, Rückfall `Schritt N · Familie`, ohne Schrittfolge, **Eingang**, Familie allein auf

@@ -218,12 +218,46 @@ describe("Der Abbruch der Kette wird gesagt, nicht verschwiegen", () => {
 describe("Das Detailpanel", () => {
   it("hängt Ketten- und Eigenschaftenblock ohne doppelten React-Schlüssel ein", async () => {
     const zwischenspeicher = neuerZwischenspeicher();
-    const daten = detail();
+    // Mit Belegdaten und einem Schritt, damit alle fünf Teile des Panels im Baum
+    // stehen — sonst ließe sich ihre Reihenfolge unten nicht prüfen.
+    const daten = detail({
+      bamAnzahl: 3,
+      schritte: [
+        {
+          position: 1,
+          name: "Datei versendet",
+          namensherkunft: "DIREKT",
+          rohwert: "ERFUNDEN_BAUSTEIN",
+          start: "2025-12-29T10:00:00Z",
+          ende: "2025-12-29T10:00:01Z",
+          dauerSekunden: 1,
+          timeoutSekunden: 1800,
+          laeuftAuf: false,
+        },
+      ],
+    });
     zwischenspeicher.setQueryData(NACHRICHTEN_SCHLUESSEL.detail(MESSAGE_ID), daten);
     zwischenspeicher.setQueryData(
       NACHRICHTEN_SCHLUESSEL.kette(MESSAGE_ID),
       kette({ abwaerts: [glied({ messageId: "teil" })], abwaertsGesamt: 1 }),
     );
+    // Seit dem 21.09.2026 kommen die Eigenschaften mit dem Detail (E‑220) — und
+    // die Zahl im Blockkopf ist die der allgemeinen Angaben, nicht die aus dem
+    // Kopf (E‑224).
+    zwischenspeicher.setQueryData(NACHRICHTEN_SCHLUESSEL.eigenschaften(MESSAGE_ID), [
+      {
+        name: "Message.GUID",
+        wert: MESSAGE_ID,
+        position: 0,
+        gekappt: false,
+        originalLaengeBytes: null,
+      },
+    ]);
+    zwischenspeicher.setQueryData(NACHRICHTEN_SCHLUESSEL.dateien(MESSAGE_ID), {
+      messageId: MESSAGE_ID,
+      nutzdaten: [],
+      protokolle: [],
+    });
 
     const { behaelter, abbauen } = await rendere(
       <NachrichtDetail
@@ -243,9 +277,32 @@ describe("Das Detailpanel", () => {
       expect(behaelter.querySelector("section section h3")?.textContent).toBe(
         KETTE.wurdeZu.titelEins,
       );
-      expect(behaelter.textContent).toContain(
-        `Technische Eigenschaften (${daten.eigenschaftenAnzahl})`,
-      );
+      expect(behaelter.textContent).toContain("Technische Eigenschaften (1)");
+
+      // **Die Reihenfolge der Blöcke** (E‑218, `docs/nachrichtendetail.md`
+      // §10.16): Kopf → Belegdaten → Technische Eigenschaften → Zeitleiste →
+      // Kette. Bis zum 21.09.2026 stand die Kette gleich unter dem Kopf und die
+      // Eigenschaften am Ende. Geprüft an der Lage im Dokument, nicht an einer
+      // Klasse: Die Kette steht unter der **ganzen** Zeitleiste.
+      const schalter = (anfang: string) =>
+        [...behaelter.querySelectorAll("button")].find((knopf) =>
+          (knopf.textContent ?? "").startsWith(anfang),
+        );
+      const teile = [
+        behaelter.querySelector("dl"),
+        schalter("Belegdaten"),
+        schalter("Technische Eigenschaften"),
+        behaelter.querySelector("ol"),
+        behaelter.querySelector("section section"),
+      ];
+      expect(teile.every((teil) => teil !== null && teil !== undefined)).toBe(true);
+      for (let stelle = 1; stelle < teile.length; stelle++) {
+        expect(
+          (teile[stelle - 1] as Element).compareDocumentPosition(teile[stelle] as Element) &
+            Node.DOCUMENT_POSITION_FOLLOWING,
+          `Teil ${stelle} steht nicht hinter Teil ${stelle - 1}`,
+        ).not.toBe(0);
+      }
     } finally {
       await abbauen();
     }

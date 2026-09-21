@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useId, useState, type ReactNode } from "react";
+import { useCallback, useId, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Check, Copy, ListTree, X } from "lucide-react";
 
@@ -14,14 +14,14 @@ import { ProblemFehler } from "@/lib/http";
 import type { Texte } from "@/i18n";
 
 import type { KuratierteEigenschaft, Nachrichtendetail } from "../api";
-import { bedeutungNichtVerifiziert, METADATEN_POSITION } from "../detail";
-import { useArtefakte, useNachrichtendetail } from "../hooks";
+import { bedeutungNichtVerifiziert, METADATEN_POSITION, verteileEigenschaften } from "../detail";
+import { useArtefakte, useEigenschaften, useNachrichtendetail } from "../hooks";
 import { absprungZiel, absprungfenster } from "../prozessansicht";
 import { zieleJeSchritt, zieleOhneZeile } from "../rohdaten";
 import { AnsichtUmschalter, type Umschaltziel } from "./ansicht-umschalter";
 import { Zielzeile } from "./artefakt-ziele";
 import { BamBlock } from "./bam-block";
-import { EigenschaftenBlock, type Sprungziel } from "./eigenschaften-block";
+import { EigenschaftenBlock } from "./eigenschaften-block";
 import { KettenBlock } from "./kette-block";
 import { StatusPlakette } from "./status-plakette";
 import { Zeitleiste } from "./zeitleiste";
@@ -111,21 +111,6 @@ export function NachrichtDetail({
   // Öffnen der Ansicht geholt.
   const artefakte = useArtefakte(messageId, true);
 
-  // Der angesprungene Schritt trägt seine Nachricht mit sich, und beim Wechsel
-  // fällt er weg. **Diese Komponente wird beim Blättern nicht neu aufgebaut** —
-  // nur ihre Kinder tragen ein `key`. Ohne das Zurücksetzen klappte der
-  // Eigenschaftenblock der nächsten Nachricht von selbst auf, und wer später
-  // zur ersten zurückkehrt, spränge dort ein zweites Mal.
-  //
-  // Zurückgesetzt wird beim Rendern und nicht in einem Effekt: Es ist ein
-  // Zustand, der sich aus einer Eigenschaft ergibt (`react.dev`, *adjusting
-  // state when a prop changes*), und ein Effekt dafür löste eine zweite
-  // Renderrunde aus.
-  const [sprung, setSprung] = useState<(Sprungziel & { messageId: string }) | null>(null);
-  if (sprung !== null && sprung.messageId !== messageId) {
-    setSprung(null);
-  }
-
   return (
     <section
       aria-labelledby={titelId}
@@ -177,19 +162,17 @@ export function NachrichtDetail({
             messageId={anfrage.data.messageId}
             anzahl={anfrage.data.bamAnzahl}
           />
+          {/*
+            **`key`: Der Aufklappzustand jeder Zeile fällt beim Nachrichtenwechsel
+            über den Baum weg**, nicht über einen Effekt (E‑226). Diese
+            Komponente selbst wird beim Blättern nicht neu aufgebaut — nur ihre
+            Kinder tragen ein `key`, jedes mit eigenem Präfix
+            (`verkettung.md` §8.12).
+          */}
           <Ablauf
+            key={`ablauf-${anfrage.data.messageId}`}
             detail={anfrage.data}
             artefakte={artefakte}
-            sprung={sprung}
-            aufSprung={(position) =>
-              setSprung((bisher) => ({
-                messageId,
-                position,
-                // Die laufende Nummer, damit derselbe Schritt zweimal
-                // hintereinander zweimal wirkt.
-                nummer: (bisher?.nummer ?? 0) + 1,
-              }))
-            }
           />
           {/*
             **Die Kette steht seit dem 21.09.2026 unter der ganzen Zeitleiste**
@@ -217,18 +200,26 @@ export function NachrichtDetail({
 }
 
 /**
- * **Der Ablauf einer Nachricht: die Zeitleiste, ihre Ziele und die technischen
- * Eigenschaften darunter** — seit dem 18.08.2026 eine Einheit statt dreier
- * gleichrangiger Listen derselben Sache.
+ * **Der Ablauf einer Nachricht: die technischen Eigenschaften der Nachricht,
+ * darunter die Zeitleiste mit ihren Zielen und den Eigenschaften je Schritt** —
+ * seit dem 18.08.2026 eine Einheit statt gleichrangiger Listen derselben Sache.
  *
  * ## Was hier steht, und in welcher Reihenfolge
  *
  * | | |
  * |---|---|
- * | **Technische Eigenschaften** | seit dem 21.09.2026 **über** der Leiste (§10.16), nach Schritt gruppiert und aus der Leiste anspringbar |
- * | **Eingang** | alles auf Schritt `0` — seit dem 19.08.2026 das Paar des Lesedienstes, Datei und Protokoll (M73). Schritt `0` hängt an keinem Ablaufschritt und steht deshalb **über** der Leiste |
- * | **Zeitleiste** | je Schritt Name, Balken, Dauer — und die Artefakte, die auf ihm liegen |
- * | **Ohne Schritt in der Zeitleiste** | der Rest. Gemessen leer (M57, Befund 1), gebaut, damit kein Artefakt lautlos verschwindet |
+ * | **Technische Eigenschaften** | seit dem 21.09.2026 **über** der Leiste und nur noch die allgemeinen Angaben zur Nachricht — `position === 0` und Name beginnt mit `Message.` (E‑219, E‑224) |
+ * | **Eingang** | alles auf Schritt `0`: das Paar des Lesedienstes, Datei und Protokoll (M73), und seit dem 21.09.2026 die übrigen Eigenschaften von Schritt `0`. Schritt `0` hängt an keinem Ablaufschritt und steht deshalb **über** der Leiste |
+ * | **Zeitleiste** | je Schritt Name, Balken, Dauer, die Artefakte, die auf ihm liegen — und aufklappbar seine Eigenschaften |
+ * | **Ohne Schritt in der Zeitleiste** | der Rest, Artefakte wie Eigenschaften. Gemessen leer (M57, Befund 1), gebaut, damit nichts lautlos verschwindet |
+ *
+ * ## Die Eigenschaften kommen mit dem Detail (E‑220)
+ *
+ * Sie hängen an der Zeitleiste, und die steht immer da. **Eingeteilt wird an
+ * genau einer Stelle**, `../detail.ts` `verteileEigenschaften`; diese Komponente
+ * reicht die vier Teile nur weiter. Solange die Antwort aussteht oder wenn die
+ * Abfrage scheitert, ist die Einteilung `undefined` — dann ist nichts
+ * aufklappbar, und die Leiste steht trotzdem (E‑221, E‑224).
  *
  * ## Warum die Dateien keinen eigenen Block mehr haben
  *
@@ -239,30 +230,35 @@ export function NachrichtDetail({
  * Umsetzung: Entscheidung 6 entstand, bevor M57 zeigte, dass Artefakte **am
  * Schritt** hängen (`docs/rohdaten.md` §3).
  *
- * **Die technischen Eigenschaften bleiben ein eigener Block**, und die
- * Trennlinie ist nicht „gehört zum Schritt oder nicht", sondern **„ein Ziel oder
- * ein Textblock"**: Dateien sind null bis zwei Verweise je Schritt,
- * Eigenschaften rund 23 Schlüssel-Wert-Paare je Nachricht (M44). Zwei Ziele
- * passen in eine Schrittzeile, zehn Wertepaare sprengen sie.
+ * > **Abgelöst am 21.09.2026.** Hier stand: *„Die technischen Eigenschaften
+ * > bleiben ein eigener Block … zwei Ziele passen in eine Schrittzeile, zehn
+ * > Wertepaare sprengen sie."* Sie sprengen die **Zeile** weiterhin — deshalb
+ * > stehen sie nicht in ihr, sondern aufklappbar **unter** ihr.
  */
 function Ablauf({
   detail,
   artefakte,
-  sprung,
-  aufSprung,
 }: {
   detail: Nachrichtendetail;
   artefakte: ReturnType<typeof useArtefakte>;
-  sprung: Sprungziel | null;
-  aufSprung: (position: number) => void;
 }) {
   const texte = useTexte();
   const bausteine = texte.nachrichten.detail.dateien;
 
-  // Beschriftet wird mit der Schrittfolge, die ohnehin im Baum liegt — dieselbe
-  // Verbindung, aus der die Gruppenköpfe des Eigenschaftenblocks entstehen
-  // (17.08.2026). **Keine zweite Anfrage.**
+  // Beschriftet wird mit der Schrittfolge, die ohnehin im Baum liegt.
+  // **Keine zweite Anfrage.**
   const ziele = zieleJeSchritt(artefakte.data, detail.schritte, texte);
+
+  // Mit dem Detail geholt, nicht erst beim Aufklappen — und bei
+  // `eigenschaftenAnzahl === 0` gar nicht (E‑220).
+  const eigenschaften = useEigenschaften(detail.messageId, detail.eigenschaftenAnzahl > 0);
+  const verteilung = useMemo(
+    () =>
+      eigenschaften.data === undefined
+        ? undefined
+        : verteileEigenschaften(eigenschaften.data, detail.schritte),
+    [eigenschaften.data, detail.schritte],
+  );
 
   return (
     <>
@@ -273,19 +269,10 @@ function Ablauf({
         Kette.
       */}
       <EigenschaftenBlock
-        // Beim Blättern zwischen Nachrichten beginnt der Block wieder
-        // eingeklappt. `key` mit eigenem Präfix, wie bei den Nachbarn:
-        // Geschwister mit demselben Schlüssel wären für React derselbe Platz im
-        // Baum (`verkettung.md` §8.12).
-        key={`eigenschaften-${detail.messageId}`}
-        messageId={detail.messageId}
         anzahl={detail.eigenschaftenAnzahl}
-        // Nur zum Beschriften der Gruppen (17.08.2026). Es ist dieselbe Liste,
-        // aus der die Zeitleiste darunter entsteht — genau deshalb stehen die
-        // Gruppen in derselben Reihenfolge und tragen wortgleich dieselben
-        // Namen.
-        schritte={detail.schritte}
-        sprung={sprung}
+        allgemein={verteilung?.allgemein}
+        fehler={eigenschaften.error}
+        aufWiederholen={() => void eigenschaften.refetch()}
       />
 
       {/*
@@ -301,22 +288,21 @@ function Ablauf({
           beschriftung={bausteine.eingang}
           hinweis={bausteine.eingangHinweis}
           ziele={ziele.get(METADATEN_POSITION) ?? []}
+          eigenschaften={
+            verteilung === undefined || verteilung.eingang.length === 0
+              ? []
+              : [{ position: METADATEN_POSITION, eintraege: verteilung.eingang }]
+          }
         />
 
-        <Zeitleiste
-          detail={detail}
-          ziele={ziele}
-          // Ohne Eigenschaften gibt es unten keinen Block, und dann bleiben die
-          // Schrittnamen Text. Ein Weg, der ins Leere führte, wäre schlechter
-          // als keiner — dieselbe Regel, aus der der Block dort einen Satz statt
-          // eines Schalters zeigt.
-          aufSchritt={detail.eigenschaftenAnzahl === 0 ? undefined : aufSprung}
-        />
+        <Zeitleiste detail={detail} ziele={ziele} eigenschaften={verteilung} />
 
         <Zielzeile
           messageId={detail.messageId}
           beschriftung={bausteine.ohneZeile}
           ziele={zieleOhneZeile(ziele, detail.schritte)}
+          eigenschaften={verteilung?.ohneZeile ?? []}
+          mitUeberschrift
         />
       </div>
 

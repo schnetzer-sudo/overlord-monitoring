@@ -782,7 +782,19 @@ export const de = {
 
       eigenschaften: {
         titel: "Technische Eigenschaften ({anzahl})",
+        // Solange die Eigenschaften laden: dieselbe Überschrift ohne Zahl. Die
+        // Zahl ist seit dem 21.09.2026 die Zeilenzahl der allgemeinen Angaben
+        // und erscheint erst mit den Daten — keine erfundene Null (E‑224).
+        titelOhneZahl: "Technische Eigenschaften",
         keine: "Keine technischen Eigenschaften",
+        // Die Nachricht HAT Eigenschaften, nur keine mit `Message.` auf
+        // Schritt 0. Der Satz darf deshalb nicht behaupten, es gäbe keine.
+        keineAllgemeinen:
+          "Keine allgemeinen Angaben zur Nachricht — die technischen Eigenschaften stehen an ihren Schritten in der Zeitleiste.",
+        // Hinter dem sichtbaren Namen einer aufklappbaren Zeile der Zeitleiste,
+        // nur für Vorleseprogramme: Der zugängliche Name beginnt mit dem
+        // sichtbaren (WCAG 2.5.3), der Zustand liegt allein in aria-expanded.
+        anZeile: "technische Eigenschaften",
         aufklappen: "Technische Eigenschaften anzeigen",
         zuklappen: "Technische Eigenschaften ausblenden",
         name: "Name",
@@ -792,20 +804,14 @@ export const de = {
         // als ganze.
         gekappt: "gekürzt",
         gekapptHinweis: "Gekürzt — im Original {bytes} Bytes.",
-        leer: "Zu dieser Nachricht ist keine Eigenschaft hinterlegt.",
-        // Der Kopf einer Gruppe (Nacharbeit vom 17.08.2026): Schrittname und
-        // Anzahl. Die Zahl steht in der Sprachdatei und nicht im JSX, weil
-        // Klammern und Wortstellung Sache der Übersetzung sind.
-        gruppe: "{name} ({anzahl})",
-        // Die Gruppe zu `position === 0`. Sie sagt, **wo** die Werte hängen — an
-        // der Nachricht statt an einem Schritt — und behauptet nichts über ihren
-        // Inhalt. „Metadaten der Nachricht" oder „Allgemeine Angaben" wären
-        // genau das: Dass dort *ausschließlich* die `Message.*`-Familie steht,
-        // ist nicht gemessen. Gemessen ist die Gegenrichtung — die
-        // `Message.*`-Familie steht ausnahmslos dort (M17 3).
-        gruppeNachricht: "Nachricht",
-        // Eine Position, zu der kein Schritt geliefert wurde. Kein erfundener
-        // Name: Die Nummer ist das einzige, was über sie bekannt ist.
+        // Bis zum 21.09.2026 standen hier `gruppe` („{name} ({anzahl})") und
+        // `gruppeNachricht` („Nachricht") für die Gruppenköpfe des Blocks. Die
+        // Gruppierung ist entfallen: Die Eigenschaften stehen unter ihrem
+        // Schritt in der Zeitleiste (docs/nachrichtendetail.md §10.16).
+        //
+        // Eine Position, zu der kein Schritt geliefert wurde — oder deren
+        // Schritt keinen Namen trägt. Kein erfundener Name: Die Nummer ist das
+        // einzige, was über sie bekannt ist.
         gruppeSchritt: "Schritt {nummer}",
       },
 
@@ -849,11 +855,6 @@ export const de = {
         // Zeichen; das hier ist der Name für Vorleseprogramme.
         ziel: "{art} · {name}",
         zielAusschnitt: "{ziel} — {marke}",
-        // Der Weg von einer Zeile der Zeitleiste zu ihrer Gruppe im
-        // Eigenschaftenblock. Der sichtbare Schrittname steht darin, wie es
-        // WCAG 2.5.3 für den zugänglichen Namen verlangt.
-        zuEigenschaften: "Technische Eigenschaften zu {name} anzeigen",
-
         // Die Ankündigung am Ziel. Sie steht dort, damit der Nutzer es vor dem
         // Öffnen weiß, statt beim Öffnen überrascht zu werden.
         ausschnittMarke: "Ausschnitt",

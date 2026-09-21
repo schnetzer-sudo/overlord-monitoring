@@ -3,9 +3,16 @@
 import Link from "next/link";
 import { FileText, ScrollText } from "lucide-react";
 
+import { einsetzen } from "@/i18n";
+import { useTexte } from "@/i18n/provider";
 import { artefaktAnsicht } from "@/lib/routen";
+import { cn } from "@/lib/utils";
 
+import type { Eigenschaft } from "../api";
+import { zusatzzeile, type EigenschaftenOhneZeile } from "../detail";
 import type { Artefaktziel } from "../rohdaten";
+import { AufklappZeile } from "./aufklapp-zeile";
+import { EigenschaftenListe } from "./eigenschaft-zeile";
 
 /**
  * **Die Ziele an einer Zeile** — ein Zeichen je Artefakt, sonst nichts.
@@ -42,7 +49,16 @@ import type { Artefaktziel } from "../rohdaten";
  * der vier benannten Texte (`docs/rohdaten.md` §8). Ein ausgegrautes Ziel wäre
  * eine Aussage, die das Backend nicht gemacht hat.
  */
-export function Ziele({ messageId, ziele }: { messageId: string; ziele: Artefaktziel[] }) {
+export function Ziele({
+  messageId,
+  ziele,
+  className,
+}: {
+  messageId: string;
+  ziele: Artefaktziel[];
+  /** An der aufklappbaren Zeile `pointer-events-auto` (`aufklapp-zeile.tsx`). */
+  className?: string;
+}) {
   if (ziele.length === 0) {
     return null;
   }
@@ -50,7 +66,7 @@ export function Ziele({ messageId, ziele }: { messageId: string; ziele: Artefakt
   return (
     // `shrink-0`: Die Ziele geben keine Breite ab. Was bei wenig Platz weicht,
     // ist der gekürzte Name daneben — die Regel aus `nachrichtenliste.md` §8.1.
-    <span className="flex shrink-0 items-center gap-0.5">
+    <span className={cn("flex shrink-0 items-center gap-0.5", className)}>
       {ziele.map((ziel) => (
         <Ziel key={ziel.artefaktId} messageId={messageId} ziel={ziel} />
       ))}
@@ -90,41 +106,99 @@ function Ziel({ messageId, ziel }: { messageId: string; ziel: Artefaktziel }) {
 }
 
 /**
- * **Eine Zeile für Artefakte, die zu keinem Schritt der Zeitleiste gehören.**
+ * **Eine Zeile für das, was zu keinem Schritt der Zeitleiste gehört.**
  *
  * Zwei Aufrufer, und beide brauchen genau dieselbe Gestalt:
  *
  * | Zeile | Was darin hängt |
  * |---|---|
- * | **Eingang**, über der Zeitleiste | alles auf Schritt `0` — seit dem 19.08.2026 das Paar des Lesedienstes, Datei und Protokoll (M57, M73) |
- * | **Ohne Schritt in der Zeitleiste**, darunter | der Rest, den es gemessen nicht gibt (M57, Befund 1) |
+ * | **Eingang**, über der Zeitleiste | alles auf Schritt `0` — das Paar des Lesedienstes (M57, M73) und seit dem 21.09.2026 die Eigenschaften von Schritt `0`, die nicht mit `Message.` beginnen |
+ * | **Ohne Schritt in der Zeitleiste**, darunter | der Rest, den es gemessen nicht gibt (M57, Befund 1) — Artefakte wie Eigenschaften |
  *
  * **Gestrichelte Kontur statt durchgezogener** — dasselbe Vokabular wie die
  * erwartete Zeile am Ende der Zeitleiste (`zeitleiste.tsx`): Was gestrichelt
  * ist, ist kein ausgeführter Schritt. Kein Balken, keine Dauer, keine Farbe;
  * eine Farbrolle gehört den Statusaussagen (`docs/visuelles-konzept.md` §3).
+ *
+ * ## Seit dem 21.09.2026 trägt sie auch Eigenschaften (E‑222, E‑223)
+ *
+ * **Es gibt die Zeile, wenn dort ein Artefakt oder eine Eigenschaft liegt;
+ * aufklappbar ist sie nur mit Eigenschaften** (`../detail.ts` `zusatzzeile`).
+ * Erscheint der Eingang erst mit den Eigenschaften, rutscht die Leiste einmal
+ * nach unten — hingenommen und nicht mit einem Platzhalter kaschiert.
+ *
+ * @param eigenschaften je Position ein Eintrag. Der Eingang reicht genau einen
+ *   ohne Überschrift; der Rest je Position einen, und jeder trägt dann den
+ *   Rückfall *Schritt N* — **kein erfundener Name**.
  */
 export function Zielzeile({
   messageId,
   beschriftung,
   hinweis,
   ziele,
+  eigenschaften = [],
+  mitUeberschrift = false,
 }: {
   messageId: string;
   beschriftung: string;
   hinweis?: string;
   ziele: Artefaktziel[];
+  eigenschaften?: readonly EigenschaftenOhneZeile[];
+  mitUeberschrift?: boolean;
 }) {
-  if (ziele.length === 0) {
+  const texte = useTexte();
+  const anzahl = eigenschaften.reduce((summe, teil) => summe + teil.eintraege.length, 0);
+  const lage = zusatzzeile(ziele.length, anzahl);
+
+  if (!lage.vorhanden) {
     return null;
   }
 
   return (
-    <div className="border-border text-muted-foreground min-h-zeile flex items-center gap-2 border-l-2 border-dashed pl-2">
-      <span className="text-beiwerk min-w-0 flex-1 truncate" title={hinweis}>
-        {beschriftung}
-      </span>
-      <Ziele messageId={messageId} ziele={ziele} />
+    <AufklappZeile
+      als="div"
+      gestrichelt
+      zeilenklasse="min-h-zeile text-muted-foreground"
+      namensklasse="text-beiwerk"
+      name={beschriftung}
+      hinweis={hinweis}
+      zieleAnzahl={ziele.length}
+      zieleKnoten={<Ziele messageId={messageId} ziele={ziele} className="pointer-events-auto" />}
+    >
+      {lage.aufklappbar ? (
+        <div className="flex min-w-0 flex-col gap-2">
+          {eigenschaften.map((teil) => (
+            <Teil
+              key={teil.position}
+              eintraege={teil.eintraege}
+              ueberschrift={
+                mitUeberschrift
+                  ? einsetzen(texte.nachrichten.detail.eigenschaften.gruppeSchritt, {
+                      nummer: teil.position,
+                    })
+                  : null
+              }
+            />
+          ))}
+        </div>
+      ) : null}
+    </AufklappZeile>
+  );
+}
+
+function Teil({
+  eintraege,
+  ueberschrift,
+}: {
+  eintraege: readonly Eigenschaft[];
+  ueberschrift: string | null;
+}) {
+  return (
+    <div className="flex min-w-0 flex-col">
+      {ueberschrift === null ? null : (
+        <p className="text-muted-foreground text-beiwerk font-medium">{ueberschrift}</p>
+      )}
+      <EigenschaftenListe eintraege={eintraege} />
     </div>
   );
 }

@@ -30,7 +30,13 @@ import { neuerZwischenspeicher, rendere } from "./hilfe/rendern";
  * | Drei Lagen je Schritt | Beide Arten, nur eine, keine — welche Zeile welches Ziel trägt, entscheidet das Markup und keine Funktion |
  * | Der Eingang | **Die Zeitleiste führt Schritt `0` nicht** (`docs/nachrichtendetail.md` §4), die Artefakte liegen aber dort. Dass sie trotzdem erreichbar sind, ist eine Aussage über Anwesenheit an einer Stelle, an der es keine Zeile gibt |
  * | Fünfzehn Artefakte | Die Belastungsprobe aus M55 — fünfzehn eigene Ziele, **kein doppelter React-Schlüssel** |
- * | Das Anspringen | Der Klick auf einen Schritt klappt den Eigenschaftenblock auf und setzt den Fokus auf **seine** Gruppe. Fokus ist ein Zustand des Dokuments |
+ * | Das Aufklappen *(21.09.2026)* | Ein Klick auf die Zeile schaltet **genau einmal**, ein Klick auf ein Ziel **nicht** — das Ziel ist kein Nachfahre der Schaltfläche. `aria-expanded`, `aria-controls` und `inert` sind Zustand des Dokuments |
+ * | Schritt ohne Eigenschaften | **kein `button`** — eine Aussage über Abwesenheit |
+ * | Bewegung mit Ausschalter | die Regel **ist** eine Klasse, wie beim Ansichtsumschalter |
+ * | Eingang und Rest | die Zeile gibt es mit Eigenschaften ohne Ziele und umgekehrt; der Rest mit Eigenschaften ist von Hand nie zu sehen (M57, Befund 1) |
+ *
+ * **Die vier Sprungfälle vom 18.08.2026 sind am 21.09.2026 entfallen** — samt der
+ * Mechanik, die sie belegten (E‑225, `docs/nachrichtendetail.md` §10.16).
  *
  * **Kein Testdatensatz enthält echten Dateiinhalt**, keinen echten Partner,
  * keinen echten Knoten, keine echte Kennung. Alles hier ist erfunden.
@@ -165,17 +171,12 @@ afterEach(() => {
 async function rendereDetail(
   werte: Partial<Nachrichtendetail>,
   liste: Artefaktliste,
-  eigenschaften: Eigenschaft[] | null = [],
+  eigenschaften: Eigenschaft[] = [],
 ) {
   const zwischenspeicher = neuerZwischenspeicher();
   zwischenspeicher.setQueryData(NACHRICHTEN_SCHLUESSEL.detail(MESSAGE_ID), detail(werte));
   zwischenspeicher.setQueryData(NACHRICHTEN_SCHLUESSEL.dateien(MESSAGE_ID), liste);
-  // `null` heißt **kalter Zwischenspeicher**: Die Eigenschaften sind beim Klick
-  // noch nicht da, und die Abfrage dafür läuft ins Leere (der `fetch`-Rumpf
-  // löst nie auf). Genau die Lage, in der ein Sprung warten muss.
-  if (eigenschaften !== null) {
-    zwischenspeicher.setQueryData(NACHRICHTEN_SCHLUESSEL.eigenschaften(MESSAGE_ID), eigenschaften);
-  }
+  zwischenspeicher.setQueryData(NACHRICHTEN_SCHLUESSEL.eigenschaften(MESSAGE_ID), eigenschaften);
 
   return rendere(
     <NachrichtDetail
@@ -188,69 +189,30 @@ async function rendereDetail(
   );
 }
 
-/**
- * Ein `fetch`, das **nie antwortet** — der kalte Zwischenspeicher.
- *
- * Der Rumpf aus `beforeEach` weist jede Anfrage ab; das ist für die übrigen
- * Fälle richtig, hier aber falsch: Eine abgewiesene Abfrage ist fertig, und
- * gebraucht wird eine, die **läuft**.
- */
-function anfrageHaengt(): void {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn((eingabe: RequestInfo | URL) => {
-      anfragen.push(String(eingabe));
-      return new Promise<Response>(() => undefined);
-    }),
-  );
-}
-
-/**
- * Die Antwort auf die laufende Abfrage — **und der Makrotask danach.**
- *
- * TanStack Query bündelt seine Benachrichtigungen und stellt sie in die
- * Aufgabenschlange. Ohne diesen Durchlauf bliebe der Baum im Ladezustand
- * stehen, obwohl im Zwischenspeicher längst Daten liegen — ein Mikrotask
- * genügt dafür nicht.
- */
-async function antwortTrifftEin(
-  zwischenspeicher: ReturnType<typeof neuerZwischenspeicher>,
-  eigenschaften: Eigenschaft[],
-): Promise<void> {
-  await act(async () => {
-    zwischenspeicher.setQueryData(NACHRICHTEN_SCHLUESSEL.eigenschaften(MESSAGE_ID), eigenschaften);
-    await new Promise((fertig) => setTimeout(fertig, 0));
-  });
-}
-
-/** Ein Klick, wie ihn die meisten Browser auslösen: Er setzt vorher den Fokus. */
 async function klicke(element: Element | null | undefined): Promise<void> {
   expect(element).toBeTruthy();
   await act(async () => {
-    (element as HTMLElement).focus();
     element?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 }
 
-/**
- * Ein Klick, der den Fokus **nicht** mitnimmt.
- *
- * Das ist kein erfundener Fall: Safari auf macOS fokussiert eine Schaltfläche
- * beim Klicken nicht. Wer sich darauf verlässt, dass ein Klick den Fokus
- * bewegt, baut eine Regel, die auf einem Drittel der Geräte nicht greift —
- * deshalb prüft dieser Weg die Regel, die ohne den Fokus auskommt.
- */
-async function klickeOhneFokus(element: Element | null | undefined): Promise<void> {
-  expect(element).toBeTruthy();
-  await act(async () => {
-    element?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-  });
+/** Die gestrichelte Zeile über der Leiste — der ganze Eintrag, samt Zielen und Inhalt. */
+function eingangszeile(behaelter: HTMLElement): Element | undefined {
+  return [...behaelter.querySelectorAll("div.border-dashed")].find((kasten) =>
+    (kasten.textContent ?? "").startsWith(DATEIEN.eingang),
+  );
 }
 
 /** Die Zeilen der Zeitleiste samt der Ziele, die an ihnen hängen. */
 function zeilen(behaelter: HTMLElement): { name: string; ziele: string[] }[] {
   return [...behaelter.querySelectorAll("ol > li")].map((zeile) => ({
-    name: (zeile.querySelector("button, span")?.textContent ?? "").trim(),
+    // Der Name ist das erste `span` der Zeile — in der Schaltfläche wie im
+    // Text. Was dahinter nur für Vorleseprogramme steht, zählt hier nicht mit.
+    name: [...(zeile.querySelector("span")?.childNodes ?? [])]
+      .filter((knoten) => knoten.nodeType === Node.TEXT_NODE)
+      .map((knoten) => knoten.textContent ?? "")
+      .join("")
+      .trim(),
     ziele: [...zeile.querySelectorAll("a")].map(
       (verweis) => verweis.querySelector(".sr-only")?.textContent ?? "",
     ),
@@ -312,9 +274,7 @@ describe("Die Ziele an der Zeitleiste", () => {
     const { behaelter, abbauen } = await rendereDetail({ schritte: SCHRITTE }, LISTE);
 
     try {
-      const eingang = [...behaelter.querySelectorAll("div")].find(
-        (kasten) => kasten.firstElementChild?.textContent === DATEIEN.eingang,
-      );
+      const eingang = eingangszeile(behaelter);
       expect(eingang).toBeDefined();
 
       expect(
@@ -421,17 +381,19 @@ describe("Die Ziele an der Zeitleiste", () => {
   });
 
   /**
-   * **Der Weg von der Zeitleiste zu den technischen Eigenschaften.**
+   * **Ein Klick auf die Zeile schaltet genau einmal, ein Klick auf ein Ziel
+   * nicht** (`docs/nachrichtendetail.md` §10.16).
    *
-   * Ein Klick auf einen Schritt klappt den Block auf und setzt den Fokus auf
-   * **seine** Gruppe. Beides ist Zustand des Dokuments und in keiner Funktion
-   * belegbar: `aria-expanded` am Schalter und `document.activeElement`.
+   * Die Schaltfläche spannt die ganze Zeile, die Ziele liegen als Geschwister
+   * darüber — nicht in ihr, das wäre verschachtelte Bedienung. Dass ein Klick auf
+   * ein Ziel die Zeile nicht mitschaltet, ist eine Aussage über den **Baum**: Das
+   * Ziel ist kein Nachfahre der Schaltfläche, also erreicht sein Klick sie nicht.
    *
-   * Es entsteht dabei **kein neuer Block und keine Duplizierung** — die
-   * Gruppierung nach Schritt besteht seit dem 17.08.2026, es fehlte nur der Weg
-   * dorthin.
+   * Der Zustand liegt allein in `aria-expanded`; `aria-controls` zeigt in beiden
+   * Zuständen auf den eingehängten Inhalt, und der zugängliche Name beginnt mit
+   * dem sichtbaren Schrittnamen (WCAG 2.5.3). Der `title` bleibt die Herkunft.
    */
-  it("springt aus der Zeitleiste in die Eigenschaftengruppe desselben Schritts", async () => {
+  it("schaltet die Zeile mit einem Klick genau einmal — und mit einem Klick auf ein Ziel gar nicht", async () => {
     const { behaelter, abbauen } = await rendereDetail(
       { schritte: SCHRITTE, eigenschaftenAnzahl: EIGENSCHAFTEN.length },
       LISTE,
@@ -439,25 +401,64 @@ describe("Die Ziele an der Zeitleiste", () => {
     );
 
     try {
-      const schalter = [...behaelter.querySelectorAll("ol > li button")];
-      expect(schalter).toHaveLength(3);
-      // Der sichtbare Name steht im zugänglichen Namen (WCAG 2.5.3).
-      expect(schalter[1]?.getAttribute("aria-label")).toBe(
-        DATEIEN.zuEigenschaften.replace("{name}", "Datei versendet"),
+      const zeile = behaelter.querySelectorAll("ol > li")[0];
+      const schalter = zeile.querySelector("button");
+      expect(schalter?.textContent?.startsWith("Datei konvertiert")).toBe(true);
+      expect(schalter?.getAttribute("title")).toBe(
+        "Datei konvertiert\nBaustein: ERFUNDEN_BAUSTEIN\nName aus der Ablaufdefinition",
       );
+      expect(schalter?.getAttribute("aria-expanded")).toBe("false");
 
+      const inhalt = behaelter.querySelector<HTMLElement>(
+        `[id="${schalter?.getAttribute("aria-controls")}"]`,
+      );
+      expect(inhalt).not.toBeNull();
+      expect(zeile.contains(inhalt)).toBe(true);
+      expect(inhalt?.hasAttribute("inert")).toBe(true);
+
+      // Die Ziele sind Geschwister der Schaltfläche, keine Nachfahren.
+      const ziele = [...zeile.querySelectorAll("a")];
+      expect(ziele).toHaveLength(2);
+      expect(ziele.some((ziel) => schalter?.contains(ziel))).toBe(false);
+
+      // `jsdom` kann nicht navigieren und meldete es sonst. Mit gedrückter
+      // Strg-Taste überlässt `next/link` den Klick dem Browser, und
+      // `preventDefault` am Verweis selbst nimmt `jsdom` die Navigation ab. Am
+      // Weg des Ereignisses durch den Baum ändert beides nichts — und nur um
+      // den geht es hier.
+      ziele[0].addEventListener("click", (ereignis) => ereignis.preventDefault());
       await act(async () => {
-        schalter[1]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        ziele[0].dispatchEvent(
+          new MouseEvent("click", { bubbles: true, cancelable: true, ctrlKey: true }),
+        );
       });
+      expect(schalter?.getAttribute("aria-expanded")).toBe("false");
 
-      const block = behaelter.querySelector('[aria-expanded="true"]');
-      expect(block).not.toBeNull();
+      await klicke(schalter);
+      expect(schalter?.getAttribute("aria-expanded")).toBe("true");
+      expect(inhalt?.hasAttribute("inert")).toBe(false);
+      expect([...(inhalt?.querySelectorAll("ul > li") ?? [])].map((z) => z.textContent)).toEqual([
+        "Converter.TypeERFUNDEN",
+      ]);
 
-      // Der Fokus sitzt auf dem Abschnitt zu Schritt 2 — und der trägt die
-      // Überschrift, die eine Zeile darüber in der Zeitleiste steht.
-      const fokussiert = document.activeElement as HTMLElement | null;
-      expect(fokussiert?.tagName).toBe("SECTION");
-      expect(fokussiert?.querySelector("h3")?.textContent).toContain("Datei versendet");
+      // Offen trägt der Abschnitt die Akzentlinie und der Name die Akzentfarbe —
+      // Anwendungszustand, keine Statusaussage; Strichbreite und Art bleiben.
+      expect(zeile.classList.contains("border-akzent-schrift")).toBe(true);
+      expect(zeile.classList.contains("border-l-2")).toBe(true);
+      expect(zeile.classList.contains("border-dashed")).toBe(false);
+
+      // Die Zeilen sind unabhängig: Die zweite bleibt zu, und sie lässt sich
+      // dazu öffnen, ohne dass die erste zufällt.
+      const zweite = behaelter.querySelectorAll("ol > li")[1].querySelector("button");
+      expect(zweite?.getAttribute("aria-expanded")).toBe("false");
+      await klicke(zweite);
+      expect(zweite?.getAttribute("aria-expanded")).toBe("true");
+      expect(schalter?.getAttribute("aria-expanded")).toBe("true");
+
+      await klicke(schalter);
+      expect(schalter?.getAttribute("aria-expanded")).toBe("false");
+      expect(inhalt?.hasAttribute("inert")).toBe(true);
+      expect(zeile.classList.contains("border-akzent-schrift")).toBe(false);
 
       expect(anfragen).toEqual([]);
     } finally {
@@ -466,134 +467,230 @@ describe("Die Ziele an der Zeitleiste", () => {
   });
 
   /**
-   * **Ein Sprung, den niemand mehr will, kommt nicht nach.**
+   * **Aufklappbar ist nur, was Inhalt hat** (E‑221). Schritt 3 trägt keine
+   * Eigenschaft — gemessen möglich, `MessageActionID = 502` steht in
+   * `MessageAction` und fehlt in `MessageProperty` (M17 3). Seine Zeile bleibt
+   * Text: **kein `button`**, und damit auch kein Inhalt, der sich öffnen ließe.
    *
-   * Bei kaltem Zwischenspeicher liegt zwischen Klick und Gruppe die Abfrage —
-   * in dieser Umgebung Sekunden, weil jede Anfrage die Sitzung schreibt. Wer in
-   * der Wartezeit von Hand zuklappt, hat den Sprung aufgegeben. Ohne die Regel
-   * käme er beim nächsten Aufklappen nach, Minuten später und ohne Anlass, und
-   * risse den Nutzer aus dem heraus, was er inzwischen liest.
-   *
-   * Der Fall ist im Baum und nirgends sonst belegbar: Er besteht aus einer
-   * Reihenfolge von Betätigungen und endet auf `document.activeElement`.
+   * Die Gegenprobe steht daneben: Ohne jede Eigenschaft ist keine Zeile eine
+   * Schaltfläche, und es geht keine Anfrage hinaus.
    */
-  it("holt einen Sprung nicht nach, den der Nutzer beim Warten zugeklappt hat", async () => {
-    anfrageHaengt();
-    const { behaelter, zwischenspeicher, abbauen } = await rendereDetail(
+  it("macht aus einem Schritt ohne Eigenschaften keine Schaltfläche", async () => {
+    const mit = await rendereDetail(
       { schritte: SCHRITTE, eigenschaftenAnzahl: EIGENSCHAFTEN.length },
       LISTE,
-      // Kalt: Die Eigenschaften sind beim Klick noch nicht da.
-      null,
+      EIGENSCHAFTEN,
     );
 
     try {
-      const schrittSchalter = [...behaelter.querySelectorAll("ol > li button")];
-      await klicke(schrittSchalter[1]);
+      const zeilenMit = [...mit.behaelter.querySelectorAll("ol > li")];
+      expect(zeilenMit.map((zeile) => zeile.querySelector("button") !== null)).toEqual([
+        true,
+        true,
+        false,
+      ]);
+      expect(zeilenMit[2].querySelector("[inert]")).toBeNull();
+      // Keine Marke, keine Zahl, kein Pfeil an der eingeklappten Zeile.
+      expect(mit.behaelter.querySelectorAll("ol svg.lucide-chevron-right")).toHaveLength(0);
+    } finally {
+      await mit.abbauen();
+    }
 
-      // Der Block ist offen und lädt — es gibt noch nichts anzuspringen.
-      const blockSchalter = behaelter.querySelector('[aria-expanded="true"]');
-      expect(blockSchalter).not.toBeNull();
-      expect(document.activeElement).toBe(schrittSchalter[1]);
+    const ohne = await rendereDetail({ schritte: SCHRITTE, eigenschaftenAnzahl: 0 }, LISTE);
 
-      // Zuklappen und wieder aufklappen, beides von Hand — und **ohne dass der
-      // Klick den Fokus mitnimmt**, wie es Safari tut. Damit hängt der Nachweis
-      // an der Regel „Zuklappen erledigt den Sprung" und nicht am Fokusvergleich
-      // daneben.
-      await klickeOhneFokus(blockSchalter);
-      await klickeOhneFokus(behaelter.querySelector('[aria-expanded="false"]'));
+    try {
+      expect(zeilen(ohne.behaelter).map((zeile) => zeile.name)).toEqual([
+        "Datei konvertiert",
+        "Datei versendet",
+        "Bestätigung verarbeitet",
+      ]);
+      expect(ohne.behaelter.querySelectorAll("ol button")).toHaveLength(0);
+      expect(anfragen).toEqual([]);
+    } finally {
+      await ohne.abbauen();
+    }
+  });
 
-      // Erst jetzt trifft die Antwort ein.
-      await antwortTrifftEin(zwischenspeicher, EIGENSCHAFTEN);
+  /**
+   * **Der zugeklappte Inhalt ist `inert`, und die Bewegung trägt ihren
+   * Ausschalter** (E‑228). Belegt über Attribut und Klassen, wie beim
+   * Ansichtsumschalter: `jsdom` rechnet weder Layout noch Übergänge, und die
+   * Regel *ist* die Klasse. Dazu die beiden Farbübergänge an Linie und Name —
+   * und dass an der Schaltfläche selbst **kein** Übergang hängt: Das Überfahren
+   * bewegt nichts.
+   */
+  it("hält den zugeklappten Inhalt der Zeile inert und gibt jeder Bewegung ihren Ausschalter", async () => {
+    const { behaelter, abbauen } = await rendereDetail(
+      { schritte: SCHRITTE, eigenschaftenAnzahl: EIGENSCHAFTEN.length },
+      LISTE,
+      EIGENSCHAFTEN,
+    );
 
-      // Die Gruppen stehen da — aber der Fokus ist geblieben, wo der Nutzer ihn
-      // zuletzt selbst hingesetzt hat.
-      expect(behaelter.querySelectorAll("section h3").length).toBeGreaterThan(0);
-      expect((document.activeElement as HTMLElement | null)?.tagName).not.toBe("SECTION");
-      expect(document.activeElement).toBe(schrittSchalter[1]);
+    try {
+      const zeile = behaelter.querySelectorAll("ol > li")[0];
+      const schalter = zeile.querySelector("button");
+      const spur = zeile.querySelector('[data-aufklappen="spur"]');
+      const blende = zeile.querySelector('[data-aufklappen="inhalt"]');
+
+      expect(spur?.querySelector("[inert]")).not.toBeNull();
+      for (const klasse of [
+        "transition-[grid-template-rows]",
+        "duration-[220ms]",
+        "ease-[cubic-bezier(0.2,0,0,1)]",
+        "motion-reduce:transition-none",
+      ]) {
+        expect(spur?.classList.contains(klasse), klasse).toBe(true);
+      }
+      expect(blende?.classList.contains("motion-reduce:transition-none")).toBe(true);
+
+      // Linie und Name wechseln die Farbe in denselben 220 ms.
+      for (const element of [zeile, schalter?.querySelector("span")]) {
+        expect(element?.classList.contains("duration-[220ms]")).toBe(true);
+        expect(element?.classList.contains("motion-reduce:transition-none")).toBe(true);
+      }
+      expect(zeile.classList.contains("transition-[border-color]")).toBe(true);
+      expect(schalter?.querySelector("span")?.classList.contains("transition-[color]")).toBe(true);
+
+      // Kein Übergang beim Überfahren: Die Hover-Fläche liegt an der
+      // Schaltfläche, und die trägt keinen.
+      expect([...(schalter?.classList ?? [])].filter((k) => k.startsWith("transition"))).toEqual(
+        [],
+      );
     } finally {
       await abbauen();
     }
   });
 
   /**
-   * **Wer in der Wartezeit weitergegangen ist, wird nicht zurückgerissen.**
+   * **Die Eingangszeile gibt es, wenn auf Schritt `0` ein Artefakt *oder* eine
+   * Eigenschaft liegt; aufklappbar ist sie nur mit Eigenschaften** (E‑222).
    *
-   * Der zweite Weg in dieselbe Lage, und er kommt ohne Zuklappen aus: Der
-   * Nutzer tabbt weiter, während die Abfrage läuft. Trifft die Antwort dann ein,
-   * risse ein Sprung ihn aus dem heraus, was er gerade tut — bei einem
-   * Vorleseprogramm mitten in der Ansage.
+   * Drei Lagen, und die mittlere ist neu: Bis zum 21.09.2026 verschwand die
+   * Zeile ohne Lesedienst ganz. Sie bleibt in jeder Lage gestrichelt, ohne
+   * Balken und ohne Dauer — und **ein `Message.*` steht nie darin**, das gehört
+   * in den Block.
    */
-  it("springt nicht, wenn der Fokus in der Wartezeit weitergewandert ist", async () => {
-    anfrageHaengt();
-    const { behaelter, zwischenspeicher, abbauen } = await rendereDetail(
+  it("zeigt den Eingang mit Eigenschaften ohne Ziele — und mit Zielen ohne Eigenschaften", async () => {
+    const aufSchrittNull: Eigenschaft[] = [
+      ...EIGENSCHAFTEN,
+      {
+        name: "SAPReader.Filename",
+        wert: "ERFUNDEN.idoc",
+        position: 0,
+        gekappt: false,
+        originalLaengeBytes: null,
+      },
+    ];
+    const ohneLesedienst: Artefaktliste = {
+      messageId: MESSAGE_ID,
+      nutzdaten: [artefakt(1, "DataWarehouse", "NUTZDATEN")],
+      protokolle: [],
+    };
+
+    // Eigenschaften ohne Ziele: Die Zeile gibt es, und sie klappt auf.
+    const nurEigenschaften = await rendereDetail(
+      { schritte: SCHRITTE, eigenschaftenAnzahl: aufSchrittNull.length },
+      ohneLesedienst,
+      aufSchrittNull,
+    );
+    try {
+      const eingang = eingangszeile(nurEigenschaften.behaelter);
+      expect(eingang).toBeDefined();
+      expect(eingang?.classList.contains("border-dashed")).toBe(true);
+      expect(eingang?.querySelectorAll("a")).toHaveLength(0);
+
+      const schalter = eingang?.querySelector("button");
+      expect(schalter?.textContent?.startsWith(DATEIEN.eingang)).toBe(true);
+      await klicke(schalter);
+      expect(schalter?.getAttribute("aria-expanded")).toBe("true");
+      expect([...(eingang?.querySelectorAll("ul > li") ?? [])].map((z) => z.textContent)).toEqual([
+        "SAPReader.FilenameERFUNDEN.idoc",
+      ]);
+      // Offen bleibt die Linie gestrichelt — und trägt den Akzent.
+      expect(eingang?.classList.contains("border-dashed")).toBe(true);
+      expect(eingang?.classList.contains("border-akzent-schrift")).toBe(true);
+    } finally {
+      await nurEigenschaften.abbauen();
+    }
+
+    // Ziele ohne Eigenschaften: Die Zeile gibt es, aber sie ist Text.
+    const nurZiele = await rendereDetail(
       { schritte: SCHRITTE, eigenschaftenAnzahl: EIGENSCHAFTEN.length },
       LISTE,
-      null,
+      EIGENSCHAFTEN.filter((eintrag) => eintrag.position !== 0),
     );
-
     try {
-      await klicke([...behaelter.querySelectorAll("ol > li button")][1]);
-
-      // Weiter zum Protokoll-Ziel derselben Zeile — nur der Fokus, kein Klick.
-      const weiter = behaelter.querySelectorAll("ol > li a")[1] as HTMLElement;
-      await act(async () => {
-        weiter.focus();
-      });
-      expect(document.activeElement).toBe(weiter);
-
-      await antwortTrifftEin(zwischenspeicher, EIGENSCHAFTEN);
-
-      // Die Gruppen stehen da, der Fokus ist geblieben, wo der Nutzer ihn
-      // hingesetzt hat.
-      expect(behaelter.querySelectorAll("section h3").length).toBeGreaterThan(0);
-      expect(document.activeElement).toBe(weiter);
+      const eingang = eingangszeile(nurZiele.behaelter);
+      expect(eingang?.querySelectorAll("a")).toHaveLength(2);
+      expect(eingang?.querySelector("button")).toBeNull();
     } finally {
-      await abbauen();
+      await nurZiele.abbauen();
+    }
+
+    // Nur ein `Message.*` auf Schritt 0 und kein Lesedienst: Dort liegt nichts,
+    // was in den Eingang gehörte — wo nichts liegt, hängt nichts.
+    const nichts = await rendereDetail(
+      { schritte: SCHRITTE, eigenschaftenAnzahl: EIGENSCHAFTEN.length },
+      ohneLesedienst,
+      EIGENSCHAFTEN,
+    );
+    try {
+      expect(eingangszeile(nichts.behaelter)).toBeUndefined();
+      // Und weiterhin keine eigene Zeile für Schritt 0 in der Leiste.
+      expect(nichts.behaelter.querySelectorAll("ol > li")).toHaveLength(3);
+    } finally {
+      await nichts.abbauen();
     }
   });
 
   /**
-   * **Die Gegenprobe: Wer wartet, bekommt seinen Sprung.**
-   *
-   * Derselbe kalte Zwischenspeicher, nur ohne Zwischenhandlung — der Fokus
-   * bleibt auf der Schaltfläche, und mit der Antwort springt die Ansicht. Ohne
-   * diesen Fall bestünde der Test darüber auch dann, wenn der Sprung gar nicht
-   * mehr funktionierte.
+   * **Der Rest, den es gemessen nicht gibt** (E‑223): Eigenschaften auf einer
+   * Position ungleich `0`, für die die Leiste keine Zeile führt. Von Hand ist
+   * das nie zu sehen — `ohne_schrittzeile` ist in beiden Fenstern `0` (M57,
+   * Befund 1). Gebaut ist es, damit nichts lautlos herausfällt: Die Zeile *Ohne
+   * Schritt in der Zeitleiste* wird aufklappbar, und jede Position trägt den
+   * Rückfall *Schritt N*. **Kein erfundener Name.**
    */
-  it("springt nach, sobald die Antwort da ist — wenn der Nutzer stehen geblieben ist", async () => {
-    anfrageHaengt();
-    const { behaelter, zwischenspeicher, abbauen } = await rendereDetail(
-      { schritte: SCHRITTE, eigenschaftenAnzahl: EIGENSCHAFTEN.length },
+  it("führt Eigenschaften ohne Zeile unter dem Rest, je Position mit dem Rückfall", async () => {
+    const mitRest: Eigenschaft[] = [
+      ...EIGENSCHAFTEN,
+      {
+        name: "Service.Type",
+        wert: "SPAET",
+        position: 9,
+        gekappt: false,
+        originalLaengeBytes: null,
+      },
+      {
+        name: "Service.Type",
+        wert: "FRUEH",
+        position: 7,
+        gekappt: false,
+        originalLaengeBytes: null,
+      },
+    ];
+
+    const { behaelter, abbauen } = await rendereDetail(
+      { schritte: SCHRITTE, eigenschaftenAnzahl: mitRest.length },
       LISTE,
-      null,
+      mitRest,
     );
 
     try {
-      const schrittSchalter = [...behaelter.querySelectorAll("ol > li button")];
-      await klicke(schrittSchalter[1]);
-      expect(document.activeElement).toBe(schrittSchalter[1]);
+      const rest = [...behaelter.querySelectorAll("div.border-dashed")].find((kasten) =>
+        (kasten.textContent ?? "").startsWith(DATEIEN.ohneZeile),
+      );
+      expect(rest).toBeDefined();
 
-      await antwortTrifftEin(zwischenspeicher, EIGENSCHAFTEN);
-
-      const fokussiert = document.activeElement as HTMLElement | null;
-      expect(fokussiert?.tagName).toBe("SECTION");
-      expect(fokussiert?.querySelector("h3")?.textContent).toContain("Datei versendet");
-    } finally {
-      await abbauen();
-    }
-  });
-
-  /**
-   * **Ohne Eigenschaften gibt es unten keinen Block — und oben keinen Weg
-   * dorthin.** Ein Bedienelement, das ins Leere führte, wäre schlechter als
-   * keines; es ist dieselbe Regel, aus der der Block bei `eigenschaftenAnzahl
-   * === 0` einen Satz statt eines Schalters zeigt.
-   */
-  it("macht die Schrittnamen nicht bedienbar, wenn es keine Eigenschaften gibt", async () => {
-    const { behaelter, abbauen } = await rendereDetail({ schritte: SCHRITTE }, LISTE);
-
-    try {
-      expect(behaelter.querySelectorAll("ol > li button")).toHaveLength(0);
+      await klicke(rest?.querySelector("button"));
+      expect([...(rest?.querySelectorAll("p") ?? [])].map((kopf) => kopf.textContent)).toEqual([
+        "Schritt 7",
+        "Schritt 9",
+      ]);
+      expect([...(rest?.querySelectorAll("ul > li") ?? [])].map((z) => z.textContent)).toEqual([
+        "Service.TypeFRUEH",
+        "Service.TypeSPAET",
+      ]);
     } finally {
       await abbauen();
     }

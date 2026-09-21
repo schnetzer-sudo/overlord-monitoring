@@ -158,9 +158,10 @@ export function zeitleiste(detail: Nachrichtendetail): Zeitleistenzeile[] {
  * Zeile der Zeitleiste darüber.
  *
  * **Alle drei Angaben dürfen fehlen**, und dann gibt es keinen Tooltip statt
- * eines leeren. Der Fall tritt an genau einer Stelle ein: bei einer Gruppe ohne
- * passenden Schritt (`gruppiereEigenschaften`, Regel 5). Die Zeitleiste liefert
- * Name und Herkunft immer.
+ * eines leeren. Der Fall trat bis zum 21.09.2026 bei einer Gruppe ohne
+ * passenden Schritt ein; seit die Eigenschaften unter ihrer Schrittzeile stehen
+ * (`verteileEigenschaften`), ruft nur noch die Zeitleiste — und die liefert Name
+ * und Herkunft immer.
  *
  * `undefined` statt `null`, weil das Ergebnis unverändert in ein `title`-Attribut
  * geht — dort heißt `undefined` „kein Attribut".
@@ -264,87 +265,98 @@ export function wartezeile(detail: Nachrichtendetail): Wartezeile | null {
  */
 export const METADATEN_POSITION = 0;
 
-/** Eine Gruppe des Eigenschaftenblocks: ein ausgeführter Schritt und was an ihm hängt. */
-export type EigenschaftenGruppe = {
-  position: number;
-  /** Name des Schritts aus `schritte[]`; `null`, wenn es dazu keinen Schritt gibt. */
-  beschriftung: string | null;
-  namensherkunft: Namensherkunft | null;
-  rohwert: string | null;
-  /** true genau für position === 0 */
-  istNachricht: boolean;
-  eintraege: Eigenschaft[];
+/**
+ * Das Präfix der allgemeinen Angaben zur Nachricht — **exakt, mit Punkt und in
+ * dieser Schreibung.** `Message` ohne Punkt, `MessageX.…` und `message.…`
+ * gehören nicht dazu; sie fallen dadurch nicht heraus, sondern stehen sichtbar
+ * im Eingang (`verteileEigenschaften`).
+ */
+export const ALLGEMEIN_PRAEFIX = "Message.";
+
+/** Die Eigenschaften einer Position, für die die Zeitleiste keine Zeile führt. */
+export type EigenschaftenOhneZeile = { position: number; eintraege: Eigenschaft[] };
+
+/** Die vier disjunkten Teile, in die `verteileEigenschaften` die Antwort zerlegt. */
+export type Eigenschaftenverteilung = {
+  /** `position === 0` **und** Name beginnt mit `Message.` — der Block *Technische Eigenschaften*. */
+  allgemein: Eigenschaft[];
+  /** die übrigen mit `position === 0` — die Zeile *Eingang*. */
+  eingang: Eigenschaft[];
+  /** Position mit Zeile in `schritte[]`, in **deren** Reihenfolge; ohne leere Einträge. */
+  jeSchritt: Map<number, Eigenschaft[]>;
+  /** Position ungleich `0` ohne Zeile, aufsteigend nach Zahl — die Zeile *Ohne Schritt in der Zeitleiste*. */
+  ohneZeile: EigenschaftenOhneZeile[];
 };
 
 /**
- * Die technischen Eigenschaften einer Nachricht, **nach dem ausgeführten Schritt
- * gruppiert**.
+ * **Wohin jede technische Eigenschaft gehört — entschieden an genau dieser
+ * Stelle** *(21.09.2026, E‑219, `docs/nachrichtendetail.md` §10.16)*.
  *
- * ## Warum überhaupt gruppiert wird
+ * Sie ersetzt `gruppiereEigenschaften` (17.08.2026). Die Eigenschaften stehen
+ * nicht mehr gruppiert in einem Block, sondern **unter ihrem Schritt in der
+ * Zeitleiste**; im Block bleiben allein die allgemeinen Angaben zur Nachricht.
  *
- * Flach untereinander steht `Converter.Log.GUID` zweimal und `Service.Type`
- * dreimal und sieht aus wie eine Dublette. Es sind Einträge **verschiedener
- * Prozessschritte**: 31 der 101 gemessenen Namen kommen auf mehr als einem
- * Schritt vor, und `Converter.Payload.GUID` steht mit 7.862 Zeilen auf 6.149
- * Nachrichten (M17 3). Mit dem Schrittnamen darüber sieht der Nutzer, **wo** ein
- * Wert entstanden ist — dass etwa per OFTP empfangen und später per FTP versendet
- * wurde.
+ * | Teil | Regel | Wo es steht |
+ * |---|---|---|
+ * | `allgemein` | `position === 0` und `name.startsWith("Message.")` | Block *Technische Eigenschaften* |
+ * | `eingang` | die übrigen mit `position === 0` | Zeile *Eingang* |
+ * | `jeSchritt` | Position mit Zeile in `schritte[]` | unter der Schrittzeile |
+ * | `ohneZeile` | Position ungleich `0` ohne Zeile | Zeile *Ohne Schritt in der Zeitleiste* |
+ *
+ * ## Die Invariante
+ *
+ * **Die Summe der vier Teile ist die Länge der Eingabe.** Nichts wird
+ * zusammengefasst, nichts fällt heraus; derselbe Name in mehreren Teilen bleibt
+ * mehrfach stehen (31 der 101 gemessenen Namen kommen auf mehr als einem Schritt
+ * vor, M17 3). `gekappt` und `originalLaengeBytes` gehen unverändert durch.
+ *
+ * ## Position `0` geht immer in die ersten beiden Teile
+ *
+ * Auch dann, wenn `schritte[]` eines Tages eine Zeile mit Position `0` führte:
+ * Die Leiste bekommt für den Metadaten-Schritt keine Zeile
+ * (`docs/nachrichtendetail.md` §4), und seine Eigenschaften hätten sonst zwei
+ * mögliche Orte. Umgekehrt landet ein `Message.*` auf einer Position ungleich
+ * `0` **am Schritt** und nicht im Block — gemessen kommt das nicht vor (die
+ * Familie steht ausnahmslos auf Schritt `0`, M17 3), aber die Regel hängt an
+ * beiden Bedingungen und nicht am Namen allein.
  *
  * ## Gruppiert wird über `MessageActionID` — nicht über `SOSActionID`
  *
- * Drei Gründe, und der dritte ist der tragende:
+ * Unverändert seit dem 17.08.2026: `MessageProperty` hat gar keine `SOSActionID`
+ * (M14), die beiden Kennungen sind nicht deckungsgleich (614 von 20.352
+ * Aktionen weichen ab, M15 1), und `MessageActionID` ist die *Ausführung* und
+ * über den Primärschlüssel je Nachricht eindeutig. Im Frontend heißt das Feld
+ * auf beiden Seiten `position`.
  *
- * 1. **`MessageProperty` hat gar keine `SOSActionID`** (M14) — nur
- *    `MessageActionID`. Über die Ablaufkennung zu gruppieren verlangte einen
- *    Join, den niemand braucht.
- * 2. **Die beiden Kennungen sind nicht deckungsgleich.** M15 (1) misst
- *    `MessageActionID = 2` mal neben `SOSActionID` 1, mal neben 2, und
- *    `MessageActionID = 3` neben 2, 3 oder 10 — in **614 von 20.352** Aktionen
- *    des Tagesfensters weichen sie voneinander ab.
- * 3. **`MessageActionID` ist die Ausführung** und über den Primärschlüssel
- *    `(MessageID, MessageActionID)` je Nachricht eindeutig. `SOSActionID` ist der
- *    Schlüssel in die *Ablaufdefinition*; führte ein Ablauf denselben
- *    Definitionsschritt zweimal aus, verschmölzen beide Ausführungen zu einer
- *    Gruppe.
+ * ## Die Reihenfolge kommt von außen und wird hier nicht erfunden
  *
- * Im Frontend heißt das Feld auf beiden Seiten `position` — an `Eigenschaft` wie
- * an `Schritt`, und beide Male steht die Spalte `MessageActionID` dahinter
- * (`nachrichtendetail.md` §4).
- *
- * ## Die Reihenfolge der Gruppen kommt von außen und wird hier nicht erfunden
- *
- * `position === 0` zuerst (die Nachricht selbst), danach **in der Reihenfolge von
- * `schritte[]`**, so wie sie ankommt, zuletzt die übrigen Positionen aufsteigend.
- *
- * **Es wird nicht numerisch nachsortiert.** Die Ordnung der Schritte
- * (`MessageActionStart`, bei Gleichstand `MessageActionID`) steht an **genau
- * einer** Stelle, nämlich im `ORDER BY` von `findeAktionen`
- * (`nachrichtendetail.md` §4). Eine zweite Sortierung hier wäre die Drift, gegen
- * die diese Regel gerichtet ist — und die Gruppen stünden dann in einer anderen
- * Reihenfolge als die Zeilen der Zeitleiste darüber.
- *
- * ## Was die Funktion ausdrücklich nicht tut
- *
- * - **Sie sortiert innerhalb einer Gruppe nicht um.** Die Eingabereihenfolge
- *   bleibt erhalten; sie ist die des Backends (`MessagePropertyName`, dann
- *   `MessageActionID`) und keine Zusage dieser Datei.
- * - **Sie fasst nichts zusammen und lässt nichts weg.** Die Summe der
- *   Gruppengrößen ist die Länge der Eingabe; derselbe Name in zwei Gruppen bleibt
- *   zweimal stehen — genau das ist der Punkt.
- * - **Sie erfindet keinen Namen.** Eine Position ohne passenden Schritt bekommt
- *   `beschriftung = null` und landet am Ende.
- * - **Sie erzeugt keine leere Gruppe.** Ein Schritt ohne Eigenschaften ist
- *   gemessen: `MessageActionID = 502` existiert in `MessageAction`, kommt in
- *   `MessageProperty` aber nicht vor (M17 3).
+ * - **In jedem Teil bleibt die Reihenfolge der Antwort.** Sie ist die des
+ *   Backends (`MessagePropertyName`, dann `MessageActionID`); ein
+ *   Ersatzsortierer ist ausdrücklich nicht gebaut.
+ * - **`jeSchritt` folgt `schritte[]` und nicht der Zahl.** Die Ordnung der
+ *   Schritte steht an genau einer Stelle, im `ORDER BY` von `findeAktionen`.
+ * - **`ohneZeile` ist aufsteigend nach Zahl** — dort ist die Zahl das einzige,
+ *   was es an Ordnung gibt.
+ * - **Ein Schritt ohne Eigenschaften kommt in `jeSchritt` nicht vor.** Der Fall
+ *   ist gemessen: `MessageActionID = 502` steht in `MessageAction` und fehlt in
+ *   `MessageProperty` (M17 3). Seine Zeile bleibt Text.
  */
-export function gruppiereEigenschaften(
-  eigenschaften: Eigenschaft[],
-  schritte: Schritt[],
-): EigenschaftenGruppe[] {
+export function verteileEigenschaften(
+  eigenschaften: readonly Eigenschaft[],
+  schritte: readonly Schritt[],
+): Eigenschaftenverteilung {
+  const allgemein: Eigenschaft[] = [];
+  const eingang: Eigenschaft[] = [];
+
   // Eine Map hält die Einfügereihenfolge je Eimer — damit bleibt die
-  // Reihenfolge innerhalb einer Gruppe die der Eingabe, ohne einen Sortierlauf.
+  // Reihenfolge innerhalb eines Teils die der Eingabe, ohne einen Sortierlauf.
   const nachPosition = new Map<number, Eigenschaft[]>();
+
   for (const eigenschaft of eigenschaften) {
+    if (eigenschaft.position === METADATEN_POSITION) {
+      (eigenschaft.name.startsWith(ALLGEMEIN_PRAEFIX) ? allgemein : eingang).push(eigenschaft);
+      continue;
+    }
     const eimer = nachPosition.get(eigenschaft.position);
     if (eimer === undefined) {
       nachPosition.set(eigenschaft.position, [eigenschaft]);
@@ -353,52 +365,48 @@ export function gruppiereEigenschaften(
     }
   }
 
-  const gruppen: EigenschaftenGruppe[] = [];
-  const vergeben = new Set<number>();
-
-  function nimm(position: number, schritt: Schritt | undefined): void {
-    const eintraege = nachPosition.get(position);
-    // Ohne Einträge keine Gruppe: Ein Schritt ohne Eigenschaften bekommt keine
-    // leere Überschrift.
-    if (eintraege === undefined || vergeben.has(position)) {
-      return;
-    }
-    vergeben.add(position);
-    gruppen.push({
-      position,
-      beschriftung: schritt?.name ?? null,
-      namensherkunft: schritt?.namensherkunft ?? null,
-      rohwert: schritt?.rohwert ?? null,
-      istNachricht: position === METADATEN_POSITION,
-      eintraege,
-    });
-  }
-
-  // Die Nachricht selbst zuerst. Sie steht in `schritte[]` nicht drin — der
-  // Metadaten-Schritt ist kein Prozessschritt und wird schon im Backend
-  // ausgenommen (`nachrichtendetail.md` §4). Nachgesehen wird trotzdem, damit
-  // die Gruppe ihren Namen bekäme, falls die Antwort ihn eines Tages mitschickt.
-  nimm(
-    METADATEN_POSITION,
-    schritte.find((schritt) => schritt.position === METADATEN_POSITION),
-  );
-
-  // Danach in der Reihenfolge der Zeitleiste — und in keiner anderen.
+  // In der Reihenfolge der Zeitleiste — und in keiner anderen.
+  const jeSchritt = new Map<number, Eigenschaft[]>();
   for (const schritt of schritte) {
-    if (schritt.position === METADATEN_POSITION) {
-      continue;
+    const eintraege = nachPosition.get(schritt.position);
+    if (eintraege !== undefined && !jeSchritt.has(schritt.position)) {
+      jeSchritt.set(schritt.position, eintraege);
     }
-    nimm(schritt.position, schritt);
   }
 
-  // Zuletzt, was zu keinem gelieferten Schritt gehört: aufsteigend nach Zahl,
-  // ohne Beschriftung. Hier ist die Zahl das einzige, was es an Ordnung gibt.
-  const uebrige = [...nachPosition.keys()]
-    .filter((position) => !vergeben.has(position))
-    .sort((eine, andere) => eine - andere);
-  for (const position of uebrige) {
-    nimm(position, undefined);
-  }
+  const ohneZeile = [...nachPosition.entries()]
+    .filter(([position]) => !jeSchritt.has(position))
+    .sort(([eine], [andere]) => eine - andere)
+    .map(([position, eintraege]) => ({ position, eintraege }));
 
-  return gruppen;
+  return { allgemein, eingang, jeSchritt, ohneZeile };
+}
+
+/**
+ * Ob eine Schrittzeile aufklappbar ist — **nur, was Inhalt hat** (E‑221).
+ *
+ * `undefined` heißt: Die Eigenschaften laden noch oder ihre Abfrage ist
+ * gescheitert. **Dann ist nichts aufklappbar**, und die Zeile bleibt Text; eine
+ * Schaltfläche, die einen leeren Bereich öffnet, ist schlimmer als keine.
+ */
+export function schrittAufklappbar(
+  verteilung: Eigenschaftenverteilung | undefined,
+  position: number,
+): boolean {
+  return (verteilung?.jeSchritt.get(position)?.length ?? 0) > 0;
+}
+
+/**
+ * Die beiden gestrichelten Zeilen um die Leiste — *Eingang* darüber, *Ohne
+ * Schritt in der Zeitleiste* darunter (E‑222, E‑223).
+ *
+ * **Es gibt die Zeile, wenn dort ein Artefakt oder eine Eigenschaft liegt;
+ * aufklappbar ist sie nur mit Eigenschaften.** Bis zum 21.09.2026 hing ihre
+ * Existenz allein an den Artefakten (`docs/rohdaten-frontend.md` §3).
+ */
+export function zusatzzeile(
+  ziele: number,
+  eigenschaften: number,
+): { vorhanden: boolean; aufklappbar: boolean } {
+  return { vorhanden: ziele > 0 || eigenschaften > 0, aufklappbar: eigenschaften > 0 };
 }

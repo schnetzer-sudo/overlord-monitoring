@@ -289,8 +289,9 @@ export function useNachrichtendetail(messageId: string | null) {
  * **Bei `eigenschaftenAnzahl === 0` geht weiterhin keine Anfrage hinaus.** Dafür
  * trägt der Kopf die Zahl: Sie sperrt die Anfrage, wo es nichts zu holen gibt.
  *
- * **Mehrere Aufrufer, eine Anfrage.** Block und Zeitleiste rufen diesen Haken
- * beide; der Abfrageschlüssel ist derselbe, und TanStack Query holt einmal.
+ * **Ein Aufrufer, zwei Verbraucher.** Der Ablauf (`nachricht-detail.tsx`) ruft
+ * den Haken, teilt die Antwort einmal ein (`detail.ts` `verteileEigenschaften`)
+ * und reicht sie an Block und Zeitleiste weiter.
  *
  * Länger gehalten als die Liste: Die Eigenschaften einer abgeschlossenen
  * Nachricht ändern sich nicht mehr, und wer zwischen zwei Nachrichten hin und

@@ -4,30 +4,40 @@ import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { texteFuer } from "@/i18n";
-import { NACHRICHTEN_SCHLUESSEL, type Eigenschaft, type Schritt } from "@/features/nachrichten/api";
-import { EigenschaftenBlock } from "@/features/nachrichten/components/eigenschaften-block";
+import {
+  NACHRICHTEN_SCHLUESSEL,
+  type Artefaktliste,
+  type Eigenschaft,
+  type Nachrichtendetail,
+  type Schritt,
+} from "@/features/nachrichten/api";
+import { NachrichtDetail } from "@/features/nachrichten/components/nachricht-detail";
 
 import { neuerZwischenspeicher, rendere } from "./hilfe/rendern";
 
 /**
- * **Die vier Fälle des Eigenschaftenblocks, für die ein gerenderter Baum die
- * einzige Prüfung ist** *(17.08.2026)*.
+ * **Der Block *Technische Eigenschaften*, für die Fälle, in denen ein
+ * gerenderter Baum die einzige Prüfung ist** *(17.08.2026, neu gefasst am
+ * 21.09.2026 — `docs/nachrichtendetail.md` §10.16)*.
  *
  * Die Einteilung selbst ist reine Funktion und steht in
  * `tests/nachrichtendetail.test.ts` — geprüft werden Entscheidungen, nicht
  * Markup (`docs/frontend-grundlagen.md` §9). Diese Datei ist die begründete
- * Ausnahme, nach derselben Bedingung wie `tests/bam-block.test.tsx`: **Es gibt
- * keinen anderen Ort, an dem der Satz belegbar wäre.**
+ * Ausnahme: **Es gibt keinen anderen Ort, an dem der Satz belegbar wäre.**
+ *
+ * Gerendert wird seit dem 21.09.2026 **das ganze Detail** und nicht mehr der
+ * Block allein: Die Abfrage gehört dem Ablauf, weil die Zeitleiste dieselbe
+ * Antwort braucht (E‑220), und „die Anfrage geht genau einmal mit dem Detail
+ * hinaus" ist ohne den Aufrufer nicht zu belegen.
  *
  * | Test | Warum genau dieser |
  * |---|---|
- * | Derselbe Name in zwei Gruppen | Der Schlüssel der Liste ist `${position}:${name}`. Wäre er der Name allein, meldete React einen **doppelten Schlüssel** — in der Konsole, und sichtbar falsch wäre nichts. 31 der 101 gemessenen Namen kommen auf mehr als einem Schritt vor (M17 3) |
- * | `eigenschaftenAnzahl === 0` | **Kein Schalter im Baum und keine Anfrage.** Beides ist eine Aussage über Abwesenheit, und die ist ohne Baum nicht zu treffen |
- * | eingeklappt mit Werten | Die Gegenprobe: Ohne sie bewiese der vorige Test nur, dass ein Block ohne Inhalt nicht lädt. Seit dem 21.09.2026 geht **genau eine** Anfrage mit dem Detail hinaus und beim Aufklappen keine |
- * | aufgeklappt ohne `schritte` | Der Rückfall aus Regel 5 der Einteilung ist eine Zeichenkette der Sprachdatei und entsteht erst im Baum. Er tritt ein, solange das Detail noch nicht da ist |
- *
- * Der erste hängt vollständig an `tests/setup/konsole.ts`: Er besteht genau
- * dann, wenn **kein `console.error`** fällt.
+ * | Die Zahl aus `allgemein` | Die Überschrift trägt die Zeilenzahl der allgemeinen Angaben und **nicht** `eigenschaftenAnzahl`. Zugleich die Regression zum Schlüssel `${position}:${name}`: derselbe Name steht unter Eingang und zwei Schritten, **ohne `console.error`** |
+ * | `eigenschaftenAnzahl === 0` | **Kein Schalter im Baum und keine Anfrage** — Aussagen über Abwesenheit |
+ * | Eine Anfrage mit dem Detail | Genau eine auf `/eigenschaften` beim Einhängen, **keine** beim Aufklappen — weder am Block noch an einer Zeile. Vorher steht die Überschrift ohne Zahl |
+ * | Die gescheiterte Abfrage | Der Fehlerbaustein steht **an Stelle des Schalters**, sichtbar ohne Aufklappen; die Zeitleiste bleibt und ist nicht aufklappbar |
+ * | Leeres `allgemein` | Ein eigener Satz, der nicht behauptet, es gäbe keine Eigenschaften — und kein Schalter |
+ * | Zugeklappt `inert`, Bewegung mit Ausschalter | Beides **ist** ein Attribut beziehungsweise eine Klasse; `jsdom` rechnet weder Layout noch Übergänge. Belegt wie beim Ansichtsumschalter |
  *
  * **Antwortrümpfe gestellt, kein Netz, keine Datenbank.**
  */
@@ -46,7 +56,7 @@ function schritt(position: number, name: string): Schritt {
     position,
     name,
     namensherkunft: "DIREKT",
-    rohwert: "NXS_FILE_CONVERT|E2A|UNWRAP",
+    rohwert: "ERFUNDEN_BAUSTEIN",
     start: "2025-12-29T22:41:12Z",
     ende: "2025-12-29T22:41:12Z",
     dauerSekunden: 0,
@@ -55,10 +65,37 @@ function schritt(position: number, name: string): Schritt {
   };
 }
 
+const SCHRITTE = [schritt(1, "Datei gelesen"), schritt(2, "Datei konvertiert")];
+
+function detail(werte: Partial<Nachrichtendetail> = {}): Nachrichtendetail {
+  return {
+    messageId: MESSAGE_ID,
+    status: "FINISHED",
+    statusKind: "ABGESCHLOSSEN",
+    processId: "P-0815",
+    processName: "Erfundener Prozess",
+    projectName: "Erfundenes Projekt",
+    sosName: "Erfundener Ablauf",
+    rollen: [],
+    zeitpunkt: "2025-12-29T22:41:20Z",
+    start: "2025-12-29T22:41:10Z",
+    gesamtdauerSekunden: 10,
+    fristSekunden: null,
+    eigenschaftenAnzahl: 5,
+    bamAnzahl: 0,
+    offenerZustand: "KEINER",
+    naechsterSchritt: null,
+    wartetSeitSekunden: null,
+    schritte: SCHRITTE,
+    kuratierteEigenschaften: [],
+    ...werte,
+  };
+}
+
 /**
- * **Derselbe Name auf drei Schritten** — genau die Gestalt, die einen Schlüssel
- * aus dem Namen allein zerlegte. `Service.Type` steht im gemessenen Tagesfenster
- * auf sieben verschiedenen Schritten (M17 3).
+ * **Derselbe Name an drei Stellen** — genau die Gestalt, die einen Schlüssel aus
+ * dem Namen allein zerlegte. `Service.Type` steht im gemessenen Tagesfenster auf
+ * sieben verschiedenen Schritten (M17 3).
  */
 const DERSELBE_NAME_MEHRFACH: Eigenschaft[] = [
   eigenschaft("Message.GUID", 0, "8f3a1c2e-0000-4000-8000-000000000001"),
@@ -68,7 +105,7 @@ const DERSELBE_NAME_MEHRFACH: Eigenschaft[] = [
   eigenschaft("Service.Type", 2, "Converter"),
 ];
 
-const SCHRITTE = [schritt(1, "Datei gelesen"), schritt(2, "Datei konvertiert")];
+const KEINE_DATEIEN: Artefaktliste = { messageId: MESSAGE_ID, nutzdaten: [], protokolle: [] };
 
 /** Ein `fetch`, das jeden Aufruf sichtbar macht — und keinen durchlässt. */
 let anfragen: string[] = [];
@@ -88,100 +125,122 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/** Klickt den Schalter des Blocks. */
-async function klappeAuf(behaelter: HTMLElement): Promise<void> {
-  const schalter = behaelter.querySelector("button");
-  expect(schalter).not.toBeNull();
+/** Ein `fetch`, das **nie antwortet** — die Abfrage läuft, statt zu scheitern. */
+function anfrageHaengt(): void {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((eingabe: RequestInfo | URL) => {
+      anfragen.push(String(eingabe));
+      return new Promise<Response>(() => undefined);
+    }),
+  );
+}
+
+function aufEigenschaften(): string[] {
+  return anfragen.filter((adresse) => adresse.includes("/eigenschaften"));
+}
+
+/** `null`: kalter Zwischenspeicher — die Abfrage der Eigenschaften geht wirklich hinaus. */
+async function rendereDetail(
+  werte: Partial<Nachrichtendetail>,
+  eigenschaften: Eigenschaft[] | null,
+) {
+  const zwischenspeicher = neuerZwischenspeicher();
+  zwischenspeicher.setQueryData(NACHRICHTEN_SCHLUESSEL.detail(MESSAGE_ID), detail(werte));
+  zwischenspeicher.setQueryData(NACHRICHTEN_SCHLUESSEL.dateien(MESSAGE_ID), KEINE_DATEIEN);
+  if (eigenschaften !== null) {
+    zwischenspeicher.setQueryData(NACHRICHTEN_SCHLUESSEL.eigenschaften(MESSAGE_ID), eigenschaften);
+  }
+
+  return rendere(
+    <NachrichtDetail
+      messageId={MESSAGE_ID}
+      aufSchliessen={() => undefined}
+      schliessenText="Schließen"
+      aufOeffnen={() => undefined}
+    />,
+    zwischenspeicher,
+  );
+}
+
+async function klicke(element: Element | null | undefined): Promise<void> {
+  expect(element).toBeTruthy();
   await act(async () => {
-    schalter?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    element?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 }
 
-/** Die Überschriften der Gruppen, in Baumreihenfolge. */
-function gruppenkoepfe(behaelter: HTMLElement): (string | null)[] {
-  return [...behaelter.querySelectorAll("section h3")].map((kopf) => kopf.textContent);
+/** Der Schalter des Blocks — die Schaltfläche, deren Text mit der Überschrift beginnt. */
+function blockschalter(behaelter: HTMLElement): HTMLButtonElement | undefined {
+  return [...behaelter.querySelectorAll("button")].find((knopf) =>
+    (knopf.textContent ?? "").startsWith(EIGENSCHAFTEN.titelOhneZahl),
+  );
 }
 
-describe("Der Eigenschaftenblock", () => {
-  /**
-   * **Die Regression zum Schlüssel.** `${position}:${name}` ist eindeutig — der
-   * Primärschlüssel ist `(MessageID, MessagePropertyName, MessageActionID)`. Der
-   * Name allein ist es nicht: 31 der 101 gemessenen Namen stehen auf mehr als
-   * einem Schritt (M17 3). Ein Schlüssel aus dem Namen allein erzeugte doppelte
-   * Schlüssel, und die sind für Vitest unsichtbar, solange kein Baum gerendert
-   * wird.
-   *
-   * Nebenbei belegt der Test die eigentliche Absicht der Nacharbeit: Die
-   * scheinbare Dublette verteilt sich sichtbar auf drei Gruppen, und die Summe
-   * der Zahlen in den Gruppenköpfen ist die Zahl im Blockkopf.
-   */
-  it("zeigt denselben Namen in drei Gruppen ohne doppelten React-Schlüssel", async () => {
-    const zwischenspeicher = neuerZwischenspeicher();
-    zwischenspeicher.setQueryData(
-      NACHRICHTEN_SCHLUESSEL.eigenschaften(MESSAGE_ID),
-      DERSELBE_NAME_MEHRFACH,
-    );
+/** Der Inhalt, den eine Schaltfläche steuert. */
+function inhaltVon(behaelter: HTMLElement, schalter: Element | undefined): HTMLElement {
+  const id = schalter?.getAttribute("aria-controls");
+  expect(id).toBeTruthy();
+  const inhalt = behaelter.querySelector<HTMLElement>(`[id="${id}"]`);
+  expect(inhalt).not.toBeNull();
+  return inhalt as HTMLElement;
+}
 
-    const { behaelter, abbauen } = await rendere(
-      <EigenschaftenBlock messageId={MESSAGE_ID} anzahl={5} schritte={SCHRITTE} />,
-      zwischenspeicher,
-    );
+function zeilentexte(bereich: Element): (string | null)[] {
+  return [...bereich.querySelectorAll("ul > li")].map((zeile) => zeile.textContent);
+}
+
+describe("Der Block Technische Eigenschaften", () => {
+  /**
+   * **Die Zahl ist die Zeilenzahl von `allgemein`** (E‑224) — eine von fünf, und
+   * nicht die `5` aus dem Kopf. Der Block ist flach: keine Gruppenköpfe mehr.
+   *
+   * **Und die Regression zum Schlüssel.** `${position}:${name}` ist eindeutig,
+   * der Name allein nicht (31 der 101 gemessenen Namen stehen auf mehr als einem
+   * Schritt, M17 3). `Service.Type` steht hier unter dem Eingang und unter beiden
+   * Schritten — der Nachweis ist das Ausbleiben eines `console.error`
+   * (`tests/setup/konsole.ts`).
+   */
+  it("trägt die Zeilenzahl der allgemeinen Angaben und verteilt den Rest an die Zeitleiste", async () => {
+    const { behaelter, abbauen } = await rendereDetail({}, DERSELBE_NAME_MEHRFACH);
 
     try {
-      await klappeAuf(behaelter);
-
-      // Die Nachricht zuerst, danach die Schritte in der Reihenfolge der
-      // Zeitleiste — und wortgleich mit ihren Namen.
-      expect(gruppenkoepfe(behaelter)).toEqual([
-        "Nachricht (2)",
-        "Datei gelesen (1)",
-        "Datei konvertiert (2)",
+      const schalter = blockschalter(behaelter);
+      expect(schalter?.textContent).toBe(EIGENSCHAFTEN.titel.replace("{anzahl}", "1"));
+      expect(zeilentexte(inhaltVon(behaelter, schalter))).toEqual([
+        "Message.GUID8f3a1c2e-0000-4000-8000-000000000001",
       ]);
+      // Flach: Die Gruppenköpfe vom 17.08.2026 gibt es nicht mehr.
+      expect(inhaltVon(behaelter, schalter).querySelectorAll("h3, section")).toHaveLength(0);
 
-      // Derselbe Name steht dreimal da, in drei verschiedenen Gruppen — genau
-      // darum geht es.
-      expect(
-        [...behaelter.querySelectorAll("section")].map((gruppe) =>
-          [...gruppe.querySelectorAll("li")].map((zeile) => zeile.textContent),
-        ),
-      ).toEqual([
-        ["Message.GUID8f3a1c2e-0000-4000-8000-000000000001", "Service.TypeScheduleBean"],
+      // Was nicht allgemein ist, steht an der Zeitleiste: unter dem Eingang und
+      // unter seinem Schritt. Zusammen sind es alle fünf.
+      const zeilenschalter = [...behaelter.querySelectorAll("button[aria-controls]")].filter(
+        (knopf) => knopf !== schalter,
+      );
+      expect(zeilenschalter.map((knopf) => zeilentexte(inhaltVon(behaelter, knopf)))).toEqual([
+        ["Service.TypeScheduleBean"],
         ["Service.TypeFileReader"],
         ["Converter.Log.GUIDlog|1", "Service.TypeConverter"],
-      ]);
-
-      // Der Tooltip des Gruppenkopfs ist derselbe wie in der Zeitleiste. Bei der
-      // Nachricht gibt es keinen Schritt und deshalb auch keinen Tooltip.
-      expect(
-        [...behaelter.querySelectorAll("section h3")].map((kopf) => kopf.getAttribute("title")),
-      ).toEqual([
-        null,
-        "Datei gelesen\nBaustein: NXS_FILE_CONVERT|E2A|UNWRAP\nName aus der Ablaufdefinition",
-        "Datei konvertiert\nBaustein: NXS_FILE_CONVERT|E2A|UNWRAP\nName aus der Ablaufdefinition",
       ]);
     } finally {
       await abbauen();
     }
-    // Der eigentliche Nachweis ist das Ausbleiben eines `console.error` — dafür
-    // sorgt `tests/setup/konsole.ts`, und deshalb steht hier keine Zusicherung.
   });
 
   /**
    * **Kein Schalter und keine Anfrage.** Die Zahl steht im Kopf des
-   * Detail-Endpunkts, genau damit diese Entscheidung ohne Zugriff fällt. Anders
-   * als der BAM-Block bleibt hier eine Zeile Text stehen: Dass eine Nachricht
-   * gar keine Eigenschaft trägt, ist der Ausnahmefall — im gemessenen
-   * Tagesfenster hat jede der 6.249 Nachrichten welche (M17 1).
+   * Detail-Endpunkts, genau damit diese Entscheidung ohne Zugriff fällt — und
+   * das ist seit E‑220 ihr einziger verbliebener Zweck.
    */
-  it("zeigt bei anzahl = 0 nur eine Zeile Text — kein Schalter, keine Anfrage", async () => {
-    const { behaelter, abbauen } = await rendere(
-      <EigenschaftenBlock messageId={MESSAGE_ID} anzahl={0} schritte={SCHRITTE} />,
-    );
+  it("zeigt bei eigenschaftenAnzahl = 0 nur eine Zeile Text — kein Schalter, keine Anfrage", async () => {
+    const { behaelter, abbauen } = await rendereDetail({ eigenschaftenAnzahl: 0 }, null);
 
     try {
-      expect(behaelter.querySelector("button")).toBeNull();
-      expect(behaelter.textContent).toBe(EIGENSCHAFTEN.keine);
-      expect(behaelter.querySelectorAll("section")).toHaveLength(0);
+      expect(blockschalter(behaelter)).toBeUndefined();
+      expect(behaelter.textContent).toContain(EIGENSCHAFTEN.keine);
+      // Auch an der Zeitleiste ist dann nichts aufklappbar.
+      expect(behaelter.querySelectorAll("button[aria-controls]")).toHaveLength(0);
       expect(anfragen).toEqual([]);
     } finally {
       await abbauen();
@@ -189,59 +248,141 @@ describe("Der Eigenschaftenblock", () => {
   });
 
   /**
-   * Die Gegenprobe: Mit Eigenschaften gibt es den Schalter — und **genau eine
-   * Anfrage, die mit dem Detail hinausgeht** (21.09.2026,
-   * `docs/nachrichtendetail.md` §10.16, E‑220). Bis dahin lud der Block erst beim
-   * Aufklappen; seit die Eigenschaften an der Zeitleiste hängen, müssen sie vor
-   * dem ersten Klick da sein. **Das Aufklappen selbst holt nichts mehr.**
+   * **Die Anfrage geht genau einmal mit dem Detail hinaus, beim Aufklappen
+   * keine** (E‑220). Solange sie läuft, steht die Überschrift **ohne Zahl** —
+   * keine erfundene Null — und an der Zeitleiste ist nichts aufklappbar (E‑221).
    */
-  it("zeigt eingeklappt die Überschrift mit der Zahl — eine Anfrage mit dem Detail, keine beim Aufklappen", async () => {
-    const { behaelter, abbauen } = await rendere(
-      <EigenschaftenBlock messageId={MESSAGE_ID} anzahl={22} schritte={SCHRITTE} />,
-    );
+  it("holt die Eigenschaften einmal mit dem Detail und beim Aufklappen nicht noch einmal", async () => {
+    anfrageHaengt();
+    const { behaelter, zwischenspeicher, abbauen } = await rendereDetail({}, null);
 
     try {
-      expect(behaelter.querySelector("button")?.textContent).toBe(
-        EIGENSCHAFTEN.titel.replace("{anzahl}", "22"),
-      );
-      expect(behaelter.querySelector("button")?.getAttribute("aria-expanded")).toBe("false");
-      expect(behaelter.querySelectorAll("section")).toHaveLength(0);
-      expect(anfragen).toHaveLength(1);
-      expect(anfragen[0]).toContain(`/nachrichten/${MESSAGE_ID}/eigenschaften`);
+      expect(aufEigenschaften()).toHaveLength(1);
+      expect(aufEigenschaften()[0]).toContain(`/nachrichten/${MESSAGE_ID}/eigenschaften`);
 
-      await klappeAuf(behaelter);
-      expect(anfragen).toHaveLength(1);
+      expect(blockschalter(behaelter)?.textContent).toBe(EIGENSCHAFTEN.titelOhneZahl);
+      expect(behaelter.querySelectorAll("ol button")).toHaveLength(0);
+
+      await klicke(blockschalter(behaelter));
+      expect(aufEigenschaften()).toHaveLength(1);
+
+      // Die Antwort trifft ein — und der Makrotask danach, in dem TanStack Query
+      // seine Benachrichtigungen zustellt.
+      await act(async () => {
+        zwischenspeicher.setQueryData(
+          NACHRICHTEN_SCHLUESSEL.eigenschaften(MESSAGE_ID),
+          DERSELBE_NAME_MEHRFACH,
+        );
+        await new Promise((fertig) => setTimeout(fertig, 0));
+      });
+
+      expect(blockschalter(behaelter)?.textContent).toBe(
+        EIGENSCHAFTEN.titel.replace("{anzahl}", "1"),
+      );
+      const schrittschalter = behaelter.querySelector("ol button");
+      await klicke(schrittschalter);
+      expect(schrittschalter?.getAttribute("aria-expanded")).toBe("true");
+      expect(aufEigenschaften()).toHaveLength(1);
     } finally {
       await abbauen();
     }
   });
 
   /**
-   * **Ohne `schritte` trägt jede Gruppe den Rückfall.** Der Fall tritt ein,
-   * solange das Detail noch nicht da ist; die Einteilung hängt nicht an den
-   * Schritten, nur die Beschriftung tut es. **Kein erfundener Name** — die
-   * Nummer ist das einzige, was über die Position bekannt ist.
+   * **Der Fehlerbaustein steht an Stelle des Schalters, sichtbar ohne
+   * Aufklappen.** Hinter einem Schalter verborgen sähe eine gescheiterte Abfrage
+   * aus wie eine Nachricht, an deren Zeitleiste schlicht nichts aufzuklappen
+   * ist. Die Zeitleiste bleibt — sie hängt am Detail —, ist dann aber nicht
+   * aufklappbar.
    */
-  it("beschriftet ohne schritte jede Gruppe mit dem Rückfall", async () => {
-    const zwischenspeicher = neuerZwischenspeicher();
-    zwischenspeicher.setQueryData(NACHRICHTEN_SCHLUESSEL.eigenschaften(MESSAGE_ID), [
-      eigenschaft("Service.Type", 1, "FileReader"),
-      eigenschaft("Service.Type", 2, "Converter"),
-    ]);
-
-    const { behaelter, abbauen } = await rendere(
-      <EigenschaftenBlock messageId={MESSAGE_ID} anzahl={2} />,
-      zwischenspeicher,
-    );
+  it("zeigt eine gescheiterte Abfrage ohne Aufklappen und lässt die Zeitleiste stehen", async () => {
+    const { behaelter, abbauen } = await rendereDetail({}, null);
 
     try {
-      await klappeAuf(behaelter);
+      // Die Abweisung kommt in einem Makrotask an — TanStack Query stellt seine
+      // Benachrichtigungen gebündelt zu.
+      await act(async () => {
+        await new Promise((fertig) => setTimeout(fertig, 0));
+      });
 
-      expect(gruppenkoepfe(behaelter)).toEqual(["Schritt 1 (1)", "Schritt 2 (1)"]);
-      // Ohne Schritt gibt es nichts zu erklären — und deshalb keinen Tooltip.
-      expect(
-        [...behaelter.querySelectorAll("section h3")].map((kopf) => kopf.getAttribute("title")),
-      ).toEqual([null, null]);
+      expect(blockschalter(behaelter)).toBeUndefined();
+      expect(behaelter.querySelectorAll('[role="alert"]')).toHaveLength(1);
+
+      expect(behaelter.querySelectorAll("ol > li")).toHaveLength(2);
+      expect(behaelter.querySelectorAll("ol button")).toHaveLength(0);
+    } finally {
+      await abbauen();
+    }
+  });
+
+  /**
+   * **Eigenschaften ja, allgemeine nein.** Der Satz dafür darf nicht behaupten,
+   * es gäbe keine — sie stehen an der Zeitleiste. Und ein Schalter, der einen
+   * leeren Bereich öffnet, wäre schlimmer als keiner.
+   */
+  it("sagt bei leerem `allgemein` nicht, es gäbe keine Eigenschaften", async () => {
+    const { behaelter, abbauen } = await rendereDetail({ eigenschaftenAnzahl: 1 }, [
+      eigenschaft("Service.Type", 1, "FileReader"),
+    ]);
+
+    try {
+      expect(blockschalter(behaelter)).toBeUndefined();
+      expect(behaelter.textContent).toContain(EIGENSCHAFTEN.keineAllgemeinen);
+      expect(behaelter.textContent).not.toContain(EIGENSCHAFTEN.keine);
+      expect(behaelter.querySelectorAll("ol button")).toHaveLength(1);
+    } finally {
+      await abbauen();
+    }
+  });
+
+  /**
+   * **Zugeklappt ist der Inhalt `inert`, und die Bewegung trägt ihren
+   * Ausschalter** (E‑228). Der Inhalt bleibt eingehängt, damit die Höhe sich
+   * bewegen kann; erreichbar ist er zugeklappt trotzdem nicht. Belegt über
+   * Attribut und Klassen — `jsdom` rechnet weder Layout noch Übergänge, und die
+   * Regel *ist* die Klasse (wie beim Ansichtsumschalter).
+   */
+  it("hält den zugeklappten Inhalt inert und gibt der Bewegung ihren Ausschalter", async () => {
+    const { behaelter, abbauen } = await rendereDetail({}, DERSELBE_NAME_MEHRFACH);
+
+    try {
+      const schalter = blockschalter(behaelter);
+      const inhalt = inhaltVon(behaelter, schalter);
+
+      expect(schalter?.getAttribute("aria-expanded")).toBe("false");
+      expect(inhalt.hasAttribute("inert")).toBe(true);
+
+      await klicke(schalter);
+      expect(schalter?.getAttribute("aria-expanded")).toBe("true");
+      expect(inhalt.hasAttribute("inert")).toBe(false);
+      // `aria-controls` zeigt in beiden Zuständen auf denselben, eingehängten Inhalt.
+      expect(inhaltVon(behaelter, schalter)).toBe(inhalt);
+
+      const spur = inhalt.closest('[data-aufklappen="spur"]');
+      expect(spur?.getAttribute("data-state")).toBe("open");
+      for (const klasse of [
+        "grid-rows-[0fr]",
+        "data-[state=open]:grid-rows-[1fr]",
+        "transition-[grid-template-rows]",
+        "duration-[220ms]",
+        "ease-[cubic-bezier(0.2,0,0,1)]",
+        "motion-reduce:transition-none",
+      ]) {
+        expect(spur?.classList.contains(klasse), klasse).toBe(true);
+      }
+
+      const blende = inhalt.querySelector('[data-aufklappen="inhalt"]');
+      for (const klasse of [
+        "duration-[110ms]",
+        "data-[state=open]:duration-150",
+        "data-[state=open]:delay-[55ms]",
+        "motion-reduce:transition-none",
+      ]) {
+        expect(blende?.classList.contains(klasse), klasse).toBe(true);
+      }
+
+      await klicke(schalter);
+      expect(inhalt.hasAttribute("inert")).toBe(true);
     } finally {
       await abbauen();
     }

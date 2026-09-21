@@ -728,6 +728,37 @@ folgt noch dem Fenster, weil ihre Mindestbreiten im schmalsten Kasten nicht aufg
   > sich an zwei Stellen auf *„keine Animation, kein Übergang"* — für das Nachrichtendetail, und
   > dort ändert sich nichts. Die Einschränkung nennt eine Ansicht und zwei Diagramme, nicht eine
   > Regel für die Anwendung.
+  >
+  > > **Korrekturvermerk vom 21.09.2026:** *„dort ändert sich nichts"* galt bis zu diesem Tag. Seither
+  > > gibt es im Nachrichtendetail die dritte benannte Ausnahme — der Kasten darunter.
+
+  > ### ⚠️ **Eingeschränkt am 21.09.2026 — die dritte benannte Ausnahme: das Auf- und Zuklappen im Nachrichtendetail** (E‑228)
+  >
+  > **Der Satz gilt weiter.** Erlaubt ist zusätzlich Bewegung **beim Auf- und Zuklappen im
+  > Nachrichtendetail** — Zeilen der Zeitleiste (Eingang, Schritte, Rest), Belegdaten, Technische
+  > Eigenschaften und Kettenabschnitte —, und sonst nirgends. Vorgabe des Auftraggebers, an einem
+  > Entwurf abgenommen; vollständig in [`nachrichtendetail.md`](nachrichtendetail.md) §10.16 und
+  > [`verkettung.md`](verkettung.md) §8.15.
+  >
+  > **Warum die Ausnahme dem Satz nicht widerspricht.** Die Eigenschaften eines Schritts stehen seit
+  > diesem Tag **unter seiner Zeile**, und die seitliche Linie läuft durch sie hindurch. **Die
+  > wachsende Linie zeigt, wohin der Inhalt gehört** — an welcher Zeile er hängt und wo er endet. Ein
+  > Inhalt, der mit einem Schlag dasteht, schiebt die Zeilen darunter weg, ohne zu sagen, was
+  > dazugekommen ist. Die Bewegung antwortet auf eine Handlung und steht danach still.
+  >
+  > | Was | Wert |
+  > |---|---|
+  > | Höhe | von 0 auf den Inhalt in **220 ms**, `cubic-bezier(0.2, 0, 0, 1)`, zu wie auf |
+  > | Inhalt | blendet beim Öffnen über **150 ms** nach **55 ms** ein und rückt **4 px** nach unten; beim Schließen über **110 ms** ohne Verzögerung aus |
+  > | Pfeil, Linie, Name | je **220 ms** |
+  >
+  > **Der Ausschalter ist Teil der Ausnahme und nicht ihr Nachtrag:** Mit
+  > `prefers-reduced-motion: reduce` steht alles **sofort** (`motion-reduce:transition-none` an jedem
+  > bewegten Element).
+  >
+  > **Was weiterhin fehlt, auch dort:** keine Bewegung beim ersten Aufbau und beim
+  > Nachrichtenwechsel, **kein Übergang beim Überfahren**, keiner beim Nachladen der Kette, kein
+  > Bildlauf beim Aufklappen.
 - **Keine Farbe für „überfällig" und „unquittiert".** Diese beiden Problemkategorien bleiben laut
   Regel Q3 von „Fehler" getrennt, haben aber noch keine Ansicht. Sie brauchen ab Schritt 4
   beziehungsweise 10 eine eigene Rolle — und die darf **nicht** Rot sein, sonst verschmelzen die
