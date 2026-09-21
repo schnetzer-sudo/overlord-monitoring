@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { texteFuer } from "@/i18n";
@@ -31,6 +32,7 @@ import { neuerZwischenspeicher, rendere } from "./hilfe/rendern";
  * | Der Ausschnitt-Vermerk | dass er **fehlt**, wenn er nicht greift, ist ohne Baum nicht zu treffen |
  * | Der Download-Knopf | dieselbe Art Aussage — und die tragende von Entscheidung 9: Ein Knopf, der etwas anderes verspricht als die Anzeige, **darf nicht im Baum stehen** |
  * | Die Herkunftszeile | *(17.09.2026)* die Beschriftung je Kodierung ist eine reine Funktion (`tests/rohdaten.test.ts`); **ob sie in der Zeile steht und außerhalb von `ANZEIGBAR` fehlt**, ist eine Aussage über Anwesenheit und Abwesenheit im Baum |
+ * | `Escape` führt zurück | *(21.09.2026)* die Taste ist ein **Zustand des Dokuments**: ein Zuhörer am `document`, ein Ziel aus dem gerenderten `href` und eine offene Liste, die zuerst zugeht — keine reine Funktion kennt eines davon |
  *
  * ## Kein Testdatensatz enthält echten Dateiinhalt
  *
@@ -40,7 +42,22 @@ import { neuerZwischenspeicher, rendere } from "./hilfe/rendern";
  * diesem Zustand keinen liefert.
  *
  * **Antwortrümpfe gestellt, kein Netz, keine Datenbank.**
+ *
+ * **`next/navigation` ist ersetzt, nicht der Prüfling** *(21.09.2026)*.
+ * `useRouter` wirft außerhalb des App-Routers, und die Ansicht braucht ihn seit
+ * der Taste `Escape`. `push` ist der Spion, an dem die beiden Fälle unten
+ * ablesen, **ob** und **wohin** navigiert wurde; das Router-Objekt ist ein
+ * Einzelstück, damit der Zuhörer des Hooks nicht bei jedem Rendern neu hängt.
  */
+
+const navigation = vi.hoisted(() => {
+  const push = vi.fn();
+  return { push, router: { push, replace: () => {} } };
+});
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => navigation.router,
+}));
 
 const TEXTE = texteFuer("de");
 const DATEIEN = TEXTE.nachrichten.detail.dateien;
@@ -158,6 +175,7 @@ let anfragen: string[] = [];
 
 beforeEach(() => {
   anfragen = [];
+  navigation.push.mockClear();
   vi.stubGlobal(
     "fetch",
     vi.fn((eingabe: RequestInfo | URL) => {
@@ -694,6 +712,78 @@ describe("Die Darstellungswahl", () => {
       );
     } finally {
       await original.abbauen();
+    }
+  });
+});
+
+/**
+ * **`Escape` führt zurück zur Nachricht** *(21.09.2026, `docs/rohdaten-frontend.md`
+ * §4 und §11 Punkt 7)* — dieselbe Wirkung wie der Klick auf den Verweis über dem
+ * Titel.
+ *
+ * | Test | Warum genau dieser |
+ * |---|---|
+ * | Das Ziel ist das `href` des Verweises | **aus dem DOM gelesen und hier nicht nachgebaut**: Der Satz lautet „dasselbe Ziel wie der Verweis", und ein im Test zusammengesetzter Pfad belegte nur, dass zwei Herleitungen heute übereinstimmen |
+ * | Die offene Darstellungsliste geht zuerst zu | die Stelle, auf die es ankommt: Das `AuswahlFeld` ist ein Popover, und die Ausnahme „offenes Auswahlfeld" von `useEscapeSchliesst` ist älter als der Baustein. Eine Taste, zwei Drücke, zwei Wirkungen — in dieser Reihenfolge |
+ *
+ * Die Taste fällt dort, wo sie im Browser fiele: auf dem Element mit dem Fokus.
+ */
+describe("Die Taste Escape", () => {
+  const verweis = (behaelter: HTMLElement) =>
+    Array.from(behaelter.querySelectorAll<HTMLAnchorElement>("a")).find(
+      (kandidat) => kandidat.textContent === DATEIEN.zurueck,
+    ) ?? null;
+  const feld = (behaelter: HTMLElement) =>
+    behaelter.querySelector<HTMLButtonElement>("[data-darstellung-auswahl] button");
+  const darstellungsliste = () => document.querySelector<HTMLElement>('[role="listbox"]');
+
+  async function escape() {
+    await act(async () => {
+      (document.activeElement ?? document.body).dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }),
+      );
+    });
+  }
+
+  it("navigiert auf das href des Verweises „Zurück zur Nachricht“", async () => {
+    const { behaelter, abbauen } = await rendereAnsicht(anzeige());
+
+    try {
+      const ziel = verweis(behaelter)?.getAttribute("href");
+      expect(ziel).toBeTruthy();
+      expect(navigation.push).not.toHaveBeenCalled();
+
+      await escape();
+
+      expect(navigation.push).toHaveBeenCalledExactlyOnceWith(ziel);
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("schließt bei offener Darstellungsliste zuerst die Liste und navigiert erst beim zweiten Druck", async () => {
+    const { behaelter, abbauen } = await rendereAnsicht(anzeige({ text: EDIFACT_ERFUNDEN }));
+
+    try {
+      const ziel = verweis(behaelter)?.getAttribute("href");
+      expect(ziel).toBeTruthy();
+
+      await act(async () => {
+        feld(behaelter)?.click();
+      });
+      expect(darstellungsliste()).not.toBeNull();
+      // Der Fokus steht in der Liste — dort fällt die Taste.
+      expect(darstellungsliste()?.contains(document.activeElement)).toBe(true);
+
+      await escape();
+      expect(darstellungsliste()).toBeNull();
+      expect(feld(behaelter)?.getAttribute("aria-expanded")).toBe("false");
+      expect(navigation.push).not.toHaveBeenCalled();
+
+      await escape();
+      expect(navigation.push).toHaveBeenCalledExactlyOnceWith(ziel);
+    } finally {
+      await abbauen();
     }
   });
 });

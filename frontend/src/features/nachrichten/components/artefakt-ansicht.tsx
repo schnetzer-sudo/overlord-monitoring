@@ -1,7 +1,8 @@
 "use client";
 
-import { useId, useMemo } from "react";
+import { useCallback, useId, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Binary,
@@ -38,7 +39,13 @@ import {
   type Darstellungsvermerk,
   type Format,
 } from "../darstellung";
-import { useArtefakte, useArtefaktinhalt, useDarstellung, useNachrichtendetail } from "../hooks";
+import {
+  useArtefakte,
+  useArtefaktinhalt,
+  useDarstellung,
+  useEscapeSchliesst,
+  useNachrichtendetail,
+} from "../hooks";
 import {
   anzeigevermerke,
   artefaktBeschriftung,
@@ -142,9 +149,21 @@ export function Dateiansicht({
   aufDarstellung: (darstellung: Darstellung) => void;
 }) {
   const texte = useTexte();
+  const router = useRouter();
   const titelId = useId();
   const auswahlId = useId();
   const bausteine = texte.nachrichten.detail.dateien;
+
+  // **Ein Ziel, zwei Wege dorthin:** das `href` des Verweises unten und die
+  // Taste. `Escape` wirkt wie der Klick auf „Zurück zur Nachricht" (21.09.2026,
+  // `docs/rohdaten-frontend.md` §4) — in jedem Zustand, denn der Verweis steht
+  // in jedem. `push` wie beim Klick und nicht `router.back()`: Wer die Datei
+  // über einen geteilten Verweis in einem neuen Tab öffnet, hat keinen Verlauf.
+  // Die offene Darstellungsliste schließt sich zuerst; das ist die Ausnahme
+  // „offenes Auswahlfeld" des Hooks und nichts, was hier stünde.
+  const zurueckZiel = nachrichtAnsicht(messageId);
+  const zurueck = useCallback(() => router.push(zurueckZiel), [router, zurueckZiel]);
+  useEscapeSchliesst(true, zurueck);
 
   const inhalt = useArtefaktinhalt(messageId, artefaktId);
   const liste = useArtefakte(messageId, true);
@@ -173,7 +192,7 @@ export function Dateiansicht({
           es auch sein. Er führt an die Nachricht, nicht an die Liste — das ist
           die Station, aus der die Datei stammt. */}
       <Link
-        href={nachrichtAnsicht(messageId)}
+        href={zurueckZiel}
         className="text-muted-foreground hover:text-foreground focus-visible:ring-ring min-h-bedienelement text-beiwerk -mx-1 flex w-fit items-center gap-1.5 rounded-md px-1 focus-visible:ring-2 focus-visible:outline-none"
       >
         <ArrowLeft aria-hidden="true" className="size-3.5 shrink-0" />

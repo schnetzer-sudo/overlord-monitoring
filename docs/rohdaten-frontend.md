@@ -422,6 +422,13 @@ Converter.Payload.GUID · Nutzdaten · 12.480 Bytes · Kodierung ISO-8859-1
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
+**`Escape` wirkt wie ein Klick auf „← Zurück zur Nachricht"** *(seit dem 21.09.2026, §11 Punkt 7)*
+— in jedem Zustand der Ansicht, über `useEscapeSchliesst` mit seinen zwei Ausnahmen
+([`nachrichtendetail.md`](nachrichtendetail.md) §10.11), mit dem Ziel aus derselben Stelle wie das
+`href` des Verweises und als Navigation wie beim Klick statt `router.back()` (ein geteilter Verweis
+im neuen Tab hat keinen Verlauf); bei offener Liste der Auswahl „Darstellung" schließt der erste
+Druck nur die Liste, erst der nächste führt zur Nachricht.
+
 **Die Herkunftszeile** — Rohname, Art, Größe und Kodierung in fester Laufweite — ist die Auskunft,
 die das Altsystem nie gibt. Dort steht über dem Feld nichts, und wer eine leere Anzeige sieht, weiß
 nicht, ob er ein Protokoll ohne freigegebenen Abschnitt vor sich hat, eine Binärdatei oder einen
@@ -762,7 +769,7 @@ zusammen **46** Fällen.
 | Datei | Art | Deckt ab |
 |---|---|---|
 | `tests/rohdaten.test.ts` | reine Funktionen, 29 Fälle *(31 seit 17.09.2026, Kasten unten)* | Beschriftungsregel in allen **vier** Lagen, **einschließlich Familie allein auf Schritt `0`** · **`Message.Payload.GUID` erzeugt kein Ziel** (M73) · die **Ziele** je Schritt: Art vor dem Namen — an jedem Ziel, auch an den beiden der Eingangszeile —, Ausschnitt in Name und `title`, Einteilung ohne Umsortieren, leere Einteilung ohne Liste, der Rest ohne Zeile in beide Richtungen · Gleichlauf über alle fünf Zustände samt der Ausnahme „binäres Protokoll" · Reihenfolge und Nachschlagen der Artefakte · die drei Vermerke · zweiter Versuch nur bei nicht erreichbarer Ablage · die vier Zustandstexte paarweise verschieden, in **beiden** Sprachen · kein Pfad trägt GUID oder Ablagenkennung |
-| `tests/artefakt-ansicht.test.tsx` | gerenderter Baum, 9 Fälle *(15 seit 17.09.2026, Kasten unten)* | **der Textknoten** · die **vier Zustände**, je einer · der Ausschnitt-Vermerk in beide Richtungen · der Download-Knopf · die Beschriftung ohne Nachladen |
+| `tests/artefakt-ansicht.test.tsx` | gerenderter Baum, 9 Fälle *(15 seit 17.09.2026, 21 seit 21.09.2026, Kästen unten)* | **der Textknoten** · die **vier Zustände**, je einer · der Ausschnitt-Vermerk in beide Richtungen · der Download-Knopf · die Beschriftung ohne Nachladen |
 | `tests/zeitleiste-ziele.test.tsx` | gerenderter Baum, 8 Fälle | die **drei Lagen je Schritt** (beide Arten, nur eine, keine) · die **Eingangszeile** über der Leiste mit **zwei** Zielen, mit Familie statt Nummer und ohne dass die Leiste eine vierte Zeile bekäme · die **Belastungsprobe aus M55**: fünfzehn Artefakte, fünfzehn eigene Ziele, ohne doppelten React-Schlüssel · das **Anspringen** der Eigenschaftengruppe · die Gegenprobe: ohne Eigenschaften kein Schalter am Schrittnamen |
 
 > **Korrigiert 19.08.2026 zu den beiden Zeilen darüber.** Die erste führte die Beschriftungsregel
@@ -792,6 +799,36 @@ zusammen **46** Fällen.
 > den anderen Zuständen fehlt —, die Beschriftung selbst ist eine reine Funktion. Der `anzeige`-
 > Baustein beider Dateien trug `kodierung: "ISO-8859-1"` und trägt jetzt `"ASCII"`; der erfundene
 > Inhalt darin ist reines ASCII, und kein Fall hat den alten Wert je abgefragt.
+
+> **Ergänzt 21.09.2026 (`Escape` führt zurück zur Nachricht, §4 und §11 Punkt 7), aus dem Lauf
+> gezählt** (`vitest run --reporter=json`, Fälle je Datei): `pnpm test` läuft mit **48 Dateien,
+> 1.284 Fällen**, alle grün. Neu sind **zwei**, beide in `tests/artefakt-ansicht.test.tsx` (von 19
+> auf **21** — die 19 im Lauf der Gegenprobe gezählt; die vier zwischen 15 und 19 gehören der
+> Darstellungswahl, [`dateiansicht-darstellung.md`](dateiansicht-darstellung.md) §7). Der
+> Basisstand `ce94562` ist **nicht** eigens gefahren: Der Zweig ändert keine andere Testdatei und
+> bringt keine Quelldatei, und 1.284 − 2 trifft die 1.282 aus dem Kopf von `vitest.config.mts`.
+>
+> | Fall | Was er belegt |
+> |---|---|
+> | `Escape` navigiert auf das `href` des Verweises | Das Ziel wird **aus dem gerenderten Verweis gelesen** und im Test nicht nachgebaut — der Satz lautet „dasselbe Ziel wie der Verweis", und ein zusammengesetzter Pfad belegte nur, dass zwei Herleitungen heute übereinstimmen. Genau ein `push`, mit genau diesem Wert |
+> | Offene Darstellungsliste | Die Liste wird geöffnet, wie ein Nutzer sie öffnet, und die Taste fällt auf dem Element mit dem Fokus — in der Liste. **Der erste Druck** schließt die Liste (`listbox` aus dem Baum, `aria-expanded="false"`) und navigiert **nicht**; **der zweite** navigiert auf das `href` |
+>
+> **Gegenproben, ausgeführt und zurückgenommen, in keinem Commit:** Hookaufruf in der Ansicht
+> entfernt → **beide** Fälle rot, die übrigen 19 grün. In die andere Richtung geeicht: ein naiver
+> Zuhörer am `document` ohne die Ausnahmen des Hooks → der zweite Fall rot **am ersten Druck**
+> (`push` gerufen, obwohl die Liste offen war). `next/navigation` ist in der Datei ersetzt, nicht
+> der Prüfling: `useRouter` wirft außerhalb des App-Routers, und `push` ist der Spion, an dem
+> beide Fälle ablesen, ob und wohin navigiert wurde.
+>
+> **Woran hängt, dass die Ausnahme „offenes Auswahlfeld" das `AuswahlFeld` erfasst** — der Hook
+> (10.08.2026) ist älter als der Baustein (16.09.2026), also nachgesehen und nicht angenommen:
+> Das `AuswahlFeld` ist ein Radix-`Popover`, und dessen Inhalt liegt — wie der eines
+> Radix-`Select` — in einem Popper-Behälter mit `data-radix-popper-content-wrapper`
+> (`@radix-ui/react-popper` 1.3.5); auf genau dieses Attribut prüft der Hook. Dazu kommt ein
+> zweiter, unabhängiger Riegel: Die Schicht des Popovers (`@radix-ui/react-dismissable-layer`
+> 1.1.17) hört am `document` **in der Fangphase**, schließt und ruft `preventDefault()` — der Hook
+> hört in der Blasenphase und tut bei `defaultPrevented` nichts. Der zweite Fall oben ist der
+> Beleg am gerenderten Baum.
 
 > **`tests/dateien-block.test.tsx` ist entfernt worden, nicht auskommentiert.** Der Block, den sie
 > prüfte, existiert nicht mehr; ihre beiden Fälle sind in `tests/zeitleiste-ziele.test.tsx`
@@ -886,7 +923,7 @@ Einschränkung — §5 legt die *Beschriftung* fest, und die steht im zugänglic
 | 4 | **Ein fehlgeschlagener Download zeigt den RFC-9457-Rumpf des Backends statt einer übersetzten Meldung.** Der Download ist eine Navigation auf den Endpunkt — anders geht es nicht, ohne eine Blob-URL zu bauen, und die ist ausgeschlossen. Der Fall setzt voraus, dass sich der Zustand **zwischen** Anzeige und Klick ändert (etwa die Ablage fällt aus); die Oberfläche bietet den Knopf sonst gar nicht erst an. **Zu entscheiden, wenn es jemanden trifft** |
 | 5 | **Kein Sheet über der Detailansicht** — ausdrücklich eine spätere Zugabe (Entscheidung 7) und nicht Teil dieses Baus |
 | 6 | ~~**Der Block ordnet nach `MessageActionID`, die Zeitleiste nach `MessageActionStart`.**~~ **Erledigt am 18.08.2026.** Der Block ist entfallen; Ziele und Eigenschaftengruppen folgen beide der Zeitleiste. Es gibt nur noch **eine** Ordnung, und damit nichts mehr, was auseinanderfallen könnte |
-| 7 | **`Escape` schließt die Dateiansicht nicht.** Im Nachrichtendetail tut es das, weil der Schließen-Knopf dort hinter bis zu fünfzig Tabellenzeilen steht; hier ist der Rückweg der erste Tabstopp der Seite. Ob die Taste trotzdem einheitlich gelten soll, ist eine Frage an die Abnahme |
+| 7 | ~~**`Escape` schließt die Dateiansicht nicht.** Im Nachrichtendetail tut es das, weil der Schließen-Knopf dort hinter bis zu fünfzig Tabellenzeilen steht; hier ist der Rückweg der erste Tabstopp der Seite. Ob die Taste trotzdem einheitlich gelten soll, ist eine Frage an die Abnahme~~ **Entschieden am 21.09.2026 (Auftraggeber) und am selben Tag gebaut.** Die Taste gilt einheitlich, wie auf `/nachrichten/<id>` seit dem 10.08.2026: `Escape` wirkt wie ein Klick auf „← Zurück zur Nachricht" (§4, Tests in §9). Dass der Rückweg der erste Tabstopp ist, stimmt weiterhin und macht die Taste nicht falsch — eine Taste, die je nach Einhängepunkt wirkt oder nicht, lernt niemand ([`nachrichtendetail.md`](nachrichtendetail.md) §10.11) |
 | 8 | **`app_user.download_allowed` wird auch hier nicht geprüft** — dieselbe Lage wie im Backend ([`rohdaten-backend.md`](rohdaten-backend.md) §11, Punkt 8). Gebaut ist nach [`rohdaten.md`](rohdaten.md) §3, Entscheidung 2: keine zweite Berechtigungsstufe. **Zu entscheiden: fällt Entscheidung 2, oder fällt das Flag?** — **Geschlossen 20.08.2026: Spalte entfernt.** Es fällt das Flag; `app_user.download_allowed` wird in Schritt 9a per Migration entfernt (E20), und mit ihr `downloadAllowed` aus `GET /api/auth/me` ([`authentifizierung.md`](authentifizierung.md) §1). Entscheidung 2 ist damit **bestätigt, nicht korrigiert**. An dieser Oberfläche ändert sich nichts — sie hat das Feld nie gelesen |
 | 9 | **Das Verhalten bei 610 KB im `<pre>` ist ungemessen.** Ein Textknoten dieser Größe mit `pre-wrap` ist theoretisch unproblematisch und praktisch ungeprüft — im lokalen Bestand ist keine so große Datei abrufbar. Gehört zur Sichtprüfung aus Punkt 1 |
 | 10 | ~~**[`rohdaten.md`](rohdaten.md) selbst fehlt im Verzeichnis von `docs/README.md`.**~~ **Erledigt am 18.08.2026**, weil der Auftrag zur Nachbesserung den Eintrag ausdrücklich freigibt |
