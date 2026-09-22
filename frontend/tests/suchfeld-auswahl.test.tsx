@@ -389,4 +389,55 @@ describe("Die Auswahl neben dem Suchfeld", () => {
       await abbauen();
     }
   });
+
+  /**
+   * **Der Schalter hat keine feste Breite mehr, und die Eingabe eine
+   * Mindestbreite** (E‑232, 22.09.2026, `docs/bam-suche.md` §11.1). Befund des
+   * Auftraggebers: Bei 7 rem Deckel war im 18-rem-Feld weder `Message.VFN` noch
+   * die gewählte Belegart lesbar. Die Regeln sind selbst Klassen — der
+   * Höchstanteil `max-w-1/2`, das Nachgeben `shrink` samt `min-w-0`, die
+   * Kürzung `truncate` an der Spanne, die Mindestbreite `min-w-[8.5rem]` der
+   * Eingabe — und der volle Name steht gekürzt im `title` und im zugänglichen
+   * Namen. Wie breit der Suchbereich wird, rechnet `jsdom` nicht; das ist
+   * Sichtprüfung (`docs/README.md`), kein Test, der eine Klasse abschreibt.
+   */
+  it("zeigt ein langes Feld am Schalter ohne feste Breite, mit vollem Namen im title und Mindestbreite der Eingabe", async () => {
+    const langesFeld = "Converter.TransactionID";
+    const angebot: Suchfelder = {
+      bam: NEXANS.bam,
+      felder: [{ quelle: "feld", name: langesFeld, spalte: false }, ...NEXANS.felder],
+    };
+    const { behaelter, abbauen } = await rendereSuchfeld(angebot);
+    try {
+      const menue = await oeffneMenue(behaelter);
+      await waehle(eintrag(await oeffneUntermenue(menue, TYPWAHL.gruppeFelder), langesFeld));
+
+      const knopf = schalter(behaelter);
+      const beschriftung = einsetzen(TYPWAHL.gewaehltesFeld, { feld: langesFeld });
+      // Der volle Name — im `title` für die Maus, im zugänglichen Namen für alle.
+      expect(knopf.getAttribute("title")).toBe(beschriftung);
+      expect(knopf.getAttribute("aria-label")).toBe(beschriftung);
+      expect(knopf.textContent).toBe(langesFeld);
+
+      // Höchstens die Hälfte des Suchbereichs, als Erster nachgebend, keine feste Breite.
+      const klassen = [...knopf.classList];
+      expect(klassen).toContain("max-w-1/2");
+      expect(klassen).toContain("shrink");
+      expect(klassen).toContain("min-w-0");
+      // Eine feste Breite wäre `w-…` oder ein `max-w-` in rem bzw. Skalenschritten
+      // (`max-w-28` war es bis dahin) — ein Anteil wie `max-w-1/2` ist keine.
+      expect(klassen.filter((k) => /^(w-|max-w-(\d+(\.\d+)?|\[[^\]]+\])$)/.test(k))).toEqual([]);
+      // Gekürzt wird die Spanne mit dem Namen, nicht der Name.
+      const spanne = [...knopf.querySelectorAll("span")].find((s) => s.textContent === langesFeld);
+      expect(spanne?.classList.contains("truncate")).toBe(true);
+
+      // Die Eingabe bekommt den Rest und nie weniger als im festen 18-rem-Feld.
+      const eingabe = behaelter.querySelector<HTMLInputElement>('input[type="search"]');
+      expect(eingabe).not.toBeNull();
+      expect([...eingabe!.classList]).toContain("min-w-[8.5rem]");
+      expect([...eingabe!.classList]).toContain("flex-1");
+    } finally {
+      await abbauen();
+    }
+  });
 });

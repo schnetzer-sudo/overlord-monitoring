@@ -435,7 +435,8 @@ Lesebeginn beim Umschalten an derselben x-Position bleibt.
 | `--dichte-navzeile` | 2.125 rem (34 px) | → `beruehrung` | Navigationseintrag, vorher 44 px |
 | `--dichte-kopfzeile` | 3.125 rem (50 px) | 3.5 rem | Kopfzeile, vorher 56 px |
 | `--dichte-navspalte` | 13 rem (208 px) | 13 rem | Navigationsspalte einschließlich Innenabstand |
-| `--dichte-suchbereich` | 18 rem (288 px) | 18 rem | reservierter Platz für die BAM-Suche, Schritt 7 |
+| `--dichte-suchbereich` | 18 rem (288 px) | 18 rem | reservierter Platz für die BAM-Suche, Schritt 7. *Seit dem 22.09.2026 die **Mindestbreite** des Suchbereichs ab 768 px (E‑232, [`bam-suche.md`](bam-suche.md) §11.1) — feste Breite war er bis dahin* |
+| `--dichte-suchbereich-max` | **40 rem** (640 px) | 40 rem | **Höchstbreite** des Suchbereichs ab 768 px, seit dem 22.09.2026 (E‑232). **Gewählt und nicht gemessen**, wie die 72 rem darunter. Begründung: Belegt die Typwahl höchstens die Hälfte des Bereichs, steht bei 40 rem die längste Belegart-Bezeichnung (17,5 rem, [`spaltenwahl.md`](spaltenwahl.md) §5.1) samt Symbol ungekürzt. Zwischen Mindest- und Höchstbreite wächst der Bereich in den freien Raum der Kopfzeile, nach links; kein anderes Element wird dafür schmaler |
 | `--dichte-baumspalte` | **26 rem** (416 px) | ebenso | Breite der Baumspalte der Prozessansicht **ab `xl`**, seit dem 02.09.2026. Darunter bekommt sie einen **Anteil** (40 %) und keine feste Breite: Bei 768 px blieben von rund 520 px Inhalt sonst gut hundert für die Liste daneben. **Gemessen und nicht gewählt** — [`process-view.md`](process-view.md) §16 (M118) |
 | `--dichte-feld` | 2.5 rem | 2.5 rem | Eingabefeld im Formular — bleibt bewusst komfortabel |
 | `--dichte-zeile` | 2.25 rem | 2.25 rem | Tabellenzeile ab Schritt 4 |
@@ -556,6 +557,12 @@ für Text, nicht für Tabellen. Deshalb steht die Grenze in der Ansicht und nich
 
 In der Kopfzeile steht links neben dem Mandantenumschalter ein Bereich fester Breite
 (`data-bereich="suche"`).
+
+> *22.09.2026 (E‑232): keine feste Breite mehr. Der Bereich ist ab 768 px mindestens 18 rem und
+> höchstens 40 rem breit und wächst dazwischen nach links in den freien Raum der Kopfzeile — er
+> bleibt am Mandantenumschalter, und nichts daneben wird schmaler. Befund des Auftraggebers: Bei
+> 18 rem waren weder der Wert noch die gewählte Belegart lesbar, links davon war Platz frei.
+> Tokens in §5, Umsetzung in [`bam-suche.md`](bam-suche.md) §11.1.*
 
 > **Der ursprüngliche Vermerk bleibt stehen, weil er die Entscheidung trägt.** Er lautete: „Kein
 > Eingabefeld, kein Platzhalter, keine Attrappe — **bis Schritt 7 ihn füllt**." Genau das ist am

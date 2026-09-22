@@ -979,6 +979,50 @@ betreffen: die **Marke** (unten) und das **Suchsignal** (§11.3).
 Der Platz ist seit Schritt 3 reserviert (`data-bereich="suche"`, `--dichte-suchbereich` = 18 rem,
 [`visuelles-konzept.md`](visuelles-konzept.md) §5) und **seit Teil 3 gefüllt**.
 
+> ### Geändert am 22.09.2026 — der Bereich wächst in den freien Raum (E‑232)
+>
+> **Befund des Auftraggebers:** Bei festen 18 rem waren weder der eingegebene Wert noch die
+> gewählte Belegart bzw. das gewählte Feld lesbar — im Screenshot „Message.V…" und
+> „HH.VDA4905.OUT." —, obwohl links vom Feld viel Platz frei war.
+>
+> **Ab 768 px** wächst der Suchbereich in den freien Raum der Kopfzeile: Mindestbreite bleibt
+> `--dichte-suchbereich` (18 rem), Höchstbreite ist das neue Token `--dichte-suchbereich-max`
+> (40 rem, gewählt und nicht gemessen, [`visuelles-konzept.md`](visuelles-konzept.md) §5). Der
+> Bereich bleibt links neben dem Mandantenumschalter und wächst **nach links**: Der Produktname ist
+> ab `md` eine Beschriftung mit seiner Textbreite und kein Füller mehr (`flex-initial`), der Bereich
+> ist `flex-1` zwischen Mindest- und Höchstbreite, und was darüber hinaus frei ist, nimmt `ml-auto`
+> auf. Kein anderes Element der Kopfzeile wird schmaler als bisher — der Produktname kürzt genau
+> dann, wenn er es vorher tat, und der Anzeigename des Mandanten hängt weiter an `lg`.
+>
+> **Die Eingabe** bekommt den Rest und wird bei keiner Breite schmaler als bisher im 18-rem-Feld:
+> `min-w-[8.5rem]` — 18 rem minus 7 rem Schalter, 2 rem `+` und zwei Fugen zu 0,25 rem.
+>
+> **Die Typwahl** hat keine feste Breite mehr (bisher `max-w-28`, 7 rem). Sie zeigt den gewählten
+> Eintrag ungekürzt, belegt höchstens die Hälfte des Suchbereichs (`max-w-1/2`) und gibt als Erste
+> nach, wenn es eng wird (`shrink`, `min-w-0`; die Eingabe hat ihre Mindestbreite, das `+`
+> schrumpft nicht). Gekürzt steht der volle Name im `title` und weiterhin im zugänglichen Namen
+> (`aria-label`, unverändert). Das Menü selbst — Untermenüs, 20 und 22 rem, Beschriftungen,
+> Platzhalter — ist unberührt ([`property-suche.md`](property-suche.md) §11.1).
+>
+> **Unter 768 px** bleibt das Feld eine eigene, volle Zeile (§11.9) mit denselben Regeln für
+> Eingabe und Typwahl; kein neuer Umbruchpunkt. Der Satz in §11.2, dass acht Marken nicht ins Feld
+> passen, gilt weiter — die Marken bleiben über der Trefferliste.
+>
+> **Test:** ein Fall in `tests/suchfeld-auswahl.test.tsx` (sieben statt sechs) — bei gewähltem
+> langem Feld (`Converter.TransactionID`) trägt der Schalter den vollen Namen im `title` und im
+> zugänglichen Namen, die Kürzungsklasse an der Spanne, den Höchstanteil `max-w-1/2` und das
+> Nachgeben `shrink`, keine feste Breite; die Eingabe `min-w-[8.5rem]`. **Vier Gegenproben, alle
+> rot, danach byte-gleich (SHA-256):** `title` entfernt; `max-w-28` zurück statt `max-w-1/2`;
+> `shrink-0` statt `shrink`; `min-w-0` statt der Mindestbreite. Der ganze Lauf: 48 Dateien,
+> **1.286 Fälle, 0 fehlgeschlagen**, gerendert **202 in vierundzwanzig Dateien** (aus
+> `vitest run --reporter=json` gezählt, im Kopf von `vitest.config.mts` fortgeschrieben). Dass
+> Tailwind die Klassen erzeugt, ist im gebauten Stylesheet nachgesehen: `md:min-w-suchbereich`,
+> `md:max-w-suchbereich-max` (→ `var(--dichte-suchbereich-max)`, das `--container-`Token wird wie
+> bei `max-w-inhalt` aufgelöst), `md:flex-initial`, `md:ml-auto`, `max-w-1/2`, `min-w-[8.5rem]`.
+> Die Breite des Suchbereichs selbst rechnet `jsdom` nicht; sie steht in der Tabelle *Offene
+> Sichtprüfungen* in [`README.md`](README.md) — breites Fenster, 768 px, 360 px, alle vier
+> Dichtestufen.
+
 **Kein Navigationseintrag.** Das Feld steht auf jeder Seite; ein Menüpunkt daneben wäre eine zweite
 Tür in denselben Raum.
 
@@ -1319,6 +1363,11 @@ Zeile Höhe — dieselbe Abwägung, die §6 beim Umbruch der Kopfzeile selbst tr
 
 **Kein neuer Umbruchpunkt.** Umgesetzt als `order-6 w-full md:order-3 md:w-suchbereich`; `md` ist
 die 48 rem = 768 px des Projekts.
+
+> *22.09.2026 (E‑232): `md:w-suchbereich` ist durch `md:min-w-suchbereich md:max-w-suchbereich-max
+> md:flex-1 md:ml-auto` ersetzt — ab 768 px wächst der Bereich zwischen 18 und 40 rem in den freien
+> Raum der Kopfzeile (§11.1, Korrekturblock). Die volle Zeile darunter und der Umbruchpunkt sind
+> unverändert.*
 
 > **Von Hand zu prüfen und nicht durch den Browsertest.** `resize_window` meldet Erfolg und ändert
 > `innerWidth` nicht ([`frontend-grundlagen.md`](frontend-grundlagen.md) §8). Nachgesehen ist das
