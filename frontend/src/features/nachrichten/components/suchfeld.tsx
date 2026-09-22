@@ -208,6 +208,10 @@ export function Suchfeld() {
           ? einsetzen(texte.suche.typwahl.gewaehltesFeld, { feld: wirksam.name })
           : texte.suche.feld.bezeichnung}
       </Label>
+      {/* Die Eingabe bekommt den Rest — und nie weniger als die 8,5 rem, die
+          sie im festen 18-rem-Feld neben dem 7 rem breiten Schalter hatte
+          (18 − 7 − 2 − 2 × 0,25; E‑232). Bei Enge gibt der Schalter nach, nicht
+          sie: Ihre Basis ist 0, ihr Schrumpfgewicht damit auch. */}
       <Input
         id={feldId}
         type="search"
@@ -218,7 +222,7 @@ export function Suchfeld() {
         placeholder={
           wirksam?.art === "feld" ? texte.suche.feld.platzhalterFeld : texte.suche.feld.platzhalter
         }
-        className="h-bedienelement min-w-0 flex-1"
+        className="h-bedienelement min-w-[8.5rem] flex-1"
       />
       <Button
         type="submit"
@@ -331,6 +335,16 @@ function ausAuswahlwert(wert: string): Auswahl {
  * Untermenü ist Platz dafür; am Schalter kürzt der Name und steht vollständig
  * im `title`. Für die Feldnamen gilt dasselbe: unverändert, technisch (E‑105).
  *
+ * **Der Schalter hat seit dem 22.09.2026 keine feste Breite mehr** (E‑232).
+ * Bis dahin war er auf 7 rem gedeckelt, und im 18-rem-Feld war weder
+ * `Message.VFN` noch `HH.VDA4905.OUT.…` lesbar (Befund des Auftraggebers). Jetzt
+ * zeigt er den gewählten Eintrag ungekürzt, solange er **höchstens die Hälfte**
+ * des Suchbereichs braucht (`max-w-1/2`), und **gibt als Erster nach**, wenn es
+ * eng wird (`shrink`, `min-w-0`; die Eingabe hält ihre Mindestbreite, das `+`
+ * schrumpft nicht). Gekürzt bleibt der volle Name im `title` und im
+ * zugänglichen Namen (`aria-label`). Wie breit der Suchbereich selbst ist,
+ * entscheidet die Kopfzeile (`components/kopfzeile.tsx`).
+ *
  * **„Technische Eigenschaften" ist die Beschriftung des Blocks im
  * Nachrichtendetail** (E‑113) — sie benennt eine Art und keinen Speicherort:
  * Acht der Einträge sind Spalten (Typ 0), keine `MessageProperty`-Zeilen, und
@@ -367,7 +381,7 @@ function Auswahlmenue({
         <Button
           type="button"
           variant="outline"
-          className="min-h-bedienelement max-w-28 shrink-0 gap-1 px-2"
+          className="min-h-bedienelement max-w-1/2 min-w-0 shrink gap-1 px-2"
           title={beschriftung}
           aria-label={beschriftung}
         >

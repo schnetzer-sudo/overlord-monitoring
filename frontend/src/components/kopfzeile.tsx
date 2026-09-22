@@ -86,9 +86,17 @@ export function Kopfzeile({
          * Bei `md` gekürzt, wenn Suchfeld, Mandant, Sprache und Nutzermenü die
          * Zeile füllen — und dann mit dem Vollwert im `title`, wie jeder gekürzte
          * Wert (Punkt 177). Keine eigene Gestalt dafür, kein Kürzel, kein Umbruch.
+         *
+         * **Ab `md` ist der Name eine Beschriftung und kein Füller mehr**
+         * (E‑232, 22.09.2026): `flex-initial` gibt ihm seine Textbreite, den
+         * freien Raum der Zeile bekommt der Suchbereich daneben. Gekürzt wird er
+         * genau dann, wenn er vorher gekürzt wurde — bis dahin bekam er als
+         * `flex-1` mit Basis 0 ohnehin nur, was übrig blieb. Unter `md` bleibt
+         * `flex-1`: Dort trennt er in der ersten Zeile Menüschalter und
+         * Nutzermenü.
          */}
         <span
-          className="text-ueberschrift order-2 min-w-0 flex-1 truncate font-semibold"
+          className="text-ueberschrift order-2 min-w-0 flex-1 truncate font-semibold md:flex-initial"
           title={texte.anwendung.name}
         >
           {texte.anwendung.name}
@@ -111,9 +119,28 @@ export function Kopfzeile({
          * beim Umbruch der Kopfzeile selbst (`docs/visuelles-konzept.md` §6).
          *
          * **Kein neuer Umbruchpunkt**: `md` ist der des Projekts.
+         *
+         * **Seit dem 22.09.2026 wächst der Bereich ab `md` in den freien Raum
+         * der Kopfzeile** (E‑232, `docs/bam-suche.md` §11.1). Befund des
+         * Auftraggebers: Bei festen 18 rem waren weder der Wert noch die
+         * gewählte Belegart lesbar, während links davon Platz frei war. Die 18 rem
+         * sind seitdem die **Mindest**breite (`--dichte-suchbereich`), 40 rem die
+         * **Höchst**breite (`--dichte-suchbereich-max`, `docs/visuelles-konzept.md`
+         * §5); dazwischen bekommt der Bereich, was Produktname, Mandant, Sprache
+         * und Nutzermenü übrig lassen — `flex-1` mit Basis 0, die Mindestbreite
+         * hält ihn, die Höchstbreite deckelt ihn. Was darüber hinaus frei ist,
+         * nimmt `ml-auto` auf: Der Bereich bleibt am Mandantenumschalter und
+         * wächst **nach links**; kein anderes Element wird dafür schmaler. Der
+         * Anzeigename des Mandanten hängt an `lg` und nicht an dieser Breite.
+         *
+         * Unter `md` bleibt es die volle Zeile — dieselben Regeln für Eingabe und
+         * Typwahl gelten dort im Feld (`suchfeld.tsx`).
          */}
         {navigationSichtbar ? (
-          <div data-bereich="suche" className="md:w-suchbereich order-6 w-full shrink-0 md:order-3">
+          <div
+            data-bereich="suche"
+            className="md:min-w-suchbereich md:max-w-suchbereich-max order-6 w-full shrink-0 md:order-3 md:ml-auto md:flex-1"
+          >
             <Suchfeld />
           </div>
         ) : null}

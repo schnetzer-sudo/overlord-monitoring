@@ -72,6 +72,9 @@
   --spacing-navzeile: var(--dichte-navzeile);
   --spacing-navspalte: var(--dichte-navspalte);
   --spacing-suchbereich: var(--dichte-suchbereich);
+  /* Die Hoechstbreite des Suchbereichs ab md (E-232) -- ein --container-Token
+     wie --container-inhalt, weil es eine max-width ist: md:max-w-suchbereich-max. */
+  --container-suchbereich-max: var(--dichte-suchbereich-max);
   --spacing-baumspalte: var(--dichte-baumspalte);
   --spacing-bedienzeile: var(--dichte-bedienzeile);
   --spacing-zeile: var(--dichte-zeile);
@@ -215,7 +218,13 @@
   --dichte-kopfzeile: 3.125rem; /* 50 px */
   --dichte-navzeile: 2.125rem; /* 34 px — Navigationseintrag */
   --dichte-navspalte: 13rem; /* 208 px einschliesslich Innenabstand */
-  --dichte-suchbereich: 18rem; /* 288 px — reserviert fuer die BAM-Suche, Schritt 7 */
+  --dichte-suchbereich: 18rem; /* 288 px — reserviert fuer die BAM-Suche, Schritt 7; seit dem 22.09.2026 die MINDESTbreite (E-232) */
+  /* Die HOECHSTbreite des Suchbereichs ab md (E-232, 22.09.2026). GEWAEHLT und
+     nicht gemessen, wie die 72 rem der Inhaltsbreite: Bei halber Breite fuer
+     die Typwahl steht die laengste Belegart-Bezeichnung (17,5 rem, M177,
+     docs/spaltenwahl.md §5.1) samt Symbol ungekuerzt. Der Bereich waechst
+     zwischen beiden Werten in den freien Raum der Kopfzeile, nach links. */
+  --dichte-suchbereich-max: 40rem; /* 640 px */
   /* Die Baumspalte der Prozessansicht AB xl. Darunter bekommt sie einen ANTEIL
      (40 %) und keine feste Breite: Bei 768 px blieben von rund 520 px Inhalt
      sonst gut hundert fuer die Liste daneben.
