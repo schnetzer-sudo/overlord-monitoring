@@ -16,6 +16,7 @@ import { Suchfeld } from "@/features/nachrichten/components/suchfeld";
 import type { Selbstauskunft } from "@/features/sitzung/api";
 import { Nutzermenue } from "@/features/sitzung/components/nutzermenue";
 import { useTexte } from "@/i18n/provider";
+import { cn } from "@/lib/utils";
 
 import { MandantAnzeige } from "./mandant-anzeige";
 import { NavigationsListe } from "./navigations-liste";
@@ -87,16 +88,27 @@ export function Kopfzeile({
          * Zeile füllen — und dann mit dem Vollwert im `title`, wie jeder gekürzte
          * Wert (Punkt 177). Keine eigene Gestalt dafür, kein Kürzel, kein Umbruch.
          *
-         * **Ab `md` ist der Name eine Beschriftung und kein Füller mehr**
-         * (E‑232, 22.09.2026): `flex-initial` gibt ihm seine Textbreite, den
-         * freien Raum der Zeile bekommt der Suchbereich daneben. Gekürzt wird er
-         * genau dann, wenn er vorher gekürzt wurde — bis dahin bekam er als
-         * `flex-1` mit Basis 0 ohnehin nur, was übrig blieb. Unter `md` bleibt
-         * `flex-1`: Dort trennt er in der ersten Zeile Menüschalter und
-         * Nutzermenü.
+         * **Ab `md` ist der Name eine Beschriftung und kein Füller mehr — sobald
+         * es das Suchfeld gibt** (E‑232, 22.09.2026): `flex-initial` gibt ihm
+         * seine Textbreite, den freien Raum der Zeile bekommt der Suchbereich
+         * daneben, und dessen `ml-auto` hält Mandant, Sprache und Nutzermenü am
+         * rechten Rand. Gekürzt wird er genau dann, wenn er vorher gekürzt wurde
+         * — bis dahin bekam er als `flex-1` mit Basis 0 ohnehin nur, was übrig
+         * blieb. Unter `md` bleibt `flex-1`: Dort trennt er in der ersten Zeile
+         * Menüschalter und Nutzermenü.
+         *
+         * **Ohne Suchfeld bleibt er der Füller** (Befund des Auftraggebers vom
+         * 22.09.2026 auf `/mandantenauswahl`): Dort — und auf `/passwort` — gibt
+         * es keine Navigation und damit keinen Suchbereich, also auch kein
+         * `ml-auto`; als `flex-initial` ließ der Name Mandant, Sprache und
+         * Nutzermenü nach links an sich heranrücken. `flex-initial` gilt deshalb
+         * nur, wenn das Element mit dem `ml-auto` auch im Baum steht.
          */}
         <span
-          className="text-ueberschrift order-2 min-w-0 flex-1 truncate font-semibold md:flex-initial"
+          className={cn(
+            "text-ueberschrift order-2 min-w-0 flex-1 truncate font-semibold",
+            navigationSichtbar && "md:flex-initial",
+          )}
           title={texte.anwendung.name}
         >
           {texte.anwendung.name}

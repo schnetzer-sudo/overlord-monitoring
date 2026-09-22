@@ -1021,7 +1021,8 @@ Der Platz ist seit Schritt 3 reserviert (`data-bereich="suche"`, `--dichte-suchb
 > bei `max-w-inhalt` aufgelöst), `md:flex-initial`, `md:ml-auto`, `max-w-1/2`, `min-w-[8.5rem]`.
 > Die Breite des Suchbereichs selbst rechnet `jsdom` nicht; sie ist am 22.09.2026 am laufenden
 > System gemessen (M190, §28) — mit einem Befund: Der Mandantenblock musste ab `md` `shrink-0`
-> bekommen, damit allein der Produktname nachgibt.
+> bekommen, damit allein der Produktname nachgibt — und `md:flex-initial` am Produktnamen gilt nur
+> mit Suchfeld, sonst rückte auf `/mandantenauswahl` alles nach links (§28, zweiter Befund).
 
 **Kein Navigationseintrag.** Das Feld steht auf jeder Seite; ein Menüpunkt daneben wäre eine zweite
 Tür in denselben Raum.
@@ -2493,6 +2494,20 @@ Mandant 416,1–545, Sprache 554–646, Nutzermenü 655–745,5 — in beiden Fa
 
 > Ein Prüfartefakt, kein Befund: Bei 360 px meldete der Überlappungsvergleich „Sprache über
 > Nutzermenü", weil er nur die x‑Achse vergleicht — dort stehen die beiden in verschiedenen Zeilen.
+
+**Zweiter Befund, gemeldet vom Auftraggeber am selben Tag, nach der Zusammenführung:** Auf
+`/mandantenauswahl` stand das Nutzermenü samt Mandant und Sprache **ganz links** neben dem
+Produktnamen. Dort — und auf `/passwort` — gibt es keine Navigation und deshalb kein Suchfeld;
+das Element mit dem `ml-auto`, das den Rest nach rechts hält, fehlt im Baum, und der Produktname
+war als `flex-initial` kein Füller mehr. Die Messrunde hatte das nicht sehen können, weil sie
+allein `/suche` aufrief. **Behoben in `components/kopfzeile.tsx`:** `md:flex-initial` gilt nur,
+wenn das Suchfeld im Baum steht; ohne Navigation bleibt der Produktname `flex-1`, wie vor E‑232.
+**Test:** `tests/kopfzeile.test.tsx` (neu, zwei Fälle) — mit Suchfeld trägt der Suchbereich
+`md:ml-auto` und der Name `md:flex-initial`; ohne Suchfeld steht kein `ml-auto` im Kopf und der
+Name trägt die Klasse nicht. Zwei Mutanten (unbedingtes `flex-initial`, `ml-auto` entfernt),
+beide rot, Datei danach byte-gleich. Gesamtlauf **1.288 Fälle, 204 gerenderte in
+fünfundzwanzig Dateien** (Kopf von `vitest.config.mts`). Am laufenden System nicht nachgesehen —
+das Debug-Chrome war geschlossen; die Regel ist eine Klasse und im Test belegt.
 
 ### Die Trefferliste ohne „Kette"
 
