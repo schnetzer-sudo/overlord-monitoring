@@ -656,27 +656,11 @@ export const en: Texte = {
 
     spalten: {
       treffer: "Match",
-      kette: "Chain",
     },
 
     treffer: {
       weitere: "{erste} +{anzahl}",
       alleTypen: "Matched as: {typen}",
-    },
-
-    kette: {
-      kurz: {
-        SPLIT_WURZEL: "Split",
-        SPLIT_KIND: "Part",
-        MERGE_EINGANG: "Input",
-        MERGE_ERGEBNIS: "Result",
-      },
-      satz: {
-        SPLIT_WURZEL: "This message was split — the parts continue on their own.",
-        SPLIT_KIND: "This message is one part of a split.",
-        MERGE_EINGANG: "This message went into a merge.",
-        MERGE_ERGEBNIS: "This message came out of a merge.",
-      },
     },
 
     varianten: "Searched for {eingabe} and {fassungen}.",

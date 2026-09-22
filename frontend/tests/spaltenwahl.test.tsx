@@ -388,15 +388,23 @@ const TREFFERZEILE: BamTreffer = {
   treffer: [{ typ: 9014, bezeichnung: "Lieferschein-Nr._L_SAP", wert: "0050" }],
 };
 
+/**
+ * Ohne „Kette": Die Spalte ist am 22.09.2026 entfallen (E‑231), `rollen` steht
+ * weiter auf der Zeile und liest hier niemand. Die Schwellen sind allein um ihre
+ * 74 px gesunken — 926 und 646 px statt 1.000 und 720.
+ */
 const TREFFER_BESCHRIFTUNG = {
   zeitpunkt: TEXTE.nachrichten.spalten.zeitpunkt,
   status: TEXTE.nachrichten.spalten.status,
   treffer: TEXTE.suche.spalten.treffer,
-  kette: TEXTE.suche.spalten.kette,
   ablauf: TEXTE.nachrichten.spalten.ablauf,
 };
 
-/** M176 §4.7 — die Hülle der Trefferliste bei 360, 390, 430, 744 und 768 px. */
+/**
+ * M176 §4.7 — die Hülle der Trefferliste bei 360, 390, 430, 744 und 768 px. Die
+ * Kanten (Grundmenge und Schwelle, ein Pixel darunter und genau darauf) rechnet
+ * `breitenFuer` aus der Spaltenwahl dazu; sie wandern mit der Rechnung.
+ */
 const TREFFER_GEMESSEN = [334, 364, 404, 718, 518];
 
 describe("Die Trefferliste an den gemessenen Containerbreiten", () => {

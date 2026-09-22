@@ -1175,6 +1175,10 @@ Breite, und Zeitpunkt, Status, Kette bleiben, wo sie sind. Bei einer **gemischte
 Zeile einen BAM-Treffer — sie muss jede Belegnummer erfüllen —, und die Spalte sagt wie bisher,
 **worauf** die Nummer getroffen hat.
 
+> *22.09.2026 (E‑231): Die Spalte „Kette" ist entfallen; bei reiner Feldsuche stehen Zeitpunkt,
+> Status und Ablauf, und der Ablauf kommt ab 646 px Hülle — [`bam-suche.md`](bam-suche.md) §11.5,
+> Korrekturblock.*
+
 **Entschieden wird an der Frage, nicht an den Zellen:** `zeigtTrefferspalte` liest, ob die Antwort
 eine Belegnummer zitiert (`begriffe.length > 0`), nicht, ob die Zellen leer sind. Ob Zellen leer
 sind, hängt an den Daten; ob eine Belegnummer gefragt war, an der Frage — und eine Tabelle, die je

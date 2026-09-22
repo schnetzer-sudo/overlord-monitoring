@@ -1209,9 +1209,11 @@ export const de = {
         "Mehr als {anzahl} Begriffe nimmt die Suche nicht an — ein Schutzgeländer, keine fachliche Grenze. Entferne einen, um einen anderen zu suchen.",
     },
 
+    // Die Spalte „Kette" mit ihren Rollenwörtern und -sätzen stand bis zum
+    // 22.09.2026 daneben (E‑231, docs/bam-suche.md §11.5, Korrekturblock); die
+    // Trefferliste war ihr einziger Verbraucher.
     spalten: {
       treffer: "Treffer",
-      kette: "Kette",
     },
 
     treffer: {
@@ -1219,27 +1221,6 @@ export const de = {
       // 4,17 Prozent der Paare steht derselbe Wert unter mehreren Typen (M37).
       weitere: "{erste} +{anzahl}",
       alleTypen: "Getroffen als: {typen}",
-    },
-
-    // Die Stellung in der Verkettung. Sie ist hier wichtiger als in der Liste:
-    // Die Suche findet fast immer die Wurzel (96,87 Prozent der Wurzeln tragen
-    // BAM-Werte gegen 2,42 Prozent der Kinder, M26‑1b), und die trägt bei einer
-    // Aufteilung einen Endstatus, der die Frage „ist der Beleg angekommen" nicht
-    // beantwortet. Kurz in der Zelle, als Satz im Tooltip — auf einem Touchgerät
-    // gibt es keinen Hover.
-    kette: {
-      kurz: {
-        SPLIT_WURZEL: "Aufgeteilt",
-        SPLIT_KIND: "Teil",
-        MERGE_EINGANG: "Eingang",
-        MERGE_ERGEBNIS: "Ergebnis",
-      },
-      satz: {
-        SPLIT_WURZEL: "Diese Nachricht wurde aufgeteilt — die Teile laufen einzeln weiter.",
-        SPLIT_KIND: "Diese Nachricht ist ein Teil einer Aufteilung.",
-        MERGE_EINGANG: "Diese Nachricht ist in eine Zusammenführung eingegangen.",
-        MERGE_ERGEBNIS: "Diese Nachricht ist aus einer Zusammenführung entstanden.",
-      },
     },
 
     // Keine stille Korrektur: Wer 4711815 tippt und 004711815 findet, muss

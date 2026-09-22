@@ -91,8 +91,8 @@ import {
  * Zeichen sucht, feuert das mehrfach ab.
  *
  * **Und kein Aufklappmenü unter dem Feld.** Eine Trefferzeile trägt Zeitpunkt,
- * Status, Ablauf, Treffertyp und Kettenhinweis — das ist eine Tabellenzeile und
- * kein Vorschlagseintrag.
+ * Status, Ablauf und Treffertyp (bis zum 22.09.2026 auch den Kettenhinweis,
+ * E‑231) — das ist eine Tabellenzeile und kein Vorschlagseintrag.
  *
  * ## Beide Suchfelder sagen, worin sie suchen
  *

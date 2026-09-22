@@ -26,6 +26,7 @@ import { neuerZwischenspeicher, rendere } from "./hilfe/rendern";
  * | Derselbe Wert unter zwei Typen | Der Schlüssel der Marken ist `(typ, wert)`. Wäre er der Wert allein, meldete React einen **doppelten Schlüssel** — in der Konsole, und sichtbar falsch wäre nichts. M37 misst den Fall auf 4,17 % der Paare |
  * | Dieselbe Parameterform als BAM- und als Feld-Marke *(Teil 2 der Property-Suche)* | Derselbe Grund, eine Ebene höher: Der Schlüssel trägt die **Art** voran. Ohne sie wären `9012:4711` als Belegart und als Feldname derselbe React-Schlüssel |
  * | Die Längenregel der Trefferspalte | Die Regel **ist** eine Klasse plus ein `title`; ohne Baum gibt es nichts, woran sie abzulesen wäre. M45 hat das Kürzen der Beschreibungen selbst ausgeschlossen — gekürzt wird die Zelle |
+ * | Keine Spalte „Kette" *(22.09.2026, E‑231)* | Eine Aussage über **Abwesenheit** im Baum: keine Kopfzelle „Kette", keine Zelle mit einer Kettenrolle — obwohl `rollen` auf der Zeile steht. Bis dahin prüfte der Fall den Kettenhinweis (Klasse plus `title`) |
  * | Keine Spalte „Treffer" ohne Belegnummer *(Teil 2)* | Eine Aussage über **Abwesenheit** im Baum (E‑110): Die Spalte entfällt, sie bleibt nicht leer — und die Zellen der Zeile rücken nach |
  *
  * Die ersten beiden hängen vollständig an `tests/setup/konsole.ts`: Sie bestehen
@@ -193,7 +194,7 @@ describe("Die Spalte „Treffer“ der Trefferliste", () => {
 
     try {
       const zellen = [...behaelter.querySelectorAll("tbody td")];
-      // Zeitpunkt · Status · Treffer · Kette · Ablauf
+      // Zeitpunkt · Status · Treffer · Ablauf
       const treffer = zellen[2]?.querySelector("span");
       expect(treffer).not.toBeNull();
 
@@ -208,12 +209,14 @@ describe("Die Spalte „Treffer“ der Trefferliste", () => {
   });
 
   /**
-   * **Der Kettenhinweis steht in der Zeile.** Die Suche findet fast immer die
-   * Wurzel (96,87 Prozent der Wurzeln tragen BAM-Werte gegen 2,42 Prozent der
-   * Kinder, M26‑1b), und die trägt bei einer Aufteilung einen Endstatus, der die
-   * eigentliche Frage nicht beantwortet.
+   * **Die Spalte „Kette" gibt es nicht mehr** (22.09.2026, E‑231). Bis dahin
+   * stand hier der Kettenhinweis aus `rollen` — kurz in der Zelle, als Satz im
+   * `title`. Die Zeile trägt weiterhin `rollen: ["SPLIT_WURZEL"]`; geprüft wird,
+   * dass nichts davon in den Baum gelangt: keine Kopfzelle „Kette" und keine
+   * Zelle, die ein Rollenwort trägt. Abwesenheit, nicht Leere — eine leere
+   * Spalte mit Überschrift fiele hier ebenso wie eine Zelle ohne Überschrift.
    */
-  it("nennt die Stellung in der Kette neben dem Endstatus", async () => {
+  it("führt keine Spalte „Kette“ — weder Kopfzelle noch eine Zelle mit einer Kettenrolle", async () => {
     const { behaelter, abbauen } = await rendere(
       <TrefferTabelle
         zeilen={[TREFFERZEILE]}
@@ -224,9 +227,29 @@ describe("Die Spalte „Treffer“ der Trefferliste", () => {
     );
 
     try {
-      const kette = [...behaelter.querySelectorAll("tbody td")][3];
-      expect(kette?.textContent).toContain("Aufgeteilt");
-      expect(kette?.querySelector("span")?.getAttribute("title")).toContain("aufgeteilt");
+      const koepfe = [...behaelter.querySelectorAll("thead th")].map((th) => th.textContent);
+      expect(koepfe).not.toContain("Kette");
+      // Zeitpunkt · Status · Treffer · Ablauf — vier Spalten, und jede Zeile hat so viele Zellen.
+      expect(koepfe).toHaveLength(4);
+      const zellen = [...behaelter.querySelectorAll("tbody td")];
+      expect(zellen).toHaveLength(4);
+      // Kein Rollenwort in irgendeiner Zelle — weder sichtbar noch im `title`
+      // noch in einer `sr-only`-Spanne.
+      const rollenwoerter = [
+        "Aufgeteilt",
+        "aufgeteilt",
+        "Teil einer Aufteilung",
+        "Zusammenführung",
+      ];
+      for (const zelle of zellen) {
+        const inhalt = [
+          zelle.textContent ?? "",
+          ...[...zelle.querySelectorAll("[title]")].map((e) => e.getAttribute("title") ?? ""),
+        ].join(" ");
+        for (const wort of rollenwoerter) {
+          expect(inhalt, `Zelle „${zelle.textContent}“ trägt ${wort}`).not.toContain(wort);
+        }
+      }
     } finally {
       await abbauen();
     }
@@ -234,7 +257,7 @@ describe("Die Spalte „Treffer“ der Trefferliste", () => {
 
   /**
    * **Ohne Belegnummer gibt es die Spalte nicht** (E‑110) — weder die
-   * Überschrift noch die Zelle; die Kette rückt an die dritte Stelle. Eine
+   * Überschrift noch die Zelle; der Ablauf rückt an die dritte Stelle. Eine
    * Überschrift über leeren Zellen wäre keine der beiden Antworten aus dem
    * Auftrag, und genau das prüft dieser Baum: Abwesenheit, nicht Leere.
    */
@@ -252,11 +275,12 @@ describe("Die Spalte „Treffer“ der Trefferliste", () => {
     try {
       const koepfe = [...behaelter.querySelectorAll("thead th")].map((th) => th.textContent);
       expect(koepfe).not.toContain("Treffer");
-      expect(koepfe).toHaveLength(4);
+      expect(koepfe).toHaveLength(3);
       const zellen = [...behaelter.querySelectorAll("tbody td")];
-      expect(zellen).toHaveLength(4);
-      // Zeitpunkt · Status · Kette · Ablauf — die Kette steht jetzt an dritter Stelle.
-      expect(zellen[2]?.textContent).toContain("Aufgeteilt");
+      expect(zellen).toHaveLength(3);
+      // Zeitpunkt · Status · Ablauf — der Ablauf steht jetzt an dritter Stelle
+      // (bis zum 22.09.2026 die Kette, E‑231).
+      expect(zellen[2]?.textContent).toContain(TREFFERZEILE.sosName);
     } finally {
       await abbauen();
     }

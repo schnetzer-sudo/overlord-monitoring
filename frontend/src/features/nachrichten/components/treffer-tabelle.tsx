@@ -14,7 +14,7 @@ import { einsetzen } from "@/i18n";
 import { useTexte } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 
-import type { BamTreffer, BamTrefferWert, Kettenrolle } from "../api";
+import type { BamTreffer, BamTrefferWert } from "../api";
 import { trefferTypen } from "../suche";
 import { TREFFER_SICHTBAR } from "../treffer-spalten";
 import { AblaufZelle, ZeitpunktZelle } from "./nachrichten-tabelle";
@@ -34,7 +34,7 @@ import { StatusPlakette } from "./status-plakette";
  * Es gilt deshalb auch dieselbe Regel: **Jede Zelle ist eine Zeile hoch. Was
  * nicht hineinpasst, wird gekürzt; der Vollwert steht im `title`.**
  *
- * ## Zwei Spalten kommen dazu
+ * ## Eine Spalte kommt dazu
  *
  * **„Treffer" zeigt den Typ, nicht den Wert** — die Begründung steht bei
  * {@link trefferTypen}. Die Beschriftungen sind lang und bleiben es: M45 misst,
@@ -43,32 +43,29 @@ import { StatusPlakette } from "./status-plakette";
  * `Abladestelle_K_SAP` stehen über einen Monat auf 3.405 Nachrichten gemeinsam.
  * Gekürzt wird deshalb in der Zelle und nicht am Text.
  *
- * **„Kette" ist hier wichtiger als in der Liste.** Die Suche findet fast immer
- * die **Wurzel**: 96,87 Prozent der Wurzeln tragen BAM-Werte, nur 2,42 Prozent
- * der Kinder (M26‑1b). Und die Wurzel trägt bei einer Aufteilung einen
- * Endstatus, der die eigentliche Frage — *ist der Beleg beim Partner angekommen*
- * — gerade nicht beantwortet. Ohne diesen Hinweis hielte sich der Nutzer für
- * fertig. Er kostet **keinen** zusätzlichen Zugriff: Die vier
- * Verkettungsspalten stehen auf der Zeile, die die Abfrage ohnehin liest (E4).
- *
- * **Kein Sammelstatus über die Kette und keine Zählung der Folgenachrichten.**
- * Beides kostete je Zeile eine eigene Auflösung, und die Zahl stünde bei 87
- * Prozent der Wurzeln ohnehin auf Eins. Wer wissen will, was daran hängt, öffnet
- * die Nachricht.
+ * **Die Spalte „Kette" gibt es seit dem 22.09.2026 nicht mehr** (E‑231,
+ * Entscheidung des Auftraggebers, `docs/bam-suche.md` §11.5, Korrekturblock).
+ * Sie nannte die Stellung in der Verkettung aus `rollen` — gebaut für die Wurzel
+ * mit Endstatus, die die Frage *bin ich fertig* falsch beantwortet; an
+ * Split-Wurzeln wiederholte sie den Status „Aufgeteilt". Die Aufteilung steht
+ * seitdem allein im Kettenblock des Details; `rollen` bleibt in der Antwort
+ * und im Typ, hier liest es niemand mehr. Kein Symbol, kein Zusatz in der
+ * Statuszelle, kein Tooltip ersetzt sie.
  *
  * ## Der Ablauf kommt, wenn die Hülle ihn trägt (E‑147)
  *
- * Zeitpunkt, Status, Treffer und Kette stehen bei jeder Breite; der Ablauf kommt
- * dazu, sobald **die Hülle dieser Tabelle** — nicht das Fenster — die
- * Mindestbreiten aller fünf trägt: ab 1.000 px, ohne die Spalte „Treffer" ab
- * 720 px. Welche Spalte weicht, ist dieselbe Wahl wie vorher und folgt derselben
- * Frage: Was beantwortet *welcher Beleg ist das* und *bin ich fertig*? Der
- * Ablaufname beantwortet keines von beiden und steht im Detail vollständig da.
+ * Zeitpunkt, Status und Treffer stehen bei jeder Breite; der Ablauf kommt dazu,
+ * sobald **die Hülle dieser Tabelle** — nicht das Fenster — die Mindestbreiten
+ * aller vier trägt: ab 926 px, ohne die Spalte „Treffer" ab 646 px (E‑231;
+ * vorher 1.000 und 720 px mit der Spalte „Kette"). Welche Spalte weicht, ist
+ * dieselbe Wahl wie vorher und folgt derselben Frage: Was beantwortet *welcher
+ * Beleg ist das* und *bin ich fertig*? Der Ablaufname beantwortet keines von
+ * beiden und steht im Detail vollständig da.
  *
  * **Jede feste Spalte trägt ihre gemessene Mindestbreite** (M177,
  * `../treffer-spalten.ts`). Vorher kam der Ablauf an der Fensterschwelle `md` mit
  * 0 px dazu und zeichnete seine Beschriftung trotzdem (Punkt 173). Unter der
- * Grundmenge — 696 px, ohne „Treffer" 416 px — scrollt die Tabelle in ihrer
+ * Grundmenge — 622 px, ohne „Treffer" 342 px — scrollt die Tabelle in ihrer
  * Hülle, wie sie es vorher unter 768 px tat (`property-suche.md` §14, Punkt 11).
  * Herleitung und Zahlen: `docs/spaltenwahl.md`.
  *
@@ -125,7 +122,7 @@ export function TrefferTabelle({
             {/* Jede feste Spalte trägt ihre gemessene Mindestbreite (M177): Zeitpunkt
               187 px, Status 155 px — die Plakette, der Zusatz daneben kürzt —,
               Treffer 280 px — die längste Belegart-Bezeichnung, mit `+2` kürzt
-              sie weiterhin —, Kette 74 px. */}
+              sie weiterhin. */}
             <TableHead className="h-8 w-[11.6875rem]">
               {texte.nachrichten.spalten.zeitpunkt}
             </TableHead>
@@ -133,7 +130,6 @@ export function TrefferTabelle({
             {mitTrefferspalte ? (
               <TableHead className="h-8 w-[17.5rem]">{texte.suche.spalten.treffer}</TableHead>
             ) : null}
-            <TableHead className="h-8 w-[4.625rem]">{texte.suche.spalten.kette}</TableHead>
             {/* Ohne Breitenangabe: Der Ablaufname bekommt, was übrig bleibt — an
               seiner Schwelle genau seine Mindestbreite. */}
             <TableHead className={cn("h-8", ablauf)}>{texte.nachrichten.spalten.ablauf}</TableHead>
@@ -183,9 +179,6 @@ export function TrefferTabelle({
                   <TrefferZelle treffer={zeile.treffer} />
                 </TableCell>
               ) : null}
-              <TableCell className="px-2 py-0 align-middle">
-                <KettenZelle rollen={zeile.rollen} />
-              </TableCell>
               <TableCell className={cn("px-2 py-0 align-middle", ablauf)}>
                 <AblaufZelle sosName={zeile.sosName} processName={zeile.processName} />
               </TableCell>
@@ -222,43 +215,6 @@ function TrefferZelle({ treffer }: { treffer: BamTrefferWert[] }) {
     <span className="block truncate" title={voll}>
       {kurz}
       {typen.weitere === 0 ? null : <span className="sr-only"> — {voll}</span>}
-    </span>
-  );
-}
-
-/**
- * **Die Stellung in der Verkettung** — und sonst nichts.
- *
- * Sie sagt, dass an dieser Nachricht etwas hängt, und behauptet nicht, *was*
- * daraus geworden ist. Der kurze Text steht in der Zelle, der ganze Satz im
- * `title`: Auf einem Touchgerät gibt es keinen Hover, und ein Wort allein wäre
- * dort eine Andeutung.
- *
- * **Ohne Rolle bleibt die Zelle leer.** Keine Kette ist keine fehlende Angabe —
- * ein „nicht zugeordnet" behauptete hier eine Lücke, wo keine ist.
- *
- * **Ohne eigene Farbrolle.** Eine Farbe wäre eine Aussage über *gut oder
- * schlecht*, und die macht die Stellung in der Kette nicht
- * (`docs/visuelles-konzept.md` §3).
- */
-function KettenZelle({ rollen }: { rollen: Kettenrolle[] }) {
-  const texte = useTexte();
-
-  // Eine Rolle, die diese Fassung nicht kennt, wird übergangen statt als
-  // „undefined" gezeigt — dieselbe Vorsicht wie bei einem unbekannten Statuswert
-  // in der Plakette. Der Typ schließt den Fall aus, die Leitung nicht.
-  const bekannt = rollen.filter((rolle) => rolle in texte.suche.kette.kurz);
-  if (bekannt.length === 0) {
-    return null;
-  }
-
-  const kurz = bekannt.map((rolle) => texte.suche.kette.kurz[rolle]).join(" · ");
-  const voll = bekannt.map((rolle) => texte.suche.kette.satz[rolle]).join(" ");
-
-  return (
-    <span className="text-muted-foreground text-beiwerk block truncate" title={voll}>
-      {kurz}
-      <span className="sr-only"> — {voll}</span>
     </span>
   );
 }
