@@ -220,11 +220,14 @@
   --dichte-navspalte: 13rem; /* 208 px einschliesslich Innenabstand */
   --dichte-suchbereich: 18rem; /* 288 px — reserviert fuer die BAM-Suche, Schritt 7; seit dem 22.09.2026 die MINDESTbreite (E-232) */
   /* Die HOECHSTbreite des Suchbereichs ab md (E-232, 22.09.2026). GEWAEHLT und
-     nicht gemessen, wie die 72 rem der Inhaltsbreite: Bei halber Breite fuer
-     die Typwahl steht die laengste Belegart-Bezeichnung (17,5 rem, M177,
-     docs/spaltenwahl.md §5.1) samt Symbol ungekuerzt. Der Bereich waechst
-     zwischen beiden Werten in den freien Raum der Kopfzeile, nach links. */
-  --dichte-suchbereich-max: 40rem; /* 640 px */
+     nicht gemessen, wie die 72 rem der Inhaltsbreite. Gebaut mit 40 rem (bei
+     halber Breite fuer die Typwahl stand die laengste Belegart-Bezeichnung,
+     17,5 rem, ungekuerzt); dem Auftraggeber war das am selben Tag zu gross,
+     entschieden sind 75 % davon: 30 rem. Die Typwahl bekommt damit hoechstens
+     15 rem, die laengsten Belegarten kuerzen dort mit dem Vollwert im title.
+     Der Bereich waechst zwischen beiden Werten in den freien Raum der
+     Kopfzeile, nach links. */
+  --dichte-suchbereich-max: 30rem; /* 480 px */
   /* Die Baumspalte der Prozessansicht AB xl. Darunter bekommt sie einen ANTEIL
      (40 %) und keine feste Breite: Bei 768 px blieben von rund 520 px Inhalt
      sonst gut hundert fuer die Liste daneben.

@@ -987,7 +987,8 @@ Der Platz ist seit Schritt 3 reserviert (`data-bereich="suche"`, `--dichte-suchb
 >
 > **Ab 768 px** wächst der Suchbereich in den freien Raum der Kopfzeile: Mindestbreite bleibt
 > `--dichte-suchbereich` (18 rem), Höchstbreite ist das neue Token `--dichte-suchbereich-max`
-> (40 rem, gewählt und nicht gemessen, [`visuelles-konzept.md`](visuelles-konzept.md) §5). Der
+> (gebaut mit 40 rem, gewählt und nicht gemessen; **seit der Sichtprüfung desselben Tages 30 rem** —
+> dem Auftraggeber war es zu groß, 75 % reichen; [`visuelles-konzept.md`](visuelles-konzept.md) §5). Der
 > Bereich bleibt links neben dem Mandantenumschalter und wächst **nach links**: Der Produktname ist
 > ab `md` eine Beschriftung mit seiner Textbreite und kein Füller mehr (`flex-initial`), der Bereich
 > ist `flex-1` zwischen Mindest- und Höchstbreite, und was darüber hinaus frei ist, nimmt `ml-auto`
@@ -1366,7 +1367,7 @@ Zeile Höhe — dieselbe Abwägung, die §6 beim Umbruch der Kopfzeile selbst tr
 die 48 rem = 768 px des Projekts.
 
 > *22.09.2026 (E‑232): `md:w-suchbereich` ist durch `md:min-w-suchbereich md:max-w-suchbereich-max
-> md:flex-1 md:ml-auto` ersetzt — ab 768 px wächst der Bereich zwischen 18 und 40 rem in den freien
+> md:flex-1 md:ml-auto` ersetzt — ab 768 px wächst der Bereich zwischen 18 und 30 rem (gebaut mit 40) in den freien
 > Raum der Kopfzeile (§11.1, Korrekturblock). Die volle Zeile darunter und der Umbruchpunkt sind
 > unverändert.*
 
@@ -2437,6 +2438,12 @@ Fehlerzustand nicht.
 ---
 
 ## 28. Sichtprüfung 22.09.2026 — ohne „Kette", mit wachsendem Suchbereich (E‑231, E‑232, M190)
+
+> *Gemessen mit der Höchstbreite **40 rem**, mit der E‑232 gebaut war. Nach dieser Runde hat der
+> Auftraggeber sie auf **30 rem** gesetzt („zu groß, 75 % reichen"); die 40‑rem-Zeilen unten
+> beschreiben den Stand der Messung. Bei 30 rem ist der Bereich ab 1.280 px in `xs` und `s` und
+> ab 1.600 px in jeder Dichte am Deckel (gerechnet: 30 rem = 420 · 450 · 480 · 540 px), die
+> Typwahl bekommt höchstens 15 rem. Nicht nachgemessen.*
 
 **Durchgeführt am 22.09.2026** am laufenden System (`next dev` auf `:3000` im Arbeitsbaum nach der
 Zusammenführung beider Zweige, Backend unverändert), in einem eigenen Chrome 153 mit

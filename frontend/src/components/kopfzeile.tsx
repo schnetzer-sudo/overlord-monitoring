@@ -136,7 +136,7 @@ export function Kopfzeile({
          * der Kopfzeile** (E‑232, `docs/bam-suche.md` §11.1). Befund des
          * Auftraggebers: Bei festen 18 rem waren weder der Wert noch die
          * gewählte Belegart lesbar, während links davon Platz frei war. Die 18 rem
-         * sind seitdem die **Mindest**breite (`--dichte-suchbereich`), 40 rem die
+         * sind seitdem die **Mindest**breite (`--dichte-suchbereich`), 30 rem die
          * **Höchst**breite (`--dichte-suchbereich-max`, `docs/visuelles-konzept.md`
          * §5); dazwischen bekommt der Bereich, was Produktname, Mandant, Sprache
          * und Nutzermenü übrig lassen — `flex-1` mit Basis 0, die Mindestbreite
