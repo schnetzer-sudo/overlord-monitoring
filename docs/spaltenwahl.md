@@ -555,6 +555,15 @@ Beide Mandanten zeigen dieselben Zahlen, wo nichts anderes steht.
 
 ---
 
+### 7.5 Nachgetragen am 22.09.2026 — die Trefferliste ohne „Kette" (E‑231, M190)
+
+Gemessen in [`bam-suche.md`](bam-suche.md) §28, an `NEXANS` mit `050` bei 1.920 bis 360 px in allen
+vier Dichtestufen: vier Spalten ab 926 px Hülle in `m` (1.280 px Fenster: 187 · 155 · 280 · 393),
+drei darunter mit anteiligem Überschuss (1.024 px: 228 · 189 · 342, Faktor 1,219), unter 622 px die
+Grundmenge mit `scrollWidth` 622 in der scrollenden Hülle (768 und 360 px). Die Schwelle skaliert mit
+der Dichte — in `l` fehlt der Ablauf bei 984 px Hülle (Schwelle 1.041,75), in `xs` steht er bei
+1.046 px (Schwelle 810,25). Keine Kopfzelle „Kette", vier Zellen je Zeile, an allen 48 Stellen.
+
 ## 8. Die Rollenauswahl
 
 Beschrieben in [`benutzerverwaltung-frontend.md`](benutzerverwaltung-frontend.md) §18: die drei

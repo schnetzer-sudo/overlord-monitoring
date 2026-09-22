@@ -1019,9 +1019,9 @@ Der Platz ist seit Schritt 3 reserviert (`data-bereich="suche"`, `--dichte-suchb
 > Tailwind die Klassen erzeugt, ist im gebauten Stylesheet nachgesehen: `md:min-w-suchbereich`,
 > `md:max-w-suchbereich-max` (→ `var(--dichte-suchbereich-max)`, das `--container-`Token wird wie
 > bei `max-w-inhalt` aufgelöst), `md:flex-initial`, `md:ml-auto`, `max-w-1/2`, `min-w-[8.5rem]`.
-> Die Breite des Suchbereichs selbst rechnet `jsdom` nicht; sie steht in der Tabelle *Offene
-> Sichtprüfungen* in [`README.md`](README.md) — breites Fenster, 768 px, 360 px, alle vier
-> Dichtestufen.
+> Die Breite des Suchbereichs selbst rechnet `jsdom` nicht; sie ist am 22.09.2026 am laufenden
+> System gemessen (M190, §28) — mit einem Befund: Der Mandantenblock musste ab `md` `shrink-0`
+> bekommen, damit allein der Produktname nachgibt.
 
 **Kein Navigationseintrag.** Das Feld steht auf jeder Seite; ein Menüpunkt daneben wäre eine zweite
 Tür in denselben Raum.
@@ -2432,3 +2432,90 @@ Fehlerzustand nicht.
    nicht geben: Welche Zeichen fehlen, weiß nur der Nutzer.
 7. **Die gebaute Höchstform ist auch von der Oberfläche aus nicht gemessen** — unverändert §9,
    Punkt 13. Acht Begriffe im Präfixmodus sind über die Marken erreichbar; gemessen ist ein Begriff.
+
+---
+
+## 28. Sichtprüfung 22.09.2026 — ohne „Kette", mit wachsendem Suchbereich (E‑231, E‑232, M190)
+
+**Durchgeführt am 22.09.2026** am laufenden System (`next dev` auf `:3000` im Arbeitsbaum nach der
+Zusammenführung beider Zweige, Backend unverändert), in einem eigenen Chrome 153 mit
+`--remote-debugging-port=9222` und eigenem Profil. **Abweichung vom Regelfall „kopflos":** Anmelden
+darf nur der Nutzer; er hat sich in diesem Chrome angemeldet (`ADMIN`), der Rest lief über das
+DevTools-Protokoll — Mandant `NEXANS` per `POST /api/auth/mandant`, Fensterbreite über
+`Emulation.setDeviceMetricsOverride` (`resize_window` ändert sie nicht, §11.9), Dichte über
+`data-dichte` am `<html>`, das lange Feld `Message.VFN` über das Menü gewählt (`pointerdown`,
+`ArrowRight`, `click`, wie im Test) und ein Wert mit 25 Zeichen eingetragen. Aufgerufen wurde
+`/suche?begriff=:050` — 50 Zeilen, abgeschnitten, alle mit Status „Aufgeteilt".
+**48 Ablesungen:** sechs Breiten (1.920, 1.600, 1.280, 1.024, 768, 360 px) × vier Dichtestufen × zwei
+Lagen (ohne Auswahl; langes Feld mit Wert). Layoutmaße über `getBoundingClientRect`, Kürzung über
+`scrollWidth > clientWidth`.
+
+**Zusagen, die an allen 48 gehalten haben:** `scrollWidth` des Dokuments und der Kopfzeile gleich
+`innerWidth` (kein horizontales Scrollen, keine zweite Bildlaufleiste); der Suchbereich zwischen
+18 und 40 rem und rechts am Mandantenumschalter (Fuge `gap-2`); der Anzeigename des Mandanten ab
+1.024 px sichtbar, darunter nicht; die Eingabe nie unter 8,5 rem; der Schalter der Typwahl nie
+über der Hälfte des Bereichs; unter 768 px das Feld als eigene volle Zeile.
+
+### Die Kopfzeile
+
+| Fenster | Dichte | Suchbereich | Produktname | Typwahl `Message.VFN` | Eingabe (langes Feld) |
+|---:|---|---:|---|---|---:|
+| 1.920 / 1.600 | xs · s · m · l | **40 rem** (560 · 600 · 640 · 720 px) | ungekürzt | ungekürzt (106 · 113 · 121 · 136 px) | 419 · 449 · 479 · 540 px |
+| 1.280 | xs · s | 40 rem | ungekürzt | ungekürzt | 419 · 449 px |
+| 1.280 | m · l | 591,5 px (36,97 rem) · 506,2 px (28,12 rem) | ungekürzt | ungekürzt | 431 · 326 px |
+| 1.024 | xs · s · m | 420,9 · 378,3 · 335,5 px (30,06 · 25,22 · 20,97 rem) | ungekürzt | ungekürzt | 280 · 228 · 175 px |
+| 1.024 | l | **18 rem** (324 px) | gekürzt, 120 px | **gekürzt**, 126 px | **153 px = 8,5 rem** |
+| 768 | xs · s | 310,9 · 278,7 px (22,21 · 18,58 rem) | ungekürzt | ungekürzt | 170 · 128 px |
+| 768 | m · l | **18 rem** (288 · 324 px) | gekürzt, 130,5 · 51,6 px | **gekürzt**, 112 · 126 px | **136 · 153 px = 8,5 rem** |
+| 360 | xs · s · m · l | volle Zeile, 339 … 333 px | ungekürzt (eigene Zeile) | ungekürzt (106 … 135 px) | 198 · 187 · 175 · 153 px |
+
+Der Bereich wächst also ab 1.024 px in `m` und ab 768 px in `xs` über die 18 rem hinaus und steht ab
+1.600 px in jeder Dichte auf 40 rem; erst bei **18 rem** — 768 px in `m` und `l`, 1.024 px in `l` —
+kürzt der Schalter, und dort genau auf die 7 rem von vorher, während die Eingabe ihre 8,5 rem hält.
+**Bei 768 px in `m` ist damit nichts besser als vorher, aber auch nichts schlechter:** Der Bereich
+steht auf seiner Mindestbreite, und die ist die alte feste Breite.
+
+### Der Befund — und er kam aus E‑232
+
+**Bei 768 px (`m`, `l`) und 1.024 px (`l`) lief die Sprachumschaltung um 14,6 · 68,1 · 41,4 px in das
+Nutzermenü.** Ein A/B am laufenden System — die alte Bauform per Inline-Stil nachgestellt
+(`flex: 0 0 auto; width: 18rem` am Bereich, `flex: 1 1 0%` am Produktnamen) — zeigte an denselben
+drei Stellen **keine** Überlappung. Ursache: Als Füller mit Basis 0 hatte der Produktname kein
+Schrumpfgewicht, und der einzige andere schrumpfbare Posten, der Mandantenblock, wurde bei 768 px
+noch gar nicht gebraucht. Mit `flex-initial` (Basis: seine Textbreite) teilte sich der Name das
+Schrumpfen **anteilig** mit dem Mandantenblock — dessen Inhalt (Mandant `flex-none`, zwei feste
+Sprachschalter) aber nicht nachgeben kann und deshalb nach rechts überlief. **Behoben in
+`components/kopfzeile.tsx`: Der Mandantenblock trägt ab `md` `shrink-0`; nachgeben soll allein der
+Produktname.** Nachgemessen (die Tabelle oben ist der Stand danach): keine Überlappung an einer der
+48 Stellen, und Produktname, Mandant, Sprache und Nutzermenü liegen bei 768 px und 1.024 px in
+jeder Dichte auf den Pixel dort, wo die alte Bauform sie im A/B legt (768 px `l`: Name 22,5–74,1,
+Mandant 416,1–545, Sprache 554–646, Nutzermenü 655–745,5 — in beiden Fassungen).
+
+> Ein Prüfartefakt, kein Befund: Bei 360 px meldete der Überlappungsvergleich „Sprache über
+> Nutzermenü", weil er nur die x‑Achse vergleicht — dort stehen die beiden in verschiedenen Zeilen.
+
+### Die Trefferliste ohne „Kette"
+
+| Fenster | Dichte | Hülle | Spalten (Breite) | Überlauf |
+|---:|---|---:|---|---|
+| 1.920 | m | 1.655 px | Zeitpunkt 187 · Status 155 · Treffer 280 · Ablauf 1.033 | — |
+| 1.280 | m | 1.015 px | 187 · 155 · 280 · Ablauf 393 | — |
+| 1.280 | l | 984 px (< 926 px × 18⁄16 = 1.041,75) | 296 · 245 · 443 — **kein Ablauf**, Überschuss anteilig | — |
+| 1.280 | xs | 1.046 px (≥ 810,25) | 164 · 136 · 245 · Ablauf 502 | — |
+| 1.024 | m | 759 px (< 926) | 228 · 189 · 342 — kein Ablauf, Faktor 1,219 | — |
+| 768 | m | 503 px (< 622) | 187 · 155 · 280 | `scrollWidth` **622** = Grundmenge, Tabelle scrollt in der Hülle |
+| 360 | m | 334 px | 187 · 155 · 280 | `scrollWidth` 622 |
+
+An jeder der 48 Stellen: **vier** Kopfzellen (drei ohne Ablauf), **vier** Zellen je Zeile, keine
+Kopfzelle „Kette", kein Rollenwort außerhalb der Statusplakette — die erste Zeile lautet
+`30.12.2025, 03:37:51 · Aufgeteilt (SPLITTED) · Kundenwerk_K_SAP · Lieferabruf von Daimler (VDA)`.
+Die Schwellen skalieren mit der Dichte, wie gerechnet: 926 px in `m`, 810,25 in `xs`, 1.041,75 in `l`.
+
+### Nicht gesehen
+
+- Die **reine Feldsuche** (Zeitpunkt · Status · Ablauf, Schwelle 646 px) am laufenden System —
+  belegt im Test (`spaltenwahl.test.tsx`), nicht im Browser.
+- **Wurzeln mit Endstatus** (`IBIS`, `IBISGUS`, `ZAST`, M24‑3) — der Fall, für den der Hinweis
+  gebaut war; ob das 30‑Tage-Fenster dort Treffer trägt, ist nicht geprüft.
+- `pointer: coarse` (Punkt 178, unverändert) und das Menü der Typwahl unter 768 px (README-Zeile
+  vom 09.09.2026, unverändert).

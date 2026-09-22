@@ -145,8 +145,18 @@ export function Kopfzeile({
           </div>
         ) : null}
 
-        {/* Auf dem Handy die zweite Zeile, am Rechner rechts neben dem Suchplatz. */}
-        <div className="order-5 flex w-full min-w-0 items-center gap-2 md:order-4 md:w-auto">
+        {/*
+         * Auf dem Handy die zweite Zeile, am Rechner rechts neben dem Suchplatz.
+         *
+         * **Ab `md` gibt dieser Block nicht nach** (`md:shrink-0`, Sichtprüfung
+         * 22.09.2026, E‑232): Sein Inhalt kann es ohnehin nicht — der Mandant ist
+         * `flex-none`, die Sprachumschaltung ein Paar fester Schalter —, und ein
+         * geschrumpfter Block ließ die Sprachumschaltung bei 768 px (m, l) und
+         * 1.024 px (l) um 15 bis 68 px in das Nutzermenü laufen. Nachgeben soll
+         * allein der Produktname; solange der Suchbereich ein Füller mit Basis 0
+         * war, geschah das von selbst, seit er selbst wächst, muss es hier stehen.
+         */}
+        <div className="order-5 flex w-full min-w-0 items-center gap-2 md:order-4 md:w-auto md:shrink-0">
           <MandantAnzeige
             mandant={auskunft.mandant}
             wechselErlaubt={mandantenwechselErlaubt}
