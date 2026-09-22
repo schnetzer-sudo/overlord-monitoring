@@ -183,6 +183,25 @@ und skalieren miteinander ([`visuelles-konzept.md`](visuelles-konzept.md) §5); 
 
 **Unter der Grundmenge** läuft die Tabelle in ihrer Hülle über, wie seit Schritt 7.
 
+> ### ⚠️ Korrektur 22.09.2026 — ohne die Spalte „Kette" (E‑231)
+>
+> Die Trefferliste hat die Spalte „Kette" verloren (Entscheidung des Auftraggebers,
+> [`bam-suche.md`](bam-suche.md) §11.5, Korrekturblock). Die beiden Tabellen oben nennen den Stand
+> bis dahin und bleiben stehen. **Die Rechnung ist dieselbe, mit einer Spalte weniger** — die
+> Breiten sind weiterhin die aus M177 in `treffer-spalten.ts` (Zeitpunkt 187, Status 155, Treffer
+> 280, Ablauf 304 px); die Zahlen aus M180 sind **nicht** übernommen, Punkt 183 bleibt offen (§11).
+>
+> | Stufe | Spalten | Schwelle | Rechnung | Klasse |
+> |---|---|---:|---|---|
+> | Grundmenge mit „Treffer" | Zeitpunkt · Status · Treffer | **622** px | 187 + 155 + 280 | — |
+> | Ablauf | + Ablauf | **926** px | 622 + 304; 926 ÷ 16 = 57,875 | `hidden @min-[57.875rem]/trefferliste:table-cell` |
+> | Grundmenge ohne „Treffer" (reine Feldsuche) | Zeitpunkt · Status | **342** px | 187 + 155 | — |
+> | Ablauf | + Ablauf | **646** px | 342 + 304; 646 ÷ 16 = 40,375 | `hidden @min-[40.375rem]/trefferliste:table-cell` |
+>
+> Jede Schwelle ist um genau die 74 px der Kette gesunken (1.000 → 926, 720 → 646). Unter der
+> Grundmenge gilt weiter die heutige Bauform. Gegenprobe mit Mutanten in §9 (Nachtrag vom
+> 22.09.2026).
+
 ### 5.2 Die Benutzertabelle
 
 `features/benutzer/spalten.ts`, Container `benutzertabelle`.
@@ -643,6 +662,28 @@ stellen den alten Zustand wieder her — einmal über die fehlende Klasse an der
 das Modell —, und beide fallen. Der sechste sichert, dass die Schwelle weiter aus der Mindestbreite
 kommt und nicht umgekehrt.
 
+#### Nachgetragen am 22.09.2026 — fünf Mutanten für E‑231 (die Trefferliste ohne „Kette")
+
+Dieselbe Eichung in beide Richtungen, derselbe Läufer-Aufbau (übersprungen zählt nicht als
+gefallen): Das Original läuft **vor** und **nach** der Reihe grün, beide Dateien sind danach über
+SHA-256 gegen den Ausgangsstand geprüft. Gelaufen sind `tests/spaltenwahl.test.tsx` und
+`tests/suche-marken.test.tsx`.
+
+| Mutant | Datei | Ergebnis |
+|---|---|---|
+| Ablauf mit „Treffer" **+1 px** (`57.9375rem`) | `treffer-spalten.ts` | **rot** |
+| Ablauf mit „Treffer" **−1 px** (`57.8125rem`) | `treffer-spalten.ts` | **rot** |
+| Ablauf ohne „Treffer" **+1 px** (`40.4375rem`) | `treffer-spalten.ts` | **rot** |
+| Ablauf ohne „Treffer" **−1 px** (`40.3125rem`) | `treffer-spalten.ts` | **rot** |
+| Kopfzelle „Kette" kurz zurück (`th` ohne `td`) | `treffer-tabelle.tsx` | **rot** — der Abwesenheitsfall in `suche-marken`, und `spaltenwahl` findet keine Zeile mit passender Zellenzahl |
+| **Original**, davor und danach | — | **grün** |
+
+**Fünf von fünf gefallen, null lebendig, null übersprungen**; beide Dateien danach byte-gleich.
+**Der ganze Lauf am 22.09.2026:** `vitest run` über alle 48 Dateien, **1.285 Fälle, 0
+fehlgeschlagen**; gerenderte Fälle **201 in vierundzwanzig Dateien** — aus dem Lauf gezählt
+(`vitest run --reporter=json`), dieselbe Zahl wie vor dem Umbau: Der Fall zum Kettenhinweis ist
+ersetzt, nicht gestrichen.
+
 **`tests/rollen-auswahl.test.tsx`** — vier Fälle, drei Mutanten, beschrieben in
 [`benutzerverwaltung-frontend.md`](benutzerverwaltung-frontend.md) §18.
 
@@ -679,7 +720,7 @@ Meldung desselben Tages (E‑149): 1.073 Fälle**, gerenderte **135 in neunzehn*
 | **176**, **177** | **geschlossen**, ebenda |
 | **178** | **offen** — nicht Teil dieser Runde. **Was ihm fehlt:** eine Messung mit `pointer: coarse` an einem **echten** Gerät; die Emulation setzt das Merkmal über `setEmulatedMedia` nicht, und der Rahmen im Chrome der Erweiterung kann es gar nicht (M176, Abweichung 3) |
 | **180** | **neu** — native Formularelemente ([`benutzerverwaltung-frontend.md`](benutzerverwaltung-frontend.md) §18) |
-| **183** | **neu am 16.09.2026** (E‑162, [`nachrichtenliste.md`](nachrichtenliste.md) §8.1) — **die Trefferliste trägt noch die Breiten aus M177.** Ihre Statusspalte ist `w-[9.6875rem]`. Mit derselben Plakette kürzt „Zusammengeführt" dort bei `xs` gerechnet um 0,063 px — *gerechnet, nicht gemessen*, eingesetzt ist die Probe nur in der Nachrichtenliste. Ihr Ablauf rechnet mit 304 px Mindestbreite, der breiteste Ablaufname misst 408 px (M180). Damit sind Liste und Trefferliste nicht mehr Spalte für Spalte gleich breit (§5.4, Korrektur). **Was ihm fehlt:** ein Auftrag für die Trefferliste. Die Zahlen aus M180 gelten für dieselben Zellen (§3, Regel 4), die Schwellen `@min-[62.5rem]` und `@min-[45rem]` wären neu herzuleiten |
+| **183** | **neu am 16.09.2026** (E‑162, [`nachrichtenliste.md`](nachrichtenliste.md) §8.1) — **die Trefferliste trägt noch die Breiten aus M177.** Ihre Statusspalte ist `w-[9.6875rem]`. Mit derselben Plakette kürzt „Zusammengeführt" dort bei `xs` gerechnet um 0,063 px — *gerechnet, nicht gemessen*, eingesetzt ist die Probe nur in der Nachrichtenliste. Ihr Ablauf rechnet mit 304 px Mindestbreite, der breiteste Ablaufname misst 408 px (M180). Damit sind Liste und Trefferliste nicht mehr Spalte für Spalte gleich breit (§5.4, Korrektur). **Was ihm fehlt:** ein Auftrag für die Trefferliste. Die Zahlen aus M180 gelten für dieselben Zellen (§3, Regel 4), die Schwellen `@min-[62.5rem]` und `@min-[45rem]` wären neu herzuleiten. **Vermerk 22.09.2026 (E‑231):** Die Spalte „Kette" ist entfallen, die Schwellen heißen seitdem `@min-[57.875rem]` und `@min-[40.375rem]` (§5.1, Korrektur) — gesunken allein um die 74 px der Kette, die Breiten aus M180 sind weiterhin nicht übernommen; **der Punkt bleibt offen** |
 
 ### Die Nummernvergabe — belegt per `grep`, jede Fundstelle gelesen
 
@@ -691,6 +732,7 @@ Meldung desselben Tages (E‑149): 1.073 Fälle**, gerenderte **135 in neunzehn*
 | **E‑148** *(16.09.2026)* | `E[^0-9]{1,3}14[6-9]` und `…15[0-9]` auf `HEAD`, `main`, `feat/suchfeld-untermenues`, `test/indexbestand-e37` und `feat/prozessbaum-projektgliederung` | **E‑146** gibt 8 Treffer (die Eichung), **E‑147 bis E‑150 null** auf jedem Stand. E‑147 steht nur im Arbeitsbaum dieser Runde und ist damit dieselbe Vergabe wie am Vortag |
 | **181** *(16.09.2026)* | `Punkt 181` und `\*\*181\*\*` auf denselben fünf Ständen | **null** Treffer; im Arbeitsbaum nur die zwei Dateien dieser Runde |
 | **E‑149** *(16.09.2026, zweite Meldung)* | `E[^0-9]{1,3}(146\|148\|149\|150)` auf denselben fünf Ständen, dazu der **Arbeitsbaum** | **E‑146** gibt auf drei Ständen 7 Treffer in `docs/` (die Eichung), **E‑148, E‑149 und E‑150 null**; im Arbeitsbaum findet dieselbe Suche E‑147 in neun Dateien und E‑149 in keiner. Auch `Punkt 182` ist frei — gebraucht wird er nicht |
+| **E‑231**, **E‑232** *(22.09.2026, beide auf einmal vergeben)* | `git grep -E 'E[^0-9]{1,3}(2[3-9][0-9]\|[3-9][0-9][0-9])'` über den **ganzen** Baum (nicht nur `docs/`, E‑Nummern stehen auch in Code-Kommentaren) auf `main`, allen **41** lokalen Branches und dem Arbeitsbaum; `[^0-9]{1,3}` deckt U+2011, U+2010, `-` und U+2013 byteweise ab | **E‑230** (die Eichung) auf `main`, `fix/nutzertexte-ohne-altsystem` und im Arbeitsbaum; **E‑231 bis E‑249 auf keinem Stand.** Die höheren Treffer sind gelesen und keine Vergaben: 250 und 290 sind EDIFACT-Beispielstrings (`ERFUNDEN+250101`) und ein Lockfile-Hash, 400 bis 955 HTTP-Codes und Tabellenwerte, **E‑780** der bekannte Falschtreffer. E‑231 gehört dieser Korrektur, E‑232 dem Suchfeld in der Kopfzeile ([`bam-suche.md`](bam-suche.md) §11.1, Vermerk) |
 
 > ⚠️ **Die erste Suche war kaputt, und nur die Eichung hat es gezeigt.** `E.146` fand auf **allen**
 > Ständen null — der Punkt steht für ein **Byte**, und der Strich in `E‑146` ist U+2011 mit drei

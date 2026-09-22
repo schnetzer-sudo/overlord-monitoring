@@ -997,6 +997,8 @@ den schlimmsten Wert 8,66 s beim Jahresfenster, auf einer *ruhenden* Testkopie.
 **Kein Aufklappmenü unter dem Feld.** Eine Trefferzeile trägt Zeitpunkt, Status, Ablauf, Treffertyp
 und Kettenhinweis — das ist eine Tabellenzeile und kein Vorschlagseintrag.
 
+> *22.09.2026 (E‑231): den Kettenhinweis trägt die Zeile nicht mehr — §11.5, Korrekturblock.*
+
 **Optional ein Typ dazu, Voreinstellung ist keiner.** Der Typ ist Verfeinerung und keine Pflicht:
 M36 misst, dass er nicht beschleunigt (+1,5 bis +4 %), und typlos kostet kaum etwas — `NEXANS`
 trägt zehn kuratierte Zeilen, aber nur **drei verschiedene** Sollängen, und aufgefüllt wird nur
@@ -1193,6 +1195,44 @@ beiden und steht im Detail vollständig da.
 > „Schritt: …" kürzt bei jeder Breite (Antwort des Auftraggebers vom 15.09.2026,
 > [`spaltenwahl.md`](spaltenwahl.md) §2).
 
+> ### Geändert am 22.09.2026 — die Spalte „Kette" entfällt (E‑231)
+>
+> **Entscheidung des Auftraggebers vom 22.09.2026:** Die Trefferliste auf `/suche` verliert die
+> Spalte „Kette", mit und ohne Spalte „Treffer". Der Absatz „Der Kettenhinweis aus `rollen`" oben
+> und die Tabellen im Kasten vom 15.09.2026 beschreiben den Stand bis dahin und bleiben stehen.
+>
+> **Was verloren geht, ausdrücklich.** Gebaut war der Hinweis für die **Wurzel mit Endstatus**
+> (§12, Beobachtung 1): Bei `IBIS`, `IBISGUS` und `ZAST` trägt die Split-Wurzel `FINISHED`
+> (M24‑3, [`verkettung.md`](verkettung.md) §1). Dort zeigt die Zeile jetzt nur einen grünen
+> Endstatus, und dass die Nachricht aufgeteilt wurde, steht allein im Kettenblock des Details.
+> Dasselbe gilt für die übrigen Rollen — „Teil", „Eingang", „Ergebnis": Die Zeile sagt über die
+> Stellung in der Verkettung nichts mehr; wer sie wissen will, öffnet die Nachricht.
+>
+> **Der Anlass:** An Split-Wurzeln mit Status `SPLITTED` sagten Plakette („Aufgeteilt") und Hinweis
+> dasselbe — Screenshot des Auftraggebers aus der Produktion vom 22.09.2026, und schon §12,
+> Beobachtung 1. **Belegvermerk nach L10:** M24‑3 ist **gemessen**; dass der Hinweis an
+> Split-Wurzeln den Status wiederholt, ist **beobachtet**, nicht gemessen. Wie oft die Wurzel mit
+> Endstatus in einem Suchergebnis steht, ist nicht gemessen.
+>
+> **Was sich ändert — und was nicht.** Entfernt sind Kopfzelle, Zellen und `KettenZelle` in
+> `treffer-tabelle.tsx`, der Eintrag `KETTE` in `treffer-spalten.ts` und die Sprachschlüssel
+> `suche.spalten.kette` und `suche.kette` in beiden Sprachdateien (die Trefferliste war ihr
+> einziger Verbraucher). **Unverändert:** der Endpunkt, `rollen` in der Antwort und der Typ in
+> `api.ts`, der Kettenblock im Detail, die Marken über der Liste. **Kein Ersatz:** kein Symbol,
+> kein Zusatz in der Statuszelle, kein Tooltip.
+>
+> **Die Schwellen der Hülle sinken allein um die 74 px der Spalte:** mit „Treffer" Grundmenge
+> **622 px** (187 + 155 + 280) und Ablauf ab **926 px** (622 + 304,
+> `hidden @min-[57.875rem]/trefferliste:table-cell`); ohne „Treffer" Grundmenge **342 px** und
+> Ablauf ab **646 px** (`hidden @min-[40.375rem]/trefferliste:table-cell`) — Rechnung und
+> Mutanten in [`spaltenwahl.md`](spaltenwahl.md) §5.1 (Korrektur) und §9. Punkt 183 dort bleibt
+> offen: Die Breiten sind weiterhin die aus M177.
+>
+> **Tests:** `tests/spaltenwahl.test.tsx` folgt der neuen Rechnung an denselben gemessenen
+> Containerbreiten aus M176, die Kanten wandern mit. In `tests/suche-marken.test.tsx` ist der Fall
+> zum Kettenhinweis eine Aussage über **Abwesenheit**: keine Kopfzelle „Kette", keine Zelle mit
+> einem Rollenwort — obwohl `rollen` auf der gestellten Zeile steht (§11.10, Vermerk).
+
 ### 11.6 Was über der Liste steht
 
 **Die Trefferzahl samt Zeitfenster**, und bei Abschneidung **beides zusammen**: dass abgeschnitten
@@ -1299,6 +1339,11 @@ die 48 rem = 768 px des Projekts.
 | `BamTypenStatementsTest` | **ohne DB** — Mandantenfilter im Statement, nur Stammdaten, `LEFT JOIN` auf die Beschriftung, zwei Sortierschlüssel |
 | `BamTypenDbIT` | `@Tag("db")` — der Mandant **ohne** konfigurierten Typ, die vollständige Zeile, die Ordnung bei doppeltem Sortierindex |
 | `BamTypenIsolationDbIT` | `@Tag("db")` — **der Pflicht-Isolationstest** (Regel M4), sechs Fälle, §10 |
+
+> *22.09.2026 (E‑231): Der Fall zum Kettenhinweis in `tests/suche-marken.test.tsx` ist seit dem
+> Wegfall der Spalte eine Aussage über Abwesenheit — keine Kopfzelle „Kette", keine Zelle mit einem
+> Rollenwort; die Zahl der Fälle bleibt. `tests/spaltenwahl.test.tsx` rechnet mit drei bzw. zwei
+> Spalten der Grundmenge — §11.5, Korrekturblock.*
 
 **Die Prüfung auf `console.error` ist ein Fehlschlagsgrund** (`tests/setup/konsole.ts`), und eine
 pauschale Unterdrückung ist untersagt. Der erste Render-Test hängt vollständig daran.
@@ -2184,6 +2229,8 @@ zweiten.
 
 **Die Trefferliste ist unverändert**, einschließlich der Spalte „Treffer" (der Typ, nicht der Wert)
 und des Kettenhinweises.
+
+> *22.09.2026 (E‑231): Die Spalte „Kette" ist seitdem entfallen — §11.5, Korrekturblock.*
 
 ### Am schmalen Fenster
 
