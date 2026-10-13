@@ -160,6 +160,32 @@ class FehlerLiveTest {
       assertThat(fehler(ergebnis)).isEqualTo(2);
     }
 
+    /**
+     * {@code EERP_FAILED} ist seit dem 13.10.2026 ein Fehler (E‑233): Er faellt aus den Grundzeilen
+     * heraus wie {@code COMMIT_REJECTED} und zaehlt, wenn er aus der Lesung kommt. Vorher blieb er
+     * als ungeklaerte Zeile im Rollup stehen.
+     */
+    @Test
+    @DisplayName("EERP_FAILED wird als FEHLER ersetzt und aus der Lesung gezaehlt")
+    void eerp_failed_wird_ersetzt() {
+      List<Zeile> grund =
+          List.of(
+              zeile("2025-12-30T10:00", "EERP_FAILED", 3),
+              zeile("2025-12-30T10:00", "eerp_failed", 1),
+              zeile("2025-12-30T10:00", "EERP_RECEIVED", 7));
+      List<Zeile> live = List.of(zeile("2025-12-30T11:00", "EERP_FAILED", 2));
+
+      List<Zeile> ergebnis = ersetzt(grund, live);
+
+      assertThat(ergebnis)
+          .extracting(Zeile::eimer, Zeile::rohwert, Zeile::anzahl)
+          .as("Beide Schreibweisen um 10:00 sind ersetzt, die positive Quittung bleibt")
+          .containsExactly(
+              tuple(LocalDateTime.parse("2025-12-30T10:00"), "EERP_RECEIVED", 7L),
+              tuple(LocalDateTime.parse("2025-12-30T11:00"), "EERP_FAILED", 2L));
+      assertThat(fehler(ergebnis)).isEqualTo(2);
+    }
+
     @Test
     @DisplayName("Leere Live-Zeilen entfernen alle Fehler — und nur die Fehler")
     void leere_live_zeilen_entfernen_alle_fehler() {

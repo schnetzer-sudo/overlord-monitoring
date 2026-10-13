@@ -35,6 +35,58 @@ class MessageStatusClassifierTest {
     assertThat(classifier.einordnung("ERROR_TIMEOUT")).isEqualTo(MessageStatusKind.FEHLER);
   }
 
+  /**
+   * <b>Der zweite Fehler ohne {@code ERROR_}-Praefix</b> (E‑233 vom 09.10.2026). In der Produktion
+   * aufgefallen, in der Testkopie null Mal (M191) — deshalb steht er hier mit eigenen Werten und
+   * nicht in einem Datenbanktest.
+   */
+  @Test
+  @DisplayName("EERP_FAILED zaehlt als Fehler wie COMMIT_REJECTED — ohne ERROR_-Praefix")
+  void eerp_failed_ist_fehler() {
+    assertThat(classifier.einordnung("EERP_FAILED")).isEqualTo(MessageStatusKind.FEHLER);
+    assertThat(classifier.einordnung("eerp_failed"))
+        .as("dieselbe Schreibweisenregel wie fuer COMMIT_REJECTED")
+        .isEqualTo(MessageStatusKind.FEHLER);
+    assertThat(classifier.rohwerte(MessageStatusKind.FEHLER))
+        .containsExactly("COMMIT_REJECTED", "EERP_FAILED", "ERROR_DUPLICATE", "ERROR_TIMEOUT");
+    // Kein Muster: ein anderer *_FAILED-Wert bleibt, was er ist.
+    assertThat(classifier.einordnung("COMMIT_FAILED")).isEqualTo(MessageStatusKind.UNGEKLAERT);
+    assertThat(classifier.einordnung("EERP_REJECTED")).isEqualTo(MessageStatusKind.UNGEKLAERT);
+  }
+
+  @Test
+  @DisplayName("Die Fehlerart von EERP_FAILED ist der feste Text, wie bei COMMIT_REJECTED")
+  void eerp_failed_fehlerart() {
+    assertThat(classifier.fehlerart("EERP_FAILED"))
+        .isEqualTo(MessageStatusClassifier.EMPFANGSBESTAETIGUNG_FEHLGESCHLAGEN)
+        .isEqualTo("Empfangsbestätigung fehlgeschlagen");
+    assertThat(classifier.fehlerart("eerp_failed"))
+        .isEqualTo(MessageStatusClassifier.EMPFANGSBESTAETIGUNG_FEHLGESCHLAGEN);
+    // Die Nachbarn bleiben unberuehrt.
+    assertThat(classifier.fehlerart("COMMIT_REJECTED"))
+        .isEqualTo(MessageStatusClassifier.ABGELEHNT_VOM_PARTNER);
+    assertThat(classifier.fehlerart("ERROR_DUPLICATE")).isEqualTo("DUPLICATE");
+    assertThat(classifier.fehlerart("EERP_RECEIVED")).isEqualTo("EERP_RECEIVED");
+  }
+
+  /**
+   * {@code istEndstatus} behandelt {@code EERP_FAILED} wie {@code COMMIT_REJECTED} — und beide wie
+   * die {@code ERROR_}-Werte: alle drei sind {@link MessageStatusKind#FEHLER}.
+   *
+   * <p><b>{@code istUeberfaellig} gibt es nicht mehr</b> (E‑71, 03.09.2026). Ihre erste Bedingung
+   * war „nicht in einem Endstatus"; dass {@code EERP_FAILED} Endstatus ist, ist damit die
+   * Zusicherung, die von ihr uebrig bleibt — er kann nie zu den offenen Zeilen zaehlen.
+   */
+  @Test
+  @DisplayName("EERP_FAILED ist Endstatus wie COMMIT_REJECTED und die ERROR_-Werte")
+  void eerp_failed_endstatus_wie_commit_rejected() {
+    assertThat(classifier.istEndstatus("EERP_FAILED")).isTrue();
+    assertThat(classifier.istEndstatus("EERP_FAILED"))
+        .isEqualTo(classifier.istEndstatus("COMMIT_REJECTED"))
+        .isEqualTo(classifier.istEndstatus("ERROR_TIMEOUT"))
+        .isEqualTo(classifier.istEndstatus("ERROR_DUPLICATE"));
+  }
+
   @Test
   @DisplayName("Unbekannte und ungeklaerte Werte werden UNGEKLAERT, niemals geraten")
   void unbekannte_werte_sind_ungeklaert() {
@@ -86,13 +138,13 @@ class MessageStatusClassifierTest {
   }
 
   @Test
-  @DisplayName("Die bekannte Menge umfasst genau die 13 dokumentierten Werte")
+  @DisplayName("Die bekannte Menge umfasst genau die 14 dokumentierten Werte")
   void bekannte_menge() {
     assertThat(classifier.bekannteStatuswerte())
-        .hasSize(13)
+        .hasSize(14)
         .contains("FINISHED", "MERGED", "SPLITTED", "EERP_RECEIVED", "COMMIT_RECEIVED", "RUNNING")
         .contains("COMMIT_SENT", "ERROR_DUPLICATE", "SUSPENDED", "CHECKED", "COMMIT_REJECTED")
-        .contains("ERROR_TIMEOUT", "CKECKED");
+        .contains("ERROR_TIMEOUT", "CKECKED", "EERP_FAILED");
   }
 
   // ─── Endstatus (Schritt 4) ──────────────────────────────────────────────────────────────────
@@ -215,6 +267,26 @@ class MessageStatusClassifierTest {
     assertThat(sql).contains("ERROR");
     // Die naive Variante ist ausdruecklich unerwuenscht (kann den Index nicht nutzen).
     assertThat(sql).doesNotContainIgnoringCase("left(");
+  }
+
+  /**
+   * Die Fehler ohne Praefix stehen <b>einzeln</b> im {@code IN} (E‑233): kein {@code '%_FAILED'},
+   * kein zweites {@code LIKE}, kein {@code = 'COMMIT_REJECTED'} mehr daneben.
+   */
+  @Test
+  @DisplayName("Die Fehlerbedingung fuehrt COMMIT_REJECTED und EERP_FAILED einzeln im IN")
+  void fehlerbedingung_mit_eerp_failed() {
+    Field<String> statusFeld = DSL.field(DSL.name("MessageStatus"), String.class);
+    String sql =
+        DSL.using(SQLDialect.MARIADB).renderInlined(classifier.fehlerBedingung(statusFeld));
+
+    assertThat(sql).contains("`MessageStatus` in ('COMMIT_REJECTED', 'EERP_FAILED')");
+    assertThat(sql).containsOnlyOnce(" like ").containsOnlyOnce("'ERROR");
+    assertThat(sql).doesNotContain("_FAILED'%").doesNotContain("%_FAILED");
+    assertThat(sql).doesNotContain("= 'COMMIT_REJECTED'");
+    assertThat(sql(classifier.bedingung(MessageStatusKind.UNGEKLAERT, statusFeld)))
+        .as("UNGEKLAERT schliesst EERP_FAILED ueber die Fehlerbedingung aus, nicht ueber NOT IN")
+        .containsOnlyOnce("EERP_FAILED");
   }
 
   // ─── Uebersetzung Einordnung → SQL (Schritt 4) ──────────────────────────────────────────────

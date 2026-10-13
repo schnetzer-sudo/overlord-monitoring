@@ -364,8 +364,10 @@ export const de = {
     // ROHWERT und nicht über die gelieferte Art — die ist ein deutscher
     // Festtext aus dem Backend und stünde sonst auch im englischen Baum.
     // Unbekannte Rohwerte bleiben Rohwerte (Regel Q4).
+    // EERP_FAILED seit 13.10.2026 (E‑233), derselbe Grund wie COMMIT_REJECTED.
     fehlerarten: {
       COMMIT_REJECTED: "Vom Partner abgelehnt",
+      EERP_FAILED: "Empfangsbestätigung fehlgeschlagen",
     },
 
     verteilung: {

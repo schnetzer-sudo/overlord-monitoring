@@ -126,8 +126,14 @@ class DatenzugriffDbIT {
         .containsAll(vorhanden);
     // Und genau die 12 vorhandenen Werte = alle bekannten ausser RUNNING (fluechtig, in der
     // Testkopie null Mal). Weicht das ab, gehoert docs/message-status.md geprueft.
+    //
+    // Seit 13.10.2026 auch ausser EERP_FAILED (E-233): in der Produktion aufgefallen, in der
+    // Testkopie null Mal (M191, Datenstand 08.07.2026). Taucht er hier doch auf, wird der Test rot
+    // und die Erhebung in docs/message-status.md ist nachzuziehen. Dass dieser Test die Produktion
+    // nicht sieht, ist offener Punkt 218.
     Set<String> erwartet = new HashSet<>(bekannt);
     erwartet.remove("RUNNING");
+    erwartet.remove("EERP_FAILED");
     assertThat(vorhanden).isEqualTo(erwartet);
   }
 

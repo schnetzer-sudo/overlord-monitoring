@@ -23,6 +23,11 @@ import org.springframework.stereotype.Component;
  * geratenen Wert. Ein Datenbanktest vergleicht {@code SELECT DISTINCT MessageStatus} gegen {@link
  * #bekannteStatuswerte()} und wird rot, sobald im Altsystem ein neuer Wert auftaucht — nur deshalb
  * ist die neutrale Behandlung vertretbar. Erhebung: {@code docs/message-status.md}.
+ *
+ * <p><b>Ergaenzt am 13.10.2026:</b> Der Datenbanktest liest die <b>Testkopie</b>, nicht die
+ * Produktion. {@code EERP_FAILED} ist in der Produktion aufgefallen (09.10.2026), ohne dass er rot
+ * werden konnte — die Voraussetzung des Satzes darueber gilt also nur fuer die Kopie. Offener Punkt
+ * 218 in {@code docs/message-status.md}.
  */
 @Component
 public class MessageStatusClassifier {
@@ -30,6 +35,11 @@ public class MessageStatusClassifier {
   /**
    * Die bekannten Statuswerte samt Einordnung, Stand {@code docs/message-status.md}. {@code
    * RUNNING} ist enthalten, kommt in der Testkopie aber null Mal vor (fluechtig).
+   *
+   * <p>{@code EERP_FAILED} ebenso: In der Produktion beobachtet am 09.10.2026, in der Testkopie
+   * (Datenstand 08.07.2026) null Mal (M191). Ein Fehler ohne {@code ERROR_}-Praefix wie {@code
+   * COMMIT_REJECTED} — die Empfangsbestaetigung ist fehlgeschlagen, der Beleg gilt nicht als
+   * angekommen (Entscheidung E‑233 vom 09.10.2026).
    */
   private static final Map<String, MessageStatusKind> BEKANNT =
       Map.ofEntries(
@@ -43,6 +53,7 @@ public class MessageStatusClassifier {
           Map.entry("ERROR_DUPLICATE", MessageStatusKind.FEHLER),
           Map.entry("ERROR_TIMEOUT", MessageStatusKind.FEHLER),
           Map.entry("COMMIT_REJECTED", MessageStatusKind.FEHLER),
+          Map.entry("EERP_FAILED", MessageStatusKind.FEHLER),
           Map.entry("COMMIT_SENT", MessageStatusKind.UNGEKLAERT),
           Map.entry("CHECKED", MessageStatusKind.UNGEKLAERT),
           Map.entry("CKECKED", MessageStatusKind.UNGEKLAERT));
@@ -53,7 +64,20 @@ public class MessageStatusClassifier {
    */
   private static final String FEHLER_PRAEFIX = "ERROR_";
 
-  /** Menge aller bekannten Statuswerte (13). */
+  /**
+   * Die bekannten Fehler <b>ohne</b> {@link #FEHLER_PRAEFIX} — {@code COMMIT_REJECTED} und {@code
+   * EERP_FAILED}, aufsteigend. Aus {@link #BEKANNT} gelesen und nicht ein zweites Mal aufgezaehlt:
+   * {@link #fehlerBedingung(Field)} und {@link #einordnung(String)} sollen sich ueber die Menge
+   * nicht uneinig werden koennen. Ein neuer Wert in {@link #BEKANNT} genuegt fuer beide.
+   */
+  private static final SortedSet<String> FEHLER_OHNE_PRAEFIX =
+      BEKANNT.entrySet().stream()
+          .filter(eintrag -> eintrag.getValue() == MessageStatusKind.FEHLER)
+          .map(Map.Entry::getKey)
+          .filter(rohwert -> !rohwert.startsWith(FEHLER_PRAEFIX))
+          .collect(Collectors.toCollection(TreeSet::new));
+
+  /** Menge aller bekannten Statuswerte (14). */
   public Set<String> bekannteStatuswerte() {
     return BEKANNT.keySet();
   }
@@ -156,8 +180,27 @@ public class MessageStatusClassifier {
    * <b>fachliche Festlegung</b>: {@code COMMIT_REJECTED} traegt keinen Namensteil hinter {@code
    * ERROR_}, aus dem sich eine Fehlerart ableiten liesse. Die Oberflaeche kann ihn ueber den
    * mitgelieferten Rohwert jederzeit uebersetzen.
+   *
+   * <p><b>Seit dem 13.10.2026 nicht mehr der einzige:</b> {@link
+   * #EMPFANGSBESTAETIGUNG_FEHLGESCHLAGEN} steht aus demselben Grund daneben. Ein Muster ist es
+   * trotzdem nicht — jeder dieser Texte ist eine eigene fachliche Festlegung.
    */
   public static final String ABGELEHNT_VOM_PARTNER = "Vom Partner abgelehnt";
+
+  /**
+   * Der feste Text fuer {@code EERP_FAILED} — fachlich festgelegt am 09.10.2026 (E‑233), analog zu
+   * {@link #ABGELEHNT_VOM_PARTNER}: Auch {@code EERP_FAILED} traegt keinen Namensteil hinter {@code
+   * ERROR_}, aus dem sich eine Fehlerart ableiten liesse. Die Oberflaeche beschriftet ueber den
+   * Rohwert und uebersetzt ihn dort ({@code fehlerarten} in den Sprachdateien).
+   */
+  public static final String EMPFANGSBESTAETIGUNG_FEHLGESCHLAGEN =
+      "Empfangsbestätigung fehlgeschlagen";
+
+  /** Die festen Fehlerarten je bekanntem Fehler ohne {@link #FEHLER_PRAEFIX}. */
+  private static final Map<String, String> FESTE_FEHLERARTEN =
+      Map.of(
+          "COMMIT_REJECTED", ABGELEHNT_VOM_PARTNER,
+          "EERP_FAILED", EMPFANGSBESTAETIGUNG_FEHLGESCHLAGEN);
 
   /**
    * Die <b>Fehlerart</b> zu einem Rohstatus — {@code PROJEKTBESCHREIBUNG.md} §4.2, an genau einer
@@ -166,6 +209,7 @@ public class MessageStatusClassifier {
    * <ul>
    *   <li>{@code ERROR_DUPLICATE} → {@code DUPLICATE} — der Namensteil hinter dem Praefix
    *   <li>{@code COMMIT_REJECTED} → {@link #ABGELEHNT_VOM_PARTNER}
+   *   <li>{@code EERP_FAILED} → {@link #EMPFANGSBESTAETIGUNG_FEHLGESCHLAGEN} (seit 13.10.2026)
    *   <li><b>alles andere → der Rohwert, unveraendert</b>
    * </ul>
    *
@@ -188,8 +232,9 @@ public class MessageStatusClassifier {
       return null;
     }
     String hochgestellt = status.toUpperCase(Locale.ROOT);
-    if ("COMMIT_REJECTED".equals(hochgestellt)) {
-      return ABGELEHNT_VOM_PARTNER;
+    String fest = FESTE_FEHLERARTEN.get(hochgestellt);
+    if (fest != null) {
+      return fest;
     }
     if (hochgestellt.startsWith(FEHLER_PRAEFIX) && status.length() > FEHLER_PRAEFIX.length()) {
       return status.substring(FEHLER_PRAEFIX.length());
@@ -312,17 +357,25 @@ public class MessageStatusClassifier {
   /**
    * Die <b>eine</b> wiederverwendbare Fehlerbedingung fuer SQL:
    *
-   * <pre>MessageStatus LIKE 'ERROR\_%' ESCAPE '\' OR MessageStatus = 'COMMIT_REJECTED'</pre>
+   * <pre>
+   * MessageStatus LIKE 'ERROR\_%' ESCAPE '\' OR MessageStatus IN ('COMMIT_REJECTED', 'EERP_FAILED')
+   * </pre>
    *
    * Nicht {@code LEFT(MessageStatus, 6) = 'ERROR_'}: diese Form kann {@code MessageStatusIDX} nicht
    * nutzen und erzwingt in Kombination mit der Oder-Bedingung einen vollen Durchlauf. Die {@code
-   * LIKE}-Fassung ergibt zwei Indexbereiche, die MariaDB zusammenfuehren kann.
+   * LIKE}-Fassung ergibt Indexbereiche, die MariaDB zusammenfuehren kann.
+   *
+   * <p><b>Geaendert am 13.10.2026 (E‑233):</b> Bis dahin stand hinter dem {@code OR} {@code
+   * MessageStatus = 'COMMIT_REJECTED'}, und es waren zwei Indexbereiche. Seit {@code EERP_FAILED}
+   * dazugekommen ist, sind es drei; die Liste hinter {@code IN} ist {@link #FEHLER_OHNE_PRAEFIX}
+   * und damit aus {@link #BEKANNT} gelesen. <b>Kein Muster</b> wie {@code '%_FAILED'} — jeder Wert
+   * steht einzeln da. Gemessen in M191 ({@code docs/message-status.md}).
    *
    * <p>Das Feld wird uebergeben, damit dieser gemeinsame Baustein nicht auf generierte {@code
    * jooq.glassfish}-Typen zugreifen muss — die Fehlerbedingung bleibt in {@code common}.
    */
   public Condition fehlerBedingung(Field<String> messageStatus) {
-    return messageStatus.like("ERROR\\_%", '\\').or(messageStatus.eq("COMMIT_REJECTED"));
+    return messageStatus.like("ERROR\\_%", '\\').or(messageStatus.in(FEHLER_OHNE_PRAEFIX));
   }
 
   /**
@@ -337,8 +390,9 @@ public class MessageStatusClassifier {
    * <p>Die drei Faelle:
    *
    * <ul>
-   *   <li>{@code FEHLER} nutzt {@link #fehlerBedingung(Field)} — nicht die Aufzaehlung der drei
-   *       bekannten Rohwerte, sonst faende der Filter eine kuenftige {@code ERROR_}-Art nicht.
+   *   <li>{@code FEHLER} nutzt {@link #fehlerBedingung(Field)} — nicht die Aufzaehlung der (seit
+   *       13.10.2026) vier bekannten Rohwerte, sonst faende der Filter eine kuenftige {@code
+   *       ERROR_}-Art nicht.
    *   <li>{@code UNGEKLAERT} ist der <b>Rest</b>: alles, was weder Fehler noch einer der anderen
    *       bekannten Werte ist — und {@code NULL}. Es kann keine Aufzaehlung sein, weil genau die
    *       unbekannten Werte hierher gehoeren.

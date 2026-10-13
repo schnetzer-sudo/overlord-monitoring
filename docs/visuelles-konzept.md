@@ -53,7 +53,7 @@ der jeder Nutzer ankommt, und sie umzudeuten kostet mehr, als jede Gestaltung ge
 | Rolle | Bedeutung | Farbe | Warum |
 |---|---|---|---|
 | `--status-abgeschlossen` | fertig und quittiert | Grün, Ton 166 | Der Endzustand, den der Nutzer sucht. Grün heißt hier „nichts zu tun". Tiefer und blaustichiger als die naheliegende Wahl — siehe „Der Akzent". |
-| `--status-fehler` | `ERROR_*` und `COMMIT_REJECTED` | Rot | Der einzige Zustand, der sofort Aufmerksamkeit verlangt. Rot ist deshalb selten. |
+| `--status-fehler` | `ERROR_*` und `COMMIT_REJECTED` (seit 13.10.2026 auch `EERP_FAILED`, E‑233) | Rot | Der einzige Zustand, der sofort Aufmerksamkeit verlangt. Rot ist deshalb selten. |
 | `--status-offen` | wartend, laufend, **aufgeteilt, zusammengeführt** | Neutral | Kein Ergebnis, kein Problem. Farbe wäre hier eine Aussage, die es nicht gibt — `SPLITTED` und `MERGED` machen zusammen rund ein Drittel aller Zeilen aus. **Beide teilen sich seit dem 11.08.2026 diese eine Rolle, obwohl sie zwei Statusarten sind:** Der Unterschied zwischen „aufgeteilt" und „zusammengeführt" ist keine Aussage über *gut oder schlecht*, und nur die trägt eine Farbe. Er steckt in Beschriftung und Zeichen. |
 | `--status-ungeklaert` | unbekannter Statuswert | Neutral, gedämpft | „Nicht zugeordnet heißt nicht zugeordnet" (Regel Q4). Ein geratener Wert wäre schlimmer als sichtbare Zurückhaltung. |
 

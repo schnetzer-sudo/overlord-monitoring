@@ -245,6 +245,38 @@ class DashboardServiceTest {
     }
 
     /**
+     * <b>Die Fehlerkachel zaehlt {@code EERP_FAILED}</b> (E‑233 vom 09.10.2026), mit eigenem festen
+     * Text. Bis dahin fiel der Wert nach {@code UNGEKLAERT} und fehlte in der Fehlerkachel (in der
+     * Kachel <i>Nachrichten</i> zaehlte er schon). Die Zahlen sind erfunden: In der Testkopie kommt
+     * der Wert null Mal vor (M191).
+     */
+    @Test
+    @DisplayName("EERP_FAILED zaehlt in der Fehlerkachel, als „Empfangsbestätigung fehlgeschlagen“")
+    void eerp_failed_in_der_kachel() {
+      bestandMit(
+          List.of(
+              new Rollupsumme(EIMER, "ERROR_DUPLICATE", 9),
+              new Rollupsumme(EIMER, "EERP_FAILED", 6),
+              new Rollupsumme(EIMER, "COMMIT_REJECTED", 4),
+              new Rollupsumme(EIMER, "FINISHED", 100)),
+          List.of());
+
+      DashboardResponse antwort = antwort();
+      FehlerkachelResponse fehler = antwort.kacheln().fehler();
+
+      assertThat(fehler.anzahl()).isEqualTo(19);
+      assertThat(fehler.arten())
+          .containsExactly(
+              new FehlerartResponse("ERROR_DUPLICATE", "DUPLICATE", 9),
+              new FehlerartResponse("EERP_FAILED", "Empfangsbestätigung fehlgeschlagen", 6),
+              new FehlerartResponse("COMMIT_REJECTED", "Vom Partner abgelehnt", 4));
+      assertThat(antwort.verlauf().getFirst().einordnungen())
+          .as("Im Verlauf derselbe Eimer: FEHLER, kein UNGEKLAERT")
+          .contains(new EinordnungszahlResponse(MessageStatusKind.FEHLER, 19))
+          .noneMatch(zahl -> zahl.einordnung() == MessageStatusKind.UNGEKLAERT);
+    }
+
+    /**
      * <b>Entscheidung E-d, maschinell festgehalten.</b> „Unquittiert" ist aus dem MVP genommen —
      * kein Feld, kein Platzhalter. {@code COMMIT_REJECTED} gehoerte ohnehin nicht dorthin: Das ist
      * eine Quittung, nur eine negative.
@@ -1331,6 +1363,33 @@ class DashboardServiceTest {
               tuple("ERROR_DUPLICATE", "DUPLICATE", 2L),
               tuple("COMMIT_REJECTED", MessageStatusClassifier.ABGELEHNT_VOM_PARTNER, 1L));
       assertThat(antwort.kacheln().nachrichten()).isEqualTo(13);
+    }
+
+    /**
+     * <b>Der Ersatz kennt {@code EERP_FAILED}</b> (E‑233). Eine Rollupzeile mit dem Wert ist eine
+     * Fehlerzeile und wird ersetzt; die Zeile der Lesung zaehlt, mit fester Fehlerart. Die Lesung
+     * ist hier gestellt — dass ihre Bedingung {@code EERP_FAILED} findet, belegen {@code
+     * MessageStatusClassifierTest.fehlerbedingung_mit_eerp_failed} und {@code
+     * DashboardStatementsTest}.
+     */
+    @Test
+    @DisplayName("Angewandt: EERP_FAILED des Rollups ist ersetzt, der aus der Lesung zaehlt")
+    void eerp_failed_aus_der_lesung() {
+      bestandMit(
+          List.of(new Rollupsumme(EIMER, "FINISHED", 10), new Rollupsumme(EIMER, "EERP_FAILED", 5)),
+          List.of());
+      verteilungOhneFehler(List.of());
+      angewandt(fehler("2025-12-30T03:00", "P-1", "EERP_FAILED", 2));
+
+      DashboardResponse antwort = antwort();
+
+      assertThat(antwort.kacheln().fehler().anzahl()).isEqualTo(2);
+      assertThat(antwort.kacheln().fehler().arten())
+          .extracting(FehlerartResponse::rohwert, FehlerartResponse::art, FehlerartResponse::anzahl)
+          .containsExactly(
+              tuple(
+                  "EERP_FAILED", MessageStatusClassifier.EMPFANGSBESTAETIGUNG_FEHLGESCHLAGEN, 2L));
+      assertThat(antwort.kacheln().nachrichten()).isEqualTo(12);
     }
 
     /**

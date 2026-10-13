@@ -354,6 +354,9 @@ nächsten neuen Statuswert von der Anzeige weg.
 - `FEHLER` nutzt die bestehende `fehlerBedingung`
   (`MessageStatus LIKE 'ERROR\_%' ESCAPE '\' OR MessageStatus = 'COMMIT_REJECTED'`) — **nicht** die
   Aufzählung der drei bekannten Rohwerte, sonst fände der Filter eine künftige `ERROR_`-Art nicht.
+  *Ergänzt 13.10.2026 (E‑233):* Seither `… OR MessageStatus IN ('COMMIT_REJECTED', 'EERP_FAILED')`,
+  vier bekannte Rohwerte; `NachrichtenStatementsTest.fehlerfilter_traegt_eerp_failed` hält es fest,
+  gemessen in M191 ([`message-status.md`](message-status.md)).
 - `UNGEKLAERT` ist der **Rest**: alles, was weder Fehler noch einer der anderen bekannten Werte ist,
   und `NULL`. Es kann keine Aufzählung sein, weil genau die unbekannten Werte hierher gehören.
 - Alle übrigen Einordnungen sind geschlossene Mengen und werden aufgezählt.
@@ -2982,7 +2985,9 @@ Der alte Link (Punkt 6) *ist* eine von Hand geöffnete URL, denn genau das ist d
   `MessageStatusIDX`, den die Messungen L5 und L6 als Treiber des Statusfilters ausweisen — für
   einen Fall, der auf der Testkopie kein einziges Mal vorkommt. `MessageStatusClassifierTest`
   deckt einen kleingeschriebenen Wert ab; `DatenzugriffDbIT` wird weiterhin rot, sobald im
-  Altsystem ein dreizehnter Statuswert auftaucht.
+  Altsystem ein dreizehnter Statuswert auftaucht. *Ergänzt 13.10.2026:* Seit `EERP_FAILED` sind
+  es vierzehn bekannte Werte, und „im Altsystem" heißt dort: in der Testkopie — offener Punkt 218
+  in [`message-status.md`](message-status.md).
 - **`suche-abgebrochen` sagt dem Nutzer „mach die Anfrage kleiner", auch wenn in Wahrheit die
   Datenbank unter Last steht.** Der Statuscode ist `400`, weil das die Handlung ist, die dem Nutzer
   zur Verfügung steht — aber die Antwort unterscheidet die beiden Ursachen nicht, und sie kann es

@@ -12,7 +12,8 @@ import java.util.List;
  * <p><b>„Unquittiert" gibt es hier nicht</b> — kein Feld, kein Platzhalter, keine leere Liste
  * (Entscheidung E-d vom 24.08.2026). Die Kategorie ist aus dem MVP genommen, weil sie keine
  * operative Definition hat. {@code COMMIT_REJECTED} gehoert ohnehin nicht dorthin, sondern hierher:
- * Es ist eine Quittung, nur eine negative.
+ * Es ist eine Quittung, nur eine negative. {@code EERP_FAILED} ebenso (E‑233 vom 09.10.2026): Es
+ * ist ein Fehler, und derselbe Beleg stuende sonst in zwei Kategorien.
  *
  * @param anzahl alle Nachrichten im Fenster, deren Einordnung {@code FEHLER} ist
  * @param arten absteigend nach {@code anzahl}, bei Gleichstand nach Rohwert — damit die Reihenfolge

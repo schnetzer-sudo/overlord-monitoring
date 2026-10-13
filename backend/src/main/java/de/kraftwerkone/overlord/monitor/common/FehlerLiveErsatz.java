@@ -11,7 +11,7 @@ import java.util.function.Function;
  * <ol>
  *   <li>Aus den Grundzeilen fallen <b>alle</b> heraus, die {@link
  *       MessageStatusClassifier#einordnung(String)} als {@link MessageStatusKind#FEHLER} einordnet
- *       — auch ein unbekanntes {@code ERROR_} und {@code COMMIT_REJECTED}.
+ *       — auch ein unbekanntes {@code ERROR_}, {@code COMMIT_REJECTED} und {@code EERP_FAILED}.
  *   <li>Die Zeilen der Live-Lesung kommen hinzu, <b>ueber denselben Schluessel</b>: Der Verbraucher
  *       hebt sie vorher auf die Gestalt seiner Grundzeilen (die Uebersicht auf ihre Eimer, der
  *       Prozessbaum auf Prozess und Rohstatus).

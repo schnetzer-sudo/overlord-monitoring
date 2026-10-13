@@ -485,11 +485,11 @@ class DashboardStatementsTest {
 
       assertThat(gerendert).as("Ein Statement, nicht zwei").hasSize(1);
       assertThat(einziges())
-          .as("Das LIKE mit ESCAPE und COMMIT_REJECTED, und keine Frist")
+          .as("Das LIKE mit ESCAPE, COMMIT_REJECTED und EERP_FAILED (E‑233), und keine Frist")
           .contains("`GlassfishDB`.`Message`.`MessageStatus` like ? escape")
-          .contains("or `GlassfishDB`.`Message`.`MessageStatus` = ?")
+          .contains("or `GlassfishDB`.`Message`.`MessageStatus` in (?, ?)")
           .doesNotContain("date_add(")
-          .doesNotContain("`GlassfishDB`.`Message`.`MessageStatus` in (")
+          .containsOnlyOnce("`GlassfishDB`.`Message`.`MessageStatus` in (")
           .contains("`GlassfishDB`.`Message`.`MessageLastUpdate` >= ?")
           .contains("rows only")
           .contains("exists (select 1 as `one`");
@@ -847,13 +847,17 @@ class DashboardStatementsTest {
    * MessageLastUpdate}, die Kette als {@code EXISTS}, das {@code GROUP BY} ueber den vollen
    * Ausdruck (Befund 11), kein Indexhinweis, keine Sortierung. Genau dieser Text ist in M188
    * gemessen ({@code docs/fehler-live.md} §8).
+   *
+   * <p><b>Geaendert am 13.10.2026 (E‑233):</b> Hinter dem {@code or} stand {@code = ?}; seit {@code
+   * EERP_FAILED} steht dort {@code in (?, ?)}. Die neue Fassung ist in M191 gegen die alte gemessen
+   * ({@code docs/message-status.md}).
    */
   static final String FEHLERLESUNG =
       "select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'),"
           + " `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`,"
           + " count(*) from `GlassfishDB`.`Message` where"
           + " ((`GlassfishDB`.`Message`.`MessageStatus` like ? escape '\\\\' or"
-          + " `GlassfishDB`.`Message`.`MessageStatus` = ?) and"
+          + " `GlassfishDB`.`Message`.`MessageStatus` in (?, ?)) and"
           + " `GlassfishDB`.`Message`.`MessageLastUpdate` >= ? and"
           + " `GlassfishDB`.`Message`.`MessageLastUpdate` < ? and exists (select 1 as `one` from"
           + " `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on"
@@ -915,7 +919,8 @@ class DashboardStatementsTest {
           + " (`dashboard_process`.`ProcessID` = `overlord_monitor`.`message_rollup`.`process_id`"
           + " and `GlassfishDB`.`ProjectMandant`.`MandantID` = ?)) and not"
           + " (`overlord_monitor`.`message_rollup`.`message_status` like ? escape '\\\\' or"
-          + " `overlord_monitor`.`message_rollup`.`message_status` = ?)) group by case when"
+          + " `overlord_monitor`.`message_rollup`.`message_status` in (?, ?))) group by case"
+          + " when"
           + " (`overlord_monitor`.`process_catalog`.`process_id` is not null and"
           + " `overlord_monitor`.`process_catalog`.`pflegestatus` = ? and"
           + " `overlord_monitor`.`process_catalog`.`partner` is not null and"
@@ -1052,9 +1057,10 @@ class DashboardStatementsTest {
           .contains("`GlassfishDB`.`Message`.`MessageLastUpdate` >= ?")
           .contains("`GlassfishDB`.`Message`.`MessageLastUpdate` < ?")
           .as(
-              "Die Fehlerbedingung aus MessageStatusClassifier: LIKE mit ESCAPE und COMMIT_REJECTED")
+              "Die Fehlerbedingung aus MessageStatusClassifier: LIKE mit ESCAPE, dazu COMMIT_REJECTED"
+                  + " und EERP_FAILED")
           .contains("`GlassfishDB`.`Message`.`MessageStatus` like ? escape")
-          .contains("or `GlassfishDB`.`Message`.`MessageStatus` = ?")
+          .contains("or `GlassfishDB`.`Message`.`MessageStatus` in (?, ?)")
           .as("Befund 11: der volle Ausdruck im GROUP BY, kein Alias")
           .contains(
               "group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`,"
@@ -1100,7 +1106,7 @@ class DashboardStatementsTest {
                           + tabelle
                           + ".`message_status` like ? escape '\\\\' or "
                           + tabelle
-                          + ".`message_status` = ?)) group by"));
+                          + ".`message_status` in (?, ?))) group by"));
         }
       }
     }

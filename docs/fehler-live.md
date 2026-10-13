@@ -195,6 +195,11 @@ WHERE (MessageStatus LIKE ? ESCAPE '\' OR MessageStatus = ?)       -- fehlerBedi
 GROUP BY date_format(MessageLastUpdate, '%Y-%m-%d %H:00:00'), ProcessID, MessageStatus
 ```
 
+> **Geändert 13.10.2026 (E‑233):** Hinter dem `OR` steht seither `MessageStatus IN (?, ?)` —
+> `COMMIT_REJECTED` und `EERP_FAILED`. `die_lesung_woertlich` pinnt die neue Fassung; M191 hat
+> sie gegen die hier gezeigte gemessen: derselbe Plan, ein Indexeinstieg mehr, Laufzeit innerhalb
+> der Streuung ([`message-status.md`](message-status.md)).
+
 | Regel des Auftrags | Wie gehalten | Belegt in |
 |---|---|---|
 | Fehlerbedingung und Stundenbildung gerufen, nicht nachgebaut | `MessageStatusClassifier.fehlerBedingung(MESSAGE.MESSAGESTATUS)` und `Stundeneimer.ausdruck(MESSAGE.MESSAGELASTUPDATE)` | `die_lesung_woertlich` |
@@ -224,7 +229,8 @@ Lese-Pools ebenso wie ein Syntaxfehler, denn der Live-Rest unterscheidet dort ni
 `FehlerLiveErsatz.ersetze(zustand, grundzeilen, liveZeilen, rohstatus, klassifizierer)`:
 
 1. Aus den Grundzeilen fallen **alle**, die `MessageStatusClassifier.einordnung` als `FEHLER`
-   einordnet — auch ein unbekanntes `ERROR_…`, eine andere Schreibweise und `COMMIT_REJECTED`.
+   einordnet — auch ein unbekanntes `ERROR_…`, eine andere Schreibweise und `COMMIT_REJECTED`
+   (seit 13.10.2026 auch `EERP_FAILED`, E‑233).
 2. Die Zeilen der Lesung kommen hinzu, **über denselben Schlüssel**: Der Verbraucher hebt sie
    vorher auf die Gestalt seiner Grundzeilen.
 
@@ -255,6 +261,11 @@ Volllauf treffen, und es gibt keinen Zeitpunkt, bis zu dem die Fehlerzahlen des 
 > der Spalte gleichmacht: `'COMMIT_REJECTED '` mit Leerzeichen am Ende ist unter `PAD SPACE` gleich
 > `'COMMIT_REJECTED'`, für Java nicht. Auf der Testkopie kommt kein solcher Wert vor; der Test gegen
 > neue Statuswerte fiele bei seinem ersten Auftreten. Offener Punkt **213**.
+>
+> **Ergänzt 13.10.2026:** Dasselbe gilt für `'EERP_FAILED '` (E‑233). Und „der Test … fiele bei
+> seinem ersten Auftreten" gilt nur, wo er hinsieht — auf der **Testkopie**. `EERP_FAILED` ist in
+> der Produktion aufgefallen, ohne dass der Test ihn sehen konnte (offener Punkt **218**,
+> [`message-status.md`](message-status.md)).
 
 ---
 
@@ -296,7 +307,7 @@ wieder hinein, und derselbe Fehler zählte zweimal — `DashboardServiceTest.feh
 
 | Zustand der Lesung | Die zwei Verteilungsstatements | Was Block 5 über die Nachlesung zugerechnet bekommt |
 |---|---|---|
-| **angewandt** | `verteilungOhneFehler` — dieselbe Gestalt mit **einer** Bedingung mehr hinter der Mandantenkette: `and not (message_status like ? escape '\' or message_status = ?)` | die Korrekturzeilen des Live-Rests **ohne** Fehlerzeilen, und die Fehlerzeilen der Lesung — beide je Prozess summiert, dem Schlüssel über die Katalog-Nachlesung zugeordnet (E‑191) |
+| **angewandt** | `verteilungOhneFehler` — dieselbe Gestalt mit **einer** Bedingung mehr hinter der Mandantenkette: `and not (message_status like ? escape '\' or message_status = ?)` *(seit 13.10.2026 `… or message_status in (?, ?)`, E‑233)* | die Korrekturzeilen des Live-Rests **ohne** Fehlerzeilen, und die Fehlerzeilen der Lesung — beide je Prozess summiert, dem Schlüssel über die Katalog-Nachlesung zugeordnet (E‑191) |
 | **ausgesetzt** | `verteilung` — **Zeichen für Zeichen der heutige Wortlaut** | die Korrektur des Live-Rests wie bisher |
 
 **Die heutige Form ist unverändert, und das ist belegt, nicht angenommen:** Beide Formen teilen eine
@@ -1427,7 +1438,7 @@ deren Kette dort mit ausgehängtem Filter rot wurde; ihre Zeilen erreichen den R
 | **210** | **Abgänge aus anderen Status bleiben bis zum Volllauf stehen — benannte Grenze.** Wechselt eine Nachricht aus `RUNNING`, `SUSPENDED`, `FINISHED` oder einem anderen Status heraus ihren Status, nachdem der Delta-Lauf ihren Eimer zum letzten Mal gerechnet hat, steht sie im alten Eimer weiter und im neuen dazu: Liegen beide im Zeitraum, zählt die Kachel *Nachrichten* sie bis 03:00 **doppelt**. Die bekannte Grenze 3 in [`dashboard.md`](dashboard.md) §2 ist entsprechend berichtigt. Für Fehler ist das seit heute behoben, für alles andere bewusst nicht gebaut |
 | **211** | **Block 6 und die Lesung lesen dieselbe Menge zweimal** — derselbe Statusbereich, einmal je Prozess gedeckelt, einmal je Stunde. Eine Zusammenlegung ist nicht gebaut (Auftrag); sie sparte eine der beiden Lesungen — gerechnet, nicht gemessen, rund 20 ms je Seite (M146, Tor 1) —, kostete aber die Deckelung von Block 6 oder die Gruppierung der Lesung und bräuchte eine eigene Messung |
 | **212** | **An der Produktion ist nichts gemessen.** Weder der Mechanismus — hergeleitet aus dem Bau und aus einer Meldung — noch die Kosten: Die Lesung liest alle Fehlerzeilen des Bestands (auf der Testkopie 3.412) und wächst zusätzlich mit den Fehlern im Fenster (711 kosten rund 10 ms mehr als 50). Wie viele es in der Produktion sind, ist nicht erhoben. Die Grenze von 100 ms je Lage gilt der Testkopie. *Nachtrag 18.09.2026 (M189, Tor 1):* Im Jahresfenster mit den meisten Fehlern der Testkopie — 3.204, im Baum als freies Fenster abrufbar — kostet die Lesung **69,8 ms**, sieben Zehntel der Grenze; sie wächst mit den Fehlern im Fenster, aber nicht mit ihrer Zahl allein (2.163 Fehler kosten 39,9 ms). Ein Mandant mit mehr Fehlern in einem Jahr käme der Grenze entsprechend näher |
-| **213** | **SQL und Java müssen sich einig sein, was ein Fehler ist** (§4). Für Rohwerte, die nur die Sortierung der Spalte gleichmacht — `'COMMIT_REJECTED '` mit Leerzeichen am Ende unter `PAD SPACE` —, sind sie es nicht; die Nachricht zählte dann in der Kachel *Nachrichten* doppelt und nicht als Fehler. Auf der Testkopie kommt kein solcher Wert vor; der Test gegen neue Statuswerte fiele bei seinem ersten Auftreten. Eine eigene Entscheidung, falls es ihn je gibt |
+| **213** | **SQL und Java müssen sich einig sein, was ein Fehler ist** (§4). Für Rohwerte, die nur die Sortierung der Spalte gleichmacht — `'COMMIT_REJECTED '` mit Leerzeichen am Ende unter `PAD SPACE` —, sind sie es nicht; die Nachricht zählte dann in der Kachel *Nachrichten* doppelt und nicht als Fehler. Auf der Testkopie kommt kein solcher Wert vor; der Test gegen neue Statuswerte fiele bei seinem ersten Auftreten. Eine eigene Entscheidung, falls es ihn je gibt. *Ergänzt 13.10.2026:* Gilt für `'EERP_FAILED '` genauso (E‑233); und der Test sieht nur die Testkopie — Punkt 218 in [`message-status.md`](message-status.md) |
 | **214** | **Der Ausfall des Live-Rests (E‑185) hat keinen eigenen Test seines `catch`-Zweigs.** Beim Bau „wie beim Live-Rest" gesucht und nicht gefunden: kein Test lässt eine Live-Lesung scheitern. Fehler live hat einen (`FehlerLiveTest.Ausfall`); für den Live-Rest ist er nicht nachgerüstet — außerhalb dieses Auftrags |
 | **215** | **Eine Rohausgabe mit Prozesskennungen ist eingecheckt:** `scripts/messung-live-rest/ergebnis/s1.txt` (M185) trägt rund 200 Zeilen mit Kennungen, die Partnernamen Dritter enthalten — gegen die Trennung, die `.gitignore` für alle anderen Messrunden vorsieht (G1). Nicht angefasst; eine Entfernung stünde weiter in der Historie |
 | **216** *(Teil B)* | **Die Fensterverengung der Nachrichtenliste liest die Einordnung `FEHLER` aus dem Rollup** (`message/VerengungRepository.frageStufe`, gefunden bei der Suche nach weiteren Lesern, §5b). Bei `status=FEHLER` zählt sie die Fehler je Stunde aus `message_rollup`, um das Fenster vorab zu verengen, und ruht dabei auf der Eigenschaft *„die gezählte Menge ist stets eine Unterschranke der wirklichen"* (`Verengungsgrenzen`). **Ein Abgang bricht sie** — hergeleitet, nicht gemessen: Eine nachverarbeitete Nachricht steht bis 03:00 im Rollup als Fehler, die Liste liest sie live nicht mehr; zählt der Rollup mehr Fehler, als es gibt, kann die Verengung zu eng ziehen, die Seite meldet dann keine weitere, und ältere Fehler des Fensters erscheinen bis zum Volllauf nicht. Nach Punkt 210 gilt dasselbe für jeden Statusfilter. Auf der Testkopie nicht herstellbar; **nicht umgebaut** (der Auftrag: melden). Eine eigene Entscheidung |

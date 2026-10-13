@@ -12,7 +12,8 @@ package de.kraftwerkone.overlord.monitor.dashboard;
  * @param rohwert {@code Message.MessageStatus}, unveraendert — etwa {@code ERROR_DUPLICATE} oder
  *     {@code COMMIT_REJECTED}
  * @param art der Namensteil hinter {@code ERROR_}, fuer {@code COMMIT_REJECTED} der feste Text
- *     {@code Vom Partner abgelehnt}, sonst der Rohwert selbst (Regel Q4)
+ *     {@code Vom Partner abgelehnt}, fuer {@code EERP_FAILED} (seit 13.10.2026) der feste Text
+ *     {@code Empfangsbestätigung fehlgeschlagen}, sonst der Rohwert selbst (Regel Q4)
  * @param anzahl wie viele Nachrichten im Fenster diesen Rohwert tragen
  */
 public record FehlerartResponse(String rohwert, String art, long anzahl) {}

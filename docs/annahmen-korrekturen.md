@@ -14,6 +14,9 @@ kann.
 - **Aufbewahrung 22 Monate**, nicht ein Jahr — ältester Datensatz `2024-10-01`.
 - **Testkopie reicht bis 08.07.2026**, nicht bis Ende 2025.
 - **Annahme A6 widerlegt:** `COMMIT_REJECTED` ist ein Fehler ohne `ERROR_`-Präfix.
+  *Ergänzt 13.10.2026:* Mit `EERP_FAILED` ist ein **zweiter** Fehler ohne Präfix belegt — in der
+  Produktion beobachtet am 09.10.2026, nicht in der Testkopie, eingeordnet durch Entscheidung E‑233
+  ([`message-status.md`](message-status.md)).
 - **Annahme A7 bestätigt:** 1.490 Prozesse.
 - **`MessageStatisticHistory` enthält 42 Zeilen** und ist als Aggregationsquelle unbrauchbar — daher
   das eigene `message_rollup` (Schritt 10).

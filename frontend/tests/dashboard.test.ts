@@ -440,6 +440,23 @@ describe("Die Beschriftung der Fehlerarten", () => {
     ).toBe("Rejected by partner");
   });
 
+  /**
+   * **EERP_FAILED, seit 13.10.2026 (E‑233).** Der Endpunkt liefert auch hier
+   * einen deutschen Festtext in `art`; ohne Eintrag in der Sprachdatei stünde
+   * er im englischen Baum.
+   */
+  it("übersetzt EERP_FAILED aus der Sprachdatei, in beiden Sprachen", () => {
+    expect(
+      fehlerartText(
+        { rohwert: "EERP_FAILED", art: "Empfangsbestätigung fehlgeschlagen" },
+        texteFuer("en"),
+      ),
+    ).toBe("Acknowledgement failed");
+    expect(fehlerartText({ rohwert: "eerp_failed", art: "irgendetwas anderes" }, TEXTE)).toBe(
+      "Empfangsbestätigung fehlgeschlagen",
+    );
+  });
+
   /** Ein unbekannter Rohwert bleibt Rohwert (Regel Q4). */
   it("lässt einen unbekannten Rohwert stehen", () => {
     expect(fehlerartText({ rohwert: "ERROR_TIMEOUT", art: "TIMEOUT" }, TEXTE)).toBe("TIMEOUT");

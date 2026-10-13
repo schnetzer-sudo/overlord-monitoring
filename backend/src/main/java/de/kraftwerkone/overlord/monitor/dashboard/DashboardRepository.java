@@ -263,9 +263,10 @@ public class DashboardRepository {
    * MessageStatusClassifier.fehlerBedingung} ueber der Rohwertspalte der Ebene, dieselbe wie in der
    * Lesung und in Block 6. Sie ist ein Filter auf der gelesenen Zeile und kein Zugriffspfad: {@code
    * message_status} steht im Primaerschluessel hinter Eimer und Prozess, ein {@code NOT (… LIKE …
-   * OR … = …)} ergibt dort keinen Bereich. Der Plan bleibt der von {@link #verteilung} (M188,
-   * {@code DashboardPlanDbIT}). {@code message_status} ist {@code NOT NULL} (V9, V10, V12); das
-   * {@code NOT} verliert deshalb keine Zeile an einem {@code NULL}.
+   * OR … IN (…))} ergibt dort keinen Bereich (bis zum 13.10.2026 {@code … = …}, E‑233). Der Plan
+   * bleibt der von {@link #verteilung} (M188, {@code DashboardPlanDbIT}). {@code message_status}
+   * ist {@code NOT NULL} (V9, V10, V12); das {@code NOT} verliert deshalb keine Zeile an einem
+   * {@code NULL}.
    *
    * <p><b>Ist die Lesung ausgesetzt, laeuft {@link #verteilung}</b> im heutigen Wortlaut — Kachel
    * und Sichten zaehlen dann wieder gleich, weil beide die Fehler aus dem Rollup nehmen.

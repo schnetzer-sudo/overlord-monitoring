@@ -23,6 +23,9 @@ package de.kraftwerkone.overlord.monitor.dashboard;
  */
 public enum Auffaelligkeit {
 
-  /** {@code MessageStatus} beginnt mit {@code ERROR_} oder ist {@code COMMIT_REJECTED}. */
+  /**
+   * {@code MessageStatus} beginnt mit {@code ERROR_} oder ist {@code COMMIT_REJECTED} oder (seit
+   * 13.10.2026, E‑233) {@code EERP_FAILED} — {@code MessageStatusClassifier.fehlerBedingung}.
+   */
   FEHLER
 }
