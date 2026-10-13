@@ -1,5 +1,5 @@
 -- ===========================================================================================
--- Diagnose: Freitextsuche der Nachrichtenliste in Produktion          Zweig diag/suche-produktion
+-- Diagnose: Freitextsuche der Nachrichtenliste in Produktion   Zweige diag/suche-produktion, fix/suche-plan
 -- ===========================================================================================
 --
 -- Anlass: In Produktion endet die Freitextsuche der Nachrichtenliste bei jedem Suchbegriff nach
@@ -43,7 +43,7 @@
 --   3. Nichts markieren, dann Query > Execute (All or Selection) to Text. Alles laeuft in einer
 --      Sitzung. Bei einem Fehler haelt Workbench an; das ist die Vorgabe, daran nichts aendern.
 --   4. Im Reiter "Query Output" alles markieren und kopieren. Vollstaendig ist der Text, wenn er
---      mit der Endmarke "ENDE: alle Ausgaben vollstaendig" schliesst (Ausgabe 16).
+--      mit der Endmarke "ENDE: alle Ausgaben vollstaendig" schliesst (Ausgabe 26).
 --   5. Zurueck NUR diesen Text: keine Bildschirmfotos, nicht den Reiter "Action Output", nicht die
 --      History, nicht die Skriptkopie -- dort steht der Suchbegriff. Vor dem Senden im Text nach
 --      dem Begriff suchen; er darf nicht vorkommen. Fehlt die Endmarke, aus dem Action Output nur
@@ -53,7 +53,7 @@
 --     mysql --default-character-set=utf8mb4 -t -h HOST -u BENUTZER -p < kopie.sql > ausgabe.txt 2> fehler.txt
 --     Zurueck nur ausgabe.txt; aus fehler.txt nur Fehlernummer und Zeile (dort steht Benutzer@Host).
 --
--- AUSGABE -- sechzehn Ergebnisse, immer in dieser Reihenfolge. Ein Fall ohne Statement an
+-- AUSGABE -- sechsundzwanzig Ergebnisse, immer in dieser Reihenfolge. Ein Fall ohne Statement an
 -- `Message` liefert an Stelle seines EXPLAIN eine Zeile mit dem Grund.
 --    1        Server und Optimierer, je Zeile eine Variable; dazu zwei Zaehler seit Serverstart:
 --             Max_statement_time_exceeded (Abbrueche an einer Sitzungsgrenze) und Com_kill.
@@ -69,13 +69,45 @@
 --                     auf Message (Fassung F4 aus docs/nachrichtenliste.md §5a)
 --   14, 15    Fall f  Mandant 1 ohne Suchbegriff, Fenster der ersten Verengungsstufe
 --                     (Zusatz, nicht im Auftrag -- siehe unten)
---   16        Endmarke
+--   seit 13.10.2026, abends (E-237, docs/messungen-suche-plan.md M196) -- jeweils das Statement,
+--   wie die Anwendung es seit dem Bau von F4 im Suchpfad schickt:
+--   16, 17    Fall g  Mandant 1 mit Suchbegriff, WIE GEBAUT (Hinweis F4, wie jOOQ ihn schreibt)
+--   18, 19    Fall h  Mandant 2 mit Suchbegriff, WIE GEBAUT
+--   20, 21    Fall i  Mandant 1 mit Suchbegriff UND Prozessfilter, kleiner Prozess -- ohne Hinweis
+--   22, 23    Fall j  Mandant 1 mit Suchbegriff UND Prozessfilter, verkehrsreicher Prozess --
+--                     ohne Hinweis
+--   24, 25    Fall k  Mandant 1, ein Begriff, der nur Prozesse und keinen Ablauf trifft, WIE GEBAUT
+--                     (die Form `(... in (...) or false)`, in der MariaDB `or false` wegfaltet)
+--   26        Endmarke
+--
+-- Zu g bis k: Seit dem 13.10.2026 schliesst die Anwendung im Suchpfad die beiden Prozessindizes per
+-- Hinweis aus -- genau dann, wenn ein Suchbegriff gesetzt ist und KEIN Prozessfilter (E-237). g, h
+-- und k zeigen, ob der Hinweis in Produktion haelt: In der Zeile `Message` duerfen ProejctIDIDX und
+-- Message_ProcessFK weder unter possible_keys noch unter key stehen. i und j zeigen den Pfad, den
+-- der Hinweis bewusst NICHT abdeckt (Suche plus Prozessfilter) -- welchen Plan die Produktion dort
+-- waehlt, ist bisher ungesehen.
+--   e bleibt, wie er war; g unterscheidet sich von e nur darin, dass jOOQ die Schluesselwoerter
+--   klein schreibt (`ignore index for join`). Fuer MariaDB ist das dasselbe.
+--   Die Prozesse fuer i und j waehlt das Skript selbst, aus dem Rollup der Anwendung
+--   (@monitor_schema.message_rollup, wie §5a): unter den Prozessen von Mandant 1 mit Nachrichten im
+--   Fenster der mit den meisten (j) und der mit den wenigsten (i), bei Gleichstand die kleinere
+--   Kennung. Ist die Tabelle fuer den angemeldeten Benutzer nicht sichtbar, liefern i und j statt
+--   des Plans eine Zeile mit dem Grund. Gelesen wird nur der Rollup, nie Message.
+--   Den Begriff fuer k waehlt das Skript ebenfalls selbst: der erste Projektname von Mandant 1
+--   (alphabetisch), dessen Projekt mindestens zwei Prozesse traegt und der in keinem Ablaufnamen
+--   dieses Mandanten vorkommt -- ersatzweise der erste solche Prozessname. Er wird nie ausgegeben,
+--   nur seine Laenge und seine Art (Ausgabe 3).
+--   Fall k ueber 90 Tage: Das Skript ein zweites Mal mit @fensterlaenge_stunden = 2160 laufen lassen.
+--   Dort hat die Testkopie unter dem Hinweis `Message` vollstaendig gelesen (M195).
 --
 -- Zu b und d: Ohne Suchbegriff verengt die Anwendung das Fenster vorab ueber message_rollup
 -- (docs/nachrichtenliste.md §5d) und schickt dann meist ein deutlich kuerzeres Fenster. b und d
 -- zeigen bewusst das UNVERENGTE Fenster: dasselbe Statement wie a und c, nur ohne Suchzweig.
 -- Mit Suchbegriff verengt die Anwendung nie (Abfragemerkmal SUCHBEGRIFF): a und c sind genau das
 -- Statement, das sie schickt. e ist a mit dem Hinweis aus F4, den die Anwendung nie setzt.
+--   Ergaenzt 13.10.2026: Der Satz gilt fuer den Code vor E-237 -- den, der heute in Produktion
+--   laeuft. Nach dem Merge von fix/suche-plan schickt die Anwendung mit Suchbegriff g und h statt
+--   a und c.
 --
 -- Zu f: Das Fenster beginnt an der vollen Stunde vor Fensterende minus 1 h -- die erste Stufe
 -- der Verengung (Fensterverengung.STUFEN, Verengungsgrenzen.volleStunde). Enger verengt die
@@ -115,6 +147,10 @@ SET @begriff_1 = '';
 -- Begriff nehmen und das ganze Skript neu ausfuehren.
 SET @mandant_2 = 'SUTTONS';
 SET @begriff_2 = '';
+
+-- Das Schema der Anwendung, in dem ihr Rollup liegt (nur fuer die Prozesswahl der Faelle i und j).
+-- In beiden Umgebungen bisher 'overlord_monitor'; weicht es ab, hier eintragen.
+SET @monitor_schema = 'overlord_monitor';
 
 -- Wache: ohne beide Begriffe kein Lauf. Der ungueltige sql_mode bricht mit Fehler 1231 ab;
 -- sind beide gesetzt, bleibt sql_mode, wie er ist.
@@ -219,6 +255,15 @@ SET @liste = CONCAT(
 
 -- Fassung F4: der Hinweis auf Message, sonst nichts.
 SET @hinweis_f4 = ' IGNORE INDEX FOR JOIN (`ProejctIDIDX`, `Message_ProcessFK`)';
+
+-- Derselbe Hinweis, wie jOOQ 3.21.5 ihn seit dem Bau rendert (gerendert.txt, BEIDE): Zeichen fuer
+-- Zeichen das, was die Anwendung schickt. Von @hinweis_f4 verschieden nur in der Schreibung der
+-- Schluesselwoerter.
+SET @hinweis_gebaut = ' ignore index for join (`ProejctIDIDX`, `Message_ProcessFK`)';
+
+-- Der Prozessfilter, wie jOOQ ihn rendert: steht unmittelbar vor dem Suchzweig (gerendert.txt,
+-- BEIDE_MIT_PROZESSFILTER). Er wird deshalb zusammen mit #SUCHE# eingesetzt, als letzter Ersatz.
+SET @prozessfilter_vorlage = ' and `GlassfishDB`.`Message`.`ProcessID` in (#PROZESS#)';
 -- [vorlage-ende]
 
 -- -------------------------------------------------------------------------------------------
@@ -263,6 +308,90 @@ PREPARE vorfilter FROM @s;
 EXECUTE vorfilter;
 DEALLOCATE PREPARE vorfilter;
 
+-- -------------------------------------------------------------------------------------------
+-- Zusatzauswahl fuer die Faelle g bis k (seit 13.10.2026). Nur Stammdaten und Rollup, nie Message.
+-- -------------------------------------------------------------------------------------------
+-- Fall k: ein Begriff, der nur Prozesse trifft. Gewaehlt, nicht eingetragen: Er ist ein
+-- Kundenname (G1) und erscheint nur als Laenge.
+--   Zuerst der erste Projektname von Mandant 1 (alphabetisch), dessen Projekt mindestens zwei
+--   Prozesse traegt und der in keinem Ablaufnamen dieses Mandanten vorkommt. Mindestens zwei, weil
+--   bei genau einem Prozess die Mandantenkette konstant wird und der Plan ein anderer ist als der,
+--   den M195 als riskant ausweist (docs/messungen-suche-plan.md, "Nur Prozesse" ueber 90 Tage).
+--   Gibt es keinen, der erste Prozessname, der in keinem Ablaufnamen vorkommt (@k_art sagt, welcher).
+SET @begriff_k = NULL, @k_art = NULL;
+SELECT TRIM(pr.`ProjectName`), 'Projektname' INTO @begriff_k, @k_art
+  FROM `GlassfishDB`.`Project` pr
+  JOIN `GlassfishDB`.`Process` p ON p.`ProjectID` = pr.`ProjectID`
+  JOIN `GlassfishDB`.`ProjectMandant` pm ON pm.`ProjectID` = p.`ProjectID`
+ WHERE pm.`MandantID` = @mandant_1
+   AND CHAR_LENGTH(TRIM(pr.`ProjectName`)) >= 3
+   AND NOT EXISTS (
+     SELECT 1 FROM `GlassfishDB`.`SOS` s
+       JOIN `GlassfishDB`.`Process` p2 ON p2.`ProcessID` = s.`ProcessID`
+       JOIN `GlassfishDB`.`ProjectMandant` pm2 ON pm2.`ProjectID` = p2.`ProjectID`
+      WHERE pm2.`MandantID` = @mandant_1
+        AND s.`SOSName` LIKE CONCAT('%', REPLACE(REPLACE(REPLACE(TRIM(pr.`ProjectName`), '!', '!!'), '%', '!%'), '_', '!_'), '%') ESCAPE '!')
+ GROUP BY pr.`ProjectID`, pr.`ProjectName`
+HAVING COUNT(DISTINCT p.`ProcessID`) >= 2
+ ORDER BY TRIM(pr.`ProjectName`), pr.`ProjectID`
+ LIMIT 1;
+SELECT TRIM(p.`ProcessName`), 'Prozessname' INTO @begriff_k, @k_art
+  FROM `GlassfishDB`.`Process` p
+  JOIN `GlassfishDB`.`ProjectMandant` pm ON pm.`ProjectID` = p.`ProjectID`
+ WHERE @begriff_k IS NULL
+   AND pm.`MandantID` = @mandant_1
+   AND CHAR_LENGTH(TRIM(p.`ProcessName`)) >= 3
+   AND NOT EXISTS (
+     SELECT 1 FROM `GlassfishDB`.`SOS` s
+       JOIN `GlassfishDB`.`Process` p2 ON p2.`ProcessID` = s.`ProcessID`
+       JOIN `GlassfishDB`.`ProjectMandant` pm2 ON pm2.`ProjectID` = p2.`ProjectID`
+      WHERE pm2.`MandantID` = @mandant_1
+        AND s.`SOSName` LIKE CONCAT('%', REPLACE(REPLACE(REPLACE(TRIM(p.`ProcessName`), '!', '!!'), '%', '!%'), '_', '!_'), '%') ESCAPE '!')
+ ORDER BY TRIM(p.`ProcessName`), p.`ProcessID`
+ LIMIT 1;
+
+SET @np_k = NULL, @ip_k = NULL, @ns_k = NULL, @is_k = NULL;
+SET @b_k = COALESCE(@begriff_k, '');
+SET @muster_k = CONCAT('%', REPLACE(REPLACE(REPLACE(@b_k, '!', '!!'), '%', '!%'), '_', '!_'), '%');
+SET @s = IF(CHAR_LENGTH(@b_k) < 3, 'SELECT 0, NULL INTO @np_k, @ip_k',
+  CONCAT('SELECT COUNT(*), GROUP_CONCAT(QUOTE(t.`ProcessID`) SEPARATOR '', '') INTO @np_k, @ip_k FROM (',
+         REPLACE(REPLACE(@vorfilter_prozesse, '#MANDANT#', QUOTE(@mandant_1)), '#MUSTER#', QUOTE(@muster_k)),
+         ') AS t'));
+PREPARE vorfilter FROM @s;
+EXECUTE vorfilter;
+SET @s = IF(CHAR_LENGTH(@b_k) < 3, 'SELECT 0, NULL INTO @ns_k, @is_k',
+  CONCAT('SELECT COUNT(*), GROUP_CONCAT(QUOTE(t.`SOSID`) SEPARATOR '', '') INTO @ns_k, @is_k FROM (',
+         REPLACE(REPLACE(@vorfilter_ablaeufe, '#MANDANT#', QUOTE(@mandant_1)), '#MUSTER#', QUOTE(@muster_k)),
+         ') AS t'));
+PREPARE vorfilter FROM @s;
+EXECUTE vorfilter;
+DEALLOCATE PREPARE vorfilter;
+
+-- Faelle i und j: je ein Prozess von Mandant 1 aus dem Rollup der Anwendung, gezaehlt ueber die
+-- Stunden des Fensters. Literale ueber QUOTE, wie der Treiber sie auf die Leitung legt.
+SET @rollup_sichtbar = (SELECT COUNT(*) FROM information_schema.TABLES
+                         WHERE TABLE_SCHEMA = @monitor_schema AND TABLE_NAME = 'message_rollup');
+SET @pf_klein = NULL, @pfn_klein = NULL, @pf_gross = NULL, @pfn_gross = NULL;
+SET @rollup_auswahl = CONCAT(
+  'SELECT QUOTE(r.`process_id`), SUM(r.`anzahl`) INTO #ZIEL# FROM `', REPLACE(@monitor_schema, '`', '``'), '`.`message_rollup` r',
+  ' JOIN `GlassfishDB`.`Process` p ON p.`ProcessID` = r.`process_id`',
+  ' JOIN `GlassfishDB`.`ProjectMandant` pm ON pm.`ProjectID` = p.`ProjectID`',
+  ' WHERE pm.`MandantID` = ', QUOTE(@mandant_1),
+  ' AND r.`stunde` >= ', QUOTE(DATE_FORMAT(@fensterende - INTERVAL @fensterlaenge_stunden HOUR, '%Y-%m-%d %H:00:00')),
+  ' AND r.`stunde` <= ', QUOTE(@bis_text),
+  ' GROUP BY r.`process_id` ORDER BY SUM(r.`anzahl`) #RICHTUNG#, r.`process_id` LIMIT 1');
+SET @s = IF(@rollup_sichtbar = 1,
+  REPLACE(REPLACE(@rollup_auswahl, '#ZIEL#', '@pf_klein, @pfn_klein'), '#RICHTUNG#', 'ASC'),
+  'SELECT NULL, NULL INTO @pf_klein, @pfn_klein');
+PREPARE auswahl FROM @s;
+EXECUTE auswahl;
+SET @s = IF(@rollup_sichtbar = 1,
+  REPLACE(REPLACE(@rollup_auswahl, '#ZIEL#', '@pf_gross, @pfn_gross'), '#RICHTUNG#', 'DESC'),
+  'SELECT NULL, NULL INTO @pf_gross, @pfn_gross');
+PREPARE auswahl FROM @s;
+EXECUTE auswahl;
+DEALLOCATE PREPARE auswahl;
+
 -- Ob die Anwendung ueberhaupt ein Statement an Message schickt -- NULL heisst ja.
 SET @grund_1 = CASE
   WHEN CHAR_LENGTH(@b_1) = 0 THEN 'kein Plan: Suchbegriff nicht eingetragen (die Anwendung liefe ohne Suche)'
@@ -278,10 +407,29 @@ SET @grund_2 = CASE
   WHEN @np_2 > 200 OR @ns_2 > 200 THEN 'kein Statement an Message: mehr als 200 Treffer (400 suchbegriff-zu-unscharf)'
   WHEN @np_2 + @ns_2 = 0 THEN 'kein Statement an Message: Vorfilterung leer, die Anwendung antwortet mit leerer Liste'
   END;
+SET @grund_k = CASE
+  WHEN @begriff_k IS NULL THEN 'kein Plan: Mandant 1 hat keinen Projekt- oder Prozessnamen, der in keinem Ablaufnamen vorkommt'
+  WHEN @np_k IS NULL OR @ns_k IS NULL THEN 'kein Plan: Vorfilterung nicht gelaufen (Fehler, siehe Action Output)'
+  WHEN @np_k > 200 OR @ns_k > 200 THEN 'kein Statement an Message: mehr als 200 Treffer (400 suchbegriff-zu-unscharf)'
+  WHEN @ns_k > 0 THEN 'kein Plan: der gewaehlte Begriff trifft doch einen Ablauf'
+  WHEN @np_k = 0 THEN 'kein Statement an Message: Vorfilterung leer, die Anwendung antwortet mit leerer Liste'
+  END;
+-- i und j: Mit Prozessfilter loest die Anwendung den Suchbegriff genauso auf wie in a; ist die
+-- Vorfilterung leer, schickt sie auch hier kein Statement.
+SET @grund_i = CASE
+  WHEN @grund_1 IS NOT NULL THEN @grund_1
+  WHEN @rollup_sichtbar <> 1 THEN 'kein Plan: message_rollup im Schema @monitor_schema fuer diesen Benutzer nicht sichtbar'
+  WHEN @pf_klein IS NULL THEN 'kein Plan: kein Prozess von Mandant 1 mit Nachrichten im Fenster laut Rollup'
+  END;
+SET @grund_j = CASE
+  WHEN @grund_1 IS NOT NULL THEN @grund_1
+  WHEN @rollup_sichtbar <> 1 THEN 'kein Plan: message_rollup im Schema @monitor_schema fuer diesen Benutzer nicht sichtbar'
+  WHEN @pf_gross IS NULL THEN 'kein Plan: kein Prozess von Mandant 1 mit Nachrichten im Fenster laut Rollup'
+  END;
 
 -- -------------------------------------------------------------------------------------------
--- Die sechs Statements. #SUCHE# wird zuletzt ersetzt, damit keine Kennung je durch ein
--- spaeteres REPLACE laeuft.
+-- Die Statements der Faelle a bis k (bis zum 13.10.2026 nur a bis f). #SUCHE# wird zuletzt
+-- ersetzt, damit keine Kennung je durch ein spaeteres REPLACE laeuft.
 -- -------------------------------------------------------------------------------------------
 -- [faelle-anfang]
 -- Der Suchzweig, wie jOOQ ihn rendert: `ProcessID in (...) or SOSID in (...)`, eine leere Art
@@ -311,6 +459,30 @@ SET @q_e = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(@liste,
 SET @q_f = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(@liste,
   '#HINWEIS#', ''), '#VON#', QUOTE(@von_f_text)), '#BIS#', QUOTE(@bis_text)),
   '#MANDANT#', QUOTE(@mandant_1)), '#SUCHE#', '');
+
+-- Seit 13.10.2026: die Faelle g bis k, wie die Anwendung sie seit dem Bau schickt. Der
+-- Prozessfilter steht vor dem Suchzweig und wird mit ihm zusammen als letzter Ersatz eingesetzt.
+SET @suche_k = CONCAT(' and (',
+  IF(@np_k = 0, 'false', CONCAT('`GlassfishDB`.`Message`.`ProcessID` in (', @ip_k, ')')), ' or ',
+  IF(@ns_k = 0, 'false', CONCAT('`GlassfishDB`.`Message`.`SOSID` in (', @is_k, ')')), ')');
+
+SET @q_g = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(@liste,
+  '#HINWEIS#', @hinweis_gebaut), '#VON#', QUOTE(@von_text)), '#BIS#', QUOTE(@bis_text)),
+  '#MANDANT#', QUOTE(@mandant_1)), '#SUCHE#', @suche_1);
+SET @q_h = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(@liste,
+  '#HINWEIS#', @hinweis_gebaut), '#VON#', QUOTE(@von_text)), '#BIS#', QUOTE(@bis_text)),
+  '#MANDANT#', QUOTE(@mandant_2)), '#SUCHE#', @suche_2);
+SET @q_i = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(@liste,
+  '#HINWEIS#', ''), '#VON#', QUOTE(@von_text)), '#BIS#', QUOTE(@bis_text)),
+  '#MANDANT#', QUOTE(@mandant_1)), '#SUCHE#',
+  CONCAT(REPLACE(@prozessfilter_vorlage, '#PROZESS#', COALESCE(@pf_klein, 'NULL')), @suche_1));
+SET @q_j = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(@liste,
+  '#HINWEIS#', ''), '#VON#', QUOTE(@von_text)), '#BIS#', QUOTE(@bis_text)),
+  '#MANDANT#', QUOTE(@mandant_1)), '#SUCHE#',
+  CONCAT(REPLACE(@prozessfilter_vorlage, '#PROZESS#', COALESCE(@pf_gross, 'NULL')), @suche_1));
+SET @q_k = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(@liste,
+  '#HINWEIS#', @hinweis_gebaut), '#VON#', QUOTE(@von_text)), '#BIS#', QUOTE(@bis_text)),
+  '#MANDANT#', QUOTE(@mandant_1)), '#SUCHE#', @suche_k);
 -- [faelle-ende]
 
 -- -------------------------------------------------------------------------------------------
@@ -328,7 +500,21 @@ UNION ALL SELECT 'd', @mandant_2, 'ohne', NULL, NULL, NULL,
 UNION ALL SELECT 'e', @mandant_1, 'mit Suchbegriff, F4', CHAR_LENGTH(@b_1), @np_1, @ns_1,
        COALESCE(@grund_1, 'wie a mit IGNORE INDEX FOR JOIN, Plan in Ausgabe 13')
 UNION ALL SELECT 'f', @mandant_1, 'ohne, Zusatz', NULL, NULL, NULL,
-       'Fenster der ersten Verengungsstufe, Plan in Ausgabe 15';
+       'Fenster der ersten Verengungsstufe, Plan in Ausgabe 15'
+UNION ALL SELECT 'g', @mandant_1, 'mit Suchbegriff, wie gebaut', CHAR_LENGTH(@b_1), @np_1, @ns_1,
+       COALESCE(@grund_1, 'wie a mit dem Hinweis, wie jOOQ ihn schreibt, Plan in Ausgabe 17')
+UNION ALL SELECT 'h', @mandant_2, 'mit Suchbegriff, wie gebaut', CHAR_LENGTH(@b_2), @np_2, @ns_2,
+       COALESCE(@grund_2, 'wie c mit dem Hinweis, wie jOOQ ihn schreibt, Plan in Ausgabe 19')
+UNION ALL SELECT 'i', @mandant_1, 'Suchbegriff + Prozessfilter, klein', CHAR_LENGTH(@b_1), @np_1, @ns_1,
+       COALESCE(@grund_i, CONCAT('ohne Hinweis; Prozess mit ', @pfn_klein,
+                                 ' Nachrichten im Fenster laut Rollup, Plan in Ausgabe 21'))
+UNION ALL SELECT 'j', @mandant_1, 'Suchbegriff + Prozessfilter, gross', CHAR_LENGTH(@b_1), @np_1, @ns_1,
+       COALESCE(@grund_j, CONCAT('ohne Hinweis; Prozess mit ', @pfn_gross,
+                                 ' Nachrichten im Fenster laut Rollup',
+                                 IF(@pf_gross <=> @pf_klein, ' (DERSELBE Prozess wie i)', ''),
+                                 ', Plan in Ausgabe 23'))
+UNION ALL SELECT 'k', @mandant_1, 'nur Prozesse, wie gebaut', CHAR_LENGTH(@b_k), @np_k, @ns_k,
+       COALESCE(@grund_k, CONCAT('Begriff vom Skript gewaehlt (', @k_art, '), Form (... or false), Plan in Ausgabe 25'));
 
 -- -------------------------------------------------------------------------------------------
 -- Ausgaben 4 bis 15: je Fall eine Marke und der Plan. Ein Fall ohne Statement an Message
@@ -363,17 +549,51 @@ SELECT CONCAT('Fall f (Zusatz): ', @mandant_1, ', ohne Suchbegriff, ab ', @von_f
 SET @x = CONCAT('EXPLAIN ', @q_f);
 PREPARE plan FROM @x;
 EXECUTE plan;
+
+-- -------------------------------------------------------------------------------------------
+-- Ausgaben 16 bis 25 (seit 13.10.2026): die Faelle g bis k, wie die Anwendung sie schickt.
+-- -------------------------------------------------------------------------------------------
+SELECT CONCAT('Fall g: ', @mandant_1, ', mit Suchbegriff, ', @fensterlaenge_stunden, ' h, wie gebaut (Hinweis)') AS fall;
+SET @x = IF(@grund_1 IS NULL, CONCAT('EXPLAIN ', @q_g), CONCAT('SELECT ', QUOTE(@grund_1), ' AS kein_explain'));
+PREPARE plan FROM @x;
+EXECUTE plan;
+
+SELECT CONCAT('Fall h: ', @mandant_2, ', mit Suchbegriff, ', @fensterlaenge_stunden, ' h, wie gebaut (Hinweis)') AS fall;
+SET @x = IF(@grund_2 IS NULL, CONCAT('EXPLAIN ', @q_h), CONCAT('SELECT ', QUOTE(@grund_2), ' AS kein_explain'));
+PREPARE plan FROM @x;
+EXECUTE plan;
+
+SELECT CONCAT('Fall i: ', @mandant_1, ', mit Suchbegriff und Prozessfilter (kleiner Prozess), ', @fensterlaenge_stunden, ' h, ohne Hinweis') AS fall;
+SET @x = IF(@grund_i IS NULL, CONCAT('EXPLAIN ', @q_i), CONCAT('SELECT ', QUOTE(@grund_i), ' AS kein_explain'));
+PREPARE plan FROM @x;
+EXECUTE plan;
+
+SELECT CONCAT('Fall j: ', @mandant_1, ', mit Suchbegriff und Prozessfilter (verkehrsreicher Prozess), ', @fensterlaenge_stunden, ' h, ohne Hinweis') AS fall;
+SET @x = IF(@grund_j IS NULL, CONCAT('EXPLAIN ', @q_j), CONCAT('SELECT ', QUOTE(@grund_j), ' AS kein_explain'));
+PREPARE plan FROM @x;
+EXECUTE plan;
+
+SELECT CONCAT('Fall k: ', @mandant_1, ', Begriff trifft nur Prozesse, ', @fensterlaenge_stunden, ' h, wie gebaut (Hinweis)') AS fall;
+SET @x = IF(@grund_k IS NULL, CONCAT('EXPLAIN ', @q_k), CONCAT('SELECT ', QUOTE(@grund_k), ' AS kein_explain'));
+PREPARE plan FROM @x;
+EXECUTE plan;
 DEALLOCATE PREPARE plan;
 
 -- -------------------------------------------------------------------------------------------
 -- Aufraeumen: Begriff, Muster und Kennungslisten aus der Sitzung nehmen (Regel G1), dann die
--- Endmarke -- Ausgabe 16. Fehlt sie im Text, ist der Lauf nicht vollstaendig.
+-- Endmarke -- Ausgabe 26. Fehlt sie im Text, ist der Lauf nicht vollstaendig.
 -- -------------------------------------------------------------------------------------------
 -- [aufraeumen-anfang]
 SET @begriff_1 = NULL, @begriff_2 = NULL, @b_1 = NULL, @b_2 = NULL, @muster_1 = NULL, @muster_2 = NULL;
 SET @ip_1 = NULL, @is_1 = NULL, @ip_2 = NULL, @is_2 = NULL, @suche_1 = NULL, @suche_2 = NULL;
 SET @q_a = NULL, @q_c = NULL, @q_e = NULL, @s = NULL, @x = NULL;
+SET @begriff_k = NULL, @b_k = NULL, @muster_k = NULL, @ip_k = NULL, @is_k = NULL, @suche_k = NULL;
+SET @pf_klein = NULL, @pf_gross = NULL, @rollup_auswahl = NULL;
+SET @q_g = NULL, @q_h = NULL, @q_i = NULL, @q_j = NULL, @q_k = NULL;
 -- [aufraeumen-ende]
-SELECT IF(@np_1 IS NULL OR @ns_1 IS NULL OR @np_2 IS NULL OR @ns_2 IS NULL,
-          'ENDE, ABER MIT FEHLERN: eine Vorfilterung ist nicht gelaufen, siehe Ausgabe 3',
+-- Vollstaendig heisst: jede Vorfilterung und jede Auswahl ist gelaufen. Ein Fall, der mit Grund
+-- statt Plan endet (Ausgabe 3), ist kein Fehler des Laufs.
+SELECT IF(@np_1 IS NULL OR @ns_1 IS NULL OR @np_2 IS NULL OR @ns_2 IS NULL
+          OR @np_k IS NULL OR @ns_k IS NULL OR @rollup_sichtbar IS NULL,
+          'ENDE, ABER MIT FEHLERN: eine Vorfilterung oder Auswahl ist nicht gelaufen, siehe Ausgabe 3',
           'ENDE: alle Ausgaben vollstaendig') AS ende;
