@@ -61,6 +61,21 @@ public class NachrichtenRepository {
    */
   private static final Process MANDANTEN_PROCESS = PROCESS.as("mandanten_process");
 
+  /**
+   * Die beiden Indizes des Altsystems auf {@code Message.ProcessID} ({@code
+   * docs/PROJEKTBESCHREIBUNG.md} §3.2), geschrieben wie in der Datenbank — {@code ProejctIDIDX} mit
+   * dem Buchstabendreher des Altsystems. Der Suchpfad schliesst sie per Hinweis aus ({@link
+   * #ignoriertProzessindizes}).
+   *
+   * <p><b>Die Suche haengt damit an diesen zwei Namen.</b> MariaDB 10.6 antwortet auf einen
+   * unbekannten Namen in {@code IGNORE INDEX} mit Fehler 1176 („Key … doesn't exist") — auch wenn
+   * nur einer der beiden fehlt (gemessen am 13.10.2026 gegen die Testkopie). Das ist kein Abbruch
+   * an der Zeitgrenze, sondern ein technischer Fehler, also {@code 500}. Benennt das Altsystem
+   * einen der beiden um, faellt die Suche aus; {@code NachrichtenSuchindizesDbIT} wird dann gegen
+   * die verbundene Datenbank rot.
+   */
+  static final List<String> PROZESSINDIZES = List.of("ProejctIDIDX", "Message_ProcessFK");
+
   private final DSLContext glassfishDsl;
   private final MessageStatusClassifier statusClassifier;
 
@@ -87,7 +102,10 @@ public class NachrichtenRepository {
               PROJECT.PROJECTNAME,
               SOS.SOSNAME,
               SOSACTION.SOSACTIONNAME)
-          .from(MESSAGE)
+          .from(
+              ignoriertProzessindizes(abfrage)
+                  ? MESSAGE.ignoreIndexForJoin(PROZESSINDIZES.toArray(String[]::new))
+                  : MESSAGE)
           // LEFT JOIN, obwohl die Mandantenkette einen Prozess ohnehin erzwingt: Der Anzeigename
           // darf nicht darueber entscheiden, ob eine Zeile erscheint.
           .leftJoin(PROCESS)
@@ -124,6 +142,32 @@ public class NachrichtenRepository {
     } catch (DataAccessException fehler) {
       throw anDerZeitgrenze(fehler, abfrage.suchtreffer() != null);
     }
+  }
+
+  /**
+   * Ob das Statement die beiden Prozessindizes ausschliesst — <b>genau dann, wenn ein Suchbegriff
+   * gesetzt ist und kein Prozessfilter</b> (Entscheidung des Auftraggebers vom 13.10.2026, Fassung
+   * F4 aus {@code docs/nachrichtenliste.md} §5a). In jedem anderen Fall bleibt das Statement
+   * Zeichen fuer Zeichen, wie es ohne den Hinweis war.
+   *
+   * <p><b>Der Anlass ist ein Befund aus der Produktion</b> (Diagnoseskript {@code
+   * scripts/diagnose-produktion/suche.sql}, 13.10.2026): Dort waehlt der Optimierer fuer {@code
+   * NEXANS} ueber 24 Stunden den prozessgetriebenen Plan ({@code ProjectMandant → mandanten_process
+   * → Message} ueber {@code Message_ProcessFK}, {@code Using temporary; Using filesort}) und laeuft
+   * damit bei jedem Suchbegriff in die Zeitgrenze. Die Testkopie waehlt zeitgetrieben. Der
+   * Unterschied liegt in der Indexstatistik, die die Produktion regelmaessig neu rechnet ({@code
+   * Message_ProcessFK} 9.127 statt 18) — und von ihr darf die Abfrage nicht abhaengen. Mit dem
+   * Hinweis bleibt dem Optimierer der prozessgetriebene Weg verschlossen; in der Produktion waehlt
+   * er dann den Zeitindex (Fall e des Skripts).
+   *
+   * <p><b>Nur im Suchpfad.</b> Ohne Suchbegriff verengt die Liste ihr Fenster vorab ueber den
+   * Rollup (§5d), und ein enges Fenster zieht den Optimierer von selbst auf den Zeitindex; die
+   * Suche verengt nie ({@link Abfragemerkmal#SUCHBEGRIFF}). <b>Und nicht mit Prozessfilter:</b>
+   * Dort traegt genau der ausgeschlossene Index die Abfrage — §5a hat gemessen, dass F4 den
+   * Prozessfilter zerstoert ({@code NEXANS}, drei kleine Prozesse: 1,730 ms → 1.547,772 ms).
+   */
+  static boolean ignoriertProzessindizes(Nachrichtenabfrage abfrage) {
+    return abfrage.suchtreffer() != null && abfrage.prozessIds().isEmpty();
   }
 
   /**

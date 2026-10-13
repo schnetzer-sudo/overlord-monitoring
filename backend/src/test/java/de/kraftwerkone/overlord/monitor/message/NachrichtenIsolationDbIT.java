@@ -158,6 +158,47 @@ class NachrichtenIsolationDbIT extends SicherheitsTestbasis {
   }
 
   /**
+   * <b>Die Suche unter dem Hinweis</b> (13.10.2026, E‑237): Mit Suchbegriff und ohne Prozessfilter
+   * schickt die Liste ein eigenes Statement — {@code IGNORE INDEX FOR JOIN} auf {@code Message}.
+   * Regel M4 verlangt die Trennung fuer genau dieses Statement, und zwar in beide Richtungen.
+   *
+   * <p>Gesucht wird nach dem Namen eines <b>eigenen</b> Prozesses, hergeleitet aus der eigenen
+   * Liste — sonst bewiese eine leere Antwort nur, dass nichts gefunden wurde. Die fremden Kennungen
+   * kommen aus derselben Abfrage beim anderen Mandanten.
+   */
+  @Test
+  @DisplayName("Suche mit Hinweis: NEXANS bekommt keine Zeile von SUTTONS und umgekehrt")
+  void suche_mit_hinweis_trennt_in_beide_richtungen() throws Exception {
+    pruefeSuche(aufNexans, aufSuttons);
+    pruefeSuche(aufSuttons, aufNexans);
+  }
+
+  private void pruefeSuche(Sitzung eigen, Sitzung fremd) throws Exception {
+    Antwort fremdeListe = fremd.hole(abfrage(""));
+    List<String> fremdeNachrichten = fremdeListe.json("$.items[*].messageId");
+    List<String> fremdeProzesse = fremdeListe.json("$.items[*].processId");
+    assertThat(fremdeNachrichten).as("Der andere Mandant hat Zeilen im Fenster").isNotEmpty();
+
+    String eigenerProzessname =
+        eigen.hole(abfrage("")).<List<String>>json("$.items[*].processName").getFirst();
+    Antwort treffer =
+        eigen.hole(
+            abfrage("&suche=" + URLEncoder.encode(eigenerProzessname, StandardCharsets.UTF_8)));
+
+    assertThat(treffer.status()).isEqualTo(200);
+    List<String> gefunden = treffer.json("$.items[*].messageId");
+    assertThat(gefunden)
+        .as("Die Suche nach einem eigenen Prozess findet eigene Zeilen")
+        .isNotEmpty()
+        .noneMatch(fremdeNachrichten::contains);
+    assertThat(treffer.<List<String>>json("$.items[*].processId"))
+        .noneMatch(fremdeProzesse::contains);
+    for (String kennung : fremdeNachrichten) {
+      assertThat(treffer.rumpf()).doesNotContain(kennung);
+    }
+  }
+
+  /**
    * Der Cursor traegt keine Berechtigung. Wer den Cursor eines fremden Mandanten einsetzt,
    * blaettert damit in <b>seinem eigenen</b> Ausschnitt weiter — die fremde Position ist nur ein
    * Zeitpunkt und eine Kennung, kein Zugang.

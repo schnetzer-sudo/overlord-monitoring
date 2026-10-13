@@ -186,4 +186,101 @@ class NachrichtenStatementsTest {
             FENSTER, Set.of(MessageStatusKind.UNGEKLAERT), List.of(), null, true, null, 50));
     assertThat(einziges()).containsOnlyOnce("'EERP_PENDING'").containsIgnoringCase("not in (");
   }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Der Hinweis im Suchpfad (13.10.2026, E‑237, docs/nachrichtenliste.md §5)
+  // ───────────────────────────────────────────────────────────────────────────
+
+  private static final Suchtreffer TREFFER =
+      new Suchtreffer(List.of("PID_1", "PID_2"), List.of("SID_1"), false);
+
+  /** Der Hinweis, wie jOOQ 3.21 ihn rendert — zwischen Tabelle und erstem Join. */
+  private static final String MIT_HINWEIS =
+      "from `GlassfishDB`.`Message` ignore index for join (`ProejctIDIDX`, `Message_ProcessFK`)"
+          + " left outer join";
+
+  /** Ohne Hinweis folgt der Join unmittelbar auf die Tabelle. */
+  private static final String OHNE_HINWEIS = "from `GlassfishDB`.`Message` left outer join";
+
+  private Nachrichtenabfrage abfrage(
+      Set<MessageStatusKind> status, List<String> prozessIds, Suchtreffer suchtreffer) {
+    return new Nachrichtenabfrage(FENSTER, status, prozessIds, suchtreffer, true, null, 50);
+  }
+
+  @Test
+  @DisplayName("Suche ohne Prozessfilter schickt den Hinweis auf Message, genau einmal")
+  void suche_ohne_prozessfilter_traegt_den_hinweis() {
+    repository.finde(MANDANT, abfrage(Set.of(), List.of(), TREFFER));
+
+    assertThat(einziges())
+        .contains(MIT_HINWEIS)
+        .containsOnlyOnce("ignore index")
+        .contains("`GlassfishDB`.`Message`.`ProcessID` in ('PID_1', 'PID_2')");
+  }
+
+  /**
+   * Die Faelle ohne Hinweis. Mit Prozessfilter traegt genau der ausgeschlossene Index die Abfrage
+   * (§5a: F4 macht aus 1,730 ms 1.547,772 ms) — dort darf er nicht stehen.
+   */
+  @Test
+  @DisplayName(
+      "Suche mit Prozessfilter, keine Suche und Statusfilter allein schicken keinen Hinweis")
+  void ohne_suche_oder_mit_prozessfilter_kein_hinweis() {
+    List<Nachrichtenabfrage> ohne =
+        List.of(
+            abfrage(Set.of(), List.of("PF_1"), TREFFER),
+            abfrage(Set.of(), List.of(), null),
+            abfrage(Set.of(MessageStatusKind.FEHLER), List.of(), null),
+            abfrage(Set.of(), List.of("PF_1"), null));
+    for (Nachrichtenabfrage abfrage : ohne) {
+      gerendert.clear();
+      repository.finde(MANDANT, abfrage);
+      assertThat(einziges())
+          .as("%s", abfrage)
+          .contains(OHNE_HINWEIS)
+          .doesNotContain("ignore index");
+    }
+  }
+
+  @Test
+  @DisplayName("Bedingung: Suche ohne Prozessfilter ergibt den Hinweis, auch mit Status und Cursor")
+  void bedingung_suche_ohne_prozessfilter() {
+    assertThat(NachrichtenRepository.ignoriertProzessindizes(abfrage(Set.of(), List.of(), TREFFER)))
+        .isTrue();
+    assertThat(
+            NachrichtenRepository.ignoriertProzessindizes(
+                abfrage(Set.of(MessageStatusKind.FEHLER), List.of(), TREFFER)))
+        .isTrue();
+    assertThat(
+            NachrichtenRepository.ignoriertProzessindizes(
+                new Nachrichtenabfrage(
+                    FENSTER,
+                    Set.of(),
+                    List.of(),
+                    TREFFER,
+                    false,
+                    new Seitenposition(JETZT, "abc"),
+                    50)))
+        .as("Sortierung aelteste und Cursor aendern an der Entscheidung nichts")
+        .isTrue();
+  }
+
+  @Test
+  @DisplayName(
+      "Bedingung: Suche mit Prozessfilter, keine Suche, Statusfilter allein — kein Hinweis")
+  void bedingung_ohne_hinweis() {
+    assertThat(
+            NachrichtenRepository.ignoriertProzessindizes(
+                abfrage(Set.of(), List.of("PF_1"), TREFFER)))
+        .as("Suche mit Prozessfilter")
+        .isFalse();
+    assertThat(NachrichtenRepository.ignoriertProzessindizes(abfrage(Set.of(), List.of(), null)))
+        .as("keine Suche")
+        .isFalse();
+    assertThat(
+            NachrichtenRepository.ignoriertProzessindizes(
+                abfrage(Set.of(MessageStatusKind.FEHLER), List.of(), null)))
+        .as("Statusfilter allein")
+        .isFalse();
+  }
 }

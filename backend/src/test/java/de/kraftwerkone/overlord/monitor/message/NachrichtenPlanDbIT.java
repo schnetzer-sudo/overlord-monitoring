@@ -168,6 +168,121 @@ class NachrichtenPlanDbIT {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
+  // Der Hinweis im Suchpfad (13.10.2026, E‑237, docs/nachrichtenliste.md §5)
+  // ───────────────────────────────────────────────────────────────────────────
+
+  /** Eine Planzeile mit den Indizes, die der Optimierer erwogen hat. */
+  private record Erwogen(String tabelle, String moeglicheIndizes, String index) {}
+
+  /** Der Plan des Statements, das das Repository fuer diese Abfrage schickt, mit possible_keys. */
+  private List<Erwogen> erwogen(String mandantId, Nachrichtenabfrage abfrage) {
+    gerendert.clear();
+    attrappe.finde(new MandantContext(mandantId), abfrage);
+    assertThat(gerendert).hasSize(1);
+
+    List<Erwogen> zeilen = new ArrayList<>();
+    for (Record satz : glassfishDsl.fetch("explain " + gerendert.getFirst())) {
+      zeilen.add(
+          new Erwogen(
+              String.valueOf(satz.get("table")),
+              String.valueOf(satz.get("possible_keys")),
+              String.valueOf(satz.get("key"))));
+    }
+    assertThat(zeilen)
+        .as("Message muss im Plan stehen")
+        .anyMatch(z -> "Message".equals(z.tabelle()));
+    return zeilen;
+  }
+
+  /**
+   * Ein Suchtreffer aus echten Kennungen des Mandanten — drei Prozesse und drei Ablaeufe, in fester
+   * Reihenfolge. Die Testkopie ist schreibgeschuetzt und wird nicht nachgepflegt (Regel 12), und
+   * ausgegeben wird keine Kennung (G1). Echte Kennungen statt erfundener, damit die Bereichsanalyse
+   * dieselben Schaetzungen sieht wie bei einer echten Suche.
+   */
+  private Suchtreffer treffer(String mandantId) {
+    List<String> prozesse =
+        glassfishDsl
+            .fetch(
+                "select p.ProcessID from Process p join ProjectMandant pm on pm.ProjectID ="
+                    + " p.ProjectID where pm.MandantID = ? order by p.ProcessID limit 3",
+                mandantId)
+            .getValues(0, String.class);
+    List<String> ablaeufe =
+        glassfishDsl
+            .fetch(
+                "select s.SOSID from SOS s join Process p on p.ProcessID = s.ProcessID join"
+                    + " ProjectMandant pm on pm.ProjectID = p.ProjectID where pm.MandantID = ?"
+                    + " order by s.SOSID limit 3",
+                mandantId)
+            .getValues(0, String.class);
+    assertThat(prozesse).as("Prozesse von %s", mandantId).isNotEmpty();
+    assertThat(ablaeufe).as("Ablaeufe von %s", mandantId).isNotEmpty();
+    return new Suchtreffer(prozesse, ablaeufe, false);
+  }
+
+  private static boolean erwaegtProzessindex(Erwogen zeile) {
+    return NachrichtenRepository.PROZESSINDIZES.stream()
+        .anyMatch(name -> List.of(zeile.moeglicheIndizes().split(",")).contains(name));
+  }
+
+  /**
+   * <b>Die Eigenschaft, die nicht an der Statistik haengt.</b> Mit Suchbegriff und ohne
+   * Prozessfilter steht keiner der beiden Prozessindizes in {@code possible_keys} von {@code
+   * Message} — der prozessgetriebene Weg, den die Produktion am 13.10.2026 gewaehlt hat, ist damit
+   * gar nicht erst im Angebot.
+   *
+   * <p><b>Welchen Treiber der Optimierer nimmt, prueft der Test bewusst nicht.</b> Auf der
+   * Testkopie ist die Liste fuer beide Mandanten ohnehin zeitgetrieben; eine Zusicherung darauf
+   * waere dort immer gruen und sagte ueber die Produktion nichts.
+   */
+  @Test
+  @DisplayName("Suche ohne Prozessfilter: keiner der beiden Prozessindizes in possible_keys")
+  void suche_schliesst_die_prozessindizes_aus() {
+    for (String mandant : List.of("NEXANS", "SUTTONS")) {
+      Nachrichtenabfrage mitSuche =
+          new Nachrichtenabfrage(FENSTER, Set.of(), List.of(), treffer(mandant), true, null, 50);
+
+      assertThat(erwogen(mandant, mitSuche))
+          .filteredOn(zeile -> "Message".equals(zeile.tabelle()))
+          .as("Message darf mit Suchbegriff keinen Prozessindex erwaegen (%s)", mandant)
+          .noneMatch(NachrichtenPlanDbIT::erwaegtProzessindex);
+    }
+  }
+
+  /**
+   * Die Gegenprobe, ohne die der Fall oben nur zeigte, dass der Optimierer die beiden nie erwaegt:
+   * <b>ohne</b> Suchbegriff und bei Suche <b>mit</b> Prozessfilter stehen sie in {@code
+   * possible_keys}. Der Hinweis ist damit die Ursache, und er wirkt nur im Suchpfad.
+   */
+  @Test
+  @DisplayName(
+      "Ohne Suche und bei Suche mit Prozessfilter stehen die Prozessindizes in possible_keys")
+  void ohne_hinweis_stehen_die_prozessindizes_zur_wahl() {
+    for (String mandant : List.of("NEXANS", "SUTTONS")) {
+      Suchtreffer treffer = treffer(mandant);
+      Nachrichtenabfrage ohneSuche =
+          new Nachrichtenabfrage(FENSTER, Set.of(), List.of(), null, true, null, 50);
+      Nachrichtenabfrage mitProzessfilter =
+          new Nachrichtenabfrage(
+              FENSTER, Set.of(), List.of(treffer.prozessIds().getFirst()), treffer, true, null, 50);
+
+      for (Nachrichtenabfrage abfrage : List.of(ohneSuche, mitProzessfilter)) {
+        List<Erwogen> message =
+            erwogen(mandant, abfrage).stream()
+                .filter(zeile -> "Message".equals(zeile.tabelle()))
+                .toList();
+        assertThat(message).as("%s, %s", mandant, abfrage).isNotEmpty();
+        for (String name : NachrichtenRepository.PROZESSINDIZES) {
+          assertThat(message)
+              .as("%s muss ohne Hinweis zur Wahl stehen (%s, %s)", name, mandant, abfrage)
+              .anyMatch(zeile -> List.of(zeile.moeglicheIndizes().split(",")).contains(name));
+        }
+      }
+    }
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
   // Die Fensterverengung (30.08.2026, docs/nachrichtenliste.md §5d)
   // ───────────────────────────────────────────────────────────────────────────
 
