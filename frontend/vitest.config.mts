@@ -196,6 +196,9 @@ import { defineConfig } from "vitest/config";
  * > `pnpm check`, beim Basislauf lag sie noch nicht im Baum; keine neue Quelldatei. Die Tabelle
  * > je Datei gegen den Lauf verglichen: keine Abweichung. **Dabei berichtigt:** Der Schlusssatz
  * > nannte noch zweihunderteins (Stand 21.09.2026), Kopf und Tabelle schon 204.
+ * > *Nachtrag am selben Tag (Commit `4dd5216`):* drei weitere reine Fälle in
+ * > `tests/nachrichtenfilter.test.ts` (die Rückmeldungen an den Zeitfensterfeldern, von 45 auf 48);
+ * > der Lauf trägt damit **1.310** Fälle (`pnpm check`), die gerenderten bleiben bei 208.
  *
  * > ⚠️ **Fortgeschrieben am 17.09.2026 (Kodierung je Datei und EBCDIC-Muster, E‑176 und E‑177)**,
  * > aus dem Lauf (`vitest run --reporter=json`, Fälle je Datei): **161 in zwanzig Dateien**, keine
