@@ -135,6 +135,8 @@ public class Fensterverengung {
       // Der Rollup ist eine Beschleunigung und keine Voraussetzung. Faellt er aus, laeuft die Liste
       // unverengt weiter -- langsamer, aber richtig. Das ist der Punkt des ganzen Baus: Die Liste
       // ist die Frage, wegen der es dieses Werkzeug gibt.
+      // Ergaenzt 13.10.2026: Fuer NEXANS heisst "unverengt" in der Produktion vermutlich
+      // Abbruch nach 10 s (docs/nachrichtenliste.md §5d, Kasten vom 13.10.2026; Punkt 221).
       LOG.warn("Fensterverengung ausgefallen, die Liste laeuft unverengt weiter.", fehler);
       return new Ergebnis(abfrage, Verengungsgrund.KEINE_UNTERGRENZE);
     }

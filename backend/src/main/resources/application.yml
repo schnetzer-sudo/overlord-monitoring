@@ -150,6 +150,9 @@ overlord:
     # weiterlaufen -- langsamer, aber richtig. Der Schalter ist der letzte
     # der drei Schutzmechanismen; die beiden anderen (Wasserstand und
     # fehlende Untergrenze) greifen von selbst.
+    # Ergaenzt 13.10.2026: Fuer NEXANS heisst "unverengt" in der Produktion
+    # vermutlich Abbruch nach 10 s -- docs/nachrichtenliste.md §5d, Kasten vom
+    # 13.10.2026, und offener Punkt 221.
     #
     # FEHLT DER SCHLUESSEL, IST DIE VERENGUNG AUS. boolean ohne Eintrag ist
     # false, und das ist die sichere Richtung -- dieselbe Entscheidung wie

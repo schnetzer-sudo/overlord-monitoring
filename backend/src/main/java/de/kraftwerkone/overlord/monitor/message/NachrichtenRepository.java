@@ -157,8 +157,11 @@ public class NachrichtenRepository {
    * damit bei jedem Suchbegriff in die Zeitgrenze. Die Testkopie waehlt zeitgetrieben. Der
    * Unterschied liegt in der Indexstatistik, die die Produktion regelmaessig neu rechnet ({@code
    * Message_ProcessFK} 9.127 statt 18) — und von ihr darf die Abfrage nicht abhaengen. Mit dem
-   * Hinweis bleibt dem Optimierer der prozessgetriebene Weg verschlossen; in der Produktion waehlt
-   * er dann den Zeitindex (Fall e des Skripts).
+   * Hinweis bleibt dem Optimierer der Zugriff auf {@code Message} ueber {@code ProcessID}
+   * verschlossen; in der Produktion waehlt er dann den Zeitindex (Fall e des Skripts). <b>Eine
+   * Reihenfolge ueber die Mandantenkette bleibt ihm moeglich</b>: Trifft der Begriff nur Prozesse,
+   * liest er {@code Message} ueber einen Join-Puffer, und ueber 90 Tage die ganze Tabelle (M195,
+   * offener Punkt 225 in {@code docs/nachrichtenliste.md}).
    *
    * <p><b>Nur im Suchpfad.</b> Ohne Suchbegriff verengt die Liste ihr Fenster vorab ueber den
    * Rollup (§5d), und ein enges Fenster zieht den Optimierer von selbst auf den Zeitindex; die
@@ -323,11 +326,15 @@ public class NachrichtenRepository {
    *
    * <p><b>Die Vorfilterung ist billig, das Hauptstatement mit ihrem Ergebnis nicht</b> (Messungen
    * L7c, L11 und L13): Die {@code ODER}-Verknuepfung ueber {@code ProcessID} und {@code SOSID}
-   * schliesst den Index auf {@code ProcessID} aus, MariaDB behaelt das Zeitfenster als Treiber. Was
-   * das kostet, haengt am Begriff und nicht an der Fenstergroesse: Wer die Seite fuellt, zahlt
-   * dasselbe ueber ein Jahr wie ueber 30 Tage (L13: 78.318 gelesene Zeilen, rund 0,5 s in beiden
-   * Faellen). Wer sie nicht fuellt, zahlt das ganze Fenster — 1,2 s ueber 30 Tage, 15,6 s ueber ein
-   * Jahr.
+   * schliesst den Index auf {@code ProcessID} aus, MariaDB behaelt das Zeitfenster als Treiber
+   * <i>(ergaenzt 13.10.2026: nicht immer. In der Produktion waehlte der Optimierer fuer {@code
+   * NEXANS} ueber die Mandantenkette den prozessgetriebenen Plan, auf der Testkopie tut er das bei
+   * {@code SUTTONS} ueber 30 Tage ebenfalls; und trifft der Begriff nur Prozesse, faltet MariaDB
+   * die Form {@code (… or false)} zu einem reinen Prozessfilter, den der Index auf {@code
+   * ProcessID} wieder traegt — M195, deshalb {@link #ignoriertProzessindizes})</i>. Was das kostet,
+   * haengt am Begriff und nicht an der Fenstergroesse: Wer die Seite fuellt, zahlt dasselbe ueber
+   * ein Jahr wie ueber 30 Tage (L13: 78.318 gelesene Zeilen, rund 0,5 s in beiden Faellen). Wer sie
+   * nicht fuellt, zahlt das ganze Fenster — 1,2 s ueber 30 Tage, 15,6 s ueber ein Jahr.
    *
    * <p><b>Beide vorgesehenen Umbauten sind gemessen und verworfen</b> (M10 und L11): Die Aufloesung
    * ueber {@code SOS.ProcessID} zu einer einzigen Kennungsliste verliert 9.101 Zeilen, und die
