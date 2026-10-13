@@ -329,6 +329,31 @@ describe("Was die Liste bei einer Rückmeldung zeigt", () => {
     },
   );
 
+  /*
+   * Die Rückmeldungen an den Zeitfensterfeldern gehören ebenfalls dazu (§8.2):
+   * Auch dort ist der Nutzer mitten in einer Eingabe. Das Fenster ist hier voll
+   * ausgefüllt, damit der Rückgriff an der Rückmeldung hängt und nicht schon am
+   * halben Fenster — ohne diesen Fall bliebe ein `suchfeldFehler` statt
+   * `feldFehler` in `listenanzeige` unbemerkt.
+   */
+  it.each(["zeitfenster-unvollstaendig", "zeitfenster-ungueltig", "zeitpunkt-ungueltig"])(
+    "lässt bei %s die zuletzt gelieferte Seite samt Σ stehen",
+    (typ) => {
+      const frei: Nachrichtenfilter = {
+        ...LEER,
+        von: new Date("2025-12-28T05:00:00Z"),
+        bis: new Date("2025-12-29T05:00:00Z"),
+      };
+
+      expect(listenanzeige(lage({ fehler: problem(typ) }), frei)).toEqual({
+        seite: "zuletzt gelieferte Seite",
+        treffer: "ihr Σ",
+        kannVor: false,
+        ohneErgebnis: false,
+      });
+    },
+  );
+
   it("greift bei einem Fehler der ganzen Ansicht nicht zurück", () => {
     const technisch = new ProblemFehler({ status: 500, typ: "technischer-fehler", angaben: {} });
 
