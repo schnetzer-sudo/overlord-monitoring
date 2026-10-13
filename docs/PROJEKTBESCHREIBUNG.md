@@ -1821,11 +1821,20 @@ Prozent der Datenbank; dort entscheidet die Bytegröße.
 7. **Jede neue Abfrage wird vor dem Merge gegen die Testkopie gemessen** (`EXPLAIN` plus
    Laufzeit). Kein Statement geht ungeprüft in Produktion.
 
+   > **Zusatz vom 13.10.2026 (E‑239).** Die Testkopie wählt Pläne nicht wie die Produktion —
+   > Annahme A12 in §11 ist widerlegt ([`messungen-suche-plan.md`](messungen-suche-plan.md) M193).
+   > **Jede Änderung, die den Plan der Nachrichtenliste oder ihrer Suche berühren kann, wird
+   > zusätzlich per `EXPLAIN` in Produktion geprüft**: über
+   > [`scripts/diagnose-produktion/suche.sql`](../scripts/diagnose-produktion/suche.sql), erweitert
+   > um den Fall der Änderung, ausgeführt von Lukas (Auftraggeber) vor dem Merge. Die Messung gegen
+   > die Testkopie bleibt Pflicht; der Satz darüber gilt unverändert. Ausführlich in
+   > [`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md), Regel L7.
+
 ### Umgebungen
 
 | Umgebung | Inhalt | Verwendung |
 |---|---|---|
-| Testkopie (interner Host, MariaDB 10.6) | Vollkopie der Produktion, Datenstand **08.07.2026** | Entwicklung, Tests, Messung von Abfrageplänen |
+| Testkopie (interner Host, MariaDB 10.6) | Vollkopie der Produktion, Datenstand **08.07.2026** | Entwicklung, Tests, Messung von Abfrageplänen — *ergänzt 13.10.2026:* Pläne unter der Statistik der Testkopie; die Planwahl der Produktion kann abweichen (A12 in §11, Zusatz zu Regel 7) |
 | Produktion | Live | Laufzeitdatenquelle der Anwendung |
 
 **Bestätigt am 01.08.2026** durch Messung M0: `MIN(MessageLastUpdate) = 2024-10-01 02:00:28`,
@@ -2018,6 +2027,7 @@ trägt dieselbe Angabe („die drei getrennten Problemkategorien") und ist dort 
 | A9 | Die BAM-Suche lässt sich mit Zeitfenster und hartem Limit ausreichend begrenzen | `MessageBAM` hat keinen Zeitstempel, das Fenster greift erst nach dem Join. Rückfalloption: eigener BAM-Index in `overlord_monitor`, vom Rollup-Job mitgeführt |
 | A10 | MariaDB 10.6 bleibt für die Laufzeit des Projekts in Betrieb | Version hat im Juli 2026 den Wartungszeitraum erreicht. Ein Upgrade auf 11.x ändert Standard-Sortierungen — deshalb steht die Sortierung in jeder Migration explizit |
 | A11 | Die unverschlüsselte Verbindung zur Datenbank ist tragbar | **Offen.** Auf der Testkopie ist kein TLS eingerichtet. Tragbar, wenn Anwendungsserver und Datenbank im selben Rechenzentrum am selben Switch stehen; nicht tragbar über ein Firmennetz mit WLAN oder Standortkopplung. Vor dem Produktivbetrieb mit `SHOW VARIABLES LIKE 'have_ssl'` gegen die Produktion zu prüfen |
+| ~~A12~~ | **Widerlegt 13.10.2026.** *Eingetragen am 13.10.2026, gemeint seit Schritt 4:* **Die Testkopie wählt Pläne wie die Produktion.** Ausgesprochen war das nirgends, aber Regel 7 in §8 setzte es voraus — gemessen wurde jede Abfrage gegen die Testkopie, und deren Plan galt als der Plan. Das Diagnoseskript hat am 13.10.2026 in Produktion das Gegenteil gezeigt ([`messungen-suche-plan.md`](messungen-suche-plan.md) M193): gleiche Version, gleicher `optimizer_switch`, gleiche Statistikeinstellungen, aber die Produktion rechnet ihre Indexstatistik neu (`Message_ProcessFK` 9.127 statt 18) und wählt für die Suche bei `NEXANS` einen prozessgetriebenen Plan, der nach 10 s abbricht; die Testkopie wählt den Zeitindex | **Eingetreten** — die Suche brach in Produktion bei jedem Begriff ab. Abhilfe: F4 im Suchpfad (E‑237, [`nachrichtenliste.md`](nachrichtenliste.md) §5) und der Zusatz zu Regel 7 (E‑239): jede planberührende Änderung zusätzlich per `EXPLAIN` in Produktion |
 
 ---
 

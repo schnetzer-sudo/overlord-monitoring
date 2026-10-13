@@ -399,6 +399,24 @@ millionenfach vor.
 Laufzeit). Kein Statement geht ungeprüft in Produktion. Das Ergebnis gehört in die
 Feature-Dokumentation unter `docs/`.
 
+> **Zusatz vom 13.10.2026 (E‑239): Die Testkopie wählt Pläne nicht wie die Produktion.** Der Absatz
+> darüber bleibt stehen und bleibt Pflicht. Was er nicht leistet, hat
+> [`docs/messungen-suche-plan.md`](docs/messungen-suche-plan.md) M193 gezeigt: Beide Server laufen
+> mit derselben Version, demselben `optimizer_switch` und denselben Statistikeinstellungen — aber
+> die Produktion trägt eine neu gerechnete Indexstatistik (`Message_ProcessFK` mit `CARDINALITY`
+> 9.127), die Testkopie den alten Stand (18). Dieselbe Suche läuft deshalb auf der Testkopie über
+> 24 Stunden zeitgetrieben in Millisekunden und bricht in Produktion bei `NEXANS` nach 10 s ab,
+> über einen Plan, den die Testkopie für `NEXANS` über 24 Stunden nicht wählt.
+>
+> **Jede Änderung, die den Plan der Nachrichtenliste oder ihrer Suche berühren kann, wird deshalb
+> zusätzlich per `EXPLAIN` in Produktion geprüft** — über das Diagnoseskript
+> [`scripts/diagnose-produktion/suche.sql`](scripts/diagnose-produktion/suche.sql), das die Änderung
+> um ihren Fall erweitert, mit dem Statement so, wie es aus dem Repository gerendert wird.
+> **Ausgeführt wird es von Lukas (Auftraggeber) vor dem Merge**; ohne seine Ausgabe wird nicht
+> gemergt. Das Skript führt kein Statement an `Message` aus und gibt weder Kennungen noch Namen aus
+> (S1, G1). Die Messung gegen die Testkopie belegt Laufzeit und Plan **unter der Statistik der
+> Testkopie** — die Planwahl in Produktion belegt sie nicht.
+
 **L8 — Keine Quelltabelle ohne Erhebung** *(neu am 07.08.2026)*.
 
 > **Bevor eine Tabelle des Quellschemas das erste Mal in Anwendungscode auftaucht, werden ihre
