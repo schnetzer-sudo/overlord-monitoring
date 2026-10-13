@@ -11,6 +11,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import org.jooq.DSLContext;
 import org.jooq.Record;
@@ -229,12 +230,12 @@ class NachrichtenPlanDbIT {
   /**
    * <b>Die Eigenschaft, die nicht an der Statistik haengt.</b> Mit Suchbegriff und ohne
    * Prozessfilter steht keiner der beiden Prozessindizes in {@code possible_keys} von {@code
-   * Message} — der prozessgetriebene Weg, den die Produktion am 13.10.2026 gewaehlt hat, ist damit
-   * gar nicht erst im Angebot.
+   * Message} — der Zugriff ueber {@code ProcessID}, mit dem die Produktion am 13.10.2026 die Suche
+   * in die Zeitgrenze gefuehrt hat, ist damit gar nicht erst im Angebot.
    *
-   * <p><b>Welchen Treiber der Optimierer nimmt, prueft der Test bewusst nicht.</b> Auf der
-   * Testkopie ist die Liste fuer beide Mandanten ohnehin zeitgetrieben; eine Zusicherung darauf
-   * waere dort immer gruen und sagte ueber die Produktion nichts.
+   * <p><b>Welchen Treiber der Optimierer nimmt, prueft der Test bewusst nicht</b> (so der Auftrag
+   * vom 13.10.2026): Der Treiber haengt an der Statistik, und die ist in der Produktion eine andere
+   * als hier. {@code possible_keys} haengt an ihr nicht.
    */
   @Test
   @DisplayName("Suche ohne Prozessfilter: keiner der beiden Prozessindizes in possible_keys")
@@ -267,15 +268,18 @@ class NachrichtenPlanDbIT {
           new Nachrichtenabfrage(
               FENSTER, Set.of(), List.of(treffer.prozessIds().getFirst()), treffer, true, null, 50);
 
-      for (Nachrichtenabfrage abfrage : List.of(ohneSuche, mitProzessfilter)) {
+      // Beschriftet ohne die Abfrage selbst: Ihr toString traegt echte Kennungen (G1).
+      Map<String, Nachrichtenabfrage> faelle =
+          Map.of("ohne Suche", ohneSuche, "Suche mit Prozessfilter", mitProzessfilter);
+      for (Map.Entry<String, Nachrichtenabfrage> fall : faelle.entrySet()) {
         List<Erwogen> message =
-            erwogen(mandant, abfrage).stream()
+            erwogen(mandant, fall.getValue()).stream()
                 .filter(zeile -> "Message".equals(zeile.tabelle()))
                 .toList();
-        assertThat(message).as("%s, %s", mandant, abfrage).isNotEmpty();
+        assertThat(message).as("%s, %s", mandant, fall.getKey()).isNotEmpty();
         for (String name : NachrichtenRepository.PROZESSINDIZES) {
           assertThat(message)
-              .as("%s muss ohne Hinweis zur Wahl stehen (%s, %s)", name, mandant, abfrage)
+              .as("%s muss ohne Hinweis zur Wahl stehen (%s, %s)", name, mandant, fall.getKey())
               .anyMatch(zeile -> List.of(zeile.moeglicheIndizes().split(",")).contains(name));
         }
       }
