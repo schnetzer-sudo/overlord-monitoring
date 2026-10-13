@@ -40,11 +40,18 @@ public class MessageStatusClassifier {
    * (Datenstand 08.07.2026) null Mal (M191). Ein Fehler ohne {@code ERROR_}-Praefix wie {@code
    * COMMIT_REJECTED} — die Empfangsbestaetigung ist fehlgeschlagen, der Beleg gilt nicht als
    * angekommen (Entscheidung E‑233 vom 09.10.2026).
+   *
+   * <p>{@code EERP_PENDING} ebenso, seit dem 13.10.2026 (E‑234): in der Produktion beobachtet, in
+   * der Testkopie null Mal (Zaehlung vom 13.10.2026). Uebertragen, die Empfangsbestaetigung des
+   * Partners steht aus; laut Auskunft des Auftraggebers vom 13.10.2026 fluechtig. <b>Nicht
+   * gemessen</b> — den Uebergang nach {@code EERP_RECEIVED} kann die Testkopie ohne Statushistorie
+   * nicht zeigen (Belegvermerk in {@code docs/message-status.md}).
    */
   private static final Map<String, MessageStatusKind> BEKANNT =
       Map.ofEntries(
           Map.entry("FINISHED", MessageStatusKind.ABGESCHLOSSEN),
           Map.entry("EERP_RECEIVED", MessageStatusKind.QUITTIERT),
+          Map.entry("EERP_PENDING", MessageStatusKind.QUITTUNG_AUSSTEHEND),
           Map.entry("COMMIT_RECEIVED", MessageStatusKind.QUITTIERT),
           Map.entry("MERGED", MessageStatusKind.ZUSAMMENGEFUEHRT),
           Map.entry("SPLITTED", MessageStatusKind.AUFGETEILT),
@@ -77,7 +84,7 @@ public class MessageStatusClassifier {
           .filter(rohwert -> !rohwert.startsWith(FEHLER_PRAEFIX))
           .collect(Collectors.toCollection(TreeSet::new));
 
-  /** Menge aller bekannten Statuswerte (14). */
+  /** Menge aller bekannten Statuswerte (15). */
   public Set<String> bekannteStatuswerte() {
     return BEKANNT.keySet();
   }
@@ -281,11 +288,26 @@ public class MessageStatusClassifier {
    * <p>Bewusst ein vollstaendiges {@code switch} ohne {@code default}: Ein neuer Wert in {@link
    * MessageStatusKind} soll hier einen Compilerfehler ausloesen und keine stille Voreinstellung
    * erben.
+   *
+   * <h2>Ergaenzt am 13.10.2026 — {@code QUITTUNG_AUSSTEHEND} ist kein Endstatus (E‑235)</h2>
+   *
+   * <p>Die Nachricht ist uebertragen, die Empfangsbestaetigung steht aus; als Zeile ist sie nicht
+   * fertig. <b>Damit ist der Satz „Offen sind allein {@code WARTEND} und {@code LAEUFT}" oben nicht
+   * mehr vollstaendig</b> — er bleibt stehen, weil er den Stand bis zu diesem Tag beschreibt.
+   *
+   * <p><b>Diese Antwort hat heute keine Wirkung zur Laufzeit.</b> Die Ueberfaelligkeitsrechnung,
+   * der diese Methode gehoerte, ist mit E‑71 entfallen; im Anwendungscode ruft sie niemand. Die
+   * Entscheidung erwartete, eine haengende Nachricht werde ueber {@code istUeberfaellig}
+   * ueberfaellig — das traegt nicht, und auf Auswahl des Auftraggebers vom 13.10.2026 wird nur
+   * eingeordnet. Eine dauerhaft auf {@code EERP_PENDING} stehende Nachricht zaehlt deshalb in
+   * keiner Problemkategorie (offener Punkt 220, {@code docs/message-status.md}). Die „offenen"
+   * Zustaende in Liste, Detail und BAM-Suche sind davon getrennt und weiterhin ausdruecklich {@code
+   * WARTEND} und {@code LAEUFT} ({@code message/OffenerZustand}).
    */
   public boolean istEndstatus(MessageStatusKind einordnung) {
     return switch (einordnung) {
       case ABGESCHLOSSEN, QUITTIERT, FEHLER, AUFGETEILT, ZUSAMMENGEFUEHRT, UNGEKLAERT -> true;
-      case WARTEND, LAEUFT -> false;
+      case WARTEND, LAEUFT, QUITTUNG_AUSSTEHEND -> false;
     };
   }
 
@@ -352,6 +374,10 @@ public class MessageStatusClassifier {
    *
    * `istEndstatus` ist ausdruecklich GEBLIEBEN: Sie beantwortet weiterhin eine eigene, richtige
    * Frage, und die Kacheln `Laeuft` und `Wartend` sind ueber `einzigerRohwert` an sie gebunden.
+   *
+   * Ergaenzt 13.10.2026: Die Bindung ist eine der Doku, nicht des Codes -- `einzigerRohwert` ruft
+   * `istEndstatus` nicht. Seit QUITTUNG_AUSSTEHEND (E-235) ist die Menge der Nicht-Endstatus
+   * groesser als die der beiden Kacheln; die Kacheln bleiben bei RUNNING und SUSPENDED.
    */
 
   /**
@@ -414,7 +440,13 @@ public class MessageStatusClassifier {
               .or(
                   DSL.not(fehlerBedingung(messageStatus))
                       .and(messageStatus.notIn(eindeutigeRohwerte())));
-      case ABGESCHLOSSEN, QUITTIERT, WARTEND, LAEUFT, AUFGETEILT, ZUSAMMENGEFUEHRT ->
+      case ABGESCHLOSSEN,
+          QUITTIERT,
+          QUITTUNG_AUSSTEHEND,
+          WARTEND,
+          LAEUFT,
+          AUFGETEILT,
+          ZUSAMMENGEFUEHRT ->
           messageStatus.in(rohwerte(einordnung));
     };
   }

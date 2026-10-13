@@ -167,3 +167,10 @@ scripts/messung-fehler-live/ergebnis/s[0-9].txt
 # Zahlen aus, keine Kennung, und ist selbst der Beleg.
 scripts/messung-eerp-failed/ergebnis/s[0-9].txt
 !scripts/messung-eerp-failed/ergebnis/s1.txt
+
+# ─── Messung M192 — EERP_PENDING, nur EXPLAIN ──────────────────────────────────
+# erzeuge.py, gerendert.txt und die Sitzung werden eingecheckt, dazu ergebnis/s1.txt:
+# EXPLAIN gibt keine Zeilen aus, und der Trace nennt nur Indexbereiche (Statuswerte,
+# Stunden, Mandantencodes) -- keine Kennung Dritter. (G1) Alles andere dort nicht.
+scripts/messung-eerp-pending/ergebnis/*
+!scripts/messung-eerp-pending/ergebnis/s1.txt

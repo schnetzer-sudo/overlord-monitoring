@@ -2030,7 +2030,8 @@ Anmeldung, Nachrichtenliste und Administration mit, und keiner dieser Pfade hat 
 ausgeschlossen:
 
 - **`status`** nimmt Namen von `MessageStatusKind` (`FEHLER`, `WARTEND`, `LAEUFT`, `AUFGETEILT`,
-  `ZUSAMMENGEFUEHRT`, `ABGESCHLOSSEN`, `QUITTIERT`). Aufzählungsnamen tragen kein Komma; ein Komma
+  `ZUSAMMENGEFUEHRT`, `ABGESCHLOSSEN`, `QUITTIERT`; seit 13.10.2026 auch `QUITTUNG_AUSSTEHEND`,
+  E‑234). Aufzählungsnamen tragen kein Komma; ein Komma
   darin gäbe es nur als Tippfehler und ergäbe `400 status-unbekannt`.
 - **`prozess`** nimmt eine `Process.ProcessID`. **Gemessen und nicht geschätzt** (Regel Q4):
   **0 von 1.503** Prozessen tragen ein Komma, in zwei Formen gegengeprüft (`LIKE` und `LOCATE`).

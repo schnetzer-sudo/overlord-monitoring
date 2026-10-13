@@ -134,6 +134,10 @@ class DatenzugriffDbIT {
     Set<String> erwartet = new HashSet<>(bekannt);
     erwartet.remove("RUNNING");
     erwartet.remove("EERP_FAILED");
+    // Seit 13.10.2026 ebenso EERP_PENDING (E-234): fluechtig wie RUNNING, in der Testkopie null Mal
+    // (Zaehlung vom 13.10.2026). Der Test ist ein Schnappschuss und saehe ihn auch in der
+    // Produktion nur, wenn gerade eine Nachricht darauf steht -- offener Punkt 219.
+    erwartet.remove("EERP_PENDING");
     assertThat(vorhanden).isEqualTo(erwartet);
   }
 

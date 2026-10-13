@@ -438,9 +438,9 @@ public class DashboardService {
    * ORDER BY} stehen laesst.
    *
    * <p><b>Nur Einordnungen, die vorkommen.</b> Alle acht je Eimer waeren bei 48 Stunden 384
-   * Eintraege, die meisten null. Die Reihenfolge ist die der Aufzaehlung ({@link EnumMap}) und
-   * damit ueber alle Eimer dieselbe — eine Oberflaeche, die Farben nach Position vergibt, bekommt
-   * sonst in jedem Balken eine andere.
+   * Eintraege, die meisten null (seit {@code QUITTUNG_AUSSTEHEND}, 13.10.2026: neun und 432). Die
+   * Reihenfolge ist die der Aufzaehlung ({@link EnumMap}) und damit ueber alle Eimer dieselbe —
+   * eine Oberflaeche, die Farben nach Position vergibt, bekommt sonst in jedem Balken eine andere.
    */
   private List<VerlaufspunktResponse> verlauf(List<Rollupsumme> summen) {
     Map<LocalDateTime, Map<MessageStatusKind, Long>> jeEimer = new TreeMap<>();

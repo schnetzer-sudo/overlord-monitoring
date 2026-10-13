@@ -273,7 +273,7 @@ jemand zwei Zahlen nebeneinanderlegt.
 ein unbekannter Wert **mit** `ERROR_`-Präfix nach `FEHLER`, weil dieselbe Regel in SQL gilt.
 
 **Je Eimer nur die Einordnungen, die vorkommen.** Alle acht je Eimer wären bei 48 Stunden 384
-Einträge, die meisten null. Die Reihenfolge ist die der Aufzählung und damit über alle Eimer
+Einträge, die meisten null *(seit 13.10.2026 mit `QUITTUNG_AUSSTEHEND` neun und 432, E‑234)*. Die Reihenfolge ist die der Aufzählung und damit über alle Eimer
 dieselbe — eine Oberfläche, die Farben nach Position vergibt, bekäme sonst in jedem Balken eine
 andere.
 

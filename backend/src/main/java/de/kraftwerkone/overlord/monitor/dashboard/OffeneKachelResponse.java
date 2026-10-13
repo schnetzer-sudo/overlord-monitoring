@@ -13,6 +13,11 @@ package de.kraftwerkone.overlord.monitor.dashboard;
  * beliebige Kacheln, sondern die vollstaendige Aufteilung eines Begriffs — und der heisst in diesem
  * Projekt <i>offen</i>.
  *
+ * <p><b>Ergaenzt am 13.10.2026:</b> Seit {@code QUITTUNG_AUSSTEHEND} (E‑235) liefert {@code
+ * istEndstatus} fuer <b>drei</b> Einordnungen {@code false}; die Aufteilung ist damit nicht mehr
+ * vollstaendig. Eine eigene Kachel bekommt die dritte nicht (Auftrag vom 13.10.2026), und keine der
+ * beiden zieht sie an sich: Beide vergleichen auf ihren einen Rohwert ({@code einzigerRohwert}).
+ *
  * <h2>Die zwei benannten Ausnahmen von Leistungsregel L2</h2>
  *
  * <p>L2 sagt: „Dashboard-Kennzahlen kommen ausschliesslich aus {@code message_rollup}." <b>Das Wort

@@ -823,7 +823,7 @@ Listenzeile die blasse Akzenttönung trägt und keine Statusfarbe.
 Ablaufnamen und Zeitpunkt trägt, ist für die Beschriftung kein Platz. Das ist **keine Ausnahme von
 „nie allein über Farbe"**: Die Regel verlangt „zusätzlich eine Beschriftung **oder** ein Zeichen"
 ([`visuelles-konzept.md`](visuelles-konzept.md) §3), und die acht Zeichen unterscheiden sich in ihrer
-Form. Die Beschriftung geht nicht verloren — sie steht im `title` und für Vorleseprogramme im Markup.
+Form *(seit 13.10.2026 neun: `QUITTUNG_AUSSTEHEND` trägt den Papierflieger `Send`, E‑234)*. Die Beschriftung geht nicht verloren — sie steht im `title` und für Vorleseprogramme im Markup.
 **Ein zweites Zeichen- oder Farbverzeichnis entsteht dafür nicht:** Die kompakte Fassung ist eine
 Eigenschaft der bestehenden `StatusPlakette` und keine zweite Komponente.
 

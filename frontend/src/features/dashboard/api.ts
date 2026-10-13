@@ -79,7 +79,7 @@ export function istVerteilungssicht(wert: string | null | undefined): wert is Ve
  */
 export type { Fenster };
 
-/** Je Eimer nur die Einordnungen, die **vorkommen** — nie alle acht mit Nullen. */
+/** Je Eimer nur die Einordnungen, die **vorkommen** — nie alle acht (seit 13.10.2026 neun) mit Nullen. */
 export type Einordnungszahl = { einordnung: Statusart; anzahl: number };
 
 export type Verlaufspunkt = {

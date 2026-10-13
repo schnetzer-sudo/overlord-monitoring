@@ -216,6 +216,30 @@ class DashboardServiceTest {
           .containsExactly(new EinordnungszahlResponse(MessageStatusKind.QUITTIERT, 11));
       assertThat(punkt.gesamt()).isEqualTo(11);
     }
+
+    /**
+     * <b>EERP_PENDING ist eine eigene Einordnung</b> (E‑234, 13.10.2026): im Verlauf neben {@code
+     * QUITTIERT}, nicht in der Fehlerkachel und nicht als ungeklaert. Die Kacheln <i>Laeuft</i> und
+     * <i>Wartend</i> beruehrt er nicht — sie vergleichen auf ihren einen Rohwert.
+     */
+    @Test
+    @DisplayName("EERP_PENDING erscheint im Verlauf als QUITTUNG_AUSSTEHEND, nicht als Fehler")
+    void eerp_pending_im_verlauf() {
+      bestandMit(
+          List.of(
+              new Rollupsumme(EIMER, "EERP_RECEIVED", 5),
+              new Rollupsumme(EIMER, "EERP_PENDING", 2)),
+          List.of());
+
+      DashboardResponse antwort = antwort();
+
+      assertThat(antwort.verlauf().getFirst().einordnungen())
+          .containsExactly(
+              new EinordnungszahlResponse(MessageStatusKind.QUITTIERT, 5),
+              new EinordnungszahlResponse(MessageStatusKind.QUITTUNG_AUSSTEHEND, 2));
+      assertThat(antwort.kacheln().fehler().anzahl()).isZero();
+      assertThat(antwort.kacheln().nachrichten()).isEqualTo(7);
+    }
   }
 
   // ─── Fehlerarten ──────────────────────────────────────────────────────────────

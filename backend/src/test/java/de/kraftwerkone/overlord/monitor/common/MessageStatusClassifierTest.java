@@ -25,6 +25,8 @@ class MessageStatusClassifierTest {
     assertThat(classifier.einordnung("SPLITTED")).isEqualTo(MessageStatusKind.AUFGETEILT);
     assertThat(classifier.einordnung("SUSPENDED")).isEqualTo(MessageStatusKind.WARTEND);
     assertThat(classifier.einordnung("RUNNING")).isEqualTo(MessageStatusKind.LAEUFT);
+    assertThat(classifier.einordnung("EERP_PENDING"))
+        .isEqualTo(MessageStatusKind.QUITTUNG_AUSSTEHEND);
   }
 
   @Test
@@ -87,6 +89,43 @@ class MessageStatusClassifierTest {
         .isEqualTo(classifier.istEndstatus("ERROR_DUPLICATE"));
   }
 
+  /**
+   * <b>{@code EERP_PENDING} ist die Quittung, die aussteht</b> (E‑234, E‑235 vom 13.10.2026): eine
+   * eigene Einordnung, kein Endstatus, kein Fehler, nicht {@code WARTEND}. In der Testkopie null
+   * Mal — deshalb eigene Werte und kein Datenbanktest.
+   *
+   * <p><b>Was hier nicht steht:</b> {@code istUeberfaellig} vor und nach Ablauf einer Frist. Die
+   * Methode ist mit E‑71 entfallen; eine Ueberfaelligkeit gibt es nicht mehr, und auf Auswahl des
+   * Auftraggebers vom 13.10.2026 wird nur eingeordnet.
+   */
+  @Test
+  @DisplayName("EERP_PENDING ist QUITTUNG_AUSSTEHEND — kein Endstatus, kein Fehler, nicht WARTEND")
+  void eerp_pending_ist_quittung_ausstehend() {
+    assertThat(classifier.einordnung("EERP_PENDING"))
+        .isEqualTo(MessageStatusKind.QUITTUNG_AUSSTEHEND);
+    assertThat(classifier.einordnung("eerp_pending"))
+        .isEqualTo(MessageStatusKind.QUITTUNG_AUSSTEHEND);
+    assertThat(classifier.istEndstatus("EERP_PENDING")).isFalse();
+    assertThat(classifier.rohwerte(MessageStatusKind.QUITTUNG_AUSSTEHEND))
+        .containsExactly("EERP_PENDING");
+    assertThat(classifier.einzigerRohwert(MessageStatusKind.WARTEND))
+        .as("WARTEND bekommt keinen zweiten Rohwert — die Kachel bleibt bei SUSPENDED")
+        .isEqualTo("SUSPENDED");
+    assertThat(classifier.fehlerart("EERP_PENDING")).isEqualTo("EERP_PENDING");
+  }
+
+  @Test
+  @DisplayName(
+      "Die Fehlerbedingung trifft EERP_PENDING nicht, der Filter QUITTUNG_AUSSTEHEND schon")
+  void eerp_pending_in_sql() {
+    assertThat(sql(classifier.fehlerBedingung(STATUS))).doesNotContain("EERP_PENDING");
+    assertThat(sql(classifier.bedingung(MessageStatusKind.QUITTUNG_AUSSTEHEND, STATUS)))
+        .isEqualTo(sql(STATUS.in("EERP_PENDING")));
+    assertThat(sql(classifier.bedingung(MessageStatusKind.UNGEKLAERT, STATUS)))
+        .as("UNGEKLAERT schliesst den Wert ueber NOT IN aus — er ist jetzt bekannt")
+        .containsOnlyOnce("'EERP_PENDING'");
+  }
+
   @Test
   @DisplayName("Unbekannte und ungeklaerte Werte werden UNGEKLAERT, niemals geraten")
   void unbekannte_werte_sind_ungeklaert() {
@@ -138,22 +177,27 @@ class MessageStatusClassifierTest {
   }
 
   @Test
-  @DisplayName("Die bekannte Menge umfasst genau die 14 dokumentierten Werte")
+  @DisplayName("Die bekannte Menge umfasst genau die 15 dokumentierten Werte")
   void bekannte_menge() {
     assertThat(classifier.bekannteStatuswerte())
-        .hasSize(14)
+        .hasSize(15)
         .contains("FINISHED", "MERGED", "SPLITTED", "EERP_RECEIVED", "COMMIT_RECEIVED", "RUNNING")
         .contains("COMMIT_SENT", "ERROR_DUPLICATE", "SUSPENDED", "CHECKED", "COMMIT_REJECTED")
-        .contains("ERROR_TIMEOUT", "CKECKED", "EERP_FAILED");
+        .contains("ERROR_TIMEOUT", "CKECKED", "EERP_FAILED", "EERP_PENDING");
   }
 
   // ─── Endstatus (Schritt 4) ──────────────────────────────────────────────────────────────────
 
+  /**
+   * Bis zum 13.10.2026 hiess dieser Fall „Offen sind allein WARTEND und LAEUFT". Seit {@code
+   * QUITTUNG_AUSSTEHEND} (E‑235) sind es drei.
+   */
   @Test
-  @DisplayName("Offen sind allein WARTEND und LAEUFT")
-  void offen_sind_nur_wartend_und_laeuft() {
+  @DisplayName("Kein Endstatus sind WARTEND, LAEUFT und QUITTUNG_AUSSTEHEND")
+  void offen_sind_wartend_laeuft_und_quittung_ausstehend() {
     assertThat(classifier.istEndstatus(MessageStatusKind.WARTEND)).isFalse();
     assertThat(classifier.istEndstatus(MessageStatusKind.LAEUFT)).isFalse();
+    assertThat(classifier.istEndstatus(MessageStatusKind.QUITTUNG_AUSSTEHEND)).isFalse();
 
     assertThat(classifier.istEndstatus(MessageStatusKind.ABGESCHLOSSEN)).isTrue();
     assertThat(classifier.istEndstatus(MessageStatusKind.QUITTIERT)).isTrue();

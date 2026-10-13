@@ -51,11 +51,15 @@ export type Statusart =
   | "ZUSAMMENGEFUEHRT"
   | "ABGESCHLOSSEN"
   | "QUITTIERT"
+  | "QUITTUNG_AUSSTEHEND"
   | "UNGEKLAERT";
 
 /**
  * Dieselben acht als **Liste zur Laufzeit**, in der Reihenfolge von
- * `common/MessageStatusKind`.
+ * `common/MessageStatusKind`. *Seit dem 13.10.2026 neun:* `QUITTUNG_AUSSTEHEND`
+ * steht wie im Backend gleich hinter `QUITTIERT` (E‑234). Fehlt ein Wert hier,
+ * kompiliert das still — der Filter böte ihn nicht an, und die URL verwürfe ihn;
+ * `tests/nachrichtenfilter.test.ts` hält die Liste gegen Zeichen und Sprachdatei.
  *
  * **Sie stand bis zum 01.09.2026 in `features/nachrichten/filter.ts`** und ist
  * mit dem Dashboard hierher gewandert: Ein zweites Fachpaket braucht sie, und
@@ -77,6 +81,7 @@ export const STATUSARTEN: readonly Statusart[] = [
   "ZUSAMMENGEFUEHRT",
   "ABGESCHLOSSEN",
   "QUITTIERT",
+  "QUITTUNG_AUSSTEHEND",
   "UNGEKLAERT",
 ];
 
@@ -169,6 +174,10 @@ const ZUORDNUNG: Record<Statusart, Statusrolle> = {
   LAEUFT: "offen",
   AUFGETEILT: "offen",
   ZUSAMMENGEFUEHRT: "offen",
+  // Seit dem 13.10.2026 (E‑234): übertragen, die Empfangsbestätigung des
+  // Partners steht aus. Neutral wie die übrigen — kein Ergebnis, kein Problem —,
+  // und ausdrücklich nicht `ungeklaert`: Der Wert ist bekannt und eingeordnet.
+  QUITTUNG_AUSSTEHEND: "offen",
   // „Nicht zugeordnet heißt nicht zugeordnet" (Q4). Ein unbekannter Statuswert
   // bekommt keine geratene Farbe, sondern eine eigene, sichtbar zurückhaltende.
   UNGEKLAERT: "ungeklaert",

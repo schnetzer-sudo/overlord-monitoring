@@ -13,7 +13,7 @@ import java.util.List;
  *     Oberflaeche fuer die Hoehe eines Balkens nicht selbst addieren muss
  * @param einordnungen nur die Einordnungen, die in diesem Eimer <b>vorkommen</b>, in der
  *     Reihenfolge von {@code MessageStatusKind}. <b>Nicht</b> alle acht je Eimer: Das waeren bei 48
- *     Stunden 384 Eintraege, von denen die meisten null waeren
+ *     Stunden 384 Eintraege, von denen die meisten null waeren (seit dem 13.10.2026 neun und 432)
  */
 public record VerlaufspunktResponse(
     Instant eimer, long gesamt, List<EinordnungszahlResponse> einordnungen) {

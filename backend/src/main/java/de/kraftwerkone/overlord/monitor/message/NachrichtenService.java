@@ -141,6 +141,11 @@ public class NachrichtenService {
    * antwortet sie {@code true} — in ihrem Zusammenhang die vorsichtige Antwort, hier waere dieselbe
    * {@code true} die unvorsichtige. „Offen" im Sinne der Oberflaeche wird deshalb hier definiert
    * und hier begruendet.
+   *
+   * <p><b>Seit dem 13.10.2026 nicht mehr „dieselbe Zweierauswahl":</b> {@code istEndstatus} liefert
+   * auch fuer {@code QUITTUNG_AUSSTEHEND} {@code false} (E‑235). Hier bleibt es bei {@code WARTEND}
+   * und {@code LAEUFT} — auf Auswahl des Auftraggebers wird {@code EERP_PENDING} nur eingeordnet,
+   * ohne Schrittanzeige ({@code docs/message-status.md}).
    */
   private static String aktuellerSchritt(MessageStatusKind einordnung, String schritt) {
     return einordnung == MessageStatusKind.WARTEND || einordnung == MessageStatusKind.LAEUFT

@@ -158,4 +158,32 @@ class NachrichtenStatementsTest {
         .contains("`GlassfishDB`.`Message`.`MessageStatus` in ('COMMIT_REJECTED', 'EERP_FAILED')")
         .doesNotContain("= 'COMMIT_REJECTED'");
   }
+
+  /**
+   * <b>Der Filter QUITTUNG_AUSSTEHEND</b> (E‑234, 13.10.2026) ist eine geschlossene Menge mit einem
+   * Wert; im Filter UNGEKLAERT steht {@code EERP_PENDING} seither im {@code NOT IN}. Beide Texte
+   * sind in M192 gegen die Testkopie erklaert ({@code docs/message-status.md}).
+   */
+  @Test
+  @DisplayName("Statusfilter QUITTUNG_AUSSTEHEND schickt IN ('EERP_PENDING'), UNGEKLAERT nicht")
+  void filter_quittung_ausstehend() {
+    repository.finde(
+        MANDANT,
+        new Nachrichtenabfrage(
+            FENSTER,
+            Set.of(MessageStatusKind.QUITTUNG_AUSSTEHEND),
+            List.of(),
+            null,
+            true,
+            null,
+            50));
+    assertThat(einziges()).contains("`GlassfishDB`.`Message`.`MessageStatus` in ('EERP_PENDING')");
+
+    gerendert.clear();
+    repository.finde(
+        MANDANT,
+        new Nachrichtenabfrage(
+            FENSTER, Set.of(MessageStatusKind.UNGEKLAERT), List.of(), null, true, null, 50));
+    assertThat(einziges()).containsOnlyOnce("'EERP_PENDING'").containsIgnoringCase("not in (");
+  }
 }

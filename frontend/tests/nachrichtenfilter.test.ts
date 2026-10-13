@@ -20,6 +20,9 @@ import {
   zeitfenstermodus,
 } from "@/lib/filter";
 import { ProblemFehler } from "@/lib/http";
+import { STATUSZEICHEN } from "@/features/nachrichten/components/status-plakette";
+import { texteFuer } from "@/i18n";
+import { STATUSARTEN, statusrolle } from "@/lib/status-farbe";
 
 /**
  * Der Filterzustand liegt in der **URL**, damit Ansichten teilbar sind.
@@ -516,5 +519,54 @@ describe("Der alte Parameter ueberfaellig", () => {
     // und kein Fehler — noch zurück in die URL.
     expect(alsAbfrage(zustand)).not.toContain("ueberfaellig");
     expect(alsSuchparameter(zustand).has("ueberfaellig")).toBe(false);
+  });
+});
+
+/**
+ * **Die Einordnung QUITTUNG_AUSSTEHEND** (E‑234, 13.10.2026) — `EERP_PENDING`:
+ * übertragen, die Empfangsbestätigung des Partners steht aus.
+ *
+ * Geprüft wird die **Abbildung**, nicht das Markup: Rolle, Wort und Zeichen,
+ * und dass die Laufzeitliste `STATUSARTEN` dieselben Schlüssel trägt wie die
+ * beiden Tabellen. Fehlte der Wert dort, kompilierte das still, der Filter böte
+ * ihn nicht an und die URL verwürfe ihn.
+ */
+describe("Die Einordnung QUITTUNG_AUSSTEHEND", () => {
+  it("steht in der Laufzeitliste gleich hinter QUITTIERT, wie im Backend", () => {
+    const stelle = STATUSARTEN.indexOf("QUITTUNG_AUSSTEHEND");
+    expect(stelle).toBeGreaterThan(-1);
+    expect(STATUSARTEN[stelle - 1]).toBe("QUITTIERT");
+  });
+
+  it("ist neutral wie die übrigen offenen Einordnungen — nicht ungeklärt", () => {
+    expect(statusrolle("QUITTUNG_AUSSTEHEND")).toBe("offen");
+    expect(statusrolle("QUITTUNG_AUSSTEHEND")).toBe(statusrolle("WARTEND"));
+  });
+
+  it("heißt „Quittung ausstehend“, englisch „Acknowledgement pending“ — ohne Rohwert", () => {
+    expect(texteFuer("de").einordnung.QUITTUNG_AUSSTEHEND).toBe("Quittung ausstehend");
+    expect(texteFuer("en").einordnung.QUITTUNG_AUSSTEHEND).toBe("Acknowledgement pending");
+    expect(texteFuer("de").einordnung.QUITTUNG_AUSSTEHEND).not.toMatch(/EERP/i);
+  });
+
+  it("trägt ein Zeichen, das keine andere Einordnung trägt", () => {
+    const zeichen = STATUSARTEN.map((art) => STATUSZEICHEN[art]);
+    expect(new Set(zeichen).size).toBe(STATUSARTEN.length);
+    expect(STATUSZEICHEN.QUITTUNG_AUSSTEHEND).not.toBe(STATUSZEICHEN.WARTEND);
+  });
+
+  it("deckt sich als Liste mit Zeichen und Sprachdatei — keine fehlt still", () => {
+    const liste = [...STATUSARTEN].sort();
+    expect(Object.keys(STATUSZEICHEN).sort()).toEqual(liste);
+    expect(Object.keys(texteFuer("de").einordnung).sort()).toEqual(liste);
+  });
+
+  it("wird als Statusfilter aus der URL gelesen — über den Parser, den nuqs nimmt", () => {
+    expect(NACHRICHTEN_PARAMETER.status.parse("QUITTUNG_AUSSTEHEND")).toEqual([
+      "QUITTUNG_AUSSTEHEND",
+    ]);
+    expect(ausSuchparametern(new URLSearchParams("status=QUITTUNG_AUSSTEHEND")).status).toEqual([
+      "QUITTUNG_AUSSTEHEND",
+    ]);
   });
 });

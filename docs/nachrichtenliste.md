@@ -1506,7 +1506,9 @@ schaltet ab, nicht ein.**
 
 | Test | Was er sichert |
 |---|---|
-| `FensterverengungDbIT` (27 Fälle) | **Verengt und unverengt liefern dieselben Zeilen** — alle zehn Mandanten, 24 h und 30 d, jede der acht Statusarten einzeln, zwei Seiten mit Cursor. Dazu ein Fall, der belegt, dass die Verengung überhaupt **greift**: Ohne ihn wäre die Gleichheitsprüfung grün, auch wenn sie stillschweigend nie zuschlüge |
+| `FensterverengungDbIT` (27 Fälle) | **Verengt und unverengt liefern dieselben Zeilen** — alle zehn Mandanten, 24 h und 30 d, jede der acht Statusarten einzeln *(seit 13.10.2026 neun: die Schleife läuft über
+`MessageStatusKind.values()` und nimmt `QUITTUNG_AUSSTEHEND` mit — auf der Testkopie ohne Zeile, also
+nur trivial geprüft, E‑234)*, zwei Seiten mit Cursor. Dazu ein Fall, der belegt, dass die Verengung überhaupt **greift**: Ohne ihn wäre die Gleichheitsprüfung grün, auch wenn sie stillschweigend nie zuschlüge |
 | `FensterverengungGrenzenTest` | Die Grenzrechnung **ohne Datenbank**, bei jedem Build: Randstunden, Wasserstand über/mitten/unter dem Fenster, Cursor, Stufenbildung |
 | `FensterverengungMerkmaleTest` | Der Riegel gegen ein neues Feld — und dass die Rückfallfälle das Repository **gar nicht anfassen** |
 | `NachrichtenPlanDbIT` (3 neue Fälle) | Dass `SUTTONS` bei engem Fenster auf den Zeitindex wechselt, dass `NEXANS` seine Planfamilie **behält**, und dass die Vorabfrage nicht über einen vollen Durchlauf der Rolluptabelle geht |
@@ -2066,7 +2068,8 @@ spürbar mehr Zeilen ins Fenster.
 > **Teil 2 hat die Nachrichtenliste nicht umgebaut — das ist der Befund, den der Auftrag in 3.4
 > vorsieht** ([`spaltenwahl.md`](spaltenwahl.md) §6, M177). Gemessen ist die Mindestbreite je Spalte am
 > längsten tatsächlichen Inhalt, beide Mandanten, beide Sprachen: Zeitpunkt **187 px** (englisch,
-> `12/30/2025, 04:02:04 AM`; deutsch 154 px), Status **155 px** (die breiteste der acht Einordnungen),
+> `12/30/2025, 04:02:04 AM`; deutsch 154 px), Status **155 px** (die breiteste der acht Einordnungen; seit 13.10.2026 ist „Quittung ausstehend" breiter und wird
+> unter der Schwelle (156 px) gekürzt, ab ihr (286 px) voraussichtlich nicht, E‑234),
 > Ablauf **304 px** (300 Zeilen), Projekt **286 px**. Im schmalsten Kasten (334 px) bleiben dem Ablauf
 > neben Zeitpunkt und Status **−8 px**, deutsch 25 px. Gezeichnet wird deshalb weiterhin, was vorher
 > gezeichnet wurde — **keine** neue 0-px-Spalte, **keine** Kartendarstellung. Welche Spalte hier
@@ -2987,7 +2990,8 @@ Der alte Link (Punkt 6) *ist* eine von Hand geöffnete URL, denn genau das ist d
   deckt einen kleingeschriebenen Wert ab; `DatenzugriffDbIT` wird weiterhin rot, sobald im
   Altsystem ein dreizehnter Statuswert auftaucht. *Ergänzt 13.10.2026:* Seit `EERP_FAILED` sind
   es vierzehn bekannte Werte, und „im Altsystem" heißt dort: in der Testkopie — offener Punkt 218
-  in [`message-status.md`](message-status.md).
+  in [`message-status.md`](message-status.md). *Ergänzt 13.10.2026, später am Tag:* Mit
+  `EERP_PENDING` (E‑234) sind es fünfzehn.
 - **`suche-abgebrochen` sagt dem Nutzer „mach die Anfrage kleiner", auch wenn in Wahrheit die
   Datenbank unter Last steht.** Der Statuscode ist `400`, weil das die Handlung ist, die dem Nutzer
   zur Verfügung steht — aber die Antwort unterscheidet die beiden Ursachen nicht, und sie kann es
