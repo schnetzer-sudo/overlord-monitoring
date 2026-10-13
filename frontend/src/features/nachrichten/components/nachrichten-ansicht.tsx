@@ -14,10 +14,10 @@ import { cn } from "@/lib/utils";
 
 import {
   feldFehler,
+  listenanzeige,
   sucheTraegt,
   suchfeldFehler,
   zeitfensterFehler,
-  zeitfensterHalb,
   type Nachrichtenfilter,
 } from "../filter";
 import { automatikzustand } from "../aktualisierung";
@@ -69,9 +69,16 @@ export function NachrichtenAnsicht() {
    * Sonst zeigte die Ansicht für die Dauer der Anfrage ein Ladeskelett, obwohl
    * schon feststeht, dass die Antwort nur „es fehlt noch etwas" lauten kann —
    * die Liste verschwände also genau für den Moment zwischen „Von" und „Bis".
+   *
+   * **Ausgenommen ist die abgebrochene Suche:** Sie ist gelaufen und hat nichts
+   * geliefert. Dann steht keine Zeile der zuletzt gelieferten Seite und kein Σ
+   * da, sondern ein Satz an ihrer Stelle — auch dann, wenn die Seite zum selben
+   * Schlüssel gehört und erst ein späterer Abruf gescheitert ist.
+   *
+   * Entschieden in `filter.ts` (`listenanzeige`), rein und dort geprüft.
    */
-  const ruhigeRueckmeldung = anEinemFeld !== undefined || zeitfensterHalb(filter);
-  const zeigeSeite = liste.seite ?? (ruhigeRueckmeldung ? liste.letzteSeite : undefined);
+  const anzeige = listenanzeige(liste, filter);
+  const zeigeSeite = anzeige.seite;
 
   /*
    * **Der Σ gehört zur gezeigten Seite** (E‑216) — derselbe Rückgriff wie bei
@@ -80,7 +87,7 @@ export function NachrichtenAnsicht() {
    * in allen vier Zuständen, weil der Stand immer sichtbar ist; den Σ trägt er
    * nicht beim ersten Laden, nicht im Leer- und nicht im Fehlerzustand.
    */
-  const zeigeTreffer = liste.treffer ?? (ruhigeRueckmeldung ? liste.letzteTreffer : undefined);
+  const zeigeTreffer = anzeige.treffer;
   const zeigtDaten = !ansichtsfehler && (zeigeSeite?.items.length ?? 0) > 0;
 
   const gewaehlt = filter.nachricht;
@@ -188,8 +195,16 @@ export function NachrichtenAnsicht() {
 
         {ansichtsfehler ? (
           <Fehler fehler={ansichtsfehler} aufWiederholen={liste.aktualisiere} />
+        ) : anzeige.ohneErgebnis ? (
+          /* Die abgebrochene Suche: ein Satz an der Stelle der Tabelle, in der
+             gedämpften Farbe. **Nicht der Leerzustand** — der behauptete, im
+             Zeitfenster stehe nichts. Was zu tun ist, sagt die Meldung am
+             Suchfeld; Filterleiste, „Neu laden" und der Stand bleiben. */
+          <p className="text-muted-foreground text-beiwerk max-w-prose">
+            {texte.nachrichten.suche.keinErgebnis}
+          </p>
         ) : /* Das Skelett nur, wenn es wirklich nichts zu zeigen gibt. Liegt eine
-               vorige Seite vor, bleibt sie stehen — siehe `ruhigeRueckmeldung`. */
+               vorige Seite vor, bleibt sie stehen — siehe `listenanzeige`. */
         liste.laedt && zeigeSeite === undefined ? (
           <Laden zeilen={8} />
         ) : (zeigeSeite?.items.length ?? 0) === 0 ? (
@@ -210,7 +225,7 @@ export function NachrichtenAnsicht() {
 
         <Blaettern
           kannZurueck={liste.kannZurueck}
-          kannVor={liste.kannVor}
+          kannVor={anzeige.kannVor}
           aufZurueck={liste.zurueck}
           aufVor={liste.vor}
           standVon={liste.standVon}

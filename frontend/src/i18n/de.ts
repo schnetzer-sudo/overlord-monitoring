@@ -645,6 +645,11 @@ export const de = {
       // Bewusst eine Auskunft und keine Warnung: Der Nutzer hat das gerade selbst
       // entschieden, er soll nur wissen, was ihn erwartet.
       langeSucheLaeuft: "Die Suche läuft über einen längeren Zeitraum und kann etwas dauern.",
+      // An der Stelle der Tabelle, wenn die Suche an der Zeitgrenze abgebrochen
+      // ist. Bewusst nicht der Leerzustand: Der behauptet, im Zeitfenster stehe
+      // nichts — gesagt ist hier nur, dass die Suche nichts geliefert hat. Was
+      // zu tun ist, steht in der Meldung am Suchfeld.
+      keinErgebnis: "Die Suche hat kein Ergebnis geliefert.",
     },
 
     // Hier stand bis zum 11.08.2026 der Textblock des Ausblende-Chips. Er ist mit

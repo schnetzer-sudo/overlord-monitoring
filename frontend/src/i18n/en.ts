@@ -363,6 +363,9 @@ export const en: Texte = {
         "Search covers at most {grenze} days; {angefragt} are selected. Narrow the time window.",
       trotzdemSuchen: "Search anyway",
       langeSucheLaeuft: "The search covers a longer period and may take a moment.",
+      // In place of the table after the search hit the time limit. Not the empty
+      // state: that one claims the time window holds nothing.
+      keinErgebnis: "The search did not return a result.",
     },
 
     blaettern: {

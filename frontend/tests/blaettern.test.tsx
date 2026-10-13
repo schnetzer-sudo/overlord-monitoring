@@ -4,7 +4,12 @@ import { act } from "react";
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { Nachricht, Prozessbaum, Seite } from "@/features/nachrichten/api";
+import {
+  NACHRICHTEN_SCHLUESSEL,
+  type Nachricht,
+  type Prozessbaum,
+  type Seite,
+} from "@/features/nachrichten/api";
 import { Blaettern } from "@/features/nachrichten/components/blaettern";
 import { NachrichtenAnsicht } from "@/features/nachrichten/components/nachrichten-ansicht";
 import { ProzessAnsicht } from "@/features/nachrichten/components/prozessansicht";
@@ -25,6 +30,7 @@ import { rendere } from "./hilfe/rendern";
  * | der Block | Das Zeichen ist `aria-hidden`, „Treffer:" steht nur für Vorleseprogramme, der Hinweis im `title` nur bei „mehr als", und der Σ steht **in keinem** `aria-live`-Bereich — Eigenschaften von Elementen. Ohne Angabe steht **kein** Σ (Abwesenheit) |
  * | die Zustände | Der Blätterblock steht in der Nachrichtenliste in allen vier Zuständen, der Σ nur im Datenzustand: Abwesenheit im Leer-, Fehler- und Ladezustand, je mit dem Blätterblock als Eichung. Fehler und Laden sind so gestellt, dass eine Seite im Zwischenspeicher liegt — sonst fehlte der Σ schon mangels Zahl |
  * | die Verdrahtung | Vor, Zurück, Filterwechsel und „Neu laden" führen die Zahl mit; bei einer Rückmeldung am Feld bleibt sie mit der Liste stehen; die Übertragungsliste der Prozessansicht trägt sie mit |
+ * | die abgebrochene Suche | Keine Zeile und kein Σ, auch nicht die der eigenen Seite, wenn erst ein späterer Abruf desselben Schlüssels abbricht; an ihrer Stelle ein Satz, und nicht der Leerzustand — Abwesenheit und Anwesenheit im Baum. Bei den drei übrigen Rückmeldungen am Suchfeld bleiben Liste und Σ stehen. Die Entscheidung selbst ist rein (`listenanzeige`, `tests/nachrichtenfilter.test.ts`) |
  *
  * **Antwortrümpfe gestellt, kein Netz, keine Datenbank.** Zugesichert wird, was
  * im Baum steht, nie eine Zeit (Regel T1).
@@ -418,32 +424,145 @@ describe("Der Σ in der Nachrichtenliste", () => {
     }
   });
 
-  it("lässt die Zahl mit der Liste stehen, wenn die Rückmeldung einem Feld gilt", async () => {
-    // Ein Suchbegriff läuft im größeren Fenster in die Zeitgrenze der Datenbank:
-    // `suche-abgebrochen` gehört an das Suchfeld, die Liste bleibt, wie sie war.
+  /* ─── die Rückmeldungen am Suchfeld ─── */
+
+  /** Im 30-Tage-Fenster antwortet die Liste mit `typ`, sonst wie immer. */
+  function im30TageFenster(typ: string): Weiche {
+    return (pfad, parameter) =>
+      pfad === "/api/nachrichten" && parameter.get("zeitraum") === "30d"
+        ? problem(400, typ)
+        : listenNetz(pfad, parameter);
+  }
+
+  async function aufSeiteZweiDann30Tage(behaelter: HTMLElement): Promise<void> {
+    await klicke(knopfMitText(behaelter, B.vor));
+    expect(sichtbar(summeDa(behaelter)), "Eichung: Seite zwei mit Σ").toBe("5");
+    expect(behaelter.querySelectorAll("tbody tr"), "Eichung: zwei Zeilen").toHaveLength(2);
+
+    const zeitfenster = behaelter.querySelector(
+      `[data-slot="toggle-group"][aria-label="${TEXTE.nachrichten.zeitfenster.bezeichnung}"]`,
+    );
+    expect(zeitfenster, "Zeitfensterumschalter").not.toBeNull();
+    await klicke(knopfMitText(zeitfenster as HTMLElement, TEXTE.nachrichten.zeitfenster.d30));
+    expect(anfragen.at(-1), "Eichung: die Anfrage im neuen Fenster").toContain("zeitraum=30d");
+  }
+
+  /** Der Satz an der Stelle der Tabelle — `null`, wenn keiner dasteht. */
+  function satzOhneErgebnis(behaelter: HTMLElement): HTMLElement | null {
+    return (
+      [...behaelter.querySelectorAll("p")].find(
+        (absatz) => absatz.textContent === TEXTE.nachrichten.suche.keinErgebnis,
+      ) ?? null
+    );
+  }
+
+  /**
+   * **Die drei Rückmeldungen zu einer Eingabe** (§8.2): Die Liste bleibt
+   * stehen, so wie sie war, und ihr Σ mit ihr (§8.3). Gestellt ist die Antwort;
+   * gefragt ist, was die Ansicht aus ihr macht.
+   */
+  it.each(["suchbegriff-zu-kurz", "suchbegriff-zu-unscharf", "suche-fenster-zu-gross"])(
+    "lässt bei %s die Zahl mit der Liste stehen",
+    async (typ) => {
+      const gerendert = await rendereListe(im30TageFenster(typ), "?suche=lieferschein");
+      try {
+        const { behaelter } = gerendert;
+        await aufSeiteZweiDann30Tage(behaelter);
+
+        expect(
+          behaelter.querySelectorAll("tbody tr"),
+          "die zwei Zeilen von Seite zwei stehen",
+        ).toHaveLength(2);
+        expect(sichtbar(summeDa(behaelter))).toBe("5");
+        expect(satzOhneErgebnis(behaelter)).toBeNull();
+      } finally {
+        await gerendert.abbauen();
+      }
+    },
+  );
+
+  /**
+   * **Die abgebrochene Suche ist gelaufen und hat nichts geliefert.** Keine
+   * Zeile der zuletzt gelieferten Seite, kein Σ, sondern ein Satz in der
+   * gedämpften Farbe — nicht der Leerzustand, der behauptete, im Zeitfenster
+   * stehe nichts. Die Meldung am Suchfeld, die Filterleiste, „Neu laden" und
+   * der Blätterblock mit dem Stand bleiben.
+   */
+  it("zeigt nach einer abgebrochenen Suche keine Zeile und keinen Σ, sondern den Satz", async () => {
+    const gerendert = await rendereListe(
+      im30TageFenster("suche-abgebrochen"),
+      "?suche=lieferschein",
+    );
+    try {
+      const { behaelter } = gerendert;
+      await aufSeiteZweiDann30Tage(behaelter);
+
+      expect(behaelter.querySelectorAll("tbody tr"), "keine Zeile").toHaveLength(0);
+      expect(summe(behaelter), "kein Σ").toBeNull();
+      const satz = satzOhneErgebnis(behaelter);
+      expect(satz, "der Satz").not.toBeNull();
+      expect(satz?.className).toContain("text-muted-foreground");
+
+      expect(behaelter.textContent, "nicht der Leerzustand").not.toContain(
+        TEXTE.nachrichten.leer.titel,
+      );
+      expect(behaelter.querySelector('[data-slot="alert"]'), "kein Fehlerzustand").toBeNull();
+      expect(behaelter.textContent, "die Meldung am Suchfeld").toContain(
+        TEXTE.fehler["suche-abgebrochen"],
+      );
+      expect(
+        behaelter.querySelector(`[aria-label="${TEXTE.neuLaden.nachrichten}"]`),
+        "Neu laden",
+      ).not.toBeNull();
+      blaetterblockSteht(behaelter);
+    } finally {
+      await gerendert.abbauen();
+    }
+  });
+
+  /**
+   * **Derselbe Schlüssel, ein späterer Abruf:** Scheitert er, behält der
+   * Zwischenspeicher die Seite des vorigen Abrufs — `seite` ist gesetzt, und
+   * der Fehler auch. Gestellt über „Neu laden" auf Seite eins; die automatische
+   * Aktualisierung fragt dort dieselbe Adresse. „Vor" führte in die verworfene
+   * Seite und ist gesperrt; der Stand des vorigen Abrufs bleibt.
+   */
+  it("verwirft auch die eigene Seite, wenn derselbe Abruf beim Neu laden abbricht", async () => {
+    let bricht = false;
     const gerendert = await rendereListe(
       (pfad, parameter) =>
-        pfad === "/api/nachrichten" && parameter.get("zeitraum") === "30d"
+        bricht && pfad === "/api/nachrichten"
           ? problem(400, "suche-abgebrochen")
           : listenNetz(pfad, parameter),
       "?suche=lieferschein",
     );
     try {
-      const { behaelter } = gerendert;
-      await klicke(knopfMitText(behaelter, B.vor));
-      expect(sichtbar(summeDa(behaelter)), "Seite zwei").toBe("5");
+      const { behaelter, zwischenspeicher } = gerendert;
+      expect(sichtbar(summeDa(behaelter)), "Eichung: Seite eins mit Σ").toBe("mehr als 3");
+      expect(knopfMitText(behaelter, B.vor).disabled, "Eichung: Vor ist frei").toBe(false);
+      const erste = anfragen.at(-1);
 
-      const zeitfenster = behaelter.querySelector(
-        `[data-slot="toggle-group"][aria-label="${TEXTE.nachrichten.zeitfenster.bezeichnung}"]`,
-      );
-      await klicke(knopfMitText(zeitfenster as HTMLElement, TEXTE.nachrichten.zeitfenster.d30));
+      bricht = true;
+      const knopf = behaelter.querySelector(`[aria-label="${TEXTE.neuLaden.nachrichten}"]`);
+      await klicke(knopf as Element);
 
-      expect(anfragen.at(-1), "Eichung: die abgebrochene Suche").toContain("zeitraum=30d");
+      expect(anfragen.at(-1), "Eichung: derselbe Abruf noch einmal").toBe(erste);
+      const eintrag = zwischenspeicher
+        .getQueryCache()
+        .find({ queryKey: NACHRICHTEN_SCHLUESSEL.liste("?suche=lieferschein"), exact: true });
+      expect(eintrag?.state.status, "Eichung: der Abruf ist gescheitert").toBe("error");
       expect(
-        behaelter.querySelectorAll("tbody tr"),
-        "Eichung: die zwei Zeilen von Seite zwei stehen",
-      ).toHaveLength(2);
-      expect(sichtbar(summeDa(behaelter))).toBe("5");
+        eintrag?.state.data,
+        "Eichung: die Seite steht noch im Zwischenspeicher",
+      ).toBeDefined();
+
+      expect(behaelter.querySelectorAll("tbody tr"), "keine Zeile").toHaveLength(0);
+      expect(summe(behaelter), "kein Σ").toBeNull();
+      expect(satzOhneErgebnis(behaelter), "der Satz").not.toBeNull();
+      expect(knopfMitText(behaelter, B.vor).disabled, "Vor").toBe(true);
+      expect(behaelter.textContent, "der Stand bleibt").not.toContain(
+        TEXTE.nachrichten.aktualisierung.standUnbekannt,
+      );
     } finally {
       await gerendert.abbauen();
     }

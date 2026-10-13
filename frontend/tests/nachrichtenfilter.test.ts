@@ -5,6 +5,7 @@ import {
   alsSuchparameter,
   ausSuchparametern,
   feldFehler,
+  listenanzeige,
   NACHRICHTEN_PARAMETER,
   sucheTraegt,
   suchfeldFehler,
@@ -261,6 +262,96 @@ describe("Rückmeldungen am Suchfeld", () => {
     expect(
       problem("suche-fenster-zu-gross", { grenzeTage: "30" }).zahl("grenzeTage"),
     ).toBeUndefined();
+  });
+});
+
+/**
+ * **Welche Seite die Liste zeigt, mit welchem Σ** (`listenanzeige`).
+ *
+ * Drei der vier Rückmeldungen am Suchfeld gelten einer Eingabe, und bei ihnen
+ * bleibt die zuletzt gelieferte Seite samt Σ stehen (`docs/nachrichtenliste.md`
+ * §8.2, §8.3). Die vierte, der Abbruch an der Zeitgrenze, ist eine gelaufene
+ * Suche ohne Ergebnis: keine Seite, kein Σ, kein „Vor" — **auch nicht die
+ * eigene Seite der Abfrage**, die der Zwischenspeicher behält, wenn erst ein
+ * späterer Abruf desselben Schlüssels scheitert.
+ */
+describe("Was die Liste bei einer Rückmeldung zeigt", () => {
+  const problem = (typ: string) => new ProblemFehler({ status: 400, typ, angaben: {} });
+  const SUCHE: Nachrichtenfilter = { ...LEER, suche: "lieferschein" };
+
+  /** Eine neue Abfrage, für die noch nichts ankam; davor stand eine gelieferte Seite. */
+  function lage(
+    teil: { seite?: string; treffer?: string; kannVor?: boolean; fehler?: unknown } = {},
+  ) {
+    return {
+      seite: teil.seite,
+      letzteSeite: "zuletzt gelieferte Seite",
+      treffer: teil.treffer,
+      letzteTreffer: "ihr Σ",
+      fehler: teil.fehler,
+      kannVor: teil.kannVor ?? false,
+    };
+  }
+
+  const OHNE_ERGEBNIS = {
+    seite: undefined,
+    treffer: undefined,
+    kannVor: false,
+    ohneErgebnis: true,
+  };
+
+  it("zeigt nach einer abgebrochenen Suche keine Seite und keinen Σ", () => {
+    expect(listenanzeige(lage({ fehler: problem("suche-abgebrochen") }), SUCHE)).toEqual(
+      OHNE_ERGEBNIS,
+    );
+  });
+
+  it("verwirft auch die eigene Seite, wenn ein späterer Abruf desselben Schlüssels abbricht", () => {
+    const eigene = lage({
+      seite: "eigene Seite",
+      treffer: "eigener Σ",
+      kannVor: true,
+      fehler: problem("suche-abgebrochen"),
+    });
+
+    expect(listenanzeige(eigene, SUCHE)).toEqual(OHNE_ERGEBNIS);
+  });
+
+  it.each(["suchbegriff-zu-kurz", "suchbegriff-zu-unscharf", "suche-fenster-zu-gross"])(
+    "lässt bei %s die zuletzt gelieferte Seite samt Σ stehen",
+    (typ) => {
+      expect(listenanzeige(lage({ fehler: problem(typ) }), SUCHE)).toEqual({
+        seite: "zuletzt gelieferte Seite",
+        treffer: "ihr Σ",
+        kannVor: false,
+        ohneErgebnis: false,
+      });
+    },
+  );
+
+  it("greift bei einem Fehler der ganzen Ansicht nicht zurück", () => {
+    const technisch = new ProblemFehler({ status: 500, typ: "technischer-fehler", angaben: {} });
+
+    expect(listenanzeige(lage({ fehler: technisch }), SUCHE)).toEqual({
+      seite: undefined,
+      treffer: undefined,
+      kannVor: false,
+      ohneErgebnis: false,
+    });
+  });
+
+  it("greift beim halb ausgefüllten freien Fenster schon vor der Antwort zurück", () => {
+    const halb: Nachrichtenfilter = { ...LEER, von: new Date("2025-12-28T05:00:00Z") };
+
+    expect(listenanzeige(lage(), halb)).toMatchObject({
+      seite: "zuletzt gelieferte Seite",
+      treffer: "ihr Σ",
+      ohneErgebnis: false,
+    });
+    expect(listenanzeige(lage(), LEER), "Eichung: ohne Anlass kein Rückgriff").toMatchObject({
+      seite: undefined,
+      treffer: undefined,
+    });
   });
 });
 
