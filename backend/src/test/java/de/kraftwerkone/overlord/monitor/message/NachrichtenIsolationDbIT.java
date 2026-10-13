@@ -2,6 +2,7 @@ package de.kraftwerkone.overlord.monitor.message;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.security.Rolle;
 import de.kraftwerkone.overlord.monitor.security.SicherheitsTestbasis;
 import java.io.IOException;
@@ -52,6 +53,8 @@ class NachrichtenIsolationDbIT extends SicherheitsTestbasis {
   private static final LocalDateTime FENSTER_BIS = LocalDateTime.parse("2025-12-30T00:00:00");
 
   @Autowired private Clock anwendungsuhr;
+
+  @Autowired private NachrichtenRepository nachrichtenRepository;
 
   private Sitzung aufNexans;
   private Sitzung aufSuttons;
@@ -171,6 +174,43 @@ class NachrichtenIsolationDbIT extends SicherheitsTestbasis {
   void suche_mit_hinweis_trennt_in_beide_richtungen() throws Exception {
     pruefeSuche(aufNexans, aufSuttons);
     pruefeSuche(aufSuttons, aufNexans);
+  }
+
+  /**
+   * <b>Die Vorfilterung der Suche, eine Ebene tiefer</b> — am Repository statt am Antwortrumpf.
+   *
+   * <p>Die Verletzungsprobe vom 13.10.2026 hat gezeigt, warum das noetig ist: Ohne den
+   * Mandantenfilter in {@code loeseSucheAuf} blieb jeder Fall dieser Klasse gruen, weil die
+   * Mandantenkette des Hauptstatements die fremden Zeilen wieder herausnimmt. Zwei Riegel sind gut
+   * fuer die Sicherheit und schlecht fuer den Test: Ein Leck im ersten bliebe am Rumpf unsichtbar
+   * ({@code docs/messungen-suche-plan.md}). Regel M3 verlangt den Filter <i>im</i> Statement — also
+   * wird er dort geprueft.
+   *
+   * <p>Gesucht wird nach dem Namen eines fremden Prozesses; er trifft sich selbst, sobald die
+   * Vorfilterung den Mandanten vergisst.
+   */
+  @Test
+  @DisplayName(
+      "Die Vorfilterung der Suche liefert keine fremde Prozesskennung, in beide Richtungen")
+  void vorfilterung_liefert_keine_fremden_kennungen() throws Exception {
+    pruefeVorfilterung(MANDANT_NEXANS, aufSuttons);
+    pruefeVorfilterung(MANDANT_SUTTONS, aufNexans);
+  }
+
+  private void pruefeVorfilterung(String eigenerMandant, Sitzung fremd) throws Exception {
+    Antwort fremdeListe = fremd.hole(abfrage(""));
+    String fremderProzessname = fremdeListe.<List<String>>json("$.items[*].processName").getFirst();
+    List<String> fremdeProzesse = fremdeListe.json("$.items[*].processId");
+
+    Suchtreffer treffer =
+        nachrichtenRepository.loeseSucheAuf(
+            new MandantContext(eigenerMandant),
+            fremderProzessname,
+            NachrichtenFilter.SUCHE_HOECHSTENS_TREFFER);
+
+    assertThat(treffer.prozessIds())
+        .as("Die Vorfilterung von %s darf keinen fremden Prozess liefern", eigenerMandant)
+        .noneMatch(fremdeProzesse::contains);
   }
 
   private void pruefeSuche(Sitzung eigen, Sitzung fremd) throws Exception {
