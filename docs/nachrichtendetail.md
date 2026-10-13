@@ -346,7 +346,11 @@ Beide Fälle kommen dort null Mal vor: M16 (3) hat „gar keine Aktion" mit `0` 
 Grund in §10.12.
 
 **„Offen" heißt `WARTEND` oder `LAEUFT`** aus dem `MessageStatusClassifier` — ausdrücklich
-aufgezählt und **nicht** über `istEndstatus` geholt. [`message-status.md`](message-status.md) führt
+aufgezählt und **nicht** über `istEndstatus` geholt. *(Seit 13.10.2026 liefert `istEndstatus` auch
+für `QUITTUNG_AUSSTEHEND` `false`, E‑235; das Detail bleibt bei `WARTEND` und `LAEUFT` — für
+`EERP_PENDING` kein offener Zustand und kein Alter. `fristSekunden` liefert die Antwort wie bei jeder
+Einordnung außer `WARTEND` (offener Punkt 132); die Oberfläche zeigt sie ohne Wartezeile nicht,
+[`message-status.md`](message-status.md).)* [`message-status.md`](message-status.md) führt
 dazu eine eigene Warnung: Jene Methode gehört der Überfälligkeitsrechnung, und für `UNGEKLAERT`
 antwortet sie `true`; in ihrem Zusammenhang die vorsichtige Antwort, hier wäre dieselbe `true` die
 unvorsichtige. Dieselbe Entscheidung trifft die Liste in `NachrichtenService.aktuellerSchritt`, aus

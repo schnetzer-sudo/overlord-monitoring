@@ -28,6 +28,7 @@ einem geratenen Wert.
 | `CKECKED` | 2 | `UNGEKLAERT` (Tippfehler) | neutral |
 | `RUNNING` | 0 | `LAEUFT` | neutral |
 | `EERP_FAILED` | nicht in der Testkopie, Produktion | **`FEHLER`** *(seit 13.10.2026, E‑233)* | rot |
+| `EERP_PENDING` | 0 *(Testkopie, 13.10.2026)*, Produktion | **`QUITTUNG_AUSSTEHEND`** *(seit 13.10.2026, E‑234)* | neutral |
 
 13 dokumentierte Werte. Die `MessageStatusKind`-Einordnung ist in `MessageStatusClassifier`
 hinterlegt.
@@ -36,6 +37,10 @@ hinterlegt.
 > aufgefallen (09.10.2026) und steht deshalb ohne Anzahl in der Tabelle — er ist kein Ergebnis
 > dieser Erhebung. In der Testkopie kommt er null Mal vor (M191). Alles Weitere im Abschnitt
 > „`EERP_FAILED` — der zweite Fehler ohne Präfix" weiter unten.
+>
+> **Ergänzt 13.10.2026, später am Tag: 15 dokumentierte Werte.** Dazu kommt `EERP_PENDING`
+> (E‑234), ebenfalls nur aus der Produktion bekannt; in der Testkopie 0 Zeilen (Zählung vom
+> 13.10.2026). Abschnitt „`EERP_PENDING` — Quittung ausstehend" weiter unten.
 
 ### `ZWISCHENSCHRITT` ist zwei Werte geworden (11.08.2026, Schritt 6, Teil 2a)
 
@@ -83,7 +88,9 @@ vor.** Der Statusfilter der Liste bietet beide Werte einzeln an
 `SELECT DISTINCT MessageStatus FROM Message` lieferte **12 Werte** — exakt die obige Menge **ohne
 `RUNNING`**. *(Gemeint ist die Menge vom 28.07.2026. Seit dem 13.10.2026 steht in der Tabelle
 zusätzlich `EERP_FAILED`, der in der Testkopie ebenfalls fehlt; M191 hat dieselben 12 Werte
-erneut gezählt.)* Kein neuer, undokumentierter Wert. Die Anzahlen liegen höher als oben (die Testkopie
+erneut gezählt. Später am 13.10.2026 kam `EERP_PENDING` dazu (E‑234), in der Testkopie ebenfalls
+0 Zeilen: Die 15 Tabellenwerte ohne `RUNNING`, `EERP_FAILED` und `EERP_PENDING` sind dieselben 12.)*
+Kein neuer, undokumentierter Wert. Die Anzahlen liegen höher als oben (die Testkopie
 reicht jetzt bis 08.07.2026), aber die *Menge* der Statuswerte ist unverändert.
 
 ---
@@ -104,6 +111,9 @@ reicht jetzt bis 08.07.2026), aber die *Menge* der Statuswerte ist unverändert.
 - **`EERP_FAILED` zählt als Fehler** *(ergänzt 13.10.2026, E‑233)*, obwohl der Wert **nicht** mit
   `ERROR_` beginnt — der zweite Fall nach `COMMIT_REJECTED`. Die Empfangsbestätigung ist
   fehlgeschlagen, der Beleg gilt nicht als angekommen. Abschnitt unten.
+- **`EERP_PENDING` ist flüchtig wie `RUNNING`** *(ergänzt 13.10.2026, E‑234)*: übertragen, die
+  Empfangsbestätigung des Partners steht aus. Eigene Einordnung `QUITTUNG_AUSSTEHEND`, neutral,
+  kein Endstatus. Abschnitt unten.
 
 ---
 
@@ -396,6 +406,106 @@ Unterschiede in beide Richtungen und innerhalb der Streuung.
 
 ---
 
+## `EERP_PENDING` — Quittung ausstehend (13.10.2026, E‑234 bis E‑236)
+
+**Der Anlass.** In der Produktion stand `EERP_PENDING` in der Nachrichtenliste als unbekannter
+Wert mit Fragezeichen. Das war im Sinne von [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md)
+§4.1 richtig — Rohwert, neutral, kein falscher Eimer. Jetzt ist der Wert bekannt.
+
+**Drei Entscheidungen aus dem Sparring vom 13.10.2026:**
+
+| | Entscheidung | Umgesetzt |
+|---|---|---|
+| **E‑234** | Eigene Einordnung `QUITTUNG_AUSSTEHEND`, Anzeige „Quittung ausstehend", neutral — das Gegenstück zu `QUITTIERT`, ausdrücklich **nicht** `WARTEND` | `MessageStatusKind` (gleich hinter `QUITTIERT`), `BEKANNT`, Farbrolle `offen`, Zeichen `Send`, Sprachdateien („Acknowledgement pending"), Statusfilter der Liste |
+| **E‑235** | Kein Endstatus | `istEndstatus` liefert `false`. **Die zweite Hälfte trägt nicht:** „Bleibt die Empfangsbestätigung aus, wird die Nachricht über die bestehende Regel `istUeberfaellig` überfällig" — die Regel ist mit E‑71 (03.09.2026) entfallen. Auf Auswahl des Auftraggebers vom 13.10.2026 wird **nur eingeordnet**; eine eigene Überfälligkeitslogik ist nicht gebaut |
+| **E‑236** | Die Testlücke nur benennen, nicht bauen | Kasten in §4.1 der Projektbeschreibung, offener Punkt 219 |
+
+**Der Name.** Alle übrigen Einordnungen sind ein einziges Wort ohne Unterstrich. Geprüft sind
+`UNQUITTIERT` (kollidiert mit der Problemkategorie *Unquittiert*) und `AUSSTEHEND` (verliert, was
+aussteht); auf Rückfrage bleibt es bei `QUITTUNG_AUSSTEHEND`. Im übrigen Backend tragen Konstanten
+häufig einen Unterstrich (`OffenerZustand.WARTET_VOR`).
+
+### Bestandsaufnahme (13.10.2026, nur gelesen)
+
+- **1a — Wie `istEndstatus` heute einen unbekannten Wert behandelt.** Unbekannt heißt
+  `UNGEKLAERT`, und dafür liefert die Methode `true`. **Sie hat seit E‑71 im Anwendungscode keinen
+  Aufrufer**; ihre einzige Wirkung ist der Compilerzwang des `switch`. Hängende `EERP_PENDING`
+  sind deshalb seit dem Livegang **nirgends als überfällig gezählt worden** — die Kategorie
+  *Überfällig* gibt es seit dem 03.09.2026 ohnehin nicht. Auch nach der Änderung zählt eine
+  hängende Nachricht nirgends als Problem (offener Punkt 220).
+- **1b — Wo Einordnungen aufgezählt oder abgebildet werden.** Backend: `MessageStatusKind`,
+  `BEKANNT`, die beiden `switch` ohne `default` (`istEndstatus`, `bedingung`) — der Compiler
+  erzwingt beide. Alles Übrige folgt aus der Zuordnung (Verlauf über `EnumMap`, Statusfilter über
+  `valueOf`, `statusKind` als Name). Die „offenen" Zustände in Liste, Detail und BAM-Suche zählen
+  `WARTEND` und `LAEUFT` von Hand auf und bleiben dabei — `QUITTUNG_AUSSTEHEND` zeigt keinen
+  Schritt, kein Alter, keine Frist. Frontend: Typ `Statusart`, Laufzeitliste `STATUSARTEN` (Filter,
+  URL), Farbrolle `ZUORDNUNG`, Zeichen `STATUSZEICHEN`, Sprachdateien. **`STATUSARTEN` fehlte bisher
+  still**, wenn ein Wert vergessen wurde; `tests/nachrichtenfilter.test.ts` hält die Liste seither
+  gegen Zeichen und Sprachdatei. **Keine Kachel und keine Diagrammreihe zieht die neue Einordnung
+  in *Läuft* oder *Wartend*:** Beide Kacheln vergleichen auf ihren einen Rohwert
+  (`einzigerRohwert`), der Verlauf ordnet über die Farbrolle — im Tooltip steht sie unter *Ohne
+  Ergebnis* neben Wartend, Läuft, Aufgeteilt und Zusammengeführt, mit gleicher Farbe und ohne
+  Kachel.
+- **1c — Die Überfällig-Abfrage gibt es nicht.** Mit E‑71 sind `istUeberfaellig`,
+  `ueberfaelligBedingung`, die Kachel und der Listenparameter entfallen. **Schritt 5 des Auftrags
+  (EXPLAIN gegen M90) ist damit gegenstandslos.** Geändert haben sich stattdessen vier andere
+  Statements, gemessen in M192 unten.
+- **1d — Der DISTINCT-Test** nimmt `RUNNING` aus der erwarteten Menge (`erwartet.remove`), seit
+  dem Vormittag auch `EERP_FAILED`. `EERP_PENDING` geht genauso; `bekannt ⊇ vorhanden` bleibt die
+  eigentliche Sicherung.
+
+**Die Zählung** (13.10.2026, 12:11:51, `monitor_read`):
+`SELECT COUNT(*) FROM GlassfishDB.Message WHERE MessageStatus = 'EERP_PENDING'` → **0**.
+
+### Die geänderten Statements (M192, nur `EXPLAIN`)
+
+**Eine Überfällig-Abfrage gibt es nicht** (1c). Mit der neuen Einordnung ändern sich aber vier
+Statementtexte: Liste und Vorabfrage der Verengung mit Statusfilter `UNGEKLAERT` — `EERP_PENDING`
+steht seither im `NOT IN` — und dieselben beiden mit dem **neuen** Filter `QUITTUNG_AUSSTEHEND`.
+Gefahren am 13.10.2026 gegen die Testkopie, für `NEXANS` und `SUTTONS`, je `EXPLAIN` und die
+gewählten Indexbereiche aus dem Optimizer-Trace; **keine Laufzeitreihe**. Die Texte sind aus dem
+Code gerendert ([`scripts/messung-eerp-pending/`](../scripts/messung-eerp-pending/)); der neue Text
+für `UNGEKLAERT` unterscheidet sich vom in M191 gemessenen nur um `'EERP_PENDING'` im `NOT IN`
+(im Generator geprüft), und beide stehen in derselben Sitzung nebeneinander.
+
+| Statement | Fassung | Zugriff | `rows` | Bereiche |
+|---|---|---|---:|---:|
+| Liste, `UNGEKLAERT` | M191 | `Message`: `range` über `MessageStatusIDX`, `key_len` 123 | 7.482 | 10 |
+| Liste, `UNGEKLAERT` | neu | `Message`: `range` über `MessageStatusIDX`, `key_len` 123 | 7.483 | 11 |
+| Verengung, `UNGEKLAERT` | M191 und neu | `message_rollup`: `ref` über `message_rollup_prozess_idx` | 459 | — |
+| Liste, `QUITTUNG_AUSSTEHEND` | neu | `Message`: `ref` über `MessageStatusIDX`, `key_len` 123 | 1 | 1 |
+| Verengung, `QUITTUNG_AUSSTEHEND` | neu | `message_rollup`: `ref` über `message_rollup_prozess_idx` | 459 | — |
+
+Die Zeilen gelten für beide Mandanten gleich. **Gleiche Zugriffsart, gleicher Index:** Die Liste
+mit `UNGEKLAERT` liest weiter die Lücken zwischen den bekannten Werten auf `MessageStatusIDX`, mit
+einer Lücke mehr; die Verengung bleibt beim Prozessindex des Rollups. Der neue Filter liest genau
+das eine Intervall `(EERP_PENDING) <= (MessageStatus) <= (EERP_PENDING)`.
+
+> **Belegvermerk** (Regel L10).
+> *Gemessen ist:* davon nichts. Die Testkopie trägt den Wert null Mal (Zählung vom 13.10.2026,
+> 12:11:51, `monitor_read`), sie kann ihn weder belegen noch widerlegen.
+> *Behauptet wird:* Die Datei ist per OFTP übertragen, die EERP des Partners steht aus; der Status
+> ist flüchtig; `MessageTimeout` ist für diese Nachrichten sinnvoll gesetzt. Quelle: Auskunft des
+> Auftraggebers vom 13.10.2026 und Beobachtung in der Produktion.
+> **Die Lücke:** Der Übergang von `EERP_PENDING` nach `EERP_RECEIVED` ist nicht messbar, weil
+> `GlassfishDB` keine Statushistorie führt. Und die Frist trägt heute nichts: Keine Regel liest
+> `MessageTimeout` für diesen Status (E‑71).
+
+**Nicht gebaut** (Auftrag): kein Logeintrag und kein Adminhinweis für unbekannte Status, keine
+Änderung daran, wie `istEndstatus` Unbekanntes behandelt, keine Kachel, keine Farbrolle, keine
+Kategorie *Unquittiert*, keine Einordnung von `COMMIT_SENT`, `CHECKED`, `CKECKED`.
+
+> ⚠️ **Eine Einschränkung, die bleibt: Unter der Schwelle ist die Statusspalte für das neue Wort zu
+> schmal.** Dort ist ihre Breite an „Zusammengeführt" gemessen (Nachrichtenliste 156 px unter der
+> Containerschwelle, Trefferliste fest 155 px; M177/M180, [`spaltenwahl.md`](spaltenwahl.md));
+> „Quittung ausstehend" ist länger und wird mit Auslassungspunkten gekürzt. Ab der Schwelle trägt die
+> Spalte der Nachrichtenliste 286 px (E‑162); ohne Schritt daneben steht die Plakette dort
+> voraussichtlich ungekürzt — gemessen ist auch das nicht. **Der Tooltip der Plakette trägt seither
+> die ungekürzte Beschriftung** (vorher nur den Rohwert). Neu messen ginge nur mit einer
+> Sichtprüfung in allen vier Dichtestufen — nicht Teil dieser Runde.
+
+---
+
 ## Die Fehlerbedingung — eine Stelle, ein Ausdruck
 
 `MessageStatusClassifier.fehlerBedingung(Field<String>)` liefert:
@@ -472,6 +582,12 @@ Das Feld wird als Parameter übergeben, damit dieser gemeinsame Baustein nicht a
 | `UNGEKLAERT` | **ja** | `CHECKED`, `CKECKED`, `COMMIT_SENT`, alles Unbekannte |
 | `WARTEND` | **nein** | `SUSPENDED` |
 | `LAEUFT` | **nein** | `RUNNING` |
+| `QUITTUNG_AUSSTEHEND` | **nein** *(seit 13.10.2026, E‑235)* | `EERP_PENDING` |
+
+> **Ergänzt 13.10.2026:** „Offen sind allein `WARTEND` und `LAEUFT`" (oben) gilt seither nicht
+> mehr — auch `QUITTUNG_AUSSTEHEND` ist kein Endstatus. Wirkung zur Laufzeit hat das keine: Die
+> Methode hat keinen Aufrufer, und die offenen Zustände in Liste, Detail und BAM-Suche bleiben
+> ausdrücklich `WARTEND` und `LAEUFT`.
 
 > **Die Aufteilung am 11.08.2026 hat an dieser Tabelle nichts geändert außer der Zeilenzahl.** Aus
 > einer Zeile wurden zwei mit demselben Wert. `MessageStatusClassifierTest` hält beides fest — dass
@@ -715,6 +831,10 @@ des `MessageStatusClassifier`, nie durch Raten.
 >    Mensch, der in der Liste eine Fragezeichen-Plakette gesehen hat. Die neutrale Behandlung
 >    unbekannter Werte, die dieser Abschnitt begründet, setzt aber einen Wächter voraus, der die
 >    **Produktion** erreicht. Offener Punkt **218** unten.
+>
+> **Später am 13.10.2026 ein Drittes:** Punkt 2 nimmt seither auch `EERP_PENDING` aus (E‑234) —
+> flüchtig wie `RUNNING`, in der Testkopie 0 Zeilen. Und selbst gegen die Produktion wäre der Test
+> ein **Schnappschuss**, der flüchtige Status nur zufällig sieht: offener Punkt **219** unten.
 
 ---
 
@@ -728,3 +848,15 @@ des `MessageStatusClassifier`, nie durch Raten.
   unsichtbar — `EERP_FAILED` ist genau so aufgefallen, über die Fragezeichen-Plakette in der Liste
   und nicht über den Test. **Offen ist, wie ein Wächter die Produktion erreicht.** Eine Lösung ist
   ausdrücklich nicht Teil dieser Runde; gebaut ist nichts.
+- **219 — Ein Laufzeitsignal für unbekannte Status** *(eingetragen 13.10.2026, E‑236)*. **Entschieden:
+  nicht gebaut** — kein Logeintrag, kein Adminhinweis. Ein stündliches `SELECT DISTINCT` wäre wieder
+  nur ein Schnappschuss und sähe flüchtige Status wie `RUNNING` und `EERP_PENDING` nur zufällig. Die
+  verlässlichste Stelle für ein solches Signal wäre der Klassifizierer: Er sieht **jeden** Wert, der
+  gelesen wird, in dem Augenblick, in dem er gelesen wird.
+- **220 — Eine dauerhaft auf `EERP_PENDING` stehende Nachricht ist fachlich unquittiert**
+  *(eingetragen 13.10.2026, E‑235)*. Im MVP zählt sie **in keiner** Problemkategorie: nicht als
+  Fehler, nicht als überfällig (seit E‑71 entfallen; die erwartete Überfälligkeit über
+  `istUeberfaellig` trägt deshalb nicht), und *Unquittiert* ist nicht gebaut (E‑d). Wird
+  *Unquittiert* gebaut, ist zu entscheiden, in welcher Kachel sie steht — sonst steht derselbe Beleg
+  in zwei Kacheln ([`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §4.2, Punkt 3). Bis dahin
+  fällt eine hängende Nachricht nur auf, wer die Liste nach *Quittung ausstehend* filtert.

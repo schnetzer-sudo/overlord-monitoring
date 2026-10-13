@@ -13,6 +13,8 @@ import type { Einordnungszahl, Verlaufspunkt } from "./api";
  * `QUITTIERT` sowie `WARTEND`, `LAEUFT`, `AUFGETEILT` und `ZUSAMMENGEFUEHRT`
  * jeweils farbgleich aneinanderstoßen und **wie ein Segment aussehen**. Die
  * Legende verspräche acht Unterscheidungen, das Bild lieferte vier.
+ * *Seit dem 13.10.2026 neun:* `QUITTUNG_AUSSTEHEND` trägt die Rolle `offen`
+ * (E‑234); die vier Reihen bleiben.
  *
  * **Der Unterschied geht dabei nicht verloren, er wandert in den Tooltip.** Dort
  * stehen die enthaltenen Einordnungen einzeln mit ihren Zahlen — und damit
@@ -76,8 +78,10 @@ function leereZeile(eimer: string, gesamt: number): Verlaufszeile {
  * Die Rolle einer Einordnung — **mit Rückfall für einen Wert, den diese Fassung
  * nicht kennt**.
  *
- * Das Backend liefert einen Aufzählungswert; eine neunte Einordnung entstünde
- * nur, wenn dort eine dazukäme. Dann gilt Regel Q4: Sie fällt nach
+ * Das Backend liefert einen Aufzählungswert; eine Einordnung, die diese Fassung
+ * nicht kennt, entstünde nur, wenn dort eine dazukäme *(bis zum 13.10.2026 hieß
+ * es hier „eine neunte“; die neunte, `QUITTUNG_AUSSTEHEND`, kennt diese Fassung
+ * und legt sie nach `offen`, E‑234)*. Dann gilt Regel Q4: Sie fällt nach
  * `ungeklaert` — der Rolle, deren ganze Bedeutung *„unbekannter Statuswert"*
  * ist — und ausdrücklich in **keinen** der drei fachlich belegten Eimer. Sie
  * still `offen` oder `abgeschlossen` zuzuschlagen wäre eine Behauptung über
@@ -95,7 +99,7 @@ function rolleVon(einordnung: string): Statusrolle {
 }
 
 /**
- * Acht Einordnungen je Eimer → vier Summen je Eimer.
+ * Acht Einordnungen *(seit 13.10.2026 neun, E‑234)* je Eimer → vier Summen je Eimer.
  *
  * Die Reihenfolge der Eimer bleibt, wie der Endpunkt sie liefert — er sortiert
  * bereits über eine `TreeMap`, und ein zweites Sortieren hier wäre ein zweiter

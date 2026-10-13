@@ -74,6 +74,7 @@ export const en: Texte = {
     ZUSAMMENGEFUEHRT: "Merged",
     ABGESCHLOSSEN: "Completed",
     QUITTIERT: "Acknowledged",
+    QUITTUNG_AUSSTEHEND: "Acknowledgement pending",
     UNGEKLAERT: "Unclear",
   },
 

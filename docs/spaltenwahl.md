@@ -174,6 +174,11 @@ und skalieren miteinander ([`visuelles-konzept.md`](visuelles-konzept.md) §5); 
 | Kette | **74** px (73,67) | 4.625 | der längsten Rolle einzeln („Aufgeteilt") | 136 px |
 | Ablauf *(frei)* | **304** px (303,33) | — | dem längsten Ablaufnamen der Nachrichtenliste (§3, Regel 4) | der Rest; bei 768 px 0 px |
 
+> **Ergänzt 13.10.2026 (E‑234):** Seither gibt es eine neunte Einordnung, und sie ist die
+> breiteste: „Quittung ausstehend" ist länger als „Zusammengeführt" und wird in dieser Spalte
+> mit Auslassungspunkten gekürzt. Neu gemessen ist nichts — das verlangte eine Sichtprüfung in
+> allen vier Dichtestufen ([`message-status.md`](message-status.md), Abschnitt „`EERP_PENDING`").
+
 | Stufe | Spalten | Schwelle | Klasse |
 |---|---|---:|---|
 | Grundmenge mit „Treffer" | Zeitpunkt · Status · Treffer · Kette | **696** px | — |

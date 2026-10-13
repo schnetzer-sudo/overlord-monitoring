@@ -536,6 +536,7 @@ Vollständige Erhebung der Testkopie seit 01.01.2025 (Stand 27.07.2026):
 | `CKECKED` | 2 | ungeklärt (Tippfehler) | neutral |
 | `RUNNING` | 0 | läuft gerade | neutral |
 | `EERP_FAILED` | nicht in der Testkopie, Produktion | **Fehler** — Empfangsbestätigung fehlgeschlagen *(ergänzt 13.10.2026, E‑233)* | rot |
+| `EERP_PENDING` | 0 *(Testkopie, gezählt 13.10.2026; in der Produktion beobachtet)* | **Quittung ausstehend** (`QUITTUNG_AUSSTEHEND`) — übertragen, die Empfangsbestätigung des Partners steht aus; kein Endstatus *(ergänzt 13.10.2026, E‑234, E‑235)* | neutral |
 
 **`COMMIT_REJECTED` zählt als Fehler, obwohl der Wert nicht mit `ERROR_` beginnt.** Der Partner
 hat die Übertragung abgelehnt, der Beleg ist nicht angekommen. Für den Nutzer ist das dieselbe
@@ -562,6 +563,28 @@ flüchtig und existiert nur, solange eine Nachricht tatsächlich in Arbeit ist. 
 Problemkategorie "Überfällig" ist gegen die Testkopie nicht prüfbar, und "läuft noch" darf niemals
 als `MessageStatus = 'RUNNING'` definiert werden — die Kategorie wäre sonst konstruktionsbedingt
 leer.
+
+**`EERP_PENDING` kommt in der Testkopie null Mal vor, in der Produktion aber sehr wohl**
+*(ergänzt 13.10.2026, E‑234 und E‑235)*. Die Datei ist übertragen, die Empfangsbestätigung des
+Partners steht aus; Nachrichten stehen dort in der Regel nur kurz. Der Wert bekommt eine eigene
+Einordnung, **Quittung ausstehend** — das Gegenstück zu *Quittiert* und ausdrücklich **nicht**
+*Wartend*: „wartet bei uns" und „wartet auf den Partner" sind für den Nutzer verschiedene
+Antworten. Er ist **kein Endstatus**. **Überfällig wird eine hängende Nachricht dadurch nicht:**
+Die Kategorie ist seit E‑71 entfallen, und eine eigene Logik ist ausdrücklich nicht gebaut. Im MVP
+zählt eine dauerhaft auf `EERP_PENDING` stehende Nachricht deshalb in keiner Problemkategorie
+(offener Punkt 220, [`message-status.md`](message-status.md)). Bis zum 13.10.2026 stand sie als
+unbekannter Wert mit Fragezeichen da — neutral, kein falscher Eimer, so wie dieser Abschnitt es
+verlangt.
+
+> **Belegvermerk** (Regel L10).
+> *Gemessen ist:* davon nichts. Die Testkopie trägt den Wert null Mal (Zählung vom 13.10.2026,
+> 12:11:51, `monitor_read`), sie kann ihn weder belegen noch widerlegen.
+> *Behauptet wird:* Die Datei ist per OFTP übertragen, die EERP des Partners steht aus; der Status
+> ist flüchtig; `MessageTimeout` ist für diese Nachrichten sinnvoll gesetzt. Quelle: Auskunft des
+> Auftraggebers vom 13.10.2026 und Beobachtung in der Produktion.
+> **Die Lücke:** Der Übergang von `EERP_PENDING` nach `EERP_RECEIVED` ist nicht messbar, weil
+> `GlassfishDB` keine Statushistorie führt. Und die Frist trägt heute nichts: Keine Regel liest
+> `MessageTimeout` für diesen Status (E‑71).
 
 > **Ergänzt 03.09.2026: Auf `RUNNING` wirkt ein Wächter des Altsystems.** Eine Nachricht, die
 > länger als `MessageTimeout` in diesem Status steht, wird automatisch auf `ERROR_TIMEOUT` gesetzt.
@@ -634,6 +657,24 @@ behandeln.
 > konnte. Die Begründung oben setzt einen Wächter voraus, der die Produktion erreicht; den gibt es
 > nicht. Offener Punkt **218** in [`message-status.md`](message-status.md). Der Satz oben bleibt
 > stehen — er ist die Voraussetzung, an der der Punkt hängt.
+
+> ### ⚠️ Ergänzt 13.10.2026 — der Test ist ein Schnappschuss und sieht flüchtige Status nicht (E‑236)
+>
+> **Der Satz „Nur deshalb ist es vertretbar …" bleibt stehen.** Selbst gegen die Produktion wäre
+> `SELECT DISTINCT MessageStatus` nur ein **Schnappschuss**: Er sieht einen Wert nur, wenn in
+> diesem Augenblick eine Nachricht darauf steht. Flüchtige Status — `RUNNING`, `EERP_PENDING` —
+> sieht er strukturell nicht. `EERP_PENDING` ist am 13.10.2026 **mit dem Auge** in der Produktion
+> gefunden worden, als unbekannter Wert mit Fragezeichen in der Nachrichtenliste.
+>
+> **Der Schaden war klein, und er ist benannt.** Ein unbekannter Wert wird `UNGEKLAERT`; dafür
+> liefert `istEndstatus` `true`, und die Methode hat seit E‑71 im Anwendungscode keinen Aufrufer
+> mehr. Hängende `EERP_PENDING`-Nachrichten sind deshalb **nirgends als überfällig gezählt
+> worden** — die Kategorie gibt es seit dem 03.09.2026 nicht — und auch nicht als Fehler. Falsch
+> war allein die Zuordnung zu *Ungeklärt*: Fragezeichen-Plakette, „Bedeutung nicht verifiziert",
+> die Fußzeile der ungeklärten Werte, im Verlauf die Reihe *Ungeklärt* und der Statusfilter
+> *Ungeklärt* der Liste samt Vorabfrage der Verengung, die die Zeilen mitlieferten (M192 in
+> [`message-status.md`](message-status.md)). Gebaut wird hier nichts; offener
+> Punkt **219** in [`message-status.md`](message-status.md).
 
 ### 4.2 Die drei Problemkategorien
 
@@ -770,6 +811,11 @@ Diese drei sind bewusst getrennt und dürfen nie zu "Fehler" zusammengefasst wer
 
    **`EERP_FAILED` gehört wie `COMMIT_REJECTED` nicht hierher** *(ergänzt 13.10.2026, E‑233)* — er
    ist ein Fehler (Punkt 1), und derselbe Beleg stünde sonst in zwei Kategorien.
+
+   *Ergänzt 13.10.2026 (E‑234):* `EERP_PENDING` ist der erste Statuswert, der wörtlich „ohne
+   Empfangsbestätigung" heißt — eine **Teildefinition** von *Unquittiert*. Wie er sich zur
+   Kategorie verhält, wenn sie gebaut wird, ist offener Punkt **220** in
+   [`message-status.md`](message-status.md). E‑d bleibt unberührt.
 
 ### 4.3 Verkettung (Lineage)
 

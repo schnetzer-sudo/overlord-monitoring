@@ -66,9 +66,9 @@ function eimer(einordnung: string, anzahl: number): Verlaufspunkt {
   };
 }
 
-describe("Der Verlauf fasst acht Einordnungen zu vier Reihen zusammen", () => {
+describe("Der Verlauf fasst die Einordnungen zu vier Reihen zusammen", () => {
   /**
-   * **Jede der acht landet in ihrer Rolle.** Die Zuordnung selbst steht in
+   * **Jede landet in ihrer Rolle** (seit 13.10.2026 neun, E‑234). Die Zuordnung selbst steht in
    * `lib/status-farbe.ts` und wird hier nicht nachgebaut — geprüft wird, dass
    * die Zusammenfassung sie *benutzt* und nicht etwas Eigenes rechnet.
    */
@@ -86,8 +86,9 @@ describe("Der Verlauf fasst acht Einordnungen zu vier Reihen zusammen", () => {
   /**
    * **Ein unbekannter Wert fällt in keinen der drei fachlich belegten Eimer.**
    *
-   * Das Backend liefert einen Aufzählungswert; eine neunte Einordnung entstünde
-   * nur, wenn dort eine dazukäme. Dann gilt Regel Q4: Sie fällt nach
+   * Das Backend liefert einen Aufzählungswert; eine Einordnung, die diese Fassung
+   * nicht kennt, entstünde nur, wenn dort eine dazukäme (bis zum 13.10.2026: „eine
+   * neunte“ — die neunte, `QUITTUNG_AUSSTEHEND`, fällt nach `offen`). Dann gilt Regel Q4: Sie fällt nach
    * `ungeklaert` — der Rolle, deren ganze Bedeutung *„unbekannter Statuswert"*
    * ist — und nicht nach `offen` oder `abgeschlossen`.
    *
@@ -104,22 +105,26 @@ describe("Der Verlauf fasst acht Einordnungen zu vier Reihen zusammen", () => {
     expect(zeile.fehler + zeile.offen + zeile.abgeschlossen + zeile.ungeklaert).toBe(zeile.gesamt);
   });
 
-  /** Vier Einordnungen, eine Reihe — das ist der Grund für E‑l. */
-  it("summiert die vier offenen Einordnungen zu einer Reihe", () => {
+  /**
+   * Die offenen Einordnungen, eine Reihe — das ist der Grund für E‑l. Bis zum
+   * 13.10.2026 vier, seither fünf: `QUITTUNG_AUSSTEHEND` gehört dazu (E‑234).
+   */
+  it("summiert die fünf offenen Einordnungen zu einer Reihe", () => {
     const [zeile] = verlaufszeilen([
       {
         eimer: "2025-12-28T05:00:00Z",
-        gesamt: 10,
+        gesamt: 15,
         einordnungen: [
           { einordnung: "WARTEND", anzahl: 1 },
           { einordnung: "LAEUFT", anzahl: 2 },
           { einordnung: "AUFGETEILT", anzahl: 3 },
           { einordnung: "ZUSAMMENGEFUEHRT", anzahl: 4 },
+          { einordnung: "QUITTUNG_AUSSTEHEND", anzahl: 5 },
         ],
       },
     ]);
 
-    expect(zeile.offen).toBe(10);
+    expect(zeile.offen).toBe(15);
     expect(STAPELREIHENFOLGE).toHaveLength(4);
   });
 

@@ -196,6 +196,9 @@ public class BamSucheService {
    * geholt</b>: Jene Methode gehört der Überfälligkeitsrechnung und antwortet für {@code
    * UNGEKLAERT} mit {@code true} — in ihrem Zusammenhang die vorsichtige Antwort, hier wäre
    * dieselbe {@code true} die unvorsichtige ({@code docs/message-status.md}).
+   *
+   * <p>Seit dem 13.10.2026 liefert jene Methode auch fuer {@code QUITTUNG_AUSSTEHEND} {@code false}
+   * (E‑235); hier bleibt es wie in der Liste bei {@code WARTEND} und {@code LAEUFT}.
    */
   private static String aktuellerSchritt(MessageStatusKind einordnung, String schritt) {
     return einordnung == MessageStatusKind.WARTEND || einordnung == MessageStatusKind.LAEUFT

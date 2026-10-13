@@ -8,6 +8,7 @@ import {
   Clock,
   Merge,
   PlayCircle,
+  Send,
   Split,
   type LucideIcon,
 } from "lucide-react";
@@ -38,7 +39,7 @@ import { cn } from "@/lib/utils";
  * Altsystem, seine fachliche Bedeutung ist nicht belegt, und die Oberfläche
  * kennzeichnet das, statt einen plausiblen Text zu erfinden.
  */
-const ZEICHEN: Record<Statusart, LucideIcon> = {
+export const STATUSZEICHEN: Record<Statusart, LucideIcon> = {
   FEHLER: AlertTriangle,
   ABGESCHLOSSEN: CircleCheck,
   QUITTIERT: CheckCheck,
@@ -49,6 +50,10 @@ const ZEICHEN: Record<Statusart, LucideIcon> = {
   // viel wurde eins.
   AUFGETEILT: Split,
   ZUSAMMENGEFUEHRT: Merge,
+  // Übertragen, die Quittung steht aus (E‑234, 13.10.2026) — ein Zeichen, das
+  // keine andere Einordnung trägt, und bewusst nicht die Uhr von WARTEND:
+  // „wartet bei uns" und „wartet auf den Partner" sind zwei Antworten.
+  QUITTUNG_AUSSTEHEND: Send,
   UNGEKLAERT: CircleHelp,
 };
 
@@ -75,7 +80,8 @@ export function StatusPlakette({
    *
    * **Das ist keine Ausnahme von „nie allein über Farbe".** Die Regel verlangt
    * „zusätzlich eine Beschriftung **oder** ein Zeichen"
-   * (`visuelles-konzept.md` §3), und die acht Zeichen unterscheiden sich in
+   * (`visuelles-konzept.md` §3), und die acht Zeichen *(seit 13.10.2026 neun:
+   * `Send` für `QUITTUNG_AUSSTEHEND`, E‑234)* unterscheiden sich in
    * ihrer Form, nicht in ihrer Farbe. Die Beschriftung geht dabei nicht
    * verloren: Sie steht im `title` und für Vorleseprogramme im Markup.
    *
@@ -87,8 +93,8 @@ export function StatusPlakette({
   const texte = useTexte();
   // Ein Wert, den diese Fassung nicht kennt, ist derselbe Fall wie ein
   // unbekannter Rohwert: ungeklärt, nicht geraten.
-  const art: Statusart = statusKind in ZEICHEN ? (statusKind as Statusart) : "UNGEKLAERT";
-  const Zeichen = ZEICHEN[art];
+  const art: Statusart = statusKind in STATUSZEICHEN ? (statusKind as Statusart) : "UNGEKLAERT";
+  const Zeichen = STATUSZEICHEN[art];
 
   const beschriftung = bedeutungNichtVerifiziert
     ? (rohwert ?? texte.einordnung.UNGEKLAERT)
@@ -141,7 +147,10 @@ export function StatusPlakette({
            */
           schritt ? "shrink-0" : "shrink",
         )}
-        title={hinweis}
+        // Seit dem 13.10.2026 (E‑234) wie in der kompakten Fassung: mit der
+        // Beschriftung. „Quittung ausstehend" wird in der schmalen Statusspalte
+        // gekürzt, und ohne sie im Tooltip wäre das Wort nirgends ganz zu lesen.
+        title={hinweis === undefined ? beschriftung : `${beschriftung} — ${hinweis}`}
       >
         <Zeichen aria-hidden="true" />
         <span className={cn("truncate", bedeutungNichtVerifiziert && "font-mono")}>

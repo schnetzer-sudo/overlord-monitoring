@@ -34,6 +34,13 @@ package de.kraftwerkone.overlord.monitor.message;
  * antwortet sie {@code true} — in ihrem Zusammenhang die vorsichtige Antwort, hier waere dieselbe
  * {@code true} die unvorsichtige. Dieselbe Entscheidung trifft die Liste in {@code
  * NachrichtenService.aktuellerSchritt}, aus demselben Grund.
+ *
+ * <p><b>Ergaenzt am 13.10.2026:</b> „Dieselbe Zweierauswahl" stimmt seither nicht mehr — {@code
+ * istEndstatus} liefert auch fuer {@code QUITTUNG_AUSSTEHEND} {@code false} (E‑235). Das Detail
+ * bleibt bei {@code WARTEND} und {@code LAEUFT}: {@code EERP_PENDING} wird nur eingeordnet (Auswahl
+ * des Auftraggebers vom 13.10.2026), ohne offenen Zustand und ohne Alter. {@code fristSekunden}
+ * liefert das Detail wie fuer jede Einordnung ausser {@code WARTEND} (offener Punkt 132); die
+ * Oberflaeche zeigt sie nur in der Wartezeile und damit hier nicht.
  */
 public enum OffenerZustand {
 

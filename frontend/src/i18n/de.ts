@@ -102,7 +102,8 @@ export const de = {
   },
 
   /**
-   * Die acht Einordnungen aus `common/MessageStatusKind` — **auf oberster Ebene,
+   * Die acht Einordnungen *(seit 13.10.2026 neun, E‑234)* aus
+   * `common/MessageStatusKind` — **auf oberster Ebene,
    * seit dem 01.09.2026.**
    *
    * Sie standen bis dahin unter `nachrichten.status`, und das war richtig,
@@ -134,6 +135,8 @@ export const de = {
     ZUSAMMENGEFUEHRT: "Zusammengeführt",
     ABGESCHLOSSEN: "Abgeschlossen",
     QUITTIERT: "Quittiert",
+    // Seit 13.10.2026 (E‑234): EERP_PENDING. Kein Wort aus dem Rohwert im Label.
+    QUITTUNG_AUSSTEHEND: "Quittung ausstehend",
     UNGEKLAERT: "Ungeklärt",
   },
 
@@ -278,6 +281,7 @@ export const de = {
       // Vier Reihen, eine je Farbrolle (Entscheidung E‑l). Die Beschriftungen
       // gehören der Rolle und nicht einer Einordnung: Die Rolle `offen` fasst
       // vier Einordnungen zusammen, und die stehen einzeln im Tooltip.
+      // Seit dem 13.10.2026 fünf: `QUITTUNG_AUSSTEHEND` kommt hinzu (E‑234).
       //
       // Entscheidung E‑82 vom 04.09.2026: Eine Rolle, die mehrere Einordnungen
       // bündelt, trägt eine Beschriftung, die für alle ihre Mitglieder gilt und

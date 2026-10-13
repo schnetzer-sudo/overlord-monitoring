@@ -186,6 +186,24 @@ class NachrichtenServiceTest {
   }
 
   /**
+   * <b>EERP_PENDING traegt seit dem 13.10.2026 eine eigene Einordnung</b> (E‑234) statt der
+   * Fragezeichen-Plakette — {@code bedeutungNichtVerifiziert} faellt damit weg.
+   */
+  @Test
+  @DisplayName("EERP_PENDING wird QUITTUNG_AUSSTEHEND, nicht mehr ungeklaert")
+  void eerp_pending_ist_quittung_ausstehend() {
+    when(nachrichtenRepository.finde(any(), any()))
+        .thenReturn(List.of(zeile("m1", "EERP_PENDING", "Send Message to Partner")));
+
+    NachrichtResponse zeile = service().liste(MANDANT, filter(null)).items().getFirst();
+
+    assertThat(zeile.statusKind()).isEqualTo("QUITTUNG_AUSSTEHEND");
+    assertThat(zeile.status()).isEqualTo("EERP_PENDING");
+    assertThat(zeile.bedeutungNichtVerifiziert()).isFalse();
+    assertThat(zeile.schritt()).as("kein offener Zustand, kein Schritt").isNull();
+  }
+
+  /**
    * Dieselbe Kette wie in {@code ZeitpunkteTest} und {@code tests/format.test.ts}: Aus 23:53:50
    * Wanduhrzeit wird in {@code Europe/Berlin} 22:53:50Z auf der Leitung — und in der Anzeige wieder
    * 23:53:50.
@@ -276,6 +294,7 @@ class NachrichtenServiceTest {
                 zeile("laeuft", "RUNNING", "Format Conversion"),
                 zeile("fertig", "FINISHED", "Send Message to Partner"),
                 zeile("quittiert", "EERP_RECEIVED", "Send Message to Partner"),
+                zeile("ausstehend", "EERP_PENDING", "Send Message to Partner"),
                 zeile("fehler", "ERROR_DUPLICATE", "Format Conversion"),
                 zeile("zwischen", "SPLITTED", "Split Multiple IDOC"),
                 zeile("ungeklaert", "CHECKED", "Format Conversion")));
@@ -285,7 +304,9 @@ class NachrichtenServiceTest {
     assertThat(zeilen)
         .filteredOn(z -> z.schritt() != null)
         .extracting(NachrichtResponse::messageId)
-        .as("nur WARTEND und LAEUFT")
+        .as(
+            "nur WARTEND und LAEUFT — QUITTUNG_AUSSTEHEND ist kein Endstatus, zeigt aber keinen"
+                + " Schritt")
         .containsExactly("wartend", "laeuft");
     assertThat(zeilen.getFirst().schritt()).isEqualTo(SCHRITT);
   }

@@ -855,6 +855,10 @@ einen Balken, in dem `ABGESCHLOSSEN` und `QUITTIERT` sowie `WARTEND`, `LAEUFT`, 
 `ZUSAMMENGEFUEHRT` jeweils farbgleich aneinanderstoßen und **wie ein Segment aussehen**. Die Legende
 verspräche acht Unterscheidungen, das Bild lieferte vier.
 
+> **Ergänzt 13.10.2026 (E‑234): neun Einordnungen.** `QUITTUNG_AUSSTEHEND` (`EERP_PENDING`) trägt
+> die Farbrolle `offen` und steht im Tooltip unter *Ohne Ergebnis* neben `WARTEND`, `LAEUFT`,
+> `AUFGETEILT` und `ZUSAMMENGEFUEHRT` — gleiche Farbe, keine Kachel. Die vier Rollen bleiben.
+
 | | |
 |---|---|
 | **Der Stapel** | vier Reihen, eine je Farbrolle. Die Zusammenfassung ist eine **reine Funktion** (`features/dashboard/verlauf.ts`) und wird ohne Ansicht geprüft |
@@ -875,6 +879,10 @@ nicht auffindbar.
 >
 > **Weggelassen wird sie nicht.** Dann wäre der Balken niedriger als `gesamt`, und die Zahl im
 > Tooltip passte nicht zu dem, was danebensteht. Der Test prüft beides.
+>
+> *Ergänzt 13.10.2026 (E‑234):* Die neunte ist gekommen, `QUITTUNG_AUSSTEHEND`, und fällt nach
+> `offen`, weil diese Fassung sie kennt (siehe oben). Die Regel gilt für jede Einordnung, die diese
+> Fassung **nicht** kennt — heute also eine zehnte.
 
 #### Die Balkenbreite ist gedeckelt (E‑v) — *gemessen am 01.09.2026*
 
