@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.MessageStatusClassifier;
+import de.kraftwerkone.overlord.monitor.common.MessageStatusKind;
 import de.kraftwerkone.overlord.monitor.common.Seitenposition;
 import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
 import java.time.LocalDateTime;
@@ -131,5 +132,30 @@ class NachrichtenStatementsTest {
                 + " or (`GlassfishDB`.`Message`.`MessageLastUpdate`"
                 + " = timestamp '2025-12-24 06:19:16.0'"
                 + " and `GlassfishDB`.`Message`.`MessageID` < 'abc')");
+  }
+
+  /**
+   * <b>Der Fehlerfilter der Liste traegt {@code EERP_FAILED}</b> (E‑233 vom 09.10.2026). Die
+   * Bedingung kommt aus {@code MessageStatusClassifier.bedingung(FEHLER, …)} und damit aus {@code
+   * fehlerBedingung} — hier steht, dass sie im gesendeten Statement ankommt.
+   *
+   * <p><b>Gezaehlt wird damit nicht.</b> In der Testkopie kommt {@code EERP_FAILED} null Mal vor
+   * (M191), und anlegen laesst sich keine Zeile: Auf {@code GlassfishDB} schreibt nichts. Was die
+   * Liste zaehlt, bestimmt die Bedingung; dass sie den Wert enthaelt, ist der Beleg, der ohne
+   * Schreibrecht zu haben ist.
+   */
+  @Test
+  @DisplayName("Der Statusfilter FEHLER schickt LIKE ERROR_ und IN (COMMIT_REJECTED, EERP_FAILED)")
+  void fehlerfilter_traegt_eerp_failed() {
+    repository.finde(
+        MANDANT,
+        new Nachrichtenabfrage(
+            FENSTER, Set.of(MessageStatusKind.FEHLER), List.of(), null, true, null, 50));
+
+    assertThat(einziges())
+        .contains("`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR")
+        .contains("_%' escape '")
+        .contains("`GlassfishDB`.`Message`.`MessageStatus` in ('COMMIT_REJECTED', 'EERP_FAILED')")
+        .doesNotContain("= 'COMMIT_REJECTED'");
   }
 }

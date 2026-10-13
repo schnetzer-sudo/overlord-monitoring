@@ -18,12 +18,14 @@ import type { Fehlerart, Verteilungssicht, Verteilungszeile } from "./api";
  * | Rohwert | Was dasteht |
  * |---|---|
  * | `COMMIT_REJECTED` | „Vom Partner abgelehnt" — aus der Sprachdatei |
+ * | `EERP_FAILED` | „Empfangsbestätigung fehlgeschlagen" — aus der Sprachdatei (seit 13.10.2026, E‑233) |
  * | `ERROR_TIMEOUT` | `TIMEOUT` — der Namensteil, den der Endpunkt liefert |
  * | alles andere | der Rohwert, unverändert (Regel Q4) |
  *
  * **Warum nicht einfach `art`.** Der Endpunkt setzt für `COMMIT_REJECTED` einen
  * **deutschen Festtext** (`MessageStatusClassifier.ABGELEHNT_VOM_PARTNER`,
- * `docs/dashboard.md` §2). Stünde der hier unverändert, läse ihn auch ein
+ * `docs/dashboard.md` §2), seit 13.10.2026 auch für `EERP_FAILED` (E‑233).
+ * Stünde der hier unverändert, läse ihn auch ein
  * englischer Nutzer. Für jeden anderen Rohwert ist `art` dagegen kein
  * Anzeigetext, sondern ein Wert — und Werte werden nicht übersetzt.
  *

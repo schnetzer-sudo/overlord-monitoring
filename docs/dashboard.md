@@ -285,6 +285,7 @@ andere.
 |---|---|
 | `ERROR_DUPLICATE` | `DUPLICATE` — der Namensteil hinter dem Präfix |
 | `COMMIT_REJECTED` | **`Vom Partner abgelehnt`** — der feste Text aus §4.2 |
+| `EERP_FAILED` | **`Empfangsbestätigung fehlgeschlagen`** — der feste Text aus §4.2 *(seit 13.10.2026, E‑233)* |
 | alles andere | **der Rohwert, unverändert** (Regel Q4) |
 
 **Der Rohwert steht daneben und wird nicht ersetzt.** Ohne ihn wäre *„Vom Partner abgelehnt"* eine
@@ -296,7 +297,8 @@ Einordnung.
 > **„Unquittiert" ist nicht gebaut** (Entscheidung E‑d vom 24.08.2026) — kein Feld, kein
 > Platzhalter, keine leere Liste. Zwei Tests halten das fest, einer über die Feldnamen der Records
 > und einer über den Antwortrumpf. `COMMIT_REJECTED` gehört ohnehin nicht dorthin: **Das ist eine
-> Quittung, nur eine negative.**
+> Quittung, nur eine negative.** `EERP_FAILED` ebenso *(ergänzt 13.10.2026, E‑233)*: Er ist ein
+> Fehler, und derselbe Beleg stünde sonst in zwei Kategorien.
 
 ### Die Fenstergrenzen liegen auf Eimergrenzen
 
@@ -517,7 +519,10 @@ niemand getroffen hat.
 > Fehlerzeilen hinein. So zählen Kachel und Sichten in beiden Zuständen dieselbe Zahl.
 >
 > **Der Plan ist Zeile für Zeile der von M178** — `message_status` steht im Primärschlüssel hinter
-> Eimer und Prozess, ein `NOT (… LIKE … OR … = …)` ergibt keinen Bereich. Gemessen: 0,04 bis 3,69 ms
+> Eimer und Prozess, ein `NOT (… LIKE … OR … = …)` ergibt keinen Bereich. *(Seit 13.10.2026
+> `NOT (… LIKE … OR … IN (…))`, E‑233; derselbe Plan und dieselben Zähler in allen sechs Formen,
+> über 30 Tage und 12 Monate aber rund 1 bis 2,5 ms langsamer — gemessen in M191,
+> [`message-status.md`](message-status.md).)* Gemessen: 0,04 bis 3,69 ms
 > teurer als die heutige Form derselben Sitzung, höchstens das 1,062-Fache von M178 (M188, Tor 2 in
 > [`fehler-live.md`](fehler-live.md) §8). `DashboardPlanDbIT` hält den Plan fest,
 > `DashboardStatementsTest` beide Fassungen wörtlich.

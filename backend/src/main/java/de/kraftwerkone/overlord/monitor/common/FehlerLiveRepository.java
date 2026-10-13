@@ -31,12 +31,12 @@ import org.springframework.stereotype.Repository;
  * <h2>Warum das billig ist, obwohl das Fenster ein Jahr sein kann</h2>
  *
  * <p>Die Bedingung ist {@link MessageStatusClassifier#fehlerBedingung} — <b>gerufen, nicht
- * nachgebaut</b> —, und sie ergibt zwei Indexbereiche auf {@code MessageStatusIDX}. Der Aufwand
- * haengt damit an der Zahl der <b>Fehlerzeilen im Bestand</b> und nicht an der Breite des Fensters,
- * wie bei Block 6 des Dashboards (M108, M146). <b>Kein Indexhinweis</b>: Ohne {@code ORDER BY} und
- * ohne Deckelung gibt es keine Sortierung, fuer die der Zeitindex verlockend waere; ob der
- * Optimierer das so sieht, belegt der {@code EXPLAIN} (M188, {@code DashboardPlanDbIT}) und nicht
- * diese Zeile.
+ * nachgebaut</b> —, und sie ergibt Indexbereiche auf {@code MessageStatusIDX} (bis zum 13.10.2026
+ * zwei, seit {@code EERP_FAILED} drei; M191). Der Aufwand haengt damit an der Zahl der
+ * <b>Fehlerzeilen im Bestand</b> und nicht an der Breite des Fensters, wie bei Block 6 des
+ * Dashboards (M108, M146). <b>Kein Indexhinweis</b>: Ohne {@code ORDER BY} und ohne Deckelung gibt
+ * es keine Sortierung, fuer die der Zeitindex verlockend waere; ob der Optimierer das so sieht,
+ * belegt der {@code EXPLAIN} (M188, {@code DashboardPlanDbIT}) und nicht diese Zeile.
  *
  * <h2>Was im Statement steht, und was nicht</h2>
  *

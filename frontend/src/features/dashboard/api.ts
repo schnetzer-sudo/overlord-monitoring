@@ -102,7 +102,8 @@ export type Verlaufspunkt = {
  * festmachen ließe.
  *
  * ⚠️ **`art` ist ein deutscher Festtext, wenn der Rohwert `COMMIT_REJECTED`
- * ist** (`MessageStatusClassifier.ABGELEHNT_VOM_PARTNER`). Beschriftet wird
+ * ist** (`MessageStatusClassifier.ABGELEHNT_VOM_PARTNER`) — seit 13.10.2026
+ * ebenso bei `EERP_FAILED` (`…EMPFANGSBESTAETIGUNG_FEHLGESCHLAGEN`, E‑233). Beschriftet wird
  * deshalb über den **Rohwert** und nicht über dieses Feld — sonst stünde das
  * deutsche Wort auch im englischen Baum. Für alles andere ist `art` der
  * Namensteil hinter `ERROR_` beziehungsweise der unveränderte Rohwert, und

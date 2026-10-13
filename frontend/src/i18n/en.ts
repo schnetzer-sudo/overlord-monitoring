@@ -206,6 +206,7 @@ export const en: Texte = {
 
     fehlerarten: {
       COMMIT_REJECTED: "Rejected by partner",
+      EERP_FAILED: "Acknowledgement failed",
     },
 
     verteilung: {

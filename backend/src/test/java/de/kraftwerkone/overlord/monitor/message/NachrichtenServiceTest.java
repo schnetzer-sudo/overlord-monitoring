@@ -1,6 +1,7 @@
 package de.kraftwerkone.overlord.monitor.message;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.never;
@@ -157,6 +158,31 @@ class NachrichtenServiceTest {
     assertThat(zeilen.get(1).statusKind()).isEqualTo("UNGEKLAERT");
     assertThat(zeilen.get(1).status()).as("der Rohwert traegt die Plakette").isEqualTo("CHECKED");
     assertThat(zeilen.get(1).bedeutungNichtVerifiziert()).isTrue();
+  }
+
+  /**
+   * <b>EERP_FAILED traegt in der Liste die Plakette <i>Fehler</i></b> (E‑233 vom 09.10.2026) — bis
+   * dahin stand er als ungeklaert mit Fragezeichen da. Die Oberflaeche entscheidet nur ueber {@code
+   * statusKind} und {@code bedeutungNichtVerifiziert}; beide kommen von hier.
+   */
+  @Test
+  @DisplayName("EERP_FAILED wird in der Liste als FEHLER eingeordnet, nicht als ungeklaert")
+  void eerp_failed_ist_in_der_liste_ein_fehler() {
+    when(nachrichtenRepository.finde(any(), any()))
+        .thenReturn(
+            List.of(
+                zeile("m1", "EERP_FAILED", "Send Message to Partner"),
+                zeile("m2", "COMMIT_REJECTED", "Send Message to Partner")));
+
+    List<NachrichtResponse> zeilen = service().liste(MANDANT, filter(null)).items();
+
+    assertThat(zeilen)
+        .extracting(
+            NachrichtResponse::status,
+            NachrichtResponse::statusKind,
+            NachrichtResponse::bedeutungNichtVerifiziert)
+        .containsExactly(
+            tuple("EERP_FAILED", "FEHLER", false), tuple("COMMIT_REJECTED", "FEHLER", false));
   }
 
   /**

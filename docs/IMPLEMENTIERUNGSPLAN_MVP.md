@@ -302,6 +302,9 @@ fremder Mandant ist von einer erfundenen ID nicht zu unterscheiden.
 - Filter: Status, Prozess, Freitext auf Prozessname
 - Statusabbildung **ausschließlich über den `MessageStatusClassifier` aus Schritt 2**, nicht inline.
   Fehler heißt `ERROR_*` **oder** `COMMIT_REJECTED`. `SUSPENDED` heißt Warten.
+  *Ergänzt 13.10.2026 (E‑233):* Fehler heißt seither auch `EERP_FAILED`
+  ([`message-status.md`](message-status.md)); der Satz „Fehler heißt `ERROR_*` oder
+  `COMMIT_REJECTED`" bleibt als Stand von Schritt 4 stehen.
   Timeout-Überschreitung berechnet aus `MessageLastUpdate + MessageTimeout`, "läuft noch" definiert
   als "nicht in einem Endstatus" — **nicht** als `MessageStatus = 'RUNNING'`, den es in der
   Testkopie null Mal gibt

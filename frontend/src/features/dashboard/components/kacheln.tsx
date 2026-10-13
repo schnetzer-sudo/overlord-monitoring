@@ -247,7 +247,8 @@ function FehlerKachel({ fehler, fenster }: { fehler: Kachelwerte["fehler"]; fens
  *
  * **Beschriftet wird über den Rohwert und nicht über die gelieferte `art`.** Der
  * Endpunkt setzt für `COMMIT_REJECTED` einen deutschen Festtext
- * (`MessageStatusClassifier.ABGELEHNT_VOM_PARTNER`); stünde der hier
+ * (`MessageStatusClassifier.ABGELEHNT_VOM_PARTNER`), seit 13.10.2026 auch für
+ * `EERP_FAILED` (E‑233); stünde der hier
  * unverändert, läse ihn auch ein englischer Nutzer. Für jeden anderen Rohwert
  * ist `art` kein Anzeigetext, sondern ein **Wert** — der Namensteil hinter
  * `ERROR_` oder der Rohwert selbst — und der wird nicht übersetzt (Regel Q4).

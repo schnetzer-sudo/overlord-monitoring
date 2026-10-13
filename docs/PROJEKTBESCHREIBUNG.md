@@ -535,10 +535,27 @@ Vollständige Erhebung der Testkopie seit 01.01.2025 (Stand 27.07.2026):
 | `ERROR_TIMEOUT` | 52 | **Fehler** | rot |
 | `CKECKED` | 2 | ungeklärt (Tippfehler) | neutral |
 | `RUNNING` | 0 | läuft gerade | neutral |
+| `EERP_FAILED` | nicht in der Testkopie, Produktion | **Fehler** — Empfangsbestätigung fehlgeschlagen *(ergänzt 13.10.2026, E‑233)* | rot |
 
 **`COMMIT_REJECTED` zählt als Fehler, obwohl der Wert nicht mit `ERROR_` beginnt.** Der Partner
 hat die Übertragung abgelehnt, der Beleg ist nicht angekommen. Für den Nutzer ist das dieselbe
 Frage wie bei einem `ERROR_`-Status.
+
+**`EERP_FAILED` zählt als Fehler, obwohl der Wert nicht mit `ERROR_` beginnt** *(Entscheidung
+E‑233 vom 09.10.2026, eingetragen am 13.10.2026)*. Die Empfangsbestätigung (EERP) ist
+fehlgeschlagen, der Beleg gilt nicht als angekommen. Für den Nutzer ist das dieselbe Frage wie bei
+`COMMIT_REJECTED` — und damit wie bei einem `ERROR_`-Status. Die Fehlerart ist der feste Text
+„Empfangsbestätigung fehlgeschlagen" (§4.2, Punkt 1). Der Wert ist in der **Produktion** aufgefallen
+und steht deshalb ohne Anzahl in der Tabelle; in der Testkopie kommt er null Mal vor (M191,
+[`message-status.md`](message-status.md)).
+
+> **Belegvermerk** (Regel L10).
+> *Gemessen ist:* auf der Testkopie nichts über `EERP_FAILED`-Zeilen — es gibt dort keine (M191:
+> 0 von 3.341.519 Zeilen, Datenstand 08.07.2026).
+> *Behauptet wird:* dass der Wert existiert — aus der Beobachtung in der Produktion am 09.10.2026
+> — und dass er ein Fehler ist, durch die Entscheidung E‑233 vom selben Tag.
+> **Die Lücke:** Beides ruht auf Auskunft, nicht auf Messung. Die Testkopie kann es weder belegen
+> noch widerlegen.
 
 **`RUNNING` kommt in der Testkopie null Mal vor, in der Produktion aber sehr wohl.** Der Status ist
 flüchtig und existiert nur, solange eine Nachricht tatsächlich in Arbeit ist. Zwei Folgen: Die
@@ -579,6 +596,29 @@ MessageStatus LIKE 'ERROR\_%' ESCAPE '\' OR MessageStatus = 'COMMIT_REJECTED'
 erzwingt in Kombination mit der Oder-Bedingung einen vollen Durchlauf über 2,9 GB. Die
 `LIKE`-Fassung ergibt zwei Indexbereiche, die MariaDB zusammenführen kann.
 
+> ### ⚠️ Geändert *(Entscheidung E‑233 vom 09.10.2026, eingetragen am 13.10.2026)*
+>
+> **Der Text oben bleibt stehen.** Seit `EERP_FAILED` ein Fehler ist, lautet die Fehlerabfrage:
+>
+> ```sql
+> MessageStatus LIKE 'ERROR\_%' ESCAPE '\' OR MessageStatus IN ('COMMIT_REJECTED', 'EERP_FAILED')
+> ```
+>
+> Weiterhin **keine** `LEFT()`-Form und **kein** Muster wie `'%_FAILED'` — jeder Fehler ohne
+> Präfix steht einzeln da. **Aus zwei Indexbereichen sind drei geworden.** Gemessen in M191 gegen
+> die Testkopie, für `NEXANS` und `SUTTONS`, an der Fehlerlesung der Übersicht, an der Liste mit
+> Statusfilter `FEHLER` und an Block 6 des Dashboards: derselbe Plan wie vorher (`range` über
+> `MessageStatusIDX`, kein Volldurchlauf), ein Indexeinstieg mehr, auf der Kopie kein gelesener Satz
+> mehr, Laufzeit innerhalb der Streuung; ebenso die Liste mit Statusfilter `UNGEKLAERT`, die die
+> Bedingung verneint trägt. Auf den Rollup-Statements (Verteilung ohne Fehler, Verengung) ist der
+> Status kein Zugriffspfad; Plan und Zähler sind dort unverändert. **Ein kleiner Aufschlag ist
+> benannt:** Die Verteilung ohne Fehler über 30 Tage und 12 Monate ist neu um rund 1 bis 2,5 ms
+> langsamer (bis 3,2 %, bei 54 bis 103 ms). Zahlen und Belegvermerk in
+> [`message-status.md`](message-status.md), Abschnitt „`EERP_FAILED`".
+>
+> **„Zusammenführen" heißt hier nicht `index_merge`.** Der Zugriff ist ein einziger `range` über
+> einen Index mit mehreren Intervallen; so war es schon in der alten Fassung (M188, M191).
+
 **Die Einordnung entsteht an genau einer Stelle im Code** (`MessageStatusClassifier` in `common`)
 und wird von Liste, Dashboard, Rollup und später vom Chatbot verwendet. Sie wird nirgends
 nachgebaut, sonst driftet sie über die Ausbaustufen auseinander.
@@ -588,6 +628,13 @@ nachgebaut, sonst driftet sie über die Ausbaustufen auseinander.
 ein unbekannter Wert auftaucht. Nur deshalb ist es vertretbar, unbekannte Werte neutral zu
 behandeln.
 
+> **Ergänzt 13.10.2026 — der Test erreicht die Produktion nicht.** Er liest die **Testkopie**
+> (Datenstand 08.07.2026). `EERP_FAILED` ist in der Produktion aufgefallen, über die
+> Fragezeichen-Plakette in der Liste und nicht über den Test, der ihn grundsätzlich nicht sehen
+> konnte. Die Begründung oben setzt einen Wächter voraus, der die Produktion erreicht; den gibt es
+> nicht. Offener Punkt **218** in [`message-status.md`](message-status.md). Der Satz oben bleibt
+> stehen — er ist die Voraussetzung, an der der Punkt hängt.
+
 ### 4.2 Die drei Problemkategorien
 
 Diese drei sind bewusst getrennt und dürfen nie zu "Fehler" zusammengefasst werden:
@@ -595,6 +642,14 @@ Diese drei sind bewusst getrennt und dürfen nie zu "Fehler" zusammengefasst wer
 1. **Fehler** — `MessageStatus` beginnt mit `ERROR_` **oder** ist `COMMIT_REJECTED`.
    Die Fehlerart ist bei `ERROR_*` der Namensteil dahinter, bei `COMMIT_REJECTED` der feste Text
    "Vom Partner abgelehnt".
+
+   > ### ⚠️ Geändert *(Entscheidung E‑233 vom 09.10.2026, eingetragen am 13.10.2026)*
+   >
+   > **Der Text oben bleibt stehen.** Seither gilt: **Fehler** — `MessageStatus` beginnt mit
+   > `ERROR_` **oder** ist `COMMIT_REJECTED` **oder** `EERP_FAILED`. Die Fehlerart ist bei
+   > `EERP_FAILED` der feste Text „Empfangsbestätigung fehlgeschlagen", analog zu „Vom Partner
+   > abgelehnt". Beide Texte stehen in `MessageStatusClassifier`; die Oberfläche übersetzt sie über
+   > den Rohwert. Herkunft und Belegvermerk in §4.1.
 2. **Überfällig** — die Nachricht ist **nicht in einem Endstatus** und
    `MessageLastUpdate + MessageTimeout` liegt in der Vergangenheit. Nicht über
    `MessageStatus = 'RUNNING'` definieren, siehe 4.1.
@@ -712,6 +767,9 @@ Diese drei sind bewusst getrennt und dürfen nie zu "Fehler" zusammengefasst wer
    > **Für die Farbrolle heißt das:** Die Aufschiebung in
    > [`visuelles-konzept.md`](visuelles-konzept.md) §7a betrifft in 10b nur noch *Überfällig*.
    > „Unquittiert" braucht bis auf Weiteres keine.
+
+   **`EERP_FAILED` gehört wie `COMMIT_REJECTED` nicht hierher** *(ergänzt 13.10.2026, E‑233)* — er
+   ist ein Fehler (Punkt 1), und derselbe Beleg stünde sonst in zwei Kategorien.
 
 ### 4.3 Verkettung (Lineage)
 
@@ -1908,7 +1966,7 @@ trägt dieselbe Angabe („die drei getrennten Problemkategorien") und ist dort 
 | A3 | Kein SMTP-Relay verfügbar, Passwort-Reset erfolgt durch Admin | Selbstbedienung fehlt, später nachrüstbar |
 | ~~A4~~ | **Geklärt.** Rohdatenzugriff über Filestore-Links ist gewünscht und für alle Mandantennutzer freigegeben | — |
 | ~~A5~~ | **Geklärt.** Eigenständiger Betrieb möglich, GlassFish nicht vorgeschrieben (Instanz wäre Version 6/7) | — |
-| ~~A6~~ | **Widerlegt 27.07.2026.** `ERROR_*` ist **nicht** die vollständige Fehlerdefinition: `COMMIT_REJECTED` ist ein Fehler ohne Präfix. Siehe 4.1 | — |
+| ~~A6~~ | **Widerlegt 27.07.2026.** `ERROR_*` ist **nicht** die vollständige Fehlerdefinition: `COMMIT_REJECTED` ist ein Fehler ohne Präfix. Siehe 4.1. **Ergänzt 13.10.2026:** Mit `EERP_FAILED` ist ein **zweiter** Fehler ohne Präfix belegt — in der Produktion beobachtet am 09.10.2026, nicht in der Testkopie, als Fehler eingeordnet durch Entscheidung E‑233 vom selben Tag. Siehe 4.1 | — |
 | ~~A7~~ | **Bestätigt 27.07.2026.** Rund 1.500 Prozesse. *Korrigiert 12.08.2026:* Hier stand **1.490**; das war die `information_schema`-Schätzung. **Gezählt sind 1.503** — am 01.08.2026 ([`messungen-schritt4.md`](messungen-schritt4.md) M10) und erneut in M44. An der Annahme selbst ändert das nichts, sie ist weiterhin bestätigt | — |
 | ~~A8~~ | **Geklärt 28.07.2026, bewusst akzeptiert.** **140** Projekte stehen 134 Zeilen in `ProjectMandant` gegenüber — sechs Projekte ohne Mandanten, und sie tragen zusammen **null** Nachrichten ([`annahmen-korrekturen.md`](annahmen-korrekturen.md)). *Korrigiert 12.08.2026:* Hier standen **142**; das war die `information_schema`-Schätzung. Gezählt sind 140, am 28.07.2026 und erneut in M44 am 12.08.2026. Nachrichten in Projekten ohne Zuordnung sind im Werkzeug für niemanden sichtbar, auch nicht für ADMIN. Es wird **kein** Sonderpfad und kein Pseudo-Mandant gebaut. Wichtig, dass das dokumentiert bleibt: Wird eine solche Nachricht gesucht, findet sie niemand, und ohne diesen Eintrag wüsste auch niemand warum | — |
 | A9 | Die BAM-Suche lässt sich mit Zeitfenster und hartem Limit ausreichend begrenzen | `MessageBAM` hat keinen Zeitstempel, das Fenster greift erst nach dem Join. Rückfalloption: eigener BAM-Index in `overlord_monitor`, vom Rollup-Job mitgeführt |

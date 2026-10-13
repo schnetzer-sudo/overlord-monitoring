@@ -1,0 +1,372 @@
+-- Messung M191 -- Sitzung 2: die Lesung, alt gegen neu
+-- Auftrag:  "EERP_FAILED als Fehlerstatus einordnen", 13.10.2026
+-- Ergebnis: docs/message-status.md, Abschnitt "EERP_FAILED"
+--
+-- ERZEUGT von scripts/messung-eerp-failed/erzeuge.py. Die Statementtexte sind aus
+-- dem Code gerendert (gerendert.txt); die alte Fassung entsteht durch eine Ersetzung.
+--
+-- Ausschliesslich SELECT / SET / EXPLAIN. (Regel S1) Benutzer: der Lese-Benutzer.
+-- G1: keine Zugangsdaten, kein Hostname. Mandanten-IDs sind Codes. Die
+--     Rohausgabe traegt Prozesskennungen und bleibt deshalb ausserhalb des
+--     Repositorys (ergebnis/s*.txt); eingecheckt wird das gefilterte Protokoll.
+-- L9: SET max_statement_time = 60 fuer diese Sitzung.
+-- T1: Zeiten werden ausgegeben, nichts wird zugesichert.
+
+SELECT '=== 00 read_only (erste Abfrage der Sitzung) ===' AS marke;
+SELECT @@global.read_only AS read_only, NOW() AS serverzeit, VERSION() AS version,
+       @@max_statement_time AS grenze_vorher;
+
+SET max_statement_time = 60;
+SET profiling = 1;
+SET profiling_history_size = 100;
+
+SELECT '=== 00a Eichung: Wanduhr um ein leeres Statement ===' AS marke;
+SET @t0 = SYSDATE(6); SELECT 1; SET @e1 = TIMESTAMPDIFF(MICROSECOND, @t0, SYSDATE(6));
+SET @t0 = SYSDATE(6); SELECT 1; SET @e2 = TIMESTAMPDIFF(MICROSECOND, @t0, SYSDATE(6));
+SET @t0 = SYSDATE(6); SELECT 1; SET @e3 = TIMESTAMPDIFF(MICROSECOND, @t0, SYSDATE(6));
+SELECT 'M191-EICHUNG-WAND' AS fall, ROUND(@e1 / 1000, 3) AS ms1, ROUND(@e2 / 1000, 3) AS ms2,
+       ROUND(@e3 / 1000, 3) AS ms3;
+
+SELECT '=== 00b Eichung: Handler-Zaehler um ein leeres Statement ===' AS marke;
+SELECT SUM(IF(VARIABLE_NAME = 'HANDLER_READ_KEY', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_NEXT', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_PREV', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_FIRST', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_RND', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_RND_NEXT', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_ICP_ATTEMPTS', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_ICP_MATCH', VARIABLE_VALUE, 0))
+INTO @handler_read_key_0, @handler_read_next_0, @handler_read_prev_0, @handler_read_first_0, @handler_read_rnd_0, @handler_read_rnd_next_0, @handler_icp_attempts_0, @handler_icp_match_0
+FROM information_schema.SESSION_STATUS WHERE VARIABLE_NAME IN ('HANDLER_READ_KEY', 'HANDLER_READ_NEXT', 'HANDLER_READ_PREV', 'HANDLER_READ_FIRST', 'HANDLER_READ_RND', 'HANDLER_READ_RND_NEXT', 'HANDLER_ICP_ATTEMPTS', 'HANDLER_ICP_MATCH');
+SELECT 1;
+SELECT SUM(IF(VARIABLE_NAME = 'HANDLER_READ_KEY', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_NEXT', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_PREV', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_FIRST', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_RND', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_RND_NEXT', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_ICP_ATTEMPTS', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_ICP_MATCH', VARIABLE_VALUE, 0))
+INTO @handler_read_key_1, @handler_read_next_1, @handler_read_prev_1, @handler_read_first_1, @handler_read_rnd_1, @handler_read_rnd_next_1, @handler_icp_attempts_1, @handler_icp_match_1
+FROM information_schema.SESSION_STATUS WHERE VARIABLE_NAME IN ('HANDLER_READ_KEY', 'HANDLER_READ_NEXT', 'HANDLER_READ_PREV', 'HANDLER_READ_FIRST', 'HANDLER_READ_RND', 'HANDLER_READ_RND_NEXT', 'HANDLER_ICP_ATTEMPTS', 'HANDLER_ICP_MATCH');
+SELECT 'M191-EICHUNG-ZAEHLER' AS fall,
+       @handler_read_key_1 - @handler_read_key_0 AS read_key,
+       @handler_read_next_1 - @handler_read_next_0 AS read_next,
+       @handler_read_prev_1 - @handler_read_prev_0 AS read_prev,
+       @handler_read_first_1 - @handler_read_first_0 AS read_first,
+       @handler_read_rnd_1 - @handler_read_rnd_0 AS read_rnd,
+       @handler_read_rnd_next_1 - @handler_read_rnd_next_0 AS read_rnd_next,
+       @handler_icp_attempts_1 - @handler_icp_attempts_0 AS icp_attempts,
+       @handler_icp_match_1 - @handler_icp_match_0 AS icp_match;
+
+SELECT '=== M191-LESUNG-NEXANS-alt · Plan (Regel L15) ===' AS marke;
+EXPLAIN select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` = 'COMMIT_REJECTED') and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'NEXANS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+
+SELECT '=== M191-LESUNG-NEXANS-alt · Bereiche (Optimizer-Trace) ===' AS marke;
+SET optimizer_trace = 'enabled=on';
+EXPLAIN select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` = 'COMMIT_REJECTED') and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'NEXANS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SELECT 'M191-LESUNG-NEXANS-alt-BEREICHE' AS fall,
+       JSON_EXTRACT(TRACE, '$**.chosen_range_access_summary') AS gewaehlt,
+       JSON_EXTRACT(TRACE, '$**.range_scan_alternatives') AS erwogen
+FROM information_schema.OPTIMIZER_TRACE;
+SET optimizer_trace = 'enabled=off';
+
+SELECT '=== M191-LESUNG-NEXANS-alt · Handler-Zaehler, ein Lauf ===' AS marke;
+SELECT SUM(IF(VARIABLE_NAME = 'HANDLER_READ_KEY', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_NEXT', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_PREV', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_FIRST', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_RND', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_RND_NEXT', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_ICP_ATTEMPTS', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_ICP_MATCH', VARIABLE_VALUE, 0))
+INTO @handler_read_key_0, @handler_read_next_0, @handler_read_prev_0, @handler_read_first_0, @handler_read_rnd_0, @handler_read_rnd_next_0, @handler_icp_attempts_0, @handler_icp_match_0
+FROM information_schema.SESSION_STATUS WHERE VARIABLE_NAME IN ('HANDLER_READ_KEY', 'HANDLER_READ_NEXT', 'HANDLER_READ_PREV', 'HANDLER_READ_FIRST', 'HANDLER_READ_RND', 'HANDLER_READ_RND_NEXT', 'HANDLER_ICP_ATTEMPTS', 'HANDLER_ICP_MATCH');
+select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` = 'COMMIT_REJECTED') and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'NEXANS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SELECT SUM(IF(VARIABLE_NAME = 'HANDLER_READ_KEY', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_NEXT', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_PREV', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_FIRST', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_RND', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_RND_NEXT', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_ICP_ATTEMPTS', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_ICP_MATCH', VARIABLE_VALUE, 0))
+INTO @handler_read_key_1, @handler_read_next_1, @handler_read_prev_1, @handler_read_first_1, @handler_read_rnd_1, @handler_read_rnd_next_1, @handler_icp_attempts_1, @handler_icp_match_1
+FROM information_schema.SESSION_STATUS WHERE VARIABLE_NAME IN ('HANDLER_READ_KEY', 'HANDLER_READ_NEXT', 'HANDLER_READ_PREV', 'HANDLER_READ_FIRST', 'HANDLER_READ_RND', 'HANDLER_READ_RND_NEXT', 'HANDLER_ICP_ATTEMPTS', 'HANDLER_ICP_MATCH');
+SELECT 'M191-LESUNG-NEXANS-alt-ZAEHLER' AS fall,
+       @handler_read_key_1 - @handler_read_key_0 AS read_key,
+       @handler_read_next_1 - @handler_read_next_0 AS read_next,
+       @handler_read_prev_1 - @handler_read_prev_0 AS read_prev,
+       @handler_read_first_1 - @handler_read_first_0 AS read_first,
+       @handler_read_rnd_1 - @handler_read_rnd_0 AS read_rnd,
+       @handler_read_rnd_next_1 - @handler_read_rnd_next_0 AS read_rnd_next,
+       @handler_icp_attempts_1 - @handler_icp_attempts_0 AS icp_attempts,
+       @handler_icp_match_1 - @handler_icp_match_0 AS icp_match;
+SELECT '=== M191-LESUNG-NEXANS-alt · sechs Laeufe ===' AS marke;
+SELECT MAX(QUERY_ID) INTO @basis FROM information_schema.PROFILING;
+SET @t0 = SYSDATE(6);
+select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` = 'COMMIT_REJECTED') and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'NEXANS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SET @w1 = TIMESTAMPDIFF(MICROSECOND, @t0, SYSDATE(6));
+SET @t0 = SYSDATE(6);
+select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` = 'COMMIT_REJECTED') and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'NEXANS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SET @w2 = TIMESTAMPDIFF(MICROSECOND, @t0, SYSDATE(6));
+SET @t0 = SYSDATE(6);
+select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` = 'COMMIT_REJECTED') and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'NEXANS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SET @w3 = TIMESTAMPDIFF(MICROSECOND, @t0, SYSDATE(6));
+SET @t0 = SYSDATE(6);
+select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` = 'COMMIT_REJECTED') and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'NEXANS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SET @w4 = TIMESTAMPDIFF(MICROSECOND, @t0, SYSDATE(6));
+SET @t0 = SYSDATE(6);
+select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` = 'COMMIT_REJECTED') and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'NEXANS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SET @w5 = TIMESTAMPDIFF(MICROSECOND, @t0, SYSDATE(6));
+SET @t0 = SYSDATE(6);
+select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` = 'COMMIT_REJECTED') and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'NEXANS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SET @w6 = TIMESTAMPDIFF(MICROSECOND, @t0, SYSDATE(6));
+SELECT 'M191-LESUNG-NEXANS-alt' AS fall,
+       COUNT(*)                          AS laeufe,
+       MAX(CASE WHEN rn = 1 THEN ms END) AS profil_aufwaermlauf,
+       MIN(CASE WHEN rn > 1 THEN ms END) AS profil_beste_von_fuenf,
+       GROUP_CONCAT(CASE WHEN rn > 1 THEN ms END ORDER BY rn) AS profil_alle_fuenf,
+       ROUND(@w1 / 1000, 3)              AS wand_aufwaermlauf,
+       ROUND(LEAST(@w2, @w3, @w4, @w5, @w6) / 1000, 3) AS wand_beste_von_fuenf,
+       CONCAT_WS('/', ROUND(@w2 / 1000, 3), ROUND(@w3 / 1000, 3), ROUND(@w4 / 1000, 3), ROUND(@w5 / 1000, 3), ROUND(@w6 / 1000, 3))       AS wand_alle_fuenf
+FROM (SELECT ROW_NUMBER() OVER (ORDER BY QUERY_ID) AS rn,
+             ROUND(SUM(DURATION) * 1000, 3) AS ms
+      FROM information_schema.PROFILING
+      WHERE QUERY_ID > @basis + 1 AND QUERY_ID <= @basis + 19
+        AND (QUERY_ID - @basis) % 3 = 0
+      GROUP BY QUERY_ID) t;
+
+SELECT '=== M191-LESUNG-NEXANS-neu · Plan (Regel L15) ===' AS marke;
+EXPLAIN select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` in ('COMMIT_REJECTED', 'EERP_FAILED')) and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'NEXANS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+
+SELECT '=== M191-LESUNG-NEXANS-neu · Bereiche (Optimizer-Trace) ===' AS marke;
+SET optimizer_trace = 'enabled=on';
+EXPLAIN select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` in ('COMMIT_REJECTED', 'EERP_FAILED')) and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'NEXANS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SELECT 'M191-LESUNG-NEXANS-neu-BEREICHE' AS fall,
+       JSON_EXTRACT(TRACE, '$**.chosen_range_access_summary') AS gewaehlt,
+       JSON_EXTRACT(TRACE, '$**.range_scan_alternatives') AS erwogen
+FROM information_schema.OPTIMIZER_TRACE;
+SET optimizer_trace = 'enabled=off';
+
+SELECT '=== M191-LESUNG-NEXANS-neu · Handler-Zaehler, ein Lauf ===' AS marke;
+SELECT SUM(IF(VARIABLE_NAME = 'HANDLER_READ_KEY', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_NEXT', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_PREV', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_FIRST', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_RND', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_RND_NEXT', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_ICP_ATTEMPTS', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_ICP_MATCH', VARIABLE_VALUE, 0))
+INTO @handler_read_key_0, @handler_read_next_0, @handler_read_prev_0, @handler_read_first_0, @handler_read_rnd_0, @handler_read_rnd_next_0, @handler_icp_attempts_0, @handler_icp_match_0
+FROM information_schema.SESSION_STATUS WHERE VARIABLE_NAME IN ('HANDLER_READ_KEY', 'HANDLER_READ_NEXT', 'HANDLER_READ_PREV', 'HANDLER_READ_FIRST', 'HANDLER_READ_RND', 'HANDLER_READ_RND_NEXT', 'HANDLER_ICP_ATTEMPTS', 'HANDLER_ICP_MATCH');
+select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` in ('COMMIT_REJECTED', 'EERP_FAILED')) and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'NEXANS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SELECT SUM(IF(VARIABLE_NAME = 'HANDLER_READ_KEY', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_NEXT', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_PREV', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_FIRST', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_RND', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_RND_NEXT', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_ICP_ATTEMPTS', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_ICP_MATCH', VARIABLE_VALUE, 0))
+INTO @handler_read_key_1, @handler_read_next_1, @handler_read_prev_1, @handler_read_first_1, @handler_read_rnd_1, @handler_read_rnd_next_1, @handler_icp_attempts_1, @handler_icp_match_1
+FROM information_schema.SESSION_STATUS WHERE VARIABLE_NAME IN ('HANDLER_READ_KEY', 'HANDLER_READ_NEXT', 'HANDLER_READ_PREV', 'HANDLER_READ_FIRST', 'HANDLER_READ_RND', 'HANDLER_READ_RND_NEXT', 'HANDLER_ICP_ATTEMPTS', 'HANDLER_ICP_MATCH');
+SELECT 'M191-LESUNG-NEXANS-neu-ZAEHLER' AS fall,
+       @handler_read_key_1 - @handler_read_key_0 AS read_key,
+       @handler_read_next_1 - @handler_read_next_0 AS read_next,
+       @handler_read_prev_1 - @handler_read_prev_0 AS read_prev,
+       @handler_read_first_1 - @handler_read_first_0 AS read_first,
+       @handler_read_rnd_1 - @handler_read_rnd_0 AS read_rnd,
+       @handler_read_rnd_next_1 - @handler_read_rnd_next_0 AS read_rnd_next,
+       @handler_icp_attempts_1 - @handler_icp_attempts_0 AS icp_attempts,
+       @handler_icp_match_1 - @handler_icp_match_0 AS icp_match;
+SELECT '=== M191-LESUNG-NEXANS-neu · sechs Laeufe ===' AS marke;
+SELECT MAX(QUERY_ID) INTO @basis FROM information_schema.PROFILING;
+SET @t0 = SYSDATE(6);
+select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` in ('COMMIT_REJECTED', 'EERP_FAILED')) and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'NEXANS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SET @w1 = TIMESTAMPDIFF(MICROSECOND, @t0, SYSDATE(6));
+SET @t0 = SYSDATE(6);
+select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` in ('COMMIT_REJECTED', 'EERP_FAILED')) and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'NEXANS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SET @w2 = TIMESTAMPDIFF(MICROSECOND, @t0, SYSDATE(6));
+SET @t0 = SYSDATE(6);
+select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` in ('COMMIT_REJECTED', 'EERP_FAILED')) and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'NEXANS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SET @w3 = TIMESTAMPDIFF(MICROSECOND, @t0, SYSDATE(6));
+SET @t0 = SYSDATE(6);
+select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` in ('COMMIT_REJECTED', 'EERP_FAILED')) and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'NEXANS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SET @w4 = TIMESTAMPDIFF(MICROSECOND, @t0, SYSDATE(6));
+SET @t0 = SYSDATE(6);
+select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` in ('COMMIT_REJECTED', 'EERP_FAILED')) and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'NEXANS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SET @w5 = TIMESTAMPDIFF(MICROSECOND, @t0, SYSDATE(6));
+SET @t0 = SYSDATE(6);
+select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` in ('COMMIT_REJECTED', 'EERP_FAILED')) and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'NEXANS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SET @w6 = TIMESTAMPDIFF(MICROSECOND, @t0, SYSDATE(6));
+SELECT 'M191-LESUNG-NEXANS-neu' AS fall,
+       COUNT(*)                          AS laeufe,
+       MAX(CASE WHEN rn = 1 THEN ms END) AS profil_aufwaermlauf,
+       MIN(CASE WHEN rn > 1 THEN ms END) AS profil_beste_von_fuenf,
+       GROUP_CONCAT(CASE WHEN rn > 1 THEN ms END ORDER BY rn) AS profil_alle_fuenf,
+       ROUND(@w1 / 1000, 3)              AS wand_aufwaermlauf,
+       ROUND(LEAST(@w2, @w3, @w4, @w5, @w6) / 1000, 3) AS wand_beste_von_fuenf,
+       CONCAT_WS('/', ROUND(@w2 / 1000, 3), ROUND(@w3 / 1000, 3), ROUND(@w4 / 1000, 3), ROUND(@w5 / 1000, 3), ROUND(@w6 / 1000, 3))       AS wand_alle_fuenf
+FROM (SELECT ROW_NUMBER() OVER (ORDER BY QUERY_ID) AS rn,
+             ROUND(SUM(DURATION) * 1000, 3) AS ms
+      FROM information_schema.PROFILING
+      WHERE QUERY_ID > @basis + 1 AND QUERY_ID <= @basis + 19
+        AND (QUERY_ID - @basis) % 3 = 0
+      GROUP BY QUERY_ID) t;
+
+SELECT '=== M191-LESUNG-SUTTONS-neu · Plan (Regel L15) ===' AS marke;
+EXPLAIN select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` in ('COMMIT_REJECTED', 'EERP_FAILED')) and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'SUTTONS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+
+SELECT '=== M191-LESUNG-SUTTONS-neu · Bereiche (Optimizer-Trace) ===' AS marke;
+SET optimizer_trace = 'enabled=on';
+EXPLAIN select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` in ('COMMIT_REJECTED', 'EERP_FAILED')) and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'SUTTONS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SELECT 'M191-LESUNG-SUTTONS-neu-BEREICHE' AS fall,
+       JSON_EXTRACT(TRACE, '$**.chosen_range_access_summary') AS gewaehlt,
+       JSON_EXTRACT(TRACE, '$**.range_scan_alternatives') AS erwogen
+FROM information_schema.OPTIMIZER_TRACE;
+SET optimizer_trace = 'enabled=off';
+
+SELECT '=== M191-LESUNG-SUTTONS-neu · Handler-Zaehler, ein Lauf ===' AS marke;
+SELECT SUM(IF(VARIABLE_NAME = 'HANDLER_READ_KEY', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_NEXT', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_PREV', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_FIRST', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_RND', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_RND_NEXT', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_ICP_ATTEMPTS', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_ICP_MATCH', VARIABLE_VALUE, 0))
+INTO @handler_read_key_0, @handler_read_next_0, @handler_read_prev_0, @handler_read_first_0, @handler_read_rnd_0, @handler_read_rnd_next_0, @handler_icp_attempts_0, @handler_icp_match_0
+FROM information_schema.SESSION_STATUS WHERE VARIABLE_NAME IN ('HANDLER_READ_KEY', 'HANDLER_READ_NEXT', 'HANDLER_READ_PREV', 'HANDLER_READ_FIRST', 'HANDLER_READ_RND', 'HANDLER_READ_RND_NEXT', 'HANDLER_ICP_ATTEMPTS', 'HANDLER_ICP_MATCH');
+select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` in ('COMMIT_REJECTED', 'EERP_FAILED')) and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'SUTTONS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SELECT SUM(IF(VARIABLE_NAME = 'HANDLER_READ_KEY', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_NEXT', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_PREV', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_FIRST', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_RND', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_RND_NEXT', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_ICP_ATTEMPTS', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_ICP_MATCH', VARIABLE_VALUE, 0))
+INTO @handler_read_key_1, @handler_read_next_1, @handler_read_prev_1, @handler_read_first_1, @handler_read_rnd_1, @handler_read_rnd_next_1, @handler_icp_attempts_1, @handler_icp_match_1
+FROM information_schema.SESSION_STATUS WHERE VARIABLE_NAME IN ('HANDLER_READ_KEY', 'HANDLER_READ_NEXT', 'HANDLER_READ_PREV', 'HANDLER_READ_FIRST', 'HANDLER_READ_RND', 'HANDLER_READ_RND_NEXT', 'HANDLER_ICP_ATTEMPTS', 'HANDLER_ICP_MATCH');
+SELECT 'M191-LESUNG-SUTTONS-neu-ZAEHLER' AS fall,
+       @handler_read_key_1 - @handler_read_key_0 AS read_key,
+       @handler_read_next_1 - @handler_read_next_0 AS read_next,
+       @handler_read_prev_1 - @handler_read_prev_0 AS read_prev,
+       @handler_read_first_1 - @handler_read_first_0 AS read_first,
+       @handler_read_rnd_1 - @handler_read_rnd_0 AS read_rnd,
+       @handler_read_rnd_next_1 - @handler_read_rnd_next_0 AS read_rnd_next,
+       @handler_icp_attempts_1 - @handler_icp_attempts_0 AS icp_attempts,
+       @handler_icp_match_1 - @handler_icp_match_0 AS icp_match;
+SELECT '=== M191-LESUNG-SUTTONS-neu · sechs Laeufe ===' AS marke;
+SELECT MAX(QUERY_ID) INTO @basis FROM information_schema.PROFILING;
+SET @t0 = SYSDATE(6);
+select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` in ('COMMIT_REJECTED', 'EERP_FAILED')) and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'SUTTONS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SET @w1 = TIMESTAMPDIFF(MICROSECOND, @t0, SYSDATE(6));
+SET @t0 = SYSDATE(6);
+select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` in ('COMMIT_REJECTED', 'EERP_FAILED')) and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'SUTTONS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SET @w2 = TIMESTAMPDIFF(MICROSECOND, @t0, SYSDATE(6));
+SET @t0 = SYSDATE(6);
+select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` in ('COMMIT_REJECTED', 'EERP_FAILED')) and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'SUTTONS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SET @w3 = TIMESTAMPDIFF(MICROSECOND, @t0, SYSDATE(6));
+SET @t0 = SYSDATE(6);
+select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` in ('COMMIT_REJECTED', 'EERP_FAILED')) and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'SUTTONS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SET @w4 = TIMESTAMPDIFF(MICROSECOND, @t0, SYSDATE(6));
+SET @t0 = SYSDATE(6);
+select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` in ('COMMIT_REJECTED', 'EERP_FAILED')) and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'SUTTONS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SET @w5 = TIMESTAMPDIFF(MICROSECOND, @t0, SYSDATE(6));
+SET @t0 = SYSDATE(6);
+select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` in ('COMMIT_REJECTED', 'EERP_FAILED')) and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'SUTTONS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SET @w6 = TIMESTAMPDIFF(MICROSECOND, @t0, SYSDATE(6));
+SELECT 'M191-LESUNG-SUTTONS-neu' AS fall,
+       COUNT(*)                          AS laeufe,
+       MAX(CASE WHEN rn = 1 THEN ms END) AS profil_aufwaermlauf,
+       MIN(CASE WHEN rn > 1 THEN ms END) AS profil_beste_von_fuenf,
+       GROUP_CONCAT(CASE WHEN rn > 1 THEN ms END ORDER BY rn) AS profil_alle_fuenf,
+       ROUND(@w1 / 1000, 3)              AS wand_aufwaermlauf,
+       ROUND(LEAST(@w2, @w3, @w4, @w5, @w6) / 1000, 3) AS wand_beste_von_fuenf,
+       CONCAT_WS('/', ROUND(@w2 / 1000, 3), ROUND(@w3 / 1000, 3), ROUND(@w4 / 1000, 3), ROUND(@w5 / 1000, 3), ROUND(@w6 / 1000, 3))       AS wand_alle_fuenf
+FROM (SELECT ROW_NUMBER() OVER (ORDER BY QUERY_ID) AS rn,
+             ROUND(SUM(DURATION) * 1000, 3) AS ms
+      FROM information_schema.PROFILING
+      WHERE QUERY_ID > @basis + 1 AND QUERY_ID <= @basis + 19
+        AND (QUERY_ID - @basis) % 3 = 0
+      GROUP BY QUERY_ID) t;
+
+SELECT '=== M191-LESUNG-SUTTONS-alt · Plan (Regel L15) ===' AS marke;
+EXPLAIN select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` = 'COMMIT_REJECTED') and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'SUTTONS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+
+SELECT '=== M191-LESUNG-SUTTONS-alt · Bereiche (Optimizer-Trace) ===' AS marke;
+SET optimizer_trace = 'enabled=on';
+EXPLAIN select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` = 'COMMIT_REJECTED') and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'SUTTONS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SELECT 'M191-LESUNG-SUTTONS-alt-BEREICHE' AS fall,
+       JSON_EXTRACT(TRACE, '$**.chosen_range_access_summary') AS gewaehlt,
+       JSON_EXTRACT(TRACE, '$**.range_scan_alternatives') AS erwogen
+FROM information_schema.OPTIMIZER_TRACE;
+SET optimizer_trace = 'enabled=off';
+
+SELECT '=== M191-LESUNG-SUTTONS-alt · Handler-Zaehler, ein Lauf ===' AS marke;
+SELECT SUM(IF(VARIABLE_NAME = 'HANDLER_READ_KEY', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_NEXT', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_PREV', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_FIRST', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_RND', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_RND_NEXT', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_ICP_ATTEMPTS', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_ICP_MATCH', VARIABLE_VALUE, 0))
+INTO @handler_read_key_0, @handler_read_next_0, @handler_read_prev_0, @handler_read_first_0, @handler_read_rnd_0, @handler_read_rnd_next_0, @handler_icp_attempts_0, @handler_icp_match_0
+FROM information_schema.SESSION_STATUS WHERE VARIABLE_NAME IN ('HANDLER_READ_KEY', 'HANDLER_READ_NEXT', 'HANDLER_READ_PREV', 'HANDLER_READ_FIRST', 'HANDLER_READ_RND', 'HANDLER_READ_RND_NEXT', 'HANDLER_ICP_ATTEMPTS', 'HANDLER_ICP_MATCH');
+select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` = 'COMMIT_REJECTED') and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'SUTTONS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SELECT SUM(IF(VARIABLE_NAME = 'HANDLER_READ_KEY', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_NEXT', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_PREV', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_FIRST', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_RND', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_READ_RND_NEXT', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_ICP_ATTEMPTS', VARIABLE_VALUE, 0)),
+       SUM(IF(VARIABLE_NAME = 'HANDLER_ICP_MATCH', VARIABLE_VALUE, 0))
+INTO @handler_read_key_1, @handler_read_next_1, @handler_read_prev_1, @handler_read_first_1, @handler_read_rnd_1, @handler_read_rnd_next_1, @handler_icp_attempts_1, @handler_icp_match_1
+FROM information_schema.SESSION_STATUS WHERE VARIABLE_NAME IN ('HANDLER_READ_KEY', 'HANDLER_READ_NEXT', 'HANDLER_READ_PREV', 'HANDLER_READ_FIRST', 'HANDLER_READ_RND', 'HANDLER_READ_RND_NEXT', 'HANDLER_ICP_ATTEMPTS', 'HANDLER_ICP_MATCH');
+SELECT 'M191-LESUNG-SUTTONS-alt-ZAEHLER' AS fall,
+       @handler_read_key_1 - @handler_read_key_0 AS read_key,
+       @handler_read_next_1 - @handler_read_next_0 AS read_next,
+       @handler_read_prev_1 - @handler_read_prev_0 AS read_prev,
+       @handler_read_first_1 - @handler_read_first_0 AS read_first,
+       @handler_read_rnd_1 - @handler_read_rnd_0 AS read_rnd,
+       @handler_read_rnd_next_1 - @handler_read_rnd_next_0 AS read_rnd_next,
+       @handler_icp_attempts_1 - @handler_icp_attempts_0 AS icp_attempts,
+       @handler_icp_match_1 - @handler_icp_match_0 AS icp_match;
+SELECT '=== M191-LESUNG-SUTTONS-alt · sechs Laeufe ===' AS marke;
+SELECT MAX(QUERY_ID) INTO @basis FROM information_schema.PROFILING;
+SET @t0 = SYSDATE(6);
+select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` = 'COMMIT_REJECTED') and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'SUTTONS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SET @w1 = TIMESTAMPDIFF(MICROSECOND, @t0, SYSDATE(6));
+SET @t0 = SYSDATE(6);
+select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` = 'COMMIT_REJECTED') and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'SUTTONS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SET @w2 = TIMESTAMPDIFF(MICROSECOND, @t0, SYSDATE(6));
+SET @t0 = SYSDATE(6);
+select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` = 'COMMIT_REJECTED') and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'SUTTONS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SET @w3 = TIMESTAMPDIFF(MICROSECOND, @t0, SYSDATE(6));
+SET @t0 = SYSDATE(6);
+select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` = 'COMMIT_REJECTED') and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'SUTTONS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SET @w4 = TIMESTAMPDIFF(MICROSECOND, @t0, SYSDATE(6));
+SET @t0 = SYSDATE(6);
+select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` = 'COMMIT_REJECTED') and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'SUTTONS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SET @w5 = TIMESTAMPDIFF(MICROSECOND, @t0, SYSDATE(6));
+SET @t0 = SYSDATE(6);
+select date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`, count(*) from `GlassfishDB`.`Message` where ((`GlassfishDB`.`Message`.`MessageStatus` like 'ERROR\\_%' escape '\\' or `GlassfishDB`.`Message`.`MessageStatus` = 'COMMIT_REJECTED') and `GlassfishDB`.`Message`.`MessageLastUpdate` >= timestamp '2025-12-01 00:00:00.0' and `GlassfishDB`.`Message`.`MessageLastUpdate` < timestamp '2025-12-31 00:00:00.0' and exists (select 1 as `one` from `GlassfishDB`.`Process` as `fehler_process` join `GlassfishDB`.`ProjectMandant` on `GlassfishDB`.`ProjectMandant`.`ProjectID` = `fehler_process`.`ProjectID` where (`fehler_process`.`ProcessID` = `GlassfishDB`.`Message`.`ProcessID` and `GlassfishDB`.`ProjectMandant`.`MandantID` = 'SUTTONS'))) group by date_format(`GlassfishDB`.`Message`.`MessageLastUpdate`, '%Y-%m-%d %H:00:00'), `GlassfishDB`.`Message`.`ProcessID`, `GlassfishDB`.`Message`.`MessageStatus`;
+SET @w6 = TIMESTAMPDIFF(MICROSECOND, @t0, SYSDATE(6));
+SELECT 'M191-LESUNG-SUTTONS-alt' AS fall,
+       COUNT(*)                          AS laeufe,
+       MAX(CASE WHEN rn = 1 THEN ms END) AS profil_aufwaermlauf,
+       MIN(CASE WHEN rn > 1 THEN ms END) AS profil_beste_von_fuenf,
+       GROUP_CONCAT(CASE WHEN rn > 1 THEN ms END ORDER BY rn) AS profil_alle_fuenf,
+       ROUND(@w1 / 1000, 3)              AS wand_aufwaermlauf,
+       ROUND(LEAST(@w2, @w3, @w4, @w5, @w6) / 1000, 3) AS wand_beste_von_fuenf,
+       CONCAT_WS('/', ROUND(@w2 / 1000, 3), ROUND(@w3 / 1000, 3), ROUND(@w4 / 1000, 3), ROUND(@w5 / 1000, 3), ROUND(@w6 / 1000, 3))       AS wand_alle_fuenf
+FROM (SELECT ROW_NUMBER() OVER (ORDER BY QUERY_ID) AS rn,
+             ROUND(SUM(DURATION) * 1000, 3) AS ms
+      FROM information_schema.PROFILING
+      WHERE QUERY_ID > @basis + 1 AND QUERY_ID <= @basis + 19
+        AND (QUERY_ID - @basis) % 3 = 0
+      GROUP BY QUERY_ID) t;

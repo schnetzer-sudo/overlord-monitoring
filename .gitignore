@@ -158,3 +158,12 @@ scripts/sichtprobe-schmal/ergebnis/
 # der Sitzungen nicht: Die Lesung gibt ProcessID aus, und das sind
 # Partnernamen Dritter. (G1)
 scripts/messung-fehler-live/ergebnis/s[0-9].txt
+
+# ─── Messrunde M191 — EERP_FAILED als Fehler ─────────────────────────────────
+# Gleiche Trennung wie bei M188: erzeuge.py, filtere.py, gerendert.txt und die
+# .sql-Sitzungen werden eingecheckt, dazu die GEFILTERTEN Protokolle. Die
+# Rohausgaben von Lesung und Liste nicht: Sie geben ProcessID aus. (G1)
+# Ausgenommen ist s1.txt, die Statuszaehlung: Sie gibt nur Statuswerte und
+# Zahlen aus, keine Kennung, und ist selbst der Beleg.
+scripts/messung-eerp-failed/ergebnis/s[0-9].txt
+!scripts/messung-eerp-failed/ergebnis/s1.txt

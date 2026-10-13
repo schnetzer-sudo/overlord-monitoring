@@ -1246,6 +1246,11 @@ daneben.
 > Anzeigetext, sondern ein **Wert** — der Namensteil hinter `ERROR_` oder der Rohwert selbst —, und
 > Werte werden nicht übersetzt (Regel Q4). Der Test belegt beide Richtungen, einschließlich eines
 > Rumpfes, in dem `art` etwas anderes sagt.
+>
+> **Ergänzt 13.10.2026 (E‑233):** Seither liefert `fehlerart` auch für `EERP_FAILED` einen festen
+> deutschen Text, *„Empfangsbestätigung fehlgeschlagen"*. Die Sprachdateien tragen ihn
+> (`fehlerarten.EERP_FAILED`, englisch *„Acknowledgement failed"*), `dashboard.test.ts` belegt beide
+> Sprachen. „Für jeden anderen Rohwert" heißt seither: für jeden außer diesen beiden.
 
 ---
 

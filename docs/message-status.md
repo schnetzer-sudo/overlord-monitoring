@@ -27,9 +27,15 @@ einem geratenen Wert.
 | `ERROR_TIMEOUT` | 52 | **`FEHLER`** | rot |
 | `CKECKED` | 2 | `UNGEKLAERT` (Tippfehler) | neutral |
 | `RUNNING` | 0 | `LAEUFT` | neutral |
+| `EERP_FAILED` | nicht in der Testkopie, Produktion | **`FEHLER`** *(seit 13.10.2026, E‑233)* | rot |
 
 13 dokumentierte Werte. Die `MessageStatusKind`-Einordnung ist in `MessageStatusClassifier`
 hinterlegt.
+
+> **Ergänzt 13.10.2026: 14 dokumentierte Werte.** `EERP_FAILED` ist in der **Produktion**
+> aufgefallen (09.10.2026) und steht deshalb ohne Anzahl in der Tabelle — er ist kein Ergebnis
+> dieser Erhebung. In der Testkopie kommt er null Mal vor (M191). Alles Weitere im Abschnitt
+> „`EERP_FAILED` — der zweite Fehler ohne Präfix" weiter unten.
 
 ### `ZWISCHENSCHRITT` ist zwei Werte geworden (11.08.2026, Schritt 6, Teil 2a)
 
@@ -75,7 +81,9 @@ vor.** Der Statusfilter der Liste bietet beide Werte einzeln an
 ## Nachprüfung am 28.07.2026 (unbefristet, ganze Testkopie)
 
 `SELECT DISTINCT MessageStatus FROM Message` lieferte **12 Werte** — exakt die obige Menge **ohne
-`RUNNING`**. Kein neuer, undokumentierter Wert. Die Anzahlen liegen höher als oben (die Testkopie
+`RUNNING`**. *(Gemeint ist die Menge vom 28.07.2026. Seit dem 13.10.2026 steht in der Tabelle
+zusätzlich `EERP_FAILED`, der in der Testkopie ebenfalls fehlt; M191 hat dieselben 12 Werte
+erneut gezählt.)* Kein neuer, undokumentierter Wert. Die Anzahlen liegen höher als oben (die Testkopie
 reicht jetzt bis 08.07.2026), aber die *Menge* der Statuswerte ist unverändert.
 
 ---
@@ -93,6 +101,298 @@ reicht jetzt bis 08.07.2026), aber die *Menge* der Statuswerte ist unverändert.
 - **`CHECKED`, `CKECKED` und `COMMIT_SENT`** gelten als bekannt, aber fachlich **ungeklärt**. Sie
   werden neutral behandelt und mit Rohwert plus Hinweis „Bedeutung nicht verifiziert" angezeigt. Es
   wird nichts geraten.
+- **`EERP_FAILED` zählt als Fehler** *(ergänzt 13.10.2026, E‑233)*, obwohl der Wert **nicht** mit
+  `ERROR_` beginnt — der zweite Fall nach `COMMIT_REJECTED`. Die Empfangsbestätigung ist
+  fehlgeschlagen, der Beleg gilt nicht als angekommen. Abschnitt unten.
+
+---
+
+## `EERP_FAILED` — der zweite Fehler ohne Präfix (13.10.2026, E‑233)
+
+**Der Anlass.** In der Nachrichtenliste der **Produktion** stand `EERP_FAILED` am 09.10.2026 mit
+der Fragezeichen-Plakette da — als unbekannter Wert, `UNGEKLAERT`, „Bedeutung nicht verifiziert".
+So verlangt es die Regel für unbekannte Werte, und genau das war hier falsch: Die
+Empfangsbestätigung (EERP) ist fehlgeschlagen, der Beleg gilt **nicht** als angekommen. Für den
+Nutzer ist das dieselbe Frage wie bei `COMMIT_REJECTED`.
+
+**Die Entscheidung E‑233** (Auftraggeber, 09.10.2026): `EERP_FAILED` gehört zur Problemkategorie
+*Fehler*, wie `COMMIT_REJECTED`.
+
+| | |
+|---|---|
+| Einordnung | **`FEHLER`**, Anzeige rot — ein Eintrag in `MessageStatusClassifier.BEKANNT` |
+| Fehlerart | der feste Text **„Empfangsbestätigung fehlgeschlagen"** (`MessageStatusClassifier.EMPFANGSBESTAETIGUNG_FEHLGESCHLAGEN`), analog zu „Vom Partner abgelehnt"; die Oberfläche übersetzt über den Rohwert (`fehlerarten` in `de.ts` / `en.ts`: „Acknowledgement failed") |
+| Fehlerbedingung in SQL | `… OR MessageStatus IN ('COMMIT_REJECTED', 'EERP_FAILED')` — Abschnitt „Die Fehlerbedingung" unten |
+| `istEndstatus` | `true`, wie `COMMIT_REJECTED` — und wie die `ERROR_`-Werte: alle drei sind `FEHLER`. **Eine Abweichung zwischen `COMMIT_REJECTED` und `ERROR_` gibt es dort nicht**; es war nichts anzugleichen |
+| `istUeberfaellig` | **gibt es nicht mehr** (E‑71, 03.09.2026). Ihre erste Bedingung war „nicht in einem Endstatus"; `EERP_FAILED` ist Endstatus und kann damit nie unter die offenen Zeilen fallen. `MessageStatusClassifierTest` hält es über `istEndstatus` fest |
+| *Unquittiert* | gehört **nicht** dazu, wie `COMMIT_REJECTED` ([`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §4.2, Punkt 3) |
+
+**Was ausdrücklich nicht gebaut ist.** Kein Muster wie `'%_FAILED'` oder `*_REJECTED`, weder in SQL
+noch in Java: `COMMIT_FAILED` oder `EERP_REJECTED` blieben `UNGEKLAERT` (der Test hält beides fest).
+An `CHECKED`, `CKECKED` und `COMMIT_SENT` ändert sich nichts, und es gibt keine Kategorie
+*Unquittiert* und keine neue Farbrolle.
+
+**Wo die Einordnung ankommt, und wo nicht.** Gespeichert ist sie nirgends: Der Rollup führt den
+Rohwert (E‑g, [`rollup.md`](rollup.md) §2), alle Verbraucher — Liste, Detail, Kette, BAM-Suche,
+Dashboard samt Fehler live, Prozessbaum — rufen `einordnung` bzw. `fehlerBedingung` zur Lesezeit.
+**Ein Rollup-Volllauf ist deshalb nicht nötig**: Rollupzeilen mit `EERP_FAILED`, die es in der
+Produktion bereits gibt, zählen ab dem Einspielen als Fehler. **Eine Nachbildung gibt es genau
+einmal, und sie ist Absicht:** Die Oberfläche beschriftet die Fehlerart über den Rohwert aus der
+Sprachdatei (`beschriftung.ts`, C.4) — deshalb der neue Eintrag dort.
+
+### Die Statuszählung (M191, Sitzung 1)
+
+`SELECT MessageStatus, COUNT(*) FROM GlassfishDB.Message GROUP BY MessageStatus` über den ganzen
+Bestand, 13.10.2026, Datenstand `2026-07-08 17:21:10`, `read_only = 1`
+([`scripts/messung-eerp-failed/s1-statuszaehlung.sql`](../scripts/messung-eerp-failed/s1-statuszaehlung.sql),
+Ausgabe `ergebnis/s1.txt`):
+
+| Status | Anzahl | dokumentiert |
+|---|---:|---|
+| `FINISHED` | 2.030.985 | ja |
+| `MERGED` | 747.885 | ja |
+| `SPLITTED` | 400.845 | ja |
+| `EERP_RECEIVED` | 143.871 | ja |
+| `COMMIT_RECEIVED` | 12.654 | ja |
+| `ERROR_DUPLICATE` | 3.248 | ja |
+| `COMMIT_SENT` | 1.051 | ja |
+| `SUSPENDED` | 538 | ja |
+| `CHECKED` | 276 | ja |
+| `COMMIT_REJECTED` | 111 | ja |
+| `ERROR_TIMEOUT` | 53 | ja |
+| `CKECKED` | 2 | ja |
+| **Summe, 12 Gruppen** | **3.341.519** | |
+
+- **Kein undokumentierter Wert.** Es fehlen `RUNNING` (wie seit dem 28.07.2026 dokumentiert) und
+  `EERP_FAILED` (`= 'EERP_FAILED'`: **0**; `LIKE '%FAIL%' OR LIKE 'EERP%'` findet nur
+  `EERP_RECEIVED`).
+- **Die Gegenprobe bytegenau** (`GROUP BY HEX(MessageStatus)`) liefert dieselben 12 Gruppen und
+  dieselbe Summe. Die Spalte sortiert mit `utf8mb4_general_ci` (`PAD SPACE`), ein
+  `GROUP BY MessageStatus` legte Schreibweisen und angehängte Leerzeichen also zusammen — es gibt
+  keine.
+- **Zwei Zahlen weichen von M87‑6 (26.08.2026) ab, die Menge nicht:** `FINISHED` 2.030.985 statt
+  2.030.986, `ERROR_TIMEOUT` 53 statt 52, Summe gleich. Dieselbe 53 steht schon in M188
+  ([`fehler-live.md`](fehler-live.md) §7, Dev-Zeile, M188 Sitzung 0, 18.09.2026). Dem Unterschied ist hier nicht nachgegangen;
+  er berührt die Einordnung nicht.
+- **Kosten** (L9): ein Lauf über den ganzen Bestand ohne Zeitfenster, mit dem Messclient und nicht
+  im Anfragepfad; die Laufzeit ist nicht erhoben.
+
+### Die Fehlerabfrage, alt gegen neu (M191, Sitzungen 2 bis 5)
+
+**Gemessen ist, was der Code schickt** (L7): Alle Statements sind aus dem Code gerendert
+(Wegwerf-Test gegen die jOOQ-Attrappe, `STATIC_STATEMENT`, danach gelöscht —
+[`gerendert.txt`](../scripts/messung-eerp-failed/gerendert.txt), `gerendert-weitere.txt`,
+`gerendert-rest.txt`), die alte Fassung entsteht daraus
+durch genau eine Ersetzung. Für die Lesung ist sie gegen den in M188 gemessenen Text geprüft:
+**zeichengleich**, für beide Mandanten. Generator und Filter:
+[`scripts/messung-eerp-failed/`](../scripts/messung-eerp-failed/); eingecheckt sind die gefilterten
+Protokolle `ergebnis/s2.gefiltert.txt` bis `ergebnis/s5.gefiltert.txt`.
+
+- **Lesung** = `FehlerLiveRepository.ausDerQuelle` — die Fehlerkachel der Übersicht und der
+  Prozessbaum, live über `Message`. Fenster `30T` am Anker (`2025-12-01` bis `2025-12-31`), wie M188.
+- **Liste** = `NachrichtenRepository.finde` mit Statusfilter `FEHLER`, 30 Tage bis zum Anker der
+  Dev-Uhr, 50 Zeilen (`fetch next 51 rows only`).
+- **Sitzung 4, drei weitere Statements mit der Fehlerbedingung** — nicht vom Auftrag
+  verlangt, aber von L7 („jede neue Abfrage"): **Block 6** (`DashboardRepository.zuletztAufgefallen`,
+  48 Stunden, 10 Prozesse — liest `Message` wie die Lesung), die **Verteilung ohne Fehler**
+  (`verteilungOhneFehler`, 48 Stunden, Partnersicht — `NOT fehlerBedingung` auf dem Rollup) und die
+  **Vorabfrage der Fensterverengung** (`VerengungRepository.frageStufe`, Statusfilter `FEHLER`, die
+  weiteste Stufe des 30‑Tage-Fensters, Wasserstand `2026-08-27 15:00` — `MAX(fenster_bis)` der
+  Testkopie am 13.10.2026). Für die Verteilung ist die alte Fassung gegen den in M188 gemessenen
+  Text geprüft: zeichengleich.
+- **Sitzung 5, nachgereicht nach der Durchsicht** (13.10.2026, 11:25): der Statusfilter
+  **`UNGEKLAERT`** von Liste und Verengung — er trägt die Fehlerbedingung als
+  `NOT (… LIKE … OR … IN (…))` in `MessageStatusClassifier.bedingung(UNGEKLAERT, …)` und ändert sich
+  damit ebenso — und die **fünf übrigen Formen der Verteilung ohne Fehler** (48H Richtung, 30T und
+  12M je Partner und Richtung). Alle zehn alten Fassungen der Verteilung sind gegen die in M188
+  gemessenen Texte geprüft: zeichengleich. **Damit ist jede Stelle gemessen, die `fehlerBedingung`
+  ruft — je in einer Form:** Liste und Verengung mit genau einer Einordnung im Statusfilter, ohne
+  Prozessfilter, Suchbegriff und Folgeseite; je Mandant in einer Fensterbreite. **Nicht gemessen**
+  sind Mehrfachauswahlen im Statusfilter (etwa `FEHLER` + `UNGEKLAERT`, von
+  `bedingung(Collection, …)` mit `OR` verbunden) und der Statusfilter zusammen mit einem
+  Prozessfilter — so führt der Verweis aus Block 6 in die Liste (`status=FEHLER&prozess=…`,
+  `prozessFehlerZiel` in `verweise.ts`); dort steht mit `ProejctIDIDX` ein weiterer Zugriffspfad zur
+  Wahl.
+- **Mandanten:** `NEXANS` und `SUTTONS` (der kleine Mandant aller Vergleichsrunden; bei der Lesung
+  steigt sein Plan über `ProjectMandant` ein). Reihenfolge `NEXANS` alt → neu, `SUTTONS` neu → alt.
+- Je Fall `EXPLAIN`, der Bereichszugriff aus dem Optimizer-Trace, ein Lauf zwischen zwei Lesungen
+  der Handler-Zähler, dann ein Aufwärmlauf und fünf Läufe — Profil **und** Wanduhr (`SYSDATE(6)`).
+
+**Die Erwartung, vor dem Lauf festgehalten** (13.10.2026, 10:53): (1) `range` über
+`MessageStatusIDX` in beiden Fassungen, kein `ALL`, `key_len` 123 wie M188; (2) alt zwei Intervalle
+auf dem Index, neu drei; (3) `read_next` gleich, `read_key` neu um eins höher; (4) Laufzeit innerhalb
+der Streuung. Für Sitzung 4 (11:03): Block 6 wie die Lesung; bei Verteilung und Verengung ist der
+Status ein Filter auf gelesenen Zeilen und kein Zugriffspfad — Plan und alle Zähler alt gleich neu,
+Laufzeit innerhalb der Streuung. Für Sitzung 5 (11:25): dasselbe für `UNGEKLAERT` und die übrigen
+Verteilungen.
+
+**Lesung** — Eichung der Wanduhr um `SELECT 1`: 1,023 / 0,932 / 1,205 ms
+
+| Mandant | Fassung | Zugriff auf `Message` | `rows` | Bereiche auf `MessageStatusIDX` | `read_key` | `read_next` | Profil, beste von fünf | Wanduhr, beste von fünf | Wanduhr, alle fünf |
+|---|---|---|---:|---:|---:|---:|---:|---:|---|
+| NEXANS | alt | `range` über `MessageStatusIDX`, `key_len` 123 | 6.257 | 2 | 74 | 3.412 | 20,197 ms | 21,783 ms | 21,783 / 21,992 / 22,230 / 25,424 / 22,877 |
+| NEXANS | neu | `range` über `MessageStatusIDX`, `key_len` 123 | 6.258 | 3 | 75 | 3.412 | 20,163 ms | 21,064 ms | 21,940 / 21,131 / 21,064 / 21,968 / 21,297 |
+| SUTTONS | alt | `range` über `MessageStatusIDX`, `key_len` 123 | 6.257 | 2 | 17 | 3.413 | 20,895 ms | 22,378 ms | 23,146 / 24,329 / 22,950 / 23,727 / 22,378 |
+| SUTTONS | neu | `range` über `MessageStatusIDX`, `key_len` 123 | 6.258 | 3 | 18 | 3.413 | 20,693 ms | 22,206 ms | 24,045 / 23,261 / 23,747 / 25,822 / 22,206 |
+
+**Liste** — Eichung der Wanduhr um `SELECT 1`: 0,918 / 0,965 / 0,762 ms
+
+| Mandant | Fassung | Zugriff auf `Message` | `rows` | Bereiche auf `MessageStatusIDX` | `read_key` | `read_next` | Profil, beste von fünf | Wanduhr, beste von fünf | Wanduhr, alle fünf |
+|---|---|---|---:|---:|---:|---:|---:|---:|---|
+| NEXANS | alt | `range` über `MessageStatusIDX`, `key_len` 123 | 6.257 | 2 | 19 | 3.412 | 22,252 ms | 24,067 ms | 25,453 / 25,542 / 24,067 / 24,413 / 24,195 |
+| NEXANS | neu | `range` über `MessageStatusIDX`, `key_len` 123 | 6.258 | 3 | 20 | 3.412 | 22,601 ms | 24,084 ms | 25,417 / 25,156 / 26,545 / 24,270 / 24,084 |
+| SUTTONS | alt | `range` über `MessageStatusIDX`, `key_len` 123 | 6.257 | 2 | 90 | 3.472 | 22,186 ms | 23,397 ms | 24,762 / 23,780 / 25,364 / 25,605 / 23,397 |
+| SUTTONS | neu | `range` über `MessageStatusIDX`, `key_len` 123 | 6.258 | 3 | 91 | 3.472 | 22,258 ms | 23,539 ms | 23,539 / 23,826 / 23,575 / 24,051 / 23,588 |
+
+Die drei Bereiche der neuen Fassung, wie der Trace sie nennt:
+`(COMMIT_REJECTED) <= (MessageStatus) <= (COMMIT_REJECTED)`,
+`(EERP_FAILED) <= (MessageStatus) <= (EERP_FAILED)` und das Präfix — von `ERROR_` mit 24 × `\0`
+bis `ERROR_` mit 24 × U+FFFF (hier nicht als Zeichen wiedergegeben).
+
+**Alle vier Erwartungen treffen zu.** Der Plan ist in jedem Fall derselbe wie in der alten Fassung;
+die Schätzung `rows` steigt um eins. Der dritte Bereich kostet **genau einen** Indexeinstieg mehr
+(`read_key` +1 in allen vier Paaren) und liest auf der Testkopie **keinen** Indexsatz
+(`read_next` gleich), weil es dort keine `EERP_FAILED`-Zeile gibt. Die Laufzeiten liegen innerhalb
+der Streuung der fünf Läufe; die Unterschiede der besten Läufe sind kleiner als die Spannweite
+innerhalb jeder Reihe.
+
+**Sitzung 4** — Eichung der Wanduhr um `SELECT 1`: 0,804 / 0,807 / 0,852 ms
+
+| Statement | Mandant | Fassung | Zugriff | `rows` | Bereiche auf `MessageStatusIDX` | `read_key` | `read_next` | Profil, beste von fünf | Wanduhr, beste von fünf | Wanduhr, alle fünf |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---|
+| Block 6 | NEXANS | alt | `Message`: `range` über `MessageStatusIDX`, `key_len` 123 | 6.257 | 2 | 57 | 3.412 | 21,983 ms | 23,437 ms | 23,565 / 27,188 / 24,366 / 24,133 / 23,437 |
+| Block 6 | NEXANS | neu | `Message`: `range` über `MessageStatusIDX`, `key_len` 123 | 6.258 | 3 | 58 | 3.412 | 21,243 ms | 22,354 ms | 22,519 / 22,585 / 22,835 / 22,354 / 23,664 |
+| Block 6 | SUTTONS | alt | `Message`: `range` über `MessageStatusIDX`, `key_len` 123 | 6.257 | 2 | 7 | 3.413 | 21,371 ms | 22,412 ms | 23,704 / 22,412 / 23,700 / 23,549 / 22,557 |
+| Block 6 | SUTTONS | neu | `Message`: `range` über `MessageStatusIDX`, `key_len` 123 | 6.258 | 3 | 8 | 3.413 | 20,597 ms | 21,796 ms | 22,487 / 21,796 / 25,551 / 24,740 / 23,605 |
+| Verteilung ohne Fehler | NEXANS | alt | `message_rollup`: `range` über `PRIMARY`, `key_len` 5 | 929 | — | 2.514 | 929 | 10,032 ms | 11,120 ms | 11,120 / 11,354 / 12,321 / 13,151 / 13,510 |
+| Verteilung ohne Fehler | NEXANS | neu | `message_rollup`: `range` über `PRIMARY`, `key_len` 5 | 929 | — | 2.514 | 929 | 10,268 ms | 11,585 ms | 11,585 / 11,679 / 12,989 / 14,512 / 13,230 |
+| Verteilung ohne Fehler | SUTTONS | alt | `message_rollup`: `range` über `PRIMARY`, `key_len` 5 | 929 | — | 2.191 | 930 | 9,706 ms | 11,106 ms | 11,253 / 11,106 / 11,424 / 11,126 / 11,214 |
+| Verteilung ohne Fehler | SUTTONS | neu | `message_rollup`: `range` über `PRIMARY`, `key_len` 5 | 929 | — | 2.191 | 930 | 9,703 ms | 10,633 ms | 10,777 / 10,633 / 11,772 / 11,119 / 10,697 |
+| Verengung | NEXANS | alt | `message_rollup`: `ref` über `message_rollup_prozess_idx`, `key_len` 146 | 459 | — | 757 | 756 | 57,168 ms | 58,647 ms | 58,985 / 61,971 / 58,647 / 58,830 / 58,888 |
+| Verengung | NEXANS | neu | `message_rollup`: `ref` über `message_rollup_prozess_idx`, `key_len` 146 | 459 | — | 757 | 756 | 58,537 ms | 59,694 ms | 60,739 / 62,336 / 63,066 / 60,237 / 59,694 |
+| Verengung | SUTTONS | alt | `message_rollup`: `ref` über `message_rollup_prozess_idx`, `key_len` 146 | 459 | — | 24 | 23 | 20,015 ms | 21,032 ms | 21,186 / 21,032 / 21,589 / 21,306 / 22,227 |
+| Verengung | SUTTONS | neu | `message_rollup`: `ref` über `message_rollup_prozess_idx`, `key_len` 146 | 459 | — | 24 | 23 | 20,182 ms | 21,268 ms | 21,901 / 21,268 / 21,526 / 21,498 / 21,383 |
+
+**Block 6 verhält sich wie die Lesung**: derselbe Plan, zwei auf drei Bereiche, `read_key` +1,
+`read_next` gleich, Laufzeit innerhalb der Streuung. **Bei der Verteilung ohne Fehler und bei der
+Verengung ist der Status kein Zugriffspfad** — der Zugriff ist `range` über `PRIMARY` (`stunde`)
+bzw. `ref` über `message_rollup_prozess_idx`, ein Bereich auf dem Status kommt nicht vor; Plan **und
+alle Zähler** sind alt und neu identisch.
+
+**Sitzung 5** — Eichung der Wanduhr um `SELECT 1`: 0,754 / 0,705 / 0,730 ms
+
+| Statement | Mandant | Fassung | Zugriff | `rows` | Bereiche auf `MessageStatusIDX` | `read_key` | `read_next` | Profil, beste von fünf | Wanduhr, beste von fünf | Wanduhr, alle fünf |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|---|
+| Liste, `UNGEKLAERT` | NEXANS | alt | `Message`: `range` über `MessageStatusIDX`, `key_len` 123 | 7.481 | 9 | 56 | 1.329 | 10,995 ms | 12,780 ms | 12,780 / 13,353 / 13,921 / 13,550 / 14,601 |
+| Liste, `UNGEKLAERT` | NEXANS | neu | `Message`: `range` über `MessageStatusIDX`, `key_len` 123 | 7.482 | 10 | 57 | 1.329 | 11,528 ms | 12,828 ms | 14,661 / 14,612 / 16,668 / 14,771 / 12,828 |
+| Liste, `UNGEKLAERT` | SUTTONS | alt | `Message`: `range` über `MessageStatusIDX`, `key_len` 123 | 7.481 | 9 | 90 | 1.383 | 11,873 ms | 13,426 ms | 14,580 / 15,112 / 14,889 / 13,426 / 13,621 |
+| Liste, `UNGEKLAERT` | SUTTONS | neu | `Message`: `range` über `MessageStatusIDX`, `key_len` 123 | 7.482 | 10 | 91 | 1.383 | 11,844 ms | 13,349 ms | 14,292 / 13,990 / 13,349 / 14,788 / 13,959 |
+| Verengung, `UNGEKLAERT` | NEXANS | alt | `message_rollup`: `ref` über `message_rollup_prozess_idx`, `key_len` 146 | 459 | — | 756 | 755 | 57,487 ms | 60,288 ms | 61,404 / 60,621 / 61,296 / 60,847 / 60,288 |
+| Verengung, `UNGEKLAERT` | NEXANS | neu | `message_rollup`: `ref` über `message_rollup_prozess_idx`, `key_len` 146 | 459 | — | 756 | 755 | 57,539 ms | 59,013 ms | 59,013 / 59,800 / 59,661 / 61,299 / 63,208 |
+| Verengung, `UNGEKLAERT` | SUTTONS | alt | `message_rollup`: `ref` über `message_rollup_prozess_idx`, `key_len` 146 | 459 | — | 54 | 53 | 20,370 ms | 21,443 ms | 21,792 / 21,882 / 21,443 / 23,317 / 23,700 |
+| Verengung, `UNGEKLAERT` | SUTTONS | neu | `message_rollup`: `ref` über `message_rollup_prozess_idx`, `key_len` 146 | 459 | — | 54 | 53 | 20,576 ms | 21,898 ms | 22,071 / 21,898 / 22,225 / 22,945 / 22,234 |
+| Verteilung 48H, Richtung | NEXANS | alt | `message_rollup`: `range` über `PRIMARY`, `key_len` 5 | 929 | — | 2.514 | 929 | 9,840 ms | 10,684 ms | 10,684 / 10,881 / 11,361 / 12,582 / 12,662 |
+| Verteilung 48H, Richtung | NEXANS | neu | `message_rollup`: `range` über `PRIMARY`, `key_len` 5 | 929 | — | 2.514 | 929 | 10,077 ms | 11,051 ms | 11,348 / 11,922 / 11,599 / 11,821 / 11,051 |
+| Verteilung 48H, Richtung | SUTTONS | alt | `message_rollup`: `range` über `PRIMARY`, `key_len` 5 | 929 | — | 2.191 | 930 | 9,714 ms | 10,632 ms | 11,140 / 11,364 / 10,632 / 11,031 / 11,047 |
+| Verteilung 48H, Richtung | SUTTONS | neu | `message_rollup`: `range` über `PRIMARY`, `key_len` 5 | 929 | — | 2.191 | 930 | 9,780 ms | 10,649 ms | 10,649 / 10,930 / 10,799 / 13,833 / 11,597 |
+| Verteilung 30T, Partner | NEXANS | alt | `message_rollup_tag`: `range` über `PRIMARY`, `key_len` 3 | 14.214 | — | 17.658 | 6.843 | 69,902 ms | 72,890 ms | 72,890 / 73,530 / 74,170 / 73,620 / 76,312 |
+| Verteilung 30T, Partner | NEXANS | neu | `message_rollup_tag`: `range` über `PRIMARY`, `key_len` 3 | 14.214 | — | 17.658 | 6.843 | 71,844 ms | 74,199 ms | 75,105 / 74,257 / 74,199 / 74,922 / 75,430 |
+| Verteilung 30T, Partner | SUTTONS | alt | `message_rollup_tag`: `range` über `PRIMARY`, `key_len` 3 | 14.214 | — | 12.289 | 6.844 | 53,234 ms | 54,286 ms | 57,561 / 55,790 / 54,286 / 56,070 / 54,702 |
+| Verteilung 30T, Partner | SUTTONS | neu | `message_rollup_tag`: `range` über `PRIMARY`, `key_len` 3 | 14.214 | — | 12.289 | 6.844 | 54,251 ms | 55,138 ms | 55,703 / 55,419 / 55,471 / 55,881 / 55,138 |
+| Verteilung 30T, Richtung | NEXANS | alt | `message_rollup_tag`: `range` über `PRIMARY`, `key_len` 3 | 14.214 | — | 17.658 | 6.843 | 70,604 ms | 72,166 ms | 76,158 / 72,878 / 73,060 / 72,166 / 72,321 |
+| Verteilung 30T, Richtung | NEXANS | neu | `message_rollup_tag`: `range` über `PRIMARY`, `key_len` 3 | 14.214 | — | 17.658 | 6.843 | 71,833 ms | 73,386 ms | 75,566 / 74,482 / 75,136 / 74,443 / 73,386 |
+| Verteilung 30T, Richtung | SUTTONS | alt | `message_rollup_tag`: `range` über `PRIMARY`, `key_len` 3 | 14.214 | — | 12.289 | 6.844 | 52,758 ms | 54,022 ms | 54,994 / 54,022 / 54,292 / 54,804 / 54,827 |
+| Verteilung 30T, Richtung | SUTTONS | neu | `message_rollup_tag`: `range` über `PRIMARY`, `key_len` 3 | 14.214 | — | 12.289 | 6.844 | 53,826 ms | 55,348 ms | 56,459 / 55,789 / 55,348 / 55,953 / 57,639 |
+| Verteilung 12M, Partner | NEXANS | alt | `message_rollup_monat`: `range` über `PRIMARY`, `key_len` 3 | 6.033 | — | 24.393 | 9.649 | 97,156 ms | 100,583 ms | 100,583 / 103,845 / 101,443 / 100,941 / 102,042 |
+| Verteilung 12M, Partner | NEXANS | neu | `message_rollup_monat`: `range` über `PRIMARY`, `key_len` 3 | 6.033 | — | 24.393 | 9.649 | 98,830 ms | 101,909 ms | 106,786 / 102,214 / 105,139 / 102,898 / 101,909 |
+| Verteilung 12M, Partner | SUTTONS | alt | `message_rollup_monat`: `range` über `PRIMARY`, `key_len` 3 | 6.033 | — | 15.899 | 9.650 | 69,069 ms | 70,805 ms | 70,805 / 71,025 / 70,817 / 71,048 / 71,688 |
+| Verteilung 12M, Partner | SUTTONS | neu | `message_rollup_monat`: `range` über `PRIMARY`, `key_len` 3 | 6.033 | — | 15.899 | 9.650 | 70,228 ms | 71,970 ms | 73,425 / 72,267 / 71,970 / 72,377 / 73,863 |
+| Verteilung 12M, Richtung | NEXANS | alt | `message_rollup_monat`: `range` über `PRIMARY`, `key_len` 3 | 6.033 | — | 24.393 | 9.649 | 97,128 ms | 98,135 ms | 98,135 / 98,767 / 99,178 / 98,281 / 99,392 |
+| Verteilung 12M, Richtung | NEXANS | neu | `message_rollup_monat`: `range` über `PRIMARY`, `key_len` 3 | 6.033 | — | 24.393 | 9.649 | 98,804 ms | 100,324 ms | 102,210 / 104,321 / 100,899 / 100,324 / 101,265 |
+| Verteilung 12M, Richtung | SUTTONS | alt | `message_rollup_monat`: `range` über `PRIMARY`, `key_len` 3 | 6.033 | — | 15.899 | 9.650 | 68,663 ms | 70,331 ms | 70,331 / 70,821 / 70,581 / 70,741 / 71,510 |
+| Verteilung 12M, Richtung | SUTTONS | neu | `message_rollup_monat`: `range` über `PRIMARY`, `key_len` 3 | 6.033 | — | 15.899 | 9.650 | 70,729 ms | 72,413 ms | 72,990 / 72,413 / 73,013 / 73,085 / 72,652 |
+
+**Die Liste mit `UNGEKLAERT` steigt ebenfalls über `MessageStatusIDX` ein** — das war nicht erwartet.
+Der Optimierer macht aus `NOT (Fehler) AND NOT IN (bekannte Werte)` die **Lücken** zwischen den
+ausgeschlossenen Werten: alt neun Intervalle, neu zehn, weil `EERP_FAILED` eine Lücke mehr schneidet.
+`read_key` +1, `read_next` gleich (1.329 bzw. 1.383) — dieselbe Gestalt wie beim Filter `FEHLER`. Bei
+der Verengung mit `UNGEKLAERT` und allen Verteilungen ist der Status kein Zugriffspfad; Plan und alle
+Zähler sind alt und neu identisch.
+
+**Alt gegen neu, verdichtet** — aus den Wanduhr-Spalten aller vier Tabellen; „paarweise langsamer"
+zählt, in wie vielen der fünf gleich nummerierten Läufe die neue Fassung länger brauchte:
+
+| Statement | Mandant | Wanduhr beste alt → neu | Δ beste | Wanduhr Median alt → neu | Δ Median | Δ Median % | neu paarweise langsamer |
+|---|---|---|---:|---|---:|---:|---:|
+| Lesung | NEXANS | 21,783 → 21,064 | -0,719 | 22,230 → 21,297 | -0,933 | -4,2 % | 1 von 5 |
+| Lesung | SUTTONS | 22,378 → 22,206 | -0,172 | 23,146 → 23,747 | +0,601 | +2,6 % | 3 von 5 |
+| Liste, `FEHLER` | NEXANS | 24,067 → 24,084 | +0,017 | 24,413 → 25,156 | +0,743 | +3,0 % | 1 von 5 |
+| Liste, `FEHLER` | SUTTONS | 23,397 → 23,539 | +0,142 | 24,762 → 23,588 | -1,174 | -4,7 % | 2 von 5 |
+| Block 6 | NEXANS | 23,437 → 22,354 | -1,083 | 24,133 → 22,585 | -1,548 | -6,4 % | 1 von 5 |
+| Block 6 | SUTTONS | 22,412 → 21,796 | -0,616 | 23,549 → 23,605 | +0,056 | +0,2 % | 3 von 5 |
+| Verteilung 48H, Partner | NEXANS | 11,120 → 11,585 | +0,465 | 12,321 → 12,989 | +0,668 | +5,4 % | 4 von 5 |
+| Verteilung 48H, Partner | SUTTONS | 11,106 → 10,633 | -0,473 | 11,214 → 10,777 | -0,437 | -3,9 % | 1 von 5 |
+| Verengung, `FEHLER` | NEXANS | 58,647 → 59,694 | +1,047 | 58,888 → 60,739 | +1,851 | +3,1 % | 5 von 5 |
+| Verengung, `FEHLER` | SUTTONS | 21,032 → 21,268 | +0,236 | 21,306 → 21,498 | +0,192 | +0,9 % | 3 von 5 |
+| Liste, `UNGEKLAERT` | NEXANS | 12,780 → 12,828 | +0,048 | 13,550 → 14,661 | +1,111 | +8,2 % | 4 von 5 |
+| Liste, `UNGEKLAERT` | SUTTONS | 13,426 → 13,349 | -0,077 | 14,580 → 13,990 | -0,590 | -4,0 % | 2 von 5 |
+| Verengung, `UNGEKLAERT` | NEXANS | 60,288 → 59,013 | -1,275 | 60,847 → 59,800 | -1,047 | -1,7 % | 2 von 5 |
+| Verengung, `UNGEKLAERT` | SUTTONS | 21,443 → 21,898 | +0,455 | 21,882 → 22,225 | +0,343 | +1,6 % | 3 von 5 |
+| Verteilung 48H, Richtung | NEXANS | 10,684 → 11,051 | +0,367 | 11,361 → 11,599 | +0,238 | +2,1 % | 3 von 5 |
+| Verteilung 48H, Richtung | SUTTONS | 10,632 → 10,649 | +0,017 | 11,047 → 10,930 | -0,117 | -1,1 % | 3 von 5 |
+| Verteilung 30T, Partner | NEXANS | 72,890 → 74,199 | +1,309 | 73,620 → 74,922 | +1,302 | +1,8 % | 4 von 5 |
+| Verteilung 30T, Partner | SUTTONS | 54,286 → 55,138 | +0,852 | 55,790 → 55,471 | -0,319 | -0,6 % | 2 von 5 |
+| Verteilung 30T, Richtung | NEXANS | 72,166 → 73,386 | +1,220 | 72,878 → 74,482 | +1,604 | +2,2 % | 4 von 5 |
+| Verteilung 30T, Richtung | SUTTONS | 54,022 → 55,348 | +1,326 | 54,804 → 55,953 | +1,149 | +2,1 % | 5 von 5 |
+| Verteilung 12M, Partner | NEXANS | 100,583 → 101,909 | +1,326 | 101,443 → 102,898 | +1,455 | +1,4 % | 3 von 5 |
+| Verteilung 12M, Partner | SUTTONS | 70,805 → 71,970 | +1,165 | 71,025 → 72,377 | +1,352 | +1,9 % | 5 von 5 |
+| Verteilung 12M, Richtung | NEXANS | 98,135 → 100,324 | +2,189 | 98,767 → 101,265 | +2,498 | +2,5 % | 5 von 5 |
+| Verteilung 12M, Richtung | SUTTONS | 70,331 → 72,413 | +2,082 | 70,741 → 72,990 | +2,249 | +3,2 % | 5 von 5 |
+
+**Wo der Status ein Zugriffspfad ist** (Lesung, Liste, Block 6, Liste mit `UNGEKLAERT`), liegen die
+Unterschiede in beide Richtungen und innerhalb der Streuung.
+
+> ⚠️ **Eine Erwartung trifft nicht zu: die Verteilung ohne Fehler über 30 Tage und 12 Monate.** Dort
+> ist die neue Fassung im besten Lauf in **allen acht** Fällen (vier Formen, je zwei Mandanten)
+> langsamer (+0,852 bis +2,189 ms), im Median in sieben von acht (bis +2,498 ms, +3,2 %), bei
+> **identischen Zählern**. Die Reihenfolge erklärt es nicht: Im besten Lauf war die neue Fassung in
+> beiden Reihenfolgen langsamer — bei `NEXANS` als zweite (auf dem wärmeren Puffer), bei `SUTTONS`
+> als erste. Diese Statements lesen 6.843 bis 9.650
+> Rollupzeilen und prüfen auf jeder die Bedingung `NOT (… LIKE … OR … IN (…))`; ein `IN` mit zwei
+> Werten ist dort offenbar messbar teurer als ein `=`. **Der Aufschlag ist klein und benannt:** rund
+> 1 bis 2,5 ms bei Laufzeiten von rund 54 bis 103 ms, weit unter der Zeitgrenze des Lese-Pools (10 s) — und
+> er wächst mit der Zahl der Rollupzeilen im Fenster. Über 48 Stunden (929 Zeilen) ist nichts davon zu
+> sehen.
+>
+> **Bei der Verengung ist ein solcher Aufschlag nicht belegt.** Mit `FEHLER` war `NEXANS` neu im
+> Median um 1,851 ms langsamer (fünf von fünf Läufen); mit `UNGEKLAERT`, das dieselben 159.768
+> Indexeinträge prüft (`icp_attempts` in allen vier `NEXANS`-Läufen gleich) und dabei dasselbe
+> geänderte `IN (…)` gleich oft auswertet — dort verneint und um ein `NOT IN` über die übrigen
+> bekannten Werte ergänzt —, war die
+> neue Fassung um 1,047 ms **schneller**. Die Vorzeichen widersprechen sich; ein Aufschlag je
+> geprüftem Eintrag, wie ihn der Fall `FEHLER` allein nahelegen würde, ist damit nicht belegt.
+
+> ⚠️ **„Index-Merge" ist es nicht, und es war es nie.** Der Auftrag erwartete „weiterhin Index-Merge
+> über `MessageStatusIDX`". Der Zugriff ist ein **einziger `range`** über **einen** Index, mit
+> mehreren Intervallen — `type = range`, im Trace `range_scan`, nicht `index_merge`. So war es
+> schon in der alten Fassung (M191 alt, M188). Gemeint war in §4.1 der Projektbeschreibung
+> („zwei Indexbereiche, die MariaDB zusammenführen kann") genau das: Intervalle desselben Index.
+> Kein Volldurchlauf über `Message` oder eine Rollup-Tabelle, in keinem Fall (`type = ALL` zeigt nur
+> die Verengung, auf ihren eigenen abgeleiteten Zwischentabellen — alt wie neu).
+
+> **Belegvermerk** (Regel L10).
+> *Gemessen ist:* auf der Testkopie **nichts über `EERP_FAILED`-Zeilen** — es gibt dort keine
+> (0 von 3.341.519). Gemessen ist nur, dass die neue Bedingung in keinem der zwölf gemessenen Statements den
+> Plan ändert, dort, wo der Status ein Zugriffspfad ist, einen Indexeinstieg mehr kostet, und auf der
+> Verteilung ohne Fehler über 30 Tage und 12 Monate rund 1 bis 2,5 ms; bei der Verengung ist ein
+> Aufschlag nicht belegt.
+> *Behauptet wird:* dass der Wert **existiert** — aus der Beobachtung in der Produktion am
+> 09.10.2026 — und dass er ein **Fehler** ist, durch die Entscheidung E‑233 vom selben Tag.
+> **Die Lücke:** Beides ruht auf Auskunft und nicht auf Messung; die Testkopie kann es weder belegen
+> noch widerlegen. Ungemessen ist auch, **wie viele** `EERP_FAILED`-Zeilen die Produktion trägt —
+> und damit, was der dritte Bereich dort liest. Die Lesung skaliert mit der Zahl der Fehlerzeilen
+> im Bestand, und die ist für die Produktion ohnehin nicht erhoben (offener Punkt 212,
+> [`fehler-live.md`](fehler-live.md)).
 
 ---
 
@@ -111,6 +411,28 @@ die MariaDB zusammenführen kann.
 
 Das Feld wird als Parameter übergeben, damit dieser gemeinsame Baustein nicht auf generierte
 `jooq.glassfish`-Typen zugreifen muss — die Fehlerbedingung bleibt in `common`.
+
+> ### ⚠️ Geändert *(Entscheidung E‑233 vom 09.10.2026, eingetragen am 13.10.2026)*
+>
+> **Der Text oben bleibt stehen.** Seit `EERP_FAILED` ein Fehler ist, liefert
+> `fehlerBedingung`:
+>
+> ```sql
+> MessageStatus LIKE 'ERROR\_%' ESCAPE '\' OR MessageStatus IN ('COMMIT_REJECTED', 'EERP_FAILED')
+> ```
+>
+> Weiterhin **keine** `LEFT()`-Form und **kein** Muster wie `'%_FAILED'`: Jeder Fehler ohne Präfix
+> steht einzeln da. Die Liste hinter `IN` ist im Code nicht ein zweites Mal aufgezählt, sondern aus
+> derselben Zuordnung gelesen wie die Java-Einordnung (`FEHLER_OHNE_PRAEFIX` aus `BEKANNT`) —
+> SQL und Java können sich über die Menge nicht uneinig werden.
+>
+> **Aus zwei Indexbereichen sind drei geworden.** Gemessen in M191 (Abschnitt „`EERP_FAILED`"
+> oben): derselbe `range` über `MessageStatusIDX` wie vorher, ein Indexeinstieg mehr, auf der
+> Testkopie kein gelesener Satz mehr, Laufzeit innerhalb der Streuung.
+>
+> Die Lücke zwischen SQL und Java für Rohwerte mit angehängtem Leerzeichen (`'COMMIT_REJECTED '`
+> unter `PAD SPACE`, offener Punkt 213 in [`fehler-live.md`](fehler-live.md)) gilt für
+> `'EERP_FAILED '` genauso. In der Testkopie kommt keiner der beiden vor (M191, bytegenaue Zählung).
 
 ---
 
@@ -144,7 +466,7 @@ Das Feld wird als Parameter übergeben, damit dieser gemeinsame Baustein nicht a
 |---|---|---|
 | `ABGESCHLOSSEN` | ja | `FINISHED` |
 | `QUITTIERT` | ja | `EERP_RECEIVED`, `COMMIT_RECEIVED` |
-| `FEHLER` | ja | `ERROR_*`, `COMMIT_REJECTED` |
+| `FEHLER` | ja | `ERROR_*`, `COMMIT_REJECTED`, `EERP_FAILED` *(seit 13.10.2026, E‑233)* |
 | `AUFGETEILT` | **ja** | `SPLITTED` |
 | `ZUSAMMENGEFUEHRT` | **ja** | `MERGED` |
 | `UNGEKLAERT` | **ja** | `CHECKED`, `CKECKED`, `COMMIT_SENT`, alles Unbekannte |
@@ -378,3 +700,31 @@ Der Test wird rot, sobald im Altsystem ein neuer Status auftaucht **oder** ein d
 verschwindet. Nur deshalb ist es vertretbar, unbekannte Werte neutral zu behandeln, ohne dass ein
 neuer Status unbemerkt aus der Problemsicht verschwindet. Reagiert wird durch Pflege dieser Datei und
 des `MessageStatusClassifier`, nie durch Raten.
+
+> ### ⚠️ Ergänzt am 13.10.2026 — der Test sieht die Testkopie und nicht die Produktion
+>
+> **Der Text oben bleibt stehen.** Zwei Dinge haben sich geändert:
+>
+> 1. **Punkt 2 nimmt seither auch `EERP_FAILED` aus.** Die vorhandenen Werte sind genau die
+>    bekannte Menge ohne `RUNNING` **und ohne `EERP_FAILED`** — der Wert ist bekannt, kommt in der
+>    Testkopie aber null Mal vor (M191). Taucht er dort doch auf, wird der Test rot, und diese Datei
+>    ist nachzuziehen. Gelaufen am 13.10.2026 gegen die Testkopie: grün.
+> 2. **Der Satz „Der Test wird rot, sobald im Altsystem ein neuer Status auftaucht" gilt nur für die
+>    Testkopie.** `EERP_FAILED` ist in der Produktion aufgefallen, und der Test konnte ihn
+>    grundsätzlich nicht sehen: Er liest die Kopie mit Datenstand 08.07.2026. Gefunden hat ihn ein
+>    Mensch, der in der Liste eine Fragezeichen-Plakette gesehen hat. Die neutrale Behandlung
+>    unbekannter Werte, die dieser Abschnitt begründet, setzt aber einen Wächter voraus, der die
+>    **Produktion** erreicht. Offener Punkt **218** unten.
+
+---
+
+## Offene Punkte
+
+- **218 — Der Wächter gegen neue Statuswerte erreicht die Produktion nicht** *(eingetragen
+  13.10.2026, M191)*. [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §4.1, „Sicherung gegen neue
+  Statuswerte", begründet die neutrale Behandlung unbekannter Werte damit, dass ein Test rot wird,
+  sobald im Altsystem ein unbekannter Wert auftaucht. `DatenzugriffDbIT` liest aber nur die
+  Testkopie (Datenstand 08.07.2026); ein Wert, der erst in der Produktion entsteht, bleibt ihm
+  unsichtbar — `EERP_FAILED` ist genau so aufgefallen, über die Fragezeichen-Plakette in der Liste
+  und nicht über den Test. **Offen ist, wie ein Wächter die Produktion erreicht.** Eine Lösung ist
+  ausdrücklich nicht Teil dieser Runde; gebaut ist nichts.
