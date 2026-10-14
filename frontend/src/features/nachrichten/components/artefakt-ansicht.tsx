@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useId, useMemo } from "react";
+import { useCallback, useId, useMemo, type MouseEvent as Mausereignis } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -24,7 +24,8 @@ import { einsetzen } from "@/i18n";
 import { useSprache, useTexte } from "@/i18n/provider";
 import { formatiereZahl } from "@/lib/format";
 import { ProblemFehler } from "@/lib/http";
-import { nachrichtAnsicht } from "@/lib/routen";
+import { nachrichtAnsicht, zeigtNachricht } from "@/lib/routen";
+import { vorigeAdresse } from "@/lib/browserverlauf";
 
 import type { Artefaktanzeige } from "../api";
 import {
@@ -161,8 +162,29 @@ export function Dateiansicht({
   // über einen geteilten Verweis in einem neuen Tab öffnet, hat keinen Verlauf.
   // Die offene Darstellungsliste schließt sich zuerst; das ist die Ausnahme
   // „offenes Auswahlfeld" des Hooks und nichts, was hier stünde.
+  //
+  // **Seit dem 14.10.2026 eine Ebene zurück (E‑241).** Belegt der Verlauf, dass
+  // davor dieselbe Nachricht stand — neben der Liste oder auf ihrer eigenen
+  // Route, seit dem Folgeauftrag desselben Tages auch neben Belegsuche und
+  // Prozessansicht (E‑243) —, gehen Taste **und** Verweis den Schritt zurück:
+  // dieselbe Adresse, dieselbe Darstellung, wie das Zurück des Browsers. Der
+  // Satz über den geteilten Verweis gilt weiter: Ohne Beleg — neuer Tab, ein
+  // Browser ohne Navigation API, eine Ansicht ohne diese Nachricht als
+  // Herkunft — bleibt es bei `push` auf das `href`. F5 im selben Tab gehört nicht dazu: Der Verlauf übersteht das
+  // Neuladen, und mit ihm der Beleg. Gefragt wird im Ereignis, nicht beim
+  // Rendern: Der Verlauf ändert sich, ohne dass die Ansicht davon erfährt.
   const zurueckZiel = nachrichtAnsicht(messageId);
-  const zurueck = useCallback(() => router.push(zurueckZiel), [router, zurueckZiel]);
+  const zurueckBelegt = useCallback(
+    () => zeigtNachricht(vorigeAdresse(), messageId, window.location.origin),
+    [messageId],
+  );
+  const zurueck = useCallback(() => {
+    if (zurueckBelegt()) {
+      router.back();
+      return;
+    }
+    router.push(zurueckZiel);
+  }, [router, zurueckBelegt, zurueckZiel]);
   useEscapeSchliesst(true, zurueck);
 
   const inhalt = useArtefaktinhalt(messageId, artefaktId);
@@ -193,6 +215,22 @@ export function Dateiansicht({
           die Station, aus der die Datei stammt. */}
       <Link
         href={zurueckZiel}
+        // Derselbe Schritt zurück wie bei `Escape`, wenn der Verlauf ihn belegt
+        // (E‑241) — aber nur beim gewöhnlichen Klick. Mit Strg, ⌘, Umschalt oder
+        // Alt will jemand einen neuen Tab, ein Fenster oder den Download, und
+        // das bleibt beim `href`: Der Verweis bleibt verlinkbar. Ein hier
+        // abgebrochener Klick wird von `Link` nicht mehr geroutet.
+        //
+        // Nicht `onNavigate`, obwohl es genau diese Unterscheidung schon trifft:
+        // `Link` ruft es nur mit eingehängtem App-Router auf, und ohne ihn — im
+        // gerenderten Test — wäre die Verdrahtung nicht prüfbar.
+        onClick={(ereignis) => {
+          if (!istGewoehnlicherKlick(ereignis) || !zurueckBelegt()) {
+            return;
+          }
+          ereignis.preventDefault();
+          router.back();
+        }}
         className="text-muted-foreground hover:text-foreground focus-visible:ring-ring min-h-bedienelement text-beiwerk -mx-1 flex w-fit items-center gap-1.5 rounded-md px-1 focus-visible:ring-2 focus-visible:outline-none"
       >
         <ArrowLeft aria-hidden="true" className="size-3.5 shrink-0" />
@@ -247,6 +285,22 @@ export function Dateiansicht({
         )}
       </div>
     </section>
+  );
+}
+
+/**
+ * Ein Klick mit der Haupttaste und ohne Zusatztaste — der Klick, den `Link`
+ * selbst als Navigation in der Seite behandelt. Mit Strg, ⌘, Umschalt oder Alt
+ * überlässt `Link` ihn dem Browser (neuer Tab, Fenster, Download), und dabei
+ * bleibt es (E‑241).
+ */
+function istGewoehnlicherKlick(ereignis: Mausereignis<HTMLAnchorElement>): boolean {
+  return (
+    ereignis.button === 0 &&
+    !ereignis.metaKey &&
+    !ereignis.ctrlKey &&
+    !ereignis.shiftKey &&
+    !ereignis.altKey
   );
 }
 

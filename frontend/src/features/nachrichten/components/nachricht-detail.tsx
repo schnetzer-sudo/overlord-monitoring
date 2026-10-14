@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useId, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Check, Copy, ListTree, X } from "lucide-react";
 
@@ -15,7 +15,12 @@ import type { Texte } from "@/i18n";
 
 import type { KuratierteEigenschaft, Nachrichtendetail } from "../api";
 import { bedeutungNichtVerifiziert, METADATEN_POSITION, verteileEigenschaften } from "../detail";
-import { useArtefakte, useEigenschaften, useNachrichtendetail } from "../hooks";
+import {
+  useArtefakte,
+  useEigenschaften,
+  useFokusAufDateiziel,
+  useNachrichtendetail,
+} from "../hooks";
 import { absprungZiel, absprungfenster } from "../prozessansicht";
 import { zieleJeSchritt, zieleOhneZeile } from "../rohdaten";
 import { AnsichtUmschalter, type Umschaltziel } from "./ansicht-umschalter";
@@ -78,6 +83,12 @@ import { Zeitleiste } from "./zeitleiste";
  *   — relativer Modus der Liste, eigene Route, Prozessansicht —, gibt es keinen
  *   Link: Ein Link, der in einem anderen Fenster landet als versprochen, ist
  *   schlechter als kein Link (E‑104).
+ * @param fokusNachDatei ob nach der Rückkehr aus einer Datei ihr Ziel den Fokus
+ *   bekommt *(14.10.2026, E‑241, S4)*. Freiwillig wie der Umschalter: Die Angabe
+ *   setzt jeder Einhängepunkt, zu dem der Schritt zurück aus der Dateiansicht
+ *   führt — die Nachrichtenliste und die eigene Route, seit dem Folgeauftrag
+ *   desselben Tages auch Belegsuche und Prozessansicht (E‑243). Bis dahin
+ *   setzten die beiden sie nicht (`useFokusAufDateiziel`).
  */
 export function NachrichtDetail({
   messageId,
@@ -87,6 +98,7 @@ export function NachrichtDetail({
   umschaltenZu,
   aufUmschalten,
   prozessbaumFenster,
+  fokusNachDatei = false,
 }: {
   messageId: string;
   aufSchliessen: () => void;
@@ -95,6 +107,7 @@ export function NachrichtDetail({
   umschaltenZu?: Umschaltziel;
   aufUmschalten?: () => void;
   prozessbaumFenster?: { von: Date; bis: Date };
+  fokusNachDatei?: boolean;
 }) {
   const texte = useTexte();
   const anfrage = useNachrichtendetail(messageId);
@@ -111,8 +124,26 @@ export function NachrichtDetail({
   // Öffnen der Ansicht geholt.
   const artefakte = useArtefakte(messageId, true);
 
+  // Die Ziele stehen, sobald Detail, Artefaktliste **und Eigenschaften** da
+  // sind — erst dann gibt es einen Auslöser, der den Fokus behält. Treffen die
+  // Eigenschaften erst nach, wird die Zeile eines Ziels aufklappbar, und
+  // `AufklappZeile` baut sie mit einer anderen Wurzel neu; ein schon
+  // fokussiertes Ziel fiele dabei aus dem Dokument (Gegenprüfung vom
+  // 14.10.2026). Gelesen wird derselbe Schlüssel wie in `Ablauf`, unter
+  // derselben Bedingung — es geht keine zweite Anfrage hinaus.
+  const bereich = useRef<HTMLElement>(null);
+  const eigenschaften = useEigenschaften(messageId, (anfrage.data?.eigenschaftenAnzahl ?? 0) > 0);
+  const zeilenStehen =
+    anfrage.data !== undefined &&
+    artefakte.data !== undefined &&
+    (anfrage.data.eigenschaftenAnzahl === 0 ||
+      eigenschaften.data !== undefined ||
+      eigenschaften.isError);
+  useFokusAufDateiziel(bereich, messageId, fokusNachDatei && zeilenStehen);
+
   return (
     <section
+      ref={bereich}
       aria-labelledby={titelId}
       className="border-border bg-card flex flex-col gap-4 rounded-lg border p-3"
     >

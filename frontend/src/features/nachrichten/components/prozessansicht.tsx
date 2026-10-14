@@ -55,6 +55,7 @@ import {
 import type { Nachrichtenfilter, Sortierung } from "../filter";
 import {
   useEscapeSchliesst,
+  useFokusZurueck,
   useNachrichtenSeite,
   useProzessansichtzustand,
   useProzessbaum,
@@ -434,6 +435,11 @@ export function ProzessAnsicht() {
   }, []);
   const geschlossen = useZuletztGeschlossen(zustand.nachricht);
   useInSicht(zuletztGewaehlteZeile, geschlossen);
+  // Und der Fokus geht an dieselbe Zeile der Übertragungsliste zurück — wie
+  // neben der Nachrichtenliste (E‑241), seit dem Folgeauftrag vom 14.10.2026
+  // auch hier (E‑243). Ohne eigenen Bildlauf: Die Lage bestimmen der Rückweg
+  // oben und der gemerkte Stand des Baums darunter.
+  useFokusZurueck(zuletztGewaehlteZeile, geschlossen);
 
   /*
    * **Der Baum steht nach dem Schließen wieder da, wo er stand** (E‑115, B4).
@@ -739,6 +745,9 @@ export function ProzessAnsicht() {
                          * Überlegung, mit der die Belegsuche ihn seit dem
                          * 13.08.2026 weglässt (`docs/nachrichtendetail.md` §10.7).
                          */
+                        // Der Schritt zurück aus einer Datei führt seit E‑243
+                        // auch hierher; dann bekommt ihr Ziel den Fokus.
+                        fokusNachDatei
                       />
                     </div>
                   )}

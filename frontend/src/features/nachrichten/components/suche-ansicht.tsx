@@ -22,7 +22,13 @@ import { KLEBENDE_SPALTE_AB_XL } from "@/lib/klebende-spalte";
 import { cn } from "@/lib/utils";
 
 import type { BamSuchergebnis } from "../api";
-import { useBamSuche, useEscapeSchliesst, useSuchfelder, useSuchzustand } from "../hooks";
+import {
+  useBamSuche,
+  useEscapeSchliesst,
+  useFokusZurueck,
+  useSuchfelder,
+  useSuchzustand,
+} from "../hooks";
 import {
   HOECHSTENS_BEGRIFFE,
   PRAEFIX_FENSTER_TAGE,
@@ -119,6 +125,10 @@ export function SucheAnsicht() {
   }, []);
   const geschlossen = useZuletztGeschlossen(gewaehlt);
   useInSicht(zuletztGewaehlteZeile, geschlossen);
+  // Und der Fokus geht an dieselbe Trefferzeile zurück — wie neben der
+  // Nachrichtenliste (E‑241), seit dem Folgeauftrag vom 14.10.2026 auch hier
+  // (E‑243): über das X, über `Escape` und über das Zurück des Browsers.
+  useFokusZurueck(zuletztGewaehlteZeile, geschlossen);
 
   /*
    * Die vorige Trefferzahl — für die Nulltreffer-Zeile.
@@ -333,6 +343,9 @@ export function SucheAnsicht() {
                 ? undefined
                 : { von: new Date(ergebnis.von), bis: new Date(ergebnis.bis) }
             }
+            // Der Schritt zurück aus einer Datei führt seit E‑243 auch hierher;
+            // dann bekommt ihr Ziel den Fokus.
+            fokusNachDatei
           />
         </div>
       )}

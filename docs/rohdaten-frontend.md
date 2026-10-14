@@ -429,6 +429,56 @@ Converter.Payload.GUID · Nutzdaten · 12.480 Bytes · Kodierung ISO-8859-1
 im neuen Tab hat keinen Verlauf); bei offener Liste der Auswahl „Darstellung" schließt der erste
 Druck nur die Liste, erst der nächste führt zur Nachricht.
 
+> ### ⚠️ Korrektur vom 14.10.2026 — eine Ebene zurück, wenn der Verlauf es belegt (E‑241)
+>
+> **Der Absatz darüber bleibt wortgleich stehen und gilt weiter — für den Fall ohne Beleg.** Neu ist
+> der Fall mit Beleg: **Stand vor dem Öffnen der Datei dieselbe Nachricht, neben der Liste
+> (`/nachrichten?…nachricht=<id>…`) oder auf ihrer eigenen Route (`/nachrichten/<id>…`), gehen
+> `Escape` und der Verweis „← Zurück zur Nachricht" per `router.back()` dorthin zurück.** Die
+> Adresse ist danach zeichengleich die von vorher, und die Nachricht steht in der Darstellung von
+> vorher: im Panel, wenn sie dort stand, auf ihrer eigenen Route, wenn sie dort stand — aus dem Panel
+> heraus also nie mehr als Vollseite. Browser-Zurück tat das schon immer; jetzt führen alle drei Wege
+> in denselben Zustand. Anlass, Entscheidung und Abnahmekriterien:
+> [`nachrichtendetail.md`](nachrichtendetail.md) §10.17.
+>
+> **Der Beleg ist der vorige Eintrag im Verlauf**, gelesen über die Navigation API
+> (`lib/browserverlauf.ts`); entschieden wird in der reinen Funktion `zeigtNachricht`
+> (`lib/routen.ts`). Gemerkt wird nichts. **Ohne Beleg bleibt es beim `push` auf das `href`**, aus
+> dem Grund, den der Absatz darüber nennt: Ein geteilter Verweis im neuen Tab oder ein Browser ohne
+> die Schnittstelle (Firefox vor 147, Safari vor 26.2) belegen keinen Vorgänger, und ein
+> `router.back()` ohne Beleg könnte aus der Anwendung hinausführen. **F5 im selben Tab gehört nicht
+> dazu:** Der Verlauf übersteht das Neuladen, und mit ihm der Beleg — nach F5 in der Datei führt
+> `Escape` ebenso zur Nachricht zurück, gesehen am 14.10.2026 ([`nachrichtendetail.md`](nachrichtendetail.md)
+> §10.17). S5 erlaubt dort die Vollseite, verlangt sie aber nicht, und der Vorgänger liegt
+> nachweislich in der Anwendung. **Prozessansicht und Belegsuche
+> gelten nicht als Beleg** — ihr Rückweg bleibt, wie er war ([`nachrichtendetail.md`](nachrichtendetail.md)
+> Punkt 231).
+>
+> **Der Verweis bleibt ein echter Verweis.** Das `href` ist unverändert; Strg-Klick, mittlere Taste
+> und „Adresse kopieren" führen weiter auf die eigene Route der Nachricht. Nur der gewöhnliche Klick
+> geht mit Beleg zurück. Umgesetzt über `onClick` und nicht über `onNavigate` von `Link`, obwohl das
+> dieselbe Unterscheidung schon träfe: `Link` ruft es nur mit eingehängtem App-Router auf, und ohne
+> ihn wäre die Verdrahtung im gerenderten Test nicht prüfbar.
+>
+> **Nach der Rückkehr liegt der Fokus auf dem Ziel, das die Datei geöffnet hat** — gefunden am
+> folgenden Eintrag im Verlauf ([`nachrichtendetail.md`](nachrichtendetail.md) §10.17).
+>
+> **Tests:** `tests/artefakt-ansicht.test.tsx`, Abschnitt „Eine Ebene zurück" (sieben Fälle), die
+> Entscheidung in `tests/routen.test.ts`. Der Fall „navigiert auf das href des Verweises" bleibt
+> und ist seither der Fall ohne Beleg.
+
+> ### ⚠️ Nachtrag vom selben Tag — auch aus Belegsuche und Prozessansicht (E‑243)
+>
+> Der Satz im Kasten darüber, **„Prozessansicht und Belegsuche gelten nicht als Beleg"**, gilt nicht
+> mehr. Seit dem Folgeauftrag vom 14.10.2026 zählt auch ein voriger Eintrag `/suche?…nachricht=<id>…`
+> oder `/prozesse?…nachricht=<id>…` als Beleg — beide tragen dasselbe Panel über denselben Parameter.
+> Weiterhin verlangt ist **dieselbe Nachricht**; eine Ansicht ohne das Panel oder eine andere
+> Nachricht bleibt ohne Beleg. Der Schritt zurück führt damit in die Ansicht, aus der die Datei
+> geöffnet wurde, samt deren Parametern; der Fokus kehrt auf das Ziel zurück. Gesamtbild:
+> [`nachrichtendetail.md`](nachrichtendetail.md) §10.18, für die beiden Ansichten
+> [`bam-suche.md`](bam-suche.md) §11.4 und [`process-view.md`](process-view.md) §18. Tests: zwei Fälle
+> mehr im Abschnitt „Eine Ebene zurück" (neun statt sieben).
+
 **Die Herkunftszeile** — Rohname, Art, Größe und Kodierung in fester Laufweite — ist die Auskunft,
 die das Altsystem nie gibt. Dort steht über dem Feld nichts, und wer eine leere Anzeige sieht, weiß
 nicht, ob er ein Protokoll ohne freigegebenen Abschnitt vor sich hat, eine Binärdatei oder einen
@@ -752,6 +802,12 @@ Drei Gründe, und der erste ist der tragende:
    und der Zurück-Knopf des Browsers führt Station für Station dorthin, wo jemand tatsächlich
    herkam — samt Filtern.
 
+> **Ergänzt am 14.10.2026 (E‑241).** Punkt 3 gilt seither auch für `Escape` und den Verweis
+> selbst: Belegt der Verlauf, dass davor dieselbe Nachricht stand, gehen beide denselben Schritt
+> zurück wie der Zurück-Knopf (§4, Korrektur vom selben Tag). **Eine Abfragezeichenkette am Verweis
+> braucht es dafür weiterhin nicht** — die Adresse von vorher steht im Verlauf. Die drei Gründe
+> bleiben unverändert; „samt Filtern" galt bis dahin nur für den Zurück-Knopf des Browsers.
+
 ### Kein neues Farbtoken, kein neues Dichtemaß
 
 Die Ziele und die Ansicht kommen mit den vorhandenen Rollen aus: `--muted` für die Fläche des
@@ -769,8 +825,8 @@ zusammen **46** Fällen.
 | Datei | Art | Deckt ab |
 |---|---|---|
 | `tests/rohdaten.test.ts` | reine Funktionen, 29 Fälle *(31 seit 17.09.2026, Kasten unten)* | Beschriftungsregel in allen **vier** Lagen, **einschließlich Familie allein auf Schritt `0`** · **`Message.Payload.GUID` erzeugt kein Ziel** (M73) · die **Ziele** je Schritt: Art vor dem Namen — an jedem Ziel, auch an den beiden der Eingangszeile —, Ausschnitt in Name und `title`, Einteilung ohne Umsortieren, leere Einteilung ohne Liste, der Rest ohne Zeile in beide Richtungen · Gleichlauf über alle fünf Zustände samt der Ausnahme „binäres Protokoll" · Reihenfolge und Nachschlagen der Artefakte · die drei Vermerke · zweiter Versuch nur bei nicht erreichbarer Ablage · die vier Zustandstexte paarweise verschieden, in **beiden** Sprachen · kein Pfad trägt GUID oder Ablagenkennung |
-| `tests/artefakt-ansicht.test.tsx` | gerenderter Baum, 9 Fälle *(15 seit 17.09.2026, 21 seit 21.09.2026, Kästen unten)* | **der Textknoten** · die **vier Zustände**, je einer · der Ausschnitt-Vermerk in beide Richtungen · der Download-Knopf · die Beschriftung ohne Nachladen |
-| `tests/zeitleiste-ziele.test.tsx` | gerenderter Baum, 8 Fälle | die **drei Lagen je Schritt** (beide Arten, nur eine, keine) · die **Eingangszeile** über der Leiste mit **zwei** Zielen, mit Familie statt Nummer und ohne dass die Leiste eine vierte Zeile bekäme · die **Belastungsprobe aus M55**: fünfzehn Artefakte, fünfzehn eigene Ziele, ohne doppelten React-Schlüssel · das **Anspringen** der Eigenschaftengruppe · die Gegenprobe: ohne Eigenschaften kein Schalter am Schrittnamen |
+| `tests/artefakt-ansicht.test.tsx` | gerenderter Baum, 9 Fälle *(15 seit 17.09.2026, 21 seit 21.09.2026, 28 seit 14.10.2026 — eine Ebene zurück, §4 —, 30 nach dem Folgeauftrag desselben Tages; Kästen unten)* | **der Textknoten** · die **vier Zustände**, je einer · der Ausschnitt-Vermerk in beide Richtungen · der Download-Knopf · die Beschriftung ohne Nachladen |
+| `tests/zeitleiste-ziele.test.tsx` | gerenderter Baum, 8 Fälle *(11 seit 14.10.2026 — der Fokus nach der Rückkehr aus einer Datei, [`nachrichtendetail.md`](nachrichtendetail.md) §10.17)* | die **drei Lagen je Schritt** (beide Arten, nur eine, keine) · die **Eingangszeile** über der Leiste mit **zwei** Zielen, mit Familie statt Nummer und ohne dass die Leiste eine vierte Zeile bekäme · die **Belastungsprobe aus M55**: fünfzehn Artefakte, fünfzehn eigene Ziele, ohne doppelten React-Schlüssel · das **Anspringen** der Eigenschaftengruppe · die Gegenprobe: ohne Eigenschaften kein Schalter am Schrittnamen |
 
 > **Korrigiert 19.08.2026 zu den beiden Zeilen darüber.** Die erste führte die Beschriftungsregel
 > „**in allen fünf Lagen**" und die Ziele mit „**keine Art beim Eingang**"; die dritte den
@@ -953,7 +1009,8 @@ Einschränkung — §5 legt die *Beschriftung* fest, und die steht im zugänglic
 | `features/nachrichten/components/artefakt-ansicht.tsx` | Die Ansicht: Herkunftszeile, Download, Vermerke, Inhalt oder benannter Zustand. *Seit 17.09.2026:* der Kodierungswert aus der Antwort statt der festen Zeichenkette, der fünfte Zustand mit dem Zeichen `Server` |
 | `features/nachrichten/darstellung/` *(17.09.2026)* | **Die Darstellungswahl** — dreizehn Dateien mit reinen Funktionen: je Darstellung Erkennung und Formatierung, die Anwendung, die Vermerke, der Parser für `darstellung`. `artefakt-ansicht.tsx` ist dafür in Hülle (`ArtefaktAnsicht`, an der Adresse) und Ansicht (`Dateiansicht`, mit Darstellung und Setter als Props) geteilt; `hooks.ts` trägt `useDarstellung`. Vollständig in [`dateiansicht-darstellung.md`](dateiansicht-darstellung.md) |
 | `app/(app)/nachrichten/[messageId]/dateien/[artefaktId]/page.tsx` | Die Route. Server-Komponente, prüft nichts |
-| `lib/routen.ts` | `artefaktAnsicht` und `nachrichtAnsicht` — die beiden neuen Ziele |
+| `lib/routen.ts` | `artefaktAnsicht` und `nachrichtAnsicht` — die beiden neuen Ziele. *Seit 14.10.2026:* `zeigtNachricht` (der Beleg für den Schritt zurück) und `dateiansichtAus` (die Datei, aus der man kam), beide rein (E‑241) |
+| `lib/browserverlauf.ts` *(14.10.2026)* | Der Verlauf, gelesen über die Navigation API: Adresse des vorigen und des folgenden Eintrags gleicher Herkunft, sonst `null`. Gemerkt wird nichts (E‑241) |
 | `i18n/de.ts`, `i18n/en.ts` | Der Abschnitt `nachrichten.detail.dateien`. **Keine Zeichenkette steht in einer Komponente.** *Seit 17.09.2026:* `kodierung` ist ein Objekt mit `ASCII`, `UTF_8`, `ISO_8859_1` statt einer Zeichenkette mit Platzhalter; dazu `ebcdicTitel` und `ebcdicText` |
 
 **Entfallen ist** `features/nachrichten/components/dateien-block.tsx` samt

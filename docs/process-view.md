@@ -2011,6 +2011,44 @@ waagerecht zu scrollen.
 > nachzumessen.~~ **Nachgemessen** (§21, M124): Bei 1.440 px trägt der Kasten die Tabelle ohne
 > Querlauf, bei 1.280 px nicht.
 
+> ### ⚠️ Korrektur vom 14.10.2026 — der Rückweg aus einer Datei führt hierher zurück (E‑243)
+>
+> **Bis dahin endete er woanders**, und dieser Abschnitt sagte dazu nichts: Ein Dateiziel im Panel
+> führt auf die eigene Route der Datei (`/nachrichten/<id>/dateien/<artefaktId>`, Entscheidung 7 der
+> Rohdaten). Deren `Escape` und Verweis „Zurück zur Nachricht" führten per `push` auf die Nachricht
+> als Vollseite, und deren Schließen auf die **Nachrichtenliste** ohne Parameter. Die Prozessansicht
+> war damit verlassen: Zeitraum, Gliederung und Prozess waren weg, und der Navigationspunkt sprang
+> auf „Nachrichten" ([`nachrichtendetail.md`](nachrichtendetail.md) Punkt 231).
+>
+> **Seit dem Folgeauftrag vom 14.10.2026 gilt die Prozessansicht als Beleg für den Schritt zurück**
+> wie die Nachrichtenliste (E‑241): Steht vor der Datei im Verlauf `/prozesse?…nachricht=<id>…` mit
+> **derselben** Nachricht, gehen `Escape` und Verweis per `router.back()` zurück — wie das Zurück des
+> Browsers. Die Adresse ist danach zeichengleich die von vorher, samt Zeitraum, Gliederung und
+> Prozess; die Nachricht steht wieder im Panel und nicht als Vollseite. Der Beleg kommt aus der
+> Navigation API und wird nicht gemerkt (`lib/browserverlauf.ts`, `zeigtNachricht` in
+> `lib/routen.ts`). **Ohne Beleg** — Direktaufruf, Browser ohne Navigation API, eine andere
+> Nachricht im Panel — bleibt es beim bisherigen `push`.
+>
+> **Der Fokus kehrt zurück wie in der Nachrichtenliste:** nach der Datei auf ihr Ziel im Panel
+> (`fokusNachDatei`), nach dem Schließen des Panels auf die Zeile der Übertragungsliste, die es
+> geöffnet hat (`useFokusZurueck`, ohne eigenen Bildlauf — die Lage bestimmen der Rückweg aus
+> E‑114 und der gemerkte Stand des Baums, §47). Geöffnet wird das Panel ausschließlich aus Zeilen der
+> Übertragungsliste; der Baum setzt nur `prozess` (§27). Das Schließen entfernt nur `nachricht` aus
+> der Adresse (`hooks.ts`, `setzeNachricht(null)`).
+>
+> Tests: `tests/ruecksprung.test.tsx` („Der Rückweg in der Prozessansicht", zwei Fälle),
+> `tests/artefakt-ansicht.test.tsx` und `tests/routen.test.ts`. Gesamtbild:
+> [`nachrichtendetail.md`](nachrichtendetail.md) §10.18.
+>
+> **Offener Punkt 233 — Baumzustand und Seitenstapel nach dem Umweg über eine Datei.** Die Datei ist
+> eine eigene Route; beim Wechsel hängt Next.js die Prozessansicht aus, wie die Nachrichtenliste
+> (Punkt 230). Nach dem Schritt zurück steht dieselbe Adresse da, aber neu eingehängt: Der
+> Aufklappzustand des Baums, das Eingrenzungsfeld (E‑48), der gemerkte Stand des Baums (§47) und der
+> Seitenstapel der Übertragungsliste samt Σ beginnen von vorn. **Nicht gebaut** — Entscheidung des
+> Auftraggebers vom 14.10.2026; zu halten wäre der Stand nur mit einem Umbau der Routenstruktur oder
+> außerhalb der URL, für den Seitenstapel auch in der URL ([`nachrichtenliste.md`](nachrichtenliste.md)
+> Punkt 230, die frühere Entscheidung gegen den Cursor in der URL steht dort).
+
 ---
 
 ---

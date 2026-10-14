@@ -117,6 +117,9 @@ export function ansichtNebenListe(messageId: string, abfragezeichenkette: string
   return `${ROUTEN.nachrichten}?${paare.join("&")}`;
 }
 
+/** Das Pfadstück zwischen Nachricht und Datei — an einer Stelle, weil es auch zerlegt wird. */
+const DATEIEN_SEGMENT = "dateien";
+
 /**
  * Die Ansicht **eines Artefakts** — `/nachrichten/<id>/dateien/<artefaktId>`.
  *
@@ -149,16 +152,137 @@ export function ansichtNebenListe(messageId: string, abfragezeichenkette: string
  * 3. Der Weg zurück bleibt gangbar: Die Ansicht führt an die **Nachricht** auf
  *    ihrer eigenen Route, und der Zurück-Knopf des Browsers führt Station für
  *    Station dorthin, wo jemand tatsächlich herkam — samt Filtern.
+ *
+ *    **Seit dem 14.10.2026 (E‑241) gehen `Escape` und der Verweis denselben
+ *    Schritt zurück**, sobald der Verlauf belegt, dass davor dieselbe Nachricht
+ *    stand ({@link zeigtNachricht}). Eine Abfragezeichenkette braucht es dafür
+ *    weiterhin nicht: Die Adresse von vorher steht im Verlauf.
  */
 export function artefaktAnsicht(messageId: string, artefaktId: string): string {
-  return `${ROUTEN.nachrichten}/${encodeURIComponent(messageId)}/dateien/${encodeURIComponent(
+  return `${ROUTEN.nachrichten}/${encodeURIComponent(messageId)}/${DATEIEN_SEGMENT}/${encodeURIComponent(
     artefaktId,
   )}`;
 }
 
-/** Die Nachricht auf ihrer eigenen Route — der Weg zurück aus der Dateiansicht. */
+/**
+ * Die Nachricht auf ihrer eigenen Route — der Weg zurück aus der Dateiansicht,
+ * **wenn der Verlauf keinen Schritt zurück belegt** (E‑241): bei einem geteilten
+ * Verweis im neuen Tab, in einem Browser ohne Navigation API, aus einer anderen
+ * Ansicht. Nach F5 im selben Tab ist der Schritt weiterhin belegt — der Verlauf
+ * übersteht das Neuladen.
+ */
 export function nachrichtAnsicht(messageId: string): string {
   return `${ROUTEN.nachrichten}/${encodeURIComponent(messageId)}`;
+}
+
+/**
+ * Eine Adresse aus dem Verlauf, zerlegt — oder `null`, wenn es keine ist oder
+ * sie eine **andere Herkunft** hat. Nur was nachweislich in dieser Anwendung
+ * liegt, taugt als Ziel eines Schritts zurück.
+ */
+function eigeneAdresse(adresse: string | null, herkunft: string): URL | null {
+  if (adresse === null) {
+    return null;
+  }
+  try {
+    const url = new URL(adresse);
+    return url.origin === herkunft ? url : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Die Stücke des Pfads, **erst getrennt, dann dekodiert** — so bleibt ein
+ * kodierter Schrägstrich in einer Kennung Teil der Kennung. `null` bei kaputter
+ * Kodierung: `decodeURIComponent` wirft dort, und eine fremde Adresse darf das
+ * Schließen nicht zum Absturz bringen.
+ */
+function pfadstuecke(url: URL): string[] | null {
+  try {
+    return url.pathname
+      .split("/")
+      .slice(1)
+      .map((stueck) => decodeURIComponent(stueck));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Die Ansichten, die eine Nachricht als **Panel neben sich** tragen — alle über
+ * denselben Parameter {@link NACHRICHT_PARAMETER}: die Nachrichtenliste (E‑241),
+ * die Belegsuche und die Prozessansicht (E‑243).
+ */
+const PANEL_ANSICHTEN: readonly string[] = [ROUTEN.nachrichten, ROUTEN.suche, ROUTEN.prozesse];
+
+/**
+ * **Zeigt diese Adresse dieselbe Nachricht?** — der Beleg für den Schritt
+ * zurück aus der Dateiansicht (E‑241).
+ *
+ * Ja heißt: **dieselbe Herkunft** und entweder eine Ansicht mit dieser Nachricht
+ * im Panel (`/nachrichten?…nachricht=<id>…`, seit E‑243 ebenso `/suche?…` und
+ * `/prozesse?…`) oder ihre eigene Route (`/nachrichten/<id>…`). Welche Filter
+ * daneben stehen, spielt keine Rolle — der Schritt zurück stellt genau die
+ * Adresse wieder her, die dort stand: in der Suche samt `begriff` und `feld`, in
+ * der Prozessansicht samt Zeitraum, Gliederung und Prozess.
+ *
+ * **Nein heißt nicht „falsch", sondern „nicht belegt"**, und dann bleibt es beim
+ * Verweis auf die eigene Route. **Bis zum Folgeauftrag vom 14.10.2026 galten
+ * Prozessansicht und Belegsuche nicht als Beleg** (Auftrag: „Kein Umbau anderer
+ * Ansichten"); seit E‑243 gelten sie. Weiterhin verlangt ist **dieselbe
+ * Nachricht** — eine Lockerung auf „irgendeine Seite der Anwendung" ist
+ * ausgeschlossen.
+ *
+ * @param adresse die volle Adresse eines Verlaufseintrags, `null` ohne Beleg
+ * @param herkunft die eigene Herkunft, `window.location.origin`
+ */
+export function zeigtNachricht(
+  adresse: string | null,
+  messageId: string,
+  herkunft: string,
+): boolean {
+  const url = eigeneAdresse(adresse, herkunft);
+  if (url === null) {
+    return false;
+  }
+  if (PANEL_ANSICHTEN.includes(url.pathname)) {
+    return url.searchParams.get(NACHRICHT_PARAMETER) === messageId;
+  }
+  const stuecke = pfadstuecke(url);
+  return (
+    stuecke !== null &&
+    stuecke.length === 2 &&
+    `/${stuecke[0]}` === ROUTEN.nachrichten &&
+    stuecke[1] === messageId
+  );
+}
+
+/**
+ * **Die Datei dieser Nachricht, die eine Adresse aus dem Verlauf zeigt** — als
+ * Pfad, **zeichengleich** mit dem `href` ihres Verweises ({@link artefaktAnsicht}),
+ * denn daran findet die Nachricht nach der Rückkehr ihren Auslöser (E‑241, S4).
+ * Die gewählte Darstellung (`?darstellung=…`) zählt nicht mit.
+ *
+ * `null` bei einer anderen Nachricht, einer anderen Herkunft oder ohne Beleg.
+ */
+export function dateiansichtAus(
+  adresse: string | null,
+  messageId: string,
+  herkunft: string,
+): string | null {
+  const url = eigeneAdresse(adresse, herkunft);
+  const stuecke = url === null ? null : pfadstuecke(url);
+  if (
+    stuecke === null ||
+    stuecke.length !== 4 ||
+    `/${stuecke[0]}` !== ROUTEN.nachrichten ||
+    stuecke[1] !== messageId ||
+    stuecke[2] !== DATEIEN_SEGMENT
+  ) {
+    return null;
+  }
+  return artefaktAnsicht(messageId, stuecke[3]);
 }
 
 /**

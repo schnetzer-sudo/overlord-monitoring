@@ -33,6 +33,7 @@ import { neuerZwischenspeicher, rendere } from "./hilfe/rendern";
  * | Der Download-Knopf | dieselbe Art Aussage — und die tragende von Entscheidung 9: Ein Knopf, der etwas anderes verspricht als die Anzeige, **darf nicht im Baum stehen** |
  * | Die Herkunftszeile | *(17.09.2026)* die Beschriftung je Kodierung ist eine reine Funktion (`tests/rohdaten.test.ts`); **ob sie in der Zeile steht und außerhalb von `ANZEIGBAR` fehlt**, ist eine Aussage über Anwesenheit und Abwesenheit im Baum |
  * | `Escape` führt zurück | *(21.09.2026)* die Taste ist ein **Zustand des Dokuments**: ein Zuhörer am `document`, ein Ziel aus dem gerenderten `href` und eine offene Liste, die zuerst zugeht — keine reine Funktion kennt eines davon |
+ * | Eine Ebene zurück | *(14.10.2026, E‑241)* ob Taste **und** Verweis den Schritt zurück gehen, statt die Vollseite zu öffnen, ist eine Aussage über **Verdrahtung**: Zuhörer am `document`, `onClick` am Verweis, der gestellte Verlauf — gelesen im Ereignis, nicht beim Rendern. Die Entscheidung selbst ist rein (`zeigtNachricht`, `tests/routen.test.ts`) |
  *
  * ## Kein Testdatensatz enthält echten Dateiinhalt
  *
@@ -48,11 +49,13 @@ import { neuerZwischenspeicher, rendere } from "./hilfe/rendern";
  * der Taste `Escape`. `push` ist der Spion, an dem die beiden Fälle unten
  * ablesen, **ob** und **wohin** navigiert wurde; das Router-Objekt ist ein
  * Einzelstück, damit der Zuhörer des Hooks nicht bei jedem Rendern neu hängt.
+ * Seit dem 14.10.2026 (E‑241) daneben `back`, der Schritt zurück.
  */
 
 const navigation = vi.hoisted(() => {
   const push = vi.fn();
-  return { push, router: { push, replace: () => {} } };
+  const back = vi.fn();
+  return { push, back, router: { push, back, replace: () => {} } };
 });
 
 vi.mock("next/navigation", () => ({
@@ -176,6 +179,7 @@ let anfragen: string[] = [];
 beforeEach(() => {
   anfragen = [];
   navigation.push.mockClear();
+  navigation.back.mockClear();
   vi.stubGlobal(
     "fetch",
     vi.fn((eingabe: RequestInfo | URL) => {
@@ -727,23 +731,30 @@ describe("Die Darstellungswahl", () => {
  * | Die offene Darstellungsliste geht zuerst zu | die Stelle, auf die es ankommt: Das `AuswahlFeld` ist ein Popover, und die Ausnahme „offenes Auswahlfeld" von `useEscapeSchliesst` ist älter als der Baustein. Eine Taste, zwei Drücke, zwei Wirkungen — in dieser Reihenfolge |
  *
  * Die Taste fällt dort, wo sie im Browser fiele: auf dem Element mit dem Fokus.
+ *
+ * **Seit dem 14.10.2026 (E‑241) ist das der Weg ohne Beleg im Verlauf** — jsdom
+ * kennt die Navigation API nicht, und genau das ist hier der Fall: ein geteilter
+ * Verweis im neuen Tab, ein Browser ohne die Schnittstelle. Mit Beleg geht es
+ * eine Ebene zurück (`describe` darunter). F5 im selben Tab gehört nicht zu den
+ * Fällen ohne Beleg: Der Verlauf übersteht das Neuladen, und mit ihm der Beleg.
  */
+const verweis = (behaelter: HTMLElement) =>
+  Array.from(behaelter.querySelectorAll<HTMLAnchorElement>("a")).find(
+    (kandidat) => kandidat.textContent === DATEIEN.zurueck,
+  ) ?? null;
+
+async function escape() {
+  await act(async () => {
+    (document.activeElement ?? document.body).dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }),
+    );
+  });
+}
+
 describe("Die Taste Escape", () => {
-  const verweis = (behaelter: HTMLElement) =>
-    Array.from(behaelter.querySelectorAll<HTMLAnchorElement>("a")).find(
-      (kandidat) => kandidat.textContent === DATEIEN.zurueck,
-    ) ?? null;
   const feld = (behaelter: HTMLElement) =>
     behaelter.querySelector<HTMLButtonElement>("[data-darstellung-auswahl] button");
   const darstellungsliste = () => document.querySelector<HTMLElement>('[role="listbox"]');
-
-  async function escape() {
-    await act(async () => {
-      (document.activeElement ?? document.body).dispatchEvent(
-        new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }),
-      );
-    });
-  }
 
   it("navigiert auf das href des Verweises „Zurück zur Nachricht“", async () => {
     const { behaelter, abbauen } = await rendereAnsicht(anzeige());
@@ -756,6 +767,7 @@ describe("Die Taste Escape", () => {
       await escape();
 
       expect(navigation.push).toHaveBeenCalledExactlyOnceWith(ziel);
+      expect(navigation.back).not.toHaveBeenCalled();
     } finally {
       await abbauen();
     }
@@ -784,6 +796,238 @@ describe("Die Taste Escape", () => {
       expect(navigation.push).toHaveBeenCalledExactlyOnceWith(ziel);
     } finally {
       await abbauen();
+    }
+  });
+});
+
+/**
+ * **Der Verlauf, wie ihn die Navigation API zeigt** — gestellt, weil jsdom die
+ * Schnittstelle nicht kennt. Gelesen wird nur `currentEntry` und `entries()`;
+ * mehr braucht `lib/browserverlauf.ts` nicht. `vi.unstubAllGlobals()` im
+ * `afterEach` räumt ihn wieder ab.
+ */
+function stelleVerlauf(pfade: string[], aktuell = pfade.length - 1) {
+  const eintraege = pfade.map((pfad, index) => ({
+    url: new URL(pfad, window.location.origin).href,
+    index,
+  }));
+  vi.stubGlobal("navigation", { currentEntry: eintraege[aktuell], entries: () => eintraege });
+}
+
+/**
+ * **Ein Klick, und ob danach noch die Standardaktion stünde.**
+ *
+ * Festgehalten am `document`: Der Zuhörer dort läuft **nach** dem
+ * Wurzelbehälter, an dem React seine Zuhörer hängt — er sieht also, was der
+ * eigene `onClick` getan hat. Ein Zuhörer am Verweis selbst liefe davor und
+ * verdeckte genau das (Gegenprüfung vom 14.10.2026). Verhindert wird erst danach,
+ * denn jsdom navigiert nicht („Not implemented: navigation").
+ */
+async function klicke(
+  ziel: Element | null,
+  zusatz: MouseEventInit = {},
+): Promise<{ verhindert: boolean }> {
+  let verhindert = false;
+  const nachReact = (ereignis: Event) => {
+    verhindert = ereignis.defaultPrevented;
+    ereignis.preventDefault();
+  };
+  document.addEventListener("click", nachReact);
+  try {
+    await act(async () => {
+      ziel?.dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true, button: 0, ...zusatz }),
+      );
+    });
+  } finally {
+    document.removeEventListener("click", nachReact);
+  }
+  return { verhindert };
+}
+
+/**
+ * **Eine Ebene zurück** *(14.10.2026, E‑241, `docs/rohdaten-frontend.md` §4)*.
+ *
+ * Stand vor dem Öffnen der Datei die Nachricht neben der Liste oder auf ihrer
+ * eigenen Route, führen `Escape` **und** der Verweis „Zurück zur Nachricht"
+ * genau dorthin zurück: per `router.back()`, also auf dieselbe Adresse wie vorher
+ * und in dieselbe Darstellung — und **nicht** per `push` auf die Vollseite (S1).
+ * Ohne Beleg im Verlauf bleibt es beim Ziel des Verweises, also in der
+ * Anwendung (S5).
+ */
+describe("Eine Ebene zurück", () => {
+  const PANEL = `/nachrichten?zeitraum=7d&status=FEHLER&prozess=P-0815&suche=Versand&nachricht=${MESSAGE_ID}`;
+  const DATEI = `/nachrichten/${MESSAGE_ID}/dateien/${ARTEFAKT_ID}`;
+
+  it("geht bei Escape einen Schritt zurück, wenn davor die Nachricht neben der Liste stand", async () => {
+    stelleVerlauf([PANEL, DATEI]);
+    const { abbauen } = await rendereAnsicht(anzeige());
+
+    try {
+      await escape();
+
+      expect(navigation.back).toHaveBeenCalledOnce();
+      expect(navigation.push).not.toHaveBeenCalled();
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("geht beim Klick auf „Zurück zur Nachricht“ denselben Schritt zurück und öffnet nicht die Vollseite", async () => {
+    stelleVerlauf([PANEL, DATEI]);
+    const { behaelter, abbauen } = await rendereAnsicht(anzeige());
+
+    try {
+      const { verhindert } = await klicke(verweis(behaelter));
+
+      expect(navigation.back).toHaveBeenCalledOnce();
+      expect(navigation.push).not.toHaveBeenCalled();
+      // Auch der Browser folgt dem `href` nicht: Es wäre die Vollseite.
+      expect(verhindert).toBe(true);
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("lässt einen Strg-Klick beim href — der Verweis bleibt ein Verweis", async () => {
+    stelleVerlauf([PANEL, DATEI]);
+    const { behaelter, abbauen } = await rendereAnsicht(anzeige());
+
+    try {
+      const ziel = verweis(behaelter);
+      expect(ziel?.getAttribute("href")).toBe(`/nachrichten/${MESSAGE_ID}`);
+
+      const { verhindert } = await klicke(ziel, { ctrlKey: true });
+
+      expect(navigation.back).not.toHaveBeenCalled();
+      expect(navigation.push).not.toHaveBeenCalled();
+      // Die Standardaktion bleibt — der Browser öffnet das `href` im neuen Tab.
+      expect(verhindert).toBe(false);
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("geht auch dann zurück, wenn die Nachricht auf ihrer eigenen Route stand", async () => {
+    stelleVerlauf([`/nachrichten/${MESSAGE_ID}?status=FEHLER`, DATEI]);
+    const { abbauen } = await rendereAnsicht(anzeige());
+
+    try {
+      await escape();
+
+      expect(navigation.back).toHaveBeenCalledOnce();
+      expect(navigation.push).not.toHaveBeenCalled();
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("geht ohne Beleg auch beim Klick nicht zurück — der Verweis führt auf sein href", async () => {
+    stelleVerlauf([DATEI]);
+    const { behaelter, abbauen } = await rendereAnsicht(anzeige());
+
+    try {
+      const { verhindert } = await klicke(verweis(behaelter));
+
+      expect(navigation.back).not.toHaveBeenCalled();
+      // Die Standardaktion bleibt: Im Browser führt `Link` auf das `href`.
+      expect(verhindert).toBe(false);
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("fragt den Verlauf im Augenblick des Schließens und nicht beim Öffnen", async () => {
+    // Beim Rendern gibt es keinen Beleg, beim Schließen gibt es einen: Gefragt
+    // wird im Ereignis, denn der Verlauf ändert sich, ohne dass die Ansicht es
+    // erfährt.
+    stelleVerlauf([DATEI]);
+    const { abbauen } = await rendereAnsicht(anzeige());
+
+    try {
+      stelleVerlauf([PANEL, DATEI]);
+      await escape();
+
+      expect(navigation.back).toHaveBeenCalledOnce();
+      expect(navigation.push).not.toHaveBeenCalled();
+    } finally {
+      await abbauen();
+    }
+  });
+
+  /**
+   * **Belegsuche und Prozessansicht** *(Folgeauftrag vom 14.10.2026, E‑243)*:
+   * Beide tragen dasselbe Panel über `nachricht`, und der Schritt zurück führt
+   * dorthin, wo die Datei geöffnet wurde — samt `begriff`, `feld` und `modus`
+   * beziehungsweise Zeitraum, Gliederung und Prozess. Taste und Verweis gehen
+   * denselben Weg; das Zurück des Browsers ist derselbe Schritt.
+   */
+  it("geht aus der Belegsuche per Taste und per Verweis einen Schritt zurück", async () => {
+    stelleVerlauf([
+      `/suche?begriff=:4711&feld=Message.SourceMessageID:ERFUNDEN-1&modus=praefix&nachricht=${MESSAGE_ID}`,
+      DATEI,
+    ]);
+    const { behaelter, abbauen } = await rendereAnsicht(anzeige());
+
+    try {
+      await escape();
+      expect(navigation.back).toHaveBeenCalledOnce();
+
+      const { verhindert } = await klicke(verweis(behaelter));
+      expect(navigation.back).toHaveBeenCalledTimes(2);
+      expect(verhindert).toBe(true);
+      expect(navigation.push).not.toHaveBeenCalled();
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("geht aus der Prozessansicht per Taste und per Verweis einen Schritt zurück", async () => {
+    stelleVerlauf([
+      `/prozesse?zeitraum=12M&gliederung=PROJEKT&prozess=P-0815&nachricht=${MESSAGE_ID}`,
+      DATEI,
+    ]);
+    const { behaelter, abbauen } = await rendereAnsicht(anzeige());
+
+    try {
+      await escape();
+      expect(navigation.back).toHaveBeenCalledOnce();
+
+      const { verhindert } = await klicke(verweis(behaelter));
+      expect(navigation.back).toHaveBeenCalledTimes(2);
+      expect(verhindert).toBe(true);
+      expect(navigation.push).not.toHaveBeenCalled();
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("bleibt ohne Beleg beim Ziel des Verweises: Direktaufruf, andere Nachricht, andere Ansicht", async () => {
+    for (const verlauf of [
+      // Direktaufruf: ein geteilter Verweis im neuen Tab. (F5 im selben Tab
+      // behält den Verlauf und damit den Beleg.)
+      [DATEI],
+      // Eine andere Nachricht neben Suche und Prozessansicht.
+      [`/suche?begriff=:4711&nachricht=andere-nachricht`, DATEI],
+      [`/prozesse?prozess=P-0815&nachricht=andere-nachricht`, DATEI],
+      // Eine Ansicht ohne das Panel — die Startseite.
+      [`/`, DATEI],
+    ]) {
+      stelleVerlauf(verlauf);
+      navigation.push.mockClear();
+      const { behaelter, abbauen } = await rendereAnsicht(anzeige());
+
+      try {
+        const ziel = verweis(behaelter)?.getAttribute("href");
+        expect(ziel).toBe(`/nachrichten/${MESSAGE_ID}`);
+
+        await escape();
+
+        expect(navigation.back, verlauf.join(" → ")).not.toHaveBeenCalled();
+        expect(navigation.push, verlauf.join(" → ")).toHaveBeenCalledExactlyOnceWith(ziel);
+      } finally {
+        await abbauen();
+      }
     }
   });
 });
