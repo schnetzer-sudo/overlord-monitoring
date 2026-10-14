@@ -467,6 +467,18 @@ Druck nur die Liste, erst der nächste führt zur Nachricht.
 > Entscheidung in `tests/routen.test.ts`. Der Fall „navigiert auf das href des Verweises" bleibt
 > und ist seither der Fall ohne Beleg.
 
+> ### ⚠️ Nachtrag vom selben Tag — auch aus Belegsuche und Prozessansicht (E‑243)
+>
+> Der Satz im Kasten darüber, **„Prozessansicht und Belegsuche gelten nicht als Beleg"**, gilt nicht
+> mehr. Seit dem Folgeauftrag vom 14.10.2026 zählt auch ein voriger Eintrag `/suche?…nachricht=<id>…`
+> oder `/prozesse?…nachricht=<id>…` als Beleg — beide tragen dasselbe Panel über denselben Parameter.
+> Weiterhin verlangt ist **dieselbe Nachricht**; eine Ansicht ohne das Panel oder eine andere
+> Nachricht bleibt ohne Beleg. Der Schritt zurück führt damit in die Ansicht, aus der die Datei
+> geöffnet wurde, samt deren Parametern; der Fokus kehrt auf das Ziel zurück. Gesamtbild:
+> [`nachrichtendetail.md`](nachrichtendetail.md) §10.18, für die beiden Ansichten
+> [`bam-suche.md`](bam-suche.md) §11.4 und [`process-view.md`](process-view.md) §18. Tests: zwei Fälle
+> mehr im Abschnitt „Eine Ebene zurück" (neun statt sieben).
+
 **Die Herkunftszeile** — Rohname, Art, Größe und Kodierung in fester Laufweite — ist die Auskunft,
 die das Altsystem nie gibt. Dort steht über dem Feld nichts, und wer eine leere Anzeige sieht, weiß
 nicht, ob er ein Protokoll ohne freigegebenen Abschnitt vor sich hat, eine Binärdatei oder einen
@@ -813,7 +825,7 @@ zusammen **46** Fällen.
 | Datei | Art | Deckt ab |
 |---|---|---|
 | `tests/rohdaten.test.ts` | reine Funktionen, 29 Fälle *(31 seit 17.09.2026, Kasten unten)* | Beschriftungsregel in allen **vier** Lagen, **einschließlich Familie allein auf Schritt `0`** · **`Message.Payload.GUID` erzeugt kein Ziel** (M73) · die **Ziele** je Schritt: Art vor dem Namen — an jedem Ziel, auch an den beiden der Eingangszeile —, Ausschnitt in Name und `title`, Einteilung ohne Umsortieren, leere Einteilung ohne Liste, der Rest ohne Zeile in beide Richtungen · Gleichlauf über alle fünf Zustände samt der Ausnahme „binäres Protokoll" · Reihenfolge und Nachschlagen der Artefakte · die drei Vermerke · zweiter Versuch nur bei nicht erreichbarer Ablage · die vier Zustandstexte paarweise verschieden, in **beiden** Sprachen · kein Pfad trägt GUID oder Ablagenkennung |
-| `tests/artefakt-ansicht.test.tsx` | gerenderter Baum, 9 Fälle *(15 seit 17.09.2026, 21 seit 21.09.2026, 28 seit 14.10.2026 — eine Ebene zurück, §4; Kästen unten)* | **der Textknoten** · die **vier Zustände**, je einer · der Ausschnitt-Vermerk in beide Richtungen · der Download-Knopf · die Beschriftung ohne Nachladen |
+| `tests/artefakt-ansicht.test.tsx` | gerenderter Baum, 9 Fälle *(15 seit 17.09.2026, 21 seit 21.09.2026, 28 seit 14.10.2026 — eine Ebene zurück, §4 —, 30 nach dem Folgeauftrag desselben Tages; Kästen unten)* | **der Textknoten** · die **vier Zustände**, je einer · der Ausschnitt-Vermerk in beide Richtungen · der Download-Knopf · die Beschriftung ohne Nachladen |
 | `tests/zeitleiste-ziele.test.tsx` | gerenderter Baum, 8 Fälle *(11 seit 14.10.2026 — der Fokus nach der Rückkehr aus einer Datei, [`nachrichtendetail.md`](nachrichtendetail.md) §10.17)* | die **drei Lagen je Schritt** (beide Arten, nur eine, keine) · die **Eingangszeile** über der Leiste mit **zwei** Zielen, mit Familie statt Nummer und ohne dass die Leiste eine vierte Zeile bekäme · die **Belastungsprobe aus M55**: fünfzehn Artefakte, fünfzehn eigene Ziele, ohne doppelten React-Schlüssel · das **Anspringen** der Eigenschaftengruppe · die Gegenprobe: ohne Eigenschaften kein Schalter am Schrittnamen |
 
 > **Korrigiert 19.08.2026 zu den beiden Zeilen darüber.** Die erste führte die Beschriftungsregel

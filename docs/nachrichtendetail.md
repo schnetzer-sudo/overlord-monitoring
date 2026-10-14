@@ -2621,6 +2621,7 @@ alles, was ohne Haltebedingung geht.
   Query, alle `nuqs`-Parameter, `components/ui`, das Backend, Inhalt und Gestaltung der
   Dateiansicht, Prozessansicht und Belegsuche. Der Navigationspunkt „Nachrichten" war schon auf dem
   ganzen Weg aktiv (Präfixregel in `lib/navigation.ts`) und ist jetzt durch einen Test gehalten.
+  *(Prozessansicht und Belegsuche nicht mehr seit dem Folgeauftrag desselben Tages — §10.18.)*
 
 #### Was nicht erreicht ist
 
@@ -2741,6 +2742,81 @@ Auf dem ganzen Weg ist „Nachrichten" der aktive Navigationspunkt; in der Proze
 
 Widersprüche zwischen Doku und Code, die die Prüfung gefunden hat — Punkt 232. Dasselbe Muster in
 anderen Ansichten — Punkt 231.
+
+### 10.18 Der Rückweg auch aus Belegsuche und Prozessansicht *(14.10.2026, Folgeauftrag, E‑243)*
+
+#### Die Entscheidungen des Auftraggebers zu den Punkten 230 und 231
+
+| Nummer | Entscheidung | Umgesetzt in |
+|---|---|---|
+| — *(Punkt 230)* | **So lassen.** Nach dem Umweg über die Rohdaten steht die Nachrichtenliste auf Seite eins, die Filter bleiben erhalten. Kein Routenumbau, kein Zustand außerhalb der URL | **nichts gebaut.** Der dritte Weg — den Seitenstand in die URL legen — und die frühere Entscheidung dagegen stehen in [`nachrichtenliste.md`](nachrichtenliste.md) Punkt 230 |
+| **E‑243** *(Punkt 231)* | **Rücksprung für beide.** Belegsuche und Prozessansicht bekommen dieselbe Rücksprunglogik wie die Nachrichtenliste. Baumzustand und Seitenstapel der Prozessansicht werden ein eigener offener Punkt und nicht gebaut | `zeigtNachricht` (`lib/routen.ts`), `suche-ansicht.tsx`, `prozessansicht.tsx`; [`bam-suche.md`](bam-suche.md) §11.4, [`process-view.md`](process-view.md) §18; offener Punkt **233** |
+
+**Vergabe der Nummern** — jeder Treffer gelesen:
+
+| Was | Suche | Ergebnis |
+|---|---|---|
+| Entscheidung | `\bE[^0-9A-Za-z\s]{1,3}(24[1-9]\|2[5-9][0-9])\b` über den ganzen Baum auf allen **58** lokalen Zweigen und in `docs`, `frontend/src`, `frontend/tests`, `backend/src` der drei weiteren Arbeitsbäume | nur **E‑241** und **E‑242** aus diesem Zweig; **E‑249** ist die bekannte Bereichsangabe. Eichung: **E‑240** auf `main` in `README.md`, `messungen-suche-plan.md` und `nachrichtenliste.md`. Folge: **E‑243** |
+| Offener Punkt | die drei Schreibweisen für 233 bis 239 auf allen Zweigen und im Arbeitsbaum | nur Tabellenwerte und Fließtext in `messungen-schritt4.md`, `-6.md`, `-7.md` und `-8.md`, gelesen; 230 bis 232 aus diesem Zweig. Folge: **233** |
+
+#### Was gebaut ist
+
+- **Der Beleg** (`zeigtNachricht`): Als voriger Eintrag zählt jetzt eine der drei Ansichten mit dem
+  Panel — `/nachrichten`, `/suche`, `/prozesse` — mit **derselben** Nachricht in `nachricht`, oder
+  ihre eigene Route. Eine Ansicht ohne das Panel, eine andere Nachricht, eine fremde Herkunft oder
+  gar kein Beleg führen weiter zum bisherigen `push` (R4). Eine Lockerung auf „irgendeine Seite der
+  Anwendung" gibt es nicht. Der Schritt zurück stellt die Adresse aus dem Verlauf her — in der Suche
+  samt `begriff`, `feld` und `modus`, in der Prozessansicht samt Zeitraum, Gliederung und Prozess —,
+  und die Nachricht steht wieder im Panel (R1, R2).
+- **Der Fokus** (R3): Beide Ansichten geben `fokusNachDatei` — nach der Rückkehr aus einer Datei liegt
+  er auf ihrem Ziel — und tragen `useFokusZurueck` am selben Schlüssel wie ihren Rückweg aus E‑114:
+  Nach dem Schließen des Panels liegt er auf der Zeile, die es geöffnet hat. **„Bzw. den Knoten"
+  aus dem Auftrag trifft die Prozessansicht nicht:** Ihr Panel öffnet sich ausschließlich aus Zeilen
+  der Übertragungsliste; der Baum setzt nur `prozess` (`prozessansicht.tsx`, Kommentar an der
+  Fokusregel aus E‑57). Auslöser ist dort also die Zeile.
+- **R5 geprüft:** Das Schließen entfernt in beiden Ansichten nur `nachricht` — `setzeNachricht(null)`
+  über `useSuchzustand` beziehungsweise `useProzessansichtzustand` (`hooks.ts`), festgehalten in
+  `tests/ruecksprung.test.tsx`. Zu korrigieren war nichts. **Eine Grenze, älter als dieser Stand:**
+  Die Kopfsuche baut ihre Adresse über `URLSearchParams` und kodiert den Trenner als `%3A`; `nuqs`
+  schreibt die Zeichenkette beim ersten Öffnen in seiner Kodierung neu. Nach dem Schließen ist sie
+  dann inhaltlich gleich, aber nicht zeichengleich — gemessen mit einem Wegwerftest, nicht
+  eingecheckt ([`bam-suche.md`](bam-suche.md) §11.4, Korrektur vom 14.10.2026).
+- **Unverändert:** Listen- und Suchabfragen, das Backend, die Voreinstellungen von TanStack Query,
+  `components/ui`, Dashboard und Administration; Baumzustand und Seitenstapel der Prozessansicht
+  (Punkt 233).
+
+#### Tests
+
+**Zuerst geschrieben, gegen den Stand vor diesem Auftrag gelaufen** (`2b97652`, nur im Testlauf,
+ohne Dateitausch unter laufendem `next dev`): **sieben neue Fälle, alle sieben rot** — einer rein
+(`tests/routen.test.ts`: Belegsuche und Prozessansicht als Beleg), zwei in
+`tests/artefakt-ansicht.test.tsx` (je Ansicht Taste und Verweis zurück) und vier in
+`tests/ruecksprung.test.tsx` (je Ansicht der Fokus auf dem Dateiziel nach der Rückkehr, mit Eichung,
+dass das Ziel im Panel steht, und der Fokus auf der Zeile nach dem Schließen samt der Adresse).
+**Drei bestehende Fälle sind angepasst**, weil sie das alte Verhalten festhielten: Die Gegenproben
+„andere Ansicht" nannten `/prozesse?…` und `/suche?…` mit derselben Nachricht — die sind jetzt Beleg;
+an ihre Stelle treten eine andere Nachricht neben Suche und Prozessansicht, die Startseite und eine
+Ansicht ohne Panel. Sie waren vorher und nachher grün. Nach dem Bau trägt `pnpm check` **1.357** Fälle
+in 50 Dateien, die gerenderten zählt `vitest.config.mts` (233 in 26).
+
+**Verletzungsproben — diesmal im Speicher.** Ein Vite-Plugin (`enforce: "pre"`) in einer eigenen
+Testkonfiguration ändert den Quelltext nur in der Umwandlung des Testlaufs; auf der Platte ändert
+sich nichts, `next dev` bleibt unberührt. Gelaufen über die drei betroffenen Dateien (65 Fälle):
+
+| Probe | Eingriff | rot |
+|---|---|---|
+| P0 | keiner (Eichung) | 0 von 65 |
+| P1 | nur die Nachrichtenliste gilt als Ansicht mit Panel (Stand vor E‑243) | 3 |
+| P2 | jede Seite mit `nachricht=` gilt als Beleg — die ausgeschlossene Lockerung | 1 |
+| P3 | die Belegsuche gibt beim Schließen keinen Fokus an die Zeile | 1 |
+| P4 | die Prozessansicht gibt beim Schließen keinen Fokus an die Zeile | 1 |
+| P5 | die Belegsuche verlangt den Fokus auf das Dateiziel nicht | 1 |
+| P6 | die Prozessansicht verlangt ihn nicht | 1 |
+
+**Nicht im Browser gesehen.** Die Sitzung im Debug-Chrome war beim Folgeauftrag abgelaufen. Derselbe
+Mechanismus — Beleg aus dem Verlauf, `router.back()`, Fokus über `fokusNachDatei` und
+`useFokusZurueck` — ist für die Nachrichtenliste gesehen (§10.17, Sichtprüfung); für Belegsuche und
+Prozessansicht steht der Posten in der README-Tabelle „Offene Sichtprüfungen".
 
 ---
 
@@ -2978,6 +3054,15 @@ aufgelöst — das ist Schritt 8.
   `zeigtNachricht`** — und genau deshalb eine Entscheidung des Auftraggebers, keine Nebenwirkung.
   Dazu verliert die Übertragungsliste der Prozessansicht beim Aushängen Seitenstapel und Baumzustand
   (`prozessansicht.tsx` Z. 167, 186, 198, 456–476), wie die Nachrichtenliste (Punkt 230).
+
+  > **Entschieden am 14.10.2026 (Folgeauftrag, E‑243): Rücksprung für beide.** Belegsuche und
+  > Prozessansicht bekommen dieselbe Rücksprunglogik wie die Nachrichtenliste: Sie gelten als Beleg
+  > für den Schritt zurück, wenn derselbe Panel-Eintrag mit **derselben** Nachricht vor der Datei
+  > steht; danach liegt der Fokus auf dem Dateiziel und nach dem Schließen des Panels auf der Zeile
+  > (§10.18). Die „eine Zeile in `zeigtNachricht`" ist es geworden, dazu je zwei Zeilen in den beiden
+  > Ansichten. **Für den Rücksprung ist der Punkt damit erledigt.** Baumzustand und Seitenstapel der
+  > Prozessansicht werden nicht gebaut und sind ein eigener offener Punkt: **233**
+  > ([`process-view.md`](process-view.md) §18, Korrektur vom 14.10.2026).
 - **232 — Vier Widersprüche zwischen Doku und Code, gemeldet und nicht aufgelöst** (14.10.2026,
   §10.17):
   1. §10.7 sagt: „Ein Klick auf eine Zeile setzt den Fokus ins Panel." Code und `hooks.ts` (an

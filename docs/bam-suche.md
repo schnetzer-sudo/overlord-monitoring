@@ -1164,6 +1164,35 @@ Kettenglied — beginnt allein der Scrollbereich des Panels wieder oben. **Am St
 Antwort und an der Trefferliste ändert das erneut nichts**, und unter `xl` bleibt alles, wie E‑114
 es gebaut hat.
 
+> ### ⚠️ Korrektur vom 14.10.2026 — der Rückweg aus einer Datei führt in die Suche zurück (E‑243)
+>
+> **Die Absätze darüber bleiben stehen.** Was sie nicht sagten: Ein Dateiziel im Panel führt auf die
+> eigene Route der Datei, und deren `Escape` und Verweis „Zurück zur Nachricht" führten bis dahin
+> per `push` auf die Nachricht als Vollseite und von dort auf die **Nachrichtenliste** ohne
+> Parameter — mit deren 24-Stunden-Vorgabe statt der 30 Tage der Suche. Verloren waren `begriff`,
+> `feld`, `modus`, `von` und `bis` ([`nachrichtendetail.md`](nachrichtendetail.md) Punkt 231).
+>
+> **Seit dem Folgeauftrag vom 14.10.2026 gilt die Suche als Beleg für den Schritt zurück** wie die
+> Nachrichtenliste (E‑241): Steht vor der Datei im Verlauf `/suche?…nachricht=<id>…` mit
+> **derselben** Nachricht, gehen `Escape` und Verweis per `router.back()` zurück — wie das Zurück des
+> Browsers. Die Adresse ist danach zeichengleich die von vorher, samt `begriff`, `feld` und allen
+> weiteren Parametern; die Nachricht steht wieder im Panel. Der Beleg kommt aus der Navigation API und
+> wird nicht gemerkt. **Ohne Beleg** — Direktaufruf, Browser ohne Navigation API, eine andere
+> Nachricht — bleibt es beim bisherigen `push`.
+>
+> **Der Fokus kehrt zurück wie in der Nachrichtenliste:** nach der Datei auf ihr Ziel im Panel, nach
+> dem Schließen des Panels auf die Trefferzeile, die es geöffnet hat. Das Schließen entfernt nur
+> `nachricht` aus der Adresse. **Eine Grenze, älter als dieser Stand und hier nur benannt:** Das Feld
+> in der Kopfzeile baut seine Adresse über `URLSearchParams` (`suchziel`) und kodiert den Trenner
+> als `%3A`; `nuqs` schreibt die ganze Zeichenkette beim ersten Öffnen einer Trefferzeile in seiner
+> Kodierung neu (`:`). Nach dem Schließen ist die Adresse dann inhaltlich gleich, aber nicht
+> zeichengleich mit der vor dem Öffnen — gemessen am 14.10.2026 mit `NuqsTestingAdapter`. Der
+> Schritt zurück aus einer Datei ist davon nicht berührt; er stellt die Adresse aus dem Verlauf her.
+>
+> Tests: `tests/ruecksprung.test.tsx` („Der Rückweg in der Belegsuche", zwei Fälle),
+> `tests/artefakt-ansicht.test.tsx` und `tests/routen.test.ts`. Gesamtbild:
+> [`nachrichtendetail.md`](nachrichtendetail.md) §10.18.
+
 ### 11.5 Die Trefferliste
 
 Dieselbe Zeilenform wie die Nachrichtenliste — Zeitpunkt, Status, Ablauf —, und **dieselben

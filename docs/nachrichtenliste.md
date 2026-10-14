@@ -3478,6 +3478,35 @@ Der alte Link (Punkt 6) *ist* eine von Hand geöffnete URL, denn genau das ist d
      Zustandsspeicher außerhalb der URL" auf; nach 5 min ohne Beobachter fragt die Liste trotzdem.
   3. **`cacheComponents`** — global, betrifft jede Route und hält den Versatz von `main` nicht.
 
+  > **Entschieden am 14.10.2026 (Folgeauftrag): so lassen.** Nach dem Umweg über die Rohdaten steht
+  > die Nachrichtenliste auf Seite eins; Filter, Suche und Zeitfenster bleiben erhalten, weil sie in
+  > der Adresse stehen. Kein Routenumbau, kein Zustand außerhalb der URL. **Gebaut wird nichts.**
+  >
+  > **Neben Routenumbau und Zustand außerhalb der URL gibt es einen dritten Weg: den Seitenstand in
+  > die URL legen.** Der Seitenstapel, den `useNachrichtenSeite` heute im Komponentenzustand führt,
+  > würde damit an das URL-Prinzip angeglichen ([`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §6:
+  > Filterzustand in der URL). Er hielte die geblätterte Seite über den Umweg; Versatz und Schalter
+  > hielte er nicht. (`cacheComponents` unter 3. ist kein Ort für Zustand, sondern eine Änderung des
+  > Rahmens.)
+  >
+  > **Dagegen steht eine frühere Entscheidung** — geprüft per `grep` über Doku, Code und Tests auf
+  > `main`, jeder Treffer gelesen:
+  >
+  > | Fundstelle | Wortlaut bzw. Inhalt |
+  > |---|---|
+  > | §4 Z. 309–310 (Schritt 4) | „**Der Cursor gehört nicht in die geteilte URL.** Filter und Zeitfenster ja, die Seitenposition nein: Ein Link auf Seite sieben eines relativen Fensters zeigt beim Empfänger auf andere Zeilen." |
+  > | §8.2 Z. 2398–2400 | „**Der Cursor steht nicht in der URL.** … Beim Öffnen eines Links beginnt die Liste auf Seite eins." |
+  > | [`process-view.md`](process-view.md) Z. 1164–1165, „Der Zustand in der URL" | dasselbe für die Übertragungsliste der Prozessansicht, mit demselben Grund |
+  > | `features/nachrichten/filter.ts` Z. 22–27, `prozessansicht.ts` Z. 64–65, `filterleiste.tsx` Z. 48, `lib/routen.ts` (an `artefaktAnsicht`) | dieselbe Regel im Code |
+  > | `tests/nachrichtenfilter.test.ts` Z. 510–548 | „Der Cursor gehört nicht in die URL" — drei Fälle, darunter „wird beim Einlesen einer URL nicht übernommen" |
+  >
+  > Eine E-Nummer trägt die Entscheidung nicht; sie stammt aus Schritt 4. **Wer den dritten Weg geht,
+  > kehrt sie um** und braucht eine Antwort auf ihren Grund — den geteilten Link auf Seite sieben eines
+  > relativen Fensters —, dazu auf den Σ (E‑216), der die Zeilen der Seiten davor braucht und nicht
+  > allein den Cursor der angezeigten Seite. Die übrigen Treffer der Suche betreffen anderes: den
+  > Parameter `nachricht` außerhalb der Abfrage (§8.2), den Cursor der Kette ([`verkettung.md`](verkettung.md)),
+  > „Neu laden" ohne Cursor ([`neu-laden.md`](neu-laden.md)).
+
 ### Zur Sortierrichtung (03.09.2026, Schritt 10b‑4)
 
 - **136. Ob die Fensterverengung auch aufsteigend rechnen kann, ist nicht geprüft — und wird hier
