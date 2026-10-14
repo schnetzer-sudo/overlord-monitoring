@@ -34,7 +34,8 @@ erweiterte Diagnoseskript (M196) fest.
 | Nummer | Entscheidung des Auftraggebers | Umgesetzt in |
 |---|---|---|
 | **E‑237** | **F4 nur im Suchpfad:** `IGNORE INDEX FOR JOIN (ProejctIDIDX, Message_ProcessFK)` auf `Message`, genau dann, wenn ein Suchbegriff gesetzt ist und kein Prozessfilter | `NachrichtenRepository.ignoriertProzessindizes` und `PROZESSINDIZES`; [`nachrichtenliste.md`](nachrichtenliste.md) §5, Kasten vom 13.10.2026 |
-| **E‑238** | **Bei `suche-abgebrochen` wird die alte Seite ausgeblendet.** Bei `suchbegriff-zu-kurz`, `suchbegriff-zu-unscharf` und `suche-fenster-zu-gross` bleibt sie stehen wie bisher | Code auf Zweig `fix/suche-abbruch-anzeige`, Doku hier: [`nachrichtenliste.md`](nachrichtenliste.md) §8.2, Kasten vom 13.10.2026. **Der Code-Zweig darf nicht vor diesem gemergt werden** — sonst steht in `main` Code ohne seine Doku |
+| **E‑238** | **Bei `suche-abgebrochen` wird die alte Seite ausgeblendet.** Bei `suchbegriff-zu-kurz`, `suchbegriff-zu-unscharf` und `suche-fenster-zu-gross` bleibt sie stehen wie bisher | Code auf Zweig `fix/suche-abbruch-anzeige`, Doku hier: [`nachrichtenliste.md`](nachrichtenliste.md) §8.2, Kasten vom 13.10.2026. ~~**Der Code-Zweig darf nicht vor diesem gemergt werden** — sonst steht in `main` Code ohne seine Doku~~ *Berichtigt am 14.10.2026 auf Vorgabe des Auftraggebers:* **Teil B wird vor oder zusammen mit Teil A gemergt**, weil der Kasten in §8.2 auf diesem Zweig das Verhalten von Teil B beschreibt — käme A zuerst, beschriebe `main` ein Verhalten, das es dort nicht gibt |
+| **E‑240** *(14.10.2026)* | **Ein Abbruch verwirft die zuletzt gelieferte Seite und ihren Σ, auch für folgende Rückmeldungen am Feld.** Erst die nächste gelieferte Seite füllt die Liste wieder; an der Stelle der Tabelle steht dann nicht der Abbruchsatz, sondern der Zustand, den eine Rückmeldung am Feld ohne gelieferte Seite zeigt (der Leerzustand) | Zweig `fix/suche-abbruch-anzeige`, `letzteLieferung` in `features/nachrichten/filter.ts`; [`nachrichtenliste.md`](nachrichtenliste.md) §8.2, Kasten vom 14.10.2026; offener Punkt 228 erledigt |
 | **E‑239** | **Das Diagnoseskript ist Pflicht:** Jede Änderung, die den Plan von Liste oder Suche berühren kann, erweitert `scripts/diagnose-produktion/suche.sql`, und Lukas führt das `EXPLAIN` vor dem Merge in der Produktion aus | [`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) L7 und [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §8 Regel 7, je ein Zusatz; §11 Annahme A12; M196 |
 
 ---
@@ -600,3 +601,49 @@ Prüfsummen wie vor der Erweiterung — die bestehenden Fälle sind unberührt.
 und h sollte `range` über `MessageLastUpdateIDX` zeigen wie Fall e. In k über 90 Tage: `ALL`
 oder ein Bereich? Und für i und j: Wählt die Produktion dort den prozessgetriebenen Plan, und mit
 welchen Schätzungen? Ausgabe 3 sagt für i und j, ob der Rollup sichtbar war.
+
+---
+
+## M197 — Das erweiterte Diagnoseskript in der Produktion (14.10.2026)
+
+> **Belegvermerk.** *Erhoben von Lukas (Auftraggeber) in MySQL Workbench gegen die Produktion*, am
+> 14.10.2026 um 09:39:07 (24 Stunden) und 09:40:38 Serverzeit (`@fensterlaenge_stunden = 2160`),
+> mit `suche.sql` vom Stand `c279ab2`; die Begriffe haben dieselben Längen wie am 13.10.2026 (6 und 3 Zeichen, Ausgabe 3) — ob es dieselben sind, sagt die Ausgabe nicht. **Nur `EXPLAIN`
+> und `information_schema`, keine Laufzeiten.** Beide Läufe enden mit „ENDE: alle Ausgaben
+> vollstaendig". Die Ausgaben liegen unter `scripts/diagnose-produktion/ergebnis/` und sind von Git
+> ignoriert.
+
+**Damit ist das Merge-Tor aus E‑239 für Teil A erfüllt:** Das Statement, das die Anwendung seit F4
+schickt, ist in der Produktion per `EXPLAIN` gesehen.
+
+**Statistik:** nahezu wie in M193. `Message_ProcessFK` trägt 9.124 statt 9.127 (558 statt 557
+Zeilen je Wert), `ProejctIDIDX` weiter 18, `TABLE_ROWS` 5.091.642 (24‑Stunden‑Lauf) bzw. 5.091.656
+(90‑Tage‑Lauf) statt 5.083.782. `Max_statement_time_exceeded` 45 und `Com_kill` 26 — dieselben
+Zähler wie am 13.10.2026; seit M193 hat der Server keinen Abbruch gezählt.
+
+| Fall | 24 Stunden: Zeile `Message` | 90 Tage: Zeile `Message` |
+|---|---|---|
+| a, b, c, d (vor E‑237, unverengt) | **prozessgetrieben** wie M193: `ProjectMandant` → `mandanten_process` → `ref` `Message_ProcessFK` (558), `Using temporary; Using filesort` | ebenso |
+| e (F4, groß geschrieben) | `range` `MessageLastUpdateIDX` (26.958) | `range` `MessageLastUpdateIDX` (1.893.256) |
+| f (erste Verengungsstufe) | `range` `MessageLastUpdateIDX` (642) | `range` `MessageLastUpdateIDX` (656) |
+| **g** `NEXANS`, wie gebaut | **`range` `MessageLastUpdateIDX` (26.958)**, `possible_keys` nur die beiden Zeitindizes | **`range` `MessageLastUpdateIDX` (1.893.256)**, ebenso |
+| **h** `SUTTONS`, wie gebaut | **`range` `MessageLastUpdateIDX` (26.958)**, ebenso | **ebenso** |
+| **i** Suche + kleiner Prozess (1 Nachricht im Fenster laut Rollup, beide Läufe), ohne Hinweis | `ref` `ProejctIDIDX` (252), `Using index condition; Using where; Using filesort`, Mandantenkette `const` | `ref` `ProejctIDIDX` (18), ebenso |
+| **j** Suche + verkehrsreicher Prozess (4.800 bzw. 367.209 Nachrichten laut Rollup), ohne Hinweis | `range` `MessageLastUpdateProcessMessageIDX` (24.076), Mandantenkette `const` | `range` `MessageLastUpdateProcessMessageIDX` (1.642.918) |
+| **k** Begriff trifft nur Prozesse (46 Prozesse, 0 Abläufe), wie gebaut | **`range` `MessageLastUpdateIDX` (26.958)**, Treiber `Message` | **`range` `MessageLastUpdateIDX` (1.893.256)** — **nicht** `ALL` wie auf der Testkopie |
+
+**Was daraus folgt:**
+
+1. **Der Hinweis hält in der Produktion.** In g, h und k steht keiner der beiden Prozessindizes in
+   `possible_keys` oder `key`; der Plan ist zeitgetrieben, über 24 Stunden wie über 90 Tage, und
+   gleicht Fall e.
+2. **Suche plus Prozessfilter (i, j) läuft in der Produktion nicht prozessgetrieben über die
+   Mandantenkette**, sondern mit konstanter Kette (`mandanten_process` und `ProjectMandant` je `const`) direkt auf `Message`: beim kleinen Prozess über
+   `ProejctIDIDX`, beim verkehrsreichen über `MessageLastUpdateProcessMessageIDX`. Das ist
+   derselbe Plan wie auf der Testkopie (M196). Offener Punkt 222 ist damit beantwortet.
+3. **„Nur Prozesse" über 90 Tage liest in der Produktion `Message` nicht vollständig**: Sie wählt
+   den Bereich über `MessageLastUpdateIDX` (geschätzt 37 % des Bestands), die Testkopie den vollen
+   Durchlauf (M195, M196). Der Unterschied liegt wieder an der Schätzung — offener Punkt 225 bleibt
+   als Risiko bestehen, ist aber in der Produktion heute nicht eingetreten.
+4. **Die Fälle a bis d zeigen weiter den prozessgetriebenen Plan** — das ist der Code vor E‑237,
+   der heute läuft. Für die Liste ohne Suche bleibt das offener Punkt 221.

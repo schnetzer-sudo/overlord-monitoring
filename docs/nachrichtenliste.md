@@ -625,6 +625,11 @@ Einträge, ist das das Signal. Steht unter „Offene Punkte".
 > bis k, M196). **Bis dahin ist F4 im Suchpfad gebaut, gemessen und getestet — aber in der
 > Produktion nur als Fall e gesehen**, mit dem Hinweis in Großschreibung und nicht als das
 > Statement, das die Anwendung schickt.
+>
+> *Ergänzt 14.10.2026 (M197):* **Gesehen.** Lukas hat das Skript in der Produktion über 24 Stunden
+> und über 90 Tage ausgeführt. In den Fällen g, h und k — dem Statement, wie die Anwendung es
+> schickt — steht keiner der beiden Indizes in `possible_keys` von `Message`; der Plan ist `range`
+> über `MessageLastUpdateIDX`, wie in Fall e. Das Merge-Tor aus E‑239 ist erfüllt.
 
 ---
 
@@ -2629,6 +2634,66 @@ schickte. Aus demselben Grund wiederholt der Zwischenspeicher diesen einen Fall 
 > | Gegenprobe `suche-fenster-zu-gross` | die alte Seite bleibt: 50 Zeilen, Σ steht, Meldung zur Fenstergrenze am Feld, kein Satz |
 > | derselbe Schlüssel: Suche liefert, dann bricht „Neu laden" ab | vorher 50 Zeilen und Σ; danach 0 Zeilen, kein Σ, der Satz, „Vor" gesperrt, Stand der letzten Lieferung |
 
+> ### Ein Abbruch verwirft die zuletzt gelieferte Seite *(14.10.2026, E‑240, Zweig `fix/suche-abbruch-anzeige`)*
+>
+> **Entscheidung des Auftraggebers zu Punkt 228:** Ein Abbruch verwirft die zuletzt gelieferte
+> Seite und ihren Σ — auch für die folgenden Rückmeldungen am Feld. Erst die nächste gelieferte
+> Seite füllt die Liste wieder. An der Stelle der Tabelle steht danach nicht der Abbruchsatz,
+> sondern der Zustand, den eine Rückmeldung am Feld heute zeigt, wenn noch keine Seite geliefert
+> wurde.
+>
+> **Welcher Zustand das ist — gefragt und so beantwortet:** der **Leerzustand** (`LeerMitUrsache`):
+> „Keine Nachricht in diesem Ausschnitt" mit den Ursachen (etwa „Erweitere das Zeitfenster. Der
+> Suchbegriff schränkt die Liste ein — leere ihn.") und dem Knopf „Auf 30 Tage erweitern"; dazu
+> kein Σ, Stand „Noch nicht geladen", der Blätterblock. Beim halb ausgefüllten freien Fenster steht,
+> solange die Anfrage läuft, kurz das Ladeskelett. **Zu beachten:** Das ist genau der Leerzustand,
+> den E‑238 für den Abbruch selbst abgelehnt hat, weil er behauptet, im Zeitfenster stehe nichts —
+> nach einem Abbruch und einer folgenden Rückmeldung am Feld behauptet er es jetzt doch. Gebaut wie
+> vorgegeben; der Abbruch selbst zeigt weiter den Satz.
+>
+> - **Gebaut** als reine Funktion `letzteLieferung(bisher, jetzt)` in
+>   `features/nachrichten/filter.ts`: Ein Abbruch (`sucheOhneErgebnis`) leert Seite und Σ, eine neue
+>   gelieferte Seite ersetzt beide, alles andere lässt sie stehen. `useNachrichtenSeite` in
+>   `hooks.ts` wendet sie während des Renderns an; `listenanzeige` (E‑238) ist unverändert.
+> - Jeder **andere** Fehler leert nicht — die Regel „die zuletzt gelieferte Seite bleibt stehen"
+>   gilt dort weiter, und die Gegenprobe `suche-fenster-zu-gross` **ohne** vorausgehenden Abbruch
+>   (Tabelle oben) zeigt weiter die alte Seite.
+>
+> **Tests:** **1.321** Fälle in `pnpm check`, gezählt. Neu in `tests/nachrichtenfilter.test.ts` acht
+> reine Fälle (describe „Was als zuletzt gelieferte Seite gilt"), in `tests/blaettern.test.tsx` drei
+> gerenderte: die Eichung *„zeigt bei einer Rückmeldung am Feld ohne gelieferte Seite den
+> Leerzustand"*, dann *„bringt nach einem Abbruch bei Fenster zu groß die alte Seite nicht zurück"*
+> (samt Wiederauffüllen über 24 Stunden) und *„bringt nach einem Abbruch beim halb ausgefüllten
+> freien Fenster die alte Seite nicht zurück"*. `vitest.config.mts`: 211 gerenderte Fälle
+> (`blaettern` 15 → 18).
+>
+> **Verletzungsproben** — je ein Eingriff, zurückgespielt und mit `cmp` verglichen, in keinem
+> Commit:
+>
+> | Probe | Eingriff | rot |
+> |---|---|---|
+> | V0 | keiner | 0 |
+> | V1 | Ein Abbruch leert nicht (Stand vor E‑240) | 4 |
+> | V2 | Jeder Fehler leert, nicht nur der Abbruch | 4 |
+> | V3 | Der Abbruch leert die Seite, der Σ bleibt | 2, **nur die reinen Fälle** — derselbe zweite Riegel wie bei E‑238, Probe 3 |
+> | V4 | Nach einem Abbruch füllt keine Lieferung mehr | 4; die gerenderten Fälle sind für das Wiederauffüllen blind, die reinen fangen es |
+> | V5 | Der Hook wendet die Funktion nicht an | 2 |
+>
+> **Sichtprüfung** *(14.10.2026; Debug-Chrome über CDP, angemeldet durch den Auftraggeber,
+> Mandant `NEXANS`, `next dev` und Backend des Zweigs, Profil `dev`; Abbruch gestellt über
+> `window.fetch` wie oben, die übrigen Antworten echt)*, deutsch bei 1920 px und 390 px, englisch
+> bei 1920 px:
+>
+> | Lage | gesehen |
+> |---|---|
+> | Abbruch, dann „Fenster zu groß" | 0 Zeilen, kein Σ, kein Abbruchsatz, der Leerzustand, Meldung zur Fenstergrenze am Feld; danach füllt „24 Stunden" die Liste wieder (50 Zeilen, Σ steht) |
+> | Abbruch, dann halb ausgefülltes freies Fenster | 0 Zeilen, kein Σ, der Leerzustand |
+> | beide | kein waagerechtes Scrollen |
+>
+> **Merge-Reihenfolge** *(Vorgabe vom 14.10.2026)*: Zweig `fix/suche-abbruch-anzeige` **vor oder
+> zusammen mit** `fix/suche-plan`, weil dieser Abschnitt auf `fix/suche-plan` das Verhalten des
+> anderen Zweigs beschreibt.
+
 #### ~~Der Chip „Zwischenschritte ausgeblendet"~~ — entfallen am 11.08.2026
 
 Er stand für die ehrliche Hälfte einer Vorgabe, die sich nicht halten ließ: Wer ein Drittel aller
@@ -3295,6 +3360,11 @@ Der alte Link (Punkt 6) *ist* eine von Hand geöffnete URL, denn genau das ist d
   `MessageLastUpdateProcessMessageIDX` beim verkehrsreichen Prozess; über 90 Tage, mit einem
   anderen, dort verkehrsreicheren Prozess, `range` über `MessageLastUpdateIDX` (M196). Der Produktionsplan
   kommt aus den Fällen i und j des Diagnoseskripts; bis dahin bleibt der Punkt offen.
+  *Beantwortet 14.10.2026 (M197):* Die Produktion wählt mit konstanter Mandantenkette `ref` über
+  `ProejctIDIDX` beim kleinen und `range` über `MessageLastUpdateProcessMessageIDX` beim
+  verkehrsreichen Prozess, über 24 Stunden wie über 90 Tage — **nicht** den prozessgetriebenen Plan
+  mit `Using temporary; Using filesort` über alle Prozesse des Mandanten. Laufzeiten sind dort nicht
+  erhoben; der Punkt bleibt als Beobachtung stehen, nicht als Befund.
 - **223. Die Suche hängt an zwei Indexnamen des Altsystems.** MariaDB beantwortet einen unbekannten
   Namen in `IGNORE INDEX` mit Fehler 1176, auch wenn nur einer der beiden fehlt; jOOQ reicht ihn als
   `DataAccessException` mit `SQLSyntaxErrorException` durch, `anDerZeitgrenze` lässt ihn passieren,
@@ -3320,6 +3390,10 @@ Der alte Link (Punkt 6) *ist* eine von Hand geöffnete URL, denn genau das ist d
   Join-Puffer beantwortet. **90 Tage gibt es nur über „Trotzdem suchen".** Der Produktionsplan
   kommt aus Fall k des Diagnoseskripts, einmal mit 24 Stunden und einmal mit
   `@fensterlaenge_stunden = 2160`.
+  *Ergänzt 14.10.2026 (M197):* **In der Produktion bleibt Fall k auch über 90 Tage an das Fenster
+  gebunden** — `range` über `MessageLastUpdateIDX`, 1.893.256 geschätzte Zeilen, kein `ALL`. Der
+  Unterschied zur Testkopie liegt an der Schätzung; der Punkt bleibt offen, weil er an der
+  Statistik hängt und nicht am Statement.
 
 ### Zur Anzeige bei abgebrochener Suche (Stand 13.10.2026, E‑238)
 
@@ -3342,6 +3416,9 @@ Der alte Link (Punkt 6) *ist* eine von Hand geöffnete URL, denn genau das ist d
   `letzteSeite` wird nur durch neue Daten ersetzt, nicht durch einen Abbruch. **Frage an den
   Auftraggeber:** Soll ein Abbruch die zuletzt gelieferte Seite auch für die folgenden Rückmeldungen
   verwerfen?
+  *Erledigt 14.10.2026 (E‑240):* Ja. Ein Abbruch verwirft Seite und Σ; an ihrer Stelle steht bei
+  der folgenden Rückmeldung der Leerzustand, bis die nächste Seite geliefert wird. §8.2, Kasten vom
+  14.10.2026.
 - **229. Belegsuche und Feldsuche lassen nach einem Abbruch die Trefferzeile der verworfenen
   Antwort stehen**, wenn ein späterer Abruf desselben Schlüssels abbricht („3 Treffer im
   Zeitfenster …" neben dem Abbruchsatz). Zeilen bleiben keine stehen. Auslöser: Wiedereinhängen der
