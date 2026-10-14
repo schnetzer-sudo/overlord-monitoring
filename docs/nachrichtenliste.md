@@ -2615,13 +2615,19 @@ schickte. Aus demselben Grund wiederholt der Zwischenspeicher diesen einen Fall 
 >   Regel „die zuletzt gelieferte Seite bleibt stehen", aber nicht dem Bild, das der Nutzer zuletzt
 >   sah (den Satz).
 >
-> **Sichtprüfung: steht aus** *(Stand 13.10.2026, abends)*. Vorbereitet ist sie vollständig — ein
-> sichtbares Chrome mit Debug-Port, `next dev` des Zweigs auf Port 3002, das Backend des Zweigs auf
-> 8080 und ein CDP-Skript, das im Prüftab `window.fetch` vorschaltet und `suche-abgebrochen` für die
-> Liste mit Suchbegriff stellt (wie §8.3), bei 1920 und 390 px, deutsch und englisch, dazu die
-> Gegenprobe mit `suche-fenster-zu-gross` und der Fall desselben Schlüssels über „Neu laden". Es
-> fehlt die Anmeldung, die nur der Auftraggeber vornimmt. Eingetragen in
-> [`README.md`](README.md), „Offene Sichtprüfungen".
+> **Sichtprüfung** *(14.10.2026, nachgeholt; Debug-Chrome über CDP, angemeldet durch den
+> Auftraggeber, Mandant `NEXANS`, `next dev` und Backend des Zweigs `fix/suche-abbruch-anzeige`,
+> Profil `dev`)*. Im Prüftab ist `window.fetch` vorgeschaltet: Die Liste ohne Suche läuft echt, die
+> Liste mit Suchbegriff bekommt die gestellte Antwort (wie §8.3). Gemessen über das DOM, dazu je
+> ein Bild:
+>
+> | Lage | gesehen |
+> |---|---|
+> | vorher, ohne Suche, 24 h | 50 Zeilen, Σ steht, Stand mit Uhrzeit, „Vor" frei |
+> | `suche-abgebrochen`, deutsch, 1920 px und 390 px | **0 Zeilen, kein Σ**, der Satz „Die Suche hat kein Ergebnis geliefert." in der gedämpften Farbe (berechnet gleich `text-muted-foreground`), Meldung am Suchfeld, kein Leerzustand, Filterleiste und „Neu laden" stehen, Stand „Noch nicht geladen", „Vor" gesperrt; kein waagerechtes Scrollen (`scrollWidth` = Fensterbreite) |
+> | dasselbe englisch, 1920 px und 390 px | „The search did not return a result.", Meldung „The search took too long and was cancelled. …", „Not loaded yet"; sonst wie deutsch |
+> | Gegenprobe `suche-fenster-zu-gross` | die alte Seite bleibt: 50 Zeilen, Σ steht, Meldung zur Fenstergrenze am Feld, kein Satz |
+> | derselbe Schlüssel: Suche liefert, dann bricht „Neu laden" ab | vorher 50 Zeilen und Σ; danach 0 Zeilen, kein Σ, der Satz, „Vor" gesperrt, Stand der letzten Lieferung |
 
 #### ~~Der Chip „Zwischenschritte ausgeblendet"~~ — entfallen am 11.08.2026
 
