@@ -174,3 +174,10 @@ scripts/messung-eerp-failed/ergebnis/s[0-9].txt
 # Stunden, Mandantencodes) -- keine Kennung Dritter. (G1) Alles andere dort nicht.
 scripts/messung-eerp-pending/ergebnis/*
 !scripts/messung-eerp-pending/ergebnis/s1.txt
+
+# ─── Diagnose: Freitextsuche in Produktion (diag/suche-produktion) ───────────
+# Gleiche Trennung wie bei scripts/messung-schritt10b-1/: suche.sql und
+# gerendert.txt werden eingecheckt, die Rohausgaben nicht -- auch nicht die
+# Kopie des Skripts mit dem eingesetzten Suchbegriff, denn der ist ein
+# Kundenname aus dem Bestand. (Regel G1)
+scripts/diagnose-produktion/ergebnis/

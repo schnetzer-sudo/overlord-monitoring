@@ -2,6 +2,8 @@ package de.kraftwerkone.overlord.monitor.message;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
+import de.kraftwerkone.overlord.monitor.common.Zeitfenster;
 import de.kraftwerkone.overlord.monitor.security.Rolle;
 import de.kraftwerkone.overlord.monitor.security.SicherheitsTestbasis;
 import java.io.IOException;
@@ -11,10 +13,13 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Set;
+import org.jooq.DSLContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 /**
  * <b>Der Pflicht-Isolationstest des Listen-Endpunkts</b> (Regel M4). Kopiert das Muster aus {@code
@@ -52,6 +57,11 @@ class NachrichtenIsolationDbIT extends SicherheitsTestbasis {
   private static final LocalDateTime FENSTER_BIS = LocalDateTime.parse("2025-12-30T00:00:00");
 
   @Autowired private Clock anwendungsuhr;
+
+  @Autowired private NachrichtenRepository nachrichtenRepository;
+
+  @Autowired
+  @Qualifier("glassfishDsl") private DSLContext glassfishDsl;
 
   private Sitzung aufNexans;
   private Sitzung aufSuttons;
@@ -155,6 +165,152 @@ class NachrichtenIsolationDbIT extends SicherheitsTestbasis {
     assertThat(antwort.status()).isEqualTo(200);
     assertThat(antwort.<List<String>>json("$.items[*].messageId")).isEmpty();
     assertThat(antwort.rumpf()).doesNotContain(fremderProzessname);
+  }
+
+  /**
+   * <b>Die Suche unter dem Hinweis</b> (13.10.2026, E‑237): Mit Suchbegriff und ohne Prozessfilter
+   * schickt die Liste ein eigenes Statement — {@code IGNORE INDEX FOR JOIN} auf {@code Message}.
+   * Regel M4 verlangt die Trennung fuer genau dieses Statement, und zwar in beide Richtungen.
+   *
+   * <p>Gesucht wird nach dem Namen eines <b>eigenen</b> Prozesses, hergeleitet aus der eigenen
+   * Liste — sonst bewiese eine leere Antwort nur, dass nichts gefunden wurde. Die fremden Kennungen
+   * kommen aus derselben Abfrage beim anderen Mandanten.
+   */
+  @Test
+  @DisplayName("Suche mit Hinweis: NEXANS bekommt keine Zeile von SUTTONS und umgekehrt")
+  void suche_mit_hinweis_trennt_in_beide_richtungen() throws Exception {
+    pruefeSuche(aufNexans, aufSuttons);
+    pruefeSuche(aufSuttons, aufNexans);
+  }
+
+  /**
+   * <b>Die Vorfilterung der Suche, eine Ebene tiefer</b> — am Repository statt am Antwortrumpf.
+   *
+   * <p>Die Verletzungsprobe vom 13.10.2026 hat gezeigt, warum das noetig ist: Ohne den
+   * Mandantenfilter in {@code loeseSucheAuf} blieb jeder Fall dieser Klasse gruen, weil die
+   * Mandantenkette des Hauptstatements die fremden Zeilen wieder herausnimmt. Zwei Riegel sind gut
+   * fuer die Sicherheit und schlecht fuer den Test: Ein Leck im ersten bliebe am Rumpf unsichtbar
+   * ({@code docs/messungen-suche-plan.md}). Regel M3 verlangt den Filter <i>im</i> Statement — also
+   * wird er dort geprueft.
+   *
+   * <p>Gesucht wird nach dem Namen eines fremden Prozesses und nach dem eines fremden Ablaufs;
+   * jeder trifft sich selbst, sobald die Vorfilterung den Mandanten vergisst. Geprueft wird, dass
+   * jede gelieferte Kennung dem eigenen Mandanten gehoert — fuer <b>beide</b> Abfragen der
+   * Vorfilterung, denn jede traegt ihren eigenen Mandantenfilter.
+   */
+  @Test
+  @DisplayName("Die Vorfilterung der Suche liefert nur eigene Kennungen, in beide Richtungen")
+  void vorfilterung_liefert_keine_fremden_kennungen() throws Exception {
+    pruefeVorfilterung(MANDANT_NEXANS, aufSuttons);
+    pruefeVorfilterung(MANDANT_SUTTONS, aufNexans);
+  }
+
+  private void pruefeVorfilterung(String eigenerMandant, Sitzung fremd) throws Exception {
+    Antwort fremdeListe = fremd.hole(abfrage(""));
+    String fremderProzessname = fremdeListe.<List<String>>json("$.items[*].processName").getFirst();
+    String fremderAblaufname =
+        fremdeListe.<List<String>>json("$.items[*].sosName").stream()
+            .filter(name -> name != null && name.trim().length() >= 3)
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("Der andere Mandant hat keinen Ablaufnamen"));
+
+    List<String> eigeneProzesse =
+        glassfishDsl
+            .fetch(
+                "select p.ProcessID from Process p join ProjectMandant pm on pm.ProjectID ="
+                    + " p.ProjectID where pm.MandantID = ?",
+                eigenerMandant)
+            .getValues(0, String.class);
+    List<String> eigeneAblaeufe =
+        glassfishDsl
+            .fetch(
+                "select s.SOSID from SOS s join Process p on p.ProcessID = s.ProcessID join"
+                    + " ProjectMandant pm on pm.ProjectID = p.ProjectID where pm.MandantID = ?",
+                eigenerMandant)
+            .getValues(0, String.class);
+
+    for (String begriff : List.of(fremderProzessname, fremderAblaufname)) {
+      Suchtreffer treffer =
+          nachrichtenRepository.loeseSucheAuf(
+              new MandantContext(eigenerMandant),
+              begriff,
+              NachrichtenFilter.SUCHE_HOECHSTENS_TREFFER);
+
+      assertThat(treffer.prozessIds())
+          .as("Die Prozessabfrage der Vorfilterung von %s liefert nur eigene", eigenerMandant)
+          .allMatch(eigeneProzesse::contains);
+      assertThat(treffer.sosIds())
+          .as("Die Ablaufabfrage der Vorfilterung von %s liefert nur eigene", eigenerMandant)
+          .allMatch(eigeneAblaeufe::contains);
+    }
+  }
+
+  /**
+   * <b>Das Hauptstatement unter dem Hinweis traegt seine Mandantenkette</b> — geprueft am
+   * Repository, mit einem Suchtreffer aus <b>fremden</b> Prozesskennungen.
+   *
+   * <p>Ueber die Oberflaeche ist das nicht zu pruefen: Dort kommen die Kennungen des Suchzweigs aus
+   * der Vorfilterung, und die liefert nur eigene. Fehlte die Mandantenkette im Hauptstatement,
+   * fiele das am Rumpf nie auf — die Verletzungsprobe vom 13.10.2026 hat den Fall der Oberflaeche
+   * nur an seiner Vorbedingung rot werden lassen. Hier steht das Statement allein: fremde Prozesse,
+   * die im Fenster Zeilen haben, und die Kette muss sie alle herausnehmen.
+   */
+  @Test
+  @DisplayName(
+      "Unter dem Hinweis nimmt die Mandantenkette fremde Prozesse heraus, beide Richtungen")
+  void hauptstatement_mit_hinweis_traegt_die_mandantenkette() throws Exception {
+    pruefeHauptstatement(MANDANT_NEXANS, aufSuttons);
+    pruefeHauptstatement(MANDANT_SUTTONS, aufNexans);
+  }
+
+  private void pruefeHauptstatement(String eigenerMandant, Sitzung fremd) throws Exception {
+    List<String> fremdeProzesse =
+        fremd.hole(abfrage("")).<List<String>>json("$.items[*].processId").stream()
+            .distinct()
+            .toList();
+    assertThat(fremdeProzesse).as("Der andere Mandant hat Zeilen im Fenster").isNotEmpty();
+
+    Nachrichtenabfrage mitFremdenProzessen =
+        new Nachrichtenabfrage(
+            new Zeitfenster(FENSTER_VON, FENSTER_BIS),
+            Set.of(),
+            List.of(),
+            new Suchtreffer(fremdeProzesse, List.of(), false),
+            true,
+            null,
+            50);
+    assertThat(NachrichtenRepository.ignoriertProzessindizes(mitFremdenProzessen))
+        .as("Das Statement traegt den Hinweis")
+        .isTrue();
+
+    assertThat(nachrichtenRepository.finde(new MandantContext(eigenerMandant), mitFremdenProzessen))
+        .as("%s darf ueber fremde Prozesskennungen keine Zeile bekommen", eigenerMandant)
+        .isEmpty();
+  }
+
+  private void pruefeSuche(Sitzung eigen, Sitzung fremd) throws Exception {
+    Antwort fremdeListe = fremd.hole(abfrage(""));
+    List<String> fremdeNachrichten = fremdeListe.json("$.items[*].messageId");
+    List<String> fremdeProzesse = fremdeListe.json("$.items[*].processId");
+    assertThat(fremdeNachrichten).as("Der andere Mandant hat Zeilen im Fenster").isNotEmpty();
+
+    String eigenerProzessname =
+        eigen.hole(abfrage("")).<List<String>>json("$.items[*].processName").getFirst();
+    Antwort treffer =
+        eigen.hole(
+            abfrage("&suche=" + URLEncoder.encode(eigenerProzessname, StandardCharsets.UTF_8)));
+
+    assertThat(treffer.status()).isEqualTo(200);
+    List<String> gefunden = treffer.json("$.items[*].messageId");
+    assertThat(gefunden)
+        .as("Die Suche nach einem eigenen Prozess findet eigene Zeilen")
+        .isNotEmpty()
+        .noneMatch(fremdeNachrichten::contains);
+    assertThat(treffer.<List<String>>json("$.items[*].processId"))
+        .noneMatch(fremdeProzesse::contains);
+    for (String kennung : fremdeNachrichten) {
+      assertThat(treffer.rumpf()).doesNotContain(kennung);
+    }
   }
 
   /**

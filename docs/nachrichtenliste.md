@@ -538,6 +538,10 @@ Spring-`SQLExceptionTranslator` liegt nicht dazwischen, weil die beiden `DSLCont
 fehlendes Recht kommen ebenfalls als `DataAccessException` an und bleiben, was sie sind: technische
 Fehler mit `500`.
 
+> *Ergänzt 13.10.2026:* **Nicht genau eine.** Connector/J 3.5.8 macht aus **jedem** SQLState
+> `70100` eine `SQLTimeoutException` — auch aus `KILL QUERY` und `KILL CONNECTION` —, und über den
+> Verbindungs-Timeout des Lese-Pools nach 5 s kommt ein weiterer Weg dazu. Offener Punkt **224**.
+
 **Und nur mit Suchbegriff.** Läuft ein Statement *ohne* Suche in die Zeitgrenze, ist das kein
 vorhergesehener Fall, sondern ein Befund; er gehört mit Stacktrace ins Protokoll und nicht in einen
 Hinweis, der dem Nutzer eine Verhaltensänderung nahelegt, die nichts ändern würde. Umgesetzt in
@@ -549,6 +553,83 @@ fachlich unbrauchbar"). Der Abstrich ist, dass dieselbe Antwort auch dann kommt,
 Datenbank unter Last steht; der Nutzer liest dann eine Aufforderung, die ihm nicht hilft. Sichtbar
 bleibt es trotzdem: Die `traceId` steht in der Antwort und im Protokoll, und häufen sich diese
 Einträge, ist das das Signal. Steht unter „Offene Punkte".
+
+> ### ⚠️ Der Befund aus der Produktion — und F4 im Suchpfad *(13.10.2026, E‑237)*
+>
+> **Die Absätze dieses Abschnitts bleiben stehen.** Sie beschreiben die Suche unter dem Plan, den
+> die Testkopie wählt: zeitgetrieben, `range` über `MessageLastUpdateIDX`, die Kosten am Begriff
+> und am Fenster (L13). **In der Produktion lief die Suche bei `NEXANS` am 13.10.2026 bei jedem
+> Begriff in die Zeitgrenze, auch über 24 Stunden** — der Abbruch, den die Fenstergrenze
+> „unwahrscheinlich, nicht unmöglich" machen sollte, war dort der Regelfall.
+>
+> **Warum** ([`messungen-suche-plan.md`](messungen-suche-plan.md) M193, erhoben per `EXPLAIN` in
+> der Produktion): Die Produktion rechnet ihre Indexstatistik neu und schätzt einen Nachschlag über
+> `Message_ProcessFK` auf **557** Zeilen je Prozess; die Testkopie schätzt **197.805**. Mit 557
+> wählt der Optimierer für `NEXANS` den **prozessgetriebenen** Plan — `ProjectMandant` →
+> `mandanten_process` → `Message` über `Message_ProcessFK`, alle Zeilen aller Prozesse, dann
+> `Using temporary; Using filesort`. **Nicht der Suchbegriff lässt den Plan kippen, sondern das
+> fehlende enge Fenster:** Ohne Suche wählt dieselbe Produktion für dasselbe unverengte Fenster
+> denselben Plan (Fall b), mit erster Verengungsstufe den Zeitindex (Fall f). Die Suche trifft es,
+> weil sie nie verengt wird (§5d, `Abfragemerkmal.SUCHBEGRIFF`).
+>
+> **Gebaut ist:** `IGNORE INDEX FOR JOIN (ProejctIDIDX, Message_ProcessFK)` auf `Message` —
+> Fassung F4 aus §5a —, **genau dann, wenn ein Suchbegriff gesetzt ist und kein Prozessfilter**.
+> Die Bedingung steht als reine Funktion an einer Stelle
+> (`NachrichtenRepository.ignoriertProzessindizes`), die beiden Indexnamen als Konstante daneben
+> (`PROZESSINDIZES`, mit Verweis auf §3.2 der Projektbeschreibung). In jedem anderen Fall ist das
+> Statement Zeichen für Zeichen das alte: Verglichen sind die Suche mit entferntem Hinweis und die
+> Liste ohne Suche (M194, MD5-gleich mit dem Stand vor dem Bau); für Prozessfilter und Statusfilter
+> folgt es aus dem Code — der Zweig ohne Hinweis ist dasselbe `.from(MESSAGE)` wie vorher.
+> **Nicht mit Prozessfilter**, weil dort
+> genau der ausgeschlossene Index die Abfrage trägt (§5a: 1,730 → 1.547,772 ms); **nicht ohne
+> Suche**, weil dort die Verengung das Fenster eng macht. In der Produktion wählt der Optimierer
+> unter F4 den Zeitindex (Fall e, 15.662 geschätzte Zeilen).
+>
+> **Was es kostet** (M195, Testkopie, alle zehn Mandanten, beste von fünf): Der schlimmste Fall —
+> Begriff trifft Stammdaten, im Fenster keine Zeile — kostet unter F4 bei **jedem** Mandanten
+> dasselbe, weil der Zeitindex das Fenster aller Mandanten liest: 37 bis 43 ms über 24 Stunden,
+> 1,22 bis 1,39 s über 30 Tage, **3,91 bis 4,49 s über 90 Tage**. Für `NEXANS` ist das der Plan, den
+> die Testkopie ohnehin wählte; teurer wird es für die Mandanten, die dort bisher prozessgetrieben
+> liefen (`WOC`, `SYSTEM`, `NXHBE` über 30 Tage: von 2 bis 15 ms auf 1,3 bis 1,4 s). **Das Tor des
+> Auftrags — höchstens 5 s in jedem Fall — hält**, mit 4.491,257 ms als höchstem Wert.
+>
+> **Was F4 nicht leistet:**
+>
+> - **Ein Begriff, der nur Prozesse trifft, kommt über 90 Tage auf einen vollen Durchlauf über
+>   `Message`** (3.478,564 ms auf der Testkopie, Plan in M195). Der Optimierer steigt dann über die
+>   Mandantenkette ein (ohne den Hinweis: `Message` über `ProejctIDIDX`) und liest `Message` über
+>   einen Join-Puffer — ohne die beiden Indizes, aber auch ohne Fenster. Offener Punkt **225**.
+> - **Suche plus Prozessfilter läuft ohne Hinweis**, also unter der Statistik der Produktion.
+>   Offener Punkt **222**.
+> - **Jeder unverengte Pfad ohne Suche** bleibt, wie er ist — und bricht bei `NEXANS` in der
+>   Produktion vermutlich ebenso ab (§5d, offener Punkt **221**).
+> - **Die Suche hängt an zwei Indexnamen des Altsystems** (M194: unbekannter Name ist Fehler 1176,
+>   also `500`). Offener Punkt **223**; bewacht durch `NachrichtenSuchindizesDbIT`.
+>
+> **Die Tests:** `NachrichtenStatementsTest` hält den gerenderten Text mit und ohne Hinweis fest und
+> prüft die Bedingung rein (Suche ohne Prozessfilter ja; Suche mit Prozessfilter, keine Suche,
+> Statusfilter allein nein). `NachrichtenPlanDbIT` prüft für `NEXANS` und `SUTTONS`, dass mit
+> Suchbegriff **keiner der beiden Indizes in `possible_keys` von `Message` steht** — die
+> Eigenschaft, die nicht an der Statistik hängt; den Treiber prüft er bewusst nicht, der ist auf der
+> Testkopie ohnehin zeitgetrieben. Gegenprobe: ohne Suche und mit Prozessfilter stehen beide dort.
+> `NachrichtenIsolationDbIT` trennt die Suche unter dem Hinweis in beide Richtungen (Regel M4),
+> dazu zwei Fälle am Repository, weil die Oberfläche die beiden Riegel der Suche nicht einzeln
+> sieht: das Hauptstatement unter dem Hinweis mit fremden Prozesskennungen (die Liste bleibt leer),
+> und die Vorfilterung, deren Prozess- **und** Ablaufabfrage nur eigene Kennungen liefern. **Jeder
+> der drei Mandantenfilter des Suchpfads macht für sich allein einen Test rot.**
+> `NachrichtenSuchindizesDbIT` prüft gegen `information_schema.STATISTICS`, dass es beide Indizes
+> gibt und dass sie auf `ProcessID` liegen. Verletzungsproben in
+> [`messungen-suche-plan.md`](messungen-suche-plan.md).
+>
+> **Vor dem Merge** führt Lukas das erweiterte Diagnoseskript in der Produktion aus (E‑239, Fälle g
+> bis k, M196). **Bis dahin ist F4 im Suchpfad gebaut, gemessen und getestet — aber in der
+> Produktion nur als Fall e gesehen**, mit dem Hinweis in Großschreibung und nicht als das
+> Statement, das die Anwendung schickt.
+>
+> *Ergänzt 14.10.2026 (M197):* **Gesehen.** Lukas hat das Skript in der Produktion über 24 Stunden
+> und über 90 Tage ausgeführt. In den Fällen g, h und k — dem Statement, wie die Anwendung es
+> schickt — steht keiner der beiden Indizes in `possible_keys` von `Message`; der Plan ist `range`
+> über `MessageLastUpdateIDX`, wie in Fall e. Das Merge-Tor aus E‑239 ist erfüllt.
 
 ---
 
@@ -566,6 +647,11 @@ oder einen anderen Filter derselben Liste zerstört.
 **Am Code dieses Endpunkts ist deshalb nichts geändert worden.** Was bleibt, sind Zahlen: die zehn
 Mandanten einzeln, die anderen Filter einzeln, und die Erkenntnis, dass die Liste heute **zwei
 Planfamilien** hat, von denen jede für eine andere Klasse von Mandanten falsch ist.
+
+> *Ergänzt 13.10.2026 (E‑237):* **F4 ist seit heute gebaut — nur im Suchpfad**, also nur mit
+> Suchbegriff und ohne Prozessfilter. Anlass ist ein Befund aus der Produktion, nicht diese Messung;
+> der Abschnitt hier bleibt, wie er ist, und gilt für die Liste ohne Suche unverändert. Siehe §5,
+> Kasten vom 13.10.2026, und [`messungen-suche-plan.md`](messungen-suche-plan.md) M193 und M195.
 
 ### Der Rahmen
 
@@ -686,6 +772,11 @@ aus M83 —, und daraus folgt `3.560.486 / 18 = 197.804` geschätzte Zeilen je P
 197.804 stehen in **jedem** prozess-getriebenen Plan dieser Runde, ob der Mandant neun Zeilen hat
 oder zweihunderttausend. Dass die Wahl bei sechs von zehn Mandanten trotzdem richtig herauskommt,
 ist keine Leistung der Schätzung.
+
+> *Ergänzt 13.10.2026:* **Das gilt für die Testkopie.** Die Produktion rechnet ihre Statistik neu
+> und trägt für `Message_ProcessFK` die `CARDINALITY` **9.127**, also 557 geschätzte Zeilen je
+> Prozess ([`messungen-suche-plan.md`](messungen-suche-plan.md) M193) — dort wählt der Optimierer
+> die prozessgetriebene Familie für `NEXANS` schon über 24 Stunden.
 
 **Und die 197.804 erklären zugleich den Zufall, aus dem offener Punkt 57 entstanden ist:**
 `SUTTONS` hat 197.158 Zeilen insgesamt. Der Mandant, bei dem die Schätzung fast genau stimmt, ist
@@ -1501,6 +1592,23 @@ Schranke von 5 ms war gegen die Zahlen aus M104 gesetzt, die beides nicht enthie
 eine Kernabfrage von einer Tabelle abhängt, die dieses Projekt selbst fortschreibt**. Fällt der
 Rollup aus, läuft die Liste unverengt weiter — langsamer, aber richtig. **Ein fehlender Schlüssel
 schaltet ab, nicht ein.**
+
+> ### ⚠️ Korrektur vom 13.10.2026 — für `NEXANS` heißt „unverengt" in der Produktion „Abbruch"
+>
+> **Der Absatz darüber bleibt stehen**; auf der Testkopie stimmt er. In der Produktion wählt der
+> Optimierer für `NEXANS` ohne Suchbegriff und ohne Verengung über 24 Stunden den
+> **prozessgetriebenen** Plan — `ProjectMandant` → `mandanten_process` → `Message` über
+> `Message_ProcessFK`, `Using temporary; Using filesort` (Fall b in
+> [`messungen-suche-plan.md`](messungen-suche-plan.md) M193). **Es ist Zeile für Zeile derselbe
+> Plan, mit dem die Suche dort bei jedem Begriff nach 10 s abbricht** (Fall a). Mit erster
+> Verengungsstufe wählt derselbe Server den Zeitindex (Fall f, 575 geschätzte Zeilen).
+>
+> **Gemessen ist dabei der Plan, nicht die Laufzeit** — das Diagnoseskript führt kein Statement an
+> `Message` aus. Dass der unverengte Pfad ohne Suche ebenfalls in die Zeitgrenze läuft, ist ein
+> Schluss: derselbe Plan liest dieselben Zeilen, der Suchzweig filtert nur. Läuft er hinein, wird
+> daraus **kein** `suche-abgebrochen`, sondern ein `500` (`anDerZeitgrenze` greift nur mit
+> Suchbegriff, §5). **Fällt der Rollup aus, ist die Liste für `NEXANS` damit nicht langsamer, sondern
+> weg** — und mit ihr jeder andere Pfad, der unverengt läuft. Offener Punkt **221** in §9.
 
 ### Die Tests
 
@@ -2428,6 +2536,164 @@ die helfen — Zeitraum verkleinern, Begriff schärfen —, finden dort statt; u
 schickte. Aus demselben Grund wiederholt der Zwischenspeicher diesen einen Fall nicht automatisch
 (`lib/query-client.ts`); bei jedem anderen `4xx` bleibt es beim einen Wiederholungsversuch.
 
+> ### Ein Abbruch blendet die alte Seite aus *(13.10.2026, E‑238, Zweig `fix/suche-abbruch-anzeige`)*
+>
+> **Die beiden Absätze darüber bleiben stehen**, und für die Meldung am Suchfeld gelten sie
+> weiter. Für die **Liste** gilt seit E‑238 eine Ausnahme: **Bei `suche-abgebrochen` zeigt die
+> Nachrichtenliste keine Zeile der zuletzt gelieferten Seite und keinen Σ.** Der Grund ist der
+> Unterschied, den der Absatz über die Rückmeldungen selbst zieht: `suchbegriff-zu-kurz`,
+> `suchbegriff-zu-unscharf` und `suche-fenster-zu-gross` antworten auf eine **Eingabe**, die noch
+> nicht fertig ist — der Nutzer soll dabei sehen, was er vorher sah. Beim Abbruch ist die Suche
+> **gelaufen** und hat nichts geliefert; die alte Seite stehen zu lassen sah aus wie ihr Ergebnis.
+> Seit dem Befund vom 13.10.2026 (§5) war genau das in der Produktion der Normalfall.
+>
+> | Lage | Liste | Σ | an Stelle der Tabelle |
+> |---|---|---|---|
+> | `suche-abgebrochen` | keine Zeile | keiner | ein Satz in der gedämpften Textfarbe: **„Die Suche hat kein Ergebnis geliefert."** — englisch „The search did not return a result." |
+> | `suchbegriff-zu-kurz`, `suchbegriff-zu-unscharf`, `suche-fenster-zu-gross` | die zuletzt gelieferte Seite, wie bisher | ihr Σ, wie bisher (§8.3) | — |
+>
+> - **Nicht der Leerzustand aus `components/zustand.tsx`:** Der behauptete, im Zeitfenster stehe
+>   nichts — das weiß nach einem Abbruch niemand. Der Satz sagt nur, was geschehen ist; was zu tun
+>   ist, sagt die Meldung am Suchfeld, die unverändert bleibt. Der englische Text sagt bewusst nicht
+>   „returned no results" — das läse sich als „null Treffer".
+> - **Filterleiste, „Neu laden" und der Stand bleiben.**
+> - **Auch die eigene Seite der Abfrage wird ausgeblendet.** Scheitert ein späterer Abruf
+>   **desselben** Schlüssels — die automatische Aktualisierung auf Seite eins oder „Neu laden" —,
+>   behält der Zwischenspeicher die Daten des vorigen Abrufs (TanStack Query 5.101.4 setzt im
+>   Fehlerfall nur `error` und `status`), und die Seite wäre gesetzt, obwohl der Abruf gescheitert
+>   ist. Sie steht dann ebenfalls nicht da. **Über den Wortlaut des Auftrags hinaus** ist in dieser
+>   Lage „Nächste Seite" gesperrt: Ihr Cursor führte in die Seite zwei eines Ergebnisses, das die
+>   Ansicht gerade nicht zeigt. Eine Zeile, falls das nicht gewollt ist.
+> - **Gebaut** als reine Funktion `listenanzeige` in `features/nachrichten/filter.ts` — welche
+>   Seite, welcher Σ, ob „Vor" frei ist und ob der Satz steht —; die Ansicht zeigt nur an. Der
+>   bisherige Rückgriff (`ruhigeRueckmeldung`) ist dorthin umgezogen und für alle übrigen Lagen
+>   unverändert, einschließlich der Rückmeldungen an den Zeitfensterfeldern.
+>
+> **Tests:** 1.295 Fälle vor dem Eingriff, **1.310** danach (gezählt, nicht gerechnet). Neu in
+> `tests/nachrichtenfilter.test.ts` zehn reine Fälle (Abbruch, Abbruch auf demselben Schlüssel, je
+> einer für die drei übrigen Typen am Suchfeld und die drei an den Zeitfensterfeldern, Fehler der
+> ganzen Ansicht, halbes freies Fenster); in `tests/blaettern.test.tsx` fünf gerenderte (Abbruch:
+> keine Zeile, kein Σ, der Satz mit `text-muted-foreground`, kein Leer- und kein Fehlerzustand, die
+> Meldung am Suchfeld, „Neu laden" und der Blätterblock stehen; derselbe Schlüssel über „Neu laden";
+> und je einer für die drei übrigen Typen am Suchfeld). **Ersetzt** ist der gerenderte Fall „lässt
+> die Zahl mit der Liste stehen, wenn die Rückmeldung einem Feld gilt" — er war mit
+> `suche-abgebrochen` gestellt und sicherte genau das Verhalten zu, das E‑238 aufhebt. Dazu +1 in
+> `farbwerte.test.ts` für `next-env.d.ts`, das `next typegen` erst im Lauf von `pnpm check` anlegt
+> und das beim Basislauf nicht im Baum lag; es gehört nicht zu diesem Zweig.
+>
+> **Verletzungsproben** — je ein Eingriff in `filter.ts`, zurückgespielt aus einer Sicherungskopie
+> und mit `cmp` verglichen, in keinem Commit; Leerprobe ohne Eingriff grün:
+>
+> | Probe | Eingriff | rot |
+> |---|---|---|
+> | 1 | Ausblenden für alle Problemtypen am Suchfeld | 6: die drei übrigen Typen, je rein und gerendert, etwa *„die zwei Zeilen von Seite zwei stehen: expected to have a length of 2 but got +0"* |
+> | 2 | Nie ausblenden | 4: Abbruch und derselbe Schlüssel, je rein und gerendert, etwa *„keine Zeile: expected to have a length of +0 but got 2"* |
+> | 3 | Σ bleibt beim Abbruch stehen | 2, **nur die reinen Fälle**: Die Ansicht zeigt den Σ zusätzlich nur bei Daten (`zeigtDaten`), der gerenderte Test ist für diese Probe blind — ein zweiter Riegel |
+> | Z1 | „Vor" beim Abbruch durchgereicht | 2 (rein und gerendert, *„Vor: expected false to be true"*) |
+> | Z2 | Rückgriff nur bei Rückmeldungen am Suchfeld statt an jedem Feld | 3: die drei Zeitfenstertypen. **Vor dem Nachtrag dieser drei Fälle blieb die Probe grün** — gefunden von einem der drei Prüfer, die den Bau gegengelesen haben; die Lücke war älter als der Bau |
+>
+> **Geprüft und gemeldet, nicht geändert** (offene Punkte **226** bis **229** in §9):
+>
+> - **Die automatische Aktualisierung schickt eine abgebrochene Suche alle 60 s erneut**, solange
+>   der Schalter an ist, die Liste auf Seite eins steht und der Tab sichtbar ist — in der Produktion
+>   jedes Mal bis zur Zeitgrenze. `aktualisierungsintervall` kennt den Fehlerzustand nicht, und
+>   `query-client.ts` unterdrückt bei `suche-abgebrochen` nur den Wiederholungsversuch, nicht das
+>   Intervall. Ist die Suche auf einem neuen Schlüssel abgebrochen, stehen **während** jedes dieser
+>   Abrufe statt des Satzes acht Skelettzeilen, und die Meldung am Suchfeld verschwindet bis zur
+>   Antwort (TanStack setzt `error` beim Abruf ohne Daten auf `null` zurück). Beides ist älter als
+>   E‑238 — vorher stand dort ebenfalls das Skelett.
+> - **„Neu laden" von Seite zwei schickt die abgebrochene Suche zweimal hintereinander:** erst über
+>   `fetchQuery`, dann, weil der gescheiterte Eintrag als veraltet gilt, beim Wechsel auf Seite eins
+>   ein zweites Mal. Älter als E‑238.
+> - **Belegsuche und Feldsuche** lassen bei einem Abbruch **keine alten Zeilen** stehen: Der
+>   Abbruchsatz ersetzt die Trefferliste, gleich ob Daten im Zwischenspeicher liegen. **Die
+>   Trefferzeile darüber** („3 Treffer im Zeitfenster …") bleibt aber stehen, wenn ein späterer
+>   Abruf **desselben** Schlüssels abbricht — sie liest die Daten der verworfenen Antwort. Das
+>   geschieht beim Wiedereinhängen der Ansicht, bei der Rückkehr zu einem veralteten Schlüssel und
+>   nach einem Netzausfall (`refetchOnReconnect` steht auf der Vorgabe).
+> - **Die Prozessansicht** kann `suche-abgebrochen` gar nicht bekommen — ihre Übertragungsliste
+>   sucht nie —, und bei jedem anderen Fehler räumt sie Liste und Σ.
+> - **Offen, als Frage an den Auftraggeber:** Nach einem Abbruch bringt eine **folgende**
+>   Rückmeldung zu einer Eingabe — etwa `suche-fenster-zu-gross`, oder schon das halb ausgefüllte
+>   freie Fenster — die Seite samt Σ zurück, die **vor** dem Abbruch geliefert wurde.
+>   `letzteSeite` wird nur durch neue Daten ersetzt, nicht durch einen Abbruch. Das folgt der
+>   Regel „die zuletzt gelieferte Seite bleibt stehen", aber nicht dem Bild, das der Nutzer zuletzt
+>   sah (den Satz).
+>
+> **Sichtprüfung** *(14.10.2026, nachgeholt; Debug-Chrome über CDP, angemeldet durch den
+> Auftraggeber, Mandant `NEXANS`, `next dev` und Backend des Zweigs `fix/suche-abbruch-anzeige`,
+> Profil `dev`)*. Im Prüftab ist `window.fetch` vorgeschaltet: Die Liste ohne Suche läuft echt, die
+> Liste mit Suchbegriff bekommt die gestellte Antwort (wie §8.3). Gemessen über das DOM, dazu je
+> ein Bild:
+>
+> | Lage | gesehen |
+> |---|---|
+> | vorher, ohne Suche, 24 h | 50 Zeilen, Σ steht, Stand mit Uhrzeit, „Vor" frei |
+> | `suche-abgebrochen`, deutsch, 1920 px und 390 px | **0 Zeilen, kein Σ**, der Satz „Die Suche hat kein Ergebnis geliefert." in der gedämpften Farbe (berechnet gleich `text-muted-foreground`), Meldung am Suchfeld, kein Leerzustand, Filterleiste und „Neu laden" stehen, Stand „Noch nicht geladen", „Vor" gesperrt; kein waagerechtes Scrollen (`scrollWidth` = Fensterbreite) |
+> | dasselbe englisch, 1920 px und 390 px | „The search did not return a result.", Meldung „The search took too long and was cancelled. …", „Not loaded yet"; sonst wie deutsch |
+> | Gegenprobe `suche-fenster-zu-gross` | die alte Seite bleibt: 50 Zeilen, Σ steht, Meldung zur Fenstergrenze am Feld, kein Satz |
+> | derselbe Schlüssel: Suche liefert, dann bricht „Neu laden" ab | vorher 50 Zeilen und Σ; danach 0 Zeilen, kein Σ, der Satz, „Vor" gesperrt, Stand der letzten Lieferung |
+
+> ### Ein Abbruch verwirft die zuletzt gelieferte Seite *(14.10.2026, E‑240, Zweig `fix/suche-abbruch-anzeige`)*
+>
+> **Entscheidung des Auftraggebers zu Punkt 228:** Ein Abbruch verwirft die zuletzt gelieferte
+> Seite und ihren Σ — auch für die folgenden Rückmeldungen am Feld. Erst die nächste gelieferte
+> Seite füllt die Liste wieder. An der Stelle der Tabelle steht danach nicht der Abbruchsatz,
+> sondern der Zustand, den eine Rückmeldung am Feld heute zeigt, wenn noch keine Seite geliefert
+> wurde.
+>
+> **Welcher Zustand das ist — gefragt und so beantwortet:** der **Leerzustand** (`LeerMitUrsache`):
+> „Keine Nachricht in diesem Ausschnitt" mit den Ursachen (etwa „Erweitere das Zeitfenster. Der
+> Suchbegriff schränkt die Liste ein — leere ihn.") und dem Knopf „Auf 30 Tage erweitern"; dazu
+> kein Σ, Stand „Noch nicht geladen", der Blätterblock. Beim halb ausgefüllten freien Fenster steht,
+> solange die Anfrage läuft, kurz das Ladeskelett. **Zu beachten:** Das ist genau der Leerzustand,
+> den E‑238 für den Abbruch selbst abgelehnt hat, weil er behauptet, im Zeitfenster stehe nichts —
+> nach einem Abbruch und einer folgenden Rückmeldung am Feld behauptet er es jetzt doch. Gebaut wie
+> vorgegeben; der Abbruch selbst zeigt weiter den Satz.
+>
+> - **Gebaut** als reine Funktion `letzteLieferung(bisher, jetzt)` in
+>   `features/nachrichten/filter.ts`: Ein Abbruch (`sucheOhneErgebnis`) leert Seite und Σ, eine neue
+>   gelieferte Seite ersetzt beide, alles andere lässt sie stehen. `useNachrichtenSeite` in
+>   `hooks.ts` wendet sie während des Renderns an; `listenanzeige` (E‑238) ist unverändert.
+> - Jeder **andere** Fehler leert nicht — die Regel „die zuletzt gelieferte Seite bleibt stehen"
+>   gilt dort weiter, und die Gegenprobe `suche-fenster-zu-gross` **ohne** vorausgehenden Abbruch
+>   (Tabelle oben) zeigt weiter die alte Seite.
+>
+> **Tests:** **1.321** Fälle in `pnpm check`, gezählt. Neu in `tests/nachrichtenfilter.test.ts` acht
+> reine Fälle (describe „Was als zuletzt gelieferte Seite gilt"), in `tests/blaettern.test.tsx` drei
+> gerenderte: die Eichung *„zeigt bei einer Rückmeldung am Feld ohne gelieferte Seite den
+> Leerzustand"*, dann *„bringt nach einem Abbruch bei Fenster zu groß die alte Seite nicht zurück"*
+> (samt Wiederauffüllen über 24 Stunden) und *„bringt nach einem Abbruch beim halb ausgefüllten
+> freien Fenster die alte Seite nicht zurück"*. `vitest.config.mts`: 211 gerenderte Fälle
+> (`blaettern` 15 → 18).
+>
+> **Verletzungsproben** — je ein Eingriff, zurückgespielt und mit `cmp` verglichen, in keinem
+> Commit:
+>
+> | Probe | Eingriff | rot |
+> |---|---|---|
+> | V0 | keiner | 0 |
+> | V1 | Ein Abbruch leert nicht (Stand vor E‑240) | 4 |
+> | V2 | Jeder Fehler leert, nicht nur der Abbruch | 4 |
+> | V3 | Der Abbruch leert die Seite, der Σ bleibt | 2, **nur die reinen Fälle** — derselbe zweite Riegel wie bei E‑238, Probe 3 |
+> | V4 | Nach einem Abbruch füllt keine Lieferung mehr | 4; die gerenderten Fälle sind für das Wiederauffüllen blind, die reinen fangen es |
+> | V5 | Der Hook wendet die Funktion nicht an | 2 |
+>
+> **Sichtprüfung** *(14.10.2026; Debug-Chrome über CDP, angemeldet durch den Auftraggeber,
+> Mandant `NEXANS`, `next dev` und Backend des Zweigs, Profil `dev`; Abbruch gestellt über
+> `window.fetch` wie oben, die übrigen Antworten echt)*, deutsch bei 1920 px und 390 px, englisch
+> bei 1920 px:
+>
+> | Lage | gesehen |
+> |---|---|
+> | Abbruch, dann „Fenster zu groß" | 0 Zeilen, kein Σ, kein Abbruchsatz, der Leerzustand, Meldung zur Fenstergrenze am Feld; danach füllt „24 Stunden" die Liste wieder (50 Zeilen, Σ steht) |
+> | Abbruch, dann halb ausgefülltes freies Fenster | 0 Zeilen, kein Σ, der Leerzustand |
+> | beide | kein waagerechtes Scrollen |
+>
+> **Merge-Reihenfolge** *(Vorgabe vom 14.10.2026)*: Zweig `fix/suche-abbruch-anzeige` **vor oder
+> zusammen mit** `fix/suche-plan`, weil dieser Abschnitt auf `fix/suche-plan` das Verhalten des
+> anderen Zweigs beschreibt.
+
 #### ~~Der Chip „Zwischenschritte ausgeblendet"~~ — entfallen am 11.08.2026
 
 Er stand für die ehrliche Hälfte einer Vorgabe, die sich nicht halten ließ: Wer ein Drittel aller
@@ -2496,6 +2762,11 @@ träge einen Zeitpunkt, der im neuen Fenster nichts zu suchen hat (`cursor-ungue
 >   nach dem Zurücksetzen des Stapels gehörten die Zeilen davor zum alten Filter und ließen sich
 >   nicht mehr rechnen. *Diese Lage nennt der Auftrag nicht; entschieden nach seinem eigenen
 >   Grundsatz „genau wie die Seite selbst".*
+>   *Ergänzt 13.10.2026 (E‑238):* **Außer bei `suche-abgebrochen`** — dort gehen Seite und Σ
+>   zusammen, und an ihrer Stelle steht ein Satz (§8.2, Kasten vom 13.10.2026). Der gerenderte
+>   Fall „lässt die Zahl mit der Liste stehen, wenn die Rückmeldung einem Feld gilt" war mit genau
+>   diesem Typ gestellt und ist durch drei Fälle für die übrigen Typen ersetzt; Probe 9 unten und die
+>   Zeile „Rückmeldung am Feld" der Sichtprüfung vom 18.09.2026 beschreiben den Stand davor.
 > - **Zugänglich:** Das Zeichen ist ein Symbol (Lucide `Sigma`) und `aria-hidden`, „Treffer:" steht
 >   nur für Vorleseprogramme. **Kein `aria-live`** — sonst läse ein Vorleseprogramm alle sechzig
 >   Sekunden die neue Zahl vor. Die Zahl über `lib/format.ts`, `tabular-nums`, Schriftrolle wie der
@@ -2857,6 +3128,9 @@ Der alte Link (Punkt 6) *ist* eine von Hand geöffnete URL, denn genau das ist d
   Solange das so bleibt, ist jede Planwahl dieses Endpunkts ein Zufallstreffer, und jeder Eingriff
   verschiebt nur, **welche** Mandanten davon profitieren. `ANALYZE TABLE` ist keine Abhilfe: Es
   wäre ein Schreibzugriff auf `GlassfishDB`.
+  *Ergänzt 13.10.2026:* Auf der Testkopie. Die Produktion trägt für `Message_ProcessFK` **9.127**
+  (557 Zeilen je Prozess) und wählt für `NEXANS` deshalb anders (M193; §5, Kasten vom 13.10.2026).
+  Dort ist die Planwahl nicht dieselbe für jeden Mandanten, sondern eine andere als hier.
 
 
 ### Zum Parameter `ueberfaellig` (Stand 27.08.2026, Schritt 10b-1 Teil B)
@@ -2913,7 +3187,9 @@ Der alte Link (Punkt 6) *ist* eine von Hand geöffnete URL, denn genau das ist d
   Schritt 10 fortgeschrieben, würde genügen: Ein Treffer in `SOSName` ließe sich damit auf **beide**
   Prozesskennungen auflösen — die des Ablaufs und die, unter der die Nachrichten tatsächlich
   stehen —, und die einfache Bedingung `ProcessID IN (…)` trüge wieder, ohne Zeilen zu verlieren.
-  Damit fiele die ODER-Verknüpfung weg, die heute den Index auf `ProcessID` ausschließt. **Der Preis
+  Damit fiele die ODER-Verknüpfung weg, die heute den Index auf `ProcessID` ausschließt *(ergänzt
+  13.10.2026: auf der Testkopie; in der Produktion nahm der Plan der Suche `Message_ProcessFK` über
+  die Mandantenkette, M193 — und seit E‑237 schließt der Hinweis beide Indizes aus)*. **Der Preis
   ist ein voller Durchlauf über `Message`** (10,9 s, M10) zum Füllen der Tabelle; als seltener
   Hintergrundlauf ist das tragbar, als Teil einer Anfrage nicht. Umgesetzt wird das hier nicht — es
   gehört zu Schritt 10 und braucht seine eigene Messung.
@@ -3060,6 +3336,93 @@ Der alte Link (Punkt 6) *ist* eine von Hand geöffnete URL, denn genau das ist d
   ist es die Annahme, die die Anwendungsuhr ohnehin macht. Ein Auseinanderlaufen fiele als
   systematischer Versatz aller Zeitpunkte auf — und seit Aufgabe 11 an **einer** Stelle: Die
   Oberfläche formatiert mit derselben Zone, die das Backend zum Umrechnen benutzt.
+
+### Zum Plan der Suche in der Produktion (Stand 13.10.2026)
+
+> Vergeben nach einer Suche mit Wortgrenzen über alle offenen Zweige; der Suchweg steht in
+> [`messungen-suche-plan.md`](messungen-suche-plan.md), „Nummernvergabe".
+
+- **221. 🔴 Jeder unverengte Pfad bricht bei `NEXANS` in der Produktion ab — vermutlich.** Belegt
+  ist der Plan, nicht die Laufzeit: Ohne Suchbegriff und ohne Verengung wählt die Produktion für
+  `NEXANS` über 24 Stunden denselben prozessgetriebenen Plan, mit dem die Suche dort nach 10 s
+  abbricht (M193, Fall b gegen Fall a; §5d, Kasten vom 13.10.2026). Unverengt läuft die Liste
+  ohne Suche heute in vier Lagen: **Sortierung „älteste"** (`SORTIERUNG` trägt der Rollup nur
+  absteigend), **abgeschalteter Schalter** `overlord.nachrichtenliste.verengung`, ein **Rollup, der
+  ausfällt** (Fehler beim Fragen, `Verengungsgrund.KEINE_UNTERGRENZE`), und ein **Wasserstand so
+  weit zurück, dass im Fenster keine `limit + 1` gezählten Zeilen stehen** — etwa wenn der Rollup
+  einen Tag nicht mehr gerechnet hat. Ohne Suchbegriff wird ein Abbruch dort ein `500`, kein
+  `suche-abgebrochen` (§5). **Ein möglicher Zusammenhang mit dem Lastschub nach dem Ausfall einer
+  Ablage ist nicht geprüft.** Nicht gebaut, auf Entscheidung vom 13.10.2026: kein Hinweis außerhalb
+  des Suchpfads. Zu sehen ist der Fall im Diagnoseskript als Fall b.
+- **222. Suche plus Prozessfilter läuft ohne Hinweis.** Bewusst (E‑237): Dort trägt der
+  ausgeschlossene Index die Abfrage. **Welchen Plan die Produktion dort wählt, ist ungesehen** — auf
+  der Testkopie über 24 Stunden `ref` über `ProejctIDIDX` beim kleinen, `range` über
+  `MessageLastUpdateProcessMessageIDX` beim verkehrsreichen Prozess; über 90 Tage, mit einem
+  anderen, dort verkehrsreicheren Prozess, `range` über `MessageLastUpdateIDX` (M196). Der Produktionsplan
+  kommt aus den Fällen i und j des Diagnoseskripts; bis dahin bleibt der Punkt offen.
+  *Beantwortet 14.10.2026 (M197):* Die Produktion wählt mit konstanter Mandantenkette `ref` über
+  `ProejctIDIDX` beim kleinen und `range` über `MessageLastUpdateProcessMessageIDX` beim
+  verkehrsreichen Prozess, über 24 Stunden wie über 90 Tage — **nicht** den prozessgetriebenen Plan
+  mit `Using temporary; Using filesort` über alle Prozesse des Mandanten. Laufzeiten sind dort nicht
+  erhoben; der Punkt bleibt als Beobachtung stehen, nicht als Befund.
+- **223. Die Suche hängt an zwei Indexnamen des Altsystems.** MariaDB beantwortet einen unbekannten
+  Namen in `IGNORE INDEX` mit Fehler 1176, auch wenn nur einer der beiden fehlt; jOOQ reicht ihn als
+  `DataAccessException` mit `SQLSyntaxErrorException` durch, `anDerZeitgrenze` lässt ihn passieren,
+  die Antwort ist `500` (M194). `ProejctIDIDX` trägt einen Buchstabendreher — eine Bereinigung im
+  Altsystem bräche die Suche. `NachrichtenSuchindizesDbIT` wird gegen die **verbundene** Datenbank
+  rot, also gegen die Testkopie; dass die Produktion beide Namen trägt, zeigt Ausgabe 2 des
+  Diagnoseskripts (M193).
+- **224. `anDerZeitgrenze` bildet jeden SQLState `70100` ab, nicht genau eine Ausnahme** (§5,
+  „Wenn das Statement trotzdem in die Zeitgrenze läuft", Vermerk vom 13.10.2026). Connector/J 3.5.8 erzeugt eine `SQLTimeoutException` für **jeden** SQLState `70100`
+  (`ExceptionFactory.createException`, am Bytecode nachgesehen) — also auch für `KILL QUERY` und
+  `KILL CONNECTION`, nicht nur für `max_statement_time`. Dazu kommt ein Weg über den
+  Verbindungs-Timeout des Lese-Pools nach 5 s (`setConnectionTimeout`, `DataSourceConfig`): Hikari
+  hängt die letzte Verbindungsursache als `cause` an, und `getCause(SQLTimeoutException.class)` geht
+  die ganze Kette entlang. **Die Javadoc sagt „genau eine Ausnahme".** Mit Suchbegriff liest der
+  Nutzer in allen drei Fällen „verkleinere den Zeitraum". Die Produktion zählt seit Serverstart 45
+  Abbrüche an einer Sitzungsgrenze und 26 `KILL` (M193). Nicht geändert, auf Auftrag.
+- **225. Ein Begriff, der nur Prozesse trifft, liest unter F4 über 90 Tage die ganze Tabelle
+  `Message`.** Gemessen auf der Testkopie (M195): `type ALL`, 3.560.486 geschätzte Zeilen,
+  3.478,564 ms — unter dem Tor von 5 s, aber an den Bestand der Tabelle gebunden und nicht an das
+  Fenster; mit dem Bestand der Produktion gerechnet rund 5,0 s. Über 24 Stunden und 30 Tage bleibt
+  der Plan an das Fenster gebunden (45 ms, 1,4 s). Der Mechanismus: Die Form `(… in (…) or false)`
+  wird zu einem reinen Prozessfilter, den der Optimierer unter F4 über die Mandantenkette und einen
+  Join-Puffer beantwortet. **90 Tage gibt es nur über „Trotzdem suchen".** Der Produktionsplan
+  kommt aus Fall k des Diagnoseskripts, einmal mit 24 Stunden und einmal mit
+  `@fensterlaenge_stunden = 2160`.
+  *Ergänzt 14.10.2026 (M197):* **In der Produktion bleibt Fall k auch über 90 Tage an das Fenster
+  gebunden** — `range` über `MessageLastUpdateIDX`, 1.893.256 geschätzte Zeilen, kein `ALL`. Der
+  Unterschied zur Testkopie liegt an der Schätzung; der Punkt bleibt offen, weil er an der
+  Statistik hängt und nicht am Statement.
+
+### Zur Anzeige bei abgebrochener Suche (Stand 13.10.2026, E‑238)
+
+> Geprüft auf Auftrag und **nicht geändert**; Belege in §8.2, Kasten vom 13.10.2026.
+
+- **226. Die automatische Aktualisierung schickt eine abgebrochene Suche alle 60 s erneut** — in
+  der Produktion jedes Mal bis zur Zeitgrenze von 10 s, solange der Schalter an ist, die Liste auf
+  Seite eins steht und der Tab sichtbar ist. `aktualisierungsintervall` kennt den Fehlerzustand
+  nicht; `query-client.ts` unterdrückt nur den Wiederholungsversuch. Ist die Suche auf einem neuen
+  Schlüssel abgebrochen, ersetzt während jedes dieser Abrufe das Ladeskelett den Satz, und die
+  Meldung am Suchfeld verschwindet bis zur Antwort. Der Schalter zeigt dabei „an", nicht
+  „pausiert". Älter als E‑238.
+- **227. „Neu laden" von Seite zwei schickt eine abbrechende Suche zweimal.** Erst über
+  `fetchQuery` in `neuLaden`, dann beim Wechsel auf Seite eins ein zweites Mal, weil TanStack den
+  gescheiterten Eintrag als veraltet markiert (`isInvalidated`). In der Produktion zweimal bis zu
+  10 s je Klick. Älter als E‑238.
+- **228. Nach einem Abbruch bringt eine folgende Rückmeldung am Feld die Seite von vor dem Abbruch
+  zurück** — samt Σ, bei `suche-fenster-zu-gross` ebenso wie schon beim halb ausgefüllten freien
+  Fenster, also gerade dann, wenn der Nutzer der Meldung folgt und den Zeitraum ändert.
+  `letzteSeite` wird nur durch neue Daten ersetzt, nicht durch einen Abbruch. **Frage an den
+  Auftraggeber:** Soll ein Abbruch die zuletzt gelieferte Seite auch für die folgenden Rückmeldungen
+  verwerfen?
+  *Erledigt 14.10.2026 (E‑240):* Ja. Ein Abbruch verwirft Seite und Σ; an ihrer Stelle steht bei
+  der folgenden Rückmeldung der Leerzustand, bis die nächste Seite geliefert wird. §8.2, Kasten vom
+  14.10.2026.
+- **229. Belegsuche und Feldsuche lassen nach einem Abbruch die Trefferzeile der verworfenen
+  Antwort stehen**, wenn ein späterer Abruf desselben Schlüssels abbricht („3 Treffer im
+  Zeitfenster …" neben dem Abbruchsatz). Zeilen bleiben keine stehen. Auslöser: Wiedereinhängen der
+  Ansicht, Rückkehr zu einem veralteten Schlüssel, Netzwiederkehr.
 
 ### Zur Sortierrichtung (03.09.2026, Schritt 10b‑4)
 

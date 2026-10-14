@@ -61,6 +61,21 @@ public class NachrichtenRepository {
    */
   private static final Process MANDANTEN_PROCESS = PROCESS.as("mandanten_process");
 
+  /**
+   * Die beiden Indizes des Altsystems auf {@code Message.ProcessID} ({@code
+   * docs/PROJEKTBESCHREIBUNG.md} §3.2), geschrieben wie in der Datenbank — {@code ProejctIDIDX} mit
+   * dem Buchstabendreher des Altsystems. Der Suchpfad schliesst sie per Hinweis aus ({@link
+   * #ignoriertProzessindizes}).
+   *
+   * <p><b>Die Suche haengt damit an diesen zwei Namen.</b> MariaDB 10.6 antwortet auf einen
+   * unbekannten Namen in {@code IGNORE INDEX} mit Fehler 1176 („Key … doesn't exist") — auch wenn
+   * nur einer der beiden fehlt (gemessen am 13.10.2026 gegen die Testkopie). Das ist kein Abbruch
+   * an der Zeitgrenze, sondern ein technischer Fehler, also {@code 500}. Benennt das Altsystem
+   * einen der beiden um, faellt die Suche aus; {@code NachrichtenSuchindizesDbIT} wird dann gegen
+   * die verbundene Datenbank rot.
+   */
+  static final List<String> PROZESSINDIZES = List.of("ProejctIDIDX", "Message_ProcessFK");
+
   private final DSLContext glassfishDsl;
   private final MessageStatusClassifier statusClassifier;
 
@@ -87,7 +102,10 @@ public class NachrichtenRepository {
               PROJECT.PROJECTNAME,
               SOS.SOSNAME,
               SOSACTION.SOSACTIONNAME)
-          .from(MESSAGE)
+          .from(
+              ignoriertProzessindizes(abfrage)
+                  ? MESSAGE.ignoreIndexForJoin(PROZESSINDIZES.toArray(String[]::new))
+                  : MESSAGE)
           // LEFT JOIN, obwohl die Mandantenkette einen Prozess ohnehin erzwingt: Der Anzeigename
           // darf nicht darueber entscheiden, ob eine Zeile erscheint.
           .leftJoin(PROCESS)
@@ -124,6 +142,35 @@ public class NachrichtenRepository {
     } catch (DataAccessException fehler) {
       throw anDerZeitgrenze(fehler, abfrage.suchtreffer() != null);
     }
+  }
+
+  /**
+   * Ob das Statement die beiden Prozessindizes ausschliesst — <b>genau dann, wenn ein Suchbegriff
+   * gesetzt ist und kein Prozessfilter</b> (Entscheidung des Auftraggebers vom 13.10.2026, Fassung
+   * F4 aus {@code docs/nachrichtenliste.md} §5a). In jedem anderen Fall bleibt das Statement
+   * Zeichen fuer Zeichen, wie es ohne den Hinweis war.
+   *
+   * <p><b>Der Anlass ist ein Befund aus der Produktion</b> (Diagnoseskript {@code
+   * scripts/diagnose-produktion/suche.sql}, 13.10.2026): Dort waehlt der Optimierer fuer {@code
+   * NEXANS} ueber 24 Stunden den prozessgetriebenen Plan ({@code ProjectMandant → mandanten_process
+   * → Message} ueber {@code Message_ProcessFK}, {@code Using temporary; Using filesort}) und laeuft
+   * damit bei jedem Suchbegriff in die Zeitgrenze. Die Testkopie waehlt zeitgetrieben. Der
+   * Unterschied liegt in der Indexstatistik, die die Produktion regelmaessig neu rechnet ({@code
+   * Message_ProcessFK} 9.127 statt 18) — und von ihr darf die Abfrage nicht abhaengen. Mit dem
+   * Hinweis bleibt dem Optimierer der Zugriff auf {@code Message} ueber {@code ProcessID}
+   * verschlossen; in der Produktion waehlt er dann den Zeitindex (Fall e des Skripts). <b>Eine
+   * Reihenfolge ueber die Mandantenkette bleibt ihm moeglich</b>: Trifft der Begriff nur Prozesse,
+   * liest er {@code Message} ueber einen Join-Puffer, und ueber 90 Tage die ganze Tabelle (M195,
+   * offener Punkt 225 in {@code docs/nachrichtenliste.md}).
+   *
+   * <p><b>Nur im Suchpfad.</b> Ohne Suchbegriff verengt die Liste ihr Fenster vorab ueber den
+   * Rollup (§5d), und ein enges Fenster zieht den Optimierer von selbst auf den Zeitindex; die
+   * Suche verengt nie ({@link Abfragemerkmal#SUCHBEGRIFF}). <b>Und nicht mit Prozessfilter:</b>
+   * Dort traegt genau der ausgeschlossene Index die Abfrage — §5a hat gemessen, dass F4 den
+   * Prozessfilter zerstoert ({@code NEXANS}, drei kleine Prozesse: 1,730 ms → 1.547,772 ms).
+   */
+  static boolean ignoriertProzessindizes(Nachrichtenabfrage abfrage) {
+    return abfrage.suchtreffer() != null && abfrage.prozessIds().isEmpty();
   }
 
   /**
@@ -279,11 +326,15 @@ public class NachrichtenRepository {
    *
    * <p><b>Die Vorfilterung ist billig, das Hauptstatement mit ihrem Ergebnis nicht</b> (Messungen
    * L7c, L11 und L13): Die {@code ODER}-Verknuepfung ueber {@code ProcessID} und {@code SOSID}
-   * schliesst den Index auf {@code ProcessID} aus, MariaDB behaelt das Zeitfenster als Treiber. Was
-   * das kostet, haengt am Begriff und nicht an der Fenstergroesse: Wer die Seite fuellt, zahlt
-   * dasselbe ueber ein Jahr wie ueber 30 Tage (L13: 78.318 gelesene Zeilen, rund 0,5 s in beiden
-   * Faellen). Wer sie nicht fuellt, zahlt das ganze Fenster — 1,2 s ueber 30 Tage, 15,6 s ueber ein
-   * Jahr.
+   * schliesst den Index auf {@code ProcessID} aus, MariaDB behaelt das Zeitfenster als Treiber
+   * <i>(ergaenzt 13.10.2026: nicht immer. In der Produktion waehlte der Optimierer fuer {@code
+   * NEXANS} ueber die Mandantenkette den prozessgetriebenen Plan, auf der Testkopie tut er das bei
+   * {@code SUTTONS} ueber 30 Tage ebenfalls; und trifft der Begriff nur Prozesse, faltet MariaDB
+   * die Form {@code (… or false)} zu einem reinen Prozessfilter, den der Index auf {@code
+   * ProcessID} wieder traegt — M195, deshalb {@link #ignoriertProzessindizes})</i>. Was das kostet,
+   * haengt am Begriff und nicht an der Fenstergroesse: Wer die Seite fuellt, zahlt dasselbe ueber
+   * ein Jahr wie ueber 30 Tage (L13: 78.318 gelesene Zeilen, rund 0,5 s in beiden Faellen). Wer sie
+   * nicht fuellt, zahlt das ganze Fenster — 1,2 s ueber 30 Tage, 15,6 s ueber ein Jahr.
    *
    * <p><b>Beide vorgesehenen Umbauten sind gemessen und verworfen</b> (M10 und L11): Die Aufloesung
    * ueber {@code SOS.ProcessID} zu einer einzigen Kennungsliste verliert 9.101 Zeilen, und die
