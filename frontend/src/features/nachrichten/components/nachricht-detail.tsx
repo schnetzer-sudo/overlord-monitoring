@@ -84,10 +84,11 @@ import { Zeitleiste } from "./zeitleiste";
  *   Link: Ein Link, der in einem anderen Fenster landet als versprochen, ist
  *   schlechter als kein Link (E‑104).
  * @param fokusNachDatei ob nach der Rückkehr aus einer Datei ihr Ziel den Fokus
- *   bekommt *(14.10.2026, E‑241, S4)*. Freiwillig wie der Umschalter: Die
- *   Nachrichtenliste und die eigene Route geben es, denn dorthin führt der
- *   Schritt zurück aus der Dateiansicht. Prozessansicht und Belegsuche geben es
- *   nicht und bleiben, wie sie sind (`useFokusAufDateiziel`).
+ *   bekommt *(14.10.2026, E‑241, S4)*. Freiwillig wie der Umschalter: Die Angabe
+ *   setzt jeder Einhängepunkt, zu dem der Schritt zurück aus der Dateiansicht
+ *   führt — die Nachrichtenliste und die eigene Route, seit dem Folgeauftrag
+ *   desselben Tages auch Belegsuche und Prozessansicht (E‑243). Bis dahin
+ *   setzten die beiden sie nicht (`useFokusAufDateiziel`).
  */
 export function NachrichtDetail({
   messageId,

@@ -132,7 +132,8 @@ export function NachrichtenAnsicht() {
   useInSicht(zuletztGewaehlteZeile, geschlossen);
   // Und der Fokus geht an dieselbe Zeile zurück (E‑241, S4) — über das X, über
   // `Escape` und über das Zurück des Browsers, denn alle drei schließen über den
-  // Parameter. Nur hier: Prozessansicht und Belegsuche bleiben, wie sie sind.
+  // Parameter. Belegsuche und Prozessansicht tragen dieselbe Regel seit dem
+  // Folgeauftrag desselben Tages (E‑243).
   useFokusZurueck(zuletztGewaehlteZeile, geschlossen);
 
   return (

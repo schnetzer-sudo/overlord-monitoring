@@ -955,13 +955,63 @@ describe("Eine Ebene zurück", () => {
     }
   });
 
-  it("bleibt ohne Beleg beim Ziel des Verweises: Direktaufruf und andere Ansicht", async () => {
+  /**
+   * **Belegsuche und Prozessansicht** *(Folgeauftrag vom 14.10.2026, E‑243)*:
+   * Beide tragen dasselbe Panel über `nachricht`, und der Schritt zurück führt
+   * dorthin, wo die Datei geöffnet wurde — samt `begriff`, `feld` und `modus`
+   * beziehungsweise Zeitraum, Gliederung und Prozess. Taste und Verweis gehen
+   * denselben Weg; das Zurück des Browsers ist derselbe Schritt.
+   */
+  it("geht aus der Belegsuche per Taste und per Verweis einen Schritt zurück", async () => {
+    stelleVerlauf([
+      `/suche?begriff=:4711&feld=Message.SourceMessageID:ERFUNDEN-1&modus=praefix&nachricht=${MESSAGE_ID}`,
+      DATEI,
+    ]);
+    const { behaelter, abbauen } = await rendereAnsicht(anzeige());
+
+    try {
+      await escape();
+      expect(navigation.back).toHaveBeenCalledOnce();
+
+      const { verhindert } = await klicke(verweis(behaelter));
+      expect(navigation.back).toHaveBeenCalledTimes(2);
+      expect(verhindert).toBe(true);
+      expect(navigation.push).not.toHaveBeenCalled();
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("geht aus der Prozessansicht per Taste und per Verweis einen Schritt zurück", async () => {
+    stelleVerlauf([
+      `/prozesse?zeitraum=12M&gliederung=PROJEKT&prozess=P-0815&nachricht=${MESSAGE_ID}`,
+      DATEI,
+    ]);
+    const { behaelter, abbauen } = await rendereAnsicht(anzeige());
+
+    try {
+      await escape();
+      expect(navigation.back).toHaveBeenCalledOnce();
+
+      const { verhindert } = await klicke(verweis(behaelter));
+      expect(navigation.back).toHaveBeenCalledTimes(2);
+      expect(verhindert).toBe(true);
+      expect(navigation.push).not.toHaveBeenCalled();
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("bleibt ohne Beleg beim Ziel des Verweises: Direktaufruf, andere Nachricht, andere Ansicht", async () => {
     for (const verlauf of [
       // Direktaufruf: ein geteilter Verweis im neuen Tab. (F5 im selben Tab
       // behält den Verlauf und damit den Beleg.)
       [DATEI],
-      // Die Prozessansicht bleibt, wie sie ist.
-      [`/prozesse?prozess=P-0815&nachricht=${MESSAGE_ID}`, DATEI],
+      // Eine andere Nachricht neben Suche und Prozessansicht.
+      [`/suche?begriff=:4711&nachricht=andere-nachricht`, DATEI],
+      [`/prozesse?prozess=P-0815&nachricht=andere-nachricht`, DATEI],
+      // Eine Ansicht ohne das Panel — die Startseite.
+      [`/`, DATEI],
     ]) {
       stelleVerlauf(verlauf);
       navigation.push.mockClear();

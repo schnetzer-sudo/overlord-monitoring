@@ -165,11 +165,12 @@ export function Dateiansicht({
   //
   // **Seit dem 14.10.2026 eine Ebene zurück (E‑241).** Belegt der Verlauf, dass
   // davor dieselbe Nachricht stand — neben der Liste oder auf ihrer eigenen
-  // Route —, gehen Taste **und** Verweis den Schritt zurück: dieselbe Adresse,
-  // dieselbe Darstellung, wie das Zurück des Browsers. Der Satz über den
-  // geteilten Verweis gilt weiter: Ohne Beleg — neuer Tab, ein Browser ohne
-  // Navigation API, eine andere Ansicht als Herkunft — bleibt es bei `push` auf
-  // das `href`. F5 im selben Tab gehört nicht dazu: Der Verlauf übersteht das
+  // Route, seit dem Folgeauftrag desselben Tages auch neben Belegsuche und
+  // Prozessansicht (E‑243) —, gehen Taste **und** Verweis den Schritt zurück:
+  // dieselbe Adresse, dieselbe Darstellung, wie das Zurück des Browsers. Der
+  // Satz über den geteilten Verweis gilt weiter: Ohne Beleg — neuer Tab, ein
+  // Browser ohne Navigation API, eine Ansicht ohne diese Nachricht als
+  // Herkunft — bleibt es bei `push` auf das `href`. F5 im selben Tab gehört nicht dazu: Der Verlauf übersteht das
   // Neuladen, und mit ihm der Beleg. Gefragt wird im Ereignis, nicht beim
   // Rendern: Der Verlauf ändert sich, ohne dass die Ansicht davon erfährt.
   const zurueckZiel = nachrichtAnsicht(messageId);

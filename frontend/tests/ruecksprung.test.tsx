@@ -7,12 +7,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   NACHRICHTEN_SCHLUESSEL,
   type Artefaktliste,
+  type BamSuchergebnis,
   type Nachricht,
   type Nachrichtendetail,
+  type Prozessbaum,
   type Seite,
 } from "@/features/nachrichten/api";
 import { NachrichtSeite } from "@/features/nachrichten/components/nachricht-seite";
 import { NachrichtenAnsicht } from "@/features/nachrichten/components/nachrichten-ansicht";
+import { ProzessAnsicht } from "@/features/nachrichten/components/prozessansicht";
+import { SucheAnsicht } from "@/features/nachrichten/components/suche-ansicht";
 import { texteFuer } from "@/i18n";
 import { artefaktAnsicht } from "@/lib/routen";
 
@@ -30,6 +34,7 @@ import { neuerZwischenspeicher, rendere } from "./hilfe/rendern";
  * | kein zusätzlicher Abruf | eine Aussage über **Anfragen, die nicht hinausgehen** — gezählt am gestellten `fetch`, nicht an der Uhr (S3, Regel T1) |
  * | die eigene Route bei Direktaufruf | das Ziel liest `window.location.search` **im Ereignis**; ohne Dokument gibt es keins (S5) |
  * | der Fokus nach der Rückkehr aus einer Datei | **Verdrahtung:** Beide Einhängepunkte der Nachrichtenliste — Panel und eigene Route — verlangen ihn (`fokusNachDatei`). Die Regel selbst steht in `tests/zeitleiste-ziele.test.tsx` (S4) |
+ * | Belegsuche und Prozessansicht *(Folgeauftrag vom 14.10.2026, E‑243)* | dieselbe **Verdrahtung** an den beiden übrigen Einhängepunkten: der Fokus auf dem Dateiziel nach der Rückkehr und auf der Zeile nach dem Schließen, dazu die Adresse nach dem Schließen (R3, R5). Den Schritt zurück selbst belegen `tests/artefakt-ansicht.test.tsx` und `tests/routen.test.ts` |
  *
  * **Was hier nicht steht:** der Weg über die Datei. Er wechselt die Route, und
  * die Liste wird dabei ausgehängt — Seitenstapel, Scrollstand und der Schalter
@@ -100,6 +105,57 @@ function zeile(messageId: string): Nachricht {
   };
 }
 
+/** Die Trefferliste der Belegsuche: dieselben drei Zeilen wie Seite eins der Liste. */
+function suchergebnis(): BamSuchergebnis {
+  return {
+    nachrichten: ["a-1", "a-2", "a-3"].map((messageId) => ({
+      ...zeile(messageId),
+      rollen: [],
+      treffer: [],
+    })),
+    begriffe: [],
+    felder: [],
+    von: "2025-11-30T04:09:47Z",
+    bis: "2025-12-30T04:09:47Z",
+    abgeschnitten: false,
+    modus: "EXAKT",
+  };
+}
+
+/** Ein Baum mit einem Partner und einem Prozess — wie in `tests/blaettern.test.tsx`. */
+function prozessbaum(): Prozessbaum {
+  return {
+    zeitraum: "48H",
+    gliederung: "PARTNER",
+    fenster: { von: "2025-12-28T05:00:00Z", bis: "2025-12-30T05:00:00Z" },
+    stilleSchwelleMonate: 3,
+    liveRest: { zustand: "NICHT_NOETIG", vollstaendigBis: null },
+    fehlerLive: { zustand: "ANGEWANDT" },
+    gesamt: { anzahlProzesse: 1, bewegt: 1, still: 0, nie: 0, nachrichten: 5, fehler: 5 },
+    ebenen: ["PARTNER", "PROZESS"],
+    knoten: [
+      {
+        schluessel: "BMW",
+        name: "BMW",
+        anzahlProzesse: 1,
+        nachrichten: 5,
+        fehler: 5,
+        kinder: [
+          {
+            schluessel: "P-0815",
+            name: "Versand Einzel IDOC",
+            processId: "P-0815",
+            nachrichten: 5,
+            fehler: 5,
+            letzteBewegung: "2025-12-29T10:01:09Z",
+            zustand: "BEWEGT",
+          },
+        ],
+      },
+    ],
+  };
+}
+
 /** Seite eins: drei Zeilen und eine weitere Seite. Seite zwei: zwei Zeilen, die letzte. */
 function listenseite(parameter: URLSearchParams): Seite<Nachricht> {
   return parameter.get("cursor") === null
@@ -121,11 +177,18 @@ beforeEach(() => {
       const adresse = String(eingabe);
       anfragen.push(adresse);
       const url = new URL(adresse, "http://localhost");
-      return Promise.resolve(
-        url.pathname === "/api/nachrichten"
-          ? json(listenseite(url.searchParams))
-          : problem(404, "nicht-gefunden"),
-      );
+      switch (url.pathname) {
+        case "/api/nachrichten":
+          return Promise.resolve(json(listenseite(url.searchParams)));
+        case "/api/bam/suche":
+          return Promise.resolve(json(suchergebnis()));
+        case "/api/bam/suchfelder":
+          return Promise.resolve(json({ bam: [], felder: [] }));
+        case "/api/prozesse/baum":
+          return Promise.resolve(json(prozessbaum()));
+        default:
+          return Promise.resolve(problem(404, "nicht-gefunden"));
+      }
     }),
   );
 });
@@ -413,6 +476,95 @@ describe("Die Rückkehr aus einer Datei", () => {
       }
     } finally {
       window.history.replaceState(null, "", "/");
+    }
+  });
+});
+
+/* ─── Belegsuche und Prozessansicht (Folgeauftrag vom 14.10.2026, E‑243) ─── */
+
+const SUCHE_ADRESSE = "?begriff=:4711&feld=Message.SourceMessageID:ERFUNDEN-1&modus=praefix";
+const PROZESS_ADRESSE = "?zeitraum=48H&prozess=P-0815";
+
+async function rendereMit(
+  ansicht: "suche" | "prozesse",
+  suchparameter: string,
+  zwischenspeicher = neuerZwischenspeicher(),
+) {
+  const adressen: UrlUpdateEvent[] = [];
+  const gerendert = await rendere(
+    <NuqsTestingAdapter
+      searchParams={suchparameter}
+      hasMemory
+      onUrlUpdate={(ereignis) => adressen.push(ereignis)}
+    >
+      {ansicht === "suche" ? <SucheAnsicht /> : <ProzessAnsicht />}
+    </NuqsTestingAdapter>,
+    zwischenspeicher,
+  );
+  await zuege();
+  return { ...gerendert, adressen };
+}
+
+/** Ein Bild weiter — die Prozessansicht setzt den Fokus beim Öffnen im `requestAnimationFrame`. */
+async function einBild(): Promise<void> {
+  await act(async () => {
+    await new Promise((fertig) => requestAnimationFrame(() => fertig(null)));
+  });
+}
+
+describe.each([
+  { ansicht: "suche" as const, pfad: "/suche", adresse: SUCHE_ADRESSE, name: "der Belegsuche" },
+  {
+    ansicht: "prozesse" as const,
+    pfad: "/prozesse",
+    adresse: PROZESS_ADRESSE,
+    name: "der Prozessansicht",
+  },
+])("Der Rückweg in $name", ({ ansicht, pfad, adresse }) => {
+  const SCHLIESSEN = TEXTE.nachrichten.detail.schliessen;
+
+  beforeEach(() => {
+    (document.activeElement as HTMLElement | null)?.blur();
+  });
+
+  it("gibt nach der Rückkehr aus einer Datei ihrem Ziel im Panel den Fokus", async () => {
+    const PANEL = `${adresse}&nachricht=a-2`;
+    stelleVerlauf([`${pfad}${PANEL}`, artefaktAnsicht("a-2", ARTEFAKT_ID)], 0);
+    const { behaelter, abbauen } = await rendereMit(ansicht, PANEL, mitNachricht("a-2"));
+
+    try {
+      // Eichung: Das Ziel steht im Panel — es geht um den Fokus, nicht ums Rendern.
+      expect(
+        behaelter.querySelector(`a[href="${artefaktAnsicht("a-2", ARTEFAKT_ID)}"]`),
+      ).not.toBeNull();
+      expect(document.activeElement?.getAttribute("href")).toBe(
+        artefaktAnsicht("a-2", ARTEFAKT_ID),
+      );
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("gibt beim Schließen den Fokus an die Zeile zurück und entfernt nur die Nachricht aus der Adresse", async () => {
+    const { behaelter, adressen, abbauen } = await rendereMit(ansicht, adresse);
+
+    try {
+      // Eichung: Die Zeilen stehen.
+      expect(zeilen(behaelter)).toHaveLength(3);
+      const vorher = adressen.at(-1)?.queryString ?? adresse;
+
+      await klicke(zeilen(behaelter)[1]);
+      await einBild();
+      expect(adressen.at(-1)?.searchParams.get("nachricht")).toBe("a-2");
+
+      // Mit `Tab` ins Panel auf das X — das verschwindet beim Schließen samt Panel.
+      knopf(behaelter, SCHLIESSEN).focus();
+      await klicke(knopf(behaelter, SCHLIESSEN));
+
+      expect(document.activeElement).toBe(zeilen(behaelter)[1]);
+      expect(adressen.at(-1)?.queryString).toBe(vorher);
+    } finally {
+      await abbauen();
     }
   });
 });

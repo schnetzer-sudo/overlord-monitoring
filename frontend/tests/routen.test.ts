@@ -183,19 +183,53 @@ describe("Der Beleg für den Schritt zurück", () => {
     expect(zeigtNachricht(`${HERKUNFT}/nachrichten/${ID}?status=FEHLER`, ID, HERKUNFT)).toBe(true);
   });
 
+  /**
+   * **Seit dem Folgeauftrag vom 14.10.2026 (E‑243) auch aus Belegsuche und
+   * Prozessansicht.** Beide tragen dasselbe Panel über denselben Parameter
+   * `nachricht`; der Schritt zurück stellt ihre ganze Adresse wieder her — in
+   * der Suche samt `begriff`, `feld` und `modus`, in der Prozessansicht samt
+   * Zeitraum, Gliederung und Prozess.
+   */
+  it("erkennt die Nachricht neben der Belegsuche und neben der Prozessansicht", () => {
+    expect(
+      zeigtNachricht(
+        `${HERKUNFT}/suche?begriff=:4711&begriff=12:ERFUNDEN&feld=Message.SourceMessageID:ERFUNDEN-1&modus=praefix&nachricht=${ID}`,
+        ID,
+        HERKUNFT,
+      ),
+    ).toBe(true);
+    expect(
+      zeigtNachricht(
+        `${HERKUNFT}/prozesse?zeitraum=12M&gliederung=PROJEKT&prozess=P-0815&nachricht=${ID}`,
+        ID,
+        HERKUNFT,
+      ),
+    ).toBe(true);
+  });
+
   it("verlangt dieselbe Nachricht", () => {
     expect(zeigtNachricht(`${HERKUNFT}/nachrichten?nachricht=andere`, ID, HERKUNFT)).toBe(false);
     expect(zeigtNachricht(`${HERKUNFT}/nachrichten/andere`, ID, HERKUNFT)).toBe(false);
-    // Die Liste ohne geöffnete Nachricht ist eine Ebene zu weit.
+    expect(zeigtNachricht(`${HERKUNFT}/suche?begriff=:4711&nachricht=andere`, ID, HERKUNFT)).toBe(
+      false,
+    );
+    expect(
+      zeigtNachricht(`${HERKUNFT}/prozesse?prozess=P-0815&nachricht=andere`, ID, HERKUNFT),
+    ).toBe(false);
+    // Die Liste ohne geöffnete Nachricht ist eine Ebene zu weit — ebenso Suche
+    // und Prozessansicht ohne Panel.
     expect(zeigtNachricht(`${HERKUNFT}/nachrichten?status=FEHLER`, ID, HERKUNFT)).toBe(false);
+    expect(zeigtNachricht(`${HERKUNFT}/suche?begriff=:4711`, ID, HERKUNFT)).toBe(false);
+    expect(zeigtNachricht(`${HERKUNFT}/prozesse?prozess=P-0815`, ID, HERKUNFT)).toBe(false);
   });
 
   it("nimmt keine andere Ansicht und keine andere Station", () => {
     for (const adresse of [
-      // Prozessansicht und Belegsuche bleiben, wie sie sind (Auftrag, „Was
-      // nicht gebaut wird").
-      `${HERKUNFT}/prozesse?prozess=P-0815&nachricht=${ID}`,
-      `${HERKUNFT}/suche?begriff=ERFUNDEN&nachricht=${ID}`,
+      // Ansichten ohne das Panel, auch wenn `nachricht` in der Adresse steht —
+      // die Lockerung auf „irgendeine Seite der Anwendung" ist ausgeschlossen.
+      `${HERKUNFT}/?nachricht=${ID}`,
+      `${HERKUNFT}/administration?nachricht=${ID}`,
+      `${HERKUNFT}/suche/?nachricht=${ID}`,
       `${HERKUNFT}${artefaktAnsicht(ID, "2-Converter.Payload.GUID")}`,
       `${HERKUNFT}/`,
     ]) {

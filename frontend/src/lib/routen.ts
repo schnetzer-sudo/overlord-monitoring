@@ -210,18 +210,29 @@ function pfadstuecke(url: URL): string[] | null {
 }
 
 /**
- * **Zeigt diese Adresse dieselbe Nachricht in der Nachrichtenliste?** — der
- * Beleg für den Schritt zurück aus der Dateiansicht (E‑241).
+ * Die Ansichten, die eine Nachricht als **Panel neben sich** tragen — alle über
+ * denselben Parameter {@link NACHRICHT_PARAMETER}: die Nachrichtenliste (E‑241),
+ * die Belegsuche und die Prozessansicht (E‑243).
+ */
+const PANEL_ANSICHTEN: readonly string[] = [ROUTEN.nachrichten, ROUTEN.suche, ROUTEN.prozesse];
+
+/**
+ * **Zeigt diese Adresse dieselbe Nachricht?** — der Beleg für den Schritt
+ * zurück aus der Dateiansicht (E‑241).
  *
- * Ja heißt: **dieselbe Herkunft** und entweder die Liste mit dieser Nachricht im
- * Panel (`/nachrichten?…nachricht=<id>…`) oder ihre eigene Route
- * (`/nachrichten/<id>…`). Welche Filter daneben stehen, spielt keine Rolle — der
- * Schritt zurück stellt genau die Adresse wieder her, die dort stand.
+ * Ja heißt: **dieselbe Herkunft** und entweder eine Ansicht mit dieser Nachricht
+ * im Panel (`/nachrichten?…nachricht=<id>…`, seit E‑243 ebenso `/suche?…` und
+ * `/prozesse?…`) oder ihre eigene Route (`/nachrichten/<id>…`). Welche Filter
+ * daneben stehen, spielt keine Rolle — der Schritt zurück stellt genau die
+ * Adresse wieder her, die dort stand: in der Suche samt `begriff` und `feld`, in
+ * der Prozessansicht samt Zeitraum, Gliederung und Prozess.
  *
  * **Nein heißt nicht „falsch", sondern „nicht belegt"**, und dann bleibt es beim
- * Verweis auf die eigene Route. Das gilt bewusst auch für die Prozessansicht und
- * die Belegsuche, die dasselbe Panel tragen: Ihr Verhalten bleibt, wie es war
- * (Auftrag vom 14.10.2026, „Kein Umbau anderer Ansichten").
+ * Verweis auf die eigene Route. **Bis zum Folgeauftrag vom 14.10.2026 galten
+ * Prozessansicht und Belegsuche nicht als Beleg** (Auftrag: „Kein Umbau anderer
+ * Ansichten"); seit E‑243 gelten sie. Weiterhin verlangt ist **dieselbe
+ * Nachricht** — eine Lockerung auf „irgendeine Seite der Anwendung" ist
+ * ausgeschlossen.
  *
  * @param adresse die volle Adresse eines Verlaufseintrags, `null` ohne Beleg
  * @param herkunft die eigene Herkunft, `window.location.origin`
@@ -235,7 +246,7 @@ export function zeigtNachricht(
   if (url === null) {
     return false;
   }
-  if (url.pathname === ROUTEN.nachrichten) {
+  if (PANEL_ANSICHTEN.includes(url.pathname)) {
     return url.searchParams.get(NACHRICHT_PARAMETER) === messageId;
   }
   const stuecke = pfadstuecke(url);

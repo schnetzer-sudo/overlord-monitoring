@@ -711,8 +711,10 @@ describe("Die Ziele an der Zeitleiste", () => {
  * **folgende** Eintrag (Navigation API, hier gestellt). Gemerkt wird dafür
  * nichts.
  *
- * Nur, wo der Einhängepunkt es verlangt (`fokusNachDatei`): Prozessansicht und
- * Belegsuche geben die Angabe nicht und bleiben, wie sie sind.
+ * Nur, wo der Einhängepunkt es verlangt (`fokusNachDatei`). Bis zum Folgeauftrag
+ * vom 14.10.2026 gaben Prozessansicht und Belegsuche die Angabe nicht; seit E‑243
+ * geben sie alle vier Einhängepunkte. Die Gegenprobe ohne Angabe bleibt — sie
+ * prüft die Regel, nicht einen Einhängepunkt.
  */
 describe("Der Fokus nach der Rückkehr aus einer Datei", () => {
   const PANEL = `/nachrichten?status=FEHLER&nachricht=${MESSAGE_ID}`;

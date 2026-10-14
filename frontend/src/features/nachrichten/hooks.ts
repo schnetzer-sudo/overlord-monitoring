@@ -145,7 +145,8 @@ export function useEscapeSchliesst(aktiv: boolean, aufSchliessen: () => void) {
 
 /**
  * **Beim Schließen kehrt der Fokus auf den Auslöser zurück** *(14.10.2026,
- * E‑241, S4)* — in der Nachrichtenliste die Zeile, die das Panel geöffnet hat.
+ * E‑241, S4)* — die Zeile, die das Panel geöffnet hat: in der Nachrichtenliste,
+ * seit E‑243 auch in Belegsuche und Prozessansicht.
  *
  * Das Gegenstück zu `useInSicht` aus `lib/in-sicht-bringen.ts`, und mit
  * demselben Schlüssel (`useZuletztGeschlossen`), der genau beim Schließen
