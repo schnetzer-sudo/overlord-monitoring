@@ -5,6 +5,7 @@ import {
   alsSuchparameter,
   ausSuchparametern,
   feldFehler,
+  letzteLieferung,
   listenanzeige,
   NACHRICHTEN_PARAMETER,
   sucheTraegt,
@@ -275,6 +276,70 @@ describe("Rückmeldungen am Suchfeld", () => {
  * eigene Seite der Abfrage**, die der Zwischenspeicher behält, wenn erst ein
  * späterer Abruf desselben Schlüssels scheitert.
  */
+/**
+ * **Was als zuletzt gelieferte Seite gilt** (E‑240, 14.10.2026): Ein Abbruch
+ * verwirft sie samt Σ, auch für die Rückmeldungen danach; erst die nächste
+ * gelieferte Seite füllt die Liste wieder.
+ */
+describe("Was als zuletzt gelieferte Seite gilt", () => {
+  const problem = (typ: string) => new ProblemFehler({ status: 400, typ, angaben: {} });
+  const BISHER = { seite: "alte Seite", treffer: "alter Σ" };
+  const LEER = { seite: undefined, treffer: undefined };
+
+  it("löst die bisherige Seite durch eine neu gelieferte ab", () => {
+    expect(
+      letzteLieferung(BISHER, { seite: "neue Seite", treffer: "neuer Σ", fehler: null }),
+    ).toEqual({ seite: "neue Seite", treffer: "neuer Σ" });
+  });
+
+  it("verwirft Seite und Σ bei einem Abbruch", () => {
+    expect(
+      letzteLieferung(BISHER, {
+        seite: undefined,
+        treffer: undefined,
+        fehler: problem("suche-abgebrochen"),
+      }),
+    ).toEqual(LEER);
+  });
+
+  it("verwirft sie auch, wenn derselbe Schlüssel abbricht und seine Seite noch hält", () => {
+    expect(
+      letzteLieferung(BISHER, {
+        seite: "alte Seite",
+        treffer: "alter Σ",
+        fehler: problem("suche-abgebrochen"),
+      }),
+    ).toEqual(LEER);
+  });
+
+  it.each(["suche-fenster-zu-gross", "zeitfenster-unvollstaendig", "suchbegriff-zu-kurz"])(
+    "bleibt nach einem Abbruch leer, wenn danach %s kommt",
+    (typ) => {
+      expect(
+        letzteLieferung(LEER, { seite: undefined, treffer: undefined, fehler: problem(typ) }),
+      ).toEqual(LEER);
+    },
+  );
+
+  it("füllt sich nach einem Abbruch mit der nächsten gelieferten Seite wieder", () => {
+    expect(
+      letzteLieferung(LEER, { seite: "nächste Seite", treffer: "ihr Σ", fehler: null }),
+    ).toEqual({ seite: "nächste Seite", treffer: "ihr Σ" });
+  });
+
+  it("behält die Seite bei jeder anderen Rückmeldung und bei einem Fehler der Ansicht", () => {
+    for (const fehler of [
+      problem("suche-fenster-zu-gross"),
+      problem("zeitfenster-unvollstaendig"),
+      new ProblemFehler({ status: 500, typ: "technischer-fehler", angaben: {} }),
+    ]) {
+      expect(letzteLieferung(BISHER, { seite: undefined, treffer: undefined, fehler })).toBe(
+        BISHER,
+      );
+    }
+  });
+});
+
 describe("Was die Liste bei einer Rückmeldung zeigt", () => {
   const problem = (typ: string) => new ProblemFehler({ status: 400, typ, angaben: {} });
   const SUCHE: Nachrichtenfilter = { ...LEER, suche: "lieferschein" };

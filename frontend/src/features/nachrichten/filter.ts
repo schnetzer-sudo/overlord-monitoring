@@ -286,6 +286,34 @@ function sucheOhneErgebnis(fehler: unknown): boolean {
   return istZeitgrenze(fehler);
 }
 
+/**
+ * **Was als „zuletzt gelieferte Seite" gilt** — der Rückgriff für die
+ * Rückmeldungen am Feld (§8.2), samt ihrem Σ.
+ *
+ * - **Eine neu gelieferte Seite** löst die bisherige ab.
+ * - **Ein Abbruch verwirft sie** (E‑240, 14.10.2026): Nach `suche-abgebrochen`
+ *   gibt es keine zuletzt gelieferte Seite mehr, auch nicht für die
+ *   Rückmeldungen, die danach kommen — wer dem Abbruch folgt und den Zeitraum
+ *   ändert, soll nicht die Seite von **vor** dem Abbruch zurückbekommen. Erst
+ *   die nächste gelieferte Seite füllt die Liste wieder.
+ * - **Sonst** bleibt, was war.
+ *
+ * Rein, damit es ohne React prüfbar ist; `useNachrichtenSeite` übernimmt das
+ * Ergebnis während des Renderns.
+ */
+export function letzteLieferung<S, T>(
+  bisher: { seite: S | undefined; treffer: T | undefined },
+  jetzt: { seite: S | undefined; treffer: T | undefined; fehler: unknown },
+): { seite: S | undefined; treffer: T | undefined } {
+  if (sucheOhneErgebnis(jetzt.fehler)) {
+    return { seite: undefined, treffer: undefined };
+  }
+  if (jetzt.seite !== undefined && jetzt.seite !== bisher.seite) {
+    return { seite: jetzt.seite, treffer: jetzt.treffer };
+  }
+  return bisher;
+}
+
 /** Was {@link listenanzeige} aus dem Zustand der Liste liest — die Felder aus `useNachrichtenSeite`. */
 type Listenlage<S, T> = {
   seite: S | undefined;

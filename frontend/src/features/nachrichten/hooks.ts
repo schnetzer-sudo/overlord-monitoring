@@ -63,6 +63,7 @@ import { PROZESSANSICHT_PARAMETER, type Prozessansichtzustand } from "./prozessa
 import {
   NACHRICHTEN_PARAMETER,
   alsAbfrage,
+  letzteLieferung,
   type Nachrichtenfilter,
   type Sortierung,
   type Statusart,
@@ -799,12 +800,18 @@ export function useNachrichtenSeite(
    *
    * Der Σ reist mit (E‑216): Er gehört zu der Seite, die stehen bleibt, und
    * nach dem Zurücksetzen des Stapels ließe er sich nicht mehr rechnen.
+   *
+   * Seit E‑240 verwirft ein Abbruch beide — entschieden in `letzteLieferung`.
    */
   const [letzteSeite, setLetzteSeite] = useState<Seite<Nachricht> | undefined>(undefined);
   const [letzteTreffer, setLetzteTreffer] = useState<Treffer | undefined>(undefined);
-  if (seite !== undefined && seite !== letzteSeite) {
-    setLetzteSeite(seite);
-    setLetzteTreffer(treffer);
+  const naechste = letzteLieferung(
+    { seite: letzteSeite, treffer: letzteTreffer },
+    { seite, treffer, fehler: anfrage.error },
+  );
+  if (naechste.seite !== letzteSeite || naechste.treffer !== letzteTreffer) {
+    setLetzteSeite(naechste.seite);
+    setLetzteTreffer(naechste.treffer);
   }
 
   const nachladen = anfrage.refetch;

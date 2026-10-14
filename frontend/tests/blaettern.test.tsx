@@ -567,6 +567,124 @@ describe("Der Σ in der Nachrichtenliste", () => {
       await gerendert.abbauen();
     }
   });
+
+  /* ─── nach dem Abbruch (E‑240, 14.10.2026) ─── */
+
+  /** Was an der Stelle der Tabelle steht, ohne Zeilen und ohne Σ. */
+  function ohneSeite(behaelter: HTMLElement): void {
+    expect(behaelter.querySelectorAll("tbody tr"), "keine Zeile").toHaveLength(0);
+    expect(summe(behaelter), "kein Σ").toBeNull();
+    expect(satzOhneErgebnis(behaelter), "nicht der Abbruchsatz").toBeNull();
+    expect(behaelter.textContent, "der Leerzustand").toContain(TEXTE.nachrichten.leer.titel);
+    blaetterblockSteht(behaelter);
+  }
+
+  /** Setzt das Feld „Von" des freien Fensters, wie eine Eingabe es tut. */
+  async function setzeVon(behaelter: HTMLElement, wert: string): Promise<void> {
+    const feld = behaelter.querySelector('input[type="datetime-local"]') as HTMLInputElement;
+    expect(feld, "Eichung: das Feld Von steht").not.toBeNull();
+    const setzer = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+    await act(async () => {
+      setzer?.call(feld, wert);
+      feld.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await zuege();
+  }
+
+  async function aufZeitraum(behaelter: HTMLElement, text: string): Promise<void> {
+    const zeitfenster = behaelter.querySelector(
+      `[data-slot="toggle-group"][aria-label="${TEXTE.nachrichten.zeitfenster.bezeichnung}"]`,
+    );
+    expect(zeitfenster, "Zeitfensterumschalter").not.toBeNull();
+    await klicke(knopfMitText(zeitfenster as HTMLElement, text));
+  }
+
+  /**
+   * **Die Eichung, und zugleich die Antwort auf die Frage, was dort steht:**
+   * Eine Rückmeldung am Feld, ohne dass je eine Seite geliefert wurde, zeigt den
+   * **Leerzustand** (`LeerMitUrsache`). Genau diesen Zustand zeigt seit E‑240 auch
+   * eine Rückmeldung nach einem Abbruch.
+   */
+  it("zeigt bei einer Rückmeldung am Feld ohne gelieferte Seite den Leerzustand", async () => {
+    const gerendert = await rendereListe(
+      (pfad, parameter) =>
+        pfad === "/api/nachrichten"
+          ? problem(400, "suche-fenster-zu-gross")
+          : listenNetz(pfad, parameter),
+      "?suche=lieferschein&zeitraum=7d",
+    );
+    try {
+      ohneSeite(gerendert.behaelter);
+    } finally {
+      await gerendert.abbauen();
+    }
+  });
+
+  /**
+   * **Abbruch, dann Fenster zu groß:** Die Seite von vor dem Abbruch kommt nicht
+   * zurück. Und die nächste gelieferte Seite füllt die Liste wieder.
+   */
+  it("bringt nach einem Abbruch bei Fenster zu groß die alte Seite nicht zurück", async () => {
+    const gerendert = await rendereListe(
+      (pfad, parameter) =>
+        pfad === "/api/nachrichten" && parameter.get("zeitraum") === "30d"
+          ? problem(400, "suche-abgebrochen")
+          : pfad === "/api/nachrichten" && parameter.get("zeitraum") === "7d"
+            ? problem(400, "suche-fenster-zu-gross")
+            : listenNetz(pfad, parameter),
+      "?suche=lieferschein",
+    );
+    try {
+      const { behaelter } = gerendert;
+      expect(sichtbar(summeDa(behaelter)), "Eichung: Seite eins mit Σ").toBe("mehr als 3");
+
+      await aufZeitraum(behaelter, TEXTE.nachrichten.zeitfenster.d30);
+      expect(satzOhneErgebnis(behaelter), "Eichung: der Abbruch").not.toBeNull();
+
+      await aufZeitraum(behaelter, TEXTE.nachrichten.zeitfenster.d7);
+      expect(anfragen.at(-1), "Eichung: die Anfrage im 7-Tage-Fenster").toContain("zeitraum=7d");
+      ohneSeite(behaelter);
+
+      await aufZeitraum(behaelter, TEXTE.nachrichten.zeitfenster.h24);
+      expect(behaelter.querySelectorAll("tbody tr"), "die nächste Lieferung").toHaveLength(3);
+      expect(sichtbar(summeDa(behaelter)), "ihr Σ").toBe("mehr als 3");
+    } finally {
+      await gerendert.abbauen();
+    }
+  });
+
+  /**
+   * **Abbruch, dann halb ausgefülltes freies Fenster:** Der Rückgriff greift
+   * dort schon vor der Antwort — und findet nach dem Abbruch keine Seite mehr.
+   */
+  it("bringt nach einem Abbruch beim halb ausgefüllten freien Fenster die alte Seite nicht zurück", async () => {
+    const gerendert = await rendereListe((pfad, parameter) => {
+      if (pfad !== "/api/nachrichten") {
+        return listenNetz(pfad, parameter);
+      }
+      if (parameter.get("von") !== null && parameter.get("bis") === null) {
+        return problem(400, "zeitfenster-unvollstaendig");
+      }
+      return parameter.get("zeitraum") === "24h"
+        ? listenNetz(pfad, parameter)
+        : problem(400, "suche-abgebrochen");
+    }, "?suche=lieferschein&zeitraum=24h");
+    try {
+      const { behaelter } = gerendert;
+      expect(sichtbar(summeDa(behaelter)), "Eichung: Seite eins mit Σ").toBe("mehr als 3");
+
+      await aufZeitraum(behaelter, TEXTE.nachrichten.zeitfenster.d30);
+      expect(satzOhneErgebnis(behaelter), "Eichung: der Abbruch").not.toBeNull();
+
+      await aufZeitraum(behaelter, TEXTE.nachrichten.zeitfenster.frei);
+      await setzeVon(behaelter, "2025-12-28T05:00");
+      expect(anfragen.at(-1), "Eichung: die Anfrage nur mit von").toContain("von=");
+      expect(anfragen.at(-1)).not.toContain("bis=");
+      ohneSeite(behaelter);
+    } finally {
+      await gerendert.abbauen();
+    }
+  });
 });
 
 /* ─── die Prozessansicht ─────────────────────────────────────────────────── */
