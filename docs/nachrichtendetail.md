@@ -1101,6 +1101,23 @@ muss. Die geöffnete Zeile trägt `aria-current` und die blasse Akzenttönung: d
 aktiven Navigationseintrag markiert. Sie sagt etwas über die **Anwendung** — welche Zeile offen ist
 —, nicht über die Daten; eine Statusfarbe wäre hier eine Aussage, die die Zeile nicht macht.
 
+> ### ⚠️ Korrektur vom 14.10.2026 — der Fokus kehrt auf die Zeile zurück (E‑241, S4)
+>
+> **Die Absätze darüber bleiben stehen.** Neu ist, wo der Fokus nach dem Schließen steht: **über das
+> X, über `Escape` und über das Zurück des Browsers liegt er danach wieder auf der Zeile, die
+> geöffnet hat** (`useFokusZurueck` in `hooks.ts`). Er hängt am selben Schlüssel wie der Rückweg ins
+> Bild aus E‑114 (§10.7), der genau beim Schließen wechselt, und wird ohne eigenen Bildlauf gesetzt;
+> die Lage bestimmt weiterhin E‑114. Bis dahin fiel er beim Schließen über das X mit dem Panel ins
+> Leere, und der nächste `Tab` begann am Anwendungsrahmen. **Nur in der Nachrichtenliste** —
+> Prozessansicht und Belegsuche bleiben, wie sie sind.
+>
+> **Die Adresse nach dem Schließen ist die Listen-Adresse von vorher**, mit Zeitfenster, Status,
+> Prozess, Suche und allen übrigen Parametern — für jede Adresse, die `nuqs` selbst geschrieben hat,
+> Zeichen für Zeichen (`tests/ruecksprung.test.tsx`). Das war schon so und ist jetzt festgehalten.
+> **Eine Grenze, älter als dieser Stand und hier nur benannt:** Eine von Hand anders kodierte
+> Adresse (etwa `%3A` statt `:`) schreibt `nuqs` beim Öffnen in seiner eigenen Kodierung neu; sie
+> ist danach inhaltlich gleich, aber nicht zeichengleich.
+
 ### 10.3 Der Kopf
 
 Ablaufname (`sosName`) als Überschrift, darunter die Statusplakette — dieselbe Komponente wie in der
@@ -2531,6 +2548,139 @@ Sichtprüfungen":
 | **Die gescheiterte Abfrage der Eigenschaften** | am laufenden System nicht herbeigeführt. Belegt in `tests/eigenschaften-block.test.tsx` |
 | **Die Bewegung mit dem Auge** | gemessen, nicht angesehen. **Erledigt ist die Runde erst, wenn der Auftraggeber sie gesehen hat** |
 
+### 10.17 Der Rückweg aus Datei und Nachricht *(14.10.2026, E‑241 und E‑242, Zweig `fix/nachrichten-ruecksprung-kontext`)*
+
+**Der Anlass, beobachtet vom Auftraggeber:** Die Liste ist über Status, Prozess oder Suche
+eingegrenzt, eine Nachricht steht im Panel, ihre Datei wird geöffnet. Nach `Escape` (oder dem
+Verweis zurück) erschien die Nachricht als **Vollseite**; deren Schließen führte auf die
+**Standardliste** — Filter, Suche und Position waren weg.
+
+#### Die Entscheidungen vom 14.10.2026
+
+| Nummer | Entscheidung des Auftraggebers | Umgesetzt in |
+|---|---|---|
+| **E‑241** | **`Escape` geht eine Ebene zurück.** Schließen der Datei führt zur Nachricht, Schließen der Nachricht führt zur Liste | `artefakt-ansicht.tsx` (Taste und Verweis per `router.back()` mit Beleg), `lib/routen.ts` (`zeigtNachricht`, `dateiansichtAus`), `lib/browserverlauf.ts`, `hooks.ts` (`useFokusZurueck`, `useFokusAufDateiziel`), `nachricht-detail.tsx` (`fokusNachDatei`); [`rohdaten-frontend.md`](rohdaten-frontend.md) §4 und §8, §10.2 hier |
+| **E‑242** | **Die Liste zeigt beim Zurückkehren den Stand von vorher**, sie wird nicht neu abgefragt | Auf dem Weg über das Panel schon so gebaut (§10.7) und jetzt durch Tests festgehalten. **Auf dem Weg über eine Datei offen** — angehalten nach Auftrag, [`nachrichtenliste.md`](nachrichtenliste.md) §8.3 und Punkt 230 |
+
+**Vergabe der Nummern** — jeder Treffer gelesen, nicht gezählt:
+
+| Was | Suche | Ergebnis |
+|---|---|---|
+| Entscheidungen | `git grep -o -P '\bE[^0-9A-Za-z\s]{1,3}(24[0-9]\|2[5-9][0-9]\|[3-9][0-9][0-9])\b'` über den ganzen Baum auf allen **58** lokalen Zweigen, dazu `grep -r` über `docs`, `frontend/src` und `frontend/tests` der drei weiteren Arbeitsbäume; `[^…]{1,3}` deckt U+2011, U+2010, `-` und U+2013 byteweise ab | Höchstwert **E‑240** (13 Treffer auf `main` — die Eichung). **E‑249** steht nur als Bereichsangabe in [`spaltenwahl.md`](spaltenwahl.md) Z. 749, **E‑780** ist der bekannte Falschtreffer; beide gelesen, keine Vergabe. Folge: **E‑241, E‑242** |
+| Offene Punkte | die drei Schreibweisen aus [`messungen-suche-plan.md`](messungen-suche-plan.md) für 229 bis 239 auf allen Zweigen und im Arbeitsbaum | **229** ist der letzte vergebene (die Eichung, [`nachrichtenliste.md`](nachrichtenliste.md)). Die Treffer für 233, 234, 235 und 238 sind Tabellenwerte und Fließtext in `messungen-schritt4.md`, `-6.md`, `-7.md` und `-8.md`. Folge: **Punkte 230 bis 232** |
+
+#### Die Diagnose — Zeilen auf `main` (`aca78b6`)
+
+Die drei Vermutungen des Auftrags, je gegengeprüft (Workflow mit neun Prüfern, darunter drei
+unabhängige Lösungsversuche):
+
+| Vermutung | Urteil und Belege |
+|---|---|
+| **V1** *Overlay oder abfangende Route; das Schließen der Datei navigiert per `push`/`Link` auf die Nachricht und rendert die Vollseite* | **teilweise.** Keine abfangende Route und kein Overlay: im Routenbaum kein `@` und kein `(.)` (`[messageId]/page.tsx` Z. 15–18, §10.1), kein Dialog, kein Sheet. Die Nachricht ist das Panel über `nachricht` (`filter.ts` Z. 145, `nachrichten-ansicht.tsx` Z. 237–285). **Bestätigt ist der Mechanismus:** Die Datei ist eine eigene Route, geöffnet per `Link` ohne Abfragezeichenkette (`artefakt-ziele.tsx` Z. 90–91, `routen.ts` Z. 153–157); `Escape` und Verweis führen per `router.push`/`Link` auf `/nachrichten/<id>` (`artefakt-ansicht.tsx` Z. 164–166 und 194–200, `routen.ts` Z. 160–162), und das ist die Vollseite |
+| **V2** *Das Schließen der Nachricht navigiert auf die Liste ohne Abfragezeichenkette* | **im Panel widerlegt, auf der Vollseite in der Wirkung bestätigt.** Das Panel entfernt nur `nachricht` (`nachrichten-ansicht.tsx` Z. 99–100 und 250, `hooks.ts` Z. 219–222). Die Vollseite reicht `window.location.search` weiter (`nachricht-seite.tsx` Z. 50–52, `Escape` Z. 90) — der ist nach dem Umweg über die Datei aber leer, weil weder der Verweis hinein noch der Weg zurück ihn mitnimmt. Verloren geht der Zustand also in der Datei, nicht beim Schließen der Nachricht |
+| **V3** *Die Liste wird beim Wechsel ausgehängt* | **zwischen Liste und Panel widerlegt, beim Wechsel in die Datei bestätigt.** Im Panel wird sie ausgeblendet (`nachrichten-ansicht.tsx` Z. 157–159). Die Dateiroute hängt sie aus: Next.js hält ohne `cacheComponents` nur den aktiven Baum (`next/dist/client/components/bfcache-state-manager.js` Z. 13). Verloren gehen der Seitenstapel (`hooks.ts` Z. 746), der Schalter der automatischen Aktualisierung (`nachrichten-ansicht.tsx` Z. 47) und der Versatz von `main` (`anwendungsrahmen.tsx` Z. 175). Neu abgefragt wird beim Wiedereinhängen, wenn Seite eins älter als 30 s ist (`query-client.ts` Z. 48; die Listenabfrage `hooks.ts` Z. 778–785 hat keine eigene `staleTime`) |
+
+#### Angehalten, dann ein Teil gebaut
+
+**E‑242 ist auf dem Weg über die Datei nicht ohne Haltebedingung erreichbar.** Die Doku im Paket
+nennt ohne Cache Components genau zwei Wege, Seitenzustand über einen Routenwechsel zu halten: ein
+gemeinsames Layout oder einen externen Store (`01-app/02-guides/preserving-ui-state.md` Z. 15). Das
+erste ist ein Umbau der Routenstruktur, das zweite Zustand außerhalb der URL — beides
+Haltebedingungen des Auftrags. Gemeldet; **der Auftraggeber hat am 14.10.2026 den Teilbau gewählt**:
+alles, was ohne Haltebedingung geht.
+
+#### Was gebaut ist
+
+- **Die Datei geht eine Ebene zurück** (E‑241, S1). `Escape` und der Verweis „← Zurück zur
+  Nachricht" rufen `router.back()`, **wenn der vorige Eintrag im Verlauf dieselbe Nachricht zeigt**
+  — neben der Liste oder auf ihrer eigenen Route, gleiche Herkunft (`zeigtNachricht`). Dann ist die
+  Adresse zeichengleich die von vorher, und die Nachricht steht wieder im Panel. **Ohne Beleg** —
+  geteilter Verweis, F5, Browser ohne Navigation API, Prozessansicht oder Suche als Herkunft — bleibt
+  es beim `push` auf die eigene Route (S5). Der Verweis behält sein `href`; nur der gewöhnliche
+  Klick geht zurück ([`rohdaten-frontend.md`](rohdaten-frontend.md) §4).
+- **Der Beleg kommt aus dem Verlauf und wird nicht gemerkt** (`lib/browserverlauf.ts`). Die
+  Navigation API führt die Einträge gleicher Herkunft samt Adresse; `window.history` und
+  `document.referrer` tun das nicht. Sie fehlt in Firefox vor 147 und Safari vor 26.2, die innerhalb
+  der Standardziele von Next.js liegen (Firefox 111, Safari 16.4) — dort gilt der Weg ohne Beleg.
+  TypeScript 5.9 kennt `window.navigation` nicht, jsdom auch nicht; die Tests stellen den Verlauf.
+- **Der Fokus kehrt zurück** (S4): beim Schließen des Panels auf die Zeile (§10.2, Korrektur vom
+  14.10.2026), nach der Rückkehr aus einer Datei auf ihr Ziel. Welches Ziel, steht im **folgenden**
+  Eintrag des Verlaufs (`dateiansichtAus`); verlangt wird es über `fokusNachDatei` nur von den beiden
+  Einhängepunkten der Nachrichtenliste. Gesetzt wird er nur, wenn der Fokus frei ist. In Kauf
+  genommen: Nach F5 auf der Nachricht steht die Datei noch als folgender Eintrag im Verlauf, und ihr
+  Ziel bekommt den Fokus beim Laden.
+- **Unverändert:** die Listenabfrage und ihr Schlüssel, die globalen Voreinstellungen von TanStack
+  Query, alle `nuqs`-Parameter, `components/ui`, das Backend, Inhalt und Gestaltung der
+  Dateiansicht, Prozessansicht und Belegsuche. Der Navigationspunkt „Nachrichten" war schon auf dem
+  ganzen Weg aktiv (Präfixregel in `lib/navigation.ts`) und ist jetzt durch einen Test gehalten.
+
+#### Was nicht erreicht ist
+
+- **E‑242 auf dem Weg über die Datei** (Punkt 230): Nach dem Schritt zurück steht dieselbe Adresse
+  da, die Liste ist aber neu eingehängt — Seite eins statt der geblätterten Seite, Schalter aus,
+  nach 30 s ein Abruf. Der Versatz von `main` ist der, den die Dateiansicht hinterlassen hat: Beim
+  Schritt zurück setzt Next.js keinen Bildlauf.
+- **Der Fokus auf die Zeile nach dem Umweg über die Datei**, wenn die Nachricht nicht auf Seite eins
+  stand: Die Zeile wird dann gar nicht gerendert.
+- **Der Fokus auf die Zeile nach dem Schließen der Vollseite:** Die Liste wird dort neu eingehängt,
+  und ihre Adresse nennt die Nachricht nicht mehr.
+
+#### Tests
+
+**Zuerst geschrieben, gegen den unveränderten Code gelaufen:** 24 neue Fälle in vier Dateien,
+davon **17 rot** — die Entscheidung als reine Funktion (10 in `tests/routen.test.ts`), der Schritt
+zurück per Taste und Verweis (3 in `tests/artefakt-ansicht.test.tsx`), der Fokus auf das Dateiziel
+(1 in `tests/zeitleiste-ziele.test.tsx`, 2 Verdrahtungen in `tests/ruecksprung.test.tsx`) und der
+Fokus auf die Zeile (1). **Sieben waren schon vorher grün**, weil sie festhalten, was bereits stimmte:
+der Navigationspunkt, der Weg ohne Beleg, der Strg-Klick, die Gegenproben zum Fokus, die Adresse nach
+dem Schließen des Panels (S2), kein zusätzlicher Abruf über Öffnen und Schließen auf Seite zwei (S3,
+gezählt am gestellten `fetch`, Regel T1) und die Vollseite bei Direktaufruf (S5). Nach dem Bau sind
+alle 66 Fälle der vier Dateien grün; `pnpm check` trägt **1.347** Fälle in 50 Dateien, die
+gerenderten zählt `vitest.config.mts` (224 in 26).
+
+**Verletzungsproben** — je ein Eingriff, über die vier Dateien gelaufen, zurückgespielt und mit dem
+Original verglichen, in keinem Commit:
+
+| Probe | Eingriff | rot |
+|---|---|---|
+| V0 | keiner (Eichung) | 0 von 66 |
+| V1 | `Escape` geht nie zurück (Stand vor E‑241) | 2 |
+| V2 | der Verweis geht nie zurück | 1 |
+| V3 | jeder Klick gilt als gewöhnlich — Strg-Klick ginge zurück | 1 |
+| V4 | im Panel gilt irgendeine Nachricht als Beleg | 1 |
+| V5 | eine fremde Herkunft gilt als eigene | 2 |
+| V6 | jede Ansicht mit `nachricht=` gilt als Beleg (Prozessansicht, Suche) | 2 |
+| V7 | kein Fokus zurück auf die Zeile | 1 |
+| V8 | Fokus auf das Dateiziel, auch wenn er schon woanders steht | 1 |
+| V9 | ohne die Sperre „nur einmal je Einhängen" | **0 — die Sperre hatte keine Wirkung und ist daraufhin entfallen** |
+| V10 | jeder Einhängepunkt fokussiert das Dateiziel | 1 |
+| V11 | die Liste verlangt den Fokus auf das Dateiziel nicht | 1 |
+| V12 | die eigene Route verlangt ihn nicht | 1 |
+| V13 | das Dateiziel einer anderen Nachricht gilt | 2 |
+| V14 | der falsche Nachbar im Verlauf (folgender statt voriger) | 3 |
+
+#### Abweichungen vom Auftrag
+
+- **Kein „X oben rechts" in der Dateiansicht** — in keinem der 58 Zweige. Sie schließt über den
+  Verweis „← Zurück zur Nachricht" oben links und über `Escape`; das X, das zu sehen war, ist
+  vermutlich das der Vollseite, die danach erschien. Gelesen ist „X" in S1 als dieser Verweis.
+- **Die Liste lädt nicht beim Scrollen nach, sie blättert** (`blaettern.tsx`). „Nachgeladene Seiten"
+  ist gelesen als die mit „Nächste Seite" erreichte Seite.
+- **Die Suche im Kopf setzt keine Parameter der Liste**, sie führt nach `/suche?begriff=…&feld=…`
+  ([`bam-suche.md`](bam-suche.md): „Nicht in `/nachrichten` hinein"). Die Liste kennt nur den
+  Freitext `suche`; „Suche samt Feldname" in S2 ist an ihrer Adresse nicht prüfbar, geprüft ist
+  `suche` samt `langeSuche` und `sortierung`.
+- **Kein Dialog, kein Sheet auf dem Weg.** Escape-Verhalten und Fokusrückgabe über die Props einer
+  shadcn-Komponente hatten keinen Ansatzpunkt; der Skill ist deshalb nicht eingesetzt. Die Taste
+  läuft über `useEscapeSchliesst`.
+- **Tests vorher grün:** sieben der 24 neuen Fälle (oben), weil das Verhalten schon stimmte.
+- **Teilbau statt Vollbau** — Entscheidung des Auftraggebers nach dem Halt.
+
+#### Gemeldet, nicht aufgelöst
+
+Widersprüche zwischen Doku und Code, die die Prüfung gefunden hat — Punkt 232. Dasselbe Muster in
+anderen Ansichten — Punkt 231.
+
 ---
 
 ## 11. Die bewussten Nicht-Entscheidungen
@@ -2753,3 +2903,30 @@ aufgelöst — das ist Schritt 8.
   > Beschriftung mehr, als belegt ist.** Der Sichtbefund an **einer** solchen Nachricht steht im
   > Protokoll von §10.16; er ist keine Messung. Zu klären mit einer Erhebung der Namen auf
   > `MessageActionID = 0` nach Lesedienst ja/nein — ohne sie wird die Zeile nicht umbenannt.
+- **231 — Prozessansicht und Belegsuche: Der Rückweg aus einer Datei endet auf der Vollseite und
+  von dort auf der Standardliste** (gefunden am 14.10.2026, §10.17; nach Auftrag nur gemeldet, nicht
+  umgebaut). Beide tragen dasselbe Panel samt Dateizielen (`prozessansicht.tsx` Z. 727–742,
+  `suche-ansicht.tsx` Z. 313–336, Zeilen auf `main` `aca78b6`). Ein Ziel führt auf die Dateiroute,
+  `Escape` und Verweis führen dort weiter auf `/nachrichten/<id>` — sie gelten bewusst nicht als
+  Beleg für den Schritt zurück (E‑241) —, und deren Schließen auf `/nachrichten` ohne Parameter.
+  Verloren gehen `/prozesse?…` beziehungsweise `/suche?begriff=…&feld=…&modus=…&von=…&bis=…`; der
+  Navigationspunkt springt auf „Nachrichten", und der Knopf heißt „Zurück zur Liste", obwohl man
+  aus dem Baum oder der Suche kam. Die gemeinsame Ursache liegt in drei geteilten Bausteinen
+  (`artefakt-ziele.tsx` Z. 90–91, `artefakt-ansicht.tsx` Z. 164–166 und 194–200,
+  `nachricht-seite.tsx` Z. 50–52). **Ein Beleg für beide Ansichten wäre eine Zeile in
+  `zeigtNachricht`** — und genau deshalb eine Entscheidung des Auftraggebers, keine Nebenwirkung.
+  Dazu verliert die Übertragungsliste der Prozessansicht beim Aushängen Seitenstapel und Baumzustand
+  (`prozessansicht.tsx` Z. 167, 186, 198, 456–476), wie die Nachrichtenliste (Punkt 230).
+- **232 — Vier Widersprüche zwischen Doku und Code, gemeldet und nicht aufgelöst** (14.10.2026,
+  §10.17):
+  1. §10.7 sagt: „Ein Klick auf eine Zeile setzt den Fokus ins Panel." Code und `hooks.ts` (an
+     `useEscapeSchliesst`) sagen, ein Fokussprung ins Panel sei verworfen — er nähme dem Nutzer die
+     Stelle in der Liste.
+  2. `lib/routen.ts` (an `artefaktAnsicht`, Grund 3) und [`rohdaten-frontend.md`](rohdaten-frontend.md)
+     §8 sagen, der Weg zurück führe „samt Filtern" dorthin, wo man herkam. Bis E‑241 galt das nur für
+     den Zurück-Knopf des Browsers; seither auch für Taste und Verweis, aber nur mit Beleg.
+  3. §10.7 verweist für einen eigenen Rückweg der Suche auf einen offenen Punkt in
+     [`bam-suche.md`](bam-suche.md) §13. Dort steht keiner.
+  4. `lib/routen.ts` (an `artefaktAnsicht`) verortet die Regel „Cursor nicht in der URL" in
+     [`frontend-grundlagen.md`](frontend-grundlagen.md) §8. Sie steht in
+     [`nachrichtenliste.md`](nachrichtenliste.md) §4.

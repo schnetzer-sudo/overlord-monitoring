@@ -2923,6 +2923,41 @@ Ein geteilter Link kann trotzdem fremde `ProcessID`s tragen. Die werden **nicht 
 entfernt** — das zeigte dem Empfänger einen anderen Ausschnitt als dem Absender —, sondern stehen
 als eigener, entfernbarer Eintrag in der Auswahl.
 
+> ### Der Stand der Liste beim Zurückkehren *(14.10.2026, E‑242, Zweig `fix/nachrichten-ruecksprung-kontext`)*
+>
+> **Entscheidung des Auftraggebers:** Die Liste zeigt beim Zurückkehren den Stand von vorher und
+> wird nicht neu abgefragt. Anlass und Gesamtbild:
+> [`nachrichtendetail.md`](nachrichtendetail.md) §10.17.
+>
+> **Auf dem Weg über das Panel hält sie ihn — das war schon so.** Die Liste wird ausgeblendet und
+> nicht ausgehängt ([`nachrichtendetail.md`](nachrichtendetail.md) §10.7), und `nachricht` steht in
+> keinem Abfrageschlüssel (§8.2). Zeilen, Seitenstapel samt Σ und der Schalter bleiben, und es geht
+> keine Anfrage hinaus. Seit diesem Stand festgehalten in `tests/ruecksprung.test.tsx`, gezählt am
+> gestellten `fetch` (Regel T1), auch auf Seite zwei. Unter `xl` holt der Rückweg die Zeile ins Bild
+> (E‑114) und stellt nicht den alten Versatz her.
+>
+> **Auf dem Weg über eine Datei hält sie ihn nicht, und das ist nicht gebaut.** Die Dateiansicht ist
+> eine eigene Route, und Next.js hängt die Liste beim Wechsel aus — ohne `cacheComponents` hält es
+> nur den aktiven Baum (`next/dist/client/components/bfcache-state-manager.js` Z. 13). Nach dem
+> Schritt zurück (E‑241) steht zwar dieselbe Adresse da, die Liste ist aber neu eingehängt:
+>
+> - Der Seitenstapel beginnt wieder auf Seite eins; er liegt im Komponentenzustand von
+>   `useNachrichtenSeite`.
+> - Der Schalter der automatischen Aktualisierung steht auf aus.
+> - Der Versatz von `main` ist der, den die Dateiansicht hinterlassen hat, denn beim Schritt zurück
+>   setzt Next.js keinen Bildlauf.
+> - Ist Seite eins älter als 30 s (`staleTime`), wird sie neu abgefragt; nach 5 min ohne Beobachter
+>   erscheint dabei das Skelett.
+>
+> **Warum nicht gebaut: angehalten nach Auftrag.** Die Doku im Paket nennt ohne Cache Components zwei
+> Wege, Seitenzustand über einen Routenwechsel zu halten: ein gemeinsames Layout oder einen externen
+> Store (`01-app/02-guides/preserving-ui-state.md` Z. 15). Das erste ist ein Umbau der
+> Routenstruktur, das zweite Zustand außerhalb der URL; beides sind Haltebedingungen des Auftrags.
+> `cacheComponents` wäre eine globale Rahmenänderung und erfasste `main` trotzdem nicht. Den Cursor
+> in die URL zu legen widerspräche §4 („Der Cursor gehört nicht in die geteilte URL"). Gegengeprüft
+> mit drei unabhängigen Lösungsversuchen; keiner fand einen Weg ohne Haltebedingung. Der
+> Auftraggeber hat am 14.10.2026 den Teilbau gewählt — offen als Punkt 230.
+
 ### 8.4 Sichtprüfung im Browser (07.08.2026)
 
 Nach der Nachbesserung, gegen die laufende Anwendung im Profil `dev`, Mandant `NEXANS`, Fenster
@@ -3423,6 +3458,22 @@ Der alte Link (Punkt 6) *ist* eine von Hand geöffnete URL, denn genau das ist d
   Antwort stehen**, wenn ein späterer Abruf desselben Schlüssels abbricht („3 Treffer im
   Zeitfenster …" neben dem Abbruchsatz). Zeilen bleiben keine stehen. Auslöser: Wiedereinhängen der
   Ansicht, Rückkehr zu einem veralteten Schlüssel, Netzwiederkehr.
+
+### Zum Rückweg aus der Dateiansicht (Stand 14.10.2026, E‑242)
+
+- **230 — Der Rückweg über eine Datei hält den Stand der Liste nicht** (§8.3, Kasten vom
+  14.10.2026). Seitenstapel samt Σ, Versatz und Schalter gehen beim Aushängen verloren, und nach
+  30 s wird Seite eins neu abgefragt. **Drei Auswege, jeder eine Entscheidung des Auftraggebers:**
+  1. **Die Liste eingehängt halten** — sie in ein gemeinsames Layout unter `/nachrichten` heben oder
+     die Datei als abfangende Route über die Liste legen. Ein Umbau der Routenstruktur; er
+     widerspricht Entscheidung 7 der Rohdaten (eigene Route, kein Sheet, kein Dialog) und
+     [`nachrichtendetail.md`](nachrichtendetail.md) §10.1 („Keine abfangenden Routen"). Im
+     Hintergrund sähe die Liste außerdem die Adresse der Datei und verlöre ihre Filter, wenn sie die
+     ihren nicht festhielte.
+  2. **Den Stand außerhalb der URL halten** — Seitenstapel, Versatz und Schalter je Listen-Adresse in
+     `sessionStorage`, dazu `refetchOnMount: false` an der Listenabfrage. Hebt die Regel „kein
+     Zustandsspeicher außerhalb der URL" auf; nach 5 min ohne Beobachter fragt die Liste trotzdem.
+  3. **`cacheComponents`** — global, betrifft jede Route und hält den Versatz von `main` nicht.
 
 ### Zur Sortierrichtung (03.09.2026, Schritt 10b‑4)
 
