@@ -123,14 +123,22 @@ export function NachrichtDetail({
   // Öffnen der Ansicht geholt.
   const artefakte = useArtefakte(messageId, true);
 
-  // Die Ziele stehen, sobald Detail und Artefaktliste da sind — erst dann gibt
-  // es einen Auslöser, der den Fokus zurückbekommen kann.
+  // Die Ziele stehen, sobald Detail, Artefaktliste **und Eigenschaften** da
+  // sind — erst dann gibt es einen Auslöser, der den Fokus behält. Treffen die
+  // Eigenschaften erst nach, wird die Zeile eines Ziels aufklappbar, und
+  // `AufklappZeile` baut sie mit einer anderen Wurzel neu; ein schon
+  // fokussiertes Ziel fiele dabei aus dem Dokument (Gegenprüfung vom
+  // 14.10.2026). Gelesen wird derselbe Schlüssel wie in `Ablauf`, unter
+  // derselben Bedingung — es geht keine zweite Anfrage hinaus.
   const bereich = useRef<HTMLElement>(null);
-  useFokusAufDateiziel(
-    bereich,
-    messageId,
-    fokusNachDatei && anfrage.data !== undefined && artefakte.data !== undefined,
-  );
+  const eigenschaften = useEigenschaften(messageId, (anfrage.data?.eigenschaftenAnzahl ?? 0) > 0);
+  const zeilenStehen =
+    anfrage.data !== undefined &&
+    artefakte.data !== undefined &&
+    (anfrage.data.eigenschaftenAnzahl === 0 ||
+      eigenschaften.data !== undefined ||
+      eigenschaften.isError);
+  useFokusAufDateiziel(bereich, messageId, fokusNachDatei && zeilenStehen);
 
   return (
     <section

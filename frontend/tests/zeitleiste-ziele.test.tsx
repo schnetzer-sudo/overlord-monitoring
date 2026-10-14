@@ -746,6 +746,67 @@ describe("Der Fokus nach der Rückkehr aus einer Datei", () => {
     }
   });
 
+  /**
+   * **Die Eigenschaften kommen erst nach** — nach mehr als 15 min in der Datei
+   * (ihre `gcTime`) oder nach F5 dort. Treffen sie ein, wird die Zeile des Ziels
+   * aufklappbar und `AufklappZeile` baut sie mit einer anderen Wurzel neu; ein
+   * schon fokussiertes Ziel fiele dabei aus dem Dokument (Befund der
+   * Gegenprüfung vom 14.10.2026). Der Fokus wartet deshalb, bis die Zeilen
+   * stehen.
+   */
+  it("liegt auf dem Ziel auch dann, wenn die Eigenschaften erst danach eintreffen", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((eingabe: RequestInfo | URL) => {
+        const adresse = String(eingabe);
+        anfragen.push(adresse);
+        return adresse.endsWith(`/nachrichten/${MESSAGE_ID}/eigenschaften`)
+          ? Promise.resolve(
+              new Response(JSON.stringify(EIGENSCHAFTEN), {
+                status: 200,
+                headers: { "content-type": "application/json" },
+              }),
+            )
+          : Promise.reject(new Error("Hier geht nur die Anfrage der Eigenschaften hinaus"));
+      }),
+    );
+    stelleVerlauf([PANEL, artefaktAnsicht(MESSAGE_ID, ZIEL.artefaktId)], 0);
+    const zwischenspeicher = neuerZwischenspeicher();
+    zwischenspeicher.setQueryData(
+      NACHRICHTEN_SCHLUESSEL.detail(MESSAGE_ID),
+      detail({ schritte: SCHRITTE, eigenschaftenAnzahl: EIGENSCHAFTEN.length }),
+    );
+    zwischenspeicher.setQueryData(NACHRICHTEN_SCHLUESSEL.dateien(MESSAGE_ID), LISTE);
+    const { behaelter, abbauen } = await rendere(
+      <NachrichtDetail
+        messageId={MESSAGE_ID}
+        aufSchliessen={() => undefined}
+        schliessenText="Schließen"
+        aufOeffnen={() => undefined}
+        fokusNachDatei
+      />,
+      zwischenspeicher,
+    );
+
+    try {
+      for (let zug = 0; zug < 12; zug++) {
+        await act(async () => {
+          await new Promise((fertig) => setTimeout(fertig, 0));
+        });
+      }
+      // Eichung: Die Eigenschaften sind da, und die Zeilen sind aufklappbar
+      // geworden — der Umbau, an dem der Fokus verloren ginge, hat stattgefunden.
+      expect(anfragen.filter((adresse) => adresse.endsWith("/eigenschaften"))).toHaveLength(1);
+      expect(behaelter.querySelectorAll("[aria-expanded]").length).toBeGreaterThan(0);
+
+      expect(document.activeElement?.getAttribute("href")).toBe(
+        artefaktAnsicht(MESSAGE_ID, ZIEL.artefaktId),
+      );
+    } finally {
+      await abbauen();
+    }
+  });
+
   it("bleibt, wo er ist — ohne Angabe des Einhängepunkts, nach der Datei einer anderen Nachricht und wenn er schon woanders steht", async () => {
     stelleVerlauf([PANEL, artefaktAnsicht(MESSAGE_ID, ZIEL.artefaktId)], 0);
     const ohneAngabe = await rendereDetail({ schritte: SCHRITTE }, LISTE);

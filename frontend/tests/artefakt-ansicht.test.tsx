@@ -33,7 +33,7 @@ import { neuerZwischenspeicher, rendere } from "./hilfe/rendern";
  * | Der Download-Knopf | dieselbe Art Aussage — und die tragende von Entscheidung 9: Ein Knopf, der etwas anderes verspricht als die Anzeige, **darf nicht im Baum stehen** |
  * | Die Herkunftszeile | *(17.09.2026)* die Beschriftung je Kodierung ist eine reine Funktion (`tests/rohdaten.test.ts`); **ob sie in der Zeile steht und außerhalb von `ANZEIGBAR` fehlt**, ist eine Aussage über Anwesenheit und Abwesenheit im Baum |
  * | `Escape` führt zurück | *(21.09.2026)* die Taste ist ein **Zustand des Dokuments**: ein Zuhörer am `document`, ein Ziel aus dem gerenderten `href` und eine offene Liste, die zuerst zugeht — keine reine Funktion kennt eines davon |
- * | Eine Ebene zurück | *(14.10.2026, E‑241)* ob Taste **und** Verweis den Schritt zurück gehen, statt die Vollseite zu öffnen, ist eine Aussage über **Verdrahtung**: Zuhörer am `document`, `onNavigate` am Verweis, der gestellte Verlauf. Die Entscheidung selbst ist rein (`zeigtNachricht`, `tests/routen.test.ts`) |
+ * | Eine Ebene zurück | *(14.10.2026, E‑241)* ob Taste **und** Verweis den Schritt zurück gehen, statt die Vollseite zu öffnen, ist eine Aussage über **Verdrahtung**: Zuhörer am `document`, `onClick` am Verweis, der gestellte Verlauf — gelesen im Ereignis, nicht beim Rendern. Die Entscheidung selbst ist rein (`zeigtNachricht`, `tests/routen.test.ts`) |
  *
  * ## Kein Testdatensatz enthält echten Dateiinhalt
  *
@@ -734,8 +734,9 @@ describe("Die Darstellungswahl", () => {
  *
  * **Seit dem 14.10.2026 (E‑241) ist das der Weg ohne Beleg im Verlauf** — jsdom
  * kennt die Navigation API nicht, und genau das ist hier der Fall: ein geteilter
- * Verweis, F5, ein Browser ohne die Schnittstelle. Mit Beleg geht es eine Ebene
- * zurück (`describe` darunter).
+ * Verweis im neuen Tab, ein Browser ohne die Schnittstelle. Mit Beleg geht es
+ * eine Ebene zurück (`describe` darunter). F5 im selben Tab gehört nicht zu den
+ * Fällen ohne Beleg: Der Verlauf übersteht das Neuladen, und mit ihm der Beleg.
  */
 const verweis = (behaelter: HTMLElement) =>
   Array.from(behaelter.querySelectorAll<HTMLAnchorElement>("a")).find(
@@ -814,6 +815,37 @@ function stelleVerlauf(pfade: string[], aktuell = pfade.length - 1) {
 }
 
 /**
+ * **Ein Klick, und ob danach noch die Standardaktion stünde.**
+ *
+ * Festgehalten am `document`: Der Zuhörer dort läuft **nach** dem
+ * Wurzelbehälter, an dem React seine Zuhörer hängt — er sieht also, was der
+ * eigene `onClick` getan hat. Ein Zuhörer am Verweis selbst liefe davor und
+ * verdeckte genau das (Gegenprüfung vom 14.10.2026). Verhindert wird erst danach,
+ * denn jsdom navigiert nicht („Not implemented: navigation").
+ */
+async function klicke(
+  ziel: Element | null,
+  zusatz: MouseEventInit = {},
+): Promise<{ verhindert: boolean }> {
+  let verhindert = false;
+  const nachReact = (ereignis: Event) => {
+    verhindert = ereignis.defaultPrevented;
+    ereignis.preventDefault();
+  };
+  document.addEventListener("click", nachReact);
+  try {
+    await act(async () => {
+      ziel?.dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true, button: 0, ...zusatz }),
+      );
+    });
+  } finally {
+    document.removeEventListener("click", nachReact);
+  }
+  return { verhindert };
+}
+
+/**
  * **Eine Ebene zurück** *(14.10.2026, E‑241, `docs/rohdaten-frontend.md` §4)*.
  *
  * Stand vor dem Öffnen der Datei die Nachricht neben der Liste oder auf ihrer
@@ -846,15 +878,12 @@ describe("Eine Ebene zurück", () => {
     const { behaelter, abbauen } = await rendereAnsicht(anzeige());
 
     try {
-      const klick = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 });
-      await act(async () => {
-        verweis(behaelter)?.dispatchEvent(klick);
-      });
+      const { verhindert } = await klicke(verweis(behaelter));
 
       expect(navigation.back).toHaveBeenCalledOnce();
       expect(navigation.push).not.toHaveBeenCalled();
       // Auch der Browser folgt dem `href` nicht: Es wäre die Vollseite.
-      expect(klick.defaultPrevented).toBe(true);
+      expect(verhindert).toBe(true);
     } finally {
       await abbauen();
     }
@@ -867,18 +896,13 @@ describe("Eine Ebene zurück", () => {
     try {
       const ziel = verweis(behaelter);
       expect(ziel?.getAttribute("href")).toBe(`/nachrichten/${MESSAGE_ID}`);
-      // jsdom navigiert nicht; ohne diesen Halt meldete es „Not implemented:
-      // navigation". Am Weg des Ereignisses durch React ändert er nichts.
-      ziel?.addEventListener("click", (ereignis) => ereignis.preventDefault());
 
-      await act(async () => {
-        ziel?.dispatchEvent(
-          new MouseEvent("click", { bubbles: true, cancelable: true, button: 0, ctrlKey: true }),
-        );
-      });
+      const { verhindert } = await klicke(ziel, { ctrlKey: true });
 
       expect(navigation.back).not.toHaveBeenCalled();
       expect(navigation.push).not.toHaveBeenCalled();
+      // Die Standardaktion bleibt — der Browser öffnet das `href` im neuen Tab.
+      expect(verhindert).toBe(false);
     } finally {
       await abbauen();
     }
@@ -898,9 +922,43 @@ describe("Eine Ebene zurück", () => {
     }
   });
 
+  it("geht ohne Beleg auch beim Klick nicht zurück — der Verweis führt auf sein href", async () => {
+    stelleVerlauf([DATEI]);
+    const { behaelter, abbauen } = await rendereAnsicht(anzeige());
+
+    try {
+      const { verhindert } = await klicke(verweis(behaelter));
+
+      expect(navigation.back).not.toHaveBeenCalled();
+      // Die Standardaktion bleibt: Im Browser führt `Link` auf das `href`.
+      expect(verhindert).toBe(false);
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("fragt den Verlauf im Augenblick des Schließens und nicht beim Öffnen", async () => {
+    // Beim Rendern gibt es keinen Beleg, beim Schließen gibt es einen: Gefragt
+    // wird im Ereignis, denn der Verlauf ändert sich, ohne dass die Ansicht es
+    // erfährt.
+    stelleVerlauf([DATEI]);
+    const { abbauen } = await rendereAnsicht(anzeige());
+
+    try {
+      stelleVerlauf([PANEL, DATEI]);
+      await escape();
+
+      expect(navigation.back).toHaveBeenCalledOnce();
+      expect(navigation.push).not.toHaveBeenCalled();
+    } finally {
+      await abbauen();
+    }
+  });
+
   it("bleibt ohne Beleg beim Ziel des Verweises: Direktaufruf und andere Ansicht", async () => {
     for (const verlauf of [
-      // Direktaufruf: ein geteilter Verweis im neuen Tab, F5.
+      // Direktaufruf: ein geteilter Verweis im neuen Tab. (F5 im selben Tab
+      // behält den Verlauf und damit den Beleg.)
       [DATEI],
       // Die Prozessansicht bleibt, wie sie ist.
       [`/prozesse?prozess=P-0815&nachricht=${MESSAGE_ID}`, DATEI],

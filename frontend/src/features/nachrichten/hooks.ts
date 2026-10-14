@@ -184,12 +184,15 @@ export function useFokusZurueck(
  * der **folgende** Eintrag (`lib/browserverlauf.ts`). Ihr Auslöser ist der
  * Verweis mit genau diesem `href`. Gemerkt wird dafür nichts.
  *
- * - **Erst, wenn die Ziele stehen** (`bereit`): Sie hängen am Detail und an der
- *   Artefaktliste, und beide können nachladen. Gefragt wird beim Übergang auf
- *   `bereit`; klappt danach eine Zeile auf und hängt ein Ziel neu ein, ändert
- *   sich keine Abhängigkeit, und nichts springt. Eine eigene Sperre „nur einmal"
- *   stand hier zuerst und ist entfallen: Die Verletzungsprobe ohne sie blieb
- *   grün, sie hatte keine Wirkung (`docs/nachrichtendetail.md` §10.17).
+ * - **Erst, wenn die Zeilen stehen** (`bereit`): Die Ziele hängen am Detail und
+ *   an der Artefaktliste, ihre Zeilen zusätzlich an den Eigenschaften — treffen
+ *   die nach, baut `AufklappZeile` die Zeile mit anderer Wurzel neu, und ein
+ *   schon fokussiertes Ziel fiele aus dem Dokument. Wann alle drei stehen,
+ *   entscheidet der Einhängepunkt (`nachricht-detail.tsx`). Gefragt wird beim
+ *   Übergang auf `bereit`; klappt danach eine Zeile auf und hängt ein Ziel neu
+ *   ein, ändert sich keine Abhängigkeit, und nichts springt. Eine eigene Sperre
+ *   „nur einmal" stand hier zuerst und ist entfallen: Die Verletzungsprobe ohne
+ *   sie blieb grün, sie hatte keine Wirkung (`docs/nachrichtendetail.md` §10.17).
  * - **Nur, wenn der Fokus frei ist.** Wer schon woanders steht, wird nicht
  *   umgesetzt.
  * - **Mit dem Bildlauf des Browsers:** Das Ziel kommt ins Bild, auch wenn das

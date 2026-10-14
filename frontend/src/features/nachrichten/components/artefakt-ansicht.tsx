@@ -167,10 +167,11 @@ export function Dateiansicht({
   // davor dieselbe Nachricht stand — neben der Liste oder auf ihrer eigenen
   // Route —, gehen Taste **und** Verweis den Schritt zurück: dieselbe Adresse,
   // dieselbe Darstellung, wie das Zurück des Browsers. Der Satz über den
-  // geteilten Verweis gilt weiter: Ohne Beleg — neuer Tab, F5, ein Browser ohne
+  // geteilten Verweis gilt weiter: Ohne Beleg — neuer Tab, ein Browser ohne
   // Navigation API, eine andere Ansicht als Herkunft — bleibt es bei `push` auf
-  // das `href`. Gefragt wird im Ereignis, nicht beim Rendern: Der Verlauf ändert
-  // sich, ohne dass die Ansicht davon erfährt.
+  // das `href`. F5 im selben Tab gehört nicht dazu: Der Verlauf übersteht das
+  // Neuladen, und mit ihm der Beleg. Gefragt wird im Ereignis, nicht beim
+  // Rendern: Der Verlauf ändert sich, ohne dass die Ansicht davon erfährt.
   const zurueckZiel = nachrichtAnsicht(messageId);
   const zurueckBelegt = useCallback(
     () => zeigtNachricht(vorigeAdresse(), messageId, window.location.origin),

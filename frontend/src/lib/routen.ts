@@ -167,8 +167,9 @@ export function artefaktAnsicht(messageId: string, artefaktId: string): string {
 /**
  * Die Nachricht auf ihrer eigenen Route — der Weg zurück aus der Dateiansicht,
  * **wenn der Verlauf keinen Schritt zurück belegt** (E‑241): bei einem geteilten
- * Verweis, nach F5, in einem Browser ohne Navigation API, aus einer anderen
- * Ansicht.
+ * Verweis im neuen Tab, in einem Browser ohne Navigation API, aus einer anderen
+ * Ansicht. Nach F5 im selben Tab ist der Schritt weiterhin belegt — der Verlauf
+ * übersteht das Neuladen.
  */
 export function nachrichtAnsicht(messageId: string): string {
   return `${ROUTEN.nachrichten}/${encodeURIComponent(messageId)}`;
