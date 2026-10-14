@@ -5,6 +5,8 @@ import {
   alsSuchparameter,
   ausSuchparametern,
   feldFehler,
+  letzteLieferung,
+  listenanzeige,
   NACHRICHTEN_PARAMETER,
   sucheTraegt,
   suchfeldFehler,
@@ -261,6 +263,185 @@ describe("Rückmeldungen am Suchfeld", () => {
     expect(
       problem("suche-fenster-zu-gross", { grenzeTage: "30" }).zahl("grenzeTage"),
     ).toBeUndefined();
+  });
+});
+
+/**
+ * **Welche Seite die Liste zeigt, mit welchem Σ** (`listenanzeige`).
+ *
+ * Drei der vier Rückmeldungen am Suchfeld gelten einer Eingabe, und bei ihnen
+ * bleibt die zuletzt gelieferte Seite samt Σ stehen (`docs/nachrichtenliste.md`
+ * §8.2, §8.3). Die vierte, der Abbruch an der Zeitgrenze, ist eine gelaufene
+ * Suche ohne Ergebnis: keine Seite, kein Σ, kein „Vor" — **auch nicht die
+ * eigene Seite der Abfrage**, die der Zwischenspeicher behält, wenn erst ein
+ * späterer Abruf desselben Schlüssels scheitert.
+ */
+/**
+ * **Was als zuletzt gelieferte Seite gilt** (E‑240, 14.10.2026): Ein Abbruch
+ * verwirft sie samt Σ, auch für die Rückmeldungen danach; erst die nächste
+ * gelieferte Seite füllt die Liste wieder.
+ */
+describe("Was als zuletzt gelieferte Seite gilt", () => {
+  const problem = (typ: string) => new ProblemFehler({ status: 400, typ, angaben: {} });
+  const BISHER = { seite: "alte Seite", treffer: "alter Σ" };
+  const LEER = { seite: undefined, treffer: undefined };
+
+  it("löst die bisherige Seite durch eine neu gelieferte ab", () => {
+    expect(
+      letzteLieferung(BISHER, { seite: "neue Seite", treffer: "neuer Σ", fehler: null }),
+    ).toEqual({ seite: "neue Seite", treffer: "neuer Σ" });
+  });
+
+  it("verwirft Seite und Σ bei einem Abbruch", () => {
+    expect(
+      letzteLieferung(BISHER, {
+        seite: undefined,
+        treffer: undefined,
+        fehler: problem("suche-abgebrochen"),
+      }),
+    ).toEqual(LEER);
+  });
+
+  it("verwirft sie auch, wenn derselbe Schlüssel abbricht und seine Seite noch hält", () => {
+    expect(
+      letzteLieferung(BISHER, {
+        seite: "alte Seite",
+        treffer: "alter Σ",
+        fehler: problem("suche-abgebrochen"),
+      }),
+    ).toEqual(LEER);
+  });
+
+  it.each(["suche-fenster-zu-gross", "zeitfenster-unvollstaendig", "suchbegriff-zu-kurz"])(
+    "bleibt nach einem Abbruch leer, wenn danach %s kommt",
+    (typ) => {
+      expect(
+        letzteLieferung(LEER, { seite: undefined, treffer: undefined, fehler: problem(typ) }),
+      ).toEqual(LEER);
+    },
+  );
+
+  it("füllt sich nach einem Abbruch mit der nächsten gelieferten Seite wieder", () => {
+    expect(
+      letzteLieferung(LEER, { seite: "nächste Seite", treffer: "ihr Σ", fehler: null }),
+    ).toEqual({ seite: "nächste Seite", treffer: "ihr Σ" });
+  });
+
+  it("behält die Seite bei jeder anderen Rückmeldung und bei einem Fehler der Ansicht", () => {
+    for (const fehler of [
+      problem("suche-fenster-zu-gross"),
+      problem("zeitfenster-unvollstaendig"),
+      new ProblemFehler({ status: 500, typ: "technischer-fehler", angaben: {} }),
+    ]) {
+      expect(letzteLieferung(BISHER, { seite: undefined, treffer: undefined, fehler })).toBe(
+        BISHER,
+      );
+    }
+  });
+});
+
+describe("Was die Liste bei einer Rückmeldung zeigt", () => {
+  const problem = (typ: string) => new ProblemFehler({ status: 400, typ, angaben: {} });
+  const SUCHE: Nachrichtenfilter = { ...LEER, suche: "lieferschein" };
+
+  /** Eine neue Abfrage, für die noch nichts ankam; davor stand eine gelieferte Seite. */
+  function lage(
+    teil: { seite?: string; treffer?: string; kannVor?: boolean; fehler?: unknown } = {},
+  ) {
+    return {
+      seite: teil.seite,
+      letzteSeite: "zuletzt gelieferte Seite",
+      treffer: teil.treffer,
+      letzteTreffer: "ihr Σ",
+      fehler: teil.fehler,
+      kannVor: teil.kannVor ?? false,
+    };
+  }
+
+  const OHNE_ERGEBNIS = {
+    seite: undefined,
+    treffer: undefined,
+    kannVor: false,
+    ohneErgebnis: true,
+  };
+
+  it("zeigt nach einer abgebrochenen Suche keine Seite und keinen Σ", () => {
+    expect(listenanzeige(lage({ fehler: problem("suche-abgebrochen") }), SUCHE)).toEqual(
+      OHNE_ERGEBNIS,
+    );
+  });
+
+  it("verwirft auch die eigene Seite, wenn ein späterer Abruf desselben Schlüssels abbricht", () => {
+    const eigene = lage({
+      seite: "eigene Seite",
+      treffer: "eigener Σ",
+      kannVor: true,
+      fehler: problem("suche-abgebrochen"),
+    });
+
+    expect(listenanzeige(eigene, SUCHE)).toEqual(OHNE_ERGEBNIS);
+  });
+
+  it.each(["suchbegriff-zu-kurz", "suchbegriff-zu-unscharf", "suche-fenster-zu-gross"])(
+    "lässt bei %s die zuletzt gelieferte Seite samt Σ stehen",
+    (typ) => {
+      expect(listenanzeige(lage({ fehler: problem(typ) }), SUCHE)).toEqual({
+        seite: "zuletzt gelieferte Seite",
+        treffer: "ihr Σ",
+        kannVor: false,
+        ohneErgebnis: false,
+      });
+    },
+  );
+
+  /*
+   * Die Rückmeldungen an den Zeitfensterfeldern gehören ebenfalls dazu (§8.2):
+   * Auch dort ist der Nutzer mitten in einer Eingabe. Das Fenster ist hier voll
+   * ausgefüllt, damit der Rückgriff an der Rückmeldung hängt und nicht schon am
+   * halben Fenster — ohne diesen Fall bliebe ein `suchfeldFehler` statt
+   * `feldFehler` in `listenanzeige` unbemerkt.
+   */
+  it.each(["zeitfenster-unvollstaendig", "zeitfenster-ungueltig", "zeitpunkt-ungueltig"])(
+    "lässt bei %s die zuletzt gelieferte Seite samt Σ stehen",
+    (typ) => {
+      const frei: Nachrichtenfilter = {
+        ...LEER,
+        von: new Date("2025-12-28T05:00:00Z"),
+        bis: new Date("2025-12-29T05:00:00Z"),
+      };
+
+      expect(listenanzeige(lage({ fehler: problem(typ) }), frei)).toEqual({
+        seite: "zuletzt gelieferte Seite",
+        treffer: "ihr Σ",
+        kannVor: false,
+        ohneErgebnis: false,
+      });
+    },
+  );
+
+  it("greift bei einem Fehler der ganzen Ansicht nicht zurück", () => {
+    const technisch = new ProblemFehler({ status: 500, typ: "technischer-fehler", angaben: {} });
+
+    expect(listenanzeige(lage({ fehler: technisch }), SUCHE)).toEqual({
+      seite: undefined,
+      treffer: undefined,
+      kannVor: false,
+      ohneErgebnis: false,
+    });
+  });
+
+  it("greift beim halb ausgefüllten freien Fenster schon vor der Antwort zurück", () => {
+    const halb: Nachrichtenfilter = { ...LEER, von: new Date("2025-12-28T05:00:00Z") };
+
+    expect(listenanzeige(lage(), halb)).toMatchObject({
+      seite: "zuletzt gelieferte Seite",
+      treffer: "ihr Σ",
+      ohneErgebnis: false,
+    });
+    expect(listenanzeige(lage(), LEER), "Eichung: ohne Anlass kein Rückgriff").toMatchObject({
+      seite: undefined,
+      treffer: undefined,
+    });
   });
 });
 

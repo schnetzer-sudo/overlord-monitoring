@@ -5,7 +5,7 @@ import {
   zeitfensterAlsParameter,
   type Zeitfensterzustand,
 } from "@/lib/filter";
-import { ProblemFehler } from "@/lib/http";
+import { istZeitgrenze, ProblemFehler } from "@/lib/http";
 import { STATUSARTEN, type Statusart } from "@/lib/status-farbe";
 
 /**
@@ -198,6 +198,10 @@ export function sucheTraegt(suche: string | null): suche is string {
  * Handlungen, die hier stattfinden — Zeitraum verkleinern, Begriff schärfen. Und
  * eine Schaltfläche „Erneut versuchen" wäre falsch, weil sie dieselbe Abfrage in
  * dieselbe Grenze schickte.
+ *
+ * **Die Liste bleibt aber nur bei den drei übrigen stehen.** Nach einem Abbruch
+ * zeigt sie keine Zeile der zuletzt gelieferten Seite und keinen Σ, sondern
+ * einen Satz an ihrer Stelle ({@link sucheOhneErgebnis}).
  */
 export const AM_SUCHFELD = [
   "suchbegriff-zu-kurz",
@@ -261,6 +265,98 @@ export function zeitfensterFehler(fehler: unknown): ProblemFehler | undefined {
  */
 export function feldFehler(fehler: unknown): ProblemFehler | undefined {
   return suchfeldFehler(fehler) ?? zeitfensterFehler(fehler);
+}
+
+/**
+ * Hat die Suche **kein Ergebnis geliefert** — und gilt damit auch die Seite
+ * nicht mehr, die vorher dastand?
+ *
+ * Genau einer der vier Typen am Suchfeld: der Abbruch an der Zeitgrenze der
+ * Datenbank. Die drei übrigen sind Rückmeldungen zu einer **Eingabe** — der
+ * Begriff ist zu kurz oder zu weit, das Fenster zu groß —, und bei ihnen bleibt
+ * die Liste stehen, weil der Nutzer mitten im Tippen ist
+ * (`docs/nachrichtenliste.md` §8.2). Beim Abbruch ist die Suche dagegen
+ * **gelaufen** und hat nichts gebracht; die alte Seite stehen zu lassen sähe
+ * aus wie ihr Ergebnis.
+ *
+ * Die Meldung am Suchfeld bleibt davon unberührt — sie entscheidet weiterhin
+ * {@link suchfeldFehler}.
+ */
+function sucheOhneErgebnis(fehler: unknown): boolean {
+  return istZeitgrenze(fehler);
+}
+
+/**
+ * **Was als „zuletzt gelieferte Seite" gilt** — der Rückgriff für die
+ * Rückmeldungen am Feld (§8.2), samt ihrem Σ.
+ *
+ * - **Eine neu gelieferte Seite** löst die bisherige ab.
+ * - **Ein Abbruch verwirft sie** (E‑240, 14.10.2026): Nach `suche-abgebrochen`
+ *   gibt es keine zuletzt gelieferte Seite mehr, auch nicht für die
+ *   Rückmeldungen, die danach kommen — wer dem Abbruch folgt und den Zeitraum
+ *   ändert, soll nicht die Seite von **vor** dem Abbruch zurückbekommen. Erst
+ *   die nächste gelieferte Seite füllt die Liste wieder.
+ * - **Sonst** bleibt, was war.
+ *
+ * Rein, damit es ohne React prüfbar ist; `useNachrichtenSeite` übernimmt das
+ * Ergebnis während des Renderns.
+ */
+export function letzteLieferung<S, T>(
+  bisher: { seite: S | undefined; treffer: T | undefined },
+  jetzt: { seite: S | undefined; treffer: T | undefined; fehler: unknown },
+): { seite: S | undefined; treffer: T | undefined } {
+  if (sucheOhneErgebnis(jetzt.fehler)) {
+    return { seite: undefined, treffer: undefined };
+  }
+  if (jetzt.seite !== undefined && jetzt.seite !== bisher.seite) {
+    return { seite: jetzt.seite, treffer: jetzt.treffer };
+  }
+  return bisher;
+}
+
+/** Was {@link listenanzeige} aus dem Zustand der Liste liest — die Felder aus `useNachrichtenSeite`. */
+type Listenlage<S, T> = {
+  seite: S | undefined;
+  letzteSeite: S | undefined;
+  treffer: T | undefined;
+  letzteTreffer: T | undefined;
+  fehler: unknown;
+  kannVor: boolean;
+};
+
+/**
+ * **Welche Seite die Nachrichtenliste zeigt, mit welchem Σ** — und ob an ihrer
+ * Stelle der Satz steht, dass die Suche kein Ergebnis geliefert hat.
+ *
+ * - **Die Suche ist abgebrochen** ({@link sucheOhneErgebnis}): keine Seite, kein
+ *   Σ, kein „Vor". Das gilt **auch für die eigene Seite der Abfrage**: Scheitert
+ *   ein späterer Abruf desselben Schlüssels — die automatische Aktualisierung
+ *   auf Seite eins oder „Neu laden" —, behält der Zwischenspeicher die Daten des
+ *   vorigen Abrufs, und `seite` ist gesetzt, obwohl der Abruf gescheitert ist.
+ *   „Vor" gehört zu der Seite, die nicht mehr dasteht: Ihr Cursor führte in ein
+ *   Ergebnis, das die Ansicht gerade nicht zeigt.
+ * - **Eine Rückmeldung an einem Feld, oder das freie Fenster ist halb
+ *   ausgefüllt:** die zuletzt gelieferte Seite bleibt stehen, ihr Σ mit ihr
+ *   (§8.2, §8.3).
+ * - **Sonst** die Seite der Abfrage selbst, oder keine.
+ *
+ * Rein und ohne React, damit die Entscheidung geprüft werden kann
+ * (`tests/nachrichtenfilter.test.ts`); die Ansicht zeigt nur an.
+ */
+export function listenanzeige<S, T>(
+  liste: Listenlage<S, T>,
+  filter: Nachrichtenfilter,
+): { seite: S | undefined; treffer: T | undefined; kannVor: boolean; ohneErgebnis: boolean } {
+  if (sucheOhneErgebnis(liste.fehler)) {
+    return { seite: undefined, treffer: undefined, kannVor: false, ohneErgebnis: true };
+  }
+  const ruhigeRueckmeldung = feldFehler(liste.fehler) !== undefined || zeitfensterHalb(filter);
+  return {
+    seite: liste.seite ?? (ruhigeRueckmeldung ? liste.letzteSeite : undefined),
+    treffer: liste.treffer ?? (ruhigeRueckmeldung ? liste.letzteTreffer : undefined),
+    kannVor: liste.kannVor,
+    ohneErgebnis: false,
+  };
 }
 
 /**
