@@ -2949,10 +2949,11 @@ als eigener, entfernbarer Eintrag in der Auswahl.
 > - Ist Seite eins älter als 30 s (`staleTime`), wird sie neu abgefragt; nach 5 min ohne Beobachter
 >   erscheint dabei das Skelett.
 >
-> **Warum nicht gebaut: angehalten nach Auftrag.** Die Doku im Paket nennt ohne Cache Components zwei
-> Wege, Seitenzustand über einen Routenwechsel zu halten: ein gemeinsames Layout oder einen externen
-> Store (`01-app/02-guides/preserving-ui-state.md` Z. 15). Das erste ist ein Umbau der
-> Routenstruktur, das zweite Zustand außerhalb der URL; beides sind Haltebedingungen des Auftrags.
+> **Warum nicht gebaut: angehalten nach Auftrag.** Die Doku im Paket nennt als Auswege ohne Cache
+> Components *„workarounds like hoisting state to a shared layout or using an external store"*
+> (`01-app/02-guides/preserving-ui-state.md` Z. 15) — Beispiele, keine abschließende Liste. Das
+> erste ist ein Umbau der Routenstruktur, das zweite Zustand außerhalb der URL; beides sind
+> Haltebedingungen des Auftrags.
 > `cacheComponents` wäre eine globale Rahmenänderung und erfasste `main` trotzdem nicht. Den Cursor
 > in die URL zu legen widerspräche §4 („Der Cursor gehört nicht in die geteilte URL"). Gegengeprüft
 > mit drei unabhängigen Lösungsversuchen; keiner fand einen Weg ohne Haltebedingung. Der
@@ -3463,7 +3464,9 @@ Der alte Link (Punkt 6) *ist* eine von Hand geöffnete URL, denn genau das ist d
 
 - **230 — Der Rückweg über eine Datei hält den Stand der Liste nicht** (§8.3, Kasten vom
   14.10.2026). Seitenstapel samt Σ, Versatz und Schalter gehen beim Aushängen verloren, und nach
-  30 s wird Seite eins neu abgefragt. **Drei Auswege, jeder eine Entscheidung des Auftraggebers:**
+  30 s wird Seite eins neu abgefragt. **Dazu, auch ohne Datei:** Unter `xl` stellt der Rückweg aus
+  dem Panel den alten Versatz nicht her, sondern holt die Zeile ins Bild (E‑114); ihn zu halten hieße
+  ebenso, ihn außerhalb der URL zu merken. **Drei Auswege, jeder eine Entscheidung des Auftraggebers:**
   1. **Die Liste eingehängt halten** — sie in ein gemeinsames Layout unter `/nachrichten` heben oder
      die Datei als abfangende Route über die Liste legen. Ein Umbau der Routenstruktur; er
      widerspricht Entscheidung 7 der Rohdaten (eigene Route, kein Sheet, kein Dialog) und

@@ -436,16 +436,21 @@ Druck nur die Liste, erst der nächste führt zur Nachricht.
 > (`/nachrichten?…nachricht=<id>…`) oder auf ihrer eigenen Route (`/nachrichten/<id>…`), gehen
 > `Escape` und der Verweis „← Zurück zur Nachricht" per `router.back()` dorthin zurück.** Die
 > Adresse ist danach zeichengleich die von vorher, und die Nachricht steht in der Darstellung von
-> vorher — nicht mehr als Vollseite. Browser-Zurück tat das schon immer; jetzt führen alle drei Wege
+> vorher: im Panel, wenn sie dort stand, auf ihrer eigenen Route, wenn sie dort stand — aus dem Panel
+> heraus also nie mehr als Vollseite. Browser-Zurück tat das schon immer; jetzt führen alle drei Wege
 > in denselben Zustand. Anlass, Entscheidung und Abnahmekriterien:
 > [`nachrichtendetail.md`](nachrichtendetail.md) §10.17.
 >
 > **Der Beleg ist der vorige Eintrag im Verlauf**, gelesen über die Navigation API
 > (`lib/browserverlauf.ts`); entschieden wird in der reinen Funktion `zeigtNachricht`
 > (`lib/routen.ts`). Gemerkt wird nichts. **Ohne Beleg bleibt es beim `push` auf das `href`**, aus
-> dem Grund, den der Absatz darüber nennt: Ein geteilter Verweis im neuen Tab, F5 oder ein Browser
-> ohne die Schnittstelle (Firefox vor 147, Safari vor 26.2) belegen keinen Vorgänger, und ein
-> `router.back()` ohne Beleg könnte aus der Anwendung hinausführen. **Prozessansicht und Belegsuche
+> dem Grund, den der Absatz darüber nennt: Ein geteilter Verweis im neuen Tab oder ein Browser ohne
+> die Schnittstelle (Firefox vor 147, Safari vor 26.2) belegen keinen Vorgänger, und ein
+> `router.back()` ohne Beleg könnte aus der Anwendung hinausführen. **F5 im selben Tab gehört nicht
+> dazu:** Der Verlauf übersteht das Neuladen, und mit ihm der Beleg — nach F5 in der Datei führt
+> `Escape` ebenso zur Nachricht zurück, gesehen am 14.10.2026 ([`nachrichtendetail.md`](nachrichtendetail.md)
+> §10.17). S5 erlaubt dort die Vollseite, verlangt sie aber nicht, und der Vorgänger liegt
+> nachweislich in der Anwendung. **Prozessansicht und Belegsuche
 > gelten nicht als Beleg** — ihr Rückweg bleibt, wie er war ([`nachrichtendetail.md`](nachrichtendetail.md)
 > Punkt 231).
 >
@@ -458,7 +463,7 @@ Druck nur die Liste, erst der nächste führt zur Nachricht.
 > **Nach der Rückkehr liegt der Fokus auf dem Ziel, das die Datei geöffnet hat** — gefunden am
 > folgenden Eintrag im Verlauf ([`nachrichtendetail.md`](nachrichtendetail.md) §10.17).
 >
-> **Tests:** `tests/artefakt-ansicht.test.tsx`, Abschnitt „Eine Ebene zurück" (fünf Fälle), die
+> **Tests:** `tests/artefakt-ansicht.test.tsx`, Abschnitt „Eine Ebene zurück" (sieben Fälle), die
 > Entscheidung in `tests/routen.test.ts`. Der Fall „navigiert auf das href des Verweises" bleibt
 > und ist seither der Fall ohne Beleg.
 
@@ -808,8 +813,8 @@ zusammen **46** Fällen.
 | Datei | Art | Deckt ab |
 |---|---|---|
 | `tests/rohdaten.test.ts` | reine Funktionen, 29 Fälle *(31 seit 17.09.2026, Kasten unten)* | Beschriftungsregel in allen **vier** Lagen, **einschließlich Familie allein auf Schritt `0`** · **`Message.Payload.GUID` erzeugt kein Ziel** (M73) · die **Ziele** je Schritt: Art vor dem Namen — an jedem Ziel, auch an den beiden der Eingangszeile —, Ausschnitt in Name und `title`, Einteilung ohne Umsortieren, leere Einteilung ohne Liste, der Rest ohne Zeile in beide Richtungen · Gleichlauf über alle fünf Zustände samt der Ausnahme „binäres Protokoll" · Reihenfolge und Nachschlagen der Artefakte · die drei Vermerke · zweiter Versuch nur bei nicht erreichbarer Ablage · die vier Zustandstexte paarweise verschieden, in **beiden** Sprachen · kein Pfad trägt GUID oder Ablagenkennung |
-| `tests/artefakt-ansicht.test.tsx` | gerenderter Baum, 9 Fälle *(15 seit 17.09.2026, 21 seit 21.09.2026, Kästen unten)* | **der Textknoten** · die **vier Zustände**, je einer · der Ausschnitt-Vermerk in beide Richtungen · der Download-Knopf · die Beschriftung ohne Nachladen |
-| `tests/zeitleiste-ziele.test.tsx` | gerenderter Baum, 8 Fälle | die **drei Lagen je Schritt** (beide Arten, nur eine, keine) · die **Eingangszeile** über der Leiste mit **zwei** Zielen, mit Familie statt Nummer und ohne dass die Leiste eine vierte Zeile bekäme · die **Belastungsprobe aus M55**: fünfzehn Artefakte, fünfzehn eigene Ziele, ohne doppelten React-Schlüssel · das **Anspringen** der Eigenschaftengruppe · die Gegenprobe: ohne Eigenschaften kein Schalter am Schrittnamen |
+| `tests/artefakt-ansicht.test.tsx` | gerenderter Baum, 9 Fälle *(15 seit 17.09.2026, 21 seit 21.09.2026, 28 seit 14.10.2026 — eine Ebene zurück, §4; Kästen unten)* | **der Textknoten** · die **vier Zustände**, je einer · der Ausschnitt-Vermerk in beide Richtungen · der Download-Knopf · die Beschriftung ohne Nachladen |
+| `tests/zeitleiste-ziele.test.tsx` | gerenderter Baum, 8 Fälle *(11 seit 14.10.2026 — der Fokus nach der Rückkehr aus einer Datei, [`nachrichtendetail.md`](nachrichtendetail.md) §10.17)* | die **drei Lagen je Schritt** (beide Arten, nur eine, keine) · die **Eingangszeile** über der Leiste mit **zwei** Zielen, mit Familie statt Nummer und ohne dass die Leiste eine vierte Zeile bekäme · die **Belastungsprobe aus M55**: fünfzehn Artefakte, fünfzehn eigene Ziele, ohne doppelten React-Schlüssel · das **Anspringen** der Eigenschaftengruppe · die Gegenprobe: ohne Eigenschaften kein Schalter am Schrittnamen |
 
 > **Korrigiert 19.08.2026 zu den beiden Zeilen darüber.** Die erste führte die Beschriftungsregel
 > „**in allen fünf Lagen**" und die Ziele mit „**keine Art beim Eingang**"; die dritte den
