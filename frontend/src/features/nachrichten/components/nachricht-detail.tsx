@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useId, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Check, Copy, ListTree, X } from "lucide-react";
 
@@ -15,7 +15,12 @@ import type { Texte } from "@/i18n";
 
 import type { KuratierteEigenschaft, Nachrichtendetail } from "../api";
 import { bedeutungNichtVerifiziert, METADATEN_POSITION, verteileEigenschaften } from "../detail";
-import { useArtefakte, useEigenschaften, useNachrichtendetail } from "../hooks";
+import {
+  useArtefakte,
+  useEigenschaften,
+  useFokusAufDateiziel,
+  useNachrichtendetail,
+} from "../hooks";
 import { absprungZiel, absprungfenster } from "../prozessansicht";
 import { zieleJeSchritt, zieleOhneZeile } from "../rohdaten";
 import { AnsichtUmschalter, type Umschaltziel } from "./ansicht-umschalter";
@@ -78,6 +83,11 @@ import { Zeitleiste } from "./zeitleiste";
  *   — relativer Modus der Liste, eigene Route, Prozessansicht —, gibt es keinen
  *   Link: Ein Link, der in einem anderen Fenster landet als versprochen, ist
  *   schlechter als kein Link (E‑104).
+ * @param fokusNachDatei ob nach der Rückkehr aus einer Datei ihr Ziel den Fokus
+ *   bekommt *(14.10.2026, E‑241, S4)*. Freiwillig wie der Umschalter: Die
+ *   Nachrichtenliste und die eigene Route geben es, denn dorthin führt der
+ *   Schritt zurück aus der Dateiansicht. Prozessansicht und Belegsuche geben es
+ *   nicht und bleiben, wie sie sind (`useFokusAufDateiziel`).
  */
 export function NachrichtDetail({
   messageId,
@@ -87,6 +97,7 @@ export function NachrichtDetail({
   umschaltenZu,
   aufUmschalten,
   prozessbaumFenster,
+  fokusNachDatei = false,
 }: {
   messageId: string;
   aufSchliessen: () => void;
@@ -95,6 +106,7 @@ export function NachrichtDetail({
   umschaltenZu?: Umschaltziel;
   aufUmschalten?: () => void;
   prozessbaumFenster?: { von: Date; bis: Date };
+  fokusNachDatei?: boolean;
 }) {
   const texte = useTexte();
   const anfrage = useNachrichtendetail(messageId);
@@ -111,8 +123,18 @@ export function NachrichtDetail({
   // Öffnen der Ansicht geholt.
   const artefakte = useArtefakte(messageId, true);
 
+  // Die Ziele stehen, sobald Detail und Artefaktliste da sind — erst dann gibt
+  // es einen Auslöser, der den Fokus zurückbekommen kann.
+  const bereich = useRef<HTMLElement>(null);
+  useFokusAufDateiziel(
+    bereich,
+    messageId,
+    fokusNachDatei && anfrage.data !== undefined && artefakte.data !== undefined,
+  );
+
   return (
     <section
+      ref={bereich}
       aria-labelledby={titelId}
       className="border-border bg-card flex flex-col gap-4 rounded-lg border p-3"
     >

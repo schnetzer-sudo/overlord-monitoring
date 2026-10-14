@@ -21,7 +21,12 @@ import {
   type Nachrichtenfilter,
 } from "../filter";
 import { automatikzustand } from "../aktualisierung";
-import { useEscapeSchliesst, useNachrichtenSeite, useNachrichtenfilter } from "../hooks";
+import {
+  useEscapeSchliesst,
+  useFokusZurueck,
+  useNachrichtenSeite,
+  useNachrichtenfilter,
+} from "../hooks";
 import { Blaettern } from "./blaettern";
 import { Filterleiste } from "./filterleiste";
 import { NachrichtDetail } from "./nachricht-detail";
@@ -125,6 +130,10 @@ export function NachrichtenAnsicht() {
   }, []);
   const geschlossen = useZuletztGeschlossen(gewaehlt);
   useInSicht(zuletztGewaehlteZeile, geschlossen);
+  // Und der Fokus geht an dieselbe Zeile zurück (E‑241, S4) — über das X, über
+  // `Escape` und über das Zurück des Browsers, denn alle drei schließen über den
+  // Parameter. Nur hier: Prozessansicht und Belegsuche bleiben, wie sie sind.
+  useFokusZurueck(zuletztGewaehlteZeile, geschlossen);
 
   return (
     /*
@@ -280,6 +289,9 @@ export function NachrichtenAnsicht() {
              * geteilten Link fiele dabei weg.
              */
             aufUmschalten={() => router.push(ansichtOhneListe(gewaehlt, window.location.search))}
+            // Der Schritt zurück aus einer Datei führt hierher (E‑241); dann
+            // bekommt ihr Ziel den Fokus.
+            fokusNachDatei
           />
         </div>
       )}

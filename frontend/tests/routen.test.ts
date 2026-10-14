@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import { NACHRICHTEN_PARAMETER } from "@/features/nachrichten/filter";
+import { NAVIGATION, istAktiv } from "@/lib/navigation";
 import {
   NACHRICHT_PARAMETER,
   ROUTEN,
   ansichtNebenListe,
   ansichtOhneListe,
+  artefaktAnsicht,
+  dateiansichtAus,
   sicheresZiel,
+  zeigtNachricht,
 } from "@/lib/routen";
 
 /**
@@ -143,6 +147,141 @@ describe("Kennungen mit Sonderzeichen", () => {
     expect(ziel).not.toContain("%25");
     expect(new URLSearchParams(ziel.split("?")[1]).get(NACHRICHT_PARAMETER)).toBe(ROH);
   });
+});
+
+/**
+ * **Eine Ebene zurück — nur mit Beleg** *(14.10.2026, E‑241)*.
+ *
+ * Die Dateiansicht geht per `router.back()` zurück, wenn der vorige Eintrag im
+ * Verlauf **dieselbe Nachricht** zeigt: neben der Liste oder auf ihrer eigenen
+ * Route. Dann ist die Adresse danach zeichengleich die von vorher, und die
+ * Nachricht steht in derselben Darstellung wie vorher. Fehlt der Beleg, bleibt
+ * es beim Ziel des Verweises. Ein Schritt zurück ohne Beleg könnte aus der
+ * Anwendung hinausführen (S5).
+ *
+ * Geprüft wird die Entscheidung als reine Funktion; woher die Adresse kommt
+ * (Navigation API), steht in `lib/browserverlauf.ts` und in den gerenderten
+ * Fällen von `tests/artefakt-ansicht.test.tsx`.
+ */
+describe("Der Beleg für den Schritt zurück", () => {
+  const HERKUNFT = "https://overlord.example";
+  const ID = "8f3a1c2e-0000-4000-8000-000000000001";
+
+  it("erkennt die Nachricht neben der Liste, mit jedem Filter daneben", () => {
+    expect(zeigtNachricht(`${HERKUNFT}/nachrichten?nachricht=${ID}`, ID, HERKUNFT)).toBe(true);
+    expect(
+      zeigtNachricht(
+        `${HERKUNFT}/nachrichten?zeitraum=7d&status=FEHLER&prozess=P-0815&suche=Versand&nachricht=${ID}`,
+        ID,
+        HERKUNFT,
+      ),
+    ).toBe(true);
+  });
+
+  it("erkennt die Nachricht auf ihrer eigenen Route, mit und ohne Filter", () => {
+    expect(zeigtNachricht(`${HERKUNFT}/nachrichten/${ID}`, ID, HERKUNFT)).toBe(true);
+    expect(zeigtNachricht(`${HERKUNFT}/nachrichten/${ID}?status=FEHLER`, ID, HERKUNFT)).toBe(true);
+  });
+
+  it("verlangt dieselbe Nachricht", () => {
+    expect(zeigtNachricht(`${HERKUNFT}/nachrichten?nachricht=andere`, ID, HERKUNFT)).toBe(false);
+    expect(zeigtNachricht(`${HERKUNFT}/nachrichten/andere`, ID, HERKUNFT)).toBe(false);
+    // Die Liste ohne geöffnete Nachricht ist eine Ebene zu weit.
+    expect(zeigtNachricht(`${HERKUNFT}/nachrichten?status=FEHLER`, ID, HERKUNFT)).toBe(false);
+  });
+
+  it("nimmt keine andere Ansicht und keine andere Station", () => {
+    for (const adresse of [
+      // Prozessansicht und Belegsuche bleiben, wie sie sind (Auftrag, „Was
+      // nicht gebaut wird").
+      `${HERKUNFT}/prozesse?prozess=P-0815&nachricht=${ID}`,
+      `${HERKUNFT}/suche?begriff=ERFUNDEN&nachricht=${ID}`,
+      `${HERKUNFT}${artefaktAnsicht(ID, "2-Converter.Payload.GUID")}`,
+      `${HERKUNFT}/`,
+    ]) {
+      expect(zeigtNachricht(adresse, ID, HERKUNFT), adresse).toBe(false);
+    }
+  });
+
+  it("verlangt dieselbe Herkunft und überhaupt einen Beleg", () => {
+    expect(zeigtNachricht(`https://fremd.example/nachrichten?nachricht=${ID}`, ID, HERKUNFT)).toBe(
+      false,
+    );
+    expect(zeigtNachricht(null, ID, HERKUNFT)).toBe(false);
+    expect(zeigtNachricht("keine Adresse", ID, HERKUNFT)).toBe(false);
+  });
+
+  it("vergleicht Kennungen mit Sonderzeichen dekodiert", () => {
+    const ROH = "a b/c?d&e=f#g";
+
+    expect(zeigtNachricht(`${HERKUNFT}${ansichtOhneListe(ROH, "")}`, ROH, HERKUNFT)).toBe(true);
+    expect(zeigtNachricht(`${HERKUNFT}${ansichtNebenListe(ROH, "")}`, ROH, HERKUNFT)).toBe(true);
+  });
+});
+
+/**
+ * **Woher man zurückkam** *(14.10.2026, E‑241)* — der Pfad der Datei, deren
+ * Auslöser nach der Rückkehr den Fokus bekommt (S4). Er muss **zeichengleich**
+ * das `href` des Verweises sein, denn daran wird der Auslöser gefunden.
+ */
+describe("Die Datei, aus der man zurückkam", () => {
+  const HERKUNFT = "https://overlord.example";
+  const ID = "8f3a1c2e-0000-4000-8000-000000000001";
+  const ARTEFAKT = "2-Converter.Payload.GUID";
+
+  it("liefert den Pfad, den der Verweis auf die Datei trägt", () => {
+    expect(dateiansichtAus(`${HERKUNFT}${artefaktAnsicht(ID, ARTEFAKT)}`, ID, HERKUNFT)).toBe(
+      artefaktAnsicht(ID, ARTEFAKT),
+    );
+  });
+
+  it("übergeht die gewählte Darstellung", () => {
+    expect(
+      dateiansichtAus(`${HERKUNFT}${artefaktAnsicht(ID, ARTEFAKT)}?darstellung=hex`, ID, HERKUNFT),
+    ).toBe(artefaktAnsicht(ID, ARTEFAKT));
+  });
+
+  it("liefert nichts für eine andere Nachricht, eine andere Herkunft oder ohne Beleg", () => {
+    expect(
+      dateiansichtAus(`${HERKUNFT}${artefaktAnsicht("andere", ARTEFAKT)}`, ID, HERKUNFT),
+    ).toBeNull();
+    expect(
+      dateiansichtAus(`https://fremd.example${artefaktAnsicht(ID, ARTEFAKT)}`, ID, HERKUNFT),
+    ).toBeNull();
+    expect(dateiansichtAus(`${HERKUNFT}/nachrichten/${ID}`, ID, HERKUNFT)).toBeNull();
+    expect(dateiansichtAus(null, ID, HERKUNFT)).toBeNull();
+    expect(dateiansichtAus("keine Adresse", ID, HERKUNFT)).toBeNull();
+  });
+
+  it("kodiert Kennungen mit Sonderzeichen genau wie der Verweis", () => {
+    const ROH = "a b/c?d&e=f#g";
+
+    expect(dateiansichtAus(`${HERKUNFT}${artefaktAnsicht(ROH, ROH)}`, ROH, HERKUNFT)).toBe(
+      artefaktAnsicht(ROH, ROH),
+    );
+  });
+});
+
+/**
+ * **Der Navigationspunkt bleibt auf dem ganzen Weg aktiv** *(14.10.2026, S4)* —
+ * Liste, Nachricht neben der Liste, Nachricht auf eigener Route, Datei. Das
+ * Panel steht in der Abfragezeichenkette, und die zählt für den Pfad nicht.
+ */
+it("hält „Nachrichten“ auf dem ganzen Weg aktiv", () => {
+  const ID = "8f3a1c2e-0000-4000-8000-000000000001";
+  const nachrichten = NAVIGATION.find((eintrag) => eintrag.pfad === ROUTEN.nachrichten);
+  expect(nachrichten).toBeDefined();
+  if (nachrichten === undefined) {
+    return;
+  }
+
+  for (const pfad of [
+    ROUTEN.nachrichten,
+    ansichtOhneListe(ID, ""),
+    artefaktAnsicht(ID, "2-Converter.Payload.GUID"),
+  ]) {
+    expect(istAktiv(nachrichten, pfad), pfad).toBe(true);
+  }
 });
 
 /**

@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 
-import { act } from "react";
+import { act, type ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { texteFuer } from "@/i18n";
+import { artefaktAnsicht } from "@/lib/routen";
 import {
   NACHRICHTEN_SCHLUESSEL,
   type Artefakt,
@@ -34,6 +35,7 @@ import { neuerZwischenspeicher, rendere } from "./hilfe/rendern";
  * | Schritt ohne Eigenschaften | **kein `button`** — eine Aussage über Abwesenheit |
  * | Bewegung mit Ausschalter | die Regel **ist** eine Klasse, wie beim Ansichtsumschalter |
  * | Eingang und Rest | die Zeile gibt es mit Eigenschaften ohne Ziele und umgekehrt; der Rest mit Eigenschaften ist von Hand nie zu sehen (M57, Befund 1) |
+ * | Der Fokus nach der Rückkehr *(14.10.2026)* | Wo der Fokus steht, ist ein **Zustand des Dokuments** (E‑241, S4): Nach dem Schritt zurück aus einer Datei liegt er auf ihrem Ziel — und nur dort, wo der Einhängepunkt es verlangt |
  *
  * **Die vier Sprungfälle vom 18.08.2026 sind am 21.09.2026 entfallen** — samt der
  * Mechanik, die sie belegten (E‑225, `docs/nachrichtendetail.md` §10.16).
@@ -172,6 +174,7 @@ async function rendereDetail(
   werte: Partial<Nachrichtendetail>,
   liste: Artefaktliste,
   eigenschaften: Eigenschaft[] = [],
+  zusatz: Partial<ComponentProps<typeof NachrichtDetail>> = {},
 ) {
   const zwischenspeicher = neuerZwischenspeicher();
   zwischenspeicher.setQueryData(NACHRICHTEN_SCHLUESSEL.detail(MESSAGE_ID), detail(werte));
@@ -184,6 +187,7 @@ async function rendereDetail(
       aufSchliessen={() => undefined}
       schliessenText="Schließen"
       aufOeffnen={() => undefined}
+      {...zusatz}
     />,
     zwischenspeicher,
   );
@@ -694,6 +698,93 @@ describe("Die Ziele an der Zeitleiste", () => {
       ]);
     } finally {
       await abbauen();
+    }
+  });
+});
+
+/**
+ * **Der Fokus nach der Rückkehr aus einer Datei** *(14.10.2026, E‑241, S4)*.
+ *
+ * Wer eine Datei öffnet und mit `Escape`, dem Verweis „Zurück zur Nachricht"
+ * oder dem Zurück des Browsers zurückkommt, findet den Fokus auf dem Ziel, das
+ * die Datei geöffnet hat. Welches das war, steht im Verlauf: Es ist der
+ * **folgende** Eintrag (Navigation API, hier gestellt). Gemerkt wird dafür
+ * nichts.
+ *
+ * Nur, wo der Einhängepunkt es verlangt (`fokusNachDatei`): Prozessansicht und
+ * Belegsuche geben die Angabe nicht und bleiben, wie sie sind.
+ */
+describe("Der Fokus nach der Rückkehr aus einer Datei", () => {
+  const PANEL = `/nachrichten?status=FEHLER&nachricht=${MESSAGE_ID}`;
+  const ZIEL = LISTE.nutzdaten[1];
+
+  function stelleVerlauf(pfade: string[], aktuell: number) {
+    const eintraege = pfade.map((pfad, index) => ({
+      url: new URL(pfad, window.location.origin).href,
+      index,
+    }));
+    vi.stubGlobal("navigation", { currentEntry: eintraege[aktuell], entries: () => eintraege });
+  }
+
+  beforeEach(() => {
+    (document.activeElement as HTMLElement | null)?.blur();
+  });
+
+  it("liegt auf dem Ziel, aus dessen Datei man zurückkam", async () => {
+    stelleVerlauf([PANEL, artefaktAnsicht(MESSAGE_ID, ZIEL.artefaktId)], 0);
+    const { abbauen } = await rendereDetail({ schritte: SCHRITTE }, LISTE, [], {
+      fokusNachDatei: true,
+    });
+
+    try {
+      expect(document.activeElement?.tagName).toBe("A");
+      expect(document.activeElement?.getAttribute("href")).toBe(
+        artefaktAnsicht(MESSAGE_ID, ZIEL.artefaktId),
+      );
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("bleibt, wo er ist — ohne Angabe des Einhängepunkts, nach der Datei einer anderen Nachricht und wenn er schon woanders steht", async () => {
+    stelleVerlauf([PANEL, artefaktAnsicht(MESSAGE_ID, ZIEL.artefaktId)], 0);
+    const ohneAngabe = await rendereDetail({ schritte: SCHRITTE }, LISTE);
+    try {
+      // Eichung: Das Ziel steht im Baum — es bekommt nur den Fokus nicht.
+      expect(
+        ohneAngabe.behaelter.querySelector(
+          `a[href="${artefaktAnsicht(MESSAGE_ID, ZIEL.artefaktId)}"]`,
+        ),
+      ).not.toBeNull();
+      expect(document.activeElement).toBe(document.body);
+    } finally {
+      await ohneAngabe.abbauen();
+    }
+
+    stelleVerlauf([PANEL, artefaktAnsicht("andere-nachricht", ZIEL.artefaktId)], 0);
+    const andere = await rendereDetail({ schritte: SCHRITTE }, LISTE, [], {
+      fokusNachDatei: true,
+    });
+    try {
+      expect(document.activeElement).toBe(document.body);
+    } finally {
+      await andere.abbauen();
+    }
+
+    // Wer schon woanders steht — hier auf einem Knopf außerhalb der Nachricht —,
+    // wird nicht umgesetzt.
+    stelleVerlauf([PANEL, artefaktAnsicht(MESSAGE_ID, ZIEL.artefaktId)], 0);
+    const anderswo = document.createElement("button");
+    document.body.appendChild(anderswo);
+    anderswo.focus();
+    const besetzt = await rendereDetail({ schritte: SCHRITTE }, LISTE, [], {
+      fokusNachDatei: true,
+    });
+    try {
+      expect(document.activeElement).toBe(anderswo);
+    } finally {
+      await besetzt.abbauen();
+      anderswo.remove();
     }
   });
 });

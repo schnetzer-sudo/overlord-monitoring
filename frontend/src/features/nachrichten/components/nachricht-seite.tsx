@@ -113,6 +113,9 @@ export function NachrichtSeite({ messageId }: { messageId: string }) {
         aufOeffnen={oeffne}
         umschaltenZu="nebenListe"
         aufUmschalten={nebenListe}
+        // Auch hierher führt der Schritt zurück aus einer Datei (E‑241), wenn
+        // sie von der eigenen Route aus geöffnet wurde.
+        fokusNachDatei
       />
     </div>
   );
