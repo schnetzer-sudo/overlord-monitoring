@@ -11,7 +11,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param denken was im Feld {@code thinking} steht: {@code between_tools} (Vorgabe, das Modell
  *     denkt nicht ausfuehrlich — nur Claude Sonnet 5.5 kennt den Wert), {@code adaptive} oder
  *     {@code keins} (das Feld entfaellt). Denken zaehlt gegen {@code max_tokens}; bei 1.024 bliebe
- *     sonst wenig fuer Antwort und Vorschlag (Festlegung F2)
+ *     sonst wenig fuer Antwort und Vorschlag (E‑1046)
  * @param wiederholungPause Pause vor dem einen Wiederholungsversuch bei {@code 429} und {@code 529}
  */
 @ConfigurationProperties("overlord.assistent.anthropic")

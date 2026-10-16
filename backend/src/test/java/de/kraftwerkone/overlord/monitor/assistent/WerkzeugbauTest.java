@@ -74,7 +74,7 @@ class WerkzeugbauTest {
   }
 
   @Test
-  @DisplayName("Ein Typ mit einem Feld mandant… oder ungueltigem Werkzeugnamen entfaellt (F10)")
+  @DisplayName("Ein Typ mit einem Feld mandant… oder ungueltigem Werkzeugnamen entfaellt (E‑1054)")
   void ungeeignete_typen_entfallen() {
     ObjectNode mitMandant = Testdefinitionen.gattungBaum();
     ((ArrayNode) mitMandant.get("felder"))

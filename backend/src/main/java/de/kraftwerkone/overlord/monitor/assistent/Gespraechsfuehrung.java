@@ -35,9 +35,9 @@ import tools.jackson.databind.node.ObjectNode;
  * (E‑1032, {@code PaketstrukturTest}).
  *
  * <p><b>Der Verlauf waechst nur am Ende.</b> Erst eine vollstaendig beantwortete Nachricht kommt in
- * das Gespraech; wirft das Modell einen Fehler, bleibt es unveraendert (F8). Bricht die Nachricht
- * ab (Runden ausgeschoepft, abgeschnitten, verweigert), stehen danach nur die Nachricht des Kunden
- * und die feste Antwort im Verlauf (F5 bis F7).
+ * das Gespraech; wirft das Modell einen Fehler, bleibt es unveraendert (E‑1052). Bricht die
+ * Nachricht ab (Runden ausgeschoepft, abgeschnitten, verweigert), stehen danach nur die Nachricht
+ * des Kunden und die feste Antwort im Verlauf (E‑1049 bis E‑1051).
  */
 public class Gespraechsfuehrung {
 
@@ -243,9 +243,9 @@ public class Gespraechsfuehrung {
   }
 
   /**
-   * Die Eintraege aus der Eingabe des Modells. <b>Nur Text zaehlt als Wert</b> (F3); {@code null}
-   * ist „fehlend“. Alles andere wird nicht umgewandelt, sondern als Formfehler gemeldet — eine Zahl
-   * verloere fuehrende Nullen.
+   * Die Eintraege aus der Eingabe des Modells. <b>Nur Text zaehlt als Wert</b> (E‑1047); {@code
+   * null} ist „fehlend“. Alles andere wird nicht umgewandelt, sondern als Formfehler gemeldet —
+   * eine Zahl verloere fuehrende Nullen.
    */
   private static List<Map<String, String>> eintraege(
       JsonNode eingabe, TypDefinition definition, List<String> formfehler) {

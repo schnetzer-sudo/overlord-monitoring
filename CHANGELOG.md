@@ -23,6 +23,8 @@ Tags und die Definition of Done für ein Release stehen in
   Schnittstelle, Werkzeuge aus den Typdefinitionen, Testsatz
   ([`docs/assistent.md`](docs/assistent.md); E‑1028 bis E‑1044).
 - `POST /api/tasks/pruefung`: Prüfung eines Auftrags ohne Anlegen, für die Karte (E‑1042).
+- Die Festlegungen der Umsetzung des Assistenten als E‑1045 bis E‑1057, bestätigt am
+  16.10.2026 ([`docs/assistent.md`](docs/assistent.md) §2).
 - Fachpaket `assistent` in `docs/PROJEKTBESCHREIBUNG.md` §6, weil der Assistent ein eigenes
   Fachpaket ist ([`docs/assistent.md`](docs/assistent.md) §4.1).
 - `docs/PROJEKTBESCHREIBUNG.md` §7, neuer Abschnitt „Assistent“: Datenfluss zum Anbieter, Schalter,
@@ -33,6 +35,9 @@ Tags und die Definition of Done für ein Release stehen in
 
 ### Geändert
 
+- `WERK_ABLADESTELLE`: höchstens 20 statt 50 Einträge je Auftrag, und die Beschreibung lässt
+  den Assistenten nachfragen, wenn der Kunde bei einer Anpassung nur einen der beiden Werte
+  nennt; Migration `V101` (E‑1058, [`docs/tasks.md`](docs/tasks.md) §4).
 - `docs/PROJEKTBESCHREIBUNG.md` §3.0: `monitor_write` wird zusätzlich von der EDI-Plattform
   verwendet; sie hat damit alle Rechte auf `overlord_monitor` (E‑1004,
   [`docs/tasks.md`](docs/tasks.md) §2).

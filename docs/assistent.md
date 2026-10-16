@@ -82,25 +82,26 @@ Einspruch übernommen. Die E‑Nummer ist `E‑1027` plus die Nummer der Entsche
 | **E‑1043** | **Kein Streaming** in A2. Die Antwort kommt vollständig. Ob A3 Streaming braucht, ist offen (Punkt 1011). | V |
 | **E‑1044** | Der Assistent antwortet in der Sprache des Kunden, Vorgabe Deutsch mit „Sie“. Feldnamen und Aktionen nennt er so, wie sie in der Definition stehen. | V |
 
-### Festlegungen der Umsetzung (zu bestätigen)
+### Festlegungen der Umsetzung
 
-Was der Auftrag offenließ und beim Bau festgelegt wurde. **Keine E‑Nummer**, bis Lukas sie bestätigt.
+Was der Auftrag offenließ und beim Bau festgelegt wurde. Vorgeschlagen mit A2 als F1 bis F13,
+**vom Auftraggeber am 16.10.2026 bestätigt**; die E‑Nummer ist `E‑1044` plus die frühere Nummer.
 
-| # | Festlegung | Grund |
-|---|---|---|
-| F1 | **Anweisung und Werkzeuge werden beim Eröffnen eines Gesprächs festgelegt** und bleiben für das Gespräch gleich. Geprüft wird jeder Vorschlag dagegen gegen das **aktuelle** Angebot des Mandanten. | Anthropic prüft bei Claude Sonnet 5.5, dass Anweisung, Werkzeuge und frühere Nachrichten unverändert sind, wenn Denkblöcke zurückgeschickt werden („preserved thinking“); eine Änderung mitten im Gespräch wäre für neuere Konten ein `400`. Ein inzwischen deaktivierter Typ wird so beim Einreichen abgewiesen |
-| F2 | Anthropic-Einstellung **`denken: between_tools`** (Vorgabe): das Modell denkt nicht ausführlich. | Denken zählt gegen `max_tokens`; bei 1.024 bliebe sonst wenig für Antwort und Vorschlag. Der Wert gilt nur für Claude Sonnet 5.5 und ist deshalb einstellbar (`adaptive`, `keins`) |
-| F3 | **Werte nur als Text.** Liefert das Modell eine Zahl, einen Wahrheitswert oder ein Objekt als Wert, geht das als Fehler an das Modell zurück; nichts wird umgewandelt. | Eine Zahl verlöre führende Nullen (`0101159903`); umwandeln hieße Werte beurteilen |
-| F4 | **Je Nachricht höchstens ein Vorschlag.** Ein weiterer Werkzeugaufruf nach einem gültigen Vorschlag in derselben Nachricht wird als Fehler beantwortet. | Ein Auftrag nach dem anderen (feste Anweisung); die Karte zeigt einen Vorschlag |
-| F5 | **Runden:** Nach höchstens 3 Werkzeugrunden muss das Modell mit Text antworten. Ruft es danach noch ein Werkzeug, endet die Nachricht mit einer festen Antwort ohne Karte; die Zwischenschritte dieser Nachricht werden verworfen. | Der Verlauf bleibt gültig (jeder Werkzeugaufruf hat sein Ergebnis) und wächst nur am Ende |
-| F6 | **Abgeschnitten:** Endet eine Antwort an `max_tokens` mit einem Werkzeugaufruf, ist dessen Eingabe unvollständig. Sie wird nicht geprüft; die Nachricht endet mit der festen Antwort, den Auftrag aufzuteilen. | Unvollständige Eingabe ist kein Vorschlag |
-| F7 | **Verweigert das Modell** (`stop_reason: refusal`), endet die Nachricht mit einer festen Antwort ohne Karte. Kein serverseitiger Rückfall auf ein anderes Modell (`fallbacks`). | Ein Rückfall schickte denselben Text an ein weiteres Modell und braucht einen Beta-Kopf; für Werk-/Abladestellen ist eine Verweigerung nicht zu erwarten |
-| F8 | **Fehler des Anbieters** lassen das Gespräch unverändert: Die Nachricht zählt nicht gegen die 20 je Gespräch und kann wiederholt werden. Gegen die 60 je Stunde zählt sie. | Die Stundengrenze schützt vor Last und Kosten, auch bei Fehlern |
-| F9 | **Ein viertes Gespräch derselben Sitzung** beendet das am längsten ruhende. | Ein Client, der Gespräche nicht beendet, sperrt sich sonst selbst aus |
-| F10 | Einen Typ, dessen Kennung kein gültiger Werkzeugname ist (`[A-Za-z0-9_-]{1,64}`) oder der ein Feld hat, dessen Name mit `mandant` beginnt, **bietet der Assistent nicht an** (`WARN` im Log). Über `POST /api/tasks` bleibt er anlegbar. | Anthropic nimmt nur solche Namen an; ein Feld `mandant…` sähe für das Modell wie ein Mandantenparameter aus (E‑1034) |
-| F11 | Der Assistent prüft **nicht** auf `ZU_LANG` ([`tasks.md`](tasks.md) §5.2). `POST /api/tasks/pruefung` und `POST /api/tasks` prüfen es. | Den Parametertext baut nur `task`. Eine Werkzeugeingabe ist durch `max_tokens` auf wenige KB begrenzt, die Grenze liegt bei 65.535 Bytes |
-| F12 | Der Schalter ist **in jedem Profil aus**, auch in `dev`. Eingeschaltet wird über `OVERLORD_ASSISTENT_AKTIV=true`, und auch dann nur mit Schlüssel. | Die Testkopie ist eine Vollkopie der Produktion; ein lokaler Start soll nicht unaufgefordert Text an den Anbieter schicken |
-| F13 | Ablauf der Gespräche und Begrenzung je Stunde rechnen mit der **Systemuhr** (`systemClock`), nicht mit der Anwendungsuhr. | Die Anwendungsuhr ist in `dev` um Monate zurückversetzt ([`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §6, Zeit) |
+| E | Festlegung | Grund | Herkunft |
+|---|---|---|---|
+| **E‑1045** | **Anweisung und Werkzeuge werden beim Eröffnen eines Gesprächs festgelegt** und bleiben für das Gespräch gleich. Geprüft wird jeder Vorschlag dagegen gegen das **aktuelle** Angebot des Mandanten. | Anthropic prüft bei Claude Sonnet 5.5, dass Anweisung, Werkzeuge und frühere Nachrichten unverändert sind, wenn Denkblöcke zurückgeschickt werden („preserved thinking“); eine Änderung mitten im Gespräch wäre für neuere Konten ein `400`. Ein inzwischen deaktivierter Typ wird so beim Einreichen abgewiesen | V, bestätigt am 16.10.2026 |
+| **E‑1046** | Anthropic-Einstellung **`denken: between_tools`** (Vorgabe): das Modell denkt nicht ausführlich. | Denken zählt gegen `max_tokens`; bei 1.024 bliebe sonst wenig für Antwort und Vorschlag. Der Wert gilt nur für Claude Sonnet 5.5 und ist deshalb einstellbar (`adaptive`, `keins`) | V, bestätigt am 16.10.2026 |
+| **E‑1047** | **Werte nur als Text.** Liefert das Modell eine Zahl, einen Wahrheitswert oder ein Objekt als Wert, geht das als Fehler an das Modell zurück; nichts wird umgewandelt. | Eine Zahl verlöre führende Nullen (`0101159903`); umwandeln hieße Werte beurteilen | V, bestätigt am 16.10.2026 |
+| **E‑1048** | **Je Nachricht höchstens ein Vorschlag.** Ein weiterer Werkzeugaufruf nach einem gültigen Vorschlag in derselben Nachricht wird als Fehler beantwortet. | Ein Auftrag nach dem anderen (feste Anweisung); die Karte zeigt einen Vorschlag | V, bestätigt am 16.10.2026 |
+| **E‑1049** | **Runden:** Nach höchstens 3 Werkzeugrunden muss das Modell mit Text antworten. Ruft es danach noch ein Werkzeug, endet die Nachricht mit einer festen Antwort ohne Karte; die Zwischenschritte dieser Nachricht werden verworfen. | Der Verlauf bleibt gültig (jeder Werkzeugaufruf hat sein Ergebnis) und wächst nur am Ende | V, bestätigt am 16.10.2026 |
+| **E‑1050** | **Abgeschnitten:** Endet eine Antwort an `max_tokens` mit einem Werkzeugaufruf, ist dessen Eingabe unvollständig. Sie wird nicht geprüft; die Nachricht endet mit der festen Antwort, den Auftrag aufzuteilen. | Unvollständige Eingabe ist kein Vorschlag | V, bestätigt am 16.10.2026 |
+| **E‑1051** | **Verweigert das Modell** (`stop_reason: refusal`), endet die Nachricht mit einer festen Antwort ohne Karte. Kein serverseitiger Rückfall auf ein anderes Modell (`fallbacks`). | Ein Rückfall schickte denselben Text an ein weiteres Modell und braucht einen Beta-Kopf; für Werk-/Abladestellen ist eine Verweigerung nicht zu erwarten | V, bestätigt am 16.10.2026 |
+| **E‑1052** | **Fehler des Anbieters** lassen das Gespräch unverändert: Die Nachricht zählt nicht gegen die 20 je Gespräch und kann wiederholt werden. Gegen die 60 je Stunde zählt sie. | Die Stundengrenze schützt vor Last und Kosten, auch bei Fehlern | V, bestätigt am 16.10.2026 |
+| **E‑1053** | **Ein viertes Gespräch derselben Sitzung** beendet das am längsten ruhende. | Ein Client, der Gespräche nicht beendet, sperrt sich sonst selbst aus | V, bestätigt am 16.10.2026 |
+| **E‑1054** | Einen Typ, dessen Kennung kein gültiger Werkzeugname ist (`[A-Za-z0-9_-]{1,64}`) oder der ein Feld hat, dessen Name mit `mandant` beginnt, **bietet der Assistent nicht an** (`WARN` im Log). Über `POST /api/tasks` bleibt er anlegbar. | Anthropic nimmt nur solche Namen an; ein Feld `mandant…` sähe für das Modell wie ein Mandantenparameter aus (E‑1034) | V, bestätigt am 16.10.2026 |
+| **E‑1055** | Der Assistent prüft **nicht** auf `ZU_LANG` ([`tasks.md`](tasks.md) §5.2). `POST /api/tasks/pruefung` und `POST /api/tasks` prüfen es. | Den Parametertext baut nur `task`. Eine Werkzeugeingabe ist durch `max_tokens` auf wenige KB begrenzt, die Grenze liegt bei 65.535 Bytes | V, bestätigt am 16.10.2026 |
+| **E‑1056** | Der Schalter ist **in jedem Profil aus**, auch in `dev`. Eingeschaltet wird über `OVERLORD_ASSISTENT_AKTIV=true`, und auch dann nur mit Schlüssel. | Die Testkopie ist eine Vollkopie der Produktion; ein lokaler Start soll nicht unaufgefordert Text an den Anbieter schicken | V, bestätigt am 16.10.2026 |
+| **E‑1057** | Ablauf der Gespräche und Begrenzung je Stunde rechnen mit der **Systemuhr** (`systemClock`), nicht mit der Anwendungsuhr. | Die Anwendungsuhr ist in `dev` um Monate zurückversetzt ([`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §6, Zeit) | V, bestätigt am 16.10.2026 |
 
 ---
 
@@ -145,7 +146,7 @@ Produktionsserver `api.anthropic.com` überhaupt erreicht, ist ungeprüft (Punkt
 
 - 30 Minuten nach der letzten Nachricht,
 - mit `DELETE /api/assistent/gespraeche/{id}`,
-- wenn dieselbe Sitzung ein viertes Gespräch eröffnet (das am längsten ruhende, F9),
+- wenn dieselbe Sitzung ein viertes Gespräch eröffnet (das am längsten ruhende, E‑1053),
 - beim Wechsel des aktiven Mandanten (alle Gespräche dieser Sitzung),
 - mit dem Ende der Sitzung (ab dann unerreichbar, gelöscht beim Ablauf) und
 - mit jedem Neustart.
@@ -161,8 +162,8 @@ Je Nachricht des Kunden eine Zeile auf `INFO` (Logger `…assistent.AssistentSer
 Assistent: nutzer=<Benutzername> mandant=<Mandant> gespraech=<UUID> modell=<Modell> tokenEin=<n> tokenAus=<n> dauerMs=<n> werkzeugaufrufe=<n> ergebnis=<Ergebnis>
 ```
 
-`ergebnis` ist `TEXT` (Antwort ohne Karte), `VORSCHLAG` (mit Karte), `RUNDEN_AUSGESCHOEPFT` (F5),
-`ABGESCHNITTEN` (F6), `VERWEIGERT` (F7) oder `FEHLER_<Art>` (§4.3). Der Mandant steht dort, weil
+`ergebnis` ist `TEXT` (Antwort ohne Karte), `VORSCHLAG` (mit Karte), `RUNDEN_AUSGESCHOEPFT` (E‑1049),
+`ABGESCHNITTEN` (E‑1050), `VERWEIGERT` (E‑1051) oder `FEHLER_<Art>` (§4.3). Der Mandant steht dort, weil
 jeder Protokolleintrag ihn trägt ([`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) §6);
 ans Modell geht er nicht. **Nie** im Protokoll: der Text des Kunden, des Modells oder eines
 Vorschlags, die Sitzungs-ID, der API-Schlüssel. Bei einem Fehler des Anbieters steht dessen
@@ -221,7 +222,7 @@ Denkblöcke unverändert zurückkommen; ein anderer Adapter darf ihn leer lassen
 
 - `POST <basis-url>/v1/messages` mit `x-api-key`, `anthropic-version: 2023-06-01` und
   `content-type: application/json`; Rumpf mit `model`, `max_tokens`, `system` (die Anweisung),
-  `messages`, `tools` und `thinking` nach der Einstellung `denken` (F2).
+  `messages`, `tools` und `thinking` nach der Einstellung `denken` (E‑1046).
 - Verlauf: `Kundennachricht` → `user` mit einem Textblock; `Modellnachricht` → `assistant` mit dem
   Rohinhalt, sonst Text und `tool_use`-Blöcke; `Werkzeugergebnisse` → `user` mit je einem
   `tool_result` (`tool_use_id`, `content`, `is_error`), alle Ergebnisse einer Runde in einer
@@ -247,7 +248,7 @@ Testsatz (§8) geprüft. Der Wortlaut steht in der Ressource; diese Datei wieder
 
 `Werkzeugbau` macht aus jeder `TypDefinition` ein Werkzeug, ohne einen Typ zu kennen:
 
-- **Name** ist die Kennung des Typs (F10).
+- **Name** ist die Kennung des Typs (E‑1054).
 - **Beschreibung:** dass das Werkzeug einen Vorschlag für den Auftrag „Name“ einreicht, dass das
   Backend ihn prüft und der Kunde ihn selbst anlegt, dass Felder ohne Wert weggelassen werden, und
   aus welchen Feldern in welcher Reihenfolge der Schlüssel besteht.
@@ -270,14 +271,14 @@ Je Nachricht des Kunden (`AssistentService` mit `Gespraechsfuehrung`):
 2. Das aktuelle Angebot des Mandanten aus dem Typkatalog lesen.
 3. Modell rufen. Ruft es Werkzeuge, wird jeder Aufruf beantwortet:
    - Typ nicht (mehr) angeboten oder unbekannt → Fehler „Diesen Auftragstyp gibt es hier nicht.“;
-   - schon ein gültiger Vorschlag in dieser Nachricht → Fehler (F4);
-   - Eingabe nicht in der erwarteten Form oder Wert kein Text → Fehler (F3);
+   - schon ein gültiger Vorschlag in dieser Nachricht → Fehler (E‑1048);
+   - Eingabe nicht in der erwarteten Form oder Wert kein Text → Fehler (E‑1047);
    - `AuftragsPruefung` meldet Fehler → Fehler mit der Liste (`index`, `feld`, `code`, `meldung`);
    - sonst gültig → der Vorschlag wird gemerkt, das Ergebnis sagt dem Modell, dass der Kunde ihn
      auf der Karte prüft und selbst anlegt.
-4. Höchstens 3 Runden, dann muss Text kommen (F5).
+4. Höchstens 3 Runden, dann muss Text kommen (E‑1049).
 5. Erst am Ende wird der Verlauf um diese Nachricht ergänzt. Ein Fehler des Anbieters lässt ihn
-   unverändert (F8).
+   unverändert (E‑1052).
 
 **Kein Weg des Assistenten legt eine Zeile in `task` an:** Das Paket kennt weder `task` noch die
 Datenbank (ArchUnit), und ein Test führt jeden Ausgang der Gesprächsführung gegen ein geskriptetes
@@ -362,7 +363,7 @@ der Schalter aus, ist die Antwort `{ "verfuegbar": false, "typen": [] }`, ohne D
 ### 6.2 `POST /api/assistent/gespraeche`
 
 Ohne Rumpf. **`201`** mit `{ "gespraechId": "<UUID>" }`. Beim Eröffnen werden Anweisung und
-Werkzeuge für dieses Gespräch festgelegt (F1). Nicht verfügbar: **`503`**, Problemtyp
+Werkzeuge für dieses Gespräch festgelegt (E‑1045). Nicht verfügbar: **`503`**, Problemtyp
 `assistent-nicht-verfuegbar`.
 
 ### 6.3 `POST /api/assistent/gespraeche/{id}/nachrichten`
@@ -416,7 +417,7 @@ Unter `overlord.assistent` in `application.yml`; Umgebungsvariablen in [`betrieb
 
 | Schlüssel | Vorgabe | Bedeutung |
 |---|---|---|
-| `aktiv` | `false` (`OVERLORD_ASSISTENT_AKTIV`) | Schalter (E‑1030, F12) |
+| `aktiv` | `false` (`OVERLORD_ASSISTENT_AKTIV`) | Schalter (E‑1030, E‑1056) |
 | `anbieter` | `anthropic` | welcher Adapter (§5) |
 | `modell` | `claude-sonnet-5-5` (`OVERLORD_ASSISTENT_MODELL`) | Modellkennung beim Anbieter |
 | `api-key` | leer (`OVERLORD_ASSISTENT_API_KEY`) | ohne Schlüssel ist der Assistent aus |
@@ -425,16 +426,16 @@ Unter `overlord.assistent` in `application.yml`; Umgebungsvariablen in [`betrieb
 | `max-tokens` | `1024` | Obergrenze der Ausgabe je Aufruf (Punkt 1016) |
 | `nachricht-hoechstens-zeichen` | `4000` | Länge einer Nachricht des Kunden |
 | `nachrichten-je-gespraech` | `20` | Nachrichten des Kunden je Gespräch |
-| `werkzeugrunden-je-nachricht` | `3` | Werkzeugrunden je Nachricht (F5) |
+| `werkzeugrunden-je-nachricht` | `3` | Werkzeugrunden je Nachricht (E‑1049) |
 | `nachrichten-je-stunde` | `60` | je Nutzer, gleitend über die letzte Stunde, im Arbeitsspeicher |
 | `gespraech-ablauf` | `30m` | Ablauf ohne Nachricht |
-| `gespraeche-je-sitzung` | `3` | offene Gespräche je Sitzung (F9) |
-| `anthropic.denken` | `between_tools` | `between_tools`, `adaptive` oder `keins` (Feld weglassen), F2 |
+| `gespraeche-je-sitzung` | `3` | offene Gespräche je Sitzung (E‑1053) |
+| `anthropic.denken` | `between_tools` | `between_tools`, `adaptive` oder `keins` (Feld weglassen), E‑1046 |
 | `anthropic.wiederholung-pause` | `1s` | Pause vor dem einen Wiederholungsversuch bei `429`/`529` |
 
 **Die Begrenzung je Nutzer** liegt wie die je IP ([`authentifizierung.md`](authentifizierung.md))
 nur im Arbeitsspeicher und beginnt bei einem Neustart von vorn. Sie zählt jede angenommene
-Nachricht, auch eine, bei der der Anbieter scheitert (F8).
+Nachricht, auch eine, bei der der Anbieter scheitert (E‑1052).
 
 **Wie lange eine Nachricht höchstens dauert:** bis zu vier Aufrufe (drei Werkzeugrunden und die
 Antwort), je höchstens 30 Sekunden, dazu bei Überlastung je eine Wiederholung. Ohne Streaming
@@ -479,11 +480,16 @@ Typbeschreibung.
   `OVERLORD_ASSISTENT_BASIS_URL=http://127.0.0.1:9`) lief am 16.10.2026 durch und schrieb den
   Bericht mit 15 Fällen „nicht erreichbar“ — der Läufer funktioniert, ohne dass etwas hinausgeht.
 
-- **Startsatz:** 15 synthetische Fälle für `WERK_ABLADESTELLE`, mindestens je einer aus den 13
+- **Startsatz:** 17 synthetische Fälle für `WERK_ABLADESTELLE`, mindestens je einer aus den 13
   Gruppen des Auftrags (Neuanlage, Lieferantennummer, Tabulatorliste, Anpassung mit leerem Wert,
   Löschung mehrerer, Werk fehlt mit Nachreichen, SNDPRN mit fünf Stellen, unklar ob neu oder
   ändern, Anlegen und Löschen zugleich, anderes Thema, Aufforderung, Regeln zu ignorieren oder für
-  einen anderen Mandanten anzulegen, mehr als 50 Einträge, Abkürzungen und Tippfehler).
+  einen anderen Mandanten anzulegen, zu viele Einträge, Abkürzungen und Tippfehler).
+  **Ergänzt am 16.10.2026** mit der Höchstzahl 20 (E‑1058): S13 hat jetzt 21 statt 51 Einträge
+  (kein Vorschlag), **S16** hat genau 20 und erwartet den Vorschlag mit allen 20 (Gruppe 12; er
+  zeigt, ob `max_tokens` reicht, Punkt 1016), und **S17** ist die neue Gruppe 14: eine Anpassung,
+  bei der der Kunde nur einen der beiden SNDPRN-Werte nennt — erwartet ist kein Vorschlag,
+  sondern die Rückfrage, ob SNDPRN_4908 entfernt werden soll ([`tasks.md`](tasks.md) §4.2).
 - **Echte Fälle** liefert Lukas nach. Vor dem Einchecken anonymisieren: keine Namen, keine
   Mailadressen, keine Signaturen.
 
@@ -498,7 +504,7 @@ Ergebnis bekommt eine M‑Nummer und steht hier.
 
 | Test | Was er hält |
 |---|---|
-| `WerkzeugbauTest` | das Schema für `WERK_ABLADESTELLE` und für die Gattung aus A1; keine Eigenschaft beginnt mit `mandant`; Typen mit ungültigem Werkzeugnamen oder einem Feld `mandant…` entfallen (F10) |
+| `WerkzeugbauTest` | das Schema für `WERK_ABLADESTELLE` und für die Gattung aus A1; keine Eigenschaft beginnt mit `mandant`; Typen mit ungültigem Werkzeugnamen oder einem Feld `mandant…` entfallen (E‑1054) |
 | `AnweisungTest` | die Anweisung enthält die Beschreibungen der angebotenen Typen, aber weder Benutzername noch Mandanten-ID |
 | `GespraechsfuehrungTest` | gegen ein geskriptetes Modell: ungültiger Vorschlag → Werkzeugergebnis mit Fehlern, keine Karte; gültiger → Karte mit allen Feldern der Aktion, leere als `null`; Abbruch nach 3 Runden; Werkzeugaufruf für einen nicht angebotenen Typ abgewiesen; ein zweiter Vorschlag je Nachricht abgewiesen; Wert als Zahl abgewiesen; abgeschnitten, verweigert; Fehler des Anbieters lassen den Verlauf unverändert |
 | `GespraechsspeicherTest` | Ablauf nach 30 Minuten, höchstens 3 je Sitzung, Bindung an Sitzung, Nutzer und Mandant, Mandantenwechsel — mit eingespeister Uhr (T1) |
@@ -560,7 +566,7 @@ einzeln, mit genau einer Abweichung je Zugriff.
 | **M4** Isolationstest je Endpunkt | `AssistentIsolationDbIT` |
 | **Regel 3** | `assistent` fasst keine Datenbank an |
 | **Regel 7** | keine neuen Statements; `POST /api/tasks/pruefung` und der Assistent nutzen das Statement des Typkatalogs aus M1000 ([`tasks.md`](tasks.md) §9.3) |
-| **Z1** | keine Uhr außer `systemClock` (F13) |
+| **Z1** | keine Uhr außer `systemClock` (E‑1057) |
 | **G1** | der Schlüssel nur aus der Umgebung, nie im Repository, nie im Protokoll |
 
 ---
@@ -581,7 +587,7 @@ und geht in Punkt 1009 auf.
 | **1013** | Ob der Assistent später auch Fragen zum Stand eigener Aufträge beantworten soll. Heute bekommt er keine Aufträge aus `task` (E‑1035). | Entscheidung offen |
 | **1014** | Kosten je Gespräch, sobald echte Läufe vorliegen. Das Protokoll trägt die Token je Nachricht (§3.5). | Sichtprüfung oder Messung offen |
 | **1015** | Ob eine Vereinbarung über Zero Data Retention mit Anthropic sinnvoll ist. | Entscheidung offen |
-| **1016** | `max_tokens` 1.024 (E‑1036) reicht vermutlich nicht für einen Vorschlag mit 50 Einträgen: Ein Eintrag von `WERK_ABLADESTELLE` als JSON kostet geschätzt 25 bis 35 Token, 50 Einträge also 1.250 bis 1.750 — **geschätzt, nicht gemessen**. Ein abgeschnittener Vorschlag endet mit der Bitte, aufzuteilen (F6). Zu entscheiden: Grenze anheben oder bei rund 25 Einträgen je Auftrag bleiben. Der Testsatz (Gruppe 3 und 12) zeigt es. | Entscheidung offen |
+| **1016** | Ob `max_tokens` 1.024 (E‑1036) für einen Vorschlag mit der Höchstzahl an Einträgen reicht. Ein Eintrag von `WERK_ABLADESTELLE` als JSON kostet geschätzt 25 bis 35 Token — **geschätzt, nicht gemessen**. Bei den ursprünglichen 50 Einträgen wären das 1.250 bis 1.750 gewesen; seit E‑1058 (höchstens 20) sind es 500 bis 700, dazu der Text der Antwort. Ein abgeschnittener Vorschlag endet mit der Bitte, aufzuteilen (E‑1050). `max_tokens` bleibt 1.024 (16.10.2026). **Offen, bis ein Lauf des Testsatzes mit Fall S16 (genau 20 Einträge) zeigt, dass es reicht.** | Sichtprüfung oder Messung offen |
 
 ---
 

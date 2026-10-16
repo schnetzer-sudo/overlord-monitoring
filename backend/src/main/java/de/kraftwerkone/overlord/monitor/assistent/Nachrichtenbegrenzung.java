@@ -20,8 +20,8 @@ import org.springframework.stereotype.Component;
  * Zaehler in der Datenbank machte den Schutz selbst zur Last. Der Preis: Nach einem Neustart
  * beginnt sie von vorn.
  *
- * <p>Gezaehlt wird jede angenommene Nachricht, auch eine, an der der Anbieter scheitert (F8): Die
- * Grenze schuetzt vor Last und Kosten. Gerechnet wird mit der Systemuhr (F13).
+ * <p>Gezaehlt wird jede angenommene Nachricht, auch eine, an der der Anbieter scheitert (E‑1052):
+ * Die Grenze schuetzt vor Last und Kosten. Gerechnet wird mit der Systemuhr (E‑1057).
  */
 @Component
 public class Nachrichtenbegrenzung {

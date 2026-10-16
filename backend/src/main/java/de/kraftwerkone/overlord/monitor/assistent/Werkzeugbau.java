@@ -22,8 +22,8 @@ import tools.jackson.databind.node.ObjectNode;
  *
  * <p><b>Kein Werkzeug hat einen Mandantenparameter.</b> Die Eingabe besteht aus {@code aktion} und
  * {@code eintraege}; jeder Eintrag traegt genau die Felder des Typs. Ein Typ mit einem Feld, dessen
- * Name mit {@value #MANDANT} beginnt, wird gar nicht erst angeboten (Festlegung F10) — fuer das
- * Modell saehe es wie ein Mandantenparameter aus.
+ * Name mit {@value #MANDANT} beginnt, wird gar nicht erst angeboten (E‑1054) — fuer das Modell
+ * saehe es wie ein Mandantenparameter aus.
  *
  * <p><b>Kein {@code strict}:</b> Anthropic garantiert schemagueltige Eingaben nur ohne Grenzen an
  * Listen wie {@code maxItems}. Geprueft wird ohnehin im Backend.
@@ -48,8 +48,8 @@ public final class Werkzeugbau {
 
   /**
    * Ob der Assistent diesen Typ anbieten kann: Die Kennung taugt als Werkzeugname, und kein Feld
-   * beginnt mit {@value #MANDANT} (F10). Ein ungeeigneter Typ bleibt ueber {@code POST /api/tasks}
-   * anlegbar.
+   * beginnt mit {@value #MANDANT} (E‑1054). Ein ungeeigneter Typ bleibt ueber {@code POST
+   * /api/tasks} anlegbar.
    */
   public static boolean geeignet(TypDefinition typ) {
     boolean geeignet =
@@ -60,7 +60,7 @@ public final class Werkzeugbau {
     if (!geeignet && GEMELDET.add(String.valueOf(typ.typ()))) {
       log.warn(
           "Auftragstyp {} wird vom Assistenten nicht angeboten: Die Kennung taugt nicht als"
-              + " Werkzeugname, oder ein Feld beginnt mit \"mandant\" (docs/assistent.md F10)",
+              + " Werkzeugname, oder ein Feld beginnt mit \"mandant\" (docs/assistent.md E‑1054)",
           typ.typ());
     }
     return geeignet;

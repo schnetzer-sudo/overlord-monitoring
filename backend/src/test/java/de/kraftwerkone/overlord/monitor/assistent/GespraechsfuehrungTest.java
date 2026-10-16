@@ -215,7 +215,7 @@ class GespraechsfuehrungTest {
   }
 
   @Test
-  @DisplayName("Ein Wert als Zahl wird nicht umgewandelt, sondern abgewiesen (F3)")
+  @DisplayName("Ein Wert als Zahl wird nicht umgewandelt, sondern abgewiesen (E‑1047)")
   void zahl_wird_abgewiesen() {
     modell
         .werkzeug(

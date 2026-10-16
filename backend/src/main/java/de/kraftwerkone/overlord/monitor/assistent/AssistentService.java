@@ -83,7 +83,7 @@ public class AssistentService {
     return new AssistentResponse(!typen.isEmpty(), typen);
   }
 
-  /** Eroeffnet ein Gespraech; Anweisung und Werkzeuge sind ab hier fest (F1). */
+  /** Eroeffnet ein Gespraech; Anweisung und Werkzeuge sind ab hier fest (E‑1045). */
   public GespraechResponse eroeffne(
       AngemeldeterNutzer nutzer, MandantContext mandant, String sitzungId) {
     speicher.beendeNachMandantenwechsel(mandant, sitzungId);
@@ -179,7 +179,7 @@ public class AssistentService {
 
   // ─── Hilfen ────────────────────────────────────────────────────────────────────────────────
 
-  /** Die angebotenen Typen, die der Assistent anbieten kann (F10). */
+  /** Die angebotenen Typen, die der Assistent anbieten kann (E‑1054). */
   private List<TypDefinition> angeboten(MandantContext mandant) {
     return Werkzeugbau.geeignete(
         typKatalog.angeboten(mandant).stream().map(TypKatalog.Angebot::definition).toList());

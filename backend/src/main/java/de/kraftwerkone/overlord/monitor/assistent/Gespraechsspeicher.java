@@ -25,8 +25,8 @@ import org.springframework.stereotype.Component;
  * jedes Gespraech dieser Sitzung ({@link #beendeNachMandantenwechsel}).
  *
  * <p><b>Ablauf und Hoechstzahl:</b> 30 Minuten ohne Nachricht, dann ist es weg; ein viertes
- * Gespraech derselben Sitzung beendet das am laengsten ruhende (Festlegung F9). Gerechnet wird mit
- * der Systemuhr, nicht mit der Anwendungsuhr (F13).
+ * Gespraech derselben Sitzung beendet das am laengsten ruhende (E‑1053). Gerechnet wird mit der
+ * Systemuhr, nicht mit der Anwendungsuhr (E‑1057).
  */
 @Component
 public class Gespraechsspeicher {
@@ -47,7 +47,7 @@ public class Gespraechsspeicher {
     this.jeSitzung = jeSitzung;
   }
 
-  /** Eroeffnet ein Gespraech mit festgelegter Anweisung und festgelegten Werkzeugen (F1). */
+  /** Eroeffnet ein Gespraech mit festgelegter Anweisung und festgelegten Werkzeugen (E‑1045). */
   public synchronized Gespraech eroeffne(
       MandantContext mandant,
       long nutzerId,

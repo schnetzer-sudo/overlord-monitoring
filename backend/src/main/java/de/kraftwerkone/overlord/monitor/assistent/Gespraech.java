@@ -14,9 +14,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <p><b>Gebunden an Sitzung, Nutzer und aktiven Mandanten.</b> Wer es sucht, muss alle drei nennen
  * ({@link Gespraechsspeicher#finde}); der Mandant geht nie an das Modell.
  *
- * <p><b>Anweisung und Werkzeuge sind beim Eroeffnen festgelegt</b> (Festlegung F1): Anthropic
- * verlangt fuer zurueckgeschickte Denkbloecke, dass sie sich im Gespraech nicht aendern. Geprueft
- * wird jeder Vorschlag trotzdem gegen das aktuelle Angebot.
+ * <p><b>Anweisung und Werkzeuge sind beim Eroeffnen festgelegt</b> (E‑1045): Anthropic verlangt
+ * fuer zurueckgeschickte Denkbloecke, dass sie sich im Gespraech nicht aendern. Geprueft wird jeder
+ * Vorschlag trotzdem gegen das aktuelle Angebot.
  *
  * <p><b>Der Verlauf waechst nur am Ende</b>, und erst, wenn eine Nachricht vollstaendig beantwortet
  * ist ({@link #schliesseAb}). Pro Gespraech laeuft hoechstens eine Nachricht zugleich ({@link

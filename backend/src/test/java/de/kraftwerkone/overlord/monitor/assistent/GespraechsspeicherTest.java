@@ -62,7 +62,7 @@ class GespraechsspeicherTest {
   }
 
   @Test
-  @DisplayName("Hoechstens drei je Sitzung: das vierte beendet das am laengsten ruhende (F9)")
+  @DisplayName("Hoechstens drei je Sitzung: das vierte beendet das am laengsten ruhende (E‑1053)")
   void hoechstens_drei_je_sitzung() {
     Gespraech erstes = eroeffne(NEXANS, 1, "s1");
     uhr.vor(Duration.ofSeconds(1));
