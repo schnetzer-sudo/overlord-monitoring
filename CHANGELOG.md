@@ -11,6 +11,10 @@ Tags und die Definition of Done für ein Release stehen in
 
 ### Geändert
 
+- Teilschritte der Assistent-Linie heißen `assistent-<teil>` statt `assistent/<teil>`, weil Git
+  neben dem Zweig `assistent` keinen Zweig `assistent/<teil>` anlegen kann; die CI baut auch
+  Pushes auf `assistent-*` (`DEVELOPMENT_GUIDELINES.md` §12).
+
 ### Behoben
 
 ## 1.0.0 (16.10.2026)

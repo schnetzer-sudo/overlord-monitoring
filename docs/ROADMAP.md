@@ -67,7 +67,8 @@ was genau, welche Abgrenzung, welches Abnahmekriterium.
 ```
 # <Titel>
 
-Zweig: <assistent/<teil> oder fix/<thema>>, abgezweigt von <assistent oder main>.
+Zweig: <assistent-<teil> oder fix/<thema>>, abgezweigt von <assistent oder main>.
+(Teilschritte mit Bindestrich: Git kann neben `assistent` keinen Zweig `assistent/<teil>` anlegen.)
 
 ## Worum es geht
 <zwei, drei Sätze: Ziel und Anlass>
