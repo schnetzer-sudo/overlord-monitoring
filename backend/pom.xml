@@ -348,14 +348,8 @@
                     Session, werden ausschliesslich von dessen Repository
                     beschrieben und nie ueber jOOQ angefasst. Waeren sie
                     generiert, laedt der Typ zum Mitschreiben ein.
-
-                    task, task_type und task_type_mandant gehoeren der Assistent-Linie
-                    (Entscheidung 8 vom 16.10.2026). main und assistent teilen
-                    sich die Testkopie; ohne den Ausschluss entstuenden auf main
-                    Klassen fuer Tabellen, die keine Migration von main anlegt.
-                    Auf assistent wird dieser Commit per git revert zurueckgenommen.
                   -->
-                  <excludes>flyway_schema_history|SPRING_SESSION.*|task|task_type|task_type_mandant</excludes>
+                  <excludes>flyway_schema_history|SPRING_SESSION.*</excludes>
                   <includeTables>true</includeTables>
                   <includeRoutines>false</includeRoutines>
                   <includeSequences>false</includeSequences>

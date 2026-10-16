@@ -66,20 +66,6 @@ class IndexbestandDbIT {
 
   private static final String MONITOR = "monitor";
 
-  /**
-   * Die Tabellen der Assistent-Linie, auf {@code main} von der Pruefung der Tabellenliste
-   * ausgenommen (Entscheidung 8 vom 16.10.2026, {@code DEVELOPMENT_GUIDELINES.md} §12).
-   *
-   * <p>{@code main} und {@code assistent} teilen sich die Testkopie. Sobald {@code assistent} diese
-   * Tabellen dort anlegt, stuenden sie in {@code overlord_monitor}, ohne dass eine Migration von
-   * {@code main} sie kennt — die Pruefung wuerde auf {@code main} rot, ohne dass sich hier etwas
-   * geaendert haette. Dieselbe Begruendung wie beim Ausschluss im Codegen ({@code
-   * backend/pom.xml}), und derselbe Commit: Auf {@code assistent} nimmt ein {@code git revert}
-   * beides zurueck.
-   */
-  private static final Set<String> ASSISTENT_TABELLEN =
-      Set.of("task", "task_type", "task_type_mandant");
-
   private static final Field<String> TABELLE = DSL.field("TABLE_NAME", String.class);
   private static final Field<String> INDEXNAME = DSL.field("INDEX_NAME", String.class);
   private static final Field<String> SPALTE = DSL.field("COLUMN_NAME", String.class);
@@ -185,7 +171,6 @@ class IndexbestandDbIT {
   void tabellenliste_des_eigenen_schemas_ist_vollstaendig() {
     Set<String> gefuehrt = bewacht(MONITOR);
     Set<String> vorhanden = basistabellen(props.monitorSchema());
-    vorhanden.removeAll(ASSISTENT_TABELLEN);
 
     List<String> befunde = new ArrayList<>();
     for (String tabelle : vorhanden) {
