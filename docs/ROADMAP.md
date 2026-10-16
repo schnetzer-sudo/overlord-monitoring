@@ -27,7 +27,7 @@ die Plattform in [`task-schnittstelle.md`](task-schnittstelle.md).
 
 | Teil | Inhalt | Stand |
 |---|---|---|
-| **A1** | Auftragsmodell: drei Tabellen (`V100`), Typdefinitionen als Daten mit Prüfung beim Laden, der Typ `WERK_ABLADESTELLE`, vier Endpunkte unter `/api/tasks`, Plattformvertrag | gebaut auf `assistent-a1-auftragsmodell` (16.10.2026), Merge nach `assistent` offen |
+| **A1** | Auftragsmodell: drei Tabellen (`V100`), Typdefinitionen als Daten mit Prüfung beim Laden, der Typ `WERK_ABLADESTELLE`, vier Endpunkte unter `/api/tasks`, Plattformvertrag | fertig, am 16.10.2026 nach `assistent` gemergt |
 | **A2** | Assistent im Backend | offen |
 | **A3** | Chatbox in der Kopfleiste | offen |
 | **A4** | „Ihre Aufträge“ in der Übersicht | offen |
