@@ -1141,3 +1141,85 @@ Ein Schritt ist fertig, wenn **alle** Punkte zutreffen. Nicht „im Wesentlichen
 - [ ] Berührt die Änderung eine Regel aus Abschnitt 4, ist das hier vermerkt
 
 **Ohne Dokumentation ist ein Schritt nicht fertig, auch wenn der Code läuft.**
+
+---
+
+## 12. Zweige und Releases
+
+*Angelegt am 16.10.2026 mit Version 1.0.0.* Herkunft der Entscheidungen: **A** = vom Auftraggeber
+am 15. oder 16.10.2026 entschieden, **V** = Vorschlag vom 16.10.2026, ohne Einspruch übernommen.
+
+### Zwei Linien *(Entscheidung 2, A)*
+
+| Zweig | Rolle | Was darauf landet |
+|---|---|---|
+| `main` | **Release-Linie 1.x** | **nur Fixes**, über Zweige `fix/<thema>` |
+| `assistent` | Weiterentwicklung „Aufträge über den Assistenten“ (A1 bis A4, `docs/ROADMAP.md`) | Teilschritte über Zweige `assistent/<teil>` |
+
+- `assistent` ist ein langlebiger Zweig ab dem Tag `v1.0.0`.
+- **Merge-Richtung:** Nach jedem Fix-Release wird `main` in `assistent` gemergt, **nie umgekehrt**.
+  Am Ende wird `assistent` **einmal** nach `main` gemergt; das wird Release 1.1.0.
+- Die CI baut Pushes auf `main` und `assistent` und jeden Pull Request
+  ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
+
+### Versionen, Tags und `CHANGELOG.md`
+
+- Versionen nach **SemVer**. Ein Fix erhöht die Patch-Version (1.0.1, 1.0.2, …); der Merge der
+  Assistent-Linie wird **1.1.0**.
+- **Ein Tag je Release** auf `main`, Form `v<version>`. Den Tag setzt Lukas.
+- **Jedes Release hat einen Eintrag in `CHANGELOG.md`** mit Datum und den
+  Abschnitten „Neu“, „Geändert“, „Behoben“. Was noch kein Release hat, steht unter
+  „Unveröffentlicht“.
+
+### Migrationen und Codegen auf zwei Linien *(Entscheidungen 6 und 8, V)*
+
+Beide Linien laufen gegen **dieselbe Testkopie** und damit gegen dasselbe `overlord_monitor`. Drei
+Regeln halten sie auseinander:
+
+1. **Migrationen der Assistent-Linie beginnen bei `V100`.** `main` zählt unterhalb weiter. So
+   kollidiert keine Versionsnummer, wenn ein Fix und ein Assistent-Schritt gleichzeitig eine
+   Migration brauchen.
+2. **Im Profil `dev` läuft Flyway mit `out-of-order`, in keinem anderen Profil**
+   (`application.yml`, gehalten von `FlywayOutOfOrderTest`). Hat `assistent` auf der Testkopie schon
+   `V100` angewandt, liegt ein späterer Fix mit `V13` darunter und wäre ohne `out-of-order` ein
+   Validierungsfehler. Die Gegenrichtung braucht keine Einstellung: `ignore-migration-patterns` hat
+   die Vorgabe `*:future` (Flyway 12.4.0, Boot 4.1.0), `main` startet also gegen eine Testkopie mit
+   fremder `V100`. In der Produktion läuft nur eine Linie, dort bleibt die strenge Reihenfolge.
+3. **Auf `main` schließt die jOOQ-Codegenerierung für `overlord_monitor` die Tabellen der
+   Assistent-Linie aus** (`task`, `task_type`, `task_type_mandant`; `<excludes>` in `backend/pom.xml`). Der
+   Codegen liest die Datenbank, nicht die Migrationen: Ohne den Ausschluss entstünden auf `main`
+   Klassen für Tabellen, die keine Migration von `main` anlegt, sobald `assistent` sie auf der
+   Testkopie angelegt hat. Der Ausschluss ist ein eigener Commit und wird auf `assistent` per
+   `git revert` zurückgenommen. Kommt auf `assistent` eine weitere Tabelle hinzu, gehört sie auf
+   `main` in denselben Ausschluss.
+
+### Nummern auf `assistent` *(Entscheidung 7, V)*
+
+Auf `assistent` beginnen **alle projektweit gezählten Nummern bei 1000**: M-Nummern, offene Punkte
+und E-Nummern, soweit sie projektweit vergeben werden. `main` zählt unterhalb weiter. So kollidiert
+nach dem Merge keine Nummer, und an der Nummer ist die Linie ablesbar. Geprüft wird vor jeder
+Vergabe wie bisher per `grep` über `docs/`, auf `assistent` ab 1000.
+
+### Doku ab 1.0.0 *(Entscheidung 9, V)*
+
+- **`docs/PROJEKTBESCHREIBUNG.md` und `docs/README.md` beschreiben den aktuellen Stand.** Eine
+  Änderung ersetzt den Text; es entsteht kein Korrekturkasten. **Commit und `CHANGELOG.md` nennen
+  Grund und Entscheidung.** Die Fassungen vor 1.0.0 liegen unverändert in `docs/archiv/`.
+- **Feature- und Messdateien behalten die datierten Korrekturblöcke** als Regel: Dort ist die
+  Vorgeschichte der Beleg.
+- Offene Punkte stehen in ihrer Feature-Datei **und** im Register
+  [`docs/offene-punkte.md`](docs/offene-punkte.md); ein Statuswechsel wird an beiden Stellen
+  nachgeführt.
+
+### Definition of Done für ein Release
+
+Ein Release ist fertig, wenn **alle** Punkte zutreffen:
+
+- [ ] Die CI ist auf dem Release-Stand grün
+- [ ] `CHANGELOG.md` hat den Eintrag mit Version und Datum, „Unveröffentlicht“ ist
+      wieder leer
+- [ ] Das Register [`docs/offene-punkte.md`](docs/offene-punkte.md) ist nachgeführt: Was das
+      Release erledigt, steht dort und in der Feature-Datei als erledigt, mit Verweis
+- [ ] Die betroffene Doku ist aktuell — Feature-Dateien nach Abschnitt 11, Projektbeschreibung und
+      `docs/README.md` nach der Regel oben
+- [ ] Der Tag ist gesetzt; nach einem Fix-Release ist `main` in `assistent` gemergt
