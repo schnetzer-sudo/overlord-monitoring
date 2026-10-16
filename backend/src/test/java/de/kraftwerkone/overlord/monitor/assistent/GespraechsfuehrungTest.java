@@ -65,7 +65,7 @@ class GespraechsfuehrungTest {
             "sitzung",
             1L,
             "NEXANS",
-            Anweisung.fuer(List.of(werk, gattung)),
+            Anweisung.fuer("Beispielkunde GmbH", List.of(werk, gattung)),
             new Werkzeugbau(Skriptmodell.JSON).werkzeuge(List.of(werk, gattung)),
             Instant.EPOCH);
   }

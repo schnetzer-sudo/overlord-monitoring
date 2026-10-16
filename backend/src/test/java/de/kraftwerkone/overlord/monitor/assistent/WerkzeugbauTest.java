@@ -61,6 +61,28 @@ class WerkzeugbauTest {
   }
 
   @Test
+  @DisplayName("Zusammengesetzter Schluessel: zerlegen mit dem Trenner des Typs, ohne Rueckfrage")
+  void zusammengesetzter_schluessel() {
+    assertThat(werkzeugbau.werkzeug(Testdefinitionen.gattung()).beschreibung())
+        .contains(
+            "Schreibt der Kunde einen Schlüssel zusammengesetzt mit dem Trenner „-“, zerlegst du"
+                + " ihn ohne Rückfrage in diese Felder in ihrer Reihenfolge; fehlt ein Teil, ist es"
+                + " der optionale erste (Bereich).")
+        .doesNotContain("„/“");
+  }
+
+  @Test
+  @DisplayName("Ist der erste Teil des Schluessels Pflicht, kann kein Teil fehlen")
+  void schluessel_ohne_optionalen_teil() {
+    ObjectNode struktur = Testdefinitionen.gattungBaum();
+    ((ObjectNode) struktur.get("felder").get(0)).put("pflicht", true);
+
+    assertThat(werkzeugbau.werkzeug(gueltig("NUR_PFLICHT", struktur)).beschreibung())
+        .endsWith("zerlegst du ihn ohne Rückfrage in diese Felder in ihrer Reihenfolge.")
+        .doesNotContain("fehlt ein Teil");
+  }
+
+  @Test
   @DisplayName("Kein Schema enthaelt eine Eigenschaft, deren Name mit mandant beginnt")
   void kein_mandantenparameter() {
     for (TypDefinition typ : List.of(Testdefinitionen.werk(), Testdefinitionen.gattung())) {

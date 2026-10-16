@@ -71,7 +71,7 @@ Einspruch übernommen. Die E‑Nummer ist `E‑1027` plus die Nummer der Entsche
 |---|---|---|
 | **E‑1033** | Das Modell hat **nur Werkzeuge ohne Nebenwirkung**: je angebotenem Auftragstyp eines, das einen Vorschlag einreicht. Das Backend prüft jeden Vorschlag mit der Prüfung aus A1. Fehler gehen als Werkzeugergebnis an das Modell zurück, das daraus seine Rückfrage formuliert. Ein gültiger Vorschlag geht an den Client als Karte. **Das Modell legt nie an und beurteilt Werte nicht selbst.** | A (Anlegen nur per Klick), V |
 | **E‑1034** | Werkzeuge entstehen aus der Struktur des Typs: Name ist die Kennung des Typs, die Eingabe ist ein JSON Schema mit `aktion` als Aufzählung und `eintraege` als Liste von Objekten mit den Feldern des Typs (Beschreibung je Feld aus `label`, `hinweis`, `beispiel`, `muster`, `nurBei`; `maxItems` aus `maxEintraege`). **Kein Werkzeug hat einen Mandantenparameter.** Im Hauptcode kennt weiterhin keine Stelle einen bestimmten Typ. | V |
-| **E‑1035** | **Datensparsamkeit.** Das Modell bekommt die feste Anweisung, Name, Beschreibung und Struktur der angebotenen Typen, was der Kunde schreibt, und die Prüfergebnisse. Es bekommt **nicht**: Benutzername, Mandanten-ID, Daten aus `GlassfishDB`, Aufträge aus `task`. | V |
+| **E‑1035** | **Datensparsamkeit.** Das Modell bekommt die feste Anweisung, Name, Beschreibung und Struktur der angebotenen Typen, was der Kunde schreibt, und die Prüfergebnisse. Es bekommt **nicht**: Benutzername, Mandanten-ID, Daten aus `GlassfishDB`, Aufträge aus `task`. **Geändert am 16.10.2026 durch E‑1059:** Der Name des aktiven Mandanten geht hin. | V, geändert (A) |
 | **E‑1036** | **Grenzen**, alle konfigurierbar, mit diesen Vorgaben: Nachricht des Kunden höchstens 4.000 Zeichen; höchstens 20 Nachrichten des Kunden je Gespräch; höchstens 3 Werkzeugrunden je Nachricht; höchstens 60 Nachrichten je Nutzer und Stunde, im Arbeitsspeicher wie die Begrenzung je IP; Zeitgrenze je Aufruf 30 Sekunden; `max_tokens` 1.024. | V |
 | **E‑1037** | Was der Assistent aus `task` braucht (Typdefinition, Typkatalog, Prüfung), **wandert nach `common`**, weil es einen zweiten Verbraucher bekommt ([`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §6). Betrifft die Verschiebung mehr als diese drei Teile samt ihrer Hilfsklassen: anhalten und melden. | V |
 | **E‑1038** | **Gespräche liegen nur im Arbeitsspeicher**, gebunden an Sitzung, Nutzer und aktiven Mandanten, mit Ablauf nach 30 Minuten ohne Nachricht und höchstens 3 offenen Gesprächen je Sitzung. Nicht in der Datenbank, nicht in der Sitzung, nicht im Log. Ein Neustart beendet alle Gespräche; ein Mandantenwechsel beendet die Gespräche dieser Sitzung. | V |
@@ -103,28 +103,54 @@ Was der Auftrag offenließ und beim Bau festgelegt wurde. Vorgeschlagen mit A2 a
 | **E‑1056** | Der Schalter ist **in jedem Profil aus**, auch in `dev`. Eingeschaltet wird über `OVERLORD_ASSISTENT_AKTIV=true`, und auch dann nur mit Schlüssel. | Die Testkopie ist eine Vollkopie der Produktion; ein lokaler Start soll nicht unaufgefordert Text an den Anbieter schicken | V, bestätigt am 16.10.2026 |
 | **E‑1057** | Ablauf der Gespräche und Begrenzung je Stunde rechnen mit der **Systemuhr** (`systemClock`), nicht mit der Anwendungsuhr. | Die Anwendungsuhr ist in `dev` um Monate zurückversetzt ([`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §6, Zeit) | V, bestätigt am 16.10.2026 |
 
+### Nachschärfung nach M1001
+
+Aus den Ergebnissen des ersten Laufs (§8.1), **vom Auftraggeber am 16.10.2026 entschieden**
+(Zweig `assistent-a2-nachschaerfung`). Nummern per `grep` geprüft; E‑1058 ist die Höchstzahl 20
+aus [`tasks.md`](tasks.md).
+
+| E | Entscheidung | Anlass | Herkunft |
+|---|---|---|---|
+| **E‑1059** | **Die Anweisung nennt den Namen des aktiven Mandanten** (`Mandant.MandantName`), weiterhin nicht die Mandanten-ID und keine weiteren Daten. Ändert E‑1035. Regel der Anweisung: Aufträge gelten immer für den aktiven Mandanten; nennt der Kunde einen anderen Mandanten oder eine andere Firma, reicht das Modell keinen Vorschlag ein und sagt, dass er den Mandanten oben in der Kopfzeile wechseln muss. **Hat der Mandant keinen Namen**, entfällt der Abschnitt; die Kennung geht nie ersatzweise hin (§3.1). | S12: Ohne den Namen kann das Modell „für den Mandanten IBIS“ nicht vom aktiven unterscheiden | A; ohne Namen V |
+| **E‑1060** | **Zusammengesetzte Schlüssel zerlegt das Modell ohne Rückfrage.** Die Werkzeugbeschreibung sagt es für jeden Typ mit Schlüssel, erzeugt aus der Struktur: Schreibt der Kunde einen Schlüssel mit dem Trenner zusammen, gehören die Teile in die Schlüsselfelder in ihrer Reihenfolge; fehlt ein Teil, ist es der optionale erste. Die Anweisung ergänzt: Einen zusammengesetzten Schlüssel zu zerlegen heißt nicht, einen Wert zu ändern. | S06 und S17: Das Modell fragte, wie `010/18VZE` aufzuteilen ist | A |
+| **E‑1061** | **Neu oder ändern unklar: Neuanlage vorschlagen.** Gibt es den Schlüssel schon, bleibt der Eintrag unverändert; eine Anpassung nur, wenn der Kunde ausdrücklich etwas ändern will. Steht in der Beschreibung von `WERK_ABLADESTELLE` (Migration `V102`, [`tasks.md`](tasks.md) §4.2). | S09: Das Modell schlug die Neuanlage vor, erwartet war eine Rückfrage | A |
+| **E‑1062** | **Zu viele Einträge: die ersten vorschlagen**, so viele wie ein Auftrag fasst, und sagen, dass die übrigen als nächster Auftrag folgen. Allgemein in der Anweisung, nicht je Typ. | S13 schwankte zwischen Rückfrage und Vorschlag mit den ersten 20 | A |
+| **E‑1063** | **Bewertung mit Begriffen:** Ein Fall ohne Vorschlag kann Begriffe nennen, die in der Antwort vorkommen müssen, ohne Rücksicht auf Groß- und Kleinschreibung (S17: `SNDPRN_4908`, S12: `Mandant`). Formulierungen werden weiterhin nicht bewertet. Der Läufer zählt Token zusätzlich je Fall. | S17 bestand in M1001 aus einem anderen Grund als dem, den er prüft | A |
+
 ---
 
 ## 3. Datenfluss
 
-### 3.1 Was an den Anbieter geht (E‑1035)
+### 3.1 Was an den Anbieter geht (E‑1035, E‑1059)
 
 Je Aufruf des Modells, und **nur** bei eingeschaltetem Assistenten:
 
-- die **feste Anweisung** (§4.4), darin **Name und Beschreibung** jedes angebotenen Typs aus
-  `task_type`;
+- die **feste Anweisung** (§4.4), darin der **Name des aktiven Mandanten** (E‑1059) und **Name und
+  Beschreibung** jedes angebotenen Typs aus `task_type`;
 - je angebotenem Typ ein **Werkzeug** mit dessen Kennung und der Struktur der Felder (§4.5);
 - der **Verlauf dieses Gesprächs**: was der Kunde geschrieben hat, die Antworten und
   Werkzeugaufrufe des Modells und die Prüfergebnisse des Backends (Fehlercode und Klartext je
   Fehler, oder die Meldung, dass der Vorschlag gültig ist).
 
+**Der Name des Mandanten** (E‑1059) ist `MandantName` aus `GlassfishDB.Mandant`, gelesen beim
+Eröffnen eines Gesprächs über `MandantService.aktiver`, also über dasselbe Statement wie die
+Selbstauskunft (`GET /api/auth/me`), kein neues. Er steht in der Anweisung als eigener Abschnitt
+vor den Typen („Der Kunde arbeitet im Mandanten „…“.“) und bleibt für das Gespräch gleich wie die
+ganze Anweisung (E‑1045); ein Mandantenwechsel beendet das Gespräch ohnehin (E‑1038). Der
+Anzeigename fällt ohne `MandantName` auf die Kennung zurück; **dann geht kein Name hin**, nie die
+Kennung (`AssistentController.mandantenname`). Auf der Testkopie hat jeder der zehn Mandanten
+einen Namen; bei sechs enthält er die Kennung als Teil des Namens, ohne Rücksicht auf Groß- und
+Kleinschreibung (Kollation `utf8mb4_general_ci`), bei zwei davon in genau derselben Schreibweise
+(gezählt am 16.10.2026). Das ist der Name, keine zweite Angabe.
+
 ### 3.2 Was nicht hingeht
 
-**Nicht** der Benutzername, **nicht** die Mandanten-ID, **keine** Daten aus `GlassfishDB` und
-**keine** Aufträge aus `task`. Das Paket `assistent` fasst keinen Datenbankzugriff an (ArchUnit,
-§9); die Typen bekommt es aus dem Typkatalog in `common`. Kein Werkzeug hat einen
-Mandantenparameter (E‑1034). Ein Test hält fest, dass die Anweisung weder Benutzername noch
-Mandanten-ID enthält.
+**Nicht** der Benutzername, **nicht** die Mandanten-ID als eigene Angabe, **keine** weiteren Daten
+aus `GlassfishDB` als den Namen des Mandanten und **keine** Aufträge aus `task`. Das Paket
+`assistent` fasst keinen Datenbankzugriff an (ArchUnit, §9); die Typen bekommt es aus dem
+Typkatalog in `common`, den Namen über `MandantService` aus `security`. Kein Werkzeug hat einen
+Mandantenparameter (E‑1034). Tests halten fest, dass die Anweisung den Namen nennt, aber weder
+Benutzername noch Mandanten-ID enthält (§9).
 
 **Was der Kunde selbst schreibt, geht hin** — auch wenn er dort einen Namen oder eine Mailadresse
 nennt. Das lässt sich nicht verhindern, nur in der Oberfläche (A3) mit einem Hinweis vermeiden.
@@ -240,8 +266,12 @@ Der Client sieht nie Einzelheiten des Anbieters (§6.6).
 ### 4.4 Die feste Anweisung (E‑1040)
 
 Die Ressource `backend/src/main/resources/assistent/anweisung.txt`, auf Deutsch. Daran hängt das
-Backend je angebotenem Typ einen Abschnitt mit Name, Kennung des Werkzeugs und Beschreibung aus
-`task_type`. Eine Änderung an der Anweisung ist eine Änderung am Repository und wird mit dem
+Backend den Abschnitt „Der aktive Mandant“ mit dessen Namen (E‑1059; ohne Namen entfällt er) und
+je angebotenem Typ einen Abschnitt mit Name, Kennung des Werkzeugs und Beschreibung aus
+`task_type`. Seit der Nachschärfung nach M1001 stehen darin drei Regeln mehr: Einen
+zusammengesetzten Schlüssel zu zerlegen heißt nicht, einen Wert zu ändern (E‑1060); mehr Einträge,
+als ein Auftrag fasst, ergeben einen Vorschlag mit den ersten (E‑1062); Aufträge gelten immer für
+den aktiven Mandanten (E‑1059). Eine Änderung an der Anweisung ist eine Änderung am Repository und wird mit dem
 Testsatz (§8) geprüft. Der Wortlaut steht in der Ressource; diese Datei wiederholt ihn nicht.
 
 ### 4.5 Die Werkzeuge (E‑1034)
@@ -251,7 +281,11 @@ Testsatz (§8) geprüft. Der Wortlaut steht in der Ressource; diese Datei wieder
 - **Name** ist die Kennung des Typs (E‑1054).
 - **Beschreibung:** dass das Werkzeug einen Vorschlag für den Auftrag „Name“ einreicht, dass das
   Backend ihn prüft und der Kunde ihn selbst anlegt, dass Felder ohne Wert weggelassen werden, und
-  aus welchen Feldern in welcher Reihenfolge der Schlüssel besteht.
+  aus welchen Feldern in welcher Reihenfolge der Schlüssel besteht. Dazu, für jeden Typ mit
+  Schlüssel (E‑1060): Schreibt der Kunde einen Schlüssel zusammengesetzt mit dem Trenner des Typs,
+  zerlegt das Modell ihn ohne Rückfrage in die Schlüsselfelder in ihrer Reihenfolge. Ist der erste
+  Teil optional (nur er darf es sein, [`tasks.md`](tasks.md) §3.2), folgt „fehlt ein Teil, ist es der
+  optionale erste (Label)“; ist er Pflicht, entfällt der Satz.
 - **Eingabe:** `aktion` (Text, `enum` der Aktionen) und `eintraege` (Liste, `minItems` 1,
   `maxItems` aus `maxEintraege`) mit je einem Objekt, das genau die Felder des Typs als Text trägt
   (`additionalProperties: false`). Die Beschreibung eines Felds nennt `label`, ob es Pflicht oder
@@ -450,24 +484,32 @@ Wechsel des Anbieters, auch auf ein lokales Modell, und für jede Änderung an A
 Typbeschreibung.
 
 - **Fälle:** `backend/src/test/resources/assistent/testsatz/faelle.json`. Ein Fall hat `kennung`,
-  `herkunft` (`synthetisch` oder `echt`), `gruppe` (1 bis 13 nach dem Auftrag), `beschreibung`,
+  `herkunft` (`synthetisch` oder `echt`), `gruppe` (1 bis 13 nach dem Auftrag, 14 seit E‑1058), `beschreibung`,
   `nachrichten` (eine oder mehrere, nacheinander) und genau eine Erwartung: `erwartet` — entweder
-  `{ "vorschlag": { "typ", "aktion", "eintraege" } }` oder `{ "vorschlag": null }` —,
+  `{ "vorschlag": { "typ", "aktion", "eintraege" } }` oder `{ "vorschlag": null }`, ohne Vorschlag
+  wahlweise mit `"begriffe": [ … ]` (E‑1063) —,
   `erwartetNach` (je Nachricht eine, etwa „nach der ersten keiner, nach der zweiten dieser“) oder
   `erwartetEinerVon` (mehrere erlaubte Vorschläge; Gruppe 9: Anlegen und Löschen in einer
   Nachricht ergibt einen Vorschlag mit genau einer der beiden Aktionen). `TestsatzTest` hält die
-  Form, die Abdeckung aller 13 Gruppen, dass jeder erwartete Vorschlag die Prüfung aus A1 besteht,
-  und die Bewertung.
+  Form, die Abdeckung aller 14 Gruppen, dass jeder erwartete Vorschlag die Prüfung aus A1 besteht,
+  dass Begriffe nur ohne Vorschlag stehen, und die Bewertung.
 - **Bewertet wird nur strukturell:** Typ, Aktion und Einträge nach Normalisierung (Felder ohne
   Wert entfallen, die Reihenfolge der Einträge zählt nicht) gleich dem Erwarteten — oder wie
-  erwartet kein Vorschlag. Formulierungen werden nicht bewertet.
+  erwartet kein Vorschlag. Formulierungen werden nicht bewertet. **Seit E‑1063** kann ein Fall
+  ohne Vorschlag Begriffe nennen, die in der Antwort vorkommen müssen, ohne Rücksicht auf Groß- und
+  Kleinschreibung; fehlt einer, ist der Fall nicht bestanden („Begriff fehlt in der Antwort“). Ein
+  Begriff zeigt nur, worauf sich die Rückfrage bezieht: S17 `SNDPRN_4908`, S12 `Mandant`, sonst
+  keiner.
 - **Lauf:** `AssistentTestsatzLauf` mit `@Tag("llm")`. **Aus dem normalen Lauf und der CI
   ausgeschlossen**, und zwar dreifach: Der Klassenname passt auf kein Muster von Surefire
   (`*Test`) oder Failsafe (`*IT`), die Klasse trägt `@Tag("llm")`, und ohne
   `OVERLORD_ASSISTENT_API_KEY` wird sie übersprungen. Er fährt die Gesprächsführung mit dem echten
   Adapter, ohne Datenbank, gegen die Definition von `WERK_ABLADESTELLE` aus den Testressourcen,
-  und schreibt den Bericht nach `backend/target/assistent-testsatz/bericht-<Zeitpunkt>.md`: je Fall
-  bestanden oder nicht mit dem tatsächlichen Vorschlag, dazu Gesamtquote, Token und Dauer.
+  mit einem erfundenen Namen des Mandanten („Beispielkunde GmbH“, E‑1059), und schreibt den
+  Bericht nach `backend/target/assistent-testsatz/bericht-<Zeitpunkt>.md`: je Fall bestanden oder
+  nicht mit dem tatsächlichen Vorschlag und den Token ein und aus (seit E‑1063), dazu
+  Gesamtquote, Token gesamt und Dauer. Wiederholungen kennt er nicht; zwei Durchgänge sind zwei
+  Aufrufe.
   **Berichte werden nicht eingecheckt** (`target/` ist ignoriert). Ein Fall, an dem der Anbieter
   scheitert, zählt als nicht bestanden. Wahlweise `OVERLORD_ASSISTENT_MODELL`,
   `OVERLORD_ASSISTENT_BASIS_URL` und `OVERLORD_ASSISTENT_DENKEN` (§7, `anthropic.denken`).
@@ -490,6 +532,11 @@ Typbeschreibung.
   zeigt, ob `max_tokens` reicht, Punkt 1016), und **S17** ist die neue Gruppe 14: eine Anpassung,
   bei der der Kunde nur einen der beiden SNDPRN-Werte nennt — erwartet ist kein Vorschlag,
   sondern die Rückfrage, ob SNDPRN_4908 entfernt werden soll ([`tasks.md`](tasks.md) §4.2).
+  **Geändert am 16.10.2026** mit der Nachschärfung nach M1001 (E‑1059 bis E‑1063): **S09**
+  erwartet jetzt den Vorschlag einer Neuanlage statt einer Rückfrage (E‑1061), **S13** den
+  Vorschlag mit W001 bis W020, denselben wie S16 (E‑1062), **S12** weiterhin keinen Vorschlag,
+  aber den Begriff `Mandant` in der Antwort (E‑1059), und **S17** den Begriff `SNDPRN_4908`. S06
+  und die Nachrichten aller Fälle sind unverändert.
 - **Echte Fälle** liefert Lukas nach. Vor dem Einchecken anonymisieren: keine Namen, keine
   Mailadressen, keine Signaturen.
 
@@ -545,14 +592,15 @@ An Anweisung, Beschreibung und Fällen ist nach diesem Lauf nichts geändert.
 
 | Test | Was er hält |
 |---|---|
-| `WerkzeugbauTest` | das Schema für `WERK_ABLADESTELLE` und für die Gattung aus A1; keine Eigenschaft beginnt mit `mandant`; Typen mit ungültigem Werkzeugnamen oder einem Feld `mandant…` entfallen (E‑1054) |
-| `AnweisungTest` | die Anweisung enthält die Beschreibungen der angebotenen Typen, aber weder Benutzername noch Mandanten-ID |
+| `WerkzeugbauTest` | das Schema für `WERK_ABLADESTELLE` und für die Gattung aus A1; keine Eigenschaft beginnt mit `mandant`; Typen mit ungültigem Werkzeugnamen oder einem Feld `mandant…` entfallen (E‑1054); der Satz zum zusammengesetzten Schlüssel mit dem Trenner des Typs, mit „fehlt ein Teil“ nur bei optionalem erstem Teil (E‑1060) |
+| `AnweisungTest` | die Anweisung enthält die Beschreibungen der angebotenen Typen, die Regeln aus E‑1059, E‑1060 und E‑1062 und den Namen des Mandanten vor den Typen, ohne Namen keinen Abschnitt, aber weder Benutzername noch Mandanten-ID |
+| `MandantennameTest` | welcher Name in die Anweisung geht: der des aktiven Mandanten; keiner, wenn der Anzeigename die Kennung ist, der aktive Mandant ein anderer als der Kontext oder keiner gewählt ist (E‑1059) |
 | `GespraechsfuehrungTest` | gegen ein geskriptetes Modell: ungültiger Vorschlag → Werkzeugergebnis mit Fehlern, keine Karte; gültiger → Karte mit allen Feldern der Aktion, leere als `null`; Abbruch nach 3 Runden; Werkzeugaufruf für einen nicht angebotenen Typ abgewiesen; ein zweiter Vorschlag je Nachricht abgewiesen; Wert als Zahl abgewiesen; abgeschnitten, verweigert; Fehler des Anbieters lassen den Verlauf unverändert |
 | `GespraechsspeicherTest` | Ablauf nach 30 Minuten, höchstens 3 je Sitzung, Bindung an Sitzung, Nutzer und Mandant, Mandantenwechsel — mit eingespeister Uhr (T1) |
 | `NachrichtenbegrenzungTest` | 60 je Stunde, gleitend, mit eingespeister Uhr |
 | `AnthropicSprachmodellTest` | gegen einen lokalen HTTP-Stub: Kopfzeilen, Aufbau der Anfrage (Anweisung, Verlauf mit Rohinhalt und `tool_result`, Werkzeuge, `thinking`), Text und `tool_use`, Abbruchgründe, ein Wiederholungsversuch bei `429` und `529`, keiner bei `500`, Zeitgrenze |
 | `AssistentServiceTest` | **Schalter aus oder kein Schlüssel:** `AssistentConfig` baut keinen Adapter, Stand, Eröffnen und Nachricht melden nicht verfügbar, **kein HTTP-Aufruf** am Stub, kein Zugriff auf den Typkatalog — mit Gegenprobe, dass eingeschaltet genau ein Aufruf am Stub ankommt. Dazu: jede Fehlerart des Anbieters auf `503` bzw. `502` ohne Anbieterdetails, Länge der Nachricht, Höchstzahl je Gespräch, `409`, `404` in allen Fällen gleich, kein angebotener Typ |
-| `TestsatzTest` | Form und Abdeckung des Testsatzes, jede erwartete Karte gültig, strukturelle Bewertung (§8) |
+| `TestsatzTest` | Form und Abdeckung des Testsatzes, jede erwartete Karte gültig, Begriffe nur ohne Vorschlag und genau bei S12 und S17, strukturelle Bewertung und Bewertung der Begriffe (§8) |
 | `PaketstrukturTest` | die Regeln aus §4.1 |
 
 ### 9.2 Mit Datenbank (`@Tag("db")`)
@@ -564,7 +612,8 @@ erfundenen; ein Gespräch derselben Person aus einer anderen Sitzung ist `404`; 
 Gespräche beim Mandantenwechsel; ein Typ, der nur `IBIS` freigeschaltet ist, steht nicht unter den
 Werkzeugen von `NEXANS` und wird beim Einreichen abgewiesen; kein Weg legt einen Auftrag an;
 `POST /api/tasks/pruefung` mit einem nicht angebotenen Typ ist `404`, ununterscheidbar von einem
-erfundenen; Änderungszwang.
+erfundenen; Änderungszwang; was das Modell bekommt, nennt den Namen von `NEXANS` aus der
+Datenbank, aber außerhalb dieses Namens weder Benutzername noch Kennung (E‑1035, E‑1059).
 
 **Die Verletzungsprobe** steht in §9.3.
 
@@ -606,7 +655,7 @@ einzeln, mit genau einer Abweichung je Zugriff.
 | **M3** Filter im Statement | die Freischaltung bleibt Teil des einen Statements im Typkatalog |
 | **M4** Isolationstest je Endpunkt | `AssistentIsolationDbIT` |
 | **Regel 3** | `assistent` fasst keine Datenbank an |
-| **Regel 7** | keine neuen Statements; `POST /api/tasks/pruefung` und der Assistent nutzen das Statement des Typkatalogs aus M1000 ([`tasks.md`](tasks.md) §9.3) |
+| **Regel 7** | keine neuen Statements; `POST /api/tasks/pruefung` und der Assistent nutzen das Statement des Typkatalogs aus M1000 ([`tasks.md`](tasks.md) §9.3); der Name des Mandanten (E‑1059) kommt über das Statement der Selbstauskunft (`MandantService.aktiver`, gemessen in [`mandantentrennung.md`](mandantentrennung.md) §6), einmal je eröffnetem Gespräch |
 | **Z1** | keine Uhr außer `systemClock` (E‑1057) |
 | **G1** | der Schlüssel nur aus der Umgebung, nie im Repository, nie im Protokoll |
 
@@ -636,5 +685,5 @@ und geht in Punkt 1009 auf.
 
 | Teil | Inhalt |
 |---|---|
-| **A3** | Chatbox in der Kopfleiste und Bestätigungskarte: `GET /api/assistent` entscheidet, ob die Chatbox erscheint; die Karte zeigt `vorschlag` mit `label` und `hinweis` je Feld, prüft Änderungen über `POST /api/tasks/pruefung` und legt mit `POST /api/tasks` an (`anfrageId` je Absenden). Offen: Streaming (1011), Rückmeldung ans Gespräch (1012) |
+| **A3** | Chatbox in der Kopfleiste und Bestätigungskarte: `GET /api/assistent` entscheidet, ob die Chatbox erscheint; die Karte zeigt `vorschlag` mit `label` und `hinweis` je Feld, prüft Änderungen über `POST /api/tasks/pruefung` und legt mit `POST /api/tasks` an (`anfrageId` je Absenden). **Die Karte zeigt den aktiven Mandanten** (E‑1059): Der Assistent weist einen anderen Mandanten ab und verweist auf den Wechsel in der Kopfzeile, also muss der Kunde auf der Karte sehen, für welchen Mandanten er anlegt. Offen: Streaming (1011), Rückmeldung ans Gespräch (1012) |
 | **A4** | Bereich „Ihre Aufträge“ in der Übersicht, über `GET /api/tasks` |

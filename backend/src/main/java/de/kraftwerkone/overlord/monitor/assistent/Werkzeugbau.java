@@ -132,11 +132,27 @@ public final class Werkzeugbau {
       text.append(" Der Schlüssel eines Eintrags besteht aus ")
           .append(
               typ.schluessel().felder().stream()
-                  .map(name -> typ.feld(name).map(Feld::label).orElse(name))
+                  .map(name -> label(typ, name))
                   .collect(Collectors.joining(", ")))
-          .append(", in dieser Reihenfolge.");
+          .append(", in dieser Reihenfolge.")
+          .append(" Schreibt der Kunde einen Schlüssel zusammengesetzt mit dem Trenner „")
+          .append(typ.schluessel().trenner())
+          .append("“, zerlegst du ihn ohne Rückfrage in diese Felder in ihrer Reihenfolge");
+      // Nur der erste Teil des Schluessels darf optional sein (DefinitionsPruefung); nur dann
+      // kann ein Teil fehlen.
+      String erster = typ.schluessel().felder().getFirst();
+      if (typ.feld(erster).map(feld -> !feld.pflicht()).orElse(false)) {
+        text.append("; fehlt ein Teil, ist es der optionale erste (")
+            .append(label(typ, erster))
+            .append(")");
+      }
+      text.append('.');
     }
     return text.toString();
+  }
+
+  private static String label(TypDefinition typ, String name) {
+    return typ.feld(name).map(Feld::label).orElse(name);
   }
 
   static String feldbeschreibung(Feld feld) {

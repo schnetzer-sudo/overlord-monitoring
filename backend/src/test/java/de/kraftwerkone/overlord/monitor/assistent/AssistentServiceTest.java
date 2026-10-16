@@ -130,7 +130,7 @@ class AssistentServiceTest {
       AssistentService service = service(eigenschaften, modell);
 
       assertThat(service.stand(NEXANS, SITZUNG)).isEqualTo(new AssistentResponse(false, List.of()));
-      assertThatThrownBy(() -> service.eroeffne(NUTZER, NEXANS, SITZUNG))
+      assertThatThrownBy(() -> service.eroeffne(NUTZER, NEXANS, "Beispielkunde GmbH", SITZUNG))
           .isInstanceOfSatisfying(
               FachlicheAusnahme.class,
               fehler -> {
@@ -157,7 +157,7 @@ class AssistentServiceTest {
       AssistentEigenschaften an = eigenschaften(true, "schluessel", stub.basisUrl());
       AssistentService service = service(an, ausDerKonfiguration(an));
 
-      String id = service.eroeffne(NUTZER, NEXANS, SITZUNG).gespraechId();
+      String id = service.eroeffne(NUTZER, NEXANS, "Beispielkunde GmbH", SITZUNG).gespraechId();
       NachrichtResponse antwort = service.sende(NUTZER, NEXANS, SITZUNG, id, "Hallo");
 
       assertThat(antwort.text()).isEqualTo("Guten Tag.");
@@ -182,7 +182,7 @@ class AssistentServiceTest {
     }
 
     private String eroeffne() {
-      return service.eroeffne(NUTZER, NEXANS, SITZUNG).gespraechId();
+      return service.eroeffne(NUTZER, NEXANS, "Beispielkunde GmbH", SITZUNG).gespraechId();
     }
 
     @Test
@@ -294,7 +294,7 @@ class AssistentServiceTest {
       when(typKatalog.angeboten(any(MandantContext.class))).thenReturn(List.of());
 
       assertThat(service.stand(NEXANS, SITZUNG).verfuegbar()).isFalse();
-      assertThatThrownBy(() -> service.eroeffne(NUTZER, NEXANS, SITZUNG))
+      assertThatThrownBy(() -> service.eroeffne(NUTZER, NEXANS, "Beispielkunde GmbH", SITZUNG))
           .isInstanceOfSatisfying(
               FachlicheAusnahme.class,
               fehler -> assertThat(fehler.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE));

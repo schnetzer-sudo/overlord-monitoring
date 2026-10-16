@@ -29,9 +29,10 @@ import tools.jackson.databind.json.JsonMapper;
  * <p><b>Abgeschaltet geht kein Aufruf hinaus</b> (E‑1030): Jeder Weg zum Modell prueft zuerst den
  * Schalter, und abgeschaltet steht hinter {@link Sprachmodell} ohnehin kein Adapter.
  *
- * <p><b>Was das Modell bekommt</b> (E‑1035): die Anweisung, die Werkzeuge, den Verlauf. Benutzer
- * und Mandant dienen nur der Bindung des Gespraechs und dem Protokoll; ins Modell geht keiner von
- * beiden. <b>Protokolliert werden nur Metadaten</b> (E‑1039), nie ein Text.
+ * <p><b>Was das Modell bekommt</b> (E‑1035, E‑1059): die Anweisung mit dem Namen des aktiven
+ * Mandanten, die Werkzeuge, den Verlauf. Benutzer und Mandanten-ID dienen nur der Bindung des
+ * Gespraechs und dem Protokoll; ins Modell geht keiner von beiden. <b>Protokolliert werden nur
+ * Metadaten</b> (E‑1039), nie ein Text.
  */
 @Service
 public class AssistentService {
@@ -83,9 +84,14 @@ public class AssistentService {
     return new AssistentResponse(!typen.isEmpty(), typen);
   }
 
-  /** Eroeffnet ein Gespraech; Anweisung und Werkzeuge sind ab hier fest (E‑1045). */
+  /**
+   * Eroeffnet ein Gespraech; Anweisung und Werkzeuge sind ab hier fest (E‑1045).
+   *
+   * @param mandantenname der Name des aktiven Mandanten fuer die Anweisung (E‑1059), {@code null}
+   *     ohne Namen; nie die Mandanten-ID
+   */
   public GespraechResponse eroeffne(
-      AngemeldeterNutzer nutzer, MandantContext mandant, String sitzungId) {
+      AngemeldeterNutzer nutzer, MandantContext mandant, String mandantenname, String sitzungId) {
     speicher.beendeNachMandantenwechsel(mandant, sitzungId);
     if (!eigenschaften.eingeschaltet()) {
       throw nichtVerfuegbar("Assistent abgeschaltet oder ohne Schluessel");
@@ -96,7 +102,11 @@ public class AssistentService {
     }
     Gespraech gespraech =
         speicher.eroeffne(
-            mandant, nutzer.id(), sitzungId, Anweisung.fuer(typen), werkzeugbau.werkzeuge(typen));
+            mandant,
+            nutzer.id(),
+            sitzungId,
+            Anweisung.fuer(mandantenname, typen),
+            werkzeugbau.werkzeuge(typen));
     return new GespraechResponse(gespraech.id().toString());
   }
 
