@@ -181,3 +181,6 @@ scripts/messung-eerp-pending/ergebnis/*
 # Kopie des Skripts mit dem eingesetzten Suchbegriff, denn der ist ein
 # Kundenname aus dem Bestand. (Regel G1)
 scripts/diagnose-produktion/ergebnis/
+
+
+brag-output/
