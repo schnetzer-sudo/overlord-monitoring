@@ -23,10 +23,11 @@ import org.springframework.context.annotation.Bean;
  * ueber jOOQ; sie erscheint im Zaehler nicht.
  *
  * <p>Angebracht ueber {@code @Import(SchreibkontextZaehlung.class)}; das kostet einen eigenen
- * Anwendungskontext, und kein anderer Test schleppt den Zaehler mit.
+ * Anwendungskontext, und kein anderer Test schleppt den Zaehler mit. Oeffentlich, weil seit A2 auch
+ * {@code AssistentIsolationDbIT} ihn nutzt.
  */
 @TestConfiguration
-class SchreibkontextZaehlung {
+public class SchreibkontextZaehlung {
 
   @Bean
   Zugriffszaehler zugriffszaehler() {

@@ -95,6 +95,16 @@ public class Gespraechsfuehrung {
       }
     }
 
+    /** Zaehlt einen anderen Zaehler dazu, etwa ueber mehrere Nachrichten hinweg. */
+    public void addiere(Zaehler anderer) {
+      tokenEin += anderer.tokenEin;
+      tokenAus += anderer.tokenAus;
+      werkzeugaufrufe += anderer.werkzeugaufrufe;
+      if (anderer.modell != null) {
+        modell = anderer.modell;
+      }
+    }
+
     public long tokenEin() {
       return tokenEin;
     }
