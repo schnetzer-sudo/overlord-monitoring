@@ -44,15 +44,15 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
 | offen — Fehler | 32 | 0 | — |
 | offen — Verbesserung | 39 | 0 | — |
 | offen — Entscheidung offen | 54 | 0 | — |
-| offen — Sichtprüfung oder Messung offen | 53 | 13 | — |
-| **offen gesamt** | **178** | **13** | — |
+| offen — Sichtprüfung oder Messung offen | 52 | 13 | — |
+| **offen gesamt** | **177** | **13** | — |
 | ungeprüft | — | — | 357 |
-| erledigt | 54 | 0 | 64 |
+| erledigt | 55 | 0 | 64 |
 | gegenstandslos | 3 | 0 | 5 |
 | **Zeilen** | 235 | 13 | 426 |
 
-Offen sind damit **191** nummerierte Punkte; dazu kommen 357 ungeprüfte lokale. Davon gehören 16 der
-Linie `assistent` (1000 bis 1007 aus A1, 1009 bis 1016 aus A2).
+Offen sind damit **190** nummerierte Punkte; dazu kommen 357 ungeprüfte lokale. Davon gehören 15 der
+Linie `assistent` (1000 bis 1007 aus A1, 1009 bis 1015 aus A2; 1016 ist seit M1001 erledigt).
 
 ### Wie das Register erhoben ist
 
@@ -303,7 +303,7 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 1013 | Ob der Assistent auch Fragen zum Stand eigener Aufträge beantworten soll | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Entscheidung offen | offen |
 | 1014 | Kosten je Gespräch, sobald echte Läufe vorliegen | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Sichtprüfung oder Messung offen | offen |
 | 1015 | Ob eine Vereinbarung über Zero Data Retention mit Anthropic sinnvoll ist | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Entscheidung offen | offen |
-| 1016 | Ob `max_tokens` 1.024 für einen Vorschlag mit 20 Einträgen reicht (geschätzt, nicht gemessen; offen bis zum Lauf mit Testfall S16) | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Sichtprüfung oder Messung offen | offen — seit 16.10.2026 höchstens 20 statt 50 Einträge (E‑1058) |
+| 1016 | Ob `max_tokens` 1.024 für einen Vorschlag mit 20 Einträgen reicht (geschätzt, nicht gemessen; offen bis zum Lauf mit Testfall S16) | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Sichtprüfung oder Messung offen | **erledigt** — `assistent.md` §8.1: „Erledigt am 16.10.2026 durch M1001“; S16 mit 20 Einträgen in beiden Durchgängen bestanden, nicht abgeschnitten |
 
 ---
 
