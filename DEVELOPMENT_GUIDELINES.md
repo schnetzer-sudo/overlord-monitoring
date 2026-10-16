@@ -2,8 +2,8 @@
 
 Stand: 24.07.2026 · Abgeleitet aus `docs/PROJEKTBESCHREIBUNG.md`.
 
-Diese Datei beschreibt **wie** gebaut wird. **Was** gebaut wird, steht in
-`docs/PROJEKTBESCHREIBUNG.md` und `docs/IMPLEMENTIERUNGSPLAN_MVP.md`. Bei Widerspruch zwischen
+Diese Datei beschreibt **wie** gebaut wird. **Was** gebaut ist, steht in
+`docs/PROJEKTBESCHREIBUNG.md`, was gebaut wird, in `docs/ROADMAP.md`. Bei Widerspruch zwischen
 dieser Datei und der Projektbeschreibung gilt die Projektbeschreibung.
 
 ---
@@ -1114,8 +1114,8 @@ Ein Schritt ist fertig, wenn **alle** Punkte zutreffen. Nicht „im Wesentlichen
 - [ ] Die CI ist grün
 
 **Fachlich**
-- [ ] Das Abnahmekriterium des Schritts aus `docs/IMPLEMENTIERUNGSPLAN_MVP.md` ist erfüllt und
-      wurde tatsächlich ausgeführt — nicht nur plausibel
+- [ ] Das Abnahmekriterium des Schritts aus seinem Auftrag (Vorlage `docs/ROADMAP.md` §4) ist
+      erfüllt und wurde tatsächlich ausgeführt — nicht nur plausibel
 - [ ] Die Abgrenzung des Schritts wurde eingehalten, es wurde nichts vorgezogen
 
 **Sicherheit**
@@ -1154,7 +1154,7 @@ am 15. oder 16.10.2026 entschieden, **V** = Vorschlag vom 16.10.2026, ohne Einsp
 | Zweig | Rolle | Was darauf landet |
 |---|---|---|
 | `main` | **Release-Linie 1.x** | **nur Fixes**, über Zweige `fix/<thema>` |
-| `assistent` | Weiterentwicklung „Aufträge über den Assistenten“ (A1 bis A4, `docs/ROADMAP.md`) | Teilschritte über Zweige `assistent/<teil>` |
+| `assistent` | Weiterentwicklung „Aufträge über den Assistenten“ (A1 bis A4, [`docs/ROADMAP.md`](docs/ROADMAP.md)) | Teilschritte über Zweige `assistent/<teil>` |
 
 - `assistent` ist ein langlebiger Zweig ab dem Tag `v1.0.0`.
 - **Merge-Richtung:** Nach jedem Fix-Release wird `main` in `assistent` gemergt, **nie umgekehrt**.
@@ -1167,7 +1167,7 @@ am 15. oder 16.10.2026 entschieden, **V** = Vorschlag vom 16.10.2026, ohne Einsp
 - Versionen nach **SemVer**. Ein Fix erhöht die Patch-Version (1.0.1, 1.0.2, …); der Merge der
   Assistent-Linie wird **1.1.0**.
 - **Ein Tag je Release** auf `main`, Form `v<version>`. Den Tag setzt Lukas.
-- **Jedes Release hat einen Eintrag in `CHANGELOG.md`** mit Datum und den
+- **Jedes Release hat einen Eintrag in [`CHANGELOG.md`](CHANGELOG.md)** mit Datum und den
   Abschnitten „Neu“, „Geändert“, „Behoben“. Was noch kein Release hat, steht unter
   „Unveröffentlicht“.
 
@@ -1186,19 +1186,34 @@ Regeln halten sie auseinander:
    die Vorgabe `*:future` (Flyway 12.4.0, Boot 4.1.0), `main` startet also gegen eine Testkopie mit
    fremder `V100`. In der Produktion läuft nur eine Linie, dort bleibt die strenge Reihenfolge.
 3. **Auf `main` schließt die jOOQ-Codegenerierung für `overlord_monitor` die Tabellen der
-   Assistent-Linie aus** (`task`, `task_type`, `task_type_mandant`; `<excludes>` in `backend/pom.xml`). Der
-   Codegen liest die Datenbank, nicht die Migrationen: Ohne den Ausschluss entstünden auf `main`
+   Assistent-Linie aus** (`task`, `task_type`, `task_type_mandant`; `<excludes>` in
+   `backend/pom.xml`). Der Codegen liest die Datenbank, nicht die Migrationen: Ohne den Ausschluss entstünden auf `main`
    Klassen für Tabellen, die keine Migration von `main` anlegt, sobald `assistent` sie auf der
    Testkopie angelegt hat. Der Ausschluss ist ein eigener Commit und wird auf `assistent` per
    `git revert` zurückgenommen. Kommt auf `assistent` eine weitere Tabelle hinzu, gehört sie auf
    `main` in denselben Ausschluss.
 
-### Nummern auf `assistent` *(Entscheidung 7, V)*
+### Nummernvergabe
 
-Auf `assistent` beginnen **alle projektweit gezählten Nummern bei 1000**: M-Nummern, offene Punkte
-und E-Nummern, soweit sie projektweit vergeben werden. `main` zählt unterhalb weiter. So kollidiert
-nach dem Merge keine Nummer, und an der Nummer ist die Linie ablesbar. Geprüft wird vor jeder
-Vergabe wie bisher per `grep` über `docs/`, auf `assistent` ab 1000.
+Vor jeder Vergabe wird die höchste vergebene Nummer per `grep` über `docs/` ermittelt.
+
+- **E-Nummern (Entscheidungen) werden projektweit vergeben**, als `E‑<n>` mit geschütztem
+  Bindestrich — seit dem 24.08.2026 (`E‑a` bis `E‑z`), numerisch ab `E‑27` am 01.09.2026
+  ([`docs/testfestigkeit.md`](docs/testfestigkeit.md) §10.6). **Ältere, je Datei vergebene
+  Kennungen** (`E1`, `E14` ohne Bindestrich) **bleiben mit ihrer Fundstelle gültig** und werden nie
+  ohne ihre Datei genannt *(Entscheidung des Auftraggebers vom 16.10.2026; die Festlegung „je
+  Feature-Datei“ vom 21.08.2026 beschrieb die Praxis seit dem 24.08.2026 nicht mehr)*.
+- **M-Nummern** (Messungen) und **offene Punkte** zählen projektweit. Jeder offene Punkt steht in
+  seiner Feature-Datei und im Register [`docs/offene-punkte.md`](docs/offene-punkte.md), wo auch die
+  nächste freie Nummer steht.
+- **Lokale Punkte ohne projektweite Nummer** (Listen vor der projektweiten Zählung, unnummerierte
+  Aufzählungen) stehen im Register mit ihrer Fundstelle als Kennung und dem Stand *ungeprüft*. **Ein
+  lokaler Punkt bekommt eine projektweite Nummer erst, wenn jemand ihn wieder aufgreift** — auf
+  `main` die nächste freie, auf `assistent` ab 1000 *(Entscheidung des Auftraggebers vom
+  16.10.2026)*.
+- **Auf `assistent` beginnen alle projektweit gezählten Nummern bei 1000** *(Entscheidung 7, V)*:
+  M-Nummern, offene Punkte und E-Nummern. `main` zählt unterhalb weiter. So kollidiert nach dem
+  Merge keine Nummer, und an der Nummer ist die Linie ablesbar.
 
 ### Doku ab 1.0.0 *(Entscheidung 9, V)*
 
