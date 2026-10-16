@@ -799,6 +799,15 @@ leeren Tabelle nicht zu sehen; `task` wird nie gelöscht. P2 und P3 sind nicht a
 Plattform sie ausführt und die Testkopie geteilt ist; `AuftraegeDbIT` führt sie aus, misst aber
 nicht (T1).
 
+### 9.4 Gegenprobe gegen `main` (16.10.2026)
+
+Nachdem `V100` auf der Testkopie angewandt war: `main` (`1194079`) in einem eigenen Worktree im
+Profil `dev` gebaut, mit Codegen und mit allen Tests unter `@Tag("db")` (`./mvnw verify`).
+Flyway validiert 14 Migrationen und meldet „Schema is up to date“ — `V100` liegt für `main` in der
+Zukunft und wird ignoriert. Der Codegen schließt `task`, `task_type` und `task_type_mandant` aus;
+`src/main/generated-java` bleibt unverändert, der Arbeitsbaum danach sauber. **1.040 Tests ohne und
+456 mit Datenbank, alle grün.** Auf `main` wurde nichts geändert; der Worktree ist entfernt.
+
 ---
 
 ## 10. Regelbezug
