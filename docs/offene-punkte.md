@@ -282,7 +282,7 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 258 | Rollup-Prozess prod,rollup: Port, abgeschaltete Ablagenprüfung und Flyway im zweiten Prozess nicht belegt | [`betrieb.md`](betrieb.md) §9 | Entscheidung offen | offen |
 | 259 | Sicherung von overlord_monitor (process_catalog, bam_sollaenge) und Wiederherstellung nicht beschrieben | [`betrieb.md`](betrieb.md) §9 | Entscheidung offen | offen |
 | 260 | Release-Bau und Auslieferung nach dem Tag nicht beschrieben; die CI liefert nichts aus | [`betrieb.md`](betrieb.md) §9 | Entscheidung offen | offen |
-| 261 | Version steht auf 0.1.0(-SNAPSHOT) statt 1.0.0; JAR-Name weicht von der Doku ab (kein finalName) | [`betrieb.md`](betrieb.md) §9 | Fehler | offen |
+| 261 | JAR-Name weicht von der Doku ab (kein finalName); Version stand auf 0.1.0(-SNAPSHOT) | [`betrieb.md`](betrieb.md) §9 | Fehler | offen — Version am 16.10.2026 auf 1.0.0 gesetzt; offen bleibt der Artefaktname |
 | 262 | Bootstrap des ersten Kontos in der Produktion nicht belegt; OVERLORD_BOOTSTRAP_ADMIN_* fehlen in .env.example | [`betrieb.md`](betrieb.md) §9 | Verbesserung | offen — die Namen stehen seit dem 16.10.2026 in `backend/.env.example`; ob die Produktion so angelegt wurde, ist offen |
 | 263 | Ziel und Aufbewahrung der Protokollausgabe in der Produktion nicht belegt | [`betrieb.md`](betrieb.md) §9 | Entscheidung offen | offen |
 
