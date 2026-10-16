@@ -192,6 +192,9 @@ tabelle;monitor;process_catalog
 tabelle;monitor;rollup_lauf
 tabelle;monitor;SPRING_SESSION
 tabelle;monitor;SPRING_SESSION_ATTRIBUTES
+tabelle;monitor;task
+tabelle;monitor;task_type
+tabelle;monitor;task_type_mandant
 
 # Nachgezogen am 16.10.2026 (offener Punkt 252): message_rollup, message_rollup_tag,
 # message_rollup_monat und rollup_lauf mit ihren Indizes. Sie kamen mit V9 bis V12 nach der
@@ -235,3 +238,20 @@ index;monitor;SPRING_SESSION;SPRING_SESSION_IX2;EXPIRY_TIME;nein
 index;monitor;SPRING_SESSION;SPRING_SESSION_IX3;PRINCIPAL_NAME;nein
 
 index;monitor;SPRING_SESSION_ATTRIBUTES;PRIMARY;SESSION_PRIMARY_ID,ATTRIBUTE_NAME;ja
+
+# Linie assistent, A1 (16.10.2026): task, task_type und task_type_mandant aus V100
+# (docs/tasks.md §5.1). Erhoben aus information_schema.STATISTICS der Testkopie nach der
+# Migration, von Hand uebernommen und gegen V100 abgeglichen — keine Abweichung. Der
+# Fremdschluessel fk_task_type_mandant_typ nutzt den Primaerschluessel von
+# task_type_mandant und hat keinen eigenen Index. Auf main nimmt IndexbestandDbIT die drei
+# Tabellen aus der Pruefung der Tabellenliste aus (DEVELOPMENT_GUIDELINES.md §12); ihre
+# Indizes prueft main nicht, weil main sie hier nicht fuehrt.
+
+index;monitor;task;PRIMARY;task_id;ja
+index;monitor;task;task_mandant_idx;mandant_id,eingestellt_am;nein
+index;monitor;task;task_status_idx;status,eingestellt_am;nein
+index;monitor;task;uq_task_anfrage;mandant_id,anfrage_id;ja
+
+index;monitor;task_type;PRIMARY;task_typ;ja
+
+index;monitor;task_type_mandant;PRIMARY;task_typ,mandant_id;ja

@@ -14,6 +14,9 @@ import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.MessageRollupMonat;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.MessageRollupTag;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.ProcessCatalog;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.RollupLauf;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.Task;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.TaskType;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.TaskTypeMandant;
 
 
 /**
@@ -71,4 +74,19 @@ public class Tables {
      * The table <code>overlord_monitor.rollup_lauf</code>.
      */
     public static final RollupLauf ROLLUP_LAUF = RollupLauf.ROLLUP_LAUF;
+
+    /**
+     * The table <code>overlord_monitor.task</code>.
+     */
+    public static final Task TASK = Task.TASK;
+
+    /**
+     * The table <code>overlord_monitor.task_type</code>.
+     */
+    public static final TaskType TASK_TYPE = TaskType.TASK_TYPE;
+
+    /**
+     * The table <code>overlord_monitor.task_type_mandant</code>.
+     */
+    public static final TaskTypeMandant TASK_TYPE_MANDANT = TaskTypeMandant.TASK_TYPE_MANDANT;
 }

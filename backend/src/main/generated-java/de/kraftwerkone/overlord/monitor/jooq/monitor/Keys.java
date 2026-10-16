@@ -14,6 +14,9 @@ import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.MessageRollupMonat;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.MessageRollupTag;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.ProcessCatalog;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.RollupLauf;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.Task;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.TaskType;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.TaskTypeMandant;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.AppUserMandantRecord;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.AppUserRecord;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.AuditLogRecord;
@@ -24,6 +27,9 @@ import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.MessageRollu
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.MessageRollupTagRecord;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.ProcessCatalogRecord;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.RollupLaufRecord;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.TaskRecord;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.TaskTypeMandantRecord;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.TaskTypeRecord;
 
 import org.jooq.ForeignKey;
 import org.jooq.TableField;
@@ -55,10 +61,15 @@ public class Keys {
     public static final UniqueKey<MessageRollupTagRecord> KEY_MESSAGE_ROLLUP_TAG_PRIMARY = Internal.createUniqueKey(MessageRollupTag.MESSAGE_ROLLUP_TAG, DSL.name("KEY_message_rollup_tag_PRIMARY"), new TableField[] { MessageRollupTag.MESSAGE_ROLLUP_TAG.TAG, MessageRollupTag.MESSAGE_ROLLUP_TAG.PROCESS_ID, MessageRollupTag.MESSAGE_ROLLUP_TAG.MESSAGE_STATUS }, true);
     public static final UniqueKey<ProcessCatalogRecord> KEY_PROCESS_CATALOG_PRIMARY = Internal.createUniqueKey(ProcessCatalog.PROCESS_CATALOG, DSL.name("KEY_process_catalog_PRIMARY"), new TableField[] { ProcessCatalog.PROCESS_CATALOG.PROCESS_ID }, true);
     public static final UniqueKey<RollupLaufRecord> KEY_ROLLUP_LAUF_PRIMARY = Internal.createUniqueKey(RollupLauf.ROLLUP_LAUF, DSL.name("KEY_rollup_lauf_PRIMARY"), new TableField[] { RollupLauf.ROLLUP_LAUF.ID }, true);
+    public static final UniqueKey<TaskRecord> KEY_TASK_PRIMARY = Internal.createUniqueKey(Task.TASK, DSL.name("KEY_task_PRIMARY"), new TableField[] { Task.TASK.TASK_ID }, true);
+    public static final UniqueKey<TaskRecord> KEY_TASK_UQ_TASK_ANFRAGE = Internal.createUniqueKey(Task.TASK, DSL.name("KEY_task_uq_task_anfrage"), new TableField[] { Task.TASK.MANDANT_ID, Task.TASK.ANFRAGE_ID }, true);
+    public static final UniqueKey<TaskTypeRecord> KEY_TASK_TYPE_PRIMARY = Internal.createUniqueKey(TaskType.TASK_TYPE, DSL.name("KEY_task_type_PRIMARY"), new TableField[] { TaskType.TASK_TYPE.TASK_TYP }, true);
+    public static final UniqueKey<TaskTypeMandantRecord> KEY_TASK_TYPE_MANDANT_PRIMARY = Internal.createUniqueKey(TaskTypeMandant.TASK_TYPE_MANDANT, DSL.name("KEY_task_type_mandant_PRIMARY"), new TableField[] { TaskTypeMandant.TASK_TYPE_MANDANT.TASK_TYP, TaskTypeMandant.TASK_TYPE_MANDANT.MANDANT_ID }, true);
 
     // -------------------------------------------------------------------------
     // FOREIGN KEY definitions
     // -------------------------------------------------------------------------
 
     public static final ForeignKey<AppUserMandantRecord, AppUserRecord> FK_APP_USER_MANDANT_USER = Internal.createForeignKey(AppUserMandant.APP_USER_MANDANT, DSL.name("fk_app_user_mandant_user"), new TableField[] { AppUserMandant.APP_USER_MANDANT.USER_ID }, Keys.KEY_APP_USER_PRIMARY, new TableField[] { AppUser.APP_USER.ID }, true, ForeignKeyRule.CASCADE, ForeignKeyRule.RESTRICT);
+    public static final ForeignKey<TaskTypeMandantRecord, TaskTypeRecord> FK_TASK_TYPE_MANDANT_TYP = Internal.createForeignKey(TaskTypeMandant.TASK_TYPE_MANDANT, DSL.name("fk_task_type_mandant_typ"), new TableField[] { TaskTypeMandant.TASK_TYPE_MANDANT.TASK_TYP }, Keys.KEY_TASK_TYPE_PRIMARY, new TableField[] { TaskType.TASK_TYPE.TASK_TYP }, true, ForeignKeyRule.CASCADE, ForeignKeyRule.RESTRICT);
 }
