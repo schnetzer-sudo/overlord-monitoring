@@ -217,6 +217,15 @@ spring:
   config:
     activate:
       on-profile: dev
+  # NUR hier an (Entscheidung 6, 16.10.2026). main und assistent teilen sich die
+  # Testkopie; die Assistent-Linie zaehlt ihre Migrationen ab V100. Kommt danach auf
+  # main ein Fix mit V13 dazu, liegt er unter einer bereits angewandten V100 und waere
+  # ohne out-of-order ein Validierungsfehler. Umgekehrt ignoriert main eine fremde
+  # V100 ueber die Vorgabe ignore-migration-patterns "*:future" (Flyway 12.4.0 und
+  # Boot 4.1.0, aus den Klassen gelesen) -- sie wird deshalb nicht gesetzt.
+  # In der Produktion gilt die strenge Reihenfolge: dort laeuft nur eine Linie.
+  flyway:
+    out-of-order: true
 
 overlord:
   ablagenpruefung:

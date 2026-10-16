@@ -18,8 +18,18 @@ Lies in dieser Reihenfolge, **bevor** du Code schreibst:
 3. Die für die Aufgabe relevanten Dateien in `docs/` — mindestens
    `docs/PROJEKTBESCHREIBUNG.md` und `docs/datenmodell.md`
 
-`docs/PROJEKTBESCHREIBUNG.md` und `docs/IMPLEMENTIERUNGSPLAN_MVP.md` sind die verbindliche
-Wahrheit. Bei Widerspruch zwischen Code und diesen Dateien gilt die Datei.
+`docs/PROJEKTBESCHREIBUNG.md` ist die verbindliche Wahrheit. Bei Widerspruch zwischen Code und
+dieser Datei gilt die Datei. Die Planung steht seit 1.0.0 in `docs/ROADMAP.md`; der
+`docs/IMPLEMENTIERUNGSPLAN_MVP.md` ist abgeschlossen.
+
+## Zweig prüfen
+
+Vor jeder Arbeit `git branch --show-current`. Seit Version 1.0.0 gibt es zwei Linien
+(`DEVELOPMENT_GUIDELINES.md` §12):
+
+- **`main` und `fix/*`:** Release-Linie 1.x, nur Fixes. **Keine Arbeit an der Assistent-Linie.**
+- **`assistent` und `assistent/*`:** Migrationen ab `V100`, projektweite Nummern (M, offene Punkte,
+  projektweite E) ab 1000.
 
 ## Die unverhandelbaren Regeln — Kurzfassung
 
@@ -84,7 +94,7 @@ Formatverstößen fehl; `pnpm build` läuft erst nach `lint` und `typecheck`.
   geratenen Partner, Richtungen oder Belegarten aus Namen ableiten. Nicht zugeordnet heißt
   „nicht zugeordnet“.
 - **Nicht** über den Umfang des aktuellen Schritts hinausbauen. Die Abgrenzung jedes Schritts
-  steht in `docs/IMPLEMENTIERUNGSPLAN_MVP.md`.
+  steht in seinem Auftrag (Vorlage in `docs/ROADMAP.md`).
 
 ## Bei Unklarheit
 

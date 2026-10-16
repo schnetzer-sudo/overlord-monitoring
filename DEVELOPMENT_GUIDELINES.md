@@ -2,8 +2,8 @@
 
 Stand: 24.07.2026 · Abgeleitet aus `docs/PROJEKTBESCHREIBUNG.md`.
 
-Diese Datei beschreibt **wie** gebaut wird. **Was** gebaut wird, steht in
-`docs/PROJEKTBESCHREIBUNG.md` und `docs/IMPLEMENTIERUNGSPLAN_MVP.md`. Bei Widerspruch zwischen
+Diese Datei beschreibt **wie** gebaut wird. **Was** gebaut ist, steht in
+`docs/PROJEKTBESCHREIBUNG.md`, was gebaut wird, in `docs/ROADMAP.md`. Bei Widerspruch zwischen
 dieser Datei und der Projektbeschreibung gilt die Projektbeschreibung.
 
 ---
@@ -233,11 +233,12 @@ Diese Regeln werden nicht abgewogen. Wer meint, eine davon brechen zu müssen, f
 Query-Parameter, nicht im Body, nicht im Header. Der Mandant wird ausschließlich aus der Session
 gelesen.
 
-**Genau zwei Ausnahmen**, beide namentlich in [`docs/mandantentrennung.md`](docs/mandantentrennung.md)
-geführt: `POST /api/auth/mandant` (Wechsel, geprüft gegen die zulässige Menge) und
-`POST /api/admin/users` (Anlegen eines Kontos, nur ADMIN). Die erste fragt einen Datenausschnitt, die
-zweite definiert ein Konto. Taucht dort jemals eine dritte auf, ist das ein Signal und keine
-Kleinigkeit.
+**Genau drei Ausnahmen**, alle namentlich in [`docs/mandantentrennung.md`](docs/mandantentrennung.md)
+§3 geführt: `POST /api/auth/mandant` (Wechsel, geprüft gegen die zulässige Menge),
+`POST /api/admin/users` (Anlegen eines Kontos, nur ADMIN) und `PUT /api/admin/users/{id}/tenants`
+(Pflege der Mandantenmenge eines Kontos, nur ADMIN, seit Schritt 9a). Alle drei definieren eine
+Berechtigung, statt einen Datenausschnitt abzufragen. Taucht dort jemals eine vierte auf, ist das ein
+Signal und keine Kleinigkeit. *(Nachgezogen am 16.10.2026, Punkt 254: Hier standen zwei.)*
 
 **M2 — Jede Repository-Methode bekommt den Mandanten als ersten Pflichtparameter.** Es gibt keine
 Überladung ohne ihn. Eine Methode `findById(String messageId)` ohne Mandant darf nicht existieren,
@@ -255,10 +256,20 @@ Regel maschinell (ab Schritt 3): Jede öffentliche Methode einer Klasse, die Typ
 > mandantengefiltert, und `common` darf nicht an `security` hängen. Regel M2 und die ArchUnit-Prüfung
 > sind unverändert; `PaketstrukturTest` importiert den Typ nur von der neuen Stelle.
 
-Die **einzige** Ausnahme sind die Methoden, die den Kontext erst *herstellen* — sie lesen die Menge
-der zulässigen Mandanten, bevor feststeht, welcher aktiv ist. Sie tragen `@OhneMandantenkontext` mit
-Pflichtbegründung, stehen ausschließlich im `MandantRepository` und liefern niemals fachliche Daten.
-Vollständig geführt in [`docs/mandantentrennung.md`](docs/mandantentrennung.md).
+**Genau drei Ausnahmen**, vollständig geführt in
+[`docs/mandantentrennung.md`](docs/mandantentrennung.md) §4 und von `PaketstrukturTest` namentlich und
+eng gehalten:
+
+1. **Die Methoden, die den Kontext erst *herstellen*** — sie lesen die Menge der zulässigen
+   Mandanten, bevor feststeht, welcher aktiv ist. Sie tragen `@OhneMandantenkontext` mit
+   Pflichtbegründung, stehen ausschließlich im `MandantRepository` und liefern niemals fachliche
+   Daten.
+2. **`RollupLeseRepository`** (seit 26.08.2026, Schritt 10a): Der Rollup-Job liest `Message`
+   mandantenfrei; der Mandant kommt erst zur Lesezeit über die Kette dazu.
+3. **`DienstLeseRepository`** (seit 10.09.2026, E‑123): liest ausschließlich `GlassfishDB.Service`,
+   eine Tabelle ohne Mandantenbezug.
+
+*(Nachgezogen am 16.10.2026, Punkt 254: Hier stand „die einzige“.)*
 
 **M3 — Der Filter über `ProjectMandant` ist Bestandteil jedes Statements**, nicht nachgelagerte
 Prüfung. Wer eine fremde `MessageID` errät, bekommt null Zeilen — weil die Zeile für ihn nie
@@ -1114,8 +1125,8 @@ Ein Schritt ist fertig, wenn **alle** Punkte zutreffen. Nicht „im Wesentlichen
 - [ ] Die CI ist grün
 
 **Fachlich**
-- [ ] Das Abnahmekriterium des Schritts aus `docs/IMPLEMENTIERUNGSPLAN_MVP.md` ist erfüllt und
-      wurde tatsächlich ausgeführt — nicht nur plausibel
+- [ ] Das Abnahmekriterium des Schritts aus seinem Auftrag (Vorlage `docs/ROADMAP.md` §4) ist
+      erfüllt und wurde tatsächlich ausgeführt — nicht nur plausibel
 - [ ] Die Abgrenzung des Schritts wurde eingehalten, es wurde nichts vorgezogen
 
 **Sicherheit**
@@ -1141,3 +1152,101 @@ Ein Schritt ist fertig, wenn **alle** Punkte zutreffen. Nicht „im Wesentlichen
 - [ ] Berührt die Änderung eine Regel aus Abschnitt 4, ist das hier vermerkt
 
 **Ohne Dokumentation ist ein Schritt nicht fertig, auch wenn der Code läuft.**
+
+---
+
+## 12. Zweige und Releases
+
+*Angelegt am 16.10.2026 mit Version 1.0.0.* Herkunft der Entscheidungen: **A** = vom Auftraggeber
+am 15. oder 16.10.2026 entschieden, **V** = Vorschlag vom 16.10.2026, ohne Einspruch übernommen.
+
+### Zwei Linien *(Entscheidung 2, A)*
+
+| Zweig | Rolle | Was darauf landet |
+|---|---|---|
+| `main` | **Release-Linie 1.x** | **nur Fixes**, über Zweige `fix/<thema>` |
+| `assistent` | Weiterentwicklung „Aufträge über den Assistenten“ (A1 bis A4, [`docs/ROADMAP.md`](docs/ROADMAP.md)) | Teilschritte über Zweige `assistent/<teil>` |
+
+- `assistent` ist ein langlebiger Zweig ab dem Tag `v1.0.0`.
+- **Merge-Richtung:** Nach jedem Fix-Release wird `main` in `assistent` gemergt, **nie umgekehrt**.
+  Am Ende wird `assistent` **einmal** nach `main` gemergt; das wird Release 1.1.0.
+- Die CI baut Pushes auf `main` und `assistent` und jeden Pull Request
+  ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
+
+### Versionen, Tags und `CHANGELOG.md`
+
+- Versionen nach **SemVer**. Ein Fix erhöht die Patch-Version (1.0.1, 1.0.2, …); der Merge der
+  Assistent-Linie wird **1.1.0**.
+- **Ein Tag je Release** auf `main`, Form `v<version>`. Den Tag setzt Lukas.
+- **Jedes Release hat einen Eintrag in [`CHANGELOG.md`](CHANGELOG.md)** mit Datum und den
+  Abschnitten „Neu“, „Geändert“, „Behoben“. Was noch kein Release hat, steht unter
+  „Unveröffentlicht“.
+
+### Migrationen und Codegen auf zwei Linien *(Entscheidungen 6 und 8, V)*
+
+Beide Linien laufen gegen **dieselbe Testkopie** und damit gegen dasselbe `overlord_monitor`. Drei
+Regeln halten sie auseinander:
+
+1. **Migrationen der Assistent-Linie beginnen bei `V100`.** `main` zählt unterhalb weiter. So
+   kollidiert keine Versionsnummer, wenn ein Fix und ein Assistent-Schritt gleichzeitig eine
+   Migration brauchen.
+2. **Im Profil `dev` läuft Flyway mit `out-of-order`, in keinem anderen Profil**
+   (`application.yml`, gehalten von `FlywayOutOfOrderTest`). Hat `assistent` auf der Testkopie schon
+   `V100` angewandt, liegt ein späterer Fix mit `V13` darunter und wäre ohne `out-of-order` ein
+   Validierungsfehler. Die Gegenrichtung braucht keine Einstellung: `ignore-migration-patterns` hat
+   die Vorgabe `*:future` (Flyway 12.4.0, Boot 4.1.0), `main` startet also gegen eine Testkopie mit
+   fremder `V100`. In der Produktion läuft nur eine Linie, dort bleibt die strenge Reihenfolge.
+3. **Auf `main` schließt die jOOQ-Codegenerierung für `overlord_monitor` die Tabellen der
+   Assistent-Linie aus** (`task`, `task_type`, `task_type_mandant`; `<excludes>` in
+   `backend/pom.xml`). Der Codegen liest die Datenbank, nicht die Migrationen: Ohne den Ausschluss entstünden auf `main`
+   Klassen für Tabellen, die keine Migration von `main` anlegt, sobald `assistent` sie auf der
+   Testkopie angelegt hat. Der Ausschluss ist ein eigener Commit und wird auf `assistent` per
+   `git revert` zurückgenommen. Im selben Commit nimmt `IndexbestandDbIT` die drei Tabellen aus der
+   Prüfung der Tabellenliste von `overlord_monitor` aus, aus demselben Grund. Kommt auf `assistent`
+   eine weitere Tabelle hinzu, gehört sie auf `main` in beide Ausschlüsse.
+
+### Nummernvergabe
+
+Vor jeder Vergabe wird die höchste vergebene Nummer per `grep` über `docs/` ermittelt.
+
+- **E-Nummern (Entscheidungen) werden projektweit vergeben**, als `E‑<n>` mit geschütztem
+  Bindestrich — seit dem 24.08.2026 (`E‑a` bis `E‑z`), numerisch ab `E‑27` am 01.09.2026
+  ([`docs/testfestigkeit.md`](docs/testfestigkeit.md) §10.6). **Ältere, je Datei vergebene
+  Kennungen** (`E1`, `E14` ohne Bindestrich) **bleiben mit ihrer Fundstelle gültig** und werden nie
+  ohne ihre Datei genannt *(Entscheidung des Auftraggebers vom 16.10.2026; die Festlegung „je
+  Feature-Datei“ vom 21.08.2026 beschrieb die Praxis seit dem 24.08.2026 nicht mehr)*.
+- **M-Nummern** (Messungen) und **offene Punkte** zählen projektweit. Jeder offene Punkt steht in
+  seiner Feature-Datei und im Register [`docs/offene-punkte.md`](docs/offene-punkte.md), wo auch die
+  nächste freie Nummer steht.
+- **Lokale Punkte ohne projektweite Nummer** (Listen vor der projektweiten Zählung, unnummerierte
+  Aufzählungen) stehen im Register mit ihrer Fundstelle als Kennung und dem Stand *ungeprüft*. **Ein
+  lokaler Punkt bekommt eine projektweite Nummer erst, wenn jemand ihn wieder aufgreift** — auf
+  `main` die nächste freie, auf `assistent` ab 1000 *(Entscheidung des Auftraggebers vom
+  16.10.2026)*.
+- **Auf `assistent` beginnen alle projektweit gezählten Nummern bei 1000** *(Entscheidung 7, V)*:
+  M-Nummern, offene Punkte und E-Nummern. `main` zählt unterhalb weiter. So kollidiert nach dem
+  Merge keine Nummer, und an der Nummer ist die Linie ablesbar.
+
+### Doku ab 1.0.0 *(Entscheidung 9, V)*
+
+- **`docs/PROJEKTBESCHREIBUNG.md` und `docs/README.md` beschreiben den aktuellen Stand.** Eine
+  Änderung ersetzt den Text; es entsteht kein Korrekturkasten. **Commit und `CHANGELOG.md` nennen
+  Grund und Entscheidung.** Die Fassungen vor 1.0.0 liegen unverändert in `docs/archiv/`.
+- **Feature- und Messdateien behalten die datierten Korrekturblöcke** als Regel: Dort ist die
+  Vorgeschichte der Beleg.
+- Offene Punkte stehen in ihrer Feature-Datei **und** im Register
+  [`docs/offene-punkte.md`](docs/offene-punkte.md); ein Statuswechsel wird an beiden Stellen
+  nachgeführt.
+
+### Definition of Done für ein Release
+
+Ein Release ist fertig, wenn **alle** Punkte zutreffen:
+
+- [ ] Die CI ist auf dem Release-Stand grün
+- [ ] `CHANGELOG.md` hat den Eintrag mit Version und Datum, „Unveröffentlicht“ ist
+      wieder leer
+- [ ] Das Register [`docs/offene-punkte.md`](docs/offene-punkte.md) ist nachgeführt: Was das
+      Release erledigt, steht dort und in der Feature-Datei als erledigt, mit Verweis
+- [ ] Die betroffene Doku ist aktuell — Feature-Dateien nach Abschnitt 11, Projektbeschreibung und
+      `docs/README.md` nach der Regel oben
+- [ ] Der Tag ist gesetzt; nach einem Fix-Release ist `main` in `assistent` gemergt

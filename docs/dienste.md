@@ -676,7 +676,7 @@ SPRING_PROFILES_ACTIVE=prod,rollup \
   java -jar overlord-monitor.jar --overlord.ablagenpruefung.aktiv=false
 ```
 
-**Lokal einschalten** — wie, steht in [`../START-LOKAL.md`](../START-LOKAL.md):
+**Lokal einschalten** — wie, steht in [`START-LOKAL.md`](START-LOKAL.md) *(Verweis berichtigt am 16.10.2026, hier stand `../START-LOKAL.md`)*:
 
 ```
 cd backend && ./mvnw spring-boot:run -Dspring-boot.run.arguments=--overlord.ablagenpruefung.aktiv=true
