@@ -159,7 +159,7 @@ Archiv und meist in einer Feature-Datei. *Überholt durch* = die Aussage gilt ni
 | 1604 Kasten *Läuft*, *Wartend* (E‑72, E‑73, M143) | | neu §8 Regel 2, Tabelle Nr. 1 und 2 |
 | 1646 Kasten Live-Rest (M185, M186) | | neu §8 Regel 2, Tabelle Nr. 3 |
 | 1689 Kasten Fehler live (E‑208, M188, M189) | | neu §8 Regel 2, Tabelle Nr. 4 |
-| — | Block 6 „Zuletzt aufgefallen“ | **neu** in §8 Regel 2 als ungeklärt (Punkt 253); in der alten Fassung nicht erwähnt |
+| — | Block 6 „Zuletzt aufgefallen“ | **neu** in §8 Regel 2 als fünfte benannte Ausnahme (Entscheidung vom 16.10.2026, Punkt 253); in der alten Fassung nicht erwähnt |
 | Regel 3 | | neu §8; „Beleg- und Property-Suche blättern nicht“ ist neu dazugeschrieben (aus [`bam-suche.md`](../bam-suche.md) §5) |
 | Regel 4 und 1735 Kasten E‑102 | | neu §8 Regel 4 |
 | Regel 5 | | neu §8; die gebauten Abweichungen (keine Mindestlänge) sind neu dazugeschrieben, ihr Status als Ausnahme offen |

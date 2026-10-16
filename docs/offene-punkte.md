@@ -40,17 +40,17 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
 
 | | Teil 1: projektweit | Teil 2: Sichtprüfungen | Teil 3: lokal |
 |---|---:|---:|---:|
-| offen — Fehler | 34 | 0 | — |
+| offen — Fehler | 32 | 0 | — |
 | offen — Verbesserung | 35 | 0 | — |
-| offen — Entscheidung offen | 47 | 0 | — |
+| offen — Entscheidung offen | 46 | 0 | — |
 | offen — Sichtprüfung oder Messung offen | 49 | 13 | — |
-| **offen gesamt** | **165** | **13** | — |
+| **offen gesamt** | **162** | **13** | — |
 | ungeprüft | — | — | 357 |
-| erledigt | 50 | 0 | 64 |
+| erledigt | 53 | 0 | 64 |
 | gegenstandslos | 3 | 0 | 5 |
 | **Zeilen** | 218 | 13 | 426 |
 
-Offen sind damit **178** nummerierte Punkte; dazu kommen 357 ungeprüfte lokale.
+Offen sind damit **175** nummerierte Punkte; dazu kommen 357 ungeprüfte lokale.
 
 ### Wie das Register erhoben ist
 
@@ -273,9 +273,9 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 249 | Ob EBCDIC im Bestand vorkommt, nicht gemessen | [`rohdaten.md`](rohdaten.md) §13 · bis 16.10.2026 doppelt als 187 geführt | Sichtprüfung oder Messung offen | offen |
 | 250 | EBCDIC-Datei mit Nullbytes bleibt BINAERDATEI | [`rohdaten.md`](rohdaten.md) §13 · bis 16.10.2026 doppelt als 188 geführt | Fehler | offen — hingenommen, nicht geschlossen |
 | 251 | Einstufung über alle Bytes (bis 8 MiB) nicht gemessen | [`rohdaten.md`](rohdaten.md) §13 · bis 16.10.2026 doppelt als 189 geführt | Sichtprüfung oder Messung offen | offen |
-| 252 | IndexbestandDbIT rot: Sollliste führt message_rollup, _tag, _monat und rollup_lauf nicht (seit V9–V12) | [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md), Ausnahme vom Vorrang · festgestellt 16.10.2026 | Fehler | offen |
-| 253 | Block 6 „Zuletzt aufgefallen“ zählt seit E‑90 live über Message und ist nicht als Ausnahme von Regel 2 eingeordnet | [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §8 Regel 2 · [`dashboard.md`](dashboard.md) §7a | Entscheidung offen | offen |
-| 254 | DEVELOPMENT_GUIDELINES zählt die Ausnahmen von M1 („genau zwei“) und M2 („die einzige“) veraltet; es sind je drei | [`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) §4.1 · [`mandantentrennung.md`](mandantentrennung.md) §3, §4 | Fehler | offen |
+| 252 | IndexbestandDbIT rot: Sollliste führt message_rollup, _tag, _monat und rollup_lauf nicht (seit V9–V12) | [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md), Ausnahme vom Vorrang · festgestellt 16.10.2026 | Fehler | **erledigt** — Sollliste am 16.10.2026 nachgezogen, gegen die Migrationen abgeglichen; `IndexbestandDbIT` 5 von 5 grün |
+| 253 | Block 6 „Zuletzt aufgefallen“ zählt seit E‑90 live über Message und ist nicht als Ausnahme von Regel 2 eingeordnet | [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §8 Regel 2 · [`dashboard.md`](dashboard.md) §7a | Entscheidung offen | **erledigt** — `PROJEKTBESCHREIBUNG.md` §8 Regel 2: fünfte benannte Ausnahme, gemessen in M146 (Entscheidung vom 16.10.2026) |
+| 254 | DEVELOPMENT_GUIDELINES zählt die Ausnahmen von M1 („genau zwei“) und M2 („die einzige“) veraltet; es sind je drei | [`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) §4.1 · [`mandantentrennung.md`](mandantentrennung.md) §3, §4 | Fehler | **erledigt** — `DEVELOPMENT_GUIDELINES.md` §4.1 nachgezogen am 16.10.2026 |
 | 255 | Betriebsform (systemd oder Container), Serverpfade, Dienstbenutzer und Units nicht belegt | [`betrieb.md`](betrieb.md) §9 | Entscheidung offen | offen |
 | 256 | Reverse Proxy: Konfiguration, Domain, Zertifikat und Routing von /api nicht im Repository | [`betrieb.md`](betrieb.md) §9 | Entscheidung offen | offen |
 | 257 | Ob IP-Begrenzung und audit_log hinter dem Proxy die echte Client-IP sehen, ist ungeprüft | [`betrieb.md`](betrieb.md) §9 | Sichtprüfung oder Messung offen | offen |
@@ -283,7 +283,7 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 259 | Sicherung von overlord_monitor (process_catalog, bam_sollaenge) und Wiederherstellung nicht beschrieben | [`betrieb.md`](betrieb.md) §9 | Entscheidung offen | offen |
 | 260 | Release-Bau und Auslieferung nach dem Tag nicht beschrieben; die CI liefert nichts aus | [`betrieb.md`](betrieb.md) §9 | Entscheidung offen | offen |
 | 261 | Version steht auf 0.1.0(-SNAPSHOT) statt 1.0.0; JAR-Name weicht von der Doku ab (kein finalName) | [`betrieb.md`](betrieb.md) §9 | Fehler | offen |
-| 262 | Bootstrap des ersten Kontos in der Produktion nicht belegt; OVERLORD_BOOTSTRAP_ADMIN_* fehlen in .env.example | [`betrieb.md`](betrieb.md) §9 | Verbesserung | offen |
+| 262 | Bootstrap des ersten Kontos in der Produktion nicht belegt; OVERLORD_BOOTSTRAP_ADMIN_* fehlen in .env.example | [`betrieb.md`](betrieb.md) §9 | Verbesserung | offen — die Namen stehen seit dem 16.10.2026 in `backend/.env.example`; ob die Produktion so angelegt wurde, ist offen |
 | 263 | Ziel und Aufbewahrung der Protokollausgabe in der Produktion nicht belegt | [`betrieb.md`](betrieb.md) §9 | Entscheidung offen | offen |
 
 ---

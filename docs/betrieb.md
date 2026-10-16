@@ -55,7 +55,7 @@ Nur Namen; Werte stehen nie im Repository (Regel G1). Vorlagen: `backend/.env.ex
 | `OVERLORD_DB_MONITOR_SCHEMA` | Backend | eigenes Schema, auch Ziel von Flyway | ja |
 | `OVERLORD_DB_READ_USER`, `OVERLORD_DB_READ_PASSWORD` | Backend | Lese-Benutzer | ja |
 | `OVERLORD_DB_WRITE_USER`, `OVERLORD_DB_WRITE_PASSWORD` | Backend | Schreib-Benutzer (nur `overlord_monitor`) | ja |
-| `OVERLORD_BOOTSTRAP_ADMIN_USER`, `OVERLORD_BOOTSTRAP_ADMIN_PASSWORD` | Backend | nur mit Profil `bootstrap`; **fehlen in `.env.example`** | mit `bootstrap` |
+| `OVERLORD_BOOTSTRAP_ADMIN_USER`, `OVERLORD_BOOTSTRAP_ADMIN_PASSWORD` | Backend | nur mit Profil `bootstrap` (seit 16.10.2026 in `.env.example`) | mit `bootstrap` |
 | `OVERLORD_BACKEND_URL` | Frontend | Ziel der `/api`-Weiterleitung, serverseitig | nein, Vorgabe `http://localhost:8080` |
 
 Der Codegen und das Flyway-Maven-Plugin lesen dieselben `OVERLORD_DB_*`.
@@ -148,5 +148,5 @@ Nicht im Repository belegt. Je Frage ein Eintrag im Register.
 | 259 | **Sicherung:** Wie und wie oft wird `overlord_monitor` gesichert, insbesondere `process_catalog` und `bam_sollaenge` vor jedem Schemaeingriff, und wer stellt wieder her? Davon hängt der Rollback in §8 ab |
 | 260 | **Release-Bau und Auslieferung:** Wer baut nach dem Tag JAR und Frontend, wo, und wie kommen sie auf den Server? |
 | 261 | **Version und Artefaktname:** `backend/pom.xml` steht auf `0.1.0-SNAPSHOT`, `frontend/package.json` auf `0.1.0`; das Release heißt 1.0.0. Ohne `finalName` trägt das JAR die Version im Namen, die Doku schreibt `overlord-monitor.jar` (`rollup.md`, `dienste.md`). Wird die Version vor dem Tag angehoben? |
-| 262 | **Bootstrap in der Produktion:** Ist das erste Konto über `prod,bootstrap` angelegt worden? Die beiden `OVERLORD_BOOTSTRAP_ADMIN_*` fehlen in `backend/.env.example` |
+| 262 | **Bootstrap in der Produktion:** Ist das erste Konto über `prod,bootstrap` angelegt worden? (Die beiden `OVERLORD_BOOTSTRAP_ADMIN_*` stehen seit dem 16.10.2026 in `backend/.env.example`.) |
 | 263 | **Protokolle:** Wohin geht die Konsolenausgabe (journald, Container, Datei), und wie lange wird sie aufbewahrt? |

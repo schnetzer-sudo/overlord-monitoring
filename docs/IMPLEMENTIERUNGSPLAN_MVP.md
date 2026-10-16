@@ -8,8 +8,8 @@ Stand: 24.08.2026 · Ergänzt `PROJEKTBESCHREIBUNG.md`
 > [`offene-punkte.md`](offene-punkte.md); die Statustabelle darunter verweist je Schritt auf sie
 > (offen = projektweit nummeriert, ungeprüft = lokale Punkte ohne Nummer). Schritt 11 (Dunkelmodus)
 > hat in der Tabelle keine Zeile; seine Restpunkte stehen unter `dunkelmodus.md`,
-> `dichte-umschalter.md`, `spaltenwahl.md` und `messungen-sichtprobe-schmal.md` — 23 offen. Zwölf
-> weitere offene Punkte gehören zu keinem Schritt (Projektbeschreibung, Richtlinien, Betrieb).
+> `dichte-umschalter.md`, `spaltenwahl.md` und `messungen-sichtprobe-schmal.md` — 23 offen. Neun
+> weitere offene Punkte gehören zu keinem Schritt (die Fragen zum Betrieb in `betrieb.md`).
 >
 > **Planung steht künftig in [`ROADMAP.md`](ROADMAP.md). Diese Datei wird nicht mehr fortgeschrieben**
 > (Entscheidung 10 vom 16.10.2026). Der Text darunter ist der Stand vom Abschluss; die Aussagen

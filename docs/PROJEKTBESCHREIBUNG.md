@@ -19,10 +19,10 @@ M-Nummer), *Auskunft* (wer, wann) oder *ungedeckt*. Offene Punkte stehen mit Num
 > [`backend/src/test/resources/indizes-sollliste.txt`](../backend/src/test/resources/indizes-sollliste.txt)
 > ist aus `information_schema.STATISTICS` erhoben (21.08.2026) und wird von **`IndexbestandDbIT`**
 > in beide Richtungen bewacht: rot bei einem fehlenden und bei einem undokumentierten Index (E37,
-> gebaut 21.08.2026). Weicht diese Datei von der Sollliste ab, gilt die Sollliste. **Stand
-> 16.10.2026:** Der Test ist in vier von fünf Prüfungen grün; die Prüfung der Tabellenliste von
-> `overlord_monitor` ist rot, weil die Sollliste die Tabellen aus `V9` bis `V12` (`message_rollup`,
-> `message_rollup_tag`, `message_rollup_monat`, `rollup_lauf`) nicht führt — offener Punkt 252.
+> gebaut 21.08.2026). Weicht diese Datei von der Sollliste ab, gilt die Sollliste. Die Sollliste
+> führt seit dem 16.10.2026 auch die Rollup-Tabellen aus `V9` bis `V12` (Punkt 252); auf `main` nimmt
+> die Prüfung der Tabellenliste die Tabellen der Assistent-Linie aus, wie der Codegen
+> ([`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) §12).
 
 ---
 
@@ -616,7 +616,7 @@ unterhalb eines neuen Bestandsanfangs stehen bleiben ([`rollup.md`](rollup.md), 
 
 2. **Keine Live-Aggregation über `Message`.** Dashboard-Kennzahlen kommen aus den Rollup-Tabellen,
    die ein stündlicher Job fortschreibt. Der Grund ist Ladezeit und Ruhe auf der Produktion, nicht
-   Unmöglichkeit — das Altsystem aggregiert tagesweise. **Vier benannte Ausnahmen**, je einzeln
+   Unmöglichkeit — das Altsystem aggregiert tagesweise. **Fünf benannte Ausnahmen**, je einzeln
    begründet, gemessen und gezählt:
 
    | # | Ausnahme | liest live | warum nicht aus dem Rollup | gemessen |
@@ -625,14 +625,15 @@ unterhalb eines neuen Bestandsanfangs stehen bleiben ([`rollup.md`](rollup.md), 
    | 2 | Kachel *Wartend* (E‑73, 03.09.2026) | dasselbe über `SUSPENDED` | wie 1 | M143: 3,34–4,66 ms |
    | 3 | Live-Rest der laufenden Stunde (16./17.09.2026, [`live-rest.md`](live-rest.md)) | `COUNT(*)` je Stundeneimer, Prozess, Rohstatus seit dem letzten Lauf, höchstens vier Eimer | hängt am Takt des Laufs: kurz vor dem nächsten Delta-Lauf fehlte bis zu eine Stunde | M185 (Baum): typisch höchstens 141,6 ms, dichtester Bereich 337,0 ms; M186 (Dashboard): höchstens 388,6 ms |
    | 4 | Fehler live (E‑208, 18.09.2026, [`fehler-live.md`](fehler-live.md)) | `COUNT(*)` je Stundeneimer, Prozess, Rohstatus über die Fehlerbedingung | ein Fehlerstatus ist durch Nachverarbeitung nicht endgültig; der Delta-Lauf entfernt Abgänge aus alten Eimern nicht | M188: Lesung 20,1–31,5 ms, Seite höchstens 418,4 ms; M189 (Baum) höchstens 167,2 ms typisch, 349,3 ms dicht |
+   | 5 | Block 6 „Zuletzt aufgefallen“ (seit E‑90, 04.09.2026; eingetragen 16.10.2026, [`dashboard.md`](dashboard.md) §7a) | je Prozess `COUNT(*)` und jüngster Zeitpunkt der Nachrichten, die die Fehlerbedingung erfüllen, höchstens zehn Zeilen | der Block nennt den jüngsten Zeitpunkt, der Rollup kennt nur die Stunde; und ein Fehlerstatus ist durch Nachverarbeitung nicht endgültig (wie Nr. 4) — *hergeleitet, in `dashboard.md` nicht ausgeschrieben* | M146: 20,0–26,2 ms in SQL, 23,3–30,2 ms durch den Code, Einstieg über `MessageStatusIDX` |
 
    Die Ausnahmen 3 und 4 haben je zwei Verbraucher (Prozessbaum und Dashboard bzw. Übersicht und
    Prozessbaum), aber einen Baustein in `common`; sie bleiben je eine. **Keine Ausnahme** sind die
    Erscheinungsbedingung von *Wartend* (liest Stammdaten, E‑74) und die Katalog-Nachlesung des
    Live-Rests (Primärschlüssel). Die frühere Ausnahme *Überfällig* (E‑c) ist mit E‑71 entfallen.
-   **Ungeklärt ist Block 6 „Zuletzt aufgefallen“:** Er gruppiert seit E‑90 je Prozess mit `COUNT`
-   live über `Message` (M146: 20,0–26,2 ms) und ist nirgends als Ausnahme eingeordnet (Punkt 253).
-   Wer eine weitere Kennzahl live rechnen will, trägt sie hier ein, begründet und misst sie.
+   Block 6 gruppiert seit E‑90 je Prozess; vorher war er eine gedeckelte Liste ohne Aggregation. Als
+   Ausnahme eingetragen ist er seit dem 16.10.2026 (Entscheidung des Auftraggebers, Punkt 253). Wer
+   eine weitere Kennzahl live rechnen will, trägt sie hier ein, begründet und misst sie.
 
 3. **Keine `OFFSET`-Paginierung.** Cursor-basiert über `(MessageLastUpdate, MessageID)`. Beleg- und
    Property-Suche blättern nicht; sie haben ein hartes Limit von 50 Treffern

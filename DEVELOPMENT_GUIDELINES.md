@@ -233,11 +233,12 @@ Diese Regeln werden nicht abgewogen. Wer meint, eine davon brechen zu müssen, f
 Query-Parameter, nicht im Body, nicht im Header. Der Mandant wird ausschließlich aus der Session
 gelesen.
 
-**Genau zwei Ausnahmen**, beide namentlich in [`docs/mandantentrennung.md`](docs/mandantentrennung.md)
-geführt: `POST /api/auth/mandant` (Wechsel, geprüft gegen die zulässige Menge) und
-`POST /api/admin/users` (Anlegen eines Kontos, nur ADMIN). Die erste fragt einen Datenausschnitt, die
-zweite definiert ein Konto. Taucht dort jemals eine dritte auf, ist das ein Signal und keine
-Kleinigkeit.
+**Genau drei Ausnahmen**, alle namentlich in [`docs/mandantentrennung.md`](docs/mandantentrennung.md)
+§3 geführt: `POST /api/auth/mandant` (Wechsel, geprüft gegen die zulässige Menge),
+`POST /api/admin/users` (Anlegen eines Kontos, nur ADMIN) und `PUT /api/admin/users/{id}/tenants`
+(Pflege der Mandantenmenge eines Kontos, nur ADMIN, seit Schritt 9a). Alle drei definieren eine
+Berechtigung, statt einen Datenausschnitt abzufragen. Taucht dort jemals eine vierte auf, ist das ein
+Signal und keine Kleinigkeit. *(Nachgezogen am 16.10.2026, Punkt 254: Hier standen zwei.)*
 
 **M2 — Jede Repository-Methode bekommt den Mandanten als ersten Pflichtparameter.** Es gibt keine
 Überladung ohne ihn. Eine Methode `findById(String messageId)` ohne Mandant darf nicht existieren,
@@ -255,10 +256,20 @@ Regel maschinell (ab Schritt 3): Jede öffentliche Methode einer Klasse, die Typ
 > mandantengefiltert, und `common` darf nicht an `security` hängen. Regel M2 und die ArchUnit-Prüfung
 > sind unverändert; `PaketstrukturTest` importiert den Typ nur von der neuen Stelle.
 
-Die **einzige** Ausnahme sind die Methoden, die den Kontext erst *herstellen* — sie lesen die Menge
-der zulässigen Mandanten, bevor feststeht, welcher aktiv ist. Sie tragen `@OhneMandantenkontext` mit
-Pflichtbegründung, stehen ausschließlich im `MandantRepository` und liefern niemals fachliche Daten.
-Vollständig geführt in [`docs/mandantentrennung.md`](docs/mandantentrennung.md).
+**Genau drei Ausnahmen**, vollständig geführt in
+[`docs/mandantentrennung.md`](docs/mandantentrennung.md) §4 und von `PaketstrukturTest` namentlich und
+eng gehalten:
+
+1. **Die Methoden, die den Kontext erst *herstellen*** — sie lesen die Menge der zulässigen
+   Mandanten, bevor feststeht, welcher aktiv ist. Sie tragen `@OhneMandantenkontext` mit
+   Pflichtbegründung, stehen ausschließlich im `MandantRepository` und liefern niemals fachliche
+   Daten.
+2. **`RollupLeseRepository`** (seit 26.08.2026, Schritt 10a): Der Rollup-Job liest `Message`
+   mandantenfrei; der Mandant kommt erst zur Lesezeit über die Kette dazu.
+3. **`DienstLeseRepository`** (seit 10.09.2026, E‑123): liest ausschließlich `GlassfishDB.Service`,
+   eine Tabelle ohne Mandantenbezug.
+
+*(Nachgezogen am 16.10.2026, Punkt 254: Hier stand „die einzige“.)*
 
 **M3 — Der Filter über `ProjectMandant` ist Bestandteil jedes Statements**, nicht nachgelagerte
 Prüfung. Wer eine fremde `MessageID` errät, bekommt null Zeilen — weil die Zeile für ihn nie
@@ -1190,8 +1201,9 @@ Regeln halten sie auseinander:
    `backend/pom.xml`). Der Codegen liest die Datenbank, nicht die Migrationen: Ohne den Ausschluss entstünden auf `main`
    Klassen für Tabellen, die keine Migration von `main` anlegt, sobald `assistent` sie auf der
    Testkopie angelegt hat. Der Ausschluss ist ein eigener Commit und wird auf `assistent` per
-   `git revert` zurückgenommen. Kommt auf `assistent` eine weitere Tabelle hinzu, gehört sie auf
-   `main` in denselben Ausschluss.
+   `git revert` zurückgenommen. Im selben Commit nimmt `IndexbestandDbIT` die drei Tabellen aus der
+   Prüfung der Tabellenliste von `overlord_monitor` aus, aus demselben Grund. Kommt auf `assistent`
+   eine weitere Tabelle hinzu, gehört sie auf `main` in beide Ausschlüsse.
 
 ### Nummernvergabe
 
