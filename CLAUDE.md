@@ -28,8 +28,9 @@ Vor jeder Arbeit `git branch --show-current`. Seit Version 1.0.0 gibt es zwei Li
 (`DEVELOPMENT_GUIDELINES.md` §12):
 
 - **`main` und `fix/*`:** Release-Linie 1.x, nur Fixes. **Keine Arbeit an der Assistent-Linie.**
-- **`assistent` und `assistent/*`:** Migrationen ab `V100`, projektweite Nummern (M, offene Punkte,
-  projektweite E) ab 1000.
+- **`assistent` und `assistent-*`:** Migrationen ab `V100`, projektweite Nummern (M, offene Punkte,
+  projektweite E) ab 1000. Teilschritte heißen `assistent-<teil>` mit Bindestrich, weil Git neben
+  einem Zweig `assistent` keinen Zweig `assistent/<teil>` anlegen kann.
 
 ## Die unverhandelbaren Regeln — Kurzfassung
 

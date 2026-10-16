@@ -1165,12 +1165,15 @@ am 15. oder 16.10.2026 entschieden, **V** = Vorschlag vom 16.10.2026, ohne Einsp
 | Zweig | Rolle | Was darauf landet |
 |---|---|---|
 | `main` | **Release-Linie 1.x** | **nur Fixes**, über Zweige `fix/<thema>` |
-| `assistent` | Weiterentwicklung „Aufträge über den Assistenten“ (A1 bis A4, [`docs/ROADMAP.md`](docs/ROADMAP.md)) | Teilschritte über Zweige `assistent/<teil>` |
+| `assistent` | Weiterentwicklung „Aufträge über den Assistenten“ (A1 bis A4, [`docs/ROADMAP.md`](docs/ROADMAP.md)) | Teilschritte über Zweige `assistent-<teil>`, z. B. `assistent-a1-auftragsmodell` |
 
 - `assistent` ist ein langlebiger Zweig ab dem Tag `v1.0.0`.
+- **Teilschritte heißen `assistent-<teil>`, mit Bindestrich.** Git kann neben einem Zweig `assistent` keinen Zweig `assistent/<teil>` anlegen: Zweignamen sind Pfade unter `refs/heads/`, und `assistent`
+  kann dort nicht zugleich Datei und Verzeichnis sein *(geändert am 16.10.2026; vorher stand hier
+  `assistent/<teil>`)*.
 - **Merge-Richtung:** Nach jedem Fix-Release wird `main` in `assistent` gemergt, **nie umgekehrt**.
   Am Ende wird `assistent` **einmal** nach `main` gemergt; das wird Release 1.1.0.
-- Die CI baut Pushes auf `main` und `assistent` und jeden Pull Request
+- Die CI baut Pushes auf `main`, `assistent` und `assistent-*` und jeden Pull Request
   ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
 
 ### Versionen, Tags und `CHANGELOG.md`
