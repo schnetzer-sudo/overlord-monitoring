@@ -2,6 +2,7 @@ package de.kraftwerkone.overlord.monitor.task;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import de.kraftwerkone.overlord.monitor.common.auftrag.Testdefinitionen;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;

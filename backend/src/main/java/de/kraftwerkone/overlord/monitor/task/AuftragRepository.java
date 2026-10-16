@@ -1,8 +1,6 @@
 package de.kraftwerkone.overlord.monitor.task;
 
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.TASK;
-import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.TASK_TYPE;
-import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.TASK_TYPE_MANDANT;
 
 import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import java.sql.SQLException;
@@ -25,9 +23,9 @@ import org.springframework.stereotype.Repository;
  * ueber {@code monitorDsl}. {@code GlassfishDB} kommt hier nicht vor.
  *
  * <p><b>Jede Methode traegt den Mandanten als ersten Parameter</b> (Regel M2) und <b>jedes
- * Statement hat ihn im {@code WHERE}</b> (Regel M3), auch das Laden der Typen: Die Freischaltung
- * ist Teil des Statements, nicht ein nachgelagerter Filter. Eine fremde oder erfundene Kennung
- * ergibt dasselbe Statement mit null Zeilen.
+ * Statement hat ihn im {@code WHERE}</b> (Regel M3). Eine fremde oder erfundene Kennung ergibt
+ * dasselbe Statement mit null Zeilen. Das Laden der Typen liegt seit A2 in {@code
+ * common.auftrag.AuftragstypRepository} (E‑1037).
  *
  * <p><b>Keine Uhr in Java</b> (E‑1011): {@code eingestellt_am} und die Grenze der Liste kommen aus
  * {@code UTC_TIMESTAMP(3)} der Datenbank.
@@ -72,10 +70,6 @@ public class AuftragRepository {
     this.monitorDsl = monitorDsl;
   }
 
-  /** Eine Zeile aus {@code task_type}, noch ungeprueft. */
-  public record Typzeile(
-      String typ, String name, String beschreibung, String struktur, LocalDateTime geaendertAm) {}
-
   /** Eine Zeile aus {@code task}, soweit die Antwort sie braucht. */
   public record Auftragszeile(
       String taskId,
@@ -101,34 +95,6 @@ public class AuftragRepository {
       String anfrageId,
       String parameter,
       String angelegtVon) {}
-
-  /**
-   * Die aktiven Typen, die fuer den Mandanten freigeschaltet sind, samt Struktur. Ob sie gueltig
-   * sind, entscheidet {@link TypKatalog}.
-   */
-  public List<Typzeile> angeboteneTypen(MandantContext mandant) {
-    return monitorDsl
-        .select(
-            TASK_TYPE.TASK_TYP,
-            TASK_TYPE.NAME,
-            TASK_TYPE.BESCHREIBUNG,
-            TASK_TYPE.STRUKTUR,
-            TASK_TYPE.GEAENDERT_AM)
-        .from(TASK_TYPE_MANDANT)
-        .join(TASK_TYPE)
-        .on(TASK_TYPE.TASK_TYP.eq(TASK_TYPE_MANDANT.TASK_TYP))
-        .where(TASK_TYPE_MANDANT.MANDANT_ID.eq(mandant.mandantId()))
-        .and(TASK_TYPE.AKTIV.isTrue())
-        .orderBy(TASK_TYPE.TASK_TYP)
-        .fetch(
-            zeile ->
-                new Typzeile(
-                    zeile.get(TASK_TYPE.TASK_TYP),
-                    zeile.get(TASK_TYPE.NAME),
-                    zeile.get(TASK_TYPE.BESCHREIBUNG),
-                    text(zeile.get(TASK_TYPE.STRUKTUR)),
-                    zeile.get(TASK_TYPE.GEAENDERT_AM)));
-  }
 
   /** Ein Auftrag des Mandanten. Fremd und unbekannt sind dasselbe Statement mit null Zeilen. */
   public Optional<Auftragszeile> finde(MandantContext mandant, String taskId) {

@@ -4,6 +4,7 @@ import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.TASK_TYPE;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.TASK_TYPE_MANDANT;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import de.kraftwerkone.overlord.monitor.common.auftrag.Testdefinitionen;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.TaskTypeRecord;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;

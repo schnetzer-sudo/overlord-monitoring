@@ -1,5 +1,6 @@
 package de.kraftwerkone.overlord.monitor.task;
 
+import de.kraftwerkone.overlord.monitor.common.auftrag.TypDefinition;
 import java.util.List;
 
 /**

@@ -1,4 +1,4 @@
-package de.kraftwerkone.overlord.monitor.task;
+package de.kraftwerkone.overlord.monitor.common.auftrag;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,7 +37,7 @@ public record TypDefinition(
   public static final String SCHLUESSEL = "schluessel";
 
   /** Ein Platzhalter {@code {name}} in einer Zeilenvorlage. */
-  static final Pattern PLATZHALTER = Pattern.compile("\\{([^{}]*)\\}");
+  public static final Pattern PLATZHALTER = Pattern.compile("\\{([^{}]*)\\}");
 
   public TypDefinition {
     aktionen = List.copyOf(aktionen);

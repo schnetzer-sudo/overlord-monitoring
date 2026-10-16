@@ -1,11 +1,14 @@
 package de.kraftwerkone.overlord.monitor.task;
 
-import static de.kraftwerkone.overlord.monitor.task.AuftragsPruefungTest.eintrag;
-import static de.kraftwerkone.overlord.monitor.task.AuftragsPruefungTest.schluessel;
+import static de.kraftwerkone.overlord.monitor.common.auftrag.Testdefinitionen.anpassung;
+import static de.kraftwerkone.overlord.monitor.common.auftrag.Testdefinitionen.eintrag;
+import static de.kraftwerkone.overlord.monitor.common.auftrag.Testdefinitionen.loeschung;
+import static de.kraftwerkone.overlord.monitor.common.auftrag.Testdefinitionen.neuanlage;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import de.kraftwerkone.overlord.monitor.common.auftrag.Testdefinitionen;
+import de.kraftwerkone.overlord.monitor.common.auftrag.TypDefinition;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -18,46 +21,6 @@ class ParametertextTest {
 
   private static final TypDefinition WERK = Testdefinitionen.werk();
   private static final TypDefinition GATTUNG = Testdefinitionen.gattung();
-
-  /** Die Eingaben zum Beispiel „Neuanlage“: zweimal ohne SNDPRN_4908, einmal mit Lieferant. */
-  static List<Map<String, String>> neuanlage() {
-    return List.of(
-        eintrag("werk", "72332", "abladestelle", "DDB0", "sndprn", "120764"),
-        eintrag("werk", "72261", "abladestelle", "DDR0", "sndprn", "120764"),
-        eintrag("werk", "010", "abladestelle", "18VZE", "sndprn", "120055", "sndprn4908", "100050"),
-        eintrag(
-            "lieferantennummer",
-            "0101159903",
-            "werk",
-            "22",
-            "abladestelle",
-            "001N0",
-            "sndprn",
-            "123085"));
-  }
-
-  static List<Map<String, String>> loeschung() {
-    Map<String, String> mitLieferant = schluessel("22", "001N0");
-    mitLieferant.put("lieferantennummer", "0101159903");
-    return List.of(schluessel("010", "18VZE"), mitLieferant);
-  }
-
-  /** Im zweiten Eintrag ist SNDPRN_4908 leer: Er wird entfernt (E‑1007). */
-  static List<Map<String, String>> anpassung() {
-    return List.of(
-        eintrag("werk", "010", "abladestelle", "18VZE", "sndprn", "123456", "sndprn4908", "123456"),
-        eintrag(
-            "lieferantennummer",
-            "0101159903",
-            "werk",
-            "22",
-            "abladestelle",
-            "001N0",
-            "sndprn",
-            "234567",
-            "sndprn4908",
-            ""));
-  }
 
   @Test
   @DisplayName("Neuanlage — exakt der Text der Quelle")

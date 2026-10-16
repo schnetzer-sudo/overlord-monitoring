@@ -1,8 +1,8 @@
-package de.kraftwerkone.overlord.monitor.task;
+package de.kraftwerkone.overlord.monitor.common.auftrag;
 
-import static de.kraftwerkone.overlord.monitor.task.Testdefinitionen.JSON;
-import static de.kraftwerkone.overlord.monitor.task.Testdefinitionen.pruefe;
-import static de.kraftwerkone.overlord.monitor.task.Testdefinitionen.werkBaum;
+import static de.kraftwerkone.overlord.monitor.common.auftrag.Testdefinitionen.JSON;
+import static de.kraftwerkone.overlord.monitor.common.auftrag.Testdefinitionen.pruefe;
+import static de.kraftwerkone.overlord.monitor.common.auftrag.Testdefinitionen.werkBaum;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.function.Consumer;

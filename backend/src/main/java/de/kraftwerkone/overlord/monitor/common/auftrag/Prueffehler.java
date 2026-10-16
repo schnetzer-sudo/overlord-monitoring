@@ -1,4 +1,4 @@
-package de.kraftwerkone.overlord.monitor.task;
+package de.kraftwerkone.overlord.monitor.common.auftrag;
 
 /**
  * Ein Fehler der Pruefung eines Auftrags, so wie er in der Liste {@code errors} der Antwort steht.
