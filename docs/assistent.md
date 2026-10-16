@@ -449,24 +449,35 @@ Wechsel des Anbieters, auch auf ein lokales Modell, und für jede Änderung an A
 Typbeschreibung.
 
 - **Fälle:** `backend/src/test/resources/assistent/testsatz/faelle.json`. Ein Fall hat `kennung`,
-  `herkunft` (`synthetisch` oder `echt`), `gruppe`, `nachrichten` (eine oder mehrere, nacheinander)
-  und `erwartet`: entweder `{ "vorschlag": { "typ", "aktion", "eintraege" } }` oder
-  `{ "vorschlag": null }`. Ein Fall mit mehreren Nachrichten kann je Nachricht etwas erwarten
-  (`erwartetNach`), etwa „nach der ersten keiner, nach der zweiten dieser“.
+  `herkunft` (`synthetisch` oder `echt`), `gruppe` (1 bis 13 nach dem Auftrag), `beschreibung`,
+  `nachrichten` (eine oder mehrere, nacheinander) und genau eine Erwartung: `erwartet` — entweder
+  `{ "vorschlag": { "typ", "aktion", "eintraege" } }` oder `{ "vorschlag": null }` —,
+  `erwartetNach` (je Nachricht eine, etwa „nach der ersten keiner, nach der zweiten dieser“) oder
+  `erwartetEinerVon` (mehrere erlaubte Vorschläge; Gruppe 9: Anlegen und Löschen in einer
+  Nachricht ergibt einen Vorschlag mit genau einer der beiden Aktionen). `TestsatzTest` hält die
+  Form, die Abdeckung aller 13 Gruppen, dass jeder erwartete Vorschlag die Prüfung aus A1 besteht,
+  und die Bewertung.
 - **Bewertet wird nur strukturell:** Typ, Aktion und Einträge nach Normalisierung (Felder ohne
   Wert entfallen, die Reihenfolge der Einträge zählt nicht) gleich dem Erwarteten — oder wie
   erwartet kein Vorschlag. Formulierungen werden nicht bewertet.
-- **Lauf:** `AssistentTestsatzLlmTest` mit `@Tag("llm")`. Er läuft nur mit gesetztem
-  `OVERLORD_ASSISTENT_API_KEY` und ist aus dem normalen Lauf und der CI ausgeschlossen
-  (Surefire schließt `llm` aus). Er fährt die Gesprächsführung mit dem echten Adapter, ohne
-  Datenbank, gegen die Definition von `WERK_ABLADESTELLE` aus den Testressourcen, und schreibt den
-  Bericht nach `backend/target/assistent-testsatz/bericht-<Zeitpunkt>.md`: je Fall bestanden oder
-  nicht mit dem tatsächlichen Vorschlag, dazu Gesamtquote, Token und Dauer. **Berichte werden
-  nicht eingecheckt** (`target/` ist ignoriert).
+- **Lauf:** `AssistentTestsatzLauf` mit `@Tag("llm")`. **Aus dem normalen Lauf und der CI
+  ausgeschlossen**, und zwar dreifach: Der Klassenname passt auf kein Muster von Surefire
+  (`*Test`) oder Failsafe (`*IT`), die Klasse trägt `@Tag("llm")`, und ohne
+  `OVERLORD_ASSISTENT_API_KEY` wird sie übersprungen. Er fährt die Gesprächsführung mit dem echten
+  Adapter, ohne Datenbank, gegen die Definition von `WERK_ABLADESTELLE` aus den Testressourcen,
+  und schreibt den Bericht nach `backend/target/assistent-testsatz/bericht-<Zeitpunkt>.md`: je Fall
+  bestanden oder nicht mit dem tatsächlichen Vorschlag, dazu Gesamtquote, Token und Dauer.
+  **Berichte werden nicht eingecheckt** (`target/` ist ignoriert). Ein Fall, an dem der Anbieter
+  scheitert, zählt als nicht bestanden. Wahlweise `OVERLORD_ASSISTENT_MODELL`,
+  `OVERLORD_ASSISTENT_BASIS_URL` und `OVERLORD_ASSISTENT_DENKEN` (§7, `anthropic.denken`).
 
   ```
-  cd backend && OVERLORD_ASSISTENT_API_KEY=… ./mvnw test -Dgroups=llm -DexcludedGroups= -Dtest=AssistentTestsatzLlmTest
+  cd backend && OVERLORD_ASSISTENT_API_KEY=… ./mvnw test -Djooq.codegen.skip=true       -Dtest=AssistentTestsatzLauf -Dsurefire.failIfNoSpecifiedTests=false
   ```
+
+  Die Probe gegen einen geschlossenen lokalen Port (Schlüssel ein Platzhalter,
+  `OVERLORD_ASSISTENT_BASIS_URL=http://127.0.0.1:9`) lief am 16.10.2026 durch und schrieb den
+  Bericht mit 15 Fällen „nicht erreichbar“ — der Läufer funktioniert, ohne dass etwas hinausgeht.
 
 - **Startsatz:** 15 synthetische Fälle für `WERK_ABLADESTELLE`, mindestens je einer aus den 13
   Gruppen des Auftrags (Neuanlage, Lieferantennummer, Tabulatorliste, Anpassung mit leerem Wert,
@@ -493,7 +504,8 @@ Ergebnis bekommt eine M‑Nummer und steht hier.
 | `GespraechsspeicherTest` | Ablauf nach 30 Minuten, höchstens 3 je Sitzung, Bindung an Sitzung, Nutzer und Mandant, Mandantenwechsel — mit eingespeister Uhr (T1) |
 | `NachrichtenbegrenzungTest` | 60 je Stunde, gleitend, mit eingespeister Uhr |
 | `AnthropicSprachmodellTest` | gegen einen lokalen HTTP-Stub: Kopfzeilen, Aufbau der Anfrage (Anweisung, Verlauf mit Rohinhalt und `tool_result`, Werkzeuge, `thinking`), Text und `tool_use`, Abbruchgründe, ein Wiederholungsversuch bei `429` und `529`, keiner bei `500`, Zeitgrenze |
-| `AssistentAbgeschaltetTest` | Schalter aus oder kein Schlüssel: Endpunktlogik meldet nicht verfügbar, **kein HTTP-Aufruf** am Stub |
+| `AssistentServiceTest` | **Schalter aus oder kein Schlüssel:** `AssistentConfig` baut keinen Adapter, Stand, Eröffnen und Nachricht melden nicht verfügbar, **kein HTTP-Aufruf** am Stub, kein Zugriff auf den Typkatalog — mit Gegenprobe, dass eingeschaltet genau ein Aufruf am Stub ankommt. Dazu: jede Fehlerart des Anbieters auf `503` bzw. `502` ohne Anbieterdetails, Länge der Nachricht, Höchstzahl je Gespräch, `409`, `404` in allen Fällen gleich, kein angebotener Typ |
+| `TestsatzTest` | Form und Abdeckung des Testsatzes, jede erwartete Karte gültig, strukturelle Bewertung (§8) |
 | `PaketstrukturTest` | die Regeln aus §4.1 |
 
 ### 9.2 Mit Datenbank (`@Tag("db")`)
@@ -507,12 +519,34 @@ Werkzeugen von `NEXANS` und wird beim Einreichen abgewiesen; kein Weg legt einen
 `POST /api/tasks/pruefung` mit einem nicht angebotenen Typ ist `404`, ununterscheidbar von einem
 erfundenen; Änderungszwang.
 
-**Die Verletzungsprobe** (jeden Mandantenfilter des neuen Codes einzeln entfernen) steht in §9.3,
-sobald sie gelaufen ist.
+**Die Verletzungsprobe** steht in §9.3.
 
-### 9.3 Verletzungsprobe
+### 9.3 Verletzungsprobe (16.10.2026)
 
-*Folgt mit dem Bau.*
+Jeder Mandantenfilter des neuen Codes ist **einzeln** entfernt oder verfälscht worden; danach
+liefen die Tests ohne Datenbank in `assistent` und `common.auftrag` (150) und
+`AssistentIsolationDbIT` (13). Die Datei ist jedes Mal per `git checkout` auf den committeten Stand
+zurückgespielt worden (der Baum war vor jeder Probe sauber); `target/classes` ist danach neu gebaut.
+`AssistentServiceTest` erscheint in der Tabelle mit seinen geschachtelten Klassen
+(„Eingeschaltet“, „Schalter aus“).
+
+| # | Entfernt oder verfälscht | Rot |
+|---|---|---|
+| P1 | `mandant_id` im `WHERE` von `AuftragstypRepository.angeboteneTypen` | `AssistentIsolationDbIT`: `stand`, `suttons_nicht_verfuegbar`, `werkzeuge_je_mandant`, `fremder_typ_wird_abgewiesen`, `pruefung_nicht_angeboten` |
+| P2 | Sitzung in `Gespraechsspeicher.finde` | `AssistentIsolationDbIT.andere_sitzung_desselben_nutzers`; `GespraechsspeicherTest.bindung`; `AssistentServiceTest` (Eingeschaltet) `.nicht_gefunden` |
+| P3 | Nutzer in `Gespraechsspeicher.finde` | `GespraechsspeicherTest.bindung`, `.beenden`; `AssistentServiceTest` (Eingeschaltet) `.nicht_gefunden` |
+| P4 | Mandant in `Gespraechsspeicher.finde` | `GespraechsspeicherTest.bindung` |
+| P5 | `Gespraechsspeicher.beendeNachMandantenwechsel` ohne Wirkung | `AssistentIsolationDbIT.admin_mandantenwechsel`; `GespraechsspeicherTest.mandantenwechsel` |
+| P6 | `eroeffne` bindet das Gespräch fest an `IBIS` statt an den Sitzungsmandanten | 7 von 13 in `AssistentIsolationDbIT` (u. a. `fremdes_gespraech`, `karte_und_nichts_geschrieben`), 5 in `GespraechsspeicherTest`, 6 in `AssistentServiceTest` |
+| P7 | `AssistentService` liest das Angebot fest für `IBIS` | `AssistentIsolationDbIT`: `stand`, `suttons_nicht_verfuegbar`, `werkzeuge_je_mandant`, `fremder_typ_wird_abgewiesen` |
+| P8 | `AuftragService.pruefe` prüft fest für `IBIS` | `AssistentIsolationDbIT.pruefung_nicht_angeboten` |
+
+**Jeder Filter hat mindestens einen Test, der sein Fehlen bemerkt.** Zwei bemerkt nur ein Test
+ohne Datenbank, und das ist Absicht, kein Loch: **P3** (Nutzer) und **P4** (Mandant) sind zweite
+Riegel. Über HTTP hat ein anderer Nutzer immer eine andere Sitzung, P2 fängt ihn also vorher; und
+ein fremder Mandant in derselben Sitzung entsteht nur durch einen Wechsel, den P5 vorher aufräumt.
+Fiele der erste Riegel, hielte der zweite — darum prüft `GespraechsspeicherTest.bindung` jeden
+einzeln, mit genau einer Abweichung je Zugriff.
 
 ---
 
