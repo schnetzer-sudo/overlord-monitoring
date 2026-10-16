@@ -185,9 +185,20 @@ tabelle;monitor;audit_log
 tabelle;monitor;bam_sollaenge
 tabelle;monitor;bam_spalte
 tabelle;monitor;flyway_schema_history
+tabelle;monitor;message_rollup
+tabelle;monitor;message_rollup_monat
+tabelle;monitor;message_rollup_tag
 tabelle;monitor;process_catalog
+tabelle;monitor;rollup_lauf
 tabelle;monitor;SPRING_SESSION
 tabelle;monitor;SPRING_SESSION_ATTRIBUTES
+
+# Nachgezogen am 16.10.2026 (offener Punkt 252): message_rollup, message_rollup_tag,
+# message_rollup_monat und rollup_lauf mit ihren Indizes. Sie kamen mit V9 bis V12 nach der
+# Erhebung vom 21.08.2026 dazu; seither war die Pruefung der Tabellenliste rot. Erhoben mit
+# scripts\indizes-kandidat.ps1 aus information_schema der Testkopie, von Hand uebernommen und
+# gegen die Migrationen abgeglichen: V9 (beide Primaerschluessel, rollup_lauf_stand_idx),
+# V10, V11 (message_rollup_prozess_idx), V12 — keine Abweichung.
 
 index;monitor;app_user;PRIMARY;id;ja
 index;monitor;app_user;uq_app_user_username;username;ja
@@ -206,7 +217,17 @@ index;monitor;bam_spalte;PRIMARY;mandant_id,position;ja
 index;monitor;flyway_schema_history;flyway_schema_history_s_idx;success;nein
 index;monitor;flyway_schema_history;PRIMARY;installed_rank;ja
 
+index;monitor;message_rollup;message_rollup_prozess_idx;process_id,stunde;nein
+index;monitor;message_rollup;PRIMARY;stunde,process_id,message_status;ja
+
+index;monitor;message_rollup_monat;PRIMARY;monat,process_id,message_status;ja
+
+index;monitor;message_rollup_tag;PRIMARY;tag,process_id,message_status;ja
+
 index;monitor;process_catalog;PRIMARY;process_id;ja
+
+index;monitor;rollup_lauf;PRIMARY;id;ja
+index;monitor;rollup_lauf;rollup_lauf_stand_idx;beendet_am,fenster_bis;nein
 
 index;monitor;SPRING_SESSION;PRIMARY;PRIMARY_ID;ja
 index;monitor;SPRING_SESSION;SPRING_SESSION_IX1;SESSION_ID;ja
