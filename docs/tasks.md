@@ -760,6 +760,24 @@ Parametertext arbeiten für sie richtig, ohne dass im Hauptcode etwas für sie s
 | `TaskMigrationDbIT` | `JSON_VALID(struktur)` ist wahr; die Muster, in der Datenbank per `JSON_EXTRACT` herausgeholt, sind zeichengleich mit dem Auftrag; Struktur, Name und Beschreibung wie geschrieben |
 | `IndexbestandDbIT` | die drei Tabellen und ihre Indizes in der Sollliste, in beide Richtungen |
 
+**Verletzungsprobe je Mandantenfilter (16.10.2026).** Jeder Filter in `AuftragRepository` ist
+einzeln entfernt worden, danach lief `AuftraegeIsolationDbIT`; die Datei ist jedes Mal byte-gleich
+zurückgespielt.
+
+| Entfernt | Rot |
+|---|---|
+| `mandant_id` in `angeboteneTypen` | `typliste`, `anlegen_ohne_freischaltung`, `admin_sieht_nur_den_aktiven_mandanten` |
+| `mandant_id` in `finde` | `fremder_auftrag_unerreichbar`, `admin_sieht_nur_den_aktiven_mandanten` |
+| `mandant_id` in `findeNachAnfrage` | `fremde_anfrage_id` |
+| `mandant_id` in `findeAktuelle` | `fremder_auftrag_unerreichbar`, `mandant_id_im_rumpf_wird_ignoriert`, `admin_sieht_nur_den_aktiven_mandanten` |
+| `legeAn` schreibt fest `IBIS` statt des Session-Mandanten | `mandant_id_im_rumpf_wird_ignoriert`, `fremde_anfrage_id`, `fremder_auftrag_unerreichbar`, `admin_sieht_nur_den_aktiven_mandanten` |
+
+Jeder Filter hat also mindestens einen Test, der sein Fehlen bemerkt. `aenderungszwang_sperrt`
+bleibt bei allen Eingriffen grün: Er prüft keine Mandantentrennung, sondern dass der
+Änderungszwang beim Passwort auch diese Endpunkte sperrt. Eine erste Probe, die nur die Filter in
+`angeboteneTypen` und `finde` gemeinsam entfernte, ließ deshalb drei Tests grün: Die beiden anderen
+prüfen Filter, die sie nicht angefasst hatte.
+
 Aufgeräumt wird, was das Präfix `it-` trägt: Aufträge über `angelegt_von`, Testtypen über
 `task_typ` (Regel T2). Die Zeile `WERK_ABLADESTELLE` fasst kein Test an.
 
