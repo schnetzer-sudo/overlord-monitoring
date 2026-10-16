@@ -1,6 +1,6 @@
 {
   "aktionen": ["Neuanlage", "Anpassung", "Löschung"],
-  "maxEintraege": 50,
+  "maxEintraege": 20,
   "felder": [
     { "name": "lieferantennummer", "label": "Lieferantennummer",
       "muster": "^[^ /,]{1,35}$", "beispiel": "0101159903" },

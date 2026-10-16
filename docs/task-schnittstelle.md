@@ -192,7 +192,8 @@ Aktion=Anpassung
   entfernt“**, nicht „bleibt wie er ist“: In `0101159903/22/001N0,234567,` wird SNDPRN auf `234567`
   gesetzt und SNDPRN_4908 entfernt. Mindestens einer der beiden Werte ist immer gesetzt.
 - **Löschung:** nur der Schlüssel.
-- Ein Auftrag hat höchstens 50 Einträge; kein Schlüssel kommt in einem Auftrag zweimal vor.
+- Ein Auftrag hat höchstens 20 Einträge (seit 16.10.2026, E‑1058; vorher 50); kein
+  Schlüssel kommt in einem Auftrag zweimal vor.
 
 **Die drei Rückgabewerte:**
 

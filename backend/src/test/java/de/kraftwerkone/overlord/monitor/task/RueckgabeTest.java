@@ -2,6 +2,8 @@ package de.kraftwerkone.overlord.monitor.task;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import de.kraftwerkone.overlord.monitor.common.auftrag.Testdefinitionen;
+import de.kraftwerkone.overlord.monitor.common.auftrag.TypDefinition;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

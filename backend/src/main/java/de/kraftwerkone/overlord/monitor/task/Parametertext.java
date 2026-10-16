@@ -1,5 +1,7 @@
 package de.kraftwerkone.overlord.monitor.task;
 
+import de.kraftwerkone.overlord.monitor.common.auftrag.AuftragsPruefung;
+import de.kraftwerkone.overlord.monitor.common.auftrag.TypDefinition;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;

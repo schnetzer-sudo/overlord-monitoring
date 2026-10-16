@@ -1,6 +1,6 @@
 package de.kraftwerkone.overlord.monitor.task;
 
-import de.kraftwerkone.overlord.monitor.task.TypDefinition.Rueckgaben;
+import de.kraftwerkone.overlord.monitor.common.auftrag.TypDefinition.Rueckgaben;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;

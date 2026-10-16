@@ -4,6 +4,7 @@ import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.TASK_TYPE;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.TASK_TYPE_MANDANT;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import de.kraftwerkone.overlord.monitor.common.auftrag.Testdefinitionen;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.TaskTypeRecord;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
@@ -16,7 +17,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
 /**
- * Was die Migration {@code V100} in {@code task_type} geschrieben hat ({@code docs/tasks.md} §4.3).
+ * Was die Migrationen {@code V100} und {@code V101} in {@code task_type} geschrieben haben ({@code
+ * docs/tasks.md} §4.3): nach {@code V101} hoechstens 20 Eintraege und die erweiterte Beschreibung.
  *
  * <p><b>Warum es diesen Test gibt.</b> Die Struktur steht als JSON in einem SQL-Text. MariaDB liest
  * dort einen Backslash als Escapezeichen, und ein Muster wie {@code \d} kaeme verstuemmelt an —

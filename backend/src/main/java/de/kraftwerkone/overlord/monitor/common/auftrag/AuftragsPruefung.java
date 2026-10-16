@@ -1,11 +1,11 @@
-package de.kraftwerkone.overlord.monitor.task;
+package de.kraftwerkone.overlord.monitor.common.auftrag;
 
-import static de.kraftwerkone.overlord.monitor.task.TypDefinition.hatWert;
+import static de.kraftwerkone.overlord.monitor.common.auftrag.TypDefinition.hatWert;
 
-import de.kraftwerkone.overlord.monitor.task.TypDefinition.Eindeutig;
-import de.kraftwerkone.overlord.monitor.task.TypDefinition.Feld;
-import de.kraftwerkone.overlord.monitor.task.TypDefinition.MindestensEins;
-import de.kraftwerkone.overlord.monitor.task.TypDefinition.Regel;
+import de.kraftwerkone.overlord.monitor.common.auftrag.TypDefinition.Eindeutig;
+import de.kraftwerkone.overlord.monitor.common.auftrag.TypDefinition.Feld;
+import de.kraftwerkone.overlord.monitor.common.auftrag.TypDefinition.MindestensEins;
+import de.kraftwerkone.overlord.monitor.common.auftrag.TypDefinition.Regel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

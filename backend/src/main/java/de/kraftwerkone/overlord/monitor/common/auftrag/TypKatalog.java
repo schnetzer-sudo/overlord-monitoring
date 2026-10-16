@@ -1,7 +1,7 @@
-package de.kraftwerkone.overlord.monitor.task;
+package de.kraftwerkone.overlord.monitor.common.auftrag;
 
 import de.kraftwerkone.overlord.monitor.common.MandantContext;
-import de.kraftwerkone.overlord.monitor.task.AuftragRepository.Typzeile;
+import de.kraftwerkone.overlord.monitor.common.auftrag.AuftragstypRepository.Typzeile;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,13 +30,16 @@ import tools.jackson.databind.json.JsonMapper;
  *
  * <p><b>Kein Zwischenspeicher mit Ablaufzeit:</b> Er hielte eine deaktivierte Definition bis zum
  * Ablauf im Angebot.
+ *
+ * <p><b>Liegt in {@code common}</b>, weil ihn neben {@code task} der Assistent braucht (E‑1037,
+ * {@code docs/assistent.md} §4.1).
  */
 @Component
 public class TypKatalog {
 
   private static final Logger log = LoggerFactory.getLogger(TypKatalog.class);
 
-  private final AuftragRepository repository;
+  private final AuftragstypRepository repository;
   private final JsonMapper json;
 
   /** Je Typ die zuletzt gepruefte Fassung. Eine geaenderte Zeile ersetzt ihren Eintrag. */
@@ -50,7 +53,7 @@ public class TypKatalog {
    */
   public record Angebot(TypDefinition definition, String struktur) {}
 
-  TypKatalog(AuftragRepository repository, JsonMapper json) {
+  TypKatalog(AuftragstypRepository repository, JsonMapper json) {
     this.repository = repository;
     this.json = json;
   }

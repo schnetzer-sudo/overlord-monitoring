@@ -452,7 +452,8 @@ Hauptklasse `OverlordMonitorApplication` im Basispaket. Fachlich geschnitten, ni
 de.kraftwerkone.overlord.monitor
 ├─ config/      DataSources, jOOQ, Security, Flyway, Konfigurationseigenschaften
 ├─ common/      Fehlerformat, Cursor, Zeitfenster, Uhren, MandantContext, Statuseinordnung,
-│               Pflegestatus, Transport zur Ablage, Live-Rest, Fehler live
+│               Pflegestatus, Transport zur Ablage, Live-Rest, Fehler live;
+│               common/auftrag: Typdefinition, Typkatalog und Prüfung der Aufträge
 ├─ security/    Anmeldung, Sitzung, Anmeldesperre, Herstellung des MandantContext
 ├─ audit/       audit_log
 ├─ message/     Liste, Detail, Verkettung, Fensterverengung
@@ -462,17 +463,21 @@ de.kraftwerkone.overlord.monitor
 ├─ rollup/      Rollup-Job (per Profil separat startbar)
 ├─ dashboard/   Übersicht, Dienste und Ablagenprüfung
 ├─ admin/       Benutzerverwaltung, Bootstrap
-├─ task/        Aufträge: Typdefinitionen, Prüfung, Parametertext, Einordnung (Linie assistent)
+├─ task/        Aufträge: Anlegen, Prüfung ohne Anlegen, Parametertext, Einordnung (Linie assistent)
+├─ assistent/   Assistent: Gesprächsführung, Werkzeuge, Endpunkte; assistent/modell die
+│               anbieterneutrale Schnittstelle, assistent/anthropic der Adapter (Linie assistent)
 └─ jooq/        generiert, nicht handgepflegt
 ```
 
 **Fachpakete kennen einander nicht; Gemeinsames liegt in `common`.** Etwas wandert dorthin, wenn es
-einen zweiten Verbraucher bekommt. `common` hängt an keinem anderen Anwendungspaket, auch nicht an
+einen zweiten Verbraucher bekommt — so Typdefinition, Typkatalog und Prüfung der Aufträge mit dem
+Assistenten nach `common/auftrag` ([`assistent.md`](assistent.md) §4.1). `common` hängt an keinem anderen Anwendungspaket, auch nicht an
 `security` — deshalb liegt der `MandantContext` dort, und was ihn herstellt, bleibt in `security`
 (17.09.2026, Punkt 186). `PaketstrukturTest` (ArchUnit) prüft das, dazu: `jooq.glassfish` nur in
 `*Repository`-Klassen, `MandantContext` als erster Parameter, kein direkter Zugriff auf die
-Systemuhr, kein JPA, kein `javax.*`, kein Jackson 2, DataSources nur in `config`, und die
-namentlichen Ausnahmen von Regel M2. **Der Paketname `payload` passt nicht mehr** (es sind Anzeige
+Systemuhr, kein JPA, kein `javax.*`, kein Jackson 2, DataSources nur in `config`, die
+namentlichen Ausnahmen von Regel M2, und im Assistenten: HTTP und Typen eines Modellanbieters nur
+im Adapter-Unterpaket, kein Datenbankzugriff. **Der Paketname `payload` passt nicht mehr** (es sind Anzeige
 und Protokolle, kein Proxy) und bleibt trotzdem; eine Umbenennung ist offener Punkt in
 [`rohdaten-backend.md`](rohdaten-backend.md) §11 Nr. 2.
 
@@ -547,6 +552,19 @@ bekommt null Zeilen.
 
 **Pro Endpunkt ein Mandanten-Isolationstest** — Mandant A fragt ab, Daten von Mandant B sind
 unerreichbar. Ohne ihn wird nicht gemergt.
+
+### Assistent
+
+Der Assistent (Linie `assistent`, [`assistent.md`](assistent.md)) schickt, was der Kunde im Chat
+schreibt, an einen Modellanbieter, zuerst die **Anthropic-API in den USA**: Verarbeitung nur `us`
+oder `global`, Speicherung nur `us` (Auskunft vom 16.10.2026). Mit hin gehen die feste Anweisung,
+Name, Beschreibung und Struktur der angebotenen Auftragstypen und die Prüfergebnisse — **nicht**
+Benutzername, Mandanten-ID, Daten aus `GlassfishDB` oder Aufträge. **Er ist abgeschaltet**
+(Schalter `overlord.assistent.aktiv`, Vorgabe aus; ohne Schlüssel ebenfalls aus), bis der
+Datenschutzbeauftragte die Auftragsverarbeitung geprüft hat; abgeschaltet geht kein einziger
+Aufruf hinaus. **Gespräche liegen nur im Arbeitsspeicher**, gebunden an Sitzung, Nutzer und
+Mandant, nicht in der Datenbank, nicht in der Sitzung, nicht im Log; protokolliert werden nur
+Metadaten. Anlegen kann nur der Kunde per Klick, nie das Modell.
 
 ### Rohdatenzugriff
 
@@ -764,6 +782,7 @@ Ausbaustufen, Vorlage für Arbeitsaufträge und Stand stehen in [`ROADMAP.md`](R
 | A10 | MariaDB 10.6 bleibt in Betrieb | Wartungszeitraum seit Juli 2026 vorbei; ein Upgrade auf 11.x ändert Standard-Sortierungen — deshalb steht die Sortierung in jeder Migration |
 | — | Takt von `MatchInterchange` „stündlich“ (§3.3) | ungedeckt; Quelle beim Altsystem einzuholen. Daran hängen jede Aussage zur Verzögerung der Quittung und *Unquittiert* |
 | — | Produktive Aufbewahrung „rund 18 Monate“ (§8) | Auskunft, beim Betreiber nicht nachgefragt; daran hängen die erreichbare Spanne und Rollupzeilen ohne Nachrichten (Punkt 54) |
+| — | Übermittlung an Anthropic in die USA auf Grundlage des EU-US Data Privacy Framework ([`assistent.md`](assistent.md) §3.3) | Prüfung durch den Datenschutzbeauftragten ausstehend (Punkt 1009); bis dahin ist der Assistent abgeschaltet |
 | — | Wächter auf `RUNNING`, absichtliches Warten von `SUSPENDED` (§4.2) | Auskunft vom 03.09.2026; gegen die Produktion zu prüfen mit der Abfrage in [`message-status.md`](message-status.md), „Die offene Prüfung“ |
 
 **Geklärt** — A1 (Testkopie vorhanden, Datenstand 08.07.2026), A2 (n:m über `app_user_mandant`,

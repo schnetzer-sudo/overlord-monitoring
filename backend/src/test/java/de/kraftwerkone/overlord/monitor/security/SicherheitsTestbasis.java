@@ -210,6 +210,13 @@ public abstract class SicherheitsTestbasis {
       return fuehreAus(anfrage);
     }
 
+    /** Ein {@code DELETE} mit CSRF-Kopf (seit A2, fuer das Beenden eines Gespraechs). */
+    public Antwort loesche(String pfad) throws IOException, InterruptedException {
+      HttpRequest.Builder anfrage = HttpRequest.newBuilder(uri(pfad)).DELETE();
+      cookieWert(CSRF_COOKIE).ifPresent(token -> anfrage.header(CSRF_HEADER, token));
+      return fuehreAus(anfrage);
+    }
+
     /** Bewusst ohne CSRF-Header — fuer den Nachweis, dass die Pruefung greift. */
     public Antwort sendeOhneCsrf(String pfad, String json)
         throws IOException, InterruptedException {

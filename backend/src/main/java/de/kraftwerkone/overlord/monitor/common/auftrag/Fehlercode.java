@@ -1,4 +1,4 @@
-package de.kraftwerkone.overlord.monitor.task;
+package de.kraftwerkone.overlord.monitor.common.auftrag;
 
 /**
  * Die stabilen Codes der Pruefung eines Auftrags ({@code docs/tasks.md} §5.3, §6.2). Der Klartext

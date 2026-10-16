@@ -1,0 +1,48 @@
+{
+  "name": "WERK_ABLADESTELLE",
+  "description": "Reicht einen Vorschlag für den Auftrag „Anpassen der Werk-/Abladestellentabelle“ ein. Rufe dieses Werkzeug, sobald die Angaben des Kunden vollständig sind. Das Backend prüft den Vorschlag: Meldet es Fehler, erkläre sie dem Kunden und frage nach; ist er gültig, sieht der Kunde ihn als Karte und legt den Auftrag dort selbst an. Felder ohne Wert lässt du weg. Werte übergibst du als Text, genau so, wie der Kunde sie nennt. Der Schlüssel eines Eintrags besteht aus Lieferantennummer, Werk, Abladestelle, in dieser Reihenfolge.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "aktion": {
+        "type": "string",
+        "enum": ["Neuanlage", "Anpassung", "Löschung"],
+        "description": "Die eine Aktion dieses Auftrags."
+      },
+      "eintraege": {
+        "type": "array",
+        "description": "Die Einträge des Auftrags, in der Reihenfolge, in der der Kunde sie nennt.",
+        "minItems": 1,
+        "maxItems": 20,
+        "items": {
+          "type": "object",
+          "properties": {
+            "lieferantennummer": {
+              "type": "string",
+              "description": "Lieferantennummer. Optional. Format (regulärer Ausdruck für den ganzen Wert): `^[^ /,]{1,35}$`. Beispiel: 0101159903."
+            },
+            "werk": {
+              "type": "string",
+              "description": "Werk. Pflichtfeld. Format (regulärer Ausdruck für den ganzen Wert): `^[^ /,]{1,35}$`. Beispiel: 72332."
+            },
+            "abladestelle": {
+              "type": "string",
+              "description": "Abladestelle. Pflichtfeld. Format (regulärer Ausdruck für den ganzen Wert): `^[^ /,]{1,35}$`. Beispiel: DDB0."
+            },
+            "sndprn": {
+              "type": "string",
+              "description": "SNDPRN. Optional. Nur bei „Neuanlage“ oder „Anpassung“; bei anderen Aktionen weglassen. Format (regulärer Ausdruck für den ganzen Wert): `^[0-9]{6}$`. Beispiel: 120764. Bei Anpassung heißt leer: der Wert wird entfernt."
+            },
+            "sndprn4908": {
+              "type": "string",
+              "description": "SNDPRN_4908. Optional. Nur bei „Neuanlage“ oder „Anpassung“; bei anderen Aktionen weglassen. Format (regulärer Ausdruck für den ganzen Wert): `^[0-9]{6}$`. Beispiel: 100050. Für VDA-4908-Prozesse. Bei Anpassung heißt leer: der Wert wird entfernt."
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "required": ["aktion", "eintraege"],
+    "additionalProperties": false
+  }
+}

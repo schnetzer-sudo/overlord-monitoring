@@ -1,8 +1,8 @@
-package de.kraftwerkone.overlord.monitor.task;
+package de.kraftwerkone.overlord.monitor.common.auftrag;
 
-import static de.kraftwerkone.overlord.monitor.task.Testdefinitionen.JSON;
-import static de.kraftwerkone.overlord.monitor.task.Testdefinitionen.pruefe;
-import static de.kraftwerkone.overlord.monitor.task.Testdefinitionen.werkBaum;
+import static de.kraftwerkone.overlord.monitor.common.auftrag.Testdefinitionen.JSON;
+import static de.kraftwerkone.overlord.monitor.common.auftrag.Testdefinitionen.pruefe;
+import static de.kraftwerkone.overlord.monitor.common.auftrag.Testdefinitionen.werkBaum;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.function.Consumer;
@@ -33,7 +33,7 @@ class DefinitionsPruefungTest {
     assertThat(ergebnis.gruende()).isEmpty();
     TypDefinition werk = ergebnis.definition();
     assertThat(werk.aktionen()).containsExactly("Neuanlage", "Anpassung", "Löschung");
-    assertThat(werk.maxEintraege()).isEqualTo(50);
+    assertThat(werk.maxEintraege()).isEqualTo(20);
     assertThat(werk.felder())
         .extracting(TypDefinition.Feld::name)
         .containsExactly("lieferantennummer", "werk", "abladestelle", "sndprn", "sndprn4908");

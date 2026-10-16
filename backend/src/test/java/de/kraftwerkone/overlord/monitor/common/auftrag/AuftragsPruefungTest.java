@@ -1,10 +1,9 @@
-package de.kraftwerkone.overlord.monitor.task;
+package de.kraftwerkone.overlord.monitor.common.auftrag;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.groups.Tuple.tuple;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -30,9 +29,9 @@ class AuftragsPruefungTest {
     @Test
     @DisplayName("Die drei Beispiele der Quelle sind gueltig")
     void beispiele_sind_gueltig() {
-      assertThat(pruefe(WERK, "Neuanlage", ParametertextTest.neuanlage())).isEmpty();
-      assertThat(pruefe(WERK, "Löschung", ParametertextTest.loeschung())).isEmpty();
-      assertThat(pruefe(WERK, "Anpassung", ParametertextTest.anpassung())).isEmpty();
+      assertThat(pruefe(WERK, "Neuanlage", Testdefinitionen.neuanlage())).isEmpty();
+      assertThat(pruefe(WERK, "Löschung", Testdefinitionen.loeschung())).isEmpty();
+      assertThat(pruefe(WERK, "Anpassung", Testdefinitionen.anpassung())).isEmpty();
     }
 
     @Test
@@ -65,13 +64,13 @@ class AuftragsPruefungTest {
     }
 
     @Test
-    @DisplayName("50 Eintraege gehen, 51 nicht")
-    void fuenfzig_und_einundfuenfzig() {
-      assertThat(pruefe(WERK, "Löschung", schluessel(50))).isEmpty();
-      List<Prueffehler> fehler = pruefe(WERK, "Löschung", schluessel(51));
+    @DisplayName("20 Eintraege gehen, 21 nicht")
+    void zwanzig_und_einundzwanzig() {
+      assertThat(pruefe(WERK, "Löschung", schluessel(20))).isEmpty();
+      List<Prueffehler> fehler = pruefe(WERK, "Löschung", schluessel(21));
       assertThat(codes(fehler)).containsExactly(Fehlercode.ZU_VIELE_EINTRAEGE);
       assertThat(fehler.getFirst().meldung())
-          .isEqualTo("Der Auftrag enthält 51 Einträge; möglich sind höchstens 50.");
+          .isEqualTo("Der Auftrag enthält 21 Einträge; möglich sind höchstens 20.");
     }
 
     @Test
@@ -386,17 +385,12 @@ class AuftragsPruefungTest {
     return fehler.stream().map(Prueffehler::code).toList();
   }
 
-  /** Ein veraenderbarer Eintrag aus Paaren Feldname, Wert; {@code null}-Werte erlaubt. */
   static Map<String, String> eintrag(String... paare) {
-    Map<String, String> eintrag = new HashMap<>();
-    for (int i = 0; i < paare.length; i += 2) {
-      eintrag.put(paare[i], paare[i + 1]);
-    }
-    return eintrag;
+    return Testdefinitionen.eintrag(paare);
   }
 
   static Map<String, String> schluessel(String werk, String abladestelle) {
-    return eintrag("werk", werk, "abladestelle", abladestelle);
+    return Testdefinitionen.schluessel(werk, abladestelle);
   }
 
   /** {@code anzahl} verschiedene Schluessel fuer eine Loeschung. */

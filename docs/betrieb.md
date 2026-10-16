@@ -56,9 +56,16 @@ Nur Namen; Werte stehen nie im Repository (Regel G1). Vorlagen: `backend/.env.ex
 | `OVERLORD_DB_READ_USER`, `OVERLORD_DB_READ_PASSWORD` | Backend | Lese-Benutzer | ja |
 | `OVERLORD_DB_WRITE_USER`, `OVERLORD_DB_WRITE_PASSWORD` | Backend | Schreib-Benutzer (nur `overlord_monitor`) | ja |
 | `OVERLORD_BOOTSTRAP_ADMIN_USER`, `OVERLORD_BOOTSTRAP_ADMIN_PASSWORD` | Backend | nur mit Profil `bootstrap` (seit 16.10.2026 in `.env.example`) | mit `bootstrap` |
+| `OVERLORD_ASSISTENT_AKTIV` | Backend | Schalter des Assistenten ([`assistent.md`](assistent.md) §7); erst nach der Prüfung durch den Datenschutzbeauftragten (Punkt 1009) | nein, Vorgabe `false` |
+| `OVERLORD_ASSISTENT_API_KEY` | Backend | Schlüssel des Modellanbieters; ohne ihn ist der Assistent aus | nur mit eingeschaltetem Assistenten |
+| `OVERLORD_ASSISTENT_MODELL` | Backend | Modellkennung beim Anbieter | nein, Vorgabe `claude-sonnet-5-5` |
 | `OVERLORD_BACKEND_URL` | Frontend | Ziel der `/api`-Weiterleitung, serverseitig | nein, Vorgabe `http://localhost:8080` |
 
 Der Codegen und das Flyway-Maven-Plugin lesen dieselben `OVERLORD_DB_*`.
+
+**Der Assistent** schickt bei eingeschaltetem Schalter HTTPS-Anfragen an `api.anthropic.com`. Ob der
+Produktionsserver dorthin darf, ist ungeprüft (Punkt 1010). Alle übrigen Grenzen stehen unter
+`overlord.assistent` in `application.yml` ([`assistent.md`](assistent.md) §7).
 
 ---
 
