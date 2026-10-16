@@ -18,6 +18,18 @@ Tags und die Definition of Done für ein Release stehen in
   `GET /api/tasks/{taskId}` ([`docs/tasks.md`](docs/tasks.md) §6).
 - Vertrag für die EDI-Plattform in [`docs/task-schnittstelle.md`](docs/task-schnittstelle.md).
 - Fachpaket `task` in `docs/PROJEKTBESCHREIBUNG.md` §6 ([`docs/tasks.md`](docs/tasks.md)).
+- Assistent im Backend (A2), abgeschaltet bis zur Prüfung durch den Datenschutzbeauftragten:
+  Endpunkte unter `/api/assistent`, Anbindung an die Anthropic-API hinter einer anbieterneutralen
+  Schnittstelle, Werkzeuge aus den Typdefinitionen, Testsatz
+  ([`docs/assistent.md`](docs/assistent.md); E‑1028 bis E‑1044).
+- `POST /api/tasks/pruefung`: Prüfung eines Auftrags ohne Anlegen, für die Karte (E‑1042).
+- Fachpaket `assistent` in `docs/PROJEKTBESCHREIBUNG.md` §6, weil der Assistent ein eigenes
+  Fachpaket ist ([`docs/assistent.md`](docs/assistent.md) §4.1).
+- `docs/PROJEKTBESCHREIBUNG.md` §7, neuer Abschnitt „Assistent“: Datenfluss zum Anbieter, Schalter,
+  keine Speicherung — weil Kundentext erstmals das Haus verlässt (E‑1029, E‑1035, E‑1038).
+- `docs/PROJEKTBESCHREIBUNG.md` §11, neue offene Annahme: Übermittlung an Anthropic in die USA auf
+  Grundlage des Data Privacy Framework, Prüfung durch den Datenschutzbeauftragten ausstehend
+  (E‑1029, Punkt 1009).
 
 ### Geändert
 
@@ -31,6 +43,9 @@ Tags und die Definition of Done für ein Release stehen in
 - Teilschritte der Assistent-Linie heißen `assistent-<teil>` statt `assistent/<teil>`, weil Git
   neben dem Zweig `assistent` keinen Zweig `assistent/<teil>` anlegen kann; die CI baut auch
   Pushes auf `assistent-*` (`DEVELOPMENT_GUIDELINES.md` §12).
+- `docs/PROJEKTBESCHREIBUNG.md` §6: Typdefinition, Typkatalog und Prüfung der Aufträge liegen in
+  `common/auftrag` statt in `task`, weil der Assistent sie als zweiter Verbraucher braucht
+  (E‑1037); die Liste der ArchUnit-Regeln nennt die Regeln des Assistenten.
 
 ### Behoben
 

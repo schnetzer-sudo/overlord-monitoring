@@ -28,7 +28,7 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
 - Die Einträge der früheren README-Tabelle „Offene Sichtprüfungen“ hatten keine Nummer und sind hier als
   **234 bis 246** vergeben (16.10.2026). **Nächste freie Nummer auf `main`: 264.**
 - **Auf `assistent` beginnen die Nummern bei 1000** (Entscheidung 7). **Nächste freie Nummer auf
-  `assistent`: 1009** (A1, 16.10.2026).
+  `assistent`: 1017** (A2, 16.10.2026).
 - **Doppelvergaben sind aufgelöst** (16.10.2026): 136 und 186 bis 189 waren je zweimal vergeben. Die
   Nummer behielt der Punkt, auf den andere Dateien öfter verweisen; der andere bekam 247 bzw. 248 bis
   251, mit datiertem Vermerk an seiner Fundstelle.
@@ -43,16 +43,16 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
 |---|---:|---:|---:|
 | offen — Fehler | 32 | 0 | — |
 | offen — Verbesserung | 39 | 0 | — |
-| offen — Entscheidung offen | 50 | 0 | — |
-| offen — Sichtprüfung oder Messung offen | 50 | 13 | — |
-| **offen gesamt** | **171** | **13** | — |
+| offen — Entscheidung offen | 55 | 0 | — |
+| offen — Sichtprüfung oder Messung offen | 52 | 13 | — |
+| **offen gesamt** | **178** | **13** | — |
 | ungeprüft | — | — | 357 |
-| erledigt | 53 | 0 | 64 |
+| erledigt | 54 | 0 | 64 |
 | gegenstandslos | 3 | 0 | 5 |
-| **Zeilen** | 227 | 13 | 426 |
+| **Zeilen** | 235 | 13 | 426 |
 
-Offen sind damit **184** nummerierte Punkte; dazu kommen 357 ungeprüfte lokale. Davon gehören neun der
-Linie `assistent` (1000 bis 1008, A1).
+Offen sind damit **191** nummerierte Punkte; dazu kommen 357 ungeprüfte lokale. Davon gehören 16 der
+Linie `assistent` (1000 bis 1007 aus A1, 1009 bis 1016 aus A2).
 
 ### Wie das Register erhoben ist
 
@@ -295,7 +295,15 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 1005 | Ungültige Typdefinitionen nur im Log sichtbar, und erst beim ersten Zugriff eines freigeschalteten Mandanten | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Verbesserung | offen |
 | 1006 | Kopfzeile Aktion=<Aktion> fest; ein Typ mit anderer Kopfzeile braucht Code | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Verbesserung | offen |
 | 1007 | Nur der erste Schlüsselteil kann optional sein | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Verbesserung | offen |
-| 1008 | Datenschutz und Auftragsverarbeitung mit dem Modellanbieter, vor A2 | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Entscheidung offen | offen |
+| 1008 | Datenschutz und Auftragsverarbeitung mit dem Modellanbieter, vor A2 | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Entscheidung offen | **erledigt** — `tasks.md` §11: „Erledigt am 16.10.2026: beantwortet mit E‑1029 und E‑1030 (gebaut, aber abgeschaltet), weitergeführt als Punkt 1009“ |
+| 1009 | Prüfung der Auftragsverarbeitung mit Anthropic durch den Datenschutzbeauftragten, vor dem Einschalten in der Produktion | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Entscheidung offen | offen |
+| 1010 | Ob der Produktionsserver `api.anthropic.com` erreicht, ist ungeprüft | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Sichtprüfung oder Messung offen | offen |
+| 1011 | Streaming für A3 | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Entscheidung offen | offen |
+| 1012 | Was das Gespräch erfährt, wenn der Kunde die Karte ändert oder den Auftrag anlegt | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Entscheidung offen | offen |
+| 1013 | Ob der Assistent auch Fragen zum Stand eigener Aufträge beantworten soll | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Entscheidung offen | offen |
+| 1014 | Kosten je Gespräch, sobald echte Läufe vorliegen | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Sichtprüfung oder Messung offen | offen |
+| 1015 | Ob eine Vereinbarung über Zero Data Retention mit Anthropic sinnvoll ist | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Entscheidung offen | offen |
+| 1016 | `max_tokens` 1.024 reicht vermutlich nicht für einen Vorschlag mit 50 Einträgen (geschätzt, nicht gemessen) | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Entscheidung offen | offen |
 
 ---
 

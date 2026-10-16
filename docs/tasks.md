@@ -573,6 +573,13 @@ geaendert_am)` er noch nicht kennt. Die Prüfung samt `WARN` läuft damit einmal
 bei jedem Aufruf; eine Änderung per SQL ändert `geaendert_am` (`ON UPDATE`) und wirkt beim nächsten
 Zugriff. Gemessen in M1000 (§9).
 
+> **Ergänzt 16.10.2026 (A2).** `TypKatalog`, `TypDefinition`, `DefinitionsPruefung`,
+> `AuftragsPruefung`, `Prueffehler` und `Fehlercode` liegen seit A2 in `common.auftrag`, weil der
+> Assistent sie ebenfalls braucht (E‑1037, [`assistent.md`](assistent.md) §4.1). Das Lesen der
+> Typen heißt seitdem `AuftragstypRepository.angeboteneTypen` statt
+> `AuftragRepository.angeboteneTypen`; Statement und Verhalten sind unverändert. Wo diese Datei
+> die alten Orte nennt (§9.2, §9.3, §10), gilt das neue.
+
 **Warum kein Zwischenspeicher mit Ablaufzeit:** Er hielte eine deaktivierte Definition bis zum
 Ablauf im Angebot. Das eine Statement liest zwei Tabellen mit einer Handvoll Zeilen; was es kostet,
 steht in M1000.
@@ -704,6 +711,12 @@ nicht, sind beide `null`.
 
 ## 7. Hinweise für A2
 
+> **Erledigt mit A2 (16.10.2026).** Umgesetzt in [`assistent.md`](assistent.md): Werkzeuge aus der
+> Struktur ohne Mandantenparameter (E‑1034), Rückfragen aus den Fehlercodes (E‑1033), Anlegen nur
+> per Klick, Datenschutz als Punkt 1009 (E‑1029, E‑1030). Typdefinition, Typkatalog und Prüfung
+> liegen seitdem in `common.auftrag` (E‑1037); neu ist `POST /api/tasks/pruefung` (E‑1042,
+> [`assistent.md`](assistent.md) §6.5).
+
 Damit sie nicht verloren gehen:
 
 - **Die Werkzeuge des Modells entstehen aus der Struktur des Typs** (Aktionen, Felder, Beispiele),
@@ -724,7 +737,7 @@ Damit sie nicht verloren gehen:
 
 | Teil | Inhalt |
 |---|---|
-| **A2** | Assistent im Backend: Anbindung an das Sprachmodell, Werkzeuge aus der Typdefinition |
+| **A2** | Assistent im Backend: Anbindung an das Sprachmodell, Werkzeuge aus der Typdefinition — erledigt, [`assistent.md`](assistent.md) |
 | **A3** | Chatbox in der Kopfleiste und Bestätigungskarte |
 | **A4** | Bereich „Ihre Aufträge“ in der Übersicht, über `GET /api/tasks` |
 
@@ -858,4 +871,4 @@ Nummern ab 1000 (Linie `assistent`); dieselben Zeilen stehen im Register
 | **1005** | Ungültige Definitionen sind nur im Log sichtbar — und erst, wenn ein freigeschalteter Mandant nach der Aktivierung zugreift. | Verbesserung |
 | **1006** | Die Kopfzeile `Aktion=<Aktion>` ist fest; ein Typ mit anderer Kopfzeile braucht Code. | Verbesserung |
 | **1007** | Nur der erste Schlüsselteil kann optional sein. | Verbesserung |
-| **1008** | Datenschutz und Auftragsverarbeitung mit dem Modellanbieter, vor A2. | Entscheidung offen |
+| **1008** | Datenschutz und Auftragsverarbeitung mit dem Modellanbieter, vor A2. **Erledigt am 16.10.2026:** beantwortet mit E‑1029 und E‑1030 (gebaut, aber abgeschaltet), weitergeführt als Punkt 1009 ([`assistent.md`](assistent.md) §11). | Entscheidung offen |

@@ -139,6 +139,7 @@ Rückweg aus der Datei im Browser. Die Beschreibung steht jeweils in der Feature
 | [`dunkelmodus.md`](dunkelmodus.md) | Die Werte des dunklen Farbblocks mit per Test gehaltenen Kontrasten und der Umschalter hell, dunkel oder System ohne Aufblitzen. |
 | [`spaltenwahl.md`](spaltenwahl.md) | Tabellen wählen ihre Spalten nach der Breite ihres Containers, mit Schwellen aus gemessenen Mindestbreiten. |
 | [`tasks.md`](tasks.md) | Aufträge über den Assistenten, Auftragsmodell (Linie `assistent`, A1): Tabellen `task`, `task_type`, `task_type_mandant`, Auftragstypen als Daten samt Anleitung zum Anlegen per SQL, der Typ `WERK_ABLADESTELLE`, Prüfung, Parametertext, Einordnung und die Endpunkte unter `/api/tasks`. |
+| [`assistent.md`](assistent.md) | Der Assistent im Backend (Linie `assistent`, A2): Ablauf von der Nachricht bis zur Karte, Datenfluss zum Anbieter, die anbieterneutrale Schnittstelle und der Adapter für Anthropic, Werkzeuge, Endpunkte unter `/api/assistent` und `POST /api/tasks/pruefung`, Grenzen, Testsatz. |
 | [`task-schnittstelle.md`](task-schnittstelle.md) | Der Vertrag für die EDI-Plattform, für sich lesbar: die vier Statements zum Lesen, Abholen und Zurückmelden, Parametertext, Rückgabe, Fehlertext und das Beispiel `WERK_ABLADESTELLE`. |
 
 ### Erhebungen

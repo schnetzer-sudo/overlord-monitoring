@@ -425,6 +425,18 @@ schlechter Beweis für eine Trennung, die zwischen Firmen greifen soll.
 > 2. **Die Freischaltung ist selbst eine Auskunft.** Ein Typ, der für den aktiven Mandanten nicht
 >    freigeschaltet ist, antwortet beim Anlegen wie ein erfundener Typ — gleicher Rumpf, gleiche
 >    Statements. Sonst ließe sich abfragen, welche Typen andere Mandanten haben.
+>
+> **Ergänzt 16.10.2026 (Linie `assistent`, A2).** Fünf neue Endpunkte: `GET /api/assistent`,
+> `POST /api/assistent/gespraeche`, `POST /api/assistent/gespraeche/{id}/nachrichten`,
+> `DELETE /api/assistent/gespraeche/{id}` und `POST /api/tasks/pruefung`, alle in
+> `AssistentIsolationDbIT` ([`assistent.md`](assistent.md) §9). **Keiner nimmt eine Mandanten-ID
+> entgegen**, und kein Werkzeug des Sprachmodells hat einen Mandantenparameter; die Liste in §3
+> bleibt bei drei. Gepaart wird wieder **`NEXANS` gegen `IBIS`**, **`SUTTONS`** ist der Gegentest
+> ohne Freischaltung (`verfuegbar: false`, `503`). Neu ist, dass die Trennung auch **im
+> Arbeitsspeicher** gilt: Ein Gespräch ist an Sitzung, Nutzer und aktiven Mandanten gebunden, und
+> ein fremdes Gespräch — auch eines desselben Nutzers aus einer anderen Sitzung — antwortet wie ein
+> erfundenes mit `404`. Statt eines Bestands der Testkopie spielt ein geskriptetes Modell den
+> Anbieter; es geht kein Aufruf hinaus.
 
 Der Test prüft zu Beginn, dass beide in der Testkopie existieren und die erfundene ID nicht. Schlägt
 das fehl, hat sich die Testkopie geändert — nicht der Code.

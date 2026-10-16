@@ -28,7 +28,7 @@ die Plattform in [`task-schnittstelle.md`](task-schnittstelle.md).
 | Teil | Inhalt | Stand |
 |---|---|---|
 | **A1** | Auftragsmodell: drei Tabellen (`V100`), Typdefinitionen als Daten mit Prüfung beim Laden, der Typ `WERK_ABLADESTELLE`, vier Endpunkte unter `/api/tasks`, Plattformvertrag | fertig, am 16.10.2026 nach `assistent` gemergt |
-| **A2** | Assistent im Backend | offen |
+| **A2** | Assistent im Backend: anbieterneutrale Schnittstelle mit Adapter für die Anthropic-API, Werkzeuge aus den Typdefinitionen, Gesprächsführung, `POST /api/tasks/pruefung`, Testsatz; abgeschaltet bis zur Prüfung durch den Datenschutzbeauftragten ([`assistent.md`](assistent.md)) | gebaut auf `assistent-a2-assistent-backend` |
 | **A3** | Chatbox in der Kopfleiste | offen |
 | **A4** | „Ihre Aufträge“ in der Übersicht | offen |
 
