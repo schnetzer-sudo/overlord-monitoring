@@ -582,7 +582,58 @@ fragte er stattdessen, wie `010/18VZE` auf Werk und Abladestelle zu verteilen is
 demselben Grund wie in S06. Die Bewertung ist strukturell (kein Vorschlag) und sieht den
 Unterschied nicht.
 
-An Anweisung, Beschreibung und Fällen ist nach diesem Lauf nichts geändert.
+An Anweisung, Beschreibung und Fällen ist nach diesem Lauf nichts geändert. Geändert wurden sie
+danach mit der Nachschärfung (E‑1059 bis E‑1063); deren Lauf ist M1002 (§8.2).
+
+### 8.2 Lauf M1002 (16.10.2026)
+
+Der zweite Lauf, auf dem Stand von `e0cb57d` (Zweig `assistent-a2-nachschaerfung`, nach E‑1059 bis
+E‑1063, Beschreibung im Stand von `V102` aus der Testressource). Sonst wie M1001: Modell
+`claude-sonnet-5-5`, `denken` auf der Vorgabe, `max_tokens` 1.024, zwei Aufrufe hintereinander,
+ohne `aktiv`. Der Name des Mandanten ist der erfundene „Beispielkunde GmbH“. Berichte nur lokal
+(`bericht-20261016-145644.md`, `bericht-20261016-145810.md`).
+
+| | Durchgang 1 | Durchgang 2 |
+|---|---:|---:|
+| bestanden | 17 von 17 (100 %) | 17 von 17 (100 %) |
+| Token ein / aus | 113.584 / 6.890 | 113.482 / 6.913 |
+| Werkzeugaufrufe | 13 | 13 |
+| Dauer | 76,6 s | 78,5 s |
+
+Zusammen 227.066 Token ein und 13.803 aus, 155,0 s. **Kein Fall schwankt**, kein Fall ist nicht
+bestanden.
+
+**Was sich gegenüber M1001 bewegt hat:**
+
+- **S06** schlägt die Löschung mit beiden Einträgen vor und zerlegt `010/18VZE` und
+  `0101159903/22/001N0` ohne Rückfrage (E‑1060).
+- **S09** schlägt die Neuanlage vor und bietet an, stattdessen eine Anpassung vorzubereiten
+  (E‑1061).
+- **S12** reicht keinen Vorschlag ein, nennt den aktiven Mandanten „Beispielkunde GmbH“ und
+  verweist für IBIS auf den Wechsel in der Kopfzeile (E‑1059). In beiden Durchgängen bietet es an,
+  die Neuanlage für den aktiven Mandanten vorzubereiten, wenn der Kunde das bestätigt.
+- **S13** schlägt beide Male W001 bis W020 vor und kündigt W021 als nächsten Auftrag an (E‑1062);
+  in M1001 schwankte der Fall.
+- **S17** fragt in beiden Durchgängen, ob SNDPRN_4908 entfernt werden soll oder welchen Wert sie
+  behalten soll, und zerlegt `010/18VZE` dabei selbst in Werk und Abladestelle. Damit besteht der
+  Fall jetzt aus dem Grund, den er prüft (E‑1063).
+
+**Token je Fall** (seit E‑1063) zeigen zweierlei:
+
+- Die Fälle mit 20 Einträgen liegen am höchsten: S13 mit 998 und 978 Token aus, S16 mit 890 und
+  889. Das ist die **Summe je Fall** über alle Aufrufe der einen Nachricht, also mindestens den
+  Aufruf mit dem Vorschlag und die Antwort danach. Der Aufruf mit dem Vorschlag allein liegt
+  darunter und unter `max_tokens` 1.024. Abgeschnitten wurde nichts (Ausgang `VORSCHLAG`, Punkt
+  1016 bleibt erledigt). **Wie groß der Abstand je Aufruf ist, misst der Läufer nicht.**
+- Token ein sind um rund ein Fünftel gestiegen (113.584 gegen 94.220 im ersten Durchgang von
+  M1001). Die Anweisung und die Werkzeugbeschreibung sind länger, und S06, S09 und S13 laufen
+  jetzt über einen Werkzeugaufruf statt über eine Rückfrage. Für die Kosten je Gespräch (Punkt
+  1014) ist der Fall mit einer Werkzeugrunde der übliche: rund 7.200 Token ein und 300 bis 500 aus.
+
+Die Tests mit Datenbank (`TaskMigrationDbIT`, `AssistentIsolationDbIT`) sind zu diesem Stand noch
+**nicht** gelaufen: Jeder startet Spring und wendet `V102` dabei auf die Testkopie an, und danach
+ist die Migration eingefroren. Der Lauf hier liest die Beschreibung aus der Testressource, nicht
+aus der Datenbank.
 
 ---
 
