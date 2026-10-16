@@ -3509,8 +3509,10 @@ Der alte Link (Punkt 6) *ist* eine von Hand geöffnete URL, denn genau das ist d
 
 ### Zur Sortierrichtung (03.09.2026, Schritt 10b‑4)
 
-- **136. Ob die Fensterverengung auch aufsteigend rechnen kann, ist nicht geprüft — und wird hier
-  nicht zugesagt.** `Abfragemerkmal.SORTIERUNG` trägt der Rollup nur bei `absteigend`; bei
+- **247. Ob die Fensterverengung auch aufsteigend rechnen kann, ist nicht geprüft — und wird hier
+  nicht zugesagt.** *Umnummeriert am 16.10.2026: Bis dahin stand der Punkt hier als **136**, doppelt
+  vergeben — 136 trägt der Punkt in [`dashboard-frontend.md`](dashboard-frontend.md) §9, auf den
+  die übrigen Dateien verweisen ([`offene-punkte.md`](offene-punkte.md)).* `Abfragemerkmal.SORTIERUNG` trägt der Rollup nur bei `absteigend`; bei
   `AELTESTE` stehen die ersten Zeilen am **Anfang** des Fensters, und eine Untergrenze verschöbe
   dort die erste Seite statt des Suchraums. **Die gespiegelte Rechnung wäre vermutlich richtig und
   ist nicht gemessen**, deshalb gilt die sichere Antwort (`false`, die Verengung fällt zurück).

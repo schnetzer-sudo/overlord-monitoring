@@ -679,8 +679,9 @@ Nummerierung im Anschluss an den projektweit höchsten Stand (**69**, in
     behebbar.** `ZAST` liest heute 167 Stunden, um 51 Zeilen zu finden, und liest verengt dieselben
     167 Stunden. Der zeitgetriebene Plan hört ohnehin bei der 51. Zeile auf; genau dort setzt die
     Verengung an. **Wer `ZAST` und die 270 ms lösen will, braucht einen anderen Hebel** — die
-    Verengung ist keiner. Damit bleibt offener Punkt **64** aus
-    [`nachrichtenliste.md`](nachrichtenliste.md) unberührt bestehen.
+    Verengung ist keiner. Damit bleibt offener Punkt **63** aus
+    [`nachrichtenliste.md`](nachrichtenliste.md) unberührt bestehen. *Berichtigt am 16.10.2026: Hier
+    stand **64** (der Prozessfilter bei `NEXANS`); gemeint ist nach dem Inhalt 63, `ZAST` über 30 Tage.*
 
 71. **Der teuerste bekannte Fall des Projekts ist lösbar, und die Lösung liegt bereit.** Der
     Prozessfilter mit verkehrsreichen Prozessen fällt von **7.519,513 ms auf 6,797 ms**, und er ist
