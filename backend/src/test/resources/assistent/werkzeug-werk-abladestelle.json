@@ -13,7 +13,7 @@
         "type": "array",
         "description": "Die Einträge des Auftrags, in der Reihenfolge, in der der Kunde sie nennt.",
         "minItems": 1,
-        "maxItems": 50,
+        "maxItems": 20,
         "items": {
           "type": "object",
           "properties": {

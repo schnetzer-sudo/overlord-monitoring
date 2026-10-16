@@ -64,13 +64,13 @@ class AuftragsPruefungTest {
     }
 
     @Test
-    @DisplayName("50 Eintraege gehen, 51 nicht")
-    void fuenfzig_und_einundfuenfzig() {
-      assertThat(pruefe(WERK, "Löschung", schluessel(50))).isEmpty();
-      List<Prueffehler> fehler = pruefe(WERK, "Löschung", schluessel(51));
+    @DisplayName("20 Eintraege gehen, 21 nicht")
+    void zwanzig_und_einundzwanzig() {
+      assertThat(pruefe(WERK, "Löschung", schluessel(20))).isEmpty();
+      List<Prueffehler> fehler = pruefe(WERK, "Löschung", schluessel(21));
       assertThat(codes(fehler)).containsExactly(Fehlercode.ZU_VIELE_EINTRAEGE);
       assertThat(fehler.getFirst().meldung())
-          .isEqualTo("Der Auftrag enthält 51 Einträge; möglich sind höchstens 50.");
+          .isEqualTo("Der Auftrag enthält 21 Einträge; möglich sind höchstens 20.");
     }
 
     @Test

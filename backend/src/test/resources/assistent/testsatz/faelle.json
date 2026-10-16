@@ -271,9 +271,9 @@
       "kennung": "S13",
       "herkunft": "synthetisch",
       "gruppe": 12,
-      "beschreibung": "Mehr als 50 Einträge",
+      "beschreibung": "Mehr als 20 Einträge (21): kein Vorschlag",
       "nachrichten": [
-        "Bitte alle neu anlegen:\nWerk\tAbladestelle\tSNDPRN\nW001\tA1\t100001\nW002\tA1\t100002\nW003\tA1\t100003\nW004\tA1\t100004\nW005\tA1\t100005\nW006\tA1\t100006\nW007\tA1\t100007\nW008\tA1\t100008\nW009\tA1\t100009\nW010\tA1\t100010\nW011\tA1\t100011\nW012\tA1\t100012\nW013\tA1\t100013\nW014\tA1\t100014\nW015\tA1\t100015\nW016\tA1\t100016\nW017\tA1\t100017\nW018\tA1\t100018\nW019\tA1\t100019\nW020\tA1\t100020\nW021\tA1\t100021\nW022\tA1\t100022\nW023\tA1\t100023\nW024\tA1\t100024\nW025\tA1\t100025\nW026\tA1\t100026\nW027\tA1\t100027\nW028\tA1\t100028\nW029\tA1\t100029\nW030\tA1\t100030\nW031\tA1\t100031\nW032\tA1\t100032\nW033\tA1\t100033\nW034\tA1\t100034\nW035\tA1\t100035\nW036\tA1\t100036\nW037\tA1\t100037\nW038\tA1\t100038\nW039\tA1\t100039\nW040\tA1\t100040\nW041\tA1\t100041\nW042\tA1\t100042\nW043\tA1\t100043\nW044\tA1\t100044\nW045\tA1\t100045\nW046\tA1\t100046\nW047\tA1\t100047\nW048\tA1\t100048\nW049\tA1\t100049\nW050\tA1\t100050\nW051\tA1\t100051"
+        "Bitte alle neu anlegen:\nWerk\tAbladestelle\tSNDPRN\nW001\tA1\t100001\nW002\tA1\t100002\nW003\tA1\t100003\nW004\tA1\t100004\nW005\tA1\t100005\nW006\tA1\t100006\nW007\tA1\t100007\nW008\tA1\t100008\nW009\tA1\t100009\nW010\tA1\t100010\nW011\tA1\t100011\nW012\tA1\t100012\nW013\tA1\t100013\nW014\tA1\t100014\nW015\tA1\t100015\nW016\tA1\t100016\nW017\tA1\t100017\nW018\tA1\t100018\nW019\tA1\t100019\nW020\tA1\t100020\nW021\tA1\t100021"
       ],
       "erwartet": {
         "vorschlag": null
@@ -323,6 +323,135 @@
             }
           ]
         }
+      }
+    },
+    {
+      "kennung": "S16",
+      "herkunft": "synthetisch",
+      "gruppe": 12,
+      "beschreibung": "Genau 20 Einträge, die Höchstzahl: ein Vorschlag mit allen 20",
+      "nachrichten": [
+        "Bitte alle neu anlegen:\nWerk\tAbladestelle\tSNDPRN\nW001\tA1\t100001\nW002\tA1\t100002\nW003\tA1\t100003\nW004\tA1\t100004\nW005\tA1\t100005\nW006\tA1\t100006\nW007\tA1\t100007\nW008\tA1\t100008\nW009\tA1\t100009\nW010\tA1\t100010\nW011\tA1\t100011\nW012\tA1\t100012\nW013\tA1\t100013\nW014\tA1\t100014\nW015\tA1\t100015\nW016\tA1\t100016\nW017\tA1\t100017\nW018\tA1\t100018\nW019\tA1\t100019\nW020\tA1\t100020"
+      ],
+      "erwartet": {
+        "vorschlag": {
+          "typ": "WERK_ABLADESTELLE",
+          "aktion": "Neuanlage",
+          "eintraege": [
+            {
+              "werk": "W001",
+              "abladestelle": "A1",
+              "sndprn": "100001"
+            },
+            {
+              "werk": "W002",
+              "abladestelle": "A1",
+              "sndprn": "100002"
+            },
+            {
+              "werk": "W003",
+              "abladestelle": "A1",
+              "sndprn": "100003"
+            },
+            {
+              "werk": "W004",
+              "abladestelle": "A1",
+              "sndprn": "100004"
+            },
+            {
+              "werk": "W005",
+              "abladestelle": "A1",
+              "sndprn": "100005"
+            },
+            {
+              "werk": "W006",
+              "abladestelle": "A1",
+              "sndprn": "100006"
+            },
+            {
+              "werk": "W007",
+              "abladestelle": "A1",
+              "sndprn": "100007"
+            },
+            {
+              "werk": "W008",
+              "abladestelle": "A1",
+              "sndprn": "100008"
+            },
+            {
+              "werk": "W009",
+              "abladestelle": "A1",
+              "sndprn": "100009"
+            },
+            {
+              "werk": "W010",
+              "abladestelle": "A1",
+              "sndprn": "100010"
+            },
+            {
+              "werk": "W011",
+              "abladestelle": "A1",
+              "sndprn": "100011"
+            },
+            {
+              "werk": "W012",
+              "abladestelle": "A1",
+              "sndprn": "100012"
+            },
+            {
+              "werk": "W013",
+              "abladestelle": "A1",
+              "sndprn": "100013"
+            },
+            {
+              "werk": "W014",
+              "abladestelle": "A1",
+              "sndprn": "100014"
+            },
+            {
+              "werk": "W015",
+              "abladestelle": "A1",
+              "sndprn": "100015"
+            },
+            {
+              "werk": "W016",
+              "abladestelle": "A1",
+              "sndprn": "100016"
+            },
+            {
+              "werk": "W017",
+              "abladestelle": "A1",
+              "sndprn": "100017"
+            },
+            {
+              "werk": "W018",
+              "abladestelle": "A1",
+              "sndprn": "100018"
+            },
+            {
+              "werk": "W019",
+              "abladestelle": "A1",
+              "sndprn": "100019"
+            },
+            {
+              "werk": "W020",
+              "abladestelle": "A1",
+              "sndprn": "100020"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "kennung": "S17",
+      "herkunft": "synthetisch",
+      "gruppe": 14,
+      "beschreibung": "Anpassung mit nur einem der beiden SNDPRN-Werte: Rückfrage, ob SNDPRN_4908 entfernt werden soll, kein Vorschlag",
+      "nachrichten": [
+        "bei 010/18VZE bitte SNDPRN auf 123456 ändern"
+      ],
+      "erwartet": {
+        "vorschlag": null
       }
     }
   ]

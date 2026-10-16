@@ -20,15 +20,15 @@ import tools.jackson.databind.JsonNode;
 
 /**
  * Der Testsatz selbst, ohne Modell ({@code docs/assistent.md} §8): Form der Faelle, Abdeckung der
- * 13 Gruppen, jede erwartete Karte besteht die Pruefung — und die strukturelle Bewertung vergleicht
- * so, wie beschrieben.
+ * 14 Gruppen (13 aus dem Auftrag, dazu die Anpassung mit nur einem Wert), jede erwartete Karte
+ * besteht die Pruefung — und die strukturelle Bewertung vergleicht so, wie beschrieben.
  */
 class TestsatzTest {
 
   private static final TypDefinition WERK = Testdefinitionen.werk();
 
   @Test
-  @DisplayName("15 synthetische Faelle, jede der 13 Gruppen mindestens einmal, Kennungen eindeutig")
+  @DisplayName("17 synthetische Faelle, jede der 14 Gruppen mindestens einmal, Kennungen eindeutig")
   void form_und_abdeckung() throws IOException {
     JsonNode faelle = lies().get("faelle");
     Set<String> kennungen = new HashSet<>();
@@ -47,8 +47,8 @@ class TestsatzTest {
       }
       gruppen.add(fall.get("gruppe").asInt());
     }
-    assertThat(faelle.size()).isEqualTo(15);
-    assertThat(gruppen).containsExactlyInAnyOrder(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13);
+    assertThat(faelle.size()).isEqualTo(17);
+    assertThat(gruppen).containsExactlyInAnyOrder(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14);
   }
 
   @Test

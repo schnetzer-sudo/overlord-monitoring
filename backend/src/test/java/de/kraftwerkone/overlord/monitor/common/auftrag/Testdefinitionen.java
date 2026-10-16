@@ -16,9 +16,9 @@ import tools.jackson.databind.node.ObjectNode;
  * Die Definitionen, gegen die die Tests ohne Datenbank laufen, und die Eintraege der Beispiele aus
  * dem Auftrag zu A1. Oeffentlich, weil {@code task} und {@code assistent} sie ebenfalls nutzen.
  *
- * <p><b>{@code WERK_ABLADESTELLE}</b> kommt aus {@code src/test/resources/task}, zeichengleich mit
- * dem Auftrag zu A1 und mit der Migration {@code V100}; {@code TaskMigrationDbIT} haelt die
- * Gleichheit mit der Datenbank.
+ * <p><b>{@code WERK_ABLADESTELLE}</b> kommt aus {@code src/test/resources/task}, im Stand nach der
+ * Migration {@code V101} (hoechstens 20 Eintraege, Beschreibung mit der Rueckfrage zur Anpassung);
+ * {@code TaskMigrationDbIT} haelt die Gleichheit mit der Datenbank.
  *
  * <p><b>Die Gattung</b> besteht nur hier: andere Aktionen, andere Felder, ein anderer Trenner, eine
  * Regel {@code eindeutig} ueber ein Feld statt ueber den Schluessel, andere Rueckgabewerte.

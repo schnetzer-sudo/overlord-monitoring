@@ -83,7 +83,8 @@ Diese Regeln stehen als Werte in seiner Definition, nicht im Code (§4).
 | **E‑1012** | Schlüsselteile: 1 bis 35 Zeichen, kein Leerraum, kein `/`, kein `,`. Groß- und Kleinschreibung bleiben wie eingegeben. Die 35 sind eine technische Schranke, keine fachliche Regel. | V |
 | **E‑1013** | SNDPRN und SNDPRN_4908: leer oder genau sechs Ziffern. | A (Anhang A) |
 | **E‑1014** | Doppelte Schlüssel innerhalb eines Auftrags werden abgelehnt. | V |
-| **E‑1015** | Höchstens 50 Einträge je Auftrag. | A (16.10.2026) |
+| **E‑1015** | Höchstens 50 Einträge je Auftrag. **Abgelöst am 16.10.2026 durch E‑1058** (20 statt 50). | A (16.10.2026) |
+| **E‑1058** | **Höchstens 20 Einträge je Auftrag**, statt 50 (E‑1015). Angefragt waren ursprünglich 10; die 50 waren eine eigene Erweiterung. Ein Wert der Definition, geändert mit der Migration `V101` (§4.3). | A (16.10.2026) |
 | **E‑1017** | Lesarten in Anhang A: „Anpasung“ ist „Anpassung“. „Löschen eines oder mehrerer neuer Einträge“ heißt „vorhandener“. | V |
 
 ### Rückfragen zu A1 (16.10.2026)
@@ -360,17 +361,28 @@ Ok
   Kleinschreibung bleiben wie eingegeben. Die 35 sind eine technische Schranke (Punkt 1002).
 - **SNDPRN und SNDPRN_4908 (E‑1013):** leer oder genau sechs Ziffern.
 - **Doppelte Schlüssel (E‑1014)** innerhalb eines Auftrags werden abgelehnt.
-- **Höchstens 50 Einträge (E‑1015).**
+- **Höchstens 20 Einträge (E‑1058).** Bis zur Migration `V101` waren es 50 (E‑1015).
+- **Anpassung mit nur einem Wert (16.10.2026, Auftraggeber):** Nennt der Kunde bei einer
+  Anpassung nur einen der beiden SNDPRN-Werte, fragt der Assistent nach, ob der andere
+  entfernt werden soll oder welchen Wert er behalten soll — sonst würde der nicht genannte
+  Wert stillschweigend entfernt (E‑1007). Der Satz steht in der Beschreibung (§4.3), nicht
+  im Code.
 - **Mandanten:** freigeschaltet für `NEXANS` und `IBIS`, wie in der Quelle.
 
-### 4.3 Die Definition, wie in der Migration `V100`
+### 4.3 Die Definition, Stand nach der Migration `V101`
+
+> **Geändert am 16.10.2026 mit `V101`.** `V100` hat den Typ mit `maxEintraege` 50 und
+> einer kürzeren Beschreibung angelegt und ist unverändert. `V101` setzt `maxEintraege` per
+> `JSON_SET` auf 20 (E‑1058) und schreibt die Beschreibung neu: „bis zu 20 Einträge“ statt
+> „bis zu 50“ und der Satz zur Anpassung mit nur einem Wert (§4.2). Was hier steht, ist der
+> Stand nach `V101`; Aufträge von vorher tragen ihre Kopie (E‑1023).
 
 Name: **Anpassen der Werk-/Abladestellentabelle**, `aktiv = TRUE`.
 
 ```json
 {
   "aktionen": ["Neuanlage", "Anpassung", "Löschung"],
-  "maxEintraege": 50,
+  "maxEintraege": 20,
   "felder": [
     { "name": "lieferantennummer", "label": "Lieferantennummer",
       "muster": "^[^ /,]{1,35}$", "beispiel": "0101159903" },
@@ -400,7 +412,7 @@ Name: **Anpassen der Werk-/Abladestellentabelle**, `aktiv = TRUE`.
 ```
 
 Die Beschreibung (Fließtext für den Assistenten), wortgleich aus dem Auftrag an die
-Plattform-Entwicklung vom 16.10.2026:
+Plattform-Entwicklung vom 16.10.2026, mit den beiden Änderungen aus `V101`:
 
 ```
 Die EDI-Plattform erzeugt aus eingehenden Partnernachrichten IDOC-Nachrichten für das Kundensystem und braucht dafür eine SNDPRN. Ist sie nicht fest hinterlegt, ermittelt die Plattform sie über die Werk-/Abladestellentabelle des Kunden. Mit diesem Auftrag legt der Kunde Einträge dieser Tabelle an, passt sie an oder löscht sie.
@@ -408,10 +420,10 @@ Die EDI-Plattform erzeugt aus eingehenden Partnernachrichten IDOC-Nachrichten f�
 Ein Eintrag besteht aus einem Schlüssel und zwei Werten. Der Schlüssel besteht aus Werk und Abladestelle, wahlweise mit der Lieferantennummer davor; die Lieferantennummer gehört nur dazu, wenn der Kunde sie für diesen Eintrag nennt. Die Werte sind SNDPRN und SNDPRN_4908 (für VDA-4908-Prozesse), jeweils sechsstellig numerisch.
 
 Neuanlage: Schlüssel und mindestens einer der beiden Werte. Ist der Schlüssel schon vorhanden, bleibt der Eintrag unverändert, und die Rückmeldung lautet „Schlüssel bereits vorhanden“.
-Anpassung: der Schlüssel eines vorhandenen Eintrags und die neuen Werte. Ein leer gelassener Wert wird entfernt, mindestens einer muss gesetzt bleiben. Nenne dem Kunden vor dem Anlegen jeden Wert, der dadurch entfernt wird, denn er sieht die bisherigen Werte nicht.
+Anpassung: der Schlüssel eines vorhandenen Eintrags und die neuen Werte. Ein leer gelassener Wert wird entfernt, mindestens einer muss gesetzt bleiben. Nenne dem Kunden vor dem Anlegen jeden Wert, der dadurch entfernt wird, denn er sieht die bisherigen Werte nicht. Nennt der Kunde bei einer Anpassung nur einen der beiden Werte, frage nach, ob der andere entfernt werden soll oder welchen Wert er behalten soll.
 Löschung: nur der Schlüssel.
 
-Ein Auftrag enthält eine Aktion für bis zu 50 Einträge. Ob ein Schlüssel existiert, weiß der Assistent nicht; das zeigt erst die Ausführung.
+Ein Auftrag enthält eine Aktion für bis zu 20 Einträge. Ob ein Schlüssel existiert, weiß der Assistent nicht; das zeigt erst die Ausführung.
 ```
 
 **Woran die Regeln hängen:** Der Schlüssel aus zwei oder drei Teilen ist `schluessel` mit der
@@ -432,7 +444,7 @@ Die erste Migration der Linie `assistent` (Migrationen ab `V100`,
 tragen `utf8mb4_bin` ([`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §5). Kein Fremdschlüssel
 nach `GlassfishDB`. Die JSON-Spalten sind `LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin` mit
 `CHECK (JSON_VALID(…))` — das ist genau das, was MariaDB aus dem Typ `JSON` macht, hier aber mit
-ausgeschriebener Sortierung. Die Migration legt `WERK_ABLADESTELLE` an (§4.3) und schaltet ihn für
+ausgeschriebener Sortierung. Die Migration legt `WERK_ABLADESTELLE` an (§4.3; geändert mit `V101`) und schaltet ihn für
 `NEXANS` und `IBIS` frei.
 
 **`task`**
@@ -505,7 +517,9 @@ Aktion=Anpassung
 ```
 
 **Die Spalte ist `TEXT`, höchstens 65.535 Bytes.** Bei `WERK_ABLADESTELLE` liegt der längste
-mögliche Text bei rund 6 KB. Ein Typ ohne Muster mit vielen Einträgen könnte die Grenze reißen; das
+mögliche Text bei rund 2,4 KB: 20 Zeilen zu höchstens 121 Zeichen (drei Schlüsselteile zu 35, zwei
+Trenner, zwei Werte zu sechs Ziffern, zwei Kommata) plus Kopfzeile, hergeleitet, nicht gemessen;
+bis `V101`, mit 50 Einträgen, waren es rund 6 KB. Ein Typ ohne Muster mit vielen Einträgen könnte die Grenze reißen; das
 Backend lehnt einen solchen Auftrag deshalb mit `ZU_LANG` ab, statt an der Datenbank zu scheitern.
 
 ### 5.3 Prüfung eines Auftrags
@@ -609,7 +623,7 @@ Die dem aktiven Mandanten angebotenen Typen (E‑1020), nach Kennung sortiert. K
     "name": "Anpassen der Werk-/Abladestellentabelle",
     "beschreibung": "Die EDI-Plattform erzeugt …",
     "aktionen": ["Neuanlage", "Anpassung", "Löschung"],
-    "maxEintraege": 50,
+    "maxEintraege": 20,
     "schluessel": { "felder": ["lieferantennummer", "werk", "abladestelle"], "trenner": "/" },
     "felder": [
       { "name": "sndprn", "label": "SNDPRN", "pflicht": false,
@@ -750,11 +764,11 @@ Damit sie nicht verloren gehen:
 | Test | Was er hält |
 |---|---|
 | `DefinitionsPruefungTest` | `WERK_ABLADESTELLE` und die Gattung sind gültig; je Prüfregel beim Laden (§3.6) mindestens ein ungültiger Fall — unbekannter Schlüssel auf jeder Ebene, fehlender Pflichtschlüssel, nicht übersetzbares Muster, Platzhalter ohne Feld, Aktion ohne Zeilenvorlage, optionaler Schlüsselteil nicht vorn, `maxEintraege` außerhalb der Grenzen, `rueckgaben.ok` fehlt oder steht in `weitere`; alle Gründe kommen zurück |
-| `AuftragsPruefungTest` | jeder Fehlercode aus §5.3 mindestens einmal; 35 und 36 Zeichen, fünf und sieben Ziffern, leere Liste, 50 und 51 Einträge, Schlüssel doppelt, Löschung mit SNDPRN, Anpassung mit beiden Werten leer, Leerzeichen (`FORMAT`) und Tabulator (`UNZULAESSIGES_ZEICHEN`) im Schlüsselteil; der Zeichenschutz an einem Feld ohne Muster (Trenner, Komma bzw. Zeichen jeder Vorlage, LF, CR, Steuerzeichen, `U+0085`, `U+2028`); die Gattung |
+| `AuftragsPruefungTest` | jeder Fehlercode aus §5.3 mindestens einmal; 35 und 36 Zeichen, fünf und sieben Ziffern, leere Liste, 20 und 21 Einträge (bis `V101`: 50 und 51), Schlüssel doppelt, Löschung mit SNDPRN, Anpassung mit beiden Werten leer, Leerzeichen (`FORMAT`) und Tabulator (`UNZULAESSIGES_ZEICHEN`) im Schlüsselteil; der Zeichenschutz an einem Feld ohne Muster (Trenner, Komma bzw. Zeichen jeder Vorlage, LF, CR, Steuerzeichen, `U+0085`, `U+2028`); die Gattung |
 | `ParametertextTest` | die drei Texte aus §5.2 zeichengenau, Zeilenende, die Gattung, Ersetzen in einem Durchgang |
 | `RueckgabeTest` | CRLF, abschließendes LF, Leerraum, unbekannter Wert, leere Zeile, fehlende Rückgabe |
 | `TaskStatusClassifierTest` | jede Zeile der Tabelle in §5.5, dazu falsche Zeilenzahl |
-| `TypUnabhaengigkeitTest` | `WERK_ABLADESTELLE` steht im Hauptcode (`src/main`, auch generiert und Ressourcen) nirgends außer in `V100` — mit Gegenprobe, dass die Suche ihn dort findet (E‑1018) |
+| `TypUnabhaengigkeitTest` | `WERK_ABLADESTELLE` steht im Hauptcode (`src/main`, auch generiert und Ressourcen) nirgends außer in den Migrationen `V100` und `V101` — mit Gegenprobe, dass die Suche ihn in genau diesen beiden findet (E‑1018) |
 | `PlattformvertragTest` | die vier Statements in [`task-schnittstelle.md`](task-schnittstelle.md) §3 sind zeichengleich mit denen, die `AuftraegeDbIT` ausführt |
 | `PaketstrukturTest` | das Paket `task` ist als Fachpaket geführt und kennt kein anderes Fachpaket |
 
@@ -770,7 +784,7 @@ Parametertext arbeiten für sie richtig, ohne dass im Hauptcode etwas für sie s
 | `AuftraegeDbIT` | Anlegen ergibt eine Zeile `OFFEN` mit `eingestellt_am`, Kopie der Definition, geordneten Einträgen, Parametertext, `angelegt_von` und genau einem Ereignis ohne Parametertext; Wiederholung mit derselben `anfrageId` (auch groß geschrieben, mit anderem Rumpf) gibt `200` und keinen zweiten Auftrag; Prüffehler im Fehlerformat; **simulierte Plattform** mit den vier Statements aus dem Vertrag: Erledigt, Teilweise erledigt (CRLF), Unstimmig, Fehlgeschlagen, doppeltes Abholen, Zurückmelden ohne Abholen; Zeitstempel nur auf vorhanden und Reihenfolge (T1) |
 | `AuftraegeIsolationDbIT` | die vier Endpunkte: `NEXANS` gegen `IBIS`, `SUTTONS` ohne Freischaltung (`404` beim Anlegen, ununterscheidbar vom erfundenen Typ in Rumpf **und** Statements; leere Typliste), fremder Auftrag weder in der Liste noch einzeln (`404` gleich einer erfundenen Kennung, ein Statement), untergeschobenes `mandantId`, fremde `anfrageId`, ADMIN je aktivem Mandanten, Änderungszwang |
 | `TypdefinitionDbIT` | ein eigener Testtyp per SQL, ohne Neustart: inaktiv `404`, aktiviert in der Typliste, Änderung an `maxEintraege` wirkt beim nächsten Anlegen, ungültige Struktur nimmt ihn aus dem Angebot, ein Auftrag von vorher liest seine Kopie; `WERK_ABLADESTELLE` bleibt unberührt |
-| `TaskMigrationDbIT` | `JSON_VALID(struktur)` ist wahr; die Muster, in der Datenbank per `JSON_EXTRACT` herausgeholt, sind zeichengleich mit dem Auftrag; Struktur, Name und Beschreibung wie geschrieben |
+| `TaskMigrationDbIT` | `JSON_VALID(struktur)` ist wahr; die Muster, in der Datenbank per `JSON_EXTRACT` herausgeholt, sind zeichengleich mit dem Auftrag; Struktur, Name und Beschreibung wie geschrieben, im Stand nach `V101` |
 | `IndexbestandDbIT` | die drei Tabellen und ihre Indizes in der Sollliste, in beide Richtungen |
 
 **Verletzungsprobe je Mandantenfilter (16.10.2026).** Jeder Filter in `AuftragRepository` ist

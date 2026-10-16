@@ -43,8 +43,8 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
 |---|---:|---:|---:|
 | offen — Fehler | 32 | 0 | — |
 | offen — Verbesserung | 39 | 0 | — |
-| offen — Entscheidung offen | 55 | 0 | — |
-| offen — Sichtprüfung oder Messung offen | 52 | 13 | — |
+| offen — Entscheidung offen | 54 | 0 | — |
+| offen — Sichtprüfung oder Messung offen | 53 | 13 | — |
 | **offen gesamt** | **178** | **13** | — |
 | ungeprüft | — | — | 357 |
 | erledigt | 54 | 0 | 64 |
@@ -303,7 +303,7 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 1013 | Ob der Assistent auch Fragen zum Stand eigener Aufträge beantworten soll | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Entscheidung offen | offen |
 | 1014 | Kosten je Gespräch, sobald echte Läufe vorliegen | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Sichtprüfung oder Messung offen | offen |
 | 1015 | Ob eine Vereinbarung über Zero Data Retention mit Anthropic sinnvoll ist | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Entscheidung offen | offen |
-| 1016 | `max_tokens` 1.024 reicht vermutlich nicht für einen Vorschlag mit 50 Einträgen (geschätzt, nicht gemessen) | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Entscheidung offen | offen |
+| 1016 | Ob `max_tokens` 1.024 für einen Vorschlag mit 20 Einträgen reicht (geschätzt, nicht gemessen; offen bis zum Lauf mit Testfall S16) | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Sichtprüfung oder Messung offen | offen — seit 16.10.2026 höchstens 20 statt 50 Einträge (E‑1058) |
 
 ---
 
