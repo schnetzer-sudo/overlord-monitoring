@@ -37,7 +37,8 @@ import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * Die Fachlogik der Auftraege: anbieten, pruefen, anlegen, lesen ({@code docs/tasks.md} §6).
+ * Die Fachlogik der Auftraege: anbieten, pruefen, anlegen, lesen ({@code docs/tasks.md} §6, {@code
+ * docs/assistent.md} §6.5).
  *
  * <p><b>Der Monitor schreibt den Status nie ueber {@code OFFEN} hinaus.</b> Abholen und
  * Zurueckmelden sind Sache der Plattform ({@code docs/task-schnittstelle.md}).
@@ -52,6 +53,13 @@ public class AuftragService {
   static final int PARAMETER_HOECHSTENS_BYTES = 65_535;
 
   static final String PROBLEMTYP = "eingabe-ungueltig";
+
+  private static final Prueffehler ZU_LANG =
+      new Prueffehler(
+          null,
+          null,
+          Fehlercode.ZU_LANG,
+          "Der Auftrag ist zu umfangreich. Teile ihn auf mehrere Aufträge auf.");
 
   private static final Pattern UUID_FORM =
       Pattern.compile(
@@ -120,15 +128,9 @@ public class AuftragService {
 
     List<Map<String, String>> geprueft = geordnet(definition, eintraege);
     String parameter = Parametertext.baue(definition, anfrage.aktion(), geprueft);
-    if (parameter.getBytes(StandardCharsets.UTF_8).length > PARAMETER_HOECHSTENS_BYTES) {
+    if (zuLang(parameter)) {
       throw abgelehnt(
-          List.of(
-              new Prueffehler(
-                  null,
-                  null,
-                  Fehlercode.ZU_LANG,
-                  "Der Auftrag ist zu umfangreich. Teile ihn auf mehrere Aufträge auf.")),
-          "Parametertext ueber " + PARAMETER_HOECHSTENS_BYTES + " Bytes");
+          List.of(ZU_LANG), "Parametertext ueber " + PARAMETER_HOECHSTENS_BYTES + " Bytes");
     }
 
     String taskId = UUID.randomUUID().toString();
@@ -181,6 +183,37 @@ public class AuftragService {
                 .orElseThrow(
                     () -> new IllegalStateException("Eben angelegter Auftrag nicht lesbar"))),
         true);
+  }
+
+  /**
+   * Prueft einen Auftrag wie beim Anlegen, ohne ihn anzulegen ({@code POST /api/tasks/pruefung},
+   * E‑1042) — fuer die Karte des Assistenten, wenn der Kunde Felder aendert.
+   *
+   * <p>Dieselbe Pruefung wie in {@link #lege}, in derselben Reihenfolge und einschliesslich {@code
+   * ZU_LANG}; nur werden die Fehler zurueckgegeben statt geworfen. <b>Ein nicht angebotener Typ ist
+   * {@code 404}</b>, mit demselben Statement und demselben Rumpf wie beim Anlegen.
+   *
+   * @return leer, wenn der Auftrag so angelegt werden duerfte
+   */
+  public List<Prueffehler> pruefe(MandantContext mandant, PruefungRequest anfrage) {
+    TypDefinition definition =
+        typKatalog
+            .angeboten(mandant, anfrage.typ())
+            .orElseThrow(
+                () ->
+                    new RessourceNichtGefundenException(
+                        "Auftragstyp fuer diesen Mandanten nicht angeboten: " + anfrage.typ()))
+            .definition();
+
+    List<Map<String, String>> eintraege =
+        anfrage.eintraege() == null ? List.of() : anfrage.eintraege();
+    List<Prueffehler> fehler = AuftragsPruefung.pruefe(definition, anfrage.aktion(), eintraege);
+    if (!fehler.isEmpty()) {
+      return fehler;
+    }
+    String parameter =
+        Parametertext.baue(definition, anfrage.aktion(), geordnet(definition, eintraege));
+    return zuLang(parameter) ? List.of(ZU_LANG) : List.of();
   }
 
   /** Die laufenden Auftraege und die der letzten 7 Tage, neueste zuerst. */
@@ -249,6 +282,10 @@ public class AuftragService {
     kopie.put("name", angebot.definition().name());
     kopie.set("struktur", json.readTree(angebot.struktur()));
     return json.writeValueAsString(kopie);
+  }
+
+  private static boolean zuLang(String parameter) {
+    return parameter.getBytes(StandardCharsets.UTF_8).length > PARAMETER_HOECHSTENS_BYTES;
   }
 
   private static FachlicheAusnahme abgelehnt(List<Prueffehler> fehler, String interneUrsache) {

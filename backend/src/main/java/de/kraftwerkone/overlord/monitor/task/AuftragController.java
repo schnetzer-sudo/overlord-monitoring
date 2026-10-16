@@ -15,7 +15,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Die vier Endpunkte der Auftraege ({@code docs/tasks.md} §6).
+ * Die Endpunkte der Auftraege ({@code docs/tasks.md} §6) und die Pruefung ohne Anlegen ({@code
+ * docs/assistent.md} §6.5).
  *
  * <p><b>Kein Endpunkt nimmt eine Mandanten-ID entgegen</b> (Regel M1); es entsteht keine neue
  * Ausnahme. Der Mandant kommt aus der Sitzung ueber {@code MandantService.aktuellerKontext}, der
@@ -65,6 +66,16 @@ public class AuftragController {
     }
     return ResponseEntity.created(URI.create("/api/tasks/" + anlage.auftrag().taskId()))
         .body(anlage.auftrag());
+  }
+
+  /**
+   * Prueft einen Auftrag wie beim Anlegen, ohne ihn anzulegen (E‑1042, {@code docs/assistent.md}
+   * §6.5): {@code 200} mit der Fehlerliste, leer heisst gueltig. Nicht angebotener Typ: {@code 404}
+   * wie beim Anlegen.
+   */
+  @PostMapping("/api/tasks/pruefung")
+  public PruefungResponse pruefen(@RequestBody PruefungRequest anfrage) {
+    return new PruefungResponse(auftragService.pruefe(mandant(), anfrage));
   }
 
   /** Die laufenden Auftraege des aktiven Mandanten und die der letzten 7 Tage, hoechstens 50. */
