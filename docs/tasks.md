@@ -442,7 +442,7 @@ ausgeschriebener Sortierung. Die Migration legt `WERK_ABLADESTELLE` an (§4.3) u
 | `task_id` | `CHAR(36)` `utf8mb4_bin`, Primärschlüssel | UUID, vom Backend erzeugt |
 | `mandant_id` | `VARCHAR(36)` NOT NULL | aus der Sitzung |
 | `task_typ` | `VARCHAR(64)` NOT NULL | ohne Fremdschlüssel: Der Auftrag trägt seine Kopie (E‑1023) |
-| `definition` | JSON NOT NULL | Kopie zum Anlagezeitpunkt: `{"name": …, "struktur": …}`, die Struktur unverändert aus `task_type` |
+| `definition` | JSON NOT NULL | Kopie zum Anlagezeitpunkt: `{"name": …, "struktur": …}`, die Struktur inhaltlich unverändert aus `task_type` (dieselbe Fassung, die beim Anlegen geprüft wurde) |
 | `aktion` | `VARCHAR(64)` NOT NULL | eine der Aktionen der Kopie |
 | `eintraege` | JSON NOT NULL | die geprüften Einträge in Eingabereihenfolge, je Eintrag ein Objekt Feldname → Wert, nur Felder mit Wert, in der Reihenfolge der Definition |
 | `anfrage_id` | `CHAR(36)` `utf8mb4_bin` NOT NULL | vom Client je Absenden erzeugt, für Wiederholungen; klein geschrieben gespeichert |
@@ -467,10 +467,10 @@ Indizes:
 | `PRIMARY` | `task_id` | Einzelabruf, bedingte Updates der Plattform |
 | `task_mandant_idx` | `mandant_id, eingestellt_am` | Liste des Mandanten, neueste zuerst |
 | `task_status_idx` | `status, eingestellt_am` | Abfrage der offenen Aufträge durch die Plattform |
-| `task_anfrage_uq` (eindeutig) | `mandant_id, anfrage_id` | Wiederholung mit derselben `anfrageId` |
+| `uq_task_anfrage` (eindeutig) | `mandant_id, anfrage_id` | Wiederholung mit derselben `anfrageId` |
 
 `task_type` hat nur `PRIMARY (task_typ)`, `task_type_mandant` nur `PRIMARY (task_typ, mandant_id)`;
-der Fremdschlüssel `task_type_mandant_typ_fk` nutzt den Primärschlüssel und braucht keinen eigenen
+der Fremdschlüssel `fk_task_type_mandant_typ` nutzt den Primärschlüssel und braucht keinen eigenen
 Index. Gehalten von `IndexbestandDbIT` über die Sollliste.
 
 ### 5.2 Parametertext (exakt)
@@ -641,7 +641,7 @@ sie aus der Beschreibung und aus den Fehlercodes (§7).
 
 Die Reihenfolge ist: `anfrageId` prüfen, nach einem vorhandenen Auftrag mit dieser `anfrageId`
 suchen, Typ auflösen, Einträge prüfen, anlegen. Kommen zwei gleiche Anfragen gleichzeitig, verliert
-die zweite am eindeutigen Index `task_anfrage_uq` und antwortet mit `200` und dem Auftrag der
+die zweite am eindeutigen Index `uq_task_anfrage` und antwortet mit `200` und dem Auftrag der
 ersten.
 
 **Das Fehlerformat** ist das vorhandene ([`datenzugriff.md`](datenzugriff.md) §8): Problemtyp
@@ -653,7 +653,7 @@ ersten.
   "type": "https://overlord.kraftwerkone.de/probleme/eingabe-ungueltig",
   "title": "Auftrag nicht angenommen",
   "status": 400,
-  "detail": "Bitte prüfe die genannten Einträge.",
+  "detail": "Bitte prüfe die genannten Angaben.",
   "errors": [
     { "index": 0, "feld": "sndprn", "code": "FORMAT",
       "meldung": "Eintrag 1, SNDPRN: Der Wert „12076“ hat nicht die erwartete Form." }
@@ -732,7 +732,72 @@ Damit sie nicht verloren gehen:
 
 ## 9. Messungen und Tests
 
-Folgen mit dem Bau (M1000, Testliste).
+### 9.1 Tests ohne Datenbank
+
+| Test | Was er hält |
+|---|---|
+| `DefinitionsPruefungTest` | `WERK_ABLADESTELLE` und die Gattung sind gültig; je Prüfregel beim Laden (§3.6) mindestens ein ungültiger Fall — unbekannter Schlüssel auf jeder Ebene, fehlender Pflichtschlüssel, nicht übersetzbares Muster, Platzhalter ohne Feld, Aktion ohne Zeilenvorlage, optionaler Schlüsselteil nicht vorn, `maxEintraege` außerhalb der Grenzen, `rueckgaben.ok` fehlt oder steht in `weitere`; alle Gründe kommen zurück |
+| `AuftragsPruefungTest` | jeder Fehlercode aus §5.3 mindestens einmal; 35 und 36 Zeichen, fünf und sieben Ziffern, leere Liste, 50 und 51 Einträge, Schlüssel doppelt, Löschung mit SNDPRN, Anpassung mit beiden Werten leer, Leerzeichen (`FORMAT`) und Tabulator (`UNZULAESSIGES_ZEICHEN`) im Schlüsselteil; der Zeichenschutz an einem Feld ohne Muster (Trenner, Komma bzw. Zeichen jeder Vorlage, LF, CR, Steuerzeichen, `U+0085`, `U+2028`); die Gattung |
+| `ParametertextTest` | die drei Texte aus §5.2 zeichengenau, Zeilenende, die Gattung, Ersetzen in einem Durchgang |
+| `RueckgabeTest` | CRLF, abschließendes LF, Leerraum, unbekannter Wert, leere Zeile, fehlende Rückgabe |
+| `TaskStatusClassifierTest` | jede Zeile der Tabelle in §5.5, dazu falsche Zeilenzahl |
+| `TypUnabhaengigkeitTest` | `WERK_ABLADESTELLE` steht im Hauptcode (`src/main`, auch generiert und Ressourcen) nirgends außer in `V100` — mit Gegenprobe, dass die Suche ihn dort findet (E‑1018) |
+| `PlattformvertragTest` | die vier Statements in [`task-schnittstelle.md`](task-schnittstelle.md) §3 sind zeichengleich mit denen, die `AuftraegeDbIT` ausführt |
+| `PaketstrukturTest` | das Paket `task` ist als Fachpaket geführt und kennt kein anderes Fachpaket |
+
+Die **Gattung** ist eine zweite Definition, die nur im Test besteht (`Testdefinitionen`): andere
+Aktionen, Felder, Trenner (`-`), Vorlagen mit `;` und `|`, eine Regel `eindeutig` über ein Feld
+statt über den Schlüssel, andere Rückgabewerte (`JA`, `NEIN`, `SPAETER`). Prüfung und
+Parametertext arbeiten für sie richtig, ohne dass im Hauptcode etwas für sie steht.
+
+### 9.2 Tests mit Datenbank (`@Tag("db")`)
+
+| Test | Was er hält |
+|---|---|
+| `AuftraegeDbIT` | Anlegen ergibt eine Zeile `OFFEN` mit `eingestellt_am`, Kopie der Definition, geordneten Einträgen, Parametertext, `angelegt_von` und genau einem Ereignis ohne Parametertext; Wiederholung mit derselben `anfrageId` (auch groß geschrieben, mit anderem Rumpf) gibt `200` und keinen zweiten Auftrag; Prüffehler im Fehlerformat; **simulierte Plattform** mit den vier Statements aus dem Vertrag: Erledigt, Teilweise erledigt (CRLF), Unstimmig, Fehlgeschlagen, doppeltes Abholen, Zurückmelden ohne Abholen; Zeitstempel nur auf vorhanden und Reihenfolge (T1) |
+| `AuftraegeIsolationDbIT` | die vier Endpunkte: `NEXANS` gegen `IBIS`, `SUTTONS` ohne Freischaltung (`404` beim Anlegen, ununterscheidbar vom erfundenen Typ in Rumpf **und** Statements; leere Typliste), fremder Auftrag weder in der Liste noch einzeln (`404` gleich einer erfundenen Kennung, ein Statement), untergeschobenes `mandantId`, fremde `anfrageId`, ADMIN je aktivem Mandanten, Änderungszwang |
+| `TypdefinitionDbIT` | ein eigener Testtyp per SQL, ohne Neustart: inaktiv `404`, aktiviert in der Typliste, Änderung an `maxEintraege` wirkt beim nächsten Anlegen, ungültige Struktur nimmt ihn aus dem Angebot, ein Auftrag von vorher liest seine Kopie; `WERK_ABLADESTELLE` bleibt unberührt |
+| `TaskMigrationDbIT` | `JSON_VALID(struktur)` ist wahr; die Muster, in der Datenbank per `JSON_EXTRACT` herausgeholt, sind zeichengleich mit dem Auftrag; Struktur, Name und Beschreibung wie geschrieben |
+| `IndexbestandDbIT` | die drei Tabellen und ihre Indizes in der Sollliste, in beide Richtungen |
+
+Aufgeräumt wird, was das Präfix `it-` trägt: Aufträge über `angelegt_von`, Testtypen über
+`task_typ` (Regel T2). Die Zeile `WERK_ABLADESTELLE` fasst kein Test an.
+
+### 9.3 Messung M1000 (Regel 7)
+
+*Gemessen am 16.10.2026 gegen die Testkopie (MariaDB 10.6.22), eine Sitzung mit dem Workbench-Client,
+nach Regel 7 mit `EXPLAIN` und Laufzeit (E‑1026): je Statement fünf Läufe, Dauer aus `SHOW PROFILES`
+und Wanduhr über `SYSDATE(6)` vor und nach den fünf Läufen. Kein Lastgerüst.* Die Statements sind
+die von jOOQ gerenderten (über eine Wegwerfklasse gegen eine `MockConnection` mit eingesetzten
+Werten erhoben), die der Plattform wörtlich aus [`task-schnittstelle.md`](task-schnittstelle.md).
+
+**Bestand bei der Messung:** `task_type` 1 Zeile, `task_type_mandant` 2, `task` 0 (die Tests räumen
+ihre Aufträge weg). Die Pläne zeigen deshalb, **welchen Index der Optimizer nimmt**, nicht, wie er
+unter Last läuft; Laufzeiten unter einer Millisekunde sind hier die Kosten des Rundlaufs.
+
+| # | Statement | `EXPLAIN` | Profil (min–max) | Wanduhr je Lauf |
+|---|---|---|---|---|
+| L1 | Typen samt Freischaltung, `NEXANS` (`AuftragRepository.angeboteneTypen`) | `task_type`: `type=index`, `key=PRIMARY`, `rows=1`, `Using where` · `task_type_mandant`: `type=eq_ref`, `key=PRIMARY`, `ref=task_type.task_typ,const`, `Using index` | 0,552–0,668 ms | 1,233 ms |
+| L1b | dasselbe, `SUTTONS` (keine Freischaltung) | wie L1 | 0,495–0,522 ms | 0,937 ms |
+| L2 | Liste, `NEXANS` (`findeAktuelle`, `ORDER BY eingestellt_am DESC, task_id DESC`, 50) | `type=ref`, `key=task_mandant_idx`, `ref=const`, `rows=1`, `Using where` — kein `filesort` | 0,545–0,598 ms | 0,977 ms |
+| L3 | Einzelabruf (`finde`, Kennung und Mandant) | `Impossible WHERE noticed after reading const tables` — Zugriff über `PRIMARY` als Konstante, die Kennung gibt es nicht | 0,406–0,498 ms | 0,802 ms |
+| L4 | Wiederholung (`findeNachAnfrage`, Mandant und `anfrage_id`) | wie L3, über `uq_task_anfrage` | 0,419–0,445 ms | 0,787 ms |
+| P1 | Plattform: offene lesen | `type=ref`, `key=task_status_idx`, `ref=const`, `rows=1`, `Using index condition; Using where` — kein `filesort` | 0,439–0,481 ms | 0,878 ms |
+| P2 | Plattform: abholen (bedingtes `UPDATE`) | `type=range`, `key=PRIMARY`, `rows=1`, `Using where` | — (nur `EXPLAIN`) | — |
+| P3 | Plattform: zurückmelden (`ERLEDIGT`; `FEHLGESCHLAGEN` hat dieselbe Bedingung) | wie P2 | — (nur `EXPLAIN`) | — |
+
+**Was das trägt.** L2 und P1 lesen über den Index, der für sie angelegt ist, und sortieren ohne
+`filesort`: `task_mandant_idx (mandant_id, eingestellt_am)` liefert die Liste rückwärts in
+Reihenfolge, `task_status_idx (status, eingestellt_am)` samt dem angehängten Primärschlüssel die
+offenen Aufträge in der Reihenfolge des Vertrags. Die beiden bedingten `UPDATE`s treffen genau eine
+Zeile über `PRIMARY`; das `status` in der Bedingung wird an der Zeile geprüft. L1 beginnt bei
+`task_type` und schlägt die Freischaltung über ihren vollen Primärschlüssel nach — bei einer
+Handvoll Typen ist das der billigste Weg; mit Hunderten von Typen läse L1 jeden einmal.
+
+**Was es nicht trägt.** Wie sich L2 verhält, wenn ein Mandant Tausende Aufträge hat, ist auf der
+leeren Tabelle nicht zu sehen; `task` wird nie gelöscht. P2 und P3 sind nicht ausgeführt, weil die
+Plattform sie ausführt und die Testkopie geteilt ist; `AuftraegeDbIT` führt sie aus, misst aber
+nicht (T1).
 
 ---
 
