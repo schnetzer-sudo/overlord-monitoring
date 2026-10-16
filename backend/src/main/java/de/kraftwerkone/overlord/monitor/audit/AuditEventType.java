@@ -105,5 +105,17 @@ public enum AuditEventType {
    * Sitzung verworfen</b> ({@code docs/benutzerverwaltung.md} E26) — die Vorgabe ist keine
    * Berechtigung, und der Baum liest sie bei jedem Aufruf neu.
    */
-  BAUMGLIEDERUNG_GEAENDERT
+  BAUMGLIEDERUNG_GEAENDERT,
+
+  /**
+   * TASK_CREATED — ein Kunde hat einen Auftrag an die EDI-Plattform angelegt (Linie {@code
+   * assistent}, A1, {@code docs/tasks.md} §6.2). Im Detail Typ, Aktion und Zahl der Eintraege,
+   * {@code target_id} ist die Task-ID.
+   *
+   * <p><b>Nie mit dem Parametertext</b> und nie mit den Werten der Eintraege: Beides steht in
+   * {@code task} selbst, und das Protokoll soll den Vorgang nennen, nicht die Konfiguration des
+   * Kunden ein zweites Mal halten. Eine Wiederholung mit derselben {@code anfrageId} schreibt kein
+   * zweites Ereignis.
+   */
+  AUFTRAG_ANGELEGT
 }
