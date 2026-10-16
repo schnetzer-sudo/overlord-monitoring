@@ -214,7 +214,8 @@ public class AuftragService {
 
   /**
    * Die Eintraege, wie sie gespeichert werden: nur Felder mit Wert, in der Reihenfolge der
-   * Definition. Kein Wert wird veraendert.
+   * Definition. Kein Wert wird veraendert. Ein {@code null}-Eintrag ist ein leerer, wie in der
+   * Pruefung — bei einem Typ ohne Pflichtfeld kommt er bis hierher.
    */
   private static List<Map<String, String>> geordnet(
       TypDefinition definition, List<Map<String, String>> eintraege) {
@@ -222,7 +223,7 @@ public class AuftragService {
     for (Map<String, String> eintrag : eintraege) {
       Map<String, String> werte = new LinkedHashMap<>();
       for (TypDefinition.Feld feld : definition.felder()) {
-        String wert = eintrag.get(feld.name());
+        String wert = eintrag == null ? null : eintrag.get(feld.name());
         if (TypDefinition.hatWert(wert)) {
           werte.put(feld.name(), wert);
         }
