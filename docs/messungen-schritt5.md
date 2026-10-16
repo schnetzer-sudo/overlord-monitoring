@@ -2331,7 +2331,7 @@ Laufzeit: Aufwärmlauf 88,700 ms, beste von fünf **87,469 ms**.
 
 Das `LIKE '%…%'` steht hier **nur**, weil die Menge durch den Statusfilter bereits auf 538 Zeilen
 eingegrenzt ist; über `SOSActionServiceProperties` ungefiltert gemessen kostete dasselbe Muster
-97,976 s ([M8](messungen-schritt4.md#m8--was-ist-messagetimeout)). **Kein Muster für
+97,976 s ([M8](messungen-schritt4.md#m8--einheit-von-messagetimeout) — *Anker berichtigt am 16.10.2026, hier stand `#m8--was-ist-messagetimeout`*). **Kein Muster für
 Anwendungscode.**
 
 ### Schlussfolgerung — ausdrücklich
