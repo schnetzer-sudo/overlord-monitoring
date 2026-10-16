@@ -18,7 +18,7 @@
   -->
   <groupId>de.kraftwerkone</groupId>
   <artifactId>overlord-monitor</artifactId>
-  <version>1.0.0</version>
+  <version>1.1.0-SNAPSHOT</version>
   <name>overlord-monitor</name>
   <description>Monitoring-Werkzeug fuer die EDI-Integrationsplattform Overlord</description>
 
