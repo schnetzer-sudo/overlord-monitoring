@@ -5,7 +5,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    # main ist die Release-Linie 1.x, assistent die Weiterentwicklung
+    # (DEVELOPMENT_GUIDELINES.md §12). Pull Requests laufen fuer jeden Zielzweig.
+    branches: [main, assistent]
   pull_request:
 
 # Nur lesen. Dieser Workflow schreibt nichts ins Repository.
