@@ -27,7 +27,8 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
   sind **lokale Listen** einzelner Dateien.
 - Die Einträge der früheren README-Tabelle „Offene Sichtprüfungen“ hatten keine Nummer und sind hier als
   **234 bis 246** vergeben (16.10.2026). **Nächste freie Nummer auf `main`: 264.**
-- **Auf `assistent` beginnen die Nummern bei 1000** (Entscheidung 7).
+- **Auf `assistent` beginnen die Nummern bei 1000** (Entscheidung 7). **Nächste freie Nummer auf
+  `assistent`: 1009** (A1, 16.10.2026).
 - **Doppelvergaben sind aufgelöst** (16.10.2026): 136 und 186 bis 189 waren je zweimal vergeben. Die
   Nummer behielt der Punkt, auf den andere Dateien öfter verweisen; der andere bekam 247 bzw. 248 bis
   251, mit datiertem Vermerk an seiner Fundstelle.
@@ -41,16 +42,17 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
 | | Teil 1: projektweit | Teil 2: Sichtprüfungen | Teil 3: lokal |
 |---|---:|---:|---:|
 | offen — Fehler | 32 | 0 | — |
-| offen — Verbesserung | 35 | 0 | — |
-| offen — Entscheidung offen | 46 | 0 | — |
-| offen — Sichtprüfung oder Messung offen | 49 | 13 | — |
-| **offen gesamt** | **162** | **13** | — |
+| offen — Verbesserung | 39 | 0 | — |
+| offen — Entscheidung offen | 50 | 0 | — |
+| offen — Sichtprüfung oder Messung offen | 50 | 13 | — |
+| **offen gesamt** | **171** | **13** | — |
 | ungeprüft | — | — | 357 |
 | erledigt | 53 | 0 | 64 |
 | gegenstandslos | 3 | 0 | 5 |
-| **Zeilen** | 218 | 13 | 426 |
+| **Zeilen** | 227 | 13 | 426 |
 
-Offen sind damit **175** nummerierte Punkte; dazu kommen 357 ungeprüfte lokale.
+Offen sind damit **184** nummerierte Punkte; dazu kommen 357 ungeprüfte lokale. Davon gehören neun der
+Linie `assistent` (1000 bis 1008, A1).
 
 ### Wie das Register erhoben ist
 
@@ -285,6 +287,15 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 261 | JAR-Name weicht von der Doku ab (kein finalName); Version stand auf 0.1.0(-SNAPSHOT) | [`betrieb.md`](betrieb.md) §9 | Fehler | offen — Version am 16.10.2026 auf 1.0.0 gesetzt; offen bleibt der Artefaktname |
 | 262 | Bootstrap des ersten Kontos in der Produktion nicht belegt; OVERLORD_BOOTSTRAP_ADMIN_* fehlen in .env.example | [`betrieb.md`](betrieb.md) §9 | Verbesserung | offen — die Namen stehen seit dem 16.10.2026 in `backend/.env.example`; ob die Produktion so angelegt wurde, ist offen |
 | 263 | Ziel und Aufbewahrung der Protokollausgabe in der Produktion nicht belegt | [`betrieb.md`](betrieb.md) §9 | Entscheidung offen | offen |
+| 1000 | „Teilweise erledigt“ auch dann, wenn kein Eintrag Ok ist und nichts geändert wurde; Anzeige dafür offen | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Entscheidung offen | offen |
+| 1001 | Aufträge, die in IN_AUSFUEHRUNG hängen bleiben, haben keine Frist und keinen Rückweg | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Entscheidung offen | offen |
+| 1002 | Schranke von 35 Zeichen je Schlüsselteil (WERK_ABLADESTELLE) zu bestätigen | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Entscheidung offen | offen |
+| 1003 | Ob die Plattform UTF-8 und LF im Parametertext sicher verarbeitet | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Sichtprüfung oder Messung offen | offen |
+| 1004 | Monitor kann die Werk-/Abladestellentabelle nicht lesen; Existenz eines Schlüssels zeigt erst die Ausführung | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Verbesserung | offen |
+| 1005 | Ungültige Typdefinitionen nur im Log sichtbar, und erst beim ersten Zugriff eines freigeschalteten Mandanten | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Verbesserung | offen |
+| 1006 | Kopfzeile Aktion=<Aktion> fest; ein Typ mit anderer Kopfzeile braucht Code | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Verbesserung | offen |
+| 1007 | Nur der erste Schlüsselteil kann optional sein | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Verbesserung | offen |
+| 1008 | Datenschutz und Auftragsverarbeitung mit dem Modellanbieter, vor A2 | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Entscheidung offen | offen |
 
 ---
 

@@ -411,6 +411,21 @@ schlechter Beweis für eine Trennung, die zwischen Firmen greifen soll.
 > Rumpf verbietet, wird an seinem eigenen Zitat rot — der Rumpf nennt den Suchbegriff, weil er die
 > Frage ist. Die Kennung wird deshalb im Rumpf **ohne das Zitat** gesucht, wie bei `instance`.
 
+> **Ergänzt 16.10.2026 (Linie `assistent`, A1).** Vier neue Endpunkte unter `/api/tasks`, eine
+> Kopie: `AuftraegeIsolationDbIT` ([`tasks.md`](tasks.md) §6) für `GET /api/tasks/typen`,
+> `POST /api/tasks`, `GET /api/tasks` und `GET /api/tasks/{taskId}`. **Keiner nimmt eine
+> Mandanten-ID entgegen** — die Liste in §3 bleibt bei drei Einträgen; ein untergeschobenes Feld
+> `mandantId` im Anfragekörper wird ignoriert, und der Test prüft das. Gepaart wird **`NEXANS`
+> gegen `IBIS`**, zwei Häuser, beide für den Typ `WERK_ABLADESTELLE` freigeschaltet; **`SUTTONS`**
+> ist der Gegentest ohne Freischaltung. Zwei Dinge kommen hinzu:
+>
+> 1. **Die Daten legt der Test selbst an** (Regel T2): Der Auftrag, dessen Unerreichbarkeit
+>    geprüft wird, entsteht im Test unter `NEXANS` und verschwindet danach. Es gibt keinen
+>    Bestand, an dem die Aussage hinge.
+> 2. **Die Freischaltung ist selbst eine Auskunft.** Ein Typ, der für den aktiven Mandanten nicht
+>    freigeschaltet ist, antwortet beim Anlegen wie ein erfundener Typ — gleicher Rumpf, gleiche
+>    Statements. Sonst ließe sich abfragen, welche Typen andere Mandanten haben.
+
 Der Test prüft zu Beginn, dass beide in der Testkopie existieren und die erfundene ID nicht. Schlägt
 das fehl, hat sich die Testkopie geändert — nicht der Code.
 

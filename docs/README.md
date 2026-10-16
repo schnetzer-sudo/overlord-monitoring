@@ -138,6 +138,8 @@ Rückweg aus der Datei im Browser. Die Beschreibung steht jeweils in der Feature
 | [`dichte-umschalter.md`](dichte-umschalter.md) | Die Anzeigegröße in vier Stufen über die Wurzelschriftgröße, gespeichert per Cookie. |
 | [`dunkelmodus.md`](dunkelmodus.md) | Die Werte des dunklen Farbblocks mit per Test gehaltenen Kontrasten und der Umschalter hell, dunkel oder System ohne Aufblitzen. |
 | [`spaltenwahl.md`](spaltenwahl.md) | Tabellen wählen ihre Spalten nach der Breite ihres Containers, mit Schwellen aus gemessenen Mindestbreiten. |
+| [`tasks.md`](tasks.md) | Aufträge über den Assistenten, Auftragsmodell (Linie `assistent`, A1): Tabellen `task`, `task_type`, `task_type_mandant`, Auftragstypen als Daten samt Anleitung zum Anlegen per SQL, der Typ `WERK_ABLADESTELLE`, Prüfung, Parametertext, Einordnung und die Endpunkte unter `/api/tasks`. |
+| [`task-schnittstelle.md`](task-schnittstelle.md) | Der Vertrag für die EDI-Plattform, für sich lesbar: die vier Statements zum Lesen, Abholen und Zurückmelden, Parametertext, Rückgabe, Fehlertext und das Beispiel `WERK_ABLADESTELLE`. |
 
 ### Erhebungen
 
