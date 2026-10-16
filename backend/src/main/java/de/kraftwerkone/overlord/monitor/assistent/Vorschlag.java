@@ -14,8 +14,8 @@ import java.util.Map;
  *
  * <p><b>Jedes Feld, das bei der Aktion vorkommt, steht in jedem Eintrag</b> — leere ausdruecklich
  * als {@code null} —, und {@link #felder()} nennt je Feld {@code label} und {@code hinweis}. So
- * kann die Karte zeigen, was ein leeres Feld bedeutet (bei {@code WERK_ABLADESTELLE}: „wird
- * entfernt“), ohne einen Typ zu kennen.
+ * kann die Karte zeigen, was ein leeres Feld bedeutet (etwa „wird entfernt“, wie es der Hinweis
+ * eines Felds sagt), ohne einen Typ zu kennen.
  *
  * <p><b>Er legt nichts an.</b> Anlegen tut der Klick ueber {@code POST /api/tasks}.
  */
