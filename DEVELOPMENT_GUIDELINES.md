@@ -129,7 +129,7 @@ Damit sie prüfbar ist, sind die Pakete in drei Rollen eingeteilt:
 |---|---|---|
 | **Verdrahtung** | `config` | Darf alles sehen. Niemand importiert aus `config`. |
 | **Gemeinsames** | `common`, `security`, `audit` | Dürfen von jedem Fachpaket genutzt werden. `common` importiert aus keinem anderen Anwendungspaket. |
-| **Fachpakete** | `message`, `bam`, `payload`, `catalog`, `rollup`, `dashboard`, `admin` | Kennen einander **nicht**. |
+| **Fachpakete** | `message`, `bam`, `payload`, `catalog`, `rollup`, `dashboard`, `admin`, `task` (Linie `assistent`, seit A1) | Kennen einander **nicht**. |
 
 `security` und `audit` stehen bei „Gemeinsames", weil die Projektbeschreibung sie an mehreren
 Stellen quer fordert: Der `MandantContext` ist Pflichtparameter jeder Repository-Methode
@@ -392,10 +392,19 @@ L1 bis L6 verbindlich und nicht verhandelbar.
 Ohne Zeitfenster keine Abfrage. Fehlt es in der Anfrage, wird der Standard gesetzt — es wird nie
 unbegrenzt gelesen.
 
+> **Geltungsbereich von L1 bis L6** *(16.10.2026, E‑1016 und E‑1027 in
+> [`docs/tasks.md`](docs/tasks.md))*: Die Regeln sind mit der Last auf `GlassfishDB` begründet und
+> gelten für Lesezugriffe dort. Tabellen in `overlord_monitor`, die nicht aus `GlassfishDB`
+> abgeleitet sind — etwa `task` —, folgen ihnen nicht; `GET /api/tasks` hat deshalb weder
+> Zeitfenster noch Cursor. Die Rollup-Tabellen sind abgeleitet und bleiben darunter. L7 gilt für
+> jede Abfrage. Wortlaut in [`docs/PROJEKTBESCHREIBUNG.md`](docs/PROJEKTBESCHREIBUNG.md) §8, Regel 1.
+
 **L2 — Keine Live-Aggregation über `Message`.** Dashboard-Kennzahlen kommen ausschließlich aus
 `message_rollup`. Ein stündlicher Job schreibt inkrementell fort.
 
 **L3 — Keine `OFFSET`-Paginierung.** Cursor-basiert über `(MessageLastUpdate, MessageID)`.
+Geltungsbereich wie bei L1: Listen über Tabellen in `overlord_monitor`, die nicht aus `GlassfishDB`
+abgeleitet sind, brauchen keinen Cursor (E‑1016).
 
 **L4 — `MessageProperty` nur über `MessageID`.** Nie filtern, gruppieren oder sortieren über
 `MessagePropertyValue`. Die Indizes darauf sind Präfix-Indizes über 50 Zeichen und für Aggregation

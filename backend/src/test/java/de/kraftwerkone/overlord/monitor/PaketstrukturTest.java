@@ -61,7 +61,7 @@ class PaketstrukturTest {
 
   /** Fachpakete: kennen einander nicht. */
   private static final List<String> FACHPAKETE =
-      List.of("message", "bam", "payload", "catalog", "rollup", "dashboard", "admin");
+      List.of("message", "bam", "payload", "catalog", "rollup", "dashboard", "admin", "task");
 
   /** Das generierte Paket. Entstand in Schritt 2 durch Codegenerierung, nie von Hand gepflegt. */
   private static final String GENERIERT = "jooq";

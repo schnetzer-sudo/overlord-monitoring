@@ -22,11 +22,12 @@ Zweifel gehört es auf `assistent`.
 
 Die Ausbaustufe, die als Release **1.1.0** nach `main` kommt. **Aufträge entstehen nur im Chat**;
 es gibt **keinen Freigabeschritt**. **Die Auftragstabelle liegt in `overlord_monitor`**, und die
-Plattform holt die Aufträge dort ab. Die Details folgen mit A1 in `docs/tasks.md`.
+Plattform holt die Aufträge dort ab. Die Details stehen in [`tasks.md`](tasks.md), der Vertrag für
+die Plattform in [`task-schnittstelle.md`](task-schnittstelle.md).
 
 | Teil | Inhalt | Stand |
 |---|---|---|
-| **A1** | Auftragsmodell | offen |
+| **A1** | Auftragsmodell: drei Tabellen (`V100`), Typdefinitionen als Daten mit Prüfung beim Laden, der Typ `WERK_ABLADESTELLE`, vier Endpunkte unter `/api/tasks`, Plattformvertrag | gebaut auf `assistent-a1-auftragsmodell` (16.10.2026), Merge nach `assistent` offen |
 | **A2** | Assistent im Backend | offen |
 | **A3** | Chatbox in der Kopfleiste | offen |
 | **A4** | „Ihre Aufträge“ in der Übersicht | offen |

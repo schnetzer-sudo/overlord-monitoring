@@ -79,6 +79,12 @@ sind `varchar(36)`.
 | `monitor_read` | `SELECT` | `SELECT` |
 | `monitor_write` | `SELECT` | `ALL PRIVILEGES` |
 
+**`monitor_write` verwendet zusätzlich die EDI-Plattform**, um Aufträge aus `overlord_monitor.task`
+abzuholen und zurückzumelden (E‑1004, [`tasks.md`](tasks.md)). **Folge:** Die Plattform hat damit
+alle Rechte auf `overlord_monitor`, einschließlich `app_user` und der Sitzungen. Das ist bewusst so
+entschieden — kein neuer Benutzer, kein `GRANT`; was die Plattform darf, begrenzt allein der
+Vertrag [`task-schnittstelle.md`](task-schnittstelle.md).
+
 Host, Benutzernamen und Passwörter stehen ausschließlich in Umgebungsvariablen
 ([`betrieb.md`](betrieb.md)). MariaDB 10.6 hat seinen Wartungszeitraum im Juli 2026 erreicht
 (Annahme A10).
@@ -355,8 +361,8 @@ liest sie. `00001_Undefined` ist ein Auffangprozess.
 ## 5. Eigenes Schema `overlord_monitor`
 
 Auf derselben Instanz, verwaltet von Flyway (`backend/src/main/resources/db/migration`, `V1` bis
-`V13`). Schreibrechte hat ausschließlich `monitor_write`, und nur hier. Die Tabellen, erhoben aus den
-Migrationen:
+`V13` auf `main`, ab `V100` auf der Linie `assistent`). Schreibrechte hat ausschließlich
+`monitor_write`, und nur hier. Die Tabellen, erhoben aus den Migrationen:
 
 | Tabelle | Migration | Schlüssel | Zweck |
 |---|---|---|---|
@@ -371,6 +377,9 @@ Migrationen:
 | `rollup_lauf` | V9 | `id` | Läufe des Rollup-Jobs, Wasserstand |
 | `message_rollup_tag` | V10 | `(tag, process_id, message_status)` | dasselbe je Tag |
 | `message_rollup_monat` | V12 | `(monat, process_id, message_status)` | dasselbe je Kalendermonat |
+| `task_type` | V100 | `task_typ` | Auftragstypen als Daten: Name, Beschreibung für den Assistenten, Struktur (JSON), aktiv ([`tasks.md`](tasks.md) §3) |
+| `task_type_mandant` | V100 | `(task_typ, mandant_id)` | Freischaltung eines Auftragstyps je Mandant, Fremdschlüssel auf `task_type` mit `ON DELETE CASCADE` |
+| `task` | V100 | `task_id`, eindeutig `(mandant_id, anfrage_id)` | Aufträge der Kunden mit Kopie der Definition, Einträgen und Parametertext; die EDI-Plattform holt sie ab und meldet zurück ([`tasks.md`](tasks.md) §5, [`task-schnittstelle.md`](task-schnittstelle.md)) |
 
 **Der Rollup-Schlüssel trägt weder Mandant noch Partner noch Richtung** (E‑a, 24.08.2026). Sie kommen
 zur Lesezeit dazu — der Mandant über `Process → ProjectMandant`, Partner und Richtung über
@@ -453,6 +462,7 @@ de.kraftwerkone.overlord.monitor
 ├─ rollup/      Rollup-Job (per Profil separat startbar)
 ├─ dashboard/   Übersicht, Dienste und Ablagenprüfung
 ├─ admin/       Benutzerverwaltung, Bootstrap
+├─ task/        Aufträge: Typdefinitionen, Prüfung, Parametertext, Einordnung (Linie assistent)
 └─ jooq/        generiert, nicht handgepflegt
 ```
 
@@ -607,6 +617,12 @@ unterhalb eines neuen Bestandsanfangs stehen bleiben ([`rollup.md`](rollup.md), 
    - **Kacheln *Läuft* und *Wartend* ohne Zeitfenster** — sie lesen nur die offenen Zeilen
      ([`dashboard.md`](dashboard.md) §5).
 
+   **Geltungsbereich (E‑1016, [`tasks.md`](tasks.md)):** Diese Regel und die Regeln 2 bis 6 sind mit
+   der Last auf `GlassfishDB` begründet und gelten für Lesezugriffe dort. Tabellen in
+   `overlord_monitor`, die nicht aus `GlassfishDB` abgeleitet sind, folgen ihnen nicht — so liest
+   `GET /api/tasks` die Aufträge des Mandanten ohne Zeitfenster und ohne Cursor. Die Rollup-Tabellen
+   sind aus `GlassfishDB` abgeleitet und bleiben unter den Regeln. Regel 7 gilt für jede Abfrage.
+
    ⚠️ **Das Jahresmaximum trägt für den größten Mandanten möglicherweise nicht.** Über den Zeitbereich
    in `Message` gibt der Optimizer `MessageLastUpdateIDX` zwischen 30 und 90 Tagen auf und liest
    voll: über 90 Tage in allen zehn Messfällen Vollscan oder Abbruch (M168, M171), über ein Jahr hält
@@ -616,8 +632,10 @@ unterhalb eines neuen Bestandsanfangs stehen bleiben ([`rollup.md`](rollup.md), 
 
 2. **Keine Live-Aggregation über `Message`.** Dashboard-Kennzahlen kommen aus den Rollup-Tabellen,
    die ein stündlicher Job fortschreibt. Der Grund ist Ladezeit und Ruhe auf der Produktion, nicht
-   Unmöglichkeit — das Altsystem aggregiert tagesweise. **Fünf benannte Ausnahmen**, je einzeln
-   begründet, gemessen und gezählt:
+   Unmöglichkeit — das Altsystem aggregiert tagesweise. Die Regel betrifft `GlassfishDB`; Zählungen
+   über Tabellen in `overlord_monitor`, die nicht aus `GlassfishDB` abgeleitet sind, fallen nicht
+   darunter (E‑1016, siehe Regel 1). **Fünf benannte Ausnahmen**, je einzeln begründet, gemessen und
+   gezählt:
 
    | # | Ausnahme | liest live | warum nicht aus dem Rollup | gemessen |
    |---|---|---|---|---|
@@ -674,7 +692,7 @@ unterhalb eines neuen Bestandsanfangs stehen bleiben ([`rollup.md`](rollup.md), 
    [`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) Regel L7).
 
 Zur Laufzeit wird auf der Produktion gelesen; eine Replica gibt es nicht. Die Regeln 1 bis 6 sind
-deshalb nicht verhandelbar.
+deshalb für Lesezugriffe auf `GlassfishDB` nicht verhandelbar (Geltungsbereich bei Regel 1, E‑1016).
 
 ### Umgebungen
 

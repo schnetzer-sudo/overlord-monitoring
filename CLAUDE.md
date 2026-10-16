@@ -45,6 +45,10 @@ stillschweigend gebrochen:
 5. **Keine `OFFSET`-Paginierung** — ausschließlich cursor-basiert.
 6. **`MessageProperty` nur über `MessageID`** — nie über den Wert filtern, gruppieren, sortieren.
 7. **Keine Live-Aggregation über `Message`** — Kennzahlen kommen aus `message_rollup`.
+
+   Die Regeln 4 bis 7 gelten für Lesezugriffe auf `GlassfishDB` und das daraus Abgeleitete
+   (Rollup). Tabellen in `overlord_monitor`, die nicht aus `GlassfishDB` abgeleitet sind (`task`),
+   folgen ihnen nicht (E‑1016, `docs/tasks.md`); gemessen wird trotzdem jede Abfrage.
 8. **`LocalDateTime.now()` wird nirgends direkt aufgerufen** — stattdessen die `Clock`-Beans aus
    `common/ZeitConfig` (Anwendungsuhr bzw. `systemClock`).
 9. **Fehlerprüfung nur über `MessageStatusClassifier.fehlerBedingung(...)`** — niemals über das
