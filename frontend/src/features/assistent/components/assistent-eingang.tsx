@@ -70,9 +70,10 @@ export function AssistentEingang({ mandant }: { mandant: Mandant }) {
       {/*
        * Rechtsbündig unter dem Symbol, 26,25 rem breit — 420 px in der Stufe `m`
        * (E‑1066) — und mit fester Höhe, damit die Fläche nicht mit jeder Nachricht
-       * wächst (F10). Unter 768 px die volle Breite ohne Rundung (E‑1077); die
-       * Höhe reicht bis zum unteren Rand, über die verfügbare Höhe, die Radix am
-       * Element setzt.
+       * wächst (F10). Unter 768 px die volle Breite ohne Rundung (E‑1077) und die
+       * ganze verfügbare Höhe bis zum unteren Rand, die Radix am Element setzt —
+       * mit den 40 rem allein schien darunter die Seite durch (Sichtprobe M1004,
+       * 390 × 844).
        */}
       <PopoverContent
         align="end"
@@ -80,7 +81,7 @@ export function AssistentEingang({ mandant }: { mandant: Mandant }) {
         collisionPadding={0}
         aria-labelledby={titelId}
         data-teil="chatbox"
-        className="text-basis relative flex h-[min(40rem,var(--radix-popover-content-available-height))] w-screen max-w-none flex-col gap-0 overflow-hidden p-0 max-md:rounded-none md:w-[26.25rem]"
+        className="text-basis relative flex h-[min(40rem,var(--radix-popover-content-available-height))] w-screen max-w-none flex-col gap-0 overflow-hidden p-0 max-md:h-(--radix-popover-content-available-height) max-md:rounded-none md:w-[26.25rem]"
         onOpenAutoFocus={(ereignis) => {
           // Der Fokus gehört ins Eingabefeld, nicht auf den ersten Knopf.
           ereignis.preventDefault();
