@@ -28,7 +28,7 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
 - Die Einträge der früheren README-Tabelle „Offene Sichtprüfungen“ hatten keine Nummer und sind hier als
   **234 bis 246** vergeben (16.10.2026). **Nächste freie Nummer auf `main`: 264.**
 - **Auf `assistent` beginnen die Nummern bei 1000** (Entscheidung 7). **Nächste freie Nummer auf
-  `assistent`: 1017** (A2, 16.10.2026).
+  `assistent`: 1023** (A3, 19.10.2026).
 - **Doppelvergaben sind aufgelöst** (16.10.2026): 136 und 186 bis 189 waren je zweimal vergeben. Die
   Nummer behielt der Punkt, auf den andere Dateien öfter verweisen; der andere bekam 247 bzw. 248 bis
   251, mit datiertem Vermerk an seiner Fundstelle.
@@ -42,17 +42,18 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
 | | Teil 1: projektweit | Teil 2: Sichtprüfungen | Teil 3: lokal |
 |---|---:|---:|---:|
 | offen — Fehler | 32 | 0 | — |
-| offen — Verbesserung | 39 | 0 | — |
-| offen — Entscheidung offen | 54 | 0 | — |
-| offen — Sichtprüfung oder Messung offen | 52 | 13 | — |
-| **offen gesamt** | **177** | **13** | — |
+| offen — Verbesserung | 40 | 0 | — |
+| offen — Entscheidung offen | 53 | 0 | — |
+| offen — Sichtprüfung oder Messung offen | 57 | 13 | — |
+| **offen gesamt** | **182** | **13** | — |
 | ungeprüft | — | — | 357 |
-| erledigt | 55 | 0 | 64 |
+| erledigt | 56 | 0 | 64 |
 | gegenstandslos | 3 | 0 | 5 |
-| **Zeilen** | 235 | 13 | 426 |
+| **Zeilen** | 241 | 13 | 426 |
 
-Offen sind damit **190** nummerierte Punkte; dazu kommen 357 ungeprüfte lokale. Davon gehören 15 der
-Linie `assistent` (1000 bis 1007 aus A1, 1009 bis 1015 aus A2; 1016 ist seit M1003 erledigt).
+Offen sind damit **195** nummerierte Punkte; dazu kommen 357 ungeprüfte lokale. Davon gehören 20 der
+Linie `assistent` (1000 bis 1007 aus A1; 1009, 1010 und 1012 bis 1015 aus A2; 1017 bis 1022 aus A3;
+1011 ist seit A3 entschieden, 1016 seit M1003 erledigt).
 
 ### Wie das Register erhoben ist
 
@@ -298,12 +299,18 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 1008 | Datenschutz und Auftragsverarbeitung mit dem Modellanbieter, vor A2 | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Entscheidung offen | **erledigt** — `tasks.md` §11: „Erledigt am 16.10.2026: beantwortet mit E‑1029 und E‑1030 (gebaut, aber abgeschaltet), weitergeführt als Punkt 1009“ |
 | 1009 | Prüfung der Auftragsverarbeitung mit Anthropic durch den Datenschutzbeauftragten, vor dem Einschalten in der Produktion | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Entscheidung offen | offen |
 | 1010 | Ob der Produktionsserver `api.anthropic.com` erreicht, ist ungeprüft | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Sichtprüfung oder Messung offen | offen |
-| 1011 | Streaming für A3 | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Entscheidung offen | offen |
+| 1011 | Streaming für A3 | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Entscheidung offen | **erledigt** — `assistent.md` §11: „Entschieden am 19.10.2026 mit A3: kein Streaming, eine Warteanzeige“ (E‑1075, [`assistent-frontend.md`](assistent-frontend.md) §10) |
 | 1012 | Was das Gespräch erfährt, wenn der Kunde die Karte ändert oder den Auftrag anlegt | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Entscheidung offen | offen |
 | 1013 | Ob der Assistent auch Fragen zum Stand eigener Aufträge beantworten soll | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Entscheidung offen | offen |
 | 1014 | Kosten je Gespräch, sobald echte Läufe vorliegen | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Sichtprüfung oder Messung offen | offen |
 | 1015 | Ob eine Vereinbarung über Zero Data Retention mit Anthropic sinnvoll ist | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Entscheidung offen | offen |
 | 1016 | Ob `max_tokens` 1.024 für einen Vorschlag mit 20 Einträgen reicht (geschätzt, nicht gemessen; offen bis zum Lauf mit Testfall S16) | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Sichtprüfung oder Messung offen | **erledigt** — `assistent.md` §8.3: am 19.10.2026 wieder geöffnet und „Erledigt am 19.10.2026 durch M1003“; mit 1.024 wurde S18 (20 Einträge, alle fünf Felder) abgeschnitten, seit E‑1064 gilt 2.048, S18 in beiden Durchgängen bestanden (höchster Aufruf 1.230 Token aus) |
+| 1017 | Nach einer übernommenen Änderung kennt die Karte den Schlüssel des Eintrags nicht mehr; `POST /api/tasks/pruefung` könnte ihn mitliefern | [`assistent-frontend.md`](assistent-frontend.md) §10 · Linie `assistent`, A3 | Verbesserung | offen |
+| 1018 | Sichtprüfung: Chatbox mit Karte hell und dunkel, breit und schmal, `xs` und `l`; Kopfzeile mit dem Symbol bei 768 px in `l` | [`assistent-frontend.md`](assistent-frontend.md) §10, §11 · Linie `assistent`, A3 | Sichtprüfung oder Messung offen | offen |
+| 1019 | Sichtprüfung: Karte mit 20 Einträgen noch zu überblicken | [`assistent-frontend.md`](assistent-frontend.md) §10, §11 · Linie `assistent`, A3 | Sichtprüfung oder Messung offen | offen |
+| 1020 | Sichtprüfung: bei einer Anpassung mit leerem Feld „wird entfernt“ unübersehbar | [`assistent-frontend.md`](assistent-frontend.md) §10, §11 · Linie `assistent`, A3 | Sichtprüfung oder Messung offen | offen |
+| 1021 | Sichtprüfung: Öffnen, schreiben, Karte ändern und anlegen nur mit der Tastatur | [`assistent-frontend.md`](assistent-frontend.md) §10, §11 · Linie `assistent`, A3 | Sichtprüfung oder Messung offen | offen |
+| 1022 | Sichtprüfung: Antworten und Karte mit einem Vorleseprogramm | [`assistent-frontend.md`](assistent-frontend.md) §10, §11 · Linie `assistent`, A3 | Sichtprüfung oder Messung offen | offen |
 
 ---
 

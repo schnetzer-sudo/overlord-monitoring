@@ -799,7 +799,7 @@ und geht in Punkt 1009 auf.
 |---|---|---|
 | **1009** | Prüfung der Auftragsverarbeitung mit Anthropic durch den Datenschutzbeauftragten, vor dem Einschalten in der Produktion (E‑1029). | Entscheidung offen |
 | **1010** | Der Produktionsserver muss `api.anthropic.com` erreichen; ob der Weg frei ist (Firewall, Proxy), ist ungeprüft. | Sichtprüfung oder Messung offen |
-| **1011** | Streaming für A3 (E‑1043): Eine Nachricht kann ohne Streaming bis zu vier Modellaufrufe lang dauern (§7). | Entscheidung offen |
+| **1011** | Streaming für A3 (E‑1043): Eine Nachricht kann ohne Streaming bis zu vier Modellaufrufe lang dauern (§7). **Entschieden am 19.10.2026 mit A3:** kein Streaming, eine Warteanzeige; Eingabe und Senden sind gesperrt, solange die Antwort aussteht (E‑1075, [`assistent-frontend.md`](assistent-frontend.md) §2). | Entscheidung offen |
 | **1012** | Was das Gespräch erfährt, wenn der Kunde die Karte ändert oder den Auftrag anlegt. Heute erfährt es nichts. | Entscheidung offen |
 | **1013** | Ob der Assistent später auch Fragen zum Stand eigener Aufträge beantworten soll. Heute bekommt er keine Aufträge aus `task` (E‑1035). | Entscheidung offen |
 | **1014** | Kosten je Gespräch, sobald echte Läufe vorliegen. Das Protokoll trägt die Token je Nachricht (§3.5). | Sichtprüfung oder Messung offen |
@@ -812,5 +812,5 @@ und geht in Punkt 1009 auf.
 
 | Teil | Inhalt |
 |---|---|
-| **A3** | Chatbox in der Kopfleiste und Bestätigungskarte: `GET /api/assistent` entscheidet, ob die Chatbox erscheint; die Karte zeigt `vorschlag` mit `label` und `hinweis` je Feld, prüft Änderungen über `POST /api/tasks/pruefung` und legt mit `POST /api/tasks` an (`anfrageId` je Absenden). **Die Karte zeigt den aktiven Mandanten** (E‑1059): Der Assistent weist einen anderen Mandanten ab und verweist auf den Wechsel in der Kopfzeile, also muss der Kunde auf der Karte sehen, für welchen Mandanten er anlegt. Offen: Streaming (1011), Rückmeldung ans Gespräch (1012) |
+| **A3** | Chatbox in der Kopfleiste und Bestätigungskarte: `GET /api/assistent` entscheidet, ob die Chatbox erscheint; die Karte zeigt `vorschlag` mit `label` und `hinweis` je Feld, prüft Änderungen über `POST /api/tasks/pruefung` und legt mit `POST /api/tasks` an (`anfrageId` je Absenden). **Die Karte zeigt den aktiven Mandanten** (E‑1059): Der Assistent weist einen anderen Mandanten ab und verweist auf den Wechsel in der Kopfzeile, also muss der Kunde auf der Karte sehen, für welchen Mandanten er anlegt. Offen: Streaming (1011), Rückmeldung ans Gespräch (1012). **Erledigt mit A3 am 19.10.2026** ([`assistent-frontend.md`](assistent-frontend.md)): Symbol nur bei `verfuegbar: true` (E‑1068), Karte mit `label` und `hinweis` je Feld (E‑1070), Prüfung über `POST /api/tasks/pruefung` (E‑1071), „Gilt für: <Mandant>“ (E‑1069). Abweichend von „`anfrageId` je Absenden“ gilt **eine `anfrageId` je Karte**, auch für den zweiten Versuch (E‑1072) — das ist das Absenden derselben Karte. Streaming ist entschieden (1011, E‑1075), die Rückmeldung bleibt offen (1012, E‑1078) |
 | **A4** | Bereich „Ihre Aufträge“ in der Übersicht, über `GET /api/tasks` |

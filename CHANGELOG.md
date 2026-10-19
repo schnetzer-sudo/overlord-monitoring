@@ -32,6 +32,13 @@ Tags und die Definition of Done für ein Release stehen in
 - `docs/PROJEKTBESCHREIBUNG.md` §11, neue offene Annahme: Übermittlung an Anthropic in die USA auf
   Grundlage des Data Privacy Framework, Prüfung durch den Datenschutzbeauftragten ausstehend
   (E‑1029, Punkt 1009).
+- Assistent im Frontend (A3): Symbol in der Kopfleiste links neben dem Nutzermenü, Chatbox als
+  Overlay, Bestätigungskarte mit Prüfung über `POST /api/tasks/pruefung` und Anlegen per Klick;
+  erscheint nur, wenn `GET /api/assistent` `verfuegbar: true` meldet
+  ([`docs/assistent-frontend.md`](docs/assistent-frontend.md); E‑1065 bis E‑1082).
+- `docs/README.md`: Eintrag für `docs/assistent-frontend.md` und Hinweis auf die Sichtprüfungen
+  1018 bis 1022 im Register, weil jede neue Datei dort steht (Dokumentationspflicht in
+  [`CLAUDE.md`](CLAUDE.md)).
 
 ### Geändert
 

@@ -81,6 +81,10 @@ Die offenen Sichtprüfungen stehen in **einer** Tabelle, im Register Teil 2, als
 Spalte), eine Zustände, die die Testkopie nicht zeigt (Eigenschaften an der Zeitleiste), und eine den
 Rückweg aus der Datei im Browser. Die Beschreibung steht jeweils in der Feature-Datei.
 
+Auf der Linie `assistent` stehen neue Sichtprüfungen als gewöhnliche Punkte in Teil 1 des Registers:
+**1018 bis 1022** für Chatbox und Karte, mit eingeschaltetem Assistenten
+([`assistent-frontend.md`](assistent-frontend.md) §11).
+
 ---
 
 ## Verzeichnis
@@ -140,6 +144,7 @@ Rückweg aus der Datei im Browser. Die Beschreibung steht jeweils in der Feature
 | [`spaltenwahl.md`](spaltenwahl.md) | Tabellen wählen ihre Spalten nach der Breite ihres Containers, mit Schwellen aus gemessenen Mindestbreiten. |
 | [`tasks.md`](tasks.md) | Aufträge über den Assistenten, Auftragsmodell (Linie `assistent`, A1): Tabellen `task`, `task_type`, `task_type_mandant`, Auftragstypen als Daten samt Anleitung zum Anlegen per SQL, der Typ `WERK_ABLADESTELLE`, Prüfung, Parametertext, Einordnung und die Endpunkte unter `/api/tasks`. |
 | [`assistent.md`](assistent.md) | Der Assistent im Backend (Linie `assistent`, A2): Ablauf von der Nachricht bis zur Karte, Datenfluss zum Anbieter, die anbieterneutrale Schnittstelle und der Adapter für Anthropic, Werkzeuge, Endpunkte unter `/api/assistent` und `POST /api/tasks/pruefung`, Grenzen, Testsatz. |
+| [`assistent-frontend.md`](assistent-frontend.md) | Der Assistent im Frontend (Linie `assistent`, A3): Symbol in der Kopfleiste, Chatbox als Overlay, Bestätigungskarte mit Prüfung und Anlegen, Verhalten bei Fehlern, Barrierefreiheit und die Sichtprüfungen mit eingeschaltetem Assistenten. |
 | [`task-schnittstelle.md`](task-schnittstelle.md) | Der Vertrag für die EDI-Plattform, für sich lesbar: die vier Statements zum Lesen, Abholen und Zurückmelden, Parametertext, Rückgabe, Fehlertext und das Beispiel `WERK_ABLADESTELLE`. |
 
 ### Erhebungen
