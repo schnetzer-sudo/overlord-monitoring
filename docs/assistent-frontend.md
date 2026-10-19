@@ -78,7 +78,7 @@ Drei Punkte ließen sich aus Auftrag und Backend nicht entscheiden; **vom Auftra
 
 ### Festlegungen der Umsetzung
 
-Was der Auftrag offenließ und beim Bau festgelegt wurde, vorgeschlagen als **F1 bis F12**, zur
+Was der Auftrag offenließ und beim Bau festgelegt wurde, vorgeschlagen als **F1 bis F15**, zur
 Bestätigung durch den Auftraggeber. Eine E‑Nummer bekommen sie erst mit der Bestätigung, wie in A2.
 
 | F | Festlegung | Grund |
@@ -93,8 +93,11 @@ Bestätigung durch den Auftraggeber. Eine E‑Nummer bekommen sie erst mit der B
 | **F8** | **„Auftrag anlegen“ ist gesperrt**, solange Prüffehler aus dem Anlegen am Feld stehen, und im Änderungsmodus nicht angeboten: Erst „Übernehmen“ oder „Verwerfen“. | Dieselben Werte noch einmal zu schicken, brächte dieselben Fehler. Angelegt werden soll, was auf der Karte steht, nicht ein halber Entwurf |
 | **F9** | **Der Kopf der Chatbox nennt den Mandanten** (Code), zusätzlich zur Karte. | Unter 768 px deckt die Chatbox die zweite Zeile der Kopfzeile ab, in der der Mandant steht ([`visuelles-konzept.md`](visuelles-konzept.md) §6: „Der aktive Mandant bleibt in der Kopfzeile“). Der Assistent verweist bei einem fremden Mandanten auf den Wechsel dort (E‑1059) |
 | **F10** | **Feste Höhe** `min(40rem, verfügbare Höhe)`; nur der Verlauf scrollt. | Eine Box, die mit jeder Nachricht wächst, bewegt die Fläche unter der Hand (Leitsatz „ruhig“, [`visuelles-konzept.md`](visuelles-konzept.md) §1) |
-| **F11** | **Das Eingabefeld ist während der Antwort `readOnly`, nicht `disabled`.** Senden ist gesperrt. | Ein gesperrtes Feld verlöre unter der Tastatur den Fokus, wie beim Knopf „Neu laden“ ([`neu-laden.md`](neu-laden.md)); nach der Antwort schreibt der Kunde dort weiter, wo er war |
+| **F11** | **Gesperrt heißt `readOnly` und `aria-disabled`, nicht `disabled`:** das Eingabefeld während der Antwort, „Senden“, „Übernehmen“, „Auftrag anlegen“ und „Neues Gespräch“. Der Klick prüft die Sperre selbst. | Ein gesperrtes Element verlöre unter der Tastatur den Fokus, gerade wenn es eben gedrückt wurde — wie beim Knopf „Neu laden“ ([`neu-laden.md`](neu-laden.md)); nach der Antwort schreibt der Kunde dort weiter, wo er war |
 | **F12** | **`409 nachricht-laeuft` wird nicht angezeigt**, nur mit `console.warn` gemeldet; die Eingabe kommt ins Feld zurück. | Fehlertabelle: „darf durch die Sperre nicht vorkommen; wenn doch, still ignorieren und loggen“. `console.error` ließe die Tests fehlschlagen und ist für Befunde da |
+| **F13** | **„Neues Gespräch“ geht auch während einer Antwort.** Die späte Antwort kommt nicht in das neue Gespräch; ein Gespräch, das erst danach eröffnet wurde, wird sofort beendet. | Der Kunde soll nicht auf eine Antwort warten müssen, die er nicht mehr will. Gezählt wird über eine Generation je Gespräch im Haken, nicht über die Antwort |
+| **F14** | **„Neues Gespräch“ ist gesperrt, solange das Gespräch frisch ist** — nur die Begrüßung, kein Hinweis, nichts eröffnet. | Ein Knopf, der nichts tut, wäre ein Klickversprechen ins Leere (dieselbe Regel wie beim Mandantenumschalter, [`visuelles-konzept.md`](visuelles-konzept.md) §5) |
+| **F15** | **Die `anfrageId` entsteht auch ohne sicheren Kontext**: `crypto.randomUUID`, sonst eine UUID der Version 4 aus `crypto.getRandomValues`. | `randomUUID` gibt es nur unter HTTPS oder auf `localhost`; hinter einem Proxy ohne TLS fehlte sie still, und das Anlegen schiene zu gehen |
 
 ---
 
@@ -318,7 +321,80 @@ im Rumpf, steht derselbe Satz ohne sie ([`frontend-grundlagen.md`](frontend-grun
 
 ## 8. Tests
 
-*Folgt mit dem Bau (Teil 3 des Auftrags).*
+**Gelaufen am 19.10.2026:** `pnpm check` grün — Lint, Typprüfung, Format, **1.424 Fälle in 52
+Dateien**, davon **58 neu** (35 rein, 23 gerendert). `next build` grün. Die Zahl der gerenderten Fälle
+(jetzt 256 in 27 Dateien) steht im Kopf von `frontend/vitest.config.mts`, aus dem Lauf gezählt.
+
+| Datei | Was |
+|---|---|
+| `tests/assistent.test.ts` | **35 Fälle, rein.** Das Gespräch: Begrüßung ohne Gespräch beim Backend; gesendet heißt im Verlauf, Feld leer, warten; nur Leerraum geht nicht hinaus; die Antwort mit Vorschlag wird eine Karte mit ihrer `anfrageId`; gescheitert heißt zurück ins Feld und aus dem Verlauf (F4); abgelaufen sperrt bis „Neues Gespräch“, das den Entwurf behält; eine späte Antwort kommt nicht mehr an. Die Karte: Prüfung sperrt „Übernehmen“, Fehler sperren weiter, frei gibt frei; die Antwort auf einen älteren Stand verfällt (F5); „Verwerfen“; `typUnbekannt` und `gestoert` sperren; angelegt mit den Werten der Antwort (F7) und danach unveränderlich; die Sperre nach Prüffehlern bis zur nächsten Übernahme (F8); dieselbe `anfrageId` nach einer Störung; der Rumpf trägt nur `typ`, `aktion` und Werte. Wohin ein Fehler gehört; die Überschrift mit Rückfall (E‑1080), `null` und `""` gleich; fünf offen, sonst alle (F6). **Jede Zeile der Fehlertabelle nach Problemtyp** (E‑1081), die Zahl in beiden Sprachen und der Satz ohne sie; die Ansage; die Fehlerliste; die `anfrageId` mit und ohne `randomUUID` |
+| `tests/assistent-chatbox.test.tsx` | **23 Fälle, gerendert**, gegen ein gestelltes `fetch`. Das Symbol fehlt bei `verfuegbar: false` (und es geht keine Anfrage außer dem Stand hinaus) und bei einem Fehler; es steht mit Beschriftung und Tooltip links neben dem Nutzermenü. Fokus im Feld beim Öffnen, am Symbol nach Esc und „×“; die Begrüßung mit den Typen ohne Aufruf. Erst eröffnen, dann senden, mit dem Text als einzigem Inhalt; während der Antwort `readOnly`, `aria-disabled`, Warteanzeige, Ansage, kein zweites Senden; Umschalt+Enter sendet nicht. **Ein Text mit `<img src=x onerror=alert(1)>`, `**fett**` und einem Markdown-Verweis steht als genau ein Textknoten da, kein Element** (E‑1074). Schließen und Wiederöffnen behalten Verlauf, Entwurf und Gespräch; „Neues Gespräch“ schickt `DELETE`. Die Karte mit Typ, Aktion, „Gilt für: NEXANS …“, jedem Feld, „leer“ mit und ohne Hinweis; Ändern, „Übernehmen“ gesperrt vor dem Aufruf und während er läuft, der Fehler des Backends am Feld mit `aria-invalid`, nach Korrektur frei, danach der Rückfall der Überschrift und der Fokus auf „Ändern“; fünf von 20 Einträgen und „Alle 20 anzeigen“. Anlegen mit den Werten der Karte und der `anfrageId`, nach einem `503` dieselbe, danach gesperrt mit „Angelegt, Status: Offen“ und dem Fokus darauf; Prüffehler beim Anlegen am Feld. **Jede Zeile der Fehlertabelle**: `429` zweimal, `400`, `502`, `503` (auch beim Eröffnen), `409`, `404`. Der Mandantenwechsel setzt zurück und eröffnet beim nächsten Senden neu |
+| `tests/sprachdateien.test.ts` | ein Fall erweitert: auch die beiden `404` des Assistenten („abgelaufen“, „gibt es hier nicht“) tragen kein Wort über Berechtigung |
+
+**Verletzungsproben**, je ein Eingriff in den Code, Lauf über beide neuen Dateien, Rücknahme per
+`git checkout` gegen den committeten Stand:
+
+| Eingriff | rot |
+|---|---|
+| Symbol ohne Prüfung auf `verfuegbar` | „fehlt bei verfuegbar: false“ |
+| Antwort als HTML (`dangerouslySetInnerHTML`) | „wörtlich als einen Textknoten“ |
+| neue `anfrageId` je Versuch | „beim zweiten Versuch dieselbe“ |
+| „Übernehmen“ ohne Prüfstand | 5 Fälle, gerendert und rein |
+| Mandant nicht als `key` | „Mandantenwechsel setzt die Chatbox zurück“ |
+| Feld während der Antwort nicht `readOnly` | „sperrt während der Antwort“ |
+| Fokus beim Öffnen nicht ins Feld | „öffnet mit dem Fokus im Eingabefeld“ |
+| `429` nach Statuscode | 2 Fälle (ausgeschöpft, gerendert und rein) |
+| `DELETE` auch für das abgelaufene Gespräch | „404 auf das Gespräch“ |
+| Hinweis auch bei gefülltem Feld | „zeigt jedes Feld, leere ausdrücklich mit Hinweis“ |
+| Eingabe nach einem Fehler nicht zurück | 10 Fälle |
+| **Eichung:** ein Wort in einem Kommentar | **0** — überlebt, wie es soll |
+
+### 8.1 Sichtprobe M1004 (19.10.2026)
+
+**Wie:** Ein eigenes Chrome mit Debug-Port, angemeldet von Lukas (ADMIN), Mandant `NEXANS`, gefahren
+über das DevTools-Protokoll (`Emulation.setDeviceMetricsOverride`, Thema und Dichte über
+`data-thema` und `data-dichte`). **Der Assistent blieb aus** (`OVERLORD_ASSISTENT_AKTIV=false`):
+`GET /api/assistent`, die Gespräche, `POST /api/tasks/pruefung` und `POST /api/tasks` beantwortete
+ein Ersatz von `window.fetch` in der Seite, mit erfundenen Werten (Werk `47110`, Abladestellen
+`TOR3`, `TOR4`). Kein Text ging an Anthropic, kein Auftrag in `task`. Die Aufnahmen liegen nur
+lokal und sind nicht eingecheckt.
+
+**Befund, behoben:** Unter 768 px war die Chatbox nur `min(40rem, verfügbare Höhe)` hoch; bei
+390 × 844 endete sie bei 686 px, und darunter schien die Seite durch. Das widersprach E‑1077 und §4.
+Seither nimmt sie dort die ganze verfügbare Höhe: **798 px** (844 − 46) bei 390 × 844, volle Breite,
+`scrollWidth` 390.
+
+**Lage der Chatbox** bei 1440 × 900: rechtsbündig unter dem Symbol, links 915, oben 47; 420 × 640
+in `m`, **368 × 560 in `xs`, 473 × 720 in `l`** — Breite und Höhe gehen in `rem` mit der Dichte.
+`scrollWidth` des Dokuments in allen Aufnahmen gleich der Fensterbreite.
+
+**Kopfzeile mit dem Symbol** (Punkt 1018, zweiter Teil): In allen 16 Lagen — `xs`, `s`, `m`, `l` je bei
+768, 800, 1.024 und 1.280 px — ist die Zeile der Kopfzeile genau so breit wie das Fenster
+(`scrollWidth = clientWidth`), **kein Überlauf**. Nachgegeben hat, wie in E‑232 vorgesehen, allein der
+Produktname. Gegenprobe mit ausgeblendetem Symbol, Breite des Produktnamens in px:
+
+| Dichte | 768 ohne / mit | 800 ohne / mit | 1.024 ohne / mit |
+|---|---|---|---|
+| `xs` | 151 / 151 | 151 / 151 | 151 / 151 |
+| `s` | 161 / 134 | 161 / 161 | 161 / 161 |
+| `m` | 131 / 93 | 163 / 125 | 172 / 172 |
+| `l` | **52 / 9** | 84 / 41 | 120 / 77 |
+
+**Bei 768 px in `l` bleibt vom Produktnamen nur die Auslassung** (9 px); der volle Name steht im
+`title`. Ob das so bleiben darf, entscheidet die Sichtprüfung 1018 — die Alternative wäre, dort etwas
+anderes nachgeben zu lassen, etwa den Benutzernamen im Nutzermenü, und das ist eine Entscheidung
+über die Kopfzeile, nicht über A3.
+
+**Gesehen** (Aufnahmen hell und dunkel, 1440 × 900 und 390 × 844, dazu `xs`, `l`, Änderungsmodus mit
+Prüffehler, 20 Einträge): Kopf mit Mandant, Verlauf, Karte mit „leer“ samt Hinweis, Fehler des
+Backends am Feld mit rotem Rand und Zeichen, „Alle 20 anzeigen“ unter fünf Einträgen. **Beobachtet,
+kein Befund:** Kommt eine Antwort mit Karte, bleibt der Verlauf stehen, wenn die Oberkante der
+Antwort schon im Bild ist — die Karte beginnt dann weiter unten, und „Auftrag anlegen“ liegt unter
+dem Rand. Das ist die Regel aus [`frontend-grundlagen.md`](frontend-grundlagen.md) §7, Bedingung 4
+(„steht es schon im Bild, bewegt sich nichts“); ob sie im Chat trägt, gehört zu Sichtprüfung 1019.
+
+**Nicht geprüft:** echte Antworten des Modells, ein Vorleseprogramm, die Bedienung von Hand mit der
+Tastatur und am Finger. Dafür stehen die Sichtprüfungen in §11.
 
 ---
 
@@ -343,7 +419,7 @@ Nummern ab 1017 (Linie `assistent`, per `grep` geprüft); dieselben Zeilen stehe
 | Nr. | Punkt | Art |
 |---|---|---|
 | **1017** | Nach einer übernommenen Änderung kennt die Karte den Schlüssel des Eintrags nicht mehr und zeigt „Eintrag n“ (E‑1080). `POST /api/tasks/pruefung` könnte den Schlüssel je Eintrag mitliefern, wie der Vorschlag es tut. | Verbesserung |
-| **1018** | Sichtprüfung 1: Chatbox mit Karte hell und dunkel, breit und schmal, in `xs` und `l` (§11). Dazu, ob die Kopfzeile mit dem zusätzlichen Symbol bei 768 px in `l` noch ohne Überlauf steht. | Sichtprüfung oder Messung offen |
+| **1018** | Sichtprüfung 1: Chatbox mit Karte hell und dunkel, breit und schmal, in `xs` und `l` (§11). Dazu, ob die Kopfzeile mit dem zusätzlichen Symbol bei 768 px in `l` noch ohne Überlauf steht. **Gemessen am 19.10.2026 (M1004, §8.1):** kein Überlauf in 16 Lagen; der Produktname schrumpft bei 768 px in `l` von 52 auf 9 px. Offen bleibt das Urteil von Hand. | Sichtprüfung oder Messung offen |
 | **1019** | Sichtprüfung 2: Ist eine Karte mit 20 Einträgen noch zu überblicken? (§11) | Sichtprüfung oder Messung offen |
 | **1020** | Sichtprüfung 3: Ist bei einer Anpassung mit leerem Feld „wird entfernt“ unübersehbar? (§11) | Sichtprüfung oder Messung offen |
 | **1021** | Sichtprüfung 4: Öffnen, schreiben, Karte ändern und anlegen nur mit der Tastatur (§11) | Sichtprüfung oder Messung offen |
