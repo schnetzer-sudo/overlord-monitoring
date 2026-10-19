@@ -826,6 +826,13 @@ die er zeigt, entstehen aber nur über ihn.
 **Aufräumen**, nur die eigenen und nur auf der Testkopie: Teil 3 des Skripts löscht alle Aufträge des
 eigenen Kontos unter `NEXANS`, gleich in welchem Stand — vorher mit dem `SELECT` dort ansehen.
 
+**Das Skript ist am 19.10.2026 auf der Testkopie gelaufen**, mit sieben eigenen Testaufträgen
+(`angelegt_von = 'it-sim-probe'`, eingefügt statt über den Assistenten angelegt) und einer Kopie, in
+der die beiden Variablen gesetzt waren: Der jüngste blieb offen, die übrigen fünf standen danach in
+den fünf Ständen, die Rückgaben mit so vielen Zeilen wie Einträgen („Ok | Ok“, „Schlüssel nicht
+gefunden | Ok | Ok“, bei „unvollständig“ mit einem Eintrag leer); Teil 2 holte den siebten ab,
+Teil 3 hinterließ null Zeilen. Wie die Übersicht diese Stände zeigt, ist Sichtprüfung 1028.
+
 ### 12.13 Sichtprobe M1006 (19.10.2026)
 
 **Wie — ohne Anmeldung:** Das Markup der echten `DashboardAnsicht` mit gestellten Daten (sechs
