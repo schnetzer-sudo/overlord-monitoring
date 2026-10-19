@@ -1715,6 +1715,86 @@ export const de = {
     },
   },
 
+  // Der Assistent in der Kopfleiste (A3, `docs/assistent-frontend.md`). **In der
+  // Chatbox wird gesiezt** (F2): Der Assistent selbst siezt (E‑1044), und
+  // Begrüßung, Hinweise und Antworten stehen im selben Verlauf.
+  assistent: {
+    symbol: "Assistent",
+    titel: "Assistent",
+    mandant: "Aktiver Mandant",
+    schliessen: "Assistent schließen",
+    neuesGespraech: "Neues Gespräch",
+    // Drei Zeilen, dazwischen die Typen aus `GET /api/assistent` als Liste.
+    begruessung: {
+      gruss: "Guten Tag, ich bin der Assistent des Overlord Monitorings.",
+      einleitung:
+        "Ich nehme Ihre Änderungswünsche an der EDI-Konfiguration entgegen und bereite daraus einen Auftrag vor. Derzeit möglich:",
+      schluss:
+        "Beschreiben Sie einfach, was Sie ändern möchten. Bevor etwas angelegt wird, zeige ich Ihnen den Auftrag zur Prüfung.",
+    },
+    verlauf: "Verlauf des Gesprächs",
+    sprecher: {
+      kunde: "Sie:",
+      assistent: "Assistent:",
+    },
+    wartet: "Der Assistent antwortet …",
+    eingabe: {
+      beschriftung: "Ihre Nachricht an den Assistenten",
+      platzhalter: "Was möchten Sie ändern?",
+      senden: "Senden",
+      tasten: "Enter sendet, Umschalt+Enter beginnt eine neue Zeile.",
+    },
+    // Nach Problemtyp und nicht nach Statuscode (E‑1081). Die Zahlen kommen aus
+    // dem Fehlerformat; fehlen sie, steht derselbe Satz ohne sie.
+    hinweis: {
+      zuVieleNachrichten:
+        "Gerade kamen zu viele Nachrichten. Bitte warten Sie einen Moment und senden Sie dann erneut.",
+      ausgeschoepft:
+        "Dieses Gespräch hat die Höchstzahl von {anzahl} Nachrichten erreicht. Bitte beginnen Sie ein neues Gespräch.",
+      ausgeschoepftOhneZahl:
+        "Dieses Gespräch hat die Höchstzahl an Nachrichten erreicht. Bitte beginnen Sie ein neues Gespräch.",
+      nachrichtUngueltig:
+        "Die Nachricht ist leer oder zu lang. Bitte schreiben Sie höchstens {anzahl} Zeichen.",
+      nachrichtUngueltigOhneZahl: "Die Nachricht ist leer oder zu lang.",
+      nichtErreichbar:
+        "Der Assistent ist gerade nicht erreichbar. Ihre Nachricht steht wieder im Eingabefeld; Sie können sie erneut senden.",
+      // Ein 404 sagt nichts über Berechtigung (`docs/frontend-grundlagen.md` §6).
+      abgelaufen:
+        "Dieses Gespräch ist abgelaufen. Beginnen Sie ein neues Gespräch; Ihre Nachricht bleibt im Eingabefeld.",
+    },
+    ansage: {
+      vorschlagEins: "Vorschlag auf der Karte: {name}, ein Eintrag.",
+      vorschlagMehr: "Vorschlag auf der Karte: {name}, {anzahl} Einträge.",
+    },
+    karte: {
+      bezeichnung: "Vorschlag: {name}",
+      giltFuer: "Gilt für:",
+      eintrag: "Eintrag {nummer}",
+      leer: "leer",
+      alleAnzeigen: "Alle {anzahl} anzeigen",
+      wenigerAnzeigen: "Nur die ersten {anzahl} anzeigen",
+      anlegen: "Auftrag anlegen",
+      anlegenLaeuft: "Wird angelegt …",
+      aendern: "Ändern",
+      uebernehmen: "Übernehmen",
+      verwerfen: "Verwerfen",
+      pruefungLaeuft: "Wird geprüft …",
+      pruefungFehler: "Bitte korrigieren Sie die markierten Angaben.",
+      pruefungGestoert: "Die Angaben konnten gerade nicht geprüft werden.",
+      erneutPruefen: "Erneut prüfen",
+      // 404 beim Prüfen und beim Anlegen — wie das Backend es dem Modell sagt.
+      typUnbekannt: "Diesen Auftragstyp gibt es hier nicht.",
+      anlegenFehler:
+        "Der Auftrag wurde nicht angelegt. Bitte korrigieren Sie die markierten Angaben.",
+      anlegenGestoert:
+        "Der Auftrag konnte gerade nicht angelegt werden. Bitte versuchen Sie es erneut; er entsteht dabei nicht doppelt.",
+      // F7: „Offen“ für die Einordnung OFFEN; jede andere steht roh, die Wörter
+      // dafür gehören zu „Ihre Aufträge“ (A4).
+      angelegt: "Angelegt, Status: {status}",
+      offen: "Offen",
+    },
+  },
+
   zustand: {
     laedt: "Wird geladen …",
     leerTitel: "Nichts anzuzeigen",
