@@ -695,6 +695,16 @@ Berichte nur lokal (`bericht-20261019-085639.md`, `-085720.md`, `-085831.md`, `-
 
 **Punkt 1016 ist damit am 19.10.2026 erledigt** (§11).
 
+**Tests mit Datenbank zu diesem Stand** (`a244f05`, vom Auftraggeber freigegeben, `V102` durfte
+angewandt werden): `./mvnw clean verify -Djooq.codegen.skip=true`, alle 1.250 Tests ohne und alle
+488 Tests mit Datenbank in 68 Klassen, darunter der neue `TestsatzDefinitionDbIT`,
+`TaskMigrationDbIT` und `AssistentIsolationDbIT` (13). `V102` ist seitdem auf der Testkopie
+angewandt und eingefroren (`flyway_schema_history`, 19.10.2026). Rot war genau ein Fall,
+`DashboardIsolationDbIT.keine_mandanten_id`: der bekannte Punkt 182
+([`dashboard.md`](dashboard.md) §11). Die beiden Rümpfe unterschieden sich nur in
+`plattform.dienste[*].alterSekunden`, sechs Dienste um je eine Sekunde. Die Klasse lief einzeln
+nachgefahren grün (28 von 28).
+
 ---
 
 ## 9. Tests
