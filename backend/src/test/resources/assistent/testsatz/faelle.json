@@ -570,6 +570,163 @@
         "vorschlag": null,
         "begriffe": ["SNDPRN_4908"]
       }
+    },
+    {
+      "kennung": "S18",
+      "herkunft": "synthetisch",
+      "gruppe": 12,
+      "beschreibung": "Genau 20 Einträge mit dreiteiligem Schlüssel und beiden Werten, die größte Werkzeugeingabe: ein Vorschlag mit allen 20 (Punkt 1016)",
+      "nachrichten": [
+        "Bitte alle neu anlegen:\nLieferantennummer\tWerk\tAbladestelle\tSNDPRN\tSNDPRN_4908\n1000000001\tW001\tA1\t200001\t300001\n1000000002\tW002\tA1\t200002\t300002\n1000000003\tW003\tA1\t200003\t300003\n1000000004\tW004\tA1\t200004\t300004\n1000000005\tW005\tA1\t200005\t300005\n1000000006\tW006\tA1\t200006\t300006\n1000000007\tW007\tA1\t200007\t300007\n1000000008\tW008\tA1\t200008\t300008\n1000000009\tW009\tA1\t200009\t300009\n1000000010\tW010\tA1\t200010\t300010\n1000000011\tW011\tA1\t200011\t300011\n1000000012\tW012\tA1\t200012\t300012\n1000000013\tW013\tA1\t200013\t300013\n1000000014\tW014\tA1\t200014\t300014\n1000000015\tW015\tA1\t200015\t300015\n1000000016\tW016\tA1\t200016\t300016\n1000000017\tW017\tA1\t200017\t300017\n1000000018\tW018\tA1\t200018\t300018\n1000000019\tW019\tA1\t200019\t300019\n1000000020\tW020\tA1\t200020\t300020"
+      ],
+      "erwartet": {
+        "vorschlag": {
+          "typ": "WERK_ABLADESTELLE",
+          "aktion": "Neuanlage",
+          "eintraege": [
+            {
+              "lieferantennummer": "1000000001",
+              "werk": "W001",
+              "abladestelle": "A1",
+              "sndprn": "200001",
+              "sndprn4908": "300001"
+            },
+            {
+              "lieferantennummer": "1000000002",
+              "werk": "W002",
+              "abladestelle": "A1",
+              "sndprn": "200002",
+              "sndprn4908": "300002"
+            },
+            {
+              "lieferantennummer": "1000000003",
+              "werk": "W003",
+              "abladestelle": "A1",
+              "sndprn": "200003",
+              "sndprn4908": "300003"
+            },
+            {
+              "lieferantennummer": "1000000004",
+              "werk": "W004",
+              "abladestelle": "A1",
+              "sndprn": "200004",
+              "sndprn4908": "300004"
+            },
+            {
+              "lieferantennummer": "1000000005",
+              "werk": "W005",
+              "abladestelle": "A1",
+              "sndprn": "200005",
+              "sndprn4908": "300005"
+            },
+            {
+              "lieferantennummer": "1000000006",
+              "werk": "W006",
+              "abladestelle": "A1",
+              "sndprn": "200006",
+              "sndprn4908": "300006"
+            },
+            {
+              "lieferantennummer": "1000000007",
+              "werk": "W007",
+              "abladestelle": "A1",
+              "sndprn": "200007",
+              "sndprn4908": "300007"
+            },
+            {
+              "lieferantennummer": "1000000008",
+              "werk": "W008",
+              "abladestelle": "A1",
+              "sndprn": "200008",
+              "sndprn4908": "300008"
+            },
+            {
+              "lieferantennummer": "1000000009",
+              "werk": "W009",
+              "abladestelle": "A1",
+              "sndprn": "200009",
+              "sndprn4908": "300009"
+            },
+            {
+              "lieferantennummer": "1000000010",
+              "werk": "W010",
+              "abladestelle": "A1",
+              "sndprn": "200010",
+              "sndprn4908": "300010"
+            },
+            {
+              "lieferantennummer": "1000000011",
+              "werk": "W011",
+              "abladestelle": "A1",
+              "sndprn": "200011",
+              "sndprn4908": "300011"
+            },
+            {
+              "lieferantennummer": "1000000012",
+              "werk": "W012",
+              "abladestelle": "A1",
+              "sndprn": "200012",
+              "sndprn4908": "300012"
+            },
+            {
+              "lieferantennummer": "1000000013",
+              "werk": "W013",
+              "abladestelle": "A1",
+              "sndprn": "200013",
+              "sndprn4908": "300013"
+            },
+            {
+              "lieferantennummer": "1000000014",
+              "werk": "W014",
+              "abladestelle": "A1",
+              "sndprn": "200014",
+              "sndprn4908": "300014"
+            },
+            {
+              "lieferantennummer": "1000000015",
+              "werk": "W015",
+              "abladestelle": "A1",
+              "sndprn": "200015",
+              "sndprn4908": "300015"
+            },
+            {
+              "lieferantennummer": "1000000016",
+              "werk": "W016",
+              "abladestelle": "A1",
+              "sndprn": "200016",
+              "sndprn4908": "300016"
+            },
+            {
+              "lieferantennummer": "1000000017",
+              "werk": "W017",
+              "abladestelle": "A1",
+              "sndprn": "200017",
+              "sndprn4908": "300017"
+            },
+            {
+              "lieferantennummer": "1000000018",
+              "werk": "W018",
+              "abladestelle": "A1",
+              "sndprn": "200018",
+              "sndprn4908": "300018"
+            },
+            {
+              "lieferantennummer": "1000000019",
+              "werk": "W019",
+              "abladestelle": "A1",
+              "sndprn": "200019",
+              "sndprn4908": "300019"
+            },
+            {
+              "lieferantennummer": "1000000020",
+              "werk": "W020",
+              "abladestelle": "A1",
+              "sndprn": "200020",
+              "sndprn4908": "300020"
+            }
+          ]
+        }
+      }
     }
   ]
 }

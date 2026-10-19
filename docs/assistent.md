@@ -72,7 +72,7 @@ Einspruch übernommen. Die E‑Nummer ist `E‑1027` plus die Nummer der Entsche
 | **E‑1033** | Das Modell hat **nur Werkzeuge ohne Nebenwirkung**: je angebotenem Auftragstyp eines, das einen Vorschlag einreicht. Das Backend prüft jeden Vorschlag mit der Prüfung aus A1. Fehler gehen als Werkzeugergebnis an das Modell zurück, das daraus seine Rückfrage formuliert. Ein gültiger Vorschlag geht an den Client als Karte. **Das Modell legt nie an und beurteilt Werte nicht selbst.** | A (Anlegen nur per Klick), V |
 | **E‑1034** | Werkzeuge entstehen aus der Struktur des Typs: Name ist die Kennung des Typs, die Eingabe ist ein JSON Schema mit `aktion` als Aufzählung und `eintraege` als Liste von Objekten mit den Feldern des Typs (Beschreibung je Feld aus `label`, `hinweis`, `beispiel`, `muster`, `nurBei`; `maxItems` aus `maxEintraege`). **Kein Werkzeug hat einen Mandantenparameter.** Im Hauptcode kennt weiterhin keine Stelle einen bestimmten Typ. | V |
 | **E‑1035** | **Datensparsamkeit.** Das Modell bekommt die feste Anweisung, Name, Beschreibung und Struktur der angebotenen Typen, was der Kunde schreibt, und die Prüfergebnisse. Es bekommt **nicht**: Benutzername, Mandanten-ID, Daten aus `GlassfishDB`, Aufträge aus `task`. **Geändert am 16.10.2026 durch E‑1059:** Der Name des aktiven Mandanten geht hin. | V, geändert (A) |
-| **E‑1036** | **Grenzen**, alle konfigurierbar, mit diesen Vorgaben: Nachricht des Kunden höchstens 4.000 Zeichen; höchstens 20 Nachrichten des Kunden je Gespräch; höchstens 3 Werkzeugrunden je Nachricht; höchstens 60 Nachrichten je Nutzer und Stunde, im Arbeitsspeicher wie die Begrenzung je IP; Zeitgrenze je Aufruf 30 Sekunden; `max_tokens` 1.024. | V |
+| **E‑1036** | **Grenzen**, alle konfigurierbar, mit diesen Vorgaben: Nachricht des Kunden höchstens 4.000 Zeichen; höchstens 20 Nachrichten des Kunden je Gespräch; höchstens 3 Werkzeugrunden je Nachricht; höchstens 60 Nachrichten je Nutzer und Stunde, im Arbeitsspeicher wie die Begrenzung je IP; Zeitgrenze je Aufruf 30 Sekunden; `max_tokens` 1.024. **Geändert am 19.10.2026 durch E‑1064:** `max_tokens` 2.048. | V, geändert (A) |
 | **E‑1037** | Was der Assistent aus `task` braucht (Typdefinition, Typkatalog, Prüfung), **wandert nach `common`**, weil es einen zweiten Verbraucher bekommt ([`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §6). Betrifft die Verschiebung mehr als diese drei Teile samt ihrer Hilfsklassen: anhalten und melden. | V |
 | **E‑1038** | **Gespräche liegen nur im Arbeitsspeicher**, gebunden an Sitzung, Nutzer und aktiven Mandanten, mit Ablauf nach 30 Minuten ohne Nachricht und höchstens 3 offenen Gesprächen je Sitzung. Nicht in der Datenbank, nicht in der Sitzung, nicht im Log. Ein Neustart beendet alle Gespräche; ein Mandantenwechsel beendet die Gespräche dieser Sitzung. | V |
 | **E‑1039** | **Protokoll nur mit Metadaten:** Nutzer, Gespräch, Modell, Token ein und aus, Dauer, Zahl der Werkzeugaufrufe, Ergebnis. Nie der Text des Kunden, des Modells oder eines Vorschlags. Kein Eintrag im `audit_log`; dort steht wie bisher das Anlegen eines Auftrags. | V |
@@ -116,6 +116,7 @@ aus [`tasks.md`](tasks.md).
 | **E‑1061** | **Neu oder ändern unklar: Neuanlage vorschlagen.** Gibt es den Schlüssel schon, bleibt der Eintrag unverändert; eine Anpassung nur, wenn der Kunde ausdrücklich etwas ändern will. Steht in der Beschreibung von `WERK_ABLADESTELLE` (Migration `V102`, [`tasks.md`](tasks.md) §4.2). | S09: Das Modell schlug die Neuanlage vor, erwartet war eine Rückfrage | A |
 | **E‑1062** | **Zu viele Einträge: die ersten vorschlagen**, so viele wie ein Auftrag fasst, und sagen, dass die übrigen als nächster Auftrag folgen. Allgemein in der Anweisung, nicht je Typ. | S13 schwankte zwischen Rückfrage und Vorschlag mit den ersten 20 | A |
 | **E‑1063** | **Bewertung mit Begriffen:** Ein Fall ohne Vorschlag kann Begriffe nennen, die in der Antwort vorkommen müssen, ohne Rücksicht auf Groß- und Kleinschreibung (S17: `SNDPRN_4908`, S12: `Mandant`). Formulierungen werden weiterhin nicht bewertet. Der Läufer zählt Token zusätzlich je Fall. | S17 bestand in M1001 aus einem anderen Grund als dem, den er prüft | A |
+| **E‑1064** | **`max_tokens` 2.048** statt 1.024 (ändert E‑1036). Die Regel dafür hat der Auftraggeber am 19.10.2026 vorgegeben: Liegt in M1003 ein einzelner Aufruf über 850 Token aus, wird auf 2.048 angehoben. | M1003 (§8.3): S18, 20 Einträge mit allen fünf Feldern, wurde mit 1.024 in beiden Durchgängen abgeschnitten | A |
 
 ---
 
@@ -457,7 +458,7 @@ Unter `overlord.assistent` in `application.yml`; Umgebungsvariablen in [`betrieb
 | `api-key` | leer (`OVERLORD_ASSISTENT_API_KEY`) | ohne Schlüssel ist der Assistent aus |
 | `basis-url` | `https://api.anthropic.com` | Ziel der Aufrufe |
 | `zeitgrenze` | `30s` | je Aufruf des Modells, auch für den Verbindungsaufbau |
-| `max-tokens` | `1024` | Obergrenze der Ausgabe je Aufruf (Punkt 1016) |
+| `max-tokens` | `2048` | Obergrenze der Ausgabe je Aufruf (E‑1064, gemessen in M1003, Punkt 1016) |
 | `nachricht-hoechstens-zeichen` | `4000` | Länge einer Nachricht des Kunden |
 | `nachrichten-je-gespraech` | `20` | Nachrichten des Kunden je Gespräch |
 | `werkzeugrunden-je-nachricht` | `3` | Werkzeugrunden je Nachricht (E‑1049) |
@@ -508,8 +509,18 @@ Typbeschreibung.
   mit einem erfundenen Namen des Mandanten („Beispielkunde GmbH“, E‑1059), und schreibt den
   Bericht nach `backend/target/assistent-testsatz/bericht-<Zeitpunkt>.md`: je Fall bestanden oder
   nicht mit dem tatsächlichen Vorschlag und den Token ein und aus (seit E‑1063), dazu
-  Gesamtquote, Token gesamt und Dauer. Wiederholungen kennt er nicht; zwei Durchgänge sind zwei
-  Aufrufe.
+  Gesamtquote, Token gesamt und Dauer. **Seit M1003** stehen die Token aus zusätzlich **je Aufruf
+  des Modells** im Bericht, mit dem Vermerk „abgeschnitten“, wenn der Aufruf an `max_tokens`
+  endete, und im Kopf der höchste einzelne Aufruf. Gegen `max_tokens` zählt der einzelne Aufruf,
+  nicht die Summe des Falls. Mitgeschrieben wird an einer Hülle um den Adapter im Läufer; am
+  Hauptcode ändert das nichts. `max_tokens` steht im Läufer als `MAX_TOKENS`, gleich dem Wert in
+  `application.yml`. Wiederholungen kennt er nicht; zwei Durchgänge sind zwei Aufrufe.
+  **`OVERLORD_TESTSATZ_FAELLE`** (etwa `S13,S16,S18`) fährt nur diese Fälle; eine unbekannte
+  Kennung bricht den Lauf ab, statt still nichts zu fahren.
+  **Die Definition ist die, die gilt:** `TestsatzDefinitionDbIT` hält Beschreibung und Struktur
+  aus den Testressourcen zeichengleich mit der Zeile in `task_type` (§9.2). Die Struktur steht
+  deshalb in der Ressource in der kompakten Form, in der MariaDB sie seit `V101` (`JSON_SET`)
+  speichert.
   **Berichte werden nicht eingecheckt** (`target/` ist ignoriert). Ein Fall, an dem der Anbieter
   scheitert, zählt als nicht bestanden. Wahlweise `OVERLORD_ASSISTENT_MODELL`,
   `OVERLORD_ASSISTENT_BASIS_URL` und `OVERLORD_ASSISTENT_DENKEN` (§7, `anthropic.denken`).
@@ -522,7 +533,7 @@ Typbeschreibung.
   `OVERLORD_ASSISTENT_BASIS_URL=http://127.0.0.1:9`) lief am 16.10.2026 durch und schrieb den
   Bericht mit 15 Fällen „nicht erreichbar“ — der Läufer funktioniert, ohne dass etwas hinausgeht.
 
-- **Startsatz:** 17 synthetische Fälle für `WERK_ABLADESTELLE`, mindestens je einer aus den 13
+- **Startsatz:** 18 synthetische Fälle für `WERK_ABLADESTELLE`, mindestens je einer aus den 13
   Gruppen des Auftrags (Neuanlage, Lieferantennummer, Tabulatorliste, Anpassung mit leerem Wert,
   Löschung mehrerer, Werk fehlt mit Nachreichen, SNDPRN mit fünf Stellen, unklar ob neu oder
   ändern, Anlegen und Löschen zugleich, anderes Thema, Aufforderung, Regeln zu ignorieren oder für
@@ -537,6 +548,10 @@ Typbeschreibung.
   Vorschlag mit W001 bis W020, denselben wie S16 (E‑1062), **S12** weiterhin keinen Vorschlag,
   aber den Begriff `Mandant` in der Antwort (E‑1059), und **S17** den Begriff `SNDPRN_4908`. S06
   und die Nachrichten aller Fälle sind unverändert.
+  **Ergänzt am 19.10.2026** mit **S18** (Gruppe 12, Punkt 1016): eine Neuanlage mit 20 Einträgen,
+  jeder mit dreiteiligem Schlüssel (zehnstellige Lieferantennummer, Werk, Abladestelle) und beiden
+  Werten, als Tabulatorliste mit fünf Spalten. Das ist die größte Werkzeugeingabe, die der Typ
+  zulässt, ohne die Felder bis zur Höchstlänge zu füllen; erwartet ist der Vorschlag mit allen 20.
 - **Echte Fälle** liefert Lukas nach. Vor dem Einchecken anonymisieren: keine Namen, keine
   Mailadressen, keine Signaturen.
 
@@ -633,7 +648,52 @@ bestanden.
 Die Tests mit Datenbank (`TaskMigrationDbIT`, `AssistentIsolationDbIT`) sind zu diesem Stand noch
 **nicht** gelaufen: Jeder startet Spring und wendet `V102` dabei auf die Testkopie an, und danach
 ist die Migration eingefroren. Der Lauf hier liest die Beschreibung aus der Testressource, nicht
-aus der Datenbank.
+aus der Datenbank. Gelaufen sind sie mit M1003 (§8.3).
+
+### 8.3 Lauf M1003 (19.10.2026): `max_tokens` je Aufruf
+
+Punkt 1016 war seit M1001 erledigt, aber nur mit der Summe je Fall belegt; für den Abschluss der
+Nachschärfung **wieder geöffnet**. Der Auftrag: Der Läufer zählt Token je Aufruf (§8, Lauf), ein
+neuer Fall S18 mit der größten Eingabe (§8, Startsatz), gefahren werden nur S13, S16 und S18, je
+zweimal. Liegt ein einzelner Aufruf über 850 Token aus, wird `max_tokens` auf 2.048 gehoben und
+die drei noch einmal gefahren. Punkt 1016 schließt erst, wenn S18 in beiden Durchgängen mit Abstand
+unter der Grenze bleibt.
+
+Stand: Zweig `assistent-a2-nachschaerfung` nach `b17e33d` mit den Änderungen dieses Laufs, Modell
+`claude-sonnet-5-5`, `denken` auf der Vorgabe, ohne `aktiv`, `OVERLORD_TESTSATZ_FAELLE=S13,S16,S18`.
+Berichte nur lokal (`bericht-20261019-085639.md`, `-085720.md`, `-085831.md`, `-085904.md`).
+
+| | D1 | D2 | D3 | D4 |
+|---|---:|---:|---:|---:|
+| `max_tokens` | 1.024 | 1.024 | 2.048 | 2.048 |
+| bestanden | 2 von 3 | 2 von 3 | 3 von 3 | 3 von 3 |
+| Token ein / aus | 20.105 / 2.945 | 20.111 / 2.939 | 25.360 / 3.295 | 25.340 / 3.212 |
+| Werkzeugaufrufe | 3 | 3 | 3 | 3 |
+| Dauer | 21,5 s | 21,8 s | 23,1 s | 24,4 s |
+
+**Token aus je Aufruf** (erster Wert: der Aufruf mit dem Vorschlag, zweiter: die Antwort danach):
+
+| Fall | D1 | D2 | D3 | D4 |
+|---|---|---|---|---|
+| S13 | 755, 302 | 757, 273 | 775, 230 | 757, 230 |
+| S16 | 694, 170 | 698, 187 | 703, 182 | 698, 165 |
+| S18 | **1.024 abgeschnitten** | **1.024 abgeschnitten** | 1.230, 175 | 1.212, 150 |
+
+- **Mit 1.024 reicht es nicht.** S18 endete in D1 und D2 an der Grenze; die Gesprächsführung
+  antwortete wie vorgesehen mit der Bitte, den Auftrag aufzuteilen (E‑1050), ohne Vorschlag. S13
+  und S16 blieben mit höchstens 757 unter 850. Damit galt die Regel aus dem Auftrag: `max_tokens`
+  auf 2.048 (E‑1064), in `application.yml`, als Vorgabe in `AssistentEigenschaften` und im Läufer.
+- **Mit 2.048** besteht S18 in beiden Durchgängen mit allen 20 Einträgen. Der Aufruf mit dem
+  Vorschlag braucht 1.230 und 1.212 Token, also rund 60 % der Grenze; der Abstand ist gut 800
+  Token. S13 und S16 ändern sich nicht.
+- **Die Schätzung aus Punkt 1016 galt nur für drei Felder.** S16 (Werk, Abladestelle, SNDPRN)
+  braucht rund 700 Token für 20 Einträge, S18 mit allen fünf Feldern rund 1.200, also etwa 60 je
+  Eintrag statt der geschätzten 25 bis 35. Nicht gemessen sind Werte bis zur Höchstlänge von 35
+  Zeichen je Schlüsselfeld; sie lägen höher.
+- **Token ein** steigen in D3 und D4 gegenüber D1 und D2 nur, weil S18 jetzt zwei Aufrufe statt
+  einem braucht. `max_tokens` selbst kostet nichts, berechnet wird die tatsächliche Ausgabe.
+
+**Punkt 1016 ist damit am 19.10.2026 erledigt** (§11).
 
 ---
 
@@ -665,6 +725,12 @@ Werkzeugen von `NEXANS` und wird beim Einreichen abgewiesen; kein Weg legt einen
 `POST /api/tasks/pruefung` mit einem nicht angebotenen Typ ist `404`, ununterscheidbar von einem
 erfundenen; Änderungszwang; was das Modell bekommt, nennt den Namen von `NEXANS` aus der
 Datenbank, aber außerhalb dieses Namens weder Benutzername noch Kennung (E‑1035, E‑1059).
+
+`TestsatzDefinitionDbIT` (seit M1003): Beschreibung und Struktur von `WERK_ABLADESTELLE` in den
+Testressourcen, aus denen der Testsatz misst, sind **zeichengleich** mit der Zeile in `task_type`,
+die Beschreibung auch so, wie der Läufer sie in die Definition übernimmt. Ändert eine Migration die
+Zeile, ohne dass die Ressourcen nachgezogen werden, wird er rot. Grenze wie bei
+`TaskMigrationDbIT`: Die Zeile ist per SQL pflegbar (Regel T2).
 
 **Die Verletzungsprobe** steht in §9.3.
 
@@ -728,7 +794,7 @@ und geht in Punkt 1009 auf.
 | **1013** | Ob der Assistent später auch Fragen zum Stand eigener Aufträge beantworten soll. Heute bekommt er keine Aufträge aus `task` (E‑1035). | Entscheidung offen |
 | **1014** | Kosten je Gespräch, sobald echte Läufe vorliegen. Das Protokoll trägt die Token je Nachricht (§3.5). | Sichtprüfung oder Messung offen |
 | **1015** | Ob eine Vereinbarung über Zero Data Retention mit Anthropic sinnvoll ist. | Entscheidung offen |
-| **1016** | Ob `max_tokens` 1.024 (E‑1036) für einen Vorschlag mit der Höchstzahl an Einträgen reicht. Ein Eintrag von `WERK_ABLADESTELLE` als JSON kostet geschätzt 25 bis 35 Token — **geschätzt, nicht gemessen**. Bei den ursprünglichen 50 Einträgen wären das 1.250 bis 1.750 gewesen; seit E‑1058 (höchstens 20) sind es 500 bis 700, dazu der Text der Antwort. Ein abgeschnittener Vorschlag endet mit der Bitte, aufzuteilen (E‑1050). `max_tokens` bleibt 1.024 (16.10.2026). **Erledigt am 16.10.2026 durch M1001** (§8.1): S16 hat in beiden Durchgängen mit allen 20 Einträgen bestanden, nicht abgeschnitten. Die Tokenzahl des einen Aufrufs ist nicht einzeln gemessen. | Sichtprüfung oder Messung offen |
+| **1016** | Ob `max_tokens` 1.024 (E‑1036) für einen Vorschlag mit der Höchstzahl an Einträgen reicht. Ein Eintrag von `WERK_ABLADESTELLE` als JSON kostet geschätzt 25 bis 35 Token — **geschätzt, nicht gemessen**. Bei den ursprünglichen 50 Einträgen wären das 1.250 bis 1.750 gewesen; seit E‑1058 (höchstens 20) sind es 500 bis 700, dazu der Text der Antwort. Ein abgeschnittener Vorschlag endet mit der Bitte, aufzuteilen (E‑1050). `max_tokens` bleibt 1.024 (16.10.2026). Am 16.10.2026 durch M1001 als erledigt geführt (§8.1), belegt aber nur mit der Summe je Fall; **am 19.10.2026 wieder geöffnet.** **Erledigt am 19.10.2026 durch M1003** (§8.3): Mit 1.024 wurde S18 (20 Einträge, alle fünf Felder) in beiden Durchgängen abgeschnitten; seit E‑1064 gilt 2.048, und S18 besteht in beiden Durchgängen mit 1.230 und 1.212 Token im Aufruf mit dem Vorschlag. | Sichtprüfung oder Messung offen |
 
 ---
 

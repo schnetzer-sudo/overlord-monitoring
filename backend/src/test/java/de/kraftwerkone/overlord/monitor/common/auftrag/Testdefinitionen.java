@@ -60,8 +60,14 @@ public final class Testdefinitionen {
 
   private Testdefinitionen() {}
 
+  /**
+   * Die Struktur zeichengleich so, wie sie in {@code task_type} der Testkopie steht: seit {@code
+   * V101} ({@code JSON_SET}) in der kompakten Form von MariaDB, ohne das Zeilenende der Datei.
+   * {@code TestsatzDefinitionDbIT} haelt das fest.
+   */
   public static String werkStruktur() {
-    return ressource("/task/werk-abladestelle-struktur.json");
+    String text = ressource("/task/werk-abladestelle-struktur.json");
+    return text.endsWith("\n") ? text.substring(0, text.length() - 1) : text;
   }
 
   /** Die Beschreibung aus Anhang B, ohne das Zeilenende, das der Editor an die Datei haengt. */
