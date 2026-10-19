@@ -246,16 +246,13 @@ function Zeile({
   const zugeklappt = schluesselZugeklappt(auftrag.eintraege, (nummer) =>
     einsetzen(t.eintrag, { nummer: formatiereZahl(nummer, sprache) }),
   );
-  const schluesselText = [
-    zugeklappt.schluessel.join(", "),
+  const schluessel = zugeklappt.schluessel.join(", ");
+  const undWeitere =
     zugeklappt.weitere === 0
       ? null
       : zugeklappt.weitere === 1
         ? t.undWeiterer
-        : einsetzen(t.undWeitere, { anzahl: formatiereZahl(zugeklappt.weitere, sprache) }),
-  ]
-    .filter((teil) => teil !== null)
-    .join(" ");
+        : einsetzen(t.undWeitere, { anzahl: formatiereZahl(zugeklappt.weitere, sprache) });
 
   // Der Satz in der Zeile bekommt den Fokus, wenn er erscheint (F22) — der
   // Knopf „Löschen“ ist dann gerade verschwunden oder wieder zurückgesetzt.
@@ -274,30 +271,37 @@ function Zeile({
         onClick={() => schritt({ art: "umschalten", taskId: auftrag.taskId })}
         className="focus-visible:ring-ring hover:bg-muted/50 flex w-full min-w-0 flex-col gap-0.5 rounded-md py-1.5 text-left focus-visible:ring-2 focus-visible:outline-none"
       >
-        <span className="flex min-w-0 items-center gap-2">
+        {/*
+         * **Umbrechen statt kürzen** (F29, M1006): Bei 1.280 px ist die Spalte
+         * 300 px breit, und gekürzt verschwände dort „3 Einträge“ oder „1 von 3
+         * nicht erfolgreich“ hinter der Auslassung. Gekürzt werden allein die
+         * Schlüssel (E‑1102); Stand und Zeichen bleiben beisammen.
+         */}
+        <span className="flex min-w-0 items-start gap-2">
           {offen ? (
-            <ChevronDown aria-hidden="true" className="text-muted-foreground size-4 shrink-0" />
+            <ChevronDown
+              aria-hidden="true"
+              className="text-muted-foreground mt-0.5 size-4 shrink-0"
+            />
           ) : (
-            <ChevronRight aria-hidden="true" className="text-muted-foreground size-4 shrink-0" />
+            <ChevronRight
+              aria-hidden="true"
+              className="text-muted-foreground mt-0.5 size-4 shrink-0"
+            />
           )}
-          <span
-            className={cn(
-              "text-beiwerk flex shrink-0 items-center gap-1 font-medium",
-              auftragVordergrund(einordnung),
-            )}
-          >
-            <Zeichen aria-hidden="true" className="size-4 shrink-0" />
-            <span>{wort}</span>
-          </span>
-          <span className="text-beiwerk text-muted-foreground min-w-0 truncate" title={kopf}>
-            · {kopf}
+          <span className="text-beiwerk min-w-0">
+            <span className={cn("font-medium whitespace-nowrap", auftragVordergrund(einordnung))}>
+              <Zeichen aria-hidden="true" className="mr-1 inline-block size-4 align-[-0.2em]" />
+              <span>{wort}</span>
+            </span>
+            <span className="text-muted-foreground"> · {kopf}</span>
           </span>
         </span>
-        <span className="flex min-w-0 items-baseline gap-3 pl-6">
+        <span className="flex min-w-0 items-start gap-3 pl-6">
           {einordnung === "TEILWEISE_ERLEDIGT" ? (
             <span
               className={cn(
-                "text-beiwerk min-w-0 flex-1 truncate font-medium",
+                "text-beiwerk min-w-0 flex-1 font-medium",
                 auftragVordergrund(einordnung),
               )}
             >
@@ -307,8 +311,12 @@ function Zeile({
               })}
             </span>
           ) : (
-            <span className="text-beiwerk min-w-0 flex-1 truncate font-mono" title={schluesselText}>
-              {schluesselText}
+            <span
+              className="text-beiwerk min-w-0 flex-1 truncate"
+              title={undWeitere === null ? schluessel : `${schluessel} ${undWeitere}`}
+            >
+              <span className="font-mono">{schluessel}</span>
+              {undWeitere === null ? null : ` ${undWeitere}`}
             </span>
           )}
           <span
