@@ -969,8 +969,70 @@ Zukunft und wird ignoriert. Der Codegen schließt `task`, `task_type` und `task_
 
 ### 9.5 Löschen (A4, 19.10.2026)
 
-*Wird mit dem Bau eingetragen: die Tests mit Datenbank zu `DELETE /api/tasks/{taskId}` und die
-Messung M1005 (Regel 7) des `DELETE` und seiner Nachlesung.*
+**Tests mit Datenbank** (`@Tag("db")`, gelaufen am 19.10.2026 gegen die Testkopie, alle grün):
+
+| Test | Was er hält |
+|---|---|
+| `AuftraegeDbIT` (seit A4 19 Fälle, 10 neu) | `OFFEN` des eigenen Mandanten: `204`, Zeile weg, **genau ein** Ereignis `AUFTRAG_GELOESCHT` mit Benutzer, Mandant, `target_type = task` und dem Detail „Typ …, Aktion …, n Einträge, eingestellt <UTC>“ — ohne Parametertext und ohne Werte; ein **Kollege** desselben Mandanten löscht ebenso (E‑1113); `IN_AUSFUEHRUNG`, `ERLEDIGT`, `FEHLGESCHLAGEN`: `409 auftrag-nicht-offen`, Zeile Feld für Feld unverändert, kein Ereignis; **abgeholt zwischen Anzeige und Klick** (Liste zeigt `OFFEN`, dann `ABHOLEN` aus dem Vertrag, dann `DELETE`): `409`; ein zweites `DELETE`: `404`, und es bleibt bei einem Ereignis; unbekannte Kennung: `404`; **Löschen und Ereignis fallen gemeinsam** — `AuftragService.loesche` in einer äußeren Transaktion, die zurücksetzt: danach steht die Zeile wieder und es gibt kein Ereignis (F26); `felder` mit `name` und `label` in Einzelabruf und Liste, gegen die Kopie in der eigenen Zeile geprüft (E‑1120, Regel T2) |
+| `AuftraegeIsolationDbIT` (seit A4 8 Fälle, 1 neu, 2 erweitert) | **`IBIS` löscht einen offenen Auftrag von `NEXANS`:** `404`, derselbe Rumpf wie bei einer erfundenen Kennung und **dieselben zwei Statements** auf dem Schreib-Kontext; ein untergeschobenes `?mandantId=NEXANS` ändert nichts, `SUTTONS` ebenso `404`; die Zeile von `NEXANS` steht danach Feld für Feld unverändert, kein Ereignis; Gegenprobe: `NEXANS` löscht sie mit `204`. ADMIN: ohne aktiven Mandanten `403`, unter `IBIS` `404`, unter `NEXANS` `204`. **Änderungszwang:** `403`, an einem echten offenen Auftrag desselben Mandanten, die Zeile bleibt |
+| `TypdefinitionDbIT` (erweitert) | Ein `label` der Typzeile ändert sich nach dem Anlegen; der Auftrag von vorher zeigt weiter das `label` seiner Kopie (E‑1120, E‑1023) |
+| `AuditLogWriterDbIT` (3 Fälle, 2 neu) | `schreibeInTransaktion` fällt mit dem Rollback der Fachtransaktion — innerhalb steht der Eintrag, danach nicht —, und ohne laufende Transaktion lehnt sie ab (`IllegalTransactionStateException`), ohne zu schreiben (F26) |
+
+`./mvnw verify -DexcludedGroups=db`: **1.245 Fälle grün**, dazu Spotless, ArchUnit und
+`PlattformvertragTest` (der Vertrag liest weiterhin nur den ersten `sql`-Block, die vier Statements;
+§3a steht dahinter).
+
+**Verletzungsproben** (19.10.2026), je ein Eingriff in den Hauptcode, Lauf über `AuftraegeDbIT` und
+`AuftraegeIsolationDbIT`, Rücknahme per `git checkout` gegen den committeten Stand; danach
+`target/classes` neu gebaut:
+
+| Eingriff | rot |
+|---|---|
+| **A** Mandant im `DELETE` entfernt | `fremden_auftrag_loeschen`, `admin_sieht_nur_den_aktiven_mandanten` |
+| **B** Mandant in der Nachlesung entfernt | dieselben zwei — ohne ihn wäre der fremde Auftrag `409` statt `404` |
+| **C** `status = 'OFFEN'` im `DELETE` entfernt | `loeschen_nicht_offen` dreimal, `abgeholt_zwischen_anzeige_und_klick` |
+| **D** Protokoll mit `schreibe` (eigene Transaktion) statt `schreibeInTransaktion` | **im ersten Lauf keiner** — über HTTP committet das Löschen immer. Deshalb ist `loeschen_und_ereignis_fallen_gemeinsam` dazugekommen; im zweiten Lauf rot, und nur er |
+
+Jeder Mandantenfilter des Löschens hat damit einen Test, der sein Fehlen bemerkt.
+
+#### Messung M1005 (Regel 7)
+
+*Gemessen am 19.10.2026 gegen die Testkopie (MariaDB 10.6.22), eine Sitzung mit dem
+Workbench-Client als `monitor_write`, nach dem Verfahren von M1000 (E‑1026): `EXPLAIN` je Statement,
+je Fall fünf Läufe, Dauer aus `SHOW PROFILES`, Wanduhr über `SYSDATE(6)` vor und nach den fünf
+Läufen.* Die Statements sind die von jOOQ gerenderten (Dialekt `MARIADB`, über eine Wegwerfklasse
+erhoben, nicht eingecheckt), mit eingesetzten Werten.
+
+**Bestand und Vorgehen:** `task` hatte vor der Messung **eine** Zeile. Die Sitzung legte sieben
+eigene Testzeilen an (`angelegt_von = 'it-m1005'`, erfundene Kennungen, reines `INSERT`): fünf
+offene unter `NEXANS`, eine offene unter `IBIS` (fremd), eine `IN_AUSFUEHRUNG` unter `NEXANS`. Die
+Läufe stehen in **einer Transaktion, die zurückgerollt wird** — der Commit der Testkopie dauert
+Sekunden und ist eine Eigenschaft der Umgebung, nicht des Statements. Danach hat die Sitzung ihre
+sieben Zeilen gelöscht; `task` hatte wieder eine Zeile.
+
+| # | Statement | `EXPLAIN` | Profil (min–max) | Wanduhr je Lauf |
+|---|---|---|---|---|
+| D1 | `DELETE … RETURNING`, offener eigener Auftrag (fünf verschiedene, je eine Zeile gelöscht) | `type=range`, `key=PRIMARY`, `key_len=144`, `rows=1`, `Using where` | 0,387–0,594 ms | 0,820 ms |
+| D2 | dasselbe, Auftrag von `IBIS` als `NEXANS` — null Zeilen | wie D1 | 0,352–0,404 ms | 0,779 ms |
+| D3 | dasselbe, erfundene Kennung — null Zeilen | wie D1 | 0,375–0,406 ms | 0,755 ms |
+| D4 | dasselbe, eigener Auftrag in `IN_AUSFUEHRUNG` — null Zeilen | wie D1 | 0,354–0,428 ms | 0,764 ms |
+| L1 | Nachlesung `SELECT status`, eigener abgeholter Auftrag (→ `409`) | `type=const`, `key=PRIMARY`, `ref=const`, `rows=1` | 0,360–0,461 ms | 0,797 ms |
+| L2 | Nachlesung, Auftrag von `IBIS` (→ `404`) | `Impossible WHERE noticed after reading const tables` | 0,343–0,408 ms | 0,753 ms |
+| L3 | Nachlesung, erfundene Kennung (→ `404`) | wie L2 | 0,325–0,383 ms | 0,720 ms |
+
+`EXPLAIN` lief auf dem `DELETE` ohne die `RETURNING`-Klausel; der Zugriffsweg ist derselbe, und
+`RETURNING` liefert die Spalten der Zeile, die der Zugriff ohnehin trifft.
+
+**Was das trägt.** Das `DELETE` trifft seine Zeile über den Primärschlüssel und prüft Mandant und
+Status an ihr — wie das Abholen der Plattform (P2 in M1000). Ein fremder, ein unbekannter und ein
+abgeholter Auftrag kosten dasselbe wie ein Treffer, und die Nachlesung findet den fremden Auftrag
+schon beim Lesen der Konstanten nicht: Die beiden `404`-Fälle sind im Plan nicht zu unterscheiden.
+Alle Läufe liegen unter 0,6 ms; das sind auf dieser Tabelle die Kosten des Rundlaufs.
+
+**Was es nicht trägt.** Wie lange ein Löschen samt Commit dauert, sagt die Messung nicht: Auf der
+Testkopie dauert ein Commit Sekunden (eine Eigenschaft ihres Schreibpfads), und in der Produktion
+ist er nicht gemessen. Die Tabelle hatte eine Zeile; über den Primärschlüssel ändert eine größere
+nichts am Weg.
 
 ---
 

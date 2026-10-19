@@ -554,7 +554,7 @@ bestätigt (§2).
 Was der Auftrag offenließ, beim Bau festgelegt und **zur Bestätigung** vorgeschlagen, wie in A3;
 eine E‑Nummer bekommen sie erst damit. Die Zählung setzt die F-Nummern aus A3 fort, damit jede
 F-Nummer in dieser Datei eindeutig bleibt. F26 bis F28 betreffen das Backend und stehen in
-[`tasks.md`](tasks.md) §2.
+[`tasks.md`](tasks.md) §2; F29 ist beim Messen dazugekommen.
 
 | F | Festlegung | Grund |
 |---|---|---|
@@ -568,6 +568,7 @@ F-Nummer in dieser Datei eindeutig bleibt. F26 bis F28 betreffen das Backend und
 | **F23** | **Ohne Schlüssel** (ein Typ ohne `schluessel`) steht „Eintrag <n>“, wie auf der Karte (E‑1080). | Kein Schlüssel wird im Frontend gebildet (E‑1071) |
 | **F24** | **„Neu laden“ holt beide Abfragen** — Übersicht und Aufträge — und zeigt die Sanduhr, solange eine davon läuft. | Ein Knopf, der nur die Hälfte lädt, ließe glauben, der Stand der Aufträge sei aktuell |
 | **F25** | **„Weniger anzeigen“** auch bei den Einträgen, nach „Alle <n> Einträge anzeigen“. | Dieselbe Bedienung wie bei der Liste (E‑1101) |
+| **F29** | **Die Zeile bricht um, statt zu kürzen** — Stand, Aktion, Zahl der Einträge und „<x> von <n> nicht erfolgreich“. Gekürzt werden allein die Schlüssel; Zeichen und Wort des Stands bleiben beisammen. „und <n> weitere“ steht in der Schrift der Umgebung, nur die Schlüssel in Festbreitenschrift. *Nachgetragen nach M1006 (§12.13).* | Bei 1.280 px ist die Spalte 300 px breit; dort verschwanden „3 Einträge“ und sogar „1 von 3 nicht erfolgreich“ hinter der Auslassung. E‑1102 erlaubt sie nur für die Schlüssel. Der Preis ist eine dritte oder vierte Zeile bei 1.280 px |
 
 ### 12.4 Die Stände
 
@@ -694,6 +695,18 @@ stehen die drei untereinander, in derselben Reihenfolge. **Prozessnamen in „Zu
 brechen um, statt abgeschnitten zu werden** — die Spalte ist schmaler geworden, und ein gekürzter
 Name ist ein anderer Name ([`dashboard-frontend.md`](dashboard-frontend.md) §5.6).
 
+Gebaut als `xl:grid-cols-[3fr_3fr_4fr]` mit Block und unverändert `xl:grid-cols-[3fr_2fr]` ohne ihn.
+**Gemessen in M1006** (§12.13), Breiten in px:
+
+| Fenster | mit Block: Zuletzt aufgefallen · Ihre Aufträge · Verteilung | ohne Block: Zuletzt aufgefallen · Verteilung |
+|---|---|---|
+| 1.920 | 492 · 492 · 656 | 994 · 662 |
+| 1.440 | 348 · 348 · 464 | 706 · 470 |
+| 1.280 | 300 · 300 · 400 | 610 · 406 |
+| 390 | untereinander, je 351 | untereinander, je 351 |
+
+Die Verteilung behält ihre Breite bis auf 6 px — zwei Fünftel der zweiten Lücke zwischen den Karten.
+
 **Die Zustände:**
 
 | Übersicht | Aufträge | Block |
@@ -724,7 +737,41 @@ Name ist ein anderer Name ([`dashboard-frontend.md`](dashboard-frontend.md) §5.
 
 ### 12.10 Tests
 
-*Wird mit dem Bau eingetragen.*
+**Gelaufen am 19.10.2026:** `pnpm check` grün — Lint, Typprüfung, Format, **1.505 Fälle in 54
+Dateien**, davon **69 in den Dateien von A4** (41 rein, 27 gerendert in `tests/auftraege-block.test.tsx`,
+einer in `tests/assistent-chatbox.test.tsx`) und zwölf mehr in vorhandenen Dateien
+(`tests/farbkontrast.test.ts` führt die sechste Rolle, `tests/farbwerte.test.ts` und
+`tests/serverbausteine.test.ts` zählen je Quelldatei). `pnpm build` grün, `next build` eingeschlossen.
+Die Zahl der gerenderten Fälle — jetzt **284 in 28 Dateien** — steht im Kopf von
+`frontend/vitest.config.mts`, aus dem Lauf gezählt. Die Tests des Backends stehen in
+[`tasks.md`](tasks.md) §9.5.
+
+| Datei | Was |
+|---|---|
+| `tests/auftraege.test.ts` | **41 Fälle, rein.** Die Einordnung kommt aus dem Backend, eine unbekannte wird `UNBEKANNT` (Q4), ebenso ein unbekanntes Ergebnis; fünf von sechs sichtbar; zwei Schlüssel und der Rest, ohne Schlüssel „Eintrag <n>“ (F23); mehrere Typen über die ganze Liste; „<x> von <n> nicht erfolgreich“ zählt `NICHT_OK` und `UNBEKANNT`, auch n von n; Werte in der Reihenfolge der Definition, ein unbekanntes Feld mit seinem Namen; **löschbar nur `OFFEN`, je Stand**; der Ausgang eines Löschens nach Problemtyp und Status, und wann neu geladen wird; der Zustand des Blocks (Aufklappen, Rückfrage, Sätze oben und in der Zeile, `obenNummer`, „Neu laden“ nimmt die Sätze und lässt Aufgeklapptes); ob der Block steht (F18, F22); die Farbrollen der Stände — und **keine Klasse nennt `ueberfaellig`** (F16); die Wörter in beiden Sprachen und der vorgegebene Wortlaut |
+| `tests/auftraege-block.test.tsx` | **27 Fälle, gerendert**, gegen ein gestelltes `fetch`. **Ort:** ohne Auftrag kein Block, und die Reihe trägt genau die Klassen von vorher; mit Auftrag zwischen „Zuletzt aufgefallen“ und Verteilung; beim ersten Laden kein Platzhalter; im Leerzustand allein; im Fehler Satz und „Erneut versuchen“, „Zuletzt aufgefallen“ bleibt; kein Knopf zum Anlegen und keine Anfrage an den Assistenten. **Stände:** je Stand Wort und Zeichen in der Farbe der Rolle, aufgeklappt sein Hinweis, die Meldung der Plattform, „keine Rückmeldung“ (sieben Fälle), und sieben verschiedene Zeichen. **Zeile:** Aktion, Zahl, zwei Schlüssel mit „und 1 weiterer“, Zeitpunkt in der Anzeigezone mit Sekunden im `title` (fester Wert, keine Uhr, T1); „1 von 2 nicht erfolgreich“; der Typ oben nur bei mehreren Typen; aufgeklappt Typ, Zeiten, Werte mit `label`, Ergebnis mit „(erfolgreich)“ für Vorleseprogramme, getönter Grund nur am nicht erfolgreichen; **`fehlertext` und Rückgabe mit `<img src=x onerror=alert(1)>` als Textknoten, kein `img`**; fünf von sechs Aufträgen, fünf von sieben Einträgen. **Löschen:** nur bei Offen und nur aufgeklappt; Rückfrage mit dem Fokus auf „Abbrechen“, Esc bricht ab, Fokus zurück, kein `DELETE`; „Löschen“ schickt `DELETE`, lädt neu, der Satz oben mit Fokus, der Block bleibt ohne Auftrag für ihn stehen, „Neu laden“ nimmt ihn mit; `409` mit Satz in der Zeile, Neuladen, neuer Stand; `404` mit Satz oben und Neuladen; Störung ohne Neuladen, „Auftrag löschen“ wieder frei |
+| `tests/assistent-chatbox.test.tsx` | **ein Fall mehr:** Chatbox und Übersicht im selben Zwischenspeicher — nach dem Anlegen erscheint „Ihre Aufträge“, ohne die Seite neu zu laden (E‑1109) |
+| `tests/dashboard-bloecke.test.tsx`, `tests/neu-laden.test.tsx` | **angepasst, nicht aufgeweicht:** Die Übersicht fragt seit A4 auch `/api/tasks`. Für `/api/dashboard` gilt die Zählung wörtlich weiter; dazu genau eine Anfrage an `/api/tasks` beim Laden und bei „Neu laden“ (F24), keine beim Sichtwechsel und keine beim Zeitraum. Die gestellte Liste ist dort leer, damit die Reihe die von vorher bleibt |
+| `tests/farbkontrast.test.ts` | die Rolle `teilweise` in der Liste der Rollen: drei Werte in beiden Blöcken, Kontraste, Farbraum, Verdrahtung in `@theme inline` |
+
+**Verletzungsproben**, je ein Eingriff in den Code, Lauf über die fünf betroffenen Dateien (130
+Fälle), Rücknahme per `git checkout` gegen den committeten Stand:
+
+| Eingriff | rot |
+|---|---|
+| Block auch ohne Auftrag | 4 Fälle, gerendert und rein |
+| `fehlertext` als HTML (`dangerouslySetInnerHTML`) | „wörtlich als Text“ |
+| „Auftrag löschen“ in jedem Stand | 8 Fälle |
+| kein Neuladen nach dem Löschen | `204`, `409`, `404` |
+| kein Fokus auf „Abbrechen“ | „fragt nach …“ |
+| Assistent lädt die Liste nicht neu | „erscheinen, ohne die Seite neu zu laden“ |
+| Reihe ohne dritte Spalte | „zwischen Zuletzt aufgefallen und Verteilung“ |
+| „Teilweise erledigt“ in der Rolle `ueberfaellig` | 2 Fälle, rein |
+| kein Block im Leerzustand | „im Leerzustand … allein“ |
+| „Neu laden“ nur für die Übersicht | 3 Fälle |
+| Satz oben ohne Fokus | `204` und `404` |
+| mehrere Typen nie oben | 2 Fälle |
+| **Eichung:** ein Wort in einem Kommentar | **0** — überlebt, wie es soll |
 
 ### 12.11 Offene Punkte
 
@@ -778,3 +825,33 @@ die er zeigt, entstehen aber nur über ihn.
 
 **Aufräumen**, nur die eigenen und nur auf der Testkopie: Teil 3 des Skripts löscht alle Aufträge des
 eigenen Kontos unter `NEXANS`, gleich in welchem Stand — vorher mit dem `SELECT` dort ansehen.
+
+### 12.13 Sichtprobe M1006 (19.10.2026)
+
+**Wie — ohne Anmeldung:** Das Markup der echten `DashboardAnsicht` mit gestellten Daten (sechs
+Aufträge in sechs Ständen; drei Prozesse in „Zuletzt aufgefallen“, einer mit einem Namen aus 70
+Zeichen ohne Leerzeichen) über `renderToStaticMarkup`, erzeugt von einer Wegwerfdatei, die nicht
+eingecheckt ist. Eingesetzt in `/anmeldung` des Produktionsbaus (`next start`, die Seite ist
+öffentlich und trägt das echte Stylesheet), in einem nachgebauten Rahmen aus Navigationsspalte
+(`w-navspalte`) und `main` mit dessen Klassen. Kopfloses Chrome über das DevTools-Protokoll,
+`Emulation.setDeviceMetricsOverride` bei 1.920, 1.440, 1.280 und 390 px, Dichte `m`, hell und dunkel
+über `data-thema`. Alle Werte erfunden (Werk 47110, Tore, „Beispiel_…“). Die Aufnahmen liegen nur
+lokal.
+
+**Befund, behoben (F29):** Bei 1.280 px kürzte die obere Zeile „In Ausführung · Anpassung · 3
+Eint…“, bei „Teilweise erledigt“ auch „1 von 3 nicht erfol…“. Seither bricht beides um.
+
+**Nach der Behebung**, in allen 16 Lagen: **kein waagrechtes Scrollen** (`scrollWidth` gleich der
+Fensterbreite); **kein Prozessname abgeschnitten** — der Name aus 70 Zeichen braucht bei 1.280 px
+sechs Zeilen, bei 1.440 px vier, ohne Block zwei; im Block **gekürzt allein die Schlüssel**, ab
+1.440 px abwärts. Eine Zeile des Blocks ist 50 px hoch, bei 1.280 px bis 90 px (Teilweise erledigt,
+vier Zeilen). Die Breiten der Reihe stehen in §12.8.
+
+**Gesehen**, ohne Befund: „Teilweise erledigt“ fällt in beiden Themen auf und ist vom Rot
+„Fehlgeschlagen“ in Ton und Zeichen getrennt. Dunkel wirkt das Bernstein heller als das Rot — die
+Lage aus Punkt 122, die für `--teilweise` mit denselben Werten ebenso gilt; ob das stört, ist
+Sichtprüfung 1030.
+
+**Nicht geprüft:** aufgeklappte Zeilen, Rückfrage und Löschen im Browser (das statische Markup ist
+nicht bedienbar; im Baum belegt in §12.10), echte Daten, Tastatur und Vorleseprogramm von Hand, die
+Dichten `xs` und `l`. Dafür stehen die Sichtprüfungen 1028 bis 1032 (§12.12).
