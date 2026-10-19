@@ -6,8 +6,10 @@ import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.TASK_TYPE;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.kraftwerkone.overlord.monitor.audit.AuditEventType;
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
 import de.kraftwerkone.overlord.monitor.common.auftrag.Testdefinitionen;
 import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.TaskRecord;
+import de.kraftwerkone.overlord.monitor.security.AngemeldeterNutzer;
 import de.kraftwerkone.overlord.monitor.security.Rolle;
 import java.time.Instant;
 import java.util.List;
@@ -19,6 +21,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.JsonNode;
 
 /**
@@ -36,11 +41,15 @@ class AuftraegeDbIT extends AuftragsTestbasis {
 
   private static final String NUTZER = PRAEFIX + "auftrag-nexans";
 
+  @Autowired private AuftragService auftragService;
+  @Autowired private PlatformTransactionManager transactionManager;
+
+  private long nutzerId;
   private Sitzung sitzung;
 
   @BeforeEach
   void anmelden() throws Exception {
-    legeNutzerAn(NUTZER, PASSWORT, Rolle.MANDANT, NEXANS);
+    nutzerId = legeNutzerAn(NUTZER, PASSWORT, Rolle.MANDANT, NEXANS);
     sitzung = anmelden(NUTZER, PASSWORT);
   }
 
@@ -360,6 +369,34 @@ class AuftraegeDbIT extends AuftragsTestbasis {
     // (Regel T1).
     assertThat(Instant.parse(detail.substring(detail.lastIndexOf(' ') + 1))).isNotNull();
     assertThat(detail).doesNotContain("Aktion=").doesNotContain("72332").doesNotContain("120764");
+  }
+
+  /**
+   * <b>Loeschen und Ereignis stehen oder fallen gemeinsam</b> (E‑1114, F26). Der Service laeuft
+   * hier in einer aeusseren Transaktion, die zuruecksetzt: Danach steht die Zeile wieder, und es
+   * gibt kein Ereignis. Schriebe der Service das Ereignis in einer eigenen Transaktion ({@code
+   * schreibe} statt {@code schreibeInTransaktion}), bliebe es stehen — fuer ein Loeschen, das nie
+   * geschehen ist. Ueber HTTP ist das nicht zu pruefen: Dort committet das Loeschen immer.
+   */
+  @Test
+  @DisplayName("Loeschen und Ereignis in einer Transaktion: rollt sie zurueck, bleibt beides aus")
+  void loeschen_und_ereignis_fallen_gemeinsam() throws Exception {
+    String taskId = legeNeuanlageAn(sitzung);
+    AngemeldeterNutzer nutzer = new AngemeldeterNutzer(nutzerId, NUTZER, Rolle.MANDANT, false);
+
+    new TransactionTemplate(transactionManager)
+        .executeWithoutResult(
+            status -> {
+              auftragService.loesche(nutzer, new MandantContext(NEXANS), taskId, "127.0.0.1");
+              // Innerhalb ist die Zeile weg und das Ereignis da — sonst bewiese der Test nur,
+              // dass nichts geschehen ist.
+              assertThat(monitorDsl.fetchCount(TASK, TASK.TASK_ID.eq(taskId))).isZero();
+              assertThat(geloeschtEreignisse(taskId)).isEqualTo(1);
+              status.setRollbackOnly();
+            });
+
+    assertThat(monitorDsl.fetchCount(TASK, TASK.TASK_ID.eq(taskId))).isEqualTo(1);
+    assertThat(geloeschtEreignisse(taskId)).isZero();
   }
 
   @Test
