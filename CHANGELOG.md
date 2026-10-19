@@ -51,6 +51,10 @@ Tags und die Definition of Done für ein Release stehen in
 - `docs/PROJEKTBESCHREIBUNG.md` §6: Typdefinition, Typkatalog und Prüfung der Aufträge liegen in
   `common/auftrag` statt in `task`, weil der Assistent sie als zweiter Verbraucher braucht
   (E‑1037); die Liste der ArchUnit-Regeln nennt die Regeln des Assistenten.
+- `scripts/dev-start.ps1` schaltet den Assistenten lokal mit `-Assistent` ein
+  (`OVERLORD_ASSISTENT_AKTIV=true` im Backend-Fenster); ohne den Schalter setzt es ausdrücklich
+  `false`. Es meldet beim Start den ausgecheckten Zweig und, ob der Schlüssel gesetzt ist
+  ([`docs/START-LOKAL.md`](docs/START-LOKAL.md) §6).
 
 ### Behoben
 
