@@ -12,15 +12,18 @@ import de.kraftwerkone.overlord.monitor.security.Rolle;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.jooq.Record;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import tools.jackson.databind.JsonNode;
 
 /**
- * Anlegen, Wiederholen und die simulierte Plattform ({@code docs/tasks.md} §6, {@code
- * docs/task-schnittstelle.md}).
+ * Anlegen, Wiederholen, die simulierte Plattform und seit A4 das Loeschen offener Auftraege ({@code
+ * docs/tasks.md} §6, {@code docs/task-schnittstelle.md}).
  *
  * <p><b>Die Plattform wird mit ihren eigenen Statements simuliert</b> — woertlich die aus {@link
  * Plattformvertrag}, die {@code PlattformvertragTest} mit der Datei fuer das Plattform-Team
@@ -282,5 +285,191 @@ class AuftraegeDbIT extends AuftragsTestbasis {
     List<String> kennungen = sitzung.hole("/api/tasks").json("$[*].taskId");
 
     assertThat(kennungen).containsSubsequence(zweiter, erster);
+  }
+
+  // ─── Felder mit label (A4, E‑1120) ─────────────────────────────────────────────────────────
+
+  @Test
+  @DisplayName("Die Antwort traegt je Feld der Kopie Name und label, in deren Reihenfolge")
+  void felder_aus_der_kopie() throws Exception {
+    String taskId = legeNeuanlageAn(sitzung);
+
+    // Verglichen wird mit der Kopie in der eigenen Zeile, nicht mit einer Liste im Test: Welche
+    // Felder WERK_ABLADESTELLE hat, ist Pflegestand (Regel T2).
+    JsonNode felder =
+        Testdefinitionen.JSON
+            .readTree(
+                monitorDsl
+                    .select(TASK.DEFINITION)
+                    .from(TASK)
+                    .where(TASK.TASK_ID.eq(taskId))
+                    .fetchOne(TASK.DEFINITION)
+                    .data())
+            .get("struktur")
+            .get("felder");
+    List<String> namen = felder.valueStream().map(feld -> feld.get("name").stringValue()).toList();
+    List<String> label = felder.valueStream().map(feld -> feld.get("label").stringValue()).toList();
+    assertThat(namen).isNotEmpty();
+
+    Antwort einzeln = sitzung.hole("/api/tasks/" + taskId);
+    assertThat(einzeln.<List<String>>json("$.felder[*].name")).containsExactlyElementsOf(namen);
+    assertThat(einzeln.<List<String>>json("$.felder[*].label")).containsExactlyElementsOf(label);
+
+    Antwort liste = sitzung.hole("/api/tasks");
+    String auswahl = "$[?(@.taskId == '" + taskId + "')]";
+    assertThat(liste.<List<String>>json(auswahl + ".felder[*].name"))
+        .containsExactlyElementsOf(namen);
+    assertThat(liste.<List<String>>json(auswahl + ".felder[*].label"))
+        .containsExactlyElementsOf(label);
+  }
+
+  // ─── Loeschen (A4, docs/tasks.md §6.6) ─────────────────────────────────────────────────────
+
+  @Test
+  @DisplayName("Loeschen eines offenen Auftrags: 204, Zeile weg, genau ein Ereignis ohne Parameter")
+  void loeschen_offen() throws Exception {
+    String taskId = legeNeuanlageAn(sitzung);
+
+    Antwort antwort = sitzung.loesche("/api/tasks/" + taskId);
+
+    assertThat(antwort.status()).as(antwort.rumpf()).isEqualTo(204);
+    assertThat(antwort.rumpf()).isEmpty();
+    assertThat(monitorDsl.fetchCount(TASK, TASK.TASK_ID.eq(taskId))).isZero();
+    assertThat(sitzung.hole("/api/tasks/" + taskId).status()).isEqualTo(404);
+
+    var ereignisse =
+        monitorDsl
+            .select(
+                AUDIT_LOG.ACTOR_USERNAME,
+                AUDIT_LOG.MANDANT_ID,
+                AUDIT_LOG.TARGET_TYPE,
+                AUDIT_LOG.DETAIL)
+            .from(AUDIT_LOG)
+            .where(AUDIT_LOG.EVENT_TYPE.eq(AuditEventType.AUFTRAG_GELOESCHT.name()))
+            .and(AUDIT_LOG.TARGET_ID.eq(taskId))
+            .fetch();
+    assertThat(ereignisse).hasSize(1);
+    var ereignis = ereignisse.getFirst();
+    assertThat(ereignis.get(AUDIT_LOG.ACTOR_USERNAME)).isEqualTo(NUTZER);
+    assertThat(ereignis.get(AUDIT_LOG.MANDANT_ID)).isEqualTo(NEXANS);
+    assertThat(ereignis.get(AUDIT_LOG.TARGET_TYPE)).isEqualTo("task");
+    String detail = ereignis.get(AUDIT_LOG.DETAIL);
+    assertThat(detail)
+        .startsWith("Typ WERK_ABLADESTELLE, Aktion Neuanlage, 2 Einträge, eingestellt ");
+    // Der Zeitpunkt des Einstellens steht als UTC darin — gelesen, nicht gegen die Uhr geprueft
+    // (Regel T1).
+    assertThat(Instant.parse(detail.substring(detail.lastIndexOf(' ') + 1))).isNotNull();
+    assertThat(detail).doesNotContain("Aktion=").doesNotContain("72332").doesNotContain("120764");
+  }
+
+  @Test
+  @DisplayName("Loeschen darf jeder Benutzer des Mandanten, nicht nur der, der angelegt hat")
+  void loeschen_durch_anderen_benutzer() throws Exception {
+    String taskId = legeNeuanlageAn(sitzung);
+    String kollege = PRAEFIX + "auftrag-nexans-kollege";
+    legeNutzerAn(kollege, PASSWORT, Rolle.MANDANT, NEXANS);
+
+    Antwort antwort = anmelden(kollege, PASSWORT).loesche("/api/tasks/" + taskId);
+
+    assertThat(antwort.status()).as(antwort.rumpf()).isEqualTo(204);
+    assertThat(monitorDsl.fetchCount(TASK, TASK.TASK_ID.eq(taskId))).isZero();
+    assertThat(
+            monitorDsl
+                .select(AUDIT_LOG.ACTOR_USERNAME)
+                .from(AUDIT_LOG)
+                .where(AUDIT_LOG.EVENT_TYPE.eq(AuditEventType.AUFTRAG_GELOESCHT.name()))
+                .and(AUDIT_LOG.TARGET_ID.eq(taskId))
+                .fetch(AUDIT_LOG.ACTOR_USERNAME))
+        .containsExactly(kollege);
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @ValueSource(strings = {"IN_AUSFUEHRUNG", "ERLEDIGT", "FEHLGESCHLAGEN"})
+  @DisplayName("Nicht mehr offen: 409 auftrag-nicht-offen, Zeile unveraendert, kein Ereignis")
+  void loeschen_nicht_offen(String stand) throws Exception {
+    String taskId = legeNeuanlageAn(sitzung);
+    bringeInStand(taskId, stand);
+    TaskRecord vorher = monitorDsl.selectFrom(TASK).where(TASK.TASK_ID.eq(taskId)).fetchOne();
+    assertThat(vorher.getStatus()).isEqualTo(stand);
+
+    Antwort antwort = sitzung.loesche("/api/tasks/" + taskId);
+
+    assertThat(antwort.status()).as(antwort.rumpf()).isEqualTo(409);
+    assertThat(antwort.<String>json("$.type")).endsWith("/auftrag-nicht-offen");
+    assertThat(antwort.hatFeld("$.traceId")).isTrue();
+    assertThat(antwort.rumpf()).doesNotContain(stand);
+    assertThat(monitorDsl.selectFrom(TASK).where(TASK.TASK_ID.eq(taskId)).fetchOne())
+        .isEqualTo(vorher);
+    assertThat(geloeschtEreignisse(taskId)).isZero();
+  }
+
+  @Test
+  @DisplayName(
+      "Abgeholt zwischen Anzeige und Klick: die Liste zeigt OFFEN, die Plattform holt, 409")
+  void abgeholt_zwischen_anzeige_und_klick() throws Exception {
+    String taskId = legeNeuanlageAn(sitzung);
+    assertThat(
+            sitzung
+                .hole("/api/tasks")
+                .<List<String>>json("$[?(@.taskId == '" + taskId + "')].einordnung"))
+        .containsExactly("OFFEN");
+
+    assertThat(monitorDsl.execute(Plattformvertrag.ABHOLEN, taskId)).isEqualTo(1);
+    Antwort antwort = sitzung.loesche("/api/tasks/" + taskId);
+
+    assertThat(antwort.status()).as(antwort.rumpf()).isEqualTo(409);
+    assertThat(antwort.<String>json("$.type")).endsWith("/auftrag-nicht-offen");
+    assertThat(sitzung.hole("/api/tasks/" + taskId).<String>json("$.einordnung"))
+        .isEqualTo("IN_AUSFUEHRUNG");
+    assertThat(geloeschtEreignisse(taskId)).isZero();
+  }
+
+  @Test
+  @DisplayName("Ein zweites DELETE auf denselben Auftrag ist 404, und es bleibt ein Ereignis")
+  void zweimal_loeschen() throws Exception {
+    String taskId = legeNeuanlageAn(sitzung);
+    assertThat(sitzung.loesche("/api/tasks/" + taskId).status()).isEqualTo(204);
+
+    Antwort zweites = sitzung.loesche("/api/tasks/" + taskId);
+
+    assertThat(zweites.status()).isEqualTo(404);
+    assertThat(geloeschtEreignisse(taskId)).isEqualTo(1);
+  }
+
+  @Test
+  @DisplayName("Unbekannte Kennung: 404, kein Ereignis")
+  void loeschen_unbekannt() throws Exception {
+    String erfunden = UUID.randomUUID().toString();
+
+    Antwort antwort = sitzung.loesche("/api/tasks/" + erfunden);
+
+    assertThat(antwort.status()).isEqualTo(404);
+    assertThat(geloeschtEreignisse(erfunden)).isZero();
+  }
+
+  /** Bringt einen eben angelegten Auftrag mit den Statements der Plattform in einen Stand. */
+  private void bringeInStand(String taskId, String stand) {
+    assertThat(monitorDsl.execute(Plattformvertrag.ABHOLEN, taskId)).isEqualTo(1);
+    switch (stand) {
+      case "IN_AUSFUEHRUNG" -> {}
+      case "ERLEDIGT" ->
+          assertThat(monitorDsl.execute(Plattformvertrag.ERLEDIGT_MELDEN, "Ok\nOk", taskId))
+              .isEqualTo(1);
+      case "FEHLGESCHLAGEN" ->
+          assertThat(
+                  monitorDsl.execute(
+                      Plattformvertrag.FEHLGESCHLAGEN_MELDEN, "TEST", "Im Test.", taskId))
+              .isEqualTo(1);
+      default -> throw new IllegalArgumentException(stand);
+    }
+  }
+
+  private int geloeschtEreignisse(String taskId) {
+    return monitorDsl.fetchCount(
+        AUDIT_LOG,
+        AUDIT_LOG
+            .EVENT_TYPE
+            .eq(AuditEventType.AUFTRAG_GELOESCHT.name())
+            .and(AUDIT_LOG.TARGET_ID.eq(taskId)));
   }
 }

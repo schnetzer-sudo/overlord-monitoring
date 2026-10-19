@@ -92,11 +92,13 @@ class TypdefinitionDbIT extends AuftragsTestbasis {
                 .fetchOne(TASK.PARAMETER))
         .isEqualTo("Aktion=Sperren\nNO-1;Grund 1\nNO-2;Grund 2");
 
-    // 3. maxEintraege auf 1 und einen anderen Erfolgswert: wirkt beim naechsten Anlegen.
+    // 3. maxEintraege auf 1, einen anderen Erfolgswert und ein anderes label: wirkt beim
+    // naechsten Anlegen. Das label prueft seit A4 die Kopie in der Antwort (E‑1120, Schritt 5).
     aendere(
         struktur -> {
           struktur.put("maxEintraege", 1);
           ((ObjectNode) struktur.get("rueckgaben")).put("ok", "ANDERS");
+          ((ObjectNode) struktur.get("felder").get(1)).put("label", "Konto, heute anders");
         });
 
     Antwort zuViele = sitzung.sende("/api/tasks", sperren(2));
@@ -121,6 +123,10 @@ class TypdefinitionDbIT extends AuftragsTestbasis {
     assertThat(alt.<String>json("$.einordnung")).isEqualTo("ERLEDIGT");
     assertThat(alt.<String>json("$.name")).isEqualTo("Gattung aus dem Test");
     assertThat(alt.<List<String>>json("$.eintraege[*].schluessel")).containsExactly("NO-1", "NO-2");
+    assertThat(alt.<List<String>>json("$.felder[*].name"))
+        .containsExactly("bereich", "konto", "grund", "neuername");
+    assertThat(alt.<List<String>>json("$.felder[*].label"))
+        .containsExactly("Bereich", "Konto", "Grund", "Neuer Name");
 
     assertThat(werkGeaendertAm()).as("WERK_ABLADESTELLE unberuehrt").isEqualTo(werkVorher);
   }

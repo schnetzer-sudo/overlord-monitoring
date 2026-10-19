@@ -14,8 +14,10 @@ import de.kraftwerkone.overlord.monitor.common.error.FachlicheAusnahme;
 import de.kraftwerkone.overlord.monitor.common.error.RessourceNichtGefundenException;
 import de.kraftwerkone.overlord.monitor.security.AngemeldeterNutzer;
 import de.kraftwerkone.overlord.monitor.task.AuftragRepository.Auftragszeile;
+import de.kraftwerkone.overlord.monitor.task.AuftragRepository.GeloeschterAuftrag;
 import de.kraftwerkone.overlord.monitor.task.AuftragRepository.NeuerAuftrag;
 import de.kraftwerkone.overlord.monitor.task.AuftragResponse.EintragResponse;
+import de.kraftwerkone.overlord.monitor.task.AuftragResponse.FeldResponse;
 import de.kraftwerkone.overlord.monitor.task.Rueckgabe.Zeile;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -31,17 +33,19 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * Die Fachlogik der Auftraege: anbieten, pruefen, anlegen, lesen ({@code docs/tasks.md} §6, {@code
- * docs/assistent.md} §6.5).
+ * Die Fachlogik der Auftraege: anbieten, pruefen, anlegen, lesen, offene loeschen ({@code
+ * docs/tasks.md} §6, {@code docs/assistent.md} §6.5).
  *
  * <p><b>Der Monitor schreibt den Status nie ueber {@code OFFEN} hinaus.</b> Abholen und
- * Zurueckmelden sind Sache der Plattform ({@code docs/task-schnittstelle.md}).
+ * Zurueckmelden sind Sache der Plattform ({@code docs/task-schnittstelle.md}). Seit A4 loescht er
+ * einen Auftrag, solange er {@code OFFEN} ist — und nur dann.
  */
 @Service
 public class AuftragService {
@@ -53,6 +57,9 @@ public class AuftragService {
   static final int PARAMETER_HOECHSTENS_BYTES = 65_535;
 
   static final String PROBLEMTYP = "eingabe-ungueltig";
+
+  /** {@code 409} beim Loeschen: Die Plattform hat den Auftrag schon abgeholt (F27). */
+  static final String PROBLEMTYP_NICHT_OFFEN = "auftrag-nicht-offen";
 
   private static final Prueffehler ZU_LANG =
       new Prueffehler(
@@ -230,6 +237,57 @@ public class AuftragService {
             () -> new RessourceNichtGefundenException("Auftrag nicht vorhanden oder fremd"));
   }
 
+  /**
+   * Loescht einen offenen Auftrag des Mandanten ({@code docs/tasks.md} §6.6, E‑1110, E‑1113 bis
+   * E‑1115). Jeder Benutzer des aktiven Mandanten darf es, nicht nur der, der angelegt hat.
+   *
+   * <p><b>Ein Statement entscheidet</b>: {@code DELETE … WHERE task_id, mandant_id, status =
+   * 'OFFEN'}. Erst wenn es null Zeilen loescht, wird im eigenen Mandanten nachgelesen — {@code
+   * 404}, wenn es den Auftrag dort nicht gibt (unbekannt und fremd sind dieselben zwei Statements),
+   * {@code 409}, wenn er nicht mehr offen ist.
+   *
+   * <p><b>Loeschen und Protokoll in einer Transaktion</b> (F26): Der Eintrag geht ueber {@link
+   * AuditLogWriter#schreibeInTransaktion} in dieselbe. Danach bleibt vom Auftrag nur das Ereignis.
+   */
+  @Transactional
+  public void loesche(AngemeldeterNutzer nutzer, MandantContext mandant, String taskId, String ip) {
+    Optional<GeloeschterAuftrag> geloescht = repository.loescheOffenen(mandant, taskId);
+    if (geloescht.isEmpty()) {
+      String status =
+          repository
+              .status(mandant, taskId)
+              .orElseThrow(
+                  () -> new RessourceNichtGefundenException("Auftrag nicht vorhanden oder fremd"));
+      throw new FachlicheAusnahme(
+          HttpStatus.CONFLICT,
+          PROBLEMTYP_NICHT_OFFEN,
+          "Auftrag nicht mehr offen",
+          "Die Plattform hat den Auftrag bereits übernommen. Er kann nicht mehr gelöscht werden.",
+          "Loeschen abgelehnt, Auftrag im Status " + status);
+    }
+
+    GeloeschterAuftrag auftrag = geloescht.get();
+    int anzahl = json.readValue(auftrag.eintraege(), EINTRAGSLISTE).size();
+    auditLogWriter.schreibeInTransaktion(
+        new AuditEvent(
+            AuditEventType.AUFTRAG_GELOESCHT,
+            nutzer.id(),
+            nutzer.username(),
+            mandant.mandantId(),
+            "task",
+            taskId,
+            ip,
+            "Typ "
+                + auftrag.typ()
+                + ", Aktion "
+                + auftrag.aktion()
+                + ", "
+                + anzahl
+                + (anzahl == 1 ? " Eintrag" : " Einträge")
+                + ", eingestellt "
+                + utc(auftrag.eingestelltAm())));
+  }
+
   // ─── Anlegen ───────────────────────────────────────────────────────────────────────────────
 
   /** Eine UUID in beliebiger Schreibweise; gespeichert wird sie klein. */
@@ -345,7 +403,10 @@ public class AuftragService {
         utc(zeile.ausgefuehrtAm()),
         zeile.fehlercode(),
         zeile.fehlertext(),
-        antworten);
+        antworten,
+        definition.felder().stream()
+            .map(feld -> new FeldResponse(feld.name(), feld.label()))
+            .toList());
   }
 
   /** Im eigenen Schema steht UTC; die Datenbank hat es mit {@code UTC_TIMESTAMP(3)} gesetzt. */

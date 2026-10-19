@@ -32,7 +32,9 @@ import org.springframework.stereotype.Repository;
  *
  * <p>Ohne {@code @Transactional}: Jedes Statement laeuft fuer sich. Das ist fuer die Wiederholung
  * gewollt — nach einem verlorenen Wettlauf am eindeutigen Index muss die zweite Lesung den Auftrag
- * der ersten Anfrage sehen, und eine Transaktion mit ihrem Schnappschuss saehe ihn nicht.
+ * der ersten Anfrage sehen, und eine Transaktion mit ihrem Schnappschuss saehe ihn nicht. <b>Das
+ * Loeschen</b> (seit A4) laeuft in der Transaktion von {@code AuftragService.loesche}, damit das
+ * Ereignis im Protokoll mit ihm steht oder faellt (F26).
  */
 @Repository
 public class AuftragRepository {
@@ -167,6 +169,50 @@ public class AuftragRepository {
       }
       throw fehler;
     }
+  }
+
+  /** Was vom geloeschten Auftrag fuer das Protokoll bleibt; {@code eintraege} als JSON-Text. */
+  public record GeloeschterAuftrag(
+      String typ, String aktion, String eintraege, LocalDateTime eingestelltAm) {}
+
+  /**
+   * Loescht den Auftrag, <b>wenn er offen ist</b> — ein Statement, Mandant und Status im {@code
+   * WHERE} ({@code docs/tasks.md} §6.6, E‑1114). Das Abholen der Plattform greift unter derselben
+   * Bedingung; von beiden aendert genau eines die Zeile.
+   *
+   * <p><b>{@code RETURNING} statt eines Lesens davor</b> (F28): Ein {@code SELECT} vorher koennte
+   * einen Stand lesen, den das Abholen im selben Augenblick ueberholt.
+   *
+   * @return leer, wenn null Zeilen geloescht wurden — unbekannt, fremd oder nicht mehr offen
+   */
+  public Optional<GeloeschterAuftrag> loescheOffenen(MandantContext mandant, String taskId) {
+    return monitorDsl
+        .deleteFrom(TASK)
+        .where(TASK.TASK_ID.eq(taskId))
+        .and(TASK.MANDANT_ID.eq(mandant.mandantId()))
+        .and(TASK.STATUS.eq(TaskStatusClassifier.OFFEN))
+        .returningResult(TASK.TASK_TYP, TASK.AKTION, TASK.EINTRAEGE, TASK.EINGESTELLT_AM)
+        .fetchOptional(
+            zeile ->
+                new GeloeschterAuftrag(
+                    zeile.get(TASK.TASK_TYP),
+                    zeile.get(TASK.AKTION),
+                    text(zeile.get(TASK.EINTRAEGE)),
+                    zeile.get(TASK.EINGESTELLT_AM)));
+  }
+
+  /**
+   * Der gespeicherte Status eines Auftrags des Mandanten — die Nachlesung nach einem Loeschen ohne
+   * Treffer (E‑1115). Liest <b>nur im eigenen Mandanten</b>: Fremd und unbekannt sind dasselbe
+   * Statement mit null Zeilen.
+   */
+  public Optional<String> status(MandantContext mandant, String taskId) {
+    return monitorDsl
+        .select(TASK.STATUS)
+        .from(TASK)
+        .where(TASK.TASK_ID.eq(taskId))
+        .and(TASK.MANDANT_ID.eq(mandant.mandantId()))
+        .fetchOptional(TASK.STATUS);
   }
 
   private static Auftragszeile auftragszeile(Record zeile) {

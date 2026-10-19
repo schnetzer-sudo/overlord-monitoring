@@ -1,10 +1,13 @@
 package de.kraftwerkone.overlord.monitor.task;
 
+import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.AUDIT_LOG;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.TASK;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.TASK_TYPE;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.TASK_TYPE_MANDANT;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import de.kraftwerkone.overlord.monitor.audit.AuditEventType;
+import de.kraftwerkone.overlord.monitor.jooq.monitor.tables.records.TaskRecord;
 import de.kraftwerkone.overlord.monitor.security.Rolle;
 import de.kraftwerkone.overlord.monitor.security.Zugriffszaehler;
 import java.util.List;
@@ -17,8 +20,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 
 /**
- * <b>Der Pflicht-Isolationstest der vier Endpunkte unter {@code /api/tasks}</b> (Regel M4), nach
- * der Vorlage in {@code docs/mandantentrennung.md} §5.
+ * <b>Der Pflicht-Isolationstest der Endpunkte unter {@code /api/tasks}</b> (Regel M4), nach der
+ * Vorlage in {@code docs/mandantentrennung.md} §5 — die vier aus A1 und seit A4 {@code DELETE
+ * /api/tasks/{taskId}}.
  *
  * <p><b>Paarung {@code NEXANS} gegen {@code IBIS}</b>: zwei Haeuser, beide fuer {@code
  * WERK_ABLADESTELLE} freigeschaltet — ein Leck zwischen ihnen waere also nicht schon durch die
@@ -183,10 +187,12 @@ class AuftraegeIsolationDbIT extends AuftragsTestbasis {
     // Ohne aktiven Mandanten gibt es nichts — nicht etwa alles.
     assertThat(alsAdmin.hole("/api/tasks").status()).isEqualTo(403);
     assertThat(alsAdmin.hole("/api/tasks/typen").status()).isEqualTo(403);
+    assertThat(alsAdmin.loesche("/api/tasks/" + taskId).status()).isEqualTo(403);
 
     alsAdmin.sende("/api/auth/mandant", "{\"mandantId\":\"" + IBIS + "\"}");
     assertThat(alsAdmin.hole("/api/tasks").rumpf()).doesNotContain(taskId);
     assertThat(alsAdmin.hole("/api/tasks/" + taskId).status()).isEqualTo(404);
+    assertThat(alsAdmin.loesche("/api/tasks/" + taskId).status()).isEqualTo(404);
 
     alsAdmin.sende("/api/auth/mandant", "{\"mandantId\":\"" + SUTTONS + "\"}");
     assertThat(alsAdmin.hole("/api/tasks/typen").rumpf()).isEqualTo("[]");
@@ -195,6 +201,8 @@ class AuftraegeIsolationDbIT extends AuftragsTestbasis {
     alsAdmin.sende("/api/auth/mandant", "{\"mandantId\":\"" + NEXANS + "\"}");
     assertThat(alsAdmin.hole("/api/tasks").<List<String>>json("$[*].taskId")).contains(taskId);
     assertThat(alsAdmin.hole("/api/tasks/" + taskId).status()).isEqualTo(200);
+    // Geloescht wird nur im aktiven Mandanten, dort aber auch von ADMIN (E‑1110, E‑1113).
+    assertThat(alsAdmin.loesche("/api/tasks/" + taskId).status()).isEqualTo(204);
   }
 
   @Test
@@ -207,6 +215,57 @@ class AuftraegeIsolationDbIT extends AuftragsTestbasis {
     assertThat(sitzung.hole("/api/tasks").status()).isEqualTo(403);
     assertThat(sitzung.hole("/api/tasks/typen").status()).isEqualTo(403);
     assertThat(sitzung.sende("/api/tasks", neuanlage(neueAnfrageId())).status()).isEqualTo(403);
+
+    // Seit A4 auch das Loeschen — an einem echten offenen Auftrag desselben Mandanten, damit
+    // die Sperre und nicht eine unbekannte Kennung die Ablehnung ist.
+    String taskId = legeNeuanlageAn(aufNexans);
+    assertThat(sitzung.loesche("/api/tasks/" + taskId).status()).isEqualTo(403);
+    assertThat(monitorDsl.fetchCount(TASK, TASK.TASK_ID.eq(taskId))).isEqualTo(1);
+  }
+
+  // ─── DELETE /api/tasks/{taskId} (A4) ──────────────────────────────────────────────────────
+
+  @Test
+  @DisplayName("IBIS loescht einen offenen Auftrag von NEXANS: 404 wie erfunden, die Zeile bleibt")
+  void fremden_auftrag_loeschen() throws Exception {
+    String taskId = legeNeuanlageAn(aufNexans);
+    TaskRecord vorher = monitorDsl.selectFrom(TASK).where(TASK.TASK_ID.eq(taskId)).fetchOne();
+
+    String erfundeneId = UUID.randomUUID().toString();
+    zugriffe.zuruecksetzen();
+    Antwort fremd = aufIbis.loesche("/api/tasks/" + taskId);
+    List<String> statementsFremd = zugriffe.abgesetzt();
+    zugriffe.zuruecksetzen();
+    Antwort erfunden = aufIbis.loesche("/api/tasks/" + erfundeneId);
+    List<String> statementsErfunden = zugriffe.abgesetzt();
+
+    assertThat(fremd.status()).isEqualTo(404);
+    assertThat(erfunden.status()).isEqualTo(404);
+    assertThat(fremd.<String>json("$.instance")).isEqualTo("/api/tasks/" + taskId);
+    assertThat(fremd.rumpfOhneTraceId().replace(taskId, "<id>"))
+        .isEqualTo(erfunden.rumpfOhneTraceId().replace(erfundeneId, "<id>"));
+    // Das Loeschen ohne Treffer und die Nachlesung im eigenen Mandanten, in beiden Faellen gleich.
+    // Ein 409 fuer den fremden Auftrag verriete, dass es ihn gibt.
+    assertThat(statementsFremd).hasSize(2).isEqualTo(statementsErfunden);
+
+    // Ein untergeschobener Mandant in der Anfrage aendert nichts (Regel M1).
+    assertThat(aufIbis.loesche("/api/tasks/" + taskId + "?mandantId=" + NEXANS).status())
+        .isEqualTo(404);
+    assertThat(aufSuttons.loesche("/api/tasks/" + taskId).status()).isEqualTo(404);
+
+    assertThat(monitorDsl.selectFrom(TASK).where(TASK.TASK_ID.eq(taskId)).fetchOne())
+        .isEqualTo(vorher);
+    assertThat(
+            monitorDsl.fetchCount(
+                AUDIT_LOG,
+                AUDIT_LOG
+                    .EVENT_TYPE
+                    .eq(AuditEventType.AUFTRAG_GELOESCHT.name())
+                    .and(AUDIT_LOG.TARGET_ID.eq(taskId))))
+        .isZero();
+
+    // Gegenprobe: Der Eigentuemer loescht ihn — sonst bewiese der Test nur, dass Loeschen nie geht.
+    assertThat(aufNexans.loesche("/api/tasks/" + taskId).status()).isEqualTo(204);
   }
 
   /** Die aktiven, fuer den Mandanten freigeschalteten Typen — direkt aus der Datenbank. */

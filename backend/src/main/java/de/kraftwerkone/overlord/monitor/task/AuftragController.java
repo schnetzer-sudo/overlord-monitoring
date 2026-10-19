@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -88,6 +89,16 @@ public class AuftragController {
   @GetMapping("/api/tasks/{taskId}")
   public AuftragResponse einzeln(@PathVariable String taskId) {
     return auftragService.einzeln(mandant(), taskId);
+  }
+
+  /**
+   * Loescht einen offenen Auftrag ({@code docs/tasks.md} §6.6): {@code 204}. Fremd oder unbekannt
+   * {@code 404}, ununterscheidbar; nicht mehr offen {@code 409}.
+   */
+  @DeleteMapping("/api/tasks/{taskId}")
+  public ResponseEntity<Void> loeschen(@PathVariable String taskId, HttpServletRequest request) {
+    auftragService.loesche(erforderlicherNutzer(), mandant(), taskId, request.getRemoteAddr());
+    return ResponseEntity.noContent().build();
   }
 
   private MandantContext mandant() {
