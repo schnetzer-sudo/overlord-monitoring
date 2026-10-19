@@ -1724,11 +1724,13 @@ export const de = {
     mandant: "Aktiver Mandant",
     schliessen: "Assistent schließen",
     neuesGespraech: "Neues Gespräch",
+    // Drei Zeilen, dazwischen die Typen aus `GET /api/assistent` als Liste.
     begruessung: {
+      gruss: "Guten Tag, ich bin der Assistent des Overlord Monitorings.",
       einleitung:
-        "Guten Tag. Ich bereite mit Ihnen Aufträge an die EDI-Plattform vor. Angeboten sind:",
+        "Ich nehme Ihre Änderungswünsche an der EDI-Konfiguration entgegen und bereite daraus einen Auftrag vor. Derzeit möglich:",
       schluss:
-        "Schreiben Sie in eigenen Worten, was Sie ändern möchten. Ich lege Ihnen einen Vorschlag als Karte vor; angelegt wird erst, wenn Sie dort „Auftrag anlegen“ wählen.",
+        "Beschreiben Sie einfach, was Sie ändern möchten. Bevor etwas angelegt wird, zeige ich Ihnen den Auftrag zur Prüfung.",
     },
     verlauf: "Verlauf des Gesprächs",
     sprecher: {

@@ -163,8 +163,10 @@ Kopf und mit einem Klick daneben; das Gespräch bleibt dabei stehen (E‑1076).
 ┌──────────────────────────────────────────────┐
 │ Assistent  ▣ NEXANS       Neues Gespräch   × │  Kopf
 ├──────────────────────────────────────────────┤
-│ Guten Tag. Ich bereite mit Ihnen Aufträge …  │  Verlauf — scrollt
+│ Guten Tag, ich bin der Assistent des …       │  Verlauf — scrollt
+│ Ich nehme Ihre Änderungswünsche … möglich:   │
 │  • Anpassen der Werk-/Abladestellentabelle   │
+│ Beschreiben Sie einfach, was Sie …           │
 │                  ┌─────────────────────────┐ │
 │                  │ Bitte für Werk 72332 …  │ │  Nachricht des Kunden
 │                  └─────────────────────────┘ │
@@ -192,8 +194,13 @@ Assistenten links ohne Fläche. Beide als **ein Textknoten** in einem Absatz mit
 `white-space: pre-wrap` (E‑1074): Was wie HTML oder Markdown aussieht, steht wörtlich da. Wer
 spricht, steht für Vorleseprogramme als verborgene Beschriftung („Sie:“, „Assistent:“) davor.
 
-**Die Begrüßung** (Punkt 2 in §1) eröffnet jedes Gespräch, auch nach „Neues Gespräch“; die Typen
-kommen aus `typen` von `GET /api/assistent`, als Liste.
+**Die Begrüßung** (Punkt 2 in §1) eröffnet jedes Gespräch, auch nach „Neues Gespräch“. Drei Zeilen
+aus der Sprachdatei (`texte.assistent.begruessung`: `gruss`, `einleitung`, `schluss`), zwischen der
+zweiten und der dritten die Typen aus `typen` von `GET /api/assistent` als Liste. Wortlaut seit dem
+19.10.2026, Vorgabe des Auftraggebers: „Guten Tag, ich bin der Assistent des Overlord Monitorings.“
+· „Ich nehme Ihre Änderungswünsche an der EDI-Konfiguration entgegen und bereite daraus einen
+Auftrag vor. Derzeit möglich:“ · Liste · „Beschreiben Sie einfach, was Sie ändern möchten. Bevor
+etwas angelegt wird, zeige ich Ihnen den Auftrag zur Prüfung.“
 
 **Die Warteanzeige** ist ein Zeichen (Sanduhr) und ein Satz, ohne Drehen und ohne Übergang
 ([`visuelles-konzept.md`](visuelles-konzept.md) §7).

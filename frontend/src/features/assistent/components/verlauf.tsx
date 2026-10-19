@@ -130,6 +130,7 @@ function BeitragInhalt({
       return (
         <div className="flex flex-col gap-1.5">
           <span className="sr-only">{t.sprecher.assistent} </span>
+          <p>{t.begruessung.gruss}</p>
           <p>{t.begruessung.einleitung}</p>
           <ul className="list-disc pl-5">
             {typen.map((name, nummer) => (

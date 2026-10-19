@@ -998,10 +998,11 @@ export const en: Texte = {
     schliessen: "Close assistant",
     neuesGespraech: "New conversation",
     begruessung: {
+      gruss: "Hello, I am the assistant of Overlord Monitoring.",
       einleitung:
-        "Hello. I help you prepare orders for the EDI platform. The following are available:",
+        "I take your requests for changes to the EDI configuration and prepare an order from them. Currently available:",
       schluss:
-        "Describe in your own words what you would like to change. I will put a proposal on a card for you; nothing is created until you choose “Create order” there.",
+        "Simply describe what you would like to change. Before anything is created, I will show you the order for review.",
     },
     verlauf: "Conversation history",
     sprecher: {

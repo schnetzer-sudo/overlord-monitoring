@@ -355,11 +355,17 @@ describe("Tastatur und Fokus", () => {
       expect(symbol()?.getAttribute("aria-expanded")).toBe("true");
 
       // Die Begrüßung ist ein fester Text mit den Typen aus GET /api/assistent —
-      // und kein Aufruf des Modells.
+      // und kein Aufruf des Modells. Drei Zeilen, die Liste zwischen der zweiten
+      // und der dritten, in dieser Reihenfolge.
       const begruessung = chatbox()?.querySelector('[data-beitrag="begruessung"]');
-      expect(begruessung?.textContent).toContain(A.begruessung.einleitung);
-      expect([...(begruessung?.querySelectorAll("li") ?? [])].map((li) => li.textContent)).toEqual([
+      const zeilen = [...(begruessung?.querySelectorAll("p, li") ?? [])].map(
+        (zeile) => zeile.textContent,
+      );
+      expect(zeilen).toEqual([
+        "Guten Tag, ich bin der Assistent des Overlord Monitorings.",
+        "Ich nehme Ihre Änderungswünsche an der EDI-Konfiguration entgegen und bereite daraus einen Auftrag vor. Derzeit möglich:",
         TYPNAME,
+        "Beschreiben Sie einfach, was Sie ändern möchten. Bevor etwas angelegt wird, zeige ich Ihnen den Auftrag zur Prüfung.",
       ]);
       expect(nur("POST", "/api/assistent")).toEqual([]);
 
