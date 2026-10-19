@@ -438,14 +438,22 @@ Nummern ab 1017 (Linie `assistent`, per `grep` geprüft); dieselben Zeilen stehe
 Mit eingeschaltetem Assistenten, lokal. **Der Text, den man schreibt, geht an Anthropic in die USA**
 (E‑1029); also nur erfundene Werte verwenden.
 
-**Einschalten** ([`assistent.md`](assistent.md) §7, [`betrieb.md`](betrieb.md) §3):
+**Einschalten** ([`START-LOKAL.md`](START-LOKAL.md) §6, [`assistent.md`](assistent.md) §7):
 
-1. Das Backend mit `OVERLORD_ASSISTENT_AKTIV=true` und `OVERLORD_ASSISTENT_API_KEY=<Schlüssel>`
-   starten (Profil `dev`). Ohne Schlüssel bleibt er aus.
-2. Das Frontend wie üblich starten (`cd frontend && pnpm dev`) und anmelden.
-3. Einen Mandanten wählen, für den `WERK_ABLADESTELLE` freigeschaltet ist: `NEXANS` oder `IBIS`
-   ([`tasks.md`](tasks.md) §4.2). Bei jedem anderen meldet `GET /api/assistent`
-   `verfuegbar: false`, und das Symbol fehlt — das ist zugleich die Gegenprobe zu E‑1068.
+1. Einen Zweig mit A3 auschecken — bis zum Merge `assistent-a3-chatbox`.
+2. Backend und Frontend mit dem Startskript starten, **mit dem Schalter**:
+
+   ```
+   .\scripts\dev-start.ps1 -Assistent
+   ```
+
+   Das Skript setzt im Backend-Fenster `OVERLORD_ASSISTENT_AKTIV=true` und meldet beim Start den
+   Zweig und ob `OVERLORD_ASSISTENT_API_KEY` gesetzt ist. Ohne Schlüssel bleibt der Assistent aus;
+   ohne `-Assistent` ebenso, auch wenn die Variable in der Umgebung steht.
+3. Anmelden und einen Mandanten wählen, für den `WERK_ABLADESTELLE` freigeschaltet ist: `NEXANS` oder
+   `IBIS` (Testkopie, Stand 19.10.2026, [`tasks.md`](tasks.md) §4.2). Bei jedem anderen meldet
+   `GET /api/assistent` `verfuegbar: false`, und das Symbol fehlt — das ist zugleich die Gegenprobe
+   zu E‑1068.
 4. Das Symbol links neben dem Nutzermenü öffnet die Chatbox.
 
 **Angelegte Aufträge** stehen danach mit Status `OFFEN` in `overlord_monitor.task` der Testkopie
