@@ -18,6 +18,17 @@
     Passwoerter kommen ausschliesslich aus Umgebungsvariablen -- siehe
     PROJEKTBESCHREIBUNG.md Abschnitt 3.0.
 
+    Der Assistent bleibt aus (OVERLORD_ASSISTENT_AKTIV=false im Backend-Fenster),
+    ausser mit -Assistent. Siehe docs/assistent.md Abschnitt 7.
+
+.PARAMETER Assistent
+    Schaltet den Assistenten lokal ein: OVERLORD_ASSISTENT_AKTIV=true im
+    Backend-Fenster. Er braucht zusaetzlich OVERLORD_ASSISTENT_API_KEY in der
+    Umgebung; ohne Schluessel bleibt er aus (E-1030). Was im Chat geschrieben
+    wird, geht an Anthropic in die USA (E-1029) -- nur erfundene Werte verwenden.
+    Das Symbol erscheint nur auf einem Zweig mit A3 und nur fuer Mandanten, denen
+    ein Auftragstyp angeboten wird (docs/tasks.md Abschnitt 3.7).
+
 .PARAMETER CodeGen
     Laesst die jOOQ-Codegenerierung mitlaufen. Ohne diesen Schalter wird sie
     uebersprungen (-Djooq.codegen.skip=true).
@@ -43,9 +54,13 @@
 
 .EXAMPLE
     .\dev-start.ps1 -CodeGen
+
+.EXAMPLE
+    .\dev-start.ps1 -Assistent
 #>
 [CmdletBinding()]
 param(
+    [switch] $Assistent,
     [switch] $CodeGen,
     [switch] $Force,
     [switch] $NoBrowser,
@@ -210,6 +225,13 @@ if (-not (Test-Path (Join-Path $FrontendPfad 'package.json'))) {
 }
 Ok "backend\ und frontend\ gefunden"
 
+# Gestartet wird, was ausgecheckt ist -- das Skript wechselt keinen Zweig. Die
+# Zeile steht hier, weil ein Zweig ohne die gesuchte Aenderung genauso startet
+# wie einer mit ihr.
+$zweig = $null
+try { $zweig = (& git -C $RepoWurzel branch --show-current 2>$null) } catch { $zweig = $null }
+if ($zweig) { Hinweis "Zweig: $zweig" }
+
 # ---------------------------------------------------------------------------
 # 2. Umgebung
 # ---------------------------------------------------------------------------
@@ -229,6 +251,20 @@ if (Test-Path $envLocal) {
     Ok "frontend\.env.local vorhanden"
 } else {
     Warnung "frontend\.env.local fehlt. Ohne OVERLORD_BACKEND_URL greift der Standard http://localhost:8080."
+}
+
+# Der Assistent: aus, ausser mit -Assistent (docs/assistent.md Abschnitt 7). Vom
+# Schluessel wird nur gesagt, ob er gesetzt ist -- nie der Wert (Regel G1).
+$assistentWert = if ($Assistent) { 'true' } else { 'false' }
+if ($Assistent) {
+    if ([string]::IsNullOrEmpty($env:OVERLORD_ASSISTENT_API_KEY)) {
+        Warnung "Assistent angefordert, aber OVERLORD_ASSISTENT_API_KEY fehlt -- ohne Schluessel bleibt er aus (E-1030)."
+    } else {
+        Ok "Assistent wird eingeschaltet (OVERLORD_ASSISTENT_API_KEY gesetzt)"
+    }
+    Warnung "Was im Chat geschrieben wird, geht an Anthropic in die USA (E-1029). Nur erfundene Werte."
+} else {
+    Hinweis "Assistent bleibt aus. Einschalten mit -Assistent."
 }
 
 # ---------------------------------------------------------------------------
@@ -305,7 +341,12 @@ if ($CodeGen) {
 
 $pwshPfad = Get-PowerShellPfad
 
+# Der Schalter wird im Backend-Fenster immer gesetzt, auch auf 'false': So bleibt
+# der Assistent ohne -Assistent aus, selbst wenn OVERLORD_ASSISTENT_AKTIV in der
+# Umgebung steht. Den Schluessel erbt das Fenster aus der Umgebung dieses Skripts.
 $cmdBackend  = "`$Host.UI.RawUI.WindowTitle = 'Overlord BACKEND :$BackendPort'; " +
+               "`$env:OVERLORD_ASSISTENT_AKTIV = '$assistentWert'; " +
+               "Write-Host 'OVERLORD_ASSISTENT_AKTIV=$assistentWert' -ForegroundColor DarkGray; " +
                "Set-Location '$BackendPfad'; " +
                "Write-Host 'mvnw.cmd $mvnArgumente' -ForegroundColor DarkGray; " +
                ".\mvnw.cmd $mvnArgumente; " +
@@ -381,6 +422,11 @@ Write-Host ""
 Write-Host "----------------------------------------------------------" -ForegroundColor DarkGray
 Write-Host " Anwendung:  $FrontendUrl" -ForegroundColor White
 Write-Host " Backend:    http://localhost:$BackendPort  (nur direkt zum Pruefen)" -ForegroundColor DarkGray
+if ($Assistent) {
+    Write-Host " Assistent:  an -- Symbol nur mit A3 und fuer Mandanten mit angebotenem Typ" -ForegroundColor White
+} else {
+    Write-Host " Assistent:  aus (einschalten mit -Assistent)" -ForegroundColor DarkGray
+}
 Write-Host ""
 Write-Host " Beenden:    In beiden Fenstern Strg+C, dann Fenster schliessen." -ForegroundColor Gray
 Write-Host " Neu starten: Dieses Skript erneut ausfuehren." -ForegroundColor Gray
