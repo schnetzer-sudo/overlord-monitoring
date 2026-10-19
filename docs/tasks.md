@@ -367,15 +367,22 @@ Ok
   entfernt werden soll oder welchen Wert er behalten soll — sonst würde der nicht genannte
   Wert stillschweigend entfernt (E‑1007). Der Satz steht in der Beschreibung (§4.3), nicht
   im Code.
+- **Neu oder ändern unklar (16.10.2026, Auftraggeber, E‑1061):** Ist unklar, ob ein Eintrag
+  neu angelegt oder geändert werden soll, schlägt der Assistent die Neuanlage vor. Gibt es den
+  Schlüssel schon, bleibt der Eintrag unverändert (E‑1008). Eine Anpassung schlägt er nur vor,
+  wenn der Kunde ausdrücklich etwas ändern will. Der Absatz steht seit `V102` in der
+  Beschreibung (§4.3), nicht im Code.
 - **Mandanten:** freigeschaltet für `NEXANS` und `IBIS`, wie in der Quelle.
 
-### 4.3 Die Definition, Stand nach der Migration `V101`
+### 4.3 Die Definition, Stand nach der Migration `V102`
 
-> **Geändert am 16.10.2026 mit `V101`.** `V100` hat den Typ mit `maxEintraege` 50 und
-> einer kürzeren Beschreibung angelegt und ist unverändert. `V101` setzt `maxEintraege` per
+> **Geändert am 16.10.2026 mit `V101` und `V102`.** `V100` hat den Typ mit `maxEintraege` 50
+> und einer kürzeren Beschreibung angelegt und ist unverändert. `V101` setzt `maxEintraege` per
 > `JSON_SET` auf 20 (E‑1058) und schreibt die Beschreibung neu: „bis zu 20 Einträge“ statt
-> „bis zu 50“ und der Satz zur Anpassung mit nur einem Wert (§4.2). Was hier steht, ist der
-> Stand nach `V101`; Aufträge von vorher tragen ihre Kopie (E‑1023).
+> „bis zu 50“ und der Satz zur Anpassung mit nur einem Wert (§4.2). `V102` schreibt die
+> Beschreibung noch einmal neu, mit dem Absatz zu „neu oder ändern“ (E‑1061, §4.2); die
+> Struktur ändert sie nicht. Was hier steht, ist der Stand nach `V102`; Aufträge von vorher
+> tragen ihre Kopie (E‑1023).
 
 Name: **Anpassen der Werk-/Abladestellentabelle**, `aktiv = TRUE`.
 
@@ -412,7 +419,8 @@ Name: **Anpassen der Werk-/Abladestellentabelle**, `aktiv = TRUE`.
 ```
 
 Die Beschreibung (Fließtext für den Assistenten), wortgleich aus dem Auftrag an die
-Plattform-Entwicklung vom 16.10.2026, mit den beiden Änderungen aus `V101`:
+Plattform-Entwicklung vom 16.10.2026, mit den beiden Änderungen aus `V101` und dem Absatz aus
+`V102`:
 
 ```
 Die EDI-Plattform erzeugt aus eingehenden Partnernachrichten IDOC-Nachrichten für das Kundensystem und braucht dafür eine SNDPRN. Ist sie nicht fest hinterlegt, ermittelt die Plattform sie über die Werk-/Abladestellentabelle des Kunden. Mit diesem Auftrag legt der Kunde Einträge dieser Tabelle an, passt sie an oder löscht sie.
@@ -422,6 +430,8 @@ Ein Eintrag besteht aus einem Schlüssel und zwei Werten. Der Schlüssel besteht
 Neuanlage: Schlüssel und mindestens einer der beiden Werte. Ist der Schlüssel schon vorhanden, bleibt der Eintrag unverändert, und die Rückmeldung lautet „Schlüssel bereits vorhanden“.
 Anpassung: der Schlüssel eines vorhandenen Eintrags und die neuen Werte. Ein leer gelassener Wert wird entfernt, mindestens einer muss gesetzt bleiben. Nenne dem Kunden vor dem Anlegen jeden Wert, der dadurch entfernt wird, denn er sieht die bisherigen Werte nicht. Nennt der Kunde bei einer Anpassung nur einen der beiden Werte, frage nach, ob der andere entfernt werden soll oder welchen Wert er behalten soll.
 Löschung: nur der Schlüssel.
+
+Ist unklar, ob ein Eintrag neu angelegt oder geändert werden soll, schlage die Neuanlage vor. Gibt es den Schlüssel schon, bleibt der Eintrag unverändert. Eine Anpassung schlägst du nur vor, wenn der Kunde ausdrücklich etwas ändern will.
 
 Ein Auftrag enthält eine Aktion für bis zu 20 Einträge. Ob ein Schlüssel existiert, weiß der Assistent nicht; das zeigt erst die Ausführung.
 ```
@@ -444,7 +454,7 @@ Die erste Migration der Linie `assistent` (Migrationen ab `V100`,
 tragen `utf8mb4_bin` ([`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §5). Kein Fremdschlüssel
 nach `GlassfishDB`. Die JSON-Spalten sind `LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin` mit
 `CHECK (JSON_VALID(…))` — das ist genau das, was MariaDB aus dem Typ `JSON` macht, hier aber mit
-ausgeschriebener Sortierung. Die Migration legt `WERK_ABLADESTELLE` an (§4.3; geändert mit `V101`) und schaltet ihn für
+ausgeschriebener Sortierung. Die Migration legt `WERK_ABLADESTELLE` an (§4.3; geändert mit `V101` und `V102`) und schaltet ihn für
 `NEXANS` und `IBIS` frei.
 
 **`task`**
@@ -768,7 +778,7 @@ Damit sie nicht verloren gehen:
 | `ParametertextTest` | die drei Texte aus §5.2 zeichengenau, Zeilenende, die Gattung, Ersetzen in einem Durchgang |
 | `RueckgabeTest` | CRLF, abschließendes LF, Leerraum, unbekannter Wert, leere Zeile, fehlende Rückgabe |
 | `TaskStatusClassifierTest` | jede Zeile der Tabelle in §5.5, dazu falsche Zeilenzahl |
-| `TypUnabhaengigkeitTest` | `WERK_ABLADESTELLE` steht im Hauptcode (`src/main`, auch generiert und Ressourcen) nirgends außer in den Migrationen `V100` und `V101` — mit Gegenprobe, dass die Suche ihn in genau diesen beiden findet (E‑1018) |
+| `TypUnabhaengigkeitTest` | `WERK_ABLADESTELLE` steht im Hauptcode (`src/main`, auch generiert und Ressourcen) nirgends außer in den Migrationen `V100`, `V101` und `V102` — mit Gegenprobe, dass die Suche ihn in genau diesen dreien findet (E‑1018) |
 | `PlattformvertragTest` | die vier Statements in [`task-schnittstelle.md`](task-schnittstelle.md) §3 sind zeichengleich mit denen, die `AuftraegeDbIT` ausführt |
 | `PaketstrukturTest` | das Paket `task` ist als Fachpaket geführt und kennt kein anderes Fachpaket |
 
@@ -784,7 +794,7 @@ Parametertext arbeiten für sie richtig, ohne dass im Hauptcode etwas für sie s
 | `AuftraegeDbIT` | Anlegen ergibt eine Zeile `OFFEN` mit `eingestellt_am`, Kopie der Definition, geordneten Einträgen, Parametertext, `angelegt_von` und genau einem Ereignis ohne Parametertext; Wiederholung mit derselben `anfrageId` (auch groß geschrieben, mit anderem Rumpf) gibt `200` und keinen zweiten Auftrag; Prüffehler im Fehlerformat; **simulierte Plattform** mit den vier Statements aus dem Vertrag: Erledigt, Teilweise erledigt (CRLF), Unstimmig, Fehlgeschlagen, doppeltes Abholen, Zurückmelden ohne Abholen; Zeitstempel nur auf vorhanden und Reihenfolge (T1) |
 | `AuftraegeIsolationDbIT` | die vier Endpunkte: `NEXANS` gegen `IBIS`, `SUTTONS` ohne Freischaltung (`404` beim Anlegen, ununterscheidbar vom erfundenen Typ in Rumpf **und** Statements; leere Typliste), fremder Auftrag weder in der Liste noch einzeln (`404` gleich einer erfundenen Kennung, ein Statement), untergeschobenes `mandantId`, fremde `anfrageId`, ADMIN je aktivem Mandanten, Änderungszwang |
 | `TypdefinitionDbIT` | ein eigener Testtyp per SQL, ohne Neustart: inaktiv `404`, aktiviert in der Typliste, Änderung an `maxEintraege` wirkt beim nächsten Anlegen, ungültige Struktur nimmt ihn aus dem Angebot, ein Auftrag von vorher liest seine Kopie; `WERK_ABLADESTELLE` bleibt unberührt |
-| `TaskMigrationDbIT` | `JSON_VALID(struktur)` ist wahr; die Muster, in der Datenbank per `JSON_EXTRACT` herausgeholt, sind zeichengleich mit dem Auftrag; Struktur, Name und Beschreibung wie geschrieben, im Stand nach `V101` |
+| `TaskMigrationDbIT` | `JSON_VALID(struktur)` ist wahr; die Muster, in der Datenbank per `JSON_EXTRACT` herausgeholt, sind zeichengleich mit dem Auftrag; Struktur, Name und Beschreibung wie geschrieben, im Stand nach `V102` |
 | `IndexbestandDbIT` | die drei Tabellen und ihre Indizes in der Sollliste, in beide Richtungen |
 
 **Verletzungsprobe je Mandantenfilter (16.10.2026).** Jeder Filter in `AuftragRepository` ist

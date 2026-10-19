@@ -17,8 +17,9 @@ import tools.jackson.databind.node.ObjectNode;
  * dem Auftrag zu A1. Oeffentlich, weil {@code task} und {@code assistent} sie ebenfalls nutzen.
  *
  * <p><b>{@code WERK_ABLADESTELLE}</b> kommt aus {@code src/test/resources/task}, im Stand nach der
- * Migration {@code V101} (hoechstens 20 Eintraege, Beschreibung mit der Rueckfrage zur Anpassung);
- * {@code TaskMigrationDbIT} haelt die Gleichheit mit der Datenbank.
+ * Migration {@code V102} (hoechstens 20 Eintraege seit {@code V101}, Beschreibung mit der
+ * Rueckfrage zur Anpassung und dem Absatz zu „neu oder aendern“); {@code TaskMigrationDbIT} haelt
+ * die Gleichheit mit der Datenbank.
  *
  * <p><b>Die Gattung</b> besteht nur hier: andere Aktionen, andere Felder, ein anderer Trenner, eine
  * Regel {@code eindeutig} ueber ein Feld statt ueber den Schluessel, andere Rueckgabewerte.
@@ -59,8 +60,14 @@ public final class Testdefinitionen {
 
   private Testdefinitionen() {}
 
+  /**
+   * Die Struktur zeichengleich so, wie sie in {@code task_type} der Testkopie steht: seit {@code
+   * V101} ({@code JSON_SET}) in der kompakten Form von MariaDB, ohne das Zeilenende der Datei.
+   * {@code TestsatzDefinitionDbIT} haelt das fest.
+   */
   public static String werkStruktur() {
-    return ressource("/task/werk-abladestelle-struktur.json");
+    String text = ressource("/task/werk-abladestelle-struktur.json");
+    return text.endsWith("\n") ? text.substring(0, text.length() - 1) : text;
   }
 
   /** Die Beschreibung aus Anhang B, ohne das Zeilenende, das der Editor an die Datei haengt. */

@@ -44,7 +44,7 @@ public record AssistentEigenschaften(
     modell = leer(modell) ? "claude-sonnet-5-5" : modell;
     basisUrl = leer(basisUrl) ? "https://api.anthropic.com" : basisUrl;
     zeitgrenze = zeitgrenze == null ? Duration.ofSeconds(30) : zeitgrenze;
-    maxTokens = maxTokens <= 0 ? 1024 : maxTokens;
+    maxTokens = maxTokens <= 0 ? 2048 : maxTokens;
     nachrichtHoechstensZeichen =
         nachrichtHoechstensZeichen <= 0 ? 4000 : nachrichtHoechstensZeichen;
     nachrichtenJeGespraech = nachrichtenJeGespraech <= 0 ? 20 : nachrichtenJeGespraech;

@@ -28,7 +28,7 @@ class TestsatzTest {
   private static final TypDefinition WERK = Testdefinitionen.werk();
 
   @Test
-  @DisplayName("17 synthetische Faelle, jede der 14 Gruppen mindestens einmal, Kennungen eindeutig")
+  @DisplayName("18 synthetische Faelle, jede der 14 Gruppen mindestens einmal, Kennungen eindeutig")
   void form_und_abdeckung() throws IOException {
     JsonNode faelle = lies().get("faelle");
     Set<String> kennungen = new HashSet<>();
@@ -47,7 +47,7 @@ class TestsatzTest {
       }
       gruppen.add(fall.get("gruppe").asInt());
     }
-    assertThat(faelle.size()).isEqualTo(17);
+    assertThat(faelle.size()).isEqualTo(18);
     assertThat(gruppen).containsExactlyInAnyOrder(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14);
   }
 
@@ -56,19 +56,7 @@ class TestsatzTest {
       "Jede erwartete Karte besteht die Pruefung aus A1 — sonst waere der Fall unerfuellbar")
   void erwartete_karten_sind_gueltig() throws IOException {
     for (JsonNode fall : lies().get("faelle")) {
-      List<JsonNode> erwartet = new ArrayList<>();
-      for (String feld : List.of("erwartet", "erwartetNach", "erwartetEinerVon")) {
-        JsonNode knoten = fall.get(feld);
-        if (knoten == null) {
-          continue;
-        }
-        if (knoten.isArray()) {
-          knoten.forEach(erwartet::add);
-        } else {
-          erwartet.add(knoten);
-        }
-      }
-      for (JsonNode erwartung : erwartet) {
+      for (JsonNode erwartung : erwartungen(fall)) {
         JsonNode vorschlag = erwartung.get("vorschlag");
         if (vorschlag.isNull()) {
           continue;
@@ -80,6 +68,50 @@ class TestsatzTest {
             .isEmpty();
       }
     }
+  }
+
+  @Test
+  @DisplayName("Begriffe nur ohne Vorschlag, als Liste nicht leerer Texte; S12 und S17 tragen sie")
+  void begriffe_nur_ohne_vorschlag() throws IOException {
+    List<String> mitBegriffen = new ArrayList<>();
+    for (JsonNode fall : lies().get("faelle")) {
+      for (JsonNode erwartung : erwartungen(fall)) {
+        assertThat(erwartung.propertyNames())
+            .as("Fall %s", fall.get("kennung"))
+            .isSubsetOf("vorschlag", "begriffe");
+        JsonNode begriffe = erwartung.get("begriffe");
+        if (begriffe == null) {
+          continue;
+        }
+        mitBegriffen.add(fall.get("kennung").stringValue());
+        assertThat(erwartung.get("vorschlag").isNull()).as("Fall %s", fall.get("kennung")).isTrue();
+        assertThat(begriffe.isArray() && !begriffe.isEmpty()).isTrue();
+        begriffe.forEach(begriff -> assertThat(begriff.stringValue()).isNotBlank());
+      }
+    }
+    assertThat(mitBegriffen).containsExactlyInAnyOrder("S12", "S17");
+  }
+
+  @Test
+  @DisplayName(
+      "Begriffe: ohne Ruecksicht auf Gross- und Kleinschreibung, jeder einzeln, ohne Antwort fehlen alle")
+  void begriffe_bewertung() {
+    JsonNode erwartet =
+        Skriptmodell.JSON.readTree(
+            "{\"vorschlag\":null,\"begriffe\":[\"SNDPRN_4908\",\"Mandant\"]}");
+
+    assertThat(
+            AssistentTestsatzLauf.fehlendeBegriffe(
+                erwartet, "Soll sndprn_4908 entfernt werden? Der MANDANT bleibt."))
+        .isEmpty();
+    assertThat(AssistentTestsatzLauf.fehlendeBegriffe(erwartet, "Soll SNDPRN_4908 entfallen?"))
+        .containsExactly("Mandant");
+    assertThat(AssistentTestsatzLauf.fehlendeBegriffe(erwartet, null))
+        .containsExactly("SNDPRN_4908", "Mandant");
+    assertThat(
+            AssistentTestsatzLauf.fehlendeBegriffe(
+                Skriptmodell.JSON.readTree("{\"vorschlag\":null}"), "beliebig"))
+        .isEmpty();
   }
 
   @Test
@@ -118,6 +150,23 @@ class TestsatzTest {
                 Skriptmodell.JSON.readTree(umgekehrt.toString().replace("Neuanlage", "Anpassung")),
                 karte))
         .isFalse();
+  }
+
+  /** Alle Erwartungen eines Falls, gleich in welcher der drei Formen. */
+  private static List<JsonNode> erwartungen(JsonNode fall) {
+    List<JsonNode> erwartet = new ArrayList<>();
+    for (String feld : List.of("erwartet", "erwartetNach", "erwartetEinerVon")) {
+      JsonNode knoten = fall.get(feld);
+      if (knoten == null) {
+        continue;
+      }
+      if (knoten.isArray()) {
+        knoten.forEach(erwartet::add);
+      } else {
+        erwartet.add(knoten);
+      }
+    }
+    return erwartet;
   }
 
   private static List<Map<String, String>> eintraege(JsonNode vorschlag) {

@@ -239,19 +239,37 @@ class AssistentIsolationDbIT extends SicherheitsTestbasis {
   }
 
   @Test
-  @DisplayName("Was das Modell bekommt, nennt weder Benutzername noch Mandant (E‑1035)")
+  @DisplayName(
+      "Was das Modell bekommt, nennt den Namen des Mandanten, aber weder Benutzername noch"
+          + " Mandanten-ID (E‑1035, E‑1059)")
   void datensparsamkeit() throws Exception {
+    String name =
+        mandantRepository.findeAlle().stream()
+            .filter(mandant -> mandant.id().equals(NEXANS))
+            .findFirst()
+            .orElseThrow()
+            .name();
     modell.werkzeug(WERK, ANPASSUNG).text("Bitte prüfen.");
 
     nachricht(aufNexans, eroeffne(aufNexans), "SNDPRN ändern");
 
+    assertThat(modell.anfragen()).isNotEmpty();
     for (Modellanfrage anfrage : modell.anfragen()) {
+      if (!name.equals(NEXANS)) {
+        assertThat(anfrage.anweisung()).contains("Der Kunde arbeitet im Mandanten „" + name + "“.");
+      } else {
+        // Ohne MandantName ist der Anzeigename die Kennung: dann kein Abschnitt (E‑1059).
+        assertThat(anfrage.anweisung()).doesNotContain("# Der aktive Mandant");
+      }
       StringBuilder alles = new StringBuilder(anfrage.anweisung());
       for (Werkzeug werkzeug : anfrage.werkzeuge()) {
         alles.append(werkzeug.beschreibung()).append(werkzeug.eingabeschema());
       }
       alles.append(anfrage.verlauf());
-      assertThat(alles.toString()).doesNotContainIgnoringCase(NUTZER_NEXANS).doesNotContain(NEXANS);
+      // Der Name darf die Kennung enthalten (er ist der Name); ausserhalb von ihm steht sie nicht.
+      assertThat(alles.toString().replace(name, ""))
+          .doesNotContainIgnoringCase(NUTZER_NEXANS)
+          .doesNotContain(NEXANS);
     }
   }
 

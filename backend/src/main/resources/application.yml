@@ -172,11 +172,10 @@ overlord:
     # Nur aus der Umgebung, nie hier (Regel G1).
     api-key: ${OVERLORD_ASSISTENT_API_KEY:}
     basis-url: https://api.anthropic.com
-    # Die Grenzen aus E-1036 und E-1038. GESETZT, NICHT GEMESSEN: Es gibt noch keinen
-    # echten Lauf (Punkt 1014). max-tokens reicht vermutlich nicht fuer 50 Eintraege
-    # (Punkt 1016).
+    # Die Grenzen aus E-1036 und E-1038. max-tokens ist gemessen (M1003, Punkt 1016):
+    # 20 Eintraege mit allen fuenf Feldern brauchen ueber 1.024 Token in einem Aufruf.
     zeitgrenze: 30s
-    max-tokens: 1024
+    max-tokens: 2048
     nachricht-hoechstens-zeichen: 4000
     nachrichten-je-gespraech: 20
     werkzeugrunden-je-nachricht: 3
