@@ -9,6 +9,12 @@ ersten Typ `WERK_ABLADESTELLE` als Datenzeile, vier Endpunkte und den Plattformv
 Oberfläche, kein Sprachmodell, keine Ausführung.** Assistent, Chatbox und die Übersicht folgen mit
 A2 bis A4 (§8).
 
+> **Ergänzt am 19.10.2026 mit A4** (Zweig `assistent-a4-ihre-auftraege`): `DELETE
+> /api/tasks/{taskId}` löscht einen Auftrag, solange die Plattform ihn nicht abgeholt hat (§6.6), und
+> die Antwort trägt die `label` der Felder aus der Kopie (§6.5). Die Entscheidungen dazu stehen in §2
+> unter „Löschen und Plattform“, die Oberfläche in [`assistent-frontend.md`](assistent-frontend.md)
+> §12.
+
 ---
 
 ## 1. Zweck und Ablauf
@@ -28,7 +34,8 @@ Umweg über die Betreuung. Der Ablauf, wenn A1 bis A4 stehen:
    meldet zurück (`ERLEDIGT` mit einer Rückgabezeile je Eintrag, oder `FEHLGESCHLAGEN`).
 5. **Rückmeldung.** Der Monitor liest die Rückgabe und ordnet den Auftrag ein — Erledigt,
    Teilweise erledigt, Fehlgeschlagen —, an genau einer Stelle (`TaskStatusClassifier`, §5.5).
-6. **Übersicht.** Der Kunde sieht den Stand unter „Ihre Aufträge“ (A4).
+6. **Übersicht.** Der Kunde sieht den Stand unter „Ihre Aufträge“ (A4). Einen Auftrag, den die
+   Plattform noch nicht abgeholt hat, kann er dort löschen (§6.6).
 
 **Auftragstypen sind Daten** (E‑1018). Ein Typ ist eine Zeile in `task_type`: eine Beschreibung in
 Fließtext für den Assistenten und eine Struktur (JSON), aus der das Backend Prüfung, Parametertext
@@ -97,6 +104,39 @@ am 16.10.2026 entschieden:
 | **E‑1025** | Die Pfade heißen `/api/tasks` und `/api/tasks/typen`, die Antwortfelder sind deutsch. Das weicht von [`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) §5.2 ab (deutsche Pfadsegmente, englische Felder): Tabelle und Plattformvertrag heißen `task`, das Vorbild für einen englischen Pfad ist `/api/admin/users`; deutsche Felder sind die gelebte Praxis des Projekts. | A |
 | **E‑1026** | Regel 7 gilt vollständig: Unter M1000 stehen je Abfrage `EXPLAIN` **und** die Laufzeit aus dem Profil, aus einer Sitzung mit wenigen Läufen — kein Lastgerüst, keine Wiederholungsreihen. | A |
 | **E‑1027** | Die Klarstellung aus E‑1016 steht nicht nur in der Projektbeschreibung, sondern mit einem Satz auch bei L1 und L3 in [`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) §4.4 und bei Regel 4 und 5 in [`CLAUDE.md`](../CLAUDE.md). Sonst hielte ein späterer Schritt `GET /api/tasks` ohne Zeitfenster für einen Regelverstoß. | A |
+
+### Löschen und Plattform (A4, 19.10.2026)
+
+Aus dem Auftrag zu A4. Die E‑Nummer ist `E‑1097` plus die Nummer der Entscheidung dort; die
+Entscheidungen der Oberfläche stehen in [`assistent-frontend.md`](assistent-frontend.md) §12.1.
+Herkunft: **A** = vom Auftraggeber am 19.10.2026 entschieden, **V** = Vorschlag vom 19.10.2026, ohne
+Einspruch übernommen.
+
+| E | Entscheidung | Herkunft |
+|---|---|---|
+| **E‑1110** | **Löschbar ist nur ein Auftrag im Stand `OFFEN`.** Alle anderen Stände sind nicht löschbar, für keine Rolle, auch nicht für `ADMIN`. | A |
+| **E‑1113** | Löschen darf jeder Benutzer des aktiven Mandanten, wie die Liste jedem zeigt, was der Mandant beauftragt hat — nicht nur der, der angelegt hat. | V |
+| **E‑1114** | **Der Auftrag wird wirklich gelöscht**, weil er nie ausgeführt wurde. Ein Statement: `DELETE … WHERE task_id = ? AND mandant_id = <aus der Sitzung> AND status = 'OFFEN'`. Das Abholen der Plattform greift ebenfalls nur bei `OFFEN`; von beiden gewinnt genau eines. Eine gelöschte Zeile bekommt einen Eintrag im `audit_log`: Benutzer, Mandant, `task_id`, Typ, Aktion, Zahl der Einträge, Zeitpunkt des Einstellens. Kein Parametertext im Log. Löschen und Eintrag in einer Transaktion im eigenen Schema. | V |
+| **E‑1115** | **Antworten:** gelöscht `204`. Null Zeilen gelöscht: Gibt es den Auftrag für diesen Mandanten nicht (unbekannt oder fremder Mandant), `404` wie bei jeder unbekannten Kennung. Gibt es ihn, aber nicht mehr `OFFEN`, `409` mit einem stabilen Fehlercode im vorhandenen Fehlerformat. Nachgelesen wird nur im eigenen Mandanten, mit `WHERE task_id = ? AND mandant_id = ?`. | V |
+| **E‑1117** | Die Plattform holt **alle fünf Minuten** ab. Herkunft: Auskunft des Auftraggebers vom 19.10.2026, nicht gemessen (Punkt 1026). Die Zahl steht in der Doku, **nicht** in der Oberfläche. | A |
+| **E‑1118** | Für die Plattform ändert sich am Ablauf nichts: Ein gelöschter Auftrag fehlt beim nächsten Abfragen, und verschwindet er zwischen Abfragen und Abholen, ändert das Abholen null Zeilen wie bei einem schnelleren Lauf. Das steht ausdrücklich in [`task-schnittstelle.md`](task-schnittstelle.md) §3a. | V |
+| **E‑1119** | Abgeholt und ausgeführt wird von der Plattform, nicht von Lobster. Wo die Doku Lobster als den nannte, der abholt oder ausführt, steht jetzt „die Plattform“ (§3.7). | A |
+
+**Rückfrage zu A4, am 19.10.2026 entschieden (A):**
+
+| E | Entscheidung | Anlass |
+|---|---|---|
+| **E‑1120** | **Die Antwort trägt die `label` der Felder aus der Kopie:** `felder` mit `name` und `label` je Feld der Definition, in deren Reihenfolge — in Liste, Einzelabruf und Antwort auf `POST` gleich (§6.5). Abwärtsverträglich; die Karte aus A3 liest das Feld nicht. | `GET /api/tasks` lieferte je Eintrag nur `werte` mit Feldnamen. Die Übersicht braucht die `label` (E‑1104); sie aus `GET /api/tasks/typen` zu nehmen, hieße die aktuelle Definition statt der Kopie zu lesen (gegen E‑1023), und bei einem abgeschalteten Typ fehlten sie |
+
+**Festlegungen der Umsetzung (A4), zur Bestätigung.** Eine E‑Nummer bekommen sie erst damit, wie in
+A2 und A3; die F-Nummern setzen die der Oberfläche fort ([`assistent-frontend.md`](assistent-frontend.md)
+§12.3).
+
+| F | Festlegung | Grund |
+|---|---|---|
+| **F26** | **Löschen und Protokoll laufen in einer Transaktion:** `AuftragService.loesche` ist `@Transactional`, und der Eintrag geht über eine neue Methode `AuditLogWriter.schreibeInTransaktion` mit `Propagation.MANDATORY` in dieselbe. Das bisherige `schreibe` bleibt `REQUIRES_NEW`. | E‑1114 verlangt eine Transaktion. `schreibe` öffnet bewusst eine eigene, damit ein Fehlversuch protokolliert bleibt, wenn die Fachtransaktion zurückrollt — beim Löschen wäre das genau falsch: Ein Eintrag „gelöscht“ zu einem Löschen, das zurückgerollt ist. `MANDATORY` wirft, wenn keine Transaktion läuft, statt still eine eigene zu öffnen |
+| **F27** | **`409` hat den Problemtyp `auftrag-nicht-offen`**, Titel „Auftrag nicht mehr offen“. Die Nachlesung liest den `status`, der nur ins Protokoll geht, nicht in die Antwort. | Ein stabiler Code nach dem Muster der übrigen Problemtypen ([`datenzugriff.md`](datenzugriff.md) §8). Die Oberfläche zeigt ihren eigenen Satz (E‑1116); welcher Stand es ist, erfährt sie aus dem Neuladen der Liste |
+| **F28** | **`DELETE … RETURNING`**: Typ, Aktion, Einträge und Zeitpunkt des Einstellens für das Protokoll kommen aus dem Löschen selbst. | Ein Statement, wie E‑1114 verlangt, und kein Lesen davor: Ein `SELECT` vor dem `DELETE` könnte einen Stand lesen, den das Abholen der Plattform im selben Augenblick überholt |
 
 ---
 
@@ -244,7 +284,7 @@ zugreift.
 
 ### 3.7 Ein neuer Typ, Schritt für Schritt
 
-**Die Reihenfolge ist Pflicht: erst den Ablauf in Lobster bauen, dann aktivieren und
+**Die Reihenfolge ist Pflicht: erst den Ablauf in der Plattform bauen, dann aktivieren und
 freischalten.** Ein aktiver, freigeschalteter Typ ohne Ablauf auf der Plattform führt zu Aufträgen,
 die niemand abholt. Die Plattform bekommt die Definition, bevor der Typ aktiviert wird
 ([`task-schnittstelle.md`](task-schnittstelle.md) §7).
@@ -270,13 +310,16 @@ VALUES (
 -- 2. Fuer einen Mandanten freischalten. Noch wirkt nichts: Der Typ ist inaktiv.
 INSERT INTO overlord_monitor.task_type_mandant (task_typ, mandant_id) VALUES ('BEISPIEL', 'NEXANS');
 
--- 3. Erst wenn der Ablauf in Lobster steht: aktivieren.
+-- 3. Erst wenn der Ablauf in der Plattform steht: aktivieren.
 UPDATE overlord_monitor.task_type SET aktiv = TRUE WHERE task_typ = 'BEISPIEL';
 ```
 
 Danach in der Typliste des Mandanten nachsehen (`GET /api/tasks/typen`). Fehlt der Typ dort, steht
 der Grund im Log (§3.6). Zurücknehmen: `aktiv = FALSE` — der Typ verschwindet beim nächsten Zugriff
 aus dem Angebot; angelegte Aufträge bleiben unberührt.
+
+*Berichtigt am 19.10.2026 (E‑1119): Hier stand zweimal „Lobster“ als der, der den Ablauf baut. Abgeholt
+und ausgeführt wird von der Plattform.*
 
 ### 3.8 Eine Änderung wirkt nur auf neue Aufträge
 
@@ -621,6 +664,10 @@ entgegen**; es entsteht keine neue Ausnahme von M1 ([`mandantentrennung.md`](man
 Kein Endpunkt hat ein Zeitfenster und keiner blättert — das deckt E‑1016: `task` ist nicht aus
 `GlassfishDB` abgeleitet, die Regeln 1 bis 6 gelten dort nicht.
 
+> **Seit A4 (19.10.2026) kommt `DELETE /api/tasks/{taskId}` dazu** (§6.6). Auch er nimmt keine
+> Mandanten-ID entgegen und ist keine Ausnahme von M1; Rollen, aktiver Mandant und Änderungszwang wie
+> oben. `POST /api/tasks/pruefung` steht seit A2 in [`assistent.md`](assistent.md) §6.5.
+
 ### 6.1 `GET /api/tasks/typen`
 
 Die dem aktiven Mandanten angebotenen Typen (E‑1020), nach Kennung sortiert. Kein angebotener Typ:
@@ -727,9 +774,66 @@ Liste und Einzelabruf liefern dieselbe Form, `POST` ebenso:
 | `eingestelltAm`, `abgeholtAm`, `ausgefuehrtAm` | ISO 8601 mit `Z`, `null` wo nicht gesetzt |
 | `fehlercode`, `fehlertext` | von der Plattform, sonst `null` |
 | `eintraege` | je Eintrag `werte` (Feldname → Wert, nur Felder mit Wert), `schluessel` (Text nach der Kopie, `null` ohne Schlüssel), `rueckgabe` (Rohwert der zugehörigen Zeile oder `null`) und `ergebnis` (`OK`, `NICHT_OK`, `UNBEKANNT` oder `null`) |
+| `felder` | *seit A4 (E‑1120)* je Feld der Kopie `name` und `label`, in der Reihenfolge der Definition — alle Felder, auch die ohne Wert in einem Eintrag |
 
 Rückgabe und Ergebnis eines Eintrags gehören zur Zeile mit demselben Index; gibt es diese Zeile
 nicht, sind beide `null`.
+
+**`felder` kommt aus der Kopie** wie `name` (E‑1023): Eine spätere Änderung an einem `label` der
+Typzeile ändert nichts an der Anzeige eines vorhandenen Auftrags. Die übrigen Angaben der Struktur
+(`pflicht`, `nurBei`, `muster`, `hinweis`) gehen nicht hinaus; die Übersicht braucht sie nicht
+(Punkt 1027 nennt, wofür `nurBei` und `hinweis` einmal taugen könnten).
+
+### 6.6 `DELETE /api/tasks/{taskId}` *(A4, 19.10.2026)*
+
+Löscht einen Auftrag, den die Plattform noch nicht abgeholt hat (E‑1110, E‑1113 bis E‑1115).
+Kein Rumpf. **Ein Statement entscheidet**, im eigenen Schema über `monitorDsl`:
+
+```sql
+DELETE FROM overlord_monitor.task
+WHERE task_id = ? AND mandant_id = ? AND status = 'OFFEN'
+RETURNING task_typ, aktion, eintraege, eingestellt_am
+```
+
+Der Mandant kommt aus der Sitzung (M1, M3). Das `status = 'OFFEN'` ist dieselbe Bedingung, unter der
+die Plattform abholt ([`task-schnittstelle.md`](task-schnittstelle.md) §3): Beide Statements
+ändern dieselbe Zeile nur aus `OFFEN` heraus, und InnoDB sperrt die Zeile für das erste — **von
+beiden gewinnt genau eines**. Das `RETURNING` liefert, was das Protokoll braucht, ohne ein Lesen
+davor (F28).
+
+**Löscht es null Zeilen, wird nur im eigenen Mandanten nachgelesen** (E‑1115):
+
+```sql
+SELECT status FROM overlord_monitor.task WHERE task_id = ? AND mandant_id = ?
+```
+
+| Fall | Antwort |
+|---|---|
+| gelöscht | **`204`**, kein Rumpf. Ein Ereignis `AUFTRAG_GELOESCHT` im `audit_log`, in derselben Transaktion (F26) |
+| null Zeilen, die Nachlesung findet nichts — unbekannte Kennung **oder** Auftrag eines anderen Mandanten | **`404`**, derselbe Rumpf und dieselben zwei Statements wie bei jeder unbekannten Kennung |
+| null Zeilen, die Nachlesung findet den Auftrag — er ist nicht mehr `OFFEN` | **`409`**, Problemtyp `auftrag-nicht-offen` (F27), kein Ereignis |
+| ohne aktiven Mandanten, Änderungszwang, ohne CSRF-Token | wie bei den übrigen Endpunkten (`403`) |
+
+```json
+{
+  "type": "https://overlord.kraftwerkone.de/probleme/auftrag-nicht-offen",
+  "title": "Auftrag nicht mehr offen",
+  "status": 409,
+  "detail": "Die Plattform hat den Auftrag bereits übernommen. Er kann nicht mehr gelöscht werden.",
+  "instance": "/api/tasks/…",
+  "traceId": "…"
+}
+```
+
+**Das Ereignis** `AUFTRAG_GELOESCHT` trägt, was E‑1114 nennt: Benutzer (`actor_user_id`,
+`actor_username`), Mandant, `target_type = task`, `target_id` = Task-ID und im Detail Typ, Aktion,
+Zahl der Einträge und Zeitpunkt des Einstellens — etwa `Typ WERK_ABLADESTELLE, Aktion Neuanlage, 2
+Einträge, eingestellt 2026-10-19T12:32:10.123Z`. **Kein Parametertext, keine Werte**, wie beim
+Anlegen.
+
+**Gelöscht heißt gelöscht** (E‑1114): Die Zeile verschwindet aus `task`, es bleibt nur das
+Ereignis. Ein gelöschter Auftrag ist nie ausgeführt worden; die Plattform hat ihn nicht gesehen oder
+nicht abgeholt.
 
 ---
 
@@ -762,8 +866,8 @@ Damit sie nicht verloren gehen:
 | Teil | Inhalt |
 |---|---|
 | **A2** | Assistent im Backend: Anbindung an das Sprachmodell, Werkzeuge aus der Typdefinition — erledigt, [`assistent.md`](assistent.md) |
-| **A3** | Chatbox in der Kopfleiste und Bestätigungskarte |
-| **A4** | Bereich „Ihre Aufträge“ in der Übersicht, über `GET /api/tasks` |
+| **A3** | Chatbox in der Kopfleiste und Bestätigungskarte — erledigt, [`assistent-frontend.md`](assistent-frontend.md) |
+| **A4** | Bereich „Ihre Aufträge“ in der Übersicht, über `GET /api/tasks`, und Löschen offener Aufträge (§6.6) — erledigt, [`assistent-frontend.md`](assistent-frontend.md) §12 |
 
 ---
 
@@ -863,19 +967,24 @@ Zukunft und wird ignoriert. Der Codegen schließt `task`, `task_type` und `task_
 `src/main/generated-java` bleibt unverändert, der Arbeitsbaum danach sauber. **1.040 Tests ohne und
 456 mit Datenbank, alle grün.** Auf `main` wurde nichts geändert; der Worktree ist entfernt.
 
+### 9.5 Löschen (A4, 19.10.2026)
+
+*Wird mit dem Bau eingetragen: die Tests mit Datenbank zu `DELETE /api/tasks/{taskId}` und die
+Messung M1005 (Regel 7) des `DELETE` und seiner Nachlesung.*
+
 ---
 
 ## 10. Regelbezug
 
 | Regel | Umsetzung |
 |---|---|
-| **M1** Kein Endpunkt nimmt eine Mandanten-ID entgegen | keiner der vier; keine neue Ausnahme |
+| **M1** Kein Endpunkt nimmt eine Mandanten-ID entgegen | keiner der vier; keine neue Ausnahme. Seit A4 auch `DELETE /api/tasks/{taskId}` nicht |
 | **M2** Mandant als erster Pflichtparameter | jede Methode von `AuftragRepository`, auch das Laden der Typen |
-| **M3** Filter im Statement | Mandant im `WHERE` jedes Statements; die Freischaltung als Join im Statement des Typkatalogs |
-| **M4** Isolationstest je Endpunkt | `AuftraegeIsolationDbIT` |
+| **M3** Filter im Statement | Mandant im `WHERE` jedes Statements; die Freischaltung als Join im Statement des Typkatalogs. Seit A4 auch im `DELETE` und in seiner Nachlesung |
+| **M4** Isolationstest je Endpunkt | `AuftraegeIsolationDbIT`, seit A4 mit dem Löschen eines fremden Auftrags |
 | **Regel 3** (kein Schreibzugriff auf `GlassfishDB`) | das Paket `task` liest und schreibt ausschließlich `overlord_monitor` |
 | **Regeln 1 bis 6** | gelten hier nicht (E‑1016) |
-| **Regel 7** | M1000 (E‑1026) |
+| **Regel 7** | M1000 (E‑1026); für das Löschen M1005 (§9.5) |
 | **Z1** | keine Uhr in Java; alle Zeitstempel aus der Datenbank (E‑1011) |
 
 ---
@@ -896,3 +1005,10 @@ Nummern ab 1000 (Linie `assistent`); dieselben Zeilen stehen im Register
 | **1006** | Die Kopfzeile `Aktion=<Aktion>` ist fest; ein Typ mit anderer Kopfzeile braucht Code. | Verbesserung |
 | **1007** | Nur der erste Schlüsselteil kann optional sein. | Verbesserung |
 | **1008** | Datenschutz und Auftragsverarbeitung mit dem Modellanbieter, vor A2. **Erledigt am 16.10.2026:** beantwortet mit E‑1029 und E‑1030 (gebaut, aber abgeschaltet), weitergeführt als Punkt 1009 ([`assistent.md`](assistent.md) §11). | Entscheidung offen |
+| **1026** | Die Plattform holt **alle fünf Minuten** ab (E‑1117) — eine Auskunft des Auftraggebers vom 19.10.2026, nicht gemessen. Wie lange ein Auftrag „Offen“ steht und damit löschbar bleibt, hängt daran. *(A4)* | Sichtprüfung oder Messung offen |
+
+**Fortgeschrieben am 19.10.2026 (A4):** Punkt **1000** bleibt offen. Die Übersicht zeigt einen
+solchen Auftrag als „Teilweise erledigt“ mit „<n> von <n> nicht erfolgreich“
+([`assistent-frontend.md`](assistent-frontend.md) §12.4); das Wort passt dann nicht, entschieden ist
+es nicht. Die offenen Punkte der Oberfläche aus A4 (1023 bis 1025, 1027 bis 1032) stehen in
+[`assistent-frontend.md`](assistent-frontend.md) §12.11.

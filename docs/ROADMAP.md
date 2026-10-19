@@ -29,8 +29,19 @@ die Plattform in [`task-schnittstelle.md`](task-schnittstelle.md).
 |---|---|---|
 | **A1** | Auftragsmodell: drei Tabellen (`V100`), Typdefinitionen als Daten mit Prüfung beim Laden, der Typ `WERK_ABLADESTELLE`, vier Endpunkte unter `/api/tasks`, Plattformvertrag | fertig, am 16.10.2026 nach `assistent` gemergt |
 | **A2** | Assistent im Backend: anbieterneutrale Schnittstelle mit Adapter für die Anthropic-API, Werkzeuge aus den Typdefinitionen, Gesprächsführung, `POST /api/tasks/pruefung`, Testsatz; abgeschaltet bis zur Prüfung durch den Datenschutzbeauftragten ([`assistent.md`](assistent.md)) | fertig, am 16.10.2026 nach `assistent` gemergt; Nachschärfung am 19.10.2026 gemergt |
-| **A3** | Chatbox in der Kopfleiste und Bestätigungskarte: Symbol links neben dem Nutzermenü, Chatbox als Overlay, Karte mit Prüfung über `POST /api/tasks/pruefung` und Anlegen per Klick; kein Backend-Umbau ([`assistent-frontend.md`](assistent-frontend.md)) | gebaut auf `assistent-a3-chatbox`; Sichtprüfungen 1018 bis 1022 mit eingeschaltetem Assistenten offen |
-| **A4** | „Ihre Aufträge“ in der Übersicht | offen |
+| **A3** | Chatbox in der Kopfleiste und Bestätigungskarte: Symbol links neben dem Nutzermenü, Chatbox als Overlay, Karte mit Prüfung über `POST /api/tasks/pruefung` und Anlegen per Klick; kein Backend-Umbau ([`assistent-frontend.md`](assistent-frontend.md)) | fertig, am 19.10.2026 nach `assistent` gemergt; Sichtprüfungen 1018 bis 1022 mit eingeschaltetem Assistenten offen |
+| **A4** | „Ihre Aufträge“ in der Übersicht: Stand jedes Auftrags, Ergebnis je Eintrag, Löschen offener Aufträge über `DELETE /api/tasks/{taskId}` ([`assistent-frontend.md`](assistent-frontend.md) §12, [`tasks.md`](tasks.md) §6.6) | gebaut auf `assistent-a4-ihre-auftraege`; Sichtprüfungen 1028 bis 1032 offen |
+
+**Mit A4 ist die Ausbaustufe Aufträge gebaut.** Bis zum Release 1.1.0 fehlt, was nicht im Code
+liegt:
+
+1. **Die Prüfung durch den Datenschutzbeauftragten** (Punkt 1009): Bis dahin bleibt der Assistent
+   abgeschaltet, und ohne ihn entsteht kein Auftrag.
+2. **Der Ablauf in der Plattform** für `WERK_ABLADESTELLE`, gebaut nach
+   [`task-schnittstelle.md`](task-schnittstelle.md); erst danach wird der Typ in der Produktion
+   aktiviert ([`tasks.md`](tasks.md) §3.7). Dazu gehört Punkt 1003 (UTF-8 und LF).
+3. **Die Freischaltung in der Produktion:** Assistent einschalten, Typ aktivieren und für die
+   Mandanten freischalten, mit den Sichtprüfungen 1018 bis 1022 und 1028 bis 1032 vorher.
 
 Für diese Linie gelten Migrationen ab `V100` und projektweite Nummern ab 1000
 ([`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) §12).

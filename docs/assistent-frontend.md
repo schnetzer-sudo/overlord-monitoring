@@ -1,4 +1,4 @@
-# Assistent im Frontend: Chatbox und Bestätigungskarte (A3)
+# Assistent im Frontend: Chatbox, Bestätigungskarte und „Ihre Aufträge“ (A3, A4)
 
 *Angelegt am 19.10.2026 mit Teilschritt A3 der Linie `assistent`* (Zweig `assistent-a3-chatbox`,
 [`ROADMAP.md`](ROADMAP.md) §2). Er baut auf den Endpunkten aus A1 ([`tasks.md`](tasks.md) §6) und A2
@@ -7,6 +7,13 @@
 A3 baut die Oberfläche des Assistenten: ein Symbol in der Kopfleiste, eine Chatbox als Overlay und
 die Karte, auf der der Kunde einen Vorschlag prüft, ändert und anlegt. Der Bereich „Ihre Aufträge“
 folgt mit A4.
+
+> **Ergänzt am 19.10.2026 mit A4** (Zweig `assistent-a4-ihre-auftraege`): Der Block „Ihre Aufträge“
+> in der Übersicht zeigt, was aus den Aufträgen geworden ist, und lässt einen offenen Auftrag
+> löschen — §12. Dafür kommen ein Endpunkt (`DELETE /api/tasks/{taskId}`) und die `label` der
+> Felder in der Antwort dazu ([`tasks.md`](tasks.md) §6.5, §6.6). **Mit A4 ist die Ausbaustufe
+> Aufträge vollständig.** Chatbox und Karte ändern sich nur an einer Stelle: Nach dem Anlegen lädt
+> die Liste der Aufträge neu.
 
 > **Der Assistent bleibt abgeschaltet**, bis der Datenschutzbeauftragte die Auftragsverarbeitung
 > mit Anthropic geprüft hat (E‑1029, E‑1030, Punkt 1009). Abgeschaltet meldet
@@ -81,23 +88,30 @@ Drei Punkte ließen sich aus Auftrag und Backend nicht entscheiden; **vom Auftra
 Was der Auftrag offenließ und beim Bau festgelegt wurde, vorgeschlagen als **F1 bis F15**, zur
 Bestätigung durch den Auftraggeber. Eine E‑Nummer bekommen sie erst mit der Bestätigung, wie in A2.
 
-| F | Festlegung | Grund |
+> **Bestätigt am 19.10.2026** (Auftraggeber, vor A4): F1 bis F15 sind **E‑1083 bis E‑1097**, nach
+> der Regel aus A2 — letzte vergebene Nummer (E‑1082) plus F-Nummer. Die F-Nummer steht in Klammern
+> dahinter, damit Verweise von vorher auffindbar bleiben.
+>
+> **Nachtrag zu E‑1084 vom selben Tag (E‑1124, A):** Gesiezt wird in der Chatbox **und im Block
+> „Ihre Aufträge“** der Übersicht (§12). Die übrige Oberfläche duzt weiter.
+
+| E (F) | Festlegung | Grund |
 |---|---|---|
-| **F1** | **Keine Chat-Bausteine aus dem Generator, kein Generator-`textarea`.** Chatbox und Karte bestehen aus den vorhandenen Bausteinen (`Popover`, `Button`, `Badge`, `Alert`, `Input`, `Label`); das Eingabefeld ist ein `textarea` im Feature mit den Klassen von `components/ui/input.tsx`. | `shadcn add message-scroller message bubble marker` brächte am 19.10.2026 zwei neue Laufzeitabhängigkeiten (`@shadcn/react`, `cn`) und überschriebe `button.tsx`; selbst `textarea` zieht inzwischen `cn` nach. Der Scroller folgt dem Ende eines Streams, das Projekt holt aber die **Oberkante** des Neuen ins Bild (`lib/in-sicht-bringen.ts`, [`frontend-grundlagen.md`](frontend-grundlagen.md) §7, Bedingung 4) |
-| **F2** | **In der Chatbox wird gesiezt**, wie der Assistent selbst (E‑1044); die übrige Oberfläche duzt weiter. | Begrüßung, Hinweise und Antworten stehen im selben Verlauf; ein Wechsel der Anrede mitten im Gespräch läse sich wie zwei Absender |
-| **F3** | **Verlauf und Karten liegen im Arbeitsspeicher der Kopfzeile**, als ein Zustand über `useReducer` mit einer reinen Übergangsfunktion (`features/assistent/gespraech.ts`). Nicht in TanStack Query, nicht im lokalen Speicher, nicht in der URL. | Kein Endpunkt liefert den Verlauf zurück; das Backend hält ihn nur für die Gesprächsführung (E‑1038). Die Kopfzeile lebt im Layout der angemeldeten Routen und übersteht jede Navigation (E‑1076). Schlüssel ist der Mandant: Ein Wechsel hängt den Zustand neu ein |
-| **F4** | **Gesendet heißt: im Verlauf.** Die Nachricht steht sofort im Verlauf, das Eingabefeld wird leer. Scheitert der Aufruf, verschwindet sie aus dem Verlauf und steht wieder im Eingabefeld. | Das Backend nimmt eine gescheiterte Nachricht nicht in den Verlauf (E‑1052); stünde sie trotzdem im Chat, zeigte er ein anderes Gespräch als das, das der Assistent kennt. „Die Eingabe bleibt erhalten“ (Fehlertabelle) heißt damit: wörtlich im Feld |
-| **F5** | **Geprüft wird 400 ms nach der letzten Änderung.** Jede Änderung sperrt „Übernehmen“ sofort; eine Antwort auf einen älteren Stand wird verworfen. | Gewählt, nicht gemessen. Kurz genug, dass die Prüfung beim Weiterlesen schon da ist, lang genug, dass beim Tippen nicht je Taste ein Aufruf hinausgeht |
-| **F6** | **Mehr als fünf Einträge:** Die ersten fünf stehen offen, darunter „Alle <n> anzeigen“. Im Änderungsmodus und wenn ein verborgener Eintrag einen Fehler trägt, stehen alle offen. | „Alle n anzeigen“ setzt voraus, dass schon welche zu sehen sind; ein Fehler und ein Eingabefeld dürfen nicht hinter einem Schalter liegen |
-| **F7** | **Nach dem Anlegen zeigt die Karte die Werte aus der Antwort** von `POST /api/tasks`, nicht die eigenen; der Status steht als „Offen“, jede andere Einordnung als ihr Rohwert. | Mit derselben `anfrageId` (E‑1072) antwortet das Backend nach einer Zeitüberschreitung mit dem **vorhandenen** Auftrag, auch wenn die Karte inzwischen andere Werte trägt ([`tasks.md`](tasks.md) §6.2). Die Karte zeigt, was angelegt ist. Die Wörter für die übrigen Einordnungen gehören zu A4 |
-| **F8** | **„Auftrag anlegen“ ist gesperrt**, solange Prüffehler aus dem Anlegen am Feld stehen, und im Änderungsmodus nicht angeboten: Erst „Übernehmen“ oder „Verwerfen“. | Dieselben Werte noch einmal zu schicken, brächte dieselben Fehler. Angelegt werden soll, was auf der Karte steht, nicht ein halber Entwurf |
-| **F9** | **Der Kopf der Chatbox nennt den Mandanten** (Code), zusätzlich zur Karte. | Unter 768 px deckt die Chatbox die zweite Zeile der Kopfzeile ab, in der der Mandant steht ([`visuelles-konzept.md`](visuelles-konzept.md) §6: „Der aktive Mandant bleibt in der Kopfzeile“). Der Assistent verweist bei einem fremden Mandanten auf den Wechsel dort (E‑1059) |
-| **F10** | **Feste Höhe** `min(40rem, verfügbare Höhe)`; nur der Verlauf scrollt. | Eine Box, die mit jeder Nachricht wächst, bewegt die Fläche unter der Hand (Leitsatz „ruhig“, [`visuelles-konzept.md`](visuelles-konzept.md) §1) |
-| **F11** | **Gesperrt heißt `readOnly` und `aria-disabled`, nicht `disabled`:** das Eingabefeld während der Antwort, „Senden“, „Übernehmen“, „Auftrag anlegen“ und „Neues Gespräch“. Der Klick prüft die Sperre selbst. | Ein gesperrtes Element verlöre unter der Tastatur den Fokus, gerade wenn es eben gedrückt wurde — wie beim Knopf „Neu laden“ ([`neu-laden.md`](neu-laden.md)); nach der Antwort schreibt der Kunde dort weiter, wo er war |
-| **F12** | **`409 nachricht-laeuft` wird nicht angezeigt**, nur mit `console.warn` gemeldet; die Eingabe kommt ins Feld zurück. | Fehlertabelle: „darf durch die Sperre nicht vorkommen; wenn doch, still ignorieren und loggen“. `console.error` ließe die Tests fehlschlagen und ist für Befunde da |
-| **F13** | **„Neues Gespräch“ geht auch während einer Antwort.** Die späte Antwort kommt nicht in das neue Gespräch; ein Gespräch, das erst danach eröffnet wurde, wird sofort beendet. | Der Kunde soll nicht auf eine Antwort warten müssen, die er nicht mehr will. Gezählt wird über eine Generation je Gespräch im Haken, nicht über die Antwort |
-| **F14** | **„Neues Gespräch“ ist gesperrt, solange das Gespräch frisch ist** — nur die Begrüßung, kein Hinweis, nichts eröffnet. | Ein Knopf, der nichts tut, wäre ein Klickversprechen ins Leere (dieselbe Regel wie beim Mandantenumschalter, [`visuelles-konzept.md`](visuelles-konzept.md) §5) |
-| **F15** | **Die `anfrageId` entsteht auch ohne sicheren Kontext**: `crypto.randomUUID`, sonst eine UUID der Version 4 aus `crypto.getRandomValues`. | `randomUUID` gibt es nur unter HTTPS oder auf `localhost`; hinter einem Proxy ohne TLS fehlte sie still, und das Anlegen schiene zu gehen |
+| **E‑1083** (F1) | **Keine Chat-Bausteine aus dem Generator, kein Generator-`textarea`.** Chatbox und Karte bestehen aus den vorhandenen Bausteinen (`Popover`, `Button`, `Badge`, `Alert`, `Input`, `Label`); das Eingabefeld ist ein `textarea` im Feature mit den Klassen von `components/ui/input.tsx`. | `shadcn add message-scroller message bubble marker` brächte am 19.10.2026 zwei neue Laufzeitabhängigkeiten (`@shadcn/react`, `cn`) und überschriebe `button.tsx`; selbst `textarea` zieht inzwischen `cn` nach. Der Scroller folgt dem Ende eines Streams, das Projekt holt aber die **Oberkante** des Neuen ins Bild (`lib/in-sicht-bringen.ts`, [`frontend-grundlagen.md`](frontend-grundlagen.md) §7, Bedingung 4) |
+| **E‑1084** (F2) | **In der Chatbox wird gesiezt**, wie der Assistent selbst (E‑1044); die übrige Oberfläche duzt weiter. | Begrüßung, Hinweise und Antworten stehen im selben Verlauf; ein Wechsel der Anrede mitten im Gespräch läse sich wie zwei Absender |
+| **E‑1085** (F3) | **Verlauf und Karten liegen im Arbeitsspeicher der Kopfzeile**, als ein Zustand über `useReducer` mit einer reinen Übergangsfunktion (`features/assistent/gespraech.ts`). Nicht in TanStack Query, nicht im lokalen Speicher, nicht in der URL. | Kein Endpunkt liefert den Verlauf zurück; das Backend hält ihn nur für die Gesprächsführung (E‑1038). Die Kopfzeile lebt im Layout der angemeldeten Routen und übersteht jede Navigation (E‑1076). Schlüssel ist der Mandant: Ein Wechsel hängt den Zustand neu ein |
+| **E‑1086** (F4) | **Gesendet heißt: im Verlauf.** Die Nachricht steht sofort im Verlauf, das Eingabefeld wird leer. Scheitert der Aufruf, verschwindet sie aus dem Verlauf und steht wieder im Eingabefeld. | Das Backend nimmt eine gescheiterte Nachricht nicht in den Verlauf (E‑1052); stünde sie trotzdem im Chat, zeigte er ein anderes Gespräch als das, das der Assistent kennt. „Die Eingabe bleibt erhalten“ (Fehlertabelle) heißt damit: wörtlich im Feld |
+| **E‑1087** (F5) | **Geprüft wird 400 ms nach der letzten Änderung.** Jede Änderung sperrt „Übernehmen“ sofort; eine Antwort auf einen älteren Stand wird verworfen. | Gewählt, nicht gemessen. Kurz genug, dass die Prüfung beim Weiterlesen schon da ist, lang genug, dass beim Tippen nicht je Taste ein Aufruf hinausgeht |
+| **E‑1088** (F6) | **Mehr als fünf Einträge:** Die ersten fünf stehen offen, darunter „Alle <n> anzeigen“. Im Änderungsmodus und wenn ein verborgener Eintrag einen Fehler trägt, stehen alle offen. | „Alle n anzeigen“ setzt voraus, dass schon welche zu sehen sind; ein Fehler und ein Eingabefeld dürfen nicht hinter einem Schalter liegen |
+| **E‑1089** (F7) | **Nach dem Anlegen zeigt die Karte die Werte aus der Antwort** von `POST /api/tasks`, nicht die eigenen; der Status steht als „Offen“, jede andere Einordnung als ihr Rohwert. | Mit derselben `anfrageId` (E‑1072) antwortet das Backend nach einer Zeitüberschreitung mit dem **vorhandenen** Auftrag, auch wenn die Karte inzwischen andere Werte trägt ([`tasks.md`](tasks.md) §6.2). Die Karte zeigt, was angelegt ist. Die Wörter für die übrigen Einordnungen gehören zu A4 |
+| **E‑1090** (F8) | **„Auftrag anlegen“ ist gesperrt**, solange Prüffehler aus dem Anlegen am Feld stehen, und im Änderungsmodus nicht angeboten: Erst „Übernehmen“ oder „Verwerfen“. | Dieselben Werte noch einmal zu schicken, brächte dieselben Fehler. Angelegt werden soll, was auf der Karte steht, nicht ein halber Entwurf |
+| **E‑1091** (F9) | **Der Kopf der Chatbox nennt den Mandanten** (Code), zusätzlich zur Karte. | Unter 768 px deckt die Chatbox die zweite Zeile der Kopfzeile ab, in der der Mandant steht ([`visuelles-konzept.md`](visuelles-konzept.md) §6: „Der aktive Mandant bleibt in der Kopfzeile“). Der Assistent verweist bei einem fremden Mandanten auf den Wechsel dort (E‑1059) |
+| **E‑1092** (F10) | **Feste Höhe** `min(40rem, verfügbare Höhe)`; nur der Verlauf scrollt. | Eine Box, die mit jeder Nachricht wächst, bewegt die Fläche unter der Hand (Leitsatz „ruhig“, [`visuelles-konzept.md`](visuelles-konzept.md) §1) |
+| **E‑1093** (F11) | **Gesperrt heißt `readOnly` und `aria-disabled`, nicht `disabled`:** das Eingabefeld während der Antwort, „Senden“, „Übernehmen“, „Auftrag anlegen“ und „Neues Gespräch“. Der Klick prüft die Sperre selbst. | Ein gesperrtes Element verlöre unter der Tastatur den Fokus, gerade wenn es eben gedrückt wurde — wie beim Knopf „Neu laden“ ([`neu-laden.md`](neu-laden.md)); nach der Antwort schreibt der Kunde dort weiter, wo er war |
+| **E‑1094** (F12) | **`409 nachricht-laeuft` wird nicht angezeigt**, nur mit `console.warn` gemeldet; die Eingabe kommt ins Feld zurück. | Fehlertabelle: „darf durch die Sperre nicht vorkommen; wenn doch, still ignorieren und loggen“. `console.error` ließe die Tests fehlschlagen und ist für Befunde da |
+| **E‑1095** (F13) | **„Neues Gespräch“ geht auch während einer Antwort.** Die späte Antwort kommt nicht in das neue Gespräch; ein Gespräch, das erst danach eröffnet wurde, wird sofort beendet. | Der Kunde soll nicht auf eine Antwort warten müssen, die er nicht mehr will. Gezählt wird über eine Generation je Gespräch im Haken, nicht über die Antwort |
+| **E‑1096** (F14) | **„Neues Gespräch“ ist gesperrt, solange das Gespräch frisch ist** — nur die Begrüßung, kein Hinweis, nichts eröffnet. | Ein Knopf, der nichts tut, wäre ein Klickversprechen ins Leere (dieselbe Regel wie beim Mandantenumschalter, [`visuelles-konzept.md`](visuelles-konzept.md) §5) |
+| **E‑1097** (F15) | **Die `anfrageId` entsteht auch ohne sicheren Kontext**: `crypto.randomUUID`, sonst eine UUID der Version 4 aus `crypto.getRandomValues`. | `randomUUID` gibt es nur unter HTTPS oder auf `localhost`; hinter einem Proxy ohne TLS fehlte sie still, und das Anlegen schiene zu gehen |
 
 ---
 
@@ -447,7 +461,8 @@ Mit eingeschaltetem Assistenten, lokal. **Der Text, den man schreibt, geht an An
 
 **Einschalten** ([`START-LOKAL.md`](START-LOKAL.md) §6, [`assistent.md`](assistent.md) §7):
 
-1. Einen Zweig mit A3 auschecken — bis zum Merge `assistent-a3-chatbox`.
+1. Einen Zweig mit A3 auschecken — bis zum Merge `assistent-a3-chatbox`, seit dem 19.10.2026
+   `assistent`.
 2. Backend und Frontend mit dem Startskript starten, **mit dem Schalter**:
 
    ```
@@ -475,3 +490,291 @@ und werden von keiner Plattform abgeholt. Aufräumen nach der Prüfung, nur die 
 | **1020** | Eine Anpassung mit leerem Feld | Eine Anpassung, bei der SNDPRN_4908 nicht genannt wird. Ist „leer“ mit „der Wert wird entfernt“ unübersehbar? |
 | **1021** | Nur mit der Tastatur | Tab bis zum Symbol, Enter, schreiben, Enter; auf der Karte „Ändern“, einen Wert ändern, auf die Prüfung warten, „Übernehmen“, „Auftrag anlegen“; Esc. Wo steht der Fokus jeweils? |
 | **1022** | Mit Vorleseprogramm (NVDA oder die Sprachausgabe von Windows) | Werden Warteanzeige, Antwort und „Vorschlag auf der Karte …“ angesagt? Sind Felder, „leer“ mit Hinweis und Fehler am Feld verständlich? |
+
+---
+
+## 12. Ihre Aufträge (A4)
+
+*Teilschritt A4 der Linie `assistent`, 19.10.2026, Zweig `assistent-a4-ihre-auftraege`.* Der Kunde
+legt Aufträge über den Assistenten an; die Plattform holt sie ab, führt sie aus und meldet je Eintrag
+zurück ([`task-schnittstelle.md`](task-schnittstelle.md)). Bis A4 sah er davon nur „Angelegt,
+Status: Offen“ auf der Karte. Der Block **„Ihre Aufträge“** in der Übersicht zeigt kompakt, was aus
+seinen Aufträgen geworden ist, und lässt ihn einen Auftrag löschen, solange die Plattform ihn noch
+nicht abgeholt hat.
+
+**Der Block hängt nicht am Assistenten** (E‑1098): Auch bei abgeschaltetem Assistenten zeigt die
+Übersicht vorhandene Aufträge. Neu im Backend sind nur `DELETE /api/tasks/{taskId}` und das Feld
+`felder` in der Antwort ([`tasks.md`](tasks.md) §6.5, §6.6).
+
+### 12.1 Entscheidungen der Oberfläche
+
+Herkunft: **A** = vom Auftraggeber entschieden, mit Datum. **V** = Vorschlag vom 19.10.2026 (Entwurf
+aus dem Design-Canvas, vom Auftraggeber abgenommen), ohne Einspruch übernommen. Die E‑Nummer ist
+`E‑1097` plus die Nummer der Entscheidung im Auftrag zu A4; nächste freie Nummer war E‑1098, nachdem
+F1 bis F15 als E‑1083 bis E‑1097 bestätigt waren (§2), per `grep` über das Repository geprüft. Die
+Entscheidungen 13, 16 bis 18 und 20 bis 22 betreffen Endpunkt und Plattform und stehen in
+[`tasks.md`](tasks.md) §2 (E‑1110, E‑1113 bis E‑1115, E‑1117 bis E‑1119).
+
+| E | Entscheidung | Herkunft |
+|---|---|---|
+| **E‑1098** | Der Block erscheint **nur, wenn `GET /api/tasks` mindestens einen Auftrag liefert**. Sonst fehlt er ganz, ohne leeren Rahmen, und die Übersicht sieht aus wie vorher. Er hängt nicht an der Verfügbarkeit des Assistenten: Vorhandene Aufträge bleiben sichtbar, auch wenn der Assistent abgeschaltet ist. | A (19.10.2026) |
+| **E‑1099** | Der Block steht **in der Reihe von „Zuletzt aufgefallen“, zwischen „Zuletzt aufgefallen“ und Verteilung**. „Zuletzt aufgefallen“ teilt sich mit ihm den Platz, den es vorher allein hatte; die Verteilung behält ihre Breite. Ohne Auftrag ist die Reihe wie vorher. Am schmalen Fenster stehen die drei untereinander, in derselben Reihenfolge. | A (19.10.2026) |
+| **E‑1100** | **Kein Knopf „Neuer Auftrag“**, keine Filter, keine eigene Seite. Aufträge entstehen nur über das Symbol des Assistenten in der Kopfleiste. | A (15. und 19.10.2026) |
+| **E‑1101** | Der Block zeigt, was `GET /api/tasks` liefert, neueste zuerst. **Fünf Aufträge sichtbar**, darüber „1 weiteren anzeigen“ oder „<n> weitere anzeigen“, danach „Weniger anzeigen“. | V |
+| **E‑1102** | **Jede Zeile hat zwei Zeilen und ist zugeklappt.** Oben: Stand (Zeichen und Wort), Aktion, Zahl der Einträge („Neuanlage · 2 Einträge“). Darunter links die ersten zwei Schlüssel, bei mehr „und <n> weitere“, in Festbreitenschrift und bei Platzmangel mit Auslassung; rechts der Zeitpunkt des Einstellens. Bei „Teilweise erledigt“ steht statt der Schlüssel „<x> von <n> nicht erfolgreich“ in der Farbe des Stands. | V (Entwurf 19.10.2026) |
+| **E‑1103** | **Der Name des Typs** steht in der aufgeklappten Zeile. Kommen in der Liste Aufträge mehrerer Typen vor, steht er zusätzlich oben vor der Aktion. | V |
+| **E‑1104** | **Aufgeklappt:** Name des Typs, „eingestellt <Zeit>“ und gegebenenfalls „ausgeführt <Zeit>“, bei „Fehlgeschlagen“ der `fehlertext` als „Meldung der Plattform“, der Hinweis des Stands, dann die Einträge: Schlüssel, die Werte mit ihrem `label` und, wo es eines gibt, das Ergebnis. Bis fünf Einträge, darüber „Alle <n> Einträge anzeigen“. Aufklappen mit der Tastatur, `aria-expanded` am Auslöser. | V |
+| **E‑1105** | Stände und ihre Anzeige nach §12.4. Jeder Stand hat Zeichen **und** Wort, Farbe nie allein. „Fehlgeschlagen“ trägt die Fehlerrolle. **„Teilweise erledigt“ fällt auf, ohne wie ein Fehler auszusehen** (im Entwurf Bernstein); welche Rolle, ist F16. | V |
+| **E‑1106** | Das Ergebnis je Eintrag zeigt den Rohwert der Plattform („Schlüssel nicht gefunden“) mit Zeichen; „erfolgreich“ oder „nicht erfolgreich“ aus `ergebnis` steht für Vorleseprogramme dabei. Ein nicht erfolgreicher Eintrag hat einen leicht getönten Grund. | V |
+| **E‑1107** | `fehlertext` und Rückgabewerte schreibt die Plattform: **reiner Text**, nie HTML. | V |
+| **E‑1108** | Zeitpunkte kommen in UTC und werden im Format von „Zuletzt aufgefallen“ gezeigt. In welcher Zone, sagt E‑1122. | V |
+| **E‑1109** | Aktualisierung über den vorhandenen Mechanismus der Übersicht: „Neu laden“ lädt den Block mit. Kein eigener Takt. Nach dem Anlegen in der Chatbox und nach dem Löschen wird die Liste sofort neu geladen. Zum Abfrageschlüssel E‑1123. | V |
+| **E‑1111** | **„Auftrag löschen“ steht nur in der aufgeklappten Zeile**, unter den Einträgen rechts, als Knopf mit Papierkorb und Wort. In der zugeklappten Zeile steht nichts dafür. | A (19.10.2026) |
+| **E‑1112** | Ein Klick zeigt an derselben Stelle die Rückfrage „Auftrag löschen? Die Plattform hat ihn noch nicht abgeholt. Er wird nicht ausgeführt.“ mit „Abbrechen“ und „Löschen“. Der Fokus geht auf „Abbrechen“, Esc bricht ab. Danach steht oben im Block „Auftrag gelöscht. Er wird nicht ausgeführt.“ (`role="status"`). Kein Rückgängig. | A (Rückfrage, 19.10.2026), V (Wortlaut) |
+| **E‑1116** | Die Übersicht lädt nicht von selbst neu (E‑164), der Stand „Offen“ kann also veraltet sein. Bei `409` steht in der Zeile „Die Plattform hat den Auftrag gerade übernommen. Löschen geht nicht mehr.“, und die Liste wird neu geladen. Bei `404` „Der Auftrag ist nicht mehr vorhanden.“ und Neuladen. | V |
+
+### 12.2 Rückfragen zu A4 (19.10.2026)
+
+Fünf Punkte widersprachen beim Lesen einer Regel des Projekts oder ließen sich aus Auftrag und
+Backend nicht entscheiden; **vom Auftraggeber am 19.10.2026 entschieden**, jeweils der vorgeschlagene
+Weg. Dazu kam die Vorbedingung des Auftrags: A3 war nicht nach `assistent` gemergt. Auf Wunsch des
+Auftraggebers hat Claude Code den Merge gemacht (`6ec3563`, `--no-ff`, lokal), und F1 bis F15 sind
+bestätigt (§2).
+
+| E | Entscheidung | Anlass | Herkunft |
+|---|---|---|---|
+| **E‑1120** | **Die `label` der Felder kommen aus der Kopie der Definition in der Antwort** — steht in [`tasks.md`](tasks.md) §2 und §6.5. | `GET /api/tasks` lieferte je Eintrag nur Feldnamen; der Auftrag verlangte, bei einer fehlenden Angabe anzuhalten | A |
+| **E‑1121** | **Im Leer- und im Fehlerzustand der Übersicht steht der Block allein**, wenn es Aufträge gibt oder ihre Abfrage scheitert: im Leerzustand zwischen Satz und Stand, im Fehlerzustand unter der Meldung. E‑p bekommt dafür einen Nachtrag ([`dashboard-frontend.md`](dashboard-frontend.md) §5.7). | Die Reihe gibt es nur, wenn die Übersicht Nachrichten hat. Aufträge hängen nicht am Zeitraum: Ohne diese Regel wäre ein eben angelegter Auftrag bei leerem Zeitraum unsichtbar | A |
+| **E‑1122** | **Zeitpunkte in der Anzeigezone** mit `formatiereZeitpunkt`, wie in „Zuletzt aufgefallen“, die Sekunden im `title`. „Ortszeit des Browsers“ aus Entscheidung 11 ist als „Ortszeit = Anzeigezone“ gelesen. | `lib/format.ts` formatiert in der festen Zone aus der Selbstauskunft und schließt die Browserzone ausdrücklich aus; auf derselben Seite stünden sonst zwei Uhren | A |
+| **E‑1123** | **Der Abfrageschlüssel trägt keinen Mandanten**: `["auftraege", "liste"]`. Entscheidung 12 verlangte ihn mit dem aktiven Mandanten. | Projektregel: Beim Mandantenwechsel wird der ganze Zwischenspeicher geleert, und der Mandant steht deshalb in keinem Schlüssel (`lib/zwischenspeicher.ts`, [`frontend-grundlagen.md`](frontend-grundlagen.md) §5). Das Leeren leistet, was die Entscheidung sichern will. Die Übersicht kennt den Mandanten nicht; dafür bräuchte es eine neue Naht | A |
+| **E‑1124** | **Im Block wird gesiezt**, wie vorgegeben („Ihre Aufträge“, „können Sie ihn noch löschen“). Nachtrag zu E‑1084 (§2). | E‑1084 sagte: „die übrige Oberfläche duzt weiter“. Der Block setzt fort, was im Gespräch entstanden ist, und „Ihre Aufträge“ ist sein Name seit A1 | A |
+
+### 12.3 Festlegungen der Umsetzung (F16 bis F25)
+
+Was der Auftrag offenließ, beim Bau festgelegt und **zur Bestätigung** vorgeschlagen, wie in A3;
+eine E‑Nummer bekommen sie erst damit. Die Zählung setzt die F-Nummern aus A3 fort, damit jede
+F-Nummer in dieser Datei eindeutig bleibt. F26 bis F28 betreffen das Backend und stehen in
+[`tasks.md`](tasks.md) §2.
+
+| F | Festlegung | Grund |
+|---|---|---|
+| **F16** | **„Teilweise erledigt“ bekommt eine eigene Rolle `--teilweise`** mit Vordergrund, Fläche und Kontur in beiden Blöcken von `globals.css` — **mit den Werten von `--ueberfaellig`** (Bernstein, Ton 80). Zugeordnet wird sie in `lib/status-farbe.ts` über eine eigene Tabelle `AUFTRAG_ZUORDNUNG`; gerechnet und gehalten wie die übrigen Rollen (`scripts/farbwerte/rechne.mjs`, `tests/farbkontrast.test.ts`). | **`--ueberfaellig` ist der Kategorie *Überfällig* vorbehalten**, auch seit sie entfallen ist und die Rolle keinen Verbraucher hat (E‑71, E‑77): „Sie hier zu nehmen hieße, einen gerechneten Wert für einen zweiten Sachverhalt zu vergeben“ — so begründet `prozess-baum.tsx`, warum der stille Prozess sie nicht bekommt, und die Sprachdatei hält die Rolle ausdrücklich für den Tag bereit, an dem eine echte Schwelle zurückkommt. Statusfarben sind fachlich vergeben ([`visuelles-konzept.md`](visuelles-konzept.md) §3), und jede Rolle trägt genau eine Bedeutung; deshalb ein Name aus der Fachlichkeit und keine allgemeine „Achtung“-Farbe, die die nächste zweite Bedeutung einlädt. **Die Werte** sind die von Ton 80, weil sie genau das schon leisten, was E‑1105 verlangt — auffallen, ohne Rot zu sein: OKLab-Abstand zu Rot 0,152, Kontrast 5,59 : 1 hell und 6,53 : 1 dunkel auf `--card`, Kontur 3,29 : 1 (§7a dort). Getrennt lässt sich jede Rolle für sich ändern |
+| **F17** | Rollen und Zeichen der übrigen Stände und der Ergebnisse nach §12.4: Offen und In Ausführung neutral (`offen`), Erledigt grün, Fehlgeschlagen rot, Rückmeldung unvollständig und ein unbekannter Stand gedämpft (`ungeklaert`). Jeder Stand hat ein eigenes Zeichen in eigener Form. | Grün und Rot nur dort, wo sie dasselbe heißen wie überall (§3 dort: „keine zweite Bedeutung“). „Rückmeldung unvollständig“ ist weder Fehler noch teilweise Ausführung: Was die Plattform getan hat, ist unbekannt — „nicht zugeordnet heißt nicht zugeordnet“ (Q4). Die Zeichen lehnen sich an die Statusplakette der Nachrichten an (Uhr für wartend, Abspielen für läuft) |
+| **F18** | **Beim ersten Laden steht kein Platzhalter.** Der Block erscheint, sobald die Liste da und nicht leer ist; lädt sie neu, bleibt er mit dem bisherigen Stand stehen. So ist „mit Ladezustand“ aus dem Auftrag gelesen. | Ein Platzhalter wäre genau der leere Rahmen, den E‑1098 ausschließt — für jeden Kunden ohne Aufträge bei jedem Aufruf, und die Reihe spränge von drei auf zwei Spalten. Dieselbe Regel wie beim Symbol des Assistenten (E‑1068): lieber einen Moment später erscheinen als wieder verschwinden. Beim Neuladen bleibt alles stehen, wie in der übrigen Übersicht (E‑170) |
+| **F19** | **Der Block liegt in `features/dashboard`**, sein Abfrageschlüssel in `lib/auftraege.ts`. Typen und Aufrufe von `GET` und `DELETE` stehen in `features/dashboard/api.ts`. | Pro Ansicht ein Modul ([`frontend-grundlagen.md`](frontend-grundlagen.md) §8): Der Block ist Teil der Übersicht. Den Schlüssel braucht auch der Assistent, der nach dem Anlegen neu laden lässt; ein Feature importiert nicht aus dem Nachbarfeature, also liegt er in der Naht |
+| **F20** | **Jede Zeile klappt für sich auf**; der Zustand liegt im Arbeitsspeicher des Blocks, je `taskId`, nicht in der URL. Er übersteht „Neu laden“ und das Löschen eines anderen Auftrags. | Aufgeklappte Abschnitte gehören nicht in die URL ([`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) §8, Filterzustand). Wer nachsieht, ob sich ein Stand geändert hat, will die Zeile offen behalten |
+| **F21** | **Aufgeklappt stehen nur die Felder mit Wert**, in der Reihenfolge der Definition, mit dem `label` aus `felder`. Ein leeres Feld fehlt — auch bei einer Anpassung, wo leer „wird entfernt“ heißt. | `eintraege[].werte` trägt nur Felder mit Wert, und welche Felder bei welcher Aktion vorkommen (`nurBei`), liefert die Antwort nicht. Ein „leer“ an jedem fehlenden Feld stünde bei einer Löschung an SNDPRN, wo es keinen Sinn hat. Offen als Punkt 1027 |
+| **F22** | **Wo die Sätze nach dem Löschen stehen:** „Auftrag gelöscht …“ und der Satz zu `404` oben im Block, der zu `409` in der Zeile. Der Block bleibt für die Sätze oben stehen, auch wenn danach kein Auftrag mehr da ist — bis zum nächsten „Neu laden“ oder Aufruf der Seite. Der Fokus geht auf den Satz. Jeder andere Fehler beim Löschen steht in der Zeile („Der Auftrag konnte gerade nicht gelöscht werden. Bitte versuchen Sie es erneut.“), und „Auftrag löschen“ ist wieder frei. | Nach einem `404` verschwindet die Zeile mit dem Neuladen und mit ihr jeder Satz darin. Ohne stehenbleibenden Block verschwände nach dem Löschen des letzten Auftrags die Bestätigung — und mit dem gedrückten Knopf der Fokus |
+| **F23** | **Ohne Schlüssel** (ein Typ ohne `schluessel`) steht „Eintrag <n>“, wie auf der Karte (E‑1080). | Kein Schlüssel wird im Frontend gebildet (E‑1071) |
+| **F24** | **„Neu laden“ holt beide Abfragen** — Übersicht und Aufträge — und zeigt die Sanduhr, solange eine davon läuft. | Ein Knopf, der nur die Hälfte lädt, ließe glauben, der Stand der Aufträge sei aktuell |
+| **F25** | **„Weniger anzeigen“** auch bei den Einträgen, nach „Alle <n> Einträge anzeigen“. | Dieselbe Bedienung wie bei der Liste (E‑1101) |
+
+### 12.4 Die Stände
+
+| Einordnung | Wort | Zeichen | Rolle | Hinweis in der aufgeklappten Zeile |
+|---|---|---|---|---|
+| `OFFEN` | Offen | Uhr | `offen`, neutral | „Wartet auf die Plattform. Bis sie ihn abholt, können Sie ihn noch löschen.“ |
+| `IN_AUSFUEHRUNG` | In Ausführung | Abspielen im Kreis | `offen`, neutral | „Die Plattform bearbeitet den Auftrag.“ |
+| `ERLEDIGT` | Erledigt | Haken im Kreis | `abgeschlossen`, grün | kein Hinweis, Ergebnis je Eintrag |
+| `TEILWEISE_ERLEDIGT` | Teilweise erledigt | Ausrufezeichen im Kreis | `teilweise`, Bernstein (F16) | kein Hinweis, Ergebnis je Eintrag; die nicht erfolgreichen fallen auf |
+| `FEHLGESCHLAGEN` | Fehlgeschlagen | Warndreieck | `fehler`, rot | `fehlertext` als „Meldung der Plattform“ |
+| `UNSTIMMIG` | Rückmeldung unvollständig | gestrichelter Kreis | `ungeklaert`, gedämpft | „Die Rückmeldung der Plattform passt nicht zum Auftrag. Bitte wenden Sie sich an die Betreuung.“ Fehlt zu einem Eintrag die Rückmeldung: „keine Rückmeldung“ |
+| `UNBEKANNT` | Rohwert des Status | Fragezeichen im Kreis | `ungeklaert`, gedämpft | „Unbekannter Stand.“ |
+
+**Die Einordnung kommt allein aus dem Backend** (`TaskStatusClassifier`, [`tasks.md`](tasks.md)
+§5.5). Das Frontend leitet keinen Stand ab: „Teilweise erledigt“ und „Rückmeldung unvollständig“
+stehen in `einordnung`. Gezählt wird nur für „<x> von <n> nicht erfolgreich“: x sind die Einträge,
+deren `ergebnis` nicht `OK` ist, n alle Einträge; `UNBEKANNT` zählt wie im Backend als nicht Ok. Ist
+kein Eintrag Ok, steht „<n> von <n> nicht erfolgreich“ unter „Teilweise erledigt“ — das Wort passt
+dann nicht, entschieden ist es nicht (Punkt 1000, [`tasks.md`](tasks.md) §11).
+
+**Das Ergebnis je Eintrag** (E‑1106):
+
+| `ergebnis` | Anzeige | für Vorleseprogramme |
+|---|---|---|
+| `OK` | Haken, Rohwert („Ok“), grün | „erfolgreich“ |
+| `NICHT_OK` | Ausrufezeichen im Kreis, Rohwert, Bernstein; der Eintrag hat einen getönten Grund | „nicht erfolgreich“ |
+| `UNBEKANNT` | wie `NICHT_OK`; der Rohwert steht wörtlich da | „nicht erfolgreich“ |
+| `null` bei `UNSTIMMIG` | „keine Rückmeldung“, gedämpft | — |
+| `null` sonst | nichts — Offen, In Ausführung und Fehlgeschlagen haben keine Rückgabe | — |
+
+### 12.5 Aufbau
+
+```
+frontend/src/
+├─ lib/auftraege.ts                    Abfrageschlüssel der Liste (F19)
+├─ lib/status-farbe.ts                 AUFTRAG_ZUORDNUNG: Einordnung → Rolle (F16, F17)
+├─ app/globals.css                     die Rolle --teilweise, hell und dunkel (F16)
+├─ features/assistent/hooks.ts         lädt nach dem Anlegen die Liste neu (E‑1109)
+└─ features/dashboard/
+   ├─ api.ts                           Typen, GET /api/tasks, DELETE /api/tasks/{taskId}
+   ├─ auftraege.ts                     reine Regeln: Sichtbare, Schlüssel, Zählung, Löschbarkeit
+   ├─ hooks.ts                         Abfrage und Mutation
+   └─ components/
+      ├─ auftraege-block.tsx           Block, Zeile, Löschen
+      └─ dashboard-ansicht.tsx         Reihe und Zustände der Übersicht (E‑1099, E‑1121)
+```
+
+| Endpunkt | Weg | Wann |
+|---|---|---|
+| `GET /api/tasks` | `useQuery`, Schlüssel `["auftraege", "liste"]` | beim Aufruf der Übersicht; „Neu laden“ (F24); nach dem Anlegen in der Chatbox und nach dem Löschen (E‑1109) |
+| `DELETE /api/tasks/{taskId}` | Mutation | „Löschen“ in der Rückfrage |
+
+**Keine Anfrage trägt eine Mandanten-ID** (M1). Beim Mandantenwechsel leert die Anwendung den
+ganzen Zwischenspeicher, auch die Liste der Aufträge (E‑1123).
+
+### 12.6 Die Zeile
+
+```
+┌──────────────────────────────────────────────────┐
+│ Ihre Aufträge                                    │
+│ Auftrag gelöscht. Er wird nicht ausgeführt.      │  role="status", nach dem Löschen (F22)
+│ ▸ ◷ Offen · Neuanlage · 2 Einträge               │  zugeklappt: Stand, Aktion, Zahl
+│   72332/DDB0, 010/18VZE        19.10.2026, 14:32 │  Schlüssel, Zeitpunkt
+│ ▾ ⓘ Teilweise erledigt · Anpassung · 3 Einträge  │
+│   1 von 3 nicht erfolgreich    19.10.2026, 09:10 │  statt der Schlüssel (E‑1102)
+│   Anpassen der Werk-/Abladestellentabelle        │  aufgeklappt (E‑1104)
+│   eingestellt 19.10.2026, 09:10                  │
+│   ausgeführt 19.10.2026, 09:15                   │
+│   72332/DDB0                                     │  Eintrag: Schlüssel
+│     Werk 72332 · Abladestelle DDB0 · SNDPRN …    │  Werte mit label
+│     ✓ Ok                                         │  Ergebnis
+│   ▒ 010/18VZE                                  ▒ │  getönter Grund
+│   ▒   ⓘ Schlüssel nicht gefunden               ▒ │
+│ 2 weitere anzeigen                               │  ab sechs Aufträgen (E‑1101)
+└──────────────────────────────────────────────────┘
+```
+
+**Zugeklappt** ist die ganze Zeile ein Knopf (E‑1102, E‑1104). Oben Zeichen und Wort des Stands in
+seiner Rolle, dahinter — nur wenn die Liste mehrere Typen enthält — der Name des Typs, dann Aktion
+und Zahl der Einträge. Darunter links die ersten zwei Schlüssel in Festbreitenschrift, bei mehr
+„und <n> weitere“, gekürzt mit Auslassung; der volle Text steht im `title`. Rechts der Zeitpunkt
+des Einstellens, die Sekunden im `title` (E‑1122).
+
+**Aufgeklappt** steht darunter, eingerückt: der Name des Typs; „eingestellt <Zeit>“ und, wenn die
+Plattform zurückgemeldet hat, „ausgeführt <Zeit>“; bei „Fehlgeschlagen“ „Meldung der Plattform“ mit
+dem `fehlertext`; der Hinweis des Stands (§12.4); dann die Einträge — je Eintrag der Schlüssel, die
+Werte mit ihrem `label` (F21) und, wo es eines gibt, das Ergebnis. Bis fünf Einträge, darüber „Alle
+<n> Einträge anzeigen“ und danach „Weniger anzeigen“ (F25). Bei „Offen“ zuletzt rechts „Auftrag
+löschen“ (E‑1111).
+
+**Reiner Text** (E‑1107): `fehlertext`, Rückgabe, Schlüssel und Werte stehen als Textknoten, der
+`fehlertext` mit erhaltenen Zeilenumbrüchen (`white-space: pre-wrap`). Was wie HTML aussieht, steht
+wörtlich da — dieselbe Bauform wie die Antworten des Assistenten (E‑1074).
+
+### 12.7 Löschen
+
+1. **„Auftrag löschen“** steht nur bei „Offen“ und nur aufgeklappt (E‑1110, E‑1111). Der Knopf ist
+   eine Bequemlichkeit, keine Berechtigung: Ob gelöscht wird, entscheidet das Statement im Backend
+   ([`tasks.md`](tasks.md) §6.6).
+2. **Ein Klick** ersetzt den Knopf an derselben Stelle durch die Rückfrage (E‑1112). Der Fokus steht
+   auf „Abbrechen“. „Abbrechen“ oder Esc stellen den Knopf wieder her, mit dem Fokus darauf.
+3. **„Löschen“** schickt `DELETE /api/tasks/{taskId}`. Während des Aufrufs sind beide Knöpfe
+   gesperrt (`aria-disabled`, wie E‑1093).
+4. **Die Antwort:**
+
+| Antwort | Anzeige |
+|---|---|
+| `204` | Die Liste lädt neu; oben im Block „Auftrag gelöscht. Er wird nicht ausgeführt.“ (`role="status"`), der Fokus darauf (F22) |
+| `409` | in der Zeile „Die Plattform hat den Auftrag gerade übernommen. Löschen geht nicht mehr.“; die Liste lädt neu, die Zeile zeigt danach den neuen Stand (E‑1116) |
+| `404` | oben im Block „Der Auftrag ist nicht mehr vorhanden.“; die Liste lädt neu (E‑1116, F22) |
+| Netz, `5xx` | in der Zeile „Der Auftrag konnte gerade nicht gelöscht werden. Bitte versuchen Sie es erneut.“; „Auftrag löschen“ wieder frei (F22) |
+| `401` | wie überall: Umleitung auf die Anmeldung, ohne Meldung |
+
+**Kein Rückgängig** (E‑1112, Punkt 1024). Der Satz zu `404` sagt nichts über Berechtigung: Ein
+fremder und ein unbekannter Auftrag sind auch in der Anzeige ununterscheidbar
+([`frontend-grundlagen.md`](frontend-grundlagen.md) §6).
+
+### 12.8 Die Reihe und die Zustände der Übersicht
+
+**Die Reihe** (E‑1099): Am breiten Fenster (ab `xl`, 1.280 px) stehen „Zuletzt aufgefallen“, „Ihre
+Aufträge“ und Verteilung nebeneinander. „Zuletzt aufgefallen“ und der Block teilen sich die drei
+Fünftel, die „Zuletzt aufgefallen“ vorher allein hatte; die Verteilung behält zwei Fünftel. Darunter
+stehen die drei untereinander, in derselben Reihenfolge. **Prozessnamen in „Zuletzt aufgefallen“
+brechen um, statt abgeschnitten zu werden** — die Spalte ist schmaler geworden, und ein gekürzter
+Name ist ein anderer Name ([`dashboard-frontend.md`](dashboard-frontend.md) §5.6).
+
+**Die Zustände:**
+
+| Übersicht | Aufträge | Block |
+|---|---|---|
+| lädt | beliebig | nicht da; die Übersicht zeigt ihren Ladezustand |
+| Daten | lädt zum ersten Mal | nicht da, die Reihe wie vorher (F18) |
+| Daten | leer | nicht da (E‑1098) |
+| Daten | mindestens einer | in der Reihe (E‑1099) |
+| Daten | Fehler | in der Reihe, mit einem Satz und „Erneut versuchen“; „Zuletzt aufgefallen“ bleibt unberührt |
+| leer oder Fehler | mindestens einer, oder Fehler | allein: im Leerzustand zwischen Satz und Stand, im Fehlerzustand unter der Meldung (E‑1121) |
+| beliebig | lädt neu | bleibt mit dem bisherigen Stand stehen (F18, E‑170) |
+
+**Der Fehlerzustand des Blocks** ist der Baustein `Fehler` aus `components/zustand.tsx` mit dem Satz
+„Ihre Aufträge konnten gerade nicht geladen werden.“, der Fehler-Kennung und „Erneut versuchen“.
+
+### 12.9 Barrierefreiheit
+
+- **Aufklappen:** Der Auslöser je Zeile ist ein `button` mit `aria-expanded` und `aria-controls`;
+  Enter oder Leertaste klappt auf. Der aufgeklappte Teil steht nur dann im Baum.
+- **Stand:** Das Zeichen ist `aria-hidden`, das Wort steht sichtbar daneben. Das Ergebnis je Eintrag
+  trägt „erfolgreich“ oder „nicht erfolgreich“ als verborgene Beschriftung (E‑1106).
+- **Rückfrage:** Fokus auf „Abbrechen“, Esc bricht ab, danach Fokus auf „Auftrag löschen“. Nach dem
+  Löschen steht der Fokus auf dem Satz oben (F22).
+- **Meldungen** sind `role="status"` und sagen sich selbst an.
+- **Der Block** ist ein Abschnitt mit der Überschrift „Ihre Aufträge“ als Namen.
+- **Dichte und Thema:** nur Maße in `rem` und Rollen aus `globals.css`; hell und dunkel, alle vier
+  Stufen. Am Berührungsgerät haben die Knöpfe die Mindestfläche.
+
+### 12.10 Tests
+
+*Wird mit dem Bau eingetragen.*
+
+### 12.11 Offene Punkte
+
+Nummern ab 1023 (Linie `assistent`, per `grep` geprüft); dieselben Zeilen stehen im Register
+[`offene-punkte.md`](offene-punkte.md). Punkt 1026 betrifft die Plattform und steht in
+[`tasks.md`](tasks.md) §11.
+
+| Nr. | Punkt | Art |
+|---|---|---|
+| **1023** | Ein fehlgeschlagener oder teilweise erledigter Auftrag bleibt sieben Tage sichtbar ([`tasks.md`](tasks.md) §6.3), auch wenn der Kunde ihn längst neu angelegt hat. Ausblenden ist bewusst nicht gebaut. | Verbesserung |
+| **1024** | Löschen hat kein Rückgängig (E‑1112). | Verbesserung |
+| **1025** | Der Stand „Offen“ kann bis zum nächsten „Neu laden“ veraltet sein (E‑1116); die Übersicht lädt nicht von selbst neu (E‑164). | Verbesserung |
+| **1027** | Aufgeklappt fehlen leere Felder, auch bei einer Anpassung, wo leer „wird entfernt“ heißt (F21). Die Antwort könnte je Feld `nurBei` und `hinweis` aus der Kopie mitliefern, wie die Karte sie zeigt (E‑1070). | Verbesserung |
+| **1028** | Sichtprüfung 1: der Block in hell und dunkel, breit und schmal, mit je einem Auftrag in jedem Stand (§12.12) | Sichtprüfung oder Messung offen |
+| **1029** | Sichtprüfung 2: Sieht die Übersicht ohne Aufträge aus wie vorher? (§12.12) | Sichtprüfung oder Messung offen |
+| **1030** | Sichtprüfung 3: Fällt ein fehlgeschlagener oder teilweise erledigter Auftrag auf, ohne dass die Übersicht unruhig wird? (§12.12) | Sichtprüfung oder Messung offen |
+| **1031** | Sichtprüfung 4: einen offenen Auftrag aufklappen und löschen (§12.12) | Sichtprüfung oder Messung offen |
+| **1032** | Sichtprüfung 5: einen Auftrag abholen lassen, während die Übersicht ihn noch als „Offen“ zeigt, dann löschen — kommt der Satz aus E‑1116? (§12.12) | Sichtprüfung oder Messung offen |
+
+**Fortgeschrieben:** Punkt 1000 (A1, „Teilweise erledigt“ ohne einen einzigen Ok) bleibt offen; A4
+zeigt dann „<n> von <n> nicht erfolgreich“ unter dem Wort „Teilweise erledigt“ (§12.4).
+
+### 12.12 Sichtprüfungen für Lukas
+
+Auf der **Testkopie**, lokal. Der Block selbst braucht den Assistenten nicht (E‑1098) — die Aufträge,
+die er zeigt, entstehen aber nur über ihn.
+
+**Vorbereitung:**
+
+1. `assistent` auschecken und mit `.\scripts\dev-start.ps1 -Assistent` starten (§11, Schritt 2).
+2. Anmelden, Mandant **`NEXANS`** wählen.
+3. **Sechs Aufträge über den Assistenten anlegen**, jeder mit zwei oder drei Einträgen und
+   erfundenen Werten — etwa „Bitte neu anlegen: Werk 47110 Abladestelle TOR3 SNDPRN 120764, Werk 47110
+   Abladestelle TOR4 SNDPRN 120764“. Der Text geht an Anthropic (E‑1029). Nach jedem Anlegen
+   erscheint der Block, ohne die Seite neu zu laden.
+4. **`scripts/auftraege-simulation.sql`** in MySQL Workbench auf der Testkopie öffnen, oben den
+   eigenen Benutzernamen und die Bestätigung eintragen und **Teil 1** ausführen. Er nimmt die sechs
+   jüngsten offenen Aufträge des eigenen Kontos unter `NEXANS` und bringt fünf davon mit den
+   Statements des Plattformvertrags in die Stände In Ausführung, Erledigt, Teilweise erledigt (eine
+   Zeile „Schlüssel nicht gefunden“), Fehlgeschlagen und Rückmeldung unvollständig (eine Zeile zu
+   wenig); der sechste bleibt offen. Danach in der Übersicht „Neu laden“.
+5. Ein zweiter Mandant ohne Aufträge, für Prüfung 2: `IBIS` oder `SUTTONS`.
+
+| Nr. | Prüfung | Vorgehen |
+|---|---|---|
+| **1028** | Der Block in hell und dunkel, breit und schmal | Nach Schritt 4 je Thema (Nutzermenü) bei 1.280, 1.440 und 1.920 px und bei rund 360 px. Jeder Stand mit Zeichen und Wort; jede Zeile aufklappen. Kein horizontales Scrollen, „Zuletzt aufgefallen“ ohne abgeschnittenen Prozessnamen |
+| **1029** | Ohne Aufträge | Mandant ohne Aufträge wählen. Sieht die Übersicht aus wie vor A4 — Reihe aus „Zuletzt aufgefallen“ und Verteilung, kein leerer Rahmen? |
+| **1030** | Fällt auf, ohne zu stören | Nach Schritt 4: Fallen „Fehlgeschlagen“ und „Teilweise erledigt“ beim ersten Blick auf? Wird die Übersicht dadurch unruhig, wirkt „Teilweise erledigt“ wie ein Fehler? |
+| **1031** | Offen aufklappen und löschen | Den offenen Auftrag aufklappen, „Auftrag löschen“, die Rückfrage lesen, einmal „Abbrechen“ (auch mit Esc), dann „Löschen“. Steht „Auftrag gelöscht. Er wird nicht ausgeführt.“ oben, und ist die Zeile weg? Dasselbe nur mit der Tastatur |
+| **1032** | Löschen, nachdem die Plattform abgeholt hat | Einen weiteren Auftrag anlegen und in der Übersicht aufklappen. **Ohne neu zu laden** in Workbench **Teil 2** des Skripts ausführen (holt den jüngsten offenen Auftrag ab). Dann „Auftrag löschen“ und „Löschen“: Steht „Die Plattform hat den Auftrag gerade übernommen. Löschen geht nicht mehr.“ in der Zeile, und zeigt sie danach „In Ausführung“? |
+
+**Aufräumen**, nur die eigenen und nur auf der Testkopie: Teil 3 des Skripts löscht alle Aufträge des
+eigenen Kontos unter `NEXANS`, gleich in welchem Stand — vorher mit dem `SELECT` dort ansehen.

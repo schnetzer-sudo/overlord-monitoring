@@ -28,7 +28,7 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
 - Die Einträge der früheren README-Tabelle „Offene Sichtprüfungen“ hatten keine Nummer und sind hier als
   **234 bis 246** vergeben (16.10.2026). **Nächste freie Nummer auf `main`: 264.**
 - **Auf `assistent` beginnen die Nummern bei 1000** (Entscheidung 7). **Nächste freie Nummer auf
-  `assistent`: 1023** (A3, 19.10.2026).
+  `assistent`: 1033** (A4, 19.10.2026).
 - **Doppelvergaben sind aufgelöst** (16.10.2026): 136 und 186 bis 189 waren je zweimal vergeben. Die
   Nummer behielt der Punkt, auf den andere Dateien öfter verweisen; der andere bekam 247 bzw. 248 bis
   251, mit datiertem Vermerk an seiner Fundstelle.
@@ -42,18 +42,18 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
 | | Teil 1: projektweit | Teil 2: Sichtprüfungen | Teil 3: lokal |
 |---|---:|---:|---:|
 | offen — Fehler | 32 | 0 | — |
-| offen — Verbesserung | 40 | 0 | — |
+| offen — Verbesserung | 44 | 0 | — |
 | offen — Entscheidung offen | 53 | 0 | — |
-| offen — Sichtprüfung oder Messung offen | 57 | 13 | — |
-| **offen gesamt** | **182** | **13** | — |
+| offen — Sichtprüfung oder Messung offen | 63 | 13 | — |
+| **offen gesamt** | **192** | **13** | — |
 | ungeprüft | — | — | 357 |
 | erledigt | 56 | 0 | 64 |
 | gegenstandslos | 3 | 0 | 5 |
-| **Zeilen** | 241 | 13 | 426 |
+| **Zeilen** | 251 | 13 | 426 |
 
-Offen sind damit **195** nummerierte Punkte; dazu kommen 357 ungeprüfte lokale. Davon gehören 20 der
+Offen sind damit **205** nummerierte Punkte; dazu kommen 357 ungeprüfte lokale. Davon gehören 30 der
 Linie `assistent` (1000 bis 1007 aus A1; 1009, 1010 und 1012 bis 1015 aus A2; 1017 bis 1022 aus A3;
-1011 ist seit A3 entschieden, 1016 seit M1003 erledigt).
+1023 bis 1032 aus A4; 1011 ist seit A3 entschieden, 1016 seit M1003 erledigt).
 
 ### Wie das Register erhoben ist
 
@@ -288,7 +288,7 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 261 | JAR-Name weicht von der Doku ab (kein finalName); Version stand auf 0.1.0(-SNAPSHOT) | [`betrieb.md`](betrieb.md) §9 | Fehler | offen — Version am 16.10.2026 auf 1.0.0 gesetzt; offen bleibt der Artefaktname |
 | 262 | Bootstrap des ersten Kontos in der Produktion nicht belegt; OVERLORD_BOOTSTRAP_ADMIN_* fehlen in .env.example | [`betrieb.md`](betrieb.md) §9 | Verbesserung | offen — die Namen stehen seit dem 16.10.2026 in `backend/.env.example`; ob die Produktion so angelegt wurde, ist offen |
 | 263 | Ziel und Aufbewahrung der Protokollausgabe in der Produktion nicht belegt | [`betrieb.md`](betrieb.md) §9 | Entscheidung offen | offen |
-| 1000 | „Teilweise erledigt“ auch dann, wenn kein Eintrag Ok ist und nichts geändert wurde; Anzeige dafür offen | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Entscheidung offen | offen |
+| 1000 | „Teilweise erledigt“ auch dann, wenn kein Eintrag Ok ist und nichts geändert wurde; Anzeige dafür offen | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Entscheidung offen | offen — seit A4 (19.10.2026) zeigt die Übersicht „<n> von <n> nicht erfolgreich“ unter „Teilweise erledigt“; das Wort ist nicht entschieden (`tasks.md` §11) |
 | 1001 | Aufträge, die in IN_AUSFUEHRUNG hängen bleiben, haben keine Frist und keinen Rückweg | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Entscheidung offen | offen |
 | 1002 | Schranke von 35 Zeichen je Schlüsselteil (WERK_ABLADESTELLE) zu bestätigen | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Entscheidung offen | offen |
 | 1003 | Ob die Plattform UTF-8 und LF im Parametertext sicher verarbeitet | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Sichtprüfung oder Messung offen | offen |
@@ -311,6 +311,16 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 1020 | Sichtprüfung: bei einer Anpassung mit leerem Feld „wird entfernt“ unübersehbar | [`assistent-frontend.md`](assistent-frontend.md) §10, §11 · Linie `assistent`, A3 | Sichtprüfung oder Messung offen | offen |
 | 1021 | Sichtprüfung: Öffnen, schreiben, Karte ändern und anlegen nur mit der Tastatur | [`assistent-frontend.md`](assistent-frontend.md) §10, §11 · Linie `assistent`, A3 | Sichtprüfung oder Messung offen | offen |
 | 1022 | Sichtprüfung: Antworten und Karte mit einem Vorleseprogramm | [`assistent-frontend.md`](assistent-frontend.md) §10, §11 · Linie `assistent`, A3 | Sichtprüfung oder Messung offen | offen |
+| 1023 | Fehlgeschlagene oder teilweise erledigte Aufträge bleiben sieben Tage in „Ihre Aufträge“, auch wenn der Kunde sie längst neu angelegt hat; Ausblenden ist nicht gebaut | [`assistent-frontend.md`](assistent-frontend.md) §12.11 · Linie `assistent`, A4 | Verbesserung | offen |
+| 1024 | Löschen eines offenen Auftrags hat kein Rückgängig | [`assistent-frontend.md`](assistent-frontend.md) §12.11 · Linie `assistent`, A4 | Verbesserung | offen |
+| 1025 | Der Stand „Offen“ in „Ihre Aufträge“ kann bis zum nächsten „Neu laden“ veraltet sein | [`assistent-frontend.md`](assistent-frontend.md) §12.11 · Linie `assistent`, A4 | Verbesserung | offen |
+| 1026 | Abholtakt der Plattform von fünf Minuten ist eine Auskunft, nicht gemessen | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A4 | Sichtprüfung oder Messung offen | offen |
+| 1027 | Aufgeklappte Aufträge zeigen leere Felder nicht, auch nicht bei einer Anpassung, wo leer „wird entfernt“ heißt | [`assistent-frontend.md`](assistent-frontend.md) §12.11 · Linie `assistent`, A4 | Verbesserung | offen |
+| 1028 | Sichtprüfung: „Ihre Aufträge“ hell und dunkel, breit und schmal, je ein Auftrag in jedem Stand | [`assistent-frontend.md`](assistent-frontend.md) §12.11, §12.12 · Linie `assistent`, A4 | Sichtprüfung oder Messung offen | offen |
+| 1029 | Sichtprüfung: Übersicht ohne Aufträge wie vorher | [`assistent-frontend.md`](assistent-frontend.md) §12.11, §12.12 · Linie `assistent`, A4 | Sichtprüfung oder Messung offen | offen |
+| 1030 | Sichtprüfung: fehlgeschlagene und teilweise erledigte Aufträge fallen auf, ohne die Übersicht unruhig zu machen | [`assistent-frontend.md`](assistent-frontend.md) §12.11, §12.12 · Linie `assistent`, A4 | Sichtprüfung oder Messung offen | offen |
+| 1031 | Sichtprüfung: offenen Auftrag aufklappen und löschen, auch nur mit der Tastatur | [`assistent-frontend.md`](assistent-frontend.md) §12.11, §12.12 · Linie `assistent`, A4 | Sichtprüfung oder Messung offen | offen |
+| 1032 | Sichtprüfung: Löschen, nachdem die Plattform abgeholt hat — Satz bei 409 | [`assistent-frontend.md`](assistent-frontend.md) §12.11, §12.12 · Linie `assistent`, A4 | Sichtprüfung oder Messung offen | offen |
 
 ---
 

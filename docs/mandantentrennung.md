@@ -437,6 +437,15 @@ schlechter Beweis für eine Trennung, die zwischen Firmen greifen soll.
 > ein fremdes Gespräch — auch eines desselben Nutzers aus einer anderen Sitzung — antwortet wie ein
 > erfundenes mit `404`. Statt eines Bestands der Testkopie spielt ein geskriptetes Modell den
 > Anbieter; es geht kein Aufruf hinaus.
+>
+> **Ergänzt 19.10.2026 (Linie `assistent`, A4).** Ein neuer Endpunkt: `DELETE /api/tasks/{taskId}`,
+> in `AuftraegeIsolationDbIT` ([`tasks.md`](tasks.md) §6.6). **Er nimmt keine Mandanten-ID entgegen**
+> und ist keine Ausnahme; die Liste in §3 bleibt bei drei. Das `DELETE` trägt den Mandanten aus der
+> Sitzung im `WHERE`, die Nachlesung nach null gelöschten Zeilen ebenso. Geprüft wird wie beim
+> Einzelabruf: `IBIS` löscht einen offenen Auftrag von `NEXANS` und bekommt `404`, **dieselbe
+> Antwort und dieselben zwei Statements** wie bei einer erfundenen Kennung — und die Zeile von
+> `NEXANS` steht danach unverändert. Ein `409` gibt es nur für einen eigenen Auftrag; sonst verriete
+> der Unterschied zwischen `404` und `409`, dass es die Kennung bei einem anderen Mandanten gibt.
 
 Der Test prüft zu Beginn, dass beide in der Testkopie existieren und die erfundene ID nicht. Schlägt
 das fehl, hat sich die Testkopie geändert — nicht der Code.

@@ -264,6 +264,13 @@ wird der Zeitraum in `onAnimationEnd` an Fläche und Balken, nie in einem Effekt
 Zeitraumwechsel trifft einen anderen Wert und baut weiterhin auf (E‑86); `"auto"` behält Recharts'
 eigenen Ausschalter für `prefers-reduced-motion`. **Belegt am Browser mit Gegenprobe** (§6, M182‑5).
 
+> **Ergänzt am 19.10.2026 (Linie `assistent`, A4):** „Neu laden“ holt in der Übersicht seither
+> **zwei** Abfragen — die Übersicht und die Liste der Aufträge für den Block „Ihre Aufträge“ — und
+> zeigt die Sanduhr, solange eine davon läuft (F24, E‑1109 in
+> [`assistent-frontend.md`](assistent-frontend.md) §12). Beides sind Hauptdaten der Ansicht; E‑169
+> ist nicht berührt. Auch der Block fällt dabei nicht in einen Ladezustand. Einen Takt gibt es
+> weiterhin nicht (E‑164).
+
 ### Nachrichten
 
 **Auf Seite eins** holt `neuLaden` dieselbe Abfrage neu. **Auf einer späteren Seite wird zuerst

@@ -913,6 +913,11 @@ importiert werden. Kommt in Schritt 10 eine eigene Prozessansicht, wandert der g
 > **`components/live-rest-hinweis.tsx`**, **`lib/live-rest.ts`** und **`texte.liveRest`** —, weil die
 > Übersicht denselben Block liest ([`live-rest.md`](live-rest.md) §10).
 >
+> **Ein drittes Mal am 19.10.2026** (Linie `assistent`, A4, F19): Der Abfrageschlüssel der Aufträge
+> liegt in **`lib/auftraege.ts`**. Die Übersicht zeigt die Liste im Block „Ihre Aufträge“, und der
+> Assistent lässt sie nach dem Anlegen neu laden; Typen und Aufrufe bleiben in `features/dashboard`
+> ([`assistent-frontend.md`](assistent-frontend.md) §12.5).
+>
 > Die Umbenennung `Dashboardzeitraum` → `Rollupzeitraum` folgt dem Backend, das dieselbe Bewegung am
 > selben Tag gemacht hat ([`process-view.md`](process-view.md) E‑44). **Zwei Namen für dieselbe
 > Menge sind der Anfang zweier Mengen** — deshalb steht in `features/dashboard` keine Hülle, die den

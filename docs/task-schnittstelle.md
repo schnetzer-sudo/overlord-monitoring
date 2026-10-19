@@ -4,6 +4,10 @@
 EDI-Plattform. Sie geht an das Plattform-Team und ist ohne die übrige Dokumentation verständlich.
 Hintergrund und Entscheidungen stehen auf Seiten des Monitors in [`tasks.md`](tasks.md).
 
+*Ergänzt am 19.10.2026 (Teilschritt A4):* Der Monitor löscht einen offenen Auftrag, wenn der Kunde es
+will. **Für die Plattform ändert sich dadurch nichts** — §3a sagt, warum. Die vier Statements in §3
+sind unverändert.
+
 ---
 
 ## 1. Worum es geht
@@ -73,6 +77,34 @@ WHERE task_id = ? AND status = 'IN_AUSFUEHRUNG';
 
 Alle Zeitstempel sind UTC und entstehen in der Datenbank über `UTC_TIMESTAMP(3)`; die Plattform
 übergibt keine Uhrzeit.
+
+---
+
+## 3a. Was der Monitor an der Tabelle tut
+
+Der Monitor **legt Aufträge an** (Status `OFFEN`) und **löscht seit dem 19.10.2026 einen offenen
+Auftrag, wenn der Kunde es in der Übersicht will**. Sonst ändert er keine Zeile. Gelöscht wird mit
+einem Statement, nur im Status `OFFEN`:
+
+```sql
+DELETE FROM overlord_monitor.task
+WHERE task_id = ? AND mandant_id = ? AND status = 'OFFEN'
+```
+
+**Was das für die Plattform heißt — nichts Neues:**
+
+- Ein gelöschter Auftrag **fehlt beim nächsten Lesen** der offenen Aufträge.
+- Verschwindet er **zwischen Lesen und Abholen**, ändert das Abholen **null Zeilen** — genau wie
+  wenn ein schnellerer Lauf ihn schon abgeholt hätte. Die Regel aus §3 Punkt 2 gilt unverändert:
+  Null heißt, nicht ausführen.
+- **Abholen und Löschen schließen sich aus.** Beide greifen nur bei `OFFEN`, und die Datenbank
+  sperrt die Zeile für das erste der beiden Statements; von beiden ändert genau eines die Zeile.
+  Hat die Plattform abgeholt, kann der Kunde nicht mehr löschen. Ein abgeholter Auftrag wird nie
+  gelöscht.
+
+**Der Takt:** Die Plattform holt **alle fünf Minuten** ab (Auskunft vom 19.10.2026, nicht gemessen).
+So lange kann ein Kunde einen Auftrag ungefähr noch löschen. Ändert sich der Takt, ist das keine
+Änderung dieses Vertrags; der Monitor nennt die Zahl nirgends in der Oberfläche.
 
 ---
 

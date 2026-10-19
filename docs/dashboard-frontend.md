@@ -214,6 +214,20 @@ deshalb unten, am breiten Fenster neben den Zeilen statt über ihnen.
 > alles Wichtige nach unten — *„ohne Scrollen erreichbar"* war damit für die Anlage erkauft und
 > gegen den Verlauf. Als Kachel steht die Auskunft weiterhin oben, kostet aber keine eigene Zeile.
 
+> ### ⚠️ Ergänzt am 19.10.2026 (Linie `assistent`, A4) — „Ihre Aufträge“ steht in der Reihe von „Zuletzt aufgefallen“
+>
+> **Die Kästen darüber bleiben stehen.** Was gilt, wenn der Mandant Aufträge hat:
+>
+> **Kacheln → Verlauf mit Fehlerstreifen → Zuletzt aufgefallen · Ihre Aufträge · Verteilung →
+> Stand.**
+>
+> **Der Block erscheint nur, wenn `GET /api/tasks` mindestens einen Auftrag liefert** (E‑1098);
+> sonst ist die Reihe wie vorher. Er steht **zwischen** „Zuletzt aufgefallen“ und Verteilung
+> (E‑1099): „Zuletzt aufgefallen“ teilt sich mit ihm den Platz, den es vorher allein hatte, die
+> Verteilung behält ihre Breite. Am schmalen Fenster stehen die drei untereinander, in derselben
+> Reihenfolge. Im Leer- und im Fehlerzustand der Übersicht steht er allein (E‑1121, §5.7).
+> Vollständig in [`assistent-frontend.md`](assistent-frontend.md) §12.
+
 
 
 ---
@@ -1479,6 +1493,14 @@ ihr Platz — und dann kommt die Plakette mit ihr zurück.
 > > dass die Nachricht nicht in einem Endstatus ist, und *Fehler* ist einer. Es gibt deshalb keine
 > > Zeile mit zwei Plaketten.
 
+> ### ⚠️ Ergänzt am 19.10.2026 (A4) — Prozessnamen brechen um, statt abgeschnitten zu werden
+>
+> Seit „Ihre Aufträge“ mit in der Reihe steht (E‑1099), ist die Spalte von „Zuletzt aufgefallen“ am
+> breiten Fenster schmaler. **Der Prozessname bricht deshalb um, statt mit Auslassung gekürzt zu
+> werden** — ein gekürzter Name ist ein anderer Name, und gerade hier sucht jemand den Prozess, der
+> auffällt. Zeitpunkt, Zeichen und Zahl bleiben in ihrer Zeile oben. Zeilen ohne Aufträge sind
+> unverändert.
+
 ### 5.7 Stand und Leerzustand (Teil F)
 
 **Der Stand:** `beendetAm` und `art` aus `rollup_lauf`, **absolut in der Anzeigezone** (E‑o). Die
@@ -1500,6 +1522,18 @@ ist, und das gilt auch dann, wenn die Auskunft „nichts" lautet.
 > zweite Weg herauszufinden, ob es noch immer nichts gibt. Geprüft in `tests/neu-laden.test.tsx`
 > (*„steht im Leerzustand und lädt dort neu"*). **Punkt 169 ist davon nicht berührt** — die Kachel
 > *Plattform* steht im Leerzustand weiterhin nicht.
+
+> ### ⚠️ Nachtrag vom 19.10.2026 — **E‑p ergänzt: „Ihre Aufträge“ steht auch hier** (E‑1121, A4)
+>
+> **Der Absatz darüber bleibt stehen.** Hat der Mandant Aufträge, steht im Leerzustand zwischen dem
+> Satz und dem Stand zusätzlich der Block **„Ihre Aufträge“**, allein und über die volle Breite;
+> im Fehlerzustand der Übersicht steht er unter der Fehlermeldung. **Aufträge hängen nicht am
+> Zeitraum** — ohne diese Regel wäre ein eben angelegter Auftrag unsichtbar, sobald der gewählte
+> Zeitraum keine Nachricht enthält. Die Begründung von E‑p trägt hier nicht: Sie schließt Kacheln mit
+> Nullen und leere Diagramme aus, also Antworten auf eine Frage nach Nachrichten, die „nichts“
+> lauten. Der Block antwortet auf eine andere Frage. Ohne Aufträge bleibt es bei E‑p.
+> Entscheidung des Auftraggebers vom 19.10.2026, [`assistent-frontend.md`](assistent-frontend.md)
+> §12.2.
 
 ---
 
