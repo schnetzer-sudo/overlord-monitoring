@@ -991,6 +991,73 @@ export const en: Texte = {
     },
   },
 
+  assistent: {
+    symbol: "Assistant",
+    titel: "Assistant",
+    mandant: "Active client",
+    schliessen: "Close assistant",
+    neuesGespraech: "New conversation",
+    begruessung: {
+      einleitung:
+        "Hello. I help you prepare orders for the EDI platform. The following are available:",
+      schluss:
+        "Describe in your own words what you would like to change. I will put a proposal on a card for you; nothing is created until you choose “Create order” there.",
+    },
+    verlauf: "Conversation history",
+    sprecher: {
+      kunde: "You:",
+      assistent: "Assistant:",
+    },
+    wartet: "The assistant is answering …",
+    eingabe: {
+      beschriftung: "Your message to the assistant",
+      platzhalter: "What would you like to change?",
+      senden: "Send",
+      tasten: "Enter sends, Shift+Enter starts a new line.",
+    },
+    hinweis: {
+      zuVieleNachrichten: "Too many messages just now. Please wait a moment and then send again.",
+      ausgeschoepft:
+        "This conversation has reached the maximum of {anzahl} messages. Please start a new conversation.",
+      ausgeschoepftOhneZahl:
+        "This conversation has reached the maximum number of messages. Please start a new conversation.",
+      nachrichtUngueltig:
+        "The message is empty or too long. Please write at most {anzahl} characters.",
+      nachrichtUngueltigOhneZahl: "The message is empty or too long.",
+      nichtErreichbar:
+        "The assistant cannot be reached right now. Your message is back in the input field; you can send it again.",
+      abgelaufen:
+        "This conversation has expired. Start a new conversation; your message stays in the input field.",
+    },
+    ansage: {
+      vorschlagEins: "Proposal on the card: {name}, one entry.",
+      vorschlagMehr: "Proposal on the card: {name}, {anzahl} entries.",
+    },
+    karte: {
+      bezeichnung: "Proposal: {name}",
+      giltFuer: "Applies to:",
+      eintrag: "Entry {nummer}",
+      leer: "empty",
+      alleAnzeigen: "Show all {anzahl}",
+      wenigerAnzeigen: "Show only the first {anzahl}",
+      anlegen: "Create order",
+      anlegenLaeuft: "Creating …",
+      aendern: "Edit",
+      uebernehmen: "Apply",
+      verwerfen: "Discard",
+      pruefungLaeuft: "Checking …",
+      pruefungFehler: "Please correct the marked entries.",
+      pruefungGestoert: "The entries could not be checked just now.",
+      erneutPruefen: "Check again",
+      typUnbekannt: "This order type does not exist here.",
+      anlegenFehler: "The order was not created. Please correct the marked entries.",
+      anlegenGestoert:
+        "The order could not be created just now. Please try again; it will not be created twice.",
+      angelegt: "Created, status: {status}",
+      offen: "Open",
+    },
+  },
+
   zustand: {
     laedt: "Loading …",
     leerTitel: "Nothing to show",

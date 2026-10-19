@@ -49,6 +49,16 @@ export class ProblemFehler extends Error {
    * Sprachtext hinterherläuft.
    */
   readonly angaben: Readonly<Record<string, unknown>>;
+  /**
+   * Die Einträge von `errors`, **unverändert** — jeder, der ein Objekt ist.
+   *
+   * {@link felder} trägt nur Feld und Meldung und lässt Einträge ohne Feld weg.
+   * Die Prüfung eines Auftrags meldet mehr: den `index` des Eintrags, einen
+   * `code`, und Fehler, die kein einzelnes Feld betreffen (`docs/tasks.md`
+   * §6.2). Gelesen wird diese Form im Feature, das sie kennt; hier wird sie nur
+   * aufgehoben.
+   */
+  readonly fehlerliste: readonly Readonly<Record<string, unknown>>[];
 
   constructor(werte: {
     status: number;
@@ -58,6 +68,7 @@ export class ProblemFehler extends Error {
     traceId?: string;
     felder?: readonly Feldfehler[];
     angaben?: Readonly<Record<string, unknown>>;
+    fehlerliste?: readonly Readonly<Record<string, unknown>>[];
   }) {
     super(werte.detail ?? werte.titel ?? werte.typ);
     this.name = "ProblemFehler";
@@ -68,6 +79,7 @@ export class ProblemFehler extends Error {
     this.traceId = werte.traceId;
     this.felder = werte.felder ?? [];
     this.angaben = werte.angaben ?? {};
+    this.fehlerliste = werte.fehlerliste ?? [];
   }
 
   /** Eine Zahl aus {@link angaben} — oder `undefined`, wenn sie fehlt oder keine ist. */
@@ -206,6 +218,16 @@ function felderAus(rohwert: unknown): Feldfehler[] {
   });
 }
 
+function fehlerlisteAus(rohwert: unknown): Record<string, unknown>[] {
+  if (!Array.isArray(rohwert)) {
+    return [];
+  }
+  return rohwert.filter(
+    (eintrag): eintrag is Record<string, unknown> =>
+      typeof eintrag === "object" && eintrag !== null && !Array.isArray(eintrag),
+  );
+}
+
 /** Die Felder, die RFC 9457 selbst vergibt. Alles andere gehört dem Fall. */
 const RFC_FELDER = ["type", "title", "status", "detail", "instance", "traceId", "errors"];
 
@@ -232,6 +254,7 @@ async function fehlerAus(antwort: Response): Promise<ProblemFehler> {
     traceId: alsText(koerper.traceId),
     felder: felderAus(koerper.errors),
     angaben: angabenAus(koerper),
+    fehlerliste: fehlerlisteAus(koerper.errors),
   });
 }
 
@@ -270,7 +293,11 @@ export function hole<T>(pfad: string): Promise<T> {
  * „unverändert". Genau darauf beruht E4, denn ein leerer Partner ist ein
  * gültiger gepflegter Zustand.
  */
-async function schreibe<T>(pfad: string, methode: "POST" | "PUT", koerper?: unknown): Promise<T> {
+async function schreibe<T>(
+  pfad: string,
+  methode: "POST" | "PUT" | "DELETE",
+  koerper?: unknown,
+): Promise<T> {
   const kopf = await csrfKopf();
   return anfrage<T>(pfad, {
     method: methode,
@@ -291,4 +318,12 @@ export function sende<T>(pfad: string, koerper?: unknown): Promise<T> {
 /** Wie {@link sende}, nur mit `PUT` — der Aufruf setzt eine Ressource als Ganzes. */
 export function aendere<T>(pfad: string, koerper?: unknown): Promise<T> {
   return schreibe<T>(pfad, "PUT", koerper);
+}
+
+/**
+ * Wie {@link sende}, nur mit `DELETE` und ohne Rumpf. Seit A3: Der Assistent
+ * beendet ein Gespräch (`docs/assistent.md` §6.4).
+ */
+export function entferne<T>(pfad: string): Promise<T> {
+  return schreibe<T>(pfad, "DELETE");
 }
