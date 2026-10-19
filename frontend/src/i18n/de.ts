@@ -423,6 +423,68 @@ export const de = {
       },
     },
 
+    // „Ihre Aufträge“ (Linie `assistent`, A4, `docs/assistent-frontend.md` §12).
+    // **Hier wird gesiezt** (E‑1124): Der Block setzt fort, was im Gespräch mit
+    // dem Assistenten entstanden ist, und heißt seit A1 so. Die übrige
+    // Übersicht duzt weiter (E‑1084).
+    auftraege: {
+      titel: "Ihre Aufträge",
+      ladenFehler: "Ihre Aufträge konnten gerade nicht geladen werden.",
+      // Das Wort je Stand (§12.4). `UNBEKANNT` hat keins: Dort steht der
+      // Rohwert des Status (Regel Q4).
+      stand: {
+        OFFEN: "Offen",
+        IN_AUSFUEHRUNG: "In Ausführung",
+        ERLEDIGT: "Erledigt",
+        TEILWEISE_ERLEDIGT: "Teilweise erledigt",
+        FEHLGESCHLAGEN: "Fehlgeschlagen",
+        UNSTIMMIG: "Rückmeldung unvollständig",
+      },
+      // Der Hinweis in der aufgeklappten Zeile. Erledigt und Teilweise erledigt
+      // haben keinen (dort spricht das Ergebnis je Eintrag), Fehlgeschlagen
+      // zeigt die Meldung der Plattform.
+      hinweis: {
+        OFFEN: "Wartet auf die Plattform. Bis sie ihn abholt, können Sie ihn noch löschen.",
+        IN_AUSFUEHRUNG: "Die Plattform bearbeitet den Auftrag.",
+        UNSTIMMIG:
+          "Die Rückmeldung der Plattform passt nicht zum Auftrag. Bitte wenden Sie sich an die Betreuung.",
+        UNBEKANNT: "Unbekannter Stand.",
+      },
+      eintraegeEins: "1 Eintrag",
+      eintraegeViele: "{anzahl} Einträge",
+      undWeiterer: "und 1 weiterer",
+      undWeitere: "und {anzahl} weitere",
+      nichtErfolgreich: "{anzahl} von {gesamt} nicht erfolgreich",
+      eingestellt: "eingestellt {zeit}",
+      ausgefuehrt: "ausgeführt {zeit}",
+      meldungDerPlattform: "Meldung der Plattform",
+      // Rückfall ohne Schlüssel (F23), wie auf der Karte (E‑1080).
+      eintrag: "Eintrag {nummer}",
+      // Für Vorleseprogramme neben dem Rohwert der Plattform (E‑1106).
+      ergebnis: {
+        OK: "erfolgreich",
+        NICHT_OK: "nicht erfolgreich",
+        UNBEKANNT: "nicht erfolgreich",
+      },
+      keineRueckmeldung: "keine Rückmeldung",
+      alleEintraege: "Alle {anzahl} Einträge anzeigen",
+      weitereEins: "1 weiteren anzeigen",
+      weitereViele: "{anzahl} weitere anzeigen",
+      wenigerAnzeigen: "Weniger anzeigen",
+      // Löschen (E‑1111, E‑1112, E‑1116, F22).
+      loeschen: "Auftrag löschen",
+      frage:
+        "Auftrag löschen? Die Plattform hat ihn noch nicht abgeholt. Er wird nicht ausgeführt.",
+      abbrechen: "Abbrechen",
+      bestaetigen: "Löschen",
+      loeschenLaeuft: "Wird gelöscht …",
+      geloescht: "Auftrag gelöscht. Er wird nicht ausgeführt.",
+      uebernommen: "Die Plattform hat den Auftrag gerade übernommen. Löschen geht nicht mehr.",
+      // Ein 404 sagt nichts über Berechtigung (`docs/frontend-grundlagen.md` §6).
+      verschwunden: "Der Auftrag ist nicht mehr vorhanden.",
+      gestoert: "Der Auftrag konnte gerade nicht gelöscht werden. Bitte versuchen Sie es erneut.",
+    },
+
     /**
      * Der Block **Plattform** — die Dienstlampen und die Ablagenkachel
      * (Schritt 10d Teil B, `docs/dashboard-frontend.md`).

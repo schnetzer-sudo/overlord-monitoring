@@ -235,6 +235,55 @@ export const en: Texte = {
       },
     },
 
+    // "Your orders" (assistent line, A4). Formal address, like the assistant
+    // (E‑1124) — English has no second form, the wording follows the German.
+    auftraege: {
+      titel: "Your orders",
+      ladenFehler: "Your orders could not be loaded just now.",
+      stand: {
+        OFFEN: "Open",
+        IN_AUSFUEHRUNG: "In progress",
+        ERLEDIGT: "Done",
+        TEILWEISE_ERLEDIGT: "Partly done",
+        FEHLGESCHLAGEN: "Failed",
+        UNSTIMMIG: "Incomplete response",
+      },
+      hinweis: {
+        OFFEN: "Waiting for the platform. Until it picks the order up, you can still delete it.",
+        IN_AUSFUEHRUNG: "The platform is processing the order.",
+        UNSTIMMIG: "The platform's response does not match the order. Please contact support.",
+        UNBEKANNT: "Unknown state.",
+      },
+      eintraegeEins: "1 entry",
+      eintraegeViele: "{anzahl} entries",
+      undWeiterer: "and 1 more",
+      undWeitere: "and {anzahl} more",
+      nichtErfolgreich: "{anzahl} of {gesamt} not successful",
+      eingestellt: "submitted {zeit}",
+      ausgefuehrt: "executed {zeit}",
+      meldungDerPlattform: "Message from the platform",
+      eintrag: "Entry {nummer}",
+      ergebnis: {
+        OK: "successful",
+        NICHT_OK: "not successful",
+        UNBEKANNT: "not successful",
+      },
+      keineRueckmeldung: "no response",
+      alleEintraege: "Show all {anzahl} entries",
+      weitereEins: "Show 1 more",
+      weitereViele: "Show {anzahl} more",
+      wenigerAnzeigen: "Show less",
+      loeschen: "Delete order",
+      frage: "Delete order? The platform has not picked it up yet. It will not be executed.",
+      abbrechen: "Cancel",
+      bestaetigen: "Delete",
+      loeschenLaeuft: "Deleting …",
+      geloescht: "Order deleted. It will not be executed.",
+      uebernommen: "The platform has just taken over the order. It can no longer be deleted.",
+      verschwunden: "The order no longer exists.",
+      gestoert: "The order could not be deleted just now. Please try again.",
+    },
+
     // Entscheidung E‑129, siehe `de.ts`: eigene Wörter, nie die Beschriftung
     // einer Farbrolle. „Done" und „No outcome" gehören den Einordnungen von
     // Nachrichten (E‑82); ein Dienst ist keines ihrer Mitglieder.

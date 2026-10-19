@@ -7,10 +7,12 @@ import { Card } from "@/components/ui/card";
 import { ZeitraumUmschalter } from "@/components/zeitraum-umschalter";
 import { Fehler, Laden, Leer } from "@/components/zustand";
 import { useTexte } from "@/i18n/provider";
+import { cn } from "@/lib/utils";
 
 import { hervorgehobeneSicht, hervorgehobenerZeitraum } from "../filter";
-import { useDashboard, useDashboardzustand } from "../hooks";
+import { useAuftraegeBlock, useDashboard, useDashboardzustand } from "../hooks";
 import { AufgefallenBlock } from "./aufgefallen-block";
+import { AuftraegeBlock } from "./auftraege-block";
 import { Kacheln } from "./kacheln";
 import { VerteilungBlock } from "./verteilung-block";
 import { StandZeile } from "./stand-zeile";
@@ -74,11 +76,22 @@ import { VerlaufDiagramm } from "./verlauf-diagramm";
  * Diagramm, und ausdrücklich auch nicht die Zeile „nicht zugeordnet" aus der
  * Verteilung. Sie sagt etwas über den *Katalog*; über einen Mandanten ohne
  * Nachrichten sagt sie nichts.
+ *
+ * ## „Ihre Aufträge“ (seit dem 19.10.2026, Linie `assistent`, A4)
+ *
+ * **Eine zweite Abfrage, und sie hängt nicht am Zeitraum** (`GET /api/tasks`,
+ * `docs/assistent-frontend.md` §12). Der Block steht nur, wenn es Aufträge gibt
+ * (E‑1098), in der Reihe **zwischen** „Zuletzt aufgefallen“ und Verteilung
+ * (E‑1099) — und weil Aufträge nicht am Zeitraum hängen, **im Leer- und im
+ * Fehlerzustand allein** (E‑1121, Nachtrag zu E‑p). Sein Zustand wird hier
+ * gehalten, nicht im Block (`useAuftraegeBlock`): Der Block hängt beim
+ * Zeitraumwechsel aus, und die Reihe braucht, ob er steht.
  */
 export function DashboardAnsicht() {
   const texte = useTexte();
   const { zustand, setzeZeitraum, setzeSicht } = useDashboardzustand();
   const antwort = useDashboard(zustand);
+  const auftraege = useAuftraegeBlock();
 
   const zeitraum = hervorgehobenerZeitraum(zustand, antwort.data?.zeitraum);
 
@@ -111,10 +124,17 @@ export function DashboardAnsicht() {
             gesperrt={antwort.isPending}
           />
           <div className="ml-auto">
+            {/*
+             * **Beide Abfragen, eine Sanduhr** (F24): Ein Knopf, der nur die
+             * Hälfte lädt, ließe glauben, der Stand der Aufträge sei aktuell.
+             */}
             <NeuLaden
               name={texte.neuLaden.uebersicht}
-              laedt={antwort.isFetching}
-              aufNeuLaden={() => void antwort.refetch({ cancelRefetch: false })}
+              laedt={antwort.isFetching || auftraege.abfrage.isFetching}
+              aufNeuLaden={() => {
+                void antwort.refetch({ cancelRefetch: false });
+                void auftraege.neuLaden();
+              }}
             />
           </div>
         </div>
@@ -123,7 +143,15 @@ export function DashboardAnsicht() {
       {antwort.isPending ? (
         <Laden zeilen={6} />
       ) : antwort.isError ? (
-        <Fehler fehler={antwort.error} aufWiederholen={() => void antwort.refetch()} />
+        <>
+          <Fehler fehler={antwort.error} aufWiederholen={() => void antwort.refetch()} />
+          {/* Allein unter der Meldung (E‑1121): Aufträge liegen nicht in `GlassfishDB`. */}
+          {auftraege.sichtbar ? (
+            <Card size="sm" className="px-4">
+              <AuftraegeBlock block={auftraege} />
+            </Card>
+          ) : null}
+        </>
       ) : antwort.data.leer ? (
         <>
           {/*
@@ -136,6 +164,17 @@ export function DashboardAnsicht() {
           <LiveRestHinweis liveRest={antwort.data.liveRest} />
           <FehlerLiveHinweis fehlerLive={antwort.data.fehlerLive} />
           <Leer titel={texte.dashboard.leerTitel} hinweis={texte.dashboard.leerHinweis} />
+          {/*
+           * **Nachtrag zu E‑p** (E‑1121): Aufträge hängen nicht am Zeitraum. Ohne
+           * diese Zeile wäre ein eben angelegter Auftrag unsichtbar, sobald der
+           * gewählte Zeitraum keine Nachricht enthält. Ohne Aufträge bleibt es bei
+           * E‑p.
+           */}
+          {auftraege.sichtbar ? (
+            <Card size="sm" className="px-4">
+              <AuftraegeBlock block={auftraege} />
+            </Card>
+          ) : null}
           <StandZeile stand={antwort.data.stand} />
         </>
       ) : (
@@ -187,14 +226,29 @@ export function DashboardAnsicht() {
            *
            * Die Zeilen stehen links: Sie sind das Konkrete — eine Kennung, auf
            * die man klickt. Die Verteilung ist Hintergrund.
+           *
+           * **Seit A4 (E‑1099) steht „Ihre Aufträge“ dazwischen**, wenn es
+           * Aufträge gibt: „Zuletzt aufgefallen“ teilt sich mit ihm die drei
+           * Fünftel, die es vorher allein hatte, die Verteilung behält ihre zwei.
+           * Ohne Aufträge ist die Reihe Zeichen für Zeichen die von vorher.
            */}
-          <div className="grid gap-4 xl:grid-cols-[3fr_2fr]">
+          <div
+            className={cn(
+              "grid gap-4",
+              auftraege.sichtbar ? "xl:grid-cols-[3fr_3fr_4fr]" : "xl:grid-cols-[3fr_2fr]",
+            )}
+          >
             <Card size="sm" className="px-4">
               <AufgefallenBlock
                 zeilen={antwort.data.zuletztAufgefallen}
                 fenster={antwort.data.fenster}
               />
             </Card>
+            {auftraege.sichtbar ? (
+              <Card size="sm" className="px-4">
+                <AuftraegeBlock block={auftraege} />
+              </Card>
+            ) : null}
             <Card size="sm" className="px-4">
               {/*
                * **Die Sicht kommt aus der URL und nicht aus der Antwort** — die
