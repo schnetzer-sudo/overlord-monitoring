@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Kopfzeile } from "@/components/kopfzeile";
 import type { Vorschlag } from "@/features/assistent/api";
 import { AssistentEingang } from "@/features/assistent/components/assistent-eingang";
+import { DashboardAnsicht } from "@/features/dashboard/components/dashboard-ansicht";
 import { PRUEFVERZOEGERUNG_MS } from "@/features/assistent/hooks";
 import { NACHRICHTEN_SCHLUESSEL, type Suchfelder } from "@/features/nachrichten/api";
 import type { Selbstauskunft } from "@/features/sitzung/api";
@@ -97,6 +98,8 @@ let eroeffnen: Bedienung;
 let nachrichten: Bedienung[];
 let pruefung: (koerper: Record<string, unknown> | undefined) => Response | Promise<Response>;
 let anlegen: Bedienung[];
+/** Was `GET /api/tasks` liefert — leer, bis ein Anlegen durchgeht (A4). */
+let auftragsliste: unknown[];
 
 function json(rumpf: unknown, status = 200): Response {
   return new Response(JSON.stringify(rumpf), {
@@ -156,6 +159,7 @@ beforeEach(() => {
   nachrichten = [];
   pruefung = () => json({ errors: [] });
   anlegen = [];
+  auftragsliste = [];
   document.cookie = "XSRF-TOKEN=test-token";
   vi.stubGlobal("fetch", (eingabe: RequestInfo | URL, init?: RequestInit) => {
     const pfad = String(eingabe);
@@ -186,7 +190,13 @@ beforeEach(() => {
     }
     if (methode === "POST" && pfad === "/api/tasks") {
       const naechste = anlegen.shift();
+      if (!naechste) {
+        auftragsliste = [{ ...AUFTRAG, felder: [] }];
+      }
       return Promise.resolve(naechste ? naechste() : json(AUFTRAG, 201));
+    }
+    if (methode === "GET" && pfad === "/api/tasks") {
+      return Promise.resolve(json(auftragsliste));
     }
     return Promise.resolve(problem(404, "nicht-gefunden"));
   });
@@ -923,6 +933,48 @@ describe("Mandantenwechsel (E‑1076)", () => {
       expect(nur("POST", "/nachrichten").at(-1)?.pfad).toBe(
         "/api/assistent/gespraeche/g-2/nachrichten",
       );
+    } finally {
+      await abbauen();
+    }
+  });
+});
+
+describe("Nach dem Anlegen (A4, E‑1109)", () => {
+  /**
+   * **Die eine Änderung an A3:** Nach dem Anlegen lädt die Liste der Aufträge
+   * neu, und der Block „Ihre Aufträge“ erscheint in der Übersicht, **ohne die
+   * Seite neu zu laden**. Chatbox und Übersicht teilen sich hier den
+   * Zwischenspeicher wie in der Anwendung; die Übersicht selbst antwortet nicht
+   * (`404`) — dann steht der Block allein unter ihrer Meldung (E‑1121).
+   */
+  it("lässt „Ihre Aufträge“ erscheinen, ohne die Seite neu zu laden", async () => {
+    const ihreAuftraege = () =>
+      [...document.querySelectorAll("section")].find(
+        (abschnitt) =>
+          abschnitt.querySelector("h2")?.textContent === TEXTE.dashboard.auftraege.titel,
+      ) ?? null;
+    nachrichten.push(() => json({ text: "Bitte prüfen Sie den Vorschlag.", vorschlag: VORSCHLAG }));
+    const { abbauen } = await rendere(
+      <NuqsTestingAdapter hasMemory>
+        <AssistentEingang key={NEXANS.id} mandant={NEXANS} />
+        <DashboardAnsicht />
+      </NuqsTestingAdapter>,
+    );
+    try {
+      await bis(() => nur("GET", "/api/tasks").length === 1, "die Liste ist gefragt");
+      await zug();
+      expect(ihreAuftraege(), "vor dem Anlegen kein Block").toBeNull();
+
+      await oeffne();
+      await sende("Bitte bei Werk 72332, Abladestelle DDB0 die SNDPRN auf 120764 setzen");
+      await bis(() => karte() !== null, "die Karte ist da");
+      await klick(knopf(karte(), K.anlegen));
+
+      await bis(() => ihreAuftraege() !== null, "der Block steht");
+      expect(rufe.filter((ruf) => ruf.methode === "GET" && ruf.pfad === "/api/tasks")).toHaveLength(
+        2,
+      );
+      expect(ihreAuftraege()!.textContent).toContain("72332/DDB0");
     } finally {
       await abbauen();
     }
