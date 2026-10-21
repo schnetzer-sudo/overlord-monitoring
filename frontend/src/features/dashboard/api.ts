@@ -1,8 +1,14 @@
 import type { FehlerLive } from "@/lib/fehler-live";
-import { hole } from "@/lib/http";
+import { entferne, hole } from "@/lib/http";
 import type { LiveRest } from "@/lib/live-rest";
 import type { Fenster, Rollupzeitraum } from "@/lib/rollupzeitraum";
-import type { Ablagenzustand, Dienstzustand, Statusart } from "@/lib/status-farbe";
+import type {
+  Ablagenzustand,
+  Auftragseinordnung,
+  Dienstzustand,
+  Statusart,
+  Zeilenergebnis,
+} from "@/lib/status-farbe";
 
 /**
  * Die Landingpage — **ein Aufruf, eine Antwort** (`docs/dashboard.md` §1).
@@ -450,4 +456,66 @@ export function holeDashboard(zeitraum: Rollupzeitraum | null): Promise<Dashboar
   }
   const abfrage = parameter.toString();
   return hole<Dashboard>(`/dashboard${abfrage === "" ? "" : `?${abfrage}`}`);
+}
+
+// ─── Ihre Aufträge (Linie `assistent`, A4) ──────────────────────────────────
+
+/**
+ * Ein Eintrag eines Auftrags, wie `GET /api/tasks` ihn liefert
+ * (`docs/tasks.md` §6.5).
+ */
+export type Auftragseintrag = {
+  /** Feldname auf Wert, **nur Felder mit Wert**, in der Reihenfolge der Definition. */
+  werte: Readonly<Record<string, string>>;
+  /** Der Schlüssel als Text nach der Kopie; `null`, wenn der Typ keinen hat. */
+  schluessel: string | null;
+  /** Der Rohwert der Rückgabezeile mit demselben Index; `null`, wenn es sie nicht gibt. */
+  rueckgabe: string | null;
+  /** Wie die Zeile gegen die Kopie steht; `null` ohne Zeile. */
+  ergebnis: Zeilenergebnis | null;
+};
+
+/** Ein Feld der Kopie mit seinem `label` (seit A4, E‑1120). */
+export type Auftragsfeld = { name: string; label: string };
+
+/**
+ * Ein Auftrag des aktiven Mandanten (`docs/tasks.md` §6.5). **Die Einordnung
+ * kommt aus dem Backend** (`TaskStatusClassifier`); das Frontend leitet keinen
+ * Stand ab. Zeitpunkte in UTC, ISO 8601 mit `Z`.
+ */
+export type Auftrag = {
+  taskId: string;
+  typ: string;
+  /** Der Name des Typs aus der Kopie. */
+  name: string;
+  aktion: string;
+  /** Der gespeicherte Status, roh — gezeigt wird er nur bei `UNBEKANNT`. */
+  status: string;
+  einordnung: Auftragseinordnung;
+  eingestelltAm: string;
+  abgeholtAm: string | null;
+  ausgefuehrtAm: string | null;
+  fehlercode: string | null;
+  /** Klartext der Plattform für den Kunden — **reiner Text**, nie HTML (E‑1107). */
+  fehlertext: string | null;
+  eintraege: Auftragseintrag[];
+  felder: Auftragsfeld[];
+};
+
+/**
+ * Die Aufträge des aktiven Mandanten: die laufenden und die der letzten sieben
+ * Tage, neueste zuerst, höchstens 50 (`docs/tasks.md` §6.3). Kein Zeitfenster,
+ * kein Cursor (E‑1016). **Keine Mandanten-ID** (Regel M1).
+ */
+export function holeAuftraege(): Promise<Auftrag[]> {
+  return hole<Auftrag[]>("/tasks");
+}
+
+/**
+ * Löscht einen offenen Auftrag (`docs/tasks.md` §6.6): `204`; `404`, wenn es
+ * ihn hier nicht gibt; `409 auftrag-nicht-offen`, wenn die Plattform ihn schon
+ * abgeholt hat. Ob gelöscht wird, entscheidet allein das Backend.
+ */
+export function loescheAuftrag(taskId: string): Promise<void> {
+  return entferne<void>(`/tasks/${encodeURIComponent(taskId)}`);
 }

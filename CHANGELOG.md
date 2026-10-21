@@ -39,6 +39,20 @@ Tags und die Definition of Done für ein Release stehen in
 - `docs/README.md`: Eintrag für `docs/assistent-frontend.md` und Hinweis auf die Sichtprüfungen
   1018 bis 1022 im Register, weil jede neue Datei dort steht (Dokumentationspflicht in
   [`CLAUDE.md`](CLAUDE.md)).
+- „Ihre Aufträge“ in der Übersicht (A4): ein Block in der Reihe von „Zuletzt aufgefallen“, nur wenn
+  der Mandant Aufträge hat, mit dem Stand jedes Auftrags, dem Ergebnis je Eintrag und dem Löschen
+  offener Aufträge ([`docs/assistent-frontend.md`](docs/assistent-frontend.md) §12; E‑1098 bis
+  E‑1124).
+- `DELETE /api/tasks/{taskId}`: löscht einen Auftrag, solange die Plattform ihn nicht abgeholt hat,
+  mit einem Ereignis `AUFTRAG_GELOESCHT` im `audit_log`; `404` für fremde und unbekannte, `409` für
+  nicht mehr offene Aufträge ([`docs/tasks.md`](docs/tasks.md) §6.6; E‑1110, E‑1113 bis E‑1115).
+- Farbrolle `--teilweise` für „Teilweise erledigt“, mit den Werten von `--ueberfaellig`, weil jene
+  der Kategorie *Überfällig* vorbehalten bleibt ([`docs/visuelles-konzept.md`](docs/visuelles-konzept.md)
+  §3; F16).
+- `scripts/auftraege-simulation.sql`: bringt eigene Testaufträge auf der Testkopie mit den
+  Statements des Plattformvertrags in jeden Stand, für die Sichtprüfungen 1028 bis 1032.
+- Die Festlegungen der Chatbox als E‑1083 bis E‑1097, bestätigt am 19.10.2026
+  ([`docs/assistent-frontend.md`](docs/assistent-frontend.md) §2).
 
 ### Geändert
 
@@ -62,6 +76,21 @@ Tags und die Definition of Done für ein Release stehen in
   (`OVERLORD_ASSISTENT_AKTIV=true` im Backend-Fenster); ohne den Schalter setzt es ausdrücklich
   `false`. Es meldet beim Start den ausgecheckten Zweig und, ob der Schlüssel gesetzt ist
   ([`docs/START-LOKAL.md`](docs/START-LOKAL.md) §6).
+- Die Antwort von `GET /api/tasks`, `GET /api/tasks/{taskId}` und `POST /api/tasks` trägt `felder`
+  mit `name` und `label` aus der Kopie der Definition, weil die Übersicht die Werte mit ihrem
+  `label` zeigt (E‑1120, [`docs/tasks.md`](docs/tasks.md) §6.5). Abwärtsverträglich.
+- Plattformvertrag: neuer §3a — der Monitor löscht offene Aufträge auf Wunsch des Kunden, für die
+  Plattform ändert sich nichts; Abholtakt fünf Minuten als Auskunft (E‑1117, E‑1118,
+  [`docs/task-schnittstelle.md`](docs/task-schnittstelle.md)).
+- Doku: Abgeholt und ausgeführt wird von der Plattform, nicht von Lobster (E‑1119).
+- „Zuletzt aufgefallen“ bricht Prozessnamen um, statt sie abzuschneiden, weil die Spalte neben
+  „Ihre Aufträge“ schmaler ist ([`docs/dashboard-frontend.md`](docs/dashboard-frontend.md) §5.6).
+- Nach dem Anlegen in der Chatbox lädt die Liste der Aufträge neu (E‑1109).
+- `docs/README.md`: Einträge zu `assistent-frontend.md`, `tasks.md` und `task-schnittstelle.md`
+  nennen A4, und die Sichtprüfungen 1028 bis 1032 stehen beim Hinweis auf das Register — weil die
+  Dateien seit A4 mehr enthalten, als ihr Eintrag sagte.
+- `docs/PROJEKTBESCHREIBUNG.md` §5: `audit_log` nennt Anlegen und Löschen von Aufträgen, `task` das
+  Löschen offener Aufträge durch den Kunden — weil beides seit A1 bzw. A4 geschieht (E‑1114).
 
 ### Behoben
 

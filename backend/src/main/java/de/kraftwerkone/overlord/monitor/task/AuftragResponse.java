@@ -12,6 +12,9 @@ import java.util.Map;
  *
  * @param status der gespeicherte Status, roh
  * @param einordnung abgeleitet im {@link TaskStatusClassifier}
+ * @param felder je Feld der Kopie Name und {@code label}, in der Reihenfolge der Definition — seit
+ *     A4, damit die Uebersicht die Werte beschriften kann, ohne die aktuelle Typzeile zu lesen
+ *     (E‑1120)
  */
 public record AuftragResponse(
     String taskId,
@@ -25,7 +28,8 @@ public record AuftragResponse(
     Instant ausgefuehrtAm,
     String fehlercode,
     String fehlertext,
-    List<EintragResponse> eintraege) {
+    List<EintragResponse> eintraege,
+    List<FeldResponse> felder) {
 
   /**
    * @param werte Feldname auf Wert, nur Felder mit Wert, in der Reihenfolge der Definition
@@ -36,4 +40,7 @@ public record AuftragResponse(
    */
   public record EintragResponse(
       Map<String, String> werte, String schluessel, String rueckgabe, Zeilenergebnis ergebnis) {}
+
+  /** Ein Feld der Kopie, nur Name und {@code label} — Regeln und Muster gehen nicht hinaus. */
+  public record FeldResponse(String name, String label) {}
 }

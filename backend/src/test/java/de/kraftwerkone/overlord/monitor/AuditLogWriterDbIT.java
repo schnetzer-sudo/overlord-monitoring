@@ -2,6 +2,7 @@ package de.kraftwerkone.overlord.monitor;
 
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.AUDIT_LOG;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import de.kraftwerkone.overlord.monitor.audit.AuditEvent;
 import de.kraftwerkone.overlord.monitor.audit.AuditEventType;
@@ -15,12 +16,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Prueft, dass der {@link AuditLogWriter} in einer eigenen Transaktion schreibt: rollt die
  * umgebende Fachtransaktion zurueck, bleibt der Protokolleintrag bestehen ({@code REQUIRES_NEW}).
+ *
+ * <p>Seit A4 auch das Gegenstueck {@code schreibeInTransaktion} ({@code MANDATORY}, F26 in {@code
+ * docs/tasks.md} §2): Der Eintrag faellt mit der Fachtransaktion, und ohne Transaktion wird gar
+ * nicht geschrieben.
  */
 @SpringBootTest
 @ActiveProfiles("dev")
@@ -60,5 +66,55 @@ class AuditLogWriterDbIT {
     } finally {
       monitorDsl.deleteFrom(AUDIT_LOG).where(AUDIT_LOG.ACTOR_USERNAME.eq(markierung)).execute();
     }
+  }
+
+  @Test
+  @DisplayName("schreibeInTransaktion: der Eintrag faellt mit dem Rollback der Fachtransaktion")
+  void eintrag_in_transaktion_faellt_mit_rollback() {
+    String markierung = "IT-" + UUID.randomUUID();
+    try {
+      TransactionTemplate aeussere = new TransactionTemplate(transactionManager);
+      aeussere.executeWithoutResult(
+          status -> {
+            writer.schreibeInTransaktion(ereignis(markierung, "Integrationstest MANDATORY"));
+            // Innerhalb der Transaktion steht er schon da — sonst bewiese der Test nur, dass
+            // nichts geschrieben wurde.
+            assertThat(monitorDsl.fetchCount(AUDIT_LOG, AUDIT_LOG.ACTOR_USERNAME.eq(markierung)))
+                .isEqualTo(1);
+            status.setRollbackOnly();
+          });
+
+      assertThat(monitorDsl.fetchCount(AUDIT_LOG, AUDIT_LOG.ACTOR_USERNAME.eq(markierung)))
+          .isZero();
+    } finally {
+      monitorDsl.deleteFrom(AUDIT_LOG).where(AUDIT_LOG.ACTOR_USERNAME.eq(markierung)).execute();
+    }
+  }
+
+  @Test
+  @DisplayName("schreibeInTransaktion ohne laufende Transaktion: abgelehnt, nichts geschrieben")
+  void eintrag_in_transaktion_ohne_transaktion() {
+    String markierung = "IT-" + UUID.randomUUID();
+    try {
+      assertThatThrownBy(
+              () -> writer.schreibeInTransaktion(ereignis(markierung, "Integrationstest ohne")))
+          .isInstanceOf(IllegalTransactionStateException.class);
+      assertThat(monitorDsl.fetchCount(AUDIT_LOG, AUDIT_LOG.ACTOR_USERNAME.eq(markierung)))
+          .isZero();
+    } finally {
+      monitorDsl.deleteFrom(AUDIT_LOG).where(AUDIT_LOG.ACTOR_USERNAME.eq(markierung)).execute();
+    }
+  }
+
+  private static AuditEvent ereignis(String markierung, String detail) {
+    return new AuditEvent(
+        AuditEventType.AUFTRAG_GELOESCHT,
+        null,
+        markierung,
+        null,
+        "TEST",
+        null,
+        "127.0.0.1",
+        detail);
   }
 }

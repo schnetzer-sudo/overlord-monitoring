@@ -7,6 +7,9 @@
  * `ABLAGEN_ZUORDNUNG` (E‑128, Schritt 10d Teil B). Eine zweite Datei mit einer
  * Farbzuordnung weichte genau die Regel auf, um derentwillen es diese Datei
  * gibt — „Zuordnung an genau einer Stelle" (`docs/visuelles-konzept.md` §2).
+ * **Seit dem 19.10.2026 sechs** (Linie `assistent`, A4): `AUFTRAG_ZUORDNUNG`
+ * und `ERGEBNIS_ZUORDNUNG` für den Block „Ihre Aufträge“, und mit ihnen die
+ * sechste Rolle `teilweise` (F16, `docs/assistent-frontend.md` §12.3).
  *
  * **Vier Schlüsselmengen und weiterhin vier Rollen.** Keine der beiden neuen
  * Tabellen bringt eine Farbe mit; sie wenden die bestehenden ein zweites Mal an
@@ -156,6 +159,54 @@ export const ABLAGENZUSTAENDE: readonly Ablagenzustand[] = [
   "UNGEKLAERT",
 ];
 
+/**
+ * Wie ein **Auftrag** dasteht — die Einordnung aus `task/Einordnung` im
+ * Backend, gebildet allein vom `TaskStatusClassifier` (`docs/tasks.md` §5.5).
+ * Seit A4 (19.10.2026). Hier und nicht im Feature, aus demselben Grund wie
+ * {@link Dienstzustand}: Der Schlüssel einer Farbzuordnung wohnt bei ihr.
+ */
+export type Auftragseinordnung =
+  | "OFFEN"
+  | "IN_AUSFUEHRUNG"
+  | "ERLEDIGT"
+  | "TEILWEISE_ERLEDIGT"
+  | "UNSTIMMIG"
+  | "FEHLGESCHLAGEN"
+  | "UNBEKANNT";
+
+/** Dieselben sieben als Liste zur Laufzeit, in der Reihenfolge der Aufzählung im Backend. */
+export const AUFTRAGSEINORDNUNGEN: readonly Auftragseinordnung[] = [
+  "OFFEN",
+  "IN_AUSFUEHRUNG",
+  "ERLEDIGT",
+  "TEILWEISE_ERLEDIGT",
+  "UNSTIMMIG",
+  "FEHLGESCHLAGEN",
+  "UNBEKANNT",
+];
+
+/**
+ * Wie eine **Rückgabezeile** der Plattform gegen die Kopie der Definition steht
+ * — `task/Zeilenergebnis` im Backend (`docs/tasks.md` §5.4). `UNBEKANNT` heißt:
+ * ein Wert, den die Definition nicht kennt; er zählt als nicht Ok.
+ */
+export type Zeilenergebnis = "OK" | "NICHT_OK" | "UNBEKANNT";
+
+/** Dieselben drei als Liste zur Laufzeit. */
+export const ZEILENERGEBNISSE: readonly Zeilenergebnis[] = ["OK", "NICHT_OK", "UNBEKANNT"];
+
+/**
+ * Die **sechste** Rolle (A4, F16): „Teilweise erledigt“ — auffallen, ohne wie
+ * ein Fehler auszusehen.
+ *
+ * **Nicht `ueberfaellig`, obwohl die Werte gleich sind.** Jene Rolle bleibt
+ * der Kategorie *Überfällig* vorbehalten, auch ohne Verbraucher (E‑71, E‑77)
+ * — dieselbe Begründung, aus der der stille Prozess im Baum sie nicht
+ * bekommt. Und kein `status-`-Präfix: Der Stand eines Auftrags ist keine
+ * Statusart einer Nachricht.
+ */
+export type Auftragsrolle = "teilweise";
+
 const ZUORDNUNG: Record<Statusart, Statusrolle> = {
   // Rot — und nur hier.
   FEHLER: "fehler",
@@ -263,11 +314,46 @@ const ABLAGEN_ZUORDNUNG: Record<Ablagenzustand, Statusrolle> = {
 };
 
 /**
+ * Die **fünfte** Zuordnung: Stand eines Auftrags → Farbrolle (A4, F16 und F17
+ * in `docs/assistent-frontend.md` §12.3).
+ *
+ * **Vier Stände nehmen die bestehenden Rollen** — nach dem Muster von E‑121,
+ * und mit dem Wort aus ihrer eigenen Menge, nie dem der Rolle (E‑82, E‑129):
+ * Grün und Rot nur dort, wo sie dasselbe heißen wie überall.
+ */
+const AUFTRAG_ZUORDNUNG: Record<Auftragseinordnung, Statusrolle | Auftragsrolle> = {
+  // Kein Ergebnis, kein Problem: Die Plattform hat ihn noch nicht oder noch
+  // nicht fertig.
+  OFFEN: "offen",
+  IN_AUSFUEHRUNG: "offen",
+  ERLEDIGT: "abgeschlossen",
+  // Bernstein, die eigene Rolle (F16). Fällt auf und ist kein Fehler.
+  TEILWEISE_ERLEDIGT: "teilweise",
+  // Rot, und es ist dasselbe Rot: Der Auftrag als Ganzes war nicht ausführbar.
+  FEHLGESCHLAGEN: "fehler",
+  // Was die Plattform getan hat, ist unbekannt — weder Fehler noch teilweise
+  // ausgeführt. „Nicht zugeordnet heißt nicht zugeordnet" (Q4).
+  UNSTIMMIG: "ungeklaert",
+  UNBEKANNT: "ungeklaert",
+};
+
+/**
+ * Die **sechste** Zuordnung: Ergebnis einer Rückgabezeile → Farbrolle (A4,
+ * E‑1106). Ein unbekannter Rückgabewert zählt als nicht Ok und sieht deshalb
+ * aus wie einer — der Rohwert steht daneben.
+ */
+const ERGEBNIS_ZUORDNUNG: Record<Zeilenergebnis, Statusrolle | Auftragsrolle> = {
+  OK: "abgeschlossen",
+  NICHT_OK: "teilweise",
+  UNBEKANNT: "teilweise",
+};
+
+/**
  * Vordergrund und Fläche je Rolle. Vollständige Zeichenketten, weil Tailwind den
  * Quelltext nach Klassennamen durchsucht — ein zusammengesetzter Name entstünde
  * nie im erzeugten CSS.
  */
-const FLAECHE_UND_SCHRIFT: Record<Statusrolle | Problemrolle, string> = {
+const FLAECHE_UND_SCHRIFT: Record<Statusrolle | Problemrolle | Auftragsrolle, string> = {
   abgeschlossen: "text-status-abgeschlossen bg-status-abgeschlossen-flaeche",
   fehler: "text-status-fehler bg-status-fehler-flaeche",
   offen: "text-status-offen bg-status-offen-flaeche",
@@ -275,6 +361,8 @@ const FLAECHE_UND_SCHRIFT: Record<Statusrolle | Problemrolle, string> = {
   // Ohne `status-`-Präfix, weil es keine Statusart dahinter gibt — siehe
   // `Problemkategorie` oben und den Kommentar in `app/globals.css`.
   ueberfaellig: "text-ueberfaellig bg-ueberfaellig-flaeche",
+  // Ebenfalls ohne Präfix, siehe `Auftragsrolle`.
+  teilweise: "text-teilweise bg-teilweise-flaeche",
 };
 
 /**
@@ -291,16 +379,17 @@ const FLAECHE_UND_SCHRIFT: Record<Statusrolle | Problemrolle, string> = {
  * ebenfalls nicht: Ein `var(--status-${rolle})` stünde nirgends vollständig im
  * Quelltext und wäre bei einer Umbenennung nicht auffindbar.
  */
-const FUELLUNG: Record<Statusrolle | Problemrolle, string> = {
+const FUELLUNG: Record<Statusrolle | Problemrolle | Auftragsrolle, string> = {
   abgeschlossen: "var(--status-abgeschlossen)",
   fehler: "var(--status-fehler)",
   offen: "var(--status-offen)",
   ungeklaert: "var(--status-ungeklaert)",
   ueberfaellig: "var(--ueberfaellig)",
+  teilweise: "var(--teilweise)",
 };
 
 /** Die Füllfarbe einer Rolle für ein Diagramm-Prop. Siehe {@link FUELLUNG}. */
-export function rollenfuellung(rolle: Statusrolle | Problemrolle): string {
+export function rollenfuellung(rolle: Statusrolle | Problemrolle | Auftragsrolle): string {
   return FUELLUNG[rolle];
 }
 
@@ -330,19 +419,20 @@ export function rollenfuellung(rolle: Statusrolle | Problemrolle): string {
  * sondern seine **Verwendung**: Eine Ansicht, in der die Kategorien
  * nebeneinander stehen, nimmt zwei der drei Werte.
  */
-const KONTUR: Record<Statusrolle | Problemrolle, string> = {
+const KONTUR: Record<Statusrolle | Problemrolle | Auftragsrolle, string> = {
   abgeschlossen: "border-status-abgeschlossen-kontur",
   fehler: "border-status-fehler-kontur",
   offen: "border-status-offen-kontur",
   ungeklaert: "border-status-ungeklaert-kontur",
   ueberfaellig: "border-ueberfaellig-kontur",
+  teilweise: "border-teilweise-kontur",
 };
 
 /**
  * Alle drei Werte — die Fassung für eine Ansicht, in der eine Rolle **allein**
  * auftritt. So steht sie in der Nachrichtenliste, im Detail und im Kettenblock.
  */
-function alleDrei(rolle: Statusrolle | Problemrolle): string {
+function alleDrei(rolle: Statusrolle | Problemrolle | Auftragsrolle): string {
   return `${FLAECHE_UND_SCHRIFT[rolle]} ${KONTUR[rolle]}`;
 }
 
@@ -354,9 +444,24 @@ function alleDrei(rolle: Statusrolle | Problemrolle): string {
  * `variant="outline"` setzt sonst `border-border` und zöge einen grauen Ring an
  * genau die Stelle, die hier leer bleiben soll.
  */
-function ohneKontur(rolle: Statusrolle | Problemrolle): string {
+function ohneKontur(rolle: Statusrolle | Problemrolle | Auftragsrolle): string {
   return `${FLAECHE_UND_SCHRIFT[rolle]} border-transparent`;
 }
+
+/**
+ * Nur die **Fläche** — für einen getönten Grund ohne eigene Schrift (seit A4:
+ * ein nicht erfolgreicher Eintrag eines Auftrags). Die Schrift darauf bleibt
+ * die der Umgebung; Kontraste auf der eigenen Fläche hält
+ * `tests/farbkontrast.test.ts`.
+ */
+const FLAECHE: Record<Statusrolle | Problemrolle | Auftragsrolle, string> = {
+  abgeschlossen: "bg-status-abgeschlossen-flaeche",
+  fehler: "bg-status-fehler-flaeche",
+  offen: "bg-status-offen-flaeche",
+  ungeklaert: "bg-status-ungeklaert-flaeche",
+  ueberfaellig: "bg-ueberfaellig-flaeche",
+  teilweise: "bg-teilweise-flaeche",
+};
 
 /**
  * Nur der **Vordergrund** — die Fassung für eine Zahl, die in einer Zeile
@@ -371,12 +476,13 @@ function ohneKontur(rolle: Statusrolle | Problemrolle): string {
  * Klassen nimmt, stellt ein Zeichen oder eine Beschriftung daneben
  * (`docs/visuelles-konzept.md` §3).
  */
-const VORDERGRUND: Record<Statusrolle | Problemrolle, string> = {
+const VORDERGRUND: Record<Statusrolle | Problemrolle | Auftragsrolle, string> = {
   abgeschlossen: "text-status-abgeschlossen",
   fehler: "text-status-fehler",
   offen: "text-status-offen",
   ungeklaert: "text-status-ungeklaert",
   ueberfaellig: "text-ueberfaellig",
+  teilweise: "text-teilweise",
 };
 
 export function statusrolle(art: Statusart): Statusrolle {
@@ -443,4 +549,34 @@ export function ablagenrolle(zustand: Ablagenzustand): Statusrolle {
 /** Siehe {@link dienstVordergrund} — dieselbe Lage, andere Aufzählung. */
 export function ablagenVordergrund(zustand: Ablagenzustand): string {
   return VORDERGRUND[ablagenrolle(zustand)];
+}
+
+export function auftragsrolle(einordnung: Auftragseinordnung): Statusrolle | Auftragsrolle {
+  return AUFTRAG_ZUORDNUNG[einordnung];
+}
+
+/**
+ * Nur der **Vordergrund** eines Auftragsstands — für Zeichen und Wort in der
+ * Zeile, in der Bauform von E‑91. Das Wort steht dort sichtbar daneben.
+ */
+export function auftragVordergrund(einordnung: Auftragseinordnung): string {
+  return VORDERGRUND[auftragsrolle(einordnung)];
+}
+
+export function ergebnisrolle(ergebnis: Zeilenergebnis): Statusrolle | Auftragsrolle {
+  return ERGEBNIS_ZUORDNUNG[ergebnis];
+}
+
+/** Nur der **Vordergrund** eines Ergebnisses — Zeichen und Rohwert eines Eintrags. */
+export function ergebnisVordergrund(ergebnis: Zeilenergebnis): string {
+  return VORDERGRUND[ergebnisrolle(ergebnis)];
+}
+
+/**
+ * Nur die **Fläche** eines Ergebnisses — der „leicht getönte Grund“ eines nicht
+ * erfolgreichen Eintrags (E‑1106). Bei `OK` keine: Getönt ist, was auffallen
+ * soll, und ein erfolgreicher Eintrag soll es nicht.
+ */
+export function ergebnisFlaeche(ergebnis: Zeilenergebnis): string {
+  return ergebnis === "OK" ? "" : FLAECHE[ergebnisrolle(ergebnis)];
 }

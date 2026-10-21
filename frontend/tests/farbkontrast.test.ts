@@ -90,13 +90,19 @@ const SCHWELLE_TEXT = 4.5;
 /** Der Umriss-Kontrast aus WCAG 1.4.11 — **berichtet, nicht zugesichert**. */
 const SCHWELLE_UMRISS = 3;
 
-/** Die fünf Farbrollen: vier Statusrollen und die Problemkategorie. */
+/**
+ * Die sechs Farbrollen: vier Statusrollen, die Problemkategorie und seit dem
+ * 19.10.2026 der Stand „Teilweise erledigt“ eines Auftrags (A4, F16 in
+ * `docs/assistent-frontend.md` §12.3) — mit den Werten von `--ueberfaellig`,
+ * aber als eigene Rolle und deshalb hier eigens geprüft.
+ */
 const ROLLEN = [
   "status-abgeschlossen",
   "status-fehler",
   "status-offen",
   "status-ungeklaert",
   "ueberfaellig",
+  "teilweise",
 ] as const;
 
 /** Die drei Werte, die jede Rolle hat. Ein vierter wird nirgends erfunden (§3). */

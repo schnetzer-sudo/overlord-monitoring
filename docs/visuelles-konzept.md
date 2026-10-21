@@ -122,6 +122,31 @@ Jede Rolle hat drei Werte: Vordergrund, `-flaeche` und `-kontur`. Damit lässt s
 Text, als Plakette oder als Zeilenmarkierung zeigen, ohne dass irgendwo ein vierter Wert erfunden
 wird.
 
+> ### Eine sechste Rolle: `--teilweise` *(19.10.2026, Linie `assistent`, A4, F16)*
+>
+> **Der Block „Ihre Aufträge“ in der Übersicht ordnet die Stände eines Auftrags den Rollen zu**
+> ([`assistent-frontend.md`](assistent-frontend.md) §12.4) — eine fünfte Tabelle in
+> `lib/status-farbe.ts`, `AUFTRAG_ZUORDNUNG`, nach dem Muster von E‑121. Vier Stände nehmen die
+> vorhandenen Rollen: Offen und In Ausführung `--status-offen`, Erledigt `--status-abgeschlossen`,
+> Fehlgeschlagen `--status-fehler`, Rückmeldung unvollständig und unbekannte Stände
+> `--status-ungeklaert`.
+>
+> **„Teilweise erledigt“ muss auffallen, ohne wie ein Fehler auszusehen** (E‑1105), und keine der
+> vier Statusrollen kann das. **`--ueberfaellig` kann es, ist aber vergeben:** Sie bleibt der
+> Kategorie *Überfällig* vorbehalten, auch ohne Verbraucher (E‑71, E‑77) — `prozess-baum.tsx`
+> begründet so, warum der stille Prozess sie nicht bekommt. Deshalb eine **eigene Rolle mit einem
+> Namen aus der Fachlichkeit**, `--teilweise` samt `-flaeche` und `-kontur` in beiden Blöcken, und
+> keine allgemeine „Achtung“-Farbe, die die nächste zweite Bedeutung einlädt.
+>
+> **Die Werte sind die von `--ueberfaellig`** (Ton 80): Sie leisten genau das Verlangte — OKLab-Abstand
+> zu Rot 0,152, Kontrast 5,59 : 1 hell und 6,53 : 1 dunkel auf `--card`, Kontur 3,29 : 1 (§7a). Zwei
+> Rollen mit gleichen Werten sind Absicht und kein Versehen: Getrennt lässt sich jede für sich ändern,
+> und beide stehen nie in derselben Ansicht. `scripts/farbwerte/rechne.mjs` und
+> `tests/farbkontrast.test.ts` führen sie wie die übrigen fünf. **Was beim Zurückholen von
+> `--ueberfaellig` zu rechnen wäre** (§7a, das Flächenpaar zu Rot unter 0,025 im hellen Block), gilt
+> für `--teilweise` ebenso; im Block „Ihre Aufträge“ steht deshalb **keine rote Fläche** — „Fehlgeschlagen“
+> trägt Rot nur im Vordergrund, die getönte Fläche gehört allein den nicht erfolgreichen Einträgen.
+
 **Es gibt keine zweite Bedeutung von Grün oder Rot.** Insbesondere keine grüne Hauptschaltfläche —
 sie hieße „abgeschlossen" an einer Stelle, an der noch nichts abgeschlossen ist. `--destructive`
 aus shadcn/ui zeigt bewusst auf denselben Wert wie `--status-fehler`: ein zweites Rot wäre ein
@@ -1125,6 +1150,8 @@ nichts.
 | Eine Problemkategorie bekommt eine andere Rolle | `src/lib/status-farbe.ts`, Tabelle `PROBLEM_ZUORDNUNG` | eine Zeile |
 | Ein **Dienstzustand** bekommt eine andere Rolle *(seit 10.09.2026, E‑128)* | `src/lib/status-farbe.ts`, Tabelle `DIENST_ZUORDNUNG` | eine Zeile |
 | Ein **Ablagenzustand** bekommt eine andere Rolle *(seit 10.09.2026, E‑128)* | `src/lib/status-farbe.ts`, Tabelle `ABLAGEN_ZUORDNUNG` | eine Zeile |
+| Ein **Stand eines Auftrags** bekommt eine andere Rolle *(seit 19.10.2026, A4)* | `src/lib/status-farbe.ts`, Tabelle `AUFTRAG_ZUORDNUNG` | eine Zeile |
+| Anderes Bernstein für „Teilweise erledigt" *(seit 19.10.2026, A4, F16)* | `globals.css`, drei Werte `--teilweise*` je Block | sechs Zeilen, **nachrechnen** wie bei `--ueberfaellig` — `scripts/farbwerte/rechne.mjs` und `tests/farbkontrast.test.ts` |
 | Andere Stufenwerte des Dichteumschalters | `globals.css`, die vier `html[data-dichte="…"]` | vier Zeilen, **nachmessen** — `tests/dichte.test.ts` rechnet die Mindestfläche nach, aber ob die Nachrichtenliste, der Belegdaten-Block und der Recharts-Baum die neue Stufe tragen, sagt kein Test ([`dichte-umschalter.md`](dichte-umschalter.md) §5) |
 | Dichtere oder luftigere Navigation | `globals.css`, `--dichte-navzeile` | eine Zeile |
 | Dichtere oder luftigere Listen | `globals.css`, `--dichte-zeile` | eine Zeile |

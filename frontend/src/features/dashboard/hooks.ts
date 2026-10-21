@@ -1,12 +1,29 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useQueryStates } from "nuqs";
-import { useCallback } from "react";
+import { useCallback, useReducer } from "react";
 
+import { AUFTRAEGE_SCHLUESSEL } from "@/lib/auftraege";
 import type { Rollupzeitraum } from "@/lib/rollupzeitraum";
 
-import { DASHBOARD_SCHLUESSEL, holeDashboard, type Dashboard, type Verteilungssicht } from "./api";
+import {
+  DASHBOARD_SCHLUESSEL,
+  holeAuftraege,
+  holeDashboard,
+  loescheAuftrag,
+  type Auftrag,
+  type Dashboard,
+  type Verteilungssicht,
+} from "./api";
+import {
+  BLOCK_ANFANG,
+  blockschritt,
+  blockSichtbar,
+  laedtNeuNach,
+  loeschergebnis,
+  type Loeschergebnis,
+} from "./auftraege";
 import { DASHBOARD_PARAMETER, mitSicht, type Dashboardzustand } from "./filter";
 
 /**
@@ -84,3 +101,69 @@ export function useDashboard(zustand: Dashboardzustand) {
     queryFn: () => holeDashboard(zustand.zeitraum),
   });
 }
+
+/**
+ * Die Aufträge des aktiven Mandanten für den Block „Ihre Aufträge“ (A4).
+ *
+ * **Kein Takt** (E‑164). Neu geladen wird über „Neu laden“, nach dem Anlegen
+ * im Assistenten und nach dem Löschen (E‑1109) — alle drei über denselben
+ * Schlüssel aus `lib/auftraege.ts`. Der Schlüssel trägt keinen Mandanten
+ * (E‑1123): Beim Wechsel wird der ganze Zwischenspeicher geleert.
+ */
+export function useAuftraege() {
+  return useQuery<Auftrag[]>({ queryKey: AUFTRAEGE_SCHLUESSEL.liste, queryFn: holeAuftraege });
+}
+
+/**
+ * Der Block „Ihre Aufträge“ mit allem, was er sich merkt — **gehalten von der
+ * Übersicht**, die immer eingehängt ist, und nicht vom Block selbst.
+ *
+ * Der Block hängt aus, sobald die Übersicht lädt (etwa beim Zeitraumwechsel);
+ * Aufgeklapptes und ein Satz nach dem Löschen überstehen das hier (F20, F22).
+ * Und ob der Block überhaupt steht, braucht die Übersicht, um die Reihe zu
+ * schneiden (E‑1099) — dieselbe Regel, an einer Stelle (`blockSichtbar`).
+ *
+ * **Eine Mutation für alle Zeilen**: Es wird immer nur ein Auftrag zugleich
+ * gelöscht, und solange das läuft, sind alle Knöpfe dafür gesperrt.
+ */
+export function useAuftraegeBlock() {
+  const abfrage = useAuftraege();
+  const speicher = useQueryClient();
+  const [zustand, schritt] = useReducer(blockschritt, BLOCK_ANFANG);
+  const loeschen = useMutation({ mutationFn: loescheAuftrag });
+
+  const loesche = useCallback(
+    (taskId: string) => {
+      if (loeschen.isPending) {
+        return;
+      }
+      schritt({ art: "loeschenBegonnen", taskId });
+      loeschen.mutate(taskId, {
+        onSettled: (_antwort, fehler) => {
+          const ergebnis: Loeschergebnis = fehler ? loeschergebnis(fehler) : "geloescht";
+          schritt({ art: "loeschenBeendet", taskId, ergebnis });
+          if (laedtNeuNach(ergebnis)) {
+            void speicher.invalidateQueries({ queryKey: AUFTRAEGE_SCHLUESSEL.liste });
+          }
+        },
+      });
+    },
+    [loeschen, speicher],
+  );
+
+  return {
+    abfrage,
+    zustand,
+    schritt,
+    loesche,
+    loeschtGerade: loeschen.isPending ? (loeschen.variables ?? null) : null,
+    sichtbar: blockSichtbar(abfrage.status, abfrage.data?.length ?? 0, zustand.oben),
+    /** „Neu laden“ (F24): nimmt die Sätze weg und holt die Liste, ohne Ladezustand. */
+    neuLaden: () => {
+      schritt({ art: "neuLaden" });
+      return abfrage.refetch({ cancelRefetch: false });
+    },
+  };
+}
+
+export type AuftraegeBlockZustand = ReturnType<typeof useAuftraegeBlock>;

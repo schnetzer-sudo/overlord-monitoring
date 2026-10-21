@@ -36,6 +36,25 @@ public class AuditLogWriter {
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void schreibe(AuditEvent ereignis) {
+    fuegeEin(ereignis);
+  }
+
+  /**
+   * Schreibt den Eintrag in die <b>laufende</b> Transaktion des Aufrufers ({@link
+   * Propagation#MANDATORY}) — das Gegenstueck zu {@link #schreibe}, fuer den einen Fall, in dem der
+   * Eintrag mit der Fachaenderung stehen oder fallen muss.
+   *
+   * <p>Gebraucht seit A4 beim Loeschen eines Auftrags ({@code docs/tasks.md} §6.6, F26): Rollt das
+   * Loeschen zurueck, darf kein Eintrag „geloescht“ bleiben, und scheitert der Eintrag, darf die
+   * Zeile nicht verschwunden sein. {@code MANDATORY} wirft, wenn keine Transaktion laeuft, statt
+   * still eine eigene zu oeffnen.
+   */
+  @Transactional(propagation = Propagation.MANDATORY)
+  public void schreibeInTransaktion(AuditEvent ereignis) {
+    fuegeEin(ereignis);
+  }
+
+  private void fuegeEin(AuditEvent ereignis) {
     LocalDateTime jetztUtc = LocalDateTime.ofInstant(systemClock.instant(), ZoneOffset.UTC);
     monitorDsl
         .insertInto(AUDIT_LOG)

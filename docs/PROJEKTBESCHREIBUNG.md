@@ -366,7 +366,7 @@ Auf derselben Instanz, verwaltet von Flyway (`backend/src/main/resources/db/migr
 
 | Tabelle | Migration | Schlüssel | Zweck |
 |---|---|---|---|
-| `audit_log` | V1 | `id` | Anmeldungen, Fehlversuche, Passwort-, Konto- und Katalogänderungen, Rohdatenabrufe |
+| `audit_log` | V1 | `id` | Anmeldungen, Fehlversuche, Passwort-, Konto- und Katalogänderungen, Rohdatenabrufe, Anlegen und Löschen von Aufträgen |
 | `app_user` | V2, V7, V13 | `id`, eindeutig `username` | Konto, Passwort-Hash, Rolle, Sperrzustand, Änderungszwang, Baumgliederung (`tree_layout`) |
 | `app_user_mandant` | V2 | `(user_id, mandant_id)` | Mandantenmenge je Konto (n:m) |
 | `SPRING_SESSION`, `SPRING_SESSION_ATTRIBUTES` | V3 | `PRIMARY_ID` bzw. `(SESSION_PRIMARY_ID, ATTRIBUTE_NAME)` | serverseitige Sitzung (Spring Session JDBC) |
@@ -379,7 +379,7 @@ Auf derselben Instanz, verwaltet von Flyway (`backend/src/main/resources/db/migr
 | `message_rollup_monat` | V12 | `(monat, process_id, message_status)` | dasselbe je Kalendermonat |
 | `task_type` | V100 | `task_typ` | Auftragstypen als Daten: Name, Beschreibung für den Assistenten, Struktur (JSON), aktiv ([`tasks.md`](tasks.md) §3) |
 | `task_type_mandant` | V100 | `(task_typ, mandant_id)` | Freischaltung eines Auftragstyps je Mandant, Fremdschlüssel auf `task_type` mit `ON DELETE CASCADE` |
-| `task` | V100 | `task_id`, eindeutig `(mandant_id, anfrage_id)` | Aufträge der Kunden mit Kopie der Definition, Einträgen und Parametertext; die EDI-Plattform holt sie ab und meldet zurück ([`tasks.md`](tasks.md) §5, [`task-schnittstelle.md`](task-schnittstelle.md)) |
+| `task` | V100 | `task_id`, eindeutig `(mandant_id, anfrage_id)` | Aufträge der Kunden mit Kopie der Definition, Einträgen und Parametertext; die EDI-Plattform holt sie ab und meldet zurück, einen offenen kann der Kunde löschen ([`tasks.md`](tasks.md) §5, §6.6, [`task-schnittstelle.md`](task-schnittstelle.md)) |
 
 **Der Rollup-Schlüssel trägt weder Mandant noch Partner noch Richtung** (E‑a, 24.08.2026). Sie kommen
 zur Lesezeit dazu — der Mandant über `Process → ProjectMandant`, Partner und Richtung über

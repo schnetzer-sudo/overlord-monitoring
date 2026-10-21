@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useReducer, useRef } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { AUFTRAEGE_SCHLUESSEL } from "@/lib/auftraege";
 import { ProblemFehler } from "@/lib/http";
 
 import {
@@ -82,7 +83,15 @@ export function useGespraech(): Gespraechssteuerung {
   });
   const beenden = useMutation({ mutationFn: beendeGespraech });
   const pruefung = useMutation({ mutationFn: pruefeAuftrag });
-  const anlage = useMutation({ mutationFn: legeAuftragAn });
+  // Nach dem Anlegen lädt die Liste der Aufträge sofort neu (A4, E‑1109): Der
+  // Block „Ihre Aufträge“ in der Übersicht erscheint, ohne die Seite neu zu
+  // laden. Der Schlüssel liegt in `lib/auftraege.ts` — die Liste selbst gehört
+  // der Übersicht, und ein Feature importiert nicht aus dem Nachbarfeature.
+  const speicher = useQueryClient();
+  const anlage = useMutation({
+    mutationFn: legeAuftragAn,
+    onSuccess: () => void speicher.invalidateQueries({ queryKey: AUFTRAEGE_SCHLUESSEL.liste }),
+  });
 
   const generation = useRef(0);
   const zeitgeber = useRef(new Map<string, ReturnType<typeof setTimeout>>());

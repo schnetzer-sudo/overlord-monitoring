@@ -117,5 +117,16 @@ public enum AuditEventType {
    * Kunden ein zweites Mal halten. Eine Wiederholung mit derselben {@code anfrageId} schreibt kein
    * zweites Ereignis.
    */
-  AUFTRAG_ANGELEGT
+  AUFTRAG_ANGELEGT,
+
+  /**
+   * TASK_DELETED — ein Kunde hat einen offenen Auftrag geloescht, bevor die Plattform ihn abgeholt
+   * hat (Linie {@code assistent}, A4, {@code docs/tasks.md} §6.6, E‑1114). Im Detail Typ, Aktion,
+   * Zahl der Eintraege und Zeitpunkt des Einstellens, {@code target_id} ist die Task-ID.
+   *
+   * <p><b>Geschrieben in derselben Transaktion wie das Loeschen</b> (F26): Die Zeile in {@code
+   * task} ist danach weg, und dieses Ereignis ist das Einzige, was von dem Auftrag bleibt. Nie mit
+   * dem Parametertext, aus demselben Grund wie beim Anlegen.
+   */
+  AUFTRAG_GELOESCHT
 }
