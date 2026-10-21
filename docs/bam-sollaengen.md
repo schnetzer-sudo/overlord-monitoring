@@ -280,6 +280,18 @@ Es gibt genau **eine** Liste, und sie steht hier:
 |---|---|---|---|
 | `bam_sollaenge` | Schritt 7 (V5) | Sollänge und Leerzeichen-Kennzeichen je (Mandant, Typ) | einer Neumessung nach M46 — **nur bei unverändertem Bestand** |
 | `process_catalog` | Schritt 9b (V6) | Partner, Richtung je `ProcessID` | **gar nicht** — Heuristik befüllt vor, die Wahrheit ist gepflegt |
+| `app_user` | Schritt 3 (V2) | Konten, Passwort-Hashes, Rolle, Sperrzustand, Baumgliederung | **gar nicht** — gepflegt (21.10.2026, Auskunft von Lukas) |
+| `app_user_mandant` | Schritt 3 (V2) | Mandantenmenge je Konto | **gar nicht** — gepflegt (21.10.2026, Auskunft von Lukas) |
+| `bam_spalte` | Schritt 4 (V4) | kuratierte BAM-Spalten der Nachrichtenliste je Mandant | **gar nicht** — gepflegt (21.10.2026, Auskunft von Lukas) |
+| `task_type` | 1.1.0 (V100) | Definitionen der Auftragstypen | **nur zum Teil** — `WERK_ABLADESTELLE` aus `V100` bis `V102`; neue und geänderte Definitionen kommen per SQL in die Produktion (E‑1019) |
+| `task_type_mandant` | 1.1.0 (V100) | Freischaltung der Auftragstypen je Mandant | **gar nicht** — ein `INSERT` je Mandant in der Produktion (E‑1126); `V100` bis `V103` hinterlassen keine Zeile |
+
+*Ergänzt am 21.10.2026 (E‑1135):* Die fünf unteren Zeilen fehlten. Seitdem wird vor jedem
+Schemaeingriff **das ganze Schema `overlord_monitor`** gesichert, nicht eine Auswahl
+([`betrieb.md`](betrieb.md) §8, §7a B): Die Liste führte zwei Tabellen, gepflegt werden sieben. Sie
+bleibt die eine Stelle, die sagt, **was eine Sicherung unersetzlich macht**. Nicht gepflegt, aber
+auch nicht wiederherstellbar sind `task` (Aufträge) und `audit_log`; die Sicherung des ganzen
+Schemas trägt sie mit.
 
 *Korrigiert 20.08.2026:* Die Zeile trug den Vermerk „*(noch nicht angelegt)*". Die Tabelle ist an
 diesem Tag mit `V6__process_catalog.sql` entstanden; die Sicherungspflicht gilt ab jetzt nicht mehr
