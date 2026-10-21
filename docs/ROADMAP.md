@@ -43,7 +43,8 @@ Mandanten, zunächst nur `SYSTEM`** (E‑1125). Die Prüfung durch den Datenschu
 erledigt (Punkt 1009, E‑1131). Was nicht im Code liegt:
 
 1. **Der Test gegen die Produktion mit `SYSTEM`:** Schalter und Schlüssel setzen, das Skript für
-   `SYSTEM` ausführen ([`tasks.md`](tasks.md) §3.9), die ausgehende Verbindung (Punkt 1010) und die
+   `SYSTEM` ausführen ([`tasks.md`](tasks.md) §3.9), beides nach der Deployment-Routine
+   ([`betrieb.md`](betrieb.md) §7a, Schritte A bis C), die ausgehende Verbindung (Punkt 1010) und die
    Zeitgrenze des Reverse Proxy (Punkt 1033) prüfen, die Sichtprüfungen 1018 bis 1022 und 1028 bis
    1032 dort nachholen.
 2. **Der Ablauf in der Plattform** für `WERK_ABLADESTELLE`, gebaut nach

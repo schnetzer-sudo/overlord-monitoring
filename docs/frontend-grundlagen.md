@@ -35,7 +35,10 @@ etwas verloren geht. Beim Rohdaten-Download in Schritt 8 wäre das ein echtes Pr
 
 Die Backend-Adresse kommt aus `OVERLORD_BACKEND_URL`, Vorlage in `frontend/.env.example`. Der
 Standard `http://localhost:8080` gilt ausschließlich lokal. **Die Variable trägt bewusst kein
-`NEXT_PUBLIC_`**: Der Browser sieht diese Adresse nie.
+`NEXT_PUBLIC_`**: Der Browser sieht diese Adresse nie. **Sie wirkt beim Bau, nicht beim Start**
+*(ergänzt am 21.10.2026)*: `pnpm build` schreibt die Weiterleitung in `.next/routes-manifest.json`,
+und `next start` liest sie nur von dort; neu ausgewertet wird `next.config.ts` allein unter
+`next dev` ([`betrieb.md`](betrieb.md) §3, Punkt 1041).
 
 ### CSRF
 

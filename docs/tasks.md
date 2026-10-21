@@ -148,7 +148,8 @@ A2 und A3; die F-Nummern setzen die der Oberfläche fort ([`assistent-frontend.m
 
 Aus dem Auftrag, die Linie `assistent` nach `main` zusammenzuführen. Die E‑Nummer ist `E‑1124` plus
 die Nummer der Entscheidung dort (E‑1125 bis E‑1128); die drei Rückfragen vom selben Tag folgen als
-E‑1129 bis E‑1131. Die nächste freie Nummer nach A4 war E‑1125, per `grep` über alle Zweige geprüft.
+E‑1129 bis E‑1131, der Nachtrag zum Auftrag vom selben Tag als E‑1132 bis E‑1135. Die nächste freie
+Nummer nach A4 war E‑1125, per `grep` über alle Zweige geprüft.
 Herkunft: **A** = vom Auftraggeber am 21.10.2026 entschieden.
 
 | E | Entscheidung | Herkunft |
@@ -160,6 +161,10 @@ Herkunft: **A** = vom Auftraggeber am 21.10.2026 entschieden.
 | **E‑1129** | **A4 vor dem Zusammenführen nach `assistent`:** `assistent-a4-ihre-auftraege` per `--no-ff` nach `assistent` (`18f0f41`), dann `assistent-merge` von dort. Die Festlegungen F16 bis F29 bleiben Vorschläge. | A (Rückfrage: A4 lag nicht auf `assistent`) |
 | **E‑1130** | **Der Schalter bleibt.** Verfügbar heißt: Schalter `OVERLORD_ASSISTENT_AKTIV` an, Schlüssel gesetzt (E‑1030, E‑1056) **und** mindestens ein freigeschalteter Typ. Fehlt Schalter oder Schlüssel, ist der Assistent für alle Mandanten aus. | A (Rückfrage: Der Auftrag nannte nur Schlüssel und Typ) |
 | **E‑1131** | **Punkt 1009 ist erledigt:** Die Prüfung der Auftragsverarbeitung mit Anthropic durch den Datenschutzbeauftragten ist abgeschlossen. Auskunft des Auftraggebers vom 21.10.2026; Datum und Ergebnis der Prüfung selbst stehen nicht im Repository. | A (Rückfrage) |
+| **E‑1132** | **Der Bau des Servers gehört zur Abnahme:** `./mvnw -B clean package -Djooq.codegen.skip=true -DexcludedGroups=db` ist auf dem gemergten Stand grün. Nach dem Merge läuft `pnpm install`, und `pnpm-lock.yaml` wird mitcommittet, weil der Server mit `pnpm install --frozen-lockfile` baut. Erfüllt am 21.10.2026 auf `865537e`: Das Lockfile bleibt unverändert, beide Bauten sind grün ([`betrieb.md`](betrieb.md) §7a). | A (Nachtrag) |
+| **E‑1133** | **Die Deployment-Routine der Produktion ist die mitgeteilte** (`deploy-routine.txt`), festgehalten in [`betrieb.md`](betrieb.md) §7a: systemd mit drei Units, Bau auf dem Server, Sicherung vor dem Start, Rollback über das vorige JAR. Damit sind die Punkte 255, 260 und 261 erledigt. | A (Nachtrag) |
+| **E‑1134** | **Der Schlüssel des Assistenten liegt in einer eigenen `EnvironmentFile`** (`/etc/overlord-monitor/assistent.env`) nur für die Unit `overlord-monitor`, nicht für `overlord-monitor-rollup`. Der Schalter `OVERLORD_ASSISTENT_AKTIV` steht in derselben Datei. | A (Nachtrag); der Schalter ergänzt, weil der Schlüssel allein den Assistenten nicht einschaltet (E‑1130) |
+| **E‑1135** | **Vor jedem Schemaeingriff wird das ganze Schema `overlord_monitor` gesichert**, nicht eine Auswahl, weil auch `app_user`, `app_user_mandant` und `bam_spalte` von Hand gepflegt sind ([`betrieb.md`](betrieb.md) §8, [`bam-sollaengen.md`](bam-sollaengen.md) §7.2). | A (Nachtrag) |
 
 **Festlegungen der Umsetzung (1.1.0), zur Bestätigung.** Eine E‑Nummer bekommen sie erst damit, wie
 in A2 bis A4; die F-Nummern setzen F29 fort.
@@ -401,9 +406,11 @@ frei (F34):
 
 Beide laufen in MySQL Workbench mit dem Schreibbenutzer, Vorgabeschema das eigene Schema, über
 „Execute (All or Selection) to Text“; die Einzelheiten stehen im Kopf der Skripte. Lukas führt sie in
-der Produktion aus, **nach dem ersten Start von 1.1.0**. Auf der Testkopie sind beide am 21.10.2026
-gelaufen (§9.6). Ein Auftrag unter `SYSTEM` ist ein Auftrag wie jeder andere: Die Plattform holt ihn
-nach [`task-schnittstelle.md`](task-schnittstelle.md) ab.
+der Produktion aus, **nach dem ersten Start von 1.1.0**, nach der Deployment-Routine über die
+Kommandozeile (`mysql … overlord_monitor < scripts/…`, [`betrieb.md`](betrieb.md) §7a C). Der Client
+bricht dort wie die Workbench beim ersten Fehler ab (geprüft am 21.10.2026). Auf der Testkopie sind
+beide am 21.10.2026 gelaufen (§9.6). Ein Auftrag unter `SYSTEM` ist ein Auftrag wie jeder andere:
+Die Plattform holt ihn nach [`task-schnittstelle.md`](task-schnittstelle.md) ab.
 
 **Ausrollen auf einen weiteren Mandanten** ist ein `INSERT`, kein Deployment (E‑1126). Die
 Reihenfolge aus §3.7 gilt auch hier: Der Typ ist aktiv, weil sein Ablauf auf der Plattform steht.

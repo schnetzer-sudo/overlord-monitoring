@@ -1263,7 +1263,10 @@ unterhalb weiterzählte (Entscheidung 7, V), damit nach dem Zusammenführen kein
 
 Ein Release ist fertig, wenn **alle** Punkte zutreffen:
 
-- [ ] Die CI ist auf dem Release-Stand grün
+- [ ] Die CI ist auf dem Release-Stand grün. Sie baut, was der Server baut
+      ([`docs/betrieb.md`](docs/betrieb.md) §7 und §7a B: `-Djooq.codegen.skip=true
+      -DexcludedGroups=db`, `pnpm install --frozen-lockfile`, `pnpm build`); ein falsch
+      aufgelöstes `pnpm-lock.yaml` fällt also schon dort auf (E‑1132)
 - [ ] `CHANGELOG.md` hat den Eintrag mit Version und Datum, „Unveröffentlicht“ ist
       wieder leer
 - [ ] Das Register [`docs/offene-punkte.md`](docs/offene-punkte.md) ist nachgeführt: Was das

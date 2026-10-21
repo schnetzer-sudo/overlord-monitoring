@@ -30,7 +30,7 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
   vergeben.
 - **Seit 1.1.0 (21.10.2026) eine Linie** (E‑1127): Neue Punkte schließen an die höchste vergebene
   Nummer an; der Bereich unter 1000 wird nicht weiter befüllt. Bis dahin begannen die Nummern auf
-  `assistent` bei 1000 (Entscheidung 7). **Nächste freie Nummer: 1038.**
+  `assistent` bei 1000 (Entscheidung 7). **Nächste freie Nummer: 1042.**
 - **Doppelvergaben sind aufgelöst** (16.10.2026): 136 und 186 bis 189 waren je zweimal vergeben. Die
   Nummer behielt der Punkt, auf den andere Dateien öfter verweisen; der andere bekam 247 bzw. 248 bis
   251, mit datiertem Vermerk an seiner Fundstelle.
@@ -43,21 +43,22 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
 
 | | Teil 1: projektweit | Teil 2: Sichtprüfungen | Teil 3: lokal |
 |---|---:|---:|---:|
-| offen — Fehler | 33 | 0 | — |
-| offen — Verbesserung | 46 | 0 | — |
-| offen — Entscheidung offen | 53 | 0 | — |
-| offen — Sichtprüfung oder Messung offen | 64 | 13 | — |
-| **offen gesamt** | **196** | **13** | — |
+| offen — Fehler | 32 | 0 | — |
+| offen — Verbesserung | 49 | 0 | — |
+| offen — Entscheidung offen | 51 | 0 | — |
+| offen — Sichtprüfung oder Messung offen | 65 | 13 | — |
+| **offen gesamt** | **197** | **13** | — |
 | ungeprüft | — | — | 357 |
-| erledigt | 57 | 0 | 64 |
+| erledigt | 60 | 0 | 64 |
 | gegenstandslos | 3 | 0 | 5 |
-| **Zeilen** | 256 | 13 | 426 |
+| **Zeilen** | 260 | 13 | 426 |
 
-Offen sind damit **209** nummerierte Punkte; dazu kommen 357 ungeprüfte lokale (gezählt am
-21.10.2026 über die Tabelle in Teil 1). Davon stammen 34 aus der Linie `assistent` und ihrer
+Offen sind damit **210** nummerierte Punkte; dazu kommen 357 ungeprüfte lokale (gezählt am
+21.10.2026 über die Tabelle in Teil 1). Davon stammen 38 aus der Linie `assistent` und ihrer
 Zusammenführung (1000 bis 1007 aus A1; 1010 und 1012 bis 1015 aus A2; 1017 bis 1022 aus A3; 1023
-bis 1032 aus A4; 1033 bis 1037 aus 1.1.0). 1009 ist seit dem 21.10.2026 erledigt, 1011 seit A3
-entschieden, 1016 seit M1003 erledigt.
+bis 1032 aus A4; 1033 bis 1037 aus 1.1.0; 1038 bis 1041 aus dem Nachtrag zu 1.1.0, der
+Deployment-Routine). 1009 ist seit dem 21.10.2026 erledigt, 1011 seit A3 entschieden, 1016 seit
+M1003 erledigt. Am selben Tag erledigt: 255, 260 und 261 (`betrieb.md` §9).
 
 ### Wie das Register erhoben ist
 
@@ -283,15 +284,15 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 252 | IndexbestandDbIT rot: Sollliste führt message_rollup, _tag, _monat und rollup_lauf nicht (seit V9–V12) | [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md), Ausnahme vom Vorrang · festgestellt 16.10.2026 | Fehler | **erledigt** — Sollliste am 16.10.2026 nachgezogen, gegen die Migrationen abgeglichen; `IndexbestandDbIT` 5 von 5 grün |
 | 253 | Block 6 „Zuletzt aufgefallen“ zählt seit E‑90 live über Message und ist nicht als Ausnahme von Regel 2 eingeordnet | [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §8 Regel 2 · [`dashboard.md`](dashboard.md) §7a | Entscheidung offen | **erledigt** — `PROJEKTBESCHREIBUNG.md` §8 Regel 2: fünfte benannte Ausnahme, gemessen in M146 (Entscheidung vom 16.10.2026) |
 | 254 | DEVELOPMENT_GUIDELINES zählt die Ausnahmen von M1 („genau zwei“) und M2 („die einzige“) veraltet; es sind je drei | [`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) §4.1 · [`mandantentrennung.md`](mandantentrennung.md) §3, §4 | Fehler | **erledigt** — `DEVELOPMENT_GUIDELINES.md` §4.1 nachgezogen am 16.10.2026 |
-| 255 | Betriebsform (systemd oder Container), Serverpfade, Dienstbenutzer und Units nicht belegt | [`betrieb.md`](betrieb.md) §9 | Entscheidung offen | offen |
+| 255 | Betriebsform (systemd oder Container), Serverpfade, Dienstbenutzer und Units nicht belegt | [`betrieb.md`](betrieb.md) §9 | Entscheidung offen | **erledigt** — `betrieb.md` §9: „Beantwortet am 21.10.2026 (§7a): systemd mit den Units `overlord-monitor`, `overlord-monitor-rollup` und `overlord-monitor-frontend`…“ |
 | 256 | Reverse Proxy: Konfiguration, Domain, Zertifikat und Routing von /api nicht im Repository | [`betrieb.md`](betrieb.md) §9 | Entscheidung offen | offen |
 | 257 | Ob IP-Begrenzung und audit_log hinter dem Proxy die echte Client-IP sehen, ist ungeprüft | [`betrieb.md`](betrieb.md) §9 | Sichtprüfung oder Messung offen | offen |
-| 258 | Rollup-Prozess prod,rollup: Port, abgeschaltete Ablagenprüfung und Flyway im zweiten Prozess nicht belegt | [`betrieb.md`](betrieb.md) §9 | Entscheidung offen | offen |
-| 259 | Sicherung von overlord_monitor (process_catalog, bam_sollaenge) und Wiederherstellung nicht beschrieben | [`betrieb.md`](betrieb.md) §9 | Entscheidung offen | offen |
-| 260 | Release-Bau und Auslieferung nach dem Tag nicht beschrieben; die CI liefert nichts aus | [`betrieb.md`](betrieb.md) §9 | Entscheidung offen | offen |
-| 261 | JAR-Name weicht von der Doku ab (kein finalName); Version stand auf 0.1.0(-SNAPSHOT) | [`betrieb.md`](betrieb.md) §9 | Fehler | offen — Version am 16.10.2026 auf 1.0.0 gesetzt; offen bleibt der Artefaktname |
+| 258 | Rollup-Prozess prod,rollup: Port, abgeschaltete Ablagenprüfung und Flyway im zweiten Prozess nicht belegt | [`betrieb.md`](betrieb.md) §9 | Entscheidung offen | offen — seit 21.10.2026 belegt: Unit `overlord-monitor-rollup`, startet nach dem Backend, nur ein Prozess migriert (`betrieb.md` §7a); Port und Ablagenprüfung offen |
+| 259 | Sicherung von overlord_monitor (process_catalog, bam_sollaenge) und Wiederherstellung nicht beschrieben | [`betrieb.md`](betrieb.md) §9 | Entscheidung offen | offen — seit 21.10.2026 wird vor jedem Deployment das ganze Schema gesichert (E‑1135, `betrieb.md` §7a, §8); offen sind Sicherung außerhalb von Deployments, Aufbewahrung und wer wiederherstellt |
+| 260 | Release-Bau und Auslieferung nach dem Tag nicht beschrieben; die CI liefert nichts aus | [`betrieb.md`](betrieb.md) §9 | Entscheidung offen | **erledigt** — `betrieb.md` §9: „Beantwortet am 21.10.2026 (§7a): Lukas baut von Hand auf dem Produktionsserver…“; Tag oder Zweig ist Punkt 1038 |
+| 261 | JAR-Name weicht von der Doku ab (kein finalName); Version stand auf 0.1.0(-SNAPSHOT) | [`betrieb.md`](betrieb.md) §9 | Fehler | **erledigt** — `betrieb.md` §9: „Beantwortet am 21.10.2026 (§7a): `finalName` wird nicht gesetzt; die Routine installiert `overlord-monitor-<version>.jar` als `/opt/overlord-monitor/overlord-monitor.jar`…“ |
 | 262 | Bootstrap des ersten Kontos in der Produktion nicht belegt; OVERLORD_BOOTSTRAP_ADMIN_* fehlen in .env.example | [`betrieb.md`](betrieb.md) §9 | Verbesserung | offen — die Namen stehen seit dem 16.10.2026 in `backend/.env.example`; ob die Produktion so angelegt wurde, ist offen |
-| 263 | Ziel und Aufbewahrung der Protokollausgabe in der Produktion nicht belegt | [`betrieb.md`](betrieb.md) §9 | Entscheidung offen | offen |
+| 263 | Ziel und Aufbewahrung der Protokollausgabe in der Produktion nicht belegt | [`betrieb.md`](betrieb.md) §9 | Entscheidung offen | offen — Ziel ist seit 21.10.2026 belegt: journald (`betrieb.md` §7a); offen bleibt die Aufbewahrung |
 | 1000 | „Teilweise erledigt“ auch dann, wenn kein Eintrag Ok ist und nichts geändert wurde; Anzeige dafür offen | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Entscheidung offen | offen — seit A4 (19.10.2026) zeigt die Übersicht „<n> von <n> nicht erfolgreich“ unter „Teilweise erledigt“; das Wort ist nicht entschieden (`tasks.md` §11) |
 | 1001 | Aufträge, die in IN_AUSFUEHRUNG hängen bleiben, haben keine Frist und keinen Rückweg | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Entscheidung offen | offen |
 | 1002 | Schranke von 35 Zeichen je Schlüsselteil (WERK_ABLADESTELLE) zu bestätigen | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Entscheidung offen | offen |
@@ -302,7 +303,7 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 1007 | Nur der erste Schlüsselteil kann optional sein | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Verbesserung | offen |
 | 1008 | Datenschutz und Auftragsverarbeitung mit dem Modellanbieter, vor A2 | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Entscheidung offen | **erledigt** — `tasks.md` §11: „Erledigt am 16.10.2026: beantwortet mit E‑1029 und E‑1030 (gebaut, aber abgeschaltet), weitergeführt als Punkt 1009“ |
 | 1009 | Prüfung der Auftragsverarbeitung mit Anthropic durch den Datenschutzbeauftragten, vor dem Einschalten in der Produktion | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Entscheidung offen | **erledigt** — `assistent.md` §11: „Erledigt am 21.10.2026 (E‑1131): Die Prüfung ist abgeschlossen, Auskunft des Auftraggebers“ |
-| 1010 | Ob der Produktionsserver `api.anthropic.com` erreicht, ist ungeprüft | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Sichtprüfung oder Messung offen | offen |
+| 1010 | Ob der Produktionsserver `api.anthropic.com` erreicht, ist ungeprüft | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Sichtprüfung oder Messung offen | offen — die Probe steht seit 21.10.2026 in `betrieb.md` §7a A; ihr Ergebnis ist nicht mitgeteilt |
 | 1011 | Streaming für A3 | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Entscheidung offen | **erledigt** — `assistent.md` §11: „Entschieden am 19.10.2026 mit A3: kein Streaming, eine Warteanzeige“ (E‑1075, [`assistent-frontend.md`](assistent-frontend.md) §10) |
 | 1012 | Was das Gespräch erfährt, wenn der Kunde die Karte ändert oder den Auftrag anlegt | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Entscheidung offen | offen |
 | 1013 | Ob der Assistent auch Fragen zum Stand eigener Aufträge beantworten soll | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Entscheidung offen | offen |
@@ -330,6 +331,10 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 1035 | Die CI baut weiter Pushes auf `assistent` und `assistent-*`; ob die Auslöser nach dem Zusammenführen bleiben | [`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) §12, [`betrieb.md`](betrieb.md) §7 · 1.1.0 | Entscheidung offen | offen |
 | 1036 | Die Zeitgrenze der Weiterleitung in `next.config.ts` (300 s) hängt von Hand an `zeitgrenze` und `werkzeugrunden-je-nachricht` im Backend; kein Test hält beide zusammen | [`betrieb.md`](betrieb.md) §5a · 1.1.0 | Verbesserung | offen |
 | 1037 | Eine Anfrage kann zur vollen Minute mit 500 scheitern, wenn das Speichern der Sitzung einen Deadlock gegen die Aufräumung von Spring Session verliert (auf der Testkopie dreimal am 21.10.2026 im Protokoll) | [`authentifizierung.md`](authentifizierung.md) §12 · 1.1.0 | Fehler | offen |
+| 1038 | Die Deployment-Routine baut nach `git pull` den Kopf des Zweigs, nicht ausdrücklich den Tag; `git describe --tags` zeigt es nur an | [`betrieb.md`](betrieb.md) §7a, §9 · 1.1.0 | Verbesserung | offen |
+| 1039 | Ein zweiter Durchlauf der Routine am selben Tag überschreibt die Sicherung von vor der Migration und `.vorher`; die Sicherung trägt Passwort-Hashes und Sitzungen mit den Rechten der `umask` | [`betrieb.md`](betrieb.md) §7a, §9 · 1.1.0 | Verbesserung | offen |
+| 1040 | Rollback nimmt nur das Backend zurück, das Frontend hat keine Vorversion; Frontend 1.1.0 vor Backend 1.0.x zeigt jedem den Fehler unter „Ihre Aufträge“ | [`betrieb.md`](betrieb.md) §7a, §8, §9 · 1.1.0 | Verbesserung | offen |
+| 1041 | `OVERLORD_BACKEND_URL` wirkt beim Bau, nicht beim Start; die Routine baut ohne sie, also mit `http://localhost:8080`, ob das auf dem Server stimmt, ist offen | [`betrieb.md`](betrieb.md) §3, §7a, §9 · 1.1.0 | Sichtprüfung oder Messung offen | offen |
 
 ---
 

@@ -35,6 +35,11 @@ SQL-Insert frei, kein Deployment ([`docs/tasks.md`](docs/tasks.md) §3.9; E‑11
   `scripts/assistent-freischaltung-system-ruecknahme.sql`; Lukas führt es in der Produktion aus (F34).
 - `docs/betrieb.md` §5a: Zeitgrenze, Antwort am Stück ohne Streaming, Reverse Proxy und ausgehendes
   HTTPS zu `api.anthropic.com`.
+- **Nachtrag (21.10.2026):** `docs/betrieb.md` §7a hält die Deployment-Routine der Produktion fest,
+  wie Lukas sie mitgeteilt hat (E‑1133): systemd mit drei Units, Bau auf dem Server, Sicherung vor
+  dem Start, Rollback. Der Schlüssel des Assistenten liegt dort in einer eigenen `EnvironmentFile`
+  nur für die Unit `overlord-monitor`, zusammen mit dem Schalter (E‑1134). Erledigt sind die Punkte
+  255, 260 und 261; neu offen sind 1038 bis 1041 aus dem Abgleich der Routine mit dem Repository.
 - Auftragsmodell der Assistent-Linie (A1): Tabellen `task`, `task_type` und `task_type_mandant`
   in `overlord_monitor` (Migration `V100`), neu in `docs/PROJEKTBESCHREIBUNG.md` §5
   ([`docs/tasks.md`](docs/tasks.md) §5).
@@ -82,6 +87,14 @@ SQL-Insert frei, kein Deployment ([`docs/tasks.md`](docs/tasks.md) §3.9; E‑11
 
 ### Geändert
 
+- **Sicherung vor jedem Schemaeingriff: das ganze Schema `overlord_monitor`** statt der beiden
+  Tabellen `process_catalog` und `bam_sollaenge`, weil auch `app_user`, `app_user_mandant` und
+  `bam_spalte` von Hand gepflegt sind (E‑1135, `docs/betrieb.md` §8). Die Liste in
+  `docs/bam-sollaengen.md` §7.2 führt jetzt sieben Tabellen.
+- Doku: `OVERLORD_BACKEND_URL` wirkt beim Bau des Frontends, nicht beim Start; `next start` liest
+  die Weiterleitung aus `.next/routes-manifest.json` (`docs/betrieb.md` §3, Punkt 1041).
+- `docs/PROJEKTBESCHREIBUNG.md` §6, „Betrieb“, und `docs/README.md`, Eintrag `betrieb.md`: verweisen
+  auf die Deployment-Routine, weil sie seit dem Nachtrag in `docs/betrieb.md` §7a steht (E‑1133).
 - `WERK_ABLADESTELLE`: höchstens 20 statt 50 Einträge je Auftrag, und die Beschreibung lässt
   den Assistenten nachfragen, wenn der Kunde bei einer Anpassung nur einen der beiden Werte
   nennt; Migration `V101` (E‑1058, [`docs/tasks.md`](docs/tasks.md) §4).

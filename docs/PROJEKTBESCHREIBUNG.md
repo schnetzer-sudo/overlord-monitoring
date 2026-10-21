@@ -512,7 +512,8 @@ Reverse Proxy, der beide unter einer Domain zusammenführt. Der Rollup-Job läuf
 derselben Anwendung. **Bewusst nicht im vorhandenen GlassFish:** Ein Monitoring-Werkzeug soll
 unabhängig von dem laufen, was es beobachtet; eine Rückfalloption gibt es nicht (Spring Boot 4
 braucht Jakarta EE 11, die Instanz ist 9 oder 10). Profile, Variablen, Release und Rollback stehen in
-[`betrieb.md`](betrieb.md).
+[`betrieb.md`](betrieb.md), seit dem 21.10.2026 auch die Deployment-Routine der Produktion: drei
+systemd-Units, gebaut wird auf dem Server (§7a dort, E‑1133).
 
 ---
 
