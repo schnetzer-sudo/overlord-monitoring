@@ -32,11 +32,13 @@ import {
 } from "./gespraech";
 
 /**
- * Ob der Assistent da ist und mit welchen Typen (E‑1068). Ohne eigene Regel:
- * Ein Fehler heißt hier dasselbe wie `verfuegbar: false` — das Symbol fehlt.
+ * Ob der Assistent für den aktiven Mandanten da ist und mit welchen Typen
+ * (E‑1068). Ohne eigene Regel: Ein Fehler heißt hier dasselbe wie
+ * `verfuegbar: false` — das Symbol fehlt. Ob er da ist, entscheidet das
+ * Backend je Mandant nach der Freischaltung; das Symbol ist Bequemlichkeit.
  */
-export function useAssistentStand() {
-  return useQuery({ queryKey: ASSISTENT_SCHLUESSEL.stand, queryFn: holeStand });
+export function useAssistentStand(mandantId: string) {
+  return useQuery({ queryKey: ASSISTENT_SCHLUESSEL.stand(mandantId), queryFn: holeStand });
 }
 
 /** Geprüft wird so lange nach der letzten Änderung auf der Karte (F5). Gewählt, nicht gemessen. */

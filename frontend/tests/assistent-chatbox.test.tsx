@@ -802,7 +802,9 @@ describe("Verhalten bei Fehlern (§6)", () => {
   }
 
   it("503 schon beim Eröffnen: nicht erreichbar, und der nächste Versuch eröffnet neu", async () => {
-    eroeffnen = () => problem(503, "assistent-nicht-verfuegbar");
+    // Seit 1.1.0 antwortet ein nicht verfügbarer Assistent 404 (`docs/tasks.md` §3.9); 503
+    // bleibt die vorübergehende Störung.
+    eroeffnen = () => problem(503, "assistent-voruebergehend-gestoert");
     const { abbauen } = await eingang();
     try {
       await oeffne();
@@ -933,6 +935,37 @@ describe("Mandantenwechsel (E‑1076)", () => {
       expect(nur("POST", "/nachrichten").at(-1)?.pfad).toBe(
         "/api/assistent/gespraeche/g-2/nachrichten",
       );
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("schließt eine offene Chatbox und liest die Verfügbarkeit für den neuen Mandanten neu (1.1.0)", async () => {
+    const zwischenspeicher = neuerZwischenspeicher();
+    zwischenspeicher.setQueryData(NACHRICHTEN_SCHLUESSEL.suchfelder, ANGEBOT);
+    // Der Zwischenspeicher wird hier bewusst nicht geleert: Neu gelesen wird, weil der Stand je
+    // Mandant gilt, nicht weil der Wechsel im echten Ablauf den Speicher leert.
+    const { abbauen } = await rendere(
+      <NuqsTestingAdapter searchParams="" hasMemory>
+        <WechselbareKopfzeile />
+      </NuqsTestingAdapter>,
+      zwischenspeicher,
+    );
+    try {
+      await bis(() => symbol() !== null, "das Symbol steht für NEXANS");
+      await oeffne();
+      expect(nur("GET", "/api/assistent")).toHaveLength(1);
+
+      // IBIS ist nicht freigeschaltet.
+      stand = () => json({ verfuegbar: false, typen: [] });
+      await act(async () => {
+        window.dispatchEvent(new CustomEvent("test-mandantenwechsel", { detail: IBIS }));
+      });
+      await bis(() => nur("GET", "/api/assistent").length === 2, "der Stand ist neu gefragt");
+      await zug();
+      expect(chatbox(), "die offene Chatbox ist zu").toBeNull();
+      expect(symbol(), "kein Symbol ohne Freischaltung").toBeNull();
+      expect(nur("POST", "/api/assistent")).toEqual([]);
     } finally {
       await abbauen();
     }

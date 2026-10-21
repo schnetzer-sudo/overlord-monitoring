@@ -77,7 +77,13 @@ export type Pruefanfrage = {
 };
 
 export const ASSISTENT_SCHLUESSEL = {
-  stand: ["assistent", "stand"] as const,
+  /**
+   * **Je Mandant ein Eintrag** (1.1.0, `docs/tasks.md` §3.9): Die Verfügbarkeit
+   * hängt an der Freischaltung des Mandanten. Nach einem Wechsel liest das
+   * Symbol neu, auch wenn der Zwischenspeicher dabei nicht geleert würde. Der
+   * Mandant steht nur im Schlüssel, nie in der Anfrage (Regel M1).
+   */
+  stand: (mandantId: string) => ["assistent", "stand", mandantId] as const,
 };
 
 export function holeStand(): Promise<AssistentStand> {

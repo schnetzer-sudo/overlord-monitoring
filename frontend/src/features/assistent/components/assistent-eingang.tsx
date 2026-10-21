@@ -21,7 +21,8 @@ import { Verlauf } from "./verlauf";
  * **Das Symbol steht nur bei `verfuegbar: true`** (E‑1068). Solange die Abfrage
  * läuft oder scheitert, fehlt es ohne Hinweis und ohne Platzhalter — lieber ein
  * Bedienelement, das einen Moment später erscheint, als eines, das wieder
- * verschwindet (dieselbe Regel wie beim Mandantenumschalter).
+ * verschwindet (dieselbe Regel wie beim Mandantenumschalter). Verfügbar ist der
+ * Assistent nur für freigeschaltete Mandanten (1.1.0); gefragt wird je Mandant.
  *
  * **Das Gespräch lebt hier und nicht in der Chatbox** (F3, E‑1076): Der Inhalt
  * des Overlays hängt beim Schließen aus, diese Komponente steht so lange wie
@@ -34,7 +35,7 @@ import { Verlauf } from "./verlauf";
 export function AssistentEingang({ mandant }: { mandant: Mandant }) {
   const texte = useTexte();
   const t = texte.assistent;
-  const { data: stand } = useAssistentStand();
+  const { data: stand } = useAssistentStand(mandant.id);
   const steuerung = useGespraech();
   const [offen, setzeOffen] = useState(false);
   const feld = useRef<HTMLTextAreaElement>(null);
