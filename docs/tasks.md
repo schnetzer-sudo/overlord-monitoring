@@ -1195,7 +1195,16 @@ rot:** `NachrichtendetailDbIT.kein_schritt_steht_leer` mit `500` — im Protokol
 (MariaDB `1213`) um 12:45:00,1, zur vollen Minute, an der Spring Session abgelaufene Sitzungen
 aufräumt (Vorgabe `0 * * * * *`, nicht umgestellt); auf derselben Testkopie lief ein zweites
 Backend. Belegt ist der Zeitpunkt, nicht der Gegenspieler. Der Test hat mit dieser Änderung nichts
-zu tun und lief einzeln nachgefahren grün (12 von 12). Grün darunter: `IndexbestandDbIT` (5, in beiden
+zu tun und lief einzeln nachgefahren grün (12 von 12).
+
+**Abschlusslauf auf `72a515e`** (Code wie oben, dazu Doku und Version), `.\mvnw.cmd clean verify`,
+13:07 bis 13:36: 1.256 ohne Datenbank grün; 503 mit Datenbank, **zwei rot, beide außerhalb dieser
+Änderung**: `NachrichtendetailDbIT.rollen_stehen_im_kopf` mit `500`, diesmal mit Gegenspieler im
+Protokoll — um 13:30:00 verliert das `UPDATE SPRING_SESSION` der Anfrage einen Deadlock gegen das
+`DELETE FROM SPRING_SESSION` der Aufräumung (Punkt 1037, [`authentifizierung.md`](authentifizierung.md)
+§12); und `DashboardIsolationDbIT.keine_mandanten_id`, Punkt 182: Der JSON-Diff beider Rümpfe zeigt
+nur `plattform.dienste[*].alterSekunden`, sechs Dienste um je eine Sekunde. Beide Klassen einzeln
+nachgefahren grün (28 von 28, 12 von 12). Die Abnahmeklassen waren in beiden Läufen grün. Grün darunter: `IndexbestandDbIT` (5, in beiden
 Richtungen und mit den Tabellen der Aufträge), `AssistentIsolationDbIT` (14),
 `AssistentOhneSchluesselDbIT` (1), `AuftraegeIsolationDbIT` (8), `AuftraegeDbIT` (19),
 `TypdefinitionDbIT`, `TaskMigrationDbIT` und `TestsatzDefinitionDbIT`. Kein Test ruft die
@@ -1253,6 +1262,7 @@ Nummern ab 1000 (Linie `assistent`); dieselben Zeilen stehen im Register
 | **1007** | Nur der erste Schlüsselteil kann optional sein. | Verbesserung |
 | **1008** | Datenschutz und Auftragsverarbeitung mit dem Modellanbieter, vor A2. **Erledigt am 16.10.2026:** beantwortet mit E‑1029 und E‑1030 (gebaut, aber abgeschaltet), weitergeführt als Punkt 1009 ([`assistent.md`](assistent.md) §11). | Entscheidung offen |
 | **1026** | Die Plattform holt **alle fünf Minuten** ab (E‑1117) — eine Auskunft des Auftraggebers vom 19.10.2026, nicht gemessen. Wie lange ein Auftrag „Offen“ steht und damit löschbar bleibt, hängt daran. *(A4)* | Sichtprüfung oder Messung offen |
+| **1037** | Eine Anfrage kann zur vollen Minute mit `500` scheitern, wenn das Speichern ihrer Sitzung einen Deadlock gegen die Aufräumung von Spring Session verliert — gesehen in den DB-Läufen zu 1.1.0 (§9.6). Beschrieben in [`authentifizierung.md`](authentifizierung.md) §12; nicht Teil dieses Schritts. *(1.1.0)* | Fehler |
 
 **Fortgeschrieben am 19.10.2026 (A4):** Punkt **1000** bleibt offen. Die Übersicht zeigt einen
 solchen Auftrag als „Teilweise erledigt“ mit „<n> von <n> nicht erfolgreich“

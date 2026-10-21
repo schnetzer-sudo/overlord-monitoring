@@ -30,7 +30,7 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
   vergeben.
 - **Seit 1.1.0 (21.10.2026) eine Linie** (E‑1127): Neue Punkte schließen an die höchste vergebene
   Nummer an; der Bereich unter 1000 wird nicht weiter befüllt. Bis dahin begannen die Nummern auf
-  `assistent` bei 1000 (Entscheidung 7). **Nächste freie Nummer: 1037.**
+  `assistent` bei 1000 (Entscheidung 7). **Nächste freie Nummer: 1038.**
 - **Doppelvergaben sind aufgelöst** (16.10.2026): 136 und 186 bis 189 waren je zweimal vergeben. Die
   Nummer behielt der Punkt, auf den andere Dateien öfter verweisen; der andere bekam 247 bzw. 248 bis
   251, mit datiertem Vermerk an seiner Fundstelle.
@@ -43,20 +43,20 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
 
 | | Teil 1: projektweit | Teil 2: Sichtprüfungen | Teil 3: lokal |
 |---|---:|---:|---:|
-| offen — Fehler | 32 | 0 | — |
+| offen — Fehler | 33 | 0 | — |
 | offen — Verbesserung | 46 | 0 | — |
 | offen — Entscheidung offen | 53 | 0 | — |
 | offen — Sichtprüfung oder Messung offen | 64 | 13 | — |
-| **offen gesamt** | **195** | **13** | — |
+| **offen gesamt** | **196** | **13** | — |
 | ungeprüft | — | — | 357 |
 | erledigt | 57 | 0 | 64 |
 | gegenstandslos | 3 | 0 | 5 |
-| **Zeilen** | 255 | 13 | 426 |
+| **Zeilen** | 256 | 13 | 426 |
 
-Offen sind damit **208** nummerierte Punkte; dazu kommen 357 ungeprüfte lokale (gezählt am
-21.10.2026 über die Tabelle in Teil 1). Davon stammen 33 aus der Linie `assistent` und ihrer
+Offen sind damit **209** nummerierte Punkte; dazu kommen 357 ungeprüfte lokale (gezählt am
+21.10.2026 über die Tabelle in Teil 1). Davon stammen 34 aus der Linie `assistent` und ihrer
 Zusammenführung (1000 bis 1007 aus A1; 1010 und 1012 bis 1015 aus A2; 1017 bis 1022 aus A3; 1023
-bis 1032 aus A4; 1033 bis 1036 aus 1.1.0). 1009 ist seit dem 21.10.2026 erledigt, 1011 seit A3
+bis 1032 aus A4; 1033 bis 1037 aus 1.1.0). 1009 ist seit dem 21.10.2026 erledigt, 1011 seit A3
 entschieden, 1016 seit M1003 erledigt.
 
 ### Wie das Register erhoben ist
@@ -329,6 +329,7 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 1034 | Wird einem Mandanten die Freischaltung bei offener Chatbox entzogen, meldet sie „Gespräch abgelaufen“, und ein neues Gespräch scheitert genauso; das Symbol verschwindet erst nach Neuladen oder Mandantenwechsel | [`assistent-frontend.md`](assistent-frontend.md) §13 · 1.1.0 | Verbesserung | offen |
 | 1035 | Die CI baut weiter Pushes auf `assistent` und `assistent-*`; ob die Auslöser nach dem Zusammenführen bleiben | [`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) §12, [`betrieb.md`](betrieb.md) §7 · 1.1.0 | Entscheidung offen | offen |
 | 1036 | Die Zeitgrenze der Weiterleitung in `next.config.ts` (300 s) hängt von Hand an `zeitgrenze` und `werkzeugrunden-je-nachricht` im Backend; kein Test hält beide zusammen | [`betrieb.md`](betrieb.md) §5a · 1.1.0 | Verbesserung | offen |
+| 1037 | Eine Anfrage kann zur vollen Minute mit 500 scheitern, wenn das Speichern der Sitzung einen Deadlock gegen die Aufräumung von Spring Session verliert (auf der Testkopie dreimal am 21.10.2026 im Protokoll) | [`authentifizierung.md`](authentifizierung.md) §12 · 1.1.0 | Fehler | offen |
 
 ---
 

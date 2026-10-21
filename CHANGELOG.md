@@ -142,7 +142,8 @@ SQL-Insert frei, kein Deployment ([`docs/tasks.md`](docs/tasks.md) §3.9; E‑11
 - `docs/README.md`: Einträge ohne „Linie `assistent`“ als laufende Linie, Hinweis auf die
   Freischaltung — weil es seit 1.1.0 eine Linie gibt.
 - Punkt 1009 (Prüfung durch den Datenschutzbeauftragten) ist erledigt, Auskunft des Auftraggebers
-  vom 21.10.2026 (E‑1131).
+  vom 21.10.2026 (E‑1131). Neu im Register: 1033 bis 1037 (Reverse Proxy, Freischaltung bei offener
+  Chatbox, Auslöser der CI, Kopplung der Zeitgrenze, Deadlock der Sitzungsablage).
 
 ### Behoben
 
