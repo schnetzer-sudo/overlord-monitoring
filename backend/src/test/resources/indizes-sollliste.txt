@@ -243,9 +243,12 @@ index;monitor;SPRING_SESSION_ATTRIBUTES;PRIMARY;SESSION_PRIMARY_ID,ATTRIBUTE_NAM
 # (docs/tasks.md §5.1). Erhoben aus information_schema.STATISTICS der Testkopie nach der
 # Migration, von Hand uebernommen und gegen V100 abgeglichen — keine Abweichung. Der
 # Fremdschluessel fk_task_type_mandant_typ nutzt den Primaerschluessel von
-# task_type_mandant und hat keinen eigenen Index. Auf main nimmt IndexbestandDbIT die drei
-# Tabellen aus der Pruefung der Tabellenliste aus (DEVELOPMENT_GUIDELINES.md §12); ihre
-# Indizes prueft main nicht, weil main sie hier nicht fuehrt.
+# task_type_mandant und hat keinen eigenen Index.
+#
+# Seit 1.1.0 (21.10.2026) eine Linie: Die Ausnahme auf main — IndexbestandDbIT nahm die drei
+# Tabellen aus der Pruefung der Tabellenliste aus — ist mit dem Zusammenfuehren entfallen.
+# Am selben Tag mit scripts\indizes-kandidat.ps1 gegen die Testkopie nach V103 geprueft:
+# kein Unterschied. V101 bis V103 aendern nur Zeilen, keinen Index.
 
 index;monitor;task;PRIMARY;task_id;ja
 index;monitor;task;task_mandant_idx;mandant_id,eingestellt_am;nein

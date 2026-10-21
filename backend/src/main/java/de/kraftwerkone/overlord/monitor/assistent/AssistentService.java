@@ -5,8 +5,8 @@ import de.kraftwerkone.overlord.monitor.assistent.Gespraechsfuehrung.Zaehler;
 import de.kraftwerkone.overlord.monitor.assistent.modell.Modellfehler;
 import de.kraftwerkone.overlord.monitor.assistent.modell.Sprachmodell;
 import de.kraftwerkone.overlord.monitor.common.MandantContext;
+import de.kraftwerkone.overlord.monitor.common.auftrag.AssistentFreigabe;
 import de.kraftwerkone.overlord.monitor.common.auftrag.TypDefinition;
-import de.kraftwerkone.overlord.monitor.common.auftrag.TypKatalog;
 import de.kraftwerkone.overlord.monitor.common.error.FachlicheAusnahme;
 import de.kraftwerkone.overlord.monitor.common.error.RessourceNichtGefundenException;
 import de.kraftwerkone.overlord.monitor.security.AngemeldeterNutzer;
@@ -26,8 +26,10 @@ import tools.jackson.databind.json.JsonMapper;
  * Der Assistent hinter den Endpunkten ({@code docs/assistent.md} §6): verfuegbar oder nicht,
  * Gespraech eroeffnen, Nachricht beantworten, Gespraech beenden.
  *
- * <p><b>Abgeschaltet geht kein Aufruf hinaus</b> (E‑1030): Jeder Weg zum Modell prueft zuerst den
- * Schalter, und abgeschaltet steht hinter {@link Sprachmodell} ohnehin kein Adapter.
+ * <p><b>Ob der Assistent fuer den Mandanten verfuegbar ist, entscheidet {@link
+ * AssistentFreigabe}</b> (E‑1126, E‑1130): Schalter, Schluessel und mindestens ein freigeschalteter
+ * Typ. Eroeffnen und Nachricht fragen sie zuerst; nicht verfuegbar ist {@code 404}, und es geht
+ * kein Aufruf hinaus. Abgeschaltet steht hinter {@link Sprachmodell} ohnehin kein Adapter (E‑1030).
  *
  * <p><b>Was das Modell bekommt</b> (E‑1035, E‑1059): die Anweisung mit dem Namen des aktiven
  * Mandanten, die Werkzeuge, den Verlauf. Benutzer und Mandanten-ID dienen nur der Bindung des
@@ -39,10 +41,8 @@ public class AssistentService {
 
   private static final Logger log = LoggerFactory.getLogger(AssistentService.class);
 
-  static final String NICHT_VERFUEGBAR = "assistent-nicht-verfuegbar";
-
   private final AssistentEigenschaften eigenschaften;
-  private final TypKatalog typKatalog;
+  private final AssistentFreigabe freigabe;
   private final Gespraechsspeicher speicher;
   private final Nachrichtenbegrenzung begrenzung;
   private final Gespraechsfuehrung fuehrung;
@@ -52,13 +52,13 @@ public class AssistentService {
   AssistentService(
       AssistentEigenschaften eigenschaften,
       Sprachmodell sprachmodell,
-      TypKatalog typKatalog,
+      AssistentFreigabe freigabe,
       Gespraechsspeicher speicher,
       Nachrichtenbegrenzung begrenzung,
       JsonMapper json,
       @Qualifier("systemClock") Clock uhr) {
     this.eigenschaften = eigenschaften;
-    this.typKatalog = typKatalog;
+    this.freigabe = freigabe;
     this.speicher = speicher;
     this.begrenzung = begrenzung;
     this.fuehrung =
@@ -72,15 +72,13 @@ public class AssistentService {
   }
 
   /**
-   * Ob der Assistent fuer diesen Mandanten verfuegbar ist, und mit welchen Typen. Abgeschaltet ohne
-   * Datenbankzugriff.
+   * Ob der Assistent fuer diesen Mandanten verfuegbar ist, und mit welchen Typen — die
+   * Selbstauskunft, nach der das Frontend das Symbol zeigt. Nicht verfuegbar ist hier {@code 200}
+   * mit {@code verfuegbar: false}. Abgeschaltet ohne Datenbankzugriff.
    */
   public AssistentResponse stand(MandantContext mandant, String sitzungId) {
     speicher.beendeNachMandantenwechsel(mandant, sitzungId);
-    if (!eigenschaften.eingeschaltet()) {
-      return new AssistentResponse(false, List.of());
-    }
-    List<String> typen = angeboten(mandant).stream().map(TypDefinition::name).toList();
+    List<String> typen = freigabe.angebot(mandant).stream().map(TypDefinition::name).toList();
     return new AssistentResponse(!typen.isEmpty(), typen);
   }
 
@@ -93,13 +91,7 @@ public class AssistentService {
   public GespraechResponse eroeffne(
       AngemeldeterNutzer nutzer, MandantContext mandant, String mandantenname, String sitzungId) {
     speicher.beendeNachMandantenwechsel(mandant, sitzungId);
-    if (!eigenschaften.eingeschaltet()) {
-      throw nichtVerfuegbar("Assistent abgeschaltet oder ohne Schluessel");
-    }
-    List<TypDefinition> typen = angeboten(mandant);
-    if (typen.isEmpty()) {
-      throw nichtVerfuegbar("Kein Auftragstyp fuer den Assistenten angeboten");
-    }
+    List<TypDefinition> typen = freigabe.verlangeAngebot(mandant);
     Gespraech gespraech =
         speicher.eroeffne(
             mandant,
@@ -110,7 +102,12 @@ public class AssistentService {
     return new GespraechResponse(gespraech.id().toString());
   }
 
-  /** Beantwortet eine Nachricht des Kunden. */
+  /**
+   * Beantwortet eine Nachricht des Kunden. Zuerst die Freigabe: Ist der Assistent fuer den
+   * Mandanten nicht (mehr) verfuegbar, ist das {@code 404} wie ein unbekanntes Gespraech, auch fuer
+   * ein Gespraech, das noch offen ist. Geprueft wird jeder Vorschlag gegen das Angebot von jetzt
+   * (E‑1045).
+   */
   public NachrichtResponse sende(
       AngemeldeterNutzer nutzer,
       MandantContext mandant,
@@ -118,10 +115,8 @@ public class AssistentService {
       String gespraechId,
       String text) {
     speicher.beendeNachMandantenwechsel(mandant, sitzungId);
+    Map<String, TypDefinition> angebot = nachKennung(freigabe.verlangeAngebot(mandant));
     Gespraech gespraech = gespraech(nutzer, mandant, sitzungId, gespraechId);
-    if (!eigenschaften.eingeschaltet()) {
-      throw nichtVerfuegbar("Assistent abgeschaltet oder ohne Schluessel");
-    }
     pruefeText(text);
     if (gespraech.kundennachrichten() >= eigenschaften.nachrichtenJeGespraech()) {
       throw new FachlicheAusnahme(
@@ -149,7 +144,7 @@ public class AssistentService {
     try {
       begrenzung.pruefeUndZaehle(nutzer.id());
       gespraech.beruehre(uhr.instant());
-      Ergebnis ergebnis = fuehrung.fuehre(gespraech, text, angebot(mandant), zaehler);
+      Ergebnis ergebnis = fuehrung.fuehre(gespraech, text, angebot, zaehler);
       ergebnisName = ergebnis.ausgang().name();
       return new NachrichtResponse(ergebnis.text(), ergebnis.vorschlag());
     } catch (Modellfehler fehler) {
@@ -189,15 +184,9 @@ public class AssistentService {
 
   // ─── Hilfen ────────────────────────────────────────────────────────────────────────────────
 
-  /** Die angebotenen Typen, die der Assistent anbieten kann (E‑1054). */
-  private List<TypDefinition> angeboten(MandantContext mandant) {
-    return Werkzeugbau.geeignete(
-        typKatalog.angeboten(mandant).stream().map(TypKatalog.Angebot::definition).toList());
-  }
-
-  private Map<String, TypDefinition> angebot(MandantContext mandant) {
+  private static Map<String, TypDefinition> nachKennung(List<TypDefinition> typen) {
     Map<String, TypDefinition> angebot = new LinkedHashMap<>();
-    for (TypDefinition typ : angeboten(mandant)) {
+    for (TypDefinition typ : typen) {
       angebot.put(typ.typ(), typ);
     }
     return angebot;
@@ -237,15 +226,6 @@ public class AssistentService {
   private static RessourceNichtGefundenException nichtGefunden() {
     return new RessourceNichtGefundenException(
         "Gespraech unbekannt, abgelaufen, beendet oder fremd");
-  }
-
-  private static FachlicheAusnahme nichtVerfuegbar(String interneUrsache) {
-    return new FachlicheAusnahme(
-        HttpStatus.SERVICE_UNAVAILABLE,
-        NICHT_VERFUEGBAR,
-        "Assistent nicht verfügbar",
-        "Der Assistent ist zurzeit nicht verfügbar.",
-        interneUrsache);
   }
 
   /** Ohne Einzelheiten des Anbieters: Die stehen nur im Protokoll. */

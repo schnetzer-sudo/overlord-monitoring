@@ -4,6 +4,7 @@ import de.kraftwerkone.overlord.monitor.audit.AuditEvent;
 import de.kraftwerkone.overlord.monitor.audit.AuditEventType;
 import de.kraftwerkone.overlord.monitor.audit.AuditLogWriter;
 import de.kraftwerkone.overlord.monitor.common.MandantContext;
+import de.kraftwerkone.overlord.monitor.common.auftrag.AssistentFreigabe;
 import de.kraftwerkone.overlord.monitor.common.auftrag.AuftragsPruefung;
 import de.kraftwerkone.overlord.monitor.common.auftrag.DefinitionsPruefung;
 import de.kraftwerkone.overlord.monitor.common.auftrag.Fehlercode;
@@ -43,6 +44,12 @@ import tools.jackson.databind.node.ObjectNode;
  * Die Fachlogik der Auftraege: anbieten, pruefen, anlegen, lesen, offene loeschen ({@code
  * docs/tasks.md} §6, {@code docs/assistent.md} §6.5).
  *
+ * <p><b>Pruefen und Anlegen nur, wo der Assistent verfuegbar ist</b> ({@link AssistentFreigabe},
+ * E‑1126): Auftraege entstehen ausschliesslich ueber ihn (E‑1001). Ist er fuer den Mandanten nicht
+ * verfuegbar — abgeschaltet, ohne Schluessel oder ohne freigeschalteten Typ —, ist das {@code 404}.
+ * Liste, Einzelabruf und Loeschen sind nicht gesperrt: Was der Mandant beauftragt hat, sieht er
+ * weiter.
+ *
  * <p><b>Der Monitor schreibt den Status nie ueber {@code OFFEN} hinaus.</b> Abholen und
  * Zurueckmelden sind Sache der Plattform ({@code docs/task-schnittstelle.md}). Seit A4 loescht er
  * einen Auftrag, solange er {@code OFFEN} ist — und nur dann.
@@ -77,16 +84,19 @@ public class AuftragService {
 
   private final AuftragRepository repository;
   private final TypKatalog typKatalog;
+  private final AssistentFreigabe freigabe;
   private final AuditLogWriter auditLogWriter;
   private final JsonMapper json;
 
   AuftragService(
       AuftragRepository repository,
       TypKatalog typKatalog,
+      AssistentFreigabe freigabe,
       AuditLogWriter auditLogWriter,
       JsonMapper json) {
     this.repository = repository;
     this.typKatalog = typKatalog;
+    this.freigabe = freigabe;
     this.auditLogWriter = auditLogWriter;
     this.json = json;
   }
@@ -102,14 +112,16 @@ public class AuftragService {
 
   /**
    * Legt einen Auftrag an. Die Reihenfolge ist Absicht ({@code docs/tasks.md} §6.2): erst die
-   * {@code anfrageId}, dann die Wiederholung, dann der Typ, dann die Eintraege.
+   * Freigabe, dann die {@code anfrageId}, dann die Wiederholung, dann der Typ, dann die Eintraege.
    *
    * <p><b>Ein nicht angebotener Typ ist {@code 404}</b>, gleich ob unbekannt, inaktiv, ungueltig
    * oder fuer diesen Mandanten nicht freigeschaltet — dasselbe Statement, derselbe Rumpf. Sonst
-   * liesse sich die Freischaltung anderer Mandanten abfragen.
+   * liesse sich die Freischaltung anderer Mandanten abfragen. Ein Mandant ohne Assistenten bekommt
+   * denselben Rumpf schon bei der Freigabe.
    */
   public Anlage lege(
       AngemeldeterNutzer nutzer, MandantContext mandant, AuftragRequest anfrage, String ip) {
+    List<TypKatalog.Angebot> katalog = freigabe.verlangeKatalog(mandant);
     String anfrageId = anfrageId(anfrage.anfrageId());
 
     Optional<Auftragszeile> vorhanden = repository.findeNachAnfrage(mandant, anfrageId);
@@ -117,13 +129,7 @@ public class AuftragService {
       return new Anlage(antwort(vorhanden.get()), false);
     }
 
-    TypKatalog.Angebot angebot =
-        typKatalog
-            .angeboten(mandant, anfrage.typ())
-            .orElseThrow(
-                () ->
-                    new RessourceNichtGefundenException(
-                        "Auftragstyp fuer diesen Mandanten nicht angeboten: " + anfrage.typ()));
+    TypKatalog.Angebot angebot = angebotener(katalog, anfrage.typ());
     TypDefinition definition = angebot.definition();
 
     List<Map<String, String>> eintraege =
@@ -198,19 +204,14 @@ public class AuftragService {
    *
    * <p>Dieselbe Pruefung wie in {@link #lege}, in derselben Reihenfolge und einschliesslich {@code
    * ZU_LANG}; nur werden die Fehler zurueckgegeben statt geworfen. <b>Ein nicht angebotener Typ ist
-   * {@code 404}</b>, mit demselben Statement und demselben Rumpf wie beim Anlegen.
+   * {@code 404}</b>, mit demselben Statement und demselben Rumpf wie beim Anlegen — ebenso ein
+   * Mandant, fuer den der Assistent nicht verfuegbar ist.
    *
    * @return leer, wenn der Auftrag so angelegt werden duerfte
    */
   public List<Prueffehler> pruefe(MandantContext mandant, PruefungRequest anfrage) {
     TypDefinition definition =
-        typKatalog
-            .angeboten(mandant, anfrage.typ())
-            .orElseThrow(
-                () ->
-                    new RessourceNichtGefundenException(
-                        "Auftragstyp fuer diesen Mandanten nicht angeboten: " + anfrage.typ()))
-            .definition();
+        angebotener(freigabe.verlangeKatalog(mandant), anfrage.typ()).definition();
 
     List<Map<String, String>> eintraege =
         anfrage.eintraege() == null ? List.of() : anfrage.eintraege();
@@ -328,6 +329,20 @@ public class AuftragService {
       geordnet.add(werte);
     }
     return geordnet;
+  }
+
+  /**
+   * Der Typ der Anfrage aus dem Katalog des Mandanten. Die Kennung wird genau verglichen;
+   * unbekannt, inaktiv, ungueltig und nicht freigeschaltet sind dasselbe {@code 404}.
+   */
+  private static TypKatalog.Angebot angebotener(List<TypKatalog.Angebot> katalog, String typ) {
+    return katalog.stream()
+        .filter(angebot -> angebot.definition().typ().equals(typ))
+        .findFirst()
+        .orElseThrow(
+            () ->
+                new RessourceNichtGefundenException(
+                    "Auftragstyp fuer diesen Mandanten nicht angeboten: " + typ));
   }
 
   /**

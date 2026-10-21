@@ -5,7 +5,6 @@ import de.kraftwerkone.overlord.monitor.common.auftrag.AuftragstypRepository.Typ
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.slf4j.Logger;
@@ -68,16 +67,6 @@ public class TypKatalog {
       }
     }
     return angeboten;
-  }
-
-  /**
-   * Ein angebotener Typ. Unbekannt, inaktiv, ungueltig und nicht freigeschaltet sind dasselbe:
-   * dasselbe Statement, dieselbe leere Antwort. Die Kennung wird genau verglichen.
-   */
-  public Optional<Angebot> angeboten(MandantContext mandant, String typ) {
-    return angeboten(mandant).stream()
-        .filter(angebot -> angebot.definition().typ().equals(typ))
-        .findFirst();
   }
 
   private DefinitionsPruefung.Ergebnis geprueft(Typzeile zeile) {

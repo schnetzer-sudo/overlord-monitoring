@@ -15,8 +15,8 @@ import org.junit.jupiter.api.Test;
 
 /**
  * <b>Im Hauptcode kennt keine Stelle einen bestimmten Typ</b> (E‑1018). Der erste Typ steht nur in
- * den Migrationen, die ihn anlegen ({@code V100}) und aendern ({@code V101}, {@code V102}), und in
- * Tests.
+ * den Migrationen, die ihn anlegen ({@code V100}), aendern ({@code V101}, {@code V102}) und seine
+ * Freischaltungen fuer Kundenmandanten zuruecknehmen ({@code V103}), und in Tests.
  *
  * <p>Durchsucht wird {@code src/main} ganz — Java, generierter Code, Ressourcen —, ausser {@code
  * src/main/resources/db/migration}. Damit der Test nicht blind gruen ist, verlangt er, dass er die
@@ -84,7 +84,8 @@ class TypUnabhaengigkeitTest {
           .containsExactlyInAnyOrder(
               "V100__task.sql",
               "V101__werk_abladestelle_20_eintraege.sql",
-              "V102__werk_abladestelle_neu_oder_aendern.sql");
+              "V102__werk_abladestelle_neu_oder_aendern.sql",
+              "V103__werk_abladestelle_ohne_kundenmandanten.sql");
     }
   }
 

@@ -9,6 +9,7 @@ import de.kraftwerkone.overlord.monitor.assistent.modell.Modellanfrage;
 import de.kraftwerkone.overlord.monitor.assistent.modell.Nachricht.Werkzeugergebnisse;
 import de.kraftwerkone.overlord.monitor.assistent.modell.Werkzeug;
 import de.kraftwerkone.overlord.monitor.common.auftrag.Testdefinitionen;
+import de.kraftwerkone.overlord.monitor.common.auftrag.Testfreischaltungen;
 import de.kraftwerkone.overlord.monitor.security.Rolle;
 import de.kraftwerkone.overlord.monitor.security.SicherheitsTestbasis;
 import de.kraftwerkone.overlord.monitor.security.Zugriffszaehler;
@@ -32,7 +33,9 @@ import org.springframework.test.context.TestPropertySource;
 /**
  * <b>Der Pflicht-Isolationstest der fuenf neuen Endpunkte</b> (Regel M4, {@code docs/assistent.md}
  * §9.2): {@code GET /api/assistent}, {@code POST /api/assistent/gespraeche}, {@code POST
- * …/{id}/nachrichten}, {@code DELETE …/{id}} und {@code POST /api/tasks/pruefung}.
+ * …/{id}/nachrichten}, {@code DELETE …/{id}} und {@code POST /api/tasks/pruefung} — seit 1.1.0
+ * zugleich der Test der Sperre je Mandant ({@code docs/tasks.md} §3.9, E‑1126): Ohne Freischaltung
+ * antworten Gespraeche, Pruefung und Anlegen {@code 404}, und das Modell bekommt keinen Aufruf.
  *
  * <p><b>Statt des Anbieters spielt ein geskriptetes Modell</b> ({@link Skriptmodell} als
  * {@code @Primary}-Bean). Der Schalter ist an, der Schluessel ein Platzhalter, die Basis-URL ein
@@ -40,9 +43,10 @@ import org.springframework.test.context.TestPropertySource;
  * falsch waere.
  *
  * <p><b>Paarung {@code NEXANS} gegen {@code IBIS}</b>, beide fuer {@code WERK_ABLADESTELLE}
- * freigeschaltet; dazu legt der Test einen eigenen Typ an, der nur {@code IBIS} freigeschaltet ist
- * (Regel T2: reines {@code INSERT} auf eine freie Kennung, genau diese wird geloescht). {@code
- * SUTTONS} ist der Gegentest ohne Freischaltung.
+ * freigeschaltet — seit {@code V103} vom Test selbst ({@link Testfreischaltungen}); dazu legt er
+ * einen eigenen Typ an, der nur {@code IBIS} freigeschaltet ist (Regel T2: reines {@code INSERT}
+ * auf eine freie Kennung, genau diese wird geloescht). {@code SUTTONS} ist der Gegentest ohne
+ * Freischaltung.
  *
  * <p><b>Ununterscheidbar heisst dieselben Statements</b> — gezaehlt auf dem Schreib-Kontext ({@link
  * SchreibkontextZaehlung}). Derselbe Zaehler belegt, dass <b>kein Weg des Assistenten etwas
@@ -98,6 +102,7 @@ class AssistentIsolationDbIT extends SicherheitsTestbasis {
   @Autowired private Skriptmodell modell;
   @Autowired private Zugriffszaehler zugriffe;
 
+  private Testfreischaltungen freischaltungen;
   private Sitzung aufNexans;
   private Sitzung aufIbis;
   private Sitzung aufSuttons;
@@ -107,12 +112,13 @@ class AssistentIsolationDbIT extends SicherheitsTestbasis {
     assertThat(mandantRepository.existiert(NEXANS)).isTrue();
     assertThat(mandantRepository.existiert(IBIS)).isTrue();
     assertThat(mandantRepository.existiert(SUTTONS)).isTrue();
-    assertThat(freigeschaltet(NEXANS)).as("WERK_ABLADESTELLE fuer NEXANS").contains(WERK);
-    assertThat(freigeschaltet(IBIS)).as("WERK_ABLADESTELLE fuer IBIS").contains(WERK);
     assertThat(freigeschaltet(SUTTONS)).as("kein aktiver Typ fuer SUTTONS").isEmpty();
     assertThat(monitorDsl.fetchCount(TASK_TYPE, TASK_TYPE.TASK_TYP.eq(NUR_IBIS)))
         .as("die Kennung des Testtyps ist frei")
         .isZero();
+
+    freischaltungen = new Testfreischaltungen(monitorDsl);
+    freischaltungen.schalteFrei(WERK, NEXANS, IBIS);
 
     monitorDsl
         .insertInto(TASK_TYPE)
@@ -140,8 +146,13 @@ class AssistentIsolationDbIT extends SicherheitsTestbasis {
 
   @AfterEach
   void raeumeTestTypWeg() {
+    // Auftraege tragen keinen Fremdschluessel; die der eigenen Konten gehen zuerst.
+    monitorDsl.deleteFrom(TASK).where(TASK.ANGELEGT_VON.like(PRAEFIX + "assistent%")).execute();
     // ON DELETE CASCADE raeumt task_type_mandant mit. Genau die eigene Kennung, nichts sonst.
     monitorDsl.deleteFrom(TASK_TYPE).where(TASK_TYPE.TASK_TYP.eq(NUR_IBIS)).execute();
+    if (freischaltungen != null) {
+      freischaltungen.raeumeAuf();
+    }
   }
 
   // ─── GET /api/assistent ────────────────────────────────────────────────────────────────────
@@ -167,12 +178,61 @@ class AssistentIsolationDbIT extends SicherheitsTestbasis {
   // ─── POST /api/assistent/gespraeche ────────────────────────────────────────────────────────
 
   @Test
-  @DisplayName("Eroeffnen: SUTTONS bekommt 503, kein Aufruf des Modells")
-  void suttons_nicht_verfuegbar() throws Exception {
-    Antwort antwort = aufSuttons.sende("/api/assistent/gespraeche", "");
+  @DisplayName(
+      "Ohne Freischaltung (SUTTONS): Eroeffnen, Nachricht, Pruefen und Anlegen 404 wie ein"
+          + " erfundenes Gespraech oder ein erfundener Typ, kein Aufruf des Modells")
+  void ohne_freischaltung_gesperrt() throws Exception {
+    String erfunden = UUID.randomUUID().toString();
 
-    assertThat(antwort.status()).isEqualTo(503);
-    assertThat(antwort.<String>json("$.type")).endsWith("/assistent-nicht-verfuegbar");
+    Antwort eroeffnen = aufSuttons.sende("/api/assistent/gespraeche", "");
+    Antwort nachrichtSuttons = nachricht(aufSuttons, erfunden, "Hallo");
+    Antwort nachrichtNexans = nachricht(aufNexans, erfunden, "Hallo");
+    Antwort pruefenSuttons = aufSuttons.sende("/api/tasks/pruefung", pruefung(WERK, ANPASSUNG));
+    Antwort pruefenNexans =
+        aufNexans.sende("/api/tasks/pruefung", pruefung("WERK_ABLADESTELLX", ANPASSUNG));
+    Antwort anlegenSuttons = aufSuttons.sende("/api/tasks", anlage(WERK, ANPASSUNG));
+    Antwort anlegenNexans = aufNexans.sende("/api/tasks", anlage("WERK_ABLADESTELLX", ANPASSUNG));
+
+    for (Antwort antwort :
+        List.of(
+            eroeffnen,
+            nachrichtSuttons,
+            nachrichtNexans,
+            pruefenSuttons,
+            pruefenNexans,
+            anlegenSuttons,
+            anlegenNexans)) {
+      assertThat(antwort.status()).as(antwort.rumpf()).isEqualTo(404);
+      assertThat(antwort.<String>json("$.type")).endsWith("/nicht-gefunden");
+    }
+    // Ununterscheidbar: Nicht freigeschaltet sieht aus wie unbekannt — am selben Pfad derselbe
+    // Rumpf wie ein erfundenes Gespraech bzw. ein erfundener Typ unter einem freigeschalteten
+    // Mandanten.
+    assertThat(nachrichtSuttons.rumpfOhneTraceId()).isEqualTo(nachrichtNexans.rumpfOhneTraceId());
+    assertThat(pruefenSuttons.rumpfOhneTraceId()).isEqualTo(pruefenNexans.rumpfOhneTraceId());
+    assertThat(anlegenSuttons.rumpfOhneTraceId()).isEqualTo(anlegenNexans.rumpfOhneTraceId());
+
+    assertThat(modell.anfragen()).as("kein Aufruf des Modells").isEmpty();
+    assertThat(monitorDsl.fetchCount(TASK, TASK.ANGELEGT_VON.like(PRAEFIX + "assistent%")))
+        .isZero();
+
+    // Gegenprobe: Mit Freischaltung ist derselbe Weg offen.
+    assertThat(aufNexans.sende("/api/assistent/gespraeche", "").status()).isEqualTo(201);
+  }
+
+  @Test
+  @DisplayName(
+      "Anlegen eines Typs, der fuer den Mandanten nicht freigeschaltet ist: 404, nichts angelegt;"
+          + " unter IBIS legt derselbe Rumpf an")
+  void anlegen_fremder_typ() throws Exception {
+    Antwort nexans = aufNexans.sende("/api/tasks", anlage(NUR_IBIS, GATTUNG_FREIGEBEN));
+
+    assertThat(nexans.status()).as(nexans.rumpf()).isEqualTo(404);
+    assertThat(monitorDsl.fetchCount(TASK, TASK.ANGELEGT_VON.eq(NUTZER_NEXANS))).isZero();
+
+    Antwort ibis = aufIbis.sende("/api/tasks", anlage(NUR_IBIS, GATTUNG_FREIGEBEN));
+    assertThat(ibis.status()).as(ibis.rumpf()).isEqualTo(201);
+    assertThat(monitorDsl.fetchCount(TASK, TASK.ANGELEGT_VON.eq(NUTZER_IBIS))).isEqualTo(1);
     assertThat(modell.anfragen()).isEmpty();
   }
 
@@ -447,6 +507,12 @@ class AssistentIsolationDbIT extends SicherheitsTestbasis {
   /** Der Rumpf von {@code POST /api/tasks/pruefung}: Typ plus Aktion und Eintraege. */
   private static String pruefung(String typ, String eingabe) {
     return eingabe.strip().replaceFirst("\\{", "{\"typ\":\"" + typ + "\",");
+  }
+
+  /** Der Rumpf von {@code POST /api/tasks}: wie die Pruefung, mit einer neuen {@code anfrageId}. */
+  private static String anlage(String typ, String eingabe) {
+    return pruefung(typ, eingabe)
+        .replaceFirst("\\{", "{\"anfrageId\":\"" + UUID.randomUUID() + "\",");
   }
 
   private static List<String> werkzeugnamen(Modellanfrage anfrage) {

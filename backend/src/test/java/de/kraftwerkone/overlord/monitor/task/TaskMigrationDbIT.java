@@ -1,7 +1,6 @@
 package de.kraftwerkone.overlord.monitor.task;
 
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.TASK_TYPE;
-import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.TASK_TYPE_MANDANT;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.kraftwerkone.overlord.monitor.common.auftrag.Testdefinitionen;
@@ -26,6 +25,11 @@ import org.springframework.test.context.ActiveProfiles;
  * oder die Zeile scheiterte an {@code JSON_VALID}. Der Test holt die Muster <b>in der Datenbank</b>
  * heraus ({@code JSON_EXTRACT}) und vergleicht sie mit dem Text aus dem Auftrag zu A1, nicht mit
  * einer zweiten Abschrift.
+ *
+ * <p><b>Die Freischaltungen prueft der Test nicht.</b> Bis 1.1.0 stand hier, dass {@code V100} den
+ * Typ fuer {@code NEXANS} und {@code IBIS} freischaltet; {@code V103} nimmt genau diese beiden
+ * zurueck ({@code docs/tasks.md} §3.9, E‑1125). Seitdem sind Freischaltungen Pflegedaten (Regel
+ * 12), und die Tests legen sich ihre selbst an.
  *
  * <p><b>Grenze (Regel T2):</b> Die Zeile ist per SQL pflegbar. Aendert die Betreuung sie auf der
  * Testkopie, wird dieser Test rot — dann hat sich die Testkopie geaendert, nicht der Code, und die
@@ -81,13 +85,5 @@ class TaskMigrationDbIT {
     assertThat(zeile.getBeschreibung()).isEqualTo(Testdefinitionen.werkBeschreibung());
     assertThat(zeile.getAktiv()).isTrue();
     assertThat(zeile.getGeaendertAm()).isNotNull();
-
-    assertThat(
-            monitorDsl
-                .select(TASK_TYPE_MANDANT.MANDANT_ID)
-                .from(TASK_TYPE_MANDANT)
-                .where(TASK_TYPE_MANDANT.TASK_TYP.eq(Testdefinitionen.WERK))
-                .fetch(TASK_TYPE_MANDANT.MANDANT_ID))
-        .contains("NEXANS", "IBIS");
   }
 }

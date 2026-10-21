@@ -7,11 +7,15 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import de.kraftwerkone.overlord.monitor.assistent.anthropic.AnthropicEigenschaften;
 import de.kraftwerkone.overlord.monitor.assistent.anthropic.AnthropicStub;
 import de.kraftwerkone.overlord.monitor.assistent.modell.Modellfehler;
 import de.kraftwerkone.overlord.monitor.assistent.modell.Sprachmodell;
 import de.kraftwerkone.overlord.monitor.common.MandantContext;
+import de.kraftwerkone.overlord.monitor.common.auftrag.AssistentFreigabe;
 import de.kraftwerkone.overlord.monitor.common.auftrag.Testdefinitionen;
 import de.kraftwerkone.overlord.monitor.common.auftrag.TypKatalog;
 import de.kraftwerkone.overlord.monitor.common.error.FachlicheAusnahme;
@@ -28,11 +32,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 
 /**
- * Der Assistent hinter den Endpunkten, ohne Datenbank: der Schalter (E‑1030), die Abbildung der
- * Fehler des Anbieters und die Grenzen je Nachricht. Den Typkatalog ersetzt ein Mock.
+ * Der Assistent hinter den Endpunkten, ohne Datenbank: der Schalter (E‑1030), die Freigabe je
+ * Mandant (E‑1126, nicht verfuegbar ist {@code 404}), die Abbildung der Fehler des Anbieters und
+ * die Grenzen je Nachricht. Den Typkatalog ersetzt ein Mock.
  */
 class AssistentServiceTest {
 
@@ -81,7 +87,7 @@ class AssistentServiceTest {
     return new AssistentService(
         eigenschaften,
         modell,
-        typKatalog,
+        new AssistentFreigabe(eigenschaften.eingeschaltet(), typKatalog, Werkzeugbau::geeignet),
         speicher,
         new Nachrichtenbegrenzung(uhr, eigenschaften.nachrichtenJeStunde()),
         Skriptmodell.JSON,
@@ -111,6 +117,34 @@ class AssistentServiceTest {
     }
 
     @Test
+    @DisplayName(
+        "Eine Logzeile beim Start nennt den Grund — kein Schluessel oder Schalter aus —, nie den"
+            + " Schluessel")
+    void logzeile_ohne_schluesselinhalt() {
+      Logger protokoll = (Logger) LoggerFactory.getLogger(AssistentConfig.class);
+      ListAppender<ILoggingEvent> anhang = new ListAppender<>();
+      anhang.start();
+      protokoll.addAppender(anhang);
+      try {
+        ausDerKonfiguration(eigenschaften(true, "", stub.basisUrl()));
+        ausDerKonfiguration(eigenschaften(false, "geheim-1234567890", stub.basisUrl()));
+      } finally {
+        protokoll.detachAppender(anhang);
+        anhang.stop();
+      }
+
+      List<String> zeilen = anhang.list.stream().map(ILoggingEvent::getFormattedMessage).toList();
+      assertThat(zeilen).hasSize(2);
+      assertThat(zeilen.get(0))
+          .startsWith("Assistent fuer alle Mandanten aus: kein Schluessel")
+          .contains("schluessel=fehlt");
+      assertThat(zeilen.get(1))
+          .startsWith("Assistent fuer alle Mandanten aus: Schalter aus")
+          .contains("schluessel=gesetzt")
+          .doesNotContain("geheim");
+    }
+
+    @Test
     @DisplayName("Schalter aus, Schluessel gesetzt: nicht verfuegbar, kein HTTP-Aufruf")
     void schalter_aus() {
       AssistentEigenschaften aus = eigenschaften(false, "schluessel", stub.basisUrl());
@@ -130,16 +164,12 @@ class AssistentServiceTest {
       AssistentService service = service(eigenschaften, modell);
 
       assertThat(service.stand(NEXANS, SITZUNG)).isEqualTo(new AssistentResponse(false, List.of()));
+      // Nicht verfuegbar ist 404 wie ein nicht zulaessiger Mandant (E‑1126), nicht mehr 503.
       assertThatThrownBy(() -> service.eroeffne(NUTZER, NEXANS, "Beispielkunde GmbH", SITZUNG))
-          .isInstanceOfSatisfying(
-              FachlicheAusnahme.class,
-              fehler -> {
-                assertThat(fehler.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-                assertThat(fehler.problemTyp()).isEqualTo("assistent-nicht-verfuegbar");
-              });
+          .isInstanceOf(RessourceNichtGefundenException.class);
       assertThatThrownBy(
               () -> service.sende(NUTZER, NEXANS, SITZUNG, UUID.randomUUID().toString(), "Hallo"))
-          .isInstanceOf(FachlicheAusnahme.class);
+          .isInstanceOf(RessourceNichtGefundenException.class);
 
       assertThat(stub.anfragen()).as("kein Aufruf beim Anbieter").isEmpty();
       verifyNoInteractions(typKatalog);
@@ -289,15 +319,27 @@ class AssistentServiceTest {
     }
 
     @Test
-    @DisplayName("Ohne angebotenen Typ: verfuegbar false, Eroeffnen 503")
+    @DisplayName("Ohne angebotenen Typ: verfuegbar false, Eroeffnen 404, kein Aufruf des Modells")
     void ohne_typ() {
       when(typKatalog.angeboten(any(MandantContext.class))).thenReturn(List.of());
 
       assertThat(service.stand(NEXANS, SITZUNG).verfuegbar()).isFalse();
       assertThatThrownBy(() -> service.eroeffne(NUTZER, NEXANS, "Beispielkunde GmbH", SITZUNG))
-          .isInstanceOfSatisfying(
-              FachlicheAusnahme.class,
-              fehler -> assertThat(fehler.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE));
+          .isInstanceOf(RessourceNichtGefundenException.class);
+      assertThat(modell.anfragen()).isEmpty();
+    }
+
+    @Test
+    @DisplayName(
+        "Freischaltung entzogen, Gespraech noch offen: die Nachricht ist 404, kein Aufruf des"
+            + " Modells")
+    void freischaltung_entzogen() {
+      String id = eroeffne();
+      when(typKatalog.angeboten(any(MandantContext.class))).thenReturn(List.of());
+
+      assertThatThrownBy(() -> service.sende(NUTZER, NEXANS, SITZUNG, id, "Hallo"))
+          .isInstanceOf(RessourceNichtGefundenException.class);
+      assertThat(modell.anfragen()).isEmpty();
     }
   }
 }

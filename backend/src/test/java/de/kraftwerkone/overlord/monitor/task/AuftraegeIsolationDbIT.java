@@ -27,12 +27,12 @@ import org.springframework.context.annotation.Import;
  * <p><b>Paarung {@code NEXANS} gegen {@code IBIS}</b>: zwei Haeuser, beide fuer {@code
  * WERK_ABLADESTELLE} freigeschaltet — ein Leck zwischen ihnen waere also nicht schon durch die
  * Freischaltung verdeckt. <b>{@code SUTTONS}</b> ist der Gegentest ohne Freischaltung (Regel L7:
- * neben dem grossen Mandanten immer ein kleiner).
+ * neben dem grossen Mandanten immer ein kleiner); fuer ihn ist der Assistent nicht verfuegbar.
  *
  * <p><b>Die Daten legt der Test selbst an</b> (Regel T2): Der Auftrag, dessen Unerreichbarkeit
- * geprueft wird, entsteht hier unter {@code NEXANS}. Vom Bestand haengt nur die Freischaltung ab,
- * und die wird zu Beginn geprueft — schlaegt das fehl, hat sich die Testkopie geaendert, nicht der
- * Code.
+ * geprueft wird, entsteht hier unter {@code NEXANS}, die beiden Freischaltungen seit {@code V103}
+ * in {@link AuftragsTestbasis}. Vom Bestand haengt nur ab, dass {@code SUTTONS} keine hat; das wird
+ * zu Beginn geprueft — schlaegt es fehl, hat sich die Testkopie geaendert, nicht der Code.
  *
  * <p><b>Ununterscheidbar heisst: dieselben Statements.</b> Fremd und erfunden werden ueber den
  * Rumpf <b>und</b> ueber die Folge der Statements auf dem Schreib-Kontext verglichen ({@link
@@ -57,8 +57,6 @@ class AuftraegeIsolationDbIT extends AuftragsTestbasis {
     assertThat(mandantRepository.existiert(NEXANS)).isTrue();
     assertThat(mandantRepository.existiert(IBIS)).isTrue();
     assertThat(mandantRepository.existiert(SUTTONS)).isTrue();
-    assertThat(freigeschaltet(NEXANS)).as("WERK_ABLADESTELLE fuer NEXANS").contains(WERK);
-    assertThat(freigeschaltet(IBIS)).as("WERK_ABLADESTELLE fuer IBIS").contains(WERK);
     assertThat(freigeschaltet(SUTTONS)).as("kein aktiver Typ fuer SUTTONS").isEmpty();
 
     legeNutzerAn(NUTZER_NEXANS, PASSWORT, Rolle.MANDANT, NEXANS);
