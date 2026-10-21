@@ -9,6 +9,32 @@ Tags und die Definition of Done für ein Release stehen in
 
 ### Neu
 
+### Geändert
+
+### Behoben
+
+## 1.1.0 (21.10.2026)
+
+Die Linie `assistent` — **Aufträge über den Assistenten**, A1 bis A4 — ist nach `main`
+zusammengeführt. **Der Assistent ist nur für freigeschaltete Mandanten sichtbar, mit diesem Release
+zunächst nur im Mandanten `SYSTEM`, den ausschließlich `ADMIN` sieht.** Nutzer aller anderen
+Mandanten sehen weder den Assistenten noch „Ihre Aufträge“. Weitere Mandanten schaltet ein
+SQL-Insert frei, kein Deployment ([`docs/tasks.md`](docs/tasks.md) §3.9; E‑1125 bis E‑1131).
+
+### Neu
+
+- **Zusammenführung (21.10.2026):** eine Stelle entscheidet je Mandant über den Assistenten
+  (`AssistentFreigabe`): Schalter an, Schlüssel gesetzt und mindestens ein für den Mandanten
+  freigeschalteter Typ (E‑1126, E‑1130). Nicht verfügbar antworten Gespräche, Prüfen und Anlegen
+  `404` wie bei einem nicht zulässigen Mandanten, und kein Aufruf geht an den Anbieter
+  ([`docs/tasks.md`](docs/tasks.md) §3.9, F30 bis F33).
+- Migration `V103`: nimmt die Freischaltungen von `WERK_ABLADESTELLE` für `NEXANS` und `IBIS` aus
+  `V100` zurück (E‑1125).
+- `scripts/assistent-freischaltung-system.sql` schaltet `WERK_ABLADESTELLE` ausschließlich für
+  `SYSTEM` frei, idempotent, mit Rücknahme
+  `scripts/assistent-freischaltung-system-ruecknahme.sql`; Lukas führt es in der Produktion aus (F34).
+- `docs/betrieb.md` §5a: Zeitgrenze, Antwort am Stück ohne Streaming, Reverse Proxy und ausgehendes
+  HTTPS zu `api.anthropic.com`.
 - Auftragsmodell der Assistent-Linie (A1): Tabellen `task`, `task_type` und `task_type_mandant`
   in `overlord_monitor` (Migration `V100`), neu in `docs/PROJEKTBESCHREIBUNG.md` §5
   ([`docs/tasks.md`](docs/tasks.md) §5).
@@ -18,8 +44,8 @@ Tags und die Definition of Done für ein Release stehen in
   `GET /api/tasks/{taskId}` ([`docs/tasks.md`](docs/tasks.md) §6).
 - Vertrag für die EDI-Plattform in [`docs/task-schnittstelle.md`](docs/task-schnittstelle.md).
 - Fachpaket `task` in `docs/PROJEKTBESCHREIBUNG.md` §6 ([`docs/tasks.md`](docs/tasks.md)).
-- Assistent im Backend (A2), abgeschaltet bis zur Prüfung durch den Datenschutzbeauftragten:
-  Endpunkte unter `/api/assistent`, Anbindung an die Anthropic-API hinter einer anbieterneutralen
+- Assistent im Backend (A2), abgeschaltet bis zur Prüfung durch den Datenschutzbeauftragten
+  (seit 21.10.2026 erledigt, Punkt 1009): Endpunkte unter `/api/assistent`, Anbindung an die Anthropic-API hinter einer anbieterneutralen
   Schnittstelle, Werkzeuge aus den Typdefinitionen, Testsatz
   ([`docs/assistent.md`](docs/assistent.md); E‑1028 bis E‑1044).
 - `POST /api/tasks/pruefung`: Prüfung eines Auftrags ohne Anlegen, für die Karte (E‑1042).
@@ -29,9 +55,9 @@ Tags und die Definition of Done für ein Release stehen in
   Fachpaket ist ([`docs/assistent.md`](docs/assistent.md) §4.1).
 - `docs/PROJEKTBESCHREIBUNG.md` §7, neuer Abschnitt „Assistent“: Datenfluss zum Anbieter, Schalter,
   keine Speicherung — weil Kundentext erstmals das Haus verlässt (E‑1029, E‑1035, E‑1038).
-- `docs/PROJEKTBESCHREIBUNG.md` §11, neue offene Annahme: Übermittlung an Anthropic in die USA auf
-  Grundlage des Data Privacy Framework, Prüfung durch den Datenschutzbeauftragten ausstehend
-  (E‑1029, Punkt 1009).
+- `docs/PROJEKTBESCHREIBUNG.md` §11, neue Annahme: Übermittlung an Anthropic in die USA auf
+  Grundlage des Data Privacy Framework (E‑1029, Punkt 1009); bis 21.10.2026 offen, seitdem unter
+  „Geklärt“.
 - Assistent im Frontend (A3): Symbol in der Kopfleiste links neben dem Nutzermenü, Chatbox als
   Overlay, Bestätigungskarte mit Prüfung über `POST /api/tasks/pruefung` und Anlegen per Klick;
   erscheint nur, wenn `GET /api/assistent` `verfuegbar: true` meldet
@@ -91,6 +117,32 @@ Tags und die Definition of Done für ein Release stehen in
   Dateien seit A4 mehr enthalten, als ihr Eintrag sagte.
 - `docs/PROJEKTBESCHREIBUNG.md` §5: `audit_log` nennt Anlegen und Löschen von Aufträgen, `task` das
   Löschen offener Aufträge durch den Kunden — weil beides seit A1 bzw. A4 geschieht (E‑1114).
+- **Zusammenführung (21.10.2026):** Nicht verfügbar ist `404 nicht-gefunden` statt
+  `503 assistent-nicht-verfuegbar`; der Problemtyp entfällt (F33). Anlegen und Prüfen fragen die
+  Freigabe zuerst (F32).
+- Die `/api`-Weiterleitung in Next.js wartet 300 s statt 30 s (`experimental.proxyTimeout`), weil
+  eine Nachricht an den Assistenten im ungünstigsten Fall 244 s dauert (F37).
+- Der Stand des Assistenten gilt im Frontend je Mandant; nach einem Mandantenwechsel wird er neu
+  gelesen, eine offene Chatbox schließt sich (F36).
+- Die Logzeile beim Start nennt, warum der Assistent für alle Mandanten aus ist (kein Schlüssel,
+  Schalter aus), nie den Schlüssel.
+- Die DB-Tests legen ihre Freischaltung selbst an und räumen sie ab (F35).
+- `DEVELOPMENT_GUIDELINES.md` §12, `CLAUDE.md`: Das Modell zweier Linien ist durch eine Linie
+  ersetzt; Migrationen und projektweite Nummern schließen an die höchste vergebene an, der Bereich
+  unter 1000 wird nicht weiter befüllt; die Ausnahmen bei Codegen und Indexprüfung entfallen
+  (E‑1127). Grund: die Entscheidung des Auftraggebers vom 21.10.2026, die Linie zusammenzuführen.
+- `docs/PROJEKTBESCHREIBUNG.md`: Kopfkasten auf 1.1.0; §5 Migrationsbereich `V1` bis `V13` und
+  `V100` bis `V103`, `task_type_mandant` als Freischaltung des Assistenten; §6 Codegen ohne
+  Ausnahme, Paketbaum ohne „Linie assistent“, die Freigabe in `common/auftrag`; §7 der Assistent
+  verfügbar nur für freigeschaltete Mandanten, zunächst `SYSTEM`, und die Freischaltung als keine
+  Ausnahme von M1; §9 „Funktionsumfang 1.1“ mit den Aufträgen, „Nicht enthalten“ ohne „Assistent und
+  Chatbot“, dafür Fragen an den Chatbot und der Assistent für Kundenmandanten; §10 neu gefasst;
+  §11 die Übermittlung an Anthropic unter „Geklärt“. Grund: E‑1125 bis E‑1131.
+- `docs/ROADMAP.md` §1 und §2: Linien zusammengeführt, Stand A1 bis A4 und 1.1.0.
+- `docs/README.md`: Einträge ohne „Linie `assistent`“ als laufende Linie, Hinweis auf die
+  Freischaltung — weil es seit 1.1.0 eine Linie gibt.
+- Punkt 1009 (Prüfung durch den Datenschutzbeauftragten) ist erledigt, Auskunft des Auftraggebers
+  vom 21.10.2026 (E‑1131).
 
 ### Behoben
 

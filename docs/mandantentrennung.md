@@ -446,6 +446,16 @@ schlechter Beweis für eine Trennung, die zwischen Firmen greifen soll.
 > Antwort und dieselben zwei Statements** wie bei einer erfundenen Kennung — und die Zeile von
 > `NEXANS` steht danach unverändert. Ein `409` gibt es nur für einen eigenen Auftrag; sonst verriete
 > der Unterschied zwischen `404` und `409`, dass es die Kennung bei einem anderen Mandanten gibt.
+>
+> **Ergänzt 21.10.2026 (1.1.0, Zusammenführung).** Kein neuer Endpunkt, keine neue Ausnahme; die
+> Liste in §3 bleibt bei drei. **Der Assistent ist je Mandant freigeschaltet** — als Daten in
+> `task_type_mandant`, gelesen für den Mandanten aus der Sitzung ([`tasks.md`](tasks.md) §3.9).
+> Ohne Freischaltung antworten Gespräche, Prüfen und Anlegen `404`, **derselbe Rumpf** wie ein
+> erfundenes Gespräch bzw. ein erfundener Typ unter einem freigeschalteten Mandanten (vorher `503`).
+> `AssistentIsolationDbIT` prüft das für `SUTTONS`, ohne einen Aufruf des Modells. Seit `V103` ist
+> `WERK_ABLADESTELLE` für `NEXANS` und `IBIS` nicht mehr in der Testkopie freigeschaltet; beide
+> Isolationstests legen die Freischaltung für die Paarung selbst an und entfernen genau diese Zeilen
+> (Regel T2).
 
 Der Test prüft zu Beginn, dass beide in der Testkopie existieren und die erfundene ID nicht. Schlägt
 das fehl, hat sich die Testkopie geändert — nicht der Code.

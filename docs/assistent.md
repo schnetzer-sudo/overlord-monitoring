@@ -13,6 +13,12 @@ Oberfläche**; Chatbox und Karte folgen mit A3 (§12).
 > **Der Assistent ist abgeschaltet**, bis der Datenschutzbeauftragte die Auftragsverarbeitung mit
 > Anthropic geprüft hat (E‑1029, E‑1030, Punkt 1009). Abgeschaltet heißt: Kein einziger Aufruf geht
 > an den Anbieter.
+>
+> **Stand 21.10.2026 (1.1.0):** Punkt 1009 ist erledigt (E‑1131, Auskunft des Auftraggebers). Der
+> Code geht mit 1.1.0 nach `main` und in die Produktion. **Verfügbar ist der Assistent nur für
+> Mandanten, für die ein Typ freigeschaltet ist**, mit Schalter **und** Schlüssel, zunächst nur
+> `SYSTEM` (E‑1125, E‑1126, E‑1130; [`tasks.md`](tasks.md) §3.9). Nicht verfügbar ist seitdem
+> `404` statt `503` (§6). Der Schalter bleibt in jedem Profil zunächst aus (E‑1056).
 
 ---
 
@@ -395,11 +401,21 @@ Zeitfenster oder blättert: Sie lesen nichts aus `GlassfishDB` (E‑1016).
 für den Assistenten angeboten wird. `typen` sind die Namen dieser Typen, nach Kennung sortiert. Ist
 der Schalter aus, ist die Antwort `{ "verfuegbar": false, "typen": [] }`, ohne Datenbankzugriff.
 
+**Seit 1.1.0 entscheidet das an genau einer Stelle**, `common.auftrag.AssistentFreigabe`
+([`tasks.md`](tasks.md) §3.9, F30): Schalter, Schlüssel, mindestens ein für den aktiven Mandanten
+freigeschalteter Typ, den der Assistent anbieten kann. Dieser Endpunkt ist die Selbstauskunft für
+das Symbol und antwortet auch dann `200`, wenn der Assistent nicht verfügbar ist; die übrigen
+antworten `404`.
+
 ### 6.2 `POST /api/assistent/gespraeche`
 
 Ohne Rumpf. **`201`** mit `{ "gespraechId": "<UUID>" }`. Beim Eröffnen werden Anweisung und
-Werkzeuge für dieses Gespräch festgelegt (E‑1045). Nicht verfügbar: **`503`**, Problemtyp
-`assistent-nicht-verfuegbar`.
+Werkzeuge für dieses Gespräch festgelegt (E‑1045). Nicht verfügbar: **`404`** `nicht-gefunden`,
+derselbe Rumpf wie bei einem nicht zulässigen Mandanten, und kein Aufruf beim Anbieter *(seit
+1.1.0, F33; bis dahin `503 assistent-nicht-verfuegbar`)*.
+
+Auch `POST …/nachrichten` fragt die Freigabe zuerst: Ist der Assistent für den Mandanten nicht mehr
+verfügbar, ist das `404` — auch für ein Gespräch, das noch offen ist.
 
 ### 6.3 `POST /api/assistent/gespraeche/{id}/nachrichten`
 
@@ -425,7 +441,8 @@ Prüfung wie beim Anlegen, einschließlich `ZU_LANG`, ohne Anlegen und ohne Erei
 ```
 
 Leer heißt gültig. Typ nicht angeboten: **`404`**, gleich wie beim Anlegen — derselbe Rumpf,
-dasselbe Statement ([`tasks.md`](tasks.md) §6.2).
+dasselbe Statement ([`tasks.md`](tasks.md) §6.2). Seit 1.1.0 ebenso, wenn der Assistent für den
+Mandanten nicht verfügbar ist (F32).
 
 ### 6.6 Fehler
 
@@ -435,7 +452,7 @@ Fehlercode. Kein Rumpf nennt Einzelheiten des Anbieters.
 | Fall | Status | Problemtyp |
 |---|---|---|
 | unbekanntes, abgelaufenes, beendetes oder fremdes Gespräch — auch eines anderen Nutzers oder einer anderen Sitzung desselben Nutzers | **`404`**, in allen Fällen gleich | `nicht-gefunden` |
-| Assistent aus, kein Schlüssel, kein Typ angeboten | `503` | `assistent-nicht-verfuegbar` |
+| Assistent aus, kein Schlüssel, kein Typ für den Mandanten freigeschaltet *(seit 1.1.0; bis dahin `503 assistent-nicht-verfuegbar`)* | **`404`**, derselbe Rumpf | `nicht-gefunden` |
 | Text leer oder länger als 4.000 Zeichen | `400` | `nachricht-ungueltig`, mit `hoechstensZeichen` |
 | 20 Nachrichten in diesem Gespräch erreicht | `429` | `gespraech-ausgeschoepft`, mit `hoechstensNachrichten` |
 | 60 Nachrichten in der letzten Stunde erreicht | `429` | `zu-viele-nachrichten`, mit `hoechstensJeStunde` |
@@ -475,6 +492,11 @@ Nachricht, auch eine, bei der der Anbieter scheitert (E‑1052).
 **Wie lange eine Nachricht höchstens dauert:** bis zu vier Aufrufe (drei Werkzeugrunden und die
 Antwort), je höchstens 30 Sekunden, dazu bei Überlastung je eine Wiederholung. Ohne Streaming
 (E‑1043) wartet der Client so lange; was A3 daraus macht, ist Punkt 1011.
+
+**Seit 1.1.0 gerechnet:** 4 × (30 + 1 + 30) s = 244 s. Die `/api`-Weiterleitung in Next.js wartet
+darum 300 s statt der Vorgabe von 30 s (F37); was der Reverse Proxy davor braucht, steht in
+[`betrieb.md`](betrieb.md) §5a. Gemessen sind im Mittel 3,9 bis 8,1 s je Testfall (M1001: 66,4 s
+und 74,3 s für je 17 Fälle; M1003: 21,5 bis 24,4 s für je 3 Fälle).
 
 ---
 
@@ -720,7 +742,8 @@ nachgefahren grün (28 von 28).
 | `GespraechsspeicherTest` | Ablauf nach 30 Minuten, höchstens 3 je Sitzung, Bindung an Sitzung, Nutzer und Mandant, Mandantenwechsel — mit eingespeister Uhr (T1) |
 | `NachrichtenbegrenzungTest` | 60 je Stunde, gleitend, mit eingespeister Uhr |
 | `AnthropicSprachmodellTest` | gegen einen lokalen HTTP-Stub: Kopfzeilen, Aufbau der Anfrage (Anweisung, Verlauf mit Rohinhalt und `tool_result`, Werkzeuge, `thinking`), Text und `tool_use`, Abbruchgründe, ein Wiederholungsversuch bei `429` und `529`, keiner bei `500`, Zeitgrenze |
-| `AssistentServiceTest` | **Schalter aus oder kein Schlüssel:** `AssistentConfig` baut keinen Adapter, Stand, Eröffnen und Nachricht melden nicht verfügbar, **kein HTTP-Aufruf** am Stub, kein Zugriff auf den Typkatalog — mit Gegenprobe, dass eingeschaltet genau ein Aufruf am Stub ankommt. Dazu: jede Fehlerart des Anbieters auf `503` bzw. `502` ohne Anbieterdetails, Länge der Nachricht, Höchstzahl je Gespräch, `409`, `404` in allen Fällen gleich, kein angebotener Typ |
+| `AssistentServiceTest` | **Schalter aus oder kein Schlüssel:** `AssistentConfig` baut keinen Adapter, Stand, Eröffnen und Nachricht melden nicht verfügbar (seit 1.1.0 `404`), **kein HTTP-Aufruf** am Stub, kein Zugriff auf den Typkatalog — mit Gegenprobe, dass eingeschaltet genau ein Aufruf am Stub ankommt. Die Logzeile beim Start nennt den Grund („kein Schluessel“, „Schalter aus“), nie den Schlüssel (seit 1.1.0). Dazu: jede Fehlerart des Anbieters auf `503` bzw. `502` ohne Anbieterdetails, Länge der Nachricht, Höchstzahl je Gespräch, `409`, `404` in allen Fällen gleich, kein angebotener Typ, Freischaltung bei offenem Gespräch entzogen (seit 1.1.0) |
+| `AssistentFreigabeTest` *(1.1.0)* | die eine Stelle in `common.auftrag` ([`tasks.md`](tasks.md) §9.1) |
 | `TestsatzTest` | Form und Abdeckung des Testsatzes, jede erwartete Karte gültig, Begriffe nur ohne Vorschlag und genau bei S12 und S17, strukturelle Bewertung und Bewertung der Begriffe (§8) |
 | `PaketstrukturTest` | die Regeln aus §4.1 |
 
@@ -735,6 +758,17 @@ Werkzeugen von `NEXANS` und wird beim Einreichen abgewiesen; kein Weg legt einen
 `POST /api/tasks/pruefung` mit einem nicht angebotenen Typ ist `404`, ununterscheidbar von einem
 erfundenen; Änderungszwang; was das Modell bekommt, nennt den Namen von `NEXANS` aus der
 Datenbank, aber außerhalb dieses Namens weder Benutzername noch Kennung (E‑1035, E‑1059).
+
+> **Seit 1.1.0 (21.10.2026) zugleich der Test der Sperre** ([`tasks.md`](tasks.md) §3.9).
+> `ohne_freischaltung_gesperrt` (vorher `suttons_nicht_verfuegbar` mit `503`): Für `SUTTONS`
+> antworten Eröffnen, Nachricht, Prüfen und Anlegen `404 nicht-gefunden` — am selben Pfad derselbe
+> Rumpf wie ein erfundenes Gespräch bzw. ein erfundener Typ unter `NEXANS` —, das Modell bekommt
+> **keinen** Aufruf, und kein Auftrag entsteht; Gegenprobe: Unter `NEXANS` öffnet sich ein Gespräch.
+> `anlegen_fremder_typ`: Der nur für `IBIS` freigeschaltete Typ ist unter `NEXANS` beim Anlegen
+> `404` ohne Auftrag, unter `IBIS` legt derselbe Rumpf an. Die Freischaltung von
+> `WERK_ABLADESTELLE` für `NEXANS` und `IBIS` legt der Test seit `V103` selbst an
+> (`Testfreischaltungen`, F35). `AssistentOhneSchluesselDbIT` hält den Start ohne Schlüssel
+> ([`tasks.md`](tasks.md) §9.2).
 
 `TestsatzDefinitionDbIT` (seit M1003): Beschreibung und Struktur von `WERK_ABLADESTELLE` in den
 Testressourcen, aus denen der Testsatz misst, sind **zeichengleich** mit der Zeile in `task_type`,
@@ -780,7 +814,8 @@ einzeln, mit genau einer Abweichung je Zugriff.
 | **M1** Kein Endpunkt nimmt eine Mandanten-ID entgegen | keiner der fünf neuen; kein Werkzeug hat einen Mandantenparameter (E‑1034) |
 | **M2** Mandant als erster Pflichtparameter | `AuftragstypRepository` wie bisher; der Gesprächsspeicher sucht nur mit Mandant, Nutzer und Sitzung |
 | **M3** Filter im Statement | die Freischaltung bleibt Teil des einen Statements im Typkatalog |
-| **M4** Isolationstest je Endpunkt | `AssistentIsolationDbIT` |
+| **M4** Isolationstest je Endpunkt | `AssistentIsolationDbIT`, seit 1.1.0 mit der Sperre ohne Freischaltung |
+| **Freischaltung** (E‑1126, seit 1.1.0) | genau eine Stelle, `AssistentFreigabe` ([`tasks.md`](tasks.md) §3.9); nicht verfügbar ist `404`, ohne Aufruf beim Anbieter |
 | **Regel 3** | `assistent` fasst keine Datenbank an |
 | **Regel 7** | keine neuen Statements; `POST /api/tasks/pruefung` und der Assistent nutzen das Statement des Typkatalogs aus M1000 ([`tasks.md`](tasks.md) §9.3); der Name des Mandanten (E‑1059) kommt über das Statement der Selbstauskunft (`MandantService.aktiver`, gemessen in [`mandantentrennung.md`](mandantentrennung.md) §6), einmal je eröffnetem Gespräch |
 | **Z1** | keine Uhr außer `systemClock` (E‑1057) |
@@ -797,8 +832,8 @@ und geht in Punkt 1009 auf.
 
 | Nr. | Punkt | Art |
 |---|---|---|
-| **1009** | Prüfung der Auftragsverarbeitung mit Anthropic durch den Datenschutzbeauftragten, vor dem Einschalten in der Produktion (E‑1029). | Entscheidung offen |
-| **1010** | Der Produktionsserver muss `api.anthropic.com` erreichen; ob der Weg frei ist (Firewall, Proxy), ist ungeprüft. | Sichtprüfung oder Messung offen |
+| **1009** | Prüfung der Auftragsverarbeitung mit Anthropic durch den Datenschutzbeauftragten, vor dem Einschalten in der Produktion (E‑1029). **Erledigt am 21.10.2026** (E‑1131): Die Prüfung ist abgeschlossen, Auskunft des Auftraggebers; Datum und Ergebnis der Prüfung selbst stehen nicht im Repository. | Entscheidung offen |
+| **1010** | Der Produktionsserver muss `api.anthropic.com` erreichen; ob der Weg frei ist (Firewall, Proxy), ist ungeprüft. *Weiter offen mit 1.1.0; beschrieben in [`betrieb.md`](betrieb.md) §5a.* | Sichtprüfung oder Messung offen |
 | **1011** | Streaming für A3 (E‑1043): Eine Nachricht kann ohne Streaming bis zu vier Modellaufrufe lang dauern (§7). **Entschieden am 19.10.2026 mit A3:** kein Streaming, eine Warteanzeige; Eingabe und Senden sind gesperrt, solange die Antwort aussteht (E‑1075, [`assistent-frontend.md`](assistent-frontend.md) §2). | Entscheidung offen |
 | **1012** | Was das Gespräch erfährt, wenn der Kunde die Karte ändert oder den Auftrag anlegt. Heute erfährt es nichts. | Entscheidung offen |
 | **1013** | Ob der Assistent später auch Fragen zum Stand eigener Aufträge beantworten soll. Heute bekommt er keine Aufträge aus `task` (E‑1035). | Entscheidung offen |

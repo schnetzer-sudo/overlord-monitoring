@@ -26,34 +26,38 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
   beginnt bei **33** ([`messungen-schritt9.md`](messungen-schritt9.md), Offene Punkte); Nummern darunter
   sind **lokale Listen** einzelner Dateien.
 - Die Einträge der früheren README-Tabelle „Offene Sichtprüfungen“ hatten keine Nummer und sind hier als
-  **234 bis 246** vergeben (16.10.2026). **Nächste freie Nummer auf `main`: 264.**
-- **Auf `assistent` beginnen die Nummern bei 1000** (Entscheidung 7). **Nächste freie Nummer auf
-  `assistent`: 1033** (A4, 19.10.2026).
+  **234 bis 246** vergeben (16.10.2026). Auf `main` waren bis 1.1.0 die Nummern bis **263**
+  vergeben.
+- **Seit 1.1.0 (21.10.2026) eine Linie** (E‑1127): Neue Punkte schließen an die höchste vergebene
+  Nummer an; der Bereich unter 1000 wird nicht weiter befüllt. Bis dahin begannen die Nummern auf
+  `assistent` bei 1000 (Entscheidung 7). **Nächste freie Nummer: 1037.**
 - **Doppelvergaben sind aufgelöst** (16.10.2026): 136 und 186 bis 189 waren je zweimal vergeben. Die
   Nummer behielt der Punkt, auf den andere Dateien öfter verweisen; der andere bekam 247 bzw. 248 bis
   251, mit datiertem Vermerk an seiner Fundstelle.
 - **Lokale Punkte ohne projektweite Nummer** (Teil 3) haben die Fundstelle als Kennung und den Stand
   **ungeprüft**: Niemand hat geprüft, ob sie noch offen sind. Ein lokaler Punkt bekommt eine
-  projektweite Nummer erst, wenn jemand ihn wieder aufgreift — auf `main` die nächste freie, auf
-  `assistent` ab 1000 — und wird dann in Teil 1 geführt (Entscheidung vom 16.10.2026).
+  projektweite Nummer erst, wenn jemand ihn wieder aufgreift — die nächste freie — und wird dann in
+  Teil 1 geführt (Entscheidung vom 16.10.2026, Nummernkreis seit E‑1127).
 
 ### Zählung
 
 | | Teil 1: projektweit | Teil 2: Sichtprüfungen | Teil 3: lokal |
 |---|---:|---:|---:|
 | offen — Fehler | 32 | 0 | — |
-| offen — Verbesserung | 44 | 0 | — |
+| offen — Verbesserung | 46 | 0 | — |
 | offen — Entscheidung offen | 53 | 0 | — |
-| offen — Sichtprüfung oder Messung offen | 63 | 13 | — |
-| **offen gesamt** | **192** | **13** | — |
+| offen — Sichtprüfung oder Messung offen | 64 | 13 | — |
+| **offen gesamt** | **195** | **13** | — |
 | ungeprüft | — | — | 357 |
-| erledigt | 56 | 0 | 64 |
+| erledigt | 57 | 0 | 64 |
 | gegenstandslos | 3 | 0 | 5 |
-| **Zeilen** | 251 | 13 | 426 |
+| **Zeilen** | 255 | 13 | 426 |
 
-Offen sind damit **205** nummerierte Punkte; dazu kommen 357 ungeprüfte lokale. Davon gehören 30 der
-Linie `assistent` (1000 bis 1007 aus A1; 1009, 1010 und 1012 bis 1015 aus A2; 1017 bis 1022 aus A3;
-1023 bis 1032 aus A4; 1011 ist seit A3 entschieden, 1016 seit M1003 erledigt).
+Offen sind damit **208** nummerierte Punkte; dazu kommen 357 ungeprüfte lokale (gezählt am
+21.10.2026 über die Tabelle in Teil 1). Davon stammen 33 aus der Linie `assistent` und ihrer
+Zusammenführung (1000 bis 1007 aus A1; 1010 und 1012 bis 1015 aus A2; 1017 bis 1022 aus A3; 1023
+bis 1032 aus A4; 1033 bis 1036 aus 1.1.0). 1009 ist seit dem 21.10.2026 erledigt, 1011 seit A3
+entschieden, 1016 seit M1003 erledigt.
 
 ### Wie das Register erhoben ist
 
@@ -297,7 +301,7 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 1006 | Kopfzeile Aktion=<Aktion> fest; ein Typ mit anderer Kopfzeile braucht Code | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Verbesserung | offen |
 | 1007 | Nur der erste Schlüsselteil kann optional sein | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Verbesserung | offen |
 | 1008 | Datenschutz und Auftragsverarbeitung mit dem Modellanbieter, vor A2 | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Entscheidung offen | **erledigt** — `tasks.md` §11: „Erledigt am 16.10.2026: beantwortet mit E‑1029 und E‑1030 (gebaut, aber abgeschaltet), weitergeführt als Punkt 1009“ |
-| 1009 | Prüfung der Auftragsverarbeitung mit Anthropic durch den Datenschutzbeauftragten, vor dem Einschalten in der Produktion | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Entscheidung offen | offen |
+| 1009 | Prüfung der Auftragsverarbeitung mit Anthropic durch den Datenschutzbeauftragten, vor dem Einschalten in der Produktion | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Entscheidung offen | **erledigt** — `assistent.md` §11: „Erledigt am 21.10.2026 (E‑1131): Die Prüfung ist abgeschlossen, Auskunft des Auftraggebers“ |
 | 1010 | Ob der Produktionsserver `api.anthropic.com` erreicht, ist ungeprüft | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Sichtprüfung oder Messung offen | offen |
 | 1011 | Streaming für A3 | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Entscheidung offen | **erledigt** — `assistent.md` §11: „Entschieden am 19.10.2026 mit A3: kein Streaming, eine Warteanzeige“ (E‑1075, [`assistent-frontend.md`](assistent-frontend.md) §10) |
 | 1012 | Was das Gespräch erfährt, wenn der Kunde die Karte ändert oder den Auftrag anlegt | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Entscheidung offen | offen |
@@ -321,6 +325,10 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 1030 | Sichtprüfung: fehlgeschlagene und teilweise erledigte Aufträge fallen auf, ohne die Übersicht unruhig zu machen | [`assistent-frontend.md`](assistent-frontend.md) §12.11, §12.12 · Linie `assistent`, A4 | Sichtprüfung oder Messung offen | offen |
 | 1031 | Sichtprüfung: offenen Auftrag aufklappen und löschen, auch nur mit der Tastatur | [`assistent-frontend.md`](assistent-frontend.md) §12.11, §12.12 · Linie `assistent`, A4 | Sichtprüfung oder Messung offen | offen |
 | 1032 | Sichtprüfung: Löschen, nachdem die Plattform abgeholt hat — Satz bei 409 | [`assistent-frontend.md`](assistent-frontend.md) §12.11, §12.12 · Linie `assistent`, A4 | Sichtprüfung oder Messung offen | offen |
+| 1033 | Reverse Proxy: Lese-Zeitgrenze für `/api` von mindestens 300 s, weil eine Nachricht an den Assistenten bis zu 244 s ohne Daten dauern kann | [`betrieb.md`](betrieb.md) §5a, §9 · 1.1.0 | Sichtprüfung oder Messung offen | offen |
+| 1034 | Wird einem Mandanten die Freischaltung bei offener Chatbox entzogen, meldet sie „Gespräch abgelaufen“, und ein neues Gespräch scheitert genauso; das Symbol verschwindet erst nach Neuladen oder Mandantenwechsel | [`assistent-frontend.md`](assistent-frontend.md) §13 · 1.1.0 | Verbesserung | offen |
+| 1035 | Die CI baut weiter Pushes auf `assistent` und `assistent-*`; ob die Auslöser nach dem Zusammenführen bleiben | [`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) §12, [`betrieb.md`](betrieb.md) §7 · 1.1.0 | Entscheidung offen | offen |
+| 1036 | Die Zeitgrenze der Weiterleitung in `next.config.ts` (300 s) hängt von Hand an `zeitgrenze` und `werkzeugrunden-je-nachricht` im Backend; kein Test hält beide zusammen | [`betrieb.md`](betrieb.md) §5a · 1.1.0 | Verbesserung | offen |
 
 ---
 

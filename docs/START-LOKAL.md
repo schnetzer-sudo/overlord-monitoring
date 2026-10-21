@@ -150,9 +150,9 @@ cd backend && OVERLORD_ASSISTENT_AKTIV=true ./mvnw spring-boot:run
 
 | Bedingung | Prüfen |
 |---|---|
-| Der ausgecheckte Zweig enthält die Chatbox (A3) | das Skript nennt den Zweig; A3 steht auf `assistent-a3-chatbox`, bis es nach `assistent` gemergt ist |
+| Der ausgecheckte Zweig enthält die Chatbox (A3) | das Skript nennt den Zweig; seit 1.1.0 (21.10.2026) hat `main` die Chatbox |
 | Schalter an und Schlüssel gesetzt | `-Assistent`; die Zeile „Assistent wird eingeschaltet (… gesetzt)“ beim Start |
-| Dem aktiven Mandanten wird mindestens ein Typ angeboten | auf der Testkopie ist `WERK_ABLADESTELLE` aktiv und für **`NEXANS`** und **`IBIS`** freigeschaltet (Stand 19.10.2026, [`tasks.md`](tasks.md) §4.2); bei jedem anderen Mandanten fehlt das Symbol |
+| Für den aktiven Mandanten ist ein Typ freigeschaltet | **seit 1.1.0 auf der Testkopie nur `SYSTEM`** (als ADMIN den Mandanten `SYSTEM` wählen): `V103` hat die Freischaltungen für `NEXANS` und `IBIS` zurückgenommen, `scripts/assistent-freischaltung-system.sql` hat `SYSTEM` freigeschaltet ([`tasks.md`](tasks.md) §3.9); bei jedem anderen Mandanten fehlt das Symbol, und Gespräche und Anlegen antworten `404` |
 
 **Was dabei wirklich passiert, und es ist kein Versehen:** Was im Chat geschrieben wird, geht an
 Anthropic in die USA (E‑1029, Punkt 1009) — **nur erfundene Werte verwenden**. Ein Klick auf

@@ -71,8 +71,9 @@ ermittelt; die jüngsten Dateien führen dazu eine Tabelle „Nummernvergabe“.
   und bekommen eine projektweite Nummer erst, wenn jemand sie wieder aufgreift.
 - **`E<n>` in Messdateien** (`E1` bis `E7`) heißt dort *ergänzende Messung*; die Bezeichnung ist
   seit dem 13.08.2026 nicht mehr in Gebrauch.
-- **Auf dem Zweig `assistent` beginnen alle projektweit gezählten Nummern bei 1000**
-  ([`../DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) §12).
+- **Projektweit gezählte Nummern schließen an die höchste vergebene an** (seit 1.1.0, E‑1127): Bis
+  zum Zusammenführen begannen sie auf dem Zweig `assistent` bei 1000; der Bereich darunter wird nicht
+  weiter befüllt ([`../DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) §12).
 
 ### Sichtprüfungen
 
@@ -81,10 +82,11 @@ Die offenen Sichtprüfungen stehen in **einer** Tabelle, im Register Teil 2, als
 Spalte), eine Zustände, die die Testkopie nicht zeigt (Eigenschaften an der Zeitleiste), und eine den
 Rückweg aus der Datei im Browser. Die Beschreibung steht jeweils in der Feature-Datei.
 
-Auf der Linie `assistent` stehen neue Sichtprüfungen als gewöhnliche Punkte in Teil 1 des Registers:
-**1018 bis 1022** für Chatbox und Karte, mit eingeschaltetem Assistenten
+Seit der Linie `assistent` stehen neue Sichtprüfungen als gewöhnliche Punkte in Teil 1 des
+Registers: **1018 bis 1022** für Chatbox und Karte, mit eingeschaltetem Assistenten
 ([`assistent-frontend.md`](assistent-frontend.md) §11), und **1028 bis 1032** für den Block „Ihre
-Aufträge“ ([`assistent-frontend.md`](assistent-frontend.md) §12.12).
+Aufträge“ ([`assistent-frontend.md`](assistent-frontend.md) §12.12). Seit 1.1.0 sind sie mit dem
+Mandanten `SYSTEM` zu fahren, dem einzigen freigeschalteten ([`tasks.md`](tasks.md) §3.9).
 
 ---
 
@@ -94,8 +96,8 @@ Aufträge“ ([`assistent-frontend.md`](assistent-frontend.md) §12.12).
 
 | Datei | Inhalt |
 |---|---|
-| [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) | **Die verbindliche Wahrheit.** Zweck, Rollen, Quellsystem, eigenes Schema, fachliche Definitionen, Architektur, Sicherheit, Leistungsregeln mit ihren benannten Ausnahmen, Funktionsumfang 1.0, Annahmen und Glossar. |
-| [`ROADMAP.md`](ROADMAP.md) | Planung ab 1.0.0: die Linie 1.x mit Fixes aus dem Register, die Linie `assistent` mit A1 bis A4 und weitere Ausbaustufen. Dazu die Vorlage für einen Arbeitsauftrag. |
+| [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) | **Die verbindliche Wahrheit.** Zweck, Rollen, Quellsystem, eigenes Schema, fachliche Definitionen, Architektur, Sicherheit, Leistungsregeln mit ihren benannten Ausnahmen, Funktionsumfang 1.1, Annahmen und Glossar. |
+| [`ROADMAP.md`](ROADMAP.md) | Planung ab 1.0.0: seit 1.1.0 eine Linie auf `main`, der Stand der Aufträge über den Assistenten (A1 bis A4 und die Zusammenführung) und weitere Ausbaustufen. Dazu die Vorlage für einen Arbeitsauftrag. |
 | [`offene-punkte.md`](offene-punkte.md) | Register aller offenen Punkte: je Punkt eine Zeile mit Kurztext, Fundstelle, Art und Stand. Die Beschreibung bleibt in der Feature-Datei; hier steht die nächste freie Nummer. |
 | [`betrieb.md`](betrieb.md) | Was das Repository über den Betrieb belegt: Bausteine, Profile, Umgebungsvariablen, Flyway, Rollup-Job, Ablagenprüfung, Release und Rollback. Dazu die offenen Fragen zum Produktionsbetrieb. |
 | [`IMPLEMENTIERUNGSPLAN_MVP.md`](IMPLEMENTIERUNGSPLAN_MVP.md) | Die Schritte 1 bis 11 bis Version 1.0.0, je mit Ziel, Abgrenzung und Abnahmekriterium. Abgeschlossen am 16.10.2026, wird nicht mehr fortgeschrieben. |
@@ -143,9 +145,9 @@ Aufträge“ ([`assistent-frontend.md`](assistent-frontend.md) §12.12).
 | [`dichte-umschalter.md`](dichte-umschalter.md) | Die Anzeigegröße in vier Stufen über die Wurzelschriftgröße, gespeichert per Cookie. |
 | [`dunkelmodus.md`](dunkelmodus.md) | Die Werte des dunklen Farbblocks mit per Test gehaltenen Kontrasten und der Umschalter hell, dunkel oder System ohne Aufblitzen. |
 | [`spaltenwahl.md`](spaltenwahl.md) | Tabellen wählen ihre Spalten nach der Breite ihres Containers, mit Schwellen aus gemessenen Mindestbreiten. |
-| [`tasks.md`](tasks.md) | Aufträge über den Assistenten, Auftragsmodell (Linie `assistent`, A1): Tabellen `task`, `task_type`, `task_type_mandant`, Auftragstypen als Daten samt Anleitung zum Anlegen per SQL, der Typ `WERK_ABLADESTELLE`, Prüfung, Parametertext, Einordnung und die Endpunkte unter `/api/tasks`, seit A4 auch das Löschen offener Aufträge. |
-| [`assistent.md`](assistent.md) | Der Assistent im Backend (Linie `assistent`, A2): Ablauf von der Nachricht bis zur Karte, Datenfluss zum Anbieter, die anbieterneutrale Schnittstelle und der Adapter für Anthropic, Werkzeuge, Endpunkte unter `/api/assistent` und `POST /api/tasks/pruefung`, Grenzen, Testsatz. |
-| [`assistent-frontend.md`](assistent-frontend.md) | Der Assistent im Frontend (Linie `assistent`, A3 und A4): Symbol in der Kopfleiste, Chatbox als Overlay, Bestätigungskarte mit Prüfung und Anlegen, Verhalten bei Fehlern, Barrierefreiheit und die Sichtprüfungen mit eingeschaltetem Assistenten; dazu der Block „Ihre Aufträge“ in der Übersicht mit den Ständen eines Auftrags und dem Löschen offener Aufträge (§12). |
+| [`tasks.md`](tasks.md) | Aufträge über den Assistenten, Auftragsmodell (A1): Tabellen `task`, `task_type`, `task_type_mandant`, Auftragstypen als Daten samt Anleitung zum Anlegen per SQL, der Typ `WERK_ABLADESTELLE`, Prüfung, Parametertext, Einordnung und die Endpunkte unter `/api/tasks`, seit A4 auch das Löschen offener Aufträge; seit 1.1.0 die Freischaltung des Assistenten je Mandant, das Ausrollen per SQL und die Entscheidungen zur Zusammenführung (§2, §3.9). |
+| [`assistent.md`](assistent.md) | Der Assistent im Backend (A2): Ablauf von der Nachricht bis zur Karte, Datenfluss zum Anbieter, die anbieterneutrale Schnittstelle und der Adapter für Anthropic, Werkzeuge, Endpunkte unter `/api/assistent` und `POST /api/tasks/pruefung`, Grenzen, Testsatz. |
+| [`assistent-frontend.md`](assistent-frontend.md) | Der Assistent im Frontend (A3 und A4, seit 1.1.0 mit der Verfügbarkeit je Mandant, §13): Symbol in der Kopfleiste, Chatbox als Overlay, Bestätigungskarte mit Prüfung und Anlegen, Verhalten bei Fehlern, Barrierefreiheit und die Sichtprüfungen mit eingeschaltetem Assistenten; dazu der Block „Ihre Aufträge“ in der Übersicht mit den Ständen eines Auftrags und dem Löschen offener Aufträge (§12). |
 | [`task-schnittstelle.md`](task-schnittstelle.md) | Der Vertrag für die EDI-Plattform, für sich lesbar: die vier Statements zum Lesen, Abholen und Zurückmelden, was der Monitor an der Tabelle tut (Anlegen, Löschen offener Aufträge), Parametertext, Rückgabe, Fehlertext und das Beispiel `WERK_ABLADESTELLE`. |
 
 ### Erhebungen

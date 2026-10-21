@@ -140,7 +140,7 @@ Angabe, die die Kopfzeile anzeigt (E‑1069); der Typ liegt in `lib/mandanten.ts
 
 | Endpunkt | Weg | Wann |
 |---|---|---|
-| `GET /api/assistent` | `useQuery`, Schlüssel `["assistent", "stand"]` | beim Einhängen der Kopfzeile; entscheidet über das Symbol und liefert die Typen der Begrüßung |
+| `GET /api/assistent` | `useQuery`, Schlüssel `["assistent", "stand", <Mandant>]` (seit 1.1.0 je Mandant, §13; vorher `["assistent", "stand"]`) | beim Einhängen der Kopfzeile; entscheidet über das Symbol und liefert die Typen der Begrüßung |
 | `POST /api/assistent/gespraeche` | Mutation | vor der ersten Nachricht eines Gesprächs (E‑1082) |
 | `POST /api/assistent/gespraeche/{id}/nachrichten` | Mutation | je gesendeter Nachricht |
 | `DELETE /api/assistent/gespraeche/{id}` | Mutation | „Neues Gespräch“, wenn es ein offenes gibt; ein Fehler dabei wird nicht angezeigt |
@@ -862,3 +862,37 @@ Sichtprüfung 1030.
 **Nicht geprüft:** aufgeklappte Zeilen, Rückfrage und Löschen im Browser (das statische Markup ist
 nicht bedienbar; im Baum belegt in §12.10), echte Daten, Tastatur und Vorleseprogramm von Hand, die
 Dichten `xs` und `l`. Dafür stehen die Sichtprüfungen 1028 bis 1032 (§12.12).
+
+---
+
+## 13. Verfügbarkeit je Mandant (1.1.0)
+
+*Zweig `assistent-merge`, 21.10.2026.* Mit 1.1.0 ist der Assistent nur für Mandanten verfügbar, für
+die ein Auftragstyp freigeschaltet ist, zunächst nur `SYSTEM` ([`tasks.md`](tasks.md) §3.9, E‑1125,
+E‑1126). **Das Frontend entscheidet darüber nicht**: Es zeigt das Symbol nur, wenn `GET /api/assistent`
+`verfuegbar: true` meldet (E‑1068); verbindlich prüft das Backend, das ohne Freischaltung bei
+Gesprächen, Prüfen und Anlegen `404` antwortet. „Ihre Aufträge“ (§12) bleibt unverändert: Ohne
+Aufträge erscheint der Block nicht (E‑1121), und ein Mandant ohne Freischaltung hat keine.
+
+**Der Stand gilt je Mandant** (F36): Der Abfrageschlüssel ist `["assistent", "stand", <Mandant>]`.
+Nach einem Wechsel fragt das Symbol für den neuen Mandanten neu — unabhängig davon, dass der Wechsel
+den Zwischenspeicher ohnehin leert (`lib/zwischenspeicher.ts`). Die Anfrage selbst trägt keinen
+Mandanten (M1). **Eine offene Chatbox schließt sich beim Wechsel**: Die Kopfzeile hängt den Eingang
+über den Mandanten als `key` neu ein (E‑1076), und ohne Verfügbarkeit des neuen Mandanten steht er
+gar nicht erst.
+
+**Seit 1.1.0 ist „nicht verfügbar“ `404` statt `503`** ([`assistent.md`](assistent.md) §6, F33). Die
+Chatbox liest einen `404` als abgelaufenes Gespräch (§6) — das passt, solange das Symbol nur bei
+Verfügbarkeit steht. Den Rest beschreibt Punkt 1034.
+
+**Tests** (`tests/assistent-chatbox.test.tsx`): „Das Symbol (E‑1068)“ hält, dass es nur bei
+`verfuegbar: true` steht und bei `verfuegbar: false` oder einem Fehler fehlt. Neu: Unter
+„Mandantenwechsel (E‑1076)“ schließt ein Wechsel mit offener Chatbox die Chatbox, fragt den Stand für
+den neuen Mandanten ein zweites Mal ab und zeigt ohne Verfügbarkeit kein Symbol — **ohne** geleerten
+Zwischenspeicher. Verletzungsprobe am 21.10.2026: Mit dem mandantenfreien Schlüssel von vorher ist
+genau dieser Fall rot („der Stand ist neu gefragt“), mit dem neuen grün. Der Fall „503 schon beim
+Eröffnen“ arbeitet seitdem mit dem Problemtyp `assistent-voruebergehend-gestoert`, den es noch gibt.
+
+| Nr. | Punkt | Art |
+|---|---|---|
+| **1034** | Wird einem Mandanten die Freischaltung entzogen, während seine Chatbox offen ist, meldet die nächste Nachricht „Gespräch abgelaufen“, und „Neues Gespräch“ scheitert genauso; das Symbol verschwindet erst nach Neuladen der Seite oder einem Mandantenwechsel. Selten — die Freischaltung pflegt die Betreuung per SQL —, aber ohne passenden Satz. | Verbesserung |

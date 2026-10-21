@@ -1,6 +1,6 @@
 # Overlord Monitoring — Projektbeschreibung
 
-Stand: Version 1.0.0, 16.10.2026 · Diese Datei ist der verbindliche Kontext für alle Arbeiten am
+Stand: Version 1.1.0, 21.10.2026 · Diese Datei ist der verbindliche Kontext für alle Arbeiten am
 Projekt. Bei Widersprüchen zwischen dieser Datei und einer Annahme im Code gilt diese Datei.
 
 **Ab 1.0.0 beschreibt diese Datei den aktuellen Stand.** Eine Änderung ersetzt den Text; Grund und
@@ -20,8 +20,9 @@ M-Nummer), *Auskunft* (wer, wann) oder *ungedeckt*. Offene Punkte stehen mit Num
 > ist aus `information_schema.STATISTICS` erhoben (21.08.2026) und wird von **`IndexbestandDbIT`**
 > in beide Richtungen bewacht: rot bei einem fehlenden und bei einem undokumentierten Index (E37,
 > gebaut 21.08.2026). Weicht diese Datei von der Sollliste ab, gilt die Sollliste. Die Sollliste
-> führt seit dem 16.10.2026 auch die Rollup-Tabellen aus `V9` bis `V12` (Punkt 252); auf `main` nimmt
-> die Prüfung der Tabellenliste die Tabellen der Assistent-Linie aus, wie der Codegen
+> führt seit dem 16.10.2026 auch die Rollup-Tabellen aus `V9` bis `V12` (Punkt 252) und die drei
+> Tabellen der Aufträge aus `V100`; seit 1.1.0 prüft `IndexbestandDbIT` die Tabellenliste ohne
+> Ausnahme, wie der Codegen sie ohne Ausnahme erzeugt
 > ([`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) §12).
 
 ---
@@ -360,9 +361,12 @@ liest sie. `00001_Undefined` ist ein Auffangprozess.
 
 ## 5. Eigenes Schema `overlord_monitor`
 
-Auf derselben Instanz, verwaltet von Flyway (`backend/src/main/resources/db/migration`, `V1` bis
-`V13` auf `main`, ab `V100` auf der Linie `assistent`). Schreibrechte hat ausschließlich
-`monitor_write`, und nur hier. Die Tabellen, erhoben aus den Migrationen:
+Auf derselben Instanz, verwaltet von Flyway (`backend/src/main/resources/db/migration`): **`V1` bis
+`V13` und `V100` bis `V103`**, in der Produktion in strenger Reihenfolge. Die Lücke dazwischen ist
+die Spur der beiden Linien bis 1.1.0; **eine neue Migration schließt an die höchste vergebene an**
+(`V104`), unter `V103` folgt keine mehr (E‑1127). `V101` bis `V103` ändern nur Zeilen in
+`task_type` und `task_type_mandant`. Schreibrechte hat ausschließlich `monitor_write`, und nur hier.
+Die Tabellen, erhoben aus den Migrationen:
 
 | Tabelle | Migration | Schlüssel | Zweck |
 |---|---|---|---|
@@ -378,7 +382,7 @@ Auf derselben Instanz, verwaltet von Flyway (`backend/src/main/resources/db/migr
 | `message_rollup_tag` | V10 | `(tag, process_id, message_status)` | dasselbe je Tag |
 | `message_rollup_monat` | V12 | `(monat, process_id, message_status)` | dasselbe je Kalendermonat |
 | `task_type` | V100 | `task_typ` | Auftragstypen als Daten: Name, Beschreibung für den Assistenten, Struktur (JSON), aktiv ([`tasks.md`](tasks.md) §3) |
-| `task_type_mandant` | V100 | `(task_typ, mandant_id)` | Freischaltung eines Auftragstyps je Mandant, Fremdschlüssel auf `task_type` mit `ON DELETE CASCADE` |
+| `task_type_mandant` | V100, V103 | `(task_typ, mandant_id)` | Freischaltung eines Auftragstyps je Mandant, Fremdschlüssel auf `task_type` mit `ON DELETE CASCADE`; zugleich die Freischaltung des Assistenten: Ein Mandant hat ihn, sobald hier eine Zeile für einen aktiven, gültigen Typ steht ([`tasks.md`](tasks.md) §3.9). Mit 1.1.0 nur `SYSTEM`, per Skript; `V103` nimmt die Zeilen für `NEXANS` und `IBIS` aus `V100` zurück |
 | `task` | V100 | `task_id`, eindeutig `(mandant_id, anfrage_id)` | Aufträge der Kunden mit Kopie der Definition, Einträgen und Parametertext; die EDI-Plattform holt sie ab und meldet zurück, einen offenen kann der Kunde löschen ([`tasks.md`](tasks.md) §5, §6.6, [`task-schnittstelle.md`](task-schnittstelle.md)) |
 
 **Der Rollup-Schlüssel trägt weder Mandant noch Partner noch Richtung** (E‑a, 24.08.2026). Sie kommen
@@ -442,8 +446,9 @@ typsichere Zugriffe in zwei getrennte Zielpakete — `…jooq.glassfish` (nur le
 `…jooq.monitor` (schreibend) —, damit am Import erkennbar ist, welches Schema angefasst wird. Der
 Codegen läuft lokal gegen die Testkopie; die erzeugten Quellen sind eingecheckt
 (`src/main/generated-java`), die CI überspringt ihn (`-Djooq.codegen.skip=true`) und schließt Tests
-mit `@Tag("db")` aus. Auf `main` schließt der Codegen die Tabellen der Assistent-Linie aus
-([`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) §12).
+mit `@Tag("db")` aus. Er nimmt alle Tabellen von `overlord_monitor` auf, ausgenommen nur
+`flyway_schema_history` und die Tabellen der Sitzung; seit 1.1.0 ohne Ausnahme für die Tabellen der
+Aufträge ([`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) §12).
 
 **Basispaket `de.kraftwerkone.overlord.monitor`** (Maven `de.kraftwerkone:overlord-monitor`),
 Hauptklasse `OverlordMonitorApplication` im Basispaket. Fachlich geschnitten, nicht nach Schichten:
@@ -453,7 +458,8 @@ de.kraftwerkone.overlord.monitor
 ├─ config/      DataSources, jOOQ, Security, Flyway, Konfigurationseigenschaften
 ├─ common/      Fehlerformat, Cursor, Zeitfenster, Uhren, MandantContext, Statuseinordnung,
 │               Pflegestatus, Transport zur Ablage, Live-Rest, Fehler live;
-│               common/auftrag: Typdefinition, Typkatalog und Prüfung der Aufträge
+│               common/auftrag: Typdefinition, Typkatalog, Prüfung der Aufträge und
+│               die Freigabe des Assistenten je Mandant
 ├─ security/    Anmeldung, Sitzung, Anmeldesperre, Herstellung des MandantContext
 ├─ audit/       audit_log
 ├─ message/     Liste, Detail, Verkettung, Fensterverengung
@@ -463,15 +469,17 @@ de.kraftwerkone.overlord.monitor
 ├─ rollup/      Rollup-Job (per Profil separat startbar)
 ├─ dashboard/   Übersicht, Dienste und Ablagenprüfung
 ├─ admin/       Benutzerverwaltung, Bootstrap
-├─ task/        Aufträge: Anlegen, Prüfung ohne Anlegen, Parametertext, Einordnung (Linie assistent)
+├─ task/        Aufträge: Anlegen, Prüfung ohne Anlegen, Parametertext, Einordnung, Löschen
 ├─ assistent/   Assistent: Gesprächsführung, Werkzeuge, Endpunkte; assistent/modell die
-│               anbieterneutrale Schnittstelle, assistent/anthropic der Adapter (Linie assistent)
+│               anbieterneutrale Schnittstelle, assistent/anthropic der Adapter
 └─ jooq/        generiert, nicht handgepflegt
 ```
 
 **Fachpakete kennen einander nicht; Gemeinsames liegt in `common`.** Etwas wandert dorthin, wenn es
 einen zweiten Verbraucher bekommt — so Typdefinition, Typkatalog und Prüfung der Aufträge mit dem
-Assistenten nach `common/auftrag` ([`assistent.md`](assistent.md) §4.1). `common` hängt an keinem anderen Anwendungspaket, auch nicht an
+Assistenten nach `common/auftrag` ([`assistent.md`](assistent.md) §4.1), und seit 1.1.0 die eine
+Stelle, die je Mandant über den Assistenten entscheidet (`AssistentFreigabe`, gebaut in `config`,
+[`tasks.md`](tasks.md) §3.9). `common` hängt an keinem anderen Anwendungspaket, auch nicht an
 `security` — deshalb liegt der `MandantContext` dort, und was ihn herstellt, bleibt in `security`
 (17.09.2026, Punkt 186). `PaketstrukturTest` (ArchUnit) prüft das, dazu: `jooq.glassfish` nur in
 `*Repository`-Klassen, `MandantContext` als erster Parameter, kein direkter Zugriff auf die
@@ -553,18 +561,28 @@ bekommt null Zeilen.
 **Pro Endpunkt ein Mandanten-Isolationstest** — Mandant A fragt ab, Daten von Mandant B sind
 unerreichbar. Ohne ihn wird nicht gemergt.
 
+**Die Freischaltung des Assistenten ist keine Ausnahme von M1** (1.1.0): Sie steht als Daten in
+`task_type_mandant`, das Backend liest sie für den Mandanten aus der Session. Ein Mandant ohne
+Freischaltung bekommt bei Gesprächen, Prüfen und Anlegen dasselbe `404` wie bei einem nicht
+zulässigen Mandanten ([`tasks.md`](tasks.md) §3.9).
+
 ### Assistent
 
-Der Assistent (Linie `assistent`, [`assistent.md`](assistent.md)) schickt, was der Kunde im Chat
-schreibt, an einen Modellanbieter, zuerst die **Anthropic-API in den USA**: Verarbeitung nur `us`
-oder `global`, Speicherung nur `us` (Auskunft vom 16.10.2026). Mit hin gehen die feste Anweisung,
-Name, Beschreibung und Struktur der angebotenen Auftragstypen und die Prüfergebnisse — **nicht**
-Benutzername, Mandanten-ID, Daten aus `GlassfishDB` oder Aufträge. **Er ist abgeschaltet**
-(Schalter `overlord.assistent.aktiv`, Vorgabe aus; ohne Schlüssel ebenfalls aus), bis der
-Datenschutzbeauftragte die Auftragsverarbeitung geprüft hat; abgeschaltet geht kein einziger
-Aufruf hinaus. **Gespräche liegen nur im Arbeitsspeicher**, gebunden an Sitzung, Nutzer und
-Mandant, nicht in der Datenbank, nicht in der Sitzung, nicht im Log; protokolliert werden nur
-Metadaten. Anlegen kann nur der Kunde per Klick, nie das Modell.
+Der Assistent ([`assistent.md`](assistent.md)) schickt, was der Kunde im Chat schreibt, an einen
+Modellanbieter, zuerst die **Anthropic-API in den USA**: Verarbeitung nur `us` oder `global`,
+Speicherung nur `us` (Auskunft vom 16.10.2026). Mit hin gehen die feste Anweisung, der Name des
+aktiven Mandanten, Name, Beschreibung und Struktur der angebotenen Auftragstypen und die
+Prüfergebnisse — **nicht** Benutzername, Mandanten-ID, Daten aus `GlassfishDB` oder Aufträge. Die
+Auftragsverarbeitung hat der Datenschutzbeauftragte geprüft (Punkt 1009 erledigt, Auskunft vom
+21.10.2026). **Verfügbar ist er nur, wo drei Dinge zusammenkommen**: Schalter
+`overlord.assistent.aktiv` an (Vorgabe aus, in jedem Profil), Schlüssel gesetzt, und für den
+aktiven Mandanten ist mindestens ein Auftragstyp freigeschaltet — **mit 1.1.0 nur `SYSTEM`, den
+ausschließlich `ADMIN` sieht** (E‑1125, E‑1126, E‑1130). Darüber entscheidet genau eine Stelle;
+weitere Mandanten schaltet ein SQL-Insert frei, kein Deployment. Nicht verfügbar geht kein einziger
+Aufruf hinaus. Next.js zeigt das Symbol nur, wenn das Backend Verfügbarkeit meldet; das ist
+Bequemlichkeit, verbindlich prüft das Backend. **Gespräche liegen nur im Arbeitsspeicher**,
+gebunden an Sitzung, Nutzer und Mandant, nicht in der Datenbank, nicht in der Sitzung, nicht im
+Log; protokolliert werden nur Metadaten. Anlegen kann nur der Kunde per Klick, nie das Modell.
 
 ### Rohdatenzugriff
 
@@ -730,7 +748,7 @@ und weiterläuft. Eine ArchUnit-Regel hält das Verbot von `now()`.
 
 ---
 
-## 9. Funktionsumfang 1.0
+## 9. Funktionsumfang 1.1
 
 | Funktion | Beschrieben in |
 |---|---|
@@ -751,6 +769,7 @@ und weiterläuft. Eine ArchUnit-Regel hält das Verbot von `now()`.
 | Benutzerverwaltung: Konten, Mandantenmenge, Sperre, Anlegen | [`benutzerverwaltung.md`](benutzerverwaltung.md), [`benutzerverwaltung-backend.md`](benutzerverwaltung-backend.md), [`benutzerverwaltung-frontend.md`](benutzerverwaltung-frontend.md) |
 | Neu laden und automatische Aktualisierung | [`neu-laden.md`](neu-laden.md) |
 | Anzeigegröße in vier Stufen, Dunkelmodus, Spaltenwahl nach Containerbreite | [`dichte-umschalter.md`](dichte-umschalter.md), [`dunkelmodus.md`](dunkelmodus.md), [`spaltenwahl.md`](spaltenwahl.md) |
+| **Seit 1.1.0:** Aufträge über den Assistenten — Chat in der Kopfleiste, Bestätigungskarte, Anlegen per Klick, Typen als Daten mit dem ersten Typ `WERK_ABLADESTELLE`, „Ihre Aufträge“ in der Übersicht mit Löschen offener Aufträge, Vertrag für die Plattform. **Verfügbar nur für freigeschaltete Mandanten, zunächst nur `SYSTEM`**; ohne Freischaltung kein Symbol und kein Auftrag | [`tasks.md`](tasks.md), [`assistent.md`](assistent.md), [`assistent-frontend.md`](assistent-frontend.md), [`task-schnittstelle.md`](task-schnittstelle.md) |
 
 **Nicht enthalten**
 
@@ -759,16 +778,23 @@ und weiterläuft. Eine ArchUnit-Regel hält das Verbot von `now()`.
   keine Lampe für Dienste ohne Zeitgrenze, kein `ServiceName` in einer Antwort (E‑116, E‑122).
 - Zerlegung der Rohdaten in Segmente mit Beschreibung, Syntaxhervorhebung, Farbe im Inhalt.
 - Benachrichtigungen und Alarmierung.
-- Assistent und Chatbot.
+- Fragen an den Chatbot (Auskünfte über Nachrichten und Fehler, [`ROADMAP.md`](ROADMAP.md) §3): Der
+  Assistent nimmt nur Aufträge entgegen.
+- Der Assistent für Kundenmandanten: Mit 1.1.0 ist er nur für `SYSTEM` freigeschaltet; das Ausrollen
+  ist ein SQL-Insert ([`tasks.md`](tasks.md) §3.9).
+- Eine Oberfläche zur Pflege von Auftragstypen und Freischaltungen; beides geht per SQL.
 - Löschen von Konten, Selbstbedienung beim Passwort.
 
 ---
 
 ## 10. Weiterentwicklung
 
-`main` ist ab 1.0.0 die Release-Linie 1.x und bekommt nur Fixes aus dem Register. Die
-Weiterentwicklung „Aufträge über den Assistenten“ läuft auf dem Zweig `assistent` und kommt als 1.1.0.
-Ausbaustufen, Vorlage für Arbeitsaufträge und Stand stehen in [`ROADMAP.md`](ROADMAP.md).
+**Seit 1.1.0 (21.10.2026) gibt es eine Linie, `main`.** Die Weiterentwicklung „Aufträge über den
+Assistenten“ lief von 1.0.0 an auf dem Zweig `assistent` und ist mit 1.1.0 zusammengeführt (E‑1125).
+Fixes und Weiterentwicklung kommen auf Zweigen von `main`; neue Migrationen schließen an die
+höchste vergebene an (`V104`), projektweite Nummern ebenso (E‑1127,
+[`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) §12). Ausbaustufen, Vorlage für
+Arbeitsaufträge und Stand stehen in [`ROADMAP.md`](ROADMAP.md).
 
 ---
 
@@ -782,7 +808,6 @@ Ausbaustufen, Vorlage für Arbeitsaufträge und Stand stehen in [`ROADMAP.md`](R
 | A10 | MariaDB 10.6 bleibt in Betrieb | Wartungszeitraum seit Juli 2026 vorbei; ein Upgrade auf 11.x ändert Standard-Sortierungen — deshalb steht die Sortierung in jeder Migration |
 | — | Takt von `MatchInterchange` „stündlich“ (§3.3) | ungedeckt; Quelle beim Altsystem einzuholen. Daran hängen jede Aussage zur Verzögerung der Quittung und *Unquittiert* |
 | — | Produktive Aufbewahrung „rund 18 Monate“ (§8) | Auskunft, beim Betreiber nicht nachgefragt; daran hängen die erreichbare Spanne und Rollupzeilen ohne Nachrichten (Punkt 54) |
-| — | Übermittlung an Anthropic in die USA auf Grundlage des EU-US Data Privacy Framework ([`assistent.md`](assistent.md) §3.3) | Prüfung durch den Datenschutzbeauftragten ausstehend (Punkt 1009); bis dahin ist der Assistent abgeschaltet |
 | — | Wächter auf `RUNNING`, absichtliches Warten von `SUSPENDED` (§4.2) | Auskunft vom 03.09.2026; gegen die Produktion zu prüfen mit der Abfrage in [`message-status.md`](message-status.md), „Die offene Prüfung“ |
 
 **Geklärt** — A1 (Testkopie vorhanden, Datenstand 08.07.2026), A2 (n:m über `app_user_mandant`,
@@ -792,7 +817,10 @@ GlassFish), A6 (widerlegt: `COMMIT_REJECTED` und `EERP_FAILED` sind Fehler ohne 
 sind für niemanden sichtbar, bewusst ohne Sonderpfad), A9 (die Belegsuche ist mit Fenster und Limit
 begrenzbar, M33/M34), **A11** (unverschlüsselte Datenbankverbindung tragbar laut Auskunft vom
 16.10.2026, nicht gemessen — Anwendung und Datenbank im selben Netz, Entscheidung 5), **A12**
-(widerlegt am 13.10.2026: Die Testkopie wählt Pläne nicht wie die Produktion, M193; Abhilfe Regel 7).
+(widerlegt am 13.10.2026: Die Testkopie wählt Pläne nicht wie die Produktion, M193; Abhilfe Regel 7),
+die **Übermittlung an Anthropic in die USA** auf Grundlage des EU-US Data Privacy Framework
+([`assistent.md`](assistent.md) §3.3): vom Datenschutzbeauftragten geprüft, Punkt 1009 erledigt
+(Auskunft des Auftraggebers vom 21.10.2026, E‑1131).
 Einzelheiten in [`annahmen-korrekturen.md`](annahmen-korrekturen.md) und im Archiv.
 
 ---

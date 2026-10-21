@@ -176,7 +176,9 @@ Trenner, die Zeilenvorlage je Aktion und die Rückgabewerte (Erfolgswert und bek
 
 ## 8. Beispiel: der Typ `WERK_ABLADESTELLE`
 
-**Anpassen der Werk-/Abladestellentabelle**, freigeschaltet für `NEXANS` und `IBIS`.
+**Anpassen der Werk-/Abladestellentabelle.** Mit 1.1.0 (21.10.2026) ausschließlich für `SYSTEM`
+freigeschaltet; bis dahin für `NEXANS` und `IBIS` ([`tasks.md`](tasks.md) §3.9). Für die Plattform
+ändert sich damit nichts: Sie liest `mandant_id` aus dem Auftrag, gleich welcher Mandant es ist.
 
 Ein Eintrag besteht aus einem **Schlüssel** und zwei Werten. Der Schlüssel ist `Werk/Abladestelle`
 oder `Lieferantennummer/Werk/Abladestelle`, Trenner `/`. Die Werte sind **SNDPRN** und

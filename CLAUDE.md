@@ -24,13 +24,14 @@ dieser Datei gilt die Datei. Die Planung steht seit 1.0.0 in `docs/ROADMAP.md`; 
 
 ## Zweig prüfen
 
-Vor jeder Arbeit `git branch --show-current`. Seit Version 1.0.0 gibt es zwei Linien
-(`DEVELOPMENT_GUIDELINES.md` §12):
+Vor jeder Arbeit `git branch --show-current`. Seit Version 1.1.0 gibt es **eine Linie, `main`**
+(`DEVELOPMENT_GUIDELINES.md` §12); die Linie `assistent` ist zusammengeführt, auf dem Zweig
+`assistent` wird nicht mehr gearbeitet.
 
-- **`main` und `fix/*`:** Release-Linie 1.x, nur Fixes. **Keine Arbeit an der Assistent-Linie.**
-- **`assistent` und `assistent-*`:** Migrationen ab `V100`, projektweite Nummern (M, offene Punkte,
-  projektweite E) ab 1000. Teilschritte heißen `assistent-<teil>` mit Bindestrich, weil Git neben
-  einem Zweig `assistent` keinen Zweig `assistent/<teil>` anlegen kann.
+- **Zweige von `main`:** `fix/<thema>` und `feat/<thema>`.
+- **Neue Migrationen** schließen an die höchste vergebene an (nach `V103` also `V104`); unter `V103`
+  folgt keine mehr. **Projektweite Nummern** (E, M, offene Punkte) schließen ebenso an die höchste
+  vergebene an (über 1000); der Bereich darunter wird nicht weiter befüllt.
 
 ## Die unverhandelbaren Regeln — Kurzfassung
 

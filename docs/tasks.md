@@ -15,6 +15,12 @@ A2 bis A4 (§8).
 > unter „Löschen und Plattform“, die Oberfläche in [`assistent-frontend.md`](assistent-frontend.md)
 > §12.
 
+> **Ergänzt am 21.10.2026 mit 1.1.0** (Zweig `assistent-merge`): Die Linie ist nach `main`
+> zusammengeführt. **Der Assistent — und mit ihm das Anlegen — ist nur für Mandanten verfügbar, für
+> die ein Typ freigeschaltet ist**, mit 1.1.0 zunächst nur `SYSTEM` (§3.9). `V103` nimmt die
+> Freischaltungen für `NEXANS` und `IBIS` aus `V100` zurück. Die Entscheidungen stehen in §2 unter
+> „Zusammenführung und Freischaltung“.
+
 ---
 
 ## 1. Zweck und Ablauf
@@ -137,6 +143,38 @@ A2 und A3; die F-Nummern setzen die der Oberfläche fort ([`assistent-frontend.m
 | **F26** | **Löschen und Protokoll laufen in einer Transaktion:** `AuftragService.loesche` ist `@Transactional`, und der Eintrag geht über eine neue Methode `AuditLogWriter.schreibeInTransaktion` mit `Propagation.MANDATORY` in dieselbe. Das bisherige `schreibe` bleibt `REQUIRES_NEW`. | E‑1114 verlangt eine Transaktion. `schreibe` öffnet bewusst eine eigene, damit ein Fehlversuch protokolliert bleibt, wenn die Fachtransaktion zurückrollt — beim Löschen wäre das genau falsch: Ein Eintrag „gelöscht“ zu einem Löschen, das zurückgerollt ist. `MANDATORY` wirft, wenn keine Transaktion läuft, statt still eine eigene zu öffnen |
 | **F27** | **`409` hat den Problemtyp `auftrag-nicht-offen`**, Titel „Auftrag nicht mehr offen“. Die Nachlesung liest den `status`, der nur ins Protokoll geht, nicht in die Antwort. | Ein stabiler Code nach dem Muster der übrigen Problemtypen ([`datenzugriff.md`](datenzugriff.md) §8). Die Oberfläche zeigt ihren eigenen Satz (E‑1116); welcher Stand es ist, erfährt sie aus dem Neuladen der Liste |
 | **F28** | **`DELETE … RETURNING`**: Typ, Aktion, Einträge und Zeitpunkt des Einstellens für das Protokoll kommen aus dem Löschen selbst. | Ein Statement, wie E‑1114 verlangt, und kein Lesen davor: Ein `SELECT` vor dem `DELETE` könnte einen Stand lesen, den das Abholen der Plattform im selben Augenblick überholt |
+
+### Zusammenführung und Freischaltung (1.1.0, 21.10.2026)
+
+Aus dem Auftrag, die Linie `assistent` nach `main` zusammenzuführen. Die E‑Nummer ist `E‑1124` plus
+die Nummer der Entscheidung dort (E‑1125 bis E‑1128); die drei Rückfragen vom selben Tag folgen als
+E‑1129 bis E‑1131. Die nächste freie Nummer nach A4 war E‑1125, per `grep` über alle Zweige geprüft.
+Herkunft: **A** = vom Auftraggeber am 21.10.2026 entschieden.
+
+| E | Entscheidung | Herkunft |
+|---|---|---|
+| **E‑1125** | **`assistent` wird nach `main` zusammengeführt** und mit 1.1.0 ausgeliefert. Die Entscheidung vom 16.10.2026, Releases an Kunden ohne Chatbot auszuliefern, gilt damit für die **Sichtbarkeit**: Der Code geht mit, sichtbar ist der Assistent nur für freigeschaltete Mandanten, zunächst nur `SYSTEM`, den ausschließlich `ADMIN` sieht. Der Typ `WERK_ABLADESTELLE` ist definiert und ausschließlich für `SYSTEM` freigeschaltet; die Freischaltungen für `NEXANS` und `IBIS` aus `V100` nimmt `V103` zurück. | A |
+| **E‑1126** | **Die Freischaltung ist datengetrieben:** Der Assistent steht einem Mandanten zur Verfügung, wenn für ihn mindestens ein Auftragstyp freigeschaltet ist (`task_type_mandant`, E‑1020). Das Ausrollen auf weitere Mandanten ist ein SQL-Insert in der Produktion, kein Deployment — wie bei neuen Typen (E‑1019). Kein zweiter Weg: keine Rolle, keine Mandantenliste in der Konfiguration, keine Bibliothek für Schalter. | A |
+| **E‑1127** | **Eine Linie.** Sobald Migrationen ab `V100` in der Produktion angewandt sind, kann dort keine mit kleinerer Nummer mehr folgen. Neue Migrationen schließen an die höchste vergebene an (nach `V103` also `V104`), projektweite Nummern (E, M, Punkte) ebenso; der Bereich unter 1000 wird nicht weiter befüllt ([`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) §12). | A |
+| **E‑1128** | Version **1.1.0**. Den Tag setzt Lukas. | A |
+| **E‑1129** | **A4 vor dem Zusammenführen nach `assistent`:** `assistent-a4-ihre-auftraege` per `--no-ff` nach `assistent` (`18f0f41`), dann `assistent-merge` von dort. Die Festlegungen F16 bis F29 bleiben Vorschläge. | A (Rückfrage: A4 lag nicht auf `assistent`) |
+| **E‑1130** | **Der Schalter bleibt.** Verfügbar heißt: Schalter `OVERLORD_ASSISTENT_AKTIV` an, Schlüssel gesetzt (E‑1030, E‑1056) **und** mindestens ein freigeschalteter Typ. Fehlt Schalter oder Schlüssel, ist der Assistent für alle Mandanten aus. | A (Rückfrage: Der Auftrag nannte nur Schlüssel und Typ) |
+| **E‑1131** | **Punkt 1009 ist erledigt:** Die Prüfung der Auftragsverarbeitung mit Anthropic durch den Datenschutzbeauftragten ist abgeschlossen. Auskunft des Auftraggebers vom 21.10.2026; Datum und Ergebnis der Prüfung selbst stehen nicht im Repository. | A (Rückfrage) |
+
+**Festlegungen der Umsetzung (1.1.0), zur Bestätigung.** Eine E‑Nummer bekommen sie erst damit, wie
+in A2 bis A4; die F-Nummern setzen F29 fort.
+
+| F | Festlegung | Grund |
+|---|---|---|
+| **F30** | **Die eine Stelle ist `common.auftrag.AssistentFreigabe`**, gebaut in `config.AssistentConfig` aus Schalter und Schlüssel, dem Typkatalog und `Werkzeugbau::geeignet`. Assistent und Aufträge fragen nur sie. | `task` und `assistent` sind Fachpakete und kennen einander nicht; was beide brauchen, liegt in `common` ([`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §6). Nur `config` sieht, was „eingeschaltet“ heißt, und den Katalog |
+| **F31** | **„Anbietbar“ gehört zur Verfügbarkeit:** Kann der Assistent keinen der freigeschalteten Typen als Werkzeug anbieten (E‑1054), hat der Mandant keinen Assistenten. Hat er ihn, wählt das Anlegen den Typ aus dem ganzen Katalog — ein ungeeigneter Typ bleibt anlegbar. | Eine Entscheidung, nicht zwei: Symbol, Gespräche und Anlegen sagen dasselbe. E‑1054 („über `POST /api/tasks` anlegbar“) gilt damit nur für Mandanten mit Assistenten |
+| **F32** | **Prüfen und Anlegen fragen die Freigabe zuerst**, vor `anfrageId` und Wiederholung (§6.2). Nicht verfügbar ist `404` — auch ohne Schlüssel, dann für alle Mandanten. Liste, Einzelabruf, Löschen und Typliste sind nicht gesperrt. | E‑1001: Aufträge entstehen ausschließlich über den Assistenten. Folge: Eine Wiederholung mit derselben `anfrageId`, nachdem die Freischaltung entzogen wurde, bekommt `404` statt des vorhandenen Auftrags; in „Ihre Aufträge“ steht er trotzdem |
+| **F33** | **Nicht verfügbar ist `404 nicht-gefunden`** statt `503 assistent-nicht-verfuegbar`, auch für ein noch offenes Gespräch. Der Problemtyp `assistent-nicht-verfuegbar` entfällt. `GET /api/assistent` antwortet weiter `200` mit `verfuegbar: false`. | Der Auftrag verlangt `404` wie bei einem nicht zulässigen Mandanten: derselbe feste Rumpf wie für jede unbekannte Ressource ([`mandantentrennung.md`](mandantentrennung.md) §3) |
+| **F34** | **Die Freischaltung für `SYSTEM` kommt per Skript**, nicht per Migration (`scripts/assistent-freischaltung-system.sql`, Rücknahme daneben). Das Skript bricht ab, wenn für den Typ schon ein anderer Mandant freigeschaltet ist. | Freischaltungen sind Pflegedaten (E‑1126). Ein Skript, das „ausschließlich `SYSTEM`“ durch Löschen herstellte, nähme bei einem zweiten Lauf ein späteres Ausrollen zurück; dieses bricht stattdessen ab |
+| **F35** | **Die Tests legen sich ihre Freischaltung selbst an** (`Testfreischaltungen`): reines `INSERT` auf eine freie Zeile, gelöscht wird genau diese. | Regel 12. Vor `V103` hingen vier DB-Tests an der Freischaltung aus `V100` |
+| **F36** | **Der Stand des Assistenten gilt im Frontend je Mandant** (Abfrageschlüssel `["assistent", "stand", <Mandant>]`). | Nach einem Wechsel liest das Symbol neu, auch wenn der Zwischenspeicher nicht geleert würde; die Anfrage selbst trägt keinen Mandanten (M1) |
+| **F37** | **Die Zeitgrenze der `/api`-Weiterleitung ist 300 s** (`experimental.proxyTimeout` in `frontend/next.config.ts`) statt der Vorgabe von 30 s. | Ohne Streaming dauert eine Nachricht im ungünstigsten Fall 244 s ([`betrieb.md`](betrieb.md) §5a) |
+| **F38** | **Zweige nach dem Zusammenführen:** `fix/<thema>` und `feat/<thema>` von `main`, zurück mit `--no-ff` ([`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) §12). | Der Auftrag legt eine Linie fest, aber keine Zweignamen; das ist die Praxis vor 1.0.0 |
 
 ---
 
@@ -328,6 +366,70 @@ und Einordnung lesen die Kopie. Wer `rueckgaben` oder eine Vorlage ändert, änd
 Aufträgen, die schon in `task` stehen — auch nicht an solchen, die die Plattform noch nicht
 abgeholt hat: Deren Parametertext ist fertig gebaut.
 
+### 3.9 Den Assistenten für einen Mandanten freischalten *(1.1.0, 21.10.2026)*
+
+**Der Assistent ist für einen Mandanten verfügbar, wenn drei Dinge zusammenkommen** — und genau
+eine Stelle prüft sie, `AssistentFreigabe` (E‑1126, E‑1130, F30):
+
+1. Schalter an (`OVERLORD_ASSISTENT_AKTIV=true`) **und** Schlüssel gesetzt
+   (`OVERLORD_ASSISTENT_API_KEY`), [`betrieb.md`](betrieb.md) §3;
+2. für den Mandanten ist mindestens ein Typ freigeschaltet, der aktiv und gültig ist (E‑1020, §3.6);
+3. der Assistent kann mindestens einen davon als Werkzeug anbieten (E‑1054, F31).
+
+| | verfügbar | nicht verfügbar |
+|---|---|---|
+| Symbol in der Kopfleiste (`GET /api/assistent`) | `verfuegbar: true` | `verfuegbar: false`, kein Symbol |
+| Gespräch eröffnen, Nachricht ([`assistent.md`](assistent.md) §6) | wie beschrieben | **`404`**, kein Aufruf beim Anbieter |
+| Prüfen und Anlegen (§6.2, `POST /api/tasks/pruefung`) | Typ aus dem Katalog des Mandanten | **`404`**, kein Auftrag |
+| Typliste, „Ihre Aufträge“, Einzelabruf, Löschen | unverändert | unverändert |
+
+**`404` ist der feste Rumpf jeder unbekannten Ressource**, wie bei einem nicht zulässigen Mandanten
+(F33). Ob ein anderer Mandant freigeschaltet ist, lässt sich darüber nicht erfragen. Gelesen wird bei
+jedem Zugriff, mit dem einen Statement des Typkatalogs (§5.6, gemessen in M1000) — eine neue oder
+entfernte Freischaltung wirkt im Backend beim nächsten Zugriff, ohne Neustart. Das Symbol fragt
+einmal je Mandant und Seitenaufruf; es zeigt eine Änderung nach dem nächsten Neuladen der Seite oder
+Mandantenwechsel (F36).
+
+**Stand mit 1.1.0:** `WERK_ABLADESTELLE` ist **ausschließlich für `SYSTEM`** freigeschaltet
+(E‑1125). `V103` nimmt die beiden Freischaltungen aus `V100` zurück, `SYSTEM` schaltet ein Skript
+frei (F34):
+
+| Skript | Was es tut |
+|---|---|
+| [`scripts/assistent-freischaltung-system.sql`](../scripts/assistent-freischaltung-system.sql) | schaltet `SYSTEM` frei; idempotent. Bricht ab, wenn das Vorgabeschema nicht das eigene ist, wenn `V103` noch nicht angewandt ist oder wenn für den Typ schon ein anderer Mandant freigeschaltet ist |
+| [`scripts/assistent-freischaltung-system-ruecknahme.sql`](../scripts/assistent-freischaltung-system-ruecknahme.sql) | nimmt die Freischaltung für `SYSTEM` zurück; idempotent |
+
+Beide laufen in MySQL Workbench mit dem Schreibbenutzer, Vorgabeschema das eigene Schema, über
+„Execute (All or Selection) to Text“; die Einzelheiten stehen im Kopf der Skripte. Lukas führt sie in
+der Produktion aus, **nach dem ersten Start von 1.1.0**. Auf der Testkopie sind beide am 21.10.2026
+gelaufen (§9.6). Ein Auftrag unter `SYSTEM` ist ein Auftrag wie jeder andere: Die Plattform holt ihn
+nach [`task-schnittstelle.md`](task-schnittstelle.md) ab.
+
+**Ausrollen auf einen weiteren Mandanten** ist ein `INSERT`, kein Deployment (E‑1126). Die
+Reihenfolge aus §3.7 gilt auch hier: Der Typ ist aktiv, weil sein Ablauf auf der Plattform steht.
+
+```sql
+-- 1. Ist es der richtige Mandant? Die Kennung ist die aus GlassfishDB.Mandant (nur lesen).
+SELECT MandantID, MandantName FROM GlassfishDB.Mandant WHERE MandantID = '<Mandantenkennung>';
+
+-- 2. Freischalten. Wirkt beim naechsten Zugriff, ohne Neustart.
+INSERT INTO overlord_monitor.task_type_mandant (task_typ, mandant_id)
+VALUES ('WERK_ABLADESTELLE', '<Mandantenkennung>');
+
+-- 3. Welche Mandanten haben den Typ jetzt?
+SELECT mandant_id FROM overlord_monitor.task_type_mandant
+WHERE task_typ = 'WERK_ABLADESTELLE' ORDER BY mandant_id;
+```
+
+Die Schemanamen sind die der Testkopie; in der Produktion gelten die aus `OVERLORD_DB_*`. Nachsehen
+im Mandanten: Das Symbol steht, `GET /api/assistent` meldet `verfuegbar: true`.
+
+**Zurücknehmen:** dieselbe Zeile löschen
+(`DELETE FROM overlord_monitor.task_type_mandant WHERE task_typ = 'WERK_ABLADESTELLE' AND mandant_id = '<Mandantenkennung>'`).
+Beim nächsten Zugriff ist der Assistent für den Mandanten nicht mehr verfügbar. Offene Aufträge
+bleiben in `task`, und die Plattform holt sie weiter ab; „Ihre Aufträge“ zeigt sie, und gelöscht
+werden können sie dort, solange sie offen sind (§6.6).
+
 ---
 
 ## 4. Der erste Typ `WERK_ABLADESTELLE`
@@ -415,7 +517,9 @@ Ok
   Schlüssel schon, bleibt der Eintrag unverändert (E‑1008). Eine Anpassung schlägt er nur vor,
   wenn der Kunde ausdrücklich etwas ändern will. Der Absatz steht seit `V102` in der
   Beschreibung (§4.3), nicht im Code.
-- **Mandanten:** freigeschaltet für `NEXANS` und `IBIS`, wie in der Quelle.
+- **Mandanten:** in der Quelle `NEXANS` und `IBIS`; `V100` hat den Typ für beide freigeschaltet.
+  **Seit 1.1.0 ausschließlich für `SYSTEM`** (E‑1125): `V103` nimmt die beiden Freischaltungen
+  zurück, das Skript aus §3.9 schaltet `SYSTEM` frei.
 
 ### 4.3 Die Definition, Stand nach der Migration `V102`
 
@@ -498,7 +602,9 @@ tragen `utf8mb4_bin` ([`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §5). K
 nach `GlassfishDB`. Die JSON-Spalten sind `LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin` mit
 `CHECK (JSON_VALID(…))` — das ist genau das, was MariaDB aus dem Typ `JSON` macht, hier aber mit
 ausgeschriebener Sortierung. Die Migration legt `WERK_ABLADESTELLE` an (§4.3; geändert mit `V101` und `V102`) und schaltet ihn für
-`NEXANS` und `IBIS` frei.
+`NEXANS` und `IBIS` frei. **`V103` nimmt diese beiden Freischaltungen mit 1.1.0 zurück** (§3.9,
+E‑1125); seit dem Zusammenführen gibt es eine Linie, neue Migrationen schließen an `V103` an
+(E‑1127).
 
 **`task`**
 
@@ -668,6 +774,11 @@ Kein Endpunkt hat ein Zeitfenster und keiner blättert — das deckt E‑1016: `
 > Mandanten-ID entgegen und ist keine Ausnahme von M1; Rollen, aktiver Mandant und Änderungszwang wie
 > oben. `POST /api/tasks/pruefung` steht seit A2 in [`assistent.md`](assistent.md) §6.5.
 
+> **Seit 1.1.0 (21.10.2026) gesperrt, wo der Assistent nicht verfügbar ist** (§3.9, F32):
+> `POST /api/tasks` und `POST /api/tasks/pruefung` antworten dann `404`. `GET /api/tasks/typen`,
+> `GET /api/tasks`, `GET /api/tasks/{taskId}` und `DELETE /api/tasks/{taskId}` bleiben, wie sie
+> sind. Es entsteht kein neuer Endpunkt und keine Ausnahme von M1.
+
 ### 6.1 `GET /api/tasks/typen`
 
 Die dem aktiven Mandanten angebotenen Typen (E‑1020), nach Kennung sortiert. Kein angebotener Typ:
@@ -713,12 +824,14 @@ sie aus der Beschreibung und aus den Fehlercodes (§7).
 |---|---|
 | angelegt | **`201`** mit dem Auftrag (§6.5) und `Location: /api/tasks/{taskId}`. Ein Ereignis `AUFTRAG_ANGELEGT` im `audit_log` mit Typ, Aktion, Zahl der Einträge und Task-ID — nicht mit dem Parametertext |
 | gleiche `anfrageId` im selben Mandanten noch einmal | **`200`** mit dem vorhandenen Auftrag. Kein zweiter Auftrag, kein zweites Ereignis — auch wenn der übrige Rumpf diesmal anders aussieht |
+| Assistent für den aktiven Mandanten nicht verfügbar (§3.9) — *seit 1.1.0* | **`404`**, derselbe Rumpf wie unten; kein Auftrag, kein Ereignis |
 | `anfrageId` fehlt oder ist keine UUID | `400`, Fehlerliste mit `feld: "anfrageId"` und Code `PFLICHT_FEHLT` bzw. `FORMAT` |
 | Typ unbekannt, inaktiv, ungültig **oder** für den aktiven Mandanten nicht freigeschaltet | **`404`**, in allen Fällen gleich: derselbe Rumpf, dasselbe Statement. Sonst ließe sich die Freischaltung anderer Mandanten abfragen |
 | Prüffehler (§5.3) | `400` |
 
-Die Reihenfolge ist: `anfrageId` prüfen, nach einem vorhandenen Auftrag mit dieser `anfrageId`
-suchen, Typ auflösen, Einträge prüfen, anlegen. Kommen zwei gleiche Anfragen gleichzeitig, verliert
+Die Reihenfolge ist: **die Freigabe prüfen** (seit 1.1.0, F32; sie liest den Typkatalog des
+Mandanten, aus dem danach der Typ kommt — kein zweites Statement), `anfrageId` prüfen, nach einem
+vorhandenen Auftrag mit dieser `anfrageId` suchen, Typ auflösen, Einträge prüfen, anlegen. Kommen zwei gleiche Anfragen gleichzeitig, verliert
 die zweite am eindeutigen Index `uq_task_anfrage` und antwortet mit `200` und dem Auftrag der
 ersten.
 
@@ -882,7 +995,8 @@ Damit sie nicht verloren gehen:
 | `ParametertextTest` | die drei Texte aus §5.2 zeichengenau, Zeilenende, die Gattung, Ersetzen in einem Durchgang |
 | `RueckgabeTest` | CRLF, abschließendes LF, Leerraum, unbekannter Wert, leere Zeile, fehlende Rückgabe |
 | `TaskStatusClassifierTest` | jede Zeile der Tabelle in §5.5, dazu falsche Zeilenzahl |
-| `TypUnabhaengigkeitTest` | `WERK_ABLADESTELLE` steht im Hauptcode (`src/main`, auch generiert und Ressourcen) nirgends außer in den Migrationen `V100`, `V101` und `V102` — mit Gegenprobe, dass die Suche ihn in genau diesen dreien findet (E‑1018) |
+| `TypUnabhaengigkeitTest` | `WERK_ABLADESTELLE` steht im Hauptcode (`src/main`, auch generiert und Ressourcen) nirgends außer in den Migrationen `V100` bis `V103` — mit Gegenprobe, dass die Suche ihn in genau diesen vieren findet (E‑1018; `V103` seit 1.1.0) |
+| `AssistentFreigabeTest` *(1.1.0)* | die eine Stelle (§3.9): ausgeschaltet nichts angeboten und `404` ohne Datenbankzugriff; ohne freigeschalteten Typ `404`; nur ungeeignete Typen `404` auch für das Anlegen (F31); verfügbar bietet der Assistent nur das Anbietbare an, das Anlegen wählt aus dem ganzen Katalog |
 | `PlattformvertragTest` | die vier Statements in [`task-schnittstelle.md`](task-schnittstelle.md) §3 sind zeichengleich mit denen, die `AuftraegeDbIT` ausführt |
 | `PaketstrukturTest` | das Paket `task` ist als Fachpaket geführt und kennt kein anderes Fachpaket |
 
@@ -899,7 +1013,16 @@ Parametertext arbeiten für sie richtig, ohne dass im Hauptcode etwas für sie s
 | `AuftraegeIsolationDbIT` | die vier Endpunkte: `NEXANS` gegen `IBIS`, `SUTTONS` ohne Freischaltung (`404` beim Anlegen, ununterscheidbar vom erfundenen Typ in Rumpf **und** Statements; leere Typliste), fremder Auftrag weder in der Liste noch einzeln (`404` gleich einer erfundenen Kennung, ein Statement), untergeschobenes `mandantId`, fremde `anfrageId`, ADMIN je aktivem Mandanten, Änderungszwang |
 | `TypdefinitionDbIT` | ein eigener Testtyp per SQL, ohne Neustart: inaktiv `404`, aktiviert in der Typliste, Änderung an `maxEintraege` wirkt beim nächsten Anlegen, ungültige Struktur nimmt ihn aus dem Angebot, ein Auftrag von vorher liest seine Kopie; `WERK_ABLADESTELLE` bleibt unberührt |
 | `TaskMigrationDbIT` | `JSON_VALID(struktur)` ist wahr; die Muster, in der Datenbank per `JSON_EXTRACT` herausgeholt, sind zeichengleich mit dem Auftrag; Struktur, Name und Beschreibung wie geschrieben, im Stand nach `V102` |
-| `IndexbestandDbIT` | die drei Tabellen und ihre Indizes in der Sollliste, in beide Richtungen |
+| `IndexbestandDbIT` | die drei Tabellen und ihre Indizes in der Sollliste, in beide Richtungen — seit 1.1.0 auch auf `main`, ohne Ausnahme |
+| `AssistentOhneSchluesselDbIT` *(1.1.0)* | Start mit Schalter an und leerem Schlüssel: Der Kontext startet, `Sprachmodell` ist der abgeschaltete Ersatz, `verfuegbar: false` trotz Freischaltung; Eröffnen, Nachricht, Prüfen und Anlegen `404`, kein Auftrag; Liste und Typliste antworten |
+
+> **Seit 1.1.0 (21.10.2026)** schalten `AuftragsTestbasis` und `AssistentIsolationDbIT` den Typ
+> `WERK_ABLADESTELLE` für `NEXANS` und `IBIS` selbst frei (`Testfreischaltungen`, F35) und
+> entfernen genau diese Zeilen danach; vom Bestand hängt nur noch ab, dass `SUTTONS` keine
+> Freischaltung hat. Die Auftragstests laufen mit eingeschaltetem Assistenten — Platzhalter als
+> Schlüssel, ein geschlossener Port als Ziel —, weil Anlegen und Prüfen sonst `404` antworten.
+> `TaskMigrationDbIT` prüft die Freischaltungen nicht mehr: Sie sind seit `V103` Pflegedaten. Die
+> Sperre selbst prüft `AssistentIsolationDbIT` ([`assistent.md`](assistent.md) §9.2).
 
 **Verletzungsprobe je Mandantenfilter (16.10.2026).** Jeder Filter in `AuftragRepository` ist
 einzeln entfernt worden, danach lief `AuftraegeIsolationDbIT`; die Datei ist jedes Mal byte-gleich
@@ -920,7 +1043,8 @@ bleibt bei allen Eingriffen grün: Er prüft keine Mandantentrennung, sondern da
 prüfen Filter, die sie nicht angefasst hatte.
 
 Aufgeräumt wird, was das Präfix `it-` trägt: Aufträge über `angelegt_von`, Testtypen über
-`task_typ` (Regel T2). Die Zeile `WERK_ABLADESTELLE` fasst kein Test an.
+`task_typ` (Regel T2), seit 1.1.0 dazu genau die Freischaltungen, die der Test angelegt hat. Die
+Zeile `WERK_ABLADESTELLE` in `task_type` fasst kein Test an.
 
 ### 9.3 Messung M1000 (Regel 7)
 
@@ -1034,6 +1158,66 @@ Testkopie dauert ein Commit Sekunden (eine Eigenschaft ihres Schreibpfads), und 
 ist er nicht gemessen. Die Tabelle hatte eine Zeile; über den Primärschlüssel ändert eine größere
 nichts am Weg.
 
+### 9.6 Freischaltung und Zusammenführung (1.1.0, 21.10.2026)
+
+**Keine neue Abfrage, keine Messung.** Die Freigabe liest das Statement des Typkatalogs aus M1000
+(§9.3), einmal je Anfrage: Anlegen und Prüfen wählen den Typ aus dem Katalog, den die Freigabe
+gelesen hat, statt ihn ein zweites Mal zu lesen; Gespräche lesen das Angebot wie bisher einmal. Am
+Weg der Nachrichtenliste und ihrer Suche ändert sich nichts — Regel 7 verlangt deshalb keine
+Prüfung in der Produktion.
+
+**Testkopie.** `V103` ist beim ersten Kontextstart des DB-Laufs um 12:24 angewandt worden. Danach
+war `task_type_mandant` leer, und die Tests haben keine Zeile hinterlassen. Das Skript für `SYSTEM`
+(§3.9) mit dem Schreibbenutzer:
+
+| Lauf | Ergebnis |
+|---|---|
+| freischalten | vorher 0 Freischaltungen, nachher 1 (`SYSTEM`), Typ aktiv |
+| freischalten, zweiter Lauf | vorher und nachher 1 — idempotent |
+| Wache 1: Vorgabeschema `information_schema` | Abbruch mit `1231`, `BITTE_DAS_EIGENE_SCHEMA_ALS_VORGABE_WAEHLEN`, nichts geändert |
+| Wache 3: Probezeile für die erfundene Kennung `it-probe` | Abbruch mit `1231`, `ANDERE_MANDANTEN_FREIGESCHALTET_SKRIPT_PASST_NICHT`; Probezeile danach entfernt |
+| zurücknehmen, zweimal | vorher 1, nachher 0; der zweite Lauf ändert nichts |
+| freischalten | Zielzustand: ausschließlich `SYSTEM` |
+
+Wache 2 (`V103` noch nicht angewandt) ließ sich nicht nachstellen, weil `V103` schon angewandt war.
+Der offene Auftrag unter `NEXANS` vom 19.10.2026 (Sichtprüfung) steht weiter in `task`; „Ihre
+Aufträge“ zeigt ihn unter `NEXANS`, anlegen geht dort nicht mehr.
+
+**Codegen und Indexbestand.** Der Codegen ohne Ausschluss der Tabellen der Aufträge hat 16 Tabellen
+gelesen und 13 übernommen (ausgenommen `flyway_schema_history` und die beiden der Sitzung); am
+eingecheckten Modell änderte sich nichts. `scripts\indizes-kandidat.ps1` vor und nach `V103`: kein
+Unterschied zur Sollliste (95 Sätze).
+
+**Voller Lauf** `.\mvnw.cmd clean verify` aus PowerShell, ohne `SPRING_PROFILES_ACTIVE`, 12:23 bis
+12:50: **1.256 Tests ohne Datenbank grün**, darunter `PaketstrukturTest` (25), `FlywayOutOfOrderTest`
+(5), `CookieAttributeTest` (4) und `AssistentFreigabeTest` (4). **503 Tests mit Datenbank, einer
+rot:** `NachrichtendetailDbIT.kein_schritt_steht_leer` mit `500` — im Protokoll ein Deadlock
+(MariaDB `1213`) um 12:45:00,1, zur vollen Minute, an der Spring Session abgelaufene Sitzungen
+aufräumt (Vorgabe `0 * * * * *`, nicht umgestellt); auf derselben Testkopie lief ein zweites
+Backend. Belegt ist der Zeitpunkt, nicht der Gegenspieler. Der Test hat mit dieser Änderung nichts
+zu tun und lief einzeln nachgefahren grün (12 von 12). Grün darunter: `IndexbestandDbIT` (5, in beiden
+Richtungen und mit den Tabellen der Aufträge), `AssistentIsolationDbIT` (14),
+`AssistentOhneSchluesselDbIT` (1), `AuftraegeIsolationDbIT` (8), `AuftraegeDbIT` (19),
+`TypdefinitionDbIT`, `TaskMigrationDbIT` und `TestsatzDefinitionDbIT`. Kein Test ruft die
+Anthropic-API: Wo der Assistent eingeschaltet ist, ist der Schlüssel ein Platzhalter und das Ziel
+ein geschlossener Port, und wo Nachrichten fließen, spielt ein geskriptetes Modell.
+
+**Verletzungsprobe der Sperre (21.10.2026).** Je Probe ist die Sperre an genau einer Stelle
+entfernt worden, danach liefen `AssistentOhneSchluesselDbIT` und `AssistentIsolationDbIT` bzw.
+`AssistentServiceTest`; die Datei ist jedes Mal per `git checkout` auf den committeten Stand
+(`1d33654`) zurückgespielt worden, der Baum war vorher sauber.
+
+| # | Entfernt | Rot |
+|---|---|---|
+| P1 | `AuftragService.lege` liest den Katalog direkt statt über `verlangeKatalog` | `AssistentOhneSchluesselDbIT` (Anlegen ohne Schlüssel `201` statt `404`) |
+| P2 | dasselbe in `AuftragService.pruefe` | `AssistentOhneSchluesselDbIT` (Prüfen ohne Schlüssel `200`) |
+| P3 | `AssistentService.sende` nimmt `angebot` statt `verlangeAngebot` | `AssistentServiceTest` (Eingeschaltet) `.freischaltung_entzogen` |
+| P4 | dasselbe in `AssistentService.eroeffne` | `AssistentIsolationDbIT.ohne_freischaltung_gesperrt`, `AssistentOhneSchluesselDbIT`; in `AssistentServiceTest` `.ohne_typ`, (Schalter aus) `.ohne_schluessel` und `.schalter_aus` |
+
+`AssistentIsolationDbIT` bleibt bei P1 und P2 grün, und das ist kein Loch: Für `SUTTONS` weist
+schon die Typauswahl ab, weil kein Typ freigeschaltet ist. Was nur die Freigabe abweist — ein
+freigeschalteter Mandant ohne Schlüssel —, prüft `AssistentOhneSchluesselDbIT`.
+
 ---
 
 ## 10. Regelbezug
@@ -1043,7 +1227,8 @@ nichts am Weg.
 | **M1** Kein Endpunkt nimmt eine Mandanten-ID entgegen | keiner der vier; keine neue Ausnahme. Seit A4 auch `DELETE /api/tasks/{taskId}` nicht |
 | **M2** Mandant als erster Pflichtparameter | jede Methode von `AuftragRepository`, auch das Laden der Typen |
 | **M3** Filter im Statement | Mandant im `WHERE` jedes Statements; die Freischaltung als Join im Statement des Typkatalogs. Seit A4 auch im `DELETE` und in seiner Nachlesung |
-| **M4** Isolationstest je Endpunkt | `AuftraegeIsolationDbIT`, seit A4 mit dem Löschen eines fremden Auftrags |
+| **M4** Isolationstest je Endpunkt | `AuftraegeIsolationDbIT`, seit A4 mit dem Löschen eines fremden Auftrags; seit 1.1.0 prüft `AssistentIsolationDbIT` die Sperre ohne Freischaltung (`404` wie erfunden) |
+| **Freischaltung** (E‑1126) | genau eine Stelle, `AssistentFreigabe` (§3.9); kein zweiter Weg |
 | **Regel 3** (kein Schreibzugriff auf `GlassfishDB`) | das Paket `task` liest und schreibt ausschließlich `overlord_monitor` |
 | **Regeln 1 bis 6** | gelten hier nicht (E‑1016) |
 | **Regel 7** | M1000 (E‑1026); für das Löschen M1005 (§9.5) |
