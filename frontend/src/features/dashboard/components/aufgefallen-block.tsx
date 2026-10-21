@@ -144,7 +144,7 @@ function Zeile({ zeile, fenster }: { zeile: AuffaelligerProzess; fenster: Fenste
   const kategorie = texte.dashboard.aufgefallen.kategorie[zeile.kategorie];
 
   return (
-    <li className="border-border flex items-center gap-3 border-b py-1.5 last:border-b-0">
+    <li className="border-border flex items-start gap-3 border-b py-1.5 last:border-b-0">
       <span
         className="text-muted-foreground text-beiwerk shrink-0 tabular-nums"
         title={formatiereZeitpunktGenau(zeile.zuletzt, sprache, zone)}
@@ -164,7 +164,7 @@ function Zeile({ zeile, fenster }: { zeile: AuffaelligerProzess; fenster: Fenste
        * **Form**, sobald es je eine zweite Kategorie gibt.
        */}
       <span
-        className={`shrink-0 ${statusVordergrund(FARBQUELLE[zeile.kategorie])}`}
+        className={`mt-0.5 shrink-0 ${statusVordergrund(FARBQUELLE[zeile.kategorie])}`}
         title={kategorie}
       >
         <Zeichen aria-hidden="true" className="size-4" />
@@ -176,11 +176,15 @@ function Zeile({ zeile, fenster }: { zeile: AuffaelligerProzess; fenster: Fenste
        * heißt nicht zugeordnet" (Regel Q4) — geraten wird hier nichts, auch
        * nicht aus der Kennung. Fehlt der Name, steht die Kennung da; fehlte
        * auch die, käme die Zeile gar nicht erst durch die Mandantenkette.
+       *
+       * **Er bricht um und wird nicht abgeschnitten** (seit dem 19.10.2026,
+       * A4): Neben „Ihre Aufträge“ ist die Spalte schmaler, und ein gekürzter
+       * Name ist ein anderer Name. Zeitpunkt, Zeichen und Zahl bleiben oben.
        */}
       <Link
         href={prozessFehlerZiel(fenster, zeile.processId)}
         title={einsetzen(texte.dashboard.aufgefallen.zeileOeffnen, { anzahl })}
-        className="focus-visible:ring-ring text-beiwerk min-w-0 flex-1 truncate rounded-md hover:underline focus-visible:ring-2 focus-visible:outline-none"
+        className="focus-visible:ring-ring text-beiwerk min-w-0 flex-1 rounded-md break-words hover:underline focus-visible:ring-2 focus-visible:outline-none"
       >
         {zeile.processName ?? zeile.processId}
       </Link>

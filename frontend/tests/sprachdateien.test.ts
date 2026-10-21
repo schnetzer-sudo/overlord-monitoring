@@ -94,9 +94,17 @@ const VERRAETERISCH = [
 describe("404", () => {
   it("wird in keiner Sprache als fehlende Berechtigung formuliert", () => {
     for (const sprachdatei of [de, en]) {
-      const text = sprachdatei.fehler["nicht-gefunden"].toLowerCase();
-      for (const wort of VERRAETERISCH) {
-        expect(text, `"${text}" enthält "${wort}"`).not.toContain(wort);
+      // Seit A3 auch die beiden 404 des Assistenten: das abgelaufene Gespräch und
+      // der Typ, den es für den Mandanten nicht (mehr) gibt (`docs/assistent-frontend.md` §5, §6).
+      for (const roh of [
+        sprachdatei.fehler["nicht-gefunden"],
+        sprachdatei.assistent.hinweis.abgelaufen,
+        sprachdatei.assistent.karte.typUnbekannt,
+      ]) {
+        const text = roh.toLowerCase();
+        for (const wort of VERRAETERISCH) {
+          expect(text, `"${text}" enthält "${wort}"`).not.toContain(wort);
+        }
       }
     }
   });

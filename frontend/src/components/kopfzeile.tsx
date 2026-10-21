@@ -12,6 +12,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { AssistentEingang } from "@/features/assistent/components/assistent-eingang";
 import { Suchfeld } from "@/features/nachrichten/components/suchfeld";
 import type { Selbstauskunft } from "@/features/sitzung/api";
 import { Nutzermenue } from "@/features/sitzung/components/nutzermenue";
@@ -24,7 +25,7 @@ import { Sprachumschaltung } from "./sprachumschaltung";
 
 /**
  * Kopfzeile: Produktname, reservierter Suchplatz, aktiver Mandant,
- * Sprachumschaltung, Nutzermenü.
+ * Sprachumschaltung, Assistent, Nutzermenü.
  *
  * Sie spannt über die volle Fensterbreite und steht fest — gescrollt wird
  * ausschließlich der Inhaltsbereich darunter.
@@ -177,7 +178,20 @@ export function Kopfzeile({
           <Sprachumschaltung />
         </div>
 
-        <div className="order-4 shrink-0 md:order-5">
+        {/*
+         * **Der Assistent links neben dem Nutzermenü** (A3, E‑1065,
+         * `docs/assistent-frontend.md`). Er steht nur, wo die Navigation steht —
+         * mit aktivem Mandanten und ohne Passwortwechsel; dort lehnte das Backend
+         * ohnehin ab —, und erscheint erst bei `verfuegbar: true` (E‑1068).
+         *
+         * **Der Mandant ist der `key`:** Ein Wechsel hängt den Assistenten neu ein
+         * und setzt die Chatbox samt Gespräch zurück (E‑1076). Ohne Wechsel steht
+         * er so lange wie die Kopfzeile, also über jede Navigation hinweg.
+         */}
+        <div className="order-4 flex shrink-0 items-center gap-1 md:order-5">
+          {navigationSichtbar && auskunft.mandant !== null ? (
+            <AssistentEingang key={auskunft.mandant.id} mandant={auskunft.mandant} />
+          ) : null}
           <Nutzermenue auskunft={auskunft} />
         </div>
       </div>

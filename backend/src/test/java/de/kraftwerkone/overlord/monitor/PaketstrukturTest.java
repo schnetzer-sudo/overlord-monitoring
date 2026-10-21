@@ -61,7 +61,16 @@ class PaketstrukturTest {
 
   /** Fachpakete: kennen einander nicht. */
   private static final List<String> FACHPAKETE =
-      List.of("message", "bam", "payload", "catalog", "rollup", "dashboard", "admin");
+      List.of(
+          "message",
+          "bam",
+          "payload",
+          "catalog",
+          "rollup",
+          "dashboard",
+          "admin",
+          "task",
+          "assistent");
 
   /** Das generierte Paket. Entstand in Schritt 2 durch Codegenerierung, nie von Hand gepflegt. */
   private static final String GENERIERT = "jooq";
@@ -800,5 +809,118 @@ class PaketstrukturTest {
                     + " DataSource selbst.")
             .allowEmptyShould(true);
     regel.check(KLASSEN);
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────────────────────
+  // Assistent (Linie assistent, A2, docs/assistent.md §4.1)
+  // ───────────────────────────────────────────────────────────────────────────────────────────
+
+  private static final String ASSISTENT = BASIS + ".assistent";
+
+  private static final String NEUTRAL = ASSISTENT + ".modell";
+
+  /**
+   * Ein Adapter ist jedes Unterpaket von {@code assistent} ausser der neutralen Schnittstelle —
+   * heute {@code anthropic}, spaeter etwa ein lokales Modell. Die Regel nennt keinen Anbieter.
+   */
+  private static final DescribedPredicate<JavaClass> ADAPTER =
+      DescribedPredicate.describe(
+          "in einem Adapter-Unterpaket von assistent",
+          klasse ->
+              klasse.getPackageName().startsWith(ASSISTENT + ".")
+                  && !klasse.getPackageName().equals(NEUTRAL)
+                  && !klasse.getPackageName().startsWith(NEUTRAL + "."));
+
+  @Test
+  @DisplayName("Assistent: HTTP an einen Modellanbieter nur im Adapter-Unterpaket")
+  void assistent_http_nur_im_adapter() {
+    ArchRule regel =
+        noClasses()
+            .that()
+            .resideInAnyPackage(ASSISTENT, NEUTRAL)
+            .should()
+            .dependOnClassesThat()
+            .resideInAnyPackage(
+                "org.springframework.web.client..",
+                "org.springframework.http.client..",
+                "java.net..")
+            .because(
+                "die Gespraechsfuehrung haengt nur an der neutralen Schnittstelle (E‑1032). Wer"
+                    + " einen Anbieter ruft, ist ein Adapter und liegt in einem eigenen Unterpaket.")
+            .allowEmptyShould(true);
+    regel.check(KLASSEN);
+  }
+
+  @Test
+  @DisplayName("Assistent: Gespraechsfuehrung und Schnittstelle kennen keinen Adapter")
+  void assistent_kennt_keinen_adapter() {
+    ArchRule regel =
+        noClasses()
+            .that()
+            .resideInAnyPackage(ASSISTENT, NEUTRAL)
+            .should()
+            .dependOnClassesThat(ADAPTER)
+            .because(
+                "ein neuer Anbieter darf Gespraechsfuehrung, Werkzeuge und Endpunkte nicht"
+                    + " aendern muessen (E‑1028). Gewaehlt wird er in config.")
+            .allowEmptyShould(true);
+    regel.check(KLASSEN);
+  }
+
+  @Test
+  @DisplayName("Assistent: Nur config und der Adapter selbst kennen einen Adapter")
+  void nur_config_kennt_den_adapter() {
+    ArchRule regel =
+        noClasses()
+            .that()
+            .resideOutsideOfPackages(ASSISTENT + "..", musterFuer(VERDRAHTUNG))
+            .should()
+            .dependOnClassesThat(ADAPTER)
+            .because("anbieterspezifische Typen bleiben im Adapter (E‑1032)")
+            .allowEmptyShould(true);
+    regel.check(KLASSEN);
+  }
+
+  @Test
+  @DisplayName("Assistent: Die neutrale Schnittstelle kennt die Gespraechsfuehrung nicht")
+  void schnittstelle_ist_neutral() {
+    ArchRule regel =
+        noClasses()
+            .that()
+            .resideInAPackage(NEUTRAL + "..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAPackage(ASSISTENT)
+            .because("ein Adapter haengt an der Schnittstelle, nicht an der Gespraechsfuehrung")
+            .allowEmptyShould(true);
+    regel.check(KLASSEN);
+  }
+
+  @Test
+  @DisplayName("Assistent: Kein Datenbankzugriff, auch nicht im Adapter (E‑1035)")
+  void assistent_ohne_datenbank() {
+    ArchRule regel =
+        noClasses()
+            .that()
+            .resideInAPackage(ASSISTENT + "..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAnyPackage("org.jooq..", musterFuer(GENERIERT), "javax.sql..", "java.sql..")
+            .because(
+                "das Modell bekommt keine Daten aus GlassfishDB und keine Auftraege aus task"
+                    + " (E‑1035), und der Assistent legt nie an (E‑1033). Typen kommen aus dem"
+                    + " Typkatalog in common.")
+            .allowEmptyShould(true);
+    regel.check(KLASSEN);
+  }
+
+  @Test
+  @DisplayName("Assistent: Die Regeln greifen — es gibt Adapter und Gespraechsfuehrung")
+  void assistent_regeln_pruefen_etwas() {
+    assertThat(KLASSEN.stream().filter(ADAPTER).count())
+        .as("Ohne Adapter-Klasse pruefen die Regeln des Assistenten nichts")
+        .isPositive();
+    assertThat(KLASSEN.stream().filter(klasse -> klasse.getPackageName().equals(ASSISTENT)).count())
+        .isPositive();
   }
 }

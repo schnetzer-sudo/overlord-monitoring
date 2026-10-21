@@ -423,6 +423,68 @@ export const de = {
       },
     },
 
+    // „Ihre Aufträge“ (Linie `assistent`, A4, `docs/assistent-frontend.md` §12).
+    // **Hier wird gesiezt** (E‑1124): Der Block setzt fort, was im Gespräch mit
+    // dem Assistenten entstanden ist, und heißt seit A1 so. Die übrige
+    // Übersicht duzt weiter (E‑1084).
+    auftraege: {
+      titel: "Ihre Aufträge",
+      ladenFehler: "Ihre Aufträge konnten gerade nicht geladen werden.",
+      // Das Wort je Stand (§12.4). `UNBEKANNT` hat keins: Dort steht der
+      // Rohwert des Status (Regel Q4).
+      stand: {
+        OFFEN: "Offen",
+        IN_AUSFUEHRUNG: "In Ausführung",
+        ERLEDIGT: "Erledigt",
+        TEILWEISE_ERLEDIGT: "Teilweise erledigt",
+        FEHLGESCHLAGEN: "Fehlgeschlagen",
+        UNSTIMMIG: "Rückmeldung unvollständig",
+      },
+      // Der Hinweis in der aufgeklappten Zeile. Erledigt und Teilweise erledigt
+      // haben keinen (dort spricht das Ergebnis je Eintrag), Fehlgeschlagen
+      // zeigt die Meldung der Plattform.
+      hinweis: {
+        OFFEN: "Wartet auf die Plattform. Bis sie ihn abholt, können Sie ihn noch löschen.",
+        IN_AUSFUEHRUNG: "Die Plattform bearbeitet den Auftrag.",
+        UNSTIMMIG:
+          "Die Rückmeldung der Plattform passt nicht zum Auftrag. Bitte wenden Sie sich an die Betreuung.",
+        UNBEKANNT: "Unbekannter Stand.",
+      },
+      eintraegeEins: "1 Eintrag",
+      eintraegeViele: "{anzahl} Einträge",
+      undWeiterer: "und 1 weiterer",
+      undWeitere: "und {anzahl} weitere",
+      nichtErfolgreich: "{anzahl} von {gesamt} nicht erfolgreich",
+      eingestellt: "eingestellt {zeit}",
+      ausgefuehrt: "ausgeführt {zeit}",
+      meldungDerPlattform: "Meldung der Plattform",
+      // Rückfall ohne Schlüssel (F23), wie auf der Karte (E‑1080).
+      eintrag: "Eintrag {nummer}",
+      // Für Vorleseprogramme neben dem Rohwert der Plattform (E‑1106).
+      ergebnis: {
+        OK: "erfolgreich",
+        NICHT_OK: "nicht erfolgreich",
+        UNBEKANNT: "nicht erfolgreich",
+      },
+      keineRueckmeldung: "keine Rückmeldung",
+      alleEintraege: "Alle {anzahl} Einträge anzeigen",
+      weitereEins: "1 weiteren anzeigen",
+      weitereViele: "{anzahl} weitere anzeigen",
+      wenigerAnzeigen: "Weniger anzeigen",
+      // Löschen (E‑1111, E‑1112, E‑1116, F22).
+      loeschen: "Auftrag löschen",
+      frage:
+        "Auftrag löschen? Die Plattform hat ihn noch nicht abgeholt. Er wird nicht ausgeführt.",
+      abbrechen: "Abbrechen",
+      bestaetigen: "Löschen",
+      loeschenLaeuft: "Wird gelöscht …",
+      geloescht: "Auftrag gelöscht. Er wird nicht ausgeführt.",
+      uebernommen: "Die Plattform hat den Auftrag gerade übernommen. Löschen geht nicht mehr.",
+      // Ein 404 sagt nichts über Berechtigung (`docs/frontend-grundlagen.md` §6).
+      verschwunden: "Der Auftrag ist nicht mehr vorhanden.",
+      gestoert: "Der Auftrag konnte gerade nicht gelöscht werden. Bitte versuchen Sie es erneut.",
+    },
+
     /**
      * Der Block **Plattform** — die Dienstlampen und die Ablagenkachel
      * (Schritt 10d Teil B, `docs/dashboard-frontend.md`).
@@ -1712,6 +1774,86 @@ export const de = {
       titel: "Keine Konten",
       hinweis:
         "Die Liste ist leer. Das kann im Betrieb nicht vorkommen — wer sie sieht, hat selbst ein Konto. Bitte melde das der EDI-Betreuung.",
+    },
+  },
+
+  // Der Assistent in der Kopfleiste (A3, `docs/assistent-frontend.md`). **In der
+  // Chatbox wird gesiezt** (F2): Der Assistent selbst siezt (E‑1044), und
+  // Begrüßung, Hinweise und Antworten stehen im selben Verlauf.
+  assistent: {
+    symbol: "Assistent",
+    titel: "Assistent",
+    mandant: "Aktiver Mandant",
+    schliessen: "Assistent schließen",
+    neuesGespraech: "Neues Gespräch",
+    // Drei Zeilen, dazwischen die Typen aus `GET /api/assistent` als Liste.
+    begruessung: {
+      gruss: "Guten Tag, ich bin der Assistent des Overlord Monitorings.",
+      einleitung:
+        "Ich nehme Ihre Änderungswünsche an der EDI-Konfiguration entgegen und bereite daraus einen Auftrag vor. Derzeit möglich:",
+      schluss:
+        "Beschreiben Sie einfach, was Sie ändern möchten. Bevor etwas angelegt wird, zeige ich Ihnen den Auftrag zur Prüfung.",
+    },
+    verlauf: "Verlauf des Gesprächs",
+    sprecher: {
+      kunde: "Sie:",
+      assistent: "Assistent:",
+    },
+    wartet: "Der Assistent antwortet …",
+    eingabe: {
+      beschriftung: "Ihre Nachricht an den Assistenten",
+      platzhalter: "Was möchten Sie ändern?",
+      senden: "Senden",
+      tasten: "Enter sendet, Umschalt+Enter beginnt eine neue Zeile.",
+    },
+    // Nach Problemtyp und nicht nach Statuscode (E‑1081). Die Zahlen kommen aus
+    // dem Fehlerformat; fehlen sie, steht derselbe Satz ohne sie.
+    hinweis: {
+      zuVieleNachrichten:
+        "Gerade kamen zu viele Nachrichten. Bitte warten Sie einen Moment und senden Sie dann erneut.",
+      ausgeschoepft:
+        "Dieses Gespräch hat die Höchstzahl von {anzahl} Nachrichten erreicht. Bitte beginnen Sie ein neues Gespräch.",
+      ausgeschoepftOhneZahl:
+        "Dieses Gespräch hat die Höchstzahl an Nachrichten erreicht. Bitte beginnen Sie ein neues Gespräch.",
+      nachrichtUngueltig:
+        "Die Nachricht ist leer oder zu lang. Bitte schreiben Sie höchstens {anzahl} Zeichen.",
+      nachrichtUngueltigOhneZahl: "Die Nachricht ist leer oder zu lang.",
+      nichtErreichbar:
+        "Der Assistent ist gerade nicht erreichbar. Ihre Nachricht steht wieder im Eingabefeld; Sie können sie erneut senden.",
+      // Ein 404 sagt nichts über Berechtigung (`docs/frontend-grundlagen.md` §6).
+      abgelaufen:
+        "Dieses Gespräch ist abgelaufen. Beginnen Sie ein neues Gespräch; Ihre Nachricht bleibt im Eingabefeld.",
+    },
+    ansage: {
+      vorschlagEins: "Vorschlag auf der Karte: {name}, ein Eintrag.",
+      vorschlagMehr: "Vorschlag auf der Karte: {name}, {anzahl} Einträge.",
+    },
+    karte: {
+      bezeichnung: "Vorschlag: {name}",
+      giltFuer: "Gilt für:",
+      eintrag: "Eintrag {nummer}",
+      leer: "leer",
+      alleAnzeigen: "Alle {anzahl} anzeigen",
+      wenigerAnzeigen: "Nur die ersten {anzahl} anzeigen",
+      anlegen: "Auftrag anlegen",
+      anlegenLaeuft: "Wird angelegt …",
+      aendern: "Ändern",
+      uebernehmen: "Übernehmen",
+      verwerfen: "Verwerfen",
+      pruefungLaeuft: "Wird geprüft …",
+      pruefungFehler: "Bitte korrigieren Sie die markierten Angaben.",
+      pruefungGestoert: "Die Angaben konnten gerade nicht geprüft werden.",
+      erneutPruefen: "Erneut prüfen",
+      // 404 beim Prüfen und beim Anlegen — wie das Backend es dem Modell sagt.
+      typUnbekannt: "Diesen Auftragstyp gibt es hier nicht.",
+      anlegenFehler:
+        "Der Auftrag wurde nicht angelegt. Bitte korrigieren Sie die markierten Angaben.",
+      anlegenGestoert:
+        "Der Auftrag konnte gerade nicht angelegt werden. Bitte versuchen Sie es erneut; er entsteht dabei nicht doppelt.",
+      // F7: „Offen“ für die Einordnung OFFEN; jede andere steht roh, die Wörter
+      // dafür gehören zu „Ihre Aufträge“ (A4).
+      angelegt: "Angelegt, Status: {status}",
+      offen: "Offen",
     },
   },
 

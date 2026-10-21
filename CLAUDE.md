@@ -24,13 +24,14 @@ dieser Datei gilt die Datei. Die Planung steht seit 1.0.0 in `docs/ROADMAP.md`; 
 
 ## Zweig prüfen
 
-Vor jeder Arbeit `git branch --show-current`. Seit Version 1.0.0 gibt es zwei Linien
-(`DEVELOPMENT_GUIDELINES.md` §12):
+Vor jeder Arbeit `git branch --show-current`. Seit Version 1.1.0 gibt es **eine Linie, `main`**
+(`DEVELOPMENT_GUIDELINES.md` §12); die Linie `assistent` ist zusammengeführt, auf dem Zweig
+`assistent` wird nicht mehr gearbeitet.
 
-- **`main` und `fix/*`:** Release-Linie 1.x, nur Fixes. **Keine Arbeit an der Assistent-Linie.**
-- **`assistent` und `assistent-*`:** Migrationen ab `V100`, projektweite Nummern (M, offene Punkte,
-  projektweite E) ab 1000. Teilschritte heißen `assistent-<teil>` mit Bindestrich, weil Git neben
-  einem Zweig `assistent` keinen Zweig `assistent/<teil>` anlegen kann.
+- **Zweige von `main`:** `fix/<thema>` und `feat/<thema>`.
+- **Neue Migrationen** schließen an die höchste vergebene an (nach `V103` also `V104`); unter `V103`
+  folgt keine mehr. **Projektweite Nummern** (E, M, offene Punkte) schließen ebenso an die höchste
+  vergebene an (über 1000); der Bereich darunter wird nicht weiter befüllt.
 
 ## Die unverhandelbaren Regeln — Kurzfassung
 
@@ -45,6 +46,10 @@ stillschweigend gebrochen:
 5. **Keine `OFFSET`-Paginierung** — ausschließlich cursor-basiert.
 6. **`MessageProperty` nur über `MessageID`** — nie über den Wert filtern, gruppieren, sortieren.
 7. **Keine Live-Aggregation über `Message`** — Kennzahlen kommen aus `message_rollup`.
+
+   Die Regeln 4 bis 7 gelten für Lesezugriffe auf `GlassfishDB` und das daraus Abgeleitete
+   (Rollup). Tabellen in `overlord_monitor`, die nicht aus `GlassfishDB` abgeleitet sind (`task`),
+   folgen ihnen nicht (E‑1016, `docs/tasks.md`); gemessen wird trotzdem jede Abfrage.
 8. **`LocalDateTime.now()` wird nirgends direkt aufgerufen** — stattdessen die `Clock`-Beans aus
    `common/ZeitConfig` (Anwendungsuhr bzw. `systemClock`).
 9. **Fehlerprüfung nur über `MessageStatusClassifier.fehlerBedingung(...)`** — niemals über das

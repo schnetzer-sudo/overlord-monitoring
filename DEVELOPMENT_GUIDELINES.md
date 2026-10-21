@@ -129,7 +129,7 @@ Damit sie prüfbar ist, sind die Pakete in drei Rollen eingeteilt:
 |---|---|---|
 | **Verdrahtung** | `config` | Darf alles sehen. Niemand importiert aus `config`. |
 | **Gemeinsames** | `common`, `security`, `audit` | Dürfen von jedem Fachpaket genutzt werden. `common` importiert aus keinem anderen Anwendungspaket. |
-| **Fachpakete** | `message`, `bam`, `payload`, `catalog`, `rollup`, `dashboard`, `admin` | Kennen einander **nicht**. |
+| **Fachpakete** | `message`, `bam`, `payload`, `catalog`, `rollup`, `dashboard`, `admin`, `task`, `assistent` (beide seit 1.1.0 auf `main`) | Kennen einander **nicht**. |
 
 `security` und `audit` stehen bei „Gemeinsames", weil die Projektbeschreibung sie an mehreren
 Stellen quer fordert: Der `MandantContext` ist Pflichtparameter jeder Repository-Methode
@@ -392,10 +392,19 @@ L1 bis L6 verbindlich und nicht verhandelbar.
 Ohne Zeitfenster keine Abfrage. Fehlt es in der Anfrage, wird der Standard gesetzt — es wird nie
 unbegrenzt gelesen.
 
+> **Geltungsbereich von L1 bis L6** *(16.10.2026, E‑1016 und E‑1027 in
+> [`docs/tasks.md`](docs/tasks.md))*: Die Regeln sind mit der Last auf `GlassfishDB` begründet und
+> gelten für Lesezugriffe dort. Tabellen in `overlord_monitor`, die nicht aus `GlassfishDB`
+> abgeleitet sind — etwa `task` —, folgen ihnen nicht; `GET /api/tasks` hat deshalb weder
+> Zeitfenster noch Cursor. Die Rollup-Tabellen sind abgeleitet und bleiben darunter. L7 gilt für
+> jede Abfrage. Wortlaut in [`docs/PROJEKTBESCHREIBUNG.md`](docs/PROJEKTBESCHREIBUNG.md) §8, Regel 1.
+
 **L2 — Keine Live-Aggregation über `Message`.** Dashboard-Kennzahlen kommen ausschließlich aus
 `message_rollup`. Ein stündlicher Job schreibt inkrementell fort.
 
 **L3 — Keine `OFFSET`-Paginierung.** Cursor-basiert über `(MessageLastUpdate, MessageID)`.
+Geltungsbereich wie bei L1: Listen über Tabellen in `overlord_monitor`, die nicht aus `GlassfishDB`
+abgeleitet sind, brauchen keinen Cursor (E‑1016).
 
 **L4 — `MessageProperty` nur über `MessageID`.** Nie filtern, gruppieren oder sortieren über
 `MessagePropertyValue`. Die Indizes darauf sind Präfix-Indizes über 50 Zeichen und für Aggregation
@@ -1157,56 +1166,62 @@ Ein Schritt ist fertig, wenn **alle** Punkte zutreffen. Nicht „im Wesentlichen
 
 ## 12. Zweige und Releases
 
-*Angelegt am 16.10.2026 mit Version 1.0.0.* Herkunft der Entscheidungen: **A** = vom Auftraggeber
-am 15. oder 16.10.2026 entschieden, **V** = Vorschlag vom 16.10.2026, ohne Einspruch übernommen.
+*Angelegt am 16.10.2026 mit Version 1.0.0, neu gefasst am 21.10.2026 mit 1.1.0.* Herkunft der
+Entscheidungen: **A** = vom Auftraggeber entschieden, **V** = Vorschlag vom 16.10.2026, ohne
+Einspruch übernommen.
 
-### Zwei Linien *(Entscheidung 2, A)*
+### Eine Linie *(E‑1127, A, 21.10.2026)*
 
-| Zweig | Rolle | Was darauf landet |
-|---|---|---|
-| `main` | **Release-Linie 1.x** | **nur Fixes**, über Zweige `fix/<thema>` |
-| `assistent` | Weiterentwicklung „Aufträge über den Assistenten“ (A1 bis A4, [`docs/ROADMAP.md`](docs/ROADMAP.md)) | Teilschritte über Zweige `assistent-<teil>`, z. B. `assistent-a1-auftragsmodell` |
+**Seit 1.1.0 gibt es genau eine Linie: `main`.** Die Linie `assistent` (Aufträge über den
+Assistenten, A1 bis A4) ist am 21.10.2026 nach `main` zusammengeführt worden; das ist Release 1.1.0
+([`docs/ROADMAP.md`](docs/ROADMAP.md) §2, [`docs/tasks.md`](docs/tasks.md) §2).
 
-- `assistent` ist ein langlebiger Zweig ab dem Tag `v1.0.0`.
-- **Teilschritte heißen `assistent-<teil>`, mit Bindestrich.** Git kann neben einem Zweig `assistent` keinen Zweig `assistent/<teil>` anlegen: Zweignamen sind Pfade unter `refs/heads/`, und `assistent`
-  kann dort nicht zugleich Datei und Verzeichnis sein *(geändert am 16.10.2026; vorher stand hier
-  `assistent/<teil>`)*.
-- **Merge-Richtung:** Nach jedem Fix-Release wird `main` in `assistent` gemergt, **nie umgekehrt**.
-  Am Ende wird `assistent` **einmal** nach `main` gemergt; das wird Release 1.1.0.
-- Die CI baut Pushes auf `main`, `assistent` und `assistent-*` und jeden Pull Request
-  ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
+- **Gearbeitet wird auf Zweigen von `main`**, Fixes auf `fix/<thema>`, Weiterentwicklung auf
+  `feat/<thema>`, zusammengeführt mit `--no-ff` — so, wie es vor 1.0.0 gelebt wurde *(Vorschlag
+  F38, [`docs/tasks.md`](docs/tasks.md) §2, zur Bestätigung)*.
+- **Der Zweig `assistent` bleibt stehen**, bekommt aber keine Arbeit mehr. Die CI baut Pushes auf
+  `main`, `assistent` und `assistent-*` und jeden Pull Request
+  ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)); ob die Auslöser für `assistent` bleiben,
+  ist Punkt 1035.
+
+*Bis 1.1.0 galt hier das Modell zweier Linien (Entscheidung 2 vom 15./16.10.2026): `main` als
+Release-Linie 1.x nur mit Fixes, `assistent` als Weiterentwicklung mit Teilschritten
+`assistent-<teil>` — mit Bindestrich, weil Git neben einem Zweig `assistent` keinen Zweig
+`assistent/<teil>` anlegen kann —, und `main` wurde nach jedem Fix-Release in `assistent` gemergt.
+Es ist mit dem Zusammenführen abgelöst.*
 
 ### Versionen, Tags und `CHANGELOG.md`
 
-- Versionen nach **SemVer**. Ein Fix erhöht die Patch-Version (1.0.1, 1.0.2, …); der Merge der
-  Assistent-Linie wird **1.1.0**.
+- Versionen nach **SemVer**. Ein Fix erhöht die Patch-Version (1.1.1, 1.1.2, …), eine
+  Weiterentwicklung die Minor-Version. Das Zusammenführen der Assistent-Linie ist **1.1.0**
+  (E‑1128).
 - **Ein Tag je Release** auf `main`, Form `v<version>`. Den Tag setzt Lukas.
 - **Jedes Release hat einen Eintrag in [`CHANGELOG.md`](CHANGELOG.md)** mit Datum und den
   Abschnitten „Neu“, „Geändert“, „Behoben“. Was noch kein Release hat, steht unter
   „Unveröffentlicht“.
 
-### Migrationen und Codegen auf zwei Linien *(Entscheidungen 6 und 8, V)*
+### Migrationen und Codegen *(E‑1127, A, 21.10.2026)*
 
-Beide Linien laufen gegen **dieselbe Testkopie** und damit gegen dasselbe `overlord_monitor`. Drei
-Regeln halten sie auseinander:
-
-1. **Migrationen der Assistent-Linie beginnen bei `V100`.** `main` zählt unterhalb weiter. So
-   kollidiert keine Versionsnummer, wenn ein Fix und ein Assistent-Schritt gleichzeitig eine
-   Migration brauchen.
+1. **Eine neue Migration schließt an die höchste vergebene Nummer an.** Vergeben sind `V1` bis
+   `V13` und `V100` bis `V103`; die nächste ist `V104`. Sobald `V100` und folgende in der Produktion
+   angewandt sind, kann dort keine Migration mit kleinerer Nummer mehr folgen: Die strenge
+   Reihenfolge wiese sie beim Start ab ([`docs/betrieb.md`](docs/betrieb.md) §4, §8). Eine Lücke
+   zwischen `V13` und `V100` wird nicht aufgefüllt.
 2. **Im Profil `dev` läuft Flyway mit `out-of-order`, in keinem anderen Profil**
-   (`application.yml`, gehalten von `FlywayOutOfOrderTest`). Hat `assistent` auf der Testkopie schon
-   `V100` angewandt, liegt ein späterer Fix mit `V13` darunter und wäre ohne `out-of-order` ein
-   Validierungsfehler. Die Gegenrichtung braucht keine Einstellung: `ignore-migration-patterns` hat
-   die Vorgabe `*:future` (Flyway 12.4.0, Boot 4.1.0), `main` startet also gegen eine Testkopie mit
-   fremder `V100`. In der Produktion läuft nur eine Linie, dort bleibt die strenge Reihenfolge.
-3. **Auf `main` schließt die jOOQ-Codegenerierung für `overlord_monitor` die Tabellen der
-   Assistent-Linie aus** (`task`, `task_type`, `task_type_mandant`; `<excludes>` in
-   `backend/pom.xml`). Der Codegen liest die Datenbank, nicht die Migrationen: Ohne den Ausschluss entstünden auf `main`
-   Klassen für Tabellen, die keine Migration von `main` anlegt, sobald `assistent` sie auf der
-   Testkopie angelegt hat. Der Ausschluss ist ein eigener Commit und wird auf `assistent` per
-   `git revert` zurückgenommen. Im selben Commit nimmt `IndexbestandDbIT` die drei Tabellen aus der
-   Prüfung der Tabellenliste von `overlord_monitor` aus, aus demselben Grund. Kommt auf `assistent`
-   eine weitere Tabelle hinzu, gehört sie auf `main` in beide Ausschlüsse.
+   (`application.yml`, gehalten von `FlywayOutOfOrderTest`); `ignore-migration-patterns` behält die
+   Vorgabe `*:future` (Flyway 12.4.0, Boot 4.1.0). Beides bleibt unverändert, auch wenn
+   `out-of-order` mit einer Linie nicht mehr gebraucht wird. In der Produktion gilt die strenge
+   Reihenfolge.
+3. **Der Codegen kennt keine Ausnahme mehr.** Die jOOQ-Codegenerierung für `overlord_monitor` nimmt
+   alle Tabellen auf, die Flyway anlegt — ausgenommen nur `flyway_schema_history` und die Tabellen
+   der Sitzung (`<excludes>` in `backend/pom.xml`) —, und `IndexbestandDbIT` prüft die
+   Tabellenliste ohne Ausnahme gegen die Sollliste.
+
+*Bis 1.1.0 galten hier drei Regeln für zwei Linien auf derselben Testkopie (Entscheidungen 6 und 8,
+V): Migrationen der Assistent-Linie ab `V100`, `out-of-order` in `dev`, und auf `main` schlossen
+Codegen und `IndexbestandDbIT` die Tabellen `task`, `task_type` und `task_type_mandant` aus — ein
+eigener Commit, auf `assistent` per `git revert` zurückgenommen. Die Ausschlüsse sind mit dem
+Zusammenführen entfallen.*
 
 ### Nummernvergabe
 
@@ -1223,12 +1238,15 @@ Vor jeder Vergabe wird die höchste vergebene Nummer per `grep` über `docs/` er
   nächste freie Nummer steht.
 - **Lokale Punkte ohne projektweite Nummer** (Listen vor der projektweiten Zählung, unnummerierte
   Aufzählungen) stehen im Register mit ihrer Fundstelle als Kennung und dem Stand *ungeprüft*. **Ein
-  lokaler Punkt bekommt eine projektweite Nummer erst, wenn jemand ihn wieder aufgreift** — auf
-  `main` die nächste freie, auf `assistent` ab 1000 *(Entscheidung des Auftraggebers vom
-  16.10.2026)*.
-- **Auf `assistent` beginnen alle projektweit gezählten Nummern bei 1000** *(Entscheidung 7, V)*:
-  M-Nummern, offene Punkte und E-Nummern. `main` zählt unterhalb weiter. So kollidiert nach dem
-  Merge keine Nummer, und an der Nummer ist die Linie ablesbar.
+  lokaler Punkt bekommt eine projektweite Nummer erst, wenn jemand ihn wieder aufgreift** — die
+  nächste freie *(Entscheidung des Auftraggebers vom 16.10.2026)*.
+- **Projektweite Nummern schließen an die höchste vergebene an** *(E‑1127, A, 21.10.2026)*:
+  E-Nummern, M-Nummern und offene Punkte zählen ab dem, was die Linie `assistent` vergeben hat
+  (über 1000). **Der Bereich unter 1000 wird nicht weiter befüllt**, auch wo dort Nummern frei sind
+  (`main` hatte bis E‑243, M198 und Punkt 263 vergeben).
+
+*Bis 1.1.0 begannen auf `assistent` alle projektweit gezählten Nummern bei 1000, während `main`
+unterhalb weiterzählte (Entscheidung 7, V), damit nach dem Zusammenführen keine Nummer kollidiert.*
 
 ### Doku ab 1.0.0 *(Entscheidung 9, V)*
 
@@ -1252,4 +1270,4 @@ Ein Release ist fertig, wenn **alle** Punkte zutreffen:
       Release erledigt, steht dort und in der Feature-Datei als erledigt, mit Verweis
 - [ ] Die betroffene Doku ist aktuell — Feature-Dateien nach Abschnitt 11, Projektbeschreibung und
       `docs/README.md` nach der Regel oben
-- [ ] Der Tag ist gesetzt; nach einem Fix-Release ist `main` in `assistent` gemergt
+- [ ] Der Tag ist gesetzt

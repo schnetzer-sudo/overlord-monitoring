@@ -1,0 +1,431 @@
+package de.kraftwerkone.overlord.monitor.task;
+
+import de.kraftwerkone.overlord.monitor.audit.AuditEvent;
+import de.kraftwerkone.overlord.monitor.audit.AuditEventType;
+import de.kraftwerkone.overlord.monitor.audit.AuditLogWriter;
+import de.kraftwerkone.overlord.monitor.common.MandantContext;
+import de.kraftwerkone.overlord.monitor.common.auftrag.AssistentFreigabe;
+import de.kraftwerkone.overlord.monitor.common.auftrag.AuftragsPruefung;
+import de.kraftwerkone.overlord.monitor.common.auftrag.DefinitionsPruefung;
+import de.kraftwerkone.overlord.monitor.common.auftrag.Fehlercode;
+import de.kraftwerkone.overlord.monitor.common.auftrag.Prueffehler;
+import de.kraftwerkone.overlord.monitor.common.auftrag.TypDefinition;
+import de.kraftwerkone.overlord.monitor.common.auftrag.TypKatalog;
+import de.kraftwerkone.overlord.monitor.common.error.FachlicheAusnahme;
+import de.kraftwerkone.overlord.monitor.common.error.RessourceNichtGefundenException;
+import de.kraftwerkone.overlord.monitor.security.AngemeldeterNutzer;
+import de.kraftwerkone.overlord.monitor.task.AuftragRepository.Auftragszeile;
+import de.kraftwerkone.overlord.monitor.task.AuftragRepository.GeloeschterAuftrag;
+import de.kraftwerkone.overlord.monitor.task.AuftragRepository.NeuerAuftrag;
+import de.kraftwerkone.overlord.monitor.task.AuftragResponse.EintragResponse;
+import de.kraftwerkone.overlord.monitor.task.AuftragResponse.FeldResponse;
+import de.kraftwerkone.overlord.monitor.task.Rueckgabe.Zeile;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.regex.Pattern;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
+
+/**
+ * Die Fachlogik der Auftraege: anbieten, pruefen, anlegen, lesen, offene loeschen ({@code
+ * docs/tasks.md} §6, {@code docs/assistent.md} §6.5).
+ *
+ * <p><b>Pruefen und Anlegen nur, wo der Assistent verfuegbar ist</b> ({@link AssistentFreigabe},
+ * E‑1126): Auftraege entstehen ausschliesslich ueber ihn (E‑1001). Ist er fuer den Mandanten nicht
+ * verfuegbar — abgeschaltet, ohne Schluessel oder ohne freigeschalteten Typ —, ist das {@code 404}.
+ * Liste, Einzelabruf und Loeschen sind nicht gesperrt: Was der Mandant beauftragt hat, sieht er
+ * weiter.
+ *
+ * <p><b>Der Monitor schreibt den Status nie ueber {@code OFFEN} hinaus.</b> Abholen und
+ * Zurueckmelden sind Sache der Plattform ({@code docs/task-schnittstelle.md}). Seit A4 loescht er
+ * einen Auftrag, solange er {@code OFFEN} ist — und nur dann.
+ */
+@Service
+public class AuftragService {
+
+  /** Hoechstzahl der Auftraege in {@code GET /api/tasks}. */
+  static final int LISTE_HOECHSTENS = 50;
+
+  /** {@code task.parameter} ist {@code TEXT}. */
+  static final int PARAMETER_HOECHSTENS_BYTES = 65_535;
+
+  static final String PROBLEMTYP = "eingabe-ungueltig";
+
+  /** {@code 409} beim Loeschen: Die Plattform hat den Auftrag schon abgeholt (F27). */
+  static final String PROBLEMTYP_NICHT_OFFEN = "auftrag-nicht-offen";
+
+  private static final Prueffehler ZU_LANG =
+      new Prueffehler(
+          null,
+          null,
+          Fehlercode.ZU_LANG,
+          "Der Auftrag ist zu umfangreich. Teile ihn auf mehrere Aufträge auf.");
+
+  private static final Pattern UUID_FORM =
+      Pattern.compile(
+          "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
+
+  private static final TypeReference<List<LinkedHashMap<String, String>>> EINTRAGSLISTE =
+      new TypeReference<>() {};
+
+  private final AuftragRepository repository;
+  private final TypKatalog typKatalog;
+  private final AssistentFreigabe freigabe;
+  private final AuditLogWriter auditLogWriter;
+  private final JsonMapper json;
+
+  AuftragService(
+      AuftragRepository repository,
+      TypKatalog typKatalog,
+      AssistentFreigabe freigabe,
+      AuditLogWriter auditLogWriter,
+      JsonMapper json) {
+    this.repository = repository;
+    this.typKatalog = typKatalog;
+    this.freigabe = freigabe;
+    this.auditLogWriter = auditLogWriter;
+    this.json = json;
+  }
+
+  /** Das Ergebnis des Anlegens: der Auftrag und ob er neu ist ({@code 201}) oder schon da war. */
+  public record Anlage(AuftragResponse auftrag, boolean neu) {}
+
+  public List<TypResponse> typen(MandantContext mandant) {
+    return typKatalog.angeboten(mandant).stream()
+        .map(angebot -> TypResponse.aus(angebot.definition()))
+        .toList();
+  }
+
+  /**
+   * Legt einen Auftrag an. Die Reihenfolge ist Absicht ({@code docs/tasks.md} §6.2): erst die
+   * Freigabe, dann die {@code anfrageId}, dann die Wiederholung, dann der Typ, dann die Eintraege.
+   *
+   * <p><b>Ein nicht angebotener Typ ist {@code 404}</b>, gleich ob unbekannt, inaktiv, ungueltig
+   * oder fuer diesen Mandanten nicht freigeschaltet — dasselbe Statement, derselbe Rumpf. Sonst
+   * liesse sich die Freischaltung anderer Mandanten abfragen. Ein Mandant ohne Assistenten bekommt
+   * denselben Rumpf schon bei der Freigabe.
+   */
+  public Anlage lege(
+      AngemeldeterNutzer nutzer, MandantContext mandant, AuftragRequest anfrage, String ip) {
+    List<TypKatalog.Angebot> katalog = freigabe.verlangeKatalog(mandant);
+    String anfrageId = anfrageId(anfrage.anfrageId());
+
+    Optional<Auftragszeile> vorhanden = repository.findeNachAnfrage(mandant, anfrageId);
+    if (vorhanden.isPresent()) {
+      return new Anlage(antwort(vorhanden.get()), false);
+    }
+
+    TypKatalog.Angebot angebot = angebotener(katalog, anfrage.typ());
+    TypDefinition definition = angebot.definition();
+
+    List<Map<String, String>> eintraege =
+        anfrage.eintraege() == null ? List.of() : anfrage.eintraege();
+    List<Prueffehler> fehler = AuftragsPruefung.pruefe(definition, anfrage.aktion(), eintraege);
+    if (!fehler.isEmpty()) {
+      throw abgelehnt(fehler, "Pruefung des Auftrags: " + fehler.size() + " Fehler");
+    }
+
+    List<Map<String, String>> geprueft = geordnet(definition, eintraege);
+    String parameter = Parametertext.baue(definition, anfrage.aktion(), geprueft);
+    if (zuLang(parameter)) {
+      throw abgelehnt(
+          List.of(ZU_LANG), "Parametertext ueber " + PARAMETER_HOECHSTENS_BYTES + " Bytes");
+    }
+
+    String taskId = UUID.randomUUID().toString();
+    boolean angelegt =
+        repository.legeAn(
+            mandant,
+            new NeuerAuftrag(
+                taskId,
+                definition.typ(),
+                kopie(angebot),
+                anfrage.aktion(),
+                json.writeValueAsString(geprueft),
+                anfrageId,
+                parameter,
+                nutzer.username()));
+    if (!angelegt) {
+      // Eine gleiche Anfrage war schneller. Ihr Auftrag ist der Auftrag dieser Anfrage.
+      return new Anlage(
+          antwort(
+              repository
+                  .findeNachAnfrage(mandant, anfrageId)
+                  .orElseThrow(
+                      () ->
+                          new IllegalStateException(
+                              "Doppelte anfrageId gemeldet, aber kein Auftrag zu lesen"))),
+          false);
+    }
+
+    auditLogWriter.schreibe(
+        new AuditEvent(
+            AuditEventType.AUFTRAG_ANGELEGT,
+            nutzer.id(),
+            nutzer.username(),
+            mandant.mandantId(),
+            "task",
+            taskId,
+            ip,
+            "Typ "
+                + definition.typ()
+                + ", Aktion "
+                + anfrage.aktion()
+                + ", "
+                + geprueft.size()
+                + (geprueft.size() == 1 ? " Eintrag" : " Einträge")));
+
+    return new Anlage(
+        antwort(
+            repository
+                .finde(mandant, taskId)
+                .orElseThrow(
+                    () -> new IllegalStateException("Eben angelegter Auftrag nicht lesbar"))),
+        true);
+  }
+
+  /**
+   * Prueft einen Auftrag wie beim Anlegen, ohne ihn anzulegen ({@code POST /api/tasks/pruefung},
+   * E‑1042) — fuer die Karte des Assistenten, wenn der Kunde Felder aendert.
+   *
+   * <p>Dieselbe Pruefung wie in {@link #lege}, in derselben Reihenfolge und einschliesslich {@code
+   * ZU_LANG}; nur werden die Fehler zurueckgegeben statt geworfen. <b>Ein nicht angebotener Typ ist
+   * {@code 404}</b>, mit demselben Statement und demselben Rumpf wie beim Anlegen — ebenso ein
+   * Mandant, fuer den der Assistent nicht verfuegbar ist.
+   *
+   * @return leer, wenn der Auftrag so angelegt werden duerfte
+   */
+  public List<Prueffehler> pruefe(MandantContext mandant, PruefungRequest anfrage) {
+    TypDefinition definition =
+        angebotener(freigabe.verlangeKatalog(mandant), anfrage.typ()).definition();
+
+    List<Map<String, String>> eintraege =
+        anfrage.eintraege() == null ? List.of() : anfrage.eintraege();
+    List<Prueffehler> fehler = AuftragsPruefung.pruefe(definition, anfrage.aktion(), eintraege);
+    if (!fehler.isEmpty()) {
+      return fehler;
+    }
+    String parameter =
+        Parametertext.baue(definition, anfrage.aktion(), geordnet(definition, eintraege));
+    return zuLang(parameter) ? List.of(ZU_LANG) : List.of();
+  }
+
+  /** Die laufenden Auftraege und die der letzten 7 Tage, neueste zuerst. */
+  public List<AuftragResponse> aktuelle(MandantContext mandant) {
+    return repository.findeAktuelle(mandant, LISTE_HOECHSTENS).stream().map(this::antwort).toList();
+  }
+
+  /** Ein Auftrag. Fremd und unbekannt sind ununterscheidbar {@code 404}. */
+  public AuftragResponse einzeln(MandantContext mandant, String taskId) {
+    return repository
+        .finde(mandant, taskId)
+        .map(this::antwort)
+        .orElseThrow(
+            () -> new RessourceNichtGefundenException("Auftrag nicht vorhanden oder fremd"));
+  }
+
+  /**
+   * Loescht einen offenen Auftrag des Mandanten ({@code docs/tasks.md} §6.6, E‑1110, E‑1113 bis
+   * E‑1115). Jeder Benutzer des aktiven Mandanten darf es, nicht nur der, der angelegt hat.
+   *
+   * <p><b>Ein Statement entscheidet</b>: {@code DELETE … WHERE task_id, mandant_id, status =
+   * 'OFFEN'}. Erst wenn es null Zeilen loescht, wird im eigenen Mandanten nachgelesen — {@code
+   * 404}, wenn es den Auftrag dort nicht gibt (unbekannt und fremd sind dieselben zwei Statements),
+   * {@code 409}, wenn er nicht mehr offen ist.
+   *
+   * <p><b>Loeschen und Protokoll in einer Transaktion</b> (F26): Der Eintrag geht ueber {@link
+   * AuditLogWriter#schreibeInTransaktion} in dieselbe. Danach bleibt vom Auftrag nur das Ereignis.
+   */
+  @Transactional
+  public void loesche(AngemeldeterNutzer nutzer, MandantContext mandant, String taskId, String ip) {
+    Optional<GeloeschterAuftrag> geloescht = repository.loescheOffenen(mandant, taskId);
+    if (geloescht.isEmpty()) {
+      String status =
+          repository
+              .status(mandant, taskId)
+              .orElseThrow(
+                  () -> new RessourceNichtGefundenException("Auftrag nicht vorhanden oder fremd"));
+      throw new FachlicheAusnahme(
+          HttpStatus.CONFLICT,
+          PROBLEMTYP_NICHT_OFFEN,
+          "Auftrag nicht mehr offen",
+          "Die Plattform hat den Auftrag bereits übernommen. Er kann nicht mehr gelöscht werden.",
+          "Loeschen abgelehnt, Auftrag im Status " + status);
+    }
+
+    GeloeschterAuftrag auftrag = geloescht.get();
+    int anzahl = json.readValue(auftrag.eintraege(), EINTRAGSLISTE).size();
+    auditLogWriter.schreibeInTransaktion(
+        new AuditEvent(
+            AuditEventType.AUFTRAG_GELOESCHT,
+            nutzer.id(),
+            nutzer.username(),
+            mandant.mandantId(),
+            "task",
+            taskId,
+            ip,
+            "Typ "
+                + auftrag.typ()
+                + ", Aktion "
+                + auftrag.aktion()
+                + ", "
+                + anzahl
+                + (anzahl == 1 ? " Eintrag" : " Einträge")
+                + ", eingestellt "
+                + utc(auftrag.eingestelltAm())));
+  }
+
+  // ─── Anlegen ───────────────────────────────────────────────────────────────────────────────
+
+  /** Eine UUID in beliebiger Schreibweise; gespeichert wird sie klein. */
+  private static String anfrageId(String roh) {
+    if (!TypDefinition.hatWert(roh)) {
+      throw abgelehnt(
+          List.of(
+              new Prueffehler(
+                  null, "anfrageId", Fehlercode.PFLICHT_FEHLT, "Die Kennung der Anfrage fehlt.")),
+          "anfrageId fehlt");
+    }
+    if (!UUID_FORM.matcher(roh).matches()) {
+      throw abgelehnt(
+          List.of(
+              new Prueffehler(
+                  null, "anfrageId", Fehlercode.FORMAT, "Die Kennung der Anfrage ist keine UUID.")),
+          "anfrageId ist keine UUID");
+    }
+    return roh.toLowerCase(Locale.ROOT);
+  }
+
+  /**
+   * Die Eintraege, wie sie gespeichert werden: nur Felder mit Wert, in der Reihenfolge der
+   * Definition. Kein Wert wird veraendert. Ein {@code null}-Eintrag ist ein leerer, wie in der
+   * Pruefung — bei einem Typ ohne Pflichtfeld kommt er bis hierher.
+   */
+  private static List<Map<String, String>> geordnet(
+      TypDefinition definition, List<Map<String, String>> eintraege) {
+    List<Map<String, String>> geordnet = new ArrayList<>();
+    for (Map<String, String> eintrag : eintraege) {
+      Map<String, String> werte = new LinkedHashMap<>();
+      for (TypDefinition.Feld feld : definition.felder()) {
+        String wert = eintrag == null ? null : eintrag.get(feld.name());
+        if (TypDefinition.hatWert(wert)) {
+          werte.put(feld.name(), wert);
+        }
+      }
+      geordnet.add(werte);
+    }
+    return geordnet;
+  }
+
+  /**
+   * Der Typ der Anfrage aus dem Katalog des Mandanten. Die Kennung wird genau verglichen;
+   * unbekannt, inaktiv, ungueltig und nicht freigeschaltet sind dasselbe {@code 404}.
+   */
+  private static TypKatalog.Angebot angebotener(List<TypKatalog.Angebot> katalog, String typ) {
+    return katalog.stream()
+        .filter(angebot -> angebot.definition().typ().equals(typ))
+        .findFirst()
+        .orElseThrow(
+            () ->
+                new RessourceNichtGefundenException(
+                    "Auftragstyp fuer diesen Mandanten nicht angeboten: " + typ));
+  }
+
+  /**
+   * Die Kopie von Name und Struktur, mit der der Auftrag angelegt wird (E‑1023). Die Struktur kommt
+   * inhaltlich unveraendert aus der Typzeile — dieselbe Fassung, die eben geprueft wurde —, nicht
+   * aus der gelesenen Definition neu geschrieben.
+   */
+  private String kopie(TypKatalog.Angebot angebot) {
+    ObjectNode kopie = json.createObjectNode();
+    kopie.put("name", angebot.definition().name());
+    kopie.set("struktur", json.readTree(angebot.struktur()));
+    return json.writeValueAsString(kopie);
+  }
+
+  private static boolean zuLang(String parameter) {
+    return parameter.getBytes(StandardCharsets.UTF_8).length > PARAMETER_HOECHSTENS_BYTES;
+  }
+
+  private static FachlicheAusnahme abgelehnt(List<Prueffehler> fehler, String interneUrsache) {
+    return new FachlicheAusnahme(
+        HttpStatus.BAD_REQUEST,
+        PROBLEMTYP,
+        "Auftrag nicht angenommen",
+        "Bitte prüfe die genannten Angaben.",
+        interneUrsache,
+        Map.of("errors", fehler));
+  }
+
+  // ─── Lesen ─────────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Die Antwort aus der Zeile und ihrer <b>Kopie</b> der Definition. Die Kopie wird auch gelesen,
+   * wenn eine spaetere Fassung dieses Codes sie strenger pruefte — sie war gueltig, als der Auftrag
+   * entstand.
+   */
+  private AuftragResponse antwort(Auftragszeile zeile) {
+    JsonNode kopie = json.readTree(zeile.definition());
+    JsonNode name = kopie.get("name");
+    TypDefinition definition =
+        DefinitionsPruefung.pruefe(
+                zeile.typ(),
+                name != null && name.isString() ? name.stringValue() : null,
+                null,
+                kopie.get("struktur"))
+            .definition();
+
+    List<LinkedHashMap<String, String>> eintraege =
+        json.readValue(zeile.eintraege(), EINTRAGSLISTE);
+    Optional<Rueckgabe> rueckgabe = Rueckgabe.lies(zeile.rueckgabe(), definition.rueckgaben());
+    List<Zeile> zeilen = rueckgabe.map(Rueckgabe::zeilen).orElse(List.of());
+
+    List<EintragResponse> antworten = new ArrayList<>();
+    for (int index = 0; index < eintraege.size(); index++) {
+      Map<String, String> werte = eintraege.get(index);
+      Zeile rueck = index < zeilen.size() ? zeilen.get(index) : null;
+      antworten.add(
+          new EintragResponse(
+              werte,
+              definition.schluesselText(werte),
+              rueck == null ? null : rueck.wert(),
+              rueck == null ? null : rueck.ergebnis()));
+    }
+
+    return new AuftragResponse(
+        zeile.taskId(),
+        zeile.typ(),
+        definition.name(),
+        zeile.aktion(),
+        zeile.status(),
+        TaskStatusClassifier.einordnen(zeile.status(), rueckgabe, eintraege.size()),
+        utc(zeile.eingestelltAm()),
+        utc(zeile.abgeholtAm()),
+        utc(zeile.ausgefuehrtAm()),
+        zeile.fehlercode(),
+        zeile.fehlertext(),
+        antworten,
+        definition.felder().stream()
+            .map(feld -> new FeldResponse(feld.name(), feld.label()))
+            .toList());
+  }
+
+  /** Im eigenen Schema steht UTC; die Datenbank hat es mit {@code UTC_TIMESTAMP(3)} gesetzt. */
+  private static Instant utc(LocalDateTime wert) {
+    return wert == null ? null : wert.toInstant(ZoneOffset.UTC);
+  }
+}

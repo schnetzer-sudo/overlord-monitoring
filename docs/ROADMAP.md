@@ -1,38 +1,56 @@
 # Roadmap
 
-*Angelegt am 16.10.2026 mit Version 1.0.0.* Hier steht die Planung ab 1.0.0: welche Linien es gibt,
-was auf ihnen kommt und wie ein Arbeitsauftrag aussieht. Der
+*Angelegt am 16.10.2026 mit Version 1.0.0, nachgeführt am 21.10.2026 mit 1.1.0.* Hier steht die
+Planung ab 1.0.0: welche Linien es gab und gibt, was kommt und wie ein Arbeitsauftrag aussieht. Der
 [`IMPLEMENTIERUNGSPLAN_MVP.md`](IMPLEMENTIERUNGSPLAN_MVP.md) ist abgeschlossen und wird nicht mehr
 fortgeschrieben (Entscheidung 10 vom 16.10.2026). Zweige, Versionen und Nummern regelt
 [`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) §12.
 
 ---
 
-## 1. Linie 1.x auf `main`
+## 1. Eine Linie auf `main` *(seit 1.1.0, 21.10.2026)*
 
-**Nur Fixes, ohne eigenen Plan.** Die Fixes kommen aus dem Register
-[`offene-punkte.md`](offene-punkte.md): Ein Punkt wird aufgegriffen, auf einem Zweig `fix/<thema>`
-behoben, an beiden Stellen als erledigt nachgeführt und mit dem nächsten Patch-Release (1.0.1,
-1.0.2, …) ausgeliefert. Was ein Fix ist und was schon Weiterentwicklung, entscheidet Lukas; im
-Zweifel gehört es auf `assistent`.
+**Die beiden Linien sind zusammengeführt** (E‑1125, E‑1127, [`tasks.md`](tasks.md) §2). Von 1.0.0
+bis 1.1.0 war `main` die Release-Linie 1.x nur mit Fixes und `assistent` die Weiterentwicklung; seit
+dem Zusammenführen kommt beides auf `main`, über Zweige `fix/<thema>` und `feat/<thema>`. Fixes
+kommen weiter aus dem Register [`offene-punkte.md`](offene-punkte.md): Ein Punkt wird aufgegriffen,
+behoben, an beiden Stellen als erledigt nachgeführt und mit dem nächsten Patch-Release (1.1.1, …)
+ausgeliefert. Was ein Fix ist und was schon Weiterentwicklung, entscheidet Lukas.
+
+Migrationen schließen an die höchste vergebene an (`V104` als nächste), projektweite Nummern
+ebenso; der Bereich unter 1000 wird nicht weiter befüllt (E‑1127). Der Zweig `assistent` bleibt
+stehen und bekommt keine Arbeit mehr.
 
 ---
 
-## 2. Linie `assistent`: Aufträge über den Assistenten
+## 2. Aufträge über den Assistenten (bis 1.1.0 die Linie `assistent`)
 
-Die Ausbaustufe, die als Release **1.1.0** nach `main` kommt. **Aufträge entstehen nur im Chat**;
-es gibt **keinen Freigabeschritt**. **Die Auftragstabelle liegt in `overlord_monitor`**, und die
-Plattform holt die Aufträge dort ab. Die Details folgen mit A1 in `docs/tasks.md`.
+Die Ausbaustufe, die mit Release **1.1.0** nach `main` gekommen ist. **Aufträge entstehen nur im
+Chat**; es gibt **keinen Freigabeschritt**. **Die Auftragstabelle liegt in `overlord_monitor`**, und
+die Plattform holt die Aufträge dort ab. Die Details stehen in [`tasks.md`](tasks.md), der Vertrag
+für die Plattform in [`task-schnittstelle.md`](task-schnittstelle.md).
 
 | Teil | Inhalt | Stand |
 |---|---|---|
-| **A1** | Auftragsmodell | offen |
-| **A2** | Assistent im Backend | offen |
-| **A3** | Chatbox in der Kopfleiste | offen |
-| **A4** | „Ihre Aufträge“ in der Übersicht | offen |
+| **A1** | Auftragsmodell: drei Tabellen (`V100`), Typdefinitionen als Daten mit Prüfung beim Laden, der Typ `WERK_ABLADESTELLE`, vier Endpunkte unter `/api/tasks`, Plattformvertrag | fertig, am 16.10.2026 nach `assistent` gemergt |
+| **A2** | Assistent im Backend: anbieterneutrale Schnittstelle mit Adapter für die Anthropic-API, Werkzeuge aus den Typdefinitionen, Gesprächsführung, `POST /api/tasks/pruefung`, Testsatz ([`assistent.md`](assistent.md)) | fertig, am 16.10.2026 nach `assistent` gemergt; Nachschärfung am 19.10.2026 gemergt |
+| **A3** | Chatbox in der Kopfleiste und Bestätigungskarte: Symbol links neben dem Nutzermenü, Chatbox als Overlay, Karte mit Prüfung über `POST /api/tasks/pruefung` und Anlegen per Klick; kein Backend-Umbau ([`assistent-frontend.md`](assistent-frontend.md)) | fertig, am 19.10.2026 nach `assistent` gemergt; Sichtprüfungen 1018 bis 1022 mit eingeschaltetem Assistenten offen |
+| **A4** | „Ihre Aufträge“ in der Übersicht: Stand jedes Auftrags, Ergebnis je Eintrag, Löschen offener Aufträge über `DELETE /api/tasks/{taskId}` ([`assistent-frontend.md`](assistent-frontend.md) §12, [`tasks.md`](tasks.md) §6.6) | fertig, am 21.10.2026 nach `assistent` gemergt (E‑1129); F16 bis F29 zur Bestätigung, Sichtprüfungen 1028 bis 1032 offen |
+| **1.1.0** | Zusammenführung nach `main`; Freischaltung je Mandant an einer Stelle, nicht verfügbar ist `404`; `V103` nimmt die Freischaltungen aus `V100` zurück; `SYSTEM` per Skript; Zeitgrenze der Weiterleitung 300 s ([`tasks.md`](tasks.md) §3.9, [`betrieb.md`](betrieb.md) §5a) | auf `main` am 21.10.2026; F30 bis F38 zur Bestätigung; den Tag setzt Lukas |
 
-Für diese Linie gelten Migrationen ab `V100` und projektweite Nummern ab 1000
-([`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) §12).
+**Mit 1.1.0 ist die Ausbaustufe Aufträge ausgeliefert, sichtbar aber nur für freigeschaltete
+Mandanten, zunächst nur `SYSTEM`** (E‑1125). Die Prüfung durch den Datenschutzbeauftragten ist
+erledigt (Punkt 1009, E‑1131). Was nicht im Code liegt:
+
+1. **Der Test gegen die Produktion mit `SYSTEM`:** Schalter und Schlüssel setzen, das Skript für
+   `SYSTEM` ausführen ([`tasks.md`](tasks.md) §3.9), die ausgehende Verbindung (Punkt 1010) und die
+   Zeitgrenze des Reverse Proxy (Punkt 1033) prüfen, die Sichtprüfungen 1018 bis 1022 und 1028 bis
+   1032 dort nachholen.
+2. **Der Ablauf in der Plattform** für `WERK_ABLADESTELLE`, gebaut nach
+   [`task-schnittstelle.md`](task-schnittstelle.md). Dazu gehört Punkt 1003 (UTF-8 und LF). Der Typ
+   ist seit `V100` aktiv; ein Auftrag, den niemand abholt, bleibt „Offen“ und lässt sich löschen.
+3. **Das Ausrollen auf Kundenmandanten:** je Mandant ein `INSERT` in `task_type_mandant`, kein
+   Deployment (E‑1126, [`tasks.md`](tasks.md) §3.9).
 
 ---
 
@@ -67,8 +85,7 @@ was genau, welche Abgrenzung, welches Abnahmekriterium.
 ```
 # <Titel>
 
-Zweig: <assistent-<teil> oder fix/<thema>>, abgezweigt von <assistent oder main>.
-(Teilschritte mit Bindestrich: Git kann neben `assistent` keinen Zweig `assistent/<teil>` anlegen.)
+Zweig: <fix/<thema> oder feat/<thema>>, abgezweigt von main.
 
 ## Worum es geht
 <zwei, drei Sätze: Ziel und Anlass>

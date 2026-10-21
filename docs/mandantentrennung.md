@@ -411,6 +411,52 @@ schlechter Beweis für eine Trennung, die zwischen Firmen greifen soll.
 > Rumpf verbietet, wird an seinem eigenen Zitat rot — der Rumpf nennt den Suchbegriff, weil er die
 > Frage ist. Die Kennung wird deshalb im Rumpf **ohne das Zitat** gesucht, wie bei `instance`.
 
+> **Ergänzt 16.10.2026 (Linie `assistent`, A1).** Vier neue Endpunkte unter `/api/tasks`, eine
+> Kopie: `AuftraegeIsolationDbIT` ([`tasks.md`](tasks.md) §6) für `GET /api/tasks/typen`,
+> `POST /api/tasks`, `GET /api/tasks` und `GET /api/tasks/{taskId}`. **Keiner nimmt eine
+> Mandanten-ID entgegen** — die Liste in §3 bleibt bei drei Einträgen; ein untergeschobenes Feld
+> `mandantId` im Anfragekörper wird ignoriert, und der Test prüft das. Gepaart wird **`NEXANS`
+> gegen `IBIS`**, zwei Häuser, beide für den Typ `WERK_ABLADESTELLE` freigeschaltet; **`SUTTONS`**
+> ist der Gegentest ohne Freischaltung. Zwei Dinge kommen hinzu:
+>
+> 1. **Die Daten legt der Test selbst an** (Regel T2): Der Auftrag, dessen Unerreichbarkeit
+>    geprüft wird, entsteht im Test unter `NEXANS` und verschwindet danach. Es gibt keinen
+>    Bestand, an dem die Aussage hinge.
+> 2. **Die Freischaltung ist selbst eine Auskunft.** Ein Typ, der für den aktiven Mandanten nicht
+>    freigeschaltet ist, antwortet beim Anlegen wie ein erfundener Typ — gleicher Rumpf, gleiche
+>    Statements. Sonst ließe sich abfragen, welche Typen andere Mandanten haben.
+>
+> **Ergänzt 16.10.2026 (Linie `assistent`, A2).** Fünf neue Endpunkte: `GET /api/assistent`,
+> `POST /api/assistent/gespraeche`, `POST /api/assistent/gespraeche/{id}/nachrichten`,
+> `DELETE /api/assistent/gespraeche/{id}` und `POST /api/tasks/pruefung`, alle in
+> `AssistentIsolationDbIT` ([`assistent.md`](assistent.md) §9). **Keiner nimmt eine Mandanten-ID
+> entgegen**, und kein Werkzeug des Sprachmodells hat einen Mandantenparameter; die Liste in §3
+> bleibt bei drei. Gepaart wird wieder **`NEXANS` gegen `IBIS`**, **`SUTTONS`** ist der Gegentest
+> ohne Freischaltung (`verfuegbar: false`, `503`). Neu ist, dass die Trennung auch **im
+> Arbeitsspeicher** gilt: Ein Gespräch ist an Sitzung, Nutzer und aktiven Mandanten gebunden, und
+> ein fremdes Gespräch — auch eines desselben Nutzers aus einer anderen Sitzung — antwortet wie ein
+> erfundenes mit `404`. Statt eines Bestands der Testkopie spielt ein geskriptetes Modell den
+> Anbieter; es geht kein Aufruf hinaus.
+>
+> **Ergänzt 19.10.2026 (Linie `assistent`, A4).** Ein neuer Endpunkt: `DELETE /api/tasks/{taskId}`,
+> in `AuftraegeIsolationDbIT` ([`tasks.md`](tasks.md) §6.6). **Er nimmt keine Mandanten-ID entgegen**
+> und ist keine Ausnahme; die Liste in §3 bleibt bei drei. Das `DELETE` trägt den Mandanten aus der
+> Sitzung im `WHERE`, die Nachlesung nach null gelöschten Zeilen ebenso. Geprüft wird wie beim
+> Einzelabruf: `IBIS` löscht einen offenen Auftrag von `NEXANS` und bekommt `404`, **dieselbe
+> Antwort und dieselben zwei Statements** wie bei einer erfundenen Kennung — und die Zeile von
+> `NEXANS` steht danach unverändert. Ein `409` gibt es nur für einen eigenen Auftrag; sonst verriete
+> der Unterschied zwischen `404` und `409`, dass es die Kennung bei einem anderen Mandanten gibt.
+>
+> **Ergänzt 21.10.2026 (1.1.0, Zusammenführung).** Kein neuer Endpunkt, keine neue Ausnahme; die
+> Liste in §3 bleibt bei drei. **Der Assistent ist je Mandant freigeschaltet** — als Daten in
+> `task_type_mandant`, gelesen für den Mandanten aus der Sitzung ([`tasks.md`](tasks.md) §3.9).
+> Ohne Freischaltung antworten Gespräche, Prüfen und Anlegen `404`, **derselbe Rumpf** wie ein
+> erfundenes Gespräch bzw. ein erfundener Typ unter einem freigeschalteten Mandanten (vorher `503`).
+> `AssistentIsolationDbIT` prüft das für `SUTTONS`, ohne einen Aufruf des Modells. Seit `V103` ist
+> `WERK_ABLADESTELLE` für `NEXANS` und `IBIS` nicht mehr in der Testkopie freigeschaltet; beide
+> Isolationstests legen die Freischaltung für die Paarung selbst an und entfernen genau diese Zeilen
+> (Regel T2).
+
 Der Test prüft zu Beginn, dass beide in der Testkopie existieren und die erfundene ID nicht. Schlägt
 das fehl, hat sich die Testkopie geändert — nicht der Code.
 

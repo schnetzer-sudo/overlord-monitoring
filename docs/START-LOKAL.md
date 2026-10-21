@@ -1,6 +1,6 @@
 # Lokal starten — was anders ist als produktiv
 
-Stand: 10.09.2026 *(zuletzt ergänzt um die Ablagenprüfung, §4)*
+Stand: 19.10.2026 *(zuletzt ergänzt um den Assistenten, §6; davor die Ablagenprüfung, §4)*
 
 Wie das Backend und das Frontend gestartet werden, steht in [`README.md`](../README.md) im
 Wurzelverzeichnis. **Diese Datei beschreibt nur das, was lokal anders aussieht als in Produktion** —
@@ -118,3 +118,43 @@ wird einzeln eingeschaltet.
   `ReadOnlyExecuteListener` als dritte Schicht.
 - Die `db`-Tests laufen nur lokal (`./mvnw verify`); die CI schließt sie über
   `-DexcludedGroups=db` aus, weil sie die Testkopie im internen Netz nicht erreicht.
+
+---
+
+## 6. Der Assistent ist lokal aus — und wie man ihn einschaltet
+
+*Neu am 19.10.2026 (Linie `assistent`).*
+
+Der Assistent ([`assistent.md`](assistent.md)) ist **in jedem Profil aus, auch in `dev`** (E‑1056):
+Die Testkopie ist eine Vollkopie der Produktion, und ein lokaler Start soll nicht unaufgefordert Text
+an den Anbieter schicken. Aus heißt: `GET /api/assistent` meldet `verfuegbar: false`, und das Symbol
+in der Kopfleiste fehlt — **das ist kein Fehler**, sondern genau E‑1068.
+
+**Einschalten über das Startskript:**
+
+```
+.\scripts\dev-start.ps1 -Assistent
+```
+
+Das Skript setzt im Backend-Fenster `OVERLORD_ASSISTENT_AKTIV=true`; ohne `-Assistent` setzt es dort
+ausdrücklich `false`, auch wenn die Variable in der Umgebung steht. Es sagt beim Start, ob
+`OVERLORD_ASSISTENT_API_KEY` gesetzt ist (nie den Wert), und auf welchem Zweig gestartet wird.
+**Ohne Schlüssel bleibt der Assistent aus** (E‑1030); das Backend-Fenster erbt den Schlüssel aus der
+Umgebung des Skripts. Von Hand, ohne Skript:
+
+```
+cd backend && OVERLORD_ASSISTENT_AKTIV=true ./mvnw spring-boot:run
+```
+
+**Damit das Symbol erscheint, müssen drei Dinge zusammenkommen:**
+
+| Bedingung | Prüfen |
+|---|---|
+| Der ausgecheckte Zweig enthält die Chatbox (A3) | das Skript nennt den Zweig; seit 1.1.0 (21.10.2026) hat `main` die Chatbox |
+| Schalter an und Schlüssel gesetzt | `-Assistent`; die Zeile „Assistent wird eingeschaltet (… gesetzt)“ beim Start |
+| Für den aktiven Mandanten ist ein Typ freigeschaltet | **seit 1.1.0 auf der Testkopie nur `SYSTEM`** (als ADMIN den Mandanten `SYSTEM` wählen): `V103` hat die Freischaltungen für `NEXANS` und `IBIS` zurückgenommen, `scripts/assistent-freischaltung-system.sql` hat `SYSTEM` freigeschaltet ([`tasks.md`](tasks.md) §3.9); bei jedem anderen Mandanten fehlt das Symbol, und Gespräche und Anlegen antworten `404` |
+
+**Was dabei wirklich passiert, und es ist kein Versehen:** Was im Chat geschrieben wird, geht an
+Anthropic in die USA (E‑1029, Punkt 1009) — **nur erfundene Werte verwenden**. Ein Klick auf
+„Auftrag anlegen“ legt eine Zeile in `overlord_monitor.task` der Testkopie an, die keine Plattform
+abholt; aufräumen nach [`assistent-frontend.md`](assistent-frontend.md) §11.

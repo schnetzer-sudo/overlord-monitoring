@@ -113,6 +113,17 @@
   --color-ueberfaellig-flaeche: var(--ueberfaellig-flaeche);
   --color-ueberfaellig-kontur: var(--ueberfaellig-kontur);
 
+  /* ── Teilweise ─────────────────────────────────────────────────────────────
+     Die sechste Farbrolle (19.10.2026, Linie assistent, A4, F16): der Stand
+     "Teilweise erledigt" eines Auftrags. Er muss auffallen, ohne wie ein
+     Fehler auszusehen. --ueberfaellig koennte das, bleibt aber der Kategorie
+     Ueberfaellig vorbehalten (E-71, E-77); deshalb eine eigene Rolle mit
+     denselben Werten. Zugeordnet in lib/status-farbe.ts (AUFTRAG_ZUORDNUNG).
+     Begruendung: docs/visuelles-konzept.md §3. */
+  --color-teilweise: var(--teilweise);
+  --color-teilweise-flaeche: var(--teilweise-flaeche);
+  --color-teilweise-kontur: var(--teilweise-kontur);
+
   /* ── Akzent ───────────────────────────────────────────────────────────────
      Die Farbe der Anwendung selbst. Sie sagt nie etwas ueber die Daten.
 
@@ -390,6 +401,17 @@
   --ueberfaellig-flaeche: oklch(0.96 0.028 80);
   --ueberfaellig-kontur: oklch(0.65 0.13 80);
 
+  /* ── Teilweise (A4, F16) ───────────────────────────────────────────────────
+     Bewusst DIESELBEN Werte wie --ueberfaellig: Ton 80 leistet genau das
+     Verlangte — auffallen, ohne Rot zu sein —, und ist gerechnet
+     (#886108, 5,59 : 1 auf --card; Flaeche #fcf0dd; Kontur 3,29 : 1).
+     Getrennt, damit jede Rolle fuer sich geaendert werden kann. Wer einen
+     Wert aendert, laesst scripts/farbwerte/rechne.mjs laufen;
+     tests/farbkontrast.test.ts haelt beide Bloecke. */
+  --teilweise: oklch(0.52 0.105 80);
+  --teilweise-flaeche: oklch(0.96 0.028 80);
+  --teilweise-kontur: oklch(0.65 0.13 80);
+
   /* ── Akzent ───────────────────────────────────────────────────────────────
      #b9c022. Drei nachgerechnete Stufen, damit aus einer Fuellfarbe ein
      vollstaendiges Vokabular wird:
@@ -575,6 +597,13 @@
   --dunkel-ueberfaellig: oklch(0.7 0.14 80);
   --dunkel-ueberfaellig-flaeche: oklch(0.26 0.05 80);
   --dunkel-ueberfaellig-kontur: oklch(0.53 0.105 80);
+
+  /* Teilweise (A4, F16): dieselben Werte wie --dunkel-ueberfaellig, aus
+     demselben Grund wie im Hellen. Damit gilt auch offener Punkt 122 fuer
+     sie — im Dunkeln liest sich Ton 80 lauter als Rot. */
+  --dunkel-teilweise: oklch(0.7 0.14 80);
+  --dunkel-teilweise-flaeche: oklch(0.26 0.05 80);
+  --dunkel-teilweise-kontur: oklch(0.53 0.105 80);
 
   /* Dieselbe Fuellfarbe wie im Hellen — sie traegt auf dunklem Grund 8,97 : 1
      und braucht dort ebenfalls dunkle Schrift. Umgekehrt ist die abgedunkelte
@@ -774,6 +803,9 @@ html[data-thema="dunkel"] {
   --ueberfaellig: var(--dunkel-ueberfaellig);
   --ueberfaellig-flaeche: var(--dunkel-ueberfaellig-flaeche);
   --ueberfaellig-kontur: var(--dunkel-ueberfaellig-kontur);
+  --teilweise: var(--dunkel-teilweise);
+  --teilweise-flaeche: var(--dunkel-teilweise-flaeche);
+  --teilweise-kontur: var(--dunkel-teilweise-kontur);
   --akzent: var(--dunkel-akzent);
   --akzent-schrift: var(--dunkel-akzent-schrift);
   --akzent-flaeche: var(--dunkel-akzent-flaeche);
@@ -838,6 +870,9 @@ html[data-thema="dunkel"] {
     --ueberfaellig: var(--dunkel-ueberfaellig);
     --ueberfaellig-flaeche: var(--dunkel-ueberfaellig-flaeche);
     --ueberfaellig-kontur: var(--dunkel-ueberfaellig-kontur);
+    --teilweise: var(--dunkel-teilweise);
+    --teilweise-flaeche: var(--dunkel-teilweise-flaeche);
+    --teilweise-kontur: var(--dunkel-teilweise-kontur);
     --akzent: var(--dunkel-akzent);
     --akzent-schrift: var(--dunkel-akzent-schrift);
     --akzent-flaeche: var(--dunkel-akzent-flaeche);

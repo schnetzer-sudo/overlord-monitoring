@@ -476,3 +476,12 @@ Die beiden Abfragen der Mandantenmenge stehen in
   Passwort nur über ein neues Konto zu lösen.
 - **Die IP-Begrenzung gilt je Instanz.** Bei mehreren Instanzen hinter einem Reverse Proxy
   vervielfacht sich das Kontingent. Solange nur eine Instanz läuft, ist das ohne Wirkung.
+- **Punkt 1037** *(21.10.2026, beim Abschlusslauf von 1.1.0)*: **Eine Anfrage kann zur vollen
+  Minute mit `500` scheitern**, wenn das Speichern ihrer Sitzung (`UPDATE SPRING_SESSION … WHERE
+  PRIMARY_ID = ?`) einen Deadlock (MariaDB `1213`) gegen die Aufräumung abgelaufener Sitzungen
+  verliert (`DELETE FROM SPRING_SESSION …`, Vorgabe von Spring Session `0 * * * * *`). Belegt auf der
+  Testkopie als `DeadlockLoserDataAccessException` bzw. Fehler `1213` im Protokoll: um 12:45:00 eine
+  Anfrage, um 13:19:00 die Aufräumung selbst, um 13:30:00 die Aufräumung und eine Anfrage. Beide
+  Anfragen ließen `NachrichtendetailDbIT` mit `500` scheitern ([`tasks.md`](tasks.md) §9.6). Auf der
+  Testkopie liefen dabei zwei Backends gegen dieselben Sitzungstabellen. Ob es in der Produktion
+  vorkommt, ist ungeprüft. Nicht angefasst mit 1.1.0.

@@ -145,6 +145,13 @@ function antwort(ueberschreibung: Partial<Dashboard> = {}): Dashboard {
 /** Ein `fetch`, das jeden Aufruf sichtbar macht. */
 let anfragen: string[] = [];
 
+/**
+ * **Seit A4 (19.10.2026) fragt die Übersicht zusätzlich `/api/tasks`** für den
+ * Block „Ihre Aufträge“. Hier antwortet die Adresse mit einer **leeren Liste**:
+ * Dann fehlt der Block (E‑1098), und die Reihe ist die von vorher — genau die
+ * Lage, die diese Datei prüft. Die Fälle mit Aufträgen stehen in
+ * `tests/auftraege-block.test.tsx`.
+ */
 function stelleAntwort(rumpf: Dashboard): void {
   vi.stubGlobal(
     "fetch",
@@ -152,7 +159,7 @@ function stelleAntwort(rumpf: Dashboard): void {
       const adresse = String(eingabe);
       anfragen.push(adresse);
       return Promise.resolve(
-        new Response(JSON.stringify(rumpf), {
+        new Response(JSON.stringify(adresse === "/api/tasks" ? [] : rumpf), {
           status: 200,
           headers: { "content-type": "application/json" },
         }),
@@ -600,6 +607,12 @@ describe("Der Leerzustand", () => {
  * | Klick „Richtung", dann „Partner" | **keine weitere** |
  * | Klick „30 Tage" | `["/api/dashboard?zeitraum=30T"]` — die Eichung: Der Zähler sieht noch |
  *
+ * **Seit A4 (19.10.2026) kommt beim Laden genau eine Anfrage an `/api/tasks`
+ * dazu** (`docs/assistent-frontend.md` §12.5) — eine eigene Frage, ohne
+ * Parameter und ohne Zeitraum. Die Tabelle oben gilt für `/api/dashboard`
+ * unverändert; ein Sichtwechsel stellt weiterhin **gar keine** Anfrage, an
+ * keine der beiden Adressen, und der Zeitraum fragt die Aufträge nicht neu.
+ *
  * *Bis zu diesem Tag stand hier der Fall „ruft beim Sichtwechsel dieselbe
  * Adresse mit anderem Parameter" mit `["/api/dashboard",
  * "/api/dashboard?verteilung=RICHTUNG"]` — genau der Aufruf, der die ganze Seite
@@ -667,13 +680,18 @@ describe("Die Zahl der Anfragen", () => {
     return eingehaengt + imLadezustand(behaelter);
   }
 
-  it("stellt beim Laden genau eine Anfrage, und die geht an /api/dashboard", async () => {
+  it("stellt beim Laden genau eine Anfrage an /api/dashboard und eine an /api/tasks", async () => {
     stelleAntwort(antwort());
     const gerendert = await rendereAnsicht();
 
     try {
-      expect(anfragen).toHaveLength(1);
-      expect(anfragen[0]).toBe("/api/dashboard");
+      expect(anfragen.filter((adresse) => adresse.startsWith("/api/dashboard"))).toEqual([
+        "/api/dashboard",
+      ]);
+      expect(anfragen.filter((adresse) => adresse.startsWith("/api/tasks"))).toEqual([
+        "/api/tasks",
+      ]);
+      expect(anfragen).toHaveLength(2);
     } finally {
       await gerendert.abbauen();
     }
@@ -689,7 +707,9 @@ describe("Die Zahl der Anfragen", () => {
     const gerendert = await rendereAnsicht("?zeitraum=30T");
 
     try {
-      expect(anfragen).toEqual(["/api/dashboard?zeitraum=30T"]);
+      expect(anfragen.filter((adresse) => adresse !== "/api/tasks")).toEqual([
+        "/api/dashboard?zeitraum=30T",
+      ]);
     } finally {
       await gerendert.abbauen();
     }
@@ -706,7 +726,7 @@ describe("Die Zahl der Anfragen", () => {
     const gerendert = await rendereAnsicht("?verteilung=RICHTUNG");
 
     try {
-      expect(anfragen).toEqual(["/api/dashboard"]);
+      expect(anfragen.filter((adresse) => adresse !== "/api/tasks")).toEqual(["/api/dashboard"]);
       const text = gerendert.behaelter.textContent ?? "";
       expect(text).toContain(D.verteilung.titelRichtung);
       expect(text).toContain(D.verteilung.EINGEHEND);
@@ -727,7 +747,8 @@ describe("Die Zahl der Anfragen", () => {
     const gerendert = await rendereAnsicht();
 
     try {
-      expect(anfragen).toEqual(["/api/dashboard"]);
+      const nachDemLaden = [...anfragen];
+      expect([...nachDemLaden].sort()).toEqual(["/api/dashboard", "/api/tasks"]);
 
       const nachRichtung = await klicke(
         gerendert.behaelter,
@@ -752,7 +773,7 @@ describe("Die Zahl der Anfragen", () => {
       expect(text).toContain(D.verteilung.titelPartner);
       expect(text).toContain("BMW");
 
-      expect(anfragen, "Keine Anfrage nach dem ersten Laden").toEqual(["/api/dashboard"]);
+      expect(anfragen, "Keine Anfrage nach dem ersten Laden").toEqual(nachDemLaden);
     } finally {
       await gerendert.abbauen();
     }

@@ -179,6 +179,10 @@ const HELL = {
   ueberfaellig: ok(0.52, 0.105, 80),
   "ueberfaellig-flaeche": ok(0.96, 0.028, 80),
   "ueberfaellig-kontur": ok(0.65, 0.13, 80),
+  // ── neu, A4 (19.10.2026, F16): eigene Rolle, dieselben Werte ──
+  teilweise: ok(0.52, 0.105, 80),
+  "teilweise-flaeche": ok(0.96, 0.028, 80),
+  "teilweise-kontur": ok(0.65, 0.13, 80),
   // ── neu, 04.09.2026 (E-87) ──
   "verlauf-flaeche": ok(0.62, 0.118, 230),
   "verlauf-kontur": ok(0.45, 0.085, 230),
@@ -210,6 +214,9 @@ const DUNKEL = {
   ueberfaellig: ok(0.7, 0.14, 80),
   "ueberfaellig-flaeche": ok(0.26, 0.05, 80),
   "ueberfaellig-kontur": ok(0.53, 0.105, 80),
+  teilweise: ok(0.7, 0.14, 80),
+  "teilweise-flaeche": ok(0.26, 0.05, 80),
+  "teilweise-kontur": ok(0.53, 0.105, 80),
   // ── neu, 04.09.2026 (E-87). DERSELBE Flaechenwert wie im hellen Block, wie
   //    beim Akzent; die Kontur kehrt sich um. Beides getrennt nachgerechnet. ──
   "verlauf-flaeche": ok(0.62, 0.118, 230),
@@ -221,13 +228,19 @@ const DUNKEL = {
    ueber --card. GERECHNET und nicht eingetippt. */
 DUNKEL.border = ueber(ok(1, 0, 0), DUNKEL.card, 0.12);
 
-/** Die fuenf Farbrollen — vier Statusrollen und die Problemkategorie. */
+/**
+ * Die sechs Farbrollen — vier Statusrollen, die Problemkategorie und seit A4
+ * (19.10.2026, F16) der Stand "Teilweise erledigt" eines Auftrags, mit den
+ * Werten von --ueberfaellig. Ihr Abstand zueinander ist deshalb 0; das ist
+ * Absicht (docs/visuelles-konzept.md §3) und keine Bedingung dieses Skripts.
+ */
 const ROLLEN = [
   "status-abgeschlossen",
   "status-fehler",
   "status-offen",
   "status-ungeklaert",
   "ueberfaellig",
+  "teilweise",
 ];
 
 /** Die vier Akzentstufen. Sie sind Gegenstand der Rechnung, nicht ihr Bezug. */

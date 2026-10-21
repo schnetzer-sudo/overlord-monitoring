@@ -404,8 +404,15 @@ describe("Der Baustein", () => {
 /* ─── Übersicht ──────────────────────────────────────────────────────────── */
 
 describe("Neu laden auf der Übersicht", () => {
-  it("stellt genau eine weitere Anfrage an dieselbe Adresse", async () => {
-    stelleNetz((pfad) => (pfad === "/api/dashboard" ? dashboard() : undefined));
+  /**
+   * **Seit A4 (19.10.2026) zwei Adressen** (F24): „Neu laden“ holt die Übersicht
+   * und die Liste der Aufträge, je genau einmal. Verglichen ohne Reihenfolge —
+   * die beiden Abfragen sind unabhängig.
+   */
+  it("stellt genau eine weitere Anfrage an dieselbe Adresse und eine an die Aufträge", async () => {
+    stelleNetz((pfad) =>
+      pfad === "/api/dashboard" ? dashboard() : pfad === "/api/tasks" ? [] : undefined,
+    );
     const gerendert = await rendere(
       <NuqsTestingAdapter searchParams="?zeitraum=30T" hasMemory>
         <DashboardAnsicht />
@@ -413,19 +420,21 @@ describe("Neu laden auf der Übersicht", () => {
     );
     try {
       await zuege();
-      expect(anfragen).toEqual(["/api/dashboard?zeitraum=30T"]);
+      expect([...anfragen].sort()).toEqual(["/api/dashboard?zeitraum=30T", "/api/tasks"]);
 
       const stand = anfragen.length;
       await klicke(mitName(gerendert.behaelter, N.uebersicht));
 
-      expect(seit(stand)).toEqual(["/api/dashboard?zeitraum=30T"]);
+      expect([...seit(stand)].sort()).toEqual(["/api/dashboard?zeitraum=30T", "/api/tasks"]);
     } finally {
       await gerendert.abbauen();
     }
   });
 
   it("steht unmittelbar rechts neben dem letzten Zeitraum-Knopf", async () => {
-    stelleNetz((pfad) => (pfad === "/api/dashboard" ? dashboard() : undefined));
+    stelleNetz((pfad) =>
+      pfad === "/api/dashboard" ? dashboard() : pfad === "/api/tasks" ? [] : undefined,
+    );
     const gerendert = await rendere(
       <NuqsTestingAdapter searchParams="?zeitraum=30T" hasMemory>
         <DashboardAnsicht />
@@ -447,7 +456,13 @@ describe("Neu laden auf der Übersicht", () => {
    * Ohne ihn wäre nicht gezeigt, dass wirklich der Leerzustand steht.
    */
   it("steht im Leerzustand und lädt dort neu", async () => {
-    stelleNetz((pfad) => (pfad === "/api/dashboard" ? { ...dashboard(), leer: true } : undefined));
+    stelleNetz((pfad) =>
+      pfad === "/api/dashboard"
+        ? { ...dashboard(), leer: true }
+        : pfad === "/api/tasks"
+          ? []
+          : undefined,
+    );
     const gerendert = await rendere(
       <NuqsTestingAdapter hasMemory>
         <DashboardAnsicht />
@@ -460,7 +475,7 @@ describe("Neu laden auf der Übersicht", () => {
       const stand = anfragen.length;
       await klicke(mitName(gerendert.behaelter, N.uebersicht));
 
-      expect(seit(stand)).toEqual(["/api/dashboard"]);
+      expect([...seit(stand)].sort()).toEqual(["/api/dashboard", "/api/tasks"]);
       expect(gerendert.behaelter.textContent).toContain(TEXTE.dashboard.leerTitel);
     } finally {
       await gerendert.abbauen();

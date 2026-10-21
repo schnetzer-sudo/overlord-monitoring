@@ -235,6 +235,55 @@ export const en: Texte = {
       },
     },
 
+    // "Your orders" (assistent line, A4). Formal address, like the assistant
+    // (E‑1124) — English has no second form, the wording follows the German.
+    auftraege: {
+      titel: "Your orders",
+      ladenFehler: "Your orders could not be loaded just now.",
+      stand: {
+        OFFEN: "Open",
+        IN_AUSFUEHRUNG: "In progress",
+        ERLEDIGT: "Done",
+        TEILWEISE_ERLEDIGT: "Partly done",
+        FEHLGESCHLAGEN: "Failed",
+        UNSTIMMIG: "Incomplete response",
+      },
+      hinweis: {
+        OFFEN: "Waiting for the platform. Until it picks the order up, you can still delete it.",
+        IN_AUSFUEHRUNG: "The platform is processing the order.",
+        UNSTIMMIG: "The platform's response does not match the order. Please contact support.",
+        UNBEKANNT: "Unknown state.",
+      },
+      eintraegeEins: "1 entry",
+      eintraegeViele: "{anzahl} entries",
+      undWeiterer: "and 1 more",
+      undWeitere: "and {anzahl} more",
+      nichtErfolgreich: "{anzahl} of {gesamt} not successful",
+      eingestellt: "submitted {zeit}",
+      ausgefuehrt: "executed {zeit}",
+      meldungDerPlattform: "Message from the platform",
+      eintrag: "Entry {nummer}",
+      ergebnis: {
+        OK: "successful",
+        NICHT_OK: "not successful",
+        UNBEKANNT: "not successful",
+      },
+      keineRueckmeldung: "no response",
+      alleEintraege: "Show all {anzahl} entries",
+      weitereEins: "Show 1 more",
+      weitereViele: "Show {anzahl} more",
+      wenigerAnzeigen: "Show less",
+      loeschen: "Delete order",
+      frage: "Delete order? The platform has not picked it up yet. It will not be executed.",
+      abbrechen: "Cancel",
+      bestaetigen: "Delete",
+      loeschenLaeuft: "Deleting …",
+      geloescht: "Order deleted. It will not be executed.",
+      uebernommen: "The platform has just taken over the order. It can no longer be deleted.",
+      verschwunden: "The order no longer exists.",
+      gestoert: "The order could not be deleted just now. Please try again.",
+    },
+
     // Entscheidung E‑129, siehe `de.ts`: eigene Wörter, nie die Beschriftung
     // einer Farbrolle. „Done" und „No outcome" gehören den Einordnungen von
     // Nachrichten (E‑82); ein Dienst ist keines ihrer Mitglieder.
@@ -988,6 +1037,74 @@ export const en: Texte = {
       titel: "No accounts",
       hinweis:
         "The list is empty. That cannot happen in practice — whoever sees it has an account. Please report this to EDI support.",
+    },
+  },
+
+  assistent: {
+    symbol: "Assistant",
+    titel: "Assistant",
+    mandant: "Active client",
+    schliessen: "Close assistant",
+    neuesGespraech: "New conversation",
+    begruessung: {
+      gruss: "Hello, I am the assistant of Overlord Monitoring.",
+      einleitung:
+        "I take your requests for changes to the EDI configuration and prepare an order from them. Currently available:",
+      schluss:
+        "Simply describe what you would like to change. Before anything is created, I will show you the order for review.",
+    },
+    verlauf: "Conversation history",
+    sprecher: {
+      kunde: "You:",
+      assistent: "Assistant:",
+    },
+    wartet: "The assistant is answering …",
+    eingabe: {
+      beschriftung: "Your message to the assistant",
+      platzhalter: "What would you like to change?",
+      senden: "Send",
+      tasten: "Enter sends, Shift+Enter starts a new line.",
+    },
+    hinweis: {
+      zuVieleNachrichten: "Too many messages just now. Please wait a moment and then send again.",
+      ausgeschoepft:
+        "This conversation has reached the maximum of {anzahl} messages. Please start a new conversation.",
+      ausgeschoepftOhneZahl:
+        "This conversation has reached the maximum number of messages. Please start a new conversation.",
+      nachrichtUngueltig:
+        "The message is empty or too long. Please write at most {anzahl} characters.",
+      nachrichtUngueltigOhneZahl: "The message is empty or too long.",
+      nichtErreichbar:
+        "The assistant cannot be reached right now. Your message is back in the input field; you can send it again.",
+      abgelaufen:
+        "This conversation has expired. Start a new conversation; your message stays in the input field.",
+    },
+    ansage: {
+      vorschlagEins: "Proposal on the card: {name}, one entry.",
+      vorschlagMehr: "Proposal on the card: {name}, {anzahl} entries.",
+    },
+    karte: {
+      bezeichnung: "Proposal: {name}",
+      giltFuer: "Applies to:",
+      eintrag: "Entry {nummer}",
+      leer: "empty",
+      alleAnzeigen: "Show all {anzahl}",
+      wenigerAnzeigen: "Show only the first {anzahl}",
+      anlegen: "Create order",
+      anlegenLaeuft: "Creating …",
+      aendern: "Edit",
+      uebernehmen: "Apply",
+      verwerfen: "Discard",
+      pruefungLaeuft: "Checking …",
+      pruefungFehler: "Please correct the marked entries.",
+      pruefungGestoert: "The entries could not be checked just now.",
+      erneutPruefen: "Check again",
+      typUnbekannt: "This order type does not exist here.",
+      anlegenFehler: "The order was not created. Please correct the marked entries.",
+      anlegenGestoert:
+        "The order could not be created just now. Please try again; it will not be created twice.",
+      angelegt: "Created, status: {status}",
+      offen: "Open",
     },
   },
 
