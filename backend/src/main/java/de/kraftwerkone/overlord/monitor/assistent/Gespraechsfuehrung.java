@@ -214,7 +214,8 @@ public class Gespraechsfuehrung {
       return abgewiesen(aufruf, formfehler);
     }
 
-    List<Prueffehler> fehler = AuftragsPruefung.pruefe(definition, aktion, eintraege);
+    AuftragsPruefung.Ergebnis pruefung = AuftragsPruefung.pruefe(definition, aktion, eintraege);
+    List<Prueffehler> fehler = pruefung.fehler();
     if (!fehler.isEmpty()) {
       ObjectNode inhalt = json.createObjectNode();
       inhalt.put("gueltig", false);
@@ -237,9 +238,11 @@ public class Gespraechsfuehrung {
     ObjectNode inhalt = json.createObjectNode();
     inhalt.put("gueltig", true);
     inhalt.put("hinweis", GUELTIG);
+    // Die Karte zeigt, was gespeichert wird: die Eintraege aus der Pruefung, mit gekuerzten
+    // Schluesselteilen (E‑1141).
     return new Beantwortet(
         new Werkzeugergebnis(aufruf.id(), json.writeValueAsString(inhalt), false),
-        Vorschlag.aus(definition, aktion, eintraege));
+        Vorschlag.aus(definition, aktion, pruefung.eintraege()));
   }
 
   /**

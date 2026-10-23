@@ -7,7 +7,9 @@ import de.kraftwerkone.overlord.monitor.common.auftrag.TypDefinition.Feld;
 import de.kraftwerkone.overlord.monitor.common.auftrag.TypDefinition.MindestensEins;
 import de.kraftwerkone.overlord.monitor.common.auftrag.TypDefinition.Regel;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -20,8 +22,11 @@ import java.util.stream.Collectors;
  * <p><b>Alle Fehler gesammelt</b>, in der Reihenfolge: Aktion, Zahl der Eintraege, je Eintrag die
  * Felder, dann die Regeln. Der Assistent soll in einer Rueckfrage alles nennen koennen, was fehlt.
  *
- * <p><b>Kein Wert wird veraendert</b>, auch nicht um Leerraum gekuerzt. {@code null} und leerer
- * Text heissen „fehlend“; ein Leerzeichen ist ein Wert und faellt ueber das Muster.
+ * <p><b>Gekuerzt werden nur Schluesselteile</b>, um {@code U+0020} am Rand, vor jeder Pruefung
+ * (E‑1137, E‑1143, E‑1144). Das ist die eine Stelle: Anlegen, Pruefen und der Vorschlag des
+ * Assistenten nehmen die Eintraege aus dem {@link Ergebnis}. Sonst wird kein Wert veraendert;
+ * {@code null} und leerer Text heissen „fehlend“, ein Leerzeichen in einem anderen Feld ist ein
+ * Wert und faellt ueber das Muster.
  *
  * <p>Hier steht kein Typ. Was ein Typ verlangt, steht in seiner {@link TypDefinition}.
  */
@@ -30,14 +35,29 @@ public final class AuftragsPruefung {
   private AuftragsPruefung() {}
 
   /**
+   * Das Ergebnis der Pruefung.
+   *
+   * @param eintraege die Eintraege, wie sie gelten: Schluesselteile am Rand gekuerzt, sonst
+   *     unveraendert, ein {@code null}-Eintrag als leerer. Angelegt und vorgeschlagen wird nur
+   *     diese Fassung.
+   * @param fehler leer, wenn der Auftrag angelegt werden darf
+   */
+  public record Ergebnis(List<Map<String, String>> eintraege, List<Prueffehler> fehler) {
+
+    public Ergebnis {
+      eintraege = List.copyOf(eintraege);
+      fehler = List.copyOf(fehler);
+    }
+  }
+
+  /**
    * @param eintraege je Eintrag Feldname auf Wert; {@code null} wie eine leere Liste, ein {@code
    *     null}-Eintrag wie ein leerer
-   * @return leer, wenn der Auftrag angelegt werden darf
    */
-  public static List<Prueffehler> pruefe(
+  public static Ergebnis pruefe(
       TypDefinition definition, String aktion, List<Map<String, String>> eintraege) {
     List<Prueffehler> fehler = new ArrayList<>();
-    List<Map<String, String>> liste = eintraege == null ? List.of() : eintraege;
+    List<Map<String, String>> liste = gekuerzt(definition, eintraege);
 
     // 1. Die Aktion. Ist sie unbekannt, entfallen unten die Pruefungen, die an ihr haengen.
     boolean aktionBekannt = aktion != null && definition.aktionen().contains(aktion);
@@ -105,7 +125,44 @@ public final class AuftragsPruefung {
         case Eindeutig eindeutig -> pruefeEindeutig(definition, eindeutig, liste, fehler);
       }
     }
-    return fehler;
+    return new Ergebnis(liste, fehler);
+  }
+
+  /**
+   * Die Eintraege mit gekuerzten Schluesselteilen: <b>nur {@code U+0020}</b> am Anfang und am Ende,
+   * nur an den Feldern des Schluessels. {@link String#strip()} und {@link String#trim()} naehmen
+   * auch Tabulator oder {@code U+00A0} weg und liessen so einen Wert durch, den die Pruefung sonst
+   * ablehnt. Innen bleibt jedes Zeichen, auch mehrere Leerzeichen hintereinander (E‑1138). Ein
+   * Teil, der danach leer ist, fehlt (E‑1139).
+   */
+  private static List<Map<String, String>> gekuerzt(
+      TypDefinition definition, List<Map<String, String>> eintraege) {
+    if (eintraege == null) {
+      return List.of();
+    }
+    List<String> teile =
+        definition.schluessel() == null ? List.of() : definition.schluessel().felder();
+    List<Map<String, String>> liste = new ArrayList<>();
+    for (Map<String, String> eintrag : eintraege) {
+      Map<String, String> werte = new LinkedHashMap<>(werte(eintrag));
+      for (String teil : teile) {
+        werte.computeIfPresent(teil, (name, wert) -> ohneRandleerzeichen(wert));
+      }
+      liste.add(Collections.unmodifiableMap(werte));
+    }
+    return liste;
+  }
+
+  private static String ohneRandleerzeichen(String wert) {
+    int anfang = 0;
+    int ende = wert.length();
+    while (anfang < ende && wert.charAt(anfang) == ' ') {
+      anfang++;
+    }
+    while (ende > anfang && wert.charAt(ende - 1) == ' ') {
+      ende--;
+    }
+    return wert.substring(anfang, ende);
   }
 
   private static void pruefeFeld(

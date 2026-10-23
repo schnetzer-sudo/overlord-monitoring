@@ -20,15 +20,16 @@ import tools.jackson.databind.JsonNode;
 
 /**
  * Der Testsatz selbst, ohne Modell ({@code docs/assistent.md} §8): Form der Faelle, Abdeckung der
- * 14 Gruppen (13 aus dem Auftrag, dazu die Anpassung mit nur einem Wert), jede erwartete Karte
- * besteht die Pruefung — und die strukturelle Bewertung vergleicht so, wie beschrieben.
+ * 15 Gruppen (13 aus dem Auftrag, dazu die Anpassung mit nur einem Wert und Leerzeichen im
+ * Schluessel), jede erwartete Karte besteht die Pruefung — und die strukturelle Bewertung
+ * vergleicht so, wie beschrieben.
  */
 class TestsatzTest {
 
   private static final TypDefinition WERK = Testdefinitionen.werk();
 
   @Test
-  @DisplayName("18 synthetische Faelle, jede der 14 Gruppen mindestens einmal, Kennungen eindeutig")
+  @DisplayName("21 synthetische Faelle, jede der 15 Gruppen mindestens einmal, Kennungen eindeutig")
   void form_und_abdeckung() throws IOException {
     JsonNode faelle = lies().get("faelle");
     Set<String> kennungen = new HashSet<>();
@@ -47,13 +48,15 @@ class TestsatzTest {
       }
       gruppen.add(fall.get("gruppe").asInt());
     }
-    assertThat(faelle.size()).isEqualTo(18);
-    assertThat(gruppen).containsExactlyInAnyOrder(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14);
+    assertThat(faelle.size()).isEqualTo(21);
+    assertThat(gruppen)
+        .containsExactlyInAnyOrder(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
   }
 
   @Test
   @DisplayName(
-      "Jede erwartete Karte besteht die Pruefung aus A1 — sonst waere der Fall unerfuellbar")
+      "Jede erwartete Karte besteht die Pruefung aus A1 und steht schon gekuerzt da — sonst waere"
+          + " der Fall unerfuellbar")
   void erwartete_karten_sind_gueltig() throws IOException {
     for (JsonNode fall : lies().get("faelle")) {
       for (JsonNode erwartung : erwartungen(fall)) {
@@ -61,11 +64,15 @@ class TestsatzTest {
         if (vorschlag.isNull()) {
           continue;
         }
-        assertThat(
-                AuftragsPruefung.pruefe(
-                    WERK, vorschlag.get("aktion").stringValue(), eintraege(vorschlag)))
-            .as("Fall %s", fall.get("kennung"))
-            .isEmpty();
+        AuftragsPruefung.Ergebnis pruefung =
+            AuftragsPruefung.pruefe(
+                WERK, vorschlag.get("aktion").stringValue(), eintraege(vorschlag));
+        assertThat(pruefung.fehler()).as("Fall %s", fall.get("kennung")).isEmpty();
+        // Die Karte traegt die gekuerzten Schluesselteile (E‑1141); eine Erwartung mit
+        // Leerzeichen am Rand traefe nie.
+        assertThat(pruefung.eintraege())
+            .as("Fall %s, gekuerzt", fall.get("kennung"))
+            .isEqualTo(eintraege(vorschlag));
       }
     }
   }

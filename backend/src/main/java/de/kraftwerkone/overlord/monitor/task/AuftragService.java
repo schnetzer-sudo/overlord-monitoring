@@ -132,14 +132,14 @@ public class AuftragService {
     TypKatalog.Angebot angebot = angebotener(katalog, anfrage.typ());
     TypDefinition definition = angebot.definition();
 
-    List<Map<String, String>> eintraege =
-        anfrage.eintraege() == null ? List.of() : anfrage.eintraege();
-    List<Prueffehler> fehler = AuftragsPruefung.pruefe(definition, anfrage.aktion(), eintraege);
+    AuftragsPruefung.Ergebnis pruefung =
+        AuftragsPruefung.pruefe(definition, anfrage.aktion(), anfrage.eintraege());
+    List<Prueffehler> fehler = pruefung.fehler();
     if (!fehler.isEmpty()) {
       throw abgelehnt(fehler, "Pruefung des Auftrags: " + fehler.size() + " Fehler");
     }
 
-    List<Map<String, String>> geprueft = geordnet(definition, eintraege);
+    List<Map<String, String>> geprueft = geordnet(definition, pruefung.eintraege());
     String parameter = Parametertext.baue(definition, anfrage.aktion(), geprueft);
     if (zuLang(parameter)) {
       throw abgelehnt(
@@ -213,14 +213,14 @@ public class AuftragService {
     TypDefinition definition =
         angebotener(freigabe.verlangeKatalog(mandant), anfrage.typ()).definition();
 
-    List<Map<String, String>> eintraege =
-        anfrage.eintraege() == null ? List.of() : anfrage.eintraege();
-    List<Prueffehler> fehler = AuftragsPruefung.pruefe(definition, anfrage.aktion(), eintraege);
-    if (!fehler.isEmpty()) {
-      return fehler;
+    AuftragsPruefung.Ergebnis pruefung =
+        AuftragsPruefung.pruefe(definition, anfrage.aktion(), anfrage.eintraege());
+    if (!pruefung.fehler().isEmpty()) {
+      return pruefung.fehler();
     }
     String parameter =
-        Parametertext.baue(definition, anfrage.aktion(), geordnet(definition, eintraege));
+        Parametertext.baue(
+            definition, anfrage.aktion(), geordnet(definition, pruefung.eintraege()));
     return zuLang(parameter) ? List.of(ZU_LANG) : List.of();
   }
 
@@ -312,8 +312,8 @@ public class AuftragService {
 
   /**
    * Die Eintraege, wie sie gespeichert werden: nur Felder mit Wert, in der Reihenfolge der
-   * Definition. Kein Wert wird veraendert. Ein {@code null}-Eintrag ist ein leerer, wie in der
-   * Pruefung — bei einem Typ ohne Pflichtfeld kommt er bis hierher.
+   * Definition. Sie kommen aus dem Ergebnis der Pruefung, mit gekuerzten Schluesselteilen und ohne
+   * {@code null}-Eintrag; hier wird kein Wert veraendert.
    */
   private static List<Map<String, String>> geordnet(
       TypDefinition definition, List<Map<String, String>> eintraege) {
@@ -321,7 +321,7 @@ public class AuftragService {
     for (Map<String, String> eintrag : eintraege) {
       Map<String, String> werte = new LinkedHashMap<>();
       for (TypDefinition.Feld feld : definition.felder()) {
-        String wert = eintrag == null ? null : eintrag.get(feld.name());
+        String wert = eintrag.get(feld.name());
         if (TypDefinition.hatWert(wert)) {
           werte.put(feld.name(), wert);
         }

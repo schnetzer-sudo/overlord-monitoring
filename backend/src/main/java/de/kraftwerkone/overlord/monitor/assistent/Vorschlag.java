@@ -33,7 +33,10 @@ public record Vorschlag(
    */
   public record Eintrag(Map<String, String> werte, String schluessel) {}
 
-  /** Der Vorschlag aus geprueften Eintraegen; kein Wert wird veraendert. */
+  /**
+   * Der Vorschlag aus den Eintraegen, wie die Pruefung sie zurueckgibt — mit gekuerzten
+   * Schluesselteilen ({@code AuftragsPruefung.Ergebnis}). Hier wird kein Wert veraendert.
+   */
   static Vorschlag aus(TypDefinition definition, String aktion, List<Map<String, String>> liste) {
     List<Feld> vorkommend =
         definition.felder().stream().filter(feld -> feld.kommtVorBei(aktion)).toList();

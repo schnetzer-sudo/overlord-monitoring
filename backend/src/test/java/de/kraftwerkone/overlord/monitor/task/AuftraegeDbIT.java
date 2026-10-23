@@ -172,6 +172,61 @@ class AuftraegeDbIT extends AuftragsTestbasis {
   }
 
   @Test
+  @DisplayName(
+      "Leerzeichen im Schluessel: Pruefung frei, gespeichert und im Parametertext am Rand gekuerzt,"
+          + " innen zeichengenau (E-1136 bis E-1144)")
+  void leerzeichen_im_schluessel() throws Exception {
+    List<Map<String, String>> eintraege =
+        List.of(
+            Map.of("lieferantennummer", " 0101 159903", "werk", "  A  1 ", "abladestelle", "DDB0 "),
+            Map.of("werk", "72332", "abladestelle", " B 2"));
+
+    Antwort pruefung =
+        sitzung.sende("/api/tasks/pruefung", auftrag(neueAnfrageId(), WERK, "Löschung", eintraege));
+    assertThat(pruefung.status()).as(pruefung.rumpf()).isEqualTo(200);
+    assertThat(pruefung.<List<Object>>json("$.errors")).isEmpty();
+
+    Antwort antwort =
+        sitzung.sende("/api/tasks", auftrag(neueAnfrageId(), WERK, "Löschung", eintraege));
+    assertThat(antwort.status()).as(antwort.rumpf()).isEqualTo(201);
+    assertThat(antwort.<List<String>>json("$.eintraege[*].schluessel"))
+        .containsExactly("0101 159903/A  1/DDB0", "72332/B 2");
+
+    TaskRecord zeile =
+        monitorDsl
+            .selectFrom(TASK)
+            .where(TASK.TASK_ID.eq(antwort.<String>json("$.taskId")))
+            .fetchOne();
+    assertThat(zeile).isNotNull();
+    assertThat(zeile.getParameter()).isEqualTo("Aktion=Löschung\n0101 159903/A  1/DDB0\n72332/B 2");
+    assertThat(Testdefinitionen.JSON.readTree(zeile.getEintraege().data()))
+        .isEqualTo(
+            Testdefinitionen.JSON.readTree(
+                """
+                [ {"lieferantennummer": "0101 159903", "werk": "A  1", "abladestelle": "DDB0"},
+                  {"werk": "72332", "abladestelle": "B 2"} ]"""));
+  }
+
+  @Test
+  @DisplayName("Geschuetztes Leerzeichen im Schluessel: 400 FORMAT, nichts angelegt")
+  void geschuetztes_leerzeichen_im_schluessel() throws Exception {
+    String wert = "A" + Character.toString(0x00A0) + "1";
+    Antwort antwort =
+        sitzung.sende(
+            "/api/tasks",
+            auftrag(
+                neueAnfrageId(),
+                WERK,
+                "Löschung",
+                List.of(Map.of("werk", wert, "abladestelle", "DDB0"))));
+
+    assertThat(antwort.status()).as(antwort.rumpf()).isEqualTo(400);
+    assertThat(antwort.<String>json("$.errors[0].feld")).isEqualTo("werk");
+    assertThat(antwort.<String>json("$.errors[0].code")).isEqualTo("FORMAT");
+    assertThat(monitorDsl.fetchCount(TASK, TASK.ANGELEGT_VON.eq(NUTZER))).isZero();
+  }
+
+  @Test
   @DisplayName("anfrageId fehlt oder ist keine UUID: 400 mit feld anfrageId")
   void anfrage_id_ungueltig() throws Exception {
     Antwort ohne =

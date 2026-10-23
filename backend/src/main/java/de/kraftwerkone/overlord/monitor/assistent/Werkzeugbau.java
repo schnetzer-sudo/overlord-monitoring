@@ -147,6 +147,10 @@ public final class Werkzeugbau {
             .append(")");
       }
       text.append('.');
+      // Leerzeichen am Rand eines Teils kuerzt das Backend (E‑1137); das Modell gibt weiter, was
+      // der Kunde schreibt, und zieht nichts zusammen (E‑1141).
+      text.append(" Schlüsselteile übergibst du zeichengenau, mit jedem Leerzeichen, auch mehreren")
+          .append(" hintereinander; Leerzeichen am Anfang und Ende entfernt das Backend.");
     }
     return text.toString();
   }
