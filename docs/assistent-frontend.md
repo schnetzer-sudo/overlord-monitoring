@@ -268,7 +268,11 @@ Die Karte kennt keinen Typ: Sie zeigt, was der Vorschlag mitbringt, und sonst ni
 §5.3). Ein leeres Feld zeigt das Wort „leer“ in gestrichelter Umrandung und darunter, mit einem
 Infozeichen und in voller Schriftfarbe, den `hinweis` des Felds — bei `WERK_ABLADESTELLE` etwa
 „Bei Anpassung heißt leer: der Wert wird entfernt.“ Ein Feld ohne `hinweis` zeigt nur „leer“.
-Werte stehen in fester Laufweite, Leerraum bleibt sichtbar erhalten.
+Werte stehen in fester Laufweite, Leerraum bleibt sichtbar erhalten. **Seit 23.10.2026 auch in der
+Überschrift:** Werte und Schlüssel stehen mit `white-space: pre-wrap`, damit der Browser mehrere
+Leerzeichen nicht zu einem zusammenzieht — `A  1/DDB0` bleibt mit zwei Leerzeichen stehen, ohne
+Ersatzzeichen, die beim Kopieren mitkämen (E‑1141). Der Schlüssel des Vorschlags ist schon der
+gekürzte, den das Backend speichern wird ([`assistent.md`](assistent.md) §4.7).
 
 **Ändern** (E‑1067, E‑1071): Jedes Feld wird ein Eingabefeld mit seinem `label`; unter einem leeren
 steht weiterhin sein `hinweis`. Jede Änderung sperrt „Übernehmen“ und schickt 400 ms nach der letzten
@@ -298,7 +302,10 @@ Knopf gesperrt. Danach:
 | Zeitüberschreitung, `5xx`, Netz | Hinweis auf der Karte, „Auftrag anlegen“ wieder frei — **mit derselben `anfrageId`**; ein schon angelegter Auftrag entsteht dabei nicht doppelt |
 
 **Kein Wert wird verändert**, auch nicht um Leerraum gekürzt: Die Karte schickt, was im Feld
-steht.
+steht. Das Kürzen der Schlüsselteile ist Sache des Backends und geschieht nur dort
+([`tasks.md`](tasks.md) §5.3, E‑1141). **Folge:** Nach „Ändern“ zeigt die Karte bis zum Anlegen,
+was im Feld getippt wurde, auch mit Leerzeichen am Rand; erst die Antwort auf das Anlegen zeigt die
+gekürzten Werte (F7). Einen Schlüssel zeigt sie in dieser Zeit nicht, nur „Eintrag n“ (Punkt 1017).
 
 ---
 
@@ -439,7 +446,7 @@ Nummern ab 1017 (Linie `assistent`, per `grep` geprüft); dieselben Zeilen stehe
 
 | Nr. | Punkt | Art |
 |---|---|---|
-| **1017** | Nach einer übernommenen Änderung kennt die Karte den Schlüssel des Eintrags nicht mehr und zeigt „Eintrag n“ (E‑1080). `POST /api/tasks/pruefung` könnte den Schlüssel je Eintrag mitliefern, wie der Vorschlag es tut. | Verbesserung |
+| **1017** | Nach einer übernommenen Änderung kennt die Karte den Schlüssel des Eintrags nicht mehr und zeigt „Eintrag n“ (E‑1080). `POST /api/tasks/pruefung` könnte den Schlüssel je Eintrag mitliefern, wie der Vorschlag es tut. **Fortgeschrieben am 23.10.2026:** Seit das Backend Schlüsselteile kürzt (E‑1137), zeigt die Karte nach „Ändern“ bis zum Anlegen auch Werte, die so nicht gespeichert werden — etwa `  A 1 ` statt `A 1` (§5). Lieferte die Prüfung die geltenden Einträge mit, zeigte die Karte beides richtig, ohne im Frontend zu kürzen. | Verbesserung |
 | **1018** | Sichtprüfung 1: Chatbox mit Karte hell und dunkel, breit und schmal, in `xs` und `l` (§11). Dazu, ob die Kopfzeile mit dem zusätzlichen Symbol bei 768 px in `l` noch ohne Überlauf steht. **Gemessen am 19.10.2026 (M1004, §8.1):** kein Überlauf in 16 Lagen; der Produktname schrumpft bei 768 px in `l` von 52 auf 9 px. Offen bleibt das Urteil von Hand. | Sichtprüfung oder Messung offen |
 | **1019** | Sichtprüfung 2: Ist eine Karte mit 20 Einträgen noch zu überblicken? (§11) | Sichtprüfung oder Messung offen |
 | **1020** | Sichtprüfung 3: Ist bei einer Anpassung mit leerem Feld „wird entfernt“ unübersehbar? (§11) | Sichtprüfung oder Messung offen |
@@ -663,6 +670,12 @@ löschen“ (E‑1111).
 `fehlertext` mit erhaltenen Zeilenumbrüchen (`white-space: pre-wrap`). Was wie HTML aussieht, steht
 wörtlich da — dieselbe Bauform wie die Antworten des Assistenten (E‑1074).
 
+**Leerzeichen im Schlüssel** *(seit 23.10.2026, E‑1141)*: Ein Schlüssel wie `A  1/DDB0` steht mit
+beiden Leerzeichen da, ohne Ersatzzeichen. Aufgeklappt tragen Schlüssel und Werte
+`white-space: pre-wrap`. **Zugeklappt** tragen die Schlüssel `white-space: pre` (F39): Die Zeile ist
+einzeilig mit Auslassung gekürzt, und `pre-wrap` bräche sie an den Leerzeichen um, die Auslassung
+fiele weg. `pre` hält die Leerzeichen und die eine Zeile.
+
 ### 12.7 Löschen
 
 1. **„Auftrag löschen“** steht nur bei „Offen“ und nur aufgeklappt (E‑1110, E‑1111). Der Knopf ist
@@ -753,6 +766,16 @@ Die Zahl der gerenderten Fälle — jetzt **284 in 28 Dateien** — steht im Kop
 | `tests/assistent-chatbox.test.tsx` | **ein Fall mehr:** Chatbox und Übersicht im selben Zwischenspeicher — nach dem Anlegen erscheint „Ihre Aufträge“, ohne die Seite neu zu laden (E‑1109) |
 | `tests/dashboard-bloecke.test.tsx`, `tests/neu-laden.test.tsx` | **angepasst, nicht aufgeweicht:** Die Übersicht fragt seit A4 auch `/api/tasks`. Für `/api/dashboard` gilt die Zählung wörtlich weiter; dazu genau eine Anfrage an `/api/tasks` beim Laden und bei „Neu laden“ (F24), keine beim Sichtwechsel und keine beim Zeitraum. Die gestellte Liste ist dort leer, damit die Reihe die von vorher bleibt |
 | `tests/farbkontrast.test.ts` | die Rolle `teilweise` in der Liste der Rollen: drei Werte in beiden Blöcken, Kontraste, Farbraum, Verdrahtung in `@theme inline` |
+
+**Leerzeichen im Schlüssel (23.10.2026, E‑1141, F39):** je ein gerenderter Fall mehr in
+`tests/auftraege-block.test.tsx` (28) und `tests/assistent-chatbox.test.tsx` (26): `A  1/DDB0` steht
+mit beiden Leerzeichen im DOM — in „Ihre Aufträge“ zugeklappt mit `whitespace-pre` in der gekürzten
+Zeile, aufgeklappt Schlüssel und Wert mit `whitespace-pre-wrap`, auf der Karte Überschrift und Wert
+mit `whitespace-pre-wrap`. `pnpm check` grün mit **1.508 Fällen in 54 Dateien**; die gerenderten
+Fälle stehen jetzt bei **287 in 28 Dateien** (`frontend/vitest.config.mts`, aus dem Lauf gezählt —
+einer davon kam mit 1.1.0 und war dort nicht nachgezählt). **Verletzungsprobe:** die drei neuen
+Klassen aus Kopien entfernt, Lauf über beide Dateien — genau die zwei neuen Fälle rot, 52 grün;
+zurückgespielt aus den Kopien, nicht per `git checkout`.
 
 **Verletzungsproben**, je ein Eingriff in den Code, Lauf über die fünf betroffenen Dateien (130
 Fälle), Rücknahme per `git checkout` gegen den committeten Stand:

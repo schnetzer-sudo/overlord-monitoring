@@ -292,7 +292,11 @@ Testsatz (§8) geprüft. Der Wortlaut steht in der Ressource; diese Datei wieder
   Schlüssel (E‑1060): Schreibt der Kunde einen Schlüssel zusammengesetzt mit dem Trenner des Typs,
   zerlegt das Modell ihn ohne Rückfrage in die Schlüsselfelder in ihrer Reihenfolge. Ist der erste
   Teil optional (nur er darf es sein, [`tasks.md`](tasks.md) §3.2), folgt „fehlt ein Teil, ist es der
-  optionale erste (Label)“; ist er Pflicht, entfällt der Satz.
+  optionale erste (Label)“; ist er Pflicht, entfällt der Satz. **Seit 23.10.2026** schließt für
+  jeden Typ mit Schlüssel der Satz an: „Schlüsselteile übergibst du zeichengenau, mit jedem
+  Leerzeichen, auch mehreren hintereinander; Leerzeichen am Anfang und Ende entfernt das Backend.“
+  Gekürzt wird nur im Backend ([`tasks.md`](tasks.md) §5.3, E‑1141, F41); ob ein Leerzeichen im
+  Innern zulässig ist, sagt das `muster` des Felds, das in der Feldbeschreibung steht.
 - **Eingabe:** `aktion` (Text, `enum` der Aktionen) und `eintraege` (Liste, `minItems` 1,
   `maxItems` aus `maxEintraege`) mit je einem Objekt, das genau die Felder des Typs als Text trägt
   (`additionalProperties: false`). Die Beschreibung eines Felds nennt `label`, ob es Pflicht oder
@@ -351,6 +355,11 @@ Modell und zählt danach die Aufträge des Testnutzers (§9).
 `Löschung` also ohne die beiden SNDPRN-Felder. `werte` trägt **jedes** dieser Felder, leere als
 `null`. `schluessel` ist der Text nach der Definition oder `null` ohne Schlüssel. Die Karte schickt
 für `POST /api/tasks/pruefung` und `POST /api/tasks` nur `typ`, `aktion` und die Werte.
+
+**Die Werte sind die geprüften** *(seit 23.10.2026)*: Der Vorschlag entsteht aus den Einträgen, die
+`AuftragsPruefung` zurückgibt, also mit gekürzten Schlüsselteilen ([`tasks.md`](tasks.md) §5.3,
+F40). Reicht das Modell `"werk": "  A  1 "` ein, steht auf der Karte `A  1` und als Schlüssel
+`A  1/DDB0` — das, was gespeichert wird (E‑1141).
 
 ---
 
@@ -574,6 +583,12 @@ Typbeschreibung.
   jeder mit dreiteiligem Schlüssel (zehnstellige Lieferantennummer, Werk, Abladestelle) und beiden
   Werten, als Tabulatorliste mit fünf Spalten. Das ist die größte Werkzeugeingabe, die der Typ
   zulässt, ohne die Felder bis zur Höchstlänge zu füllen; erwartet ist der Vorschlag mit allen 20.
+  **Ergänzt am 23.10.2026** mit der neuen **Gruppe 15, Leerzeichen im Schlüssel**
+  ([`tasks.md`](tasks.md) §2, E‑1136 bis E‑1144): **S19** löscht `HALLE 2/TOR 3` (je ein
+  Leerzeichen im Innern beider Teile), **S20** legt `HALLE  2/DDB0` an, mit zwei Leerzeichen
+  hintereinander, die stehen bleiben müssen, und **S21** löscht `72332 / DDB0` — erwartet ist
+  `72332`/`DDB0`, weil das Backend die Teile am Trenner kürzt. Der Testsatz hat damit 21 Fälle in 15
+  Gruppen; die Bewertung vergleicht die Karte, also die gekürzten Werte (§4.7).
 - **Echte Fälle** liefert Lukas nach. Vor dem Einchecken anonymisieren: keine Namen, keine
   Mailadressen, keine Signaturen.
 
@@ -727,6 +742,37 @@ angewandt und eingefroren (`flyway_schema_history`, 19.10.2026). Rot war genau e
 `plattform.dienste[*].alterSekunden`, sechs Dienste um je eine Sekunde. Die Klasse lief einzeln
 nachgefahren grün (28 von 28).
 
+### 8.4 Lauf M1007 (23.10.2026): Leerzeichen im Schlüssel
+
+**Anlass:** Die Werkzeugbeschreibung hat einen Satz mehr (F41), das Muster der Schlüsselteile ist
+neu (E‑1142), und die Karte trägt die gekürzten Werte (F40). Gefahren auf
+`fix/auftrag-schluessel-leerzeichen` mit der Struktur aus den Testressourcen, also der nach dem Skript
+([`tasks.md`](tasks.md) §4.3). Modell `claude-sonnet-5-5`, `denken` auf der Vorgabe, `max_tokens`
+2.048. Ein voller Durchgang über alle 21 Fälle, danach S15 dreimal allein und S19 bis S21 zweimal.
+
+| Durchgang | Fälle | Bestanden | Token ein / aus | Höchster Aufruf, Token aus | Werkzeugaufrufe | Dauer |
+|---|---|---|---|---|---|---|
+| voll | alle 21 | **20 von 21** | 144.309 / 9.252 | 1.169 (S18) | 16 | 100,7 s |
+| S15 allein, 3× | S15 | 3 von 3 | — | — | — | — |
+| S19 bis S21, 2× | S19, S20, S21 | 3 von 3, 3 von 3 | — | — | — | — |
+
+- **Die neuen Fälle bestehen in allen drei Durchgängen.** S19 schlägt `HALLE 2`/`TOR 3` vor;
+  **S20 behält beide Leerzeichen in `HALLE  2`** — das Modell zieht sie nicht zusammen; S21 ergibt
+  `72332`/`DDB0`. Ob bei S21 das Modell oder das Backend die Leerzeichen am Trenner entfernt hat,
+  zeigt der Bericht nicht: Er hält die Karte fest, also die gekürzte Fassung, nicht die Eingabe des
+  Modells.
+- **S15 (Tippfehler) ist einmal gefallen:** Im vollen Durchgang fragte das Modell, ob der Eintrag
+  eine Lieferantennummer haben soll, statt `Wek 010 / Abladestele 18VZE` vorzuschlagen. In drei
+  Wiederholungen bestand der Fall jedes Mal mit dem erwarteten Vorschlag. In M1001 und M1002 hat
+  S15 bestanden. Schwankend wie S13 in M1001 (§8.1). Dass der neue Satz zu den Schlüsselteilen
+  dazu beiträgt — die Nachricht hat Leerzeichen um den Trenner —, ist mit vier Läufen weder zu
+  zeigen noch auszuschließen.
+- Die übrigen 17 Fälle bestehen; der höchste Aufruf bleibt S18 mit 1.169 Token aus, unter
+  `max_tokens`.
+
+Die Berichte liegen unter `backend/target/assistent-testsatz/` (`bericht-20261023-064056.md` und die
+fünf folgenden) und werden nicht eingecheckt.
+
 ---
 
 ## 9. Tests
@@ -735,16 +781,16 @@ nachgefahren grün (28 von 28).
 
 | Test | Was er hält |
 |---|---|
-| `WerkzeugbauTest` | das Schema für `WERK_ABLADESTELLE` und für die Gattung aus A1; keine Eigenschaft beginnt mit `mandant`; Typen mit ungültigem Werkzeugnamen oder einem Feld `mandant…` entfallen (E‑1054); der Satz zum zusammengesetzten Schlüssel mit dem Trenner des Typs, mit „fehlt ein Teil“ nur bei optionalem erstem Teil (E‑1060) |
+| `WerkzeugbauTest` | das Schema für `WERK_ABLADESTELLE` und für die Gattung aus A1; keine Eigenschaft beginnt mit `mandant`; Typen mit ungültigem Werkzeugnamen oder einem Feld `mandant…` entfallen (E‑1054); der Satz zum zusammengesetzten Schlüssel mit dem Trenner des Typs, mit „fehlt ein Teil“ nur bei optionalem erstem Teil (E‑1060); seit 23.10.2026 der Satz „Schlüsselteile übergibst du zeichengenau …“ bei jedem Typ mit Schlüssel und bei keinem ohne (F41) |
 | `AnweisungTest` | die Anweisung enthält die Beschreibungen der angebotenen Typen, die Regeln aus E‑1059, E‑1060 und E‑1062 und den Namen des Mandanten vor den Typen, ohne Namen keinen Abschnitt, aber weder Benutzername noch Mandanten-ID |
 | `MandantennameTest` | welcher Name in die Anweisung geht: der des aktiven Mandanten; keiner, wenn der Anzeigename die Kennung ist, der aktive Mandant ein anderer als der Kontext oder keiner gewählt ist (E‑1059) |
-| `GespraechsfuehrungTest` | gegen ein geskriptetes Modell: ungültiger Vorschlag → Werkzeugergebnis mit Fehlern, keine Karte; gültiger → Karte mit allen Feldern der Aktion, leere als `null`; Abbruch nach 3 Runden; Werkzeugaufruf für einen nicht angebotenen Typ abgewiesen; ein zweiter Vorschlag je Nachricht abgewiesen; Wert als Zahl abgewiesen; abgeschnitten, verweigert; Fehler des Anbieters lassen den Verlauf unverändert |
+| `GespraechsfuehrungTest` | gegen ein geskriptetes Modell: ungültiger Vorschlag → Werkzeugergebnis mit Fehlern, keine Karte; gültiger → Karte mit allen Feldern der Aktion, leere als `null`; Abbruch nach 3 Runden; Werkzeugaufruf für einen nicht angebotenen Typ abgewiesen; ein zweiter Vorschlag je Nachricht abgewiesen; Wert als Zahl abgewiesen; abgeschnitten, verweigert; Fehler des Anbieters lassen den Verlauf unverändert; seit 23.10.2026 trägt die Karte die gekürzten Schlüsselteile, innen zeichengenau (`"  A  1 "` wird `A  1`, F40) |
 | `GespraechsspeicherTest` | Ablauf nach 30 Minuten, höchstens 3 je Sitzung, Bindung an Sitzung, Nutzer und Mandant, Mandantenwechsel — mit eingespeister Uhr (T1) |
 | `NachrichtenbegrenzungTest` | 60 je Stunde, gleitend, mit eingespeister Uhr |
 | `AnthropicSprachmodellTest` | gegen einen lokalen HTTP-Stub: Kopfzeilen, Aufbau der Anfrage (Anweisung, Verlauf mit Rohinhalt und `tool_result`, Werkzeuge, `thinking`), Text und `tool_use`, Abbruchgründe, ein Wiederholungsversuch bei `429` und `529`, keiner bei `500`, Zeitgrenze |
 | `AssistentServiceTest` | **Schalter aus oder kein Schlüssel:** `AssistentConfig` baut keinen Adapter, Stand, Eröffnen und Nachricht melden nicht verfügbar (seit 1.1.0 `404`), **kein HTTP-Aufruf** am Stub, kein Zugriff auf den Typkatalog — mit Gegenprobe, dass eingeschaltet genau ein Aufruf am Stub ankommt. Die Logzeile beim Start nennt den Grund („kein Schluessel“, „Schalter aus“), nie den Schlüssel (seit 1.1.0). Dazu: jede Fehlerart des Anbieters auf `503` bzw. `502` ohne Anbieterdetails, Länge der Nachricht, Höchstzahl je Gespräch, `409`, `404` in allen Fällen gleich, kein angebotener Typ, Freischaltung bei offenem Gespräch entzogen (seit 1.1.0) |
 | `AssistentFreigabeTest` *(1.1.0)* | die eine Stelle in `common.auftrag` ([`tasks.md`](tasks.md) §9.1) |
-| `TestsatzTest` | Form und Abdeckung des Testsatzes, jede erwartete Karte gültig, Begriffe nur ohne Vorschlag und genau bei S12 und S17, strukturelle Bewertung und Bewertung der Begriffe (§8) |
+| `TestsatzTest` | Form und Abdeckung des Testsatzes (seit 23.10.2026: 21 Fälle, 15 Gruppen), jede erwartete Karte gültig und schon in gekürzter Form, Begriffe nur ohne Vorschlag und genau bei S12 und S17, strukturelle Bewertung und Bewertung der Begriffe (§8) |
 | `PaketstrukturTest` | die Regeln aus §4.1 |
 
 ### 9.2 Mit Datenbank (`@Tag("db")`)

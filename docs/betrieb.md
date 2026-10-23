@@ -332,6 +332,30 @@ sudo systemctl start   overlord-monitor-rollup
 # Zurück auf den alten Datenstand nur über die Sicherung aus B.
 ```
 
+Ist das Skript aus E gelaufen und geht der Rollback auf ein JAR **ohne** das Kürzen der
+Schlüsselteile (1.1.0), läuft **vorher** die Rücknahme aus E; sonst nähme das alte JAR Leerzeichen am
+Rand mit in Auftrag und Parametertext ([`tasks.md`](tasks.md) §4.3, F42).
+
+### E. Einmalig nach dem Deployment des Fixes „Leerzeichen im Schlüssel“ *(23.10.2026)*
+
+Erst wenn die Version mit dem Kürzen läuft (B), nicht vorher: Das Skript kann die Version nicht
+prüfen ([`tasks.md`](tasks.md) §4.3, E‑1136, F42).
+
+```sh
+mysql --skip-ssl -h <db-host> -u monitor_write -p overlord_monitor < scripts/werk-abladestelle-schluessel-leerzeichen.sql
+# Rücknahme, falls nötig:
+# mysql --skip-ssl -h <db-host> -u monitor_write -p overlord_monitor < scripts/werk-abladestelle-schluessel-leerzeichen-ruecknahme.sql
+```
+
+Erwartet sind drei Ergebnisse, `vorher`, `nachher` und `fertig`; in `nachher` steht `neu` 3, und die
+drei Muster lauten `^(?:[^/,\p{Z}]| ){1,35}$`. Der Client gibt den Backslash in seiner Tabellenausgabe
+verdoppelt aus (`\\p{Z}`); gespeichert ist einer. Ein zweiter Lauf ändert nichts, auch nicht
+`geaendert_am`. Die Änderung wirkt beim nächsten Zugriff, ohne Neustart. **Geprüft am 23.10.2026 auf
+der Testkopie** mit dem MariaDB-Client 12.3 in genau dieser Form: mit falschem Vorgabeschema Abbruch an
+Wache 1; dann Rücknahme auf dem alten Stand (nichts geändert), Skript (geändert), Skript noch einmal
+(nichts geändert, `geaendert_am` gleich), Rücknahme (zurück), Skript (geändert) — danach unterschied
+sich die Struktur vom Stand davor nur in den drei Mustern ([`tasks.md`](tasks.md) §9.7).
+
 ### Abgleich mit dem Repository *(21.10.2026)*
 
 **Was trägt:**

@@ -9,9 +9,38 @@ Tags und die Definition of Done für ein Release stehen in
 
 ### Neu
 
+- `scripts/werk-abladestelle-schluessel-leerzeichen.sql` mit Rücknahme
+  `scripts/werk-abladestelle-schluessel-leerzeichen-ruecknahme.sql`: setzt das Muster der drei
+  Schlüsselteile von `WERK_ABLADESTELLE` auf `^(?:[^/,\p{Z}]| ){1,35}$`, idempotent, mit drei
+  Wachen. Lukas führt es in der Produktion aus, **erst nach dem Deployment dieser Version**
+  ([`docs/betrieb.md`](docs/betrieb.md) §7a E, F42). Auf der Testkopie gelaufen am 23.10.2026
+  (E‑1145).
+
 ### Geändert
 
+- **Leerzeichen im Schlüssel des Auftrags „Anpassen der Werk-/Abladestellentabelle“**
+  (Entscheidung des Auftraggebers vom 21.10.2026, Rückfragen am 23.10.2026; E‑1136 bis E‑1145,
+  [`docs/tasks.md`](docs/tasks.md) §2). Grund: Die Plattform verarbeitet Schlüssel mit Leerzeichen
+  bereits, der Monitor lehnte sie ab. Erlaubt ist U+0020 im Innern eines Schlüsselteils, auch mehrere
+  hintereinander, zeichengenau. **Das Backend kürzt jeden Schlüsselteil vor der Prüfung um
+  Leerzeichen am Rand**, an genau einer Stelle (`AuftragsPruefung`), für Neuanlage, Anpassung und
+  Löschung gleich; gespeichert, in den Parametertext gebaut und auf der Karte gezeigt wird die
+  gekürzte Fassung. Tabulator, Zeilenumbruch, U+00A0 und jedes andere Leerzeichen bleiben
+  unzulässig. Ändert E‑1012 („kein Leerraum“). Das Kürzen gilt für die Schlüsselteile jedes Typs, eine
+  Option in der Definition gibt es dafür nicht (E‑1144).
+- Die Werkzeugbeschreibung des Assistenten sagt für jeden Typ mit Schlüssel, dass Schlüsselteile
+  zeichengenau mit jedem Leerzeichen übergeben werden (F41). Der Testsatz hat drei Fälle mehr, S19
+  bis S21 als Gruppe 15 ([`docs/assistent.md`](docs/assistent.md) §8).
+- Karte und „Ihre Aufträge“ zeigen Schlüssel mit erhaltenen Leerzeichen (`white-space: pre-wrap`,
+  in der zugeklappten Zeile `pre`, F39), ohne Ersatzzeichen.
+- [`docs/task-schnittstelle.md`](docs/task-schnittstelle.md) §8: Ein Schlüsselteil kann Leerzeichen
+  enthalten, nie am Rand. Statements und Ablauf der Plattform sind unverändert.
+
 ### Behoben
+
+- Ein geschütztes Leerzeichen (U+00A0) oder ein anderes Unicode-Leerzeichen in einem Schlüsselteil
+  von `WERK_ABLADESTELLE` wurde angenommen, obwohl E‑1012 „kein Leerraum“ verlangte: Das alte Muster
+  `^[^ /,]{1,35}$` sperrte nur U+0020. Jetzt `FORMAT` (E‑1142).
 
 ## 1.1.0 (21.10.2026)
 
