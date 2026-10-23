@@ -1,6 +1,6 @@
 {
   "name": "WERK_ABLADESTELLE",
-  "description": "Reicht einen Vorschlag für den Auftrag „Anpassen der Werk-/Abladestellentabelle“ ein. Rufe dieses Werkzeug, sobald die Angaben des Kunden vollständig sind. Das Backend prüft den Vorschlag: Meldet es Fehler, erkläre sie dem Kunden und frage nach; ist er gültig, sieht der Kunde ihn als Karte und legt den Auftrag dort selbst an. Felder ohne Wert lässt du weg. Werte übergibst du als Text, genau so, wie der Kunde sie nennt. Der Schlüssel eines Eintrags besteht aus Lieferantennummer, Werk, Abladestelle, in dieser Reihenfolge. Schreibt der Kunde einen Schlüssel zusammengesetzt mit dem Trenner „/“, zerlegst du ihn ohne Rückfrage in diese Felder in ihrer Reihenfolge; fehlt ein Teil, ist es der optionale erste (Lieferantennummer).",
+  "description": "Reicht einen Vorschlag für den Auftrag „Anpassen der Werk-/Abladestellentabelle“ ein. Rufe dieses Werkzeug, sobald die Angaben des Kunden vollständig sind. Das Backend prüft den Vorschlag: Meldet es Fehler, erkläre sie dem Kunden und frage nach; ist er gültig, sieht der Kunde ihn als Karte und legt den Auftrag dort selbst an. Felder ohne Wert lässt du weg. Werte übergibst du als Text, genau so, wie der Kunde sie nennt. Der Schlüssel eines Eintrags besteht aus Lieferantennummer, Werk, Abladestelle, in dieser Reihenfolge. Schreibt der Kunde einen Schlüssel zusammengesetzt mit dem Trenner „/“, zerlegst du ihn ohne Rückfrage in diese Felder in ihrer Reihenfolge; fehlt ein Teil, ist es der optionale erste (Lieferantennummer). Schlüsselteile übergibst du zeichengenau, mit jedem Leerzeichen, auch mehreren hintereinander; Leerzeichen am Anfang und Ende entfernt das Backend.",
   "input_schema": {
     "type": "object",
     "properties": {
@@ -19,15 +19,15 @@
           "properties": {
             "lieferantennummer": {
               "type": "string",
-              "description": "Lieferantennummer. Optional. Format (regulärer Ausdruck für den ganzen Wert): `^[^ /,]{1,35}$`. Beispiel: 0101159903."
+              "description": "Lieferantennummer. Optional. Format (regulärer Ausdruck für den ganzen Wert): `^(?:[^/,\\p{Z}]| ){1,35}$`. Beispiel: 0101159903."
             },
             "werk": {
               "type": "string",
-              "description": "Werk. Pflichtfeld. Format (regulärer Ausdruck für den ganzen Wert): `^[^ /,]{1,35}$`. Beispiel: 72332."
+              "description": "Werk. Pflichtfeld. Format (regulärer Ausdruck für den ganzen Wert): `^(?:[^/,\\p{Z}]| ){1,35}$`. Beispiel: 72332."
             },
             "abladestelle": {
               "type": "string",
-              "description": "Abladestelle. Pflichtfeld. Format (regulärer Ausdruck für den ganzen Wert): `^[^ /,]{1,35}$`. Beispiel: DDB0."
+              "description": "Abladestelle. Pflichtfeld. Format (regulärer Ausdruck für den ganzen Wert): `^(?:[^/,\\p{Z}]| ){1,35}$`. Beispiel: DDB0."
             },
             "sndprn": {
               "type": "string",

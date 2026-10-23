@@ -727,6 +727,70 @@
           ]
         }
       }
+    },
+    {
+      "kennung": "S19",
+      "herkunft": "synthetisch",
+      "gruppe": 15,
+      "beschreibung": "Löschung, beide Schlüsselteile mit einem Leerzeichen im Innern: ein Vorschlag mit den Werten, wie geschrieben (E‑1136)",
+      "nachrichten": [
+        "Bitte den Eintrag HALLE 2/TOR 3 löschen."
+      ],
+      "erwartet": {
+        "vorschlag": {
+          "typ": "WERK_ABLADESTELLE",
+          "aktion": "Löschung",
+          "eintraege": [
+            {
+              "werk": "HALLE 2",
+              "abladestelle": "TOR 3"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "kennung": "S20",
+      "herkunft": "synthetisch",
+      "gruppe": 15,
+      "beschreibung": "Neuanlage, Werk mit zwei Leerzeichen hintereinander: Sie bleiben beide stehen, nichts wird zusammengezogen (E‑1138)",
+      "nachrichten": [
+        "Bitte neu anlegen: HALLE  2/DDB0 mit SNDPRN 120764. Zwischen HALLE und 2 stehen zwei Leerzeichen."
+      ],
+      "erwartet": {
+        "vorschlag": {
+          "typ": "WERK_ABLADESTELLE",
+          "aktion": "Neuanlage",
+          "eintraege": [
+            {
+              "werk": "HALLE  2",
+              "abladestelle": "DDB0",
+              "sndprn": "120764"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "kennung": "S21",
+      "herkunft": "synthetisch",
+      "gruppe": 15,
+      "beschreibung": "Löschung, Leerzeichen um den Trenner: Die Karte trägt die gekürzten Teile (E‑1137, E‑1143)",
+      "nachrichten": [
+        "Bitte den Eintrag 72332 / DDB0 löschen."
+      ],
+      "erwartet": {
+        "vorschlag": {
+          "typ": "WERK_ABLADESTELLE",
+          "aktion": "Löschung",
+          "eintraege": [
+            {
+              "werk": "72332",
+              "abladestelle": "DDB0"
+            }
+          ]
+        }
+      }
     }
   ]
 }

@@ -315,7 +315,12 @@ function Zeile({
               className="text-beiwerk min-w-0 flex-1 truncate"
               title={undWeitere === null ? schluessel : `${schluessel} ${undWeitere}`}
             >
-              <span className="font-mono">{schluessel}</span>
+              {/*
+               * Leerzeichen im Schlüssel bleiben stehen (E‑1141): `pre`, nicht
+               * `pre-wrap` — die Zeile ist einzeilig gekürzt (E‑1102), und
+               * `pre-wrap` bräche sie an den Leerzeichen um (F39).
+               */}
+              <span className="font-mono whitespace-pre">{schluessel}</span>
               {undWeitere === null ? null : ` ${undWeitere}`}
             </span>
           )}
@@ -471,14 +476,15 @@ function Eintrag({
 
   return (
     <li className={cn("rounded-md px-2 py-1", ergebnis === null ? "" : ergebnisFlaeche(ergebnis))}>
-      <p className="font-mono break-all">
+      {/* Leerzeichen in Schlüssel und Werten bleiben stehen, auch mehrere (E‑1141). */}
+      <p className="font-mono break-all whitespace-pre-wrap">
         {eintrag.schluessel ?? einsetzen(t.eintrag, { nummer: formatiereZahl(nummer, sprache) })}
       </p>
       <dl className="flex flex-wrap gap-x-3">
         {beschrifteteWerte(felder, eintrag.werte).map((wert) => (
           <div key={wert.name} className="flex gap-1">
             <dt className="text-muted-foreground">{wert.label}</dt>
-            <dd className="font-mono break-all">{wert.wert}</dd>
+            <dd className="font-mono break-all whitespace-pre-wrap">{wert.wert}</dd>
           </div>
         ))}
       </dl>

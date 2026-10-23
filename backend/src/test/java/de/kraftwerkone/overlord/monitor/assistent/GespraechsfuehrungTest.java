@@ -150,6 +150,25 @@ class GespraechsfuehrungTest {
   }
 
   @Test
+  @DisplayName(
+      "Leerzeichen im Schluessel: Die Karte traegt die gekuerzten Teile, innen bleibt alles")
+  void karte_traegt_gekuerzte_schluesselteile() {
+    modell
+        .werkzeug(
+            WERK,
+            """
+            {"aktion":"Löschung","eintraege":[{"werk":"  A  1 ","abladestelle":" DDB0"}]}
+            """)
+        .text("Bitte prüfen Sie die Karte.");
+
+    Vorschlag vorschlag = fuehre("A  1 / DDB0 löschen").vorschlag();
+
+    Vorschlag.Eintrag eintrag = vorschlag.eintraege().getFirst();
+    assertThat(eintrag.werte()).containsEntry("werk", "A  1").containsEntry("abladestelle", "DDB0");
+    assertThat(eintrag.schluessel()).isEqualTo("A  1/DDB0");
+  }
+
+  @Test
   @DisplayName("Nach drei Werkzeugrunden ist Schluss: feste Antwort, keine Karte, Verlauf kurz")
   void abbruch_nach_drei_runden() {
     modell

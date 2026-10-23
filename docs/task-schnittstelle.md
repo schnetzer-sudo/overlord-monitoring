@@ -8,6 +8,11 @@ Hintergrund und Entscheidungen stehen auf Seiten des Monitors in [`tasks.md`](ta
 will. **Für die Plattform ändert sich dadurch nichts** — §3a sagt, warum. Die vier Statements in §3
 sind unverändert.
 
+*Geändert am 23.10.2026:* **Ein Schlüssel von `WERK_ABLADESTELLE` kann Leerzeichen enthalten**, im
+Innern eines Schlüsselteils und auch mehrere hintereinander, nie am Rand eines Teils (§8). Die
+Plattform verarbeitet solche Schlüssel nach Auskunft des Auftraggebers bereits; Statements, Spalten
+und Ablauf sind unverändert.
+
 ---
 
 ## 1. Worum es geht
@@ -182,8 +187,21 @@ freigeschaltet; bis dahin für `NEXANS` und `IBIS` ([`tasks.md`](tasks.md) §3.9
 
 Ein Eintrag besteht aus einem **Schlüssel** und zwei Werten. Der Schlüssel ist `Werk/Abladestelle`
 oder `Lieferantennummer/Werk/Abladestelle`, Trenner `/`. Die Werte sind **SNDPRN** und
-**SNDPRN_4908**, jeweils leer oder sechs Ziffern. Kein Schlüsselteil enthält `/`, `,` oder
-Leerraum; jeder ist 1 bis 35 Zeichen lang, Groß- und Kleinschreibung wie eingegeben.
+**SNDPRN_4908**, jeweils leer oder sechs Ziffern. Kein Schlüsselteil enthält `/` oder `,`; jeder ist
+1 bis 35 Zeichen lang, Groß- und Kleinschreibung wie eingegeben.
+
+**Leerzeichen im Schlüssel** *(seit 23.10.2026)*: Ein Schlüsselteil kann Leerzeichen (U+0020)
+enthalten, auch mehrere hintereinander — **zeichengenau so, wie sie im Parametertext stehen**. Am
+Rand eines Teils steht nie eines: Der Monitor entfernt sie vor dem Speichern, also auch direkt vor
+und nach dem `/`. Jedes andere Leerzeichen (Tabulator, geschütztes Leerzeichen U+00A0 und alle
+übrigen) kommt nicht vor. Die Plattform trennt eine Zeile also weiter nur an `,` und den Schlüssel
+nur an `/`; ein Leerzeichen gehört zum Wert und wird nicht gekürzt oder zusammengezogen.
+
+```
+Aktion=Löschung
+HALLE 2/TOR  3
+0101 159903/22/001N0
+```
 
 | Aktion | Zeile je Eintrag |
 |---|---|

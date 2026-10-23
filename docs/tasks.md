@@ -21,6 +21,13 @@ A2 bis A4 (§8).
 > Freischaltungen für `NEXANS` und `IBIS` aus `V100` zurück. Die Entscheidungen stehen in §2 unter
 > „Zusammenführung und Freischaltung“.
 
+> **Geändert am 23.10.2026** (Zweig `fix/auftrag-schluessel-leerzeichen`): **Der Schlüssel von
+> `WERK_ABLADESTELLE` darf Leerzeichen enthalten.** Das Backend kürzt jeden Schlüsselteil vor der
+> Prüfung um Leerzeichen am Rand (§5.3), das Muster der drei Teile lässt U+0020 im Innern zu und
+> kein anderes Leerzeichen (§4.3). Die Definition ändert ein Skript, keine Migration
+> (`scripts/werk-abladestelle-schluessel-leerzeichen.sql`). Die Entscheidungen stehen in §2 unter
+> „Leerzeichen im Schlüssel“, die Tests in §9.7.
+
 ---
 
 ## 1. Zweck und Ablauf
@@ -93,7 +100,7 @@ Diese Regeln stehen als Werte in seiner Definition, nicht im Code (§4).
 |---|---|---|
 | **E‑1007** | Anpassung: Ein leeres SNDPRN-Feld bedeutet „Wert wird entfernt“. Mindestens einer der beiden Werte muss gesetzt bleiben. Die Bedeutung steht in Beschreibung und Plattformvertrag; der Monitor prüft nur die Regel „mindestens eins“. | A |
 | **E‑1008** | Neuanlage mit vorhandenem Schlüssel: Eintrag bleibt unverändert, Rückgabe `Schlüssel bereits vorhanden`. Das ist ein dritter Rückgabewert über Anhang A hinaus. | A |
-| **E‑1012** | Schlüsselteile: 1 bis 35 Zeichen, kein Leerraum, kein `/`, kein `,`. Groß- und Kleinschreibung bleiben wie eingegeben. Die 35 sind eine technische Schranke, keine fachliche Regel. | V |
+| **E‑1012** | Schlüsselteile: 1 bis 35 Zeichen, kein Leerraum, kein `/`, kein `,`. Groß- und Kleinschreibung bleiben wie eingegeben. Die 35 sind eine technische Schranke, keine fachliche Regel. **Geändert am 23.10.2026 durch E‑1136, E‑1142 und E‑1143:** Leerzeichen (U+0020) im Innern sind erlaubt, am Rand kürzt das Backend; jedes andere Leerzeichen bleibt unzulässig. Die 35 gelten für den gekürzten Teil. | V |
 | **E‑1013** | SNDPRN und SNDPRN_4908: leer oder genau sechs Ziffern. | A (Anhang A) |
 | **E‑1014** | Doppelte Schlüssel innerhalb eines Auftrags werden abgelehnt. | V |
 | **E‑1015** | Höchstens 50 Einträge je Auftrag. **Abgelöst am 16.10.2026 durch E‑1058** (20 statt 50). | A (16.10.2026) |
@@ -181,6 +188,43 @@ in A2 bis A4; die F-Nummern setzen F29 fort.
 | **F37** | **Die Zeitgrenze der `/api`-Weiterleitung ist 300 s** (`experimental.proxyTimeout` in `frontend/next.config.ts`) statt der Vorgabe von 30 s. | Ohne Streaming dauert eine Nachricht im ungünstigsten Fall 244 s ([`betrieb.md`](betrieb.md) §5a) |
 | **F38** | **Zweige nach dem Zusammenführen:** `fix/<thema>` und `feat/<thema>` von `main`, zurück mit `--no-ff` ([`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) §12). | Der Auftrag legt eine Linie fest, aber keine Zweignamen; das ist die Praxis vor 1.0.0 |
 
+### Leerzeichen im Schlüssel (23.10.2026)
+
+Aus dem Auftrag „Leerzeichen im Schlüssel des Abladestellen-Auftrags“ (Zweig
+`fix/auftrag-schluessel-leerzeichen`). Die E‑Nummer ist `E‑1135` plus die Nummer der Entscheidung
+dort (E‑1136 bis E‑1141); die vier Rückfragen folgen als E‑1142 bis E‑1145, die bestätigten
+Festlegungen der Umsetzung als E‑1146 bis E‑1149. Die nächste freie Nummer war E‑1136, per `grep` über
+alle Zweige geprüft. Herkunft: **A** = vom Auftraggeber entschieden, am
+21.10.2026 (Auftrag) oder am 23.10.2026 (Rückfragen). Anlass: Die Plattform verarbeitet Schlüssel
+mit Leerzeichen bereits; angepasst wird nur der Monitor.
+
+| E | Entscheidung | Herkunft |
+|---|---|---|
+| **E‑1136** | **Der Schlüssel von `WERK_ABLADESTELLE` darf Leerzeichen enthalten.** Erlaubt ist U+0020. Tabulator, Zeilenumbruch und das geschützte Leerzeichen U+00A0 sind unzulässig. Ändert E‑1012. | A |
+| **E‑1137** | **Rand:** Leerzeichen am Anfang und Ende werden entfernt, bevor der Auftrag gespeichert wird — nur U+0020. `String.trim()` und `strip()` passen nicht: Sie entfernten auch andere Zeichen und ließen so eine sonst abgelehnte Eingabe durch. Erst kürzen, dann die erlaubten Zeichen prüfen. | A |
+| **E‑1138** | **Innen** zeichengenau, auch mehrere Leerzeichen hintereinander. Kein Zusammenziehen. | A |
+| **E‑1139** | Nach dem Kürzen leer heißt ungültig, wie ein fehlender Wert. | A |
+| **E‑1140** | Dieselbe Regel für Neuanlage, Anpassung und Löschung, damit alle drei dieselbe Form an die Plattform geben. | A |
+| **E‑1141** | **Verbindlich ist das Backend, an genau einer Stelle.** Das Modell übergibt den Schlüssel so, wie der Kunde ihn nennt, und kürzt nicht selbst. Die Karte zeigt den gekürzten Schlüssel, also das, was gespeichert wird. Kein Kürzen im Frontend und im Modell. Wo ein Schlüssel erscheint, zieht der Browser Leerzeichen nicht zusammen; keine Ersatzzeichen wie `·`. | A |
+| **E‑1142** | **Nur U+0020 als Leerzeichen, über das Muster der Typdefinition:** `^(?:[^/,\p{Z}]\| ){1,35}$` an allen drei Schlüsselteilen. Es lehnt jedes Zeichen der Unicode-Kategorie Z außer U+0020 ab (U+00A0, U+202F, U+3000 …), mit `FORMAT`. Gesetzt per `JSON_SET`, das den Backslash im JSON maskiert (§3.5). | A (Rückfrage: E‑1012 sagte „kein Leerraum“, das alte Muster `^[^ /,]{1,35}$` sperrte aber nur U+0020 — U+00A0 und andere Leerzeichen gingen still durch) |
+| **E‑1143** | **Gekürzt wird je Schlüsselteil**, nicht nur am Rand des zusammengesetzten Schlüssels. Die 1 bis 35 Zeichen gelten für den gekürzten Teil. Folge: Leerzeichen am Trenner fallen weg (`72332 / DDB0` wird `72332/DDB0`), und eine Lieferantennummer nur aus Leerzeichen fehlt — der Schlüssel ist dann zweiteilig. | A (Rückfrage: Der Schlüssel besteht aus drei Feldern, geprüft wird je Feld) |
+| **E‑1144** | **Das Kürzen ist eine Regel für die Schlüsselteile jedes Typs**, keine Option der Definition (§3.2). Kein Code nennt einen Typ (E‑1018). | A (Rückfrage) |
+| **E‑1145** | **Das Skript läuft auf der Testkopie**, die Produktion bekommt es von Lukas nach dem Deployment (§4.3, [`betrieb.md`](betrieb.md) §7a E). Auf der Testkopie gelaufen am 23.10.2026 (§9.7). | A (Rückfrage: Ohne den Lauf hingen `TestsatzDefinitionDbIT` und die Prüfung des Assistenten am alten Muster) |
+
+**Festlegungen der Umsetzung.** Vorgeschlagen als F39 bis F42, die F-Nummern setzen F38 fort.
+
+> **Bestätigt am 23.10.2026** (Auftraggeber): F39 bis F42 sind **E‑1146 bis E‑1149**, im Anschluss
+> an die letzte vergebene Nummer (E‑1145). Die F-Nummer steht in Klammern dahinter, damit Verweise
+> von vorher auffindbar bleiben. E‑1146 bis E‑1149 waren auf keinem Zweig vergeben, per `grep`
+> geprüft.
+
+| E (F) | Festlegung | Grund |
+|---|---|---|
+| **E‑1146** (F39) | **Die zugeklappte Zeile in „Ihre Aufträge“ zeigt die Schlüssel mit `white-space: pre`**, nicht mit `pre-wrap`; aufgeklappt, auf der Karte und an den Werten gilt `pre-wrap` ([`assistent-frontend.md`](assistent-frontend.md) §12.6). | Die Zeile ist einzeilig mit Auslassung gekürzt (E‑1102). `pre-wrap` bräche sie an den Leerzeichen um, die Auslassung fiele weg. `pre` hält die Leerzeichen und die eine Zeile |
+| **E‑1147** (F40) | **`AuftragsPruefung.pruefe` gibt die gekürzten Einträge mit den Fehlern zurück** (`AuftragsPruefung.Ergebnis`). Anlegen, `POST /api/tasks/pruefung` und der Vorschlag des Assistenten nehmen die Einträge daraus; die Kürzung selbst steht nur dort. | Die eine Stelle aus E‑1141: Wer prüft, bekommt die geltende Fassung mit. Ein getrenntes „kürzen, dann prüfen“ ließe einen Aufrufer prüfen und die ungekürzte Fassung speichern |
+| **E‑1148** (F41) | **Die Werkzeugbeschreibung sagt für jeden Typ mit Schlüssel:** „Schlüsselteile übergibst du zeichengenau, mit jedem Leerzeichen, auch mehreren hintereinander; Leerzeichen am Anfang und Ende entfernt das Backend.“ Die Beschreibung des Typs in `task_type` bleibt unverändert ([`assistent.md`](assistent.md) §4.5). | Die Regel gilt für alle Schlüssel (E‑1144), also gehört der Satz in den Werkzeugbau und nicht in einen Typ. Ein Modell neigt dazu, doppelte Leerzeichen zusammenzuziehen |
+| **E‑1149** (F42) | **Die Typdefinition ändert ein Skript mit Rücknahme**, keine Migration. **Reihenfolge Pflicht:** erst die Version mit dem Kürzen ausrollen, dann das Skript; wer danach auf ein JAR ohne Kürzen zurückgeht, nimmt vorher das Skript zurück. Das Skript kann die Version nicht prüfen. | E‑1019: Definitionen kommen per SQL in die Produktion. Mit dem neuen Muster und ohne Kürzen nähme 1.1.0 Leerzeichen am Rand mit in Auftrag und Parametertext |
+
 ---
 
 ## 3. Auftragstypen definieren
@@ -220,7 +264,7 @@ wirkungslos zu bleiben.
 | `aktionen` | Liste der Aktionen in Klartext, 1 bis 10, eindeutig, je 1 bis 64 Zeichen, ohne Zeilenumbruch und Steuerzeichen. Sie stehen so in der Kopfzeile des Parametertexts |
 | `maxEintraege` | Höchstzahl Einträge je Auftrag, ganze Zahl von 1 bis 500 |
 | `felder` | Liste der Felder, mindestens eines. Je Feld: `name` (Pflicht, `[a-z][a-z0-9]*`, eindeutig, nicht `schluessel`), `label` (Pflicht, nicht leer — so nennt der Klartext einer Prüfmeldung das Feld), `pflicht` (`true` oder `false`, Vorgabe `false`; gilt bei den Aktionen, bei denen das Feld vorkommt), `muster` (regulärer Ausdruck nach Java, den der **ganze** Wert erfüllen muss, optional), `nurBei` (Liste von Aktionen, optional, nicht leer; außerhalb davon ist das Feld verboten), `beispiel` und `hinweis` (optional, Text, für den Assistenten) |
-| `schluessel` | `felder` (Liste von Feldnamen in Reihenfolge, mindestens einer, ohne `nurBei`) und `trenner` (genau ein Zeichen, kein Zeilenumbruch, kein Steuerzeichen). **Nur der erste Teil darf ein Feld ohne `pflicht` sein**, und mindestens ein Teil muss `pflicht` sein. Fehlt der Wert des ersten Teils, entfällt er mit seinem Trenner |
+| `schluessel` | `felder` (Liste von Feldnamen in Reihenfolge, mindestens einer, ohne `nurBei`) und `trenner` (genau ein Zeichen, kein Zeilenumbruch, kein Steuerzeichen). **Nur der erste Teil darf ein Feld ohne `pflicht` sein**, und mindestens ein Teil muss `pflicht` sein. Fehlt der Wert des ersten Teils, entfällt er mit seinem Trenner. **Jeder Teil wird vor der Prüfung um Leerzeichen (U+0020) am Rand gekürzt**, bei jedem Typ; eine Option dafür gibt es nicht (§5.3, E‑1144). Ob ein Leerzeichen im Innern zulässig ist, entscheidet das `muster` |
 | `regeln` | Liste aus dem festen Satz in §3.3 |
 | `zeile` | je Aktion genau eine Vorlage für die Zeile eines Eintrags, keine für eine unbekannte Aktion. Platzhalter `{feldname}` und `{schluessel}`; ein fehlender Wert wird zu leerem Text. Außerhalb eines Platzhalters keine geschweifte Klammer, kein Zeilenumbruch, kein Steuerzeichen |
 | `rueckgaben` | `ok` (der Wert, der Erfolg heißt; Pflicht, nicht leer) und `weitere` (Liste bekannter anderer Werte, optional). Kein Wert mit Leerraum am Rand oder mit Zeilenumbruch — die Rückgabe wird zeilenweise und ohne Leerraum am Rand verglichen (§5.4) |
@@ -281,7 +325,9 @@ Unabhängig von jedem `muster` lehnt das Backend in **jedem** Wert ab (E‑1022,
 Bei `WERK_ABLADESTELLE` sind das außer Umbrüchen und Steuerzeichen `,` und `/`. Ein Wert kann den
 Parametertext damit nicht in zusätzliche Zeilen oder Spalten zerlegen, auch wenn die Definition ein
 Muster vergisst. Das `muster` bleibt trotzdem die fachliche Prüfung: Ein Leerzeichen etwa ist kein
-Steuerzeichen und fällt nur über das Muster (`FORMAT`).
+Steuerzeichen und fällt nur über das Muster (`FORMAT`), ebenso das geschützte Leerzeichen U+00A0
+und jedes andere aus der Unicode-Kategorie Z. Bei `WERK_ABLADESTELLE` lässt das Muster der
+Schlüsselteile seit dem 23.10.2026 U+0020 zu und kein anderes (§4.3, E‑1142).
 
 ### 3.5 Muster ohne Backslash
 
@@ -289,6 +335,13 @@ Steuerzeichen und fällt nur über das Muster (`FORMAT`).
 einem SQL-Text den Backslash als Escapezeichen: Aus `\\d` im JSON würde beim Einfügen `\d`, das ist
 kein gültiges JSON, und die Prüfung `JSON_VALID` wiese die Zeile ab. Tabulator und Zeilenumbruch
 muss ein Muster nicht abwehren, das tut die Zeichenprüfung (§3.4).
+
+**Braucht ein Muster doch einen Backslash** — etwa `\p{Z}` für alle Unicode-Leerzeichen, wofür es
+keine Schreibweise ohne gibt —, setzt ihn `JSON_SET` mit einem SQL-Text als Wert statt eines
+JSON-Texts: `JSON_SET` maskiert den Backslash im JSON selbst. Den Backslash im SQL-Text baut
+`CHAR(92 USING utf8mb4)`, dann hängt das Skript nicht am `sql_mode` (`NO_BACKSLASH_ESCAPES`). So
+macht es `scripts/werk-abladestelle-schluessel-leerzeichen.sql` (E‑1142); `TaskMigrationDbIT` hält
+fest, dass genau ein Backslash ankommt.
 
 Muster sind reguläre Ausdrücke nach `java.util.regex.Pattern` und müssen auf den **ganzen** Wert
 passen (`matches`); `^` und `$` schaden nicht und machen das sichtbar.
@@ -509,8 +562,13 @@ Ok
   Plattformvertrag; der Monitor prüft nur „mindestens eins“.
 - **Neuanlage mit vorhandenem Schlüssel (E‑1008):** Eintrag bleibt unverändert, Rückgabe
   `Schlüssel bereits vorhanden` — ein dritter Rückgabewert über die Quelle hinaus.
-- **Schlüsselteile (E‑1012):** 1 bis 35 Zeichen, kein Leerraum, kein `/`, kein `,`; Groß- und
-  Kleinschreibung bleiben wie eingegeben. Die 35 sind eine technische Schranke (Punkt 1002).
+- **Schlüsselteile (E‑1012, geändert durch E‑1136 bis E‑1143):** 1 bis 35 Zeichen, kein `/`, kein
+  `,`; Groß- und Kleinschreibung bleiben wie eingegeben. **Leerzeichen (U+0020) sind erlaubt**, auch
+  mehrere hintereinander, und bleiben zeichengenau. Am Rand kürzt das Backend sie vor der Prüfung,
+  je Teil; die 35 gelten für den gekürzten Teil. Jedes andere Leerzeichen — Tabulator, Umbruch,
+  U+00A0, U+202F, U+3000 — ist unzulässig. Ein Teil nur aus Leerzeichen fehlt: Bei Werk und
+  Abladestelle ist das `PFLICHT_FEHLT`, eine solche Lieferantennummer entfällt, und der Schlüssel ist
+  zweiteilig. Die 35 sind eine technische Schranke (Punkt 1002).
 - **SNDPRN und SNDPRN_4908 (E‑1013):** leer oder genau sechs Ziffern.
 - **Doppelte Schlüssel (E‑1014)** innerhalb eines Auftrags werden abgelehnt.
 - **Höchstens 20 Einträge (E‑1058).** Bis zur Migration `V101` waren es 50 (E‑1015).
@@ -528,15 +586,26 @@ Ok
   **Seit 1.1.0 ausschließlich für `SYSTEM`** (E‑1125): `V103` nimmt die beiden Freischaltungen
   zurück, das Skript aus §3.9 schaltet `SYSTEM` frei.
 
-### 4.3 Die Definition, Stand nach der Migration `V102`
+### 4.3 Die Definition, Stand nach `V102` und dem Skript vom 23.10.2026
 
 > **Geändert am 16.10.2026 mit `V101` und `V102`.** `V100` hat den Typ mit `maxEintraege` 50
 > und einer kürzeren Beschreibung angelegt und ist unverändert. `V101` setzt `maxEintraege` per
 > `JSON_SET` auf 20 (E‑1058) und schreibt die Beschreibung neu: „bis zu 20 Einträge“ statt
 > „bis zu 50“ und der Satz zur Anpassung mit nur einem Wert (§4.2). `V102` schreibt die
 > Beschreibung noch einmal neu, mit dem Absatz zu „neu oder ändern“ (E‑1061, §4.2); die
-> Struktur ändert sie nicht. Was hier steht, ist der Stand nach `V102`; Aufträge von vorher
-> tragen ihre Kopie (E‑1023).
+> Struktur ändert sie nicht. Aufträge von vorher tragen ihre Kopie (E‑1023).
+
+> **Geändert am 23.10.2026 per Skript, nicht per Migration** (E‑1136, E‑1142, F42).
+> [`scripts/werk-abladestelle-schluessel-leerzeichen.sql`](../scripts/werk-abladestelle-schluessel-leerzeichen.sql)
+> setzt per `JSON_SET` das Muster der drei Schlüsselteile von `^[^ /,]{1,35}$` auf
+> `^(?:[^/,\p{Z}]| ){1,35}$`; sonst ändert es nichts, auch nicht die Beschreibung. Die Rücknahme
+> [`scripts/werk-abladestelle-schluessel-leerzeichen-ruecknahme.sql`](../scripts/werk-abladestelle-schluessel-leerzeichen-ruecknahme.sql)
+> setzt das alte Muster zurück. Beide sind idempotent, mit drei Wachen wie die Skripte aus §3.9
+> (eigenes Schema; Typ da und die ersten drei Felder sind die Schlüsselteile; jedes der drei Muster
+> ist das alte oder das neue). **Erst nach dem Deployment der Version mit dem Kürzen ausführen**
+> ([`betrieb.md`](betrieb.md) §7a E): 1.1.0 kürzt nicht und nähme mit dem neuen Muster Leerzeichen am
+> Rand mit in den Auftrag. Auf der Testkopie gelaufen am 23.10.2026 (§9.7, E‑1145). Was hier steht,
+> ist der Stand nach dem Skript.
 
 Name: **Anpassen der Werk-/Abladestellentabelle**, `aktiv = TRUE`.
 
@@ -546,11 +615,11 @@ Name: **Anpassen der Werk-/Abladestellentabelle**, `aktiv = TRUE`.
   "maxEintraege": 20,
   "felder": [
     { "name": "lieferantennummer", "label": "Lieferantennummer",
-      "muster": "^[^ /,]{1,35}$", "beispiel": "0101159903" },
+      "muster": "^(?:[^/,\\p{Z}]| ){1,35}$", "beispiel": "0101159903" },
     { "name": "werk", "label": "Werk", "pflicht": true,
-      "muster": "^[^ /,]{1,35}$", "beispiel": "72332" },
+      "muster": "^(?:[^/,\\p{Z}]| ){1,35}$", "beispiel": "72332" },
     { "name": "abladestelle", "label": "Abladestelle", "pflicht": true,
-      "muster": "^[^ /,]{1,35}$", "beispiel": "DDB0" },
+      "muster": "^(?:[^/,\\p{Z}]| ){1,35}$", "beispiel": "DDB0" },
     { "name": "sndprn", "label": "SNDPRN",
       "muster": "^[0-9]{6}$", "nurBei": ["Neuanlage", "Anpassung"], "beispiel": "120764",
       "hinweis": "Bei Anpassung heißt leer: der Wert wird entfernt." },
@@ -571,6 +640,11 @@ Name: **Anpassen der Werk-/Abladestellentabelle**, `aktiv = TRUE`.
   "rueckgaben": { "ok": "Ok", "weitere": ["Schlüssel nicht gefunden", "Schlüssel bereits vorhanden"] }
 }
 ```
+
+Im JSON steht der Backslash maskiert; das Muster der Schlüsselteile selbst ist
+`^(?:[^/,\p{Z}]| ){1,35}$`: 1 bis 35 Zeichen, jedes entweder U+0020 oder keines aus `/`, `,` und der
+Unicode-Kategorie Z. Es sieht den gekürzten Teil (§5.3). Tabulator und Umbruch passieren das Muster
+und fallen über die Zeichenprüfung (§3.4).
 
 Die Beschreibung (Fließtext für den Assistenten), wortgleich aus dem Auftrag an die
 Plattform-Entwicklung vom 16.10.2026, mit den beiden Änderungen aus `V101` und dem Absatz aus
@@ -690,7 +764,15 @@ Backend lehnt einen solchen Auftrag deshalb mit `ZU_LANG` ab, statt an der Daten
 
 ### 5.3 Prüfung eines Auftrags
 
-In dieser Reihenfolge, **alle Fehler gesammelt** statt beim ersten abzubrechen:
+**Zuerst werden die Schlüsselteile gekürzt** *(seit 23.10.2026, E‑1137, E‑1143, E‑1144)*: In
+jedem Eintrag verliert jedes Feld aus `schluessel.felder` Leerzeichen (U+0020) am Anfang und am
+Ende — nur dieses Zeichen; Tabulator, U+00A0 und alles andere bleiben stehen und fallen unten
+durch. Innen bleibt jedes Zeichen, auch mehrere Leerzeichen hintereinander. Alle Prüfungen sehen
+den gekürzten Wert, und **dieselbe Fassung wird gespeichert, in den Parametertext gebaut und dem
+Assistenten als Karte gezeigt**: `AuftragsPruefung.pruefe` gibt sie mit den Fehlern zurück
+(`AuftragsPruefung.Ergebnis`, F40). Das ist die einzige Stelle, an der gekürzt wird.
+
+Dann in dieser Reihenfolge, **alle Fehler gesammelt** statt beim ersten abzubrechen:
 
 1. Die Aktion ist eine der Aktionen der Definition (`AKTION_UNBEKANNT`).
 2. Die Zahl der Einträge liegt zwischen 1 und `maxEintraege` (`ZU_WENIGE_EINTRAEGE`,
@@ -701,8 +783,10 @@ In dieser Reihenfolge, **alle Fehler gesammelt** statt beim ersten abzubrechen:
    (`FORMAT`); kein Wert enthält ein Zeichen nach §3.4 (`UNZULAESSIGES_ZEICHEN`).
 4. Die Regeln der Definition (`MINDESTENS_EINS`, `DOPPELT`).
 
-`null` und leerer Text heißen gleichermaßen „fehlend“. **Sonst wird kein Wert verändert**, auch nicht
-um Leerraum gekürzt: `" 72332"` ist ein Wert mit Leerzeichen und fällt über das Muster. Ist die
+`null` und leerer Text heißen gleichermaßen „fehlend“; ein Schlüsselteil nur aus Leerzeichen ist nach
+dem Kürzen leer und fehlt also. **Sonst wird kein Wert verändert**: Ein Feld außerhalb des
+Schlüssels wird nicht gekürzt, `" 120764"` als SNDPRN ist ein Wert mit Leerzeichen und fällt über
+das Muster. Ist die
 Aktion unbekannt, entfallen die Prüfungen, die an der Aktion hängen (`nurBei`, `pflicht`, Regeln
 mit `bei`); alle übrigen laufen. Ein Wert, der zugleich das Muster verfehlt und ein verbotenes
 Zeichen trägt, bekommt beide Meldungen. `DOPPELT` steht am späteren der beiden Einträge.
@@ -998,7 +1082,7 @@ Damit sie nicht verloren gehen:
 | Test | Was er hält |
 |---|---|
 | `DefinitionsPruefungTest` | `WERK_ABLADESTELLE` und die Gattung sind gültig; je Prüfregel beim Laden (§3.6) mindestens ein ungültiger Fall — unbekannter Schlüssel auf jeder Ebene, fehlender Pflichtschlüssel, nicht übersetzbares Muster, Platzhalter ohne Feld, Aktion ohne Zeilenvorlage, optionaler Schlüsselteil nicht vorn, `maxEintraege` außerhalb der Grenzen, `rueckgaben.ok` fehlt oder steht in `weitere`; alle Gründe kommen zurück |
-| `AuftragsPruefungTest` | jeder Fehlercode aus §5.3 mindestens einmal; 35 und 36 Zeichen, fünf und sieben Ziffern, leere Liste, 20 und 21 Einträge (bis `V101`: 50 und 51), Schlüssel doppelt, Löschung mit SNDPRN, Anpassung mit beiden Werten leer, Leerzeichen (`FORMAT`) und Tabulator (`UNZULAESSIGES_ZEICHEN`) im Schlüsselteil; der Zeichenschutz an einem Feld ohne Muster (Trenner, Komma bzw. Zeichen jeder Vorlage, LF, CR, Steuerzeichen, `U+0085`, `U+2028`); die Gattung |
+| `AuftragsPruefungTest` | jeder Fehlercode aus §5.3 mindestens einmal; 35 und 36 Zeichen, fünf und sieben Ziffern, leere Liste, 20 und 21 Einträge (bis `V101`: 50 und 51), Schlüssel doppelt, Löschung mit SNDPRN, Anpassung mit beiden Werten leer, Tabulator (`UNZULAESSIGES_ZEICHEN`) im Schlüsselteil; seit 23.10.2026 die Leerzeichen im Schlüssel (§9.7); der Zeichenschutz an einem Feld ohne Muster (Trenner, Komma bzw. Zeichen jeder Vorlage, LF, CR, Steuerzeichen, `U+0085`, `U+2028`); die Gattung |
 | `ParametertextTest` | die drei Texte aus §5.2 zeichengenau, Zeilenende, die Gattung, Ersetzen in einem Durchgang |
 | `RueckgabeTest` | CRLF, abschließendes LF, Leerraum, unbekannter Wert, leere Zeile, fehlende Rückgabe |
 | `TaskStatusClassifierTest` | jede Zeile der Tabelle in §5.5, dazu falsche Zeilenzahl |
@@ -1016,10 +1100,10 @@ Parametertext arbeiten für sie richtig, ohne dass im Hauptcode etwas für sie s
 
 | Test | Was er hält |
 |---|---|
-| `AuftraegeDbIT` | Anlegen ergibt eine Zeile `OFFEN` mit `eingestellt_am`, Kopie der Definition, geordneten Einträgen, Parametertext, `angelegt_von` und genau einem Ereignis ohne Parametertext; Wiederholung mit derselben `anfrageId` (auch groß geschrieben, mit anderem Rumpf) gibt `200` und keinen zweiten Auftrag; Prüffehler im Fehlerformat; **simulierte Plattform** mit den vier Statements aus dem Vertrag: Erledigt, Teilweise erledigt (CRLF), Unstimmig, Fehlgeschlagen, doppeltes Abholen, Zurückmelden ohne Abholen; Zeitstempel nur auf vorhanden und Reihenfolge (T1) |
+| `AuftraegeDbIT` | Anlegen ergibt eine Zeile `OFFEN` mit `eingestellt_am`, Kopie der Definition, geordneten Einträgen, Parametertext, `angelegt_von` und genau einem Ereignis ohne Parametertext; Wiederholung mit derselben `anfrageId` (auch groß geschrieben, mit anderem Rumpf) gibt `200` und keinen zweiten Auftrag; Prüffehler im Fehlerformat; **simulierte Plattform** mit den vier Statements aus dem Vertrag: Erledigt, Teilweise erledigt (CRLF), Unstimmig, Fehlgeschlagen, doppeltes Abholen, Zurückmelden ohne Abholen; Zeitstempel nur auf vorhanden und Reihenfolge (T1); seit 23.10.2026 Leerzeichen im Schlüssel über Prüfung und Anlegen bis in Zeile und Parametertext, U+00A0 `400` (§9.7) |
 | `AuftraegeIsolationDbIT` | die vier Endpunkte: `NEXANS` gegen `IBIS`, `SUTTONS` ohne Freischaltung (`404` beim Anlegen, ununterscheidbar vom erfundenen Typ in Rumpf **und** Statements; leere Typliste), fremder Auftrag weder in der Liste noch einzeln (`404` gleich einer erfundenen Kennung, ein Statement), untergeschobenes `mandantId`, fremde `anfrageId`, ADMIN je aktivem Mandanten, Änderungszwang |
 | `TypdefinitionDbIT` | ein eigener Testtyp per SQL, ohne Neustart: inaktiv `404`, aktiviert in der Typliste, Änderung an `maxEintraege` wirkt beim nächsten Anlegen, ungültige Struktur nimmt ihn aus dem Angebot, ein Auftrag von vorher liest seine Kopie; `WERK_ABLADESTELLE` bleibt unberührt |
-| `TaskMigrationDbIT` | `JSON_VALID(struktur)` ist wahr; die Muster, in der Datenbank per `JSON_EXTRACT` herausgeholt, sind zeichengleich mit dem Auftrag; Struktur, Name und Beschreibung wie geschrieben, im Stand nach `V102` |
+| `TaskMigrationDbIT` | `JSON_VALID(struktur)` ist wahr; die Muster, in der Datenbank per `JSON_EXTRACT` herausgeholt, sind zeichengleich mit dem Auftrag; Struktur, Name und Beschreibung wie geschrieben, im Stand nach `V102` **und dem Skript vom 23.10.2026** — mit genau einem Backslash in `\p{Z}` (§3.5, §9.7) |
 | `IndexbestandDbIT` | die drei Tabellen und ihre Indizes in der Sollliste, in beide Richtungen — seit 1.1.0 auch auf `main`, ohne Ausnahme |
 | `AssistentOhneSchluesselDbIT` *(1.1.0)* | Start mit Schalter an und leerem Schlüssel: Der Kontext startet, `Sprachmodell` ist der abgeschaltete Ersatz, `verfuegbar: false` trotz Freischaltung; Eröffnen, Nachricht, Prüfen und Anlegen `404`, kein Auftrag; Liste und Typliste antworten |
 
@@ -1233,6 +1317,75 @@ entfernt worden, danach liefen `AssistentOhneSchluesselDbIT` und `AssistentIsola
 `AssistentIsolationDbIT` bleibt bei P1 und P2 grün, und das ist kein Loch: Für `SUTTONS` weist
 schon die Typauswahl ab, weil kein Typ freigeschaltet ist. Was nur die Freigabe abweist — ein
 freigeschalteter Mandant ohne Schlüssel —, prüft `AssistentOhneSchluesselDbIT`.
+
+### 9.7 Leerzeichen im Schlüssel (23.10.2026)
+
+**Bestand vor der Änderung** (Stand `main` = `9352d1a`). Hier wurde der Schlüssel geprüft oder
+beschrieben:
+
+| Stelle | Was dort stand |
+|---|---|
+| `overlord_monitor.task_type`, Zeile `WERK_ABLADESTELLE`, Spalte `struktur`, `$.felder[0..2].muster` | `^[^ /,]{1,35}$` an Lieferantennummer, Werk und Abladestelle (aus `V100`; `V101` und `V102` ändern es nicht). Lokal auf der Testkopie vorhanden, freigeschaltet nur für `SYSTEM` |
+| `AuftragsPruefung` | Muster (`FORMAT`) und Zeichenschutz (Cc, U+2028/9, Trenner); kein Kürzen, „kein Wert wird verändert“ |
+| `AuftragService.lege`, `.pruefe`; `Gespraechsfuehrung.beantworte`; `Vorschlag.aus` | prüften und nutzten die Werte unverändert |
+| `Werkzeugbau` | „Werte übergibst du als Text, genau so, wie der Kunde sie nennt“; das Muster in der Feldbeschreibung |
+| `assistent/anweisung.txt` | „ändere, ergänze oder kürze ihn nicht“ — unverändert geblieben |
+| `vorschlag-karte.tsx` | Werte mit `whitespace-pre-wrap`, die Überschrift mit dem Schlüssel ohne |
+| `auftraege-block.tsx` | Schlüssel und Werte ohne Regel für Leerraum |
+| E‑1012 (§2, §4.2), [`task-schnittstelle.md`](task-schnittstelle.md) §8 | „kein Leerraum“ |
+
+**Widerspruch, gemeldet und entschieden (E‑1142):** E‑1012 und der Plattformvertrag verlangten
+„kein Leerraum“, das Muster sperrte nur U+0020. U+00A0, U+202F, U+3000 und die übrigen
+Unicode-Leerzeichen gingen still durch; der Zeichenschutz (§3.4) erfasst nur Cc und die beiden
+Unicode-Trenner. **Der Ablauf** brauchte keinen Halt: Die Karte entsteht erst nach
+`AuftragsPruefung` (§5.3, [`assistent.md`](assistent.md) §1).
+
+**Skript auf der Testkopie** (E‑1145), MariaDB-Client 12.3 über die Standardeingabe wie in der
+Deployment-Routine ([`betrieb.md`](betrieb.md) §7a E). Zuerst die Zeile gesichert (Scratchpad, nicht
+eingecheckt). Mit falschem Vorgabeschema Abbruch an Wache 1 (Fehler `1231`). Dann fünf Läufe:
+Rücknahme auf dem alten Stand (nichts geändert, `geaendert_am` 19.10.2026 unverändert), Skript
+(`neu` 3), Skript noch einmal (nichts geändert, `geaendert_am` gleich), Rücknahme (`alt` 3), Skript
+(`neu` 3). Danach unterschied sich die Struktur vom gesicherten Stand **nur in den drei Mustern**
+(Textvergleich nach Ersetzen); `task/werk-abladestelle-struktur.json` ist zeichengleich aus der
+Datenbank übernommen.
+
+**Tests ohne Datenbank:** `./mvnw verify -Djooq.codegen.skip=true -DexcludedGroups=db` grün, **1.275
+Tests**. Neu oder geändert:
+
+| Test | Was er hält |
+|---|---|
+| `AuftragsPruefungTest`, Gruppe „Leerzeichen im Schlüssel“ (24 Fälle) | `A 1` angenommen und unverändert; `  A 1 ` wird `A 1`; `A  1` bleibt; nur Leerzeichen `PFLICHT_FEHLT` wie leer; eine Lieferantennummer nur aus Leerzeichen fehlt, der Schlüssel ist zweiteilig; je Teil gekürzt, auch am Trenner; `\tA1`, `A\n1`, ` \tA1 `, `A1\t` `UNZULAESSIGES_ZEICHEN`; U+00A0, U+2007, U+202F, U+3000 innen und am Rand `FORMAT`; 35 Zeichen mit Leerzeichen am Rand gehen, 36 innen nicht; Neuanlage, Anpassung und Löschung kürzen gleich; erst nach dem Kürzen gleich ist `DOPPELT` wie heute (E‑1014); `A 1` und `A  1` nicht doppelt; SNDPRN wird nicht gekürzt; die Gattung kürzt ihre Schlüsselteile und nur diese; ein `null`-Eintrag kommt leer zurück. Zwei alte Fälle („Leerzeichen `FORMAT`“, „kein Kürzen“) sind entfallen, einer nimmt jetzt U+00A0 statt des Leerzeichens |
+| `GespraechsfuehrungTest` | die Karte trägt `A  1`/`DDB0` aus `"  A  1 "` und `" DDB0"` |
+| `WerkzeugbauTest` | der Satz zu den Schlüsselteilen bei jedem Typ mit Schlüssel, bei keinem ohne; das Schema mit dem neuen Muster |
+| `TestsatzTest` | 21 Fälle in 15 Gruppen; jede erwartete Karte schon in gekürzter Form |
+
+**Tests mit Datenbank** gegen die Testkopie, 47 in sieben Klassen grün: `AuftraegeDbIT` (21, davon
+zwei neu: Prüfung frei, gespeichert und im Parametertext gekürzt, innen zeichengenau —
+`Aktion=Löschung\n0101 159903/A  1/DDB0\n72332/B 2`; U+00A0 ist `400 FORMAT` ohne Auftrag),
+`AuftraegeIsolationDbIT` (8), `AssistentIsolationDbIT` (14), `AssistentOhneSchluesselDbIT`,
+`TypdefinitionDbIT`, `TaskMigrationDbIT` (das neue Muster mit genau einem Backslash) und
+`TestsatzDefinitionDbIT`. Kein neuer Endpunkt, kein neuer Isolationstest, keine neue Abfrage auf
+`GlassfishDB`: Regel 7 greift nicht. Der volle DB-Lauf ist nicht gefahren.
+
+**Verletzungsproben**, je ein Eingriff, zurückgespielt aus einer Kopie, nicht per `git checkout`:
+
+| # | Eingriff | Rot |
+|---|---|---|
+| P1 | `AuftragsPruefung` kürzt nicht | 12 Fälle: elf der Gruppe „Leerzeichen im Schlüssel“, dazu der Kartenfall in `GespraechsfuehrungTest`; grün bleiben, wie erwartet, die Fälle, die nicht am Kürzen hängen |
+| P2 | `Gespraechsfuehrung` baut den Vorschlag aus den ungekürzten Einträgen | genau der Kartenfall in `GespraechsfuehrungTest` |
+| P3 | `AuftragService.lege` speichert die ungekürzten Einträge | genau `AuftraegeDbIT.leerzeichen_im_schluessel` (gespeichert wären `" 0101 159903/  A  1 /DDB0 "` und `"72332/ B 2"`) |
+
+Danach `AuftraegeDbIT`, `TaskMigrationDbIT` und `TestsatzDefinitionDbIT` auf dem zurückgespielten Code
+noch einmal grün. Der alte Failsafe-Bericht der Probe P3 hatte einen anschließenden Lauf mit
+`-DexcludedGroups=db` rot gemacht, obwohl kein DB-Test lief; nach dem Löschen von
+`target/failsafe-reports` grün.
+
+**Assistent bis zur Karte:** Testsatz M1007 gegen das Modell ([`assistent.md`](assistent.md) §8.4):
+20 von 21 im vollen Durchgang, die drei neuen Fälle in drei Durchgängen jedes Mal bestanden — auch
+`HALLE  2` mit zwei Leerzeichen. S15 (Tippfehler) schwankte einmal. **Darstellung:**
+[`assistent-frontend.md`](assistent-frontend.md) §12.10; das gebaute CSS (`pnpm build`) enthält
+`.whitespace-pre{white-space:pre}` und `.whitespace-pre-wrap{white-space:pre-wrap}`. Eine
+Sichtprüfung im Browser ist nicht gefahren, sie bräuchte eine Anmeldung durch Lukas.
 
 ---
 

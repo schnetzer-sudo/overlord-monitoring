@@ -78,8 +78,27 @@ class WerkzeugbauTest {
     ((ObjectNode) struktur.get("felder").get(0)).put("pflicht", true);
 
     assertThat(werkzeugbau.werkzeug(gueltig("NUR_PFLICHT", struktur)).beschreibung())
-        .endsWith("zerlegst du ihn ohne Rückfrage in diese Felder in ihrer Reihenfolge.")
+        .contains(
+            "zerlegst du ihn ohne Rückfrage in diese Felder in ihrer Reihenfolge. Schlüsselteile")
         .doesNotContain("fehlt ein Teil");
+  }
+
+  @Test
+  @DisplayName(
+      "Schluesselteile zeichengenau, mit jedem Leerzeichen — nur bei einem Typ mit Schluessel")
+  void schluesselteile_zeichengenau() {
+    assertThat(werkzeugbau.werkzeug(Testdefinitionen.gattung()).beschreibung())
+        .endsWith(
+            " Schlüsselteile übergibst du zeichengenau, mit jedem Leerzeichen, auch mehreren"
+                + " hintereinander; Leerzeichen am Anfang und Ende entfernt das Backend.");
+
+    ObjectNode ohneSchluessel = Testdefinitionen.gattungBaum();
+    ohneSchluessel.remove("schluessel");
+    ObjectNode zeile = (ObjectNode) ohneSchluessel.get("zeile");
+    zeile.put("Sperren", "{konto};{grund}");
+    zeile.put("Umbenennen", "{konto}|{neuername}");
+    assertThat(werkzeugbau.werkzeug(gueltig("OHNE_SCHLUESSEL", ohneSchluessel)).beschreibung())
+        .doesNotContain("Schlüssel");
   }
 
   @Test

@@ -22,6 +22,9 @@ class AuftragsPruefungTest {
   private static final TypDefinition WERK = Testdefinitionen.werk();
   private static final TypDefinition GATTUNG = Testdefinitionen.gattung();
 
+  /** Das geschuetzte Leerzeichen, ohne Escape im Quelltext. */
+  private static final String NBSP = Character.toString(0x00A0);
+
   @Nested
   @DisplayName("WERK_ABLADESTELLE")
   class Werk {
@@ -151,14 +154,6 @@ class AuftragsPruefungTest {
     }
 
     @Test
-    @DisplayName("Leerzeichen im Schluesselteil: FORMAT, kein unzulaessiges Zeichen")
-    void leerzeichen_im_schluessel() {
-      assertThat(pruefe(WERK, "Löschung", List.of(schluessel("723 32", "A"))))
-          .extracting(Prueffehler::feld, Prueffehler::code)
-          .containsExactly(tuple("werk", Fehlercode.FORMAT));
-    }
-
-    @Test
     @DisplayName(
         "Tabulator im Schluesselteil: das Muster laesst ihn durch, der Zeichenschutz nicht")
     void tabulator_im_schluessel() {
@@ -171,13 +166,6 @@ class AuftragsPruefungTest {
                   Fehlercode.UNZULAESSIGES_ZEICHEN,
                   "Eintrag 1, Werk: Der Wert enthält ein unzulässiges Zeichen (Steuerzeichen"
                       + " U+0009)."));
-    }
-
-    @Test
-    @DisplayName("Ein Wert wird nicht gekuerzt: Leerraum am Rand faellt ueber das Muster")
-    void kein_kuerzen() {
-      assertThat(codes(pruefe(WERK, "Löschung", List.of(schluessel(" 72332", "DDB0")))))
-          .containsExactly(Fehlercode.FORMAT);
     }
 
     @Test
@@ -261,8 +249,190 @@ class AuftragsPruefungTest {
     @DisplayName("Unbekannte Aktion: Pflicht und nurBei entfallen, Muster und Zeichen nicht")
     void unbekannte_aktion_prueft_den_rest() {
       List<Prueffehler> fehler =
-          pruefe(WERK, "Umbau", List.of(eintrag("werk", "7 2", "sndprn", "120764")));
+          pruefe(WERK, "Umbau", List.of(eintrag("werk", "7" + NBSP + "2", "sndprn", "120764")));
       assertThat(codes(fehler)).containsExactly(Fehlercode.AKTION_UNBEKANNT, Fehlercode.FORMAT);
+    }
+  }
+
+  @Nested
+  @DisplayName("Leerzeichen im Schluessel (E-1136 bis E-1144)")
+  class LeerzeichenImSchluessel {
+
+    @Test
+    @DisplayName("„A 1“ wird angenommen und bleibt, wie es ist")
+    void innen_ein_leerzeichen() {
+      AuftragsPruefung.Ergebnis ergebnis =
+          geprueft(WERK, "Löschung", List.of(schluessel("A 1", "DDB0")));
+      assertThat(ergebnis.fehler()).isEmpty();
+      assertThat(ergebnis.eintraege().getFirst()).containsEntry("werk", "A 1");
+    }
+
+    @Test
+    @DisplayName("„  A 1 “ wird „A 1“")
+    void rand_wird_gekuerzt() {
+      AuftragsPruefung.Ergebnis ergebnis =
+          geprueft(WERK, "Löschung", List.of(schluessel("  A 1 ", "DDB0")));
+      assertThat(ergebnis.fehler()).isEmpty();
+      assertThat(ergebnis.eintraege().getFirst()).containsEntry("werk", "A 1");
+    }
+
+    @Test
+    @DisplayName("„A  1“ bleibt mit zwei Leerzeichen, nichts wird zusammengezogen")
+    void innen_zwei_leerzeichen() {
+      AuftragsPruefung.Ergebnis ergebnis =
+          geprueft(WERK, "Löschung", List.of(schluessel("A  1", "DDB0")));
+      assertThat(ergebnis.fehler()).isEmpty();
+      assertThat(ergebnis.eintraege().getFirst()).containsEntry("werk", "A  1");
+      assertThat(WERK.schluesselText(ergebnis.eintraege().getFirst())).isEqualTo("A  1/DDB0");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {" ", "   "})
+    @DisplayName("Nur Leerzeichen: abgelehnt wie ein fehlender Wert")
+    void nur_leerzeichen(String wert) {
+      assertThat(pruefe(WERK, "Löschung", List.of(schluessel(wert, "DDB0"))))
+          .containsExactly(
+              new Prueffehler(
+                  0, "werk", Fehlercode.PFLICHT_FEHLT, "Eintrag 1, Werk: Der Wert fehlt."));
+    }
+
+    @Test
+    @DisplayName("Eine Lieferantennummer nur aus Leerzeichen fehlt: Der Schluessel ist zweiteilig")
+    void optionaler_teil_nur_leerzeichen() {
+      Map<String, String> eintrag = schluessel("72332", "DDB0");
+      eintrag.put("lieferantennummer", "   ");
+      AuftragsPruefung.Ergebnis ergebnis = geprueft(WERK, "Löschung", List.of(eintrag));
+      assertThat(ergebnis.fehler()).isEmpty();
+      assertThat(WERK.schluesselText(ergebnis.eintraege().getFirst())).isEqualTo("72332/DDB0");
+    }
+
+    @Test
+    @DisplayName("Jeder Teil fuer sich: Leerzeichen am Trenner fallen weg, innen bleiben sie")
+    void je_schluesselteil() {
+      Map<String, String> eintrag = schluessel(" 22 ", " 001N0");
+      eintrag.put("lieferantennummer", "0101 159903 ");
+      AuftragsPruefung.Ergebnis ergebnis = geprueft(WERK, "Löschung", List.of(eintrag));
+      assertThat(ergebnis.fehler()).isEmpty();
+      assertThat(WERK.schluesselText(ergebnis.eintraege().getFirst()))
+          .isEqualTo("0101 159903/22/001N0");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"\tA1", "A\n1", " \tA1 ", "A1\t"})
+    @DisplayName("Tabulator und Zeilenumbruch: abgelehnt, auch am Rand; gekuerzt wird nur U+0020")
+    void tabulator_und_umbruch(String wert) {
+      assertThat(pruefe(WERK, "Löschung", List.of(schluessel(wert, "DDB0"))))
+          .extracting(Prueffehler::feld, Prueffehler::code)
+          .containsExactly(tuple("werk", Fehlercode.UNZULAESSIGES_ZEICHEN));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0x00A0, 0x2007, 0x202F, 0x3000})
+    @DisplayName("Andere Leerzeichen (U+00A0 …): FORMAT, innen wie am Rand")
+    void andere_leerzeichen(int zeichen) {
+      String anders = Character.toString(zeichen);
+      for (String wert : List.of("A" + anders + "1", anders + "A1", "A1" + anders)) {
+        assertThat(pruefe(WERK, "Löschung", List.of(schluessel(wert, "DDB0"))))
+            .as("U+%04X in „%s“", zeichen, wert)
+            .extracting(Prueffehler::feld, Prueffehler::code)
+            .containsExactly(tuple("werk", Fehlercode.FORMAT));
+      }
+    }
+
+    @Test
+    @DisplayName("Erst kuerzen, dann pruefen: 35 Zeichen mit Leerzeichen am Rand gehen, 36 nicht")
+    void laenge_nach_dem_kuerzen() {
+      assertThat(pruefe(WERK, "Löschung", List.of(schluessel("  " + "W".repeat(35) + " ", "A"))))
+          .isEmpty();
+      assertThat(
+              codes(
+                  pruefe(
+                      WERK,
+                      "Löschung",
+                      List.of(schluessel("W".repeat(17) + " " + "W".repeat(18), "A")))))
+          .containsExactly(Fehlercode.FORMAT);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"Neuanlage", "Anpassung", "Löschung"})
+    @DisplayName("Neuanlage, Anpassung und Loeschung kuerzen gleich")
+    void alle_aktionen_gleich(String aktion) {
+      Map<String, String> eintrag =
+          eintrag("lieferantennummer", " 0101 ", "werk", "  A  1 ", "abladestelle", "DDB0 ");
+      if (!"Löschung".equals(aktion)) {
+        eintrag.put("sndprn", "120764");
+      }
+      AuftragsPruefung.Ergebnis ergebnis = geprueft(WERK, aktion, List.of(eintrag));
+      assertThat(ergebnis.fehler()).isEmpty();
+      assertThat(ergebnis.eintraege().getFirst())
+          .containsEntry("lieferantennummer", "0101")
+          .containsEntry("werk", "A  1")
+          .containsEntry("abladestelle", "DDB0");
+      assertThat(WERK.schluesselText(ergebnis.eintraege().getFirst())).isEqualTo("0101/A  1/DDB0");
+    }
+
+    @Test
+    @DisplayName("Erst nach dem Kuerzen gleich: DOPPELT wie jeder doppelte Schluessel (E-1014)")
+    void doppelt_nach_dem_kuerzen() {
+      assertThat(
+              pruefe(
+                  WERK,
+                  "Löschung",
+                  List.of(schluessel("A 1", "DDB0"), schluessel(" A 1  ", " DDB0"))))
+          .containsExactly(
+              new Prueffehler(
+                  1,
+                  null,
+                  Fehlercode.DOPPELT,
+                  "Eintrag 2 hat denselben Schlüssel wie Eintrag 1 („A 1/DDB0“)."));
+    }
+
+    @Test
+    @DisplayName("Innen verschieden viele Leerzeichen: nicht doppelt")
+    void innen_verschieden_nicht_doppelt() {
+      assertThat(
+              pruefe(
+                  WERK, "Löschung", List.of(schluessel("A 1", "DDB0"), schluessel("A  1", "DDB0"))))
+          .isEmpty();
+    }
+
+    @Test
+    @DisplayName("Nur der Schluessel wird gekuerzt: SNDPRN mit Leerzeichen am Rand bleibt FORMAT")
+    void sndprn_wird_nicht_gekuerzt() {
+      AuftragsPruefung.Ergebnis ergebnis =
+          geprueft(
+              WERK,
+              "Neuanlage",
+              List.of(eintrag("werk", "1", "abladestelle", "A", "sndprn", " 120764 ")));
+      assertThat(ergebnis.fehler())
+          .extracting(Prueffehler::feld, Prueffehler::code)
+          .containsExactly(tuple("sndprn", Fehlercode.FORMAT));
+      assertThat(ergebnis.eintraege().getFirst()).containsEntry("sndprn", " 120764 ");
+    }
+
+    @Test
+    @DisplayName("Kein Typ im Code: Die Gattung kuerzt ihre Schluesselteile, sonst nichts")
+    void gattung() {
+      AuftragsPruefung.Ergebnis ergebnis =
+          geprueft(
+              GATTUNG,
+              "Umbenennen",
+              List.of(eintrag("bereich", " NO ", "konto", " 17 ", "neuername", " Neu ")));
+      assertThat(ergebnis.fehler()).isEmpty();
+      assertThat(ergebnis.eintraege().getFirst())
+          .containsEntry("bereich", "NO")
+          .containsEntry("konto", "17")
+          .containsEntry("neuername", " Neu ");
+    }
+
+    @Test
+    @DisplayName("Ein null-Eintrag kommt als leerer zurueck")
+    void null_eintrag() {
+      List<Map<String, String>> liste = new ArrayList<>();
+      liste.add(null);
+      AuftragsPruefung.Ergebnis ergebnis = geprueft(GATTUNG, "Freigeben", liste);
+      assertThat(codes(ergebnis.fehler())).containsExactly(Fehlercode.PFLICHT_FEHLT);
+      assertThat(ergebnis.eintraege()).containsExactly(Map.of());
     }
   }
 
@@ -377,6 +547,11 @@ class AuftragsPruefungTest {
   // ─── Hilfen ────────────────────────────────────────────────────────────────────────────────
 
   static List<Prueffehler> pruefe(
+      TypDefinition definition, String aktion, List<Map<String, String>> eintraege) {
+    return geprueft(definition, aktion, eintraege).fehler();
+  }
+
+  static AuftragsPruefung.Ergebnis geprueft(
       TypDefinition definition, String aktion, List<Map<String, String>> eintraege) {
     return AuftragsPruefung.pruefe(definition, aktion, eintraege);
   }
