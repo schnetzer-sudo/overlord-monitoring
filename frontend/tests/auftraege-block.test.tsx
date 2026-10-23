@@ -600,6 +600,39 @@ describe("Die Zeile (E‑1102 bis E‑1104, E‑1107, E‑1122)", () => {
     }
   });
 
+  /** E‑1141, F39: Der Browser zieht Leerzeichen nicht zusammen, auch nicht in der gekürzten Zeile. */
+  it("zeigt „A  1“ mit beiden Leerzeichen, zugeklappt mit pre, aufgeklappt mit pre-wrap", async () => {
+    const mitLeerzeichen = eintrag("DDB0", {
+      werte: { werk: "A  1", abladestelle: "DDB0", sndprn: "120764" },
+      schluessel: "A  1/DDB0",
+    });
+    mitAuftraegen([auftrag({ eintraege: [mitLeerzeichen] })]);
+    const { abbauen } = await ansicht();
+    try {
+      const [zeile] = zeilen();
+      // Die innere Spanne: Die äußere mit `truncate` trägt denselben Text.
+      const zugeklappt = [...zeile.querySelectorAll("span.font-mono")].find(
+        (s) => s.textContent === "A  1/DDB0",
+      );
+      expect(zugeklappt, "der Schlüssel zugeklappt, zeichengenau").toBeTruthy();
+      expect(zugeklappt!.classList.contains("whitespace-pre")).toBe(true);
+      expect(zugeklappt!.closest(".truncate"), "weiter einzeilig gekürzt").not.toBeNull();
+
+      await klick(zeile);
+      const bereich = document.getElementById(zeile.getAttribute("aria-controls")!)!;
+      const schluessel = [...bereich.querySelectorAll("p")].find(
+        (p) => p.textContent === "A  1/DDB0",
+      );
+      expect(schluessel, "der Schlüssel aufgeklappt, zeichengenau").toBeTruthy();
+      expect(schluessel!.classList.contains("whitespace-pre-wrap")).toBe(true);
+      const werk = [...bereich.querySelectorAll("dd")].find((dd) => dd.textContent === "A  1");
+      expect(werk, "der Wert, zeichengenau").toBeTruthy();
+      expect(werk!.classList.contains("whitespace-pre-wrap")).toBe(true);
+    } finally {
+      await abbauen();
+    }
+  });
+
   /** E‑1107: Was die Plattform schreibt, ist reiner Text — auch wenn es nach HTML aussieht. */
   it("zeigt fehlertext und Rückgabe mit <img src=x onerror=alert(1)> wörtlich als Text", async () => {
     const angriff = "<img src=x onerror=alert(1)>";

@@ -167,7 +167,10 @@ export function VorschlagKarte({
                       </span>
                       <span aria-hidden="true">{index + 1}</span>
                     </span>
-                    <span className="font-mono font-medium break-all">{titel}</span>
+                    {/* Leerzeichen im Schlüssel bleiben stehen, auch mehrere (E‑1141). */}
+                    <span className="font-mono font-medium break-all whitespace-pre-wrap">
+                      {titel}
+                    </span>
                   </>
                 )}
               </h4>

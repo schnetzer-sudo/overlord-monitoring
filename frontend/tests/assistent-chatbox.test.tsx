@@ -570,6 +570,33 @@ describe("Die Karte (E‑1069, E‑1070, E‑1071)", () => {
     }
   });
 
+  /** E‑1141: Die Karte zeigt den Schlüssel, wie das Backend ihn gekürzt hat — mit jedem Leerzeichen. */
+  it("zeigt „A  1“ mit beiden Leerzeichen in Überschrift und Wert, beide mit pre-wrap", async () => {
+    const { abbauen } = await mitKarte({
+      ...VORSCHLAG,
+      eintraege: [
+        {
+          werte: { ...VORSCHLAG.eintraege[0].werte, werk: "A  1" },
+          schluessel: "A  1/DDB0",
+        },
+      ],
+    });
+    try {
+      const wurzel = karte()!;
+      const titel = [...wurzel.querySelectorAll("h4 span")].find(
+        (span) => span.textContent === "A  1/DDB0",
+      );
+      expect(titel, "der Schlüssel in der Überschrift, zeichengenau").toBeTruthy();
+      expect(titel!.classList.contains("whitespace-pre-wrap")).toBe(true);
+
+      const wert = wurzel.querySelector('[data-feld="werk"] [data-teil="wert"]');
+      expect(wert?.textContent).toBe("A  1");
+      expect(wert!.classList.contains("whitespace-pre-wrap")).toBe(true);
+    } finally {
+      await abbauen();
+    }
+  });
+
   it("prüft Änderungen über das Backend, zeigt den Fehler am Feld und sperrt „Übernehmen“, bis die Prüfung frei ist", async () => {
     const { abbauen } = await mitKarte();
     try {
