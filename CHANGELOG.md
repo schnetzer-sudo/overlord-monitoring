@@ -13,14 +13,14 @@ Tags und die Definition of Done für ein Release stehen in
   `scripts/werk-abladestelle-schluessel-leerzeichen-ruecknahme.sql`: setzt das Muster der drei
   Schlüsselteile von `WERK_ABLADESTELLE` auf `^(?:[^/,\p{Z}]| ){1,35}$`, idempotent, mit drei
   Wachen. Lukas führt es in der Produktion aus, **erst nach dem Deployment dieser Version**
-  ([`docs/betrieb.md`](docs/betrieb.md) §7a E, F42). Auf der Testkopie gelaufen am 23.10.2026
+  ([`docs/betrieb.md`](docs/betrieb.md) §7a E, E‑1149). Auf der Testkopie gelaufen am 23.10.2026
   (E‑1145).
 
 ### Geändert
 
 - **Leerzeichen im Schlüssel des Auftrags „Anpassen der Werk-/Abladestellentabelle“**
-  (Entscheidung des Auftraggebers vom 21.10.2026, Rückfragen am 23.10.2026; E‑1136 bis E‑1145,
-  [`docs/tasks.md`](docs/tasks.md) §2). Grund: Die Plattform verarbeitet Schlüssel mit Leerzeichen
+  (Entscheidung des Auftraggebers vom 21.10.2026, Rückfragen und Festlegungen der Umsetzung am
+  23.10.2026 bestätigt; E‑1136 bis E‑1149, [`docs/tasks.md`](docs/tasks.md) §2). Grund: Die Plattform verarbeitet Schlüssel mit Leerzeichen
   bereits, der Monitor lehnte sie ab. Erlaubt ist U+0020 im Innern eines Schlüsselteils, auch mehrere
   hintereinander, zeichengenau. **Das Backend kürzt jeden Schlüsselteil vor der Prüfung um
   Leerzeichen am Rand**, an genau einer Stelle (`AuftragsPruefung`), für Neuanlage, Anpassung und
@@ -29,10 +29,10 @@ Tags und die Definition of Done für ein Release stehen in
   unzulässig. Ändert E‑1012 („kein Leerraum“). Das Kürzen gilt für die Schlüsselteile jedes Typs, eine
   Option in der Definition gibt es dafür nicht (E‑1144).
 - Die Werkzeugbeschreibung des Assistenten sagt für jeden Typ mit Schlüssel, dass Schlüsselteile
-  zeichengenau mit jedem Leerzeichen übergeben werden (F41). Der Testsatz hat drei Fälle mehr, S19
+  zeichengenau mit jedem Leerzeichen übergeben werden (E‑1148). Der Testsatz hat drei Fälle mehr, S19
   bis S21 als Gruppe 15 ([`docs/assistent.md`](docs/assistent.md) §8).
 - Karte und „Ihre Aufträge“ zeigen Schlüssel mit erhaltenen Leerzeichen (`white-space: pre-wrap`,
-  in der zugeklappten Zeile `pre`, F39), ohne Ersatzzeichen.
+  in der zugeklappten Zeile `pre`, E‑1146), ohne Ersatzzeichen.
 - [`docs/task-schnittstelle.md`](docs/task-schnittstelle.md) §8: Ein Schlüsselteil kann Leerzeichen
   enthalten, nie am Rand. Statements und Ablauf der Plattform sind unverändert.
 

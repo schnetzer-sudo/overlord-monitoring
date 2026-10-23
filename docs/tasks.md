@@ -192,8 +192,9 @@ in A2 bis A4; die F-Nummern setzen F29 fort.
 
 Aus dem Auftrag „Leerzeichen im Schlüssel des Abladestellen-Auftrags“ (Zweig
 `fix/auftrag-schluessel-leerzeichen`). Die E‑Nummer ist `E‑1135` plus die Nummer der Entscheidung
-dort (E‑1136 bis E‑1141); die vier Rückfragen folgen als E‑1142 bis E‑1145. Die nächste freie Nummer
-war E‑1136, per `grep` über alle Zweige geprüft. Herkunft: **A** = vom Auftraggeber entschieden, am
+dort (E‑1136 bis E‑1141); die vier Rückfragen folgen als E‑1142 bis E‑1145, die bestätigten
+Festlegungen der Umsetzung als E‑1146 bis E‑1149. Die nächste freie Nummer war E‑1136, per `grep` über
+alle Zweige geprüft. Herkunft: **A** = vom Auftraggeber entschieden, am
 21.10.2026 (Auftrag) oder am 23.10.2026 (Rückfragen). Anlass: Die Plattform verarbeitet Schlüssel
 mit Leerzeichen bereits; angepasst wird nur der Monitor.
 
@@ -210,14 +211,19 @@ mit Leerzeichen bereits; angepasst wird nur der Monitor.
 | **E‑1144** | **Das Kürzen ist eine Regel für die Schlüsselteile jedes Typs**, keine Option der Definition (§3.2). Kein Code nennt einen Typ (E‑1018). | A (Rückfrage) |
 | **E‑1145** | **Das Skript läuft auf der Testkopie**, die Produktion bekommt es von Lukas nach dem Deployment (§4.3, [`betrieb.md`](betrieb.md) §7a E). Auf der Testkopie gelaufen am 23.10.2026 (§9.7). | A (Rückfrage: Ohne den Lauf hingen `TestsatzDefinitionDbIT` und die Prüfung des Assistenten am alten Muster) |
 
-**Festlegungen der Umsetzung, zur Bestätigung.** Die F-Nummern setzen F38 fort.
+**Festlegungen der Umsetzung.** Vorgeschlagen als F39 bis F42, die F-Nummern setzen F38 fort.
 
-| F | Festlegung | Grund |
+> **Bestätigt am 23.10.2026** (Auftraggeber): F39 bis F42 sind **E‑1146 bis E‑1149**, im Anschluss
+> an die letzte vergebene Nummer (E‑1145). Die F-Nummer steht in Klammern dahinter, damit Verweise
+> von vorher auffindbar bleiben. E‑1146 bis E‑1149 waren auf keinem Zweig vergeben, per `grep`
+> geprüft.
+
+| E (F) | Festlegung | Grund |
 |---|---|---|
-| **F39** | **Die zugeklappte Zeile in „Ihre Aufträge“ zeigt die Schlüssel mit `white-space: pre`**, nicht mit `pre-wrap`; aufgeklappt, auf der Karte und an den Werten gilt `pre-wrap` ([`assistent-frontend.md`](assistent-frontend.md) §12.6). | Die Zeile ist einzeilig mit Auslassung gekürzt (E‑1102). `pre-wrap` bräche sie an den Leerzeichen um, die Auslassung fiele weg. `pre` hält die Leerzeichen und die eine Zeile |
-| **F40** | **`AuftragsPruefung.pruefe` gibt die gekürzten Einträge mit den Fehlern zurück** (`AuftragsPruefung.Ergebnis`). Anlegen, `POST /api/tasks/pruefung` und der Vorschlag des Assistenten nehmen die Einträge daraus; die Kürzung selbst steht nur dort. | Die eine Stelle aus E‑1141: Wer prüft, bekommt die geltende Fassung mit. Ein getrenntes „kürzen, dann prüfen“ ließe einen Aufrufer prüfen und die ungekürzte Fassung speichern |
-| **F41** | **Die Werkzeugbeschreibung sagt für jeden Typ mit Schlüssel:** „Schlüsselteile übergibst du zeichengenau, mit jedem Leerzeichen, auch mehreren hintereinander; Leerzeichen am Anfang und Ende entfernt das Backend.“ Die Beschreibung des Typs in `task_type` bleibt unverändert ([`assistent.md`](assistent.md) §4.5). | Die Regel gilt für alle Schlüssel (E‑1144), also gehört der Satz in den Werkzeugbau und nicht in einen Typ. Ein Modell neigt dazu, doppelte Leerzeichen zusammenzuziehen |
-| **F42** | **Die Typdefinition ändert ein Skript mit Rücknahme**, keine Migration. **Reihenfolge Pflicht:** erst die Version mit dem Kürzen ausrollen, dann das Skript; wer danach auf ein JAR ohne Kürzen zurückgeht, nimmt vorher das Skript zurück. Das Skript kann die Version nicht prüfen. | E‑1019: Definitionen kommen per SQL in die Produktion. Mit dem neuen Muster und ohne Kürzen nähme 1.1.0 Leerzeichen am Rand mit in Auftrag und Parametertext |
+| **E‑1146** (F39) | **Die zugeklappte Zeile in „Ihre Aufträge“ zeigt die Schlüssel mit `white-space: pre`**, nicht mit `pre-wrap`; aufgeklappt, auf der Karte und an den Werten gilt `pre-wrap` ([`assistent-frontend.md`](assistent-frontend.md) §12.6). | Die Zeile ist einzeilig mit Auslassung gekürzt (E‑1102). `pre-wrap` bräche sie an den Leerzeichen um, die Auslassung fiele weg. `pre` hält die Leerzeichen und die eine Zeile |
+| **E‑1147** (F40) | **`AuftragsPruefung.pruefe` gibt die gekürzten Einträge mit den Fehlern zurück** (`AuftragsPruefung.Ergebnis`). Anlegen, `POST /api/tasks/pruefung` und der Vorschlag des Assistenten nehmen die Einträge daraus; die Kürzung selbst steht nur dort. | Die eine Stelle aus E‑1141: Wer prüft, bekommt die geltende Fassung mit. Ein getrenntes „kürzen, dann prüfen“ ließe einen Aufrufer prüfen und die ungekürzte Fassung speichern |
+| **E‑1148** (F41) | **Die Werkzeugbeschreibung sagt für jeden Typ mit Schlüssel:** „Schlüsselteile übergibst du zeichengenau, mit jedem Leerzeichen, auch mehreren hintereinander; Leerzeichen am Anfang und Ende entfernt das Backend.“ Die Beschreibung des Typs in `task_type` bleibt unverändert ([`assistent.md`](assistent.md) §4.5). | Die Regel gilt für alle Schlüssel (E‑1144), also gehört der Satz in den Werkzeugbau und nicht in einen Typ. Ein Modell neigt dazu, doppelte Leerzeichen zusammenzuziehen |
+| **E‑1149** (F42) | **Die Typdefinition ändert ein Skript mit Rücknahme**, keine Migration. **Reihenfolge Pflicht:** erst die Version mit dem Kürzen ausrollen, dann das Skript; wer danach auf ein JAR ohne Kürzen zurückgeht, nimmt vorher das Skript zurück. Das Skript kann die Version nicht prüfen. | E‑1019: Definitionen kommen per SQL in die Produktion. Mit dem neuen Muster und ohne Kürzen nähme 1.1.0 Leerzeichen am Rand mit in Auftrag und Parametertext |
 
 ---
 
