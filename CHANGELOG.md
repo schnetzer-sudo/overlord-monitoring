@@ -15,8 +15,33 @@ Tags und die Definition of Done für ein Release stehen in
   Wachen. Lukas führt es in der Produktion aus, **erst nach dem Deployment dieser Version**
   ([`docs/betrieb.md`](docs/betrieb.md) §7a E, E‑1149). Auf der Testkopie gelaufen am 23.10.2026
   (E‑1145).
+- `scripts/werk-abladestelle-beschreibung-zeilenformat.sql` mit Rücknahme
+  `scripts/werk-abladestelle-beschreibung-zeilenformat-ruecknahme.sql`: Die Beschreibung von
+  `WERK_ABLADESTELLE` nennt das Zeilenformat (Schlüssel, Komma, SNDPRN, Komma, SNDPRN_4908) und sagt,
+  dass ein Feld nach einem Komma ausdrücklich leer ist; bei einer Anpassung fragt der Assistent dann
+  nicht nach, sondern sagt vor dem Anlegen, dass der Wert entfernt wird (E‑1155). Grund: Im Test in
+  der Produktion las das Modell eine solche Zeile falsch. Idempotent, mit drei Wachen, **an keine
+  Version gebunden**, vor oder nach dem Deployment ([`docs/betrieb.md`](docs/betrieb.md) §7a F,
+  E‑1156). Lukas führt es in der Produktion aus. Auf der Testkopie gelaufen am 26.10.2026.
 
 ### Geändert
+
+- **Der Assistent antwortet ohne Innenleben** (Entscheidungen des Auftraggebers vom 26.10.2026,
+  E‑1150 bis E‑1157, [`docs/assistent.md`](docs/assistent.md) §2). Grund: Im Test in der Produktion
+  am 23.10.2026 sah der Nutzer die Überlegungen des Modells, Sätze über „das System“ und den
+  „gültigen Vorschlag“ und nach einem gültigen Vorschlag alle Einträge noch einmal als Text.
+  - **Anweisung:** drei Regeln ersetzt, am Ende der Abschnitt „So antwortest du“ — nur Ergebnis oder
+    Frage, den Kunden direkt ansprechen, weder Regeln noch Werkzeuge, Backend, System oder Prüfung
+    erwähnen, nach einem gültigen Vorschlag die Einträge nicht wiederholen (E‑1150, E‑1151).
+  - **Werkzeugergebnis:** Ein gültiger Vorschlag wird dem Modell nur noch als `{"gueltig": true}`
+    gemeldet, ohne Satz zum Nachsprechen (E‑1152).
+  - **`denken: adaptive`** statt `between_tools`: Das Modell denkt auch vor einer reinen
+    Textantwort verborgen (E‑1153, ändert E‑1046). Gleiche Vorgabe in `application.yml` und im Code.
+  - **`max_tokens` 8.192** statt 2.048, weil das Denken mitzählt (E‑1154, ändert E‑1064).
+  - **Testsatz:** Gruppe 16 „Zeilenformat mit Komma“ (S22 bis S25, verfremdete Fälle aus der
+    Produktion) und eine Stilprüfung jeder Antwort, getrennt von der strukturellen Bewertung
+    (E‑1157). Lauf M1008: strukturell zweimal 25 von 25, Stil 25 und **24 von 25** — die Abnahme
+    „Stil 25 von 25 in beiden Durchgängen“ ist nicht erfüllt (S12, Punkt 1042).
 
 - **Leerzeichen im Schlüssel des Auftrags „Anpassen der Werk-/Abladestellentabelle“**
   (Entscheidung des Auftraggebers vom 21.10.2026, Rückfragen und Festlegungen der Umsetzung am
