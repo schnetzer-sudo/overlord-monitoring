@@ -402,17 +402,22 @@ mysql --skip-ssl -h <db-host> -u monitor_write -p overlord_monitor < scripts/wer
 ```
 
 Erwartet sind drei Ergebnisse, `vorher`, `nachher` und `fertig`; in `nachher` steht
-`abladestelle_pflicht` `NULL`, `werk_pflicht` 1, `neu` 2 und `zeichen` 2303 (die Rücknahme:
+`abladestelle_pflicht` `NULL`, `werk_pflicht` 1, `neu` 2 und `zeichen` 2433 (die Rücknahme:
 `abladestelle_pflicht` `true`, `alt` 2 und 2272). Das Skript entfernt `"pflicht": true` an der
-Abladestelle und setzt die Beschreibung mit dem neuen Satz zum Schlüssel, in einer Anweisung; sonst
-ändert es nichts. Stimmt etwas nicht, bricht eine Wache mit Fehler `1231` ab, und es ist nichts
+Abladestelle und setzt die Beschreibung mit dem neuen Satz zum Schlüssel und dem zweiten Beispiel zum
+Zeilenformat (`0101159903/40NP/,120764,`), in einer Anweisung; sonst ändert es nichts. Der Schlüssel
+eines Eintrags ohne Abladestelle endet danach mit `/`, wie in der Tabelle der Plattform — das baut die
+Version, nicht das Skript ([`tasks.md`](tasks.md) §3.2, E‑1173). Stimmt etwas nicht, bricht eine Wache mit Fehler `1231` ab, und es ist nichts
 geschrieben. Den Zeichensatz der Verbindung setzt das Skript selbst (`SET NAMES utf8mb4`). Ein zweiter
 Lauf ändert nichts, auch nicht `geaendert_am`. Die Änderung wirkt beim nächsten Zugriff, ohne
 Neustart; die Beschreibung ab dem nächsten eröffneten Gespräch. **Geprüft am 26.10.2026 auf der
 Testkopie** mit dem MariaDB-Client 12.3 in genau dieser Form: ohne Vorgabeschema Abbruch an Wache 1;
 dann Rücknahme auf dem alten Stand (nichts geändert), Skript (geändert), Skript noch einmal (nichts
 geändert, `geaendert_am` gleich), Rücknahme (zurück, Struktur und Beschreibung binär wie vorher),
-Skript (geändert) ([`tasks.md`](tasks.md) §9.9).
+Skript (geändert) ([`tasks.md`](tasks.md) §9.9). Im Nachtrag desselben Tages mit der Fassung samt
+zweitem Beispiel noch einmal so, dazu Wache 3: Am Stand der ersten Fassung brechen Skript und
+Rücknahme mit `1231` ab. **Danach ist die Rücknahme gelaufen: Die Testkopie trägt den Stand von
+`main`.**
 
 ### Abgleich mit dem Repository *(21.10.2026)*
 
