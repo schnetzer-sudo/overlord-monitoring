@@ -60,37 +60,60 @@ class WerkzeugbauTest {
         .contains("besteht aus Bereich, Konto");
   }
 
-  /** Der Satz, der folgt, sobald ein Teil des Schluessels optional ist (E‑1170). */
-  private static final String WENIGER_TEILE =
-      " Hat ein zusammengesetzter Schlüssel weniger Teile als der Schlüssel Felder, zerlege ihn"
-          + " nur, wenn eindeutig ist, welche fehlen; sonst frage nach, statt zu raten.";
+  /**
+   * Der Satz, der folgt, sobald ein Teil des Schluessels optional ist (E‑1175): von hinten
+   * ausgerichtet, mit dem Label des letzten Felds, ohne Rueckfrage.
+   */
+  private static String vonHinten(String letztesLabel) {
+    return " Ein zusammengesetzter Schlüssel ist von hinten ausgerichtet; der letzte Teil gehört zu "
+        + letztesLabel
+        + ", fehlen vorne Teile, sind es die vorderen Felder; ein leerer Teil (zwei Trenner"
+        + " hintereinander oder ein Trenner am Ende) heißt, dieses Feld bleibt leer; zerlege ohne"
+        + " Rückfrage.";
+  }
+
+  /**
+   * Was es seit E‑1174 nicht mehr gibt: die Rueckfrage zur Lesart aus E‑1170. „frage nach“ allein
+   * steht weiter im Satz zu den Fehlern des Backends, wie auf {@code main}.
+   */
+  private static final String[] KEINE_RUECKFRAGE = {
+    "sonst frage nach", "statt zu raten", "eindeutig ist", "fehlt ein Teil", "optionale erste"
+  };
 
   @Test
   @DisplayName(
       "Zusammengesetzter Schluessel: zerlegen mit dem Trenner des Typs; der optionale Teil mit"
-          + " seinem Label")
+          + " seinem Label, von hinten ausgerichtet")
   void zusammengesetzter_schluessel() {
     assertThat(werkzeugbau.werkzeug(Testdefinitionen.gattung()).beschreibung())
         .contains(
             "Schreibt der Kunde einen Schlüssel zusammengesetzt mit dem Trenner „-“, zerlegst du"
                 + " ihn ohne Rückfrage in diese Felder in ihrer Reihenfolge. Optional ist der Teil"
                 + " Bereich."
-                + WENIGER_TEILE
+                + vonHinten("Konto")
                 + " Schlüsselteile übergibst du")
-        .doesNotContain("„/“", "fehlt ein Teil", "optionale erste");
+        .doesNotContain("„/“")
+        .doesNotContain(KEINE_RUECKFRAGE);
   }
 
   @Test
-  @DisplayName("Optionale Teile an jeder Position: genannt mit Label, in der Reihenfolge")
+  @DisplayName(
+      "Optionale Teile an jeder Position: genannt mit Label; der letzte Teil, ohne Rueckfrage")
   void optionale_teile_an_jeder_position() {
     assertThat(beschreibung(mitPflicht(false, true, true)))
-        .contains(" Optional ist der Teil Lieferantennummer." + WENIGER_TEILE);
+        .contains(" Optional ist der Teil Lieferantennummer." + vonHinten("Abladestelle"))
+        .doesNotContain(KEINE_RUECKFRAGE);
     assertThat(beschreibung(mitPflicht(true, false, true)))
-        .contains(" Optional ist der Teil Werk." + WENIGER_TEILE);
+        .contains(" Optional ist der Teil Werk." + vonHinten("Abladestelle"))
+        .doesNotContain(KEINE_RUECKFRAGE);
     assertThat(beschreibung(mitPflicht(true, true, false)))
-        .contains(" Optional ist der Teil Abladestelle." + WENIGER_TEILE);
+        .contains(" Optional ist der Teil Abladestelle." + vonHinten("Abladestelle"))
+        .doesNotContain(KEINE_RUECKFRAGE);
     assertThat(beschreibung(mitPflicht(false, true, false)))
-        .contains(" Optional sind die Teile Lieferantennummer und Abladestelle." + WENIGER_TEILE);
+        .contains(
+            " Optional sind die Teile Lieferantennummer und Abladestelle."
+                + vonHinten("Abladestelle"))
+        .doesNotContain(KEINE_RUECKFRAGE);
 
     // Vier Teile, drei davon optional: Die Aufzaehlung trennt mit Komma und „und“.
     ObjectNode vier = mitPflicht(false, false, false);
@@ -104,11 +127,12 @@ class WerkzeugbauTest {
         .contains(
             "besteht aus Lieferantennummer, Werk, Abladestelle, Lager, in dieser Reihenfolge.")
         .contains(
-            " Optional sind die Teile Lieferantennummer, Werk und Abladestelle." + WENIGER_TEILE);
+            " Optional sind die Teile Lieferantennummer, Werk und Abladestelle."
+                + vonHinten("Lager"));
   }
 
   @Test
-  @DisplayName("Ohne optionalen Teil: der Text wie vor dem 26.10.2026, Wort fuer Wort")
+  @DisplayName("Ohne optionalen Teil: der Text wie auf main, Wort fuer Wort")
   void schluessel_ohne_optionalen_teil() {
     ObjectNode struktur = Testdefinitionen.gattungBaum();
     ((ObjectNode) struktur.get("felder").get(0)).put("pflicht", true);

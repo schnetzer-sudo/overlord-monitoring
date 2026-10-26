@@ -121,9 +121,11 @@ public record TypDefinition(
   }
 
   /**
-   * Der Schluessel eines Eintrags: die Teile mit Wert, verbunden mit dem Trenner. Fehlt ein
-   * optionaler Teil, entfaellt er mit seinem Trenner, an jeder Position. {@code null} ohne
-   * Schluessel.
+   * Der Schluessel eines Eintrags, von hinten ausgerichtet (E‑1173): Teile vor dem ersten Teil mit
+   * Wert entfallen samt Trenner; ab dem ersten Teil mit Wert behaelt jeder Teil seinen Platz, ein
+   * fehlender als leerer Text zwischen zwei Trennern oder nach dem letzten. Der letzte Teil gehoert
+   * so immer zum letzten Feld, und ein zusammengesetzter Schluessel ist eindeutig (E‑1174). {@code
+   * null} ohne Schluessel.
    */
   public String schluesselText(Map<String, String> werte) {
     if (schluessel == null) {
@@ -134,6 +136,8 @@ public record TypDefinition(
       String wert = werte.get(feld);
       if (hatWert(wert)) {
         teile.add(wert);
+      } else if (!teile.isEmpty()) {
+        teile.add("");
       }
     }
     return String.join(schluessel.trenner(), teile);

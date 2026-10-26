@@ -2,11 +2,12 @@
 -- WERK_ABLADESTELLE: Abladestelle optional
 -- ═══════════════════════════════════════════════════════════════════════════════
 --
--- Zielzustand (docs/tasks.md §4.3, E-1164 bis E-1168): Der Schlüssel besteht aus dem
--- Werk, wahlweise mit der Lieferantennummer davor und der Abladestelle dahinter. Möglich
--- sind damit Werk, Werk/Abladestelle, Lieferantennummer/Werk und
--- Lieferantennummer/Werk/Abladestelle; die Plattform verarbeitet alle vier (E-1168).
--- Gegenüber dem Stand nach den Skripten vom 23. und 26.10.2026 ändern sich zwei Stellen:
+-- Zielzustand (docs/tasks.md §4.3, E-1164 bis E-1176): Der Schlüssel besteht aus dem
+-- Werk, wahlweise mit der Lieferantennummer davor und der Abladestelle dahinter. Ohne
+-- Abladestelle steht der Schrägstrich am Ende, wie in der Tabelle der Plattform: Die
+-- vier Formen sind Lieferantennummer/Werk/Abladestelle, Werk/Abladestelle,
+-- Lieferantennummer/Werk/ und Werk/ (E-1172). Gegenüber dem Stand nach den Skripten vom
+-- 23. und 26.10.2026 ändern sich drei Stellen:
 --
 --   1. Struktur: Das Feld abladestelle ($.felder[2]) verliert "pflicht": true. Sonst
 --      bleibt die Struktur Zeichen für Zeichen, wie sie ist; das Werk bleibt Pflicht.
@@ -18,12 +19,18 @@
 --        „Der Schlüssel besteht aus dem Werk, wahlweise mit der Lieferantennummer davor
 --        und der Abladestelle dahinter; Lieferantennummer und Abladestelle gehören nur
 --        dazu, wenn der Kunde sie für diesen Eintrag nennt.“
+--   3. Beschreibung, Absatz zum Zeilenformat: Nach dem Beispiel
+--      „0101159903/40NP/123,120764,“ steht ein zweites (E-1176):
+--        „0101159903/40NP/,120764,“ heißt Lieferantennummer 0101159903, Werk 40NP,
+--        keine Abladestelle, SNDPRN 120764 und SNDPRN_4908 leer.
 --
 -- Die Beschreibung setzt das Skript ganz, aber nur, wenn sie zeichengleich dem Stand nach
 -- dem Skript vom 26.10.2026 entspricht oder schon dem neuen (wie E-1162). Die beiden
--- Fassungen unterscheiden sich nur in diesem Satz; sie stehen unten vollständig, damit sie
--- sich mit der Testressource
+-- Fassungen unterscheiden sich nur an den Stellen 2 und 3; sie stehen unten vollständig,
+-- damit sie sich mit der Testressource
 -- (backend/src/test/resources/task/werk-abladestelle-beschreibung.txt) vergleichen lassen.
+-- Die erste Fassung dieses Skripts (Commit cae4fbf, nie ausgerollt) hatte Stelle 3 nicht;
+-- ihre Beschreibung erkennt Wache 3 nicht. Dort zuerst deren Rücknahme fahren.
 --
 -- IDEMPOTENT: Ein zweiter Lauf ändert nichts, auch nicht geaendert_am.
 -- RÜCKNAHME: scripts/werk-abladestelle-abladestelle-optional-ruecknahme.sql
@@ -61,7 +68,7 @@
 -- nicht wieder und bricht ab, bevor etwas geschrieben wird.
 --
 -- Erwartet: drei Ergebnismengen — „vorher“, „nachher“, „fertig“. In „nachher“ steht
--- abladestelle_pflicht NULL, werk_pflicht 1, neu 2 und zeichen 2303.
+-- abladestelle_pflicht NULL, werk_pflicht 1, neu 2 und zeichen 2433.
 
 SET SESSION max_statement_time = 10;
 SET NAMES utf8mb4;
@@ -86,7 +93,7 @@ SET @neu = 'Die EDI-Plattform erzeugt aus eingehenden Partnernachrichten IDOC-Na
 
 Ein Eintrag besteht aus einem Schlüssel und zwei Werten. Der Schlüssel besteht aus dem Werk, wahlweise mit der Lieferantennummer davor und der Abladestelle dahinter; Lieferantennummer und Abladestelle gehören nur dazu, wenn der Kunde sie für diesen Eintrag nennt. Die Werte sind SNDPRN und SNDPRN_4908 (für VDA-4908-Prozesse), jeweils sechsstellig numerisch.
 
-Kunden schreiben einen Eintrag oft als Zeile: Schlüssel, Komma, SNDPRN, Komma, SNDPRN_4908. Im Schlüssel trennt „/“ die Teile, das erste Komma beendet den Schlüssel. Beispiel: „0101159903/40NP/123,120764,“ heißt Lieferantennummer 0101159903, Werk 40NP, Abladestelle 123, SNDPRN 120764 und SNDPRN_4908 leer. Ein Feld, das nach einem Komma leer bleibt, ist ausdrücklich leer. Einen Schlüsselteil zerlegst du nie weiter, auch wenn er wie 40NP Ziffern und Buchstaben mischt.
+Kunden schreiben einen Eintrag oft als Zeile: Schlüssel, Komma, SNDPRN, Komma, SNDPRN_4908. Im Schlüssel trennt „/“ die Teile, das erste Komma beendet den Schlüssel. Beispiel: „0101159903/40NP/123,120764,“ heißt Lieferantennummer 0101159903, Werk 40NP, Abladestelle 123, SNDPRN 120764 und SNDPRN_4908 leer. „0101159903/40NP/,120764,“ heißt Lieferantennummer 0101159903, Werk 40NP, keine Abladestelle, SNDPRN 120764 und SNDPRN_4908 leer. Ein Feld, das nach einem Komma leer bleibt, ist ausdrücklich leer. Einen Schlüsselteil zerlegst du nie weiter, auch wenn er wie 40NP Ziffern und Buchstaben mischt.
 
 Neuanlage: Schlüssel und mindestens einer der beiden Werte. Ist der Schlüssel schon vorhanden, bleibt der Eintrag unverändert, und die Rückmeldung lautet „Schlüssel bereits vorhanden“.
 Anpassung: der Schlüssel eines vorhandenen Eintrags und die neuen Werte. Ein leer gelassener Wert wird entfernt, mindestens einer muss gesetzt bleiben. Nenne dem Kunden vor dem Anlegen jeden Wert, der dadurch entfernt wird, denn er sieht die bisherigen Werte nicht. Nennt der Kunde bei einer Anpassung einen der beiden Werte gar nicht, frage nach, ob er entfernt werden soll oder welchen Wert er behalten soll. Ein ausdrücklich leeres Feld ist genannt: Dann fragst du nicht nach, sondern sagst ihm vor dem Anlegen, dass dieser Wert entfernt wird.

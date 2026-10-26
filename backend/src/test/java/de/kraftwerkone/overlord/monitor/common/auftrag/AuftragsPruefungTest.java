@@ -125,7 +125,7 @@ class AuftragsPruefungTest {
     }
 
     @Test
-    @DisplayName("Die vier Schluesselformen der Plattform sind gueltig (E‑1168)")
+    @DisplayName("Die vier Schluesselformen der Plattform sind gueltig (E‑1172)")
     void vier_schluesselformen() {
       assertThat(
               pruefe(
@@ -145,19 +145,27 @@ class AuftragsPruefungTest {
           .isEmpty();
     }
 
+    /**
+     * Bis zum Nachtrag vom 26.10.2026 entfielen fehlende Teile an jeder Position, und beide
+     * Eintraege hiessen {@code 010/18VZE} — {@code DOPPELT}. Von hinten ausgerichtet (E‑1173) ist
+     * der zweite {@code 010/18VZE/}.
+     */
     @Test
     @DisplayName(
-        "Werk/Abladestelle und Lieferantennummer/Werk mit gleichem Text sind derselbe Schluessel")
-    void zweiteilig_gleicher_text_ist_doppelt() {
+        "Werk/Abladestelle (010/18VZE) und Lieferantennummer/Werk (010/18VZE/) verschieden")
+    void zweiteilig_und_ohne_abladestelle_verschieden() {
       assertThat(
-              codes(
-                  pruefe(
-                      WERK,
-                      "Löschung",
-                      List.of(
-                          eintrag("werk", "010", "abladestelle", "18VZE"),
-                          eintrag("lieferantennummer", "010", "werk", "18VZE")))))
-          .containsExactly(Fehlercode.DOPPELT);
+              pruefe(
+                  WERK,
+                  "Löschung",
+                  List.of(
+                      eintrag("werk", "010", "abladestelle", "18VZE"),
+                      eintrag("lieferantennummer", "010", "werk", "18VZE"))))
+          .isEmpty();
+      assertThat(WERK.schluesselText(eintrag("werk", "010", "abladestelle", "18VZE")))
+          .isEqualTo("010/18VZE");
+      assertThat(WERK.schluesselText(eintrag("lieferantennummer", "010", "werk", "18VZE")))
+          .isEqualTo("010/18VZE/");
     }
 
     @ParameterizedTest

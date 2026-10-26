@@ -30,7 +30,7 @@ class TestsatzTest {
   private static final TypDefinition WERK = Testdefinitionen.werk();
 
   @Test
-  @DisplayName("25 Faelle, jede der 16 Gruppen mindestens einmal, Kennungen eindeutig")
+  @DisplayName("27 Faelle, jede der 16 Gruppen mindestens einmal, Kennungen eindeutig")
   void form_und_abdeckung() throws IOException {
     JsonNode faelle = lies().get("faelle");
     Set<String> kennungen = new HashSet<>();
@@ -49,7 +49,7 @@ class TestsatzTest {
       }
       gruppen.add(fall.get("gruppe").asInt());
     }
-    assertThat(faelle.size()).isEqualTo(25);
+    assertThat(faelle.size()).isEqualTo(27);
     assertThat(gruppen)
         .containsExactlyInAnyOrder(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
   }
@@ -80,7 +80,8 @@ class TestsatzTest {
 
   @Test
   @DisplayName(
-      "Begriffe nur ohne Vorschlag, als Liste nicht leerer Texte; S12, S17 und S24 tragen sie")
+      "Begriffe nur ohne Vorschlag, als Liste nicht leerer Texte; S12 und S17 tragen sie (S24 seit"
+          + " E‑1177 nicht mehr)")
   void begriffe_nur_ohne_vorschlag() throws IOException {
     List<String> mitBegriffen = new ArrayList<>();
     for (JsonNode fall : lies().get("faelle")) {
@@ -98,7 +99,7 @@ class TestsatzTest {
         begriffe.forEach(begriff -> assertThat(begriff.stringValue()).isNotBlank());
       }
     }
-    assertThat(mitBegriffen).containsExactlyInAnyOrder("S12", "S17", "S24");
+    assertThat(mitBegriffen).containsExactlyInAnyOrder("S12", "S17");
   }
 
   @Test

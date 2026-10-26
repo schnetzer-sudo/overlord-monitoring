@@ -121,12 +121,16 @@ class TaskMigrationDbIT {
     assertThat(zeile.getStruktur().data().replace("\\\\p{Z}", "p{Z}")).doesNotContain("\\");
     assertThat(zeile.getName()).isEqualTo(Testdefinitionen.WERK_NAME);
     assertThat(zeile.getBeschreibung()).isEqualTo(Testdefinitionen.werkBeschreibung());
-    // Der Satz wortgleich aus dem Auftrag vom 26.10.2026, nicht aus einer zweiten Abschrift.
+    // Satz und zweites Beispiel wortgleich aus den Auftraegen vom 26.10.2026, nicht aus einer
+    // zweiten Abschrift.
     assertThat(zeile.getBeschreibung())
         .contains(
             "Der Schlüssel besteht aus dem Werk, wahlweise mit der Lieferantennummer davor und der"
                 + " Abladestelle dahinter; Lieferantennummer und Abladestelle gehören nur dazu, wenn"
                 + " der Kunde sie für diesen Eintrag nennt.")
+        .contains(
+            "„0101159903/40NP/,120764,“ heißt Lieferantennummer 0101159903, Werk 40NP, keine"
+                + " Abladestelle, SNDPRN 120764 und SNDPRN_4908 leer.")
         .doesNotContain("Der Schlüssel besteht aus Werk und Abladestelle");
     assertThat(zeile.getAktiv()).isTrue();
     assertThat(zeile.getGeaendertAm()).isNotNull();

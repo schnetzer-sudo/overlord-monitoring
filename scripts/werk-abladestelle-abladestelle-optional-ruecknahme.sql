@@ -3,9 +3,12 @@
 -- ═══════════════════════════════════════════════════════════════════════════════
 --
 -- Die Rücknahme zu scripts/werk-abladestelle-abladestelle-optional.sql
--- (docs/tasks.md §4.3, E-1164). Danach ist die Abladestelle wieder Pflicht, und die
--- Beschreibung ist wieder die nach dem Skript vom 26.10.2026: „Der Schlüssel besteht aus
--- Werk und Abladestelle, wahlweise mit der Lieferantennummer davor; …“.
+-- (docs/tasks.md §4.3, E-1164, E-1171). Danach ist die Abladestelle wieder Pflicht, und
+-- die Beschreibung ist wieder die nach dem Skript vom 26.10.2026: „Der Schlüssel besteht
+-- aus Werk und Abladestelle, wahlweise mit der Lieferantennummer davor; …“, und im Absatz
+-- zum Zeilenformat steht nur das erste Beispiel. Die Beschreibung der ersten Fassung dieses
+-- Skripts (Commit cae4fbf, ohne das zweite Beispiel) erkennt Wache 3 nicht; sie nimmt
+-- deren eigene Rücknahme zurück.
 --
 -- Die Struktur ist danach Zeichen für Zeichen die von vorher: "pflicht": true steht wieder
 -- an seiner Stelle zwischen "label" und "muster". Dafür setzt die Rücknahme das ganze Feld
@@ -60,7 +63,7 @@ SET @neu = 'Die EDI-Plattform erzeugt aus eingehenden Partnernachrichten IDOC-Na
 
 Ein Eintrag besteht aus einem Schlüssel und zwei Werten. Der Schlüssel besteht aus dem Werk, wahlweise mit der Lieferantennummer davor und der Abladestelle dahinter; Lieferantennummer und Abladestelle gehören nur dazu, wenn der Kunde sie für diesen Eintrag nennt. Die Werte sind SNDPRN und SNDPRN_4908 (für VDA-4908-Prozesse), jeweils sechsstellig numerisch.
 
-Kunden schreiben einen Eintrag oft als Zeile: Schlüssel, Komma, SNDPRN, Komma, SNDPRN_4908. Im Schlüssel trennt „/“ die Teile, das erste Komma beendet den Schlüssel. Beispiel: „0101159903/40NP/123,120764,“ heißt Lieferantennummer 0101159903, Werk 40NP, Abladestelle 123, SNDPRN 120764 und SNDPRN_4908 leer. Ein Feld, das nach einem Komma leer bleibt, ist ausdrücklich leer. Einen Schlüsselteil zerlegst du nie weiter, auch wenn er wie 40NP Ziffern und Buchstaben mischt.
+Kunden schreiben einen Eintrag oft als Zeile: Schlüssel, Komma, SNDPRN, Komma, SNDPRN_4908. Im Schlüssel trennt „/“ die Teile, das erste Komma beendet den Schlüssel. Beispiel: „0101159903/40NP/123,120764,“ heißt Lieferantennummer 0101159903, Werk 40NP, Abladestelle 123, SNDPRN 120764 und SNDPRN_4908 leer. „0101159903/40NP/,120764,“ heißt Lieferantennummer 0101159903, Werk 40NP, keine Abladestelle, SNDPRN 120764 und SNDPRN_4908 leer. Ein Feld, das nach einem Komma leer bleibt, ist ausdrücklich leer. Einen Schlüsselteil zerlegst du nie weiter, auch wenn er wie 40NP Ziffern und Buchstaben mischt.
 
 Neuanlage: Schlüssel und mindestens einer der beiden Werte. Ist der Schlüssel schon vorhanden, bleibt der Eintrag unverändert, und die Rückmeldung lautet „Schlüssel bereits vorhanden“.
 Anpassung: der Schlüssel eines vorhandenen Eintrags und die neuen Werte. Ein leer gelassener Wert wird entfernt, mindestens einer muss gesetzt bleiben. Nenne dem Kunden vor dem Anlegen jeden Wert, der dadurch entfernt wird, denn er sieht die bisherigen Werte nicht. Nennt der Kunde bei einer Anpassung einen der beiden Werte gar nicht, frage nach, ob er entfernt werden soll oder welchen Wert er behalten soll. Ein ausdrücklich leeres Feld ist genannt: Dann fragst du nicht nach, sondern sagst ihm vor dem Anlegen, dass dieser Wert entfernt wird.

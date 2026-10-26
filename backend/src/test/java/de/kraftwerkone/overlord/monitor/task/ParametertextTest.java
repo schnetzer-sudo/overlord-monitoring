@@ -10,6 +10,7 @@ import de.kraftwerkone.overlord.monitor.common.auftrag.DefinitionsPruefung;
 import de.kraftwerkone.overlord.monitor.common.auftrag.Testdefinitionen;
 import de.kraftwerkone.overlord.monitor.common.auftrag.TypDefinition;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.node.ObjectNode;
@@ -76,38 +77,37 @@ class ParametertextTest {
   }
 
   @Test
-  @DisplayName("Ohne letzten Teil: er entfaellt mit seinem Trenner (Abladestelle optional)")
+  @DisplayName("Die vier Schluesselformen der Plattform woertlich: L/W/A, W/A, L/W/, W/ (E‑1172)")
+  void vier_schluesselformen() {
+    List<Map<String, String>> eintraege =
+        List.of(
+            eintrag("lieferantennummer", "0101159903", "werk", "22", "abladestelle", "001N0"),
+            eintrag("werk", "72332", "abladestelle", "DDB0"),
+            eintrag("lieferantennummer", "0101159903", "werk", "40NP"),
+            eintrag("werk", "72332"));
+    assertThat(Parametertext.baue(WERK, "Löschung", eintraege))
+        .isEqualTo("Aktion=Löschung\n0101159903/22/001N0\n72332/DDB0\n0101159903/40NP/\n72332/");
+  }
+
+  @Test
+  @DisplayName("Ohne letzten Teil: er bleibt als leerer Text nach dem letzten Trenner")
   void ohne_letzten_teil() {
     assertThat(
             Parametertext.baue(
                 WERK,
                 "Neuanlage",
                 List.of(
-                    eintrag("lieferantennummer", "0101159903", "werk", "22", "sndprn", "123085"),
+                    eintrag("lieferantennummer", "0101159903", "werk", "40NP", "sndprn", "120764"),
                     eintrag("werk", "72332", "sndprn", "120764", "sndprn4908", "100050"))))
-        .isEqualTo("Aktion=Neuanlage\n0101159903/22,123085,\n72332,120764,100050");
-    assertThat(
-            Parametertext.baue(
-                WERK,
-                "Löschung",
-                List.of(eintrag("lieferantennummer", "0101159903", "werk", "22"))))
-        .isEqualTo("Aktion=Löschung\n0101159903/22");
+        .isEqualTo("Aktion=Neuanlage\n0101159903/40NP/,120764,\n72332/,120764,100050");
   }
 
   @Test
-  @DisplayName("Ohne mittleren Teil: er entfaellt mit seinem Trenner")
+  @DisplayName("Ohne mittleren Teil: leerer Text zwischen zwei Trennern (a//c)")
   void ohne_mittleren_teil() {
-    // Eine Variante, in der das Werk optional ist und die Abladestelle Pflicht: Nur so steht ein
-    // optionaler Teil zwischen zwei anderen. Fachlich gibt es sie nicht.
-    ObjectNode struktur = Testdefinitionen.werkBaum();
-    ((ObjectNode) struktur.get("felder").get(1)).remove("pflicht");
-    ((ObjectNode) struktur.get("felder").get(2)).put("pflicht", true);
-    DefinitionsPruefung.Ergebnis mitte = DefinitionsPruefung.pruefe("MITTE", "Mitte", "", struktur);
-    assertThat(mitte.gruende()).isEmpty();
-
     assertThat(
             Parametertext.baue(
-                mitte.definition(),
+                mitte(),
                 "Neuanlage",
                 List.of(
                     eintrag(
@@ -126,7 +126,33 @@ class ParametertextTest {
                         "001N0",
                         "sndprn",
                         "123085"))))
-        .isEqualTo("Aktion=Neuanlage\n0101159903/001N0,123085,\n0101159903/22/001N0,123085,");
+        .isEqualTo("Aktion=Neuanlage\n0101159903//001N0,123085,\n0101159903/22/001N0,123085,");
+  }
+
+  @Test
+  @DisplayName("Fuehrende fehlende Teile entfallen weiter samt Trenner, auch zwei hintereinander")
+  void fuehrende_fehlende_teile_entfallen() {
+    assertThat(
+            Parametertext.baue(
+                mitte(),
+                "Löschung",
+                List.of(
+                    eintrag("abladestelle", "001N0"),
+                    eintrag("werk", "22", "abladestelle", "001N0"))))
+        .isEqualTo("Aktion=Löschung\n001N0\n22/001N0");
+  }
+
+  /**
+   * Eine Variante, in der das Werk optional ist und die Abladestelle Pflicht: Nur so steht ein
+   * optionaler Teil zwischen zwei anderen. Fachlich gibt es sie nicht.
+   */
+  private static TypDefinition mitte() {
+    ObjectNode struktur = Testdefinitionen.werkBaum();
+    ((ObjectNode) struktur.get("felder").get(1)).remove("pflicht");
+    ((ObjectNode) struktur.get("felder").get(2)).put("pflicht", true);
+    DefinitionsPruefung.Ergebnis mitte = DefinitionsPruefung.pruefe("MITTE", "Mitte", "", struktur);
+    assertThat(mitte.gruende()).isEmpty();
+    return mitte.definition();
   }
 
   @Test

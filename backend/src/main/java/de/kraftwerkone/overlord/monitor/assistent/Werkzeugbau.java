@@ -138,8 +138,9 @@ public final class Werkzeugbau {
           .append(" Schreibt der Kunde einen Schlüssel zusammengesetzt mit dem Trenner „")
           .append(typ.schluessel().trenner())
           .append("“, zerlegst du ihn ohne Rückfrage in diese Felder in ihrer Reihenfolge.");
-      // Jeder Teil des Schluessels kann optional sein, an jeder Position (E‑1164). Fehlen Teile,
-      // ist nicht immer eindeutig, welche; dann fragt das Modell, statt zu raten (E‑1170).
+      // Jeder Teil des Schluessels kann optional sein, an jeder Position (E‑1164). Der Schluessel
+      // ist von hinten ausgerichtet (TypDefinition.schluesselText, E‑1173), jede Zerlegung also
+      // eindeutig; eine Rueckfrage zur Lesart gibt es nicht (E‑1174).
       List<String> optionale =
           typ.schluessel().felder().stream()
               .filter(name -> typ.feld(name).map(feld -> !feld.pflicht()).orElse(false))
@@ -149,9 +150,12 @@ public final class Werkzeugbau {
         text.append(optionale.size() == 1 ? " Optional ist der Teil " : " Optional sind die Teile ")
             .append(aufzaehlung(optionale))
             .append('.')
-            .append(" Hat ein zusammengesetzter Schlüssel weniger Teile als der Schlüssel Felder,")
-            .append(" zerlege ihn nur, wenn eindeutig ist, welche fehlen; sonst frage nach, statt")
-            .append(" zu raten.");
+            .append(" Ein zusammengesetzter Schlüssel ist von hinten ausgerichtet; der letzte Teil")
+            .append(" gehört zu ")
+            .append(label(typ, typ.schluessel().felder().getLast()))
+            .append(", fehlen vorne Teile, sind es die vorderen Felder; ein leerer Teil (zwei")
+            .append(" Trenner hintereinander oder ein Trenner am Ende) heißt, dieses Feld bleibt")
+            .append(" leer; zerlege ohne Rückfrage.");
       }
       // Leerzeichen am Rand eines Teils kuerzt das Backend (E‑1137); das Modell gibt weiter, was
       // der Kunde schreibt, und zieht nichts zusammen (E‑1141).
