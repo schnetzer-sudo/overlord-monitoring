@@ -127,7 +127,10 @@ class GespraechsfuehrungTest {
     assertThat(eintrag.werte().get("lieferantennummer")).isNull();
     assertThat(eintrag.werte().get("sndprn4908")).isNull();
     assertThat(eintrag.schluessel()).isEqualTo("010/18VZE");
-    assertThat(einzigesErgebnis(modell.letzteAnfrage()).fehler()).isFalse();
+    Werkzeugergebnis antwort = einzigesErgebnis(modell.letzteAnfrage());
+    assertThat(antwort.fehler()).isFalse();
+    // Kein Satz zum Nachsprechen: Was das Modell dann sagt, regelt die Anweisung (E‑1152).
+    assertThat(antwort.inhalt()).isEqualTo("{\"gueltig\":true}");
   }
 
   @Test
