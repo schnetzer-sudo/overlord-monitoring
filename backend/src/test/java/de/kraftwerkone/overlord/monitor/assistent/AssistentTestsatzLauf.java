@@ -70,8 +70,8 @@ class AssistentTestsatzLauf {
   /** Ein erfundener Name fuer den aktiven Mandanten (E‑1059); kein echter geht hinaus. */
   static final String MANDANTENNAME = "Beispielkunde GmbH";
 
-  /** Wie {@code overlord.assistent.max-tokens} in {@code application.yml}. */
-  static final int MAX_TOKENS = 2048;
+  /** Wie {@code overlord.assistent.max-tokens} in {@code application.yml} (E‑1154). */
+  static final int MAX_TOKENS = 8192;
 
   /** Ein Aufruf des Modells: was er ausgegeben hat und ob er an {@code max_tokens} endete. */
   private record Aufruf(long tokenAus, boolean abgeschnitten) {
