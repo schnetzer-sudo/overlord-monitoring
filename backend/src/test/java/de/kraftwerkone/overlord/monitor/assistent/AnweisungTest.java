@@ -37,7 +37,12 @@ class AnweisungTest {
         .contains("Einen zusammengesetzten Schlüssel zu zerlegen heißt nicht, einen Wert zu ändern")
         .contains("schlägst du die ersten vor, so viele wie erlaubt")
         .contains("Aufträge gelten immer für den aktiven Mandanten")
-        .contains("den Mandanten oben in der Kopfzeile wechseln muss");
+        // Wortlaut seit E‑1158: kein „Vorschlag einreichen“, das das Modell nachsprechen koennte.
+        .contains(
+            "Nennt der Kunde einen anderen Mandanten oder eine andere Firma, bereitest du nichts"
+                + " vor und sagst ihm in einem Satz, dass er dafür oben in der Kopfzeile den"
+                + " Mandanten wechseln muss.")
+        .doesNotContain("reichst du keinen Vorschlag ein");
   }
 
   @Test

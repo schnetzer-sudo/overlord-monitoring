@@ -80,7 +80,8 @@ class AssistentTestsatzLauf {
 
   /**
    * Was in keiner Antwort stehen darf, ohne Ruecksicht auf Gross- und Kleinschreibung (E‑1157):
-   * Reden ueber den Kunden, ueber Technik und Pruefung, und Ueberlegungen statt Ergebnis.
+   * Reden ueber den Kunden, ueber Technik und Pruefung, und Ueberlegungen statt Ergebnis. Die
+   * letzten drei seit E‑1158; die Liste bleibt woertlich (Punkt 1043).
    */
   static final List<String> STIL_BEGRIFFE =
       List.of(
@@ -94,7 +95,10 @@ class AssistentTestsatzLauf {
           "ist gültig",
           "laut Regel",
           "ich muss",
-          "ich prüfe");
+          "ich prüfe",
+          "muss ich",
+          "ich analysiere",
+          "einreichen");
 
   /** Hoechstens so viele Zeichen hat eine Antwort (E‑1157), gezaehlt in Unicode-Zeichen. */
   static final int STIL_HOECHSTENS_ZEICHEN = 400;

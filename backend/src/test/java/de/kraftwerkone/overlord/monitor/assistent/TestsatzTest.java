@@ -102,7 +102,7 @@ class TestsatzTest {
   }
 
   @Test
-  @DisplayName("Stil: genau diese elf Begriffe und hoechstens 400 Zeichen (E‑1157)")
+  @DisplayName("Stil: genau diese vierzehn Begriffe und hoechstens 400 Zeichen (E‑1157, E‑1158)")
   void stil_begriffe() {
     assertThat(AssistentTestsatzLauf.STIL_BEGRIFFE)
         .containsExactly(
@@ -116,7 +116,10 @@ class TestsatzTest {
             "ist gültig",
             "laut Regel",
             "ich muss",
-            "ich prüfe");
+            "ich prüfe",
+            "muss ich",
+            "ich analysiere",
+            "einreichen");
     assertThat(AssistentTestsatzLauf.STIL_HOECHSTENS_ZEICHEN).isEqualTo(400);
   }
 
@@ -141,6 +144,14 @@ class TestsatzTest {
             AssistentTestsatzLauf.stilverstoss(
                 "Der Kunde nennt drei Zeilen. Ich muss genau lesen; laut Regel frage ich nach."))
         .isEqualTo("enthält „der Kunde“, „laut Regel“, „ich muss“");
+    // M1008, D3, S24 galt mit der ersten Liste als ok (Punkt 1043); seit E‑1158 nicht mehr.
+    assertThat(
+            AssistentTestsatzLauf.stilverstoss(
+                "Ich analysiere die Zeilen. Die Abladestelle ist ein Pflichtfeld, daher muss ich"
+                    + " nachfragen."))
+        .isEqualTo("enthält „muss ich“, „ich analysiere“");
+    assertThat(AssistentTestsatzLauf.stilverstoss("Ich kann keinen Vorschlag einreichen."))
+        .isEqualTo("enthält „einreichen“");
 
     String vierhundert = "ä".repeat(400);
     assertThat(AssistentTestsatzLauf.stilverstoss(vierhundert)).isNull();
