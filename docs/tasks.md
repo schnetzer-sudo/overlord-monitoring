@@ -225,6 +225,31 @@ mit Leerzeichen bereits; angepasst wird nur der Monitor.
 | **E‑1148** (F41) | **Die Werkzeugbeschreibung sagt für jeden Typ mit Schlüssel:** „Schlüsselteile übergibst du zeichengenau, mit jedem Leerzeichen, auch mehreren hintereinander; Leerzeichen am Anfang und Ende entfernt das Backend.“ Die Beschreibung des Typs in `task_type` bleibt unverändert ([`assistent.md`](assistent.md) §4.5). | Die Regel gilt für alle Schlüssel (E‑1144), also gehört der Satz in den Werkzeugbau und nicht in einen Typ. Ein Modell neigt dazu, doppelte Leerzeichen zusammenzuziehen |
 | **E‑1149** (F42) | **Die Typdefinition ändert ein Skript mit Rücknahme**, keine Migration. **Reihenfolge Pflicht:** erst die Version mit dem Kürzen ausrollen, dann das Skript; wer danach auf ein JAR ohne Kürzen zurückgeht, nimmt vorher das Skript zurück. Das Skript kann die Version nicht prüfen. | E‑1019: Definitionen kommen per SQL in die Produktion. Mit dem neuen Muster und ohne Kürzen nähme 1.1.0 Leerzeichen am Rand mit in Auftrag und Parametertext |
 
+### Zeilenformat (26.10.2026)
+
+Aus dem Auftrag „Assistent: Antworten ohne Innenleben, Zeilenformat in der Typbeschreibung“ (Zweig
+`fix/assistent-antworten`). Die Entscheidungen zu den Antworten des Assistenten, zu `denken`,
+`max_tokens` und zum Testsatz (E‑1150 bis E‑1154, E‑1157) stehen in
+[`assistent.md`](assistent.md) §2; hier stehen die beiden zur Typdefinition. Die E‑Nummer ist
+`E‑1149` plus die Nummer der Entscheidung im Auftrag. **Anlass:** Im Test in der Produktion am
+23.10.2026 las das Modell eine Zeile im Format der Quelle (§4.1) falsch — verfremdet
+`0101159903/40NP/123,120764,` als Werk `40`, Abladestelle `NP` und SNDPRN `123` —, weil die
+Beschreibung das Zeilenformat nicht nennt. Herkunft: **A** = vom Auftraggeber am 26.10.2026
+entschieden, **V** = Vorschlag des Auftraggebers vom 26.10.2026 zur Bestätigung.
+
+| E | Entscheidung | Herkunft |
+|---|---|---|
+| **E‑1155** | **Die Beschreibung von `WERK_ABLADESTELLE` nennt das Zeilenformat**: Schlüssel, Komma, SNDPRN, Komma, SNDPRN_4908, mit Beispiel. Ein Feld, das nach einem Komma leer bleibt, ist ausdrücklich leer. Bei einer Anpassung fragt der Assistent dann nicht nach, sondern sagt vor dem Anlegen, dass dieser Wert entfernt wird. Die Rückfrage aus S17 bleibt für den Fall, dass der Kunde einen Wert gar nicht nennt (§4.2). | V |
+| **E‑1156** | **Die Beschreibung ändert ein Skript mit Rücknahme**, keine Migration, wie E‑1149. `V100` bis `V103` bleiben unverändert. Anders als das Skript aus E‑1149 hängt es an keiner Version (§4.3, [`betrieb.md`](betrieb.md) §7a F). | A |
+
+**Festlegung der Umsetzung.** Vorgeschlagen als F46, **bestätigt am 26.10.2026** als **E‑1162**
+(F43 bis F45 sind E‑1159 bis E‑1161 in [`assistent.md`](assistent.md) §2). Die F-Nummer steht in
+Klammern dahinter.
+
+| E (F) | Festlegung | Grund |
+|---|---|---|
+| **E‑1162** (F46) | **Das Skript setzt die ganze Beschreibung**, nicht zwei Teiltexte per `REPLACE`, und nur, wenn dort binär gleich der Stand nach `V102` oder schon der neue steht; sonst bricht Wache 3 ab. Beide Fassungen stehen vollständig im Skript und in der Rücknahme. `SET NAMES utf8mb4` legt den Zeichensatz der Verbindung fest. | Ein `REPLACE` träfe eine von Hand geänderte Beschreibung halb und hinterließe einen Text, den niemand geprüft hat. Die ganze Fassung lässt sich zeichengleich mit der Testressource vergleichen. Die Texte tragen Umlaute und „…“: Kommt einer verfälscht an, erkennt Wache 3 die gespeicherte Beschreibung nicht wieder und schreibt nichts |
+
 ---
 
 ## 3. Auftragstypen definieren
@@ -576,7 +601,16 @@ Ok
   Anpassung nur einen der beiden SNDPRN-Werte, fragt der Assistent nach, ob der andere
   entfernt werden soll oder welchen Wert er behalten soll — sonst würde der nicht genannte
   Wert stillschweigend entfernt (E‑1007). Der Satz steht in der Beschreibung (§4.3), nicht
-  im Code.
+  im Code. **Geändert am 26.10.2026 (E‑1155):** Nachgefragt wird nur, wenn der Kunde einen der
+  beiden Werte **gar nicht** nennt. Ein ausdrücklich leeres Feld — im Zeilenformat ein Feld, das
+  nach einem Komma leer bleibt — ist genannt: Dann fragt der Assistent nicht nach, sondern sagt vor
+  dem Anlegen, dass dieser Wert entfernt wird.
+- **Zeilenformat (26.10.2026, E‑1155):** Kunden schreiben einen Eintrag oft als Zeile wie in den
+  Beispielen der Quelle (§4.1): Schlüssel, Komma, SNDPRN, Komma, SNDPRN_4908. Im Schlüssel trennt
+  `/` die Teile, das erste Komma beendet ihn. Einen Schlüsselteil, der Ziffern und Buchstaben mischt
+  (`40NP`), zerlegt der Assistent nicht weiter. Der Absatz steht in der Beschreibung (§4.3), nicht im
+  Code; einen Parser für das Format gibt es nicht. Der Testsatz prüft es mit Gruppe 16
+  ([`assistent.md`](assistent.md) §8, M1008 §8.5: S22 bis S25 in drei Durchgängen bestanden).
 - **Neu oder ändern unklar (16.10.2026, Auftraggeber, E‑1061):** Ist unklar, ob ein Eintrag
   neu angelegt oder geändert werden soll, schlägt der Assistent die Neuanlage vor. Gibt es den
   Schlüssel schon, bleibt der Eintrag unverändert (E‑1008). Eine Anpassung schlägt er nur vor,
@@ -586,7 +620,7 @@ Ok
   **Seit 1.1.0 ausschließlich für `SYSTEM`** (E‑1125): `V103` nimmt die beiden Freischaltungen
   zurück, das Skript aus §3.9 schaltet `SYSTEM` frei.
 
-### 4.3 Die Definition, Stand nach `V102` und dem Skript vom 23.10.2026
+### 4.3 Die Definition, Stand nach `V102` und den Skripten vom 23. und 26.10.2026
 
 > **Geändert am 16.10.2026 mit `V101` und `V102`.** `V100` hat den Typ mit `maxEintraege` 50
 > und einer kürzeren Beschreibung angelegt und ist unverändert. `V101` setzt `maxEintraege` per
@@ -606,6 +640,20 @@ Ok
 > ([`betrieb.md`](betrieb.md) §7a E): 1.1.0 kürzt nicht und nähme mit dem neuen Muster Leerzeichen am
 > Rand mit in den Auftrag. Auf der Testkopie gelaufen am 23.10.2026 (§9.7, E‑1145). Was hier steht,
 > ist der Stand nach dem Skript.
+
+> **Geändert am 26.10.2026 per Skript, nicht per Migration** (E‑1155, E‑1156, E‑1162).
+> [`scripts/werk-abladestelle-beschreibung-zeilenformat.sql`](../scripts/werk-abladestelle-beschreibung-zeilenformat.sql)
+> ändert die Beschreibung an zwei Stellen: ein neuer Absatz zum Zeilenformat nach dem Absatz „Ein
+> Eintrag besteht aus einem Schlüssel und zwei Werten. …“, und der Satz zur Anpassung mit nur einem
+> Wert fragt nur noch, wenn der Kunde einen Wert gar nicht nennt (§4.2). Struktur, Name und
+> Freischaltung bleiben. Das Skript setzt die ganze Beschreibung und nur, wenn dort zeichengleich der
+> Stand nach `V102` oder schon der neue steht (E‑1162); die Rücknahme
+> [`scripts/werk-abladestelle-beschreibung-zeilenformat-ruecknahme.sql`](../scripts/werk-abladestelle-beschreibung-zeilenformat-ruecknahme.sql)
+> setzt den Stand nach `V102` zurück. Beide sind idempotent, mit drei Wachen (eigenes Schema; Typ
+> da; Beschreibung die alte oder die neue). **An keine Version gebunden:** Kein Code wertet die
+> Beschreibung aus, das Skript kann vor oder nach einem Deployment laufen
+> ([`betrieb.md`](betrieb.md) §7a F). Es wirkt ab dem nächsten eröffneten Gespräch (E‑1045). Auf
+> der Testkopie gelaufen am 26.10.2026 (§9.8). Was hier steht, ist der Stand nach beiden Skripten.
 
 Name: **Anpassen der Werk-/Abladestellentabelle**, `aktiv = TRUE`.
 
@@ -647,16 +695,18 @@ Unicode-Kategorie Z. Es sieht den gekürzten Teil (§5.3). Tabulator und Umbruch
 und fallen über die Zeichenprüfung (§3.4).
 
 Die Beschreibung (Fließtext für den Assistenten), wortgleich aus dem Auftrag an die
-Plattform-Entwicklung vom 16.10.2026, mit den beiden Änderungen aus `V101` und dem Absatz aus
-`V102`:
+Plattform-Entwicklung vom 16.10.2026, mit den beiden Änderungen aus `V101`, dem Absatz aus
+`V102` und den beiden Änderungen aus dem Skript vom 26.10.2026:
 
 ```
 Die EDI-Plattform erzeugt aus eingehenden Partnernachrichten IDOC-Nachrichten für das Kundensystem und braucht dafür eine SNDPRN. Ist sie nicht fest hinterlegt, ermittelt die Plattform sie über die Werk-/Abladestellentabelle des Kunden. Mit diesem Auftrag legt der Kunde Einträge dieser Tabelle an, passt sie an oder löscht sie.
 
 Ein Eintrag besteht aus einem Schlüssel und zwei Werten. Der Schlüssel besteht aus Werk und Abladestelle, wahlweise mit der Lieferantennummer davor; die Lieferantennummer gehört nur dazu, wenn der Kunde sie für diesen Eintrag nennt. Die Werte sind SNDPRN und SNDPRN_4908 (für VDA-4908-Prozesse), jeweils sechsstellig numerisch.
 
+Kunden schreiben einen Eintrag oft als Zeile: Schlüssel, Komma, SNDPRN, Komma, SNDPRN_4908. Im Schlüssel trennt „/“ die Teile, das erste Komma beendet den Schlüssel. Beispiel: „0101159903/40NP/123,120764,“ heißt Lieferantennummer 0101159903, Werk 40NP, Abladestelle 123, SNDPRN 120764 und SNDPRN_4908 leer. Ein Feld, das nach einem Komma leer bleibt, ist ausdrücklich leer. Einen Schlüsselteil zerlegst du nie weiter, auch wenn er wie 40NP Ziffern und Buchstaben mischt.
+
 Neuanlage: Schlüssel und mindestens einer der beiden Werte. Ist der Schlüssel schon vorhanden, bleibt der Eintrag unverändert, und die Rückmeldung lautet „Schlüssel bereits vorhanden“.
-Anpassung: der Schlüssel eines vorhandenen Eintrags und die neuen Werte. Ein leer gelassener Wert wird entfernt, mindestens einer muss gesetzt bleiben. Nenne dem Kunden vor dem Anlegen jeden Wert, der dadurch entfernt wird, denn er sieht die bisherigen Werte nicht. Nennt der Kunde bei einer Anpassung nur einen der beiden Werte, frage nach, ob der andere entfernt werden soll oder welchen Wert er behalten soll.
+Anpassung: der Schlüssel eines vorhandenen Eintrags und die neuen Werte. Ein leer gelassener Wert wird entfernt, mindestens einer muss gesetzt bleiben. Nenne dem Kunden vor dem Anlegen jeden Wert, der dadurch entfernt wird, denn er sieht die bisherigen Werte nicht. Nennt der Kunde bei einer Anpassung einen der beiden Werte gar nicht, frage nach, ob er entfernt werden soll oder welchen Wert er behalten soll. Ein ausdrücklich leeres Feld ist genannt: Dann fragst du nicht nach, sondern sagst ihm vor dem Anlegen, dass dieser Wert entfernt wird.
 Löschung: nur der Schlüssel.
 
 Ist unklar, ob ein Eintrag neu angelegt oder geändert werden soll, schlage die Neuanlage vor. Gibt es den Schlüssel schon, bleibt der Eintrag unverändert. Eine Anpassung schlägst du nur vor, wenn der Kunde ausdrücklich etwas ändern will.
@@ -1386,6 +1436,30 @@ noch einmal grün. Der alte Failsafe-Bericht der Probe P3 hatte einen anschließ
 [`assistent-frontend.md`](assistent-frontend.md) §12.10; das gebaute CSS (`pnpm build`) enthält
 `.whitespace-pre{white-space:pre}` und `.whitespace-pre-wrap{white-space:pre-wrap}`. Eine
 Sichtprüfung im Browser ist nicht gefahren, sie bräuchte eine Anmeldung durch Lukas.
+
+### 9.8 Zeilenformat (26.10.2026)
+
+**Skript auf der Testkopie** (E‑1156): MariaDB-Client 12.3 über die Standardeingabe, wie in der
+Deployment-Routine ([`betrieb.md`](betrieb.md) §7a F), ohne `--default-character-set` — den
+Zeichensatz setzt das Skript selbst (E‑1162). Geschrieben wurde nur `overlord_monitor.task_type`, nur
+über Skript und Rücknahme. Zuerst die Zeile gesichert (Scratchpad, nicht eingecheckt; die
+Beschreibung war zeichengleich mit der Testressource). Ohne Vorgabeschema Abbruch an Wache 1 (Fehler
+`1231`). Dann fünf Läufe: Rücknahme auf dem alten Stand (nichts geändert, `geaendert_am` 23.10.2026
+unverändert), Skript (`neu` 1, 2.272 Zeichen statt 1.666), Skript noch einmal (nichts geändert,
+`geaendert_am` gleich), Rücknahme (`alt` 1), Skript (`neu` 1). Danach war die Beschreibung binär
+gleich dem neuen Text, Struktur, Name und `aktiv` unverändert gegenüber der Sicherung, und
+`task/werk-abladestelle-beschreibung.txt` ist zeichengleich nachgezogen.
+
+**Tests mit Datenbank:** `TestsatzDefinitionDbIT` und `TaskMigrationDbIT` gegen die Testkopie nach
+dem Skript, beide grün. Beide lesen nur. **Ein voller DB-Lauf entfällt** (E‑1163, Entscheidung des
+Auftraggebers vom 26.10.2026, [`assistent.md`](assistent.md) §2): Die übrigen DB-Tests schreiben in
+weitere Tabellen der Testkopie (etwa `task_type_mandant`, `task`, `app_user`), und der Auftrag erlaubte
+dort nur `task_type` über das Skript. **Tests ohne Datenbank:** `./mvnw verify
+-Djooq.codegen.skip=true -DexcludedGroups=db` grün, **1.283 Tests**.
+
+**Assistent bis zur Karte:** Testsatz M1008 ([`assistent.md`](assistent.md) §8.5): die vier Fälle
+der Gruppe 16 (S22 bis S25) in allen drei vollen Durchgängen bestanden, mit `adaptive` und mit
+`between_tools`. Ein Parser für das Zeilenformat ist danach nicht nötig.
 
 ---
 

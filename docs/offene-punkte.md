@@ -30,7 +30,7 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
   vergeben.
 - **Seit 1.1.0 (21.10.2026) eine Linie** (E‑1127): Neue Punkte schließen an die höchste vergebene
   Nummer an; der Bereich unter 1000 wird nicht weiter befüllt. Bis dahin begannen die Nummern auf
-  `assistent` bei 1000 (Entscheidung 7). **Nächste freie Nummer: 1042.**
+  `assistent` bei 1000 (Entscheidung 7). **Nächste freie Nummer: 1045.**
 - **Doppelvergaben sind aufgelöst** (16.10.2026): 136 und 186 bis 189 waren je zweimal vergeben. Die
   Nummer behielt der Punkt, auf den andere Dateien öfter verweisen; der andere bekam 247 bzw. 248 bis
   251, mit datiertem Vermerk an seiner Fundstelle.
@@ -44,20 +44,21 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
 | | Teil 1: projektweit | Teil 2: Sichtprüfungen | Teil 3: lokal |
 |---|---:|---:|---:|
 | offen — Fehler | 32 | 0 | — |
-| offen — Verbesserung | 49 | 0 | — |
+| offen — Verbesserung | 51 | 0 | — |
 | offen — Entscheidung offen | 51 | 0 | — |
 | offen — Sichtprüfung oder Messung offen | 65 | 13 | — |
-| **offen gesamt** | **197** | **13** | — |
+| **offen gesamt** | **199** | **13** | — |
 | ungeprüft | — | — | 357 |
-| erledigt | 60 | 0 | 64 |
+| erledigt | 61 | 0 | 64 |
 | gegenstandslos | 3 | 0 | 5 |
-| **Zeilen** | 260 | 13 | 426 |
+| **Zeilen** | 263 | 13 | 426 |
 
-Offen sind damit **210** nummerierte Punkte; dazu kommen 357 ungeprüfte lokale (gezählt am
-21.10.2026 über die Tabelle in Teil 1). Davon stammen 38 aus der Linie `assistent` und ihrer
+Offen sind damit **212** nummerierte Punkte; dazu kommen 357 ungeprüfte lokale (gezählt am
+26.10.2026 über die Tabelle in Teil 1). Davon stammen 38 aus der Linie `assistent` und ihrer
 Zusammenführung (1000 bis 1007 aus A1; 1010 und 1012 bis 1015 aus A2; 1017 bis 1022 aus A3; 1023
 bis 1032 aus A4; 1033 bis 1037 aus 1.1.0; 1038 bis 1041 aus dem Nachtrag zu 1.1.0, der
-Deployment-Routine). 1009 ist seit dem 21.10.2026 erledigt, 1011 seit A3 entschieden, 1016 seit
+Deployment-Routine). Dazu kommen 1042 bis 1044 aus dem Fix „Antworten ohne Innenleben“ vom
+26.10.2026; 1042 ist seit M1009 am selben Tag erledigt. 1009 ist seit dem 21.10.2026 erledigt, 1011 seit A3 entschieden, 1016 seit
 M1003 erledigt. Am selben Tag erledigt: 255, 260 und 261 (`betrieb.md` §9).
 
 ### Wie das Register erhoben ist
@@ -335,6 +336,9 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 1039 | Ein zweiter Durchlauf der Routine am selben Tag überschreibt die Sicherung von vor der Migration und `.vorher`; die Sicherung trägt Passwort-Hashes und Sitzungen mit den Rechten der `umask` | [`betrieb.md`](betrieb.md) §7a, §9 · 1.1.0 | Verbesserung | offen |
 | 1040 | Rollback nimmt nur das Backend zurück, das Frontend hat keine Vorversion; Frontend 1.1.0 vor Backend 1.0.x zeigt jedem den Fehler unter „Ihre Aufträge“ | [`betrieb.md`](betrieb.md) §7a, §8, §9 · 1.1.0 | Verbesserung | offen |
 | 1041 | `OVERLORD_BACKEND_URL` wirkt beim Bau, nicht beim Start; die Routine baut ohne sie, also mit `http://localhost:8080`, ob das auf dem Server stimmt, ist offen | [`betrieb.md`](betrieb.md) §3, §7a, §9 · 1.1.0 | Sichtprüfung oder Messung offen | offen |
+| 1042 | S12 (fremder Mandant) hält die 400 Zeichen der Stilprüfung nicht zuverlässig (M1008: 469 und 435 Zeichen); die Abnahme „Stil 25 von 25 in beiden `adaptive`-Durchgängen“ ist nicht erfüllt — Wortlaut ändern, Grenze anders fassen oder hinnehmen | [`assistent.md`](assistent.md) §8.5, §11 · 26.10.2026 | Entscheidung offen | **erledigt** — `assistent.md` §11: „Erledigt am 26.10.2026 durch M1009“: neuer Wortlaut der Mandantenregel (E‑1158), S12 sechsmal mit Stil ok, 167 bis 257 Zeichen (§8.6) |
+| 1043 | Die Stilprüfung des Testsatzes ist eine wörtliche Liste und übersieht Umstellungen: „Ich analysiere die Zeilen: … daher muss ich nachfragen.“ galt in M1008 als ok | [`assistent.md`](assistent.md) §8, §8.5, §11 · 26.10.2026 | Verbesserung | offen — fortgeschrieben am 26.10.2026: „muss ich“, „ich analysiere“ und „einreichen“ ergänzt (E‑1158); die Liste bleibt wörtlich |
+| 1044 | Der Hinweis „Bei Anpassung heißt leer: der Wert wird entfernt.“ steht auf der Karte auch bei einer Neuanlage und bei jedem Eintrag; laut Auftrag ein eigener Auftrag | [`assistent.md`](assistent.md) §11 · 26.10.2026 | Verbesserung | offen |
 
 ---
 

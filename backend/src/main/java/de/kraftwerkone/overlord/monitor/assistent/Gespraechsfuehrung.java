@@ -55,11 +55,6 @@ public class Gespraechsfuehrung {
 
   static final String OHNE_TEXT = "Bitte beschreiben Sie mir, was Sie ändern möchten.";
 
-  static final String GUELTIG =
-      "Der Vorschlag ist gültig. Der Kunde sieht ihn jetzt als Karte, kann ihn dort ändern und legt"
-          + " den Auftrag dort selbst an. Sag ihm das. Du legst nichts an und sagst nie, du hättest"
-          + " etwas angelegt.";
-
   static final String NICHT_ANGEBOTEN =
       "Diesen Auftragstyp gibt es hier nicht. Nutze nur die Werkzeuge der angebotenen Typen.";
 
@@ -235,9 +230,10 @@ public class Gespraechsfuehrung {
           new Werkzeugergebnis(aufruf.id(), json.writeValueAsString(inhalt), true), null);
     }
 
+    // Kein Satz, den das Modell nachsprechen koennte: Was es nach einem gueltigen Vorschlag sagt,
+    // regelt die Anweisung (E‑1152).
     ObjectNode inhalt = json.createObjectNode();
     inhalt.put("gueltig", true);
-    inhalt.put("hinweis", GUELTIG);
     // Die Karte zeigt, was gespeichert wird: die Eintraege aus der Pruefung, mit gekuerzten
     // Schluesselteilen (E‑1141).
     return new Beantwortet(

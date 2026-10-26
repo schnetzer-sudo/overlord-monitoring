@@ -1,5 +1,5 @@
 {
-  "_hinweis": "Testsatz des Assistenten (docs/assistent.md §8). Bewertet wird nur strukturell: Typ, Aktion und Einträge nach Normalisierung (Felder ohne Wert entfallen, Reihenfolge der Einträge zählt nicht), oder wie erwartet kein Vorschlag; ohne Vorschlag wahlweise Begriffe, die in der Antwort vorkommen müssen (ohne Rücksicht auf Groß- und Kleinschreibung). Echte Fälle vor dem Einchecken anonymisieren.",
+  "_hinweis": "Testsatz des Assistenten (docs/assistent.md §8). Bewertet wird nur strukturell: Typ, Aktion und Einträge nach Normalisierung (Felder ohne Wert entfallen, Reihenfolge der Einträge zählt nicht), oder wie erwartet kein Vorschlag; ohne Vorschlag wahlweise Begriffe, die in der Antwort vorkommen müssen (ohne Rücksicht auf Groß- und Kleinschreibung). Getrennt davon prüft der Läufer den Stil jeder Antwort (E‑1157). Echte Fälle vor dem Einchecken anonymisieren: keine Namen, keine Mailadressen, keine Originalnummern.",
   "typ": "WERK_ABLADESTELLE",
   "faelle": [
     {
@@ -787,6 +787,112 @@
             {
               "werk": "72332",
               "abladestelle": "DDB0"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "kennung": "S22",
+      "herkunft": "echt",
+      "gruppe": 16,
+      "beschreibung": "Anpassung im Zeilenformat, SNDPRN_4908 nach dem letzten Komma ausdrücklich leer: ein Vorschlag ohne Rückfrage, drei Einträge mit Lieferantennummer, Werk, Abladestelle und SNDPRN (E‑1155; Werte verfremdet)",
+      "nachrichten": [
+        "Anpassen 0101159903/40NP/123,120764, 0101159903/41BH/123,120765, 0101159903/40M4/123,120766,"
+      ],
+      "erwartet": {
+        "vorschlag": {
+          "typ": "WERK_ABLADESTELLE",
+          "aktion": "Anpassung",
+          "eintraege": [
+            {
+              "lieferantennummer": "0101159903",
+              "werk": "40NP",
+              "abladestelle": "123",
+              "sndprn": "120764"
+            },
+            {
+              "lieferantennummer": "0101159903",
+              "werk": "41BH",
+              "abladestelle": "123",
+              "sndprn": "120765"
+            },
+            {
+              "lieferantennummer": "0101159903",
+              "werk": "40M4",
+              "abladestelle": "123",
+              "sndprn": "120766"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "kennung": "S23",
+      "herkunft": "echt",
+      "gruppe": 16,
+      "beschreibung": "Dieselbe Zeile als Neuanlage: ein Vorschlag mit denselben drei Einträgen (E‑1155; Werte verfremdet)",
+      "nachrichten": [
+        "Anlegen 0101159903/40NP/123,120764, 0101159903/41BH/123,120765, 0101159903/40M4/123,120766,"
+      ],
+      "erwartet": {
+        "vorschlag": {
+          "typ": "WERK_ABLADESTELLE",
+          "aktion": "Neuanlage",
+          "eintraege": [
+            {
+              "lieferantennummer": "0101159903",
+              "werk": "40NP",
+              "abladestelle": "123",
+              "sndprn": "120764"
+            },
+            {
+              "lieferantennummer": "0101159903",
+              "werk": "41BH",
+              "abladestelle": "123",
+              "sndprn": "120765"
+            },
+            {
+              "lieferantennummer": "0101159903",
+              "werk": "40M4",
+              "abladestelle": "123",
+              "sndprn": "120766"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "kennung": "S24",
+      "herkunft": "echt",
+      "gruppe": 16,
+      "beschreibung": "Anpassung im Zeilenformat, die Abladestelle fehlt in jeder Zeile: kein Vorschlag, die Rückfrage nennt die Abladestelle (E‑1155; Werte verfremdet)",
+      "nachrichten": [
+        "Anpassen 0101159903/40NP/,120764, 0101159903/41BH/,120765, 0101159903/40M4/,120766,"
+      ],
+      "erwartet": {
+        "vorschlag": null,
+        "begriffe": ["Abladestelle"]
+      }
+    },
+    {
+      "kennung": "S25",
+      "herkunft": "echt",
+      "gruppe": 16,
+      "beschreibung": "Neuanlage im Zeilenformat mit zweiteiligem Schlüssel und beiden Werten: Werk 40NP, Abladestelle 123, ohne Lieferantennummer (E‑1155; Werte verfremdet)",
+      "nachrichten": [
+        "Neuanlage 40NP/123,120764,100050"
+      ],
+      "erwartet": {
+        "vorschlag": {
+          "typ": "WERK_ABLADESTELLE",
+          "aktion": "Neuanlage",
+          "eintraege": [
+            {
+              "werk": "40NP",
+              "abladestelle": "123",
+              "sndprn": "120764",
+              "sndprn4908": "100050"
             }
           ]
         }

@@ -172,10 +172,12 @@ overlord:
     # Nur aus der Umgebung, nie hier (Regel G1).
     api-key: ${OVERLORD_ASSISTENT_API_KEY:}
     basis-url: https://api.anthropic.com
-    # Die Grenzen aus E-1036 und E-1038. max-tokens ist gemessen (M1003, Punkt 1016):
-    # 20 Eintraege mit allen fuenf Feldern brauchen ueber 1.024 Token in einem Aufruf.
+    # Die Grenzen aus E-1036 und E-1038. max-tokens: 20 Eintraege mit allen fuenf Feldern
+    # brauchen rund 1.200 Token in einem Aufruf (M1003), und seit denken: adaptive zaehlt
+    # das Denken mit -- endet ein Aufruf im Denken, bliebe die Antwort leer (E-1154, M1008).
+    # Gleich AssistentEigenschaften und MAX_TOKENS im Testsatzlaeufer.
     zeitgrenze: 30s
-    max-tokens: 2048
+    max-tokens: 8192
     nachricht-hoechstens-zeichen: 4000
     nachrichten-je-gespraech: 20
     werkzeugrunden-je-nachricht: 3
@@ -183,10 +185,12 @@ overlord:
     gespraech-ablauf: 30m
     gespraeche-je-sitzung: 3
     anthropic:
-      # between_tools: das Modell denkt nicht ausfuehrlich; Denken zaehlte gegen
-      # max-tokens. Nur Claude Sonnet 5.5 kennt den Wert -- bei einem anderen Modell
-      # "adaptive" oder "keins" (Feld weglassen). docs/assistent.md F2.
-      denken: between_tools
+      # adaptive: das Modell denkt verborgen, auch vor einer reinen Textantwort, statt
+      # seine Ueberlegungen in die Antwort zu schreiben (E-1153, aendert E-1046). Das
+      # Denken zaehlt gegen max-tokens. Gleich der Vorgabe in AnthropicEigenschaften, damit
+      # Produktion und Testsatzlaeufer ohne Umgebungsvariable dasselbe fahren. Weitere Werte:
+      # between_tools (kennt nur Claude Sonnet 5.5) und keins (Feld weglassen).
+      denken: adaptive
       wiederholung-pause: 1s
 
 server:

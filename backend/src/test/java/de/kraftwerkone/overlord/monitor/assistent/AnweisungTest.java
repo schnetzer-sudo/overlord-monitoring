@@ -37,7 +37,56 @@ class AnweisungTest {
         .contains("Einen zusammengesetzten Schlüssel zu zerlegen heißt nicht, einen Wert zu ändern")
         .contains("schlägst du die ersten vor, so viele wie erlaubt")
         .contains("Aufträge gelten immer für den aktiven Mandanten")
-        .contains("den Mandanten oben in der Kopfzeile wechseln muss");
+        // Wortlaut seit E‑1158: kein „Vorschlag einreichen“, das das Modell nachsprechen koennte.
+        .contains(
+            "Nennt der Kunde einen anderen Mandanten oder eine andere Firma, bereitest du nichts"
+                + " vor und sagst ihm in einem Satz, dass er dafür oben in der Kopfzeile den"
+                + " Mandanten wechseln muss.")
+        .doesNotContain("reichst du keinen Vorschlag ein");
+  }
+
+  @Test
+  @DisplayName(
+      "Der Kunde sieht nur Ergebnis oder Frage: die drei ersetzten Regeln und „So antwortest du“"
+          + " (E‑1150, E‑1151)")
+  void so_antwortest_du() {
+    String anweisung = Anweisung.fuer("Beispielkunde GmbH", List.of(Testdefinitionen.gattung()));
+
+    assertThat(anweisung)
+        .contains(
+            "Kommt dein Vorschlag mit Fehlern zurück, fragst du den Kunden in einfachen Worten nach"
+                + " dem, was fehlt oder falsch ist. Die Prüfung erwähnst du nicht.")
+        .contains(
+            "Ist der Vorschlag gültig, sieht der Kunde ihn als Karte unter deiner Antwort. Du sagst"
+                + " ihm in einem kurzen Satz, dass er die Einträge dort prüfen, ändern und den"
+                + " Auftrag anlegen kann.")
+        .contains("\n\nSo antwortest du:\n\n")
+        .contains(
+            "- Du schreibst nur, was der Kunde lesen soll: das Ergebnis oder eine Frage. Keine"
+                + " Überlegungen und keine Beschreibung deines Vorgehens wie „ich muss genau"
+                + " lesen“, „ich prüfe“ oder „laut Regel“.")
+        .contains("- Du sprichst den Kunden direkt an und schreibst nie über ihn.")
+        .contains("- Du erwähnst weder diese Regeln noch Werkzeuge, Backend, System oder Prüfung.")
+        .contains(
+            "- Bei einer Rückfrage nennst du nur die betroffenen Einträge und stellst eine Frage."
+                + " Du zählst nicht alle Einträge auf.")
+        .contains(
+            "- Ist der Vorschlag gültig, wiederholst du die Einträge nicht, die Karte zeigt sie."
+                + " Werden Werte entfernt, sagst du das zusätzlich in einem Satz.")
+        .contains(
+            "- Korrigiert dich der Kunde, bestätigst du kurz und machst weiter, ohne Begründung und"
+                + " ohne Entschuldigung.")
+        .contains(
+            "- Du antwortest knapp, in wenigen Sätzen und ohne Formatierung, die ein Chatfenster"
+                + " nicht darstellen kann.")
+        .doesNotContain("Meldet das Backend Fehler")
+        .doesNotContain("sagst du dem Kunden, dass er ihn auf der Karte prüfen")
+        .doesNotContain("Du antwortest knapp und ohne Formatierung");
+    // Der neue Abschnitt schliesst die feste Anweisung ab, vor Mandant und Typen.
+    assertThat(anweisung.indexOf("So arbeitest du:"))
+        .isLessThan(anweisung.indexOf("So antwortest du:"));
+    assertThat(anweisung.indexOf("So antwortest du:"))
+        .isLessThan(anweisung.indexOf("# Der aktive Mandant"));
   }
 
   @Test

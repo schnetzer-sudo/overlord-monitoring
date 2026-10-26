@@ -14,7 +14,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param apiKey der Schluessel, nur aus der Umgebung (Regel G1)
  * @param basisUrl das Ziel der Aufrufe
  * @param zeitgrenze je Aufruf des Modells
- * @param maxTokens Obergrenze der Ausgabe je Aufruf
+ * @param maxTokens Obergrenze der Ausgabe je Aufruf, Denken eingeschlossen (E‑1154)
  * @param nachrichtHoechstensZeichen Laenge einer Nachricht des Kunden
  * @param nachrichtenJeGespraech Nachrichten des Kunden je Gespraech
  * @param werkzeugrundenJeNachricht Werkzeugrunden je Nachricht
@@ -38,13 +38,13 @@ public record AssistentEigenschaften(
     Duration gespraechAblauf,
     int gespraecheJeSitzung) {
 
-  /** Die Vorgaben aus E‑1036 und E‑1038, falls nichts konfiguriert ist. */
+  /** Die Vorgaben aus E‑1036 und E‑1038 (max_tokens E‑1154), falls nichts konfiguriert ist. */
   public AssistentEigenschaften {
     anbieter = leer(anbieter) ? "anthropic" : anbieter;
     modell = leer(modell) ? "claude-sonnet-5-5" : modell;
     basisUrl = leer(basisUrl) ? "https://api.anthropic.com" : basisUrl;
     zeitgrenze = zeitgrenze == null ? Duration.ofSeconds(30) : zeitgrenze;
-    maxTokens = maxTokens <= 0 ? 2048 : maxTokens;
+    maxTokens = maxTokens <= 0 ? 8192 : maxTokens;
     nachrichtHoechstensZeichen =
         nachrichtHoechstensZeichen <= 0 ? 4000 : nachrichtHoechstensZeichen;
     nachrichtenJeGespraech = nachrichtenJeGespraech <= 0 ? 20 : nachrichtenJeGespraech;

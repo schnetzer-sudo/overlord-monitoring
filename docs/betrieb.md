@@ -336,6 +336,8 @@ Ist das Skript aus E gelaufen und geht der Rollback auf ein JAR **ohne** das Kü
 Schlüsselteile (1.1.0), läuft **vorher** die Rücknahme aus E; sonst nähme das alte JAR Leerzeichen am
 Rand mit in Auftrag und Parametertext ([`tasks.md`](tasks.md) §4.3, F42).
 
+Das Skript aus F braucht beim Rollback keine Rücknahme: Es hängt an keiner Version.
+
 ### E. Einmalig nach dem Deployment des Fixes „Leerzeichen im Schlüssel“ *(23.10.2026)*
 
 Erst wenn die Version mit dem Kürzen läuft (B), nicht vorher: Das Skript kann die Version nicht
@@ -355,6 +357,29 @@ der Testkopie** mit dem MariaDB-Client 12.3 in genau dieser Form: mit falschem V
 Wache 1; dann Rücknahme auf dem alten Stand (nichts geändert), Skript (geändert), Skript noch einmal
 (nichts geändert, `geaendert_am` gleich), Rücknahme (zurück), Skript (geändert) — danach unterschied
 sich die Struktur vom Stand davor nur in den drei Mustern ([`tasks.md`](tasks.md) §9.7).
+
+### F. Einmalig: Zeilenformat in der Beschreibung von `WERK_ABLADESTELLE` *(26.10.2026)*
+
+**An keine Version gebunden** ([`tasks.md`](tasks.md) §4.3, E‑1156): Die Beschreibung ist Text für den
+Assistenten, kein Code wertet sie aus. Das Skript kann vor oder nach dem Deployment laufen, ohne
+Neustart; es wirkt ab dem nächsten eröffneten Gespräch.
+
+```sh
+mysql --skip-ssl -h <db-host> -u monitor_write -p overlord_monitor < scripts/werk-abladestelle-beschreibung-zeilenformat.sql
+# Rücknahme, falls nötig:
+# mysql --skip-ssl -h <db-host> -u monitor_write -p overlord_monitor < scripts/werk-abladestelle-beschreibung-zeilenformat-ruecknahme.sql
+```
+
+Erwartet sind drei Ergebnisse, `vorher`, `nachher` und `fertig`; in `nachher` steht `neu` 1 und
+`zeichen` 2272 (die Rücknahme: `alt` 1 und 1666). Das Skript setzt die Beschreibung nur, wenn dort
+zeichengleich der Stand nach `V102` oder schon der neue steht; sonst bricht Wache 3 mit Fehler `1231`
+ab, und es ist nichts geschrieben (E‑1162). Den Zeichensatz der Verbindung setzt das Skript selbst
+(`SET NAMES utf8mb4`). Ein zweiter Lauf ändert nichts, auch nicht `geaendert_am`. **Geprüft am
+26.10.2026 auf der Testkopie** mit dem MariaDB-Client 12.3 in genau dieser Form: ohne Vorgabeschema
+Abbruch an Wache 1; dann Rücknahme auf dem alten Stand (nichts geändert), Skript (geändert), Skript
+noch einmal (nichts geändert, `geaendert_am` gleich), Rücknahme (zurück), Skript (geändert) — danach
+war die Beschreibung binär gleich dem neuen Text und alles andere an der Zeile unverändert
+([`tasks.md`](tasks.md) §9.8).
 
 ### Abgleich mit dem Repository *(21.10.2026)*
 

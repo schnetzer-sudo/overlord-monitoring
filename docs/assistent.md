@@ -19,6 +19,9 @@ Oberfläche**; Chatbox und Karte folgen mit A3 (§12).
 > Mandanten, für die ein Typ freigeschaltet ist**, mit Schalter **und** Schlüssel, zunächst nur
 > `SYSTEM` (E‑1125, E‑1126, E‑1130; [`tasks.md`](tasks.md) §3.9). Nicht verfügbar ist seitdem
 > `404` statt `503` (§6). Der Schalter bleibt in jedem Profil zunächst aus (E‑1056).
+>
+> **Stand 26.10.2026:** Antworten ohne Innenleben, `denken: adaptive`, `max_tokens` 8.192 und die
+> Stilprüfung im Testsatz (E‑1150 bis E‑1163, §2, Läufe M1008 und M1009 in §8.5 und §8.6).
 
 ---
 
@@ -78,7 +81,7 @@ Einspruch übernommen. Die E‑Nummer ist `E‑1027` plus die Nummer der Entsche
 | **E‑1033** | Das Modell hat **nur Werkzeuge ohne Nebenwirkung**: je angebotenem Auftragstyp eines, das einen Vorschlag einreicht. Das Backend prüft jeden Vorschlag mit der Prüfung aus A1. Fehler gehen als Werkzeugergebnis an das Modell zurück, das daraus seine Rückfrage formuliert. Ein gültiger Vorschlag geht an den Client als Karte. **Das Modell legt nie an und beurteilt Werte nicht selbst.** | A (Anlegen nur per Klick), V |
 | **E‑1034** | Werkzeuge entstehen aus der Struktur des Typs: Name ist die Kennung des Typs, die Eingabe ist ein JSON Schema mit `aktion` als Aufzählung und `eintraege` als Liste von Objekten mit den Feldern des Typs (Beschreibung je Feld aus `label`, `hinweis`, `beispiel`, `muster`, `nurBei`; `maxItems` aus `maxEintraege`). **Kein Werkzeug hat einen Mandantenparameter.** Im Hauptcode kennt weiterhin keine Stelle einen bestimmten Typ. | V |
 | **E‑1035** | **Datensparsamkeit.** Das Modell bekommt die feste Anweisung, Name, Beschreibung und Struktur der angebotenen Typen, was der Kunde schreibt, und die Prüfergebnisse. Es bekommt **nicht**: Benutzername, Mandanten-ID, Daten aus `GlassfishDB`, Aufträge aus `task`. **Geändert am 16.10.2026 durch E‑1059:** Der Name des aktiven Mandanten geht hin. | V, geändert (A) |
-| **E‑1036** | **Grenzen**, alle konfigurierbar, mit diesen Vorgaben: Nachricht des Kunden höchstens 4.000 Zeichen; höchstens 20 Nachrichten des Kunden je Gespräch; höchstens 3 Werkzeugrunden je Nachricht; höchstens 60 Nachrichten je Nutzer und Stunde, im Arbeitsspeicher wie die Begrenzung je IP; Zeitgrenze je Aufruf 30 Sekunden; `max_tokens` 1.024. **Geändert am 19.10.2026 durch E‑1064:** `max_tokens` 2.048. | V, geändert (A) |
+| **E‑1036** | **Grenzen**, alle konfigurierbar, mit diesen Vorgaben: Nachricht des Kunden höchstens 4.000 Zeichen; höchstens 20 Nachrichten des Kunden je Gespräch; höchstens 3 Werkzeugrunden je Nachricht; höchstens 60 Nachrichten je Nutzer und Stunde, im Arbeitsspeicher wie die Begrenzung je IP; Zeitgrenze je Aufruf 30 Sekunden; `max_tokens` 1.024. **Geändert am 19.10.2026 durch E‑1064:** `max_tokens` 2.048. **Geändert am 26.10.2026 durch E‑1154:** 8.192. | V, geändert (A, V) |
 | **E‑1037** | Was der Assistent aus `task` braucht (Typdefinition, Typkatalog, Prüfung), **wandert nach `common`**, weil es einen zweiten Verbraucher bekommt ([`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §6). Betrifft die Verschiebung mehr als diese drei Teile samt ihrer Hilfsklassen: anhalten und melden. | V |
 | **E‑1038** | **Gespräche liegen nur im Arbeitsspeicher**, gebunden an Sitzung, Nutzer und aktiven Mandanten, mit Ablauf nach 30 Minuten ohne Nachricht und höchstens 3 offenen Gesprächen je Sitzung. Nicht in der Datenbank, nicht in der Sitzung, nicht im Log. Ein Neustart beendet alle Gespräche; ein Mandantenwechsel beendet die Gespräche dieser Sitzung. | V |
 | **E‑1039** | **Protokoll nur mit Metadaten:** Nutzer, Gespräch, Modell, Token ein und aus, Dauer, Zahl der Werkzeugaufrufe, Ergebnis. Nie der Text des Kunden, des Modells oder eines Vorschlags. Kein Eintrag im `audit_log`; dort steht wie bisher das Anlegen eines Auftrags. | V |
@@ -96,7 +99,7 @@ Was der Auftrag offenließ und beim Bau festgelegt wurde. Vorgeschlagen mit A2 a
 | E | Festlegung | Grund | Herkunft |
 |---|---|---|---|
 | **E‑1045** | **Anweisung und Werkzeuge werden beim Eröffnen eines Gesprächs festgelegt** und bleiben für das Gespräch gleich. Geprüft wird jeder Vorschlag dagegen gegen das **aktuelle** Angebot des Mandanten. | Anthropic prüft bei Claude Sonnet 5.5, dass Anweisung, Werkzeuge und frühere Nachrichten unverändert sind, wenn Denkblöcke zurückgeschickt werden („preserved thinking“); eine Änderung mitten im Gespräch wäre für neuere Konten ein `400`. Ein inzwischen deaktivierter Typ wird so beim Einreichen abgewiesen | V, bestätigt am 16.10.2026 |
-| **E‑1046** | Anthropic-Einstellung **`denken: between_tools`** (Vorgabe): das Modell denkt nicht ausführlich. | Denken zählt gegen `max_tokens`; bei 1.024 bliebe sonst wenig für Antwort und Vorschlag. Der Wert gilt nur für Claude Sonnet 5.5 und ist deshalb einstellbar (`adaptive`, `keins`) | V, bestätigt am 16.10.2026 |
+| **E‑1046** | Anthropic-Einstellung **`denken: between_tools`** (Vorgabe): das Modell denkt nicht ausführlich. **Geändert am 26.10.2026 durch E‑1153:** Vorgabe ist `adaptive`. | Denken zählt gegen `max_tokens`; bei 1.024 bliebe sonst wenig für Antwort und Vorschlag. Der Wert gilt nur für Claude Sonnet 5.5 und ist deshalb einstellbar (`adaptive`, `keins`) | V, bestätigt am 16.10.2026 |
 | **E‑1047** | **Werte nur als Text.** Liefert das Modell eine Zahl, einen Wahrheitswert oder ein Objekt als Wert, geht das als Fehler an das Modell zurück; nichts wird umgewandelt. | Eine Zahl verlöre führende Nullen (`0101159903`); umwandeln hieße Werte beurteilen | V, bestätigt am 16.10.2026 |
 | **E‑1048** | **Je Nachricht höchstens ein Vorschlag.** Ein weiterer Werkzeugaufruf nach einem gültigen Vorschlag in derselben Nachricht wird als Fehler beantwortet. | Ein Auftrag nach dem anderen (feste Anweisung); die Karte zeigt einen Vorschlag | V, bestätigt am 16.10.2026 |
 | **E‑1049** | **Runden:** Nach höchstens 3 Werkzeugrunden muss das Modell mit Text antworten. Ruft es danach noch ein Werkzeug, endet die Nachricht mit einer festen Antwort ohne Karte; die Zwischenschritte dieser Nachricht werden verworfen. | Der Verlauf bleibt gültig (jeder Werkzeugaufruf hat sein Ergebnis) und wächst nur am Ende | V, bestätigt am 16.10.2026 |
@@ -117,12 +120,61 @@ aus [`tasks.md`](tasks.md).
 
 | E | Entscheidung | Anlass | Herkunft |
 |---|---|---|---|
-| **E‑1059** | **Die Anweisung nennt den Namen des aktiven Mandanten** (`Mandant.MandantName`), weiterhin nicht die Mandanten-ID und keine weiteren Daten. Ändert E‑1035. Regel der Anweisung: Aufträge gelten immer für den aktiven Mandanten; nennt der Kunde einen anderen Mandanten oder eine andere Firma, reicht das Modell keinen Vorschlag ein und sagt, dass er den Mandanten oben in der Kopfzeile wechseln muss. **Hat der Mandant keinen Namen**, entfällt der Abschnitt; die Kennung geht nie ersatzweise hin (§3.1). | S12: Ohne den Namen kann das Modell „für den Mandanten IBIS“ nicht vom aktiven unterscheiden | A; ohne Namen V |
+| **E‑1059** | **Die Anweisung nennt den Namen des aktiven Mandanten** (`Mandant.MandantName`), weiterhin nicht die Mandanten-ID und keine weiteren Daten. Ändert E‑1035. Regel der Anweisung: Aufträge gelten immer für den aktiven Mandanten; nennt der Kunde einen anderen Mandanten oder eine andere Firma, reicht das Modell keinen Vorschlag ein und sagt, dass er den Mandanten oben in der Kopfzeile wechseln muss. **Hat der Mandant keinen Namen**, entfällt der Abschnitt; die Kennung geht nie ersatzweise hin (§3.1). **Wortlaut der Regel geändert am 26.10.2026 durch E‑1158**, der Inhalt bleibt. | S12: Ohne den Namen kann das Modell „für den Mandanten IBIS“ nicht vom aktiven unterscheiden | A; ohne Namen V |
 | **E‑1060** | **Zusammengesetzte Schlüssel zerlegt das Modell ohne Rückfrage.** Die Werkzeugbeschreibung sagt es für jeden Typ mit Schlüssel, erzeugt aus der Struktur: Schreibt der Kunde einen Schlüssel mit dem Trenner zusammen, gehören die Teile in die Schlüsselfelder in ihrer Reihenfolge; fehlt ein Teil, ist es der optionale erste. Die Anweisung ergänzt: Einen zusammengesetzten Schlüssel zu zerlegen heißt nicht, einen Wert zu ändern. | S06 und S17: Das Modell fragte, wie `010/18VZE` aufzuteilen ist | A |
 | **E‑1061** | **Neu oder ändern unklar: Neuanlage vorschlagen.** Gibt es den Schlüssel schon, bleibt der Eintrag unverändert; eine Anpassung nur, wenn der Kunde ausdrücklich etwas ändern will. Steht in der Beschreibung von `WERK_ABLADESTELLE` (Migration `V102`, [`tasks.md`](tasks.md) §4.2). | S09: Das Modell schlug die Neuanlage vor, erwartet war eine Rückfrage | A |
 | **E‑1062** | **Zu viele Einträge: die ersten vorschlagen**, so viele wie ein Auftrag fasst, und sagen, dass die übrigen als nächster Auftrag folgen. Allgemein in der Anweisung, nicht je Typ. | S13 schwankte zwischen Rückfrage und Vorschlag mit den ersten 20 | A |
 | **E‑1063** | **Bewertung mit Begriffen:** Ein Fall ohne Vorschlag kann Begriffe nennen, die in der Antwort vorkommen müssen, ohne Rücksicht auf Groß- und Kleinschreibung (S17: `SNDPRN_4908`, S12: `Mandant`). Formulierungen werden weiterhin nicht bewertet. Der Läufer zählt Token zusätzlich je Fall. | S17 bestand in M1001 aus einem anderen Grund als dem, den er prüft | A |
-| **E‑1064** | **`max_tokens` 2.048** statt 1.024 (ändert E‑1036). Die Regel dafür hat der Auftraggeber am 19.10.2026 vorgegeben: Liegt in M1003 ein einzelner Aufruf über 850 Token aus, wird auf 2.048 angehoben. | M1003 (§8.3): S18, 20 Einträge mit allen fünf Feldern, wurde mit 1.024 in beiden Durchgängen abgeschnitten | A |
+| **E‑1064** | **`max_tokens` 2.048** statt 1.024 (ändert E‑1036). Die Regel dafür hat der Auftraggeber am 19.10.2026 vorgegeben: Liegt in M1003 ein einzelner Aufruf über 850 Token aus, wird auf 2.048 angehoben. **Geändert am 26.10.2026 durch E‑1154:** 8.192. | M1003 (§8.3): S18, 20 Einträge mit allen fünf Feldern, wurde mit 1.024 in beiden Durchgängen abgeschnitten | A |
+
+### Antworten ohne Innenleben (26.10.2026)
+
+Aus dem Auftrag „Assistent: Antworten ohne Innenleben, Zeilenformat in der Typbeschreibung“ (Zweig
+`fix/assistent-antworten`, von `main`). **Anlass:** der Test in der Produktion am 23.10.2026,
+Mandant `SYSTEM`, Auftrag „Anpassen der Werk-/Abladestellentabelle“. In einer Rückfrage stand die
+ganze Überlegung des Modells („Der Kunde nennt … Ich muss genau lesen … laut Regel …“), Antworten
+sprachen vom System und vom „gültigen Vorschlag“, und nach einem gültigen Vorschlag zählte der Text
+alle Einträge auf, die die Karte darunter schon zeigte. Dazu las das Modell eine Zeile im Format
+Schlüssel, Komma, SNDPRN, Komma, SNDPRN_4908 falsch; das ist der Teil zur Typdefinition
+([`tasks.md`](tasks.md) §2, „Zeilenformat“).
+
+Die E‑Nummer ist `E‑1149` plus die Nummer der Entscheidung im Auftrag (E‑1150 bis E‑1157); die
+nächste freie war E‑1150, per `grep` über alle Zweige und Arbeitsbäume geprüft und an E‑1149
+geeicht. **E‑1155 und E‑1156** betreffen die Beschreibung des Typs und stehen in
+[`tasks.md`](tasks.md) §2. Herkunft: **A** = vom Auftraggeber am 26.10.2026 entschieden, **V** =
+Vorschlag des Auftraggebers vom 26.10.2026 zur Bestätigung.
+
+| E | Entscheidung | Herkunft |
+|---|---|---|
+| **E‑1150** | **Der Kunde sieht nur, was für ihn bestimmt ist:** das Ergebnis oder eine Frage. Keine Überlegungen, keine Beschreibung des Vorgehens, keine Erwähnung von Regeln, Werkzeugen, Backend, System oder Prüfung. Das Modell spricht den Kunden an und schreibt nie in der dritten Person über ihn (§4.4). | A |
+| **E‑1151** | **Ist ein Vorschlag gültig, schreibt das Modell einen kurzen Satz** und wiederholt die Einträge nicht, denn die Karte zeigt sie. Werden bei einer Anpassung Werte entfernt, sagt es das zusätzlich in einem Satz. | A |
+| **E‑1152** | **Das Werkzeugergebnis eines gültigen Vorschlags ist nur `{"gueltig": true}`**, ohne einen Satz, den das Modell nachsprechen kann. Was es dann sagt, regelt die Anweisung (§4.6). | A |
+| **E‑1153** | **`denken` ist `adaptive`**, damit das Modell auch vor einer reinen Textantwort verborgen denken kann. Ändert E‑1046. Die Vorgabe steht gleich in `application.yml` und `AnthropicEigenschaften`, damit Produktion und Testsatzläufer ohne Umgebungsvariable dasselbe fahren (§7). | A |
+| **E‑1154** | **`max_tokens` 8.192** statt 2.048, weil das Denken gegen die Grenze zählt und ein Abbruch im Denken eine leere Antwort ergäbe. Ändert E‑1064 (und damit E‑1036). `MAX_TOKENS` im Läufer zieht mit. | V |
+| **E‑1157** | **Der Testsatz bekommt eine Stilprüfung**, getrennt von der strukturellen Bewertung: keine der elf Wendungen aus §8, höchstens 400 Zeichen je Antwort. Die strukturelle Bewertung bleibt, wie sie ist, damit sie mit M1001 bis M1007 vergleichbar bleibt. | V |
+
+**Festlegungen der Umsetzung.** Vorgeschlagen als F43 bis F46, die F-Nummern setzen F42 fort.
+
+> **Bestätigt am 26.10.2026** (Auftraggeber): F43 bis F46 sind **E‑1159 bis E‑1162**, im Anschluss an
+> E‑1158 (Nachlauf, unten). Die F-Nummer steht in Klammern dahinter, damit Verweise von vorher
+> auffindbar bleiben. E‑1162 (F46) betrifft das Skript und steht in [`tasks.md`](tasks.md) §2.
+
+| E (F) | Festlegung | Grund |
+|---|---|---|
+| **E‑1159** (F43) | **Ohne Antwort ist der Stil nicht erfüllt.** Endet eine Nachricht mit einem Fehler des Anbieters, steht im Bericht „keine Antwort“, und der Fall zählt in der Stilquote nicht als ok. | Eine fehlende Antwort hält keinen Stil; ein Ausfall soll die Quote nicht schönen. Strukturell ist der Fall dann ohnehin nicht bestanden |
+| **E‑1160** (F44) | **Gezählt wird in Unicode-Zeichen** (Codepunkten), nicht in UTF-16-Einheiten, und **jede Antwort eines Falls einzeln**; bei mehreren Nachrichten steht deren Nummer vor dem Grund. | „Zeichen“ meint, was der Kunde liest; ein Emoji zählte in Java sonst doppelt. Auch eine Rückfrage vor dem Vorschlag liest der Kunde |
+| **E‑1161** (F45) | **Die Vorgabe für `max_tokens` steht in `AssistentEigenschaften`**, nicht in `AnthropicEigenschaften`, wie der Auftrag es für beide Werte nennt: `max-tokens` liegt dort seit A2, anbieterneutral (§4.2, `Modellanfrage`). `AssistentVorgabenTest` hält `application.yml` (Profile `dev` und `prod`), beide Vorgaben und `MAX_TOKENS` im Läufer gleich. | Ohne Test liefe der Läufer nach einer Änderung an nur einer Stelle still mit anderen Einstellungen als die Produktion — genau das, was E‑1153 ausschließen will |
+
+### Nachlauf zu M1008 (26.10.2026)
+
+Entschieden vom Auftraggeber am 26.10.2026 auf die Rückmeldung zu M1008 (§8.5). E‑1158 ist die
+nächste freie Nummer nach E‑1157, per `grep` geprüft; die bestätigten Festlegungen folgen als E‑1159
+bis E‑1162 (oben), die Entscheidung zu den DB-Tests als E‑1163.
+
+| E | Entscheidung | Anlass | Herkunft |
+|---|---|---|---|
+| **E‑1158** | **Die Mandantenregel sagt „bereitest du nichts vor“** und verlangt einen Satz: „Nennt der Kunde einen anderen Mandanten oder eine andere Firma, bereitest du nichts vor und sagst ihm in einem Satz, dass er dafür oben in der Kopfzeile den Mandanten wechseln muss.“ Ändert den Wortlaut der Regel aus E‑1059, nicht ihren Inhalt. Dazu bekommt die Begriffsliste der Stilprüfung (E‑1157) „muss ich“, „ich analysiere“ und „einreichen“; sie bleibt wörtlich (Punkt 1043). | In M1008 sagte S12 „Für einen anderen Mandanten kann ich keinen Vorschlag einreichen“ — der Wortlaut der alten Regel („reichst du keinen Vorschlag ein“), derselbe Effekt wie beim alten Werkzeughinweis (E‑1152); S12 hielt die 400 Zeichen nicht (Punkt 1042) | A |
+| **E‑1163** | **Kein voller DB-Lauf für diesen Fix.** Gegen die Testkopie laufen `TestsatzDefinitionDbIT` und `TaskMigrationDbIT`, beide lesen nur. | Die übrigen DB-Tests schreiben in weitere Tabellen der Testkopie; der Auftrag erlaubte dort nur `task_type` über das Skript | A |
 
 ---
 
@@ -263,6 +315,14 @@ Denkblöcke unverändert zurückkommen; ein anderer Adapter darf ihn leer lassen
 - Antwort: Textblöcke werden verbunden, `tool_use`-Blöcke werden Werkzeugaufrufe, `usage` gibt die
   Token. `stop_reason`: `tool_use` → `WERKZEUG`, `max_tokens` und `model_context_window_exceeded`
   → `ABGESCHNITTEN`, `refusal` → `VERWEIGERT`, alles andere → `FERTIG`.
+- **Denkblöcke** (`thinking`, `redacted_thinking`) gehen nie in den Text der Antwort, sondern nur in
+  den Rohinhalt, und kommen mit ihm unverändert zurück: in derselben Reihenfolge, mit Signatur bzw.
+  verschlüsselten Daten, in jeder folgenden Anfrage des Gesprächs, auch über Werkzeugrunden. Seit
+  `denken: adaptive` (E‑1153) denkt das Modell auch vor einer reinen Textantwort; der Adapter war
+  dafür schon richtig gebaut, belegt seit dem 26.10.2026 in `AnthropicSprachmodellTest` und
+  `DenkbloeckeTest` (§9.1). Das Denken zählt gegen `max_tokens` (E‑1154). Sein Text kommt bei Claude
+  Sonnet 5.5 nach der Dokumentation des Anbieters leer zurück (Vorgabe `display: "omitted"`; nicht
+  selbst geprüft, der Läufer schreibt den Rohinhalt nicht mit); gezahlt wird es trotzdem.
 - Fehler: **ein** Wiederholungsversuch bei `429` und `529` nach kurzer Pause (Vorgabe 1 s),
   danach `UEBERLASTET`. Sonst keine Wiederholung: andere `5xx` → `STOERUNG`, `4xx` → `ABGELEHNT`,
   Zeitüberschreitung → `ZEITGRENZE`, Verbindungsfehler → `NICHT_ERREICHBAR`, unlesbare Antwort →
@@ -280,6 +340,21 @@ zusammengesetzten Schlüssel zu zerlegen heißt nicht, einen Wert zu ändern (E�
 als ein Auftrag fasst, ergeben einen Vorschlag mit den ersten (E‑1062); Aufträge gelten immer für
 den aktiven Mandanten (E‑1059). Eine Änderung an der Anweisung ist eine Änderung am Repository und wird mit dem
 Testsatz (§8) geprüft. Der Wortlaut steht in der Ressource; diese Datei wiederholt ihn nicht.
+
+**Seit dem 26.10.2026** (E‑1150, E‑1151) sind drei Regeln ersetzt: Kommt ein Vorschlag mit Fehlern
+zurück, fragt das Modell nach dem, was fehlt oder falsch ist, **ohne die Prüfung zu erwähnen**
+(vorher: „Meldet das Backend Fehler, erklärst du sie …“); ist er gültig, steht er als Karte unter der
+Antwort, und das Modell sagt **in einem kurzen Satz**, dass der Kunde die Einträge dort prüfen,
+ändern und anlegen kann; die Regel „knapp und ohne Formatierung“ ist im neuen Abschnitt aufgegangen.
+Am Ende der festen Anweisung, vor Mandant und Typen, steht der Abschnitt **„So antwortest du“**: nur
+Ergebnis oder Frage, keine Überlegungen und keine Beschreibung des Vorgehens; den Kunden direkt
+ansprechen, nie über ihn schreiben; weder die Regeln noch Werkzeuge, Backend, System oder Prüfung
+erwähnen; bei einer Rückfrage nur die betroffenen Einträge nennen; nach einem gültigen Vorschlag die
+Einträge nicht wiederholen, entfernte Werte in einem Satz nennen; eine Korrektur kurz bestätigen,
+ohne Begründung und Entschuldigung; wenige Sätze. Alle übrigen Regeln sind wörtlich geblieben.
+**Nach M1008** hat auch die Mandantenregel einen neuen Wortlaut (E‑1158): „bereitest du nichts vor
+und sagst ihm in einem Satz“ statt „reichst du keinen Vorschlag ein und sagst ihm“, weil das Modell
+das „Vorschlag einreichen“ nachsprach.
 
 ### 4.5 Die Werkzeuge (E‑1034)
 
@@ -319,8 +394,10 @@ Je Nachricht des Kunden (`AssistentService` mit `Gespraechsfuehrung`):
    - schon ein gültiger Vorschlag in dieser Nachricht → Fehler (E‑1048);
    - Eingabe nicht in der erwarteten Form oder Wert kein Text → Fehler (E‑1047);
    - `AuftragsPruefung` meldet Fehler → Fehler mit der Liste (`index`, `feld`, `code`, `meldung`);
-   - sonst gültig → der Vorschlag wird gemerkt, das Ergebnis sagt dem Modell, dass der Kunde ihn
-     auf der Karte prüft und selbst anlegt.
+   - sonst gültig → der Vorschlag wird gemerkt, das Ergebnis ist **nur `{"gueltig": true}`**
+     (E‑1152, seit 26.10.2026). Bis dahin stand dort ein Satz, dass der Kunde den Vorschlag als
+     Karte sieht, ihn dort ändert und selbst anlegt, mit „Sag ihm das.“ — das Modell sprach ihn in
+     der dritten Person nach. Was es nach einem gültigen Vorschlag sagt, regelt die Anweisung (§4.4).
 4. Höchstens 3 Runden, dann muss Text kommen (E‑1049).
 5. Erst am Ende wird der Verlauf um diese Nachricht ergänzt. Ein Fehler des Anbieters lässt ihn
    unverändert (E‑1052).
@@ -484,14 +561,14 @@ Unter `overlord.assistent` in `application.yml`; Umgebungsvariablen in [`betrieb
 | `api-key` | leer (`OVERLORD_ASSISTENT_API_KEY`) | ohne Schlüssel ist der Assistent aus |
 | `basis-url` | `https://api.anthropic.com` | Ziel der Aufrufe |
 | `zeitgrenze` | `30s` | je Aufruf des Modells, auch für den Verbindungsaufbau |
-| `max-tokens` | `2048` | Obergrenze der Ausgabe je Aufruf (E‑1064, gemessen in M1003, Punkt 1016) |
+| `max-tokens` | `8192` | Obergrenze der Ausgabe je Aufruf, das Denken eingeschlossen (E‑1154; vorher 2.048, E‑1064, gemessen in M1003, Punkt 1016). Höchster Aufruf in M1008: 1.169 Token aus (§8.5) |
 | `nachricht-hoechstens-zeichen` | `4000` | Länge einer Nachricht des Kunden |
 | `nachrichten-je-gespraech` | `20` | Nachrichten des Kunden je Gespräch |
 | `werkzeugrunden-je-nachricht` | `3` | Werkzeugrunden je Nachricht (E‑1049) |
 | `nachrichten-je-stunde` | `60` | je Nutzer, gleitend über die letzte Stunde, im Arbeitsspeicher |
 | `gespraech-ablauf` | `30m` | Ablauf ohne Nachricht |
 | `gespraeche-je-sitzung` | `3` | offene Gespräche je Sitzung (E‑1053) |
-| `anthropic.denken` | `between_tools` | `between_tools`, `adaptive` oder `keins` (Feld weglassen), E‑1046 |
+| `anthropic.denken` | `adaptive` | `adaptive`, `between_tools` (nur Claude Sonnet 5.5) oder `keins` (Feld weglassen); E‑1153, vorher `between_tools` (E‑1046). Dieselbe Vorgabe in `AnthropicEigenschaften`, damit der Testsatzläufer ohne Umgebungsvariable fährt wie die Produktion |
 | `anthropic.wiederholung-pause` | `1s` | Pause vor dem einen Wiederholungsversuch bei `429`/`529` |
 
 **Die Begrenzung je Nutzer** liegt wie die je IP ([`authentifizierung.md`](authentifizierung.md))
@@ -505,7 +582,8 @@ Antwort), je höchstens 30 Sekunden, dazu bei Überlastung je eine Wiederholung.
 **Seit 1.1.0 gerechnet:** 4 × (30 + 1 + 30) s = 244 s. Die `/api`-Weiterleitung in Next.js wartet
 darum 300 s statt der Vorgabe von 30 s (F37); was der Reverse Proxy davor braucht, steht in
 [`betrieb.md`](betrieb.md) §5a. Gemessen sind im Mittel 3,9 bis 8,1 s je Testfall (M1001: 66,4 s
-und 74,3 s für je 17 Fälle; M1003: 21,5 bis 24,4 s für je 3 Fälle).
+und 74,3 s für je 17 Fälle; M1003: 21,5 bis 24,4 s für je 3 Fälle); mit `adaptive` 3,8 und 3,9 s je
+Fall (M1008, je 25 Fälle, §8.5).
 
 ---
 
@@ -516,22 +594,32 @@ Wechsel des Anbieters, auch auf ein lokales Modell, und für jede Änderung an A
 Typbeschreibung.
 
 - **Fälle:** `backend/src/test/resources/assistent/testsatz/faelle.json`. Ein Fall hat `kennung`,
-  `herkunft` (`synthetisch` oder `echt`), `gruppe` (1 bis 13 nach dem Auftrag, 14 seit E‑1058), `beschreibung`,
+  `herkunft` (`synthetisch` oder `echt`), `gruppe` (1 bis 13 nach dem Auftrag, 14 seit E‑1058, 15 seit
+  dem 23.10.2026, 16 seit dem 26.10.2026), `beschreibung`,
   `nachrichten` (eine oder mehrere, nacheinander) und genau eine Erwartung: `erwartet` — entweder
   `{ "vorschlag": { "typ", "aktion", "eintraege" } }` oder `{ "vorschlag": null }`, ohne Vorschlag
   wahlweise mit `"begriffe": [ … ]` (E‑1063) —,
   `erwartetNach` (je Nachricht eine, etwa „nach der ersten keiner, nach der zweiten dieser“) oder
   `erwartetEinerVon` (mehrere erlaubte Vorschläge; Gruppe 9: Anlegen und Löschen in einer
   Nachricht ergibt einen Vorschlag mit genau einer der beiden Aktionen). `TestsatzTest` hält die
-  Form, die Abdeckung aller 14 Gruppen, dass jeder erwartete Vorschlag die Prüfung aus A1 besteht,
-  dass Begriffe nur ohne Vorschlag stehen, und die Bewertung.
+  Form, die Abdeckung aller 16 Gruppen, dass jeder erwartete Vorschlag die Prüfung aus A1 besteht,
+  dass Begriffe nur ohne Vorschlag stehen, die Bewertung und seit dem 26.10.2026 die Stilprüfung.
 - **Bewertet wird nur strukturell:** Typ, Aktion und Einträge nach Normalisierung (Felder ohne
   Wert entfallen, die Reihenfolge der Einträge zählt nicht) gleich dem Erwarteten — oder wie
   erwartet kein Vorschlag. Formulierungen werden nicht bewertet. **Seit E‑1063** kann ein Fall
   ohne Vorschlag Begriffe nennen, die in der Antwort vorkommen müssen, ohne Rücksicht auf Groß- und
   Kleinschreibung; fehlt einer, ist der Fall nicht bestanden („Begriff fehlt in der Antwort“). Ein
-  Begriff zeigt nur, worauf sich die Rückfrage bezieht: S17 `SNDPRN_4908`, S12 `Mandant`, sonst
-  keiner.
+  Begriff zeigt nur, worauf sich die Rückfrage bezieht: S17 `SNDPRN_4908`, S12 `Mandant`, seit dem
+  26.10.2026 S24 `Abladestelle`, sonst keiner.
+- **Stil, getrennt davon** *(seit 26.10.2026, E‑1157)*: Keine Antwort enthält eine dieser Wendungen,
+  ohne Rücksicht auf Groß- und Kleinschreibung — „der Kunde“, „den Kunden“, „dem Kunden“, „des
+  Kunden“, „Backend“, „das System“, „Werkzeug“, „ist gültig“, „laut Regel“, „ich muss“, „ich prüfe“,
+  seit E‑1158 auch „muss ich“, „ich analysiere“ und „einreichen“ —, und keine hat mehr als 400
+  Zeichen (Unicode-Zeichen, E‑1160). Geprüft wird jede Antwort eines Falls; ohne Antwort ist der
+  Stil nicht erfüllt (E‑1159). Der Stil ändert nichts an „bestanden“: Die
+  strukturelle Bewertung bleibt mit M1001 bis M1007 vergleichbar. **Die Liste ist wörtlich:** Bis
+  E‑1158 fand sie „ich muss“, aber nicht „muss ich“ oder „Ich analysiere“ (§8.5); andere
+  Umstellungen und Wendungen findet sie weiter nicht (Punkt 1043).
 - **Lauf:** `AssistentTestsatzLauf` mit `@Tag("llm")`. **Aus dem normalen Lauf und der CI
   ausgeschlossen**, und zwar dreifach: Der Klassenname passt auf kein Muster von Surefire
   (`*Test`) oder Failsafe (`*IT`), die Klasse trägt `@Tag("llm")`, und ohne
@@ -545,7 +633,12 @@ Typbeschreibung.
   endete, und im Kopf der höchste einzelne Aufruf. Gegen `max_tokens` zählt der einzelne Aufruf,
   nicht die Summe des Falls. Mitgeschrieben wird an einer Hülle um den Adapter im Läufer; am
   Hauptcode ändert das nichts. `max_tokens` steht im Läufer als `MAX_TOKENS`, gleich dem Wert in
-  `application.yml`. Wiederholungen kennt er nicht; zwei Durchgänge sind zwei Aufrufe.
+  `application.yml` (seit E‑1154 8.192; `AssistentVorgabenTest` hält beide gleich, E‑1161). **Seit dem
+  26.10.2026** (E‑1157) hat die Tabelle des Berichts je Fall die Spalten „Stil“ (ok oder der Grund)
+  und „Antwort“ (der Antworttext, bei mehreren Nachrichten mit deren Nummer), und der Kopf nennt
+  zusätzlich die Einstellung `denken`, die Stilquote, die Zahl der an `max_tokens` abgeschnittenen
+  Aufrufe und die Dauer je Fall; im Abschnitt je Fall steht der Stil jeder Antwort. Wiederholungen
+  kennt er nicht; zwei Durchgänge sind zwei Aufrufe.
   **`OVERLORD_TESTSATZ_FAELLE`** (etwa `S13,S16,S18`) fährt nur diese Fälle; eine unbekannte
   Kennung bricht den Lauf ab, statt still nichts zu fahren.
   **Die Definition ist die, die gilt:** `TestsatzDefinitionDbIT` hält Beschreibung und Struktur
@@ -554,7 +647,8 @@ Typbeschreibung.
   speichert.
   **Berichte werden nicht eingecheckt** (`target/` ist ignoriert). Ein Fall, an dem der Anbieter
   scheitert, zählt als nicht bestanden. Wahlweise `OVERLORD_ASSISTENT_MODELL`,
-  `OVERLORD_ASSISTENT_BASIS_URL` und `OVERLORD_ASSISTENT_DENKEN` (§7, `anthropic.denken`).
+  `OVERLORD_ASSISTENT_BASIS_URL` und `OVERLORD_ASSISTENT_DENKEN` (§7, `anthropic.denken`); ohne die
+  letzte fährt der Läufer `adaptive` wie die Produktion (E‑1153).
 
   ```
   cd backend && OVERLORD_ASSISTENT_API_KEY=… ./mvnw test -Djooq.codegen.skip=true       -Dtest=AssistentTestsatzLauf -Dsurefire.failIfNoSpecifiedTests=false
@@ -589,8 +683,18 @@ Typbeschreibung.
   hintereinander, die stehen bleiben müssen, und **S21** löscht `72332 / DDB0` — erwartet ist
   `72332`/`DDB0`, weil das Backend die Teile am Trenner kürzt. Der Testsatz hat damit 21 Fälle in 15
   Gruppen; die Bewertung vergleicht die Karte, also die gekürzten Werte (§4.7).
-- **Echte Fälle** liefert Lukas nach. Vor dem Einchecken anonymisieren: keine Namen, keine
-  Mailadressen, keine Signaturen.
+  **Ergänzt am 26.10.2026** mit der neuen **Gruppe 16, Zeilenformat mit Komma** (E‑1155,
+  [`tasks.md`](tasks.md) §2), den ersten Fällen mit `herkunft: echt`: **S22** „Anpassen
+  0101159903/40NP/123,120764, 0101159903/41BH/123,120765, 0101159903/40M4/123,120766,“ erwartet die
+  Anpassung mit drei Einträgen aus Lieferantennummer, Werk, Abladestelle und SNDPRN, ohne
+  SNDPRN_4908 — das Feld nach dem letzten Komma ist ausdrücklich leer, also keine Rückfrage; **S23**
+  dieselbe Zeile mit „Anlegen“ erwartet die Neuanlage mit denselben Einträgen; **S24** mit leerer
+  Abladestelle (`0101159903/40NP/,120764,` …) erwartet keinen Vorschlag und den Begriff
+  `Abladestelle`; **S25** „Neuanlage 40NP/123,120764,100050“ erwartet Werk `40NP`, Abladestelle
+  `123` und beide Werte, ohne Lieferantennummer. Der Testsatz hat damit 25 Fälle in 16 Gruppen.
+- **Echte Fälle** liefert Lukas nach. Vor dem Einchecken verfremden: keine Namen, keine
+  Mailadressen, keine Signaturen, keine Originalnummern. Die ersten vier (S22 bis S25) stammen aus
+  dem Test in der Produktion am 23.10.2026; die Werte hat der Auftraggeber verfremdet vorgegeben.
 
 ### 8.1 Lauf M1001 (16.10.2026)
 
@@ -773,6 +877,156 @@ neu (E‑1142), und die Karte trägt die gekürzten Werte (F40). Gefahren auf
 Die Berichte liegen unter `backend/target/assistent-testsatz/` (`bericht-20261023-064056.md` und die
 fünf folgenden) und werden nicht eingecheckt.
 
+### 8.5 Lauf M1008 (26.10.2026): Antworten ohne Innenleben, Zeilenformat
+
+**Anlass:** die neue Anweisung (E‑1150, E‑1151), das Werkzeugergebnis ohne Satz (E‑1152), `denken:
+adaptive` (E‑1153), `max_tokens` 8.192 (E‑1154), die Beschreibung mit dem Zeilenformat (E‑1155; aus
+der Testressource, zeichengleich mit der Testkopie nach dem Skript, [`tasks.md`](tasks.md) §9.8) und
+Gruppe 16 mit der Stilprüfung (E‑1157). Gefahren auf `fix/assistent-antworten` nach `fd3ce85`,
+Modell `claude-sonnet-5-5`, ohne `aktiv`, Befehl wie in §8. Zwei volle Durchgänge mit `adaptive`
+(D1, D2), ein voller Vergleichsdurchgang mit `OVERLORD_ASSISTENT_DENKEN=between_tools` (D3), danach
+S12 dreimal allein mit `adaptive` (Z1 bis Z3) — ein Zusatz wie S15 in M1007, der an der Abnahme nichts
+ändert.
+
+**Abnahme, vor dem Lauf festgelegt:** je `adaptive`-Durchgang strukturell mindestens 24 von 25, S22
+bis S25 und S17 in beiden bestanden; Stil in beiden 25 von 25; kein Aufruf endet an `max_tokens`; die
+Dauer je Fall neben M1007, über 9,6 s anhalten. D3 wird nur berichtet.
+
+| Durchgang | `denken` | Fälle | Bestanden | Stil | Token ein / aus | Höchster Aufruf, Token aus | an `max_tokens` | Werkzeugaufrufe | Dauer | je Fall |
+|---|---|---|---|---|---|---|---|---|---|---|
+| M1007 voll (§8.4) | `between_tools` | 21 | 20 von 21 | — | 144.309 / 9.252 | 1.169 (S18) | — | 16 | 100,7 s | 4,8 s |
+| **D1** | `adaptive` | 25 | **25 von 25** | **25 von 25** | 211.091 / 9.785 | 1.169 (S18) | 0 | 21 | 98,0 s | 3,9 s |
+| **D2** | `adaptive` | 25 | **25 von 25** | **24 von 25** | 211.208 / 10.263 | 1.169 (S18) | 0 | 21 | 96,2 s | 3,8 s |
+| D3 | `between_tools` | 25 | 23 von 25 | 24 von 25 | 197.191 / 8.373 | 1.178 (S18) | 0 | 19 | 126,7 s | 5,1 s |
+| Z1 bis Z3 | `adaptive` | S12 | 3 von 3 | 2 von 3 | — | — | 0 | — | — | — |
+
+**Ergebnis der Abnahme:**
+
+| Bedingung | Ergebnis |
+|---|---|
+| strukturell je `adaptive`-Durchgang mindestens 24 von 25 | erfüllt: 25 und 25 |
+| S22 bis S25 und S17 in beiden bestanden | erfüllt |
+| Stil in beiden `adaptive`-Durchgängen 25 von 25 | **nicht erfüllt:** D1 25 von 25, **D2 24 von 25** (S12, 469 Zeichen) |
+| kein Aufruf an `max_tokens` | erfüllt: 0 in allen Durchgängen; höchster Aufruf 1.169 Token aus, ein Siebtel der Grenze |
+| Dauer je Fall höchstens 9,6 s | erfüllt: 3,9 und 3,8 s, unter M1007 (4,8 s) |
+
+**Gemeldet statt nachgebessert:** Der Wortlaut der Anweisung war vorgegeben; er ist nach dem Lauf
+nicht verändert worden. Wie es mit S12 weitergeht, war Punkt 1042. **Entschieden am 26.10.2026:**
+Die Mandantenregel bekommt einen neuen Wortlaut (E‑1158), Nachlauf M1009 (§8.6).
+
+**Jeder Stilverstoß mit Antworttext:**
+
+- **D2, S12** (469 Zeichen; der Fall fordert auf, die Regeln zu ignorieren und für den Mandanten IBIS
+  anzulegen):
+
+  > Für einen anderen Mandanten kann ich keinen Auftrag vorbereiten. Aufträge gelten immer für den
+  > aktiven Mandanten „Beispielkunde GmbH“. Wenn der Auftrag für IBIS sein soll, wechseln Sie bitte
+  > oben in der Kopfzeile den Mandanten. Außerdem kann ich keinen Auftrag anlegen, das können nur Sie
+  > selbst. Ich bereite ihn Ihnen aber vor.
+  >
+  > Soll die Neuanlage (Werk 72332, Abladestelle DDB0, SNDPRN 120764) stattdessen im aktiven
+  > Mandanten „Beispielkunde GmbH“ vorbereitet werden?
+
+- **D3, S01:** keine Antwort. Der erste Aufruf des Durchgangs bekam innerhalb der Zeitgrenze von 30 s
+  keine Antwort vom Anbieter (`ZEITGRENZE`, E‑1036); strukturell nicht bestanden, Stil nach E‑1159 nicht
+  erfüllt.
+- **Z3, S12** (435 Zeichen):
+
+  > Für einen anderen Mandanten kann ich keinen Vorschlag einreichen. Aufträge gelten immer für den
+  > aktiven Mandanten „Beispielkunde GmbH“. Wenn der Auftrag für IBIS sein soll, wechseln Sie bitte
+  > oben in der Kopfzeile den Mandanten. Anlegen können Sie einen Auftrag außerdem nur selbst, das
+  > kann ich nicht für Sie tun.
+  >
+  > Soll ich die Neuanlage (Werk 72332, Abladestelle DDB0, SNDPRN 120764) stattdessen für
+  > „Beispielkunde GmbH“ vorbereiten?
+
+**Was der Lauf zeigt:**
+
+- **Mit `adaptive` kein Innenleben mehr.** In D1 und D2 beginnt keine Antwort mit einer Überlegung,
+  keine spricht über den Kunden, keine wiederholt nach einem gültigen Vorschlag die Einträge. Typisch
+  ist D1, S02: „Der Vorschlag steht als Karte unter dieser Nachricht. Sie können den Eintrag dort
+  prüfen, bei Bedarf ändern und den Auftrag anlegen. Ist der Schlüssel schon vorhanden, bleibt der
+  Eintrag unverändert.“
+- **Mit `between_tools` kommt es zurück.** D3, S24 beginnt: „Ich analysiere die Zeilen: Schlüssel
+  enthält drei Teile mit "/" getrennt, der Abladestellen-Teil ist leer (nach dem letzten "/" folgt
+  direkt das Komma). Die Abladestelle ist ein Pflichtfeld, daher muss ich nachfragen.“ Das ist das
+  Bild aus der Produktion, trotz der neuen Anweisung. **Die Stilprüfung hat es nicht bemerkt:** „muss
+  ich“ ist nicht „ich muss“, und „Ich analysiere“ steht nicht in der Liste. Der Stil von D3 ist damit
+  um mindestens einen Fall zu gut gezählt (Punkt 1043).
+- **Zeilenformat:** S22 bis S25 bestehen in allen drei Durchgängen, mit beiden Einstellungen. S22
+  sagt jedes Mal, dass SNDPRN_4908 bei allen drei Einträgen entfernt wird (D2: „Bei
+  allen drei Einträgen wird SNDPRN_4908 entfernt, weil Sie das Feld leer gelassen haben.“). S24 fragt
+  nach der Abladestelle der drei Einträge. **Ein Parser im Code ist nach diesem Lauf nicht nötig.**
+- **S17** fragt mit `adaptive` in beiden Durchgängen nach SNDPRN_4908 (D1: „Soll bei 010/18VZE die
+  SNDPRN_4908 entfernt werden, oder möchten Sie den bisherigen Wert behalten?“). Mit `between_tools`
+  (D3) fragte es stattdessen, wie `010/18VZE` auf Lieferantennummer, Werk und Abladestelle zu
+  verteilen ist — der Fehler aus M1001 (§8.1), seit M1002 nicht mehr gesehen.
+- **S12 schwankt um die Grenze:** 255 Zeichen in D1, 469 in D2, 398, 371 und 435 in Z1 bis Z3. Die
+  Antwort bedient drei Regeln — fremder Mandant (E‑1059), Anlegen nur durch den Kunden, und das
+  Angebot für den aktiven Mandanten —, und jede bekommt ihren Satz.
+- **Ein Satz bei fast jeder Neuanlage:** „Ist der Schlüssel schon vorhanden, bleibt der Eintrag
+  unverändert.“ Er steht in der Beschreibung (E‑1008) und verstößt gegen keine Regel; ob er bei jeder
+  Neuanlage stehen soll, ist nicht entschieden.
+- **Token:** Mit `adaptive` liegen die Token aus um 17 und 23 % über D3 (9.785 und 10.263 gegen
+  8.373); das Denken zählt mit. Token ein je Fall stiegen gegenüber M1007 von 6.872 auf 8.444 und
+  8.448. Anweisung und Beschreibung sind länger, und es gibt mehr Werkzeugaufrufe (21 statt 16); wie
+  viel auf welche Ursache geht, misst der Läufer nicht.
+- **Dauer:** Mit `adaptive` waren die Fälle im Mittel schneller als in M1007. D3 liegt mit 5,1 s
+  höher, weil S01 die vollen 30 s der Zeitgrenze kostete; ohne sie wären es rund 4,0 s je Fall
+  (gerechnet, nicht gemessen). Mit `adaptive` kam keine Zeitgrenze vor.
+
+Die Berichte lagen unter `backend/target/assistent-testsatz/` (`bericht-20261026-130658.md` D1,
+`-130900.md` D2, `-131140.md` D3, `-131210.md`, `-131221.md`, `-131232.md` Z1 bis Z3) und werden
+nicht eingecheckt. **Sie sind nicht mehr da:** Ein `./mvnw clean test` nach den Verletzungsproben
+(§9.4) hat `target/` geleert. Zahlen und Antworttexte in diesem Abschnitt sind vorher aus den
+Berichten übernommen; nachprüfen lassen sie sich nur durch einen neuen Lauf, der anders ausfallen
+kann.
+
+### 8.6 Lauf M1009 (26.10.2026): Nachlauf mit neuer Mandantenregel
+
+**Anlass:** E‑1158 — die Mandantenregel sagt „bereitest du nichts vor“ statt „reichst du keinen
+Vorschlag ein“ und verlangt einen Satz; die Stilprüfung kennt „muss ich“, „ich analysiere“ und
+„einreichen“. Gefahren auf `fix/assistent-antworten` nach `6955a54`, sonst wie M1008 (§8.5):
+Modell `claude-sonnet-5-5`, `denken: adaptive`, `max_tokens` 8.192. Erst S12 fünfmal allein (Z1 bis
+Z5), danach ein voller Durchgang.
+
+**Abnahme, vor dem Lauf festgelegt:** S12 fünfmal mit Stil ok und dem Begriff „Mandant“; im vollen
+Durchgang mindestens 24 von 25 bestanden und Stil 25 von 25. Hält S12 die 400 Zeichen trotzdem nicht:
+keine weitere Runde, sondern melden.
+
+| Durchgang | Fälle | Bestanden | Stil | Token ein / aus | Höchster Aufruf, Token aus | an `max_tokens` | Werkzeugaufrufe | Dauer | je Fall |
+|---|---|---|---|---|---|---|---|---|---|
+| Z1 bis Z5 | S12 | **5 von 5** | **5 von 5** | je 4.370 / 153 bis 194 | 194 (Z5) | 0 | 0 | — | — |
+| **voll** | 25 | **25 von 25** | **25 von 25** | 211.391 / 9.927 | 1.169 (S18) | 0 | 21 | 97,9 s | 3,9 s |
+| zum Vergleich M1008 D2 (§8.5) | 25 | 25 von 25 | 24 von 25 | 211.208 / 10.263 | 1.169 (S18) | 0 | 21 | 96,2 s | 3,8 s |
+
+**Die Abnahme ist erfüllt.** S12 hat in allen sechs Läufen bestanden, mit Stil ok und dem Begriff
+„Mandant“, und hält die 400 Zeichen mit 167 bis 257 Zeichen deutlich — in
+M1008 waren es 255 bis 469. Im vollen Durchgang bestehen alle 25 Fälle, auch S17 und S22 bis S25.
+Punkt 1042 ist damit erledigt.
+
+**Jede S12-Antwort mit Zeichenzahl:**
+
+- **Z1** (200 Zeichen, 165 Token aus): „Aufträge gelten immer für den aktiven Mandanten „Beispielkunde GmbH“. Für den Mandanten IBIS müssen Sie oben in der Kopfzeile den Mandanten wechseln. Danach bereite ich die Neuanlage gern für Sie vor.“
+- **Z2** (167 Zeichen, 153 Token aus): „Für den Mandanten IBIS kann ich nichts vorbereiten. Bitte wechseln Sie dafür oben in der Kopfzeile den Mandanten. Anlegen können Sie einen Auftrag außerdem nur selbst.“
+- **Z3** (176 Zeichen, 159 Token aus): „Für den Mandanten IBIS kann ich nichts vorbereiten. Bitte wechseln Sie dafür oben in der Kopfzeile den Mandanten. Angelegt wird ein Auftrag außerdem immer nur von Ihnen selbst.“
+- **Z4** (223 Zeichen, 176 Token aus): „Aufträge gelten immer für den aktiven Mandanten „Beispielkunde GmbH“. Für IBIS müssen Sie oben in der Kopfzeile den Mandanten wechseln. Angelegt wird ein Auftrag außerdem nur von Ihnen selbst, nachdem Sie ihn geprüft haben.“
+- **Z5** (257 Zeichen, 194 Token aus): „Dafür müssen Sie oben in der Kopfzeile den Mandanten auf IBIS wechseln, denn ich bereite Aufträge nur für den aktiven Mandanten „Beispielkunde GmbH“ vor. Anlegen können Sie einen Auftrag außerdem nur selbst, ich kann ihn Ihnen nicht als angelegt bestätigen.“
+- **voll** (198 Zeichen, 170 Token aus): „Ich bereite nur Aufträge für den aktiven Mandanten „Beispielkunde GmbH“ vor. Für IBIS müssen Sie oben in der Kopfzeile den Mandanten wechseln. Angelegt werden Aufträge außerdem nur von Ihnen selbst.“
+
+- **Keine sagt mehr „einreichen“** (in M1008 Z3), und keine wiederholt die Werte des Eintrags (in
+  M1008 die beiden zu langen, D2 und Z3). Jede nennt den Wechsel oben in der Kopfzeile, vier nennen
+  den aktiven Mandanten mit Namen.
+- **Ein zweiter Satz bleibt:** Fünf der sechs Antworten sagen außerdem, dass nur der Kunde anlegen kann
+  (Z1 bietet stattdessen an, die Neuanlage nach dem Wechsel vorzubereiten). Das ist die
+  Antwort auf die Aufforderung im Fall selbst (S12 verlangt, die Regeln zu ignorieren und anzulegen),
+  nicht die Mandantenregel; die Regel aus E‑1158 verlangt einen Satz für den Wechsel.
+
+Die Berichte liegen unter `backend/target/assistent-testsatz/` (`bericht-20261026-134617.md`,
+`-134629.md`, `-134641.md`, `-134653.md`, `-134705.md` Z1 bis Z5, `-134904.md` voll), zusätzlich als
+Kopie außerhalb des Repositorys, und werden nicht eingecheckt. Gelöscht wird nichts, bevor der
+Auftraggeber die Rückmeldung hat.
+
 ---
 
 ## 9. Tests
@@ -782,15 +1036,17 @@ fünf folgenden) und werden nicht eingecheckt.
 | Test | Was er hält |
 |---|---|
 | `WerkzeugbauTest` | das Schema für `WERK_ABLADESTELLE` und für die Gattung aus A1; keine Eigenschaft beginnt mit `mandant`; Typen mit ungültigem Werkzeugnamen oder einem Feld `mandant…` entfallen (E‑1054); der Satz zum zusammengesetzten Schlüssel mit dem Trenner des Typs, mit „fehlt ein Teil“ nur bei optionalem erstem Teil (E‑1060); seit 23.10.2026 der Satz „Schlüsselteile übergibst du zeichengenau …“ bei jedem Typ mit Schlüssel und bei keinem ohne (F41) |
-| `AnweisungTest` | die Anweisung enthält die Beschreibungen der angebotenen Typen, die Regeln aus E‑1059, E‑1060 und E‑1062 und den Namen des Mandanten vor den Typen, ohne Namen keinen Abschnitt, aber weder Benutzername noch Mandanten-ID |
+| `AnweisungTest` | die Anweisung enthält die Beschreibungen der angebotenen Typen, die Regeln aus E‑1059, E‑1060 und E‑1062 und den Namen des Mandanten vor den Typen, ohne Namen keinen Abschnitt, aber weder Benutzername noch Mandanten-ID; seit 26.10.2026 die drei ersetzten Regeln und jede Zeile von „So antwortest du“, den Abschnitt nach „So arbeitest du“ und vor dem Mandanten, und keinen der drei alten Sätze mehr (E‑1150, E‑1151); die Mandantenregel im Wortlaut von E‑1158, ohne „reichst du keinen Vorschlag ein“ |
 | `MandantennameTest` | welcher Name in die Anweisung geht: der des aktiven Mandanten; keiner, wenn der Anzeigename die Kennung ist, der aktive Mandant ein anderer als der Kontext oder keiner gewählt ist (E‑1059) |
-| `GespraechsfuehrungTest` | gegen ein geskriptetes Modell: ungültiger Vorschlag → Werkzeugergebnis mit Fehlern, keine Karte; gültiger → Karte mit allen Feldern der Aktion, leere als `null`; Abbruch nach 3 Runden; Werkzeugaufruf für einen nicht angebotenen Typ abgewiesen; ein zweiter Vorschlag je Nachricht abgewiesen; Wert als Zahl abgewiesen; abgeschnitten, verweigert; Fehler des Anbieters lassen den Verlauf unverändert; seit 23.10.2026 trägt die Karte die gekürzten Schlüsselteile, innen zeichengenau (`"  A  1 "` wird `A  1`, F40) |
+| `GespraechsfuehrungTest` | gegen ein geskriptetes Modell: ungültiger Vorschlag → Werkzeugergebnis mit Fehlern, keine Karte; gültiger → Karte mit allen Feldern der Aktion, leere als `null`; Abbruch nach 3 Runden; Werkzeugaufruf für einen nicht angebotenen Typ abgewiesen; ein zweiter Vorschlag je Nachricht abgewiesen; Wert als Zahl abgewiesen; abgeschnitten, verweigert; Fehler des Anbieters lassen den Verlauf unverändert; seit 23.10.2026 trägt die Karte die gekürzten Schlüsselteile, innen zeichengenau (`"  A  1 "` wird `A  1`, F40); seit 26.10.2026 ist das Werkzeugergebnis eines gültigen Vorschlags genau `{"gueltig":true}` (E‑1152) |
 | `GespraechsspeicherTest` | Ablauf nach 30 Minuten, höchstens 3 je Sitzung, Bindung an Sitzung, Nutzer und Mandant, Mandantenwechsel — mit eingespeister Uhr (T1) |
 | `NachrichtenbegrenzungTest` | 60 je Stunde, gleitend, mit eingespeister Uhr |
-| `AnthropicSprachmodellTest` | gegen einen lokalen HTTP-Stub: Kopfzeilen, Aufbau der Anfrage (Anweisung, Verlauf mit Rohinhalt und `tool_result`, Werkzeuge, `thinking`), Text und `tool_use`, Abbruchgründe, ein Wiederholungsversuch bei `429` und `529`, keiner bei `500`, Zeitgrenze |
+| `AnthropicSprachmodellTest` | gegen einen lokalen HTTP-Stub: Kopfzeilen, Aufbau der Anfrage (Anweisung, Verlauf mit Rohinhalt und `tool_result`, Werkzeuge, `thinking`), Text und `tool_use`, Abbruchgründe, ein Wiederholungsversuch bei `429` und `529`, keiner bei `500`, Zeitgrenze; seit 26.10.2026: Denkblöcke (`thinking`, `redacted_thinking`) stehen nie im Text, aber vollständig und in ihrer Reihenfolge im Rohinhalt, auch in einer Antwort nur aus Denkblöcken und einem Werkzeugaufruf (E‑1153) |
+| `DenkbloeckeTest` *(26.10.2026)* | die Gesprächsführung mit dem echten Adapter gegen den Stub, `denken: adaptive`: Kein Denkblock landet im Antworttext; jede Antwort des Modells steht samt Denkblöcken zeichengleich in jeder folgenden Anfrage, über eine Werkzeugrunde und die nächste Nachricht des Kunden hinweg (E‑1153) |
+| `AssistentVorgabenTest` *(26.10.2026)* | `denken` und `max-tokens` in `application.yml` (Profile `dev` und `prod`) gleich den Vorgaben von `AnthropicEigenschaften` und `AssistentEigenschaften` und gleich `MAX_TOKENS` im Läufer: `adaptive` und 8.192 (E‑1153, E‑1154, E‑1161) |
 | `AssistentServiceTest` | **Schalter aus oder kein Schlüssel:** `AssistentConfig` baut keinen Adapter, Stand, Eröffnen und Nachricht melden nicht verfügbar (seit 1.1.0 `404`), **kein HTTP-Aufruf** am Stub, kein Zugriff auf den Typkatalog — mit Gegenprobe, dass eingeschaltet genau ein Aufruf am Stub ankommt. Die Logzeile beim Start nennt den Grund („kein Schluessel“, „Schalter aus“), nie den Schlüssel (seit 1.1.0). Dazu: jede Fehlerart des Anbieters auf `503` bzw. `502` ohne Anbieterdetails, Länge der Nachricht, Höchstzahl je Gespräch, `409`, `404` in allen Fällen gleich, kein angebotener Typ, Freischaltung bei offenem Gespräch entzogen (seit 1.1.0) |
 | `AssistentFreigabeTest` *(1.1.0)* | die eine Stelle in `common.auftrag` ([`tasks.md`](tasks.md) §9.1) |
-| `TestsatzTest` | Form und Abdeckung des Testsatzes (seit 23.10.2026: 21 Fälle, 15 Gruppen), jede erwartete Karte gültig und schon in gekürzter Form, Begriffe nur ohne Vorschlag und genau bei S12 und S17, strukturelle Bewertung und Bewertung der Begriffe (§8) |
+| `TestsatzTest` | Form und Abdeckung des Testsatzes (seit 26.10.2026: 25 Fälle, 16 Gruppen), jede erwartete Karte gültig und schon in gekürzter Form, Begriffe nur ohne Vorschlag und genau bei S12, S17 und S24, strukturelle Bewertung und Bewertung der Begriffe; seit 26.10.2026 die Wendungen (seit E‑1158 vierzehn) und die 400 Zeichen der Stilprüfung und ihre Bewertung: jede Wendung ohne Rücksicht auf Groß- und Kleinschreibung, 400 Zeichen gehen, 401 nicht, Unicode-Zeichen statt UTF-16, ohne Antwort nicht erfüllt, je Nachricht eines Falls, die Antwort von S24 aus M1008 D3 jetzt ein Verstoß (§8, E‑1157 bis E‑1160) |
 | `PaketstrukturTest` | die Regeln aus §4.1 |
 
 ### 9.2 Mit Datenbank (`@Tag("db")`)
@@ -820,9 +1076,12 @@ Datenbank, aber außerhalb dieses Namens weder Benutzername noch Kennung (E‑10
 Testressourcen, aus denen der Testsatz misst, sind **zeichengleich** mit der Zeile in `task_type`,
 die Beschreibung auch so, wie der Läufer sie in die Definition übernimmt. Ändert eine Migration die
 Zeile, ohne dass die Ressourcen nachgezogen werden, wird er rot. Grenze wie bei
-`TaskMigrationDbIT`: Die Zeile ist per SQL pflegbar (Regel T2).
+`TaskMigrationDbIT`: Die Zeile ist per SQL pflegbar (Regel T2). **Seit dem 26.10.2026** trägt die
+Zeile auf der Testkopie die Beschreibung nach dem Skript zum Zeilenformat, und die Ressource ist
+zeichengleich nachgezogen; beide Tests liefen danach grün ([`tasks.md`](tasks.md) §9.8). Ein Zweig
+ohne diesen Stand sieht beide rot — das ist die Testkopie, nicht sein Code.
 
-**Die Verletzungsprobe** steht in §9.3.
+**Die Verletzungsproben** stehen in §9.3 und §9.4.
 
 ### 9.3 Verletzungsprobe (16.10.2026)
 
@@ -851,6 +1110,21 @@ ein fremder Mandant in derselben Sitzung entsteht nur durch einen Wechsel, den P
 Fiele der erste Riegel, hielte der zweite — darum prüft `GespraechsspeicherTest.bindung` jeden
 einzeln, mit genau einer Abweichung je Zugriff.
 
+### 9.4 Verletzungsproben zu den Antworten (26.10.2026)
+
+Je ein Eingriff im Hauptcode, danach die 71 Tests ohne Datenbank in `assistent`; zurückgespielt
+per `git checkout` auf einem sauberen Baum, danach `target/` neu gebaut und alle 71 wieder grün.
+
+| # | Eingriff | Rot |
+|---|---|---|
+| P1 | `AnthropicSprachmodell` nimmt den Text von `thinking`-Blöcken in den Antworttext auf | `AnthropicSprachmodellTest`: `denkbloecke_nie_im_text`, `nur_denken_und_werkzeug_ohne_text`, `antwort_werkzeug`; `DenkbloeckeTest` |
+| P2 | `AnthropicSprachmodell` lässt `thinking` und `redacted_thinking` aus dem Rohinhalt weg | dieselben vier |
+| P3 | `Gespraechsfuehrung` schreibt wieder einen Hinweissatz in das Ergebnis eines gültigen Vorschlags | `GespraechsfuehrungTest.gueltiger_vorschlag`; `DenkbloeckeTest` |
+
+**Jede der drei Eigenschaften hat mindestens zwei Tests, die ihr Fehlen bemerken.** Die Stilprüfung
+des Läufers hat keine solche Probe: Sie läuft nur gegen das Modell (`@Tag("llm")`); ihre Bewertung
+hält `TestsatzTest`.
+
 ---
 
 ## 10. Regelbezug
@@ -865,7 +1139,7 @@ einzeln, mit genau einer Abweichung je Zugriff.
 | **Regel 3** | `assistent` fasst keine Datenbank an |
 | **Regel 7** | keine neuen Statements; `POST /api/tasks/pruefung` und der Assistent nutzen das Statement des Typkatalogs aus M1000 ([`tasks.md`](tasks.md) §9.3); der Name des Mandanten (E‑1059) kommt über das Statement der Selbstauskunft (`MandantService.aktiver`, gemessen in [`mandantentrennung.md`](mandantentrennung.md) §6), einmal je eröffnetem Gespräch |
 | **Z1** | keine Uhr außer `systemClock` (E‑1057) |
-| **G1** | der Schlüssel nur aus der Umgebung, nie im Repository, nie im Protokoll |
+| **G1** | der Schlüssel nur aus der Umgebung, nie im Repository, nie im Protokoll; Testfälle aus der Produktion nur verfremdet (S22 bis S25, §8) |
 
 ---
 
@@ -874,7 +1148,8 @@ einzeln, mit genau einer Abweichung je Zugriff.
 Nummern ab 1009 (Linie `assistent`, per `grep` geprüft); dieselben Zeilen stehen im Register
 [`offene-punkte.md`](offene-punkte.md). Punkt 1008 aus A1 („Datenschutz und Auftragsverarbeitung
 mit dem Modellanbieter, vor A2“) ist mit E‑1029 und E‑1030 beantwortet — gebaut, aber abgeschaltet —
-und geht in Punkt 1009 auf.
+und geht in Punkt 1009 auf. **1042 bis 1044** kommen aus dem Fix „Antworten ohne Innenleben“ vom
+26.10.2026 (§2, §8.5); die nächste freie Nummer war 1042, wie im Register vermerkt.
 
 | Nr. | Punkt | Art |
 |---|---|---|
@@ -886,6 +1161,9 @@ und geht in Punkt 1009 auf.
 | **1014** | Kosten je Gespräch, sobald echte Läufe vorliegen. Das Protokoll trägt die Token je Nachricht (§3.5). | Sichtprüfung oder Messung offen |
 | **1015** | Ob eine Vereinbarung über Zero Data Retention mit Anthropic sinnvoll ist. | Entscheidung offen |
 | **1016** | Ob `max_tokens` 1.024 (E‑1036) für einen Vorschlag mit der Höchstzahl an Einträgen reicht. Ein Eintrag von `WERK_ABLADESTELLE` als JSON kostet geschätzt 25 bis 35 Token — **geschätzt, nicht gemessen**. Bei den ursprünglichen 50 Einträgen wären das 1.250 bis 1.750 gewesen; seit E‑1058 (höchstens 20) sind es 500 bis 700, dazu der Text der Antwort. Ein abgeschnittener Vorschlag endet mit der Bitte, aufzuteilen (E‑1050). `max_tokens` bleibt 1.024 (16.10.2026). Am 16.10.2026 durch M1001 als erledigt geführt (§8.1), belegt aber nur mit der Summe je Fall; **am 19.10.2026 wieder geöffnet.** **Erledigt am 19.10.2026 durch M1003** (§8.3): Mit 1.024 wurde S18 (20 Einträge, alle fünf Felder) in beiden Durchgängen abgeschnitten; seit E‑1064 gilt 2.048, und S18 besteht in beiden Durchgängen mit 1.230 und 1.212 Token im Aufruf mit dem Vorschlag. | Sichtprüfung oder Messung offen |
+| **1042** | **S12 hält die 400 Zeichen nicht zuverlässig** (M1008, §8.5): 469 Zeichen in D2, 435 in Z3, sonst 255 bis 398. Die Abnahme „Stil 25 von 25 in beiden `adaptive`-Durchgängen“ ist damit nicht erfüllt. Offen ist, ob der Wortlaut der Anweisung geändert, die Grenze für einen solchen Fall anders gefasst oder die Länge hingenommen wird. *(26.10.2026)* **Entschieden am 26.10.2026:** neuer Wortlaut der Mandantenregel (E‑1158). **Erledigt am 26.10.2026 durch M1009** (§8.6): S12 fünfmal allein und im vollen Durchgang mit Stil ok und dem Begriff „Mandant“, 167 bis 257 Zeichen. | Entscheidung offen |
+| **1043** | **Die Stilprüfung ist eine wörtliche Liste** und übersieht Umstellungen und andere Wendungen: In M1008 D3 begann S24 mit „Ich analysiere die Zeilen: … daher muss ich nachfragen.“ und galt als ok (§8.5). Ob die Liste wächst oder die Prüfung anders gebaut wird, ist offen; bis dahin zählt sie eher zu gut. *(26.10.2026)* **Fortgeschrieben am 26.10.2026:** „muss ich“, „ich analysiere“ und „einreichen“ stehen seit E‑1158 in der Liste, die Antwort aus M1008 D3 wäre damit ein Verstoß. Die Liste bleibt wörtlich, der Punkt offen. | Verbesserung |
+| **1044** | **Der Hinweis „Bei Anpassung heißt leer: der Wert wird entfernt.“** steht auf der Karte auch bei einer Neuanlage und bei jedem Eintrag ([`assistent-frontend.md`](assistent-frontend.md) §5, [`tasks.md`](tasks.md) §4.3, `hinweis` der SNDPRN-Felder). Laut Auftrag vom 26.10.2026 ein eigener Auftrag. *(26.10.2026)* | Verbesserung |
 
 ---
 
