@@ -60,7 +60,7 @@ class WerkzeugbauTest {
         .contains("besteht aus Bereich, Konto");
   }
 
-  /** Der Satz, der folgt, sobald ein Teil des Schluessels optional ist (E‑1164). */
+  /** Der Satz, der folgt, sobald ein Teil des Schluessels optional ist (E‑1170). */
   private static final String WENIGER_TEILE =
       " Hat ein zusammengesetzter Schlüssel weniger Teile als der Schlüssel Felder, zerlege ihn"
           + " nur, wenn eindeutig ist, welche fehlen; sonst frage nach, statt zu raten.";

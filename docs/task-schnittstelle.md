@@ -13,6 +13,12 @@ Innern eines Schlüsselteils und auch mehrere hintereinander, nie am Rand eines 
 Plattform verarbeitet solche Schlüssel nach Auskunft des Auftraggebers bereits; Statements, Spalten
 und Ablauf sind unverändert.
 
+*Geändert am 26.10.2026:* **Bei `WERK_ABLADESTELLE` ist auch die Abladestelle optional.** Ein
+Schlüssel ist damit `Werk`, `Werk/Abladestelle`, `Lieferantennummer/Werk` oder
+`Lieferantennummer/Werk/Abladestelle` (§8). Die Plattform verarbeitet alle vier nach Auskunft des
+Auftraggebers bereits. Allgemein gilt für jeden Typ: Ein fehlender Teil des Schlüssels entfällt samt
+Trenner, an jeder Stelle (§7). Statements, Spalten und Ablauf sind unverändert.
+
 ---
 
 ## 1. Worum es geht
@@ -177,6 +183,12 @@ Mandanten freigeschaltet. Ein aktivierter Typ ohne Ablauf führt zu Aufträgen, 
 Eine Definition nennt je Typ: die Aktionen, die Felder, den Aufbau des Schlüssels mit seinem
 Trenner, die Zeilenvorlage je Aktion und die Rückgabewerte (Erfolgswert und bekannte andere Werte).
 
+**Teile des Schlüssels** *(seit 26.10.2026)*: Jeder Teil kann optional sein, an jeder Stelle;
+mindestens einer ist Pflicht, ein Schlüssel ist also nie leer. **Fehlt ein Teil, entfällt er samt
+seinem Trenner** — es gibt keinen leeren Teil zwischen zwei Trennern und keinen Trenner am Anfang oder
+Ende. Welche Teile ein Schlüssel hat, steht deshalb nicht im Text, sondern nur in der Zahl der Teile;
+haben zwei Formen gleich viele, sieht ihr Text gleich aus (§8).
+
 ---
 
 ## 8. Beispiel: der Typ `WERK_ABLADESTELLE`
@@ -185,10 +197,23 @@ Trenner, die Zeilenvorlage je Aktion und die Rückgabewerte (Erfolgswert und bek
 freigeschaltet; bis dahin für `NEXANS` und `IBIS` ([`tasks.md`](tasks.md) §3.9). Für die Plattform
 ändert sich damit nichts: Sie liest `mandant_id` aus dem Auftrag, gleich welcher Mandant es ist.
 
-Ein Eintrag besteht aus einem **Schlüssel** und zwei Werten. Der Schlüssel ist `Werk/Abladestelle`
-oder `Lieferantennummer/Werk/Abladestelle`, Trenner `/`. Die Werte sind **SNDPRN** und
-**SNDPRN_4908**, jeweils leer oder sechs Ziffern. Kein Schlüsselteil enthält `/` oder `,`; jeder ist
-1 bis 35 Zeichen lang, Groß- und Kleinschreibung wie eingegeben.
+Ein Eintrag besteht aus einem **Schlüssel** und zwei Werten. Der Schlüssel hat eine von vier Formen,
+Trenner `/` *(seit 26.10.2026; bis dahin nur die zweite und die vierte)*:
+
+| Form | Beispiel |
+|---|---|
+| `Werk` | `72332` |
+| `Werk/Abladestelle` | `72332/DDB0` |
+| `Lieferantennummer/Werk` | `0101159903/22` |
+| `Lieferantennummer/Werk/Abladestelle` | `0101159903/22/001N0` |
+
+Pflicht ist nur das Werk. Die Plattform verarbeitet alle vier Formen nach Auskunft des Auftraggebers
+vom 26.10.2026 bereits. **`Werk/Abladestelle` und `Lieferantennummer/Werk` sind im Parametertext
+nicht zu unterscheiden:** `010/18VZE` kann beides sein. Der Monitor gibt den Schlüssel so weiter, wie
+er ihn zusammensetzt, und lehnt zwei Einträge mit demselben Schlüsseltext in einem Auftrag ab, gleich
+in welcher Lesart. Die Werte sind **SNDPRN** und **SNDPRN_4908**, jeweils leer oder sechs Ziffern.
+Kein Schlüsselteil enthält `/` oder `,`; jeder ist 1 bis 35 Zeichen lang, Groß- und Kleinschreibung
+wie eingegeben.
 
 **Leerzeichen im Schlüssel** *(seit 23.10.2026)*: Ein Schlüsselteil kann Leerzeichen (U+0020)
 enthalten, auch mehrere hintereinander — **zeichengenau so, wie sie im Parametertext stehen**. Am

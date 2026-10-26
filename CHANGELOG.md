@@ -23,8 +23,32 @@ Tags und die Definition of Done für ein Release stehen in
   der Produktion las das Modell eine solche Zeile falsch. Idempotent, mit drei Wachen, **an keine
   Version gebunden**, vor oder nach dem Deployment ([`docs/betrieb.md`](docs/betrieb.md) §7a F,
   E‑1156). Lukas führt es in der Produktion aus. Auf der Testkopie gelaufen am 26.10.2026.
+- `scripts/werk-abladestelle-abladestelle-optional.sql` mit Rücknahme
+  `scripts/werk-abladestelle-abladestelle-optional-ruecknahme.sql`: **Bei `WERK_ABLADESTELLE` ist
+  die Abladestelle optional**; Pflicht bleibt nur das Werk. Das Skript entfernt `pflicht` an der
+  Abladestelle und ersetzt in der Beschreibung den Satz zum Schlüssel; die Rücknahme stellt beides
+  zeichengleich wieder her. Grund: Die Plattform verarbeitet Schlüssel ohne Abladestelle bereits
+  (E‑1168). Idempotent, mit drei Wachen. Lukas führt es in der Produktion aus, **erst nach dem
+  Deployment dieser Version und nach dem Skript zum Zeilenformat** ([`docs/betrieb.md`](docs/betrieb.md)
+  §7a G, E‑1171). Auf der Testkopie gelaufen am 26.10.2026.
 
 ### Geändert
+
+- **Schlüsselteile frei wählbar** (Entscheidungen des Auftraggebers vom 26.10.2026, E‑1164 bis
+  E‑1171, [`docs/tasks.md`](docs/tasks.md) §2). Grund: Eine Definition mit optionaler Abladestelle
+  war ungültig, weil nur der erste Teil des Schlüssels optional sein durfte; der Assistent wäre für
+  den Mandanten verschwunden.
+  - **Jeder Teil eines Schlüssels kann optional sein**, an jeder Position; mindestens einer bleibt
+    Pflicht, alle übrigen Prüfungen am Schlüssel bleiben (E‑1164 bis E‑1166). Fehlende Teile
+    entfallen samt Trenner, wie bisher schon (E‑1167). Erledigt Punkt 1007.
+  - **Werkzeugbeschreibung:** statt „fehlt ein Teil, ist es der optionale erste“ nennt sie die
+    optionalen Teile mit ihrem Label und sagt, einen Schlüssel mit weniger Teilen nur zu zerlegen,
+    wenn eindeutig ist, welche fehlen, und sonst nachzufragen (E‑1170, ändert E‑1060). Ohne
+    optionale Teile bleibt der Text Wort für Wort.
+  - [`docs/task-schnittstelle.md`](docs/task-schnittstelle.md) §7 und §8: die vier Schlüsselformen;
+    `Werk/Abladestelle` und `Lieferantennummer/Werk` sehen im Parametertext gleich aus.
+  - Der Testsatz rechnet in sechs Fällen mit der alten Lesart; kein Lauf in diesem Schritt
+    (Punkt 1045). Kein voller DB-Lauf (F51).
 
 - **Der Assistent antwortet ohne Innenleben** (Entscheidungen des Auftraggebers vom 26.10.2026,
   E‑1150 bis E‑1157, [`docs/assistent.md`](docs/assistent.md) §2). Grund: Im Test in der Produktion

@@ -28,6 +28,13 @@ A2 bis A4 (§8).
 > (`scripts/werk-abladestelle-schluessel-leerzeichen.sql`). Die Entscheidungen stehen in §2 unter
 > „Leerzeichen im Schlüssel“, die Tests in §9.7.
 
+> **Geändert am 26.10.2026** (Zweig `feat/schluessel-frei`): **Jeder Teil eines Schlüssels kann
+> optional sein**, an jeder Position; mindestens einer bleibt Pflicht (§3.2, §3.6). Bei
+> `WERK_ABLADESTELLE` ist seitdem auch die Abladestelle optional, Pflicht ist nur das Werk (§4.2,
+> §4.3). Die Definition ändert ein Skript, erst nach dem Deployment
+> (`scripts/werk-abladestelle-abladestelle-optional.sql`). Die Entscheidungen stehen in §2 unter
+> „Schlüsselteile frei wählbar“, die Tests in §9.9.
+
 ---
 
 ## 1. Zweck und Ablauf
@@ -250,6 +257,39 @@ Klammern dahinter.
 |---|---|---|
 | **E‑1162** (F46) | **Das Skript setzt die ganze Beschreibung**, nicht zwei Teiltexte per `REPLACE`, und nur, wenn dort binär gleich der Stand nach `V102` oder schon der neue steht; sonst bricht Wache 3 ab. Beide Fassungen stehen vollständig im Skript und in der Rücknahme. `SET NAMES utf8mb4` legt den Zeichensatz der Verbindung fest. | Ein `REPLACE` träfe eine von Hand geänderte Beschreibung halb und hinterließe einen Text, den niemand geprüft hat. Die ganze Fassung lässt sich zeichengleich mit der Testressource vergleichen. Die Texte tragen Umlaute und „…“: Kommt einer verfälscht an, erkennt Wache 3 die gespeicherte Beschreibung nicht wieder und schreibt nichts |
 
+### Schlüsselteile frei wählbar (26.10.2026)
+
+Aus dem Auftrag „Schlüsselteile frei wählbar“ (Zweig `feat/schluessel-frei`, von `main` =
+`d3d0fb0`). **Anlass:** Eine Definition mit optionaler Abladestelle war ungültig, weil nur der erste
+Teil des Schlüssels optional sein durfte (§3.6 Nr. 6) — der Typ wäre nicht mehr angeboten worden, und
+der Assistent wäre für den Mandanten verschwunden. Die E‑Nummer ist `E‑1163` plus die Nummer der
+Entscheidung im Auftrag (E‑1164 bis E‑1169); E‑1170 und E‑1171 stehen im Auftrag als Aufgabe. Die
+nächste freie Nummer war E‑1164, per `grep` über alle Zweige und Arbeitsbäume geprüft und an E‑1163
+geeicht. Herkunft: **A** = vom Auftraggeber am 26.10.2026 entschieden, **Auskunft** = Mitteilung des
+Auftraggebers vom 26.10.2026, im Monitor nicht prüfbar.
+
+| E | Entscheidung | Herkunft |
+|---|---|---|
+| **E‑1164** | **Ein Schlüssel kann beliebig viele Teile haben, und jeder Teil kann optional sein**, an jeder Position. Die Regel „nur der erste Teil darf optional sein“ entfällt (§3.2, §3.6 Nr. 6). Erledigt Punkt 1007. | A |
+| **E‑1165** | **Mindestens ein Teil des Schlüssels bleibt Pflicht.** Damit hat jeder Eintrag einen Schlüssel; eine zusätzliche Prüfung am Eintrag gibt es nicht. | A |
+| **E‑1166** | **Alle übrigen Prüfungen am Schlüssel bleiben:** Felder bekannt, eindeutig, ohne `nurBei`; `trenner` genau ein Zeichen. | A |
+| **E‑1167** | **Fehlende Teile entfallen samt Trenner, an jeder Position**, wie `TypDefinition.schluesselText` es schon tat (§5.2). Eine Option für leere Teile mit Trenner (`72332//`) gibt es nicht. | A |
+| **E‑1168** | **Die Plattform verarbeitet bei `WERK_ABLADESTELLE` Schlüssel ohne Abladestelle bereits:** `Werk`, `Werk/Abladestelle`, `Lieferantennummer/Werk` und `Lieferantennummer/Werk/Abladestelle`. Darauf stützt sich das Skript, das die Abladestelle optional macht (§4.2, §4.3). | Auskunft |
+| **E‑1169** | **Die Freigabe des Assistenten bleibt unverändert** (`AssistentFreigabe`, §3.9). | A |
+| **E‑1170** | **Die Werkzeugbeschreibung nennt die optionalen Teile des Schlüssels mit ihrem `label`** und sagt: „Hat ein zusammengesetzter Schlüssel weniger Teile als der Schlüssel Felder, zerlege ihn nur, wenn eindeutig ist, welche fehlen; sonst frage nach, statt zu raten.“ Ohne optionale Teile bleibt der Text, wie er war; kein Wort über einen bestimmten Typ. Ändert E‑1060 ([`assistent.md`](assistent.md) §2, §4.5): „fehlt ein Teil, ist es der optionale erste“ entfällt. | A |
+| **E‑1171** | **`WERK_ABLADESTELLE` ändert ein Skript mit Rücknahme**, keine Migration, mit Wachen wie das vom 23.10.2026: Es entfernt `pflicht` an der Abladestelle und ersetzt in der Beschreibung den Satz zum Schlüssel; sonst ändert es nichts (§4.3). **Reihenfolge Pflicht:** erst die Version mit E‑1164 ausrollen, dann das Skript ([`betrieb.md`](betrieb.md) §7a G). Auf der Testkopie gelaufen am 26.10.2026 (§9.9). | A |
+
+**Festlegungen der Umsetzung.** Vorgeschlagen als F47 bis F51, die F-Nummern setzen F46 fort; sie
+gelten, bis der Auftraggeber sie bestätigt oder anders entscheidet.
+
+| F | Festlegung | Grund |
+|---|---|---|
+| **F47** | **Das Skript setzt die ganze Beschreibung**, wie E‑1162, und nur, wenn dort binär gleich der Stand nach dem Skript vom 26.10.2026 (Zeilenformat) oder schon der neue steht. Beide Fassungen unterscheiden sich nur im Satz zum Schlüssel; sie stehen vollständig in Skript und Rücknahme. | Der Auftrag nennt die Wirkung („ersetzt den Satz“); E‑1162 die Form. Die Wirkung ist dieselbe, und ein von Hand geänderter Text wird nicht halb überschrieben |
+| **F48** | **Die Rücknahme stellt die Struktur zeichengleich wieder her.** Sie setzt das Feld `abladestelle` als Ganzes neu (`JSON_OBJECT` mit `pflicht` zwischen `label` und `muster`, Werte aus dem Feld selbst); Wache 3 verlangt, dass es genau `name`, `label`, `muster` und `beispiel` trägt. | `JSON_INSERT` hängte `pflicht` ans Ende des Felds: inhaltlich gleich, als Text nicht. Dann wären `TestsatzDefinitionDbIT` und `TaskMigrationDbIT` nach einer Rücknahme rot, und der Vergleich mit einer Sicherung schlüge fehl. Auf der Testkopie hatte die Struktur nach der Rücknahme wieder die MD5 der Sicherung (§9.9) |
+| **F49** | **Wache 2 prüft zusätzlich, dass das Werk Pflicht ist.** | Ohne Pflicht am Werk wäre nach dem Skript kein Teil des Schlüssels Pflicht, und die Definition wäre ungültig (E‑1165) — der Typ verschwände still |
+| **F50** | **Wortlaut der optionalen Teile:** „Optional ist der Teil Bereich.“ bzw. „Optional sind die Teile Lieferantennummer und Abladestelle.“ (drei und mehr mit Komma und „und“), direkt nach „… zerlegst du ihn ohne Rückfrage in diese Felder in ihrer Reihenfolge.“, der für einen vollständigen Schlüssel stehen bleibt; danach der Satz aus E‑1170 wörtlich. | Der Auftrag nennt den Inhalt, nicht die Form. „Optional“ ist das Wort, mit dem die Feldbeschreibung dasselbe sagt |
+| **F51** | **Kein voller DB-Lauf.** Gegen die Testkopie laufen `TaskMigrationDbIT` und `TestsatzDefinitionDbIT`; beide lesen nur. Grün ist damit `./mvnw verify -DexcludedGroups=db` plus diese beiden, nicht der volle `./mvnw verify` aus der Abnahme. | Der Auftrag erlaubt auf der Testkopie nur dem Skript zu schreiben, in `task_type`; die übrigen DB-Tests schreiben in weitere Tabellen. Wie E‑1163 |
+
 ---
 
 ## 3. Auftragstypen definieren
@@ -289,7 +329,7 @@ wirkungslos zu bleiben.
 | `aktionen` | Liste der Aktionen in Klartext, 1 bis 10, eindeutig, je 1 bis 64 Zeichen, ohne Zeilenumbruch und Steuerzeichen. Sie stehen so in der Kopfzeile des Parametertexts |
 | `maxEintraege` | Höchstzahl Einträge je Auftrag, ganze Zahl von 1 bis 500 |
 | `felder` | Liste der Felder, mindestens eines. Je Feld: `name` (Pflicht, `[a-z][a-z0-9]*`, eindeutig, nicht `schluessel`), `label` (Pflicht, nicht leer — so nennt der Klartext einer Prüfmeldung das Feld), `pflicht` (`true` oder `false`, Vorgabe `false`; gilt bei den Aktionen, bei denen das Feld vorkommt), `muster` (regulärer Ausdruck nach Java, den der **ganze** Wert erfüllen muss, optional), `nurBei` (Liste von Aktionen, optional, nicht leer; außerhalb davon ist das Feld verboten), `beispiel` und `hinweis` (optional, Text, für den Assistenten) |
-| `schluessel` | `felder` (Liste von Feldnamen in Reihenfolge, mindestens einer, ohne `nurBei`) und `trenner` (genau ein Zeichen, kein Zeilenumbruch, kein Steuerzeichen). **Nur der erste Teil darf ein Feld ohne `pflicht` sein**, und mindestens ein Teil muss `pflicht` sein. Fehlt der Wert des ersten Teils, entfällt er mit seinem Trenner. **Jeder Teil wird vor der Prüfung um Leerzeichen (U+0020) am Rand gekürzt**, bei jedem Typ; eine Option dafür gibt es nicht (§5.3, E‑1144). Ob ein Leerzeichen im Innern zulässig ist, entscheidet das `muster` |
+| `schluessel` | `felder` (Liste von Feldnamen in Reihenfolge, mindestens einer, ohne `nurBei`) und `trenner` (genau ein Zeichen, kein Zeilenumbruch, kein Steuerzeichen). **Jeder Teil darf ein Feld ohne `pflicht` sein, an jeder Position; mindestens ein Teil muss `pflicht` sein** *(seit 26.10.2026, E‑1164, E‑1165; bis dahin nur der erste)*. Fehlt der Wert eines Teils, entfällt er mit seinem Trenner, an jeder Position; einen leeren Teil mit Trenner gibt es nicht (E‑1167). **Jeder Teil wird vor der Prüfung um Leerzeichen (U+0020) am Rand gekürzt**, bei jedem Typ; eine Option dafür gibt es nicht (§5.3, E‑1144). Ob ein Leerzeichen im Innern zulässig ist, entscheidet das `muster` |
 | `regeln` | Liste aus dem festen Satz in §3.3 |
 | `zeile` | je Aktion genau eine Vorlage für die Zeile eines Eintrags, keine für eine unbekannte Aktion. Platzhalter `{feldname}` und `{schluessel}`; ein fehlender Wert wird zu leerem Text. Außerhalb eines Platzhalters keine geschweifte Klammer, kein Zeilenumbruch, kein Steuerzeichen |
 | `rueckgaben` | `ok` (der Wert, der Erfolg heißt; Pflicht, nicht leer) und `weitere` (Liste bekannter anderer Werte, optional). Kein Wert mit Leerraum am Rand oder mit Zeilenumbruch — die Rückgabe wird zeilenweise und ohne Leerraum am Rand verglichen (§5.4) |
@@ -388,7 +428,8 @@ Geprüft wird beim Laden, jeweils mit Grund:
    `schluessel`; `label` nicht leer; `pflicht` ein Wahrheitswert; jedes `muster` übersetzbar;
    `nurBei` nicht leer und nur aus bekannten Aktionen; `beispiel` und `hinweis` Text.
 6. `schluessel`: Felder bekannt, eindeutig und ohne `nurBei`; `trenner` genau ein Zeichen, kein
-   Umbruch, kein Steuerzeichen; ab dem zweiten Teil `pflicht`; mindestens ein Teil `pflicht`.
+   Umbruch, kein Steuerzeichen; mindestens ein Teil `pflicht`, gleich an welcher Position. *Bis zum
+   26.10.2026 galt dazu „ab dem zweiten Teil `pflicht`“; die Regel ist entfallen (E‑1164).*
 7. `regeln`: jede `art` aus dem festen Satz; jeder Feldname bekannt (`schluessel` nur bei
    `eindeutig` und nur mit Schlüssel); jede Aktion in `bei` bekannt.
 8. `zeile`: für jede Aktion genau eine Vorlage, keine für eine unbekannte Aktion; jeder Platzhalter
@@ -591,9 +632,19 @@ Ok
   `,`; Groß- und Kleinschreibung bleiben wie eingegeben. **Leerzeichen (U+0020) sind erlaubt**, auch
   mehrere hintereinander, und bleiben zeichengenau. Am Rand kürzt das Backend sie vor der Prüfung,
   je Teil; die 35 gelten für den gekürzten Teil. Jedes andere Leerzeichen — Tabulator, Umbruch,
-  U+00A0, U+202F, U+3000 — ist unzulässig. Ein Teil nur aus Leerzeichen fehlt: Bei Werk und
-  Abladestelle ist das `PFLICHT_FEHLT`, eine solche Lieferantennummer entfällt, und der Schlüssel ist
-  zweiteilig. Die 35 sind eine technische Schranke (Punkt 1002).
+  U+00A0, U+202F, U+3000 — ist unzulässig. Ein Teil nur aus Leerzeichen fehlt: Beim Werk ist das
+  `PFLICHT_FEHLT`, eine solche Lieferantennummer oder Abladestelle entfällt samt Trenner *(bis zum
+  26.10.2026 war auch die Abladestelle Pflicht)*. Die 35 sind eine technische Schranke (Punkt 1002).
+- **Schlüsselformen (26.10.2026, E‑1164 bis E‑1168):** Pflicht ist nur das Werk; Lieferantennummer
+  und Abladestelle sind optional. Damit gibt es vier Formen — `Werk`, `Werk/Abladestelle`,
+  `Lieferantennummer/Werk` und `Lieferantennummer/Werk/Abladestelle` —, und die Plattform verarbeitet
+  alle vier (Auskunft, E‑1168). **Zwei davon sehen im Parametertext gleich aus:** `010/18VZE` ist
+  Werk `010` mit Abladestelle `18VZE` oder Lieferantennummer `010` mit Werk `18VZE`. Zwei solche
+  Einträge in einem Auftrag sind `DOPPELT`, weil `eindeutig` den zusammengesetzten Schlüssel
+  vergleicht (E‑1014). Welche Lesart der Kunde meint, klärt der Assistent: Die Werkzeugbeschreibung
+  sagt, einen Schlüssel mit weniger Teilen nur zu zerlegen, wenn eindeutig ist, welche fehlen, und
+  sonst nachzufragen (E‑1170, [`assistent.md`](assistent.md) §4.5). Wie sich das auf den Testsatz
+  auswirkt, ist Punkt 1045.
 - **SNDPRN und SNDPRN_4908 (E‑1013):** leer oder genau sechs Ziffern.
 - **Doppelte Schlüssel (E‑1014)** innerhalb eines Auftrags werden abgelehnt.
 - **Höchstens 20 Einträge (E‑1058).** Bis zur Migration `V101` waren es 50 (E‑1015).
@@ -653,7 +704,23 @@ Ok
 > da; Beschreibung die alte oder die neue). **An keine Version gebunden:** Kein Code wertet die
 > Beschreibung aus, das Skript kann vor oder nach einem Deployment laufen
 > ([`betrieb.md`](betrieb.md) §7a F). Es wirkt ab dem nächsten eröffneten Gespräch (E‑1045). Auf
-> der Testkopie gelaufen am 26.10.2026 (§9.8). Was hier steht, ist der Stand nach beiden Skripten.
+> der Testkopie gelaufen am 26.10.2026 (§9.8).
+
+> **Geändert am 26.10.2026 per Skript, nicht per Migration** (E‑1164 bis E‑1171, F47 bis F49).
+> [`scripts/werk-abladestelle-abladestelle-optional.sql`](../scripts/werk-abladestelle-abladestelle-optional.sql)
+> macht die Abladestelle optional: Es entfernt `"pflicht": true` an `abladestelle` und ersetzt in der
+> Beschreibung den Satz „Der Schlüssel besteht aus Werk und Abladestelle, wahlweise mit der
+> Lieferantennummer davor; die Lieferantennummer gehört nur dazu, wenn der Kunde sie für diesen
+> Eintrag nennt.“ durch den im Text unten. Sonst ändert es nichts; die Struktur bleibt Zeichen für
+> Zeichen, wie sie war. Die Rücknahme
+> [`scripts/werk-abladestelle-abladestelle-optional-ruecknahme.sql`](../scripts/werk-abladestelle-abladestelle-optional-ruecknahme.sql)
+> stellt beides zeichengleich wieder her (F48). Beide sind idempotent, mit drei Wachen (eigenes Schema;
+> Typ da, die ersten drei Felder die Schlüsselteile und das Werk Pflicht; `pflicht` an der
+> Abladestelle `true` oder fehlend und die Beschreibung die alte oder die neue). **Erst nach dem
+> Deployment der Version mit E‑1164 ausführen** ([`betrieb.md`](betrieb.md) §7a G): Eine ältere
+> liest die Definition danach als ungültig, und der Assistent verschwindet. Voraussetzung ist das
+> Skript zum Zeilenformat; ohne es erkennt Wache 3 die Beschreibung nicht. Auf der Testkopie gelaufen
+> am 26.10.2026 (§9.9). Was hier steht, ist der Stand nach allen drei Skripten.
 
 Name: **Anpassen der Werk-/Abladestellentabelle**, `aktiv = TRUE`.
 
@@ -666,7 +733,7 @@ Name: **Anpassen der Werk-/Abladestellentabelle**, `aktiv = TRUE`.
       "muster": "^(?:[^/,\\p{Z}]| ){1,35}$", "beispiel": "0101159903" },
     { "name": "werk", "label": "Werk", "pflicht": true,
       "muster": "^(?:[^/,\\p{Z}]| ){1,35}$", "beispiel": "72332" },
-    { "name": "abladestelle", "label": "Abladestelle", "pflicht": true,
+    { "name": "abladestelle", "label": "Abladestelle",
       "muster": "^(?:[^/,\\p{Z}]| ){1,35}$", "beispiel": "DDB0" },
     { "name": "sndprn", "label": "SNDPRN",
       "muster": "^[0-9]{6}$", "nurBei": ["Neuanlage", "Anpassung"], "beispiel": "120764",
@@ -696,12 +763,13 @@ und fallen über die Zeichenprüfung (§3.4).
 
 Die Beschreibung (Fließtext für den Assistenten), wortgleich aus dem Auftrag an die
 Plattform-Entwicklung vom 16.10.2026, mit den beiden Änderungen aus `V101`, dem Absatz aus
-`V102` und den beiden Änderungen aus dem Skript vom 26.10.2026:
+`V102`, den beiden Änderungen aus dem Skript zum Zeilenformat und dem Satz zum Schlüssel aus dem
+Skript zur optionalen Abladestelle (beide vom 26.10.2026):
 
 ```
 Die EDI-Plattform erzeugt aus eingehenden Partnernachrichten IDOC-Nachrichten für das Kundensystem und braucht dafür eine SNDPRN. Ist sie nicht fest hinterlegt, ermittelt die Plattform sie über die Werk-/Abladestellentabelle des Kunden. Mit diesem Auftrag legt der Kunde Einträge dieser Tabelle an, passt sie an oder löscht sie.
 
-Ein Eintrag besteht aus einem Schlüssel und zwei Werten. Der Schlüssel besteht aus Werk und Abladestelle, wahlweise mit der Lieferantennummer davor; die Lieferantennummer gehört nur dazu, wenn der Kunde sie für diesen Eintrag nennt. Die Werte sind SNDPRN und SNDPRN_4908 (für VDA-4908-Prozesse), jeweils sechsstellig numerisch.
+Ein Eintrag besteht aus einem Schlüssel und zwei Werten. Der Schlüssel besteht aus dem Werk, wahlweise mit der Lieferantennummer davor und der Abladestelle dahinter; Lieferantennummer und Abladestelle gehören nur dazu, wenn der Kunde sie für diesen Eintrag nennt. Die Werte sind SNDPRN und SNDPRN_4908 (für VDA-4908-Prozesse), jeweils sechsstellig numerisch.
 
 Kunden schreiben einen Eintrag oft als Zeile: Schlüssel, Komma, SNDPRN, Komma, SNDPRN_4908. Im Schlüssel trennt „/“ die Teile, das erste Komma beendet den Schlüssel. Beispiel: „0101159903/40NP/123,120764,“ heißt Lieferantennummer 0101159903, Werk 40NP, Abladestelle 123, SNDPRN 120764 und SNDPRN_4908 leer. Ein Feld, das nach einem Komma leer bleibt, ist ausdrücklich leer. Einen Schlüsselteil zerlegst du nie weiter, auch wenn er wie 40NP Ziffern und Buchstaben mischt.
 
@@ -714,8 +782,9 @@ Ist unklar, ob ein Eintrag neu angelegt oder geändert werden soll, schlage die 
 Ein Auftrag enthält eine Aktion für bis zu 20 Einträge. Ob ein Schlüssel existiert, weiß der Assistent nicht; das zeigt erst die Ausführung.
 ```
 
-**Woran die Regeln hängen:** Der Schlüssel aus zwei oder drei Teilen ist `schluessel` mit der
-optionalen `lieferantennummer` vorn. „Löschung: nur der Schlüssel“ ist `nurBei` an beiden
+**Woran die Regeln hängen:** Der Schlüssel aus einem bis drei Teilen ist `schluessel` mit
+`pflicht` nur am `werk`; `lieferantennummer` vorn und `abladestelle` hinten sind optional (seit
+26.10.2026; bis dahin war auch die Abladestelle Pflicht). „Löschung: nur der Schlüssel“ ist `nurBei` an beiden
 SNDPRN-Feldern — eine Löschung mit SNDPRN wird mit `FELD_NICHT_ERLAUBT` abgelehnt. „Mindestens
 einer der beiden Werte“ ist `mindestensEins` bei Neuanlage und Anpassung. Keine Zeile Code nennt den
 Typ (E‑1018); ein Test hält das fest (§9).
@@ -1131,9 +1200,9 @@ Damit sie nicht verloren gehen:
 
 | Test | Was er hält |
 |---|---|
-| `DefinitionsPruefungTest` | `WERK_ABLADESTELLE` und die Gattung sind gültig; je Prüfregel beim Laden (§3.6) mindestens ein ungültiger Fall — unbekannter Schlüssel auf jeder Ebene, fehlender Pflichtschlüssel, nicht übersetzbares Muster, Platzhalter ohne Feld, Aktion ohne Zeilenvorlage, optionaler Schlüsselteil nicht vorn, `maxEintraege` außerhalb der Grenzen, `rueckgaben.ok` fehlt oder steht in `weitere`; alle Gründe kommen zurück |
+| `DefinitionsPruefungTest` | `WERK_ABLADESTELLE` und die Gattung sind gültig; je Prüfregel beim Laden (§3.6) mindestens ein ungültiger Fall — unbekannter Schlüssel auf jeder Ebene, fehlender Pflichtschlüssel, nicht übersetzbares Muster, Platzhalter ohne Feld, Aktion ohne Zeilenvorlage, kein Schlüsselteil Pflicht, `maxEintraege` außerhalb der Grenzen, `rueckgaben.ok` fehlt oder steht in `weitere`; alle Gründe kommen zurück. Seit 26.10.2026 sind optionale Schlüsselteile nicht vorn, in der Mitte, am Ende und mehrere gültig, alle optional ungültig (§9.9) |
 | `AuftragsPruefungTest` | jeder Fehlercode aus §5.3 mindestens einmal; 35 und 36 Zeichen, fünf und sieben Ziffern, leere Liste, 20 und 21 Einträge (bis `V101`: 50 und 51), Schlüssel doppelt, Löschung mit SNDPRN, Anpassung mit beiden Werten leer, Tabulator (`UNZULAESSIGES_ZEICHEN`) im Schlüsselteil; seit 23.10.2026 die Leerzeichen im Schlüssel (§9.7); der Zeichenschutz an einem Feld ohne Muster (Trenner, Komma bzw. Zeichen jeder Vorlage, LF, CR, Steuerzeichen, `U+0085`, `U+2028`); die Gattung |
-| `ParametertextTest` | die drei Texte aus §5.2 zeichengenau, Zeilenende, die Gattung, Ersetzen in einem Durchgang |
+| `ParametertextTest` | die drei Texte aus §5.2 zeichengenau, Zeilenende, die Gattung, Ersetzen in einem Durchgang; seit 26.10.2026 Schlüssel ohne letzten und ohne mittleren Teil (§9.9) |
 | `RueckgabeTest` | CRLF, abschließendes LF, Leerraum, unbekannter Wert, leere Zeile, fehlende Rückgabe |
 | `TaskStatusClassifierTest` | jede Zeile der Tabelle in §5.5, dazu falsche Zeilenzahl |
 | `TypUnabhaengigkeitTest` | `WERK_ABLADESTELLE` steht im Hauptcode (`src/main`, auch generiert und Ressourcen) nirgends außer in den Migrationen `V100` bis `V103` — mit Gegenprobe, dass die Suche ihn in genau diesen vieren findet (E‑1018; `V103` seit 1.1.0) |
@@ -1153,7 +1222,7 @@ Parametertext arbeiten für sie richtig, ohne dass im Hauptcode etwas für sie s
 | `AuftraegeDbIT` | Anlegen ergibt eine Zeile `OFFEN` mit `eingestellt_am`, Kopie der Definition, geordneten Einträgen, Parametertext, `angelegt_von` und genau einem Ereignis ohne Parametertext; Wiederholung mit derselben `anfrageId` (auch groß geschrieben, mit anderem Rumpf) gibt `200` und keinen zweiten Auftrag; Prüffehler im Fehlerformat; **simulierte Plattform** mit den vier Statements aus dem Vertrag: Erledigt, Teilweise erledigt (CRLF), Unstimmig, Fehlgeschlagen, doppeltes Abholen, Zurückmelden ohne Abholen; Zeitstempel nur auf vorhanden und Reihenfolge (T1); seit 23.10.2026 Leerzeichen im Schlüssel über Prüfung und Anlegen bis in Zeile und Parametertext, U+00A0 `400` (§9.7) |
 | `AuftraegeIsolationDbIT` | die vier Endpunkte: `NEXANS` gegen `IBIS`, `SUTTONS` ohne Freischaltung (`404` beim Anlegen, ununterscheidbar vom erfundenen Typ in Rumpf **und** Statements; leere Typliste), fremder Auftrag weder in der Liste noch einzeln (`404` gleich einer erfundenen Kennung, ein Statement), untergeschobenes `mandantId`, fremde `anfrageId`, ADMIN je aktivem Mandanten, Änderungszwang |
 | `TypdefinitionDbIT` | ein eigener Testtyp per SQL, ohne Neustart: inaktiv `404`, aktiviert in der Typliste, Änderung an `maxEintraege` wirkt beim nächsten Anlegen, ungültige Struktur nimmt ihn aus dem Angebot, ein Auftrag von vorher liest seine Kopie; `WERK_ABLADESTELLE` bleibt unberührt |
-| `TaskMigrationDbIT` | `JSON_VALID(struktur)` ist wahr; die Muster, in der Datenbank per `JSON_EXTRACT` herausgeholt, sind zeichengleich mit dem Auftrag; Struktur, Name und Beschreibung wie geschrieben, im Stand nach `V102` **und dem Skript vom 23.10.2026** — mit genau einem Backslash in `\p{Z}` (§3.5, §9.7) |
+| `TaskMigrationDbIT` | `JSON_VALID(struktur)` ist wahr; die Muster, in der Datenbank per `JSON_EXTRACT` herausgeholt, sind zeichengleich mit dem Auftrag; Struktur, Name und Beschreibung wie geschrieben, im Stand nach `V102` **und den Skripten vom 23. und 26.10.2026** — mit genau einem Backslash in `\p{Z}` (§3.5, §9.7), `pflicht` nur am Werk und dem neuen Satz zum Schlüssel wörtlich aus dem Auftrag, beides in der Datenbank nachgesehen (§9.9) |
 | `IndexbestandDbIT` | die drei Tabellen und ihre Indizes in der Sollliste, in beide Richtungen — seit 1.1.0 auch auf `main`, ohne Ausnahme |
 | `AssistentOhneSchluesselDbIT` *(1.1.0)* | Start mit Schalter an und leerem Schlüssel: Der Kontext startet, `Sprachmodell` ist der abgeschaltete Ersatz, `verfuegbar: false` trotz Freischaltung; Eröffnen, Nachricht, Prüfen und Anlegen `404`, kein Auftrag; Liste und Typliste antworten |
 
@@ -1461,6 +1530,78 @@ dort nur `task_type` über das Skript. **Tests ohne Datenbank:** `./mvnw verify
 der Gruppe 16 (S22 bis S25) in allen drei vollen Durchgängen bestanden, mit `adaptive` und mit
 `between_tools`. Ein Parser für das Zeilenformat ist danach nicht nötig.
 
+### 9.9 Schlüsselteile frei wählbar (26.10.2026)
+
+**Bestand vor der Änderung** (Stand `main` = `d3d0fb0`). Hier hing etwas daran, dass nur der erste
+Teil optional sein durfte:
+
+| Stelle | Was dort stand |
+|---|---|
+| `DefinitionsPruefung` | ab dem zweiten Teil `pflicht`, sonst der Grund „Das Schlüsselfeld … ist nicht Pflicht; nur der erste Teil des Schlüssels darf optional sein.“ |
+| `Werkzeugbau.beschreibung` | „fehlt ein Teil, ist es der optionale erste (Label)“, nur wenn der erste Teil optional ist (E‑1060) |
+| `TypDefinition.schluesselText` | ließ jeden fehlenden Teil samt Trenner weg, an jeder Position — schon so, wie E‑1167 es will; nur der Javadoc sprach vom „optionalen ersten Teil“ und ist angepasst |
+| `overlord_monitor.task_type`, Zeile `WERK_ABLADESTELLE` | `"pflicht": true` an Werk und Abladestelle; in der Beschreibung „Der Schlüssel besteht aus Werk und Abladestelle, wahlweise mit der Lieferantennummer davor; …“. Freigeschaltet nur für `SYSTEM` |
+| `AuftragsPruefung`, `Parametertext`, Frontend | nichts, was an einer Position hängt; unverändert |
+
+**Vorab nur lesend geprüft** (`SELECT` auf der Testkopie, MariaDB 10.6.22): `JSON_REMOVE` nimmt genau
+`"pflicht": true, ` heraus und lässt den übrigen Text Zeichen für Zeichen stehen. `JSON_INSERT`
+hängte `pflicht` beim Zurücknehmen ans Ende des Felds; `JSON_SET` mit `JSON_OBJECT` stellt den Text
+binär gleich wieder her (F48). Als Wache taugt `JSON_EXTRACT(…) = 'true'` nicht: Es ist auch für den
+Text `"true"` wahr. `JSON_CONTAINS(struktur, 'true', pfad)` ist genau für den Wahrheitswert `true`
+1, für `"true"`, `1`, `false` und einen fehlenden Schlüssel 0.
+
+**Skript auf der Testkopie** (E‑1171), MariaDB-Client 12.3 über die Standardeingabe, wie in der
+Deployment-Routine ([`betrieb.md`](betrieb.md) §7a G). Geschrieben wurde nur
+`overlord_monitor.task_type`, nur über Skript und Rücknahme. Zuerst die Zeile gesichert (Scratchpad,
+nicht eingecheckt; Struktur und Beschreibung waren zeichengleich mit den Testressourcen, per MD5
+verglichen). Ohne Vorgabeschema Abbruch an Wache 1 (Fehler `1231`), nichts geändert. Dann fünf Läufe:
+
+| Lauf | Ergebnis |
+|---|---|
+| Rücknahme auf dem alten Stand | nichts geändert (`alt` 2), `geaendert_am` 26.10.2026 14:01:56 unverändert |
+| Skript | `neu` 2: an der Abladestelle kein `pflicht`, das Werk Pflicht, Beschreibung 2.303 Zeichen statt 2.272, Struktur 17 Bytes kürzer |
+| Skript noch einmal | nichts geändert, `geaendert_am` gleich |
+| Rücknahme | `alt` 2; Struktur und Beschreibung tragen wieder die MD5 der Sicherung |
+| Skript | `neu` 2 |
+
+Danach unterschied sich die Struktur von der Sicherung genau um `"pflicht": true, ` an der
+Abladestelle und die Beschreibung genau im Satz zum Schlüssel (Textvergleich); Name und `aktiv`
+unverändert. `task/werk-abladestelle-struktur.json` und `task/werk-abladestelle-beschreibung.txt`
+sind aus der Datenbank übernommen, über `HEX` und damit zeichengleich. Wache 2 und Wache 3 ließen sich
+nicht nachstellen, ohne die Zeile anders zu ändern, als der Auftrag erlaubt.
+
+**Tests ohne Datenbank:** `./mvnw verify -Djooq.codegen.skip=true -DexcludedGroups=db` grün, **1.292
+Tests** (am 26.10.2026 vorher 1.283, neun neu). Neu oder geändert:
+
+| Test | Was er hält |
+|---|---|
+| `DefinitionsPruefungTest`, Gruppe `schluessel` | `optionaler_teil_nicht_vorn` ist zum Gültigkeitsfall umgebaut (Reihenfolge Werk, Lieferantennummer, Abladestelle; nur die Lieferantennummer optional). Neu gültig: optional nur in der Mitte, nur am Ende, mehrere (vorn und hinten, nebeneinander); neu ungültig: alle drei optional, mit genau dem Grund „Mindestens ein Teil des Schlüssels muss Pflicht sein.“ `kein_teil_pflicht` bleibt ungültig. `werk_ist_gueltig` hält `pflicht` nur am Werk |
+| `WerkzeugbauTest` | der optionale Teil der Gattung mit seinem Label (`Bereich`) und dem Satz aus E‑1170; optionale Teile vorn, in der Mitte, am Ende und zwei zugleich, je mit Label; vier Teile mit drei optionalen („Lieferantennummer, Werk und Abladestelle“); **ohne optionalen Teil der ganze Text wörtlich**; die Testressource `werkzeug-werk-abladestelle.json` mit „Optional sind die Teile Lieferantennummer und Abladestelle.“ und „Abladestelle. Optional.“ |
+| `ParametertextTest` | ohne letzten Teil (`WERK_ABLADESTELLE` nach dem Skript): `Aktion=Neuanlage`, `0101159903/22,123085,`, `72332,120764,100050` und `Aktion=Löschung`, `0101159903/22`; ohne mittleren Teil (eine Variante mit optionalem Werk, die es fachlich nicht gibt): `0101159903/001N0,123085,` neben `0101159903/22/001N0,123085,` |
+| `AuftragsPruefungTest` | `pflicht_fehlt` meldet nur noch das Werk; `alle_fehler_gesammelt` lässt das Werk statt der Abladestelle weg, die Folge der Codes bleibt dieselbe; neu die vier Schlüsselformen aus E‑1168 gültig und `010/18VZE` als Werk/Abladestelle und als Lieferantennummer/Werk `DOPPELT` (§4.2) |
+
+**Tests mit Datenbank** gegen die Testkopie nach dem Skript, beide grün und beide nur lesend:
+`TaskMigrationDbIT` (neu: `JSON_CONTAINS(struktur, 'true', '$.felder[i].pflicht')` ist 0, 1, 0, an
+der Abladestelle steht kein `pflicht`, und die Beschreibung trägt den Satz wörtlich aus dem Auftrag)
+und `TestsatzDefinitionDbIT`. Der Lauf ging von 15:48:29 bis 15:48:48, ohne volle Minute dazwischen;
+die Aufräumung von Spring Session (`0 * * * * *`) hat in ihm nicht geschrieben. **Kein voller
+DB-Lauf** (F51). Kein neuer Endpunkt, kein neuer Isolationstest, keine neue Abfrage: Regel 7 greift
+nicht, es gibt keine Messung.
+
+**Verletzungsproben** auf dem committeten Stand (`cae4fbf`), je eine Datei durch ihre Fassung aus
+`main` ersetzt, Lauf über `AuftragsPruefungTest`, `DefinitionsPruefungTest`, `WerkzeugbauTest` und
+`ParametertextTest` (145 Fälle), danach per `git checkout` zurück; der Baum war vorher sauber.
+
+| # | Eingriff | Rot |
+|---|---|---|
+| P1 | `DefinitionsPruefung` mit der alten Regel | 84 von 145: `AuftragsPruefungTest` (62) und `ParametertextTest` (8) ganz, weil sie `WERK_ABLADESTELLE` beim Laden der Klasse lesen und die Definition nach dem Skript für die alte Regel ungültig ist — genau das, wovor [`betrieb.md`](betrieb.md) §7a G warnt —; in `DefinitionsPruefungTest` 11 von 67, darunter die fünf Fälle der Gruppe `schluessel`; in `WerkzeugbauTest` 3 von 8 |
+| P2 | `Werkzeugbau` mit dem alten Text | genau drei: `werk_abladestelle`, `zusammengesetzter_schluessel`, `optionale_teile_an_jeder_position`. **`schluessel_ohne_optionalen_teil` bleibt grün:** Ohne optionale Teile ist der Text Wort für Wort der alte |
+
+**Nicht gefahren:** der Testsatz gegen das Modell. Die neue Werkzeugbeschreibung und die neue
+Beschreibung des Typs machen einen zweiteiligen Schlüssel mehrdeutig, und sechs Fälle des Testsatzes
+rechnen mit der alten Lesart (Punkt 1045). Eine Sichtprüfung im Browser ist nicht gefahren; im
+Frontend hat sich nichts geändert.
+
 ---
 
 ## 10. Regelbezug
@@ -1493,10 +1634,11 @@ Nummern ab 1000 (Linie `assistent`); dieselben Zeilen stehen im Register
 | **1004** | Der Monitor kann die Werk-/Abladestellentabelle der Plattform nicht lesen. Ob ein Schlüssel existiert, zeigt sich erst bei der Ausführung. | Verbesserung |
 | **1005** | Ungültige Definitionen sind nur im Log sichtbar — und erst, wenn ein freigeschalteter Mandant nach der Aktivierung zugreift. | Verbesserung |
 | **1006** | Die Kopfzeile `Aktion=<Aktion>` ist fest; ein Typ mit anderer Kopfzeile braucht Code. | Verbesserung |
-| **1007** | Nur der erste Schlüsselteil kann optional sein. | Verbesserung |
+| **1007** | Nur der erste Schlüsselteil kann optional sein. **Erledigt am 26.10.2026:** Jeder Teil kann optional sein, mindestens einer bleibt Pflicht (E‑1164, E‑1165, §9.9). | Verbesserung |
 | **1008** | Datenschutz und Auftragsverarbeitung mit dem Modellanbieter, vor A2. **Erledigt am 16.10.2026:** beantwortet mit E‑1029 und E‑1030 (gebaut, aber abgeschaltet), weitergeführt als Punkt 1009 ([`assistent.md`](assistent.md) §11). | Entscheidung offen |
 | **1026** | Die Plattform holt **alle fünf Minuten** ab (E‑1117) — eine Auskunft des Auftraggebers vom 19.10.2026, nicht gemessen. Wie lange ein Auftrag „Offen“ steht und damit löschbar bleibt, hängt daran. *(A4)* | Sichtprüfung oder Messung offen |
 | **1037** | Eine Anfrage kann zur vollen Minute mit `500` scheitern, wenn das Speichern ihrer Sitzung einen Deadlock gegen die Aufräumung von Spring Session verliert — gesehen in den DB-Läufen zu 1.1.0 (§9.6). Beschrieben in [`authentifizierung.md`](authentifizierung.md) §12; nicht Teil dieses Schritts. *(1.1.0)* | Fehler |
+| **1045** | **Der Testsatz rechnet mit der alten Lesart des Schlüssels.** Seit der Abladestelle optional ist, kann ein zweiteiliger Schlüssel wie `010/18VZE` Werk/Abladestelle oder Lieferantennummer/Werk sein, und die Werkzeugbeschreibung sagt, dann nachzufragen (E‑1170). S06, S19, S20 und S25 erwarten aber einen Vorschlag mit Werk und Abladestelle aus einem zweiteiligen Schlüssel; S24 erwartet zu `0101159903/40NP/,…` eine Rückfrage nach der Abladestelle, die jetzt fehlen darf; S17 erwartet eine Rückfrage zu SNDPRN_4908, die mit einer Frage zum Schlüssel konkurrieren kann ([`assistent.md`](assistent.md) §8). Kein Testsatzlauf in diesem Schritt; was die Fälle künftig erwarten, ist zu entscheiden, dann ein Lauf. *(26.10.2026)* | Entscheidung offen |
 
 **Fortgeschrieben am 19.10.2026 (A4):** Punkt **1000** bleibt offen. Die Übersicht zeigt einen
 solchen Auftrag als „Teilweise erledigt“ mit „<n> von <n> nicht erfolgreich“

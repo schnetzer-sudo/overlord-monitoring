@@ -30,7 +30,7 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
   vergeben.
 - **Seit 1.1.0 (21.10.2026) eine Linie** (E‑1127): Neue Punkte schließen an die höchste vergebene
   Nummer an; der Bereich unter 1000 wird nicht weiter befüllt. Bis dahin begannen die Nummern auf
-  `assistent` bei 1000 (Entscheidung 7). **Nächste freie Nummer: 1045.**
+  `assistent` bei 1000 (Entscheidung 7). **Nächste freie Nummer: 1046.**
 - **Doppelvergaben sind aufgelöst** (16.10.2026): 136 und 186 bis 189 waren je zweimal vergeben. Die
   Nummer behielt der Punkt, auf den andere Dateien öfter verweisen; der andere bekam 247 bzw. 248 bis
   251, mit datiertem Vermerk an seiner Fundstelle.
@@ -44,21 +44,22 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
 | | Teil 1: projektweit | Teil 2: Sichtprüfungen | Teil 3: lokal |
 |---|---:|---:|---:|
 | offen — Fehler | 32 | 0 | — |
-| offen — Verbesserung | 51 | 0 | — |
-| offen — Entscheidung offen | 51 | 0 | — |
+| offen — Verbesserung | 50 | 0 | — |
+| offen — Entscheidung offen | 52 | 0 | — |
 | offen — Sichtprüfung oder Messung offen | 65 | 13 | — |
 | **offen gesamt** | **199** | **13** | — |
 | ungeprüft | — | — | 357 |
-| erledigt | 61 | 0 | 64 |
+| erledigt | 62 | 0 | 64 |
 | gegenstandslos | 3 | 0 | 5 |
-| **Zeilen** | 263 | 13 | 426 |
+| **Zeilen** | 264 | 13 | 426 |
 
 Offen sind damit **212** nummerierte Punkte; dazu kommen 357 ungeprüfte lokale (gezählt am
-26.10.2026 über die Tabelle in Teil 1). Davon stammen 38 aus der Linie `assistent` und ihrer
-Zusammenführung (1000 bis 1007 aus A1; 1010 und 1012 bis 1015 aus A2; 1017 bis 1022 aus A3; 1023
-bis 1032 aus A4; 1033 bis 1037 aus 1.1.0; 1038 bis 1041 aus dem Nachtrag zu 1.1.0, der
-Deployment-Routine). Dazu kommen 1042 bis 1044 aus dem Fix „Antworten ohne Innenleben“ vom
-26.10.2026; 1042 ist seit M1009 am selben Tag erledigt. 1009 ist seit dem 21.10.2026 erledigt, 1011 seit A3 entschieden, 1016 seit
+26.10.2026 über die Tabelle in Teil 1, nach „Schlüsselteile frei wählbar“ nachgezählt). Davon
+stammen 37 aus der Linie `assistent` und ihrer Zusammenführung (1000 bis 1006 aus A1; 1010 und 1012
+bis 1015 aus A2; 1017 bis 1022 aus A3; 1023 bis 1032 aus A4; 1033 bis 1037 aus 1.1.0; 1038 bis 1041
+aus dem Nachtrag zu 1.1.0, der Deployment-Routine). Dazu kommen 1042 bis 1044 aus dem Fix „Antworten
+ohne Innenleben“ vom 26.10.2026; 1042 ist seit M1009 am selben Tag erledigt. 1045 kommt aus
+„Schlüsselteile frei wählbar“ vom selben Tag, das 1007 erledigt hat. 1009 ist seit dem 21.10.2026 erledigt, 1011 seit A3 entschieden, 1016 seit
 M1003 erledigt. Am selben Tag erledigt: 255, 260 und 261 (`betrieb.md` §9).
 
 ### Wie das Register erhoben ist
@@ -301,7 +302,7 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 1004 | Monitor kann die Werk-/Abladestellentabelle nicht lesen; Existenz eines Schlüssels zeigt erst die Ausführung | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Verbesserung | offen |
 | 1005 | Ungültige Typdefinitionen nur im Log sichtbar, und erst beim ersten Zugriff eines freigeschalteten Mandanten | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Verbesserung | offen |
 | 1006 | Kopfzeile Aktion=<Aktion> fest; ein Typ mit anderer Kopfzeile braucht Code | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Verbesserung | offen |
-| 1007 | Nur der erste Schlüsselteil kann optional sein | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Verbesserung | offen |
+| 1007 | Nur der erste Schlüsselteil kann optional sein | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Verbesserung | **erledigt** — `tasks.md` §11: „Erledigt am 26.10.2026: Jeder Teil kann optional sein, mindestens einer bleibt Pflicht (E‑1164, E‑1165, §9.9)“ |
 | 1008 | Datenschutz und Auftragsverarbeitung mit dem Modellanbieter, vor A2 | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Entscheidung offen | **erledigt** — `tasks.md` §11: „Erledigt am 16.10.2026: beantwortet mit E‑1029 und E‑1030 (gebaut, aber abgeschaltet), weitergeführt als Punkt 1009“ |
 | 1009 | Prüfung der Auftragsverarbeitung mit Anthropic durch den Datenschutzbeauftragten, vor dem Einschalten in der Produktion | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Entscheidung offen | **erledigt** — `assistent.md` §11: „Erledigt am 21.10.2026 (E‑1131): Die Prüfung ist abgeschlossen, Auskunft des Auftraggebers“ |
 | 1010 | Ob der Produktionsserver `api.anthropic.com` erreicht, ist ungeprüft | [`assistent.md`](assistent.md) §11 · Linie `assistent`, A2 | Sichtprüfung oder Messung offen | offen — die Probe steht seit 21.10.2026 in `betrieb.md` §7a A; ihr Ergebnis ist nicht mitgeteilt |
@@ -339,6 +340,7 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 1042 | S12 (fremder Mandant) hält die 400 Zeichen der Stilprüfung nicht zuverlässig (M1008: 469 und 435 Zeichen); die Abnahme „Stil 25 von 25 in beiden `adaptive`-Durchgängen“ ist nicht erfüllt — Wortlaut ändern, Grenze anders fassen oder hinnehmen | [`assistent.md`](assistent.md) §8.5, §11 · 26.10.2026 | Entscheidung offen | **erledigt** — `assistent.md` §11: „Erledigt am 26.10.2026 durch M1009“: neuer Wortlaut der Mandantenregel (E‑1158), S12 sechsmal mit Stil ok, 167 bis 257 Zeichen (§8.6) |
 | 1043 | Die Stilprüfung des Testsatzes ist eine wörtliche Liste und übersieht Umstellungen: „Ich analysiere die Zeilen: … daher muss ich nachfragen.“ galt in M1008 als ok | [`assistent.md`](assistent.md) §8, §8.5, §11 · 26.10.2026 | Verbesserung | offen — fortgeschrieben am 26.10.2026: „muss ich“, „ich analysiere“ und „einreichen“ ergänzt (E‑1158); die Liste bleibt wörtlich |
 | 1044 | Der Hinweis „Bei Anpassung heißt leer: der Wert wird entfernt.“ steht auf der Karte auch bei einer Neuanlage und bei jedem Eintrag; laut Auftrag ein eigener Auftrag | [`assistent.md`](assistent.md) §11 · 26.10.2026 | Verbesserung | offen |
+| 1045 | Der Testsatz rechnet mit der alten Lesart des Schlüssels: Seit die Abladestelle optional ist, ist ein zweiteiliger Schlüssel mehrdeutig, und das Modell soll nachfragen (E‑1170); S06, S19, S20 und S25 erwarten einen Vorschlag mit Werk und Abladestelle, S24 eine Rückfrage nach der Abladestelle, S17 eine Rückfrage zu SNDPRN_4908. Kein Lauf; was die Fälle erwarten, ist zu entscheiden | [`tasks.md`](tasks.md) §4.2, §9.9, §11 · 26.10.2026 | Entscheidung offen | offen |
 
 ---
 

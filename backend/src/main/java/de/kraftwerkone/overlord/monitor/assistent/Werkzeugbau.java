@@ -139,7 +139,7 @@ public final class Werkzeugbau {
           .append(typ.schluessel().trenner())
           .append("“, zerlegst du ihn ohne Rückfrage in diese Felder in ihrer Reihenfolge.");
       // Jeder Teil des Schluessels kann optional sein, an jeder Position (E‑1164). Fehlen Teile,
-      // ist nicht immer eindeutig, welche; dann fragt das Modell, statt zu raten.
+      // ist nicht immer eindeutig, welche; dann fragt das Modell, statt zu raten (E‑1170).
       List<String> optionale =
           typ.schluessel().felder().stream()
               .filter(name -> typ.feld(name).map(feld -> !feld.pflicht()).orElse(false))
