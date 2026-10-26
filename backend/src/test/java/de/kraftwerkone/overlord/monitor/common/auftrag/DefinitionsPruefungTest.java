@@ -37,6 +37,11 @@ class DefinitionsPruefungTest {
     assertThat(werk.felder())
         .extracting(TypDefinition.Feld::name)
         .containsExactly("lieferantennummer", "werk", "abladestelle", "sndprn", "sndprn4908");
+    // Seit dem Skript werk-abladestelle-abladestelle-optional.sql ist nur das Werk Pflicht
+    // (docs/tasks.md §4.3).
+    assertThat(werk.felder())
+        .extracting(TypDefinition.Feld::pflicht)
+        .containsExactly(false, true, false, false, false);
     assertThat(werk.schluessel().felder())
         .containsExactly("lieferantennummer", "werk", "abladestelle");
     assertThat(werk.schluessel().trenner()).isEqualTo("/");
@@ -252,15 +257,51 @@ class DefinitionsPruefungTest {
   @DisplayName("schluessel")
   class Schluessel {
 
+    /**
+     * Bis zum 26.10.2026 ungueltig („nur der erste Teil des Schluessels darf optional sein“); seit
+     * E‑1164 darf jeder Teil optional sein.
+     */
     @Test
+    @DisplayName("Ein optionaler Teil, der nicht vorn steht, ist gueltig")
     void optionaler_teil_nicht_vorn() {
-      fall(
-          struktur -> {
-            ArrayNode felder = (ArrayNode) ((ObjectNode) struktur.get("schluessel")).get("felder");
-            felder.removeAll();
-            felder.add("werk").add("lieferantennummer").add("abladestelle");
-          },
-          "nur der erste Teil des Schlüssels darf optional sein");
+      ObjectNode struktur = werkBaum();
+      pflicht(struktur, 0, false);
+      pflicht(struktur, 1, true);
+      pflicht(struktur, 2, true);
+      ArrayNode felder = (ArrayNode) ((ObjectNode) struktur.get("schluessel")).get("felder");
+      felder.removeAll();
+      felder.add("werk").add("lieferantennummer").add("abladestelle");
+
+      DefinitionsPruefung.Ergebnis ergebnis = pruefe(struktur);
+      assertThat(ergebnis.gruende()).isEmpty();
+      assertThat(ergebnis.definition().schluessel().felder())
+          .containsExactly("werk", "lieferantennummer", "abladestelle");
+    }
+
+    @Test
+    @DisplayName("Optional nur in der Mitte: gueltig")
+    void optionaler_teil_in_der_mitte() {
+      assertThat(pruefe(mitPflicht(true, false, true)).gruende()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Optional nur am Ende: gueltig")
+    void optionaler_teil_am_ende() {
+      assertThat(pruefe(mitPflicht(true, true, false)).gruende()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Mehrere optionale Teile, vorn und hinten oder nebeneinander: gueltig")
+    void mehrere_optionale_teile() {
+      assertThat(pruefe(mitPflicht(false, true, false)).gruende()).isEmpty();
+      assertThat(pruefe(mitPflicht(false, false, true)).gruende()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Alle Teile optional: ungueltig")
+    void alle_teile_optional() {
+      assertThat(pruefe(mitPflicht(false, false, false)).gruende())
+          .containsExactly("Mindestens ein Teil des Schlüssels muss Pflicht sein.");
     }
 
     @Test
@@ -430,5 +471,23 @@ class DefinitionsPruefungTest {
 
   private static ObjectNode regel(ObjectNode struktur, int index) {
     return (ObjectNode) struktur.get("regeln").get(index);
+  }
+
+  /** Die Struktur mit {@code pflicht} an den drei Schluesselteilen, in ihrer Reihenfolge. */
+  private static ObjectNode mitPflicht(boolean lieferant, boolean werk, boolean abladestelle) {
+    ObjectNode struktur = werkBaum();
+    pflicht(struktur, 0, lieferant);
+    pflicht(struktur, 1, werk);
+    pflicht(struktur, 2, abladestelle);
+    return struktur;
+  }
+
+  /** Setzt {@code pflicht: true} oder laesst den Schluessel weg, wie es die Definition tut. */
+  private static void pflicht(ObjectNode struktur, int index, boolean pflicht) {
+    if (pflicht) {
+      feld(struktur, index).put("pflicht", true);
+    } else {
+      feld(struktur, index).remove("pflicht");
+    }
   }
 }

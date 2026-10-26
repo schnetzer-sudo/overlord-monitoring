@@ -113,16 +113,59 @@ class AuftragsPruefungTest {
       assertThat(pruefe(WERK, "Löschung", List.of(eintrag))).isEmpty();
     }
 
+    /** Seit dem Skript vom 26.10.2026 ist die Abladestelle optional; Pflicht ist nur das Werk. */
     @Test
     void pflicht_fehlt() {
       Map<String, String> eintrag = eintrag("werk", "", "sndprn", "120764");
       List<Prueffehler> fehler = pruefe(WERK, "Neuanlage", List.of(eintrag));
       assertThat(fehler)
           .extracting(Prueffehler::feld, Prueffehler::code)
-          .containsExactly(
-              tuple("werk", Fehlercode.PFLICHT_FEHLT),
-              tuple("abladestelle", Fehlercode.PFLICHT_FEHLT));
+          .containsExactly(tuple("werk", Fehlercode.PFLICHT_FEHLT));
       assertThat(fehler.getFirst().meldung()).isEqualTo("Eintrag 1, Werk: Der Wert fehlt.");
+    }
+
+    @Test
+    @DisplayName("Die vier Schluesselformen der Plattform sind gueltig (E‑1172)")
+    void vier_schluesselformen() {
+      assertThat(
+              pruefe(
+                  WERK,
+                  "Löschung",
+                  List.of(
+                      eintrag("werk", "72332"),
+                      eintrag("werk", "72261", "abladestelle", "DDR0"),
+                      eintrag("lieferantennummer", "0101159903", "werk", "22"),
+                      eintrag(
+                          "lieferantennummer",
+                          "0101159903",
+                          "werk",
+                          "40NP",
+                          "abladestelle",
+                          "123"))))
+          .isEmpty();
+    }
+
+    /**
+     * Bis zum Nachtrag vom 26.10.2026 entfielen fehlende Teile an jeder Position, und beide
+     * Eintraege hiessen {@code 010/18VZE} — {@code DOPPELT}. Von hinten ausgerichtet (E‑1173) ist
+     * der zweite {@code 010/18VZE/}.
+     */
+    @Test
+    @DisplayName(
+        "Werk/Abladestelle (010/18VZE) und Lieferantennummer/Werk (010/18VZE/) verschieden")
+    void zweiteilig_und_ohne_abladestelle_verschieden() {
+      assertThat(
+              pruefe(
+                  WERK,
+                  "Löschung",
+                  List.of(
+                      eintrag("werk", "010", "abladestelle", "18VZE"),
+                      eintrag("lieferantennummer", "010", "werk", "18VZE"))))
+          .isEmpty();
+      assertThat(WERK.schluesselText(eintrag("werk", "010", "abladestelle", "18VZE")))
+          .isEqualTo("010/18VZE");
+      assertThat(WERK.schluesselText(eintrag("lieferantennummer", "010", "werk", "18VZE")))
+          .isEqualTo("010/18VZE/");
     }
 
     @ParameterizedTest
@@ -228,7 +271,9 @@ class AuftragsPruefungTest {
     @Test
     @DisplayName("Alle Fehler gesammelt, in der Reihenfolge der Pruefung")
     void alle_fehler_gesammelt() {
-      Map<String, String> eintrag = eintrag("werk", "7/2", "sndprn", "1", "lager", "x");
+      // Bis zum 26.10.2026 fehlte hier die Abladestelle; seit sie optional ist, fehlt das Werk.
+      Map<String, String> eintrag =
+          eintrag("lieferantennummer", "7/2", "sndprn", "1", "lager", "x");
       List<Prueffehler> fehler = pruefe(WERK, "Neuanlage", List.of(eintrag, eintrag));
       assertThat(codes(fehler))
           .containsExactly(

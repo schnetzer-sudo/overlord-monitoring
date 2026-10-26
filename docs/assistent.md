@@ -121,7 +121,7 @@ aus [`tasks.md`](tasks.md).
 | E | Entscheidung | Anlass | Herkunft |
 |---|---|---|---|
 | **E‑1059** | **Die Anweisung nennt den Namen des aktiven Mandanten** (`Mandant.MandantName`), weiterhin nicht die Mandanten-ID und keine weiteren Daten. Ändert E‑1035. Regel der Anweisung: Aufträge gelten immer für den aktiven Mandanten; nennt der Kunde einen anderen Mandanten oder eine andere Firma, reicht das Modell keinen Vorschlag ein und sagt, dass er den Mandanten oben in der Kopfzeile wechseln muss. **Hat der Mandant keinen Namen**, entfällt der Abschnitt; die Kennung geht nie ersatzweise hin (§3.1). **Wortlaut der Regel geändert am 26.10.2026 durch E‑1158**, der Inhalt bleibt. | S12: Ohne den Namen kann das Modell „für den Mandanten IBIS“ nicht vom aktiven unterscheiden | A; ohne Namen V |
-| **E‑1060** | **Zusammengesetzte Schlüssel zerlegt das Modell ohne Rückfrage.** Die Werkzeugbeschreibung sagt es für jeden Typ mit Schlüssel, erzeugt aus der Struktur: Schreibt der Kunde einen Schlüssel mit dem Trenner zusammen, gehören die Teile in die Schlüsselfelder in ihrer Reihenfolge; fehlt ein Teil, ist es der optionale erste. Die Anweisung ergänzt: Einen zusammengesetzten Schlüssel zu zerlegen heißt nicht, einen Wert zu ändern. | S06 und S17: Das Modell fragte, wie `010/18VZE` aufzuteilen ist | A |
+| **E‑1060** | **Zusammengesetzte Schlüssel zerlegt das Modell ohne Rückfrage.** Die Werkzeugbeschreibung sagt es für jeden Typ mit Schlüssel, erzeugt aus der Struktur: Schreibt der Kunde einen Schlüssel mit dem Trenner zusammen, gehören die Teile in die Schlüsselfelder in ihrer Reihenfolge; fehlt ein Teil, ist es der optionale erste. Die Anweisung ergänzt: Einen zusammengesetzten Schlüssel zu zerlegen heißt nicht, einen Wert zu ändern. **Geändert am 26.10.2026 durch E‑1170** ([`tasks.md`](tasks.md) §2, „Schlüsselteile frei wählbar“): Jeder Teil kann optional sein; die Beschreibung nennt die optionalen Teile, und hat ein Schlüssel weniger Teile, zerlegt das Modell ihn nur, wenn eindeutig ist, welche fehlen, sonst fragt es nach (§4.5). Ein vollständiger Schlüssel wird weiter ohne Rückfrage zerlegt. **Im Nachtrag am selben Tag ersetzt durch E‑1174 und E‑1175:** Der Schlüssel ist von hinten ausgerichtet und damit immer eindeutig; das Modell zerlegt wieder jeden zusammengesetzten Schlüssel ohne Rückfrage, von hinten. | S06 und S17: Das Modell fragte, wie `010/18VZE` aufzuteilen ist | A |
 | **E‑1061** | **Neu oder ändern unklar: Neuanlage vorschlagen.** Gibt es den Schlüssel schon, bleibt der Eintrag unverändert; eine Anpassung nur, wenn der Kunde ausdrücklich etwas ändern will. Steht in der Beschreibung von `WERK_ABLADESTELLE` (Migration `V102`, [`tasks.md`](tasks.md) §4.2). | S09: Das Modell schlug die Neuanlage vor, erwartet war eine Rückfrage | A |
 | **E‑1062** | **Zu viele Einträge: die ersten vorschlagen**, so viele wie ein Auftrag fasst, und sagen, dass die übrigen als nächster Auftrag folgen. Allgemein in der Anweisung, nicht je Typ. | S13 schwankte zwischen Rückfrage und Vorschlag mit den ersten 20 | A |
 | **E‑1063** | **Bewertung mit Begriffen:** Ein Fall ohne Vorschlag kann Begriffe nennen, die in der Antwort vorkommen müssen, ohne Rücksicht auf Groß- und Kleinschreibung (S17: `SNDPRN_4908`, S12: `Mandant`). Formulierungen werden weiterhin nicht bewertet. Der Läufer zählt Token zusätzlich je Fall. | S17 bestand in M1001 aus einem anderen Grund als dem, den er prüft | A |
@@ -365,9 +365,20 @@ das „Vorschlag einreichen“ nachsprach.
   Backend ihn prüft und der Kunde ihn selbst anlegt, dass Felder ohne Wert weggelassen werden, und
   aus welchen Feldern in welcher Reihenfolge der Schlüssel besteht. Dazu, für jeden Typ mit
   Schlüssel (E‑1060): Schreibt der Kunde einen Schlüssel zusammengesetzt mit dem Trenner des Typs,
-  zerlegt das Modell ihn ohne Rückfrage in die Schlüsselfelder in ihrer Reihenfolge. Ist der erste
-  Teil optional (nur er darf es sein, [`tasks.md`](tasks.md) §3.2), folgt „fehlt ein Teil, ist es der
-  optionale erste (Label)“; ist er Pflicht, entfällt der Satz. **Seit 23.10.2026** schließt für
+  zerlegt das Modell ihn ohne Rückfrage in die Schlüsselfelder in ihrer Reihenfolge. **Seit
+  26.10.2026** kann jeder Teil optional sein ([`tasks.md`](tasks.md) §3.2, E‑1164), und der
+  Schlüssel ist von hinten ausgerichtet (E‑1173). Hat der Schlüssel optionale Teile, folgen „Optional
+  ist der Teil Label.“ bzw. „Optional sind die Teile A und B.“ (F50, F52) und der Satz „Ein
+  zusammengesetzter Schlüssel ist von hinten ausgerichtet; der letzte Teil gehört zu ‹Label des
+  letzten Felds›, fehlen vorne Teile, sind es die vorderen Felder; ein leerer Teil (zwei Trenner
+  hintereinander oder ein Trenner am Ende) heißt, dieses Feld bleibt leer; zerlege ohne Rückfrage.“
+  (E‑1175); ohne optionale Teile entfällt beides, und der Text ist wortgleich der auf `main`. Bis zum
+  26.10.2026 hieß es „fehlt ein Teil, ist es der optionale erste (Label)“, weil nur der erste Teil
+  optional sein durfte. *Im ersten Durchgang des 26.10.2026 stand statt des Satzes von hinten „Hat
+  ein zusammengesetzter Schlüssel weniger Teile als der Schlüssel Felder, zerlege ihn nur, wenn
+  eindeutig ist, welche fehlen; sonst frage nach, statt zu raten.“ (E‑1170); ersetzt im Nachtrag
+  (E‑1174).* Bei `WERK_ABLADESTELLE` sind Lieferantennummer und Abladestelle optional, und ihr
+  Werkzeug sagt „der letzte Teil gehört zu Abladestelle“. **Seit 23.10.2026** schließt für
   jeden Typ mit Schlüssel der Satz an: „Schlüsselteile übergibst du zeichengenau, mit jedem
   Leerzeichen, auch mehreren hintereinander; Leerzeichen am Anfang und Ende entfernt das Backend.“
   Gekürzt wird nur im Backend ([`tasks.md`](tasks.md) §5.3, E‑1141, F41); ob ein Leerzeichen im
@@ -609,8 +620,9 @@ Typbeschreibung.
   erwartet kein Vorschlag. Formulierungen werden nicht bewertet. **Seit E‑1063** kann ein Fall
   ohne Vorschlag Begriffe nennen, die in der Antwort vorkommen müssen, ohne Rücksicht auf Groß- und
   Kleinschreibung; fehlt einer, ist der Fall nicht bestanden („Begriff fehlt in der Antwort“). Ein
-  Begriff zeigt nur, worauf sich die Rückfrage bezieht: S17 `SNDPRN_4908`, S12 `Mandant`, seit dem
-  26.10.2026 S24 `Abladestelle`, sonst keiner.
+  Begriff zeigt nur, worauf sich die Rückfrage bezieht: S17 `SNDPRN_4908`, S12 `Mandant`, sonst
+  keiner. (S24 trug vom 26.10.2026 bis zum Nachtrag desselben Tages `Abladestelle`; seit E‑1177
+  erwartet er einen Vorschlag.)
 - **Stil, getrennt davon** *(seit 26.10.2026, E‑1157)*: Keine Antwort enthält eine dieser Wendungen,
   ohne Rücksicht auf Groß- und Kleinschreibung — „der Kunde“, „den Kunden“, „dem Kunden“, „des
   Kunden“, „Backend“, „das System“, „Werkzeug“, „ist gültig“, „laut Regel“, „ich muss“, „ich prüfe“,
@@ -689,9 +701,18 @@ Typbeschreibung.
   Anpassung mit drei Einträgen aus Lieferantennummer, Werk, Abladestelle und SNDPRN, ohne
   SNDPRN_4908 — das Feld nach dem letzten Komma ist ausdrücklich leer, also keine Rückfrage; **S23**
   dieselbe Zeile mit „Anlegen“ erwartet die Neuanlage mit denselben Einträgen; **S24** mit leerer
-  Abladestelle (`0101159903/40NP/,120764,` …) erwartet keinen Vorschlag und den Begriff
-  `Abladestelle`; **S25** „Neuanlage 40NP/123,120764,100050“ erwartet Werk `40NP`, Abladestelle
+  Abladestelle (`0101159903/40NP/,120764,` …) erwartete keinen Vorschlag und den Begriff
+  `Abladestelle` (geändert im Nachtrag, unten); **S25** „Neuanlage 40NP/123,120764,100050“ erwartet Werk `40NP`, Abladestelle
   `123` und beide Werte, ohne Lieferantennummer. Der Testsatz hat damit 25 Fälle in 16 Gruppen.
+  **Geändert und ergänzt am 26.10.2026** im Nachtrag „Schlüssel von hinten ausgerichtet“ (E‑1177,
+  [`tasks.md`](tasks.md) §2): **S24** erwartet seitdem den Vorschlag einer Anpassung mit drei
+  Einträgen aus Lieferantennummer, Werk und SNDPRN, ohne Abladestelle — der Schrägstrich am Ende ist
+  die Schreibweise der Plattform für „keine Abladestelle“ (E‑1172); der Begriff entfällt. Neu in
+  Gruppe 16, beide `synthetisch` (F54): **S26** „Neuanlage 72332/,120764,“ erwartet Werk `72332` und
+  SNDPRN, **S27** „Bitte neu anlegen: Lieferantennummer 0101159903, Werk 40NP, SNDPRN 120764“
+  erwartet Lieferantennummer, Werk und SNDPRN — je ohne Abladestelle, ohne Rückfrage. S06, S17, S19,
+  S20 und S25 sind unverändert: Von hinten gelesen ist `010/18VZE` Werk und Abladestelle. Der
+  Testsatz hat damit 27 Fälle in 16 Gruppen.
 - **Echte Fälle** liefert Lukas nach. Vor dem Einchecken verfremden: keine Namen, keine
   Mailadressen, keine Signaturen, keine Originalnummern. Die ersten vier (S22 bis S25) stammen aus
   dem Test in der Produktion am 23.10.2026; die Werte hat der Auftraggeber verfremdet vorgegeben.
@@ -1027,6 +1048,64 @@ Die Berichte liegen unter `backend/target/assistent-testsatz/` (`bericht-2026102
 Kopie außerhalb des Repositorys, und werden nicht eingecheckt. Gelöscht wird nichts, bevor der
 Auftraggeber die Rückmeldung hat.
 
+### 8.7 Lauf M1010 (26.10.2026): Schlüssel von hinten ausgerichtet
+
+**Anlass:** der Nachtrag „Schlüssel von hinten ausgerichtet“ ([`tasks.md`](tasks.md) §2, E‑1172 bis
+E‑1177): Die Werkzeugbeschreibung sagt „von hinten ausgerichtet … zerlege ohne Rückfrage“ statt der
+Rückfrage aus E‑1170, die Beschreibung des Typs hat das zweite Beispiel `0101159903/40NP/,120764,`
+(aus der Testressource, also im Stand nach dem Skript), S24 erwartet einen Vorschlag, S26 und S27 sind
+neu. Gefahren auf `feat/schluessel-frei` nach `fbcbd31`, sonst wie M1008 (§8.5): Modell
+`claude-sonnet-5-5`, `denken: adaptive`, `max_tokens` 8.192, Befehl wie in §8 mit
+`OVERLORD_TESTSATZ_FAELLE=S06,S17,S19,S20,S24,S25,S26,S27`, drei Durchgänge D1 bis D3.
+
+**Abnahme, vor dem Lauf festgelegt:** alle acht Fälle in allen drei Durchgängen bestanden, Stil 8 von
+8, kein Aufruf an `max_tokens`. Was davon abweicht, wird gemeldet, nicht nachgebessert.
+
+| Durchgang | Bestanden | Stil | Token ein / aus | Höchster Aufruf, Token aus | an `max_tokens` | Werkzeugaufrufe | Dauer | je Fall |
+|---|---|---|---|---|---|---|---|---|
+| **D1** | **8 von 8** | **8 von 8** | 69.744 / 2.998 | 531 (S24) | 0 | 7 | 33,3 s | 4,2 s |
+| **D2** | **8 von 8** | **8 von 8** | 69.710 / 2.810 | 497 (S24) | 0 | 7 | 30,1 s | 3,8 s |
+| **D3** | **8 von 8** | **8 von 8** | 69.753 / 2.915 | 521 (S24) | 0 | 7 | 29,1 s | 3,6 s |
+
+**Je Fall und Durchgang** (bestanden heißt: Vorschlag bzw. Rückfrage wie erwartet; „Stil ok“ in allen
+24 Antworten):
+
+| Fall | erwartet | Karte | D1 | D2 | D3 |
+|---|---|---|---|---|---|
+| S06 | Löschung `010/18VZE` (Werk, Abladestelle) und `0101159903/22/001N0` | `010/18VZE`, `0101159903/22/001N0` | bestanden | bestanden | bestanden |
+| S17 | kein Vorschlag, Rückfrage mit `SNDPRN_4908` | — | bestanden | bestanden | bestanden |
+| S19 | Löschung `HALLE 2`/`TOR 3` | `HALLE 2/TOR 3` | bestanden | bestanden | bestanden |
+| S20 | Neuanlage `HALLE  2`/`DDB0` mit zwei Leerzeichen | `HALLE  2/DDB0` | bestanden | bestanden | bestanden |
+| S24 | Anpassung, drei Einträge ohne Abladestelle | `0101159903/40NP/`, `…/41BH/`, `…/40M4/` | bestanden | bestanden | bestanden |
+| S25 | Neuanlage Werk `40NP`, Abladestelle `123` | `40NP/123` | bestanden | bestanden | bestanden |
+| S26 | Neuanlage Werk `72332`, SNDPRN | `72332/` | bestanden | bestanden | bestanden |
+| S27 | Neuanlage Lieferantennummer, Werk, SNDPRN | `0101159903/40NP/` | bestanden | bestanden | bestanden |
+
+**Die Abnahme ist erfüllt.**
+
+**Was der Lauf zeigt:**
+
+- **Keine Rückfrage zur Lesart**, in keiner der 24 Antworten. Die zweiteiligen Schlüssel (S06, S19,
+  S20, S25) liest das Modell als Werk und Abladestelle, wie vor dem Nachtrag.
+- **S24** schlägt in allen drei Durchgängen die Anpassung ohne Abladestelle vor und sagt, dass
+  SNDPRN_4908 entfernt wird (D1: „Bei allen drei Einträgen wird SNDPRN_4908 entfernt, weil das Feld
+  leer ist.“). Der Schlüssel auf der Karte endet mit `/` — die Karte zeigt, was das Backend baut.
+- **S17** fragt in allen drei nach SNDPRN_4908, nicht nach dem Schlüssel (D2: „Soll bei der Anpassung
+  von 010/18VZE die SNDPRN_4908 entfernt werden, oder welchen Wert soll sie behalten?“).
+- **S27** sagt in allen drei zusätzlich „Falls der Schlüssel schon vorhanden ist, bleibt der … Eintrag
+  unverändert.“ — der Satz aus E‑1008, den M1008 schon bei Neuanlagen sah (§8.5); er verstößt gegen
+  keine Regel.
+- **Token:** Der höchste Aufruf ist S24 mit höchstens 531 Token aus, ein Fünfzehntel der Grenze.
+  Token ein liegen bei rund 9.200 bis 9.600 je Fall mit Vorschlag; mit den vollen Durchgängen aus
+  M1008 und M1009 ist die Summe nicht vergleichbar, weil nur acht Fälle liefen.
+- **Nicht gefahren:** die übrigen 19 Fälle. Der Nachtrag ändert die Werkzeugbeschreibung nur bei
+  Typen mit optionalen Teilen, und `WERK_ABLADESTELLE` ist der einzige; wie sich der längere Satz auf
+  die anderen Fälle auswirkt, zeigt erst ein voller Durchgang.
+
+Die Berichte liegen unter `backend/target/assistent-testsatz/` (`bericht-20261026-152231.md` D1,
+`-152312.md` D2, `-152351.md` D3; Zeitpunkte in UTC), zusätzlich als Kopie außerhalb des
+Repositorys, und werden nicht eingecheckt.
+
 ---
 
 ## 9. Tests
@@ -1035,7 +1114,7 @@ Auftraggeber die Rückmeldung hat.
 
 | Test | Was er hält |
 |---|---|
-| `WerkzeugbauTest` | das Schema für `WERK_ABLADESTELLE` und für die Gattung aus A1; keine Eigenschaft beginnt mit `mandant`; Typen mit ungültigem Werkzeugnamen oder einem Feld `mandant…` entfallen (E‑1054); der Satz zum zusammengesetzten Schlüssel mit dem Trenner des Typs, mit „fehlt ein Teil“ nur bei optionalem erstem Teil (E‑1060); seit 23.10.2026 der Satz „Schlüsselteile übergibst du zeichengenau …“ bei jedem Typ mit Schlüssel und bei keinem ohne (F41) |
+| `WerkzeugbauTest` | das Schema für `WERK_ABLADESTELLE` und für die Gattung aus A1; keine Eigenschaft beginnt mit `mandant`; Typen mit ungültigem Werkzeugnamen oder einem Feld `mandant…` entfallen (E‑1054); der Satz zum zusammengesetzten Schlüssel mit dem Trenner des Typs (E‑1060); seit 23.10.2026 der Satz „Schlüsselteile übergibst du zeichengenau …“ bei jedem Typ mit Schlüssel und bei keinem ohne (F41); seit 26.10.2026 statt „fehlt ein Teil, ist es der optionale erste“ die optionalen Teile mit Label an jeder Position und — seit dem Nachtrag desselben Tages statt der Rückfrage aus E‑1170 — der Satz „von hinten ausgerichtet; der letzte Teil gehört zu ‹Label des letzten Felds› … zerlege ohne Rückfrage“ (E‑1175), ohne „sonst frage nach“; ohne optionale Teile der ganze Text wörtlich wie auf `main` ([`tasks.md`](tasks.md) §9.9) |
 | `AnweisungTest` | die Anweisung enthält die Beschreibungen der angebotenen Typen, die Regeln aus E‑1059, E‑1060 und E‑1062 und den Namen des Mandanten vor den Typen, ohne Namen keinen Abschnitt, aber weder Benutzername noch Mandanten-ID; seit 26.10.2026 die drei ersetzten Regeln und jede Zeile von „So antwortest du“, den Abschnitt nach „So arbeitest du“ und vor dem Mandanten, und keinen der drei alten Sätze mehr (E‑1150, E‑1151); die Mandantenregel im Wortlaut von E‑1158, ohne „reichst du keinen Vorschlag ein“ |
 | `MandantennameTest` | welcher Name in die Anweisung geht: der des aktiven Mandanten; keiner, wenn der Anzeigename die Kennung ist, der aktive Mandant ein anderer als der Kontext oder keiner gewählt ist (E‑1059) |
 | `GespraechsfuehrungTest` | gegen ein geskriptetes Modell: ungültiger Vorschlag → Werkzeugergebnis mit Fehlern, keine Karte; gültiger → Karte mit allen Feldern der Aktion, leere als `null`; Abbruch nach 3 Runden; Werkzeugaufruf für einen nicht angebotenen Typ abgewiesen; ein zweiter Vorschlag je Nachricht abgewiesen; Wert als Zahl abgewiesen; abgeschnitten, verweigert; Fehler des Anbieters lassen den Verlauf unverändert; seit 23.10.2026 trägt die Karte die gekürzten Schlüsselteile, innen zeichengenau (`"  A  1 "` wird `A  1`, F40); seit 26.10.2026 ist das Werkzeugergebnis eines gültigen Vorschlags genau `{"gueltig":true}` (E‑1152) |
@@ -1046,7 +1125,7 @@ Auftraggeber die Rückmeldung hat.
 | `AssistentVorgabenTest` *(26.10.2026)* | `denken` und `max-tokens` in `application.yml` (Profile `dev` und `prod`) gleich den Vorgaben von `AnthropicEigenschaften` und `AssistentEigenschaften` und gleich `MAX_TOKENS` im Läufer: `adaptive` und 8.192 (E‑1153, E‑1154, E‑1161) |
 | `AssistentServiceTest` | **Schalter aus oder kein Schlüssel:** `AssistentConfig` baut keinen Adapter, Stand, Eröffnen und Nachricht melden nicht verfügbar (seit 1.1.0 `404`), **kein HTTP-Aufruf** am Stub, kein Zugriff auf den Typkatalog — mit Gegenprobe, dass eingeschaltet genau ein Aufruf am Stub ankommt. Die Logzeile beim Start nennt den Grund („kein Schluessel“, „Schalter aus“), nie den Schlüssel (seit 1.1.0). Dazu: jede Fehlerart des Anbieters auf `503` bzw. `502` ohne Anbieterdetails, Länge der Nachricht, Höchstzahl je Gespräch, `409`, `404` in allen Fällen gleich, kein angebotener Typ, Freischaltung bei offenem Gespräch entzogen (seit 1.1.0) |
 | `AssistentFreigabeTest` *(1.1.0)* | die eine Stelle in `common.auftrag` ([`tasks.md`](tasks.md) §9.1) |
-| `TestsatzTest` | Form und Abdeckung des Testsatzes (seit 26.10.2026: 25 Fälle, 16 Gruppen), jede erwartete Karte gültig und schon in gekürzter Form, Begriffe nur ohne Vorschlag und genau bei S12, S17 und S24, strukturelle Bewertung und Bewertung der Begriffe; seit 26.10.2026 die Wendungen (seit E‑1158 vierzehn) und die 400 Zeichen der Stilprüfung und ihre Bewertung: jede Wendung ohne Rücksicht auf Groß- und Kleinschreibung, 400 Zeichen gehen, 401 nicht, Unicode-Zeichen statt UTF-16, ohne Antwort nicht erfüllt, je Nachricht eines Falls, die Antwort von S24 aus M1008 D3 jetzt ein Verstoß (§8, E‑1157 bis E‑1160) |
+| `TestsatzTest` | Form und Abdeckung des Testsatzes (seit 26.10.2026: 27 Fälle, 16 Gruppen; bis zum Nachtrag desselben Tages 25), jede erwartete Karte gültig und schon in gekürzter Form, Begriffe nur ohne Vorschlag und genau bei S12 und S17 (bis zum Nachtrag auch S24), strukturelle Bewertung und Bewertung der Begriffe; seit 26.10.2026 die Wendungen (seit E‑1158 vierzehn) und die 400 Zeichen der Stilprüfung und ihre Bewertung: jede Wendung ohne Rücksicht auf Groß- und Kleinschreibung, 400 Zeichen gehen, 401 nicht, Unicode-Zeichen statt UTF-16, ohne Antwort nicht erfüllt, je Nachricht eines Falls, die Antwort von S24 aus M1008 D3 jetzt ein Verstoß (§8, E‑1157 bis E‑1160) |
 | `PaketstrukturTest` | die Regeln aus §4.1 |
 
 ### 9.2 Mit Datenbank (`@Tag("db")`)

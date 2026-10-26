@@ -866,13 +866,32 @@
       "kennung": "S24",
       "herkunft": "echt",
       "gruppe": 16,
-      "beschreibung": "Anpassung im Zeilenformat, die Abladestelle fehlt in jeder Zeile: kein Vorschlag, die Rückfrage nennt die Abladestelle (E‑1155; Werte verfremdet)",
+      "beschreibung": "Anpassung im Zeilenformat, die Abladestelle nach dem letzten Schrägstrich leer: ein Vorschlag ohne Rückfrage, drei Einträge mit Lieferantennummer, Werk und SNDPRN, ohne Abladestelle (E‑1155, E‑1177; Werte verfremdet)",
       "nachrichten": [
         "Anpassen 0101159903/40NP/,120764, 0101159903/41BH/,120765, 0101159903/40M4/,120766,"
       ],
       "erwartet": {
-        "vorschlag": null,
-        "begriffe": ["Abladestelle"]
+        "vorschlag": {
+          "typ": "WERK_ABLADESTELLE",
+          "aktion": "Anpassung",
+          "eintraege": [
+            {
+              "lieferantennummer": "0101159903",
+              "werk": "40NP",
+              "sndprn": "120764"
+            },
+            {
+              "lieferantennummer": "0101159903",
+              "werk": "41BH",
+              "sndprn": "120765"
+            },
+            {
+              "lieferantennummer": "0101159903",
+              "werk": "40M4",
+              "sndprn": "120766"
+            }
+          ]
+        }
       }
     },
     {
@@ -893,6 +912,49 @@
               "abladestelle": "123",
               "sndprn": "120764",
               "sndprn4908": "100050"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "kennung": "S26",
+      "herkunft": "synthetisch",
+      "gruppe": 16,
+      "beschreibung": "Neuanlage im Zeilenformat nur mit Werk und SNDPRN, Schrägstrich am Ende: Abladestelle leer, ein Vorschlag ohne Rückfrage (E‑1172, E‑1177)",
+      "nachrichten": [
+        "Neuanlage 72332/,120764,"
+      ],
+      "erwartet": {
+        "vorschlag": {
+          "typ": "WERK_ABLADESTELLE",
+          "aktion": "Neuanlage",
+          "eintraege": [
+            {
+              "werk": "72332",
+              "sndprn": "120764"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "kennung": "S27",
+      "herkunft": "synthetisch",
+      "gruppe": 16,
+      "beschreibung": "Neuanlage mit benannten Feldern, ohne Abladestelle: ein Vorschlag ohne Abladestelle, keine Rückfrage (E‑1168, E‑1177)",
+      "nachrichten": [
+        "Bitte neu anlegen: Lieferantennummer 0101159903, Werk 40NP, SNDPRN 120764"
+      ],
+      "erwartet": {
+        "vorschlag": {
+          "typ": "WERK_ABLADESTELLE",
+          "aktion": "Neuanlage",
+          "eintraege": [
+            {
+              "lieferantennummer": "0101159903",
+              "werk": "40NP",
+              "sndprn": "120764"
             }
           ]
         }

@@ -13,6 +13,15 @@ Innern eines Schlüsselteils und auch mehrere hintereinander, nie am Rand eines 
 Plattform verarbeitet solche Schlüssel nach Auskunft des Auftraggebers bereits; Statements, Spalten
 und Ablauf sind unverändert.
 
+*Geändert am 26.10.2026:* **Bei `WERK_ABLADESTELLE` ist auch die Abladestelle optional.** Ohne
+Abladestelle steht der Schrägstrich am Ende, so wie die Plattform den Eintrag in ihrer Tabelle führt:
+Ein Schlüssel ist `Lieferantennummer/Werk/Abladestelle`, `Werk/Abladestelle`,
+`Lieferantennummer/Werk/` oder `Werk/` (§8). Allgemein gilt für jeden Typ: Der Schlüssel ist von
+hinten ausgerichtet, der letzte Teil gehört immer zum letzten Feld (§7). Statements, Spalten und
+Ablauf sind unverändert. *(Eine erste Fassung desselben Tages ließ fehlende Teile an jeder Stelle
+weg, `Lieferantennummer/Werk` ohne Schrägstrich; sie ist nicht ausgerollt und im Nachtrag
+korrigiert.)*
+
 ---
 
 ## 1. Worum es geht
@@ -177,6 +186,14 @@ Mandanten freigeschaltet. Ein aktivierter Typ ohne Ablauf führt zu Aufträgen, 
 Eine Definition nennt je Typ: die Aktionen, die Felder, den Aufbau des Schlüssels mit seinem
 Trenner, die Zeilenvorlage je Aktion und die Rückgabewerte (Erfolgswert und bekannte andere Werte).
 
+**Teile des Schlüssels** *(seit 26.10.2026)*: Jeder Teil kann optional sein, an jeder Stelle;
+mindestens einer ist Pflicht, ein Schlüssel ist also nie leer. **Der Schlüssel ist von hinten
+ausgerichtet:** Teile vor dem ersten Teil mit Wert entfallen samt ihrem Trenner, ein Schlüssel beginnt
+also nie mit einem Trenner. Ab dem ersten Teil mit Wert steht jeder Teil an seinem Platz; fehlt einer,
+ist er leerer Text — zwischen zwei Trennern (`a//c`) oder nach dem letzten Trenner (`a/b/`). Wer den
+Schlüssel am Trenner zerlegt, ordnet die Teile also von hinten zu: Der letzte gehört zum letzten Feld,
+der vorletzte zum vorletzten. Damit ist jeder Schlüssel eindeutig.
+
 ---
 
 ## 8. Beispiel: der Typ `WERK_ABLADESTELLE`
@@ -185,10 +202,22 @@ Trenner, die Zeilenvorlage je Aktion und die Rückgabewerte (Erfolgswert und bek
 freigeschaltet; bis dahin für `NEXANS` und `IBIS` ([`tasks.md`](tasks.md) §3.9). Für die Plattform
 ändert sich damit nichts: Sie liest `mandant_id` aus dem Auftrag, gleich welcher Mandant es ist.
 
-Ein Eintrag besteht aus einem **Schlüssel** und zwei Werten. Der Schlüssel ist `Werk/Abladestelle`
-oder `Lieferantennummer/Werk/Abladestelle`, Trenner `/`. Die Werte sind **SNDPRN** und
-**SNDPRN_4908**, jeweils leer oder sechs Ziffern. Kein Schlüsselteil enthält `/` oder `,`; jeder ist
-1 bis 35 Zeichen lang, Groß- und Kleinschreibung wie eingegeben.
+Ein Eintrag besteht aus einem **Schlüssel** und zwei Werten. Der Schlüssel hat eine von vier Formen,
+Trenner `/` *(seit 26.10.2026; bis dahin nur die zweite und die vierte)*:
+
+| Form | Beispiel |
+|---|---|
+| `Lieferantennummer/Werk/Abladestelle` | `0101159903/22/001N0` |
+| `Werk/Abladestelle` | `72332/DDB0` |
+| `Lieferantennummer/Werk/` | `0101159903/40NP/` |
+| `Werk/` | `72332/` |
+
+Pflicht ist nur das Werk. **Ohne Abladestelle endet der Schlüssel mit `/`**, so wie die Plattform den
+Eintrag in ihrer Tabelle führt (Auskunft des Auftraggebers vom 26.10.2026). Jede Form ist eindeutig:
+`010/18VZE` ist Werk `010` mit Abladestelle `18VZE`, Lieferantennummer `010` mit Werk `18VZE` heißt
+`010/18VZE/`. In einer Zeile sieht das so aus: `0101159903/40NP/,120764,`. Die Werte sind **SNDPRN** und **SNDPRN_4908**, jeweils leer oder sechs Ziffern.
+Kein Schlüsselteil enthält `/` oder `,`; jeder ist 1 bis 35 Zeichen lang, Groß- und Kleinschreibung
+wie eingegeben.
 
 **Leerzeichen im Schlüssel** *(seit 23.10.2026)*: Ein Schlüsselteil kann Leerzeichen (U+0020)
 enthalten, auch mehrere hintereinander — **zeichengenau so, wie sie im Parametertext stehen**. Am

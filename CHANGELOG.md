@@ -23,8 +23,41 @@ Tags und die Definition of Done für ein Release stehen in
   der Produktion las das Modell eine solche Zeile falsch. Idempotent, mit drei Wachen, **an keine
   Version gebunden**, vor oder nach dem Deployment ([`docs/betrieb.md`](docs/betrieb.md) §7a F,
   E‑1156). Lukas führt es in der Produktion aus. Auf der Testkopie gelaufen am 26.10.2026.
+- `scripts/werk-abladestelle-abladestelle-optional.sql` mit Rücknahme
+  `scripts/werk-abladestelle-abladestelle-optional-ruecknahme.sql`: **Bei `WERK_ABLADESTELLE` ist
+  die Abladestelle optional**; Pflicht bleibt nur das Werk. Das Skript entfernt `pflicht` an der
+  Abladestelle, ersetzt in der Beschreibung den Satz zum Schlüssel und ergänzt im Absatz zum
+  Zeilenformat das Beispiel `0101159903/40NP/,120764,` (E‑1176); die Rücknahme stellt beides
+  zeichengleich wieder her. Grund: Die Plattform verarbeitet Schlüssel ohne Abladestelle bereits, mit
+  Schrägstrich am Ende (E‑1172). Idempotent, mit drei Wachen. Lukas führt es in der Produktion aus,
+  **erst nach dem Deployment dieser Version und nach dem Skript zum Zeilenformat**
+  ([`docs/betrieb.md`](docs/betrieb.md) §7a G, E‑1171). Auf der Testkopie gelaufen am 26.10.2026 und
+  danach zurückgenommen; die Testkopie trägt den Stand von `main`.
 
 ### Geändert
+
+- **Schlüsselteile frei wählbar, Schlüssel von hinten ausgerichtet** (Entscheidungen des
+  Auftraggebers vom 26.10.2026, E‑1164 bis E‑1177, [`docs/tasks.md`](docs/tasks.md) §2). Grund: Eine
+  Definition mit optionaler Abladestelle war ungültig, weil nur der erste Teil des Schlüssels
+  optional sein durfte; der Assistent wäre für den Mandanten verschwunden.
+  - **Jeder Teil eines Schlüssels kann optional sein**, an jeder Position; mindestens einer bleibt
+    Pflicht, alle übrigen Prüfungen am Schlüssel bleiben (E‑1164 bis E‑1166). Erledigt Punkt 1007.
+  - **Der Schlüsseltext ist von hinten ausgerichtet**, für jeden Typ: Teile vor dem ersten Teil mit
+    Wert entfallen samt Trenner, danach behält jeder Teil seinen Platz, ein fehlender als leerer
+    Text (`a//c`, `a/b/`). Bei `WERK_ABLADESTELLE` heißt ein Eintrag ohne Abladestelle damit
+    `0101159903/40NP/` bzw. `72332/`, wie in der Tabelle der Plattform, und `010/18VZE` (Werk,
+    Abladestelle) und `010/18VZE/` (Lieferantennummer, Werk) sind verschiedene Schlüssel (E‑1172 bis
+    E‑1174; ersetzt „fehlende Teile entfallen an jeder Position“, E‑1167, aus dem ersten Durchgang
+    desselben Tages).
+  - **Werkzeugbeschreibung:** statt „fehlt ein Teil, ist es der optionale erste“ nennt sie die
+    optionalen Teile mit ihrem Label und sagt, der Schlüssel sei von hinten ausgerichtet, der letzte
+    Teil gehöre zum letzten Feld, ein leerer Teil heiße „Feld leer“; das Modell zerlegt ohne
+    Rückfrage (E‑1175, ändert E‑1060). Ohne optionale Teile bleibt der Text Wort für Wort.
+  - [`docs/task-schnittstelle.md`](docs/task-schnittstelle.md) §7 und §8: die Regel von hinten und
+    die vier Schlüsselformen `L/W/A`, `W/A`, `L/W/`, `W/`.
+  - **Testsatz:** S24 erwartet den Vorschlag ohne Abladestelle, neu S26 und S27, 27 Fälle (E‑1177).
+    Lauf M1010 über die acht betroffenen Fälle, drei Durchgänge: je 8 von 8 bestanden, Stil 8 von 8
+    ([`docs/assistent.md`](docs/assistent.md) §8.7). Punkt 1045 erledigt. Kein voller DB-Lauf (F51).
 
 - **Der Assistent antwortet ohne Innenleben** (Entscheidungen des Auftraggebers vom 26.10.2026,
   E‑1150 bis E‑1157, [`docs/assistent.md`](docs/assistent.md) §2). Grund: Im Test in der Produktion

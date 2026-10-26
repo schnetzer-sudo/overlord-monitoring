@@ -60,27 +60,96 @@ class WerkzeugbauTest {
         .contains("besteht aus Bereich, Konto");
   }
 
+  /**
+   * Der Satz, der folgt, sobald ein Teil des Schluessels optional ist (E‑1175): von hinten
+   * ausgerichtet, mit dem Label des letzten Felds, ohne Rueckfrage.
+   */
+  private static String vonHinten(String letztesLabel) {
+    return " Ein zusammengesetzter Schlüssel ist von hinten ausgerichtet; der letzte Teil gehört zu "
+        + letztesLabel
+        + ", fehlen vorne Teile, sind es die vorderen Felder; ein leerer Teil (zwei Trenner"
+        + " hintereinander oder ein Trenner am Ende) heißt, dieses Feld bleibt leer; zerlege ohne"
+        + " Rückfrage.";
+  }
+
+  /**
+   * Was es seit E‑1174 nicht mehr gibt: die Rueckfrage zur Lesart aus E‑1170. „frage nach“ allein
+   * steht weiter im Satz zu den Fehlern des Backends, wie auf {@code main}.
+   */
+  private static final String[] KEINE_RUECKFRAGE = {
+    "sonst frage nach", "statt zu raten", "eindeutig ist", "fehlt ein Teil", "optionale erste"
+  };
+
   @Test
-  @DisplayName("Zusammengesetzter Schluessel: zerlegen mit dem Trenner des Typs, ohne Rueckfrage")
+  @DisplayName(
+      "Zusammengesetzter Schluessel: zerlegen mit dem Trenner des Typs; der optionale Teil mit"
+          + " seinem Label, von hinten ausgerichtet")
   void zusammengesetzter_schluessel() {
     assertThat(werkzeugbau.werkzeug(Testdefinitionen.gattung()).beschreibung())
         .contains(
             "Schreibt der Kunde einen Schlüssel zusammengesetzt mit dem Trenner „-“, zerlegst du"
-                + " ihn ohne Rückfrage in diese Felder in ihrer Reihenfolge; fehlt ein Teil, ist es"
-                + " der optionale erste (Bereich).")
-        .doesNotContain("„/“");
+                + " ihn ohne Rückfrage in diese Felder in ihrer Reihenfolge. Optional ist der Teil"
+                + " Bereich."
+                + vonHinten("Konto")
+                + " Schlüsselteile übergibst du")
+        .doesNotContain("„/“")
+        .doesNotContain(KEINE_RUECKFRAGE);
   }
 
   @Test
-  @DisplayName("Ist der erste Teil des Schluessels Pflicht, kann kein Teil fehlen")
+  @DisplayName(
+      "Optionale Teile an jeder Position: genannt mit Label; der letzte Teil, ohne Rueckfrage")
+  void optionale_teile_an_jeder_position() {
+    assertThat(beschreibung(mitPflicht(false, true, true)))
+        .contains(" Optional ist der Teil Lieferantennummer." + vonHinten("Abladestelle"))
+        .doesNotContain(KEINE_RUECKFRAGE);
+    assertThat(beschreibung(mitPflicht(true, false, true)))
+        .contains(" Optional ist der Teil Werk." + vonHinten("Abladestelle"))
+        .doesNotContain(KEINE_RUECKFRAGE);
+    assertThat(beschreibung(mitPflicht(true, true, false)))
+        .contains(" Optional ist der Teil Abladestelle." + vonHinten("Abladestelle"))
+        .doesNotContain(KEINE_RUECKFRAGE);
+    assertThat(beschreibung(mitPflicht(false, true, false)))
+        .contains(
+            " Optional sind die Teile Lieferantennummer und Abladestelle."
+                + vonHinten("Abladestelle"))
+        .doesNotContain(KEINE_RUECKFRAGE);
+
+    // Vier Teile, drei davon optional: Die Aufzaehlung trennt mit Komma und „und“.
+    ObjectNode vier = mitPflicht(false, false, false);
+    ((ArrayNode) vier.get("felder"))
+        .addObject()
+        .put("name", "lager")
+        .put("label", "Lager")
+        .put("pflicht", true);
+    ((ArrayNode) vier.get("schluessel").get("felder")).add("lager");
+    assertThat(beschreibung(vier))
+        .contains(
+            "besteht aus Lieferantennummer, Werk, Abladestelle, Lager, in dieser Reihenfolge.")
+        .contains(
+            " Optional sind die Teile Lieferantennummer, Werk und Abladestelle."
+                + vonHinten("Lager"));
+  }
+
+  @Test
+  @DisplayName("Ohne optionalen Teil: der Text wie auf main, Wort fuer Wort")
   void schluessel_ohne_optionalen_teil() {
     ObjectNode struktur = Testdefinitionen.gattungBaum();
     ((ObjectNode) struktur.get("felder").get(0)).put("pflicht", true);
 
     assertThat(werkzeugbau.werkzeug(gueltig("NUR_PFLICHT", struktur)).beschreibung())
-        .contains(
-            "zerlegst du ihn ohne Rückfrage in diese Felder in ihrer Reihenfolge. Schlüsselteile")
-        .doesNotContain("fehlt ein Teil");
+        .isEqualTo(
+            "Reicht einen Vorschlag für den Auftrag „Name NUR_PFLICHT“ ein. Rufe dieses Werkzeug,"
+                + " sobald die Angaben des Kunden vollständig sind. Das Backend prüft den Vorschlag:"
+                + " Meldet es Fehler, erkläre sie dem Kunden und frage nach; ist er gültig, sieht der"
+                + " Kunde ihn als Karte und legt den Auftrag dort selbst an. Felder ohne Wert lässt"
+                + " du weg. Werte übergibst du als Text, genau so, wie der Kunde sie nennt. Der"
+                + " Schlüssel eines Eintrags besteht aus Bereich, Konto, in dieser Reihenfolge."
+                + " Schreibt der Kunde einen Schlüssel zusammengesetzt mit dem Trenner „-“,"
+                + " zerlegst du ihn ohne Rückfrage in diese Felder in ihrer Reihenfolge."
+                + " Schlüsselteile übergibst du zeichengenau, mit jedem Leerzeichen, auch mehreren"
+                + " hintereinander; Leerzeichen am Anfang und Ende entfernt das Backend.");
+    assertThat(beschreibung(mitPflicht(true, true, true))).doesNotContain("Optional");
   }
 
   @Test
@@ -129,6 +198,28 @@ class WerkzeugbauTest {
     assertThat(Werkzeugbau.geeignete(List.of(mandantFeld, falscherName, gut)))
         .extracting(TypDefinition::typ)
         .containsExactly("GUT");
+  }
+
+  private String beschreibung(ObjectNode struktur) {
+    return werkzeugbau.werkzeug(gueltig("PROBE", struktur)).beschreibung();
+  }
+
+  /**
+   * Die Struktur von {@code WERK_ABLADESTELLE} mit {@code pflicht} an den drei Schluesselteilen, in
+   * ihrer Reihenfolge — unabhaengig davon, was die Testressource gerade traegt.
+   */
+  private static ObjectNode mitPflicht(boolean lieferant, boolean werk, boolean abladestelle) {
+    ObjectNode struktur = Testdefinitionen.werkBaum();
+    boolean[] pflicht = {lieferant, werk, abladestelle};
+    for (int i = 0; i < pflicht.length; i++) {
+      ObjectNode feld = (ObjectNode) struktur.get("felder").get(i);
+      if (pflicht[i]) {
+        feld.put("pflicht", true);
+      } else {
+        feld.remove("pflicht");
+      }
+    }
+    return struktur;
   }
 
   private static TypDefinition gueltig(String typ, ObjectNode struktur) {
