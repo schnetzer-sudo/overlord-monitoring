@@ -202,6 +202,58 @@ class AnthropicSprachmodellTest {
     assertThat(antwort.modell()).isEqualTo("claude-sonnet-5-5");
   }
 
+  /**
+   * Mit {@code adaptive} denkt das Modell auch vor einer reinen Textantwort (E‑1153). Was es dabei
+   * denkt, ist nicht fuer den Kunden: Der Text der Antwort entsteht nur aus {@code text}-Bloecken,
+   * der Rohinhalt traegt alle Bloecke in ihrer Reihenfolge, mit Signatur und Daten.
+   */
+  @Test
+  @DisplayName(
+      "Denkbloecke (thinking, redacted_thinking) stehen nie im Text, aber vollstaendig im Rohinhalt")
+  void denkbloecke_nie_im_text() {
+    String antwortMitDenken =
+        """
+        {"id":"msg_3","type":"message","role":"assistant","model":"claude-sonnet-5-5",
+         "content":[
+           {"type":"thinking","thinking":"Der Kunde nennt drei Zeilen. Ich muss genau lesen.",
+            "signature":"sig-3"},
+           {"type":"redacted_thinking","data":"verschluesselt-3"},
+           {"type":"text","text":"Welche Abladestelle gilt für 40NP?"},
+           {"type":"thinking","thinking":"","signature":"sig-4"}],
+         "stop_reason":"end_turn","usage":{"input_tokens":300,"output_tokens":80}}
+        """;
+    stub.antworte(200, antwortMitDenken);
+
+    Modellantwort antwort = adapter("adaptive", Duration.ofSeconds(5)).rufe(einfach());
+
+    assertThat(antwort.text()).isEqualTo("Welche Abladestelle gilt für 40NP?");
+    assertThat(antwort.text()).doesNotContain("Kunde", "genau lesen", "verschluesselt", "sig-");
+    assertThat(antwort.aufrufe()).isEmpty();
+    assertThat(antwort.ende()).isEqualTo(Modellantwort.Ende.FERTIG);
+    assertThat(antwort.rohinhalt())
+        .isEqualTo(JSON.writeValueAsString(JSON.readTree(antwortMitDenken).get("content")));
+  }
+
+  @Test
+  @DisplayName("Nur Denkbloecke und ein Werkzeugaufruf: Der Text bleibt leer")
+  void nur_denken_und_werkzeug_ohne_text() {
+    stub.antworte(
+        200,
+        """
+        {"model":"claude-sonnet-5-5","content":[
+           {"type":"redacted_thinking","data":"verschluesselt-5"},
+           {"type":"thinking","thinking":"Laut Regel reiche ich ein.","signature":"sig-5"},
+           {"type":"tool_use","id":"toolu_5","name":"WERK_ABLADESTELLE","input":{}}],
+         "stop_reason":"tool_use","usage":{"input_tokens":10,"output_tokens":20}}
+        """);
+
+    Modellantwort antwort = adapter("adaptive", Duration.ofSeconds(5)).rufe(einfach());
+
+    assertThat(antwort.text()).isEmpty();
+    assertThat(antwort.aufrufe()).extracting(Werkzeugaufruf::id).containsExactly("toolu_5");
+    assertThat(JSON.readTree(antwort.rohinhalt()).size()).isEqualTo(3);
+  }
+
   @Test
   @DisplayName(
       "Antwort mit tool_use: WERKZEUG, Aufruf mit Kennung und Eingabe, Rohinhalt vollstaendig")
