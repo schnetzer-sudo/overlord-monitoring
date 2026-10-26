@@ -59,8 +59,13 @@ import tools.jackson.databind.JsonNode;
  * Ohne Datenbank: Die Definition von {@code WERK_ABLADESTELLE} kommt aus den Testressourcen, der
  * Name des Mandanten ist erfunden.
  *
- * <p><b>Was hinausgeht:</b> die Anweisung, die Werkzeuge und die synthetischen Nachrichten aus
- * {@code faelle.json} — keine Daten aus der Datenbank.
+ * <p><b>Getrennt davon der Stil</b> (E‑1157): Keine Antwort enthaelt einen Begriff aus {@link
+ * #STIL_BEGRIFFE}, und keine ist laenger als {@value #STIL_HOECHSTENS_ZEICHEN} Zeichen. Der Bericht
+ * zeigt den Stil je Fall und den Antworttext, im Kopf die Stilquote. Die strukturelle Bewertung
+ * aendert das nicht, damit sie mit M1001 bis M1007 vergleichbar bleibt.
+ *
+ * <p><b>Was hinausgeht:</b> die Anweisung, die Werkzeuge und die Nachrichten aus {@code
+ * faelle.json}, synthetisch oder verfremdet — keine Daten aus der Datenbank.
  */
 @Tag("llm")
 class AssistentTestsatzLauf {
@@ -72,6 +77,27 @@ class AssistentTestsatzLauf {
 
   /** Wie {@code overlord.assistent.max-tokens} in {@code application.yml} (E‑1154). */
   static final int MAX_TOKENS = 8192;
+
+  /**
+   * Was in keiner Antwort stehen darf, ohne Ruecksicht auf Gross- und Kleinschreibung (E‑1157):
+   * Reden ueber den Kunden, ueber Technik und Pruefung, und Ueberlegungen statt Ergebnis.
+   */
+  static final List<String> STIL_BEGRIFFE =
+      List.of(
+          "der Kunde",
+          "den Kunden",
+          "dem Kunden",
+          "des Kunden",
+          "Backend",
+          "das System",
+          "Werkzeug",
+          "ist gültig",
+          "laut Regel",
+          "ich muss",
+          "ich prüfe");
+
+  /** Hoechstens so viele Zeichen hat eine Antwort (E‑1157), gezaehlt in Unicode-Zeichen. */
+  static final int STIL_HOECHSTENS_ZEICHEN = 400;
 
   /** Ein Aufruf des Modells: was er ausgegeben hat und ob er an {@code max_tokens} endete. */
   private record Aufruf(long tokenAus, boolean abgeschnitten) {
@@ -133,6 +159,8 @@ class AssistentTestsatzLauf {
     String modellname = umgebung("OVERLORD_ASSISTENT_MODELL", "claude-sonnet-5-5");
     String basisUrl = umgebung("OVERLORD_ASSISTENT_BASIS_URL", "https://api.anthropic.com");
 
+    AnthropicEigenschaften eigenschaften =
+        new AnthropicEigenschaften(umgebung("OVERLORD_ASSISTENT_DENKEN", null), null);
     Mitschrift modell =
         new Mitschrift(
             new AnthropicSprachmodell(
@@ -140,7 +168,7 @@ class AssistentTestsatzLauf {
                 schluessel,
                 modellname,
                 Duration.ofSeconds(30),
-                new AnthropicEigenschaften(umgebung("OVERLORD_ASSISTENT_DENKEN", null), null),
+                eigenschaften,
                 Skriptmodell.JSON));
     Gespraechsfuehrung fuehrung = new Gespraechsfuehrung(modell, Skriptmodell.JSON, 3, MAX_TOKENS);
 
@@ -186,7 +214,7 @@ class AssistentTestsatzLauf {
     }
 
     Duration dauer = Duration.ofNanos(System.nanoTime() - beginn);
-    schreibeBericht(modellname, auswahl, ausgaenge, gesamt, dauer);
+    schreibeBericht(modellname, eigenschaften.denken(), auswahl, ausgaenge, gesamt, dauer);
   }
 
   /**
@@ -289,6 +317,52 @@ class AssistentTestsatzLauf {
     return fehlend;
   }
 
+  /**
+   * Der Stil einer Antwort (E‑1157): {@code null}, wenn sie keinen der {@link #STIL_BEGRIFFE}
+   * enthaelt und hoechstens {@value #STIL_HOECHSTENS_ZEICHEN} Zeichen hat; sonst warum nicht. Ohne
+   * Antwort (Fehler des Anbieters) ist der Stil nicht erfuellt: Es gibt nichts, das ihn haelt.
+   */
+  static String stilverstoss(String antwort) {
+    if (antwort == null) {
+      return "keine Antwort";
+    }
+    String text = antwort.toLowerCase(Locale.ROOT);
+    List<String> gefunden = new ArrayList<>();
+    for (String begriff : STIL_BEGRIFFE) {
+      if (text.contains(begriff.toLowerCase(Locale.ROOT))) {
+        gefunden.add("„" + begriff + "“");
+      }
+    }
+    List<String> gruende = new ArrayList<>();
+    if (!gefunden.isEmpty()) {
+      gruende.add("enthält " + String.join(", ", gefunden));
+    }
+    int zeichen = antwort.codePointCount(0, antwort.length());
+    if (zeichen > STIL_HOECHSTENS_ZEICHEN) {
+      gruende.add(zeichen + " Zeichen");
+    }
+    return gruende.isEmpty() ? null : String.join("; ", gruende);
+  }
+
+  /**
+   * Der Stil eines Falls: {@code null}, wenn jede seiner Antworten ihn haelt. Bei mehreren
+   * Nachrichten steht vor jedem Grund die Nummer der Nachricht.
+   */
+  static String stil(List<String> antworten) {
+    List<String> gruende = new ArrayList<>();
+    for (int i = 0; i < antworten.size(); i++) {
+      String grund = stilverstoss(antworten.get(i));
+      if (grund != null) {
+        gruende.add(antworten.size() == 1 ? grund : "Nachricht " + (i + 1) + ": " + grund);
+      }
+    }
+    return gruende.isEmpty() ? null : String.join(" / ", gruende);
+  }
+
+  private static List<String> antworten(Ausgang ausgang) {
+    return ausgang.schritte().stream().map(Schritt::antwort).toList();
+  }
+
   /** Strukturell: Typ, Aktion und Eintraege als Menge, Felder ohne Wert entfallen. */
   static boolean passt(JsonNode erwartet, Vorschlag tatsaechlich) {
     JsonNode vorschlag = erwartet.get("vorschlag");
@@ -336,16 +410,26 @@ class AssistentTestsatzLauf {
   // ─── Bericht ───────────────────────────────────────────────────────────────────────────────
 
   private static void schreibeBericht(
-      String modell, Set<String> auswahl, List<Ausgang> ausgaenge, Zaehler gesamt, Duration dauer)
+      String modell,
+      String denken,
+      Set<String> auswahl,
+      List<Ausgang> ausgaenge,
+      Zaehler gesamt,
+      Duration dauer)
       throws IOException {
     long bestanden = ausgaenge.stream().filter(Ausgang::bestanden).count();
+    long stilOk = ausgaenge.stream().filter(ausgang -> stil(antworten(ausgang)) == null).count();
     String hoechster = "—";
     long hoechsterAufruf = -1;
+    long abgeschnitten = 0;
     for (Ausgang ausgang : ausgaenge) {
       for (Aufruf aufruf : ausgang.aufrufe()) {
         if (aufruf.tokenAus() > hoechsterAufruf) {
           hoechsterAufruf = aufruf.tokenAus();
           hoechster = hoechsterAufruf + " (" + ausgang.kennung() + ")";
+        }
+        if (aufruf.abgeschnitten()) {
+          abgeschnitten++;
         }
       }
     }
@@ -359,6 +443,8 @@ class AssistentTestsatzLauf {
         .append(modell)
         .append("\n- Faelle: ")
         .append(auswahl.isEmpty() ? "alle" : String.join(", ", auswahl))
+        .append("\n- Denken: ")
+        .append(denken)
         .append("\n- max_tokens: ")
         .append(MAX_TOKENS)
         .append("\n- Bestanden: ")
@@ -366,20 +452,30 @@ class AssistentTestsatzLauf {
         .append(" von ")
         .append(ausgaenge.size())
         .append(String.format(" (%.0f %%)", 100.0 * bestanden / ausgaenge.size()))
+        .append("\n- Stil: ")
+        .append(stilOk)
+        .append(" von ")
+        .append(ausgaenge.size())
+        .append(String.format(" (%.0f %%)", 100.0 * stilOk / ausgaenge.size()))
         .append("\n- Token ein / aus: ")
         .append(gesamt.tokenEin())
         .append(" / ")
         .append(gesamt.tokenAus())
         .append("\n- Hoechster einzelner Aufruf, Token aus: ")
         .append(hoechster)
+        .append("\n- Aufrufe an max_tokens abgeschnitten: ")
+        .append(abgeschnitten)
         .append("\n- Werkzeugaufrufe: ")
         .append(gesamt.werkzeugaufrufe())
         .append("\n- Dauer: ")
         .append(dauer.toMillis())
+        .append(" ms, je Fall ")
+        .append(dauer.toMillis() / ausgaenge.size())
         .append(
-            " ms\n\n| Fall | Ergebnis | Grund | Token ein | Token aus | Token aus je Aufruf |\n"
-                + "|---|---|---|---:|---:|---|\n");
+            " ms\n\n| Fall | Ergebnis | Grund | Stil | Token ein | Token aus | Token aus je Aufruf"
+                + " | Antwort |\n|---|---|---|---|---:|---:|---|---|\n");
     for (Ausgang ausgang : ausgaenge) {
+      String stil = stil(antworten(ausgang));
       bericht
           .append("| ")
           .append(ausgang.kennung())
@@ -388,11 +484,15 @@ class AssistentTestsatzLauf {
           .append(" | ")
           .append(ausgang.grund() == null ? "" : ausgang.grund())
           .append(" | ")
+          .append(stil == null ? "ok" : zelle(stil))
+          .append(" | ")
           .append(ausgang.tokenEin())
           .append(" | ")
           .append(ausgang.tokenAus())
           .append(" | ")
           .append(String.join(", ", ausgang.aufrufe().stream().map(Aufruf::toString).toList()))
+          .append(" | ")
+          .append(zelle(antworttext(antworten(ausgang))))
           .append(" |\n");
     }
     for (Ausgang ausgang : ausgaenge) {
@@ -404,6 +504,9 @@ class AssistentTestsatzLauf {
             .append(schritt.fehler() == null ? "" : " (" + schritt.fehler() + ")")
             .append("\n- Antwort: ")
             .append(schritt.antwort() == null ? "—" : schritt.antwort().replace("\n", " "))
+            .append("\n- Stil: ")
+            .append(
+                stilverstoss(schritt.antwort()) == null ? "ok" : stilverstoss(schritt.antwort()))
             .append("\n- Vorschlag: ")
             .append(
                 schritt.vorschlag() == null
@@ -419,6 +522,21 @@ class AssistentTestsatzLauf {
     Path datei = ziel.resolve("bericht-" + stempel + ".md");
     Files.writeString(datei, bericht, StandardCharsets.UTF_8);
     System.out.println("Testsatz: " + bestanden + " von " + ausgaenge.size() + " -> " + datei);
+  }
+
+  /** Die Antworten eines Falls in einer Zeile, bei mehreren mit der Nummer der Nachricht. */
+  private static String antworttext(List<String> antworten) {
+    List<String> teile = new ArrayList<>();
+    for (int i = 0; i < antworten.size(); i++) {
+      String antwort = antworten.get(i) == null ? "—" : antworten.get(i);
+      teile.add(antworten.size() == 1 ? antwort : "(" + (i + 1) + ") " + antwort);
+    }
+    return String.join(" ", teile);
+  }
+
+  /** Ein Text als Zelle einer Markdown-Tabelle: einzeilig, der Trenner maskiert. */
+  private static String zelle(String text) {
+    return text.replace("\r", " ").replace("\n", " ").replace("|", "\\|");
   }
 
   private static void summiere(Zaehler gesamt, Zaehler einzeln) {

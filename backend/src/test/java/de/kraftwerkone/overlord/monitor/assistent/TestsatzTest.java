@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
@@ -20,16 +21,16 @@ import tools.jackson.databind.JsonNode;
 
 /**
  * Der Testsatz selbst, ohne Modell ({@code docs/assistent.md} §8): Form der Faelle, Abdeckung der
- * 15 Gruppen (13 aus dem Auftrag, dazu die Anpassung mit nur einem Wert und Leerzeichen im
- * Schluessel), jede erwartete Karte besteht die Pruefung — und die strukturelle Bewertung
- * vergleicht so, wie beschrieben.
+ * 16 Gruppen (13 aus dem Auftrag, dazu die Anpassung mit nur einem Wert, Leerzeichen im Schluessel
+ * und das Zeilenformat mit Komma), jede erwartete Karte besteht die Pruefung — und die strukturelle
+ * Bewertung und die Stilpruefung vergleichen so, wie beschrieben.
  */
 class TestsatzTest {
 
   private static final TypDefinition WERK = Testdefinitionen.werk();
 
   @Test
-  @DisplayName("21 synthetische Faelle, jede der 15 Gruppen mindestens einmal, Kennungen eindeutig")
+  @DisplayName("25 Faelle, jede der 16 Gruppen mindestens einmal, Kennungen eindeutig")
   void form_und_abdeckung() throws IOException {
     JsonNode faelle = lies().get("faelle");
     Set<String> kennungen = new HashSet<>();
@@ -48,9 +49,9 @@ class TestsatzTest {
       }
       gruppen.add(fall.get("gruppe").asInt());
     }
-    assertThat(faelle.size()).isEqualTo(21);
+    assertThat(faelle.size()).isEqualTo(25);
     assertThat(gruppen)
-        .containsExactlyInAnyOrder(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+        .containsExactlyInAnyOrder(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
   }
 
   @Test
@@ -78,7 +79,8 @@ class TestsatzTest {
   }
 
   @Test
-  @DisplayName("Begriffe nur ohne Vorschlag, als Liste nicht leerer Texte; S12 und S17 tragen sie")
+  @DisplayName(
+      "Begriffe nur ohne Vorschlag, als Liste nicht leerer Texte; S12, S17 und S24 tragen sie")
   void begriffe_nur_ohne_vorschlag() throws IOException {
     List<String> mitBegriffen = new ArrayList<>();
     for (JsonNode fall : lies().get("faelle")) {
@@ -96,7 +98,64 @@ class TestsatzTest {
         begriffe.forEach(begriff -> assertThat(begriff.stringValue()).isNotBlank());
       }
     }
-    assertThat(mitBegriffen).containsExactlyInAnyOrder("S12", "S17");
+    assertThat(mitBegriffen).containsExactlyInAnyOrder("S12", "S17", "S24");
+  }
+
+  @Test
+  @DisplayName("Stil: genau diese elf Begriffe und hoechstens 400 Zeichen (E‑1157)")
+  void stil_begriffe() {
+    assertThat(AssistentTestsatzLauf.STIL_BEGRIFFE)
+        .containsExactly(
+            "der Kunde",
+            "den Kunden",
+            "dem Kunden",
+            "des Kunden",
+            "Backend",
+            "das System",
+            "Werkzeug",
+            "ist gültig",
+            "laut Regel",
+            "ich muss",
+            "ich prüfe");
+    assertThat(AssistentTestsatzLauf.STIL_HOECHSTENS_ZEICHEN).isEqualTo(400);
+  }
+
+  @Test
+  @DisplayName(
+      "Stil: jeder Begriff ohne Ruecksicht auf Gross- und Kleinschreibung, 400 Zeichen gehen, 401"
+          + " nicht, ohne Antwort nicht erfuellt, je Nachricht eines Falls")
+  void stil_bewertung() {
+    assertThat(
+            AssistentTestsatzLauf.stilverstoss(
+                "Bitte prüfen Sie die Einträge auf der Karte. Dort können Sie sie ändern und den"
+                    + " Auftrag anlegen."))
+        .isNull();
+    for (String begriff : AssistentTestsatzLauf.STIL_BEGRIFFE) {
+      assertThat(
+              AssistentTestsatzLauf.stilverstoss(
+                  "Vorher " + begriff.toUpperCase(Locale.ROOT) + " nachher"))
+          .as(begriff)
+          .isEqualTo("enthält „" + begriff + "“");
+    }
+    assertThat(
+            AssistentTestsatzLauf.stilverstoss(
+                "Der Kunde nennt drei Zeilen. Ich muss genau lesen; laut Regel frage ich nach."))
+        .isEqualTo("enthält „der Kunde“, „laut Regel“, „ich muss“");
+
+    String vierhundert = "ä".repeat(400);
+    assertThat(AssistentTestsatzLauf.stilverstoss(vierhundert)).isNull();
+    assertThat(AssistentTestsatzLauf.stilverstoss(vierhundert + ".")).isEqualTo("401 Zeichen");
+    // Gezaehlt werden Unicode-Zeichen, nicht UTF-16-Einheiten: 400 Zeichen ausserhalb der BMP.
+    assertThat(AssistentTestsatzLauf.stilverstoss("📦".repeat(400))).isNull();
+    assertThat(AssistentTestsatzLauf.stilverstoss("Das Backend sagt " + vierhundert))
+        .isEqualTo("enthält „Backend“; 417 Zeichen");
+    assertThat(AssistentTestsatzLauf.stilverstoss(null)).isEqualTo("keine Antwort");
+
+    assertThat(AssistentTestsatzLauf.stil(List.of("Gern.", "Welches Werk?"))).isNull();
+    assertThat(AssistentTestsatzLauf.stil(List.of("Das Werkzeug meldet einen Fehler.")))
+        .isEqualTo("enthält „Werkzeug“");
+    assertThat(AssistentTestsatzLauf.stil(List.of("Welches Werk?", "Der Vorschlag ist gültig.")))
+        .isEqualTo("Nachricht 2: enthält „ist gültig“");
   }
 
   @Test
