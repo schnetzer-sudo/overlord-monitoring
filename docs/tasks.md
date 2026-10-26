@@ -242,11 +242,13 @@ entschieden, **V** = Vorschlag des Auftraggebers vom 26.10.2026 zur Bestätigung
 | **E‑1155** | **Die Beschreibung von `WERK_ABLADESTELLE` nennt das Zeilenformat**: Schlüssel, Komma, SNDPRN, Komma, SNDPRN_4908, mit Beispiel. Ein Feld, das nach einem Komma leer bleibt, ist ausdrücklich leer. Bei einer Anpassung fragt der Assistent dann nicht nach, sondern sagt vor dem Anlegen, dass dieser Wert entfernt wird. Die Rückfrage aus S17 bleibt für den Fall, dass der Kunde einen Wert gar nicht nennt (§4.2). | V |
 | **E‑1156** | **Die Beschreibung ändert ein Skript mit Rücknahme**, keine Migration, wie E‑1149. `V100` bis `V103` bleiben unverändert. Anders als das Skript aus E‑1149 hängt es an keiner Version (§4.3, [`betrieb.md`](betrieb.md) §7a F). | A |
 
-**Festlegung der Umsetzung, zur Bestätigung** (F43 bis F45 stehen in [`assistent.md`](assistent.md) §2):
+**Festlegung der Umsetzung.** Vorgeschlagen als F46, **bestätigt am 26.10.2026** als **E‑1162**
+(F43 bis F45 sind E‑1159 bis E‑1161 in [`assistent.md`](assistent.md) §2). Die F-Nummer steht in
+Klammern dahinter.
 
-| F | Festlegung | Grund |
+| E (F) | Festlegung | Grund |
 |---|---|---|
-| **F46** | **Das Skript setzt die ganze Beschreibung**, nicht zwei Teiltexte per `REPLACE`, und nur, wenn dort binär gleich der Stand nach `V102` oder schon der neue steht; sonst bricht Wache 3 ab. Beide Fassungen stehen vollständig im Skript und in der Rücknahme. `SET NAMES utf8mb4` legt den Zeichensatz der Verbindung fest. | Ein `REPLACE` träfe eine von Hand geänderte Beschreibung halb und hinterließe einen Text, den niemand geprüft hat. Die ganze Fassung lässt sich zeichengleich mit der Testressource vergleichen. Die Texte tragen Umlaute und „…“: Kommt einer verfälscht an, erkennt Wache 3 die gespeicherte Beschreibung nicht wieder und schreibt nichts |
+| **E‑1162** (F46) | **Das Skript setzt die ganze Beschreibung**, nicht zwei Teiltexte per `REPLACE`, und nur, wenn dort binär gleich der Stand nach `V102` oder schon der neue steht; sonst bricht Wache 3 ab. Beide Fassungen stehen vollständig im Skript und in der Rücknahme. `SET NAMES utf8mb4` legt den Zeichensatz der Verbindung fest. | Ein `REPLACE` träfe eine von Hand geänderte Beschreibung halb und hinterließe einen Text, den niemand geprüft hat. Die ganze Fassung lässt sich zeichengleich mit der Testressource vergleichen. Die Texte tragen Umlaute und „…“: Kommt einer verfälscht an, erkennt Wache 3 die gespeicherte Beschreibung nicht wieder und schreibt nichts |
 
 ---
 
@@ -639,13 +641,13 @@ Ok
 > Rand mit in den Auftrag. Auf der Testkopie gelaufen am 23.10.2026 (§9.7, E‑1145). Was hier steht,
 > ist der Stand nach dem Skript.
 
-> **Geändert am 26.10.2026 per Skript, nicht per Migration** (E‑1155, E‑1156, F46).
+> **Geändert am 26.10.2026 per Skript, nicht per Migration** (E‑1155, E‑1156, E‑1162).
 > [`scripts/werk-abladestelle-beschreibung-zeilenformat.sql`](../scripts/werk-abladestelle-beschreibung-zeilenformat.sql)
 > ändert die Beschreibung an zwei Stellen: ein neuer Absatz zum Zeilenformat nach dem Absatz „Ein
 > Eintrag besteht aus einem Schlüssel und zwei Werten. …“, und der Satz zur Anpassung mit nur einem
 > Wert fragt nur noch, wenn der Kunde einen Wert gar nicht nennt (§4.2). Struktur, Name und
 > Freischaltung bleiben. Das Skript setzt die ganze Beschreibung und nur, wenn dort zeichengleich der
-> Stand nach `V102` oder schon der neue steht (F46); die Rücknahme
+> Stand nach `V102` oder schon der neue steht (E‑1162); die Rücknahme
 > [`scripts/werk-abladestelle-beschreibung-zeilenformat-ruecknahme.sql`](../scripts/werk-abladestelle-beschreibung-zeilenformat-ruecknahme.sql)
 > setzt den Stand nach `V102` zurück. Beide sind idempotent, mit drei Wachen (eigenes Schema; Typ
 > da; Beschreibung die alte oder die neue). **An keine Version gebunden:** Kein Code wertet die
@@ -1439,7 +1441,7 @@ Sichtprüfung im Browser ist nicht gefahren, sie bräuchte eine Anmeldung durch 
 
 **Skript auf der Testkopie** (E‑1156): MariaDB-Client 12.3 über die Standardeingabe, wie in der
 Deployment-Routine ([`betrieb.md`](betrieb.md) §7a F), ohne `--default-character-set` — den
-Zeichensatz setzt das Skript selbst (F46). Geschrieben wurde nur `overlord_monitor.task_type`, nur
+Zeichensatz setzt das Skript selbst (E‑1162). Geschrieben wurde nur `overlord_monitor.task_type`, nur
 über Skript und Rücknahme. Zuerst die Zeile gesichert (Scratchpad, nicht eingecheckt; die
 Beschreibung war zeichengleich mit der Testressource). Ohne Vorgabeschema Abbruch an Wache 1 (Fehler
 `1231`). Dann fünf Läufe: Rücknahme auf dem alten Stand (nichts geändert, `geaendert_am` 23.10.2026
@@ -1449,7 +1451,8 @@ gleich dem neuen Text, Struktur, Name und `aktiv` unverändert gegenüber der Si
 `task/werk-abladestelle-beschreibung.txt` ist zeichengleich nachgezogen.
 
 **Tests mit Datenbank:** `TestsatzDefinitionDbIT` und `TaskMigrationDbIT` gegen die Testkopie nach
-dem Skript, beide grün. Beide lesen nur. Die übrigen DB-Tests sind nicht gelaufen: Sie schreiben in
+dem Skript, beide grün. Beide lesen nur. **Ein voller DB-Lauf entfällt** (E‑1163, Entscheidung des
+Auftraggebers vom 26.10.2026, [`assistent.md`](assistent.md) §2): Die übrigen DB-Tests schreiben in
 weitere Tabellen der Testkopie (etwa `task_type_mandant`, `task`, `app_user`), und der Auftrag erlaubte
 dort nur `task_type` über das Skript. **Tests ohne Datenbank:** `./mvnw verify
 -Djooq.codegen.skip=true -DexcludedGroups=db` grün, **1.283 Tests**.

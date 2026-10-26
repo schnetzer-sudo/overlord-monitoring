@@ -40,8 +40,15 @@ Tags und die Definition of Done für ein Release stehen in
   - **`max_tokens` 8.192** statt 2.048, weil das Denken mitzählt (E‑1154, ändert E‑1064).
   - **Testsatz:** Gruppe 16 „Zeilenformat mit Komma“ (S22 bis S25, verfremdete Fälle aus der
     Produktion) und eine Stilprüfung jeder Antwort, getrennt von der strukturellen Bewertung
-    (E‑1157). Lauf M1008: strukturell zweimal 25 von 25, Stil 25 und **24 von 25** — die Abnahme
-    „Stil 25 von 25 in beiden Durchgängen“ ist nicht erfüllt (S12, Punkt 1042).
+    (E‑1157). Lauf M1008: strukturell zweimal 25 von 25, Stil 25 und 24 von 25 (S12 zu lang,
+    Punkt 1042).
+  - **Mandantenregel neu formuliert:** „bereitest du nichts vor und sagst ihm in einem Satz“ statt
+    „reichst du keinen Vorschlag ein“, weil das Modell den Wortlaut nachsprach; die Stilprüfung kennt
+    dazu „muss ich“, „ich analysiere“ und „einreichen“ (E‑1158, ändert den Wortlaut von E‑1059).
+    Nachlauf M1009: S12 sechsmal mit Stil ok (167 bis 257 Zeichen), voller Durchgang 25 von 25,
+    Stil 25 von 25.
+  - Festlegungen der Umsetzung bestätigt als E‑1159 bis E‑1162; ein voller DB-Lauf entfällt für
+    diesen Fix (E‑1163).
 
 - **Leerzeichen im Schlüssel des Auftrags „Anpassen der Werk-/Abladestellentabelle“**
   (Entscheidung des Auftraggebers vom 21.10.2026, Rückfragen und Festlegungen der Umsetzung am

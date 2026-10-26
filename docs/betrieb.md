@@ -373,7 +373,7 @@ mysql --skip-ssl -h <db-host> -u monitor_write -p overlord_monitor < scripts/wer
 Erwartet sind drei Ergebnisse, `vorher`, `nachher` und `fertig`; in `nachher` steht `neu` 1 und
 `zeichen` 2272 (die Rücknahme: `alt` 1 und 1666). Das Skript setzt die Beschreibung nur, wenn dort
 zeichengleich der Stand nach `V102` oder schon der neue steht; sonst bricht Wache 3 mit Fehler `1231`
-ab, und es ist nichts geschrieben (F46). Den Zeichensatz der Verbindung setzt das Skript selbst
+ab, und es ist nichts geschrieben (E‑1162). Den Zeichensatz der Verbindung setzt das Skript selbst
 (`SET NAMES utf8mb4`). Ein zweiter Lauf ändert nichts, auch nicht `geaendert_am`. **Geprüft am
 26.10.2026 auf der Testkopie** mit dem MariaDB-Client 12.3 in genau dieser Form: ohne Vorgabeschema
 Abbruch an Wache 1; dann Rücknahme auf dem alten Stand (nichts geändert), Skript (geändert), Skript
