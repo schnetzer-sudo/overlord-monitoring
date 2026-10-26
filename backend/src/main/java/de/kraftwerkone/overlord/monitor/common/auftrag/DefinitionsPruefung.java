@@ -288,9 +288,10 @@ public final class DefinitionsPruefung {
       }
     }
 
+    // Jeder Teil darf optional sein, an jeder Position (E‑1164); einer muss Pflicht sein, damit
+    // jeder Eintrag einen Schluessel hat (E‑1165).
     boolean einerPflicht = false;
-    for (int position = 0; position < teile.size(); position++) {
-      String name = teile.get(position);
+    for (String name : teile) {
       Feld feld = felder.stream().filter(f -> f.name().equals(name)).findFirst().orElse(null);
       if (feld == null) {
         gruende.add("Der Schlüssel nennt das unbekannte Feld „" + name + "“.");
@@ -301,11 +302,6 @@ public final class DefinitionsPruefung {
       }
       if (feld.pflicht()) {
         einerPflicht = true;
-      } else if (position > 0) {
-        gruende.add(
-            "Das Schlüsselfeld „"
-                + name
-                + "“ ist nicht Pflicht; nur der erste Teil des Schlüssels darf optional sein.");
       }
     }
     if (!teile.isEmpty() && !einerPflicht) {

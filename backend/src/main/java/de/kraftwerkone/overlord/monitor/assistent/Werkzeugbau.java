@@ -137,16 +137,22 @@ public final class Werkzeugbau {
           .append(", in dieser Reihenfolge.")
           .append(" Schreibt der Kunde einen Schlüssel zusammengesetzt mit dem Trenner „")
           .append(typ.schluessel().trenner())
-          .append("“, zerlegst du ihn ohne Rückfrage in diese Felder in ihrer Reihenfolge");
-      // Nur der erste Teil des Schluessels darf optional sein (DefinitionsPruefung); nur dann
-      // kann ein Teil fehlen.
-      String erster = typ.schluessel().felder().getFirst();
-      if (typ.feld(erster).map(feld -> !feld.pflicht()).orElse(false)) {
-        text.append("; fehlt ein Teil, ist es der optionale erste (")
-            .append(label(typ, erster))
-            .append(")");
+          .append("“, zerlegst du ihn ohne Rückfrage in diese Felder in ihrer Reihenfolge.");
+      // Jeder Teil des Schluessels kann optional sein, an jeder Position (E‑1164). Fehlen Teile,
+      // ist nicht immer eindeutig, welche; dann fragt das Modell, statt zu raten.
+      List<String> optionale =
+          typ.schluessel().felder().stream()
+              .filter(name -> typ.feld(name).map(feld -> !feld.pflicht()).orElse(false))
+              .map(name -> label(typ, name))
+              .toList();
+      if (!optionale.isEmpty()) {
+        text.append(optionale.size() == 1 ? " Optional ist der Teil " : " Optional sind die Teile ")
+            .append(aufzaehlung(optionale))
+            .append('.')
+            .append(" Hat ein zusammengesetzter Schlüssel weniger Teile als der Schlüssel Felder,")
+            .append(" zerlege ihn nur, wenn eindeutig ist, welche fehlen; sonst frage nach, statt")
+            .append(" zu raten.");
       }
-      text.append('.');
       // Leerzeichen am Rand eines Teils kuerzt das Backend (E‑1137); das Modell gibt weiter, was
       // der Kunde schreibt, und zieht nichts zusammen (E‑1141).
       text.append(" Schlüsselteile übergibst du zeichengenau, mit jedem Leerzeichen, auch mehreren")
@@ -157,6 +163,14 @@ public final class Werkzeugbau {
 
   private static String label(TypDefinition typ, String name) {
     return typ.feld(name).map(Feld::label).orElse(name);
+  }
+
+  /** „A“, „A und B“, „A, B und C“. */
+  private static String aufzaehlung(List<String> namen) {
+    if (namen.size() == 1) {
+      return namen.getFirst();
+    }
+    return String.join(", ", namen.subList(0, namen.size() - 1)) + " und " + namen.getLast();
   }
 
   static String feldbeschreibung(Feld feld) {

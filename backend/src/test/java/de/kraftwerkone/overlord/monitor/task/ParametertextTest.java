@@ -6,11 +6,13 @@ import static de.kraftwerkone.overlord.monitor.common.auftrag.Testdefinitionen.l
 import static de.kraftwerkone.overlord.monitor.common.auftrag.Testdefinitionen.neuanlage;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import de.kraftwerkone.overlord.monitor.common.auftrag.DefinitionsPruefung;
 import de.kraftwerkone.overlord.monitor.common.auftrag.Testdefinitionen;
 import de.kraftwerkone.overlord.monitor.common.auftrag.TypDefinition;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
  * Der Parametertext, zeichengenau ({@code docs/tasks.md} §5.2). Die drei Texte stehen so in der
@@ -71,6 +73,60 @@ class ParametertextTest {
             Parametertext.baue(
                 GATTUNG, "Freigeben", List.of(eintrag("bereich", "NO", "konto", "17"))))
         .isEqualTo("Aktion=Freigeben\n17");
+  }
+
+  @Test
+  @DisplayName("Ohne letzten Teil: er entfaellt mit seinem Trenner (Abladestelle optional)")
+  void ohne_letzten_teil() {
+    assertThat(
+            Parametertext.baue(
+                WERK,
+                "Neuanlage",
+                List.of(
+                    eintrag("lieferantennummer", "0101159903", "werk", "22", "sndprn", "123085"),
+                    eintrag("werk", "72332", "sndprn", "120764", "sndprn4908", "100050"))))
+        .isEqualTo("Aktion=Neuanlage\n0101159903/22,123085,\n72332,120764,100050");
+    assertThat(
+            Parametertext.baue(
+                WERK,
+                "Löschung",
+                List.of(eintrag("lieferantennummer", "0101159903", "werk", "22"))))
+        .isEqualTo("Aktion=Löschung\n0101159903/22");
+  }
+
+  @Test
+  @DisplayName("Ohne mittleren Teil: er entfaellt mit seinem Trenner")
+  void ohne_mittleren_teil() {
+    // Eine Variante, in der das Werk optional ist und die Abladestelle Pflicht: Nur so steht ein
+    // optionaler Teil zwischen zwei anderen. Fachlich gibt es sie nicht.
+    ObjectNode struktur = Testdefinitionen.werkBaum();
+    ((ObjectNode) struktur.get("felder").get(1)).remove("pflicht");
+    ((ObjectNode) struktur.get("felder").get(2)).put("pflicht", true);
+    DefinitionsPruefung.Ergebnis mitte = DefinitionsPruefung.pruefe("MITTE", "Mitte", "", struktur);
+    assertThat(mitte.gruende()).isEmpty();
+
+    assertThat(
+            Parametertext.baue(
+                mitte.definition(),
+                "Neuanlage",
+                List.of(
+                    eintrag(
+                        "lieferantennummer",
+                        "0101159903",
+                        "abladestelle",
+                        "001N0",
+                        "sndprn",
+                        "123085"),
+                    eintrag(
+                        "lieferantennummer",
+                        "0101159903",
+                        "werk",
+                        "22",
+                        "abladestelle",
+                        "001N0",
+                        "sndprn",
+                        "123085"))))
+        .isEqualTo("Aktion=Neuanlage\n0101159903/001N0,123085,\n0101159903/22/001N0,123085,");
   }
 
   @Test

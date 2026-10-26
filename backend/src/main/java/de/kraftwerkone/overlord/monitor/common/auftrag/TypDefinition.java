@@ -121,8 +121,9 @@ public record TypDefinition(
   }
 
   /**
-   * Der Schluessel eines Eintrags: die Teile mit Wert, verbunden mit dem Trenner. Fehlt der
-   * optionale erste Teil, entfaellt er mit seinem Trenner. {@code null} ohne Schluessel.
+   * Der Schluessel eines Eintrags: die Teile mit Wert, verbunden mit dem Trenner. Fehlt ein
+   * optionaler Teil, entfaellt er mit seinem Trenner, an jeder Position. {@code null} ohne
+   * Schluessel.
    */
   public String schluesselText(Map<String, String> werte) {
     if (schluessel == null) {

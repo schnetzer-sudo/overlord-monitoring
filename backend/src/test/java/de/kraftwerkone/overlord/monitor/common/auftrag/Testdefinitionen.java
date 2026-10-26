@@ -18,8 +18,9 @@ import tools.jackson.databind.node.ObjectNode;
  *
  * <p><b>{@code WERK_ABLADESTELLE}</b> kommt aus {@code src/test/resources/task}, im Stand nach der
  * Migration {@code V102} (hoechstens 20 Eintraege seit {@code V101}, Beschreibung mit der
- * Rueckfrage zur Anpassung und dem Absatz zu „neu oder aendern“); {@code TaskMigrationDbIT} haelt
- * die Gleichheit mit der Datenbank.
+ * Rueckfrage zur Anpassung und dem Absatz zu „neu oder aendern“) und den Skripten vom 23. und
+ * 26.10.2026 (Leerzeichen im Schluessel, Zeilenformat, optionale Abladestelle); {@code
+ * TaskMigrationDbIT} haelt die Gleichheit mit der Datenbank.
  *
  * <p><b>Die Gattung</b> besteht nur hier: andere Aktionen, andere Felder, ein anderer Trenner, eine
  * Regel {@code eindeutig} ueber ein Feld statt ueber den Schluessel, andere Rueckgabewerte.
