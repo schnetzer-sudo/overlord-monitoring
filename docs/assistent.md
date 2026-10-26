@@ -955,9 +955,12 @@ nicht verändert worden. Wie es mit S12 weitergeht, ist Punkt 1042.
   höher, weil S01 die vollen 30 s der Zeitgrenze kostete; ohne sie wären es rund 4,0 s je Fall
   (gerechnet, nicht gemessen). Mit `adaptive` kam keine Zeitgrenze vor.
 
-Die Berichte liegen unter `backend/target/assistent-testsatz/` (`bericht-20261026-130658.md` D1,
+Die Berichte lagen unter `backend/target/assistent-testsatz/` (`bericht-20261026-130658.md` D1,
 `-130900.md` D2, `-131140.md` D3, `-131210.md`, `-131221.md`, `-131232.md` Z1 bis Z3) und werden
-nicht eingecheckt.
+nicht eingecheckt. **Sie sind nicht mehr da:** Ein `./mvnw clean test` nach den Verletzungsproben
+(§9.4) hat `target/` geleert. Zahlen und Antworttexte in diesem Abschnitt sind vorher aus den
+Berichten übernommen; nachprüfen lassen sie sich nur durch einen neuen Lauf, der anders ausfallen
+kann.
 
 ---
 
@@ -1013,7 +1016,7 @@ Zeile auf der Testkopie die Beschreibung nach dem Skript zum Zeilenformat, und d
 zeichengleich nachgezogen; beide Tests liefen danach grün ([`tasks.md`](tasks.md) §9.8). Ein Zweig
 ohne diesen Stand sieht beide rot — das ist die Testkopie, nicht sein Code.
 
-**Die Verletzungsprobe** steht in §9.3.
+**Die Verletzungsproben** stehen in §9.3 und §9.4.
 
 ### 9.3 Verletzungsprobe (16.10.2026)
 
@@ -1041,6 +1044,21 @@ Riegel. Über HTTP hat ein anderer Nutzer immer eine andere Sitzung, P2 fängt i
 ein fremder Mandant in derselben Sitzung entsteht nur durch einen Wechsel, den P5 vorher aufräumt.
 Fiele der erste Riegel, hielte der zweite — darum prüft `GespraechsspeicherTest.bindung` jeden
 einzeln, mit genau einer Abweichung je Zugriff.
+
+### 9.4 Verletzungsproben zu den Antworten (26.10.2026)
+
+Je ein Eingriff im Hauptcode, danach die 71 Tests ohne Datenbank in `assistent`; zurückgespielt
+per `git checkout` auf einem sauberen Baum, danach `target/` neu gebaut und alle 71 wieder grün.
+
+| # | Eingriff | Rot |
+|---|---|---|
+| P1 | `AnthropicSprachmodell` nimmt den Text von `thinking`-Blöcken in den Antworttext auf | `AnthropicSprachmodellTest`: `denkbloecke_nie_im_text`, `nur_denken_und_werkzeug_ohne_text`, `antwort_werkzeug`; `DenkbloeckeTest` |
+| P2 | `AnthropicSprachmodell` lässt `thinking` und `redacted_thinking` aus dem Rohinhalt weg | dieselben vier |
+| P3 | `Gespraechsfuehrung` schreibt wieder einen Hinweissatz in das Ergebnis eines gültigen Vorschlags | `GespraechsfuehrungTest.gueltiger_vorschlag`; `DenkbloeckeTest` |
+
+**Jede der drei Eigenschaften hat mindestens zwei Tests, die ihr Fehlen bemerken.** Die Stilprüfung
+des Läufers hat keine solche Probe: Sie läuft nur gegen das Modell (`@Tag("llm")`); ihre Bewertung
+hält `TestsatzTest`.
 
 ---
 
