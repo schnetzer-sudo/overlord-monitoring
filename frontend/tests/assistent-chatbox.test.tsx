@@ -137,7 +137,7 @@ const AUFTRAG = {
   aktion: "Anpassung",
   status: "OFFEN",
   einordnung: "OFFEN",
-  angelegtVon: { art: "BENUTZER", name: "beispielnutzer" },
+  angelegtVon: "beispielnutzer",
   eingestelltAm: "2026-10-19T10:00:00Z",
   abgeholtAm: null,
   ausgefuehrtAm: null,

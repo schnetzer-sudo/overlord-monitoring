@@ -37,7 +37,6 @@ import {
   beschrifteteWerte,
   einordnungVon,
   ergebnisVon,
-  erstellerName,
   loeschbar,
   mehrereTypen,
   nichtErfolgreich,
@@ -254,7 +253,6 @@ function Zeile({
       : zugeklappt.weitere === 1
         ? t.undWeiterer
         : einsetzen(t.undWeitere, { anzahl: formatiereZahl(zugeklappt.weitere, sprache) });
-  const ersteller = erstellerName(auftrag.angelegtVon, t.angelegtVonAdmin);
 
   // Der Satz in der Zeile bekommt den Fokus, wenn er erscheint (F22) — der
   // Knopf „Löschen“ ist dann gerade verschwunden oder wieder zurückgesetzt.
@@ -348,9 +346,9 @@ function Zeile({
               className="min-w-0 break-words"
               title={formatiereZeitpunktGenau(auftrag.eingestelltAm, sprache, zone)}
             >
-              {einsetzen(ersteller === null ? t.eingestellt : t.eingestelltVon, {
+              {einsetzen(t.eingestellt, {
                 zeit: formatiereZeitpunkt(auftrag.eingestelltAm, sprache, zone),
-                name: ersteller ?? "",
+                name: auftrag.angelegtVon,
               })}
             </span>
             {auftrag.ausgefuehrtAm === null ? null : (
