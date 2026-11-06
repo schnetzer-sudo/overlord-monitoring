@@ -90,6 +90,7 @@ scripts/messung-schritt10b/ergebnis/
 scripts/messung-schritt10b-1/ergebnis/
 scripts/messung-liste-verengung/ergebnis/
 scripts/messung-monatsebene/ergebnis/
+scripts/messung-auftrag-ersteller/ergebnis/
 
 # ─── Quelltext des Altwerkzeugs ──────────────────────────────────────────────
 # alterCode/ bleibt LOKAL. JsonServlet.java traegt drei produktive absolute
