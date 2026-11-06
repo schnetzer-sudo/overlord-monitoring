@@ -110,6 +110,7 @@ function auftrag(teil: Partial<Auftrag> = {}): Auftrag {
     fehlertext: null,
     eintraege: [eintrag("TOR3"), eintrag("TOR4")],
     felder: FELDER,
+    angelegtVon: { art: "BENUTZER", name: "beispielnutzer" },
     ...teil,
   };
 }
@@ -595,6 +596,72 @@ describe("Die Zeile (E‑1102 bis E‑1104, E‑1107, E‑1122)", () => {
       // Getönt ist nur der nicht erfolgreiche Eintrag (E‑1106).
       expect(eintraege[0].className).not.toContain("bg-teilweise-flaeche");
       expect(eintraege[1].className).toContain("bg-teilweise-flaeche");
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("zeigt aufgeklappt „von <Name>“ als Text in der Umgebungsschrift, zugeklappt keinen Namen", async () => {
+    mitAuftraegen([auftrag({ angelegtVon: { art: "BENUTZER", name: "m.muster" } })]);
+    const { abbauen } = await ansicht();
+    try {
+      const [zeile] = zeilen();
+      expect(block()!.textContent).not.toContain("m.muster");
+
+      await klick(zeile);
+      expect(zeile.textContent).not.toContain("m.muster");
+      const bereich = document.getElementById(zeile.getAttribute("aria-controls")!);
+      const satz = [...bereich!.querySelectorAll("span")].find((s) =>
+        (s.textContent ?? "").startsWith("eingestellt"),
+      );
+      expect(satz!.textContent).toBe("eingestellt 19.10.2026, 14:32 von m.muster");
+      expect(satz!.getAttribute("title")).toBe("19.10.2026, 14:32:10");
+      expect(satz!.closest(".font-mono")).toBeNull();
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("zeigt bei ADMIN aufgeklappt „von Admin“, zugeklappt nichts", async () => {
+    mitAuftraegen([auftrag({ angelegtVon: { art: "ADMIN", name: null } })]);
+    const { abbauen } = await ansicht();
+    try {
+      const [zeile] = zeilen();
+      expect(block()!.textContent).not.toContain("Admin");
+
+      await klick(zeile);
+      const bereich = document.getElementById(zeile.getAttribute("aria-controls")!);
+      expect(bereich!.textContent).toContain("eingestellt 19.10.2026, 14:32 von Admin");
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("zeigt bei einem unbekannten Wert von art den Satz ohne „von …“ (Q4)", async () => {
+    mitAuftraegen([auftrag({ angelegtVon: { art: "PLATTFORM" as never, name: "m.muster" } })]);
+    const { abbauen } = await ansicht();
+    try {
+      const [zeile] = zeilen();
+      await klick(zeile);
+      const bereich = document.getElementById(zeile.getAttribute("aria-controls")!);
+      expect(bereich!.textContent).toContain("eingestellt 19.10.2026, 14:32");
+      expect(bereich!.textContent).not.toContain(" von ");
+      expect(bereich!.textContent).not.toContain("m.muster");
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("zeigt einen Namen, der wie HTML aussieht, wörtlich als Text", async () => {
+    const name = "<img src=x onerror=alert(1)>";
+    mitAuftraegen([auftrag({ angelegtVon: { art: "UNBEKANNT", name } })]);
+    const { abbauen } = await ansicht();
+    try {
+      const [zeile] = zeilen();
+      await klick(zeile);
+      const bereich = document.getElementById(zeile.getAttribute("aria-controls")!);
+      expect(bereich!.textContent).toContain(`von ${name}`);
+      expect(bereich!.querySelector("img")).toBeNull();
     } finally {
       await abbauen();
     }

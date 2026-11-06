@@ -9,6 +9,7 @@ import {
   blockschritt,
   einordnungVon,
   ergebnisVon,
+  erstellerName,
   laedtNeuNach,
   loeschbar,
   loeschergebnis,
@@ -19,7 +20,7 @@ import {
   weitere,
   type Blockzustand,
 } from "@/features/dashboard/auftraege";
-import { texteFuer, SPRACHEN } from "@/i18n";
+import { einsetzen, texteFuer, SPRACHEN } from "@/i18n";
 import { ProblemFehler } from "@/lib/http";
 import {
   AUFTRAGSEINORDNUNGEN,
@@ -56,6 +57,7 @@ function auftrag(teil: Partial<Auftrag> = {}): Auftrag {
     fehlertext: null,
     eintraege: [],
     felder: [],
+    angelegtVon: { art: "BENUTZER", name: "beispielnutzer" },
     ...teil,
   };
 }
@@ -154,6 +156,38 @@ describe("Die Werte mit ihrem label (E‑1104, E‑1120, F21)", () => {
       { name: "werk", label: "Werk", wert: "1" },
       { name: "neu", label: "neu", wert: "x" },
     ]);
+  });
+});
+
+describe("Der Ersteller (E‑1178, E‑1179, F55, F58)", () => {
+  const admin = texteFuer("de").dashboard.auftraege.angelegtVonAdmin;
+
+  it("nimmt bei BENUTZER den Benutzernamen", () => {
+    expect(erstellerName({ art: "BENUTZER", name: "m.muster" }, admin)).toBe("m.muster");
+  });
+
+  it("nimmt bei UNBEKANNT den gespeicherten Wert", () => {
+    expect(erstellerName({ art: "UNBEKANNT", name: "it-kein-konto" }, admin)).toBe("it-kein-konto");
+  });
+
+  it("zeigt bei ADMIN das Wort, auch wenn doch ein Name mitkäme", () => {
+    expect(erstellerName({ art: "ADMIN", name: null }, admin)).toBe("Admin");
+    expect(erstellerName({ art: "ADMIN", name: "m.muster" }, admin)).toBe("Admin");
+  });
+
+  /** Regel Q4: Ein Wert, den das Frontend nicht kennt, bekommt keinen geratenen Namen. */
+  it("zeigt bei einem unbekannten Wert von art keinen Namen", () => {
+    expect(erstellerName({ art: "PLATTFORM" as never, name: "m.muster" }, admin)).toBeNull();
+  });
+
+  it("trägt den Wortlaut in beiden Sprachen, „Admin“ in beiden gleich", () => {
+    const de = texteFuer("de").dashboard.auftraege;
+    const en = texteFuer("en").dashboard.auftraege;
+    const werte = { zeit: "19.10.2026, 14:32", name: "m.muster" };
+    expect(einsetzen(de.eingestelltVon, werte)).toBe("eingestellt 19.10.2026, 14:32 von m.muster");
+    expect(einsetzen(en.eingestelltVon, werte)).toBe("submitted 19.10.2026, 14:32 by m.muster");
+    expect(de.angelegtVonAdmin).toBe("Admin");
+    expect(en.angelegtVonAdmin).toBe("Admin");
   });
 });
 

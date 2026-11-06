@@ -6,7 +6,7 @@ import {
   type Zeilenergebnis,
 } from "@/lib/status-farbe";
 
-import type { Auftrag, Auftragseintrag } from "./api";
+import type { AngelegtVon, Auftrag, Auftragseintrag } from "./api";
 
 /**
  * Die Regeln des Blocks „Ihre Aufträge“ (Linie `assistent`, A4,
@@ -103,6 +103,26 @@ export function nichtErfolgreich(eintraege: readonly Pick<Auftragseintrag, "erge
  */
 export function loeschbar(auftrag: Pick<Auftrag, "einordnung">): boolean {
   return einordnungVon(auftrag) === "OFFEN";
+}
+
+/**
+ * Der Name hinter „eingestellt <Zeit> von …“ (E‑1178, F58). `admin` ist das
+ * Wort für Aufträge von `ADMIN`-Konten (E‑1179), übergeben, damit hier kein
+ * Text steht.
+ *
+ * **Ein Wert von `art`, den dieses Frontend nicht kennt, ergibt `null`:** Der
+ * Satz steht dann ohne „von …“, statt einen Namen zu raten (Regel Q4).
+ */
+export function erstellerName(angelegtVon: AngelegtVon, admin: string): string | null {
+  switch (angelegtVon.art) {
+    case "ADMIN":
+      return admin;
+    case "BENUTZER":
+    case "UNBEKANNT":
+      return angelegtVon.name;
+    default:
+      return null;
+  }
 }
 
 /** Ein Wert eines Eintrags mit seinem `label`. */
