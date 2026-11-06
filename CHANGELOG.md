@@ -10,13 +10,13 @@ Tags und die Definition of Done für ein Release stehen in
 ### Neu
 
 - **„Ihre Aufträge“ zeigt, wer einen Auftrag angelegt hat** (Entscheidungen des Auftraggebers vom
-  06.11.2026, E‑1178 bis E‑1180, [`docs/tasks.md`](docs/tasks.md) §2). In der aufgeklappten Zeile
-  steht „eingestellt <Zeit> von <Name>“, bei Aufträgen von `ADMIN`-Konten „von Admin“. Grund:
-  Jeder Benutzer des Mandanten sieht alle Aufträge (E‑1113), aber nicht, von wem sie stammen.
-  Liste, Einzelabruf und Antwort auf `POST /api/tasks` tragen dafür `angelegtVon` mit `art` und
-  `name`; bei `ADMIN` verlässt der Benutzername das Backend nicht. Die Rolle kommt zur Lesezeit aus
-  `app_user` (`LEFT JOIN`, M1011), es gilt die heutige Rolle des Kontos. Keine Migration, kein
-  Skript, keine Änderung am Plattformvertrag. F55 bis F58 stehen zur Bestätigung.
+  06.11.2026, E‑1178 und E‑1181, [`docs/tasks.md`](docs/tasks.md) §2). In der aufgeklappten Zeile
+  steht „eingestellt <Zeit> von <Name>“, immer mit dem Benutzernamen, auch bei `ADMIN`-Konten. Grund:
+  Jeder Benutzer des Mandanten sieht alle Aufträge (E‑1113), aber nicht, von wem sie stammen. Liste,
+  Einzelabruf und Antwort auf `POST /api/tasks` tragen dafür `angelegtVon`, den Wert aus
+  `task.angelegt_von` (M1012). Keine Migration, kein Skript, keine Änderung am Plattformvertrag. Die
+  erste Fassung am selben Tag zeigte bei `ADMIN`-Konten „Admin“ und las die Rolle aus `app_user`
+  (E‑1179, E‑1180, F55 bis F57, M1011); sie ist mit E‑1181 aufgehoben und war in keinem Release.
 - `scripts/werk-abladestelle-schluessel-leerzeichen.sql` mit Rücknahme
   `scripts/werk-abladestelle-schluessel-leerzeichen-ruecknahme.sql`: setzt das Muster der drei
   Schlüsselteile von `WERK_ABLADESTELLE` auf `^(?:[^/,\p{Z}]| ){1,35}$`, idempotent, mit drei
