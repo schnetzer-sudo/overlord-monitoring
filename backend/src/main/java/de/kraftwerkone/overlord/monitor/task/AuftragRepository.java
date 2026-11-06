@@ -1,5 +1,6 @@
 package de.kraftwerkone.overlord.monitor.task;
 
+import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.APP_USER;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.TASK;
 
 import de.kraftwerkone.overlord.monitor.common.MandantContext;
@@ -12,6 +13,7 @@ import org.jooq.Field;
 import org.jooq.JSON;
 import org.jooq.Record;
 import org.jooq.SelectField;
+import org.jooq.SelectOnConditionStep;
 import org.jooq.exception.DataAccessException;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
@@ -26,6 +28,11 @@ import org.springframework.stereotype.Repository;
  * Statement hat ihn im {@code WHERE}</b> (Regel M3). Eine fremde oder erfundene Kennung ergibt
  * dasselbe Statement mit null Zeilen. Das Laden der Typen liegt seit A2 in {@code
  * common.auftrag.AuftragstypRepository} (E‑1037).
+ *
+ * <p><b>{@code app_user} wird ohne Mandantenfilter nachgeschlagen</b> (F57): Ein {@code ADMIN} muss
+ * dem Mandanten nicht zugeordnet sein. Die Zeilenmenge bestimmt allein der Filter auf {@code task};
+ * aus {@code app_user} kommt nur die Rolle, und {@code username} ist eindeutig, der Join
+ * vervielfacht also keine Zeile.
  *
  * <p><b>Keine Uhr in Java</b> (E‑1011): {@code eingestellt_am} und die Grenze der Liste kommen aus
  * {@code UTC_TIMESTAMP(3)} der Datenbank.
@@ -64,7 +71,9 @@ public class AuftragRepository {
           TASK.FEHLERTEXT,
           TASK.EINGESTELLT_AM,
           TASK.ABGEHOLT_AM,
-          TASK.AUSGEFUEHRT_AM);
+          TASK.AUSGEFUEHRT_AM,
+          TASK.ANGELEGT_VON,
+          APP_USER.ROLE);
 
   private final DSLContext monitorDsl;
 
@@ -72,7 +81,11 @@ public class AuftragRepository {
     this.monitorDsl = monitorDsl;
   }
 
-  /** Eine Zeile aus {@code task}, soweit die Antwort sie braucht. */
+  /**
+   * Eine Zeile aus {@code task}, soweit die Antwort sie braucht.
+   *
+   * @param rolle {@code app_user.role} des Kontos zu {@code angelegtVon}; {@code null} ohne Konto
+   */
   public record Auftragszeile(
       String taskId,
       String typ,
@@ -85,7 +98,9 @@ public class AuftragRepository {
       String fehlertext,
       LocalDateTime eingestelltAm,
       LocalDateTime abgeholtAm,
-      LocalDateTime ausgefuehrtAm) {}
+      LocalDateTime ausgefuehrtAm,
+      String angelegtVon,
+      String rolle) {}
 
   /** Was beim Anlegen geschrieben wird; die JSON-Spalten als Text. */
   public record NeuerAuftrag(
@@ -100,9 +115,7 @@ public class AuftragRepository {
 
   /** Ein Auftrag des Mandanten. Fremd und unbekannt sind dasselbe Statement mit null Zeilen. */
   public Optional<Auftragszeile> finde(MandantContext mandant, String taskId) {
-    return monitorDsl
-        .select(AUFTRAGSSPALTEN)
-        .from(TASK)
+    return auftraege()
         .where(TASK.TASK_ID.eq(taskId))
         .and(TASK.MANDANT_ID.eq(mandant.mandantId()))
         .fetchOptional(AuftragRepository::auftragszeile);
@@ -110,9 +123,7 @@ public class AuftragRepository {
 
   /** Der Auftrag, den dieser Mandant mit dieser {@code anfrageId} schon angelegt hat. */
   public Optional<Auftragszeile> findeNachAnfrage(MandantContext mandant, String anfrageId) {
-    return monitorDsl
-        .select(AUFTRAGSSPALTEN)
-        .from(TASK)
+    return auftraege()
         .where(TASK.MANDANT_ID.eq(mandant.mandantId()))
         .and(TASK.ANFRAGE_ID.eq(anfrageId))
         .fetchOptional(AuftragRepository::auftragszeile);
@@ -124,9 +135,7 @@ public class AuftragRepository {
    * kein Cursor: {@code task} ist nicht aus {@code GlassfishDB} abgeleitet (E‑1016).
    */
   public List<Auftragszeile> findeAktuelle(MandantContext mandant, int hoechstens) {
-    return monitorDsl
-        .select(AUFTRAGSSPALTEN)
-        .from(TASK)
+    return auftraege()
         .where(TASK.MANDANT_ID.eq(mandant.mandantId()))
         .and(
             TASK.STATUS
@@ -215,6 +224,15 @@ public class AuftragRepository {
         .fetchOptional(TASK.STATUS);
   }
 
+  /** Der gemeinsame Anfang aller Lesewege: {@code task} mit der heutigen Rolle des Anlegenden. */
+  private SelectOnConditionStep<Record> auftraege() {
+    return monitorDsl
+        .select(AUFTRAGSSPALTEN)
+        .from(TASK)
+        .leftJoin(APP_USER)
+        .on(APP_USER.USERNAME.eq(TASK.ANGELEGT_VON));
+  }
+
   private static Auftragszeile auftragszeile(Record zeile) {
     return new Auftragszeile(
         zeile.get(TASK.TASK_ID),
@@ -228,7 +246,9 @@ public class AuftragRepository {
         zeile.get(TASK.FEHLERTEXT),
         zeile.get(TASK.EINGESTELLT_AM),
         zeile.get(TASK.ABGEHOLT_AM),
-        zeile.get(TASK.AUSGEFUEHRT_AM));
+        zeile.get(TASK.AUSGEFUEHRT_AM),
+        zeile.get(TASK.ANGELEGT_VON),
+        zeile.get(APP_USER.ROLE));
   }
 
   private static String text(JSON json) {

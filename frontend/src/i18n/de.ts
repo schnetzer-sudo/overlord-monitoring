@@ -456,6 +456,9 @@ export const de = {
       undWeitere: "und {anzahl} weitere",
       nichtErfolgreich: "{anzahl} von {gesamt} nicht erfolgreich",
       eingestellt: "eingestellt {zeit}",
+      // Mit Ersteller (E‑1178, F58). „Admin“ ist in beiden Sprachen gleich (E‑1179).
+      eingestelltVon: "eingestellt {zeit} von {name}",
+      angelegtVonAdmin: "Admin",
       ausgefuehrt: "ausgeführt {zeit}",
       meldungDerPlattform: "Meldung der Plattform",
       // Rückfall ohne Schlüssel (F23), wie auf der Karte (E‑1080).

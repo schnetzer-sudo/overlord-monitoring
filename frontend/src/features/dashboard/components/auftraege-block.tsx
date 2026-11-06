@@ -37,6 +37,7 @@ import {
   beschrifteteWerte,
   einordnungVon,
   ergebnisVon,
+  erstellerName,
   loeschbar,
   mehrereTypen,
   nichtErfolgreich,
@@ -253,6 +254,7 @@ function Zeile({
       : zugeklappt.weitere === 1
         ? t.undWeiterer
         : einsetzen(t.undWeitere, { anzahl: formatiereZahl(zugeklappt.weitere, sprache) });
+  const ersteller = erstellerName(auftrag.angelegtVon, t.angelegtVonAdmin);
 
   // Der Satz in der Zeile bekommt den Fokus, wenn er erscheint (F22) — der
   // Knopf „Löschen“ ist dann gerade verschwunden oder wieder zurückgesetzt.
@@ -337,9 +339,18 @@ function Zeile({
         <div id={inhaltId} className="text-beiwerk flex flex-col gap-2 pt-1 pb-3 pl-6">
           <p className="font-medium">{auftrag.name}</p>
           <p className="text-muted-foreground flex flex-wrap gap-x-3">
-            <span title={formatiereZeitpunktGenau(auftrag.eingestelltAm, sprache, zone)}>
-              {einsetzen(t.eingestellt, {
+            {/*
+             * Der Name ist ein Textknoten in der Schrift der Umgebung (F58). Er kann
+             * lang sein und eine Adresse ohne Leerzeichen: `min-w-0` lässt die
+             * Spalte ihn umbrechen, statt dass er aus ihr hinausläuft.
+             */}
+            <span
+              className="min-w-0 break-words"
+              title={formatiereZeitpunktGenau(auftrag.eingestelltAm, sprache, zone)}
+            >
+              {einsetzen(ersteller === null ? t.eingestellt : t.eingestelltVon, {
                 zeit: formatiereZeitpunkt(auftrag.eingestelltAm, sprache, zone),
+                name: ersteller ?? "",
               })}
             </span>
             {auftrag.ausgefuehrtAm === null ? null : (

@@ -260,6 +260,8 @@ export const en: Texte = {
       undWeitere: "and {anzahl} more",
       nichtErfolgreich: "{anzahl} of {gesamt} not successful",
       eingestellt: "submitted {zeit}",
+      eingestelltVon: "submitted {zeit} by {name}",
+      angelegtVonAdmin: "Admin",
       ausgefuehrt: "executed {zeit}",
       meldungDerPlattform: "Message from the platform",
       eintrag: "Entry {nummer}",

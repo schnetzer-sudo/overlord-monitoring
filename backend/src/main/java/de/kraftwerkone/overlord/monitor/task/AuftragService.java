@@ -421,7 +421,8 @@ public class AuftragService {
         antworten,
         definition.felder().stream()
             .map(feld -> new FeldResponse(feld.name(), feld.label()))
-            .toList());
+            .toList(),
+        AngelegtVon.einordnen(zeile.angelegtVon(), zeile.rolle()));
   }
 
   /** Im eigenen Schema steht UTC; die Datenbank hat es mit {@code UTC_TIMESTAMP(3)} gesetzt. */
