@@ -15,6 +15,8 @@ import java.util.Map;
  * @param felder je Feld der Kopie Name und {@code label}, in der Reihenfolge der Definition — seit
  *     A4, damit die Uebersicht die Werte beschriften kann, ohne die aktuelle Typzeile zu lesen
  *     (E‑1120)
+ * @param angelegtVon wer angelegt hat, eingeordnet in {@link AngelegtVon} — seit E‑1178, gleich
+ *     fuer jeden Betrachter (F56)
  */
 public record AuftragResponse(
     String taskId,
@@ -29,7 +31,8 @@ public record AuftragResponse(
     String fehlercode,
     String fehlertext,
     List<EintragResponse> eintraege,
-    List<FeldResponse> felder) {
+    List<FeldResponse> felder,
+    AngelegtVon angelegtVon) {
 
   /**
    * @param werte Feldname auf Wert, nur Felder mit Wert, in der Reihenfolge der Definition

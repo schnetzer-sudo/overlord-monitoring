@@ -1,5 +1,7 @@
 package de.kraftwerkone.overlord.monitor.task;
 
+import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.APP_USER;
+import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.APP_USER_MANDANT;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.AUDIT_LOG;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.TASK;
 import static de.kraftwerkone.overlord.monitor.jooq.monitor.Tables.TASK_TYPE;
@@ -34,12 +36,16 @@ import tools.jackson.databind.JsonNode;
  * Plattformvertrag}, die {@code PlattformvertragTest} mit der Datei fuer das Plattform-Team
  * gleichhaelt. Damit ist der Vertrag ausfuehrbar belegt und nicht nur beschrieben.
  *
+ * <p><b>Der Ersteller</b> (E‑1178 bis E‑1180, F55 bis F58): Bei {@code ADMIN} wird der Rumpf als
+ * Zeichenkette gegen den Benutzernamen gehalten, damit auch ein anderes Feld ihn nicht traegt.
+ *
  * <p><b>Keine Wanduhr in Zusicherungen</b> (Regel T1): Zeitstempel werden auf vorhanden und
  * Reihenfolge geprueft, nicht auf Werte.
  */
 class AuftraegeDbIT extends AuftragsTestbasis {
 
   private static final String NUTZER = PRAEFIX + "auftrag-nexans";
+  private static final String ADMIN_KONTO = PRAEFIX + "auftrag-admin";
 
   @Autowired private AuftragService auftragService;
   @Autowired private PlatformTransactionManager transactionManager;
@@ -385,6 +391,149 @@ class AuftraegeDbIT extends AuftragsTestbasis {
         .containsExactlyElementsOf(namen);
     assertThat(liste.<List<String>>json(auswahl + ".felder[*].label"))
         .containsExactlyElementsOf(label);
+  }
+
+  // ─── Ersteller (E‑1178 bis E‑1180, F55 bis F58) ────────────────────────────────────────────
+
+  @Test
+  @DisplayName("Auftrag eines MANDANT-Kontos: BENUTZER mit Namen in allen vier Antworten")
+  void ersteller_benutzer() throws Exception {
+    String anfrageId = neueAnfrageId();
+    Antwort angelegt = sitzung.sende("/api/tasks", neuanlage(anfrageId));
+    Antwort wiederholt = sitzung.sende("/api/tasks", neuanlage(anfrageId));
+    assertThat(angelegt.status()).as(angelegt.rumpf()).isEqualTo(201);
+    assertThat(wiederholt.status()).as(wiederholt.rumpf()).isEqualTo(200);
+    String taskId = angelegt.json("$.taskId");
+
+    erwarteErsteller(angelegt, "BENUTZER", NUTZER);
+    erwarteErsteller(wiederholt, "BENUTZER", NUTZER);
+    erwarteErsteller(sitzung.hole("/api/tasks/" + taskId), "BENUTZER", NUTZER);
+    erwarteErstellerInListe(sitzung.hole("/api/tasks"), taskId, "BENUTZER", NUTZER);
+  }
+
+  @Test
+  @DisplayName("Auftrag eines ADMIN-Kontos: ADMIN ohne Namen, der Name steht nirgends im Rumpf")
+  void ersteller_admin() throws Exception {
+    legeNutzerAn(ADMIN_KONTO, PASSWORT, Rolle.ADMIN, NEXANS);
+    Sitzung alsAdmin = adminAufNexans();
+
+    String anfrageId = neueAnfrageId();
+    Antwort angelegt = alsAdmin.sende("/api/tasks", neuanlage(anfrageId));
+    Antwort wiederholt = alsAdmin.sende("/api/tasks", neuanlage(anfrageId));
+    assertThat(angelegt.status()).as(angelegt.rumpf()).isEqualTo(201);
+    assertThat(wiederholt.status()).as(wiederholt.rumpf()).isEqualTo(200);
+    String taskId = angelegt.json("$.taskId");
+
+    // Gleich fuer jeden Betrachter (F56): der ADMIN selbst und ein MANDANT-Konto des Mandanten.
+    List<Antwort> einzelne =
+        List.of(
+            angelegt,
+            wiederholt,
+            alsAdmin.hole("/api/tasks/" + taskId),
+            sitzung.hole("/api/tasks/" + taskId));
+    for (Antwort antwort : einzelne) {
+      assertThat(antwort.status()).as(antwort.rumpf()).isIn(200, 201);
+      erwarteErsteller(antwort, "ADMIN", null);
+      assertThat(antwort.rumpf()).doesNotContain(ADMIN_KONTO);
+    }
+    for (Antwort liste : List.of(alsAdmin.hole("/api/tasks"), sitzung.hole("/api/tasks"))) {
+      erwarteErstellerInListe(liste, taskId, "ADMIN", null);
+      assertThat(liste.rumpf()).doesNotContain(ADMIN_KONTO);
+    }
+
+    // Wer angelegt hat, steht unveraendert in der Zeile (E‑1180).
+    assertThat(angelegtVon(taskId)).isEqualTo(ADMIN_KONTO);
+  }
+
+  @Test
+  @DisplayName("Ein ADMIN ohne Zuordnung zum Mandanten wird trotzdem als ADMIN erkannt (F57)")
+  void ersteller_admin_ohne_zuordnung() throws Exception {
+    long konto = legeNutzerAn(ADMIN_KONTO, PASSWORT, Rolle.ADMIN);
+    assertThat(monitorDsl.fetchCount(APP_USER_MANDANT, APP_USER_MANDANT.USER_ID.eq(konto)))
+        .isZero();
+    Sitzung alsAdmin = adminAufNexans();
+
+    String taskId = legeNeuanlageAn(alsAdmin);
+
+    Antwort einzeln = sitzung.hole("/api/tasks/" + taskId);
+    erwarteErsteller(einzeln, "ADMIN", null);
+    assertThat(einzeln.rumpf()).doesNotContain(ADMIN_KONTO);
+    erwarteErstellerInListe(sitzung.hole("/api/tasks"), taskId, "ADMIN", null);
+  }
+
+  @Test
+  @DisplayName("Kein Konto zu angelegt_von: UNBEKANNT mit dem gespeicherten Wert, die Zeile bleibt")
+  void ersteller_unbekannt() throws Exception {
+    String ohneKonto = PRAEFIX + "ohne-konto";
+    String anfrageId = neueAnfrageId();
+    Antwort angelegt = sitzung.sende("/api/tasks", neuanlage(anfrageId));
+    assertThat(angelegt.status()).as(angelegt.rumpf()).isEqualTo(201);
+    String taskId = angelegt.json("$.taskId");
+    assertThat(
+            monitorDsl
+                .update(TASK)
+                .set(TASK.ANGELEGT_VON, ohneKonto)
+                .where(TASK.TASK_ID.eq(taskId))
+                .execute())
+        .isEqualTo(1);
+
+    erwarteErsteller(sitzung.hole("/api/tasks/" + taskId), "UNBEKANNT", ohneKonto);
+    erwarteErsteller(sitzung.sende("/api/tasks", neuanlage(anfrageId)), "UNBEKANNT", ohneKonto);
+    erwarteErstellerInListe(sitzung.hole("/api/tasks"), taskId, "UNBEKANNT", ohneKonto);
+  }
+
+  @Test
+  @DisplayName("Rollenwechsel nach dem Anlegen aendert die Anzeige, nicht angelegt_von (E‑1180)")
+  void ersteller_nach_rollenwechsel() throws Exception {
+    String taskId = legeNeuanlageAn(sitzung);
+    erwarteErsteller(sitzung.hole("/api/tasks/" + taskId), "BENUTZER", NUTZER);
+
+    setzeRolle(Rolle.ADMIN);
+    Antwort alsAdminEingeordnet = sitzung.hole("/api/tasks/" + taskId);
+    erwarteErsteller(alsAdminEingeordnet, "ADMIN", null);
+    assertThat(alsAdminEingeordnet.rumpf()).doesNotContain(NUTZER);
+    assertThat(angelegtVon(taskId)).isEqualTo(NUTZER);
+
+    setzeRolle(Rolle.MANDANT);
+    erwarteErsteller(sitzung.hole("/api/tasks/" + taskId), "BENUTZER", NUTZER);
+  }
+
+  /** Meldet {@link #ADMIN_KONTO} an und stellt {@code NEXANS} als aktiven Mandanten ein. */
+  private Sitzung adminAufNexans() throws Exception {
+    Sitzung alsAdmin = anmelden(ADMIN_KONTO, PASSWORT);
+    Antwort wechsel = alsAdmin.sende("/api/auth/mandant", "{\"mandantId\":\"" + NEXANS + "\"}");
+    assertThat(wechsel.status()).as(wechsel.rumpf()).isEqualTo(200);
+    return alsAdmin;
+  }
+
+  private void setzeRolle(Rolle rolle) {
+    assertThat(
+            monitorDsl
+                .update(APP_USER)
+                .set(APP_USER.ROLE, rolle.name())
+                .where(APP_USER.USERNAME.eq(NUTZER))
+                .execute())
+        .isEqualTo(1);
+  }
+
+  private String angelegtVon(String taskId) {
+    return monitorDsl
+        .select(TASK.ANGELEGT_VON)
+        .from(TASK)
+        .where(TASK.TASK_ID.eq(taskId))
+        .fetchOne(TASK.ANGELEGT_VON);
+  }
+
+  private static void erwarteErsteller(Antwort antwort, String art, String name) {
+    assertThat(antwort.<String>json("$.angelegtVon.art")).as(antwort.rumpf()).isEqualTo(art);
+    assertThat(antwort.<String>json("$.angelegtVon.name")).as(antwort.rumpf()).isEqualTo(name);
+  }
+
+  private static void erwarteErstellerInListe(
+      Antwort liste, String taskId, String art, String name) {
+    String auswahl = "$[?(@.taskId == '" + taskId + "')].angelegtVon";
+    assertThat(liste.<List<String>>json(auswahl + ".art")).containsExactly(art);
+    assertThat(liste.<List<String>>json(auswahl + ".name")).containsExactly(name);
   }
 
   // ─── Loeschen (A4, docs/tasks.md §6.6) ─────────────────────────────────────────────────────
