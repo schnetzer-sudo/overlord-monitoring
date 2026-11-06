@@ -479,17 +479,6 @@ export type Auftragseintrag = {
 export type Auftragsfeld = { name: string; label: string };
 
 /**
- * Wer einen Auftrag angelegt hat (E‑1178 bis E‑1180, F55): eingeordnet im
- * Backend, gleich für jeden Betrachter. **`name` ist bei `ADMIN` `null`** — der
- * Benutzername verlässt das Backend dann nicht. Bei `UNBEKANNT` ist er der
- * gespeicherte Wert.
- */
-export type AngelegtVon = {
-  art: "BENUTZER" | "ADMIN" | "UNBEKANNT";
-  name: string | null;
-};
-
-/**
  * Ein Auftrag des aktiven Mandanten (`docs/tasks.md` §6.5). **Die Einordnung
  * kommt aus dem Backend** (`TaskStatusClassifier`); das Frontend leitet keinen
  * Stand ab. Zeitpunkte in UTC, ISO 8601 mit `Z`.
@@ -511,7 +500,8 @@ export type Auftrag = {
   fehlertext: string | null;
   eintraege: Auftragseintrag[];
   felder: Auftragsfeld[];
-  angelegtVon: AngelegtVon;
+  /** Der Benutzername des Anlegenden, bei jedem Konto (E‑1178, E‑1181). */
+  angelegtVon: string;
 };
 
 /**

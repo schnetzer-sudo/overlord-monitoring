@@ -38,11 +38,12 @@ A2 bis A4 (§8).
 > (`0101159903/40NP/`, `72332/`), wie in der Tabelle der Plattform, und jeder zusammengesetzte
 > Schlüssel ist eindeutig; der Assistent fragt nicht nach der Lesart.
 
-> **Ergänzt am 06.11.2026** (Zweig `auftrag-ersteller`): **Liste, Einzelabruf und die Antwort auf
-> `POST` tragen das Feld `angelegtVon`** (§6.5). Aufgeklappt zeigt „Ihre Aufträge“ damit, wer einen
-> Auftrag angelegt hat, bei `ADMIN`-Konten „Admin“. Die Rolle kommt zur Lesezeit aus `app_user`,
-> keine Migration. Die Entscheidungen stehen in §2 unter „Ersteller am Auftrag“, Tests und Messung
-> M1011 in §9.10, die Oberfläche in [`assistent-frontend.md`](assistent-frontend.md) §12.6.
+> **Ergänzt am 06.11.2026** (Zweige `auftrag-ersteller` und `feat/ersteller-immer-benutzername`):
+> **Liste, Einzelabruf und die Antwort auf `POST` tragen das Feld `angelegtVon`, den Benutzernamen des
+> Anlegenden** (§6.5). Aufgeklappt zeigt „Ihre Aufträge“ damit, wer einen Auftrag angelegt hat, bei
+> jedem Konto. Kein Join, keine Migration. Die Entscheidungen stehen in §2 unter „Ersteller am
+> Auftrag“, Tests und die Messungen M1011 und M1012 in §9.10, die Oberfläche in
+> [`assistent-frontend.md`](assistent-frontend.md) §12.6.
 
 ---
 
@@ -343,11 +344,12 @@ am 06.11.2026 entschieden.
 | E | Entscheidung | Herkunft |
 |---|---|---|
 | **E‑1178** | **Der Name steht in der aufgeklappten Zeile**, nicht in der zugeklappten. | A |
-| **E‑1179** | **Aufträge von `ADMIN`-Konten zeigen „Admin“** statt des Benutzernamens. | A |
-| **E‑1180** | **Die Rolle wird zur Lesezeit ermittelt**, über `app_user`. Es gilt die heutige Rolle des Kontos: Ändert sich die Rolle später, ändert sich die Anzeige alter Aufträge mit. Das ist bewusst so. Wer angelegt hat, steht unverändert in `angelegt_von` und im `audit_log`. Keine Migration. | A |
+| **E‑1179** | **Aufträge von `ADMIN`-Konten zeigen „Admin“** statt des Benutzernamens. **Aufgehoben am selben Tag durch E‑1181.** | A |
+| **E‑1180** | **Die Rolle wird zur Lesezeit ermittelt**, über `app_user`. Es gilt die heutige Rolle des Kontos: Ändert sich die Rolle später, ändert sich die Anzeige alter Aufträge mit. Das ist bewusst so. Wer angelegt hat, steht unverändert in `angelegt_von` und im `audit_log`. Keine Migration. **Aufgehoben am selben Tag durch E‑1181:** Ohne „Admin“ gibt es keine Rolle mehr zu ermitteln. | A |
 
-**Festlegungen der Umsetzung.** Vorgeschlagen als F55 bis F58, zur Bestätigung; die Bauform ist so
-umgesetzt, wie der Auftrag sie vorgibt.
+**Festlegungen der Umsetzung.** Vorgeschlagen als F55 bis F58, zur Bestätigung. **Mit E‑1181
+entfallen F55 bis F57, von F58 gilt nur noch der Satz „eingestellt <Zeit> von <Name>“ als
+Textknoten in der Schrift der Umgebung** (siehe unten). Die Tabelle bleibt als Vorgeschichte stehen.
 
 | F | Festlegung | Grund |
 |---|---|---|
@@ -356,13 +358,20 @@ umgesetzt, wie der Auftrag sie vorgibt.
 | **F57** | **Nachschlagen ohne Mandantenfilter.** Das Konto wird allein über `username` gefunden; ein `ADMIN` muss dem Mandanten nicht in `app_user_mandant` zugeordnet sein. Der Mandantenfilter auf `task` bleibt unverändert und ist weiterhin der einzige, der die Zeilenmenge bestimmt. Aus `app_user` geht nur die Rolle in die Einordnung, keine weitere Spalte in die Antwort. | Ein `ADMIN` sieht alle Mandanten, ohne ihnen zugeordnet zu sein ([`mandantentrennung.md`](mandantentrennung.md) §2). `username` ist eindeutig, der Join vervielfacht keine Zeile, und als `LEFT JOIN` nimmt er keine weg. Regel M2 betrifft Methoden auf `jooq.glassfish`; `app_user` liegt in `overlord_monitor`, das ist keine vierte Ausnahme |
 | **F58** | **Anzeige.** Aufgeklappt wird „eingestellt <Zeit>“ zu „eingestellt <Zeit> von <Name>“, bei `ADMIN` „von Admin“. „Admin“ ist in beiden Sprachen gleich. Der Name steht als Textknoten in der Schrift der Umgebung (E‑1107 sinngemäß). Ein unbekannter Wert von `art` zeigt den Satz ohne „von …“. | Regel Q4: kein geratener Name. Zu Aufbau und Tests [`assistent-frontend.md`](assistent-frontend.md) §12.3, §12.6, §12.10 |
 
-**`UNBEKANNT` gibt keinen `ADMIN`-Namen preis, solange es das Konto gibt.** Konten werden nicht
-gelöscht, nur deaktiviert ([`benutzerverwaltung.md`](benutzerverwaltung.md), E8), und einen
-Benutzernamen ändert kein Endpunkt. Ein Auftrag, der über den Assistenten entstanden ist, hat also
-immer sein Konto. Kein Konto gibt es nur bei Zeilen, die nicht über die Anwendung entstanden sind.
-Auf der Testkopie trifft das am 06.11.2026 alle 15 vorhandenen Zeilen unter `SYSTEM`: Zu ihren drei
-Werten in `angelegt_von` gibt es dort kein Konto, sie erscheinen als `UNBEKANNT` mit dem
-gespeicherten Wert.
+**Geändert am 06.11.2026** (Zweig `feat/ersteller-immer-benutzername`, auf `8bdffae`). Der
+Auftraggeber hat die erste Fassung am selben Tag korrigiert.
+
+| E | Entscheidung | Herkunft |
+|---|---|---|
+| **E‑1181** | **Angezeigt wird immer der Benutzername, auch bei `ADMIN`-Konten.** Kein „Admin“. Hebt E‑1179 und E‑1180 auf. | A |
+
+| F | Festlegung | Grund |
+|---|---|---|
+| **F59** | **`angelegtVon` ist ein Text**: der Wert aus `task.angelegt_von`. `art`, `name`, die Einordnung und der Join auf `app_user` entfallen. | Ohne Unterscheidung nach Rolle braucht die Antwort keine Einordnung und das Statement kein `app_user`. Der Wert steht schon in der Zeile. Das Feld war nur auf `main`, in keinem Release |
+
+**Folge:** Der Benutzername eines `ADMIN`-Kontos steht in der Antwort. Jeder Benutzer des Mandanten,
+der einen solchen Auftrag sieht, liest ihn. Das ist so entschieden. Eine Zeile ohne Konto zeigt ihren
+gespeicherten Wert wie jede andere.
 
 **Was nicht gebaut ist:** kein Klarname, keine Migration, keine Spalte für die Rolle in `task`, kein
 Name in der zugeklappten Zeile, kein Filter „meine Aufträge“. Die Rechte zum Löschen (E‑1110,
@@ -1218,7 +1227,7 @@ Liste und Einzelabruf liefern dieselbe Form, `POST` ebenso:
 | `fehlercode`, `fehlertext` | von der Plattform, sonst `null` |
 | `eintraege` | je Eintrag `werte` (Feldname → Wert, nur Felder mit Wert), `schluessel` (Text nach der Kopie, `null` ohne Schlüssel), `rueckgabe` (Rohwert der zugehörigen Zeile oder `null`) und `ergebnis` (`OK`, `NICHT_OK`, `UNBEKANNT` oder `null`) |
 | `felder` | *seit A4 (E‑1120)* je Feld der Kopie `name` und `label`, in der Reihenfolge der Definition — alle Felder, auch die ohne Wert in einem Eintrag |
-| `angelegtVon` | *seit 06.11.2026 (E‑1178)* wer angelegt hat: `art` und `name`, siehe unten |
+| `angelegtVon` | *seit 06.11.2026 (E‑1178, E‑1181)* der Benutzername des Anlegenden, Text, bei jedem Konto |
 
 Rückgabe und Ergebnis eines Eintrags gehören zur Zeile mit demselben Index; gibt es diese Zeile
 nicht, sind beide `null`.
@@ -1228,20 +1237,8 @@ Typzeile ändert nichts an der Anzeige eines vorhandenen Auftrags. Die übrigen 
 (`pflicht`, `nurBei`, `muster`, `hinweis`) gehen nicht hinaus; die Übersicht braucht sie nicht
 (Punkt 1027 nennt, wofür `nurBei` und `hinweis` einmal taugen könnten).
 
-**`angelegtVon` kommt nicht aus der Kopie, sondern aus `app_user`, zur Lesezeit** (E‑1180): Die
-drei Lesewege holen die heutige Rolle mit `LEFT JOIN app_user ON app_user.username =
-task.angelegt_von`, auch die Wiederholung über `anfrageId`. Eingeordnet wird an genau einer Stelle
-(`AngelegtVon.einordnen`, F55):
-
-| `art` | Wann | `name` |
-|---|---|---|
-| `BENUTZER` | Konto gefunden, Rolle nicht `ADMIN` | der Benutzername |
-| `ADMIN` | Konto gefunden, Rolle `ADMIN` | `null` — **der Benutzername verlässt das Backend nicht** |
-| `UNBEKANNT` | kein Konto zu `angelegt_von`, zum Beispiel bei Testzeilen | der gespeicherte Wert |
-
-Die Antwort hängt nicht von der Rolle des Betrachters ab (F56). `task.angelegt_von` und
-`app_user.username` haben dieselbe Sortierung (`utf8mb4_general_ci`, §9.10): Die Groß- und
-Kleinschreibung, mit der jemand angemeldet ist, ändert am Treffer nichts.
+**`angelegtVon` kommt nicht aus der Kopie, sondern aus der Spalte `task.angelegt_von`** (F59), ohne
+Blick in `app_user`. Die Antwort hängt weder von der Rolle des Kontos noch von der des Betrachters ab.
 
 ### 6.6 `DELETE /api/tasks/{taskId}` *(A4, 19.10.2026)*
 
@@ -1801,43 +1798,37 @@ Die Karten tragen `0101159903/40NP/`, `0101159903/41BH/`, `0101159903/40M4/` und
 
 ### 9.10 Ersteller am Auftrag (06.11.2026)
 
-**Tests.** Die Gründe stehen in §2 unter „Ersteller am Auftrag“.
+**Tests.** Die Gründe stehen in §2 unter „Ersteller am Auftrag“. Stand nach E‑1181; die Proben und
+Tests der Fassung mit Rolle und Join stehen im Commit `79614df`, ihr Code ist entfallen.
 
 | Test | Was er hält |
 |---|---|
-| `AngelegtVonTest` *(neu, 4 Fälle, ohne Datenbank)* | die drei Arten und eine fremde Rolle, die `BENUTZER` ergibt und nicht wirft |
-| `AuftraegeDbIT.ersteller_benutzer` | Auftrag eines `MANDANT`-Kontos: `BENUTZER` mit Namen in Antwort auf `POST`, Wiederholung, Einzelabruf und Liste |
-| `AuftraegeDbIT.ersteller_admin` | Auftrag eines `ADMIN`-Kontos: `ADMIN`, `name` ist `null`, und der Benutzername kommt **in keinem Rumpf** vor, als Zeichenkette gegen den ganzen Rumpf geprüft: `POST`, Wiederholung, Einzelabruf und Liste, Einzelabruf und Liste je als `ADMIN` und als `MANDANT` (F56). `angelegt_von` trägt ihn weiter |
-| `AuftraegeDbIT.ersteller_admin_ohne_zuordnung` | ein `ADMIN` ohne Zeile in `app_user_mandant` wird trotzdem erkannt (F57) |
-| `AuftraegeDbIT.ersteller_unbekannt` | unbekanntes `angelegt_von` ergibt `UNBEKANNT` mit dem gespeicherten Wert; die Zeile bleibt in Einzelabruf, Wiederholung und Liste |
-| `AuftraegeDbIT.ersteller_nach_rollenwechsel` | Rollenwechsel nach dem Anlegen ändert die Einordnung in beide Richtungen, `angelegt_von` nicht (E‑1180) |
+| `AuftraegeDbIT.ersteller_benutzer` | Auftrag eines `MANDANT`-Kontos: der Benutzername in Antwort auf `POST`, Wiederholung, Einzelabruf und Liste |
+| `AuftraegeDbIT.ersteller_admin` | Auftrag eines `ADMIN`-Kontos: auch hier der Benutzername, in Einzelabruf und Liste, für einen `ADMIN` und ein `MANDANT`-Konto als Betrachter (E‑1181) |
+| `AuftraegeDbIT.ersteller_ohne_konto` | ein `angelegt_von` ohne Konto: der gespeicherte Wert, die Zeile bleibt |
 
-`AuftraegeDbIT` zählt damit 26 Fälle, 5 mehr. Die 8 von `AuftraegeIsolationDbIT` bleiben
-unverändert grün; es ist kein Endpunkt dazugekommen. Der Rollenwechsel schreibt direkt in die Zeile
-des eigenen `it-`-Kontos, die Aufräumung bleibt die aus §9.2.
+`AuftraegeDbIT` zählt damit 24 Fälle, 3 mehr als vor dem Ersteller. Die 8 von
+`AuftraegeIsolationDbIT` bleiben unverändert grün; es ist kein Endpunkt dazugekommen.
 
-**Verletzungsproben (06.11.2026).** Je ein Eingriff in `task/`, Lauf über `AngelegtVonTest`,
-`AuftraegeDbIT` und `AuftraegeIsolationDbIT` (38 Fälle), Datei danach byte-gleich zurückgeschrieben.
+**Verletzungsprobe (06.11.2026).** Lauf über `AuftraegeDbIT` und `AuftraegeIsolationDbIT` (32 Fälle),
+Datei danach byte-gleich zurückgeschrieben.
 
 | Eingriff | Rot |
 |---|---|
-| Einordnung `ADMIN` entfernt, ein `ADMIN`-Konto wird `BENUTZER` | `AngelegtVonTest.admin`, `ersteller_admin`, `ersteller_admin_ohne_zuordnung`, `ersteller_nach_rollenwechsel` |
-| Bei `ADMIN` steht der Benutzername in `name` | dieselben vier |
-| Der Benutzername steht in einem anderen Feld (`fehlertext`), `name` bleibt `null` | `ersteller_admin`, `ersteller_admin_ohne_zuordnung`, `ersteller_nach_rollenwechsel` am Vergleich gegen den Rumpf; dazu `plattform_fehlgeschlagen`, das `fehlertext` liest, und `loeschen_durch_anderen_benutzer` (siehe unten) |
-| `LEFT JOIN` zu `INNER JOIN`, Aufträge ohne Konto fallen weg | `ersteller_unbekannt` |
-| **Eichung:** ohne Eingriff | **0** von 38 |
+| Die Antwort trägt `null` statt `angelegt_von` | `ersteller_benutzer`, `ersteller_admin`, `ersteller_ohne_konto` |
+| **Eichung:** ohne Eingriff | **0** von 32 |
 
-Die dritte Probe ist die, die den Vergleich gegen den ganzen Rumpf belegt: Die zweite fällt schon
-an `name`.
-
-**`loeschen_durch_anderen_benutzer` ist in dieser Probe mit `409` gefallen, nicht wegen des
-Eingriffs:** Er ändert nur ein Feld der Antwort. Ein `409` heißt, dass der eben angelegte Auftrag
-beim `DELETE` nicht mehr `OFFEN` stand. In den sechs anderen Läufen des Tages blieb der Test
-grün. Eine mögliche Ursache steht auf der Testkopie: Ihre vorhandenen Zeilen tragen `abgeholt_am`
-auf vollen Minuten, meist weniger als 60 Sekunden nach `eingestellt_am`. Ob dort etwas abholt, das
-auch Testaufträge trifft, ist nicht belegt (Punkt 1047).
+**`loeschen_durch_anderen_benutzer` fiel in einem Probelauf einmal mit `409`,** in einem Lauf, der nur
+ein Feld der Antwort änderte: Der eben angelegte Auftrag stand beim `DELETE` nicht mehr auf `OFFEN`.
+**Auskunft des Auftraggebers vom 06.11.2026:** In der Testumgebung werden offene Aufträge abgeholt
+(Punkt 1047, erledigt). Ein Test, der einen offenen Auftrag voraussetzt, kann dort also zufällig
+rot werden, wenn das Abholen zwischen seine Schritte fällt. Dann gilt: wiederholen, bevor der Diff
+verdächtigt wird.
 
 #### Messung M1011 (Regel 7)
+
+> **Mit E‑1181 ist der Join entfallen.** M1011 bleibt als Beleg für die Fassung, die `8bdffae` auf
+> `main` gebracht hat. Gültig für den heutigen Stand ist M1012 unten.
 
 *Gemessen am 06.11.2026 gegen die Testkopie (MariaDB 10.6.22), eine Sitzung mit dem
 Workbench-Client, nach Regel 7 mit `EXPLAIN` und Laufzeit, wie M1000 (E‑1026): je Statement fünf
@@ -1898,6 +1889,37 @@ eindeutig ist. Ein Mandant, dessen Aufträge fast alle außerhalb der 7 Tage lie
 aus `task`, bevor das `LIMIT` greift; das Statement ist dort dasselbe wie in M1000 und nicht
 gesondert gemessen. Der Join läuft erst für Zeilen, die das `WHERE` auf `task` bestanden haben.
 
+#### Messung M1012 (Regel 7)
+
+*Gemessen am 06.11.2026 gegen die Testkopie, wie M1011 und mit denselben 403 eigenen Zeilen, die
+wieder über ihre `task_id` weggeräumt sind: 403 Zeilen gelöscht, danach Anzahl und Prüfsumme wie
+vorher.* Die Statements sind die von jOOQ gerenderten: gegenüber M1000 kommt `task.angelegt_von`
+dazu, der Join aus M1011 ist weg (`scripts/messung-auftrag-ersteller/m1012-messen.sql`).
+
+**Ein `EXPLAIN` in der Produktion ist nicht nötig: Die Änderung berührt weder die Nachrichtenliste
+noch ihre Suche.**
+
+| # | Statement | `EXPLAIN` | Profil (min–max) | Wanduhr je Lauf |
+|---|---|---|---|---|
+| L2 | Liste, 400 Aufträge | `type=range`, `key=task_mandant_idx`, `rows=400`, `Using where` — kein `filesort` | 1,866–2,399 ms | 3,882 ms |
+| L2k | Liste, 3 Aufträge | `type=ref`, `key=task_mandant_idx`, `ref=const`, `rows=3`, `Using where` — kein `filesort` | 0,613–0,709 ms | 1,217 ms |
+| L2s | Liste `SYSTEM`, 15 Aufträge | wie L2k, `rows=15` | 0,686–0,754 ms | 1,223 ms |
+| | dasselbe ohne `angelegt_von` | wie L2k, `rows=15` | 0,661–0,742 ms | 1,135 ms |
+| L3 | Einzelabruf | `type=const`, `key=PRIMARY` | 0,449–0,538 ms | 0,881 ms |
+| L3x | Einzelabruf, fremder Mandant | `Impossible WHERE noticed after reading const tables` | 0,451–0,487 ms | 0,818 ms |
+| L4 | Wiederholung | `type=const`, `key=uq_task_anfrage`, `ref=const,const` | 0,488–0,529 ms | 0,886 ms |
+
+**`ANALYZE`:** L2 liest 50 Zeilen und bricht am `LIMIT` ab, L2k 3, L2s 15.
+
+**Was das trägt.** Die Liste läuft über den Plan aus M1000, die zusätzliche Spalte ändert ihn nicht:
+Gelesen wird die Zeile ohnehin. Die Zahlen liegen im Bereich der Fassung „ohne Join“ aus M1011.
+
+**Was es nicht trägt.** Solange auf der Testkopie **alle** Zeilen unter `SYSTEM` liegen, wählt der
+Optimizer für `SYSTEM` `type=ALL` mit `filesort` (15 Zeilen, 0,673–0,839 ms, erster Lauf ohne die
+eigenen Zeilen). Das ist die billigste Wahl für einen Mandanten, dem die ganze Tabelle gehört; ob die
+Fassung ohne `angelegt_von` dort denselben Plan nimmt, ist nicht gesondert gemessen. 400 Aufträge
+sind weiter kein Beleg für Tausende.
+
 ---
 
 ## 10. Regelbezug
@@ -1906,12 +1928,12 @@ gesondert gemessen. Der Join läuft erst für Zeilen, die das `WHERE` auf `task`
 |---|---|
 | **M1** Kein Endpunkt nimmt eine Mandanten-ID entgegen | keiner der vier; keine neue Ausnahme. Seit A4 auch `DELETE /api/tasks/{taskId}` nicht |
 | **M2** Mandant als erster Pflichtparameter | jede Methode von `AuftragRepository`, auch das Laden der Typen |
-| **M3** Filter im Statement | Mandant im `WHERE` jedes Statements; die Freischaltung als Join im Statement des Typkatalogs. Seit A4 auch im `DELETE` und in seiner Nachlesung. Der Join auf `app_user` filtert bewusst nicht nach Mandant; die Zeilenmenge bestimmt allein der Filter auf `task` (F57) |
+| **M3** Filter im Statement | Mandant im `WHERE` jedes Statements; die Freischaltung als Join im Statement des Typkatalogs. Seit A4 auch im `DELETE` und in seiner Nachlesung. |
 | **M4** Isolationstest je Endpunkt | `AuftraegeIsolationDbIT`, seit A4 mit dem Löschen eines fremden Auftrags; seit 1.1.0 prüft `AssistentIsolationDbIT` die Sperre ohne Freischaltung (`404` wie erfunden) |
 | **Freischaltung** (E‑1126) | genau eine Stelle, `AssistentFreigabe` (§3.9); kein zweiter Weg |
 | **Regel 3** (kein Schreibzugriff auf `GlassfishDB`) | das Paket `task` liest und schreibt ausschließlich `overlord_monitor` |
 | **Regeln 1 bis 6** | gelten hier nicht (E‑1016) |
-| **Regel 7** | M1000 (E‑1026); für das Löschen M1005 (§9.5); für den Join auf `app_user` M1011 (§9.10) |
+| **Regel 7** | M1000 (E‑1026); für das Löschen M1005 (§9.5); für den Ersteller M1011 und M1012 (§9.10) |
 | **Z1** | keine Uhr in Java; alle Zeitstempel aus der Datenbank (E‑1011) |
 
 ---
@@ -1935,8 +1957,8 @@ Nummern ab 1000 (Linie `assistent`); dieselben Zeilen stehen im Register
 | **1026** | Die Plattform holt **alle fünf Minuten** ab (E‑1117) — eine Auskunft des Auftraggebers vom 19.10.2026, nicht gemessen. Wie lange ein Auftrag „Offen“ steht und damit löschbar bleibt, hängt daran. *(A4)* | Sichtprüfung oder Messung offen |
 | **1037** | Eine Anfrage kann zur vollen Minute mit `500` scheitern, wenn das Speichern ihrer Sitzung einen Deadlock gegen die Aufräumung von Spring Session verliert — gesehen in den DB-Läufen zu 1.1.0 (§9.6). Beschrieben in [`authentifizierung.md`](authentifizierung.md) §12; nicht Teil dieses Schritts. *(1.1.0)* | Fehler |
 | **1045** | **Der Testsatz rechnet mit der alten Lesart des Schlüssels.** Seit der Abladestelle optional ist, kann ein zweiteiliger Schlüssel wie `010/18VZE` Werk/Abladestelle oder Lieferantennummer/Werk sein, und die Werkzeugbeschreibung sagt, dann nachzufragen (E‑1170). S06, S19, S20 und S25 erwarten aber einen Vorschlag mit Werk und Abladestelle aus einem zweiteiligen Schlüssel; S24 erwartet zu `0101159903/40NP/,…` eine Rückfrage nach der Abladestelle, die jetzt fehlen darf; S17 erwartet eine Rückfrage zu SNDPRN_4908, die mit einer Frage zum Schlüssel konkurrieren kann ([`assistent.md`](assistent.md) §8). Kein Testsatzlauf in diesem Schritt; was die Fälle künftig erwarten, ist zu entscheiden, dann ein Lauf. *(26.10.2026)* **Erledigt im Nachtrag am selben Tag:** Der Schlüssel ist von hinten ausgerichtet und damit eindeutig, die Rückfrage entfällt (E‑1173 bis E‑1175); S24 erwartet den Vorschlag, S06, S17, S19, S20, S25 bleiben, S26 und S27 sind neu (E‑1177). M1010: alle acht in drei Durchgängen bestanden ([`assistent.md`](assistent.md) §8.7). | Entscheidung offen |
-| **1046** | Sichtprüfung 6: „von <Name>“ und „von Admin“ in der aufgeklappten Zeile, hell und dunkel, breit und schmal, auch mit einem langen Namen ([`assistent-frontend.md`](assistent-frontend.md) §12.12). *(06.11.2026)* | Sichtprüfung oder Messung offen |
-| **1047** | `AuftraegeDbIT.loeschen_durch_anderen_benutzer` fiel am 06.11.2026 einmal mit `409`, in einem Lauf ohne fachlichen Bezug (§9.10). Ob auf der Testkopie etwas `OFFEN`-Zeilen abholt und damit Tests trifft, die einen offenen Auftrag voraussetzen, ist zu klären. *(06.11.2026)* | Sichtprüfung oder Messung offen |
+| **1046** | Sichtprüfung 6: „von <Name>“ in der aufgeklappten Zeile, hell und dunkel, breit und schmal, auch mit einem langen Namen ([`assistent-frontend.md`](assistent-frontend.md) §12.12). *(06.11.2026)* | Sichtprüfung oder Messung offen |
+| **1047** | `AuftraegeDbIT.loeschen_durch_anderen_benutzer` fiel am 06.11.2026 einmal mit `409`, in einem Lauf ohne fachlichen Bezug (§9.10). Ob auf der Testkopie etwas `OFFEN`-Zeilen abholt und damit Tests trifft, die einen offenen Auftrag voraussetzen, ist zu klären. *(06.11.2026)* **Erledigt am selben Tag:** Auskunft des Auftraggebers, in der Testumgebung werden offene Aufträge abgeholt (§9.10). | Sichtprüfung oder Messung offen |
 
 **Fortgeschrieben am 19.10.2026 (A4):** Punkt **1000** bleibt offen. Die Übersicht zeigt einen
 solchen Auftrag als „Teilweise erledigt“ mit „<n> von <n> nicht erfolgreich“

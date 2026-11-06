@@ -9,7 +9,6 @@ import {
   blockschritt,
   einordnungVon,
   ergebnisVon,
-  erstellerName,
   laedtNeuNach,
   loeschbar,
   loeschergebnis,
@@ -57,7 +56,7 @@ function auftrag(teil: Partial<Auftrag> = {}): Auftrag {
     fehlertext: null,
     eintraege: [],
     felder: [],
-    angelegtVon: { art: "BENUTZER", name: "beispielnutzer" },
+    angelegtVon: "beispielnutzer",
     ...teil,
   };
 }
@@ -159,35 +158,15 @@ describe("Die Werte mit ihrem label (E‑1104, E‑1120, F21)", () => {
   });
 });
 
-describe("Der Ersteller (E‑1178, E‑1179, F55, F58)", () => {
-  const admin = texteFuer("de").dashboard.auftraege.angelegtVonAdmin;
-
-  it("nimmt bei BENUTZER den Benutzernamen", () => {
-    expect(erstellerName({ art: "BENUTZER", name: "m.muster" }, admin)).toBe("m.muster");
-  });
-
-  it("nimmt bei UNBEKANNT den gespeicherten Wert", () => {
-    expect(erstellerName({ art: "UNBEKANNT", name: "it-kein-konto" }, admin)).toBe("it-kein-konto");
-  });
-
-  it("zeigt bei ADMIN das Wort, auch wenn doch ein Name mitkäme", () => {
-    expect(erstellerName({ art: "ADMIN", name: null }, admin)).toBe("Admin");
-    expect(erstellerName({ art: "ADMIN", name: "m.muster" }, admin)).toBe("Admin");
-  });
-
-  /** Regel Q4: Ein Wert, den das Frontend nicht kennt, bekommt keinen geratenen Namen. */
-  it("zeigt bei einem unbekannten Wert von art keinen Namen", () => {
-    expect(erstellerName({ art: "PLATTFORM" as never, name: "m.muster" }, admin)).toBeNull();
-  });
-
-  it("trägt den Wortlaut in beiden Sprachen, „Admin“ in beiden gleich", () => {
-    const de = texteFuer("de").dashboard.auftraege;
-    const en = texteFuer("en").dashboard.auftraege;
+describe("Der Ersteller (E‑1178, E‑1181, F58)", () => {
+  it("trägt den Wortlaut in beiden Sprachen", () => {
     const werte = { zeit: "19.10.2026, 14:32", name: "m.muster" };
-    expect(einsetzen(de.eingestelltVon, werte)).toBe("eingestellt 19.10.2026, 14:32 von m.muster");
-    expect(einsetzen(en.eingestelltVon, werte)).toBe("submitted 19.10.2026, 14:32 by m.muster");
-    expect(de.angelegtVonAdmin).toBe("Admin");
-    expect(en.angelegtVonAdmin).toBe("Admin");
+    expect(einsetzen(texteFuer("de").dashboard.auftraege.eingestellt, werte)).toBe(
+      "eingestellt 19.10.2026, 14:32 von m.muster",
+    );
+    expect(einsetzen(texteFuer("en").dashboard.auftraege.eingestellt, werte)).toBe(
+      "submitted 19.10.2026, 14:32 by m.muster",
+    );
   });
 });
 

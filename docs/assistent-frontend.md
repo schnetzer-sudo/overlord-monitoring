@@ -15,9 +15,9 @@ folgt mit A4.
 > Aufträge vollständig.** Chatbox und Karte ändern sich nur an einer Stelle: Nach dem Anlegen lädt
 > die Liste der Aufträge neu.
 
-> **Ergänzt am 06.11.2026** (Zweig `auftrag-ersteller`): Aufgeklappt nennt „Ihre Aufträge“, wer
-> einen Auftrag angelegt hat, bei `ADMIN`-Konten „Admin“ (E‑1178, E‑1179, §12.6). Das Backend
-> liefert dafür `angelegtVon` ([`tasks.md`](tasks.md) §6.5).
+> **Ergänzt am 06.11.2026** (Zweige `auftrag-ersteller` und `feat/ersteller-immer-benutzername`):
+> Aufgeklappt nennt „Ihre Aufträge“, wer einen Auftrag angelegt hat, immer mit dem Benutzernamen
+> (E‑1178, E‑1181, §12.6). Das Backend liefert dafür `angelegtVon` ([`tasks.md`](tasks.md) §6.5).
 
 > **Der Assistent bleibt abgeschaltet**, bis der Datenschutzbeauftragte die Auftragsverarbeitung
 > mit Anthropic geprüft hat (E‑1029, E‑1030, Punkt 1009). Abgeschaltet meldet
@@ -544,7 +544,8 @@ Entscheidungen 13, 16 bis 18 und 20 bis 22 betreffen Endpunkt und Plattform und 
 | **E‑1112** | Ein Klick zeigt an derselben Stelle die Rückfrage „Auftrag löschen? Die Plattform hat ihn noch nicht abgeholt. Er wird nicht ausgeführt.“ mit „Abbrechen“ und „Löschen“. Der Fokus geht auf „Abbrechen“, Esc bricht ab. Danach steht oben im Block „Auftrag gelöscht. Er wird nicht ausgeführt.“ (`role="status"`). Kein Rückgängig. | A (Rückfrage, 19.10.2026), V (Wortlaut) |
 | **E‑1116** | Die Übersicht lädt nicht von selbst neu (E‑164), der Stand „Offen“ kann also veraltet sein. Bei `409` steht in der Zeile „Die Plattform hat den Auftrag gerade übernommen. Löschen geht nicht mehr.“, und die Liste wird neu geladen. Bei `404` „Der Auftrag ist nicht mehr vorhanden.“ und Neuladen. | V |
 | **E‑1178** | **Der Name des Anlegenden steht in der aufgeklappten Zeile**, nicht in der zugeklappten ([`tasks.md`](tasks.md) §2 „Ersteller am Auftrag“, auch für E‑1180: die Rolle zur Lesezeit). Jeder Benutzer des Mandanten sieht weiterhin alle Aufträge (E‑1113). | A (06.11.2026) |
-| **E‑1179** | **Aufträge von `ADMIN`-Konten zeigen „Admin“** statt des Benutzernamens. | A (06.11.2026) |
+| **E‑1179** | **Aufträge von `ADMIN`-Konten zeigen „Admin“** statt des Benutzernamens. **Aufgehoben am selben Tag durch E‑1181.** | A (06.11.2026) |
+| **E‑1181** | **Angezeigt wird immer der Benutzername, auch bei `ADMIN`-Konten** ([`tasks.md`](tasks.md) §2 „Ersteller am Auftrag“). | A (06.11.2026) |
 
 ### 12.2 Rückfragen zu A4 (19.10.2026)
 
@@ -568,7 +569,7 @@ Was der Auftrag offenließ, beim Bau festgelegt und **zur Bestätigung** vorgesc
 eine E‑Nummer bekommen sie erst damit. Die Zählung setzt die F-Nummern aus A3 fort, damit jede
 F-Nummer in dieser Datei eindeutig bleibt. F26 bis F28 betreffen das Backend und stehen in
 [`tasks.md`](tasks.md) §2; F29 ist beim Messen dazugekommen. F58 gehört zum Ersteller am Auftrag
-(06.11.2026), F55 bis F57 stehen in [`tasks.md`](tasks.md) §2.
+(06.11.2026), F55 bis F57 und F59 stehen in [`tasks.md`](tasks.md) §2.
 
 | F | Festlegung | Grund |
 |---|---|---|
@@ -583,7 +584,7 @@ F-Nummer in dieser Datei eindeutig bleibt. F26 bis F28 betreffen das Backend und
 | **F24** | **„Neu laden“ holt beide Abfragen** — Übersicht und Aufträge — und zeigt die Sanduhr, solange eine davon läuft. | Ein Knopf, der nur die Hälfte lädt, ließe glauben, der Stand der Aufträge sei aktuell |
 | **F25** | **„Weniger anzeigen“** auch bei den Einträgen, nach „Alle <n> Einträge anzeigen“. | Dieselbe Bedienung wie bei der Liste (E‑1101) |
 | **F29** | **Die Zeile bricht um, statt zu kürzen** — Stand, Aktion, Zahl der Einträge und „<x> von <n> nicht erfolgreich“. Gekürzt werden allein die Schlüssel; Zeichen und Wort des Stands bleiben beisammen. „und <n> weitere“ steht in der Schrift der Umgebung, nur die Schlüssel in Festbreitenschrift. *Nachgetragen nach M1006 (§12.13).* | Bei 1.280 px ist die Spalte 300 px breit; dort verschwanden „3 Einträge“ und sogar „1 von 3 nicht erfolgreich“ hinter der Auslassung. E‑1102 erlaubt sie nur für die Schlüssel. Der Preis ist eine dritte oder vierte Zeile bei 1.280 px |
-| **F58** | **„eingestellt <Zeit> von <Name>“** in der aufgeklappten Zeile, bei `ADMIN` „von Admin“, in beiden Sprachen dasselbe Wort. Der Name steht als Textknoten in der Schrift der Umgebung, nicht in Festbreitenschrift (E‑1107 sinngemäß). Ein unbekannter Wert von `art` zeigt den Satz ohne „von …“ (`erstellerName` in `auftraege.ts`). Im `title` bleibt die Zeit mit Sekunden. Der Satz trägt `min-w-0` und `break-words`. | Regel Q4: kein geratener Name. Ein Name kann eine lange Adresse ohne Leerzeichen sein; ohne `min-w-0` läuft er aus der Spalte. Im kopflosen Chrome mit dem gebauten CSS und einer Spalte von 252 px: mit beiden Klassen 252 px breit und umbrochen, ohne sie 403 px |
+| **F58** | **„eingestellt <Zeit> von <Name>“** in der aufgeklappten Zeile. Der Name steht als Textknoten in der Schrift der Umgebung, nicht in Festbreitenschrift (E‑1107 sinngemäß). Im `title` bleibt die Zeit mit Sekunden. Der Satz trägt `min-w-0` und `break-words`. *Bis E‑1181 stand hier auch „von Admin“ und der Satz ohne „von …“ für einen unbekannten Wert von `art`; beides ist entfallen.* | Ein Name kann eine lange Adresse ohne Leerzeichen sein; ohne `min-w-0` läuft er aus der Spalte. Im kopflosen Chrome mit dem gebauten CSS und einer Spalte von 252 px: mit beiden Klassen 252 px breit und umbrochen, ohne sie 403 px |
 
 ### 12.4 Die Stände
 
@@ -624,7 +625,7 @@ frontend/src/
 ├─ features/assistent/hooks.ts         lädt nach dem Anlegen die Liste neu (E‑1109)
 └─ features/dashboard/
    ├─ api.ts                           Typen, GET /api/tasks, DELETE /api/tasks/{taskId}
-   ├─ auftraege.ts                     reine Regeln: Sichtbare, Schlüssel, Zählung, Löschbarkeit, Ersteller
+   ├─ auftraege.ts                     reine Regeln: Sichtbare, Schlüssel, Zählung, Löschbarkeit
    ├─ hooks.ts                         Abfrage und Mutation
    └─ components/
       ├─ auftraege-block.tsx           Block, Zeile, Löschen
@@ -650,7 +651,7 @@ ganzen Zwischenspeicher, auch die Liste der Aufträge (E‑1123).
 │ ▾ ⓘ Teilweise erledigt · Anpassung · 3 Einträge  │
 │   1 von 3 nicht erfolgreich    19.10.2026, 09:10 │  statt der Schlüssel (E‑1102)
 │   Anpassen der Werk-/Abladestellentabelle        │  aufgeklappt (E‑1104)
-│   eingestellt 19.10.2026, 09:10 von m.muster     │  bei ADMIN „von Admin“ (F58)
+│   eingestellt 19.10.2026, 09:10 von m.muster     │  Benutzername (E‑1178, E‑1181)
 │   ausgeführt 19.10.2026, 09:15                   │
 │   72332/DDB0                                     │  Eintrag: Schlüssel
 │     Werk 72332 · Abladestelle DDB0 · SNDPRN …    │  Werte mit label
@@ -786,22 +787,19 @@ einer davon kam mit 1.1.0 und war dort nicht nachgezählt). **Verletzungsprobe:*
 Klassen aus Kopien entfernt, Lauf über beide Dateien — genau die zwei neuen Fälle rot, 52 grün;
 zurückgespielt aus den Kopien, nicht per `git checkout`.
 
-**Ersteller am Auftrag (06.11.2026, E‑1178, E‑1179, F58):** fünf reine Fälle mehr in
-`tests/auftraege.test.ts` (46): `BENUTZER`, `UNBEKANNT`, `ADMIN` auch dann, wenn doch ein Name
-mitkäme, ein unbekannter Wert von `art`, der Wortlaut in beiden Sprachen. Vier gerenderte mehr in
-`tests/auftraege-block.test.tsx` (32): aufgeklappt „von <Name>“ als Text in der Umgebungsschrift
-und zugeklappt kein Name, „von Admin“, ein unbekannter Wert von `art` ohne „von …“ (Q4), ein
-Name, der wie HTML aussieht, wörtlich als Text. `tests/assistent-chatbox.test.tsx` bekommt das
-Feld nur in seiner gestellten Antwort. `pnpm check` und `pnpm build` grün mit **1.517 Fällen in
-54 Dateien**, gerendert **291 in 28 Dateien** (`frontend/vitest.config.mts`, aus dem Lauf gezählt).
-Die Tests des Backends und M1011 stehen in [`tasks.md`](tasks.md) §9.10.
+**Ersteller am Auftrag (06.11.2026, E‑1178, E‑1181, F58):** ein reiner Fall mehr in
+`tests/auftraege.test.ts` (42): der Wortlaut in beiden Sprachen. Zwei gerenderte mehr in
+`tests/auftraege-block.test.tsx` (30): aufgeklappt „von <Name>“ als Text in der Umgebungsschrift und
+zugeklappt kein Name; ein Name, der wie HTML aussieht, wörtlich als Text.
+`tests/assistent-chatbox.test.tsx` bekommt das Feld nur in seiner gestellten Antwort. `pnpm check` und
+`pnpm build` grün mit **1.511 Fällen in 54 Dateien**, gerendert **289 in 28 Dateien**
+(`frontend/vitest.config.mts`, aus dem Lauf gezählt). Die Tests des Backends und M1012 stehen in
+[`tasks.md`](tasks.md) §9.10.
 
-| Eingriff (Lauf über die beiden Dateien, 78 Fälle) | rot |
+| Eingriff (Lauf über die beiden Dateien, 72 Fälle) | rot |
 |---|---|
-| der Satz nie mit Ersteller | 3 Fälle |
-| ein unbekannter Wert von `art` zeigt den Namen | 2 Fälle |
-| `ADMIN` zeigt den Namen aus dem Feld | 2 Fälle |
-| Name zusätzlich in der zugeklappten Zeile | 2 Fälle |
+| der Satz ohne Namen | 2 Fälle |
+| Name zusätzlich in der zugeklappten Zeile | 1 Fall |
 
 Zurückgeschrieben aus der Kopie im Skript, nicht per `git checkout`.
 
@@ -841,7 +839,7 @@ Nummern ab 1023 (Linie `assistent`, per `grep` geprüft); dieselben Zeilen stehe
 | **1030** | Sichtprüfung 3: Fällt ein fehlgeschlagener oder teilweise erledigter Auftrag auf, ohne dass die Übersicht unruhig wird? (§12.12) | Sichtprüfung oder Messung offen |
 | **1031** | Sichtprüfung 4: einen offenen Auftrag aufklappen und löschen (§12.12) | Sichtprüfung oder Messung offen |
 | **1032** | Sichtprüfung 5: einen Auftrag abholen lassen, während die Übersicht ihn noch als „Offen“ zeigt, dann löschen — kommt der Satz aus E‑1116? (§12.12) | Sichtprüfung oder Messung offen |
-| **1046** | Sichtprüfung 6: „von <Name>“ und „von Admin“ in der aufgeklappten Zeile, hell und dunkel, breit und schmal, auch mit einem langen Namen (§12.12). *(06.11.2026)* | Sichtprüfung oder Messung offen |
+| **1046** | Sichtprüfung 6: „von <Name>“ in der aufgeklappten Zeile, hell und dunkel, breit und schmal, auch mit einem langen Namen (§12.12). *(06.11.2026)* | Sichtprüfung oder Messung offen |
 
 **Fortgeschrieben:** Punkt 1000 (A1, „Teilweise erledigt“ ohne einen einzigen Ok) bleibt offen; A4
 zeigt dann „<n> von <n> nicht erfolgreich“ unter dem Wort „Teilweise erledigt“ (§12.4).
@@ -874,7 +872,7 @@ die er zeigt, entstehen aber nur über ihn.
 | **1030** | Fällt auf, ohne zu stören | Nach Schritt 4: Fallen „Fehlgeschlagen“ und „Teilweise erledigt“ beim ersten Blick auf? Wird die Übersicht dadurch unruhig, wirkt „Teilweise erledigt“ wie ein Fehler? |
 | **1031** | Offen aufklappen und löschen | Den offenen Auftrag aufklappen, „Auftrag löschen“, die Rückfrage lesen, einmal „Abbrechen“ (auch mit Esc), dann „Löschen“. Steht „Auftrag gelöscht. Er wird nicht ausgeführt.“ oben, und ist die Zeile weg? Dasselbe nur mit der Tastatur |
 | **1032** | Löschen, nachdem die Plattform abgeholt hat | Einen weiteren Auftrag anlegen und in der Übersicht aufklappen. **Ohne neu zu laden** in Workbench **Teil 2** des Skripts ausführen (holt den jüngsten offenen Auftrag ab). Dann „Auftrag löschen“ und „Löschen“: Steht „Die Plattform hat den Auftrag gerade übernommen. Löschen geht nicht mehr.“ in der Zeile, und zeigt sie danach „In Ausführung“? |
-| **1046** | Der Ersteller in der Zeile *(06.11.2026, Zweig `auftrag-ersteller`)* | Den Block aufklappen, je Thema bei 1.280 px und bei rund 360 px. Steht „eingestellt <Zeit> von <Name>“ in der Umgebungsschrift, zugeklappt kein Name? Ein Auftrag eines `ADMIN`-Kontos zeigt „von Admin“. Sichtbar wird der Block nur mit Aufträgen für den aktiven Mandanten: über den Assistenten oder mit eingefügten Zeilen wie in [`scripts/messung-auftrag-ersteller/`](../scripts/messung-auftrag-ersteller/). Unter `SYSTEM` stehen auf der Testkopie Zeilen ohne lokales Konto, sie zeigen den gespeicherten Wert ([`tasks.md`](tasks.md) §2). Ein langer Name ist in Chrome am gebauten CSS geprüft (F58), nicht am Block selbst |
+| **1046** | Der Ersteller in der Zeile *(06.11.2026)* | Den Block aufklappen, je Thema bei 1.280 px und bei rund 360 px. Steht „eingestellt <Zeit> von <Name>“ in der Umgebungsschrift, zugeklappt kein Name? Sichtbar wird der Block nur mit Aufträgen für den aktiven Mandanten: über den Assistenten oder mit eingefügten Zeilen wie in [`scripts/messung-auftrag-ersteller/`](../scripts/messung-auftrag-ersteller/). Ein langer Name ist in Chrome am gebauten CSS geprüft (F58), nicht am Block selbst |
 
 **Aufräumen**, nur die eigenen und nur auf der Testkopie: Teil 3 des Skripts löscht alle Aufträge des
 eigenen Kontos unter `NEXANS`, gleich in welchem Stand — vorher mit dem `SELECT` dort ansehen.
