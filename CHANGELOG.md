@@ -9,6 +9,10 @@ Tags und die Definition of Done für ein Release stehen in
 
 ### Neu
 
+- **„Ihre Aufträge“ hat einen eigenen Knopf „Neu laden“** rechts neben der Überschrift (Entscheidung
+  des Auftraggebers vom 09.11.2026, E‑1183, [`docs/assistent-frontend.md`](docs/assistent-frontend.md)
+  §12.1). Er lädt nur die Liste der Aufträge; „Neu laden“ der Übersicht lädt den Block weiterhin mit
+  (E‑1109). Kein eigener Takt (E‑164).
 - **„Ihre Aufträge“ zeigt, wer einen Auftrag angelegt hat** (Entscheidungen des Auftraggebers vom
   06.11.2026, E‑1178 und E‑1181, [`docs/tasks.md`](docs/tasks.md) §2). In der aufgeklappten Zeile
   steht „eingestellt <Zeit> von <Name>“, immer mit dem Benutzernamen, auch bei `ADMIN`-Konten. Grund:

@@ -271,6 +271,16 @@ eigenen Ausschalter für `prefers-reduced-motion`. **Belegt am Browser mit Gegen
 > ist nicht berührt. Auch der Block fällt dabei nicht in einen Ladezustand. Einen Takt gibt es
 > weiterhin nicht (E‑164).
 
+> **Ergänzt am 09.11.2026 (E‑1183, [`assistent-frontend.md`](assistent-frontend.md) §12.1):** Der
+> Block „Ihre Aufträge“ hat rechts neben seiner Überschrift einen eigenen Knopf, zugänglicher Name
+> „Aufträge neu laden“. **Er holt nur die Liste der Aufträge**, keine Anfrage an `/api/dashboard`.
+> Der Knopf der Übersicht holt weiterhin beide. Der Baustein hat damit **vier Verwendungen**:
+> Übersicht, Block „Ihre Aufträge“, Nachrichten, Prozessansicht; der Block ohne `automatik`, also
+> ohne Schalter und ohne Takt (E‑164). **Beide Knöpfe schauen auf dieselbe Abfrage der Liste:**
+> Der Knopf des Blocks zeigt `laedt` allein aus ihr, der der Übersicht aus beiden Abfragen (F24).
+> Lädt der Block neu, zeigt deshalb auch der Knopf der Übersicht die Sanduhr, und ein Klick auf ihn
+> tut in dieser Zeit nichts.
+
 ### Nachrichten
 
 **Auf Seite eins** holt `neuLaden` dieselbe Abfrage neu. **Auf einer späteren Seite wird zuerst
