@@ -433,6 +433,121 @@ describe("Ort und Reihe (E‑1098, E‑1099, E‑1121, F18)", () => {
   });
 });
 
+describe("Neu laden im Kopf des Blocks (E‑1183)", () => {
+  /** Der Knopf des Blocks; der der Übersicht steht außerhalb des Abschnitts. */
+  function knopfDesBlocks(): HTMLButtonElement | null {
+    return block()?.querySelector<HTMLButtonElement>(`button[aria-label="${T.neuLaden}"]`) ?? null;
+  }
+
+  const abrufeDerUebersicht = () =>
+    rufe.filter((ruf) => ruf.methode === "GET" && ruf.pfad.startsWith("/api/dashboard")).length;
+
+  it("heißt „Aufträge neu laden“ und steht in der Zeile der Überschrift", async () => {
+    mitAuftraegen([auftrag()]);
+    const { abbauen } = await ansicht();
+    try {
+      expect(T.neuLaden).toBe("Aufträge neu laden");
+      const gefunden = knopfDesBlocks();
+      expect(gefunden, "der Knopf").toBeTruthy();
+      expect(gefunden!.getAttribute("title")).toBe(T.neuLaden);
+      expect(block()!.querySelector("h2")!.parentElement!.contains(gefunden)).toBe(true);
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("lädt mit einem Klick genau einmal die Liste und nicht die Übersicht", async () => {
+    mitAuftraegen([auftrag()]);
+    const { abbauen } = await ansicht();
+    try {
+      const vorher = nur("GET", "/api/tasks").length;
+      const uebersichtVorher = abrufeDerUebersicht();
+      mitAuftraegen([auftrag({ aktion: "Löschung" })]);
+
+      await klick(knopfDesBlocks());
+      await bis(
+        () => (zeilen()[0]?.textContent ?? "").includes("Löschung"),
+        "die neue Liste steht",
+      );
+
+      expect(nur("GET", "/api/tasks").length).toBe(vorher + 1);
+      expect(abrufeDerUebersicht()).toBe(uebersichtVorher);
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("trägt aria-busy, solange die Liste lädt, und stellt dabei keine zweite Anfrage", async () => {
+    mitAuftraegen([auftrag()]);
+    const { abbauen } = await ansicht();
+    try {
+      const vorher = nur("GET", "/api/tasks").length;
+      expect(knopfDesBlocks()!.getAttribute("aria-busy")).toBe("false");
+
+      let antworte: (antwort: Response) => void = () => undefined;
+      liste = () => new Promise<Response>((fertig) => (antworte = fertig));
+
+      await klick(knopfDesBlocks());
+      await bis(() => knopfDesBlocks()!.getAttribute("aria-busy") === "true", "es lädt");
+      expect(nur("GET", "/api/tasks").length).toBe(vorher + 1);
+
+      await klick(knopfDesBlocks());
+      expect(nur("GET", "/api/tasks").length).toBe(vorher + 1);
+
+      await act(async () => {
+        antworte(json([auftrag()]));
+      });
+      await bis(() => knopfDesBlocks()!.getAttribute("aria-busy") === "false", "es ist fertig");
+      expect(nur("GET", "/api/tasks").length).toBe(vorher + 1);
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("nimmt den Satz oben weg und lässt die Liste stehen", async () => {
+    const bleibt = auftrag();
+    const weg = auftrag();
+    mitAuftraegen([weg, bleibt]);
+    const { abbauen } = await ansicht();
+    try {
+      await klick(zeilen()[0]);
+      await klick(knopf(block(), T.loeschen));
+      mitAuftraegen([bleibt]);
+      await klick(knopf(block(), T.bestaetigen));
+      await bis(() => (block()?.textContent ?? "").includes(T.geloescht), "der Satz steht");
+      await bis(() => zeilen().length === 1, "die Zeile ist weg");
+
+      await klick(knopfDesBlocks());
+      await bis(() => !(block()?.textContent ?? "").includes(T.geloescht), "der Satz ist weg");
+      expect(zeilen()).toHaveLength(1);
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("steht im Fehlerzustand zusätzlich zu „Erneut versuchen“", async () => {
+    liste = () => problem(503, "technischer-fehler");
+    const { abbauen } = await ansicht();
+    try {
+      await bis(() => block() !== null, "der Block steht");
+      expect(knopf(block(), TEXTE.zustand.erneutVersuchen), "Erneut versuchen").toBeTruthy();
+      expect(knopfDesBlocks(), "der Knopf im Kopf").toBeTruthy();
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("fehlt ohne Auftrag, wie der Block (E‑1098)", async () => {
+    const { behaelter, abbauen } = await ansicht();
+    try {
+      expect(block()).toBeNull();
+      expect(behaelter.querySelector(`[aria-label="${T.neuLaden}"]`)).toBeNull();
+    } finally {
+      await abbauen();
+    }
+  });
+});
+
 describe("Die Stände (§12.4, E‑1105)", () => {
   const HINWEIS: Record<Auftragseinordnung, string | null> = {
     OFFEN: T.hinweis.OFFEN,

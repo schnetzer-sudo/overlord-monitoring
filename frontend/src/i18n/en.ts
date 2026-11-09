@@ -239,6 +239,7 @@ export const en: Texte = {
     // (E‑1124) — English has no second form, the wording follows the German.
     auftraege: {
       titel: "Your orders",
+      neuLaden: "Reload orders",
       ladenFehler: "Your orders could not be loaded just now.",
       stand: {
         OFFEN: "Open",

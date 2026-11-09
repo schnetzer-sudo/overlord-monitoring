@@ -429,6 +429,8 @@ export const de = {
     // Übersicht duzt weiter (E‑1084).
     auftraege: {
       titel: "Ihre Aufträge",
+      // Zugänglicher Name und Tooltip des eigenen Knopfes (E‑1183); ein Name, kein Satz.
+      neuLaden: "Aufträge neu laden",
       ladenFehler: "Ihre Aufträge konnten gerade nicht geladen werden.",
       // Das Wort je Stand (§12.4). `UNBEKANNT` hat keins: Dort steht der
       // Rohwert des Status (Regel Q4).
