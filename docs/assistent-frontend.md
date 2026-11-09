@@ -546,7 +546,7 @@ Entscheidungen 13, 16 bis 18 und 20 bis 22 betreffen Endpunkt und Plattform und 
 | **E‑1178** | **Der Name des Anlegenden steht in der aufgeklappten Zeile**, nicht in der zugeklappten ([`tasks.md`](tasks.md) §2 „Ersteller am Auftrag“, auch für E‑1180: die Rolle zur Lesezeit). Jeder Benutzer des Mandanten sieht weiterhin alle Aufträge (E‑1113). | A (06.11.2026) |
 | **E‑1179** | **Aufträge von `ADMIN`-Konten zeigen „Admin“** statt des Benutzernamens. **Aufgehoben am selben Tag durch E‑1181.** | A (06.11.2026) |
 | **E‑1181** | **Angezeigt wird immer der Benutzername, auch bei `ADMIN`-Konten** ([`tasks.md`](tasks.md) §2 „Ersteller am Auftrag“). | A (06.11.2026) |
-| **E‑1183** | **Der Block hat rechts neben der Überschrift „Ihre Aufträge“ einen eigenen Knopf „Neu laden“.** Er lädt nur die Liste der Aufträge, nicht die Übersicht; „Neu laden“ der Übersicht lädt den Block weiterhin mit (E‑1109). Kein eigener Takt (E‑164). Vorhandener Baustein `NeuLaden` ohne `automatik`, kein Drehen (E‑167). Der Knopf steht nur, wenn der Block steht (E‑1098); im Fehlerzustand zusätzlich zu „Erneut versuchen“. | A (09.11.2026) |
+| **E‑1183** | **Der Block hat rechts neben der Überschrift „Ihre Aufträge“ einen eigenen Knopf „Neu laden“.** Er lädt nur die Liste der Aufträge, nicht die Übersicht; „Neu laden“ der Übersicht lädt den Block weiterhin mit (E‑1109). Kein eigener Takt (E‑164). Vorhandener Baustein `NeuLaden` ohne `automatik`, kein Drehen (E‑167). Der Knopf steht nur, wenn der Block steht (E‑1098); im Fehlerzustand zusätzlich zu „Erneut versuchen“. Der Kopf wird dadurch 10 px höher als der von „Zuletzt aufgefallen“ und so hoch wie der der Verteilung; **so belassen** (§12.10). | A (09.11.2026) |
 
 ### 12.2 Rückfragen zu A4 (19.10.2026)
 
@@ -855,12 +855,23 @@ bauen). Kopfloses Chrome, gebautes Stylesheet, die echte `DashboardAnsicht` per
 **Der Kopf ist durch den Knopf 10 px höher als vorher und als der von „Zuletzt aufgefallen“**, und
 genau so hoch wie der der Verteilung, deren Umschalter dieselbe Klasse `min-h-bedienelement` trägt.
 Vorher standen „Zuletzt aufgefallen“ und „Ihre Aufträge“ auf einer Linie und die Verteilung tiefer;
-jetzt steht „Zuletzt aufgefallen“ allein höher. Geändert ist daran nichts; die Entscheidung steht aus
-(Punkt 1049).
+jetzt steht „Zuletzt aufgefallen“ allein höher. **Der Auftraggeber hat am 09.11.2026 entschieden: so
+belassen.**
 
 > **Belegvermerk (L10).** *Gemessen war:* die Höhen und Abstände der Köpfe, an echten Komponenten und
-> echtem CSS. *Nicht gemessen:* die angemeldete Übersicht und die Dichtestufen außer der Vorgabe.
-> Am Berührungsgerät haben Knopf und Umschalter 44 px; beide Köpfe wachsen gleich.
+> echtem CSS, und am selben Tag in der angemeldeten Übersicht: dieselben Werte bei 1.280, 1.440, 1.920
+> und 360 px, ohne Überhang. *Nicht gemessen:* die Dichtestufen außer der Vorgabe. Am Berührungsgerät
+> haben Knopf und Umschalter 44 px; beide Köpfe wachsen gleich.
+
+**Sichtprüfung 1049, im Browser (09.11.2026).** Chrome mit Debug-Port, angemeldet durch den
+Auftraggeber, Mandant `NEXANS`, Frontend dieses Zweigs neben den laufenden Diensten. Der Knopf steht
+rechts neben der Überschrift, Tooltip „Aufträge neu laden“. Ein Klick zeigt die Sanduhr und `aria-busy`
+und stellt genau ein `GET /api/tasks`, kein `/api/dashboard`; ein zweiter währenddessen stellt keine
+Anfrage. Ein in der Datenbank geänderter Stand bleibt ohne Klick stehen und wechselt mit ihm;
+Aufgeklapptes bleibt offen. Der Knopf der Übersicht holt weiter beide Abfragen. Ein Mandant ohne
+Auftrag (`IBIS`) hat weder Block noch Knopf. **Gestellt** waren der offene Auftrag und das `DELETE` für
+den Satz oben, weil die Testumgebung offene Aufträge abholt; kein `DELETE` hat das Backend erreicht.
+Geklickt wurde per `click()`, nicht mit der echten Maus.
 
 ### 12.11 Offene Punkte
 
@@ -882,7 +893,7 @@ Nummern ab 1023 (Linie `assistent`, per `grep` geprüft); dieselben Zeilen stehe
 | **1031** | Sichtprüfung 4: einen offenen Auftrag aufklappen und löschen (§12.12) | Sichtprüfung oder Messung offen |
 | **1032** | Sichtprüfung 5: einen Auftrag abholen lassen, während die Übersicht ihn noch als „Offen“ zeigt, dann löschen — kommt der Satz aus E‑1116? (§12.12) | Sichtprüfung oder Messung offen |
 | **1046** | Sichtprüfung 6: „von <Name>“ in der aufgeklappten Zeile, hell und dunkel, breit und schmal, auch mit einem langen Namen (§12.12). *(06.11.2026)* | Sichtprüfung oder Messung offen |
-| **1049** | Sichtprüfung 8: eigener Knopf „Neu laden“ im Kopf des Blocks: Ort, Sanduhr, lädt nur die Liste; Höhe des Kopfes gegen die Nachbarblöcke (§12.12). *(09.11.2026)* | Sichtprüfung oder Messung offen |
+| **1049** | Sichtprüfung 8: eigener Knopf „Neu laden“ im Kopf des Blocks: Ort, Sanduhr, lädt nur die Liste; Höhe des Kopfes gegen die Nachbarblöcke (§12.12). *(09.11.2026)* **Erledigt am selben Tag:** im angemeldeten Chrome bestanden, die Höhe bleibt (§12.10). | Sichtprüfung oder Messung offen |
 
 **Fortgeschrieben:** Punkt 1000 (A1, „Teilweise erledigt“ ohne einen einzigen Ok) bleibt offen; A4
 zeigt dann „<n> von <n> nicht erfolgreich“ unter dem Wort „Teilweise erledigt“ (§12.4).
@@ -916,7 +927,7 @@ die er zeigt, entstehen aber nur über ihn.
 | **1031** | Offen aufklappen und löschen | Den offenen Auftrag aufklappen, „Auftrag löschen“, die Rückfrage lesen, einmal „Abbrechen“ (auch mit Esc), dann „Löschen“. Steht „Auftrag gelöscht. Er wird nicht ausgeführt.“ oben, und ist die Zeile weg? Dasselbe nur mit der Tastatur |
 | **1032** | Löschen, nachdem die Plattform abgeholt hat | Einen weiteren Auftrag anlegen und in der Übersicht aufklappen. **Ohne neu zu laden** in Workbench **Teil 2** des Skripts ausführen (holt den jüngsten offenen Auftrag ab). Dann „Auftrag löschen“ und „Löschen“: Steht „Die Plattform hat den Auftrag gerade übernommen. Löschen geht nicht mehr.“ in der Zeile, und zeigt sie danach „In Ausführung“? |
 | **1046** | Der Ersteller in der Zeile *(06.11.2026)* | Den Block aufklappen, je Thema bei 1.280 px und bei rund 360 px. Steht „eingestellt <Zeit> von <Name>“ in der Umgebungsschrift, zugeklappt kein Name? Sichtbar wird der Block nur mit Aufträgen für den aktiven Mandanten: über den Assistenten oder mit eingefügten Zeilen wie in [`scripts/messung-auftrag-ersteller/`](../scripts/messung-auftrag-ersteller/). Ein langer Name ist in Chrome am gebauten CSS geprüft (F58), nicht am Block selbst |
-| **1049** | „Neu laden“ im Block *(09.11.2026)* | Mit mindestens einem Auftrag die Übersicht öffnen. Stehen rechts neben „Ihre Aufträge“ die Pfeile, Tooltip „Aufträge neu laden“? Ein Klick: Sanduhr im Knopf, in den Entwicklerwerkzeugen genau ein `GET /api/tasks` und kein `/api/dashboard`. Einen offenen Auftrag abholen lassen, dann nur diesen Knopf: Wechselt der Stand, bleibt Aufgeklapptes offen? Nach dem Löschen eines Auftrags: Verschwindet der Satz oben beim Klick? „Neu laden“ der Übersicht lädt den Block weiter mit. **Zu entscheiden:** Der Kopf ist 10 px höher als der von „Zuletzt aufgefallen“ und so hoch wie der der Verteilung (§12.10). Stört das? |
+| **1049** | „Neu laden“ im Block *(09.11.2026)* | Mit mindestens einem Auftrag die Übersicht öffnen. Stehen rechts neben „Ihre Aufträge“ die Pfeile, Tooltip „Aufträge neu laden“? Ein Klick: Sanduhr im Knopf, in den Entwicklerwerkzeugen genau ein `GET /api/tasks` und kein `/api/dashboard`. Einen offenen Auftrag abholen lassen, dann nur diesen Knopf: Wechselt der Stand, bleibt Aufgeklapptes offen? Nach dem Löschen eines Auftrags: Verschwindet der Satz oben beim Klick? „Neu laden“ der Übersicht lädt den Block weiter mit. **Bestanden am 09.11.2026** (§12.10); der Kopf bleibt 10 px höher als der von „Zuletzt aufgefallen“ (E‑1183) |
 
 **Aufräumen**, nur die eigenen und nur auf der Testkopie: Teil 3 des Skripts löscht alle Aufträge des
 eigenen Kontos unter `NEXANS`, gleich in welchem Stand — vorher mit dem `SELECT` dort ansehen.
