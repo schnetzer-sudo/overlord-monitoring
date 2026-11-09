@@ -50,12 +50,44 @@ class TaskStatusClassifierTest {
       strings = {
         "Ok\nSchlüssel nicht gefunden",
         "Ok\nirgendwas",
-        "Schlüssel bereits vorhanden\nNEIN"
+        "Schlüssel bereits vorhanden\nOk"
       })
-  @DisplayName("ERLEDIGT, Anzahl passt, mindestens einer nicht OK: TEILWEISE_ERLEDIGT")
+  @DisplayName("ERLEDIGT, Anzahl passt, gemischt: TEILWEISE_ERLEDIGT")
   void erledigt_teilweise(String roh) {
     assertThat(TaskStatusClassifier.einordnen("ERLEDIGT", rueckgabe(roh), 2))
         .isEqualTo(Einordnung.TEILWEISE_ERLEDIGT);
+  }
+
+  @Test
+  @DisplayName("ERLEDIGT, Anzahl passt, keiner OK, ein Eintrag: FEHLGESCHLAGEN")
+  void erledigt_keiner_ok_ein_eintrag() {
+    assertThat(TaskStatusClassifier.einordnen("ERLEDIGT", rueckgabe("Schlüssel nicht gefunden"), 1))
+        .isEqualTo(Einordnung.FEHLGESCHLAGEN);
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "Schlüssel nicht gefunden\nSchlüssel nicht gefunden",
+        "Schlüssel bereits vorhanden\r\nSchlüssel nicht gefunden\r\n",
+        "Schlüssel nicht gefunden\nirgendwas"
+      })
+  @DisplayName("ERLEDIGT, Anzahl passt, keiner OK, mehrere Eintraege: FEHLGESCHLAGEN")
+  void erledigt_keiner_ok_mehrere(String roh) {
+    assertThat(TaskStatusClassifier.einordnen("ERLEDIGT", rueckgabe(roh), 2))
+        .isEqualTo(Einordnung.FEHLGESCHLAGEN);
+  }
+
+  @Test
+  @DisplayName("ERLEDIGT, Anzahl passt, alle UNBEKANNT: FEHLGESCHLAGEN, der Rohwert bleibt")
+  void erledigt_alle_unbekannt() {
+    Optional<Rueckgabe> gelesen = rueckgabe("Payload fehlt\nOK");
+    assertThat(gelesen.orElseThrow().zeilen())
+        .containsExactly(
+            new Rueckgabe.Zeile("Payload fehlt", Zeilenergebnis.UNBEKANNT),
+            new Rueckgabe.Zeile("OK", Zeilenergebnis.UNBEKANNT));
+    assertThat(TaskStatusClassifier.einordnen("ERLEDIGT", gelesen, 2))
+        .isEqualTo(Einordnung.FEHLGESCHLAGEN);
   }
 
   @ParameterizedTest

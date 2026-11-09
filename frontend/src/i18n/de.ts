@@ -442,7 +442,7 @@ export const de = {
       },
       // Der Hinweis in der aufgeklappten Zeile. Erledigt und Teilweise erledigt
       // haben keinen (dort spricht das Ergebnis je Eintrag), Fehlgeschlagen
-      // zeigt die Meldung der Plattform.
+      // zeigt die Meldung der Plattform, wenn sie eine gesetzt hat (E‑1182).
       hinweis: {
         OFFEN: "Wartet auf die Plattform. Bis sie ihn abholt, können Sie ihn noch löschen.",
         IN_AUSFUEHRUNG: "Die Plattform bearbeitet den Auftrag.",

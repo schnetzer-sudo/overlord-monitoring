@@ -43,6 +43,7 @@ import {
   schluesselZugeklappt,
   sichtbare,
   weitere,
+  zeigtZaehlung,
   type Blockschritt,
   type Blockzustand,
   type Zeilenmeldung,
@@ -298,7 +299,7 @@ function Zeile({
           </span>
         </span>
         <span className="flex min-w-0 items-start gap-3 pl-6">
-          {einordnung === "TEILWEISE_ERLEDIGT" ? (
+          {zeigtZaehlung(auftrag) ? (
             <span
               className={cn(
                 "text-beiwerk min-w-0 flex-1 font-medium",

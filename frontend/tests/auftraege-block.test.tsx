@@ -550,6 +550,56 @@ describe("Die Zeile (E‑1102 bis E‑1104, E‑1107, E‑1122)", () => {
     }
   });
 
+  it("zeigt bei Fehlgeschlagen mit Ergebnissen die Zählzeile in der Farbe des Stands, ohne Schlüssel und ohne Meldung der Plattform (E‑1182)", async () => {
+    mitAuftraegen([
+      auftrag({
+        status: "ERLEDIGT",
+        einordnung: "FEHLGESCHLAGEN",
+        abgeholtAm: "2026-10-19T12:35:00Z",
+        ausgefuehrtAm: "2026-10-19T12:36:00Z",
+        eintraege: [
+          eintrag("TOR3", { rueckgabe: "Schlüssel nicht gefunden", ergebnis: "NICHT_OK" }),
+          eintrag("TOR4", { rueckgabe: "Payload fehlt", ergebnis: "UNBEKANNT" }),
+        ],
+      }),
+    ]);
+    const { abbauen } = await ansicht();
+    try {
+      const [zeile] = zeilen();
+      expect(zeile.textContent).not.toContain("47110/TOR3");
+      const zaehlung = [...zeile.querySelectorAll("span")].find(
+        (s) => s.textContent === "2 von 2 nicht erfolgreich",
+      );
+      expect(zaehlung, "die Zählzeile").toBeTruthy();
+      expect(zaehlung!.className).toContain(auftragVordergrund("FEHLGESCHLAGEN"));
+
+      await klick(zeile);
+      const text = block()!.textContent ?? "";
+      expect(text).not.toContain(T.meldungDerPlattform);
+      expect(text).toContain("Schlüssel nicht gefunden");
+      expect(text).toContain("Payload fehlt");
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("zeigt bei Fehlgeschlagen ohne Ergebnisse den Schlüssel und aufgeklappt die Meldung der Plattform", async () => {
+    mitAuftraegen([imStand("FEHLGESCHLAGEN")]);
+    const { abbauen } = await ansicht();
+    try {
+      const [zeile] = zeilen();
+      expect(zeile.textContent).toContain("47110/TOR3, 47110/TOR4");
+      expect(zeile.textContent).not.toContain("nicht erfolgreich");
+
+      await klick(zeile);
+      const text = block()!.textContent ?? "";
+      expect(text).toContain(T.meldungDerPlattform);
+      expect(text).toContain("Die Tabelle konnte nicht gespeichert werden.");
+    } finally {
+      await abbauen();
+    }
+  });
+
   it("nennt den Typ oben nur, wenn die Liste mehrere Typen hat", async () => {
     const zweiter = auftrag({ typ: "GATTUNG", name: "Gattung aus dem Test", aktion: "Sperren" });
     mitAuftraegen([auftrag(), zweiter]);

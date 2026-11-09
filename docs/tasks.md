@@ -92,7 +92,7 @@ weil auf der Linie `assistent` alle projektweit gezählten Nummern dort beginnen
 | **E‑1004** | Die Plattform holt Aufträge ab und meldet zurück, mit dem Benutzer `monitor_write`. **Folge:** Sie hat damit alle Rechte auf `overlord_monitor`, einschließlich `app_user` und der Sitzungen. Bewusst so entschieden: kein neuer Benutzer, kein `GRANT`. | A |
 | **E‑1005** | Ein Auftrag trägt genau eine Aktion aus den Aktionen seines Typs und eine Liste von Einträgen. | V |
 | **E‑1006** | Den Parametertext baut ausschließlich das Backend aus geprüften Einzelwerten. Kein Endpunkt nimmt Parametertext entgegen. | V |
-| **E‑1009** | Gesamtstand: **Erledigt** (alle Ok), **Teilweise erledigt** (mindestens einer nicht Ok), **Fehlgeschlagen** (Auftrag nicht verarbeitbar, mit Fehlercode). „Teilweise“ wird **nicht gespeichert**, sondern im Monitor aus der Rückgabe abgeleitet, an genau einer Stelle. Die Plattform setzt nur `ERLEDIGT` oder `FEHLGESCHLAGEN`. | A (Regel), V (Ableitung im Monitor) |
+| **E‑1009** | Gesamtstand: **Erledigt** (alle Ok), **Teilweise erledigt** (mindestens einer nicht Ok), **Fehlgeschlagen** (Auftrag nicht verarbeitbar, mit Fehlercode). „Teilweise“ wird **nicht gespeichert**, sondern im Monitor aus der Rückgabe abgeleitet, an genau einer Stelle. Die Plattform setzt nur `ERLEDIGT` oder `FEHLGESCHLAGEN`. **Ergänzt am 09.11.2026 durch E‑1182:** „Teilweise erledigt“ verlangt mindestens einen Ok; ist bei `ERLEDIGT` keiner Ok, heißt der Stand „Fehlgeschlagen“. | A (Regel), V (Ableitung im Monitor) |
 | **E‑1010** | Die Plattform setzt beim Abholen `IN_AUSFUEHRUNG`, mit einem bedingten Update, das nur bei Status `OFFEN` greift. Das verhindert doppelte Ausführung. | V |
 | **E‑1011** | Alle Zeitstempel eines Auftrags in UTC, gesetzt in der Datenbank über `UTC_TIMESTAMP(3)`, nie aus Java. | V |
 | **E‑1016** | Klarstellung zu [`PROJEKTBESCHREIBUNG.md`](PROJEKTBESCHREIBUNG.md) §8: Die Regeln 1 bis 6 sind mit der Last auf `GlassfishDB` begründet und gelten für Lesezugriffe dort. Tabellen in `overlord_monitor`, die nicht aus `GlassfishDB` abgeleitet sind, folgen ihnen nicht. Regel 7 gilt weiter. | V |
@@ -377,6 +377,32 @@ gespeicherten Wert wie jede andere.
 Name in der zugeklappten Zeile, kein Filter „meine Aufträge“. Die Rechte zum Löschen (E‑1110,
 E‑1113), die Aufbewahrung der Liste und der Plattformvertrag bleiben, wie sie sind; die Plattform
 liest `angelegt_von` nicht. Nichts davon geht an das Modell (E‑1035).
+
+### Kein Eintrag Ok (09.11.2026)
+
+Aus dem Auftrag „Ihre Aufträge, zwei Änderungen“, Teil A (Zweig `fix/auftrag-ohne-ok-fehlgeschlagen`,
+von `main` = `20650be`). **Anlass, Befund aus der Produktion vom 03. bis 06.11.2026:** Aufträge mit
+`status = 'ERLEDIGT'` und der Rückgabe `Payload fehlt` oder `Schlüssel nicht gefunden` bei einem
+Eintrag standen als „Teilweise erledigt · 1 von 1 nicht erfolgreich“. Das war kein Programmierfehler
+gegen die Regel, sondern E‑1009 in der Lesart von §5.5; die Anzeige dafür war Punkt 1000. Die nächste
+freie Nummer war E‑1182, per `grep` über alle lokalen Zweige geprüft. Herkunft: **A** = vom
+Auftraggeber am 09.11.2026 entschieden.
+
+| E | Entscheidung | Herkunft |
+|---|---|---|
+| **E‑1182** | **`ERLEDIGT` mit passender Zeilenzahl und keiner Zeile `OK` wird `FEHLGESCHLAGEN`.** `UNBEKANNT` je Zeile zählt weiterhin als nicht Ok; ein Auftrag, dessen Zeilen alle `UNBEKANNT` sind, wird damit ebenfalls `FEHLGESCHLAGEN`, der Rohwert steht wie bisher am Eintrag. Ergänzt E‑1009, schließt Punkt 1000. | A |
+
+**Folgen.** `FEHLGESCHLAGEN` entsteht seither auf zwei Wegen: von der Plattform gesetzt, mit
+`fehlercode` und `fehlertext` und ohne Rückgabe, oder abgeleitet aus einer Rückgabe ohne Ok, dann ohne
+beide und mit dem Ergebnis je Eintrag; `status` bleibt in diesem Fall `ERLEDIGT`. Weil die Einordnung
+zur Lesezeit entsteht, gilt sie nach dem Deployment sofort auch für alle vorhandenen Aufträge, ohne
+Datenkorrektur. Zur Anzeige [`assistent-frontend.md`](assistent-frontend.md) §12.4.
+
+**Was nicht gebaut ist:** kein neuer Stand und kein neuer Enum-Wert, keine neue Farbrolle, kein neues
+Antwortfeld, keine Migration, kein Skript. Der Vertrag mit der Plattform bleibt gleich
+([`task-schnittstelle.md`](task-schnittstelle.md) ist nicht geändert); sein Satz in §5, „mindestens
+einer nicht Ok heißt teilweise erledigt“, beschreibt damit den Fall ohne Ok nicht mehr. Die Plattform
+wertet den Satz nicht aus.
 
 ---
 
@@ -1061,20 +1087,21 @@ umgedeutet.** Eine Rückgabe, die fehlt (`NULL`) oder nur aus Leerraum besteht, 
 
 ### 5.5 Einordnung (`TaskStatusClassifier`)
 
-Die eine Stelle, an der aus gespeichertem Status und Rückgabe der Gesamtstand wird (E‑1009).
+Die eine Stelle, an der aus gespeichertem Status und Rückgabe der Gesamtstand wird (E‑1009, E‑1182).
 
 | gespeicherter Status | Rückgabe | Einordnung |
 |---|---|---|
 | `OFFEN` | beliebig | `OFFEN` |
 | `IN_AUSFUEHRUNG` | beliebig | `IN_AUSFUEHRUNG` |
 | `ERLEDIGT` | Zeilenzahl gleich Eintragszahl, alle `OK` | `ERLEDIGT` |
-| `ERLEDIGT` | Zeilenzahl gleich Eintragszahl, mindestens eine nicht `OK` | `TEILWEISE_ERLEDIGT` |
+| `ERLEDIGT` | Zeilenzahl gleich Eintragszahl, mindestens eine `OK` und mindestens eine nicht `OK` | `TEILWEISE_ERLEDIGT` |
+| `ERLEDIGT` | Zeilenzahl gleich Eintragszahl, **keine** `OK` | `FEHLGESCHLAGEN` |
 | `ERLEDIGT` | fehlt, oder Zeilenzahl passt nicht zur Eintragszahl | `UNSTIMMIG` |
 | `FEHLGESCHLAGEN` | beliebig | `FEHLGESCHLAGEN` |
 | anderer Wert | beliebig | `UNBEKANNT`, der Rohwert steht in `status` |
 
-`TEILWEISE_ERLEDIGT` gilt auch, wenn **kein** Eintrag Ok ist — Regel E‑1009 unterscheidet das
-nicht; wie die Anzeige damit umgeht, ist offen (Punkt 1000).
+`UNBEKANNT` je Zeile zählt als nicht Ok (§5.4): Ein Auftrag aus lauter `UNBEKANNT` wird
+`FEHLGESCHLAGEN`, der Rohwert steht am Eintrag.
 
 ### 5.6 Der Typkatalog
 
@@ -1920,6 +1947,46 @@ eigenen Zeilen). Das ist die billigste Wahl für einen Mandanten, dem die ganze 
 Fassung ohne `angelegt_von` dort denselben Plan nimmt, ist nicht gesondert gemessen. 400 Aufträge
 sind weiter kein Beleg für Tausende.
 
+### 9.11 Kein Eintrag Ok (09.11.2026)
+
+**Tests.** Die Gründe stehen in §2 unter „Kein Eintrag Ok“; die Tests des Frontends in
+[`assistent-frontend.md`](assistent-frontend.md) §12.10.
+
+| Test | Was er hält |
+|---|---|
+| `TaskStatusClassifierTest.erledigt_keiner_ok_ein_eintrag` | ein Eintrag, Rückgabe ohne Ok: `FEHLGESCHLAGEN` |
+| `TaskStatusClassifierTest.erledigt_keiner_ok_mehrere` | zwei Einträge, keine Zeile Ok: `FEHLGESCHLAGEN`, auch mit CRLF und mit einem unbekannten Wert unter den Zeilen |
+| `TaskStatusClassifierTest.erledigt_alle_unbekannt` | alle Zeilen `UNBEKANNT`: `FEHLGESCHLAGEN`, und die Rohwerte stehen unverändert an den Zeilen |
+| `TaskStatusClassifierTest.erledigt_teilweise` | auf **gemischt** umgestellt: Jeder Fall hat mindestens eine Zeile Ok |
+
+`AuftraegeDbIT` enthält keinen Fall mit lauter nicht Ok (`plattform_teilweise` ist gemischt); keine
+Erwartung war anzupassen.
+
+**Verletzungsproben**, je ein Eingriff in den Hauptcode, Lauf über `TaskStatusClassifierTest` und
+`RueckgabeTest` (39 Fälle), zurückgeschrieben aus der Kopie im Skript, in keinem Commit:
+
+| Eingriff | rot |
+|---|---|
+| die Änderung zurückgenommen, nie `FEHLGESCHLAGEN` aus einer Rückgabe | 5 Fälle: `erledigt_keiner_ok_ein_eintrag`, dreimal `erledigt_keiner_ok_mehrere`, `erledigt_alle_unbekannt` |
+| nie `TEILWEISE_ERLEDIGT` | 3 Fälle: dreimal `erledigt_teilweise` |
+| `keinOk` zählt `UNBEKANNT` nicht als nicht Ok | 2 Fälle: `erledigt_alle_unbekannt`, `erledigt_keiner_ok_mehrere` mit dem unbekannten Wert |
+
+**Lauf.** `./mvnw clean verify` mit `@Tag("db")` gegen die Testkopie: 1.304 Einheitstests grün, von
+508 Integrationstests 507, darunter `AuftraegeDbIT` (24), `AuftraegeIsolationDbIT` (8). **Rot:**
+`DashboardLiveRestDbIT.kachel_ist_die_quelle` für `NEXANS/12M` mit „Fenster ungeeignet“, 2.307.612
+gegen 2.307.613. Derselbe Fall ist mit denselben Zahlen auf dem Stand rot, dessen Backend `main` =
+`20650be` entspricht (Zweig `feat/auftraege-neu-laden`, Lauf nur dieses Tests); er hängt an den Daten
+der Testkopie und hat keinen Bezug zu diesem Schritt.
+
+**Sichtprüfung 1048, im Browser (09.11.2026).** Chrome mit Debug-Port, angemeldet durch den
+Auftraggeber, Mandant `NEXANS`, Frontend und Backend dieses Zweigs neben den laufenden Diensten, fünf
+eigene Zeilen in `task` (keine `OFFEN`, danach gelöscht). „1 von 1“ und „2 von 2 nicht erfolgreich“
+stehen unter „Fehlgeschlagen“ in der Farbe des Stands, aufgeklappt ohne „Meldung der Plattform“, mit
+Rohwert und getöntem Grund, auch bei lauter `UNBEKANNT`. Gemischt bleibt „Teilweise erledigt“. Von der
+Plattform gesetzt: Schlüssel, aufgeklappt die Meldung. **Gegenprobe:** Dieselben Zeilen gegen das
+Backend von `main` zeigen „Teilweise erledigt · 1 von 1“. Gelesen wurde das gerenderte DOM samt
+berechneter Farben; aufgeklappt per `click()`, nicht mit der echten Maus.
+
 ---
 
 ## 10. Regelbezug
@@ -1945,7 +2012,7 @@ Nummern ab 1000 (Linie `assistent`); dieselben Zeilen stehen im Register
 
 | Nr. | Punkt | Art |
 |---|---|---|
-| **1000** | Regel E‑1009 nennt einen Auftrag „Teilweise erledigt“, auch wenn **kein** Eintrag Ok ist, also nichts geändert wurde. Die Anzeige dafür ist offen. | Entscheidung offen |
+| **1000** | Regel E‑1009 nennt einen Auftrag „Teilweise erledigt“, auch wenn **kein** Eintrag Ok ist, also nichts geändert wurde. Die Anzeige dafür ist offen. **Erledigt am 09.11.2026 durch E‑1182** (§2 „Kein Eintrag Ok“, §5.5). | Entscheidung offen |
 | **1001** | Aufträge, die in `IN_AUSFUEHRUNG` hängen bleiben (die Plattform bricht ab), haben keine Frist und keinen Rückweg. | Entscheidung offen |
 | **1002** | Die Schranke von 35 Zeichen je Schlüsselteil (E‑1012) ist zu bestätigen. | Entscheidung offen |
 | **1003** | Ob die Plattform UTF-8 (ö in „Löschung“) und LF als Zeilenende sicher verarbeitet. | Sichtprüfung oder Messung offen |
@@ -1959,9 +2026,11 @@ Nummern ab 1000 (Linie `assistent`); dieselben Zeilen stehen im Register
 | **1045** | **Der Testsatz rechnet mit der alten Lesart des Schlüssels.** Seit der Abladestelle optional ist, kann ein zweiteiliger Schlüssel wie `010/18VZE` Werk/Abladestelle oder Lieferantennummer/Werk sein, und die Werkzeugbeschreibung sagt, dann nachzufragen (E‑1170). S06, S19, S20 und S25 erwarten aber einen Vorschlag mit Werk und Abladestelle aus einem zweiteiligen Schlüssel; S24 erwartet zu `0101159903/40NP/,…` eine Rückfrage nach der Abladestelle, die jetzt fehlen darf; S17 erwartet eine Rückfrage zu SNDPRN_4908, die mit einer Frage zum Schlüssel konkurrieren kann ([`assistent.md`](assistent.md) §8). Kein Testsatzlauf in diesem Schritt; was die Fälle künftig erwarten, ist zu entscheiden, dann ein Lauf. *(26.10.2026)* **Erledigt im Nachtrag am selben Tag:** Der Schlüssel ist von hinten ausgerichtet und damit eindeutig, die Rückfrage entfällt (E‑1173 bis E‑1175); S24 erwartet den Vorschlag, S06, S17, S19, S20, S25 bleiben, S26 und S27 sind neu (E‑1177). M1010: alle acht in drei Durchgängen bestanden ([`assistent.md`](assistent.md) §8.7). | Entscheidung offen |
 | **1046** | Sichtprüfung 6: „von <Name>“ in der aufgeklappten Zeile, hell und dunkel, breit und schmal, auch mit einem langen Namen ([`assistent-frontend.md`](assistent-frontend.md) §12.12). *(06.11.2026)* | Sichtprüfung oder Messung offen |
 | **1047** | `AuftraegeDbIT.loeschen_durch_anderen_benutzer` fiel am 06.11.2026 einmal mit `409`, in einem Lauf ohne fachlichen Bezug (§9.10). Ob auf der Testkopie etwas `OFFEN`-Zeilen abholt und damit Tests trifft, die einen offenen Auftrag voraussetzen, ist zu klären. *(06.11.2026)* **Erledigt am selben Tag:** Auskunft des Auftraggebers, in der Testumgebung werden offene Aufträge abgeholt (§9.10). | Sichtprüfung oder Messung offen |
+| **1048** | Sichtprüfung 7: „Fehlgeschlagen“ aus einer Rückgabe ohne Ok, gegen „Teilweise erledigt“ und gegen „Fehlgeschlagen“ von der Plattform ([`assistent-frontend.md`](assistent-frontend.md) §12.12). *(09.11.2026)* **Erledigt am selben Tag:** im angemeldeten Chrome bestanden (§9.11). | Sichtprüfung oder Messung offen |
 
 **Fortgeschrieben am 19.10.2026 (A4):** Punkt **1000** bleibt offen. Die Übersicht zeigt einen
 solchen Auftrag als „Teilweise erledigt“ mit „<n> von <n> nicht erfolgreich“
 ([`assistent-frontend.md`](assistent-frontend.md) §12.4); das Wort passt dann nicht, entschieden ist
 es nicht. Die offenen Punkte der Oberfläche aus A4 (1023 bis 1025, 1027 bis 1032) stehen in
-[`assistent-frontend.md`](assistent-frontend.md) §12.11.
+[`assistent-frontend.md`](assistent-frontend.md) §12.11. **Am 09.11.2026 durch E‑1182 erledigt:** Ein
+solcher Auftrag heißt jetzt „Fehlgeschlagen“.

@@ -532,9 +532,9 @@ Entscheidungen 13, 16 bis 18 und 20 bis 22 betreffen Endpunkt und Plattform und 
 | **E‑1099** | Der Block steht **in der Reihe von „Zuletzt aufgefallen“, zwischen „Zuletzt aufgefallen“ und Verteilung**. „Zuletzt aufgefallen“ teilt sich mit ihm den Platz, den es vorher allein hatte; die Verteilung behält ihre Breite. Ohne Auftrag ist die Reihe wie vorher. Am schmalen Fenster stehen die drei untereinander, in derselben Reihenfolge. | A (19.10.2026) |
 | **E‑1100** | **Kein Knopf „Neuer Auftrag“**, keine Filter, keine eigene Seite. Aufträge entstehen nur über das Symbol des Assistenten in der Kopfleiste. | A (15. und 19.10.2026) |
 | **E‑1101** | Der Block zeigt, was `GET /api/tasks` liefert, neueste zuerst. **Fünf Aufträge sichtbar**, darüber „1 weiteren anzeigen“ oder „<n> weitere anzeigen“, danach „Weniger anzeigen“. | V |
-| **E‑1102** | **Jede Zeile hat zwei Zeilen und ist zugeklappt.** Oben: Stand (Zeichen und Wort), Aktion, Zahl der Einträge („Neuanlage · 2 Einträge“). Darunter links die ersten zwei Schlüssel, bei mehr „und <n> weitere“, in Festbreitenschrift und bei Platzmangel mit Auslassung; rechts der Zeitpunkt des Einstellens. Bei „Teilweise erledigt“ steht statt der Schlüssel „<x> von <n> nicht erfolgreich“ in der Farbe des Stands. | V (Entwurf 19.10.2026) |
+| **E‑1102** | **Jede Zeile hat zwei Zeilen und ist zugeklappt.** Oben: Stand (Zeichen und Wort), Aktion, Zahl der Einträge („Neuanlage · 2 Einträge“). Darunter links die ersten zwei Schlüssel, bei mehr „und <n> weitere“, in Festbreitenschrift und bei Platzmangel mit Auslassung; rechts der Zeitpunkt des Einstellens. Bei „Teilweise erledigt“ und bei „Fehlgeschlagen“ mit mindestens einem Ergebnis (E‑1182, [`tasks.md`](tasks.md) §2 „Kein Eintrag Ok“) steht statt der Schlüssel „<x> von <n> nicht erfolgreich“ in der Farbe des Stands. Ohne Ergebnisse, wenn die Plattform den Auftrag als Ganzes als fehlgeschlagen gemeldet hat, bleibt der Schlüssel. | V (Entwurf 19.10.2026), A (E‑1182, 09.11.2026) |
 | **E‑1103** | **Der Name des Typs** steht in der aufgeklappten Zeile. Kommen in der Liste Aufträge mehrerer Typen vor, steht er zusätzlich oben vor der Aktion. | V |
-| **E‑1104** | **Aufgeklappt:** Name des Typs, „eingestellt <Zeit>“ und gegebenenfalls „ausgeführt <Zeit>“, bei „Fehlgeschlagen“ der `fehlertext` als „Meldung der Plattform“, der Hinweis des Stands, dann die Einträge: Schlüssel, die Werte mit ihrem `label` und, wo es eines gibt, das Ergebnis. Bis fünf Einträge, darüber „Alle <n> Einträge anzeigen“. Aufklappen mit der Tastatur, `aria-expanded` am Auslöser. | V |
+| **E‑1104** | **Aufgeklappt:** Name des Typs, „eingestellt <Zeit>“ und gegebenenfalls „ausgeführt <Zeit>“, bei „Fehlgeschlagen“ der `fehlertext` als „Meldung der Plattform“, sofern es einen gibt, der Hinweis des Stands, dann die Einträge: Schlüssel, die Werte mit ihrem `label` und, wo es eines gibt, das Ergebnis. Bis fünf Einträge, darüber „Alle <n> Einträge anzeigen“. Aufklappen mit der Tastatur, `aria-expanded` am Auslöser. | V |
 | **E‑1105** | Stände und ihre Anzeige nach §12.4. Jeder Stand hat Zeichen **und** Wort, Farbe nie allein. „Fehlgeschlagen“ trägt die Fehlerrolle. **„Teilweise erledigt“ fällt auf, ohne wie ein Fehler auszusehen** (im Entwurf Bernstein); welche Rolle, ist F16. | V |
 | **E‑1106** | Das Ergebnis je Eintrag zeigt den Rohwert der Plattform („Schlüssel nicht gefunden“) mit Zeichen; „erfolgreich“ oder „nicht erfolgreich“ aus `ergebnis` steht für Vorleseprogramme dabei. Ein nicht erfolgreicher Eintrag hat einen leicht getönten Grund. | V |
 | **E‑1107** | `fehlertext` und Rückgabewerte schreibt die Plattform: **reiner Text**, nie HTML. | V |
@@ -594,7 +594,7 @@ F-Nummer in dieser Datei eindeutig bleibt. F26 bis F28 betreffen das Backend und
 | `IN_AUSFUEHRUNG` | In Ausführung | Abspielen im Kreis | `offen`, neutral | „Die Plattform bearbeitet den Auftrag.“ |
 | `ERLEDIGT` | Erledigt | Haken im Kreis | `abgeschlossen`, grün | kein Hinweis, Ergebnis je Eintrag |
 | `TEILWEISE_ERLEDIGT` | Teilweise erledigt | Ausrufezeichen im Kreis | `teilweise`, Bernstein (F16) | kein Hinweis, Ergebnis je Eintrag; die nicht erfolgreichen fallen auf |
-| `FEHLGESCHLAGEN` | Fehlgeschlagen | Warndreieck | `fehler`, rot | `fehlertext` als „Meldung der Plattform“ |
+| `FEHLGESCHLAGEN` | Fehlgeschlagen | Warndreieck | `fehler`, rot | von der Plattform gesetzt: `fehlertext` als „Meldung der Plattform“; aus einer Rückgabe ohne Ok (E‑1182): kein Hinweis, Ergebnis je Eintrag |
 | `UNSTIMMIG` | Rückmeldung unvollständig | gestrichelter Kreis | `ungeklaert`, gedämpft | „Die Rückmeldung der Plattform passt nicht zum Auftrag. Bitte wenden Sie sich an die Betreuung.“ Fehlt zu einem Eintrag die Rückmeldung: „keine Rückmeldung“ |
 | `UNBEKANNT` | Rohwert des Status | Fragezeichen im Kreis | `ungeklaert`, gedämpft | „Unbekannter Stand.“ |
 
@@ -602,8 +602,10 @@ F-Nummer in dieser Datei eindeutig bleibt. F26 bis F28 betreffen das Backend und
 §5.5). Das Frontend leitet keinen Stand ab: „Teilweise erledigt“ und „Rückmeldung unvollständig“
 stehen in `einordnung`. Gezählt wird nur für „<x> von <n> nicht erfolgreich“: x sind die Einträge,
 deren `ergebnis` nicht `OK` ist, n alle Einträge; `UNBEKANNT` zählt wie im Backend als nicht Ok. Ist
-kein Eintrag Ok, steht „<n> von <n> nicht erfolgreich“ unter „Teilweise erledigt“ — das Wort passt
-dann nicht, entschieden ist es nicht (Punkt 1000, [`tasks.md`](tasks.md) §11).
+kein Eintrag Ok, stuft das Backend den Auftrag als „Fehlgeschlagen“ ein (E‑1182), und in der
+zugeklappten Zeile steht „<n> von <n> nicht erfolgreich“. Ob dort gezählt wird, entscheidet
+`zeigtZaehlung` allein aus `einordnung` und daraus, ob es ein `ergebnis` gibt; „keiner Ok“ rechnet das
+Frontend nicht aus.
 
 **Das Ergebnis je Eintrag** (E‑1106):
 
@@ -613,7 +615,7 @@ dann nicht, entschieden ist es nicht (Punkt 1000, [`tasks.md`](tasks.md) §11).
 | `NICHT_OK` | Ausrufezeichen im Kreis, Rohwert, Bernstein; der Eintrag hat einen getönten Grund | „nicht erfolgreich“ |
 | `UNBEKANNT` | wie `NICHT_OK`; der Rohwert steht wörtlich da | „nicht erfolgreich“ |
 | `null` bei `UNSTIMMIG` | „keine Rückmeldung“, gedämpft | — |
-| `null` sonst | nichts — Offen, In Ausführung und Fehlgeschlagen haben keine Rückgabe | — |
+| `null` sonst | nichts — Offen, In Ausführung und von der Plattform gesetztes Fehlgeschlagen haben keine Rückgabe | — |
 
 ### 12.5 Aufbau
 
@@ -803,6 +805,23 @@ zugeklappt kein Name; ein Name, der wie HTML aussieht, wörtlich als Text.
 
 Zurückgeschrieben aus der Kopie im Skript, nicht per `git checkout`.
 
+**Kein Eintrag Ok (09.11.2026, E‑1182):** zwei reine Fälle mehr in `tests/auftraege.test.ts` (44):
+gezählt wird bei „Teilweise erledigt“ immer, bei „Fehlgeschlagen“ nur mit Ergebnissen, in keinem
+anderen Stand. Zwei gerenderte mehr in `tests/auftraege-block.test.tsx` (32): „Fehlgeschlagen“ mit
+Ergebnissen zeigt die Zählzeile in der Farbe des Stands, keinen Schlüssel und aufgeklappt keine
+Meldung der Plattform; ohne Ergebnisse den Schlüssel und aufgeklappt die Meldung. `pnpm check` und
+`pnpm build` grün mit **1.515 Fällen in 54 Dateien**, gerendert **291 in 28 Dateien**
+(`frontend/vitest.config.mts`, aus dem Lauf gezählt). Die Tests des Backends stehen in
+[`tasks.md`](tasks.md) §9.11.
+
+| Eingriff (Lauf über die beiden Dateien, 76 Fälle) | rot |
+|---|---|
+| die Zählzeile nur bei „Teilweise erledigt“ | 2 Fälle |
+| „Fehlgeschlagen“ auch ohne Ergebnisse | 2 Fälle |
+| **Eichung:** ein Wort in einem Kommentar | **0** |
+
+Zurückgeschrieben aus der Kopie im Skript.
+
 **Verletzungsproben**, je ein Eingriff in den Code, Lauf über die fünf betroffenen Dateien (130
 Fälle), Rücknahme per `git checkout` gegen den committeten Stand:
 
@@ -840,9 +859,11 @@ Nummern ab 1023 (Linie `assistent`, per `grep` geprüft); dieselben Zeilen stehe
 | **1031** | Sichtprüfung 4: einen offenen Auftrag aufklappen und löschen (§12.12) | Sichtprüfung oder Messung offen |
 | **1032** | Sichtprüfung 5: einen Auftrag abholen lassen, während die Übersicht ihn noch als „Offen“ zeigt, dann löschen — kommt der Satz aus E‑1116? (§12.12) | Sichtprüfung oder Messung offen |
 | **1046** | Sichtprüfung 6: „von <Name>“ in der aufgeklappten Zeile, hell und dunkel, breit und schmal, auch mit einem langen Namen (§12.12). *(06.11.2026)* | Sichtprüfung oder Messung offen |
+| **1048** | Sichtprüfung 7: „Fehlgeschlagen“ aus einer Rückgabe ohne Ok, gegen „Teilweise erledigt“ und gegen „Fehlgeschlagen“ von der Plattform (§12.12). *(09.11.2026)* **Erledigt am selben Tag:** im angemeldeten Chrome bestanden ([`tasks.md`](tasks.md) §9.11). | Sichtprüfung oder Messung offen |
 
-**Fortgeschrieben:** Punkt 1000 (A1, „Teilweise erledigt“ ohne einen einzigen Ok) bleibt offen; A4
-zeigt dann „<n> von <n> nicht erfolgreich“ unter dem Wort „Teilweise erledigt“ (§12.4).
+**Fortgeschrieben:** Punkt 1000 (A1, „Teilweise erledigt“ ohne einen einzigen Ok) blieb mit A4 offen.
+**Am 09.11.2026 durch E‑1182 erledigt:** Ein solcher Auftrag heißt „Fehlgeschlagen“ und zeigt
+„<n> von <n> nicht erfolgreich“ (§12.4).
 
 ### 12.12 Sichtprüfungen für Lukas
 
@@ -873,6 +894,7 @@ die er zeigt, entstehen aber nur über ihn.
 | **1031** | Offen aufklappen und löschen | Den offenen Auftrag aufklappen, „Auftrag löschen“, die Rückfrage lesen, einmal „Abbrechen“ (auch mit Esc), dann „Löschen“. Steht „Auftrag gelöscht. Er wird nicht ausgeführt.“ oben, und ist die Zeile weg? Dasselbe nur mit der Tastatur |
 | **1032** | Löschen, nachdem die Plattform abgeholt hat | Einen weiteren Auftrag anlegen und in der Übersicht aufklappen. **Ohne neu zu laden** in Workbench **Teil 2** des Skripts ausführen (holt den jüngsten offenen Auftrag ab). Dann „Auftrag löschen“ und „Löschen“: Steht „Die Plattform hat den Auftrag gerade übernommen. Löschen geht nicht mehr.“ in der Zeile, und zeigt sie danach „In Ausführung“? |
 | **1046** | Der Ersteller in der Zeile *(06.11.2026)* | Den Block aufklappen, je Thema bei 1.280 px und bei rund 360 px. Steht „eingestellt <Zeit> von <Name>“ in der Umgebungsschrift, zugeklappt kein Name? Sichtbar wird der Block nur mit Aufträgen für den aktiven Mandanten: über den Assistenten oder mit eingefügten Zeilen wie in [`scripts/messung-auftrag-ersteller/`](../scripts/messung-auftrag-ersteller/). Ein langer Name ist in Chrome am gebauten CSS geprüft (F58), nicht am Block selbst |
+| **1048** | Kein Eintrag Ok *(09.11.2026)* | Einen eigenen Auftrag mit **einem** Eintrag auf `status = 'ERLEDIGT'` und `rueckgabe = 'Schlüssel nicht gefunden'` setzen (Teil 1 von `scripts/auftraege-simulation.sql` tut das am Fall „Teilweise erledigt“, wenn er nur einen Eintrag hat), dazu je einen mit gemischter Rückgabe und einen mit Fehlercode. Dann „Neu laden“. Steht beim ersten „Fehlgeschlagen“ in Rot, darunter „1 von 1 nicht erfolgreich“ statt des Schlüssels, und aufgeklappt keine „Meldung der Plattform“, aber das Ergebnis mit getöntem Grund? Der gemischte bleibt „Teilweise erledigt“ in Bernstein; der mit Fehlercode zeigt den Schlüssel und aufgeklappt die Meldung. **Bestanden am 09.11.2026** ([`tasks.md`](tasks.md) §9.11) |
 
 **Aufräumen**, nur die eigenen und nur auf der Testkopie: Teil 3 des Skripts löscht alle Aufträge des
 eigenen Kontos unter `NEXANS`, gleich in welchem Stand — vorher mit dem `SELECT` dort ansehen.

@@ -329,7 +329,8 @@ const AUFTRAG_ZUORDNUNG: Record<Auftragseinordnung, Statusrolle | Auftragsrolle>
   ERLEDIGT: "abgeschlossen",
   // Bernstein, die eigene Rolle (F16). Fällt auf und ist kein Fehler.
   TEILWEISE_ERLEDIGT: "teilweise",
-  // Rot, und es ist dasselbe Rot: Der Auftrag als Ganzes war nicht ausführbar.
+  // Rot, und es ist dasselbe Rot: Der Auftrag als Ganzes war nicht ausführbar,
+  // oder kein Eintrag ist Ok (E‑1182).
   FEHLGESCHLAGEN: "fehler",
   // Was die Plattform getan hat, ist unbekannt — weder Fehler noch teilweise
   // ausgeführt. „Nicht zugeordnet heißt nicht zugeordnet" (Q4).

@@ -17,6 +17,7 @@ import {
   schluesselZugeklappt,
   sichtbare,
   weitere,
+  zeigtZaehlung,
   type Blockzustand,
 } from "@/features/dashboard/auftraege";
 import { einsetzen, texteFuer, SPRACHEN } from "@/i18n";
@@ -132,6 +133,33 @@ describe("Die zugeklappte Zeile (E‑1102, E‑1103)", () => {
       nichtErfolgreich([eintrag({ ergebnis: "NICHT_OK" }), eintrag({ ergebnis: "NICHT_OK" })]),
     ).toBe(2);
     expect(nichtErfolgreich([eintrag({ ergebnis: "OK" })])).toBe(0);
+  });
+
+  /** Die Einordnung kommt aus dem Backend; gefragt wird nur, ob es Ergebnisse gibt (E‑1182). */
+  it("zählt bei Teilweise erledigt immer, bei Fehlgeschlagen nur mit Ergebnissen", () => {
+    const ohneErgebnis = [eintrag(), eintrag()];
+    const mitErgebnis = [eintrag({ ergebnis: "NICHT_OK" }), eintrag({ ergebnis: "UNBEKANNT" })];
+
+    expect(zeigtZaehlung({ einordnung: "TEILWEISE_ERLEDIGT", eintraege: mitErgebnis })).toBe(true);
+    expect(zeigtZaehlung({ einordnung: "FEHLGESCHLAGEN", eintraege: mitErgebnis })).toBe(true);
+    expect(zeigtZaehlung({ einordnung: "FEHLGESCHLAGEN", eintraege: ohneErgebnis })).toBe(false);
+    // Schon ein Ergebnis genügt.
+    expect(
+      zeigtZaehlung({
+        einordnung: "FEHLGESCHLAGEN",
+        eintraege: [eintrag(), eintrag({ ergebnis: "NICHT_OK" })],
+      }),
+    ).toBe(true);
+  });
+
+  it("zählt in keinem anderen Stand, auch nicht mit Ergebnissen", () => {
+    const mitErgebnis = [eintrag({ ergebnis: "OK" }), eintrag({ ergebnis: "NICHT_OK" })];
+    for (const einordnung of ["OFFEN", "IN_AUSFUEHRUNG", "ERLEDIGT", "UNSTIMMIG", "UNBEKANNT"]) {
+      expect(
+        zeigtZaehlung({ einordnung: einordnung as Auftrag["einordnung"], eintraege: mitErgebnis }),
+        einordnung,
+      ).toBe(false);
+    }
   });
 });
 
