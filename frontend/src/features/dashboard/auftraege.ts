@@ -90,10 +90,29 @@ export function schluesselZugeklappt(
 /**
  * Wie viele Einträge **nicht erfolgreich** sind: jeder, dessen Ergebnis nicht
  * `OK` ist. `UNBEKANNT` zählt mit, wie im Backend (`docs/tasks.md` §5.4).
- * Gebraucht für „<x> von <n> nicht erfolgreich“ bei „Teilweise erledigt“.
+ * Gebraucht für „<x> von <n> nicht erfolgreich“ ({@link zeigtZaehlung}).
  */
 export function nichtErfolgreich(eintraege: readonly Pick<Auftragseintrag, "ergebnis">[]): number {
   return eintraege.filter((eintrag) => ergebnisVon(eintrag) !== "OK").length;
+}
+
+/**
+ * Steht in der zugeklappten Zeile „<x> von <n> nicht erfolgreich“ statt der
+ * Schlüssel? Bei „Teilweise erledigt“ immer, bei „Fehlgeschlagen“, sobald ein
+ * Eintrag ein Ergebnis hat (E‑1102, E‑1182). Meldet die Plattform den Auftrag
+ * als Ganzes als fehlgeschlagen, gibt es keine Ergebnisse, und es bleibt beim
+ * Schlüssel.
+ *
+ * **Hier wird kein Stand abgeleitet:** Die Einordnung kommt aus dem Backend,
+ * und ob ein Eintrag Ok ist, spielt für diese Frage keine Rolle.
+ */
+export function zeigtZaehlung(auftrag: Pick<Auftrag, "einordnung" | "eintraege">): boolean {
+  const einordnung = einordnungVon(auftrag);
+  return (
+    einordnung === "TEILWEISE_ERLEDIGT" ||
+    (einordnung === "FEHLGESCHLAGEN" &&
+      auftrag.eintraege.some((eintrag) => ergebnisVon(eintrag) !== null))
+  );
 }
 
 /**
