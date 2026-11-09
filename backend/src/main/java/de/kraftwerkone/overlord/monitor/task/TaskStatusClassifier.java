@@ -11,6 +11,9 @@ import java.util.Optional;
  * {@code ERLEDIGT} oder {@code FEHLGESCHLAGEN} ({@code docs/task-schnittstelle.md} §5). Steht es an
  * einer zweiten Stelle, laufen die beiden auseinander — deshalb liest auch die Liste die Menge der
  * laufenden Status von hier ({@link #LAUFEND}).
+ *
+ * <p>Die Einordnung entsteht zur Lesezeit: Eine Aenderung hier gilt sofort auch fuer vorhandene
+ * Auftraege (E‑1182).
  */
 public final class TaskStatusClassifier {
 
@@ -49,6 +52,10 @@ public final class TaskStatusClassifier {
     if (rueckgabe.isEmpty() || rueckgabe.get().zeilen().size() != eintraege) {
       return Einordnung.UNSTIMMIG;
     }
-    return rueckgabe.get().alleOk() ? Einordnung.ERLEDIGT : Einordnung.TEILWEISE_ERLEDIGT;
+    if (rueckgabe.get().alleOk()) {
+      return Einordnung.ERLEDIGT;
+    }
+    // Keine Zeile Ok: Es wurde nichts geaendert, also nicht „teilweise“ (E‑1182).
+    return rueckgabe.get().keinOk() ? Einordnung.FEHLGESCHLAGEN : Einordnung.TEILWEISE_ERLEDIGT;
   }
 }

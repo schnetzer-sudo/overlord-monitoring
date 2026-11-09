@@ -51,6 +51,11 @@ public record Rueckgabe(List<Zeile> zeilen) {
     return zeilen.stream().allMatch(zeile -> zeile.ergebnis() == Zeilenergebnis.OK);
   }
 
+  /** Keine Zeile ist Ok; {@link Zeilenergebnis#UNBEKANNT} zaehlt als nicht Ok (E‑1182). */
+  public boolean keinOk() {
+    return zeilen.stream().noneMatch(zeile -> zeile.ergebnis() == Zeilenergebnis.OK);
+  }
+
   private static Zeilenergebnis ergebnis(String wert, Rueckgaben rueckgaben) {
     if (rueckgaben != null && wert.equals(rueckgaben.ok())) {
       return Zeilenergebnis.OK;
