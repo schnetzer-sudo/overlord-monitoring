@@ -1978,6 +1978,15 @@ gegen 2.307.613. Derselbe Fall ist mit denselben Zahlen auf dem Stand rot, desse
 `20650be` entspricht (Zweig `feat/auftraege-neu-laden`, Lauf nur dieses Tests); er hängt an den Daten
 der Testkopie und hat keinen Bezug zu diesem Schritt.
 
+**Sichtprüfung 1048, im Browser (09.11.2026).** Chrome mit Debug-Port, angemeldet durch den
+Auftraggeber, Mandant `NEXANS`, Frontend und Backend dieses Zweigs neben den laufenden Diensten, fünf
+eigene Zeilen in `task` (keine `OFFEN`, danach gelöscht). „1 von 1“ und „2 von 2 nicht erfolgreich“
+stehen unter „Fehlgeschlagen“ in der Farbe des Stands, aufgeklappt ohne „Meldung der Plattform“, mit
+Rohwert und getöntem Grund, auch bei lauter `UNBEKANNT`. Gemischt bleibt „Teilweise erledigt“. Von der
+Plattform gesetzt: Schlüssel, aufgeklappt die Meldung. **Gegenprobe:** Dieselben Zeilen gegen das
+Backend von `main` zeigen „Teilweise erledigt · 1 von 1“. Gelesen wurde das gerenderte DOM samt
+berechneter Farben; aufgeklappt per `click()`, nicht mit der echten Maus.
+
 ---
 
 ## 10. Regelbezug
@@ -2017,7 +2026,7 @@ Nummern ab 1000 (Linie `assistent`); dieselben Zeilen stehen im Register
 | **1045** | **Der Testsatz rechnet mit der alten Lesart des Schlüssels.** Seit der Abladestelle optional ist, kann ein zweiteiliger Schlüssel wie `010/18VZE` Werk/Abladestelle oder Lieferantennummer/Werk sein, und die Werkzeugbeschreibung sagt, dann nachzufragen (E‑1170). S06, S19, S20 und S25 erwarten aber einen Vorschlag mit Werk und Abladestelle aus einem zweiteiligen Schlüssel; S24 erwartet zu `0101159903/40NP/,…` eine Rückfrage nach der Abladestelle, die jetzt fehlen darf; S17 erwartet eine Rückfrage zu SNDPRN_4908, die mit einer Frage zum Schlüssel konkurrieren kann ([`assistent.md`](assistent.md) §8). Kein Testsatzlauf in diesem Schritt; was die Fälle künftig erwarten, ist zu entscheiden, dann ein Lauf. *(26.10.2026)* **Erledigt im Nachtrag am selben Tag:** Der Schlüssel ist von hinten ausgerichtet und damit eindeutig, die Rückfrage entfällt (E‑1173 bis E‑1175); S24 erwartet den Vorschlag, S06, S17, S19, S20, S25 bleiben, S26 und S27 sind neu (E‑1177). M1010: alle acht in drei Durchgängen bestanden ([`assistent.md`](assistent.md) §8.7). | Entscheidung offen |
 | **1046** | Sichtprüfung 6: „von <Name>“ in der aufgeklappten Zeile, hell und dunkel, breit und schmal, auch mit einem langen Namen ([`assistent-frontend.md`](assistent-frontend.md) §12.12). *(06.11.2026)* | Sichtprüfung oder Messung offen |
 | **1047** | `AuftraegeDbIT.loeschen_durch_anderen_benutzer` fiel am 06.11.2026 einmal mit `409`, in einem Lauf ohne fachlichen Bezug (§9.10). Ob auf der Testkopie etwas `OFFEN`-Zeilen abholt und damit Tests trifft, die einen offenen Auftrag voraussetzen, ist zu klären. *(06.11.2026)* **Erledigt am selben Tag:** Auskunft des Auftraggebers, in der Testumgebung werden offene Aufträge abgeholt (§9.10). | Sichtprüfung oder Messung offen |
-| **1048** | Sichtprüfung 7: „Fehlgeschlagen“ aus einer Rückgabe ohne Ok, gegen „Teilweise erledigt“ und gegen „Fehlgeschlagen“ von der Plattform ([`assistent-frontend.md`](assistent-frontend.md) §12.12). *(09.11.2026)* | Sichtprüfung oder Messung offen |
+| **1048** | Sichtprüfung 7: „Fehlgeschlagen“ aus einer Rückgabe ohne Ok, gegen „Teilweise erledigt“ und gegen „Fehlgeschlagen“ von der Plattform ([`assistent-frontend.md`](assistent-frontend.md) §12.12). *(09.11.2026)* **Erledigt am selben Tag:** im angemeldeten Chrome bestanden (§9.11). | Sichtprüfung oder Messung offen |
 
 **Fortgeschrieben am 19.10.2026 (A4):** Punkt **1000** bleibt offen. Die Übersicht zeigt einen
 solchen Auftrag als „Teilweise erledigt“ mit „<n> von <n> nicht erfolgreich“
