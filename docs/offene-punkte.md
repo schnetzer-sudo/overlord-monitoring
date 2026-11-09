@@ -30,7 +30,7 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
   vergeben.
 - **Seit 1.1.0 (21.10.2026) eine Linie** (E‑1127): Neue Punkte schließen an die höchste vergebene
   Nummer an; der Bereich unter 1000 wird nicht weiter befüllt. Bis dahin begannen die Nummern auf
-  `assistent` bei 1000 (Entscheidung 7). **Nächste freie Nummer: 1048.**
+  `assistent` bei 1000 (Entscheidung 7). **Nächste freie Nummer: 1050.**
 - **Doppelvergaben sind aufgelöst** (16.10.2026): 136 und 186 bis 189 waren je zweimal vergeben. Die
   Nummer behielt der Punkt, auf den andere Dateien öfter verweisen; der andere bekam 247 bzw. 248 bis
   251, mit datiertem Vermerk an seiner Fundstelle.
