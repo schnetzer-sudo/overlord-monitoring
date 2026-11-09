@@ -539,13 +539,14 @@ Entscheidungen 13, 16 bis 18 und 20 bis 22 betreffen Endpunkt und Plattform und 
 | **E‑1106** | Das Ergebnis je Eintrag zeigt den Rohwert der Plattform („Schlüssel nicht gefunden“) mit Zeichen; „erfolgreich“ oder „nicht erfolgreich“ aus `ergebnis` steht für Vorleseprogramme dabei. Ein nicht erfolgreicher Eintrag hat einen leicht getönten Grund. | V |
 | **E‑1107** | `fehlertext` und Rückgabewerte schreibt die Plattform: **reiner Text**, nie HTML. | V |
 | **E‑1108** | Zeitpunkte kommen in UTC und werden im Format von „Zuletzt aufgefallen“ gezeigt. In welcher Zone, sagt E‑1122. | V |
-| **E‑1109** | Aktualisierung über den vorhandenen Mechanismus der Übersicht: „Neu laden“ lädt den Block mit. Kein eigener Takt. Nach dem Anlegen in der Chatbox und nach dem Löschen wird die Liste sofort neu geladen. Zum Abfrageschlüssel E‑1123. | V |
+| **E‑1109** | Aktualisierung über den vorhandenen Mechanismus der Übersicht: „Neu laden“ lädt den Block mit. Kein eigener Takt. Nach dem Anlegen in der Chatbox und nach dem Löschen wird die Liste sofort neu geladen. Zum Abfrageschlüssel E‑1123. **Ergänzt am 09.11.2026 durch E‑1183:** Der Block hat zusätzlich einen eigenen Knopf. | V |
 | **E‑1111** | **„Auftrag löschen“ steht nur in der aufgeklappten Zeile**, unter den Einträgen rechts, als Knopf mit Papierkorb und Wort. In der zugeklappten Zeile steht nichts dafür. | A (19.10.2026) |
 | **E‑1112** | Ein Klick zeigt an derselben Stelle die Rückfrage „Auftrag löschen? Die Plattform hat ihn noch nicht abgeholt. Er wird nicht ausgeführt.“ mit „Abbrechen“ und „Löschen“. Der Fokus geht auf „Abbrechen“, Esc bricht ab. Danach steht oben im Block „Auftrag gelöscht. Er wird nicht ausgeführt.“ (`role="status"`). Kein Rückgängig. | A (Rückfrage, 19.10.2026), V (Wortlaut) |
 | **E‑1116** | Die Übersicht lädt nicht von selbst neu (E‑164), der Stand „Offen“ kann also veraltet sein. Bei `409` steht in der Zeile „Die Plattform hat den Auftrag gerade übernommen. Löschen geht nicht mehr.“, und die Liste wird neu geladen. Bei `404` „Der Auftrag ist nicht mehr vorhanden.“ und Neuladen. | V |
 | **E‑1178** | **Der Name des Anlegenden steht in der aufgeklappten Zeile**, nicht in der zugeklappten ([`tasks.md`](tasks.md) §2 „Ersteller am Auftrag“, auch für E‑1180: die Rolle zur Lesezeit). Jeder Benutzer des Mandanten sieht weiterhin alle Aufträge (E‑1113). | A (06.11.2026) |
 | **E‑1179** | **Aufträge von `ADMIN`-Konten zeigen „Admin“** statt des Benutzernamens. **Aufgehoben am selben Tag durch E‑1181.** | A (06.11.2026) |
 | **E‑1181** | **Angezeigt wird immer der Benutzername, auch bei `ADMIN`-Konten** ([`tasks.md`](tasks.md) §2 „Ersteller am Auftrag“). | A (06.11.2026) |
+| **E‑1183** | **Der Block hat rechts neben der Überschrift „Ihre Aufträge“ einen eigenen Knopf „Neu laden“.** Er lädt nur die Liste der Aufträge, nicht die Übersicht; „Neu laden“ der Übersicht lädt den Block weiterhin mit (E‑1109). Kein eigener Takt (E‑164). Vorhandener Baustein `NeuLaden` ohne `automatik`, kein Drehen (E‑167). Der Knopf steht nur, wenn der Block steht (E‑1098); im Fehlerzustand zusätzlich zu „Erneut versuchen“. Der Kopf wird dadurch 10 px höher als der von „Zuletzt aufgefallen“ und so hoch wie der der Verteilung; **so belassen** (§12.10). | A (09.11.2026) |
 
 ### 12.2 Rückfragen zu A4 (19.10.2026)
 
@@ -630,13 +631,13 @@ frontend/src/
    ├─ auftraege.ts                     reine Regeln: Sichtbare, Schlüssel, Zählung, Löschbarkeit
    ├─ hooks.ts                         Abfrage und Mutation
    └─ components/
-      ├─ auftraege-block.tsx           Block, Zeile, Löschen
+      ├─ auftraege-block.tsx           Block mit eigenem „Neu laden“ (E‑1183), Zeile, Löschen
       └─ dashboard-ansicht.tsx         Reihe und Zustände der Übersicht (E‑1099, E‑1121)
 ```
 
 | Endpunkt | Weg | Wann |
 |---|---|---|
-| `GET /api/tasks` | `useQuery`, Schlüssel `["auftraege", "liste"]` | beim Aufruf der Übersicht; „Neu laden“ (F24); nach dem Anlegen in der Chatbox und nach dem Löschen (E‑1109) |
+| `GET /api/tasks` | `useQuery`, Schlüssel `["auftraege", "liste"]` | beim Aufruf der Übersicht; „Neu laden“ der Übersicht (F24); der eigene Knopf des Blocks (E‑1183); nach dem Anlegen in der Chatbox und nach dem Löschen (E‑1109) |
 | `DELETE /api/tasks/{taskId}` | Mutation | „Löschen“ in der Rückfrage |
 
 **Keine Anfrage trägt eine Mandanten-ID** (M1). Beim Mandantenwechsel leert die Anwendung den
@@ -841,6 +842,58 @@ Fälle), Rücknahme per `git checkout` gegen den committeten Stand:
 | mehrere Typen nie oben | 2 Fälle |
 | **Eichung:** ein Wort in einem Kommentar | **0** — überlebt, wie es soll |
 
+**„Neu laden“ im Block (09.11.2026, E‑1183):** sechs gerenderte Fälle mehr in
+`tests/auftraege-block.test.tsx` (36): Name und Ort des Knopfes; ein Klick holt genau einmal die Liste
+und nicht die Übersicht; `aria-busy` folgt der Abfrage, ein zweiter Klick währenddessen stellt keine
+Anfrage; der Satz oben verschwindet, die Liste bleibt; im Fehlerzustand steht er zusätzlich zu „Erneut
+versuchen“; ohne Auftrag fehlt er wie der Block. `pnpm check` und `pnpm build` grün mit **1.517 Fällen
+in 54 Dateien**, gerendert **295 in 28 Dateien** (`frontend/vitest.config.mts`, aus dem Lauf gezählt).
+
+| Eingriff (Lauf über die Datei, 36 Fälle) | rot |
+|---|---|
+| kein Knopf im Kopf | 5 Fälle |
+| `laedt` immer `false` | „trägt aria-busy …“ |
+| nur die Abfrage, ohne den Schritt im Zustand | „nimmt den Satz oben weg …“ |
+| der Name des Knopfes der Übersicht | 5 Fälle |
+| kein Knopf im Fehlerzustand | „steht im Fehlerzustand zusätzlich …“ |
+| **Eichung:** ein Wort in einem Kommentar | **0** |
+
+Zurückgespielt aus der Kopie im Skript, in keinem Commit.
+
+**Die Höhe des Kopfes, gemessen am 09.11.2026** (Auftrag: prüfen, melden, nichts eigenmächtig kleiner
+bauen). Kopfloses Chrome, gebautes Stylesheet, die echte `DashboardAnsicht` per
+`renderToStaticMarkup` mit gestellten Daten in `/anmeldung` eingesetzt, Standarddichte. Bei 1.280,
+1.440 und 1.920 px dieselben Werte:
+
+| Block | Kopf | Überschrift ab Oberkante der Karte | Inhalt ab Oberkante der Karte |
+|---|---|---|---|
+| Zuletzt aufgefallen | 22 px | 12 px | 46 px |
+| Ihre Aufträge | 32 px | 17 px | 56 px |
+| Verteilung | 32 px | 17 px | 56 px |
+
+**Der Kopf ist durch den Knopf 10 px höher als vorher und als der von „Zuletzt aufgefallen“**, und
+genau so hoch wie der der Verteilung, deren Umschalter dieselbe Klasse `min-h-bedienelement` trägt.
+Vorher standen „Zuletzt aufgefallen“ und „Ihre Aufträge“ auf einer Linie und die Verteilung tiefer;
+jetzt steht „Zuletzt aufgefallen“ allein höher. **Der Auftraggeber hat am 09.11.2026 entschieden: so
+belassen.**
+
+> **Belegvermerk (L10).** *Gemessen war:* die Höhen und Abstände der Köpfe, an echten Komponenten und
+> echtem CSS, und am selben Tag in der angemeldeten Übersicht: dieselben Werte bei 1.280, 1.440, 1.920
+> und 360 px, ohne Überhang. *Nicht gemessen:* die Dichtestufen außer der Vorgabe. Am Berührungsgerät
+> haben Knopf und Umschalter 44 px; beide Köpfe wachsen gleich.
+
+**Sichtprüfung 1049, im Browser (09.11.2026).** Chrome mit Debug-Port, angemeldet durch den
+Auftraggeber, Mandant `NEXANS`, Frontend dieses Zweigs neben den laufenden Diensten. Der Knopf steht
+rechts neben der Überschrift, Tooltip „Aufträge neu laden“. Ein Klick zeigt die Sanduhr und `aria-busy`
+und stellt genau ein `GET /api/tasks`, kein `/api/dashboard`; ein zweiter währenddessen stellt keine
+Anfrage. Ein in der Datenbank geänderter Stand bleibt ohne Klick stehen und wechselt mit ihm;
+Aufgeklapptes bleibt offen. Der Knopf der Übersicht holt weiter beide Abfragen. Ein Mandant ohne
+Auftrag (`IBIS`) hat weder Block noch Knopf. **Gestellt** waren der offene Auftrag und das `DELETE` für
+den Satz oben, weil die Testumgebung offene Aufträge abholt; kein `DELETE` hat das Backend erreicht.
+Geklickt wurde per `click()`, nicht mit der echten Maus.
+
+### 12.11 Offene Punkte
+
 ### 12.11 Offene Punkte
 
 Nummern ab 1023 (Linie `assistent`, per `grep` geprüft); dieselben Zeilen stehen im Register
@@ -860,6 +913,7 @@ Nummern ab 1023 (Linie `assistent`, per `grep` geprüft); dieselben Zeilen stehe
 | **1032** | Sichtprüfung 5: einen Auftrag abholen lassen, während die Übersicht ihn noch als „Offen“ zeigt, dann löschen — kommt der Satz aus E‑1116? (§12.12) | Sichtprüfung oder Messung offen |
 | **1046** | Sichtprüfung 6: „von <Name>“ in der aufgeklappten Zeile, hell und dunkel, breit und schmal, auch mit einem langen Namen (§12.12). *(06.11.2026)* | Sichtprüfung oder Messung offen |
 | **1048** | Sichtprüfung 7: „Fehlgeschlagen“ aus einer Rückgabe ohne Ok, gegen „Teilweise erledigt“ und gegen „Fehlgeschlagen“ von der Plattform (§12.12). *(09.11.2026)* **Erledigt am selben Tag:** im angemeldeten Chrome bestanden ([`tasks.md`](tasks.md) §9.11). | Sichtprüfung oder Messung offen |
+| **1049** | Sichtprüfung 8: eigener Knopf „Neu laden“ im Kopf des Blocks: Ort, Sanduhr, lädt nur die Liste; Höhe des Kopfes gegen die Nachbarblöcke (§12.12). *(09.11.2026)* **Erledigt am selben Tag:** im angemeldeten Chrome bestanden, die Höhe bleibt (§12.10). | Sichtprüfung oder Messung offen |
 
 **Fortgeschrieben:** Punkt 1000 (A1, „Teilweise erledigt“ ohne einen einzigen Ok) blieb mit A4 offen.
 **Am 09.11.2026 durch E‑1182 erledigt:** Ein solcher Auftrag heißt „Fehlgeschlagen“ und zeigt
@@ -895,6 +949,7 @@ die er zeigt, entstehen aber nur über ihn.
 | **1032** | Löschen, nachdem die Plattform abgeholt hat | Einen weiteren Auftrag anlegen und in der Übersicht aufklappen. **Ohne neu zu laden** in Workbench **Teil 2** des Skripts ausführen (holt den jüngsten offenen Auftrag ab). Dann „Auftrag löschen“ und „Löschen“: Steht „Die Plattform hat den Auftrag gerade übernommen. Löschen geht nicht mehr.“ in der Zeile, und zeigt sie danach „In Ausführung“? |
 | **1046** | Der Ersteller in der Zeile *(06.11.2026)* | Den Block aufklappen, je Thema bei 1.280 px und bei rund 360 px. Steht „eingestellt <Zeit> von <Name>“ in der Umgebungsschrift, zugeklappt kein Name? Sichtbar wird der Block nur mit Aufträgen für den aktiven Mandanten: über den Assistenten oder mit eingefügten Zeilen wie in [`scripts/messung-auftrag-ersteller/`](../scripts/messung-auftrag-ersteller/). Ein langer Name ist in Chrome am gebauten CSS geprüft (F58), nicht am Block selbst |
 | **1048** | Kein Eintrag Ok *(09.11.2026)* | Einen eigenen Auftrag mit **einem** Eintrag auf `status = 'ERLEDIGT'` und `rueckgabe = 'Schlüssel nicht gefunden'` setzen (Teil 1 von `scripts/auftraege-simulation.sql` tut das am Fall „Teilweise erledigt“, wenn er nur einen Eintrag hat), dazu je einen mit gemischter Rückgabe und einen mit Fehlercode. Dann „Neu laden“. Steht beim ersten „Fehlgeschlagen“ in Rot, darunter „1 von 1 nicht erfolgreich“ statt des Schlüssels, und aufgeklappt keine „Meldung der Plattform“, aber das Ergebnis mit getöntem Grund? Der gemischte bleibt „Teilweise erledigt“ in Bernstein; der mit Fehlercode zeigt den Schlüssel und aufgeklappt die Meldung. **Bestanden am 09.11.2026** ([`tasks.md`](tasks.md) §9.11) |
+| **1049** | „Neu laden“ im Block *(09.11.2026)* | Mit mindestens einem Auftrag die Übersicht öffnen. Stehen rechts neben „Ihre Aufträge“ die Pfeile, Tooltip „Aufträge neu laden“? Ein Klick: Sanduhr im Knopf, in den Entwicklerwerkzeugen genau ein `GET /api/tasks` und kein `/api/dashboard`. Einen offenen Auftrag abholen lassen, dann nur diesen Knopf: Wechselt der Stand, bleibt Aufgeklapptes offen? Nach dem Löschen eines Auftrags: Verschwindet der Satz oben beim Klick? „Neu laden“ der Übersicht lädt den Block weiter mit. **Bestanden am 09.11.2026** (§12.10); der Kopf bleibt 10 px höher als der von „Zuletzt aufgefallen“ (E‑1183) |
 
 **Aufräumen**, nur die eigenen und nur auf der Testkopie: Teil 3 des Skripts löscht alle Aufträge des
 eigenen Kontos unter `NEXANS`, gleich in welchem Stand — vorher mit dem `SELECT` dort ansehen.

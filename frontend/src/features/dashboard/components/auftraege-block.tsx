@@ -15,6 +15,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { NeuLaden } from "@/components/neu-laden";
 import { Button } from "@/components/ui/button";
 import { useAnzeigezone } from "@/components/zeitzone";
 import { Fehler } from "@/components/zustand";
@@ -87,9 +88,20 @@ export function AuftraegeBlock({ block }: { block: AuftraegeBlockZustand }) {
 
   return (
     <section aria-labelledby={titelId} className="flex flex-col gap-3">
-      <h2 id={titelId} className="text-basis font-semibold">
-        {t.titel}
-      </h2>
+      {/*
+       * **Der eigene Knopf lädt nur die Liste** (E‑1183), „Neu laden“ der
+       * Übersicht lädt sie weiterhin mit (E‑1109). Kein Takt (E‑164).
+       */}
+      <div className="flex items-center justify-between gap-2">
+        <h2 id={titelId} className="text-basis font-semibold">
+          {t.titel}
+        </h2>
+        <NeuLaden
+          name={t.neuLaden}
+          laedt={abfrage.isFetching}
+          aufNeuLaden={() => void block.neuLaden()}
+        />
+      </div>
 
       {zustand.oben === null ? null : (
         <p

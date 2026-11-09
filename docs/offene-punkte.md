@@ -347,6 +347,7 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 1046 | Sichtprüfung 6: „von <Name>“ in der aufgeklappten Zeile, hell und dunkel, breit und schmal, auch mit einem langen Namen | [`assistent-frontend.md`](assistent-frontend.md) §12.11, §12.12 · 06.11.2026 | Sichtprüfung oder Messung offen | offen |
 | 1047 | `AuftraegeDbIT.loeschen_durch_anderen_benutzer` fiel einmal mit `409`: Ob auf der Testkopie etwas `OFFEN`-Zeilen abholt und damit Tests trifft, ist zu klären | [`tasks.md`](tasks.md) §9.10, §11 · 06.11.2026 | Sichtprüfung oder Messung offen | erledigt am 06.11.2026 — Auskunft des Auftraggebers: In der Testumgebung werden offene Aufträge abgeholt ([`tasks.md`](tasks.md) §9.10) |
 | 1048 | Sichtprüfung 7: „Fehlgeschlagen“ aus einer Rückgabe ohne Ok, gegen „Teilweise erledigt“ und gegen „Fehlgeschlagen“ von der Plattform | [`assistent-frontend.md`](assistent-frontend.md) §12.11, §12.12 · 09.11.2026 | Sichtprüfung oder Messung offen | erledigt am 09.11.2026 — im angemeldeten Chrome bestanden ([`tasks.md`](tasks.md) §9.11) |
+| 1049 | Sichtprüfung 8: eigener Knopf „Neu laden“ im Kopf von „Ihre Aufträge“: Ort, Sanduhr, lädt nur die Liste; Höhe des Kopfes gegen die Nachbarblöcke | [`assistent-frontend.md`](assistent-frontend.md) §12.11, §12.12 · 09.11.2026 | Sichtprüfung oder Messung offen | erledigt am 09.11.2026 — im angemeldeten Chrome bestanden, die Höhe bleibt ([`assistent-frontend.md`](assistent-frontend.md) §12.10) |
 
 ---
 
