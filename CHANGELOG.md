@@ -114,6 +114,14 @@ Tags und die Definition of Done für ein Release stehen in
 - Ein geschütztes Leerzeichen (U+00A0) oder ein anderes Unicode-Leerzeichen in einem Schlüsselteil
   von `WERK_ABLADESTELLE` wurde angenommen, obwohl E‑1012 „kein Leerraum“ verlangte: Das alte Muster
   `^[^ /,]{1,35}$` sperrte nur U+0020. Jetzt `FORMAT` (E‑1142).
+- **Ein Auftrag, bei dem kein Eintrag Ok ist, steht als „Fehlgeschlagen“ statt „Teilweise erledigt“**
+  (Entscheidung des Auftraggebers vom 09.11.2026, E‑1182, [`docs/tasks.md`](docs/tasks.md) §2 „Kein
+  Eintrag Ok“, schließt Punkt 1000). Befund aus der Produktion: Aufträge mit einem Eintrag und der
+  Rückgabe `Payload fehlt` oder `Schlüssel nicht gefunden` zeigten „Teilweise erledigt · 1 von 1 nicht
+  erfolgreich“, obwohl nichts geändert wurde. In der zugeklappten Zeile steht bei „Fehlgeschlagen“
+  mit Ergebnissen „<x> von <n> nicht erfolgreich“ statt des Schlüssels. Die Einordnung entsteht zur
+  Lesezeit und gilt nach dem Deployment sofort auch für vorhandene Aufträge; keine Migration, kein
+  Skript, keine Änderung am Plattformvertrag.
 
 ## 1.1.0 (21.10.2026)
 

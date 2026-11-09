@@ -30,7 +30,7 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
   vergeben.
 - **Seit 1.1.0 (21.10.2026) eine Linie** (E‑1127): Neue Punkte schließen an die höchste vergebene
   Nummer an; der Bereich unter 1000 wird nicht weiter befüllt. Bis dahin begannen die Nummern auf
-  `assistent` bei 1000 (Entscheidung 7). **Nächste freie Nummer: 1048.**
+  `assistent` bei 1000 (Entscheidung 7). **Nächste freie Nummer: 1050.**
 - **Doppelvergaben sind aufgelöst** (16.10.2026): 136 und 186 bis 189 waren je zweimal vergeben. Die
   Nummer behielt der Punkt, auf den andere Dateien öfter verweisen; der andere bekam 247 bzw. 248 bis
   251, mit datiertem Vermerk an seiner Fundstelle.
@@ -298,7 +298,7 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 261 | JAR-Name weicht von der Doku ab (kein finalName); Version stand auf 0.1.0(-SNAPSHOT) | [`betrieb.md`](betrieb.md) §9 | Fehler | **erledigt** — `betrieb.md` §9: „Beantwortet am 21.10.2026 (§7a): `finalName` wird nicht gesetzt; die Routine installiert `overlord-monitor-<version>.jar` als `/opt/overlord-monitor/overlord-monitor.jar`…“ |
 | 262 | Bootstrap des ersten Kontos in der Produktion nicht belegt; OVERLORD_BOOTSTRAP_ADMIN_* fehlen in .env.example | [`betrieb.md`](betrieb.md) §9 | Verbesserung | offen — die Namen stehen seit dem 16.10.2026 in `backend/.env.example`; ob die Produktion so angelegt wurde, ist offen |
 | 263 | Ziel und Aufbewahrung der Protokollausgabe in der Produktion nicht belegt | [`betrieb.md`](betrieb.md) §9 | Entscheidung offen | offen — Ziel ist seit 21.10.2026 belegt: journald (`betrieb.md` §7a); offen bleibt die Aufbewahrung |
-| 1000 | „Teilweise erledigt“ auch dann, wenn kein Eintrag Ok ist und nichts geändert wurde; Anzeige dafür offen | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Entscheidung offen | offen — seit A4 (19.10.2026) zeigt die Übersicht „<n> von <n> nicht erfolgreich“ unter „Teilweise erledigt“; das Wort ist nicht entschieden (`tasks.md` §11) |
+| 1000 | „Teilweise erledigt“ auch dann, wenn kein Eintrag Ok ist und nichts geändert wurde; Anzeige dafür offen | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Entscheidung offen | erledigt am 09.11.2026 durch E‑1182 — ein Auftrag ohne einen Ok heißt „Fehlgeschlagen“ ([`tasks.md`](tasks.md) §2 „Kein Eintrag Ok“, §5.5, §11) |
 | 1001 | Aufträge, die in IN_AUSFUEHRUNG hängen bleiben, haben keine Frist und keinen Rückweg | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Entscheidung offen | offen |
 | 1002 | Schranke von 35 Zeichen je Schlüsselteil (WERK_ABLADESTELLE) zu bestätigen | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Entscheidung offen | offen |
 | 1003 | Ob die Plattform UTF-8 und LF im Parametertext sicher verarbeitet | [`tasks.md`](tasks.md) §11 · Linie `assistent`, A1 | Sichtprüfung oder Messung offen | offen |
@@ -346,6 +346,7 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 1045 | Der Testsatz rechnet mit der alten Lesart des Schlüssels: Seit die Abladestelle optional ist, ist ein zweiteiliger Schlüssel mehrdeutig, und das Modell soll nachfragen (E‑1170); S06, S19, S20 und S25 erwarten einen Vorschlag mit Werk und Abladestelle, S24 eine Rückfrage nach der Abladestelle, S17 eine Rückfrage zu SNDPRN_4908. Kein Lauf; was die Fälle erwarten, ist zu entscheiden | [`tasks.md`](tasks.md) §4.2, §9.9, §11 · 26.10.2026 | Entscheidung offen | **erledigt** — `tasks.md` §11: „Erledigt im Nachtrag am selben Tag“: Schlüssel von hinten ausgerichtet und damit eindeutig, keine Rückfrage (E‑1173 bis E‑1175); S24 erwartet den Vorschlag, S26 und S27 neu (E‑1177); M1010 alle acht in drei Durchgängen bestanden |
 | 1046 | Sichtprüfung 6: „von <Name>“ in der aufgeklappten Zeile, hell und dunkel, breit und schmal, auch mit einem langen Namen | [`assistent-frontend.md`](assistent-frontend.md) §12.11, §12.12 · 06.11.2026 | Sichtprüfung oder Messung offen | offen |
 | 1047 | `AuftraegeDbIT.loeschen_durch_anderen_benutzer` fiel einmal mit `409`: Ob auf der Testkopie etwas `OFFEN`-Zeilen abholt und damit Tests trifft, ist zu klären | [`tasks.md`](tasks.md) §9.10, §11 · 06.11.2026 | Sichtprüfung oder Messung offen | erledigt am 06.11.2026 — Auskunft des Auftraggebers: In der Testumgebung werden offene Aufträge abgeholt ([`tasks.md`](tasks.md) §9.10) |
+| 1048 | Sichtprüfung 7: „Fehlgeschlagen“ aus einer Rückgabe ohne Ok, gegen „Teilweise erledigt“ und gegen „Fehlgeschlagen“ von der Plattform | [`assistent-frontend.md`](assistent-frontend.md) §12.11, §12.12 · 09.11.2026 | Sichtprüfung oder Messung offen | offen |
 
 ---
 
