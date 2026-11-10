@@ -800,6 +800,11 @@ export const de = {
       ohneAktion: "Zu dieser Nachricht ist kein Ablauf protokolliert.",
       ohneDauer: "keine Dauer aufgezeichnet",
       laeuftGerade: "läuft gerade",
+      // Das Ende je Schritt (E-1184). Sichtbar steht allein die Uhrzeit hinter der
+      // Dauer; das Wort braucht, wer die Spalte nicht sieht: Vorleseprogramm und
+      // Tooltip. Es ist das Gegenstück zu „Beginn" im Kopf.
+      schrittEnde: "Ende",
+      schrittEndeHinweis: "Ende: {zeitpunkt} ({abstand})",
       nochNichtBegonnen: "noch nicht begonnen",
       // Die Wartezeile am offenen Zustand. Sie ersetzt die Lückenzeile zwischen
       // zwei Schritten, die über rund 700 geprüfte Nachrichten nie erschienen

@@ -60,6 +60,18 @@ import { AUFKLAPP_UEBERGANG, AufklappInhalt, AufklappSchalter, Aufklappen } from
 /** Die Anordnung einer Zeile — **für beide Ebenen dieselbe**, sonst wandern die Ziele. */
 const EBENE = "flex items-center gap-2 px-1";
 
+/**
+ * **Die Spalte „Ende" — Zelle und Platzhalter tragen dieselbe Klasse** *(E‑1184,
+ * `docs/nachrichtendetail.md` §10.19)*.
+ *
+ * Die Schwelle fragt die Breite der Zeitleiste ab (`@container/zeitleiste` in
+ * `nachricht-detail.tsx`), nicht den Einhängepunkt und nicht das Fenster. Darunter
+ * ist die Spalte `display: none` und die Zeile Zeichen für Zeichen, wie sie war.
+ * Breite und Schwelle sind gemessen (M1013, `docs/spaltenwahl.md` §5.6).
+ */
+export const ENDE_SPALTE =
+  "text-muted-foreground text-beiwerk hidden w-[9.9375rem] shrink-0 text-right @min-[38.875rem]/zeitleiste:block";
+
 export function AufklappZeile({
   als,
   gestrichelt = false,

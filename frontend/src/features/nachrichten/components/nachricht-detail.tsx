@@ -312,8 +312,12 @@ function Ablauf({
         —, und ein Abstand von 16 rem/4 dazwischen zerschnitte sie in drei
         Stücke. Der Rahmen darum hält seinen Abstand zu den Nachbarblöcken; nach
         innen gibt es keinen.
+
+        **Der Rahmen ist auch der Container der Spalte „Ende"** (E‑1184): Eingang
+        und Rest gehören zur selben Flucht wie die Schritte, also fragen alle drei
+        dieselbe Breite ab.
       */}
-      <div className="flex flex-col">
+      <div className="@container/zeitleiste flex flex-col">
         <Zielzeile
           messageId={detail.messageId}
           beschriftung={bausteine.eingang}

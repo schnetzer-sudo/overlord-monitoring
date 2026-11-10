@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import type { Eigenschaft } from "../api";
 import { zusatzzeile, type EigenschaftenOhneZeile } from "../detail";
 import type { Artefaktziel } from "../rohdaten";
-import { AufklappZeile } from "./aufklapp-zeile";
+import { AufklappZeile, ENDE_SPALTE } from "./aufklapp-zeile";
 import { EigenschaftenListe } from "./eigenschaft-zeile";
 
 /**
@@ -164,6 +164,11 @@ export function Zielzeile({
       hinweis={hinweis}
       zieleAnzahl={ziele.length}
       zieleKnoten={<Ziele messageId={messageId} ziele={ziele} className="pointer-events-auto" />}
+      // Kein Zeitstempel (Schritt `0` steht nicht in `schritte[]`, sein Zeitpunkt
+      // ist der Beginn im Kopf), aber die Spalte bleibt frei: Die Ziele stehen
+      // sonst rechts neben der Flucht von Dauer und Balken (E‑1184).
+      rechts={<span aria-hidden="true" className={ENDE_SPALTE} />}
+      rechtsSpiegel={<span aria-hidden="true" className={ENDE_SPALTE} />}
     >
       {lage.aufklappbar ? (
         <div className="flex min-w-0 flex-col gap-2">

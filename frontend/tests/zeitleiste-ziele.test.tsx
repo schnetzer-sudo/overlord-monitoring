@@ -36,6 +36,7 @@ import { neuerZwischenspeicher, rendere } from "./hilfe/rendern";
  * | Bewegung mit Ausschalter | die Regel **ist** eine Klasse, wie beim Ansichtsumschalter |
  * | Eingang und Rest | die Zeile gibt es mit Eigenschaften ohne Ziele und umgekehrt; der Rest mit Eigenschaften ist von Hand nie zu sehen (M57, Befund 1) |
  * | Der Fokus nach der Rückkehr *(14.10.2026)* | Wo der Fokus steht, ist ein **Zustand des Dokuments** (E‑241, S4): Nach dem Schritt zurück aus einer Datei liegt er auf ihrem Ziel — und nur dort, wo der Einhängepunkt es verlangt |
+ * | Das Ende je Schritt *(09.11.2026)* | Die Schwelle **ist** eine Klasse, und beide Ebenen müssen sie tragen; Eingang, Rest und erwartete Zeile sind Aussagen über **Abwesenheit** eines Zeitstempels bei freigehaltener Spalte (E‑1184) |
  *
  * **Die vier Sprungfälle vom 18.08.2026 sind am 21.09.2026 entfallen** — samt der
  * Mechanik, die sie belegten (E‑225, `docs/nachrichtendetail.md` §10.16).
@@ -848,6 +849,186 @@ describe("Der Fokus nach der Rückkehr aus einer Datei", () => {
     } finally {
       await besetzt.abbauen();
       anderswo.remove();
+    }
+  });
+});
+
+/**
+ * **Das Ende je Schritt** *(09.11.2026, E‑1184, `docs/nachrichtendetail.md`
+ * §10.19)*.
+ *
+ * Gerendert, weil die Schwelle eine Klasse ist und die Zusage „beide Ebenen" eine
+ * über den Baum: Eine Spalte nur in der Schaltfläche schöbe die Ziele aus der
+ * Deckung, und das sieht man keiner Funktion an. Die Formen des Zeitpunkts prüft
+ * `tests/nachrichtendetail.test.ts`.
+ *
+ * Die Zahlen sind gemessen (M1013, `docs/spaltenwahl.md` §5.6) und stehen deshalb
+ * hier ausgeschrieben: Wer sie ändert, muss neu messen.
+ */
+describe("Das Ende je Schritt", () => {
+  const SCHWELLE = "@min-[38.875rem]/zeitleiste:block";
+  const BREITE = "w-[9.9375rem]";
+
+  /** Die Zellen der Spalte in einem Knoten, Zelle wie Platzhalter. */
+  function endezellen(knoten: Element | null | undefined): Element[] {
+    return [...(knoten?.querySelectorAll('[class*="/zeitleiste:block"]') ?? [])];
+  }
+
+  function erwarteSpalte(zelle: Element | undefined): void {
+    expect(zelle?.classList.contains("hidden")).toBe(true);
+    expect(zelle?.classList.contains(SCHWELLE)).toBe(true);
+    expect(zelle?.classList.contains(BREITE)).toBe(true);
+    expect(zelle?.classList.contains("shrink-0")).toBe(true);
+  }
+
+  it("trägt die Uhrzeit hinter der Dauer, in beiden Ebenen dieselbe Spalte", async () => {
+    const { behaelter, abbauen } = await rendereDetail(
+      { schritte: SCHRITTE, eigenschaftenAnzahl: EIGENSCHAFTEN.length },
+      LISTE,
+      EIGENSCHAFTEN,
+    );
+
+    try {
+      // Eingang, Leiste und Rest fragen dieselbe Breite ab.
+      const zeitleiste = behaelter.querySelector("ol");
+      const container = zeitleiste?.closest('[class~="@container/zeitleiste"]');
+      expect(container).not.toBeNull();
+      expect(container?.contains(eingangszeile(behaelter) ?? null)).toBe(true);
+
+      const zeile = behaelter.querySelectorAll("ol > li")[0];
+      const schalter = zeile.querySelector("button");
+      const zeit = schalter?.querySelector("time");
+
+      // Der Start im Kopf liegt am selben Tag: nur die Uhrzeit, mit Sekunden.
+      expect(zeit?.textContent).toBe("22:41:13");
+      expect(zeit?.getAttribute("dateTime")).toBe("2025-12-29T22:41:13Z");
+      expect(zeit?.getAttribute("title")).toMatch(/^Ende: 29\.12\.2025, 22:41:13 \(.+\)$/);
+
+      // Die Zelle in der Schaltfläche und der Platzhalter in der Ebene der Ziele.
+      const [zelle] = endezellen(schalter);
+      erwarteSpalte(zelle);
+      expect(zelle.contains(zeit ?? null)).toBe(true);
+
+      const ebene = zeile.querySelector("div.pointer-events-none");
+      const platzhalter = endezellen(ebene);
+      expect(platzhalter).toHaveLength(1);
+      expect(platzhalter[0].className).toBe(zelle.className);
+      expect(ebene?.querySelector("time")).toBeNull();
+
+      // Der Name beginnt mit dem Schritt, das Ende steht nach der Dauer, und ein
+      // `aria-label` nähme der Schaltfläche beides (WCAG 2.5.3).
+      const name = schalter?.textContent ?? "";
+      expect(name.startsWith("Datei konvertiert")).toBe(true);
+      expect(name.indexOf("1 s")).toBeGreaterThan(name.indexOf("technische Eigenschaften"));
+      expect(name.endsWith(", Ende 22:41:13")).toBe(true);
+      expect(schalter?.hasAttribute("aria-label")).toBe(false);
+
+      // Eine Zeile ohne Eigenschaften ist Text und hat dieselbe Spalte.
+      const dritte = behaelter.querySelectorAll("ol > li")[2];
+      expect(dritte.querySelector("button")).toBeNull();
+      erwarteSpalte(endezellen(dritte)[0]);
+      expect(dritte.querySelector("time")?.textContent).toBe("22:41:13");
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("schaltet mit einem Klick auf die Endzeit genau einmal, weil sie in der Zeile liegt", async () => {
+    const { behaelter, abbauen } = await rendereDetail(
+      { schritte: SCHRITTE, eigenschaftenAnzahl: EIGENSCHAFTEN.length },
+      LISTE,
+      EIGENSCHAFTEN,
+    );
+
+    try {
+      const zeile = behaelter.querySelectorAll("ol > li")[0];
+      const schalter = zeile.querySelector("button");
+      await klicke(schalter?.querySelector("time"));
+      expect(schalter?.getAttribute("aria-expanded")).toBe("true");
+      await klicke(schalter?.querySelector("time"));
+      expect(schalter?.getAttribute("aria-expanded")).toBe("false");
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("vergleicht gegen den Beginn im Kopf und nicht gegen die letzte Änderung", async () => {
+    const schritte: Schritt[] = [
+      { ...schritt(1, "Am Tag des Beginns"), ende: "2025-12-29T22:41:13Z" },
+      { ...schritt(2, "Am Tag der Änderung"), ende: "2025-12-30T01:00:05Z" },
+    ];
+    const { behaelter, abbauen } = await rendereDetail(
+      { schritte, start: "2025-12-29T22:41:10Z", zeitpunkt: "2025-12-30T02:00:00Z" },
+      { ...LISTE, nutzdaten: [], protokolle: [] },
+    );
+
+    try {
+      const zeiten = [...behaelter.querySelectorAll("ol > li time")].map((z) => z.textContent);
+      expect(zeiten).toEqual(["22:41:13", "30.12.2025, 01:00:05"]);
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("zeigt ohne Beginn die volle Form und ohne Ende nichts, bei freigehaltener Spalte", async () => {
+    const schritte: Schritt[] = [
+      schritt(1, "Mit Ende"),
+      { ...schritt(2, "Ohne Ende"), ende: null, dauerSekunden: null },
+    ];
+    const { behaelter, abbauen } = await rendereDetail(
+      { schritte, start: null },
+      { ...LISTE, nutzdaten: [], protokolle: [] },
+    );
+
+    try {
+      const [erste, zweite] = behaelter.querySelectorAll("ol > li");
+      expect(erste.querySelector("time")?.textContent).toBe("29.12.2025, 22:41:13");
+      expect(zweite.querySelector("time")).toBeNull();
+      const [leer] = endezellen(zweite);
+      erwarteSpalte(leer);
+      // Keine erfundene Zeit, kein Platzhalter, keine Null.
+      expect(leer.textContent).toBe("");
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("gibt Eingang, Rest und erwarteter Zeile keinen Zeitstempel, aber dieselbe Spalte", async () => {
+    const { behaelter, abbauen } = await rendereDetail(
+      {
+        schritte: SCHRITTE,
+        offenerZustand: "WARTET_VOR",
+        naechsterSchritt: "Noch nicht gelaufen",
+      },
+      {
+        ...LISTE,
+        protokolle: [...LISTE.protokolle, artefakt(9, "Ohne", "PROTOKOLL", true)],
+      },
+    );
+
+    try {
+      const eingang = eingangszeile(behaelter);
+      expect(eingang?.querySelector("time")).toBeNull();
+      // Zwei Stellen: die Zeile selbst und die Ebene der Ziele darüber.
+      const inEingang = endezellen(eingang);
+      expect(inEingang).toHaveLength(2);
+      inEingang.forEach(erwarteSpalte);
+
+      const rest = [...behaelter.querySelectorAll("div.border-dashed")].find((kasten) =>
+        (kasten.textContent ?? "").startsWith(DATEIEN.ohneZeile),
+      );
+      expect(rest?.querySelector("time")).toBeNull();
+      expect(endezellen(rest)).toHaveLength(2);
+
+      const erwartet = [...behaelter.querySelectorAll("ol > li")].at(-1);
+      expect(erwartet?.textContent).toContain("Noch nicht gelaufen");
+      expect(erwartet?.querySelector("time")).toBeNull();
+      erwarteSpalte(endezellen(erwartet)[0]);
+
+      // Schritt `0` bleibt ohne Zeile: drei Schritte, drei Zeitstempel.
+      expect(behaelter.querySelectorAll("ol > li time")).toHaveLength(3);
+    } finally {
+      await abbauen();
     }
   });
 });

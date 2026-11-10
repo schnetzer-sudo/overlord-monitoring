@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Eigenschaft, Nachrichtendetail, Schritt } from "@/features/nachrichten/api";
 import {
@@ -7,6 +7,7 @@ import {
   bedeutungNichtVerifiziert,
   laengsteDauer,
   schrittAufklappbar,
+  schrittEndeAnzeige,
   verteileEigenschaften,
   wartezeile,
   zeitleiste,
@@ -716,5 +717,96 @@ describe("Was an der Zeitleiste aufklappbar ist", () => {
     expect(zusatzzeile(2, 7)).toEqual({ vorhanden: true, aufklappbar: true });
     // nichts — wo nichts liegt, hängt nichts
     expect(zusatzzeile(0, 0)).toEqual({ vorhanden: false, aufklappbar: false });
+  });
+});
+
+/**
+ * **Das Ende je Schritt** *(09.11.2026, E‑1184, `docs/nachrichtendetail.md`
+ * §10.19)*.
+ *
+ * Geprüft wird die Entscheidung: welche Form dasteht und gegen welchen Tag
+ * verglichen wird. Die Spalte selbst prüft `tests/zeitleiste-ziele.test.tsx`.
+ *
+ * Alle Werte sind erfunden und in Winterzeit gewählt: `Europe/Berlin` liegt dort
+ * eine Stunde vor UTC, und genau diese Stunde trägt die Fälle um Mitternacht.
+ */
+describe("Das Ende je Schritt", () => {
+  const ZONE = "Europe/Berlin";
+  const START = "2026-11-09T14:00:00Z";
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("zeigt nichts, wenn kein Ende protokolliert ist", () => {
+    expect(schrittEndeAnzeige({ ende: null }, START, "de", ZONE)).toBeNull();
+    // Auch ohne Start: keine erfundene Zeit, kein Platzhalter, keine Null.
+    expect(schrittEndeAnzeige({ ende: null }, null, "de", ZONE)).toBeNull();
+  });
+
+  it("zeigt am Tag des Starts nur die Uhrzeit und im Vollwert das Datum dazu", () => {
+    expect(schrittEndeAnzeige({ ende: "2026-11-09T14:04:09Z" }, START, "de", ZONE)).toEqual({
+      text: "15:04:09",
+      vollwert: "09.11.2026, 15:04:09",
+    });
+  });
+
+  it("zeigt an einem anderen Tag die volle Form", () => {
+    expect(schrittEndeAnzeige({ ende: "2026-11-10T07:14:02Z" }, START, "de", ZONE)).toEqual({
+      text: "10.11.2026, 08:14:02",
+      vollwert: "10.11.2026, 08:14:02",
+    });
+  });
+
+  it("zeigt ohne Start immer die volle Form, weil es keinen Tag zum Vergleichen gibt", () => {
+    expect(schrittEndeAnzeige({ ende: "2026-11-09T14:04:09Z" }, null, "de", ZONE)).toEqual({
+      text: "09.11.2026, 15:04:09",
+      vollwert: "09.11.2026, 15:04:09",
+    });
+  });
+
+  /**
+   * **Der Tag wird in der Anzeigezone verglichen, nicht in UTC.** Beide Richtungen,
+   * denn jede fällt bei einem Vergleich in UTC anders herum um.
+   */
+  it("wertet ein Ende nach Mitternacht als neuen Tag, auch wenn UTC noch den alten zeigt", () => {
+    // Start 23:30 am 09.11., Ende 00:30 am 10.11. In UTC liegen beide am 09.11.
+    expect(
+      schrittEndeAnzeige({ ende: "2026-11-09T23:30:00Z" }, "2026-11-09T22:30:00Z", "de", ZONE),
+    ).toEqual({ text: "10.11.2026, 00:30:00", vollwert: "10.11.2026, 00:30:00" });
+  });
+
+  it("wertet zwei Zeitpunkte desselben Ortstags als gleich, auch wenn UTC den Tag wechselt", () => {
+    // Start 00:30, Ende 01:30, beide am 10.11. In UTC liegt der Start am 09.11.
+    expect(
+      schrittEndeAnzeige({ ende: "2026-11-10T00:30:00Z" }, "2026-11-09T23:30:00Z", "de", ZONE),
+    ).toEqual({ text: "01:30:00", vollwert: "10.11.2026, 01:30:00" });
+  });
+
+  it("zeigt die Sekunden immer, auch bei null Sekunden und um Mitternacht", () => {
+    expect(schrittEndeAnzeige({ ende: "2026-11-09T14:04:00Z" }, START, "de", ZONE)?.text).toBe(
+      "15:04:00",
+    );
+    expect(
+      schrittEndeAnzeige({ ende: "2026-11-09T23:00:00Z" }, "2026-11-09T23:00:00Z", "de", ZONE)
+        ?.text,
+    ).toBe("00:00:00");
+  });
+
+  it("folgt der Sprache und bleibt dabei die kurze Form der vollen", () => {
+    const anzeige = schrittEndeAnzeige({ ende: "2026-11-09T14:04:09Z" }, START, "en", ZONE);
+    expect(anzeige?.text).toBe("03:04:09 PM");
+    expect(anzeige?.vollwert).toBe("11/09/2026, 03:04:09 PM");
+    expect(anzeige?.vollwert.endsWith(anzeige.text)).toBe(true);
+  });
+
+  it("rechnet nicht gegen die Uhr des Browsers", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2020-01-01T00:00:00Z"));
+    const frueher = schrittEndeAnzeige({ ende: "2026-11-09T14:04:09Z" }, START, "de", ZONE);
+    vi.setSystemTime(new Date("2031-06-15T12:00:00Z"));
+    expect(schrittEndeAnzeige({ ende: "2026-11-09T14:04:09Z" }, START, "de", ZONE)).toEqual(
+      frueher,
+    );
   });
 });

@@ -466,6 +466,8 @@ export const en: Texte = {
       ohneAktion: "No workflow run is recorded for this message.",
       ohneDauer: "no duration recorded",
       laeuftGerade: "running now",
+      schrittEnde: "Finished",
+      schrittEndeHinweis: "Finished: {zeitpunkt} ({abstand})",
       nochNichtBegonnen: "not started yet",
       wartetSeit: "waiting for {dauer}",
       laeuftSeit: "running for {dauer}",
