@@ -71,18 +71,31 @@ export function mehrereTypen(liste: readonly Pick<Auftrag, "typ">[]): boolean {
 }
 
 /**
+ * Hat der Typ des Auftrags einen Schlüssel? Das Backend bildet ihn aus der
+ * Kopie der Definition und liefert `null` genau dann, wenn die Definition
+ * keinen `schluessel` hat (`TypDefinition.schluesselText`, `docs/tasks.md`
+ * §6.5); mit Schlüssel hat jeder Eintrag einen (E‑1165). **Gefragt wird die
+ * Antwort, nie der Name des Typs** (E‑1185).
+ */
+export function hatSchluessel(eintraege: readonly Pick<Auftragseintrag, "schluessel">[]): boolean {
+  return eintraege.some((eintrag) => eintrag.schluessel !== null);
+}
+
+/**
  * Die Schlüssel der zugeklappten Zeile: die ersten zwei, und wie viele danach
- * kommen (E‑1102). **Ohne Schlüssel** steht „Eintrag <n>“ (F23) — gebildet
- * über `rueckfall`, damit hier kein Text steht.
+ * kommen (E‑1102). **Ohne Schlüssel `null`** — dann bleibt der linke Teil der
+ * Zeile leer, ohne Ersatz (E‑1185; bis dahin „Eintrag <n>“, F23).
  */
 export function schluesselZugeklappt(
   eintraege: readonly Pick<Auftragseintrag, "schluessel">[],
-  rueckfall: (nummer: number) => string,
-): { schluessel: string[]; weitere: number } {
+): { schluessel: string[]; weitere: number } | null {
+  if (!hatSchluessel(eintraege)) {
+    return null;
+  }
   return {
     schluessel: eintraege
       .slice(0, SCHLUESSEL_ZUGEKLAPPT)
-      .map((eintrag, index) => eintrag.schluessel ?? rueckfall(index + 1)),
+      .flatMap((eintrag) => (eintrag.schluessel === null ? [] : [eintrag.schluessel])),
     weitere: weitere(eintraege, SCHLUESSEL_ZUGEKLAPPT),
   };
 }
@@ -122,6 +135,16 @@ export function zeigtZaehlung(auftrag: Pick<Auftrag, "einordnung" | "eintraege">
  */
 export function loeschbar(auftrag: Pick<Auftrag, "einordnung">): boolean {
   return einordnungVon(auftrag) === "OFFEN";
+}
+
+/**
+ * Ein Wert, zerlegt **hinter jedem Bindestrich** — die Stellen, an denen er
+ * brechen darf, wenn er auch allein nicht in die Zeile passt (E‑1187). Eine
+ * Nachrichten-ID bricht so zwischen ihren Gruppen und nie mitten in einer.
+ * Zusammengesetzt ergeben die Teile den Wert Zeichen für Zeichen.
+ */
+export function teileHinterBindestrich(wert: string): string[] {
+  return wert.split(/(?<=-)/);
 }
 
 /** Ein Wert eines Eintrags mit seinem `label`. */

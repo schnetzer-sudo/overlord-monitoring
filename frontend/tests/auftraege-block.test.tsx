@@ -92,6 +92,26 @@ function eintrag(tor: string, teil: Partial<Auftragseintrag> = {}): Auftragseint
   };
 }
 
+/**
+ * Ein Typ **ohne Schlüssel** mit den Feldern des Neudurchlaufs eines Jobs
+ * (E‑1185). Die Werte sind erfunden; der Typname in den Fällen ist bewusst
+ * keiner, den es gibt — entschieden wird an `schluessel: null`.
+ */
+const NEUSTART_FELDER = [
+  { name: "messageid", label: "Nachrichten ID" },
+  { name: "start", label: "Start um" },
+  { name: "step", label: "ab Schritt" },
+];
+
+function neustart(messageid: string): Auftragseintrag {
+  return {
+    werte: { messageid, start: "25.03.2026 10:35", step: "5" },
+    schluessel: null,
+    rueckgabe: null,
+    ergebnis: null,
+  };
+}
+
 let laufendeNummer = 0;
 
 function auftrag(teil: Partial<Auftrag> = {}): Auftrag {
@@ -830,6 +850,158 @@ describe("Die Zeile (E‑1102 bis E‑1104, E‑1107, E‑1122)", () => {
       const werk = [...bereich.querySelectorAll("dd")].find((dd) => dd.textContent === "A  1");
       expect(werk, "der Wert, zeichengenau").toBeTruthy();
       expect(werk!.classList.contains("whitespace-pre-wrap")).toBe(true);
+    } finally {
+      await abbauen();
+    }
+  });
+
+  /**
+   * E‑1185, E‑1186: Ein Typ ohne Schlüssel hat nichts an dessen Stelle — kein
+   * „Eintrag <n>“, kein anderer Ersatz. Entschieden wird an der Antwort
+   * (`schluessel: null`), nicht am Namen des Typs; deshalb heißt der Typ hier
+   * anders als jeder echte. Der Auftrag mit Schlüssel daneben bleibt, wie er war.
+   */
+  it("zeigt bei einem Typ ohne Schlüssel keine Ersatzbeschriftung, den Zeitpunkt an seiner Stelle und zwischen den Einträgen eine Linie", async () => {
+    const ohne = auftrag({
+      typ: "TYP_OHNE_SCHLUESSEL",
+      name: "Typ ohne Schlüssel",
+      aktion: "Starten ab Schritt",
+      felder: NEUSTART_FELDER,
+      eintraege: [
+        neustart("11111111-2222-4333-8444-555555555555"),
+        neustart("66666666-7777-4888-8999-aaaaaaaaaaaa"),
+      ],
+    });
+    const einzeln = auftrag({
+      typ: "TYP_OHNE_SCHLUESSEL",
+      name: "Typ ohne Schlüssel",
+      aktion: "Starten ab Schritt",
+      felder: NEUSTART_FELDER,
+      eintraege: [neustart("bbbbbbbb-cccc-4ddd-8eee-ffffffffffff")],
+    });
+    mitAuftraegen([ohne, einzeln, auftrag()]);
+    const { abbauen } = await ansicht();
+    try {
+      const [zeile, einzelzeile, mitSchluessel] = zeilen();
+      const zweiteZeile = (knopfzeile: HTMLButtonElement) =>
+        knopfzeile.querySelectorAll<HTMLElement>(":scope > span")[1];
+
+      // Zugeklappt: links nichts, rechts der Zeitpunkt — derselbe Bau wie mit Schlüssel.
+      for (const ohneZeile of [zeile, einzelzeile]) {
+        expect(ohneZeile.textContent).not.toMatch(/Eintrag \d/);
+        const teile = [...zweiteZeile(ohneZeile).children] as HTMLElement[];
+        expect(teile).toHaveLength(2);
+        expect(teile[0].textContent, "der linke Teil ist leer").toBe("");
+        expect(teile[0].hasAttribute("title")).toBe(false);
+        expect(teile[0].classList.contains("flex-1")).toBe(true);
+        expect(teile[1].textContent).toBe("19.10.2026, 14:32");
+      }
+      expect(zeile.textContent).toContain("Starten ab Schritt · 2 Einträge");
+      const mitTeile = [...zweiteZeile(mitSchluessel).children] as HTMLElement[];
+      expect(mitTeile).toHaveLength(2);
+      expect(mitTeile[0].textContent).toBe("47110/TOR3, 47110/TOR4");
+      expect(mitTeile[1].textContent).toBe("19.10.2026, 14:32");
+
+      // Aufgeklappt: keine Überschrift je Eintrag, eine Linie zwischen den Einträgen.
+      await klick(zeile);
+      await klick(einzelzeile);
+      await klick(mitSchluessel);
+      const bereich = (knopfzeile: HTMLButtonElement) =>
+        document.getElementById(knopfzeile.getAttribute("aria-controls")!)!;
+      const liste = (knopfzeile: HTMLButtonElement) =>
+        [...bereich(knopfzeile).querySelectorAll<HTMLUListElement>("ul")].at(-1)!;
+
+      expect(bereich(zeile).textContent).not.toMatch(/Eintrag \d/);
+      const eintraege = [...liste(zeile).children];
+      expect(eintraege).toHaveLength(2);
+      for (const eintragsZeile of eintraege) {
+        expect(eintragsZeile.firstElementChild?.tagName, "zuerst die Werte").toBe("DL");
+        expect(eintragsZeile.querySelector("p.font-mono")).toBeNull();
+      }
+      expect(eintraege[0].textContent).toContain("11111111-2222-4333-8444-555555555555");
+      expect(liste(zeile).classList.contains("divide-y")).toBe(true);
+      // Gerade Linie: keine runde Ecke, an der sich ihre Enden aufbiegen.
+      for (const eintragsZeile of eintraege) {
+        expect(eintragsZeile.classList.contains("rounded-md")).toBe(false);
+      }
+      // Bei einem einzigen Eintrag zieht `divide-y` keine Linie; es gibt kein Zweites.
+      expect(liste(einzelzeile).children).toHaveLength(1);
+
+      // Mit Schlüssel: die Überschrift je Eintrag und der Abstand wie bisher, keine Linie.
+      const mitEintraege = [...liste(mitSchluessel).children];
+      expect(mitEintraege.map((li) => li.querySelector("p.font-mono")?.textContent)).toEqual([
+        "47110/TOR3",
+        "47110/TOR4",
+      ]);
+      expect(liste(mitSchluessel).classList.contains("divide-y")).toBe(false);
+      expect(liste(mitSchluessel).classList.contains("gap-1")).toBe(true);
+      expect(mitEintraege.every((li) => li.classList.contains("rounded-md"))).toBe(true);
+    } finally {
+      await abbauen();
+    }
+  });
+
+  /**
+   * E‑1187: Das `label` bricht nicht um, und der Wert steht in einem Stück
+   * unter dem `label`, wenn neben ihm kein Platz ist; passt er auch dort nicht,
+   * bricht er hinter einem Bindestrich. Die Regel **ist** eine Kombination aus
+   * Klassen und Bruchstellen — `flex-wrap` an der Feldzeile,
+   * `whitespace-nowrap` am `label`, `break-words` statt `break-all` und `<wbr>`
+   * hinter jedem Bindestrich am Wert; wie sie im Browser bricht, steht in M1015.
+   */
+  it("lässt in den Feldzeilen beider Typen das label nie umbrechen und den Wert nur hinter einem Bindestrich", async () => {
+    mitAuftraegen([
+      auftrag({
+        typ: "TYP_OHNE_SCHLUESSEL",
+        name: "Typ ohne Schlüssel",
+        aktion: "Starten ab Schritt",
+        felder: NEUSTART_FELDER,
+        eintraege: [neustart("11111111-2222-4333-8444-555555555555")],
+      }),
+      auftrag(),
+    ]);
+    const { abbauen } = await ansicht();
+    try {
+      for (const zeile of zeilen()) {
+        await klick(zeile);
+      }
+      const felder = [...block()!.querySelectorAll("dl > div")];
+      expect(felder.map((feld) => feld.querySelector("dt")?.textContent)).toEqual([
+        "Nachrichten ID",
+        "Start um",
+        "ab Schritt",
+        "Werk",
+        "Abladestelle",
+        "SNDPRN",
+        "Werk",
+        "Abladestelle",
+        "SNDPRN",
+      ]);
+      for (const feld of felder) {
+        expect(feld.classList.contains("flex-wrap"), "die Feldzeile darf umbrechen").toBe(true);
+        const dt = feld.querySelector("dt")!;
+        expect(dt.classList.contains("whitespace-nowrap"), `${dt.textContent} bricht nicht`).toBe(
+          true,
+        );
+        const dd = feld.querySelector("dd")!;
+        expect(dd.classList.contains("break-all"), "kein Bruch mitten im Wert").toBe(false);
+        expect(dd.classList.contains("break-words")).toBe(true);
+        expect(dd.classList.contains("whitespace-pre-wrap"), "Leerzeichen bleiben (E‑1141)").toBe(
+          true,
+        );
+      }
+
+      // Die Nachrichten-ID: eine Bruchstelle hinter jedem ihrer vier Bindestriche,
+      // der Text bleibt Zeichen für Zeichen derselbe — und nichts anderes im Wert.
+      const id = felder[0].querySelector("dd")!;
+      expect(id.textContent).toBe("11111111-2222-4333-8444-555555555555");
+      expect(id.querySelectorAll("wbr")).toHaveLength(4);
+      expect([...id.children].every((kind) => kind.tagName === "WBR")).toBe(true);
+      for (const wbr of id.querySelectorAll("wbr")) {
+        expect(wbr.previousSibling?.textContent?.endsWith("-")).toBe(true);
+      }
+      // Ohne Bindestrich keine Bruchstelle.
+      expect(felder[3].querySelector("dd")!.querySelectorAll("wbr")).toHaveLength(0);
     } finally {
       await abbauen();
     }

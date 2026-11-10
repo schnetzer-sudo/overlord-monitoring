@@ -30,7 +30,7 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
   vergeben.
 - **Seit 1.1.0 (21.10.2026) eine Linie** (E‑1127): Neue Punkte schließen an die höchste vergebene
   Nummer an; der Bereich unter 1000 wird nicht weiter befüllt. Bis dahin begannen die Nummern auf
-  `assistent` bei 1000 (Entscheidung 7). **Nächste freie Nummer: 1050.**
+  `assistent` bei 1000 (Entscheidung 7). **Nächste freie Nummer: 1051.**
 - **Doppelvergaben sind aufgelöst** (16.10.2026): 136 und 186 bis 189 waren je zweimal vergeben. Die
   Nummer behielt der Punkt, auf den andere Dateien öfter verweisen; der andere bekam 247 bzw. 248 bis
   251, mit datiertem Vermerk an seiner Fundstelle.
@@ -348,6 +348,7 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 1047 | `AuftraegeDbIT.loeschen_durch_anderen_benutzer` fiel einmal mit `409`: Ob auf der Testkopie etwas `OFFEN`-Zeilen abholt und damit Tests trifft, ist zu klären | [`tasks.md`](tasks.md) §9.10, §11 · 06.11.2026 | Sichtprüfung oder Messung offen | erledigt am 06.11.2026 — Auskunft des Auftraggebers: In der Testumgebung werden offene Aufträge abgeholt ([`tasks.md`](tasks.md) §9.10) |
 | 1048 | Sichtprüfung 7: „Fehlgeschlagen“ aus einer Rückgabe ohne Ok, gegen „Teilweise erledigt“ und gegen „Fehlgeschlagen“ von der Plattform | [`assistent-frontend.md`](assistent-frontend.md) §12.11, §12.12 · 09.11.2026 | Sichtprüfung oder Messung offen | erledigt am 09.11.2026 — im angemeldeten Chrome bestanden ([`tasks.md`](tasks.md) §9.11) |
 | 1049 | Sichtprüfung 8: eigener Knopf „Neu laden“ im Kopf von „Ihre Aufträge“: Ort, Sanduhr, lädt nur die Liste; Höhe des Kopfes gegen die Nachbarblöcke | [`assistent-frontend.md`](assistent-frontend.md) §12.11, §12.12 · 09.11.2026 | Sichtprüfung oder Messung offen | erledigt am 09.11.2026 — im angemeldeten Chrome bestanden, die Höhe bleibt ([`assistent-frontend.md`](assistent-frontend.md) §12.10) |
+| 1050 | Die Karte im Gespräch zeigt bei einem Typ ohne Schlüssel „Eintrag <n>“ als Überschrift jedes Eintrags (E‑1080); „Ihre Aufträge“ zeigt seit E‑1185 keinen Ersatz mehr. Gemeldet, nicht geändert: Der Auftrag schloss die Karte aus | [`assistent-frontend.md`](assistent-frontend.md) §12.11, §12.14 · 10.11.2026 | Entscheidung offen | offen |
 
 ---
 
