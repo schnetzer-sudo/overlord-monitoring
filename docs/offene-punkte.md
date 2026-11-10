@@ -30,7 +30,7 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
   vergeben.
 - **Seit 1.1.0 (21.10.2026) eine Linie** (E‑1127): Neue Punkte schließen an die höchste vergebene
   Nummer an; der Bereich unter 1000 wird nicht weiter befüllt. Bis dahin begannen die Nummern auf
-  `assistent` bei 1000 (Entscheidung 7). **Nächste freie Nummer: 1051.**
+  `assistent` bei 1000 (Entscheidung 7). **Nächste freie Nummer: 1053.**
 - **Doppelvergaben sind aufgelöst** (16.10.2026): 136 und 186 bis 189 waren je zweimal vergeben. Die
   Nummer behielt der Punkt, auf den andere Dateien öfter verweisen; der andere bekam 247 bzw. 248 bis
   251, mit datiertem Vermerk an seiner Fundstelle.
@@ -45,23 +45,26 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
 |---|---:|---:|---:|
 | offen — Fehler | 32 | 0 | — |
 | offen — Verbesserung | 50 | 0 | — |
-| offen — Entscheidung offen | 51 | 0 | — |
+| offen — Entscheidung offen | 53 | 0 | — |
 | offen — Sichtprüfung oder Messung offen | 66 | 13 | — |
-| **offen gesamt** | **199** | **13** | — |
+| **offen gesamt** | **201** | **13** | — |
 | ungeprüft | — | — | 357 |
-| erledigt | 64 | 0 | 64 |
+| erledigt | 67 | 0 | 64 |
 | gegenstandslos | 3 | 0 | 5 |
-| **Zeilen** | 266 | 13 | 426 |
+| **Zeilen** | 271 | 13 | 426 |
 
-Offen sind damit **212** nummerierte Punkte; dazu kommen 357 ungeprüfte lokale (gezählt am
-06.11.2026 über die Tabelle in Teil 1, nach „Ersteller am Auftrag“ nachgezählt). Davon
+Offen sind damit **214** nummerierte Punkte; dazu kommen 357 ungeprüfte lokale (Teil 1 gezählt am
+10.11.2026 über die Tabelle, nach „Ihre Aufträge neu gegliedert“ per Skript nachgezählt; Teil 3 vom
+06.11.2026). Davon
 stammen 37 aus der Linie `assistent` und ihrer Zusammenführung (1000 bis 1006 aus A1; 1010 und 1012
 bis 1015 aus A2; 1017 bis 1022 aus A3; 1023 bis 1032 aus A4; 1033 bis 1037 aus 1.1.0; 1038 bis 1041
 aus dem Nachtrag zu 1.1.0, der Deployment-Routine). Dazu kommen 1042 bis 1044 aus dem Fix „Antworten
 ohne Innenleben“ vom 26.10.2026; 1042 ist seit M1009 am selben Tag erledigt. 1045 kommt aus
 „Schlüsselteile frei wählbar“ vom selben Tag, das 1007 erledigt hat; 1045 ist seit dem Nachtrag
 (M1010) am selben Tag erledigt. 1046 und 1047 kommen aus „Ersteller am Auftrag“ vom 06.11.2026; 1047 ist seit der Auskunft des
-Auftraggebers am selben Tag erledigt. 1009 ist
+Auftraggebers am selben Tag erledigt. 1048 und 1049 (beide am 09.11.2026 erledigt) und 1050 kommen
+aus den Fixes an „Ihre Aufträge“ vom 09. und 10.11.2026, 1051 und 1052 aus „Ihre Aufträge neu
+gegliedert“ vom 10.11.2026. 1009 ist
 seit dem 21.10.2026 erledigt, 1011 seit A3 entschieden, 1016 seit
 M1003 erledigt. Am selben Tag erledigt: 255, 260 und 261 (`betrieb.md` §9).
 
@@ -349,6 +352,8 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 1048 | Sichtprüfung 7: „Fehlgeschlagen“ aus einer Rückgabe ohne Ok, gegen „Teilweise erledigt“ und gegen „Fehlgeschlagen“ von der Plattform | [`assistent-frontend.md`](assistent-frontend.md) §12.11, §12.12 · 09.11.2026 | Sichtprüfung oder Messung offen | erledigt am 09.11.2026 — im angemeldeten Chrome bestanden ([`tasks.md`](tasks.md) §9.11) |
 | 1049 | Sichtprüfung 8: eigener Knopf „Neu laden“ im Kopf von „Ihre Aufträge“: Ort, Sanduhr, lädt nur die Liste; Höhe des Kopfes gegen die Nachbarblöcke | [`assistent-frontend.md`](assistent-frontend.md) §12.11, §12.12 · 09.11.2026 | Sichtprüfung oder Messung offen | erledigt am 09.11.2026 — im angemeldeten Chrome bestanden, die Höhe bleibt ([`assistent-frontend.md`](assistent-frontend.md) §12.10) |
 | 1050 | Die Karte im Gespräch zeigt bei einem Typ ohne Schlüssel „Eintrag <n>“ als Überschrift jedes Eintrags (E‑1080); „Ihre Aufträge“ zeigt seit E‑1185 keinen Ersatz mehr. Gemeldet, nicht geändert: Der Auftrag schloss die Karte aus | [`assistent-frontend.md`](assistent-frontend.md) §12.11, §12.14 · 10.11.2026 | Entscheidung offen | offen |
+| 1051 | Die Typdefinition hat keine Feldart; „Ihre Aufträge“ entscheidet an der Länge des Werts, ob ein Feld eine Spalte oder die ganze Breite bekommt (E‑1192), kein Wert in `--text-basis`. Nach Art ginge es erst mit einer Feldart in der Definition, ihrer Prüfung und ihr in der Antwort — gemeldet, nicht gebaut | [`assistent-frontend.md`](assistent-frontend.md) §12.11, §12.15 · 10.11.2026 | Entscheidung offen | offen |
+| 1052 | Die Nachrichten-ID passt in „Ihre Aufträge“ bei 1.280 px in keiner Anzeigegröße in eine Zeile (in `xs` 7,1 px zu wenig), bei 1.440 px in `m` und `l` nicht; sie endet dort mit Auslassungspunkten (M1016) | [`assistent-frontend.md`](assistent-frontend.md) §12.11, §12.15 · 10.11.2026 | Entscheidung offen | offen |
 
 ---
 

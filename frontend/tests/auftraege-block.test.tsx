@@ -651,7 +651,7 @@ describe("Die Stände (§12.4, E‑1105)", () => {
   });
 });
 
-describe("Die Zeile (E‑1102 bis E‑1104, E‑1107, E‑1122)", () => {
+describe("Die Zeile (E‑1102, E‑1104, E‑1107, E‑1122, E‑1188 bis E‑1191)", () => {
   it("zeigt zugeklappt Aktion, Anzahl, zwei Schlüssel mit „und 1 weiterer“ und den Zeitpunkt in der Anzeigezone", async () => {
     mitAuftraegen([auftrag({ eintraege: [eintrag("TOR3"), eintrag("TOR4"), eintrag("TOR5")] })]);
     const { abbauen } = await ansicht();
@@ -735,29 +735,164 @@ describe("Die Zeile (E‑1102 bis E‑1104, E‑1107, E‑1122)", () => {
     }
   });
 
-  it("nennt den Typ oben nur, wenn die Liste mehrere Typen hat", async () => {
-    const zweiter = auftrag({ typ: "GATTUNG", name: "Gattung aus dem Test", aktion: "Sperren" });
-    mitAuftraegen([auftrag(), zweiter]);
+  /**
+   * E‑1188: Der Kopf hat zwei Zeilen — Stand · Typname, darunter Aktion und
+   * Zahl mit dem Zeitpunkt —, zugeklappt mit Schlüssel eine dritte. Ohne
+   * Schlüssel gibt es keine dritte, auch keine leere. Entschieden wird an der
+   * Antwort (`schluessel: null`), nicht am Namen des Typs; deshalb heißt der
+   * Typ hier anders als jeder echte. Gezählt werden die Zeilen des Auslösers.
+   */
+  it("hat ohne Schlüssel zwei Zeilen, mit Schlüssel zugeklappt drei und aufgeklappt zwei", async () => {
+    mitAuftraegen([
+      auftrag({
+        typ: "TYP_OHNE_SCHLUESSEL",
+        name: "Typ ohne Schlüssel",
+        aktion: "Starten ab Schritt",
+        felder: NEUSTART_FELDER,
+        eintraege: [
+          neustart("11111111-2222-4333-8444-555555555555"),
+          neustart("66666666-7777-4888-8999-aaaaaaaaaaaa"),
+        ],
+      }),
+      auftrag({ eintraege: [eintrag("TOR3"), eintrag("TOR4"), eintrag("TOR5")] }),
+    ]);
     const { abbauen } = await ansicht();
     try {
-      expect(zeilen()[0].textContent).toContain(
-        "Anpassen der Werk-/Abladestellentabelle · Neuanlage",
+      const kopfzeilen = (knopfzeile: HTMLButtonElement) => [
+        ...knopfzeile.querySelectorAll<HTMLElement>(":scope > span"),
+      ];
+      const [ohne, mit] = zeilen();
+
+      // Ohne Schlüssel: zwei Zeilen, kein Ersatz.
+      expect(kopfzeilen(ohne)).toHaveLength(2);
+      expect(ohne.textContent).not.toMatch(/Eintrag \d/);
+      const [erste, zweite] = kopfzeilen(ohne);
+      expect(erste.textContent).toBe("Offen · Typ ohne Schlüssel");
+      const ersteSchrift = erste.querySelector<HTMLElement>(":scope > span")!;
+      expect(ersteSchrift.classList.contains("text-basis")).toBe(true);
+      expect(ersteSchrift.classList.contains("font-medium")).toBe(true);
+      // Die innerste Spanne mit genau dem Wort; ihr Elternteil trägt Farbe und Zeichen.
+      const stand = [...ersteSchrift.querySelectorAll("span")]
+        .filter((s) => s.textContent === T.stand.OFFEN)
+        .pop()!.parentElement!;
+      expect(stand.classList.contains("whitespace-nowrap"), "das Wort bricht nicht").toBe(true);
+      expect(stand.className).toContain(auftragVordergrund("OFFEN"));
+      expect([...zweite.children].map((teil) => teil.textContent)).toEqual([
+        "Starten ab Schritt · 2 Einträge",
+        "19.10.2026, 14:32",
+      ]);
+      expect(zweite.classList.contains("text-beiwerk")).toBe(true);
+      expect(zweite.classList.contains("text-muted-foreground")).toBe(true);
+      const zeit = zweite.children[1];
+      expect(zeit.classList.contains("whitespace-nowrap")).toBe(true);
+      expect(zeit.classList.contains("tabular-nums")).toBe(true);
+
+      // Mit Schlüssel zugeklappt: die dritte Zeile, einzeilig gekürzt in Festbreitenschrift.
+      expect(kopfzeilen(mit)).toHaveLength(3);
+      expect(kopfzeilen(mit)[0].textContent).toBe(
+        "Offen · Anpassen der Werk-/Abladestellentabelle",
       );
-      expect(zeilen()[1].textContent).toContain("Gattung aus dem Test · Sperren");
+      const dritte = kopfzeilen(mit)[2];
+      expect(dritte.textContent).toBe("47110/TOR3, 47110/TOR4 und 1 weiterer");
+      expect(dritte.classList.contains("truncate")).toBe(true);
+      expect(dritte.classList.contains("text-beiwerk")).toBe(true);
+      expect(dritte.querySelector(".font-mono")?.textContent).toBe("47110/TOR3, 47110/TOR4");
+
+      // Aufgeklappt: zwei Zeilen bei beiden; die Einträge zeigen ihre Schlüssel selbst.
+      await klick(mit);
+      await klick(ohne);
+      expect(kopfzeilen(mit)).toHaveLength(2);
+      expect(mit.textContent).not.toContain("47110/TOR3");
+      expect(kopfzeilen(ohne)).toHaveLength(2);
     } finally {
       await abbauen();
     }
+  });
 
-    mitAuftraegen([auftrag()]);
-    const nurEiner = await ansicht();
+  /**
+   * E‑1188 mit E‑1102 und E‑1182: Die Zählung „<x> von <n> nicht erfolgreich“
+   * steht zugeklappt in der dritten Zeile, statt der Schlüssel — auch bei
+   * einem Typ ohne Schlüssel, wie bisher in der zweiten.
+   */
+  it("setzt bei Teilweise erledigt die Zählung in die dritte Zeile, auch ohne Schlüssel", async () => {
+    mitAuftraegen([
+      auftrag({
+        typ: "TYP_OHNE_SCHLUESSEL",
+        name: "Typ ohne Schlüssel",
+        aktion: "Starten ab Schritt",
+        status: "ERLEDIGT",
+        einordnung: "TEILWEISE_ERLEDIGT",
+        felder: NEUSTART_FELDER,
+        eintraege: [
+          { ...neustart("11111111-2222-4333-8444-555555555555"), rueckgabe: "Ok", ergebnis: "OK" },
+          {
+            ...neustart("66666666-7777-4888-8999-aaaaaaaaaaaa"),
+            rueckgabe: "Job nicht gefunden",
+            ergebnis: "NICHT_OK",
+          },
+        ],
+      }),
+    ]);
+    const { abbauen } = await ansicht();
     try {
-      expect(zeilen()[0].textContent).not.toContain("Anpassen der Werk-/Abladestellentabelle");
+      const [zeile] = zeilen();
+      const kopf = [...zeile.querySelectorAll<HTMLElement>(":scope > span")];
+      expect(kopf).toHaveLength(3);
+      expect(kopf[2].textContent).toBe("1 von 2 nicht erfolgreich");
+      expect(kopf[2].className).toContain(auftragVordergrund("TEILWEISE_ERLEDIGT"));
+      await klick(zeile);
+      expect(zeile.querySelectorAll(":scope > span")).toHaveLength(2);
     } finally {
-      await nurEiner.abbauen();
+      await abbauen();
     }
   });
 
-  it("zeigt aufgeklappt Typ, Zeiten, Werte mit label und das Ergebnis je Eintrag", async () => {
+  /**
+   * E‑1189: Aufgeklappt in dieser Reihenfolge — „Eingestellt von <Name>“ ohne
+   * Zeitpunkt, der Hinweis in der Grundgröße, die Einträge in einer Fläche,
+   * „Auftrag löschen“. Kein wiederholter Typname, keine Überschrift je Eintrag.
+   */
+  it("zeigt aufgeklappt keinen Typnamen, keine Überschrift je Eintrag und „Eingestellt von“ ohne Zeitpunkt", async () => {
+    mitAuftraegen([auftrag()]);
+    const { abbauen } = await ansicht();
+    try {
+      const [zeile] = zeilen();
+      await klick(zeile);
+      const bereich = document.getElementById(zeile.getAttribute("aria-controls")!)!;
+      const typname = "Anpassen der Werk-/Abladestellentabelle";
+      expect(bereich.textContent).not.toContain(typname);
+      expect((block()!.textContent ?? "").split(typname)).toHaveLength(2);
+      expect(bereich.textContent, "der Zeitpunkt steht nur im Kopf").not.toContain("14:32");
+
+      const teile = [...bereich.children] as HTMLElement[];
+      expect(teile.map((teil) => teil.tagName)).toEqual(["P", "P", "UL", "DIV"]);
+      expect(teile[0].textContent).toBe("Eingestellt von beispielnutzer");
+      expect(teile[0].classList.contains("text-beiwerk")).toBe(true);
+      expect(teile[0].classList.contains("text-muted-foreground")).toBe(true);
+      expect(teile[0].querySelector("[title]"), "keine Zeit im title").toBeNull();
+      expect(teile[1].textContent).toBe(T.hinweis.OFFEN);
+      expect(teile[1].classList.contains("text-basis")).toBe(true);
+      expect(knopf(teile[3], T.loeschen)).toBeTruthy();
+      expect(teile[3].classList.contains("justify-end")).toBe(true);
+
+      // Die Einträge: eine Fläche aus vorhandenen Rollen, ohne Überschrift, mit Linie.
+      const liste = teile[2];
+      for (const klasse of ["bg-muted", "border", "border-border", "rounded-md", "divide-y"]) {
+        expect(liste.classList.contains(klasse), klasse).toBe(true);
+      }
+      const eintraege = [...liste.children] as HTMLElement[];
+      expect(eintraege).toHaveLength(2);
+      for (const eintragsZeile of eintraege) {
+        expect(eintragsZeile.firstElementChild?.tagName, "zuerst das Feldraster").toBe("DL");
+        expect(eintragsZeile.querySelector("p, h3, h4, strong")).toBeNull();
+        expect(eintragsZeile.classList.contains("rounded-md")).toBe(false);
+      }
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("zeigt aufgeklappt Zeiten, Werte mit label und das Ergebnis je Eintrag", async () => {
     mitAuftraegen([imStand("TEILWEISE_ERLEDIGT")]);
     const { abbauen } = await ansicht();
     try {
@@ -768,14 +903,14 @@ describe("Die Zeile (E‑1102 bis E‑1104, E‑1107, E‑1122)", () => {
       expect(bereich, "aria-controls zeigt auf den aufgeklappten Teil").not.toBeNull();
 
       const text = bereich!.textContent ?? "";
-      expect(text).toContain("Anpassen der Werk-/Abladestellentabelle");
-      expect(text).toContain("eingestellt 19.10.2026, 14:32");
-      expect(text).toContain("ausgeführt 19.10.2026, 14:36");
+      expect(text).toContain("Eingestellt von beispielnutzer");
+      expect(text).toContain("Ausgeführt 19.10.2026, 14:36");
 
       const eintraege = [...bereich!.querySelectorAll("li")];
       expect(eintraege).toHaveLength(2);
       const begriffe = [...eintraege[0].querySelectorAll("dt")].map((dt) => dt.textContent);
-      expect(begriffe).toEqual(["Werk", "Abladestelle", "SNDPRN"]);
+      expect(begriffe).toEqual([T.schluessel, "Werk", "Abladestelle", "SNDPRN"]);
+      expect(eintraege[0].querySelector("dd")?.textContent).toBe("47110/TOR3");
       expect(eintraege[0].textContent).toContain("Ok(erfolgreich)");
       expect(eintraege[1].textContent).toContain("Schlüssel nicht gefunden(nicht erfolgreich)");
       // Getönt ist nur der nicht erfolgreiche Eintrag (E‑1106).
@@ -786,7 +921,7 @@ describe("Die Zeile (E‑1102 bis E‑1104, E‑1107, E‑1122)", () => {
     }
   });
 
-  it("zeigt aufgeklappt „von <Name>“ als Text in der Umgebungsschrift, zugeklappt keinen Namen", async () => {
+  it("zeigt aufgeklappt „Eingestellt von <Name>“ als Text in der Umgebungsschrift, zugeklappt keinen Namen", async () => {
     mitAuftraegen([auftrag({ angelegtVon: "m.muster" })]);
     const { abbauen } = await ansicht();
     try {
@@ -797,10 +932,9 @@ describe("Die Zeile (E‑1102 bis E‑1104, E‑1107, E‑1122)", () => {
       expect(zeile.textContent).not.toContain("m.muster");
       const bereich = document.getElementById(zeile.getAttribute("aria-controls")!);
       const satz = [...bereich!.querySelectorAll("span")].find((s) =>
-        (s.textContent ?? "").startsWith("eingestellt"),
+        (s.textContent ?? "").startsWith("Eingestellt"),
       );
-      expect(satz!.textContent).toBe("eingestellt 19.10.2026, 14:32 von m.muster");
-      expect(satz!.getAttribute("title")).toBe("19.10.2026, 14:32:10");
+      expect(satz!.textContent).toBe("Eingestellt von m.muster");
       expect(satz!.closest(".font-mono")).toBeNull();
     } finally {
       await abbauen();
@@ -822,8 +956,8 @@ describe("Die Zeile (E‑1102 bis E‑1104, E‑1107, E‑1122)", () => {
     }
   });
 
-  /** E‑1141, F39: Der Browser zieht Leerzeichen nicht zusammen, auch nicht in der gekürzten Zeile. */
-  it("zeigt „A  1“ mit beiden Leerzeichen, zugeklappt mit pre, aufgeklappt mit pre-wrap", async () => {
+  /** E‑1141, F39: Der Browser zieht Leerzeichen nicht zusammen, auch nicht in einer gekürzten Zeile. */
+  it("zeigt „A  1“ mit beiden Leerzeichen, zugeklappt und aufgeklappt mit pre", async () => {
     const mitLeerzeichen = eintrag("DDB0", {
       werte: { werk: "A  1", abladestelle: "DDB0", sndprn: "120764" },
       schluessel: "A  1/DDB0",
@@ -842,114 +976,32 @@ describe("Die Zeile (E‑1102 bis E‑1104, E‑1107, E‑1122)", () => {
 
       await klick(zeile);
       const bereich = document.getElementById(zeile.getAttribute("aria-controls")!)!;
-      const schluessel = [...bereich.querySelectorAll("p")].find(
-        (p) => p.textContent === "A  1/DDB0",
-      );
-      expect(schluessel, "der Schlüssel aufgeklappt, zeichengenau").toBeTruthy();
-      expect(schluessel!.classList.contains("whitespace-pre-wrap")).toBe(true);
-      const werk = [...bereich.querySelectorAll("dd")].find((dd) => dd.textContent === "A  1");
-      expect(werk, "der Wert, zeichengenau").toBeTruthy();
-      expect(werk!.classList.contains("whitespace-pre-wrap")).toBe(true);
+      for (const wert of ["A  1/DDB0", "A  1"]) {
+        const feld = [...bereich.querySelectorAll("dd")].find((dd) => dd.textContent === wert);
+        expect(feld, `${wert}, zeichengenau`).toBeTruthy();
+        expect(feld!.classList.contains("whitespace-pre")).toBe(true);
+        expect(feld!.getAttribute("title")).toBe(wert);
+      }
     } finally {
       await abbauen();
     }
   });
 
   /**
-   * E‑1185, E‑1186: Ein Typ ohne Schlüssel hat nichts an dessen Stelle — kein
-   * „Eintrag <n>“, kein anderer Ersatz. Entschieden wird an der Antwort
-   * (`schluessel: null`), nicht am Namen des Typs; deshalb heißt der Typ hier
-   * anders als jeder echte. Der Auftrag mit Schlüssel daneben bleibt, wie er war.
+   * E‑1190 bis E‑1192: Jedes Feld ist `label` über Wert. Kurze Werte (höchstens
+   * 17 Zeichen) stehen zu zweit, sobald der Eintrag 17,75 rem breit ist; lange
+   * Werte und der Schlüssel stehen über die volle Breite — entschieden am Wert,
+   * die Definition kennt keine Feldart (Punkt 1051). Der Wert bricht nicht um:
+   * Festbreitenschrift, einzeilig, mit Auslassung, wo er nicht passt, und dem
+   * vollen Wert im `title`. Ein Zeitpunkt in der Schreibweise der Plattform
+   * steht mit Komma. Die `label` kommen aus der Kopie, unverändert. Die Spalten
+   * rechnet jsdom nicht; wo die Schwelle im Browser liegt, belegt M1017.
    */
-  it("zeigt bei einem Typ ohne Schlüssel keine Ersatzbeschriftung, den Zeitpunkt an seiner Stelle und zwischen den Einträgen eine Linie", async () => {
-    const ohne = auftrag({
-      typ: "TYP_OHNE_SCHLUESSEL",
-      name: "Typ ohne Schlüssel",
-      aktion: "Starten ab Schritt",
-      felder: NEUSTART_FELDER,
-      eintraege: [
-        neustart("11111111-2222-4333-8444-555555555555"),
-        neustart("66666666-7777-4888-8999-aaaaaaaaaaaa"),
-      ],
+  it("setzt kurze Werte zu zweit, lange und den Schlüssel über die volle Breite, einzeilig und das Datum mit Komma", async () => {
+    const kurzerSchluessel = eintrag("TOR3", {
+      werte: { werk: "47110", abladestelle: "TOR3", sndprn: "120764" },
+      schluessel: "47110/TOR3",
     });
-    const einzeln = auftrag({
-      typ: "TYP_OHNE_SCHLUESSEL",
-      name: "Typ ohne Schlüssel",
-      aktion: "Starten ab Schritt",
-      felder: NEUSTART_FELDER,
-      eintraege: [neustart("bbbbbbbb-cccc-4ddd-8eee-ffffffffffff")],
-    });
-    mitAuftraegen([ohne, einzeln, auftrag()]);
-    const { abbauen } = await ansicht();
-    try {
-      const [zeile, einzelzeile, mitSchluessel] = zeilen();
-      const zweiteZeile = (knopfzeile: HTMLButtonElement) =>
-        knopfzeile.querySelectorAll<HTMLElement>(":scope > span")[1];
-
-      // Zugeklappt: links nichts, rechts der Zeitpunkt — derselbe Bau wie mit Schlüssel.
-      for (const ohneZeile of [zeile, einzelzeile]) {
-        expect(ohneZeile.textContent).not.toMatch(/Eintrag \d/);
-        const teile = [...zweiteZeile(ohneZeile).children] as HTMLElement[];
-        expect(teile).toHaveLength(2);
-        expect(teile[0].textContent, "der linke Teil ist leer").toBe("");
-        expect(teile[0].hasAttribute("title")).toBe(false);
-        expect(teile[0].classList.contains("flex-1")).toBe(true);
-        expect(teile[1].textContent).toBe("19.10.2026, 14:32");
-      }
-      expect(zeile.textContent).toContain("Starten ab Schritt · 2 Einträge");
-      const mitTeile = [...zweiteZeile(mitSchluessel).children] as HTMLElement[];
-      expect(mitTeile).toHaveLength(2);
-      expect(mitTeile[0].textContent).toBe("47110/TOR3, 47110/TOR4");
-      expect(mitTeile[1].textContent).toBe("19.10.2026, 14:32");
-
-      // Aufgeklappt: keine Überschrift je Eintrag, eine Linie zwischen den Einträgen.
-      await klick(zeile);
-      await klick(einzelzeile);
-      await klick(mitSchluessel);
-      const bereich = (knopfzeile: HTMLButtonElement) =>
-        document.getElementById(knopfzeile.getAttribute("aria-controls")!)!;
-      const liste = (knopfzeile: HTMLButtonElement) =>
-        [...bereich(knopfzeile).querySelectorAll<HTMLUListElement>("ul")].at(-1)!;
-
-      expect(bereich(zeile).textContent).not.toMatch(/Eintrag \d/);
-      const eintraege = [...liste(zeile).children];
-      expect(eintraege).toHaveLength(2);
-      for (const eintragsZeile of eintraege) {
-        expect(eintragsZeile.firstElementChild?.tagName, "zuerst die Werte").toBe("DL");
-        expect(eintragsZeile.querySelector("p.font-mono")).toBeNull();
-      }
-      expect(eintraege[0].textContent).toContain("11111111-2222-4333-8444-555555555555");
-      expect(liste(zeile).classList.contains("divide-y")).toBe(true);
-      // Gerade Linie: keine runde Ecke, an der sich ihre Enden aufbiegen.
-      for (const eintragsZeile of eintraege) {
-        expect(eintragsZeile.classList.contains("rounded-md")).toBe(false);
-      }
-      // Bei einem einzigen Eintrag zieht `divide-y` keine Linie; es gibt kein Zweites.
-      expect(liste(einzelzeile).children).toHaveLength(1);
-
-      // Mit Schlüssel: die Überschrift je Eintrag und der Abstand wie bisher, keine Linie.
-      const mitEintraege = [...liste(mitSchluessel).children];
-      expect(mitEintraege.map((li) => li.querySelector("p.font-mono")?.textContent)).toEqual([
-        "47110/TOR3",
-        "47110/TOR4",
-      ]);
-      expect(liste(mitSchluessel).classList.contains("divide-y")).toBe(false);
-      expect(liste(mitSchluessel).classList.contains("gap-1")).toBe(true);
-      expect(mitEintraege.every((li) => li.classList.contains("rounded-md"))).toBe(true);
-    } finally {
-      await abbauen();
-    }
-  });
-
-  /**
-   * E‑1187: Das `label` bricht nicht um, und der Wert steht in einem Stück
-   * unter dem `label`, wenn neben ihm kein Platz ist; passt er auch dort nicht,
-   * bricht er hinter einem Bindestrich. Die Regel **ist** eine Kombination aus
-   * Klassen und Bruchstellen — `flex-wrap` an der Feldzeile,
-   * `whitespace-nowrap` am `label`, `break-words` statt `break-all` und `<wbr>`
-   * hinter jedem Bindestrich am Wert; wie sie im Browser bricht, steht in M1015.
-   */
-  it("lässt in den Feldzeilen beider Typen das label nie umbrechen und den Wert nur hinter einem Bindestrich", async () => {
     mitAuftraegen([
       auftrag({
         typ: "TYP_OHNE_SCHLUESSEL",
@@ -958,7 +1010,7 @@ describe("Die Zeile (E‑1102 bis E‑1104, E‑1107, E‑1122)", () => {
         felder: NEUSTART_FELDER,
         eintraege: [neustart("11111111-2222-4333-8444-555555555555")],
       }),
-      auftrag(),
+      auftrag({ eintraege: [kurzerSchluessel] }),
     ]);
     const { abbauen } = await ansicht();
     try {
@@ -966,42 +1018,54 @@ describe("Die Zeile (E‑1102 bis E‑1104, E‑1107, E‑1122)", () => {
         await klick(zeile);
       }
       const felder = [...block()!.querySelectorAll("dl > div")];
-      expect(felder.map((feld) => feld.querySelector("dt")?.textContent)).toEqual([
+      const beschriftung = (feld: Element) => feld.querySelector("dt")?.textContent;
+      expect(felder.map(beschriftung)).toEqual([
         "Nachrichten ID",
         "Start um",
         "ab Schritt",
-        "Werk",
-        "Abladestelle",
-        "SNDPRN",
+        T.schluessel,
         "Werk",
         "Abladestelle",
         "SNDPRN",
       ]);
-      for (const feld of felder) {
-        expect(feld.classList.contains("flex-wrap"), "die Feldzeile darf umbrechen").toBe(true);
-        const dt = feld.querySelector("dt")!;
-        expect(dt.classList.contains("whitespace-nowrap"), `${dt.textContent} bricht nicht`).toBe(
-          true,
-        );
-        const dd = feld.querySelector("dd")!;
-        expect(dd.classList.contains("break-all"), "kein Bruch mitten im Wert").toBe(false);
-        expect(dd.classList.contains("break-words")).toBe(true);
-        expect(dd.classList.contains("whitespace-pre-wrap"), "Leerzeichen bleiben (E‑1141)").toBe(
-          true,
-        );
-      }
 
-      // Die Nachrichten-ID: eine Bruchstelle hinter jedem ihrer vier Bindestriche,
-      // der Text bleibt Zeichen für Zeichen derselbe — und nichts anderes im Wert.
-      const id = felder[0].querySelector("dd")!;
-      expect(id.textContent).toBe("11111111-2222-4333-8444-555555555555");
-      expect(id.querySelectorAll("wbr")).toHaveLength(4);
-      expect([...id.children].every((kind) => kind.tagName === "WBR")).toBe(true);
-      for (const wbr of id.querySelectorAll("wbr")) {
-        expect(wbr.previousSibling?.textContent?.endsWith("-")).toBe(true);
+      // Das Raster: eine Spalte, zwei ab der Breite des Eintrags, die M1017 belegt.
+      for (const dl of block()!.querySelectorAll("dl")) {
+        expect(dl.classList.contains("grid")).toBe(true);
+        expect(dl.classList.contains("grid-cols-1")).toBe(true);
+        expect(dl.classList.contains("@min-[17.75rem]/eintrag:grid-cols-2")).toBe(true);
+        expect(dl.closest("li")!.classList.contains("@container/eintrag")).toBe(true);
       }
-      // Ohne Bindestrich keine Bruchstelle.
-      expect(felder[3].querySelector("dd")!.querySelectorAll("wbr")).toHaveLength(0);
+      // Über die volle Breite: die Nachrichten-ID (lang) und der Schlüssel (immer).
+      const breit = felder
+        .filter((feld) => feld.classList.contains("col-span-full"))
+        .map(beschriftung);
+      expect(breit).toEqual(["Nachrichten ID", T.schluessel]);
+      expect(felder[3].querySelector("dd")!.textContent, "auch ein kurzer Schlüssel").toBe(
+        "47110/TOR3",
+      );
+
+      for (const feld of felder) {
+        expect(feld.classList.contains("flex-col"), "label über dem Wert").toBe(true);
+        const [dt, dd] = [...feld.children];
+        expect(dt.tagName).toBe("DT");
+        expect(dt.classList.contains("text-muted-foreground")).toBe(true);
+        expect(dd.tagName).toBe("DD");
+        for (const klasse of ["font-mono", "whitespace-pre", "overflow-hidden", "text-ellipsis"]) {
+          expect(dd.classList.contains(klasse), `${dt.textContent}: ${klasse}`).toBe(true);
+        }
+        for (const fett of ["font-medium", "font-semibold", "font-bold"]) {
+          expect(dd.classList.contains(fett), `${dt.textContent} ist nicht fett`).toBe(false);
+        }
+        expect(dd.querySelector("wbr"), "keine Bruchstelle im Wert").toBeNull();
+        expect(dd.getAttribute("title")).toBe(dd.textContent);
+      }
+      // Der ganze Wert ist da, gekürzt wird nur in der Anzeige.
+      expect(felder[0].querySelector("dd")!.textContent).toBe(
+        "11111111-2222-4333-8444-555555555555",
+      );
+      expect(felder[1].querySelector("dd")!.textContent).toBe("25.03.2026, 10:35");
+      expect(felder[2].querySelector("dd")!.textContent).toBe("5");
     } finally {
       await abbauen();
     }

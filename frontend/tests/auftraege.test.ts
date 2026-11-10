@@ -7,17 +7,18 @@ import {
   beschrifteteWerte,
   blockSichtbar,
   blockschritt,
+  dritteZeile,
   einordnungVon,
   ergebnisVon,
   hatSchluessel,
+  istKurz,
+  KURZ_HOECHSTENS,
   laedtNeuNach,
   loeschbar,
   loeschergebnis,
-  mehrereTypen,
   nichtErfolgreich,
   schluesselZugeklappt,
   sichtbare,
-  teileHinterBindestrich,
   weitere,
   zeigtZaehlung,
   type Blockzustand,
@@ -98,7 +99,7 @@ describe("Sichtbar sind fünf, der Rest hinter „weitere anzeigen“ (E‑1101)
   });
 });
 
-describe("Die zugeklappte Zeile (E‑1102, E‑1103)", () => {
+describe("Die zugeklappte Zeile (E‑1102, E‑1188)", () => {
   it("nennt die ersten zwei Schlüssel und zählt den Rest", () => {
     const eintraege = ["A/1", "B/2", "C/3", "D/4"].map((schluessel) => eintrag({ schluessel }));
     expect(schluesselZugeklappt(eintraege)).toEqual({
@@ -122,10 +123,31 @@ describe("Die zugeklappte Zeile (E‑1102, E‑1103)", () => {
     expect(hatSchluessel([eintrag({ schluessel: "A/1" })])).toBe(true);
   });
 
-  it("erkennt mehrere Typen über die ganze Liste, nicht über die sichtbaren", () => {
-    const fuenfGleiche = Array.from({ length: 5 }, () => ({ typ: "A" }));
-    expect(mehrereTypen(fuenfGleiche)).toBe(false);
-    expect(mehrereTypen([...fuenfGleiche, { typ: "B" }])).toBe(true);
+  /**
+   * E‑1188: Die dritte Zeile trägt die Zählung oder die Schlüssel — und fehlt
+   * ganz, wenn es keins von beidem gibt. Die Zählung geht vor, auch bei einem
+   * Typ ohne Schlüssel (E‑1102, E‑1182).
+   */
+  it("hat eine dritte Zeile nur mit Zählung oder Schlüssel, die Zählung zuerst", () => {
+    const mitSchluessel = [eintrag({ schluessel: "A/1" }), eintrag({ schluessel: "B/2" })];
+    const ohneSchluessel = [eintrag(), eintrag()];
+    expect(dritteZeile({ einordnung: "OFFEN", eintraege: mitSchluessel })).toBe("schluessel");
+    expect(dritteZeile({ einordnung: "OFFEN", eintraege: ohneSchluessel })).toBeNull();
+    expect(dritteZeile({ einordnung: "ERLEDIGT", eintraege: ohneSchluessel })).toBeNull();
+
+    const teilweise = (eintraege: Auftragseintrag[]): Auftragseintrag[] =>
+      eintraege.map((e, i) => ({ ...e, ergebnis: i === 0 ? "OK" : "NICHT_OK" }));
+    expect(
+      dritteZeile({ einordnung: "TEILWEISE_ERLEDIGT", eintraege: teilweise(mitSchluessel) }),
+    ).toBe("zaehlung");
+    expect(
+      dritteZeile({ einordnung: "TEILWEISE_ERLEDIGT", eintraege: teilweise(ohneSchluessel) }),
+    ).toBe("zaehlung");
+    // Fehlgeschlagen ohne Ergebnisse: die Plattform hat den Auftrag als Ganzes gemeldet.
+    expect(dritteZeile({ einordnung: "FEHLGESCHLAGEN", eintraege: mitSchluessel })).toBe(
+      "schluessel",
+    );
+    expect(dritteZeile({ einordnung: "FEHLGESCHLAGEN", eintraege: ohneSchluessel })).toBeNull();
   });
 
   /** Gezählt wird jeder, der nicht OK ist — UNBEKANNT zählt mit, wie im Backend. */
@@ -191,33 +213,44 @@ describe("Die Werte mit ihrem label (E‑1104, E‑1120, F21)", () => {
       { name: "neu", label: "neu", wert: "x" },
     ]);
   });
+});
 
-  /** E‑1187: Bruchstellen nur hinter Bindestrichen; die Teile ergeben den Wert zeichengenau. */
-  it("zerlegt einen Wert hinter jedem Bindestrich und sonst nicht", () => {
-    const id = "11111111-2222-4333-8444-555555555555";
-    expect(teileHinterBindestrich(id)).toEqual([
-      "11111111-",
-      "2222-",
-      "4333-",
-      "8444-",
-      "555555555555",
-    ]);
-    expect(teileHinterBindestrich(id).join("")).toBe(id);
-    expect(teileHinterBindestrich("A  1")).toEqual(["A  1"]);
-    expect(teileHinterBindestrich("25.03.2026 10:35")).toEqual(["25.03.2026 10:35"]);
-    expect(teileHinterBindestrich("-a--")).toEqual(["-", "a-", "-"]);
+/**
+ * E‑1192: Kurz ist ein Wert mit höchstens 17 Zeichen — genau ein Zeitpunkt im
+ * Format des Blocks. Gezählt werden Zeichen, nicht UTF-16-Einheiten.
+ */
+describe("Kurze Werte stehen zu zweit (E‑1192)", () => {
+  it("nennt einen Wert bis 17 Zeichen kurz, die Nachrichten-ID nicht", () => {
+    expect(KURZ_HOECHSTENS).toBe(17);
+    expect(istKurz("10.11.2026, 14:55")).toBe(true);
+    expect(istKurz("5")).toBe(true);
+    expect(istKurz("047110001")).toBe(true);
+    expect(istKurz("")).toBe(true);
+    expect(istKurz("12345678901234567")).toBe(true);
+    expect(istKurz("123456789012345678")).toBe(false);
+    expect(istKurz("c70f6022-e801-41b5-a614-cbd64a99b31a")).toBe(false);
+    expect(istKurz("11/10/2026, 02:55 PM")).toBe(false);
+  });
+
+  it("zählt Zeichen, nicht UTF-16-Einheiten", () => {
+    // 17 Zeichen, davon eines außerhalb der Grundebene (zwei UTF-16-Einheiten).
+    const mitAstral = "ABCDEFGHIJKLMNOP\u{1D400}";
+    expect(mitAstral.length).toBe(18);
+    expect(istKurz(mitAstral)).toBe(true);
   });
 });
 
-describe("Der Ersteller (E‑1178, E‑1181, F58)", () => {
-  it("trägt den Wortlaut in beiden Sprachen", () => {
-    const werte = { zeit: "19.10.2026, 14:32", name: "m.muster" };
-    expect(einsetzen(texteFuer("de").dashboard.auftraege.eingestellt, werte)).toBe(
-      "eingestellt 19.10.2026, 14:32 von m.muster",
-    );
-    expect(einsetzen(texteFuer("en").dashboard.auftraege.eingestellt, werte)).toBe(
-      "submitted 19.10.2026, 14:32 by m.muster",
-    );
+describe("Der Ersteller (E‑1178, E‑1181, F58, E‑1189)", () => {
+  /** Seit E‑1189 ohne Zeitpunkt: Der steht im Kopf des Auftrags. */
+  it("trägt den Wortlaut in beiden Sprachen, ohne Zeitpunkt", () => {
+    const t = { de: texteFuer("de").dashboard.auftraege, en: texteFuer("en").dashboard.auftraege };
+    expect(einsetzen(t.de.eingestellt, { name: "m.muster" })).toBe("Eingestellt von m.muster");
+    expect(einsetzen(t.en.eingestellt, { name: "m.muster" })).toBe("Submitted by m.muster");
+    for (const text of [t.de.eingestellt, t.en.eingestellt]) {
+      expect(text).not.toContain("{zeit}");
+    }
+    expect(t.de.schluessel).toBe("Schlüssel");
+    expect(t.en.schluessel).toBe("Key");
   });
 });
 

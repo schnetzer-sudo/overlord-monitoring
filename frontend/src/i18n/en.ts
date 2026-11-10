@@ -260,8 +260,9 @@ export const en: Texte = {
       undWeiterer: "and 1 more",
       undWeitere: "and {anzahl} more",
       nichtErfolgreich: "{anzahl} of {gesamt} not successful",
-      eingestellt: "submitted {zeit} by {name}",
-      ausgefuehrt: "executed {zeit}",
+      eingestellt: "Submitted by {name}",
+      ausgefuehrt: "Executed {zeit}",
+      schluessel: "Key",
       meldungDerPlattform: "Message from the platform",
       ergebnis: {
         OK: "successful",

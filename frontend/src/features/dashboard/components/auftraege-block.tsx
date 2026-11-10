@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useId, useRef, type Dispatch } from "react";
+import { useEffect, useId, useRef, type Dispatch } from "react";
 import {
   AlertTriangle,
   ChevronDown,
@@ -21,7 +21,12 @@ import { useAnzeigezone } from "@/components/zeitzone";
 import { Fehler } from "@/components/zustand";
 import { einsetzen } from "@/i18n";
 import { useSprache, useTexte } from "@/i18n/provider";
-import { formatiereZahl, formatiereZeitpunkt, formatiereZeitpunktGenau } from "@/lib/format";
+import {
+  formatiereRohzeitpunkt,
+  formatiereZahl,
+  formatiereZeitpunkt,
+  formatiereZeitpunktGenau,
+} from "@/lib/format";
 import {
   auftragVordergrund,
   ergebnisFlaeche,
@@ -36,17 +41,15 @@ import {
   SICHTBARE_AUFTRAEGE,
   SICHTBARE_EINTRAEGE,
   beschrifteteWerte,
+  dritteZeile,
   einordnungVon,
   ergebnisVon,
-  hatSchluessel,
+  istKurz,
   loeschbar,
-  mehrereTypen,
   nichtErfolgreich,
   schluesselZugeklappt,
   sichtbare,
-  teileHinterBindestrich,
   weitere,
-  zeigtZaehlung,
   type Blockschritt,
   type Blockzustand,
   type Zeilenmeldung,
@@ -151,7 +154,6 @@ function Liste({
   const texte = useTexte();
   const sprache = useSprache();
   const t = texte.dashboard.auftraege;
-  const mitTyp = mehrereTypen(auftraege);
   const mehr = weitere(auftraege, SICHTBARE_AUFTRAEGE);
 
   if (auftraege.length === 0) {
@@ -165,7 +167,6 @@ function Liste({
           <Zeile
             key={auftrag.taskId}
             auftrag={auftrag}
-            mitTyp={mitTyp}
             offen={zustand.offen.includes(auftrag.taskId)}
             alleEintraege={zustand.alleEintraege.includes(auftrag.taskId)}
             meldung={zustand.zeilen[auftrag.taskId] ?? null}
@@ -222,7 +223,6 @@ const GESPERRT = "aria-disabled:cursor-not-allowed aria-disabled:opacity-50";
 
 function Zeile({
   auftrag,
-  mitTyp,
   offen,
   alleEintraege,
   meldung,
@@ -232,7 +232,6 @@ function Zeile({
   loeschtGerade,
 }: {
   auftrag: Auftrag;
-  mitTyp: boolean;
   offen: boolean;
   alleEintraege: boolean;
   meldung: Zeilenmeldung | null;
@@ -256,16 +255,9 @@ function Zeile({
     anzahl === 1
       ? t.eintraegeEins
       : einsetzen(t.eintraegeViele, { anzahl: formatiereZahl(anzahl, sprache) });
-  const kopf = [...(mitTyp ? [auftrag.name] : []), auftrag.aktion, eintraegeText].join(" · ");
-
-  const zugeklappt = schluesselZugeklappt(auftrag.eintraege);
-  const schluessel = zugeklappt === null ? null : zugeklappt.schluessel.join(", ");
-  const undWeitere =
-    zugeklappt === null || zugeklappt.weitere === 0
-      ? null
-      : zugeklappt.weitere === 1
-        ? t.undWeiterer
-        : einsetzen(t.undWeitere, { anzahl: formatiereZahl(zugeklappt.weitere, sprache) });
+  // Aufgeklappt gibt es keine dritte Zeile: Die Einträge zeigen Schlüssel und
+  // Ergebnis selbst (E‑1188).
+  const dritte = offen ? null : dritteZeile(auftrag);
 
   // Der Satz in der Zeile bekommt den Fokus, wenn er erscheint (F22) — der
   // Knopf „Löschen“ ist dann gerade verschwunden oder wieder zurückgesetzt.
@@ -285,91 +277,85 @@ function Zeile({
         className="focus-visible:ring-ring hover:bg-muted/50 flex w-full min-w-0 flex-col gap-0.5 rounded-md py-1.5 text-left focus-visible:ring-2 focus-visible:outline-none"
       >
         {/*
-         * **Umbrechen statt kürzen** (F29, M1006): Bei 1.280 px ist die Spalte
-         * 300 px breit, und gekürzt verschwände dort „3 Einträge“ oder „1 von 3
-         * nicht erfolgreich“ hinter der Auslassung. Gekürzt werden allein die
-         * Schlüssel (E‑1102); Stand und Zeichen bleiben beisammen.
+         * **Der Kopf** (E‑1188), zugeklappt und aufgeklappt gleich. Zeile 1:
+         * Stand und Typname in der Grundgröße. Das Wort des Stands bricht nie
+         * um, ein langer Typname schon (F29) — umbrochen steht er unter dem
+         * Zeichen, nicht unter dem Pfeil. Der Pfeil steht mittig zur ersten
+         * Zeile: (1,375 rem Zeilenhöhe − 1 rem) / 2 = `mt-0.75`.
          */}
         <span className="flex min-w-0 items-start gap-2">
           {offen ? (
             <ChevronDown
               aria-hidden="true"
-              className="text-muted-foreground mt-0.5 size-4 shrink-0"
+              className="text-muted-foreground mt-0.75 size-4 shrink-0"
             />
           ) : (
             <ChevronRight
               aria-hidden="true"
-              className="text-muted-foreground mt-0.5 size-4 shrink-0"
+              className="text-muted-foreground mt-0.75 size-4 shrink-0"
             />
           )}
-          <span className="text-beiwerk min-w-0">
-            <span className={cn("font-medium whitespace-nowrap", auftragVordergrund(einordnung))}>
+          <span className="text-basis min-w-0 font-medium">
+            <span className={cn("whitespace-nowrap", auftragVordergrund(einordnung))}>
               <Zeichen aria-hidden="true" className="mr-1 inline-block size-4 align-[-0.2em]" />
               <span>{wort}</span>
             </span>
-            <span className="text-muted-foreground"> · {kopf}</span>
+            {/* Das geschützte Leerzeichen hält den Punkt beim Stand. */}
+            <span className="text-muted-foreground">{" · "}</span>
+            <span>{auftrag.name}</span>
           </span>
         </span>
-        <span className="flex min-w-0 items-start gap-3 pl-6">
-          {zeigtZaehlung(auftrag) ? (
-            <span
-              className={cn(
-                "text-beiwerk min-w-0 flex-1 font-medium",
-                auftragVordergrund(einordnung),
-              )}
-            >
-              {einsetzen(t.nichtErfolgreich, {
-                anzahl: formatiereZahl(nichtErfolgreich(auftrag.eintraege), sprache),
-                gesamt: formatiereZahl(anzahl, sprache),
-              })}
-            </span>
-          ) : schluessel === null ? (
-            // Ohne Schlüssel bleibt der linke Teil leer, ohne Ersatz (E‑1185);
-            // die leere Spanne hält den Zeitpunkt rechts, wo er immer steht.
-            <span className="min-w-0 flex-1" />
-          ) : (
-            <span
-              className="text-beiwerk min-w-0 flex-1 truncate"
-              title={undWeitere === null ? schluessel : `${schluessel} ${undWeitere}`}
-            >
-              {/*
-               * Leerzeichen im Schlüssel bleiben stehen (E‑1141): `pre`, nicht
-               * `pre-wrap` — die Zeile ist einzeilig gekürzt (E‑1102), und
-               * `pre-wrap` bräche sie an den Leerzeichen um (F39).
-               */}
-              <span className="font-mono whitespace-pre">{schluessel}</span>
-              {undWeitere === null ? null : ` ${undWeitere}`}
-            </span>
-          )}
+        {/*
+         * Zeile 2: Aktion und Zahl der Einträge, rechts der Zeitpunkt des
+         * Einstellens in der Anzeigezone (E‑1122), die Sekunden im `title`.
+         */}
+        <span className="text-beiwerk text-muted-foreground flex min-w-0 items-start gap-3 pl-6">
+          <span className="min-w-0 flex-1">
+            {auftrag.aktion} · {eintraegeText}
+          </span>
           <span
-            className="text-beiwerk text-muted-foreground shrink-0 tabular-nums"
+            className="shrink-0 whitespace-nowrap tabular-nums"
             title={formatiereZeitpunktGenau(auftrag.eingestelltAm, sprache, zone)}
           >
             {formatiereZeitpunkt(auftrag.eingestelltAm, sprache, zone)}
           </span>
         </span>
+        {/*
+         * Zeile 3, nur zugeklappt: die Zählung oder die Schlüssel. Ohne beides
+         * gibt es sie nicht, auch nicht leer (E‑1185, E‑1188).
+         */}
+        {dritte === "zaehlung" ? (
+          <span
+            className={cn("text-beiwerk min-w-0 pl-6 font-medium", auftragVordergrund(einordnung))}
+          >
+            {einsetzen(t.nichtErfolgreich, {
+              anzahl: formatiereZahl(nichtErfolgreich(auftrag.eintraege), sprache),
+              gesamt: formatiereZahl(anzahl, sprache),
+            })}
+          </span>
+        ) : dritte === "schluessel" ? (
+          <Schluesselzeile eintraege={auftrag.eintraege} />
+        ) : null}
       </button>
 
       {offen ? (
-        <div id={inhaltId} className="text-beiwerk flex flex-col gap-2 pt-1 pb-3 pl-6">
-          <p className="font-medium">{auftrag.name}</p>
-          <p className="text-muted-foreground flex flex-wrap gap-x-3">
-            {/*
-             * Der Name ist ein Textknoten in der Schrift der Umgebung (F58). Er kann
-             * lang sein und eine Adresse ohne Leerzeichen: `min-w-0` lässt die
-             * Spalte ihn umbrechen, statt dass er aus ihr hinausläuft.
-             */}
-            <span
-              className="min-w-0 break-words"
-              title={formatiereZeitpunktGenau(auftrag.eingestelltAm, sprache, zone)}
-            >
-              {einsetzen(t.eingestellt, {
-                zeit: formatiereZeitpunkt(auftrag.eingestelltAm, sprache, zone),
-                name: auftrag.angelegtVon,
-              })}
+        <div id={inhaltId} className="flex flex-col gap-2 pt-1 pb-3 pl-6">
+          {/*
+           * **Kein Typname über dem Inhalt** (E‑1189): Er steht im Kopf, ebenso
+           * der Zeitpunkt des Einstellens. Der Name des Anlegenden ist ein
+           * Textknoten in der Schrift der Umgebung (F58); er kann lang sein und
+           * eine Adresse ohne Leerzeichen: `min-w-0` lässt die Spalte ihn
+           * umbrechen, statt dass er aus ihr hinausläuft.
+           */}
+          <p className="text-beiwerk text-muted-foreground flex flex-wrap gap-x-3">
+            <span className="min-w-0 break-words">
+              {einsetzen(t.eingestellt, { name: auftrag.angelegtVon })}
             </span>
             {auftrag.ausgefuehrtAm === null ? null : (
-              <span title={formatiereZeitpunktGenau(auftrag.ausgefuehrtAm, sprache, zone)}>
+              <span
+                className="tabular-nums"
+                title={formatiereZeitpunktGenau(auftrag.ausgefuehrtAm, sprache, zone)}
+              >
                 {einsetzen(t.ausgefuehrt, {
                   zeit: formatiereZeitpunkt(auftrag.ausgefuehrtAm, sprache, zone),
                 })}
@@ -379,7 +365,7 @@ function Zeile({
 
           {einordnung === "FEHLGESCHLAGEN" && auftrag.fehlertext ? (
             <div>
-              <p className="font-medium">{t.meldungDerPlattform}</p>
+              <p className="text-beiwerk text-muted-foreground">{t.meldungDerPlattform}</p>
               <p className="break-words whitespace-pre-wrap">{auftrag.fehlertext}</p>
             </div>
           ) : null}
@@ -398,7 +384,7 @@ function Zeile({
               ref={meldungRef}
               role="status"
               tabIndex={-1}
-              className="focus-visible:ring-ring rounded-md font-medium focus-visible:ring-2 focus-visible:outline-none"
+              className="text-beiwerk focus-visible:ring-ring rounded-md font-medium focus-visible:ring-2 focus-visible:outline-none"
             >
               {meldung === "uebernommen" ? t.uebernommen : t.gestoert}
             </p>
@@ -420,6 +406,42 @@ function Zeile({
   );
 }
 
+/**
+ * Die dritte Zeile mit den Schlüsseln (E‑1102, E‑1188): die ersten zwei,
+ * kommagetrennt in Festbreitenschrift, bei mehr „und <n> weitere“ in der
+ * Schrift der Umgebung (F29), einzeilig mit Auslassung; der volle Text steht
+ * im `title`.
+ */
+function Schluesselzeile({ eintraege }: { eintraege: Auftrag["eintraege"] }) {
+  const t = useTexte().dashboard.auftraege;
+  const sprache = useSprache();
+  const zugeklappt = schluesselZugeklappt(eintraege);
+  if (zugeklappt === null) {
+    return null;
+  }
+  const schluessel = zugeklappt.schluessel.join(", ");
+  const undWeitere =
+    zugeklappt.weitere === 0
+      ? null
+      : zugeklappt.weitere === 1
+        ? t.undWeiterer
+        : einsetzen(t.undWeitere, { anzahl: formatiereZahl(zugeklappt.weitere, sprache) });
+  return (
+    <span
+      className="text-beiwerk min-w-0 truncate pl-6"
+      title={undWeitere === null ? schluessel : `${schluessel} ${undWeitere}`}
+    >
+      {/*
+       * Leerzeichen im Schlüssel bleiben stehen (E‑1141): `pre`, nicht
+       * `pre-wrap` — die Zeile ist einzeilig gekürzt (E‑1102), und `pre-wrap`
+       * bräche sie an den Leerzeichen um (F39).
+       */}
+      <span className="font-mono whitespace-pre">{schluessel}</span>
+      {undWeitere === null ? null : ` ${undWeitere}`}
+    </span>
+  );
+}
+
 function Hinweis({ einordnung }: { einordnung: Auftragseinordnung }) {
   const t = useTexte().dashboard.auftraege;
   switch (einordnung) {
@@ -427,7 +449,7 @@ function Hinweis({ einordnung }: { einordnung: Auftragseinordnung }) {
     case "IN_AUSFUEHRUNG":
     case "UNSTIMMIG":
     case "UNBEKANNT":
-      return <p>{t.hinweis[einordnung]}</p>;
+      return <p className="text-basis">{t.hinweis[einordnung]}</p>;
     case "ERLEDIGT":
     case "TEILWEISE_ERLEDIGT":
     case "FEHLGESCHLAGEN":
@@ -454,17 +476,14 @@ function Eintraege({
   return (
     <>
       {/*
-       * **Ohne Schlüssel keine Überschrift, sondern eine dünne Linie** zwischen
-       * den Einträgen (E‑1186) — dieselbe wie zwischen den Einträgen der Karte
-       * im Gespräch. `divide-y` zieht sie nur zwischen zwei Einträgen; bei
-       * einem einzigen steht keine. Mit Schlüssel bleibt es beim Abstand.
+       * **Die Einträge in einer Fläche** (E‑1189): gedämpft gegen die Karte,
+       * mit Rahmen und runden Ecken, bei jedem Typ gleich. Zwischen zwei
+       * Einträgen eine dünne Linie (E‑1186, seit E‑1189 auch mit Schlüssel);
+       * `divide-y` zieht sie nur zwischen zweien, bei einem einzigen steht
+       * keine. `overflow-hidden` hält den getönten Grund eines Eintrags in
+       * den runden Ecken der Fläche.
        */}
-      <ul
-        className={cn(
-          "flex flex-col",
-          hatSchluessel(auftrag.eintraege) ? "gap-1" : "divide-border divide-y",
-        )}
-      >
+      <ul className="bg-muted border-border divide-border flex flex-col divide-y overflow-hidden rounded-md border">
         {sichtbare(auftrag.eintraege, alle, SICHTBARE_EINTRAEGE).map((eintrag, index) => (
           <Eintrag
             // Die Reihenfolge ist die des Auftrags und ändert sich nie; der
@@ -504,50 +523,70 @@ function Eintrag({
   unstimmig: boolean;
 }) {
   const t = useTexte().dashboard.auftraege;
+  const sprache = useSprache();
   const ergebnis = ergebnisVon(eintrag);
+  // Der Schlüssel ist das erste Feld, mit eigener Beschriftung (E‑1190) —
+  // keine Überschrift — und steht immer über die volle Breite, wie kurz er
+  // auch ist: Er ist eine Kennung (E‑1192). Ohne Schlüssel steht nichts an
+  // seiner Stelle (E‑1185).
+  const werte = [
+    ...(eintrag.schluessel === null
+      ? []
+      : [{ name: "schluessel", label: t.schluessel, wert: eintrag.schluessel, breit: true }]),
+    ...beschrifteteWerte(felder, eintrag.werte).map((wert) => ({ ...wert, breit: false })),
+  ];
 
   return (
     <li
       className={cn(
-        "px-2 py-1",
-        // Ohne Schlüssel trennt eine Linie (E‑1186). An runden Ecken biegen
-        // sich ihre Enden nach oben (M1015); ohne sie ist sie gerade, wie
-        // auf der Karte.
-        eintrag.schluessel === null ? "" : "rounded-md",
+        "text-beiwerk @container/eintrag flex flex-col gap-2 px-3 py-2",
         ergebnis === null ? "" : ergebnisFlaeche(ergebnis),
       )}
     >
       {/*
-       * Leerzeichen in Schlüssel und Werten bleiben stehen, auch mehrere
-       * (E‑1141). Ohne Schlüssel keine Überschrift und kein Ersatz (E‑1185).
+       * **Das Feldraster** (E‑1190, E‑1192): je Feld das `label` aus der Kopie
+       * oben, gedämpft, der Wert darunter, nie fett. **Kurze Werte stehen zu
+       * zweit nebeneinander**, lange und der Schlüssel über die volle Breite.
+       * Kurz heißt: höchstens 17 Zeichen, entschieden am angezeigten Wert — die
+       * Definition kennt keine Feldart (`docs/tasks.md` §3.2, Punkt 1051), und
+       * am Namen wird nichts entschieden.
+       *
+       * **Zwei Spalten erst ab 17,75 rem** im Eintrag: Jede Spalte ist dann
+       * mindestens 8,5 rem breit, und darin steht ein Wert aus 17 Zeichen
+       * Festbreitenschrift (8,29 rem) ebenso ganz wie das längste `label` der
+       * Definitionen, „Lieferantennummer“ (7,24 rem; M1017). Die Maße sind rem
+       * und gehen mit der Anzeigegröße mit; schmaler bleibt es einspaltig.
+       * Ein längeres `label` einer künftigen Definition bricht in seiner Spalte
+       * um, statt in die Nachbarin zu laufen.
+       *
+       * **Der Wert bricht nicht um.** Festbreitenschrift, einzeilig; passt er
+       * nicht in die Zeile — eine Nachrichten-ID bei 1.280 px (M1016) —,
+       * endet er mit Auslassungspunkten, und der volle Wert steht im `title`
+       * und kommt beim Kopieren mit. Leerzeichen bleiben stehen: `pre`, nicht
+       * `pre-wrap` (E‑1141, F39). Ein Zeitpunkt in der Schreibweise der
+       * Plattform steht im Format aller Zeitpunkte des Blocks (E‑1191).
        */}
-      {eintrag.schluessel === null ? null : (
-        <p className="font-mono break-all whitespace-pre-wrap">{eintrag.schluessel}</p>
-      )}
-      {/*
-       * **Die Feldzeilen** (E‑1187): Das `label` bricht nie um. Der Wert steht
-       * neben ihm, wenn er dort ganz Platz hat, sonst in einem Stück darunter —
-       * `flex-wrap` stellt ihn mit seiner vollen Breite in die nächste Zeile,
-       * bevor er schrumpft. Passt er auch dort nicht (eine Nachrichten-ID bei
-       * 1.280 px in jeder Anzeigegröße, M1015), bricht er hinter einem
-       * Bindestrich: `<wbr>` macht die Stelle in jedem Browser zur Bruchstelle,
-       * `break-words` statt `break-all` bricht mitten in einer Gruppe nur, wenn
-       * sie allein nicht passt.
-       */}
-      <dl className="flex flex-wrap gap-x-3">
-        {beschrifteteWerte(felder, eintrag.werte).map((wert) => (
-          <div key={wert.name} className="flex min-w-0 flex-wrap gap-x-1">
-            <dt className="text-muted-foreground shrink-0 whitespace-nowrap">{wert.label}</dt>
-            <dd className="min-w-0 font-mono break-words whitespace-pre-wrap">
-              {teileHinterBindestrich(wert.wert).map((teil, index) => (
-                <Fragment key={index}>
-                  {index === 0 ? null : <wbr />}
-                  {teil}
-                </Fragment>
-              ))}
-            </dd>
-          </div>
-        ))}
+      <dl className="grid grid-cols-1 gap-x-3 gap-y-2 @min-[17.75rem]/eintrag:grid-cols-2">
+        {werte.map((wert) => {
+          const gezeigt = formatiereRohzeitpunkt(wert.wert, sprache);
+          return (
+            <div
+              key={wert.name}
+              className={cn(
+                "flex min-w-0 flex-col gap-0.5",
+                wert.breit || !istKurz(gezeigt) ? "col-span-full" : "",
+              )}
+            >
+              <dt className="text-muted-foreground break-words">{wert.label}</dt>
+              <dd
+                className="overflow-hidden font-mono text-ellipsis whitespace-pre"
+                title={gezeigt}
+              >
+                {gezeigt}
+              </dd>
+            </div>
+          );
+        })}
       </dl>
       {ergebnis === null ? (
         unstimmig ? (
@@ -639,7 +678,7 @@ function Loeschen({
     <div
       role="group"
       aria-labelledby={frageId}
-      className="border-border flex flex-col gap-2 rounded-md border p-2"
+      className="text-beiwerk border-border flex flex-col gap-2 rounded-md border p-2"
       onKeyDown={(ereignis) => {
         if (ereignis.key === "Escape" && !laeuft) {
           ereignis.stopPropagation();

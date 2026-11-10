@@ -263,6 +263,45 @@ export function formatiereRelativ(
   return format.format(0, "second");
 }
 
+/** `TT.MM.JJJJ HH:MM` — die Schreibweise, in der ein Auftrag Zeitpunkte an die Plattform gibt. */
+const ROHZEITPUNKT = /^(\d{2})\.(\d{2})\.(\d{4}) (\d{2}):(\d{2})$/;
+
+/**
+ * Ein Wert, den der Kunde **als Text** eingegeben hat und der ganz ein Zeitpunkt
+ * in der Schreibweise `TT.MM.JJJJ HH:MM` ist — etwa der Start eines
+ * Neudurchlaufs („25.03.2026 10:35“) —, im **Format von
+ * {@link formatiereZeitpunkt}**: „25.03.2026, 10:35“ (E‑1191,
+ * `docs/assistent-frontend.md` §12.15). Jeder andere Wert kommt unverändert
+ * zurück — lieber roh als falsch.
+ *
+ * **Erkannt am Wert, nicht am Feld.** Die Typdefinition kennt keine Feldart
+ * (`docs/tasks.md` §3.2), und am Namen des Felds wird nichts entschieden.
+ * Erkannt wird nur die vollständige Schreibweise mit einem Tag, den es gibt,
+ * und einer Uhrzeit bis 23:59.
+ *
+ * **Ohne Umrechnung.** Der Wert ist eine Wanduhrzeit ohne Zone und keine
+ * UTC-Angabe der API. Er wird deshalb als UTC gelesen und in UTC formatiert:
+ * Ziffern und Tag bleiben, wie sie eingegeben sind, und nur die Form ist die
+ * aller Zeitpunkte im Block — mit Komma, in jeder Sprache die von `Intl`.
+ */
+export function formatiereRohzeitpunkt(wert: string, sprache: Sprache): string {
+  const teile = ROHZEITPUNKT.exec(wert);
+  if (teile === null) {
+    return wert;
+  }
+  const [tag, monat, jahr, stunde, minute] = teile.slice(1).map(Number);
+  const zeitpunkt = new Date(Date.UTC(jahr, monat - 1, tag, stunde, minute));
+  // `Date.UTC` rechnet einen 31.02. still in den März und 24:00 in den
+  // nächsten Tag um; dann ist es keiner der Zeitpunkte, die gemeint sein können.
+  const gibtEsIhn =
+    zeitpunkt.getUTCFullYear() === jahr &&
+    zeitpunkt.getUTCMonth() === monat - 1 &&
+    zeitpunkt.getUTCDate() === tag &&
+    zeitpunkt.getUTCHours() === stunde &&
+    zeitpunkt.getUTCMinutes() === minute;
+  return gibtEsIhn ? formatierer(sprache, "UTC", ZEITPUNKT).format(zeitpunkt) : wert;
+}
+
 export function formatiereZahl(wert: number, sprache: Sprache): string {
   return new Intl.NumberFormat(sprache).format(wert);
 }

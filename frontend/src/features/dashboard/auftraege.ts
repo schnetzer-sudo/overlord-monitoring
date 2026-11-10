@@ -61,16 +61,6 @@ export function weitere(liste: readonly unknown[], anzahl: number): number {
 }
 
 /**
- * Stehen Aufträge **mehrerer Typen** in der Liste? Dann steht der Name des Typs
- * zusätzlich oben in der Zeile (E‑1103). Gezählt über die ganze Liste, nicht
- * nur über die sichtbaren fünf — sonst wechselte die Zeile ihr Aussehen mit
- * „weitere anzeigen“.
- */
-export function mehrereTypen(liste: readonly Pick<Auftrag, "typ">[]): boolean {
-  return new Set(liste.map((auftrag) => auftrag.typ)).size > 1;
-}
-
-/**
  * Hat der Typ des Auftrags einen Schlüssel? Das Backend bildet ihn aus der
  * Kopie der Definition und liefert `null` genau dann, wenn die Definition
  * keinen `schluessel` hat (`TypDefinition.schluesselText`, `docs/tasks.md`
@@ -82,9 +72,10 @@ export function hatSchluessel(eintraege: readonly Pick<Auftragseintrag, "schlues
 }
 
 /**
- * Die Schlüssel der zugeklappten Zeile: die ersten zwei, und wie viele danach
- * kommen (E‑1102). **Ohne Schlüssel `null`** — dann bleibt der linke Teil der
- * Zeile leer, ohne Ersatz (E‑1185; bis dahin „Eintrag <n>“, F23).
+ * Die Schlüssel der dritten Zeile eines zugeklappten Auftrags: die ersten zwei,
+ * und wie viele danach kommen (E‑1102, E‑1188). **Ohne Schlüssel `null`** —
+ * dann steht an ihrer Stelle nichts, kein Ersatz (E‑1185; bis dahin
+ * „Eintrag <n>“, F23).
  */
 export function schluesselZugeklappt(
   eintraege: readonly Pick<Auftragseintrag, "schluessel">[],
@@ -129,6 +120,27 @@ export function zeigtZaehlung(auftrag: Pick<Auftrag, "einordnung" | "eintraege">
 }
 
 /**
+ * Was **zugeklappt in der dritten Zeile** des Kopfes steht (E‑1188):
+ *
+ * - `zaehlung` — „<x> von <n> nicht erfolgreich“, wo {@link zeigtZaehlung}
+ *   es verlangt, **statt der Schlüssel** (E‑1102, E‑1182) und auch bei einem
+ *   Typ ohne Schlüssel, wie bisher
+ * - `schluessel` — sonst die Schlüssel, wenn der Typ einen hat
+ * - `null` — **keine dritte Zeile**, auch keine leere
+ *
+ * Aufgeklappt steht sie nie: Dort zeigen die Einträge Schlüssel und Ergebnis
+ * selbst.
+ */
+export type DritteZeile = "zaehlung" | "schluessel" | null;
+
+export function dritteZeile(auftrag: Pick<Auftrag, "einordnung" | "eintraege">): DritteZeile {
+  if (zeigtZaehlung(auftrag)) {
+    return "zaehlung";
+  }
+  return hatSchluessel(auftrag.eintraege) ? "schluessel" : null;
+}
+
+/**
  * Darf „Auftrag löschen“ stehen? **Nur bei `OFFEN`** (E‑1110), für jede Rolle
  * gleich. Der Knopf ist Bequemlichkeit, keine Berechtigung: Das Backend prüft
  * im Statement selbst.
@@ -138,13 +150,20 @@ export function loeschbar(auftrag: Pick<Auftrag, "einordnung">): boolean {
 }
 
 /**
- * Ein Wert, zerlegt **hinter jedem Bindestrich** — die Stellen, an denen er
- * brechen darf, wenn er auch allein nicht in die Zeile passt (E‑1187). Eine
- * Nachrichten-ID bricht so zwischen ihren Gruppen und nie mitten in einer.
- * Zusammengesetzt ergeben die Teile den Wert Zeichen für Zeichen.
+ * Höchstens so viele Zeichen hat ein **kurzer** Wert (E‑1192): genau ein
+ * Zeitpunkt im Format des Blocks, „10.11.2026, 14:55“. Die Spalte des
+ * zweispaltigen Rasters ist so breit, dass ein solcher Wert in ihr ganz steht.
  */
-export function teileHinterBindestrich(wert: string): string[] {
-  return wert.split(/(?<=-)/);
+export const KURZ_HOECHSTENS = 17;
+
+/**
+ * Ist ein Wert so kurz, dass er sich die Zeile mit einem zweiten teilen kann
+ * (E‑1192)? **Entschieden am angezeigten Wert, nicht am Feld und nicht am
+ * Namen** — die Definition hat keine Feldart (Punkt 1051). Gezählt werden
+ * Zeichen, nicht UTF-16-Einheiten.
+ */
+export function istKurz(gezeigt: string): boolean {
+  return [...gezeigt].length <= KURZ_HOECHSTENS;
 }
 
 /** Ein Wert eines Eintrags mit seinem `label`. */

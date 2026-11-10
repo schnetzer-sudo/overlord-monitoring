@@ -6,6 +6,7 @@ import {
   ZEITZONE_RUECKFALL,
   formatiereDatum,
   formatiereDauer,
+  formatiereRohzeitpunkt,
   formatiereRelativ,
   formatiereAnteil,
   formatiereZahl,
@@ -121,6 +122,54 @@ describe("Zeitpunkte lesen", () => {
     expect(formatiereZeitpunkt("2025-12-29T22:53:50Z", "de", undefined)).toBe(inUtc);
     expect(formatiereZeitpunkt("2025-12-29T22:53:50Z", "de", "Gibt/EsNicht")).toBe(inUtc);
     expect(inUtc).toBe("29.12.2025, 22:53");
+  });
+});
+
+/**
+ * **Zeitpunkte, die ein Auftrag als Text trägt** (E‑1191,
+ * `docs/assistent-frontend.md` §12.15): der Start eines Neudurchlaufs, so, wie
+ * er an die Plattform geht. Im Block steht er im Format aller Zeitpunkte — mit
+ * Komma —, ohne dass sich Tag oder Uhrzeit verschieben.
+ */
+describe("Zeitpunkte als Rohwert", () => {
+  it("steht mit Komma, im Format der übrigen Zeitpunkte", () => {
+    expect(formatiereRohzeitpunkt("25.03.2026 10:35", "de")).toBe("25.03.2026, 10:35");
+    // Dasselbe Format wie ein Zeitpunkt der API, der in der Anzeigezone dieselbe Wanduhrzeit hat.
+    expect(formatiereZeitpunkt("2026-03-25T09:35:00Z", "de", BERLIN)).toBe("25.03.2026, 10:35");
+  });
+
+  it("verschiebt weder Tag noch Uhrzeit — der Wert hat keine Zone", () => {
+    expect(formatiereRohzeitpunkt("31.12.2026 23:59", "de")).toBe("31.12.2026, 23:59");
+    expect(formatiereRohzeitpunkt("01.01.2026 00:00", "de")).toBe("01.01.2026, 00:00");
+    // Der Tag der Zeitumstellung: Eine Wanduhrzeit, die es in Berlin nicht gibt, bleibt stehen.
+    expect(formatiereRohzeitpunkt("29.03.2026 02:30", "de")).toBe("29.03.2026, 02:30");
+  });
+
+  it("folgt in jeder Sprache dem Format der übrigen Zeitpunkte", () => {
+    expect(formatiereRohzeitpunkt("25.03.2026 10:35", "en")).toBe(
+      formatiereZeitpunkt("2026-03-25T10:35:00Z", "en", ZEITZONE_RUECKFALL),
+    );
+  });
+
+  it("lässt jeden anderen Wert unverändert — lieber roh als falsch", () => {
+    for (const wert of [
+      "c70f6022-e801-41b5-a614-cbd64a99b31a",
+      "5",
+      "72332",
+      "25.03.2026",
+      "25.03.2026  10:35",
+      " 25.03.2026 10:35",
+      "25.03.2026 10:35 ",
+      "25.03.2026, 10:35",
+      "2026-03-25 10:35",
+      "31.02.2026 10:35",
+      "25.13.2026 10:35",
+      "25.03.2026 24:00",
+      "25.03.2026 10:60",
+      "",
+    ]) {
+      expect(formatiereRohzeitpunkt(wert, "de"), wert).toBe(wert);
+    }
   });
 });
 

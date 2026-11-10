@@ -65,7 +65,8 @@ Umweg über die Betreuung. Der Ablauf, wenn A1 bis A4 stehen:
 5. **Rückmeldung.** Der Monitor liest die Rückgabe und ordnet den Auftrag ein — Erledigt,
    Teilweise erledigt, Fehlgeschlagen —, an genau einer Stelle (`TaskStatusClassifier`, §5.5).
 6. **Übersicht.** Der Kunde sieht den Stand unter „Ihre Aufträge“ (A4). Einen Auftrag, den die
-   Plattform noch nicht abgeholt hat, kann er dort löschen (§6.6).
+   Plattform noch nicht abgeholt hat, kann er dort löschen (§6.6). Wie der Block aussieht, steht in
+   [`assistent-frontend.md`](assistent-frontend.md) §12.6, seit dem 10.11.2026 neu gegliedert (§12.15).
 
 **Auftragstypen sind Daten** (E‑1018). Ein Typ ist eine Zeile in `task_type`: eine Beschreibung in
 Fließtext für den Assistenten und eine Struktur (JSON), aus der das Backend Prüfung, Parametertext
@@ -447,6 +448,12 @@ wirkungslos zu bleiben.
 | `regeln` | Liste aus dem festen Satz in §3.3 |
 | `zeile` | je Aktion genau eine Vorlage für die Zeile eines Eintrags, keine für eine unbekannte Aktion. Platzhalter `{feldname}` und `{schluessel}`; ein fehlender Wert wird zu leerem Text. Außerhalb eines Platzhalters keine geschweifte Klammer, kein Zeilenumbruch, kein Steuerzeichen |
 | `rueckgaben` | `ok` (der Wert, der Erfolg heißt; Pflicht, nicht leer) und `weitere` (Liste bekannter anderer Werte, optional). Kein Wert mit Leerraum am Rand oder mit Zeilenumbruch — die Rückgabe wird zeilenweise und ohne Leerraum am Rand verglichen (§5.4) |
+
+**Eine Feldart gibt es nicht** *(festgestellt am 10.11.2026)*: Ob ein Feld ein Datum, eine Zahl
+oder eine Kennung trägt, steht nirgends — das `muster` prüft den Wert, es ordnet ihn nicht ein. „Ihre
+Aufträge“ entscheidet deshalb an der Länge des Werts, ob ein Feld eine Spalte oder die ganze Breite
+bekommt, und erkennt ein Datum an seiner Schreibweise
+([`assistent-frontend.md`](assistent-frontend.md) §12.15, E‑1190 bis E‑1192, Punkt 1051).
 
 **Beispiel** — eine Struktur ohne fachliche Bedeutung, nur zur Form:
 
