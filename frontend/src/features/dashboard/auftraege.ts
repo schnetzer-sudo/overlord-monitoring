@@ -149,6 +149,23 @@ export function loeschbar(auftrag: Pick<Auftrag, "einordnung">): boolean {
   return einordnungVon(auftrag) === "OFFEN";
 }
 
+/**
+ * Höchstens so viele Zeichen hat ein **kurzer** Wert (E‑1192): genau ein
+ * Zeitpunkt im Format des Blocks, „10.11.2026, 14:55“. Die Spalte des
+ * zweispaltigen Rasters ist so breit, dass ein solcher Wert in ihr ganz steht.
+ */
+export const KURZ_HOECHSTENS = 17;
+
+/**
+ * Ist ein Wert so kurz, dass er sich die Zeile mit einem zweiten teilen kann
+ * (E‑1192)? **Entschieden am angezeigten Wert, nicht am Feld und nicht am
+ * Namen** — die Definition hat keine Feldart (Punkt 1051). Gezählt werden
+ * Zeichen, nicht UTF-16-Einheiten.
+ */
+export function istKurz(gezeigt: string): boolean {
+  return [...gezeigt].length <= KURZ_HOECHSTENS;
+}
+
 /** Ein Wert eines Eintrags mit seinem `label`. */
 export type BeschrifteterWert = { name: string; label: string; wert: string };
 

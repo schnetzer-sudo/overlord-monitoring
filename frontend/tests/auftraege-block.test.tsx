@@ -988,14 +988,20 @@ describe("Die Zeile (E‑1102, E‑1104, E‑1107, E‑1122, E‑1188 bis E‑11
   });
 
   /**
-   * E‑1190, E‑1191: Jedes Feld ist `label` über Wert, einspaltig über die volle
-   * Breite — die Definition kennt keine Feldart (Punkt 1051). Der Wert bricht
-   * nicht um: Festbreitenschrift, einzeilig, mit Auslassung, wo er nicht passt,
-   * und dem vollen Wert im `title`. Ein Zeitpunkt in der Schreibweise der
-   * Plattform steht mit Komma. Die `label` kommen aus der Kopie, unverändert.
-   * Wie es im Browser aussieht, belegt M1016.
+   * E‑1190 bis E‑1192: Jedes Feld ist `label` über Wert. Kurze Werte (höchstens
+   * 17 Zeichen) stehen zu zweit, sobald der Eintrag 17,75 rem breit ist; lange
+   * Werte und der Schlüssel stehen über die volle Breite — entschieden am Wert,
+   * die Definition kennt keine Feldart (Punkt 1051). Der Wert bricht nicht um:
+   * Festbreitenschrift, einzeilig, mit Auslassung, wo er nicht passt, und dem
+   * vollen Wert im `title`. Ein Zeitpunkt in der Schreibweise der Plattform
+   * steht mit Komma. Die `label` kommen aus der Kopie, unverändert. Die Spalten
+   * rechnet jsdom nicht; wo die Schwelle im Browser liegt, belegt M1017.
    */
-  it("setzt jedes Feld als label über dem Wert, einspaltig, den Wert einzeilig und das Datum mit Komma", async () => {
+  it("setzt kurze Werte zu zweit, lange und den Schlüssel über die volle Breite, einzeilig und das Datum mit Komma", async () => {
+    const kurzerSchluessel = eintrag("TOR3", {
+      werte: { werk: "47110", abladestelle: "TOR3", sndprn: "120764" },
+      schluessel: "47110/TOR3",
+    });
     mitAuftraegen([
       auftrag({
         typ: "TYP_OHNE_SCHLUESSEL",
@@ -1004,7 +1010,7 @@ describe("Die Zeile (E‑1102, E‑1104, E‑1107, E‑1122, E‑1188 bis E‑11
         felder: NEUSTART_FELDER,
         eintraege: [neustart("11111111-2222-4333-8444-555555555555")],
       }),
-      auftrag(),
+      auftrag({ eintraege: [kurzerSchluessel] }),
     ]);
     const { abbauen } = await ansicht();
     try {
@@ -1012,7 +1018,8 @@ describe("Die Zeile (E‑1102, E‑1104, E‑1107, E‑1122, E‑1188 bis E‑11
         await klick(zeile);
       }
       const felder = [...block()!.querySelectorAll("dl > div")];
-      expect(felder.map((feld) => feld.querySelector("dt")?.textContent)).toEqual([
+      const beschriftung = (feld: Element) => feld.querySelector("dt")?.textContent;
+      expect(felder.map(beschriftung)).toEqual([
         "Nachrichten ID",
         "Start um",
         "ab Schritt",
@@ -1020,15 +1027,24 @@ describe("Die Zeile (E‑1102, E‑1104, E‑1107, E‑1122, E‑1188 bis E‑11
         "Werk",
         "Abladestelle",
         "SNDPRN",
-        T.schluessel,
-        "Werk",
-        "Abladestelle",
-        "SNDPRN",
       ]);
+
+      // Das Raster: eine Spalte, zwei ab der Breite des Eintrags, die M1017 belegt.
       for (const dl of block()!.querySelectorAll("dl")) {
-        expect(dl.classList.contains("flex-col"), "einspaltig").toBe(true);
-        expect(dl.classList.contains("grid"), "kein Raster in zwei Spalten").toBe(false);
+        expect(dl.classList.contains("grid")).toBe(true);
+        expect(dl.classList.contains("grid-cols-1")).toBe(true);
+        expect(dl.classList.contains("@min-[17.75rem]/eintrag:grid-cols-2")).toBe(true);
+        expect(dl.closest("li")!.classList.contains("@container/eintrag")).toBe(true);
       }
+      // Über die volle Breite: die Nachrichten-ID (lang) und der Schlüssel (immer).
+      const breit = felder
+        .filter((feld) => feld.classList.contains("col-span-full"))
+        .map(beschriftung);
+      expect(breit).toEqual(["Nachrichten ID", T.schluessel]);
+      expect(felder[3].querySelector("dd")!.textContent, "auch ein kurzer Schlüssel").toBe(
+        "47110/TOR3",
+      );
+
       for (const feld of felder) {
         expect(feld.classList.contains("flex-col"), "label über dem Wert").toBe(true);
         const [dt, dd] = [...feld.children];

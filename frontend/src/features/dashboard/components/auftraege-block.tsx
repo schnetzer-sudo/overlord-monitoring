@@ -44,6 +44,7 @@ import {
   dritteZeile,
   einordnungVon,
   ergebnisVon,
+  istKurz,
   loeschbar,
   nichtErfolgreich,
   schluesselZugeklappt,
@@ -525,27 +526,38 @@ function Eintrag({
   const sprache = useSprache();
   const ergebnis = ergebnisVon(eintrag);
   // Der Schlüssel ist das erste Feld, mit eigener Beschriftung (E‑1190) —
-  // keine Überschrift. Ohne Schlüssel steht nichts an seiner Stelle (E‑1185).
+  // keine Überschrift — und steht immer über die volle Breite, wie kurz er
+  // auch ist: Er ist eine Kennung (E‑1192). Ohne Schlüssel steht nichts an
+  // seiner Stelle (E‑1185).
   const werte = [
     ...(eintrag.schluessel === null
       ? []
-      : [{ name: "schluessel", label: t.schluessel, wert: eintrag.schluessel }]),
-    ...beschrifteteWerte(felder, eintrag.werte),
+      : [{ name: "schluessel", label: t.schluessel, wert: eintrag.schluessel, breit: true }]),
+    ...beschrifteteWerte(felder, eintrag.werte).map((wert) => ({ ...wert, breit: false })),
   ];
 
   return (
     <li
       className={cn(
-        "text-beiwerk flex flex-col gap-2 px-3 py-2",
+        "text-beiwerk @container/eintrag flex flex-col gap-2 px-3 py-2",
         ergebnis === null ? "" : ergebnisFlaeche(ergebnis),
       )}
     >
       {/*
-       * **Das Feldraster** (E‑1190): je Feld das `label` aus der Kopie oben,
-       * gedämpft, der Wert darunter, nie fett. **Einspaltig über die volle
-       * Breite**, bei jedem Typ: Die Definition kennt keine Feldart, an der
-       * sich ein kurzes Feld erkennen ließe (`docs/tasks.md` §3.2), und am
-       * Namen wird nichts entschieden (Punkt 1051).
+       * **Das Feldraster** (E‑1190, E‑1192): je Feld das `label` aus der Kopie
+       * oben, gedämpft, der Wert darunter, nie fett. **Kurze Werte stehen zu
+       * zweit nebeneinander**, lange und der Schlüssel über die volle Breite.
+       * Kurz heißt: höchstens 17 Zeichen, entschieden am angezeigten Wert — die
+       * Definition kennt keine Feldart (`docs/tasks.md` §3.2, Punkt 1051), und
+       * am Namen wird nichts entschieden.
+       *
+       * **Zwei Spalten erst ab 17,75 rem** im Eintrag: Jede Spalte ist dann
+       * mindestens 8,5 rem breit, und darin steht ein Wert aus 17 Zeichen
+       * Festbreitenschrift (8,29 rem) ebenso ganz wie das längste `label` der
+       * Definitionen, „Lieferantennummer“ (7,24 rem; M1017). Die Maße sind rem
+       * und gehen mit der Anzeigegröße mit; schmaler bleibt es einspaltig.
+       * Ein längeres `label` einer künftigen Definition bricht in seiner Spalte
+       * um, statt in die Nachbarin zu laufen.
        *
        * **Der Wert bricht nicht um.** Festbreitenschrift, einzeilig; passt er
        * nicht in die Zeile — eine Nachrichten-ID bei 1.280 px (M1016) —,
@@ -554,12 +566,18 @@ function Eintrag({
        * `pre-wrap` (E‑1141, F39). Ein Zeitpunkt in der Schreibweise der
        * Plattform steht im Format aller Zeitpunkte des Blocks (E‑1191).
        */}
-      <dl className="flex flex-col gap-2">
+      <dl className="grid grid-cols-1 gap-x-3 gap-y-2 @min-[17.75rem]/eintrag:grid-cols-2">
         {werte.map((wert) => {
           const gezeigt = formatiereRohzeitpunkt(wert.wert, sprache);
           return (
-            <div key={wert.name} className="flex min-w-0 flex-col gap-0.5">
-              <dt className="text-muted-foreground">{wert.label}</dt>
+            <div
+              key={wert.name}
+              className={cn(
+                "flex min-w-0 flex-col gap-0.5",
+                wert.breit || !istKurz(gezeigt) ? "col-span-full" : "",
+              )}
+            >
+              <dt className="text-muted-foreground break-words">{wert.label}</dt>
               <dd
                 className="overflow-hidden font-mono text-ellipsis whitespace-pre"
                 title={gezeigt}

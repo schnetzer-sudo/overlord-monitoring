@@ -11,6 +11,8 @@ import {
   einordnungVon,
   ergebnisVon,
   hatSchluessel,
+  istKurz,
+  KURZ_HOECHSTENS,
   laedtNeuNach,
   loeschbar,
   loeschergebnis,
@@ -210,6 +212,31 @@ describe("Die Werte mit ihrem label (E‑1104, E‑1120, F21)", () => {
       { name: "werk", label: "Werk", wert: "1" },
       { name: "neu", label: "neu", wert: "x" },
     ]);
+  });
+});
+
+/**
+ * E‑1192: Kurz ist ein Wert mit höchstens 17 Zeichen — genau ein Zeitpunkt im
+ * Format des Blocks. Gezählt werden Zeichen, nicht UTF-16-Einheiten.
+ */
+describe("Kurze Werte stehen zu zweit (E‑1192)", () => {
+  it("nennt einen Wert bis 17 Zeichen kurz, die Nachrichten-ID nicht", () => {
+    expect(KURZ_HOECHSTENS).toBe(17);
+    expect(istKurz("10.11.2026, 14:55")).toBe(true);
+    expect(istKurz("5")).toBe(true);
+    expect(istKurz("047110001")).toBe(true);
+    expect(istKurz("")).toBe(true);
+    expect(istKurz("12345678901234567")).toBe(true);
+    expect(istKurz("123456789012345678")).toBe(false);
+    expect(istKurz("c70f6022-e801-41b5-a614-cbd64a99b31a")).toBe(false);
+    expect(istKurz("11/10/2026, 02:55 PM")).toBe(false);
+  });
+
+  it("zählt Zeichen, nicht UTF-16-Einheiten", () => {
+    // 17 Zeichen, davon eines außerhalb der Grundebene (zwei UTF-16-Einheiten).
+    const mitAstral = "ABCDEFGHIJKLMNOP\u{1D400}";
+    expect(mitAstral.length).toBe(18);
+    expect(istKurz(mitAstral)).toBe(true);
   });
 });
 
