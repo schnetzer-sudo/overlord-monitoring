@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, type Dispatch } from "react";
+import { Fragment, useEffect, useId, useRef, type Dispatch } from "react";
 import {
   AlertTriangle,
   ChevronDown,
@@ -38,11 +38,13 @@ import {
   beschrifteteWerte,
   einordnungVon,
   ergebnisVon,
+  hatSchluessel,
   loeschbar,
   mehrereTypen,
   nichtErfolgreich,
   schluesselZugeklappt,
   sichtbare,
+  teileHinterBindestrich,
   weitere,
   zeigtZaehlung,
   type Blockschritt,
@@ -256,12 +258,10 @@ function Zeile({
       : einsetzen(t.eintraegeViele, { anzahl: formatiereZahl(anzahl, sprache) });
   const kopf = [...(mitTyp ? [auftrag.name] : []), auftrag.aktion, eintraegeText].join(" · ");
 
-  const zugeklappt = schluesselZugeklappt(auftrag.eintraege, (nummer) =>
-    einsetzen(t.eintrag, { nummer: formatiereZahl(nummer, sprache) }),
-  );
-  const schluessel = zugeklappt.schluessel.join(", ");
+  const zugeklappt = schluesselZugeklappt(auftrag.eintraege);
+  const schluessel = zugeklappt === null ? null : zugeklappt.schluessel.join(", ");
   const undWeitere =
-    zugeklappt.weitere === 0
+    zugeklappt === null || zugeklappt.weitere === 0
       ? null
       : zugeklappt.weitere === 1
         ? t.undWeiterer
@@ -323,6 +323,10 @@ function Zeile({
                 gesamt: formatiereZahl(anzahl, sprache),
               })}
             </span>
+          ) : schluessel === null ? (
+            // Ohne Schlüssel bleibt der linke Teil leer, ohne Ersatz (E‑1185);
+            // die leere Spanne hält den Zeitpunkt rechts, wo er immer steht.
+            <span className="min-w-0 flex-1" />
           ) : (
             <span
               className="text-beiwerk min-w-0 flex-1 truncate"
@@ -449,7 +453,18 @@ function Eintraege({
 
   return (
     <>
-      <ul className="flex flex-col gap-1">
+      {/*
+       * **Ohne Schlüssel keine Überschrift, sondern eine dünne Linie** zwischen
+       * den Einträgen (E‑1186) — dieselbe wie zwischen den Einträgen der Karte
+       * im Gespräch. `divide-y` zieht sie nur zwischen zwei Einträgen; bei
+       * einem einzigen steht keine. Mit Schlüssel bleibt es beim Abstand.
+       */}
+      <ul
+        className={cn(
+          "flex flex-col",
+          hatSchluessel(auftrag.eintraege) ? "gap-1" : "divide-border divide-y",
+        )}
+      >
         {sichtbare(auftrag.eintraege, alle, SICHTBARE_EINTRAEGE).map((eintrag, index) => (
           <Eintrag
             // Die Reihenfolge ist die des Auftrags und ändert sich nie; der
@@ -457,7 +472,6 @@ function Eintraege({
             // `null` liefert.
             key={index}
             eintrag={eintrag}
-            nummer={index + 1}
             felder={auftrag.felder}
             unstimmig={unstimmig}
           />
@@ -482,31 +496,56 @@ function Eintraege({
 
 function Eintrag({
   eintrag,
-  nummer,
   felder,
   unstimmig,
 }: {
   eintrag: Auftragseintrag;
-  nummer: number;
   felder: Auftrag["felder"];
   unstimmig: boolean;
 }) {
-  const texte = useTexte();
-  const sprache = useSprache();
-  const t = texte.dashboard.auftraege;
+  const t = useTexte().dashboard.auftraege;
   const ergebnis = ergebnisVon(eintrag);
 
   return (
-    <li className={cn("rounded-md px-2 py-1", ergebnis === null ? "" : ergebnisFlaeche(ergebnis))}>
-      {/* Leerzeichen in Schlüssel und Werten bleiben stehen, auch mehrere (E‑1141). */}
-      <p className="font-mono break-all whitespace-pre-wrap">
-        {eintrag.schluessel ?? einsetzen(t.eintrag, { nummer: formatiereZahl(nummer, sprache) })}
-      </p>
+    <li
+      className={cn(
+        "px-2 py-1",
+        // Ohne Schlüssel trennt eine Linie (E‑1186). An runden Ecken biegen
+        // sich ihre Enden nach oben (M1015); ohne sie ist sie gerade, wie
+        // auf der Karte.
+        eintrag.schluessel === null ? "" : "rounded-md",
+        ergebnis === null ? "" : ergebnisFlaeche(ergebnis),
+      )}
+    >
+      {/*
+       * Leerzeichen in Schlüssel und Werten bleiben stehen, auch mehrere
+       * (E‑1141). Ohne Schlüssel keine Überschrift und kein Ersatz (E‑1185).
+       */}
+      {eintrag.schluessel === null ? null : (
+        <p className="font-mono break-all whitespace-pre-wrap">{eintrag.schluessel}</p>
+      )}
+      {/*
+       * **Die Feldzeilen** (E‑1187): Das `label` bricht nie um. Der Wert steht
+       * neben ihm, wenn er dort ganz Platz hat, sonst in einem Stück darunter —
+       * `flex-wrap` stellt ihn mit seiner vollen Breite in die nächste Zeile,
+       * bevor er schrumpft. Passt er auch dort nicht (eine Nachrichten-ID bei
+       * 1.280 px in jeder Anzeigegröße, M1015), bricht er hinter einem
+       * Bindestrich: `<wbr>` macht die Stelle in jedem Browser zur Bruchstelle,
+       * `break-words` statt `break-all` bricht mitten in einer Gruppe nur, wenn
+       * sie allein nicht passt.
+       */}
       <dl className="flex flex-wrap gap-x-3">
         {beschrifteteWerte(felder, eintrag.werte).map((wert) => (
-          <div key={wert.name} className="flex gap-1">
-            <dt className="text-muted-foreground">{wert.label}</dt>
-            <dd className="font-mono break-all whitespace-pre-wrap">{wert.wert}</dd>
+          <div key={wert.name} className="flex min-w-0 flex-wrap gap-x-1">
+            <dt className="text-muted-foreground shrink-0 whitespace-nowrap">{wert.label}</dt>
+            <dd className="min-w-0 font-mono break-words whitespace-pre-wrap">
+              {teileHinterBindestrich(wert.wert).map((teil, index) => (
+                <Fragment key={index}>
+                  {index === 0 ? null : <wbr />}
+                  {teil}
+                </Fragment>
+              ))}
+            </dd>
           </div>
         ))}
       </dl>

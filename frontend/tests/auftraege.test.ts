@@ -9,6 +9,7 @@ import {
   blockschritt,
   einordnungVon,
   ergebnisVon,
+  hatSchluessel,
   laedtNeuNach,
   loeschbar,
   loeschergebnis,
@@ -16,6 +17,7 @@ import {
   nichtErfolgreich,
   schluesselZugeklappt,
   sichtbare,
+  teileHinterBindestrich,
   weitere,
   zeigtZaehlung,
   type Blockzustand,
@@ -97,22 +99,27 @@ describe("Sichtbar sind fünf, der Rest hinter „weitere anzeigen“ (E‑1101)
 });
 
 describe("Die zugeklappte Zeile (E‑1102, E‑1103)", () => {
-  const rueckfall = (nummer: number) => `Eintrag ${nummer}`;
-
   it("nennt die ersten zwei Schlüssel und zählt den Rest", () => {
     const eintraege = ["A/1", "B/2", "C/3", "D/4"].map((schluessel) => eintrag({ schluessel }));
-    expect(schluesselZugeklappt(eintraege, rueckfall)).toEqual({
+    expect(schluesselZugeklappt(eintraege)).toEqual({
       schluessel: ["A/1", "B/2"],
       weitere: 2,
     });
-    expect(schluesselZugeklappt(eintraege.slice(0, 2), rueckfall).weitere).toBe(0);
-    expect(schluesselZugeklappt(eintraege.slice(0, 1), rueckfall).schluessel).toEqual(["A/1"]);
+    expect(schluesselZugeklappt(eintraege.slice(0, 2))?.weitere).toBe(0);
+    expect(schluesselZugeklappt(eintraege.slice(0, 1))?.schluessel).toEqual(["A/1"]);
   });
 
-  /** F23: Ohne Schlüssel steht „Eintrag <n>“ — gezählt ab 1, wie auf der Karte. */
-  it("setzt ohne Schlüssel den Rückfall mit der Nummer des Eintrags", () => {
-    const eintraege = [eintrag({ schluessel: null }), eintrag({ schluessel: "B/2" })];
-    expect(schluesselZugeklappt(eintraege, rueckfall).schluessel).toEqual(["Eintrag 1", "B/2"]);
+  /**
+   * E‑1185 (ersetzt F23): Ohne Schlüssel gibt es nichts an seiner Stelle —
+   * kein „Eintrag <n>“ und kein „und <n> weitere“. Entschieden wird an der
+   * Antwort, nicht am Namen des Typs.
+   */
+  it("gibt ohne Schlüssel nichts zurück, auch bei mehr als zwei Einträgen", () => {
+    const drei = [eintrag(), eintrag(), eintrag()];
+    expect(hatSchluessel(drei)).toBe(false);
+    expect(schluesselZugeklappt(drei)).toBeNull();
+    expect(schluesselZugeklappt(drei.slice(0, 1))).toBeNull();
+    expect(hatSchluessel([eintrag({ schluessel: "A/1" })])).toBe(true);
   });
 
   it("erkennt mehrere Typen über die ganze Liste, nicht über die sichtbaren", () => {
@@ -183,6 +190,22 @@ describe("Die Werte mit ihrem label (E‑1104, E‑1120, F21)", () => {
       { name: "werk", label: "Werk", wert: "1" },
       { name: "neu", label: "neu", wert: "x" },
     ]);
+  });
+
+  /** E‑1187: Bruchstellen nur hinter Bindestrichen; die Teile ergeben den Wert zeichengenau. */
+  it("zerlegt einen Wert hinter jedem Bindestrich und sonst nicht", () => {
+    const id = "11111111-2222-4333-8444-555555555555";
+    expect(teileHinterBindestrich(id)).toEqual([
+      "11111111-",
+      "2222-",
+      "4333-",
+      "8444-",
+      "555555555555",
+    ]);
+    expect(teileHinterBindestrich(id).join("")).toBe(id);
+    expect(teileHinterBindestrich("A  1")).toEqual(["A  1"]);
+    expect(teileHinterBindestrich("25.03.2026 10:35")).toEqual(["25.03.2026 10:35"]);
+    expect(teileHinterBindestrich("-a--")).toEqual(["-", "a-", "-"]);
   });
 });
 

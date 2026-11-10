@@ -263,7 +263,6 @@ export const en: Texte = {
       eingestellt: "submitted {zeit} by {name}",
       ausgefuehrt: "executed {zeit}",
       meldungDerPlattform: "Message from the platform",
-      eintrag: "Entry {nummer}",
       ergebnis: {
         OK: "successful",
         NICHT_OK: "not successful",

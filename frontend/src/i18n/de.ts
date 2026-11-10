@@ -461,8 +461,6 @@ export const de = {
       eingestellt: "eingestellt {zeit} von {name}",
       ausgefuehrt: "ausgeführt {zeit}",
       meldungDerPlattform: "Meldung der Plattform",
-      // Rückfall ohne Schlüssel (F23), wie auf der Karte (E‑1080).
-      eintrag: "Eintrag {nummer}",
       // Für Vorleseprogramme neben dem Rohwert der Plattform (E‑1106).
       ergebnis: {
         OK: "erfolgreich",
