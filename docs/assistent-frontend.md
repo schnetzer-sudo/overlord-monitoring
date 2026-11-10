@@ -21,8 +21,9 @@ folgt mit A4.
 
 > **Neu gegliedert am 10.11.2026** (Zweig `fix/auftraege-darstellung`): Der Kopf eines Auftrags hat
 > zwei Zeilen — Stand · Typname, darunter Aktion, Zahl und Zeitpunkt —, zugeklappt mit Schlüssel eine
-> dritte; aufgeklappt stehen die Einträge in einer Fläche, jedes Feld mit `label` über dem Wert, und
-> Zeitpunkte haben überall dasselbe Format (E‑1188 bis E‑1191, §12.6, §12.15).
+> dritte; aufgeklappt stehen die Einträge in einer Fläche, jedes Feld mit `label` über dem Wert,
+> kurze Werte zu zweit, und Zeitpunkte haben überall dasselbe Format (E‑1188 bis E‑1192, §12.6,
+> §12.15).
 
 > **Der Assistent bleibt abgeschaltet**, bis der Datenschutzbeauftragte die Auftragsverarbeitung
 > mit Anthropic geprüft hat (E‑1029, E‑1030, Punkt 1009). Abgeschaltet meldet
@@ -539,7 +540,7 @@ Entscheidungen 13, 16 bis 18 und 20 bis 22 betreffen Endpunkt und Plattform und 
 | **E‑1101** | Der Block zeigt, was `GET /api/tasks` liefert, neueste zuerst. **Fünf Aufträge sichtbar**, darüber „1 weiteren anzeigen“ oder „<n> weitere anzeigen“, danach „Weniger anzeigen“. | V |
 | **E‑1102** | **Jede Zeile hat zwei Zeilen und ist zugeklappt.** Oben: Stand (Zeichen und Wort), Aktion, Zahl der Einträge („Neuanlage · 2 Einträge“). Darunter links die ersten zwei Schlüssel, bei mehr „und <n> weitere“, in Festbreitenschrift und bei Platzmangel mit Auslassung; rechts der Zeitpunkt des Einstellens. Bei „Teilweise erledigt“ und bei „Fehlgeschlagen“ mit mindestens einem Ergebnis (E‑1182, [`tasks.md`](tasks.md) §2 „Kein Eintrag Ok“) steht statt der Schlüssel „<x> von <n> nicht erfolgreich“ in der Farbe des Stands. Ohne Ergebnisse, wenn die Plattform den Auftrag als Ganzes als fehlgeschlagen gemeldet hat, bleibt der Schlüssel. **Seit E‑1188 (§12.15)** hat der Kopf zwei Zeilen — Stand · Typname, darunter Aktion · Zahl und der Zeitpunkt —, und Schlüssel oder Zählung stehen zugeklappt in einer dritten; **ein Typ ohne Schlüssel hat keine**, außer der Zählung. | V (Entwurf 19.10.2026), A (E‑1182, 09.11.2026; E‑1185 und E‑1188, 10.11.2026) |
 | **E‑1103** | **Der Name des Typs** steht in der aufgeklappten Zeile. Kommen in der Liste Aufträge mehrerer Typen vor, steht er zusätzlich oben vor der Aktion. **Ersetzt am 10.11.2026 durch E‑1188** (§12.15): Der Typname steht immer in der ersten Zeile des Kopfes und aufgeklappt nicht noch einmal. | V |
-| **E‑1104** | **Aufgeklappt:** Name des Typs, „eingestellt <Zeit>“ und gegebenenfalls „ausgeführt <Zeit>“, bei „Fehlgeschlagen“ der `fehlertext` als „Meldung der Plattform“, sofern es einen gibt, der Hinweis des Stands, dann die Einträge: Schlüssel, die Werte mit ihrem `label` und, wo es eines gibt, das Ergebnis — **ohne Schlüssel keine Überschrift, dafür eine Linie zwischen den Einträgen** (E‑1185, E‑1186, §12.14). Bis fünf Einträge, darüber „Alle <n> Einträge anzeigen“. Aufklappen mit der Tastatur, `aria-expanded` am Auslöser. **Geändert am 10.11.2026 durch E‑1189 und E‑1190** (§12.15): kein Typname, „Eingestellt von <Name>“ ohne Zeitpunkt, die Einträge in einer Fläche mit Linie bei jedem Typ, je Feld `label` über dem Wert, der Schlüssel als erstes Feld. | V |
+| **E‑1104** | **Aufgeklappt:** Name des Typs, „eingestellt <Zeit>“ und gegebenenfalls „ausgeführt <Zeit>“, bei „Fehlgeschlagen“ der `fehlertext` als „Meldung der Plattform“, sofern es einen gibt, der Hinweis des Stands, dann die Einträge: Schlüssel, die Werte mit ihrem `label` und, wo es eines gibt, das Ergebnis — **ohne Schlüssel keine Überschrift, dafür eine Linie zwischen den Einträgen** (E‑1185, E‑1186, §12.14). Bis fünf Einträge, darüber „Alle <n> Einträge anzeigen“. Aufklappen mit der Tastatur, `aria-expanded` am Auslöser. **Geändert am 10.11.2026 durch E‑1189 und E‑1190** (§12.15): kein Typname, „Eingestellt von <Name>“ ohne Zeitpunkt, die Einträge in einer Fläche mit Linie bei jedem Typ, je Feld `label` über dem Wert, kurze Werte zu zweit (E‑1192), der Schlüssel als erstes Feld. | V |
 | **E‑1105** | Stände und ihre Anzeige nach §12.4. Jeder Stand hat Zeichen **und** Wort, Farbe nie allein. „Fehlgeschlagen“ trägt die Fehlerrolle. **„Teilweise erledigt“ fällt auf, ohne wie ein Fehler auszusehen** (im Entwurf Bernstein); welche Rolle, ist F16. | V |
 | **E‑1106** | Das Ergebnis je Eintrag zeigt den Rohwert der Plattform („Schlüssel nicht gefunden“) mit Zeichen; „erfolgreich“ oder „nicht erfolgreich“ aus `ergebnis` steht für Vorleseprogramme dabei. Ein nicht erfolgreicher Eintrag hat einen leicht getönten Grund. | V |
 | **E‑1107** | `fehlertext` und Rückgabewerte schreibt die Plattform: **reiner Text**, nie HTML. | V |
@@ -673,11 +674,9 @@ Stand danach; wie es vorher aussah, steht in §12.13 und §12.14.*
 │   Ausgeführt 10.11.2026, 09:06                   │
 │   ┌──────────────────────────────────────────┐   │  Fläche: bg-muted, Rahmen, runde Ecken
 │   │ Nachrichten ID                           │   │  label oben, gedämpft (E‑1190)
-│   │ e1188aaa-0000-4000-8000-000000…          │   │  einzeilig, Auslassung, voller Wert im title
-│   │ Start um                                 │   │
-│   │ 10.11.2026, 09:05                        │   │  Datum mit Komma (E‑1191)
-│   │ ab Schritt                               │   │
-│   │ 3                                        │   │
+│   │ e1188aaa-0000-4000-8000-000000000003     │   │  lang: volle Breite, einzeilig
+│   │ Start um             ab Schritt          │   │  kurz: zu zweit, ab 17,75 rem (E‑1192)
+│   │ 10.11.2026, 09:05    3                   │   │  Datum mit Komma (E‑1191)
 │   │ ✓ Ok                                     │   │  Ergebnis
 │   └──────────────────────────────────────────┘   │
 │ 2 weitere anzeigen                               │  ab sechs Aufträgen (E‑1101)
@@ -727,11 +726,17 @@ Der Typname steht aufgeklappt **nicht** noch einmal.
 **Das Feldraster eines Eintrags** (E‑1190), bei jedem Typ gleich: je Feld das `label` aus der Kopie
 oben, `--text-beiwerk`, gedämpft, der Wert darunter, nie fett. **Hat der Typ einen Schlüssel, ist er
 das erste Feld**, beschriftet „Schlüssel“; die übrigen Felder folgen in der Reihenfolge der
-Definition, nur die mit Wert (F21). **Alle Felder stehen einspaltig über die volle Breite** — die
-Definition hat keine Feldart, an der sich ein kurzes Feld erkennen ließe (Punkt 1051). Jeder Wert
-steht in Festbreitenschrift `--text-beiwerk` und **bricht nicht um**; passt er nicht in die Zeile,
-endet er mit Auslassungspunkten, der volle Wert steht im `title` und kommt beim Markieren und Kopieren
-mit (Punkt 1052). Ein Wert, der ganz ein Zeitpunkt in der Schreibweise `TT.MM.JJJJ HH:MM` ist, steht
+Definition, nur die mit Wert (F21). **Kurze Werte stehen zu zweit nebeneinander, lange und der
+Schlüssel über die volle Breite** (E‑1192). Kurz heißt: Der angezeigte Wert hat höchstens 17 Zeichen
+— genau ein Zeitpunkt im Format des Blocks. Entschieden wird am Wert, denn die Definition hat keine
+Feldart (Punkt 1051); am Namen wird nichts entschieden. **Zwei Spalten gibt es erst, wenn der Eintrag
+innen mindestens 17,75 rem breit ist** (Container-Abfrage `@container/eintrag`): Dann ist jede Spalte
+mindestens 8,5 rem breit, und ein Wert aus 17 Zeichen Festbreitenschrift (8,29 rem) steht darin ganz,
+ebenso das längste `label`, „Lieferantennummer“ (7,24 rem, M1017). Schmaler bleibt es einspaltig. Ein
+längeres `label` einer künftigen Definition bricht in seiner Spalte um. Jeder Wert steht in
+Festbreitenschrift `--text-beiwerk` und **bricht nicht um**; passt er nicht in die Zeile, endet er mit
+Auslassungspunkten, der volle Wert steht im `title` und kommt beim Markieren und Kopieren mit
+(Punkt 1052). Ein Wert, der ganz ein Zeitpunkt in der Schreibweise `TT.MM.JJJJ HH:MM` ist, steht
 im Format aller Zeitpunkte des Blocks: „10.11.2026, 09:05“ (E‑1191). Unter den Feldern das Ergebnis,
 wo es eines gibt (§12.4).
 
@@ -1003,6 +1008,25 @@ nachgezählt).
 Per Skript aus einer Kopie je Datei, zurückgespielt aus der Kopie, nicht per `git checkout`; danach
 `git diff --stat` unverändert.
 
+**Zwei Spalten nach Wertlänge (10.11.2026, E‑1192, M1017).** `tests/auftraege.test.ts` (44 → 46):
+kurz ist ein Wert bis 17 Zeichen — das Datum ja, 18 Zeichen, die Nachrichten-ID und das englische
+Datum nein —, und gezählt werden Zeichen, nicht UTF-16-Einheiten. In `tests/auftraege-block.test.tsx`
+(41) ersetzt der Fall „kurze Werte zu zweit, lange und den Schlüssel über die volle Breite“ den
+einspaltigen: das Raster mit `grid-cols-1` und `@min-[17.75rem]/eintrag:grid-cols-2`, der Eintrag als
+`@container/eintrag`, `col-span-full` genau an der Nachrichten-ID und am Schlüssel — auch an einem
+kurzen („47110/TOR3“); die Spalten selbst rechnet jsdom nicht, sie belegt M1017 (§12.15). `pnpm check`
+grün mit **1.552 Fällen in 54 Dateien**, gerendert unverändert **308 in 28 Dateien**.
+
+| Eingriff (Lauf über die drei Dateien, 117 Fälle) | rot |
+|---|---|
+| lange Werte nicht über die volle Breite | 1 Fall |
+| ein kurzer Schlüssel in einer Spalte | 1 Fall |
+| kurz nur bis 16 Zeichen | 3 Fälle |
+| UTF-16-Einheiten statt Zeichen | 1 Fall |
+| andere Schwelle (16 rem) | 1 Fall |
+| immer einspaltig | 1 Fall |
+| **Eichung:** ein Wort in einem Kommentar | **0** |
+
 **Sichtprüfung 1049, im Browser (09.11.2026).** Chrome mit Debug-Port, angemeldet durch den
 Auftraggeber, Mandant `NEXANS`, Frontend dieses Zweigs neben den laufenden Diensten. Der Knopf steht
 rechts neben der Überschrift, Tooltip „Aufträge neu laden“. Ein Klick zeigt die Sanduhr und `aria-busy`
@@ -1034,7 +1058,7 @@ Nummern ab 1023 (Linie `assistent`, per `grep` geprüft); dieselben Zeilen stehe
 | **1048** | Sichtprüfung 7: „Fehlgeschlagen“ aus einer Rückgabe ohne Ok, gegen „Teilweise erledigt“ und gegen „Fehlgeschlagen“ von der Plattform (§12.12). *(09.11.2026)* **Erledigt am selben Tag:** im angemeldeten Chrome bestanden ([`tasks.md`](tasks.md) §9.11). | Sichtprüfung oder Messung offen |
 | **1049** | Sichtprüfung 8: eigener Knopf „Neu laden“ im Kopf des Blocks: Ort, Sanduhr, lädt nur die Liste; Höhe des Kopfes gegen die Nachbarblöcke (§12.12). *(09.11.2026)* **Erledigt am selben Tag:** im angemeldeten Chrome bestanden, die Höhe bleibt (§12.10). | Sichtprüfung oder Messung offen |
 | **1050** | Die Karte im Gespräch zeigt bei einem Typ ohne Schlüssel „Eintrag <n>“ als Überschrift jedes Eintrags (E‑1080), „Ihre Aufträge“ seit E‑1185 nichts. Gemeldet, nicht geändert (§12.14). *(10.11.2026)* | Entscheidung offen |
-| **1051** | Die Typdefinition hat keine Feldart; das Feldraster steht deshalb einspaltig, und kein Wert steht in `--text-basis` (E‑1190). Kurze Felder zu zweit nebeneinander bräuchten eine Feldart in der Definition ([`tasks.md`](tasks.md) §3.2), ihre Prüfung und sie in `felder` der Antwort — Backend und gepflegte Definitionen. Gemeldet, nicht gebaut (§12.15). *(10.11.2026)* | Entscheidung offen |
+| **1051** | Die Typdefinition hat keine Feldart. Ob ein Feld eine Spalte oder die ganze Breite bekommt, entscheidet deshalb die Länge des Werts (E‑1192), und kein Wert steht in `--text-basis` (E‑1190). Nach Art (Datum, Zahl, Auswahl, Kennung) ginge es erst mit einer Feldart in der Definition ([`tasks.md`](tasks.md) §3.2), ihrer Prüfung und ihr in `felder` der Antwort — Backend und gepflegte Definitionen. Gemeldet, nicht gebaut (§12.15). *(10.11.2026)* | Entscheidung offen |
 | **1052** | Die Nachrichten-ID passt in der Breite neben „Zuletzt aufgefallen“ bei 1.280 px in keiner Anzeigegröße in eine Zeile, auch nicht in `xs` (7,1 px zu wenig, in `l` 122,8), bei 1.440 px in `m` und `l` nicht; dort endet sie mit Auslassungspunkten (M1016, §12.15). *(10.11.2026)* | Entscheidung offen |
 
 **Fortgeschrieben:** Punkt 1000 (A1, „Teilweise erledigt“ ohne einen einzigen Ok) blieb mit A4 offen.
@@ -1215,7 +1239,8 @@ Block jetzt aussieht, steht in §12.6.
 |---|---|---|
 | **E‑1188** | **Der Kopf eines Auftrags**, zugeklappt und aufgeklappt gleich. **Zeile 1:** Zeichen und Wort des Stands in seiner Farbe, „ · “, der Typname; `--text-basis`, mittleres Gewicht; das Wort bricht nicht um, der Typname darf. **Zeile 2:** Aktion · Zahl der Einträge links, der Zeitpunkt rechts; `--text-beiwerk`, gedämpft; der Zeitpunkt bricht nicht um, `tabular-nums`. **Zeile 3, nur zugeklappt:** die Schlüssel, wenn der Typ einen hat (die ersten zwei und „und <n> weitere“, Festbreitenschrift, einzeilig mit Auslassung) — **sonst keine dritte Zeile, auch keine leere**. Wo „<x> von <n> nicht erfolgreich“ steht (E‑1102, E‑1182), steht es **in der dritten Zeile statt der Schlüssel, auch bei einem Typ ohne Schlüssel**. Aufgeklappt gibt es keine dritte Zeile. Der Typname steht immer in Zeile 1 — **ersetzt E‑1103**. Ersetzt die Regel „links leer“ aus E‑1185. | A (10.11.2026); die Zählung in Zeile 3 beim Bau festgelegt |
 | **E‑1189** | **Aufgeklappt, in dieser Reihenfolge:** „Eingestellt von <Benutzername>“ (`--text-beiwerk`, gedämpft, **ohne Zeitpunkt**), der Hinweis des Stands in `--text-basis`, die Einträge **in einer Fläche** (`bg-muted`, Rahmen `--border`, `rounded-md`), „Auftrag löschen“ rechts. **Kein wiederholter Typname.** Die Einträge haben keine Überschrift; zwischen zweien eine Linie in `--border`, bei einem keine — **bei jedem Typ** (erweitert E‑1186 auf Typen mit Schlüssel). „Ausgeführt <Zeit>“ steht neben „Eingestellt von …“, die Meldung der Plattform vor dem Hinweis, beide wie bisher. Ändert E‑1104 und F58. | A (10.11.2026); „Ausgeführt“ und Meldung der Plattform beim Bau belassen |
-| **E‑1190** | **Das Feldraster eines Eintrags, für alle Typen gleich:** je Feld `label` oben (`--text-beiwerk`, gedämpft), Wert darunter, nie fett. **Einspaltig über die volle Breite**, weil die Definition keine Feldart hat (Befund unten, Punkt 1051). **Der Schlüssel ist das erste Feld**, beschriftet „Schlüssel“, und keine Überschrift. Jeder Wert in Festbreitenschrift `--text-beiwerk`, `white-space: pre`, **ohne Umbruch**; passt er nicht, **Auslassungspunkte** und der volle Wert im `title` (Punkt 1052). Die `label` kommen aus der Kopie und werden nicht umbenannt. **Ersetzt E‑1187.** | A (10.11.2026): Raster und Rückfall ohne Feldart aus dem Auftrag, die Auslassung auf Rückfrage vom selben Tag; der Schlüssel als beschriftetes Feld beim Bau festgelegt |
+| **E‑1190** | **Das Feldraster eines Eintrags, für alle Typen gleich:** je Feld `label` oben (`--text-beiwerk`, gedämpft), Wert darunter, nie fett. **Einspaltig über die volle Breite**, weil die Definition keine Feldart hat (Befund unten, Punkt 1051). **Der Schlüssel ist das erste Feld**, beschriftet „Schlüssel“, und keine Überschrift. Jeder Wert in Festbreitenschrift `--text-beiwerk`, `white-space: pre`, **ohne Umbruch**; passt er nicht, **Auslassungspunkte** und der volle Wert im `title` (Punkt 1052). Die `label` kommen aus der Kopie und werden nicht umbenannt. **Ersetzt E‑1187.** *„Einspaltig“ geändert am selben Tag durch E‑1192: kurze Werte zu zweit.* | A (10.11.2026): Raster und Rückfall ohne Feldart aus dem Auftrag, die Auslassung auf Rückfrage vom selben Tag; der Schlüssel als beschriftetes Feld beim Bau festgelegt |
+| **E‑1192** | **Kurze Werte stehen zu zweit nebeneinander**, lange und der Schlüssel über die volle Breite. **Kurz:** der angezeigte Wert hat höchstens 17 Zeichen (`istKurz`, `KURZ_HOECHSTENS` in `features/dashboard/auftraege.ts`) — genau ein Zeitpunkt „10.11.2026, 14:55“; gezählt werden Zeichen. **Zwei Spalten ab 17,75 rem** Innenbreite des Eintrags (`@container/eintrag`, `@min-[17.75rem]/eintrag:grid-cols-2`), je Spalte mindestens 8,5 rem; schmaler einspaltig. Werte bleiben in Festbreitenschrift `--text-beiwerk`. Ändert E‑1190: dort „einspaltig“. | A (Rückfrage, 10.11.2026, nach der ersten Sichtprobe: „wieso nutzen wir hier nicht die Breite die wir haben?“); Grenze 17 Zeichen und Schwelle beim Bau festgelegt, gemessen in M1017 |
 | **E‑1191** | **Ein Datumsformat im Block, `TT.MM.JJJJ, HH:MM`.** Ein Wert eines Eintrags, der **ganz** die Schreibweise `TT.MM.JJJJ HH:MM` hat, mit einem Tag, den es gibt, und einer Uhrzeit bis 23:59, steht im Format von `formatiereZeitpunkt` — über `formatiereRohzeitpunkt` in `lib/format.ts`, **ohne Umrechnung** (als UTC gelesen und in UTC formatiert, Ziffern und Tag bleiben). Jeder andere Wert bleibt roh. **Erkannt am Wert, nicht am Feld und nicht am Namen.** | A (Rückfrage, 10.11.2026) |
 
 **Rückfragen am 10.11.2026**, vom Auftraggeber entschieden:
@@ -1225,14 +1250,18 @@ Block jetzt aussieht, steht in §12.6.
 2. *Was tut die Nachrichten-ID, wo sie nicht in die Zeile passt?* — **Auslassungspunkte**, der volle
    Wert im `title` (E‑1190). Die Alternativen waren eine Laufleiste im Wert und der Bruch hinter dem
    Bindestrich wie bisher (E‑1187).
+3. *Nach der Sichtprobe: Wie nutzen die Felder die Breite, ohne Feldart?* — **Zwei Spalten nach
+   Wertlänge** (E‑1192). Die Alternativen waren, die Felder nach ihrer Inhaltsbreite fließen zu lassen
+   (ohne fluchtende Spalten), oder einspaltig zu bleiben bis zu einer Feldart (Punkt 1051).
 
 **Befund: Die Typdefinition hat keine Feldart.** Ein Feld trägt `name`, `label`, `pflicht`,
 `muster`, `nurBei`, `beispiel` und `hinweis` (§3.2 in [`tasks.md`](tasks.md)), und
 `DefinitionsPruefung` verwirft jeden anderen Schlüssel. Die Antwort trägt je Feld nur `name` und
 `label` (E‑1120). Ob ein Feld kurz ist (Datum, Zahl, Auswahl), lässt sich also nicht sicher
 entscheiden — am `muster` nicht, das ist ein regulärer Ausdruck und keine Art, und am Namen nach
-Auftrag nicht. **Deshalb stehen alle Felder einspaltig, und kein Wert steht in `--text-basis`**;
-gebaut ist nichts davon (Punkt 1051). Ein Raster in zwei Spalten bräuchte einen neuen Schlüssel je
+Auftrag nicht. **Deshalb stand das Raster zuerst einspaltig** (E‑1190, die Rückfallregel des
+Auftrags), **seit E‑1192 entscheidet die Länge des Werts**; kein Wert steht in `--text-basis`, und
+eine Feldart ist nicht gebaut (Punkt 1051). Ein Raster in zwei Spalten bräuchte einen neuen Schlüssel je
 Feld in §3.2, seine Prüfung in `DefinitionsPruefung`, ihn in `felder` der Antwort und gepflegte
 Definitionen auf Testkopie und Produktion — Backend und Daten, laut Auftrag „melden statt bauen“.
 
@@ -1306,10 +1335,39 @@ in der Fläche, die Stände in ihren Farben.
 `xl` (die drei Blöcke untereinander), ein Auftrag mit mehr als fünf Einträgen im Browser (im Baum
 belegt, §12.10). Geklickt per `click()`.
 
+#### Messung M1017: zwei Spalten (10.11.2026)
+
+**Wie:** wie M1016, derselbe Zweig, dieselben Zeilen, nach E‑1192. Erst die Breiten in rem bei
+1.920 px in `xs`, `m` und `l` (in jeder Größe dieselben, auf 0,003 rem): `label` „Lieferantennummer“
+7,24, „SNDPRN_4908“ 5,82, „Nachrichten ID“ 5,47, die übrigen unter 4,7; Werte in Festbreitenschrift
+`--text-beiwerk` „10.11.2026, 14:55“ (17 Zeichen) 8,29, 16 Zeichen 7,80, „11/10/2026, 02:55 PM“ 9,75.
+Daraus die Spalte von 8,5 rem und mit der Lücke `gap-x-3` (0,75 rem) die Schwelle 17,75 rem.
+
+**Die Schwelle**, am Eintrag selbst angefahren (Breite per `style` gesetzt, danach zurück; 1.920 px,
+`m`): innen 17,6875 rem (283 px) eine Spalte, 17,75 rem (284 px) zwei zu je 136 px (8,5 rem),
+17,8125 rem zwei.
+
+**Die Lagen**, Innenbreite des Eintrags in rem und Spalten:
+
+| Fenster | `xs` | `s` | `m` | `l` |
+|---|---|---|---|---|
+| 1.280 | 17,04 — eine | 15,22 — eine | 13,34 — eine | 10,72 — eine |
+| 1.440 | 20,46 — **zwei** | 18,42 — **zwei** | 16,34 — eine | 13,39 — eine |
+| 1.920 | 30,75 — **zwei** | 28,02 — **zwei** | 25,63 — **zwei** | 21,64 — **zwei** |
+
+In keiner Lage läuft ein `label` über seine Spalte, und **kein kurzer Wert ist gekürzt**; gekürzt ist
+allein die Nachrichten-ID, und nur dort, wo sie auch in M1016 nicht passte. Bei 1.280 px fehlen in `xs`
+0,71 rem zur zweiten Spalte. In zwei Spalten stehen beim Neudurchlauf „Start um“ und „ab Schritt“
+nebeneinander, beim Abladestellen-Auftrag „Lieferantennummer“ | „Werk“ und „Abladestelle“ |
+„SNDPRN“; ein Abladestellen-Eintrag ist damit sechs statt zehn Zeilen hoch. Aufnahmen bei 1.920 px in
+`m` hell und dunkel, 1.440 px in `xs` und 1.280 px in `l`, nur lokal.
+
 **Abweichungen vom Auftrag:**
 
-- **Feldraster einspaltig**, kein Raster in zwei Spalten und kein Wert in `--text-basis`: Die
-  Definition hat keine Feldart (Befund oben, Punkt 1051) — der Rückfall, den der Auftrag vorgibt.
+- **Zwei Spalten nach Wertlänge statt nach Feldart**, kein Wert in `--text-basis`: Die Definition
+  hat keine Feldart (Befund oben, Punkt 1051). Zuerst gebaut war der Rückfall des Auftrags
+  (einspaltig); nach der Sichtprobe auf Rückfrage geändert (E‑1192). Werk, Abladestelle und
+  Lieferantennummer gelten damit als kurz, weil ihre Werte kurz sind.
 - **Die Nachrichten-ID passt bei 1.280 px in keiner Anzeigegröße** in eine Zeile, auch nicht in
   `xs` (M1016, Punkt 1052); sie endet dort mit Auslassungspunkten (Rückfrage 2).
 - **Die Zählung steht auch bei einem Typ ohne Schlüssel in einer dritten Zeile.** Der Auftrag sagt

@@ -451,8 +451,9 @@ wirkungslos zu bleiben.
 
 **Eine Feldart gibt es nicht** *(festgestellt am 10.11.2026)*: Ob ein Feld ein Datum, eine Zahl
 oder eine Kennung trägt, steht nirgends — das `muster` prüft den Wert, es ordnet ihn nicht ein. „Ihre
-Aufträge“ stellt deshalb jedes Feld einspaltig dar und erkennt ein Datum nur an der Schreibweise des
-Werts ([`assistent-frontend.md`](assistent-frontend.md) §12.15, E‑1190, E‑1191, Punkt 1051).
+Aufträge“ entscheidet deshalb an der Länge des Werts, ob ein Feld eine Spalte oder die ganze Breite
+bekommt, und erkennt ein Datum an seiner Schreibweise
+([`assistent-frontend.md`](assistent-frontend.md) §12.15, E‑1190 bis E‑1192, Punkt 1051).
 
 **Beispiel** — eine Struktur ohne fachliche Bedeutung, nur zur Form:
 
