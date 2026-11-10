@@ -9,6 +9,13 @@ Tags und die Definition of Done für ein Release stehen in
 
 ### Neu
 
+- **Das Nachrichtendetail zeigt je Schritt das Ende, sobald die Zeitleiste breit genug ist**
+  (Entscheidung des Auftraggebers vom 09.11.2026, E‑1184,
+  [`docs/nachrichtendetail.md`](docs/nachrichtendetail.md) §10.19). Grund: Gewünscht ist die Uhrzeit,
+  zu der jeder Schritt fertig war. Die Uhrzeit steht mit Sekunden hinter der Dauer, das Datum nur, wenn
+  der Tag vom Beginn im Kopf abweicht. Die Schwelle ist die Breite der Zeitleiste (38,875 rem, M1013,
+  [`docs/spaltenwahl.md`](docs/spaltenwahl.md) §5.6): eigene Route und volles Panel zeigen die Spalte,
+  das Panel neben der Liste bleibt unverändert. Keine Änderung am Backend.
 - **„Ihre Aufträge“ hat einen eigenen Knopf „Neu laden“** rechts neben der Überschrift (Entscheidung
   des Auftraggebers vom 09.11.2026, E‑1183, [`docs/assistent-frontend.md`](docs/assistent-frontend.md)
   §12.1). Er lädt nur die Liste der Aufträge; „Neu laden“ der Übersicht lädt den Block weiterhin mit

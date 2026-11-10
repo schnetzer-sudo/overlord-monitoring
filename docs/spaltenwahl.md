@@ -413,6 +413,66 @@ zusätzliche Pixel mehr Text.
 > ich öffnen kann, ist nicht angemeldet, und angemeldet wird nur durch den Auftraggeber. Bau und
 > Testlauf sind grün, und die Klasse steht wörtlich im Quelltext.
 
+### 5.6 Die Zeitleiste im Nachrichtendetail *(09.11.2026, E‑1184, M1013)*
+
+Container `zeitleiste` am gemeinsamen Rahmen von Eingang, Leiste und Rest (`nachricht-detail.tsx`),
+Klasse `ENDE_SPALTE` in `features/nachrichten/components/aufklapp-zeile.tsx`. Eine Spalte, eine Schwelle;
+keine `spalten.ts`, weil die Zeitleiste keine Tabelle ist. Was die Spalte zeigt, steht in
+[`nachrichtendetail.md`](nachrichtendetail.md) §10.19.
+
+**Die Mindestbreite** ist die breiteste Form samt Datum, in beiden Sprachen, nach §3 über alle vier
+Dichten. Gemessen an einem `<time>` in `text-beiwerk` im laufenden System, über `Range`, jede Ziffer an
+jeder Stelle (`tabular-nums`: Spanne über die zehn Ziffern 0 px):
+
+| Dichte | Wurzel | Deutsch `10.11.2026, 08:14:02` | Englisch `12/30/2025, 04:02:04 AM` | Englisch in `rem` |
+|---|---:|---:|---:|---:|
+| `xs` | 14 px | 111,97 px | 138,50 px | 9,8929 |
+| `s` | 15 px | 119,94 px | 148,36 px | 9,8906 |
+| `m` | 16 px | 128,02 px | 158,34 px | **9,8965** |
+| `l` | 18 px | 143,97 px | 178,08 px | 9,8932 |
+
+`PM` ist schmaler als `AM` (158,11 px bei `m`). Der größte Wert, auf 1/16 `rem` aufgerundet (§3):
+**9,9375 rem**, 159 px bei `m`.
+
+**Die Schwelle** ist so gewählt, dass der Name bei ihr nicht schmaler wird als heute im breitesten Panel
+(30 rem):
+
+| Größe | `rem` |
+|---|---:|
+| Kasten der Zeitleiste im Panel von 30 rem, größter Wert der vier Dichten (454 px bei `m`, 511 px bei `l`) | 28,3889 |
+| Spalte | 9,9375 |
+| Abstand davor (`gap-2`) | 0,5 |
+| Summe | 38,8264 |
+| **Schwelle**, auf 1/16 `rem` aufgerundet | **38,875** |
+
+`hidden w-[9.9375rem] … @min-[38.875rem]/zeitleiste:block`. **Das Panel neben der Liste (Kasten 390 px
+bei 26 rem, 454 px bei 30 rem) liegt darunter** und zeigt die Spalte nicht, eigene Route und volles Panel
+unter `xl` liegen darüber.
+
+Im Browser nachgemessen, Kastenbreite am `@container`-Element gestellt, breiteste Form an der letzten
+Zeile (`T` = 38,875 rem):
+
+| Sprache, Dichte | `T` | bei `T − 1` | bei `T` | Name bei `T` | Name im Panel heute | Text / Zelle |
+|---|---:|---|---|---:|---:|---:|
+| de `xs` | 544,25 px | `none` | `block` | 142,38 | 141,25 | 111,97 / 139,13 |
+| de `s` | 583,13 px | `none` | `block` | 152,69 | 151,63 | 119,94 / 149,06 |
+| de `m` | 622 px | `none` | `block` | 163 | 162 | 128,02 / 159 |
+| de `l` | 699,75 px | `none` | `block` | 183,63 | 182,75 | 143,97 / 178,88 |
+| en `xs` | 544,25 px | `none` | `block` | 142,38 | 141,25 | 138,50 / 139,13 |
+| en `s` | 583,13 px | `none` | `block` | 152,69 | 151,63 | 148,36 / 149,06 |
+| en `m` | 622 px | `none` | `block` | 163 | 162 | 158,34 / 159 |
+| en `l` | 699,75 px | `none` | `block` | 183,63 | 182,75 | 178,08 / 178,88 |
+
+Am echten Fenster, eigene Route, Dichte `m`: **895 px** (Kasten 621) `none`, **896 px** (Kasten 622)
+`block`. Der Name fällt dort von 329 auf 163 px und bleibt damit einen Pixel über dem heutigen Panel.
+
+> **Belegvermerk zu M1013** *(Regel L10)*. *Gemessen:* Entwicklungsbau auf `:3002`, Chrome, angemeldet
+> durch den Auftraggeber, Mandant `NEXANS`, die Tabellen oben, der Kasten des Panels bei 1.920 und 1.280 px
+> Fensterbreite in allen vier Dichten. *Behauptet wird:* dass die Spalte die breiteste Form beider
+> Sprachen ohne Kürzung trägt und der Name an der Schwelle nicht schmaler ist als heute im Panel.
+> *Behauptet wird nicht:* dasselbe für andere Schriften oder Browser; eine längere Schreibweise als die
+> beiden der `Intl`-Formatierung gibt es in den zwei Sprachen nicht.
+
 ---
 
 ## 6. Die Nachrichtenliste — Befund, nicht gebaut
