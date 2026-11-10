@@ -458,8 +458,12 @@ export const de = {
       undWeitere: "und {anzahl} weitere",
       nichtErfolgreich: "{anzahl} von {gesamt} nicht erfolgreich",
       // Mit dem Benutzernamen des Anlegenden, bei jedem Konto (E‑1178, E‑1181).
-      eingestellt: "eingestellt {zeit} von {name}",
-      ausgefuehrt: "ausgeführt {zeit}",
+      // Ohne Zeitpunkt: Der steht im Kopf des Auftrags (E‑1189).
+      eingestellt: "Eingestellt von {name}",
+      ausgefuehrt: "Ausgeführt {zeit}",
+      // Die Beschriftung des Schlüssels im Feldraster eines Eintrags (E‑1190).
+      // Die Felder selbst tragen das `label` aus der Kopie der Definition.
+      schluessel: "Schlüssel",
       meldungDerPlattform: "Meldung der Plattform",
       // Für Vorleseprogramme neben dem Rohwert der Plattform (E‑1106).
       ergebnis: {
