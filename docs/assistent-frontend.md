@@ -532,9 +532,9 @@ Entscheidungen 13, 16 bis 18 und 20 bis 22 betreffen Endpunkt und Plattform und 
 | **E‑1099** | Der Block steht **in der Reihe von „Zuletzt aufgefallen“, zwischen „Zuletzt aufgefallen“ und Verteilung**. „Zuletzt aufgefallen“ teilt sich mit ihm den Platz, den es vorher allein hatte; die Verteilung behält ihre Breite. Ohne Auftrag ist die Reihe wie vorher. Am schmalen Fenster stehen die drei untereinander, in derselben Reihenfolge. | A (19.10.2026) |
 | **E‑1100** | **Kein Knopf „Neuer Auftrag“**, keine Filter, keine eigene Seite. Aufträge entstehen nur über das Symbol des Assistenten in der Kopfleiste. | A (15. und 19.10.2026) |
 | **E‑1101** | Der Block zeigt, was `GET /api/tasks` liefert, neueste zuerst. **Fünf Aufträge sichtbar**, darüber „1 weiteren anzeigen“ oder „<n> weitere anzeigen“, danach „Weniger anzeigen“. | V |
-| **E‑1102** | **Jede Zeile hat zwei Zeilen und ist zugeklappt.** Oben: Stand (Zeichen und Wort), Aktion, Zahl der Einträge („Neuanlage · 2 Einträge“). Darunter links die ersten zwei Schlüssel, bei mehr „und <n> weitere“, in Festbreitenschrift und bei Platzmangel mit Auslassung; rechts der Zeitpunkt des Einstellens. Bei „Teilweise erledigt“ und bei „Fehlgeschlagen“ mit mindestens einem Ergebnis (E‑1182, [`tasks.md`](tasks.md) §2 „Kein Eintrag Ok“) steht statt der Schlüssel „<x> von <n> nicht erfolgreich“ in der Farbe des Stands. Ohne Ergebnisse, wenn die Plattform den Auftrag als Ganzes als fehlgeschlagen gemeldet hat, bleibt der Schlüssel. | V (Entwurf 19.10.2026), A (E‑1182, 09.11.2026) |
+| **E‑1102** | **Jede Zeile hat zwei Zeilen und ist zugeklappt.** Oben: Stand (Zeichen und Wort), Aktion, Zahl der Einträge („Neuanlage · 2 Einträge“). Darunter links die ersten zwei Schlüssel, bei mehr „und <n> weitere“, in Festbreitenschrift und bei Platzmangel mit Auslassung; rechts der Zeitpunkt des Einstellens. Bei „Teilweise erledigt“ und bei „Fehlgeschlagen“ mit mindestens einem Ergebnis (E‑1182, [`tasks.md`](tasks.md) §2 „Kein Eintrag Ok“) steht statt der Schlüssel „<x> von <n> nicht erfolgreich“ in der Farbe des Stands. Ohne Ergebnisse, wenn die Plattform den Auftrag als Ganzes als fehlgeschlagen gemeldet hat, bleibt der Schlüssel. **Hat der Typ keinen Schlüssel, bleibt der linke Teil leer** (E‑1185, §12.14). | V (Entwurf 19.10.2026), A (E‑1182, 09.11.2026; E‑1185, 10.11.2026) |
 | **E‑1103** | **Der Name des Typs** steht in der aufgeklappten Zeile. Kommen in der Liste Aufträge mehrerer Typen vor, steht er zusätzlich oben vor der Aktion. | V |
-| **E‑1104** | **Aufgeklappt:** Name des Typs, „eingestellt <Zeit>“ und gegebenenfalls „ausgeführt <Zeit>“, bei „Fehlgeschlagen“ der `fehlertext` als „Meldung der Plattform“, sofern es einen gibt, der Hinweis des Stands, dann die Einträge: Schlüssel, die Werte mit ihrem `label` und, wo es eines gibt, das Ergebnis. Bis fünf Einträge, darüber „Alle <n> Einträge anzeigen“. Aufklappen mit der Tastatur, `aria-expanded` am Auslöser. | V |
+| **E‑1104** | **Aufgeklappt:** Name des Typs, „eingestellt <Zeit>“ und gegebenenfalls „ausgeführt <Zeit>“, bei „Fehlgeschlagen“ der `fehlertext` als „Meldung der Plattform“, sofern es einen gibt, der Hinweis des Stands, dann die Einträge: Schlüssel, die Werte mit ihrem `label` und, wo es eines gibt, das Ergebnis — **ohne Schlüssel keine Überschrift, dafür eine Linie zwischen den Einträgen** (E‑1185, E‑1186, §12.14). Bis fünf Einträge, darüber „Alle <n> Einträge anzeigen“. Aufklappen mit der Tastatur, `aria-expanded` am Auslöser. | V |
 | **E‑1105** | Stände und ihre Anzeige nach §12.4. Jeder Stand hat Zeichen **und** Wort, Farbe nie allein. „Fehlgeschlagen“ trägt die Fehlerrolle. **„Teilweise erledigt“ fällt auf, ohne wie ein Fehler auszusehen** (im Entwurf Bernstein); welche Rolle, ist F16. | V |
 | **E‑1106** | Das Ergebnis je Eintrag zeigt den Rohwert der Plattform („Schlüssel nicht gefunden“) mit Zeichen; „erfolgreich“ oder „nicht erfolgreich“ aus `ergebnis` steht für Vorleseprogramme dabei. Ein nicht erfolgreicher Eintrag hat einen leicht getönten Grund. | V |
 | **E‑1107** | `fehlertext` und Rückgabewerte schreibt die Plattform: **reiner Text**, nie HTML. | V |
@@ -581,7 +581,7 @@ F-Nummer in dieser Datei eindeutig bleibt. F26 bis F28 betreffen das Backend und
 | **F20** | **Jede Zeile klappt für sich auf**; der Zustand liegt im Arbeitsspeicher des Blocks, je `taskId`, nicht in der URL. Er übersteht „Neu laden“ und das Löschen eines anderen Auftrags. | Aufgeklappte Abschnitte gehören nicht in die URL ([`DEVELOPMENT_GUIDELINES.md`](../DEVELOPMENT_GUIDELINES.md) §8, Filterzustand). Wer nachsieht, ob sich ein Stand geändert hat, will die Zeile offen behalten |
 | **F21** | **Aufgeklappt stehen nur die Felder mit Wert**, in der Reihenfolge der Definition, mit dem `label` aus `felder`. Ein leeres Feld fehlt — auch bei einer Anpassung, wo leer „wird entfernt“ heißt. | `eintraege[].werte` trägt nur Felder mit Wert, und welche Felder bei welcher Aktion vorkommen (`nurBei`), liefert die Antwort nicht. Ein „leer“ an jedem fehlenden Feld stünde bei einer Löschung an SNDPRN, wo es keinen Sinn hat. Offen als Punkt 1027 |
 | **F22** | **Wo die Sätze nach dem Löschen stehen:** „Auftrag gelöscht …“ und der Satz zu `404` oben im Block, der zu `409` in der Zeile. Der Block bleibt für die Sätze oben stehen, auch wenn danach kein Auftrag mehr da ist — bis zum nächsten „Neu laden“ oder Aufruf der Seite. Der Fokus geht auf den Satz. Jeder andere Fehler beim Löschen steht in der Zeile („Der Auftrag konnte gerade nicht gelöscht werden. Bitte versuchen Sie es erneut.“), und „Auftrag löschen“ ist wieder frei. | Nach einem `404` verschwindet die Zeile mit dem Neuladen und mit ihr jeder Satz darin. Ohne stehenbleibenden Block verschwände nach dem Löschen des letzten Auftrags die Bestätigung — und mit dem gedrückten Knopf der Fokus |
-| **F23** | **Ohne Schlüssel** (ein Typ ohne `schluessel`) steht „Eintrag <n>“, wie auf der Karte (E‑1080). | Kein Schlüssel wird im Frontend gebildet (E‑1071) |
+| **F23** | **Ohne Schlüssel** (ein Typ ohne `schluessel`) steht „Eintrag <n>“, wie auf der Karte (E‑1080). **Ersetzt am 10.11.2026 durch E‑1185** (§12.14): Ohne Schlüssel steht nichts an seiner Stelle. | Kein Schlüssel wird im Frontend gebildet (E‑1071) |
 | **F24** | **„Neu laden“ holt beide Abfragen** — Übersicht und Aufträge — und zeigt die Sanduhr, solange eine davon läuft. | Ein Knopf, der nur die Hälfte lädt, ließe glauben, der Stand der Aufträge sei aktuell |
 | **F25** | **„Weniger anzeigen“** auch bei den Einträgen, nach „Alle <n> Einträge anzeigen“. | Dieselbe Bedienung wie bei der Liste (E‑1101) |
 | **F29** | **Die Zeile bricht um, statt zu kürzen** — Stand, Aktion, Zahl der Einträge und „<x> von <n> nicht erfolgreich“. Gekürzt werden allein die Schlüssel; Zeichen und Wort des Stands bleiben beisammen. „und <n> weitere“ steht in der Schrift der Umgebung, nur die Schlüssel in Festbreitenschrift. *Nachgetragen nach M1006 (§12.13).* | Bei 1.280 px ist die Spalte 300 px breit; dort verschwanden „3 Einträge“ und sogar „1 von 3 nicht erfolgreich“ hinter der Auslassung. E‑1102 erlaubt sie nur für die Schlüssel. Der Preis ist eine dritte oder vierte Zeile bei 1.280 px |
@@ -678,6 +678,27 @@ Werte mit ihrem `label` (F21) und, wo es eines gibt, das Ergebnis. Bis fünf Ein
 <n> Einträge anzeigen“ und danach „Weniger anzeigen“ (F25). Bei „Offen“ zuletzt rechts „Auftrag
 löschen“ (E‑1111).
 
+**Ein Typ ohne Schlüssel** *(seit 10.11.2026, E‑1185, E‑1186, §12.14)*: Zugeklappt bleibt der linke
+Teil der zweiten Zeile leer, der Zeitpunkt steht rechts, wo er immer steht. Aufgeklappt hat kein
+Eintrag eine Überschrift; eine dünne Linie trennt sie, bei einem Eintrag keine.
+
+```
+│ ▾ ▷ In Ausführung · Starten ab Schritt · 2 Einträge │
+│                                10.11.2026, 15:25  │  links leer (E‑1185)
+│   …                                               │
+│   Nachrichten ID                                  │  label in einer Zeile (E‑1187)
+│   e1185aaa-0000-4000-8000-000000000001            │  Wert darunter, in einem Stück
+│   Start um 25.03.2026 10:35  ab Schritt 5         │
+│   ─────────────────────────────────────────────── │  Linie zwischen den Einträgen (E‑1186)
+│   Nachrichten ID                                  │
+│   …                                               │
+```
+
+**Die Feldzeilen** *(seit 10.11.2026, E‑1187, beide Typen)*: Das `label` bricht nie um. Der Wert
+steht daneben, wenn er dort ganz Platz hat, sonst in einem Stück darunter. Passt er auch allein nicht
+in die Zeile — eine Nachrichten-ID bei 1.280 px in jeder Anzeigegröße (M1015, §12.14) —, bricht er
+hinter einem Bindestrich, nie mitten in einer Gruppe.
+
 **Reiner Text** (E‑1107): `fehlertext`, Rückgabe, Schlüssel, Werte und der Name des Anlegenden
 stehen als Textknoten, der
 `fehlertext` mit erhaltenen Zeilenumbrüchen (`white-space: pre-wrap`). Was wie HTML aussieht, steht
@@ -685,7 +706,7 @@ wörtlich da — dieselbe Bauform wie die Antworten des Assistenten (E‑1074).
 
 **Leerzeichen im Schlüssel** *(seit 23.10.2026, E‑1141)*: Ein Schlüssel wie `A  1/DDB0` steht mit
 beiden Leerzeichen da, ohne Ersatzzeichen. Aufgeklappt tragen Schlüssel und Werte
-`white-space: pre-wrap`. **Zugeklappt** tragen die Schlüssel `white-space: pre` (F39): Die Zeile ist
+`white-space: pre-wrap` (die Werte seit E‑1187 mit `break-words` statt `break-all`). **Zugeklappt** tragen die Schlüssel `white-space: pre` (F39): Die Zeile ist
 einzeilig mit Auslassung gekürzt, und `pre-wrap` bräche sie an den Leerzeichen um, die Auslassung
 fiele weg. `pre` hält die Leerzeichen und die eine Zeile.
 
@@ -774,7 +795,7 @@ Die Zahl der gerenderten Fälle — jetzt **284 in 28 Dateien** — steht im Kop
 
 | Datei | Was |
 |---|---|
-| `tests/auftraege.test.ts` | **41 Fälle, rein.** Die Einordnung kommt aus dem Backend, eine unbekannte wird `UNBEKANNT` (Q4), ebenso ein unbekanntes Ergebnis; fünf von sechs sichtbar; zwei Schlüssel und der Rest, ohne Schlüssel „Eintrag <n>“ (F23); mehrere Typen über die ganze Liste; „<x> von <n> nicht erfolgreich“ zählt `NICHT_OK` und `UNBEKANNT`, auch n von n; Werte in der Reihenfolge der Definition, ein unbekanntes Feld mit seinem Namen; **löschbar nur `OFFEN`, je Stand**; der Ausgang eines Löschens nach Problemtyp und Status, und wann neu geladen wird; der Zustand des Blocks (Aufklappen, Rückfrage, Sätze oben und in der Zeile, `obenNummer`, „Neu laden“ nimmt die Sätze und lässt Aufgeklapptes); ob der Block steht (F18, F22); die Farbrollen der Stände — und **keine Klasse nennt `ueberfaellig`** (F16); die Wörter in beiden Sprachen und der vorgegebene Wortlaut |
+| `tests/auftraege.test.ts` | **41 Fälle, rein.** Die Einordnung kommt aus dem Backend, eine unbekannte wird `UNBEKANNT` (Q4), ebenso ein unbekanntes Ergebnis; fünf von sechs sichtbar; zwei Schlüssel und der Rest, ohne Schlüssel „Eintrag <n>“ (F23; seit dem 10.11.2026 ohne Schlüssel nichts, E‑1185); mehrere Typen über die ganze Liste; „<x> von <n> nicht erfolgreich“ zählt `NICHT_OK` und `UNBEKANNT`, auch n von n; Werte in der Reihenfolge der Definition, ein unbekanntes Feld mit seinem Namen; **löschbar nur `OFFEN`, je Stand**; der Ausgang eines Löschens nach Problemtyp und Status, und wann neu geladen wird; der Zustand des Blocks (Aufklappen, Rückfrage, Sätze oben und in der Zeile, `obenNummer`, „Neu laden“ nimmt die Sätze und lässt Aufgeklapptes); ob der Block steht (F18, F22); die Farbrollen der Stände — und **keine Klasse nennt `ueberfaellig`** (F16); die Wörter in beiden Sprachen und der vorgegebene Wortlaut |
 | `tests/auftraege-block.test.tsx` | **27 Fälle, gerendert**, gegen ein gestelltes `fetch`. **Ort:** ohne Auftrag kein Block, und die Reihe trägt genau die Klassen von vorher; mit Auftrag zwischen „Zuletzt aufgefallen“ und Verteilung; beim ersten Laden kein Platzhalter; im Leerzustand allein; im Fehler Satz und „Erneut versuchen“, „Zuletzt aufgefallen“ bleibt; kein Knopf zum Anlegen und keine Anfrage an den Assistenten. **Stände:** je Stand Wort und Zeichen in der Farbe der Rolle, aufgeklappt sein Hinweis, die Meldung der Plattform, „keine Rückmeldung“ (sieben Fälle), und sieben verschiedene Zeichen. **Zeile:** Aktion, Zahl, zwei Schlüssel mit „und 1 weiterer“, Zeitpunkt in der Anzeigezone mit Sekunden im `title` (fester Wert, keine Uhr, T1); „1 von 2 nicht erfolgreich“; der Typ oben nur bei mehreren Typen; aufgeklappt Typ, Zeiten, Werte mit `label`, Ergebnis mit „(erfolgreich)“ für Vorleseprogramme, getönter Grund nur am nicht erfolgreichen; **`fehlertext` und Rückgabe mit `<img src=x onerror=alert(1)>` als Textknoten, kein `img`**; fünf von sechs Aufträgen, fünf von sieben Einträgen. **Löschen:** nur bei Offen und nur aufgeklappt; Rückfrage mit dem Fokus auf „Abbrechen“, Esc bricht ab, Fokus zurück, kein `DELETE`; „Löschen“ schickt `DELETE`, lädt neu, der Satz oben mit Fokus, der Block bleibt ohne Auftrag für ihn stehen, „Neu laden“ nimmt ihn mit; `409` mit Satz in der Zeile, Neuladen, neuer Stand; `404` mit Satz oben und Neuladen; Störung ohne Neuladen, „Auftrag löschen“ wieder frei |
 | `tests/assistent-chatbox.test.tsx` | **ein Fall mehr:** Chatbox und Übersicht im selben Zwischenspeicher — nach dem Anlegen erscheint „Ihre Aufträge“, ohne die Seite neu zu laden (E‑1109) |
 | `tests/dashboard-bloecke.test.tsx`, `tests/neu-laden.test.tsx` | **angepasst, nicht aufgeweicht:** Die Übersicht fragt seit A4 auch `/api/tasks`. Für `/api/dashboard` gilt die Zählung wörtlich weiter; dazu genau eine Anfrage an `/api/tasks` beim Laden und bei „Neu laden“ (F24), keine beim Sichtwechsel und keine beim Zeitraum. Die gestellte Liste ist dort leer, damit die Reihe die von vorher bleibt |
@@ -882,6 +903,25 @@ belassen.**
 > und 360 px, ohne Überhang. *Nicht gemessen:* die Dichtestufen außer der Vorgabe. Am Berührungsgerät
 > haben Knopf und Umschalter 44 px; beide Köpfe wachsen gleich.
 
+**Aufträge ohne Schlüssel und die Feldzeilen (10.11.2026, E‑1185 bis E‑1187, §12.14).**
+`tests/auftraege.test.ts` (44 → 45): Der Fall „ohne Schlüssel `Eintrag <n>`“ (F23) ist ersetzt durch
+„ohne Schlüssel `null`, auch bei mehr als zwei Einträgen“ samt `hatSchluessel`; neu ist die Zerlegung
+eines Werts hinter jedem Bindestrich, die zusammengesetzt den Wert ergibt. Zwei gerenderte Fälle mehr
+in `tests/auftraege-block.test.tsx` (40): **Ein Typ ohne Schlüssel** — unter einem Typnamen, den es
+nicht gibt, weil die Antwort entscheidet — hat zugeklappt links eine leere Spanne ohne `title` und
+rechts den Zeitpunkt, aufgeklappt keine Überschrift je Eintrag, `divide-y` und keine runden Ecken; bei
+einem Eintrag gibt es nichts zu trennen; der Auftrag mit Schlüssel daneben zeigt Schlüssel,
+Überschriften, `gap-1` und runde Ecken wie bisher. **Die Feldzeilen** beider Typen tragen `flex-wrap`,
+das `label` `whitespace-nowrap`, der Wert `break-words` statt `break-all` und `whitespace-pre-wrap`
+(E‑1141); in der Nachrichten-ID steht hinter jedem der vier Bindestriche ein `<wbr>`, der Text bleibt
+Zeichen für Zeichen derselbe, ein Wert ohne Bindestrich hat keins. Wo der Wert im Browser steht und
+wo er bricht, belegt M1015 (§12.14). `pnpm check` und `pnpm build` grün, **1.546 Fälle in 54 Dateien**, gerendert
+**307 in 28 Dateien** (`frontend/vitest.config.mts`, aus dem Lauf gezählt). **Verletzungsprobe** per
+Skript aus einer Kopie der Komponente, je Regel einzeln, zurückgespielt aus der Kopie: Ersatztext in
+der zugeklappten Zeile, Überschrift ohne Schlüssel, Abstand statt Linie, `label` ohne `nowrap` mit
+`break-all` am Wert, kein `<wbr>`, runde Ecken ohne Schlüssel — jede der sechs macht genau einen der
+neuen Fälle rot, 39 bleiben grün.
+
 **Sichtprüfung 1049, im Browser (09.11.2026).** Chrome mit Debug-Port, angemeldet durch den
 Auftraggeber, Mandant `NEXANS`, Frontend dieses Zweigs neben den laufenden Diensten. Der Knopf steht
 rechts neben der Überschrift, Tooltip „Aufträge neu laden“. Ein Klick zeigt die Sanduhr und `aria-busy`
@@ -914,6 +954,7 @@ Nummern ab 1023 (Linie `assistent`, per `grep` geprüft); dieselben Zeilen stehe
 | **1046** | Sichtprüfung 6: „von <Name>“ in der aufgeklappten Zeile, hell und dunkel, breit und schmal, auch mit einem langen Namen (§12.12). *(06.11.2026)* | Sichtprüfung oder Messung offen |
 | **1048** | Sichtprüfung 7: „Fehlgeschlagen“ aus einer Rückgabe ohne Ok, gegen „Teilweise erledigt“ und gegen „Fehlgeschlagen“ von der Plattform (§12.12). *(09.11.2026)* **Erledigt am selben Tag:** im angemeldeten Chrome bestanden ([`tasks.md`](tasks.md) §9.11). | Sichtprüfung oder Messung offen |
 | **1049** | Sichtprüfung 8: eigener Knopf „Neu laden“ im Kopf des Blocks: Ort, Sanduhr, lädt nur die Liste; Höhe des Kopfes gegen die Nachbarblöcke (§12.12). *(09.11.2026)* **Erledigt am selben Tag:** im angemeldeten Chrome bestanden, die Höhe bleibt (§12.10). | Sichtprüfung oder Messung offen |
+| **1050** | Die Karte im Gespräch zeigt bei einem Typ ohne Schlüssel „Eintrag <n>“ als Überschrift jedes Eintrags (E‑1080), „Ihre Aufträge“ seit E‑1185 nichts. Gemeldet, nicht geändert (§12.14). *(10.11.2026)* | Entscheidung offen |
 
 **Fortgeschrieben:** Punkt 1000 (A1, „Teilweise erledigt“ ohne einen einzigen Ok) blieb mit A4 offen.
 **Am 09.11.2026 durch E‑1182 erledigt:** Ein solcher Auftrag heißt „Fehlgeschlagen“ und zeigt
@@ -990,6 +1031,94 @@ Sichtprüfung 1030.
 **Nicht geprüft:** aufgeklappte Zeilen, Rückfrage und Löschen im Browser (das statische Markup ist
 nicht bedienbar; im Baum belegt in §12.10), echte Daten, Tastatur und Vorleseprogramm von Hand, die
 Dichten `xs` und `l`. Dafür stehen die Sichtprüfungen 1028 bis 1032 (§12.12).
+
+### 12.14 Aufträge ohne Schlüssel (10.11.2026)
+
+*Zweig `fix/auftraege-ohne-schluessel`, 10.11.2026.* **Befund des Auftraggebers:** Ein Auftrag
+„Neudurchlauf eines Jobs · Starten ab Schritt · 2 Einträge“ (`INTERNAL_JOB_RESTART`, eine Definition
+ohne `schluessel`) zeigte zugeklappt „Eintrag 1, Eintrag 2“ und aufgeklappt „Eintrag 1“ und „Eintrag
+2“ als Überschrift. Dazu brach aufgeklappt das `label` „Nachrichten ID“ in zwei Zeilen um und die
+Nachrichten-ID mitten im Wert, das letzte Zeichen allein in der nächsten Zeile.
+
+**Wo die Ersatzbeschriftung entstand:** allein im Frontend. Das Backend liefert je Eintrag
+`schluessel: null`, genau wenn die Definition keinen `schluessel` hat (`TypDefinition.schluesselText`,
+[`tasks.md`](tasks.md) §6.5); mit Schlüssel hat jeder Eintrag einen (E‑1165). Aus `null` machten zwei
+Stellen „Eintrag <n>“ (F23): zugeklappt `schluesselZugeklappt` in `features/dashboard/auftraege.ts`
+mit dem Rückfall, den `Zeile` in `components/auftraege-block.tsx` aus dem Text
+`dashboard.auftraege.eintrag` bildete; aufgeklappt `Eintrag` in derselben Datei
+(`eintrag.schluessel ?? „Eintrag <n>“`). Beide sind entfernt, der Text in beiden Sprachdateien auch.
+
+**Wo „Eintrag <n>“ sonst noch steht — gemeldet, nicht geändert:** Die Karte im Gespräch
+(`features/assistent/components/vorschlag-karte.tsx`, Text `assistent.karte.eintrag`) zeigt bei einem
+Typ ohne Schlüssel „Eintrag <n>“ als Überschrift jedes Eintrags (E‑1080); mit Schlüssel steht es dort
+nur für Vorleseprogramme vor der Nummer. Der Auftrag schloss die Karte aus; Punkt **1050**. Die
+Prüfmeldungen „Eintrag 1, SNDPRN: …“ aus `AuftragsPruefung` und `Gespraechsfuehrung` im Backend sind
+keine Beschriftung: Sie sagen, an welchem Eintrag ein Fehler sitzt, und bleiben.
+
+| E | Entscheidung | Herkunft |
+|---|---|---|
+| **E‑1185** | **Ohne Schlüssel keine Ersatzbeschriftung**, weder zugeklappt noch als Überschrift aufgeklappt: kein „Eintrag <n>“ und kein anderer Text, auch nicht die Nachrichten-ID. Zugeklappt bleibt der linke Teil der zweiten Zeile leer, ohne „und <n> weitere“; der Zeitpunkt steht rechts an derselben Stelle, die zweite Zeile ist so hoch wie mit Schlüssel. **Entschieden wird an der Antwort** (`schluessel: null`, `hatSchluessel`), nie am Namen des Typs; ein künftiger Typ ohne Schlüssel verhält sich ebenso. Mit Schlüssel bleibt alles, wie es war. Ersetzt F23. | A (10.11.2026) |
+| **E‑1186** | **Ohne Schlüssel trennt eine dünne Linie die Einträge** (`divide-y divide-border` an der Liste), dieselbe wie zwischen den Einträgen der Karte im Gespräch; bei einem Eintrag gibt es keine. Die Einträge haben dann **keine runden Ecken**: An ihnen bogen sich die Enden der Linie nach oben (M1015), und sie sah aus wie die Unterkante eines Kastens. Mit Schlüssel bleiben Abstand (`gap-1`) und runde Ecken. | A (Abstand oder Linie freigestellt); Linie und Ecken beim Bau festgelegt |
+| **E‑1187** | **Die Feldzeilen beider Typen:** Das `label` bricht nicht um (`whitespace-nowrap`). Der Wert steht daneben, wenn er dort ganz Platz hat, sonst in einem Stück darunter (`flex-wrap` an der Feldzeile stellt ihn mit seiner vollen Breite in die nächste Zeile, bevor er schrumpft). **Passt er auch allein nicht in die Zeile, bricht er hinter einem Bindestrich**, nie mitten in einer Gruppe: `<wbr>` hinter jedem Bindestrich, `break-words` statt `break-all`. Leerzeichen bleiben stehen (`pre-wrap`, E‑1141). | A (10.11.2026); der Bruch hinter dem Bindestrich auf Rückfrage vom selben Tag |
+
+**Die Rückfrage zu E‑1187.** Der Auftrag verlangte, dass Werte in Festbreitenschrift nicht innerhalb
+des Werts umbrechen. **Gemessen (M1015) passt eine Nachrichten-ID bei 1.280 px in keiner der vier
+Anzeigegrößen in die Zeile unter dem `label`:**
+
+| Größe | Zeile unter dem `label` | Nachrichten-ID (36 Zeichen Geist Mono) |
+|---|---:|---:|
+| `xs` | 243 px | 245,7 px |
+| `s` | 233,3 px | 263,3 px |
+| `m` | 223,5 px | 280,8 px |
+| `l` | 204 px | 315,9 px |
+
+Gemessen bei 1.000 px Fensterhöhe, also mit Laufleiste in `main`. Ohne Laufleiste ist die Spalte rund
+4,5 px breiter, und in `xs` passt die ID gerade. Bei 1.440 px in `m` fehlen 9,3 px (271,5 gegen 280,8);
+erst bei 1.920 px steht sie neben dem `label`. **Entscheidung des Auftraggebers:** brechen, aber nur
+hinter einem Bindestrich — statt einer Laufleiste im Wert oder einer breiteren Spalte. Das `<wbr>` ist
+nötig, weil Chrome zwar schon von selbst hinter `8000-` brach, eine Bruchstelle zwischen Bindestrich
+und Ziffer aber nicht jede Zeilenumbruchregel vorsieht; ohne sie bräche `break-words` dann mitten in
+einer Gruppe.
+
+**Sichtprobe M1015 (10.11.2026).** Chrome mit Debug-Port, angemeldet durch den Auftraggeber, Mandant
+`SYSTEM`. Backend von `main` (8080, Profil `dev`, Assistent aus), das Frontend dieses Zweigs auf 3000
+und das von `main` aus einem eigenen Arbeitsbaum auf 3002, beide gegen dasselbe Backend. **Daten:**
+zwei Zeilen per SQL in `overlord_monitor.task` unter `SYSTEM`, `angelegt_von = 'it-sichtprobe-1185'`,
+erfundene Werte: ein Neudurchlauf mit zwei Einträgen (Nachrichten-IDs `e1185aaa-0000-4000-8000-…`) und
+ein Abladestellen-Auftrag mit zwei Einträgen (Werk 47110, `TOR3`, `TOR4`), **beide `IN_AUSFUEHRUNG`,
+nicht `OFFEN`**, weil die Testumgebung offene Aufträge abholt (Punkt 1047); die Einträge sehen in
+beiden Ständen gleich aus. Dazu die vorhandenen Aufträge unter `SYSTEM`, darunter ein Neudurchlauf mit
+einem Eintrag. Je Lage über das DevTools-Protokoll: `Emulation.setDeviceMetricsOverride`, Dichte per
+Cookie, Übersicht mit `zeitraum=12M`, alle Aufträge sichtbar, die drei fraglichen per `click()`
+aufgeklappt; gemessen an `getBoundingClientRect` und je Zeichen an `Range`. Zwölf Lagen: vorher und
+nachher bei 1.280 px in `xs`, `s`, `m`, `l`, nachher dazu 1.440 und 1.920 px in `m` und 390 px in `xs`
+und `l`, alle bei 2.400 px Höhe, damit der Block ganz im Bild steht und aufgenommen werden kann
+(`main` hat dann keine Laufleiste). Die Zeilenbreiten der Tabelle oben stammen aus einem zweiten Lauf
+desselben Stands bei 1.000 px Höhe, nachher bei 1.280 px in allen vier Größen und bei 1.440 px in
+`m`; der Lauf über alle zwölf Lagen hing dort bei 390 px und ist abgebrochen. Eine erste Fassung der
+Aufnahmen mit `captureBeyondViewport` zeigte einen veralteten Stand, weil die Übersicht in `main`
+scrollt und nicht im Dokument; verworfen.
+
+| | vorher (`main`) | nachher |
+|---|---|---|
+| „Eintrag <n>“ im Block | zugeklappt 3, aufgeklappt 6 | 0 in jeder Lage |
+| linker Teil zugeklappt, ohne Schlüssel | „Eintrag 1, Eintrag 2“ | leer |
+| Zeitpunkt rechts | in jeder Lage eine Kante für alle Zeilen | unverändert |
+| Höhe der zweiten Zeile ohne / mit Schlüssel | gleich | gleich (15,8 / 16,9 / 18 / 20,3 px in `xs` bis `l`) |
+| „Nachrichten ID“ | zwei Zeilen in jeder Größe | eine Zeile in jeder Lage; kein `label` bricht |
+| Nachrichten-ID bei 1.280 px | neben dem `label`, gebrochen mitten in einer Gruppe (`xs`: `…8000-00` / `0000000001`; `l`: drei Zeilen) | darunter; gebrochen hinter `8000-` (`l`: hinter `4000-`); in `xs` ohne Laufleiste in einem Stück |
+| Nachrichten-ID bei 1.920 px (`m`), 390 px (`xs`) | — | daneben bzw. darunter, in einem Stück |
+| Linie zwischen den Einträgen ohne Schlüssel | keine, Überschriften | 1 px unter dem ersten von zwei, keine bei einem Eintrag |
+| Auftrag mit Schlüssel | Schlüssel, Überschriften, Abstand | unverändert |
+| Überlauf, waagrechtes Scrollen | keins | keins |
+
+**Aufräumen:** Die zwei Zeilen sind über ihre `task_id` gelöscht. Die Aufnahmen liegen nur lokal.
+**Nicht geprüft:** das helle Thema, Tastatur und Vorleseprogramm von Hand, andere Browser als Chrome.
+
+**Abweichungen vom Auftrag:** Die Zeilen der Sichtprobe stehen `IN_AUSFUEHRUNG` statt `OFFEN` (oben).
+Eine Nachrichten-ID bricht bei 1.280 px trotzdem, hinter einem Bindestrich (Rückfrage). Einträge ohne
+Schlüssel haben keine runden Ecken mehr (E‑1186). Der Typ heißt auf der Testkopie
+`INTERNAL_JOB_RESTART`, nicht `JOB_RESTART`; der Code nennt keinen Typ.
 
 ---
 

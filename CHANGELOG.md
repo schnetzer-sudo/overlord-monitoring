@@ -128,6 +128,17 @@ Tags und die Definition of Done für ein Release stehen in
 
 ### Behoben
 
+- **„Ihre Aufträge“ zeigt bei einem Auftragstyp ohne Schlüssel keine Ersatzbeschriftung mehr**
+  (Entscheidungen des Auftraggebers vom 10.11.2026, E‑1185 bis E‑1187,
+  [`docs/assistent-frontend.md`](docs/assistent-frontend.md) §12.14). Befund: Ein Neudurchlauf eines
+  Jobs zeigte zugeklappt „Eintrag 1, Eintrag 2“ und aufgeklappt „Eintrag 1“ und „Eintrag 2“ als
+  Überschrift. Jetzt bleibt der linke Teil der zugeklappten Zeile leer, der Zeitpunkt steht an seiner
+  Stelle, und aufgeklappt trennt eine dünne Linie die Einträge. Entschieden wird daran, ob die
+  Definition einen Schlüssel hat, nicht am Namen des Typs. Dazu brechen die Feldzeilen der Einträge
+  nicht mehr mitten im Wort: Das `label` steht in einer Zeile, der Wert daneben oder in einem Stück
+  darunter; eine Nachrichten-ID, die auch allein nicht in die Spalte passt (bei 1.280 px in jeder
+  Anzeigegröße), bricht hinter einem Bindestrich. Nur Frontend; die Karte im Gespräch ist unverändert
+  (Punkt 1050).
 - Ein geschütztes Leerzeichen (U+00A0) oder ein anderes Unicode-Leerzeichen in einem Schlüsselteil
   von `WERK_ABLADESTELLE` wurde angenommen, obwohl E‑1012 „kein Leerraum“ verlangte: Das alte Muster
   `^[^ /,]{1,35}$` sperrte nur U+0020. Jetzt `FORMAT` (E‑1142).
