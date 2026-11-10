@@ -1032,3 +1032,144 @@ describe("Das Ende je Schritt", () => {
     }
   });
 });
+
+/**
+ * **Die Spalte „Ende“ steht neben der Dauer** *(10.11.2026, Nachbesserung zu
+ * E‑1184, `docs/nachrichtendetail.md` §10.19)*.
+ *
+ * Bis zu dieser Runde war die Spalte immer so breit wie die volle Form mit Datum.
+ * Die kurze Form stand rechtsbündig darin, und zwischen Dauer und Uhrzeit blieben
+ * rund 110 px leer. Seitdem ist sie so breit wie die breiteste Form, die **diese**
+ * Nachricht in **dieser** Sprache zeigt. Der Rahmen der Leiste trägt die Wahl, jede
+ * Zelle dieselbe Klasse; die Breiten sind gemessen (M1014,
+ * `docs/spaltenwahl.md` §5.6) und stehen deshalb ausgeschrieben.
+ *
+ * Gerendert wird in Deutsch (`tests/hilfe/rendern.tsx`); die englischen Werte der
+ * Wahl prüft `tests/nachrichtendetail.test.ts`.
+ */
+describe("Die Spalte „Ende“ neben der Dauer", () => {
+  const BREITEN = [
+    // Die volle Form auf Englisch ist die breiteste und deshalb der Rückfall.
+    "w-[9.9375rem]",
+    "group-data-[ende-spalte=voll-de]/zeitleiste:w-[8.0625rem]",
+    "group-data-[ende-spalte=kurz-de]/zeitleiste:w-[3.4375rem]",
+    "group-data-[ende-spalte=kurz-en]/zeitleiste:w-[4.875rem]",
+  ];
+
+  /** Der Rahmen von Eingang, Leiste und Rest: Container und Träger der Wahl. */
+  function rahmen(behaelter: HTMLElement): Element | null {
+    return behaelter.querySelector('[class~="@container/zeitleiste"]');
+  }
+
+  /** Klassen, die einen eigenen Außenabstand setzen, gleich unter welcher Bedingung. */
+  function rand(knoten: Element | null | undefined): string[] {
+    return [...(knoten?.classList ?? [])].filter((klasse) =>
+      /^-?m[trblxyse]?-/.test(klasse.split(":").at(-1) ?? ""),
+    );
+  }
+
+  it("steht unmittelbar hinter der Dauer, in beiden Ebenen, mit dem Abstand der Ebene", async () => {
+    const { behaelter, abbauen } = await rendereDetail(
+      { schritte: SCHRITTE, eigenschaftenAnzahl: EIGENSCHAFTEN.length },
+      LISTE,
+      EIGENSCHAFTEN,
+    );
+
+    try {
+      const zeile = behaelter.querySelectorAll("ol > li")[0];
+      const schalter = zeile.querySelector("button");
+
+      // Balken, Dauer, Ende: Geschwister in der Schaltfläche, das Ende als letztes.
+      const dauer = schalter?.querySelector("[data-ziffern]");
+      expect(dauer?.textContent).toBe("1 s");
+      const zelle = dauer?.nextElementSibling;
+      expect(zelle?.querySelector("time")?.textContent).toBe("22:41:13");
+      expect(zelle?.nextElementSibling).toBeNull();
+      const balken = dauer?.previousElementSibling;
+      expect(balken?.classList.contains("w-20")).toBe(true);
+      expect(zelle?.parentElement).toBe(schalter);
+
+      // Den Abstand setzt allein die Ebene (`gap-2`), zwischen Balken und Dauer
+      // wie zwischen Dauer und Ende. Kein eigener Rand, kein `ml-auto`.
+      expect(schalter?.classList.contains("gap-2")).toBe(true);
+      for (const knoten of [balken, dauer, zelle]) {
+        expect(rand(knoten)).toEqual([]);
+      }
+      for (const breite of BREITEN) {
+        expect(zelle?.classList.contains(breite)).toBe(true);
+      }
+
+      // Die Ebene der Ziele hält dieselbe Folge frei: Platzhalter der Dauer, dann
+      // der des Endes, mit derselben Klasse und ohne eigenen Rand.
+      const ebene = zeile.querySelector("div.pointer-events-none");
+      expect(ebene?.classList.contains("gap-2")).toBe(true);
+      const platzhalter = ebene?.lastElementChild;
+      expect(platzhalter?.className).toBe(zelle?.className);
+      expect(platzhalter?.previousElementSibling?.className).toBe("w-20 shrink-0");
+      expect(rand(platzhalter)).toEqual([]);
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("ist im Regelfall so breit wie die kurze Form, an jeder Stelle der Leiste", async () => {
+    const { behaelter, abbauen } = await rendereDetail(
+      {
+        schritte: SCHRITTE,
+        offenerZustand: "WARTET_VOR",
+        naechsterSchritt: "Noch nicht gelaufen",
+      },
+      {
+        ...LISTE,
+        protokolle: [...LISTE.protokolle, artefakt(9, "Ohne", "PROTOKOLL", true)],
+      },
+    );
+
+    try {
+      const leiste = rahmen(behaelter);
+      expect(leiste?.getAttribute("data-ende-spalte")).toBe("kurz-de");
+      expect(leiste?.classList.contains("group/zeitleiste")).toBe(true);
+
+      // Eingang und drei Schritte, je Zeile mit Zielen auch der Platzhalter in der
+      // Ebene darüber, dazu die erwartete Zeile und der Rest: zehn Stellen, eine Klasse.
+      const zellen = [...(leiste?.querySelectorAll('[class*="/zeitleiste:block"]') ?? [])];
+      expect(zellen).toHaveLength(10);
+      expect(new Set(zellen.map((zelle) => zelle.className)).size).toBe(1);
+      for (const breite of BREITEN) {
+        expect(zellen[0].classList.contains(breite)).toBe(true);
+      }
+      expect([...(leiste?.querySelectorAll("time") ?? [])].map((zeit) => zeit.textContent)).toEqual(
+        ["22:41:13", "22:41:13", "22:41:13"],
+      );
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("wird für die ganze Leiste voll, sobald eine Zeile das Datum trägt", async () => {
+    const schritte: Schritt[] = [
+      { ...schritt(1, "Am Tag des Beginns"), ende: "2025-12-29T22:41:13Z" },
+      { ...schritt(2, "Nach Mitternacht"), ende: "2025-12-30T00:01:07Z" },
+    ];
+    const { behaelter, abbauen } = await rendereDetail(
+      { schritte },
+      { ...LISTE, nutzdaten: [], protokolle: [] },
+    );
+
+    try {
+      const leiste = rahmen(behaelter);
+      expect(leiste?.getAttribute("data-ende-spalte")).toBe("voll-de");
+      // Die kurze Form steht rechtsbündig unter der vollen: Die Sekunden stehen
+      // untereinander, und dafür bleibt in den kurzen Zeilen ein Spalt.
+      expect([...behaelter.querySelectorAll("ol > li time")].map((z) => z.textContent)).toEqual([
+        "22:41:13",
+        "30.12.2025, 00:01:07",
+      ]);
+      const zellen = [...(leiste?.querySelectorAll('[class*="/zeitleiste:block"]') ?? [])];
+      expect(new Set(zellen.map((zelle) => zelle.className)).size).toBe(1);
+      expect(zellen[0].classList.contains("text-right")).toBe(true);
+    } finally {
+      await abbauen();
+    }
+  });
+});

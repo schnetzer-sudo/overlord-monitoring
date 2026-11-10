@@ -14,7 +14,12 @@ import { ProblemFehler } from "@/lib/http";
 import type { Texte } from "@/i18n";
 
 import type { KuratierteEigenschaft, Nachrichtendetail } from "../api";
-import { bedeutungNichtVerifiziert, METADATEN_POSITION, verteileEigenschaften } from "../detail";
+import {
+  bedeutungNichtVerifiziert,
+  endeSpalte,
+  METADATEN_POSITION,
+  verteileEigenschaften,
+} from "../detail";
 import {
   useArtefakte,
   useEigenschaften,
@@ -274,6 +279,8 @@ function Ablauf({
   artefakte: ReturnType<typeof useArtefakte>;
 }) {
   const texte = useTexte();
+  const sprache = useSprache();
+  const zone = useAnzeigezone();
   const bausteine = texte.nachrichten.detail.dateien;
 
   // Beschriftet wird mit der Schrittfolge, die ohnehin im Baum liegt.
@@ -315,9 +322,14 @@ function Ablauf({
 
         **Der Rahmen ist auch der Container der Spalte „Ende"** (E‑1184): Eingang
         und Rest gehören zur selben Flucht wie die Schritte, also fragen alle drei
-        dieselbe Breite ab.
+        dieselbe Breite ab. **Und er trägt die Breite dieser Nachricht**
+        (`data-ende-spalte`, Nachbesserung vom 10.11.2026): kurz, solange keine
+        Zeile ein Datum zeigt, sonst voll, für alle Zeilen dieselbe.
       */}
-      <div className="@container/zeitleiste flex flex-col">
+      <div
+        data-ende-spalte={endeSpalte(detail.schritte, detail.start, sprache, zone)}
+        className="group/zeitleiste @container/zeitleiste flex flex-col"
+      >
         <Zielzeile
           messageId={detail.messageId}
           beschriftung={bausteine.eingang}

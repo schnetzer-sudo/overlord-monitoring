@@ -68,9 +68,17 @@ const EBENE = "flex items-center gap-2 px-1";
  * `nachricht-detail.tsx`), nicht den Einhängepunkt und nicht das Fenster. Darunter
  * ist die Spalte `display: none` und die Zeile Zeichen für Zeichen, wie sie war.
  * Breite und Schwelle sind gemessen (M1013, `docs/spaltenwahl.md` §5.6).
+ *
+ * **Die Breite wählt der Rahmen der Leiste, je Nachricht** *(10.11.2026,
+ * Nachbesserung)*: `data-ende-spalte` aus `endeSpalte` in `../detail.ts`, hier
+ * gelesen über `group/zeitleiste`. Vier gemessene Breiten (M1014): die kurze und
+ * die volle Form, je Sprache. Die volle englische ist die breiteste und steht
+ * ohne Bedingung, damit eine Zelle ohne Wahl nie kürzt; die Schwelle ist an ihr
+ * bemessen und gilt für alle vier. Der Abstand zur Dauer ist das `gap-2` der
+ * Ebene, kein eigener Rand.
  */
 export const ENDE_SPALTE =
-  "text-muted-foreground text-beiwerk hidden w-[9.9375rem] shrink-0 text-right @min-[38.875rem]/zeitleiste:block";
+  "text-muted-foreground text-beiwerk hidden w-[9.9375rem] shrink-0 text-right group-data-[ende-spalte=voll-de]/zeitleiste:w-[8.0625rem] group-data-[ende-spalte=kurz-de]/zeitleiste:w-[3.4375rem] group-data-[ende-spalte=kurz-en]/zeitleiste:w-[4.875rem] @min-[38.875rem]/zeitleiste:block";
 
 export function AufklappZeile({
   als,

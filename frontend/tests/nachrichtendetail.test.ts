@@ -5,6 +5,7 @@ import {
   BALKEN_MINDESTANTEIL,
   balkenanteil,
   bedeutungNichtVerifiziert,
+  endeSpalte,
   laengsteDauer,
   schrittAufklappbar,
   schrittEndeAnzeige,
@@ -808,5 +809,70 @@ describe("Das Ende je Schritt", () => {
     expect(schrittEndeAnzeige({ ende: "2026-11-09T14:04:09Z" }, START, "de", ZONE)).toEqual(
       frueher,
     );
+  });
+});
+
+/**
+ * **Die Breite der Spalte „Ende“ je Nachricht** *(10.11.2026, Nachbesserung zu
+ * E‑1184, `docs/nachrichtendetail.md` §10.19)*.
+ *
+ * Die Spalte ist so breit wie die breiteste Form, die **diese** Nachricht in
+ * **dieser** Sprache zeigt: Trägt keine Zeile das Datum, steht die Uhrzeit ohne
+ * Spalt neben der Dauer. Geprüft wird hier die Entscheidung; dass jede Stelle der
+ * Leiste dieselbe Breite trägt, prüft `tests/zeitleiste-ziele.test.tsx`.
+ *
+ * Dieselben erfundenen Werte wie oben, in Winterzeit: `Europe/Berlin` liegt eine
+ * Stunde vor UTC.
+ */
+describe("Die Breite der Spalte „Ende“ je Nachricht", () => {
+  const ZONE = "Europe/Berlin";
+  const START = "2026-11-09T14:00:00Z";
+
+  it("ist kurz, wenn jedes Ende am Tag des Beginns liegt, in der Sprache der Anzeige", () => {
+    const schritte = [{ ende: "2026-11-09T14:04:09Z" }, { ende: "2026-11-09T22:59:59Z" }];
+    expect(endeSpalte(schritte, START, "de", ZONE)).toBe("kurz-de");
+    expect(endeSpalte(schritte, START, "en", ZONE)).toBe("kurz-en");
+  });
+
+  it("wird voll, sobald eine Zeile das Datum trägt, nach dem Tag in der Anzeigezone", () => {
+    // 23:00 UTC ist 00:00 in Berlin: ein neuer Tag, auch wenn UTC noch den alten zeigt.
+    const schritte = [{ ende: "2026-11-09T14:04:09Z" }, { ende: "2026-11-09T23:00:00Z" }];
+    expect(endeSpalte(schritte, START, "de", ZONE)).toBe("voll-de");
+    expect(endeSpalte(schritte, START, "en", ZONE)).toBe("voll-en");
+    // Dieselben Zeitpunkte in UTC liegen am selben Tag.
+    expect(endeSpalte(schritte, START, "de", "UTC")).toBe("kurz-de");
+  });
+
+  it("wird ohne Beginn voll, sobald es ein Ende gibt", () => {
+    expect(endeSpalte([{ ende: "2026-11-09T14:04:09Z" }], null, "de", ZONE)).toBe("voll-de");
+  });
+
+  it("zählt Schritte ohne Ende nicht mit, und ohne jedes Ende bleibt sie kurz", () => {
+    expect(endeSpalte([{ ende: null }, { ende: "2026-11-09T14:04:09Z" }], START, "de", ZONE)).toBe(
+      "kurz-de",
+    );
+    // Nichts steht in der Spalte, also braucht sie keine volle Breite, auch ohne Beginn.
+    expect(endeSpalte([{ ende: null }], null, "de", ZONE)).toBe("kurz-de");
+    expect(endeSpalte([], null, "en", ZONE)).toBe("kurz-en");
+  });
+
+  it("wird voll genau dann, wenn eine Zeile die volle Form zeigt", () => {
+    // Dieselbe Datumsregel wie die Zeile, an einer Stelle: Wichen beide
+    // voneinander ab, kürzte die Spalte eine volle Form oder hielte Platz frei.
+    const faelle: { ende: string | null }[][] = [
+      [{ ende: "2026-11-09T14:04:09Z" }],
+      [{ ende: "2026-11-09T23:30:00Z" }],
+      [{ ende: "2026-11-08T23:59:59Z" }],
+      [{ ende: null }, { ende: "2026-11-10T00:00:00Z" }, { ende: "2026-11-09T15:00:00Z" }],
+    ];
+    for (const start of [START, "2026-11-09T22:30:00Z", null]) {
+      for (const schritte of faelle) {
+        const voll = schritte.some((s) => {
+          const anzeige = schrittEndeAnzeige(s, start, "de", ZONE);
+          return anzeige !== null && anzeige.text === anzeige.vollwert;
+        });
+        expect(endeSpalte(schritte, start, "de", ZONE)).toBe(voll ? "voll-de" : "kurz-de");
+      }
+    }
   });
 });
